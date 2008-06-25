@@ -1,12 +1,15 @@
 #pragma once
 
 #include <string>
+#include <ios>
 
 namespace YAML
 {
-	const std::string Str = "!!str";
-	const std::string Seq = "!!seq";
-	const std::string Map = "!!map";
+	const std::string StrTag = "!!str";
+	const std::string SeqTag = "!!seq";
+	const std::string MapTag = "!!map";
+
+	class Content;
 
 	class Node
 	{
@@ -14,7 +17,11 @@ namespace YAML
 		Node();
 		~Node();
 
+		void Clear();
+		void Read(std::istream& in);
+
 	private:
 		std::string m_tag;
+		Content *m_pContent;
 	};
 }

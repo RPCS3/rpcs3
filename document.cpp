@@ -1,5 +1,6 @@
 #include "document.h"
 #include "node.h"
+#include <fstream>
 
 namespace YAML
 {
@@ -25,5 +26,10 @@ namespace YAML
 
 	void Document::Load(const std::string& fileName)
 	{
+		Clear();
+
+		std::ifstream fin(fileName.c_str());
+		m_pRoot = new Node;
+		m_pRoot->Read(fin);
 	}
 }

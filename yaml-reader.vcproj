@@ -162,6 +162,10 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
+				RelativePath=".\content.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\document.cpp"
 				>
 			</File>
@@ -170,7 +174,19 @@
 				>
 			</File>
 			<File
+				RelativePath=".\map.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\node.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\scalar.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\sequence.cpp"
 				>
 			</File>
 		</Filter>
@@ -180,11 +196,27 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
+				RelativePath=".\content.h"
+				>
+			</File>
+			<File
 				RelativePath=".\document.h"
 				>
 			</File>
 			<File
+				RelativePath=".\map.h"
+				>
+			</File>
+			<File
 				RelativePath=".\node.h"
+				>
+			</File>
+			<File
+				RelativePath=".\scalar.h"
+				>
+			</File>
+			<File
+				RelativePath=".\sequence.h"
 				>
 			</File>
 		</Filter>
