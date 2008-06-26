@@ -212,6 +212,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\exceptions.h"
+				>
+			</File>
+			<File
 				RelativePath=".\map.h"
 				>
 			</File>

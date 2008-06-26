@@ -2,6 +2,7 @@
 #include "node.h"
 #include "parser.h"
 #include "scanner.h"
+#include "exceptions.h"
 #include <fstream>
 
 namespace YAML
@@ -32,7 +33,11 @@ namespace YAML
 
 		std::ifstream fin(fileName.c_str());
 		Scanner scanner(fin);
-		scanner.Scan();
+
+		try {
+			scanner.Scan();
+		} catch(const UnknownToken& e) {
+		}
 //		if(!scanner)
 //			return;
 

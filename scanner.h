@@ -4,6 +4,7 @@
 #include <string>
 #include <queue>
 #include <stack>
+#include <set>
 
 namespace YAML
 {
@@ -12,6 +13,19 @@ namespace YAML
 	namespace Keys
 	{
 		const char Comment = '#';
+		const char FlowSeqStart = '[';
+		const char FlowSeqEnd = ']';
+		const char FlowMapStart = '{';
+		const char FlowMapEnd = '}';
+		const char FlowEntry = ',';
+		const char BlockEntry = '-';
+		const char Key = '?';
+		const char Value = ':';
+		const char Alias = '*';
+		const char Anchor = '&';
+		const char Tag = '!';
+		const char LiteralScalar = '|';
+		const char FoldedScalar = '>';
 	}
 
 	class Scanner
@@ -20,8 +34,10 @@ namespace YAML
 		Scanner(std::istream& in);
 		~Scanner();
 
-		Token *ScanNextToken();
+		void ScanNextToken();
 		void ScanToNextToken();
+		void PushIndentTo(int column, bool sequence);
+		void PopIndentTo(int column);
 
 		void Scan();
 
@@ -36,6 +52,12 @@ namespace YAML
 		bool IsBlank();
 		bool IsDocumentStart();
 		bool IsDocumentEnd();
+		bool IsBlockEntry();
+		bool IsKey();
+		bool IsValue();
+		bool IsPlainScalar();
+
+		template <typename T> void ScanAndEnqueue(T *pToken);
 		template <typename T> T *ScanToken(T *pToken);
 
 	private:
@@ -45,6 +67,7 @@ namespace YAML
 
 		// the output (tokens)
 		std::queue <Token *> m_tokens;
+		std::set <Token *> m_limboTokens;
 
 		// state info
 		bool m_startedStream;
