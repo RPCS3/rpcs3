@@ -2,7 +2,7 @@
 
 namespace YAML
 {
-	Scalar::Scalar()
+	Scalar::Scalar(const std::string& data): m_data(data)
 	{
 	}
 

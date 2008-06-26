@@ -1,5 +1,8 @@
 #include "node.h"
 #include "content.h"
+#include "parser.h"
+#include "scalar.h"
+#include "sequence.h"
 
 namespace YAML
 {
@@ -18,7 +21,14 @@ namespace YAML
 		m_pContent = 0;
 	}
 
-	void Node::Read(std::istream& in)
+	void Node::Read(Parser *pParser, const std::string& token)
 	{
+		Clear();
+
+		if(token == std::string("") + SeqToken) {
+			m_pContent = new Sequence(pParser);
+		} else {
+			m_pContent = new Scalar(token);
+		}
 	}
 }

@@ -10,6 +10,7 @@ namespace YAML
 	const std::string MapTag = "!!map";
 
 	class Content;
+	class Parser;
 
 	class Node
 	{
@@ -18,7 +19,7 @@ namespace YAML
 		~Node();
 
 		void Clear();
-		void Read(std::istream& in);
+		void Read(Parser *pParser, const std::string& token);
 
 	private:
 		std::string m_tag;

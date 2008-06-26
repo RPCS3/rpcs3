@@ -1,5 +1,6 @@
 #include "document.h"
 #include "node.h"
+#include "parser.h"
 #include <fstream>
 
 namespace YAML
@@ -29,7 +30,10 @@ namespace YAML
 		Clear();
 
 		std::ifstream fin(fileName.c_str());
-		m_pRoot = new Node;
-		m_pRoot->Read(fin);
+		Parser parser(fin);
+		if(!parser)
+			return;
+
+		m_pRoot = parser.ReadNextNode();
 	}
 }

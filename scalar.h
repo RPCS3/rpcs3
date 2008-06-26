@@ -8,7 +8,7 @@ namespace YAML
 	class Scalar: public Content
 	{
 	public:
-		Scalar();
+		Scalar(const std::string& data);
 		virtual ~Scalar();
 
 	protected:
