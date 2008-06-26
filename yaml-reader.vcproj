@@ -190,6 +190,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\scanner.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\sequence.cpp"
 				>
 			</File>
@@ -224,7 +228,15 @@
 				>
 			</File>
 			<File
+				RelativePath=".\scanner.h"
+				>
+			</File>
+			<File
 				RelativePath=".\sequence.h"
+				>
+			</File>
+			<File
+				RelativePath=".\token.h"
 				>
 			</File>
 		</Filter>
