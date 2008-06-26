@@ -2,7 +2,7 @@
 
 namespace YAML
 {
-	class Token {};
+	class Token { public: virtual ~Token() {} };
 
 	class StreamStartToken: public Token {};
 	class StreamEndToken: public Token {};

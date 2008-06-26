@@ -11,4 +11,5 @@ namespace YAML
 	class IllegalMapKey: public Exception {};
 	class IllegalMapValue: public Exception {};
 	class IllegalScalar: public Exception {};
+	class IllegalTabInScalar: public Exception {};
 }

@@ -36,8 +36,9 @@ namespace YAML
 
 		try {
 			scanner.Scan();
-		} catch(const UnknownToken& e) {
+		} catch(const Exception& e) {
 		}
+		getchar();
 //		if(!scanner)
 //			return;
 

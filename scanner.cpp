@@ -1,6 +1,7 @@
 #include "scanner.h"
 #include "token.h"
 #include "exceptions.h"
+#include <iostream>
 
 namespace YAML
 {
@@ -32,30 +33,42 @@ namespace YAML
 		return INPUT.get();
 	}
 
+	// Eat
+	// . Eats 'n' characters and updates our position.
+	void Scanner::Eat(int n)
+	{
+		for(int i=0;i<n;i++) {
+			m_column++;
+			char ch = INPUT.get();
+			if(ch == '\n')
+				m_column = 0;
+		}
+	}
+
+	// Peek
+	// . Peeks at the next 'n' characters and returns them in a string.
+	std::string Scanner::Peek(int n)
+	{
+		std::string ret;
+
+		// extract n - 1 characters, and peek at the nth
+		for(int i=0;i<n-1;i++)
+			ret += INPUT.get();
+		ret += INPUT.peek();
+
+		// and put back the n - 1 characters we STOLE
+		for(int i=n-2;i>=0;i--)
+			INPUT.putback(ret[i]);
+
+		return ret;
+	}
+
 	// GetLineBreak
 	// . Eats with no checking
 	void Scanner::EatLineBreak()
 	{
+		Eat(1);
 		m_column = 0;
-		INPUT.get();
-	}
-
-	// EatDocumentStart
-	// . Eats with no checking
-	void Scanner::EatDocumentStart()
-	{
-		INPUT.get();
-		INPUT.get();
-		INPUT.get();
-	}
-
-	// EatDocumentEnd
-	// . Eats with no checking
-	void Scanner::EatDocumentEnd()
-	{
-		INPUT.get();
-		INPUT.get();
-		INPUT.get();
 	}
 
 	// IsWhitespaceToBeEaten
@@ -65,10 +78,8 @@ namespace YAML
 	//      a. In the flow context
 	//      b. In the block context but not where a simple key could be allowed
 	//         (i.e., not at the beginning of a line, or following '-', '?', or ':')
-	bool Scanner::IsWhitespaceToBeEaten()
+	bool Scanner::IsWhitespaceToBeEaten(char ch)
 	{
-		char ch = INPUT.peek();
-
 		if(ch == ' ')
 			return true;
 
@@ -79,17 +90,15 @@ namespace YAML
 	}
 
 	// IsLineBreak
-	bool Scanner::IsLineBreak()
+	bool Scanner::IsLineBreak(char ch)
 	{
-		char ch = INPUT.peek();
 		return ch == '\n'; // TODO: More types of line breaks
 	}
 
 	// IsBlank
-	bool Scanner::IsBlank()
+	bool Scanner::IsBlank(char ch)
 	{
-		char ch = INPUT.peek();
-		return IsLineBreak() || ch == ' ' || ch == '\t' || ch == EOF;
+		return IsLineBreak(ch) || ch == ' ' || ch == '\t' || ch == EOF;
 	}
 
 	// IsDocumentStart
@@ -99,34 +108,8 @@ namespace YAML
 		if(m_column != 0)
 			return false;
 
-		// then needs '---'
-		for(int i=0;i<3;i++) {
-			if(INPUT.peek() != '-') {
-				// first put 'em back
-				for(int j=0;j<i;j++)
-					INPUT.putback('-');
-
-				// and return
-				return false;
-			}
-			INPUT.get();
-		}
-
-		// then needs a blank character (or eof)
-		if(!IsBlank()) {
-			// put 'em back
-			for(int i=0;i<3;i++)
-				INPUT.putback('-');
-
-			// and return
-			return false;
-		}
-
-		// finally, put 'em back and go
-		for(int i=0;i<3;i++)
-			INPUT.putback('-');
-
-		return true;
+		std::string next = Peek(4);
+		return next[0] == '-' && next[1] == '-' && next[2] == '-' && IsBlank(next[3]);
 	}
 
 	// IsDocumentEnd
@@ -136,88 +119,29 @@ namespace YAML
 		if(m_column != 0)
 			return false;
 
-		// then needs '...'
-		for(int i=0;i<3;i++) {
-			if(INPUT.peek() != '.') {
-				// first put 'em back
-				for(int j=0;j<i;j++)
-					INPUT.putback('.');
-
-				// and return
-				return false;
-			}
-			INPUT.get();
-		}
-
-		// then needs a blank character (or eof)
-		if(!IsBlank()) {
-			// put 'em back
-			for(int i=0;i<3;i++)
-				INPUT.putback('.');
-
-			// and return
-			return false;
-		}
-
-		// finally, put 'em back and go
-		for(int i=0;i<3;i++)
-			INPUT.putback('-');
-
-		return true;
+		std::string next = Peek(4);
+		return next[0] == '.' && next[1] == '.' && next[2] == '.' && IsBlank(next[3]);
 	}
 
 	// IsBlockEntry
 	bool Scanner::IsBlockEntry()
 	{
-		if(INPUT.peek() != Keys::BlockEntry)
-			return false;
-
-		INPUT.get();
-
-		// then needs a blank character (or eof)
-		if(!IsBlank()) {
-			INPUT.putback(Keys::BlockEntry);
-			return false;
-		}
-
-		INPUT.putback(Keys::BlockEntry);
-		return true;
+		std::string next = Peek(2);
+		return next[0] == Keys::BlockEntry && IsBlank(next[1]);
 	}
 
 	// IsKey
 	bool Scanner::IsKey()
 	{
-		if(INPUT.peek() != Keys::Key)
-			return false;
-
-		INPUT.get();
-
-		// then needs a blank character (or eof), if we're in block context
-		if(m_flowLevel == 0 && !IsBlank()) {
-			INPUT.putback(Keys::BlockEntry);
-			return false;
-		}
-
-		INPUT.putback(Keys::BlockEntry);
-		return true;
+		std::string next = Peek(2);
+		return next[0] == Keys::Key && (IsBlank(next[1]) || m_flowLevel > 0);
 	}
 
 	// IsValue
 	bool Scanner::IsValue()
 	{
-		if(INPUT.peek() != Keys::Value)
-			return false;
-
-		INPUT.get();
-
-		// then needs a blank character (or eof), if we're in block context
-		if(m_flowLevel == 0 && !IsBlank()) {
-			INPUT.putback(Keys::BlockEntry);
-			return false;
-		}
-
-		INPUT.putback(Keys::BlockEntry);
-		return true;
+		std::string next = Peek(2);
+		return next[0] == Keys::Value && (IsBlank(next[1]) || m_flowLevel > 0);
 	}
 
 	// IsPlainScalar
@@ -228,34 +152,25 @@ namespace YAML
 	//   . In the flow context ? : are illegal and - must not be followed with a space.
 	bool Scanner::IsPlainScalar()
 	{
-		if(IsBlank())
+		std::string next = Peek(2);
+
+		if(IsBlank(next[0]))
 			return false;
 
 		// never characters
-		std::string never = ",[]{}#&*!|>\'\"%@`";
-		for(unsigned i=0;i<never.size();i++)
-			if(INPUT.peek() == never[i])
-				return false;
+		if(std::string(",[]{}#&*!|>\'\"%@`").find(next[0]) != std::string::npos)
+			return false;
 
 		// specific block/flow characters
 		if(m_flowLevel == 0) {
-			if(INPUT.peek() == '-' || INPUT.peek() == '?' || INPUT.peek() == ':') {
-				char ch = INPUT.get();
-				if(IsBlank()) {
-					INPUT.putback(ch);
-					return false;
-				}
-			}
-		} else {
-			if(INPUT.peek() == '?' || INPUT.peek() == ':')
+			if((next[0] == '-' || next[0] == '?' || next[0] == ':') && IsBlank(next[1]))
 				return false;
-			if(INPUT.peek() == '-') {
-				INPUT.get();
-				if(IsBlank()) {
-					INPUT.putback('-');
-					return false;
-				}
-			}
+		} else {
+			if(next[0] == '?' || next[0]  == ':')
+				return false;
+
+			if(next[0] == '-' && IsBlank(next[1]))
+				return false;
 		}
 
 		return true;
@@ -311,8 +226,8 @@ namespace YAML
 
 		m_simpleKeyAllowed = false;
 
-		// eat it
-		EatDocumentStart();
+		// eat
+		Eat(3);
 
 		return pToken;
 	}
@@ -325,8 +240,8 @@ namespace YAML
 
 		m_simpleKeyAllowed = false;
 
-		// eat it
-		EatDocumentEnd();
+		// eat
+		Eat(3);
 
 		return pToken;
 	}
@@ -419,7 +334,7 @@ namespace YAML
 		m_simpleKeyAllowed = true;
 
 		// eat
-		INPUT.get();
+		Eat(1);
 		return pToken;
 	}
 
@@ -443,7 +358,7 @@ namespace YAML
 			m_simpleKeyAllowed = false;
 
 		// eat
-		INPUT.get();
+		Eat(1);
 		return pToken;
 	}
 
@@ -470,7 +385,7 @@ namespace YAML
 			m_simpleKeyAllowed = false;
 
 		// eat
-		INPUT.get();
+		Eat(1);
 		return pToken;
 	}
 
@@ -482,7 +397,10 @@ namespace YAML
 		m_simpleKeyAllowed = false;
 
 		// now eat and store the scalar
-		while(1) {
+		std::string scalar;
+		bool leadingBlanks = true;
+
+		while(INPUT) {
 			// doc start/end tokens
 			if(IsDocumentStart() || IsDocumentEnd())
 				break;
@@ -492,21 +410,47 @@ namespace YAML
 				break;
 
 			// first eat non-blanks
-			while(!IsBlank()) {
+			while(INPUT && !IsBlank(INPUT.peek())) {
+				std::string next = Peek(2);
+
 				// illegal colon in flow context
-				if(m_flowLevel > 0 && INPUT.peek() == ':') {
-					INPUT.get();
-					if(!IsBlank()) {
-						INPUT.putback(':');
+				if(m_flowLevel > 0 && next[0] == ':') {
+					if(!IsBlank(next[1]))
 						throw IllegalScalar();
-					}
-					INPUT.putback(':');
 				}
 
 				// characters that might end the scalar
-				// TODO: scanner.c line 3434
+				if(next[0] == ':' && IsBlank(next[1]))
+					break;
+				if(m_flowLevel > 0 && std::string(",:?[]{}").find(next[0]) != std::string::npos)
+					break;
+
+				scalar += GetChar();
 			}
+
+			// now eat blanks
+			while(IsBlank(INPUT.peek()) /* || IsBreak(INPUT.peek()) */) {
+				if(IsBlank(INPUT.peek())) {
+					if(leadingBlanks && m_column <= m_indents.top())
+						throw IllegalTabInScalar();
+
+					// TODO: Store some blanks?
+					Eat(1);
+				} else {
+					Eat(1);
+				}
+			}
+
+			// TODO: join whitespace
+
+			// and finally break if we're below the indentation level
+			if(m_flowLevel == 0 && m_column <= m_indents.top())
+				break;
 		}
+
+		// now modify our token
+		if(leadingBlanks)
+			m_simpleKeyAllowed = true;
 
 		return pToken;
 	}
@@ -588,18 +532,18 @@ namespace YAML
 	{
 		while(1) {
 			// first eat whitespace
-			while(IsWhitespaceToBeEaten())
-				INPUT.get();
+			while(IsWhitespaceToBeEaten(INPUT.peek()))
+				Eat(1);
 
 			// then eat a comment
 			if(INPUT.peek() == Keys::Comment) {
 				// eat until line break
-				while(INPUT && !IsLineBreak())
-					INPUT.get();
+				while(INPUT && !IsLineBreak(INPUT.peek()))
+					Eat(1);
 			}
 
 			// if it's NOT a line break, then we're done!
-			if(!IsLineBreak())
+			if(!IsLineBreak(INPUT.peek()))
 				break;
 
 			// otherwise, let's eat the line break and keep going
@@ -651,7 +595,15 @@ namespace YAML
 	// temporary function for testing
 	void Scanner::Scan()
 	{
-		while(INPUT)
+		while(INPUT) {
 			ScanNextToken();
+
+			while(!m_tokens.empty()) {
+				Token *pToken = m_tokens.front();
+				m_tokens.pop();
+				std::cout << typeid(*pToken).name() << std::endl;
+				delete pToken;
+			}
+		}
 	}
 }

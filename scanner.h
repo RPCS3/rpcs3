@@ -43,13 +43,14 @@ namespace YAML
 
 	private:
 		char GetChar();
-		void EatLineBreak();
-		void EatDocumentStart();
-		void EatDocumentEnd();
+		void Eat(int n = 1);
+		std::string Peek(int n);
 
-		bool IsWhitespaceToBeEaten();
-		bool IsLineBreak();
-		bool IsBlank();
+		void EatLineBreak();
+
+		bool IsWhitespaceToBeEaten(char ch);
+		bool IsLineBreak(char ch);
+		bool IsBlank(char ch);
 		bool IsDocumentStart();
 		bool IsDocumentEnd();
 		bool IsBlockEntry();
