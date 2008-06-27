@@ -198,6 +198,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\scantoken.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\sequence.cpp"
 				>
 			</File>
@@ -217,6 +221,10 @@
 			</File>
 			<File
 				RelativePath=".\exceptions.h"
+				>
+			</File>
+			<File
+				RelativePath=".\exp.h"
 				>
 			</File>
 			<File
