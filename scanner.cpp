@@ -30,7 +30,10 @@ namespace YAML
 	char Scanner::GetChar()
 	{
 		m_column++;
-		return INPUT.get();
+		char ch = INPUT.get();
+		if(ch == '\n')
+			m_column = 0;
+		return ch;
 	}
 
 	// Eat
@@ -87,18 +90,6 @@ namespace YAML
 		return false;
 	}
 
-	// IsLineBreak
-	bool Scanner::IsLineBreak(char ch)
-	{
-		return ch == '\n'; // TODO: More types of line breaks
-	}
-
-	// IsBlank
-	bool Scanner::IsBlank(char ch)
-	{
-		return IsLineBreak(ch) || ch == ' ' || ch == '\t' || ch == EOF;
-	}
-
 	// IsDocumentStart
 	bool Scanner::IsDocumentStart()
 	{
@@ -106,8 +97,7 @@ namespace YAML
 		if(m_column != 0)
 			return false;
 
-		std::string next = Peek(4);
-		return next[0] == '-' && next[1] == '-' && next[2] == '-' && IsBlank(next[3]);
+		return Exp::DocStart.Matches(Peek(4));
 	}
 
 	// IsDocumentEnd
@@ -117,61 +107,41 @@ namespace YAML
 		if(m_column != 0)
 			return false;
 
-		std::string next = Peek(4);
-		return next[0] == '.' && next[1] == '.' && next[2] == '.' && IsBlank(next[3]);
+		return Exp::DocEnd.Matches(Peek(4));
 	}
 
 	// IsBlockEntry
 	bool Scanner::IsBlockEntry()
 	{
-		std::string next = Peek(2);
-		return next[0] == Keys::BlockEntry && IsBlank(next[1]);
+		return Exp::BlockEntry.Matches(Peek(2));
 	}
 
 	// IsKey
 	bool Scanner::IsKey()
 	{
 		std::string next = Peek(2);
-		return next[0] == Keys::Key && (IsBlank(next[1]) || m_flowLevel > 0);
+		if(m_flowLevel > 0)
+			return Exp::KeyInFlow.Matches(next);
+		return Exp::Key.Matches(next);
 	}
 
 	// IsValue
 	bool Scanner::IsValue()
 	{
 		std::string next = Peek(2);
-		return next[0] == Keys::Value && (IsBlank(next[1]) || m_flowLevel > 0);
+		if(m_flowLevel > 0)
+			return Exp::ValueInFlow.Matches(next);
+		return Exp::Value.Matches(next);
 	}
 
 	// IsPlainScalar
 	// . Rules:
-	//   . Cannot start with a blank.
-	//   . Can never start with any of , [ ] { } # & * ! | > \' \" % @ `
-	//   . In the block context - ? : must be not be followed with a space.
-	//   . In the flow context ? : are illegal and - must not be followed with a space.
 	bool Scanner::IsPlainScalar()
 	{
 		std::string next = Peek(2);
-
-		if(IsBlank(next[0]))
-			return false;
-
-		// never characters
-		if(std::string(",[]{}#&*!|>\'\"%@`").find(next[0]) != std::string::npos)
-			return false;
-
-		// specific block/flow characters
-		if(m_flowLevel == 0) {
-			if((next[0] == '-' || next[0] == '?' || next[0] == ':') && IsBlank(next[1]))
-				return false;
-		} else {
-			if(next[0] == '?' || next[0]  == ':')
-				return false;
-
-			if(next[0] == '-' && IsBlank(next[1]))
-				return false;
-		}
-
-		return true;
+		if(m_flowLevel > 0)
+			return Exp::PlainScalarInFlow.Matches(next);
+		return Exp::PlainScalar.Matches(next);
 	}
 
 	///////////////////////////////////////////////////////////////////////
@@ -233,7 +203,7 @@ namespace YAML
 	// DocumentEndToken
 	template <> DocumentEndToken *Scanner::ScanToken(DocumentEndToken *pToken)
 	{
-		PopIndentTo(m_column);
+		PopIndentTo(-1);
 		// TODO: "reset simple keys"
 
 		m_simpleKeyAllowed = false;
@@ -389,8 +359,8 @@ namespace YAML
 		m_simpleKeyAllowed = false;
 
 		// now eat and store the scalar
-		std::string scalar;
-		bool leadingBlanks = true;
+		std::string scalar, whitespace, leadingBreaks, trailingBreaks;
+		bool leadingBlanks = false;
 
 		while(INPUT) {
 			// doc start/end tokens
@@ -398,42 +368,71 @@ namespace YAML
 				break;
 
 			// comment
-			if(INPUT.peek() == Keys::Comment)
+			if(Exp::Comment.Matches(INPUT.peek()))
 				break;
 
 			// first eat non-blanks
-			while(INPUT && !IsBlank(INPUT.peek())) {
+			while(INPUT && !Exp::BlankOrBreak.Matches(INPUT.peek())) {
 				std::string next = Peek(2);
 
 				// illegal colon in flow context
-				if(m_flowLevel > 0 && next[0] == ':') {
-					if(!IsBlank(next[1]))
-						throw IllegalScalar();
-				}
+				if(m_flowLevel > 0 && Exp::IllegalColonInScalar.Matches(next))
+					throw IllegalScalar();
 
 				// characters that might end the scalar
-				if(next[0] == ':' && IsBlank(next[1]))
+				if(m_flowLevel > 0 && Exp::EndScalarInFlow.Matches(next))
 					break;
-				if(m_flowLevel > 0 && std::string(",:?[]{}").find(next[0]) != std::string::npos)
+				if(m_flowLevel == 0 && Exp::EndScalar.Matches(next))
 					break;
 
+				if(leadingBlanks) {
+					if(!leadingBreaks.empty() && leadingBreaks[0] == '\n') {
+						// fold line break?
+						if(trailingBreaks.empty())
+							scalar += ' ';
+						else {
+							scalar += trailingBreaks;
+							trailingBreaks = "";
+						}
+					} else {
+						scalar += leadingBreaks + trailingBreaks;
+						leadingBreaks = "";
+						trailingBreaks = "";
+					}
+				} else if(!whitespace.empty()) {
+					scalar += whitespace;
+					whitespace = "";
+				}
+
+				// finally, read the character!
 				scalar += GetChar();
 			}
 
+			// did we hit a non-blank character that ended us?
+			if(!Exp::BlankOrBreak.Matches(INPUT.peek()))
+				break;
+
 			// now eat blanks
-			while(INPUT && (IsBlank(INPUT.peek()) /* || IsBreak(INPUT.peek()) */)) {
-				if(IsBlank(INPUT.peek())) {
+			while(INPUT && Exp::BlankOrBreak.Matches(INPUT.peek())) {
+				if(Exp::Blank.Matches(INPUT.peek())) {
 					if(leadingBlanks && m_column <= m_indents.top())
 						throw IllegalTabInScalar();
 
-					// TODO: Store some blanks?
-					Eat(1);
+					// maybe store this character
+					if(!leadingBlanks)
+						whitespace += GetChar();
+					else
+						Eat(1);
 				} else {
-					Eat(1);
+					// where to store this character?
+					if(!leadingBlanks) {
+						leadingBlanks = true;
+						whitespace = "";
+						leadingBreaks += GetChar();
+					} else
+						trailingBreaks += GetChar();
 				}
 			}
-
-			// TODO: join whitespace
 
 			// and finally break if we're below the indentation level
 			if(m_flowLevel == 0 && m_column <= m_indents.top())
@@ -532,14 +531,14 @@ namespace YAML
 				Eat(1);
 
 			// then eat a comment
-			if(INPUT.peek() == Keys::Comment) {
+			if(Exp::Comment.Matches(INPUT.peek())) {
 				// eat until line break
-				while(INPUT && !IsLineBreak(INPUT.peek()))
+				while(INPUT && !Exp::Break.Matches(INPUT.peek()))
 					Eat(1);
 			}
 
 			// if it's NOT a line break, then we're done!
-			if(!IsLineBreak(INPUT.peek()))
+			if(!Exp::Break.Matches(INPUT.peek()))
 				break;
 
 			// otherwise, let's eat the line break and keep going

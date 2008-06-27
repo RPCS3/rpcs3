@@ -1,3 +1,5 @@
+---
 - milk
-- eggs
-- cheese and bread       # this is really important!
+- eggs             # this is really important!
+- cheese and bread
+...

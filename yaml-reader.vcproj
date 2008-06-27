@@ -186,6 +186,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\regex.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\scalar.cpp"
 				>
 			</File>
@@ -225,6 +229,10 @@
 			</File>
 			<File
 				RelativePath=".\parser.h"
+				>
+			</File>
+			<File
+				RelativePath=".\regex.h"
 				>
 			</File>
 			<File
