@@ -170,6 +170,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\exp.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\main.cpp"
 				>
 			</File>

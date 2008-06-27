@@ -1,10 +1,4 @@
 ---
-- green
-  eggs,
-  and
-  ham!
-- eggs             # this is really important!
-- - cheddar cheese
-  - american cheese
-- bread
+- milk and eggs
+- [cheddar, american, swiss]
 ...

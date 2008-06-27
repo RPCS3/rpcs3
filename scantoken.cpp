@@ -64,8 +64,8 @@ namespace YAML
 	template <> FlowSeqStartToken *Scanner::ScanToken(FlowSeqStartToken *pToken)
 	{
 		// TODO: "save simple key"
-		// TODO: increase flow level
 
+		IncreaseFlowLevel();
 		m_simpleKeyAllowed = true;
 
 		// eat
@@ -77,8 +77,8 @@ namespace YAML
 	template <> FlowMapStartToken *Scanner::ScanToken(FlowMapStartToken *pToken)
 	{
 		// TODO: "save simple key"
-		// TODO: increase flow level
 
+		IncreaseFlowLevel();
 		m_simpleKeyAllowed = true;
 
 		// eat
@@ -90,8 +90,8 @@ namespace YAML
 	template <> FlowSeqEndToken *Scanner::ScanToken(FlowSeqEndToken *pToken)
 	{
 		// TODO: "remove simple key"
-		// TODO: decrease flow level
 
+		DecreaseFlowLevel();
 		m_simpleKeyAllowed = false;
 
 		// eat
@@ -103,8 +103,8 @@ namespace YAML
 	template <> FlowMapEndToken *Scanner::ScanToken(FlowMapEndToken *pToken)
 	{
 		// TODO: "remove simple key"
-		// TODO: decrease flow level
 
+		DecreaseFlowLevel();
 		m_simpleKeyAllowed = false;
 
 		// eat
@@ -210,8 +210,8 @@ namespace YAML
 		m_simpleKeyAllowed = false;
 
 		// now eat and store the scalar
-		std::string scalar, whitespace, leadingBreaks, trailingBreaks;
-		bool leadingBlanks = false;
+		std::string scalar;
+		WhitespaceInfo info;
 
 		while(INPUT) {
 			// doc start/end tokens
@@ -234,26 +234,6 @@ namespace YAML
 				if(m_flowLevel == 0 && Exp::EndScalar.Matches(INPUT))
 					break;
 
-				// join whitespace
-				if(leadingBlanks) {
-					if(Exp::Break.Matches(leadingBreaks)) {
-						// fold line break?
-						if(trailingBreaks.empty())
-							scalar += ' ';
-						else
-							scalar += trailingBreaks;
-					} else {
-						scalar += leadingBreaks + trailingBreaks;
-					}
-
-					leadingBlanks = false;
-					leadingBreaks = "";
-					trailingBreaks = "";
-				} else if(!whitespace.empty()) {
-					scalar += whitespace;
-					whitespace = "";
-				}
-
 				// finally, read the character!
 				scalar += GetChar();
 			}
@@ -266,37 +246,29 @@ namespace YAML
 			while(INPUT && Exp::BlankOrBreak.Matches(INPUT)) {
 				if(Exp::Blank.Matches(INPUT)) {
 					// can't use tabs as indentation! only spaces!
-					if(INPUT.peek() == '\t' && leadingBlanks && m_column <= m_indents.top())
+					if(INPUT.peek() == '\t' && info.leadingBlanks && m_column <= m_indents.top())
 						throw IllegalTabInScalar();
 
-					// maybe store this character
-					if(!leadingBlanks)
-						whitespace += GetChar();
-					else
-						Eat(1);
-				} else {
+					info.AddBlank(GetChar());
+				} else	{
 					// we know it's a line break; see how many characters to read
 					int n = Exp::Break.Match(INPUT);
 					std::string line = GetChar(n);
-
-					// where to store this character?
-					if(!leadingBlanks) {
-						leadingBlanks = true;
-						whitespace = "";
-						leadingBreaks += line;
-					} else
-						trailingBreaks += line;
+					info.AddBreak(line);
 				}
 			}
 
-			// and finally break if we're below the indentation level
+			// break if we're below the indentation level
 			if(m_flowLevel == 0 && m_column <= m_indents.top())
 				break;
+
+			// finally join whitespace
+			scalar += info.Join();
 		}
 
 		// now modify our token
 		pToken->value = scalar;
-		if(leadingBlanks)
+		if(info.leadingBlanks)
 			m_simpleKeyAllowed = true;
 
 		return pToken;
@@ -305,6 +277,128 @@ namespace YAML
 	// QuotedScalarToken
 	template <> QuotedScalarToken *Scanner::ScanToken(QuotedScalarToken *pToken)
 	{
+		// TODO: "save simple key"
+
+		m_simpleKeyAllowed = false;
+
+		// eat single or double quote
+		char quote = GetChar();
+		bool single = (quote == '\'');
+
+		// now eat and store the scalar
+		std::string scalar;
+		WhitespaceInfo info;
+
+		while(INPUT) {
+			if(IsDocumentStart() || IsDocumentEnd())
+				throw DocIndicatorInQuote();
+
+			if(INPUT.peek() == EOF)
+				throw EOFInQuote();
+
+			// first eat non-blanks
+			while(INPUT && !Exp::BlankOrBreak.Matches(INPUT)) {
+				// escaped single quote?
+				if(single && Exp::EscSingleQuote.Matches(INPUT)) {
+					int n = Exp::EscSingleQuote.Match(INPUT);
+					scalar += GetChar(n);
+					continue;
+				}
+
+				// is the quote ending?
+				if(INPUT.peek() == (single ? '\'' : '\"'))
+					break;
+
+				// escaped newline?
+				if(Exp::EscBreak.Matches(INPUT))
+					break;
+
+				// other escape sequence
+				if(INPUT.peek() == '\\') {
+					int length = 0;
+					scalar += Exp::Escape(INPUT, length);
+					m_column += length;
+					continue;
+				}
+
+				// and finally, just add the damn character
+				scalar += GetChar();
+			}
+
+			// is the quote ending?
+			if(INPUT.peek() == (single ? '\'' : '\"')) {
+				// eat and go
+				GetChar();
+				break;
+			}
+
+			// now we eat blanks
+			while(Exp::BlankOrBreak.Matches(INPUT)) {
+				if(Exp::Blank.Matches(INPUT)) {
+					info.AddBlank(GetChar());
+				} else {
+					// we know it's a line break; see how many characters to read
+					int n = Exp::Break.Match(INPUT);
+					std::string line = GetChar(n);
+					info.AddBreak(line);
+				}
+			}
+
+			// and finally join the whitespace
+			scalar += info.Join();
+		}
+
+		pToken->value = scalar;
 		return pToken;
+	}
+
+	//////////////////////////////////////////////////////////
+	// WhitespaceInfo stuff
+
+	Scanner::WhitespaceInfo::WhitespaceInfo(): leadingBlanks(false)
+	{
+	}
+
+	void Scanner::WhitespaceInfo::AddBlank(char ch)
+	{
+		if(!leadingBlanks)
+			whitespace += ch;
+	}
+
+	void Scanner::WhitespaceInfo::AddBreak(const std::string& line)
+	{
+		// where to store this character?
+		if(!leadingBlanks) {
+			leadingBlanks = true;
+			whitespace = "";
+			leadingBreaks += line;
+		} else
+			trailingBreaks += line;
+	}
+
+	std::string Scanner::WhitespaceInfo::Join()
+	{
+		std::string ret;
+
+		if(leadingBlanks) {
+			if(Exp::Break.Matches(leadingBreaks)) {
+				// fold line break?
+				if(trailingBreaks.empty())
+					ret = " ";
+				else
+					ret = trailingBreaks;
+			} else {
+				ret = leadingBreaks + trailingBreaks;
+			}
+
+			leadingBlanks = false;
+			leadingBreaks = "";
+			trailingBreaks = "";
+		} else if(!whitespace.empty()) {
+			ret = whitespace;
+			whitespace = "";
+		}
+
+		return ret;
 	}
 }

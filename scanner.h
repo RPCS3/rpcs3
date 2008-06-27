@@ -20,6 +20,8 @@ namespace YAML
 		void ScanToNextToken();
 		void PushIndentTo(int column, bool sequence);
 		void PopIndentTo(int column);
+		void IncreaseFlowLevel();
+		void DecreaseFlowLevel();
 
 		void Scan();
 
@@ -36,6 +38,16 @@ namespace YAML
 		bool IsKey();
 		bool IsValue();
 		bool IsPlainScalar();
+
+		struct WhitespaceInfo {
+			WhitespaceInfo();
+			void AddBlank(char ch);
+			void AddBreak(const std::string& line);
+			std::string Join();
+
+			bool leadingBlanks;
+			std::string whitespace, leadingBreaks, trailingBreaks;
+		};
 
 		template <typename T> void ScanAndEnqueue(T *pToken);
 		template <typename T> T *ScanToken(T *pToken);

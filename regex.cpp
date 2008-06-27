@@ -35,7 +35,7 @@ namespace YAML
 	RegEx::RegEx(const std::string& str, REGEX_OP op): m_op(op), m_pOp(0)
 	{
 		for(unsigned i=0;i<str.size();i++)
-			m_params.push_back(RegEx(str[0]));
+			m_params.push_back(RegEx(str[i]));
 
 		SetOp();
 	}

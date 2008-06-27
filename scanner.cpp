@@ -286,6 +286,22 @@ namespace YAML
 		}
 	}
 
+	// IncreaseFlowLevel
+	void Scanner::IncreaseFlowLevel()
+	{
+		// TODO: Push simple key
+		m_flowLevel++;
+	}
+
+	// DecreaseFlowLevel
+	void Scanner::DecreaseFlowLevel()
+	{
+		if(m_flowLevel > 0) {
+			m_flowLevel--;
+			// TODO: Pop simple key
+		}
+	}
+
 	// temporary function for testing
 	void Scanner::Scan()
 	{
