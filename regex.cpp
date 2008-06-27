@@ -2,30 +2,60 @@
 
 namespace YAML
 {
-	RegEx::RegEx(REGEX_OP op): m_op(op)
+	RegEx::RegEx(REGEX_OP op): m_op(op), m_pOp(0)
 	{
+		SetOp();
 	}
 
-	RegEx::RegEx(): m_op(REGEX_EMPTY)
+	RegEx::RegEx(const RegEx& rhs): m_pOp(0)
 	{
+		m_op = rhs.m_op;
+		m_a = rhs.m_a;
+		m_z = rhs.m_z;
+		m_params = rhs.m_params;
+
+		SetOp();
 	}
 
-	RegEx::RegEx(char ch): m_op(REGEX_MATCH), m_a(ch)
+	RegEx::RegEx(): m_op(REGEX_EMPTY), m_pOp(0)
 	{
+		SetOp();
 	}
 
-	RegEx::RegEx(char a, char z): m_op(REGEX_RANGE), m_a(a), m_z(z)
+	RegEx::RegEx(char ch): m_op(REGEX_MATCH), m_pOp(0), m_a(ch)
 	{
+		SetOp();
 	}
 
-	RegEx::RegEx(const std::string& str, REGEX_OP op): m_op(op)
+	RegEx::RegEx(char a, char z): m_op(REGEX_RANGE), m_pOp(0), m_a(a), m_z(z)
+	{
+		SetOp();
+	}
+
+	RegEx::RegEx(const std::string& str, REGEX_OP op): m_op(op), m_pOp(0)
 	{
 		for(unsigned i=0;i<str.size();i++)
 			m_params.push_back(RegEx(str[0]));
+
+		SetOp();
 	}
 
 	RegEx::~RegEx()
 	{
+		delete m_pOp;
+	}
+
+	void RegEx::SetOp()
+	{
+		delete m_pOp;
+		m_pOp = 0;
+		switch(m_op) {
+			case REGEX_MATCH: m_pOp = new MatchOperator; break;
+			case REGEX_RANGE: m_pOp = new RangeOperator; break;
+			case REGEX_OR: m_pOp = new OrOperator; break;
+			case REGEX_NOT: m_pOp = new NotOperator; break;
+			case REGEX_SEQ: m_pOp = new SeqOperator; break;
+		}
 	}
 
 	bool RegEx::Matches(char ch) const
@@ -40,6 +70,11 @@ namespace YAML
 		return Match(str) >= 0;
 	}
 
+	bool RegEx::Matches(std::istream& in) const
+	{
+		return Match(in) >= 0;
+	}
+
 	// Match
 	// . Matches the given string against this regular expression.
 	// . Returns the number of characters matched.
@@ -49,44 +84,36 @@ namespace YAML
 	//   but that of course matches zero characters).
 	int RegEx::Match(const std::string& str) const
 	{
-		switch(m_op) {
-			case REGEX_EMPTY:
-				if(str.empty())
-					return 0;
-				return -1;
-			case REGEX_MATCH:
-				if(str.empty() || str[0] != m_a)
-					return -1;
-				return 1;
-			case REGEX_RANGE:
-				if(str.empty() || m_a > str[0] || m_z < str[0])
-					return -1;
-				return 1;
-			case REGEX_NOT:
-				if(m_params.empty())
-					return false;
-				if(m_params[0].Match(str) >= 0)
-					return -1;
-				return 1;
-			case REGEX_OR:
-				for(unsigned i=0;i<m_params.size();i++) {
-					int n = m_params[i].Match(str);
-					if(n >= 0)
-						return n;
-				}
-				return -1;
-			case REGEX_SEQ:
-				int offset = 0;
-				for(unsigned i=0;i<m_params.size();i++) {
-					int n = m_params[i].Match(str.substr(offset));
-					if(n == -1)
-						return -1;
-					offset += n;
-				}
-				return offset;
-		}
+		if(!m_pOp)
+			return -1;
 
-		return -1;
+		return m_pOp->Match(str, *this);
+
+			//case REGEX_EMPTY:
+			//	if(str.empty())
+			//		return 0;
+			//	return -1;
+	}
+
+	// Match
+	// . The stream version does the same thing as the string version;
+	//   REMEMBER that we only match from the start of the stream!
+	// . Note: the istream is not a const reference, but we guarantee
+	//   that the pointer will be in the same spot, and we'll clear its
+	//   flags before we end.
+	int RegEx::Match(std::istream& in) const
+	{
+		if(!m_pOp)
+			return -1;
+
+		int pos = in.tellg();
+		int ret = m_pOp->Match(in, *this);
+
+		// reset input stream!
+		in.clear();
+		in.seekg(pos);
+
+		return ret;
 	}
 
 	RegEx operator ! (const RegEx& ex)
@@ -111,4 +138,107 @@ namespace YAML
 		ret.m_params.push_back(ex2);
 		return ret;
 	}
+
+	//////////////////////////////////////////////////////////////////////////////
+	// Operators
+
+	// MatchOperator
+	int RegEx::MatchOperator::Match(const std::string& str, const RegEx& regex) const
+	{
+		if(str.empty() || str[0] != regex.m_a)
+			return -1;
+		return 1;
+	}
+
+	
+	int RegEx::MatchOperator::Match(std::istream& in, const RegEx& regex) const
+	{
+		if(!in || in.peek() != regex.m_a)
+			return -1;
+		return 1;
+	}
+
+	// RangeOperator
+	int RegEx::RangeOperator::Match(const std::string& str, const RegEx& regex) const
+	{
+		if(str.empty() || regex.m_a > str[0] || regex.m_z < str[0])
+			return -1;
+		return 1;
+	}
+
+	int RegEx::RangeOperator::Match(std::istream& in, const RegEx& regex) const
+	{
+		if(!in || regex.m_a > in.peek() || regex.m_z < in.peek())
+			return -1;
+		return 1;
+	}
+
+	// OrOperator
+	int RegEx::OrOperator::Match(const std::string& str, const RegEx& regex) const
+	{
+		for(unsigned i=0;i<regex.m_params.size();i++) {
+			int n = regex.m_params[i].Match(str);
+			if(n >= 0)
+				return n;
+		}
+		return -1;
+	}
+
+	int RegEx::OrOperator::Match(std::istream& in, const RegEx& regex) const
+	{
+		for(unsigned i=0;i<regex.m_params.size();i++) {
+			int n = regex.m_params[i].Match(in);
+			if(n >= 0)
+				return n;
+		}
+		return -1;
+	}
+
+	// NotOperator
+	int RegEx::NotOperator::Match(const std::string& str, const RegEx& regex) const
+	{
+		if(regex.m_params.empty())
+			return -1;
+		if(regex.m_params[0].Match(str) >= 0)
+			return -1;
+		return 1;
+	}
+
+	int RegEx::NotOperator::Match(std::istream& in, const RegEx& regex) const
+	{
+		if(regex.m_params.empty())
+			return -1;
+		if(regex.m_params[0].Match(in) >= 0)
+			return -1;
+		return 1;
+	}
+
+	// SeqOperator
+	int RegEx::SeqOperator::Match(const std::string& str, const RegEx& regex) const
+	{
+		int offset = 0;
+		for(unsigned i=0;i<regex.m_params.size();i++) {
+			int n = regex.m_params[i].Match(str.substr(offset));
+			if(n == -1)
+				return -1;
+			offset += n;
+		}
+		return offset;
+	}
+	
+	int RegEx::SeqOperator::Match(std::istream& in, const RegEx& regex) const
+	{
+		int offset = 0;
+		for(unsigned i=0;i<regex.m_params.size();i++) {
+			int n = regex.m_params[i].Match(in);
+			if(n == -1)
+				return -1;
+
+			offset += n;
+			in.seekg(n, std::ios_base::cur);
+		}
+
+		return offset;
+	}
 }
+

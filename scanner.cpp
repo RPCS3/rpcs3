@@ -48,22 +48,6 @@ namespace YAML
 		}
 	}
 
-	// Peek
-	// . Peeks at the next 'n' characters and returns them in a string.
-	std::string Scanner::Peek(int n)
-	{
-		std::string ret;
-
-		int pos = INPUT.tellg();
-		for(int i=0;i<n;i++)
-			ret += INPUT.get();
-
-		INPUT.clear();
-		INPUT.seekg(pos);
-
-		return ret;
-	}
-
 	// GetLineBreak
 	// . Eats with no checking
 	void Scanner::EatLineBreak()
@@ -97,7 +81,7 @@ namespace YAML
 		if(m_column != 0)
 			return false;
 
-		return Exp::DocStart.Matches(Peek(4));
+		return Exp::DocStart.Matches(INPUT);
 	}
 
 	// IsDocumentEnd
@@ -107,41 +91,37 @@ namespace YAML
 		if(m_column != 0)
 			return false;
 
-		return Exp::DocEnd.Matches(Peek(4));
+		return Exp::DocEnd.Matches(INPUT);
 	}
 
 	// IsBlockEntry
 	bool Scanner::IsBlockEntry()
 	{
-		return Exp::BlockEntry.Matches(Peek(2));
+		return Exp::BlockEntry.Matches(INPUT);
 	}
 
 	// IsKey
 	bool Scanner::IsKey()
 	{
-		std::string next = Peek(2);
 		if(m_flowLevel > 0)
-			return Exp::KeyInFlow.Matches(next);
-		return Exp::Key.Matches(next);
+			return Exp::KeyInFlow.Matches(INPUT);
+		return Exp::Key.Matches(INPUT);
 	}
 
 	// IsValue
 	bool Scanner::IsValue()
 	{
-		std::string next = Peek(2);
 		if(m_flowLevel > 0)
-			return Exp::ValueInFlow.Matches(next);
-		return Exp::Value.Matches(next);
+			return Exp::ValueInFlow.Matches(INPUT);
+		return Exp::Value.Matches(INPUT);
 	}
 
 	// IsPlainScalar
-	// . Rules:
 	bool Scanner::IsPlainScalar()
 	{
-		std::string next = Peek(2);
 		if(m_flowLevel > 0)
-			return Exp::PlainScalarInFlow.Matches(next);
-		return Exp::PlainScalar.Matches(next);
+			return Exp::PlainScalarInFlow.Matches(INPUT);
+		return Exp::PlainScalar.Matches(INPUT);
 	}
 
 	///////////////////////////////////////////////////////////////////////
@@ -368,21 +348,19 @@ namespace YAML
 				break;
 
 			// comment
-			if(Exp::Comment.Matches(INPUT.peek()))
+			if(Exp::Comment.Matches(INPUT))
 				break;
 
 			// first eat non-blanks
-			while(INPUT && !Exp::BlankOrBreak.Matches(INPUT.peek())) {
-				std::string next = Peek(2);
-
+			while(INPUT && !Exp::BlankOrBreak.Matches(INPUT)) {
 				// illegal colon in flow context
-				if(m_flowLevel > 0 && Exp::IllegalColonInScalar.Matches(next))
+				if(m_flowLevel > 0 && Exp::IllegalColonInScalar.Matches(INPUT))
 					throw IllegalScalar();
 
 				// characters that might end the scalar
-				if(m_flowLevel > 0 && Exp::EndScalarInFlow.Matches(next))
+				if(m_flowLevel > 0 && Exp::EndScalarInFlow.Matches(INPUT))
 					break;
-				if(m_flowLevel == 0 && Exp::EndScalar.Matches(next))
+				if(m_flowLevel == 0 && Exp::EndScalar.Matches(INPUT))
 					break;
 
 				if(leadingBlanks) {
@@ -409,12 +387,12 @@ namespace YAML
 			}
 
 			// did we hit a non-blank character that ended us?
-			if(!Exp::BlankOrBreak.Matches(INPUT.peek()))
+			if(!Exp::BlankOrBreak.Matches(INPUT))
 				break;
 
 			// now eat blanks
-			while(INPUT && Exp::BlankOrBreak.Matches(INPUT.peek())) {
-				if(Exp::Blank.Matches(INPUT.peek())) {
+			while(INPUT && Exp::BlankOrBreak.Matches(INPUT)) {
+				if(Exp::Blank.Matches(INPUT)) {
 					if(leadingBlanks && m_column <= m_indents.top())
 						throw IllegalTabInScalar();
 

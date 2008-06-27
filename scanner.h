@@ -71,8 +71,6 @@ namespace YAML
 	private:
 		char GetChar();
 		void Eat(int n = 1);
-		std::string Peek(int n);
-
 		void EatLineBreak();
 
 		bool IsWhitespaceToBeEaten(char ch);
