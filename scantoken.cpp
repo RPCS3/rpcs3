@@ -199,6 +199,10 @@ namespace YAML
 	}
 
 	// PlainScalarToken
+	// . We scan these in passes of two steps each: First, grab all non-whitespace
+	//   characters we can, and then grab all whitespace characters we can.
+	// . This has the benefit of letting us handle leading whitespace (which is chomped)
+	//   and in-line whitespace (which is kept) separately.
 	template <> PlainScalarToken *Scanner::ScanToken(PlainScalarToken *pToken)
 	{
 		// TODO: "save simple key"
@@ -230,20 +234,21 @@ namespace YAML
 				if(m_flowLevel == 0 && Exp::EndScalar.Matches(INPUT))
 					break;
 
+				// join whitespace
 				if(leadingBlanks) {
-					if(!leadingBreaks.empty() && leadingBreaks[0] == '\n') {
+					if(Exp::Break.Matches(leadingBreaks)) {
 						// fold line break?
 						if(trailingBreaks.empty())
 							scalar += ' ';
-						else {
+						else
 							scalar += trailingBreaks;
-							trailingBreaks = "";
-						}
 					} else {
 						scalar += leadingBreaks + trailingBreaks;
-						leadingBreaks = "";
-						trailingBreaks = "";
 					}
+
+					leadingBlanks = false;
+					leadingBreaks = "";
+					trailingBreaks = "";
 				} else if(!whitespace.empty()) {
 					scalar += whitespace;
 					whitespace = "";
@@ -260,7 +265,8 @@ namespace YAML
 			// now eat blanks
 			while(INPUT && Exp::BlankOrBreak.Matches(INPUT)) {
 				if(Exp::Blank.Matches(INPUT)) {
-					if(leadingBlanks && m_column <= m_indents.top())
+					// can't use tabs as indentation! only spaces!
+					if(INPUT.peek() == '\t' && leadingBlanks && m_column <= m_indents.top())
 						throw IllegalTabInScalar();
 
 					// maybe store this character
@@ -269,13 +275,17 @@ namespace YAML
 					else
 						Eat(1);
 				} else {
+					// we know it's a line break; see how many characters to read
+					int n = Exp::Break.Match(INPUT);
+					std::string line = GetChar(n);
+
 					// where to store this character?
 					if(!leadingBlanks) {
 						leadingBlanks = true;
 						whitespace = "";
-						leadingBreaks += GetChar();
+						leadingBreaks += line;
 					} else
-						trailingBreaks += GetChar();
+						trailingBreaks += line;
 				}
 			}
 
@@ -285,10 +295,16 @@ namespace YAML
 		}
 
 		// now modify our token
-		pToken->SetValue(scalar);
+		pToken->value = scalar;
 		if(leadingBlanks)
 			m_simpleKeyAllowed = true;
 
+		return pToken;
+	}
+
+	// QuotedScalarToken
+	template <> QuotedScalarToken *Scanner::ScanToken(QuotedScalarToken *pToken)
+	{
 		return pToken;
 	}
 }

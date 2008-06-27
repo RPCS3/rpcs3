@@ -1,5 +1,10 @@
 ---
-- milk
+- green
+  eggs,
+  and
+  ham!
 - eggs             # this is really important!
-- cheese and bread
+- - cheddar cheese
+  - american cheese
+- bread
 ...

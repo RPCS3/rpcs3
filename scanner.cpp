@@ -37,6 +37,16 @@ namespace YAML
 		return ch;
 	}
 
+	// GetChar
+	// . Extracts 'n' characters from the stream and updates our position
+	std::string Scanner::GetChar(int n)
+	{
+		std::string ret;
+		for(int i=0;i<n;i++)
+			ret += GetChar();
+		return ret;
+	}
+
 	// Eat
 	// . Eats 'n' characters and updates our position.
 	void Scanner::Eat(int n)
@@ -199,11 +209,8 @@ namespace YAML
 		if(INPUT.peek() == Keys::FoldedScalar && m_flowLevel == 0)
 			return;
 
-		if(INPUT.peek() == '\'')
-			return;
-
-		if(INPUT.peek() == '\"')
-			return;
+		if(INPUT.peek() == '\'' || INPUT.peek() == '\"')
+			return ScanAndEnqueue(new QuotedScalarToken);
 
 		// plain scalars
 		if(IsPlainScalar())
@@ -290,7 +297,7 @@ namespace YAML
 			while(!m_tokens.empty()) {
 				Token *pToken = m_tokens.front();
 				m_tokens.pop();
-				std::cout << typeid(*pToken).name() << std::endl;
+				std::cout << typeid(*pToken).name() << ": " << *pToken << std::endl;
 				delete pToken;
 			}
 		}

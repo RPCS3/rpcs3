@@ -8,7 +8,7 @@
 
 namespace YAML
 {
-	class Token;
+	struct Token;
 
 	class Scanner
 	{
@@ -25,6 +25,7 @@ namespace YAML
 
 	private:
 		char GetChar();
+		std::string GetChar(int n);
 		void Eat(int n = 1);
 		void EatLineBreak();
 

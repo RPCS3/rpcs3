@@ -34,10 +34,7 @@ namespace YAML
 		std::ifstream fin(fileName.c_str());
 		Scanner scanner(fin);
 
-		try {
-			scanner.Scan();
-		} catch(const Exception& e) {
-		}
+		scanner.Scan();
 		getchar();
 //		if(!scanner)
 //			return;

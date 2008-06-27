@@ -1,32 +1,40 @@
 #pragma once
 
+#include <ios>
+
 namespace YAML
 {
-	class Token { public: virtual ~Token() {} };
+	struct Token {
+		virtual ~Token() {}
+		virtual void Write(std::ostream& out) const {}
 
-	class StreamStartToken: public Token {};
-	class StreamEndToken: public Token {};
-	class DocumentStartToken: public Token {};
-	class DocumentEndToken: public Token {};
-
-	class BlockSeqStartToken: public Token {};
-	class BlockMapStartToken: public Token {};
-	class BlockEndToken: public Token {};
-	class BlockEntryToken: public Token {};
-
-	class FlowSeqStartToken: public Token {};
-	class FlowMapStartToken: public Token {};
-	class FlowSeqEndToken: public Token {};
-	class FlowMapEndToken: public Token {};
-	class FlowEntryToken: public Token {};
-
-	class KeyToken: public Token {};
-	class ValueToken: public Token {};
-
-	class PlainScalarToken: public Token {
-	public:
-		void SetValue(const std::string& value) { m_value = value; }
-	protected:
-		std::string m_value;
+		friend std::ostream& operator << (std::ostream& out, const Token& token) { token.Write(out); return out; }
 	};
+
+	struct StreamStartToken: public Token {};
+	struct StreamEndToken: public Token {};
+	struct DocumentStartToken: public Token {};
+	struct DocumentEndToken: public Token {};
+
+	struct BlockSeqStartToken: public Token {};
+	struct BlockMapStartToken: public Token {};
+	struct BlockEndToken: public Token {};
+	struct BlockEntryToken: public Token {};
+
+	struct FlowSeqStartToken: public Token {};
+	struct FlowMapStartToken: public Token {};
+	struct FlowSeqEndToken: public Token {};
+	struct FlowMapEndToken: public Token {};
+	struct FlowEntryToken: public Token {};
+
+	struct KeyToken: public Token {};
+	struct ValueToken: public Token {};
+
+	struct ScalarToken: public Token {
+		std::string value;
+		virtual void Write(std::ostream& out) const { out << value; }
+	};
+
+	struct PlainScalarToken: public ScalarToken {};
+	struct QuotedScalarToken: public ScalarToken {};
 }
