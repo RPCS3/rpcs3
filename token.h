@@ -23,5 +23,10 @@ namespace YAML
 	class KeyToken: public Token {};
 	class ValueToken: public Token {};
 
-	class PlainScalarToken: public Token {};
+	class PlainScalarToken: public Token {
+	public:
+		void SetValue(const std::string& value) { m_value = value; }
+	protected:
+		std::string m_value;
+	};
 }

@@ -6,7 +6,7 @@
 namespace YAML
 {
 	Scanner::Scanner(std::istream& in)
-		: INPUT(in), m_startedStream(false), m_simpleKeyAllowed(false), m_flowLevel(0), m_column(0)
+		: INPUT(in), m_startedStream(false), m_endedStream(false), m_simpleKeyAllowed(false), m_flowLevel(0), m_column(0)
 	{
 	}
 
@@ -51,14 +51,12 @@ namespace YAML
 	{
 		std::string ret;
 
-		// extract n - 1 characters, and peek at the nth
-		for(int i=0;i<n-1;i++)
+		int pos = INPUT.tellg();
+		for(int i=0;i<n;i++)
 			ret += INPUT.get();
-		ret += INPUT.peek();
 
-		// and put back the n - 1 characters we STOLE
-		for(int i=n-2;i>=0;i--)
-			INPUT.putback(ret[i]);
+		INPUT.clear();
+		INPUT.seekg(pos);
 
 		return ret;
 	}
@@ -214,6 +212,7 @@ namespace YAML
 		// TODO: "reset simple keys"
 
 		m_simpleKeyAllowed = false;
+		m_endedStream = true;
 
 		return pToken;
 	}
@@ -228,7 +227,6 @@ namespace YAML
 
 		// eat
 		Eat(3);
-
 		return pToken;
 	}
 
@@ -242,7 +240,6 @@ namespace YAML
 
 		// eat
 		Eat(3);
-
 		return pToken;
 	}
 
@@ -254,9 +251,8 @@ namespace YAML
 
 		m_simpleKeyAllowed = true;
 
-		// eat it
-		INPUT.get();
-
+		// eat
+		Eat(1);
 		return pToken;
 	}
 
@@ -268,9 +264,8 @@ namespace YAML
 
 		m_simpleKeyAllowed = true;
 
-		// eat it
-		INPUT.get();
-
+		// eat
+		Eat(1);
 		return pToken;
 	}
 
@@ -282,9 +277,8 @@ namespace YAML
 
 		m_simpleKeyAllowed = false;
 
-		// eat it
-		INPUT.get();
-
+		// eat
+		Eat(1);
 		return pToken;
 	}
 
@@ -296,9 +290,8 @@ namespace YAML
 
 		m_simpleKeyAllowed = false;
 
-		// eat it
-		INPUT.get();
-
+		// eat
+		Eat(1);
 		return pToken;
 	}
 
@@ -309,9 +302,8 @@ namespace YAML
 
 		m_simpleKeyAllowed = true;
 
-		// eat it
-		INPUT.get();
-
+		// eat
+		Eat(1);
 		return pToken;
 	}
 
@@ -429,7 +421,7 @@ namespace YAML
 			}
 
 			// now eat blanks
-			while(IsBlank(INPUT.peek()) /* || IsBreak(INPUT.peek()) */) {
+			while(INPUT && (IsBlank(INPUT.peek()) /* || IsBreak(INPUT.peek()) */)) {
 				if(IsBlank(INPUT.peek())) {
 					if(leadingBlanks && m_column <= m_indents.top())
 						throw IllegalTabInScalar();
@@ -449,6 +441,7 @@ namespace YAML
 		}
 
 		// now modify our token
+		pToken->SetValue(scalar);
 		if(leadingBlanks)
 			m_simpleKeyAllowed = true;
 
@@ -460,6 +453,9 @@ namespace YAML
 
 	void Scanner::ScanNextToken()
 	{
+		if(m_endedStream)
+			return;
+
 		if(!m_startedStream)
 			return ScanAndEnqueue(new StreamStartToken);
 
@@ -595,8 +591,10 @@ namespace YAML
 	// temporary function for testing
 	void Scanner::Scan()
 	{
-		while(INPUT) {
+		while(1) {
 			ScanNextToken();
+			if(m_tokens.empty())
+				break;
 
 			while(!m_tokens.empty()) {
 				Token *pToken = m_tokens.front();

@@ -71,7 +71,7 @@ namespace YAML
 		std::set <Token *> m_limboTokens;
 
 		// state info
-		bool m_startedStream;
+		bool m_startedStream, m_endedStream;
 		bool m_simpleKeyAllowed;
 		int m_flowLevel;                // number of unclosed '[' and '{' indicators
 		std::stack <int> m_indents;
