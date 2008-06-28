@@ -15,6 +15,8 @@ namespace YAML
 	class DocIndicatorInQuote: public Exception {};
 	class EOFInQuote: public Exception {};
 	class RequiredSimpleKeyNotFound: public Exception {};
+	class ZeroIndentationInBlockScalar: public Exception {};
+	class UnexpectedCharacterInBlockScalar: public Exception {};
 
 	class UnknownEscapeSequence: public Exception {
 	public:

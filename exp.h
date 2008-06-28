@@ -43,6 +43,9 @@ namespace YAML
 		const RegEx EscSingleQuote = RegEx("\'\'");
 		const RegEx EscBreak = RegEx('\\') + Break;
 
+		const RegEx ChompIndicator = RegEx("+-", REGEX_OR);
+		const RegEx Chomp = (ChompIndicator + Digit) || (Digit + ChompIndicator) || ChompIndicator || Digit;
+
 		// and some functions
 		std::string Escape(std::istream& in, int& length);
 	}

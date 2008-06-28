@@ -358,11 +358,135 @@ namespace YAML
 		return pToken;
 	}
 
+	// BlockScalarToken
+	template <> BlockScalarToken *Scanner::ScanToken(BlockScalarToken *pToken)
+	{
+		// simple keys always ok after block scalars (since we're gonna start a new line anyways)
+		m_simpleKeyAllowed = true;
+
+		WhitespaceInfo info;
+
+		// eat block indicator ('|' or '>')
+		char indicator = GetChar();
+		info.fold = (indicator == Keys::FoldedScalar);
+
+		// eat chomping/indentation indicators
+		int n = Exp::Chomp.Match(INPUT);
+		for(int i=0;i<n;i++)
+			info.SetChompers(GetChar());
+
+		// first eat whitespace
+		while(Exp::Blank.Matches(INPUT))
+			Eat(1);
+
+		// and comments to the end of the line
+		if(Exp::Comment.Matches(INPUT))
+			while(INPUT && !Exp::Break.Matches(INPUT))
+				Eat(1);
+
+		// if it's not a line break, then we ran into a bad character inline
+		if(INPUT && !Exp::Break.Matches(INPUT))
+			throw UnexpectedCharacterInBlockScalar();
+
+		// and eat that baby
+		EatLineBreak();
+
+		// set the initial indentation
+		int indent = info.increment;
+		if(info.increment && m_indents.top() >= 0)
+			indent += m_indents.top();
+
+		// finally, grab that scalar
+		std::string scalar;
+		while(INPUT) {
+			// initialize indentation
+			GetBlockIndentation(indent, info.trailingBreaks);
+
+			// are we done with this guy (i.e. at a lower indentation?)
+			if(m_column != indent)
+				break;
+
+			bool trailingBlank = Exp::Blank.Matches(INPUT);
+			scalar += info.Join();
+
+			bool leadingBlank = Exp::Blank.Matches(INPUT);
+
+			// now eat and save the line
+			while(INPUT.peek() != EOF && !Exp::Break.Matches(INPUT))
+				scalar += GetChar();
+
+			// we know it's a line break; see how many characters to read
+			int n = Exp::Break.Match(INPUT);
+			std::string line = GetChar(n);
+			info.AddBreak(line);
+		}
+
+		// one last whitespace join (with chompers this time)
+		scalar += info.Join(true);
+
+		// finally set the scalar
+		pToken->value = scalar;
+
+		return pToken;
+	}
+
+	// GetBlockIndentation
+	// . Helper to scanning a block scalar.
+	// . Eats leading *indentation* zeros (i.e., those that come before 'indent'),
+	//   and updates 'indent' (if it hasn't been set yet).
+	void Scanner::GetBlockIndentation(int& indent, std::string& breaks)
+	{
+		int maxIndent = 0;
+
+		while(1) {
+			// eat as many indentation spaces as we can
+			while((indent == 0 || m_column < indent) && INPUT.peek() == ' ')
+				Eat(1);
+
+			if(m_column > maxIndent)
+				maxIndent = m_column;
+
+			// do we need more indentation, but we've got a tab?
+			if((indent == 0 || m_column < indent) && INPUT.peek() == '\t')
+				throw IllegalTabInScalar();   // TODO: are literal scalar lines allowed to have tabs here?
+
+			// is this a non-empty line?
+			if(!Exp::Break.Matches(INPUT))
+				break;
+
+			// otherwise, eat the line break and move on
+			int n = Exp::Break.Match(INPUT);
+			breaks += GetChar(n);
+		}
+
+		// finally, set the indentation
+		if(indent == 0) {
+			indent = maxIndent;
+			if(indent < m_indents.top() + 1)
+				indent = m_indents.top() + 1;
+			if(indent < 1)
+				indent = 1;
+		}
+	}
+
 	//////////////////////////////////////////////////////////
 	// WhitespaceInfo stuff
 
-	Scanner::WhitespaceInfo::WhitespaceInfo(): leadingBlanks(false)
+	Scanner::WhitespaceInfo::WhitespaceInfo(): leadingBlanks(false), fold(true), chomp(0), increment(0)
 	{
+	}
+
+	void Scanner::WhitespaceInfo::SetChompers(char ch)
+	{
+		if(ch == '+')
+			chomp = 1;
+		else if(ch == '-')
+			chomp = -1;
+		else if(Exp::Digit.Matches(ch)) {
+			increment = ch - '0';
+			if(increment == 0)
+				throw ZeroIndentationInBlockScalar();
+		}
 	}
 
 	void Scanner::WhitespaceInfo::AddBlank(char ch)
@@ -382,20 +506,19 @@ namespace YAML
 			trailingBreaks += line;
 	}
 
-	std::string Scanner::WhitespaceInfo::Join()
+	std::string Scanner::WhitespaceInfo::Join(bool lastLine)
 	{
 		std::string ret;
 
 		if(leadingBlanks) {
-			if(Exp::Break.Matches(leadingBreaks)) {
-				// fold line break?
-				if(trailingBreaks.empty())
-					ret = " ";
-				else
-					ret = trailingBreaks;
-			} else {
-				ret = leadingBreaks + trailingBreaks;
-			}
+			// fold line break?
+			if(fold && Exp::Break.Matches(leadingBreaks) && trailingBreaks.empty() && !lastLine)
+				ret = " ";
+			else if(!lastLine || chomp != -1)
+				ret = leadingBreaks;
+
+			if(!lastLine || chomp == 1)
+				ret += trailingBreaks;
 
 			leadingBlanks = false;
 			leadingBreaks = "";

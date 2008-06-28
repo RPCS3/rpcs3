@@ -45,15 +45,20 @@ namespace YAML
 		bool IsValue();
 		bool IsPlainScalar();
 
+		void GetBlockIndentation(int& indent, std::string& breaks);
+
 		struct WhitespaceInfo {
 			WhitespaceInfo();
 
+			void SetChompers(char ch);
 			void AddBlank(char ch);
 			void AddBreak(const std::string& line);
-			std::string Join();
+			std::string Join(bool lastline = false);
 
 			bool leadingBlanks;
+			bool fold;
 			std::string whitespace, leadingBreaks, trailingBreaks;
+			int chomp, increment;
 		};
 
 		struct SimpleKey {

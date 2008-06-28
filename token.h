@@ -39,4 +39,5 @@ namespace YAML
 
 	struct PlainScalarToken: public ScalarToken {};
 	struct QuotedScalarToken: public ScalarToken {};
+	struct BlockScalarToken: public ScalarToken {};
 }

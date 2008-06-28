@@ -1,4 +1,3 @@
-{
-  a simple key: a value,
-  ? a complex key: another value,
-}
+- sun: yellow
+- ? earth: blue
+  : moon: white

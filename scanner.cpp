@@ -31,8 +31,8 @@ namespace YAML
 	// . Extracts a character from the stream and updates our position
 	char Scanner::GetChar()
 	{
-		m_column++;
 		char ch = INPUT.get();
+		m_column++;
 		if(ch == '\n') {
 			m_column = 0;
 			m_line++;
@@ -201,12 +201,9 @@ namespace YAML
 
 		// TODO: alias/anchor/tag
 
-		// TODO: special scalars
-		if(INPUT.peek() == Keys::LiteralScalar && m_flowLevel == 0)
-			return;
-
-		if(INPUT.peek() == Keys::FoldedScalar && m_flowLevel == 0)
-			return;
+		// special scalars
+		if(m_flowLevel == 0 && (INPUT.peek() == Keys::LiteralScalar || INPUT.peek() == Keys::FoldedScalar))
+			return ScanAndEnqueue(new BlockScalarToken);
 
 		if(INPUT.peek() == '\'' || INPUT.peek() == '\"')
 			return ScanAndEnqueue(new QuotedScalarToken);
