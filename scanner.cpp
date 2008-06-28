@@ -229,14 +229,14 @@ namespace YAML
 				Eat(1);
 
 			// then eat a comment
-			if(Exp::Comment.Matches(INPUT.peek())) {
+			if(Exp::Comment.Matches(INPUT)) {
 				// eat until line break
-				while(INPUT && !Exp::Break.Matches(INPUT.peek()))
+				while(INPUT && !Exp::Break.Matches(INPUT))
 					Eat(1);
 			}
 
 			// if it's NOT a line break, then we're done!
-			if(!Exp::Break.Matches(INPUT.peek()))
+			if(!Exp::Break.Matches(INPUT))
 				break;
 
 			// otherwise, let's eat the line break and keep going

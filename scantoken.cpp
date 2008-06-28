@@ -204,7 +204,8 @@ namespace YAML
 	template <> PlainScalarToken *Scanner::ScanToken(PlainScalarToken *pToken)
 	{
 		// insert a potential simple key
-		InsertSimpleKey();
+		if(m_simpleKeyAllowed)
+			InsertSimpleKey();
 		m_simpleKeyAllowed = false;
 
 		// now eat and store the scalar
@@ -279,7 +280,8 @@ namespace YAML
 	template <> QuotedScalarToken *Scanner::ScanToken(QuotedScalarToken *pToken)
 	{
 		// insert a potential simple key
-		InsertSimpleKey();
+		if(m_simpleKeyAllowed)
+			InsertSimpleKey();
 		m_simpleKeyAllowed = false;
 
 		// eat single or double quote
