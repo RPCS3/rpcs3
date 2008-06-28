@@ -63,7 +63,7 @@ namespace YAML
 	{
 		// flow sequences can be simple keys
 		InsertSimpleKey();
-		IncreaseFlowLevel();
+		m_flowLevel++;
 		m_simpleKeyAllowed = true;
 
 		// eat
@@ -76,7 +76,7 @@ namespace YAML
 	{
 		// flow maps can be simple keys
 		InsertSimpleKey();
-		IncreaseFlowLevel();
+		m_flowLevel++;
 		m_simpleKeyAllowed = true;
 
 		// eat
@@ -87,8 +87,10 @@ namespace YAML
 	// FlowSeqEndToken
 	template <> FlowSeqEndToken *Scanner::ScanToken(FlowSeqEndToken *pToken)
 	{
-//		ValidateSimpleKey();
-		DecreaseFlowLevel();
+		if(m_flowLevel == 0)
+			throw IllegalFlowEnd();
+
+		m_flowLevel--;
 		m_simpleKeyAllowed = false;
 
 		// eat
@@ -99,8 +101,10 @@ namespace YAML
 	// FlowMapEndToken
 	template <> FlowMapEndToken *Scanner::ScanToken(FlowMapEndToken *pToken)
 	{
-		//ValidateSimpleKey();
-		DecreaseFlowLevel();
+		if(m_flowLevel == 0)
+			throw IllegalFlowEnd();
+
+		m_flowLevel--;
 		m_simpleKeyAllowed = false;
 
 		// eat
@@ -111,7 +115,6 @@ namespace YAML
 	// FlowEntryToken
 	template <> FlowEntryToken *Scanner::ScanToken(FlowEntryToken *pToken)
 	{
-		//ValidateSimpleKey();
 		m_simpleKeyAllowed = true;
 
 		// eat
@@ -122,19 +125,15 @@ namespace YAML
 	// BlockEntryToken
 	template <> BlockEntryToken *Scanner::ScanToken(BlockEntryToken *pToken)
 	{
-		//ValidateSimpleKey();
-
 		// we better be in the block context!
-		if(m_flowLevel == 0) {
-			// can we put it here?
-			if(!m_simpleKeyAllowed)
-				throw IllegalBlockEntry();
+		if(m_flowLevel > 0)
+			throw IllegalBlockEntry();
 
-			PushIndentTo(m_column, true);	// , -1
-		} else {
-			// TODO: throw?
-		}
+		// can we put it here?
+		if(!m_simpleKeyAllowed)
+			throw IllegalBlockEntry();
 
+		PushIndentTo(m_column, true);
 		m_simpleKeyAllowed = true;
 
 		// eat
@@ -145,15 +144,13 @@ namespace YAML
 	// KeyToken
 	template <> KeyToken *Scanner::ScanToken(KeyToken *pToken)
 	{
-		// are we in block context?
+		// handle keys diffently in the block context (and manage indents)
 		if(m_flowLevel == 0) {
 			if(!m_simpleKeyAllowed)
 				throw IllegalMapKey();
 
 			PushIndentTo(m_column, false);
 		}
-
-		// TODO: "remove simple key"
 
 		// can only put a simple key here if we're in block context
 		if(m_flowLevel == 0)
@@ -170,13 +167,11 @@ namespace YAML
 	template <> ValueToken *Scanner::ScanToken(ValueToken *pToken)
 	{
 		// does this follow a simple key?
-//		bool isValidKey = ValidateSimpleKey();
-
 		if(m_isLastKeyValid) {
 			// can't follow a simple key with another simple key (dunno why, though - it seems fine)
 			m_simpleKeyAllowed = false;
 		} else {
-			// are we in block context?
+			// handle values diffently in the block context (and manage indents)
 			if(m_flowLevel == 0) {
 				if(!m_simpleKeyAllowed)
 					throw IllegalMapValue();

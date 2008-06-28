@@ -288,22 +288,6 @@ namespace YAML
 		}
 	}
 
-	// IncreaseFlowLevel
-	void Scanner::IncreaseFlowLevel()
-	{
-		// TODO: Push simple key
-		m_flowLevel++;
-	}
-
-	// DecreaseFlowLevel
-	void Scanner::DecreaseFlowLevel()
-	{
-		if(m_flowLevel > 0) {
-			m_flowLevel--;
-			// TODO: Pop simple key
-		}
-	}
-
 	// GetNextToken
 	// . Returns the next token on the queue, and scans if only we need to.
 	Token *Scanner::GetNextToken()

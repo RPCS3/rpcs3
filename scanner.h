@@ -22,8 +22,6 @@ namespace YAML
 		void ScanToNextToken();
 		Token *PushIndentTo(int column, bool sequence);
 		void PopIndentTo(int column);
-		void IncreaseFlowLevel();
-		void DecreaseFlowLevel();
 
 		void InsertSimpleKey();
 		bool ValidateSimpleKey();

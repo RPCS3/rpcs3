@@ -12,6 +12,7 @@ namespace YAML
 	class IllegalMapValue: public Exception {};
 	class IllegalScalar: public Exception {};
 	class IllegalTabInScalar: public Exception {};
+	class IllegalFlowEnd: public Exception {};
 	class DocIndicatorInQuote: public Exception {};
 	class EOFInQuote: public Exception {};
 	class RequiredSimpleKeyNotFound: public Exception {};
