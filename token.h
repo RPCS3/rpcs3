@@ -5,10 +5,12 @@
 namespace YAML
 {
 	struct Token {
+		Token(): isValid(true), isPossible(true) {}
 		virtual ~Token() {}
 		virtual void Write(std::ostream& out) const {}
 
 		friend std::ostream& operator << (std::ostream& out, const Token& token) { token.Write(out); return out; }
+		bool isValid, isPossible;
 	};
 
 	struct StreamStartToken: public Token {};

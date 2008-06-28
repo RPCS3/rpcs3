@@ -26,7 +26,7 @@ namespace YAML
 			m_column = 0;
 
 		PopIndentTo(-1);
-		// TODO: "reset simple keys"
+		ValidateAllSimpleKeys();
 
 		m_simpleKeyAllowed = false;
 		m_endedStream = true;
@@ -38,8 +38,7 @@ namespace YAML
 	template <> DocumentStartToken *Scanner::ScanToken(DocumentStartToken *pToken)
 	{
 		PopIndentTo(m_column);
-		// TODO: "reset simple keys"
-
+		ValidateAllSimpleKeys();
 		m_simpleKeyAllowed = false;
 
 		// eat
@@ -51,8 +50,7 @@ namespace YAML
 	template <> DocumentEndToken *Scanner::ScanToken(DocumentEndToken *pToken)
 	{
 		PopIndentTo(-1);
-		// TODO: "reset simple keys"
-
+		ValidateAllSimpleKeys();
 		m_simpleKeyAllowed = false;
 
 		// eat
@@ -63,8 +61,8 @@ namespace YAML
 	// FlowSeqStartToken
 	template <> FlowSeqStartToken *Scanner::ScanToken(FlowSeqStartToken *pToken)
 	{
-		// TODO: "save simple key"
-
+		// flow sequences can be simple keys
+		InsertSimpleKey();
 		IncreaseFlowLevel();
 		m_simpleKeyAllowed = true;
 
@@ -76,8 +74,8 @@ namespace YAML
 	// FlowMapStartToken
 	template <> FlowMapStartToken *Scanner::ScanToken(FlowMapStartToken *pToken)
 	{
-		// TODO: "save simple key"
-
+		// flow maps can be simple keys
+		InsertSimpleKey();
 		IncreaseFlowLevel();
 		m_simpleKeyAllowed = true;
 
@@ -89,8 +87,7 @@ namespace YAML
 	// FlowSeqEndToken
 	template <> FlowSeqEndToken *Scanner::ScanToken(FlowSeqEndToken *pToken)
 	{
-		// TODO: "remove simple key"
-
+//		ValidateSimpleKey();
 		DecreaseFlowLevel();
 		m_simpleKeyAllowed = false;
 
@@ -102,8 +99,7 @@ namespace YAML
 	// FlowMapEndToken
 	template <> FlowMapEndToken *Scanner::ScanToken(FlowMapEndToken *pToken)
 	{
-		// TODO: "remove simple key"
-
+		ValidateSimpleKey();
 		DecreaseFlowLevel();
 		m_simpleKeyAllowed = false;
 
@@ -115,8 +111,7 @@ namespace YAML
 	// FlowEntryToken
 	template <> FlowEntryToken *Scanner::ScanToken(FlowEntryToken *pToken)
 	{
-		// TODO: "remove simple key"
-
+		ValidateSimpleKey();
 		m_simpleKeyAllowed = true;
 
 		// eat
@@ -127,6 +122,8 @@ namespace YAML
 	// BlockEntryToken
 	template <> BlockEntryToken *Scanner::ScanToken(BlockEntryToken *pToken)
 	{
+		ValidateSimpleKey();
+
 		// we better be in the block context!
 		if(m_flowLevel == 0) {
 			// can we put it here?
@@ -137,8 +134,6 @@ namespace YAML
 		} else {
 			// TODO: throw?
 		}
-
-		// TODO: "remove simple key"
 
 		m_simpleKeyAllowed = true;
 
@@ -174,10 +169,13 @@ namespace YAML
 	// ValueToken
 	template <> ValueToken *Scanner::ScanToken(ValueToken *pToken)
 	{
-		// TODO: Is it a simple key?
-		if(false) {
+		// does this follow a simple key?
+		bool isValidKey = ValidateSimpleKey();
+
+		if(isValidKey) {
+			// can't follow a simple key with another simple key (dunno why, though - it seems fine)
+			m_simpleKeyAllowed = false;
 		} else {
-			// If not, ...
 			// are we in block context?
 			if(m_flowLevel == 0) {
 				if(!m_simpleKeyAllowed)
@@ -185,13 +183,13 @@ namespace YAML
 
 				PushIndentTo(m_column, false);
 			}
-		}
 
-		// can only put a simple key here if we're in block context
-		if(m_flowLevel == 0)
-			m_simpleKeyAllowed = true;
-		else
-			m_simpleKeyAllowed = false;
+			// can only put a simple key here if we're in block context
+			if(m_flowLevel == 0)
+				m_simpleKeyAllowed = true;
+			else
+				m_simpleKeyAllowed = false;
+		}
 
 		// eat
 		Eat(1);
@@ -205,8 +203,8 @@ namespace YAML
 	//   and in-line whitespace (which is kept) separately.
 	template <> PlainScalarToken *Scanner::ScanToken(PlainScalarToken *pToken)
 	{
-		// TODO: "save simple key"
-
+		// insert a potential simple key
+		InsertSimpleKey();
 		m_simpleKeyAllowed = false;
 
 		// now eat and store the scalar
@@ -255,6 +253,9 @@ namespace YAML
 					int n = Exp::Break.Match(INPUT);
 					std::string line = GetChar(n);
 					info.AddBreak(line);
+
+					// and we can't continue a simple key to the next line
+					ValidateSimpleKey();
 				}
 			}
 
@@ -277,8 +278,8 @@ namespace YAML
 	// QuotedScalarToken
 	template <> QuotedScalarToken *Scanner::ScanToken(QuotedScalarToken *pToken)
 	{
-		// TODO: "save simple key"
-
+		// insert a potential simple key
+		InsertSimpleKey();
 		m_simpleKeyAllowed = false;
 
 		// eat single or double quote
@@ -341,6 +342,9 @@ namespace YAML
 					int n = Exp::Break.Match(INPUT);
 					std::string line = GetChar(n);
 					info.AddBreak(line);
+
+					// and we can't continue a simple key to the next line
+					ValidateSimpleKey();
 				}
 			}
 

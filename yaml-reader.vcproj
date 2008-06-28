@@ -209,6 +209,10 @@
 				RelativePath=".\sequence.cpp"
 				>
 			</File>
+			<File
+				RelativePath=".\simplekey.cpp"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"

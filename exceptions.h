@@ -14,6 +14,8 @@ namespace YAML
 	class IllegalTabInScalar: public Exception {};
 	class DocIndicatorInQuote: public Exception {};
 	class EOFInQuote: public Exception {};
+	class RequiredSimpleKeyNotFound: public Exception {};
+
 	class UnknownEscapeSequence: public Exception {
 	public:
 		UnknownEscapeSequence(char ch_): ch(ch_) {}

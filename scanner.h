@@ -18,10 +18,14 @@ namespace YAML
 
 		void ScanNextToken();
 		void ScanToNextToken();
-		void PushIndentTo(int column, bool sequence);
+		Token *PushIndentTo(int column, bool sequence);
 		void PopIndentTo(int column);
 		void IncreaseFlowLevel();
 		void DecreaseFlowLevel();
+
+		void InsertSimpleKey();
+		bool ValidateSimpleKey();
+		void ValidateAllSimpleKeys();
 
 		void Scan();
 
@@ -41,6 +45,7 @@ namespace YAML
 
 		struct WhitespaceInfo {
 			WhitespaceInfo();
+
 			void AddBlank(char ch);
 			void AddBreak(const std::string& line);
 			std::string Join();
@@ -49,13 +54,24 @@ namespace YAML
 			std::string whitespace, leadingBreaks, trailingBreaks;
 		};
 
+		struct SimpleKey {
+			SimpleKey(int pos_, int line_, int column_);
+
+			void Validate();
+			void Invalidate();
+
+			int pos, line, column;
+			bool required;
+			Token *pMapStart, *pKey;
+		};
+
 		template <typename T> void ScanAndEnqueue(T *pToken);
 		template <typename T> T *ScanToken(T *pToken);
 
 	private:
 		// the stream
 		std::istream& INPUT;
-		int m_column;
+		int m_line, m_column;
 
 		// the output (tokens)
 		std::queue <Token *> m_tokens;
@@ -65,6 +81,7 @@ namespace YAML
 		bool m_startedStream, m_endedStream;
 		bool m_simpleKeyAllowed;
 		int m_flowLevel;                // number of unclosed '[' and '{' indicators
+		std::stack <SimpleKey> m_simpleKeys;
 		std::stack <int> m_indents;
 	};
 }

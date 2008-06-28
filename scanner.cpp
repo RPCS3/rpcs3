@@ -7,7 +7,8 @@
 namespace YAML
 {
 	Scanner::Scanner(std::istream& in)
-		: INPUT(in), m_startedStream(false), m_endedStream(false), m_simpleKeyAllowed(false), m_flowLevel(0), m_column(0)
+		: INPUT(in), m_startedStream(false), m_endedStream(false), m_simpleKeyAllowed(false), m_flowLevel(0),
+		m_line(0), m_column(0)
 	{
 	}
 
@@ -32,8 +33,10 @@ namespace YAML
 	{
 		m_column++;
 		char ch = INPUT.get();
-		if(ch == '\n')
+		if(ch == '\n') {
 			m_column = 0;
+			m_line++;
+		}
 		return ch;
 	}
 
@@ -51,12 +54,8 @@ namespace YAML
 	// . Eats 'n' characters and updates our position.
 	void Scanner::Eat(int n)
 	{
-		for(int i=0;i<n;i++) {
-			m_column++;
-			char ch = INPUT.get();
-			if(ch == '\n')
-				m_column = 0;
-		}
+		for(int i=0;i<n;i++)
+			GetChar();
 	}
 
 	// GetLineBreak
@@ -147,6 +146,17 @@ namespace YAML
 		m_limboTokens.insert(pToken);
 		m_tokens.push(ScanToken(pToken));
 		m_limboTokens.erase(pToken);
+
+		// then remove impossible tokens
+		std::queue <Token *> temp;
+		while(!m_tokens.empty()) {
+			Token *pToken = m_tokens.front();
+			m_tokens.pop();
+			if(pToken->isPossible)
+				temp.push(pToken);
+		}
+
+		m_tokens = temp;
 	}
 
 	///////////////////////////////////////////////////////////////////////
@@ -243,6 +253,9 @@ namespace YAML
 			// otherwise, let's eat the line break and keep going
 			EatLineBreak();
 
+			// oh yeah, and let's get rid of that simple key
+			ValidateSimpleKey();
+
 			// new line - we may be able to accept a simple key now
 			if(m_flowLevel == 0)
 				m_simpleKeyAllowed = true;
@@ -252,15 +265,16 @@ namespace YAML
 	// PushIndentTo
 	// . Pushes an indentation onto the stack, and enqueues the
 	//   proper token (sequence start or mapping start).
-	void Scanner::PushIndentTo(int column, bool sequence)
+	// . Returns the token it generates (if any).
+	Token *Scanner::PushIndentTo(int column, bool sequence)
 	{
 		// are we in flow?
 		if(m_flowLevel > 0)
-			return;
+			return 0;
 
 		// is this actually an indentation?
 		if(column <= m_indents.top())
-			return;
+			return 0;
 
 		// now push
 		m_indents.push(column);
@@ -268,6 +282,8 @@ namespace YAML
 			m_tokens.push(new BlockSeqStartToken);
 		else
 			m_tokens.push(new BlockMapStartToken);
+
+		return m_tokens.front();
 	}
 
 	// PopIndentTo
@@ -312,6 +328,9 @@ namespace YAML
 
 			while(!m_tokens.empty()) {
 				Token *pToken = m_tokens.front();
+				if(!pToken->isValid)   // gotta wait on the invalid tokens - they might become valid!
+					break;
+
 				m_tokens.pop();
 				std::cout << typeid(*pToken).name() << ": " << *pToken << std::endl;
 				delete pToken;
