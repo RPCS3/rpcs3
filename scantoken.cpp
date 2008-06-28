@@ -99,7 +99,7 @@ namespace YAML
 	// FlowMapEndToken
 	template <> FlowMapEndToken *Scanner::ScanToken(FlowMapEndToken *pToken)
 	{
-		ValidateSimpleKey();
+		//ValidateSimpleKey();
 		DecreaseFlowLevel();
 		m_simpleKeyAllowed = false;
 
@@ -111,7 +111,7 @@ namespace YAML
 	// FlowEntryToken
 	template <> FlowEntryToken *Scanner::ScanToken(FlowEntryToken *pToken)
 	{
-		ValidateSimpleKey();
+		//ValidateSimpleKey();
 		m_simpleKeyAllowed = true;
 
 		// eat
@@ -122,7 +122,7 @@ namespace YAML
 	// BlockEntryToken
 	template <> BlockEntryToken *Scanner::ScanToken(BlockEntryToken *pToken)
 	{
-		ValidateSimpleKey();
+		//ValidateSimpleKey();
 
 		// we better be in the block context!
 		if(m_flowLevel == 0) {
@@ -170,9 +170,9 @@ namespace YAML
 	template <> ValueToken *Scanner::ScanToken(ValueToken *pToken)
 	{
 		// does this follow a simple key?
-		bool isValidKey = ValidateSimpleKey();
+//		bool isValidKey = ValidateSimpleKey();
 
-		if(isValidKey) {
+		if(m_isLastKeyValid) {
 			// can't follow a simple key with another simple key (dunno why, though - it seems fine)
 			m_simpleKeyAllowed = false;
 		} else {

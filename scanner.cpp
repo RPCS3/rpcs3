@@ -146,17 +146,6 @@ namespace YAML
 		m_limboTokens.insert(pToken);
 		m_tokens.push(ScanToken(pToken));
 		m_limboTokens.erase(pToken);
-
-		// then remove impossible tokens
-		std::queue <Token *> temp;
-		while(!m_tokens.empty()) {
-			Token *pToken = m_tokens.front();
-			m_tokens.pop();
-			if(pToken->isPossible)
-				temp.push(pToken);
-		}
-
-		m_tokens = temp;
 	}
 
 	///////////////////////////////////////////////////////////////////////
@@ -171,7 +160,7 @@ namespace YAML
 			return ScanAndEnqueue(new StreamStartToken);
 
 		ScanToNextToken();
-		// TODO: remove "obsolete potential simple keys"
+		ValidateSimpleKey();
 		PopIndentTo(m_column);
 
 		if(INPUT.peek() == EOF)
@@ -318,23 +307,56 @@ namespace YAML
 		}
 	}
 
+	// GetNextToken
+	// . Returns the next token on the queue, and scans if only we need to.
+	Token *Scanner::GetNextToken()
+	{
+		while(1) {
+			Token *pToken = 0;
+
+			// is there a token in the queue?
+			if(!m_tokens.empty())
+				pToken = m_tokens.front();
+
+			// ... that's possible
+			// (here's where we clean up the impossible tokens)
+			if(pToken && !pToken->isPossible) {
+				m_tokens.pop();
+				delete pToken;
+				continue;
+			}
+
+			// and valid
+			if(pToken && !pToken->isValid)
+				pToken = 0;
+
+			// then that's what we want
+			if(pToken) {
+				m_tokens.pop();
+				return pToken;
+			}
+
+			// no token? maybe we've actually finished
+			if(m_endedStream)
+				break;
+
+			// no? then scan...
+			ScanNextToken();
+		}
+
+		return 0;
+	}
+
 	// temporary function for testing
 	void Scanner::Scan()
 	{
 		while(1) {
-			ScanNextToken();
-			if(m_tokens.empty())
+			Token *pToken = GetNextToken();
+			if(!pToken)
 				break;
 
-			while(!m_tokens.empty()) {
-				Token *pToken = m_tokens.front();
-				if(!pToken->isValid)   // gotta wait on the invalid tokens - they might become valid!
-					break;
-
-				m_tokens.pop();
-				std::cout << typeid(*pToken).name() << ": " << *pToken << std::endl;
-				delete pToken;
-			}
+			std::cout << typeid(*pToken).name() << ": " << *pToken << std::endl;
+			delete pToken;
 		}
 	}
 }

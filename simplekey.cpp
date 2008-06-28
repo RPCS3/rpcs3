@@ -5,8 +5,8 @@
 
 namespace YAML
 {
-	Scanner::SimpleKey::SimpleKey(int pos_, int line_, int column_)
-		: pos(pos_), line(line_), column(column_), required(false), pMapStart(0), pKey(0)
+	Scanner::SimpleKey::SimpleKey(int pos_, int line_, int column_, int flowLevel_)
+		: pos(pos_), line(line_), column(column_), flowLevel(flowLevel_), required(false), pMapStart(0), pKey(0)
 	{
 	}
 
@@ -34,7 +34,7 @@ namespace YAML
 	//   and saves it on a stack.
 	void Scanner::InsertSimpleKey()
 	{
-		SimpleKey key(INPUT.tellg(), m_line, m_column);
+		SimpleKey key(INPUT.tellg(), m_line, m_column, m_flowLevel);
 
 		// first add a map start, if necessary
 		key.pMapStart = PushIndentTo(m_column, false);
@@ -57,11 +57,17 @@ namespace YAML
 	//   and if so, makes it valid.
 	bool Scanner::ValidateSimpleKey()
 	{
+		m_isLastKeyValid = false;
 		if(m_simpleKeys.empty())
-			return false;
+			return m_isLastKeyValid;
 
 		// grab top key
 		SimpleKey key = m_simpleKeys.top();
+
+		// only validate if we're in the correct flow level
+		if(key.flowLevel != m_flowLevel)
+			return false;
+
 		m_simpleKeys.pop();
 
 		bool isValid = true;
@@ -89,6 +95,7 @@ namespace YAML
 		if(!isValid && m_flowLevel == 0)
 			m_indents.pop();
 
+		m_isLastKeyValid = isValid;
 		return isValid;
 	}
 
