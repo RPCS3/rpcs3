@@ -22,8 +22,8 @@ namespace YAML
 	template <> StreamEndToken *Scanner::ScanToken(StreamEndToken *pToken)
 	{
 		// force newline
-		if(m_column > 0)
-			m_column = 0;
+		if(INPUT.column > 0)
+			INPUT.column = 0;
 
 		PopIndentTo(-1);
 		ValidateAllSimpleKeys();
@@ -37,12 +37,12 @@ namespace YAML
 	// DocumentStartToken
 	template <> DocumentStartToken *Scanner::ScanToken(DocumentStartToken *pToken)
 	{
-		PopIndentTo(m_column);
+		PopIndentTo(INPUT.column);
 		ValidateAllSimpleKeys();
 		m_simpleKeyAllowed = false;
 
 		// eat
-		Eat(3);
+		INPUT.Eat(3);
 		return pToken;
 	}
 
@@ -54,7 +54,7 @@ namespace YAML
 		m_simpleKeyAllowed = false;
 
 		// eat
-		Eat(3);
+		INPUT.Eat(3);
 		return pToken;
 	}
 
@@ -67,7 +67,7 @@ namespace YAML
 		m_simpleKeyAllowed = true;
 
 		// eat
-		Eat(1);
+		INPUT.Eat(1);
 		return pToken;
 	}
 
@@ -80,7 +80,7 @@ namespace YAML
 		m_simpleKeyAllowed = true;
 
 		// eat
-		Eat(1);
+		INPUT.Eat(1);
 		return pToken;
 	}
 
@@ -94,7 +94,7 @@ namespace YAML
 		m_simpleKeyAllowed = false;
 
 		// eat
-		Eat(1);
+		INPUT.Eat(1);
 		return pToken;
 	}
 
@@ -108,7 +108,7 @@ namespace YAML
 		m_simpleKeyAllowed = false;
 
 		// eat
-		Eat(1);
+		INPUT.Eat(1);
 		return pToken;
 	}
 
@@ -118,7 +118,7 @@ namespace YAML
 		m_simpleKeyAllowed = true;
 
 		// eat
-		Eat(1);
+		INPUT.Eat(1);
 		return pToken;
 	}
 
@@ -133,11 +133,11 @@ namespace YAML
 		if(!m_simpleKeyAllowed)
 			throw IllegalBlockEntry();
 
-		PushIndentTo(m_column, true);
+		PushIndentTo(INPUT.column, true);
 		m_simpleKeyAllowed = true;
 
 		// eat
-		Eat(1);
+		INPUT.Eat(1);
 		return pToken;
 	}
 
@@ -149,7 +149,7 @@ namespace YAML
 			if(!m_simpleKeyAllowed)
 				throw IllegalMapKey();
 
-			PushIndentTo(m_column, false);
+			PushIndentTo(INPUT.column, false);
 		}
 
 		// can only put a simple key here if we're in block context
@@ -159,7 +159,7 @@ namespace YAML
 			m_simpleKeyAllowed = false;
 
 		// eat
-		Eat(1);
+		INPUT.Eat(1);
 		return pToken;
 	}
 
@@ -176,7 +176,7 @@ namespace YAML
 				if(!m_simpleKeyAllowed)
 					throw IllegalMapValue();
 
-				PushIndentTo(m_column, false);
+				PushIndentTo(INPUT.column, false);
 			}
 
 			// can only put a simple key here if we're in block context
@@ -187,7 +187,7 @@ namespace YAML
 		}
 
 		// eat
-		Eat(1);
+		INPUT.Eat(1);
 		return pToken;
 	}
 
@@ -200,13 +200,13 @@ namespace YAML
 		m_simpleKeyAllowed = false;
 
 		// eat the indicator
-		char indicator = GetChar();
+		char indicator = INPUT.GetChar();
 		pToken->alias = (indicator == Keys::Alias);
 
 		// now eat the content
 		std::string tag;
 		while(Exp::AlphaNumeric.Matches(INPUT))
-			tag += GetChar();
+			tag += INPUT.GetChar();
 
 		// we need to have read SOMETHING!
 		if(tag.empty())

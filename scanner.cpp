@@ -7,8 +7,7 @@
 namespace YAML
 {
 	Scanner::Scanner(std::istream& in)
-		: INPUT(in), m_startedStream(false), m_endedStream(false), m_simpleKeyAllowed(false), m_flowLevel(0),
-		m_line(0), m_column(0)
+		: INPUT(in), m_startedStream(false), m_endedStream(false), m_simpleKeyAllowed(false), m_flowLevel(0)
 	{
 	}
 
@@ -26,45 +25,6 @@ namespace YAML
 
 	///////////////////////////////////////////////////////////////////////
 	// Misc. helpers
-
-	// GetChar
-	// . Extracts a character from the stream and updates our position
-	char Scanner::GetChar()
-	{
-		char ch = INPUT.get();
-		m_column++;
-		if(ch == '\n') {
-			m_column = 0;
-			m_line++;
-		}
-		return ch;
-	}
-
-	// GetChar
-	// . Extracts 'n' characters from the stream and updates our position
-	std::string Scanner::GetChar(int n)
-	{
-		std::string ret;
-		for(int i=0;i<n;i++)
-			ret += GetChar();
-		return ret;
-	}
-
-	// Eat
-	// . Eats 'n' characters and updates our position.
-	void Scanner::Eat(int n)
-	{
-		for(int i=0;i<n;i++)
-			GetChar();
-	}
-
-	// GetLineBreak
-	// . Eats with no checking
-	void Scanner::EatLineBreak()
-	{
-		Eat(1);
-		m_column = 0;
-	}
 
 	// IsWhitespaceToBeEaten
 	// . We can eat whitespace if:
@@ -88,7 +48,7 @@ namespace YAML
 	bool Scanner::IsDocumentStart()
 	{
 		// needs to be at the start of a new line
-		if(m_column != 0)
+		if(INPUT.column != 0)
 			return false;
 
 		return Exp::DocStart.Matches(INPUT);
@@ -98,7 +58,7 @@ namespace YAML
 	bool Scanner::IsDocumentEnd()
 	{
 		// needs to be at the start of a new line
-		if(m_column != 0)
+		if(INPUT.column != 0)
 			return false;
 
 		return Exp::DocEnd.Matches(INPUT);
@@ -166,7 +126,7 @@ namespace YAML
 		ValidateSimpleKey();
 
 		// maybe need to end some blocks
-		PopIndentTo(m_column);
+		PopIndentTo(INPUT.column);
 
 		// *****
 		// And now branch based on the next few characters!
@@ -236,13 +196,13 @@ namespace YAML
 		while(1) {
 			// first eat whitespace
 			while(IsWhitespaceToBeEaten(INPUT.peek()))
-				Eat(1);
+				INPUT.Eat(1);
 
 			// then eat a comment
 			if(Exp::Comment.Matches(INPUT)) {
 				// eat until line break
 				while(INPUT && !Exp::Break.Matches(INPUT))
-					Eat(1);
+					INPUT.Eat(1);
 			}
 
 			// if it's NOT a line break, then we're done!
@@ -250,7 +210,7 @@ namespace YAML
 				break;
 
 			// otherwise, let's eat the line break and keep going
-			EatLineBreak();
+			INPUT.EatLineBreak();
 
 			// oh yeah, and let's get rid of that simple key
 			ValidateSimpleKey();

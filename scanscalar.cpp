@@ -142,7 +142,7 @@ namespace YAML
 		if(m_simpleKeyAllowed)
 			InsertSimpleKey();
 
-		pToken->value = ScanScalar(end, false, indent, 0, true, true, true, 0);
+		pToken->value = ScanScalar(INPUT, end, false, indent, 0, true, true, true, 0);
 
 		m_simpleKeyAllowed = false;
 		if(true/*info.leadingBlanks*/)
@@ -221,7 +221,7 @@ namespace YAML
 		//}
 
 		// eat single or double quote
-		char quote = GetChar();
+		char quote = INPUT.GetChar();
 		pToken->single = (quote == '\'');
 
 		RegEx end = (pToken->single ? RegEx(quote) && !Exp::EscSingleQuote : RegEx(quote));
@@ -231,7 +231,7 @@ namespace YAML
 		if(m_simpleKeyAllowed)
 			InsertSimpleKey();
 
-		pToken->value = ScanScalar(end, true, 0, escape, true, true, false, 0);
+		pToken->value = ScanScalar(INPUT, end, true, 0, escape, true, true, false, 0);
 		m_simpleKeyAllowed = false;
 
 		return pToken;
@@ -243,39 +243,39 @@ namespace YAML
 		WhitespaceInfo info;
 
 		// eat block indicator ('|' or '>')
-		char indicator = GetChar();
+		char indicator = INPUT.GetChar();
 		info.fold = (indicator == Keys::FoldedScalar);
 
 		// eat chomping/indentation indicators
 		int n = Exp::Chomp.Match(INPUT);
 		for(int i=0;i<n;i++)
-			info.SetChompers(GetChar());
+			info.SetChompers(INPUT.GetChar());
 
 		// first eat whitespace
 		while(Exp::Blank.Matches(INPUT))
-			Eat(1);
+			INPUT.Eat(1);
 
 		// and comments to the end of the line
 		if(Exp::Comment.Matches(INPUT))
 			while(INPUT && !Exp::Break.Matches(INPUT))
-				Eat(1);
+				INPUT.Eat(1);
 
 		// if it's not a line break, then we ran into a bad character inline
 		if(INPUT && !Exp::Break.Matches(INPUT))
 			throw UnexpectedCharacterInBlockScalar();
 
 		// and eat that baby
-		EatLineBreak();
+		INPUT.EatLineBreak();
 
 		// set the initial indentation
 		int indent = info.increment;
 		if(info.increment && m_indents.top() >= 0)
 			indent += m_indents.top();
 
-		GetBlockIndentation(indent, info.trailingBreaks);
+		GetBlockIndentation(INPUT, indent, info.trailingBreaks, m_indents.top());
 
 		bool eatLeadingWhitespace = false;
-		pToken->value = ScanScalar(RegEx(), false, indent, 0, info.fold, eatLeadingWhitespace, false, info.chomp);
+		pToken->value = ScanScalar(INPUT, RegEx(), false, indent, 0, info.fold, eatLeadingWhitespace, false, info.chomp);
 
 		// simple keys always ok after block scalars (since we're gonna start a new line anyways)
 		m_simpleKeyAllowed = true;
@@ -286,20 +286,20 @@ namespace YAML
 	// . Helper to scanning a block scalar.
 	// . Eats leading *indentation* zeros (i.e., those that come before 'indent'),
 	//   and updates 'indent' (if it hasn't been set yet).
-	void Scanner::GetBlockIndentation(int& indent, std::string& breaks)
+	void GetBlockIndentation(Stream& INPUT, int& indent, std::string& breaks, int topIndent)
 	{
 		int maxIndent = 0;
 
 		while(1) {
 			// eat as many indentation spaces as we can
-			while((indent == 0 || m_column < indent) && INPUT.peek() == ' ')
-				Eat(1);
+			while((indent == 0 || INPUT.column < indent) && INPUT.peek() == ' ')
+				INPUT.Eat(1);
 
-			if(m_column > maxIndent)
-				maxIndent = m_column;
+			if(INPUT.column > maxIndent)
+				maxIndent = INPUT.column;
 
 			// do we need more indentation, but we've got a tab?
-			if((indent == 0 || m_column < indent) && INPUT.peek() == '\t')
+			if((indent == 0 || INPUT.column < indent) && INPUT.peek() == '\t')
 				throw IllegalTabInScalar();   // TODO: are literal scalar lines allowed to have tabs here?
 
 			// is this a non-empty line?
@@ -308,21 +308,21 @@ namespace YAML
 
 			// otherwise, eat the line break and move on
 			int n = Exp::Break.Match(INPUT);
-			breaks += GetChar(n);
+			breaks += INPUT.GetChar(n);
 		}
 
 		// finally, set the indentation
 		if(indent == 0) {
 			indent = maxIndent;
-			if(indent < m_indents.top() + 1)
-				indent = m_indents.top() + 1;
+			if(indent < topIndent + 1)
+				indent = topIndent + 1;
 			if(indent < 1)
 				indent = 1;
 		}
 	}
 
 	// ScanScalar
-	std::string Scanner::ScanScalar(RegEx end, bool eatEnd, int indent, char escape, bool fold, bool eatLeadingWhitespace, bool trimTrailingSpaces, int chomp)
+	std::string ScanScalar(Stream& INPUT, RegEx end, bool eatEnd, int indent, char escape, bool fold, bool eatLeadingWhitespace, bool trimTrailingSpaces, int chomp)
 	{
 		bool emptyLine = false, moreIndented = false;
 		std::string scalar;
@@ -337,20 +337,18 @@ namespace YAML
 				// escaped newline? (only if we're escaping on slash)
 				if(escape == '\\' && Exp::EscBreak.Matches(INPUT)) {
 					int n = Exp::EscBreak.Match(INPUT);
-					Eat(n);
+					INPUT.Eat(n);
 					continue;
 				}
 
 				// escape this?
 				if(INPUT.peek() == escape) {
-					int length = 0;
-					scalar += Exp::Escape(INPUT, length);
-					m_column += length;
+					scalar += Exp::Escape(INPUT);
 					continue;
 				}
 
 				// otherwise, just add the damn character
-				scalar += GetChar();
+				scalar += INPUT.GetChar();
 			}
 
 			// eof? if we're looking to eat something, then we throw
@@ -364,26 +362,26 @@ namespace YAML
 			int n = end.Match(INPUT);
 			if(n >= 0) {
 				if(eatEnd)
-					Eat(n);
+					INPUT.Eat(n);
 				break;
 			}
 
 			// ********************************
 			// Phase #2: eat line ending
 			n = Exp::Break.Match(INPUT);
-			Eat(n);
+			INPUT.Eat(n);
 
 			// ********************************
 			// Phase #3: scan initial spaces
 
 			// first the required indentation
-			while(INPUT.peek() == ' ' && m_column < indent)
-				Eat(1);
+			while(INPUT.peek() == ' ' && INPUT.column < indent)
+				INPUT.Eat(1);
 
 			// and then the rest of the whitespace
 			if(eatLeadingWhitespace) {
 				while(Exp::Blank.Matches(INPUT))
-					Eat(1);
+					INPUT.Eat(1);
 			}
 
 			// was this an empty line?
@@ -399,7 +397,7 @@ namespace YAML
 			moreIndented = nextMoreIndented;
 
 			// are we done via indentation?
-			if(!emptyLine && m_column < indent)
+			if(!emptyLine && INPUT.column < indent)
 				break;
 		}
 

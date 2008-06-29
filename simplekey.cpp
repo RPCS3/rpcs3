@@ -34,10 +34,10 @@ namespace YAML
 	//   and saves it on a stack.
 	void Scanner::InsertSimpleKey()
 	{
-		SimpleKey key(INPUT.tellg(), m_line, m_column, m_flowLevel);
+		SimpleKey key(INPUT.pos(), INPUT.line, INPUT.column, m_flowLevel);
 
 		// first add a map start, if necessary
-		key.pMapStart = PushIndentTo(m_column, false);
+		key.pMapStart = PushIndentTo(INPUT.column, false);
 		if(key.pMapStart)
 			key.pMapStart->isValid = false;
 //		else
@@ -79,7 +79,7 @@ namespace YAML
 			isValid = false;
 
 		// also needs to be less than 1024 characters and inline
-		if(m_line != key.line || (int) INPUT.tellg() - key.pos > 1024)
+		if(INPUT.line != key.line || INPUT.pos() - key.pos > 1024)
 			isValid = false;
 
 		// invalidate key

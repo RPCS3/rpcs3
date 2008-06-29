@@ -1,9 +1,14 @@
 #pragma once
 
 #include <string>
+#include "regex.h"
+#include "stream.h"
 
 namespace YAML
 {
+	void GetBlockIndentation(Stream& INPUT, int& indent, std::string& breaks, int topIndent);
+	std::string ScanScalar(Stream& INPUT, RegEx end, bool eatEnd, int indent, char escape, bool fold, bool eatLeadingWhitespace, bool trimTrailingSpaces, int chomp);
+
 	struct WhitespaceInfo {
 		WhitespaceInfo();
 

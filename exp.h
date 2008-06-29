@@ -3,6 +3,7 @@
 #include "regex.h"
 #include <string>
 #include <ios>
+#include "stream.h"
 
 namespace YAML
 {
@@ -50,7 +51,7 @@ namespace YAML
 		const RegEx Chomp = (ChompIndicator + Digit) || (Digit + ChompIndicator) || ChompIndicator || Digit;
 
 		// and some functions
-		std::string Escape(std::istream& in, int& length);
+		std::string Escape(Stream& in);
 	}
 
 	namespace Keys

@@ -34,13 +34,12 @@ namespace YAML
 		// Escape
 		// . Translates the next 'codeLength' characters into a hex number and returns the result.
 		// . Throws if it's not actually hex.
-		std::string Escape(std::istream& in, int& length, int codeLength)
+		std::string Escape(Stream& in, int codeLength)
 		{
 			// grab string
-			length += codeLength;
 			std::string str;
 			for(int i=0;i<codeLength;i++)
-				str += in.get();
+				str += in.GetChar();
 
 			// get the value
 			unsigned value = ParseHex(str);
@@ -64,18 +63,14 @@ namespace YAML
 		// Escape
 		// . Escapes the sequence starting 'in' (it must begin with a '\' or single quote)
 		//   and returns the result.
-		// . Fills 'length' with how many characters we ate.
 		// . Throws if it's an unknown escape character.
-		std::string Escape(std::istream& in, int& length)
+		std::string Escape(Stream& in)
 		{
-			// slash + character
-			length = 2;
-
 			// eat slash
-			char escape = in.get();
+			char escape = in.GetChar();
 
 			// switch on escape character
-			char ch = in.get();
+			char ch = in.GetChar();
 
 			// first do single quote, since it's easier
 			if(escape == '\'' && ch == '\'')
@@ -101,9 +96,9 @@ namespace YAML
 				case '_': return "\xC2\xA0";  // #xA0
 				case 'L': return "\xE2\x80\xA8";  // LS (#x2028)
 				case 'P': return "\xE2\x80\xA9";  // PS (#x2029)
-				case 'x': return Escape(in, length, 2);
-				case 'u': return Escape(in, length, 4);
-				case 'U': return Escape(in, length, 8);
+				case 'x': return Escape(in, 2);
+				case 'u': return Escape(in, 4);
+				case 'U': return Escape(in, 8);
 			}
 
 			throw UnknownEscapeSequence(ch);

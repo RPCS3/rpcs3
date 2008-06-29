@@ -1,4 +1,12 @@
 ---
-- "quoted scalar that contains
----
-    the document start!"
+- "quoted scalar\twith a tab\nand a newline"
+- 'This is Jesse''s single quote!'
+- |
+  here's a literal:
+  #include <iostream>
+  
+  int main()
+  {
+     std::cout << "Hello World!\n";
+     return 0;
+  }

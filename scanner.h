@@ -6,6 +6,7 @@
 #include <stack>
 #include <set>
 #include "regex.h"
+#include "stream.h"
 
 namespace YAML
 {
@@ -31,11 +32,6 @@ namespace YAML
 		void Scan();
 
 	private:
-		char GetChar();
-		std::string GetChar(int n);
-		void Eat(int n = 1);
-		void EatLineBreak();
-
 		bool IsWhitespaceToBeEaten(char ch);
 		bool IsDocumentStart();
 		bool IsDocumentEnd();
@@ -43,9 +39,6 @@ namespace YAML
 		bool IsKey();
 		bool IsValue();
 		bool IsPlainScalar();
-
-		void GetBlockIndentation(int& indent, std::string& breaks);
-		std::string ScanScalar(RegEx end, bool eatEnd, int indent, char escape, bool fold, bool eatLeadingWhitespace, bool trimTrailingSpaces, int chomp);
 
 		struct SimpleKey {
 			SimpleKey(int pos_, int line_, int column_, int flowLevel_);
@@ -63,8 +56,7 @@ namespace YAML
 
 	private:
 		// the stream
-		std::istream& INPUT;
-		int m_line, m_column;
+		Stream INPUT;
 
 		// the output (tokens)
 		std::queue <Token *> m_tokens;
