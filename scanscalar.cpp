@@ -135,14 +135,20 @@ namespace YAML
 		//	scalar += info.Join();
 		//}
 
-		RegEx end = (m_flowLevel > 0 ? Exp::EndScalarInFlow : Exp::EndScalar) || (RegEx(' ') + Exp::Comment);
-		int indent = (m_flowLevel > 0 ? 0 : m_indents.top() + 1);
+		ScanScalarInfo info;
+		info.end = (m_flowLevel > 0 ? Exp::EndScalarInFlow : Exp::EndScalar) || (RegEx(' ') + Exp::Comment);
+		info.eatEnd = false;
+		info.indent = (m_flowLevel > 0 ? 0 : m_indents.top() + 1);
+		info.fold = true;
+		info.eatLeadingWhitespace = true;
+		info.trimTrailingSpaces = true;
+		info.chomp = CLIP;
 
 		// insert a potential simple key
 		if(m_simpleKeyAllowed)
 			InsertSimpleKey();
 
-		pToken->value = ScanScalar(INPUT, end, false, indent, 0, true, true, true, 0);
+		pToken->value = ScanScalar(INPUT, info);
 
 		m_simpleKeyAllowed = false;
 		if(true/*info.leadingBlanks*/)
@@ -224,14 +230,21 @@ namespace YAML
 		char quote = INPUT.GetChar();
 		pToken->single = (quote == '\'');
 
-		RegEx end = (pToken->single ? RegEx(quote) && !Exp::EscSingleQuote : RegEx(quote));
-		char escape = (pToken->single ? '\'' : '\\');
+		ScanScalarInfo info;
+		info.end = (pToken->single ? RegEx(quote) && !Exp::EscSingleQuote : RegEx(quote));
+		info.eatEnd = true;
+		info.escape = (pToken->single ? '\'' : '\\');
+		info.indent = 0;
+		info.fold = true;
+		info.eatLeadingWhitespace = true;
+		info.trimTrailingSpaces = false;
+		info.chomp = CLIP;
 
 		// insert a potential simple key
 		if(m_simpleKeyAllowed)
 			InsertSimpleKey();
 
-		pToken->value = ScanScalar(INPUT, end, true, 0, escape, true, true, false, 0);
+		pToken->value = ScanScalar(INPUT, info);
 		m_simpleKeyAllowed = false;
 
 		return pToken;
@@ -274,8 +287,14 @@ namespace YAML
 
 		GetBlockIndentation(INPUT, indent, info.trailingBreaks, m_indents.top());
 
-		bool eatLeadingWhitespace = false;
-		pToken->value = ScanScalar(INPUT, RegEx(), false, indent, 0, info.fold, eatLeadingWhitespace, false, info.chomp);
+		ScanScalarInfo sinfo;
+		sinfo.indent = indent;
+		sinfo.fold = info.fold;
+		sinfo.eatLeadingWhitespace = false;
+		sinfo.trimTrailingSpaces = false;
+		sinfo.chomp = (CHOMP) info.chomp;
+
+		pToken->value = ScanScalar(INPUT, sinfo);
 
 		// simple keys always ok after block scalars (since we're gonna start a new line anyways)
 		m_simpleKeyAllowed = true;
@@ -322,7 +341,7 @@ namespace YAML
 	}
 
 	// ScanScalar
-	std::string ScanScalar(Stream& INPUT, RegEx end, bool eatEnd, int indent, char escape, bool fold, bool eatLeadingWhitespace, bool trimTrailingSpaces, int chomp)
+	std::string ScanScalar(Stream& INPUT, ScanScalarInfo info)
 	{
 		bool emptyLine = false, moreIndented = false;
 		std::string scalar;
@@ -330,19 +349,19 @@ namespace YAML
 		while(INPUT) {
 			// ********************************
 			// Phase #1: scan until line ending
-			while(!end.Matches(INPUT) && !Exp::Break.Matches(INPUT)) {
+			while(!info.end.Matches(INPUT) && !Exp::Break.Matches(INPUT)) {
 				if(INPUT.peek() == EOF)
 					break;
 
 				// escaped newline? (only if we're escaping on slash)
-				if(escape == '\\' && Exp::EscBreak.Matches(INPUT)) {
+				if(info.escape == '\\' && Exp::EscBreak.Matches(INPUT)) {
 					int n = Exp::EscBreak.Match(INPUT);
 					INPUT.Eat(n);
 					continue;
 				}
 
 				// escape this?
-				if(INPUT.peek() == escape) {
+				if(INPUT.peek() == info.escape) {
 					scalar += Exp::Escape(INPUT);
 					continue;
 				}
@@ -353,15 +372,15 @@ namespace YAML
 
 			// eof? if we're looking to eat something, then we throw
 			if(INPUT.peek() == EOF) {
-				if(eatEnd)
+				if(info.eatEnd)
 					throw EOFInQuote();
 				break;
 			}
 
 			// are we done via character match?
-			int n = end.Match(INPUT);
+			int n = info.end.Match(INPUT);
 			if(n >= 0) {
-				if(eatEnd)
+				if(info.eatEnd)
 					INPUT.Eat(n);
 				break;
 			}
@@ -375,11 +394,11 @@ namespace YAML
 			// Phase #3: scan initial spaces
 
 			// first the required indentation
-			while(INPUT.peek() == ' ' && INPUT.column < indent)
+			while(INPUT.peek() == ' ' && INPUT.column < info.indent)
 				INPUT.Eat(1);
 
 			// and then the rest of the whitespace
-			if(eatLeadingWhitespace) {
+			if(info.eatLeadingWhitespace) {
 				while(Exp::Blank.Matches(INPUT))
 					INPUT.Eat(1);
 			}
@@ -388,7 +407,7 @@ namespace YAML
 			bool nextEmptyLine = Exp::Break.Matches(INPUT);
 			bool nextMoreIndented = (INPUT.peek() == ' ');
 
-			if(fold && !emptyLine && !nextEmptyLine && !moreIndented && !nextMoreIndented)
+			if(info.fold && !emptyLine && !nextEmptyLine && !moreIndented && !nextMoreIndented)
 				scalar += " ";
 			else
 				scalar += "\n"; 
@@ -397,22 +416,22 @@ namespace YAML
 			moreIndented = nextMoreIndented;
 
 			// are we done via indentation?
-			if(!emptyLine && INPUT.column < indent)
+			if(!emptyLine && INPUT.column < info.indent)
 				break;
 		}
 
 		// post-processing
-		if(trimTrailingSpaces) {
+		if(info.trimTrailingSpaces) {
 			unsigned pos = scalar.find_last_not_of(' ');
 			if(pos < scalar.size())
 				scalar.erase(pos + 1);
 		}
 
-		if(chomp <= 0) {
+		if(info.chomp <= 0) {
 			unsigned pos = scalar.find_last_not_of('\n');
-			if(chomp == 0 && pos + 1 < scalar.size())
+			if(info.chomp == 0 && pos + 1 < scalar.size())
 				scalar.erase(pos + 2);
-			else if(chomp == -1 && pos < scalar.size())
+			else if(info.chomp == -1 && pos < scalar.size())
 				scalar.erase(pos + 1);
 		}
 

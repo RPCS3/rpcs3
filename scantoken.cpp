@@ -26,7 +26,7 @@ namespace YAML
 			INPUT.column = 0;
 
 		PopIndentTo(-1);
-		ValidateAllSimpleKeys();
+		VerifyAllSimpleKeys();
 
 		m_simpleKeyAllowed = false;
 		m_endedStream = true;
@@ -38,7 +38,7 @@ namespace YAML
 	template <> DocumentStartToken *Scanner::ScanToken(DocumentStartToken *pToken)
 	{
 		PopIndentTo(INPUT.column);
-		ValidateAllSimpleKeys();
+		VerifyAllSimpleKeys();
 		m_simpleKeyAllowed = false;
 
 		// eat
@@ -50,7 +50,7 @@ namespace YAML
 	template <> DocumentEndToken *Scanner::ScanToken(DocumentEndToken *pToken)
 	{
 		PopIndentTo(-1);
-		ValidateAllSimpleKeys();
+		VerifyAllSimpleKeys();
 		m_simpleKeyAllowed = false;
 
 		// eat

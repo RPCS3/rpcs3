@@ -26,8 +26,8 @@ namespace YAML
 		void PopIndentTo(int column);
 
 		void InsertSimpleKey();
-		bool ValidateSimpleKey();
-		void ValidateAllSimpleKeys();
+		bool VerifySimpleKey();
+		void VerifyAllSimpleKeys();
 
 		void Scan();
 

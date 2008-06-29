@@ -45,6 +45,21 @@ namespace YAML
 		delete m_pOp;
 	}
 
+	RegEx& RegEx::operator = (const RegEx& rhs)
+	{
+		delete m_pOp;
+		m_pOp = 0;
+
+		m_op = rhs.m_op;
+		m_a = rhs.m_a;
+		m_z = rhs.m_z;
+		m_params = rhs.m_params;
+
+		SetOp();
+
+		return *this;
+	}
+
 	void RegEx::SetOp()
 	{
 		delete m_pOp;

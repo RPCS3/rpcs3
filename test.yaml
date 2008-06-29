@@ -10,3 +10,5 @@
      std::cout << "Hello World!\n";
      return 0;
   }
+- key1: value1
+  key2: value2

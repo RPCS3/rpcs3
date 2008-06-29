@@ -13,9 +13,9 @@ namespace YAML
 	void Scanner::SimpleKey::Validate()
 	{
 		if(pMapStart)
-			pMapStart->isValid = true;
+			pMapStart->status = TS_VALID;
 		if(pKey)
-			pKey->isValid = true;
+			pKey->status = TS_VALID;
 	}
 
 	void Scanner::SimpleKey::Invalidate()
@@ -24,9 +24,9 @@ namespace YAML
 			throw RequiredSimpleKeyNotFound();
 
 		if(pMapStart)
-			pMapStart->isPossible = false;
+			pMapStart->status = TS_INVALID;
 		if(pKey)
-			pKey->isPossible = false;
+			pKey->status = TS_INVALID;
 	}
 
 	// InsertSimpleKey
@@ -39,23 +39,22 @@ namespace YAML
 		// first add a map start, if necessary
 		key.pMapStart = PushIndentTo(INPUT.column, false);
 		if(key.pMapStart)
-			key.pMapStart->isValid = false;
+			key.pMapStart->status = TS_UNVERIFIED;
 //		else
 //			key.required = true;	// TODO: is this correct?
 
-		// then add the (now invalid) key
+		// then add the (now unverified) key
 		key.pKey = new KeyToken;
-		key.pKey->isValid = false;
-
+		key.pKey->status = TS_UNVERIFIED;
 		m_tokens.push(key.pKey);
 
 		m_simpleKeys.push(key);
 	}
 
-	// ValidateSimpleKey
+	// VerifySimpleKey
 	// . Determines whether the latest simple key to be added is valid,
 	//   and if so, makes it valid.
-	bool Scanner::ValidateSimpleKey()
+	bool Scanner::VerifySimpleKey()
 	{
 		m_isLastKeyValid = false;
 		if(m_simpleKeys.empty())
@@ -99,9 +98,9 @@ namespace YAML
 		return isValid;
 	}
 
-	void Scanner::ValidateAllSimpleKeys()
+	void Scanner::VerifyAllSimpleKeys()
 	{
 		while(!m_simpleKeys.empty())
-			ValidateSimpleKey();
+			VerifySimpleKey();
 	}
 }

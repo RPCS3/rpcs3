@@ -123,7 +123,7 @@ namespace YAML
 		ScanToNextToken();
 
 		// check the latest simple key
-		ValidateSimpleKey();
+		VerifySimpleKey();
 
 		// maybe need to end some blocks
 		PopIndentTo(INPUT.column);
@@ -213,7 +213,7 @@ namespace YAML
 			INPUT.EatLineBreak();
 
 			// oh yeah, and let's get rid of that simple key
-			ValidateSimpleKey();
+			VerifySimpleKey();
 
 			// new line - we may be able to accept a simple key now
 			if(m_flowLevel == 0)
@@ -272,16 +272,15 @@ namespace YAML
 			if(!m_tokens.empty())
 				pToken = m_tokens.front();
 
-			// ... that's possible
 			// (here's where we clean up the impossible tokens)
-			if(pToken && !pToken->isPossible) {
+			if(pToken && pToken->status == TS_INVALID) {
 				m_tokens.pop();
 				delete pToken;
 				continue;
 			}
 
-			// and valid
-			if(pToken && !pToken->isValid)
+			// on unverified tokens, we just have to wait
+			if(pToken && pToken->status == TS_UNVERIFIED)
 				pToken = 0;
 
 			// then that's what we want

@@ -4,13 +4,15 @@
 
 namespace YAML
 {
+	enum TOKEN_STATUS { TS_VALID, TS_INVALID, TS_UNVERIFIED };
+
 	struct Token {
-		Token(): isValid(true), isPossible(true) {}
+		Token(): status(TS_VALID) {}
 		virtual ~Token() {}
 		virtual void Write(std::ostream& out) const {}
 
 		friend std::ostream& operator << (std::ostream& out, const Token& token) { token.Write(out); return out; }
-		bool isValid, isPossible;
+		TOKEN_STATUS status;
 	};
 
 	struct StreamStartToken: public Token {};

@@ -60,6 +60,8 @@ namespace YAML
 		RegEx(const RegEx& rhs);
 		~RegEx();
 
+		RegEx& operator = (const RegEx& rhs);
+
 		bool Matches(char ch) const;
 		bool Matches(const std::string& str) const;
 		bool Matches(std::istream& in) const;
