@@ -62,7 +62,7 @@ namespace YAML
 		}
 
 		// Escape
-		// . Escapes the sequence starting 'in' (it must begin with a '\')
+		// . Escapes the sequence starting 'in' (it must begin with a '\' or single quote)
 		//   and returns the result.
 		// . Fills 'length' with how many characters we ate.
 		// . Throws if it's an unknown escape character.
@@ -72,10 +72,16 @@ namespace YAML
 			length = 2;
 
 			// eat slash
-			in.get();
+			char escape = in.get();
 
 			// switch on escape character
 			char ch = in.get();
+
+			// first do single quote, since it's easier
+			if(escape == '\'' && ch == '\'')
+				return "\'";
+
+			// now do the slash (we're not gonna check if it's a slash - you better pass one!)
 			switch(ch) {
 				case '0': return "\0";
 				case 'a': return "\x07";

@@ -53,6 +53,7 @@ namespace YAML
 			case REGEX_MATCH: m_pOp = new MatchOperator; break;
 			case REGEX_RANGE: m_pOp = new RangeOperator; break;
 			case REGEX_OR: m_pOp = new OrOperator; break;
+			case REGEX_AND: m_pOp = new AndOperator; break;
 			case REGEX_NOT: m_pOp = new NotOperator; break;
 			case REGEX_SEQ: m_pOp = new SeqOperator; break;
 		}
@@ -80,19 +81,13 @@ namespace YAML
 	// . Returns the number of characters matched.
 	// . Returns -1 if no characters were matched (the reason for
 	//   not returning zero is that we may have an empty regex
-	//   which SHOULD be considered successfully matching nothing,
-	//   but that of course matches zero characters).
+	//   which is ALWAYS successful at matching zero characters).
 	int RegEx::Match(const std::string& str) const
 	{
 		if(!m_pOp)
-			return -1;
+			return 0;
 
 		return m_pOp->Match(str, *this);
-
-			//case REGEX_EMPTY:
-			//	if(str.empty())
-			//		return 0;
-			//	return -1;
 	}
 
 	// Match
@@ -126,6 +121,14 @@ namespace YAML
 	RegEx operator || (const RegEx& ex1, const RegEx& ex2)
 	{
 		RegEx ret(REGEX_OR);
+		ret.m_params.push_back(ex1);
+		ret.m_params.push_back(ex2);
+		return ret;
+	}
+
+	RegEx operator && (const RegEx& ex1, const RegEx& ex2)
+	{
+		RegEx ret(REGEX_AND);
 		ret.m_params.push_back(ex1);
 		ret.m_params.push_back(ex2);
 		return ret;
@@ -192,6 +195,36 @@ namespace YAML
 				return n;
 		}
 		return -1;
+	}
+
+	// AndOperator
+	// Note: 'AND' is a little funny, since we may be required to match things
+	//       of different lengths. If we find a match, we return the length of
+	//       the FIRST entry on the list.
+	int RegEx::AndOperator::Match(const std::string& str, const RegEx& regex) const
+	{
+		int first = -1;
+		for(unsigned i=0;i<regex.m_params.size();i++) {
+			int n = regex.m_params[i].Match(str);
+			if(n == -1)
+				return -1;
+			if(i == 0)
+				first = n;
+		}
+		return first;
+	}
+
+	int RegEx::AndOperator::Match(std::istream& in, const RegEx& regex) const
+	{
+		int first = -1;
+		for(unsigned i=0;i<regex.m_params.size();i++) {
+			int n = regex.m_params[i].Match(in);
+			if(n == -1)
+				return -1;
+			if(i == 0)
+				first = n;
+		}
+		return first;
 	}
 
 	// NotOperator

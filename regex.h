@@ -6,7 +6,7 @@
 
 namespace YAML
 {
-	enum REGEX_OP { REGEX_EMPTY, REGEX_MATCH, REGEX_RANGE, REGEX_OR, REGEX_NOT, REGEX_SEQ };
+	enum REGEX_OP { REGEX_EMPTY, REGEX_MATCH, REGEX_RANGE, REGEX_OR, REGEX_AND, REGEX_NOT, REGEX_SEQ };
 
 	// simplified regular expressions
 	// . Only straightforward matches (no repeated characters)
@@ -31,6 +31,11 @@ namespace YAML
 		};
 
 		struct OrOperator: public Operator {
+			virtual int Match(const std::string& str, const RegEx& regex) const;
+			virtual int Match(std::istream& in, const RegEx& regex) const;
+		};
+
+		struct AndOperator: public Operator {
 			virtual int Match(const std::string& str, const RegEx& regex) const;
 			virtual int Match(std::istream& in, const RegEx& regex) const;
 		};
@@ -63,6 +68,7 @@ namespace YAML
 
 		friend RegEx operator ! (const RegEx& ex);
 		friend RegEx operator || (const RegEx& ex1, const RegEx& ex2);
+		friend RegEx operator && (const RegEx& ex1, const RegEx& ex2);
 		friend RegEx operator + (const RegEx& ex1, const RegEx& ex2);
 
 	private:

@@ -5,6 +5,7 @@
 #include <queue>
 #include <stack>
 #include <set>
+#include "regex.h"
 
 namespace YAML
 {
@@ -44,6 +45,7 @@ namespace YAML
 		bool IsPlainScalar();
 
 		void GetBlockIndentation(int& indent, std::string& breaks);
+		std::string ScanScalar(RegEx end, bool eatEnd, int indent, char escape, bool fold, bool eatLeadingWhitespace, bool trimTrailingSpaces, int chomp);
 
 		struct SimpleKey {
 			SimpleKey(int pos_, int line_, int column_, int flowLevel_);
