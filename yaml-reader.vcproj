@@ -202,6 +202,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\scanscalar.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\scantoken.cpp"
 				>
 			</File>
@@ -257,6 +261,10 @@
 			</File>
 			<File
 				RelativePath=".\scanner.h"
+				>
+			</File>
+			<File
+				RelativePath=".\scanscalar.h"
 				>
 			</File>
 			<File

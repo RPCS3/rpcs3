@@ -45,20 +45,6 @@ namespace YAML
 
 		void GetBlockIndentation(int& indent, std::string& breaks);
 
-		struct WhitespaceInfo {
-			WhitespaceInfo();
-
-			void SetChompers(char ch);
-			void AddBlank(char ch);
-			void AddBreak(const std::string& line);
-			std::string Join(bool lastline = false);
-
-			bool leadingBlanks;
-			bool fold;
-			std::string whitespace, leadingBreaks, trailingBreaks;
-			int chomp, increment;
-		};
-
 		struct SimpleKey {
 			SimpleKey(int pos_, int line_, int column_, int flowLevel_);
 

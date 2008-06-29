@@ -44,6 +44,10 @@ namespace YAML
 	};
 
 	struct PlainScalarToken: public ScalarToken {};
-	struct QuotedScalarToken: public ScalarToken {};
+	struct QuotedScalarToken: public ScalarToken {
+		bool single;
+		virtual void Write(std::ostream& out) const { out << (single ? '\'' : '\"') << value << (single ? '\'' : '\"'); }
+	};
+
 	struct BlockScalarToken: public ScalarToken {};
 }

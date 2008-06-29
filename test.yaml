@@ -3,10 +3,10 @@ people:
     name: Jesse
     age: 23
   - &dab
-    name: Daniel
+    name: 'Daniel'
     age: 25
   - &ncb
-    name: Naftali
+    name: "Naftali"
     age: 21
 students:
   - *jsb
