@@ -148,9 +148,9 @@ namespace YAML
 		m_limboTokens.erase(pToken);
 	}
 
-	///////////////////////////////////////////////////////////////////////
-	// The main scanning function
-
+	// ScanNextToken
+	// . The main scanning function; here we branch out and
+	//   scan whatever the next token should be.
 	void Scanner::ScanNextToken()
 	{
 		if(m_endedStream)
@@ -159,21 +159,31 @@ namespace YAML
 		if(!m_startedStream)
 			return ScanAndEnqueue(new StreamStartToken);
 
+		// get rid of whitespace, etc. (in between tokens it should be irrelevent)
 		ScanToNextToken();
+
+		// check the latest simple key
 		ValidateSimpleKey();
+
+		// maybe need to end some blocks
 		PopIndentTo(m_column);
 
+		// *****
+		// And now branch based on the next few characters!
+		// *****
+
+		// end of stream
 		if(INPUT.peek() == EOF)
 			return ScanAndEnqueue(new StreamEndToken);
 
-		// are we at a document token?
+		// document token
 		if(IsDocumentStart())
 			return ScanAndEnqueue(new DocumentStartToken);
 
 		if(IsDocumentEnd())
 			return ScanAndEnqueue(new DocumentEndToken);
 
-		// are we at a flow start/end/entry?
+		// flow start/end/entry
 		if(INPUT.peek() == Keys::FlowSeqStart)
 			return ScanAndEnqueue(new FlowSeqStartToken);
 
@@ -189,7 +199,7 @@ namespace YAML
 		if(INPUT.peek() == Keys::FlowEntry)
 			return ScanAndEnqueue(new FlowEntryToken);
 
-		// block/map stuff?
+		// block/map stuff
 		if(IsBlockEntry())
 			return ScanAndEnqueue(new BlockEntryToken);
 
@@ -199,7 +209,10 @@ namespace YAML
 		if(IsValue())
 			return ScanAndEnqueue(new ValueToken);
 
-		// TODO: alias/anchor/tag
+		if(INPUT.peek() == Keys::Alias || INPUT.peek() == Keys::Anchor)
+			return ScanAndEnqueue(new AnchorToken);
+
+		// TODO: tag
 
 		// special scalars
 		if(m_flowLevel == 0 && (INPUT.peek() == Keys::LiteralScalar || INPUT.peek() == Keys::FoldedScalar))

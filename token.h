@@ -31,6 +31,12 @@ namespace YAML
 
 	struct KeyToken: public Token {};
 	struct ValueToken: public Token {};
+	struct AnchorToken: public Token {
+		bool alias;
+		std::string value;
+
+		virtual void Write(std::ostream& out) const { out << (alias ? '*' : '&') << value; }
+	};
 
 	struct ScalarToken: public Token {
 		std::string value;

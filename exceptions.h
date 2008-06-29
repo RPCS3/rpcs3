@@ -18,6 +18,8 @@ namespace YAML
 	class RequiredSimpleKeyNotFound: public Exception {};
 	class ZeroIndentationInBlockScalar: public Exception {};
 	class UnexpectedCharacterInBlockScalar: public Exception {};
+	class AnchorNotFound: public Exception {};
+	class IllegalCharacterInAnchor: public Exception {};
 
 	class UnknownEscapeSequence: public Exception {
 	public:

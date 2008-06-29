@@ -191,6 +191,36 @@ namespace YAML
 		return pToken;
 	}
 
+	// AnchorToken
+	template <> AnchorToken *Scanner::ScanToken(AnchorToken *pToken)
+	{
+		// insert a potential simple key
+		if(m_simpleKeyAllowed)
+			InsertSimpleKey();
+		m_simpleKeyAllowed = false;
+
+		// eat the indicator
+		char indicator = GetChar();
+		pToken->alias = (indicator == Keys::Alias);
+
+		// now eat the content
+		std::string tag;
+		while(Exp::AlphaNumeric.Matches(INPUT))
+			tag += GetChar();
+
+		// we need to have read SOMETHING!
+		if(tag.empty())
+			throw AnchorNotFound();
+
+		// and needs to end correctly
+		if(INPUT.peek() != EOF && !Exp::AnchorEnd.Matches(INPUT))
+			throw IllegalCharacterInAnchor();
+
+		// and we're done
+		pToken->value = tag;
+		return pToken;
+	}
+
 	// PlainScalarToken
 	// . We scan these in passes of two steps each: First, grab all non-whitespace
 	//   characters we can, and then grab all whitespace characters we can.

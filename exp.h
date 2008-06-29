@@ -16,6 +16,8 @@ namespace YAML
 		const RegEx Break = RegEx('\n');
 		const RegEx BlankOrBreak = Blank || Break;
 		const RegEx Digit = RegEx('0', '9');
+		const RegEx Alpha = RegEx('a', 'z') || RegEx('A', 'Z');
+		const RegEx AlphaNumeric = Alpha || Digit;
 		const RegEx Hex = Digit || RegEx('A', 'F') || RegEx('a', 'f');
 
 		// actual tags
@@ -28,6 +30,7 @@ namespace YAML
 		const RegEx Value = RegEx(':'),
 		            ValueInFlow = RegEx(':') + BlankOrBreak;
 		const RegEx Comment = RegEx('#');
+		const RegEx AnchorEnd = RegEx("?:,]}%@`", REGEX_OR) || BlankOrBreak;
 
 		// Plain scalar rules:
 		// . Cannot start with a blank.
