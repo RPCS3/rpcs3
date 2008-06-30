@@ -13,6 +13,13 @@ namespace YAML
 		Map();
 		virtual ~Map();
 
+		virtual void Parse(Scanner *pScanner);
+		virtual void Write(std::ostream& out, int indent);
+
+	private:
+		void ParseBlock(Scanner *pScanner);
+		void ParseFlow(Scanner *pScanner);
+
 	protected:
 		typedef std::map <Node *, Node *> node_map;
 		node_map m_data;

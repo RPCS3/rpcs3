@@ -28,6 +28,20 @@ namespace YAML
 		return pToken;
 	}
 
+	// PopNextToken
+	// . Simply removes the next token on the queue.
+	void Scanner::PopNextToken()
+	{
+		GetNextToken();
+	}
+
+	// EatNextToken
+	// . Removes and deletes the next token on the queue
+	void Scanner::EatNextToken()
+	{
+		delete GetNextToken();
+	}
+
 	// PeekNextToken
 	// . Returns (but does not remove) the next token on the queue, and scans if only we need to.
 	Token *Scanner::PeekNextToken()

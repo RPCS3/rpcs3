@@ -18,6 +18,8 @@ namespace YAML
 		~Scanner();
 
 		Token *GetNextToken();
+		void EatNextToken();
+		void PopNextToken();
 		Token *PeekNextToken();
 
 	private:

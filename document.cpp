@@ -1,5 +1,7 @@
 #include "document.h"
 #include "node.h"
+#include "token.h"
+#include "scanner.h"
 
 namespace YAML
 {
@@ -16,5 +18,37 @@ namespace YAML
 	{
 		delete m_pRoot;
 		m_pRoot = 0;
+	}
+
+	void Document::Parse(Scanner *pScanner)
+	{
+		Clear();
+
+		// we better have some tokens in the queue
+		if(!pScanner->PeekNextToken())
+			return;
+
+		// first eat doc start (optional)
+		if(pScanner->PeekNextToken()->type == TT_DOC_START)
+			pScanner->EatNextToken();
+
+		// now create our root node and parse it
+		m_pRoot = new Node;
+		m_pRoot->Parse(pScanner);
+
+		// and finally eat any doc ends we see
+		while(pScanner->PeekNextToken() && pScanner->PeekNextToken()->type == TT_DOC_END)
+			pScanner->EatNextToken();
+	}
+
+	std::ostream& operator << (std::ostream& out, const Document& doc)
+	{
+		if(!doc.m_pRoot) {
+			out << "{empty node}\n";
+			return out;
+		}
+
+		doc.m_pRoot->Write(out, 0);
+		return out;
 	}
 }

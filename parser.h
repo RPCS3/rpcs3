@@ -1,13 +1,12 @@
 #pragma once
 
 #include <ios>
-#include <string>
-#include "scanner.h"
 #include "document.h"
 
 namespace YAML
 {
 	class Node;
+	class Scanner;
 
 	class Parser
 	{
@@ -18,6 +17,6 @@ namespace YAML
 		void GetNextDocument(Document& document);
 
 	private:
-		Scanner m_scanner;
+		Scanner *m_pScanner;
 	};
 }

@@ -10,6 +10,7 @@ namespace YAML
 	const std::string MapTag = "!!map";
 
 	class Content;
+	class Scanner;
 
 	class Node
 	{
@@ -18,6 +19,11 @@ namespace YAML
 		~Node();
 
 		void Clear();
+		void Parse(Scanner *pScanner);
+		void Write(std::ostream& out, int indent);
+
+	private:
+		void ParseHeader(Scanner *pScanner);
 
 	private:
 		std::string m_tag;
