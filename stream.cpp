@@ -2,9 +2,9 @@
 
 namespace YAML
 {
-	// GetChar
+	// get
 	// . Extracts a character from the stream and updates our position
-	char Stream::GetChar()
+	char Stream::get()
 	{
 		char ch = input.get();
 		column++;
@@ -15,21 +15,21 @@ namespace YAML
 		return ch;
 	}
 
-	// GetChar
+	// get
 	// . Extracts 'n' characters from the stream and updates our position
-	std::string Stream::GetChar(int n)
+	std::string Stream::get(int n)
 	{
 		std::string ret;
 		for(int i=0;i<n;i++)
-			ret += GetChar();
+			ret += get();
 		return ret;
 	}
 
-	// Eat
+	// eat
 	// . Eats 'n' characters and updates our position.
-	void Stream::Eat(int n)
+	void Stream::eat(int n)
 	{
 		for(int i=0;i<n;i++)
-			GetChar();
+			get();
 	}
 }

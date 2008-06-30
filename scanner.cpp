@@ -153,13 +153,13 @@ namespace YAML
 		while(1) {
 			// first eat whitespace
 			while(IsWhitespaceToBeEaten(INPUT.peek()))
-				INPUT.Eat(1);
+				INPUT.eat(1);
 
 			// then eat a comment
 			if(Exp::Comment.Matches(INPUT)) {
 				// eat until line break
 				while(INPUT && !Exp::Break.Matches(INPUT))
-					INPUT.Eat(1);
+					INPUT.eat(1);
 			}
 
 			// if it's NOT a line break, then we're done!
@@ -168,7 +168,7 @@ namespace YAML
 
 			// otherwise, let's eat the line break and keep going
 			int n = Exp::Break.Match(INPUT);
-			INPUT.Eat(n);
+			INPUT.eat(n);
 
 			// oh yeah, and let's get rid of that simple key
 			VerifySimpleKey();

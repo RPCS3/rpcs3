@@ -5,7 +5,6 @@
 #include <queue>
 #include <stack>
 #include <set>
-#include "regex.h"
 #include "stream.h"
 
 namespace YAML

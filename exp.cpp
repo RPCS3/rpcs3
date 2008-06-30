@@ -39,7 +39,7 @@ namespace YAML
 			// grab string
 			std::string str;
 			for(int i=0;i<codeLength;i++)
-				str += in.GetChar();
+				str += in.get();
 
 			// get the value
 			unsigned value = ParseHex(str);
@@ -67,10 +67,10 @@ namespace YAML
 		std::string Escape(Stream& in)
 		{
 			// eat slash
-			char escape = in.GetChar();
+			char escape = in.get();
 
 			// switch on escape character
-			char ch = in.GetChar();
+			char ch = in.get();
 
 			// first do single quote, since it's easier
 			if(escape == '\'' && ch == '\'')

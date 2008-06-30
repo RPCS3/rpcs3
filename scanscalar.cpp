@@ -43,7 +43,7 @@ namespace YAML
 				// escaped newline? (only if we're escaping on slash)
 				if(params.escape == '\\' && Exp::EscBreak.Matches(INPUT)) {
 					int n = Exp::EscBreak.Match(INPUT);
-					INPUT.Eat(n);
+					INPUT.eat(n);
 					continue;
 				}
 
@@ -54,7 +54,7 @@ namespace YAML
 				}
 
 				// otherwise, just add the damn character
-				scalar += INPUT.GetChar();
+				scalar += INPUT.get();
 			}
 
 			// eof? if we're looking to eat something, then we throw
@@ -72,21 +72,21 @@ namespace YAML
 			int n = params.end.Match(INPUT);
 			if(n >= 0) {
 				if(params.eatEnd)
-					INPUT.Eat(n);
+					INPUT.eat(n);
 				break;
 			}
 
 			// ********************************
 			// Phase #2: eat line ending
 			n = Exp::Break.Match(INPUT);
-			INPUT.Eat(n);
+			INPUT.eat(n);
 
 			// ********************************
 			// Phase #3: scan initial spaces
 
 			// first the required indentation
 			while(INPUT.peek() == ' ' && (INPUT.column < params.indent || (params.detectIndent && !foundNonEmptyLine)))
-				INPUT.Eat(1);
+				INPUT.eat(1);
 
 			// update indent if we're auto-detecting
 			if(params.detectIndent && !foundNonEmptyLine)
@@ -101,7 +101,7 @@ namespace YAML
 				if(!params.eatLeadingWhitespace)
 					break;
 
-				INPUT.Eat(1);
+				INPUT.eat(1);
 			}
 
 			// was this an empty line?

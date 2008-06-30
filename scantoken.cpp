@@ -23,17 +23,17 @@ namespace YAML
 		m_simpleKeyAllowed = false;
 
 		// eat indicator
-		INPUT.Eat(1);
+		INPUT.eat(1);
 
 		// read name
 		while(INPUT.peek() != EOF && !Exp::BlankOrBreak.Matches(INPUT))
-			name += INPUT.GetChar();
+			name += INPUT.get();
 
 		// read parameters
 		while(1) {
 			// first get rid of whitespace
 			while(Exp::Blank.Matches(INPUT))
-				INPUT.Eat(1);
+				INPUT.eat(1);
 
 			// break on newline or comment
 			if(INPUT.peek() == EOF || Exp::Break.Matches(INPUT) || Exp::Comment.Matches(INPUT))
@@ -42,7 +42,7 @@ namespace YAML
 			// now read parameter
 			std::string param;
 			while(INPUT.peek() != EOF && !Exp::BlankOrBreak.Matches(INPUT))
-				param += INPUT.GetChar();
+				param += INPUT.get();
 
 			params.push_back(param);
 		}
@@ -61,7 +61,7 @@ namespace YAML
 		m_simpleKeyAllowed = false;
 
 		// eat
-		INPUT.Eat(3);
+		INPUT.eat(3);
 		m_tokens.push(new Token(TT_DOC_START));
 	}
 
@@ -73,7 +73,7 @@ namespace YAML
 		m_simpleKeyAllowed = false;
 
 		// eat
-		INPUT.Eat(3);
+		INPUT.eat(3);
 		m_tokens.push(new Token(TT_DOC_END));
 	}
 
@@ -86,7 +86,7 @@ namespace YAML
 		m_simpleKeyAllowed = true;
 
 		// eat
-		char ch = INPUT.GetChar();
+		char ch = INPUT.get();
 		TOKEN_TYPE type = (ch == Keys::FlowSeqStart ? TT_FLOW_SEQ_START : TT_FLOW_MAP_START);
 		m_tokens.push(new Token(type));
 	}
@@ -101,7 +101,7 @@ namespace YAML
 		m_simpleKeyAllowed = false;
 
 		// eat
-		char ch = INPUT.GetChar();
+		char ch = INPUT.get();
 		TOKEN_TYPE type = (ch == Keys::FlowSeqEnd ? TT_FLOW_SEQ_END : TT_FLOW_MAP_END);
 		m_tokens.push(new Token(type));
 	}
@@ -112,7 +112,7 @@ namespace YAML
 		m_simpleKeyAllowed = true;
 
 		// eat
-		INPUT.Eat(1);
+		INPUT.eat(1);
 		m_tokens.push(new Token(TT_FLOW_ENTRY));
 	}
 
@@ -131,7 +131,7 @@ namespace YAML
 		m_simpleKeyAllowed = true;
 
 		// eat
-		INPUT.Eat(1);
+		INPUT.eat(1);
 		m_tokens.push(new Token(TT_BLOCK_ENTRY));
 	}
 
@@ -153,7 +153,7 @@ namespace YAML
 			m_simpleKeyAllowed = false;
 
 		// eat
-		INPUT.Eat(1);
+		INPUT.eat(1);
 		m_tokens.push(new Token(TT_KEY));
 	}
 
@@ -181,7 +181,7 @@ namespace YAML
 		}
 
 		// eat
-		INPUT.Eat(1);
+		INPUT.eat(1);
 		m_tokens.push(new Token(TT_VALUE));
 	}
 
@@ -197,12 +197,12 @@ namespace YAML
 		m_simpleKeyAllowed = false;
 
 		// eat the indicator
-		char indicator = INPUT.GetChar();
+		char indicator = INPUT.get();
 		alias = (indicator == Keys::Alias);
 
 		// now eat the content
 		while(Exp::AlphaNumeric.Matches(INPUT))
-			tag += INPUT.GetChar();
+			tag += INPUT.get();
 
 		// we need to have read SOMETHING!
 		if(tag.empty())
@@ -229,20 +229,20 @@ namespace YAML
 		m_simpleKeyAllowed = false;
 
 		// eat the indicator
-		INPUT.Eat(1);
+		INPUT.eat(1);
 
 		// read the handle
 		while(INPUT.peek() != EOF && INPUT.peek() != Keys::Tag && !Exp::BlankOrBreak.Matches(INPUT))
-			handle += INPUT.GetChar();
+			handle += INPUT.get();
 
 		// is there a suffix?
 		if(INPUT.peek() == Keys::Tag) {
 			// eat the indicator
-			INPUT.Eat(1);
+			INPUT.eat(1);
 
 			// then read it
 			while(INPUT.peek() != EOF && !Exp::BlankOrBreak.Matches(INPUT))
-				suffix += INPUT.GetChar();
+				suffix += INPUT.get();
 		}
 
 		Token *pToken = new Token(TT_TAG);
@@ -293,7 +293,7 @@ namespace YAML
 		std::string scalar;
 
 		// eat single or double quote
-		char quote = INPUT.GetChar();
+		char quote = INPUT.get();
 		bool single = (quote == '\'');
 
 		// setup the scanning parameters
@@ -333,13 +333,13 @@ namespace YAML
 		params.detectIndent = true;
 
 		// eat block indicator ('|' or '>')
-		char indicator = INPUT.GetChar();
+		char indicator = INPUT.get();
 		params.fold = (indicator == Keys::FoldedScalar);
 
 		// eat chomping/indentation indicators
 		int n = Exp::Chomp.Match(INPUT);
 		for(int i=0;i<n;i++) {
-			char ch = INPUT.GetChar();
+			char ch = INPUT.get();
 			if(ch == '+')
 				params.chomp = KEEP;
 			else if(ch == '-')
@@ -355,12 +355,12 @@ namespace YAML
 
 		// now eat whitespace
 		while(Exp::Blank.Matches(INPUT))
-			INPUT.Eat(1);
+			INPUT.eat(1);
 
 		// and comments to the end of the line
 		if(Exp::Comment.Matches(INPUT))
 			while(INPUT && !Exp::Break.Matches(INPUT))
-				INPUT.Eat(1);
+				INPUT.eat(1);
 
 		// if it's not a line break, then we ran into a bad character inline
 		if(INPUT && !Exp::Break.Matches(INPUT))
