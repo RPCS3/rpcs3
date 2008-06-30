@@ -9,8 +9,8 @@ namespace YAML
 	enum CHOMP { STRIP = -1, CLIP, KEEP };
 	enum ACTION { NONE, BREAK, THROW };
 
-	struct ScanScalarInfo {
-		ScanScalarInfo(): eatEnd(false), indent(0), detectIndent(false), eatLeadingWhitespace(0), escape(0), fold(false),
+	struct ScanScalarParams {
+		ScanScalarParams(): eatEnd(false), indent(0), detectIndent(false), eatLeadingWhitespace(0), escape(0), fold(false),
 			trimTrailingSpaces(0), chomp(CLIP), onDocIndicator(NONE), onTabInIndentation(NONE), leadingSpaces(false) {}
 
 		// input:
@@ -31,5 +31,5 @@ namespace YAML
 		bool leadingSpaces;
 	};
 
-	std::string ScanScalar(Stream& INPUT, ScanScalarInfo& info);
+	std::string ScanScalar(Stream& INPUT, ScanScalarParams& info);
 }
