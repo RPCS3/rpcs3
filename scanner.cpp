@@ -2,7 +2,6 @@
 #include "token.h"
 #include "exceptions.h"
 #include "exp.h"
-#include <iostream>
 
 namespace YAML
 {
@@ -23,39 +22,51 @@ namespace YAML
 			delete *it;
 	}
 
-	///////////////////////////////////////////////////////////////////////
-	// Misc. helpers
-
-	// IsWhitespaceToBeEaten
-	// . We can eat whitespace if:
-	//   1. It's a space
-	//   2. It's a tab, and we're either:
-	//      a. In the flow context
-	//      b. In the block context but not where a simple key could be allowed
-	//         (i.e., not at the beginning of a line, or following '-', '?', or ':')
-	bool Scanner::IsWhitespaceToBeEaten(char ch)
+	// GetNextToken
+	// . Removes and returns the next token on the queue.
+	Token *Scanner::GetNextToken()
 	{
-		if(ch == ' ')
-			return true;
-
-		if(ch == '\t' && (m_flowLevel >= 0 || !m_simpleKeyAllowed))
-			return true;
-
-		return false;
+		Token *pToken = PeekNextToken();
+		if(!m_tokens.empty())
+			m_tokens.pop();
+		return pToken;
 	}
 
-	// ScanAndEnqueue
-	// . Scans the token, then pushes it in the queue.
-	// . Note: we also use a set of "limbo tokens", i.e., tokens
-	//   that haven't yet been pushed. This way, if ScanToken()
-	//   throws an exception, we'll be keeping track of 'pToken'
-	//   somewhere, and it will be automatically cleaned up when
-	//   the Scanner destructs.
-	template <typename T> void Scanner::ScanAndEnqueue(T *pToken)
+	// PeekNextToken
+	// . Returns (but does not remove) the next token on the queue, and scans if only we need to.
+	Token *Scanner::PeekNextToken()
 	{
-		m_limboTokens.insert(pToken);
-		m_tokens.push(ScanToken(pToken));
-		m_limboTokens.erase(pToken);
+		while(1) {
+			Token *pToken = 0;
+
+			// is there a token in the queue?
+			if(!m_tokens.empty())
+				pToken = m_tokens.front();
+
+			// (here's where we clean up the impossible tokens)
+			if(pToken && pToken->status == TS_INVALID) {
+				m_tokens.pop();
+				delete pToken;
+				continue;
+			}
+
+			// on unverified tokens, we just have to wait
+			if(pToken && pToken->status == TS_UNVERIFIED)
+				pToken = 0;
+
+			// then that's what we want
+			if(pToken)
+				return pToken;
+
+			// no token? maybe we've actually finished
+			if(m_endedStream)
+				break;
+
+			// no? then scan...
+			ScanNextToken();
+		}
+
+		return 0;
 	}
 
 	// ScanNextToken
@@ -166,7 +177,8 @@ namespace YAML
 				break;
 
 			// otherwise, let's eat the line break and keep going
-			INPUT.EatLineBreak();
+			int n = Exp::Break.Match(INPUT);
+			INPUT.Eat(n);
 
 			// oh yeah, and let's get rid of that simple key
 			VerifySimpleKey();
@@ -175,6 +187,41 @@ namespace YAML
 			if(m_flowLevel == 0)
 				m_simpleKeyAllowed = true;
         }
+	}
+
+	///////////////////////////////////////////////////////////////////////
+	// Misc. helpers
+
+	// IsWhitespaceToBeEaten
+	// . We can eat whitespace if:
+	//   1. It's a space
+	//   2. It's a tab, and we're either:
+	//      a. In the flow context
+	//      b. In the block context but not where a simple key could be allowed
+	//         (i.e., not at the beginning of a line, or following '-', '?', or ':')
+	bool Scanner::IsWhitespaceToBeEaten(char ch)
+	{
+		if(ch == ' ')
+			return true;
+
+		if(ch == '\t' && (m_flowLevel >= 0 || !m_simpleKeyAllowed))
+			return true;
+
+		return false;
+	}
+
+	// ScanAndEnqueue
+	// . Scans the token, then pushes it in the queue.
+	// . Note: we also use a set of "limbo tokens", i.e., tokens
+	//   that haven't yet been pushed. This way, if ScanToken()
+	//   throws an exception, we'll be keeping track of 'pToken'
+	//   somewhere, and it will be automatically cleaned up when
+	//   the Scanner destructs.
+	template <typename T> void Scanner::ScanAndEnqueue(T *pToken)
+	{
+		m_limboTokens.insert(pToken);
+		m_tokens.push(ScanToken(pToken));
+		m_limboTokens.erase(pToken);
 	}
 
 	// PushIndentTo
@@ -214,58 +261,6 @@ namespace YAML
 		while(!m_indents.empty() && m_indents.top() > column) {
 			m_indents.pop();
 			m_tokens.push(new BlockEndToken);
-		}
-	}
-
-	// GetNextToken
-	// . Returns the next token on the queue, and scans if only we need to.
-	Token *Scanner::GetNextToken()
-	{
-		while(1) {
-			Token *pToken = 0;
-
-			// is there a token in the queue?
-			if(!m_tokens.empty())
-				pToken = m_tokens.front();
-
-			// (here's where we clean up the impossible tokens)
-			if(pToken && pToken->status == TS_INVALID) {
-				m_tokens.pop();
-				delete pToken;
-				continue;
-			}
-
-			// on unverified tokens, we just have to wait
-			if(pToken && pToken->status == TS_UNVERIFIED)
-				pToken = 0;
-
-			// then that's what we want
-			if(pToken) {
-				m_tokens.pop();
-				return pToken;
-			}
-
-			// no token? maybe we've actually finished
-			if(m_endedStream)
-				break;
-
-			// no? then scan...
-			ScanNextToken();
-		}
-
-		return 0;
-	}
-
-	// temporary function for testing
-	void Scanner::Scan()
-	{
-		while(1) {
-			Token *pToken = GetNextToken();
-			if(!pToken)
-				break;
-
-			std::cout << typeid(*pToken).name() << ": " << *pToken << std::endl;
-			delete pToken;
 		}
 	}
 }

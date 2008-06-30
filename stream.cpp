@@ -32,12 +32,4 @@ namespace YAML
 		for(int i=0;i<n;i++)
 			GetChar();
 	}
-
-	// GetLineBreak
-	// . Eats with no checking
-	void Stream::EatLineBreak()
-	{
-		Eat(1);
-		column = 0;
-	}
 }

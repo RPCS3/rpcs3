@@ -19,7 +19,7 @@ namespace YAML
 		~Scanner();
 
 		Token *GetNextToken();
-		void Scan();
+		Token *PeekNextToken();
 
 	private:
 		// scanning

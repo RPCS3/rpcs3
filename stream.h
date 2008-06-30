@@ -18,7 +18,6 @@ namespace YAML
 		char GetChar();
 		std::string GetChar(int n);
 		void Eat(int n = 1);
-		void EatLineBreak();
 
 		std::istream& input;
 		int line, column;

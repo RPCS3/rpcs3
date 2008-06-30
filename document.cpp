@@ -5,6 +5,9 @@
 #include "exceptions.h"
 #include <fstream>
 
+#include <iostream>
+#include "token.h"
+
 namespace YAML
 {
 	Document::Document(): m_pRoot(0)
@@ -34,10 +37,16 @@ namespace YAML
 		std::ifstream fin(fileName.c_str());
 		Scanner scanner(fin);
 
-		scanner.Scan();
+		// scan and output, for now
+		while(1) {
+			Token *pToken = scanner.GetNextToken();
+			if(!pToken)
+				break;
+
+			std::cout << typeid(*pToken).name() << ": " << *pToken << std::endl;
+			delete pToken;
+		}
 		getchar();
-//		if(!scanner)
-//			return;
 
 //		m_pRoot = parser.ReadNextNode();
 	}

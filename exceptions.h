@@ -5,33 +5,34 @@
 namespace YAML
 {
 	class Exception: public std::exception {};
+	class ScannerException: public Exception {};
 
-	class UnknownToken: public Exception {};
-	class IllegalBlockEntry: public Exception {};
-	class IllegalMapKey: public Exception {};
-	class IllegalMapValue: public Exception {};
-	class IllegalScalar: public Exception {};
-	class IllegalTabInIndentation: public Exception {};
-	class IllegalFlowEnd: public Exception {};
-	class IllegalDocIndicator: public Exception {};
-	class IllegalEOF: public Exception {};
-	class RequiredSimpleKeyNotFound: public Exception {};
-	class ZeroIndentationInBlockScalar: public Exception {};
-	class UnexpectedCharacterInBlockScalar: public Exception {};
-	class AnchorNotFound: public Exception {};
-	class IllegalCharacterInAnchor: public Exception {};
+	class UnknownToken: public ScannerException {};
+	class IllegalBlockEntry: public ScannerException {};
+	class IllegalMapKey: public ScannerException {};
+	class IllegalMapValue: public ScannerException {};
+	class IllegalScalar: public ScannerException {};
+	class IllegalTabInIndentation: public ScannerException {};
+	class IllegalFlowEnd: public ScannerException {};
+	class IllegalDocIndicator: public ScannerException {};
+	class IllegalEOF: public ScannerException {};
+	class RequiredSimpleKeyNotFound: public ScannerException {};
+	class ZeroIndentationInBlockScalar: public ScannerException {};
+	class UnexpectedCharacterInBlockScalar: public ScannerException {};
+	class AnchorNotFound: public ScannerException {};
+	class IllegalCharacterInAnchor: public ScannerException {};
 
-	class UnknownEscapeSequence: public Exception {
+	class UnknownEscapeSequence: public ScannerException {
 	public:
 		UnknownEscapeSequence(char ch_): ch(ch_) {}
 		char ch;
 	};
-	class NonHexNumber: public Exception {
+	class NonHexNumber: public ScannerException {
 	public:
 		NonHexNumber(char ch_): ch(ch_) {}
 		char ch;
 	};
-	class InvalidUnicode: public Exception {
+	class InvalidUnicode: public ScannerException {
 	public:
 		InvalidUnicode(unsigned value_): value(value_) {}
 		unsigned value;
