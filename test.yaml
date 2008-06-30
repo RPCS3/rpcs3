@@ -1,14 +1,17 @@
 ---
-- "quoted scalar\twith a tab\nand a newline"
-- 'This is Jesse''s single quote!'
-- |
-  here's a literal:
-  #include <iostream>
-  
-  int main()
-  {
-     std::cout << "Hello World!\n";
-     return 0;
-  }
-- key1: value1
-  key2: value2
+- here's a key: value
+  here's the first block: |
+  after the block: value
+  and here's a block: |-
+    What's going on?
+    How are you doing?
+    Here's some code:
+    
+      #include <iostream>
+      int main()
+      {
+         std::cout << "Hello World!\n";
+      }
+    
+    I'm doing fine!
+  and last key: value

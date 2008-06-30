@@ -19,19 +19,20 @@ namespace YAML
 		~Scanner();
 
 		Token *GetNextToken();
+		void Scan();
 
+	private:
+		// scanning
 		void ScanNextToken();
 		void ScanToNextToken();
 		Token *PushIndentTo(int column, bool sequence);
 		void PopIndentTo(int column);
 
+		// checking input
 		void InsertSimpleKey();
 		bool VerifySimpleKey();
 		void VerifyAllSimpleKeys();
 
-		void Scan();
-
-	private:
 		bool IsWhitespaceToBeEaten(char ch);
 		bool IsDocumentStart();
 		bool IsDocumentEnd();
