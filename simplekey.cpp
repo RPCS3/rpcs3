@@ -44,7 +44,7 @@ namespace YAML
 //			key.required = true;	// TODO: is this correct?
 
 		// then add the (now unverified) key
-		key.pKey = new KeyToken;
+		key.pKey = new Token(TT_KEY);
 		key.pKey->status = TS_UNVERIFIED;
 		m_tokens.push(key.pKey);
 

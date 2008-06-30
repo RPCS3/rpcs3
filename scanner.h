@@ -23,6 +23,8 @@ namespace YAML
 
 	private:
 		// scanning
+		void StartStream();
+		void EndStream();
 		void ScanNextToken();
 		void ScanToNextToken();
 		Token *PushIndentTo(int column, bool sequence);
@@ -46,8 +48,24 @@ namespace YAML
 			Token *pMapStart, *pKey;
 		};
 
-		template <typename T> void ScanAndEnqueue(T *pToken);
-		template <typename T> T *ScanToken(T *pToken);
+		// and the tokens
+		void ScanDirective();
+		void ScanDocStart();
+		void ScanDocEnd();
+		void ScanBlockSeqStart();
+		void ScanBlockMapSTart();
+		void ScanBlockEnd();
+		void ScanBlockEntry();
+		void ScanFlowStart();
+		void ScanFlowEnd();
+		void ScanFlowEntry();
+		void ScanKey();
+		void ScanValue();
+		void ScanAnchorOrAlias();
+		void ScanTag();
+		void ScanPlainScalar();
+		void ScanQuotedScalar();
+		void ScanBlockScalar();
 
 	private:
 		// the stream
@@ -55,7 +73,6 @@ namespace YAML
 
 		// the output (tokens)
 		std::queue <Token *> m_tokens;
-		std::set <Token *> m_limboTokens;
 
 		// state info
 		bool m_startedStream, m_endedStream;

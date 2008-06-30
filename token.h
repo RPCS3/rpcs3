@@ -7,64 +7,61 @@
 namespace YAML
 {
 	enum TOKEN_STATUS { TS_VALID, TS_INVALID, TS_UNVERIFIED };
+	enum TOKEN_TYPE {
+		TT_DIRECTIVE,
+		TT_DOC_START,
+		TT_DOC_END,
+		TT_BLOCK_SEQ_START,
+		TT_BLOCK_MAP_START,
+		TT_BLOCK_END,
+		TT_BLOCK_ENTRY,
+		TT_FLOW_SEQ_START,
+		TT_FLOW_MAP_START,
+		TT_FLOW_SEQ_END,
+		TT_FLOW_MAP_END,
+		TT_FLOW_ENTRY,
+		TT_KEY,
+		TT_VALUE,
+		TT_ANCHOR,
+		TT_ALIAS,
+		TT_TAG,
+		TT_SCALAR,
+	};
+
+	const std::string TokenNames[] = {
+		"DIRECTIVE",
+		"DOC_START",
+		"DOC_END",
+		"BLOCK_SEQ_START",
+		"BLOCK_MAP_START",
+		"BLOCK_END",
+		"BLOCK_ENTRY",
+		"FLOW_SEQ_START",
+		"FLOW_MAP_START",
+		"FLOW_SEQ_END",
+		"FLOW_MAP_END",
+		"FLOW_ENTRY",
+		"KEY",
+		"VALUE",
+		"ANCHOR",
+		"ALIAS",
+		"TAG",
+		"SCALAR",
+	};
 
 	struct Token {
-		Token(): status(TS_VALID) {}
-		virtual ~Token() {}
-		virtual void Write(std::ostream& out) const {}
+		Token(TOKEN_TYPE type_): status(TS_VALID), type(type_) {}
 
-		friend std::ostream& operator << (std::ostream& out, const Token& token) { token.Write(out); return out; }
+		friend std::ostream& operator << (std::ostream& out, const Token& token) {
+			out << TokenNames[token.type] << ": " << token.value;
+			for(unsigned i=0;i<token.params.size();i++)
+				out << " " << token.params[i];
+			return out;
+		}
+
 		TOKEN_STATUS status;
-	};
-
-	struct StreamStartToken: public Token {};
-	struct StreamEndToken: public Token {};
-	struct DirectiveToken: public Token {
-		std::string name;
+		TOKEN_TYPE type;
+		std::string value;
 		std::vector <std::string> params;
-
-		virtual void Write(std::ostream& out) const { out << name; for(unsigned i=0;i<params.size();i++) out << " " << params[i]; }
 	};
-
-	struct DocumentStartToken: public Token {};
-	struct DocumentEndToken: public Token {};
-
-	struct BlockSeqStartToken: public Token {};
-	struct BlockMapStartToken: public Token {};
-	struct BlockEndToken: public Token {};
-	struct BlockEntryToken: public Token {};
-
-	struct FlowSeqStartToken: public Token {};
-	struct FlowMapStartToken: public Token {};
-	struct FlowSeqEndToken: public Token {};
-	struct FlowMapEndToken: public Token {};
-	struct FlowEntryToken: public Token {};
-
-	struct KeyToken: public Token {};
-	struct ValueToken: public Token {};
-	struct AnchorToken: public Token {
-		bool alias;
-		std::string value;
-
-		virtual void Write(std::ostream& out) const { out << (alias ? '*' : '&') << value; }
-	};
-
-	struct TagToken: public Token {
-		std::string handle, suffix;
-
-		virtual void Write(std::ostream& out) const { out << "!" << handle << "!" << suffix; }
-	};
-
-	struct ScalarToken: public Token {
-		std::string value;
-		virtual void Write(std::ostream& out) const { out << value; }
-	};
-
-	struct PlainScalarToken: public ScalarToken {};
-	struct QuotedScalarToken: public ScalarToken {
-		bool single;
-		virtual void Write(std::ostream& out) const { out << (single ? '\'' : '\"') << value << (single ? '\'' : '\"'); }
-	};
-
-	struct BlockScalarToken: public ScalarToken {};
 }

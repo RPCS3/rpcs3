@@ -8,9 +8,6 @@ namespace YAML
 {
 	Parser::Parser(std::istream& in): m_scanner(in)
 	{
-		// eat the stream start token
-		// TODO: check?
-		Token *pToken = m_scanner.GetNextToken();
 	}
 
 	Parser::~Parser()
@@ -25,7 +22,7 @@ namespace YAML
 			if(!pToken)
 				break;
 
-			std::cout << typeid(*pToken).name() << ": " << *pToken << std::endl;
+			std::cout << *pToken << std::endl;
 			delete pToken;
 		}
 		getchar();

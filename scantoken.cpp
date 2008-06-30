@@ -9,36 +9,13 @@ namespace YAML
 	///////////////////////////////////////////////////////////////////////
 	// Specialization for scanning specific tokens
 
-	// StreamStartToken
-	template <> StreamStartToken *Scanner::ScanToken(StreamStartToken *pToken)
-	{
-		m_startedStream = true;
-		m_simpleKeyAllowed = true;
-		m_indents.push(-1);
-
-		return pToken;
-	}
-
-	// StreamEndToken
-	template <> StreamEndToken *Scanner::ScanToken(StreamEndToken *pToken)
-	{
-		// force newline
-		if(INPUT.column > 0)
-			INPUT.column = 0;
-
-		PopIndentTo(-1);
-		VerifyAllSimpleKeys();
-
-		m_simpleKeyAllowed = false;
-		m_endedStream = true;
-
-		return pToken;
-	}
-
-	// DirectiveToken
+	// Directive
 	// . Note: no semantic checking is done here (that's for the parser to do)
-	template <> DirectiveToken *Scanner::ScanToken(DirectiveToken *pToken)
+	void Scanner::ScanDirective()
 	{
+		std::string name;
+		std::vector <std::string> params;
+
 		// pop indents and simple keys
 		PopIndentTo(-1);
 		VerifyAllSimpleKeys();
@@ -50,7 +27,7 @@ namespace YAML
 
 		// read name
 		while(INPUT.peek() != EOF && !Exp::BlankOrBreak.Matches(INPUT))
-			pToken->name += INPUT.GetChar();
+			name += INPUT.GetChar();
 
 		// read parameters
 		while(1) {
@@ -67,14 +44,17 @@ namespace YAML
 			while(INPUT.peek() != EOF && !Exp::BlankOrBreak.Matches(INPUT))
 				param += INPUT.GetChar();
 
-			pToken->params.push_back(param);
+			params.push_back(param);
 		}
 		
-		return pToken;
+		Token *pToken = new Token(TT_DIRECTIVE);
+		pToken->value = name;
+		pToken->params = params;
+		m_tokens.push(pToken);
 	}
 
-	// DocumentStartToken
-	template <> DocumentStartToken *Scanner::ScanToken(DocumentStartToken *pToken)
+	// DocStart
+	void Scanner::ScanDocStart()
 	{
 		PopIndentTo(INPUT.column);
 		VerifyAllSimpleKeys();
@@ -82,11 +62,11 @@ namespace YAML
 
 		// eat
 		INPUT.Eat(3);
-		return pToken;
+		m_tokens.push(new Token(TT_DOC_START));
 	}
 
-	// DocumentEndToken
-	template <> DocumentEndToken *Scanner::ScanToken(DocumentEndToken *pToken)
+	// DocEnd
+	void Scanner::ScanDocEnd()
 	{
 		PopIndentTo(-1);
 		VerifyAllSimpleKeys();
@@ -94,37 +74,25 @@ namespace YAML
 
 		// eat
 		INPUT.Eat(3);
-		return pToken;
+		m_tokens.push(new Token(TT_DOC_END));
 	}
 
-	// FlowSeqStartToken
-	template <> FlowSeqStartToken *Scanner::ScanToken(FlowSeqStartToken *pToken)
+	// FlowStart
+	void Scanner::ScanFlowStart()
 	{
-		// flow sequences can be simple keys
+		// flows can be simple keys
 		InsertSimpleKey();
 		m_flowLevel++;
 		m_simpleKeyAllowed = true;
 
 		// eat
-		INPUT.Eat(1);
-		return pToken;
+		char ch = INPUT.GetChar();
+		TOKEN_TYPE type = (ch == Keys::FlowSeqStart ? TT_FLOW_SEQ_START : TT_FLOW_MAP_START);
+		m_tokens.push(new Token(type));
 	}
 
-	// FlowMapStartToken
-	template <> FlowMapStartToken *Scanner::ScanToken(FlowMapStartToken *pToken)
-	{
-		// flow maps can be simple keys
-		InsertSimpleKey();
-		m_flowLevel++;
-		m_simpleKeyAllowed = true;
-
-		// eat
-		INPUT.Eat(1);
-		return pToken;
-	}
-
-	// FlowSeqEndToken
-	template <> FlowSeqEndToken *Scanner::ScanToken(FlowSeqEndToken *pToken)
+	// FlowEnd
+	void Scanner::ScanFlowEnd()
 	{
 		if(m_flowLevel == 0)
 			throw IllegalFlowEnd();
@@ -133,36 +101,23 @@ namespace YAML
 		m_simpleKeyAllowed = false;
 
 		// eat
-		INPUT.Eat(1);
-		return pToken;
+		char ch = INPUT.GetChar();
+		TOKEN_TYPE type = (ch == Keys::FlowSeqEnd ? TT_FLOW_SEQ_END : TT_FLOW_MAP_END);
+		m_tokens.push(new Token(type));
 	}
 
-	// FlowMapEndToken
-	template <> FlowMapEndToken *Scanner::ScanToken(FlowMapEndToken *pToken)
-	{
-		if(m_flowLevel == 0)
-			throw IllegalFlowEnd();
-
-		m_flowLevel--;
-		m_simpleKeyAllowed = false;
-
-		// eat
-		INPUT.Eat(1);
-		return pToken;
-	}
-
-	// FlowEntryToken
-	template <> FlowEntryToken *Scanner::ScanToken(FlowEntryToken *pToken)
+	// FlowEntry
+	void Scanner::ScanFlowEntry()
 	{
 		m_simpleKeyAllowed = true;
 
 		// eat
 		INPUT.Eat(1);
-		return pToken;
+		m_tokens.push(new Token(TT_FLOW_ENTRY));
 	}
 
-	// BlockEntryToken
-	template <> BlockEntryToken *Scanner::ScanToken(BlockEntryToken *pToken)
+	// BlockEntry
+	void Scanner::ScanBlockEntry()
 	{
 		// we better be in the block context!
 		if(m_flowLevel > 0)
@@ -177,11 +132,11 @@ namespace YAML
 
 		// eat
 		INPUT.Eat(1);
-		return pToken;
+		m_tokens.push(new Token(TT_BLOCK_ENTRY));
 	}
 
-	// KeyToken
-	template <> KeyToken *Scanner::ScanToken(KeyToken *pToken)
+	// Key
+	void Scanner::ScanKey()
 	{
 		// handle keys diffently in the block context (and manage indents)
 		if(m_flowLevel == 0) {
@@ -199,11 +154,11 @@ namespace YAML
 
 		// eat
 		INPUT.Eat(1);
-		return pToken;
+		m_tokens.push(new Token(TT_KEY));
 	}
 
-	// ValueToken
-	template <> ValueToken *Scanner::ScanToken(ValueToken *pToken)
+	// Value
+	void Scanner::ScanValue()
 	{
 		// does this follow a simple key?
 		if(m_isLastKeyValid) {
@@ -227,12 +182,15 @@ namespace YAML
 
 		// eat
 		INPUT.Eat(1);
-		return pToken;
+		m_tokens.push(new Token(TT_VALUE));
 	}
 
-	// AnchorToken
-	template <> AnchorToken *Scanner::ScanToken(AnchorToken *pToken)
+	// AnchorOrAlias
+	void Scanner::ScanAnchorOrAlias()
 	{
+		bool alias;
+		std::string tag;
+
 		// insert a potential simple key
 		if(m_simpleKeyAllowed)
 			InsertSimpleKey();
@@ -240,10 +198,9 @@ namespace YAML
 
 		// eat the indicator
 		char indicator = INPUT.GetChar();
-		pToken->alias = (indicator == Keys::Alias);
+		alias = (indicator == Keys::Alias);
 
 		// now eat the content
-		std::string tag;
 		while(Exp::AlphaNumeric.Matches(INPUT))
 			tag += INPUT.GetChar();
 
@@ -256,13 +213,16 @@ namespace YAML
 			throw IllegalCharacterInAnchor();
 
 		// and we're done
+		Token *pToken = new Token(alias ? TT_ALIAS : TT_ANCHOR);
 		pToken->value = tag;
-		return pToken;
+		m_tokens.push(pToken);
 	}
 
-	// TagToken
-	template <> TagToken *Scanner::ScanToken(TagToken *pToken)
+	// Tag
+	void Scanner::ScanTag()
 	{
+		std::string handle, suffix;
+
 		// insert a potential simple key
 		if(m_simpleKeyAllowed)
 			InsertSimpleKey();
@@ -273,7 +233,7 @@ namespace YAML
 
 		// read the handle
 		while(INPUT.peek() != EOF && INPUT.peek() != Keys::Tag && !Exp::BlankOrBreak.Matches(INPUT))
-			pToken->handle += INPUT.GetChar();
+			handle += INPUT.GetChar();
 
 		// is there a suffix?
 		if(INPUT.peek() == Keys::Tag) {
@@ -282,15 +242,20 @@ namespace YAML
 
 			// then read it
 			while(INPUT.peek() != EOF && !Exp::BlankOrBreak.Matches(INPUT))
-				pToken->suffix += INPUT.GetChar();
+				suffix += INPUT.GetChar();
 		}
 
-		return pToken;
+		Token *pToken = new Token(TT_TAG);
+		pToken->value = handle;
+		pToken->params.push_back(suffix);
+		m_tokens.push(pToken);
 	}
 
-	// PlainScalarToken
-	template <> PlainScalarToken *Scanner::ScanToken(PlainScalarToken *pToken)
+	// PlainScalar
+	void Scanner::ScanPlainScalar()
 	{
+		std::string scalar;
+
 		// set up the scanning parameters
 		ScanScalarParams params;
 		params.end = (m_flowLevel > 0 ? Exp::EndScalarInFlow : Exp::EndScalar) || (RegEx(' ') + Exp::Comment);
@@ -307,7 +272,7 @@ namespace YAML
 		if(m_simpleKeyAllowed)
 			InsertSimpleKey();
 
-		pToken->value = ScanScalar(INPUT, params);
+		scalar = ScanScalar(INPUT, params);
 
 		// can have a simple key only if we ended the scalar by starting a new line
 		m_simpleKeyAllowed = params.leadingSpaces;
@@ -317,21 +282,25 @@ namespace YAML
 		if(Exp::IllegalColonInScalar.Matches(INPUT))
 			throw IllegalScalar();
 
-		return pToken;
+		Token *pToken = new Token(TT_SCALAR);
+		pToken->value = scalar;
+		m_tokens.push(pToken);
 	}
 
-	// QuotedScalarToken
-	template <> QuotedScalarToken *Scanner::ScanToken(QuotedScalarToken *pToken)
+	// QuotedScalar
+	void Scanner::ScanQuotedScalar()
 	{
+		std::string scalar;
+
 		// eat single or double quote
 		char quote = INPUT.GetChar();
-		pToken->single = (quote == '\'');
+		bool single = (quote == '\'');
 
 		// setup the scanning parameters
 		ScanScalarParams params;
-		params.end = (pToken->single ? RegEx(quote) && !Exp::EscSingleQuote : RegEx(quote));
+		params.end = (single ? RegEx(quote) && !Exp::EscSingleQuote : RegEx(quote));
 		params.eatEnd = true;
-		params.escape = (pToken->single ? '\'' : '\\');
+		params.escape = (single ? '\'' : '\\');
 		params.indent = 0;
 		params.fold = true;
 		params.eatLeadingWhitespace = true;
@@ -343,18 +312,22 @@ namespace YAML
 		if(m_simpleKeyAllowed)
 			InsertSimpleKey();
 
-		pToken->value = ScanScalar(INPUT, params);
+		scalar = ScanScalar(INPUT, params);
 		m_simpleKeyAllowed = false;
 
-		return pToken;
+		Token *pToken = new Token(TT_SCALAR);
+		pToken->value = scalar;
+		m_tokens.push(pToken);
 	}
 
 	// BlockScalarToken
 	// . These need a little extra processing beforehand.
 	// . We need to scan the line where the indicator is (this doesn't count as part of the scalar),
 	//   and then we need to figure out what level of indentation we'll be using.
-	template <> BlockScalarToken *Scanner::ScanToken(BlockScalarToken *pToken)
+	void Scanner::ScanBlockScalar()
 	{
+		std::string scalar;
+
 		ScanScalarParams params;
 		params.indent = 1;
 		params.detectIndent = true;
@@ -401,10 +374,13 @@ namespace YAML
 		params.trimTrailingSpaces = false;
 		params.onTabInIndentation = THROW;
 
-		pToken->value = ScanScalar(INPUT, params);
+		scalar = ScanScalar(INPUT, params);
 
 		// simple keys always ok after block scalars (since we're gonna start a new line anyways)
 		m_simpleKeyAllowed = true;
-		return pToken;
+
+		Token *pToken = new Token(TT_SCALAR);
+		pToken->value = scalar;
+		m_tokens.push(pToken);
 	}
 }

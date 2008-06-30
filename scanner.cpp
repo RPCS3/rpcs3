@@ -16,10 +16,6 @@ namespace YAML
 			delete m_tokens.front();
 			m_tokens.pop();
 		}
-
-		// delete limbo tokens (they're here for RAII)
-		for(std::set <Token *>::const_iterator it=m_limboTokens.begin();it!=m_limboTokens.end();++it)
-			delete *it;
 	}
 
 	// GetNextToken
@@ -78,7 +74,7 @@ namespace YAML
 			return;
 
 		if(!m_startedStream)
-			return ScanAndEnqueue(new StreamStartToken);
+			return StartStream();
 
 		// get rid of whitespace, etc. (in between tokens it should be irrelevent)
 		ScanToNextToken();
@@ -95,62 +91,56 @@ namespace YAML
 
 		// end of stream
 		if(INPUT.peek() == EOF)
-			return ScanAndEnqueue(new StreamEndToken);
+			return EndStream();
 
 		if(INPUT.column == 0 && INPUT.peek() == Keys::Directive)
-			return ScanAndEnqueue(new DirectiveToken);
+			return ScanDirective();
 
 		// document token
 		if(INPUT.column == 0 && Exp::DocStart.Matches(INPUT))
-			return ScanAndEnqueue(new DocumentStartToken);
+			return ScanDocStart();
 
 		if(INPUT.column == 0 && Exp::DocEnd.Matches(INPUT))
-			return ScanAndEnqueue(new DocumentEndToken);
+			return ScanDocEnd();
 
 		// flow start/end/entry
-		if(INPUT.peek() == Keys::FlowSeqStart)
-			return ScanAndEnqueue(new FlowSeqStartToken);
+		if(INPUT.peek() == Keys::FlowSeqStart || INPUT.peek() == Keys::FlowMapStart)
+			return ScanFlowStart();
 
-		if(INPUT.peek() == Keys::FlowSeqEnd)
-			return ScanAndEnqueue(new FlowSeqEndToken);
-		
-		if(INPUT.peek() == Keys::FlowMapStart)
-			return ScanAndEnqueue(new FlowMapStartToken);
-		
-		if(INPUT.peek() == Keys::FlowMapEnd)
-			return ScanAndEnqueue(new FlowMapEndToken);
-
+		if(INPUT.peek() == Keys::FlowSeqEnd || INPUT.peek() == Keys::FlowMapEnd)
+			return ScanFlowEnd();
+	
 		if(INPUT.peek() == Keys::FlowEntry)
-			return ScanAndEnqueue(new FlowEntryToken);
+			return ScanFlowEntry();
 
 		// block/map stuff
 		if(Exp::BlockEntry.Matches(INPUT))
-			return ScanAndEnqueue(new BlockEntryToken);
+			return ScanBlockEntry();
 
 		if((m_flowLevel == 0 ? Exp::Key : Exp::KeyInFlow).Matches(INPUT))
-			return ScanAndEnqueue(new KeyToken);
+			return ScanKey();
 
 		if((m_flowLevel == 0 ? Exp::Value : Exp::ValueInFlow).Matches(INPUT))
-			return ScanAndEnqueue(new ValueToken);
+			return ScanValue();
 
 		// alias/anchor
 		if(INPUT.peek() == Keys::Alias || INPUT.peek() == Keys::Anchor)
-			return ScanAndEnqueue(new AnchorToken);
+			return ScanAnchorOrAlias();
 
 		// tag
 		if(INPUT.peek() == Keys::Tag)
-			return ScanAndEnqueue(new TagToken);
+			return ScanTag();
 
 		// special scalars
 		if(m_flowLevel == 0 && (INPUT.peek() == Keys::LiteralScalar || INPUT.peek() == Keys::FoldedScalar))
-			return ScanAndEnqueue(new BlockScalarToken);
+			return ScanBlockScalar();
 
 		if(INPUT.peek() == '\'' || INPUT.peek() == '\"')
-			return ScanAndEnqueue(new QuotedScalarToken);
+			return ScanQuotedScalar();
 
 		// plain scalars
 		if((m_flowLevel == 0 ? Exp::PlainScalar : Exp::PlainScalarInFlow).Matches(INPUT))
-			return ScanAndEnqueue(new PlainScalarToken);
+			return ScanPlainScalar();
 
 		// don't know what it is!
 		throw UnknownToken();
@@ -210,18 +200,28 @@ namespace YAML
 		return false;
 	}
 
-	// ScanAndEnqueue
-	// . Scans the token, then pushes it in the queue.
-	// . Note: we also use a set of "limbo tokens", i.e., tokens
-	//   that haven't yet been pushed. This way, if ScanToken()
-	//   throws an exception, we'll be keeping track of 'pToken'
-	//   somewhere, and it will be automatically cleaned up when
-	//   the Scanner destructs.
-	template <typename T> void Scanner::ScanAndEnqueue(T *pToken)
+	// StartStream
+	// . Set the initial conditions for starting a stream.
+	void Scanner::StartStream()
 	{
-		m_limboTokens.insert(pToken);
-		m_tokens.push(ScanToken(pToken));
-		m_limboTokens.erase(pToken);
+		m_startedStream = true;
+		m_simpleKeyAllowed = true;
+		m_indents.push(-1);
+	}
+
+	// EndStream
+	// . Close out the stream, finish up, etc.
+	void Scanner::EndStream()
+	{
+		// force newline
+		if(INPUT.column > 0)
+			INPUT.column = 0;
+
+		PopIndentTo(-1);
+		VerifyAllSimpleKeys();
+
+		m_simpleKeyAllowed = false;
+		m_endedStream = true;
 	}
 
 	// PushIndentTo
@@ -241,9 +241,9 @@ namespace YAML
 		// now push
 		m_indents.push(column);
 		if(sequence)
-			m_tokens.push(new BlockSeqStartToken);
+			m_tokens.push(new Token(TT_BLOCK_SEQ_START));
 		else
-			m_tokens.push(new BlockMapStartToken);
+			m_tokens.push(new Token(TT_BLOCK_MAP_START));
 
 		return m_tokens.front();
 	}
@@ -260,7 +260,7 @@ namespace YAML
 		// now pop away
 		while(!m_indents.empty() && m_indents.top() > column) {
 			m_indents.pop();
-			m_tokens.push(new BlockEndToken);
+			m_tokens.push(new Token(TT_BLOCK_END));
 		}
 	}
 }
