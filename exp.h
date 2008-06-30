@@ -57,6 +57,7 @@ namespace YAML
 
 	namespace Keys
 	{
+		const char Directive = '%';
 		const char FlowSeqStart = '[';
 		const char FlowSeqEnd = ']';
 		const char FlowMapStart = '{';

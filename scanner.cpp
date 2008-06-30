@@ -44,56 +44,6 @@ namespace YAML
 		return false;
 	}
 
-	// IsDocumentStart
-	bool Scanner::IsDocumentStart()
-	{
-		// needs to be at the start of a new line
-		if(INPUT.column != 0)
-			return false;
-
-		return Exp::DocStart.Matches(INPUT);
-	}
-
-	// IsDocumentEnd
-	bool Scanner::IsDocumentEnd()
-	{
-		// needs to be at the start of a new line
-		if(INPUT.column != 0)
-			return false;
-
-		return Exp::DocEnd.Matches(INPUT);
-	}
-
-	// IsBlockEntry
-	bool Scanner::IsBlockEntry()
-	{
-		return Exp::BlockEntry.Matches(INPUT);
-	}
-
-	// IsKey
-	bool Scanner::IsKey()
-	{
-		if(m_flowLevel > 0)
-			return Exp::KeyInFlow.Matches(INPUT);
-		return Exp::Key.Matches(INPUT);
-	}
-
-	// IsValue
-	bool Scanner::IsValue()
-	{
-		if(m_flowLevel > 0)
-			return Exp::ValueInFlow.Matches(INPUT);
-		return Exp::Value.Matches(INPUT);
-	}
-
-	// IsPlainScalar
-	bool Scanner::IsPlainScalar()
-	{
-		if(m_flowLevel > 0)
-			return Exp::PlainScalarInFlow.Matches(INPUT);
-		return Exp::PlainScalar.Matches(INPUT);
-	}
-
 	// ScanAndEnqueue
 	// . Scans the token, then pushes it in the queue.
 	// . Note: we also use a set of "limbo tokens", i.e., tokens
@@ -136,11 +86,14 @@ namespace YAML
 		if(INPUT.peek() == EOF)
 			return ScanAndEnqueue(new StreamEndToken);
 
+		if(INPUT.column == 0 && INPUT.peek() == Keys::Directive)
+			return ScanAndEnqueue(new DirectiveToken);
+
 		// document token
-		if(IsDocumentStart())
+		if(INPUT.column == 0 && Exp::DocStart.Matches(INPUT))
 			return ScanAndEnqueue(new DocumentStartToken);
 
-		if(IsDocumentEnd())
+		if(INPUT.column == 0 && Exp::DocEnd.Matches(INPUT))
 			return ScanAndEnqueue(new DocumentEndToken);
 
 		// flow start/end/entry
@@ -160,19 +113,22 @@ namespace YAML
 			return ScanAndEnqueue(new FlowEntryToken);
 
 		// block/map stuff
-		if(IsBlockEntry())
+		if(Exp::BlockEntry.Matches(INPUT))
 			return ScanAndEnqueue(new BlockEntryToken);
 
-		if(IsKey())
+		if((m_flowLevel == 0 ? Exp::Key : Exp::KeyInFlow).Matches(INPUT))
 			return ScanAndEnqueue(new KeyToken);
 
-		if(IsValue())
+		if((m_flowLevel == 0 ? Exp::Value : Exp::ValueInFlow).Matches(INPUT))
 			return ScanAndEnqueue(new ValueToken);
 
+		// alias/anchor
 		if(INPUT.peek() == Keys::Alias || INPUT.peek() == Keys::Anchor)
 			return ScanAndEnqueue(new AnchorToken);
 
-		// TODO: tag
+		// tag
+		if(INPUT.peek() == Keys::Tag)
+			return ScanAndEnqueue(new TagToken);
 
 		// special scalars
 		if(m_flowLevel == 0 && (INPUT.peek() == Keys::LiteralScalar || INPUT.peek() == Keys::FoldedScalar))
@@ -182,7 +138,7 @@ namespace YAML
 			return ScanAndEnqueue(new QuotedScalarToken);
 
 		// plain scalars
-		if(IsPlainScalar())
+		if((m_flowLevel == 0 ? Exp::PlainScalar : Exp::PlainScalarInFlow).Matches(INPUT))
 			return ScanAndEnqueue(new PlainScalarToken);
 
 		// don't know what it is!

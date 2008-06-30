@@ -34,12 +34,6 @@ namespace YAML
 		void VerifyAllSimpleKeys();
 
 		bool IsWhitespaceToBeEaten(char ch);
-		bool IsDocumentStart();
-		bool IsDocumentEnd();
-		bool IsBlockEntry();
-		bool IsKey();
-		bool IsValue();
-		bool IsPlainScalar();
 
 		struct SimpleKey {
 			SimpleKey(int pos_, int line_, int column_, int flowLevel_);

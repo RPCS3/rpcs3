@@ -35,6 +35,44 @@ namespace YAML
 		return pToken;
 	}
 
+	// DirectiveToken
+	// . Note: no semantic checking is done here (that's for the parser to do)
+	template <> DirectiveToken *Scanner::ScanToken(DirectiveToken *pToken)
+	{
+		// pop indents and simple keys
+		PopIndentTo(-1);
+		VerifyAllSimpleKeys();
+
+		m_simpleKeyAllowed = false;
+
+		// eat indicator
+		INPUT.Eat(1);
+
+		// read name
+		while(INPUT.peek() != EOF && !Exp::BlankOrBreak.Matches(INPUT))
+			pToken->name += INPUT.GetChar();
+
+		// read parameters
+		while(1) {
+			// first get rid of whitespace
+			while(Exp::Blank.Matches(INPUT))
+				INPUT.Eat(1);
+
+			// break on newline or comment
+			if(INPUT.peek() == EOF || Exp::Break.Matches(INPUT) || Exp::Comment.Matches(INPUT))
+				break;
+
+			// now read parameter
+			std::string param;
+			while(INPUT.peek() != EOF && !Exp::BlankOrBreak.Matches(INPUT))
+				param += INPUT.GetChar();
+
+			pToken->params.push_back(param);
+		}
+		
+		return pToken;
+	}
+
 	// DocumentStartToken
 	template <> DocumentStartToken *Scanner::ScanToken(DocumentStartToken *pToken)
 	{
@@ -219,6 +257,34 @@ namespace YAML
 
 		// and we're done
 		pToken->value = tag;
+		return pToken;
+	}
+
+	// TagToken
+	template <> TagToken *Scanner::ScanToken(TagToken *pToken)
+	{
+		// insert a potential simple key
+		if(m_simpleKeyAllowed)
+			InsertSimpleKey();
+		m_simpleKeyAllowed = false;
+
+		// eat the indicator
+		INPUT.Eat(1);
+
+		// read the handle
+		while(INPUT.peek() != EOF && INPUT.peek() != Keys::Tag && !Exp::BlankOrBreak.Matches(INPUT))
+			pToken->handle += INPUT.GetChar();
+
+		// is there a suffix?
+		if(INPUT.peek() == Keys::Tag) {
+			// eat the indicator
+			INPUT.Eat(1);
+
+			// then read it
+			while(INPUT.peek() != EOF && !Exp::BlankOrBreak.Matches(INPUT))
+				pToken->suffix += INPUT.GetChar();
+		}
+
 		return pToken;
 	}
 

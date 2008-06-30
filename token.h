@@ -1,6 +1,8 @@
 #pragma once
 
 #include <ios>
+#include <string>
+#include <vector>
 
 namespace YAML
 {
@@ -17,6 +19,13 @@ namespace YAML
 
 	struct StreamStartToken: public Token {};
 	struct StreamEndToken: public Token {};
+	struct DirectiveToken: public Token {
+		std::string name;
+		std::vector <std::string> params;
+
+		virtual void Write(std::ostream& out) const { out << name; for(unsigned i=0;i<params.size();i++) out << " " << params[i]; }
+	};
+
 	struct DocumentStartToken: public Token {};
 	struct DocumentEndToken: public Token {};
 
@@ -38,6 +47,12 @@ namespace YAML
 		std::string value;
 
 		virtual void Write(std::ostream& out) const { out << (alias ? '*' : '&') << value; }
+	};
+
+	struct TagToken: public Token {
+		std::string handle, suffix;
+
+		virtual void Write(std::ostream& out) const { out << "!" << handle << "!" << suffix; }
 	};
 
 	struct ScalarToken: public Token {
