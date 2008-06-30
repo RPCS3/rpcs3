@@ -1,23 +1,21 @@
 #pragma once
 
 #include <ios>
-#include <string>
-#include "scanner.h"
 #include "document.h"
 
 namespace YAML
 {
-	class Node;
+	class Parser;
 
-	class Parser
+	class Reader
 	{
 	public:
-		Parser(std::istream& in);
-		~Parser();
+		Reader(std::istream& in);
+		~Reader();
 
 		void GetNextDocument(Document& document);
 
 	private:
-		Scanner m_scanner;
+		Parser *m_pParser;
 	};
 }

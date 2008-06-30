@@ -170,10 +170,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\exp.cpp"
-				>
-			</File>
-			<File
 				RelativePath=".\main.cpp"
 				>
 			</File>
@@ -186,11 +182,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\parser.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\regex.cpp"
+				RelativePath=".\reader.cpp"
 				>
 			</File>
 			<File
@@ -198,29 +190,49 @@
 				>
 			</File>
 			<File
-				RelativePath=".\scanner.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\scanscalar.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\scantoken.cpp"
-				>
-			</File>
-			<File
 				RelativePath=".\sequence.cpp"
 				>
 			</File>
-			<File
-				RelativePath=".\simplekey.cpp"
+			<Filter
+				Name="Scanner"
 				>
-			</File>
-			<File
-				RelativePath=".\stream.cpp"
+				<File
+					RelativePath=".\exp.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\regex.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\scanner.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\scanscalar.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\scantoken.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\simplekey.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\stream.cpp"
+					>
+				</File>
+			</Filter>
+			<Filter
+				Name="Parser"
 				>
-			</File>
+				<File
+					RelativePath=".\parser.cpp"
+					>
+				</File>
+			</Filter>
 		</Filter>
 		<Filter
 			Name="Header Files"
@@ -240,10 +252,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\exp.h"
-				>
-			</File>
-			<File
 				RelativePath=".\map.h"
 				>
 			</File>
@@ -252,11 +260,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\parser.h"
-				>
-			</File>
-			<File
-				RelativePath=".\regex.h"
+				RelativePath=".\reader.h"
 				>
 			</File>
 			<File
@@ -264,25 +268,45 @@
 				>
 			</File>
 			<File
-				RelativePath=".\scanner.h"
-				>
-			</File>
-			<File
-				RelativePath=".\scanscalar.h"
-				>
-			</File>
-			<File
 				RelativePath=".\sequence.h"
-				>
-			</File>
-			<File
-				RelativePath=".\stream.h"
 				>
 			</File>
 			<File
 				RelativePath=".\token.h"
 				>
 			</File>
+			<Filter
+				Name="Scanner"
+				>
+				<File
+					RelativePath=".\exp.h"
+					>
+				</File>
+				<File
+					RelativePath=".\regex.h"
+					>
+				</File>
+				<File
+					RelativePath=".\scanner.h"
+					>
+				</File>
+				<File
+					RelativePath=".\scanscalar.h"
+					>
+				</File>
+				<File
+					RelativePath=".\stream.h"
+					>
+				</File>
+			</Filter>
+			<Filter
+				Name="Parser"
+				>
+				<File
+					RelativePath=".\parser.h"
+					>
+				</File>
+			</Filter>
 		</Filter>
 		<Filter
 			Name="Resource Files"

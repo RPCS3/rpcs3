@@ -1,9 +1,12 @@
-#include "document.h"
-#include "regex.h"
+#include "reader.h"
+#include <fstream>
 
 int main()
 {
-	YAML::Document doc("test.yaml");
+	std::ifstream fin("test.yaml");
+	YAML::Reader reader(fin);
+	YAML::Document doc;
+	reader.GetNextDocument(doc);
 
 	return 0;
 }

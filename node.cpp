@@ -20,15 +20,4 @@ namespace YAML
 		delete m_pContent;
 		m_pContent = 0;
 	}
-
-	void Node::Read(Parser *pParser, const std::string& token)
-	{
-		Clear();
-
-		if(token == std::string("") + SeqToken) {
-			m_pContent = new Sequence(pParser);
-		} else {
-			m_pContent = new Scalar(token);
-		}
-	}
 }
