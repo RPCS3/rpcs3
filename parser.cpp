@@ -1,5 +1,7 @@
 #include "parser.h"
 #include "scanner.h"
+#include "token.h"
+#include <iostream>
 
 namespace YAML
 {
@@ -16,5 +18,16 @@ namespace YAML
 	void Parser::GetNextDocument(Document& document)
 	{
 		document.Parse(m_pScanner);
+	}
+
+	void Parser::PrintTokens()
+	{
+		while(1) {
+			Token *pToken = m_pScanner->GetNextToken();
+			if(!pToken)
+				break;
+
+			std::cout << *pToken << std::endl;
+		}
 	}
 }

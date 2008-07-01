@@ -12,26 +12,35 @@ namespace YAML
 
 	Sequence::~Sequence()
 	{
+		Clear();
+	}
+
+	void Sequence::Clear()
+	{
 		for(unsigned i=0;i<m_data.size();i++)
 			delete m_data[i];
+		m_data.clear();
 	}
 
 	void Sequence::Parse(Scanner *pScanner)
 	{
-		// grab start token
-		Token *pToken = pScanner->GetNextToken();
+		Clear();
+
+		// split based on start token
+		Token *pToken = pScanner->PeekNextToken();
 
 		switch(pToken->type) {
 			case TT_BLOCK_SEQ_START: ParseBlock(pScanner); break;
 			case TT_BLOCK_ENTRY: ParseImplicit(pScanner); break;
 			case TT_FLOW_SEQ_START: ParseFlow(pScanner); break;
 		}
-
-		delete pToken;
 	}
 
 	void Sequence::ParseBlock(Scanner *pScanner)
 	{
+		// eat start token
+		pScanner->EatNextToken();
+
 		while(1) {
 			Token *pToken = pScanner->PeekNextToken();
 			if(!pToken)
@@ -52,11 +61,29 @@ namespace YAML
 
 	void Sequence::ParseImplicit(Scanner *pScanner)
 	{
-		// TODO
+		while(1) {
+			Token *pToken = pScanner->PeekNextToken();
+			// we're actually *allowed* to have no tokens at some point
+			if(!pToken)
+				break;
+
+			// and we end at anything other than a block entry
+			if(pToken->type != TT_BLOCK_ENTRY)
+				break;
+
+			pScanner->PopNextToken();
+
+			Node *pNode = new Node;
+			m_data.push_back(pNode);
+			pNode->Parse(pScanner);
+		}
 	}
 
 	void Sequence::ParseFlow(Scanner *pScanner)
 	{
+		// eat start token
+		pScanner->EatNextToken();
+
 		while(1) {
 			Token *pToken = pScanner->PeekNextToken();
 			if(!pToken)

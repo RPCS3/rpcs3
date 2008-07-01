@@ -13,6 +13,7 @@ namespace YAML
 		Map();
 		virtual ~Map();
 
+		void Clear();
 		virtual void Parse(Scanner *pScanner);
 		virtual void Write(std::ostream& out, int indent);
 

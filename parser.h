@@ -15,6 +15,7 @@ namespace YAML
 		~Parser();
 
 		void GetNextDocument(Document& document);
+		void PrintTokens();
 
 	private:
 		Scanner *m_pScanner;

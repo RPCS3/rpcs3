@@ -24,9 +24,13 @@ namespace YAML
 
 	private:
 		void ParseHeader(Scanner *pScanner);
+		void ParseTag(Scanner *pScanner);
+		void ParseAnchor(Scanner *pScanner);
+		void ParseAlias(Scanner *pScanner);
 
 	private:
-		std::string m_tag;
+		bool m_alias;
+		std::string m_anchor, m_tag;
 		Content *m_pContent;
 	};
 }

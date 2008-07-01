@@ -254,12 +254,14 @@ namespace YAML
 
 		// now push
 		m_indents.push(column);
+		Token *pToken = 0;
 		if(sequence)
-			m_tokens.push(new Token(TT_BLOCK_SEQ_START));
+			pToken = new Token(TT_BLOCK_SEQ_START);
 		else
-			m_tokens.push(new Token(TT_BLOCK_MAP_START));
+			pToken = new Token(TT_BLOCK_MAP_START);
 
-		return m_tokens.front();
+		m_tokens.push(pToken);
+		return pToken;
 	}
 
 	// PopIndentTo

@@ -9,7 +9,7 @@
 
 namespace YAML
 {
-	Node::Node(): m_pContent(0)
+	Node::Node(): m_pContent(0), m_alias(false)
 	{
 	}
 
@@ -22,11 +22,18 @@ namespace YAML
 	{
 		delete m_pContent;
 		m_pContent = 0;
+		m_alias = false;
 	}
 
 	void Node::Parse(Scanner *pScanner)
 	{
+		Clear();
+
 		ParseHeader(pScanner);
+
+		// is this an alias? if so, it can have no content
+		if(m_alias)
+			return;
 
 		// now split based on what kind of node we should be
 		Token *pToken = pScanner->PeekNextToken();
@@ -57,29 +64,75 @@ namespace YAML
 	{
 		while(1) {
 			Token *pToken = pScanner->PeekNextToken();
-			if(!pToken || pToken->type != TT_TAG || pToken->type != TT_ANCHOR || pToken->type != TT_ALIAS)
+			if(!pToken || (pToken->type != TT_TAG && pToken->type != TT_ANCHOR && pToken->type != TT_ALIAS))
 				break;
 
-			pScanner->PopNextToken();
 			switch(pToken->type) {
-				case TT_TAG:
-					break;
-				case TT_ANCHOR:
-					break;
-				case TT_ALIAS:
-					break;
+				case TT_TAG: ParseTag(pScanner); break;
+				case TT_ANCHOR: ParseAnchor(pScanner); break;
+				case TT_ALIAS: ParseAlias(pScanner); break;
 			}
-			delete pToken;
 		}
+	}
+
+	void Node::ParseTag(Scanner *pScanner)
+	{
+		if(m_tag != "")
+			return;  // TODO: throw
+
+		Token *pToken = pScanner->PeekNextToken();
+		m_tag = pToken->value;
+		for(unsigned i=0;i<pToken->params.size();i++)
+			m_tag += pToken->params[i];
+		pScanner->PopNextToken();
+	}
+	
+	void Node::ParseAnchor(Scanner *pScanner)
+	{
+		if(m_anchor != "")
+			return;  // TODO: throw
+
+		Token *pToken = pScanner->PeekNextToken();
+		m_anchor = pToken->value;
+		m_alias = false;
+		pScanner->PopNextToken();
+	}
+
+	void Node::ParseAlias(Scanner *pScanner)
+	{
+		if(m_anchor != "")
+			return;  // TODO: throw
+		if(m_tag != "")
+			return;  // TODO: throw (aliases can't have any content, *including* tags)
+
+		Token *pToken = pScanner->PeekNextToken();
+		m_anchor = pToken->value;
+		m_alias = true;
+		pScanner->PopNextToken();
 	}
 
 	void Node::Write(std::ostream& out, int indent)
 	{
+		if(m_tag != "") {
+			for(int i=0;i<indent;i++)
+				out << "  ";
+			out << "{tag: " << m_tag << "}\n";
+		}
+		if(m_anchor != "") {
+			for(int i=0;i<indent;i++)
+				out << "  ";
+			if(m_alias)
+				out << "{alias: " << m_anchor << "}\n";
+			else
+				out << "{anchor: " << m_anchor << "}\n";
+		}
+
 		if(!m_pContent) {
 			for(int i=0;i<indent;i++)
 				out << "  ";
 			out << "{no content}\n";
-		} else
+		} else {
 			m_pContent->Write(out, indent);
+		}
 	}
 }

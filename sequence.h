@@ -13,6 +13,7 @@ namespace YAML
 		Sequence();
 		virtual ~Sequence();
 
+		void Clear();
 		virtual void Parse(Scanner *pScanner);
 		virtual void Write(std::ostream& out, int indent);
 

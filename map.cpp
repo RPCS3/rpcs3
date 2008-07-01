@@ -11,27 +11,36 @@ namespace YAML
 
 	Map::~Map()
 	{
+		Clear();
+	}
+
+	void Map::Clear()
+	{
 		for(node_map::const_iterator it=m_data.begin();it!=m_data.end();++it) {
 			delete it->first;
 			delete it->second;
 		}
+		m_data.clear();
 	}
 
 	void Map::Parse(Scanner *pScanner)
 	{
-		// grab start token
-		Token *pToken = pScanner->GetNextToken();
+		Clear();
+
+		// split based on start token
+		Token *pToken = pScanner->PeekNextToken();
 
 		switch(pToken->type) {
 			case TT_BLOCK_MAP_START: ParseBlock(pScanner); break;
 			case TT_FLOW_MAP_START: ParseFlow(pScanner); break;
 		}
-
-		delete pToken;
 	}
 
 	void Map::ParseBlock(Scanner *pScanner)
 	{
+		// eat start token
+		pScanner->EatNextToken();
+
 		while(1) {
 			Token *pToken = pScanner->PeekNextToken();
 			if(!pToken)
@@ -61,6 +70,9 @@ namespace YAML
 
 	void Map::ParseFlow(Scanner *pScanner)
 	{
+		// eat start token
+		pScanner->EatNextToken();
+
 		while(1) {
 			Token *pToken = pScanner->PeekNextToken();
 			if(!pToken)
