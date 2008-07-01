@@ -204,6 +204,10 @@
 					RelativePath=".\parser.cpp"
 					>
 				</File>
+				<File
+					RelativePath=".\parserstate.cpp"
+					>
+				</File>
 			</Filter>
 			<Filter
 				Name="Representation"
@@ -276,6 +280,10 @@
 				>
 				<File
 					RelativePath=".\parser.h"
+					>
+				</File>
+				<File
+					RelativePath=".\parserstate.h"
 					>
 				</File>
 			</Filter>

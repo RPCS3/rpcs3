@@ -2,6 +2,7 @@
 
 #include <string>
 #include <ios>
+#include "parserstate.h"
 
 namespace YAML
 {
@@ -19,14 +20,14 @@ namespace YAML
 		~Node();
 
 		void Clear();
-		void Parse(Scanner *pScanner);
+		void Parse(Scanner *pScanner, const ParserState& state);
 		void Write(std::ostream& out, int indent);
 
 	private:
-		void ParseHeader(Scanner *pScanner);
-		void ParseTag(Scanner *pScanner);
-		void ParseAnchor(Scanner *pScanner);
-		void ParseAlias(Scanner *pScanner);
+		void ParseHeader(Scanner *pScanner, const ParserState& state);
+		void ParseTag(Scanner *pScanner, const ParserState& state);
+		void ParseAnchor(Scanner *pScanner, const ParserState& state);
+		void ParseAlias(Scanner *pScanner, const ParserState& state);
 
 	private:
 		bool m_alias;

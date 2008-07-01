@@ -189,7 +189,7 @@ namespace YAML
 	void Scanner::ScanAnchorOrAlias()
 	{
 		bool alias;
-		std::string tag;
+		std::string name;
 
 		// insert a potential simple key
 		if(m_simpleKeyAllowed)
@@ -202,10 +202,10 @@ namespace YAML
 
 		// now eat the content
 		while(Exp::AlphaNumeric.Matches(INPUT))
-			tag += INPUT.get();
+			name += INPUT.get();
 
 		// we need to have read SOMETHING!
-		if(tag.empty())
+		if(name.empty())
 			throw AnchorNotFound();
 
 		// and needs to end correctly
@@ -214,7 +214,7 @@ namespace YAML
 
 		// and we're done
 		Token *pToken = new Token(alias ? TT_ALIAS : TT_ANCHOR);
-		pToken->value = tag;
+		pToken->value = name;
 		m_tokens.push(pToken);
 	}
 
@@ -229,7 +229,7 @@ namespace YAML
 		m_simpleKeyAllowed = false;
 
 		// eat the indicator
-		INPUT.eat(1);
+		handle += INPUT.get();
 
 		// read the handle
 		while(INPUT.peek() != EOF && INPUT.peek() != Keys::Tag && !Exp::BlankOrBreak.Matches(INPUT))
@@ -238,11 +238,15 @@ namespace YAML
 		// is there a suffix?
 		if(INPUT.peek() == Keys::Tag) {
 			// eat the indicator
-			INPUT.eat(1);
+			handle += INPUT.get();
 
 			// then read it
 			while(INPUT.peek() != EOF && !Exp::BlankOrBreak.Matches(INPUT))
 				suffix += INPUT.get();
+		} else {
+			// this is a bit weird: we keep just the '!' as the handle and move the rest to the suffix
+			suffix = handle.substr(1);
+			handle = "!";
 		}
 
 		Token *pToken = new Token(TT_TAG);

@@ -1,7 +1,11 @@
 #pragma once
 
 #include <ios>
+#include <string>
+#include <vector>
+#include <map>
 #include "document.h"
+#include "parserstate.h"
 
 namespace YAML
 {
@@ -14,10 +18,19 @@ namespace YAML
 		Parser(std::istream& in);
 		~Parser();
 
+		operator bool() const;
+
 		void GetNextDocument(Document& document);
-		void PrintTokens();
+		void PrintTokens(std::ostream& out);
+
+	private:
+		void ParseDirectives();
+		void HandleDirective(const std::string& name, const std::vector <std::string>& params);
+		void HandleYamlDirective(const std::vector <std::string>& params);
+		void HandleTagDirective(const std::vector <std::string>& params);
 
 	private:
 		Scanner *m_pScanner;
+		ParserState m_state;
 	};
 }

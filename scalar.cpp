@@ -12,7 +12,7 @@ namespace YAML
 	{
 	}
 
-	void Scalar::Parse(Scanner *pScanner)
+	void Scalar::Parse(Scanner *pScanner, const ParserState& state)
 	{
 		Token *pToken = pScanner->GetNextToken();
 		m_data = pToken->value;

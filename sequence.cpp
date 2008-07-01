@@ -22,7 +22,7 @@ namespace YAML
 		m_data.clear();
 	}
 
-	void Sequence::Parse(Scanner *pScanner)
+	void Sequence::Parse(Scanner *pScanner, const ParserState& state)
 	{
 		Clear();
 
@@ -30,13 +30,13 @@ namespace YAML
 		Token *pToken = pScanner->PeekNextToken();
 
 		switch(pToken->type) {
-			case TT_BLOCK_SEQ_START: ParseBlock(pScanner); break;
-			case TT_BLOCK_ENTRY: ParseImplicit(pScanner); break;
-			case TT_FLOW_SEQ_START: ParseFlow(pScanner); break;
+			case TT_BLOCK_SEQ_START: ParseBlock(pScanner, state); break;
+			case TT_BLOCK_ENTRY: ParseImplicit(pScanner, state); break;
+			case TT_FLOW_SEQ_START: ParseFlow(pScanner, state); break;
 		}
 	}
 
-	void Sequence::ParseBlock(Scanner *pScanner)
+	void Sequence::ParseBlock(Scanner *pScanner, const ParserState& state)
 	{
 		// eat start token
 		pScanner->EatNextToken();
@@ -55,11 +55,11 @@ namespace YAML
 
 			Node *pNode = new Node;
 			m_data.push_back(pNode);
-			pNode->Parse(pScanner);
+			pNode->Parse(pScanner, state);
 		}
 	}
 
-	void Sequence::ParseImplicit(Scanner *pScanner)
+	void Sequence::ParseImplicit(Scanner *pScanner, const ParserState& state)
 	{
 		while(1) {
 			Token *pToken = pScanner->PeekNextToken();
@@ -75,11 +75,11 @@ namespace YAML
 
 			Node *pNode = new Node;
 			m_data.push_back(pNode);
-			pNode->Parse(pScanner);
+			pNode->Parse(pScanner, state);
 		}
 	}
 
-	void Sequence::ParseFlow(Scanner *pScanner)
+	void Sequence::ParseFlow(Scanner *pScanner, const ParserState& state)
 	{
 		// eat start token
 		pScanner->EatNextToken();
@@ -98,7 +98,7 @@ namespace YAML
 			// then read the node
 			Node *pNode = new Node;
 			m_data.push_back(pNode);
-			pNode->Parse(pScanner);
+			pNode->Parse(pScanner, state);
 
 			// now eat the separator (or could be a sequence end, which we ignore - but if it's neither, then it's a bad node)
 			pToken = pScanner->PeekNextToken();

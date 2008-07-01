@@ -1,13 +1,14 @@
 #include "parser.h"
 #include "scanner.h"
 #include "token.h"
-#include <iostream>
+#include <sstream>
 
 namespace YAML
 {
 	Parser::Parser(std::istream& in): m_pScanner(0)
 	{
 		m_pScanner = new Scanner(in);
+		m_state.Reset();
 	}
 
 	Parser::~Parser()
@@ -15,19 +16,82 @@ namespace YAML
 		delete m_pScanner;
 	}
 
-	void Parser::GetNextDocument(Document& document)
+	Parser::operator bool() const
 	{
-		document.Parse(m_pScanner);
+		return m_pScanner->PeekNextToken() != 0;
 	}
 
-	void Parser::PrintTokens()
+	void Parser::GetNextDocument(Document& document)
+	{
+		// first read directives
+		ParseDirectives();
+
+		// then parse the document
+		document.Parse(m_pScanner, m_state);
+	}
+
+	void Parser::ParseDirectives()
+	{
+		bool readDirective = false;
+
+		while(1) {
+			Token *pToken = m_pScanner->PeekNextToken();
+			if(!pToken || pToken->type != TT_DIRECTIVE)
+				break;
+
+			// we keep the directives from the last document if none are specified;
+			// but if any directives are specific, then we reset them
+			if(!readDirective)
+				m_state.Reset();
+
+			readDirective = true;
+			HandleDirective(pToken->value, pToken->params);
+			m_pScanner->PopNextToken();
+		}
+	}
+
+	void Parser::HandleDirective(const std::string& name, const std::vector <std::string>& params)
+	{
+		if(name == "YAML")
+			HandleYamlDirective(params);
+		else if(name == "TAG")
+			HandleTagDirective(params);
+	}
+
+	// HandleYamlDirective
+	// . Should be of the form 'major.minor' (like a version number)
+	void Parser::HandleYamlDirective(const std::vector <std::string>& params)
+	{
+		if(params.empty())
+			return;  // TODO: throw? (or throw on params.size() > 1?)
+
+		std::stringstream str(params[0]);
+		str >> m_state.version.major;
+		str.get();
+		str >> m_state.version.minor;
+		if(!str)
+			return;  // TODO: throw? (or throw if there are any more characters in the stream?)
+
+		// TODO: throw on major > 1? warning on major == 1, minor > 1?
+	}
+
+	void Parser::HandleTagDirective(const std::vector <std::string>& params)
+	{
+		if(params.size() != 2)
+			return;  // TODO: throw?
+
+		std::string handle = params[0], prefix = params[1];
+		m_state.tags[handle] = prefix;
+	}
+
+	void Parser::PrintTokens(std::ostream& out)
 	{
 		while(1) {
 			Token *pToken = m_pScanner->GetNextToken();
 			if(!pToken)
 				break;
 
-			std::cout << *pToken << std::endl;
+			out << *pToken << std::endl;
 		}
 	}
 }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <ios>
+#include "parserstate.h"
 
 namespace YAML
 {
@@ -14,7 +15,7 @@ namespace YAML
 		~Document();
 
 		void Clear();
-		void Parse(Scanner *pScanner);
+		void Parse(Scanner *pScanner, const ParserState& state);
 
 		friend std::ostream& operator << (std::ostream& out, const Document& doc);
 

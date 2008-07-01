@@ -23,7 +23,7 @@ namespace YAML
 		m_data.clear();
 	}
 
-	void Map::Parse(Scanner *pScanner)
+	void Map::Parse(Scanner *pScanner, const ParserState& state)
 	{
 		Clear();
 
@@ -31,12 +31,12 @@ namespace YAML
 		Token *pToken = pScanner->PeekNextToken();
 
 		switch(pToken->type) {
-			case TT_BLOCK_MAP_START: ParseBlock(pScanner); break;
-			case TT_FLOW_MAP_START: ParseFlow(pScanner); break;
+			case TT_BLOCK_MAP_START: ParseBlock(pScanner, state); break;
+			case TT_FLOW_MAP_START: ParseFlow(pScanner, state); break;
 		}
 	}
 
-	void Map::ParseBlock(Scanner *pScanner)
+	void Map::ParseBlock(Scanner *pScanner, const ParserState& state)
 	{
 		// eat start token
 		pScanner->EatNextToken();
@@ -58,17 +58,17 @@ namespace YAML
 			m_data[pKey] = pValue;
 
 			// grab key
-			pKey->Parse(pScanner);
+			pKey->Parse(pScanner, state);
 
 			// now grab value (optional)
 			if(pScanner->PeekNextToken() && pScanner->PeekNextToken()->type == TT_VALUE) {
 				pScanner->PopNextToken();
-				pValue->Parse(pScanner);
+				pValue->Parse(pScanner, state);
 			}
 		}
 	}
 
-	void Map::ParseFlow(Scanner *pScanner)
+	void Map::ParseFlow(Scanner *pScanner, const ParserState& state)
 	{
 		// eat start token
 		pScanner->EatNextToken();
@@ -95,12 +95,12 @@ namespace YAML
 			m_data[pKey] = pValue;
 
 			// grab key
-			pKey->Parse(pScanner);
+			pKey->Parse(pScanner, state);
 
 			// now grab value (optional)
 			if(pScanner->PeekNextToken() && pScanner->PeekNextToken()->type == TT_VALUE) {
 				pScanner->PopNextToken();
-				pValue->Parse(pScanner);
+				pValue->Parse(pScanner, state);
 			}
 
 			// now eat the separator (or could be a map end, which we ignore - but if it's neither, then it's a bad node)

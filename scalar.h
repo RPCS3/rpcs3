@@ -11,7 +11,7 @@ namespace YAML
 		Scalar();
 		virtual ~Scalar();
 
-		virtual void Parse(Scanner *pScanner);
+		virtual void Parse(Scanner *pScanner, const ParserState& state);
 		virtual void Write(std::ostream& out, int indent);
 
 	protected:

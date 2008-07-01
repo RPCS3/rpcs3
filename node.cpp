@@ -25,11 +25,11 @@ namespace YAML
 		m_alias = false;
 	}
 
-	void Node::Parse(Scanner *pScanner)
+	void Node::Parse(Scanner *pScanner, const ParserState& state)
 	{
 		Clear();
 
-		ParseHeader(pScanner);
+		ParseHeader(pScanner, state);
 
 		// is this an alias? if so, it can have no content
 		if(m_alias)
@@ -43,24 +43,24 @@ namespace YAML
 		switch(pToken->type) {
 			case TT_SCALAR:
 				m_pContent = new Scalar;
-				m_pContent->Parse(pScanner);
+				m_pContent->Parse(pScanner, state);
 				break;
 			case TT_FLOW_SEQ_START:
 			case TT_BLOCK_SEQ_START:
 			case TT_BLOCK_ENTRY:
 				m_pContent = new Sequence;
-				m_pContent->Parse(pScanner);
+				m_pContent->Parse(pScanner, state);
 				break;
 			case TT_FLOW_MAP_START:
 			case TT_BLOCK_MAP_START:
 				m_pContent = new Map;
-				m_pContent->Parse(pScanner);
+				m_pContent->Parse(pScanner, state);
 		}
 	}
 
 	// ParseHeader
 	// . Grabs any tag, alias, or anchor tokens and deals with them.
-	void Node::ParseHeader(Scanner *pScanner)
+	void Node::ParseHeader(Scanner *pScanner, const ParserState& state)
 	{
 		while(1) {
 			Token *pToken = pScanner->PeekNextToken();
@@ -68,26 +68,27 @@ namespace YAML
 				break;
 
 			switch(pToken->type) {
-				case TT_TAG: ParseTag(pScanner); break;
-				case TT_ANCHOR: ParseAnchor(pScanner); break;
-				case TT_ALIAS: ParseAlias(pScanner); break;
+				case TT_TAG: ParseTag(pScanner, state); break;
+				case TT_ANCHOR: ParseAnchor(pScanner, state); break;
+				case TT_ALIAS: ParseAlias(pScanner, state); break;
 			}
 		}
 	}
 
-	void Node::ParseTag(Scanner *pScanner)
+	void Node::ParseTag(Scanner *pScanner, const ParserState& state)
 	{
 		if(m_tag != "")
 			return;  // TODO: throw
 
 		Token *pToken = pScanner->PeekNextToken();
-		m_tag = pToken->value;
+		m_tag = state.TranslateTag(pToken->value);
+
 		for(unsigned i=0;i<pToken->params.size();i++)
 			m_tag += pToken->params[i];
 		pScanner->PopNextToken();
 	}
 	
-	void Node::ParseAnchor(Scanner *pScanner)
+	void Node::ParseAnchor(Scanner *pScanner, const ParserState& state)
 	{
 		if(m_anchor != "")
 			return;  // TODO: throw
@@ -98,7 +99,7 @@ namespace YAML
 		pScanner->PopNextToken();
 	}
 
-	void Node::ParseAlias(Scanner *pScanner)
+	void Node::ParseAlias(Scanner *pScanner, const ParserState& state)
 	{
 		if(m_anchor != "")
 			return;  // TODO: throw

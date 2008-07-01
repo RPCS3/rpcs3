@@ -8,8 +8,11 @@ int main()
 	YAML::Parser parser(fin);
 
 	YAML::Document doc;
-	parser.GetNextDocument(doc);
-	std::cout << doc;
+	while(parser) {
+		std::cout << "---\n";
+		parser.GetNextDocument(doc);
+		std::cout << doc;
+	}
 	getchar();
 
 	return 0;

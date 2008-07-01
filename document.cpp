@@ -20,7 +20,7 @@ namespace YAML
 		m_pRoot = 0;
 	}
 
-	void Document::Parse(Scanner *pScanner)
+	void Document::Parse(Scanner *pScanner, const ParserState& state)
 	{
 		Clear();
 
@@ -34,7 +34,7 @@ namespace YAML
 
 		// now create our root node and parse it
 		m_pRoot = new Node;
-		m_pRoot->Parse(pScanner);
+		m_pRoot->Parse(pScanner, state);
 
 		// and finally eat any doc ends we see
 		while(pScanner->PeekNextToken() && pScanner->PeekNextToken()->type == TT_DOC_END)

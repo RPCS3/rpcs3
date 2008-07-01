@@ -14,12 +14,12 @@ namespace YAML
 		virtual ~Map();
 
 		void Clear();
-		virtual void Parse(Scanner *pScanner);
+		virtual void Parse(Scanner *pScanner, const ParserState& state);
 		virtual void Write(std::ostream& out, int indent);
 
 	private:
-		void ParseBlock(Scanner *pScanner);
-		void ParseFlow(Scanner *pScanner);
+		void ParseBlock(Scanner *pScanner, const ParserState& state);
+		void ParseFlow(Scanner *pScanner, const ParserState& state);
 
 	protected:
 		typedef std::map <Node *, Node *> node_map;
