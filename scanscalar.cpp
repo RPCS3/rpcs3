@@ -18,7 +18,7 @@ namespace YAML
 	//   and different places in the above flow.
 	std::string ScanScalar(Stream& INPUT, ScanScalarParams& params)
 	{
-		bool foundNonEmptyLine = false;
+		bool foundNonEmptyLine = false, pastOpeningBreak = false;
 		bool emptyLine = false, moreIndented = false;
 		std::string scalar;
 		params.leadingSpaces = false;
@@ -39,6 +39,7 @@ namespace YAML
 				}
 
 				foundNonEmptyLine = true;
+				pastOpeningBreak = true;
 
 				// escaped newline? (only if we're escaping on slash)
 				if(params.escape == '\\' && Exp::EscBreak.Matches(INPUT)) {
@@ -108,15 +109,17 @@ namespace YAML
 			bool nextEmptyLine = Exp::Break.Matches(INPUT);
 			bool nextMoreIndented = (INPUT.peek() == ' ');
 
-			// TODO: for block scalars, we always start with a newline, so we should fold OR keep that
-
-			if(params.fold && !emptyLine && !nextEmptyLine && !moreIndented && !nextMoreIndented)
-				scalar += " ";
-			else
-				scalar += "\n";
+			// for block scalars, we always start with a newline, so we should ignore it (not fold or keep)
+			if(pastOpeningBreak) {
+				if(params.fold && !emptyLine && !nextEmptyLine && !moreIndented && !nextMoreIndented)
+					scalar += " ";
+				else
+					scalar += "\n";
+			}
 
 			emptyLine = nextEmptyLine;
 			moreIndented = nextMoreIndented;
+			pastOpeningBreak = true;
 
 			// are we done via indentation?
 			if(!emptyLine && INPUT.column < params.indent) {
