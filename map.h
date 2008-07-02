@@ -14,8 +14,8 @@ namespace YAML
 		virtual ~Map();
 
 		void Clear();
-		virtual bool GetBegin(std::map <Node *, Node *>::const_iterator& it);
-		virtual bool GetEnd(std::map <Node *, Node *>::const_iterator& it);
+		virtual bool GetBegin(std::map <Node *, Node *>::const_iterator& it) const;
+		virtual bool GetEnd(std::map <Node *, Node *>::const_iterator& it) const;
 		virtual void Parse(Scanner *pScanner, const ParserState& state);
 		virtual void Write(std::ostream& out, int indent);
 

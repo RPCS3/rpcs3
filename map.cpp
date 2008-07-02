@@ -24,13 +24,13 @@ namespace YAML
 		m_data.clear();
 	}
 
-	bool Map::GetBegin(std::map <Node *, Node *>::const_iterator& it)
+	bool Map::GetBegin(std::map <Node *, Node *>::const_iterator& it) const
 	{
 		it = m_data.begin();
 		return true;
 	}
 
-	bool Map::GetEnd(std::map <Node *, Node *>::const_iterator& it)
+	bool Map::GetEnd(std::map <Node *, Node *>::const_iterator& it) const
 	{
 		it = m_data.end();
 		return true;

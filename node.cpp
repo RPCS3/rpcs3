@@ -173,6 +173,41 @@ namespace YAML
 		return Iterator();
 	}
 
+	// size
+	// . Returns the size of this node, if it's a sequence node.
+	// . Otherwise, returns zero.
+	unsigned Node::size() const
+	{
+		if(!m_pContent)
+			return 0;
+
+		return m_pContent->GetSize();
+	}
+
+	const Node& Node::operator [] (unsigned u) const
+	{
+		if(!m_pContent)
+			throw BadDereference();
+
+		Node *pNode = m_pContent->GetNode(u);
+		if(pNode)
+			return *pNode;
+
+		return GetValue(u);
+	}
+
+	const Node& Node::operator [] (int i) const
+	{
+		if(!m_pContent)
+			throw BadDereference();
+
+		Node *pNode = m_pContent->GetNode(i);
+		if(pNode)
+			return *pNode;
+
+		return GetValue(i);
+	}
+
 	///////////////////////////////////////////////////////
 	// Extraction
 

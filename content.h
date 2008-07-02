@@ -21,10 +21,12 @@ namespace YAML
 		virtual void Parse(Scanner *pScanner, const ParserState& state) = 0;
 		virtual void Write(std::ostream& out, int indent) = 0;
 
-		virtual bool GetBegin(std::vector <Node *>::const_iterator& it) { return false; }
-		virtual bool GetBegin(std::map <Node *, Node *>::const_iterator& it) { return false; }
-		virtual bool GetEnd(std::vector <Node *>::const_iterator& it) { return false; }
-		virtual bool GetEnd(std::map <Node *, Node *>::const_iterator& it) { return false; }
+		virtual bool GetBegin(std::vector <Node *>::const_iterator& it) const { return false; }
+		virtual bool GetBegin(std::map <Node *, Node *>::const_iterator& it) const { return false; }
+		virtual bool GetEnd(std::vector <Node *>::const_iterator& it) const { return false; }
+		virtual bool GetEnd(std::map <Node *, Node *>::const_iterator& it) const { return false; }
+		virtual Node *GetNode(unsigned i) const { return 0; }
+		virtual unsigned GetSize() const { return 0; }
 
 		// extraction
 		virtual void Read(std::string& s) { throw InvalidScalar(); }

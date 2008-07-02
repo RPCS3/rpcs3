@@ -14,12 +14,9 @@ struct Vec3 {
 
 void operator >> (const YAML::Node& node, Vec3& v)
 {
-	YAML::Node::Iterator it = node.begin();
-	*it >> v.x;
-	++it;
-	*it >> v.y;
-	++it;
-	*it >> v.z;
+	node[0] >> v.x;
+	node[1] >> v.y;
+	node[2] >> v.z;
 }
 
 struct Room {
@@ -59,9 +56,9 @@ struct Level {
 void operator >> (const YAML::Node& node, Level& level)
 {
 	const YAML::Node& rooms = node["rooms"];
-	for(YAML::Node::Iterator it=rooms.begin();it!=rooms.end();++it) {
+	for(unsigned i=0;i<rooms.size();i++) {
 		Room room;
-		*it >> room;
+		rooms[i] >> room;
 		level.rooms.push_back(room);
 	}
 }
@@ -78,9 +75,8 @@ int main()
 		YAML::Document doc;
 		parser.GetNextDocument(doc);
 
-		const YAML::Node& root = doc.GetRoot();
 		Level level;
-		root >> level;
+		doc.GetRoot() >> level;
 		std::cout << level;
 	} catch(YAML::Exception&) {
 		std::cout << "Error parsing the yaml!\n";

@@ -14,8 +14,10 @@ namespace YAML
 		virtual ~Sequence();
 
 		void Clear();
-		virtual bool GetBegin(std::vector <Node *>::const_iterator& it);
-		virtual bool GetEnd(std::vector <Node *>::const_iterator& it);
+		virtual bool GetBegin(std::vector <Node *>::const_iterator& it) const;
+		virtual bool GetEnd(std::vector <Node *>::const_iterator& it) const;
+		virtual Node *GetNode(unsigned i) const;
+		virtual unsigned GetSize() const;
 
 		virtual void Parse(Scanner *pScanner, const ParserState& state);
 		virtual void Write(std::ostream& out, int indent);

@@ -50,9 +50,10 @@ namespace YAML
 
 		Iterator begin() const;
 		Iterator end() const;
+		unsigned size() const;
 
 		template <typename T>
-		const Node& operator [] (const T& key) const {
+		const Node& GetValue(const T& key) const {
 			if(!m_pContent)
 				throw BadDereference();
 
@@ -69,9 +70,17 @@ namespace YAML
 			throw BadDereference();
 		}
 
-		const Node& operator [] (const char *key) const {
-			return operator [] (std::string(key));
+		template <typename T>
+		const Node& operator [] (const T& key) const {
+			return GetValue(key);
 		}
+
+		const Node& operator [] (const char *key) const {
+			return GetValue(std::string(key));
+		}
+
+		const Node& operator [] (unsigned u) const;
+		const Node& operator [] (int i) const;
 
 		// extraction
 		friend void operator >> (const Node& node, std::string& s);
