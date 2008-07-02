@@ -6,6 +6,7 @@ namespace YAML
 {
 	class Exception: public std::exception {};
 	class ScannerException: public Exception {};
+	class ParserException: public Exception {};
 	class RepresentationException: public Exception {};
 
 	// scanner exceptions
@@ -39,6 +40,12 @@ namespace YAML
 		InvalidUnicode(unsigned value_): value(value_) {}
 		unsigned value;
 	};
+
+	// parser exceptions
+	class MapEndNotFound: public ParserException {};
+	class SeqEndNotFound: public ParserException {};
+	class BadYAMLDirective: public ParserException {};
+	class BadTAGDirective: public ParserException {};
 
 	// representation exceptions
 	class InvalidScalar: public RepresentationException {};

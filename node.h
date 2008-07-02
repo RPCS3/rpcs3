@@ -26,6 +26,7 @@ namespace YAML
 			friend bool operator == (const Iterator& it, const Iterator& jt);
 			friend bool operator != (const Iterator& it, const Iterator& jt);
 			Iterator& operator ++ ();
+			Iterator operator ++ (int);
 			const Node& operator * ();
 			const Node *operator -> ();
 			const Node& first();
@@ -61,7 +62,7 @@ namespace YAML
 					it.first() >> t;
 					if(key == t)
 						return it.second();
-				} catch(InvalidScalar&) {
+				} catch(RepresentationException&) {
 				}
 			}
 

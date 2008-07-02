@@ -6,7 +6,7 @@ namespace YAML
 	{
 		// version
 		version.major = 1;
-		version.minor = 1;
+		version.minor = 2;
 
 		// and tags
 		tags.clear();

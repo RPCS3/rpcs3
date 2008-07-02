@@ -1,6 +1,7 @@
 #include "parser.h"
 #include "scanner.h"
 #include "token.h"
+#include "exceptions.h"
 #include <sstream>
 
 namespace YAML
@@ -62,23 +63,23 @@ namespace YAML
 	// . Should be of the form 'major.minor' (like a version number)
 	void Parser::HandleYamlDirective(const std::vector <std::string>& params)
 	{
-		if(params.empty())
-			return;  // TODO: throw? (or throw on params.size() > 1?)
+		if(params.size() != 1)
+			throw BadYAMLDirective();
 
 		std::stringstream str(params[0]);
 		str >> m_state.version.major;
 		str.get();
 		str >> m_state.version.minor;
 		if(!str)
-			return;  // TODO: throw? (or throw if there are any more characters in the stream?)
+			throw BadYAMLDirective();  // TODO: or throw if there are any more characters in the stream?
 
-		// TODO: throw on major > 1? warning on major == 1, minor > 1?
+		// TODO: throw on major > 1? warning on major == 1, minor > 2?
 	}
 
 	void Parser::HandleTagDirective(const std::vector <std::string>& params)
 	{
 		if(params.size() != 2)
-			return;  // TODO: throw?
+			throw BadTAGDirective();
 
 		std::string handle = params[0], prefix = params[1];
 		m_state.tags[handle] = prefix;

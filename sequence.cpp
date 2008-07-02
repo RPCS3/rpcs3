@@ -56,10 +56,10 @@ namespace YAML
 		while(1) {
 			Token *pToken = pScanner->PeekNextToken();
 			if(!pToken)
-				break;  // TODO: throw?
+				throw SeqEndNotFound();
 
 			if(pToken->type != TT_BLOCK_ENTRY && pToken->type != TT_BLOCK_END)
-				break;  // TODO: throw?
+				throw SeqEndNotFound();
 
 			pScanner->PopNextToken();
 			if(pToken->type == TT_BLOCK_END)
@@ -99,7 +99,7 @@ namespace YAML
 		while(1) {
 			Token *pToken = pScanner->PeekNextToken();
 			if(!pToken)
-				break;  // TODO: throw?
+				throw SeqEndNotFound();
 
 			// first check for end
 			if(pToken->type == TT_FLOW_SEQ_END) {
@@ -117,7 +117,7 @@ namespace YAML
 			if(pToken->type == TT_FLOW_ENTRY)
 				pScanner->EatNextToken();
 			else if(pToken->type != TT_FLOW_SEQ_END)
-				break;  // TODO: throw?
+				throw SeqEndNotFound();
 		}
 	}
 

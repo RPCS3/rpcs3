@@ -2,6 +2,7 @@
 #include "node.h"
 #include "scanner.h"
 #include "token.h"
+#include "exceptions.h"
 
 namespace YAML
 {
@@ -56,10 +57,10 @@ namespace YAML
 		while(1) {
 			Token *pToken = pScanner->PeekNextToken();
 			if(!pToken)
-				break;  // TODO: throw?
+				throw MapEndNotFound();
 
 			if(pToken->type != TT_KEY && pToken->type != TT_BLOCK_END)
-				break;  // TODO: throw?
+				throw MapEndNotFound();
 
 			pScanner->PopNextToken();
 			if(pToken->type == TT_BLOCK_END)
@@ -88,7 +89,7 @@ namespace YAML
 		while(1) {
 			Token *pToken = pScanner->PeekNextToken();
 			if(!pToken)
-				break;  // TODO: throw?
+				throw MapEndNotFound();
 
 			// first check for end
 			if(pToken->type == TT_FLOW_MAP_END) {
@@ -98,7 +99,7 @@ namespace YAML
 
 			// now it better be a key
 			if(pToken->type != TT_KEY)
-				break;  // TODO: throw?
+				throw MapEndNotFound();
 
 			pScanner->PopNextToken();
 
@@ -120,7 +121,7 @@ namespace YAML
 			if(pToken->type == TT_FLOW_ENTRY)
 				pScanner->EatNextToken();
 			else if(pToken->type != TT_FLOW_MAP_END)
-				break;  // TODO: throw?
+				throw MapEndNotFound();
 		}
 	}
 

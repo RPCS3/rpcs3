@@ -29,6 +29,18 @@ namespace YAML
 		return *this;
 	}
 
+	Node::Iterator Node::Iterator::operator ++ (int)
+	{
+		Iterator temp = *this;
+
+		if(type == IT_SEQ)
+			++seqIter;
+		else if(type == IT_MAP)
+			++mapIter;
+
+		return temp;
+	}
+
 	const Node& Node::Iterator::operator * ()
 	{
 		if(type == IT_SEQ)
