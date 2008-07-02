@@ -1,8 +1,4 @@
 ---
-- name: Jesse
-  age: 23
-  school: University of Illinois
-- name: Naftali
-  age: 21
-  school: Rhode Island School of Design
+- [1, 2, 3]
+- [2, 4, 6]
 ...

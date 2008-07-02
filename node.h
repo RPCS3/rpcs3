@@ -27,6 +27,7 @@ namespace YAML
 			friend bool operator != (const Iterator& it, const Iterator& jt);
 			Iterator& operator ++ ();
 			const Node& operator * ();
+			const Node *operator -> ();
 			const Node& first();
 			const Node& second();
 

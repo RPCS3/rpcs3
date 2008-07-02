@@ -37,6 +37,14 @@ namespace YAML
 		throw BadDereference();
 	}
 
+	const Node *Node::Iterator::operator -> ()
+	{
+		if(type == IT_SEQ)
+			return &**seqIter;
+
+		throw BadDereference();
+	}
+
 	const Node& Node::Iterator::first()
 	{
 		if(type == IT_MAP)
