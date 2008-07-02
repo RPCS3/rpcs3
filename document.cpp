@@ -41,8 +41,17 @@ namespace YAML
 			pScanner->EatNextToken();
 	}
 
+	const Node& Document::GetRoot() const
+	{
+		if(!m_pRoot)
+			throw;
+
+		return *m_pRoot;
+	}
+
 	std::ostream& operator << (std::ostream& out, const Document& doc)
 	{
+		out << "---\n";
 		if(!doc.m_pRoot) {
 			out << "{empty node}\n";
 			return out;

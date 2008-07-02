@@ -221,6 +221,10 @@
 					>
 				</File>
 				<File
+					RelativePath=".\iterator.cpp"
+					>
+				</File>
+				<File
 					RelativePath=".\map.cpp"
 					>
 				</File>

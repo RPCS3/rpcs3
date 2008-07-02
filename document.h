@@ -16,6 +16,7 @@ namespace YAML
 
 		void Clear();
 		void Parse(Scanner *pScanner, const ParserState& state);
+		const Node& GetRoot() const;
 
 		friend std::ostream& operator << (std::ostream& out, const Document& doc);
 

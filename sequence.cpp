@@ -22,6 +22,18 @@ namespace YAML
 		m_data.clear();
 	}
 
+	bool Sequence::GetBegin(std::vector <Node *>::const_iterator& it)
+	{
+		it = m_data.begin();
+		return true;
+	}
+
+	bool Sequence::GetEnd(std::vector <Node *>::const_iterator& it)
+	{
+		it = m_data.end();
+		return true;
+	}
+
 	void Sequence::Parse(Scanner *pScanner, const ParserState& state)
 	{
 		Clear();

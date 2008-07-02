@@ -136,4 +136,99 @@ namespace YAML
 			m_pContent->Write(out, indent);
 		}
 	}
+
+	// begin
+	// Returns an iterator to the beginning of this (sequence or map).
+	Node::Iterator Node::begin() const
+	{
+		if(!m_pContent)
+			return Iterator();
+
+		std::vector <Node *>::const_iterator seqIter;
+		if(m_pContent->GetBegin(seqIter))
+			return Iterator(seqIter);
+
+		std::map <Node *, Node *>::const_iterator mapIter;
+		if(m_pContent->GetBegin(mapIter))
+			return Iterator(mapIter);
+
+		return Iterator();
+	}
+
+	// end
+	// . Returns an iterator to the end of this (sequence or map).
+	Node::Iterator Node::end() const
+	{
+		if(!m_pContent)
+			return Iterator();
+
+		std::vector <Node *>::const_iterator seqIter;
+		if(m_pContent->GetEnd(seqIter))
+			return Iterator(seqIter);
+
+		std::map <Node *, Node *>::const_iterator mapIter;
+		if(m_pContent->GetEnd(mapIter))
+			return Iterator(mapIter);
+
+		return Iterator();
+	}
+
+	///////////////////////////////////////////////////////
+	// Extraction
+
+	void operator >> (const Node& node, std::string& s)
+	{
+		if(!node.m_pContent)
+			throw;
+
+		node.m_pContent->Read(s);
+	}
+
+	void operator >> (const Node& node, int& i)
+	{
+		if(!node.m_pContent)
+			throw;
+
+		node.m_pContent->Read(i);
+	}
+
+	void operator >> (const Node& node, unsigned& u)
+	{
+		if(!node.m_pContent)
+			throw;
+
+		node.m_pContent->Read(u);
+	}
+
+	void operator >> (const Node& node, long& l)
+	{
+		if(!node.m_pContent)
+			throw;
+
+		node.m_pContent->Read(l);
+	}
+
+	void operator >> (const Node& node, float& f)
+	{
+		if(!node.m_pContent)
+			throw;
+
+		node.m_pContent->Read(f);
+	}
+
+	void operator >> (const Node& node, double& d)
+	{
+		if(!node.m_pContent)
+			throw;
+
+		node.m_pContent->Read(d);
+	}
+
+	void operator >> (const Node& node, char& c)
+	{
+		if(!node.m_pContent)
+			throw;
+
+		node.m_pContent->Read(c);
+	}
 }

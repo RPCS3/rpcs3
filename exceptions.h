@@ -6,7 +6,9 @@ namespace YAML
 {
 	class Exception: public std::exception {};
 	class ScannerException: public Exception {};
+	class RepresentationException: public Exception {};
 
+	// scanner exceptions
 	class UnknownToken: public ScannerException {};
 	class IllegalBlockEntry: public ScannerException {};
 	class IllegalMapKey: public ScannerException {};
@@ -37,4 +39,8 @@ namespace YAML
 		InvalidUnicode(unsigned value_): value(value_) {}
 		unsigned value;
 	};
+
+	// representation exceptions
+	class InvalidScalar: public RepresentationException {};
+	class BadDereference: public RepresentationException {};
 }

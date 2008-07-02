@@ -23,6 +23,18 @@ namespace YAML
 		m_data.clear();
 	}
 
+	bool Map::GetBegin(std::map <Node *, Node *>::const_iterator& it)
+	{
+		it = m_data.begin();
+		return true;
+	}
+
+	bool Map::GetEnd(std::map <Node *, Node *>::const_iterator& it)
+	{
+		it = m_data.end();
+		return true;
+	}
+
 	void Map::Parse(Scanner *pScanner, const ParserState& state)
 	{
 		Clear();
