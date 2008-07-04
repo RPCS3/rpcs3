@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 #include <map>
-#include "document.h"
+#include "node.h"
 #include "parserstate.h"
 
 namespace YAML
@@ -20,7 +20,7 @@ namespace YAML
 
 		operator bool() const;
 
-		void GetNextDocument(Document& document);
+		void GetNextDocument(Node& document);
 		void PrintTokens(std::ostream& out);
 
 	private:

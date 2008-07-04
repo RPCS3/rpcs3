@@ -22,15 +22,35 @@ namespace YAML
 		return m_pScanner->PeekNextToken() != 0;
 	}
 
-	void Parser::GetNextDocument(Document& document)
+	// GetNextDocument
+	// . Reads the next document in the queue (of tokens).
+	// . Throws (ScannerException|ParserException)s on errors.
+	void Parser::GetNextDocument(Node& document)
 	{
+		// clear node
+		document.Clear();
+
 		// first read directives
 		ParseDirectives();
 
-		// then parse the document
+		// we better have some tokens in the queue
+		if(!m_pScanner->PeekNextToken())
+			return;
+
+		// first eat doc start (optional)
+		if(m_pScanner->PeekNextToken()->type == TT_DOC_START)
+			m_pScanner->EatNextToken();
+
+		// now parse our root node
 		document.Parse(m_pScanner, m_state);
+
+		// and finally eat any doc ends we see
+		while(m_pScanner->PeekNextToken() && m_pScanner->PeekNextToken()->type == TT_DOC_END)
+			m_pScanner->EatNextToken();
 	}
 
+	// ParseDirectives
+	// . Reads any directives that are next in the queue.
 	void Parser::ParseDirectives()
 	{
 		bool readDirective = false;

@@ -72,11 +72,11 @@ int main()
 		if(!parser)
 			return 0;
 
-		YAML::Document doc;
+		YAML::Node doc;
 		parser.GetNextDocument(doc);
 
 		Level level;
-		doc.GetRoot() >> level;
+		doc >> level;
 		std::cout << level;
 	} catch(YAML::Exception&) {
 		std::cout << "Error parsing the yaml!\n";

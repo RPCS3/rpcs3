@@ -48,6 +48,7 @@ namespace YAML
 		void Parse(Scanner *pScanner, const ParserState& state);
 		void Write(std::ostream& out, int indent);
 
+		// accessors
 		Iterator begin() const;
 		Iterator end() const;
 		unsigned size() const;

@@ -217,10 +217,6 @@
 					>
 				</File>
 				<File
-					RelativePath=".\document.cpp"
-					>
-				</File>
-				<File
 					RelativePath=".\iterator.cpp"
 					>
 				</File>
@@ -296,10 +292,6 @@
 				>
 				<File
 					RelativePath=".\content.h"
-					>
-				</File>
-				<File
-					RelativePath=".\document.h"
 					>
 				</File>
 				<File
