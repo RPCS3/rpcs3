@@ -133,12 +133,22 @@ namespace YAML
 		}
 	}
 
-	void Sequence::Write(std::ostream& out, int indent)
+	void Sequence::Write(std::ostream& out, int indent, bool startedLine, bool onlyOneCharOnLine)
 	{
-		for(int i=0;i<indent;i++)
-			out << "  ";
-		out << "{sequence}\n";
-		for(unsigned i=0;i<m_data.size();i++)
-			m_data[i]->Write(out, indent + 1);
+		if(startedLine && !onlyOneCharOnLine)
+			out << std::endl;
+
+		for(unsigned i=0;i<m_data.size();i++) {
+			if((startedLine && !onlyOneCharOnLine) || i > 0) {
+				for(int j=0;j<indent;j++)
+					out  << "  ";
+			}
+
+			out << "- ";
+			m_data[i]->Write(out, indent + 1, true, i > 0 || !startedLine || onlyOneCharOnLine);
+		}
+
+		if(m_data.empty())
+			out << std::endl;
 	}
 }

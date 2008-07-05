@@ -112,28 +112,30 @@ namespace YAML
 		pScanner->PopNextToken();
 	}
 
-	void Node::Write(std::ostream& out, int indent)
+	void Node::Write(std::ostream& out, int indent, bool startedLine, bool onlyOneCharOnLine) const
 	{
-		if(m_tag != "") {
-			for(int i=0;i<indent;i++)
-				out << "  ";
-			out << "{tag: " << m_tag << "}\n";
-		}
+		// write anchor/alias
 		if(m_anchor != "") {
-			for(int i=0;i<indent;i++)
-				out << "  ";
 			if(m_alias)
-				out << "{alias: " << m_anchor << "}\n";
+				out << "*";
 			else
-				out << "{anchor: " << m_anchor << "}\n";
+				out << "&";
+			out << m_anchor << " ";
+			startedLine = true;
+			onlyOneCharOnLine = false;
+		}
+
+		// write tag
+		if(m_tag != "") {
+			out << "!<" << m_tag << "> ";
+			startedLine = true;
+			onlyOneCharOnLine = false;
 		}
 
 		if(!m_pContent) {
-			for(int i=0;i<indent;i++)
-				out << "  ";
-			out << "{no content}\n";
+			out << std::endl;
 		} else {
-			m_pContent->Write(out, indent);
+			m_pContent->Write(out, indent, startedLine, onlyOneCharOnLine);
 		}
 	}
 
@@ -265,5 +267,11 @@ namespace YAML
 			throw;
 
 		node.m_pContent->Read(c);
+	}
+
+	std::ostream& operator << (std::ostream& out, const Node& node)
+	{
+		node.Write(out, 0, false, false);
+		return out;
 	}
 }

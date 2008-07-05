@@ -12,7 +12,7 @@ namespace YAML
 		virtual ~Scalar();
 
 		virtual void Parse(Scanner *pScanner, const ParserState& state);
-		virtual void Write(std::ostream& out, int indent);
+		virtual void Write(std::ostream& out, int indent, bool startedLine, bool onlyOneCharOnLine);
 
 		// extraction
 		virtual void Read(std::string& s);

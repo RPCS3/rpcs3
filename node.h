@@ -46,7 +46,7 @@ namespace YAML
 
 		void Clear();
 		void Parse(Scanner *pScanner, const ParserState& state);
-		void Write(std::ostream& out, int indent);
+		void Write(std::ostream& out, int indent, bool startedLine, bool onlyOneCharOnLine) const;
 
 		// accessors
 		Iterator begin() const;
@@ -91,6 +91,9 @@ namespace YAML
 		friend void operator >> (const Node& node, float& f);
 		friend void operator >> (const Node& node, double& d);
 		friend void operator >> (const Node& node, char& c);
+
+		// insertion
+		friend std::ostream& operator << (std::ostream& out, const Node& node);
 
 	private:
 		void ParseHeader(Scanner *pScanner, const ParserState& state);

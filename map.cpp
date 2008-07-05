@@ -125,22 +125,27 @@ namespace YAML
 		}
 	}
 
-	void Map::Write(std::ostream& out, int indent)
+	void Map::Write(std::ostream& out, int indent, bool startedLine, bool onlyOneCharOnLine)
 	{
-		for(int i=0;i<indent;i++)
-			out << "  ";
-		out << "{map}\n";
+		if(startedLine && !onlyOneCharOnLine)
+			out << std::endl;
 
 		for(node_map::const_iterator it=m_data.begin();it!=m_data.end();++it) {
-			for(int i=0;i<indent + 1;i++)
-				out << "  ";
-			out << "{key}\n";
-			it->first->Write(out, indent + 2);
+			if((startedLine && !onlyOneCharOnLine) || it != m_data.begin()) {
+				for(int i=0;i<indent;i++)
+					out << "  ";
+			}
 
-			for(int i=0;i<indent + 1;i++)
+			out << "? ";
+			it->first->Write(out, indent + 1, true, it!= m_data.begin() || !startedLine || onlyOneCharOnLine);
+
+			for(int i=0;i<indent;i++)
 				out << "  ";
-			out << "{value}\n";
-			it->second->Write(out, indent + 2);
+			out << ": ";
+			it->second->Write(out, indent + 1, true, true);
 		}
+
+		if(m_data.empty())
+			out << std::endl;
 	}
 }

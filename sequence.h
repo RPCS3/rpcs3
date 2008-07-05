@@ -20,7 +20,7 @@ namespace YAML
 		virtual unsigned GetSize() const;
 
 		virtual void Parse(Scanner *pScanner, const ParserState& state);
-		virtual void Write(std::ostream& out, int indent);
+		virtual void Write(std::ostream& out, int indent, bool startedLine, bool onlyOneCharOnLine);
 
 	private:
 		void ParseBlock(Scanner *pScanner, const ParserState& state);

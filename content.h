@@ -19,7 +19,7 @@ namespace YAML
 		virtual ~Content();
 
 		virtual void Parse(Scanner *pScanner, const ParserState& state) = 0;
-		virtual void Write(std::ostream& out, int indent) = 0;
+		virtual void Write(std::ostream& out, int indent, bool startedLine, bool onlyOneCharOnLine) = 0;
 
 		virtual bool GetBegin(std::vector <Node *>::const_iterator& it) const { return false; }
 		virtual bool GetBegin(std::map <Node *, Node *>::const_iterator& it) const { return false; }

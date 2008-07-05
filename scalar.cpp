@@ -21,14 +21,19 @@ namespace YAML
 		delete pToken;
 	}
 
-	void Scalar::Write(std::ostream& out, int indent)
+	void Scalar::Write(std::ostream& out, int indent, bool startedLine, bool onlyOneCharOnLine)
 	{
-		for(int i=0;i<indent;i++)
-			out << "  ";
-		out << "{scalar}\n";
-		for(int i=0;i<indent;i++)
-			out << "  ";
-		out << m_data << std::endl;
+		out << "\"";
+		for(unsigned i=0;i<m_data.size();i++) {
+			switch(m_data[i]) {
+				case '\\': out << "\\\\"; break;
+				case '\t': out << "\\t"; break;
+				case '\n': out << "\\n"; break;
+				case '\r': out << "\\r"; break;
+				default: out << m_data[i]; break;
+			}
+		}
+		out << "\"\n";
 	}
 
 	void Scalar::Read(std::string& s)
