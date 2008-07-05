@@ -165,6 +165,10 @@
 				RelativePath=".\main.cpp"
 				>
 			</File>
+			<File
+				RelativePath=".\tests.cpp"
+				>
+			</File>
 			<Filter
 				Name="Scanner"
 				>
@@ -245,6 +249,10 @@
 			>
 			<File
 				RelativePath=".\exceptions.h"
+				>
+			</File>
+			<File
+				RelativePath=".\tests.h"
 				>
 			</File>
 			<Filter

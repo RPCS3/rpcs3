@@ -20,6 +20,7 @@ namespace YAML
 
 		operator bool() const;
 
+		void Load(std::istream& in);
 		void GetNextDocument(Node& document);
 		void PrintTokens(std::ostream& out);
 

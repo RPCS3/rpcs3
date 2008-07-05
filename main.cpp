@@ -1,4 +1,5 @@
 #include "parser.h"
+#include "tests.h"
 #include <fstream>
 #include <iostream>
 
@@ -64,19 +65,21 @@ void operator >> (const YAML::Node& node, Level& level)
 
 int main()
 {
-	std::ifstream fin("test.yaml");
+	YAML::Test::RunAll();
 
-	try {
-		YAML::Parser parser(fin);
-		if(!parser)
-			return 0;
+	//std::ifstream fin("test.yaml");
 
-		YAML::Node doc;
-		parser.GetNextDocument(doc);
-		std::cout << doc;
-	} catch(YAML::Exception&) {
-		std::cout << "Error parsing the yaml!\n";
-	}
+	//try {
+	//	YAML::Parser parser(fin);
+	//	if(!parser)
+	//		return 0;
+
+	//	YAML::Node doc;
+	//	parser.GetNextDocument(doc);
+	//	std::cout << doc;
+	//} catch(YAML::Exception&) {
+	//	std::cout << "Error parsing the yaml!\n";
+	//}
 
 	getchar();
 

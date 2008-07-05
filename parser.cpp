@@ -8,8 +8,7 @@ namespace YAML
 {
 	Parser::Parser(std::istream& in): m_pScanner(0)
 	{
-		m_pScanner = new Scanner(in);
-		m_state.Reset();
+		Load(in);
 	}
 
 	Parser::~Parser()
@@ -20,6 +19,13 @@ namespace YAML
 	Parser::operator bool() const
 	{
 		return m_pScanner->PeekNextToken() != 0;
+	}
+
+	void Parser::Load(std::istream& in)
+	{
+		delete m_pScanner;
+		m_pScanner = new Scanner(in);
+		m_state.Reset();
 	}
 
 	// GetNextDocument
