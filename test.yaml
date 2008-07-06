@@ -1,17 +1,3 @@
-literal: |
-  Here's a literal scalar.
-  That's a newline.
-  
-  Let's go...
-folded: >
-  Here's a folded scalar that
-  wraps over to a newline.
-  
-  Let's go...
-regular: Here's a regular
-   scalar that keeps
-   on wrapping...
-   
-   
-   Let's go!
-and last key: so it doesn't go bonkers
+abeginning: value
+zend: value
+middle: value

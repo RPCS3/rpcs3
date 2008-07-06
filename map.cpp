@@ -24,13 +24,13 @@ namespace YAML
 		m_data.clear();
 	}
 
-	bool Map::GetBegin(std::map <Node *, Node *>::const_iterator& it) const
+	bool Map::GetBegin(std::map <Node *, Node *, ltnode>::const_iterator& it) const
 	{
 		it = m_data.begin();
 		return true;
 	}
 
-	bool Map::GetEnd(std::map <Node *, Node *>::const_iterator& it) const
+	bool Map::GetEnd(std::map <Node *, Node *, ltnode>::const_iterator& it) const
 	{
 		it = m_data.end();
 		return true;
@@ -68,15 +68,22 @@ namespace YAML
 
 			Node *pKey = new Node;
 			Node *pValue = new Node;
-			m_data[pKey] = pValue;
 
-			// grab key
-			pKey->Parse(pScanner, state);
+			try {
+				// grab key
+				pKey->Parse(pScanner, state);
 
-			// now grab value (optional)
-			if(pScanner->PeekNextToken() && pScanner->PeekNextToken()->type == TT_VALUE) {
-				pScanner->PopNextToken();
-				pValue->Parse(pScanner, state);
+				// now grab value (optional)
+				if(pScanner->PeekNextToken() && pScanner->PeekNextToken()->type == TT_VALUE) {
+					pScanner->PopNextToken();
+					pValue->Parse(pScanner, state);
+				}
+
+				m_data[pKey] = pValue;
+			} catch(Exception& e) {
+				delete pKey;
+				delete pValue;
+				throw e;
 			}
 		}
 	}
@@ -105,23 +112,31 @@ namespace YAML
 
 			Node *pKey = new Node;
 			Node *pValue = new Node;
-			m_data[pKey] = pValue;
 
-			// grab key
-			pKey->Parse(pScanner, state);
+			try {
+				// grab key
+				pKey->Parse(pScanner, state);
 
-			// now grab value (optional)
-			if(pScanner->PeekNextToken() && pScanner->PeekNextToken()->type == TT_VALUE) {
-				pScanner->PopNextToken();
-				pValue->Parse(pScanner, state);
+				// now grab value (optional)
+				if(pScanner->PeekNextToken() && pScanner->PeekNextToken()->type == TT_VALUE) {
+					pScanner->PopNextToken();
+					pValue->Parse(pScanner, state);
+				}
+
+				// now eat the separator (or could be a map end, which we ignore - but if it's neither, then it's a bad node)
+				pToken = pScanner->PeekNextToken();
+				if(pToken->type == TT_FLOW_ENTRY)
+					pScanner->EatNextToken();
+				else if(pToken->type != TT_FLOW_MAP_END)
+					throw MapEndNotFound();
+
+				m_data[pKey] = pValue;
+			} catch(Exception& e) {
+				// clean up and rethrow
+				delete pKey;
+				delete pValue;
+				throw e;
 			}
-
-			// now eat the separator (or could be a map end, which we ignore - but if it's neither, then it's a bad node)
-			pToken = pScanner->PeekNextToken();
-			if(pToken->type == TT_FLOW_ENTRY)
-				pScanner->EatNextToken();
-			else if(pToken->type != TT_FLOW_MAP_END)
-				throw MapEndNotFound();
 		}
 	}
 
@@ -147,5 +162,35 @@ namespace YAML
 
 		if(m_data.empty())
 			out << std::endl;
+	}
+
+	int Map::Compare(Content *pContent)
+	{
+		return -pContent->Compare(this);
+	}
+
+	int Map::Compare(Map *pMap)
+	{
+		node_map::const_iterator it = m_data.begin(), jt = pMap->m_data.begin();
+		while(1) {
+			if(it == m_data.end()) {
+				if(jt == pMap->m_data.end())
+					return 0;
+				else
+					return -1;
+			}
+			if(jt == pMap->m_data.end())
+				return 1;
+
+			int cmp = it->first->Compare(*jt->first);
+			if(cmp != 0)
+				return cmp;
+
+			cmp = it->second->Compare(*jt->second);
+			if(cmp != 0)
+				return cmp;
+		}
+
+		return 0;
 	}
 }

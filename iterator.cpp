@@ -11,7 +11,7 @@ namespace YAML
 	{
 	}
 
-	Node::Iterator::Iterator(std::map <Node *, Node *>::const_iterator it): mapIter(it), type(IT_MAP)
+	Node::Iterator::Iterator(std::map <Node *, Node *, ltnode>::const_iterator it): mapIter(it), type(IT_MAP)
 	{
 	}
 

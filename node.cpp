@@ -9,6 +9,12 @@
 
 namespace YAML
 {
+	// the ordering!
+	bool ltnode::operator ()(const Node *pNode1, const Node *pNode2) const
+	{
+		return *pNode1 < *pNode2;
+	}
+
 	Node::Node(): m_pContent(0), m_alias(false)
 	{
 	}
@@ -150,7 +156,7 @@ namespace YAML
 		if(m_pContent->GetBegin(seqIter))
 			return Iterator(seqIter);
 
-		std::map <Node *, Node *>::const_iterator mapIter;
+		std::map <Node *, Node *, ltnode>::const_iterator mapIter;
 		if(m_pContent->GetBegin(mapIter))
 			return Iterator(mapIter);
 
@@ -168,7 +174,7 @@ namespace YAML
 		if(m_pContent->GetEnd(seqIter))
 			return Iterator(seqIter);
 
-		std::map <Node *, Node *>::const_iterator mapIter;
+		std::map <Node *, Node *, ltnode>::const_iterator mapIter;
 		if(m_pContent->GetEnd(mapIter))
 			return Iterator(mapIter);
 
@@ -273,5 +279,25 @@ namespace YAML
 	{
 		node.Write(out, 0, false, false);
 		return out;
+	}
+
+	int Node::Compare(const Node& rhs) const
+	{
+		// Step 1: no content is the smallest
+		if(!m_pContent) {
+			if(rhs.m_pContent)
+				return -1;
+			else
+				return 0;
+		}
+		if(!rhs.m_pContent)
+			return 1;
+
+		return m_pContent->Compare(rhs.m_pContent);
+	}
+
+	bool operator < (const Node& n1, const Node& n2)
+	{
+		return n1.Compare(n2) < 0;
 	}
 }

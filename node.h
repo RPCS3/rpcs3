@@ -6,6 +6,7 @@
 #include <map>
 #include "parserstate.h"
 #include "exceptions.h"
+#include "ltnode.h"
 
 namespace YAML
 {
@@ -20,7 +21,7 @@ namespace YAML
 		public:
 			Iterator();
 			Iterator(std::vector <Node *>::const_iterator it);
-			Iterator(std::map <Node *, Node *>::const_iterator it);
+			Iterator(std::map <Node *, Node *, ltnode>::const_iterator it);
 			~Iterator();
 
 			friend bool operator == (const Iterator& it, const Iterator& jt);
@@ -37,7 +38,7 @@ namespace YAML
 			ITER_TYPE type;
 
 			std::vector <Node *>::const_iterator seqIter;
-			std::map <Node *, Node *>::const_iterator mapIter;
+			std::map <Node *, Node *, ltnode>::const_iterator mapIter;
 		};
 
 	public:
@@ -94,6 +95,10 @@ namespace YAML
 
 		// insertion
 		friend std::ostream& operator << (std::ostream& out, const Node& node);
+
+		// ordering
+		int Compare(const Node& rhs) const;
+		friend bool operator < (const Node& n1, const Node& n2);
 
 	private:
 		void ParseHeader(Scanner *pScanner, const ParserState& state);

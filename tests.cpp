@@ -15,6 +15,7 @@ namespace YAML
 			std::vector <std::string> files;
 			files.push_back("tests/simple.yaml");
 			files.push_back("tests/mixed.yaml");
+			files.push_back("tests/scalars.yaml");
 
 			bool passed = true;
 			for(unsigned i=0;i<files.size();i++) {
@@ -63,7 +64,7 @@ namespace YAML
 				if(firstTry == secondTry)
 					return true;
 
-				std::ofstream fout("out.yaml");
+				std::ofstream fout("tests/out.yaml");
 				fout << "---\n";
 				fout << firstTry << std::endl;
 				fout << "---\n";

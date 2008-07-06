@@ -303,6 +303,10 @@
 					>
 				</File>
 				<File
+					RelativePath=".\ltnode.h"
+					>
+				</File>
+				<File
 					RelativePath=".\map.h"
 					>
 				</File>

@@ -22,6 +22,12 @@ namespace YAML
 		virtual void Parse(Scanner *pScanner, const ParserState& state);
 		virtual void Write(std::ostream& out, int indent, bool startedLine, bool onlyOneCharOnLine);
 
+		// ordering
+		virtual int Compare(Content *pContent);
+		virtual int Compare(Scalar *pScalar) { return 1; }
+		virtual int Compare(Sequence *pSeq);
+		virtual int Compare(Map *pMap) { return -1; }
+
 	private:
 		void ParseBlock(Scanner *pScanner, const ParserState& state);
 		void ParseImplicit(Scanner *pScanner, const ParserState& state);

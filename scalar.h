@@ -23,6 +23,12 @@ namespace YAML
 		virtual void Read(double& d);
 		virtual void Read(char& c);
 
+		// ordering
+		virtual int Compare(Content *pContent);
+		virtual int Compare(Scalar *pScalar);
+		virtual int Compare(Sequence *pSeq) { return -1; }
+		virtual int Compare(Map *pMap) { return -1; }
+
 	protected:
 		std::string m_data;
 	};

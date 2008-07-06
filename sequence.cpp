@@ -151,4 +151,26 @@ namespace YAML
 		if(m_data.empty())
 			out << std::endl;
 	}
+
+	int Sequence::Compare(Content *pContent)
+	{
+		return -pContent->Compare(this);
+	}
+
+	int Sequence::Compare(Sequence *pSeq)
+	{
+		unsigned n = m_data.size(), m = pSeq->m_data.size();
+		if(n < m)
+			return -1;
+		else if(n > m)
+			return 1;
+
+		for(unsigned i=0;i<n;i++) {
+			int cmp = m_data[i]->Compare(*pSeq->m_data[i]);
+			if(cmp != 0)
+				return cmp;
+		}
+
+		return 0;
+	}
 }

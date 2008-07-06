@@ -88,4 +88,19 @@ namespace YAML
 		if(!data)
 			throw InvalidScalar();
 	}
+
+	int Scalar::Compare(Content *pContent)
+	{
+		return -pContent->Compare(this);
+	}
+
+	int Scalar::Compare(Scalar *pScalar)
+	{
+		if(m_data < pScalar->m_data)
+			return -1;
+		else if(m_data > pScalar->m_data)
+			return 1;
+		else
+			return 0;
+	}
 }
