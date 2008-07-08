@@ -50,7 +50,7 @@ namespace YAML
 	};
 
 	struct Token {
-		Token(TOKEN_TYPE type_): status(TS_VALID), type(type_) {}
+		Token(TOKEN_TYPE type_, int line_, int column_): status(TS_VALID), type(type_), line(line_), column(column_) {}
 
 		friend std::ostream& operator << (std::ostream& out, const Token& token) {
 			out << TokenNames[token.type] << ": " << token.value;
@@ -61,6 +61,7 @@ namespace YAML
 
 		TOKEN_STATUS status;
 		TOKEN_TYPE type;
+		int line, column;
 		std::string value;
 		std::vector <std::string> params;
 	};

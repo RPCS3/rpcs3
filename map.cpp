@@ -57,10 +57,10 @@ namespace YAML
 		while(1) {
 			Token *pToken = pScanner->PeekNextToken();
 			if(!pToken)
-				throw MapEndNotFound();
+				throw ParserException(-1, -1, "end of map not found");
 
 			if(pToken->type != TT_KEY && pToken->type != TT_BLOCK_END)
-				throw MapEndNotFound();
+				throw ParserException(pToken->line, pToken->column, "end of map not found");
 
 			pScanner->PopNextToken();
 			if(pToken->type == TT_BLOCK_END)
@@ -96,7 +96,7 @@ namespace YAML
 		while(1) {
 			Token *pToken = pScanner->PeekNextToken();
 			if(!pToken)
-				throw MapEndNotFound();
+				throw ParserException(-1, -1, "end of map flow not found");
 
 			// first check for end
 			if(pToken->type == TT_FLOW_MAP_END) {
@@ -106,7 +106,7 @@ namespace YAML
 
 			// now it better be a key
 			if(pToken->type != TT_KEY)
-				throw MapEndNotFound();
+				throw ParserException(pToken->line, pToken->column, "end of map flow not found");
 
 			pScanner->PopNextToken();
 
@@ -128,7 +128,7 @@ namespace YAML
 				if(pToken->type == TT_FLOW_ENTRY)
 					pScanner->EatNextToken();
 				else if(pToken->type != TT_FLOW_MAP_END)
-					throw MapEndNotFound();
+					throw ParserException(pToken->line, pToken->column, "end of map flow not found");
 
 				m_data[pKey] = pValue;
 			} catch(Exception& e) {

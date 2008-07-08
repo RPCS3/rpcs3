@@ -157,7 +157,7 @@ namespace YAML
 			return ScanPlainScalar();
 
 		// don't know what it is!
-		throw UnknownToken();
+		throw ParserException(INPUT.line, INPUT.column, "unknown token");
 	}
 
 	// ScanToNextToken
@@ -256,9 +256,9 @@ namespace YAML
 		m_indents.push(column);
 		Token *pToken = 0;
 		if(sequence)
-			pToken = new Token(TT_BLOCK_SEQ_START);
+			pToken = new Token(TT_BLOCK_SEQ_START, INPUT.line, INPUT.column);
 		else
-			pToken = new Token(TT_BLOCK_MAP_START);
+			pToken = new Token(TT_BLOCK_MAP_START, INPUT.line, INPUT.column);
 
 		m_tokens.push(pToken);
 		return pToken;
@@ -276,7 +276,7 @@ namespace YAML
 		// now pop away
 		while(!m_indents.empty() && m_indents.top() > column) {
 			m_indents.pop();
-			m_tokens.push(new Token(TT_BLOCK_END));
+			m_tokens.push(new Token(TT_BLOCK_END, INPUT.line, INPUT.column));
 		}
 	}
 }

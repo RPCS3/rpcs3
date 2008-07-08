@@ -30,7 +30,7 @@ namespace YAML
 
 	// GetNextDocument
 	// . Reads the next document in the queue (of tokens).
-	// . Throws (ScannerException|ParserException)s on errors.
+	// . Throws (ParserException|ParserException)s on errors.
 	void Parser::GetNextDocument(Node& document)
 	{
 		// clear node
@@ -72,42 +72,43 @@ namespace YAML
 				m_state.Reset();
 
 			readDirective = true;
-			HandleDirective(pToken->value, pToken->params);
+			HandleDirective(pToken);
 			m_pScanner->PopNextToken();
 		}
 	}
 
-	void Parser::HandleDirective(const std::string& name, const std::vector <std::string>& params)
+	void Parser::HandleDirective(Token *pToken)
 	{
-		if(name == "YAML")
-			HandleYamlDirective(params);
-		else if(name == "TAG")
-			HandleTagDirective(params);
+		if(pToken->value == "YAML")
+			HandleYamlDirective(pToken);
+		else if(pToken->value == "TAG")
+			HandleTagDirective(pToken);
 	}
 
 	// HandleYamlDirective
 	// . Should be of the form 'major.minor' (like a version number)
-	void Parser::HandleYamlDirective(const std::vector <std::string>& params)
+	void Parser::HandleYamlDirective(Token *pToken)
 	{
-		if(params.size() != 1)
-			throw BadYAMLDirective();
+		if(pToken->params.size() != 1)
+			throw ParserException(pToken->line, pToken->column, "YAML directives must have exactly one argument");
 
-		std::stringstream str(params[0]);
+		std::stringstream str(pToken->params[0]);
 		str >> m_state.version.major;
 		str.get();
 		str >> m_state.version.minor;
 		if(!str)
-			throw BadYAMLDirective();  // TODO: or throw if there are any more characters in the stream?
+			throw ParserException(pToken->line, pToken->column, "bad YAML directive");
+				// TODO: or throw if there are any more characters in the stream?
 
 		// TODO: throw on major > 1? warning on major == 1, minor > 2?
 	}
 
-	void Parser::HandleTagDirective(const std::vector <std::string>& params)
+	void Parser::HandleTagDirective(Token *pToken)
 	{
-		if(params.size() != 2)
-			throw BadTAGDirective();
+		if(pToken->params.size() != 2)
+			throw ParserException(pToken->line, pToken->column, "TAG directives must have exactly two arguments");
 
-		std::string handle = params[0], prefix = params[1];
+		std::string handle = pToken->params[0], prefix = pToken->params[1];
 		m_state.tags[handle] = prefix;
 	}
 

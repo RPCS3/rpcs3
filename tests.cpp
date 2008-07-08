@@ -71,7 +71,8 @@ namespace YAML
 				fout << secondTry << std::endl;
 
 				return false;
-			} catch(Exception&) {
+			} catch(ParserException& e) {
+				std::cout << file << " (line " << e.line + 1 << ", col " << e.column + 1 << "): " << e.msg << std::endl;
 				return false;
 			}
 

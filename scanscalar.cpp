@@ -35,7 +35,7 @@ namespace YAML
 					if(params.onDocIndicator == BREAK)
 						break;
 					else if(params.onDocIndicator == THROW)
-						throw IllegalDocIndicator();
+						throw ParserException(INPUT.line, INPUT.column, "illegal document indicator in scalar");
 				}
 
 				foundNonEmptyLine = true;
@@ -61,7 +61,7 @@ namespace YAML
 			// eof? if we're looking to eat something, then we throw
 			if(INPUT.peek() == EOF) {
 				if(params.eatEnd)
-					throw IllegalEOF();
+					throw ParserException(INPUT.line, INPUT.column, "illegal EOF in scalar");
 				break;
 			}
 
@@ -97,7 +97,7 @@ namespace YAML
 			while(Exp::Blank.Matches(INPUT)) {
 				// we check for tabs that masquerade as indentation
 				if(INPUT.peek() == '\t'&& INPUT.column < params.indent && params.onTabInIndentation == THROW)
-					throw IllegalTabInIndentation();
+					throw ParserException(INPUT.line, INPUT.column, "illegal tab when looking for indentation");
 
 				if(!params.eatLeadingWhitespace)
 					break;

@@ -9,8 +9,8 @@
 
 namespace YAML
 {
-	class Node;
 	class Scanner;
+	struct Token;
 
 	class Parser
 	{
@@ -26,9 +26,9 @@ namespace YAML
 
 	private:
 		void ParseDirectives();
-		void HandleDirective(const std::string& name, const std::vector <std::string>& params);
-		void HandleYamlDirective(const std::vector <std::string>& params);
-		void HandleTagDirective(const std::vector <std::string>& params);
+		void HandleDirective(Token *pToken);
+		void HandleYamlDirective(Token *pToken);
+		void HandleTagDirective(Token *pToken);
 
 	private:
 		Scanner *m_pScanner;

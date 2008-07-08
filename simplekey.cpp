@@ -21,7 +21,7 @@ namespace YAML
 	void Scanner::SimpleKey::Invalidate()
 	{
 		if(required)
-			throw RequiredSimpleKeyNotFound();
+			throw ParserException(line, column, "required simple key not found");
 
 		if(pMapStart)
 			pMapStart->status = TS_INVALID;
@@ -44,7 +44,7 @@ namespace YAML
 //			key.required = true;	// TODO: is this correct?
 
 		// then add the (now unverified) key
-		key.pKey = new Token(TT_KEY);
+		key.pKey = new Token(TT_KEY, INPUT.line, INPUT.column);
 		key.pKey->status = TS_UNVERIFIED;
 		m_tokens.push(key.pKey);
 

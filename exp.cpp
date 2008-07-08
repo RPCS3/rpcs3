@@ -1,11 +1,12 @@
 #include "exp.h"
 #include "exceptions.h"
+#include <sstream>
 
 namespace YAML
 {
 	namespace Exp
 	{
-		unsigned ParseHex(std::string str)
+		unsigned ParseHex(const std::string& str, int line, int column)
 		{
 			unsigned value = 0;
 			for(unsigned i=0;i<str.size();i++) {
@@ -18,7 +19,7 @@ namespace YAML
 				else if('0' <= ch && ch <= '9')
 					digit = ch - '0';
 				else
-					throw NonHexNumber(ch);
+					throw ParserException(line, column, "bad character found while scanning hex number");
 
 				value = (value << 4) + digit;
 			}
@@ -42,11 +43,14 @@ namespace YAML
 				str += in.get();
 
 			// get the value
-			unsigned value = ParseHex(str);
+			unsigned value = ParseHex(str, in.line, in.column);
 
 			// legal unicode?
-			if((value >= 0xD800 && value <= 0xDFFF) || value > 0x10FFFF)
-				throw InvalidUnicode(value);
+			if((value >= 0xD800 && value <= 0xDFFF) || value > 0x10FFFF) {
+				std::stringstream msg;
+				msg << "invalid unicode: " << value;
+				throw ParserException(in.line, in.column, msg.str());
+			}
 
 			// now break it up into chars
 			if(value <= 0x7F)
@@ -101,7 +105,9 @@ namespace YAML
 				case 'U': return Escape(in, 8);
 			}
 
-			throw UnknownEscapeSequence(ch);
+			std::stringstream msg;
+			msg << "unknown escape character: " << ch;
+			throw ParserException(in.line, in.column, msg.str());
 		}
 	}
 }

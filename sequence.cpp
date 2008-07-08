@@ -68,10 +68,10 @@ namespace YAML
 		while(1) {
 			Token *pToken = pScanner->PeekNextToken();
 			if(!pToken)
-				throw SeqEndNotFound();
+				throw ParserException(-1, -1, "end of sequence not found");
 
 			if(pToken->type != TT_BLOCK_ENTRY && pToken->type != TT_BLOCK_END)
-				throw SeqEndNotFound();
+				throw ParserException(pToken->line, pToken->column, "end of sequence not found");
 
 			pScanner->PopNextToken();
 			if(pToken->type == TT_BLOCK_END)
@@ -111,7 +111,7 @@ namespace YAML
 		while(1) {
 			Token *pToken = pScanner->PeekNextToken();
 			if(!pToken)
-				throw SeqEndNotFound();
+				throw ParserException(-1, -1, "end of sequence flow not found");
 
 			// first check for end
 			if(pToken->type == TT_FLOW_SEQ_END) {
@@ -129,7 +129,7 @@ namespace YAML
 			if(pToken->type == TT_FLOW_ENTRY)
 				pScanner->EatNextToken();
 			else if(pToken->type != TT_FLOW_SEQ_END)
-				throw SeqEndNotFound();
+				throw ParserException(pToken->line, pToken->column, "end of sequence flow not found");
 		}
 	}
 
