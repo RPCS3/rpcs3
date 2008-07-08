@@ -83,10 +83,10 @@ namespace YAML
 
 	void Node::ParseTag(Scanner *pScanner, const ParserState& state)
 	{
-		if(m_tag != "")
-			return;  // TODO: throw
-
 		Token *pToken = pScanner->PeekNextToken();
+		if(m_tag != "")
+			throw ParserException(pToken->line, pToken->column, "cannot assign multiple tags to the same node");
+
 		m_tag = state.TranslateTag(pToken->value);
 
 		for(unsigned i=0;i<pToken->params.size();i++)
@@ -96,10 +96,10 @@ namespace YAML
 	
 	void Node::ParseAnchor(Scanner *pScanner, const ParserState& state)
 	{
-		if(m_anchor != "")
-			return;  // TODO: throw
-
 		Token *pToken = pScanner->PeekNextToken();
+		if(m_anchor != "")
+			throw ParserException(pToken->line, pToken->column, "cannot assign multiple anchors to the same node");
+
 		m_anchor = pToken->value;
 		m_alias = false;
 		pScanner->PopNextToken();
@@ -107,12 +107,12 @@ namespace YAML
 
 	void Node::ParseAlias(Scanner *pScanner, const ParserState& state)
 	{
-		if(m_anchor != "")
-			return;  // TODO: throw
-		if(m_tag != "")
-			return;  // TODO: throw (aliases can't have any content, *including* tags)
-
 		Token *pToken = pScanner->PeekNextToken();
+		if(m_anchor != "")
+			throw ParserException(pToken->line, pToken->column, "cannot assign multiple aliases to the same node");
+		if(m_tag != "")
+			throw ParserException(pToken->line, pToken->column, "aliases can't have any content, *including* tags");
+
 		m_anchor = pToken->value;
 		m_alias = true;
 		pScanner->PopNextToken();

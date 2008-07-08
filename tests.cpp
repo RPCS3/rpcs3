@@ -16,6 +16,7 @@ namespace YAML
 			files.push_back("tests/simple.yaml");
 			files.push_back("tests/mixed.yaml");
 			files.push_back("tests/scalars.yaml");
+			files.push_back("tests/directives.yaml");
 
 			bool passed = true;
 			for(unsigned i=0;i<files.size();i++) {
@@ -69,8 +70,6 @@ namespace YAML
 				fout << firstTry << std::endl;
 				fout << "---\n";
 				fout << secondTry << std::endl;
-
-				return false;
 			} catch(ParserException& e) {
 				std::cout << file << " (line " << e.line + 1 << ", col " << e.column + 1 << "): " << e.msg << std::endl;
 				return false;

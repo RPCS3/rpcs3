@@ -96,13 +96,17 @@ namespace YAML
 		str >> m_state.version.major;
 		str.get();
 		str >> m_state.version.minor;
-		if(!str)
-			throw ParserException(pToken->line, pToken->column, "bad YAML directive");
-				// TODO: or throw if there are any more characters in the stream?
+		if(!str || str.peek() != EOF)
+			throw ParserException(pToken->line, pToken->column, "bad YAML version: " + pToken->params[0]);
 
-		// TODO: throw on major > 1? warning on major == 1, minor > 2?
+		if(m_state.version.major > 1)
+			throw ParserException(pToken->line, pToken->column, "YAML major version > 1");
+
+		// TODO: warning on major == 1, minor > 2?
 	}
 
+	// HandleTagDirective
+	// . Should be of the form 'handle prefix', where 'handle' is converted to 'prefix' in the file.
 	void Parser::HandleTagDirective(Token *pToken)
 	{
 		if(pToken->params.size() != 2)
