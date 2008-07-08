@@ -6,7 +6,7 @@
 namespace YAML
 {
 	Scanner::SimpleKey::SimpleKey(int pos_, int line_, int column_, int flowLevel_)
-		: pos(pos_), line(line_), column(column_), flowLevel(flowLevel_), required(false), pMapStart(0), pKey(0)
+		: pos(pos_), line(line_), column(column_), flowLevel(flowLevel_), pMapStart(0), pKey(0)
 	{
 	}
 
@@ -20,9 +20,6 @@ namespace YAML
 
 	void Scanner::SimpleKey::Invalidate()
 	{
-		if(required)
-			throw ParserException(line, column, "required simple key not found");
-
 		if(pMapStart)
 			pMapStart->status = TS_INVALID;
 		if(pKey)
@@ -40,8 +37,6 @@ namespace YAML
 		key.pMapStart = PushIndentTo(INPUT.column, false);
 		if(key.pMapStart)
 			key.pMapStart->status = TS_UNVERIFIED;
-//		else
-//			key.required = true;	// TODO: is this correct?
 
 		// then add the (now unverified) key
 		key.pKey = new Token(TT_KEY, INPUT.line, INPUT.column);

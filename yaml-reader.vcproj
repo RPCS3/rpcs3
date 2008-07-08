@@ -330,6 +330,22 @@
 			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}"
 			>
 			<File
+				RelativePath=".\tests\directives.yaml"
+				>
+			</File>
+			<File
+				RelativePath=".\tests\mixed.yaml"
+				>
+			</File>
+			<File
+				RelativePath=".\tests\scalars.yaml"
+				>
+			</File>
+			<File
+				RelativePath=".\tests\simple.yaml"
+				>
+			</File>
+			<File
 				RelativePath=".\test.yaml"
 				>
 			</File>

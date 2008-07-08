@@ -45,7 +45,6 @@ namespace YAML
 			void Invalidate();
 
 			int pos, line, column, flowLevel;
-			bool required;
 			Token *pMapStart, *pKey;
 		};
 
