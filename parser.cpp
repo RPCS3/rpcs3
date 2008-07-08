@@ -90,17 +90,17 @@ namespace YAML
 	void Parser::HandleYamlDirective(Token *pToken)
 	{
 		if(pToken->params.size() != 1)
-			throw ParserException(pToken->line, pToken->column, "YAML directives must have exactly one argument");
+			throw ParserException(pToken->line, pToken->column, ErrorMsg::YAML_DIRECTIVE_ARGS);
 
 		std::stringstream str(pToken->params[0]);
 		str >> m_state.version.major;
 		str.get();
 		str >> m_state.version.minor;
 		if(!str || str.peek() != EOF)
-			throw ParserException(pToken->line, pToken->column, "bad YAML version: " + pToken->params[0]);
+			throw ParserException(pToken->line, pToken->column, ErrorMsg::YAML_VERSION + pToken->params[0]);
 
 		if(m_state.version.major > 1)
-			throw ParserException(pToken->line, pToken->column, "YAML major version > 1");
+			throw ParserException(pToken->line, pToken->column, ErrorMsg::YAML_MAJOR_VERSION);
 
 		// TODO: warning on major == 1, minor > 2?
 	}
@@ -110,7 +110,7 @@ namespace YAML
 	void Parser::HandleTagDirective(Token *pToken)
 	{
 		if(pToken->params.size() != 2)
-			throw ParserException(pToken->line, pToken->column, "TAG directives must have exactly two arguments");
+			throw ParserException(pToken->line, pToken->column, ErrorMsg::TAG_DIRECTIVE_ARGS);
 
 		std::string handle = pToken->params[0], prefix = pToken->params[1];
 		m_state.tags[handle] = prefix;

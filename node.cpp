@@ -85,7 +85,7 @@ namespace YAML
 	{
 		Token *pToken = pScanner->PeekNextToken();
 		if(m_tag != "")
-			throw ParserException(pToken->line, pToken->column, "cannot assign multiple tags to the same node");
+			throw ParserException(pToken->line, pToken->column, ErrorMsg::MULTIPLE_TAGS);
 
 		m_tag = state.TranslateTag(pToken->value);
 
@@ -98,7 +98,7 @@ namespace YAML
 	{
 		Token *pToken = pScanner->PeekNextToken();
 		if(m_anchor != "")
-			throw ParserException(pToken->line, pToken->column, "cannot assign multiple anchors to the same node");
+			throw ParserException(pToken->line, pToken->column, ErrorMsg::MULTIPLE_ANCHORS);
 
 		m_anchor = pToken->value;
 		m_alias = false;
@@ -109,9 +109,9 @@ namespace YAML
 	{
 		Token *pToken = pScanner->PeekNextToken();
 		if(m_anchor != "")
-			throw ParserException(pToken->line, pToken->column, "cannot assign multiple aliases to the same node");
+			throw ParserException(pToken->line, pToken->column, ErrorMsg::MULTIPLE_ALIASES);
 		if(m_tag != "")
-			throw ParserException(pToken->line, pToken->column, "aliases can't have any content, *including* tags");
+			throw ParserException(pToken->line, pToken->column, ErrorMsg::ALIAS_CONTENT);
 
 		m_anchor = pToken->value;
 		m_alias = true;

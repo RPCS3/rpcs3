@@ -157,7 +157,7 @@ namespace YAML
 			return ScanPlainScalar();
 
 		// don't know what it is!
-		throw ParserException(INPUT.line, INPUT.column, "unknown token");
+		throw ParserException(INPUT.line, INPUT.column, ErrorMsg::UNKNOWN_TOKEN);
 	}
 
 	// ScanToNextToken

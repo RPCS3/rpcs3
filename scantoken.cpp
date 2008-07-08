@@ -100,7 +100,7 @@ namespace YAML
 	void Scanner::ScanFlowEnd()
 	{
 		if(m_flowLevel == 0)
-			throw ParserException(INPUT.line, INPUT.column, "illegal flow end");
+			throw ParserException(INPUT.line, INPUT.column, ErrorMsg::FLOW_END);
 
 		m_flowLevel--;
 		m_simpleKeyAllowed = false;
@@ -128,11 +128,11 @@ namespace YAML
 	{
 		// we better be in the block context!
 		if(m_flowLevel > 0)
-			throw ParserException(INPUT.line, INPUT.column, "illegal block entry");
+			throw ParserException(INPUT.line, INPUT.column, ErrorMsg::BLOCK_ENTRY);
 
 		// can we put it here?
 		if(!m_simpleKeyAllowed)
-			throw ParserException(INPUT.line, INPUT.column, "illegal block entry");
+			throw ParserException(INPUT.line, INPUT.column, ErrorMsg::BLOCK_ENTRY);
 
 		PushIndentTo(INPUT.column, true);
 		m_simpleKeyAllowed = true;
@@ -149,7 +149,7 @@ namespace YAML
 		// handle keys diffently in the block context (and manage indents)
 		if(m_flowLevel == 0) {
 			if(!m_simpleKeyAllowed)
-				throw ParserException(INPUT.line, INPUT.column, "illegal map key");
+				throw ParserException(INPUT.line, INPUT.column, ErrorMsg::MAP_KEY);
 
 			PushIndentTo(INPUT.column, false);
 		}
@@ -177,7 +177,7 @@ namespace YAML
 			// handle values diffently in the block context (and manage indents)
 			if(m_flowLevel == 0) {
 				if(!m_simpleKeyAllowed)
-					throw ParserException(INPUT.line, INPUT.column, "illegal map value");
+					throw ParserException(INPUT.line, INPUT.column, ErrorMsg::MAP_VALUE);
 
 				PushIndentTo(INPUT.column, false);
 			}
@@ -216,21 +216,12 @@ namespace YAML
 			name += INPUT.get();
 
 		// we need to have read SOMETHING!
-		if(name.empty()) {
-			std::stringstream msg;
-			msg << (alias ? "alias" : "anchor");
-			msg << " not found after ";
-			msg << (alias ? "*" : "&");
-			throw ParserException(INPUT.line, INPUT.column, msg.str());
-		}
+		if(name.empty())
+			throw ParserException(INPUT.line, INPUT.column, alias ? ErrorMsg::ALIAS_NOT_FOUND : ErrorMsg::ANCHOR_NOT_FOUND);
 
 		// and needs to end correctly
-		if(INPUT.peek() != EOF && !Exp::AnchorEnd.Matches(INPUT)) {
-			std::stringstream msg;
-			msg << "illegal character found while scanning ";
-			msg << (alias ? "alias" : "anchor");
-			throw ParserException(INPUT.line, INPUT.column, msg.str());
-		}
+		if(INPUT.peek() != EOF && !Exp::AnchorEnd.Matches(INPUT))
+			throw ParserException(INPUT.line, INPUT.column, alias ? ErrorMsg::CHAR_IN_ALIAS : ErrorMsg::CHAR_IN_ANCHOR);
 
 		// and we're done
 		Token *pToken = new Token(alias ? TT_ALIAS : TT_ANCHOR, line, column);
@@ -306,7 +297,7 @@ namespace YAML
 		// finally, we can't have any colons in a scalar, so if we ended on a colon, there
 		// had better be a break after it
 		if(Exp::IllegalColonInScalar.Matches(INPUT))
-			throw ParserException(INPUT.line, INPUT.column, "illegal character in scalar");
+			throw ParserException(INPUT.line, INPUT.column, ErrorMsg::CHAR_IN_SCALAR);
 
 		Token *pToken = new Token(TT_SCALAR, line, column);
 		pToken->value = scalar;
@@ -374,7 +365,7 @@ namespace YAML
 				params.chomp = STRIP;
 			else if(Exp::Digit.Matches(ch)) {
 				if(ch == '0')
-					throw ParserException(INPUT.line, INPUT.column, "cannot set zero indentation for a block scalar");
+					throw ParserException(INPUT.line, INPUT.column, ErrorMsg::ZERO_INDENT_IN_BLOCK);
 
 				params.indent = ch - '0';
 				params.detectIndent = false;
@@ -392,7 +383,7 @@ namespace YAML
 
 		// if it's not a line break, then we ran into a bad character inline
 		if(INPUT && !Exp::Break.Matches(INPUT))
-			throw ParserException(INPUT.line, INPUT.column, "unexpected character in block scalar");
+			throw ParserException(INPUT.line, INPUT.column, ErrorMsg::CHAR_IN_BLOCK);
 
 		// set the initial indentation
 		if(m_indents.top() >= 0)

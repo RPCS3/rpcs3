@@ -19,7 +19,7 @@ namespace YAML
 				else if('0' <= ch && ch <= '9')
 					digit = ch - '0';
 				else
-					throw ParserException(line, column, "bad character found while scanning hex number");
+					throw ParserException(line, column, ErrorMsg::INVALID_HEX);
 
 				value = (value << 4) + digit;
 			}
@@ -48,7 +48,7 @@ namespace YAML
 			// legal unicode?
 			if((value >= 0xD800 && value <= 0xDFFF) || value > 0x10FFFF) {
 				std::stringstream msg;
-				msg << "invalid unicode: " << value;
+				msg << ErrorMsg::INVALID_UNICODE << value;
 				throw ParserException(in.line, in.column, msg.str());
 			}
 
@@ -106,8 +106,7 @@ namespace YAML
 			}
 
 			std::stringstream msg;
-			msg << "unknown escape character: " << ch;
-			throw ParserException(in.line, in.column, msg.str());
+			throw ParserException(in.line, in.column, ErrorMsg::INVALID_ESCAPE + ch);
 		}
 	}
 }
