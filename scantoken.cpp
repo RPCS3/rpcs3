@@ -274,7 +274,7 @@ namespace YAML
 
 		// set up the scanning parameters
 		ScanScalarParams params;
-		params.end = (m_flowLevel > 0 ? Exp::EndScalarInFlow : Exp::EndScalar) || (RegEx(' ') + Exp::Comment);
+		params.end = (m_flowLevel > 0 ? Exp::EndScalarInFlow : Exp::EndScalar) || (Exp::BlankOrBreak + Exp::Comment);
 		params.eatEnd = false;
 		params.indent = (m_flowLevel > 0 ? 0 : m_indents.top() + 1);
 		params.fold = true;
@@ -294,10 +294,9 @@ namespace YAML
 		// can have a simple key only if we ended the scalar by starting a new line
 		m_simpleKeyAllowed = params.leadingSpaces;
 
-		// finally, we can't have any colons in a scalar, so if we ended on a colon, there
-		// had better be a break after it
-		if(Exp::IllegalColonInScalar.Matches(INPUT))
-			throw ParserException(INPUT.line, INPUT.column, ErrorMsg::CHAR_IN_SCALAR);
+		// finally, check and see if we ended on an illegal character
+		//if(Exp::IllegalCharInScalar.Matches(INPUT))
+		//	throw ParserException(INPUT.line, INPUT.column, ErrorMsg::CHAR_IN_SCALAR);
 
 		Token *pToken = new Token(TT_SCALAR, line, column);
 		pToken->value = scalar;

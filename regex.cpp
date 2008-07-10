@@ -283,7 +283,7 @@ namespace YAML
 				return -1;
 
 			offset += n;
-			in.seekg(n, std::ios_base::cur);
+			in.ignore(n);
 		}
 
 		return offset;

@@ -29,7 +29,7 @@ namespace YAML
 		const RegEx BlockEntry = RegEx('-') + (BlankOrBreak || RegEx(EOF));
 		const RegEx Key = RegEx('?'),
 		            KeyInFlow = RegEx('?') + BlankOrBreak;
-		const RegEx Value = RegEx(':'),
+		const RegEx Value = RegEx(':') + BlankOrBreak,
 		            ValueInFlow = RegEx(':') + BlankOrBreak;
 		const RegEx Comment = RegEx('#');
 		const RegEx AnchorEnd = RegEx("?:,]}%@`", REGEX_OR) || BlankOrBreak;
@@ -38,12 +38,11 @@ namespace YAML
 		// . Cannot start with a blank.
 		// . Can never start with any of , [ ] { } # & * ! | > \' \" % @ `
 		// . In the block context - ? : must be not be followed with a space.
-		// . In the flow context ? : are illegal and - must not be followed with a space.
+		// . In the flow context ? is illegal and : and - must not be followed with a space.
 		const RegEx PlainScalar = !(BlankOrBreak || RegEx(",[]{}#&*!|>\'\"%@`", REGEX_OR) || (RegEx("-?:", REGEX_OR) + Blank)),
-	                PlainScalarInFlow = !(BlankOrBreak || RegEx("?:,[]{}#&*!|>\'\"%@`", REGEX_OR) || (RegEx('-') + Blank));
-		const RegEx IllegalColonInScalar = RegEx(':') + !BlankOrBreak;
+		            PlainScalarInFlow = !(BlankOrBreak || RegEx("?,[]{}#&*!|>\'\"%@`", REGEX_OR) || (RegEx("-:", REGEX_OR) + Blank));
 		const RegEx EndScalar = RegEx(':') + BlankOrBreak,
-		            EndScalarInFlow = (RegEx(':') + BlankOrBreak) || RegEx(",:?[]{}", REGEX_OR);
+		            EndScalarInFlow = (RegEx(':') + BlankOrBreak) || RegEx(",?[]{}", REGEX_OR);
 
 		const RegEx EscSingleQuote = RegEx("\'\'");
 		const RegEx EscBreak = RegEx('\\') + Break;
