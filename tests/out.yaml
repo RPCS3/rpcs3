@@ -1,0 +1,8 @@
+---
+- "basic node"
+- !<!howdy> "yeah baby"
+
+---
+- "basic node"
+- !<!<!howdy>> "yeah baby"
+

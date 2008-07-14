@@ -40,6 +40,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
+				AdditionalIncludeDirectories="include"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
@@ -109,6 +110,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
+				AdditionalIncludeDirectories="include"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
 				WarningLevel="3"
@@ -162,42 +164,42 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath=".\main.cpp"
+				RelativePath=".\src\main.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\tests.cpp"
+				RelativePath=".\src\tests.cpp"
 				>
 			</File>
 			<Filter
 				Name="Scanner"
 				>
 				<File
-					RelativePath=".\exp.cpp"
+					RelativePath=".\src\exp.cpp"
 					>
 				</File>
 				<File
-					RelativePath=".\regex.cpp"
+					RelativePath=".\src\regex.cpp"
 					>
 				</File>
 				<File
-					RelativePath=".\scanner.cpp"
+					RelativePath=".\src\scanner.cpp"
 					>
 				</File>
 				<File
-					RelativePath=".\scanscalar.cpp"
+					RelativePath=".\src\scanscalar.cpp"
 					>
 				</File>
 				<File
-					RelativePath=".\scantoken.cpp"
+					RelativePath=".\src\scantoken.cpp"
 					>
 				</File>
 				<File
-					RelativePath=".\simplekey.cpp"
+					RelativePath=".\src\simplekey.cpp"
 					>
 				</File>
 				<File
-					RelativePath=".\stream.cpp"
+					RelativePath=".\src\stream.cpp"
 					>
 				</File>
 			</Filter>
@@ -205,11 +207,11 @@
 				Name="Parser"
 				>
 				<File
-					RelativePath=".\parser.cpp"
+					RelativePath=".\src\parser.cpp"
 					>
 				</File>
 				<File
-					RelativePath=".\parserstate.cpp"
+					RelativePath=".\src\parserstate.cpp"
 					>
 				</File>
 			</Filter>
@@ -217,27 +219,27 @@
 				Name="Representation"
 				>
 				<File
-					RelativePath=".\content.cpp"
+					RelativePath=".\src\content.cpp"
 					>
 				</File>
 				<File
-					RelativePath=".\iterator.cpp"
+					RelativePath=".\src\iterator.cpp"
 					>
 				</File>
 				<File
-					RelativePath=".\map.cpp"
+					RelativePath=".\src\map.cpp"
 					>
 				</File>
 				<File
-					RelativePath=".\node.cpp"
+					RelativePath=".\src\node.cpp"
 					>
 				</File>
 				<File
-					RelativePath=".\scalar.cpp"
+					RelativePath=".\src\scalar.cpp"
 					>
 				</File>
 				<File
-					RelativePath=".\sequence.cpp"
+					RelativePath=".\src\sequence.cpp"
 					>
 				</File>
 			</Filter>
@@ -248,38 +250,38 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
-				RelativePath=".\exceptions.h"
+				RelativePath=".\include\exceptions.h"
 				>
 			</File>
 			<File
-				RelativePath=".\tests.h"
+				RelativePath=".\src\tests.h"
 				>
 			</File>
 			<Filter
 				Name="Scanner"
 				>
 				<File
-					RelativePath=".\exp.h"
+					RelativePath=".\src\exp.h"
 					>
 				</File>
 				<File
-					RelativePath=".\regex.h"
+					RelativePath=".\src\regex.h"
 					>
 				</File>
 				<File
-					RelativePath=".\scanner.h"
+					RelativePath=".\src\scanner.h"
 					>
 				</File>
 				<File
-					RelativePath=".\scanscalar.h"
+					RelativePath=".\src\scanscalar.h"
 					>
 				</File>
 				<File
-					RelativePath=".\stream.h"
+					RelativePath=".\src\stream.h"
 					>
 				</File>
 				<File
-					RelativePath=".\token.h"
+					RelativePath=".\src\token.h"
 					>
 				</File>
 			</Filter>
@@ -287,11 +289,11 @@
 				Name="Parser"
 				>
 				<File
-					RelativePath=".\parser.h"
+					RelativePath=".\include\parser.h"
 					>
 				</File>
 				<File
-					RelativePath=".\parserstate.h"
+					RelativePath=".\include\parserstate.h"
 					>
 				</File>
 			</Filter>
@@ -299,27 +301,27 @@
 				Name="Representation"
 				>
 				<File
-					RelativePath=".\content.h"
+					RelativePath=".\src\content.h"
 					>
 				</File>
 				<File
-					RelativePath=".\ltnode.h"
+					RelativePath=".\include\ltnode.h"
 					>
 				</File>
 				<File
-					RelativePath=".\map.h"
+					RelativePath=".\src\map.h"
 					>
 				</File>
 				<File
-					RelativePath=".\node.h"
+					RelativePath=".\include\node.h"
 					>
 				</File>
 				<File
-					RelativePath=".\scalar.h"
+					RelativePath=".\src\scalar.h"
 					>
 				</File>
 				<File
-					RelativePath=".\sequence.h"
+					RelativePath=".\src\sequence.h"
 					>
 				</File>
 			</Filter>
