@@ -30,7 +30,7 @@ namespace YAML
 
 	// GetNextDocument
 	// . Reads the next document in the queue (of tokens).
-	// . Throws (ParserException|ParserException)s on errors.
+	// . Throws a ParserException on error.
 	void Parser::GetNextDocument(Node& document)
 	{
 		// clear node
