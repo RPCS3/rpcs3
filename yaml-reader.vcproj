@@ -166,11 +166,11 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath=".\src\main.cpp"
+				RelativePath=".\yaml-reader\main.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\src\tests.cpp"
+				RelativePath=".\yaml-reader\tests.cpp"
 				>
 			</File>
 		</Filter>
@@ -180,7 +180,7 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
-				RelativePath=".\src\tests.h"
+				RelativePath=".\yaml-reader\tests.h"
 				>
 			</File>
 		</Filter>
@@ -190,23 +190,23 @@
 			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}"
 			>
 			<File
-				RelativePath=".\tests\directives.yaml"
+				RelativePath=".\yaml-reader\tests\directives.yaml"
 				>
 			</File>
 			<File
-				RelativePath=".\tests\mixed.yaml"
+				RelativePath=".\yaml-reader\tests\mixed.yaml"
 				>
 			</File>
 			<File
-				RelativePath=".\tests\scalars.yaml"
+				RelativePath=".\yaml-reader\tests\scalars.yaml"
 				>
 			</File>
 			<File
-				RelativePath=".\tests\simple.yaml"
+				RelativePath=".\yaml-reader\tests\simple.yaml"
 				>
 			</File>
 			<File
-				RelativePath=".\test.yaml"
+				RelativePath=".\yaml-reader\test.yaml"
 				>
 			</File>
 		</Filter>

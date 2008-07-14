@@ -2,6 +2,9 @@
 Microsoft Visual Studio Solution File, Format Version 10.00
 # Visual Studio 2008
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "yaml-reader", "yaml-reader.vcproj", "{E8CC0D8A-D784-4A6B-B78B-ACEA13F9FB0B}"
+	ProjectSection(ProjectDependencies) = postProject
+		{3104AB4E-CD31-4F47-95E9-0E8D9374E15D} = {3104AB4E-CD31-4F47-95E9-0E8D9374E15D}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "yamlcpp", "yamlcpp.vcproj", "{3104AB4E-CD31-4F47-95E9-0E8D9374E15D}"
 EndProject
