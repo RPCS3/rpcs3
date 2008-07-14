@@ -3,6 +3,12 @@
 #include <fstream>
 #include <iostream>
 
+#ifdef _DEBUG
+#pragma comment(lib, "yamlcppd.lib")
+#else
+#pragma comment(lib, "yamlcpp.lib")
+#endif
+
 struct Vec3 {
 	float x, y, z;
 

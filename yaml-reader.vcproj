@@ -58,6 +58,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				AdditionalLibraryDirectories="lib"
 				GenerateDebugInformation="true"
 				TargetMachine="1"
 			/>
@@ -127,6 +128,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				AdditionalLibraryDirectories="lib"
 				GenerateDebugInformation="true"
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"
@@ -171,78 +173,6 @@
 				RelativePath=".\src\tests.cpp"
 				>
 			</File>
-			<Filter
-				Name="Scanner"
-				>
-				<File
-					RelativePath=".\src\exp.cpp"
-					>
-				</File>
-				<File
-					RelativePath=".\src\regex.cpp"
-					>
-				</File>
-				<File
-					RelativePath=".\src\scanner.cpp"
-					>
-				</File>
-				<File
-					RelativePath=".\src\scanscalar.cpp"
-					>
-				</File>
-				<File
-					RelativePath=".\src\scantoken.cpp"
-					>
-				</File>
-				<File
-					RelativePath=".\src\simplekey.cpp"
-					>
-				</File>
-				<File
-					RelativePath=".\src\stream.cpp"
-					>
-				</File>
-			</Filter>
-			<Filter
-				Name="Parser"
-				>
-				<File
-					RelativePath=".\src\parser.cpp"
-					>
-				</File>
-				<File
-					RelativePath=".\src\parserstate.cpp"
-					>
-				</File>
-			</Filter>
-			<Filter
-				Name="Representation"
-				>
-				<File
-					RelativePath=".\src\content.cpp"
-					>
-				</File>
-				<File
-					RelativePath=".\src\iterator.cpp"
-					>
-				</File>
-				<File
-					RelativePath=".\src\map.cpp"
-					>
-				</File>
-				<File
-					RelativePath=".\src\node.cpp"
-					>
-				</File>
-				<File
-					RelativePath=".\src\scalar.cpp"
-					>
-				</File>
-				<File
-					RelativePath=".\src\sequence.cpp"
-					>
-				</File>
-			</Filter>
 		</Filter>
 		<Filter
 			Name="Header Files"
@@ -250,81 +180,9 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
-				RelativePath=".\include\exceptions.h"
-				>
-			</File>
-			<File
 				RelativePath=".\src\tests.h"
 				>
 			</File>
-			<Filter
-				Name="Scanner"
-				>
-				<File
-					RelativePath=".\src\exp.h"
-					>
-				</File>
-				<File
-					RelativePath=".\src\regex.h"
-					>
-				</File>
-				<File
-					RelativePath=".\src\scanner.h"
-					>
-				</File>
-				<File
-					RelativePath=".\src\scanscalar.h"
-					>
-				</File>
-				<File
-					RelativePath=".\src\stream.h"
-					>
-				</File>
-				<File
-					RelativePath=".\src\token.h"
-					>
-				</File>
-			</Filter>
-			<Filter
-				Name="Parser"
-				>
-				<File
-					RelativePath=".\include\parser.h"
-					>
-				</File>
-				<File
-					RelativePath=".\include\parserstate.h"
-					>
-				</File>
-			</Filter>
-			<Filter
-				Name="Representation"
-				>
-				<File
-					RelativePath=".\src\content.h"
-					>
-				</File>
-				<File
-					RelativePath=".\include\ltnode.h"
-					>
-				</File>
-				<File
-					RelativePath=".\src\map.h"
-					>
-				</File>
-				<File
-					RelativePath=".\include\node.h"
-					>
-				</File>
-				<File
-					RelativePath=".\src\scalar.h"
-					>
-				</File>
-				<File
-					RelativePath=".\src\sequence.h"
-					>
-				</File>
-			</Filter>
 		</Filter>
 		<Filter
 			Name="Resource Files"
