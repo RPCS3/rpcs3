@@ -206,7 +206,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\yaml-reader\test.yaml"
+				RelativePath=".\yaml-reader\tests\test.yaml"
 				>
 			</File>
 		</Filter>

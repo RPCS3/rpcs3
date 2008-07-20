@@ -1,3 +1,4 @@
+#include "crt.h"
 #include "parser.h"
 #include "scanner.h"
 #include "token.h"
@@ -18,7 +19,7 @@ namespace YAML
 
 	Parser::operator bool() const
 	{
-		return m_pScanner->PeekNextToken() != 0;
+		return !m_pScanner->IsEmpty();
 	}
 
 	void Parser::Load(std::istream& in)
@@ -40,19 +41,19 @@ namespace YAML
 		ParseDirectives();
 
 		// we better have some tokens in the queue
-		if(!m_pScanner->PeekNextToken())
+		if(m_pScanner->IsEmpty())
 			return;
 
 		// first eat doc start (optional)
-		if(m_pScanner->PeekNextToken()->type == TT_DOC_START)
-			m_pScanner->EatNextToken();
+		if(m_pScanner->PeekToken().type == TT_DOC_START)
+			m_pScanner->PopToken();
 
 		// now parse our root node
 		document.Parse(m_pScanner, m_state);
 
 		// and finally eat any doc ends we see
-		while(m_pScanner->PeekNextToken() && m_pScanner->PeekNextToken()->type == TT_DOC_END)
-			m_pScanner->EatNextToken();
+		while(!m_pScanner->IsEmpty() && m_pScanner->PeekToken().type == TT_DOC_END)
+			m_pScanner->PopToken();
 	}
 
 	// ParseDirectives
@@ -62,8 +63,11 @@ namespace YAML
 		bool readDirective = false;
 
 		while(1) {
-			Token *pToken = m_pScanner->PeekNextToken();
-			if(!pToken || pToken->type != TT_DIRECTIVE)
+			if(m_pScanner->IsEmpty())
+				break;
+
+			Token& token = m_pScanner->PeekToken();
+			if(token.type != TT_DIRECTIVE)
 				break;
 
 			// we keep the directives from the last document if none are specified;
@@ -72,8 +76,8 @@ namespace YAML
 				m_state.Reset();
 
 			readDirective = true;
-			HandleDirective(pToken);
-			m_pScanner->PopNextToken();
+			HandleDirective(&token);
+			m_pScanner->PopToken();
 		}
 	}
 
@@ -119,11 +123,11 @@ namespace YAML
 	void Parser::PrintTokens(std::ostream& out)
 	{
 		while(1) {
-			Token *pToken = m_pScanner->GetNextToken();
-			if(!pToken)
+			if(m_pScanner->IsEmpty())
 				break;
 
-			out << *pToken << std::endl;
+			out << m_pScanner->PeekToken() << std::endl;
+			m_pScanner->PopToken();
 		}
 	}
 }

@@ -1,3 +1,4 @@
+#include "crt.h"
 #include "scanner.h"
 #include "token.h"
 #include "exceptions.h"
@@ -12,61 +13,45 @@ namespace YAML
 
 	Scanner::~Scanner()
 	{
-		while(!m_tokens.empty()) {
-			delete m_tokens.front();
-			m_tokens.pop();
-		}
 	}
 
-	// GetNextToken
-	// . Removes and returns the next token on the queue.
-	Token *Scanner::GetNextToken()
+	// IsEmpty
+	// . Returns true if there are no more tokens to be read
+	bool Scanner::IsEmpty()
 	{
-		Token *pToken = PeekNextToken();
+		PeekToken();  // to ensure that there are tokens in the queue, if possible
+		return m_tokens.empty();
+	}
+
+	// PopToken
+	// . Simply removes the next token on the queue.
+	void Scanner::PopToken()
+	{
+		PeekToken();  // to ensure that there are tokens in the queue
 		if(!m_tokens.empty())
 			m_tokens.pop();
-		return pToken;
 	}
 
-	// PopNextToken
-	// . Simply removes the next token on the queue.
-	void Scanner::PopNextToken()
-	{
-		GetNextToken();
-	}
-
-	// EatNextToken
-	// . Removes and deletes the next token on the queue
-	void Scanner::EatNextToken()
-	{
-		delete GetNextToken();
-	}
-
-	// PeekNextToken
+	// PeekToken
 	// . Returns (but does not remove) the next token on the queue, and scans if only we need to.
-	Token *Scanner::PeekNextToken()
+	Token& Scanner::PeekToken()
 	{
 		while(1) {
-			Token *pToken = 0;
+			if(!m_tokens.empty()) {
+				Token& token = m_tokens.front();
 
-			// is there a token in the queue?
-			if(!m_tokens.empty())
-				pToken = m_tokens.front();
+				// return this guy if it's valid
+				if(token.status == TS_VALID)
+					return token;
 
-			// (here's where we clean up the impossible tokens)
-			if(pToken && pToken->status == TS_INVALID) {
-				m_tokens.pop();
-				delete pToken;
-				continue;
+				// here's where we clean up the impossible tokens
+				if(token.status == TS_INVALID) {
+					m_tokens.pop();
+					continue;
+				}
+
+				// note: what's left are the unverified tokens
 			}
-
-			// on unverified tokens, we just have to wait
-			if(pToken && pToken->status == TS_UNVERIFIED)
-				pToken = 0;
-
-			// then that's what we want
-			if(pToken)
-				return pToken;
 
 			// no token? maybe we've actually finished
 			if(m_endedStream)
@@ -76,7 +61,7 @@ namespace YAML
 			ScanNextToken();
 		}
 
-		return 0;
+		// TODO: find something to return here, or assert (but can't do that! maybe split into two functions?)
 	}
 
 	// ScanNextToken
@@ -254,14 +239,12 @@ namespace YAML
 
 		// now push
 		m_indents.push(column);
-		Token *pToken = 0;
 		if(sequence)
-			pToken = new Token(TT_BLOCK_SEQ_START, INPUT.line, INPUT.column);
+			m_tokens.push(Token(TT_BLOCK_SEQ_START, INPUT.line, INPUT.column));
 		else
-			pToken = new Token(TT_BLOCK_MAP_START, INPUT.line, INPUT.column);
+			m_tokens.push(Token(TT_BLOCK_MAP_START, INPUT.line, INPUT.column));
 
-		m_tokens.push(pToken);
-		return pToken;
+		return &m_tokens.back();
 	}
 
 	// PopIndentTo
@@ -276,7 +259,7 @@ namespace YAML
 		// now pop away
 		while(!m_indents.empty() && m_indents.top() > column) {
 			m_indents.pop();
-			m_tokens.push(new Token(TT_BLOCK_END, INPUT.line, INPUT.column));
+			m_tokens.push(Token(TT_BLOCK_END, INPUT.line, INPUT.column));
 		}
 	}
 }

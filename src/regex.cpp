@@ -1,3 +1,4 @@
+#include "crt.h"
 #include "regex.h"
 
 namespace YAML

@@ -1,3 +1,4 @@
+#include "crt.h"
 #include "node.h"
 #include "token.h"
 #include "scanner.h"
@@ -42,11 +43,7 @@ namespace YAML
 			return;
 
 		// now split based on what kind of node we should be
-		Token *pToken = pScanner->PeekNextToken();
-		if(pToken->type == TT_DOC_END)
-			return;
-
-		switch(pToken->type) {
+		switch(pScanner->PeekToken().type) {
 			case TT_SCALAR:
 				m_pContent = new Scalar;
 				m_pContent->Parse(pScanner, state);
@@ -61,6 +58,7 @@ namespace YAML
 			case TT_BLOCK_MAP_START:
 				m_pContent = new Map;
 				m_pContent->Parse(pScanner, state);
+				break;
 		}
 	}
 
@@ -69,53 +67,53 @@ namespace YAML
 	void Node::ParseHeader(Scanner *pScanner, const ParserState& state)
 	{
 		while(1) {
-			Token *pToken = pScanner->PeekNextToken();
-			if(!pToken || (pToken->type != TT_TAG && pToken->type != TT_ANCHOR && pToken->type != TT_ALIAS))
-				break;
+			if(pScanner->IsEmpty())
+				return;
 
-			switch(pToken->type) {
+			switch(pScanner->PeekToken().type) {
 				case TT_TAG: ParseTag(pScanner, state); break;
 				case TT_ANCHOR: ParseAnchor(pScanner, state); break;
 				case TT_ALIAS: ParseAlias(pScanner, state); break;
+				default: return;
 			}
 		}
 	}
 
 	void Node::ParseTag(Scanner *pScanner, const ParserState& state)
 	{
-		Token *pToken = pScanner->PeekNextToken();
+		Token& token = pScanner->PeekToken();
 		if(m_tag != "")
-			throw ParserException(pToken->line, pToken->column, ErrorMsg::MULTIPLE_TAGS);
+			throw ParserException(token.line, token.column, ErrorMsg::MULTIPLE_TAGS);
 
-		m_tag = state.TranslateTag(pToken->value);
+		m_tag = state.TranslateTag(token.value);
 
-		for(unsigned i=0;i<pToken->params.size();i++)
-			m_tag += pToken->params[i];
-		pScanner->PopNextToken();
+		for(unsigned i=0;i<token.params.size();i++)
+			m_tag += token.params[i];
+		pScanner->PopToken();
 	}
 	
 	void Node::ParseAnchor(Scanner *pScanner, const ParserState& state)
 	{
-		Token *pToken = pScanner->PeekNextToken();
+		Token& token = pScanner->PeekToken();
 		if(m_anchor != "")
-			throw ParserException(pToken->line, pToken->column, ErrorMsg::MULTIPLE_ANCHORS);
+			throw ParserException(token.line, token.column, ErrorMsg::MULTIPLE_ANCHORS);
 
-		m_anchor = pToken->value;
+		m_anchor = token.value;
 		m_alias = false;
-		pScanner->PopNextToken();
+		pScanner->PopToken();
 	}
 
 	void Node::ParseAlias(Scanner *pScanner, const ParserState& state)
 	{
-		Token *pToken = pScanner->PeekNextToken();
+		Token& token = pScanner->PeekToken();
 		if(m_anchor != "")
-			throw ParserException(pToken->line, pToken->column, ErrorMsg::MULTIPLE_ALIASES);
+			throw ParserException(token.line, token.column, ErrorMsg::MULTIPLE_ALIASES);
 		if(m_tag != "")
-			throw ParserException(pToken->line, pToken->column, ErrorMsg::ALIAS_CONTENT);
+			throw ParserException(token.line, token.column, ErrorMsg::ALIAS_CONTENT);
 
-		m_anchor = pToken->value;
+		m_anchor = token.value;
 		m_alias = true;
-		pScanner->PopNextToken();
+		pScanner->PopToken();
 	}
 
 	void Node::Write(std::ostream& out, int indent, bool startedLine, bool onlyOneCharOnLine) const

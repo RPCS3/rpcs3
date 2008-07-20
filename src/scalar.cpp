@@ -1,3 +1,4 @@
+#include "crt.h"
 #include "scalar.h"
 #include "scanner.h"
 #include "token.h"
@@ -16,9 +17,9 @@ namespace YAML
 
 	void Scalar::Parse(Scanner *pScanner, const ParserState& state)
 	{
-		Token *pToken = pScanner->GetNextToken();
-		m_data = pToken->value;
-		delete pToken;
+		Token& token = pScanner->PeekToken();
+		m_data = token.value;
+		pScanner->PopToken();
 	}
 
 	void Scalar::Write(std::ostream& out, int indent, bool startedLine, bool onlyOneCharOnLine)

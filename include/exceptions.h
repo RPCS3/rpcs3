@@ -1,6 +1,7 @@
 #pragma once
 
 #include <exception>
+#include <string>
 
 namespace YAML
 {
@@ -9,6 +10,7 @@ namespace YAML
 	public:
 		ParserException(int line_, int column_, const std::string& msg_)
 			: line(line_), column(column_), msg(msg_) {}
+
 		int line, column;
 		std::string msg;
 	};

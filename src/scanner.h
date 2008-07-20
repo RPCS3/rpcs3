@@ -6,21 +6,19 @@
 #include <stack>
 #include <set>
 #include "stream.h"
+#include "token.h"
 
 namespace YAML
 {
-	struct Token;
-
 	class Scanner
 	{
 	public:
 		Scanner(std::istream& in);
 		~Scanner();
 
-		Token *GetNextToken();
-		void EatNextToken();
-		void PopNextToken();
-		Token *PeekNextToken();
+		bool IsEmpty();
+		void PopToken();
+		Token& PeekToken();
 
 	private:
 		// scanning
@@ -72,7 +70,7 @@ namespace YAML
 		Stream INPUT;
 
 		// the output (tokens)
-		std::queue <Token *> m_tokens;
+		std::queue <Token> m_tokens;
 
 		// state info
 		bool m_startedStream, m_endedStream;

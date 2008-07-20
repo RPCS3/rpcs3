@@ -1,3 +1,4 @@
+#include "crt.h"
 #include "map.h"
 #include "node.h"
 #include "scanner.h"
@@ -41,9 +42,9 @@ namespace YAML
 		Clear();
 
 		// split based on start token
-		Token *pToken = pScanner->PeekNextToken();
+		Token& token = pScanner->PeekToken();
 
-		switch(pToken->type) {
+		switch(token.type) {
 			case TT_BLOCK_MAP_START: ParseBlock(pScanner, state); break;
 			case TT_FLOW_MAP_START: ParseFlow(pScanner, state); break;
 		}
@@ -52,18 +53,18 @@ namespace YAML
 	void Map::ParseBlock(Scanner *pScanner, const ParserState& state)
 	{
 		// eat start token
-		pScanner->EatNextToken();
+		pScanner->PopToken();
 
 		while(1) {
-			Token *pToken = pScanner->PeekNextToken();
-			if(!pToken)
+			if(pScanner->IsEmpty())
 				throw ParserException(-1, -1, ErrorMsg::END_OF_MAP);
 
-			if(pToken->type != TT_KEY && pToken->type != TT_BLOCK_END)
-				throw ParserException(pToken->line, pToken->column, ErrorMsg::END_OF_MAP);
+			Token token = pScanner->PeekToken();
+			if(token.type != TT_KEY && token.type != TT_BLOCK_END)
+				throw ParserException(token.line, token.column, ErrorMsg::END_OF_MAP);
 
-			pScanner->PopNextToken();
-			if(pToken->type == TT_BLOCK_END)
+			pScanner->PopToken();
+			if(token.type == TT_BLOCK_END)
 				break;
 
 			Node *pKey = new Node;
@@ -74,8 +75,8 @@ namespace YAML
 				pKey->Parse(pScanner, state);
 
 				// now grab value (optional)
-				if(pScanner->PeekNextToken() && pScanner->PeekNextToken()->type == TT_VALUE) {
-					pScanner->PopNextToken();
+				if(!pScanner->IsEmpty() && pScanner->PeekToken().type == TT_VALUE) {
+					pScanner->PopToken();
 					pValue->Parse(pScanner, state);
 				}
 
@@ -91,24 +92,24 @@ namespace YAML
 	void Map::ParseFlow(Scanner *pScanner, const ParserState& state)
 	{
 		// eat start token
-		pScanner->EatNextToken();
+		pScanner->PopToken();
 
 		while(1) {
-			Token *pToken = pScanner->PeekNextToken();
-			if(!pToken)
+			if(pScanner->IsEmpty())
 				throw ParserException(-1, -1, ErrorMsg::END_OF_MAP_FLOW);
 
+			Token& token = pScanner->PeekToken();
 			// first check for end
-			if(pToken->type == TT_FLOW_MAP_END) {
-				pScanner->EatNextToken();
+			if(token.type == TT_FLOW_MAP_END) {
+				pScanner->PopToken();
 				break;
 			}
 
 			// now it better be a key
-			if(pToken->type != TT_KEY)
-				throw ParserException(pToken->line, pToken->column, ErrorMsg::END_OF_MAP_FLOW);
+			if(token.type != TT_KEY)
+				throw ParserException(token.line, token.column, ErrorMsg::END_OF_MAP_FLOW);
 
-			pScanner->PopNextToken();
+			pScanner->PopToken();
 
 			Node *pKey = new Node;
 			Node *pValue = new Node;
@@ -118,17 +119,17 @@ namespace YAML
 				pKey->Parse(pScanner, state);
 
 				// now grab value (optional)
-				if(pScanner->PeekNextToken() && pScanner->PeekNextToken()->type == TT_VALUE) {
-					pScanner->PopNextToken();
+				if(!pScanner->IsEmpty() && pScanner->PeekToken().type == TT_VALUE) {
+					pScanner->PopToken();
 					pValue->Parse(pScanner, state);
 				}
 
 				// now eat the separator (or could be a map end, which we ignore - but if it's neither, then it's a bad node)
-				pToken = pScanner->PeekNextToken();
-				if(pToken->type == TT_FLOW_ENTRY)
-					pScanner->EatNextToken();
-				else if(pToken->type != TT_FLOW_MAP_END)
-					throw ParserException(pToken->line, pToken->column, ErrorMsg::END_OF_MAP_FLOW);
+				Token& nextToken = pScanner->PeekToken();
+				if(nextToken.type == TT_FLOW_ENTRY)
+					pScanner->PopToken();
+				else if(nextToken.type != TT_FLOW_MAP_END)
+					throw ParserException(nextToken.line, nextToken.column, ErrorMsg::END_OF_MAP_FLOW);
 
 				m_data[pKey] = pValue;
 			} catch(Exception& e) {

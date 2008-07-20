@@ -1,3 +1,4 @@
+#include "crt.h"
 #include "scanner.h"
 #include "token.h"
 #include "exceptions.h"
@@ -49,10 +50,10 @@ namespace YAML
 			params.push_back(param);
 		}
 		
-		Token *pToken = new Token(TT_DIRECTIVE, line, column);
-		pToken->value = name;
-		pToken->params = params;
-		m_tokens.push(pToken);
+		Token token(TT_DIRECTIVE, line, column);
+		token.value = name;
+		token.params = params;
+		m_tokens.push(token);
 	}
 
 	// DocStart
@@ -65,7 +66,7 @@ namespace YAML
 		// eat
 		int line = INPUT.line, column = INPUT.column;
 		INPUT.eat(3);
-		m_tokens.push(new Token(TT_DOC_START, line, column));
+		m_tokens.push(Token(TT_DOC_START, line, column));
 	}
 
 	// DocEnd
@@ -78,7 +79,7 @@ namespace YAML
 		// eat
 		int line = INPUT.line, column = INPUT.column;
 		INPUT.eat(3);
-		m_tokens.push(new Token(TT_DOC_END, line, column));
+		m_tokens.push(Token(TT_DOC_END, line, column));
 	}
 
 	// FlowStart
@@ -93,7 +94,7 @@ namespace YAML
 		int line = INPUT.line, column = INPUT.column;
 		char ch = INPUT.get();
 		TOKEN_TYPE type = (ch == Keys::FlowSeqStart ? TT_FLOW_SEQ_START : TT_FLOW_MAP_START);
-		m_tokens.push(new Token(type, line, column));
+		m_tokens.push(Token(type, line, column));
 	}
 
 	// FlowEnd
@@ -109,7 +110,7 @@ namespace YAML
 		int line = INPUT.line, column = INPUT.column;
 		char ch = INPUT.get();
 		TOKEN_TYPE type = (ch == Keys::FlowSeqEnd ? TT_FLOW_SEQ_END : TT_FLOW_MAP_END);
-		m_tokens.push(new Token(type, line, column));
+		m_tokens.push(Token(type, line, column));
 	}
 
 	// FlowEntry
@@ -120,7 +121,7 @@ namespace YAML
 		// eat
 		int line = INPUT.line, column = INPUT.column;
 		INPUT.eat(1);
-		m_tokens.push(new Token(TT_FLOW_ENTRY, line, column));
+		m_tokens.push(Token(TT_FLOW_ENTRY, line, column));
 	}
 
 	// BlockEntry
@@ -140,7 +141,7 @@ namespace YAML
 		// eat
 		int line = INPUT.line, column = INPUT.column;
 		INPUT.eat(1);
-		m_tokens.push(new Token(TT_BLOCK_ENTRY, line, column));
+		m_tokens.push(Token(TT_BLOCK_ENTRY, line, column));
 	}
 
 	// Key
@@ -163,7 +164,7 @@ namespace YAML
 		// eat
 		int line = INPUT.line, column = INPUT.column;
 		INPUT.eat(1);
-		m_tokens.push(new Token(TT_KEY, line, column));
+		m_tokens.push(Token(TT_KEY, line, column));
 	}
 
 	// Value
@@ -192,7 +193,7 @@ namespace YAML
 		// eat
 		int line = INPUT.line, column = INPUT.column;
 		INPUT.eat(1);
-		m_tokens.push(new Token(TT_VALUE, line, column));
+		m_tokens.push(Token(TT_VALUE, line, column));
 	}
 
 	// AnchorOrAlias
@@ -224,9 +225,9 @@ namespace YAML
 			throw ParserException(INPUT.line, INPUT.column, alias ? ErrorMsg::CHAR_IN_ALIAS : ErrorMsg::CHAR_IN_ANCHOR);
 
 		// and we're done
-		Token *pToken = new Token(alias ? TT_ALIAS : TT_ANCHOR, line, column);
-		pToken->value = name;
-		m_tokens.push(pToken);
+		Token token(alias ? TT_ALIAS : TT_ANCHOR, line, column);
+		token.value = name;
+		m_tokens.push(token);
 	}
 
 	// Tag
@@ -261,10 +262,10 @@ namespace YAML
 			handle = "!";
 		}
 
-		Token *pToken = new Token(TT_TAG, line, column);
-		pToken->value = handle;
-		pToken->params.push_back(suffix);
-		m_tokens.push(pToken);
+		Token token(TT_TAG, line, column);
+		token.value = handle;
+		token.params.push_back(suffix);
+		m_tokens.push(token);
 	}
 
 	// PlainScalar
@@ -298,9 +299,9 @@ namespace YAML
 		//if(Exp::IllegalCharInScalar.Matches(INPUT))
 		//	throw ParserException(INPUT.line, INPUT.column, ErrorMsg::CHAR_IN_SCALAR);
 
-		Token *pToken = new Token(TT_SCALAR, line, column);
-		pToken->value = scalar;
-		m_tokens.push(pToken);
+		Token token(TT_SCALAR, line, column);
+		token.value = scalar;
+		m_tokens.push(token);
 	}
 
 	// QuotedScalar
@@ -332,9 +333,9 @@ namespace YAML
 		scalar = ScanScalar(INPUT, params);
 		m_simpleKeyAllowed = false;
 
-		Token *pToken = new Token(TT_SCALAR, line, column);
-		pToken->value = scalar;
-		m_tokens.push(pToken);
+		Token token(TT_SCALAR, line, column);
+		token.value = scalar;
+		m_tokens.push(token);
 	}
 
 	// BlockScalarToken
@@ -397,8 +398,8 @@ namespace YAML
 		// simple keys always ok after block scalars (since we're gonna start a new line anyways)
 		m_simpleKeyAllowed = true;
 
-		Token *pToken = new Token(TT_SCALAR, line, column);
-		pToken->value = scalar;
-		m_tokens.push(pToken);
+		Token token(TT_SCALAR, line, column);
+		token.value = scalar;
+		m_tokens.push(token);
 	}
 }

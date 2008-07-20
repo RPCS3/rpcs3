@@ -1,3 +1,4 @@
+#include "crt.h"
 #include "exp.h"
 #include "exceptions.h"
 #include <sstream>

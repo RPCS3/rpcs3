@@ -1,3 +1,4 @@
+#include "crt.h"
 #include "scanner.h"
 #include "token.h"
 #include "exceptions.h"
@@ -39,9 +40,9 @@ namespace YAML
 			key.pMapStart->status = TS_UNVERIFIED;
 
 		// then add the (now unverified) key
-		key.pKey = new Token(TT_KEY, INPUT.line, INPUT.column);
+		m_tokens.push(Token(TT_KEY, INPUT.line, INPUT.column));
+		key.pKey = &m_tokens.back();
 		key.pKey->status = TS_UNVERIFIED;
-		m_tokens.push(key.pKey);
 
 		m_simpleKeys.push(key);
 	}

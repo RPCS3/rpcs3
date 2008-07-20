@@ -1,3 +1,4 @@
+#include "crt.h"
 #include "stream.h"
 
 namespace YAML

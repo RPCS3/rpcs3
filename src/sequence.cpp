@@ -1,3 +1,4 @@
+#include "crt.h"
 #include "sequence.h"
 #include "node.h"
 #include "scanner.h"
@@ -51,9 +52,9 @@ namespace YAML
 		Clear();
 
 		// split based on start token
-		Token *pToken = pScanner->PeekNextToken();
+		Token& token = pScanner->PeekToken();
 
-		switch(pToken->type) {
+		switch(token.type) {
 			case TT_BLOCK_SEQ_START: ParseBlock(pScanner, state); break;
 			case TT_BLOCK_ENTRY: ParseImplicit(pScanner, state); break;
 			case TT_FLOW_SEQ_START: ParseFlow(pScanner, state); break;
@@ -63,18 +64,18 @@ namespace YAML
 	void Sequence::ParseBlock(Scanner *pScanner, const ParserState& state)
 	{
 		// eat start token
-		pScanner->EatNextToken();
+		pScanner->PopToken();
 
 		while(1) {
-			Token *pToken = pScanner->PeekNextToken();
-			if(!pToken)
+			if(pScanner->IsEmpty())
 				throw ParserException(-1, -1, ErrorMsg::END_OF_SEQ);
 
-			if(pToken->type != TT_BLOCK_ENTRY && pToken->type != TT_BLOCK_END)
-				throw ParserException(pToken->line, pToken->column, ErrorMsg::END_OF_SEQ);
+			Token token = pScanner->PeekToken();
+			if(token.type != TT_BLOCK_ENTRY && token.type != TT_BLOCK_END)
+				throw ParserException(token.line, token.column, ErrorMsg::END_OF_SEQ);
 
-			pScanner->PopNextToken();
-			if(pToken->type == TT_BLOCK_END)
+			pScanner->PopToken();
+			if(token.type == TT_BLOCK_END)
 				break;
 
 			Node *pNode = new Node;
@@ -86,16 +87,16 @@ namespace YAML
 	void Sequence::ParseImplicit(Scanner *pScanner, const ParserState& state)
 	{
 		while(1) {
-			Token *pToken = pScanner->PeekNextToken();
 			// we're actually *allowed* to have no tokens at some point
-			if(!pToken)
+			if(pScanner->IsEmpty())
 				break;
 
 			// and we end at anything other than a block entry
-			if(pToken->type != TT_BLOCK_ENTRY)
+			Token& token = pScanner->PeekToken();
+			if(token.type != TT_BLOCK_ENTRY)
 				break;
 
-			pScanner->PopNextToken();
+			pScanner->PopToken();
 
 			Node *pNode = new Node;
 			m_data.push_back(pNode);
@@ -106,16 +107,15 @@ namespace YAML
 	void Sequence::ParseFlow(Scanner *pScanner, const ParserState& state)
 	{
 		// eat start token
-		pScanner->EatNextToken();
+		pScanner->PopToken();
 
 		while(1) {
-			Token *pToken = pScanner->PeekNextToken();
-			if(!pToken)
+			if(pScanner->IsEmpty())
 				throw ParserException(-1, -1, ErrorMsg::END_OF_SEQ_FLOW);
 
 			// first check for end
-			if(pToken->type == TT_FLOW_SEQ_END) {
-				pScanner->PopNextToken();
+			if(pScanner->PeekToken().type == TT_FLOW_SEQ_END) {
+				pScanner->PopToken();
 				break;
 			}
 
@@ -125,11 +125,11 @@ namespace YAML
 			pNode->Parse(pScanner, state);
 
 			// now eat the separator (or could be a sequence end, which we ignore - but if it's neither, then it's a bad node)
-			pToken = pScanner->PeekNextToken();
-			if(pToken->type == TT_FLOW_ENTRY)
-				pScanner->EatNextToken();
-			else if(pToken->type != TT_FLOW_SEQ_END)
-				throw ParserException(pToken->line, pToken->column, ErrorMsg::END_OF_SEQ_FLOW);
+			Token& token = pScanner->PeekToken();
+			if(token.type == TT_FLOW_ENTRY)
+				pScanner->PopToken();
+			else if(token.type != TT_FLOW_SEQ_END)
+				throw ParserException(token.line, token.column, ErrorMsg::END_OF_SEQ_FLOW);
 		}
 	}
 
