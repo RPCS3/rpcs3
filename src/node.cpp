@@ -7,6 +7,7 @@
 #include "scalar.h"
 #include "sequence.h"
 #include "map.h"
+#include "iterpriv.h"
 
 namespace YAML
 {
@@ -145,36 +146,36 @@ namespace YAML
 
 	// begin
 	// Returns an iterator to the beginning of this (sequence or map).
-	Node::Iterator Node::begin() const
+	Iterator Node::begin() const
 	{
 		if(!m_pContent)
 			return Iterator();
 
 		std::vector <Node *>::const_iterator seqIter;
 		if(m_pContent->GetBegin(seqIter))
-			return Iterator(seqIter);
+			return Iterator(new IterPriv(seqIter));
 
 		std::map <Node *, Node *, ltnode>::const_iterator mapIter;
 		if(m_pContent->GetBegin(mapIter))
-			return Iterator(mapIter);
+			return Iterator(new IterPriv(mapIter));
 
 		return Iterator();
 	}
 
 	// end
 	// . Returns an iterator to the end of this (sequence or map).
-	Node::Iterator Node::end() const
+	Iterator Node::end() const
 	{
 		if(!m_pContent)
 			return Iterator();
 
 		std::vector <Node *>::const_iterator seqIter;
 		if(m_pContent->GetEnd(seqIter))
-			return Iterator(seqIter);
+			return Iterator(new IterPriv(seqIter));
 
 		std::map <Node *, Node *, ltnode>::const_iterator mapIter;
 		if(m_pContent->GetEnd(mapIter))
-			return Iterator(mapIter);
+			return Iterator(new IterPriv(mapIter));
 
 		return Iterator();
 	}

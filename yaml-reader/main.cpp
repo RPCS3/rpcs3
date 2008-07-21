@@ -20,7 +20,11 @@ void run()
 
 		YAML::Node doc;
 		parser.GetNextDocument(doc);
-		std::cout << doc;
+		for(YAML::Iterator it=doc.begin();it!=doc.end();++it) {
+			std::string item;
+			*it >> item;
+			std::cout << item << "\n";
+		}
 	} catch(YAML::Exception&) {
 		std::cout << "Error parsing the yaml!\n";
 	}

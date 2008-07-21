@@ -176,6 +176,10 @@
 					>
 				</File>
 				<File
+					RelativePath=".\src\iterpriv.cpp"
+					>
+				</File>
+				<File
 					RelativePath=".\src\map.cpp"
 					>
 				</File>
@@ -262,7 +266,15 @@
 					>
 				</File>
 				<File
-					RelativePath=".\include\ltnode.h"
+					RelativePath=".\include\iterator.h"
+					>
+				</File>
+				<File
+					RelativePath=".\src\iterpriv.h"
+					>
+				</File>
+				<File
+					RelativePath=".\src\ltnode.h"
 					>
 				</File>
 				<File

@@ -6,7 +6,7 @@
 #include <map>
 #include "parserstate.h"
 #include "exceptions.h"
-#include "ltnode.h"
+#include "iterator.h"
 
 namespace YAML
 {
@@ -15,32 +15,6 @@ namespace YAML
 
 	class Node
 	{
-	public:
-		class Iterator
-		{
-		public:
-			Iterator();
-			Iterator(std::vector <Node *>::const_iterator it);
-			Iterator(std::map <Node *, Node *, ltnode>::const_iterator it);
-			~Iterator();
-
-			friend bool operator == (const Iterator& it, const Iterator& jt);
-			friend bool operator != (const Iterator& it, const Iterator& jt);
-			Iterator& operator ++ ();
-			Iterator operator ++ (int);
-			const Node& operator * ();
-			const Node *operator -> ();
-			const Node& first();
-			const Node& second();
-
-		private:
-			enum ITER_TYPE { IT_NONE, IT_SEQ, IT_MAP };
-			ITER_TYPE type;
-
-			std::vector <Node *>::const_iterator seqIter;
-			std::map <Node *, Node *, ltnode>::const_iterator mapIter;
-		};
-
 	public:
 		Node();
 		~Node();

@@ -1,93 +1,107 @@
 #include "crt.h"
 #include "node.h"
 #include "exceptions.h"
+#include "iterpriv.h"
 
 namespace YAML
 {
-	Node::Iterator::Iterator(): type(IT_NONE)
+	Iterator::Iterator(): m_pData(0)
+	{
+		m_pData = new IterPriv;
+	}
+
+	Iterator::Iterator(IterPriv *pData): m_pData(pData)
 	{
 	}
 
-	Node::Iterator::Iterator(std::vector <Node *>::const_iterator it): seqIter(it), type(IT_SEQ)
+	Iterator::Iterator(const Iterator& rhs): m_pData(0)
 	{
+		m_pData = new IterPriv(*rhs.m_pData);
 	}
 
-	Node::Iterator::Iterator(std::map <Node *, Node *, ltnode>::const_iterator it): mapIter(it), type(IT_MAP)
+	Iterator& Iterator::operator = (const Iterator& rhs)
 	{
+		if(this == &rhs)
+			return *this;
+
+		delete m_pData;
+		m_pData = new IterPriv(*rhs.m_pData);
+		return *this;
 	}
 
-	Node::Iterator::~Iterator()
+	Iterator::~Iterator()
 	{
+		delete m_pData;
 	}
 
-	Node::Iterator& Node::Iterator::operator ++ ()
+	Iterator& Iterator::operator ++ ()
 	{
-		if(type == IT_SEQ)
-			++seqIter;
-		else if(type == IT_MAP)
-			++mapIter;
+		if(m_pData->type == IterPriv::IT_SEQ)
+			++m_pData->seqIter;
+		else if(m_pData->type == IterPriv::IT_MAP)
+			++m_pData->mapIter;
 
 		return *this;
 	}
 
-	Node::Iterator Node::Iterator::operator ++ (int)
+	Iterator Iterator::operator ++ (int)
 	{
 		Iterator temp = *this;
 
-		if(type == IT_SEQ)
-			++seqIter;
-		else if(type == IT_MAP)
-			++mapIter;
+		if(m_pData->type == IterPriv::IT_SEQ)
+			++m_pData->seqIter;
+		else if(m_pData->type == IterPriv::IT_MAP)
+			++m_pData->mapIter;
 
 		return temp;
 	}
 
-	const Node& Node::Iterator::operator * ()
+	const Node& Iterator::operator * ()
 	{
-		if(type == IT_SEQ)
-			return **seqIter;
+		if(m_pData->type == IterPriv::IT_SEQ)
+			return **m_pData->seqIter;
 
 		throw BadDereference();
 	}
 
-	const Node *Node::Iterator::operator -> ()
+	const Node *Iterator::operator -> ()
 	{
-		if(type == IT_SEQ)
-			return &**seqIter;
+		if(m_pData->type == IterPriv::IT_SEQ)
+			return &**m_pData->seqIter;
 
 		throw BadDereference();
 	}
 
-	const Node& Node::Iterator::first()
+	const Node& Iterator::first()
 	{
-		if(type == IT_MAP)
-			return *mapIter->first;
+		if(m_pData->type == IterPriv::IT_MAP)
+			return *m_pData->mapIter->first;
 
 		throw BadDereference();
 	}
 
-	const Node& Node::Iterator::second()
+	const Node& Iterator::second()
 	{
-		if(type == IT_MAP)
-			return *mapIter->second;
+		if(m_pData->type == IterPriv::IT_MAP)
+			return *m_pData->mapIter->second;
 
 		throw BadDereference();
 	}
 
-	bool operator == (const Node::Iterator& it, const Node::Iterator& jt)
+	bool operator == (const Iterator& it, const Iterator& jt)
 	{
-		if(it.type != jt.type)
+		if(it.m_pData->type != jt.m_pData->type)
 			return false;
 
-		if(it.type == Node::Iterator::IT_SEQ)
-			return it.seqIter == jt.seqIter;
-		else if(it.type == Node::Iterator::IT_MAP)
-			return it.mapIter == jt.mapIter;
+		if(it.m_pData->type == IterPriv::IT_SEQ)
+			return it.m_pData->seqIter == jt.m_pData->seqIter;
+		else if(it.m_pData->type == IterPriv::IT_MAP)
+			return it.m_pData->mapIter == jt.m_pData->mapIter;
 
 		return true;
 	}
 
-	bool operator != (const Node::Iterator& it, const Node::Iterator& jt)
+	bool operator != (const Iterator& it, const Iterator& jt)
 	{
 		return !(it == jt);
 	}
