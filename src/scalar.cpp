@@ -17,9 +17,9 @@ namespace YAML
 
 	void Scalar::Parse(Scanner *pScanner, const ParserState& state)
 	{
-		Token& token = pScanner->PeekToken();
+		Token& token = pScanner->peek();
 		m_data = token.value;
-		pScanner->PopToken();
+		pScanner->pop();
 	}
 
 	void Scalar::Write(std::ostream& out, int indent, bool startedLine, bool onlyOneCharOnLine)

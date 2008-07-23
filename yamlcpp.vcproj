@@ -176,10 +176,6 @@
 					>
 				</File>
 				<File
-					RelativePath=".\src\iterpriv.cpp"
-					>
-				</File>
-				<File
 					RelativePath=".\src\map.cpp"
 					>
 				</File>

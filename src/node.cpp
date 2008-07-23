@@ -44,7 +44,7 @@ namespace YAML
 			return;
 
 		// now split based on what kind of node we should be
-		switch(pScanner->PeekToken().type) {
+		switch(pScanner->peek().type) {
 			case TT_SCALAR:
 				m_pContent = new Scalar;
 				m_pContent->Parse(pScanner, state);
@@ -68,10 +68,10 @@ namespace YAML
 	void Node::ParseHeader(Scanner *pScanner, const ParserState& state)
 	{
 		while(1) {
-			if(pScanner->IsEmpty())
+			if(pScanner->empty())
 				return;
 
-			switch(pScanner->PeekToken().type) {
+			switch(pScanner->peek().type) {
 				case TT_TAG: ParseTag(pScanner, state); break;
 				case TT_ANCHOR: ParseAnchor(pScanner, state); break;
 				case TT_ALIAS: ParseAlias(pScanner, state); break;
@@ -82,7 +82,7 @@ namespace YAML
 
 	void Node::ParseTag(Scanner *pScanner, const ParserState& state)
 	{
-		Token& token = pScanner->PeekToken();
+		Token& token = pScanner->peek();
 		if(m_tag != "")
 			throw ParserException(token.line, token.column, ErrorMsg::MULTIPLE_TAGS);
 
@@ -90,23 +90,23 @@ namespace YAML
 
 		for(unsigned i=0;i<token.params.size();i++)
 			m_tag += token.params[i];
-		pScanner->PopToken();
+		pScanner->pop();
 	}
 	
 	void Node::ParseAnchor(Scanner *pScanner, const ParserState& state)
 	{
-		Token& token = pScanner->PeekToken();
+		Token& token = pScanner->peek();
 		if(m_anchor != "")
 			throw ParserException(token.line, token.column, ErrorMsg::MULTIPLE_ANCHORS);
 
 		m_anchor = token.value;
 		m_alias = false;
-		pScanner->PopToken();
+		pScanner->pop();
 	}
 
 	void Node::ParseAlias(Scanner *pScanner, const ParserState& state)
 	{
-		Token& token = pScanner->PeekToken();
+		Token& token = pScanner->peek();
 		if(m_anchor != "")
 			throw ParserException(token.line, token.column, ErrorMsg::MULTIPLE_ALIASES);
 		if(m_tag != "")
@@ -114,7 +114,7 @@ namespace YAML
 
 		m_anchor = token.value;
 		m_alias = true;
-		pScanner->PopToken();
+		pScanner->pop();
 	}
 
 	void Node::Write(std::ostream& out, int indent, bool startedLine, bool onlyOneCharOnLine) const

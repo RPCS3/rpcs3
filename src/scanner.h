@@ -16,16 +16,18 @@ namespace YAML
 		Scanner(std::istream& in);
 		~Scanner();
 
-		bool IsEmpty();
-		void PopToken();
-		Token& PeekToken();
+		// token queue management (hopefully this looks kinda stl-ish)
+		bool empty();
+		void pop();
+		Token& peek();
 
 	private:
 		// scanning
-		void StartStream();
-		void EndStream();
+		void EnsureTokensInQueue();
 		void ScanNextToken();
 		void ScanToNextToken();
+		void StartStream();
+		void EndStream();
 		Token *PushIndentTo(int column, bool sequence);
 		void PopIndentTo(int column);
 

@@ -13,15 +13,16 @@ namespace YAML
 		Iterator(const Iterator& rhs);
 		~Iterator();
 
-		friend bool operator == (const Iterator& it, const Iterator& jt);
-		friend bool operator != (const Iterator& it, const Iterator& jt);
 		Iterator& operator = (const Iterator& rhs);
 		Iterator& operator ++ ();
 		Iterator operator ++ (int);
-		const Node& operator * ();
-		const Node *operator -> ();
-		const Node& first();
-		const Node& second();
+		const Node& operator * () const;
+		const Node *operator -> () const;
+		const Node& first() const;
+		const Node& second() const;
+
+		friend bool operator == (const Iterator& it, const Iterator& jt);
+		friend bool operator != (const Iterator& it, const Iterator& jt);
 
 	private:
 		IterPriv *m_pData;

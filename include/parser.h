@@ -31,6 +31,11 @@ namespace YAML
 		void HandleTagDirective(Token *pToken);
 
 	private:
+		// can't copy this
+		Parser(const Parser& rhs) {}
+		Parser& operator = (const Parser& rhs) { return *this; }
+
+	private:
 		Scanner *m_pScanner;
 		ParserState m_state;
 	};

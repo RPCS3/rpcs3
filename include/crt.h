@@ -1,6 +1,6 @@
 #pragma once
 
-// for memory leaks
+// for detecting memory leaks
 #ifdef _DEBUG
 
 #define _CRTDBG_MAP_ALLOC

@@ -3,6 +3,7 @@
 #include "token.h"
 #include "exceptions.h"
 #include "exp.h"
+#include <cassert>
 
 namespace YAML
 {
@@ -15,34 +16,46 @@ namespace YAML
 	{
 	}
 
-	// IsEmpty
+	// empty
 	// . Returns true if there are no more tokens to be read
-	bool Scanner::IsEmpty()
+	bool Scanner::empty()
 	{
-		PeekToken();  // to ensure that there are tokens in the queue, if possible
+		EnsureTokensInQueue();
 		return m_tokens.empty();
 	}
 
-	// PopToken
+	// pop
 	// . Simply removes the next token on the queue.
-	void Scanner::PopToken()
+	void Scanner::pop()
 	{
-		PeekToken();  // to ensure that there are tokens in the queue
+		EnsureTokensInQueue();
 		if(!m_tokens.empty())
 			m_tokens.pop();
 	}
 
-	// PeekToken
-	// . Returns (but does not remove) the next token on the queue, and scans if only we need to.
-	Token& Scanner::PeekToken()
+	// peek
+	// . Returns (but does not remove) the next token on the queue.
+	Token& Scanner::peek()
+	{
+		EnsureTokensInQueue();
+		assert(!m_tokens.empty());  // should we be asserting here? I mean, we really just be checking
+		                            // if it's empty before peeking.
+
+		return m_tokens.front();
+	}
+
+	// EnsureTokensInQueue
+	// . Scan until there's a valid token at the front of the queue,
+	//   or we're sure the queue is empty.
+	void Scanner::EnsureTokensInQueue()
 	{
 		while(1) {
 			if(!m_tokens.empty()) {
 				Token& token = m_tokens.front();
 
-				// return this guy if it's valid
+				// if this guy's valid, then we're done
 				if(token.status == TS_VALID)
-					return token;
+					return;
 
 				// here's where we clean up the impossible tokens
 				if(token.status == TS_INVALID) {
@@ -55,13 +68,11 @@ namespace YAML
 
 			// no token? maybe we've actually finished
 			if(m_endedStream)
-				break;
+				return;
 
 			// no? then scan...
 			ScanNextToken();
 		}
-
-		// TODO: find something to return here, or assert (but can't do that! maybe split into two functions?)
 	}
 
 	// ScanNextToken

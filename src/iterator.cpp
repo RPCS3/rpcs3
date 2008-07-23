@@ -56,7 +56,7 @@ namespace YAML
 		return temp;
 	}
 
-	const Node& Iterator::operator * ()
+	const Node& Iterator::operator * () const
 	{
 		if(m_pData->type == IterPriv::IT_SEQ)
 			return **m_pData->seqIter;
@@ -64,15 +64,15 @@ namespace YAML
 		throw BadDereference();
 	}
 
-	const Node *Iterator::operator -> ()
+	const Node *Iterator::operator -> () const
 	{
 		if(m_pData->type == IterPriv::IT_SEQ)
-			return &**m_pData->seqIter;
+			return *m_pData->seqIter;
 
 		throw BadDereference();
 	}
 
-	const Node& Iterator::first()
+	const Node& Iterator::first() const
 	{
 		if(m_pData->type == IterPriv::IT_MAP)
 			return *m_pData->mapIter->first;
@@ -80,7 +80,7 @@ namespace YAML
 		throw BadDereference();
 	}
 
-	const Node& Iterator::second()
+	const Node& Iterator::second() const
 	{
 		if(m_pData->type == IterPriv::IT_MAP)
 			return *m_pData->mapIter->second;
