@@ -3,6 +3,7 @@
 #include "scanner.h"
 #include "token.h"
 #include "exceptions.h"
+#include "node.h"
 #include <sstream>
 
 namespace YAML
@@ -35,6 +36,11 @@ namespace YAML
 			}
 		}
 		out << "\"\n";
+	}
+
+	CONTENT_TYPE Scalar::GetType() const
+	{
+		return CT_SCALAR;
 	}
 
 	void Scalar::Read(std::string& s)

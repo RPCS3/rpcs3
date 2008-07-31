@@ -150,6 +150,11 @@ namespace YAML
 			out << std::endl;
 	}
 
+	CONTENT_TYPE Sequence::GetType() const
+	{
+		return CT_SEQUENCE;
+	}
+
 	int Sequence::Compare(Content *pContent)
 	{
 		return -pContent->Compare(this);

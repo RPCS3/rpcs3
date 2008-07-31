@@ -19,6 +19,8 @@ namespace YAML
 		virtual void Parse(Scanner *pScanner, const ParserState& state);
 		virtual void Write(std::ostream& out, int indent, bool startedLine, bool onlyOneCharOnLine);
 
+		virtual CONTENT_TYPE GetType() const;
+
 		// ordering
 		virtual int Compare(Content *pContent);
 		virtual int Compare(Scalar *pScalar) { return 1; }

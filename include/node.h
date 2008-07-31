@@ -13,6 +13,8 @@ namespace YAML
 	class Content;
 	class Scanner;
 
+	enum CONTENT_TYPE { CT_NONE, CT_SCALAR, CT_SEQUENCE, CT_MAP };
+
 	class Node
 	{
 	public:
@@ -22,6 +24,8 @@ namespace YAML
 		void Clear();
 		void Parse(Scanner *pScanner, const ParserState& state);
 		void Write(std::ostream& out, int indent, bool startedLine, bool onlyOneCharOnLine) const;
+
+		CONTENT_TYPE GetType() const;
 
 		// accessors
 		Iterator begin() const;

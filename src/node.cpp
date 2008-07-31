@@ -144,6 +144,14 @@ namespace YAML
 		}
 	}
 
+	CONTENT_TYPE Node::GetType() const
+	{
+		if(!m_pContent)
+			return CT_NONE;
+
+		return m_pContent->GetType();
+	}
+
 	// begin
 	// Returns an iterator to the beginning of this (sequence or map).
 	Iterator Node::begin() const

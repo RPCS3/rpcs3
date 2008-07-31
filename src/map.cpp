@@ -163,6 +163,11 @@ namespace YAML
 			out << std::endl;
 	}
 
+	CONTENT_TYPE Map::GetType() const
+	{
+		return CT_MAP;
+	}
+
 	int Map::Compare(Content *pContent)
 	{
 		return -pContent->Compare(this);

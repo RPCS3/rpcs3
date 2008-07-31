@@ -16,6 +16,8 @@ namespace YAML
 	class Sequence;
 	class Map;
 
+	enum CONTENT_TYPE;
+
 	class Content
 	{
 	public:
@@ -31,6 +33,7 @@ namespace YAML
 		virtual bool GetEnd(std::map <Node *, Node *, ltnode>::const_iterator& it) const { return false; }
 		virtual Node *GetNode(unsigned i) const { return 0; }
 		virtual unsigned GetSize() const { return 0; }
+		virtual CONTENT_TYPE GetType() const = 0;
 
 		// extraction
 		virtual void Read(std::string& s) { throw InvalidScalar(); }
