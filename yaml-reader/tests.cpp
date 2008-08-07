@@ -9,20 +9,21 @@
 namespace Test
 {
 	// runs all the tests on all data we have
-	void RunAll()
+	void RunAll(bool verbose)
 	{
 		std::vector <std::string> files;
-		files.push_back("yaml-reader/tests/simple.yaml");
-		files.push_back("yaml-reader/tests/mixed.yaml");
-		files.push_back("yaml-reader/tests/scalars.yaml");
-		files.push_back("yaml-reader/tests/directives.yaml");
+		files.push_back("tests/simple.yaml");
+		files.push_back("tests/mixed.yaml");
+		files.push_back("tests/scalars.yaml");
+		files.push_back("tests/directives.yaml");
 
 		bool passed = true;
 		for(unsigned i=0;i<files.size();i++) {
-			if(!Inout(files[i])) {
-				std::cout << "Inout test failed on " << files[i] << std::endl;
+			if(!Inout(files[i], verbose)) {
+				std::cout << "Inout test failed on " << files[i] << "\n";
 				passed = false;
-			}
+			} else
+				std::cout << "Inout test passed: " << files[i] << "\n";
 		}
 
 		if(passed)
@@ -31,7 +32,7 @@ namespace Test
 
 	// loads the given YAML file, outputs it, and then loads the outputted file,
 	// outputs again, and makes sure that the two outputs are the same
-	bool Inout(const std::string& file)
+	bool Inout(const std::string& file, bool verbose)
 	{
 		std::ifstream fin(file.c_str());
 
@@ -71,6 +72,14 @@ namespace Test
 			fout << secondTry << std::endl;
 		} catch(YAML::ParserException& e) {
 			std::cout << file << " (line " << e.line + 1 << ", col " << e.column + 1 << "): " << e.msg << std::endl;
+			
+			if(verbose) {
+				std::cout << "Token queue:\n";
+				std::ifstream f(file.c_str());
+				YAML::Parser p(f);
+				p.PrintTokens(std::cout);
+			}
+			
 			return false;
 		}
 

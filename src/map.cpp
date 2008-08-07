@@ -4,6 +4,7 @@
 #include "scanner.h"
 #include "token.h"
 #include "exceptions.h"
+#include <iostream>
 
 namespace YAML
 {
@@ -142,7 +143,7 @@ namespace YAML
 	void Map::Write(std::ostream& out, int indent, bool startedLine, bool onlyOneCharOnLine)
 	{
 		if(startedLine && !onlyOneCharOnLine)
-			out << std::endl;
+			out << "\n";
 
 		for(node_map::const_iterator it=m_data.begin();it!=m_data.end();++it) {
 			if((startedLine && !onlyOneCharOnLine) || it != m_data.begin()) {
@@ -160,12 +161,7 @@ namespace YAML
 		}
 
 		if(m_data.empty())
-			out << std::endl;
-	}
-
-	CONTENT_TYPE Map::GetType() const
-	{
-		return CT_MAP;
+			out << "\n";
 	}
 
 	int Map::Compare(Content *pContent)

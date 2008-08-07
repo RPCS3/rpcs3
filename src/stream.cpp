@@ -1,8 +1,24 @@
 #include "crt.h"
 #include "stream.h"
+#include <iostream>
 
 namespace YAML
 {
+	int Stream::pos() const
+	{
+		return input.tellg();
+	}
+	
+	char Stream::peek()
+	{
+		return input.peek();
+	}
+	
+	Stream::operator bool()
+	{
+		return input.good();
+	}
+
 	// get
 	// . Extracts a character from the stream and updates our position
 	char Stream::get()
@@ -33,4 +49,5 @@ namespace YAML
 		for(int i=0;i<n;i++)
 			get();
 	}
+
 }

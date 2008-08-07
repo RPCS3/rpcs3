@@ -38,11 +38,6 @@ namespace YAML
 		out << "\"\n";
 	}
 
-	CONTENT_TYPE Scalar::GetType() const
-	{
-		return CT_SCALAR;
-	}
-
 	void Scalar::Read(std::string& s)
 	{
 		s = m_data;

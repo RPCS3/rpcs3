@@ -3,6 +3,7 @@
 #include "node.h"
 #include "scanner.h"
 #include "token.h"
+#include <iostream>
 
 namespace YAML
 {
@@ -134,7 +135,7 @@ namespace YAML
 	void Sequence::Write(std::ostream& out, int indent, bool startedLine, bool onlyOneCharOnLine)
 	{
 		if(startedLine && !onlyOneCharOnLine)
-			out << std::endl;
+			out << "\n";
 
 		for(unsigned i=0;i<m_data.size();i++) {
 			if((startedLine && !onlyOneCharOnLine) || i > 0) {
@@ -147,12 +148,7 @@ namespace YAML
 		}
 
 		if(m_data.empty())
-			out << std::endl;
-	}
-
-	CONTENT_TYPE Sequence::GetType() const
-	{
-		return CT_SEQUENCE;
+			out << "\n";
 	}
 
 	int Sequence::Compare(Content *pContent)

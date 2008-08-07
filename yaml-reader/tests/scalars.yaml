@@ -1,0 +1,35 @@
+- normal scalar, but
+  over several lines
+- |
+  literal scalar - so we can draw ASCII:
+  
+         -   -
+        |  -   |
+         ------
+- >
+  and a folded scalar... so we
+  can just keep writing various
+  things. And if we want to keep indentation:
+  
+    we just indent a little
+    see, this stays indented
+- >-
+  Here's a folded scalar
+  that gets chomped.
+- |-
+  And here's a literal scalar
+  that gets chomped.
+- >2
+       Here's a folded scalar
+  that starts with some indentation.
+- ::vector
+- ": - ()"
+- Up, up, and away!
+- -123
+- http://example.com/foo#bar
+# Inside flow collection:
+- [ ::vector,
+  ": - ()",
+  "Up, up and away!",
+  -123,
+  http://example.com/foo#bar ]

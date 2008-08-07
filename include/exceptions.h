@@ -10,6 +10,7 @@ namespace YAML
 	public:
 		ParserException(int line_, int column_, const std::string& msg_)
 			: line(line_), column(column_), msg(msg_) {}
+		virtual ~ParserException() throw () {}
 
 		int line, column;
 		std::string msg;

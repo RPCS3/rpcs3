@@ -1,5 +1,7 @@
 #include "crt.h"
 #include "regex.h"
+#include "stream.h"
+#include <iostream>
 
 namespace YAML
 {
@@ -91,6 +93,11 @@ namespace YAML
 	{
 		return Match(in) >= 0;
 	}
+	
+	bool RegEx::Matches(Stream& in) const
+	{
+		return Match(in) >= 0;
+	}
 
 	// Match
 	// . Matches the given string against this regular expression.
@@ -106,6 +113,12 @@ namespace YAML
 		return m_pOp->Match(str, *this);
 	}
 
+	// Match
+	int RegEx::Match(Stream& in) const
+	{
+		return Match(in.stream());
+	}
+	
 	// Match
 	// . The stream version does the same thing as the string version;
 	//   REMEMBER that we only match from the start of the stream!

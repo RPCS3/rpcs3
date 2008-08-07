@@ -122,23 +122,23 @@ namespace YAML
 		// write anchor/alias
 		if(m_anchor != "") {
 			if(m_alias)
-				out << "*";
+				out << std::string("*");
 			else
-				out << "&";
-			out << m_anchor << " ";
+				out << std::string("&");
+			out << m_anchor << std::string(" ");
 			startedLine = true;
 			onlyOneCharOnLine = false;
 		}
 
 		// write tag
 		if(m_tag != "") {
-			out << "!<" << m_tag << "> ";
+			out << std::string("!<") << m_tag << std::string("> ");
 			startedLine = true;
 			onlyOneCharOnLine = false;
 		}
 
 		if(!m_pContent) {
-			out << std::endl;
+			out << std::string("\n");
 		} else {
 			m_pContent->Write(out, indent, startedLine, onlyOneCharOnLine);
 		}
@@ -149,7 +149,14 @@ namespace YAML
 		if(!m_pContent)
 			return CT_NONE;
 
-		return m_pContent->GetType();
+		if(m_pContent->IsScalar())
+			return CT_SCALAR;
+		else if(m_pContent->IsSequence())
+			return CT_SEQUENCE;
+		else if(m_pContent->IsMap())
+			return CT_MAP;
+			
+		return CT_NONE;
 	}
 
 	// begin

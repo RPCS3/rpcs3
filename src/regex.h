@@ -6,6 +6,8 @@
 
 namespace YAML
 {
+	class Stream;
+
 	enum REGEX_OP { REGEX_EMPTY, REGEX_MATCH, REGEX_RANGE, REGEX_OR, REGEX_AND, REGEX_NOT, REGEX_SEQ };
 
 	// simplified regular expressions
@@ -65,8 +67,10 @@ namespace YAML
 		bool Matches(char ch) const;
 		bool Matches(const std::string& str) const;
 		bool Matches(std::istream& in) const;
+		bool Matches(Stream& in) const;
 		int Match(const std::string& str) const;
 		int Match(std::istream& in) const;
+		int Match(Stream& in) const;
 
 		friend RegEx operator ! (const RegEx& ex);
 		friend RegEx operator || (const RegEx& ex1, const RegEx& ex2);

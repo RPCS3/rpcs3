@@ -53,9 +53,9 @@ namespace YAML
 		Token(TOKEN_TYPE type_, int line_, int column_): status(TS_VALID), type(type_), line(line_), column(column_) {}
 
 		friend std::ostream& operator << (std::ostream& out, const Token& token) {
-			out << TokenNames[token.type] << ": " << token.value;
+			out << TokenNames[token.type] << std::string(": ") << token.value;
 			for(unsigned i=0;i<token.params.size();i++)
-				out << " " << token.params[i];
+				out << std::string(" ") << token.params[i];
 			return out;
 		}
 

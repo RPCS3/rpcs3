@@ -126,7 +126,7 @@ namespace YAML
 			if(m_pScanner->empty())
 				break;
 
-			out << m_pScanner->peek() << std::endl;
+			out << m_pScanner->peek() << "\n";
 			m_pScanner->pop();
 		}
 	}

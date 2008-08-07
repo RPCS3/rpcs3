@@ -14,7 +14,7 @@ namespace YAML
 	{
 		// misc
 		const RegEx Blank = RegEx(' ') || RegEx('\t');
-		const RegEx Break = RegEx('\n');
+		const RegEx Break = RegEx('\n') || RegEx("\r\n");
 		const RegEx BlankOrBreak = Blank || Break;
 		const RegEx Digit = RegEx('0', '9');
 		const RegEx Alpha = RegEx('a', 'z') || RegEx('A', 'Z');
