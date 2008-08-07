@@ -6,7 +6,7 @@
 
 namespace YAML
 {
-	class Stream;
+	struct Stream;
 
 	enum REGEX_OP { REGEX_EMPTY, REGEX_MATCH, REGEX_RANGE, REGEX_OR, REGEX_AND, REGEX_NOT, REGEX_SEQ };
 
