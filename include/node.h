@@ -85,8 +85,8 @@ namespace YAML
 		void ParseAlias(Scanner *pScanner, const ParserState& state);
 
 	private:
-		bool m_alias;
 		std::string m_anchor, m_tag;
 		Content *m_pContent;
+		bool m_alias;
 	};
 }

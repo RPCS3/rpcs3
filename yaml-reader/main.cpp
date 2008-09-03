@@ -3,11 +3,13 @@
 #include <fstream>
 #include <iostream>
 
+#ifdef _MSC_VER
 #ifdef _DEBUG
 #pragma comment(lib, "yamlcppd.lib")
 #else
 #pragma comment(lib, "yamlcpp.lib")
-#endif
+#endif  // _DEBUG
+#endif  // _MSC_VER
 
 void run()
 {
