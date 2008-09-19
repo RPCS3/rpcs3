@@ -79,6 +79,11 @@ namespace YAML
 		friend bool operator < (const Node& n1, const Node& n2);
 
 	private:
+		// shouldn't be copyable! (at least for now)
+		Node(const Node& rhs);
+		Node& operator = (const Node& rhs);
+
+	private:
 		void ParseHeader(Scanner *pScanner, const ParserState& state);
 		void ParseTag(Scanner *pScanner, const ParserState& state);
 		void ParseAnchor(Scanner *pScanner, const ParserState& state);
