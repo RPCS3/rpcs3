@@ -80,10 +80,10 @@ namespace YAML
 				}
 
 				m_data[pKey] = pValue;
-			} catch(Exception& e) {
+			} catch(Exception&) {
 				delete pKey;
 				delete pValue;
-				throw e;
+				throw;
 			}
 		}
 	}
@@ -131,11 +131,11 @@ namespace YAML
 					throw ParserException(nextToken.line, nextToken.column, ErrorMsg::END_OF_MAP_FLOW);
 
 				m_data[pKey] = pValue;
-			} catch(Exception& e) {
+			} catch(Exception&) {
 				// clean up and rethrow
 				delete pKey;
 				delete pValue;
-				throw e;
+				throw;
 			}
 		}
 	}
