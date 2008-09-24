@@ -38,57 +38,52 @@ namespace YAML
 		out << "\"\n";
 	}
 
-	void Scalar::Read(std::string& s)
+	bool Scalar::Read(std::string& s) const
 	{
 		s = m_data;
+		return true;
 	}
 
-	void Scalar::Read(int& i)
+	bool Scalar::Read(int& i) const
 	{
 		std::stringstream data(m_data);
 		data >> i;
-		if(!data)
-			throw InvalidScalar();
+		return !data.fail();
 	}
 
-	void Scalar::Read(unsigned& u)
+	bool Scalar::Read(unsigned& u) const
 	{
 		std::stringstream data(m_data);
 		data >> u;
-		if(!data)
-			throw InvalidScalar();
+		return !data.fail();
 	}
 
-	void Scalar::Read(long& l)
+	bool Scalar::Read(long& l) const
 	{
 		std::stringstream data(m_data);
 		data >> l;
-		if(!data)
-			throw InvalidScalar();
+		return !data.fail();
 	}
 	
-	void Scalar::Read(float& f)
+	bool Scalar::Read(float& f) const
 	{
 		std::stringstream data(m_data);
 		data >> f;
-		if(!data)
-			throw InvalidScalar();
+		return !data.fail();
 	}
 	
-	void Scalar::Read(double& d)
+	bool Scalar::Read(double& d) const
 	{
 		std::stringstream data(m_data);
 		data >> d;
-		if(!data)
-			throw InvalidScalar();
+		return !data.fail();
 	}
 
-	void Scalar::Read(char& c)
+	bool Scalar::Read(char& c) const
 	{
 		std::stringstream data(m_data);
 		data >> c;
-		if(!data)
-			throw InvalidScalar();
+		return !data.fail();
 	}
 
 	int Scalar::Compare(Content *pContent)

@@ -32,44 +32,34 @@ namespace YAML
 		Iterator end() const;
 		unsigned size() const;
 
+		// extraction of scalars
+		bool Read(std::string& s) const;
+		bool Read(int& i) const;
+		bool Read(unsigned& u) const;
+		bool Read(long& l) const;
+		bool Read(float& f) const;
+		bool Read(double& d) const;
+		bool Read(char& c) const;
+
+		// so you can specialize for other values
 		template <typename T>
-		const Node& GetValue(const T& key) const {
-			if(!m_pContent)
-				throw BadDereference();
-
-			for(Iterator it=begin();it!=end();++it) {
-				T t;
-				try {
-					it.first() >> t;
-					if(key == t)
-						return it.second();
-				} catch(RepresentationException&) {
-				}
-			}
-
-			throw BadDereference();
-		}
+		friend bool Read(const Node& node, T& value);
 
 		template <typename T>
-		const Node& operator [] (const T& key) const {
-			return GetValue(key);
-		}
+		friend void operator >> (const Node& node, T& value);
 
-		const Node& operator [] (const char *key) const {
-			return GetValue(std::string(key));
-		}
+		// just for maps
+		template <typename T>
+		const Node& GetValue(const T& key) const;
 
+		template <typename T>
+		const Node& operator [] (const T& key) const;
+
+		const Node& operator [] (const char *key) const;
+
+		// just for sequences
 		const Node& operator [] (unsigned u) const;
 		const Node& operator [] (int i) const;
-
-		// extraction
-		friend void operator >> (const Node& node, std::string& s);
-		friend void operator >> (const Node& node, int& i);
-		friend void operator >> (const Node& node, unsigned& u);
-		friend void operator >> (const Node& node, long& l);
-		friend void operator >> (const Node& node, float& f);
-		friend void operator >> (const Node& node, double& d);
-		friend void operator >> (const Node& node, char& c);
 
 		// insertion
 		friend std::ostream& operator << (std::ostream& out, const Node& node);
@@ -94,4 +84,46 @@ namespace YAML
 		Content *m_pContent;
 		bool m_alias;
 	};
+
+	// templated things we need to keep inline in the header
+	template <typename T>
+	inline bool Read(const Node& node, T& value)
+	{
+		return node.Read(value);
+	}
+
+	template <typename T>
+	inline void operator >> (const Node& node, T& value)
+	{
+		if(!Read(node, value))
+			throw InvalidScalar();
+	}
+
+	template <typename T>
+	inline const Node& Node::GetValue(const T& key) const
+	{
+		if(!m_pContent)
+			throw BadDereference();
+
+		for(Iterator it=begin();it!=end();++it) {
+			T t;
+			if(YAML::Read(it.first(), t)) {
+				if(key == t)
+					return it.second();
+			}
+		}
+
+		throw BadDereference();
+	}
+
+	template <typename T>
+	inline const Node& Node::operator [] (const T& key) const
+	{
+		return GetValue(key);
+	}
+
+	inline const Node& Node::operator [] (const char *key) const
+	{
+		return GetValue(std::string(key));
+	}
 }

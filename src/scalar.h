@@ -17,13 +17,13 @@ namespace YAML
 		virtual bool IsScalar() const { return true; }
 
 		// extraction
-		virtual void Read(std::string& s);
-		virtual void Read(int& i);
-		virtual void Read(unsigned& u);
-		virtual void Read(long& l);
-		virtual void Read(float& f);
-		virtual void Read(double& d);
-		virtual void Read(char& c);
+		virtual bool Read(std::string& s) const;
+		virtual bool Read(int& i) const;
+		virtual bool Read(unsigned& u) const;
+		virtual bool Read(long& l) const;
+		virtual bool Read(float& f) const;
+		virtual bool Read(double& d) const;
+		virtual bool Read(char& c) const;
 
 		// ordering
 		virtual int Compare(Content *pContent);

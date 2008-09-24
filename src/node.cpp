@@ -232,61 +232,65 @@ namespace YAML
 
 	///////////////////////////////////////////////////////
 	// Extraction
+	// Note: these Read() functions are identical, but
+	// they're not templated because they use a Content virtual
+	// function, so we'd have to #include that in node.h, and
+	// I don't want to.
 
-	void operator >> (const Node& node, std::string& s)
+	bool Node::Read(std::string& s) const
 	{
-		if(!node.m_pContent)
-			throw;
+		if(!m_pContent)
+			return false;
 
-		node.m_pContent->Read(s);
+		return m_pContent->Read(s);
 	}
 
-	void operator >> (const Node& node, int& i)
+	bool Node::Read(int& i) const
 	{
-		if(!node.m_pContent)
-			throw;
+		if(!m_pContent)
+			return false;
 
-		node.m_pContent->Read(i);
+		return m_pContent->Read(i);
 	}
 
-	void operator >> (const Node& node, unsigned& u)
+	bool Node::Read(unsigned& u) const
 	{
-		if(!node.m_pContent)
-			throw;
+		if(!m_pContent)
+			return false;
 
-		node.m_pContent->Read(u);
+		return m_pContent->Read(u);
 	}
 
-	void operator >> (const Node& node, long& l)
+	bool Node::Read(long& l) const
 	{
-		if(!node.m_pContent)
-			throw;
+		if(!m_pContent)
+			return false;
 
-		node.m_pContent->Read(l);
+		return m_pContent->Read(l);
 	}
 
-	void operator >> (const Node& node, float& f)
+	bool Node::Read(float& f) const
 	{
-		if(!node.m_pContent)
-			throw;
+		if(!m_pContent)
+			return false;
 
-		node.m_pContent->Read(f);
+		return m_pContent->Read(f);
 	}
 
-	void operator >> (const Node& node, double& d)
+	bool Node::Read(double& d) const
 	{
-		if(!node.m_pContent)
-			throw;
+		if(!m_pContent)
+			return false;
 
-		node.m_pContent->Read(d);
+		return m_pContent->Read(d);
 	}
 
-	void operator >> (const Node& node, char& c)
+	bool Node::Read(char& c) const
 	{
-		if(!node.m_pContent)
-			throw;
+		if(!m_pContent)
+			return false;
 
-		node.m_pContent->Read(c);
+		return m_pContent->Read(c);
 	}
 
 	std::ostream& operator << (std::ostream& out, const Node& node)
