@@ -50,7 +50,8 @@ namespace YAML
 	// VerifySimpleKey
 	// . Determines whether the latest simple key to be added is valid,
 	//   and if so, makes it valid.
-	bool Scanner::VerifySimpleKey()
+	// . If 'force' is true, then we'll pop no matter what (whether we can verify it or not).
+	bool Scanner::VerifySimpleKey(bool force)
 	{
 		m_isLastKeyValid = false;
 		if(m_simpleKeys.empty())
@@ -60,8 +61,11 @@ namespace YAML
 		SimpleKey key = m_simpleKeys.top();
 
 		// only validate if we're in the correct flow level
-		if(key.flowLevel != m_flowLevel)
+		if(key.flowLevel != m_flowLevel) {
+			if(force)
+				m_simpleKeys.pop();
 			return false;
+		}
 
 		m_simpleKeys.pop();
 
@@ -94,9 +98,11 @@ namespace YAML
 		return isValid;
 	}
 
+	// VerifyAllSimplyKeys
+	// . Pops all simple keys (with checking, but if we can't verify one, then pop it anyways).
 	void Scanner::VerifyAllSimpleKeys()
 	{
 		while(!m_simpleKeys.empty())
-			VerifySimpleKey();
+			VerifySimpleKey(true);
 	}
 }

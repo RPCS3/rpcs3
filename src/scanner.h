@@ -33,7 +33,7 @@ namespace YAML
 
 		// checking input
 		void InsertSimpleKey();
-		bool VerifySimpleKey();
+		bool VerifySimpleKey(bool force = false);
 		void VerifyAllSimpleKeys();
 
 		bool IsWhitespaceToBeEaten(char ch);
