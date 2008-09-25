@@ -293,6 +293,14 @@ namespace YAML
 		return m_pContent->Read(c);
 	}
 
+	bool Node::Read(bool& b) const
+	{
+		if(!m_pContent)
+			return false;
+
+		return m_pContent->Read(b);
+	}
+
 	std::ostream& operator << (std::ostream& out, const Node& node)
 	{
 		node.Write(out, 0, false, false);

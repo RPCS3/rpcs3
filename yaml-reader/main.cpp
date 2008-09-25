@@ -3,21 +3,19 @@
 #include <fstream>
 #include <iostream>
 
-#ifdef _MSC_VER
-#ifdef _DEBUG
-#pragma comment(lib, "yamlcppd.lib")
-#else
-#pragma comment(lib, "yamlcpp.lib")
-#endif  // _DEBUG
-#endif  // _MSC_VER
-
 void run()
 {
 	std::ifstream fin("tests/test.yaml");
 
 	try {
 		YAML::Parser parser(fin);
-		parser.PrintTokens(std::cout);
+		YAML::Node doc;
+		parser.GetNextDocument(doc);
+		for(unsigned i=0;i<doc.size();i++) {
+			bool value;
+			doc[i] >> value;
+			std::cout << (value ? "true" : "false") << "\n";
+		}
 	} catch(YAML::Exception&) {
 		std::cout << "Error parsing the yaml!\n";
 	}

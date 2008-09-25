@@ -40,6 +40,7 @@ namespace YAML
 		bool Read(float& f) const;
 		bool Read(double& d) const;
 		bool Read(char& c) const;
+		bool Read(bool& b) const;
 
 		// so you can specialize for other values
 		template <typename T>

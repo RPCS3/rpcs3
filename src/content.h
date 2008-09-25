@@ -43,6 +43,7 @@ namespace YAML
 		virtual bool Read(float& f) const { return false; }
 		virtual bool Read(double& d) const { return false; }
 		virtual bool Read(char& c) const { return false; }
+		virtual bool Read(bool& b) const { return false; }
 
 		// ordering
 		virtual int Compare(Content *pContent) { return 0; }

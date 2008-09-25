@@ -24,6 +24,7 @@ namespace YAML
 		virtual bool Read(float& f) const;
 		virtual bool Read(double& d) const;
 		virtual bool Read(char& c) const;
+		virtual bool Read(bool& b) const;
 
 		// ordering
 		virtual int Compare(Content *pContent);

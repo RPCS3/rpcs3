@@ -58,6 +58,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				AdditionalDependencies="yamlcppd.lib"
 				AdditionalLibraryDirectories="lib"
 				GenerateDebugInformation="true"
 				TargetMachine="1"
@@ -128,6 +129,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				AdditionalDependencies="yamlcpp.lib"
 				AdditionalLibraryDirectories="lib"
 				GenerateDebugInformation="true"
 				OptimizeReferences="2"

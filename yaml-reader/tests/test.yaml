@@ -1,1 +1,7 @@
-bad YAML: [
+- true
+- n
+- Off
+- YES
+- on
+- FALSE
+- FaLse
