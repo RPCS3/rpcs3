@@ -1,0 +1,235 @@
+//Microsoft Developer Studio generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "afxres.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// Neutral resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_NEU)
+#ifdef _WIN32
+LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
+#pragma code_page(1252)
+#endif //_WIN32
+
+#ifndef _MAC
+/////////////////////////////////////////////////////////////////////////////
+//
+// Version
+//
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 1,0,2,0
+ PRODUCTVERSION 1,0,2,0
+ FILEFLAGSMASK 0x3fL
+#ifdef _DEBUG
+ FILEFLAGS 0x1L
+#else
+ FILEFLAGS 0x0L
+#endif
+ FILEOS 0x40004L
+ FILETYPE 0x2L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040704b0"
+        BEGIN
+            VALUE "Comments", "\0"
+            VALUE "CompanyName", "Pete Bernert and the P.E.Op.S. team\0"
+            VALUE "FileDescription", "cdvdPeops\0"
+            VALUE "FileVersion", "1, 0, 2, 0\0"
+            VALUE "InternalName", "cdvdPeops\0"
+            VALUE "LegalCopyright", "Copyright © 2003-2004\0"
+            VALUE "LegalTrademarks", "\0"
+            VALUE "OriginalFilename", "cdvdPeops.dll\0"
+            VALUE "PrivateBuild", "\0"
+            VALUE "ProductName", "cdvdPeops\0"
+            VALUE "ProductVersion", "1, 0, 2, 0\0"
+            VALUE "SpecialBuild", "\0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x407, 1200
+    END
+END
+
+#endif    // !_MAC
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_CONFIG DIALOG DISCARDABLE  0, 0, 287, 239
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Configure the P.E.Op.S. ASPI/IOCTL PS2 CDVD Driver..."
+FONT 8, "MS Sans Serif"
+BEGIN
+    COMBOBOX        IDC_IMODE,63,6,199,52,CBS_DROPDOWNLIST | WS_VSCROLL | 
+                    WS_TABSTOP
+    COMBOBOX        IDC_DRIVE,63,22,199,52,CBS_DROPDOWNLIST | WS_VSCROLL | 
+                    WS_TABSTOP
+    COMBOBOX        IDC_CACHE,63,39,199,65,CBS_DROPDOWNLIST | WS_VSCROLL | 
+                    WS_TABSTOP
+    CONTROL         "Use additional 4 MByte data cache",IDC_DATACACHE,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,63,55,156,11
+    CONTROL         "Try to limit speed (not supported by all drives)",
+                    IDC_SPEEDLIMIT,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,13,
+                    76,156,11
+    COMBOBOX        IDC_SPEED,204,75,33,93,CBS_DROPDOWNLIST | WS_VSCROLL | 
+                    WS_TABSTOP
+    CONTROL         "Don't wait until drive is ready (needed by a few drives)",
+                    IDC_NOWAIT,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,13,89,
+                    198,11
+    CONTROL         "Check tray state (not tested, you can leave that off)",
+                    IDC_TRAYSTATE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,13,
+                    102,186,11
+    CONTROL         "Try again on reading error. Retry count (1-10):",
+                    IDC_TRYAGAIN,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,13,
+                    129,156,11
+    EDITTEXT        IDC_RETRY,204,128,33,13,ES_AUTOHSCROLL
+    CONTROL         "Show message box on reading error",IDC_SHOWREADERR,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,13,142,156,11
+    CONTROL         "Use PPF patch file:",IDC_USEPPF,"Button",
+                    BS_AUTOCHECKBOX | WS_DISABLED | WS_TABSTOP,13,168,74,11
+    EDITTEXT        IDC_PPFFILE,89,168,167,12,ES_AUTOHSCROLL | WS_DISABLED
+    PUSHBUTTON      "...",IDC_CHOOSEFILE,259,168,13,12,WS_DISABLED
+    COMBOBOX        IDC_SUBCHAN0,13,197,261,52,CBS_DROPDOWNLIST | 
+                    WS_DISABLED | WS_VSCROLL | WS_TABSTOP
+    EDITTEXT        IDC_SUBFILE,63,197,193,12,ES_AUTOHSCROLL | WS_DISABLED
+    PUSHBUTTON      "...",IDC_CHOOSESUBF,259,197,13,12,WS_DISABLED
+    DEFPUSHBUTTON   "OK",IDOK,63,221,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,175,221,50,14
+    RTEXT           "Drive:",IDC_STATIC,37,24,21,11
+    RTEXT           "Caching mode:",IDC_STATIC,9,41,49,11
+    GROUPBOX        "Error handling",IDC_STATIC,6,119,275,38
+    GROUPBOX        "PPF patches",IDC_STATIC,6,158,275,28
+    GROUPBOX        "Misc",IDC_STATIC,6,66,275,52
+    RTEXT           "Interface:",IDC_STATIC,15,8,43,11
+    GROUPBOX        "Subchannel reading",IDC_STATIC,6,187,275,29
+    RTEXT           "File:",IDC_SFSTATIC,26,198,30,11,SS_CENTERIMAGE
+END
+
+IDD_ABOUT DIALOGEX 0, 0, 238, 210
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "About the P.E.Op.S. ASPI/IOCTL PS2 CDVD Driver..."
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,98,188,44,14
+    RTEXT           "Version :",IDC_STATIC,5,5,74,9
+    RTEXT           "Release date :",IDC_STATIC,5,16,74,9
+    RTEXT           "Coded by :",IDC_STATIC,5,27,74,9
+    RTEXT           "Pete's EMail :",IDC_STATIC,5,40,74,9
+    RTEXT           "Pete's homepage :",IDC_STATIC,5,51,74,9
+    LTEXT           "1.2",IDC_STATIC,82,5,154,9
+    LTEXT           "25.12.2004",IDC_STATIC,81,16,154,9
+    LTEXT           "Pete Bernert and the P.E.Op.S. team",IDC_STATIC,81,27,
+                    154,9
+    LTEXT           "BlackDove@addcom.de",IDC_STATIC,81,39,154,9
+    LTEXT           "http://www.pbernert.com",IDC_STATIC,81,51,154,9
+    CONTROL         "",IDC_STATIC,"Static",SS_ETCHEDFRAME,9,100,218,81,
+                    WS_EX_DLGMODALFRAME
+    RTEXT           "Thanks to :",IDC_STATIC,16,109,38,9
+    LTEXT           "the PCSX2 team - special thanx to shadow for kicking my ass",
+                    IDC_STATIC,57,109,161,18
+    LTEXT           "My girlfriend Heike... because everything I do wouldn't be the same without her",
+                    IDC_STATIC,57,130,161,19
+    RTEXT           "P.E.Op.S. homepage :",IDC_STATIC,5,80,74,9
+    LTEXT           "https://sourceforge.net/projects/peops/",IDC_STATIC,81,
+                    80,154,9
+    RTEXT           "linuzappz :",IDC_STATIC,10,63,69,10
+    LTEXT           "http://www.pcsx.net",IDC_STATIC,81,63,142,10
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO DISCARDABLE 
+BEGIN
+    IDD_CONFIG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 280
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 232
+    END
+
+    IDD_ABOUT, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 231
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 203
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+#endif    // Neutral resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////////////////////
+// German (Germany) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_DEU)
+#ifdef _WIN32
+LANGUAGE LANG_GERMAN, SUBLANG_GERMAN
+#pragma code_page(1252)
+#endif //_WIN32
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "#include ""afxres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+#endif    // German (Germany) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+

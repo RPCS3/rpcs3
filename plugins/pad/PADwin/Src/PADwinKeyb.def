@@ -1,0 +1,22 @@
+; PADdinput.def : Declares the module parameters for the DLL.
+
+LIBRARY      "PADwinKeyb"
+DESCRIPTION  'PAD Plugin Using Windows Keyboard'
+
+EXPORTS
+    ; Explicit exports can go here
+	PS2EgetLibType		@2
+	PS2EgetLibName		@3
+	PS2EgetLibVersion2	@4
+	PADinit				@5
+	PADshutdown			@6
+	PADopen				@7
+	PADclose			@8
+	PADkeyEvent			@9
+	PADstartPoll		@10
+	PADpoll				@11
+	PADquery			@12
+
+	PADconfigure		@13
+	PADtest				@14
+	PADabout			@15

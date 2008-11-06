@@ -1,0 +1,4 @@
+gametitle=Dynasty Warriors 4 - Empires
+comment=Skips Video
+//Skip Video
+patch=0,EE,00211544,word,00000000

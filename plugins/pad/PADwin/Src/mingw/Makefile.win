@@ -1,0 +1,43 @@
+# Project: PADwinKeyb
+# Makefile created by Dev-C++ 4.9.9.2
+
+CPP  = mingw32-g++.exe
+CC   = mingw32-gcc.exe
+WINDRES = windres.exe
+RES  = Obj//PADwinKeyb_private.res
+OBJ  = Obj//Win32.o Obj//Conf.o Obj//PAD.o $(RES)
+LINKOBJ  = Obj//Win32.o Obj//Conf.o Obj//PAD.o $(RES)
+LIBS =  -L"C:/Develop/Dev-Cpp/lib" --def ../plugin.def -lcomctl32 -lwsock32 -lwinmm -lgdi32 -lcomdlg32    
+INCS =  -I"C:/Develop/Dev-Cpp/include"  -I"../" 
+CXXINCS =  -I"C:/Develop/Dev-Cpp/include"  -I"../" 
+BIN  = PADwin.dll
+CXXFLAGS = $(CXXINCS)   
+CFLAGS = $(INCS) -Wall -O2 -fomit-frame-pointer -D__WIN32__ -D__MINGW32__   
+RM = rm -f
+
+.PHONY: all all-before all-after clean clean-custom
+
+all: all-before PADwin.dll all-after
+
+
+clean: clean-custom
+	${RM} $(OBJ) $(BIN)
+
+DLLWRAP=dllwrap.exe
+DEFFILE=libPADwin.def
+STATICLIB=libPADwin.a
+
+$(BIN): $(LINKOBJ)
+	$(DLLWRAP) --output-def $(DEFFILE) --implib $(STATICLIB) $(LINKOBJ) $(LIBS) -o $(BIN)
+
+Obj//Win32.o: ../Win32.c
+	$(CC) -c ../Win32.c -o Obj//Win32.o $(CFLAGS)
+
+Obj//Conf.o: ../Conf.c
+	$(CC) -c ../Conf.c -o Obj//Conf.o $(CFLAGS)
+
+Obj//PAD.o: ../PAD.c
+	$(CC) -c ../PAD.c -o Obj//PAD.o $(CFLAGS)
+
+Obj//PADwinKeyb_private.res: PADwinKeyb_private.rc ../PADwnKeyb.rc 
+	$(WINDRES) -i PADwinKeyb_private.rc --input-format=rc -o Obj//PADwinKeyb_private.res -O coff  --include-dir ../ --include-dir ../mingw

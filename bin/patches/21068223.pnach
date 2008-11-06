@@ -1,0 +1,5 @@
+gametitle=Okami [US]
+//fix sceSifDmaStat loop
+patch=0,EE,00214f90,word,24020001
+//ZeroGS Patch -GAME_FULL16BITRES|GAME_NODEPTHRESOLVE|GAME_FASTUPDATE
+zerogs=00058000

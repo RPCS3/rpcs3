@@ -1,0 +1,138 @@
+# Microsoft Developer Studio Generated Dependency File, included by cdvddraft.mak
+
+.\Config.cpp : \
+	"..\program files\microsoft visual studio\vc98\include\devioctl.h"\
+	"..\program files\microsoft visual studio\vc98\include\ntddcdrm.h"\
+	"..\program files\microsoft visual studio\vc98\include\ntdddisk.h"\
+	"..\program files\microsoft visual studio\vc98\include\ntddscsi.h"\
+	"..\program files\microsoft visual studio\vc98\include\ntddstor.h"\
+	".\cdvd.h"\
+	".\cdvddraft.h"\
+	".\Config.h"\
+	".\constants.h"\
+	".\PS2Edefs.h"\
+	".\PS2Etypes.h"\
+	".\typedefs.h"\
+	".\winaspi\scsidefs.h"\
+	".\winaspi\wnaspi32.h"\
+	
+
+.\AboutBox.cpp : \
+	"..\program files\microsoft visual studio\vc98\include\devioctl.h"\
+	"..\program files\microsoft visual studio\vc98\include\ntddcdrm.h"\
+	"..\program files\microsoft visual studio\vc98\include\ntdddisk.h"\
+	"..\program files\microsoft visual studio\vc98\include\ntddscsi.h"\
+	"..\program files\microsoft visual studio\vc98\include\ntddstor.h"\
+	".\AboutBox.h"\
+	".\cdvd.h"\
+	".\cdvddraft.h"\
+	".\constants.h"\
+	".\PS2Edefs.h"\
+	".\PS2Etypes.h"\
+	".\typedefs.h"\
+	".\winaspi\scsidefs.h"\
+	".\winaspi\wnaspi32.h"\
+	
+
+.\cdvdcompat.cpp : \
+	"..\program files\microsoft visual studio\vc98\include\devioctl.h"\
+	"..\program files\microsoft visual studio\vc98\include\ntddcdrm.h"\
+	"..\program files\microsoft visual studio\vc98\include\ntdddisk.h"\
+	"..\program files\microsoft visual studio\vc98\include\ntddscsi.h"\
+	"..\program files\microsoft visual studio\vc98\include\ntddstor.h"\
+	".\cdvd.h"\
+	".\cdvdcompat.h"\
+	".\cdvddraft.h"\
+	".\cdvdmisc.h"\
+	".\constants.h"\
+	".\PS2Edefs.h"\
+	".\PS2Etypes.h"\
+	".\typedefs.h"\
+	".\winaspi\scsidefs.h"\
+	".\winaspi\wnaspi32.h"\
+	
+
+.\cdvddraft.cpp : \
+	"..\program files\microsoft visual studio\vc98\include\devioctl.h"\
+	"..\program files\microsoft visual studio\vc98\include\ntddcdrm.h"\
+	"..\program files\microsoft visual studio\vc98\include\ntdddisk.h"\
+	"..\program files\microsoft visual studio\vc98\include\ntddscsi.h"\
+	"..\program files\microsoft visual studio\vc98\include\ntddstor.h"\
+	".\AboutBox.h"\
+	".\cdvd.h"\
+	".\cdvddraft.h"\
+	".\cdvdmisc.h"\
+	".\Config.h"\
+	".\constants.h"\
+	".\PS2Edefs.h"\
+	".\PS2Etypes.h"\
+	".\typedefs.h"\
+	".\winaspi\scsidefs.h"\
+	".\winaspi\wnaspi32.h"\
+	
+
+.\cdvddraft.rc : \
+	".\bitmap1.bmp"\
+	".\res\cdvddraft.rc2"\
+	
+
+.\cdvdmisc.cpp : \
+	"..\program files\microsoft visual studio\vc98\include\devioctl.h"\
+	"..\program files\microsoft visual studio\vc98\include\ntddcdrm.h"\
+	"..\program files\microsoft visual studio\vc98\include\ntdddisk.h"\
+	"..\program files\microsoft visual studio\vc98\include\ntddscsi.h"\
+	"..\program files\microsoft visual studio\vc98\include\ntddstor.h"\
+	".\cdvd.h"\
+	".\cdvddraft.h"\
+	".\cdvdmisc.h"\
+	".\constants.h"\
+	".\PS2Edefs.h"\
+	".\PS2Etypes.h"\
+	".\typedefs.h"\
+	".\winaspi\scsidefs.h"\
+	".\winaspi\wnaspi32.h"\
+	
+
+.\StdAfx.cpp : \
+	"..\mssdk\include\basetsd.h"\
+	".\StdAfx.h"\
+	
+
+.\aspi.cpp : \
+	"..\program files\microsoft visual studio\vc98\include\devioctl.h"\
+	"..\program files\microsoft visual studio\vc98\include\ntddcdrm.h"\
+	"..\program files\microsoft visual studio\vc98\include\ntdddisk.h"\
+	"..\program files\microsoft visual studio\vc98\include\ntddscsi.h"\
+	"..\program files\microsoft visual studio\vc98\include\ntddstor.h"\
+	".\cdvd.h"\
+	".\constants.h"\
+	".\typedefs.h"\
+	".\winaspi\scsidefs.h"\
+	".\winaspi\wnaspi32.h"\
+	
+
+.\cdvd.cpp : \
+	"..\program files\microsoft visual studio\vc98\include\devioctl.h"\
+	"..\program files\microsoft visual studio\vc98\include\ntddcdrm.h"\
+	"..\program files\microsoft visual studio\vc98\include\ntdddisk.h"\
+	"..\program files\microsoft visual studio\vc98\include\ntddscsi.h"\
+	"..\program files\microsoft visual studio\vc98\include\ntddstor.h"\
+	".\cdvd.h"\
+	".\constants.h"\
+	".\typedefs.h"\
+	".\winaspi\scsidefs.h"\
+	".\winaspi\wnaspi32.h"\
+	
+
+.\ioctl.cpp : \
+	"..\program files\microsoft visual studio\vc98\include\devioctl.h"\
+	"..\program files\microsoft visual studio\vc98\include\ntddcdrm.h"\
+	"..\program files\microsoft visual studio\vc98\include\ntdddisk.h"\
+	"..\program files\microsoft visual studio\vc98\include\ntddscsi.h"\
+	"..\program files\microsoft visual studio\vc98\include\ntddstor.h"\
+	".\cdvd.h"\
+	".\constants.h"\
+	".\typedefs.h"\
+	".\winaspi\scsidefs.h"\
+	".\winaspi\wnaspi32.h"\
+	

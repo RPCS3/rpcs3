@@ -1,0 +1,273 @@
+Developers Blog
+===============
+
+This file is mainly an R&D document containing developers findings. The aim is
+ to have it as much accurate as possible. Each item has to contain a number(ID),
+ the name of developer, revisions history and a short description.
+Also, this document will serve as a pinboard - will contain coding rules,
+ explanations on implementation of different parts of the emulator, suggestions,
+ questions and ideas.
+
+
+==============================================================================
+==============================================================================
+==============================================================================
+
+[ ID ] 4
+[name] Florin
+[desc] PS2 info dumping project
+[hist] 2006-05-08 initial version
+
+The emulator needs some information from a Playstation2 console.
+We used to require the 'bios' software. In order to get better results
+ more and more information was needed. So here are some guidelines
+ on what we need and what we don't need from the console.
+Also, a new dumper and handling of these infos in the emu are in work.
+
+a. The so-called 'bios', is actualy rom0 found in consoles, devkits,
+   test-kits and PSX at address 0xBFC00000 on both EE and IOP.
+   [!] Note that on 75xxx the EE side bios mismatch zone fields,
+       so it is recomended to make a IOP side dump.
+b. Rom1 and Erom contain DvdPlayer related software and are located
+   starting with 0xBE000000 on PS2s from 18000 and up. Over various
+   versions, the size of rom1 and size and position of erom changed.
+   They used to be dumped separately, the new dumper will simplify this,
+   there'll only one file containing both rom1 and erom (2M or 4M).
+   [!] Note that on 70xxx and 75xxx (PStwo's) the dumping of erom from EE
+       is not possible, the correct dump is done only from IOP!
+   [!] rom1 and erom are identical for same generation for all zones.
+   In order to be able to run the dvdplayer code in the emulator, it needs
+   to be pre-decrypted. EROMDRV and DVDELF will have some 'decrypt' patches.
+c. NVM (Non Volatile Memory) is 1K of code and provide valuable info about
+   console model and region. 10000 and 15000 don't contain the model name.
+   PStwo's contain the zone codes making possible to have a single version
+   of the rom for all zones.
+d. Rom2 is found only in Chinese PS2s (50009, 70009...) and contains
+   a font file: GB18030. It is located at 0xBE400000. It was (w/o
+   justification) assumed that it is as big as rom1. There is no need to
+   dump it on any other console than chinese. The size is to be calculated
+   from the filesystem (as rom0 and rom1, it has romfs).
+e. BBA (BroadBand Adapter) info is not needed to be dumped. At least not
+   for the emulator itself, maybe for the DEV9 plugin. Anyway, it's just
+   a MAC address that can be made up.
+f. The current dumper is reading CDVD Mecha version. This will be replaced
+   by a more complete information file that will contain the following info:
+   from [EE]
+	CPU revision - revision code from COP0->PRId register
+		easier read from (u16)GetCop0(15)
+		high byte is 0x2E for EE
+		low byte is: high nibble major, low nibble minor of revision
+	FPU revision - revision code from COP1->control register 0
+		same description as for cpu PRId
+	VUs revision - hum, i'm not aware of any revision for them :(
+	VUs memory   - local and micro memory sizes are not detected
+	GS  revision - upper halfword in CSR register
+		high byte is ID = 0x55
+		low bytes is major.minor (per nibbles)
+	GS mem       - is 4M
+	IPU revision - hum, i'm not aware of any revision for IPU :(
+	Caches       - instruction and data cache sizes are read from
+		COP0->Config register
+		easier read from GetCop0(16).
+	MEM          - total RAM available
+		easier read with Syscall +127 - GetMemorySize()
+		the values are: 32M for console and test-kits,
+		128M for devkits and 64M for PSX
+		the size is not roughly detected. As devkits have multiple
+		boot modes (128M or 64M).
+   from [IOP]
+	CPU revision - revision code from COP0->PRId register
+		high byte seems to be 0
+		low byte is major.minor (per nibbles)
+		initial japs have major=1,
+		most of the consoles have major=2,
+		75xxx have a new IOP processor with major=3
+	Caches       - are known to be 4K-I$; 1K-D$
+		0xFFFE0130 is CACHE_CONFIG register...
+	MEM          - total RAM available
+		easier to read with QueryMemSize()
+		the values are: 2M for consoles and test-kits,
+		8M for devkits and PSX
+		again, the size is incorrectly read :)
+	SPU mem      - 2M (any method of detection?)
+	CDVD mecha   - version of CDVD controller
+		Scmd 0x03 with subcode 0x00 (outsize=4)
+		the first byte is the MG-encryption code
+		second is major, third is minor, fourth is [2b completed]
+	     meka    - i don't know; not supported on early consoles
+		Scmd 0x03 with subcode 0x90 (outsize=1+1)
+	DEV9 revision- type of DEV9 device: 0x2x for PCMCIA, 0x3x for EXPBAY
+		*(vu16*)BF80146E
+	USB OHCI rev - Hc_revision of the OHCI controller
+		*(vu32*)0xBF801600
+	ILINK rev/id - I'm not sure of this one, on ps2's that don't have
+		firewire anymore, the value is 0xFF; on 10000 is random
+		*(vu32*)0xBF808480 and *(vu32*)0xBF808500 (looks like mirror)
+
+g. The dumper will sign the dumped content, so John Doe cannot play easily
+   with the bios data ;) The emu works correctly with good data/food.
+
+h. I'm thinking of a method to check for modified content (dumps made with a
+   chipped console). Probably, it will be done in the emu and presented as a
+   warrning.
+
+
+==============================================================================
+==============================================================================
+==============================================================================
+
+[ ID ] 3
+[name] auMatt
+[desc] PS2 NVM Data not 100%
+[hist] 2006-05-07 initial version
+
+             Ёv0-v8 Ё  v9-   Ё Bits  Ё Bytes ╨
+мммммммммммммьмммммммьмммммммьмммммммьммммммм╧
+мммммммммммммьмммммммьмммммммьмммммммьммммммм╧
+PS1 Disc Spd Ё 0x300 Ё 0x2c0 Ё       Ё       ╨
+PS1 Texture  Ё 0x300 Ё 0x2c0 Ё       Ё       ╨
+Video Output Ё 0x300 Ё 0x2c0 Ё       Ё       ╨
+SPDIF        Ё 0x310 Ё 0x2c0 Ё   0   Ё       ╨
+A/R          Ё 0x310 Ё 0x2c0 Ё 1 & 2 Ё       ╨
+Language     Ё 0x311 Ё 0x2c1 Ё  All  Ё       ╨
+TimeZone     Ё 0x312 Ё 0x2c2 Ё       Ё       ╨
+Summer Time  Ё 0x312 Ё 0x2c2 Ё   3   Ё       ╨
+Time Format  Ё 0x312 Ё 0x2c2 Ё   5   Ё       ╨
+DateNotation Ё 0x312 Ё 0x2c2 Ё 6 & 7 Ё       ╨
+TimeZone     Ё 0x313 Ё 0x2c3 Ё  All  Ё       ╨
+TimeZone     Ё 0x315 Ё 0x2c5 Ё  All  Ё       ╨
+Model Number Ё 0x1a0 Ё 0x1b0 Ё       Ё   16  ╨
+Console ID   Ё 0x1c8 Ё 0x1f0 Ё       Ё   8   ╨
+ILink ID     Ё 0x1c0 Ё 0x1e0 Ё       Ё   8   ╨
+Date Stamp   Ё 0x180 Ё       Ё       Ё   16  ╨
+Date Stamp   Ё 0x1e0 Ё       Ё       Ё   16  ╨
+Date Stamp   Ё 0x1f0 Ё       Ё       Ё   16  ╨
+Rem. Control Ё       Ё 0x2c4 Ё   5   Ё       ╨
+Checksum     Ё 0x31f Ё 0x2cf Ё  All  Ё       ╨
+
+Checksum is calculated by the previous 15 bytes added together, then ANDed with 0xFF
+Serial Number of Console can be obtained from bytes 7,6 & 5 of the Console ID in dec.
+
+
+==============================================================================
+==============================================================================
+==============================================================================
+
+[ ID ] 2
+[name] Florin
+[desc] PS2 bios versioning
+[hist] 2006-04-30 initial version
+
+MG zone - the MagicGate decryption zone. You can find the code as one of the bits
+	  in the byte at offset +1C in MagicGate encrypted files
+PS1 drv - the letter for PS1VERx files in PStwo rom0
+ROMVER  - has the following format VVvvZTYYYYMMDD in 14 bytes
+	  VV, vv are the version of the bios in BCD
+	  Z is zone code, see below
+	  T is type of the console: C - consumer console, D - devkit/test console
+	  YYYYMMDD is date of the bios
+	- BxDATA-SYSTEM, BxEXEC-SYSTEM, BxEXEC-DVDPLAYER uses Z code in place of 'x'
+	  I: default, Japan; A: Usa, Asia; E: Europe, Oceania, Russia; C: China
+VERSTR  - the code from that file in rom0
+OSDVER  - VVvvZlng is the format of the file for scph5xxxx. in PStwo the last 4 letters
+	  are read from NVM, offset +180 7 chars (ROMVER:1|OSDVER:4|VERSTR:1|DVDID:1)
+mecha   - version read from CDVD SCmd 0x03:0x00
+
+The following table is far from complete...
+
+         ЁJapan Ё USA  ЁAusNz Ё  UK  ЁEuropeЁKorea Ё  HK  ЁTaiwanЁRussiaЁChina ЁMexic ╨
+мммммммммьммммммьммммммьммммммьммммммьммммммьммммммьммммммьммммммьммммммьммммммьмммммм╧
+мммммммммьммммммьммммммьммммммьммммммьммммммьммммммьммммммьммммммьммммммьммммммьмммммм╧
+MG zone  Ё 0/J  Ё 1/U  Ё 3/O  Ё 2/E  Ё 2/E  Ё 4/A  Ё 4/A  Ё 4/A  Ё 5/R  Ё 6/C  Ё 7/M  ╨
+PS1 drv  Ё  J   Ё  A   Ё  E   Ё  E   Ё  E   Ё  H   Ё  H   Ё  H   Ё  E   Ё  C   Ё  A   ╨
+ROMVER   Ё0 J   Ё1 A   Ё2 E   Ё2 E   Ё2 E   Ё1 H   Ё1 H   Ё1 H   Ё2 E   Ё3 C   Ё1 A   ╨
+VERSTR   Ё  J   Ё  A   Ё  E   Ё  E   Ё  E   Ё  J   Ё  J   Ё  J   Ё  E   Ё  J   Ё  A   ╨
+OSDVER   Ё0 JjpnЁ1 AengЁ2 EengЁ2 EengЁ2 EengЁ5 KkorЁ6 HtchЁ6 HtchЁ4 RrusЁ3 CschЁ Aspa?╨
+дддддддддеддддддеддддддеддддддеддддддеддддддеддддддеддддддеддддддеддддддеддддддедддддд╤
+v0   scphЁ10000 цддддддеддддддеддддддеддддддеддддддеддддддеддддддеддддддеддддддедддддд╤
+    mechaЁ0.12.0цддддддеддддддеддддддеддддддеддддддеддддддеддддддеддддддеддддддедддддд╤
+      verЁ0100JCцддддддеддддддеддддддеддддддеддддддеддддддеддддддеддддддеддддддедддддд╤
+     dateЁ000117цддддддеддддддеддддддеддддддеддддддеддддддеддддддеддддддеддддддедддддд╤
+     scphЁ15000 цддддддеддддддеддддддеддддддеддддддеддддддеддддддеддддддеддддддедддддд╤
+    mechaЁ0.18.0цддддддеддддддеддддддеддддддеддддддеддддддеддддддеддддддеддддддедддддд╤
+      verЁ0101JCцддддддеддддддеддддддеддддддеддддддеддддддеддддддеддддддеддддддедддддд╤
+     dateЁ000217цддддддеддддддеддддддеддддддеддддддеддддддеддддддеддддддеддддддедддддд╤
+     scphЁ18000 цддддддеддддддеддддддеддддддеддддддеддддддеддддддеддддддеддддддедддддд╤
+    mechaЁ0.22.0цддддддеддддддеддддддеддддддеддддддеддддддеддддддеддддддеддддддедддддд╤
+      verЁ0120JCцддддддеддддддеддддддеддддддеддддддеддддддеддддддеддддддеддддддедддддд╤
+     dateЁ001027цддддддеддддддеддддддеддддддеддддддеддддддеддддддеддддддеддддддедддддд╤
+мммммммммьммммммьммммммьммммммьммммммьммммммьммммммьммммммьммммммьммммммьммммммьмммммм╧
+v1   scphЁ30000 Ё30001 цддддддеддддддеддддддеддддддеддддддеддддддеддддддеддддддедддддд╤
+v2       Ё30000 Ё30001 цддддддеддддддеддддддеддддддеддддддеддддддеддддддеддддддедддддд╤
+v3       Ё30000 Ё30001 Ё30002 Ё30003 Ё30004 цддддддеддддддеддддддеддддддеддддддедддддд╤
+мммммммммьммммммьммммммьммммммьммммммьммммммьммммммьммммммьммммммьммммммьммммммьмммммм╧
+v4   scphЁ30000 Ё30001 Ё30002 Ё30003 Ё30004 цддддддеддддддеддддддеддддддеддддддедддддд╤
+    mechaЁ      Ё      Ё      Ё      Ё      цддддддеддддддеддддддеддддддеддддддедддддд╤
+      verЁ      Ё      Ё      Ё0120ECЁ      цддддддеддддддеддддддеддддддеддддддедддддд╤
+     dateЁ      Ё      Ё      Ё000902Ё      цддддддеддддддеддддддеддддддеддддддедддддд╤
+         Ё35000 Ё35001 Ё35002 Ё35003 Ё35004 Ё35005 цддддддеддддддеддддддеддддддедддддд╤
+мммммммммьммммммьммммммьммммммьммммммьммммммьммммммьммммммьммммммьммммммьммммммьмммммм╧
+v5       Ё30000 Ё30001 Ё30002 Ё30003 Ё30004 Ё30005 Ё      Ё      цддддддеддддддедддддд╤
+     scphЁ30000RЁ30001RЁ30002RЁ30003RЁ30004RЁ30005RЁ30006RЁ30007Rцддддддеддддддедддддд╤
+    mechaЁ0.32.0Ё      Ё      Ё2.32.0Ё      Ё      Ё      Ё      цддддддеддддддедддддд╤
+      verЁ0160JCЁ      Ё      Ё0160ECЁ0160ECЁ      Ё      Ё      цддддддеддддддедддддд╤
+     dateЁ011004Ё      Ё      Ё011004Ё011004Ё      Ё      Ё      цддддддеддддддедддддд╤
+v6       Ё      Ё      Ё      Ё      Ё      Ё      Ё      Ё      цддддддеддддддедддддд╤
+мммммммммьммммммьммммммьммммммьммммммьммммммьммммммьммммммьммммммьммммммьммммммьмммммм╧
+v7   scphЁ37000 цддддддеддддддеддддддеддддддеддддддеддддддеддддддеддддддеддддддедддддд╤
+         Ё39000 Ё39001 Ё39002 Ё39003 Ё39004 Ё39005 Ё39006 Ё39007 Ё39008 цддддддедддддд╤
+    mechaЁ      Ё1.36.0Ё      Ё      Ё      Ё      Ё      Ё      Ё      цддддддедддддд╤
+      verЁ      Ё0160ACЁ      Ё      Ё      Ё      Ё      Ё      Ё      цддддддедддддд╤
+     dateЁ      Ё020207Ё      Ё      Ё      Ё      Ё      Ё      Ё      цддддддедддддд╤
+         цдддддд╢39001Nцддддддеддддддеддддддеддддддеддддддеддддддеддддддедддддд╢39010N╨
+дддддддддеддддддеддддддеддддддеддддддеддддддеддддддеддддддеддддддеддддддеддддддедддддд╤
+v8   scphЁ39000 цддддддеддддддеддддддеддддддедддддд╢39006 цддддддеддддддеддддддедддддд╤
+    mechaЁ0.38.0Ё      Ё      Ё      Ё      Ё      Ё      Ё      Ё      Ё      Ё      ╨
+      verЁ0160JCЁ      Ё      Ё      Ё      Ё      Ё      Ё      Ё      Ё      Ё      ╨
+     dateЁ020426Ё      Ё      Ё      Ё      Ё      Ё      Ё      Ё      Ё      Ё      ╨
+мммммммммьммммммьммммммьммммммьммммммьммммммьммммммьммммммьммммммьммммммьммммммьмммммм╧
+v9   scphЁ50000 Ё50001 Ё50002 Ё50003 Ё50004 Ё50005NЁ50006 Ё50007 Ё50008 Ё50009 цдддддд╤
+         цдддддд╢50001Nцддддддеддддддеддддддеддддддеддддддеддддддеддддддедддддд╢50010N╨
+         Ё55000 цддддддеддддддеддддддедддддд╢55005NЁ55006 Ё55007 цддддддеддддддедддддд╤
+дддддддддеддддддеддддддеддддддеддддддеддддддеддддддеддддддеддддддеддддддеддддддедддддд╤
+v10  scphЁ      Ё50001 Ё50002 Ё50003 Ё50004 Ё      Ё50006 Ё50007 Ё      Ё50009 Ё50010 ╨
+    mechaЁ      Ё      Ё      Ё      Ё      Ё      Ё4.54.0Ё4.??.0Ё      Ё6.??.0Ё      ╨
+      verЁ      Ё      Ё      Ё      Ё0190ECЁ      Ё0190HCЁ0190HCЁ      Ё0190CCЁ      ╨
+     dateЁ      Ё      Ё      Ё      Ё030623Ё      Ё030623Ё030623Ё      Ё030623Ё      ╨
+v11      Ё      Ё      Ё      Ё      Ё50004 Ё      Ё      Ё      Ё      Ё      Ё      ╨Mexic  USA
+мммммммммьммммммьммммммьммммммьммммммьммммммьммммммьммммммьммммммьммммммьммммммьммммммнммммммямммммм╩
+v12  scphЁ70000 цдддддд╢70002 Ё70003 Ё70004 Ё70005 Ё70006 Ё70007 Ё70008 Ё70009 цдддддд╢70011 Ё70012 ╨
+    mechaЁ      цдддддд╢3.62.0Ё2.62.0Ё2.??.0Ё      Ё4.64.0Ё      Ё5.??.0Ё      цдддддд╢      Ё1.60.0╨
+      verЁ0200JCцдддддд╢0200ECЁ0200ECЁ0200ECЁ      Ё0200HCЁ      Ё0200ECЁ      цдддддд╢      Ё0200AC╨
+     dateЁ040614цдддддд╢040614Ё040614Ё040614Ё      Ё040614Ё      Ё040614Ё      цдддддд╢      Ё040614╨
+v13  scphЁ      Ё70001 Ё70002 Ё70003 Ё70004 Ё      Ё      Ё      Ё      Ё      Ё      лммммммомммммм╪
+мммммммммьммммммьммммммьммммммьммммммьммммммьммммммьммммммьммммммьммммммьммммммьмммммм╧
+v14  scphЁ75000 Ё75001 Ё75002 Ё75003 Ё75004 Ё75005 Ё75006 Ё75007 Ё75008 цдддддд╢75010 ╨
+    mechaЁ      Ё1.66.0Ё3.66.0Ё      Ё      Ё      Ё      Ё      Ё      цдддддд╢      ╨
+      verЁ      Ё0220ACЁ0220ECЁ      Ё      Ё      Ё      Ё      Ё      цдддддд╢      ╨
+     dateЁ      Ё050620Ё050620Ё      Ё      Ё      Ё      Ё      Ё      цдддддд╢      ╨
+дддддддддаддддддаддддддаддддддаддддддаддддддаддддддаддддддаддддддаддддддаддддддадддддд╫
+
+
+==============================================================================
+==============================================================================
+==============================================================================
+
+[ ID ] 1
+[name] Florin
+[desc] CVS management rules
+[hist] 2006-04-30 initial version
+
+Please do not commit on CVS temporary files or those made by development tools
+ (IDEs). Eg: *.suo/aps/opt/plg/ncb/exp
+Keep it clean and before commiting a new module see the previous structure and
+ naming rules. If unsure about how to do any opperation please ASK. please ASK!
+There's no rush ;)
+Also, I'm considering switching to SVN, as CVS seems to be *abandoned* by
+ sourceforge.net
+Any change to sources has to be commited to the public CVS. The risk of
+ stealing is faced by any open-source developer - the difference is the
+ quality! The original will always stand up ;)
+Try not to break the source by your patches. Although linux and 64-bit versions
+ are not maintained atm, your changes should be done with all versions in mind.
+Happy coding :)

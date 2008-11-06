@@ -1,0 +1,12 @@
+; RAO2
+; c0.rgb = BGCOLOR
+; c0.a = ALP
+; c1.a = MMOD
+; c2.a = SLBG
+
+ps_1_1
+
+tex t1
+
+mov r0, c2
+cnd r0, r0.a, c0, t1

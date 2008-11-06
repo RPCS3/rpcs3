@@ -1,0 +1,4 @@
+gametitle=Tomb Raider Legend [SLES 53908] (E) [05177ECE]
+comment=Patch by CKemu
+//Skip Videos (sceMpegIsEnd)
+patch=0,EE,00369988,word,24020001

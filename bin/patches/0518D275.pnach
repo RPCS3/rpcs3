@@ -1,0 +1,4 @@
+gametitle=Need For Speed Most Wanted (SLUS_212.67)
+comment=Skips Video - deny file By General Plot
+//Skip Videos
+patch=0,EE,00242414,word,00000000

@@ -1,0 +1,4 @@
+gametitle=Kessen 2 [SLUS 20275] (U)
+comment=Skips Video (sceMpegIsEnd)
+//Skip Videos by General Plot
+patch=0,EE,00108970,word,24020001

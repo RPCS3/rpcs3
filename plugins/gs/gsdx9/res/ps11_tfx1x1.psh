@@ -1,0 +1,13 @@
+; TFX = 1 (DECAL) | TCC = x | At = 0.0 - 1.0
+; Rv = Rt
+; Gv = Gt
+; Bv = Bt
+; Av = At
+
+ps_1_1
+
+tex t0
+
+mov r0, t0
+lrp r0.rgb, v1.a, r0, v1
+

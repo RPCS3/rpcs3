@@ -1,0 +1,49 @@
+; cdvddraft.def : Declares the module parameters for the DLL.
+
+LIBRARY      "cdvddraft"
+DESCRIPTION  'cdvddraft Windows Dynamic Link Library'
+
+EXPORTS
+    ; Explicit exports can go here
+
+	CDVDinit			
+	CDVDshutdown		
+	CDVDopen			
+	CDVDclose			
+	CDVDreadTrack		
+	CDVDgetBuffer		
+	CDVDreadSubQ
+	CDVDgetTN			
+	CDVDgetTD			
+	CDVDgetTOC
+
+	CDVDconfigure		
+	CDVDtest			
+	CDVDabout			 
+	CDVDgetDiskType
+	CDVDgetTrayStatus
+    CDVDctrlTrayOpen
+    CDVDctrlTrayClose
+
+	PS2EgetLibType		
+	PS2EgetLibName		
+	PS2EgetLibVersion2	
+
+	PSEgetLibType		
+	PSEgetLibName		
+	PSEgetLibVersion
+		
+	CDRinit				
+	CDRshutdown			
+	CDRopen				
+	CDRclose			
+	CDRconfigure		
+	CDRabout			
+	CDRtest				
+    CDRgetTN       
+    CDRgetTD       
+    CDRreadTrack   
+    CDRgetBuffer   
+    CDRplay        
+    CDRstop    
+	CDRgetStatus

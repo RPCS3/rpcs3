@@ -1,0 +1,4 @@
+gametitle=Carmen Sandiego-The Secret Of The Stolen Drums [SLES52143] (E)
+comment= patches by Nachbrenner
+//Skip MpegPlay
+patch=0,EE,0011efd0,word,03e00008

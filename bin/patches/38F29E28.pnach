@@ -1,0 +1,4 @@
+gametitle=7 cavalry of molmoth NTSC JAPAN
+comment=skips pss intro
+//Skip Videos
+patch=0,EE,00284b58,word,24020001

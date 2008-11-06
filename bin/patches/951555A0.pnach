@@ -1,0 +1,4 @@
+gametitle=Disgaea 2 - Cursed Memories [SLUS 21397] (U) 
+comment=
+//ZeroGS Patch - GAME_NODEPTHRESOLVE
+zerogs=00008000

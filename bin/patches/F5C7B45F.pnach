@@ -1,0 +1,4 @@
+gametitle=Need For Speed Underground 2
+comment=Video Skip by Refraction
+//Skip videos
+patch=0,EE,00293538,word,00000000

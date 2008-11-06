@@ -1,0 +1,20 @@
+gametitle=GTC Africa [SLES 50472] (E)
+comment=since beta 01/MAR/2004 PLAYABLE!!!
+//Unlock All Challenges
+patch=0,EE,0010a8bc,word,ac23a588
+patch=0,EE,0010a8d4,word,ac23a588
+//Unlock All Championships
+//patch=0,EE,0010a8dc,word,ac23a594
+//Unlock All Single Races
+patch=0,EE,0010a8e4,word,ac23a598
+//"-no_music"
+//patch=0,EE,0010a7e4,word,ac20a534
+//@1234 PlayMPEGFile
+patch=0,EE,0010a824,word,ac20a554
+//@1242 DrawDebugText
+patch=0,EE,0010a87c,word,ac20a578
+//Disable HUDRender
+patch=0,EE,001996c0,word,03e00008
+patch=0,EE,001996c4,word,00000000
+//wm: fix VIF0_STAT (obsolete)
+//patch=0,EE,001f027c,word,00000000

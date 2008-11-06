@@ -1,0 +1,4 @@
+gametitle=James Cameron's Dark Angel [SLES 51333] (E)
+comment= patches by Nachbrenner
+//Skip FMV
+// patch=0,EE,0021CC24,word,00000000

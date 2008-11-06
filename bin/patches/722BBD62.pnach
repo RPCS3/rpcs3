@@ -1,0 +1,4 @@
+gametitle=FIFA Football 2003 [SLES 51197] (E)
+comment=patches by nachbrenner
+// fix WaitForDMACompletion__Q212EAGLInternal6DmaMgr
+patch=0,EE,0037b310,word,00000000

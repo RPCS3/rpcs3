@@ -1,0 +1,43 @@
+# Project: USBnull
+# Makefile created by Dev-C++ 4.9.9.2
+
+CPP  = mingw32-g++.exe
+CC   = mingw32-gcc.exe
+WINDRES = windres.exe
+RES  = Obj//USBnull_private.res
+OBJ  = Obj//Win32.o Obj//Config.o Obj//USB.o $(RES)
+LINKOBJ  = Obj//Win32.o Obj//Config.o Obj//USB.o $(RES)
+LIBS =  -L"C:/Develop/Dev-Cpp/lib" --def ../plugin.def -lcomctl32 -lwsock32 -lwinmm -lgdi32 -lcomdlg32  
+INCS =  -I"C:/Develop/Dev-Cpp/include"  -I"../"  -I"../../"  -I"../.." 
+CXXINCS =  -I"C:/Develop/Dev-Cpp/include"  -I"../"  -I"../../"  -I"../.." 
+BIN  = USBnull.dll
+CXXFLAGS = $(CXXINCS)  
+CFLAGS = $(INCS) -Wall -O2 -fomit-frame-pointer -D__WIN32__ -D__MINGW32__  
+RM = rm -f
+
+.PHONY: all all-before all-after clean clean-custom
+
+all: all-before USBnull.dll all-after
+
+
+clean: clean-custom
+	${RM} $(OBJ) $(BIN)
+
+DLLWRAP=dllwrap.exe
+DEFFILE=libUSBnull.def
+STATICLIB=libUSBnull.a
+
+$(BIN): $(LINKOBJ)
+	$(DLLWRAP) --output-def $(DEFFILE) --implib $(STATICLIB) $(LINKOBJ) $(LIBS) -o $(BIN)
+
+Obj//Win32.o: ../Win32.c
+	$(CC) -c ../Win32.c -o Obj//Win32.o $(CFLAGS)
+
+Obj//Config.o: ../Config.c
+	$(CC) -c ../Config.c -o Obj//Config.o $(CFLAGS)
+
+Obj//USB.o: ../../USB.c
+	$(CC) -c ../../USB.c -o Obj//USB.o $(CFLAGS)
+
+Obj//USBnull_private.res: USBnull_private.rc ../USBnull.rc 
+	$(WINDRES) -i USBnull_private.rc --input-format=rc -o Obj//USBnull_private.res -O coff  --include-dir ../mingw --include-dir ../

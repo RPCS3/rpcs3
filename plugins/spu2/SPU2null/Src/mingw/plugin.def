@@ -1,0 +1,22 @@
+EXPORTS
+    PS2EgetLibName = PS2EgetLibName@0 @2
+    PS2EgetLibType = PS2EgetLibType@0 @3
+    PS2EgetLibVersion2 = PS2EgetLibVersion2@4 @4
+    SPU2about = SPU2about@0 @5
+    SPU2async = SPU2async@4 @6
+    SPU2close = SPU2close@0 @7
+    SPU2configure = SPU2configure@0 @8
+    SPU2freeze = SPU2freeze@8 @9
+    SPU2init = SPU2init@0 @10
+    SPU2interruptDMA4 = SPU2interruptDMA4@0 @11
+    SPU2interruptDMA7 = SPU2interruptDMA7@0 @12
+    SPU2irqCallback = SPU2irqCallback@4 @13
+    SPU2open = SPU2open@4 @14
+    SPU2read = SPU2read@4 @15
+    SPU2readDMA4Mem = SPU2readDMA4Mem@8 @16
+    SPU2readDMA7Mem = SPU2readDMA7Mem@8 @17
+    SPU2shutdown = SPU2shutdown@0 @18
+    SPU2test = SPU2test@0 @19
+    SPU2write = SPU2write@8 @20
+    SPU2writeDMA4Mem = SPU2writeDMA4Mem@8 @21
+    SPU2writeDMA7Mem = SPU2writeDMA7Mem@8 @22

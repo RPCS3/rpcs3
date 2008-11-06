@@ -1,0 +1,4 @@
+gametitle=Psyvariar Revision [SLPM 62371] (J)
+comment=
+//Skip Videos
+patch=0,EE,00155938,word,00000000

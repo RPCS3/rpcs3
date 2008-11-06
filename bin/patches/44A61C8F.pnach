@@ -1,0 +1,4 @@
+gametitle=Gran Turismo 4 [SCES 51719] (E) [44A61C8F]
+comment=patches by nachbrenner
+//skip Videos
+patch=1,EE,00100D84,word,24100001

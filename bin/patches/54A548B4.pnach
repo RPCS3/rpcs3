@@ -1,0 +1,6 @@
+gametitle= Crash N Burn
+comment= Mpegisend
+//Skip Videos
+//patch=0,EE,0039fd50,word,24020001
+//ZeroGS Patch - GAME_EXACTCOLOR
+zerogs=00000020

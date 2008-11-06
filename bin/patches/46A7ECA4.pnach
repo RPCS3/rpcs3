@@ -1,0 +1,4 @@
+gametitle=Guilty Gear Isuka [SLES 53284] (E) [46A7ECA4]
+comment=Patch By CKemu
+//Skip Videos
+patch=0,EE,00107f10,word,24020001

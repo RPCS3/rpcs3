@@ -1,0 +1,9 @@
+gametitle=Formula One 2001 [SCES 50004] (E)
+comment=patches by Nachbrenner
+//Skip F1_Intro Video
+//patch=0,EE,0010A1EC,word,00000000
+//Skip Credits Video
+//patch=0,EE,0021A038,word,00000000
+//Skip FIA/ANIM256.FLC
+//patch=0,EE,00162570,word,03e00008
+//patch=0,EE,00162574,word,00000000

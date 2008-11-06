@@ -1,0 +1,20 @@
+gametitle=Red Faction II [SLES 51133] (E)
+comment=comment=patches by Nachbrenner
+//Skip Videos
+//patch=0,EE,001afbc8,word,24020001
+//Boot Language Modifier (use only one of these)
+//English
+//patch=0,EE,0015bca8,word,24020001
+//Français
+//patch=0,EE,0015bca8,word,24020002
+//Deutsch
+//patch=0,EE,0015bca8,word,24020004
+//obsolete:
+//skip borked VU0 stuff
+//patch=0,EE,0020a464,word,00000000
+//patch=0,EE,00180eb0,word,03e00008 //slerp_src
+//patch=0,EE,00180eb4,word,00000000
+//new VU0 fix: ctc2 t0, CMSAR0 -> li t0,0
+//patch=0,EE,00180df8,word,24080000 
+//patch=0,EE,00181738,word,24080000
+//patch=0,EE,001811ac,word,24080000  

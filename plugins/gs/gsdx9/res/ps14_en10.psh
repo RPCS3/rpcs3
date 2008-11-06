@@ -1,0 +1,20 @@
+; RAO1
+; c0.rgb = BGCOLOR
+; c0.a = ALP
+; c1.a = MMOD
+; c2.a = SLBG
+
+ps_1_4
+
+texld r0, t0
+mov r1, r0 // FIXME
+
+mov r0, c1
+cnd r0.a, r0.a, c0, r1
+mul r2, r1, r0.a
+
+mov r0.ga, r2
+mov r0.b, r2.r
+mov r0.r, r2.b
+
+

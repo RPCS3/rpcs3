@@ -1,0 +1,19 @@
+#########################################################################
+
+Version 1.2
+-----------
+- Pete: added an hack in CDVDgetTD for big dvds 
+- Pete: fixed a track size calculation bug
+
+
+Version 1.1
+-----------
+- Pete: added dvd support for Plextor PX-708A
+
+Version 1.0
+-----------
+- First release 
+  Pete Bernert: ported the P.E.Op.S. PSX cdr plugin to PS2 needs
+
+#########################################################################
+

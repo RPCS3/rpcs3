@@ -1,0 +1,4 @@
+gametitle=Erementar Gerad [SLPM 62623] (J)
+comment=patches by Nachbrenner
+//Skip Videos (sceMpegIsEnd)
+patch=0,EE,002861c8,word,24020001

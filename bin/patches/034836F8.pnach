@@ -1,0 +1,13 @@
+gametitle=Driving Emotion Type-S [SLPS 20007] (J)
+comment= patches by Nachbrenner
+//Skip OP_MOVIE
+//patch=0,EE,001c1818,word,1000000c
+//MTGS: fix GS_CSR in "sceGsExecStoreImage"
+patch=0,EE,00276ad0,word,34420002
+patch=0,EE,00276aa0,word,34630002
+//MTGS: fix GS_CSR in custom function
+patch=0,EE,00251ac4,word,00000000
+//disable BGM
+patch=0,EE,00221914,word,24020000
+patch=0,EE,002218c8,word,03e00008
+patch=0,EE,002218cc,word,00000000

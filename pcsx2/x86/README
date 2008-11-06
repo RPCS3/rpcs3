@@ -1,0 +1,12 @@
+PCSX2 x86 Recompilers - zerofrog(@gmail.com)
+    
+There are two types of x86 recompilers: x86-32 and x86-64. The code that both of them share is in the x86/ directory. Code for x86-32 is in the ix86-32/ and same goes for x86-64. The ix86/ dirctory contains the low level translation of x86 instructions to actual code, it is written to be used for both architectures. There are a lot of places where it was hard to separate 32bit from 64bit recompilers, so a lot of functions are surrounded by "#if(n)def __x86_64__" statements.
+
+It would be simple if the story ended here, but hte x86 recompilers use a lot of low level assembly routines, meaning that assembly has to be compiled for both windows x32/x64 versions and linux x32/x64 versions.
+
+For windows, the masm assembler is used (*.asm files)
+For linux, gcc is used (*.S files)
+
+Both assemblers use very different syntax, also some routines in x86-64 differ a lot from their 32bit counterparts. Therefore, you might see the same function implemented up to 4 times in assembly.
+
+(no, it's not fun maintaining 4 versions of the same thing... and it might be easier to use nasm, but that probably has its own unforseeable problems)

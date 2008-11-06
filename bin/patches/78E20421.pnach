@@ -1,0 +1,7 @@
+gametitle=Crimson Tears [SLPM 65575] (J)
+comment=patches by Nachbrenner, ported from CMX' US codes
+//Funds Increase When Buying Items From Shop
+patch=0,EE,0029b8fc,word,00641821
+//Infinite Health
+patch=0,EE,0028581c,word,C60101FC
+patch=0,EE,00285820,word,E6010200

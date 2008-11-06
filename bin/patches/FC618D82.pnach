@@ -1,0 +1,8 @@
+gametitle=Energy Airforce [SLPM 65177] (J)
+comment=patches by Nachbrenner
+//Skip Videos
+//patch=0,EE,00109f48,word,24020001
+//Lots of fuel
+patch=0,EE,002ef328,word,47110000
+//Infinite fuel
+patch=0,EE,00195964,word,00000000

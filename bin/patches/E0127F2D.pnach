@@ -1,0 +1,5 @@
+gametitle=Flatout
+comment=Skip Videos sceMpegIsEnd
+//patch by refraction
+//Skip Videos
+patch=0,EE,002b2490,word,24020001

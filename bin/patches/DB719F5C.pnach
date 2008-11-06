@@ -1,0 +1,7 @@
+gametitle=Gumball 3000 [SLES 50984] (E)
+comment=patches by Nachbrenner
+//skip FMV
+// patch=0,EE,00209c00,word,03e00008
+// patch=0,EE,00209c04,word,00000000
+//go ingame w/o 3D
+//patch=0,EE,00167da0,word,00000000

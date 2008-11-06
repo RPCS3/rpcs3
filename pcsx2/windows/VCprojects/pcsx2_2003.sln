@@ -1,0 +1,100 @@
+Microsoft Visual Studio Solution File, Format Version 8.00
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pcsx2", "pcsx2_2003.vcproj", "{1CEFD830-2B76-4596-A4EE-BCD7280A60BD}"
+	ProjectSection(ProjectDependencies) = postProject
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ZeroSPU2", "..\..\..\plugins\spu2\zerospu2\ZeroSPU2.vcproj", "{4DA8FB7A-A7C5-4FF9-82FA-BA385F3B3D00}"
+	ProjectSection(ProjectDependencies) = postProject
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ZeroPAD", "..\..\..\plugins\pad\zeropad\Windows\ZeroPAD.vcproj", "{4DA8FB7A-A7C5-4FF9-82FA-BA385F3B3D00}"
+	ProjectSection(ProjectDependencies) = postProject
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ZeroGS", "..\..\..\plugins\gs\zerogs\dx\Win32\zerogs.vcproj", "{2D4E85B2-F47F-4D65-B091-701E5C031DAC}"
+	ProjectSection(ProjectDependencies) = postProject
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ZeroGSShaders", "..\..\..\plugins\gs\zerogs\dx\ZeroGSShaders\ZeroGSShaders.vcproj", "{811D47CC-E5F0-456A-918E-5908005E8FC0}"
+	ProjectSection(ProjectDependencies) = postProject
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ZeroGSogl", "..\..\..\plugins\gs\zerogs\opengl\Win32\zerogsogl.vcproj", "{2D4E85B2-F47F-4D65-B091-701E5C031DAC}"
+	ProjectSection(ProjectDependencies) = postProject
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfiguration) = preSolution
+		Debug = Debug
+		Debug TLB = Debug TLB
+		Release = Release
+		Release (to Public) = Release (to Public)
+		Release TLB = Release TLB
+	EndGlobalSection
+	GlobalSection(ProjectConfiguration) = postSolution
+		{1CEFD830-2B76-4596-A4EE-BCD7280A60BD}.Debug.ActiveCfg = Debug|Win32
+		{1CEFD830-2B76-4596-A4EE-BCD7280A60BD}.Debug.Build.0 = Debug|Win32
+		{1CEFD830-2B76-4596-A4EE-BCD7280A60BD}.Debug TLB.ActiveCfg = Debut TLB|Win32
+		{1CEFD830-2B76-4596-A4EE-BCD7280A60BD}.Debug TLB.Build.0 = Debut TLB|Win32
+		{1CEFD830-2B76-4596-A4EE-BCD7280A60BD}.Release.ActiveCfg = Release|Win32
+		{1CEFD830-2B76-4596-A4EE-BCD7280A60BD}.Release.Build.0 = Release|Win32
+		{1CEFD830-2B76-4596-A4EE-BCD7280A60BD}.Release (to Public).ActiveCfg = Release (to Public)|Win32
+		{1CEFD830-2B76-4596-A4EE-BCD7280A60BD}.Release (to Public).Build.0 = Release (to Public)|Win32
+		{1CEFD830-2B76-4596-A4EE-BCD7280A60BD}.Release TLB.ActiveCfg = Release TLB|Win32
+		{1CEFD830-2B76-4596-A4EE-BCD7280A60BD}.Release TLB.Build.0 = Release TLB|Win32
+		{4DA8FB7A-A7C5-4FF9-82FA-BA385F3B3D00}.Debug.ActiveCfg = Debug|Win32
+		{4DA8FB7A-A7C5-4FF9-82FA-BA385F3B3D00}.Debug.Build.0 = Debug|Win32
+		{4DA8FB7A-A7C5-4FF9-82FA-BA385F3B3D00}.Debug TLB.ActiveCfg = Debug|Win32
+		{4DA8FB7A-A7C5-4FF9-82FA-BA385F3B3D00}.Debug TLB.Build.0 = Debug|Win32
+		{4DA8FB7A-A7C5-4FF9-82FA-BA385F3B3D00}.Release.ActiveCfg = Release|Win32
+		{4DA8FB7A-A7C5-4FF9-82FA-BA385F3B3D00}.Release.Build.0 = Release|Win32
+		{4DA8FB7A-A7C5-4FF9-82FA-BA385F3B3D00}.Release (to Public).ActiveCfg = Release|Win32
+		{4DA8FB7A-A7C5-4FF9-82FA-BA385F3B3D00}.Release (to Public).Build.0 = Release|Win32
+		{4DA8FB7A-A7C5-4FF9-82FA-BA385F3B3D00}.Release TLB.ActiveCfg = Release|Win32
+		{4DA8FB7A-A7C5-4FF9-82FA-BA385F3B3D00}.Release TLB.Build.0 = Release|Win32
+		{4DA8FB7A-A7C5-4FF9-82FA-BA385F3B3D00}.Debug.ActiveCfg = Debug|Win32
+		{4DA8FB7A-A7C5-4FF9-82FA-BA385F3B3D00}.Debug.Build.0 = Debug|Win32
+		{4DA8FB7A-A7C5-4FF9-82FA-BA385F3B3D00}.Debug TLB.ActiveCfg = Debug|Win32
+		{4DA8FB7A-A7C5-4FF9-82FA-BA385F3B3D00}.Debug TLB.Build.0 = Debug|Win32
+		{4DA8FB7A-A7C5-4FF9-82FA-BA385F3B3D00}.Release.ActiveCfg = Release|Win32
+		{4DA8FB7A-A7C5-4FF9-82FA-BA385F3B3D00}.Release.Build.0 = Release|Win32
+		{4DA8FB7A-A7C5-4FF9-82FA-BA385F3B3D00}.Release (to Public).ActiveCfg = Release|Win32
+		{4DA8FB7A-A7C5-4FF9-82FA-BA385F3B3D00}.Release (to Public).Build.0 = Release|Win32
+		{4DA8FB7A-A7C5-4FF9-82FA-BA385F3B3D00}.Release TLB.ActiveCfg = Release|Win32
+		{4DA8FB7A-A7C5-4FF9-82FA-BA385F3B3D00}.Release TLB.Build.0 = Release|Win32
+		{2D4E85B2-F47F-4D65-B091-701E5C031DAC}.Debug.ActiveCfg = Debug|Win32
+		{2D4E85B2-F47F-4D65-B091-701E5C031DAC}.Debug.Build.0 = Debug|Win32
+		{2D4E85B2-F47F-4D65-B091-701E5C031DAC}.Debug TLB.ActiveCfg = Debug|Win32
+		{2D4E85B2-F47F-4D65-B091-701E5C031DAC}.Debug TLB.Build.0 = Debug|Win32
+		{2D4E85B2-F47F-4D65-B091-701E5C031DAC}.Release.ActiveCfg = Release|Win32
+		{2D4E85B2-F47F-4D65-B091-701E5C031DAC}.Release.Build.0 = Release|Win32
+		{2D4E85B2-F47F-4D65-B091-701E5C031DAC}.Release (to Public).ActiveCfg = Release (to Public)|Win32
+		{2D4E85B2-F47F-4D65-B091-701E5C031DAC}.Release (to Public).Build.0 = Release (to Public)|Win32
+		{2D4E85B2-F47F-4D65-B091-701E5C031DAC}.Release TLB.ActiveCfg = Release (to Public)|Win32
+		{2D4E85B2-F47F-4D65-B091-701E5C031DAC}.Release TLB.Build.0 = Release (to Public)|Win32
+		{811D47CC-E5F0-456A-918E-5908005E8FC0}.Debug.ActiveCfg = Debug|Win32
+		{811D47CC-E5F0-456A-918E-5908005E8FC0}.Debug.Build.0 = Debug|Win32
+		{811D47CC-E5F0-456A-918E-5908005E8FC0}.Debug TLB.ActiveCfg = Debug|Win32
+		{811D47CC-E5F0-456A-918E-5908005E8FC0}.Debug TLB.Build.0 = Debug|Win32
+		{811D47CC-E5F0-456A-918E-5908005E8FC0}.Release.ActiveCfg = Release|Win32
+		{811D47CC-E5F0-456A-918E-5908005E8FC0}.Release.Build.0 = Release|Win32
+		{811D47CC-E5F0-456A-918E-5908005E8FC0}.Release (to Public).ActiveCfg = Release (to Public)|Win32
+		{811D47CC-E5F0-456A-918E-5908005E8FC0}.Release (to Public).Build.0 = Release (to Public)|Win32
+		{811D47CC-E5F0-456A-918E-5908005E8FC0}.Release TLB.ActiveCfg = Release (to Public)|Win32
+		{811D47CC-E5F0-456A-918E-5908005E8FC0}.Release TLB.Build.0 = Release (to Public)|Win32
+		{2D4E85B2-F47F-4D65-B091-701E5C031DAC}.Debug.ActiveCfg = Debug|Win32
+		{2D4E85B2-F47F-4D65-B091-701E5C031DAC}.Debug.Build.0 = Debug|Win32
+		{2D4E85B2-F47F-4D65-B091-701E5C031DAC}.Debug TLB.ActiveCfg = Debug|Win32
+		{2D4E85B2-F47F-4D65-B091-701E5C031DAC}.Debug TLB.Build.0 = Debug|Win32
+		{2D4E85B2-F47F-4D65-B091-701E5C031DAC}.Release.ActiveCfg = Release|Win32
+		{2D4E85B2-F47F-4D65-B091-701E5C031DAC}.Release.Build.0 = Release|Win32
+		{2D4E85B2-F47F-4D65-B091-701E5C031DAC}.Release (to Public).ActiveCfg = Release (to Public)|Win32
+		{2D4E85B2-F47F-4D65-B091-701E5C031DAC}.Release (to Public).Build.0 = Release (to Public)|Win32
+		{2D4E85B2-F47F-4D65-B091-701E5C031DAC}.Release TLB.ActiveCfg = Release (to Public)|Win32
+		{2D4E85B2-F47F-4D65-B091-701E5C031DAC}.Release TLB.Build.0 = Release (to Public)|Win32
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+	EndGlobalSection
+	GlobalSection(ExtensibilityAddIns) = postSolution
+	EndGlobalSection
+EndGlobal

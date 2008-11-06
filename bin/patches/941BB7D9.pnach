@@ -1,0 +1,29 @@
+gametitle=Final Fantasy X Deutsch [SCES 50492] (G)
+comment=patches by Nachbrenner
+//crash fix: sceDmaSend
+patch=0,EE,002dbacc,word,00000000
+patch=0,EE,002dbab8,word,00000000
+//fix DMA error: 0c0f0f00 - ipu1dma NULL!
+patch=0,EE,0015ff68,word,00000000
+//Skip Videos 
+patch=0,EE,0015d1c0,word,100000b2
+//Skip sceIpuSync
+//patch=0,EE,002e2530,word,03e00008
+//Use american savegames
+//patch=0,EE,0024144c,word,24a56e60 
+//
+//Max GIL 
+patch=0,EE,201BE554,word,ACA3D218
+//Max HP 
+patch=0,EE,201C97B8,word,2402270F
+patch=0,EE,201C97BC,word,AC620290
+//Max MP 
+patch=0,EE,201C97CC,word,2402270F
+patch=0,EE,201C97D0,word,AC620294
+//No random battles
+patch=0,EE,001be880,byte,00
+patch=0,EE,001bf2bc,byte,00
+//Hypermode
+patch=0,EE,001164d0,word,3c014280
+//ZeroGS Patch - GAME_FFXHACK
+zerogs=00000080

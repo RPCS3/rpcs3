@@ -1,0 +1,13 @@
+gametitle=Rally Championship [SLES 50763] (E)
+comment=patches by Nachbrenner
+//Skip Videos
+patch=0,EE,001ADE48,word,03E00008
+patch=0,EE,001CC840,word,24020001
+//Skip sceGsExecStoreImage
+patch=0,EE,001c4af0,word,03e00008
+patch=0,EE,001c4af4,word,00000000
+//Begin New Career With Loads Of Money
+patch=0,EE,001A05C0,word,3C0505F5
+patch=0,EE,001A05DC,word,34A5E0FF
+//Enable Cheat (ASM)
+patch=0,EE,0018DEB8,word,24020001

@@ -1,0 +1,4 @@
+gametitle=Need For Speed Most Wanted (SLES_535.57)
+comment=Skips Video - deny file By Refraction
+//Skip Videos
+patch=0,EE,00242414,word,00000000

@@ -1,0 +1,152 @@
+// Microsoft Visual C++ generated resource script.
+//
+#include "PadSSSPSXres.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "afxres.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// “ú–{Œê resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_JPN)
+#ifdef _WIN32
+LANGUAGE LANG_JAPANESE, SUBLANG_DEFAULT
+#pragma code_page(932)
+#endif //_WIN32
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE 
+BEGIN
+    "PadSSSPSXres.h\0"
+END
+
+2 TEXTINCLUDE 
+BEGIN
+    "#include ""afxres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE 
+BEGIN
+    "\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_DIALOG1 DIALOGEX 0, 0, 442, 239
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION
+CAPTION "PAD Settings"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    CONTROL         "",IDC_TABC,"SysTabControl32",0x0,6,6,432,210
+    PUSHBUTTON      "L2",IDC_BL2,54,24,72,12,NOT WS_TABSTOP
+    EDITTEXT        IDC_EL2,54,36,72,12,ES_READONLY | NOT WS_TABSTOP
+    PUSHBUTTON      "L1",IDC_BL1,54,48,72,12,NOT WS_TABSTOP
+    EDITTEXT        IDC_EL1,54,60,72,12,ES_READONLY | NOT WS_TABSTOP
+    PUSHBUTTON      "Up",IDC_BUP,54,78,72,12,NOT WS_TABSTOP
+    EDITTEXT        IDC_EUP,54,90,72,12,ES_READONLY | NOT WS_TABSTOP
+    PUSHBUTTON      "Left",IDC_BLEFT,12,102,72,12,NOT WS_TABSTOP
+    EDITTEXT        IDC_ELEFT,12,114,72,12,ES_READONLY | NOT WS_TABSTOP
+    PUSHBUTTON      "Right",IDC_BRIGHT,96,102,72,12,NOT WS_TABSTOP
+    EDITTEXT        IDC_ERIGHT,96,114,72,12,ES_READONLY | NOT WS_TABSTOP
+    PUSHBUTTON      "Down",IDC_BDOWN,54,126,72,12,NOT WS_TABSTOP
+    EDITTEXT        IDC_EDOWN,54,138,72,12,ES_READONLY | NOT WS_TABSTOP
+    PUSHBUTTON      "Select",IDC_BSELECT,144,36,72,12,NOT WS_TABSTOP,
+                    WS_EX_TRANSPARENT
+    EDITTEXT        IDC_ESELECT,144,48,72,12,ES_READONLY | NOT WS_TABSTOP,
+                    WS_EX_TRANSPARENT
+    PUSHBUTTON      "Start",IDC_BSTART,228,36,72,12,NOT WS_TABSTOP,
+                    WS_EX_TRANSPARENT
+    EDITTEXT        IDC_ESTART,228,48,72,12,ES_READONLY | NOT WS_TABSTOP,
+                    WS_EX_TRANSPARENT
+    PUSHBUTTON      "Analog",IDC_BMODE,186,66,72,12,NOT WS_TABSTOP,
+                    WS_EX_TRANSPARENT
+    EDITTEXT        IDC_EMODE,186,78,72,12,ES_READONLY | NOT WS_TABSTOP,
+                    WS_EX_TRANSPARENT
+    PUSHBUTTON      "R2",IDC_BR2,318,24,72,12,NOT WS_TABSTOP
+    EDITTEXT        IDC_ER2,318,36,72,12,ES_AUTOHSCROLL | ES_READONLY | NOT 
+                    WS_TABSTOP
+    PUSHBUTTON      "R1",IDC_BR1,318,48,72,12,NOT WS_TABSTOP
+    EDITTEXT        IDC_ER1,318,60,72,12,ES_AUTOHSCROLL | ES_READONLY | NOT 
+                    WS_TABSTOP
+    PUSHBUTTON      "Triangle",IDC_BTRIANGLE,318,78,72,12,NOT WS_TABSTOP
+    EDITTEXT        IDC_ETRIANGLE,318,90,72,12,ES_AUTOHSCROLL | ES_READONLY | 
+                    NOT WS_TABSTOP
+    PUSHBUTTON      "Square",IDC_BSQUARE,276,102,72,12,NOT WS_TABSTOP
+    EDITTEXT        IDC_ESQUARE,276,114,72,12,ES_AUTOHSCROLL | ES_READONLY | 
+                    NOT WS_TABSTOP
+    PUSHBUTTON      "Circle",IDC_BCIRCLE,360,102,72,12,NOT WS_TABSTOP
+    EDITTEXT        IDC_ECIRCLE,360,114,72,12,ES_AUTOHSCROLL | ES_READONLY | 
+                    NOT WS_TABSTOP
+    PUSHBUTTON      "Cross",IDC_BCROSS,318,126,72,12,NOT WS_TABSTOP
+    EDITTEXT        IDC_ECROSS,318,138,72,12,ES_AUTOHSCROLL | ES_READONLY | 
+                    NOT WS_TABSTOP
+    PUSHBUTTON      "L3",IDC_BL3,144,132,72,12,NOT WS_TABSTOP
+    EDITTEXT        IDC_EL3,144,144,72,12,ES_READONLY | NOT WS_TABSTOP
+    PUSHBUTTON      "LX",IDC_BLAX,144,162,72,12,NOT WS_TABSTOP
+    EDITTEXT        IDC_ELAX,144,174,72,12,ES_READONLY | NOT WS_TABSTOP
+    PUSHBUTTON      "LY",IDC_BLAY,144,186,72,12,NOT WS_TABSTOP
+    EDITTEXT        IDC_ELAY,144,198,72,12,ES_READONLY | NOT WS_TABSTOP
+    PUSHBUTTON      "R3",IDC_BR3,228,132,72,12,NOT WS_TABSTOP
+    EDITTEXT        IDC_ER3,228,144,72,12,ES_READONLY | NOT WS_TABSTOP
+    PUSHBUTTON      "RX",IDC_BRAX,228,162,72,12,NOT WS_TABSTOP
+    EDITTEXT        IDC_ERAX,228,174,72,12,ES_READONLY | NOT WS_TABSTOP
+    PUSHBUTTON      "RY",IDC_BRAY,228,186,72,12,NOT WS_TABSTOP
+    EDITTEXT        IDC_ERAY,228,198,72,12,ES_READONLY | NOT WS_TABSTOP
+    PUSHBUTTON      "OK",IDOK,330,222,48,12,NOT WS_TABSTOP
+    PUSHBUTTON      "Cancel",IDCANCEL,390,222,48,12,NOT WS_TABSTOP
+    CTEXT           "",IDC_STATIC,318,174,108,30,0,WS_EX_STATICEDGE
+    LTEXT           "DUALSHOCK2 INSIDE",IDC_STATIC,331,186,84,8
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO 
+BEGIN
+    IDD_DIALOG1, DIALOG
+    BEGIN
+        RIGHTMARGIN, 432
+        BOTTOMMARGIN, 233
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+#endif    // “ú–{Œê resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+

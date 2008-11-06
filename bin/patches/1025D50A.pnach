@@ -1,0 +1,7 @@
+gametitle=  Godzilla - Save The Earth [SLUS 20809] (U)
+comment=patches by nachbrenner
+//EEREC fix: borked memory write
+patch=0,EE,0028b2d0,word,00000000
+//DMA fix menus
+patch=0,EE,0022c568,word,00000000
+patch=0,EE,0022c540,word,00000000

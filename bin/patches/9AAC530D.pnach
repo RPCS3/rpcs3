@@ -1,0 +1,6 @@
+gametitle=Final Fantasy X-2 [SLES 51817] (G)
+comment=patches by Nachbrenner
+//Skip Videos 
+patch=0,EE,0017e1e4,word,1000000d
+//ZeroGS Patch - GAME_FFXHACK
+zerogs=00000080

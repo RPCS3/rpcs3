@@ -1,0 +1,20 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 9.00
+# Visual Studio 2005
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "spu2PeopsSound", "spu2PeopsSound_2005_x64.vcproj", "{F9E64144-301B-48BC-8D35-A2686DBB1982}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F9E64144-301B-48BC-8D35-A2686DBB1982}.Debug|x64.ActiveCfg = Debug|x64
+		{F9E64144-301B-48BC-8D35-A2686DBB1982}.Debug|x64.Build.0 = Debug|x64
+		{F9E64144-301B-48BC-8D35-A2686DBB1982}.Release|x64.ActiveCfg = Release|x64
+		{F9E64144-301B-48BC-8D35-A2686DBB1982}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

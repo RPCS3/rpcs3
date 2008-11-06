@@ -1,0 +1,9 @@
+gametitle=Shin Sangoku Musou 2 [SLPM 65053] (J)
+comment=patches by nachbrenner
+//Skip Videos
+patch=0,EE,0019d360,word,24020001
+//Skip Intro
+patch=0,EE,00160ac0,word,03E00008
+patch=0,EE,00160ac4,word,00000000
+//GS_CSR fix 
+patch=0,EE,0017647c,word,34840001

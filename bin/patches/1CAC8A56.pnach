@@ -1,0 +1,4 @@
+gametitle=Venus & braves NTSC-J
+comment=
+//Skip Videos ("sceMpegIsEnd")
+patch=0,EE,003e86a0,word,24020001

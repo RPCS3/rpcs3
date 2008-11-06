@@ -1,0 +1,4 @@
+gametitle=Toca Race Driver 2 [SLUS 21039] (U)
+comment=Skips Video (sceMpegIsEnd)
+//Skip Videos
+patch=0,EE,00452a48,word,24020001

@@ -1,0 +1,6 @@
+gametitle=Summoner 2 [SLES 51142] (G)
+comment=patches by Nachbrenner
+//skip FMV (sceMpegIsEnd)
+// patch=0,EE,001c6638,word,24020001
+//brute force fix GS_CSR
+// patch=0,EE,00188604,word,fc620000 // sd v0, $0000(v1)

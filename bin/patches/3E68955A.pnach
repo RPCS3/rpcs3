@@ -1,0 +1,5 @@
+gametitle=Kingdom Hearts - Final Mix [SLPS 25198] (J) 
+comment=
+//ZeroGS Patch - GAME_QUICKRESOLVE1
+zerogs=00000400
+fastmemory

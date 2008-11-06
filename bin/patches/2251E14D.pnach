@@ -1,0 +1,4 @@
+gametitle=Tekken 4 [SCES 50878] (E) [2251E14D]
+comment=Patch By CKemu
+//ZeroGS Patch - Stops characters appearing as wigs on GeForce 8x00 series cards (Disable Alpha Testing)
+zerogs=00080000

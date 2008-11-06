@@ -1,0 +1,7 @@
+gametitle=Formula 1 2003 [SCES 51592] (E)
+comment=patches by Nachbrenner
+//skip sceIpuSync
+patch=0,EE,00379f78,word,03e00008
+//skip Videos
+patch=0,EE,00376f80,word,03e00008
+patch=0,EE,00376f84,word,00000000

@@ -1,0 +1,7 @@
+gametitle=F1 Championship Season 2000 [SLUS 20103] (U)
+comment=patches by nachbrenner
+//Skip Intro Videos
+patch=0,EE,00221a14,word,00000000
+//Skip All Videos
+patch=0,EE,00241bc0,word,03E00008
+patch=0,EE,00241bc4,word,00000000

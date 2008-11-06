@@ -1,0 +1,4 @@
+gametitle=Simple Series 2000 - Vol. 61 - The Oane Chapara [SLPM 62525] (J) [5D67AE48]
+comment=Skips Video (sceMpegIsEnd)
+//Skip Videos
+patch=0,EE,001de758,word,24020001

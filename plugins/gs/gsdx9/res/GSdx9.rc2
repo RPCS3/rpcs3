@@ -1,0 +1,37 @@
+//
+// GSdx9.RC2 - resources Microsoft Visual C++ does not edit directly
+//
+
+#ifdef APSTUDIO_INVOKED
+#error this file is not editable by Microsoft Visual C++
+#endif //APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+// Add manually edited resources here...
+
+IDR_PS11_TFX000	RCDATA                                 "res\\ps11_tfx000.psh"
+IDR_PS11_TFX010 RCDATA                                 "res\\ps11_tfx010.psh"
+IDR_PS11_TFX011 RCDATA                                 "res\\ps11_tfx011.psh"
+IDR_PS11_TFX1x0 RCDATA                                 "res\\ps11_tfx1x0.psh"
+IDR_PS11_TFX1x1 RCDATA                                 "res\\ps11_tfx1x1.psh"
+IDR_PS11_TFX200 RCDATA                                 "res\\ps11_tfx200.psh"
+IDR_PS11_TFX210 RCDATA                                 "res\\ps11_tfx210.psh"
+IDR_PS11_TFX211 RCDATA                                 "res\\ps11_tfx211.psh"
+IDR_PS11_TFX300 RCDATA                                 "res\\ps11_tfx300.psh"
+IDR_PS11_TFX310 RCDATA                                 "res\\ps11_tfx310.psh"
+IDR_PS11_TFX311 RCDATA                                 "res\\ps11_tfx311.psh"
+IDR_PS11_TFX4xx RCDATA                                 "res\\ps11_tfx4xx.psh"
+IDR_PS11_EN11   RCDATA                                 "res\\ps11_en11.psh"
+IDR_PS11_EN01   RCDATA                                 "res\\ps11_en01.psh"
+IDR_PS11_EN10   RCDATA                                 "res\\ps11_en10.psh"
+IDR_PS11_EN00   RCDATA                                 "res\\ps11_en00.psh"
+IDR_PS14_EN11   RCDATA                                 "res\\ps14_en11.psh"
+IDR_PS14_EN01   RCDATA                                 "res\\ps14_en01.psh"
+IDR_PS14_EN10   RCDATA                                 "res\\ps14_en10.psh"
+IDR_PS14_EN00   RCDATA                                 "res\\ps14_en00.psh"
+IDR_HLSL_TFX    RCDATA                                 "res\\hlsl_tfx.fx"
+IDR_HLSL_MERGE  RCDATA                                 "res\\hlsl_merge.fx"
+IDR_HLSL_RB		RCDATA                                 "res\\hlsl_rb.fx"
+
+/////////////////////////////////////////////////////////////////////////////

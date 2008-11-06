@@ -1,0 +1,4 @@
+gametitle=DNA - Dark Native Apostle [SLES 50202] (E)
+comment=patches by Nachbrenner
+//Skip PSSPLAY.ELF
+patch=1,EE,001691F0,word,00000000

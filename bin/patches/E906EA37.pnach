@@ -1,0 +1,7 @@
+gametitle=Gran Turismo 4 First Preview [PCPX 96649] (J)
+comment=patches by mdr61
+//Timelimit counter stop
+patch=0,EE,002EF740,word,00000000
+//Pause counter stop
+patch=0,EE,002C7394,word,00000000
+patch=0,EE,002F1F40,word,00000000

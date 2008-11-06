@@ -1,0 +1,9 @@
+gametitle=Midnight Club II [SLUS20209] (U)
+comment=patches by Nachbrenner
+//skip videos
+patch=0,EE,0013D5E0,word,00000000
+//skip sceIpuSync
+patch=0,EE,003ef4e8,word,03e00008
+patch=0,EE,003ef4ec,word,00000000
+//skip network check "BT_ok_to_initialize_networking"
+patch=0,EE,00123c70,word,00000000

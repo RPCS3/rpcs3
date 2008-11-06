@@ -1,0 +1,81 @@
+<html>
+<body>
+<pre>
+<h1>Build Log</h1>
+<h3>
+--------------------Configuration: spu2PeopsSound - Win32 Release--------------------
+</h3>
+<h3>Command Lines</h3>
+Creating temporary file "C:\DOCUME~1\SAQIB\LOCALS~1\Temp\RSP3A5.tmp" with contents
+[
+/nologo /G5 /MD /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /FR"Release/" /Fp"Release/spu2PeopsSound.pch" /YX /Fo"Release/" /Fd"Release/" /FD /c 
+"C:\Documents and Settings\SAQIB\Desktop\PeopsSpu2_103\src\dma.c"
+]
+Creating command line "snCl.exe @C:\DOCUME~1\SAQIB\LOCALS~1\Temp\RSP3A5.tmp" 
+Creating temporary file "C:\DOCUME~1\SAQIB\LOCALS~1\Temp\RSP3A6.tmp" with contents
+[
+dsound.lib winmm.lib user32.lib gdi32.lib advapi32.lib /nologo /subsystem:windows /dll /incremental:no /pdb:"Release/spu2PeopsSound.pdb" /machine:I386 /def:".\spu2PeopsSound.def" /out:"Release/spu2PeopsSound.dll" /implib:"Release/spu2PeopsSound.lib" 
+".\Release\adsr.obj"
+".\Release\alsa.obj"
+".\Release\cfg.obj"
+".\Release\debug.obj"
+".\Release\dma.obj"
+".\Release\dsound.obj"
+".\Release\freeze.obj"
+".\Release\oss.obj"
+".\Release\psemu.obj"
+".\Release\record.obj"
+".\Release\registers.obj"
+".\Release\reverb.obj"
+".\Release\spu.obj"
+".\Release\spu2PeopsSound.obj"
+".\Release\StdAfx.obj"
+".\Release\xa.obj"
+".\Release\spu2PeopsSound.res"
+]
+Creating command line "snLink.exe @C:\DOCUME~1\SAQIB\LOCALS~1\Temp\RSP3A6.tmp"
+<h3>Output Window</h3>
+Compiling...
+snCL -- Detected win32 build...passing to cl.exe
+dma.c
+Linking...
+snCL -- Detected win32 build...passing to link.exe
+   Creating library Release/spu2PeopsSound.lib and object Release/spu2PeopsSound.exp
+Creating temporary file "C:\DOCUME~1\SAQIB\LOCALS~1\Temp\RSP3AA.tmp" with contents
+[
+/nologo /o"Release/spu2PeopsSound.bsc" 
+".\Release\adsr.sbr"
+".\Release\alsa.sbr"
+".\Release\cfg.sbr"
+".\Release\debug.sbr"
+".\Release\dma.sbr"
+".\Release\dsound.sbr"
+".\Release\freeze.sbr"
+".\Release\oss.sbr"
+".\Release\psemu.sbr"
+".\Release\record.sbr"
+".\Release\registers.sbr"
+".\Release\reverb.sbr"
+".\Release\spu.sbr"
+".\Release\spu2PeopsSound.sbr"
+".\Release\StdAfx.sbr"
+".\Release\xa.sbr"]
+Creating command line "snBsc.exe @C:\DOCUME~1\SAQIB\LOCALS~1\Temp\RSP3AA.tmp"
+Creating browse info file...
+snCL -- Detected win32 build...passing to bscmake.exe
+<h3>Output Window</h3>
+Creating temporary file "C:\DOCUME~1\SAQIB\LOCALS~1\Temp\RSP3AB.bat" with contents
+[
+@echo off
+rem copy release\spu2PeopsSound.dll D:\pcsx2\plugins\spu2PeopsDSound.dll
+]
+Creating command line "C:\DOCUME~1\SAQIB\LOCALS~1\Temp\RSP3AB.bat"
+
+
+
+
+<h3>Results</h3>
+spu2PeopsSound.dll - 0 error(s), 0 warning(s)
+</pre>
+</body>
+</html>

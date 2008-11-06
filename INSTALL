@@ -1,0 +1,87 @@
+        Pcsx2 Compilation Guide
+
+Linux Users
+-----------
+
+Make sure you have these packages:
+gtk2
+opengl
+libbz2
+libjpeg
+glew-dev
+libxxf86vm-dev
+x11proto-xf86vidmode
+automake and autoconf (verion >= 1.9)
+Nvidia Cg-Toolkit (http://developer.nvidia.com/object/cg_toolkit.html)
+libasound-dev
+joystick
+
+When first building, the Pcsx2 programs need to configure the Makefiles for your specific OS. type:
+
+# sh build.sh all
+
+The program and all plugins will be installed in the pcsx2 bin dir. After that, just launch pcsx2 (make sure you have a PS2 bios dump in the bios directory).
+
+To rebuild any changes to the source code type:
+# sh build.sh install
+
+Typeing sh build.sh without the install will just build the programs without copying them to the bin dirctory (bin/plugins for all plugins).
+
+To clean all object files type:
+# sh build.sh clean
+
+If there is a plugin that is giving you errors and you want to skip it, modify the corresponding build.sh to skip it (otherwise execution of the script will stop until the error is resolved).
+
+Special Options (modify PCSX2OPTIONS in build.sh)
+
+--enable-debug {Build with symbols and no optimizations}
+--enable-devbuild {Build with extra tests}
+--disable-recbuild {Disables all architecture dependent recompilation code}
+--enable-sse2 {Enables x86 SSE2 extensions}
+--enable-sse3 {Force enables x86 SSE3 extensions}
+
+For plugin authors: Your Makefile should support the 'install' option.
+
+When debugging, make sure to add
+
+handle SIGSEGV noprint ignore pass
+
+to .gdbinit
+
+Windows Users
+-------------
+
+Make sure you have: Nvidia Cg-Toolkit (for ZeroGS)
+
+Open the corresponding Visual Studio sln files for all projects, compile, and move the executables appropriately. Pcsx2 and some plugins require masm to assemble (ml for win32, ml64 for win64).
+
+At the moment, MinGW is not supported, however there's a good chance the cygwin toolset will work.
+
+
+email zerofrog@gmail.com for any compilation/linking issues in any Linux/Windows distribution.
+
+Global defines
+--------------
+
+Pcsx2 uses global defines to detect the OS, architecture, and different compilation options. They are:
+
+_MSC_VER - used to detect Visual Studio's cl compiler
+
+_WIN32 - used to detect windows compilation
+
+__LINUX__ - used to detect linux compilation (a lot of times it is assumed that linux is running when _WIN32 is missing)
+
+__x86_64__ - defined for x86-64 architectures only.
+
+PCSX2_DEVBUILD - used to enable runtime debugging and developer specific features of pcsx2 (disabled on releases)
+
+PCSX2_VIRTUAL_MEM - switches the way pcsx2 handles memory. VM enabled builds are valid for both windows and linux and they speed up games. However, there are less stable than TLB builds.
+
+PCSX2_NORECBUILD - ignore all recompiler code so that Pcsx2 can be built for different architectures. Note that there are a couple of places that use asm code even in interpreter (coroutines in IPU).
+
+_DEBUG - build with extra debug information
+NDEBUG - build without absolutely no debug information
+
+ZEROGS_SSE2 - controls sse2 usage in zerogs
+
+compile with -D_FILE_OFFSET_BITS=64 if iso is failing to load large files

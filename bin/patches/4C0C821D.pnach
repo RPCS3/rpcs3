@@ -1,0 +1,4 @@
+gametitle=Demolition Girl [SLES 53403] (E) [4C0C821D]
+comment=Skips Video (sceMpegIsEnd)
+//Skip Videos
+patch=0,EE,0020b5c0,word,24020001

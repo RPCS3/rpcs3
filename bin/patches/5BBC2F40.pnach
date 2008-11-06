@@ -1,0 +1,20 @@
+gametitle=Ridge Racer V [SCES 50000] (E)
+comment= patches by Nachbrenner
+// disable foreground 3D on car selection
+//patch=0,EE,00201e3c,word,00000000
+// disable background 3D on car selection
+//patch=0,EE,00227254,word,00000000
+//patch=0,EE,0027fac0,word,00000000
+//patch=0,EE,0027fbf4,word,00000000
+//
+//skip VU0 Matrices (3D car select)
+//patch=0,EE,0025a728,word,03e00008
+//patch=0,EE,0025a72c,word,00000000
+//patch=0,EE,0025aab8,word,03e00008
+//patch=0,EE,0025aabc,word,00000000
+//patch=0,EE,0025a6f8,word,03e00008
+//patch=0,EE,0025a6fc,word,00000000
+//patch=0,EE,00201540,word,03e00008 // ingame
+//patch=0,EE,00201544,word,00000000 
+//skip FlushCache before VU0 Sub/Scale/Copy Vector 
+//patch=0,EE,002a1298,word,00000000

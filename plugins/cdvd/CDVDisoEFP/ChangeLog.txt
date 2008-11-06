@@ -1,0 +1,58 @@
+CDVDisoEFP v0.6 Changes:
+--------------------
+
+ v0.6:
+ * Completely re-wrote screens (efp)
+ * Used device access sources from CDVDlinuz to get data from DVDs. (efp)
+ *   Added ability to read devices from Windows XP (efp)
+       Note: only ISO and CDDA seem to be readable from CDs at this time.
+         If your trying to get another format, use Linux.
+         DVD5 is readable. Don't have a DVD9 game to test. (I think - efp) 
+ * Separated image file access by OS. (Linux, Windows) (efp)
+ * Separated Multi-file/Compression/Image-Typing to their own source files. (efp)
+ * Added a few entries to the Image Typing database, based on Linux CD-ROM sources (efp)
+ * Added Table Rebuild (for those who lost .table files.) (efp)
+ * Put in a separate source program to compare two ISOs for data accuracy. (efp)
+ * Renamed executables and config files (so not to conflict with CDVDiso) (efp)
+ * Internalized the .INI File code (to allow use in other OS-es besides Windows) (efp)
+ * Added temporarily a .toc file saving track info (for PS1 and Music CDs) (efp)
+ * Added a new compression format. (BZip2 Size) (efp)
+ * Added .glade files at linuzappz's request (efp)
+ * Upgraded to 0.6.0 beta PS2Edef.h definitions (efp)
+
+ * Data buffer start position re-set for CDs. (shadow caught the problem while testing)
+ * Supported images grouped in "Browse" button (shadow's suggestion)
+ * Initial Image reminder added to Windows CDVDOpen() (shadow's suggestion)
+ * used 64 bit fstat (fstat64) for correct sizes on >2GB files in Linux (efp)
+ * Adjusted CD types to allow for PS2 CDs (shadow pointed out an example iso)
+ * Added changing CDs/DVDs while emulation stopped (shadow's suggestion)
+     Built in an "open tray" delay when switching media. (efp)
+ * Added ".img" to Image Filter (although .cue/.sub files aren't tapped.) (efp)
+ * Added ".nrg" to Image Filter (shadow's suggestion)
+ * In Windows, when newly selected from the PCSX2 configure screen, CDVDinit()
+     (as well as InitConf()) are not called. Fixed (EFP)
+
+ v0.5:
+ * Added block dumping code
+ * Added BZ2/Z2 format ;)
+ * Added optimaze asm code of zlib with vsnet2003 only. Compression / Uncompression should be faster now (shadow)
+ * Added Vsnet2005 beta1 project files + amd64 asm optimaze code for zlib (shadow)
+
+ v0.4:
+ * Rewrote mostly ;)
+ * .bz is still unsupported
+
+ v0.3:
+ * Better Iso detection, thx florin :)
+ * Updated to PS2Edefs v0.4.5
+
+ v0.2:
+ * Added support for isos using 2048 blocksize
+ * Nero images are supported
+ * Better extension filtering
+
+ v0.1:
+ * First Release
+ * Tested with Pcsx2
+
+ Email: <linuzappz@hotmail.com>

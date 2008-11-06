@@ -1,0 +1,7 @@
+gametitle= Armored Core 2 - Another Age [SLPS 25040] (J)
+//Skip Videos  (sceMpegIsEnd)
+// patch=0,EE,002c8a10,word,24020001
+// Skip Intros
+// patch=0,EE,00100230,word,00000000
+// Lots of credits
+// patch=1,EE,00319f00,word,00C0FFEE

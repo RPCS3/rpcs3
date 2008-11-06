@@ -1,0 +1,11 @@
+gametitle=Tom Clancy's Splinter Cell Chaos Theory [SLES 53007] (E)
+comment=patches by Nachbrenner
+//fix sceIpuStopDMA
+patch=0,EE,0020b884,word,00000000
+//
+//   load SC3_OFF.ELF manually to go ingame
+//   d7a4b7af.pnach
+//   gametitle=Tom Clancy's Splinter Cell Chaos Theory [SC3_OFF.ELF] (E)
+//   Skip sceIpuRestartDMA
+//   patch=1,EE,001116e0,word,03e00008
+//   patch=1,EE,001116e4,word,00000000

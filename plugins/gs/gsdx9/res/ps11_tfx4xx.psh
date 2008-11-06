@@ -1,0 +1,4 @@
+ps_1_1
+
+mov r0, v0
+lrp r0.rgb, v1.a, r0, v1

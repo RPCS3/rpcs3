@@ -1,0 +1,96 @@
+<html>
+<body>
+<pre>
+<h1>Build Log</h1>
+<h3>
+--------------------Configuration: cdvdPeops - Win32 Release--------------------
+</h3>
+<h3>Command Lines</h3>
+Creating command line "rc.exe /l 0x407 /fo"Release/cdvdPeops.res" /d "NDEBUG" "D:\src\cdvdPeops\src\cdvdPeops.rc"" 
+Creating temporary file "E:\DOCUME~1\Pete1\LOCALS~1\Temp\RSP9E.tmp" with contents
+[
+/nologo /G5 /MT /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /FR"Release/" /Fp"Release/cdvdPeops.pch" /YX /Fo"Release/" /Fd"Release/" /FD /c 
+"D:\src\cdvdPeops\src\cdda.c"
+"D:\src\cdvdPeops\src\cdr.c"
+"D:\src\cdvdPeops\src\cdvdPeops.c"
+"D:\src\cdvdPeops\src\cfg.c"
+"D:\src\cdvdPeops\src\generic.c"
+"D:\src\cdvdPeops\src\ioctrl.c"
+"D:\src\cdvdPeops\src\ppf.c"
+"D:\src\cdvdPeops\src\read.c"
+"D:\src\cdvdPeops\src\scsi.c"
+"D:\src\cdvdPeops\src\StdAfx.c"
+"D:\src\cdvdPeops\src\sub.c"
+"D:\src\cdvdPeops\src\toc.c"
+]
+Creating command line "cl.exe @E:\DOCUME~1\Pete1\LOCALS~1\Temp\RSP9E.tmp" 
+Creating temporary file "E:\DOCUME~1\Pete1\LOCALS~1\Temp\RSP9F.tmp" with contents
+[
+kernel32.lib user32.lib advapi32.lib comdlg32.lib /nologo /subsystem:windows /dll /incremental:no /pdb:"Release/cdvdPeops.pdb" /machine:I386 /def:".\cdvdPeops.def" /out:"Release/cdvdPeops.dll" /implib:"Release/cdvdPeops.lib" 
+.\Release\cdda.obj
+.\Release\cdr.obj
+.\Release\cdvdPeops.obj
+.\Release\cfg.obj
+.\Release\generic.obj
+.\Release\ioctrl.obj
+.\Release\ppf.obj
+.\Release\read.obj
+.\Release\scsi.obj
+.\Release\StdAfx.obj
+.\Release\sub.obj
+.\Release\toc.obj
+.\Release\cdvdPeops.res
+]
+Creating command line "link.exe @E:\DOCUME~1\Pete1\LOCALS~1\Temp\RSP9F.tmp"
+<h3>Output Window</h3>
+Compiling resources...
+Compiling...
+cdda.c
+cdr.c
+cdvdPeops.c
+cfg.c
+generic.c
+ioctrl.c
+ppf.c
+read.c
+scsi.c
+StdAfx.c
+sub.c
+toc.c
+Linking...
+   Creating library Release/cdvdPeops.lib and object Release/cdvdPeops.exp
+Creating temporary file "E:\DOCUME~1\Pete1\LOCALS~1\Temp\RSPA3.tmp" with contents
+[
+/nologo /o"Release/cdvdPeops.bsc" 
+.\Release\cdda.sbr
+.\Release\cdr.sbr
+.\Release\cdvdPeops.sbr
+.\Release\cfg.sbr
+.\Release\generic.sbr
+.\Release\ioctrl.sbr
+.\Release\ppf.sbr
+.\Release\read.sbr
+.\Release\scsi.sbr
+.\Release\StdAfx.sbr
+.\Release\sub.sbr
+.\Release\toc.sbr]
+Creating command line "bscmake.exe @E:\DOCUME~1\Pete1\LOCALS~1\Temp\RSPA3.tmp"
+Creating browse info file...
+<h3>Output Window</h3>
+Creating temporary file "E:\DOCUME~1\Pete1\LOCALS~1\Temp\RSPA4.bat" with contents
+[
+@echo off
+copy release\*.dll d:\emus\pcsx2_07\plugins
+]
+Creating command line "E:\DOCUME~1\Pete1\LOCALS~1\Temp\RSPA4.bat"
+
+release\cdvdPeops.dll
+        1 file(s) copied.
+
+
+
+<h3>Results</h3>
+cdvdPeops.dll - 0 error(s), 0 warning(s)
+</pre>
+</body>
+</html>

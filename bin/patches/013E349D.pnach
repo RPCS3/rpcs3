@@ -1,0 +1,4 @@
+gametitle= Resident Evil 4 [SLUS 21134] (U)
+comment=
+//ZeroGS Patch - GAME_NOTARGETCLUT
+zerogs=00001000

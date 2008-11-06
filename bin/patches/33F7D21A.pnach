@@ -1,0 +1,14 @@
+gametitle= Dirge Of Cerberus - Final Fantasy VII [SLES 54185] (E)
+comment=patches by nachbrenner
+//Fix "**** SQTHREAD ERROR : BAD LOCK STATE" 
+patch=0,EE,0042d768,word,00000000
+//Skip mcDelayThread (calls SleepThread)
+patch=0,EE,00458008,word,00000000
+//Skip Videos (for blockdump)
+patch=0,EE,00241bac,word,00000000
+//override sceScfGetLanguage
+//patch=0,EE,002486d8,word,24020000 //japanese
+patch=0,EE,002486d8,word,24020001 //english
+//patch=0,EE,002486d8,word,24020004 //german
+//intro 3D - fix DMA0 vs. VU0REC
+patch=0,EE,0026f960,word,10000020

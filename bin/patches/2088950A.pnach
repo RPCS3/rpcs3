@@ -1,0 +1,4 @@
+gametitle= Xenosaga Episode III - Also Sprach Zarathustra [SLUS 21389] (U)
+comment=
+//ZeroGS Patch - GAME_VSSHACK|GAME_FULL16BITRES|GAME_NODEPTHRESOLVE
+zerogs=00018000

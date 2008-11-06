@@ -1,0 +1,3 @@
+gametitle=Turok: Evolution [SLES 51124] (G)
+//Skip Videos  (sceMpegIsEnd)
+patch=0,EE,001cf280,word,24020001

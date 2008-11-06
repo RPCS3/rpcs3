@@ -1,0 +1,6 @@
+gametitle=Hisshou Pachinko Pachi-Slot Kouryoku Series Vol. 7 - Fever Powerful Zero [SLPS 25697] (J)
+//Skip sceIpuSync
+patch=0,EE,00100dd8,word,03e00008
+//IPU VQ fix 
+patch=0,EE,0021b2cc,word,00000000 // ?
+patch=0,EE,0021b08c,word,00000000 // _pictureData0

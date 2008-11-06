@@ -1,0 +1,5 @@
+gametitle= Kamen Rider 555 [SLPS 20329] (J)
+comment=patches by Nachbrenner
+//skip "PlayMpeg"
+patch=0,EE,0022f590,word,03e00008
+patch=0,EE,0022f594,word,00000000

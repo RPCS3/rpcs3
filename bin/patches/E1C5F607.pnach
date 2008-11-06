@@ -1,0 +1,6 @@
+gametitle= Pirates of the Caribbean
+comment=by Refraction
+//"Data/Movies/%s"
+patch=0,EE,0031ed84,word,00000000
+//"Data/Movies/%s/%s"
+patch=0,EE,0031edac,word,00000000

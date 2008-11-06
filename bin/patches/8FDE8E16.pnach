@@ -1,0 +1,6 @@
+gametitle= Spongebob Squarepants - Revenge of the Flying Dutchman [SLES 51285] (E)
+comment=patches by Nachbrenner
+//skip "SBPlayLogoMovie"
+//patch=0,EE,004531bc,word,00000000
+//skip "SBPlayDemoMovie"
+//patch=0,EE,004531e0,word,00000000

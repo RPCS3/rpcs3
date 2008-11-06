@@ -1,0 +1,4 @@
+gametitle=TD overdrive  - The Brotherhood Of Speed [SLES 50778] (E)
+comment=  patches by Nachbrenner
+// skip FMV sceMpegIsEnd
+// patch=1,EE,0030aad0,word,24020001

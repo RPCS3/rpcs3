@@ -1,0 +1,5 @@
+gametitle=Starsky & Hutch DE/FR [SLES 51783] (E)
+comment=patches by Nachbrenner
+//Skip videos
+//patch=1,EE,0021FAC4,word,00000000
+//patch=1,EE,00151750,word,24020001

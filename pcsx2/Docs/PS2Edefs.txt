@@ -1,0 +1,443 @@
+ PS2E Definitions v0.3.0 (beta)
+ ------------------------------
+
+ Author: linuzappz@pcsx.net
+
+Note: Refer to PS2Edefs.h for more info.
+
+1) API Funcs
+2) FAQs
+3) Notes
+
+1) API Funcs:
+   ---------
+
+ Common stuff:
+ ------------
+
+// u32   CALLBACK PS2EgetLibType(void);
+
+Gets the plugin type, from the following defines:
+
+#define PS2E_LT_GS   0x01
+#define PS2E_LT_PAD  0x02
+#define PS2E_LT_SPU2 0x04
+#define PS2E_LT_CDVD 0x08
+#define PS2E_LT_DEV9 0x10
+#define PS2E_LT_USB  0x20
+#define PS2E_LT_FIREWIRE 0x40
+
+Note that the types can be ORed so you can make an
+ie. GS/PAD plugin in one dll.
+
+// u32   CALLBACK PS2EgetLibVersion(void);
+
+Will get the plugin version:
+
+const unsigned char version  = 1;    // GS library v1
+const unsigned char revision = VERSION;
+const unsigned char build    = BUILD;    // increase that with each version
+
+return version<<16|revision<<8|build;
+
+'version' is the GS plugin API version, as this is beta,
+it should be 1.
+'revision' and 'build' are plugin defined values.
+
+// char* CALLBACK PS2EgetLibName(void);
+
+Get the LibName, ie. "GSsoftdx Driver";
+
+
+
+ GS plugin API:
+ -------------
+
+Basic funcs
+-----------
+
+// s32  CALLBACK GSinit();
+
+Inits the plugin, return 0 on success, else -1.
+
+// s32  CALLBACK GSopen(void *pDsp, char *Title);
+
+Opens the plugin, return 0 on success, else -1.
+The plugin must fill the 'pDsp' arg (32bit) that'll be
+passed to other plugins (*1), this is OS dependant (*2).
+
+On Win32: pass a HWND value, ie:
+          *(long*)pDsp = (long)GShwnd;
+On Linux: pass a Display value, ie:
+          *(long*)pDsp = (long)display;
+
+*1 Even if this value is passed to every plugin, this
+may not be used by the plugins.
+
+*2 This could change anyways, ie. maybe you can code a
+GS/PAD plugin for a speacial library, so the pDsp
+will be a value that you need to communicate between 
+them (if you need to do this).
+
+// void CALLBACK GSclose();
+
+Close the plugin.
+
+// void CALLBACK GSshutdown();
+
+Shutdown the plugin.
+
+// void CALLBACK GSvsync();
+
+Called on every VSync.
+
+// void CALLBACK GSgifTransfer(u32 *pMem, u32 size);
+
+Transfer 'size' qwords (128bit) from 'pMem' to the Gif.
+
+// void CALLBACK GSgifTransfer2(u32 *pMem);
+
+Transfer a qwords (128bit) block from 'pMem' to the Gif.
+
+// void CALLBACK GSwrite32(u32 mem, u32 value);
+
+Writes to address 'mem' data 'value', 32bit.
+Addresses can range from 0x12000000 to 0x14000000.
+
+// void CALLBACK GSwrite64(u32 mem, u64 value);
+
+Writes to address 'mem' data 'value', 64bit.
+Addresses can range from 0x12000000 to 0x14000000.
+
+// u32  CALLBACK GSread32(u32 mem);
+
+Returns 32bit from address 'mem'.
+Addresses can range from 0x12000000 to 0x14000000.
+
+// u64  CALLBACK GSread64(u32 mem);
+
+Returns 64bit from address 'mem'.
+Addresses can range from 0x12000000 to 0x14000000.
+
+Extended funcs
+--------------
+
+// void CALLBACK GSkeyEvent(keyEvent *ev);
+
+Gets called when there is a keyEvent from the PAD plugin
+
+// void CALLBACK GSmakeSnapshot(char *path);
+
+Makes an snapshot of the vRam, can be a with the full 
+vRam or just the view area (as you prefer), to the dir
+'path'.
+
+
+// #ifdef __WIN32__
+// s32  CALLBACK GSsetWindowInfo(winInfo *info);
+// #endif
+
+Windows only function, will pass the info struct to the
+GS plugin, if the plugin will use this info it should 
+return 1 (TRUE), else the emu will destroy the window
+handle and let the plugin take care of that.
+This function must be called before the GSopen.
+Note that the emu should hide the hMenu and the hStatusWnd
+if it they are set.
+The position and size of the window is not specified and
+should be reset by the plugin, but the window passed should
+be in a normal state, not maximized nor minimized.
+After a GSclose the emu must destroy the window and 
+recreate it.
+
+// void CALLBACK GSconfigure();
+
+Configure the plugin.
+
+// void CALLBACK GSabout();
+
+Shows an About Dialog of the plugin.
+
+// s32  CALLBACK GStest();
+
+Returns 0 if the plugin should work ok, else -1.
+
+
+
+ PAD plugin API:  -=[ OBSOLETE ]=-
+ --------------
+
+Basic funcs
+-----------
+
+// s32  CALLBACK PADinit(u32 flags);
+
+Inits the plugin, return 0 on success, else -1.
+
+// s32  CALLBACK PADopen(void *pDsp);
+
+Opens the plugin, return 0 on success, else -1.
+The 'pDsp' is a value from the GS plugin (refer to
+GSopen).
+
+// void CALLBACK PADclose();
+
+Close the plugin.
+
+// void CALLBACK PADshutdown();
+
+Shutdown the plugin.
+
+// keyEvent* CALLBACK PADkeyEvent();
+
+Called every vsync, return NULL if no event happened.
+
+// u8   CALLBACK PADstartPoll(int pad);
+
+Starts polling data from the PAD, 'pad' can be 1 (pad1)
+or 2 (pad2).
+Returns first byte from buffer;
+
+// u8   CALLBACK PADpoll(u8 value);
+
+Returns next byte from buffer;
+Refer to "pad and mem card data.txt" or "padmem.txt", 
+for info about value/buffer data.
+
+// u32  CALLBACK PADquery();
+
+returns: 1 if supported pad1
+         2 if supported pad2
+         3 if both are supported
+
+Extended funcs
+--------------
+
+// void CALLBACK PADconfigure();
+
+Configure the plugin.
+
+// void CALLBACK PADabout();
+
+Shows an About Dialog of the plugin.
+
+// s32  CALLBACK PADtest();
+
+Returns 0 if the plugin should work ok, else -1.
+
+
+
+ SIO plugin API:
+ --------------
+
+Basic funcs
+-----------
+
+// s32  CALLBACK SIOinit(u32 port, u32 slot, SIOchangeSlotCB f);
+
+Inits the plugin, return 0 on success, else -1.
+port/slot combination will be used to load the corresponding
+ configuration data from ini. It's like an id for the instance.
+'f' is a callback function that is used by SIO_TYPE_MTAP capable
+ plugins to change active slot in emulator (since sio is emu-controled).
+
+// s32  CALLBACK SIOopen(void *pDsp);
+
+Opens the plugin, return 0 on success, else -1.
+The 'pDsp' is a value from the GS plugin (refer to
+GSopen).
+
+// void CALLBACK SIOclose();
+
+Close the plugin.
+
+// void CALLBACK SIOshutdown();
+
+Shutdown the plugin.
+
+// u8   CALLBACK SIOstartPoll(u8 value);
+
+Starts polling data from the SIO, 'value' is
+ 0x01, 0x21, 0x61 and 0x81 corresponding to pad, mtap, rm and mc.
+Returns first byte from buffer;
+
+// u8   CALLBACK SIOpoll(u8 value);
+
+Returns next byte from buffer;
+Refer to "pad and mem card data.txt", "padmem.txt" or
+ "padspecs.txt" (http://ps2dev.ps2-scene.org/padspecs.txt), 
+for info about value/buffer data.
+
+// u32  CALLBACK SIOquery();
+
+#define SIO_TYPE_PAD	0x00000001
+#define SIO_TYPE_MTAP	0x00000004
+#define SIO_TYPE_RM	0x00000040
+#define SIO_TYPE_MC	0x00000100
+
+returns: ORed value of SIO_TYPE_xxxx - the capabilities of the plugin
+eg. a remote control plugin will return SIO_TYPE_PAD | SIO_TYPE_RM
+
+Extended funcs
+--------------
+
+// void CALLBACK SIOconfigure();
+
+Configure the plugin.
+
+// void CALLBACK SIOabout();
+
+Shows an About Dialog of the plugin.
+
+// s32  CALLBACK SIOtest();
+
+Returns 0 if the plugin should work ok, else -1.
+
+
+
+ SPU2 plugin API:
+ ---------------
+
+TODO :)
+
+Basic funcs
+-----------
+
+// s32  CALLBACK SPU2init();
+// s32  CALLBACK SPU2open(void *pDsp);
+// void CALLBACK SPU2close();
+// void CALLBACK SPU2shutdown();
+// void CALLBACK SPU2update();
+// void CALLBACK SPU2dma(u32 *dmaAddr, char *pRam);
+// void CALLBACK SPU2write(u32 mem, u16 value);
+// u16  CALLBACK SPU2read(u32 mem);
+
+Extended funcs
+--------------
+
+// void CALLBACK SPU2configure();
+// void CALLBACK SPU2about();
+// s32  CALLBACK SPU2test();
+
+
+
+ CDVD plugin API:
+ ---------------
+
+Basic funcs
+-----------
+
+// s32  CALLBACK CDVDinit();
+
+Inits the plugin, return 0 on success, else -1.
+
+// s32  CALLBACK CDVDopen();
+
+Opens the plugin, return 0 on success, else -1.
+
+// void CALLBACK CDVDclose();
+
+Close the plugin.
+
+// void CALLBACK CDVDshutdown();
+
+Shutdown the plugin.
+
+// s32  CALLBACK CDVDreadTrack(u32 lsn, int mode);
+
+Starts reading from the specified 'lsn' sector location,
+return 0 on success, else -1.
+
+// u8*  CALLBACK CDVDgetBuffer();
+
+Gets a pointer to the buffer with the sector data
+readed by a previously CDVDreadTrack call.
+The buffer size depends on the mode used for readTrack.
+
+note: return can be NULL (for async modes)
+
+// s32  CALLBACK CDVDreadSubQ(u32 lsn, cdvdSubQ* subq);
+
+Read subq data from disc at 'lsn' location (only cds have subq data),
+return 0 on success, else -1.
+
+// s32  CALLBACK CDVDgetTN(cdvdTN *Buffer);
+
+Get the the cdvdTN data for the currect CdRom,
+return 0 on success, else -1.
+
+// s32  CALLBACK CDVDgetTD(u8 Track, cdvdLoc *Buffer);
+
+Get the the cdvdTD data for the 'Track' track in the current CdRom,
+return 0 on success, else -1.
+
+// s32  CALLBACK CDVDgetTOC(void* toc);
+
+Get ps2 style toc from disc, return 0 on success, else -1.
+(ps2 toc isnt quite the same as a normal disc toc,
+especially for dvds)
+
+// s32  CALLBACK CDVDgetDiskType();
+
+Returns disktype in the format CDVD_TYPE_xxxx
+
+// s32  CALLBACK CDVDgetTrayStatus();
+
+Returns tray status in the format CDVD_TRAY_xxxx
+
+// s32  CALLBACK CDVDctrlTrayOpen();
+
+Opens disc tray, return 0 on success, else -1.
+
+// s32  CALLBACK CDVDctrlTrayClose();
+
+Closes disc tray, return 0 on success, else -1.
+
+
+Extended funcs
+--------------
+
+// void CALLBACK CDVDconfigure();
+
+Configure the plugin.
+
+// void CALLBACK CDVDabout();
+
+Shows an About Dialog of the plugin.
+
+// s32  CALLBACK CDVDtest();
+
+Returns 0 if the plugin should work ok, else -1.
+
+
+2) FAQs
+
+ * What's the right open/close sequence?
+    1. CDVD
+    2. GS
+    3. PAD1/2
+    4. SPU2
+
+ * Where to start coding a plugin?
+    Get an open source plugin, mine are all open source,
+    so you can freely base on them.
+
+ * Why GSgifTransfer2 exists?
+    GSgifTransfer2 is used by the XGKICK VU1 opcode, and
+    it doesn't has a size, the GSgifTransfer is used by he GIF
+    and the VIF dmas, and it has a size, so that's why :).
+
+3) Notes
+
+ * CDVDgetBuffer should be used after CDVDreadTrack, 
+   like this:
+   CDVDreadTrack(time);
+   ptr = CDVDgetBuffer();
+
+   but not like this;
+   ptr = CDVDgetBuffer();
+   CDVDreadTrack(time);
+
+ * Errors should be checked for both CDVDreadTrack and CDVDgetBuffer,
+   and not only CDVDreadTrack.
+

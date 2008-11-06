@@ -1,0 +1,5 @@
+gametitle=World Soccer Winning Eleven 10 [SLPM 66374] (J)
+comment=patches by fullcodes
+//Skip PSS
+// patch=0,EE,00131260,word,03e00008
+// patch=0,EE,00131264,word,00000000

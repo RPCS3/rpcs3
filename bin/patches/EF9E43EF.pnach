@@ -1,0 +1,5 @@
+gametitle= Ys: Ark Of Napishtim [SLUS 20980] (U)
+comment=Skips Videos
+//patches by Refraction
+//Skip Videos
+patch=0,EE,00224620,word,00000000

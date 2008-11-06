@@ -1,0 +1,4 @@
+gametitle=RC Revenge Pro [SLUS 20153] (U)
+comment=Skips Video (sceMpegIsEnd)
+//Skip Videos
+patch=0,EE,001ceaf8,word,24020001

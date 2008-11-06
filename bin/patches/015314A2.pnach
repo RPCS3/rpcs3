@@ -1,0 +1,4 @@
+gametitle= Sims - The Urbz, The [SLES 52908] (E)
+comment=
+//ZeroGS Patch - GAME_NOQUICKRESOLVE
+zerogs=00000800

@@ -1,0 +1,372 @@
+// Microsoft Visual C++ generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "afxres.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// Polish resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_PLK)
+#ifdef _WIN32
+LANGUAGE LANG_POLISH, SUBLANG_DEFAULT
+#pragma code_page(1250)
+#endif //_WIN32
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE 
+BEGIN
+    "#include ""afxres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE 
+BEGIN
+    "#define _AFX_NO_SPLITTER_RESOURCES\r\n"
+    "#define _AFX_NO_OLE_RESOURCES\r\n"
+    "#define _AFX_NO_TRACKER_RESOURCES\r\n"
+    "#define _AFX_NO_PROPERTY_RESOURCES\r\n"
+    "\r\n"
+    "#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)\r\n"
+    "#ifdef _WIN32\r\n"
+    "LANGUAGE 9, 1\r\n"
+    "#pragma code_page(1252)\r\n"
+    "#endif\r\n"
+    "#include ""res\\spu2PeopsSound.rc2""  // non-Microsoft Visual C++ edited resources\r\n"
+    "#include ""afxres.rc""         // Standard components\r\n"
+    "#endif\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+#endif    // Polish resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////////////////////
+// Neutral resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_NEU)
+#ifdef _WIN32
+LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
+#pragma code_page(1252)
+#endif //_WIN32
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_ABOUT DIALOGEX 0, 0, 239, 198
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "About the P.E.Op.S. SPU2 DSound Audio Driver..."
+FONT 8, "MS Sans Serif", 0, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,98,178,44,14
+    RTEXT           "Version:",IDC_STATIC,5,7,74,9
+    RTEXT           "Release date :",IDC_STATIC,5,16,74,9
+    RTEXT           "Coded by :",IDC_STATIC,5,27,74,9
+    RTEXT           "Pete's EMail :",IDC_STATIC,5,40,74,9
+    RTEXT           "Pete's homepage :",IDC_STATIC,5,51,74,9
+    LTEXT           "1.9.0",IDC_STATIC,81,7,155,9
+    LTEXT           "11.11.2007",IDC_STATIC,81,16,154,9
+    LTEXT           "Pete Bernert and the P.E.Op.S. team",IDC_STATIC,81,27,154,9
+    LTEXT           "BlackDove@addcom.de",IDC_STATIC,81,40,154,9
+    LTEXT           "http://www.pbernert.com",IDC_STATIC,81,51,154,9
+    CONTROL         "",IDC_STATIC,"Static",SS_ETCHEDFRAME,5,132,218,41,WS_EX_DLGMODALFRAME
+    RTEXT           "Greetings to:",IDC_STATIC,12,137,41,9
+    LTEXT           "- Kanodin, Elly and zenogais (I wouldn't have started without their sources).\n- Neill Corlett (for his always excellent work)",IDC_STATIC,56,137,153,27
+    RTEXT           "P.E.Op.S. homepage :",IDC_STATIC,5,87,74,9
+    LTEXT           "https://sourceforge.net/projects/peops/",IDC_STATIC,82,87,154,9
+    RTEXT           "linuzappz :",IDC_STATIC,10,63,69,10
+    LTEXT           "http://www.pcsx.net",IDC_STATIC,81,63,142,10
+    RTEXT           "kode54 :",IDC_STATIC,10,75,69,10
+    LTEXT           "http://home.earthlink.net/~kode54/",IDC_STATIC,81,75,142,10
+    LTEXT           "Additional changes by Refraction of PCSX2 team",IDC_STATIC,12,103,198,14
+END
+
+IDD_CFGDLG DIALOGEX 0, 0, 258, 150
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "P.E.Op.S SPU2 Plugin Configuration"
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    COMBOBOX        IDC_VOLUME,55,19,186,62,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        IDC_USEREVERB,55,35,186,44,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        IDC_INTERPOL,55,51,186,62,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    CONTROL         "Enable developer debug mode",IDC_DEBUGMODE,"Button",BS_AUTOCHECKBOX | BS_LEFT | BS_VCENTER | WS_TABSTOP,12,97,229,10
+    CONTROL         "Enable sound recording window",IDC_RECORDMODE,"Button",BS_AUTOCHECKBOX | BS_LEFT | BS_VCENTER | WS_TABSTOP,12,84,229,10
+    DEFPUSHBUTTON   "OK",IDOK,51,127,45,14
+    PUSHBUTTON      "Cancel",IDCANCEL,157,127,45,14
+    RTEXT           "Volume:",IDC_STATIC,23,22,29,10,SS_CENTERIMAGE
+    GROUPBOX        "General settings",IDC_STATIC,7,7,245,63
+    GROUPBOX        "Misc",IDC_STATIC,7,74,245,51
+    RTEXT           "Reverb:",IDC_STATIC,23,38,29,10,SS_CENTERIMAGE
+    RTEXT           "Interpolation:",IDC_STATIC,9,54,43,10,SS_CENTERIMAGE
+    CONTROL         "Enable Thread Mode",IDC_TIMER,"Button",BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,12,111,194,11
+END
+
+IDD_DEBUG DIALOGEX 0, 0, 398, 314
+STYLE DS_SETFONT | DS_MODALFRAME | DS_CENTER | WS_MINIMIZEBOX | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+CAPTION "P.E.Op.S. SPU2 sound debug screen"
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    CONTROL         "Core 0",IDC_CORE1,"Button",BS_AUTORADIOBUTTON | WS_GROUP,44,2,49,8
+    CONTROL         "Core 1",IDC_CORE2,"Button",BS_AUTORADIOBUTTON,101,2,49,8
+    LTEXT           "",IDC_SAREA,4,14,150,288,WS_BORDER
+    CONTROL         "",IDC_MUTE1,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,158,14,9,9
+    CONTROL         "1",IDC_CHAN1,"Button",BS_AUTORADIOBUTTON | WS_GROUP,168,14,22,9
+    CONTROL         "",IDC_MUTE2,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,158,26,9,9
+    CONTROL         "2",IDC_CHAN2,"Button",BS_AUTORADIOBUTTON,168,26,22,9
+    CONTROL         "",IDC_MUTE3,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,158,38,9,9
+    CONTROL         "3",IDC_CHAN3,"Button",BS_AUTORADIOBUTTON,168,38,22,9
+    CONTROL         "",IDC_MUTE4,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,158,50,9,9
+    CONTROL         "4",IDC_CHAN4,"Button",BS_AUTORADIOBUTTON,168,50,22,9
+    CONTROL         "",IDC_MUTE5,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,158,62,9,9
+    CONTROL         "5",IDC_CHAN5,"Button",BS_AUTORADIOBUTTON,168,62,22,9
+    CONTROL         "",IDC_MUTE6,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,158,74,9,9
+    CONTROL         "6",IDC_CHAN6,"Button",BS_AUTORADIOBUTTON,168,74,22,9
+    CONTROL         "",IDC_MUTE7,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,158,86,9,9
+    CONTROL         "7",IDC_CHAN7,"Button",BS_AUTORADIOBUTTON,168,86,22,9
+    CONTROL         "",IDC_MUTE8,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,158,98,9,9
+    CONTROL         "8",IDC_CHAN8,"Button",BS_AUTORADIOBUTTON,168,98,22,9
+    CONTROL         "",IDC_MUTE9,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,158,110,9,9
+    CONTROL         "9",IDC_CHAN9,"Button",BS_AUTORADIOBUTTON,168,110,22,9
+    CONTROL         "",IDC_MUTE10,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,158,122,9,9
+    CONTROL         "10",IDC_CHAN10,"Button",BS_AUTORADIOBUTTON,168,122,22,9
+    CONTROL         "",IDC_MUTE11,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,158,134,9,9
+    CONTROL         "11",IDC_CHAN11,"Button",BS_AUTORADIOBUTTON,168,134,22,9
+    CONTROL         "",IDC_MUTE12,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,158,146,9,9
+    CONTROL         "12",IDC_CHAN12,"Button",BS_AUTORADIOBUTTON,168,146,22,9
+    CONTROL         "",IDC_MUTE13,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,158,158,9,9
+    CONTROL         "13",IDC_CHAN13,"Button",BS_AUTORADIOBUTTON,168,158,22,9
+    CONTROL         "",IDC_MUTE14,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,158,170,9,9
+    CONTROL         "14",IDC_CHAN14,"Button",BS_AUTORADIOBUTTON,168,170,22,9
+    CONTROL         "",IDC_MUTE15,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,158,182,9,9
+    CONTROL         "15",IDC_CHAN15,"Button",BS_AUTORADIOBUTTON,168,182,22,9
+    CONTROL         "",IDC_MUTE16,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,158,194,9,9
+    CONTROL         "16",IDC_CHAN16,"Button",BS_AUTORADIOBUTTON,168,194,22,9
+    CONTROL         "",IDC_MUTE17,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,158,206,9,9
+    CONTROL         "17",IDC_CHAN17,"Button",BS_AUTORADIOBUTTON,168,206,22,9
+    CONTROL         "",IDC_MUTE18,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,158,218,9,9
+    CONTROL         "18",IDC_CHAN18,"Button",BS_AUTORADIOBUTTON,168,218,22,9
+    CONTROL         "",IDC_MUTE19,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,158,230,9,9
+    CONTROL         "19",IDC_CHAN19,"Button",BS_AUTORADIOBUTTON,168,230,22,9
+    CONTROL         "",IDC_MUTE20,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,158,242,9,9
+    CONTROL         "20",IDC_CHAN20,"Button",BS_AUTORADIOBUTTON,168,242,22,9
+    CONTROL         "",IDC_MUTE21,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,158,254,9,9
+    CONTROL         "21",IDC_CHAN21,"Button",BS_AUTORADIOBUTTON,168,254,22,9
+    CONTROL         "",IDC_MUTE22,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,158,266,9,9
+    CONTROL         "22",IDC_CHAN22,"Button",BS_AUTORADIOBUTTON,168,266,22,9
+    CONTROL         "",IDC_MUTE23,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,158,278,9,9
+    CONTROL         "23",IDC_CHAN23,"Button",BS_AUTORADIOBUTTON,168,278,22,9
+    CONTROL         "",IDC_MUTE24,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,158,290,9,9
+    CONTROL         "24",IDC_CHAN24,"Button",BS_AUTORADIOBUTTON,168,290,22,9
+    LTEXT           "Streams",IDC_STATIC,6,2,29,8
+    CTEXT           "Mute/Select",IDC_STATIC,144,2,55,8
+    LTEXT           "",IDC_ADSR,208,22,176,55,WS_BORDER
+    RTEXT           "Attack:",IDC_STATIC,221,81,30,9
+    RTEXT           "Decay:",IDC_STATIC,221,92,30,9
+    RTEXT           "Sustain:",IDC_STATIC,221,103,30,9
+    RTEXT           "Release:",IDC_STATIC,221,114,30,9
+    LTEXT           "---",IDC_SADSR1,254,81,44,9
+    LTEXT           "---",IDC_SADSR2,254,92,44,9
+    LTEXT           "---",IDC_SADSR3,254,103,44,9
+    LTEXT           "---",IDC_SADSR4,254,114,42,9
+    RTEXT           "Sustain level:",IDC_STATIC,302,81,44,9
+    LTEXT           "---",IDC_SADSR5,349,81,38,9
+    RTEXT           "Sustain inc.:",IDC_STATIC,302,92,44,9
+    LTEXT           "---",IDC_SADSR6,349,92,38,9
+    RTEXT           "Channel:",IDC_STATIC,204,2,30,8
+    GROUPBOX        "ADSR channel info",IDC_STATIC,201,11,190,119
+    LTEXT           "1",IDC_CHANNUM,238,2,33,8
+    PUSHBUTTON      "M0",IDC_MUTEOFF,157,300,15,10
+    PUSHBUTTON      "M1",IDC_MUTEON,174,300,15,10
+    GROUPBOX        "Generic channel info",IDC_STATIC,201,131,190,114
+    RTEXT           "On:",IDC_STATIC,210,143,41,9
+    RTEXT           "Stop:",IDC_STATIC,210,154,41,9
+    RTEXT           "Reverb:",IDC_STATIC,210,187,41,9
+    RTEXT           "Start pos:",IDC_STATIC,301,143,35,9
+    RTEXT           "Curr pos:",IDC_STATIC,301,154,35,9
+    RTEXT           "Loop pos:",IDC_STATIC,301,165,35,9
+    RTEXT           "Act freq:",IDC_STATIC,300,220,35,9
+    RTEXT           "Used freq:",IDC_STATIC,300,231,35,9
+    RTEXT           "Right vol:",IDC_STATIC,300,192,35,9
+    RTEXT           "Left vol:",IDC_STATIC,300,203,35,9
+    RTEXT           "Rvb active:",IDC_STATIC,210,198,41,9
+    RTEXT           "Rvb end:",IDC_STATIC,210,220,41,9
+    RTEXT           "Rvb cur:",IDC_STATIC,210,231,41,9
+    RTEXT           "Noise:",IDC_STATIC,210,165,41,9
+    RTEXT           "FMod:",IDC_STATIC,210,176,41,9
+    RTEXT           "Rvb start:",IDC_STATIC,210,209,41,9
+    RTEXT           "Irq addr.:",IDC_STATIC,207,259,35,9
+    RTEXT           "Curr adsr vol.:",IDC_STATIC,302,103,44,9
+    LTEXT           "---",IDC_SADSR7,349,103,38,9
+    LTEXT           "---",IDC_CI1,254,143,39,9
+    LTEXT           "---",IDC_CI2,254,154,39,9
+    LTEXT           "---",IDC_CI3,254,165,39,9
+    LTEXT           "---",IDC_CI4,254,176,39,9
+    LTEXT           "---",IDC_CI5,254,187,39,9
+    LTEXT           "---",IDC_CI6,254,198,39,9
+    LTEXT           "---",IDC_CI7,254,209,39,9
+    LTEXT           "---",IDC_CI8,254,220,39,9
+    LTEXT           "---",IDC_CI9,254,231,39,9
+    LTEXT           "---",IDC_CI10,339,143,46,9
+    GROUPBOX        "Spu states",IDC_STATIC,202,246,189,61
+    LTEXT           "---",IDC_CI11,339,154,46,9
+    LTEXT           "---",IDC_CI12,339,165,46,9
+    LTEXT           "---",IDC_CI13,339,192,23,9
+    LTEXT           "---",IDC_CI14,339,203,22,9
+    LTEXT           "---",IDC_CI15,339,220,46,9
+    LTEXT           "---",IDC_CI16,339,231,46,9
+    LTEXT           "---",IDC_STA1,246,259,46,9
+    RTEXT           "Raw envelope:",IDC_STATIC,296,114,50,9
+    LTEXT           "---",IDC_SADSR8,349,114,38,9
+    RTEXT           "Ctrl:",IDC_STATIC,207,270,35,9
+    LTEXT           "---",IDC_STA2,247,270,46,9
+    RTEXT           "Stat:",IDC_STATIC,207,281,35,9
+    LTEXT           "---",IDC_STA3,247,281,46,9
+    RTEXT           "Spu mem:",IDC_STATIC,207,292,35,9
+    LTEXT           "---",IDC_STA4,247,292,46,9
+    LTEXT           "---",IDC_CI17,367,192,18,9
+    LTEXT           "---",IDC_CI18,367,203,18,9
+    RTEXT           "Dbg addr:",IDC_STATIC,301,176,35,9
+    LTEXT           "---",IDC_CI19,339,176,46,9
+END
+
+IDD_RECORD DIALOGEX 0, 0, 248, 25
+STYLE DS_SETFONT | DS_MODALFRAME | WS_MINIMIZEBOX | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+CAPTION "P.E.Op.S. SPU2 sound recording"
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    RTEXT           "Filename:",IDC_STATIC,3,5,33,9
+    EDITTEXT        IDC_WAVFILE,41,3,134,12,ES_AUTOHSCROLL
+    PUSHBUTTON      "Start recording",IDC_RECORD,180,3,61,12
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO 
+BEGIN
+    IDD_ABOUT, DIALOG
+    BEGIN
+        LEFTMARGIN, 5
+        RIGHTMARGIN, 236
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 192
+    END
+
+    IDD_CFGDLG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 251
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 144
+    END
+
+    IDD_DEBUG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 391
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 307
+    END
+
+    IDD_RECORD, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 241
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 18
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Version
+//
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 1,6,0,0
+ PRODUCTVERSION 1,6,0,0
+ FILEFLAGSMASK 0x3fL
+#ifdef _DEBUG
+ FILEFLAGS 0x1L
+#else
+ FILEFLAGS 0x0L
+#endif
+ FILEOS 0x4L
+ FILETYPE 0x2L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904b0"
+        BEGIN
+            VALUE "Comments", "P.E.Op.S. Sound PS2 SPU Audio driver - coded by Pete Bernert and the P.E.Op.S. team"
+            VALUE "FileDescription", "spu2PeopsSound"
+            VALUE "FileVersion", "1, 6, 0, 0"
+            VALUE "InternalName", "spu2PeopsSound"
+            VALUE "LegalCopyright", "GPL 2004"
+            VALUE "LegalTrademarks", "GPL 2004"
+            VALUE "OriginalFilename", "spu2PeopsSound.DLL"
+            VALUE "ProductName", "spu2PeopsSound"
+            VALUE "ProductVersion", "1, 6, 0, 0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END
+
+#endif    // Neutral resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+#define _AFX_NO_SPLITTER_RESOURCES
+#define _AFX_NO_OLE_RESOURCES
+#define _AFX_NO_TRACKER_RESOURCES
+#define _AFX_NO_PROPERTY_RESOURCES
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE 9, 1
+#pragma code_page(1252)
+#endif
+#include "res\spu2PeopsSound.rc2"  // non-Microsoft Visual C++ edited resources
+#include "afxres.rc"         // Standard components
+#endif
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+

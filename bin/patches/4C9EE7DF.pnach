@@ -1,0 +1,20 @@
+gametitle=Crazy Taxi [SLUS 20202] (U)
+comment= patches by Nachbrenner
+//skip movie "PlaySega"
+patch=0,EE,001a1950,word,03e00008
+patch=0,EE,001a1954,word,00000000
+//skip movie "PlayAcclaim"
+patch=0,EE,001a1ae8,word,03e00008
+patch=0,EE,001a1aec,word,00000000
+//skip music.str (for blockdump)
+// patch=0,EE,001a0bb0,word,0000000
+//skip voice.str (for blockdump)
+// patch=0,EE,001a0b9c,word,0000000
+//Infinite arcade time
+patch=1,EE,002F0C64,word,00000e00
+//Japanese mode
+//patch=0,EE,00118514,word,af8095a4
+//controller setting B
+patch=1,EE,002152DF,byte,01
+//skip nlWaitVSync / TaxiBlankInterrupt (obsolete)
+//patch=0,EE,0019a590,word,03e00008

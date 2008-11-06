@@ -1,0 +1,53 @@
+<html>
+<body>
+<pre>
+<h1>Build Log</h1>
+<h3>
+--------------------Configuration: DEV9linuz - Win32 Release--------------------
+</h3>
+<h3>Command Lines</h3>
+Creating temporary file "C:\DOCUME~1\Florin\LOCALS~1\Temp\RSP5C7.tmp" with contents
+[
+/nologo /ML /W3 /GX /O2 /I "../" /I "./" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "DEV9linuz_EXPORTS" /D "__WIN32__" /D VERSION=0 /D BUILD=2 /Fo"Release/" /Fd"Release/" /FD /c 
+"D:\Temporar\Npcsx2\plugins\dev9\DEV9linuz\flash.c"
+]
+Creating command line "snCl.exe @C:\DOCUME~1\Florin\LOCALS~1\Temp\RSP5C7.tmp" 
+Creating temporary file "C:\DOCUME~1\Florin\LOCALS~1\Temp\RSP5C8.tmp" with contents
+[
+kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib comctl32.lib packet.lib /nologo /dll /incremental:no /pdb:"Release/DEV9linuz.pdb" /machine:I386 /nodefaultlib:"msvcrt.lib" /def:".\DEV9linuz.def" /out:"Release/DEV9linuz.dll" /implib:"Release/DEV9linuz.lib" 
+.\Release\Config.obj
+.\Release\DEV9.obj
+.\Release\socks.obj
+.\Release\Win32.obj
+.\Release\Dev9linuz.res
+.\Release\flash.obj
+]
+Creating command line "snLink.exe @C:\DOCUME~1\Florin\LOCALS~1\Temp\RSP5C8.tmp"
+<h3>Output Window</h3>
+Compiling...
+snCL -- Detected win32 build...passing to cl.exe
+flash.c
+
+NOTE: WINVER has been defined as 0x0500 or greater which enables
+Windows NT 5.0 and Windows 98 features. When these headers were released,
+Windows NT 5.0 beta 1 and Windows 98 beta 2.1 were the current versions.
+
+For this release when WINVER is defined as 0x0500 or greater, you can only
+build beta or test applications.  To build a retail application,
+set WINVER to 0x0400 or visit http://www.microsoft.com/msdn/sdk
+to see if retail Windows NT 5.0 or Windows 98 headers are available.
+
+See the SDK release notes for more information.
+
+Linking...
+snCL -- Detected win32 build...passing to link.exe
+snMonitor already running.
+   Creating library Release/DEV9linuz.lib and object Release/DEV9linuz.exp
+
+
+
+<h3>Results</h3>
+DEV9linuz.dll - 0 error(s), 0 warning(s)
+</pre>
+</body>
+</html>

@@ -1,0 +1,11 @@
+; FRAME_n
+; c0.rgb = BGCOLOR
+; c0.a = ALP
+; c1.a = MMOD
+; c2.a = SLBG
+
+ps_1_1
+
+tex t2
+
+mov r0, t2

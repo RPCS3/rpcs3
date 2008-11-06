@@ -1,0 +1,17 @@
+EXPORTS
+    PADabout = PADabout@0 @6
+    PADclose = PADclose@0 @7
+    PADconfigure = PADconfigure@0 @8
+    PADinit = PADinit@4 @9
+    PADkeyEvent = PADkeyEvent@0 @10
+    PADopen = PADopen@4 @11
+    PADpoll = PADpoll@4 @12
+    PADquery = PADquery@0 @13
+    PADsetMode @14
+    PADshutdown = PADshutdown@0 @15
+    PADstartPoll = PADstartPoll@4 @16
+    PADtest = PADtest@0 @17
+    PADwndProc = PADwndProc@16 @18
+    PS2EgetLibName = PS2EgetLibName@0 @20
+    PS2EgetLibType = PS2EgetLibType@0 @21
+    PS2EgetLibVersion2 = PS2EgetLibVersion2@4 @22
