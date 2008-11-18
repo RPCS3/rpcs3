@@ -37,6 +37,10 @@ namespace YAML
 	{
 		Clear();
 
+		// save location
+		m_line = pScanner->peek().line;
+		m_column = pScanner->peek().column;
+
 		ParseHeader(pScanner, state);
 
 		// is this an alias? if so, it can have no content

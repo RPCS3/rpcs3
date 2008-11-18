@@ -27,6 +27,10 @@ namespace YAML
 
 		CONTENT_TYPE GetType() const;
 
+		// file location of start of this node
+		int GetLine() const { return m_line; }
+		int GetColumn() const { return m_column; }
+
 		// accessors
 		Iterator begin() const;
 		Iterator end() const;
@@ -81,6 +85,7 @@ namespace YAML
 		void ParseAlias(Scanner *pScanner, const ParserState& state);
 
 	private:
+		int m_line, m_column;
 		std::string m_anchor, m_tag;
 		Content *m_pContent;
 		bool m_alias;
@@ -97,7 +102,7 @@ namespace YAML
 	inline void operator >> (const Node& node, T& value)
 	{
 		if(!Read(node, value))
-			throw InvalidScalar();
+			throw InvalidScalar(node.m_line, node.m_column);
 	}
 
 	template <typename T>
@@ -114,7 +119,7 @@ namespace YAML
 			}
 		}
 
-		throw BadDereference();
+		throw KeyNotFound(m_line, m_column);
 	}
 
 	template <typename T>

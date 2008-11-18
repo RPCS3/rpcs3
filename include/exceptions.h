@@ -5,23 +5,6 @@
 
 namespace YAML
 {
-	class Exception: public std::exception {};
-	class ParserException: public Exception {
-	public:
-		ParserException(int line_, int column_, const std::string& msg_)
-			: line(line_), column(column_), msg(msg_) {}
-		virtual ~ParserException() throw () {}
-
-		int line, column;
-		std::string msg;
-	};
-
-	class RepresentationException: public Exception {};
-
-	// representation exceptions
-	class InvalidScalar: public RepresentationException {};
-	class BadDereference: public RepresentationException {};
-
 	// error messages
 	namespace ErrorMsg
 	{
@@ -55,5 +38,50 @@ namespace YAML
 		const std::string CHAR_IN_ANCHOR       = "illegal character found while scanning anchor";
 		const std::string ZERO_INDENT_IN_BLOCK = "cannot set zero indentation for a block scalar";
 		const std::string CHAR_IN_BLOCK        = "unexpected character in block scalar";
+
+		const std::string INVALID_SCALAR       = "invalid scalar";
+		const std::string KEY_NOT_FOUND        = "key not found";
+		const std::string BAD_DEREFERENCE      = "bad dereference";
 	}
+
+	class Exception: public std::exception {
+	public:
+		Exception(int line_, int column_, const std::string& msg_)
+			: line(line_), column(column_), msg(msg_) {}
+		virtual ~Exception() throw () {}
+
+		int line, column;
+		std::string msg;
+	};
+
+	class ParserException: public Exception {
+	public:
+		ParserException(int line_, int column_, const std::string& msg_)
+			: Exception(line_, column_, msg_) {}
+	};
+
+	class RepresentationException: public Exception {
+	public:
+		RepresentationException(int line_, int column_, const std::string& msg_)
+			: Exception(line_, column_, msg_) {}
+	};
+
+	// representation exceptions
+	class InvalidScalar: public RepresentationException {
+	public:
+		InvalidScalar(int line_, int column_)
+			: RepresentationException(line_, column_, ErrorMsg::INVALID_SCALAR) {}
+	};
+
+	class KeyNotFound: public RepresentationException {
+	public:
+		KeyNotFound(int line_, int column_)
+			: RepresentationException(line_, column_, ErrorMsg::KEY_NOT_FOUND) {}
+	};
+
+	class BadDereference: public RepresentationException {
+	public:
+		BadDereference()
+			: RepresentationException(-1, -1, ErrorMsg::BAD_DEREFERENCE) {}
+	};
 }
