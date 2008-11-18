@@ -16,8 +16,8 @@ void run()
 			doc[i] >> value;
 			std::cout << (value ? "true" : "false") << "\n";
 		}
-	} catch(YAML::Exception&) {
-		std::cout << "Error parsing the yaml!\n";
+	} catch(YAML::Exception& e) {
+		std::cout << "Error at line " << e.line+1 << ", col " << e.column+1 << ": " << e.msg << "\n";
 	}
 }
 
