@@ -136,7 +136,11 @@ namespace YAML
 
 		// write tag
 		if(m_tag != "") {
-			out << std::string("!<") << m_tag << std::string("> ");
+			// put the tag in the "proper" brackets
+			if(m_tag.substr(0, 2) == "!<" && m_tag.substr(m_tag.size() - 1) == ">")
+				out << m_tag;
+			else
+				out << std::string("!<") << m_tag << std::string("> ");
 			startedLine = true;
 			onlyOneCharOnLine = false;
 		}
