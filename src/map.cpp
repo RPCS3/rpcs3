@@ -5,6 +5,7 @@
 #include "token.h"
 #include "exceptions.h"
 #include <iostream>
+#include <memory>
 
 namespace YAML
 {
@@ -66,25 +67,19 @@ namespace YAML
 			if(token.type == TT_BLOCK_END)
 				break;
 
-			Node *pKey = new Node;
-			Node *pValue = new Node;
+			std::auto_ptr <Node> pKey(new Node), pValue(new Node);
 
-			try {
-				// grab key
-				pKey->Parse(pScanner, state);
+			// grab key
+			pKey->Parse(pScanner, state);
 
-				// now grab value (optional)
-				if(!pScanner->empty() && pScanner->peek().type == TT_VALUE) {
-					pScanner->pop();
-					pValue->Parse(pScanner, state);
-				}
-
-				m_data[pKey] = pValue;
-			} catch(Exception&) {
-				delete pKey;
-				delete pValue;
-				throw;
+			// now grab value (optional)
+			if(!pScanner->empty() && pScanner->peek().type == TT_VALUE) {
+				pScanner->pop();
+				pValue->Parse(pScanner, state);
 			}
+
+			// assign the map with the actual pointers
+			m_data[pKey.release()] = pValue.release();
 		}
 	}
 
@@ -110,33 +105,26 @@ namespace YAML
 
 			pScanner->pop();
 
-			Node *pKey = new Node;
-			Node *pValue = new Node;
+			std::auto_ptr <Node> pKey(new Node), pValue(new Node);
 
-			try {
-				// grab key
-				pKey->Parse(pScanner, state);
+			// grab key
+			pKey->Parse(pScanner, state);
 
-				// now grab value (optional)
-				if(!pScanner->empty() && pScanner->peek().type == TT_VALUE) {
-					pScanner->pop();
-					pValue->Parse(pScanner, state);
-				}
-
-				// now eat the separator (or could be a map end, which we ignore - but if it's neither, then it's a bad node)
-				Token& nextToken = pScanner->peek();
-				if(nextToken.type == TT_FLOW_ENTRY)
-					pScanner->pop();
-				else if(nextToken.type != TT_FLOW_MAP_END)
-					throw ParserException(nextToken.line, nextToken.column, ErrorMsg::END_OF_MAP_FLOW);
-
-				m_data[pKey] = pValue;
-			} catch(Exception&) {
-				// clean up and rethrow
-				delete pKey;
-				delete pValue;
-				throw;
+			// now grab value (optional)
+			if(!pScanner->empty() && pScanner->peek().type == TT_VALUE) {
+				pScanner->pop();
+				pValue->Parse(pScanner, state);
 			}
+
+			// now eat the separator (or could be a map end, which we ignore - but if it's neither, then it's a bad node)
+			Token& nextToken = pScanner->peek();
+			if(nextToken.type == TT_FLOW_ENTRY)
+				pScanner->pop();
+			else if(nextToken.type != TT_FLOW_MAP_END)
+				throw ParserException(nextToken.line, nextToken.column, ErrorMsg::END_OF_MAP_FLOW);
+
+			// assign the map with the actual pointers
+			m_data[pKey.release()] = pValue.release();
 		}
 	}
 
