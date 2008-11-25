@@ -47,7 +47,7 @@ void SysMessage(char *fmt, ...) {
 
 	if (msg[strlen(msg)-1] == '\n') msg[strlen(msg)-1] = 0;
 
-	MsgDlg = gtk_window_new (GTK_WINDOW_DIALOG);
+	MsgDlg = gtk_window_new (GTK_WINDOW_TOPLEVEL);
 	gtk_window_set_position(GTK_WINDOW(MsgDlg), GTK_WIN_POS_CENTER);
 	gtk_window_set_title(GTK_WINDOW(MsgDlg), "GSsoft Msg");
 	gtk_container_set_border_width(GTK_CONTAINER(MsgDlg), 5);

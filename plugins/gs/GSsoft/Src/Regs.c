@@ -356,6 +356,31 @@ void CALLBACK GSwrite64(u32 mem, u64 value) {
 	}
 }
 
+u32 CALLBACK GSread32(u32 mem) {
+	u32 ret;
+
+	switch (mem) {
+		case 0x12001000: // CSR
+//			gs.interlace = 1 - gs.interlace;
+			ret = gs.interlace << 13;
+			ret|= gs.CSRr;
+			return ret;
+
+		case 0x12001080: // SIGLBLID
+			ret = gs.SIGLBLID.sigid;
+			break;
+
+		default:
+			ret = 0;
+			break;
+	}
+
+#ifdef PREG_LOG
+	PREG_LOG("GSread32 mem %x ret %8.8lx\n", mem, ret);
+#endif
+	return ret;
+}
+
 u8 CALLBACK GSread8(u32 mem) {
 	u8 ret;
 
@@ -402,31 +427,6 @@ u16 CALLBACK GSread16(u32 mem) {
 
 #ifdef PREG_LOG
 	PREG_LOG("GSread16 mem %x ret %8.8lx\n", mem, ret);
-#endif
-	return ret;
-}
-
-u32 CALLBACK GSread32(u32 mem) {
-	u32 ret;
-
-	switch (mem) {
-		case 0x12001000: // CSR
-//			gs.interlace = 1 - gs.interlace;
-			ret = gs.interlace << 13;
-			ret|= gs.CSRr;
-			return ret;
-
-		case 0x12001080: // SIGLBLID
-			ret = gs.SIGLBLID.sigid;
-			break;
-
-		default:
-			ret = 0;
-			break;
-	}
-
-#ifdef PREG_LOG
-	PREG_LOG("GSread32 mem %x ret %8.8lx\n", mem, ret);
 #endif
 	return ret;
 }

@@ -517,7 +517,7 @@ void DumpTexture() {
 	for (;;) {
 		snapshotnr++;
 
-		sprintf(filename,"tex%03ld_%x.bmp", snapshotnr, tex0->tbp0);
+		sprintf(filename,"tex%03d_%x.bmp", snapshotnr, tex0->tbp0);
 
 		bmpfile=fopen(filename,"rb");
 		if (bmpfile == NULL) break;

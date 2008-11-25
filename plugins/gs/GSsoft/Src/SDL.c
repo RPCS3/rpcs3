@@ -30,7 +30,7 @@
 #include "Rec.h"
 #include "scale2x.h"
 #if defined(__i386__) || defined(__x86_64__)
-#include "ix86.h"
+#include "x86/ix86.h"
 #endif
 
 SDL_Surface *surf1x;
@@ -47,7 +47,7 @@ void DXclearScr() {
 }
 
 s32 DXopen() {
-#ifdef __LINUX__
+#ifndef __WIN32__
 	int screen;
 	int w, h;
 #endif
@@ -60,7 +60,7 @@ s32 DXopen() {
 	SDL_VERSION(&info.version);
 	if (SDL_GetWMInfo(&info) == 0) return -1;
 
-#ifdef __LINUX__
+#ifndef __WIN32__
 	info.info.x11.lock_func();
 	screen = DefaultScreen(info.info.x11.display);
 	w = DisplayWidth(info.info.x11.display, screen);

@@ -29,7 +29,7 @@
 #include "Cache.h"
 #include "Regs.h"
 #if defined(__i386__) || defined(__x86_64__)
-#include "ix86.h"
+#include "x86/ix86.h"
 #endif
 
 #ifdef __MSCW32__
@@ -39,6 +39,7 @@
 char *codeclist[] = { "MPEG1", /*"DIVX", "MPEG2",*/ NULL };
 char *filterslist[] = { "Disabled", "Scale2x", NULL };
 
+u8* g_pBasePS2Mem = NULL;
 
 const unsigned char version  = PS2E_GS_VERSION;
 const unsigned char revision = 1;	// revision and build gives plugin version
@@ -83,6 +84,10 @@ void __Log(char *fmt, ...) {
 	va_end(list);
 }
 #endif
+
+void CALLBACK GSsetBaseMem(void* pmem) {
+    g_pBasePS2Mem = (u8*)pmem;
+}
 
 void gsSetCtxt(int ctxt) {
 	if (gs.ctxt == ctxt) return;
@@ -190,7 +195,7 @@ void CALLBACK GSshutdown() {
 #endif
 }
 
-s32 CALLBACK GSopen(void *pDsp, char *Title) {
+s32 CALLBACK GSopen(void *pDsp, char *Title, int multithread) {
 	s32 dsp;
 
 #ifdef GS_LOG
@@ -230,6 +235,11 @@ void CALLBACK GSclose() {
 
 void CALLBACK GSirqCallback(void (*callback)()) {
 	GSirq = callback;
+}
+
+void CALLBACK GSwriteCSR(u32 write)
+{
+    gs.CSRw = write;
 }
 
 void CALLBACK GSmakeSnapshot(char *path) {
@@ -275,7 +285,7 @@ void CALLBACK GSmakeSnapshot(char *path) {
 	for (;;) {
 		snapshotnr++;
 
-		sprintf(filename,"%ssnap%03ld.bmp", path, snapshotnr);
+		sprintf(filename,"%ssnap%03d.bmp", path, snapshotnr);
 
 		bmpfile=fopen(filename,"rb");
 		if (bmpfile == NULL) break;
@@ -300,7 +310,7 @@ void CALLBACK GSmakeSnapshot(char *path) {
 	fclose(bmpfile);  
 }
 
-void CALLBACK GSvsync() {
+void CALLBACK GSvsync(int interlace) {
 #ifdef GS_LOG
 	GS_LOG("\nGSvsync\n\n");
 #endif

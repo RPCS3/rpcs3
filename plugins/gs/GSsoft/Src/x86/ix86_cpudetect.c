@@ -1,17 +1,30 @@
-
-#if defined (__WIN32__)
-
+/*  Cpudetection lib
+ *  Copyright (C) 2002-2008  Pcsx2 Team
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *  
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *  
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
+ */
+#if defined (_WIN32)
 #include <windows.h>
-
 #endif
 
-#include <memory.h>
 #include <string.h>
 #include <stdio.h>
 
 #include "ix86.h"
 
-#if defined (__VCNET2005__)
+#if defined (_MSC_VER) && _MSC_VER >= 1400
 
    void __cpuid(int* CPUInfo, int InfoType);
    unsigned __int64 __rdtsc();
@@ -21,68 +34,29 @@
 
 #endif
 
-u32 hasFloatingPointUnit;
-u32 hasVirtual8086ModeEnhancements;
-u32 hasDebuggingExtensions;
-u32 hasPageSizeExtensions;
-u32 hasTimeStampCounter;
-u32 hasModelSpecificRegisters;
-u32 hasPhysicalAddressExtension;
-u32 hasMachineCheckArchitecture;
-u32 hasCOMPXCHG8BInstruction;
-u32 hasAdvancedProgrammableInterruptController;
-u32 hasSEPFastSystemCall;
-u32 hasMemoryTypeRangeRegisters;
-u32 hasPTEGlobalFlag;
-u32 hasMachineCheckArchitecture;
-u32 hasConditionalMoveAndCompareInstructions;
-u32 hasFGPageAttributeTable;
-u32 has36bitPageSizeExtension;
-u32 hasProcessorSerialNumber;
-u32 hasCFLUSHInstruction;
-u32 hasDebugStore;
-u32 hasACPIThermalMonitorAndClockControl;
-u32 hasMultimediaExtensions;
-u32 hasFastStreamingSIMDExtensionsSaveRestore;
-u32 hasStreamingSIMDExtensions;
-u32 hasStreamingSIMD2Extensions;
-u32 hasSelfSnoop;
-u32 hasHyperThreading;
-u32 hasThermalMonitor;
-u32 hasIntel64BitArchitecture;
-//that is only for AMDs
-u32 hasMultimediaExtensionsExt;
-u32 hasAMD64BitArchitecture;
-u32 has3DNOWInstructionExtensionsExt;
-u32 has3DNOWInstructionExtensions;
+CAPABILITIES cpucaps;
+CPUINFO cpuinfo;
 
-s8  x86ID[16];	   // Vendor ID
-u32 x86Family;	   // Processor Family
-u32 x86Model;	   // Processor Model
-u32 x86PType;	   // Processor Type
-u32 x86StepID;	   // Stepping ID
-u32 x86Flags;	   // Feature Flags
-u32 x86EFlags;	   // Extended Feature Flags
-//AMD 64 STUFF
-u32 x86_64_8BITBRANDID;
-u32 x86_64_12BITBRANDID;
-s8  x86Type[20];   //cpu type in char format
-s8  x86Fam[50];    // family in char format
-u32 cpuspeed;      // speed of cpu
-int cputype;            // Cpu type
+#define cpuid(cmd,a,b,c,d) \
+  __asm__ __volatile__("xchgl %%ebx, %1; cpuid; xchgl %%ebx, %1" \
+		: "=a" (a), "=r" (b), "=c" (c), "=d" (d)  : "0" (cmd))
 
-static s32 iCpuId( u32 cmd, u32 *regs ) 
+extern s32 iCpuId( u32 cmd, u32 *regs )
 {
-   int flag;
+   int flag=1;
 
-#if defined (__VCNET2005__)
+#if defined (_MSC_VER) && _MSC_VER >= 1400
 
    __cpuid( regs, cmd );
 
    return 0;
 
-#elif defined (__MSCW32__) && !defined(__x86_64__)
-   __asm 
+#elif defined (_MSC_VER)
+
+#ifdef __x86_64__
+   assert(0);
+#else // __x86_64__
+   __asm
    {
       push ebx;
       push edi;
@@ -103,7 +77,7 @@ static s32 iCpuId( u32 cmd, u32 *regs )
       return -1;
    }
 
-   __asm 
+   __asm
    {
       mov eax, cmd;
       cpuid;
@@ -116,16 +90,16 @@ static s32 iCpuId( u32 cmd, u32 *regs )
       pop edi;
       pop ebx;
    }
-
+#endif // __x86_64__
    return 0;
 
 
 #else
 
+#ifndef __x86_64__
+   // see if we can use cpuid
    __asm__ __volatile__ (
-#ifdef __x86_64__
-	"sub $0x18, %%rsp\n"
-#endif
+      "sub $0x18, %%esp\n"
       "pushf\n"
       "pop %%eax\n"
       "mov %%eax, %%edx\n"
@@ -136,37 +110,26 @@ static s32 iCpuId( u32 cmd, u32 *regs )
       "pop %%eax\n"
       "xor %%edx, %%eax\n"
       "mov %%eax, %0\n"
-#ifdef __x86_64__
-	"add $0x18, %%rsp\n"
-#endif
+	  "add $0x18, %%esp\n"
+      "cmpl $0x0,%%eax\n"
+      "jne 1f\n"
+      "mov $0xffffffff, %%eax\n"
+      "leave\n"
+      "ret\n"
+      "1:\n"
       : "=r"(flag) :
    );
-   
-   if ( ! flag )
-   {
-      return -1;
-   }
-
-   __asm__ __volatile__ (
-      "mov %4, %%eax\n"
-      "cpuid\n"
-      "mov %%eax, %0\n"
-      "mov %%ebx, %1\n"
-      "mov %%ecx, %2\n"
-      "mov %%edx, %3\n"
-      : "=m" (regs[0]), "=m" (regs[1]),
-        "=m" (regs[2]), "=m" (regs[3])
-      : "m"(cmd)
-      : "eax", "ebx", "ecx", "edx"
-   );
-
-   return 0;
 #endif
+
+   cpuid(cmd, regs[0], regs[1], regs[2], regs[3]);
+   return 0;
+
+#endif // _MSC_VER
 }
 
-u64 GetCPUTick( void ) 
+u64 GetCPUTick( void )
 {
-#if defined (__VCNET2005__)
+#if defined (_MSC_VER) && _MSC_VER >= 1400
 
    return __rdtsc();
 
@@ -187,12 +150,14 @@ u64 GetCPUTick( void )
 
 #include <sys/time.h>
 #include <errno.h>
+#include <sys/timeb.h>
 
-u32 timeGetTime( void ) 
+
+u32 timeGetTime()
 {
-	struct timeval tv;
-	gettimeofday( &tv, 0 );
-	return tv.tv_sec * 1000 + tv.tv_usec / 1000;
+	struct timeb t;
+	ftime(&t);
+	return (u32)(t.time*1000+t.millitm);
 }
 
 #endif
@@ -205,7 +170,7 @@ s64 CPUSpeedHz( unsigned int time )
             endTick;
    s64 overhead;
 
-   if( ! hasTimeStampCounter )
+   if( ! cpucaps.hasTimeStampCounter )
    {
       return 0; //check if function is supported
    }
@@ -217,7 +182,7 @@ s64 CPUSpeedHz( unsigned int time )
    {
       timeStart = timeGetTime( );
    }
-	while ( 1 )
+	for(;;)
 	{
 		timeStop = timeGetTime( );
 		if ( ( timeStop - timeStart ) > 1 )	
@@ -228,7 +193,7 @@ s64 CPUSpeedHz( unsigned int time )
 	}
 
 	timeStart = timeStop;
-	while ( 1 )
+	for(;;)
 	{
 		timeStop = timeGetTime( );
 		if ( ( timeStop - timeStart ) > time )	
@@ -240,38 +205,45 @@ s64 CPUSpeedHz( unsigned int time )
 
 	return (s64)( ( endTick - startTick ) + ( overhead ) );
 }
-u32 AMDspeed;
-s8 AMDspeedString[10];
+
 ////////////////////////////////////////////////////
-void x86Init( void ) 
+int arr[] = {0x65746e49, 0x2952286c, 0x726f4320, 0x4d542865,
+        0x51203229,0x20646175,0x20555043,0x20202020 ,
+        0x20202020,0x20402020,0x36362e32,0x7a4847};
+
+void cpudetectInit( void ) 
 {
    u32 regs[ 4 ];
    u32 cmds;
-
-   memset( x86ID, 0, sizeof( x86ID ) );
-   x86Family = 0;
-   x86Model  = 0;
-   x86PType  = 0;
-   x86StepID = 0;
-   x86Flags  = 0;
-   x86EFlags = 0;
+   int cputype=0;            // Cpu type
+   //AMD 64 STUFF
+   u32 x86_64_8BITBRANDID;
+   u32 x86_64_12BITBRANDID; 
+   memset( cpuinfo.x86ID, 0, sizeof( cpuinfo.x86ID ) );
+   cpuinfo.x86Family = 0;
+   cpuinfo.x86Model  = 0;
+   cpuinfo.x86PType  = 0;
+   cpuinfo.x86StepID = 0;
+   cpuinfo.x86Flags  = 0;
+   cpuinfo.x86EFlags = 0;
    
    if ( iCpuId( 0, regs ) == -1 ) return;
 
    cmds = regs[ 0 ];
-   ((u32*)x86ID)[ 0 ] = regs[ 1 ];
-   ((u32*)x86ID)[ 1 ] = regs[ 3 ];
-   ((u32*)x86ID)[ 2 ] = regs[ 2 ];
+   ((u32*)cpuinfo.x86ID)[ 0 ] = regs[ 1 ];
+   ((u32*)cpuinfo.x86ID)[ 1 ] = regs[ 3 ];
+   ((u32*)cpuinfo.x86ID)[ 2 ] = regs[ 2 ];
    if ( cmds >= 0x00000001 ) 
    {
       if ( iCpuId( 0x00000001, regs ) != -1 )
       {
-         x86StepID =  regs[ 0 ]        & 0xf;
-         x86Model  = (regs[ 0 ] >>  4) & 0xf;
-         x86Family = (regs[ 0 ] >>  8) & 0xf;
-         x86PType  = (regs[ 0 ] >> 12) & 0x3;
+         cpuinfo.x86StepID =  regs[ 0 ]        & 0xf;
+         cpuinfo.x86Model  = (regs[ 0 ] >>  4) & 0xf;
+         cpuinfo.x86Family = (regs[ 0 ] >>  8) & 0xf;
+         cpuinfo.x86PType  = (regs[ 0 ] >> 12) & 0x3;
          x86_64_8BITBRANDID = regs[1] & 0xff;
-         x86Flags  =  regs[ 3 ];
+         cpuinfo.x86Flags  =  regs[ 3 ];
+         cpuinfo.x86Flags2 =  regs[ 2 ];
       }
    }
    if ( iCpuId( 0x80000000, regs ) != -1 )
@@ -279,232 +251,76 @@ void x86Init( void )
       cmds = regs[ 0 ];
       if ( cmds >= 0x80000001 ) 
       {
-         if ( iCpuId( 0x80000001, regs ) != -1 )
+		 if ( iCpuId( 0x80000001, regs ) != -1 )
          {
 			x86_64_12BITBRANDID = regs[1] & 0xfff;
-            x86EFlags = regs[ 3 ];
+            cpuinfo.x86EFlags = regs[ 3 ];
             
          }
       }
    }
-   switch(x86PType)
+   
+   switch(cpuinfo.x86PType)
    {
       case 0:
-         strcpy( x86Type, "Standard OEM");
+         strcpy( cpuinfo.x86Type, "Standard OEM");
          break;
       case 1:
-         strcpy( x86Type, "Overdrive");
+         strcpy( cpuinfo.x86Type, "Overdrive");
          break;
       case 2:
-         strcpy( x86Type, "Dual");
+         strcpy( cpuinfo.x86Type, "Dual");
          break;
       case 3:
-         strcpy( x86Type, "Reserved");
+         strcpy( cpuinfo.x86Type, "Reserved");
          break;
       default:
-         strcpy( x86Type, "Unknown");
+         strcpy( cpuinfo.x86Type, "Unknown");
          break;
    }
-   if ( x86ID[ 0 ] == 'G' ){ cputype=0;}//trick lines but if you know a way better ;p
-   if ( x86ID[ 0 ] == 'A' ){ cputype=1;}
+   if ( cpuinfo.x86ID[ 0 ] == 'G' ){ cputype=0;}//trick lines but if you know a way better ;p
+   if ( cpuinfo.x86ID[ 0 ] == 'A' ){ cputype=1;}
    
-   if ( cputype == 0 ) //intel cpu
-   {
-      if( ( x86Family >= 7 ) && ( x86Family < 15 ) )
-      {
-         strcpy( x86Fam, "Intel P6 family (Not PIV and Higher then PPro" );
-      }
-      else
-      {
-         switch( x86Family )
-         {     
-            // Start at 486 because if it's below 486 there is no cpuid instruction
-            case 4:
-               strcpy( x86Fam, "Intel 486" );
-               break;
-            case 5:     
-               switch( x86Model )
-               {
-               case 4:
-               case 8:     // 0.25 µm
-                  strcpy( x86Fam, "Intel Pentium (MMX)");
-                  break;
-               default:
-                  strcpy( x86Fam, "Intel Pentium" );
-               }
-               break;
-            case 6:     
-               switch( x86Model )
-               {
-               case 0:     // Pentium pro (P6 A-Step)
-               case 1:     // Pentium pro
-                  strcpy( x86Fam, "Intel Pentium Pro" );
-                  break;
+    memset(cpuinfo.x86Fam, 0, sizeof(cpuinfo.x86Fam));
+    iCpuId( 0x80000002, (u32*)cpuinfo.x86Fam);
+    iCpuId( 0x80000003, (u32*)(cpuinfo.x86Fam+16));
+    iCpuId( 0x80000004, (u32*)(cpuinfo.x86Fam+32));
 
-               case 2:     // 66 MHz FSB
-               case 5:     // Xeon/Celeron (0.25 µm)
-               case 6:     // Internal L2 cache
-                  strcpy( x86Fam, "Intel Pentium II" );
-                  break;
-
-               case 7:     // Xeon external L2 cache
-               case 8:     // Xeon/Celeron with 256 KB on-die L2 cache
-               case 10:    // Xeon/Celeron with 1 or 2 MB on-die L2 cache
-               case 11:    // Xeon/Celeron with Tualatin core, on-die cache
-                  strcpy( x86Fam, "Intel Pentium III" );
-                  break;
-
-               default:
-                  strcpy( x86Fam, "Intel Pentium Pro (Unknown)" );
-               }
-               break;
-            case 15:
-               switch( x86Model )
-               {
-               case 0:     // Willamette (A-Step)
-               case 1:     // Willamette 
-                  strcpy( x86Fam, "Willamette Intel Pentium IV" );
-                  break;
-               case 2:     // Northwood 
-                  strcpy( x86Fam, "Northwood Intel Pentium IV" );
-                  break;
-
-               default:
-                  strcpy( x86Fam, "Intel Pentium IV (Unknown)" );
-                  break;
-               }
-               break;
-            default:
-               strcpy( x86Fam, "Unknown Intel CPU" );
-         }
-      }
-   }
-   else if ( cputype == 1 ) //AMD cpu
-   {
-      if( x86Family >= 7 )
-      {
-		  if((x86_64_12BITBRANDID !=0) || (x86_64_8BITBRANDID !=0))
-		  {
-		    if(x86_64_8BITBRANDID == 0 )
-		    {
-               switch((x86_64_12BITBRANDID >>6)& 0x3f)
-			   {
-			    case 4:
-				 strcpy(x86Fam,"AMD Athlon(tm) 64 Processor");
-                 AMDspeed = 22 + (x86_64_12BITBRANDID & 0x1f);
-				 //AMDspeedString = strtol(AMDspeed, (char**)NULL,10);
-				 sprintf(AMDspeedString," %d",AMDspeed);
-				 strcat(AMDspeedString,"00+");
-				 strcat(x86Fam,AMDspeedString);
-				 break;
-			    case 12: 
-				 strcpy(x86Fam,"AMD Opteron(tm) Processor");
-				 break;
-			    default:
-				   strcpy(x86Fam,"Unknown AMD 64 proccesor");
-				   
-			    }
-		     }
-		     else //8bit brand id is non zero
-		     {
-                strcpy(x86Fam,"Unsupported yet AMD64 cpu");
-		     }
-		  }
-		  else
-		  {		 
-			  strcpy( x86Fam, "AMD K7+" );
-		  }
-      }
-      else
-      {
-         switch ( x86Family )
-         {
-            case 4:
-               switch( x86Model )
-               {
-               case 14: 
-               case 15:       // Write-back enhanced
-                  strcpy( x86Fam, "AMD 5x86" );
-                  break;
-
-               case 3:        // DX2
-               case 7:        // Write-back enhanced DX2
-               case 8:        // DX4
-               case 9:        // Write-back enhanced DX4
-                  strcpy( x86Fam, "AMD 486" );
-                  break;
-
-               default:
-                  strcpy( x86Fam, "AMD Unknown" );
-
-               }
-               break;
-
-            case 5:     
-               switch( x86Model)
-               {
-               case 0:     // SSA 5 (75, 90 and 100 Mhz)
-               case 1:     // 5k86 (PR 120 and 133 MHz)
-               case 2:     // 5k86 (PR 166 MHz)
-               case 3:     // K5 5k86 (PR 200 MHz)
-                  strcpy( x86Fam, "AMD K5" );
-                  break;
-
-               case 6:     
-               case 7:     // (0.25 µm)
-               case 8:     // K6-2
-               case 9:     // K6-III
-               case 14:    // K6-2+ / K6-III+
-                  strcpy( x86Fam, "AMD K6" );
-                  break;
-
-               default:
-                  strcpy( x86Fam, "AMD Unknown" );
-               }
-               break;
-            case 6:     
-               strcpy( x86Fam, "AMD K7" );
-               break;
-            default:
-               strcpy( x86Fam, "Unknown AMD CPU" ); 
-         }
-      }
-   }
    //capabilities
-   hasFloatingPointUnit                         = ( x86Flags >>  0 ) & 1;
-   hasVirtual8086ModeEnhancements               = ( x86Flags >>  1 ) & 1;
-   hasDebuggingExtensions                       = ( x86Flags >>  2 ) & 1;
-   hasPageSizeExtensions                        = ( x86Flags >>  3 ) & 1;
-   hasTimeStampCounter                          = ( x86Flags >>  4 ) & 1;
-   hasModelSpecificRegisters                    = ( x86Flags >>  5 ) & 1;
-   hasPhysicalAddressExtension                  = ( x86Flags >>  6 ) & 1;
-   hasMachineCheckArchitecture                  = ( x86Flags >>  7 ) & 1;
-   hasCOMPXCHG8BInstruction                     = ( x86Flags >>  8 ) & 1;
-   hasAdvancedProgrammableInterruptController   = ( x86Flags >>  9 ) & 1;
-   hasSEPFastSystemCall                         = ( x86Flags >> 11 ) & 1;
-   hasMemoryTypeRangeRegisters                  = ( x86Flags >> 12 ) & 1;
-   hasPTEGlobalFlag                             = ( x86Flags >> 13 ) & 1;
-   hasMachineCheckArchitecture                  = ( x86Flags >> 14 ) & 1;
-   hasConditionalMoveAndCompareInstructions     = ( x86Flags >> 15 ) & 1;
-   hasFGPageAttributeTable                      = ( x86Flags >> 16 ) & 1;
-   has36bitPageSizeExtension                    = ( x86Flags >> 17 ) & 1;
-   hasProcessorSerialNumber                     = ( x86Flags >> 18 ) & 1;
-   hasCFLUSHInstruction                         = ( x86Flags >> 19 ) & 1;
-   hasDebugStore                                = ( x86Flags >> 21 ) & 1;
-   hasACPIThermalMonitorAndClockControl         = ( x86Flags >> 22 ) & 1;
-   hasMultimediaExtensions                      = ( x86Flags >> 23 ) & 1; //mmx
-   hasFastStreamingSIMDExtensionsSaveRestore    = ( x86Flags >> 24 ) & 1;
-   hasStreamingSIMDExtensions                   = ( x86Flags >> 25 ) & 1; //sse
-   hasStreamingSIMD2Extensions                  = ( x86Flags >> 26 ) & 1; //sse2
-   hasSelfSnoop                                 = ( x86Flags >> 27 ) & 1;
-   hasHyperThreading                            = ( x86Flags >> 28 ) & 1;
-   hasThermalMonitor                            = ( x86Flags >> 29 ) & 1;
-   hasIntel64BitArchitecture                    = ( x86Flags >> 30 ) & 1;
+   cpucaps.hasFloatingPointUnit                         = ( cpuinfo.x86Flags >>  0 ) & 1;
+   cpucaps.hasVirtual8086ModeEnhancements               = ( cpuinfo.x86Flags >>  1 ) & 1;
+   cpucaps.hasDebuggingExtensions                       = ( cpuinfo.x86Flags >>  2 ) & 1;
+   cpucaps.hasPageSizeExtensions                        = ( cpuinfo.x86Flags >>  3 ) & 1;
+   cpucaps.hasTimeStampCounter                          = ( cpuinfo.x86Flags >>  4 ) & 1;
+   cpucaps.hasModelSpecificRegisters                    = ( cpuinfo.x86Flags >>  5 ) & 1;
+   cpucaps.hasPhysicalAddressExtension                  = ( cpuinfo.x86Flags >>  6 ) & 1;
+   cpucaps.hasMachineCheckArchitecture                  = ( cpuinfo.x86Flags >>  7 ) & 1;
+   cpucaps.hasCOMPXCHG8BInstruction                     = ( cpuinfo.x86Flags >>  8 ) & 1;
+   cpucaps.hasAdvancedProgrammableInterruptController   = ( cpuinfo.x86Flags >>  9 ) & 1;
+   cpucaps.hasSEPFastSystemCall                         = ( cpuinfo.x86Flags >> 11 ) & 1;
+   cpucaps.hasMemoryTypeRangeRegisters                  = ( cpuinfo.x86Flags >> 12 ) & 1;
+   cpucaps.hasPTEGlobalFlag                             = ( cpuinfo.x86Flags >> 13 ) & 1;
+   cpucaps.hasMachineCheckArchitecture                  = ( cpuinfo.x86Flags >> 14 ) & 1;
+   cpucaps.hasConditionalMoveAndCompareInstructions     = ( cpuinfo.x86Flags >> 15 ) & 1;
+   cpucaps.hasFGPageAttributeTable                      = ( cpuinfo.x86Flags >> 16 ) & 1;
+   cpucaps.has36bitPageSizeExtension                    = ( cpuinfo.x86Flags >> 17 ) & 1;
+   cpucaps.hasProcessorSerialNumber                     = ( cpuinfo.x86Flags >> 18 ) & 1;
+   cpucaps.hasCFLUSHInstruction                         = ( cpuinfo.x86Flags >> 19 ) & 1;
+   cpucaps.hasDebugStore                                = ( cpuinfo.x86Flags >> 21 ) & 1;
+   cpucaps.hasACPIThermalMonitorAndClockControl         = ( cpuinfo.x86Flags >> 22 ) & 1;
+   cpucaps.hasMultimediaExtensions                      = ( cpuinfo.x86Flags >> 23 ) & 1; //mmx
+   cpucaps.hasFastStreamingSIMDExtensionsSaveRestore    = ( cpuinfo.x86Flags >> 24 ) & 1;
+   cpucaps.hasStreamingSIMDExtensions                   = ( cpuinfo.x86Flags >> 25 ) & 1; //sse
+   cpucaps.hasStreamingSIMD2Extensions                  = ( cpuinfo.x86Flags >> 26 ) & 1; //sse2
+   cpucaps.hasStreamingSIMD4Extensions                  = ( cpuinfo.x86Flags2 >> 19 ) & 1; //sse4.1   
+   cpucaps.hasSelfSnoop                                 = ( cpuinfo.x86Flags >> 27 ) & 1;
+   cpucaps.hasHyperThreading                            = ( cpuinfo.x86Flags >> 28 ) & 1;
+   cpucaps.hasThermalMonitor                            = ( cpuinfo.x86Flags >> 29 ) & 1;
+   cpucaps.hasIntel64BitArchitecture                    = ( cpuinfo.x86Flags >> 30 ) & 1;
     //that is only for AMDs
-   hasMultimediaExtensionsExt                   = ( x86EFlags >> 22 ) & 1; //mmx2
-   hasAMD64BitArchitecture                      = ( x86EFlags >> 29 ) & 1; //64bit cpu
-   has3DNOWInstructionExtensionsExt             = ( x86EFlags >> 30 ) & 1; //3dnow+
-   has3DNOWInstructionExtensions                = ( x86EFlags >> 31 ) & 1; //3dnow
-
-	cpuspeed = (u32 )(CPUSpeedHz( 1000 ) / 1000000);
+   cpucaps.hasMultimediaExtensionsExt                   = ( cpuinfo.x86EFlags >> 22 ) & 1; //mmx2
+   cpucaps.hasAMD64BitArchitecture                      = ( cpuinfo.x86EFlags >> 29 ) & 1; //64bit cpu
+   cpucaps.has3DNOWInstructionExtensionsExt             = ( cpuinfo.x86EFlags >> 30 ) & 1; //3dnow+
+   cpucaps.has3DNOWInstructionExtensions                = ( cpuinfo.x86EFlags >> 31 ) & 1; //3dnow   
+   cpuinfo.cpuspeed = (u32 )(CPUSpeedHz( 1000 ) / 1000000);
 }

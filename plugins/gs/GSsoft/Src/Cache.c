@@ -69,19 +69,24 @@ void _CacheLoadTexture32(Cache *tex) {
 	for (v=0; v<tex->tex0.th; v++) {
 		for (u=0; u<tex->tex0.tw; u+=8) {
 			mem = &vRamUL[getPixelAddress32(u, v, tex->tex0.tbp0, tex->tex0.tbw)];
+/*
+ * This gives the following error:
+    Cache.c:73: error: memory input 2 is not directly addressable
+
 #ifdef __GNUC__
 			__asm__ __volatile__ (
 				"movsd %1, %%xmm0\n"
 				"movhps %2, %%xmm0\n"
 				"movaps %%xmm0, %0\n"
-				: "=m"(&ptr[0]) : "m"(&mem[0]), "m"(&mem[4])
+				: "=m"(&ptr[0]) : "m"(mem), "m"(mem+4)
 			);
 #else
+*/
 			ptr[0] = mem[0]; ptr[1] = mem[1];
 			ptr[2] = mem[4]; ptr[3] = mem[5];
 			ptr[4] = mem[8]; ptr[5] = mem[9];
 			ptr[6] = mem[12]; ptr[7] = mem[13];
-#endif
+/* #endif */
 			ptr+= 8;
 		}
 
