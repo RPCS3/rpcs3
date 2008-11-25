@@ -579,14 +579,14 @@ static void VIFunpack(u32 *data, vifCode *v, int size, const unsigned int VIFdma
 #else
 			if( VIFdmanum ) {
 				__asm__(".intel_syntax\n"
-						"movaps %%xmm6, qword ptr [%0]\n"
-						"movaps %%xmm7, qword ptr [%1]\n"
+						"movaps %%xmm6, xmmword ptr [%0]\n"
+						"movaps %%xmm7, xmmword ptr [%1]\n"
 						".att_syntax\n" : :"r"(g_vifRow1), "r"(g_vifCol1) );
 			}
 			else {
 				__asm__(".intel_syntax\n"
-						"movaps %%xmm6, qword ptr [%0]\n"
-						"movaps %%xmm7, qword ptr [%1]\n"
+						"movaps %%xmm6, xmmword ptr [%0]\n"
+						"movaps %%xmm7, xmmword ptr [%1]\n"
 						".att_syntax\n" : : "r"(g_vifRow0), "r"(g_vifCol0) );
 			}
 #endif
