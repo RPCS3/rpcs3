@@ -48,7 +48,7 @@ namespace YAML
 	public:
 		Exception(int line_, int column_, const std::string& msg_)
 			: line(line_), column(column_), msg(msg_) {}
-		virtual ~Exception() {}
+		virtual ~Exception() throw() {}
 
 		int line, column;
 		std::string msg;
@@ -84,6 +84,7 @@ namespace YAML
 	public:
 		TypedKeyNotFound(int line_, int column_, const T& key_)
 			: KeyNotFound(line_, column_), key(key_) {}
+		~TypedKeyNotFound() throw() {}
 
 		T key;
 	};
