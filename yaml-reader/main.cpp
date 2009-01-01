@@ -11,11 +11,13 @@ void run()
 		YAML::Parser parser(fin);
 		YAML::Node doc;
 		parser.GetNextDocument(doc);
-		for(unsigned i=0;i<doc.size();i++) {
-			bool value;
-			doc[i] >> value;
-			std::cout << (value ? "true" : "false") << "\n";
-		}
+
+		std::cout << "name: " << doc["name"] << "\n";
+		std::cout << "age: " << doc["age"] << "\n";
+	} catch(YAML::TypedKeyNotFound <std::string>& e) {
+		std::cout << "Key '" << e.key << "' not found at line " << e.line+1 << ", col " << e.column+1 << "\n";
+	} catch(YAML::KeyNotFound& e) {
+		std::cout << "Key not found at line " << e.line+1 << ", col " << e.column+1 << "\n";
 	} catch(YAML::Exception& e) {
 		std::cout << "Error at line " << e.line+1 << ", col " << e.column+1 << ": " << e.msg << "\n";
 	}

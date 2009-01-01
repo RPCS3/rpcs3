@@ -119,7 +119,7 @@ namespace YAML
 			}
 		}
 
-		throw KeyNotFound(m_line, m_column);
+		throw MakeTypedKeyNotFound(m_line, m_column, key);
 	}
 
 	template <typename T>

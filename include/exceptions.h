@@ -79,6 +79,20 @@ namespace YAML
 			: RepresentationException(line_, column_, ErrorMsg::KEY_NOT_FOUND) {}
 	};
 
+	template <typename T>
+	class TypedKeyNotFound: public KeyNotFound {
+	public:
+		TypedKeyNotFound(int line_, int column_, const T& key_)
+			: KeyNotFound(line_, column_), key(key_) {}
+
+		T key;
+	};
+
+	template <typename T>
+	TypedKeyNotFound <T> MakeTypedKeyNotFound(int line, int column, const T& key) {
+		return TypedKeyNotFound <T> (line, column, key);
+	}
+
 	class BadDereference: public RepresentationException {
 	public:
 		BadDereference()
