@@ -32,8 +32,8 @@ namespace YAML
 
 	private:
 		// can't copy this
-		Parser(const Parser& rhs) {}
-		Parser& operator = (const Parser& rhs) { return *this; }
+		Parser(const Parser&) {}
+		Parser& operator = (const Parser&) { return *this; }
 
 	private:
 		Scanner *m_pScanner;

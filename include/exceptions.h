@@ -48,7 +48,7 @@ namespace YAML
 	public:
 		Exception(int line_, int column_, const std::string& msg_)
 			: line(line_), column(column_), msg(msg_) {}
-		virtual ~Exception() throw () {}
+		virtual ~Exception() {}
 
 		int line, column;
 		std::string msg;
