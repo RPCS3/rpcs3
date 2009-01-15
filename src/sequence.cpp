@@ -57,6 +57,7 @@ namespace YAML
 			case TT_BLOCK_SEQ_START: ParseBlock(pScanner, state); break;
 			case TT_BLOCK_ENTRY: ParseImplicit(pScanner, state); break;
 			case TT_FLOW_SEQ_START: ParseFlow(pScanner, state); break;
+			default: break;
 		}
 	}
 

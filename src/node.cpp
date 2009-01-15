@@ -64,6 +64,8 @@ namespace YAML
 				m_pContent = new Map;
 				m_pContent->Parse(pScanner, state);
 				break;
+			default:
+				break;
 		}
 	}
 

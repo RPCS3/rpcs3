@@ -74,6 +74,7 @@ namespace YAML
 			case REGEX_AND: m_pOp = new AndOperator; break;
 			case REGEX_NOT: m_pOp = new NotOperator; break;
 			case REGEX_SEQ: m_pOp = new SeqOperator; break;
+			default: break;
 		}
 	}
 

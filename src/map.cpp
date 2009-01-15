@@ -47,6 +47,7 @@ namespace YAML
 		switch(pScanner->peek().type) {
 			case TT_BLOCK_MAP_START: ParseBlock(pScanner, state); break;
 			case TT_FLOW_MAP_START: ParseFlow(pScanner, state); break;
+			default: break;
 		}
 	}
 
