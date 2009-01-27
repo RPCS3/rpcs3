@@ -4,6 +4,7 @@
 #include "token.h"
 #include "exceptions.h"
 #include <sstream>
+#include <cstdio>
 
 namespace YAML
 {

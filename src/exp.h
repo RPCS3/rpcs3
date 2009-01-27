@@ -3,6 +3,7 @@
 #include "regex.h"
 #include <string>
 #include <ios>
+#include <cstdio>
 #include "stream.h"
 
 namespace YAML
