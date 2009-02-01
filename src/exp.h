@@ -3,7 +3,6 @@
 #include "regex.h"
 #include <string>
 #include <ios>
-#include <cstdio>
 #include "stream.h"
 
 namespace YAML
@@ -24,10 +23,10 @@ namespace YAML
 
 		// actual tags
 
-		const RegEx DocStart = RegEx("---") + (BlankOrBreak || RegEx(EOF) || RegEx());
-		const RegEx DocEnd = RegEx("...") + (BlankOrBreak || RegEx(EOF) || RegEx());
+		const RegEx DocStart = RegEx("---") + (BlankOrBreak || RegEx());
+		const RegEx DocEnd = RegEx("...") + (BlankOrBreak || RegEx());
 		const RegEx DocIndicator = DocStart || DocEnd;
-		const RegEx BlockEntry = RegEx('-') + (BlankOrBreak || RegEx(EOF));
+		const RegEx BlockEntry = RegEx('-') + BlankOrBreak;
 		const RegEx Key = RegEx('?'),
 		            KeyInFlow = RegEx('?') + BlankOrBreak;
 		const RegEx Value = RegEx(':') + BlankOrBreak,

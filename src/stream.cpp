@@ -4,26 +4,39 @@
 
 namespace YAML
 {
-	int Stream::pos() const
+	Stream::Stream(std::istream& input): buffer(0), pos(0), line(0), column(0), size(0)
 	{
-		return input.tellg();
+		std::streambuf *pBuf = input.rdbuf();
+
+		// store entire file in buffer
+		size = pBuf->pubseekoff(0, std::ios::end, std::ios::in);
+		pBuf->pubseekpos(0, std::ios::in);
+		buffer = new char[size];
+		pBuf->sgetn(buffer, size);
 	}
-	
+
+	Stream::~Stream()
+	{
+		delete [] buffer;
+	}
+
+
 	char Stream::peek()
 	{
-		return input.peek();
+		return buffer[pos];
 	}
 	
-	Stream::operator bool()
+	Stream::operator bool() const
 	{
-		return input.good();
+		return pos < size;
 	}
 
 	// get
 	// . Extracts a character from the stream and updates our position
 	char Stream::get()
 	{
-		char ch = input.get();
+		char ch = buffer[pos];
+		pos++;
 		column++;
 		if(ch == '\n') {
 			column = 0;

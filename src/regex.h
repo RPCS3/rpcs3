@@ -2,7 +2,6 @@
 
 #include <vector>
 #include <string>
-#include <ios>
 
 namespace YAML
 {
@@ -19,37 +18,37 @@ namespace YAML
 		struct Operator {
 			virtual ~Operator() {}
 			virtual int Match(const std::string& str, const RegEx& regex) const = 0;
-			virtual int Match(std::istream& in, const RegEx& regex) const = 0;
+			virtual int Match(const char *buffer, const RegEx& regex) const = 0;
 		};
 
 		struct MatchOperator: public Operator {
 			virtual int Match(const std::string& str, const RegEx& regex) const;
-			virtual int Match(std::istream& in, const RegEx& regex) const;
+			virtual int Match(const char *buffer, const RegEx& regex) const;
 		};
 
 		struct RangeOperator: public Operator {
 			virtual int Match(const std::string& str, const RegEx& regex) const;
-			virtual int Match(std::istream& in, const RegEx& regex) const;
+			virtual int Match(const char *buffer, const RegEx& regex) const;
 		};
 
 		struct OrOperator: public Operator {
 			virtual int Match(const std::string& str, const RegEx& regex) const;
-			virtual int Match(std::istream& in, const RegEx& regex) const;
+			virtual int Match(const char *buffer, const RegEx& regex) const;
 		};
 
 		struct AndOperator: public Operator {
 			virtual int Match(const std::string& str, const RegEx& regex) const;
-			virtual int Match(std::istream& in, const RegEx& regex) const;
+			virtual int Match(const char *buffer, const RegEx& regex) const;
 		};
 
 		struct NotOperator: public Operator {
 			virtual int Match(const std::string& str, const RegEx& regex) const;
-			virtual int Match(std::istream& in, const RegEx& regex) const;
+			virtual int Match(const char *buffer, const RegEx& regex) const;
 		};
 
 		struct SeqOperator: public Operator {
 			virtual int Match(const std::string& str, const RegEx& regex) const;
-			virtual int Match(std::istream& in, const RegEx& regex) const;
+			virtual int Match(const char *buffer, const RegEx& regex) const;
 		};
 
 	public:
@@ -66,11 +65,11 @@ namespace YAML
 
 		bool Matches(char ch) const;
 		bool Matches(const std::string& str) const;
-		bool Matches(std::istream& in) const;
-		bool Matches(Stream& in) const;
+		bool Matches(const char *buffer) const;
+		bool Matches(const Stream& in) const;
 		int Match(const std::string& str) const;
-		int Match(std::istream& in) const;
-		int Match(Stream& in) const;
+		int Match(const char *buffer) const;
+		int Match(const Stream& in) const;
 
 		friend RegEx operator ! (const RegEx& ex);
 		friend RegEx operator || (const RegEx& ex1, const RegEx& ex2);

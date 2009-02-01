@@ -90,12 +90,12 @@ namespace YAML
 		return Match(str) >= 0;
 	}
 
-	bool RegEx::Matches(std::istream& in) const
+	bool RegEx::Matches(const char *buffer) const
 	{
-		return Match(in) >= 0;
+		return Match(buffer) >= 0;
 	}
 	
-	bool RegEx::Matches(Stream& in) const
+	bool RegEx::Matches(const Stream& in) const
 	{
 		return Match(in) >= 0;
 	}
@@ -115,9 +115,9 @@ namespace YAML
 	}
 
 	// Match
-	int RegEx::Match(Stream& in) const
+	int RegEx::Match(const Stream& in) const
 	{
-		return Match(in.stream());
+		return Match(in.current());
 	}
 	
 	// Match
@@ -126,19 +126,12 @@ namespace YAML
 	// . Note: the istream is not a const reference, but we guarantee
 	//   that the pointer will be in the same spot, and we'll clear its
 	//   flags before we end.
-	int RegEx::Match(std::istream& in) const
+	int RegEx::Match(const char *buffer) const
 	{
 		if(!m_pOp)
 			return -1;
 
-		int pos = in.tellg();
-		int ret = m_pOp->Match(in, *this);
-
-		// reset input stream!
-		in.clear();
-		in.seekg(pos);
-
-		return ret;
+		return m_pOp->Match(buffer, *this);
 	}
 
 	RegEx operator ! (const RegEx& ex)
@@ -184,9 +177,9 @@ namespace YAML
 	}
 
 	
-	int RegEx::MatchOperator::Match(std::istream& in, const RegEx& regex) const
+	int RegEx::MatchOperator::Match(const char *buffer, const RegEx& regex) const
 	{
-		if(!in || in.peek() != regex.m_a)
+		if(buffer[0] != regex.m_a)
 			return -1;
 		return 1;
 	}
@@ -199,9 +192,9 @@ namespace YAML
 		return 1;
 	}
 
-	int RegEx::RangeOperator::Match(std::istream& in, const RegEx& regex) const
+	int RegEx::RangeOperator::Match(const char *buffer, const RegEx& regex) const
 	{
-		if(!in || regex.m_a > in.peek() || regex.m_z < in.peek())
+		if(regex.m_a > buffer[0] || regex.m_z < buffer[0])
 			return -1;
 		return 1;
 	}
@@ -217,10 +210,10 @@ namespace YAML
 		return -1;
 	}
 
-	int RegEx::OrOperator::Match(std::istream& in, const RegEx& regex) const
+	int RegEx::OrOperator::Match(const char *buffer, const RegEx& regex) const
 	{
 		for(unsigned i=0;i<regex.m_params.size();i++) {
-			int n = regex.m_params[i].Match(in);
+			int n = regex.m_params[i].Match(buffer);
 			if(n >= 0)
 				return n;
 		}
@@ -244,11 +237,11 @@ namespace YAML
 		return first;
 	}
 
-	int RegEx::AndOperator::Match(std::istream& in, const RegEx& regex) const
+	int RegEx::AndOperator::Match(const char *buffer, const RegEx& regex) const
 	{
 		int first = -1;
 		for(unsigned i=0;i<regex.m_params.size();i++) {
-			int n = regex.m_params[i].Match(in);
+			int n = regex.m_params[i].Match(buffer);
 			if(n == -1)
 				return -1;
 			if(i == 0)
@@ -267,11 +260,11 @@ namespace YAML
 		return 1;
 	}
 
-	int RegEx::NotOperator::Match(std::istream& in, const RegEx& regex) const
+	int RegEx::NotOperator::Match(const char *buffer, const RegEx& regex) const
 	{
 		if(regex.m_params.empty())
 			return -1;
-		if(regex.m_params[0].Match(in) >= 0)
+		if(regex.m_params[0].Match(buffer) >= 0)
 			return -1;
 		return 1;
 	}
@@ -289,16 +282,15 @@ namespace YAML
 		return offset;
 	}
 	
-	int RegEx::SeqOperator::Match(std::istream& in, const RegEx& regex) const
+	int RegEx::SeqOperator::Match(const char *buffer, const RegEx& regex) const
 	{
 		int offset = 0;
 		for(unsigned i=0;i<regex.m_params.size();i++) {
-			int n = regex.m_params[i].Match(in);
+			int n = regex.m_params[i].Match(buffer + offset);
 			if(n == -1)
 				return -1;
 
 			offset += n;
-			in.ignore(n);
 		}
 
 		return offset;

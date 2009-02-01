@@ -5,21 +5,24 @@
 
 namespace YAML
 {
-	struct Stream
+	class Stream
 	{
-		Stream(std::istream& input_): input(input_), line(0), column(0) {}
+	public:
+		Stream(std::istream& input);
+		~Stream();
 
-		int pos() const;
-		operator bool();
-		bool operator !() { return !(*this); }
+		operator bool() const;
+		bool operator !() const { return !static_cast <bool>(*this); }
 
-		std::istream& stream() const { return input; }
+		const char *current() const { return buffer + pos; }
 		char peek();
 		char get();
 		std::string get(int n);
 		void eat(int n = 1);
 
-		std::istream& input;
-		int line, column;
+		int pos, line, column, size;
+	
+	private:
+		char *buffer;
 	};
 }

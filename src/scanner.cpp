@@ -100,7 +100,7 @@ namespace YAML
 		// *****
 
 		// end of stream
-		if(INPUT.peek() == EOF)
+		if(!INPUT)
 			return EndStream();
 
 		if(INPUT.column == 0 && INPUT.peek() == Keys::Directive)
