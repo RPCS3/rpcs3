@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="windows-1250"?>
+<VisualStudioPropertySheet
+	ProjectType="Visual C++"
+	Version="8.00"
+	Name="sse4"
+	>
+	<Tool
+		Name="VCCLCompilerTool"
+		PreprocessorDefinitions="_M_SSE=0x401"
+		EnableEnhancedInstructionSet="2"
+	/>
+</VisualStudioPropertySheet>
