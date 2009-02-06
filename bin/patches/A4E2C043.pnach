@@ -1,0 +1,8 @@
+gametitle=Homura [SLPM 62685] (J)
+comment=patches by Nachbrenner
+//Infinite Lives 00310758
+patch=0,EE,00225714,word,24030005
+//Infinite Health
+patch=0,EE,00213884,word,00000000
+//Infinite Bombs 0031075C
+patch=0,EE,00227174,word,24030005

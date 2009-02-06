@@ -1,0 +1,8 @@
+gametitle=Okage Shadow King [SCUS 97129](U)
+comment= patches by Nachbrenner
+// kill menu 3D (obsolete)
+//patch=0,EE,00100fb8,word,24030000
+//LP=99
+patch=1,EE,005c1be0,word,00000063
+//Lots of Money
+patch=1,EE,005c1b6c,word,07F819A0

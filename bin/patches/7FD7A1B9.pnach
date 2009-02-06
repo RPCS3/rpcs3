@@ -1,0 +1,8 @@
+gametitle=Jade Cocoon 2 [SLES 50735] (E)
+comment=patches by Nachbrenner
+//Skip Videos
+patch=0,EE,00118110,word,24020001
+//Music off
+patch=0,EE,00290eac,byte,00
+//Start new game with 10000 Yen
+patch=0,EE,00291258,word,24022710

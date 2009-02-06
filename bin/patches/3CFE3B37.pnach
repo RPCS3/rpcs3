@@ -1,0 +1,6 @@
+gametitle=Powershot Pinball [SLES 54084] (E)
+comment=patches by auMatt
+//Skip Video
+patch=0,EE,0029c990,word,24020001
+//ZeroGS Patch - GAME_AUTORESET
+zerogs=00000002

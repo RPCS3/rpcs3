@@ -1,0 +1,7 @@
+gametitle=Crash Twinsanity [SLES 52568] (E)
+comment= patches by Nachbrenner
+//Skip Videos
+patch=0,EE,002b85d0,word,24020001
+// fix VU0REC 17.10.06 (obsolete)
+//patch=0,EE,00189ab4,word,00000000
+//patch=0,EE,00189b78,word,00000000

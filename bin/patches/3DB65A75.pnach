@@ -1,0 +1,5 @@
+gametitle=Megaman Anniversary Collection [SLUS 20833] (U)
+//fix GS_CSR
+//patch=0,EE,0012d938,word,00000000
+//Skip videos
+//patch=0,EE,0014e548,word,24020001

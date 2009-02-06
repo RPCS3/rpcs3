@@ -1,0 +1,6 @@
+gametitle=Need For Speed Underground 2 [SLES52725] (E)
+comment= patches by Nachbrenner
+//Skip videos
+patch=0,EE,0042b400,word,24020001
+//skip "RCMPDecodeBuffer" causing cputlbmiss
+patch=0,EE,0025a970,word,00000000

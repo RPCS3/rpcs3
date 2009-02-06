@@ -1,0 +1,5 @@
+gametitle=Big Mutha Truckers [SLES 51355] (E)
+comment=patches by Nachbrenner
+//Skip Videos
+patch=0,EE,002d1438,word,24020001 //sceMpegIsEnd
+patch=0,EE,001ca00c,word,00000000 //sceMpegGetPicture

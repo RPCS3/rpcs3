@@ -1,0 +1,868 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"POT-Creation-Date: \n"
+"PO-Revision-Date: 2006-11-17 02:05+0100\n"
+"Last-Translator: Simon Lindell <Doomangel_91@hotmail.com>\n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=iso-8859-1\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "%s: Error loading %s: %s"
+msgstr "%s: Kan ej ladda %s: %s"
+
+msgid "&About..."
+msgstr "&Om..."
+
+msgid "&Arguments"
+msgstr "&Argument"
+
+msgid "&Config"
+msgstr "&Konfiguration"
+
+msgid "&Configure"
+msgstr "&Konfigurera"
+
+msgid "&Debug"
+msgstr "&Debug"
+
+msgid "&File"
+msgstr "&Arkiv"
+
+msgid "&Graphics"
+msgstr "&Grafik"
+
+msgid "&Help"
+msgstr "&Hjälp"
+
+msgid "&Language"
+msgstr "&Språk"
+
+msgid "&Load"
+msgstr "&Ladda"
+
+msgid "&Logging"
+msgstr "&Loggar"
+
+msgid "&Low"
+msgstr "&Låg"
+
+msgid "&Memcards"
+msgstr "&Minneskort"
+
+msgid "&Misc"
+msgstr "&Övrigt"
+
+msgid "&Open ELF File"
+msgstr "&Öppna ELF fil"
+
+msgid "&Other..."
+msgstr "&Annat..."
+
+msgid "&Patches"
+msgstr "&Patchar"
+
+msgid "&Process Priority"
+msgstr "&Process Prioritet"
+
+msgid "&Remote Debugging"
+msgstr "&Fjärrstyrd Debug"
+
+msgid "&Run"
+msgstr "&Kör"
+
+msgid "&Run CD"
+msgstr "&Kör CD"
+
+msgid "&Save"
+msgstr "&Spara"
+
+msgid "&Sound"
+msgstr "&Ljud"
+
+msgid "&States"
+msgstr "Sparpunkter"
+
+msgid "*PCSX2*: Error Loading State %d"
+msgstr "*PCSX2*: Kan inte ladda sparpunkt %d"
+
+msgid "*PCSX2*: Error Loading State %s"
+msgstr "*PCSX2*: Kan inte ladda sparpunkt %s"
+
+msgid "*PCSX2*: Error Saving State %d"
+msgstr "*PCSX2*: Kan inte spara sparpunkt %d"
+
+msgid "*PCSX2*: Error Saving State %s"
+msgstr "*PCSX2*: Kan inte spara sparpunkt %s"
+
+msgid "*PCSX2*: Loaded State %d"
+msgstr "*PCSX2*: Sparpunkt laddad %d"
+
+msgid "*PCSX2*: Loaded State %s"
+msgstr "*PCSX2*: Sparpunkt laddad %s"
+
+msgid "*PCSX2*: Saving State %d"
+msgstr "*PCSX2*: Sparar punkt %d"
+
+msgid "*PCSX2*: Saving State %s"
+msgstr "*PCSX2*: Sparar punkt %s"
+
+msgid "0x"
+msgstr "0x"
+
+msgid "About"
+msgstr "Om"
+
+msgid "About PCSX2"
+msgstr "Om PCSX2"
+
+msgid "About..."
+msgstr "Om..."
+
+msgid "Address  "
+msgstr "Address"
+
+msgid "All Files"
+msgstr "Alla Filer"
+
+msgid "Arabic"
+msgstr "Arabiska"
+
+msgid "Arguments"
+msgstr "Argument"
+
+msgid "Bios"
+msgstr "BIOS"
+
+msgid "Bios Log"
+msgstr "BIOS Log"
+
+msgid "Bulgarian"
+msgstr "Bulgariska"
+
+msgid "C&dvdrom"
+msgstr "C&DVDROM"
+
+msgid "C&ontrollers"
+msgstr "K&ontroller"
+
+msgid "C&pu"
+msgstr "C&PU"
+
+msgid "CDVDinit error: %d"
+msgstr "CDVD Initieringsfel: %d"
+
+msgid "Cancel"
+msgstr "Avbryt"
+
+msgid "Cannot load '%s', wrong PS2E version (%x != %x)"
+msgstr "Kan inte ladda '%s',Fel PS2E version (%x != %x)"
+
+msgid "Catalan"
+msgstr "Kataloniska"
+
+msgid "Cdr Log"
+msgstr "CDR Log"
+
+msgid "Cdvdrom"
+msgstr "CDVDROM"
+
+msgid "Clear BPs"
+msgstr "Rensa BPs"
+
+msgid "Close"
+msgstr "Stäng"
+
+msgid "Conf"
+msgstr "Konfiguration"
+
+msgid "Configuration"
+msgstr "Konfiguration"
+
+msgid "Configure"
+msgstr "Konfigurera"
+
+msgid "Configure..."
+msgstr "Konfigurera"
+
+msgid "Controllers"
+msgstr "Kontroller"
+
+msgid "Cop0 Log"
+msgstr "COP0 Log"
+
+msgid "Could Not Load CDVD Plugin '%s': %s"
+msgstr "Kunde inte ladda CDVD Plugin '%s': %s"
+
+msgid "Could Not Load DEV9 Plugin '%s': %s"
+msgstr "Kunde inte ladda DEV9 Plugin '%s': %s"
+
+msgid "Could Not Load FW Plugin '%s': %s"
+msgstr "Kunde inte ladda Firewire Plugin '%s': %s"
+
+msgid "Could Not Load GS Plugin '%s': %s"
+msgstr "Kunde inte ladda Grafik Plugin '%s': %s"
+
+msgid "Could Not Load PAD1 Plugin '%s': %s"
+msgstr "Kunde inte ladda PAD1 Plugin '%s': %s"
+
+msgid "Could Not Load PAD2 Plugin '%s': %s"
+msgstr "Kunde inte ladda PAD2 Plugin '%s': %s"
+
+msgid "Could Not Load SPU2 Plugin '%s': %s"
+msgstr "Kunde inte ladda SPU2 Plugin '%s': %s"
+
+msgid "Could Not Load USB Plugin '%s': %s"
+msgstr "Kunde inte ladda USB Plugin '%s': %s"
+
+msgid "Could not create threads or event"
+msgstr "Kunde inte skapa trådar eller händelse."
+
+msgid "Could not open '%s' directory"
+msgstr "Kunde inte öppna mappen '%s'"
+
+msgid "Couldn't find pixmap file: %s"
+msgstr "Kunde inte hitta pixmap filen: %s"
+
+msgid "Cpu"
+msgstr "CPU"
+
+msgid "Cpu Config"
+msgstr "CPU Konfiguration"
+
+msgid "Cpu Log"
+msgstr "CPU Log"
+
+msgid "D&ev9"
+msgstr "D&ev9"
+
+msgid "DEV9init error: %d"
+msgstr "DEV9 Initieringsfel: %d"
+
+msgid "Data       "
+msgstr "Data"
+
+msgid "Debug"
+msgstr "Debug"
+
+msgid "Dev9"
+msgstr "Dev9"
+
+msgid "Disable Recompiler"
+msgstr "Avaktivera Omkompilerare"
+
+msgid "Disable VUs recompilation"
+msgstr "Inaktivera VUs omkompilation"
+
+msgid "Dma Log"
+msgstr "DMA Log"
+
+msgid "Dump File = \"dump.txt\""
+msgstr "Dumpa Fil = \"dump.txt\""
+
+msgid "Dump code"
+msgstr "Dumpa kod"
+
+msgid "Dutch"
+msgstr "Hollendska"
+
+msgid "E&xecute"
+msgstr "K&ör"
+
+msgid "E&xit"
+msgstr "&Avsluta"
+
+msgid "EE Debug Mode"
+msgstr "EE Debug Läge"
+
+msgid "EE Logs"
+msgstr "EE Logs"
+
+msgid "Elf Log"
+msgstr "ELF Log"
+
+msgid "Emulator"
+msgstr "Emulator"
+
+msgid "Enable Console Output"
+msgstr "Aktivera konsol"
+
+msgid "Enable Patches"
+msgstr "Aktivera patcher"
+
+msgid "Enable Reg Caching"
+msgstr "Aktivera Reg Cachning"
+
+msgid "English"
+msgstr "Engelska"
+
+msgid "Enter &Debugger..."
+msgstr "Starta &Debugger..."
+
+msgid "Enter Debugger ..."
+msgstr "Starta &Debugger"
+
+msgid "Error Loading Symbol"
+msgstr "Kunde inte ladda symbol"
+
+msgid "Error Opening CDVD Plugin"
+msgstr "Kunde inte öppna CD-ROM Plugin"
+
+msgid "Error Opening DEV9 Plugin"
+msgstr "Kunde inte öppna DEV9 Plugin"
+
+msgid "Error Opening FW Plugin"
+msgstr "Kunde inte öppna Firewire Plugin"
+
+msgid "Error Opening GS Plugin"
+msgstr "Kunde inte öppna Grafik Plugin"
+
+msgid "Error Opening PAD1 Plugin"
+msgstr "Kunde inte öppna PAD1 Plugin"
+
+msgid "Error Opening PAD2 Plugin"
+msgstr "Kunde inte öppna PAD2 Plugin"
+
+msgid "Error Opening SPU2 Plugin"
+msgstr "Kunde inte öppna SPU2 Plugin"
+
+msgid "Error Opening USB Plugin"
+msgstr "Kunde inte öppna  USB Plugin"
+
+msgid "Error allocating memory"
+msgstr "Kunde inte allokollera minne"
+
+msgid "Error initializing Recompiler, switching to Interpreter"
+msgstr "Kunde inte initiera omkompilerare, går till Interpreter"
+
+msgid "Error loading pixmap file: %s"
+msgstr "Kunde inte öppna pixmap Fil: %s"
+
+msgid "Exit"
+msgstr "Avsluta"
+
+msgid "FW"
+msgstr "Firewire"
+
+msgid "FWinit error: %d"
+msgstr "Firewire Initieringsfel: %d"
+
+msgid "Failed loading MemCard %s"
+msgstr "Kunde inte ladda minneskort: %s"
+
+msgid "File"
+msgstr "Arkiv"
+
+msgid "Fill in the command line arguments for opened program:"
+msgstr "Fyll i kommando rads argumenten för det öppnade programmet:"
+
+msgid "Fire&Wire"
+msgstr "Fire&Wire"
+
+msgid "First Controller"
+msgstr "Första kontrollern"
+
+msgid "Fpu Log"
+msgstr "FPU Log"
+
+msgid "French"
+msgstr "Franska"
+
+msgid "From 0x"
+msgstr "Från 0x"
+
+msgid "GIF Log"
+msgstr "GIF Log"
+
+msgid "GPU Log"
+msgstr "GPU Log"
+
+msgid "GSinit error: %d"
+msgstr "Grafiska Syncen kunde inte initieras: %d"
+
+msgid "German"
+msgstr "Tyska"
+
+msgid "Go"
+msgstr "Starta"
+
+msgid "Graphics"
+msgstr "Grafik"
+
+msgid "Greek"
+msgstr "Grekiska"
+
+msgid "Greets to:"
+msgstr "Hälsningar till:"
+
+msgid ""
+"Greets to: Bobbi, Keith, CpUMasteR, Nave, Snake785, Raziel\n"
+"Special thanks to: Sjeep, Dreamtime, F|RES, BGnome, MrBrown, \n"
+"Seta-San, Skarmeth, blackd_wd, _Demo_\n"
+"Credits: Hiryu && Sjeep for their libcdvd (iso parsing and filesystem driver code)\n"
+"Some betatester/support dudes: bositman, Seta-san, falcon4ever, jegHegy, Razorblade, CKemu, Belmont, parotaku, crushtest, ChaosCode"
+msgstr ""
+"Hälsningar till: Bobbi, Keith, CpUMasteR, Nave, Snake785, Raziel\n"
+"Danke an: Sjeep, Dreamtime, F|RES, BGnome, MrBrown, \n"
+"Seta-San, Skarmeth, blackd_wd, _Demo_\n"
+"Meriten: Hiryu && Sjeep fr Ihre libcdvd (ISO Parsing und Filesystem Treiber Code)\n"
+"Einige Betatester/Hilfskrfte: bositman, Seta-san, falcon4ever, jegHegy, Razorblade, CKemu"
+
+msgid "Gte Log"
+msgstr "GTE Log"
+
+msgid "Help"
+msgstr "Hjälp"
+
+msgid "High"
+msgstr "Hög"
+
+msgid "Hw Log"
+msgstr "Hårdvaru Log"
+
+msgid "IOP Debug Mode"
+msgstr "IOP Debug läge"
+
+msgid "IOP Log"
+msgstr "IOP Log"
+
+msgid "IOP Logs"
+msgstr "IOP Log"
+
+msgid "IPU Log"
+msgstr "IPU Log"
+
+msgid "If you don't know what to write leave it blank"
+msgstr "Om du inte vet vad du ska skriva, lämna den tom"
+
+msgid ""
+"In debugger:\n"
+"Put EE in stop state\n"
+"and IOP in run state"
+msgstr ""
+"I Debugger: \n"
+"Sätt EE i stoppad status\n"
+"och IOP i pågående status"
+
+msgid ""
+"In debugger:\n"
+"Put IOP in stop state\n"
+"and EE in run state"
+msgstr ""
+"I Debugger: \n"
+"Sätt IOP i stoppad status\n"
+"och EE i pågående status"
+
+msgid "Interpreter -The slowest but the most compatible cpu core"
+msgstr "Interpreter -Den långsammaste men mest kompitabla cpu kärnan"
+
+msgid "Italian"
+msgstr "Italienska"
+
+msgid "Japanese"
+msgstr "Japanska"
+
+msgid "Language"
+msgstr "Språk"
+
+msgid "Load"
+msgstr "Ladda"
+
+msgid "Load Elf"
+msgstr "Ladda Elf"
+
+msgid "Log"
+msgstr "Log"
+
+msgid "Log On/Off"
+msgstr "Loggning På/Av"
+
+msgid "Log to STDOUT"
+msgstr "Logga till STDOUT"
+
+msgid "Logging"
+msgstr "Loggning"
+
+msgid "MMI Log"
+msgstr "MMI Log"
+
+msgid "Mem Log"
+msgstr "Minnes Log"
+
+msgid "Memcard Manager"
+msgstr "Minneskorts Skötare"
+
+msgid "Memory Card 1"
+msgstr "Minneskort 1"
+
+msgid "Memory Card 2"
+msgstr "Minneskort 2"
+
+msgid "Memory Dump"
+msgstr "Minnesdump"
+
+msgid ""
+"Nah, you have to be in\n"
+"Interpreter Mode to debug"
+msgstr ""
+"Nej, du måste vara i\n"
+"Interpreter läge för att debugga"
+
+msgid "New Patch"
+msgstr "Ny Patch"
+
+msgid "Normal"
+msgstr "Normal"
+
+msgid "Not enough params for inicommand\n"
+msgstr "Inte tillräckligt med parametrar för inikommando\n"
+
+msgid "Note: this is intented for developers only."
+msgstr "Notera: detta är endast menat för utvecklare."
+
+msgid "Notice on debugging EE"
+msgstr "Notis på EE debug"
+
+msgid "Notice on debugging IOP"
+msgstr "Notis på IOP debug"
+
+msgid "OK"
+msgstr "Ok"
+
+msgid "Ok"
+msgstr "Ok"
+
+msgid "Options"
+msgstr "Alternativ"
+
+msgid "Other..."
+msgstr "Annat..."
+
+msgid "PAD1init error: %d"
+msgstr "Kunde inte initiera Pad1: %d"
+
+msgid "PAD2init error: %d"
+msgstr "Kunde inte initiera pad2: %d"
+
+msgid "PCSX"
+msgstr "PCSX"
+
+msgid ""
+"PCSX2\r\r\r\n"
+"Version x.x"
+msgstr ""
+"PCSX2\r\r\r\n"
+"Version x.x"
+
+msgid "PCSX2 %s Compile Date - %s %s"
+msgstr "PCSX2 %s Kompilerat: %s %s"
+
+msgid "PCSX2 Debugger"
+msgstr "PCSX2 Debugger"
+
+msgid "PCSX2 EMU\n"
+msgstr "PCSX2 Emulator\n"
+
+msgid ""
+"PCSX2 For Linux\n"
+"Version %s"
+msgstr ""
+"PCSX2 För Linux\n"
+"Version %s"
+
+msgid "PCSX2 Msg"
+msgstr "PCSX2 Meddelande"
+
+msgid "PCSX2 Quitting\n"
+msgstr "PCSX2 Stänger\n"
+
+msgid "PCSX2 State Format"
+msgstr "PCSX2 Sparpunktsformat"
+
+msgid ""
+"PCSX2 a ps2 emulator\n"
+"\n"
+"written by:\n"
+"linuzappz, shadow, florin,\n"
+"alexey silinov, asadr, goldfinger,\n"
+"nachbrenner, auMatt, loser\n"
+"\n"
+"Webmaster: Thorgal"
+msgstr ""
+"PCSX2 - En PS2 Emulator\n"
+"\n"
+"Skriven av:\n"
+"linuzappz, shadow, florin,\n"
+"alexey silinov, saqibakhtar, goldfinger,\n"
+"Nachbrenner, auMatt, loser\n"
+"\n"
+"Webmaster: Thorgal"
+
+msgid "Pad Log"
+msgstr "PAD Log"
+
+msgid "Patches Browser"
+msgstr "Patch Utforskare"
+
+msgid "Pcsx About"
+msgstr "PCSX om"
+
+msgid "Pcsx2 Msg"
+msgstr "PCSX2 Meddelande"
+
+msgid "Pcsx2 needs to be configured"
+msgstr "PCSX2 måste konfigureras"
+
+msgid "Plugins & Bios"
+msgstr "Plugins & BIOS"
+
+msgid "Portuguese"
+msgstr "Portugisiska"
+
+msgid "Processor doesn't supports MMX, can't run recompiler without that"
+msgstr "Processorn är inte kompitabel med MMX, kan inte köra omkompilerare utan det."
+
+msgid "Program arguments"
+msgstr "ProgramArgument"
+
+msgid "Ps2 Memory Card (*.ps2)"
+msgstr "PS2 Minneskort (*.ps2)"
+
+msgid "Ps2 Output"
+msgstr "PS2 Konsol"
+
+msgid "RPC Log"
+msgstr "RPC Log"
+
+msgid "Raw Dump"
+msgstr "Rådata dump"
+
+msgid "Re&set"
+msgstr "&Starta om"
+
+msgid "Ready"
+msgstr "Redo"
+
+msgid "Recompiler - Much faster than Intepreter(Needs MMX)"
+msgstr "Omkompilerare - Mycket snabbare än Interpreter(Kräver MMX)"
+
+msgid "Recompiler Options"
+msgstr "Omkompilerarens alternativ"
+
+msgid "Recompiler+VuRecs - The fastest setting (Needs SSE,SSE2)"
+msgstr "Omkompilerare + VuRecs - Snabbaste alternativer (Kräver SSE,SSE2)"
+
+msgid "Refresh List"
+msgstr "Uppdatera Lista"
+
+msgid "Reset"
+msgstr "Starta om"
+
+msgid "Resetting..."
+msgstr "Startar om..."
+
+msgid "Romanian"
+msgstr "Rumenska"
+
+msgid "Run"
+msgstr "Kör"
+
+msgid "Run CD"
+msgstr "Kör CD"
+
+msgid "Russian"
+msgstr "Ryska"
+
+msgid "SPR Log"
+msgstr "SPR Log"
+
+msgid "SPU2init error: %d"
+msgstr "Kunde inte initiera SPU2: %d"
+
+msgid "SYMs Log"
+msgstr "SYMs Log"
+
+msgid "Save"
+msgstr "Spara"
+
+msgid "Save Patch"
+msgstr "Spara Patch"
+
+msgid "Search game name patch:"
+msgstr "Sök efter spelpatch:"
+
+msgid "Second Controller"
+msgstr "Andra kontrollern"
+
+msgid "Select Bios Dir"
+msgstr "Välj BIOS mapp"
+
+msgid "Select Bios Directory"
+msgstr "Välj BIOS mapp"
+
+msgid "Select Mcd"
+msgstr "Välj Mcd"
+
+msgid "Select Plugins Dir"
+msgstr "Välj plugin mapp"
+
+msgid "Select Plugins Directory"
+msgstr "Välj pluginmapp"
+
+msgid "Select Psx Elf File"
+msgstr "Välj PSX Elf Fil"
+
+msgid "Select State File"
+msgstr "Välj sparpunktsfil"
+
+msgid "Set BP Addr"
+msgstr "Set BP Address"
+
+msgid "Set BP Count"
+msgstr "Set BP Räknare"
+
+msgid "Set Bios Directory"
+msgstr "Set BIOS mapp"
+
+msgid "Set Dump Addr (in Hex):"
+msgstr "Set Dump Address (i hexadecimalt tal):"
+
+msgid "Set New BP Address (in Hex):"
+msgstr "Set ny BP Address (i hexadecimalt tal)"
+
+msgid "Set New BP Count (in Hex):"
+msgstr "Set ny BP räkning (i hexadecimalt tal):"
+
+msgid "Set New PC Address (in Hex):"
+msgstr "Set ny PC address (i hexadecimalt tal):"
+
+msgid "Set PC"
+msgstr "Set PC"
+
+msgid "Set Plugins Directory"
+msgstr "Set Plugin Mapp"
+
+msgid "SetBreakPoint Addr"
+msgstr "Set BP Address"
+
+msgid "SetPCDlg"
+msgstr "Set PC Dialog"
+
+msgid "Sif Log"
+msgstr "SIF Log"
+
+msgid "Skip"
+msgstr "Skippa"
+
+msgid "Slot &1"
+msgstr "Slot &1"
+
+msgid "Slot &2"
+msgstr "Slot &2"
+
+msgid "Slot &3"
+msgstr "Slot &3"
+
+msgid "Slot &4"
+msgstr "Slot &4"
+
+msgid "Slot &5"
+msgstr "Slot &5"
+
+msgid "Slot 1"
+msgstr "Slot 1"
+
+msgid "Slot 2"
+msgstr "Slot 2"
+
+msgid "Slot 3"
+msgstr "Slot 3"
+
+msgid "Slot 4"
+msgstr "Slot 4"
+
+msgid "Slot 5"
+msgstr "Slot 5"
+
+msgid "Sound"
+msgstr "Ljud"
+
+msgid "Spanish"
+msgstr "Spanska"
+
+msgid "States"
+msgstr "Sparpunkter"
+
+msgid "Step"
+msgstr "Steg"
+
+msgid "Test"
+msgstr "Test"
+
+msgid "Test..."
+msgstr "Test"
+
+msgid "This plugin reports that should not work correctly"
+msgstr "Denna plugin rapporterar att den funkar bra"
+
+msgid "This plugin reports that should work correctly"
+msgstr "Denna plugin rapporterar att den funkar bra"
+
+msgid ""
+"Tip: If you don't know what to write\n"
+"leave it blank"
+msgstr ""
+"Tips: Om du inte vet vad du ska skriva\n"
+"lämna den tom"
+
+msgid "To    0x"
+msgstr "Till    0x"
+
+msgid "Turkish"
+msgstr "Turkiska"
+
+msgid "U&SB"
+msgstr "U&SB"
+
+msgid "USBinit error: %d"
+msgstr "Kunde inte initiera Usb: %d"
+
+msgid "Unable to hack in %s%s\n"
+msgstr ""
+"Kunde inte hacka %s%s \n"
+"\n"
+
+msgid "Unable to load bios: '%s', PCSX2 can't run without that"
+msgstr "Kunde inte ladda BIOS: '%s', PCSX2 Kan inte funka utan det!"
+
+msgid "Unrecoverable error while running recompiler"
+msgstr "Ireparabelt fel under omkompilerarens körning"
+
+msgid "Usb"
+msgstr "USB"
+
+msgid "VU Micro Log"
+msgstr "VU Micro Log"
+
+msgid "VU0 Log"
+msgstr "VU0 Log"
+
+msgid "Vif Log"
+msgstr "VIF Log"
+
+msgid "button69"
+msgstr "Knapp 69"
+
+msgid "button70"
+msgstr "Knapp70"
+
+msgid "memWrite32"
+msgstr "memWrite32"
+
+msgid "patch file for this game not found. Can't apply any patches\n"
+msgstr "Hittade ingen patch för detta spel. Kan inte applicera patch. \n"
+
+msgid "written by..."
+msgstr "Skrivet av..."
+

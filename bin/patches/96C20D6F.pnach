@@ -1,0 +1,4 @@
+gametitle=Dynasty Warriors 4 Xtreme Legends
+comment=Skips Videos by bositman
+//Skip Videos
+patch=0,EE,0010ab70,word,24020001

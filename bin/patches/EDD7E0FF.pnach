@@ -1,0 +1,4 @@
+gametitle=F1 Racing Championship DE/FR [SLES 50046] (E)
+comment= patches by Nachbrenner
+//Skip Videos
+patch=0,EE,0024ddc0,word,24020001

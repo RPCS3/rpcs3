@@ -1,0 +1,10 @@
+gametitle=Midnight Club II [SLES 51054] (E)
+comment=patches by Nachbrenner
+//skip videos (for blockdump)
+//patch=0,EE,0013DB58,word,00000000
+//skip network check "BT_ok_to_initialize_networking"
+//patch=0,EE,00123efc,word,00000000
+//music off (for blockdump)
+//patch=1,EE,004ABB1C,word,00000000
+//crash fix SVN november (obsolete)
+//patch=0,EE,0016c9a4,word,10000068

@@ -1,0 +1,3 @@
+gametitle=Taiko no Tatsujin: Doki! NTSC JAP
+//Skip Videos ("sceMpegIsEnd")
+patch=0,EE,001e7728,word,24020001

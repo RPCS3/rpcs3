@@ -1,0 +1,4 @@
+gametitle=Breath Of Fire V: Drangon Quarter USA
+comment=Skips videos
+//Skip Videos
+patch=0,EE,0010a758,word,24020001

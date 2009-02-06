@@ -1,0 +1,9 @@
+gametitle=Codename: Kids Next Door - Operation V.I.D.E.O.G.A.M.E [SLES 53685] (E)
+comment=patches by nachbrenner
+// MMI fix: replace PINTH with PINTEH (obsolete)
+//patch=0,EE,0037eef8,word,700212a9
+// skip SFD movies
+patch=0,EE,00208220,word,03e00008
+patch=0,EE,00208224,word,00000000
+patch=0,EE,00208190,word,03e00008
+patch=0,EE,00208194,word,00000000

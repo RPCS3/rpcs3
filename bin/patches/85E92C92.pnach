@@ -1,0 +1,9 @@
+gametitle=The uchuujin NTSC J
+comment=
+//Skip Videos ("sceMpegIsEnd")
+//patch=0,EE,00108fa0,word,24020001
+//Skip videos (custom)
+patch=0,EE,001b4cd8,word,00000000
+//Skip videos (custom)
+patch=0,EE,001b4c90,word,03e00008
+patch=0,EE,001b4c94,word,00000000

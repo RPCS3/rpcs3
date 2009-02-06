@@ -1,0 +1,15 @@
+gametitle=Tenchu - Wrath Of Heaven [SLES 51402] (G)
+comment=  patches by Nachbrenner
+//fix _waitIpuIdle for intro videos
+patch=0,EE,00107a10,word,00000000
+//fix D3_CHCR for tutorial's mini-videos
+patch=0,EE,00310dc4,word,00000000 
+//
+//obsolete:
+//Skip sceIpuSync
+//patch=0,EE,0010c810,word,03e00008
+//Skip sceDmaSendI | sceDmaSendN
+//patch=0,EE,00176824,word,24020001
+//Skip Videos
+//patch=0,EE,0010B288,word,24020001 //sceMpegIsEnd
+//patch=0,EE,002fe2f0,word,00000000 //xref of sceMpegGetPicture

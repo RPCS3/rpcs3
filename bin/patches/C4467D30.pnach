@@ -1,0 +1,4 @@
+gametitle=World Rally Championship 3 [SLPM 65583] (J)
+comment= patch by Nachbrenner
+//Skip sceIpuSync
+patch=1,EE,0027c808,word,03e00008

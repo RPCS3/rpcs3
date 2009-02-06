@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="windows-1250"?>
+<VisualStudioPropertySheet
+	ProjectType="Visual C++"
+	Version="8.00"
+	Name="release"
+	>
+	<Tool
+		Name="VCCLCompilerTool"
+		Optimization="2"
+		InlineFunctionExpansion="2"
+		EnableIntrinsicFunctions="true"
+		FavorSizeOrSpeed="1"
+		OmitFramePointers="true"
+		PreprocessorDefinitions="NDEBUG"
+		StringPooling="true"
+		BufferSecurityCheck="false"
+	/>
+	<Tool
+		Name="VCLinkerTool"
+		OptimizeReferences="2"
+		EnableCOMDATFolding="2"
+	/>
+	<Tool
+		Name="VCResourceCompilerTool"
+		PreprocessorDefinitions="NDEBUG"
+	/>
+</VisualStudioPropertySheet>

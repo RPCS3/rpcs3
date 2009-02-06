@@ -1,0 +1,6 @@
+gametitle=Indiana Jones und die Legende der Kaisergruft [SLES 50838] (G) 
+comment=patches by Nachbrenner
+//Skip Videos
+//patch=1,EE,00100624,word,24020000 // legal.pss
+//patch=1,EE,0012c414,word,24020000 // leclogo.pss
+//patch=1,EE,00100674,word,24020000 // cslogo.pss

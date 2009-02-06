@@ -1,0 +1,172 @@
+{\rtf1\ansi\ansicpg1253\deff0\deflang1032{\fonttbl{\f0\froman\fprq2\fcharset161{\*\fname Times New Roman;}Times New Roman Greek;}{\f1\froman\fprq2\fcharset2 Symbol;}{\f2\fswiss\fcharset161{\*\fname Arial;}Arial Greek;}}
+{\colortbl ;\red0\green0\blue255;}
+{\*\generator Msftedit 5.41.15.1515;}\viewkind4\uc1\pard\b\f0\fs44 PCSX2 0.9.4 FAQ\par
+\par
+\b0\fs28 In this document we will try to answer the most common questions our end users have. This is mostly a copy/paste from the Emuforums thread created by CKemu with some updates and corrections.\par
+\b\fs44\par
+\par
+\par
+Can I 'Play' Games?\b0\par
+\fs28  \par
+If by 'playing' a game, you mean: at full speed with sound, perfect graphics, etc, then \b NO\b0 . Come back next year.\par
+ \par
+Since this release (PCSX2 0.9.4) compatibility has increased greatly. Many games will now go 'in-game' or at least to some form of menu. Whilst games may get 'in-game', they will not run at 'playable' speeds, due to the complex nature of PS2 emulation, and the lack of modern hardware that is powerful enough to emulate such a console.\par
+ \par
+Speed has recently increased significantly, for near 'fullspeed' games, we recommend you examine the {\field{\*\fldinst{HYPERLINK "http://forums.ngemu.com/pcsx2-official-forum/95668-post-your-pcsx2-0-9-4-screenshots-here.html"}}{\fldrslt{\cf1\ul screenshots thread}}}\cf0\ulnone\f0\fs28  for speeds.\par
+ \par
+\b\fs44 Is game 'X' Working?\b0\fs28\par
+ \par
+Before posting this, check the {\field{\*\fldinst{HYPERLINK "http://www.pcsx2.net/compat.php?p=1&c=$&s1=1&s2=1&s3=1&s4=1&s5=1" }}{\fldrslt{\cf1\ul compatibility list}}}\cf0\ulnone\f0\fs28   you will be able to see how far your game goes, if you can't get it as far as we can, check your configuration against the {\field{\*\fldinst{HYPERLINK "http://www.pcsx2.net/guide.php" }}{\fldrslt{\cf1\ul Configuration Guide}}}\cf0\ulnone\f0\fs28 , if you still have no luck, you may post the question. If your game is not in the compatibility list then I\rquote m afraid you are on your own, we cannot guarantee it working either way so it is impossible to tell if we can help you at all.\par
+ \par
+\b\fs44 Does PCSX2 play PlayStation 1 (PSOne / PSX / PS1) Games?\b0\fs28\par
+ \par
+\b No\b0 , simple as that. PCSX2's primary goal is to emulate the PS2, which would eventually include PlayStation 1 games, however at this time the key focus is to make PlayStation 2 games 'run' with a high degree of compatibility, including support for such features as USB device support (EyeToy, Special Controllers), DEV9 (Network, HDD) etc.\par
+ \par
+If you wish to play PlayStation 1 games, there are extremely compatible, fast and stable emulators already in existance, and I recommend:\par
+ \par
+{\field{\*\fldinst{HYPERLINK "http://psxemulator.gazaxian.com/" }}{\fldrslt{\cf1\ul pSX}}}\cf0\ulnone\f0\fs28  - New emulator, with a growing level of compatibility and is very simple to use.\par
+{\field{\*\fldinst{HYPERLINK "http://epsxe.com/" }}{\fldrslt{\cf1\ul ePSXe}}}\cf0\ulnone\f0\fs28  - The famous and widely supported PS1 emulator, use this if you love features, and plugins!\par
+{\field{\*\fldinst{HYPERLINK "http://batard.psxfanatics.com/" }}{\fldrslt{\cf1\ul PSXeven}}}\cf0\ulnone\f0\fs28  - Created by Xeven, supports the PSEmu Pro plugin system, and often has increased compatibilty over ePSXe with some specific games.\par
+ \par
+\par
+\b\fs44 My game worked in 0.9.2 but not in 0.9.4 why?\b0\fs28\par
+ \par
+Due to changes in the emulator some games may not work as well as they did in the previous release, as you will find with most emulation projects, you fix one game, you break another somewhere. So the best solution to this is, play your game on the version it worked best for you.\par
+ \par
+\b\fs44 PCSX2 doesn't work on my Athlon XP (or other non SSE2 chips)\b0\fs28\par
+ \par
+Due to the nature of the VM (pcsx2.exe), which heavily uses SSE2, this version of the emulator will \b NOT\b0  work for you, however the TLB (pcsx2t.exe) build should work for you. Note when using a \b non\b0  SSE2 cpu to run PCSX2, make sure you select the \b non\b0  SSE2 versions of the plugins.\par
+ \par
+\par
+\b\fs44 ZeroGS looks REALLY ugly!! - What gives?\par
+\b0\fs28  \par
+\par
+ZeroGS renders to native PS2 resolution, that\rquote s it's default render target, when you set the window size to say 1024x768, ZeroGS still renders to native PS2 resolution, but stretches that resolution to fit the window size. What you are used to is setting your window size to x*y and the target resolution also changes accordingly.\par
+ \par
+The so called 'AA' ZeroGS uses, isn't actually anti aliasing, it simply ups the render target size, so you end up with a higher resolution image, thus increasing it's quality (albeit blocky).\par
+ \par
+So you're thinking, well what gives? To be honest, you do, the forum user, so many people whine about speed (oh no my aging rig..or general abuse thrown at the mods / developers), it was decided that in order to maintain speed, the render target and window resolution would remain unlinked, despite the obvious fuglyness of it.\par
+ \par
+\b\fs44 Where is the BIOS?\par
+\b0\fs28  \par
+It is Illegal to ask for a BIOS, as the BIOS is copyright of SONY. If you wish to use a REAL BIOS with PCSX2, you can dump it from your own PS2 (there are guides {\field{\*\fldinst{HYPERLINK "http://forums.ngemu.com/pcsx2-official-forum/83608-rfs-guide-dumping-your-ps2-bios-over-lan.html" }}{\fldrslt{\cf1\ul here}}}\cf0\ulnone\f0\fs28  and {\field{\*\fldinst{HYPERLINK "http://forums.ngemu.com/pcsx2-official-forum/84994-guide-dump-bios-through-usb.html" }}{\fldrslt{\cf1\ul here}}}\cf0\ulnone\f0\fs28 . Or find it by yourself.\par
+ \par
+\b\fs44 No SCPH10,000 Support?!\par
+\b0\fs28  \par
+The SCPH10,000 BIOS doesn't have all the libraries many games need to load, thus for better results, use a more modern BIOS version.\par
+ \par
+\b\fs44 Do I need ROM1, ROM2, EROM?\par
+\b0\fs28  \par
+If the console is warning you about not having these files, do not panic, all you need is the main ROM0 (the 4,096kb main BIOS file). You can dump the ROM1, ROM2, EROM from your own PS2 console, again guides and tools are on the internet, use {\field{\*\fldinst{HYPERLINK "http://www.google.com" }}{\fldrslt{\cf1\ul Google}}}\cf0\ulnone\f0\fs28\par
+\par
+\b\fs44 Is PCSX2 finally using the new .p2b BIOS format?\par
+\par
+\b0\fs28 Unfortunately, florin the team member responsible for this feature got held back and it did not make it in the release. Nevertheless, you can extract the contents of your .p2b BIOS file using 7zip, so you are still able to use your own complete BIOS files\par
+\par
+ \par
+\b\fs44 Where can I get games?\b0\fs28\par
+ \par
+From your local computer game shop, where else?\par
+ \par
+This forum does not support warez or piracy,  helping someone get links to such files, asking for such files, or linking to illegal material will be warned then banned if the violation is repeated. There are \b MANY\b0  great games out there, and you owe it to the talented creators to buy their games, and many you can get very cheaply, in platinum editions or second hand.\par
+ \par
+\b\fs44 Can I be a betatester?\b0\fs28\par
+ \par
+Ask this and the answer will always be \b NO\b0 . Keep asking it and you'll find yourself with a big fat ban.\par
+ \par
+\b\fs44 What are the system requirements?\b0\fs28\par
+ \par
+We recommend the following:\par
+ \par
+\b Minimal Specs:\par
+\b0 AMD XP/64 or Intel Pentium 4 (VM Built will not work with [B]non[/B] SSE2 CPU's)\par
+512MB of RAM\par
+Pixel Shader 1.4 supporting card (GSdx Graphics Plugin Only)\par
+ \par
+\b Recommended Specs:\b0  (For reasonable performance in many games, but not all)\par
+AMD64 X2 or Intel Conroe E6600+ (Multi Threading is supported in PCSX2)\par
+512-1024MB of RAM (more RAM allows for VM mode to be stable)\par
+Pixel Shader 2.0 supporting card (recommended GeForce 6600-8800 or equivalent ATi card)\par
+ \par
+\b Possible Ideal Specs:\b0\par
+64bit OS such as Vista or winXP64, to allow for future support of 64bit recompilers.\par
+Future AMD or Intel Quad Core maybe needed, but currently the support of 4 threads is not handled by PCSX2, and the effect of threading out EE / VU is not yet known.\par
+We don't forsee you requiring a GPU more powerful than the current generation of cards, up to and including the nVidia GeForce 8800.\par
+ \par
+A more in-depth guide to system specifications can be found {\field{\*\fldinst{HYPERLINK "http://forums.ngemu.com/pcsx2-official-forum/84457-will-emulator-run-fast-my-computer.html" }}{\fldrslt{\cf1\ul here}}}\cf0\ulnone\f0\fs28 .\par
+ \par
+\b\fs44 How do I compile the SVN source?\par
+\b0\fs28  \par
+We do not support SVN builds on this forum. Only official builds are permitted to be discussed. This is mainly to stop confusion, people 'handing out' betas, n00b questions when dealing with errors, as it's hard to keep track of multiple 0.x.x versions.\par
+ \par
+Besides, if you need to ask that question, then trust me, you don't want to be bothered. It's very very hard.\par
+ \par
+\b\fs44 What is going on with PCSX2?\par
+\b0\fs28\par
+\i Why aren't we getting lots of info, or is PCSX2 dead?\i0\par
+\pard\fi-360\li720\tx720\lang2057\f1\'b7\tab\lang1032\f0 When something 'special' happens, one of the beta-testers will post shots and information.\par
+\pard\lang2057\f1\'b7\tab\lang1032\f0 When something super-dupa mega super hyper turbo mega mega happens, shots will be posted like \i super mega\i0  lightning fast on the main {\field{\*\fldinst{HYPERLINK "http://www.pcsx2.net/"}}{\fldrslt{\cf1\ul news page}}}\cf0\ulnone\f0\fs28 .\par
+\lang2057\f1\'b7\tab\lang1032\f0 If no shots are being posted, assume that the progress is slow but steady, and whilst stuff is happening, it doesn't result in anything that you'd be able to see (eg techy nerd stuff).\par
+\lang2057\f1\'b7\tab\lang1032\f0 If nothing is being posted whatsoever, assume that \b A:\b0  The developers have lives (yeah I didn't believe that either), \b B:\b0  The developers are taking a rest.\par
+\lang2057\f1\'b7\tab\lang1032\f0 What if \b SHOCK HORROR\b0  no news has been posted for ages???!!!!!! Assume any of the above or most of the team was killed.\par
+\lang2057\f1\'b7\tab\lang1032\f0 What if I have programming knowledge, and could understand the technical changes being made? Well then go browse to the SVN, and aquire the \b changelog.txt\b0 .\par
+\par
+\b\fs44 When will the next version be released?\par
+\b0\fs28  \par
+The authors are writing this in there spare time. If they knew, they would inform you, normally a release is made when significant progress and a big difference in 'output' is shown, eg, when you the end user will be able to see more stuff running.\par
+ \par
+\b\fs44 Why bother making releases when it is not finished?\b0\fs28\par
+ \par
+In a nutshell, it keeps the "Gimme the next release \b NOW!\b0 " crowd from getting too annoying. More importantly it alls folks to see how things are progressing first hand.\par
+ \par
+\b\fs44 How do I make a patch?\par
+\b0\fs28  \par
+Making a patch will \b not\b0  make a game 'playable' but may allow you further into it. Patches can be used to skip videos that don't play, or other simple bugs, they will not make '3D' perfect or make sound super duppa!\par
+ \par
+{\field{\*\fldinst{HYPERLINK "http://www.pcsx2.net/nachbrenner/" }}{\fldrslt{\cf1\ul Nachbrenner's Site for making Patches}}}\cf0\ulnone\f0\fs28\par
+{\field{\*\fldinst{HYPERLINK "http://www.ngemu.com/forums/showthread.php?t=62837" }}{\fldrslt{\cf1\ul Simple Guide for Video Skip Patches}}}\cf0\ulnone\f0\fs28\par
+ \par
+\b\fs44 My Sprites have black borders!\b0\fs28\par
+ \par
+This happens when you have \b Linear Texture Filtering\b0  (LTF) turned on in GSdx, to solve this, turn off LTF. This is most often the cause of black squares or borders around sprites in 2D and 2.5D fighting games.\par
+ \par
+\b\fs44 Every Game I run crashes the emulator instantly!\par
+\b0\fs28  \par
+This is often caused by people having the \b NLOOP0\b0  hack enabled in the GS plugin (ZeroGS KOSMOS / GSdx), and using the Run>Execute menu. By using Run>Execute the emulator first boots the BIOS, which will crash when you have NLOOP0 enabled. Simply use File>RunCD menu to avoid crashes, and this is the recommended option for anygame.\par
+ \par
+If you wish to run the BIOS, simply \b DISABLE\b0  NLOOP0 in your GS plugin first!\par
+ \par
+\b\fs44 Useful Links\par
+\b0\fs28  \par
+BIOS Guides:\par
+ \par
+{\field{\*\fldinst{HYPERLINK "http://www.ngemu.com/forums/showthread.php?t=65015" }}{\fldrslt{\cf1\ul CKemu's guide to using the PS2 BIOS}}}\cf0\ulnone\f0\fs28  \par
+{\field{\*\fldinst{HYPERLINK "http://forums.ngemu.com/pcsx2-official-forum/84994-guide-dump-bios-through-usb.html" }}{\fldrslt{\cf1\ul RealOne's Guide to USB BIOS Dumping}}}\cf0\ulnone\f0\fs28\par
+{\field{\*\fldinst{HYPERLINK "http://forums.ngemu.com/pcsx2-official-forum/83608-rfs-guide-dumping-your-ps2-bios-over-lan.html" }}{\fldrslt{\cf1\ul Reichfuher's guide to dumping your Playstation 2 BIOS}}}\cf0\ulnone\f0\fs28\par
+\par
+Error/Problem Guides:\par
+ \par
+{\field{\*\fldinst{HYPERLINK "http://forums.ngemu.com/pcsx2-official-forum/67512-common-problems-solutions-guide.html" \\\\l "post912874" }}{\fldrslt{\cf1\ul Refraction's guide to common problems and errors.}}}\cf0\ulnone\f0\fs28\par
+{\field{\*\fldinst{HYPERLINK "http://forums.ngemu.com/pcsx2-official-forum/84457-will-emulator-run-fast-my-computer.html" }}{\fldrslt{\cf1\ul Will the emulator run fast on my computer?}}}\cf0\ulnone\f0\fs28\par
+{\field{\*\fldinst{HYPERLINK "http://forums.ngemu.com/pcsx2-official-forum/70174-why-pcsx2-slow.html" }}{\fldrslt{\cf1\ul Why is PCSX2 Slow?}}}\cf0\ulnone\f0\fs28\par
+\par
+Memory Card Guides:\par
+ \par
+{\field{\*\fldinst{HYPERLINK "http://www.ngemu.com/forums/showthread.php?t=64482" }}{\fldrslt{\cf1\ul Convert GameFAQ saves to PCSX2 memorycard}}}\cf0\ulnone\f0\fs28  {\field{\*\fldinst{HYPERLINK "http://forums.ngemu.com/pcsx2-official-forum/69844-load-us-ntsc-final-fantasy-x-gamesaves-any-ffx-version.html" }}{\fldrslt{\cf1\ul Load US memcard saves on any region version of FFX and FFX-2}}}\cf0\ulnone\f0\fs28\par
+ \par
+Plugins/Patch Guides:\par
+ \par
+{\field{\*\fldinst{HYPERLINK "http://www.ngemu.com/forums/showthread.php?t=62837" }}{\fldrslt{\cf1\ul Guide to making patches for PCSX2}}}\cf0\ulnone\f0\fs28\par
+{\field{\*\fldinst{HYPERLINK "http://forums.ngemu.com/1065199-post74.html" }}{\fldrslt{\cf1\ul TwinPad Keyboard Plugin Latest Version}}}\cf0\ulnone\f0\fs28\par
+{\field{\*\fldinst{HYPERLINK "http://forums.ngemu.com/ps2-plugin-questions-troubleshooting/87274-lilypad-new-pad-plugin-lame-name.html" }}{\fldrslt{\cf1\ul Lilypad plugin}}}\cf0\ulnone\f0\fs28\par
+{\field{\*\fldinst{HYPERLINK "http://forums.ngemu.com/ps2-plugin-questions-troubleshooting/94273-megapad-plugin.html" }}{\fldrslt{\cf1\ul MegaPad plugin}}}\cf0\ulnone\f0\fs28\par
+ \par
+Reviews:\par
+ \par
+{\field{\*\fldinst{HYPERLINK "http://forums.ngemu.com/pcsx2-official-forum/76251-pcsx2-review-cpu-power-does-matter.html" }}{\fldrslt{\cf1\ul PCSX2 Review Part 1: CPU Power Matters}}}\cf0\ulnone\f0\fs28\par
+{\field{\*\fldinst{HYPERLINK "http://forums.ngemu.com/pcsx2-official-forum/80417-pcsx2-review-part2-gpu-power-also-matter.html" }}{\fldrslt{\cf1\ul PCSX2 Review Part 2: GPU Power Also Matters}}}\cf0\ulnone\f0\fs28\par
+\par
+\par
+\f2\fs20\par
+}
+ 

@@ -1,0 +1,7 @@
+gametitle=Dakar 2 [SLES 50879] (E)
+comment= patches by Nachbrenner
+//Skip Intro Videos
+patch=0,EE,00139188,word,10000029
+//KOSMOS fix
+patch=0,EE,00171874,word,00000000 // D1_CHCR
+patch=0,EE,001718c4,word,00000000 // GS_CSR

@@ -1,0 +1,4 @@
+gametitle= PC Genjin [SLPM 62418] (J) [4043F228]
+comment=
+//Skip Videos ("sceMpegIsEnd")
+patch=0,EE,0020f9e0,word,24020001

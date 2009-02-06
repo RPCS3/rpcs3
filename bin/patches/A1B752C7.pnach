@@ -1,0 +1,4 @@
+gametitle=Sensible Soccer 2006
+comment=Patch By Refraction
+//Skip Videos
+patch=0,EE,0036b0a0,word,24020001

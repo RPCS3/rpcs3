@@ -1,0 +1,20 @@
+gametitle=FFX-2 US
+comment=
+// InvalidDCache | SyncDCache
+patch=0,EE,003498b0,word,03e00008
+patch=0,EE,003498b4,word,00000000
+//skip "INIT SOUND"
+patch=0,EE,00132868,word,00000000
+//skip "INIT VOICE"
+patch=0,EE,0013287c,word,00000000
+//skip AC3+PCM start (NOPs whole subroutine)
+patch=0,EE,0017ac70,word,00000000
+//Skip Videos
+//patch=0,EE,003338e0,word,24020001
+//skip "decode MPEG2"
+patch=0,EE,0017aaa0,word,03e00008
+patch=0,EE,0017aaa4,word,00000000
+patch=0,EE,0017a9e8,word,03e00008
+patch=0,EE,0017a9ec,word,00000000
+//ZeroGS Patch - GAME_FFXHACK
+zerogs=00000080

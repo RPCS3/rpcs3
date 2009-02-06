@@ -1,0 +1,4 @@
+gametitle= FlatOut 2 [SLES 54002] (E)
+comment= Video Skip by Refraction
+//Skip Videos (sceMpegIsEnd)
+patch=0,EE,003dd1d0,word,24020001

@@ -1,0 +1,8 @@
+gametitle=Steel Dragon EX [SLES 52482] (E)
+comment=patches by Nachbrenner
+//Disable BGM
+//patch=0,EE,0015bcf8,word,00000000
+//Disable SE
+//patch=0,EE,0015bcf0,word,00000000
+//Skip Memory Card check
+patch=0,EE,0015bd00,word,00000000

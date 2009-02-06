@@ -1,0 +1,10 @@
+gametitle=Primal [SCES 51135] (E)
+comment=patches by Nachbrenner
+//Skip Videos
+patch=0,EE,003ec7d4,word,00000000
+patch=0,EE,003ec4e0,word,00000000
+//Skip custom IPU routine
+patch=0,EE,003c44ac,word,00000000
+patch=0,EE,003c4568,word,00000000
+//fix VU wm 25.06.06
+patch=0,EE,00391efc,word,00000000

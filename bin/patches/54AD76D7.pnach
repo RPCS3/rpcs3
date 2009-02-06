@@ -1,0 +1,8 @@
+gametitle=Lara Croft Tomb Raider - The Angel of Darkness [SLES 51227] (E)
+comment= patches by nachbrenner
+//Skip videos
+patch=0,EE,00104de0,word,03E00008
+patch=0,EE,00104de4,word,24020001
+patch=0,EE,00104d60,word,03E00008
+patch=0,EE,00104d64,word,24020001
+patch=0,EE,0021bf68,word,24020001

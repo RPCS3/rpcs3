@@ -1,0 +1,4 @@
+gametitle=Guilty Gear XX - Accent Core [SLPM 66746] (J) [6175FE7D]
+comment=Skips Video (sceMpegIsEnd)
+//Skip Videos
+patch=0,EE,002bcc48,word,24020001

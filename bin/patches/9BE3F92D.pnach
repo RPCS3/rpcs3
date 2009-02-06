@@ -1,0 +1,4 @@
+gametitle=Psyvariar Complete Edition [SLPM62139] (J)
+comment=patch by Nachbrenner
+//skip movie
+patch=0,EE,0010019c,word,00000000

@@ -1,0 +1,4 @@
+gametitle= Kamen Rider Blade [SLPS 20402] (J)
+comment=patches by Nachbrenner
+//skip "PlayMpeg"
+patch=0,EE,00158dec,word,00000000

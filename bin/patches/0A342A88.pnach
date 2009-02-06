@@ -1,0 +1,4 @@
+gametitle=Futurama ( U )
+comment=patch by Refraction
+//skip movies
+patch=0,EE,002fc474,word,00000000

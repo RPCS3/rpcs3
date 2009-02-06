@@ -1,0 +1,7 @@
+gametitle=Pirates - The Legend Of Black Cat [SLES 50680] (E)
+comment= patches by Nachbrenner
+//skip MPC videos
+//patch=0,EE,00101504,word,24020000 // intro videos
+//patch=0,EE,00100aa4,word,10000013 // amulett video
+//fix IPU Wait Time Out
+//patch=0,EE,001a7854,word,00000000

@@ -1,0 +1,23 @@
+gametitle= Gunbird 1 & 2 [SLPM 62469] (J)
+comment=patches by nachbrenner
+//Disable Autosave (001E5AF2)
+//patch=0,EE,00107f6c,word,a4400012
+//
+//Gunbird 1 Codes
+//
+//Infinite Lives
+patch=0,EE,0018b06c,word,24020005
+//Infinite Bombs
+patch=0,EE,0018AF30,word,24020006
+//Invincible
+patch=0,EE,0018AF60,word,340203E8
+patch=0,EE,00199b78,word,00000000
+//
+//Gunbird 2 Codes
+//
+//Infinite Lives
+patch=0,EE,00134900,word,34020008
+//Infinite Bombs
+patch=0,EE,00133db4,word,34020009
+//Invincible
+patch=0,EE,00133a60,word,340303E7

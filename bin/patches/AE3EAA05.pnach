@@ -1,0 +1,14 @@
+gametitle=Kingdom Hearts German [SCES 50969] (G)
+comment=patches by Nachbrenner
+//Size modifier 
+// default = 1 (3f800000)
+// patch=0,EE,001243BC,word,3c014000 //double size
+//Hypermode 
+// default = 1.2 (3f999999)
+// max =5 (40a00000)
+//Don't use "Hypermode" in cutscenes.
+//patch=0,EE,0011007c,word,3c0140a0
+//patch=0,EE,00110080,word,34210000
+//ZeroGS Patch - GAME_QUICKRESOLVE1
+zerogs=00000400
+fastmemory

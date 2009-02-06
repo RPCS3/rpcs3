@@ -1,0 +1,14 @@
+gametitle= Dirge Of Cerberus - Final Fantasy VII [SLPM 66271] (J)
+comment=patches by Nachbrenner
+//Fix "**** SQTHREAD ERROR : BAD LOCK STATE" 
+patch=0,EE,0047d228,word,00000000
+//Skip Videos
+// patch=0,EE,00255264,word,00000000
+//fix ingame DMA0
+patch=0,EE,00283060,word,10000020
+//fix ingame DMA8
+//patch=0,EE,0031d714,word,00000000
+//fix ingame VIF1_STAT
+//patch=0,EE,004a184c,word,00000000
+//Skip mcDelayThread
+//patch=0,EE,004b7c88,word,00000000

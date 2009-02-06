@@ -1,0 +1,105 @@
+ษอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บNOTE: 1. this is an internal pcsx2 team document, for developers ONLYบ
+บ      2. lamers/gamers are excluded                                  บ
+บ      3. DECI2 will not run your games:P                             บ
+ศอออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+
+RemoteDebugging
+===============
+
+This is a new feature available for debugging applications within pcsx2 emu.
+ Using a remote debugger is not wellcomed unless it is more featured.
+ Fortunately, there are such debuggers. Currently added support is for win32
+ target only; also, only TCP/IP remote connection and only for Sony's DECI2
+ app-level protocol. Future addition could be GNU debugger remote support.
+
+Anyway, pcsx2 has a new menu item that allows one to start a debugging session
+ by specifying the listen port [default for DECI2 is 8510]. Pcsx2 will act like
+ a server for the remote debugger. It is set to accept connections on any IP.
+ For local debugging sessions, use IP=127.0.0.1 aka IP=localhost. On the
+ other hand, if a pcsx2 would be listening on an active IP in the Internet,
+ anyone could connect to it;) Only one connection is supported. After the
+ connection is closed by the client/remote tool, the only thing to do is to
+ "admire" the log window and then close it/restart the emu.
+
+So, to start a debug session:
+ - first start the emu [quite reasonable; because it will be the server]. There
+   are some issues if you start the client first or if you didn't close ALL the
+   client subprograms in the last debugging session.
+ - choose from the menu, Debug->Remote Debugging. A dialog will pop asking for
+   the port to use. Also, if you have a non-HLE bios selected in the Config box,
+   ie. a true bios, there will be also an option weather to debug the bios. You
+   have 2 choices:
+		-not checked=Run Bios
+			before any debug is performed a bios run. ie. the emu
+			will run the bios up to the shell loading or a bit
+			further, to the moment when all the iop modules are
+			loaded. You will have then a full environment loaded.
+		-checked=Debug Bios
+			nothing is done further and the PC=0xBFC00000.
+ - after that a connection log window will be shown and you can follow the
+   connection data exchange. First, the emu is placed in a wait state.
+ - this is the moment you have to run the client. It will open the connection.
+   The emu accepts the connection and the DECI2 protocol is on;)
+   You'll see how the client queries for registers values & memory areas.
+ - the situation gets complicated since you can do many things from now on:
+
+Debug bios:
+ - start with a bios selected and the check box checked (see above).
+ - PC=0xBFC00000 and you can trace the bios now. Anyway, there is no breakpoints
+   support for the bios as the client "thinks" you are debugging the real PS2,
+   so you cannot write to bios area. BTW: the breakpoints are implemented by
+   patching the code with a BREAK instruction. Since you cannot write such instr
+   you cannot put a breakpoint on the bios, cannot run to address and so on...
+Run bios:
+ - start with a bios selected and the check box not checked (see above).
+ - wait till the emu runs the bios...it will take some time. After THAT the
+   connection log window will be displayed.
+ - PC=0x82000 or smth like that...you can check the environment set up while
+   running the bios. The modules window for instance. And various memory
+   structures. Also, this is the entrypoint of the shell loading. Try to trace
+   it;)
+Debug an application:
+ - start with HLEbios selected (see above)
+ - since the debugger (the client) does debug whatever you want to. You can
+   load the elf to debug with pcsx2 loader (ie. with File->Load ELF file or
+   from the CDVD). But you will need to know the entrypoint to force it in
+   remote debugger (set PC to cursor or to address). This way is not recomended.
+   I like to use the loader of the debugger since it knows to load the source
+   also if available and does not cause troubles with setting the PC. Also, if
+   the ELF has symbols, it can run it to main;)
+ - now, you're on your own. Use step by step, step over, breakpoints, run to
+   cursor, run to address etc. HAPPY DEBUGGING!
+
+KNOWN ISSUES and NOTES
+======================
+ - use CDVDnull or another plugin as you like to have or not a src for cdvd
+   loading;)
+ - pcsx2 does not have support to debug the IOP. You can do this now but it is
+   a hard job. That is due to the fact that PS2 can run every processor
+   independently (ie. one can be stopped) and pcsx2 cannot. The emu runs either
+   all the procs or nothing. So, in the debugger, the debugged processor is on
+   stop and others are "running". When there will be added support for debugging
+   the IOP, also only one processor will run.
+ - do not step through the program very fast. Because of the communication speed
+   and a reentrancy issue, this will get the debugger in a FALSE run state. That
+   means that the debugger "thinks" that the PS2 (ie. pcsx2;)) is running,
+   although it is not. The simple solution to this is to press STOP/BREAK button
+   in the debugger. Notice also that some run states might be also true! When
+   you are stepping over a big loop...that might take some time, so if you stop
+   the emu you will get in the middle of the loop:P
+ - you can also notice the low speed that can also be met in the pcsx2 debugger.
+   That's because Cpu->Step() is used.
+ - also, notice that you cannot debug in recompiler mode! ONLY interpreter mode
+   works!
+ - IOP modules loading is not supported and the files loaded from host directory
+   are also loaded in pcsx2 way, ie. from host\ directory; not through remote
+   debugger.
+ - if you try to debug the bios and the code is not displayed...scroll down
+   in order to have only valid addresses on the screen; ie. the top address
+   to be 0xBFC00000 and in emu communication log there will be no ADDRESS ERROR.
+
+
+===============================
+Florin (florinsasu@yahoo.com)
+2003/04/17

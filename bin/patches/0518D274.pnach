@@ -1,0 +1,4 @@
+gametitle=Need For Speed Most Wanted Black Edition(SLUS_213.51)
+comment=Skips Video - deny file By General Plot
+//Skip Videos
+patch=0,EE,00242418,word,00000000

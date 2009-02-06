@@ -1,0 +1,159 @@
+\documentclass[10pt]{article}
+
+\begin{document}
+\section{...stuff...}
+-order the plugins are started\\
+-platform dependent stuff, calling convention\\
+
+\section{Generic functions}
+The following three functions will be present in all the plugin libraries,
+ in order to be recognized as valid PS2E plugins. They will help
+ the emulator to find a plugin capabilities.
+
+\subsection{PS2EgetLibType}
+\begin{quote}\texttt{unsigned int} PS2EgetLibType(\texttt{void});\end{quote}
+
+\begin{description}
+\item[PS2EgetLibType] returns the type of the plugin.
+ In fact it indicates the APIs supported by the dynamic library.
+ The returned value can be one of:
+\begin{itemize}
+\item PS2E\_LT\_GS   0x01
+\item PS2E\_LT\_PAD  0x02
+\item PS2E\_LT\_SPU2 0x04
+\item PS2E\_LT\_CDVD 0x08
+\item PS2E\_LT\_DEV9 0x10
+\end{itemize}
+Currently, these are the only plugin types supported. Note that the values
+ can be ORed.
+\end{description}
+
+
+
+\subsection{PS2EgetLibVersion2}
+\begin{quote}\texttt{unsigned int} PS2EgetLibVersion2(\texttt{unsigned int}
+ type);\end{quote}
+
+\begin{description}
+\item[PS2EgetLibVersion2] returns a combination of version numbers.
+Parameter \emph{type} is used to select the functions set for which
+ the emulator requests version information. See \texttt{PS2EgetLibType}
+ for the values of this parameter.
+
+The 5 APIs and their corresponding specs have changed over time.
+ In order to prevent crashes and incompatibilities, a spec version have
+ been introduced as the highest 16 bits of the returned value.
+\begin{itemize}
+\item PS2E\_GS\_VERSION   0x0002
+\item PS2E\_PAD\_VERSION  0x0002
+\item PS2E\_SPU2\_VERSION 0x0002
+\item PS2E\_CDVD\_VERSION 0x0003
+\item PS2E\_DEV9\_VERSION 0x0001
+\end{itemize}
+Notice that when the specs do change \texttt{and} the compatibility is broken,
+ this version number is increased. The emulator loading code will support
+ only one version for a certain library type at a time. If the internal
+ version and plugin API version does not match, the plugin
+ will not be loaded nor used.
+
+The low half of the returned value reflects the version of the plugin itself.
+ A major.minor versioning scheme is used on the two bytes like this:
+\begin{verbatim}
+...//code
+return (PS2E_CDVD_VERSION<<16) | (0<<8) | (67);	//version 0.67
+\end{verbatim}
+\end{description}
+
+
+
+\subsection{PS2EgetLibName}
+\begin{quote}\texttt{char*} PS2EgetLibName(\texttt{void});\end{quote}
+
+\begin{description}
+\item[PS2EgetLibName] returns a string that contains a short\footnote{
+less then 30 chars in one line} name. The string is stored
+ in the plugin and will be used to represent the plugin in a config dialog.
+\end{description}
+
+
+
+
+
+\section{CDVD functions}
+This section describes the functions that corresponds to CDVD\footnote{short for CD/DVD}
+API - type PS2E\_LT\_CDVD(0x08).
+ These specs are for PS2E\_CDVD\_VERSION(0x0003).
+
+\subsection{CDVDinit}
+\begin{quote}\texttt{int} CDVDinit(\texttt{void});\end{quote}
+
+\begin{description}
+\item[CDVDinit] does the initialization of the CDVD interface.
+ It is the first function called; so, it can be used to do all the
+ init stuff such as reading saved configuration, one-time hardware init and
+ preparing the internal structures, tables, etc\ldots
+ If an error is found the function will return -1, otherwise 0.
+\end{description}
+
+
+
+\subsection{CDVDshutdown}
+\begin{quote}\texttt{void} CDVDshutdown(\texttt{void});\end{quote}
+
+\begin{description}
+\item[CDVDshutdown] is called when the emulator is closed. Do now the freeing
+ operations. DO NOT FORGET TO FREE the resources used. The OS will probably
+ free the garbage left, but some pieces of hardware might need a
+ ``deinitialization'' procedure in order to work next time the emulator
+ is run. Imagine that the user will choose another plugin to run with
+ next time instead of yours, do not cause troubles.
+\end{description}
+
+
+
+\subsection{CDVDopen}
+\begin{quote}\texttt{int} CDVDopen(\texttt{void});\end{quote}
+
+\begin{description}
+\item[CDVDopen] is called when the emulation starts.
+ It is recommended that functions called from now on (until
+ \texttt{CDVDclose} is met) to spend few processing time. Avoid calling
+ blocking functions and if you do, the user should be notified visualy.
+ Report errors by return value and warrings using a log.
+ If an error is found the function will return -1 and the emulation stops,
+ otherwise 0.
+
+Do not report errors using message boxes while the emu runs, the GS plugin
+ might use a display mode that can cause troubles to windowing system
+ in showing your message.
+\end{description}
+
+
+
+\subsection{CDVDclose}
+\begin{quote}\texttt{void} CDVDclose(\texttt{void});\end{quote}
+
+\begin{description}
+\item[CDVDclose] is called when the emulation is stopped. Some of the
+ resources that you aquired with \texttt{CDVDstart} have to be released now
+ in order that other programs to use them. If you locked the CD/DVD tray,
+ unlock it so the user can change the disc.
+\end{description}
+
+
+
+\subsection{CDVDreadTrack}
+\begin{quote}\texttt{int} CDVDreadTrack(\texttt{unsigned int}
+ lsn, \texttt{int} mode);\end{quote}
+
+\begin{description}
+\item[CDVDreadTrack] is the function that performs the read of \texttt{a}
+ sector from the CD/DVD. Parameter \emph{lsn} specifies the absolute value
+ of the sector number in linear addressing mode without \emph{lead-in}\footnote{i.e.\
+without leading 150 sectors == 2 seconds}. Usualy, the plugin will read
+ a full sector of 2352 bytes in its internal buffer.
+ The second parameter tells what port of ...
+\end{description}
+
+\end{document}
+

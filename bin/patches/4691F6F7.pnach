@@ -1,0 +1,4 @@
+gametitle=The Sum Of All Fears [SLES 51180] (E)
+comment= patches by Nachbrenner
+//Skip sceIpuSync
+//patch=0,EE,002aa098,word,03e00008

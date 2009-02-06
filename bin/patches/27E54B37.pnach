@@ -1,0 +1,16 @@
+gametitle=Syphon Filter - The Omega Strain [SCES 52033] (G)
+comment= patches by Nachbrenner
+//Skip FMV (for blockdump)
+patch=0,EE,0041743c,word,00000000
+patch=0,EE,00417444,word,00000000
+//Boot Language Fix
+patch=0,EE,0042020c,word,24020004 //german
+// Playername = PCSX2
+patch=1,EE,008b945c,word,58534350
+patch=1,EE,008b9460,word,00000032
+//
+//brute force fix GS_CSR (obsolete)
+//patch=0,EE,0039ca3c,word,00000000
+//patch=0,EE,0039caec,word,00000000
+//brute force fix VIF1_STAT (obsolete)
+//patch=0,EE,0039c8e0,word,10000019

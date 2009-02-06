@@ -1,0 +1,5 @@
+gametitle= Gran Turismo 3 A-spec [SCUS 97102] (U)
+comment=patches by nachbrenner
+//Skip Opening Video
+patch=1,EE,001287a8,word,03e00008
+patch=1,EE,001287ac,word,00000000

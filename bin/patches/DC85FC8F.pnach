@@ -1,0 +1,4 @@
+gametitle=Worms 4 - Mayhem [SLES 53096] (E) [DC85FC8F]
+comment=Patch by CKemu
+//Skip SceMpegIsEnd
+patch=0,EE,00520d40,word,24020001

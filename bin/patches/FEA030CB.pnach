@@ -1,0 +1,23 @@
+gametitle=Le Mans 24 Hours (24 Heures Du Mans) [SLES 50131] (E)
+comment=patches by Nachbrenner
+//Skip Video Mode Menu
+patch=0,EE,00248238,word,24020000
+//Skip Videos
+patch=0,EE,001152c8,word,24020001
+//g_showOnScreenRenderStats (debug mode)
+//patch=0,EE,0024875c,word,24020001
+//RenderFrameRateIndicator__Fv
+//patch=0,EE,0033d35c,word,00000000
+//g_ps2RenderTestPattern
+//patch=1,EE,004123d4,word,00000001
+//Boot Language Modifier (use only one of these)
+//English
+patch=0,EE,001fe060,word,24020001
+//Francais
+//patch=0,EE,001fe060,word,24020002
+//Espanol
+//patch=0,EE,001fe060,word,24020003
+//Deutsch
+//patch=0,EE,001fe060,word,24020004
+//Italiano
+//patch=0,EE,001fe060,word,24020005

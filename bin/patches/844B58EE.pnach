@@ -1,0 +1,4 @@
+gametitle=Tekken Tag Tournament (J)
+comment= patch by parotaku
+//Skip Videos (sceMpegIsEnd)
+patch=0,EE,004b7220,word,24020001

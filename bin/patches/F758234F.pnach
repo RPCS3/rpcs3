@@ -1,0 +1,7 @@
+//skip BGM (for blockdump)
+patch=0,EE,002cc1f0,word,03e00008
+patch=0,EE,002cc1f4,word,00000000
+patch=0,EE,002cc610,word,03e00008
+patch=0,EE,002cc614,word,00000000
+patch=0,EE,002cc430,word,03e00008
+patch=0,EE,002cc434,word,00000000

@@ -1,0 +1,4 @@
+gametitle=Glass rose (J)
+comment= patch by parotaku
+//Skip Videos (sceMpegIsEnd)
+patch=0,EE,0010c1c0,word,24020001

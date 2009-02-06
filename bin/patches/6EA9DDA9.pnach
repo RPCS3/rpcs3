@@ -1,0 +1,4 @@
+gametitle= Resident Evil: Code Veronica X [SLES 50306] (E)
+comment= patches by Nachbrenner
+//Skip Videos (sceMpegIsEnd)
+//patch=0,EE,00109d48,word,24020001

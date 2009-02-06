@@ -1,0 +1,16 @@
+gametitle=Disney's Stitch: Experiment 626 [SCES 50960] (E)
+comment=patches by Nachbrenner
+//Skip Videos
+//patch=0,EE,001edbe4,word,00000000
+//Skip music
+patch=0,EE,001d1de0,word,03e00008
+patch=0,EE,001d1de4,word,00000000
+patch=1,EE,00A02FAC,word,00000000
+//MTGS vs. GS_CSR
+//patch=0,EE,00269e00,word,00000000
+//patch=0,EE,00269de4,word,00000000
+//patch=0,EE,002e3d54,word,00000000
+//patch=0,EE,00269fdc,word,00000000
+//patch=0,EE,0026a018,word,00000000
+//sceGsExecStoreImage
+//patch=0,EE,002e22ec,word,00000000

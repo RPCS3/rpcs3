@@ -1,0 +1,5 @@
+
+gametitle=Beach King Stunts Racer
+comment=Skips Video by Rudy_x(sceMpegIsEnd)
+//Skip Video
+patch=0,EE,00197988,word,24020001

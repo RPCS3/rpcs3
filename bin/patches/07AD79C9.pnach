@@ -1,0 +1,4 @@
+gametitle=Yu-Gi-Oh The Duelists Of The Roses (U)
+comment=
+//Skip Videos
+patch=0,EE,0018ee60,word,24020001

@@ -1,0 +1,8 @@
+gametitle=Contra - Shattered Soldier [SLUS 20306] (U)
+comment=patches by nachbrenner
+//skip FMV (sceMpegIsEnd)
+patch=0,EE,0063d950,word,24020001
+//suppress message "Gifstat write value = 4"
+//patch=0,EE,0041be6c,word,00000000
+//suppress message "Gifstat write value = 0"
+//patch=0,EE,0041bf1c,word,00000000

@@ -1,0 +1,4 @@
+gametitle=Samurai Warriors Xtreme Legends
+comment=Skips Videos by bositman
+//Skip Videos
+patch=0,EE,00126bb0,word,24020001

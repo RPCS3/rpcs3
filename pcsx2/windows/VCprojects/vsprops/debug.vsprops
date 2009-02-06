@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="windows-1250"?>
+<VisualStudioPropertySheet
+	ProjectType="Visual C++"
+	Version="8.00"
+	Name="debug"
+	>
+	<Tool
+		Name="VCCLCompilerTool"
+		Optimization="0"
+		PreprocessorDefinitions="_DEBUG"
+		BasicRuntimeChecks="3"
+		RuntimeLibrary="1"
+	/>
+	<Tool
+		Name="VCResourceCompilerTool"
+		PreprocessorDefinitions="_DEBUG"
+	/>
+</VisualStudioPropertySheet>

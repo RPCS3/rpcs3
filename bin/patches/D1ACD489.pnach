@@ -1,0 +1,5 @@
+gametitle=Syberia [SLES 51393] (E)
+//Skip Videos
+// patch=0,EE,0013E608,word,24020001
+//skip video "INTRO_MICROIDS.BIK" 
+// patch=0,EE,00297780,word,00000000

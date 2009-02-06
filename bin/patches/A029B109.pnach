@@ -1,0 +1,12 @@
+gametitle=Grand Prix Challenge [SLES 51296] (E)
+comment=patches by Nachbrenner
+//g_dmaMaximumWaitTime (default=40400000)
+patch=0,EE,00484f88,word,00000000
+//
+//for blockdump:
+//Don't stream videos  (press 3 times X after FIA logo)
+patch=0,EE,003a6fc0,word,03e00008 // UpdateInternal__12fmvStreamPS2Fv
+patch=0,EE,003a6fc4,word,00000000
+//skip Play__13slMusicStreamFv
+patch=0,EE,002ea300,word,03e00008
+patch=0,EE,002ea304,word,00000000

@@ -1,0 +1,5 @@
+gametitle=Gran Turismo 3 A-Spec [SCES 50294] (E) [B590CE04]
+comment= patches by Nachbrenner
+//Skip Intro Videos
+patch=1,EE,00128c60,word,03e00008
+patch=1,EE,00128c64,word,00000000

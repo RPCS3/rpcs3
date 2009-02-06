@@ -1,0 +1,4 @@
+gametitle=Play it Pinball (E)
+comment= patch by parotaku
+//Skip Videos (sceMpegIsEnd)
+patch=0,EE,002b29d0,word,24020001

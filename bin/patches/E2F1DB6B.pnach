@@ -1,0 +1,6 @@
+gametitle=GT Racers [SLES 52602] (E)
+comment=patches by nachbrenner
+//Skip INTRO.PSS
+patch=0,EE,00160a2c,word,00000000
+//fix "sound end command"
+patch=0,EE,00167f14,word,00000000

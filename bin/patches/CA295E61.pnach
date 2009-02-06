@@ -1,0 +1,4 @@
+gametitle= Atelier Iris Grand Phantasm [SLPM 66436] (J)
+comment= Video Skip before MCD screen by Refraction
+//Nop out IPU routine
+patch=0,EE,00135cdc,word,00000000

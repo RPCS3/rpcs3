@@ -1,0 +1,10 @@
+gametitle=Lotus Challenge [SLES 50230] (E)
+comment=patches by nachbrenner
+//skip Videos
+//patch=0,EE,001cc5dc,word,00000000
+//recheck_wheel_connection__10cPauseMenuFv
+patch=0,EE,001fef50,word,03e00008
+patch=0,EE,001fef54,word,00000000
+//getClosestPoint__FP11sGameSplineP8sVector4PiPScPi
+patch=0,EE,00198d40,word,03e00008
+patch=0,EE,00198d44,word,00000000

@@ -1,0 +1,7 @@
+gametitle=kata
+comment=
+//Skip Intro Videos
+patch=0,EE,0018e9e8,word,24020001
+//0018e4c8
+//0018e11c
+//0018e020

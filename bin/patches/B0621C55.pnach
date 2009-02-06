@@ -1,0 +1,4 @@
+gametitle=Fighting Angels [SLES 53408] (E) [B0621C55]
+comment=Skips Video (sceMpegIsEnd)
+//Skip Videos
+patch=0,EE,00192a38,word,24020001

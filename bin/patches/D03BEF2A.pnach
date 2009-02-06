@@ -1,0 +1,13 @@
+gametitle=Max Payne 2 - The Fall Of Max Payne [SLES 52336] (E)
+comment=patches by Nachbrenner
+//Skip Videos 
+patch=0,EE,002c8650,word,03e00008
+patch=0,EE,002c8654,word,00000000
+//fix obscure inf. loop
+patch=0,EE,001aa610,word,03e00008
+patch=0,EE,001aa614,word,24020000
+//Language Modifier (sceScfGetLanguage)
+patch=0,EE,00445ce4,word,24020001 // english
+//patch=0,EE,00445ce4,word,24020004 // deutsch
+//fix "SleepThread vs. RTFSSIOP.IRX"
+patch=0,EE,001b3208,word,00000000

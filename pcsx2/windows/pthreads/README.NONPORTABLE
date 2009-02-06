@@ -1,0 +1,285 @@
+This file documents non-portable functions and other issues.
+
+Non-portable functions included in pthreads-win32
+-------------------------------------------------
+
+BOOL
+pthread_win32_test_features_np(int mask)
+
+	This routine allows an application to check which
+	run-time auto-detected features are available within
+	the library.
+
+	The possible features are:
+
+		PTW32_SYSTEM_INTERLOCKED_COMPARE_EXCHANGE
+			Return TRUE if the native version of
+			InterlockedCompareExchange() is being used.
+		PTW32_ALERTABLE_ASYNC_CANCEL
+			Return TRUE is the QueueUserAPCEx package
+			QUSEREX.DLL is available and the AlertDrv.sys
+			driver is loaded into Windows, providing
+			alertable (pre-emptive) asyncronous threads
+			cancelation. If this feature returns FALSE
+			then the default async cancel scheme is in
+			use, which cannot cancel blocked threads.
+
+	Features may be Or'ed into the mask parameter, in which case
+	the routine returns TRUE if any of the Or'ed features would
+	return TRUE. At this stage it doesn't make sense to Or features
+	but it may some day.
+
+
+void *
+pthread_timechange_handler_np(void *)
+
+        To improve tolerance against operator or time service
+        initiated system clock changes.
+
+        This routine can be called by an application when it
+        receives a WM_TIMECHANGE message from the system. At
+        present it broadcasts all condition variables so that
+        waiting threads can wake up and re-evaluate their
+        conditions and restart their timed waits if required.
+
+        It has the same return type and argument type as a
+        thread routine so that it may be called directly
+        through pthread_create(), i.e. as a separate thread.
+
+        Parameters
+
+        Although a parameter must be supplied, it is ignored.
+        The value NULL can be used.
+
+        Return values
+
+        It can return an error EAGAIN to indicate that not
+        all condition variables were broadcast for some reason.
+        Otherwise, 0 is returned.
+
+        If run as a thread, the return value is returned
+        through pthread_join().
+
+        The return value should be cast to an integer.
+
+
+HANDLE
+pthread_getw32threadhandle_np(pthread_t thread);
+
+	Returns the win32 thread handle that the POSIX
+	thread "thread" is running as.
+
+	Applications can use the win32 handle to set
+	win32 specific attributes of the thread.
+
+
+int
+pthread_mutexattr_setkind_np(pthread_mutexattr_t * attr, int kind)
+
+int
+pthread_mutexattr_getkind_np(pthread_mutexattr_t * attr, int *kind)
+
+        These two routines are included for Linux compatibility
+        and are direct equivalents to the standard routines
+                pthread_mutexattr_settype
+                pthread_mutexattr_gettype
+
+        pthread_mutexattr_setkind_np accepts the following
+        mutex kinds:
+                PTHREAD_MUTEX_FAST_NP
+                PTHREAD_MUTEX_ERRORCHECK_NP
+                PTHREAD_MUTEX_RECURSIVE_NP
+
+        These are really just equivalent to (respectively):
+                PTHREAD_MUTEX_NORMAL
+                PTHREAD_MUTEX_ERRORCHECK
+                PTHREAD_MUTEX_RECURSIVE
+
+int
+pthread_delay_np (const struct timespec *interval);
+
+        This routine causes a thread to delay execution for a specific period of time.
+        This period ends at the current time plus the specified interval. The routine
+        will not return before the end of the period is reached, but may return an
+        arbitrary amount of time after the period has gone by. This can be due to
+        system load, thread priorities, and system timer granularity.
+
+        Specifying an interval of zero (0) seconds and zero (0) nanoseconds is
+        allowed and can be used to force the thread to give up the processor or to
+        deliver a pending cancelation request.
+
+        This routine is a cancelation point.
+
+        The timespec structure contains the following two fields:
+
+                tv_sec is an integer number of seconds.
+                tv_nsec is an integer number of nanoseconds. 
+
+        Return Values
+
+        If an error condition occurs, this routine returns an integer value
+        indicating the type of error. Possible return values are as follows:
+
+        0          Successful completion. 
+        [EINVAL]   The value specified by interval is invalid. 
+
+int
+pthread_num_processors_np
+
+        This routine (found on HPUX systems) returns the number of processors
+        in the system. This implementation actually returns the number of
+        processors available to the process, which can be a lower number
+        than the system's number, depending on the process's affinity mask.
+
+BOOL
+pthread_win32_process_attach_np (void);
+
+BOOL
+pthread_win32_process_detach_np (void);
+
+BOOL
+pthread_win32_thread_attach_np (void);
+
+BOOL
+pthread_win32_thread_detach_np (void);
+
+	These functions contain the code normally run via dllMain
+	when the library is used as a dll but which need to be
+	called explicitly by an application when the library
+	is statically linked.
+
+	You will need to call pthread_win32_process_attach_np() before
+	you can call any pthread routines when statically linking.
+	You should call pthread_win32_process_detach_np() before
+	exiting your application to clean up.
+
+	pthread_win32_thread_attach_np() is currently a no-op, but
+	pthread_win32_thread_detach_np() is needed to clean up
+	the implicit pthread handle that is allocated to a Win32 thread if
+	it calls certain pthreads routines. Call this routine when the
+	Win32 thread exits.
+
+	These functions invariably return TRUE except for
+	pthread_win32_process_attach_np() which will return FALSE
+	if pthreads-win32 initialisation fails.
+
+int
+pthreadCancelableWait (HANDLE waitHandle);
+
+int
+pthreadCancelableTimedWait (HANDLE waitHandle, DWORD timeout);
+
+	These two functions provide hooks into the pthread_cancel
+	mechanism that will allow you to wait on a Windows handle
+	and make it a cancellation point. Both functions block
+	until either the given w32 handle is signaled, or
+	pthread_cancel has been called. It is implemented using
+	WaitForMultipleObjects on 'waitHandle' and a manually
+	reset w32 event used to implement pthread_cancel.
+
+
+Non-portable issues
+-------------------
+
+Thread priority
+
+	POSIX defines a single contiguous range of numbers that determine a
+	thread's priority. Win32 defines priority classes and priority
+	levels relative to these classes. Classes are simply priority base
+	levels that the defined priority levels are relative to such that,
+	changing a process's priority class will change the priority of all
+	of it's threads, while the threads retain the same relativity to each
+	other.
+
+	A Win32 system defines a single contiguous monotonic range of values
+	that define system priority levels, just like POSIX. However, Win32
+	restricts individual threads to a subset of this range on a
+	per-process basis.
+
+	The following table shows the base priority levels for combinations
+	of priority class and priority value in Win32.
+	
+	 Process Priority Class               Thread Priority Level
+	 -----------------------------------------------------------------
+	 1 IDLE_PRIORITY_CLASS                THREAD_PRIORITY_IDLE
+	 1 BELOW_NORMAL_PRIORITY_CLASS        THREAD_PRIORITY_IDLE
+	 1 NORMAL_PRIORITY_CLASS              THREAD_PRIORITY_IDLE
+	 1 ABOVE_NORMAL_PRIORITY_CLASS        THREAD_PRIORITY_IDLE
+	 1 HIGH_PRIORITY_CLASS                THREAD_PRIORITY_IDLE
+	 2 IDLE_PRIORITY_CLASS                THREAD_PRIORITY_LOWEST
+	 3 IDLE_PRIORITY_CLASS                THREAD_PRIORITY_BELOW_NORMAL
+	 4 IDLE_PRIORITY_CLASS                THREAD_PRIORITY_NORMAL
+	 4 BELOW_NORMAL_PRIORITY_CLASS        THREAD_PRIORITY_LOWEST
+	 5 IDLE_PRIORITY_CLASS                THREAD_PRIORITY_ABOVE_NORMAL
+	 5 BELOW_NORMAL_PRIORITY_CLASS        THREAD_PRIORITY_BELOW_NORMAL
+	 5 Background NORMAL_PRIORITY_CLASS   THREAD_PRIORITY_LOWEST
+	 6 IDLE_PRIORITY_CLASS                THREAD_PRIORITY_HIGHEST
+	 6 BELOW_NORMAL_PRIORITY_CLASS        THREAD_PRIORITY_NORMAL
+	 6 Background NORMAL_PRIORITY_CLASS   THREAD_PRIORITY_BELOW_NORMAL
+	 7 BELOW_NORMAL_PRIORITY_CLASS        THREAD_PRIORITY_ABOVE_NORMAL
+	 7 Background NORMAL_PRIORITY_CLASS   THREAD_PRIORITY_NORMAL
+	 7 Foreground NORMAL_PRIORITY_CLASS   THREAD_PRIORITY_LOWEST
+ 	 8 BELOW_NORMAL_PRIORITY_CLASS        THREAD_PRIORITY_HIGHEST
+	 8 NORMAL_PRIORITY_CLASS              THREAD_PRIORITY_ABOVE_NORMAL
+	 8 Foreground NORMAL_PRIORITY_CLASS   THREAD_PRIORITY_BELOW_NORMAL
+	 8 ABOVE_NORMAL_PRIORITY_CLASS        THREAD_PRIORITY_LOWEST
+	 9 NORMAL_PRIORITY_CLASS              THREAD_PRIORITY_HIGHEST
+	 9 Foreground NORMAL_PRIORITY_CLASS   THREAD_PRIORITY_NORMAL
+	 9 ABOVE_NORMAL_PRIORITY_CLASS        THREAD_PRIORITY_BELOW_NORMAL
+	10 Foreground NORMAL_PRIORITY_CLASS   THREAD_PRIORITY_ABOVE_NORMAL
+	10 ABOVE_NORMAL_PRIORITY_CLASS        THREAD_PRIORITY_NORMAL
+	11 Foreground NORMAL_PRIORITY_CLASS   THREAD_PRIORITY_HIGHEST
+	11 ABOVE_NORMAL_PRIORITY_CLASS        THREAD_PRIORITY_ABOVE_NORMAL
+	11 HIGH_PRIORITY_CLASS                THREAD_PRIORITY_LOWEST
+	12 ABOVE_NORMAL_PRIORITY_CLASS        THREAD_PRIORITY_HIGHEST
+	12 HIGH_PRIORITY_CLASS                THREAD_PRIORITY_BELOW_NORMAL
+	13 HIGH_PRIORITY_CLASS                THREAD_PRIORITY_NORMAL
+	14 HIGH_PRIORITY_CLASS                THREAD_PRIORITY_ABOVE_NORMAL
+	15 HIGH_PRIORITY_CLASS                THREAD_PRIORITY_HIGHEST
+	15 HIGH_PRIORITY_CLASS                THREAD_PRIORITY_TIME_CRITICAL
+	15 IDLE_PRIORITY_CLASS                THREAD_PRIORITY_TIME_CRITICAL
+	15 BELOW_NORMAL_PRIORITY_CLASS        THREAD_PRIORITY_TIME_CRITICAL
+	15 NORMAL_PRIORITY_CLASS              THREAD_PRIORITY_TIME_CRITICAL
+	15 ABOVE_NORMAL_PRIORITY_CLASS        THREAD_PRIORITY_TIME_CRITICAL
+	16 REALTIME_PRIORITY_CLASS            THREAD_PRIORITY_IDLE
+	17 REALTIME_PRIORITY_CLASS            -7
+	18 REALTIME_PRIORITY_CLASS            -6
+	19 REALTIME_PRIORITY_CLASS            -5
+	20 REALTIME_PRIORITY_CLASS            -4
+	21 REALTIME_PRIORITY_CLASS            -3
+	22 REALTIME_PRIORITY_CLASS            THREAD_PRIORITY_LOWEST
+	23 REALTIME_PRIORITY_CLASS            THREAD_PRIORITY_BELOW_NORMAL
+	24 REALTIME_PRIORITY_CLASS            THREAD_PRIORITY_NORMAL
+	25 REALTIME_PRIORITY_CLASS            THREAD_PRIORITY_ABOVE_NORMAL
+	26 REALTIME_PRIORITY_CLASS            THREAD_PRIORITY_HIGHEST
+	27 REALTIME_PRIORITY_CLASS             3
+	28 REALTIME_PRIORITY_CLASS             4
+	29 REALTIME_PRIORITY_CLASS             5
+	30 REALTIME_PRIORITY_CLASS             6
+	31 REALTIME_PRIORITY_CLASS            THREAD_PRIORITY_TIME_CRITICAL
+	
+	Windows NT:  Values -7, -6, -5, -4, -3, 3, 4, 5, and 6 are not supported.
+
+
+	As you can see, the real priority levels available to any individual
+	Win32 thread are non-contiguous.
+
+	An application using pthreads-win32 should not make assumptions about
+	the numbers used to represent thread priority levels, except that they
+	are monotonic between the values returned by sched_get_priority_min()
+	and sched_get_priority_max(). E.g. Windows 95, 98, NT, 2000, XP make
+	available a non-contiguous range of numbers between -15 and 15, while
+	at least one version of WinCE (3.0) defines the minimum priority
+	(THREAD_PRIORITY_LOWEST) as 5, and the maximum priority
+	(THREAD_PRIORITY_HIGHEST) as 1.
+
+	Internally, pthreads-win32 maps any priority levels between
+	THREAD_PRIORITY_IDLE and THREAD_PRIORITY_LOWEST to THREAD_PRIORITY_LOWEST,
+	or between THREAD_PRIORITY_TIME_CRITICAL and THREAD_PRIORITY_HIGHEST to
+	THREAD_PRIORITY_HIGHEST. Currently, this also applies to
+	REALTIME_PRIORITY_CLASSi even if levels -7, -6, -5, -4, -3, 3, 4, 5, and 6
+	are supported.
+
+	If it wishes, a Win32 application using pthreads-win32 can use the Win32
+	defined priority macros THREAD_PRIORITY_IDLE through
+	THREAD_PRIORITY_TIME_CRITICAL.

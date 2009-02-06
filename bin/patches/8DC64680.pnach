@@ -1,0 +1,30 @@
+gametitle=Red Faction 1 [SLES 50279] (G)
+comment=patches by Nachbrenner
+//Skip Videos
+patch=0,EE,0024b488,word,24020001
+patch=0,EE,002044d0,word,03e00008
+patch=0,EE,002044d4,word,24020001
+// skip IDEC error
+patch=0,EE,002146b8,word,00000000
+//patch=0,EE,001b1d78,word,24020001
+//Skip THQ Logo
+patch=0,EE,001B0A78,word,24020001
+//Skip RF Trailer
+patch=0,EE,0027D19C,word,24020001
+// Unendlich Gesundheit (Inf. health)
+patch=0,EE,200C0220,word,3C0142C8
+patch=0,EE,200C0224,word,44810000
+patch=0,EE,200C0228,word,03E00008
+patch=0,EE,200C022C,word,E6000034
+patch=0,EE,2016937C,word,0C030088
+// Unendlich Schutzanzug (Inf. flak jacket)
+patch=0,EE,200C0230,word,3C0142C8
+patch=0,EE,200C0234,word,44811000
+patch=0,EE,200C0238,word,03E00008
+patch=0,EE,200C023C,word,E6020038
+patch=0,EE,201693E0,word,0C03008C
+// Unendlich Munition (Inf. Ammo)
+patch=0,EE,20154854,word,24630000
+patch=0,EE,20154890,word,24630000
+// Unendlich Sprengladungen (Inf. Explosives)
+patch=0,EE,201A19BC,word,24420000

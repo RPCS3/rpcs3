@@ -1,0 +1,6 @@
+gametitle=FFX-2 International + Last Mission
+comment=Skip videos by General Plot
+//Skip Videos
+patch=0,EE,003338a0,word,24020001
+//ZeroGS Patch - GAME_FFXHACK
+zerogs=00000080

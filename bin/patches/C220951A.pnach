@@ -1,0 +1,5 @@
+gametitle= Gran Turismo Concept 2001 Tokyo [SCPS 15010] (J)
+comment= patches by Nachbrenner
+//Skip Video
+patch=1,EE,001295b8,word,03e00008
+patch=1,EE,001295bc,word,00000000
