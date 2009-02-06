@@ -522,18 +522,22 @@ void MixChannels(int core)
 {
 	// mix all channels
 	int c_offset = 0x0400 * core;
-	int dma;
+	int dma, left_vol, right_vol;
 	ADMA *Adma;
 	
 	if (core == 0)
 	{
 		Adma = &Adma4;
 		dma = 4;
+		left_vol = REG_C0_BVOLL;
+		right_vol = REG_C0_BVOLR;
 	}
 	else
 	{
 		Adma = &Adma7;
 		dma = 7;
+		left_vol = REG_C1_BVOLL;
+		right_vol = REG_C1_BVOLR;
 	}
 	
 	if ((spu2Ru16(REG_C0_MMIX + c_offset) & 0xF0) && (spu2Ru16(REG_C0_ADMAS + c_offset) & (0x1 + core))) 
@@ -541,9 +545,9 @@ void MixChannels(int core)
 		for (int ns=0;ns<NSSIZE;ns++) 
 		{ 
 			if ((spu2Ru16(REG_C0_MMIX + c_offset) & 0x80)) 
-				s_buffers[ns][0] += (((short*)spu2mem)[0x2000 + c_offset +Adma->Index]*(int)spu2Ru16(REG_C0_BVOLL + c_offset))>>16;
+				s_buffers[ns][0] += (((short*)spu2mem)[0x2000 + c_offset +Adma->Index]*(int)spu2Ru16(left_vol))>>16;
 			if ((spu2Ru16(REG_C0_MMIX + c_offset) & 0x40)) 
-				s_buffers[ns][1] += (((short*)spu2mem)[0x2200 + c_offset +Adma->Index]*(int)spu2Ru16(REG_C0_BVOLR + c_offset))>>16;
+				s_buffers[ns][1] += (((short*)spu2mem)[0x2200 + c_offset +Adma->Index]*(int)spu2Ru16(right_vol))>>16;
 			
 			Adma->Index +=1;
 			MemAddr[core] += 4;
@@ -736,92 +740,8 @@ ENDX:
 	}
 
 	// mix all channels
-	/*MixChannels(0);
-	MixChannels(1);*/
-	
-	
-        // mix all channels
-	// This code is temporarily being put back, till I work out why the replacement is breaking things, --arcum42
-        if ((spu2Ru16(REG_C0_MMIX) & 0xF0) && (spu2Ru16(REG_C0_ADMAS) & 0x1) /*&& !(spu2Ru16(REG_C0_CTRL) & 0x30)*/) 
-        {
-                ADMA *Adma = &Adma4;
-                
-                for (int ns=0;ns<NSSIZE;ns++) 
-                { 
-                
-                        if ((spu2Ru16(REG_C0_MMIX) & 0x80)) 
-                                s_buffers[ns][0] += (((short*)spu2mem)[0x2000+Adma->Index]*(int)spu2Ru16(REG_C0_BVOLL))>>16;
-                        if ((spu2Ru16(REG_C0_MMIX) & 0x40)) 
-                                s_buffers[ns][1] += (((short*)spu2mem)[0x2200+Adma->Index]*(int)spu2Ru16(REG_C0_BVOLR))>>16;
-
-                        Adma->Index +=1;
-                        // just add after every sample, it is better than adding 1024 all at once (games like Genji don't like it)
-                        MemAddr[0] += 4;
-
-                        if ((Adma->Index == 128) || (Adma->Index == 384))
-                        {
-                                if (ADMASWrite(0))
-                                {
-                                        if (interrupt & 0x2)
-                                        {
-                                                interrupt &= ~0x2;
-                                                printf("Stopping double interrupt DMA4\n");
-                                        }
-                                        irqCallbackDMA4();
-                                        
-                                }
-                        }
-                        
-                        if (Adma->Index == 512) 
-                        {
-                                if ( Adma->Enabled == 2 ) 
-                                {
-                                        Adma->Enabled = 0;
-                                }
-                                Adma->Index = 0;
-                        }
-                }
-        }
-
-        // Let's do the same bloody mixing code again, only for C1. 
-        // fixme - There is way too much duplication of code between C0 & C1, and Adma4 & Adma7.
-        // arcum42
-        if ((spu2Ru16(REG_C1_MMIX) & 0xF0) && (spu2Ru16(REG_C1_ADMAS) & 0x2)) 
-        {
-                ADMA *Adma = &Adma7;
-
-                for (int ns=0;ns<NSSIZE;ns++) 
-                { 
-                        if ((spu2Ru16(REG_C1_MMIX) & 0x80)) 
-                                s_buffers[ns][0] += (((short*)spu2mem)[0x2400+Adma->Index]*(int)spu2Ru16(REG_C1_BVOLL))>>16;
-                        if ((spu2Ru16(REG_C1_MMIX) & 0x40)) 
-                                s_buffers[ns][1] += (((short*)spu2mem)[0x2600+Adma->Index]*(int)spu2Ru16(REG_C1_BVOLR))>>16;
-                        
-                        Adma->Index +=1;
-                        MemAddr[1] += 4;
-                        
-                        if (Adma->Index == 128 || Adma->Index == 384)
-                        {
-                                if (ADMASWrite(1))
-                                {
-                                        if (interrupt & 0x4)
-                                        {
-                                                interrupt &= ~0x4;
-                                                printf("Stopping double interrupt DMA7\n");
-                                        }
-                                        irqCallbackDMA7();
-                                        
-                                }
-                                Adma->Enabled = 2;
-                        }
-
-                        if (Adma->Index == 512) 
-                        {
-                                if ( Adma->Enabled == 2 ) Adma->Enabled = 0;
-                                Adma->Index = 0;
-                        }
-                }
-        }
+	MixChannels(0);
+	MixChannels(1);
 
 	if ( g_bPlaySound ) 
 	{
