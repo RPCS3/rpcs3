@@ -1,0 +1,29 @@
+/* Wedit generated resource file */
+#ifdef __LCC__
+#include <windows.h>
+#endif
+#include "screens.h"
+
+
+DLG_0100 DIALOG 2, 2, 140, 59
+STYLE DS_CENTER | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+CAPTION "About CDVDlinuz"
+FONT 8, "MS Sans Serif"
+BEGIN
+    CTEXT           "EFP polling CDVD Driver v0.4", 101, 11, 6, 118, 12
+    CTEXT           "Current Author: efp", 102, 12, 16, 118, 12
+    CTEXT           "Original code by: linuzappz && shadow", 103, 12, 26, 118, 12
+    PUSHBUTTON      "Ok", IDC_0104, 50, 37, 40, 14
+END
+
+DLG_0200 DIALOG 4, 2, 241, 50
+STYLE WS_MINIMIZEBOX | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+CAPTION "CDVDlinuz Configuration"
+FONT 8, "MS Sans Serif"
+BEGIN
+    LTEXT           "CD/DVD device:", 201, 14, 8, 59, 12
+    EDITTEXT        IDC_0202, 71, 7, 164, 12, ES_AUTOHSCROLL
+    CTEXT           "Device Type: ---", IDC_0203, 10, 21, 220, 12
+    PUSHBUTTON      "Ok", IDC_0204, 15, 31, 48, 14
+    PUSHBUTTON      "Cancel", IDC_0205, 177, 31, 48, 14
+END
