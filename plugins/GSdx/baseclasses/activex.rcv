@@ -1,0 +1,142 @@
+//------------------------------------------------------------------------------
+// File: Activex.rcv
+//
+// Desc: DirectShow base classes - this file defines the version resource 
+//       used for the application.
+//
+//       NOTE: All strings MUST have an explicit \0 for termination!
+//
+//       For a complete description of the Version Resource, search the
+//       Microsoft Developer's Network (MSDN) CD-ROM for 'version resource'..
+//
+// Copyright (c) 1992 - 2002, Microsoft Corporation.  All rights reserved.
+//------------------------------------------------------------------------------
+
+
+#ifndef _ACTIVEX_RCV_
+#define _ACTIVEX_RCV_
+
+#ifndef WIN32
+#define WIN32
+#endif
+#include <winver.h>
+
+#ifndef _ACTIVEX_VER_
+#include <activex.ver>
+#endif
+
+//
+// Version flags.
+//
+// OFFICIAL and FINAL should be defined when appropriate.
+//
+
+#ifndef OFFICIAL
+#define VER_PRIVATEBUILD      VS_FF_PRIVATEBUILD
+#else
+#define VER_PRIVATEBUILD      0
+#endif
+
+#ifndef FINAL
+#define VER_PRERELEASE        VS_FF_PRERELEASE
+#else
+#define VER_PRERELEASE        0
+#endif
+
+#ifdef DEBUG
+#define VER_DEBUG             VS_FF_DEBUG
+#else
+#define VER_DEBUG             0
+#endif
+
+//
+// Version definitions
+//
+
+#define VERSION_RES_FLAGSMASK   0x0030003FL
+#define VERSION_RES_FLAGS       (VER_PRIVATEBUILD|VER_PRERELEASE|VER_DEBUG)
+
+#ifndef VERSION_RES_OS
+#define VERSION_RES_OS          VOS__WINDOWS32
+#endif
+
+#ifndef VERSION_RES_TYPE
+#define VERSION_RES_TYPE        VFT_DLL
+#endif
+
+#ifndef VERSION_RES_SUBTYPE
+#define VERSION_RES_SUBTYPE     VFT2_UNKNOWN
+#endif
+
+#define VERSION_RES_LANGUAGE    0x409
+
+#ifndef VERSION_RES_CHARSET
+#ifdef UNICODE
+#define VERSION_RES_CHARSET     1200
+#else
+#define VERSION_RES_CHARSET     1252
+#endif
+#endif
+
+#ifndef VERSION_RES_ACTIVEX
+#define VERSION_RES_ACTIVEX     "Filter dll\0"
+#endif
+
+#ifdef  AMOVIE_SELF_REGISTER
+#ifndef OLE_SELF_REGISTER
+#define OLE_SELF_REGISTER
+#endif
+#endif
+
+#ifdef  OLE_SELF_REGISTER
+#ifdef  AMOVIE_SELF_REGISTER
+#define VERSION_RES_SELFREGISTER "AM20\0"
+#else
+#define VERSION_RES_SELFREGISTER "\0"
+#endif
+#endif
+
+//
+// Version resource
+//
+
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION     VERSION_RES_MAJOR_VER, VERSION_RES_MINOR_VER, 0, VERSION_RES_BUILD
+PRODUCTVERSION  VERSION_RES_MAJOR_VER, VERSION_RES_MINOR_VER, 0, VERSION_RES_BUILD
+FILEFLAGSMASK   VERSION_RES_FLAGSMASK
+FILEFLAGS       VERSION_RES_FLAGS
+FILEOS          VERSION_RES_OS
+FILETYPE        VERSION_RES_TYPE
+FILESUBTYPE     VERSION_RES_SUBTYPE
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "040904E4"
+    BEGIN
+      VALUE "CompanyName",        VERSION_RES_COMPANY_NAME
+      VALUE "Comment",            VERSION_RES_COMMENT
+      VALUE "FileDescription",    VERSION_RES_BIN_DESCRIPTION
+      VALUE "FileVersion",        VERSION_RES_STRING
+      VALUE "InternalName",       VERSION_RES_BIN_NAME
+      VALUE "LegalCopyright",     VERSION_RES_COPYRIGHT
+      VALUE "OriginalFilename",   VERSION_RES_BIN_NAME
+      VALUE "ProductName",        VERSION_RES_PRODUCT_NAME
+#ifdef DEBUG
+      VALUE "ProductVersion",     VERSION_RES_STRING_D
+#else
+      VALUE "ProductVersion",     VERSION_RES_STRING
+#endif
+      VALUE "ActiveMovie",        VERSION_RES_ACTIVEX
+#ifdef OLE_SELF_REGISTER
+      VALUE "OLESelfRegister",    VERSION_RES_SELFREGISTER
+#endif
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", VERSION_RES_LANGUAGE, VERSION_RES_CHARSET
+  END
+END
+
+#endif
+// _ACTIVEX_RCV_
