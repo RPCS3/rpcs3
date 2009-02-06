@@ -7,7 +7,8 @@
 //
 // Generated from the TEXTINCLUDE 2 resource.
 //
-#include "afxresmw.h" /////////////////////////////////////////////////////////////////////////////
+#include "afxresmw.h"
+/////////////////////////////////////////////////////////////////////////////
 #undef APSTUDIO_READONLY_SYMBOLS
 
 /////////////////////////////////////////////////////////////////////////////
@@ -73,21 +74,21 @@ LANGUAGE LANG_GERMAN, SUBLANG_GERMAN
 // Dialog
 //
 
-IDD_GAMEFIXES DIALOGEX 0, 0, 278, 129
+IDD_GAMEFIXES DIALOGEX 0, 0, 278, 130
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Game Special Fixes"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
-    DEFPUSHBUTTON   "OK",IDOK,85,108,50,14
-    PUSHBUTTON      "Cancel",IDCANCEL,139,108,50,14
+    DEFPUSHBUTTON   "OK",IDOK,85,102,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,139,102,50,14
     CTEXT           "Some games need special settings.\nConfigure them here.",IDC_STATIC,7,7,264,17
-    GROUPBOX        "PCSX2 Gamefixes",IDC_STATIC,7,30,264,92
+    GROUPBOX        "PCSX2 Gamefixes",IDC_STATIC,7,31,264,92
     CONTROL         "FPU Clamp Hack - Special fix for Tekken 5.",IDC_GAMEFIX3,
-                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,12,46,249,10
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,12,51,249,10
     CONTROL         "VU Branch Hack - Special fix for Magna Carta; Breaks Crash Bandicoot!",IDC_GAMEFIX4,
-                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,12,74,252,10
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,12,79,252,10
     CONTROL         "VU Add / Sub Hack - Special fix for Tri-Ace games!",IDC_GAMEFIX1,
-                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,12,60,252,10
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,12,65,252,10
 END
 
 
@@ -105,7 +106,7 @@ BEGIN
         RIGHTMARGIN, 271
         VERTGUIDE, 12
         TOPMARGIN, 7
-        BOTTOMMARGIN, 122
+        BOTTOMMARGIN, 123
     END
 END
 #endif    // APSTUDIO_INVOKED
@@ -1713,6 +1714,7 @@ END
 //
 // Generated from the TEXTINCLUDE 3 resource.
 //
- /////////////////////////////////////////////////////////////////////////////
+
+/////////////////////////////////////////////////////////////////////////////
 #endif    // not APSTUDIO_INVOKED
 
