@@ -1,5 +1,0 @@
-gametitle=Simply... The Best For Less - Vol. 6 Ultimate Casino [SLES 52515] (E)
-comment=patches by Nachbrenner
-//Skip logo.pss
-patch=0,EE,00115778,word,24020001
-patch=0,EE,0012eb90,word,00000000

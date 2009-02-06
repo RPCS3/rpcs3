@@ -1,5 +1,0 @@
-gametitle=Star Trek Voyager - Elite Force [SLES 50738] (E)
-//Skip Videos
-patch=0,EE,002945E8,word,24020001
-//suppress message: SPR0 stall 1
-patch=0,EE,0027fd18,byte,49 // 0027fd20: sw v0, $0000(v1) (D_CTRL)

@@ -1,9 +1,0 @@
-gametitle= Card Captor Sakura [SLPS 20408] (J)
-comment=patches by Nachbrenner
-//skip eyetoy check
-patch=0,EE,013385b0,word,00000000
-//skip MC & Start screen
-patch=0,EE,01337c20,word,00000000
-//activate 1st for food scene, both for telephone scene
-// patch=0,EE,01337c2c,word,00000000 // food scene
-// patch=0,EE,01337c3c,word,00000000 // telephone scene

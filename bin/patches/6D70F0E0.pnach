@@ -1,4 +1,0 @@
-gametitle=Anubis 2 [SLES 53571] (E) [6D70F0E0]
-comment=Patch by CKemu
-//Skip Videos (scempegisend)
-patch=0,EE,002DAFD0,word,24020001

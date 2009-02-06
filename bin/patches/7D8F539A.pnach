@@ -1,7 +1,0 @@
-gametitle=Devil May Cry PAL [SLES 50358] (U) [7D8F539A]
-comment=
-//Skip Videos
-patch=0,EE,0015BC78,word,00000000
-patch=0,EE,001CE340,word,03E00008
-patch=0,EE,001CE344,word,00000000
-patch=0,EE,001CE8EC,word,70001428

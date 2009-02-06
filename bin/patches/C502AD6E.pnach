@@ -1,8 +1,0 @@
-gametitle=Wallace & Grommit in Projekt Zoo [SLES 52026] (G)
-comment=patches by Nachbrenner
-//skip FMV (for blockdump)
-//patch=0,EE,0046bf70,word,24020001
-//skip sceIpuSync
-patch=0,EE,00472c78,word,03e00008
-//Disable Music & Speech (for blockdump)
-//patch=0,EE,005767ac,word,001001d0

@@ -1,4 +1,0 @@
-gametitle=Yu Gi Oh! Capsule Monster Coliseum (U)
-comment=Skips Video (sceMpegIsEnd)
-//Skip Videos
-patch=0,EE,00280f30,word,24020001

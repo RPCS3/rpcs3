@@ -1,7 +1,0 @@
-gametitle=SWAT - Global Strike Team Germany/Australia [SLES 52097] (E)
-comment=patches by nachbrenner
-//multi-ELF fix / skip videos
-patch=0,EE,004721B4,word,00100100
-patch=0,EE,004738C4,word,00100100
-//Enable Gore
-patch=0,EE,00274AAC,word,24040001

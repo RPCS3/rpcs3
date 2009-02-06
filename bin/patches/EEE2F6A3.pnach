@@ -1,4 +1,0 @@
-gametitle=Neo Contra [SLES 52510] (E) [EEE2F6A3]
-comment=Skips Video (sceMpegIsEnd)
-//Skip Videos
-patch=0,EE,003b8050,word,24020001

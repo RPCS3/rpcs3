@@ -1,3 +1,0 @@
-gametitle=GTA3
-//Skip Intro Videos ("InitMPEGPlayer__Fv")
-patch=0,EE,0027ef00,word,1000000b

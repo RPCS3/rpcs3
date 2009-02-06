@@ -1,4 +1,0 @@
-gametitle=Dynasty Warriors 5 XL
-comment=Skips Video (sceMpegIsEnd)
-//Skip Videos
-patch=0,EE,0011a240,word,24020001

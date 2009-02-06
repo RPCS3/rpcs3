@@ -1,4 +1,0 @@
-gametitle=bloody roar 3 NTSC JAPAN
-comment=skips intro
-//Skip Videos ("sceMpegIsEnd")
-patch=0,EE,001dc9f8,word,24020001

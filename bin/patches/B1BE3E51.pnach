@@ -1,6 +1,0 @@
-gametitle=Whiplash [SLES 51958] (E)
-comment=patches by nachbrenner
-//Skip error printing
-//patch=0,EE,00252d88,word,00000000
-//fix jalr crash
-patch=0,EE,0040db84,word,0010c370

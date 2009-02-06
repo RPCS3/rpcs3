@@ -1,8 +1,0 @@
-gametitle=DTM Race Driver [SLES 50816] (E)
-comment=patches by nachbrenner
-//Skip Videos
-patch=0,EE,003876c8,word,24020001
-//All Boni unlocked
-patch=1,EE,0046a120,word,0000ffff
-patch=0,EE,00306e5c,word,3445ffff
-patch=0,EE,00306e94,word,3446ffff

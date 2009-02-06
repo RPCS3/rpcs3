@@ -1,6 +1,0 @@
-gametitle=Kengo: Master Of Bushido [SLES 50114] (E)
-comment=patches by nachbrenner
-//start with 5 minutes time limit
-patch=0,EE,002999b8,word,00003A98 //single_game_time_limit_table
-//skip videos
-patch=0,EE,0018d738,word,24020001

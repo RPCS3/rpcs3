@@ -1,7 +1,0 @@
-gametitle=Haven - Call of the King [SLES 51209] (E)
-comment= patches by Nachbrenner
-//disable 3D for menus and mashed music
-patch=1,EE,00114c90,word,03e00008
-patch=1,EE,00114c94,word,00000000
-patch=1,EE,0010a980,word,03e00008
-patch=1,EE,0010a984,word,00000000

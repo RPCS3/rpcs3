@@ -1,4 +1,0 @@
-gametitle=Fu-Un Bakumatsu-Den [SLPM 65813] (J)
-comment= patches by nachbrenner
-//Skip Videos
-// patch=0,EE,00112f20,word,24020001

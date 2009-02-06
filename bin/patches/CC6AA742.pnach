@@ -1,4 +1,0 @@
-gametitle=FIFA Soccer 2004 [SLKA 25087] (J)
-comment=patches by Nachbrenner
-//boot with english texts
-patch=0,EE,00329b7c,word,24709430

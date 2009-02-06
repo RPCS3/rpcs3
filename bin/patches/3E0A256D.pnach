@@ -1,4 +1,0 @@
-//skip FMV (sceMpegIsEnd)
-patch=0,EE,001eccc8,word,24020001
-//fix AudioReset (Peops SPU2 4.11.06)
-patch=0,EE,00120a94,word,00000000

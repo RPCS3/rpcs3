@@ -1,9 +1,0 @@
-gametitle=Flipnic [SCPS15050](J)
-comment= patches by Nachbrenner
-// fix D3_CHCR (might be redundant)
-patch=0,EE,0011c1b8,word,00000000
-// skip sceIpuSync
-patch=0,EE,00208eb0,word,03e00008
-patch=0,EE,00208eb4,word,00000000
-// fix sceIpuRestartDMA
-patch=0,EE,00208e04,word,00000000

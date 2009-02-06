@@ -1,4 +1,0 @@
-gametitle=7 Sins [SLES 53280] (E)
-comment=patch by Nachbrenner & Refraction
-//fix "SleepThread vs. RTFSSIOP.IRX"
-patch=0,EE,004afc7c,word,00000000

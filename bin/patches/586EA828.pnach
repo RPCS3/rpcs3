@@ -1,7 +1,0 @@
-gametitle=MotoGP 2 [SLUS 20285] (U)
-comment=patches by nachbrenner
-//skip FMV
-//patch=0,EE,00171fe8,word,24020001
-//All challenges complete
-patch=0,EE,00133e54,word,20020002
-patch=0,EE,00133e58,word,a0a20000

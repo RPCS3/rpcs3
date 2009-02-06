@@ -1,4 +1,0 @@
-gametitle=WE7
-comment= patch by Prafull
-//skip movie "WE7_OP"
-patch=0,EE,012ba4a0,word,00000000

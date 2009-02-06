@@ -1,4 +1,0 @@
-gametitle= Graffiti Kingdom [SLUS 21136] (U)
-comment= Video Skip by Refraction
-//Skip Videos (sceMpegIsEnd)
-patch=0,EE,00108590,word,24020001

@@ -1,3 +1,0 @@
-gametitle= MX VS ATV Unleashed [SLUS 21104] (U)
-//Skip Movies
-patch=0,EE,00339bc0,word,24020001

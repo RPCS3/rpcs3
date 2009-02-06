@@ -1,9 +1,0 @@
-gametitle=SX Superstars [SLES 51495](E)
-comment= patches by Nachbrenner
-//Skip Intro Movies (for blockdump) 
-patch=0,EE,002f1088,word,03e00008
-patch=0,EE,002f108c,word,00000000
-//No ingame music (for blockdump)
-patch=0,EE,00223cac,word,00000000
-//fix IPU DMA for "MAINMENU.IPU" (enable to go ingame)
-patch=0,EE,003befe4,word,001003e0

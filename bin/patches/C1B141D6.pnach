@@ -1,7 +1,0 @@
-gametitle= 25 To Life [SLUS 21016] (U)
-comment=patches by Nachbrenner and Refraction
-//Skip Videos (for blockdump)
-// patch=0,EE,0040ade4,word,00000000
-//fix EEREC: LQ qw align
-// patch=0,EE,0043b31c,word,78c40020 // intro (fixed)
-patch=0,EE,0022d3d0,word,79050020 // ingame (still borked)

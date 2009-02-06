@@ -1,4 +1,0 @@
-gametitle=Simple Series 2000 - Vol. 99 - The Genshijin [SLPS 20461] (J)
-comment= patch by parotaku
-//Skip Videos (sceMpegIsEnd)
-patch=0,EE,00109e40,word,24020001

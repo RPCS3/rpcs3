@@ -1,4 +1,0 @@
-gametitle=Guilty Gear X2 Reload [SLES 52967] (E) [B234036E]
-comment=Patch By CKemu
-//Skip Videos
-patch=0,EE,00250418,word,24020001

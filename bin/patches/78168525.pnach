@@ -1,3 +1,0 @@
-gametitle=Off-Road Wide Open [SLES 50232] (E)
-//skip FMV
-patch=0,EE,002953f0,word,24020001

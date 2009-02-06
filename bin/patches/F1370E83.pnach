@@ -1,4 +1,0 @@
-gametitle=Enter the matrix
-comment=Skips Video (sceMpegIsEnd)/bored
-//Skip Videos
-patch=0,EE,003d07c0,word,24020001

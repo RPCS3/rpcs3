@@ -1,4 +1,0 @@
-gametitle=The Thing/Das Ding [SLES 50976] (G)
-comment= patches by nachbrenner
-//Skip videos (for blockdump)
-patch=0,EE,006ef130,word,03e00008

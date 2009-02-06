@@ -1,6 +1,0 @@
-gametitle=Tsukyo Ni Saraba [SLPM 65826] (J)
-comment=patches by Nachbrenner
-//infinite ammo
-patch=0,EE,003620b4,word,24040000
-//crash fix (nukes AI)
-patch=0,EE,0025328c,word,00000000

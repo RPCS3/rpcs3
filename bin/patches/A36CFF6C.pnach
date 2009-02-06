@@ -1,3 +1,0 @@
-gametitle=Castlevania NTSC JPN
-//Skip Videos ("sceMpegIsEnd")
-patch=0,EE,007296b0,word,24020001

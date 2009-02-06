@@ -1,4 +1,0 @@
-gametitle=Superior Defender Gundam Force Showdown! [SLUS 20698] (U)
-comment= Captain Gundam The Secret Defender Of Neotopia 
-//Skip Videos
-patch=0,EE,0010c660,word,24020001

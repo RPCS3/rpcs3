@@ -1,4 +1,0 @@
-gametitle= The Thing (pal)
-comment=
-//Skip Videos
-patch=0,EE,00131dc0,word,24020001

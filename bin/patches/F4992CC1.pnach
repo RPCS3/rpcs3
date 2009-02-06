@@ -1,4 +1,0 @@
-gametitle=switch (J)
-comment= patch by parotaku
-//Skip Videos (sceMpegIsEnd)
-patch=0,EE,00108ce8,word,24020001

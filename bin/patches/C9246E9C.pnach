@@ -1,4 +1,0 @@
-gametitle=Tetris Worlds NTSC
-comment=Skips videos
-//Skip Videos
-patch=0,EE,002cea30,word,24020001

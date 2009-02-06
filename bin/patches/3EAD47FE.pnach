@@ -1,4 +1,0 @@
-gametitle=Britney's Dance Beat [SLUS 20402] (U)
-comment=Kill BNE
-//Patch made by CKemu
-patch=0,EE,0022581c,word,00000000

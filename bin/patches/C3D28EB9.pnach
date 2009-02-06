@@ -1,4 +1,0 @@
-gametitle=Shadow Hearts - From The New World
-comment=Skips Video,by bositman
-//Skip Videos
-patch=0,EE,00208b68,word,24020001

@@ -1,5 +1,0 @@
-gametitle= Gran Turismo Concept 2002 Tokyo-Geneva [SCES 50858] (E)
-comment= patches by Nachbrenner
-//Skip Video
-patch=1,EE,00129600,word,03e00008
-patch=1,EE,00129604,word,00000000

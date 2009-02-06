@@ -1,5 +1,0 @@
-gametitle=IndyCar Series [SLUS 20641] (U)
-//skip BjMediaVideoPlay
-patch=0,EE,00204b38,word,24020001
-patch=0,EE,001ea500,word,03e00008
-patch=0,EE,001ea504,word,00000000

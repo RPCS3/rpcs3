@@ -1,4 +1,0 @@
-gametitle=The Urbz: Sims In The City [SLUS 21066] (U)
-comment=Skips Video (sceMpegIsEnd)
-//Skip Videos
-patch=0,EE,004226d0,word,24020001

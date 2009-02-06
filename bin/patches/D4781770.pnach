@@ -1,6 +1,0 @@
-gametitle=Donald Duck Phantomias Platyrhynchos Kineticus [SLES 50773] (E)
-comment=patches by Nachbrenner
-//Skip Videos
-// patch=0,EE,00108ef0,word,24020001 // (sceMpegIsEnd)
-//fix inf. loop on video playback
-patch=0,EE,002d8b94,word,00000000

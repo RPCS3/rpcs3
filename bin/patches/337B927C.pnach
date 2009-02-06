@@ -1,4 +1,0 @@
-gametitle=We Love Katamari (SLUS 21230)  (U)
-comment=Video Skip
-//Skip Videos
-patch=0,EE,0010ec5c,word,10000041

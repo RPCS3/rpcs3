@@ -1,4 +1,0 @@
-gametitle=Swords of Destiny [SLES 53699] (E)
-comment=patch by Refraction
-//skip movies - brute force
-patch=0,EE,00235440,word,10000003

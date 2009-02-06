@@ -1,8 +1,0 @@
-gametitle=Clock tower 3 NTSC japan
-comment=
-//Skip Videos ("sceMpegIsEnd")
-patch=0,EE,01818cb8,word,24020001
-//skip MovieEndCheck
-//patch=0,EE,019415c8,word,70001428
-//skip MoviePlayCheck
-//patch=0,EE,019415cc,word,70001428

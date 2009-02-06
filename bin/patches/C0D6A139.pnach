@@ -1,4 +1,0 @@
-gametitle=Romance Of The Three Kingdoms XI [SLUS 21584] (U)
-comment=Skips Video (sceMpegIsEnd)
-//Skip Videos
-patch=0,EE,0010b690,word,24020001
