@@ -16,7 +16,7 @@ export PCSX2OPTIONS="--enable-sse3 --enable-sse4 --prefix `pwd`"
 #export PCSX2OPTIONS="--enable-debug --enable-devbuild --enable-sse3 --prefix `pwd`"
 
 # Make sure we have plugins, and bring the normal plugins in.
-sh fetch.sh
+#sh fetch.sh
 
 option=$@
 export PCSX2PLUGINS="`pwd`/bin/plugins"
