@@ -74,6 +74,6 @@ extern TESTRUNARGS g_TestRun;
 //#include "Misc.h"
 #include "Patch.h"
 
-#define PCSX2_VERSION "Playground (beta)"
+#define PCSX2_VERSION "(beta)"
 
 #endif /* __COMMON_H__ */

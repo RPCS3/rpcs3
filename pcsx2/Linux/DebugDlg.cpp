@@ -18,7 +18,6 @@
 
 #include "DebugDlg.h"
 using namespace R5900;
-//using namespace Dynarec;
 
 void UpdateDebugger() {
 

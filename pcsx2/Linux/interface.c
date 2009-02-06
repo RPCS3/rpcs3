@@ -2698,7 +2698,7 @@ create_MainWindow (void)
   GtkMenuItem_Help_menu = gtk_menu_new ();
   gtk_menu_item_set_submenu (GTK_MENU_ITEM (GtkMenuItem_Help), GtkMenuItem_Help_menu);
 
-  GtkMenuItem_About = gtk_menu_item_new_with_mnemonic (_("About PCSX2 - Playground..."));
+  GtkMenuItem_About = gtk_menu_item_new_with_mnemonic (_("About PCSX2..."));
   gtk_widget_show (GtkMenuItem_About);
   gtk_container_add (GTK_CONTAINER (GtkMenuItem_Help_menu), GtkMenuItem_About);
 

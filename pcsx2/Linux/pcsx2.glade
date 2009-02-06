@@ -5219,7 +5219,7 @@ Version x.x</property>
 		  <child>
 		    <widget class="GtkMenuItem" id="GtkMenuItem_About">
 		      <property name="visible">True</property>
-		      <property name="label" translatable="yes">About PCSX2 - Playground...</property>
+		      <property name="label" translatable="yes">About PCSX2...</property>
 		      <property name="use_underline">True</property>
 		      <signal name="activate" handler="OnHelp_About"/>
 		    </widget>

@@ -36,9 +36,9 @@ void StartGui() {
 	MainWindow = create_MainWindow();
 	
 	if (SVN_REV != 0)
-		gtk_window_set_title(GTK_WINDOW(MainWindow), "PCSX2 "PCSX2_VERSION" "SVN_REV" Playground");
+		gtk_window_set_title(GTK_WINDOW(MainWindow), "PCSX2 "PCSX2_VERSION" "SVN_REV);
 	else
-		gtk_window_set_title(GTK_WINDOW(MainWindow), "PCSX2 "PCSX2_VERSION" Playground");
+		gtk_window_set_title(GTK_WINDOW(MainWindow), "PCSX2 "PCSX2_VERSION);
 
 	// status bar
 	pStatusBar = gtk_statusbar_new ();
@@ -605,11 +605,17 @@ void OnCpu_Ok(GtkButton *button, gpointer user_data) {
 	{
 		SysRestorableReset();
 
-		if( (Config.Options&PCSX2_GSMULTITHREAD) ^ (newopts&PCSX2_GSMULTITHREAD) )
+		if ((Config.Options&PCSX2_GSMULTITHREAD) ^ (newopts&PCSX2_GSMULTITHREAD))
 		{
-			// gotta shut down *all* the plugins.
-			ResetPlugins();
+			// Need the MTGS setting to take effect, so close out the plugins:
+			PluginsResetGS();
+			
+			if (CHECK_MULTIGS)
+				Console::Notice( "MTGS mode disabled.\n\tEnjoy the fruits of single-threaded simpicity." );
+			else
+				Console::Notice( "MTGS mode enabled.\n\tWelcome to multi-threaded awesomeness. And random crashes." );
 		}
+		
 		Config.Options = newopts;
 	}
 	else
@@ -731,10 +737,10 @@ void OnHelp_About(GtkMenuItem *menuitem, gpointer user_data) {
 	
  	// Include the SVN revision
 	if (SVN_REV !=0)
-		sprintf(str, _("PCSX2 Playground For Linux\nVersion %s %s\n"), PCSX2_VERSION, SVN_REV);
+		sprintf(str, _("PCSX2 For Linux\nVersion %s %s\n"), PCSX2_VERSION, SVN_REV);
 	else
 		//Use this instead for a non-svn version
-		sprintf(str, _("PCSX2 Playground For Linux\nVersion %s\n"), PCSX2_VERSION);
+		sprintf(str, _("PCSX2 For Linux\nVersion %s\n"), PCSX2_VERSION);
 	
 	gtk_label_set_text(GTK_LABEL(Label), str);	
 	
