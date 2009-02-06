@@ -2,7 +2,7 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="9.00"
-	Name="ZeroSPU2-Pg"
+	Name="ZeroSPU2"
 	ProjectGUID="{7F059854-568D-4E08-9D00-1E78E203E4DC}"
 	RootNamespace="ZeroSPU2"
 	Keyword="Win32Proj"
@@ -18,10 +18,13 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			InheritedPropertySheets=".\vsprops\pcsx2_plugin_common.vsprops"
 			ConfigurationType="2"
+			InheritedPropertySheets=".\vsprops\pcsx2_plugin_common.vsprops"
 			CharacterSet="2"
 			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
 			<Tool
 				Name="VCCustomBuildTool"
 				CommandLine="&#x0D;&#x0A;"
@@ -86,14 +89,20 @@
 			<Tool
 				Name="VCAppVerifierTool"
 			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			InheritedPropertySheets=".\vsprops\pcsx2_plugin_common.vsprops"
 			ConfigurationType="2"
+			InheritedPropertySheets=".\vsprops\pcsx2_plugin_common.vsprops"
 			CharacterSet="2"
 			WholeProgramOptimization="1"
 			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
 			<Tool
 				Name="VCCustomBuildTool"
 				CommandLine=""
@@ -161,6 +170,9 @@
 			/>
 			<Tool
 				Name="VCAppVerifierTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
 			/>
 		</Configuration>
 	</Configurations>

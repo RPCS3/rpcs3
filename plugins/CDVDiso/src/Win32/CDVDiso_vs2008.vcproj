@@ -2,7 +2,7 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="9.00"
-	Name="CDVDiso-Pg"
+	Name="CDVDiso"
 	ProjectGUID="{5F78E90B-BD22-47B1-9CA5-7A80F4DF5EF3}"
 	RootNamespace="CDVDiso_vs2008"
 	Keyword="Win32Proj"

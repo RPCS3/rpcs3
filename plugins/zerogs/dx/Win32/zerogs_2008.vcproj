@@ -2,7 +2,7 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="9.00"
-	Name="ZeroGS-Pg"
+	Name="ZeroGS"
 	ProjectGUID="{5C6B7D28-E73D-4F71-8FC0-17ADA640EBD8}"
 	RootNamespace="ZeroGS"
 	TargetFrameworkVersion="131072"
@@ -17,13 +17,16 @@
 	<Configurations>
 		<Configuration
 			Name="Devel|Win32"
-			InheritedPropertySheets=".\vsprops\pcsx2_plugin_common.vsprops"
 			ConfigurationType="2"
+			InheritedPropertySheets=".\vsprops\pcsx2_plugin_common.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="2"
 			WholeProgramOptimization="1"
 			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
 			<Tool
 				Name="VCCustomBuildTool"
 			/>
@@ -103,13 +106,19 @@
 			<Tool
 				Name="VCAppVerifierTool"
 			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
 		</Configuration>
 		<Configuration
 			Name="Debug|Win32"
-			InheritedPropertySheets=".\vsprops\pcsx2_plugin_common.vsprops"
 			ConfigurationType="2"
+			InheritedPropertySheets=".\vsprops\pcsx2_plugin_common.vsprops"
 			CharacterSet="2"
 			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
 			<Tool
 				Name="VCCustomBuildTool"
 			/>
@@ -172,16 +181,22 @@
 			<Tool
 				Name="VCAppVerifierTool"
 			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			InheritedPropertySheets=".\vsprops\pcsx2_plugin_common.vsprops"
 			ConfigurationType="2"
+			InheritedPropertySheets=".\vsprops\pcsx2_plugin_common.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="2"
 			WholeProgramOptimization="1"
 			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
 			<Tool
 				Name="VCCustomBuildTool"
 			/>
@@ -262,6 +277,9 @@
 			/>
 			<Tool
 				Name="VCAppVerifierTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
 			/>
 		</Configuration>
 	</Configurations>
