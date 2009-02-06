@@ -1,3 +1,0 @@
-void SaveConf();
-void LoadConf();
-

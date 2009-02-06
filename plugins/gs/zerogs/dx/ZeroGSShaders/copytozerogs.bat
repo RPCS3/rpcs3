@@ -1,1 +1,0 @@
-copy .\Release\ZeroGSShaders.exe ..\ZeroGS\
