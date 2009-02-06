@@ -1,0 +1,136 @@
+// Microsoft Visual C++ generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "afxres.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// Neutral (Sys. Default) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_NEUSD)
+#ifdef _WIN32
+LANGUAGE LANG_NEUTRAL, SUBLANG_SYS_DEFAULT
+#pragma code_page(1252)
+#endif //_WIN32
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_DIALOG1 DIALOGEX 3, 1, 443, 266
+STYLE DS_SETFONT | WS_CAPTION | WS_SYSMENU
+CAPTION "Pad Settings"
+FONT 8, "MS Sans Serif", 0, 0, 0x1
+BEGIN
+    PUSHBUTTON      "OK",IDOK,320,244,56,18,NOT WS_TABSTOP
+    PUSHBUTTON      "Cancel",IDCANCEL,384,244,56,17,NOT WS_TABSTOP
+    EDITTEXT        IDC_ERIGHT,219,31,86,12,ES_AUTOHSCROLL | ES_READONLY | NOT WS_TABSTOP,WS_EX_TRANSPARENT
+    PUSHBUTTON      "Start",IDC_START,219,17,86,15,NOT WS_TABSTOP,WS_EX_TRANSPARENT
+    EDITTEXT        IDC_ER2,129,31,86,12,ES_AUTOHSCROLL | ES_READONLY | NOT WS_TABSTOP,WS_EX_TRANSPARENT
+    PUSHBUTTON      "Select",IDC_SELECT,129,17,86,15,NOT WS_TABSTOP,WS_EX_TRANSPARENT
+    EDITTEXT        IDC_ECIRCLE,340,214,86,12,ES_AUTOHSCROLL | ES_READONLY | NOT WS_TABSTOP
+    PUSHBUTTON      "Cross",IDC2_CROSS,340,199,86,15,NOT WS_TABSTOP
+    EDITTEXT        IDC_ETRIANGLE,340,185,86,12,ES_AUTOHSCROLL | ES_READONLY | NOT WS_TABSTOP
+    PUSHBUTTON      "Square",IDC_SQUARE,340,170,86,15,NOT WS_TABSTOP
+    EDITTEXT        IDC_ESQUARE,340,155,86,12,ES_AUTOHSCROLL | ES_READONLY | NOT WS_TABSTOP
+    PUSHBUTTON      "Circle",IDC_CIRCLE,340,140,86,15,NOT WS_TABSTOP
+    EDITTEXT        IDC_ECROSS,340,125,86,12,ES_AUTOHSCROLL | ES_READONLY | NOT WS_TABSTOP
+    PUSHBUTTON      "Triangle",IDC_TRI,340,111,86,15,NOT WS_TABSTOP
+    EDITTEXT        IDC_ER3,340,96,86,12,ES_AUTOHSCROLL | ES_READONLY | NOT WS_TABSTOP
+    PUSHBUTTON      "R2",IDC_R2,340,81,86,15,NOT WS_TABSTOP
+    EDITTEXT        IDC_ESELECT,340,67,86,12,ES_AUTOHSCROLL | ES_READONLY | NOT WS_TABSTOP
+    PUSHBUTTON      "R1",IDC_R1,340,52,86,15,NOT WS_TABSTOP
+    EDITTEXT        IDC_EL2,5,214,86,12,ES_AUTOHSCROLL | ES_READONLY | NOT WS_TABSTOP
+    PUSHBUTTON      "Down",IDC_DOWN,5,199,86,15,NOT WS_TABSTOP
+    EDITTEXT        IDC_EUP,5,185,86,12,ES_AUTOHSCROLL | ES_READONLY | NOT WS_TABSTOP
+    PUSHBUTTON      "Right",IDC_RIGHT,5,170,86,15,NOT WS_TABSTOP
+    EDITTEXT        IDC_EL1,5,155,86,12,ES_AUTOHSCROLL | ES_READONLY | NOT WS_TABSTOP
+    PUSHBUTTON      "Left",IDC_LEFT,5,140,86,15,NOT WS_TABSTOP
+    EDITTEXT        IDC_ELEFT,5,125,86,12,ES_AUTOHSCROLL | ES_READONLY | NOT WS_TABSTOP
+    PUSHBUTTON      "Up",IDC_UP,5,111,86,15,NOT WS_TABSTOP
+    EDITTEXT        IDC_EL3,5,96,86,12,ES_AUTOHSCROLL | ES_READONLY | NOT WS_TABSTOP
+    PUSHBUTTON      "L2",IDC_L2,5,81,86,15,NOT WS_TABSTOP
+    EDITTEXT        IDC_ESTART,5,67,86,12,ES_AUTOHSCROLL | ES_READONLY | NOT WS_TABSTOP
+    PUSHBUTTON      "L1",IDC_L1,5,52,86,15,NOT WS_TABSTOP
+    CONTROL         112,IDC_STATIC,"Static",SS_BITMAP | SS_SUNKEN,94,47,242,183,WS_EX_TRANSPARENT
+    CONTROL         "Tab1",IDC_TABC,"SysTabControl32",0x0,0,0,431,240
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO 
+BEGIN
+    IDD_DIALOG1, DIALOG
+    BEGIN
+        BOTTOMMARGIN, 265
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+#endif    // Neutral (Sys. Default) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////////////////////
+// Spanish resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ESN)
+#ifdef _WIN32
+LANGUAGE LANG_SPANISH, SUBLANG_SPANISH_MODERN
+#pragma code_page(1252)
+#endif //_WIN32
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE 
+BEGIN
+    "#include ""afxres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE 
+BEGIN
+    "\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+#endif    // Spanish resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+

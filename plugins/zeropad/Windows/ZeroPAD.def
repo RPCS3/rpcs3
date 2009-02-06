@@ -1,0 +1,18 @@
+LIBRARY      "ZeroPAD"
+
+EXPORTS
+    PS2EgetLibType       @1
+    PS2EgetLibName       @2
+    PS2EgetLibVersion2    @3
+    PADinit             @7
+    PADshutdown         @8
+    PADopen             @9
+    PADclose            @10
+    PADkeyEvent         @11
+    PADstartPoll        @12
+    PADpoll             @13
+    PADquery            @16
+    PADconfigure        @17
+    PADtest             @18
+    PADabout            @19
+	PADupdate			@20

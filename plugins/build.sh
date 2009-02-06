@@ -2,58 +2,20 @@
 
 curdir=`pwd`
 
-cd ${curdir}/gs
-sh build.sh $@
+function buildplugin {
+cd ${curdir}/$1
+sh build.sh $2
 
 if [ $? -ne 0 ]
 then
 exit 1
 fi
+}
 
-cd ${curdir}/cdvd
-sh build.sh $@
-
-if [ $? -ne 0 ]
-then
-exit 1
-fi
-
-cd ${curdir}/dev9
-sh build.sh $@
-
-if [ $? -ne 0 ]
-then
-exit 1
-fi
-
-cd ${curdir}/fw
-sh build.sh $@
-
-if [ $? -ne 0 ]
-then
-exit 1
-fi
-
-cd ${curdir}/pad
-sh build.sh $@
-
-if [ $? -ne 0 ]
-then
-exit 1
-fi
-
-cd ${curdir}/spu2
-sh build.sh $@
-
-if [ $? -ne 0 ]
-then
-exit 1
-fi
-
-cd ${curdir}/usb
-sh build.sh $@
-
-if [ $? -ne 0 ]
-then
-exit 1
-fi
+buildplugin gs $@
+buildplugin cdvd $@
+buildplugin dev9 $@
+buildplugin fw $@
+buildplugin pad $@
+buildplugin spu2 $@
+buildplugin usb $@
