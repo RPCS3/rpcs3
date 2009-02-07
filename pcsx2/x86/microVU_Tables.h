@@ -1,4 +1,4 @@
-/*  Pcsx2-Playground - Pc Ps2 Emulator
+/*  Pcsx2 - Pc Ps2 Emulator
 *  Copyright (C) 2009  Pcsx2-Playground Team
 *
 *  This program is free software; you can redistribute it and/or modify
@@ -99,12 +99,12 @@ void mVU_MAXx(VURegs *vuRegs, int info);
 void mVU_MAXy(VURegs *vuRegs, int info);
 void mVU_MAXz(VURegs *vuRegs, int info);
 void mVU_MAXw(VURegs *vuRegs, int info);
-void mVU_MIN(VURegs *vuRegs, int info);
-void mVU_MINi(VURegs *vuRegs, int info);
-void mVU_MINx(VURegs *vuRegs, int info);
-void mVU_MINy(VURegs *vuRegs, int info);
-void mVU_MINz(VURegs *vuRegs, int info);
-void mVU_MINw(VURegs *vuRegs, int info);
+void mVU_MINI(VURegs *vuRegs, int info);
+void mVU_MINIi(VURegs *vuRegs, int info);
+void mVU_MINIx(VURegs *vuRegs, int info);
+void mVU_MINIy(VURegs *vuRegs, int info);
+void mVU_MINIz(VURegs *vuRegs, int info);
+void mVU_MINIw(VURegs *vuRegs, int info);
 void mVU_OPMULA(VURegs *vuRegs, int info);
 void mVU_OPMSUB(VURegs *vuRegs, int info);
 void mVU_NOP(VURegs *vuRegs, int info);

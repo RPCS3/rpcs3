@@ -1,4 +1,4 @@
-/*  Pcsx2-Playground - Pc Ps2 Emulator
+/*  Pcsx2 - Pc Ps2 Emulator
 *  Copyright (C) 2009  Pcsx2-Playground Team
 *
 *  This program is free software; you can redistribute it and/or modify
@@ -16,25 +16,24 @@
 *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
 
-// Mega VU(micro) recompiler! - author: cottonvibes(@gmail.com)
+// Micro VU recompiler! - author: cottonvibes(@gmail.com)
 
-#include "PrecompiledHeader.h"
-#include "megaVU.h"
-#ifdef PCSX2_MEGAVU
-
-//------------------------------------------------------------------
-// Mega VU - Global Variables
-//------------------------------------------------------------------
-
-megaVU megaVU0;
-megaVU megaVU1;
+#include "microVU.h"
+#ifdef PCSX2_MICROVU
 
 //------------------------------------------------------------------
-// Mega VU - Main Functions
+// VU Micro - Global Variables
+//------------------------------------------------------------------
+
+microVU microVU0;
+microVU microVU1;
+
+//------------------------------------------------------------------
+// Micro VU - Main Functions
 //------------------------------------------------------------------
 
 // Only run this once! ;)
-__forceinline void mVUinit(megaVU* mVU, VURegs* vuRegsPtr, const int vuIndex) {
+__forceinline void mVUinit(microVU* mVU, VURegs* vuRegsPtr, const int vuIndex) {
 
 	mVU->regs		= vuRegsPtr;
 	mVU->index		= vuIndex;
@@ -45,7 +44,7 @@ __forceinline void mVUinit(megaVU* mVU, VURegs* vuRegsPtr, const int vuIndex) {
 
 	for (int i; i <= mVU->prog.max; i++) {
 		for (u32 j; j < mVU->progSize; j++) {
-			mVU->prog.prog[i].block[j] = new megaBlockManager();
+			mVU->prog.prog[i].block[j] = new microBlockManager();
 		}
 	}
 
@@ -53,13 +52,13 @@ __forceinline void mVUinit(megaVU* mVU, VURegs* vuRegsPtr, const int vuIndex) {
 }
 
 // Will Optimize later
-__forceinline void mVUreset(megaVU* mVU) {
+__forceinline void mVUreset(microVU* mVU) {
 
 	mVUclose(mVU); // Close
 
 	// Dynarec Cache
-	mVU->cache = SysMmap(mVU->cacheAddr, mVU->cacheSize, 0x10000000, "Mega VU");
-	if ( mVU->cache == NULL ) throw Exception::OutOfMemory(fmt_string( "megaVU Error: failed to allocate recompiler memory! (addr: 0x%x)", params (u32)mVU->cache));
+	mVU->cache = SysMmapEx(mVU->cacheAddr, mVU->cacheSize, 0x10000000, "Mega VU");
+	if ( mVU->cache == NULL ) throw Exception::OutOfMemory(fmt_string( "microVU Error: failed to allocate recompiler memory! (addr: 0x%x)", params (u32)mVU->cache));
 
 	// Other Variables
 	ZeroMemory(&mVU->prog, sizeof(mVU->prog));
@@ -70,7 +69,7 @@ __forceinline void mVUreset(megaVU* mVU) {
 }
 
 // Free Allocated Resources
-__forceinline void mVUclose(megaVU* mVU) {
+__forceinline void mVUclose(microVU* mVU) {
 
 	if ( mVU->cache ) { SysMunmap( mVU->cache, mVU->cacheSize ); mVU->cache = NULL; }
 
@@ -82,7 +81,7 @@ __forceinline void mVUclose(megaVU* mVU) {
 }
 
 // Clears Block Data in specified range (Caches current microProgram if a difference has been found)
-__forceinline void mVUclear(megaVU* mVU, u32 addr, u32 size) {
+__forceinline void mVUclear(microVU* mVU, u32 addr, u32 size) {
 
 	int i = addr/8;
 	int end = i+((size+(8-(size&7)))/8); // ToDo: Can be simplified to addr+size if Size is always a multiple of 8
@@ -103,12 +102,12 @@ __forceinline void mVUclear(megaVU* mVU, u32 addr, u32 size) {
 }
 
 // Executes for number of cycles
-void* mVUexecute(megaVU* mVU, u32 startPC, u32 cycles) {
+void* mVUexecute(microVU* mVU, u32 startPC, u32 cycles) {
 	return NULL;
 }
 
 // Executes till finished
-void* mVUexecuteF(megaVU* mVU, u32 startPC) {
+void* mVUexecuteF(microVU* mVU, u32 startPC) {
 	//if (!mProg.finished) {
 	//	runMicroProgram(startPC);
 	//}
@@ -119,11 +118,11 @@ void* mVUexecuteF(megaVU* mVU, u32 startPC) {
 }
 
 //------------------------------------------------------------------
-// Mega VU - Private Functions
+// Micro VU - Private Functions
 //------------------------------------------------------------------
 
 // Finds the least used program
-__forceinline int mVUfindLeastUsedProg(megaVU* mVU) {
+__forceinline int mVUfindLeastUsedProg(microVU* mVU) {
 	if (mVU->prog.total < mVU->prog.max) {
 		mVU->prog.total++;
 		return mVU->prog.total;
@@ -142,14 +141,14 @@ __forceinline int mVUfindLeastUsedProg(megaVU* mVU) {
 }
 
 // Caches Micro Program if appropriate
-__forceinline void mVUcacheProg(megaVU* mVU) {
+__forceinline void mVUcacheProg(microVU* mVU) {
 	if (!mVU->prog.prog[mVU->prog.cur].cached) { // If uncached, then cache
 		memcpy_fast(mVU->prog.prog[mVU->prog.cur].data, mVU->regs->Micro, mVU->microSize);
 	}
 }
 
 // Searches for Cached Micro Program and sets prog.cur (returns -1 if no program found)
-__forceinline int mVUsearchProg(megaVU* mVU) {
+__forceinline int mVUsearchProg(microVU* mVU) {
 	if (mVU->prog.cleared) { // If cleared, we need to search for new program
 		for (int i = 0; i <= mVU->prog.total; i++) {
 			if (!memcmp_mmx(mVU->prog.prog[i].data, mVU->regs->Micro, mVU->microSize)) {
@@ -167,38 +166,38 @@ __forceinline int mVUsearchProg(megaVU* mVU) {
 //------------------------------------------------------------------
 
 // Runs till finished
-__declspec(naked) void runVU0(megaVU* mVU, u32 startPC) {
+__declspec(naked) void runVU0(microVU* mVU, u32 startPC) {
 	__asm {
 		mov eax, dword ptr [esp]
-		mov megaVU0.x86callstack, eax
+		mov microVU0.x86callstack, eax
 		add esp, 4
 		call mVUexecuteF
 
 		/*backup cpu state*/
-		mov megaVU0.x86ebp, ebp
-		mov megaVU0.x86esi, esi
-		mov megaVU0.x86edi, edi
-		mov megaVU0.x86ebx, ebx
-		/*mov megaVU0.x86esp, esp*/
+		mov microVU0.x86ebp, ebp
+		mov microVU0.x86esi, esi
+		mov microVU0.x86edi, edi
+		mov microVU0.x86ebx, ebx
+		/*mov microVU0.x86esp, esp*/
 
 		ldmxcsr g_sseVUMXCSR
 
 		jmp eax
 	}
 }
-__declspec(naked) void runVU1(megaVU* mVU, u32 startPC) {
+__declspec(naked) void runVU1(microVU* mVU, u32 startPC) {
 	__asm {
 		mov eax, dword ptr [esp]
-		mov megaVU1.x86callstack, eax
+		mov microVU1.x86callstack, eax
 		add esp, 4
 		call mVUexecuteF
 
 		/*backup cpu state*/
-		mov megaVU1.x86ebp, ebp
-		mov megaVU1.x86esi, esi
-		mov megaVU1.x86edi, edi
-		mov megaVU1.x86ebx, ebx
-		/*mov megaVU1.x86esp, esp*/
+		mov microVU1.x86ebp, ebp
+		mov microVU1.x86esi, esi
+		mov microVU1.x86edi, edi
+		mov microVU1.x86ebx, ebx
+		/*mov microVU1.x86esp, esp*/
 
 		ldmxcsr g_sseVUMXCSR
 
@@ -207,38 +206,38 @@ __declspec(naked) void runVU1(megaVU* mVU, u32 startPC) {
 }
 
 // Runs for number of cycles
-__declspec(naked) void runVU0(megaVU* mVU, u32 startPC, u32 cycles) {
+__declspec(naked) void runVU0(microVU* mVU, u32 startPC, u32 cycles) {
 	__asm {
 		mov eax, dword ptr [esp]
-		mov megaVU0.x86callstack, eax
+		mov microVU0.x86callstack, eax
 		add esp, 4
 		call mVUexecute
 
 		/*backup cpu state*/
-		mov megaVU0.x86ebp, ebp
-		mov megaVU0.x86esi, esi
-		mov megaVU0.x86edi, edi
-		mov megaVU0.x86ebx, ebx
-		/*mov megaVU0.x86esp, esp*/
+		mov microVU0.x86ebp, ebp
+		mov microVU0.x86esi, esi
+		mov microVU0.x86edi, edi
+		mov microVU0.x86ebx, ebx
+		/*mov microVU0.x86esp, esp*/
 
 		ldmxcsr g_sseVUMXCSR
 
 		jmp eax
 	}
 }
-__declspec(naked) void runVU1(megaVU* mVU, u32 startPC, u32 cycles) {
+__declspec(naked) void runVU1(microVU* mVU, u32 startPC, u32 cycles) {
 	__asm {
 		mov eax, dword ptr [esp]
-		mov megaVU1.x86callstack, eax
+		mov microVU1.x86callstack, eax
 		add esp, 4
 		call mVUexecute
 
 		/*backup cpu state*/
-		mov megaVU1.x86ebp, ebp
-		mov megaVU1.x86esi, esi
-		mov megaVU1.x86edi, edi
-		mov megaVU1.x86ebx, ebx
-		/*mov megaVU1.x86esp, esp*/
+		mov microVU1.x86ebp, ebp
+		mov microVU1.x86esi, esi
+		mov microVU1.x86edi, edi
+		mov microVU1.x86ebx, ebx
+		/*mov microVU1.x86esp, esp*/
 
 		ldmxcsr g_sseVUMXCSR
 
@@ -250,33 +249,33 @@ __declspec(naked) void runVU1(megaVU* mVU, u32 startPC, u32 cycles) {
 //------------------------------------------------------------------
 
 __forceinline void initVUrec(VURegs* vuRegs, int vuIndex) {
-	if (!vuIndex) mVUinit(&megaVU0, vuRegs, 0);
-	else		  mVUinit(&megaVU1, vuRegs, 1);
+	if (!vuIndex) mVUinit(&microVU0, vuRegs, 0);
+	else		  mVUinit(&microVU1, vuRegs, 1);
 }
 
 __forceinline void closeVUrec(int vuIndex) {
-	if (!vuIndex) mVUclose(&megaVU0);
-	else		  mVUclose(&megaVU1);
+	if (!vuIndex) mVUclose(&microVU0);
+	else		  mVUclose(&microVU1);
 }
 
 __forceinline void resetVUrec(int vuIndex) {
-	if (!vuIndex) mVUreset(&megaVU0);
-	else		  mVUreset(&megaVU1);
+	if (!vuIndex) mVUreset(&microVU0);
+	else		  mVUreset(&microVU1);
 }
 
 __forceinline void clearVUrec(u32 addr, u32 size, int vuIndex) {
-	if (!vuIndex) mVUclear(&megaVU0, addr, size);
-	else		  mVUclear(&megaVU1, addr, size);
+	if (!vuIndex) mVUclear(&microVU0, addr, size);
+	else		  mVUclear(&microVU1, addr, size);
 }
 
 __forceinline void runVUrec(u32 startPC, int vuIndex) {
-	if (!vuIndex) runVU0(&megaVU0, startPC);
-	else		  runVU1(&megaVU1, startPC);
+	if (!vuIndex) runVU0(&microVU0, startPC);
+	else		  runVU1(&microVU1, startPC);
 }
 
 __forceinline void runVUrec(u32 startPC, u32 cycles, int vuIndex) {
-	if (!vuIndex) runVU0(&megaVU0, startPC, cycles);
-	else		  runVU1(&megaVU1, startPC, cycles);
+	if (!vuIndex) runVU0(&microVU0, startPC, cycles);
+	else		  runVU1(&microVU1, startPC, cycles);
 }
 
 #endif // PCSX2_MEGAVU

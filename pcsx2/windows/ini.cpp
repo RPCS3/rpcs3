@@ -49,7 +49,7 @@ static void GetConfigFilename( string& dest )
 		// Our current working directory can change, so we use the one we detected
 		// at startup:
 
-		Path::Combine( dest, g_WorkingFolder, CONFIG_DIR "\\pcsx2pg.ini" );
+		Path::Combine( dest, g_WorkingFolder, CONFIG_DIR "\\pcsx2.ini" );
 	}
 }
 
@@ -128,7 +128,7 @@ public:
 
 		//cpu
 		SetCurrentSection( "Cpu" );
-		Entry( "Options", Conf.Options, PCSX2_EEREC|PCSX2_VU0REC|PCSX2_VU1REC );
+		Entry( "Options", Conf.Options, PCSX2_EEREC|PCSX2_VU0REC|PCSX2_VU1REC|PCSX2_GSMULTITHREAD );
 		Entry( "sseMXCSR", Conf.sseMXCSR, DEFAULT_sseMXCSR );
 		Entry( "sseVUMXCSR", Conf.sseVUMXCSR, DEFAULT_sseVUMXCSR );
 		Entry( "eeOptions", Conf.eeOptions, DEFAULT_eeOptions );

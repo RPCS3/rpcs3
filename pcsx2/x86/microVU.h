@@ -1,4 +1,4 @@
-/*  Pcsx2-Playground - Pc Ps2 Emulator
+/*  Pcsx2 - Pc Ps2 Emulator
 *  Copyright (C) 2009  Pcsx2-Playground Team
 *
 *  This program is free software; you can redistribute it and/or modify
@@ -17,12 +17,13 @@
 */
 
 #pragma once
+#include "PrecompiledHeader.h"
 #include "Common.h"
 #include "VU.h"
-#include "megaVU_Tables.h"
+#include "microVU_Tables.h"
 //#include <vector>
 
-struct megaBlock {
+struct microBlock {
 	u32 pipelineState; // FMACx|y|z|w | FDiv | EFU | IALU | BRANCH // Still thinking of how I'm going to do this
 	u32 x86ptrStart;
 	u32 x86ptrEnd;
@@ -31,19 +32,19 @@ struct megaBlock {
 };
 
 #define mMaxBlocks 32 // Max Blocks With Different Pipeline States (For n = 1, 2, 4, 8, 16, etc...)
-class megaBlockManager {
+class microBlockManager {
 private:
 	static const int MaxBlocks = mMaxBlocks - 1;
 	u32 startPC;
 	u32 endPC;
 	int listSize; // Total Items - 1
 	int callerSize; // Total Callers - 1
-	megaBlock blockList[mMaxBlocks];
-	megaBlock callersList[mMaxBlocks]; // Foreign Blocks that call Local Blocks
+	microBlock blockList[mMaxBlocks];
+	microBlock callersList[mMaxBlocks]; // Foreign Blocks that call Local Blocks
 
 public:
-	megaBlockManager()	{ init(); }
-	~megaBlockManager()	{ close(); }
+	microBlockManager()	{ init(); }
+	~microBlockManager()	{ close(); }
 	void init() {
 		listSize = -1;
 		callerSize = -1;
@@ -58,7 +59,7 @@ public:
 			blockList[listSize].x86ptrStart = x86ptrStart;
 		}
 	}
-	megaBlock* search(u32 pipelineState) {
+	microBlock* search(u32 pipelineState) {
 		for (int i = 0; i < listSize; i++) {
 			if (blockList[i].pipelineState == pipelineState) return &blockList[i];
 		}
@@ -80,7 +81,7 @@ struct microProgram {
 	u8 data[progSize];
 	u32 used;	// Number of times its been used
 	int cached;	// Has been Cached?
-	megaBlockManager* block[progSize];
+	microBlockManager* block[progSize];
 };
 
 #define mMaxProg 16 // The amount of Micro Programs Recs will 'remember' (For n = 1, 2, 4, 8, 16, etc...)
@@ -94,7 +95,7 @@ struct microProgManager {
 	int					finished;		// Completed MicroProgram to E-bit Termination
 };
 
-struct megaVU {
+struct microVU {
 	int index;		// VU Index (VU0 or VU1)
 	u32 microSize;	// VU Micro Memory Size
 	u32 progSize;	// VU Micro Program Size (microSize/8)
@@ -120,13 +121,13 @@ extern void (*mVU_UPPER_OPCODE[64])( VURegs* VU, s32 info );
 extern void (*mVU_LOWER_OPCODE[128])( VURegs* VU, s32 info );
 
 //void invalidateBlocks(u32 addr, u32 size); // Invalidates Blocks in the range [addr, addr+size)
-__forceinline void mVUinit(megaVU* mVU, VURegs* vuRegsPtr, const int vuIndex);
-__forceinline void mVUreset(megaVU* mVU);
-__forceinline void mVUclose(megaVU* mVU);
-__forceinline void mVUclear(megaVU* mVU, u32 addr, u32 size); // Clears part of a Micro Program (must use before modifying micro program!)
-void* mVUexecute(megaVU* mVU, u32 startPC, u32 cycles); // Recompiles/Executes code for the number of cycles indicated (will always run for >= 'cycles' amount unless 'finished')
-void* mVUexecuteF(megaVU* mVU, u32 startPC); // Recompiles/Executes code till finished
+__forceinline void mVUinit(microVU* mVU, VURegs* vuRegsPtr, const int vuIndex);
+__forceinline void mVUreset(microVU* mVU);
+__forceinline void mVUclose(microVU* mVU);
+__forceinline void mVUclear(microVU* mVU, u32 addr, u32 size); // Clears part of a Micro Program (must use before modifying micro program!)
+void* mVUexecute(microVU* mVU, u32 startPC, u32 cycles); // Recompiles/Executes code for the number of cycles indicated (will always run for >= 'cycles' amount unless 'finished')
+void* mVUexecuteF(microVU* mVU, u32 startPC); // Recompiles/Executes code till finished
 
-__forceinline int mVUfindLeastUsedProg(megaVU* mVU);
-__forceinline int mVUsearchProg(megaVU* mVU);
-__forceinline void mVUcacheProg(megaVU* mVU);
+__forceinline int mVUfindLeastUsedProg(microVU* mVU);
+__forceinline int mVUsearchProg(microVU* mVU);
+__forceinline void mVUcacheProg(microVU* mVU);

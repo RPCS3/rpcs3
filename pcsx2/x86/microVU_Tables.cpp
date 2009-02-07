@@ -1,4 +1,4 @@
-/*  Pcsx2-Playground - Pc Ps2 Emulator
+/*  Pcsx2 - Pc Ps2 Emulator
 *  Copyright (C) 2009  Pcsx2-Playground Team
 *
 *  This program is free software; you can redistribute it and/or modify
@@ -16,10 +16,9 @@
 *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
 
-#include "PrecompiledHeader.h"
-#include "megaVU.h"
+#include "microVU.h"
 
-#ifdef PCSX2_MEGAVU_lulz
+#ifdef PCSX2_MICROVU_lulz
 
 void mVU_UPPER_FD_00(VURegs* VU, s32 info);
 void mVU_UPPER_FD_01(VURegs* VU, s32 info);

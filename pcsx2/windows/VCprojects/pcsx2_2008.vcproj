@@ -2325,30 +2325,30 @@
 						>
 					</File>
 					<Filter
-						Name="megaVU"
+						Name="microVU"
 						>
 						<File
-							RelativePath="..\..\x86\megaVU.cpp"
+							RelativePath="..\..\x86\microVU.cpp"
 							>
 						</File>
 						<File
-							RelativePath="..\..\x86\megaVU.h"
+							RelativePath="..\..\x86\microVU.h"
 							>
 						</File>
 						<File
-							RelativePath="..\..\x86\megaVU_Lower.cpp"
+							RelativePath="..\..\x86\microVU_Lower.cpp"
 							>
 						</File>
 						<File
-							RelativePath="..\..\x86\megaVU_Tables.cpp"
+							RelativePath="..\..\x86\microVU_Tables.cpp"
 							>
 						</File>
 						<File
-							RelativePath="..\..\x86\megaVU_Tables.h"
+							RelativePath="..\..\x86\microVU_Tables.h"
 							>
 						</File>
 						<File
-							RelativePath="..\..\x86\megaVU_Upper.cpp"
+							RelativePath="..\..\x86\microVU_Upper.cpp"
 							>
 						</File>
 					</Filter>
