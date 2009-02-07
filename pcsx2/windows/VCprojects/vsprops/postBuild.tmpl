@@ -8,14 +8,17 @@ rem     DestFile - Base filename of the target/dest, without extension!
 rem     DestExt - Extension of the target/dest!
 
 set pcsxoutdir=%2\bin
-set pcsxoutname=%pcsxoutdir%\%3-r$WCREV$$WCMODS?m:$%4
+set pcsxoutname=%pcsxoutdir%\%3%4
+set pcsxnewname=%pcsxoutdir%\%3-r$WCREV$$WCMODS?m:$%4
 
 IF NOT EXIST %pcsxoutdir% (
     md %pcsxoutdir%
 )
 
 copy /Y %1 %pcsxoutname%
+copy /Y %1 %pcsxnewname%
+
 if ERRORLEVEL 0 (
-    echo Target copied to %pcsxoutname%
+    echo Target copied to %pcsxnewname%
 )
-set ERRORLEVEL=0
+exit 0

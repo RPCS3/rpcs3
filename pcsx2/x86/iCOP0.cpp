@@ -57,10 +57,8 @@ static void _setupBranchTest()
 	// everything except the lower 10 bits away.
 
 	MOV32MtoR( EAX, (uptr)&psHu32(DMAC_STAT) );
-	MOV32MtoR( ECX, (uptr)&psHu32(DMAC_PCR) );
-	AND32ItoR( EAX, 0x3ff );	// masks off all but lower 10 bits.
-	AND32ItoR( ECX, 0x3ff );
-	CMP32RtoR( EAX, ECX );
+	XOR32MtoR( EAX, (uptr)&psHu32(DMAC_PCR) );
+	AND32ItoR( EAX, 0x3ff );
 }
 
 void recBC0F()

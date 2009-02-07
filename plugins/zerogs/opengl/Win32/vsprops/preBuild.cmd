@@ -15,6 +15,6 @@ if %ERRORLEVEL% NEQ 0 (
   SubWCRev.exe %1 %2\postBuild.tmpl %2\postBuild.cmd
 )
 
-rem Clear the error level -- this allows compilation to continue if SubWCRev failed.
+rem Always return an errorlevel of 0 -- this allows compilation to continue if SubWCRev failed.
 
-set ERRORLEVEL=0
+exit 0
