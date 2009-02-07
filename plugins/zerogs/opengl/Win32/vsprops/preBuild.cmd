@@ -6,7 +6,7 @@ rem    ProjectSrcDir - $(ProjectDir)\.. - Directory of project source code.
 rem    VspropsDir - $(PrjectDir)\vsprops - Directory of this script and its counterparts.
 
 SubWCRev.exe %1 %2\svnrev_template.h %1\svnrev.h
-if not ERRORLEVEL 0 (
+if %ERRORLEVEL% NEQ 0 (
   echo Automatic revision update unavailable, using generic template instead.
   echo You can safely ignore this message - see svnrev.h for details.
   copy /Y %2\svnrev_unknown.h %1\svnrev.h
