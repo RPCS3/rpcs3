@@ -19,7 +19,7 @@
 #pragma once
 
 //------------------------------------------------------------------
-// Mega VU Micromode Upper instructions
+// Micro VU Micromode Upper instructions
 //------------------------------------------------------------------
 
 void mVU_ABS(VURegs *vuRegs, int info);
@@ -119,7 +119,7 @@ void mVU_ITOF15(VURegs *vuRegs, int info);
 void mVU_CLIP(VURegs *vuRegs, int info);
 
 //------------------------------------------------------------------
-// Mega VU Micromode Lower instructions
+// Micro VU Micromode Lower instructions
 //------------------------------------------------------------------
 
 void mVU_DIV(VURegs *vuRegs, int info);

@@ -57,7 +57,7 @@ __forceinline void mVUreset(microVU* mVU) {
 	mVUclose(mVU); // Close
 
 	// Dynarec Cache
-	mVU->cache = SysMmapEx(mVU->cacheAddr, mVU->cacheSize, 0x10000000, "Mega VU");
+	mVU->cache = SysMmapEx(mVU->cacheAddr, mVU->cacheSize, 0x10000000, "Micro VU");
 	if ( mVU->cache == NULL ) throw Exception::OutOfMemory(fmt_string( "microVU Error: failed to allocate recompiler memory! (addr: 0x%x)", params (u32)mVU->cache));
 
 	// Other Variables
@@ -278,4 +278,4 @@ __forceinline void runVUrec(u32 startPC, u32 cycles, int vuIndex) {
 	else		  runVU1(&microVU1, startPC, cycles);
 }
 
-#endif // PCSX2_MEGAVU
+#endif // PCSX2_MICROVU

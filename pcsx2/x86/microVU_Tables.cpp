@@ -220,7 +220,7 @@ void mVULowerOP_T3_11(VURegs* VU, s32 info) {
 	mVULowerOP_T3_11_OPCODE[ ( VU->code >> 6 ) & 0x1f ]( VU, info ); 
 }
 void mVUunknown(VURegs* VU, s32 info) { 
-	SysPrintf("Unknown Mega VU opcode called\n"); 
+	SysPrintf("Unknown Micro VU opcode called\n"); 
 }
 
 #endif
