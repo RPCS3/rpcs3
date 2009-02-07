@@ -28,7 +28,7 @@ namespace YAML
 			// ********************************
 			// Phase #1: scan until line ending
 			while(!params.end.Matches(INPUT) && !Exp::Break.Matches(INPUT)) {
-				if(INPUT.peek() == EOF)
+				if(!INPUT)
 					break;
 
 				// document indicator?
@@ -60,7 +60,7 @@ namespace YAML
 			}
 
 			// eof? if we're looking to eat something, then we throw
-			if(INPUT.peek() == EOF) {
+			if(!INPUT) {
 				if(params.eatEnd)
 					throw ParserException(INPUT.line, INPUT.column, ErrorMsg::EOF_IN_SCALAR);
 				break;

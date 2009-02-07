@@ -37,6 +37,10 @@ namespace YAML
 	{
 		Clear();
 
+		// an empty node *is* a possibility
+		if(pScanner->empty())
+			return;
+
 		// save location
 		m_line = pScanner->peek().line;
 		m_column = pScanner->peek().column;

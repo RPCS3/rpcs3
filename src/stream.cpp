@@ -6,13 +6,18 @@ namespace YAML
 {
 	Stream::Stream(std::istream& input): buffer(0), pos(0), line(0), column(0), size(0)
 	{
+		if(!input)
+			return;
+
 		std::streambuf *pBuf = input.rdbuf();
 
 		// store entire file in buffer
 		size = pBuf->pubseekoff(0, std::ios::end, std::ios::in);
 		pBuf->pubseekpos(0, std::ios::in);
 		buffer = new char[size];
-		pBuf->sgetn(buffer, size);
+		size = pBuf->sgetn(buffer, size);  // Note: when reading a Windows CR/LF file,
+		                                   // pubseekoff() counts CR/LF as two characters,
+		                                   // setgn() reads CR/LF as a single LF character!
 	}
 
 	Stream::~Stream()

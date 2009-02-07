@@ -5,7 +5,8 @@
 
 namespace YAML
 {
-	struct Stream;
+	class Stream;
+	struct Buffer;
 
 	enum REGEX_OP { REGEX_EMPTY, REGEX_MATCH, REGEX_RANGE, REGEX_OR, REGEX_AND, REGEX_NOT, REGEX_SEQ };
 
@@ -15,40 +16,41 @@ namespace YAML
 	class RegEx
 	{
 	private:
+		// the operators
 		struct Operator {
 			virtual ~Operator() {}
 			virtual int Match(const std::string& str, const RegEx& regex) const = 0;
-			virtual int Match(const char *buffer, const RegEx& regex) const = 0;
+			virtual int Match(const Buffer& buffer, const RegEx& regex) const = 0;
 		};
 
 		struct MatchOperator: public Operator {
 			virtual int Match(const std::string& str, const RegEx& regex) const;
-			virtual int Match(const char *buffer, const RegEx& regex) const;
+			virtual int Match(const Buffer& buffer, const RegEx& regex) const;
 		};
 
 		struct RangeOperator: public Operator {
 			virtual int Match(const std::string& str, const RegEx& regex) const;
-			virtual int Match(const char *buffer, const RegEx& regex) const;
+			virtual int Match(const Buffer& buffer, const RegEx& regex) const;
 		};
 
 		struct OrOperator: public Operator {
 			virtual int Match(const std::string& str, const RegEx& regex) const;
-			virtual int Match(const char *buffer, const RegEx& regex) const;
+			virtual int Match(const Buffer& buffer, const RegEx& regex) const;
 		};
 
 		struct AndOperator: public Operator {
 			virtual int Match(const std::string& str, const RegEx& regex) const;
-			virtual int Match(const char *buffer, const RegEx& regex) const;
+			virtual int Match(const Buffer& buffer, const RegEx& regex) const;
 		};
 
 		struct NotOperator: public Operator {
 			virtual int Match(const std::string& str, const RegEx& regex) const;
-			virtual int Match(const char *buffer, const RegEx& regex) const;
+			virtual int Match(const Buffer& buffer, const RegEx& regex) const;
 		};
 
 		struct SeqOperator: public Operator {
 			virtual int Match(const std::string& str, const RegEx& regex) const;
-			virtual int Match(const char *buffer, const RegEx& regex) const;
+			virtual int Match(const Buffer& buffer, const RegEx& regex) const;
 		};
 
 	public:
@@ -65,10 +67,10 @@ namespace YAML
 
 		bool Matches(char ch) const;
 		bool Matches(const std::string& str) const;
-		bool Matches(const char *buffer) const;
+		bool Matches(const Buffer& buffer) const;
 		bool Matches(const Stream& in) const;
 		int Match(const std::string& str) const;
-		int Match(const char *buffer) const;
+		int Match(const Buffer& buffer) const;
 		int Match(const Stream& in) const;
 
 		friend RegEx operator ! (const RegEx& ex);

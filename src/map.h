@@ -23,8 +23,8 @@ namespace YAML
 
 		// ordering
 		virtual int Compare(Content *pContent);
-		virtual int Compare(Scalar *pScalar) { return 1; }
-		virtual int Compare(Sequence *pSeq) { return 1; }
+		virtual int Compare(Scalar *) { return 1; }
+		virtual int Compare(Sequence *) { return 1; }
 		virtual int Compare(Map *pMap);
 
 	private:

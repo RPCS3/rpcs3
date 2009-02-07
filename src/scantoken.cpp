@@ -29,7 +29,7 @@ namespace YAML
 		INPUT.eat(1);
 
 		// read name
-		while(INPUT.peek() != EOF && !Exp::BlankOrBreak.Matches(INPUT))
+		while(INPUT && !Exp::BlankOrBreak.Matches(INPUT))
 			name += INPUT.get();
 
 		// read parameters
@@ -39,12 +39,12 @@ namespace YAML
 				INPUT.eat(1);
 
 			// break on newline or comment
-			if(INPUT.peek() == EOF || Exp::Break.Matches(INPUT) || Exp::Comment.Matches(INPUT))
+			if(!INPUT || Exp::Break.Matches(INPUT) || Exp::Comment.Matches(INPUT))
 				break;
 
 			// now read parameter
 			std::string param;
-			while(INPUT.peek() != EOF && !Exp::BlankOrBreak.Matches(INPUT))
+			while(INPUT && !Exp::BlankOrBreak.Matches(INPUT))
 				param += INPUT.get();
 
 			params.push_back(param);
@@ -221,7 +221,7 @@ namespace YAML
 			throw ParserException(INPUT.line, INPUT.column, alias ? ErrorMsg::ALIAS_NOT_FOUND : ErrorMsg::ANCHOR_NOT_FOUND);
 
 		// and needs to end correctly
-		if(INPUT.peek() != EOF && !Exp::AnchorEnd.Matches(INPUT))
+		if(INPUT && !Exp::AnchorEnd.Matches(INPUT))
 			throw ParserException(INPUT.line, INPUT.column, alias ? ErrorMsg::CHAR_IN_ALIAS : ErrorMsg::CHAR_IN_ANCHOR);
 
 		// and we're done
@@ -245,7 +245,7 @@ namespace YAML
 		handle += INPUT.get();
 
 		// read the handle
-		while(INPUT.peek() != EOF && INPUT.peek() != Keys::Tag && !Exp::BlankOrBreak.Matches(INPUT))
+		while(INPUT && INPUT.peek() != Keys::Tag && !Exp::BlankOrBreak.Matches(INPUT))
 			handle += INPUT.get();
 
 		// is there a suffix?
@@ -254,7 +254,7 @@ namespace YAML
 			handle += INPUT.get();
 
 			// then read it
-			while(INPUT.peek() != EOF && !Exp::BlankOrBreak.Matches(INPUT))
+			while(INPUT && !Exp::BlankOrBreak.Matches(INPUT))
 				suffix += INPUT.get();
 		} else {
 			// this is a bit weird: we keep just the '!' as the handle and move the rest to the suffix

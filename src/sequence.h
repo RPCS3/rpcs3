@@ -26,9 +26,9 @@ namespace YAML
 
 		// ordering
 		virtual int Compare(Content *pContent);
-		virtual int Compare(Scalar *pScalar) { return 1; }
+		virtual int Compare(Scalar *) { return 1; }
 		virtual int Compare(Sequence *pSeq);
-		virtual int Compare(Map *pMap) { return -1; }
+		virtual int Compare(Map *) { return -1; }
 
 	private:
 		void ParseBlock(Scanner *pScanner, const ParserState& state);
