@@ -19,7 +19,7 @@
 	<Tool
 		Name="VCLinkerTool"
 		AdditionalDependencies="d3d10.lib d3dx10.lib d3d9.lib d3dx9.lib ddraw.lib dxguid.lib winmm.lib strmiids.lib xinput.lib"
-		OutputFile="..\..\..\bin\plugins\$(ProjectName).dll"
+		OutputFile="..\..\bin\plugins\$(ProjectName).dll"
 		DelayLoadDLLs="d3d9.dll;d3dx9_40.dll;d3d10.dll;d3dx10_40.dll"
 		GenerateDebugInformation="true"
 		SubSystem="2"
@@ -27,6 +27,6 @@
 	/>
 	<Tool
 		Name="VCPreBuildEventTool"
-		CommandLine="SubWCRev.exe $(ProjectDir) $(ProjectDir)svnrev_template.h $(ProjectDir)svnrev.h"
+		CommandLine="SubWCRev.exe $(ProjectDir) ..\..\common\tsvnrev\svnrev_template.h $(ProjectDir)svnrev.h"
 	/>
 </VisualStudioPropertySheet>
