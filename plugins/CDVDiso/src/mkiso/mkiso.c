@@ -156,9 +156,15 @@ int main(int argc, char *argv[])
 
 	switch (argv[1][0])
 	{
-		case 'c': Compress(argv[2], 1);
-		case 'C': Compress(argv[2], 2);
-		case 'd':  Decompress(argv[2]);
+		case 'c': 
+			Compress(argv[2], 1); 
+			break;
+		case 'C': 
+			Compress(argv[2], 2); 
+			break;
+		case 'd':  
+			Decompress(argv[2]); 
+			break;
 		default: break;
 	}
 
