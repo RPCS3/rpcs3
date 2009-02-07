@@ -16,7 +16,7 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
  
- #include "Linux.h"
+#include "Linux.h"
 
 GtkWidget *AboutDlg, *about_version , *about_authors, *about_greets;
  

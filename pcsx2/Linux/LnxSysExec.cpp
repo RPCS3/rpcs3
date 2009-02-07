@@ -16,16 +16,13 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
  
- #include "Linux.h"
- 
-#include <sys/mman.h>
-#include <sys/stat.h>
+#include "Linux.h"
+#include "LnxSysExec.h"
 
 bool UseGui = true;
 
 MemoryAlloc<u8>* g_RecoveryState = NULL;
 MemoryAlloc<u8>* g_gsRecoveryState = NULL;
-const char* g_pRunGSState = NULL;
 
 bool g_ReturnToGui = false;			// set to exit the execution of the emulator and return control to the GUI
 bool g_EmulationInProgress = false;	// Set TRUE if a game is actively running (set to false on reset)
@@ -118,6 +115,10 @@ void ExecuteCpu()
 	}
 }
 
+void RunGui()
+{
+	StartGui();
+}
 
 // Runs an ELF image directly (ISO or ELF program or BIN)
 // Used by Run::FromCD and such

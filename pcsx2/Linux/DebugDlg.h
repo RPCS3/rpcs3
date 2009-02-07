@@ -20,18 +20,6 @@
 #define __DEBUGDLG_H__
 
 #include "Linux.h"
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-
-#include "support.h"
-#include "callbacks.h"
-#include "interface.h"
-
-#ifdef __cplusplus
-}
-#endif
 #include "R3000A.h"
 #include "IopMem.h"
 

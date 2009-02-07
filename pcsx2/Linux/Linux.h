@@ -67,45 +67,25 @@ extern "C"
 }
 #endif
 
-/* Misc.c */
-extern void vu0Shutdown();
-extern void vu1Shutdown();
 extern void SaveConfig();
 
 extern bool UseGui;
 
-extern int efile;
-extern int g_SaveGSStream;
-extern int g_ZeroGSOptions;
-extern void FixCPUState(void);
-
-extern void InitLanguages();
-extern char *GetLanguageNext();
-extern void CloseLanguages();
-extern void ChangeLanguage(char *lang);
-extern void StartGui();
-extern void RunGui();
 extern int Pcsx2Configure();
-extern GtkWidget *CpuDlg;
 
 extern int LoadConfig();
 extern void SaveConfig();
 
-extern void init_widgets();
-extern MemoryAlloc<u8>* g_RecoveryState;
 extern void SysRestorableReset();
-extern void SysDetect();
-void SignalExit(int sig);
-extern void RunExecute(const char* elf_file, bool use_bios = false);
-extern void ExecuteCpu();
-
-extern bool g_ReturnToGui;			// set to exit the execution of the emulator and return control to the GUI
-extern bool g_EmulationInProgress;	// Set TRUE if a game is actively running (set to false on reset)
+extern void SignalExit(int sig);
 
 typedef struct
 {
 	char lang[g_MaxPath];
 } _langs;
+
+_langs *langs;
+unsigned int langsMax;
 
 typedef enum
 {
@@ -121,16 +101,8 @@ typedef enum
 } plugin_types;
 
 extern GtkWidget *MainWindow;
-extern bool applychanges;
 extern bool configuringplug;
 
-GtkWidget *check_eerec, *check_vu0rec, *check_vu1rec;
-GtkWidget *check_mtgs , *check_cpu_dc;
-GtkWidget *check_console , *check_patches;
-GtkWidget *radio_normal_limit, *radio_limit_limit, *radio_fs_limit, *radio_vuskip_limit;
-
-_langs *langs;
-unsigned int langsMax;
 
 char cfgfile[g_MaxPath];
 
@@ -143,24 +115,6 @@ int Config_hacks_backup;
 
 #define set_flag(v, flag, value) if (value == TRUE) v |= flag; else v &= flag;
 #define get_flag(v,flag) ((v & (1 << flag)) != 0)
-
-/*static __forceinline void print_flags(char *name, u32 num, char *flag_names[16])
-{
-	int i;
-
-	DevCon::WriteLn("%s:", name);
-
-	if (flag_names != NULL)
-	{
-		for(i=0; i<=15; i++)
-			DevCon::WriteLn("%s %x: %x", params flag_names[i], (1<<i), get_flag(num, i));
-	}
-	else
-	{
-		for(i=0; i<=15; i++)
-			DevCon::WriteLn("%x: %x", params (1<<i), get_flag(num, i));
-	}
-} */
 
 char ee_log_names[17][32] =
 {

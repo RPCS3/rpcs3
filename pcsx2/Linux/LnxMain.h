@@ -21,33 +21,19 @@
 
 #include "Linux.h"
 
-extern char* g_pRunGSState;
-
 void SignalExit(int sig);
-bool applychanges = FALSE;
-bool configuringplug = FALSE;
-extern bool UseGui;
+extern bool applychanges;
 
 extern MemoryAlloc<u8>* g_RecoveryState;
-extern bool g_ReturnToGui;			// set to exit the execution of the emulator and return control to the GUI
 extern bool g_EmulationInProgress;	// Set TRUE if a game is actively running (set to false on reset)
 
-int efile = 0;
-char elfname[g_MaxPath];
-int Slots[5] = { -1, -1, -1, -1, -1 };
-
-GtkWidget *CpuDlg;
-
-// Functions Callbacks
-void OnFile_LoadElf(GtkMenuItem *menuitem, gpointer user_data);
-void OnFile_Exit(GtkMenuItem *menuitem, gpointer user_data);
-void OnEmu_Run(GtkMenuItem *menuitem, gpointer user_data);
-void OnEmu_Reset(GtkMenuItem *menuitem, gpointer user_data);
-void OnEmu_Arguments(GtkMenuItem *menuitem, gpointer user_data);
+extern void RunExecute(const char* elf_file, bool use_bios = false);
 void OnLanguage(GtkMenuItem *menuitem, gpointer user_data);
-void OnHelp_Help();
-void OnHelp_About(GtkMenuItem *menuitem, gpointer user_data);
-void ExecuteCpu();
+extern void ExecuteCpu();
+
+void InitLanguages();
+char *GetLanguageNext();
+void CloseLanguages();
 
 void StartGui();
 void pcsx2_exit();
@@ -56,8 +42,6 @@ GtkWidget *pStatusBar = NULL, *Status_Box;
 GtkWidget *CmdLine;	//2002-09-28 (Florin)
 GtkWidget *widgetCmdLine;
 GtkWidget *LogDlg;
-
-void init_widgets();
 
 GtkAccelGroup *AccelGroup;
 

@@ -22,12 +22,18 @@ using namespace R5900;
 
 DIR *dir;
 GtkWidget *FileSel;
+GtkWidget *MsgDlg;
+bool configuringplug = FALSE;
+const char* g_pRunGSState = NULL;
+
+int efile = 0;
+char elfname[g_MaxPath];
+int Slots[5] = { -1, -1, -1, -1, -1 };
 
 #ifdef PCSX2_DEVBUILD
 TESTRUNARGS g_TestRun;
 #endif
 
-GtkWidget *MsgDlg;
 
 int main(int argc, char *argv[])
 {
@@ -222,7 +228,7 @@ int main(int argc, char *argv[])
 
 	SysReset();
 
-	FixCPUState();
+	//FixCPUState();
 	cpuExecuteBios();
 	if (file) strcpy(elfname, file);
 	if (!efile) efile = GetPS2ElfName(elfname);
@@ -359,17 +365,12 @@ void StartGui()
 	gtk_main();
 }
 
-void RunGui()
-{
-	StartGui();
-}
-
-void FixCPUState(void)
+/*void FixCPUState(void)
 {
 	//Config.sseMXCSR = LinuxsseMXCSR;
 	//Config.sseVUMXCSR = LinuxsseVUMXCSR;
 	SetCPUState(Config.sseMXCSR, Config.sseVUMXCSR);
-}
+}*/
 
 void OnDestroy(GtkObject *object, gpointer user_data) {}
 
@@ -378,6 +379,7 @@ gboolean OnDelete(GtkWidget       *widget, GdkEvent *event, gpointer user_data)
 	pcsx2_exit();
 	return (FALSE);
 }
+
 int Pcsx2Configure()
 {
 	if (!UseGui) return 0;

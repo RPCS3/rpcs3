@@ -18,6 +18,9 @@
  
  #include "Linux.h"
  
+GtkWidget *CpuDlg;
+GtkWidget *check_eerec, *check_vu0rec, *check_vu1rec;
+
 void OnCpu_Ok(GtkButton *button, gpointer user_data)
 {
 	u32 newopts = 0;

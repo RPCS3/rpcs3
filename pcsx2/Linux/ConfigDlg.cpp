@@ -21,6 +21,8 @@
 using namespace std;
 using namespace R5900;
 
+bool applychanges = FALSE;
+
 static void FindComboText(GtkWidget *combo, char plist[255][255], GList *list, char *conf)
 {
 	if (strlen(conf) > 0) SetActiveComboItem(GTK_COMBO_BOX(combo), plist, list, conf);
