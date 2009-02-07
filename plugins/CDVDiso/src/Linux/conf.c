@@ -44,7 +44,8 @@ extern const unsigned char build;
 
 GtkWidget *FileSel;
 
-void OnFile_Ok() {
+void OnFile_Ok()
+{
 	gchar *File;
 
 	gtk_widget_hide(FileSel);
@@ -53,24 +54,26 @@ void OnFile_Ok() {
 	gtk_main_quit();
 }
 
-void OnFile_Cancel() {
+void OnFile_Cancel()
+{
 	gtk_widget_hide(FileSel);
 	gtk_main_quit();
 }
 
-void _CDRopen() {
+void _CDRopen()
+{
 	GtkWidget *Ok, *Cancel;
 
 	FileSel = gtk_file_selection_new("Select Iso File");
 
 	Ok = GTK_FILE_SELECTION(FileSel)->ok_button;
 	gtk_signal_connect(GTK_OBJECT(Ok), "clicked",
-					   GTK_SIGNAL_FUNC(OnFile_Ok), NULL);
+	                   GTK_SIGNAL_FUNC(OnFile_Ok), NULL);
 	gtk_widget_show(Ok);
 
 	Cancel = GTK_FILE_SELECTION(FileSel)->cancel_button;
 	gtk_signal_connect(GTK_OBJECT(Cancel), "clicked",
-					   GTK_SIGNAL_FUNC(OnFile_Cancel), NULL);
+	                   GTK_SIGNAL_FUNC(OnFile_Cancel), NULL);
 	gtk_widget_show(Cancel);
 
 	gtk_widget_show(FileSel);
@@ -83,14 +86,16 @@ void _CDRopen() {
 
 GtkWidget *MsgDlg;
 
-void OnMsg_Ok() {
+void OnMsg_Ok()
+{
 	gtk_widget_destroy(MsgDlg);
 	gtk_main_quit();
 }
 
-static void SysMessageLoc(char *fmt, ...) {
-	GtkWidget *Ok,*Txt;
-	GtkWidget *Box,*Box1;
+static void SysMessageLoc(char *fmt, ...)
+{
+	GtkWidget *Ok, *Txt;
+	GtkWidget *Box, *Box1;
 	va_list list;
 	int w;
 	char msg[512];
@@ -103,7 +108,7 @@ static void SysMessageLoc(char *fmt, ...) {
 
 	w = strlen(msg) * 6 + 20;
 
-	MsgDlg = gtk_window_new (GTK_WINDOW_TOPLEVEL);
+	MsgDlg = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	gtk_widget_set_usize(MsgDlg, w, 70);
 	gtk_window_set_position(GTK_WINDOW(MsgDlg), GTK_WIN_POS_CENTER);
 	gtk_window_set_title(GTK_WINDOW(MsgDlg), "cdriso Msg");
@@ -114,7 +119,7 @@ static void SysMessageLoc(char *fmt, ...) {
 	gtk_widget_show(Box);
 
 	Txt = gtk_label_new(msg);
-	
+
 	gtk_box_pack_start(GTK_BOX(Box), Txt, FALSE, FALSE, 5);
 	gtk_widget_show(Txt);
 
@@ -123,12 +128,12 @@ static void SysMessageLoc(char *fmt, ...) {
 	gtk_widget_show(Box1);
 
 	Ok = gtk_button_new_with_label("Ok");
-	gtk_signal_connect (GTK_OBJECT(Ok), "clicked", GTK_SIGNAL_FUNC(OnMsg_Ok), NULL);
+	gtk_signal_connect(GTK_OBJECT(Ok), "clicked", GTK_SIGNAL_FUNC(OnMsg_Ok), NULL);
 	gtk_container_add(GTK_CONTAINER(Box1), Ok);
 	GTK_WIDGET_SET_FLAGS(Ok, GTK_CAN_DEFAULT);
 	gtk_widget_show(Ok);
 
-	gtk_widget_show(MsgDlg);	
+	gtk_widget_show(MsgDlg);
 
 	gtk_main();
 }
@@ -148,10 +153,11 @@ extern char *methods[];
 
 int stop;
 
-void OnOk(GtkMenuItem * menuitem, gpointer userdata) {
+void OnOk(GtkMenuItem * menuitem, gpointer userdata)
+{
 	char *tmp;
 
-	stop=1;
+	stop = 1;
 	tmp = gtk_entry_get_text(GTK_ENTRY(Edit));
 	strcpy(IsoFile, tmp);
 	tmp = gtk_entry_get_text(GTK_ENTRY(CdEdit));
@@ -161,13 +167,15 @@ void OnOk(GtkMenuItem * menuitem, gpointer userdata) {
 	gtk_main_quit();
 }
 
-void OnCancel(GtkMenuItem * menuitem, gpointer userdata) {
-	stop=1;
+void OnCancel(GtkMenuItem * menuitem, gpointer userdata)
+{
+	stop = 1;
 	gtk_widget_destroy(ConfDlg);
 	gtk_main_quit();
 }
 
-void OnFileSel_Ok() {
+void OnFileSel_Ok()
+{
 	gchar *File;
 
 	File = gtk_file_selection_get_filename(GTK_FILE_SELECTION(FileSel));
@@ -175,33 +183,37 @@ void OnFileSel_Ok() {
 	gtk_widget_destroy(FileSel);
 }
 
-void OnFileSel_Cancel() {
+void OnFileSel_Cancel()
+{
 	gtk_widget_destroy(FileSel);
 }
 
-void OnFileSel() {
-	GtkWidget *Ok,*Cancel;
+void OnFileSel()
+{
+	GtkWidget *Ok, *Cancel;
 
 	FileSel = gtk_file_selection_new("Select Psx Iso File");
 	gtk_file_selection_set_filename(GTK_FILE_SELECTION(FileSel), IsoFile);
 
 	Ok = GTK_FILE_SELECTION(FileSel)->ok_button;
-	gtk_signal_connect (GTK_OBJECT(Ok), "clicked", GTK_SIGNAL_FUNC(OnFileSel_Ok), NULL);
+	gtk_signal_connect(GTK_OBJECT(Ok), "clicked", GTK_SIGNAL_FUNC(OnFileSel_Ok), NULL);
 	gtk_widget_show(Ok);
 
 	Cancel = GTK_FILE_SELECTION(FileSel)->cancel_button;
-	gtk_signal_connect (GTK_OBJECT(Cancel), "clicked", GTK_SIGNAL_FUNC(OnFileSel_Cancel), NULL);
+	gtk_signal_connect(GTK_OBJECT(Cancel), "clicked", GTK_SIGNAL_FUNC(OnFileSel_Cancel), NULL);
 	gtk_widget_show(Cancel);
 
 	gtk_widget_show(FileSel);
 	gdk_window_raise(FileSel->window);
 }
 
-void OnStop() {
-	stop=1;
+void OnStop()
+{
+	stop = 1;
 }
 
-void UpdZmode() {
+void UpdZmode()
+{
 	char *tmp;
 
 	tmp = gtk_entry_get_text(GTK_ENTRY(GTK_COMBO(Method)->entry));
@@ -211,7 +223,8 @@ void UpdZmode() {
 
 char buffer[2352 * 10];
 
-void OnCompress() {
+void OnCompress()
+{
 	struct stat buf;
 	u32 lsn;
 	u8 cdbuff[10*2352];
@@ -228,13 +241,14 @@ void OnCompress() {
 	if (Zmode == 1) sprintf(Zfile, "%s.Z2", IsoFile);
 	if (Zmode == 2) sprintf(Zfile, "%s.BZ2", IsoFile);
 
-	if (stat(Zfile, &buf) != -1) {
-		char str[256];
+	if (stat(Zfile, &buf) != -1)
+	{
+		/*char str[256];*/
 		return;
-/*		sprintf(str, "'%s' already exists, overwrite?", Zfile);
-		if (MessageBox(hDlg, str, "Question", MB_YESNO) != IDYES) {
-			return;
-		}*/
+		/*		sprintf(str, "'%s' already exists, overwrite?", Zfile);
+				if (MessageBox(hDlg, str, "Question", MB_YESNO) != IDYES) {
+					return;
+				}*/
 	}
 
 	src = isoOpen(IsoFile);
@@ -246,9 +260,10 @@ void OnCompress() {
 	gtk_widget_set_sensitive(BtnDecompress, FALSE);
 	gtk_widget_set_sensitive(BtnCreate, FALSE);
 	gtk_widget_set_sensitive(BtnCreateZ, FALSE);
-	stop=0;
+	stop = 0;
 
-	for (lsn = 0; lsn<src->blocks; lsn++) {
+	for (lsn = 0; lsn < src->blocks; lsn++)
+	{
 		printf("block %d ", lsn);
 		putchar(13);
 		fflush(stdout);
@@ -271,20 +286,25 @@ void OnCompress() {
 	gtk_widget_set_sensitive(BtnCreate, TRUE);
 	gtk_widget_set_sensitive(BtnCreateZ, TRUE);
 
-	if (!stop) {
-		if (ret == -1) {
+	if (!stop)
+	{
+		if (ret == -1)
+		{
 			SysMessageLoc("Error compressing iso image");
-		} else {
+		}
+		else
+		{
 			SysMessageLoc("Iso image compressed OK");
 		}
 	}
 }
 
-void OnDecompress() {
+void OnDecompress()
+{
 #if 0
 	struct stat buf;
 	FILE *f;
-	unsigned long c=0, p=0, s;
+	unsigned long c = 0, p = 0, s;
 	char table[256];
 	char *tmp;
 	int blocks;
@@ -299,7 +319,8 @@ void OnDecompress() {
 	if (Zmode == 1) strcat(table, ".table");
 	else strcat(table, ".index");
 
-	if (stat(table, &buf) == -1) {
+	if (stat(table, &buf) == -1)
+	{
 		return;
 	}
 	if (Zmode == 1) c = s = buf.st_size / 6;
@@ -310,7 +331,8 @@ void OnDecompress() {
 	fclose(f);
 
 	cdHandle[0] = fopen(IsoFile, "rb");
-	if (cdHandle[0] == NULL) {
+	if (cdHandle[0] == NULL)
+	{
 		return;
 	}
 
@@ -318,7 +340,8 @@ void OnDecompress() {
 	else IsoFile[strlen(IsoFile) - 3] = 0;
 
 	f = fopen(IsoFile, "wb");
-	if (f == NULL) {
+	if (f == NULL)
+	{
 		return;
 	}
 
@@ -326,29 +349,36 @@ void OnDecompress() {
 	gtk_widget_set_sensitive(BtnDecompress, FALSE);
 	gtk_widget_set_sensitive(BtnCreate, FALSE);
 	gtk_widget_set_sensitive(BtnCreateZ, FALSE);
-	stop=0;
+	stop = 0;
 
-	if (Zmode == 1) {
+	if (Zmode == 1)
+	{
 		blocks = 1;
-	} else {
+	}
+	else
+	{
 		blocks = 10;
 	}
 
-	while (c--) {
+	while (c--)
+	{
 		unsigned long size, pos, ssize;
 		float per;
 
-		if (Zmode == 1) {
-			pos = *(unsigned long*)&Ztable[p * 6];
+		if (Zmode == 1)
+		{
+			pos = *(unsigned long*) & Ztable[p * 6];
 			fseek(cdHandle[0], pos, SEEK_SET);
 
-			ssize = *(unsigned short*)&Ztable[p * 6 + 4];
+			ssize = *(unsigned short*) & Ztable[p * 6 + 4];
 			fread(Zbuf, 1, ssize, cdHandle[0]);
-		} else {
-			pos = *(unsigned long*)&Ztable[p * 4];
+		}
+		else
+		{
+			pos = *(unsigned long*) & Ztable[p * 4];
 			fseek(cdHandle[0], pos, SEEK_SET);
 
-			ssize = *(unsigned long*)&Ztable[p * 4 + 4] - pos;
+			ssize = *(unsigned long*) & Ztable[p * 4 + 4] - pos;
 			fread(Zbuf, 1, ssize, cdHandle[0]);
 		}
 
@@ -368,8 +398,10 @@ void OnDecompress() {
 	if (!stop) gtk_entry_set_text(GTK_ENTRY(Edit), IsoFile);
 
 	fclose(f);
-	fclose(cdHandle[0]); cdHandle[0] = NULL;
-	free(Ztable); Ztable = NULL;
+	fclose(cdHandle[0]);
+	cdHandle[0] = NULL;
+	free(Ztable);
+	Ztable = NULL;
 
 	gtk_widget_set_sensitive(BtnCompress, TRUE);
 	gtk_widget_set_sensitive(BtnDecompress, TRUE);
@@ -384,28 +416,34 @@ void OnDecompress() {
 unsigned char param[4];
 int cddev = -1;
 
-union {
+union
+{
 	struct cdrom_msf msf;
 	unsigned char buf[CD_FRAMESIZE_RAW];
 } cr;
 
-void incSector() {
+void incSector()
+{
 	param[2]++;
-	if (param[2] == 75) {
+	if (param[2] == 75)
+	{
 		param[2] = 0;
 		param[1]++;
 	}
-	if (param[1] == 60) {
+	if (param[1] == 60)
+	{
 		param[1] = 0;
 		param[0]++;
 	}
 }
 
-long CDR_open(void) {
+long CDR_open(void)
+{
 	if (cddev != -1)
 		return 0;
 	cddev = open(CdDev, O_RDONLY);
-	if (cddev == -1) {
+	if (cddev == -1)
+	{
 		printf("CDR: Could not open %s\n", CdDev);
 		return -1;
 	}
@@ -413,7 +451,8 @@ long CDR_open(void) {
 	return 0;
 }
 
-long CDR_close(void) {
+long CDR_close(void)
+{
 	if (cddev == -1) return 0;
 	close(cddev);
 	cddev = -1;
@@ -425,7 +464,8 @@ long CDR_close(void) {
 // buffer:
 //  byte 0 - start track
 //  byte 1 - end track
-long CDR_getTN(unsigned char *buffer) {
+long CDR_getTN(unsigned char *buffer)
+{
 	struct cdrom_tochdr toc;
 
 	if (ioctl(cddev, CDROMREADTOCHDR, &toc) == -1) return -1;
@@ -441,7 +481,8 @@ long CDR_getTN(unsigned char *buffer) {
 //  byte 0 - frame
 //  byte 1 - second
 //  byte 2 - minute
-long CDR_getTD(unsigned char track, unsigned char *buffer) {
+long CDR_getTD(unsigned char track, unsigned char *buffer)
+{
 	struct cdrom_tocentry entry;
 
 	if (track == 0) track = 0xaa; // total time
@@ -462,7 +503,8 @@ long CDR_getTD(unsigned char track, unsigned char *buffer) {
 //  byte 0 - minute
 //  byte 1 - second
 //  byte 2 - frame
-char *CDR_readTrack(unsigned char *time) {
+char *CDR_readTrack(unsigned char *time)
+{
 	cr.msf.cdmsf_min0 = time[0];
 	cr.msf.cdmsf_sec0 = time[1];
 	cr.msf.cdmsf_frame0 = time[2];
@@ -472,20 +514,21 @@ char *CDR_readTrack(unsigned char *time) {
 }
 
 
-void OnCreate() {
+void OnCreate()
+{
 	FILE *f;
 	struct stat buf;
 	struct tm *Tm;
 	time_t Ttime;
 	unsigned long ftrack, ltrack;
-	unsigned long p=0,s;
+	unsigned long p = 0, s;
 	unsigned char *buffer;
 	unsigned char bufferz[2352];
 	unsigned char start[4], end[4];
 	char *tmp;
 #ifdef VERBOSE
 	unsigned long count = 0;
-	int i=0;
+	int i = 0;
 #endif
 
 	memset(bufferz, 0, sizeof(bufferz));
@@ -495,37 +538,42 @@ void OnCreate() {
 	tmp = gtk_entry_get_text(GTK_ENTRY(Edit));
 	strcpy(IsoFile, tmp);
 
-	if (stat(IsoFile, &buf) == 0) {
+	if (stat(IsoFile, &buf) == 0)
+	{
 		printf("File %s Already exists\n", IsoFile);
 		return;
 	}
 
-	if (CDR_open() == -1) {
+	if (CDR_open() == -1)
+	{
 		return;
 	}
 
-	if (CDR_getTD(ftrack, start) == -1) {
+	if (CDR_getTD(ftrack, start) == -1)
+	{
 		printf("Error getting TD\n");
 
 		CDR_close();
 		return;
 	}
-	if (CDR_getTD(ltrack, end) == -1) {
+	if (CDR_getTD(ltrack, end) == -1)
+	{
 		printf("Error getting TD\n");
-		
+
 		CDR_close();
 		return;
 	}
 
 	f = fopen(IsoFile, "wb");
-	if (f == NULL) {
+	if (f == NULL)
+	{
 		CDR_close();
 		printf("Error opening %s", IsoFile);
 		return;
 	}
 
 	printf("Making Iso: from %2.2d:%2.2d:%2.2d to %2.2d:%2.2d:%2.2d\n",
-		   start[0], start[1], start[2], end[0], end[1], end[2]);
+	       start[0], start[1], start[2], end[0], end[1], end[2]);
 
 	memcpy(param, start, 3);
 
@@ -538,20 +586,24 @@ void OnCreate() {
 	gtk_widget_set_sensitive(BtnCreate, FALSE);
 	gtk_widget_set_sensitive(BtnCreateZ, FALSE);
 
-	for (;;) { /* loop until end */
+	for (;;)   /* loop until end */
+	{
 		float per;
 
 		if ((param[0] == end[0]) & (param[1] == end[1]) & (param[2] == end[2]))
 			break;
 		buffer = CDR_readTrack(param);
-		if (buffer == NULL) {
+		if (buffer == NULL)
+		{
 			int i;
 
-			for (i=0; i<10; i++) {
+			for (i = 0; i < 10; i++)
+			{
 				buffer = CDR_readTrack(param);
 				if (buffer != NULL) break;
 			}
-			if (buffer == NULL) {
+			if (buffer == NULL)
+			{
 				printf("Error Reading %2d:%2d:%2d\n", param[0], param[1], param[2]);
 				buffer = bufferz;
 				buffer[12] = param[0];
@@ -562,10 +614,11 @@ void OnCreate() {
 		}
 		fwrite(buffer, 1, 2352, f);
 #ifdef VERBOSE
-		count+= CD_FRAMESIZE_RAW;
+		count += CD_FRAMESIZE_RAW;
 
 		printf("reading %2d:%2d:%2d ", param[0], param[1], param[2]);
-		if ((time(NULL) - Ttime) != 0) {
+		if ((time(NULL) - Ttime) != 0)
+		{
 			i = (count / 1024) / (time(NULL) - Ttime);
 			printf("( %5dKbytes/s, %dX)", i, i / 150);
 		}
@@ -585,7 +638,7 @@ void OnCreate() {
 	Ttime = time(NULL) - Ttime;
 	Tm = gmtime(&Ttime);
 	printf("\nTotal Time used: %d:%d:%d\n", Tm->tm_hour, Tm->tm_min,
-		   Tm->tm_sec);
+	       Tm->tm_sec);
 
 	CDR_close();
 	fclose(f);
@@ -598,14 +651,15 @@ void OnCreate() {
 	if (!stop) SysMessageLoc("Iso Image Created OK");
 }
 
-void OnCreateZ() {
+void OnCreateZ()
+{
 	FILE *f;
 	FILE *t;
 	struct stat buf;
 	struct tm *Tm;
 	time_t Ttime;
 	unsigned long ftrack, ltrack;
-	unsigned long p=0,s,c=0;
+	unsigned long p = 0, s, c = 0;
 	unsigned char *buffer;
 	unsigned char bufferz[2352];
 	unsigned char start[4], end[4];
@@ -614,7 +668,7 @@ void OnCreateZ() {
 	int b, blocks;
 #ifdef VERBOSE
 	unsigned long count = 0;
-	int i=0;
+	int i = 0;
 #endif
 
 	memset(bufferz, 0, sizeof(bufferz));
@@ -626,53 +680,58 @@ void OnCreateZ() {
 
 	UpdZmode();
 
-	if (Zmode == 1) {
+	if (Zmode == 1)
+	{
 		blocks = 1;
 		if (strstr(IsoFile, ".Z") == NULL) strcat(IsoFile, ".Z");
-	} else {
+	}
+	else
+	{
 		blocks = 10;
 		if (strstr(IsoFile, ".bz") == NULL) strcat(IsoFile, ".bz");
 	}
-	if (stat(IsoFile, &buf) == 0) {
+	
+	if (stat(IsoFile, &buf) == 0)
+	{
 		printf("File %s Already exists\n", IsoFile);
 		return;
 	}
 
 	strcpy(table, IsoFile);
-	if (Zmode == 1) strcat(table, ".table");
-	else strcat(table, ".index");
+	if (Zmode == 1) 
+		strcat(table, ".table");
+	else 
+		strcat(table, ".index");
 
 	t = fopen(table, "wb");
-	if (t == NULL) {
-		return;
-	}
+	
+	if (t == NULL) return;
+	if (CDR_open() == -1) return;
 
-	if (CDR_open() == -1) {
-		return;
-	}
-
-	if (CDR_getTD(ftrack, start) == -1) {
+	if (CDR_getTD(ftrack, start) == -1)
+	{
 		printf("Error getting TD\n");
-
 		CDR_close();
 		return;
 	}
-	if (CDR_getTD(ltrack, end) == -1) {
+	
+	if (CDR_getTD(ltrack, end) == -1)
+	{
 		printf("Error getting TD\n");
-		
 		CDR_close();
 		return;
 	}
 
 	f = fopen(IsoFile, "wb");
-	if (f == NULL) {
+	if (f == NULL)
+	{
 		CDR_close();
 		printf("Error opening %s", IsoFile);
 		return;
 	}
 
 	printf("Making Iso: from %2.2d:%2.2d:%2.2d to %2.2d:%2.2d:%2.2d\n",
-		   start[0], start[1], start[2], end[0], end[1], end[2]);
+	       start[0], start[1], start[2], end[0], end[1], end[2]);
 
 	memcpy(param, start, 3);
 
@@ -685,23 +744,30 @@ void OnCreateZ() {
 	gtk_widget_set_sensitive(BtnCreate, FALSE);
 	gtk_widget_set_sensitive(BtnCreateZ, FALSE);
 
-	for (;;) { /* loop until end */
+	for (;;)   /* loop until end */
+	{
 		unsigned long size;
 		unsigned char Zbuf[CD_FRAMESIZE_RAW * 10 * 2];
 		float per;
 
-		for (b=0; b<blocks; b++) {
+		for (b = 0; b < blocks; b++)
+		{
 			if ((param[0] == end[0]) & (param[1] == end[1]) & (param[2] == end[2]))
 				break;
+			
 			buffer = CDR_readTrack(param);
-			if (buffer == NULL) {
+			if (buffer == NULL)
+			{
 				int i;
 
-				for (i=0; i<10; i++) {
+				for (i = 0; i < 10; i++)
+				{
 					buffer = CDR_readTrack(param);
 					if (buffer != NULL) break;
 				}
-				if (buffer == NULL) {
+				
+				if (buffer == NULL)
+				{
 					printf("Error Reading %2d:%2d:%2d\n", param[0], param[1], param[2]);
 					buffer = bufferz;
 					buffer[12] = param[0];
@@ -718,20 +784,23 @@ void OnCreateZ() {
 			break;
 
 		size = CD_FRAMESIZE_RAW * blocks * 2;
-		if (Zmode == 1) compress(Zbuf, &size, cdbuffer, CD_FRAMESIZE_RAW);
-		else BZ2_bzBuffToBuffCompress(Zbuf, (unsigned int*)&size, cdbuffer, CD_FRAMESIZE_RAW * 10, 1, 0, 30);
+		if (Zmode == 1) 
+			compress(Zbuf, &size, cdbuffer, CD_FRAMESIZE_RAW);
+		else 
+			BZ2_bzBuffToBuffCompress(Zbuf, (unsigned int*)&size, cdbuffer, CD_FRAMESIZE_RAW * 10, 1, 0, 30);
 
 		fwrite(&c, 1, 4, t);
 		if (Zmode == 1) fwrite(&size, 1, 2, t);
 
 		fwrite(Zbuf, 1, size, f);
 
-		c+=size;
+		c += size;
 #ifdef VERBOSE
-		count+= CD_FRAMESIZE_RAW * blocks;
+		count += CD_FRAMESIZE_RAW * blocks;
 
 		printf("reading %2d:%2d:%2d ", param[0], param[1], param[2]);
-		if ((time(NULL) - Ttime) != 0) {
+		if ((time(NULL) - Ttime) != 0)
+		{
 			i = (count / 1024) / (time(NULL) - Ttime);
 			printf("( %5dKbytes/s, %dX)", i, i / 150);
 		}
@@ -741,8 +810,10 @@ void OnCreateZ() {
 
 		p++;
 		per = ((float)p / s);
+		
 		gtk_progress_bar_update(GTK_PROGRESS_BAR(Progress), per);
 		while (gtk_events_pending()) gtk_main_iteration();
+		
 		if (stop) break;
 	}
 	if (Zmode == 2) fwrite(&c, 1, 4, f);
@@ -752,7 +823,7 @@ void OnCreateZ() {
 	Ttime = time(NULL) - Ttime;
 	Tm = gmtime(&Ttime);
 	printf("\nTotal Time used: %d:%d:%d\n", Tm->tm_hour, Tm->tm_min,
-		   Tm->tm_sec);
+	       Tm->tm_sec);
 
 	CDR_close();
 	fclose(f);
@@ -766,7 +837,8 @@ void OnCreateZ() {
 	if (!stop) SysMessageLoc("Compressed Iso Image Created OK");
 }
 
-long CDRconfigure(void) {
+long CDRconfigure(void)
+{
 	int i;
 
 	LoadConf();
@@ -786,12 +858,12 @@ long CDRconfigure(void) {
 	BtnCreateZ    = lookup_widget(ConfDlg, "GtkButton_CreateZ");
 
 	methodlist = NULL;
-	for (i=0; i<2; i++)
+	for (i = 0; i < 2; i++)
 		methodlist = g_list_append(methodlist, methods[i]);
 	Method = lookup_widget(ConfDlg, "GtkCombo_Method");
 	gtk_combo_set_popdown_strings(GTK_COMBO(Method), methodlist);
 	if (strstr(IsoFile, ".Z") != NULL)
-		 gtk_entry_set_text(GTK_ENTRY(GTK_COMBO(Method)->entry), methods[0]);
+		gtk_entry_set_text(GTK_ENTRY(GTK_COMBO(Method)->entry), methods[0]);
 	else gtk_entry_set_text(GTK_ENTRY(GTK_COMBO(Method)->entry), methods[1]);
 
 	gtk_widget_show_all(ConfDlg);
@@ -802,12 +874,14 @@ long CDRconfigure(void) {
 
 GtkWidget *AboutDlg;
 
-void OnAboutOk(GtkMenuItem * menuitem, gpointer userdata) {
+void OnAboutOk(GtkMenuItem * menuitem, gpointer userdata)
+{
 	gtk_widget_hide(AboutDlg);
 	gtk_main_quit();
 }
 
-void CDRabout(void) {
+void CDRabout(void)
+{
 	GtkWidget *Label;
 	GtkWidget *Ok;
 	GtkWidget *Box, *BBox;
@@ -835,7 +909,7 @@ void CDRabout(void) {
 
 	Ok = gtk_button_new_with_label("Ok");
 	gtk_signal_connect(GTK_OBJECT(Ok), "clicked",
-					   GTK_SIGNAL_FUNC(OnAboutOk), NULL);
+	                   GTK_SIGNAL_FUNC(OnAboutOk), NULL);
 	gtk_container_add(GTK_CONTAINER(BBox), Ok);
 	GTK_WIDGET_SET_FLAGS(Ok, GTK_CAN_DEFAULT);
 	gtk_widget_show(Ok);
@@ -844,20 +918,22 @@ void CDRabout(void) {
 	gtk_main();
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
 	if (argc < 2) return 0;
 
 	gtk_init(NULL, NULL);
 
-	if (!strcmp(argv[1], "open")) {
+	if (!strcmp(argv[1], "open"))
 		_CDRopen();
-	} else if (!strcmp(argv[1], "configure")) {
+	else if (!strcmp(argv[1], "configure"))
 		CDRconfigure();
-	} else if (!strcmp(argv[1], "message")) {
+	else if (!strcmp(argv[1], "message"))
+	{
 		if (argc > 2) SysMessageLoc(argv[2]);
-	} else {
-		CDRabout();
 	}
+	else
+		CDRabout();
 
 	return 0;
 }

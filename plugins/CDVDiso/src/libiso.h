@@ -22,13 +22,15 @@
 #define itob(i)		((i)/10*16 + (i)%10)	/* u_char to BCD */
 #define btoi(b)		((b)/16*10 + (b)%16)	/* BCD to u_char */
 
-typedef struct {
+typedef struct
+{
 	u32 slsn;
 	u32 elsn;
 	void *handle;
 } _multih;
 
-typedef struct {
+typedef struct
+{
 	char filename[256];
 	u32  type;
 	u32  flags;

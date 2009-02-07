@@ -16,7 +16,8 @@
 #define SetKeyVdw(name, var) \
 	SetKeyV(name, var, 4, REG_DWORD);
 
-void SaveConf() {
+void SaveConf()
+{
 	HKEY myKey;
 	DWORD myDisp;
 
@@ -29,14 +30,17 @@ void SaveConf() {
 	RegCloseKey(myKey);
 }
 
-void LoadConf() {
+void LoadConf()
+{
 	HKEY myKey;
 	DWORD type, size;
 
 	memset(IsoFile, 0, sizeof(IsoFile));
 
-	if (RegOpenKeyEx(HKEY_CURRENT_USER, "Software\\PS2Eplugin\\CDVD\\CDVDiso", 0, KEY_ALL_ACCESS, &myKey)!=ERROR_SUCCESS) {
-		SaveConf(); return;
+	if (RegOpenKeyEx(HKEY_CURRENT_USER, "Software\\PS2Eplugin\\CDVD\\CDVDiso", 0, KEY_ALL_ACCESS, &myKey) != ERROR_SUCCESS)
+	{
+		SaveConf();
+		return;
 	}
 
 	GetKeyV("IsoFile", IsoFile, sizeof(IsoFile), REG_BINARY);

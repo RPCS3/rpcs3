@@ -25,44 +25,55 @@
 #include "Config.h"
 #include "CDVDiso.h"
 
-void ExecCfg(char *arg) {
+void ExecCfg(char *arg)
+{
 	char cfg[256];
 	struct stat buf;
 
 	strcpy(cfg, "./cfgCDVDiso");
-	if (stat(cfg, &buf) != -1) {
+	if (stat(cfg, &buf) != -1)
+	{
 		sprintf(cfg, "%s %s", cfg, arg);
-		system(cfg); return;
+		system(cfg);
+		return;
 	}
 
 	strcpy(cfg, "./cfg/cfgCDVDiso");
-	if (stat(cfg, &buf) != -1) {
+	if (stat(cfg, &buf) != -1)
+	{
 		sprintf(cfg, "%s %s", cfg, arg);
-		system(cfg); return;
+		system(cfg);
+		return;
 	}
 
 	sprintf(cfg, "%s/cfgCDVDiso", getenv("HOME"));
-	if (stat(cfg, &buf) != -1) {
+	if (stat(cfg, &buf) != -1)
+	{
 		sprintf(cfg, "%s %s", cfg, arg);
-		system(cfg); return;
+		system(cfg);
+		return;
 	}
 
 	printf("cfgCDVDiso file not found!\n");
 }
 
-void CDVDconfigure() {
+void CDVDconfigure()
+{
 	ExecCfg("configure");
 }
 
-void CDVDabout() {
+void CDVDabout()
+{
 	ExecCfg("about");
 }
 
-void CfgOpenFile() {
+void CfgOpenFile()
+{
 	ExecCfg("open");
 }
 
-void SysMessage(char *fmt, ...) {
+void SysMessage(char *fmt, ...)
+{
 	va_list list;
 	char tmp[256];
 	char cmd[256];

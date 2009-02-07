@@ -21,7 +21,8 @@
 #pragma warning(disable:4018)
 #endif
 
-#include "PS2Edefs.h"
+#include "common/PS2Etypes.h"
+#include "common/PS2Edefs.h"
 #include "libiso.h"
 
 #ifdef __cplusplus
@@ -82,7 +83,8 @@ void __Log(char *fmt, ...);
 #define DEV_DEF		""
 #define CDDEV_DEF	"/dev/cdrom"
 
-typedef struct {
+typedef struct
+{
 	int slsn;
 	int elsn;
 #ifdef _WINDOWS_

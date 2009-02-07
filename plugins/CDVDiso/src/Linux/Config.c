@@ -24,36 +24,59 @@
 
 #include "CDVDiso.h"
 
-void LoadConf() {
+
+const char *s_strIniPath="../inis/CDVDiso.ini";
+
+void LoadConf()
+{
 	FILE *f;
 	char cfg[256];
 
-    sprintf(cfg, "%s/.PS2E/CDVDiso.cfg", getenv("HOME"));
+	//sprintf(cfg, "%s/.PS2E/CDVDiso.cfg", getenv("HOME"));
+	strcpy(cfg, s_strIniPath);
 	f = fopen(cfg, "r");
-	if (f == NULL) {
+	
+	if (f == NULL)
+	{
+		printf("Unable to load %s\n", cfg);
 		strcpy(IsoFile, DEV_DEF);
 		strcpy(CdDev, CDDEV_DEF);
+		BlockDump = 0;
+		SaveConf();
 		return;
 	}
+	
 	fscanf(f, "IsoFile = %[^\n]\n", IsoFile);
 	fscanf(f, "CdDev   = %[^\n]\n", CdDev);
+	fscanf(f, "BlockDump   = %[^\n]\n", &BlockDump);
+	
 	if (!strncmp(IsoFile, "CdDev   =", 9)) *IsoFile = 0; // quick fix
 	if (*CdDev == 0) strcpy(CdDev, CDDEV_DEF);
+	
 	fclose(f);
 }
 
-void SaveConf() {
+void SaveConf()
+{
 	FILE *f;
 	char cfg[256];
 
-    sprintf(cfg, "%s/.PS2E", getenv("HOME"));
-	mkdir(cfg, 0755);
-    sprintf(cfg, "%s/.PS2E/CDVDiso.cfg", getenv("HOME"));
+	//sprintf(cfg, "%s/.PS2E", getenv("HOME"));
+	
+	//mkdir(cfg, 0755);
+	//sprintf(cfg, "%s/.PS2E/CDVDiso.cfg", getenv("HOME"));
+	strcpy(cfg, s_strIniPath);
+	
 	f = fopen(cfg, "w");
 	if (f == NULL)
+	{
+		printf("Unable to save %s\n", cfg);
 		return;
+	}
+	
 	fprintf(f, "IsoFile = %s\n", IsoFile);
 	fprintf(f, "CdDev   = %s\n", CdDev);
+	fprintf(f, "BlockDump   = %s\n", &BlockDump);
 	fclose(f);
 }
 

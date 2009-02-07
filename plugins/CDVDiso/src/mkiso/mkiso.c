@@ -24,43 +24,52 @@
 #include "CDVDiso.h"
 
 
-void Compress(char *filename, int mode) {
+void Compress(char *filename, int mode)
+{
 	struct stat buf;
 	u32 lsn;
 	u8 cdbuff[1024*16];
 	char Zfile[256];
-	int ret=0;
+	int ret = 0;
 	isoFile *src;
 	isoFile *dst;
 
-	if (mode == 1) {
+	if (mode == 1)
+	{
 		sprintf(Zfile, "%s.Z2", filename);
-	} else {
+	}
+	else
+	{
 		sprintf(Zfile, "%s.BZ2", filename);
 	}
 
-	if (stat(Zfile, &buf) != -1) {
+	if (stat(Zfile, &buf) != -1)
+	{
 		printf("'%s' already exists\n", Zfile);
 		return;
-/*		sprintf(str, "'%s' already exists, overwrite?", Zfile);
-		if (MessageBox(hDlg, str, "Question", MB_YESNO) != IDYES) {
-			return;
-		}*/
+		/*		sprintf(str, "'%s' already exists, overwrite?", Zfile);
+				if (MessageBox(hDlg, str, "Question", MB_YESNO) != IDYES) {
+					return;
+				}*/
 	}
 
 	printf("src %s; dst %s\n", filename, Zfile);
 	src = isoOpen(filename);
 	if (src == NULL) return;
 
-	if (mode == 1) {
+	if (mode == 1)
+	{
 		dst = isoCreate(Zfile, ISOFLAGS_Z2);
-	} else {
+	}
+	else
+	{
 		dst = isoCreate(Zfile, ISOFLAGS_BZ2);
 	}
 	isoSetFormat(dst, src->blockofs, src->blocksize, src->blocks);
 	if (dst == NULL) return;
 
-	for (lsn = 0; lsn<src->blocks; lsn++) {
+	for (lsn = 0; lsn < src->blocks; lsn++)
+	{
 		printf("block %d ", lsn);
 		putchar(13);
 		fflush(stdout);
@@ -72,39 +81,44 @@ void Compress(char *filename, int mode) {
 	isoClose(src);
 	isoClose(dst);
 
-	if (ret == -1) {
+	if (ret == -1)
+	{
 		printf("Error compressing iso image\n");
-	} else {
+	}
+	else
+	{
 		printf("Iso image compressed OK\n");
 	}
 }
 
-void Decompress(char *filename) {
+void Decompress(char *filename)
+{
 	struct stat buf;
 	char file[256];
 	u8 cdbuff[10*2352];
 	u32 lsn;
 	isoFile *src;
 	isoFile *dst;
-	int ret=0;
+	int ret = 0;
 
 	src = isoOpen(filename);
 	if (src == NULL) return;
 
 	strcpy(file, filename);
-	if (src->flags & ISOFLAGS_Z) {
+	if (src->flags & ISOFLAGS_Z)
 		file[strlen(file) - 2] = 0;
-	} else
-	if (src->flags & ISOFLAGS_Z2) {
+	else if (src->flags & ISOFLAGS_Z2)
 		file[strlen(file) - 3] = 0;
-	} else
-	if (src->flags & ISOFLAGS_BZ2) {
+	else if (src->flags & ISOFLAGS_BZ2)
 		file[strlen(file) - 3] = 0;
-	} else {
+	else
+	{
 		printf("%s is not a compressed image\n", filename);
 		return;
 	}
-	if (stat(file, &buf) != -1) {
+	
+	if (stat(file, &buf) != -1)
+	{
 		char str[256];
 		sprintf(str, "'%s' already exists", file);
 		isoClose(src);
@@ -115,7 +129,8 @@ void Decompress(char *filename) {
 	if (dst == NULL) return;
 	isoSetFormat(dst, src->blockofs, src->blocksize, src->blocks);
 
-	for (lsn = 0; lsn<src->blocks; lsn++) {
+	for (lsn = 0; lsn < src->blocks; lsn++)
+	{
 		printf("block %d ", lsn);
 		putchar(13);
 		fflush(stdout);
@@ -128,25 +143,23 @@ void Decompress(char *filename) {
 	isoClose(src);
 	isoClose(dst);
 
-	if (ret == -1) {
+	if (ret == -1)
 		printf("Error decompressing iso image\n");
-	} else {
+	else
 		printf("Iso image decompressed OK\n");
-	}
 }
 
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
 	if (argc < 3) return 0;
 
-	if (argv[1][0] == 'c') {
-		Compress(argv[2], 1);
-	} else
-	if (argv[1][0] == 'C') {
-		Compress(argv[2], 2);
-	} else
-	if (argv[1][0] == 'd') {
-		Decompress(argv[2]);
+	switch (argv[1][0])
+	{
+		case 'c': Compress(argv[2], 1);
+		case 'C': Compress(argv[2], 2);
+		case 'd':  Decompress(argv[2]);
+		default: break;
 	}
 
 	return 0;
