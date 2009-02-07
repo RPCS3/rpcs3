@@ -4,7 +4,10 @@ INCLUDES = $(shell pkg-config --cflags gtk+-2.0) -I@srcdir@/../   -I@srcdir@/../
 bin_PROGRAMS = pcsx2
 
 # the application source, library search path, and link libraries
-pcsx2_SOURCES = Pref.cpp  interface.c  ConfigDlg.cpp DebugDlg.cpp GtkGui.cpp  LnxMain.cpp LnxConsole.cpp LnxThreads.cpp support.c
+pcsx2_SOURCES =  \
+interface.c support.c LnxMain.cpp LnxThreads.cpp LnxConsole.cpp LnxSysExec.cpp \
+AboutDlg.cpp ConfigDlg.cpp DebugDlg.cpp AdvancedDlg.cpp CpuDlg.cpp HacksDlg.cpp Pref.cpp \
+GtkGui.h Linux.h LnxMain.h ConfigDlg.h DebugDlg.h interface.h callbacks.h memzero.h support.h
 
 pcsx2_LDFLAGS =
 

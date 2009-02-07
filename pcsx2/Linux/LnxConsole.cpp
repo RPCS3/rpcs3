@@ -23,14 +23,14 @@
 // Linux Note : The Linux Console is pretty simple.  It just dumps to the stdio!
 // (no console open/close/title stuff tho, so those functions are dummies)
 
-//  Fixme - A lot of extra \ns are being added in here somewhere. I think it's 
+//  Fixme - A lot of extra \ns are being added in here somewhere. I think it's
 // partially in SetColor/ClearColor, as colored lines have more extra \ns then the other
 // lines.
 namespace Console
 {
-	static const char* tbl_color_codes[] = 
-	{
-		"\033[30m"		// black
+static const char* tbl_color_codes[] =
+{
+	"\033[30m"		// black
 	,	"\033[31m"		// red
 	,	"\033[32m"		// green
 	,	"\033[33m"		// yellow
@@ -38,108 +38,108 @@ namespace Console
 	,	"\033[35m"		// magenta
 	,	"\033[36m"		// cyan
 	,	"\033[37m"		// white!
-	};
+};
 
-	void SetTitle( const string& title )
+void SetTitle(const string& title)
+{
+}
+
+void Open()
+{
+}
+
+void Close()
+{
+}
+
+__forceinline bool __fastcall Newline()
+{
+	if (Config.PsxOut)
+		puts("\n");
+
+	if (emuLog != NULL)
 	{
+		fputs("\n", emuLog);
+		fflush(emuLog);
 	}
 
-	void Open()
-	{
-	}
+	return false;
+}
 
-	void Close()
-	{
-	}
+__forceinline bool __fastcall Write(const char* fmt)
+{
+	if (Config.PsxOut)
+		puts(fmt);
 
-	__forceinline bool __fastcall Newline()
-	{
-		if (Config.PsxOut)
-			puts( "\n" );
+	if (emuLog != NULL)
+		fputs(fmt, emuLog);
 
-		if (emuLog != NULL)
-		{
-			fputs("\n", emuLog);
-			fflush( emuLog );
-		}
+	return false;
+}
 
-		return false;
-	}
+void __fastcall SetColor(Colors color)
+{
+	Write(tbl_color_codes[color]);
+}
 
-	__forceinline bool __fastcall Write( const char* fmt )
-	{
-		if (Config.PsxOut)
-			puts( fmt );
-
-		if (emuLog != NULL)
-			fputs(fmt, emuLog);
-
-		return false;
-	}
-	
-	void __fastcall SetColor( Colors color )
-	{
-		Write( tbl_color_codes[color] );
-	}
-
-	void ClearColor()
-	{
-		Write( COLOR_RESET );
-	}
+void ClearColor()
+{
+	Write(COLOR_RESET);
+}
 }
 
 namespace Msgbox
-{	
-	bool Alert (const char* fmt)
+{
+bool Alert(const char* fmt)
+{
+	GtkWidget *dialog;
+
+	if (!UseGui)
 	{
-		GtkWidget *dialog;
-		
-		if (!UseGui) 
-		{ 
-			Console::Error( fmt ); 
-			return false; 
-		}
-
-
-		dialog = gtk_message_dialog_new (GTK_WINDOW(MainWindow),
-                                  GTK_DIALOG_DESTROY_WITH_PARENT,
-                                  GTK_MESSAGE_ERROR,
-                                  GTK_BUTTONS_OK, fmt);
-		gtk_dialog_run (GTK_DIALOG (dialog));
-		gtk_widget_destroy (dialog);
-		
-		return false; 
+		Console::Error(fmt);
+		return false;
 	}
 
-	bool Alert(const char* fmt, VARG_PARAM dummy, ...)
+
+	dialog = gtk_message_dialog_new(GTK_WINDOW(MainWindow),
+	                                GTK_DIALOG_DESTROY_WITH_PARENT,
+	                                GTK_MESSAGE_ERROR,
+	                                GTK_BUTTONS_OK, fmt);
+	gtk_dialog_run(GTK_DIALOG(dialog));
+	gtk_widget_destroy(dialog);
+
+	return false;
+}
+
+bool Alert(const char* fmt, VARG_PARAM dummy, ...)
+{
+	GtkWidget *dialog;
+	string msg;
+	va_list list;
+
+	va_start(list, dummy);
+	vssprintf(msg, fmt, list);
+	va_end(list);
+
+	// fixme: using NULL terminators on std::string might work, but are technically "incorrect."
+	// This should use one of the std::string trimming functions instead.
+	if (msg[msg.length()-1] == '\n')
+		msg[msg.length()-1] = 0;
+
+	if (!UseGui)
 	{
-		GtkWidget *dialog;
-		string msg;
-		va_list list;
-		
-		va_start(list, dummy);
-		vssprintf(msg, fmt, list);
-		va_end(list);
-
-		// fixme: using NULL terminators on std::string might work, but are technically "incorrect."
-		// This should use one of the std::string trimming functions instead.
-		if (msg[msg.length()-1] == '\n')
-			msg[msg.length()-1] = 0;
-
-		if (!UseGui) 
-		{ 
-			Console::Error( msg.c_str() ); 
-			return false; 
-		}
-		
-		dialog = gtk_message_dialog_new (GTK_WINDOW(MainWindow),
-                                  GTK_DIALOG_DESTROY_WITH_PARENT,
-                                  GTK_MESSAGE_ERROR,
-                                  GTK_BUTTONS_OK, msg.c_str());
-		gtk_dialog_run (GTK_DIALOG (dialog));
-		gtk_widget_destroy (dialog);
-		
-		return false; 
+		Console::Error(msg.c_str());
+		return false;
 	}
+
+	dialog = gtk_message_dialog_new(GTK_WINDOW(MainWindow),
+	                                GTK_DIALOG_DESTROY_WITH_PARENT,
+	                                GTK_MESSAGE_ERROR,
+	                                GTK_BUTTONS_OK, msg.c_str());
+	gtk_dialog_run(GTK_DIALOG(dialog));
+	gtk_widget_destroy(dialog);
+
+	return false;
+}
 }
 

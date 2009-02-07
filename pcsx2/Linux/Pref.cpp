@@ -5,12 +5,12 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2 of the License, or
  *  (at your option) any later version.
- *  
+ *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
- *  
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
@@ -21,14 +21,14 @@
 FILE *pref_file;
 char *data;
 
-static void SetValue( const char *name, char *var)
+static void SetValue(const char *name, char *var)
 {
-	fprintf (pref_file,"%s = %s\n", name, var);
+	fprintf(pref_file, "%s = %s\n", name, var);
 }
 
-static void SetValuel( const char *name, s32 var)
+static void SetValuel(const char *name, s32 var)
 {
-	fprintf (pref_file,"%s = %x\n", name, var);
+	fprintf(pref_file, "%s = %x\n", name, var);
 }
 
 #define GetValue(name, var) {\
@@ -50,15 +50,16 @@ static void SetValuel( const char *name, s32 var)
 		if (*tmp != '\n') sscanf(tmp, "%x", &var); \
 	} \
 }
-	
-int LoadConfig() {
+
+int LoadConfig()
+{
 	struct stat buf;
 	int size;
-	
+
 	if (stat(cfgfile, &buf) == -1) return -1;
 	size = buf.st_size;
 
-	pref_file = fopen(cfgfile,"r");
+	pref_file = fopen(cfgfile, "r");
 	if (pref_file == NULL) return -1;
 
 	data = (char*)malloc(size);
@@ -85,7 +86,7 @@ int LoadConfig() {
 	GetValue("DEV9", Config.DEV9);
 	GetValue("USB",  Config.USB);
 	GetValue("FW",  Config.FW);
-	
+
 	GetValuel("Patch",      Config.Patch);
 #ifdef PCSX2_DEVBUILD
 	GetValuel("varLog", varLog);
@@ -93,7 +94,7 @@ int LoadConfig() {
 	GetValuel("Options", Config.Options);
 	GetValuel("Hacks",        Config.Hacks);
 	GetValuel("Fixes",        Config.GameFixes);
-	
+
 	GetValuel("CustomFps",      Config.CustomFps);
 	GetValuel("CustomFrameskip",      Config.CustomFrameSkip);
 	GetValuel("CustomConsecutiveFrames",      Config.CustomConsecutiveFrames);
@@ -104,11 +105,12 @@ int LoadConfig() {
 	GetValuel("sseVUMXCSR",    Config.sseVUMXCSR);
 	GetValuel("eeOptions",        Config.eeOptions);
 	GetValuel("vuOptions",   	    Config.vuOptions);
-	
+
 	free(data);
 
 #ifdef ENABLE_NLS
-	if (Config.Lang[0]) {
+	if (Config.Lang[0])
+	{
 		extern int _nl_msg_cat_cntr;
 
 		setenv("LANGUAGE", Config.Lang, 1);
@@ -121,9 +123,10 @@ int LoadConfig() {
 
 /////////////////////////////////////////////////////////
 
-void SaveConfig() {
+void SaveConfig()
+{
 
-	pref_file = fopen(cfgfile,"w");
+	pref_file = fopen(cfgfile, "w");
 	if (pref_file == NULL) return;
 
 	SetValue("Bios", Config.Bios);
@@ -143,12 +146,12 @@ void SaveConfig() {
 	SetValue("DEV9", Config.DEV9);
 	SetValue("USB",  Config.USB);
 	SetValue("FW",  Config.FW);
-	
+
 	SetValuel("Options",        Config.Options);
-	
+
 	// Remove Fast Branches hack for now:
 	Config.Hacks &= ~0x80;
-	
+
 	SetValuel("Hacks",        Config.Hacks);
 	SetValuel("Fixes",        Config.GameFixes);
 
@@ -163,7 +166,7 @@ void SaveConfig() {
 	SetValuel("sseVUMXCSR",        Config.sseVUMXCSR);
 	SetValuel("eeOptions",        Config.eeOptions);
 	SetValuel("vuOptions",   	    Config.vuOptions);
-	
+
 #ifdef PCSX2_DEVBUILD
 	SetValuel("varLog", varLog);
 #endif

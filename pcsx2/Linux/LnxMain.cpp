@@ -5,25 +5,23 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2 of the License, or
  *  (at your option) any later version.
- *  
+ *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
- *  
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
-
-#include <sys/mman.h>
-#include <sys/stat.h>
 
 #include "LnxMain.h"
 
 using namespace R5900;
 
 DIR *dir;
+GtkWidget *FileSel;
 
 #ifdef PCSX2_DEVBUILD
 TESTRUNARGS g_TestRun;
@@ -31,14 +29,8 @@ TESTRUNARGS g_TestRun;
 
 GtkWidget *MsgDlg;
 
-static int sinit=0;
-
-// These two status vars replace the old g_GameInProgress status var.
-
-bool g_ReturnToGui = false;			// set to exit the execution of the emulator and return control to the GUI
-bool g_EmulationInProgress = false;	// Set TRUE if a game is actively running (set to false on reset)
-
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
 	char *file = NULL;
 	char elfname[g_MaxPath];
 	int i = 1;
@@ -59,79 +51,101 @@ int main(int argc, char *argv[]) {
 	memset(&g_TestRun, 0, sizeof(g_TestRun));
 #endif
 
-	while(i < argc) {
+	while (i < argc)
+	{
 		char* token = argv[i++];
 
-		if( stricmp(token, "-help") == 0 || stricmp(token, "--help") == 0 || stricmp(token, "-h") == 0 ) {
+		if (stricmp(token, "-help") == 0 || stricmp(token, "--help") == 0 || stricmp(token, "-h") == 0)
+		{
 			//Msgbox::Alert( phelpmsg );
 			return 0;
 		}
-		else if( stricmp(token, "-efile") == 0 ) {
+		else if (stricmp(token, "-efile") == 0)
+		{
 			token = argv[i++];
-			if( token != NULL ) {
+			if (token != NULL)
+			{
 				efile = atoi(token);
 			}
 		}
-		else if( stricmp(token, "-nogui") == 0 ) {
+		else if (stricmp(token, "-nogui") == 0)
+		{
 			UseGui = FALSE;
 		}
-		else if( stricmp(token, "-loadgs") == 0 ) {
+		else if (stricmp(token, "-loadgs") == 0)
+		{
 			g_pRunGSState = argv[i++];
 		}
 #ifdef PCSX2_DEVBUILD
-		else if( stricmp(token, "-image") == 0 ) {
+		else if (stricmp(token, "-image") == 0)
+		{
 			g_TestRun.pimagename = argv[i++];
 		}
-		else if( stricmp(token, "-log") == 0 ) {
+		else if (stricmp(token, "-log") == 0)
+		{
 			g_TestRun.plogname = argv[i++];
 		}
-		else if( stricmp(token, "-logopt") == 0 ) {
+		else if (stricmp(token, "-logopt") == 0)
+		{
 			token = argv[i++];
-			if( token != NULL ) {
-				if( token[0] == '0' && token[1] == 'x' ) token += 2;
+			if (token != NULL)
+			{
+				if (token[0] == '0' && token[1] == 'x') token += 2;
 				sscanf(token, "%x", &varLog);
 			}
 		}
-		else if( stricmp(token, "-frame") == 0 ) {
+		else if (stricmp(token, "-frame") == 0)
+		{
 			token = argv[i++];
-			if( token != NULL ) {
+			if (token != NULL)
+			{
 				g_TestRun.frame = atoi(token);
 			}
 		}
-		else if( stricmp(token, "-numimages") == 0 ) {
+		else if (stricmp(token, "-numimages") == 0)
+		{
 			token = argv[i++];
-			if( token != NULL ) {
+			if (token != NULL)
+			{
 				g_TestRun.numimages = atoi(token);
 			}
 		}
-		else if( stricmp(token, "-jpg") == 0 ) {
+		else if (stricmp(token, "-jpg") == 0)
+		{
 			g_TestRun.jpgcapture = 1;
 		}
-		else if( stricmp(token, "-gs") == 0 ) {
+		else if (stricmp(token, "-gs") == 0)
+		{
 			token = argv[i++];
 			g_TestRun.pgsdll = token;
 		}
-		else if( stricmp(token, "-cdvd") == 0 ) {
+		else if (stricmp(token, "-cdvd") == 0)
+		{
 			token = argv[i++];
 			g_TestRun.pcdvddll = token;
 		}
-		else if( stricmp(token, "-spu") == 0 ) {
+		else if (stricmp(token, "-spu") == 0)
+		{
 			token = argv[i++];
 			g_TestRun.pspudll = token;
 		}
-		else if( stricmp(token, "-test") == 0 ) {
+		else if (stricmp(token, "-test") == 0)
+		{
 			g_TestRun.enabled = 1;
 		}
 #endif
-		else if( stricmp(token, "-pad") == 0 ) {
+		else if (stricmp(token, "-pad") == 0)
+		{
 			token = argv[i++];
 			printf("-pad ignored\n");
 		}
-		else if( stricmp(token, "-loadgs") == 0 ) {
+		else if (stricmp(token, "-loadgs") == 0)
+		{
 			token = argv[i++];
 			g_pRunGSState = token;
 		}
-		else {
+		else
+		{
 			file = token;
 			printf("opening file %s\n", file);
 		}
@@ -143,16 +157,19 @@ int main(int argc, char *argv[]) {
 #endif
 
 	// make gtk thread safe if using MTGS
-	if( CHECK_MULTIGS ) {
+	if (CHECK_MULTIGS)
+	{
 		g_thread_init(NULL);
 		gdk_threads_init();
 	}
 
-	if (UseGui) {
+	if (UseGui)
+	{
 		gtk_init(NULL, NULL);
 	}
-	
-	if (LoadConfig() == -1) {
+
+	if (LoadConfig() == -1)
+	{
 
 		memset(&Config, 0, sizeof(Config));
 		strcpy(Config.BiosDir,    DEFAULT_BIOS_DIR "/");
@@ -168,9 +185,10 @@ int main(int argc, char *argv[]) {
 		return 0;
 	}
 
-	InitLanguages(); 
-	
-	if( Config.PsxOut ) {
+	InitLanguages();
+
+	if (Config.PsxOut)
+	{
 		// output the help commands
 		Console::WriteLn("\tF1 - save state");
 		Console::WriteLn("\t(Shift +) F2 - cycle states");
@@ -186,14 +204,16 @@ int main(int argc, char *argv[]) {
 	if (!SysInit()) return 1;
 
 #ifdef PCSX2_DEVBUILD
-	if( g_pRunGSState ) {
+	if (g_pRunGSState)
+	{
 		LoadGSState(g_pRunGSState);
 		SysClose();
 		return 0;
 	}
 #endif
 
-	if (UseGui && (file == NULL)) {
+	if (UseGui && (file == NULL))
+	{
 		StartGui();
 		return 0;
 	}
@@ -205,7 +225,7 @@ int main(int argc, char *argv[]) {
 	FixCPUState();
 	cpuExecuteBios();
 	if (file) strcpy(elfname, file);
-	if (!efile) efile=GetPS2ElfName(elfname);
+	if (!efile) efile = GetPS2ElfName(elfname);
 	loadElfFile(elfname);
 
 	ExecuteCpu();
@@ -213,33 +233,38 @@ int main(int argc, char *argv[]) {
 	return 0;
 }
 
-void InitLanguages() {
+void InitLanguages()
+{
 	char *lang;
 	int i = 1;
-	
-	if (Config.Lang[0] == 0) {
+
+	if (Config.Lang[0] == 0)
+	{
 		strcpy(Config.Lang, "en");
 	}
 
 	langs = (_langs*)malloc(sizeof(_langs));
 	strcpy(langs[0].lang, "en");
 	dir = opendir(LANGS_DIR);
-	
-	while ((lang = GetLanguageNext()) != NULL) {
-		langs = (_langs*)realloc(langs, sizeof(_langs)*(i+1));
+
+	while ((lang = GetLanguageNext()) != NULL)
+	{
+		langs = (_langs*)realloc(langs, sizeof(_langs) * (i + 1));
 		strcpy(langs[i].lang, lang);
 		i++;
 	}
-	
+
 	CloseLanguages();
 	langsMax = i;
 }
 
-char *GetLanguageNext() {
+char *GetLanguageNext()
+{
 	struct dirent *ent;
 
 	if (dir == NULL) return NULL;
-	for (;;) {
+	for (;;)
+	{
 		ent = readdir(dir);
 		if (ent == NULL) return NULL;
 
@@ -251,251 +276,354 @@ char *GetLanguageNext() {
 	return ent->d_name;
 }
 
-void CloseLanguages() {
+void CloseLanguages()
+{
 	if (dir) closedir(dir);
 }
 
-void ChangeLanguage(char *lang) {
-    strcpy(Config.Lang, lang);
+void ChangeLanguage(char *lang)
+{
+	strcpy(Config.Lang, lang);
 	SaveConfig();
 }
 
-/* Quick macros for checking shift, control, alt, and caps lock. */
-#define SHIFT_EVT(evt) ((evt == XK_Shift_L) || (evt == XK_Shift_R))
-#define CTRL_EVT(evt) ((evt == XK_Control_L) || (evt == XK_Control_L))
-#define ALT_EVT(evt) ((evt == XK_Alt_L) || (evt == XK_Alt_R))
-#define CAPS_LOCK_EVT(evt) (evt == XK_Caps_Lock)
-
-void KeyEvent(keyEvent* ev) {
-	static int shift = 0;
-
-	if (ev == NULL) return;
-	
-	if( GSkeyEvent != NULL ) GSkeyEvent(ev);
-
-	if (ev->evt == KEYPRESS)
-	{
-		if (SHIFT_EVT(ev->key)) 
-			shift = 1;
-		if (CAPS_LOCK_EVT(ev->key))
-		{
-			//Set up anything we want to happen while caps lock is down.
-			//Config_hacks_backup = Config.Hacks;
-		}
-		
-		switch (ev->key)
-		{
-			case XK_F1: case XK_F2:  case XK_F3:  case XK_F4:
-			case XK_F5: case XK_F6:  case XK_F7:  case XK_F8:
-			case XK_F9: case XK_F10: case XK_F11: case XK_F12:
-				try
-				{
-					ProcessFKeys(ev->key-XK_F1 + 1, shift);
-				}
-				catch( Exception::CpuStateShutdown& )
-				{
-					// Woops!  Something was unrecoverable.  Bummer.
-					// Let's give the user a RunGui!
-
-					g_EmulationInProgress = false;
-					g_ReturnToGui = true;
-				}
-				break;
-
-			case XK_Escape:
-				signal(SIGINT, SIG_DFL);
-				signal(SIGPIPE, SIG_DFL);
-
-				#ifdef PCSX2_DEVBUILD
-				if( g_SaveGSStream >= 3 ) {
-					g_SaveGSStream = 4;// gs state
-					break;
-				}
-				#endif
-
-				ClosePlugins();
-				if (!UseGui) exit(0);
-
-				// fixme: The GUI is now capable of recieving control back from the
-				// emulator.  Which means that when I set g_ReturnToGui here, the emulation
-				// loop in ExecuteCpu() will exit.  You should be able to set it up so
-				// that it returns control to the existing GTK event loop, instead of
-				// always starting a new one via RunGui().  (but could take some trial and
-				// error)  -- (air)
-				g_ReturnToGui = true;
-				RunGui();
-				break;
-
-			default:
-				GSkeyEvent(ev);
-				break;
-		}
-	}
-	else if (ev->evt == KEYRELEASE)
-	{
-		if (SHIFT_EVT(ev->key)) 
-			shift = 0;
-		if (CAPS_LOCK_EVT(ev->key))
-		{
-			//Release caps lock
-			//Config_hacks_backup = Config.Hacks;
-		}
-	}
-	
-	return;
-}
-
-void OnMsg_Ok() {
+void OnMsg_Ok()
+{
 	gtk_widget_destroy(MsgDlg);
 	gtk_main_quit();
 }
 
-void SysMessage(const char *fmt, ...) {
-	va_list list;
-	char msg[512];
 
-	va_start(list,fmt);
-	vsnprintf(msg,511,fmt,list);
-	msg[511] = '\0';
-	va_end(list);
-
-	Msgbox::Alert(msg);
+void On_Dialog_Cancelled(GtkButton* button, gpointer user_data)
+{
+	gtk_widget_destroy((GtkWidget*)gtk_widget_get_toplevel((GtkWidget*)button));
+	gtk_widget_set_sensitive(MainWindow, TRUE);
+	gtk_main_quit();
 }
 
-bool SysInit() 
+void StartGui()
 {
-	if( sinit ) return true;
-	sinit = true;
-	
-	mkdir(SSTATES_DIR, 0755);
-	mkdir(MEMCARDS_DIR, 0755);
+	GtkWidget *Menu;
+	GtkWidget *Item;
 
-	mkdir(LOGS_DIR, 0755);
+	u32 i;
 
-#ifdef PCSX2_DEVBUILD
-	if( g_TestRun.plogname != NULL )
-		emuLog = fopen(g_TestRun.plogname, "w");
-	if( emuLog == NULL ) 
-		emuLog = fopen(LOGS_DIR "/emuLog.txt","wb");
+	add_pixmap_directory(".pixmaps");
+	MainWindow = create_MainWindow();
+
+	if (SVN_REV != 0)
+		gtk_window_set_title(GTK_WINDOW(MainWindow), "PCSX2 "PCSX2_VERSION" "SVN_REV);
+	else
+		gtk_window_set_title(GTK_WINDOW(MainWindow), "PCSX2 "PCSX2_VERSION);
+
+	// status bar
+	pStatusBar = gtk_statusbar_new();
+	gtk_box_pack_start(GTK_BOX(lookup_widget(MainWindow, "status_box")), pStatusBar, TRUE, TRUE, 0);
+	gtk_widget_show(pStatusBar);
+
+	gtk_statusbar_push(GTK_STATUSBAR(pStatusBar), 0,
+	                   "F1 - save, F2 - next state, Shift+F2 - prev state, F3 - load, F8 - snapshot");
+
+	// add all the languages
+	Item = lookup_widget(MainWindow, "GtkMenuItem_Language");
+	Menu = gtk_menu_new();
+	gtk_menu_item_set_submenu(GTK_MENU_ITEM(Item), Menu);
+
+	for (i = 0; i < langsMax; i++)
+	{
+		Item = gtk_check_menu_item_new_with_label(ParseLang(langs[i].lang));
+		gtk_widget_show(Item);
+		gtk_container_add(GTK_CONTAINER(Menu), Item);
+		gtk_check_menu_item_set_show_toggle(GTK_CHECK_MENU_ITEM(Item), TRUE);
+		if (!strcmp(Config.Lang, langs[i].lang))
+			gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(Item), TRUE);
+
+		gtk_signal_connect(GTK_OBJECT(Item), "activate",
+		                   GTK_SIGNAL_FUNC(OnLanguage),
+		                   (gpointer)(uptr)i);
+	}
+
+	// check the appropriate menu items
+	gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(lookup_widget(MainWindow, "enable_console1")), Config.PsxOut);
+	gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(lookup_widget(MainWindow, "enable_patches1")), Config.Patch);
+
+	// disable anything not implemented or not working properly.
+	gtk_widget_set_sensitive(GTK_WIDGET(lookup_widget(MainWindow, "patch_browser1")), FALSE);
+	gtk_widget_set_sensitive(GTK_WIDGET(lookup_widget(MainWindow, "patch_finder2")), FALSE);
+#ifndef PCSX2_DEVBUILD
+	gtk_widget_set_sensitive(GTK_WIDGET(lookup_widget(MainWindow, "GtkMenuItem_Logging")), FALSE);
 #endif
 
-	if( emuLog != NULL )
-		setvbuf(emuLog, NULL, _IONBF, 0);
+	gtk_widget_show_all(MainWindow);
+	gtk_window_activate_focus(GTK_WINDOW(MainWindow));
+	gtk_main();
+}
 
-	PCSX2_MEM_PROTECT_BEGIN();
-	SysDetect();
-	if( !SysAllocateMem() )
-		return false;	// critical memory allocation failure;
+void RunGui()
+{
+	StartGui();
+}
 
-	SysAllocateDynarecs();
-	PCSX2_MEM_PROTECT_END();
+void FixCPUState(void)
+{
+	//Config.sseMXCSR = LinuxsseMXCSR;
+	//Config.sseVUMXCSR = LinuxsseVUMXCSR;
+	SetCPUState(Config.sseMXCSR, Config.sseVUMXCSR);
+}
 
-	while (LoadPlugins() == -1) {
-		if (Pcsx2Configure() == FALSE)
+void OnDestroy(GtkObject *object, gpointer user_data) {}
+
+gboolean OnDelete(GtkWidget       *widget, GdkEvent *event, gpointer user_data)
+{
+	pcsx2_exit();
+	return (FALSE);
+}
+int Pcsx2Configure()
+{
+	if (!UseGui) return 0;
+
+	configuringplug = TRUE;
+	MainWindow = NULL;
+	OnConf_Conf(NULL, 0);
+	configuringplug = FALSE;
+
+	return applychanges;
+}
+
+void OnLanguage(GtkMenuItem *menuitem, gpointer user_data)
+{
+	ChangeLanguage(langs[(int)(uptr)user_data].lang);
+	gtk_widget_destroy(MainWindow);
+	gtk_main_quit();
+	while (gtk_events_pending()) gtk_main_iteration();
+	StartGui();
+}
+
+void OnFile_RunCD(GtkMenuItem *menuitem, gpointer user_data)
+{
+	safe_free(g_RecoveryState);
+	ResetPlugins();
+	RunExecute(NULL);
+}
+
+void OnRunElf_Ok(GtkButton* button, gpointer user_data)
+{
+	gchar *File;
+
+	File = (gchar*)gtk_file_selection_get_filename(GTK_FILE_SELECTION(FileSel));
+	strcpy(elfname, File);
+	gtk_widget_destroy(FileSel);
+
+	RunExecute(elfname);
+}
+
+void OnRunElf_Cancel(GtkButton* button, gpointer user_data)
+{
+	gtk_widget_destroy(FileSel);
+}
+
+void OnFile_LoadElf(GtkMenuItem *menuitem, gpointer user_data)
+{
+	GtkWidget *Ok, *Cancel;
+
+	FileSel = gtk_file_selection_new("Select Psx Elf File");
+
+	Ok = GTK_FILE_SELECTION(FileSel)->ok_button;
+	gtk_signal_connect(GTK_OBJECT(Ok), "clicked", GTK_SIGNAL_FUNC(OnRunElf_Ok), NULL);
+	gtk_widget_show(Ok);
+
+	Cancel = GTK_FILE_SELECTION(FileSel)->cancel_button;
+	gtk_signal_connect(GTK_OBJECT(Cancel), "clicked", GTK_SIGNAL_FUNC(OnRunElf_Cancel), NULL);
+	gtk_widget_show(Cancel);
+
+	gtk_widget_show(FileSel);
+	gdk_window_raise(FileSel->window);
+}
+
+void pcsx2_exit()
+{
+	DIR *dir;
+	struct dirent *ent;
+	void *Handle;
+	char plugin[g_MaxPath];
+
+	// with this the problem with plugins that are linked with the pthread
+	// library is solved
+
+	dir = opendir(Config.PluginsDir);
+	if (dir != NULL)
+	{
+		while ((ent = readdir(dir)) != NULL)
 		{
-			Msgbox::Alert("Configuration failed. Exiting.");
-			exit(1);
+			sprintf(plugin, "%s%s", Config.PluginsDir, ent->d_name);
+
+			if (strstr(plugin, ".so") == NULL) continue;
+			Handle = dlopen(plugin, RTLD_NOW);
+			if (Handle == NULL) continue;
 		}
 	}
-	
-	return true;
-}
 
-void SysRestorableReset()
-{
-	// already reset? and saved?
-	if( !g_EmulationInProgress ) return;
-	if( g_RecoveryState != NULL ) return;
+	printf("PCSX2 Quitting\n");
 
-	try
+	if (UseGui)
 	{
-		g_RecoveryState = new MemoryAlloc<u8>( "Memory Savestate Recovery" );
-		memSavingState( *g_RecoveryState ).FreezeAll();
-		cpuShutdown();
-		g_EmulationInProgress = false;
+		gtk_main_quit();
+		SysClose();
+		gtk_exit(0);
 	}
-	catch( Exception::RuntimeError& ex )
+	else
 	{
-		Msgbox::Alert(
-			"Pcsx2 gamestate recovery failed. Some options may have been reverted to protect your game's state.\n"
-			"Error: %s", params ex.cMessage() );
-		safe_delete( g_RecoveryState );
+		SysClose();
+		exit(0);
 	}
 }
 
-void SysReset()
+void SignalExit(int sig)
 {
-	if (!sinit) return;
-
-	g_EmulationInProgress = false;
-	safe_free( g_RecoveryState );
-
-	ResetPlugins();
-
-	ElfCRC = 0;
-}
-
-void SysClose() {
-	if (sinit == 0) return;
-	cpuShutdown();
 	ClosePlugins();
-	ReleasePlugins();
+	pcsx2_exit();
+}
 
-	if (emuLog != NULL) 
+void OnFile_Exit(GtkMenuItem *menuitem, gpointer user_data)
+{
+	pcsx2_exit();
+}
+
+void OnEmu_Run(GtkMenuItem *menuitem, gpointer user_data)
+{
+	if (g_EmulationInProgress)
+		ExecuteCpu();
+	else
+		RunExecute(NULL, true);	// boots bios if no savestate is to be recovered
+
+}
+
+void OnEmu_Reset(GtkMenuItem *menuitem, gpointer user_data)
+{
+	SysReset();
+}
+
+
+void ResetMenuSlots(GtkMenuItem *menuitem, gpointer user_data)
+{
+	GtkWidget *Item;
+	char str[g_MaxPath];
+	int i;
+
+	for (i = 0; i < 5; i++)
 	{
-        fclose(emuLog);
-        emuLog = NULL;
+		sprintf(str, "GtkMenuItem_LoadSlot%d", i + 1);
+		Item = lookup_widget(MainWindow, str);
+		if (Slots[i] == -1)
+			gtk_widget_set_sensitive(Item, FALSE);
+		else
+			gtk_widget_set_sensitive(Item, TRUE);
 	}
-	sinit=0;
 }
 
-void SysPrintf(const char *fmt, ...) {
-	va_list list;
-	char msg[512];
+/*void UpdateMenuSlots(GtkMenuItem *menuitem, gpointer user_data) {
+	char str[g_MaxPath];
+	int i = 0;
 
-	va_start(list,fmt);
-	vsnprintf(msg,511,fmt,list);
-	msg[511] = '\0';
-	va_end(list);
+	for (i=0; i<5; i++) {
+		sprintf(str, SSTATES_DIR "/%8.8X.%3.3d", ElfCRC, i);
+		Slots[i] = CheckState(str);
+	}
+}*/
 
-	Console::Write( msg );
-}
-
-void *SysLoadLibrary(const char *lib) {
-	return dlopen(lib, RTLD_NOW);
-}
-
-void *SysLoadSym(void *lib, const char *sym) {
-	return dlsym(lib, sym);
-}
-
-const char *SysLibError() {
-	return dlerror();
-}
-
-void SysCloseLibrary(void *lib) {
-	dlclose(lib);
-}
-
-void SysUpdate() {
-	KeyEvent(PAD1keyEvent());
-	KeyEvent(PAD2keyEvent());
-}
-
-void SysRunGui() {
-	RunGui();
-}
-
-void *SysMmap(uptr base, u32 size) 
+//2002-09-28 (Florin)
+void OnArguments_Ok(GtkButton *button, gpointer user_data)
 {
-	u8 *Mem;
-	Mem = mmap((uptr*)base, size, PROT_EXEC | PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
-	if (Mem == MAP_FAILED) Console::Notice("Mmap Failed!");
-	
-	return Mem;
+	char *str;
+
+	str = (char*)gtk_entry_get_text(GTK_ENTRY(widgetCmdLine));
+	memcpy(args, str, g_MaxPath);
+
+	gtk_widget_destroy(CmdLine);
+	gtk_widget_set_sensitive(MainWindow, TRUE);
+	gtk_main_quit();
 }
 
-void SysMunmap(uptr base, u32 size) 
+void OnEmu_Arguments(GtkMenuItem *menuitem, gpointer user_data)
 {
-	munmap((uptr*)base, size);
+	GtkWidget *widgetCmdLine;
+
+	CmdLine = create_CmdLine();
+	gtk_window_set_title(GTK_WINDOW(CmdLine), _("Program arguments"));
+
+	widgetCmdLine = lookup_widget(CmdLine, "GtkEntry_dCMDLINE");
+
+	gtk_entry_set_text(GTK_ENTRY(widgetCmdLine), args);
+	gtk_widget_show_all(CmdLine);
+	gtk_widget_set_sensitive(MainWindow, FALSE);
+	gtk_main();
 }
+
+void OnLogging_Ok(GtkButton *button, gpointer user_data)
+{
+#ifdef PCSX2_DEVBUILD
+	GtkWidget *Btn;
+	char str[32];
+	int i, ret;
+
+
+	for (i = 0; i < 32; i++)
+	{
+		if (((i > 16) && (i < 20)) || (i == 29))
+			continue;
+
+		sprintf(str, "Log%d", i);
+		Btn = lookup_widget(LogDlg, str);
+		ret = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(Btn));
+		if (ret) varLog |= 1 << i;
+		else varLog &= ~(1 << i);
+	}
+
+	SaveConfig();
+#endif
+
+	gtk_widget_destroy(LogDlg);
+	gtk_widget_set_sensitive(MainWindow, TRUE);
+	gtk_main_quit();
+}
+
+void OnDebug_Logging(GtkMenuItem *menuitem, gpointer user_data)
+{
+	GtkWidget *Btn;
+	char str[32];
+	int i;
+
+	LogDlg = create_Logging();
+
+
+	for (i = 0; i < 32; i++)
+	{
+		if (((i > 16) && (i < 20)) || (i == 29))
+			continue;
+
+		sprintf(str, "Log%d", i);
+		Btn = lookup_widget(LogDlg, str);
+		gtk_toggle_button_set_state(GTK_TOGGLE_BUTTON(Btn), varLog & (1 << i));
+	}
+
+	gtk_widget_show_all(LogDlg);
+	gtk_widget_set_sensitive(MainWindow, FALSE);
+	gtk_main();
+}
+
+void on_patch_browser1_activate(GtkMenuItem *menuitem, gpointer user_data) {}
+
+void on_patch_finder2_activate(GtkMenuItem *menuitem, gpointer user_data) {}
+
+void on_enable_console1_activate(GtkMenuItem *menuitem, gpointer user_data)
+{
+	Config.PsxOut = (int)gtk_check_menu_item_get_active((GtkCheckMenuItem*)menuitem);
+	SaveConfig();
+}
+
+void on_enable_patches1_activate(GtkMenuItem *menuitem, gpointer user_data)
+{
+	Config.Patch = (int)gtk_check_menu_item_get_active((GtkCheckMenuItem*)menuitem);
+	SaveConfig();
+}
+

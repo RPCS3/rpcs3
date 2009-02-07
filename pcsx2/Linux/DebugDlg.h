@@ -15,25 +15,26 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
- 
- #ifndef __DEBUGDLG_H__
+
+#ifndef __DEBUGDLG_H__
 #define __DEBUGDLG_H__
 
 #include "Linux.h"
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
 #include "support.h"
 #include "callbacks.h"
 #include "interface.h"
-	
+
 #ifdef __cplusplus
 }
 #endif
 #include "R3000A.h"
 #include "IopMem.h"
-	
+
 
 GtkWidget *ListDV;
 GtkListStore *ListDVModel;

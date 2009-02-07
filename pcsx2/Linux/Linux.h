@@ -19,7 +19,7 @@
 #ifndef __LINUX_H__
 #define __LINUX_H__
 
-#include <stdio.h> 
+#include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -35,7 +35,7 @@
 
 
 #include <sys/time.h>
-#include <pthread.h> 
+#include <pthread.h>
 
 #include <X11/keysym.h>
 #include <gtk/gtk.h>
@@ -54,19 +54,31 @@
 #include "x86/ix86/ix86.h"
 #include "x86/iR5900.h"
 
+ #ifdef __cplusplus
+extern "C"
+{
+#endif
+
+#include "support.h"
+#include "callbacks.h"
+#include "interface.h"
+
+#ifdef __cplusplus
+}
+#endif
+
 /* Misc.c */
 extern void vu0Shutdown();
 extern void vu1Shutdown();
 extern void SaveConfig();
 
 extern bool UseGui;
-	
+
 extern int efile;
 extern int g_SaveGSStream;
 extern int g_ZeroGSOptions;
 extern void FixCPUState(void);
-	
-/* LnxMain */
+
 extern void InitLanguages();
 extern char *GetLanguageNext();
 extern void CloseLanguages();
@@ -75,24 +87,23 @@ extern void StartGui();
 extern void RunGui();
 extern int Pcsx2Configure();
 extern GtkWidget *CpuDlg;
-extern void SysMessage(const char *fmt, ...);
 
-/* Config.c */
 extern int LoadConfig();
 extern void SaveConfig();
 
-/* GtkGui */
 extern void init_widgets();
 extern MemoryAlloc<u8>* g_RecoveryState;
 extern void SysRestorableReset();
 extern void SysDetect();
-extern void RunExecute( const char* elf_file, bool use_bios = false);
+void SignalExit(int sig);
+extern void RunExecute(const char* elf_file, bool use_bios = false);
 extern void ExecuteCpu();
 
 extern bool g_ReturnToGui;			// set to exit the execution of the emulator and return control to the GUI
 extern bool g_EmulationInProgress;	// Set TRUE if a game is actively running (set to false on reset)
 
-typedef struct {
+typedef struct
+{
 	char lang[g_MaxPath];
 } _langs;
 
@@ -127,7 +138,7 @@ char cfgfile[g_MaxPath];
 
 int Config_hacks_backup;
 
-#define is_checked(main_widget, widget_name) (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lookup_widget(main_widget, widget_name)))) 
+#define is_checked(main_widget, widget_name) (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lookup_widget(main_widget, widget_name))))
 #define set_checked(main_widget,widget_name, state) gtk_toggle_button_set_state(GTK_TOGGLE_BUTTON(lookup_widget(main_widget, widget_name)), state)
 
 #define set_flag(v, flag, value) if (value == TRUE) v |= flag; else v &= flag;
@@ -136,22 +147,23 @@ int Config_hacks_backup;
 /*static __forceinline void print_flags(char *name, u32 num, char *flag_names[16])
 {
 	int i;
-	
+
 	DevCon::WriteLn("%s:", name);
-	
+
 	if (flag_names != NULL)
 	{
 		for(i=0; i<=15; i++)
 			DevCon::WriteLn("%s %x: %x", params flag_names[i], (1<<i), get_flag(num, i));
 	}
-	else 
+	else
 	{
 		for(i=0; i<=15; i++)
 			DevCon::WriteLn("%x: %x", params (1<<i), get_flag(num, i));
 	}
 } */
 
-char ee_log_names[17][32] = {
+char ee_log_names[17][32] =
+{
 	"Cpu Log",
 	"Mem Log",
 	"HW Log",
@@ -168,9 +180,11 @@ char ee_log_names[17][32] = {
 	"Sif Log",
 	"IPU Log",
 	"VU Micro Log",
-	"RPC Log" };
-	
-char iop_log_names[9][32] = {
+	"RPC Log"
+};
+
+char iop_log_names[9][32] =
+{
 	"IOP Log",
 	"Mem Log",
 	"HW Log",
@@ -179,8 +193,9 @@ char iop_log_names[9][32] = {
 	"Pad Log",
 	"Gte Log",
 	"Cdr Log",
-	"GPU Log" };
-	
+	"GPU Log"
+};
+
 #define FLAG_VU_ADD_SUB 0x1
 #define FLAG_VU_CLIP 0x2
 #define FLAG_FPU_CLAMP 0x4
@@ -189,10 +204,10 @@ char iop_log_names[9][32] = {
 
 #define FLAG_VU_NO_OVERFLOW 0x2
 #define FLAG_VU_EXTRA_OVERFLOW 0x40
-	
+
 #define FLAG_FPU_NO_OVERFLOW 0x800
 #define FLAG_FPU_EXTRA_OVERFLOW 0x1000
-	
+
 #define FLAG_EE_2_SYNC 0x1
 #define FLAG_IOP_2_SYNC 0x10
 #define FLAG_TRIPLE_SYNC 0x20
