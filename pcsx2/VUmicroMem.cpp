@@ -67,11 +67,11 @@ void vuMicroCpuReset()
 
 static u8* m_vuAllMem = NULL;
 static const uint m_vuMemSize = 
-	0x4000+0x800 +				// VU0 memory and VU1 registers
 	0x1000 +					// VU0micro memory
+	0x4000+0x800 +				// VU0 memory and VU1 registers
 	0x4000 +					// VU1 memory
-	0x4000 +					// VU1micro memory
-	0x4000;						// HACKFIX (see below)
+	0x4000;/* +					// VU1micro memory
+	0x4000;		*/				// HACKFIX (see below)
 
 // HACKFIX!  (air)
 // The VIFdma1 has a nasty habit of transferring data into the 4k page of memory above
@@ -91,11 +91,12 @@ void vuMicroMemAlloc()
 	jASSUME( sizeof( VURegs ) <= 0x800 );
 
 	u8* curpos = m_vuAllMem;
-	VU0.Mem		= curpos; curpos += 0x4000;
-	g_pVU1		= (VURegs*)curpos; curpos += 0x800;
 	VU0.Micro	= curpos; curpos += 0x1000;
-	VU1.Mem		= curpos; curpos += 0x4000;
-	VU1.Micro	= curpos; //curpos += 0x4000;
+	VU0.Mem		= curpos; curpos += 0x4000;
+	g_pVU1		= (VURegs*)curpos; curpos += 0x800;	
+	VU1.Micro	= curpos; curpos += 0x4000;
+	VU1.Mem		= curpos; 
+	 //curpos += 0x4000;
 }
 
 void vuMicroMemShutdown()
@@ -132,8 +133,8 @@ void vuMicroMemReset()
 	   i guess it shouldn't be a problem,
 	   at least hope so :) (linuz)
 	*/
-	VU0.maxmem = 0x4400-4;
-	VU0.maxmicro = 4*1024-4;
+	VU0.maxmem = 0x4800-4; //We are allocating 0x800 for vu1 reg's
+	VU0.maxmicro = 0x1000-4;
 	VU0.vuExec = vu0Exec;
 	VU0.vifRegs = vif0Regs;
 
@@ -149,8 +150,8 @@ void vuMicroMemReset()
 	memzero_ptr<16*1024>(VU1.Mem);
 	memzero_ptr<16*1024>(VU1.Micro);
 
-	VU1.maxmem   = -1;//16*1024-4;
-	VU1.maxmicro = 16*1024-4;
+	VU1.maxmem   = 0x4000-4;//16*1024-4;
+	VU1.maxmicro = 0x4000-4;
 //	VU1.VF       = (VECTOR*)(VU0.Mem + 0x4000);
 //	VU1.VI       = (REG_VI*)(VU0.Mem + 0x4200);
 	VU1.vuExec   = vu1Exec;

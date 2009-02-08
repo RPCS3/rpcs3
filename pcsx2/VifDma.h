@@ -87,6 +87,8 @@ void vif0Init();
 void vif1Init();
 extern void  vif0Interrupt();
 extern void  vif1Interrupt();
+extern void  vif0TransInterrupt();
+extern void  vif1TransInterrupt();
 
 void vif0Write32(u32 mem, u32 value);
 void vif1Write32(u32 mem, u32 value);
