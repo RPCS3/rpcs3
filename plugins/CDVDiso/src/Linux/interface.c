@@ -51,6 +51,7 @@ create_Config (void)
   GtkWidget *hbuttonbox3;
   GtkWidget *GtkButton_Create;
   GtkWidget *GtkButton_CreateZ;
+  GtkWidget *checkBlockDump;
   GtkWidget *hbuttonbox1;
   GtkWidget *button1;
   GtkWidget *button2;
@@ -150,6 +151,10 @@ create_Config (void)
   gtk_container_add (GTK_CONTAINER (hbuttonbox3), GtkButton_CreateZ);
   GTK_WIDGET_SET_FLAGS (GtkButton_CreateZ, GTK_CAN_DEFAULT);
 
+  checkBlockDump = gtk_check_button_new_with_mnemonic (_("Create a dump of the running iso"));
+  gtk_widget_show (checkBlockDump);
+  gtk_box_pack_start (GTK_BOX (vbox1), checkBlockDump, FALSE, FALSE, 0);
+
   hbuttonbox1 = gtk_hbutton_box_new ();
   gtk_widget_show (hbuttonbox1);
   gtk_box_pack_start (GTK_BOX (vbox1), hbuttonbox1, TRUE, TRUE, 0);
@@ -211,6 +216,7 @@ create_Config (void)
   GLADE_HOOKUP_OBJECT (Config, hbuttonbox3, "hbuttonbox3");
   GLADE_HOOKUP_OBJECT (Config, GtkButton_Create, "GtkButton_Create");
   GLADE_HOOKUP_OBJECT (Config, GtkButton_CreateZ, "GtkButton_CreateZ");
+  GLADE_HOOKUP_OBJECT (Config, checkBlockDump, "checkBlockDump");
   GLADE_HOOKUP_OBJECT (Config, hbuttonbox1, "hbuttonbox1");
   GLADE_HOOKUP_OBJECT (Config, button1, "button1");
   GLADE_HOOKUP_OBJECT (Config, button2, "button2");

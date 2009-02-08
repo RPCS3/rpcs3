@@ -179,13 +179,14 @@ EXPORT_C(s32) CDVDopen(const char* pTitle)
 	if (BlockDump)
 	{
 		char fname_only[MAX_PATH];
-		char* p, *plast;
 
 #ifdef _WIN32
 		char fname[MAX_PATH], ext[MAX_PATH];
 		_splitpath(IsoFile, NULL, NULL, fname, ext);
 		_makepath(fname_only, NULL, NULL, fname, NULL);
 #else
+		char* p, *plast;
+		
 		plast = p = strchr(IsoFile, '/');
 		while (p != NULL)
 		{
@@ -193,11 +194,13 @@ EXPORT_C(s32) CDVDopen(const char* pTitle)
 			p = strchr(p + 1, '/');
 		}
 
+		// Lets not create dumps in the plugin directory.
+		strcpy(fname_only, "../");
 		if (plast != NULL) 
-			strcpy(fname_only, plast + 1);
+			strcat(fname_only, plast + 1);
 		else 
-			strcpy(fname_only, IsoFile);
-
+			strcat(fname_only, IsoFile);
+	
 		plast = p = strchr(fname_only, '.');
 		
 		while (p != NULL)

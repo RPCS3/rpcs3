@@ -35,6 +35,11 @@
 #include "CDVDiso.h"
 #include "Config.h"
 
+
+// Make it easier to check and set checkmarks in the gui
+#define is_checked(main_widget, widget_name) (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lookup_widget(main_widget, widget_name)))) 
+#define set_checked(main_widget,widget_name, state) gtk_toggle_button_set_state(GTK_TOGGLE_BUTTON(lookup_widget(main_widget, widget_name)), state)
+
 unsigned char Zbuf[CD_FRAMESIZE_RAW * 10 * 2];
 
 extern char *LibName;
@@ -162,6 +167,12 @@ void OnOk(GtkMenuItem * menuitem, gpointer userdata)
 	strcpy(IsoFile, tmp);
 	tmp = gtk_entry_get_text(GTK_ENTRY(CdEdit));
 	strcpy(CdDev, tmp);
+	
+	if is_checked(ConfDlg, "checkBlockDump")
+		BlockDump = 1;
+	else 
+		BlockDump = 0;
+	
 	SaveConf();
 	gtk_widget_destroy(ConfDlg);
 	gtk_main_quit();
@@ -323,8 +334,12 @@ void OnDecompress()
 	{
 		return;
 	}
-	if (Zmode == 1) c = s = buf.st_size / 6;
-	else c = s = (buf.st_size / 4) - 1;
+	
+	if (Zmode == 1) 
+		c = s = buf.st_size / 6;
+	else 
+		c = s = (buf.st_size / 4) - 1;
+	
 	f = fopen(table, "rb");
 	Ztable = (char*)malloc(buf.st_size);
 	fread(Ztable, 1, buf.st_size, f);
@@ -336,8 +351,10 @@ void OnDecompress()
 		return;
 	}
 
-	if (Zmode == 1) IsoFile[strlen(IsoFile) - 2] = 0;
-	else IsoFile[strlen(IsoFile) - 3] = 0;
+	if (Zmode == 1) 
+		IsoFile[strlen(IsoFile) - 2] = 0;
+	else 
+		IsoFile[strlen(IsoFile) - 3] = 0;
 
 	f = fopen(IsoFile, "wb");
 	if (f == NULL)
@@ -383,16 +400,20 @@ void OnDecompress()
 		}
 
 		size = CD_FRAMESIZE_RAW * blocks;
-		if (Zmode == 1) uncompress(cdbuffer, &size, Zbuf, ssize);
-		else BZ2_bzBuffToBuffDecompress(cdbuffer, (unsigned int*)&size, Zbuf, ssize, 0, 0);
+		if (Zmode == 1) 
+			uncompress(cdbuffer, &size, Zbuf, ssize);
+		else 
+			BZ2_bzBuffToBuffDecompress(cdbuffer, (unsigned int*)&size, Zbuf, ssize, 0, 0);
 
 		fwrite(cdbuffer, 1, size, f);
 
 		p++;
 
 		per = ((float)p / s);
+		
 		gtk_progress_bar_update(GTK_PROGRESS_BAR(Progress), per);
 		while (gtk_events_pending()) gtk_main_iteration();
+		
 		if (stop) break;
 	}
 	if (!stop) gtk_entry_set_text(GTK_ENTRY(Edit), IsoFile);
@@ -860,12 +881,16 @@ long CDRconfigure(void)
 	methodlist = NULL;
 	for (i = 0; i < 2; i++)
 		methodlist = g_list_append(methodlist, methods[i]);
+		
 	Method = lookup_widget(ConfDlg, "GtkCombo_Method");
 	gtk_combo_set_popdown_strings(GTK_COMBO(Method), methodlist);
 	if (strstr(IsoFile, ".Z") != NULL)
 		gtk_entry_set_text(GTK_ENTRY(GTK_COMBO(Method)->entry), methods[0]);
-	else gtk_entry_set_text(GTK_ENTRY(GTK_COMBO(Method)->entry), methods[1]);
-
+	else 
+		gtk_entry_set_text(GTK_ENTRY(GTK_COMBO(Method)->entry), methods[1]);
+	
+	set_checked(ConfDlg, "checkBlockDump", (BlockDump == 1));
+	
 	gtk_widget_show_all(ConfDlg);
 	gtk_main();
 

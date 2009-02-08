@@ -48,7 +48,7 @@ void LoadConf()
 	
 	fscanf(f, "IsoFile = %[^\n]\n", IsoFile);
 	fscanf(f, "CdDev   = %[^\n]\n", CdDev);
-	fscanf(f, "BlockDump   = %[^\n]\n", &BlockDump);
+	fscanf(f, "BlockDump   = %d\n", &BlockDump);
 	
 	if (!strncmp(IsoFile, "CdDev   =", 9)) *IsoFile = 0; // quick fix
 	if (*CdDev == 0) strcpy(CdDev, CDDEV_DEF);
@@ -76,7 +76,7 @@ void SaveConf()
 	
 	fprintf(f, "IsoFile = %s\n", IsoFile);
 	fprintf(f, "CdDev   = %s\n", CdDev);
-	fprintf(f, "BlockDump   = %s\n", &BlockDump);
+	fprintf(f, "BlockDump   = %d\n", BlockDump);
 	fclose(f);
 }
 
