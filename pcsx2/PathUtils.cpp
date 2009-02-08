@@ -151,7 +151,7 @@ static int _findFilenamePosition( const string& src)
 {
 	// note: the source path could have multiple trailing slashes.  We want to ignore those.
 
-	int startpos = src.find_last_not_of( Delimiters );
+	unsigned int startpos = src.find_last_not_of( Delimiters );
 
 	if(startpos == string::npos )
 		return 0;
