@@ -27,7 +27,6 @@ namespace Threading
 		m_thread()
 	,	m_returncode( 0 )
 	,	m_terminated( false )
-	,	m_sigterm( 0 )
 	,	m_post_event()
 	{
 		if( pthread_create( &m_thread, NULL, _internal_callback, this ) != 0 )
@@ -41,8 +40,7 @@ namespace Threading
 
 	void Thread::Close()
 	{
-		AtomicExchange( m_sigterm, 1 );
-		m_post_event.Post();
+		pthread_cancel( m_thread );
 		pthread_join( m_thread, NULL );
 	}
 

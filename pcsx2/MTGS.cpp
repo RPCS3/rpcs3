@@ -219,10 +219,14 @@ mtgsThreadObject::mtgsThreadObject() :
 
 mtgsThreadObject::~mtgsThreadObject()
 {
-	Console::WriteLn( "MTGS > Closing GS thread..." );
-	SetEvent();
+}
 
-	// rest of the cleanup will be handled by the inherited object destructors...
+void mtgsThreadObject::Close()
+{
+	Console::WriteLn( "MTGS > Closing GS thread..." );
+	SendSimplePacket( GS_RINGTYPE_QUIT, 0, 0, 0 );
+	SetEvent();
+	pthread_join( m_thread, NULL );
 }
 
 void mtgsThreadObject::Reset()
@@ -452,10 +456,9 @@ int mtgsThreadObject::Callback()
 	PacketTagType prevCmd;
 #endif
 
-	while( !m_sigterm )
+	while( true )
 	{
 		m_post_event.Wait();
-		//if( m_sigterm ) break;
 
 		AtomicExchange( m_RingBufferIsBusy, 1 );
 
@@ -592,6 +595,10 @@ int mtgsThreadObject::Callback()
 					m_iSlowStart += tag.data[0];
 				break;
 
+				case GS_RINGTYPE_QUIT:
+					GSclose();
+				return 0;
+
 #ifdef PCSX2_DEVBUILD
 				default:
 					Console::Error("GSThreadProc, bad packet (%x) at m_RingPos: %x, m_WritePos: %x", params tag.command, m_RingPos, m_WritePos);
@@ -611,9 +618,6 @@ int mtgsThreadObject::Callback()
 		}
 		AtomicExchange( m_RingBufferIsBusy, 0 );
 	}
-
-	GSclose();
-	return 0;
 }
 
 // Waits for the GS to empty out the entire ring buffer contents.

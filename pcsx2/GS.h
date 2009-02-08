@@ -137,6 +137,7 @@ enum GS_RINGTYPE
 ,	GS_RINGTYPE_WRITECSR
 ,	GS_RINGTYPE_MODECHANGE	// for issued mode changes.
 ,	GS_RINGTYPE_STARTTIME	// special case for min==max fps frameskip settings
+,	GS_RINGTYPE_QUIT
 };
 
 class mtgsThreadObject : public Threading::Thread
@@ -181,9 +182,7 @@ protected:
 #endif
 
 	// the MTGS "dummy" GIFtag info!
-	// 16 byte alignment isn't "critical" here, so if GCC ignores the aignment directive
-	// it shouldn't cause any issues.
-	PCSX2_ALIGNED16( GIFPath m_path[3] );
+	GIFPath m_path[3];
 
 	// contains aligned memory allocations for gs and Ringbuffer.
 	SafeAlignedArray<u128,16> m_RingBuffer;
@@ -196,6 +195,7 @@ public:
 	mtgsThreadObject();
 	virtual ~mtgsThreadObject();
 
+	void Close();
 	void Reset();
 	void GIFSoftReset( int mask );
 

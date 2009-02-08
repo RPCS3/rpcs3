@@ -234,6 +234,7 @@ void gsClose()
 
 	if( mtgsThread != NULL )
 	{
+		mtgsThread->Close();
 		safe_delete( mtgsThread );
 	}
 	else
@@ -373,7 +374,7 @@ __forceinline void _gsSMODEwrite( u32 mem, u32 value )
 	switch (mem)
 	{
 		case GS_SMODE1:
-			gsSetVideoRegionType( !!(value & 0x6000) );
+			gsSetVideoRegionType( (value & 0x6000) == 0x6000 );
 		break;
 
 		case GS_SMODE2:

@@ -83,7 +83,6 @@ namespace Threading
 		pthread_t m_thread;
 		int m_returncode;		// value returned from the thread on close.
 		bool m_terminated;		// set true after the thread has been closed.
-		u32 m_sigterm;			// set to true(1) when the thread has been requested to exit.
 		Semaphore m_post_event;	// general wait event that's needed by most threads.
 
 	public:
