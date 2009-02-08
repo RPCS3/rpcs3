@@ -1200,7 +1200,7 @@ __forceinline void vif0TransInterrupt() {
 		//vif1ch->qwc = 0;
 		//vif1Regs->stat|= VIF1_STAT_VIS;							   //Set the Tag Interrupt flag of VIF1_STAT
 		vif0.done = 1;
-		return;												   //End Transfer
+		//return;												   //End Transfer
 	}
 	vif0Interrupt();	
 }
@@ -2130,7 +2130,7 @@ __forceinline void vif1TransInterrupt() {
 		//vif1ch->qwc = 0;
 		//vif1Regs->stat|= VIF1_STAT_VIS;							   //Set the Tag Interrupt flag of VIF1_STAT
 		vif1.done = 1;
-		return;												   //End Transfer
+		//return;												   //End Transfer
 	}
 	vif1Interrupt();	
 }
