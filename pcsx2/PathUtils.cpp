@@ -33,9 +33,13 @@ namespace Path
 {
 
 #ifdef WIN32
-static const char Separator = '\\';
+// Path Separator used when creating new paths.
+static const char Separator( '\\' );
+// Path separators used when breaking existing paths into parts and pieces.
+static const string Delimiters( "\\/" );
 #else
 static const char Separator = '/';
+static const char Delimiters( '/' );
 #endif
 
 bool Exists( const string& path )
@@ -130,7 +134,7 @@ void Combine( string& dest, const string& srcPath, const string& srcFile )
 void ReplaceExtension( string& dest, const string& src, const string& ext )
 {
 	int pos = src.find_last_of( '.' );
-	if( pos == 0 )
+	if( pos == string::npos || pos == 0 )
 		dest = src;
 	else
 		dest.assign( src.begin(), src.begin()+pos );
@@ -142,4 +146,89 @@ void ReplaceExtension( string& dest, const string& src, const string& ext )
 	}
 }
 
+// finds the starting character position of a filename for the given source path.
+static int _findFilenamePosition( const string& src)
+{
+	// note: the source path could have multiple trailing slashes.  We want to ignore those.
+
+	int startpos = src.find_last_not_of( Delimiters );
+
+	if(startpos == string::npos )
+		return 0;
+
+	int pos;
+
+	if( startpos < src.length() )
+	{
+		string trimmed( src.begin(), src.begin()+startpos );
+		pos = trimmed.find_last_of( Delimiters );
+	}
+	else
+	{
+		pos = src.find_last_of( Delimiters );
+	}
+
+	if( pos == string::npos )
+		return 0;
+
+	return pos;
+}
+
+void ReplaceFilename( string& dest, const string& src, const string& newfilename )
+{
+	int pos = _findFilenamePosition( src );
+	
+	if( pos == 0 )
+		dest = src;
+	else
+		dest.assign( src.begin(), src.begin()+pos );
+
+	if( !newfilename.empty() )
+	{
+		dest += '.';
+		dest += newfilename;
+	}
+}
+
+void GetFilename( const string& src, string& dest )
+{
+	int pos = _findFilenamePosition( src );
+	dest.assign( src.begin()+pos, src.end() );
+}
+
+void GetDirectory( const string& src, string& dest )
+{
+	int pos = _findFilenamePosition( src );
+	if( pos == 0 )
+		dest.clear();
+	else
+		dest.assign( src.begin(), src.begin()+pos );
+}
+
+void Split( const string& src, string& destpath, string& destfile )
+{
+	int pos = _findFilenamePosition( src );
+
+	if( pos == 0 )
+	{
+		destpath.clear();
+		destfile = src;
+	}
+	else
+	{
+		destpath.assign( src.begin(), src.begin()+pos );
+		destfile.assign( src.begin()+pos, src.end() );
+	}
+}
+
+// Assigns the base/root directory of the given path into dest.
+// Example /this/that/something.txt -> dest == "/"
+void GetRootDirectory( const string& src, string& dest )
+{
+	int pos = src.find_first_of( Delimiters );
+	if( pos == string::npos )
+		dest.clear();
+	else
+		dest.assign( src.begin(), src.begin()+pos );
+}
 }

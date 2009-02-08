@@ -32,17 +32,24 @@ extern u8  *psH; // hw mem
 
 extern void CPU_INT( u32 n, s32 ecycle );
 
+//////////////////////////////////////////////////////////////////////////
+// Hardware FIFOs (128 bit access only!)
+//
 // VIF0   -- 0x10004000 -- psH[0x4000]
 // VIF1   -- 0x10005000 -- psH[0x5000]
 // GIF    -- 0x10006000 -- psH[0x6000]
 // IPUout -- 0x10007000 -- psH[0x7000]
 // IPUin  -- 0x10007010 -- psH[0x7010]
 
-void ReadFIFO(u32 mem, u64 *out);
-void ConstReadFIFO(u32 mem);
+void __fastcall ReadFIFO_page_4(u32 mem, mem128_t *out);
+void __fastcall ReadFIFO_page_5(u32 mem, mem128_t *out);
+void __fastcall ReadFIFO_page_6(u32 mem, mem128_t *out);
+void __fastcall ReadFIFO_page_7(u32 mem, mem128_t *out);
 
-void WriteFIFO(u32 mem, const u64 *value);
-void ConstWriteFIFO(u32 mem);
+void __fastcall WriteFIFO_page_4(u32 mem, const mem128_t *value);
+void __fastcall WriteFIFO_page_5(u32 mem, const mem128_t *value);
+void __fastcall WriteFIFO_page_6(u32 mem, const mem128_t *value);
+void __fastcall WriteFIFO_page_7(u32 mem, const mem128_t *value);
 
 
 //
@@ -364,22 +371,26 @@ void hwShutdown();
 // hw read functions
 extern u8   hwRead8 (u32 mem);
 extern u16  hwRead16(u32 mem);
-extern u64  hwRead64(u32 mem);
-extern void hwRead128(u32 mem, u64 *out);
 
 extern mem32_t __fastcall hwRead32_page_00(u32 mem);
 extern mem32_t __fastcall hwRead32_page_01(u32 mem);
 extern mem32_t __fastcall hwRead32_page_02(u32 mem);
 extern mem32_t __fastcall hwRead32_page_0F(u32 mem);
-extern mem32_t __fastcall hwRead32_page_other(u32 mem);
+extern mem32_t __fastcall hwRead32_generic(u32 mem);
 
-extern mem32_t __fastcall hwRead32(u32 mem);
+extern void __fastcall hwRead64_page_00(u32 mem, mem64_t* result );
+extern void __fastcall hwRead64_page_01(u32 mem, mem64_t* result );
+extern void __fastcall hwRead64_page_02(u32 mem, mem64_t* result );
+extern void __fastcall hwRead64_generic(u32 mem, mem64_t* result );
+
+extern void __fastcall hwRead128_page_00(u32 mem, mem128_t* result );
+extern void __fastcall hwRead128_page_01(u32 mem, mem128_t* result );
+extern void __fastcall hwRead128_page_02(u32 mem, mem128_t* result );
+extern void __fastcall hwRead128_generic(u32 mem, mem128_t *out);
 
 // hw write functions
 extern void hwWrite8 (u32 mem, u8  value);
 extern void hwWrite16(u32 mem, u16 value);
-extern void hwWrite64(u32 mem, u64 value);
-extern void hwWrite128(u32 mem, const u64 *value);
 
 extern void __fastcall hwWrite32_page_00( u32 mem, u32 value );
 extern void __fastcall hwWrite32_page_01( u32 mem, u32 value );
@@ -388,9 +399,21 @@ extern void __fastcall hwWrite32_page_03( u32 mem, u32 value );
 extern void __fastcall hwWrite32_page_0B( u32 mem, u32 value );
 extern void __fastcall hwWrite32_page_0E( u32 mem, u32 value );
 extern void __fastcall hwWrite32_page_0F( u32 mem, u32 value );
-extern void __fastcall hwWrite32_page_other( u32 mem, u32 value );
+extern void __fastcall hwWrite32_generic( u32 mem, u32 value );
 
-extern void __fastcall hwWrite32(u32 mem, u32 value);
+extern void __fastcall hwWrite64_page_02( u32 mem, const mem64_t* srcval );
+extern void __fastcall hwWrite64_page_03( u32 mem, const mem64_t* srcval );
+extern void __fastcall hwWrite64_page_0E( u32 mem, const mem64_t* srcval );
+extern void __fastcall hwWrite64_generic( u32 mem, const mem64_t* srcval );
+
+extern void __fastcall hwWrite128_generic(u32 mem, const mem128_t *srcval);
+
+// legacy - used for debugging sometimes
+//extern mem32_t __fastcall hwRead32(u32 mem);
+//extern void __fastcall hwWrite32(u32 mem, u32 value);
+
+//extern void hwWrite64(u32 mem, u64 value);
+//extern void hwWrite128(u32 mem, const u64 *value);
 
 void hwIntcIrq(int n);
 void hwDmacIrq(int n);

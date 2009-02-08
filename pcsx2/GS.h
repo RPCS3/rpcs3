@@ -279,12 +279,23 @@ void gsCSRwrite(u32 value);
 extern void gsWrite8(u32 mem, u8 value);
 extern void gsWrite16(u32 mem, u16 value);
 extern void gsWrite32(u32 mem, u32 value);
-extern void gsWrite64(u32 mem, u64 value);
+
+extern void __fastcall gsWrite64_page_00( u32 mem, const mem64_t* value );
+extern void __fastcall gsWrite64_page_01( u32 mem, const mem64_t* value );
+extern void __fastcall gsWrite64_generic( u32 mem, const mem64_t* value );
+
+extern void __fastcall gsWrite128_page_00( u32 mem, const mem128_t* value );
+extern void __fastcall gsWrite128_page_01( u32 mem, const mem128_t* value );
+extern void __fastcall gsWrite128_generic( u32 mem, const mem128_t* value );
 
 extern u8   gsRead8(u32 mem);
 extern u16  gsRead16(u32 mem);
 extern u32  gsRead32(u32 mem);
 extern u64  gsRead64(u32 mem);
+
+
+//extern void gsWrite64(u32 mem, u64 value);
+
 
 void gsConstWrite8(u32 mem, int mmreg);
 void gsConstWrite16(u32 mem, int mmreg);

@@ -680,6 +680,11 @@ int recVUTransformAddr(int x86reg, VURegs* VU, int vireg, int imm)
 		SHL32ItoR(EAX, 4);
 	}
 	else {
+	
+		// VU0 has a somewhat interesting memory mapping:
+		// if addr >= 0x4000, reads VU1's VF regs and VI regs
+		// if addr < 0x4000, wrap around at 0x1000
+
 		CMP32ItoR(EAX, 0x400);
 		pjmp[0] = JL8(0); // if addr >= 0x4000, reads VU1's VF regs and VI regs
 			AND32ItoR(EAX, 0x43f);

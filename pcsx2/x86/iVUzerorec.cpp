@@ -283,9 +283,9 @@ VuBaseBlock::VuBaseBlock()
 #define SUPERVU_STACKSIZE 0x1000
 
 static list<VuFunctionHeader*> s_listVUHeaders[2];
-static list<VuFunctionHeader*>* s_plistCachedHeaders[2];
-static VuFunctionHeader** recVUHeaders[2] = {NULL};
-static VuBlockHeader* recVUBlocks[2] = {NULL};
+static list<VuFunctionHeader*>* s_plistCachedHeaders[2] = {NULL, NULL};
+static VuFunctionHeader** recVUHeaders[2] = {NULL,NULL};
+static VuBlockHeader* recVUBlocks[2] = {NULL,NULL};
 static u8* recVUStack = NULL, *recVUStackPtr = NULL;
 static vector<_x86regs> s_vecRegArray(128);
 
@@ -403,7 +403,11 @@ void SuperVUReset(int vuindex)
 	if( vuindex < 0 )
 	{
 		DbgCon::Status( "SuperVU reset > Resetting recompiler memory and structures." );
-		memset_8<0xcd, VU_EXESIZE>(s_recVUMem);
+
+		// Does this cause problems on VU recompiler resets?  It could, if the VU works like
+		// the EE used to, and actually tries to re-enter the recBlock after issuing a clear. (air)
+
+		//memset_8<0xcd, VU_EXESIZE>(s_recVUMem);
 		memzero_ptr<SUPERVU_STACKSIZE>(recVUStack);
 
 		s_recVUPtr = s_recVUMem;
@@ -795,9 +799,9 @@ static VuFunctionHeader* SuperVURecompileProgram(u32 startpc, int vuindex)
 	// if recPtr reached the mem limit reset whole mem
 	if ( ( (uptr)s_recVUPtr - (uptr)s_recVUMem ) >= VU_EXESIZE-0x40000 ) { 
 		//SysPrintf("SuperVU reset mem\n");
-		SuperVUReset(-1); 
 		SuperVUReset(0); 
 		SuperVUReset(1); 
+		SuperVUReset(-1); 
 		if( s_TotalVUCycles > 0 ) {
 			// already executing, so return NULL
 			return NULL;

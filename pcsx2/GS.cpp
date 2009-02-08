@@ -169,6 +169,7 @@ void gsSetVideoRegionType( u32 isPal )
 		Config.PsxType &= ~1;
 	}
 
+	// If we made it this far it means the refresh rate changed, so update the vsync timers:
 	UpdateVSyncRate();
 }
 
@@ -339,14 +340,17 @@ void gsCSRwrite(u32 value)
 	}
 }
 
-static void IMRwrite(u32 value) {
+static void IMRwrite(u32 value)
+{
 	GSIMR = (value & 0x1f00)|0x6000;
 
 	// don't update mtgs mem
 }
 
-__forceinline void gsWrite8(u32 mem, u8 value) {
-	switch (mem) {
+__forceinline void gsWrite8(u32 mem, u8 value)
+{
+	switch (mem)
+	{
 		case 0x12001000: // GS_CSR
 			gsCSRwrite((CSRw & ~0x000000ff) | value); break;
 		case 0x12001001: // GS_CSR
@@ -364,30 +368,45 @@ __forceinline void gsWrite8(u32 mem, u8 value) {
 	GIF_LOG("GS write 8 at %8.8lx with data %8.8lx\n", mem, value);
 }
 
-__forceinline void gsWrite16(u32 mem, u16 value) {
-	
+__forceinline void _gsSMODEwrite( u32 mem, u32 value )
+{
+	switch (mem)
+	{
+		case GS_SMODE1:
+			gsSetVideoRegionType( !!(value & 0x6000) );
+		break;
+
+		case GS_SMODE2:
+			if(value & 0x1)
+				Config.PsxType |= 2; // Interlaced
+			else
+				Config.PsxType &= ~2;	// Non-Interlaced
+		break;
+	}
+}
+
+//////////////////////////////////////////////////////////////////////////
+// GS Write 16 bit
+
+__forceinline void gsWrite16(u32 mem, u16 value)
+{
 	GIF_LOG("GS write 16 at %8.8lx with data %8.8lx\n", mem, value);
 
-	switch (mem) {
-		case 0x12000010: // GS_SMODE1
-			gsSetVideoRegionType( (value & 0x6000) == 0x6000 );
-			break;
-			
-		case 0x12000020: // GS_SMODE2
-			if(value & 0x1) Config.PsxType |= 2; // Interlaced
-			else Config.PsxType &= ~2;	// Non-Interlaced
-			break;
-			
-		case 0x12001000: // GS_CSR
+	_gsSMODEwrite( mem, value );
+
+	switch (mem)
+	{
+		case GS_CSR:
 			gsCSRwrite( (CSRw&0xffff0000) | value);
-			return; // do not write to MTGS memory
-		case 0x12001002: // GS_CSR
+		return; // do not write to MTGS memory
+
+		case GS_CSR+2:
 			gsCSRwrite( (CSRw&0xffff) | ((u32)value<<16));
-			return; // do not write to MTGS memory
-		case 0x12001010: // GS_IMR
-			//SysPrintf("writing to IMR 16\n");
+		return; // do not write to MTGS memory
+		
+		case GS_IMR:
 			IMRwrite(value);
-			return; // do not write to MTGS memory
+		return; // do not write to MTGS memory
 	}
 
 	*(u16*)PS2GS_BASE(mem) = value;
@@ -396,28 +415,25 @@ __forceinline void gsWrite16(u32 mem, u16 value) {
 		mtgsThread->SendSimplePacket(GS_RINGTYPE_MEMWRITE16, mem&0x13ff, value, 0);
 }
 
+//////////////////////////////////////////////////////////////////////////
+// GS Write 32 bit
+
 __forceinline void gsWrite32(u32 mem, u32 value)
 {
-	assert( !(mem&3));
+	jASSUME( (mem & 3) == 0 );
 	GIF_LOG("GS write 32 at %8.8lx with data %8.8lx\n", mem, value);
 
-	switch (mem) {
-		case 0x12000010: // GS_SMODE1
-			gsSetVideoRegionType( (value & 0x6000) == 0x6000 );
-		break;
+	_gsSMODEwrite( mem, value );
 
-		case 0x12000020: // GS_SMODE2
-			if(value & 0x1) Config.PsxType |= 2; // Interlaced
-			else Config.PsxType &= ~2;	// Non-Interlaced
-			break;
-			
-		case 0x12001000: // GS_CSR
+	switch (mem)
+	{
+		case GS_CSR:
 			gsCSRwrite(value);
-			return;
+		return;
 
-		case 0x12001010: // GS_IMR
+		case GS_IMR:
 			IMRwrite(value);
-			return;
+		return;
 	}
 
 	*(u32*)PS2GS_BASE(mem) = value;
@@ -426,14 +442,98 @@ __forceinline void gsWrite32(u32 mem, u32 value)
 		mtgsThread->SendSimplePacket(GS_RINGTYPE_MEMWRITE32, mem&0x13ff, value, 0);
 }
 
-__forceinline void gsWrite64(u32 mem, u64 value) {
+//////////////////////////////////////////////////////////////////////////
+// GS Write 64 bit
 
+void __fastcall gsWrite64_page_00( u32 mem, const mem64_t* value )
+{
+	gsWrite64_generic( mem, value );
+	_gsSMODEwrite( mem, (u32)value[0] );
+}
+
+void __fastcall gsWrite64_page_01( u32 mem, const mem64_t* value )
+{
+	switch( mem )
+	{
+		case GS_CSR:
+			gsCSRwrite((u32)value[0]);
+		return;
+
+		case GS_IMR:
+			IMRwrite((u32)value[0]);
+		return;
+	}
+	
+	gsWrite64_generic( mem, value );
+}
+
+void __fastcall gsWrite64_generic( u32 mem, const mem64_t* value )
+{
+	const u32* const srcval32 = (u32*)value;
+	GIF_LOG("GS Write64 at %8.8lx with data %8.8x_%8.8x\n", mem, srcval32[1], srcval32[0]);
+
+	*(u64*)PS2GS_BASE(mem) = *value;
+
+	if( mtgsThread != NULL )
+		mtgsThread->SendSimplePacket(GS_RINGTYPE_MEMWRITE64, mem&0x13ff, srcval32[0], srcval32[1]);
+}
+
+//////////////////////////////////////////////////////////////////////////
+// GS Write 128 bit
+
+void __fastcall gsWrite128_page_00( u32 mem, const mem128_t* value )
+{
+	gsWrite128_generic( mem, value );
+	_gsSMODEwrite( mem, (u32)value[0] );
+}
+
+void __fastcall gsWrite128_page_01( u32 mem, const mem128_t* value )
+{
+	switch( mem )
+	{
+		case GS_CSR:
+			gsCSRwrite((u32)value[0]);
+		return;
+
+		case GS_IMR:
+			IMRwrite((u32)value[0]);
+		return;
+	}
+	
+	gsWrite128_generic( mem, value );
+}
+
+void __fastcall gsWrite128_generic( u32 mem, const mem128_t* value )
+{
+	const u32* const srcval32 = (u32*)value;
+
+	GIF_LOG("GS Write64 at %8.8lx with data %8.8x_%8.8x_%8.8x_%8.8x \n", mem,
+		srcval32[3], srcval32[2], srcval32[1], srcval32[0]);
+
+	const uint masked_mem = mem & 0x13ff;
+	u64* writeTo = (u64*)(&g_RealGSMem[masked_mem]);
+
+	writeTo[0] = value[0];
+	writeTo[1] = value[1];
+
+	if( mtgsThread != NULL )
+	{
+		mtgsThread->SendSimplePacket(GS_RINGTYPE_MEMWRITE64, masked_mem, srcval32[0], srcval32[1]);
+		mtgsThread->SendSimplePacket(GS_RINGTYPE_MEMWRITE64, masked_mem+8, srcval32[2], srcval32[3]);
+	}
+}
+
+#if 0
+// This function is left in for now for debugging/reference purposes.
+__forceinline void gsWrite64(u32 mem, u64 value)
+{
 	GIF_LOG("GS write 64 at %8.8lx with data %8.8lx_%8.8lx\n", mem, ((u32*)&value)[1], (u32)value);
 
-	switch (mem) {
+	switch (mem)
+	{
 		case 0x12000010: // GS_SMODE1
 			gsSetVideoRegionType( (value & 0x6000) == 0x6000 );
-			break;
+		break;
 
 		case 0x12000020: // GS_SMODE2
 			if(value & 0x1) Config.PsxType |= 2; // Interlaced
@@ -454,6 +554,7 @@ __forceinline void gsWrite64(u32 mem, u64 value) {
 	if( mtgsThread != NULL )
 		mtgsThread->SendSimplePacket(GS_RINGTYPE_MEMWRITE64, mem&0x13ff, (u32)value, (u32)(value>>32));
 }
+#endif
 
 __forceinline u8 gsRead8(u32 mem)
 {

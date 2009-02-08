@@ -20,14 +20,20 @@
 
 namespace Path
 {
-	void Combine( string& dest, const string& srcPath, const string& srcFile );
-	bool isRooted( const string& path );
-	bool isDirectory( const string& path );
-	bool isFile( const string& path );
-	bool Exists( const string& path );
-	int getFileSize( const string& path );
+	void Combine( std::string& dest, const std::string& srcPath, const std::string& srcFile );
+	bool isRooted( const std::string& path );
+	bool isDirectory( const std::string& path );
+	bool isFile( const std::string& path );
+	bool Exists( const std::string& path );
+	int getFileSize( const std::string& path );
 
-	void ReplaceExtension( string& dest, const string& src, const string& ext );
+	void ReplaceExtension( std::string& dest, const std::string& src, const std::string& ext );
+	void ReplaceFilename( std::string& dest, const std::string& src, const std::string& newfilename );
+	void GetFilename( const std::string& src, std::string& dest );
+	void GetDirectory( const std::string& src, std::string& dest );
+	void GetRootDirectory( const std::string& src, std::string& dest );
+	void Split( const std::string& src, std::string& destpath, std::string& destfile );
+
 }
 
 #endif

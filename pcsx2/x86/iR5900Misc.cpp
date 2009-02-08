@@ -40,7 +40,7 @@ void recDoBranchImm( u32* jmpSkip, bool isLikely )
 		pc -= 4;		// instruction rewinder for delay slot, if non-likely.
 		recompileNextInstruction(1);
 	}
-	SetBranchImm(pc);
+	SetBranchImm(pc);	// start a new recompiled block.
 }
 
 void recDoBranchImm_Likely( u32* jmpSkip )

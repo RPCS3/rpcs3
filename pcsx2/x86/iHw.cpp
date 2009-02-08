@@ -374,7 +374,9 @@ void hwConstRead64(u32 mem, int mmreg) {
 
 PCSX2_ALIGNED16(u32 s_TempFIFO[4]);
 void hwConstRead128(u32 mem, int xmmreg) {
-	if (mem >= 0x10004000 && mem < 0x10008000) {
+
+	// fixme : This needs to be updated to use the new paged FIFO accessors.
+	/*if (mem >= 0x10004000 && mem < 0x10008000) {
 		iFlushCall(0);
 		PUSH32I((uptr)&s_TempFIFO[0]);
 		PUSH32I(mem);
@@ -382,7 +384,7 @@ void hwConstRead128(u32 mem, int xmmreg) {
 		ADD32ItoR(ESP, 8);
 		_eeReadConstMem128( xmmreg, (uptr)&s_TempFIFO[0]);
 		return;
-	}
+	}*/
 
 	_eeReadConstMem128( xmmreg, (uptr)PSM(mem));
 }
@@ -1125,7 +1127,9 @@ void hwConstWrite64(u32 mem, int mmreg)
 
 void hwConstWrite128(u32 mem, int mmreg)
 {
-	if (mem >= 0x10004000 && mem < 0x10008000) {
+	// fixme : This needs to be updated to use the new paged FIFO accessors.
+
+	/*if (mem >= 0x10004000 && mem < 0x10008000) {
 		_eeWriteConstMem128((uptr)&s_TempFIFO[0], mmreg);
 		iFlushCall(0);
 		PUSH32I((uptr)&s_TempFIFO[0]);
@@ -1133,7 +1137,7 @@ void hwConstWrite128(u32 mem, int mmreg)
 		CALLFunc((uptr)WriteFIFO);
 		ADD32ItoR(ESP, 8);
 		return;
-	}
+	}*/
 
 	switch (mem) {
 		case 0x1000f590: // DMAC_ENABLEW

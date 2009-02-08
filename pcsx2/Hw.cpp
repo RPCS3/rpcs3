@@ -71,7 +71,10 @@ void hwReset()
 	ipuReset();
 }
 
-__forceinline u8  hwRead8(u32 mem)
+/////////////////////////////////////////////////////////////////////////
+// Hardware READ 8 bit
+
+__forceinline u8 hwRead8(u32 mem)
 {
 	u8 ret;
 
@@ -134,6 +137,9 @@ __forceinline u8  hwRead8(u32 mem)
 	return ret;
 }
 
+/////////////////////////////////////////////////////////////////////////
+// Hardware READ 16 bit
+
 __forceinline u16 hwRead16(u32 mem)
 {
 	u16 ret;
@@ -176,6 +182,9 @@ __forceinline u16 hwRead16(u32 mem)
 	}
 	return ret;
 }
+
+/////////////////////////////////////////////////////////////////////////
+// Hardware READ 32 bit
 
 // Reads hardware registers for page 0 (counters 0 and 1)
 mem32_t __fastcall hwRead32_page_00(u32 mem)
@@ -221,19 +230,7 @@ mem32_t __fastcall hwRead32_page_0F(u32 mem)
 	// *Performance Warning*  This function is called -A-LOT.  Be weary when making changes.  It
 	// could impact FPS significantly.
 
-	// Optimization Note:
-	// Shortcut for the INTC_STAT register, which is checked *very* frequently as part of the EE's
-	// vsynch timers.  INTC_STAT has the disadvantage of being in the 0x1000f000 case, which has
-	// a lot of additional registers in it, and combined with it's call frequency is a bad thing.
-
 	mem &= 0xffff;
-
-	/*if(mem == (INTC_STAT & 0xffff) )
-	{
-		// This one is checked alot, so leave it commented out unless you love 600 meg logfiles.
-		//HW_LOG("DMAC_STAT Read  32bit %x\n", psHu32(0xe010));
-		return psHu32(INTC_STAT);
-	}*/
 
 	switch( mem )
 	{
@@ -293,7 +290,7 @@ mem32_t __fastcall hwRead32_page_02(u32 mem)
 }
 
 // Used for all pages not explicitly specified above.
-mem32_t __fastcall hwRead32_page_other(u32 mem)
+mem32_t __fastcall hwRead32_generic(u32 mem)
 {
 	const u16 masked_mem = mem & 0xffff;
 
@@ -347,38 +344,61 @@ mem32_t __fastcall hwRead32_page_other(u32 mem)
 	return *((u32*)&PS2MEM_HW[masked_mem]);
 }
 
-__forceinline u64 hwRead64(u32 mem) {
-	u64 ret;
+/////////////////////////////////////////////////////////////////////////
+// Hardware READ 64 bit
 
-	if ((mem>=0x10002000) && (mem<0x10003000)) {
-		return ipuRead64(mem);
-	}
-
-//	switch (mem) {
-//		default:
-		if (mem < 0x10010000) {
-			ret = psHu64(mem);
-		}
-		else ret = 0;
-		HW_LOG("Unknown Hardware Read 64 at %x\n",mem);
-//		break;
-//	}
-
-	return ret;
+void __fastcall hwRead64_page_00(u32 mem, mem64_t* result )
+{
+	*result = hwRead32_page_00( mem );
 }
 
-__forceinline void hwRead128(u32 mem, u64 *out) {
-	if (mem >= 0x10004000 && mem < 0x10008000) {
-		ReadFIFO(mem, out); return;
-	}
+void __fastcall hwRead64_page_01(u32 mem, mem64_t* result )
+{
+	*result = hwRead32_page_01( mem );
+}
 
-	if (mem < 0x10010000) {
-		out[0] = psHu64(mem);
-		out[1] = psHu64(mem+8);
-	}
+void __fastcall hwRead64_page_02(u32 mem, mem64_t* result )
+{
+	*result = ipuRead64(mem);
+}
+
+void __fastcall hwRead64_generic(u32 mem, mem64_t* result )
+{
+	*result = psHu64(mem);
+	HW_LOG("Unknown Hardware Read 64 at %x\n",mem);
+}
+
+/////////////////////////////////////////////////////////////////////////
+// Hardware READ 128 bit
+
+void __fastcall hwRead128_page_00(u32 mem, mem128_t* result )
+{
+	result[0] = hwRead32_page_00( mem );
+	result[1] = 0;
+}
+
+void __fastcall hwRead128_page_01(u32 mem, mem128_t* result )
+{
+	result[0] = hwRead32_page_01( mem );
+	result[1] = 0;
+}
+
+void __fastcall hwRead128_page_02(u32 mem, mem128_t* result )
+{
+	// IPU is currently unhandled in 128 bit mode.
+	HW_LOG("Unknown Hardware Read 128 at %x (IPU)\n",mem);
+}
+
+void __fastcall hwRead128_generic(u32 mem, mem128_t* out)
+{
+	out[0] = psHu64(mem);
+	out[1] = psHu64(mem+8);
 
 	HW_LOG("Unknown Hardware Read 128 at %x\n",mem);
 }
+
+/////////////////////////////////////////////////////////////////////////
+// DMA Execution Interfaces
 
 // dark cloud2 uses 8 bit DMAs register writes
 static __forceinline void DmaExec8( void (*func)(), u32 mem, u8 value )
@@ -407,11 +427,14 @@ static void DmaExec( void (*func)(), u32 mem, u32 value )
 	if( (value & 0xc) == 0x4 && (value & 0xffff0000) == 0)
 		psHu32(mem) = (psHu32(mem) & 0xFFFF0000) | (u16)value;
 	else /* Else (including Normal mode etc) write whatever the hardware sends*/
-		 psHu32(mem) = (u32)value;
+		psHu32(mem) = (u32)value;
 
 	if ((psHu32(mem) & 0x100) && (psHu32(DMAC_CTRL) & 0x1))
 		func();
 }
+
+/////////////////////////////////////////////////////////////////////////
+// Hardware WRITE 8 bit
 
 char sio_buffer[1024];
 int sio_count;
@@ -456,7 +479,6 @@ void hwWrite8(u32 mem, u8 value) {
 					sio_buffer[sio_count++] = value;
 				}
 			}
-//			SysPrintf("%c", value);
 			break;
 		
 		case 0x10003c02: //Tony Hawks Project 8 uses this
@@ -545,10 +567,8 @@ void hwWrite8(u32 mem, u8 value) {
 
 __forceinline void hwWrite16(u32 mem, u16 value)
 {
-#ifdef PCSX2_DEVBUILD
 	if( mem >= 0x10002000 && mem < 0x10008000 )
-		SysPrintf("hwWrite16 to %x\n", mem);
-#endif
+		Console::Notice( "hwWrite16 to %x", params mem );
 
 	switch(mem)
 	{
@@ -767,7 +787,7 @@ __forceinline void hwWrite16(u32 mem, u16 value)
 	}
 }
 
-// Page 0 of HW mwmory houses registers for Counters 0 and 1
+// Page 0 of HW memory houses registers for Counters 0 and 1
 void __fastcall hwWrite32_page_00( u32 mem, u32 value )
 {
 	mem &= 0xffff;
@@ -787,7 +807,7 @@ void __fastcall hwWrite32_page_00( u32 mem, u32 value )
 	*((u32*)&PS2MEM_HW[mem]) = value;
 }
 
-// Page 1 of HW mwmory houses registers for Counters 2 and 3
+// Page 1 of HW memory houses registers for Counters 2 and 3
 void __fastcall hwWrite32_page_01( u32 mem, u32 value )
 {
 	mem &= 0xffff;
@@ -826,24 +846,29 @@ void __fastcall hwWrite32_page_03( u32 mem, u32 value )
 	switch (mem)
 	{
 		case GIF_CTRL:
-			//SysPrintf("GIF_CTRL write %x\n", value);
 			psHu32(mem) = value & 0x8;
-			if (value & 0x1) gsGIFReset();
-			else if( value & 8 ) psHu32(GIF_STAT) |= 8;
-			else psHu32(GIF_STAT) &= ~8;
+			if (value & 0x1)
+				gsGIFReset();
+			else if( value & 8 )
+				psHu32(GIF_STAT) |= 8;
+			else
+				psHu32(GIF_STAT) &= ~8;
 		break;
 
 		case GIF_MODE:
+		{
 			// need to set GIF_MODE (hamster ball)
 			psHu32(GIF_MODE) = value;
-			if (value & 0x1) psHu32(GIF_STAT)|= 0x1;
-			else psHu32(GIF_STAT)&= ~0x1;
-			if (value & 0x4) psHu32(GIF_STAT)|= 0x4;
-			else psHu32(GIF_STAT)&= ~0x4;
+
+			// set/clear bits 0 and 2 as per the GIF_MODE value.
+			const u32 bitmask = 0x1 | 0x4;
+			psHu32(GIF_STAT) &= ~bitmask;
+			psHu32(GIF_STAT) |= (u32)value & bitmask;
+		}
 		break;
 
 		case GIF_STAT: // stat is readonly
-			DevCon::Notice("*PCSX2* Gifstat write value = 0x%x\n", params value);
+			DevCon::Notice("*PCSX2* GIFSTAT write value = 0x%x (readonly, ignored)", params value);
 		break;
 
 		default:
@@ -894,7 +919,11 @@ void __fastcall hwWrite32_page_0E( u32 mem, u32 value )
 	else if( mem == DMAC_STAT )
 	{
 		HW_LOG("DMAC_STAT Write 32bit %x\n", value);
-		psHu16(0xe010)&= ~(value & 0xffff); // clear on 1
+
+		// lower 16 bits: clear on 1
+		// upper 16 bits: reverse on 1
+
+		psHu16(0xe010) &= ~(value & 0xffff);
 		psHu16(0xe012) ^= (u16)(value >> 16);
 
 		cpuTestDMACInts();
@@ -932,16 +961,6 @@ void __fastcall hwWrite32_page_0F( u32 mem, u32 value )
 			psHu32(mem) = value & ~0x80000000;	//kill the busy bit
 			break;
 
-		case HELPSWITCH(0x1000f440)://MCH_DRD:
-			psHu32(mem) = value;
-			break;
-		//------------------------------------------------------------------
-		case HELPSWITCH(0x1000f590): // DMAC_ENABLEW
-			HW_LOG("DMAC_ENABLEW Write 32bit %lx\n", value);
-			psHu32(0xf590) = value;
-			psHu32(0xf520) = value;
-			break;
-		//------------------------------------------------------------------
 		case HELPSWITCH(0x1000f200):
 			psHu32(mem) = value;
 			break;
@@ -960,18 +979,29 @@ void __fastcall hwWrite32_page_0F( u32 mem, u32 value )
 		case HELPSWITCH(0x1000f260):
 			psHu32(mem) = 0;
 			break;
+
+		case HELPSWITCH(0x1000f440)://MCH_DRD:
+			psHu32(mem) = value;
+			break;
+
+		case HELPSWITCH(0x1000f590): // DMAC_ENABLEW
+			HW_LOG("DMAC_ENABLEW Write 32bit %lx\n", value);
+			psHu32(0xf590) = value;
+			psHu32(0xf520) = value;
+			break;
+
 		//------------------------------------------------------------------
 		case HELPSWITCH(0x1000f130):
 		case HELPSWITCH(0x1000f410):
 			HW_LOG("Unknown Hardware write 32 at %x with value %x (%x)\n", mem, value, cpuRegs.CP0.n.Status.val);
-			break;
+		break;
 
 		default:
 			psHu32(mem) = value;
 	}
 }
 
-void __fastcall hwWrite32_page_other( u32 mem, u32 value )
+void __fastcall hwWrite32_generic( u32 mem, u32 value )
 {
 	// Used for developer logging -- optimized away in Public Release.
 	const char* regName = "Unknown";
@@ -1044,141 +1074,175 @@ void __fastcall hwWrite32_page_other( u32 mem, u32 value )
 	psHu32(mem) = value;
 }
 
-__forceinline void hwWrite64(u32 mem, u64 value) {
-	u32 val32;
-	int i;
+/////////////////////////////////////////////////////////////////////////
+// HW Write 64 bit
 
-	if ((mem>=0x10002000) && (mem<=0x10002030)) {
-		ipuWrite64(mem, value);
+void __fastcall hwWrite64_page_02( u32 mem, const mem64_t* srcval )
+{
+	//hwWrite64( mem, *srcval );  return;
+	ipuWrite64( mem, *srcval );
+}
+
+void __fastcall hwWrite64_page_03( u32 mem, const mem64_t* srcval )
+{
+	//hwWrite64( mem, *srcval ); return;
+	const u64 value = *srcval;
+
+	if(mem>=0x10003800)
+	{
+		if(mem<0x10003c00)
+			vif0Write32(mem, value); 
+		else
+			vif1Write32(mem, value); 
 		return;
 	}
 
-	if ((mem>=0x10003800) && (mem<0x10003c00)) {
-		vif0Write32(mem, value); return;
-	}
-	if ((mem>=0x10003c00) && (mem<0x10004000)) {
-		vif1Write32(mem, value); return;
-	}
-
-	switch (mem) {
+	switch (mem)
+	{
 		case GIF_CTRL:
 			DevCon::Status("GIF_CTRL write 64", params value);
 			psHu32(mem) = value & 0x8;
-			if(value & 0x1) {
+			if(value & 0x1)
 				gsGIFReset();
-				//gsReset();
-			}
-			else {
-				if( value & 8 ) psHu32(GIF_STAT) |= 8;
-				else psHu32(GIF_STAT) &= ~8;
+			else
+			{
+				if( value & 8 )
+					psHu32(GIF_STAT) |= 8;
+				else
+					psHu32(GIF_STAT) &= ~8;
 			}
 	
 			return;
 
 		case GIF_MODE:
+		{
 #ifdef GSPATH3FIX
 			Console::Status("GIFMODE64 %x\n", params value);
 #endif
 			psHu64(GIF_MODE) = value;
-			if (value & 0x1) psHu32(GIF_STAT)|= 0x1;
-			else psHu32(GIF_STAT)&= ~0x1;
-			if (value & 0x4) psHu32(GIF_STAT)|= 0x4;
-			else psHu32(GIF_STAT)&= ~0x4;
-			break;
+
+			// set/clear bits 0 and 2 as per the GIF_MODE value.
+			const u32 bitmask = 0x1 | 0x4;
+			psHu32(GIF_STAT) &= ~bitmask;
+			psHu32(GIF_STAT) |= (u32)value & bitmask;
+		}
 
 		case GIF_STAT: // stat is readonly
 			return;
+	}
+}
 
+void __fastcall hwWrite64_page_0E( u32 mem, const mem64_t* srcval )
+{
+	//hwWrite64( mem, *srcval ); return;
+
+	const u64 value = *srcval;
+
+	if( mem == DMAC_CTRL )
+	{
+		HW_LOG("DMAC_CTRL Write 64bit %x\n", value);
+	}
+	else if( mem == DMAC_STAT )
+	{
+		HW_LOG("DMAC_STAT Write 64bit %x\n", value);
+
+		// lower 16 bits: clear on 1
+		// upper 16 bits: reverse on 1
+
+		psHu16(0xe010) &= ~(value & 0xffff);
+		psHu16(0xe012) ^= (u16)(value >> 16);
+
+		cpuTestDMACInts();
+		return;
+	}
+
+	psHu64(mem) = value;
+}
+
+void __fastcall hwWrite64_generic( u32 mem, const mem64_t* srcval )
+{
+	//hwWrite64( mem, *srcval ); return;
+
+	const u64 value = *srcval;
+
+	switch (mem)
+	{
 		case 0x1000a000: // dma2 - gif
-			DMA_LOG("0x%8.8x hwWrite64: GSdma %lx\n", cpuRegs.cycle, value);
+			DMA_LOG("0x%8.8x hwWrite64: GSdma %x\n", cpuRegs.cycle, value);
 			DmaExec(dmaGIF, mem, value);
-			break;
+		break;
 
-		case 0x1000e000: // DMAC_CTRL
-			HW_LOG("DMAC_CTRL Write 64bit %x\n", value);
-			psHu64(mem) = value;
-			break;
+		case INTC_STAT:
+			HW_LOG("INTC_STAT Write 64bit %x\n", (u32)value);
+			psHu32(INTC_STAT) &= ~value;	
+			//cpuTestINTCInts();
+		break;
 
-		case 0x1000e010: // DMAC_STAT
-			HW_LOG("DMAC_STAT Write 64bit %x\n", value);
-			val32 = (u32)value;
-			psHu16(0xe010)&= ~(val32 & 0xffff); // clear on 1
-			val32 = val32 >> 16;
-			for (i=0; i<16; i++) { // reverse on 1
-				if (val32 & (1<<i)) {
-					if (psHu16(0xe012) & (1<<i))
-						psHu16(0xe012)&= ~(1<<i);
-					else
-						psHu16(0xe012)|= 1<<i;
-				}
-			}
-            cpuTestDMACInts();
+		case INTC_MASK:
+			HW_LOG("INTC_MASK Write 64bit %x\n", (u32)value);
+			psHu32(INTC_MASK) ^= (u16)value;
+			cpuTestINTCInts();
+		break;
+
+		case 0x1000f130:
+		case 0x1000f410:
+		case 0x1000f430:
 			break;
 
 		case 0x1000f590: // DMAC_ENABLEW
 			psHu32(0xf590) = value;
 			psHu32(0xf520) = value;
-			break;
-
-		case 0x1000f000: // INTC_STAT
-			HW_LOG("INTC_STAT Write 64bit %x\n", value);
-			psHu32(INTC_STAT)&=~value;	
-			cpuTestINTCInts();
-			break;
-
-		case 0x1000f010: // INTC_MASK
-			HW_LOG("INTC_MASK Write 32bit %x\n", value);
-			for (i=0; i<16; i++) { // reverse on 1
-                const int s = (1<<i);
-				if (value & s) {
-					if (psHu32(INTC_MASK) & s)
-						psHu32(INTC_MASK)&= ~s;
-					else
-						psHu32(INTC_MASK)|= s;
-				}
-			}
-			cpuTestINTCInts();
-			break;
-
-		case 0x1000f130:
-		case 0x1000f410:
-		case 0x1000f430:
-			break;
+		break;
 
 		default:
 			psHu64(mem) = value;
-
 			HW_LOG("Unknown Hardware write 64 at %x with value %x (status=%x)\n",mem,value, cpuRegs.CP0.n.Status.val);
-			break;
+		break;
 	}
 }
 
-__forceinline void hwWrite128(u32 mem, const u64 *value) {
-	if (mem >= 0x10004000 && mem < 0x10008000) {
-		WriteFIFO(mem, value); return;
-	}
+/////////////////////////////////////////////////////////////////////////
+// HW Write 128 bit
 
-	switch (mem) {
+void __fastcall hwWrite128_generic(u32 mem, const mem128_t *srcval)
+{
+	//hwWrite128( mem, srcval ); return;
+
+	switch (mem)
+	{
+		case INTC_STAT:
+			HW_LOG("INTC_STAT Write 64bit %x\n", (u32)srcval[0]);
+			psHu32(INTC_STAT) &= ~srcval[0];	
+			//cpuTestINTCInts();
+		break;
+		
+		case INTC_MASK:
+			HW_LOG("INTC_MASK Write 64bit %x\n", (u32)srcval[0]);
+			psHu32(INTC_MASK) ^= (u16)srcval[0];
+			cpuTestINTCInts();
+		break;
+
 		case 0x1000f590: // DMAC_ENABLEW
-			psHu32(0xf590) = *(u32*)value;
-			psHu32(0xf520) = *(u32*)value;
-			break;
+			psHu32(0xf590) = srcval[0];
+			psHu32(0xf520) = srcval[0];
+		break;
+
 		case 0x1000f130:
 		case 0x1000f410:
 		case 0x1000f430:
 			break;
 
 		default:
+			psHu64(mem  ) = srcval[0];
+			psHu64(mem+8) = srcval[1];
 
-			psHu64(mem  ) = value[0];
-			psHu64(mem+8) = value[1];
-
-			HW_LOG("Unknown Hardware write 128 at %x with value %x_%x (status=%x)\n", mem, value[1], value[0], cpuRegs.CP0.n.Status.val);
-			break;
+			HW_LOG("Unknown Hardware write 128 at %x with value %x_%x (status=%x)\n", mem, srcval[1], srcval[0], cpuRegs.CP0.n.Status.val);
+		break;
 	}
 }
 
-__forceinline void  intcInterrupt() {
+__forceinline void  intcInterrupt()
+{
 	if ((cpuRegs.CP0.n.Status.val & 0x400) != 0x400) return;
 
 	if ((psHu32(INTC_STAT)) == 0) {
@@ -1814,5 +1878,143 @@ __forceinline void __fastcall hwWrite32(u32 mem, u32 value)
 		break;
 	}
 }
+
 #endif
 
+#if 0
+__forceinline void hwWrite64(u32 mem, u64 value)
+{
+	u32 val32;
+	int i;
+
+	if ((mem>=0x10002000) && (mem<=0x10002030)) {
+		ipuWrite64(mem, value);
+		return;
+	}
+
+	if ((mem>=0x10003800) && (mem<0x10003c00)) {
+		vif0Write32(mem, value); return;
+	}
+	if ((mem>=0x10003c00) && (mem<0x10004000)) {
+		vif1Write32(mem, value); return;
+	}
+
+	switch (mem) {
+		case GIF_CTRL:
+			DevCon::Status("GIF_CTRL write 64", params value);
+			psHu32(mem) = value & 0x8;
+			if(value & 0x1) {
+				gsGIFReset();
+				//gsReset();
+			}
+			else {
+				if( value & 8 ) psHu32(GIF_STAT) |= 8;
+				else psHu32(GIF_STAT) &= ~8;
+			}
+	
+			return;
+
+		case GIF_MODE:
+#ifdef GSPATH3FIX
+			Console::Status("GIFMODE64 %x\n", params value);
+#endif
+			psHu64(GIF_MODE) = value;
+			if (value & 0x1) psHu32(GIF_STAT)|= 0x1;
+			else psHu32(GIF_STAT)&= ~0x1;
+			if (value & 0x4) psHu32(GIF_STAT)|= 0x4;
+			else psHu32(GIF_STAT)&= ~0x4;
+			break;
+
+		case GIF_STAT: // stat is readonly
+			return;
+
+		case 0x1000a000: // dma2 - gif
+			DMA_LOG("0x%8.8x hwWrite64: GSdma %lx\n", cpuRegs.cycle, value);
+			DmaExec(dmaGIF, mem, value);
+			break;
+
+		case 0x1000e000: // DMAC_CTRL
+			HW_LOG("DMAC_CTRL Write 64bit %x\n", value);
+			psHu64(mem) = value;
+			break;
+
+		case 0x1000e010: // DMAC_STAT
+			HW_LOG("DMAC_STAT Write 64bit %x\n", value);
+			val32 = (u32)value;
+			psHu16(0xe010)&= ~(val32 & 0xffff); // clear on 1
+			val32 = val32 >> 16;
+			for (i=0; i<16; i++) { // reverse on 1
+				if (val32 & (1<<i)) {
+					if (psHu16(0xe012) & (1<<i))
+						psHu16(0xe012)&= ~(1<<i);
+					else
+						psHu16(0xe012)|= 1<<i;
+				}
+			}
+            cpuTestDMACInts();
+			break;
+
+		case 0x1000f590: // DMAC_ENABLEW
+			psHu32(0xf590) = value;
+			psHu32(0xf520) = value;
+			break;
+
+		case 0x1000f000: // INTC_STAT
+			HW_LOG("INTC_STAT Write 64bit %x\n", value);
+			psHu32(INTC_STAT)&=~value;	
+			cpuTestINTCInts();
+			break;
+
+		case 0x1000f010: // INTC_MASK
+			HW_LOG("INTC_MASK Write 32bit %x\n", value);
+			for (i=0; i<16; i++) { // reverse on 1
+                const int s = (1<<i);
+				if (value & s) {
+					if (psHu32(INTC_MASK) & s)
+						psHu32(INTC_MASK)&= ~s;
+					else
+						psHu32(INTC_MASK)|= s;
+				}
+			}
+			cpuTestINTCInts();
+			break;
+
+		case 0x1000f130:
+		case 0x1000f410:
+		case 0x1000f430:
+			break;
+
+		default:
+			psHu64(mem) = value;
+
+			HW_LOG("Unknown Hardware write 64 at %x with value %x (status=%x)\n",mem,value, cpuRegs.CP0.n.Status.val);
+			break;
+	}
+}
+
+__forceinline void hwWrite128(u32 mem, const u64 *value)
+{
+	if (mem >= 0x10004000 && mem < 0x10008000) {
+		WriteFIFO(mem, value); return;
+	}
+
+	switch (mem) {
+		case 0x1000f590: // DMAC_ENABLEW
+			psHu32(0xf590) = *(u32*)value;
+			psHu32(0xf520) = *(u32*)value;
+			break;
+		case 0x1000f130:
+		case 0x1000f410:
+		case 0x1000f430:
+			break;
+
+		default:
+
+			psHu64(mem  ) = value[0];
+			psHu64(mem+8) = value[1];
+
+			HW_LOG("Unknown Hardware write 128 at %x with value %x_%x (status=%x)\n", mem, value[1], value[0], cpuRegs.CP0.n.Status.val);
+			break;
+	}
+}
+#endif

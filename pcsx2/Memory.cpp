@@ -165,6 +165,9 @@ vtlbHandler vu0_micro_mem[2];		// 0 - dynarec, 1 - interpreter
 vtlbHandler vu1_micro_mem[2];		// 0 - dynarec, 1 - interpreter
 
 vtlbHandler hw_by_page[0x10];
+vtlbHandler gs_page_0;
+vtlbHandler gs_page_1;
+
 
 // Used to remap the VUmicro memory according to the VU0/VU1 dynarec setting.
 // (the VU memory operations are different for recs vs. interpreters)
@@ -196,23 +199,36 @@ void memMapPhy()
 
 	//These fallback to mem* stuff ...
 	vtlb_MapHandler(tlb_fallback_1,0x10000000,0x10000);
-	vtlb_MapHandler(tlb_fallback_6,0x12000000,0x10000);
 	vtlb_MapHandler(tlb_fallback_7,0x14000000,0x10000);
 	vtlb_MapHandler(tlb_fallback_4,0x18000000,0x10000);
 	vtlb_MapHandler(tlb_fallback_5,0x1a000000,0x10000);
+	vtlb_MapHandler(tlb_fallback_6,0x12000000,0x10000);
 	vtlb_MapHandler(tlb_fallback_8,0x1f000000,0x10000);
 	vtlb_MapHandler(tlb_fallback_3,0x1f400000,0x10000);
 	vtlb_MapHandler(tlb_fallback_2,0x1f800000,0x10000);
 	vtlb_MapHandler(tlb_fallback_8,0x1f900000,0x10000);
+
+#ifdef PCSX2_DEVBUILD
+	// Bind fallback handlers used for logging purposes only.
+	// In release mode the Vtlb will map these addresses directly instead of using
+	// the read/write handlers (which just issue logs and do normal memOps)
+#endif
 
 	// map specific optimized page handlers for HW accesses
 	vtlb_MapHandler(hw_by_page[0x0], 0x10000000, 0x01000);
 	vtlb_MapHandler(hw_by_page[0x1], 0x10001000, 0x01000);
 	vtlb_MapHandler(hw_by_page[0x2], 0x10002000, 0x01000);
 	vtlb_MapHandler(hw_by_page[0x3], 0x10003000, 0x01000);
+	vtlb_MapHandler(hw_by_page[0x4], 0x10004000, 0x01000);
+	vtlb_MapHandler(hw_by_page[0x5], 0x10005000, 0x01000);
+	vtlb_MapHandler(hw_by_page[0x6], 0x10006000, 0x01000);
+	vtlb_MapHandler(hw_by_page[0x7], 0x10007000, 0x01000);
 	vtlb_MapHandler(hw_by_page[0xb], 0x1000b000, 0x01000);
 	vtlb_MapHandler(hw_by_page[0xe], 0x1000e000, 0x01000);
 	vtlb_MapHandler(hw_by_page[0xf], 0x1000f000, 0x01000);
+
+	vtlb_MapHandler(gs_page_0, 0x12000000, 0x01000);
+	vtlb_MapHandler(gs_page_1, 0x12001000, 0x01000);
 }
 
 //Why is this required ?
@@ -298,8 +314,6 @@ mem32_t __fastcall _ext_memRead32(u32 mem)
 {
 	switch (p)
 	{
-		case 1: // hwm
-			return hwRead32_page_other(mem);
 		case 2: // psh
 			return psxHwRead32(mem);
 		case 6: // gsm
@@ -322,8 +336,6 @@ void __fastcall _ext_memRead64(u32 mem, mem64_t *out)
 {
 	switch (p)
 	{
-		case 1: // hwm
-			*out = hwRead64(mem); return;
 		case 6: // gsm
 			*out = gsRead64(mem); return;
 	}
@@ -337,8 +349,8 @@ void __fastcall _ext_memRead128(u32 mem, mem128_t *out)
 {
 	switch (p)
 	{
-		case 1: // hwm
-			hwRead128(mem & ~0xa0000000, out); return;
+		//case 1: // hwm
+		//	hwRead128(mem & ~0xa0000000, out); return;
 		case 6: // gsm
 			out[0] = gsRead64(mem  );
 			out[1] = gsRead64(mem+8); return;
@@ -398,8 +410,6 @@ template<int p>
 void __fastcall _ext_memWrite32(u32 mem, u32 value)
 {
 	switch (p) {
-		case 1: // hwm
-			hwWrite32_page_other(mem, value); return;
 		case 2: // psh
 			psxHwWrite32(mem, value); return;
 		case 6: // gsm
@@ -416,13 +426,13 @@ template<int p>
 void __fastcall _ext_memWrite64(u32 mem, const u64* value)
 {
 
-	switch (p) {
-		case 1: // hwm
-			hwWrite64(mem & ~0xa0000000, *value);
-			return;
-		case 6: // gsm
-			gsWrite64(mem & ~0xa0000000, *value); return;
-	}
+	/*switch (p) {
+		//case 1: // hwm
+		//	hwWrite64(mem & ~0xa0000000, *value);
+		//	return;
+		//case 6: // gsm
+		//	gsWrite64(mem & ~0xa0000000, *value); return;
+	}*/
 
 	MEM_LOG("Unknown Memory write64  to  address %x with data %8.8x_%8.8x\n", mem, (u32)(*value>>32), (u32)*value);
 	cpuTlbMissW(mem, cpuRegs.branch);
@@ -430,15 +440,15 @@ void __fastcall _ext_memWrite64(u32 mem, const u64* value)
 template<int p>
 void __fastcall _ext_memWrite128(u32 mem, const u64 *value)
 {
-	switch (p) {
-		case 1: // hwm
-			hwWrite128(mem & ~0xa0000000, value);
-			return;
-		case 6: // gsm
-			mem &= ~0xa0000000;
-			gsWrite64(mem,   value[0]);
-			gsWrite64(mem+8, value[1]); return;
-	}
+	/*switch (p) {
+		//case 1: // hwm
+		//	hwWrite128(mem & ~0xa0000000, value);
+		//	return;
+		//case 6: // gsm
+		//	mem &= ~0xa0000000;
+		//	gsWrite64(mem,   value[0]);
+		//	gsWrite64(mem+8, value[1]); return;
+	}*/
 
 	MEM_LOG("Unknown Memory write128 to  address %x with data %8.8x_%8.8x_%8.8x_%8.8x\n", mem, ((u32*)value)[3], ((u32*)value)[2], ((u32*)value)[1], ((u32*)value)[0]);
 	cpuTlbMissW(mem, cpuRegs.branch);
@@ -671,7 +681,7 @@ void memReset()
 	tlb_fallback_3=vtlb_RegisterHandlerTempl1(_ext_mem,3);
 	tlb_fallback_4=vtlb_RegisterHandlerTempl1(_ext_mem,4);
 	tlb_fallback_5=vtlb_RegisterHandlerTempl1(_ext_mem,5);
-	tlb_fallback_6=vtlb_RegisterHandlerTempl1(_ext_mem,6);
+	//tlb_fallback_6=vtlb_RegisterHandlerTempl1(_ext_mem,6);
 	tlb_fallback_7=vtlb_RegisterHandlerTempl1(_ext_mem,7);
 	tlb_fallback_8=vtlb_RegisterHandlerTempl1(_ext_mem,8);
 
@@ -683,50 +693,88 @@ void memReset()
 	vu0_micro_mem[1] = vtlb_RegisterHandlerTempl2(vuMicro,0,false);
 	vu1_micro_mem[1] = vtlb_RegisterHandlerTempl2(vuMicro,1,false);
 
-	//////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////////////
 	// psHw Optimized Mappings
 	// The HW Registers have been split into pages to improve optimization.
 	// Anything not explicitly mapped into one of the hw_by_page handlers will be handled
 	// by the default/generic tlb_fallback_1 handler.
 
 	tlb_fallback_1 = vtlb_RegisterHandler(
-		_ext_memRead8<1>, _ext_memRead16<1>, hwRead32_page_other, _ext_memRead64<1>, _ext_memRead128<1>,
-		_ext_memWrite8<1>, _ext_memWrite16<1>, hwWrite32_page_other, _ext_memWrite64<1>, _ext_memWrite128<1>
+		_ext_memRead8<1>, _ext_memRead16<1>, hwRead32_generic, hwRead64_generic, hwRead128_generic,
+		_ext_memWrite8<1>, _ext_memWrite16<1>, hwWrite32_generic, hwWrite64_generic, hwWrite128_generic
 	);
 
 	hw_by_page[0x0] = vtlb_RegisterHandler(
-		_ext_memRead8<1>, _ext_memRead16<1>, hwRead32_page_00, _ext_memRead64<1>, _ext_memRead128<1>,
-		_ext_memWrite8<1>, _ext_memWrite16<1>, hwWrite32_page_00, _ext_memWrite64<1>, _ext_memWrite128<1>
+		_ext_memRead8<1>, _ext_memRead16<1>, hwRead32_page_00, hwRead64_page_00, hwRead128_page_00,
+		_ext_memWrite8<1>, _ext_memWrite16<1>, hwWrite32_page_00, hwWrite64_generic, hwWrite128_generic
 	);
 
 	hw_by_page[0x1] = vtlb_RegisterHandler(
-		_ext_memRead8<1>, _ext_memRead16<1>, hwRead32_page_01, _ext_memRead64<1>, _ext_memRead128<1>,
-		_ext_memWrite8<1>, _ext_memWrite16<1>, hwWrite32_page_01, _ext_memWrite64<1>, _ext_memWrite128<1>
+		_ext_memRead8<1>, _ext_memRead16<1>, hwRead32_page_01, hwRead64_page_01, hwRead128_page_01,
+		_ext_memWrite8<1>, _ext_memWrite16<1>, hwWrite32_page_01, hwWrite64_generic, hwWrite128_generic
 	);
 
 	hw_by_page[0x2] = vtlb_RegisterHandler(
-		_ext_memRead8<1>, _ext_memRead16<1>, hwRead32_page_02, _ext_memRead64<1>, _ext_memRead128<1>,
-		_ext_memWrite8<1>, _ext_memWrite16<1>, hwWrite32_page_02, _ext_memWrite64<1>, _ext_memWrite128<1>
+		_ext_memRead8<1>, _ext_memRead16<1>, hwRead32_page_02, hwRead64_page_02, hwRead128_page_02,
+		_ext_memWrite8<1>, _ext_memWrite16<1>, hwWrite32_page_02, hwWrite64_page_02, hwWrite128_generic
 	);
 
 	hw_by_page[0x3] = vtlb_RegisterHandler(
-		_ext_memRead8<1>, _ext_memRead16<1>, hwRead32_page_other, _ext_memRead64<1>, _ext_memRead128<1>,
-		_ext_memWrite8<1>, _ext_memWrite16<1>, hwWrite32_page_03, _ext_memWrite64<1>, _ext_memWrite128<1>
+		_ext_memRead8<1>, _ext_memRead16<1>, hwRead32_generic, hwRead64_generic, hwRead128_generic,
+		_ext_memWrite8<1>, _ext_memWrite16<1>, hwWrite32_page_03, hwWrite64_page_03, hwWrite128_generic
+	);
+
+	hw_by_page[0x4] = vtlb_RegisterHandler(
+		_ext_memRead8<1>, _ext_memRead16<1>, hwRead32_generic, hwRead64_generic, ReadFIFO_page_4,
+		_ext_memWrite8<1>, _ext_memWrite16<1>, hwWrite32_generic, hwWrite64_generic, WriteFIFO_page_4
+	);
+
+	hw_by_page[0x5] = vtlb_RegisterHandler(
+		_ext_memRead8<1>, _ext_memRead16<1>, hwRead32_generic, hwRead64_generic, ReadFIFO_page_5,
+		_ext_memWrite8<1>, _ext_memWrite16<1>, hwWrite32_generic, hwWrite64_generic, WriteFIFO_page_5
+	);
+
+	hw_by_page[0x6] = vtlb_RegisterHandler(
+		_ext_memRead8<1>, _ext_memRead16<1>, hwRead32_generic, hwRead64_generic, ReadFIFO_page_6,
+		_ext_memWrite8<1>, _ext_memWrite16<1>, hwWrite32_generic, hwWrite64_generic, WriteFIFO_page_6
+	);
+
+	hw_by_page[0x7] = vtlb_RegisterHandler(
+		_ext_memRead8<1>, _ext_memRead16<1>, hwRead32_generic, hwRead64_generic, ReadFIFO_page_7,
+		_ext_memWrite8<1>, _ext_memWrite16<1>, hwWrite32_generic, hwWrite64_generic, WriteFIFO_page_7
 	);
 
 	hw_by_page[0xb] = vtlb_RegisterHandler(
-		_ext_memRead8<1>, _ext_memRead16<1>, hwRead32_page_other, _ext_memRead64<1>, _ext_memRead128<1>,
-		_ext_memWrite8<1>, _ext_memWrite16<1>, hwWrite32_page_0B, _ext_memWrite64<1>, _ext_memWrite128<1>
+		_ext_memRead8<1>, _ext_memRead16<1>, hwRead32_generic, hwRead64_generic, hwRead128_generic,
+		_ext_memWrite8<1>, _ext_memWrite16<1>, hwWrite32_page_0B, hwWrite64_generic, hwWrite128_generic
 	);
 
 	hw_by_page[0xe] = vtlb_RegisterHandler(
-		_ext_memRead8<1>, _ext_memRead16<1>, hwRead32_page_other, _ext_memRead64<1>, _ext_memRead128<1>,
-		_ext_memWrite8<1>, _ext_memWrite16<1>, hwWrite32_page_0E, _ext_memWrite64<1>, _ext_memWrite128<1>
+		_ext_memRead8<1>, _ext_memRead16<1>, hwRead32_generic, hwRead64_generic, hwRead128_generic,
+		_ext_memWrite8<1>, _ext_memWrite16<1>, hwWrite32_page_0E, hwWrite64_page_0E, hwWrite128_generic
 	);
 
 	hw_by_page[0xf] = vtlb_RegisterHandler(
-		_ext_memRead8<1>, _ext_memRead16<1>, hwRead32_page_0F, _ext_memRead64<1>, _ext_memRead128<1>,
-		_ext_memWrite8<1>, _ext_memWrite16<1>, hwWrite32_page_0F, _ext_memWrite64<1>, _ext_memWrite128<1>
+		_ext_memRead8<1>, _ext_memRead16<1>, hwRead32_page_0F, hwRead64_generic, hwRead128_generic,
+		_ext_memWrite8<1>, _ext_memWrite16<1>, hwWrite32_page_0F, hwWrite64_generic, hwWrite128_generic
+	);
+
+	//////////////////////////////////////////////////////////////////////
+	// GS Optimized Mappings
+
+	tlb_fallback_6 = vtlb_RegisterHandler(
+		_ext_memRead8<6>, _ext_memRead16<6>, _ext_memRead32<6>, _ext_memRead64<6>, _ext_memRead128<6>,
+		_ext_memWrite8<6>, _ext_memWrite16<6>, _ext_memWrite32<6>, gsWrite64_generic, gsWrite128_generic
+	);
+
+	gs_page_0 = vtlb_RegisterHandler(
+		_ext_memRead8<6>, _ext_memRead16<6>, _ext_memRead32<6>, _ext_memRead64<6>, _ext_memRead128<6>,
+		_ext_memWrite8<6>, _ext_memWrite16<6>, _ext_memWrite32<6>, gsWrite64_page_00, gsWrite128_page_00
+	);
+
+	gs_page_1 = vtlb_RegisterHandler(
+		_ext_memRead8<6>, _ext_memRead16<6>, _ext_memRead32<6>, _ext_memRead64<6>, _ext_memRead128<6>,
+		_ext_memWrite8<6>, _ext_memWrite16<6>, _ext_memWrite32<6>, gsWrite64_page_01, gsWrite128_page_01
 	);
 
 	//vtlb_Reset();

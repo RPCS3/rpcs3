@@ -28,125 +28,194 @@
 //////////////////////////////////////////////////////////////////////////
 /////////////////////////// Quick & dirty FIFO :D ////////////////////////
 //////////////////////////////////////////////////////////////////////////
+
+// ** NOTE: cannot use XMM/MMX regs **
+
+// Notes on FIFO implementation
+//
+// The FIFO consists of four separate pages of HW register memory, each mapped to a
+// PS2 device.  They are listed as follows:
+//
+// 0x4000 - 0x5000 : VIF0  (all registers map to 0x4000)
+// 0x5000 - 0x6000 : VIF1  (all registers map to 0x5000)
+// 0x6000 - 0x7000 : GS    (all registers map to 0x6000)
+// 0x7000 - 0x8000 : IPU   (registers map to 0x7000 and 0x7010, respectively)
+
 extern int FIFOto_write(u32* pMem, int size);
 extern void FIFOfrom_readsingle(void *value);
 
 extern int g_nIPU0Data;
 extern u8* g_pIPU0Pointer;
 extern int FOreadpos;
-// NOTE: cannot use XMM/MMX regs
-void ReadFIFO(u32 mem, u64 *out) {
-	if ((mem >= 0x10004000) && (mem < 0x10005000)) {
-		VIF_LOG("ReadFIFO VIF0 0x%08X\n", mem);
-		out[0] = psHu64(mem  );
-		out[1] = psHu64(mem+8);
-		return;
-	} else
-	if ((mem >= 0x10005000) && (mem < 0x10006000)) {
 
-#ifdef PCSX2_DEVBUILD
-		VIF_LOG("ReadFIFO VIF1 0x%08X\n", mem);
+//////////////////////////////////////////////////////////////////////////
+// ReadFIFO Pages
 
-		if( vif1Regs->stat & (VIF1_STAT_INT|VIF1_STAT_VSS|VIF1_STAT_VIS|VIF1_STAT_VFS) ) {
-			SysPrintf("reading from vif1 fifo when stalled\n");
-		}
-#endif
+void __fastcall ReadFIFO_page_4(u32 mem, u64 *out)
+{
+	jASSUME( (mem >= 0x10004000) && (mem < 0x10005000) );
+	
+	VIF_LOG("ReadFIFO/VIF0 0x%08X\n", mem);
+	//out[0] = psHu64(mem  );
+	//out[1] = psHu64(mem+8);
 
-		if (vif1Regs->stat & 0x800000) {
-			if (--psHu32(D1_QWC) == 0) {
-				vif1Regs->stat&= ~0x1f000000;
-			} else {
-			}
-		}
-		out[0] = psHu64(mem  );
-		out[1] = psHu64(mem+8);
-		return;
-	} else if( (mem&0xfffff010) == 0x10007000) {
-		
-		if( g_nIPU0Data > 0 ) {
+	out[0] = psHu64(0x4000);
+	out[1] = psHu64(0x4008);
+}
+
+void __fastcall ReadFIFO_page_5(u32 mem, u64 *out)
+{
+	jASSUME( (mem >= 0x10005000) && (mem < 0x10006000) );
+
+	VIF_LOG("ReadFIFO/VIF1, addr=0x%08X\n", mem);
+
+	if( vif1Regs->stat & (VIF1_STAT_INT|VIF1_STAT_VSS|VIF1_STAT_VIS|VIF1_STAT_VFS) )
+		DevCon::Notice( "Reading from vif1 fifo when stalled" );
+
+	if (vif1Regs->stat & 0x800000)
+	{
+		if (--psHu32(D1_QWC) == 0)
+			vif1Regs->stat&= ~0x1f000000;
+	}
+
+	//out[0] = psHu64(mem  );
+	//out[1] = psHu64(mem+8);
+
+	out[0] = psHu64(0x5000);
+	out[1] = psHu64(0x5008);
+}
+
+void __fastcall ReadFIFO_page_6(u32 mem, u64 *out)
+{
+	jASSUME( (mem >= 0x10006000) && (mem < 0x10007000) );
+
+	DevCon::Notice( "ReadFIFO/GIF, addr=0x%x", params mem );
+
+	//out[0] = psHu64(mem  );
+	//out[1] = psHu64(mem+8);
+
+	out[0] = psHu64(0x6000);
+	out[1] = psHu64(0x6008);	
+}
+
+void __fastcall ReadFIFO_page_7(u32 mem, u64 *out)
+{
+	jASSUME( (mem >= 0x10007000) && (mem < 0x10008000) );
+
+	// All addresses in this page map to 0x7000 and 0x7010:
+	mem &= 0x10;
+
+	if( mem == 0 )
+	{
+		if( g_nIPU0Data > 0 )
+		{
 			out[0] = *(u64*)(g_pIPU0Pointer);
 			out[1] = *(u64*)(g_pIPU0Pointer+8);
 			FOreadpos = (FOreadpos + 4) & 31;
 			g_nIPU0Data--;
 			g_pIPU0Pointer += 16;
 		}
-		return;
-	}else if ( (mem&0xfffff010) == 0x10007010) {
+	}
+	else
 		FIFOfrom_readsingle((void*)out);
-		return;
-	}
-	SysPrintf("ReadFIFO Unknown %x\n", mem);
 }
 
-void ConstReadFIFO(u32 mem)
+//////////////////////////////////////////////////////////////////////////
+// WriteFIFO Pages
+
+void __fastcall WriteFIFO_page_4(u32 mem, const mem128_t *value)
 {
-	// not done
+	jASSUME( (mem >= 0x10004000) && (mem < 0x10005000) );
+
+	VIF_LOG("WriteFIFO/VIF0, addr=0x%08X\n", mem);
+	
+	//psHu64(mem  ) = value[0];
+	//psHu64(mem+8) = value[1];
+
+	psHu64(0x4000) = value[0];
+	psHu64(0x4008) = value[1];
+	
+	vif0ch->qwc += 1;
+	int ret = VIF0transfer((u32*)value, 4, 0);
+	assert( ret == 0 ); // vif stall code not implemented
+}
+		
+void __fastcall WriteFIFO_page_5(u32 mem, const mem128_t *value)
+{
+	jASSUME( (mem >= 0x10005000) && (mem < 0x10006000) );
+
+	VIF_LOG("WriteFIFO/VIF1, addr=0x%08X\n", mem);
+	
+	//psHu64(mem  ) = value[0];
+	//psHu64(mem+8) = value[1];
+
+	psHu64(0x5000) = value[0];
+	psHu64(0x5008) = value[1];
+
+	if(vif1Regs->stat & VIF1_STAT_FDR)
+		DevCon::Notice("writing to fifo when fdr is set!");
+	if( vif1Regs->stat & (VIF1_STAT_INT|VIF1_STAT_VSS|VIF1_STAT_VIS|VIF1_STAT_VFS) )
+		DevCon::Notice("writing to vif1 fifo when stalled");
+
+	vif1ch->qwc += 1;
+	int ret = VIF1transfer((u32*)value, 4, 0);
+	assert( ret == 0 ); // vif stall code not implemented
 }
 
-void WriteFIFO(u32 mem, const u64 *value) {
-	int ret;
+void __fastcall WriteFIFO_page_6(u32 mem, const mem128_t *value)
+{
+	jASSUME( (mem >= 0x10006000) && (mem < 0x10007000) );
+	GIF_LOG("WriteFIFO/GIF, addr=0x%08X\n", mem);
 
-	if ((mem >= 0x10004000) && (mem < 0x10005000)) {
-		VIF_LOG("WriteFIFO VIF0 0x%08X\n", mem);
-		
-		psHu64(mem  ) = value[0];
-		psHu64(mem+8) = value[1];
-		vif0ch->qwc += 1;
-		ret = VIF0transfer((u32*)value, 4, 0);
-		assert(ret == 0 ); // vif stall code not implemented
+	//psHu64(mem  ) = value[0];
+	//psHu64(mem+8) = value[1];
+
+	psHu64(0x6000) = value[0];
+	psHu64(0x6008) = value[1];
+
+	if( mtgsThread != NULL )
+	{
+		const uint count = mtgsThread->PrepDataPacket( GIF_PATH_3, value, 1 );
+		jASSUME( count == 1 );
+		u64* data = (u64*)mtgsThread->GetDataPacketPtr();
+		data[0] = value[0];
+		data[1] = value[1];
+		mtgsThread->SendDataPacket();
 	}
-	else if ((mem >= 0x10005000) && (mem < 0x10006000)) {
-		VIF_LOG("WriteFIFO VIF1 0x%08X\n", mem);
-		
-		psHu64(mem  ) = value[0];
-		psHu64(mem+8) = value[1];
-
-#ifdef PCSX2_DEVBUILD
-		if(vif1Regs->stat & VIF1_STAT_FDR)
-			SysPrintf("writing to fifo when fdr is set!\n");
-		if( vif1Regs->stat & (VIF1_STAT_INT|VIF1_STAT_VSS|VIF1_STAT_VIS|VIF1_STAT_VFS) ) {
-			SysPrintf("writing to vif1 fifo when stalled\n");
-		}
-#endif
-		vif1ch->qwc += 1;
-		ret = VIF1transfer((u32*)value, 4, 0);
-		assert(ret == 0 ); // vif stall code not implemented
+	else
+	{
+		FreezeXMMRegs(1);
+		FreezeMMXRegs(1);
+		GSGIFTRANSFER3((u32*)value, 1);
+		FreezeMMXRegs(0);
+		FreezeXMMRegs(0);
 	}
-	else if ((mem >= 0x10006000) && (mem < 0x10007000)) {
-		GIF_LOG("WriteFIFO GIF 0x%08X\n", mem);
+}
+		
+void __fastcall WriteFIFO_page_7(u32 mem, const mem128_t *value)
+{
+	jASSUME( (mem >= 0x10007000) && (mem < 0x10008000) );
 
-		psHu64(mem  ) = value[0];
-		psHu64(mem+8) = value[1];
+	// All addresses in this page map to 0x7000 and 0x7010:
+	mem &= 0x10;
 
-		if( mtgsThread != NULL )
+	IPU_LOG( "WriteFIFO/IPU, addr=0x%x", params mem );
+
+	if( mem == 0 )
+	{
+		// Should this raise a PS2 exception or just ignore silently?
+		Console::Notice( "WriteFIFO/IPUout (ignored)" );
+	}
+	else
+	{
+		IPU_LOG("WriteFIFO IPU_in[%d] <- %8.8X_%8.8X_%8.8X_%8.8X\n",
+			mem/16, ((u32*)value)[3], ((u32*)value)[2], ((u32*)value)[1], ((u32*)value)[0]);
+
+		//committing every 16 bytes
+		while( FIFOto_write((u32*)value, 1) == 0 )
 		{
-			const uint count = mtgsThread->PrepDataPacket( GIF_PATH_3, value, 1 );
-			jASSUME( count == 1 );
-			u64* data = (u64*)mtgsThread->GetDataPacketPtr();
-			data[0] = value[0];
-			data[1] = value[1];
-			mtgsThread->SendDataPacket();
-		}
-		else
-		{
-			FreezeXMMRegs(1);
-			GSGIFTRANSFER3((u32*)value, 1);
-			FreezeXMMRegs(0);
-		}
-
-	} else
-	if ((mem&0xfffff010) == 0x10007010) {
-		IPU_LOG("WriteFIFO IPU_in[%d] <- %8.8X_%8.8X_%8.8X_%8.8X\n", (mem - 0x10007010)/8, ((u32*)value)[3], ((u32*)value)[2], ((u32*)value)[1], ((u32*)value)[0]);
-
-		//commiting every 16 bytes
-		while( FIFOto_write((u32*)value, 1) == 0 ) {
 			Console::WriteLn("IPU sleeping");
 			Threading::Timeslice();
 		}
-	} else {
-		Console::Notice("WriteFIFO Unknown %x", params mem);
 	}
-}
-
-void ConstWriteFIFO(u32 mem) {
 }
