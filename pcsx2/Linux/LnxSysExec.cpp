@@ -198,7 +198,6 @@ void RunExecute(const char* elf_file, bool use_bios)
 
 		loadElfFile(elf_file);
 	}
-	//FixCPUState();
 	ExecuteCpu();
 }
 
@@ -281,6 +280,13 @@ public:
 	}
 };
 
+bool isSlotUsed(int num)
+{
+	if (ElfCRC == 0) 
+		return false;
+	else
+		return Path::isFile(SaveState::GetFilename( num ));
+}
 
 void States_Load(const string& file, int num = -1)
 {
@@ -380,6 +386,7 @@ void States_Save( const string& file, int num = -1 )
 
 		Console::Error( message.c_str() );
 	}
+	CheckSlots();
 }
 
 void States_Save(int num)
@@ -436,25 +443,23 @@ public:
 	}
 };
 
-void OnStates_Load1(GtkMenuItem *menuitem, gpointer user_data)
+void OnStates_Load(GtkMenuItem *menuitem, gpointer user_data)
 {
-	States_Load(0);
-}
-void OnStates_Load2(GtkMenuItem *menuitem, gpointer user_data)
-{
-	States_Load(1);
-}
-void OnStates_Load3(GtkMenuItem *menuitem, gpointer user_data)
-{
-	States_Load(2);
-}
-void OnStates_Load4(GtkMenuItem *menuitem, gpointer user_data)
-{
-	States_Load(3);
-}
-void OnStates_Load5(GtkMenuItem *menuitem, gpointer user_data)
-{
-	States_Load(4);
+	char *name;
+	int i;
+	
+	if (GTK_BIN (menuitem)->child)
+	{
+		GtkWidget *child = GTK_BIN (menuitem)->child;
+  
+		if (GTK_IS_LABEL (child)) 
+			gtk_label_get (GTK_LABEL (child), &name);
+		else
+			return;
+	}
+	
+	sscanf(name, "Slot %d", &i);
+	States_Load(i);
 }
 
 void OnLoadOther_Ok(GtkButton* button, gpointer user_data)
@@ -493,25 +498,23 @@ void OnStates_LoadOther(GtkMenuItem *menuitem, gpointer user_data)
 	gdk_window_raise(FileSel->window);
 }
 
-void OnStates_Save1(GtkMenuItem *menuitem, gpointer user_data)
+void OnStates_Save(GtkMenuItem *menuitem, gpointer user_data)
 {
-	States_Save(0);
-}
-void OnStates_Save2(GtkMenuItem *menuitem, gpointer user_data)
-{
-	States_Save(1);
-}
-void OnStates_Save3(GtkMenuItem *menuitem, gpointer user_data)
-{
-	States_Save(2);
-}
-void OnStates_Save4(GtkMenuItem *menuitem, gpointer user_data)
-{
-	States_Save(3);
-}
-void OnStates_Save5(GtkMenuItem *menuitem, gpointer user_data)
-{
-	States_Save(4);
+	char *name;
+	int i;
+	
+	if (GTK_BIN (menuitem)->child)
+	{
+		GtkWidget *child = GTK_BIN (menuitem)->child;
+  
+		if (GTK_IS_LABEL (child)) 
+			gtk_label_get (GTK_LABEL (child), &name);
+		else
+			return;
+	}
+	
+	sscanf(name, "Slot %d", &i);
+	States_Save(i);
 }
 
 void OnSaveOther_Ok(GtkButton* button, gpointer user_data)

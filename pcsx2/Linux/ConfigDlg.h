@@ -58,6 +58,8 @@ void SetComboToGList(GtkComboBox *widget, GList *list);
 static void ConfPlugin(PluginConf confs, char* plugin, const char* name);
 static void TestPlugin(PluginConf confs, char* plugin, const char* name);
 
+extern void CheckSlots();
+
 
 
 

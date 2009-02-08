@@ -30,6 +30,8 @@ extern bool g_EmulationInProgress;	// Set TRUE if a game is actively running (se
 extern void RunExecute(const char* elf_file, bool use_bios = false);
 void OnLanguage(GtkMenuItem *menuitem, gpointer user_data);
 extern void ExecuteCpu();
+extern void CheckSlots();
+extern bool isSlotUsed(int num);
 
 void InitLanguages();
 char *GetLanguageNext();

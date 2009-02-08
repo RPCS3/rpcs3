@@ -239,23 +239,7 @@ OnFile_LoadElf                         (GtkMenuItem     *menuitem,
                                         gpointer         user_data);
 
 void
-OnStates_Load1                         (GtkMenuItem     *menuitem,
-                                        gpointer         user_data);
-
-void
-OnStates_Load2                         (GtkMenuItem     *menuitem,
-                                        gpointer         user_data);
-
-void
-OnStates_Load3                         (GtkMenuItem     *menuitem,
-                                        gpointer         user_data);
-
-void
-OnStates_Load4                         (GtkMenuItem     *menuitem,
-                                        gpointer         user_data);
-
-void
-OnStates_Load5                         (GtkMenuItem     *menuitem,
+OnStates_Load                          (GtkMenuItem     *menuitem,
                                         gpointer         user_data);
 
 void
@@ -263,23 +247,7 @@ OnStates_LoadOther                     (GtkMenuItem     *menuitem,
                                         gpointer         user_data);
 
 void
-OnStates_Save1                         (GtkMenuItem     *menuitem,
-                                        gpointer         user_data);
-
-void
-OnStates_Save2                         (GtkMenuItem     *menuitem,
-                                        gpointer         user_data);
-
-void
-OnStates_Save3                         (GtkMenuItem     *menuitem,
-                                        gpointer         user_data);
-
-void
-OnStates_Save4                         (GtkMenuItem     *menuitem,
-                                        gpointer         user_data);
-
-void
-OnStates_Save5                         (GtkMenuItem     *menuitem,
+OnStates_Save                          (GtkMenuItem     *menuitem,
                                         gpointer         user_data);
 
 void

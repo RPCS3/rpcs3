@@ -4797,47 +4797,47 @@ Version x.x</property>
 				<widget class="GtkMenu" id="load1_menu">
 
 				  <child>
-				    <widget class="GtkMenuItem" id="slot_1">
+				    <widget class="GtkMenuItem" id="load_slot_0">
+				      <property name="visible">True</property>
+				      <property name="label" translatable="yes">Slot 0</property>
+				      <property name="use_underline">True</property>
+				      <signal name="activate" handler="OnStates_Load" last_modification_time="Sun, 08 Feb 2009 01:08:22 GMT"/>
+				    </widget>
+				  </child>
+
+				  <child>
+				    <widget class="GtkMenuItem" id="load_slot_1">
 				      <property name="visible">True</property>
 				      <property name="label" translatable="yes">Slot 1</property>
 				      <property name="use_underline">True</property>
-				      <signal name="activate" handler="OnStates_Load1"/>
+				      <signal name="activate" handler="OnStates_Load" last_modification_time="Sun, 08 Feb 2009 01:08:22 GMT"/>
 				    </widget>
 				  </child>
 
 				  <child>
-				    <widget class="GtkMenuItem" id="slot_2">
+				    <widget class="GtkMenuItem" id="load_slot_2">
 				      <property name="visible">True</property>
 				      <property name="label" translatable="yes">Slot 2</property>
 				      <property name="use_underline">True</property>
-				      <signal name="activate" handler="OnStates_Load2"/>
+				      <signal name="activate" handler="OnStates_Load" last_modification_time="Sun, 08 Feb 2009 01:08:22 GMT"/>
 				    </widget>
 				  </child>
 
 				  <child>
-				    <widget class="GtkMenuItem" id="slot_3\">
+				    <widget class="GtkMenuItem" id="load_slot_3">
 				      <property name="visible">True</property>
 				      <property name="label" translatable="yes">Slot 3</property>
 				      <property name="use_underline">True</property>
-				      <signal name="activate" handler="OnStates_Load3"/>
+				      <signal name="activate" handler="OnStates_Load" last_modification_time="Sun, 08 Feb 2009 01:08:22 GMT"/>
 				    </widget>
 				  </child>
 
 				  <child>
-				    <widget class="GtkMenuItem" id="slot_4">
+				    <widget class="GtkMenuItem" id="load_slot_4">
 				      <property name="visible">True</property>
 				      <property name="label" translatable="yes">Slot 4</property>
 				      <property name="use_underline">True</property>
-				      <signal name="activate" handler="OnStates_Load4"/>
-				    </widget>
-				  </child>
-
-				  <child>
-				    <widget class="GtkMenuItem" id="slot_5">
-				      <property name="visible">True</property>
-				      <property name="label" translatable="yes">Slot 5</property>
-				      <property name="use_underline">True</property>
-				      <signal name="activate" handler="OnStates_Load5"/>
+				      <signal name="activate" handler="OnStates_Load" last_modification_time="Sun, 08 Feb 2009 01:08:22 GMT"/>
 				    </widget>
 				  </child>
 
@@ -4864,47 +4864,47 @@ Version x.x</property>
 				<widget class="GtkMenu" id="save1_menu">
 
 				  <child>
-				    <widget class="GtkMenuItem" id="slot_6">
+				    <widget class="GtkMenuItem" id="save_slot_0">
+				      <property name="visible">True</property>
+				      <property name="label" translatable="yes">Slot 0</property>
+				      <property name="use_underline">True</property>
+				      <signal name="activate" handler="OnStates_Save" last_modification_time="Sun, 08 Feb 2009 01:08:22 GMT"/>
+				    </widget>
+				  </child>
+
+				  <child>
+				    <widget class="GtkMenuItem" id="save_slot_1">
 				      <property name="visible">True</property>
 				      <property name="label" translatable="yes">Slot 1</property>
 				      <property name="use_underline">True</property>
-				      <signal name="activate" handler="OnStates_Save1"/>
+				      <signal name="activate" handler="OnStates_Save" last_modification_time="Sun, 08 Feb 2009 01:08:22 GMT"/>
 				    </widget>
 				  </child>
 
 				  <child>
-				    <widget class="GtkMenuItem" id="slot_7">
+				    <widget class="GtkMenuItem" id="save_slot_2">
 				      <property name="visible">True</property>
 				      <property name="label" translatable="yes">Slot 2</property>
 				      <property name="use_underline">True</property>
-				      <signal name="activate" handler="OnStates_Save2"/>
+				      <signal name="activate" handler="OnStates_Save" last_modification_time="Sun, 08 Feb 2009 01:08:22 GMT"/>
 				    </widget>
 				  </child>
 
 				  <child>
-				    <widget class="GtkMenuItem" id="slot_8">
+				    <widget class="GtkMenuItem" id="save_slot_3">
 				      <property name="visible">True</property>
 				      <property name="label" translatable="yes">Slot 3</property>
 				      <property name="use_underline">True</property>
-				      <signal name="activate" handler="OnStates_Save3"/>
+				      <signal name="activate" handler="OnStates_Save" last_modification_time="Sun, 08 Feb 2009 01:08:22 GMT"/>
 				    </widget>
 				  </child>
 
 				  <child>
-				    <widget class="GtkMenuItem" id="slot_9">
+				    <widget class="GtkMenuItem" id="save_slot_4">
 				      <property name="visible">True</property>
 				      <property name="label" translatable="yes">Slot 4</property>
 				      <property name="use_underline">True</property>
-				      <signal name="activate" handler="OnStates_Save4"/>
-				    </widget>
-				  </child>
-
-				  <child>
-				    <widget class="GtkMenuItem" id="slot_10">
-				      <property name="visible">True</property>
-				      <property name="label" translatable="yes">Slot 5</property>
-				      <property name="use_underline">True</property>
-				      <signal name="activate" handler="OnStates_Save5"/>
+				      <signal name="activate" handler="OnStates_Save" last_modification_time="Sun, 08 Feb 2009 01:08:22 GMT"/>
 				    </widget>
 				  </child>
 

@@ -28,7 +28,7 @@ const char* g_pRunGSState = NULL;
 
 int efile = 0;
 char elfname[g_MaxPath];
-int Slots[5] = { -1, -1, -1, -1, -1 };
+bool Slots[5] = { false, false, false, false, false };
 
 #ifdef PCSX2_DEVBUILD
 TESTRUNARGS g_TestRun;
@@ -217,7 +217,7 @@ int main(int argc, char *argv[])
 		return 0;
 	}
 #endif
-
+	
 	if (UseGui && (file == NULL))
 	{
 		StartGui();
@@ -228,7 +228,6 @@ int main(int argc, char *argv[])
 
 	SysReset();
 
-	//FixCPUState();
 	cpuExecuteBios();
 	if (file) strcpy(elfname, file);
 	if (!efile) efile = GetPS2ElfName(elfname);
@@ -359,18 +358,13 @@ void StartGui()
 #ifndef PCSX2_DEVBUILD
 	gtk_widget_set_sensitive(GTK_WIDGET(lookup_widget(MainWindow, "GtkMenuItem_Logging")), FALSE);
 #endif
-
+	
+	CheckSlots();
+	
 	gtk_widget_show_all(MainWindow);
 	gtk_window_activate_focus(GTK_WINDOW(MainWindow));
 	gtk_main();
 }
-
-/*void FixCPUState(void)
-{
-	//Config.sseMXCSR = LinuxsseMXCSR;
-	//Config.sseVUMXCSR = LinuxsseVUMXCSR;
-	SetCPUState(Config.sseMXCSR, Config.sseVUMXCSR);
-}*/
 
 void OnDestroy(GtkObject *object, gpointer user_data) {}
 
@@ -505,33 +499,45 @@ void OnEmu_Reset(GtkMenuItem *menuitem, gpointer user_data)
 	SysReset();
 }
 
-
-void ResetMenuSlots(GtkMenuItem *menuitem, gpointer user_data)
+void ResetMenuSlots()
 {
 	GtkWidget *Item;
-	char str[g_MaxPath];
+	char str[g_MaxPath], str2[g_MaxPath];
 	int i;
 
 	for (i = 0; i < 5; i++)
 	{
-		sprintf(str, "GtkMenuItem_LoadSlot%d", i + 1);
+		
+		sprintf(str, "load_slot_%d", i);
+		sprintf(str2, "save_slot_%d", i);
 		Item = lookup_widget(MainWindow, str);
-		if (Slots[i] == -1)
-			gtk_widget_set_sensitive(Item, FALSE);
+		
+		if GTK_IS_WIDGET(Item) 
+			gtk_widget_set_sensitive(Item, Slots[i]);
 		else
-			gtk_widget_set_sensitive(Item, TRUE);
+			Console::Error("No such widget: %s", params str);
+		
+		Item = lookup_widget(MainWindow, str2);
+		gtk_widget_set_sensitive(Item, (ElfCRC != 0));
+			
 	}
 }
 
-/*void UpdateMenuSlots(GtkMenuItem *menuitem, gpointer user_data) {
-	char str[g_MaxPath];
+void CheckSlots()
+{
 	int i = 0;
-
-	for (i=0; i<5; i++) {
-		sprintf(str, SSTATES_DIR "/%8.8X.%3.3d", ElfCRC, i);
-		Slots[i] = CheckState(str);
+	
+	if (ElfCRC == 0) Console::Notice("Disabling game slots until a game is loaded.");
+	
+	for (i=0; i<5; i++) 
+	{
+		if (isSlotUsed(i))
+			Slots[i] = true;
+		else
+			Slots[i] = false;
 	}
-}*/
+	ResetMenuSlots();
+}
 
 //2002-09-28 (Florin)
 void OnArguments_Ok(GtkButton *button, gpointer user_data)

@@ -2401,19 +2401,19 @@ create_MainWindow (void)
   GtkWidget *states1_menu;
   GtkWidget *load1;
   GtkWidget *load1_menu;
-  GtkWidget *slot_1;
-  GtkWidget *slot_2;
-  GtkWidget *slot_3_;
-  GtkWidget *slot_4;
-  GtkWidget *slot_5;
+  GtkWidget *load_slot_0;
+  GtkWidget *load_slot_1;
+  GtkWidget *load_slot_2;
+  GtkWidget *load_slot_3;
+  GtkWidget *load_slot_4;
   GtkWidget *other1;
   GtkWidget *save1;
   GtkWidget *save1_menu;
-  GtkWidget *slot_6;
-  GtkWidget *slot_7;
-  GtkWidget *slot_8;
-  GtkWidget *slot_9;
-  GtkWidget *slot_10;
+  GtkWidget *save_slot_0;
+  GtkWidget *save_slot_1;
+  GtkWidget *save_slot_2;
+  GtkWidget *save_slot_3;
+  GtkWidget *save_slot_4;
   GtkWidget *other2;
   GtkWidget *GtkMenuItem_Exit;
   GtkWidget *GtkMenuItem_Emulator;
@@ -2501,25 +2501,25 @@ create_MainWindow (void)
   load1_menu = gtk_menu_new ();
   gtk_menu_item_set_submenu (GTK_MENU_ITEM (load1), load1_menu);
 
-  slot_1 = gtk_menu_item_new_with_mnemonic (_("Slot 1"));
-  gtk_widget_show (slot_1);
-  gtk_container_add (GTK_CONTAINER (load1_menu), slot_1);
+  load_slot_0 = gtk_menu_item_new_with_mnemonic (_("Slot 0"));
+  gtk_widget_show (load_slot_0);
+  gtk_container_add (GTK_CONTAINER (load1_menu), load_slot_0);
 
-  slot_2 = gtk_menu_item_new_with_mnemonic (_("Slot 2"));
-  gtk_widget_show (slot_2);
-  gtk_container_add (GTK_CONTAINER (load1_menu), slot_2);
+  load_slot_1 = gtk_menu_item_new_with_mnemonic (_("Slot 1"));
+  gtk_widget_show (load_slot_1);
+  gtk_container_add (GTK_CONTAINER (load1_menu), load_slot_1);
 
-  slot_3_ = gtk_menu_item_new_with_mnemonic (_("Slot 3"));
-  gtk_widget_show (slot_3_);
-  gtk_container_add (GTK_CONTAINER (load1_menu), slot_3_);
+  load_slot_2 = gtk_menu_item_new_with_mnemonic (_("Slot 2"));
+  gtk_widget_show (load_slot_2);
+  gtk_container_add (GTK_CONTAINER (load1_menu), load_slot_2);
 
-  slot_4 = gtk_menu_item_new_with_mnemonic (_("Slot 4"));
-  gtk_widget_show (slot_4);
-  gtk_container_add (GTK_CONTAINER (load1_menu), slot_4);
+  load_slot_3 = gtk_menu_item_new_with_mnemonic (_("Slot 3"));
+  gtk_widget_show (load_slot_3);
+  gtk_container_add (GTK_CONTAINER (load1_menu), load_slot_3);
 
-  slot_5 = gtk_menu_item_new_with_mnemonic (_("Slot 5"));
-  gtk_widget_show (slot_5);
-  gtk_container_add (GTK_CONTAINER (load1_menu), slot_5);
+  load_slot_4 = gtk_menu_item_new_with_mnemonic (_("Slot 4"));
+  gtk_widget_show (load_slot_4);
+  gtk_container_add (GTK_CONTAINER (load1_menu), load_slot_4);
 
   other1 = gtk_menu_item_new_with_mnemonic (_("Other..."));
   gtk_widget_show (other1);
@@ -2532,25 +2532,25 @@ create_MainWindow (void)
   save1_menu = gtk_menu_new ();
   gtk_menu_item_set_submenu (GTK_MENU_ITEM (save1), save1_menu);
 
-  slot_6 = gtk_menu_item_new_with_mnemonic (_("Slot 1"));
-  gtk_widget_show (slot_6);
-  gtk_container_add (GTK_CONTAINER (save1_menu), slot_6);
+  save_slot_0 = gtk_menu_item_new_with_mnemonic (_("Slot 0"));
+  gtk_widget_show (save_slot_0);
+  gtk_container_add (GTK_CONTAINER (save1_menu), save_slot_0);
 
-  slot_7 = gtk_menu_item_new_with_mnemonic (_("Slot 2"));
-  gtk_widget_show (slot_7);
-  gtk_container_add (GTK_CONTAINER (save1_menu), slot_7);
+  save_slot_1 = gtk_menu_item_new_with_mnemonic (_("Slot 1"));
+  gtk_widget_show (save_slot_1);
+  gtk_container_add (GTK_CONTAINER (save1_menu), save_slot_1);
 
-  slot_8 = gtk_menu_item_new_with_mnemonic (_("Slot 3"));
-  gtk_widget_show (slot_8);
-  gtk_container_add (GTK_CONTAINER (save1_menu), slot_8);
+  save_slot_2 = gtk_menu_item_new_with_mnemonic (_("Slot 2"));
+  gtk_widget_show (save_slot_2);
+  gtk_container_add (GTK_CONTAINER (save1_menu), save_slot_2);
 
-  slot_9 = gtk_menu_item_new_with_mnemonic (_("Slot 4"));
-  gtk_widget_show (slot_9);
-  gtk_container_add (GTK_CONTAINER (save1_menu), slot_9);
+  save_slot_3 = gtk_menu_item_new_with_mnemonic (_("Slot 3"));
+  gtk_widget_show (save_slot_3);
+  gtk_container_add (GTK_CONTAINER (save1_menu), save_slot_3);
 
-  slot_10 = gtk_menu_item_new_with_mnemonic (_("Slot 5"));
-  gtk_widget_show (slot_10);
-  gtk_container_add (GTK_CONTAINER (save1_menu), slot_10);
+  save_slot_4 = gtk_menu_item_new_with_mnemonic (_("Slot 4"));
+  gtk_widget_show (save_slot_4);
+  gtk_container_add (GTK_CONTAINER (save1_menu), save_slot_4);
 
   other2 = gtk_menu_item_new_with_mnemonic (_("Other..."));
   gtk_widget_show (other2);
@@ -2722,38 +2722,38 @@ create_MainWindow (void)
   g_signal_connect ((gpointer) GtkMenuItem_LoadElf, "activate",
                     G_CALLBACK (OnFile_LoadElf),
                     NULL);
-  g_signal_connect ((gpointer) slot_1, "activate",
-                    G_CALLBACK (OnStates_Load1),
+  g_signal_connect ((gpointer) load_slot_0, "activate",
+                    G_CALLBACK (OnStates_Load),
                     NULL);
-  g_signal_connect ((gpointer) slot_2, "activate",
-                    G_CALLBACK (OnStates_Load2),
+  g_signal_connect ((gpointer) load_slot_1, "activate",
+                    G_CALLBACK (OnStates_Load),
                     NULL);
-  g_signal_connect ((gpointer) slot_3_, "activate",
-                    G_CALLBACK (OnStates_Load3),
+  g_signal_connect ((gpointer) load_slot_2, "activate",
+                    G_CALLBACK (OnStates_Load),
                     NULL);
-  g_signal_connect ((gpointer) slot_4, "activate",
-                    G_CALLBACK (OnStates_Load4),
+  g_signal_connect ((gpointer) load_slot_3, "activate",
+                    G_CALLBACK (OnStates_Load),
                     NULL);
-  g_signal_connect ((gpointer) slot_5, "activate",
-                    G_CALLBACK (OnStates_Load5),
+  g_signal_connect ((gpointer) load_slot_4, "activate",
+                    G_CALLBACK (OnStates_Load),
                     NULL);
   g_signal_connect ((gpointer) other1, "activate",
                     G_CALLBACK (OnStates_LoadOther),
                     NULL);
-  g_signal_connect ((gpointer) slot_6, "activate",
-                    G_CALLBACK (OnStates_Save1),
+  g_signal_connect ((gpointer) save_slot_0, "activate",
+                    G_CALLBACK (OnStates_Save),
                     NULL);
-  g_signal_connect ((gpointer) slot_7, "activate",
-                    G_CALLBACK (OnStates_Save2),
+  g_signal_connect ((gpointer) save_slot_1, "activate",
+                    G_CALLBACK (OnStates_Save),
                     NULL);
-  g_signal_connect ((gpointer) slot_8, "activate",
-                    G_CALLBACK (OnStates_Save3),
+  g_signal_connect ((gpointer) save_slot_2, "activate",
+                    G_CALLBACK (OnStates_Save),
                     NULL);
-  g_signal_connect ((gpointer) slot_9, "activate",
-                    G_CALLBACK (OnStates_Save4),
+  g_signal_connect ((gpointer) save_slot_3, "activate",
+                    G_CALLBACK (OnStates_Save),
                     NULL);
-  g_signal_connect ((gpointer) slot_10, "activate",
-                    G_CALLBACK (OnStates_Save5),
+  g_signal_connect ((gpointer) save_slot_4, "activate",
+                    G_CALLBACK (OnStates_Save),
                     NULL);
   g_signal_connect ((gpointer) other2, "activate",
                     G_CALLBACK (OnStates_SaveOther),
@@ -2841,19 +2841,19 @@ create_MainWindow (void)
   GLADE_HOOKUP_OBJECT (MainWindow, states1_menu, "states1_menu");
   GLADE_HOOKUP_OBJECT (MainWindow, load1, "load1");
   GLADE_HOOKUP_OBJECT (MainWindow, load1_menu, "load1_menu");
-  GLADE_HOOKUP_OBJECT (MainWindow, slot_1, "slot_1");
-  GLADE_HOOKUP_OBJECT (MainWindow, slot_2, "slot_2");
-  GLADE_HOOKUP_OBJECT (MainWindow, slot_3_, "slot_3_");
-  GLADE_HOOKUP_OBJECT (MainWindow, slot_4, "slot_4");
-  GLADE_HOOKUP_OBJECT (MainWindow, slot_5, "slot_5");
+  GLADE_HOOKUP_OBJECT (MainWindow, load_slot_0, "load_slot_0");
+  GLADE_HOOKUP_OBJECT (MainWindow, load_slot_1, "load_slot_1");
+  GLADE_HOOKUP_OBJECT (MainWindow, load_slot_2, "load_slot_2");
+  GLADE_HOOKUP_OBJECT (MainWindow, load_slot_3, "load_slot_3");
+  GLADE_HOOKUP_OBJECT (MainWindow, load_slot_4, "load_slot_4");
   GLADE_HOOKUP_OBJECT (MainWindow, other1, "other1");
   GLADE_HOOKUP_OBJECT (MainWindow, save1, "save1");
   GLADE_HOOKUP_OBJECT (MainWindow, save1_menu, "save1_menu");
-  GLADE_HOOKUP_OBJECT (MainWindow, slot_6, "slot_6");
-  GLADE_HOOKUP_OBJECT (MainWindow, slot_7, "slot_7");
-  GLADE_HOOKUP_OBJECT (MainWindow, slot_8, "slot_8");
-  GLADE_HOOKUP_OBJECT (MainWindow, slot_9, "slot_9");
-  GLADE_HOOKUP_OBJECT (MainWindow, slot_10, "slot_10");
+  GLADE_HOOKUP_OBJECT (MainWindow, save_slot_0, "save_slot_0");
+  GLADE_HOOKUP_OBJECT (MainWindow, save_slot_1, "save_slot_1");
+  GLADE_HOOKUP_OBJECT (MainWindow, save_slot_2, "save_slot_2");
+  GLADE_HOOKUP_OBJECT (MainWindow, save_slot_3, "save_slot_3");
+  GLADE_HOOKUP_OBJECT (MainWindow, save_slot_4, "save_slot_4");
   GLADE_HOOKUP_OBJECT (MainWindow, other2, "other2");
   GLADE_HOOKUP_OBJECT (MainWindow, GtkMenuItem_Exit, "GtkMenuItem_Exit");
   GLADE_HOOKUP_OBJECT (MainWindow, GtkMenuItem_Emulator, "GtkMenuItem_Emulator");

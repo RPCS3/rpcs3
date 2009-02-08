@@ -78,7 +78,7 @@ extern void SaveConfig();
 
 extern void SysRestorableReset();
 extern void SignalExit(int sig);
-
+extern bool isSlotUsed(int num);
 typedef struct
 {
 	char lang[g_MaxPath];
