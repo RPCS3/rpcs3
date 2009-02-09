@@ -506,10 +506,7 @@ u32 SuperVUGetVIAddr(int reg, int read)
 
 #ifdef SUPERVU_VIBRANCHDELAY
     if( (read != 0) && (s_pCurInst->regs[0].pipe == VUPIPE_BRANCH) && (s_pCurInst->vicached >= 0) && (s_pCurInst->vicached == reg) ) {
-		if (!CHECK_VUBRANCHHACK) {
 			return (uptr)&s_VIBranchDelay; // test for branch delays
-		}
-		//else SysPrintf("VIBRANCHDELAY hack! Please report if this breaks anything (rama)\n");
 	}
 #endif
 
@@ -1168,7 +1165,8 @@ static VuBaseBlock* SuperVUBuildBlocks(VuBaseBlock* parent, u32 startpc, const V
                     //SysPrintf("branchdelay: %x: %x\n", s_pFnHeader->startpc, pc-8);
 
                     // share the same register
-                    pdelayinst->type |= INST_CACHE_VI;
+                    if (CHECK_VUBRANCHHACK) pinst->type |= INST_CACHE_VI;
+					else					pdelayinst->type |= INST_CACHE_VI;
 
                     // find the correct register
                     u32 mask = pdelayinst->regs[0].VIwrite & pinst->regs[0].VIread;
@@ -3467,7 +3465,7 @@ void VuInstruction::Recompile(list<VuInstruction>::iterator& itinst, u32 vuxyz)
 		if( s_ScheduleXGKICK && s_XGKICKReg > 0 ) x86regs[s_XGKICKReg].needed = 1;
 
 #ifdef SUPERVU_VIBRANCHDELAY
-		if ( (!CHECK_VUBRANCHHACK) && (type & INST_CACHE_VI) ) {
+		if ( type & INST_CACHE_VI ) {
 			assert( vicached >= 0 );
 			int cachedreg = _allocX86reg(-1, X86TYPE_VI|(s_vu?X86TYPE_VU1:0), vicached, MODE_READ);
 			MOV32RtoM((uptr)&s_VIBranchDelay, cachedreg);
