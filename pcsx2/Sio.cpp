@@ -19,16 +19,16 @@
 #include "PrecompiledHeader.h"
 
 #include "PsxCommon.h"
-#include "Paths.h"
+#include "MemoryCard.h"
 
 _sio sio;
-
-static FILE * MemoryCard1=NULL, * MemoryCard2=NULL;
 
 static const u8 cardh[4] = { 0xFF, 0xFF, 0x5a, 0x5d };
 
 // Memory Card Specs : Sector size etc.
 static const mc_command_0x26_tag mc_command_0x26= {'+', 512, 16, 0x4000, 0x52, 0x5A};
+
+static int m_PostSavestateCards[2] = { 0, 0 };
 
 // SIO Inline'd IRQs : Calls the SIO interrupt handlers directly instead of
 // feeding them through the IOP's branch test. (see SIO.H for details)
@@ -46,18 +46,18 @@ __forceinline void SIO_INT()
 #endif
 
 static void _ReadMcd(u8 *data, u32 adr, int size) {
-	ReadMcd(sio.CtrlReg&0x2000?2:1, data, adr, size);
+	ReadMcd(sio.GetMemcardIndex(), data, adr, size);
 }
 
 static void _SaveMcd(const u8 *data, u32 adr, int size) {
-	SaveMcd(sio.CtrlReg&0x2000?2:1, data, adr, size);
+	SaveMcd(sio.GetMemcardIndex(), data, adr, size);
 }
 
 static void _EraseMCDBlock(u32 adr) {
-	EraseMcd(sio.CtrlReg&0x2000?2:1, adr);
+	EraseMcd(sio.GetMemcardIndex(), adr);
 }
 
-u8 sio_xor(u8 *buf, unsigned int length){
+u8 sio_xor(u8 *buf, uint length){
 	u8 i, x;
 
 	for (x=0, i=0; i<length; i++)	x ^= buf[i];
@@ -67,26 +67,18 @@ u8 sio_xor(u8 *buf, unsigned int length){
 void sioInit()
 {
 	memzero_obj(sio);
-	
-	if( MemoryCard1 == NULL )
-		MemoryCard1 = LoadMcd(1);
-	
-	if( MemoryCard2 == NULL )
-		MemoryCard2 = LoadMcd(2);
 
 	// Transfer(?) Ready and the Buffer is Empty
 	sio.StatReg = TX_RDY | TX_EMPTY;
 	sio.packetsize = 0;
 	sio.terminator =0x55; // Command terminator 'U'
+	
+	MemoryCard_Init();
 }
 
 void psxSIOShutdown()
 {
-	if(MemoryCard1) fclose(MemoryCard1);
-	if(MemoryCard2) fclose(MemoryCard2);
-	
-	MemoryCard1 = NULL;
-	MemoryCard2 = NULL;
+	MemoryCard_Shutdown();
 }
 
 u8 sioRead8() {
@@ -173,7 +165,7 @@ void SIO_CommandWrite(u8 value,int way) {
 				sio.mcdst = 99; 
 
 				sio2.packet.recvVal3 = 0x8c;
-				MEMCARDS_LOG("MC(%d) command 0x%02X\n", ((sio.CtrlReg&0x2000)>>13)+1, value);
+				MEMCARDS_LOG("MC(%d) command 0x%02X\n", sio.GetMemcardIndex()+1, value);
 				break;
 			case 0x81: // COMMIT
 				sio.bufcount =  8; 
@@ -187,7 +179,7 @@ void SIO_CommandWrite(u8 value,int way) {
 						sio2.packet.recvVal1 = 0x1600; // Writing
 					else if(sio.mc_command==0x43) sio2.packet.recvVal1 = 0x1700; // Reading
 				}
-				MEMCARDS_LOG("MC(%d) command 0x%02X\n", ((sio.CtrlReg&0x2000)>>13)+1, value);
+				MEMCARDS_LOG("MC(%d) command 0x%02X\n", sio.GetMemcardIndex()+1, value);
 				break;
 			case 0x21: 
 			case 0x22: 
@@ -197,20 +189,20 @@ void SIO_CommandWrite(u8 value,int way) {
 				sio2.packet.recvVal3 = 0x8c; 
 				sio.buf[8]=sio.terminator;
 				sio.buf[7]='+';
-				MEMCARDS_LOG("MC(%d) command 0x%02X\n", ((sio.CtrlReg&0x2000)>>13)+1, value);
+				MEMCARDS_LOG("MC(%d) command 0x%02X\n", sio.GetMemcardIndex()+1, value);
 				break;
 			case 0x24:					
-				MEMCARDS_LOG("MC(%d) command 0x%02X\n", ((sio.CtrlReg&0x2000)>>13)+1, value);
+				MEMCARDS_LOG("MC(%d) command 0x%02X\n", sio.GetMemcardIndex()+1, value);
 				break;
 			case 0x25:							
-				MEMCARDS_LOG("MC(%d) command 0x%02X\n", ((sio.CtrlReg&0x2000)>>13)+1, value);
+				MEMCARDS_LOG("MC(%d) command 0x%02X\n", sio.GetMemcardIndex()+1, value);
 				break;
 			case 0x26: 
 				sio.bufcount = 12; sio.mcdst = 99; sio2.packet.recvVal3 = 0x83;	
 				memset8_obj<0xff>(sio.buf);
 				memcpy(&sio.buf[2], &mc_command_0x26, sizeof(mc_command_0x26));
 				sio.buf[12]=sio.terminator;
-				MEMCARDS_LOG("MC(%d) command 0x%02X\n", ((sio.CtrlReg&0x2000)>>13)+1, value);
+				MEMCARDS_LOG("MC(%d) command 0x%02X\n", sio.GetMemcardIndex()+1, value);
 				break;
 			case 0x27: 
 			case 0x28: 
@@ -219,7 +211,7 @@ void SIO_CommandWrite(u8 value,int way) {
 				memset8_obj<0xff>(sio.buf);
 				sio.buf[4]=sio.terminator;
 				sio.buf[3]='+';
-				MEMCARDS_LOG("MC(%d) command 0x%02X\n", ((sio.CtrlReg&0x2000)>>13)+1, value);
+				MEMCARDS_LOG("MC(%d) command 0x%02X\n", sio.GetMemcardIndex()+1, value);
 				break;
 			case 0x42: // WRITE
 			case 0x43: // READ
@@ -232,13 +224,13 @@ void SIO_CommandWrite(u8 value,int way) {
 				memset8_obj<0xff>(sio.buf);
 				sio.buf[133]=sio.terminator;
 				sio.buf[132]='+';
-				MEMCARDS_LOG("MC(%d) command 0x%02X\n", ((sio.CtrlReg&0x2000)>>13)+1, value);
+				MEMCARDS_LOG("MC(%d) command 0x%02X\n", sio.GetMemcardIndex()+1, value);
 				break;
 			case 0xf0:
 			case 0xf1:
 			case 0xf2:				  
 				sio.mcdst = 99;	
-				MEMCARDS_LOG("MC(%d) command 0x%02X\n", ((sio.CtrlReg&0x2000)>>13)+1, value);
+				MEMCARDS_LOG("MC(%d) command 0x%02X\n", sio.GetMemcardIndex()+1, value);
 				break;
 			case 0xf3:
 			case 0xf7: 
@@ -246,23 +238,23 @@ void SIO_CommandWrite(u8 value,int way) {
 				memset8_obj<0xff>(sio.buf);
 				sio.buf[4]=sio.terminator;
 				sio.buf[3]='+';
-				MEMCARDS_LOG("MC(%d) command 0x%02X\n", ((sio.CtrlReg&0x2000)>>13)+1, value);
+				MEMCARDS_LOG("MC(%d) command 0x%02X\n", sio.GetMemcardIndex()+1, value);
 				break;
 			case 0x52:
 				sio.rdwr = 1; memset8_obj<0xff>(sio.buf);
 				sio.buf[sio.bufcount]=sio.terminator; sio.buf[sio.bufcount-1]='+';
-				MEMCARDS_LOG("MC(%d) command 0x%02X\n", ((sio.CtrlReg&0x2000)>>13)+1, value);
+				MEMCARDS_LOG("MC(%d) command 0x%02X\n", sio.GetMemcardIndex()+1, value);
 				break;
 			case 0x57:
 				sio.rdwr = 2; memset8_obj<0xff>(sio.buf);
 				sio.buf[sio.bufcount]=sio.terminator; sio.buf[sio.bufcount-1]='+';	
-				MEMCARDS_LOG("MC(%d) command 0x%02X\n", ((sio.CtrlReg&0x2000)>>13)+1, value);
+				MEMCARDS_LOG("MC(%d) command 0x%02X\n", sio.GetMemcardIndex()+1, value);
 				break;
 			default:
 				sio.mcdst = 0;
 				memset8_obj<0xff>(sio.buf);
 				sio.buf[sio.bufcount]=sio.terminator; sio.buf[sio.bufcount-1]='+';	
-				MEMCARDS_LOG("Unknown MC(%d) command 0x%02X\n", ((sio.CtrlReg&0x2000)>>13)+1, value);
+				MEMCARDS_LOG("Unknown MC(%d) command 0x%02X\n", sio.GetMemcardIndex()+1, value);
 			}
 			sio.mc_command=value;
 			return;
@@ -286,10 +278,10 @@ void SIO_CommandWrite(u8 value,int way) {
 				{
 					if (sio_xor((u8 *)&sio.sector, 4) == value)
 						MEMCARDS_LOG("MC(%d) SET PAGE sio.sector 0x%04X\n",
-									((sio.CtrlReg&0x2000)>>13)+1, sio.sector);
+									sio.GetMemcardIndex()+1, sio.sector);
 					else
 						MEMCARDS_LOG("MC(%d) SET PAGE XOR value ERROR 0x%02X != ^0x%02X\n",
-							((sio.CtrlReg&0x2000)>>13)+1, value, sio_xor((u8 *)&sio.sector, 4));
+							sio.GetMemcardIndex()+1, value, sio_xor((u8 *)&sio.sector, 4));
 				}
 				break;
 
@@ -298,7 +290,7 @@ void SIO_CommandWrite(u8 value,int way) {
 				if(sio.parp==2)	{
 					sio.terminator = value;
 					sio.buf[4] = value;
-				MEMCARDS_LOG("MC(%d) SET TERMINATOR command 0x%02X\n", ((sio.CtrlReg&0x2000)>>13)+1, value);
+				MEMCARDS_LOG("MC(%d) SET TERMINATOR command 0x%02X\n", sio.GetMemcardIndex()+1, value);
 
 				}
 				break;
@@ -312,7 +304,7 @@ void SIO_CommandWrite(u8 value,int way) {
 					
 					//if(value == 0) sio.buf[4] = 0xFF; 
 					sio.buf[4] = 0x55;
-				MEMCARDS_LOG("MC(%d) GET TERMINATOR command 0x%02X\n", ((sio.CtrlReg&0x2000)>>13)+1, value);
+				MEMCARDS_LOG("MC(%d) GET TERMINATOR command 0x%02X\n", sio.GetMemcardIndex()+1, value);
 				}	
 				break;
 			// WRITE DATA
@@ -322,12 +314,12 @@ void SIO_CommandWrite(u8 value,int way) {
 					memset8_obj<0xff>(sio.buf);
 					sio.buf[sio.bufcount-1]='+';
 					sio.buf[sio.bufcount]=sio.terminator;
-				MEMCARDS_LOG("MC(%d) WRITE command 0x%02X\n\n\n\n\n", ((sio.CtrlReg&0x2000)>>13)+1, value);
+				MEMCARDS_LOG("MC(%d) WRITE command 0x%02X\n\n\n\n\n", sio.GetMemcardIndex()+1, value);
 				} 
 				else
 				if ((sio.parp>2) && (sio.parp<sio.bufcount-2)) {
 					sio.buf[sio.parp]=value;
-				//MEMCARDS_LOG("MC(%d) WRITING 0x%02X\n", ((sio.CtrlReg&0x2000)>>13)+1, value);
+				//MEMCARDS_LOG("MC(%d) WRITING 0x%02X\n", sio.GetMemcardIndex()+1, value);
 				} else
 				if (sio.parp==sio.bufcount-2) {
 					if (sio_xor(&sio.buf[3], sio.bufcount-5)==value) {
@@ -336,7 +328,7 @@ void SIO_CommandWrite(u8 value,int way) {
 						sio.k+=sio.bufcount-5;
 					}else {
 						MEMCARDS_LOG("MC(%d) write XOR value error 0x%02X != ^0x%02X\n",
-							((sio.CtrlReg&0x2000)>>13)+1, value, sio_xor(&sio.buf[3], sio.bufcount-5));
+							sio.GetMemcardIndex()+1, value, sio_xor(&sio.buf[3], sio.bufcount-5));
 					}
 				}
 				break;
@@ -346,7 +338,7 @@ void SIO_CommandWrite(u8 value,int way) {
 					//int i;
 					sio.bufcount=value+5;
 					sio.buf[3]='+';
-				MEMCARDS_LOG("MC(%d) READ command 0x%02X\n", ((sio.CtrlReg&0x2000)>>13)+1, value);
+				MEMCARDS_LOG("MC(%d) READ command 0x%02X\n", sio.GetMemcardIndex()+1, value);
 					_ReadMcd(&sio.buf[4], (512+16)*sio.sector+sio.k, value);
 					/*if(sio.mode==2) 
 					{
@@ -377,14 +369,14 @@ void SIO_CommandWrite(u8 value,int way) {
 					sio.buf[2]='+';
 					sio.buf[3]=sio.terminator;*/
 					//sio.buf[sio.bufcount] = sio.terminator;
-				MEMCARDS_LOG("MC(%d) INTERNAL ERASE command 0x%02X\n", ((sio.CtrlReg&0x2000)>>13)+1, value);
+				MEMCARDS_LOG("MC(%d) INTERNAL ERASE command 0x%02X\n", sio.GetMemcardIndex()+1, value);
 				}
 				break;
 			// CARD AUTHENTICATION CHECKS
 			case 0xF0:
 				if (sio.parp==2)
 				{
-					MEMCARDS_LOG("MC(%d) CARD AUTH :0x%02X\n", ((sio.CtrlReg&0x2000)>>13)+1, value);
+					MEMCARDS_LOG("MC(%d) CARD AUTH :0x%02X\n", sio.GetMemcardIndex()+1, value);
 					switch(value){
 					case  1:
 					case  2:
@@ -487,6 +479,7 @@ void InitializeSIO(u8 value)
 			return;
 
 		case 0x81: // start memcard
+		{
 			sio.StatReg &= ~TX_EMPTY;
 			sio.StatReg |= RX_RDY;
 			memcpy(sio.buf, cardh, 4);
@@ -495,11 +488,35 @@ void InitializeSIO(u8 value)
 			sio.mcdst = 1;
 			sio.packetsize = 1;
 			sio.rdwr = 0;
-			sio2.packet.recvVal1 = 0x1100; // Memcards are present
 			sio.count = 0;
+
+			// Memcard presence reporting!
+			// In addition to checking the presence of MemoryCard1/2 file handles, we check a 
+			// variable which force-disables all memory cards after a savestate recovery.  This
+			// is needed to inform certain games to clear their cached memorycard indexes.
+
+			// Note:
+			//	0x01100 means Memcard is present
+			//  0x1D100 means Memcard is missing.
+
+			const int mcidx = sio.GetMemcardIndex();
+
+			if( m_PostSavestateCards[mcidx] )
+			{
+				m_PostSavestateCards[mcidx]--;
+				sio2.packet.recvVal1 = 0x1D100;
+				PAD_LOG( "START MEMCARD[%d] - post-savestate - reported as missing!\n", sio.GetMemcardIndex() );
+			}
+			else
+			{
+				sio2.packet.recvVal1 = TestMcdIsPresent( sio.GetMemcardIndex() ) ? 0x1100 : 0x1D100;
+				PAD_LOG("START MEMCARD [%d] - %s\n",
+					sio.GetMemcardIndex(), TestMcdIsPresent( sio.GetMemcardIndex() ) ? "Present" : "Missing" );
+			}
+
 			SIO_INT();
-			PAD_LOG("START MEMORY CARD\n");
-			return;
+		}
+		return;
 	}
 }
 
@@ -534,118 +551,14 @@ void SaveState::sioFreeze()
 {
     Freeze( sio );
 
-	//if( IsLoading() )
-	//	sio.count = 0;
-}
-
-
-/*******************************************************************
- *******************************************************************
- ***************   MEMORY CARD SPECIFIC FUNCTIONS  *****************
- *******************************************************************
- *******************************************************************/
-
-#ifdef WIN32
-extern void NTFS_CompressFile( const char* file );
-#endif
-
-FILE *LoadMcd(int mcd)
-{
-	string str;
-	FILE *f;
-
-	str = (mcd == 1) ? Config.Mcd1 : Config.Mcd2;
-
-	if( str.empty() )
-		Path::Combine( str, MEMCARDS_DIR, fmt_string( "Mcd00%d.ps2", mcd ) );
-
-	if( !Path::Exists(str) )
-		CreateMcd(str.c_str());
+	if( IsLoading() )
+	{
+		// Note: TOTA works with values as low as 20 here.
+		// It "times out" with values around 1800 (forces user to check the memcard
+		// twice to find it).  Other games could be different. :|
 	
-#ifdef WIN32
-	NTFS_CompressFile( str.c_str() );
-#endif
-
-	f = fopen(str.c_str(), "r+b");
-
-	if (f == NULL) {
-		Msgbox::Alert("Failed loading MemCard from file: %hs", params &str); 
-		return NULL;
+		m_PostSavestateCards[0] = 64;
+		m_PostSavestateCards[1] = 64;
 	}
-
-	return f;
 }
-
-void SeekMcd(FILE *f, u32 adr) {
-	u32 size;
-
-	fseek(f, 0, SEEK_END); size = ftell(f);
-	if (size == MCD_SIZE + 64)
-		fseek(f, adr + 64, SEEK_SET);
-	else if (size == MCD_SIZE + 3904)
-		fseek(f, adr + 3904, SEEK_SET);
-	else
-		fseek(f, adr, SEEK_SET);
-}
-
-void ReadMcd(int mcd, u8 *data, u32 adr, int size)
-{
-	FILE* const mcfp = (mcd == 1) ? MemoryCard1 : MemoryCard2;
-
-	if (mcfp == NULL) {
-		memset(data, 0, size);
-		return;
-	}
-	SeekMcd(mcfp, adr);
-	fread(data, 1, size, mcfp);
-}
-
-void SaveMcd(int mcd, const u8 *data, u32 adr, int size)
-{
-	FILE* const mcfp = (mcd == 1) ? MemoryCard1 : MemoryCard2;
-
-	SeekMcd(mcfp, adr);
-	u8 *currentdata = (u8 *)malloc(size);
-	fread(currentdata, 1, size, mcfp);
-	for (int i=0; i<size; i++)
-	{
-		if ((currentdata[i] & data[i]) != data[i])
-			Console::Notice("MemoryCard : writing odd data");
-		currentdata[i] &= data[i];
-	}
-	SeekMcd(mcfp, adr);
-	fwrite(currentdata, 1, size, mcfp);
-
-	free(currentdata);
-}
-
-
-void EraseMcd(int mcd, u32 adr)
-{
-	u8 data[528*16];
-	memset8_obj<0xff>(data);		// clears to -1's
-
-	FILE* const mcfp = (mcd == 1) ? MemoryCard1 : MemoryCard2;
-	SeekMcd(mcfp, adr);
-	fwrite(data, 1, 528*16, mcfp);
-}
-
-
-void CreateMcd(const char *mcd)
-{
-	FILE *fp;	
-	int i=0, j=0;
-	//int enc[16] = {0x77,0x7f,0x7f,0x77,0x7f,0x7f,0x77,0x7f,0x7f,0x77,0x7f,0x7f,0,0,0,0};
-
-	fp = fopen(mcd, "wb");
-	if (fp == NULL) return;
-	for(i=0; i < 16384; i++) 
-	{
-		for(j=0; j < 528; j++) fputc(0xFF,fp);
-//		for(j=0; j < 16; j++) fputc(enc[j],fp);
-	}
-	fclose(fp);
-}
-
-
 

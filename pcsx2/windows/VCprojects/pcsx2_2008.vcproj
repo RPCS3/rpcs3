@@ -1673,6 +1673,14 @@
 				RelativePath="..\..\x86\BaseblockEx.h"
 				>
 			</File>
+			<File
+				RelativePath="..\..\MemoryCard.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\MemoryCard.h"
+				>
+			</File>
 			<Filter
 				Name="EE"
 				>
@@ -2411,6 +2419,14 @@
 				</File>
 				<File
 					RelativePath="..\..\Hw.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\HwRead.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\HwWrite.cpp"
 					>
 				</File>
 				<File

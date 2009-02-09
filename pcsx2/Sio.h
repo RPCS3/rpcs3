@@ -60,12 +60,14 @@ struct _sio {
 	u32 sector;
 	u32 k;
 	u32 count;
+
+	int GetMemcardIndex() const
+	{
+		return (CtrlReg&0x2000) >> 13;
+	}
 };
 
 extern _sio sio;
-
-#define MCD_SIZE	(1024 *  8  * 16)
-#define MC2_SIZE	(1024 * 528 * 16)
 
 // Status Flags
 #define TX_RDY		0x0001
@@ -88,29 +90,14 @@ extern _sio sio;
 #define RTS			0x0020
 #define SIO_RESET	0x0040
 
-void sioInit();
-void sioShutdown();
-void psxSIOShutdown();
-u8 sioRead8();
-void sioWrite8(u8 value);
-void sioWriteCtrl16(u16 value);
+extern void sioInit();
+extern void sioShutdown();
+extern void psxSIOShutdown();
+extern u8 sioRead8();
+extern void sioWrite8(u8 value);
+extern void sioWriteCtrl16(u16 value);
 extern void sioInterrupt();
-void InitializeSIO(u8 value);
-
-FILE *LoadMcd(int mcd);
-void ReadMcd(int mcd, u8 *data, u32 adr, int size);
-void SaveMcd(int mcd, const u8 *data, u32 adr, int size);
-void EraseMcd(int mcd, u32 adr);
-void CreateMcd(const char *mcd);
-
-struct McdBlock {
-	char Title[48];
-	char ID[14];
-	char Name[16];
-	int IconCount;
-	u16 Icon[16*16*3];
-	u8 Flags;
-};
+extern void InitializeSIO(u8 value);
 
 #ifdef _MSC_VER
 #pragma pack(1)
@@ -128,7 +115,5 @@ struct mc_command_0x26_tag{
 #else
 } __attribute__((packed));
 #endif
-
-void GetMcdBlockInfo(int mcd, int block, McdBlock *info);
 
 #endif
