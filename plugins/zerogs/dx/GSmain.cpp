@@ -74,17 +74,17 @@ unsigned char build	= VER;
 unsigned char minor = 1;
 
 #ifdef _DEBUG
-char *libraryName	= "ZeroGS Playground (Debug) ";
+char *libraryName	= "ZeroGS (Debug) ";
 #elif defined(RELEASE_TO_PUBLIC)
 
 #ifdef ZEROGS_SSE2
-char *libraryName	= "ZeroGS Playground";
+char *libraryName	= "ZeroGS";
 #else
-char *libraryName	= "ZeroGS Playground (no SSE2)";
+char *libraryName	= "ZeroGS (no SSE2)";
 #endif
 
 #else
-char *libraryName	= "ZeroGS Playground (Dev) ";
+char *libraryName	= "ZeroGS (Dev) ";
 #endif
 
 static const char* s_aa[5] = { "AA none |", "AA 2x |", "AA 4x |", "AA 8x", "AA 16x" };

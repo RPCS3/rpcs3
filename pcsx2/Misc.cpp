@@ -59,10 +59,10 @@ const char *LabelAuthors = { N_(
 	"nachbrenner, auMatt, loser, \n"
 	"alexey silinov, goldfinger\n"
 	"\n"
-	"Playground Mod Devs:\n"
+	"Devs:\n"
 	"Arcum42, drkIIRaziel, Cottonvibes, \n"
 	"Jake.Stine, Rama\n\n"
-	"Playground Testing:\n"
+	"Testing:\n"
 	"Krakatos\n"
 	"\n"
 	"Webmasters: CKemu, Falcon4ever")

@@ -48,9 +48,9 @@ char *methods[] =
 };
 
 #ifdef _DEBUG
-char *LibName = "Linuz/Pg Iso CDVD (Debug) ";
+char *LibName = "Linuz Iso CDVD (Debug) ";
 #else
-char *LibName = "Linuz/Pg Iso CDVD ";
+char *LibName = "Linuz Iso CDVD ";
 #endif
 
 const unsigned char version = PS2E_CDVD_VERSION;

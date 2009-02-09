@@ -248,7 +248,7 @@ void psxBranchTest()
 
 	if ((psxRegs.CP0.n.Status & 0xFE01) >= 0x401)
 	{
-//		PSXCPU_LOG("Interrupt: %x  %x\n", HWMu32(0x1070), HWMu32(0x1074));
+		PSXCPU_LOG("Interrupt: %x  %x\n", psxHu32(0x1070), psxHu32(0x1074));
 		psxException(0, 0);
 		iopBranchAction = true;
 	}
@@ -261,7 +261,7 @@ void iopTestIntc()
 
 	if( !eeEventTestIsActive )
 	{
-		// An iop exception has occured while the EE is running code.
+		// An iop exception has occurred while the EE is running code.
 		// Inform the EE to branch so the IOP can handle it promptly:
 
 		cpuSetNextBranchDelta( 16 );

@@ -31,12 +31,12 @@ void psxHwReset() {
 
 	memzero_ptr<0x10000>(psxH);
 
-//	mdecInit(); //intialize mdec decoder
+//	mdecInit(); //initialize mdec decoder
 	cdrReset();
 	cdvdReset();
 	psxRcntInit();
 	sioInit();
-//	sio2Reset();
+	//sio2Reset();
 }
 
 u8 psxHwRead8(u32 add) {

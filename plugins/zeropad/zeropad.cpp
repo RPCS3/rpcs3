@@ -143,7 +143,7 @@ static void InitLibraryName()
 	// Public Release!
 	// Output a simplified string that's just our name:
 
-	strcpy( libraryName, "ZeroPAD Playground" );
+	strcpy( libraryName, "ZeroPAD" );
 
 #elif defined( SVN_REV_UNKNOWN )
 
@@ -151,7 +151,7 @@ static void InitLibraryName()
 	// Output a name that includes devbuild status but not
 	// subversion revision tags:
 
-	strcpy( libraryName, "ZeroPAD Playground"
+	strcpy( libraryName, "ZeroPAD"
 #	ifdef _DEBUG
 		"-Debug"
 #	endif
@@ -161,7 +161,7 @@ static void InitLibraryName()
 	// Use TortoiseSVN's SubWCRev utility's output
 	// to label the specific revision:
 
-	sprintf_s( libraryName, "ZeroPAD PPr%d%s"
+	sprintf_s( libraryName, "ZeroPAD r%d%s"
 #	ifdef _DEBUG
 		"-Debug"
 #	else
@@ -174,7 +174,7 @@ static void InitLibraryName()
 #else
 // I'll fix up SVN support later. --arcum42
 
-	strcpy( libraryName, "ZeroPAD Playground"
+	strcpy( libraryName, "ZeroPAD"
 #	ifdef _DEBUG
 		"-Debug"
 #	endif

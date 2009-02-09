@@ -117,7 +117,7 @@ static void InitLibraryName()
 	// Public Release!
 	// Output a simplified string that's just our name:
 
-	strcpy( libraryName, "ZeroSPU2 Playground" );
+	strcpy( libraryName, "ZeroSPU2" );
 
 #elif defined( SVN_REV_UNKNOWN )
 
@@ -125,7 +125,7 @@ static void InitLibraryName()
 	// Output a name that includes devbuild status but not
 	// subversion revision tags:
 
-	strcpy( libraryName, "ZeroSPU2 Playground"
+	strcpy( libraryName, "ZeroSPU2"
 #	ifdef _DEBUG
 		"-Debug"
 #	endif
@@ -135,7 +135,7 @@ static void InitLibraryName()
 	// Use TortoiseSVN's SubWCRev utility's output
 	// to label the specific revision:
 
-	sprintf_s( libraryName, "ZeroSPU2 PG r%d%s"
+	sprintf_s( libraryName, "ZeroSPU2 r%d%s"
 #	ifdef _DEBUG
 		"-Debug"
 #	else
