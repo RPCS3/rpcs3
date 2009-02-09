@@ -579,7 +579,7 @@ void cpuTestINTCInts()
 
 	cpuRegs.interrupt|= 1 << 30;
 	cpuRegs.sCycle[30] = cpuRegs.cycle;
-	cpuRegs.eCycle[30] = 0;
+	cpuRegs.eCycle[30] = 4;  //Needs to be 4 to account for bus delays/pipelines etc
 
 	// only set the next branch delta if the exception won't be handled for
 	// the current branch...
@@ -602,7 +602,7 @@ __forceinline void cpuTestDMACInts()
 
 	cpuRegs.interrupt|= 1 << 31;
 	cpuRegs.sCycle[31] = cpuRegs.cycle;
-	cpuRegs.eCycle[31] = 0;
+	cpuRegs.eCycle[31] = 4;  //Needs to be 4 to account for bus delays/pipelines etc
 
 	// only set the next branch delta if the exception won't be handled for
 	// the current branch...

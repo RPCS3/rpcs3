@@ -427,7 +427,9 @@ static __forceinline void VSyncStart(u32 sCycle)
 	// (I haven't investigated why Dark Cloud freezes on larger values)
 	// (all testing done using the recompiler -- dunno how the ints respond yet)
 
-	cpuRegs.eCycle[30] = 2;
+	//cpuRegs.eCycle[30] = 2;
+
+	// Should no longer be required (Refraction)
 }
 
 static __forceinline void VSyncEnd(u32 sCycle)
