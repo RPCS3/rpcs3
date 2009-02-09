@@ -363,7 +363,6 @@ static __forceinline void _cpuTestInterrupts()
 	   that depends on the cycle timings */
 
 	TESTINT(1, vif1Interrupt);
-	TESTINT(13, vif1TransInterrupt);
 	TESTINT(2, gsInterrupt);
 	TESTINT(5, EEsif0Interrupt);
 	TESTINT(6, EEsif1Interrupt);
@@ -372,10 +371,9 @@ static __forceinline void _cpuTestInterrupts()
 	// The following ints are rarely called.  Encasing them in a conditional
 	// as follows helps speed up most games.
 
-	if( cpuRegs.interrupt & ( 1 | (3 << 3) | (3<<8) | (3<<10) | (1<<12)) )
+	if( cpuRegs.interrupt & ( 1 | (3 << 3) | (3<<8) | (3<<10)) )
 	{
 		TESTINT(0, vif0Interrupt);
-		TESTINT(12, vif0TransInterrupt);
 #ifndef IPU_INLINE_IRQS
 		TESTINT(3, ipu0Interrupt);
 		TESTINT(4, ipu1Interrupt);
