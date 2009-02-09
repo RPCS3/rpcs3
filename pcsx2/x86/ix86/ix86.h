@@ -1357,10 +1357,14 @@ extern void SSE2_CVTPS2DQ_M128_to_XMM( x86SSERegType to, uptr from );
 extern void SSE2_CVTPS2DQ_XMM_to_XMM( x86SSERegType to, x86SSERegType from );
 extern void SSE2_CVTTPS2DQ_XMM_to_XMM( x86SSERegType to, x86SSERegType from );
 
+extern void SSE2_MAXPD_M128_to_XMM( x86SSERegType to, uptr from );
+extern void SSE2_MAXPD_XMM_to_XMM( x86SSERegType to, x86SSERegType from );
 extern void SSE_MAXPS_M128_to_XMM( x86SSERegType to, uptr from );
 extern void SSE_MAXPS_XMM_to_XMM( x86SSERegType to, x86SSERegType from );
 extern void SSE_MAXSS_M32_to_XMM( x86SSERegType to, uptr from );
 extern void SSE_MAXSS_XMM_to_XMM( x86SSERegType to, x86SSERegType from );
+extern void SSE2_MINPD_M128_to_XMM( x86SSERegType to, uptr from );
+extern void SSE2_MINPD_XMM_to_XMM( x86SSERegType to, x86SSERegType from );
 extern void SSE_MINPS_M128_to_XMM( x86SSERegType to, uptr from );
 extern void SSE_MINPS_XMM_to_XMM( x86SSERegType to, x86SSERegType from );
 extern void SSE_MINSS_M32_to_XMM( x86SSERegType to, uptr from );
@@ -1489,7 +1493,6 @@ extern void SSE2_PADDD_M128_to_XMM(x86SSERegType to, uptr from );
 extern void SSE2_PADDQ_XMM_to_XMM(x86SSERegType to, x86SSERegType from );
 extern void SSE2_PADDQ_M128_to_XMM(x86SSERegType to, uptr from );
 extern void SSE2_PMADDWD_XMM_to_XMM(x86SSERegType to, x86SSERegType from);
-
 
 //**********************************************************************************/
 //PACKSSWB,PACKSSDW: Pack Saturate Signed Word

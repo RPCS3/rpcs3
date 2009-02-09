@@ -32,7 +32,7 @@
 #include "iVUops.h"
 #include "iVUzerorec.h"
 //------------------------------------------------------------------
-
+#define MINMAXFIX 1
 //------------------------------------------------------------------
 // Helper Macros
 //------------------------------------------------------------------
@@ -2329,37 +2329,146 @@ void recVUMI_MSUBAw( VURegs *VU, int info )
 //------------------------------------------------------------------
 
 
+static const u32 PCSX2_ALIGNED16(special_mask[4]) = {0xffffffff, 0x80000000, 0xffffffff, 0x80000000};
+static const u32 PCSX2_ALIGNED16(special_mask2[4]) = {0, 0x40000000, 0, 0x40000000};
+
+u32 PCSX2_ALIGNED16(temp_loc[4]);
+u32 PCSX2_ALIGNED16(temp_loc2[4]);
+
+//MAX/MINI are non-arithmetic operations that implicitly support numbers with the EXP field being 0 ("denormals").
+//
+//As such, they are sometimes used for integer move and (positive!) integer max/min, knowing that integers that 
+//represent denormals will not be flushed to 0.
+//
+//As such, this implementation performs a non-arithmetic operation that supports "denormals" and "infs/nans".
+//There might be an easier way to do it but here, MAX/MIN is performed with PMAXPD/PMINPD.
+//Fake double-precision numbers are constructed by copying the sign of the original numbers, clearing the upper 32 bits,
+//setting the 62nd bit to 1 (to ensure double-precision number is "normalized") and having the lower 32bits
+//being the same as the original number. 
+
+void MINMAXlogical(VURegs *VU, int info, int min, int mode, uptr addr = 0, int xyzw = 0) 
+//mode1 = iq, mode2 = xyzw, mode0 = normal
+{
+	int t1regbool = 0;
+	int t1reg = _vuGetTempXMMreg(info);
+	if (t1reg < 0)
+	{
+		t1regbool = 1;
+		for (t1reg = 0; ( (t1reg == EEREC_D) || (t1reg == EEREC_S) || (mode != 1 && t1reg == EEREC_T) 
+			|| (t1reg == EEREC_TEMP) ); t1reg++); // Find unused reg (For first temp reg)
+		SSE_MOVAPS_XMM_to_M128((uptr)temp_loc, t1reg); // Backup t1reg XMM reg
+	}
+	int t2regbool = -1;
+	int t2reg = EEREC_TEMP;
+	if (EEREC_TEMP == EEREC_D || EEREC_TEMP == EEREC_S || (mode != 1 && EEREC_TEMP == EEREC_T)) 
+	{
+		t2regbool = 0;
+		t2reg = _vuGetTempXMMreg(info);
+		if (t2reg < 0)
+		{
+			t2regbool = 1;
+			for (t2reg = 0; ( (t2reg == EEREC_D) || (t2reg == EEREC_S) || (mode != 1 && t2reg == EEREC_T) || 
+					(t2reg == t1reg) || (t2reg == EEREC_TEMP) ); t2reg++); // Find unused reg (For second temp reg)
+			SSE_MOVAPS_XMM_to_M128((uptr)temp_loc2, t2reg); // Backup t2reg XMM reg
+		}			
+	}
+
+	if (_X || _Y)
+	{
+		SSE2_PSHUFD_XMM_to_XMM(t1reg, EEREC_S, 0x50);
+		SSE2_PAND_M128_to_XMM(t1reg, (uptr)special_mask);
+		SSE2_POR_M128_to_XMM(t1reg, (uptr)special_mask2);
+		if (mode == 0)
+			SSE2_PSHUFD_XMM_to_XMM(t2reg, EEREC_T, 0x50);
+		else if (mode == 1)
+		{
+			SSE2_MOVD_M32_to_XMM(t2reg, addr);
+			SSE2_PSHUFD_XMM_to_XMM(t2reg, t2reg, 0x00);
+		}
+		else if (mode == 2)
+			_unpackVF_xyzw(t2reg, EEREC_T, xyzw);
+		SSE2_PAND_M128_to_XMM(t2reg, (uptr)special_mask);
+		SSE2_POR_M128_to_XMM(t2reg, (uptr)special_mask2);
+		if (min)
+			SSE2_MINPD_XMM_to_XMM(t1reg, t2reg);
+		else
+			SSE2_MAXPD_XMM_to_XMM(t1reg, t2reg);
+		SSE2_PSHUFD_XMM_to_XMM(t1reg, t1reg, 0x88);
+		VU_MERGE_REGS_CUSTOM(EEREC_D, t1reg, 0xc & _X_Y_Z_W);
+	}
+	
+	if (_Z || _W)
+	{
+		SSE2_PSHUFD_XMM_to_XMM(t1reg, EEREC_S, 0xfa);
+		SSE2_PAND_M128_to_XMM(t1reg, (uptr)special_mask);
+		SSE2_POR_M128_to_XMM(t1reg, (uptr)special_mask2);
+		if (mode == 0)
+			SSE2_PSHUFD_XMM_to_XMM(t2reg, EEREC_T, 0xfa);
+		else if (mode == 1)
+		{
+			SSE2_MOVD_M32_to_XMM(t2reg, addr);
+			SSE2_PSHUFD_XMM_to_XMM(t2reg, t2reg, 0x00);
+		}
+		else if (mode == 2)
+			_unpackVF_xyzw(t2reg, EEREC_T, xyzw);
+		SSE2_PAND_M128_to_XMM(t2reg, (uptr)special_mask);
+		SSE2_POR_M128_to_XMM(t2reg, (uptr)special_mask2);
+		if (min)
+			SSE2_MINPD_XMM_to_XMM(t1reg, t2reg);
+		else
+			SSE2_MAXPD_XMM_to_XMM(t1reg, t2reg);
+		SSE2_PSHUFD_XMM_to_XMM(t1reg, t1reg, 0x88);
+		VU_MERGE_REGS_CUSTOM(EEREC_D, t1reg, 0x3 & _X_Y_Z_W);
+	}
+
+	if (t1regbool == 0)
+		_freeXMMreg(t1reg);
+	else if (t1regbool == 1)
+		SSE_MOVAPS_M128_to_XMM(t1reg, (uptr)temp_loc); // Restore t1reg XMM reg
+	if (t2regbool == 0)
+		_freeXMMreg(t2reg);
+	else if (t2regbool == 1)
+		SSE_MOVAPS_M128_to_XMM(t2reg, (uptr)temp_loc2); // Restore t2reg XMM reg
+}
+
 //------------------------------------------------------------------
 // MAX
 //------------------------------------------------------------------
+
 void recVUMI_MAX(VURegs *VU, int info)
 {	
 	if ( _Fd_ == 0 ) return;
-
 	//SysPrintf ("recVUMI_MAX  \n");
-	if (_Fs_) vuFloat4_useEAX( EEREC_S, EEREC_TEMP, _X_Y_Z_W ); // Always do Preserved Sign Clamping
-	if (_Ft_) vuFloat4_useEAX( EEREC_T, EEREC_TEMP, _X_Y_Z_W );
 
-	if( _X_Y_Z_W == 8 ) {
-		if (EEREC_D == EEREC_S) SSE_MAXSS_XMM_to_XMM(EEREC_D, EEREC_T);
-		else if (EEREC_D == EEREC_T) SSE_MAXSS_XMM_to_XMM(EEREC_D, EEREC_S);
-		else {
-			SSE_MOVSS_XMM_to_XMM(EEREC_D, EEREC_S);
-			SSE_MAXSS_XMM_to_XMM(EEREC_D, EEREC_T);
+	if (MINMAXFIX)
+		MINMAXlogical(VU, info, 0, 0);
+	else
+	{
+
+		if (_Fs_) vuFloat4_useEAX( EEREC_S, EEREC_TEMP, _X_Y_Z_W ); // Always do Preserved Sign Clamping
+		if (_Ft_) vuFloat4_useEAX( EEREC_T, EEREC_TEMP, _X_Y_Z_W );
+
+		if( _X_Y_Z_W == 8 ) {
+			if (EEREC_D == EEREC_S) SSE_MAXSS_XMM_to_XMM(EEREC_D, EEREC_T);
+			else if (EEREC_D == EEREC_T) SSE_MAXSS_XMM_to_XMM(EEREC_D, EEREC_S);
+			else {
+				SSE_MOVSS_XMM_to_XMM(EEREC_D, EEREC_S);
+				SSE_MAXSS_XMM_to_XMM(EEREC_D, EEREC_T);
+			}
 		}
-	}
-	else if (_X_Y_Z_W != 0xf) {
-		SSE_MOVAPS_XMM_to_XMM(EEREC_TEMP, EEREC_S);
-		SSE_MAXPS_XMM_to_XMM(EEREC_TEMP, EEREC_T);
+		else if (_X_Y_Z_W != 0xf) {
+			SSE_MOVAPS_XMM_to_XMM(EEREC_TEMP, EEREC_S);
+			SSE_MAXPS_XMM_to_XMM(EEREC_TEMP, EEREC_T);
 
-		VU_MERGE_REGS(EEREC_D, EEREC_TEMP);
-	}
-	else {
-		if( EEREC_D == EEREC_S ) SSE_MAXPS_XMM_to_XMM(EEREC_D, EEREC_T);
-		else if( EEREC_D == EEREC_T ) SSE_MAXPS_XMM_to_XMM(EEREC_D, EEREC_S);
+			VU_MERGE_REGS(EEREC_D, EEREC_TEMP);
+		}
 		else {
-			SSE_MOVAPS_XMM_to_XMM(EEREC_D, EEREC_S);
-			SSE_MAXPS_XMM_to_XMM(EEREC_D, EEREC_T);
+			if( EEREC_D == EEREC_S ) SSE_MAXPS_XMM_to_XMM(EEREC_D, EEREC_T);
+			else if( EEREC_D == EEREC_T ) SSE_MAXPS_XMM_to_XMM(EEREC_D, EEREC_S);
+			else {
+				SSE_MOVAPS_XMM_to_XMM(EEREC_D, EEREC_S);
+				SSE_MAXPS_XMM_to_XMM(EEREC_D, EEREC_T);
+			}
 		}
 	}
 }
@@ -2367,57 +2476,62 @@ void recVUMI_MAX(VURegs *VU, int info)
 void recVUMI_MAX_iq(VURegs *VU, uptr addr, int info)
 {	
 	if ( _Fd_ == 0 ) return;
-
 	//SysPrintf ("recVUMI_MAX_iq  \n");
-	if (_Fs_) vuFloat4_useEAX( EEREC_S, EEREC_TEMP, _X_Y_Z_W ); // Always do Preserved Sign Clamping
-	vuFloat3(addr);
 
-	if( _XYZW_SS ) {
-		if( EEREC_D == EEREC_TEMP ) {
-			_vuFlipRegSS(VU, EEREC_S);
-			SSE_MOVSS_XMM_to_XMM(EEREC_D, EEREC_S);
-			SSE_MAXSS_M32_to_XMM(EEREC_D, addr);
-			_vuFlipRegSS(VU, EEREC_S);
+	if (MINMAXFIX)
+		MINMAXlogical(VU, info, 0, 1, addr);
+	else
+	{
+		if (_Fs_) vuFloat4_useEAX( EEREC_S, EEREC_TEMP, _X_Y_Z_W ); // Always do Preserved Sign Clamping
+		vuFloat3(addr);
 
-			// have to flip over EEREC_D if computing flags!
-			//if( (info & PROCESS_VU_UPDATEFLAGS) )
-				_vuFlipRegSS(VU, EEREC_D);
-		}
-		else if( EEREC_D == EEREC_S ) {
-			_vuFlipRegSS(VU, EEREC_D);
-			SSE_MAXSS_M32_to_XMM(EEREC_D, addr);
-			_vuFlipRegSS(VU, EEREC_D);
-		}
-		else {
-			if( _X ) {
+		if( _XYZW_SS ) {
+			if( EEREC_D == EEREC_TEMP ) {
+				_vuFlipRegSS(VU, EEREC_S);
 				SSE_MOVSS_XMM_to_XMM(EEREC_D, EEREC_S);
 				SSE_MAXSS_M32_to_XMM(EEREC_D, addr);
+				_vuFlipRegSS(VU, EEREC_S);
+
+				// have to flip over EEREC_D if computing flags!
+				//if( (info & PROCESS_VU_UPDATEFLAGS) )
+					_vuFlipRegSS(VU, EEREC_D);
+			}
+			else if( EEREC_D == EEREC_S ) {
+				_vuFlipRegSS(VU, EEREC_D);
+				SSE_MAXSS_M32_to_XMM(EEREC_D, addr);
+				_vuFlipRegSS(VU, EEREC_D);
 			}
 			else {
-				_vuMoveSS(VU, EEREC_TEMP, EEREC_S);
-				_vuFlipRegSS(VU, EEREC_D);
-				SSE_MAXSS_M32_to_XMM(EEREC_TEMP, addr);
-				SSE_MOVSS_XMM_to_XMM(EEREC_D, EEREC_TEMP);
-				_vuFlipRegSS(VU, EEREC_D);
+				if( _X ) {
+					SSE_MOVSS_XMM_to_XMM(EEREC_D, EEREC_S);
+					SSE_MAXSS_M32_to_XMM(EEREC_D, addr);
+				}
+				else {
+					_vuMoveSS(VU, EEREC_TEMP, EEREC_S);
+					_vuFlipRegSS(VU, EEREC_D);
+					SSE_MAXSS_M32_to_XMM(EEREC_TEMP, addr);
+					SSE_MOVSS_XMM_to_XMM(EEREC_D, EEREC_TEMP);
+					_vuFlipRegSS(VU, EEREC_D);
+				}
 			}
 		}
-	}
-	else if (_X_Y_Z_W != 0xf) {
-		SSE_MOVSS_M32_to_XMM(EEREC_TEMP, addr); 
-		SSE_SHUFPS_XMM_to_XMM(EEREC_TEMP, EEREC_TEMP, 0x00);
-		SSE_MAXPS_XMM_to_XMM(EEREC_TEMP, EEREC_S);
-		VU_MERGE_REGS(EEREC_D, EEREC_TEMP);
-	}
-	else {
-		if(EEREC_D == EEREC_S) {
-			SSE_MOVSS_M32_to_XMM(EEREC_TEMP, addr);
+		else if (_X_Y_Z_W != 0xf) {
+			SSE_MOVSS_M32_to_XMM(EEREC_TEMP, addr); 
 			SSE_SHUFPS_XMM_to_XMM(EEREC_TEMP, EEREC_TEMP, 0x00);
-			SSE_MAXPS_XMM_to_XMM(EEREC_D, EEREC_TEMP);
+			SSE_MAXPS_XMM_to_XMM(EEREC_TEMP, EEREC_S);
+			VU_MERGE_REGS(EEREC_D, EEREC_TEMP);
 		}
 		else {
-			SSE_MOVSS_M32_to_XMM(EEREC_D, addr);
-			SSE_SHUFPS_XMM_to_XMM(EEREC_D, EEREC_D, 0x00);
-			SSE_MAXPS_XMM_to_XMM(EEREC_D, EEREC_S);
+			if(EEREC_D == EEREC_S) {
+				SSE_MOVSS_M32_to_XMM(EEREC_TEMP, addr);
+				SSE_SHUFPS_XMM_to_XMM(EEREC_TEMP, EEREC_TEMP, 0x00);
+				SSE_MAXPS_XMM_to_XMM(EEREC_D, EEREC_TEMP);
+			}
+			else {
+				SSE_MOVSS_M32_to_XMM(EEREC_D, addr);
+				SSE_SHUFPS_XMM_to_XMM(EEREC_D, EEREC_D, 0x00);
+				SSE_MAXPS_XMM_to_XMM(EEREC_D, EEREC_S);
+			}
 		}
 	}
 }
@@ -2425,13 +2539,11 @@ void recVUMI_MAX_iq(VURegs *VU, uptr addr, int info)
 void recVUMI_MAX_xyzw(VURegs *VU, int xyzw, int info)
 {	
 	if ( _Fd_ == 0 ) return;
-
 	//SysPrintf ("recVUMI_MAX_xyzw  \n");
-	if (_Fs_) vuFloat4_useEAX( EEREC_S, EEREC_TEMP, _X_Y_Z_W ); // Always do Preserved Sign Clamping
-	if (_Ft_) vuFloat4_useEAX( EEREC_T, EEREC_TEMP, ( 1 << (3 - xyzw) ) );
 
-	if( _X_Y_Z_W == 8 && (EEREC_D != EEREC_TEMP)) {
-		if( _Fs_ == 0 && _Ft_ == 0 ) {
+	if (_Fs_ == 0 && _Ft_ == 0)
+	{
+		if( _X_Y_Z_W == 8 && (EEREC_D != EEREC_TEMP)) {
 			if( xyzw < 3 ) {
 				SSE_XORPS_XMM_to_XMM(EEREC_TEMP, EEREC_TEMP);
 				SSE_MOVSS_XMM_to_XMM(EEREC_D, EEREC_TEMP);
@@ -2441,7 +2553,29 @@ void recVUMI_MAX_xyzw(VURegs *VU, int xyzw, int info)
 				SSE_MOVSS_XMM_to_XMM(EEREC_D, EEREC_TEMP);
 			}
 		}
+		else if (_X_Y_Z_W != 0xf) {
+			if( xyzw < 3 ) {
+				if( _X_Y_Z_W & 1 ) SSE_MOVAPS_M128_to_XMM(EEREC_TEMP, (uptr)&VU->VF[0].UL[0]); // w included, so insert the whole reg
+				else SSE_XORPS_XMM_to_XMM(EEREC_TEMP, EEREC_TEMP); // w not included, can zero out
+			}
+			else SSE_MOVAPS_M128_to_XMM(EEREC_TEMP, (uptr)s_fones);
+			VU_MERGE_REGS(EEREC_D, EEREC_TEMP);
+		} 
 		else {
+			if( xyzw < 3 ) SSE_XORPS_XMM_to_XMM(EEREC_D, EEREC_D);
+			else SSE_MOVAPS_M128_to_XMM(EEREC_D, (uptr)s_fones);
+		}
+		return;
+	}
+
+	if (MINMAXFIX)
+		MINMAXlogical(VU, info, 0, 2, 0, xyzw);
+	else
+	{
+		if (_Fs_) vuFloat4_useEAX( EEREC_S, EEREC_TEMP, _X_Y_Z_W ); // Always do Preserved Sign Clamping
+		if (_Ft_) vuFloat4_useEAX( EEREC_T, EEREC_TEMP, ( 1 << (3 - xyzw) ) );
+
+		if( _X_Y_Z_W == 8 && (EEREC_D != EEREC_TEMP)) {
 			if( xyzw == 0 ) {
 				if( EEREC_D == EEREC_S ) SSE_MAXSS_XMM_to_XMM(EEREC_D, EEREC_T);
 				else if( EEREC_D == EEREC_T ) SSE_MAXSS_XMM_to_XMM(EEREC_D, EEREC_S);
@@ -2456,25 +2590,10 @@ void recVUMI_MAX_xyzw(VURegs *VU, int xyzw, int info)
 				SSE_MAXSS_XMM_to_XMM(EEREC_D, EEREC_TEMP);
 			}
 		}
-	}
-	else if (_X_Y_Z_W != 0xf) {
-		if( _Fs_ == 0 && _Ft_ == 0 ) {
-			if( xyzw < 3 ) {
-				if( _X_Y_Z_W & 1 ) SSE_MOVAPS_M128_to_XMM(EEREC_TEMP, (uptr)&VU->VF[0].UL[0]); // w included, so insert the whole reg
-				else SSE_XORPS_XMM_to_XMM(EEREC_TEMP, EEREC_TEMP); // w not included, can zero out
-			}
-			else SSE_MOVAPS_M128_to_XMM(EEREC_TEMP, (uptr)s_fones);
-		}
-		else {
+		else if (_X_Y_Z_W != 0xf) {
 			_unpackVF_xyzw(EEREC_TEMP, EEREC_T, xyzw);
 			SSE_MAXPS_XMM_to_XMM(EEREC_TEMP, EEREC_S);
-		}
-		VU_MERGE_REGS(EEREC_D, EEREC_TEMP);
-	}
-	else {
-		if( _Fs_ == 0 && _Ft_ == 0 ) {
-			if( xyzw < 3 ) SSE_XORPS_XMM_to_XMM(EEREC_D, EEREC_D);
-			else SSE_MOVAPS_M128_to_XMM(EEREC_D, (uptr)s_fones);
+			VU_MERGE_REGS(EEREC_D, EEREC_TEMP);
 		}
 		else {
 			if (EEREC_D == EEREC_S) {
@@ -2503,37 +2622,43 @@ void recVUMI_MAXw(VURegs *VU, int info) { recVUMI_MAX_xyzw(VU, 3, info); }
 void recVUMI_MINI(VURegs *VU, int info)
 {
 	if ( _Fd_ == 0 ) return;
-
 	//SysPrintf ("recVUMI_MINI\n");
-	if (_Fs_) vuFloat4_useEAX( EEREC_S, EEREC_TEMP, _X_Y_Z_W ); // Always do Preserved Sign Clamping
-	if (_Ft_) vuFloat4_useEAX( EEREC_T, EEREC_TEMP, _X_Y_Z_W );
 
-	if( _X_Y_Z_W == 8 ) {
-		if (EEREC_D == EEREC_S) SSE_MINSS_XMM_to_XMM(EEREC_D, EEREC_T);
-		else if (EEREC_D == EEREC_T) SSE_MINSS_XMM_to_XMM(EEREC_D, EEREC_S);
-		else {
-			SSE_MOVSS_XMM_to_XMM(EEREC_D, EEREC_S);
-			SSE_MINSS_XMM_to_XMM(EEREC_D, EEREC_T);
-		}
-	}
-	else if (_X_Y_Z_W != 0xf) {
-		SSE_MOVAPS_XMM_to_XMM(EEREC_TEMP, EEREC_S);
-		SSE_MINPS_XMM_to_XMM(EEREC_TEMP, EEREC_T);
+	if (MINMAXFIX)
+		MINMAXlogical(VU, info, 1, 0);
+	else
+	{
 
-		VU_MERGE_REGS(EEREC_D, EEREC_TEMP);
-	}
-	else {
-		if( EEREC_D == EEREC_S ) {
-			//ClampUnordered(EEREC_T, EEREC_TEMP, 0); // need for GT4 vu0rec
-			SSE_MINPS_XMM_to_XMM(EEREC_D, EEREC_T);
+		if (_Fs_) vuFloat4_useEAX( EEREC_S, EEREC_TEMP, _X_Y_Z_W ); // Always do Preserved Sign Clamping
+		if (_Ft_) vuFloat4_useEAX( EEREC_T, EEREC_TEMP, _X_Y_Z_W );
+
+		if( _X_Y_Z_W == 8 ) {
+			if (EEREC_D == EEREC_S) SSE_MINSS_XMM_to_XMM(EEREC_D, EEREC_T);
+			else if (EEREC_D == EEREC_T) SSE_MINSS_XMM_to_XMM(EEREC_D, EEREC_S);
+			else {
+				SSE_MOVSS_XMM_to_XMM(EEREC_D, EEREC_S);
+				SSE_MINSS_XMM_to_XMM(EEREC_D, EEREC_T);
+			}
 		}
-		else if( EEREC_D == EEREC_T ) {
-			//ClampUnordered(EEREC_S, EEREC_TEMP, 0); // need for GT4 vu0rec
-			SSE_MINPS_XMM_to_XMM(EEREC_D, EEREC_S);
+		else if (_X_Y_Z_W != 0xf) {
+			SSE_MOVAPS_XMM_to_XMM(EEREC_TEMP, EEREC_S);
+			SSE_MINPS_XMM_to_XMM(EEREC_TEMP, EEREC_T);
+
+			VU_MERGE_REGS(EEREC_D, EEREC_TEMP);
 		}
 		else {
-			SSE_MOVAPS_XMM_to_XMM(EEREC_D, EEREC_S);
-			SSE_MINPS_XMM_to_XMM(EEREC_D, EEREC_T);
+			if( EEREC_D == EEREC_S ) {
+				//ClampUnordered(EEREC_T, EEREC_TEMP, 0); // need for GT4 vu0rec
+				SSE_MINPS_XMM_to_XMM(EEREC_D, EEREC_T);
+			}
+			else if( EEREC_D == EEREC_T ) {
+				//ClampUnordered(EEREC_S, EEREC_TEMP, 0); // need for GT4 vu0rec
+				SSE_MINPS_XMM_to_XMM(EEREC_D, EEREC_S);
+			}
+			else {
+				SSE_MOVAPS_XMM_to_XMM(EEREC_D, EEREC_S);
+				SSE_MINPS_XMM_to_XMM(EEREC_D, EEREC_T);
+			}
 		}
 	}
 }
@@ -2541,57 +2666,63 @@ void recVUMI_MINI(VURegs *VU, int info)
 void recVUMI_MINI_iq(VURegs *VU, uptr addr, int info)
 {
 	if ( _Fd_ == 0 ) return;
-
 	//SysPrintf ("recVUMI_MINI_iq  \n");
-	if (_Fs_) vuFloat4_useEAX( EEREC_S, EEREC_TEMP, _X_Y_Z_W ); // Always do Preserved Sign Clamping
-	vuFloat3(addr);
 
-	if( _XYZW_SS ) {
-		if( EEREC_D == EEREC_TEMP ) {
-			_vuFlipRegSS(VU, EEREC_S);
-			SSE_MOVSS_XMM_to_XMM(EEREC_D, EEREC_S);
-			SSE_MINSS_M32_to_XMM(EEREC_D, addr);
-			_vuFlipRegSS(VU, EEREC_S);
+	if (MINMAXFIX)
+		MINMAXlogical(VU, info, 1, 1, addr);
+	else
+	{
 
-			// have to flip over EEREC_D if computing flags!
-			//if( (info & PROCESS_VU_UPDATEFLAGS) )
-				_vuFlipRegSS(VU, EEREC_D);
-		}
-		else if( EEREC_D == EEREC_S ) {
-			_vuFlipRegSS(VU, EEREC_D);
-			SSE_MINSS_M32_to_XMM(EEREC_D, addr);
-			_vuFlipRegSS(VU, EEREC_D);
-		}
-		else {
-			if( _X ) {
+		if (_Fs_) vuFloat4_useEAX( EEREC_S, EEREC_TEMP, _X_Y_Z_W ); // Always do Preserved Sign Clamping
+		vuFloat3(addr);
+
+		if( _XYZW_SS ) {
+			if( EEREC_D == EEREC_TEMP ) {
+				_vuFlipRegSS(VU, EEREC_S);
 				SSE_MOVSS_XMM_to_XMM(EEREC_D, EEREC_S);
 				SSE_MINSS_M32_to_XMM(EEREC_D, addr);
+				_vuFlipRegSS(VU, EEREC_S);
+
+				// have to flip over EEREC_D if computing flags!
+				//if( (info & PROCESS_VU_UPDATEFLAGS) )
+					_vuFlipRegSS(VU, EEREC_D);
+			}
+			else if( EEREC_D == EEREC_S ) {
+				_vuFlipRegSS(VU, EEREC_D);
+				SSE_MINSS_M32_to_XMM(EEREC_D, addr);
+				_vuFlipRegSS(VU, EEREC_D);
 			}
 			else {
-				_vuMoveSS(VU, EEREC_TEMP, EEREC_S);
-				_vuFlipRegSS(VU, EEREC_D);
-				SSE_MINSS_M32_to_XMM(EEREC_TEMP, addr);
-				SSE_MOVSS_XMM_to_XMM(EEREC_D, EEREC_TEMP);
-				_vuFlipRegSS(VU, EEREC_D);
+				if( _X ) {
+					SSE_MOVSS_XMM_to_XMM(EEREC_D, EEREC_S);
+					SSE_MINSS_M32_to_XMM(EEREC_D, addr);
+				}
+				else {
+					_vuMoveSS(VU, EEREC_TEMP, EEREC_S);
+					_vuFlipRegSS(VU, EEREC_D);
+					SSE_MINSS_M32_to_XMM(EEREC_TEMP, addr);
+					SSE_MOVSS_XMM_to_XMM(EEREC_D, EEREC_TEMP);
+					_vuFlipRegSS(VU, EEREC_D);
+				}
 			}
 		}
-	}
-	else if (_X_Y_Z_W != 0xf) {
-		SSE_MOVSS_M32_to_XMM(EEREC_TEMP, addr); 
-		SSE_SHUFPS_XMM_to_XMM(EEREC_TEMP, EEREC_TEMP, 0x00);
-		SSE_MINPS_XMM_to_XMM(EEREC_TEMP, EEREC_S);
-		VU_MERGE_REGS(EEREC_D, EEREC_TEMP);
-	}
-	else {
-		if(EEREC_D == EEREC_S) {
-			SSE_MOVSS_M32_to_XMM(EEREC_TEMP, addr);
+		else if (_X_Y_Z_W != 0xf) {
+			SSE_MOVSS_M32_to_XMM(EEREC_TEMP, addr); 
 			SSE_SHUFPS_XMM_to_XMM(EEREC_TEMP, EEREC_TEMP, 0x00);
-			SSE_MINPS_XMM_to_XMM(EEREC_D, EEREC_TEMP);
+			SSE_MINPS_XMM_to_XMM(EEREC_TEMP, EEREC_S);
+			VU_MERGE_REGS(EEREC_D, EEREC_TEMP);
 		}
 		else {
-			SSE_MOVSS_M32_to_XMM(EEREC_D, addr);
-			SSE_SHUFPS_XMM_to_XMM(EEREC_D, EEREC_D, 0x00);
-			SSE_MINPS_XMM_to_XMM(EEREC_D, EEREC_S);
+			if(EEREC_D == EEREC_S) {
+				SSE_MOVSS_M32_to_XMM(EEREC_TEMP, addr);
+				SSE_SHUFPS_XMM_to_XMM(EEREC_TEMP, EEREC_TEMP, 0x00);
+				SSE_MINPS_XMM_to_XMM(EEREC_D, EEREC_TEMP);
+			}
+			else {
+				SSE_MOVSS_M32_to_XMM(EEREC_D, addr);
+				SSE_SHUFPS_XMM_to_XMM(EEREC_D, EEREC_D, 0x00);
+				SSE_MINPS_XMM_to_XMM(EEREC_D, EEREC_S);
+			}
 		}
 	}
 }
@@ -2599,39 +2730,44 @@ void recVUMI_MINI_iq(VURegs *VU, uptr addr, int info)
 void recVUMI_MINI_xyzw(VURegs *VU, int xyzw, int info)
 {
 	if ( _Fd_ == 0 ) return;
-
 	//SysPrintf ("recVUMI_MINI_xyzw  \n");
-	if (_Fs_) vuFloat4_useEAX( EEREC_S, EEREC_TEMP, _X_Y_Z_W ); // Always do Preserved Sign Clamping
-	if (_Ft_) vuFloat4_useEAX( EEREC_T, EEREC_TEMP, ( 1 << (3 - xyzw) ) );
 
-	if( _X_Y_Z_W == 8 && (EEREC_D != EEREC_TEMP)) {
-		if( xyzw == 0 ) {
-			if( EEREC_D == EEREC_S ) SSE_MINSS_XMM_to_XMM(EEREC_D, EEREC_T);
-			else if( EEREC_D == EEREC_T ) SSE_MINSS_XMM_to_XMM(EEREC_D, EEREC_S);
+	if (MINMAXFIX)
+		MINMAXlogical(VU, info, 1, 2, 0, xyzw);
+	else
+	{
+		if (_Fs_) vuFloat4_useEAX( EEREC_S, EEREC_TEMP, _X_Y_Z_W ); // Always do Preserved Sign Clamping
+		if (_Ft_) vuFloat4_useEAX( EEREC_T, EEREC_TEMP, ( 1 << (3 - xyzw) ) );
+
+		if( _X_Y_Z_W == 8 && (EEREC_D != EEREC_TEMP)) {
+			if( xyzw == 0 ) {
+				if( EEREC_D == EEREC_S ) SSE_MINSS_XMM_to_XMM(EEREC_D, EEREC_T);
+				else if( EEREC_D == EEREC_T ) SSE_MINSS_XMM_to_XMM(EEREC_D, EEREC_S);
+				else {
+					SSE_MOVSS_XMM_to_XMM(EEREC_D, EEREC_S);
+					SSE_MINSS_XMM_to_XMM(EEREC_D, EEREC_T);
+				}
+			}
 			else {
+				_unpackVFSS_xyzw(EEREC_TEMP, EEREC_T, xyzw);
 				SSE_MOVSS_XMM_to_XMM(EEREC_D, EEREC_S);
-				SSE_MINSS_XMM_to_XMM(EEREC_D, EEREC_T);
+				SSE_MINSS_XMM_to_XMM(EEREC_D, EEREC_TEMP);
 			}
 		}
-		else {
-			_unpackVFSS_xyzw(EEREC_TEMP, EEREC_T, xyzw);
-			SSE_MOVSS_XMM_to_XMM(EEREC_D, EEREC_S);
-			SSE_MINSS_XMM_to_XMM(EEREC_D, EEREC_TEMP);
-		}
-	}
-	else if (_X_Y_Z_W != 0xf) {
-		_unpackVF_xyzw(EEREC_TEMP, EEREC_T, xyzw);
-		SSE_MINPS_XMM_to_XMM(EEREC_TEMP, EEREC_S);
-		VU_MERGE_REGS(EEREC_D, EEREC_TEMP);
-	}
-	else {
-		if (EEREC_D == EEREC_S) {
+		else if (_X_Y_Z_W != 0xf) {
 			_unpackVF_xyzw(EEREC_TEMP, EEREC_T, xyzw);
-			SSE_MINPS_XMM_to_XMM(EEREC_D, EEREC_TEMP);
+			SSE_MINPS_XMM_to_XMM(EEREC_TEMP, EEREC_S);
+			VU_MERGE_REGS(EEREC_D, EEREC_TEMP);
 		}
 		else {
-			_unpackVF_xyzw(EEREC_D, EEREC_T, xyzw);
-			SSE_MINPS_XMM_to_XMM(EEREC_D, EEREC_S);
+			if (EEREC_D == EEREC_S) {
+				_unpackVF_xyzw(EEREC_TEMP, EEREC_T, xyzw);
+				SSE_MINPS_XMM_to_XMM(EEREC_D, EEREC_TEMP);
+			}
+			else {
+				_unpackVF_xyzw(EEREC_D, EEREC_T, xyzw);
+				SSE_MINPS_XMM_to_XMM(EEREC_D, EEREC_S);
+			}
 		}
 	}
 }

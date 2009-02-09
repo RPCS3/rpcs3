@@ -553,6 +553,9 @@ __forceinline void SSE_SQRTSS_XMM_to_XMM( x86SSERegType to, x86SSERegType from )
 __forceinline void SSE_MAXPS_M128_to_XMM( x86SSERegType to, uptr from )           { SSEMtoR( 0x5f0f, 0 ); }
 __forceinline void SSE_MAXPS_XMM_to_XMM( x86SSERegType to, x86SSERegType from ) { SSERtoR( 0x5f0f ); }
 
+__forceinline void SSE2_MAXPD_M128_to_XMM( x86SSERegType to, uptr from )           { SSEMtoR66( 0x5f0f ); }
+__forceinline void SSE2_MAXPD_XMM_to_XMM( x86SSERegType to, x86SSERegType from ) { SSERtoR66( 0x5f0f ); }
+
 /////////////////////////////////////////////////////////////////////////////////////////
 //**********************************************************************************/
 //MAXSS: Return Scalar Single-Precision FP Maximum                                 *
@@ -612,6 +615,9 @@ __forceinline void SSE2_CVTTPS2DQ_XMM_to_XMM( x86SSERegType to, x86SSERegType fr
 //**********************************************************************************
 __forceinline void SSE_MINPS_M128_to_XMM( x86SSERegType to, uptr from )           { SSEMtoR( 0x5d0f, 0 ); }
 __forceinline void SSE_MINPS_XMM_to_XMM( x86SSERegType to, x86SSERegType from ) { SSERtoR( 0x5d0f ); }
+
+__forceinline void SSE2_MINPD_M128_to_XMM( x86SSERegType to, uptr from )           { SSEMtoR66( 0x5d0f ); }
+__forceinline void SSE2_MINPD_XMM_to_XMM( x86SSERegType to, x86SSERegType from ) { SSERtoR66( 0x5d0f ); }
 
 //////////////////////////////////////////////////////////////////////////////////////////
 //**********************************************************************************/
