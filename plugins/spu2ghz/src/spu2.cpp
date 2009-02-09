@@ -20,35 +20,20 @@
 #include <assert.h>
 
 #include "regtable.h"
-#include "svnrev.h"
 
 void StartVoices(int core, u32 value);
 void StopVoices(int core, u32 value);
 
 void InitADSR();
 
-const unsigned char version  = PS2E_SPU2_VERSION;
-const unsigned char revision = 1;
-const unsigned char build	 = 9;	// increase that with each version
-
-static __forceinline void SPU2_FastWrite( u32 rmem, u16 value );
-static void SPU2writeLog(u32 rmem, u16 value);
 DWORD CALLBACK TimeThread(PVOID /* unused param */);
-
 
 const char *ParamNames[8]={"VOLL","VOLR","PITCH","ADSR1","ADSR2","ENVX","VOLXL","VOLXR"};
 const char *AddressNames[6]={"SSAH","SSAL","LSAH","LSAL","NAXH","NAXL"};
 
-double opitch;
-int osps;
-
-// [Air]: Adding the spu2init boolean wasn't necessary except to help me in
-//   debugging the spu2 suspend/resume behavior (when user hits escape).
-static bool spu2open=false;	// has spu2open plugin interface been called?
-static bool spu2init=false;	// has spu2init plugin interface been called?
 
 // [Air]: fixed the hacky part of UpdateTimer with this:
-static bool resetClock = true;
+bool resetClock = true;
 
 // Used to make spu2 more robust at loading incompatible saves.
 // Disables re-freezing of save state data.
@@ -78,11 +63,9 @@ s16 InputPos;
 u8 InpBuff;
 u32 Cycles;
 u32 Num;
-u32 acumCycles;
 
 u32* cPtr=NULL;
 u32  lClocks=0;
-u32  pClocks=0;
 
 bool hasPtr=false;
 
@@ -95,23 +78,13 @@ HINSTANCE hInstance;
 bool debugDialogOpen=false;
 HWND hDebugDialog=NULL;
 
-static char libraryName[256];
-
 CRITICAL_SECTION threadSync;
-
-s32 logvolume[16384];
 
 bool has_to_call_irq=false;
 
 void SetIrqCall()
 {
 	has_to_call_irq=true;
-}
-
-BOOL WINAPI DllMain(HINSTANCE hinstDLL,DWORD dwReason,LPVOID lpvReserved)
-{
-	if(dwReason==DLL_PROCESS_ATTACH) hInstance=hinstDLL;
-	return TRUE;
 }
 
 void SysMessage(const char *fmt, ...) 
@@ -124,80 +97,6 @@ void SysMessage(const char *fmt, ...)
 	va_end(list);
 	MessageBox(0, tmp, "SPU2ghz Msg", 0);
 }
-
-static void InitLibraryName()
-{
-#ifdef PUBLIC
-
-	// Public Release!
-	// Output a simplified string that's just our name:
-
-	strcpy( libraryName, "SPU2ghz" );
-
-#elif defined( SVN_REV_UNKNOWN )
-
-	// Unknown revision.
-	// Output a name that includes devbuild status but not
-	// subversion revision tags:
-
-	strcpy( libraryName, "SPU2ghz"
-#	ifdef _DEBUG_FAST
-		"-Debug"
-#	elif defined( DEBUG )
-		"-Debug/Strict"		// strict debugging is slow!
-#	else
-		"-Dev"
-#	endif
-		);
-#else
-
-	// Use TortoiseSVN's SubWCRev utility's output
-	// to label the specific revision:
-
-	sprintf_s( libraryName, "SPU2ghz r%d%s"
-#	ifdef _DEBUG_FAST
-		"-Debug"
-#	elif defined( _DEBUG )
-		"-Debug/Strict"		// strict debugging is slow!
-#	else
-		"-Dev"
-#	endif
-		,SVN_REV,
-		SVN_MODS ? "m" : ""
-	);
-#endif
-
-}
-
-EXPORT_C_(u32) PS2EgetLibType() 
-{
-	return PS2E_LT_SPU2;
-}
-
-EXPORT_C_(char*) PS2EgetLibName() 
-{
-	InitLibraryName();
-	return libraryName;
-}
-
-EXPORT_C_(u32) PS2EgetLibVersion2(u32 type) 
-{
-	return (version<<16)|(revision<<8)|build;
-}
-
-EXPORT_C_(void) SPU2configure() {
-	configure();
-}
-
-EXPORT_C_(void) SPU2about() {
-	InitLibraryName();
-	SysMessage( libraryName );
-}
-
-EXPORT_C_(s32) SPU2test() {
-	return SndTest();
-}
-
 
 __forceinline s16 * __fastcall GetMemPtr(u32 addr)
 {
@@ -238,6 +137,12 @@ __inline void __fastcall spu2M_Write( u32 addr, s16 value )
 __inline void __fastcall spu2M_Write( u32 addr, u16 value )
 {
 	spu2M_Write( addr, (s16)value );
+}
+
+__forceinline void RegLog(int level, char *RName,u32 mem,u32 core,u16 value) 
+{
+	if( level > 1 )
+		FileLog("[%10d] SPU2 write mem %08x (core %d, register %s) value %04x\n",Cycles,mem,core,RName,value);
 }
 
 void AssignVolume(V_Volume& vol, s16 value)
@@ -324,109 +229,6 @@ void CoreReset(int c)
 	ConLog("done.\n");
 }
 
-extern void LowPassFilterInit();
-
-EXPORT_C_(s32) SPU2init() 
-{
-#define MAKESURE(a,b) \
-		/*fprintf(stderr,"%08p: %08p == %08p\n",&(regtable[a>>1]),regtable[a>>1],U16P(b));*/ \
-		assert(regtable[(a)>>1]==U16P(b))
-
-	MAKESURE(0x800,zero);
-
-	s32 c=0,v=0;
-	ReadSettings();
-	acumCycles=0;
-
-#ifdef SPU2_LOG
-	if(AccessLog()) 
-	{
-		spu2Log = fopen(AccessLogFileName, "w");
-		setvbuf(spu2Log, NULL,  _IONBF, 0);
-		FileLog("SPU2init\n");
-	}
-#endif
-	srand((unsigned)time(NULL));
-
-	disableFreezes=false;
-
-	if (spu2init)
-	{
-		ConLog( " * SPU2: Already initialized - Ignoring SPU2init signal." );
-		return 0;
-	}
-
-	spu2init=true;
-
-	spu2regs  = (short*)malloc(0x010000);
-	_spu2mem  = (short*)malloc(0x200000);
-
-	// adpcm decoder cache:
-	//  the cache data size is determined by taking the number of adpcm blocks
-	//  (2MB / 16) and multiplying it by the decoded block size (28 samples).
-	//  Thus: pcm_cache_data = 7,340,032 bytes (ouch!)
-	//  Expanded: 16 bytes expands to 56 bytes [3.5:1 ratio]
-	//    Resulting in 2MB * 3.5.
-
-	pcm_cache_data = (PcmCacheEntry*)calloc( pcm_BlockCount, sizeof(PcmCacheEntry) );
-
-	if( (spu2regs == NULL) || (_spu2mem == NULL) ||
-		(pcm_cache_data == NULL) )
-	{
-		SysMessage("SPU2: Error allocating Memory\n"); return -1;
-	}
-
-	for(int mem=0;mem<0x800;mem++)
-	{
-		u16 *ptr=regtable[mem>>1];
-		if(!ptr) {
-			regtable[mem>>1] = &(spu2Ru16(mem));
-		}
-	}
-
-	memset(spu2regs,0,0x010000);
-	memset(_spu2mem,0,0x200000);
-	memset(&Cores,0,(sizeof(V_Core) * 2));
-	CoreReset(0);
-	CoreReset(1);
-
-	DMALogOpen();
-
-	if(WaveLog()) 
-	{
-		if(!wavedump_open())
-		{
-			SysMessage("Can't open '%s'.\nWave Log disabled.",WaveLogFileName);
-		}
-	}
-
-	for(v=0;v<16384;v++)
-	{
-		logvolume[v]=(s32)(s32)floor(log((double)(v+1))*3376.7);
-	}
-
-	LowPassFilterInit();
-	InitADSR();
-
-#ifdef STREAM_DUMP
-	il0=fopen("logs/spu2input0.pcm","wb");
-	il1=fopen("logs/spu2input1.pcm","wb");
-#endif
-
-#ifdef EFFECTS_DUMP
-	el0=fopen("logs/spu2fx0.pcm","wb");
-	el1=fopen("logs/spu2fx1.pcm","wb");
-#endif
-
-
-#ifdef S2R_ENABLE
-	if(!replay_mode)
-		s2r_open("replay_dump.s2r");
-#endif
-	return 0;
-}
-
-
 static BOOL CALLBACK DebugProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 {
 	int wmId,wmEvent;
@@ -461,99 +263,7 @@ static BOOL CALLBACK DebugProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 	return TRUE;
 }
 
-EXPORT_C_(s32) SPU2open(void *pDsp)
-{
-	if( spu2open ) return 0;
-
-	FileLog("[%10d] SPU2 Open\n",Cycles);
-
-	/*
-	if(debugDialogOpen==0)
-	{
-		hDebugDialog = CreateDialogParam(hInstance,MAKEINTRESOURCE(IDD_DEBUG),0,DebugProc,0);
-		ShowWindow(hDebugDialog,SW_SHOWNORMAL);
-		debugDialogOpen=1;
-	}*/
-
-	spu2open=true;
-	if (!SndInit())
-	{
-		srate_pv=(double)SampleRate/48000.0;
-
-		spdif_init();
-
-		DspLoadLibrary(dspPlugin,dspPluginModule);
-
-		return 0;
-	}
-	else 
-	{
-		SPU2close();
-		return -1;
-	};
-}
-
-EXPORT_C_(void) SPU2close() 
-{
-	if( !spu2open ) return;
-	FileLog("[%10d] SPU2 Close\n",Cycles);
-
-	DspCloseLibrary();
-	spdif_shutdown();
-	SndClose();
-
-	spu2open = false;
-}
-
-EXPORT_C_(void) SPU2shutdown() 
-{
-	if(!spu2init) return;
-
-	ConLog( " * SPU2: Shutting down.\n" );
-
-	SPU2close();
-
-#ifdef S2R_ENABLE
-	if(!replay_mode)
-		s2r_close();
-#endif
-
-	DoFullDump();
-#ifdef STREAM_DUMP
-	fclose(il0);
-	fclose(il1);
-#endif
-#ifdef EFFECTS_DUMP
-	fclose(el0);
-	fclose(el1);
-#endif
-	if(WaveLog() && wavedump_ok) wavedump_close();
-
-	DMALogClose();
-
-	spu2init = false;
-
-	SAFE_FREE(spu2regs);
-	SAFE_FREE(_spu2mem);
-
-	SAFE_FREE( pcm_cache_data );
-
-	spu2regs = NULL;
-	_spu2mem = NULL;
-	pcm_cache_data = NULL;
-
-#ifdef SPU2_LOG
-	if(!AccessLog()) return;
-	FileLog("[%10d] SPU2shutdown\n",Cycles);
-	if(spu2Log) fclose(spu2Log);
-#endif
-}
-
-EXPORT_C_(void) SPU2setClockPtr(u32 *ptr)
-{
-	cPtr=ptr;
-	hasPtr=(cPtr!=NULL);
-}
+#ifndef PUBLIC
 
 int FillRectangle(HDC dc, int left, int top, int width, int height)
 {
@@ -577,7 +287,7 @@ BOOL DrawRectangle(HDC dc, int left, int top, int width, int height)
 	return Polyline(dc, p, 5);
 }
 
-#ifndef PUBLIC
+
 HFONT hf = NULL;
 int lCount=0;
 void UpdateDebugDialog()
@@ -689,27 +399,6 @@ void UpdateDebugDialog()
 u32 TicksCore=0;
 u32 TicksThread=0;
 
-static DWORD CALLBACK TimeThread(PVOID /* unused param */)
-{
-	while(spu2open)
-	{
-		if(TicksThread>=(TicksCore+320))
-		{
-			Sleep(1);
-		}
-		else if(TicksThread>=TicksCore)
-		{
-			Sleep(0);
-		}
-		else
-		{
-			Mix();
-			TicksThread++;
-		}
-	}
-	return 0;
-}
-
 void __fastcall TimeUpdate(u32 cClocks)
 {
 	u32 dClocks = cClocks-lClocks;
@@ -794,69 +483,7 @@ void __fastcall TimeUpdate(u32 cClocks)
 	}
 }
 
-bool numpad_minus_old=false;
-bool numpad_minus = false;
-
-bool numpad_plus = false, numpad_plus_old = false;
-
-EXPORT_C_(void) SPU2async(u32 cycles) 
-{
-#ifndef PUBLIC
-	u32 oldClocks = lClocks;
-	static u32 timer=0,time1=0,time2=0;
-	timer++;
-	if (timer == 1){
-		time1=timeGetTime();
-	}
-	if (timer == 3000){
-		time2 = timeGetTime()-time1 ;
-		timer=0;
-	}
-#endif
-
-	DspUpdate();
-
-	if(LimiterToggleEnabled)
-	{
-		numpad_minus = (GetAsyncKeyState(VK_SUBTRACT)&0x8000)!=0;
-
-		if(numpad_minus && !numpad_minus_old)
-		{
-			if(LimitMode) LimitMode=0;
-			else		  LimitMode=1;
-			SndUpdateLimitMode();
-		}
-		numpad_minus_old = numpad_minus;
-	}
-
-#ifndef PUBLIC
-	/*numpad_plus = (GetAsyncKeyState(VK_ADD)&0x8000)!=0;
-	if(numpad_plus && !numpad_plus_old)
-	{
-		DoFullDump();
-	}
-	numpad_plus_old = numpad_plus;*/
-#endif
-
-	if(hasPtr)
-	{
-		TimeUpdate(*cPtr); 
-	}
-	else
-	{
-		pClocks+=cycles;
-		TimeUpdate(pClocks);
-	}
-}
-
-EXPORT_C_(void) SPU2irqCallback(void (*SPU2callback)(),void (*DMA4callback)(),void (*DMA7callback)())
-{
-	_irqcallback=SPU2callback;
-	dma4callback=DMA4callback;
-	dma7callback=DMA7callback;
-}
-
-u16 mask = 0xFFFF;
+static u16 mask = 0xFFFF;
 
 void UpdateSpdifMode()
 {
@@ -896,13 +523,7 @@ void UpdateSpdifMode()
 	}
 }
 
-__forceinline void RegLog(int level, char *RName,u32 mem,u32 core,u16 value) 
-{
-	if( level > 1 )
-		FileLog("[%10d] SPU2 write mem %08x (core %d, register %s) value %04x\n",Cycles,mem,core,RName,value);
-}
-
-static void SPU_ps1_write(u32 mem, u16 value) 
+void SPU_ps1_write(u32 mem, u16 value) 
 {
 	bool show=true;
 
@@ -1043,7 +664,7 @@ static void SPU_ps1_write(u32 mem, u16 value)
 	spu2Ru16(mem)=value;
 }
 
-static u16 SPU_ps1_read(u32 mem) 
+u16 SPU_ps1_read(u32 mem) 
 {
 	bool show=true;
 	u16 value = spu2Ru16(mem);
@@ -1120,7 +741,7 @@ static u16 SPU_ps1_read(u32 mem)
 
 void RegWriteLog(u32 core,u16 value);
 
-static void SPU2writeLog(u32 rmem, u16 value) 
+void SPU2writeLog(u32 rmem, u16 value) 
 {
 #ifndef PUBLIC
 	u32 vx=0, vc=0, core=0, omem=rmem, mem=rmem&0x7FF;
@@ -1329,8 +950,7 @@ static void SPU2writeLog(u32 rmem, u16 value)
 #endif
 }
 
-
-static __forceinline void SPU2_FastWrite( u32 rmem, u16 value )
+__forceinline void SPU2_FastWrite( u32 rmem, u16 value )
 {
 	u32 vx=0, vc=0, core=0, omem, mem;
 	omem=mem=rmem & 0x7FF; //FFFF;
@@ -1622,315 +1242,6 @@ static __forceinline void SPU2_FastWrite( u32 rmem, u16 value )
 }
 
 
-EXPORT_C_(void) SPU2write(u32 rmem, u16 value) 
-{
-#ifdef S2R_ENABLE
-	if(!replay_mode)
-		s2r_writereg(Cycles,rmem,value);
-#endif
-
-	if(rmem==0x1f9001ac)
-	{
-		//RegWriteLog(0,value);
-		if((Cores[0].IRQEnable)&&(Cores[0].TSA==Cores[0].IRQA))
-		{
-			Spdif.Info=4;
-			SetIrqCall();
-		}
-		spu2M_Write( Cores[0].TSA++, value );
-		Cores[0].TSA&=0xfffff;
-	}
-	else if(rmem==0x1f9005ac)
-	{
-		//RegWriteLog(1,value);
-		if((Cores[0].IRQEnable)&&(Cores[0].TSA==Cores[0].IRQA))
-		{
-			Spdif.Info=4;
-			SetIrqCall();
-		}
-		spu2M_Write( Cores[1].TSA++, value );
-		Cores[1].TSA&=0xfffff;
-	}
-	else
-	{
-		if(hasPtr) TimeUpdate(*cPtr);
-
-		if (rmem>>16 == 0x1f80)
-			SPU_ps1_write(rmem,value);
-		else
-			SPU2_FastWrite( rmem, value );
-	}
-}
-
-EXPORT_C_(u16) SPU2read(u32 rmem) 
-{
-//	if(!replay_mode)
-//		s2r_readreg(Cycles,rmem);
-
-	if(hasPtr) TimeUpdate(*cPtr);
-
-	u16 ret=0xDEAD; u32 core=0, mem=rmem&0xFFFF, omem=mem;
-	if (mem & 0x400) { omem^=0x400; core=1; }
-
-	if(rmem==0x1f9001AC)
-	{
-		ret =  DmaRead(core);
-	}
-	else if (rmem>>16 == 0x1f80)
-	{
-		ret = SPU_ps1_read(rmem);
-	}
-	else if ((mem&0xFFFF)>=0x800)
-	{
-		ret=spu2Ru16(mem);
-		ConLog(" * SPU2: Read from reg>=0x800: %x value %x\n",mem,ret);
-		FileLog(" * SPU2: Read from reg>=0x800: %x value %x\n",mem,ret);
-	}
-	else 
-	{
-		ret = *(regtable[(mem>>1)]);
-
-		FileLog("[%10d] SPU2 read mem %x (core %d, register %x): %x\n",Cycles, mem, core, (omem & 0x7ff), ret);
-	}
-
-	return ret;
-}
-
-typedef struct 
-{
-	// compatibility with zerospu2 removed...
-
-	u32 version;
-	u8 unkregs[0x10000];
-	u8 mem[0x200000];
-
-	u32 id;
-	V_Core Cores[2];
-	V_SPDIF Spdif;
-	s16 OutPos;
-	s16 InputPos;
-	u8 InpBuff;
-	u32 Cycles;
-	s32 uTicks;
-	double srate_pv;
-	double opitch;
-	int osps;
-	int PlayMode;
-
-	int lClocks;
-
-	PcmCacheEntry cacheData;
-
-} SPU2freezeData;
-
-// No more ZeroSPU compatibility...
-//#define ZEROSPU_VERSION 0x70000001
-
-#define SAVE_ID 0x73326701
-
-// versioning for saves.
-// Increment this if changes to V_Core or V_Voice structs are made.
-// Chances are we'll never explicitly support older save versions,
-// but might as well version them anyway.  Could come in handly someday!
-#define SAVE_VERSION 0x0101
-
-static int getFreezeSize()
-{
-	if( disableFreezes ) return 8;	// length of the string id "invalid" (plus a zero!)
-
-	int size = sizeof(SPU2freezeData);
-
-	// calculate the amount of memory consumed by our cache:
-
-	for( int bidx=0; bidx<pcm_BlockCount; bidx++ )
-	{
-		if( pcm_cache_data[bidx].Validated )
-			size += pcm_DecodedSamplesPerBlock*sizeof(PcmCacheEntry);
-	}
-	return size;
-}
-
-
-static void wipe_the_cache()
-{
-	memset( pcm_cache_data, 0, pcm_BlockCount * sizeof(PcmCacheEntry) );
-}
-
-
-static s16 old_state_sBuffer[pcm_DecodedSamplesPerBlock] = {0};
-
-EXPORT_C_(s32) SPU2freeze(int mode, freezeData *data)
-{
-	if (mode == FREEZE_LOAD)
-	{
-		const SPU2freezeData *spud = (SPU2freezeData*)data->data;
-
-		if( spud->id != SAVE_ID || spud->version < 0x100 )
-		{
-			printf("\n*** SPU2Ghz Warning:\n");
-			printf("  The savestate you are trying to load was not made with this plugin.\n");
-			printf("  The emulator will not be stable!  Find a memorycard savespot to save your\n");
-			printf("  game, reset, and then continue from there.\n\n");
-
-			disableFreezes=true;
-			lClocks = 0;
-			resetClock = true;
-
-			// Do *not* reset the cores.
-			// We'll need some "hints" as to how the cores should be initialized,
-			// and the only way to get that is to use the game's existing core settings
-			// and hope they kinda match the settings for the savestate (IRQ enables and such).
-			//
-
-			//CoreReset( 0 );
-			//CoreReset( 1 );
-
-			// adpcm cache : Clear all the cache flags and buffers.
-
-			wipe_the_cache();
-		}
-		else
-		{
-			disableFreezes=false;
-
-			// base stuff
-			memcpy(spu2regs, spud->unkregs, 0x010000);
-			memcpy(_spu2mem, spud->mem,     0x200000);
-
-			memcpy(Cores, spud->Cores, sizeof(Cores));
-			memcpy(&Spdif, &spud->Spdif, sizeof(Spdif));
-			OutPos		= spud->OutPos;
-			InputPos	= spud->InputPos;
-			InpBuff		= spud->InpBuff;
-			Cycles		= spud->Cycles;
-			uTicks		= spud->uTicks;
-			srate_pv	= spud->srate_pv;
-			opitch		= spud->opitch;
-			osps		= spud->osps;
-			PlayMode	= spud->PlayMode;
-			lClocks		= spud->lClocks;
-
-			// Load the ADPCM cache:
-
-			wipe_the_cache();
-			if( spud->version == 0x100 )		// don't support 0x100 cache anymore.
-			{
-				printf("\n*** SPU2Ghz Warning:\n");
-				printf("\tSavestate version is from an older version of this plugin.\n");
-				printf("\tAudio may not recover correctly.");
-
-				const PcmCacheEntry* pcmSrc = &spud->cacheData;
-				int blksLoaded=0;
-
-				for( int bidx=0; bidx<pcm_BlockCount; bidx++ )
-				{
-					if( pcm_cache_data[bidx].Validated )
-					{
-						// load a cache block!
-						memcpy( &pcm_cache_data[bidx], pcmSrc, sizeof(PcmCacheEntry) );
-						pcmSrc++;
-						blksLoaded++;
-					}
-				}
-
-				// Go through the V_Voice structs and recalculate SBuffer pointer from
-				// the NextA setting.
-
-				for( int c=0; c<2; c++ )
-				{
-					for( int v=0; v<24; v++ )
-					{
-						const int cacheIdx = Cores[c].Voices[v].NextA / pcm_WordsPerBlock;
-						Cores[c].Voices[v].SBuffer = pcm_cache_data[cacheIdx].Sampledata;
-					}
-				}
-			}
-			else
-			{
-				// We don't support the cache, so make sure the SBuffer pointers
-				// are safe (don't want any GPFs reading bad data)
-
-				for( int c=0; c<2; c++ )
-				{
-					for( int v=0; v<24; v++ )
-						Cores[c].Voices[v].SBuffer = old_state_sBuffer;
-				}
-			}
-
-
-			//printf( " * SPU2 > FreezeLoad > Loaded %d cache blocks.\n", blksLoaded++ );
-		}
-
-	} else if (mode == FREEZE_SAVE)
-	{
-		if (data->data == NULL) return -1;
-
-		if( disableFreezes )
-		{
-			// No point in making a save state since the SPU2
-			// state is completely bogus anyway... Let's just
-			// give this some random ID that no one will recognize.
-
-			strcpy( data->data, "invalid" );
-			return 0;
-		}
-
-
-		SPU2freezeData *spud = (SPU2freezeData*)data->data;
-
-		spud->id=SAVE_ID;
-		spud->version=SAVE_VERSION;//ZEROSPU_VERSION; //Zero compat working bad, better not save that
-
-		memcpy(spud->unkregs, spu2regs, 0x010000);
-		memcpy(spud->mem,     _spu2mem, 0x200000);
-		memcpy(spud->Cores, Cores, sizeof(Cores));
-		memcpy(&spud->Spdif, &Spdif, sizeof(Spdif));
-		spud->OutPos		= OutPos;
-		spud->InputPos		= InputPos;
-		spud->InpBuff		= InpBuff;
-		spud->Cycles		= Cycles;
-		spud->uTicks		= uTicks;
-		spud->srate_pv		= srate_pv;
-		spud->opitch		= opitch;
-		spud->osps			= osps;
-		spud->PlayMode		= PlayMode;
-		spud->lClocks		= lClocks;
-
-		// Save our cache:
-		//   We could just force the user to rebuild the cache when loading
-		//   from stavestates, but for most games the cache is pretty
-		//   small and compresses well.
-		//
-		// Potential Alternative:
-		//   If the cache is not saved then it is necessary to save the
-		//   decoded blocks currently in use by active voices.  This allows
-		//   voices to resume seamlessly on load.
-
-		PcmCacheEntry* pcmDst = &spud->cacheData;
-		int blksSaved=0;
-
-		for( int bidx=0; bidx<pcm_BlockCount; bidx++ )
-		{
-			if( pcm_cache_data[bidx].Validated )
-			{
-				// save a cache block!
-				memcpy( pcmDst, &pcm_cache_data[bidx], sizeof(PcmCacheEntry) );
-				pcmDst++;
-				blksSaved++;
-			}
-		}
-
-		//printf( " * SPU2 > FreezeSave > Saved %d cache blocks.\n", blksSaved++ );
-
-	}
-	else if (mode == FREEZE_SIZE)
-	{
-		data->size = getFreezeSize();
-	}
-	return 0;
-
-}
-
 void VoiceStart(int core,int vc)
 {
 	if((Cycles-Cores[core].Voices[vc].PlayCycle)>=4)
@@ -1958,20 +1269,20 @@ void VoiceStart(int core,int vc)
 
 		Cores[core].Regs.ENDX&=~(1<<vc);
 
-		#ifndef PUBLIC
+#ifndef PUBLIC
 		DebugCores[core].Voices[vc].FirstBlock=1;
 		if(core==1)
 		{
 			if(MsgKeyOnOff()) ConLog(" * SPU2: KeyOn: C%dV%02d: SSA: %8x; M: %s%s%s%s; H: %02x%02x; P: %04x V: %04x/%04x; ADSR: %04x%04x\n",
-						core,vc,Cores[core].Voices[vc].StartA,
-						(Cores[core].Voices[vc].DryL)?"+":"-",(Cores[core].Voices[vc].DryR)?"+":"-",
-						(Cores[core].Voices[vc].WetL)?"+":"-",(Cores[core].Voices[vc].WetR)?"+":"-",
-						*(u8*)GetMemPtr(Cores[core].Voices[vc].StartA),*(u8 *)GetMemPtr((Cores[core].Voices[vc].StartA)+1),
-						Cores[core].Voices[vc].Pitch,
-						Cores[core].Voices[vc].VolumeL.Value,Cores[core].Voices[vc].VolumeR.Value,
-						Cores[core].Voices[vc].ADSR.Reg_ADSR1,Cores[core].Voices[vc].ADSR.Reg_ADSR2);
+				core,vc,Cores[core].Voices[vc].StartA,
+				(Cores[core].Voices[vc].DryL)?"+":"-",(Cores[core].Voices[vc].DryR)?"+":"-",
+				(Cores[core].Voices[vc].WetL)?"+":"-",(Cores[core].Voices[vc].WetR)?"+":"-",
+				*(u8*)GetMemPtr(Cores[core].Voices[vc].StartA),*(u8 *)GetMemPtr((Cores[core].Voices[vc].StartA)+1),
+				Cores[core].Voices[vc].Pitch,
+				Cores[core].Voices[vc].VolumeL.Value,Cores[core].Voices[vc].VolumeR.Value,
+				Cores[core].Voices[vc].ADSR.Reg_ADSR1,Cores[core].Voices[vc].ADSR.Reg_ADSR2);
 		}
-		#endif
+#endif
 	}
 	else
 	{
@@ -2010,28 +1321,3 @@ void StopVoices(int core, u32 value)
 	}
 }
 
-
-// if start is 1, starts recording spu2 data, else stops
-// returns a non zero value if successful
-// for now, pData is not used
-EXPORT_C_(int) SPU2setupRecording(int start, void* pData)
-{
-	// Don't record if we have a bogus state.
-	if( disableFreezes ) return 0;
-
-	if(start==0)
-	{
-		//stop recording
-		RecordStop();
-		if(recording==0)
-			return 1;
-	}
-	else if(start==1)
-	{
-		//start recording
-		RecordStart();
-		if(recording!=0)
-			return 1;
-	}
-	return 0;
-}

@@ -85,18 +85,16 @@ static s32 __forceinline MulShr32su( s32 srcval, u32 mulval )
 void InitADSR()                                    // INIT ADSR
 {
 	for (int i=0; i<(32+128); i++)
-		{
-			int shift=(i-32)>>2;
-			s64 rate=(i&3)+4;
-			if (shift<0)
-			{
-				rate>>=-shift;
-			} else
-			{
-				rate<<=shift;
-			}
-			PsxRates[i]=(int)min(rate,0x3fffffff);
-		}
+	{
+		int shift=(i-32)>>2;
+		s64 rate=(i&3)+4;
+		if (shift<0)
+			rate>>=-shift;
+		else
+			rate<<=shift;
+
+		PsxRates[i]=(int)min(rate,0x3fffffff);
+	}
 }
 
 #define VOL(x) (((s32)x)) //24.8 volume

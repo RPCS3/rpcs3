@@ -17,6 +17,7 @@
 //
 #ifndef SPU2_H_INCLUDED
 #define SPU2_H_INCLUDED
+
 //system defines
 #ifdef __LINUX__
 	#include <gtk/gtk.h>
@@ -26,11 +27,14 @@
 #	include <windows.h>
 #	include <mmsystem.h>
 #endif
-#include "stdlib.h"
-#include "stdio.h"
-#include "stdarg.h"
-#include "math.h"
-#include "time.h"
+
+#include <assert.h>
+
+#include <cstdlib>
+#include <cstdio>
+#include <cstdarg.>
+#include <cmath>
+#include <ctime>
 
 //SPU2 plugin defines
 //#define SPU2defs		// not using the PCSX2 defs (see below)
@@ -197,13 +201,7 @@ extern u32 input_data_ptr;
 extern HINSTANCE hInstance;
 
 extern int PlayMode;
-
 extern int recording;
-void RecordStart();
-void RecordStop();
-void RecordWrite(s16 left, s16 right);
-
-extern CRITICAL_SECTION threadSync;
 
 extern u32 lClocks;
 
@@ -211,17 +209,34 @@ extern u32* cPtr;
 extern bool hasPtr;
 
 extern bool disableFreezes;
+extern bool resetClock;
 
-void __fastcall TimeUpdate(u32 cClocks);
+extern void RegLog(int level, char *RName,u32 mem,u32 core,u16 value);
+extern void SPU2writeLog(u32 rmem, u16 value);
 
-void TimestretchUpdate(int bufferusage,int buffersize);
+extern void __fastcall TimeUpdate(u32 cClocks);
+extern u16 SPU_ps1_read(u32 mem);
+extern void SPU_ps1_write(u32 mem, u16 value);
+extern void SPU2_FastWrite( u32 rmem, u16 value );
 
-s32  DspLoadLibrary(char *fileName, int modNum);
-void DspCloseLibrary();
-int  DspProcess(s16 *buffer, int samples);
-void DspUpdate(); // to let the Dsp process window messages
+extern void CoreReset(int c);
+extern void StartVoices(int core, u32 value);
+extern void StopVoices(int core, u32 value);
 
-void SndUpdateLimitMode();
+extern s32  DspLoadLibrary(char *fileName, int modNum);
+extern void DspCloseLibrary();
+extern int  DspProcess(s16 *buffer, int samples);
+extern void DspUpdate(); // to let the Dsp process window messages
+
+extern void RecordStart();
+extern void RecordStop();
+extern void RecordWrite(s16 left, s16 right);
+
+extern void UpdateSpdifMode();
+extern void LowPassFilterInit();
+extern void InitADSR();
+extern void SndUpdateLimitMode();
+
 //#define PCM24_S1_INTERLEAVE
 
 #endif // SPU2_H_INCLUDED //

@@ -473,7 +473,6 @@
 						<Tool
 							Name="VCCLCompilerTool"
 							UsePrecompiledHeader="0"
-							AssemblerOutput="4"
 							BrowseInformation="1"
 							CompileAs="0"
 						/>
@@ -619,7 +618,6 @@
 						<Tool
 							Name="VCCLCompilerTool"
 							UsePrecompiledHeader="0"
-							AssemblerOutput="4"
 							BrowseInformation="1"
 							CompileAs="0"
 						/>
@@ -853,11 +851,23 @@
 					>
 				</File>
 				<File
+					RelativePath="..\interface.cpp"
+					>
+				</File>
+				<File
 					RelativePath="..\regs.h"
 					>
 				</File>
 				<File
+					RelativePath="..\regtable.cpp"
+					>
+				</File>
+				<File
 					RelativePath="..\regtable.h"
+					>
+				</File>
+				<File
+					RelativePath="..\savestate.cpp"
 					>
 				</File>
 				<File
@@ -888,7 +898,6 @@
 						<Tool
 							Name="VCCLCompilerTool"
 							UsePrecompiledHeader="0"
-							AssemblerOutput="4"
 							BrowseInformation="1"
 							CompileAs="0"
 						/>

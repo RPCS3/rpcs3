@@ -61,7 +61,8 @@ void CALLBACK USBconfigure() {
     DialogBox(hInst,
               MAKEINTRESOURCE(IDD_CONFIG),
               GetActiveWindow(),  
-              (DLGPROC)ConfigureDlgProc); 
+              (DLGPROC)ConfigureDlgProc); 
+
 }
 
 void CALLBACK USBabout() {
