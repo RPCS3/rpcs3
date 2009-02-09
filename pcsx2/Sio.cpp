@@ -23,12 +23,12 @@
 
 _sio sio;
 
-static FILE * MemoryCard1, * MemoryCard2;
+static FILE * MemoryCard1=NULL, * MemoryCard2=NULL;
 
 static const u8 cardh[4] = { 0xFF, 0xFF, 0x5a, 0x5d };
 
 // Memory Card Specs : Sector size etc.
-static const struct mc_command_0x26_tag mc_command_0x26= {'+', 512, 16, 0x4000, 0x52, 0x5A};
+static const mc_command_0x26_tag mc_command_0x26= {'+', 512, 16, 0x4000, 0x52, 0x5A};
 
 // SIO Inline'd IRQs : Calls the SIO interrupt handlers directly instead of
 // feeding them through the IOP's branch test. (see SIO.H for details)
@@ -68,8 +68,11 @@ void sioInit()
 {
 	memzero_obj(sio);
 	
-	MemoryCard1 = LoadMcd(1);
-	MemoryCard2 = LoadMcd(2);
+	if( MemoryCard1 == NULL )
+		MemoryCard1 = LoadMcd(1);
+	
+	if( MemoryCard2 == NULL )
+		MemoryCard2 = LoadMcd(2);
 
 	// Transfer(?) Ready and the Buffer is Empty
 	sio.StatReg = TX_RDY | TX_EMPTY;
@@ -81,6 +84,9 @@ void psxSIOShutdown()
 {
 	if(MemoryCard1) fclose(MemoryCard1);
 	if(MemoryCard2) fclose(MemoryCard2);
+	
+	MemoryCard1 = NULL;
+	MemoryCard2 = NULL;
 }
 
 u8 sioRead8() {
@@ -538,23 +544,32 @@ void SaveState::sioFreeze()
  ***************   MEMORY CARD SPECIFIC FUNCTIONS  *****************
  *******************************************************************
  *******************************************************************/
-FILE *LoadMcd(int mcd) {
-	char str[g_MaxPath];
+
+#ifdef WIN32
+extern void NTFS_CompressFile( const char* file );
+#endif
+
+FILE *LoadMcd(int mcd)
+{
+	string str;
 	FILE *f;
 
-	if (mcd == 1) {
-		strcpy(str, Config.Mcd1);
-	} else {
-		strcpy(str, Config.Mcd2);
-	}
-	if (*str == 0) sprintf(str, MEMCARDS_DIR "/Mcd00%d.ps2", mcd);
-	f = fopen(str, "r+b");
+	str = (mcd == 1) ? Config.Mcd1 : Config.Mcd2;
+
+	if( str.empty() )
+		Path::Combine( str, MEMCARDS_DIR, fmt_string( "Mcd00%d.ps2", mcd ) );
+
+	if( !Path::Exists(str) )
+		CreateMcd(str.c_str());
+	
+#ifdef WIN32
+	NTFS_CompressFile( str.c_str() );
+#endif
+
+	f = fopen(str.c_str(), "r+b");
+
 	if (f == NULL) {
-		CreateMcd(str);
-		f = fopen(str, "r+b");
-	}
-	if (f == NULL) {
-		Msgbox::Alert("Failed loading MemCard %s", params str); 
+		Msgbox::Alert("Failed loading MemCard from file: %hs", params &str); 
 		return NULL;
 	}
 
@@ -573,76 +588,51 @@ void SeekMcd(FILE *f, u32 adr) {
 		fseek(f, adr, SEEK_SET);
 }
 
-void ReadMcd(int mcd, u8 *data, u32 adr, int size) {
-	if(mcd == 1)
-	{
-		if (MemoryCard1 == NULL) {
-			memset(data, 0, size);
-			return;
-		}
-		SeekMcd(MemoryCard1, adr);
-		fread(data, 1, size, MemoryCard1);
+void ReadMcd(int mcd, u8 *data, u32 adr, int size)
+{
+	FILE* const mcfp = (mcd == 1) ? MemoryCard1 : MemoryCard2;
+
+	if (mcfp == NULL) {
+		memset(data, 0, size);
+		return;
 	}
-	else
-	{
-		if (MemoryCard2 == NULL) {
-			memset(data, 0, size);
-			return;
-		}
-		SeekMcd(MemoryCard2, adr);
-		fread(data, 1, size, MemoryCard2);
-	}
+	SeekMcd(mcfp, adr);
+	fread(data, 1, size, mcfp);
 }
 
-void SaveMcd(int mcd, const u8 *data, u32 adr, int size) {
-	if(mcd == 1)
+void SaveMcd(int mcd, const u8 *data, u32 adr, int size)
+{
+	FILE* const mcfp = (mcd == 1) ? MemoryCard1 : MemoryCard2;
+
+	SeekMcd(mcfp, adr);
+	u8 *currentdata = (u8 *)malloc(size);
+	fread(currentdata, 1, size, mcfp);
+	for (int i=0; i<size; i++)
 	{
-		SeekMcd(MemoryCard1, adr);
-		u8 *currentdata = (u8 *)malloc(size);
-		fread(currentdata, 1, size, MemoryCard1);
-		for (int i=0; i<size; i++)
-		{
-			if ((currentdata[i] & data[i]) != data[i])
-				Console::Notice("MemoryCard : writing odd data");
-			currentdata[i] &= data[i];
-		}
-		SeekMcd(MemoryCard1, adr);
-		fwrite(currentdata, 1, size, MemoryCard1);
+		if ((currentdata[i] & data[i]) != data[i])
+			Console::Notice("MemoryCard : writing odd data");
+		currentdata[i] &= data[i];
 	}
-	else
-	{
-		SeekMcd(MemoryCard2, adr);
-		u8 *currentdata = (u8 *)malloc(size);
-		fread(currentdata, 1, size, MemoryCard2);
-		for (int i=0; i<size; i++)
-		{
-			if ((currentdata[i] & data[i]) != data[i])
-				Console::Notice("MemoryCard : writing odd data");
-			currentdata[i] &= data[i];
-		}
-		SeekMcd(MemoryCard2, adr);
-		fwrite(currentdata, 1, size, MemoryCard2);
-	}		
+	SeekMcd(mcfp, adr);
+	fwrite(currentdata, 1, size, mcfp);
+
+	free(currentdata);
 }
 
 
-void EraseMcd(int mcd, u32 adr) {
+void EraseMcd(int mcd, u32 adr)
+{
 	u8 data[528*16];
 	memset8_obj<0xff>(data);		// clears to -1's
-	if(mcd == 1)
-	{
-		SeekMcd(MemoryCard1, adr);
-		fwrite(data, 1, 528*16, MemoryCard1);
-	}
-	else
-	{
-		SeekMcd(MemoryCard2, adr);
-		fwrite(data, 1, 528*16, MemoryCard2);
-	}		
+
+	FILE* const mcfp = (mcd == 1) ? MemoryCard1 : MemoryCard2;
+	SeekMcd(mcfp, adr);
+	fwrite(data, 1, 528*16, mcfp);
 }
 
 
-void CreateMcd(char *mcd) {
+void CreateMcd(const char *mcd)
+{
 	FILE *fp;	
 	int i=0, j=0;
 	//int enc[16] = {0x77,0x7f,0x7f,0x77,0x7f,0x7f,0x77,0x7f,0x7f,0x77,0x7f,0x7f,0,0,0,0};

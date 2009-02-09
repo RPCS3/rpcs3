@@ -98,16 +98,13 @@ void sio2_setSend3(u32 index, u32 value)
 {
 //	int i;
 	sio2.packet.sendArray3[index]=value;
-#ifdef PAD_LOG
 //	if (index==15){
 //		for (i=0; i<4; i++){PAD_LOG("0x%08X ", sio2.packet.sendArray1[i]);}PAD_LOG("\n");
 //		for (i=0; i<4; i++){PAD_LOG("0x%08X ", sio2.packet.sendArray2[i]);}PAD_LOG("\n");
 //		for (i=0; i<8; i++){PAD_LOG("0x%08X ", sio2.packet.sendArray3[i]);}PAD_LOG("\n");
 //		for (  ; i<16; i++){PAD_LOG("0x%08X ", sio2.packet.sendArray3[i]);}PAD_LOG("\n");
-	PAD_LOG("[%d] : 0x%08X ", index,sio2.packet.sendArray3[index]);
-		PAD_LOG("\n");
+	PAD_LOG("[%d] : 0x%08X\n", index,sio2.packet.sendArray3[index]);
 //	}
-#endif
 }	//0->15
 
 u32 sio2_getSend3(u32 index) {return sio2.packet.sendArray3[index];}				//0->15
@@ -227,14 +224,12 @@ void psxDma11(u32 madr, u32 bcr, u32 chcr) {
 		{
 			sio2_fifoIn(PSXMu8(madr));
 			madr++;
-			if(sio2.packet.sendSize == BUFSIZE) {
-				HW_DMA11_MADR = madr;
-				PSX_INT(IopEvt_Dma11,(size>>2));	// Interrupts should always occur at the end
-				return;
-			}
+			if(sio2.packet.sendSize == BUFSIZE)
+				goto finished;
 		}
 	}
 
+finished:
 	HW_DMA11_MADR = madr;
 	PSX_INT(IopEvt_Dma11,(size>>2));	// Interrupts should always occur at the end
 }

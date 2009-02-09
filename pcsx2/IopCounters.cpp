@@ -30,7 +30,6 @@ s32 psxNextCounter;
 u32 psxNextsCounter;
 u8 psxhblankgate = 0;
 u8 psxvblankgate = 0;
-u8 psxcntmask = 0;
 
 // flags when the gate is off or counter disabled. (do not count)
 #define IOPCNT_STOPPED	(0x10000000ul)
@@ -718,9 +717,30 @@ u64 psxRcntCycles(int index)
 	return (u64)(psxCounters[index].count + (u32)((psxRegs.cycle - psxCounters[index].sCycleT) / psxCounters[index].rate));
 }
 
+void psxRcntSetGates()
+{
+	if(psxCounters[0].mode & IOPCNT_ENABLE_GATE)
+		psxhblankgate |= 1;
+	else
+		psxhblankgate &= ~1;
+
+	if(psxCounters[1].mode & IOPCNT_ENABLE_GATE)
+		psxvblankgate |= 1<<1;
+	else
+		psxvblankgate &= ~(1<<1);
+
+	if(psxCounters[3].mode & IOPCNT_ENABLE_GATE)
+		psxvblankgate |= 1<<3;
+	else
+		psxvblankgate &= ~(1<<3);
+}
+
 void SaveState::psxRcntFreeze()
 {
     Freeze(psxCounters);
 	Freeze(psxNextCounter);
 	Freeze(psxNextsCounter);
+	
+	if( IsLoading() )
+		psxRcntSetGates();
 }

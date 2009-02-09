@@ -101,7 +101,7 @@ FILE *LoadMcd(int mcd);
 void ReadMcd(int mcd, u8 *data, u32 adr, int size);
 void SaveMcd(int mcd, const u8 *data, u32 adr, int size);
 void EraseMcd(int mcd, u32 adr);
-void CreateMcd(char *mcd);
+void CreateMcd(const char *mcd);
 
 struct McdBlock {
 	char Title[48];

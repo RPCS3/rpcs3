@@ -757,6 +757,11 @@ bool SysInit()
 	CreateDirectory(MEMCARDS_DIR, NULL);
 	CreateDirectory(SSTATES_DIR, NULL);
 
+	// Set the compression attribute on the Memcards folder.
+	// Memcards generally compress very well via NTFS compression.
+	
+	NTFS_CompressFile( MEMCARDS_DIR );
+
 	if( IsDevBuild && emuLog == NULL && g_TestRun.plogname != NULL )
 		emuLog = fopen(g_TestRun.plogname, "w");
 

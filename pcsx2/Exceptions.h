@@ -83,7 +83,7 @@ namespace Exception
 	{
 	public:
 		virtual ~RuntimeError() throw() {}
-		explicit RuntimeError( const std::string& msg="An unhandled runtime error has occured, somewhere in the depths of Pcsx2's cluttered brain-matter." ) :
+		explicit RuntimeError( const std::string& msg="An unhandled runtime error has occurred, somewhere in the depths of Pcsx2's cluttered brain-matter." ) :
 			BaseException( msg )
 		{}
 	};
@@ -96,7 +96,7 @@ namespace Exception
 			BaseException( msg )
 		{}
 	};
-
+	
 	class OutOfMemory : public RuntimeError
 	{
 	public:
@@ -111,6 +111,16 @@ namespace Exception
 	public:
 		virtual ~InvalidOperation() throw() {}
 		explicit InvalidOperation( const std::string& msg="Attempted method call is invalid for the current object or program state." ) :
+			LogicError( msg ) {}
+	};
+
+	// This exception thrown any time an operation is attempted when an object
+	// is in an uninitialized state.
+	class InvalidArgument : public LogicError
+	{
+	public:
+		virtual ~InvalidArgument() throw() {}
+		explicit InvalidArgument( const std::string& msg="Invalid argument passed to a function." ) :
 			LogicError( msg ) {}
 	};
 
@@ -140,6 +150,132 @@ namespace Exception
 		virtual ~CpuStateShutdown() throw() {}
 		explicit CpuStateShutdown( const std::string& msg="The PS2 emulated state was shut down unexpectedly." ) :
 			RuntimeError( msg ) {}
+	};
+
+	class PluginFailure : public RuntimeError
+	{
+	public:
+		std::string plugin_name;		// name of the plugin
+
+		virtual ~PluginFailure() throw() {}
+		explicit PluginFailure( const std::string& plugin, const std::string& msg = "A plugin encountered a critical error." ) :
+			RuntimeError( msg )
+		,	plugin_name( plugin ) {}
+	};
+
+	class ThreadCreationError : public RuntimeError
+	{
+	public:
+		virtual ~ThreadCreationError() throw() {}
+		explicit ThreadCreationError( const std::string& msg="Thread could not be created." ) :
+			RuntimeError( msg ) {}
+	};
+
+	// This is a "special" exception that's primarily included for safe functioning in the 
+	// Win32's ASCII API (ie, the non-Unicode one).  Many of the old Win32 APIs don't support
+	// paths over 256 characters.
+	class PathTooLong : public RuntimeError
+	{
+	public:
+		virtual ~PathTooLong() throw() {}
+		explicit PathTooLong( const std::string& msg=
+			"A Pcsx2 pathname was too long for the system.  Please move or reinstall Pcsx2 to\n"
+			"a location on your hard drive that has a shorter path." ) :
+			RuntimeError( msg ) {}
+	};
+
+	///////////////////////////////////////////////////////////////////////
+	//                        STREAMING EXCEPTIONS
+
+	// Generic stream error.  Contains the name of the stream and a message.
+	// This exception is usually thrown via derrived classes, except in the (rare) case of a generic / unknown error.
+	class Stream : public RuntimeError
+	{
+	public:
+		std::string stream_name;		// name of the stream (if applicable)
+
+		virtual ~Stream() throw() {}
+
+		// copy construct!
+		Stream( const Stream& src ) :
+			RuntimeError( src.Message() )
+		,	stream_name( src.stream_name ) {}
+
+		explicit Stream(
+			const std::string& objname=std::string(),
+			const std::string& msg="Invalid stream object" ) :
+		  RuntimeError( msg + "\n\tFilename: " + objname )
+		, stream_name( objname ) {}
+	};
+
+	// A generic base error class for bad streams -- corrupted data, sudden closures, loss of
+	// connection, or anything else that would indicate a failure to read the data after the
+	// stream was successfully opened.
+	class BadStream : public Stream
+	{
+	public:
+		virtual ~BadStream() throw() {}
+		explicit BadStream(
+			const std::string& objname=std::string(),
+			const std::string& msg="Stream data is corrupted or incomplete, or the stream connection closed unexpectedly" ) :
+		Stream( objname, msg ) {}
+	};
+
+	// A generic exception for odd-ball stream creation errors.
+	class CreateStream : public Stream
+	{
+	public:
+		virtual ~CreateStream() throw() {}
+		explicit CreateStream(
+			const std::string& objname=std::string(),
+			const std::string& msg="Stream could not be created or opened" ) :
+		Stream( objname, msg ) {}	
+	};
+
+	// Exception thrown when an attempt to open a non-existent file is made.
+	// (this exception can also mean file permissions are invalid)
+	class FileNotFound : public CreateStream
+	{
+	public:
+		virtual ~FileNotFound() throw() {}
+		explicit FileNotFound(
+			const std::string& objname=std::string(),
+			const std::string& msg="File not found" ) :
+		CreateStream( objname, msg ) {}
+	};
+
+	class AccessDenied : public CreateStream
+	{
+	public:
+		virtual ~AccessDenied() throw() {}
+		explicit AccessDenied(
+			const std::string& objname=std::string(),
+			const std::string& msg="Permission denied to file or stream" ) :
+		CreateStream( objname, msg ) {}
+	};
+
+	// Generic End of Stream exception (sometimes an error, and sometimes just used as a
+	// shortcut for manual feof checks).
+	class EndOfStream : public Stream
+	{
+	public:
+		virtual ~EndOfStream() throw() {}
+		explicit EndOfStream( const std::string& objname=std::string(), const std::string& msg="End of stream was encountered" ) :
+			Stream( objname, msg ) {}
+	};
+
+	//////////////////////////////////////////////////////////////////////////
+	//                       SAVESTATE EXCEPTIONS
+
+	// Exception thrown when a corrupted or truncated savestate is encountered.
+	class BadSavedState : public BadStream
+	{
+	public:
+		virtual ~BadSavedState() throw() {}
+		explicit BadSavedState(
+			const std::string& objname=std::string(),
+			const std::string& msg="Savestate data is corrupted or incomplete" ) :
+		BadStream( objname, msg ) {}
 	};
 
 	// Exception thrown by SaveState class when a critical plugin or gzread
@@ -208,96 +344,6 @@ namespace Exception
 		,	Crc_Cdvd( crc_cdvd )
 		{}
 	};
-
-	class PluginFailure : public RuntimeError
-	{
-	public:
-		std::string plugin_name;		// name of the plugin
-
-		virtual ~PluginFailure() throw() {}
-		explicit PluginFailure( const std::string& plugin, const std::string& msg = "A plugin encountered a critical error." ) :
-			RuntimeError( msg )
-		,	plugin_name( plugin ) {}
-	};
-
-	class ThreadCreationError : public RuntimeError
-	{
-	public:
-		virtual ~ThreadCreationError() throw() {}
-		explicit ThreadCreationError( const std::string& msg="Thread could not be created." ) :
-			RuntimeError( msg ) {}
-	};
-
-	// This is a "special" exception that's primarily included for safe functioning in the 
-	// Win32's ASCII API (ie, the non-Unicode one).  Many of the old Win32 APIs don't support
-	// paths over 256 characters.
-	class PathTooLong : public RuntimeError
-	{
-	public:
-		virtual ~PathTooLong() throw() {}
-		explicit PathTooLong( const std::string& msg=
-			"A Pcsx2 pathname was too long for the system.  Please move or reinstall Pcsx2 to\n"
-			"a location on your hard drive that has a shorter path." ) :
-			RuntimeError( msg ) {}
-	};
-
-	///////////////////////////////////////////////////////////////////////
-	//                     BEGIN STREAMING EXCEPTIONS
-
-	// Generic stream error.  Contains the name of the stream and a message.
-	// This exception is usually thrown via derrived classes, except in the (rare) case of a generic / unknown error.
-	class Stream : public RuntimeError
-	{
-	public:
-		std::string stream_name;		// name of the stream (if applicable)
-
-		virtual ~Stream() throw() {}
-
-		// copy construct!
-		Stream( const Stream& src ) :
-			RuntimeError( src.Message() )
-		,	stream_name( src.stream_name ) {}
-
-		explicit Stream(
-			const std::string& objname=std::string(),
-			const std::string& msg="Invalid stream object" ) :
-		  RuntimeError( msg + ": " + objname )
-		, stream_name( objname ) {}
-	};
-
-	// Exception thrown when a corrupted or truncated savestate is encountered.
-	class BadSavedState : public Stream
-	{
-	public:
-		virtual ~BadSavedState() throw() {}
-		explicit BadSavedState(
-			const std::string& objname=std::string(),
-			const std::string& msg="Corrupted data or end of file encountered while loading savestate" ) :
-		Stream( objname, msg ) {}
-	};
-
-	// Exception thrown when an attempt to open a non-existant file is made.
-	// (this exception can also mean file permissions are invalid)
-	class FileNotFound : public Stream
-	{
-	public:
-		virtual ~FileNotFound() throw() {}
-		explicit FileNotFound(
-			const std::string& objname=std::string(),
-			const std::string& msg="File not found or permission denied" ) :
-		Stream( objname, msg ) {}
-	};
-
-	// Generic End of Stream exception (sometimes an error, and sometimes just used as a
-	// shortcut for manual feof checks).
-	class EndOfStream : public Stream
-	{
-	public:
-		virtual ~EndOfStream() throw() {}
-		explicit EndOfStream( const std::string& objname=std::string(), const std::string& msg="End of stream was encountered" ) :
-			Stream( objname, msg ) {}
-	};
-
 }
 
 #endif

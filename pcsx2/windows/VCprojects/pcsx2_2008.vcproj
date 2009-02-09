@@ -2595,6 +2595,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\WinCompressNTFS.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\WinThreads.cpp"
 				>
 			</File>

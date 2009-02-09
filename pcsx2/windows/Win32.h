@@ -99,8 +99,22 @@ extern int g_SaveGSStream;
 
 
 // sets the contents of the Pcsx2 status bar...
-void StatusBar_Notice( const std::string& text );
-void StatusBar_SetMsg( const std::string& text );
+extern void StatusBar_Notice( const std::string& text );
+extern void StatusBar_SetMsg( const std::string& text );
+
+// Throws an exception based on the value returned from GetLastError.
+// Performs an option return value success/fail check on hresult.
+extern void StreamException_ThrowLastError( const string& streamname, HANDLE result=INVALID_HANDLE_VALUE );
+
+// Throws an exception based on the given error code (usually taken from ANSI C's errno)
+extern void StreamException_ThrowFromErrno( const string& streamname, errno_t errcode );
+
+extern bool StreamException_LogFromErrno( const string& streamname, const char* action, errno_t result );
+extern bool StreamException_LogLastError( const string& streamname, const char* action, HANDLE result=INVALID_HANDLE_VALUE );
+
+// Sets the NTFS compression flag for a directory or file.
+// This function does not operate recursively.  If the given directory
+extern void NTFS_CompressFile( const char* file );
 
 #endif
 
