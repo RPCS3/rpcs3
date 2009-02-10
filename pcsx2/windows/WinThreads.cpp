@@ -72,20 +72,12 @@ namespace Threading
 	{
 		jASSUME( itsme != NULL );
 
-		Thread& owner = *((Thread*)itsme);
 		pthread_win32_thread_attach_np();
 
-		try
-		{
-			owner.m_returncode = owner.Callback();
-		}
-		catch( std::exception& ex )
-		{
-			Console::Error( "Thread terminated abnormally with error:\n\t%s", params ex.what() );
-			owner.m_returncode = -1;
-		}
-
+		Thread& owner = *((Thread*)itsme);
+		owner.m_returncode = owner.Callback();
 		owner.m_terminated = true;
+
 		pthread_win32_thread_detach_np();
 
 		return NULL;

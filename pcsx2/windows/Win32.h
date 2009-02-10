@@ -92,8 +92,8 @@ extern int UseGui;
 extern int nDisableSC; // screensaver
 extern unsigned int langsMax;
 
-extern MemoryAlloc<u8>* g_RecoveryState;
-extern MemoryAlloc<u8>* g_gsRecoveryState;
+extern SafeArray<u8>* g_RecoveryState;
+extern SafeArray<u8>* g_gsRecoveryState;
 extern const char* g_pRunGSState;
 extern int g_SaveGSStream;
 

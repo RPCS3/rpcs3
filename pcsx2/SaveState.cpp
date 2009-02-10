@@ -281,7 +281,7 @@ void gzLoadingState::FreezePlugin( const char* name, s32 (CALLBACK *freezer)(int
 //////////////////////////////////////////////////////////////////////////////////
 // uncompressed to/from memory state saves implementation
 
-memBaseStateInfo::memBaseStateInfo( MemoryAlloc<u8>& memblock, const char* msg ) :
+memBaseStateInfo::memBaseStateInfo( SafeArray<u8>& memblock, const char* msg ) :
   SaveState( msg, "Memory" )
 , m_memory( memblock )
 , m_idx( 0 )
@@ -290,7 +290,7 @@ memBaseStateInfo::memBaseStateInfo( MemoryAlloc<u8>& memblock, const char* msg )
 	mtgsWaitGS();
 }
 
-memSavingState::memSavingState( MemoryAlloc<u8>& save_to ) : memBaseStateInfo( save_to, _("Saving state to: ") )
+memSavingState::memSavingState( SafeArray<u8>& save_to ) : memBaseStateInfo( save_to, _("Saving state to: ") )
 {
 	save_to.ChunkSize = ReallocThreshold;
 	save_to.MakeRoomFor( MemoryBaseAllocSize );
@@ -309,7 +309,7 @@ void memSavingState::FreezeMem( void* data, int size )
 		dest[m_idx] = *src;
 }
 
-memLoadingState::memLoadingState(MemoryAlloc<u8>& load_from ) : 
+memLoadingState::memLoadingState(SafeArray<u8>& load_from ) : 
 	memBaseStateInfo( load_from, _("Loading state from: ") )
 {
 }

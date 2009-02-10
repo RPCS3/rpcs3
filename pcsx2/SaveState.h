@@ -166,12 +166,12 @@ public:
 class memBaseStateInfo : public SaveState
 {
 protected:
-	MemoryAlloc<u8>& m_memory;
+	SafeArray<u8>& m_memory;
 	int m_idx;		// current read/write index of the allocation
 
 public:
 	virtual ~memBaseStateInfo() { }
-	memBaseStateInfo( MemoryAlloc<u8>& memblock, const char* msg );
+	memBaseStateInfo( SafeArray<u8>& memblock, const char* msg );
 };
 
 class memSavingState : public memBaseStateInfo
@@ -182,7 +182,7 @@ protected:
 
 public:
 	virtual ~memSavingState() { }
-	memSavingState( MemoryAlloc<u8>& save_to );
+	memSavingState( SafeArray<u8>& save_to );
 	
 	void FreezePlugin( const char* name, s32(CALLBACK *freezer)(int mode, freezeData *data) );
 	// Saving of state data to a memory buffer
@@ -194,7 +194,7 @@ class memLoadingState : public memBaseStateInfo
 {
 public:
 	virtual ~memLoadingState();
-	memLoadingState(MemoryAlloc<u8>& load_from );
+	memLoadingState(SafeArray<u8>& load_from );
 
 	void FreezePlugin( const char* name, s32(CALLBACK *freezer)(int mode, freezeData *data) );
 	// Loading of state data from a memory buffer...

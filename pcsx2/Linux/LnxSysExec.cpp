@@ -21,8 +21,8 @@
 
 bool UseGui = true;
 
-MemoryAlloc<u8>* g_RecoveryState = NULL;
-MemoryAlloc<u8>* g_gsRecoveryState = NULL;
+SafeArray<u8>* g_RecoveryState = NULL;
+SafeArray<u8>* g_gsRecoveryState = NULL;
 
 bool g_ReturnToGui = false;			// set to exit the execution of the emulator and return control to the GUI
 bool g_EmulationInProgress = false;	// Set TRUE if a game is actively running (set to false on reset)
@@ -128,7 +128,7 @@ void RunExecute(const char* elf_file, bool use_bios)
 	// (air notes:)
 	// If you want to use the new to-memory savestate feature, take a look at the new
 	// RunExecute in WinMain.c, and secondly the CpuDlg.c or AdvancedDlg.cpp.  The
-	// objects used are MemoryAlloc, memLoadingState, and memSavingState.
+	// objects used are SafeArray, memLoadingState, and memSavingState.
 
 	// It's important to make sure to reset the CPU and the plugins correctly, which is
 	// where the new RunExecute comes into play.  It can be kind of tricky knowing
@@ -620,7 +620,7 @@ void KeyEvent(keyEvent* ev)
 				{
 					safe_delete( g_gsRecoveryState );
 					safe_delete( g_RecoveryState );
-					g_gsRecoveryState = new MemoryAlloc<u8>();
+					g_gsRecoveryState = new SafeArray<u8>();
 					JustGsSavingState eddie;
 					eddie.FreezePlugin( "GS", gsSafeFreeze ) ;
 					eddie.gsFreeze();
@@ -672,7 +672,7 @@ void SysRestorableReset()
 
 	try
 	{
-		g_RecoveryState = new MemoryAlloc<u8>( "Memory Savestate Recovery" );
+		g_RecoveryState = new SafeArray<u8>( "Memory Savestate Recovery" );
 		RecoveryMemSavingState().FreezeAll();
 		safe_delete( g_gsRecoveryState );
 		g_EmulationInProgress = false;

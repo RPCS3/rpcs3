@@ -527,13 +527,13 @@ void ProcessFKeys(int fkey, int shift)
 				SaveState::GetFilename( Text, StatesC );
 				gzSavingState( Text ).FreezeAll();
 			}
-			catch( std::exception& ex )
+			catch( Exception::BaseException& ex )
 			{
 				// 99% of the time this is a file permission error and the
 				// cpu state is intact so just display a passive msg to console.
 
 				Console::Error( _( "Error > Could not save state to slot %d" ), params StatesC );
-				Console::Error( ex.what() );
+				Console::Error( ex.cMessage() );
 			}
 			break;
 

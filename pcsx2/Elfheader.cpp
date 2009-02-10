@@ -226,7 +226,7 @@ static uint parseCommandLine( const char *filename )
 struct ElfObject
 {
 	string filename;
-	MemoryAlloc<u8> data;
+	SafeArray<u8> data;
 	ELF_HEADER& header;
 	ELF_PHR* proghead;
 	ELF_SHR* secthead;
@@ -243,18 +243,18 @@ struct ElfObject
 	,	secthead( NULL )
 	{
 		readFile();
-		proghead = (ELF_PHR*)&data[header.e_phoff];
-		secthead = (ELF_SHR*)&data[header.e_shoff];
+
+		if( header.e_phnum > 0 )
+			proghead = (ELF_PHR*)&data[header.e_phoff];
+			
+		if( header.e_shnum > 0 )
+			secthead = (ELF_SHR*)&data[header.e_shoff];
 
 		if ( ( header.e_shnum > 0 ) && ( header.e_shentsize != sizeof(ELF_SHR) ) )
-		{
 			Console::Error( "ElfLoader Warning > Size of section headers is not standard" );
-		}
 
 		if ( ( header.e_phnum > 0 ) && ( header.e_phentsize != sizeof(ELF_PHR) ) )
-		{
 			Console::Error( "ElfLoader Warning > Size of program headers is not standard" );
-		}
 
 		ELF_LOG( "type:      " );
 		switch( header.e_type ) 
@@ -349,7 +349,7 @@ struct ElfObject
 
 	void loadProgramHeaders()
 	{
-		if ( header.e_phnum == 0 )
+		if ( proghead == NULL )
 			return;
 
 		for( int i = 0 ; i < header.e_phnum ; i++ )
@@ -407,7 +407,7 @@ struct ElfObject
 
 	void loadSectionHeaders() 
 	{
-		if( header.e_shnum == 0 || header.e_shoff > (u32)data.GetLength() )
+		if( secthead == NULL || header.e_shoff > (u32)data.GetLength() )
 			return;
 
 		const u8* sections_names = data.GetPtr( secthead[ header.e_shstrndx ].sh_offset );
@@ -575,6 +575,9 @@ int loadElfFile(const char *filename)
 
 	Console::Status( "loadElfFile: %d", params elfsize);
 	ElfObject elfobj( filename, elfsize );
+
+	if( elfobj.proghead == NULL )
+		throw Exception::CpuStateShutdown( fmt_string( "%s > This ELF has no program headers; Pcsx2 can't run what doesn't exist...", filename ) );
 
 	//2002-09-19 (Florin)
 	args_ptr = 0xFFFFFFFF;	//big value, searching for minimum

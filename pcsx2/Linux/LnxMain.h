@@ -24,7 +24,7 @@
 void SignalExit(int sig);
 extern bool applychanges;
 
-extern MemoryAlloc<u8>* g_RecoveryState;
+extern SafeArray<u8>* g_RecoveryState;
 extern bool g_EmulationInProgress;	// Set TRUE if a game is actively running (set to false on reset)
 
 extern void RunExecute(const char* elf_file, bool use_bios = false);

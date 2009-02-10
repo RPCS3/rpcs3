@@ -31,8 +31,8 @@
 int UseGui = 1;
 int nDisableSC = 0; // screensaver
 
-MemoryAlloc<u8>* g_RecoveryState = NULL;
-MemoryAlloc<u8>* g_gsRecoveryState = NULL;
+SafeArray<u8>* g_RecoveryState = NULL;
+SafeArray<u8>* g_gsRecoveryState = NULL;
 
 
 bool g_ReturnToGui = false;			// set to exit the execution of the emulator and return control to the GUI
@@ -681,7 +681,7 @@ static void __fastcall KeyEvent(keyEvent* ev)
 				{
 					safe_delete( g_gsRecoveryState );
 					safe_delete( g_RecoveryState );
-					g_gsRecoveryState = new MemoryAlloc<u8>();
+					g_gsRecoveryState = new SafeArray<u8>();
 					JustGsSavingState eddie;
 					eddie.FreezePlugin( "GS", gsSafeFreeze ) ;
 					eddie.gsFreeze();
@@ -710,7 +710,7 @@ void SysRestorableReset()
 
 	try
 	{
-		g_RecoveryState = new MemoryAlloc<u8>( "Memory Savestate Recovery" );
+		g_RecoveryState = new SafeArray<u8>( "Memory Savestate Recovery" );
 		RecoveryMemSavingState().FreezeAll();
 		safe_delete( g_gsRecoveryState );
 		g_EmulationInProgress = false;

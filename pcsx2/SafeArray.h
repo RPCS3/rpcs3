@@ -72,7 +72,7 @@ extern void pcsx2_aligned_free(void* pmem);
 // exception-based error handling and automatic cleanup.
 
 template< typename T >
-class MemoryAlloc : public NoncopyableObject
+class SafeArray : public NoncopyableObject
 {
 public:
 	static const int DefaultChunkSize = 0x1000 * sizeof(T);
@@ -91,7 +91,7 @@ protected:
 	// use its own memory allocation (with an aligned memory, for example).
 	// Throws:
 	//   Exception::OutOfMemory if the allocated_mem pointr is NULL.
-	explicit MemoryAlloc( const std::string& name, T* allocated_mem, int initSize ) : 
+	explicit SafeArray( const std::string& name, T* allocated_mem, int initSize ) : 
 	  Name( name )
 	, ChunkSize( DefaultChunkSize )
 	, m_ptr( allocated_mem )
@@ -107,12 +107,12 @@ protected:
 	}
 
 public:
-	virtual ~MemoryAlloc()
+	virtual ~SafeArray()
 	{
 		safe_free( m_ptr );
 	}
 
-	explicit MemoryAlloc( const std::string& name="Unnamed" ) : 
+	explicit SafeArray( const std::string& name="Unnamed" ) : 
 	  Name( name )
 	, ChunkSize( DefaultChunkSize )
 	, m_ptr( NULL )
@@ -120,7 +120,7 @@ public:
 	{
 	}
 
-	explicit MemoryAlloc( int initialSize, const std::string& name="Unnamed" ) : 
+	explicit SafeArray( int initialSize, const std::string& name="Unnamed" ) : 
 	  Name( name )
 	, ChunkSize( DefaultChunkSize )
 	, m_ptr( (T*)malloc( initialSize * sizeof(T) ) )
@@ -167,9 +167,9 @@ public:
 	T& operator[]( int idx ) { return *_getPtr( (uint)idx ); }
 	const T& operator[]( int idx ) const { return *_getPtr( (uint)idx ); }
 
-	virtual MemoryAlloc<T>* Clone() const
+	virtual SafeArray<T>* Clone() const
 	{
-		MemoryAlloc<T>* retval = new MemoryAlloc<T>( m_size );
+		SafeArray<T>* retval = new SafeArray<T>( m_size );
 		memcpy_fast( retval->GetPtr(), m_ptr, sizeof(T) * m_size );
 		return retval;
 	}
@@ -179,15 +179,16 @@ protected:
 	// is outside the bounds of the array.
 	// Performance Considerations: This function adds quite a bit of overhead
 	// to array indexing and thus should be done infrequently if used in
-	// time-critical situations.  Indead of using it from inside loops, cache
+	// time-critical situations.  Instead of using it from inside loops, cache
 	// the pointer into a local variable and use stad (unsafe) C indexes.
 	T* _getPtr( uint i ) const
 	{
 #ifdef PCSX2_DEVBUILD
 		if( i >= (uint)m_size )
 		{
+			assert( 0 );	// makes debugging easier sometimes. :)
 			throw Exception::IndexBoundsFault(
-				"Index out of bounds on MemoryAlloc: " + Name + 
+				"Index out of bounds on SafeArray: " + Name + 
 				" (index=" + to_string(i) + 
 				", size=" + to_string(m_size) + ")"
 			);
@@ -204,7 +205,7 @@ protected:
 // This one supports aligned data allocations too!
 
 template< typename T, uint Alignment >
-class SafeAlignedArray : public MemoryAlloc<T>
+class SafeAlignedArray : public SafeArray<T>
 {
 protected:
 	T* _virtual_realloc( int newsize )
@@ -230,12 +231,12 @@ public:
 	}
 
 	explicit SafeAlignedArray( const std::string& name="Unnamed" ) : 
-		MemoryAlloc<T>::MemoryAlloc( name )
+		SafeArray<T>::SafeArray( name )
 	{
 	}
 
 	explicit SafeAlignedArray( int initialSize, const std::string& name="Unnamed" ) : 
-		MemoryAlloc<T>::MemoryAlloc(
+		SafeArray<T>::SafeArray(
 			_getName(name),
 			(T*)_aligned_malloc( initialSize * sizeof(T), Alignment ),
 			initialSize 

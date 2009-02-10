@@ -64,19 +64,11 @@ namespace Threading
 	void* Thread::_internal_callback( void* itsme )
 	{
 		jASSUME( itsme != NULL );
+
 		Thread& owner = *((Thread*)itsme);
-
-		try
-		{
-			owner.m_returncode = owner.Callback();
-		}
-		catch( std::exception& ex )
-		{
-			Console::Error( "Thread terminated abnormally with error:\n%s", params ex.what() );
-			owner.m_returncode = -1;
-		}
-
+		owner.m_returncode = owner.Callback();
 		owner.m_terminated = true;
+
 		return NULL;
 	}
 

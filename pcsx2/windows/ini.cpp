@@ -140,7 +140,7 @@ public:
 class IniFileLoader : public IniFile
 {
 protected:
-	MemoryAlloc<char> m_workspace;
+	SafeArray<char> m_workspace;
 
 public:
 	virtual ~IniFileLoader() {}
