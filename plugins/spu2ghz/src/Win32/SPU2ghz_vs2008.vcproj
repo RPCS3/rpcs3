@@ -367,6 +367,7 @@
 				Name="VCResourceCompilerTool"
 				PreprocessorDefinitions="_DEBUG"
 				Culture="3082"
+				AdditionalIncludeDirectories=""
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"

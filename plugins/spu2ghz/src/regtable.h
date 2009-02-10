@@ -21,40 +21,9 @@
 
 #define U16P(x) ((u16*)&(x))
 
-#define PCORE(c,p) \
-	U16P(Cores[c].##p)
-
-#define PVCP(c,v,p) \
-	PCORE(c,Voices[v].##p)
-
-#define PVC(c,v) \
-	PVCP(c,v,VolumeL.Reg_VOL), \
-	PVCP(c,v,VolumeR.Reg_VOL), \
-	PVCP(c,v,Pitch), \
-	PVCP(c,v,ADSR.Reg_ADSR1), \
-	PVCP(c,v,ADSR.Reg_ADSR2), \
-	PVCP(c,v,ADSR.Value)+1, \
-	PVCP(c,v,VolumeL.Value), \
-	PVCP(c,v,VolumeR.Value)
-
-#define PVCA(c,v) \
-	PVCP(c,v,StartA)+1, \
-	PVCP(c,v,StartA), \
-	PVCP(c,v,LoopStartA)+1, \
-	PVCP(c,v,LoopStartA), \
-	PVCP(c,v,NextA)+1, \
-	PVCP(c,v,NextA)
-
-#define PRAW(a) \
-	((u16*)NULL)
-
-#define PREVB_REG(c,n) \
-	PCORE(c,Revb.##n)+1, \
-	PCORE(c,Revb.##n)
-
 // Yay!  Global namespace pollution 101!
-static const u16 zero=0;
+extern const u16 zero;
 
-extern u16* regtable[];
+extern u16* regtable[0x800];
 
 #endif

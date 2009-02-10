@@ -744,8 +744,8 @@ void RegWriteLog(u32 core,u16 value);
 void SPU2writeLog(u32 rmem, u16 value) 
 {
 #ifndef PUBLIC
-	u32 vx=0, vc=0, core=0, omem=rmem, mem=rmem&0x7FF;
-	omem=mem=mem&0x7FF; //FFFF;
+	u32 vx=0, vc=0, core=0, omem, mem;
+	omem=mem=rmem & 0x7FF; //FFFF;
 	if (mem & 0x400) { omem^=0x400; core=1; }
 
 	/*
@@ -760,7 +760,8 @@ void SPU2writeLog(u32 rmem, u16 value)
 		FileLog("[%10d] SPU2 write mem %08x (Core %d Voice %d Address %s) value %x\n",Cycles,rmem,core,voice,AddressNames[address],value);
 	}
 	*/
-	if ((mem >= 0x0760) && (mem < 0x07b0)) {
+	if ((mem >= 0x0760) && (mem < 0x07b0))
+	{
 		omem=mem; core=0;
 		if (mem >= 0x0788) {omem-=0x28; core=1;}
 		switch(omem) {
@@ -817,135 +818,139 @@ void SPU2writeLog(u32 rmem, u16 value)
 		UpdateSpdifMode();
 	}
 	else
-		switch(omem) {
-		case REG_C_ATTR:
-			RegLog(4,"ATTR",rmem,core,value);
-			break;
-		case REG_S_PMON:
-			RegLog(1,"PMON0",rmem,core,value);
-			break;
-		case (REG_S_PMON + 2):
-			RegLog(1,"PMON1",rmem,core,value);
-			break;
-		case REG_S_NON:
-			RegLog(1,"NON0",rmem,core,value);
-			break;
-		case (REG_S_NON + 2):
-			RegLog(1,"NON1",rmem,core,value);
-			break;
-		case REG_S_VMIXL:
-			RegLog(1,"VMIXL0",rmem,core,value);
-		case (REG_S_VMIXL + 2):
-			RegLog(1,"VMIXL1",rmem,core,value);
-			break;
-		case REG_S_VMIXEL:
-			RegLog(1,"VMIXEL0",rmem,core,value);
-			break;
-		case (REG_S_VMIXEL + 2):
-			RegLog(1,"VMIXEL1",rmem,core,value);
-			break;
-		case REG_S_VMIXR:
-			RegLog(1,"VMIXR0",rmem,core,value);
-			break;
-		case (REG_S_VMIXR + 2):
-			RegLog(1,"VMIXR1",rmem,core,value);
-			break;
-		case REG_S_VMIXER:
-			RegLog(1,"VMIXER0",rmem,core,value);
-			break;
-		case (REG_S_VMIXER + 2):
-			RegLog(1,"VMIXER1",rmem,core,value);
-			break;
-		case REG_P_MMIX:
-			RegLog(1,"MMIX",rmem,core,value);
-			break;
-		case REG_A_IRQA:
-			RegLog(2,"IRQAH",rmem,core,value);
-			break;
-		case (REG_A_IRQA + 2):
-			RegLog(2,"IRQAL",rmem,core,value);
-			break;
-		case (REG_S_KON + 2):
-			RegLog(2,"KON1",rmem,core,value);
-			break;
-		case REG_S_KON:
-			RegLog(2,"KON0",rmem,core,value);
-			break;
-		case (REG_S_KOFF + 2):
-			RegLog(2,"KOFF1",rmem,core,value);
-			break;
-		case REG_S_KOFF:
-			RegLog(2,"KOFF0",rmem,core,value);
-			break;
-		case REG_A_TSA:
-			RegLog(2,"TSAH",rmem,core,value);
-			break;
-		case (REG_A_TSA + 2):
-			RegLog(2,"TSAL",rmem,core,value);
-			break;
-		case REG_S_ENDX:
-			//ConLog(" * SPU2: Core %d ENDX cleared!\n",core);
-			RegLog(2,"ENDX0",rmem,core,value);
-			break;
-		case (REG_S_ENDX + 2):	
-			//ConLog(" * SPU2: Core %d ENDX cleared!\n",core);
-			RegLog(2,"ENDX1",rmem,core,value);
-			break;
-		case REG_P_MVOLL:
-			RegLog(1,"MVOLL",rmem,core,value);
-			break;
-		case REG_P_MVOLR:
-			RegLog(1,"MVOLR",rmem,core,value);
-			break;
-		case REG_S_ADMAS:
-			RegLog(3,"ADMAS",rmem,core,value);
-			ConLog(" * SPU2: Core %d AutoDMAControl set to %d\n",core,value);
-			break;
-		case REG_P_STATX:
-			RegLog(3,"STATX",rmem,core,value);
-			break;
-		case REG_A_ESA:
-			RegLog(1,"ESAH",rmem,core,value);
-			break;
-		case (REG_A_ESA + 2):
-			RegLog(1,"ESAL",rmem,core,value);
-			break;
-		case REG_A_EEA:
-			RegLog(1,"EEAH",rmem,core,value);
-			break;
+	{
+		switch(omem)
+		{
+			case REG_C_ATTR:
+				RegLog(4,"ATTR",rmem,core,value);
+				break;
+			case REG_S_PMON:
+				RegLog(1,"PMON0",rmem,core,value);
+				break;
+			case (REG_S_PMON + 2):
+				RegLog(1,"PMON1",rmem,core,value);
+				break;
+			case REG_S_NON:
+				RegLog(1,"NON0",rmem,core,value);
+				break;
+			case (REG_S_NON + 2):
+				RegLog(1,"NON1",rmem,core,value);
+				break;
+			case REG_S_VMIXL:
+				RegLog(1,"VMIXL0",rmem,core,value);
+			case (REG_S_VMIXL + 2):
+				RegLog(1,"VMIXL1",rmem,core,value);
+				break;
+			case REG_S_VMIXEL:
+				RegLog(1,"VMIXEL0",rmem,core,value);
+				break;
+			case (REG_S_VMIXEL + 2):
+				RegLog(1,"VMIXEL1",rmem,core,value);
+				break;
+			case REG_S_VMIXR:
+				RegLog(1,"VMIXR0",rmem,core,value);
+				break;
+			case (REG_S_VMIXR + 2):
+				RegLog(1,"VMIXR1",rmem,core,value);
+				break;
+			case REG_S_VMIXER:
+				RegLog(1,"VMIXER0",rmem,core,value);
+				break;
+			case (REG_S_VMIXER + 2):
+				RegLog(1,"VMIXER1",rmem,core,value);
+				break;
+			case REG_P_MMIX:
+				RegLog(1,"MMIX",rmem,core,value);
+				break;
+			case REG_A_IRQA:
+				RegLog(2,"IRQAH",rmem,core,value);
+				break;
+			case (REG_A_IRQA + 2):
+				RegLog(2,"IRQAL",rmem,core,value);
+				break;
+			case (REG_S_KON + 2):
+				RegLog(2,"KON1",rmem,core,value);
+				break;
+			case REG_S_KON:
+				RegLog(2,"KON0",rmem,core,value);
+				break;
+			case (REG_S_KOFF + 2):
+				RegLog(2,"KOFF1",rmem,core,value);
+				break;
+			case REG_S_KOFF:
+				RegLog(2,"KOFF0",rmem,core,value);
+				break;
+			case REG_A_TSA:
+				RegLog(2,"TSAH",rmem,core,value);
+				break;
+			case (REG_A_TSA + 2):
+				RegLog(2,"TSAL",rmem,core,value);
+				break;
+			case REG_S_ENDX:
+				//ConLog(" * SPU2: Core %d ENDX cleared!\n",core);
+				RegLog(2,"ENDX0",rmem,core,value);
+				break;
+			case (REG_S_ENDX + 2):	
+				//ConLog(" * SPU2: Core %d ENDX cleared!\n",core);
+				RegLog(2,"ENDX1",rmem,core,value);
+				break;
+			case REG_P_MVOLL:
+				RegLog(1,"MVOLL",rmem,core,value);
+				break;
+			case REG_P_MVOLR:
+				RegLog(1,"MVOLR",rmem,core,value);
+				break;
+			case REG_S_ADMAS:
+				RegLog(3,"ADMAS",rmem,core,value);
+				ConLog(" * SPU2: Core %d AutoDMAControl set to %d\n",core,value);
+				break;
+			case REG_P_STATX:
+				RegLog(3,"STATX",rmem,core,value);
+				break;
+			case REG_A_ESA:
+				RegLog(1,"ESAH",rmem,core,value);
+				break;
+			case (REG_A_ESA + 2):
+				RegLog(1,"ESAL",rmem,core,value);
+				break;
+			case REG_A_EEA:
+				RegLog(1,"EEAH",rmem,core,value);
+				break;
 
-#define LOG_REVB_REG(n,t) \
-		case R_##n: \
-			RegLog(2,t "H",mem,core,value); \
-			break; \
-		case (R_##n + 2): \
-			RegLog(2,t "L",mem,core,value); \
-			break;
+	#define LOG_REVB_REG(n,t) \
+			case R_##n: \
+				RegLog(2,t "H",mem,core,value); \
+				break; \
+			case (R_##n + 2): \
+				RegLog(2,t "L",mem,core,value); \
+				break;
 
-	LOG_REVB_REG(FB_SRC_A,"FB_SRC_A")
-	LOG_REVB_REG(FB_SRC_B,"FB_SRC_B")
-	LOG_REVB_REG(IIR_SRC_A0,"IIR_SRC_A0")
-	LOG_REVB_REG(IIR_SRC_A1,"IIR_SRC_A1")
-	LOG_REVB_REG(IIR_SRC_B1,"IIR_SRC_B1")
-	LOG_REVB_REG(IIR_SRC_B0,"IIR_SRC_B0")
-	LOG_REVB_REG(IIR_DEST_A0,"IIR_DEST_A0")
-	LOG_REVB_REG(IIR_DEST_A1,"IIR_DEST_A1")
-	LOG_REVB_REG(IIR_DEST_B0,"IIR_DEST_B0")
-	LOG_REVB_REG(IIR_DEST_B1,"IIR_DEST_B1")
-	LOG_REVB_REG(ACC_SRC_A0,"ACC_SRC_A0")
-	LOG_REVB_REG(ACC_SRC_A1,"ACC_SRC_A1")
-	LOG_REVB_REG(ACC_SRC_B0,"ACC_SRC_B0")
-	LOG_REVB_REG(ACC_SRC_B1,"ACC_SRC_B1")
-	LOG_REVB_REG(ACC_SRC_C0,"ACC_SRC_C0")
-	LOG_REVB_REG(ACC_SRC_C1,"ACC_SRC_C1")
-	LOG_REVB_REG(ACC_SRC_D0,"ACC_SRC_D0")
-	LOG_REVB_REG(ACC_SRC_D1,"ACC_SRC_D1")
-	LOG_REVB_REG(MIX_DEST_A0,"MIX_DEST_A0")
-	LOG_REVB_REG(MIX_DEST_A1,"MIX_DEST_A1")
-	LOG_REVB_REG(MIX_DEST_B0,"MIX_DEST_B0")
-	LOG_REVB_REG(MIX_DEST_B1,"MIX_DEST_B1")
+			LOG_REVB_REG(FB_SRC_A,"FB_SRC_A")
+			LOG_REVB_REG(FB_SRC_B,"FB_SRC_B")
+			LOG_REVB_REG(IIR_SRC_A0,"IIR_SRC_A0")
+			LOG_REVB_REG(IIR_SRC_A1,"IIR_SRC_A1")
+			LOG_REVB_REG(IIR_SRC_B1,"IIR_SRC_B1")
+			LOG_REVB_REG(IIR_SRC_B0,"IIR_SRC_B0")
+			LOG_REVB_REG(IIR_DEST_A0,"IIR_DEST_A0")
+			LOG_REVB_REG(IIR_DEST_A1,"IIR_DEST_A1")
+			LOG_REVB_REG(IIR_DEST_B0,"IIR_DEST_B0")
+			LOG_REVB_REG(IIR_DEST_B1,"IIR_DEST_B1")
+			LOG_REVB_REG(ACC_SRC_A0,"ACC_SRC_A0")
+			LOG_REVB_REG(ACC_SRC_A1,"ACC_SRC_A1")
+			LOG_REVB_REG(ACC_SRC_B0,"ACC_SRC_B0")
+			LOG_REVB_REG(ACC_SRC_B1,"ACC_SRC_B1")
+			LOG_REVB_REG(ACC_SRC_C0,"ACC_SRC_C0")
+			LOG_REVB_REG(ACC_SRC_C1,"ACC_SRC_C1")
+			LOG_REVB_REG(ACC_SRC_D0,"ACC_SRC_D0")
+			LOG_REVB_REG(ACC_SRC_D1,"ACC_SRC_D1")
+			LOG_REVB_REG(MIX_DEST_A0,"MIX_DEST_A0")
+			LOG_REVB_REG(MIX_DEST_A1,"MIX_DEST_A1")
+			LOG_REVB_REG(MIX_DEST_B0,"MIX_DEST_B0")
+			LOG_REVB_REG(MIX_DEST_B1,"MIX_DEST_B1")
 
-		default:			RegLog(2,"UNKNOWN",rmem,core,value); spu2Ru16(mem) = value;
+			default:
+				RegLog(2,"UNKNOWN",rmem,core,value); spu2Ru16(mem) = value;
+		}
 	}
 #endif
 }
@@ -956,31 +961,42 @@ __forceinline void SPU2_FastWrite( u32 rmem, u16 value )
 	omem=mem=rmem & 0x7FF; //FFFF;
 	if (mem & 0x400) { omem^=0x400; core=1; }
 
-	//else if ((omem >= 0x0000) && (omem < 0x0180)) { // Voice Params
-	if (omem < 0x0180) { // Voice Params
-		u32 voice=(omem & 0x1F0) >> 4;
-		u32 param=(omem & 0xF)>>1;
+	SPU2writeLog(mem,value);
+
+	if (omem < 0x0180)	// Voice Params
+	{ 
+		const u32 voice = (omem & 0x1F0) >> 4;
+		const u32 param = (omem & 0xF)>>1;
+
 		//FileLog("[%10d] SPU2 write mem %08x (Core %d Voice %d Param %s) value %x\n",Cycles,rmem,core,voice,ParamNames[param],value);
-		switch (param) { 
+
+		switch (param) 
+		{ 
 			case 0: //VOLL (Volume L)
-				if (value & 0x8000) {  // +Lin/-Lin/+Exp/-Exp
+				if (value & 0x8000)		// +Lin/-Lin/+Exp/-Exp
+				{
 					Cores[core].Voices[voice].VolumeL.Mode=(value & 0xF000)>>12;
 					Cores[core].Voices[voice].VolumeL.Increment=(value & 0x3F);
 				}
-				else {
+				else
+				{
 					Cores[core].Voices[voice].VolumeL.Mode=0;
 					Cores[core].Voices[voice].VolumeL.Increment=0;
 					if(value&0x4000)
 						value=0x3fff - (value&0x3fff);
 					Cores[core].Voices[voice].VolumeL.Value=value<<1;
 				}
-				Cores[core].Voices[voice].VolumeL.Reg_VOL = value;	break;
+				Cores[core].Voices[voice].VolumeL.Reg_VOL = value;
+			break;
+
 			case 1: //VOLR (Volume R)
-				if (value & 0x8000) {
+				if (value & 0x8000)
+				{
 					Cores[core].Voices[voice].VolumeR.Mode=(value & 0xF000)>>12;
 					Cores[core].Voices[voice].VolumeR.Increment=(value & 0x3F);
 				}
-				else {
+				else
+				{
 					Cores[core].Voices[voice].VolumeR.Mode=0;
 					Cores[core].Voices[voice].VolumeR.Increment=0;
 					Cores[core].Voices[voice].VolumeR.Value=value<<1;
@@ -1011,9 +1027,10 @@ __forceinline void SPU2_FastWrite( u32 rmem, u16 value )
 			jNO_DEFAULT;
 		}
 	}
-	else if ((omem >= 0x01C0) && (omem < 0x02DE)) {
-		u32 voice   =((omem-0x01C0) / 12);
-		u32 address =((omem-0x01C0) % 12)>>1;
+	else if ((omem >= 0x01C0) && (omem < 0x02DE))
+	{
+		const u32 voice   =((omem-0x01C0) / 12);
+		const u32 address =((omem-0x01C0) % 12)>>1;
 		//FileLog("[%10d] SPU2 write mem %08x (Core %d Voice %d Address %s) value %x\n",Cycles,rmem,core,voice,AddressNames[address],value);
 		
 		switch (address) {
@@ -1041,9 +1058,10 @@ __forceinline void SPU2_FastWrite( u32 rmem, u16 value )
 		}
 	}
 	else
-		switch(omem) {
-		case REG_C_ATTR:
-			RegLog(4,"ATTR",rmem,core,value);
+	{
+		switch(omem)
+		{
+			case REG_C_ATTR:
 			{
 				int irqe=Cores[core].IRQEnable;
 				int bit0=Cores[core].AttrBit0;
@@ -1091,150 +1109,152 @@ __forceinline void SPU2_FastWrite( u32 rmem, u16 value )
 				}
 
 			}
-			break;
-		case REG_S_PMON:
-			RegLog(1,"PMON0",rmem,core,value);
-			vx=2; for (vc=1;vc<16;vc++) { Cores[core].Voices[vc].Modulated=(s8)((value & vx)/vx); vx<<=1; }
-			Cores[core].Regs.PMON = (Cores[core].Regs.PMON & 0xFFFF0000) | value;
-			break;
-		case (REG_S_PMON + 2):
-			RegLog(1,"PMON1",rmem,core,value);
-			vx=1; for (vc=16;vc<24;vc++) { Cores[core].Voices[vc].Modulated=(s8)((value & vx)/vx); vx<<=1; }
-			Cores[core].Regs.PMON = (Cores[core].Regs.PMON & 0xFFFF) | (value << 16);
-			break;
-		case REG_S_NON:
-			RegLog(1,"NON0",rmem,core,value);
-			vx=1; for (vc=0;vc<16;vc++) { Cores[core].Voices[vc].Noise=(s8)((value & vx)/vx); vx<<=1; }
-			Cores[core].Regs.NON = (Cores[core].Regs.NON & 0xFFFF0000) | value;
-			break;
-		case (REG_S_NON + 2):
-			RegLog(1,"NON1",rmem,core,value);
-			vx=1; for (vc=16;vc<24;vc++) { Cores[core].Voices[vc].Noise=(s8)((value & vx)/vx); vx<<=1; }
-			Cores[core].Regs.NON = (Cores[core].Regs.NON & 0xFFFF) | (value << 16);
-			break;
-		case REG_S_VMIXL:
-			RegLog(1,"VMIXL0",rmem,core,value);
-			vx=1; for (vc=0;vc<16;vc++) { Cores[core].Voices[vc].DryL=(s8)((value & vx)/vx); vx<<=1; }
-			Cores[core].Regs.VMIXL = (Cores[core].Regs.VMIXL & 0xFFFF0000) | value;
-		case (REG_S_VMIXL + 2):
-			RegLog(1,"VMIXL1",rmem,core,value);
-			vx=1; for (vc=16;vc<24;vc++) { Cores[core].Voices[vc].DryL=(s8)((value & vx)/vx); vx<<=1; }
-			Cores[core].Regs.VMIXL = (Cores[core].Regs.VMIXL & 0xFFFF) | (value << 16);
-		case REG_S_VMIXEL:
-			RegLog(1,"VMIXEL0",rmem,core,value);
-			vx=1; for (vc=0;vc<16;vc++) { Cores[core].Voices[vc].WetL=(s8)((value & vx)/vx); vx<<=1; }
-			Cores[core].Regs.VMIXEL = (Cores[core].Regs.VMIXEL & 0xFFFF0000) | value;
-			break;
-		case (REG_S_VMIXEL + 2):
-			RegLog(1,"VMIXEL1",rmem,core,value);
-			vx=1; for (vc=16;vc<24;vc++) { Cores[core].Voices[vc].WetL=(s8)((value & vx)/vx); vx<<=1; }
-			Cores[core].Regs.VMIXEL = (Cores[core].Regs.VMIXEL & 0xFFFF) | (value << 16);
-			break;
-		case REG_S_VMIXR:
-			RegLog(1,"VMIXR0",rmem,core,value);
-			vx=1; for (vc=0;vc<16;vc++) { Cores[core].Voices[vc].DryR=(s8)((value & vx)/vx); vx<<=1; }
-			Cores[core].Regs.VMIXR = (Cores[core].Regs.VMIXR & 0xFFFF0000) | value;
-			break;
-		case (REG_S_VMIXR + 2):
-			RegLog(1,"VMIXR1",rmem,core,value);
-			vx=1; for (vc=16;vc<24;vc++) { Cores[core].Voices[vc].DryR=(s8)((value & vx)/vx); vx<<=1; }
-			Cores[core].Regs.VMIXR = (Cores[core].Regs.VMIXR & 0xFFFF) | (value << 16);
-			break;
-		case REG_S_VMIXER:
-			RegLog(1,"VMIXER0",rmem,core,value);
-			vx=1; for (vc=0;vc<16;vc++) { Cores[core].Voices[vc].WetR=(s8)((value & vx)/vx); vx<<=1; }
-			Cores[core].Regs.VMIXER = (Cores[core].Regs.VMIXER & 0xFFFF0000) | value;
-			break;
-		case (REG_S_VMIXER + 2):
-			RegLog(1,"VMIXER1",rmem,core,value);
-			vx=1; for (vc=16;vc<24;vc++) { Cores[core].Voices[vc].WetR=(s8)((value & vx)/vx); vx<<=1; }
-			Cores[core].Regs.VMIXER = (Cores[core].Regs.VMIXER & 0xFFFF) | (value << 16);
-			break;
-		case REG_P_MMIX:
-			RegLog(1,"MMIX",rmem,core,value);
-			vx=value;
-			if (core == 0) vx&=0xFF0;
-			Cores[core].ExtWetR=(vx & 0x001);
-			Cores[core].ExtWetL=(vx & 0x002)>>1;
-			Cores[core].ExtDryR=(vx & 0x004)>>2;
-			Cores[core].ExtDryL=(vx & 0x008)>>3;
-			Cores[core].InpWetR=(vx & 0x010)>>4;
-			Cores[core].InpWetL=(vx & 0x020)>>5;
-			Cores[core].InpDryR=(vx & 0x040)>>6;
-			Cores[core].InpDryL=(vx & 0x080)>>7;
-			Cores[core].SndWetR=(vx & 0x100)>>8;
-			Cores[core].SndWetL=(vx & 0x200)>>9;
-			Cores[core].SndDryR=(vx & 0x400)>>10;
-			Cores[core].SndDryL=(vx & 0x800)>>11;
-			Cores[core].Regs.MMIX = value;
-			break;
-		case (REG_S_KON + 2):
-			RegLog(2,"KON1",rmem,core,value);
-			StartVoices(core,((u32)value)<<16);
-			break;
-		case REG_S_KON:
-			RegLog(2,"KON0",rmem,core,value);
-			StartVoices(core,((u32)value));
-			break;
-		case (REG_S_KOFF + 2):
-			RegLog(2,"KOFF1",rmem,core,value);
-			StopVoices(core,((u32)value)<<16);
-			break;
-		case REG_S_KOFF:
-			RegLog(2,"KOFF0",rmem,core,value);
-			StopVoices(core,((u32)value));
-			break;
-		case REG_S_ENDX:
-			//ConLog(" * SPU2: Core %d ENDX cleared!\n",core);
-			RegLog(2,"ENDX0",rmem,core,value);
-			Cores[core].Regs.ENDX&=0x00FF0000; break;
-		case (REG_S_ENDX + 2):	
-			//ConLog(" * SPU2: Core %d ENDX cleared!\n",core);
-			RegLog(2,"ENDX1",rmem,core,value);
-			Cores[core].Regs.ENDX&=0xFFFF; break;
-		case REG_P_MVOLL:
-			RegLog(1,"MVOLL",rmem,core,value);
-			if (value & 0x8000) {  // +Lin/-Lin/+Exp/-Exp
-				Cores[core].MasterL.Mode=(value & 0xE000)/0x2000;
-				Cores[core].MasterL.Increment=(value & 0x3F) | ((value & 0x800)/0x10);
-			}
-			else {
-				Cores[core].MasterL.Mode=0;
-				Cores[core].MasterL.Increment=0;
-				Cores[core].MasterL.Value=value;
-			}
-			Cores[core].MasterL.Reg_VOL=value;
-			break;
-		case REG_P_MVOLR:
-			RegLog(1,"MVOLR",rmem,core,value);
-			if (value & 0x8000) {  // +Lin/-Lin/+Exp/-Exp
-				Cores[core].MasterR.Mode=(value & 0xE000)/0x2000;
-				Cores[core].MasterR.Increment=(value & 0x3F) | ((value & 0x800)/0x10);
-			}
-			else {
-				Cores[core].MasterR.Mode=0;
-				Cores[core].MasterR.Increment=0;
-				Cores[core].MasterR.Value=value;
-			}
-			Cores[core].MasterR.Reg_VOL=value;
-			break;
-		case REG_S_ADMAS:
-			RegLog(3,"ADMAS",rmem,core,value);
-			//ConLog(" * SPU2: Core %d AutoDMAControl set to %d (%d)\n",core,value, Cycles);
-			Cores[core].AutoDMACtrl=value;
+			return;
 
-			if(value==0)
-			{
-				Cores[core].AdmaInProgress=0;
-			}
-			break;
+			case REG_S_PMON:
+				vx=2; for (vc=1;vc<16;vc++) { Cores[core].Voices[vc].Modulated=(s8)((value & vx)/vx); vx<<=1; }
+				Cores[core].Regs.PMON = (Cores[core].Regs.PMON & 0xFFFF0000) | value;
+			return;
 
-		default:
-			*(regtable[mem>>1])=value;
+			case (REG_S_PMON + 2):
+				vx=1; for (vc=16;vc<24;vc++) { Cores[core].Voices[vc].Modulated=(s8)((value & vx)/vx); vx<<=1; }
+				Cores[core].Regs.PMON = (Cores[core].Regs.PMON & 0xFFFF) | (value << 16);
+			return;
+
+			case REG_S_NON:
+				vx=1; for (vc=0;vc<16;vc++) { Cores[core].Voices[vc].Noise=(s8)((value & vx)/vx); vx<<=1; }
+				Cores[core].Regs.NON = (Cores[core].Regs.NON & 0xFFFF0000) | value;
+			return;
+
+			case (REG_S_NON + 2):
+				vx=1; for (vc=16;vc<24;vc++) { Cores[core].Voices[vc].Noise=(s8)((value & vx)/vx); vx<<=1; }
+				Cores[core].Regs.NON = (Cores[core].Regs.NON & 0xFFFF) | (value << 16);
+			return;
+
+			case REG_S_VMIXL:
+				vx=1; for (vc=0;vc<16;vc++) { Cores[core].Voices[vc].DryL=(s8)((value & vx)/vx); vx<<=1; }
+				Cores[core].Regs.VMIXL = (Cores[core].Regs.VMIXL & 0xFFFF0000) | value;
+			return;
+
+			case (REG_S_VMIXL + 2):
+				vx=1; for (vc=16;vc<24;vc++) { Cores[core].Voices[vc].DryL=(s8)((value & vx)/vx); vx<<=1; }
+				Cores[core].Regs.VMIXL = (Cores[core].Regs.VMIXL & 0xFFFF) | (value << 16);
+			return;
+
+			case REG_S_VMIXEL:
+				vx=1; for (vc=0;vc<16;vc++) { Cores[core].Voices[vc].WetL=(s8)((value & vx)/vx); vx<<=1; }
+				Cores[core].Regs.VMIXEL = (Cores[core].Regs.VMIXEL & 0xFFFF0000) | value;
+			return;
+
+			case (REG_S_VMIXEL + 2):
+				vx=1; for (vc=16;vc<24;vc++) { Cores[core].Voices[vc].WetL=(s8)((value & vx)/vx); vx<<=1; }
+				Cores[core].Regs.VMIXEL = (Cores[core].Regs.VMIXEL & 0xFFFF) | (value << 16);
+			return;
+
+			case REG_S_VMIXR:
+				vx=1; for (vc=0;vc<16;vc++) { Cores[core].Voices[vc].DryR=(s8)((value & vx)/vx); vx<<=1; }
+				Cores[core].Regs.VMIXR = (Cores[core].Regs.VMIXR & 0xFFFF0000) | value;
+			return;
+
+			case (REG_S_VMIXR + 2):
+				vx=1; for (vc=16;vc<24;vc++) { Cores[core].Voices[vc].DryR=(s8)((value & vx)/vx); vx<<=1; }
+				Cores[core].Regs.VMIXR = (Cores[core].Regs.VMIXR & 0xFFFF) | (value << 16);
+			return;
+
+			case REG_S_VMIXER:
+				vx=1; for (vc=0;vc<16;vc++) { Cores[core].Voices[vc].WetR=(s8)((value & vx)/vx); vx<<=1; }
+				Cores[core].Regs.VMIXER = (Cores[core].Regs.VMIXER & 0xFFFF0000) | value;
+			return;
+
+			case (REG_S_VMIXER + 2):
+				vx=1; for (vc=16;vc<24;vc++) { Cores[core].Voices[vc].WetR=(s8)((value & vx)/vx); vx<<=1; }
+				Cores[core].Regs.VMIXER = (Cores[core].Regs.VMIXER & 0xFFFF) | (value << 16);
+			return;
+
+			case REG_P_MMIX:
+				vx=value;
+				if (core == 0) vx&=0xFF0;
+				Cores[core].ExtWetR=(vx & 0x001);
+				Cores[core].ExtWetL=(vx & 0x002)>>1;
+				Cores[core].ExtDryR=(vx & 0x004)>>2;
+				Cores[core].ExtDryL=(vx & 0x008)>>3;
+				Cores[core].InpWetR=(vx & 0x010)>>4;
+				Cores[core].InpWetL=(vx & 0x020)>>5;
+				Cores[core].InpDryR=(vx & 0x040)>>6;
+				Cores[core].InpDryL=(vx & 0x080)>>7;
+				Cores[core].SndWetR=(vx & 0x100)>>8;
+				Cores[core].SndWetL=(vx & 0x200)>>9;
+				Cores[core].SndDryR=(vx & 0x400)>>10;
+				Cores[core].SndDryL=(vx & 0x800)>>11;
+				Cores[core].Regs.MMIX = value;
+			return;
+
+			case (REG_S_KON + 2):
+				StartVoices(core,((u32)value)<<16);
+			return;
+
+			case REG_S_KON:
+				StartVoices(core,((u32)value));
+			return;
+
+			case (REG_S_KOFF + 2):
+				StopVoices(core,((u32)value)<<16);
+			return;
+
+			case REG_S_KOFF:
+				StopVoices(core,((u32)value));
+			return;
+
+			case REG_S_ENDX:
+				Cores[core].Regs.ENDX&=0x00FF0000;
+			return;
+
+			case (REG_S_ENDX + 2):	
+				Cores[core].Regs.ENDX&=0xFFFF;
+			return;
+
+			case REG_P_MVOLL:
+				if (value & 0x8000) {  // +Lin/-Lin/+Exp/-Exp
+					Cores[core].MasterL.Mode=(value & 0xE000)/0x2000;
+					Cores[core].MasterL.Increment=(value & 0x3F) | ((value & 0x800)/0x10);
+				}
+				else {
+					Cores[core].MasterL.Mode=0;
+					Cores[core].MasterL.Increment=0;
+					Cores[core].MasterL.Value=value;
+				}
+				Cores[core].MasterL.Reg_VOL=value;
+			return;
+
+			case REG_P_MVOLR:
+				if (value & 0x8000) {  // +Lin/-Lin/+Exp/-Exp
+					Cores[core].MasterR.Mode=(value & 0xE000)/0x2000;
+					Cores[core].MasterR.Increment=(value & 0x3F) | ((value & 0x800)/0x10);
+				}
+				else {
+					Cores[core].MasterR.Mode=0;
+					Cores[core].MasterR.Increment=0;
+					Cores[core].MasterR.Value=value;
+				}
+				Cores[core].MasterR.Reg_VOL=value;
+			return;
+
+			case REG_S_ADMAS:
+				//ConLog(" * SPU2: Core %d AutoDMAControl set to %d (%d)\n",core,value, Cycles);
+				Cores[core].AutoDMACtrl=value;
+
+				if(value==0)
+				{
+					Cores[core].AdmaInProgress=0;
+				}
+			return;
+
+			default:
+				*(regtable[mem>>1]) = value;
 			break;
+		}
 	}
 
-	SPU2writeLog(mem,value);
 	if ((mem>=0x07C0) && (mem<0x07CE)) 
 	{
 		UpdateSpdifMode();
@@ -1248,7 +1268,7 @@ void VoiceStart(int core,int vc)
 	{
 		if(Cores[core].Voices[vc].StartA&7)
 		{
-			fprintf( stderr, " *** Missaligned StartA %05x!\n",Cores[core].Voices[vc].StartA);
+			fprintf( stderr, " *** Misaligned StartA %05x!\n",Cores[core].Voices[vc].StartA);
 			Cores[core].Voices[vc].StartA=(Cores[core].Voices[vc].StartA+0xFFFF8)+0x8;
 		}
 

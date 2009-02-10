@@ -228,9 +228,10 @@ static void __forceinline __fastcall GetNextDataBuffered( V_Core& thiscore, V_Vo
 	{
 		if(vc.LoopFlags & XAFLAG_LOOP_END)
 		{
-			if(vc.LoopFlags & XAFLAG_LOOP)
+			if( vc.LoopFlags & XAFLAG_LOOP )
 			{
 				vc.NextA=vc.LoopStartA;
+				thiscore.Regs.ENDX|=1<<voice;
 			}
 			else
 			{
@@ -297,9 +298,6 @@ static void __forceinline __fastcall GetNextDataBuffered( V_Core& thiscore, V_Vo
 		vc.SCurrent = 0;
 		if( (vc.LoopFlags & XAFLAG_LOOP_START) && !vc.LoopMode )
 			vc.LoopStartA = vc.NextA;
-
-		// [Air] : Increment will get called below (change made to avoid needless code cache clutter)		
-		//IncrementNextA( thiscore, vc );
 	}
 
 	IncrementNextA( thiscore, vc );
