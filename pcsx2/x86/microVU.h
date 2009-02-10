@@ -47,8 +47,10 @@ public:
 	void init() {
 		listSize = -1;
 		callerSize = -1;
-		ZeroMemory(&blockList, sizeof(blockList)); // Can be Omitted?
+		//ZeroMemory(&blockList, sizeof(blockList)); // Can be Omitted?
+		//ZeroMemory(&blockList, sizeof(callersList)); // Can be Omitted?
 	}
+	void reset() { init(); };
 	void close() {}; // Can be Omitted?
 	void add(u32 pipelineState, u8* x86ptrStart) {
 		if (!search(pipelineState)) {
@@ -67,7 +69,7 @@ public:
 	void clearFast() {
 		listSize = -1;
 		for ( ; callerSize >= 0; callerSize--) {
-			//callerList[callerSize]. // Implement Branch Link Removal Code
+			//callerList[callerSize]. // ToDo: Implement Branch Link Removal Code
 		}
 	}
 	int clear() {
@@ -80,7 +82,7 @@ template<u32 progSize>
 struct microProgram {
 	u8 data[progSize];
 	u32 used;	// Number of times its been used
-	int cached;	// Has been Cached?
+	//int cached;	// Has been Cached? (can be omitted because every new program will be cached?)
 	microBlockManager* block[progSize];
 };
 
@@ -92,7 +94,7 @@ struct microProgManager {
 	int					cur;			// Index to Current MicroProgram thats running (-1 = uncached)
 	int					total;			// Total Number of valid MicroPrograms minus 1
 	int					cleared;		// Micro Program is Indeterminate so must be searched for (and if no matches are found then recompile a new one)
-	int					finished;		// Completed MicroProgram to E-bit Termination
+	int					finished;		// Completed MicroProgram by E-bit Termination
 	u32					lastPipelineState; // Pipeline state from where it left off (useful for continuing execution)
 };
 
@@ -119,18 +121,23 @@ struct microVU {
 	microProgManager<0x800> prog; // Micro Program Data
 };
 
+// Template Stuff
+#define mVUx (vuIndex ? &microVU1 : &microVU0)
+#define microVUt(aType) template<int vuIndex> __forceinline aType
+
 // Opcode Tables
 extern void (*mVU_UPPER_OPCODE[64])( VURegs* VU, s32 info );
 extern void (*mVU_LOWER_OPCODE[128])( VURegs* VU, s32 info );
 
 //void invalidateBlocks(u32 addr, u32 size); // Invalidates Blocks in the range [addr, addr+size)
-__forceinline void mVUinit(microVU* mVU, VURegs* vuRegsPtr, const int vuIndex);
-__forceinline void mVUreset(microVU* mVU);
-__forceinline void mVUclose(microVU* mVU);
-__forceinline void mVUclear(microVU* mVU, u32 addr, u32 size); // Clears part of a Micro Program (must use before modifying micro program!)
+//__forceinline void mVUinit(microVU* mVU, VURegs* vuRegsPtr, const int vuIndex);
+//__forceinline void mVUreset(microVU* mVU);
+//__forceinline void mVUclose(microVU* mVU);
+//__forceinline void mVUclear(microVU* mVU, u32 addr, u32 size); // Clears part of a Micro Program (must use before modifying micro program!)
 //void* mVUexecute(microVU* mVU, u32 startPC, u32 cycles); // Recompiles/Executes code for the number of cycles indicated (will always run for >= 'cycles' amount unless 'finished')
 //void* mVUexecuteF(microVU* mVU, u32 startPC); // Recompiles/Executes code till finished
 
-__forceinline int mVUfindLeastUsedProg(microVU* mVU);
-__forceinline int mVUsearchProg(microVU* mVU);
-__forceinline void mVUcacheProg(microVU* mVU);
+__forceinline void	mVUclearProg(microVU* mVU, int progIndex);
+__forceinline int	mVUfindLeastUsedProg(microVU* mVU);
+__forceinline int	mVUsearchProg(microVU* mVU);
+__forceinline void	mVUcacheProg(microVU* mVU, int progIndex);
