@@ -2,7 +2,7 @@
 
 curdir=`pwd`
 
-function buildplugin {
+buildplugin() {
 cd ${curdir}/$1
 sh build.sh $2
 

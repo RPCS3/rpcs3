@@ -5361,6 +5361,8 @@ fi
 $as_echo "$ac_cv_lib_Xxf86vm_main" >&6; }
 if test "x$ac_cv_lib_Xxf86vm_main" = x""yes; then
   LIBS="$LIBS -lXxf86vm"
+else
+  echo "Error! You need to have libXxf86vm-dev." ; exit -1
 fi
 
 

@@ -112,6 +112,7 @@ void OnConf_Ok(GtkButton *button, gpointer user_data)
 	char *str;
 	int i;
 
+	// fixme; This doesn't look right; conf.interlace is a u8.
 	u32 newinterlace = is_checked(Conf, "checkInterlace");
 
 	if (!conf.interlace ) 
@@ -198,13 +199,14 @@ void CALLBACK GSconfigure()
 	if (!(conf.options & GSOPTION_LOADED)) LoadConfig();
 	Conf = create_Config();
 	
+	// fixme; Need to check "checkInterlace" as well.
 	set_checked(Conf, "checkBilinear", !!conf.bilinear);
 	//set_checked(Conf, "checkbutton6", conf.mrtdepth);
-	set_checked(Conf, "radioAANone", conf.aa==0);
-	set_checked(Conf, "radioAA2X",     conf.aa==1);
-	set_checked(Conf, "radioAA4X",     conf.aa==2);
-	set_checked(Conf, "radioAA8X",     conf.aa==3);
-	set_checked(Conf, "radioAA16X",   conf.aa==4);
+	set_checked(Conf, "radioAANone", (conf.aa==0));
+	set_checked(Conf, "radioAA2X",     (conf.aa==1));
+	set_checked(Conf, "radioAA4X",     (conf.aa==2));
+	set_checked(Conf, "radioAA8X",     (conf.aa==3));
+	set_checked(Conf, "radioAA16X",   (conf.aa==4));
 	set_checked(Conf, "checkWireframe", (conf.options&GSOPTION_WIREFRAME)?1:0);
 	set_checked(Conf, "checkAVI", (conf.options&GSOPTION_CAPTUREAVI)?1:0);
 	set_checked(Conf, "checkfullscreen", (conf.options&GSOPTION_FULLSCREEN)?1:0);

@@ -20,6 +20,7 @@
 #define __LNXSYSEXEC_H__
 
 #include "Linux.h"
+#include "GS.h"
 #include <sys/mman.h>
 
 extern void StartGui();

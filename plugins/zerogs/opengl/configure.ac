@@ -131,7 +131,7 @@ AC_CHECK_LIB(pthread,main,[LIBS="$LIBS -lpthread"])
 AC_CHECK_LIB(stdc++,main,[LIBS="$LIBS -lstdc++"])
 AC_CHECK_LIB(z,main,[LIBS="$LIBS -lz"])
 AC_CHECK_LIB(dl,main,[LIBS="$LIBS -ldl"])
-AC_CHECK_LIB(Xxf86vm,main,[LIBS="$LIBS -lXxf86vm"])
+AC_CHECK_LIB(Xxf86vm,main,[LIBS="$LIBS -lXxf86vm"],[echo "Error! You need to have libXxf86vm-dev." ; exit -1])
 
 dnl AC_CHECK_LIB(Cg,cgCreateContext,[LIBS="$LIBS -lCg"])
 dnl AC_CHECK_LIB(CgGL,cgGLEnableProfile,[LIBS="$LIBS -lCgGL"])

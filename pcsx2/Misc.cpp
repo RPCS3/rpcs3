@@ -386,7 +386,7 @@ void SaveGSState(const string& file)
 	if( g_SaveGSStream ) return;
 
 	Console::WriteLn( _("Saving GS State...") );
-	Console::WriteLn( "\t%hs", params file );
+	Console::WriteLn( "\t%hs", params file.c_str() );
 
 	g_fGSSave = new gzSavingState( file );
 	

@@ -1883,16 +1883,33 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 	}
 	else {
 		if( tex0.psm == PSMT16Z || tex0.psm == PSMT16SZ ) {
-			
-			texdata.resize(4*GPU_TEXWIDTH*channels*widthmult*(targ->realheight+widthmult-1)/widthmult);
+#if defined(ZEROGS_SSE2)		
+			// reserve additional elements for alignment if SSE2 used. 
+			texdata.resize(4 * GPU_TEXWIDTH * channels * widthmult * (targ->realheight + widthmult - 1) / widthmult + 15);
+#else
+			texdata.resize(4 * GPU_TEXWIDTH * channels * widthmult * (targ->realheight + widthmult - 1) / widthmult);
+#endif
 			ptexdata = &texdata[0];
 			// needs to be 8 bit, use xmm for unpacking
 			u16* dst = (u16*)ptexdata;
 			u16* src = (u16*)(g_pbyGSMemory + 4 * GPU_TEXWIDTH * targ->realy);
-
-			assert( ((u32)(uptr)dst)%16 == 0 );
-
+			
 #if defined(ZEROGS_SSE2)
+			if (((u32)(uptr)dst) % 16 != 0) {
+				// This is not an unusual situation, when vector<u8> does not align 16bit, it is destructive for SSE2
+				// instruction movdqa [%eax], xmm0
+				// The idea would be resize vector to 15 elements, and set ptxedata to an aligned position.
+				// Later we would move eax by 16, so  we should only verify that the first element is aligned
+				// FIXME. As I see, texdata used only once here, it does not have any impact on other code.
+				// Probably, usage of _aligned_maloc() would be preferable.
+				// --  Zeydlitz
+				
+				int disalignment = 16 - ((u32)(uptr)dst)%16 ;		// This is value of shift. It could be 0 < disalignment <= 15	
+				ptexdata = &texdata[disalignment];			// Set pointer to aligned element
+				dst = (u16*)ptexdata;					
+				GS_LOG("Made alignment for texdata, 0x%x\n", dst );	
+				assert( ((u32)(uptr)dst)%16 == 0 );			// Assert, because at future could be vectors with uncontigious spaces
+			}
 			int iters = targ->height*GPU_TEXWIDTH/16;
 
 #if defined(_MSC_VER) 
