@@ -25,10 +25,16 @@
 //
 #include "spu2.h"
 
-#include <assert.h>
-#include <math.h>
 #include <float.h>
 #include "lowpass.h"
+
+#undef min
+#undef max
+
+#include <algorithm>
+
+using std::min;
+using std::max;
 
 extern void	spdif_update();
 
@@ -39,18 +45,53 @@ extern void VoiceStop(int core,int vc);
 double pow_2_31 = pow(2.0,31.0);
 
 LPF_data L,R;
-
 extern u32 core;
-
 u32 core, voice;
-
 extern u8 callirq;
-
 double srate_pv=1.0;
 
-extern u32 PsxRates[160];
-
 static const s32 ADSR_MAX_VOL = 0x7fffffff;
+
+static const s32 f[5][2] =
+{
+	{    0,   0 },
+	{   60,   0 },
+	{  115, -52 },
+	{   98, -55 },
+	{  122, -60 }
+};
+
+static const int InvExpOffsets[] = { 0,4,6,8,9,10,11,12 };
+
+static u32 PsxRates[160];
+/*=
+{
+
+	//for +Lin: PsxRates[value+8]
+	//for -Lin: PsxRates[value+7]
+
+	0xFFFFFFFF,0xFFFFFFFF,0xFFFFFFFF,0xFFFFFFFF,0xFFFFFFFF,0xFFFFFFFF,0xFFFFFFFF,0xFFFFFFFF,
+	0xD744FCCB,0xB504F334,0x9837F052,0x80000000,0x6BA27E65,0x5A82799A,0x4C1BF829,0x40000000,
+	0x35D13F33,0x2D413CCD,0x260DFC14,0x20000000,0x1AE89F99,0x16A09E66,0x1306FE0A,0x10000000,
+	0x0D744FCD,0x0B504F33,0x09837F05,0x08000000,0x06BA27E6,0x05A8279A,0x04C1BF83,0x04000000,
+	0x035D13F3,0x02D413CD,0x0260DFC1,0x02000000,0x01AE89FA,0x016A09E6,0x01306FE1,0x01000000,
+	0x00D744FD,0x00B504F3,0x009837F0,0x00800000,0x006BA27E,0x005A827A,0x004C1BF8,0x00400000,
+	0x0035D13F,0x002D413D,0x00260DFC,0x00200000,0x001AE8A0,0x0016A09E,0x001306FE,0x00100000,
+	0x000D7450,0x000B504F,0x0009837F,0x00080000,0x0006BA28,0x0005A828,0x0004C1C0,0x00040000,
+	0x00035D14,0x0002D414,0x000260E0,0x00020000,0x0001AE8A,0x00016A0A,0x00013070,0x00010000,
+	0x0000D745,0x0000B505,0x00009838,0x00008000,0x00006BA2,0x00005A82,0x00004C1C,0x00004000,
+	0x000035D1,0x00002D41,0x0000260E,0x00002000,0x00001AE9,0x000016A1,0x00001307,0x00001000,
+	0x00000D74,0x00000B50,0x00000983,0x00000800,0x000006BA,0x000005A8,0x000004C2,0x00000400,
+	0x0000035D,0x000002D4,0x00000261,0x00000200,0x000001AF,0x0000016A,0x00000130,0x00000100,
+	0x000000D7,0x000000B5,0x00000098,0x00000080,0x0000006C,0x0000005B,0x0000004C,0x00000040,
+	0x00000036,0x0000002D,0x00000026,0x00000020,0x0000001B,0x00000017,0x00000013,0x00000010,
+	0x0000000D,0x0000000B,0x0000000A,0x00000008,0x00000007,0x00000006,0x00000005,0x00000004,
+	0x00000003,0x00000003,0x00000002,0x00000002,0x00000002,0x00000001,0x00000001,0x00000000,
+
+	//128+8
+	0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,
+};*/
+
 
 // Performs a 64-bit multiplication between two values and returns the
 // high 32 bits as a result (discarding the fractional 32 bits).
@@ -89,25 +130,15 @@ void InitADSR()                                    // INIT ADSR
 		int shift=(i-32)>>2;
 		s64 rate=(i&3)+4;
 		if (shift<0)
-			rate>>=-shift;
+			rate >>= -shift;
 		else
-			rate<<=shift;
+			rate <<= shift;
 
-		PsxRates[i]=(int)min(rate,0x3fffffff);
+		PsxRates[i] = (int)min( rate, 0x3fffffffLL );
 	}
 }
 
 #define VOL(x) (((s32)x)) //24.8 volume
-
-/////////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////////////////////////////
-//                                                                                     //
-
-const s32 f[5][2] ={{    0,   0 },
-					{   60,   0 },
-					{  115, -52 },
-					{   98, -55 },
-					{  122, -60 }};
 
 static void __forceinline XA_decode_block(s16* buffer, const s16* block, s32& prev1, s32& prev2)
 {
@@ -306,11 +337,16 @@ _skipIncrement:
 	Data = vc.SBuffer[vc.SCurrent++];
 }
 
-/////////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////////////////////////////
-//                                                                                     //
+// Returns the linear slide value for AR and SR inputs.
+static int GetLinearSrAr( uint SrAr )
+{
+	// The Sr/Ar settings work in quarter steps, which means
+	// the bottom 2 bits go on the left side of the shift, and
+	// the right side of the shift gets divided by 4:
 
-const int InvExpOffsets[] = { 0,4,6,8,9,10,11,12 };
+	const uint newSr = 0x127 - SrAr;
+	return (1+(newSr&3)) << (30UL-(newSr>>2));
+}
 
 static void __forceinline CalculateADSR( V_Voice& vc ) 
 {
@@ -318,17 +354,8 @@ static void __forceinline CalculateADSR( V_Voice& vc )
 
 	jASSUME( env.Phase != 0 );
 
-	s32 SLevel = ((s32)env.Sl)<<27;
-
-	jASSUME( SLevel >= 0 );
-
-	if(env.Releasing)
-	{
-		if( env.Phase < 5)
-		{
-			env.Phase=5;
-		}
-	}
+	if(env.Releasing && (env.Phase < 5))
+		env.Phase = 5;
 
 	switch (env.Phase)
 	{
@@ -340,21 +367,14 @@ static void __forceinline CalculateADSR( V_Voice& vc )
 				break;
 			}
 
-			if (env.Am) // pseudo exponential
-			{
-				if (env.Value<0x60000000) // below 75%
-				{
-					env.Value+=PsxRates[(env.Ar^0x7f)-0x10+32];
-				} 
-				else // above 75%
-				{
-					env.Value+=PsxRates[(env.Ar^0x7f)-0x18+32];
-				}
-			}
-			else // linear
-			{
-				env.Value+=PsxRates[(env.Ar^0x7f)-0x10+32];
-			}
+			// Case 1 below is for pseudo exponential below 75%.
+			// Pseudo Exp > 75% and Linear are the same.
+
+			if (env.Am && (env.Value>=0x60000000))
+				env.Value += PsxRates[(env.Ar^0x7f)-0x18+32];
+			else if( env.Ar < 0x7f )
+				//env.Value+=PsxRates[(env.Ar^0x7f)-0x10+32];
+				env.Value += GetLinearSrAr( env.Ar );
 
 			if( env.Value < 0 )
 			{
@@ -362,29 +382,37 @@ static void __forceinline CalculateADSR( V_Voice& vc )
 				env.Phase++;
 				env.Value = ADSR_MAX_VOL;
 			}
-
-			break;
+		break;
 
 		case 2: // decay
 		{
 			u32 off = InvExpOffsets[(env.Value>>28)&7];
-			env.Value-=PsxRates[((env.Dr^0x1f)<<2)-0x18+off+32];
+			env.Value-=PsxRates[((env.Dr^0x1f)*4)-0x18+off+32];
 
-			if(env.Value <= SLevel)
+			// Clamp decay to SLevel or Zero
+			if (env.Value < 0)
+				env.Value = 0;
+			else
 			{
-				// Clamp decay to SLevel or Zero
-				if (env.Value < 0)
-					env.Value = 0;
-				else
-					env.Value = SLevel;
+				// calculate sustain level by mirroring the bits
+				// of the sustain var into the lower bits as we shift up
+				// (total shift, 27 bits)
+				
+				u32 suslev = (env.Sl << 4) | env.Sl;
+				suslev = (suslev << 8) | suslev;	// brings us to 12 bits!
+				suslev = (suslev << 12) | suslev;	// 24 bits!
 
-				env.Phase++;
-			}
-
-			break;
+				if( env.Value <= (suslev<<3) )
+					env.Phase++;
+			}	
 		}
+		break;
 
 		case 3: // sustain
+		{
+			// 0x7f disables sustain (infinite sustain)
+			if( env.Sr == 0x7f ) return;
+			
 			if (env.Sm&2) // decreasing
 			{
 				if (env.Sm&4) // exponential
@@ -394,8 +422,10 @@ static void __forceinline CalculateADSR( V_Voice& vc )
 				} 
 				else // linear
 				{
-					env.Value-=PsxRates[(env.Sr^0x7f)-0xf+32];
+					//env.Value-=PsxRates[(env.Sr^0x7f)-0xf+32];
+					env.Value -= GetLinearSrAr( env.Sr );
 				}
+
 				if( env.Value <= 0 )
 				{
 					env.Value = 0;
@@ -404,22 +434,15 @@ static void __forceinline CalculateADSR( V_Voice& vc )
 			} 
 			else // increasing
 			{
-				if (env.Sm&4) // pseudo exponential
-				{
-					if (env.Value<0x60000000) // below 75%
-					{
-						env.Value+=PsxRates[(env.Sr^0x7f)-0x10+32];
-					} 
-					else // above 75%
-					{
-						env.Value+=PsxRates[(env.Sr^0x7f)-0x18+32];
-					}
-				}
+				if( (env.Sm&4) && (env.Value>=0x60000000) )
+					env.Value+=PsxRates[(env.Sr^0x7f)-0x18+32];
 				else
 				{
-					// linear
+					// linear / Pseudo below 75% (they're the same)
+					//env.Value+=PsxRates[(env.Sr^0x7f)-0x10+32];
 
-					env.Value+=PsxRates[(env.Sr^0x7f)-0x10+32];
+					int newSr = 0x7f-env.Sr;
+					env.Value += GetLinearSrAr( env.Sr );
 				}
 
 				if( env.Value < 0 )
@@ -428,8 +451,8 @@ static void __forceinline CalculateADSR( V_Voice& vc )
 					env.Phase++;
 				}
 			}
-
-			break;
+		}
+		break;
 
 		case 4: // sustain end
 			env.Value = (env.Sm&2) ? 0 : ADSR_MAX_VOL;
@@ -442,11 +465,13 @@ static void __forceinline CalculateADSR( V_Voice& vc )
 			if (env.Rm) // exponential
 			{
 				u32 off=InvExpOffsets[(env.Value>>28)&7];
-				env.Value-=PsxRates[((env.Rr^0x1f)<<2)-0x18+off+32];
+				env.Value-=PsxRates[((env.Rr^0x1f)*4)-0x18+off+32];
 			} 
 			else // linear
 			{
-				env.Value-=PsxRates[((env.Rr^0x1f)<<2)-0xc+32];
+				//env.Value-=PsxRates[((env.Rr^0x1f)*4)-0xc+32];
+				if( env.Rr != 0x1f )
+					env.Value -= 1 << (30UL-env.Rr);
 			}
 
 			if( env.Value <= 0 )
@@ -454,12 +479,11 @@ static void __forceinline CalculateADSR( V_Voice& vc )
 				env.Value=0;
 				env.Phase++;
 			}
-
-			break;
+		break;
 
 		case 6: // release end
 			env.Value=0;
-			break;
+		break;
 
 		jNO_DEFAULT
 	}
@@ -482,7 +506,7 @@ static void __forceinline GetNoiseValues(s32& VD)
 {
 	static s32 Seed = 0x41595321;
 
-	if(Seed&0x100) VD =(s32)((Seed&0xff)<<8);
+	if(Seed&0x100) VD = (s32)((Seed&0xff)<<8);
 	else if(!(Seed&0xffff)) VD = (s32)0x8000;
 	else VD = (s32)0x7fff;
 
@@ -515,12 +539,11 @@ void LowPass(s32& VL, s32& VR)
 	VR = (s32)(LPF(&R,(VR)/pow_2_31)*pow_2_31);
 }
 
-/////////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////////////////////////////
-//                                                                                     //
+// Data is expected to be 16 bit signed (typical stuff!).
+// Volume is the SPU2 register value, usually ranged from 0 to 0x7fff.
 static __forceinline s32 ApplyVolume(s32 data, s32 volume)
 {
-	return (volume * data) >> 7; // >> 6 is more correct, but causes a few overflows
+	return (volume * data) >> 15;
 }
 
 static void __forceinline UpdatePitch( V_Voice& vc )
@@ -532,13 +555,14 @@ static void __forceinline UpdatePitch( V_Voice& vc )
 	//   most of the time.  Now it'll just check Modulated and short-circuit past the voice
 	//   check (not that it amounts to much, but eh every little bit helps).
 	if( (vc.Modulated==0) || (voice==0) )
-		pitch=vc.Pitch;
+		pitch = vc.Pitch;
 	else
-		pitch=(vc.Pitch*(32768 + abs(Cores[core].Voices[voice-1].OutX)))>>15;
+		pitch = (vc.Pitch*(32768 + abs(Cores[core].Voices[voice-1].OutX)))>>15;
 	
 	vc.SP+=pitch;
 }
 
+// Returns a 16 bit result in Value.
 static void __forceinline GetVoiceValues_Linear(V_Core& thiscore, V_Voice& vc, s32& Value)
 {
 	while( vc.SP > 0 )
@@ -560,19 +584,22 @@ static void __forceinline GetVoiceValues_Linear(V_Core& thiscore, V_Voice& vc, s
 
 	jASSUME( vc.ADSR.Value >= 0 );	// ADSR should never be negative...
 
+	// Note!  It's very important that ADSR stay as accurate as possible.  By the way
+	// it is used, various sound effects can end prematurely if we truncate more than
+	// one or two bits.
+
 	if(Interpolation==0)
 	{
-		Value = MulShr32( vc.PV1, vc.ADSR.Value );
+		Value = MulShr32( vc.PV1<<1, vc.ADSR.Value );
 	} 
 	else //if(Interpolation==1) //must be linear
 	{
 		s32 t0 = vc.PV2 - vc.PV1;
-		s32 t1 = vc.PV1;
-		Value = MulShr32( t1 - ((t0*vc.SP)>>12), vc.ADSR.Value );
+		Value = MulShr32( (vc.PV1<<1) - ((t0*vc.SP)>>11), vc.ADSR.Value );
 	}
 }
 
-
+// Returns a 16 bit result in Value.
 static void __forceinline GetVoiceValues_Cubic(V_Core& thiscore, V_Voice& vc, s32& Value)
 {
 	while( vc.SP > 0 )
@@ -582,7 +609,7 @@ static void __forceinline GetVoiceValues_Cubic(V_Core& thiscore, V_Voice& vc, s3
 		vc.PV2=vc.PV1;
 
 		GetNextDataBuffered( thiscore, vc, vc.PV1 );
-		vc.PV1<<=3;
+		vc.PV1<<=2;
 		vc.SPc = vc.SP&4095;	// just the fractional part, please!
 		vc.SP-=4096;
 	}
@@ -608,11 +635,15 @@ static void __forceinline GetVoiceValues_Cubic(V_Core& thiscore, V_Voice& vc, s3
 	val = ((val + z2) * mu) >> 12;
 	val += vc.PV2;
 
-	Value = MulShr32( val, vc.ADSR.Value>>3 );
+	// Note!  It's very important that ADSR stay as accurate as possible.  By the way
+	// it is used, various sound effects can end prematurely if we truncate more than
+	// one or two bits.
+	Value = MulShr32( val, vc.ADSR.Value>>1 );
 }
 
-// [Air]: Noise values need to be mixed without going through interpolation, since it
-//    can wreak havoc on the noise (causing muffling or popping).
+// Noise values need to be mixed without going through interpolation, since it
+// can wreak havoc on the noise (causing muffling or popping).  Not that this noise
+// generator is accurate in its own right.. but eh, ah well :)
 static void __forceinline __fastcall GetNoiseValues(V_Core& thiscore, V_Voice& vc, s32& Data)
 {
 	while(vc.SP>=4096) 
@@ -622,10 +653,13 @@ static void __forceinline __fastcall GetNoiseValues(V_Core& thiscore, V_Voice& v
 	}
 
 	// GetNoiseValues can't set the phase zero on us unexpectedly
-	// like GetVoiceValues can.  Better asster just in case though..
+	// like GetVoiceValues can.  Better assert just in case though..
 	jASSUME( vc.ADSR.Phase != 0 );	
 
 	CalculateADSR( vc );
+
+	// Yup, ADSR applies even to noise sources...
+	Data = MulShr32( Data, vc.ADSR.Value );
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
@@ -642,7 +676,11 @@ void __fastcall ReadInput(V_Core& thiscore, s32& PDataL,s32& PDataR)
 		{
 			thiscore.InputPos&=~1;
 
-			//CDDA mode
+			// CDDA mode
+			// Source audio data is 32 bits.
+			// We don't yet have the capability to handle this high res input data
+			// so we just downgrade it to 16 bits for now.
+			
 #ifdef PCM24_S1_INTERLEAVE
 			*PDataL=*(((s32*)(thiscore.ADMATempBuffer+(thiscore.InputPos<<1))));
 			*PDataR=*(((s32*)(thiscore.ADMATempBuffer+(thiscore.InputPos<<1)+2)));
@@ -653,8 +691,8 @@ void __fastcall ReadInput(V_Core& thiscore, s32& PDataL,s32& PDataR)
 			PDataR=*pr;
 #endif
 
-			PDataL>>=4; //give 16.8 data
-			PDataR>>=4;
+			PDataL>>=1; //give 31 bit data (SndOut downsamples the rest of the way)
+			PDataR>>=1;
 
 			thiscore.InputPos+=2;
 			if((thiscore.InputPos==0x100)||(thiscore.InputPos>=0x200)) {
@@ -821,11 +859,6 @@ static void __forceinline __fastcall ReadInputPV(V_Core& thiscore, s32& ValL,s32
 	// Apply volumes:
 	ValL = ApplyVolume( ValL, thiscore.InpL );
 	ValR = ApplyVolume( ValR, thiscore.InpR );
-	
-	// These make XS2 intro too quiet.
-	//ValL >>= 1;
-	//ValR >>= 1;
-
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
@@ -839,72 +872,46 @@ static void __forceinline __fastcall ReadInputPV(V_Core& thiscore, s32& ValL,s32
 
 static void __fastcall UpdateVolume(V_Volume& Vol)
 {
-	// TIMINGS ARE FAKE!!! Need to investigate.
+	// TODO : Vol.Value should be a 32 bit internal value, same as ADSR.
 
-	// [Air]: Cleaned up this code... may have broken it.  Can't really
-	//   test it here since none of my games seem to use it.  If anything's
-	//   not sounding right, we should revert the code in this method first.
-
-	// [Air] Reverse phasing?
-	//   Invert our value so that exponential mathematics are applied
-	//   as if the volume were sliding the other direction.  This makes
-	//   a lot more sense than the old method's likeliness to chop off
-	//   sound volumes to zero abruptly.
-
-	if(Vol.Mode & VOLFLAG_REVERSE_PHASE)
-	{
-		ConLog( " *** SPU2 > Reverse Phase in progress!\n" );
-		Vol.Value = 0x7fff - Vol.Value;
-	}
-
+	// Volume slides use the same basic logic as ADSR, but simplified (single-stage
+	// instead of multi-stage)
+	
 	if (Vol.Mode & VOLFLAG_DECREMENT)
 	{
 		// Decrement
 
 		if(Vol.Mode & VOLFLAG_EXPONENTIAL)
 		{
-			ConLog( " *** SPU2 > Exponential Volume Slide Down!\n" );
-			Vol.Value *= Vol.Increment >> 7;
-			Vol.Value-=((32768*5)>>(Vol.Increment));
+			u32 off = InvExpOffsets[(Vol.Value>>12)&7];
+			Vol.Value -= PsxRates[(Vol.Increment^0x7f)-0x1b+off+32] >> 16;
 		}
 		else
-		{
-			Vol.Value-=Vol.Increment;
-		}
+			Vol.Value -= Vol.Increment;
 
-		if (Vol.Value<0)
+		if (Vol.Value < 0)
 		{
 			Vol.Value = 0;
-			Vol.Mode=0;	// disable slide
+			Vol.Mode = 0;	// disable slide
 		}
 	}
 	else
 	{
-		//ConLog( " *** SPU2 > Volflag > Increment!\n" );
 		// Increment
-		if(Vol.Mode & VOLFLAG_EXPONENTIAL)
-		{
-			ConLog( " *** SPU2 > Exponential Volume Slide Up!\n" );
-			int T = Vol.Increment>>(Vol.Value>>12);
-			Vol.Value+=T;
-		}
-		else
-		{
-			Vol.Value+=Vol.Increment;
-		}
+		// Pseudo-exponential increments, as done by the SPU2 (really!)
+		// Above 75% slides slow, below 75% slides fast.  It's exponential, pseudoly speaking.
 
-		if( Vol.Value > 0x7fff )
+		if( (Vol.Mode & VOLFLAG_EXPONENTIAL) && (Vol.Value>=0x6000))
+			Vol.Value += PsxRates[(Vol.Increment^0x7f)-0x18+32] >> 16;
+		else
+			Vol.Value += Vol.Increment;
+
+		if( Vol.Value < 0 )		// wrapped around the "top"?
 		{
 			Vol.Value = 0x7fff;
-			Vol.Mode=0; // disable slide
+			Vol.Mode = 0; // disable slide
 		}
 	}
-
-	// Reverse phasing
-	//  Invert the value back into output form:
-	if(Vol.Mode & VOLFLAG_REVERSE_PHASE) Vol.Value = 0x7fff-Vol.Value;
-
-	//Vol.Value=NVal;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
@@ -1022,17 +1029,16 @@ static __forceinline void MixVoice( V_Core& thiscore, V_Voice& vc, s32& VValL, s
 {
 	s32 Value=0;
 
-	VValL=0;
-	VValR=0;
+	VValL = 0;
+	VValR = 0;
 
-	// [Air] : Most games don't use much volume slide effects.  So only
-	//   call the UpdateVolume methods when needed by checking the flag
-	//   outside the method here...
+	// Most games don't use much volume slide effects.  So only call the UpdateVolume
+	// methods when needed by checking the flag outside the method here...
 
 	if( vc.VolumeL.Mode & VOLFLAG_SLIDE_ENABLE ) UpdateVolume( vc.VolumeL );
 	if( vc.VolumeR.Mode & VOLFLAG_SLIDE_ENABLE ) UpdateVolume( vc.VolumeR );
 
-	if (vc.ADSR.Phase>0) 
+	if( vc.ADSR.Phase > 0 )
 	{
 		UpdatePitch( vc );
 
@@ -1053,12 +1059,17 @@ static __forceinline void MixVoice( V_Core& thiscore, V_Voice& vc, s32& VValL, s
 		DebugCores[core].Voices[voice].displayPeak = max(DebugCores[core].Voices[voice].displayPeak,abs(Value));
 		#endif
 
-		VValL=ApplyVolume(Value,(vc.VolumeL.Value));
-		VValR=ApplyVolume(Value,(vc.VolumeR.Value));
+		// TODO : Implement this using high-def MulShr32.
+		//   vc.VolumeL/R are 15 bits.  Value should be 32 bits (but is currently 16)
+
+		VValL = ApplyVolume(Value,vc.VolumeL.Value);
+		VValR = ApplyVolume(Value,vc.VolumeR.Value);
 	}
 
-	if (voice==1)      spu2M_WriteFast( 0x400 + (core<<12) + OutPos, (s16)Value );
-	else if (voice==3) spu2M_WriteFast( 0x600 + (core<<12) + OutPos, (s16)Value );
+	// Write-back of raw voice data (post ADSR applied)
+
+	if (voice==1)      spu2M_WriteFast( 0x400 + (core<<12) + OutPos, (s16)Value>>3 );
+	else if (voice==3) spu2M_WriteFast( 0x600 + (core<<12) + OutPos, (s16)Value>>3 );
 
 }
 
@@ -1071,29 +1082,42 @@ static void __fastcall MixCore(s32& OutL, s32& OutR, s32 ExtL, s32 ExtR)
 
 	V_Core& thiscore( Cores[core] );
 
-	for (voice=0;voice<24;voice++) 
+	for (voice=0;voice<24;voice++)
 	{
 		s32 VValL,VValR;
 
 		V_Voice& vc( thiscore.Voices[voice] );
 		MixVoice( thiscore, vc, VValL, VValR );
+		
+		// Note: Results from MixVoice are ranged at 16 bits.
+		// Following muls are toggles only (0 or 1)
 
 		SDL += VValL * vc.DryL;
 		SDR += VValR * vc.DryR;
 		SWL += VValL * vc.WetL;
 		SWR += VValR * vc.WetR;
 	}
-
-	//Write To Output Area
-	spu2M_WriteFast( 0x1000 + (core<<12) + OutPos, (s16)(SDL>>16) );
-	spu2M_WriteFast( 0x1200 + (core<<12) + OutPos, (s16)(SDR>>16) );
-	spu2M_WriteFast( 0x1400 + (core<<12) + OutPos, (s16)(SWL>>16) );
-	spu2M_WriteFast( 0x1600 + (core<<12) + OutPos, (s16)(SWR>>16) );
+	
+	// Saturate final result to standard 16 bit range.
+	SDL = min( max( SDL, -0x8000 ), 0x7fff );
+	SDR = min( max( SDR, -0x8000 ), 0x7fff );
+	SWL = min( max( SWL, -0x8000 ), 0x7fff );
+	SWR = min( max( SWR, -0x8000 ), 0x7fff );
+	
+	// Write Mixed results To Output Area
+	spu2M_WriteFast( 0x1000 + (core<<12) + OutPos, (s16)SDL );
+	spu2M_WriteFast( 0x1200 + (core<<12) + OutPos, (s16)SDR );
+	spu2M_WriteFast( 0x1400 + (core<<12) + OutPos, (s16)SWL );
+	spu2M_WriteFast( 0x1600 + (core<<12) + OutPos, (s16)SWR );
+	
+	// Write mixed results to logfile (if enabled)
+	
+	WaveDump::WriteCore( core, CoreSrc_DryVoiceMix, SDL, SDR );
+	WaveDump::WriteCore( core, CoreSrc_WetVoiceMix, SWL, SWR );
 
 	s32 TDL,TDR;
 
 	// Mix in the Input data
-	// divide by 3 fixes some volume problems.
 	TDL = OutL * thiscore.InpDryL;
 	TDR = OutR * thiscore.InpDryR;
 
@@ -1107,7 +1131,7 @@ static void __fastcall MixCore(s32& OutL, s32& OutR, s32 ExtL, s32 ExtR)
 	
 	if(EffectsEnabled)
 	{
-		s32 TWL=0,TWR=0;
+		s32 TWL,TWR;
 
 		// Mix Input, Voice, and External data:
 		TWL = OutL * thiscore.InpWetL;
@@ -1117,15 +1141,19 @@ static void __fastcall MixCore(s32& OutL, s32& OutR, s32 ExtL, s32 ExtR)
 		TWL += ExtL * thiscore.ExtWetL; 
 		TWR += ExtR * thiscore.ExtWetR;
 
-		//Apply Effects
-		DoReverb( thiscore, RVL,RVR,TWL>>16,TWR>>16);
+		WaveDump::WriteCore( core, CoreSrc_PreReverb, TWL, TWR );
 
-		TWL=ApplyVolume(RVL,VOL(thiscore.FxL));
-		TWR=ApplyVolume(RVR,VOL(thiscore.FxR));
+		//Apply Effects
+		DoReverb( thiscore, RVL, RVR, TWL, TWR );
+
+		TWL = ApplyVolume(RVL,VOL(thiscore.FxL));
+		TWR = ApplyVolume(RVR,VOL(thiscore.FxR));
+
+		WaveDump::WriteCore( core, CoreSrc_PostReverb, TWL, TWR );
 
 		//Mix Wet,Dry
-		OutL=(TDL + TWL);
-		OutR=(TDR + TWR);
+		OutL = (TDL + TWL);
+		OutR = (TDR + TWR);
 	}
 	else
 	{
@@ -1139,8 +1167,11 @@ static void __fastcall MixCore(s32& OutL, s32& OutR, s32 ExtL, s32 ExtR)
 
 	if (thiscore.Mute==0)
 	{
-		OutL = MulShr32( OutL, ((s32)thiscore.MasterL.Value)<<16 );
-		OutR = MulShr32( OutR, ((s32)thiscore.MasterR.Value)<<16 );
+		// Final output value -- We don't use ApplyVolume sot hat we can leave the 15 bits of
+		// fixed point accuracy in place for SoundTouch and other post processing. 
+
+		OutL = OutL * thiscore.MasterL.Value;
+		OutR = OutR * thiscore.MasterR.Value;
 	}
 	else 
 	{
@@ -1159,10 +1190,11 @@ void __fastcall Mix()
 	// ****  CORE ZERO  ****
 
 	core=0;
-	if( (PlayMode&4) != 4 )
+	if( (PlayMode&4) == 0 )
 	{
 		// get input data from input buffers
 		ReadInputPV(Cores[0], ExtL, ExtR);
+		WaveDump::WriteCore( 0, CoreSrc_Input, ExtL, ExtR );
 	}
 
 	MixCore( ExtL, ExtR, 0, 0 );
@@ -1174,10 +1206,16 @@ void __fastcall Mix()
 	}
 
 	// Commit Core 0 output to ram before mixing Core 1:
-	ExtL>>=14;
-	ExtR>>=14;
-	spu2M_WriteFast( 0x800 + OutPos, ExtL>>3 );
-	spu2M_WriteFast( 0xA00 + OutPos, ExtR>>3 );
+	ExtL>>=15;
+	ExtR>>=15;
+	
+	ExtL = min( max( ExtL, -0x8000 ), 0x7fff );
+	ExtR = min( max( ExtR, -0x8000 ), 0x7fff );
+
+	spu2M_WriteFast( 0x800 + OutPos, ExtL );
+	spu2M_WriteFast( 0xA00 + OutPos, ExtR );
+
+	WaveDump::WriteCore( 0, CoreSrc_External, ExtL, ExtR );
 
 	// ****  CORE ONE  ****
 
@@ -1185,15 +1223,20 @@ void __fastcall Mix()
 	if( (PlayMode&8) != 8 )
 	{
 		ReadInputPV(Cores[1], OutL, OutR);	// get input data from input buffers
+		WaveDump::WriteCore( 1, CoreSrc_Input, OutL, OutR );
 	}
 
 	// Apply volume to the external (Core 0) input data.
 
-	MixCore( OutL, OutR, ExtL*Cores[1].ExtL, ExtR*Cores[1].ExtR );
+	MixCore( OutL, OutR, ApplyVolume( ExtL, Cores[1].ExtL), ApplyVolume( ExtR, Cores[1].ExtR) );
 
 	if( PlayMode & 8 )
 	{
+		// Experimental CDDA support
+		// The CDDA overrides all other mixer output.  It's a direct feed!
+
 		ReadInput(Cores[1], OutL, OutR);
+		//WaveLog::WriteCore( 1, "CDDA-32", OutL, OutR );
 	}
 
 #ifndef PUBLIC
@@ -1206,12 +1249,13 @@ void __fastcall Mix()
 
 	// Update spdif (called each sample)
 	if(PlayMode&4)
-	{
 		spdif_update();
-	}
+
+	OutL >>= 6;
+	OutR >>= 6;
 
 	// AddToBuffer
-	SndWrite(OutL, OutR); //ExtL,ExtR);
+	SndWrite(OutL, OutR);
 	OutPos++;
 	if (OutPos>=0x200) OutPos=0;
 
@@ -1232,36 +1276,6 @@ void __fastcall Mix()
 	}
 #endif
 }
-
-/////////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////////////////////////////
-//                                                                                     //
-u32 PsxRates[160]={
-	
-	//for +Lin: PsxRates[value+8]
-	//for -Lin: PsxRates[value+7]
-
-	0xFFFFFFFF,0xFFFFFFFF,0xFFFFFFFF,0xFFFFFFFF,0xFFFFFFFF,0xFFFFFFFF,0xFFFFFFFF,0xFFFFFFFF,
-	0xD744FCCB,0xB504F334,0x9837F052,0x80000000,0x6BA27E65,0x5A82799A,0x4C1BF829,0x40000000,
-	0x35D13F33,0x2D413CCD,0x260DFC14,0x20000000,0x1AE89F99,0x16A09E66,0x1306FE0A,0x10000000,
-	0x0D744FCD,0x0B504F33,0x09837F05,0x08000000,0x06BA27E6,0x05A8279A,0x04C1BF83,0x04000000,
-	0x035D13F3,0x02D413CD,0x0260DFC1,0x02000000,0x01AE89FA,0x016A09E6,0x01306FE1,0x01000000,
-	0x00D744FD,0x00B504F3,0x009837F0,0x00800000,0x006BA27E,0x005A827A,0x004C1BF8,0x00400000,
-	0x0035D13F,0x002D413D,0x00260DFC,0x00200000,0x001AE8A0,0x0016A09E,0x001306FE,0x00100000,
-	0x000D7450,0x000B504F,0x0009837F,0x00080000,0x0006BA28,0x0005A828,0x0004C1C0,0x00040000,
-	0x00035D14,0x0002D414,0x000260E0,0x00020000,0x0001AE8A,0x00016A0A,0x00013070,0x00010000,
-	0x0000D745,0x0000B505,0x00009838,0x00008000,0x00006BA2,0x00005A82,0x00004C1C,0x00004000,
-	0x000035D1,0x00002D41,0x0000260E,0x00002000,0x00001AE9,0x000016A1,0x00001307,0x00001000,
-	0x00000D74,0x00000B50,0x00000983,0x00000800,0x000006BA,0x000005A8,0x000004C2,0x00000400,
-	0x0000035D,0x000002D4,0x00000261,0x00000200,0x000001AF,0x0000016A,0x00000130,0x00000100,
-	0x000000D7,0x000000B5,0x00000098,0x00000080,0x0000006C,0x0000005B,0x0000004C,0x00000040,
-	0x00000036,0x0000002D,0x00000026,0x00000020,0x0000001B,0x00000017,0x00000013,0x00000010,
-	0x0000000D,0x0000000B,0x0000000A,0x00000008,0x00000007,0x00000006,0x00000005,0x00000004,
-	0x00000003,0x00000003,0x00000002,0x00000002,0x00000002,0x00000001,0x00000001,0x00000000,
-
-	//128+8
-	0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,
-};
 
 /////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////

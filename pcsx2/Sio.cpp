@@ -67,6 +67,7 @@ u8 sio_xor(u8 *buf, uint length){
 void sioInit()
 {
 	memzero_obj(sio);
+	memzero_obj(m_PostSavestateCards);
 
 	// Transfer(?) Ready and the Buffer is Empty
 	sio.StatReg = TX_RDY | TX_EMPTY;

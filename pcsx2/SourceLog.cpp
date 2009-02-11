@@ -129,7 +129,7 @@ void SourceLog( u16 protocol, u8 source, u32 cpuPc, u32 cpuCycle, const char *fm
 
 // Functions with variable argument lists can't be inlined.
 #define IMPLEMENT_SOURCE_LOG( unit, source, protocol ) \
-	void SrcLog_##unit( const char* fmt, ... ) \
+	bool SrcLog_##unit( const char* fmt, ... ) \
 	{ \
 		va_list list; \
 		va_start( list, fmt ); \
@@ -137,6 +137,7 @@ void SourceLog( u16 protocol, u8 source, u32 cpuPc, u32 cpuCycle, const char *fm
 			(source == 'E') ? cpuRegs.pc : psxRegs.pc, \
 			(source == 'E') ? cpuRegs.cycle : psxRegs.cycle, fmt, list ); \
 		va_end( list ); \
+		return false; \
 	} \
 
 IMPLEMENT_SOURCE_LOG( EECNT, 'E', 0 ) 

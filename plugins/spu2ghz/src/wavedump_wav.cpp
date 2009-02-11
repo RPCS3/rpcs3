@@ -16,181 +16,107 @@
 //Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 
+#include <stdexcept>
+#include <new>
+
 #include "spu2.h"
-#include <stdio.h>
 
-#define WAVONLY
+#include "SoundTouch/WavFile.h"
 
-typedef struct {
-	//Main Header
-  char           riffID[4];
-  long           riffSize;
-  char           riffTYPE[4];
-	//Format Tag
-  char           chunkID[4];
-  long           chunkSize;
-  short          wFormatTag;
-  unsigned short wChannels;
-  unsigned long  dwSamplesPerSec;
-  unsigned long  dwAvgBytesPerSec;
-  unsigned short wBlockAlign;
-  unsigned short wBitsPerSample;
-	//Data Tag
-  char           dataID[4];
-  long           dataSize;
-} WAVEHeader;
-
-int wavedump_ok=0;
-int datasize;
-FILE *fdump;
-
-#ifndef WAVONLY
-int flacdump_open();
-void flacdump_close();
-void flacdump_write(s16 left,s16 right);
-int oggvdump_open();
-void oggvdump_close();
-void oggvdump_write(s16 left,s16 right);
-#endif
-
-int wavedump_open()
+static WavOutFile* _new_WavOutFile( const char* destfile )
 {
-#ifndef WAVONLY
-	if(WaveDumpFormat==1) return flacdump_open();
-	if(WaveDumpFormat==2) return oggvdump_open();
-#endif
-
-	fdump=fopen(WaveLogFileName,"wb");
-	if(fdump==NULL) return 0;
-
-	fseek(fdump,sizeof(WAVEHeader),SEEK_SET);
-
-	datasize=0;
-	wavedump_ok=1;
-	return 1;
+	return new WavOutFile( destfile, 48000, 16, 2 );
 }
 
-void wavedump_flush()
+namespace WaveDump
 {
-	WAVEHeader w;
+	static WavOutFile* m_CoreWav[2][CoreSrc_Count] = { NULL };
 
-	memcpy(w.riffID,"RIFF",4);
-	w.riffSize=datasize+36;
-	memcpy(w.riffTYPE,"WAVE",4);
-	memcpy(w.chunkID,"fmt ",4);
-	w.chunkSize=0x10;
-	w.wFormatTag=1;
-	w.wChannels=2;
-	w.dwSamplesPerSec=48000;
-	w.dwAvgBytesPerSec=48000*4;
-  	w.wBlockAlign=4;
-	w.wBitsPerSample=16;
-	memcpy(w.dataID,"data",4);
-	w.dataSize=datasize;
+	static const char* m_tbl_CoreOutputTypeNames[CoreSrc_Count]  =
+	{
+		"Input",
+		"DryVoiceMix",
+		"WetVoiceMix",
+		"PreReverb",
+		"PostReverb",
+		"External"
+	};
 
-	fseek(fdump,0,SEEK_SET);
-	fwrite(&w,sizeof(w),1,fdump);
+	void Open()
+	{
+		if( !WaveLog() ) return;
+		
+		char wavfilename[256];
 
-	fseek(fdump,datasize+sizeof(w),SEEK_SET);
+		for( uint cidx=0; cidx<2; cidx++ )
+		{
+			for( int srcidx=0; srcidx<CoreSrc_Count; srcidx++ )
+			{
+				SAFE_DELETE_OBJ( m_CoreWav[cidx][srcidx] );
+				
+				sprintf( wavfilename, "logs\\spu2ghz-Core%d-%s.wav",
+					cidx, m_tbl_CoreOutputTypeNames[ srcidx ] );
+
+				try
+				{
+					m_CoreWav[cidx][srcidx] = _new_WavOutFile( wavfilename );
+				}
+				catch( std::runtime_error& ex )
+				{
+					printf( "SPU2ghz > %s.\n\tWave Log for this core source disabled.", ex.what() );
+					m_CoreWav[cidx][srcidx] = NULL;
+				}
+			}
+		}
+	}
+
+	void Close()
+	{
+		for( uint cidx=0; cidx<2; cidx++ )
+		{
+			for( int srcidx=0; srcidx<CoreSrc_Count; srcidx++ )
+			{
+				SAFE_DELETE_OBJ( m_CoreWav[cidx][srcidx]  );
+			}
+		}
+	}
+
+	void WriteCore( uint coreidx, CoreSourceType src, s16 left, s16 right )
+	{
+		if( m_CoreWav[coreidx][src] != NULL )
+		{
+			s16 buffer[2] = { left, right };
+			m_CoreWav[coreidx][src]->write( buffer, 2 );
+		}
+	}
 }
 
-void wavedump_close()
-{
-	if(!wavedump_ok) return;
-
-	wavedump_flush();
-#ifndef WAVONLY
-	if(WaveDumpFormat==1) { flacdump_close(); return;}
-	if(WaveDumpFormat==2) { oggvdump_close(); return;}
-#endif
-
-
-	fclose(fdump);
-	wavedump_ok=0;
-}
-
-void wavedump_write(s16 left,s16 right)
-{
-	s16 buffer[2]={left,right};
-
-	if(!wavedump_ok) return;
-
-#ifndef WAVONLY
-	if(WaveDumpFormat==1) return flacdump_write(left,right);
-	if(WaveDumpFormat==2) return oggvdump_write(left,right);
-#endif
-	datasize+=4;
-
-	fwrite(buffer,4,1,fdump);
-
-	if((datasize&1023)==0)
-		wavedump_flush();
-}
-
-FILE *recordFile;
-int   recordSize;
-int recording;
+WavOutFile* m_wavrecord = NULL;
 
 void RecordStart()
 {
-	if(recording&&recordFile)
-		fclose(recordFile);
+	SAFE_DELETE_OBJ( m_wavrecord );
 
-	recordFile=fopen("recording.wav","wb");
-	if(recordFile==NULL) return;
-
-	fseek(recordFile,sizeof(WAVEHeader),SEEK_SET);
-
-	recordSize=0;
-	recording=1;
-}
-
-void RecordFlush()
-{
-	WAVEHeader w;
-
-	memcpy(w.riffID,"RIFF",4);
-	w.riffSize=recordSize+36;
-	memcpy(w.riffTYPE,"WAVE",4);
-	memcpy(w.chunkID,"fmt ",4);
-	w.chunkSize=0x10;
-	w.wFormatTag=1;
-	w.wChannels=2;
-	w.dwSamplesPerSec=48000;
-	w.dwAvgBytesPerSec=48000*4;
-  	w.wBlockAlign=4;
-	w.wBitsPerSample=16;
-	memcpy(w.dataID,"data",4);
-	w.dataSize=recordSize;
-
-	fseek(recordFile,0,SEEK_SET);
-	fwrite(&w,sizeof(w),1,recordFile);
-	fseek(recordFile,recordSize+sizeof(w),SEEK_SET);
+	try
+	{
+		m_wavrecord = new WavOutFile( "recording.wav", 48000, 16, 2 );
+	}
+	catch( std::runtime_error& )
+	{
+		SysMessage("SPU2ghz couldn't open file for recording: %s.\nRecording to wavfile disabled.", "recording.wav");
+		m_wavrecord = NULL;	
+	}
 }
 
 void RecordStop()
 {
-	if(!recording)
-		return;
-	recording=0;
-
-	RecordFlush();
-
-	fclose(recordFile);
+	SAFE_DELETE_OBJ( m_wavrecord );
 }
 
 void RecordWrite(s16 left, s16 right)
 {
-	if(!recording)
-		return;
+	if( m_wavrecord == NULL ) return;
 
-	s16 buffer[2]={left,right};
-
-	recordSize+=4;
-
-	fwrite(buffer,4,1,recordFile);
-
-	if((recordSize&1023)==0)
-		RecordFlush();
-
+	s16 buffer[2] = { left, right };
+	m_wavrecord->write( buffer, 2 );
 }

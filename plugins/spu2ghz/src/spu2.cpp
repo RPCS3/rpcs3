@@ -155,11 +155,8 @@ void AssignVolume(V_Volume& vol, s16 value)
 	else {
 		vol.Mode=0;
 		vol.Increment=0;
- 
-		value<<=1;
-		vol.Value=value;
- 
-	}
+ 		vol.Value=value<<1;
+ 	}
 }
 
 void CoreReset(int c)
@@ -173,10 +170,10 @@ void CoreReset(int c)
  
 	Cores[c].Regs.STATX=0;
 	Cores[c].Regs.ATTR=0;
-	Cores[c].ExtL=0x3FFF;
-	Cores[c].ExtR=0x3FFF;
-	Cores[c].InpL=0x3FFF;
-	Cores[c].InpR=0x3FFF;
+	Cores[c].ExtL=0x7FFF;
+	Cores[c].ExtR=0x7FFF;
+	Cores[c].InpL=0x7FFF;
+	Cores[c].InpR=0x7FFF;
 	Cores[c].FxL=0x7FFF;
 	Cores[c].FxR=0x7FFF;
 	Cores[c].MasterL.Reg_VOL=0x3FFF;
@@ -519,7 +516,8 @@ void UpdateSpdifMode()
 	}
 	if(OPM!=PlayMode)
 	{
-		ConLog(" * SPU2: Play Mode Set to %s (%d).\n",(PlayMode==0)?"Normal":((PlayMode==1)?"PCM Clone":((PlayMode==2)?"PCM Bypass":"BitStream Bypass")),PlayMode);
+		ConLog(" * SPU2: Play Mode Set to %s (%d).\n",
+			(PlayMode==0) ? "Normal" : ((PlayMode==1) ? "PCM Clone" : ((PlayMode==2) ? "PCM Bypass" : "BitStream Bypass")),PlayMode);
 	}
 }
 
@@ -748,19 +746,24 @@ void SPU2writeLog(u32 rmem, u16 value)
 	omem=mem=rmem & 0x7FF; //FFFF;
 	if (mem & 0x400) { omem^=0x400; core=1; }
 
-	/*
-	if ((omem >= 0x0000) && (omem < 0x0180)) { // Voice Params
-		u32 voice=(omem & 0x1F0) >> 4;
-		u32 param=(omem & 0xF)>>1;
-		FileLog("[%10d] SPU2 write mem %08x (Core %d Voice %d Param %s) value %x\n",Cycles,rmem,core,voice,ParamNames[param],value);
+	if( omem < 0x0180 )	 // Voice Params (VP)
+	{
+		const u32 voice = (omem & 0x1F0) >> 4;
+		const u32 param = (omem & 0xF) >> 1;
+		char dest[192];
+		sprintf( dest, "Voice %d %s", voice,ParamNames[param] );
+		RegLog( 2, dest, rmem, core, value );
 	}
-	else if ((omem >= 0x01C0) && (omem < 0x02DE)) {
-		u32 voice   =((omem-0x01C0) / 12);
-		u32 address =((omem-0x01C0) % 12)>>1;
-		FileLog("[%10d] SPU2 write mem %08x (Core %d Voice %d Address %s) value %x\n",Cycles,rmem,core,voice,AddressNames[address],value);
+	else if ((omem >= 0x01C0) && (omem < 0x02DE))	// Voice Addressing Params (VA)
+	{
+		const u32 voice   = ((omem-0x01C0) / 12);
+		const u32 address = ((omem-0x01C0) % 12)>>1;
+
+		char dest[192];
+		sprintf( dest, "Voice %d %s", voice, AddressNames[address] );
+		RegLog( 2, dest, rmem, core, value );
 	}
-	*/
-	if ((mem >= 0x0760) && (mem < 0x07b0))
+	else if ((mem >= 0x0760) && (mem < 0x07b0))
 	{
 		omem=mem; core=0;
 		if (mem >= 0x0788) {omem-=0x28; core=1;}
@@ -869,16 +872,16 @@ void SPU2writeLog(u32 rmem, u16 value)
 				RegLog(2,"IRQAL",rmem,core,value);
 				break;
 			case (REG_S_KON + 2):
-				RegLog(2,"KON1",rmem,core,value);
+				RegLog(1,"KON1",rmem,core,value);
 				break;
 			case REG_S_KON:
-				RegLog(2,"KON0",rmem,core,value);
+				RegLog(1,"KON0",rmem,core,value);
 				break;
 			case (REG_S_KOFF + 2):
-				RegLog(2,"KOFF1",rmem,core,value);
+				RegLog(1,"KOFF1",rmem,core,value);
 				break;
 			case REG_S_KOFF:
-				RegLog(2,"KOFF0",rmem,core,value);
+				RegLog(1,"KOFF0",rmem,core,value);
 				break;
 			case REG_A_TSA:
 				RegLog(2,"TSAH",rmem,core,value);
@@ -973,35 +976,31 @@ __forceinline void SPU2_FastWrite( u32 rmem, u16 value )
 		switch (param) 
 		{ 
 			case 0: //VOLL (Volume L)
+			case 1: //VOLR (Volume R)
+			{
+				V_Volume& thisvol = (param==0) ? Cores[core].Voices[voice].VolumeL : Cores[core].Voices[voice].VolumeR;
 				if (value & 0x8000)		// +Lin/-Lin/+Exp/-Exp
 				{
-					Cores[core].Voices[voice].VolumeL.Mode=(value & 0xF000)>>12;
-					Cores[core].Voices[voice].VolumeL.Increment=(value & 0x3F);
+					thisvol.Mode=(value & 0xF000)>>12;
+					thisvol.Increment=(value & 0x3F);
 				}
 				else
 				{
-					Cores[core].Voices[voice].VolumeL.Mode=0;
-					Cores[core].Voices[voice].VolumeL.Increment=0;
-					if(value&0x4000)
-						value=0x3fff - (value&0x3fff);
-					Cores[core].Voices[voice].VolumeL.Value=value<<1;
+					// Constant Volume mode (no slides or envelopes)
+					// Volumes range from 0x3fff to -0x4000.  Values below zero invert the waveform (unimplemented)
+					
+					thisvol.Mode=0;
+					thisvol.Increment=0;
+
+					s16 newval = value & 0x3fff;
+					if( value & 0x4000 )
+						newval = 0x3fff - newval;
+					thisvol.Value = newval<<1;
 				}
-				Cores[core].Voices[voice].VolumeL.Reg_VOL = value;
+				thisvol.Reg_VOL = value;
+			}
 			break;
 
-			case 1: //VOLR (Volume R)
-				if (value & 0x8000)
-				{
-					Cores[core].Voices[voice].VolumeR.Mode=(value & 0xF000)>>12;
-					Cores[core].Voices[voice].VolumeR.Increment=(value & 0x3F);
-				}
-				else
-				{
-					Cores[core].Voices[voice].VolumeR.Mode=0;
-					Cores[core].Voices[voice].VolumeR.Increment=0;
-					Cores[core].Voices[voice].VolumeR.Value=value<<1;
-				}
-				Cores[core].Voices[voice].VolumeR.Reg_VOL = value;	break;
 			case 2:	Cores[core].Voices[voice].Pitch=value;			break;
 			case 3: // ADSR1 (Envelope)
 				Cores[core].Voices[voice].ADSR.Am=(value & 0x8000)>>15;
@@ -1021,6 +1020,7 @@ __forceinline void SPU2_FastWrite( u32 rmem, u16 value )
 				Cores[core].Voices[voice].ADSR.Value = value << 15;
 				ConLog( "* SPU2: Mysterious ADSR Volume Set to 0x%x", value );
 			break;
+			
 			case 6:	Cores[core].Voices[voice].VolumeL.Value=value;	break;
 			case 7:	Cores[core].Voices[voice].VolumeR.Value=value;	break;
 
@@ -1214,29 +1214,55 @@ __forceinline void SPU2_FastWrite( u32 rmem, u16 value )
 			return;
 
 			case REG_P_MVOLL:
-				if (value & 0x8000) {  // +Lin/-Lin/+Exp/-Exp
-					Cores[core].MasterL.Mode=(value & 0xE000)/0x2000;
-					Cores[core].MasterL.Increment=(value & 0x3F) | ((value & 0x800)/0x10);
+			case REG_P_MVOLR:
+			{
+				V_Volume& thisvol = (omem==REG_P_MVOLL) ? Cores[core].MasterL : Cores[core].MasterR;
+
+				if( value & 0x8000 )	// +Lin/-Lin/+Exp/-Exp
+				{ 
+					thisvol.Mode = (value & 0xE000) / 0x2000;
+					thisvol.Increment = (value & 0x7F); // | ((value & 0x800)/0x10);
 				}
-				else {
-					Cores[core].MasterL.Mode=0;
-					Cores[core].MasterL.Increment=0;
-					Cores[core].MasterL.Value=value;
+				else
+				{
+					thisvol.Mode = 0;
+					thisvol.Increment = 0;
+
+					// Constant Volume mode (no slides or envelopes)
+					// Volumes range from 0x3fff to -0x4000.  Values below zero invert the waveform (unimplemented)
+					
+					s16 newval = value & 0x3fff;
+					if( value & 0x4000 )
+						newval = 0x3fff - newval;
+
+					thisvol.Value = newval<<1;
 				}
-				Cores[core].MasterL.Reg_VOL=value;
+				thisvol.Reg_VOL = value;
+			}
 			return;
 
-			case REG_P_MVOLR:
-				if (value & 0x8000) {  // +Lin/-Lin/+Exp/-Exp
-					Cores[core].MasterR.Mode=(value & 0xE000)/0x2000;
-					Cores[core].MasterR.Increment=(value & 0x3F) | ((value & 0x800)/0x10);
-				}
-				else {
-					Cores[core].MasterR.Mode=0;
-					Cores[core].MasterR.Increment=0;
-					Cores[core].MasterR.Value=value;
-				}
-				Cores[core].MasterR.Reg_VOL=value;
+			case REG_P_EVOLL:
+				Cores[core].FxL = ( value & 0x8000 ) ? -value : value;
+			return;
+
+			case REG_P_EVOLR:
+				Cores[core].FxR = ( value & 0x8000 ) ? -value : value;
+			return;
+			
+			case REG_P_AVOLL:
+				Cores[core].ExtL = ( value & 0x8000 ) ? -value : value;
+			return;
+
+			case REG_P_AVOLR:
+				Cores[core].ExtR = ( value & 0x8000 ) ? -value : value;
+			return;
+			
+			case REG_P_BVOLL:
+				Cores[core].InpL = ( value & 0x8000 ) ? -value : value;
+			return;
+
+			case REG_P_BVOLR:
+				Cores[core].InpR = ( value & 0x8000 ) ? -value : value;
 			return;
 
 			case REG_S_ADMAS:

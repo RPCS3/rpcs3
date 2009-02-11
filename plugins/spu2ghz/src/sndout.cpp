@@ -693,15 +693,12 @@ void SndUpdateLimitMode()
 
 s32 SndWrite(s32 ValL, s32 ValR)
 {
+	// Log final output to wavefile.
 	#ifndef PUBLIC
-	if(WaveLog() && wavedump_ok)
-	{
-		wavedump_write(SndScaleVol(ValL),SndScaleVol(ValR));
-	}
+	WaveDump::WriteCore( 1, CoreSrc_External, SndScaleVol(ValL), SndScaleVol(ValR) );
 	#endif
 
-	if(recording!=0)
-		RecordWrite(SndScaleVol(ValL),SndScaleVol(ValR));
+	RecordWrite(SndScaleVol(ValL),SndScaleVol(ValR));
  
 	if(mods[OutputModule] == &NullOut) // null output doesn't need buffering or stretching! :p
 		return 0;

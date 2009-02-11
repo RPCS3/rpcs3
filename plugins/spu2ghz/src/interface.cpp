@@ -180,14 +180,6 @@ EXPORT_C_(s32) SPU2init()
 
 	DMALogOpen();
 
-	if(WaveLog()) 
-	{
-		if(!wavedump_open())
-		{
-			SysMessage("Can't open '%s'.\nWave Log disabled.",WaveLogFileName);
-		}
-	}
-
 	for(v=0;v<16384;v++)
 	{
 		logvolume[v]=(s32)(s32)floor(log((double)(v+1))*3376.7);
@@ -236,6 +228,8 @@ EXPORT_C_(s32) SPU2open(void *pDsp)
 		spdif_init();
 
 		DspLoadLibrary(dspPlugin,dspPluginModule);
+		
+		WaveDump::Open();
 
 		return 0;
 	}
@@ -280,7 +274,7 @@ EXPORT_C_(void) SPU2shutdown()
 	fclose(el0);
 	fclose(el1);
 #endif
-	if(WaveLog() && wavedump_ok) wavedump_close();
+	WaveDump::Close();
 
 	DMALogClose();
 
@@ -452,18 +446,9 @@ EXPORT_C_(int) SPU2setupRecording(int start, void* pData)
 	if( disableFreezes ) return 0;
 
 	if(start==0)
-	{
-		//stop recording
 		RecordStop();
-		if(recording==0)
-			return 1;
-	}
 	else if(start==1)
-	{
-		//start recording
 		RecordStart();
-		if(recording!=0)
-			return 1;
-	}
+
 	return 0;
 }

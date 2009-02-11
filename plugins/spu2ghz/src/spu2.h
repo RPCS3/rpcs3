@@ -135,7 +135,7 @@ default: \
 #ifndef SAFE_DELETE_ARRAY
 #	define SAFE_DELETE_ARRAY(p)		{ if(p) { delete[] (p);   (p)=NULL; } }
 #endif
-#ifndef SAFE_DELETE
+#ifndef SAFE_DELETE_OBJ
 #	define SAFE_DELETE_OBJ(p)		{ if(p) { delete (p); (p)=NULL; } }
 #endif
 #ifndef SAFE_RELEASE

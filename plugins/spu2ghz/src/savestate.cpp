@@ -131,7 +131,7 @@ EXPORT_C_(s32) SPU2freeze(int mode, freezeData *data)
 			{
 				printf("\n*** SPU2Ghz Warning:\n");
 				printf("\tSavestate version is from an older version of this plugin.\n");
-				printf("\tAudio may not recover correctly.");
+				printf("\tAudio may not recover correctly.\n\n");
 
 				const PcmCacheEntry* pcmSrc = &spud->cacheData;
 				int blksLoaded=0;
