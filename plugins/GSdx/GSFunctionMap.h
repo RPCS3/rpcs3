@@ -40,21 +40,21 @@ struct GSRasterizerStats
 	}
 };
 
-template<class T> class GSFunctionMap
+template<class KEY, class VALUE> class GSFunctionMap
 {
 protected:
 	struct ActivePtr
 	{
 		UINT64 frame, frames;
 		__int64 ticks, pixels;
-		T f;
+		VALUE f;
 	};
 
-	CRBMap<DWORD, T> m_map;
-	CRBMap<DWORD, ActivePtr*> m_map_active;
+	CRBMap<KEY, VALUE> m_map;
+	CRBMap<KEY, ActivePtr*> m_map_active;
 	ActivePtr* m_active;
 
-	virtual T GetDefaultFunction(DWORD sel) = 0;
+	virtual VALUE GetDefaultFunction(KEY key) = 0;
 
 public:
 	GSFunctionMap() 
@@ -74,18 +74,18 @@ public:
 		m_map_active.RemoveAll();
 	}
 
-	void SetAt(DWORD sel, T f)
+	void SetAt(KEY key, VALUE f)
 	{
-		m_map.SetAt(sel, f);
+		m_map.SetAt(key, f);
 	}
 
-	T Lookup(DWORD sel)
+	VALUE Lookup(KEY key)
 	{
 		m_active = NULL;
 
-		if(!m_map_active.Lookup(sel, m_active))
+		if(!m_map_active.Lookup(key, m_active))
 		{
-			CRBMap<DWORD, T>::CPair* pair = m_map.Lookup(sel);
+			CRBMap<KEY, VALUE>::CPair* pair = m_map.Lookup(key);
 
 			ActivePtr* p = new ActivePtr();
 
@@ -93,9 +93,9 @@ public:
 
 			p->frame = (UINT64)-1;
 
-			p->f = pair ? pair->m_value : GetDefaultFunction(sel);
+			p->f = pair ? pair->m_value : GetDefaultFunction(key);
 
-			m_map_active.SetAt(sel, p);
+			m_map_active.SetAt(key, p);
 
 			m_active = p;
 		}
@@ -138,10 +138,10 @@ public:
 
 		while(pos)
 		{
-			DWORD sel;
+			KEY key;
 			ActivePtr* p;
 
-			m_map_active.GetNextAssoc(pos, sel, p);
+			m_map_active.GetNextAssoc(pos, key, p);
 
 			if(p->frames > 0)
 			{
@@ -150,7 +150,7 @@ public:
 				__int64 ppf = p->frames > 0 ? p->pixels / p->frames : 0;
 
 				printf("[%08x]%c %6.2f%% | %5.2f%% | f %4I64d | p %10I64d | tpp %4I64d | tpf %9I64d | ppf %7I64d\n", 
-					sel, !m_map.Lookup(sel) ? '*' : ' ',
+					key, !m_map.Lookup(key) ? '*' : ' ',
 					(float)(tpf * 10000 / 50000000) / 100, 
 					(float)(tpf * 10000 / ttpf) / 100, 
 					p->frames, p->pixels, 

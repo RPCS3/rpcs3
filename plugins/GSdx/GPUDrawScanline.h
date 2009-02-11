@@ -50,9 +50,9 @@ union GPUScanlineSelector
 		DWORD tfx:2; // 5
 	};
 
-	DWORD dw;
+	DWORD key;
 
-	operator DWORD() {return dw & 0xff;}
+	operator DWORD() {return key & 0xff;}
 };
 
 __declspec(align(16)) struct GPUScanlineEnvironment
@@ -87,28 +87,28 @@ class GPUDrawScanline : public GSAlignedClass<16>, public IDrawScanline
 
 	//
 
-	class GPUDrawScanlineMap : public GSFunctionMap<DrawScanlinePtr>
+	class GPUDrawScanlineMap : public GSFunctionMap<DWORD, DrawScanlinePtr>
 	{
 		DrawScanlinePtr m_default[256];
 
 	public:
 		GPUDrawScanlineMap();
 
-		DrawScanlinePtr GetDefaultFunction(DWORD dw);
+		DrawScanlinePtr GetDefaultFunction(DWORD key);
 	};
 	
 	GPUDrawScanlineMap m_ds;
 
 	//
 
-	class GPUSetupPrimMap : public GSFunctionMap<SetupPrimPtr>
+	class GPUSetupPrimMap : public GSFunctionMap<DWORD, SetupPrimPtr>
 	{
 		SetupPrimPtr m_default[2][2][2];
 
 	public:
 		GPUSetupPrimMap();
 
-		SetupPrimPtr GetDefaultFunction(DWORD dw);
+		SetupPrimPtr GetDefaultFunction(DWORD key);
 	};
 	
 	GPUSetupPrimMap m_sp;

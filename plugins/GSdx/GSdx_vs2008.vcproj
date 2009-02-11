@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="windows-1250"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="9,00"
+	Version="9.00"
 	Name="GSdx"
 	ProjectGUID="{18E42F6F-3A62-41EE-B42F-79366C4F1E95}"
 	RootNamespace="GSdx"
@@ -22,7 +22,7 @@
 		<Configuration
 			Name="Debug|Win32"
 			ConfigurationType="2"
-			InheritedPropertySheets="vsprops\common.vsprops;vsprops\debug.vsprops"
+			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\debug.vsprops"
 			UseOfMFC="1"
 			CharacterSet="2"
 			>
@@ -86,7 +86,7 @@
 		<Configuration
 			Name="Debug|x64"
 			ConfigurationType="2"
-			InheritedPropertySheets="vsprops\common.vsprops;vsprops\debug.vsprops"
+			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\debug.vsprops"
 			UseOfMFC="1"
 			CharacterSet="2"
 			>
@@ -150,7 +150,7 @@
 		<Configuration
 			Name="Release|Win32"
 			ConfigurationType="2"
-			InheritedPropertySheets="vsprops\common.vsprops;vsprops\release.vsprops"
+			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\release.vsprops"
 			UseOfMFC="1"
 			CharacterSet="2"
 			WholeProgramOptimization="1"
@@ -215,7 +215,7 @@
 		<Configuration
 			Name="Release|x64"
 			ConfigurationType="2"
-			InheritedPropertySheets="vsprops\common.vsprops;vsprops\release.vsprops"
+			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\release.vsprops"
 			UseOfMFC="1"
 			CharacterSet="2"
 			WholeProgramOptimization="1"
@@ -280,7 +280,7 @@
 		<Configuration
 			Name="Debug SSE2|Win32"
 			ConfigurationType="2"
-			InheritedPropertySheets="vsprops\common.vsprops;vsprops\debug.vsprops;vsprops\sse2.vsprops"
+			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\debug.vsprops;.\vsprops\sse2.vsprops"
 			UseOfMFC="1"
 			CharacterSet="2"
 			>
@@ -344,7 +344,7 @@
 		<Configuration
 			Name="Debug SSE2|x64"
 			ConfigurationType="2"
-			InheritedPropertySheets="vsprops\common.vsprops;vsprops\debug.vsprops"
+			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\debug.vsprops"
 			UseOfMFC="1"
 			CharacterSet="2"
 			WholeProgramOptimization="0"
@@ -407,7 +407,7 @@
 		<Configuration
 			Name="Release SSE2|Win32"
 			ConfigurationType="2"
-			InheritedPropertySheets="vsprops\common.vsprops;vsprops\release.vsprops;vsprops\sse2.vsprops"
+			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\release.vsprops;.\vsprops\sse2.vsprops"
 			UseOfMFC="1"
 			CharacterSet="2"
 			WholeProgramOptimization="1"
@@ -472,7 +472,7 @@
 		<Configuration
 			Name="Release SSE2|x64"
 			ConfigurationType="2"
-			InheritedPropertySheets="vsprops\common.vsprops;vsprops\release.vsprops"
+			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\release.vsprops"
 			UseOfMFC="1"
 			CharacterSet="2"
 			WholeProgramOptimization="1"
@@ -535,7 +535,7 @@
 		<Configuration
 			Name="Release SSSE3|Win32"
 			ConfigurationType="2"
-			InheritedPropertySheets="vsprops\common.vsprops;vsprops\release.vsprops;vsprops\ssse3.vsprops"
+			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\release.vsprops;.\vsprops\ssse3.vsprops"
 			UseOfMFC="1"
 			CharacterSet="2"
 			WholeProgramOptimization="1"
@@ -600,7 +600,7 @@
 		<Configuration
 			Name="Release SSSE3|x64"
 			ConfigurationType="2"
-			InheritedPropertySheets="vsprops\common.vsprops;vsprops\release.vsprops;vsprops\ssse3.vsprops"
+			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\release.vsprops;.\vsprops\ssse3.vsprops"
 			UseOfMFC="1"
 			CharacterSet="2"
 			WholeProgramOptimization="1"
@@ -663,7 +663,7 @@
 		<Configuration
 			Name="Debug SSSE3|Win32"
 			ConfigurationType="2"
-			InheritedPropertySheets="vsprops\common.vsprops;vsprops\debug.vsprops;vsprops\ssse3.vsprops"
+			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\debug.vsprops;.\vsprops\ssse3.vsprops"
 			UseOfMFC="1"
 			CharacterSet="2"
 			>
@@ -727,7 +727,7 @@
 		<Configuration
 			Name="Debug SSSE3|x64"
 			ConfigurationType="2"
-			InheritedPropertySheets="vsprops\common.vsprops;vsprops\debug.vsprops;vsprops\ssse3.vsprops"
+			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\debug.vsprops;.\vsprops\ssse3.vsprops"
 			UseOfMFC="1"
 			CharacterSet="2"
 			>
@@ -789,7 +789,7 @@
 		<Configuration
 			Name="Debug SSE4|Win32"
 			ConfigurationType="2"
-			InheritedPropertySheets="vsprops\common.vsprops;vsprops\debug.vsprops;vsprops\sse4.vsprops"
+			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\debug.vsprops;.\vsprops\sse4.vsprops"
 			UseOfMFC="1"
 			CharacterSet="2"
 			>
@@ -853,7 +853,7 @@
 		<Configuration
 			Name="Debug SSE4|x64"
 			ConfigurationType="2"
-			InheritedPropertySheets="vsprops\common.vsprops;vsprops\debug.vsprops;vsprops\sse4.vsprops"
+			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\debug.vsprops;.\vsprops\sse4.vsprops"
 			UseOfMFC="1"
 			CharacterSet="2"
 			>
@@ -916,7 +916,7 @@
 		<Configuration
 			Name="Release SSE4|Win32"
 			ConfigurationType="2"
-			InheritedPropertySheets="vsprops\common.vsprops;vsprops\release.vsprops;vsprops\sse4.vsprops"
+			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\release.vsprops;.\vsprops\sse4.vsprops"
 			UseOfMFC="1"
 			CharacterSet="2"
 			WholeProgramOptimization="1"
@@ -981,7 +981,7 @@
 		<Configuration
 			Name="Release SSE4|x64"
 			ConfigurationType="2"
-			InheritedPropertySheets="vsprops\common.vsprops;vsprops\release.vsprops;vsprops\sse4.vsprops"
+			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\release.vsprops;.\vsprops\sse4.vsprops"
 			UseOfMFC="1"
 			CharacterSet="2"
 			WholeProgramOptimization="1"
@@ -1157,6 +1157,10 @@
 			</File>
 			<File
 				RelativePath=".\GSDrawScanline.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\GSDrawScanlineCodeGenerator.cpp"
 				>
 			</File>
 			<File
@@ -1670,6 +1674,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\GSDrawScanlineCodeGenerator.h"
+				>
+			</File>
+			<File
 				RelativePath=".\GSDump.h"
 				>
 			</File>
@@ -1715,6 +1723,10 @@
 			</File>
 			<File
 				RelativePath=".\GSRendererSW.h"
+				>
+			</File>
+			<File
+				RelativePath=".\GSScanlineEnvironment.h"
 				>
 			</File>
 			<File
@@ -5041,6 +5053,26 @@
 			</File>
 			<File
 				RelativePath=".\baseclasses\wxutil.h"
+				>
+			</File>
+		</Filter>
+		<Filter
+			Name="Xbyak"
+			>
+			<File
+				RelativePath=".\xbyak\xbyak.h"
+				>
+			</File>
+			<File
+				RelativePath=".\xbyak\xbyak_bin2hex.h"
+				>
+			</File>
+			<File
+				RelativePath=".\xbyak\xbyak_mnemonic.h"
+				>
+			</File>
+			<File
+				RelativePath=".\xbyak\xbyak_util.h"
 				>
 			</File>
 		</Filter>

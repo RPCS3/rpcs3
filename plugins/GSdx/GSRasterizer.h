@@ -54,6 +54,7 @@ public:
 	typedef void (IDrawScanline::*DrawScanlinePtr)(int top, int left, int right, const GSVertexSW& v);
 	typedef void (IDrawScanline::*DrawSolidRectPtr)(const GSVector4i& r, const GSVertexSW& v);
 	typedef void (IDrawScanline::*SetupPrimPtr)(const GSVertexSW* vertices, const GSVertexSW& dscan);
+	typedef void (*DrawScanlineStaticPtr)(int top, int left, int right, const GSVertexSW& v);
 
 	struct Functions
 	{

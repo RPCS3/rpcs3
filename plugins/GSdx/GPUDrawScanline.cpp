@@ -871,11 +871,11 @@ GPUDrawScanline::GPUDrawScanlineMap::GPUDrawScanlineMap()
 	#endif
 }
 
-IDrawScanline::DrawScanlinePtr GPUDrawScanline::GPUDrawScanlineMap::GetDefaultFunction(DWORD dw)
+IDrawScanline::DrawScanlinePtr GPUDrawScanline::GPUDrawScanlineMap::GetDefaultFunction(DWORD key)
 {
 	GPUScanlineSelector sel;
 
-	sel.dw = dw;
+	sel.key = key;
 
 	return m_default[sel];
 }
@@ -899,11 +899,11 @@ GPUDrawScanline::GPUSetupPrimMap::GPUSetupPrimMap()
 	InitSP_SPRITE(1);
 }
 
-IDrawScanline::SetupPrimPtr GPUDrawScanline::GPUSetupPrimMap::GetDefaultFunction(DWORD dw)
+IDrawScanline::SetupPrimPtr GPUDrawScanline::GPUSetupPrimMap::GetDefaultFunction(DWORD key)
 {
-	DWORD sprite = (dw >> 0) & 1;
-	DWORD tme = (dw >> 1) & 1;
-	DWORD iip = (dw >> 2) & 1;
+	DWORD sprite = (key >> 0) & 1;
+	DWORD tme = (key >> 1) & 1;
+	DWORD iip = (key >> 2) & 1;
 
 	return m_default[sprite][tme][iip];
 }

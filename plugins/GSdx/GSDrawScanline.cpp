@@ -32,6 +32,12 @@ GSDrawScanline::GSDrawScanline(GSState* state, int id)
 
 GSDrawScanline::~GSDrawScanline()
 {
+	POSITION pos = m_dscg.GetHeadPosition();
+
+	while(pos)
+	{
+		delete m_dscg.GetNextValue(pos);
+	}
 }
 
 void GSDrawScanline::BeginDraw(const GSRasterizerData* data, Functions* f)
@@ -60,6 +66,7 @@ void GSDrawScanline::BeginDraw(const GSRasterizerData* data, Functions* f)
 	m_env.afix2 = m_env.afix.yywwlh().sll16(7);
 	m_env.frb = GSVector4i((int)env.FOGCOL.ai32[0] & 0x00ff00ff);
 	m_env.fga = GSVector4i((int)(env.FOGCOL.ai32[0] >> 8) & 0x00ff00ff);
+	m_env.dimx = env.dimx;
 
 	if(m_env.sel.fpsm == 1)
 	{
@@ -163,7 +170,7 @@ void GSDrawScanline::BeginDraw(const GSRasterizerData* data, Functions* f)
 
 	//
 
-	f->sl = m_ds.Lookup(m_env.sel);
+	f->sl = (DrawScanlinePtr)&GSDrawScanline::DrawScanline; // m_ds.Lookup(m_env.sel);
 
 	//
 
@@ -186,16 +193,31 @@ void GSDrawScanline::BeginDraw(const GSRasterizerData* data, Functions* f)
 	}
 
 	f->sp = m_sp.Lookup(sel);
+
+	//
+
+	GSDrawScanlineCodeGenerator* cg = NULL;
+
+	if(!m_dscg.Lookup(m_env.sel, cg))
+	{
+		cg = new GSDrawScanlineCodeGenerator(m_env);
+
+		m_dscg.SetAt(m_env.sel, cg);
+	}
+
+	m_dsf = (DrawScanlineStaticPtr)cg->getCode();
 }
 
 void GSDrawScanline::EndDraw(const GSRasterizerStats& stats)
 {
-	m_ds.UpdateStats(stats, m_state->m_perfmon.GetFrame());
+	// m_ds.UpdateStats(stats, m_state->m_perfmon.GetFrame());
 }
 
 template<DWORD zbe, DWORD fge, DWORD tme, DWORD fst, DWORD iip>
 void GSDrawScanline::SetupPrim(const GSVertexSW* vertices, const GSVertexSW& dscan)
 {
+	// TODO: clean up unused parts
+
 	// p
 
 	GSVector4 p = dscan.p;
@@ -311,47 +333,28 @@ void GSDrawScanline::SetupPrim(const GSVertexSW* vertices, const GSVertexSW& dsc
 	}
 	else
 	{
-		GSVector4i rgba = GSVector4i(vertices[0].c);
+		GSVector4i c = GSVector4i(vertices[0].c);
 		
-		GSVector4i rbga = rgba.upl16(rgba.zwxy());
+		c = c.upl16(c.zwxy());
 
 		if(tme == 0)
 		{
-			rbga = rbga.srl16(7);
-
-			DWORD abe = m_env.sel.abe & 0x3f; // a, b, c
-
-			DWORD abea = m_env.sel.abea;
-			DWORD abeb = m_env.sel.abeb;
-			DWORD abec = m_env.sel.abec;
-			DWORD abed = m_env.sel.abed;
-
-			if(fge == 0 && abe != 0x3f && !(abe & 0x15) && abea != abeb) // 0x15 = 010101b => a, b, c != 1
-			{
-				GSVector4i c[4];
-
-				c[0] = rbga;
-				c[1] = rgba.zzzzh().zzzz();
-				c[2] = GSVector4i::zero();
-				c[3] = m_env.afix2;
-
-				GSVector4i cc = GSVector4i::lerp16<1>(c[abea], c[abeb], c[abec + 1]);
-
-				if(abed == 0)
-				{
-					cc = cc.add16(c[0]);
-				}
-
-				m_env.c2.rb = cc.xxxx();
-				m_env.c2.ga = cc.zzzz().mix16(c[1].srl16(7));
-			}
+			c = c.srl16(7);
 		}
 
-		m_env.c.rb = rbga.xxxx();
-		m_env.c.ga = rbga.zzzz();
+		m_env.c.rb = c.xxxx();
+		m_env.c.ga = c.zzzz();
 	}
 }
 
+void GSDrawScanline::DrawScanline(int top, int left, int right, const GSVertexSW& v)
+{
+	// TODO: call this directly from rasterizer
+
+	m_dsf(top, left, right, v);
+}
+
+/*
 GSVector4i GSDrawScanline::Wrap(const GSVector4i& t)
 {
 	GSVector4i clamp = t.sat_i16(m_env.t.min, m_env.t.max);
@@ -1133,7 +1136,7 @@ void GSDrawScanline::DrawScanlineEx(int top, int left, int right, const GSVertex
 
 				GSVector4i rb, ga;
 
-				if(tfx == TFX_NONE && fge == 0 && abea != 1 && abeb != 1 && abec != 1 && abea != abeb)
+				if(!iip && tfx == TFX_NONE && !fge && abea != 1 && abeb != 1 && abec != 1 && abea != abeb)
 				{
 					c[0] = m_env.c2.rb;
 					c[1] = m_env.c2.ga;
@@ -1236,15 +1239,9 @@ void GSDrawScanline::DrawScanlineEx(int top, int left, int right, const GSVertex
 		}
 	}
 }
-
+*/
 void GSDrawScanline::DrawSolidRect(const GSVector4i& r, const GSVertexSW& v)
 {
-/*
-static FILE* s_fp = NULL;
-if(!s_fp) s_fp = fopen("c:\\log2.txt", "w");
-__int64 start = __rdtsc();
-int size = (r.z - r.x) * (r.w - r.y);
-*/
 	ASSERT(r.y >= 0);
 	ASSERT(r.w >= 0);
 
@@ -1318,10 +1315,6 @@ int size = (r.z - r.x) * (r.w - r.y);
 			}
 		}
 	}
-/*
-__int64 stop = __rdtsc();
-fprintf(s_fp, "%I64d => %I64d = %I64d (%d,%d - %d,%d) %d\n", start, stop, stop - start, r.x, r.y, r.z, r.w, size);
-*/
 }
 
 template<class T, bool masked> 
@@ -1396,7 +1389,7 @@ void GSDrawScanline::FillBlock(const GSVector4i* row, int* col, const GSVector4i
 		}
 	}
 }
-
+/*
 //
 
 GSDrawScanline::GSDrawScanlineMap::GSDrawScanlineMap()
@@ -2736,11 +2729,11 @@ GSDrawScanline::GSDrawScanlineMap::GSDrawScanlineMap()
 	#endif
 }
 
-IDrawScanline::DrawScanlinePtr GSDrawScanline::GSDrawScanlineMap::GetDefaultFunction(DWORD dw)
+IDrawScanline::DrawScanlinePtr GSDrawScanline::GSDrawScanlineMap::GetDefaultFunction(DWORD key)
 {
 	GSScanlineSelector sel;
 
-	sel.dw = dw;
+	sel.key = key;
 
 	return m_default[sel.fpsm][sel.zpsm][sel.ztst][sel.iip];
 }
@@ -2755,19 +2748,19 @@ void GSDrawScanline::GSDrawScanlineMap::PrintStats()
 
 		while(pos)
 		{
-			DWORD dw;
+			DWORD key;
 			ActivePtr* p;
 			
-			m_map_active.GetNextAssoc(pos, dw, p);
+			m_map_active.GetNextAssoc(pos, key, p);
 
-			if(m_map.Lookup(dw))
+			if(m_map.Lookup(key))
 			{
 				continue;
 			}
 
 			GSScanlineSelector sel;
 
-			sel.dw = dw;
+			sel.key = key;
 
 			if(p->frames > 30 && !sel.IsSolidRect())
 			{
@@ -2775,7 +2768,7 @@ void GSDrawScanline::GSDrawScanlineMap::PrintStats()
 
 				if(tpf >= 500)
 				{
-					_ftprintf(fp, _T("InitDS_Sel(0x%08x); // %6.2f%%\n"), sel.dw, (float)tpf / 100);
+					_ftprintf(fp, _T("InitDS_Sel(0x%08x); // %6.2f%%\n"), (DWORD)sel, (float)tpf / 100);
 				}
 			}
 		}
@@ -2785,7 +2778,7 @@ void GSDrawScanline::GSDrawScanlineMap::PrintStats()
 }
 
 //
-
+*/
 GSDrawScanline::GSSetupPrimMap::GSSetupPrimMap()
 {
 	#define InitSP_IIP(zbe, fge, tme, fst, iip) \
@@ -2811,13 +2804,13 @@ GSDrawScanline::GSSetupPrimMap::GSSetupPrimMap()
 	InitSP_ZBE(1);
 }
 
-IDrawScanline::SetupPrimPtr GSDrawScanline::GSSetupPrimMap::GetDefaultFunction(DWORD dw)
+IDrawScanline::SetupPrimPtr GSDrawScanline::GSSetupPrimMap::GetDefaultFunction(DWORD key)
 {
-	DWORD zbe = (dw >> 0) & 1;
-	DWORD fge = (dw >> 1) & 1;
-	DWORD tme = (dw >> 2) & 1;
-	DWORD fst = (dw >> 3) & 1;
-	DWORD iip = (dw >> 4) & 1;
+	DWORD zbe = (key >> 0) & 1;
+	DWORD fge = (key >> 1) & 1;
+	DWORD tme = (key >> 2) & 1;
+	DWORD fst = (key >> 3) & 1;
+	DWORD iip = (key >> 4) & 1;
 
 	return m_default[zbe][fge][tme][fst][iip];
 }
@@ -2831,7 +2824,7 @@ const GSVector4 GSDrawScanline::m_shift[4] =
 	GSVector4(-2.0f, -1.0f, 0.0f, 1.0f),
 	GSVector4(-3.0f, -2.0f, -1.0f, 0.0f),
 };
-
+/*
 const GSVector4i GSDrawScanline::m_test[8] = 
 {
 	GSVector4i::zero(),
@@ -2843,3 +2836,4 @@ const GSVector4i GSDrawScanline::m_test[8] =
 	GSVector4i(0x00000000, 0x00000000, 0x00000000, 0xffffffff),
 	GSVector4i::zero(),
 };
+*/

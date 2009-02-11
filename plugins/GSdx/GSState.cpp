@@ -798,12 +798,21 @@ template<int i> void GSState::GIFRegHandlerALPHA(GIFReg* r)
 
 void GSState::GIFRegHandlerDIMX(GIFReg* r)
 {
+	bool update = false;
+
 	if(!(m_env.DIMX == (GSVector4i)r->DIMX).alltrue())
 	{
 		Flush();
+
+		update = true;
 	}
 
 	m_env.DIMX = (GSVector4i)r->DIMX;
+
+	if(update)
+	{
+		m_env.UpdateDIMX();
+	}
 }
 
 void GSState::GIFRegHandlerDTHE(GIFReg* r)
@@ -1572,6 +1581,8 @@ int GSState::Defrost(const GSFreezeData* fd)
 	m_context = &m_env.CTXT[PRIM->CTXT];
 
 	UpdateVertexKick();
+
+	m_env.UpdateDIMX();
 
 	m_env.CTXT[0].UpdateScissor();
 	m_env.CTXT[1].UpdateScissor();

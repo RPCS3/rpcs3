@@ -256,7 +256,7 @@ protected:
 		p.zbo = m_mem.GetOffset(context->ZBUF.Block(), context->FRAME.FBW, context->ZBUF.PSM);
 		p.fzbo = m_mem.GetOffset4(context->FRAME, context->ZBUF);
 
-		p.sel.dw = 0;
+		p.sel.key = 0;
 
 		p.sel.fpsm = 3;
 		p.sel.zpsm = 3;
@@ -291,6 +291,9 @@ protected:
 		bool fwrite = p.fm != 0xffffffff;
 		bool ftest = p.sel.atst != ATST_ALWAYS || context->TEST.DATE && context->FRAME.PSM != PSM_PSMCT24;
 
+		p.sel.fwrite = fwrite;
+		p.sel.ftest = ftest;
+
 		if(fwrite || ftest)
 		{
 			p.sel.fpsm = GSUtil::EncodePSM(context->FRAME.PSM);
@@ -307,6 +310,8 @@ protected:
 				p.sel.fst = PRIM->FST;
 				p.sel.ltf = context->TEX1.IsLinear();
 				p.sel.tlu = GSLocalMemory::m_psm[context->TEX0.PSM].pal > 0;
+				p.sel.wms = ((context->CLAMP.WMS + 1) >> 1) & 1;
+				p.sel.wmt = ((context->CLAMP.WMT + 1) >> 1) & 1;
 
 				if(p.sel.iip == 0 && p.sel.tfx == TFX_MODULATE && p.sel.tcc)
 				{
@@ -466,10 +471,17 @@ protected:
 			{
 				p.sel.rfb = 1;
 			}
+
+			p.sel.colclamp = env.COLCLAMP.CLAMP;
+			p.sel.fba = context->FBA.FBA;
+			p.sel.dthe = env.DTHE.DTHE;
 		}
 
 		bool zwrite = p.zm != 0xffffffff;
 		bool ztest = context->TEST.ZTE && context->TEST.ZTST > 1;
+
+		p.sel.zwrite = zwrite;
+		p.sel.ztest = ztest;
 
 		if(zwrite || ztest)
 		{

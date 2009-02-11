@@ -125,7 +125,7 @@ protected:
 
 		GPUScanlineParam p;
 
-		p.sel.dw = 0;
+		p.sel.key = 0;
 		p.sel.iip = env.PRIM.IIP;
 		p.sel.me = env.STATUS.ME;
 		p.sel.abe = env.PRIM.ABE;

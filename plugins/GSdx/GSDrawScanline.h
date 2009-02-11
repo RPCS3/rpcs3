@@ -23,148 +23,59 @@
 
 #include "GSState.h"
 #include "GSRasterizer.h"
+#include "GSScanlineEnvironment.h"
+#include "GSDrawScanlineCodeGenerator.h"
 #include "GSAlignedClass.h"
-
-union GSScanlineSelector
-{
-	struct
-	{
-		DWORD fpsm:2; // 0
-		DWORD zpsm:2; // 2
-		DWORD ztst:2; // 4 (0: off, 1: write, 2: test (ge), 3: test (g))
-		DWORD atst:3; // 6
-		DWORD afail:2; // 9
-		DWORD iip:1; // 11
-		DWORD tfx:3; // 12
-		DWORD tcc:1; // 15
-		DWORD fst:1; // 16
-		DWORD ltf:1; // 17
-		DWORD tlu:1; // 18
-		DWORD fge:1; // 19
-		DWORD date:1; // 20
-		DWORD abea:2; // 21
-		DWORD abeb:2; // 23
-		DWORD abec:2; // 25
-		DWORD abed:2; // 27
-		DWORD pabe:1; // 29
-		DWORD rfb:1; // 30
-		DWORD sprite:1; // 31
-	};
-
-	struct
-	{
-		DWORD _pad1:21;
-		DWORD abe:8;
-		DWORD _pad2:3;
-	};
-
-	DWORD dw;
-
-	operator DWORD() {return dw;}
-
-	bool IsSolidRect()
-	{
-		return sprite
-			&& iip == 0
-			&& tfx == TFX_NONE
-			&& abe == 255 
-			&& ztst <= 1 
-			&& atst <= 1
-			&& date == 0
-			&& fge == 0;
-	}
-};
-
-__declspec(align(16)) struct GSScanlineEnvironment
-{
-	GSScanlineSelector sel;
-
-	void* vm;
-	const void* tex;
-	const DWORD* clut;
-	DWORD tw;
-
-	GSVector4i* fbr;
-	GSVector4i* zbr;
-	int** fbc;
-	int** zbc;
-	GSVector2i* fzbr;
-	GSVector2i* fzbc;
-
-	GSVector4i fm, zm;
-	struct {GSVector4i min, max, mask;} t; // [u] x 4 [v] x 4
-	GSVector4i datm;
-	GSVector4i colclamp;
-	GSVector4i fba;
-	GSVector4i aref;
-	GSVector4i afix, afix2;
-	GSVector4i frb, fga;
-
-	struct {GSVector4 z, s, t, q; GSVector4i rb, ga, f, si, ti, _pad[3];} d[4];
-	struct {GSVector4 z, stq; GSVector4i c, f, st;} d4;
-	struct {GSVector4i rb, ga;} c;
-	struct {GSVector4i z, f;} p;
-	struct {GSVector4i rb, ga;} c2;
-};
-
-__declspec(align(16)) struct GSScanlineParam
-{
-	GSScanlineSelector sel;
-
-	void* vm;
-	const void* tex;
-	const DWORD* clut;
-	DWORD tw;
-
-	GSLocalMemory::Offset* fbo;
-	GSLocalMemory::Offset* zbo;
-	GSLocalMemory::Offset4* fzbo;
-
-	DWORD fm, zm;
-};
 
 class GSDrawScanline : public GSAlignedClass<16>, public IDrawScanline
 {
 	GSScanlineEnvironment m_env;
 
 	static const GSVector4 m_shift[4];
-	static const GSVector4i m_test[8];
+/*	static const GSVector4i m_test[8];
 
 	//
 
-	class GSDrawScanlineMap : public GSFunctionMap<DrawScanlinePtr>
+	class GSDrawScanlineMap : public GSFunctionMap<DWORD, DrawScanlinePtr>
 	{
 		DrawScanlinePtr m_default[4][4][4][2];
 
 	public:
 		GSDrawScanlineMap();
 
-		DrawScanlinePtr GetDefaultFunction(DWORD dw);
+		DrawScanlinePtr GetDefaultFunction(DWORD key);
 
 		void PrintStats();
 	};
 	
 	GSDrawScanlineMap m_ds;
-
+*/
 	//
 
-	class GSSetupPrimMap : public GSFunctionMap<SetupPrimPtr>
+	class GSSetupPrimMap : public GSFunctionMap<DWORD, SetupPrimPtr>
 	{
 		SetupPrimPtr m_default[2][2][2][2][2];
 
 	public:
 		GSSetupPrimMap();
 
-		SetupPrimPtr GetDefaultFunction(DWORD dw);
+		SetupPrimPtr GetDefaultFunction(DWORD key);
 	};
 	
 	GSSetupPrimMap m_sp;
 
-	//
-
 	template<DWORD zbe, DWORD fge, DWORD tme, DWORD fst, DWORD iip>
 	void SetupPrim(const GSVertexSW* vertices, const GSVertexSW& dscan);
 
+	//
+
+	CRBMap<UINT64, GSDrawScanlineCodeGenerator*> m_dscg;
+
+	DrawScanlineStaticPtr m_dsf;
+
+	void DrawScanline(int top, int left, int right, const GSVertexSW& v);
+
+/*
 	//
 
 	__forceinline GSVector4i Wrap(const GSVector4i& t);
@@ -187,7 +98,7 @@ class GSDrawScanline : public GSAlignedClass<16>, public IDrawScanline
 
 	template<DWORD sel>
 	void DrawScanlineEx(int top, int left, int right, const GSVertexSW& v);
-
+*/
 	//
 
 	void DrawSolidRect(const GSVector4i& r, const GSVertexSW& v);
@@ -213,5 +124,5 @@ public:
 
 	void BeginDraw(const GSRasterizerData* data, Functions* f);
 	void EndDraw(const GSRasterizerStats& stats);
-	void PrintStats() {m_ds.PrintStats();}
+	void PrintStats() {/*m_ds.PrintStats();*/}
 };
