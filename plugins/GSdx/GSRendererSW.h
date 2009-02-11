@@ -446,6 +446,7 @@ protected:
 			if(context->FRAME.PSM != PSM_PSMCT24)
 			{
 				p.sel.date = context->TEST.DATE;
+				p.sel.datm = context->TEST.DATM;
 			}
 
 			if(PRIM->ABE)

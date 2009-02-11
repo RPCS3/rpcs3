@@ -55,9 +55,10 @@ union GSScanlineSelector
 		DWORD ztest:1; // 35
 		DWORD wms:1; // 36 (0: repeat, 1: clamp)
 		DWORD wmt:1; // 37
-		DWORD colclamp:1; // 38
-		DWORD fba:1; // 39
-		DWORD dthe:1; // 40
+		DWORD datm:1; // 38
+		DWORD colclamp:1; // 39
+		DWORD fba:1; // 40
+		DWORD dthe:1; // 41
 	};
 
 	struct
@@ -128,7 +129,7 @@ __declspec(align(16)) struct GSScanlineEnvironment
 	GSVector4i* dimx;
 
 	GSVector4i fm, zm;
-	struct {GSVector4i min, max, mask;} t; // [u] x 4 [v] x 4
+	struct {GSVector4i min, max, mask, invmask;} t; // [u] x 4 [v] x 4
 	GSVector4i datm;
 	GSVector4i colclamp;
 	GSVector4i fba;

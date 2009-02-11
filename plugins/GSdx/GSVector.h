@@ -327,7 +327,15 @@ public:
 
 	GSVector4i blend8(const GSVector4i& a, const GSVector4i& mask) const
 	{
+		#if _M_SSE >= 0x401
+
 		return GSVector4i(_mm_blendv_epi8(m, a, mask));
+
+		#else
+
+		return GSVector4i(_mm_or_si128(_mm_andnot_si128(mask, m), _mm_and_si128(mask, a)));
+
+		#endif
 	}
 
 	#if _M_SSE >= 0x401
@@ -2310,7 +2318,15 @@ public:
 
 	GSVector4 blend8(const GSVector4& a, const GSVector4& mask)  const
 	{
+		#if _M_SSE >= 0x401
+
 		return GSVector4(_mm_blendv_ps(m, a, mask));
+
+		#else
+
+		return GSVector4(_mm_or_ps(_mm_andnot_ps(mask, m), _mm_and_ps(mask, a)));
+
+		#endif
 	}
 
 	GSVector4 upl(const GSVector4& a) const

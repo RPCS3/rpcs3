@@ -103,11 +103,6 @@
 
 #else
 
-	// not an equal replacement for sse4's blend but for our needs it is ok
-
-	#define _mm_blendv_ps(a, b, mask) _mm_or_ps(_mm_andnot_ps(mask, a), _mm_and_ps(mask, b))
-	#define _mm_blendv_epi8(a, b, mask) _mm_or_si128(_mm_andnot_si128(mask, a), _mm_and_si128(mask, b))
-
 	__forceinline __m128 _mm_round_ps(__m128 x)
 	{
 		__m128 t = _mm_or_ps(_mm_and_ps(ps_80000000, x), ps_4b000000);

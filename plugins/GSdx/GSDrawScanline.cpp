@@ -166,6 +166,7 @@ void GSDrawScanline::BeginDraw(const GSRasterizerData* data, Functions* f)
 		m_env.t.min = m_env.t.min.xxxxlh();
 		m_env.t.max = m_env.t.max.xxxxlh();
 		m_env.t.mask = m_env.t.mask.xxzz();
+		m_env.t.invmask = ~m_env.t.mask;
 	}
 
 	//
