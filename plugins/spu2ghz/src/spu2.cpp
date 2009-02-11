@@ -180,18 +180,18 @@ void CoreReset(int c)
 	Cores[c].MasterL.Value=0x7FFF;
 	Cores[c].MasterR.Reg_VOL=0x3FFF;
 	Cores[c].MasterR.Value=0x7FFF;
-	Cores[c].ExtWetR=1;
-	Cores[c].ExtWetL=1;
-	Cores[c].ExtDryR=1;
-	Cores[c].ExtDryL=1;
-	Cores[c].InpWetR=1;
-	Cores[c].InpWetL=1;
-	Cores[c].InpDryR=1;
-	Cores[c].InpDryL=1;
-	Cores[c].SndWetR=1;
-	Cores[c].SndWetL=1;
-	Cores[c].SndDryR=1;
-	Cores[c].SndDryL=1;
+	Cores[c].ExtWetR = -1;
+	Cores[c].ExtWetL = -1;
+	Cores[c].ExtDryR = -1;
+	Cores[c].ExtDryL = -1;
+	Cores[c].InpWetR = -1;
+	Cores[c].InpWetL = -1;
+	Cores[c].InpDryR = -1;
+	Cores[c].InpDryL = -1;
+	Cores[c].SndWetR = -1;
+	Cores[c].SndWetL = -1;
+	Cores[c].SndDryR = -1;
+	Cores[c].SndDryL = -1;
 	Cores[c].Regs.MMIX = 0xFFCF;
 	Cores[c].Regs.VMIXL = 0xFFFFFF;
 	Cores[c].Regs.VMIXR = 0xFFFFFF;
@@ -209,10 +209,10 @@ void CoreReset(int c)
 		Cores[c].Voices[v].ADSR.Value=0;
 		Cores[c].Voices[v].ADSR.Phase=0;
 		Cores[c].Voices[v].Pitch=0x3FFF;
-		Cores[c].Voices[v].DryL=1;
-		Cores[c].Voices[v].DryR=1;
-		Cores[c].Voices[v].WetL=1;
-		Cores[c].Voices[v].WetR=1;
+		Cores[c].Voices[v].DryL = -1;
+		Cores[c].Voices[v].DryR = -1;
+		Cores[c].Voices[v].WetL = -1;
+		Cores[c].Voices[v].WetR = -1;
 		Cores[c].Voices[v].NextA=2800;
 		Cores[c].Voices[v].StartA=2800;
 		Cores[c].Voices[v].LoopStartA=2800;
@@ -1111,6 +1111,9 @@ __forceinline void SPU2_FastWrite( u32 rmem, u16 value )
 			}
 			return;
 
+#define vx_SetSomeBits( varname, start, done ) \
+	{ for (uint vc=start, vx=1;vc<done;vc++) { Cores[core].Voices[vc].varname = (value & vx) ? -1 : 0; vx<<=1; } }
+
 			case REG_S_PMON:
 				vx=2; for (vc=1;vc<16;vc++) { Cores[core].Voices[vc].Modulated=(s8)((value & vx)/vx); vx<<=1; }
 				Cores[core].Regs.PMON = (Cores[core].Regs.PMON & 0xFFFF0000) | value;
@@ -1132,60 +1135,60 @@ __forceinline void SPU2_FastWrite( u32 rmem, u16 value )
 			return;
 
 			case REG_S_VMIXL:
-				vx=1; for (vc=0;vc<16;vc++) { Cores[core].Voices[vc].DryL=(s8)((value & vx)/vx); vx<<=1; }
+				vx_SetSomeBits( DryL, 0, 16 );
 				Cores[core].Regs.VMIXL = (Cores[core].Regs.VMIXL & 0xFFFF0000) | value;
 			return;
 
 			case (REG_S_VMIXL + 2):
-				vx=1; for (vc=16;vc<24;vc++) { Cores[core].Voices[vc].DryL=(s8)((value & vx)/vx); vx<<=1; }
+				vx_SetSomeBits( DryL, 16, 24 );
 				Cores[core].Regs.VMIXL = (Cores[core].Regs.VMIXL & 0xFFFF) | (value << 16);
 			return;
 
 			case REG_S_VMIXEL:
-				vx=1; for (vc=0;vc<16;vc++) { Cores[core].Voices[vc].WetL=(s8)((value & vx)/vx); vx<<=1; }
+				vx_SetSomeBits( WetL, 0, 16 );
 				Cores[core].Regs.VMIXEL = (Cores[core].Regs.VMIXEL & 0xFFFF0000) | value;
 			return;
 
 			case (REG_S_VMIXEL + 2):
-				vx=1; for (vc=16;vc<24;vc++) { Cores[core].Voices[vc].WetL=(s8)((value & vx)/vx); vx<<=1; }
+				vx_SetSomeBits( WetL, 16, 24 );
 				Cores[core].Regs.VMIXEL = (Cores[core].Regs.VMIXEL & 0xFFFF) | (value << 16);
 			return;
 
 			case REG_S_VMIXR:
-				vx=1; for (vc=0;vc<16;vc++) { Cores[core].Voices[vc].DryR=(s8)((value & vx)/vx); vx<<=1; }
+				vx_SetSomeBits( DryR, 0, 16 );
 				Cores[core].Regs.VMIXR = (Cores[core].Regs.VMIXR & 0xFFFF0000) | value;
 			return;
 
 			case (REG_S_VMIXR + 2):
-				vx=1; for (vc=16;vc<24;vc++) { Cores[core].Voices[vc].DryR=(s8)((value & vx)/vx); vx<<=1; }
+				vx_SetSomeBits( DryR, 16, 24 );
 				Cores[core].Regs.VMIXR = (Cores[core].Regs.VMIXR & 0xFFFF) | (value << 16);
 			return;
 
 			case REG_S_VMIXER:
-				vx=1; for (vc=0;vc<16;vc++) { Cores[core].Voices[vc].WetR=(s8)((value & vx)/vx); vx<<=1; }
+				vx_SetSomeBits( WetR, 0, 16 );
 				Cores[core].Regs.VMIXER = (Cores[core].Regs.VMIXER & 0xFFFF0000) | value;
 			return;
 
 			case (REG_S_VMIXER + 2):
-				vx=1; for (vc=16;vc<24;vc++) { Cores[core].Voices[vc].WetR=(s8)((value & vx)/vx); vx<<=1; }
+				vx_SetSomeBits( WetR, 16, 24 );
 				Cores[core].Regs.VMIXER = (Cores[core].Regs.VMIXER & 0xFFFF) | (value << 16);
 			return;
 
 			case REG_P_MMIX:
 				vx=value;
 				if (core == 0) vx&=0xFF0;
-				Cores[core].ExtWetR=(vx & 0x001);
-				Cores[core].ExtWetL=(vx & 0x002)>>1;
-				Cores[core].ExtDryR=(vx & 0x004)>>2;
-				Cores[core].ExtDryL=(vx & 0x008)>>3;
-				Cores[core].InpWetR=(vx & 0x010)>>4;
-				Cores[core].InpWetL=(vx & 0x020)>>5;
-				Cores[core].InpDryR=(vx & 0x040)>>6;
-				Cores[core].InpDryL=(vx & 0x080)>>7;
-				Cores[core].SndWetR=(vx & 0x100)>>8;
-				Cores[core].SndWetL=(vx & 0x200)>>9;
-				Cores[core].SndDryR=(vx & 0x400)>>10;
-				Cores[core].SndDryL=(vx & 0x800)>>11;
+				Cores[core].ExtWetR = (vx & 0x001) ? -1 : 0;
+				Cores[core].ExtWetL = (vx & 0x002) ? -1 : 0;
+				Cores[core].ExtDryR = (vx & 0x004) ? -1 : 0;
+				Cores[core].ExtDryL = (vx & 0x008) ? -1 : 0;
+				Cores[core].InpWetR = (vx & 0x010) ? -1 : 0;
+				Cores[core].InpWetL = (vx & 0x020) ? -1 : 0;
+				Cores[core].InpDryR = (vx & 0x040) ? -1 : 0;
+				Cores[core].InpDryL = (vx & 0x080) ? -1 : 0;
+				Cores[core].SndWetR = (vx & 0x100) ? -1 : 0;
+				Cores[core].SndWetL = (vx & 0x200) ? -1 : 0;
+				Cores[core].SndDryR = (vx & 0x400) ? -1 : 0;
+				Cores[core].SndDryL = (vx & 0x800) ? -1 : 0;
 				Cores[core].Regs.MMIX = value;
 			return;
 

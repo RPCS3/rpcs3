@@ -389,22 +389,20 @@ static void __forceinline CalculateADSR( V_Voice& vc )
 			u32 off = InvExpOffsets[(env.Value>>28)&7];
 			env.Value-=PsxRates[((env.Dr^0x1f)*4)-0x18+off+32];
 
-			// Clamp decay to SLevel or Zero
-			if (env.Value < 0)
-				env.Value = 0;
-			else
-			{
-				// calculate sustain level by mirroring the bits
-				// of the sustain var into the lower bits as we shift up
-				// (total shift, 27 bits)
-				
-				u32 suslev = (env.Sl << 4) | env.Sl;
-				suslev = (suslev << 8) | suslev;	// brings us to 12 bits!
-				suslev = (suslev << 12) | suslev;	// 24 bits!
+			// calculate sustain level by mirroring the bits
+			// of the sustain var into the lower bits as we shift up
+			// (total shift, 27 bits)
+			
+			s32 suslev = (env.Sl << 4) | env.Sl;
+			suslev = (suslev << 8) | suslev;	// brings us to 12 bits!
+			suslev = (suslev << 12) | suslev;	// 24 bits!
 
-				if( env.Value <= (suslev<<3) )
-					env.Phase++;
-			}	
+			if( env.Value <= (suslev<<3) )
+			{
+				if (env.Value < 0)
+					env.Value = 0;
+				env.Phase++;
+			}
 		}
 		break;
 
@@ -1090,10 +1088,10 @@ static void __fastcall MixCore(s32& OutL, s32& OutR, s32 ExtL, s32 ExtR)
 		// Note: Results from MixVoice are ranged at 16 bits.
 		// Following muls are toggles only (0 or 1)
 
-		SDL += VValL * vc.DryL;
-		SDR += VValR * vc.DryR;
-		SWL += VValL * vc.WetL;
-		SWR += VValR * vc.WetR;
+		SDL += VValL & vc.DryL;
+		SDR += VValR & vc.DryR;
+		SWL += VValL & vc.WetL;
+		SWR += VValR & vc.WetR;
 	}
 	
 	// Saturate final result to standard 16 bit range.
@@ -1116,28 +1114,28 @@ static void __fastcall MixCore(s32& OutL, s32& OutR, s32 ExtL, s32 ExtR)
 	s32 TDL,TDR;
 
 	// Mix in the Input data
-	TDL = OutL * thiscore.InpDryL;
-	TDR = OutR * thiscore.InpDryR;
+	TDL = OutL & thiscore.InpDryL;
+	TDR = OutR & thiscore.InpDryR;
 
 	// Mix in the Voice data
-	TDL += SDL * thiscore.SndDryL;
-	TDR += SDR * thiscore.SndDryR;
+	TDL += SDL & thiscore.SndDryL;
+	TDR += SDR & thiscore.SndDryR;
 
 	// Mix in the External (nothing/core0) data
-	TDL += ExtL * thiscore.ExtDryL;
-	TDR += ExtR * thiscore.ExtDryR;
+	TDL += ExtL & thiscore.ExtDryL;
+	TDR += ExtR & thiscore.ExtDryR;
 	
 	if(EffectsEnabled)
 	{
 		s32 TWL,TWR;
 
 		// Mix Input, Voice, and External data:
-		TWL = OutL * thiscore.InpWetL;
-		TWR = OutR * thiscore.InpWetR;
-		TWL += SWL * thiscore.SndWetL;
-		TWR += SWR * thiscore.SndWetR;
-		TWL += ExtL * thiscore.ExtWetL; 
-		TWR += ExtR * thiscore.ExtWetR;
+		TWL = OutL & thiscore.InpWetL;
+		TWR = OutR & thiscore.InpWetR;
+		TWL += SWL & thiscore.SndWetL;
+		TWR += SWR & thiscore.SndWetR;
+		TWL += ExtL & thiscore.ExtWetL; 
+		TWR += ExtR & thiscore.ExtWetR;
 
 		WaveDump::WriteCore( core, CoreSrc_PreReverb, TWL, TWR );
 

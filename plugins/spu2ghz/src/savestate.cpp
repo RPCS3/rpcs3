@@ -48,7 +48,7 @@ struct SPU2freezeData
 // Increment this if changes to V_Core or V_Voice structs are made.
 // Chances are we'll never explicitly support older save versions,
 // but might as well version them anyway.  Could come in handly someday!
-#define SAVE_VERSION 0x0101
+#define SAVE_VERSION 0x0102
 
 static int getFreezeSize()
 {
@@ -81,12 +81,20 @@ EXPORT_C_(s32) SPU2freeze(int mode, freezeData *data)
 	{
 		const SPU2freezeData *spud = (SPU2freezeData*)data->data;
 
-		if( spud->id != SAVE_ID || spud->version < 0x100 )
+		if( spud->id != SAVE_ID || spud->version < SAVE_VERSION )
 		{
 			printf("\n*** SPU2Ghz Warning:\n");
-			printf("  The savestate you are trying to load was not made with this plugin.\n");
-			printf("  The emulator will not be stable!  Find a memorycard savespot to save your\n");
-			printf("  game, reset, and then continue from there.\n\n");
+			if( spud->id == SAVE_ID )
+			{
+				printf("\tSavestate version is from an older version of this plugin.\n");
+				printf("\tAudio may not recover correctly.\n\n");
+			}
+			else
+			{
+				printf("  The savestate you are trying to load was not made with this plugin.\n");
+				printf("  The emulator will not be stable!  Find a memorycard savespot to save your\n");
+				printf("  game, reset, and then continue from there.\n\n");
+			}
 
 			disableFreezes=true;
 			lClocks = 0;
@@ -127,39 +135,34 @@ EXPORT_C_(s32) SPU2freeze(int mode, freezeData *data)
 			// Load the ADPCM cache:
 
 			wipe_the_cache();
-			if( spud->version == 0x100 )		// don't support 0x100 cache anymore.
+
+			const PcmCacheEntry* pcmSrc = &spud->cacheData;
+			int blksLoaded=0;
+
+			for( int bidx=0; bidx<pcm_BlockCount; bidx++ )
 			{
-				printf("\n*** SPU2Ghz Warning:\n");
-				printf("\tSavestate version is from an older version of this plugin.\n");
-				printf("\tAudio may not recover correctly.\n\n");
-
-				const PcmCacheEntry* pcmSrc = &spud->cacheData;
-				int blksLoaded=0;
-
-				for( int bidx=0; bidx<pcm_BlockCount; bidx++ )
+				if( pcm_cache_data[bidx].Validated )
 				{
-					if( pcm_cache_data[bidx].Validated )
-					{
-						// load a cache block!
-						memcpy( &pcm_cache_data[bidx], pcmSrc, sizeof(PcmCacheEntry) );
-						pcmSrc++;
-						blksLoaded++;
-					}
-				}
-
-				// Go through the V_Voice structs and recalculate SBuffer pointer from
-				// the NextA setting.
-
-				for( int c=0; c<2; c++ )
-				{
-					for( int v=0; v<24; v++ )
-					{
-						const int cacheIdx = Cores[c].Voices[v].NextA / pcm_WordsPerBlock;
-						Cores[c].Voices[v].SBuffer = pcm_cache_data[cacheIdx].Sampledata;
-					}
+					// load a cache block!
+					memcpy( &pcm_cache_data[bidx], pcmSrc, sizeof(PcmCacheEntry) );
+					pcmSrc++;
+					blksLoaded++;
 				}
 			}
-			else
+
+			// Go through the V_Voice structs and recalculate SBuffer pointer from
+			// the NextA setting.
+
+			for( int c=0; c<2; c++ )
+			{
+				for( int v=0; v<24; v++ )
+				{
+					const int cacheIdx = Cores[c].Voices[v].NextA / pcm_WordsPerBlock;
+					Cores[c].Voices[v].SBuffer = pcm_cache_data[cacheIdx].Sampledata;
+				}
+			}
+			
+			/*else
 			{
 				// We don't support the cache, so make sure the SBuffer pointers
 				// are safe (don't want any GPFs reading bad data)
@@ -169,7 +172,7 @@ EXPORT_C_(s32) SPU2freeze(int mode, freezeData *data)
 					for( int v=0; v<24; v++ )
 						Cores[c].Voices[v].SBuffer = old_state_sBuffer;
 				}
-			}
+			}*/
 
 
 			//printf( " * SPU2 > FreezeLoad > Loaded %d cache blocks.\n", blksLoaded++ );

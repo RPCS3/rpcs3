@@ -72,13 +72,13 @@ typedef struct {
 // Source (Wave/Noise)
 	s8 Noise;
 // Direct Output for Left Channel
-	s8 DryL;
+	s32 DryL;
 // Direct Output for Right Channel
-	s8 DryR;
+	s32 DryR;
 // Effect Output for Left Channel
-	s8 WetL;
+	s32 WetL;
 // Effect Output for Right Channel
-	s8 WetR;
+	s32 WetR;
 // Loop Start Adress (also Reg_LSAH/L)
 	u32 LoopStartA; 
 // Sound Start Adress (also Reg_SSAH/L)
@@ -237,29 +237,29 @@ typedef struct {
 // DMA Transfer Data Address (Internal...)
 	u32 TDA;  
 // External Input to Direct Output (Left)
-	s8 ExtDryL;
+	s32 ExtDryL;
 // External Input to Direct Output (Right)
-	s8 ExtDryR;
+	s32 ExtDryR;
 // External Input to Effects (Left)
-	s8 ExtWetL;
+	s32 ExtWetL;
 // External Input to Effects (Right)
-	s8 ExtWetR;
+	s32 ExtWetR;
 // Sound Data Input to Direct Output (Left)
-	s8 InpDryL;
+	s32 InpDryL;
 // Sound Data Input to Direct Output (Right)
-	s8 InpDryR;
+	s32 InpDryR;
 // Sound Data Input to Effects (Left)
-	s8 InpWetL;
+	s32 InpWetL;
 // Sound Data Input to Effects (Right)
-	s8 InpWetR;
+	s32 InpWetR;
 // Voice Data to Direct Output (Left)
-	s8 SndDryL;
+	s32 SndDryL;
 // Voice Data to Direct Output (Right)
-	s8 SndDryR;
+	s32 SndDryR;
 // Voice Data to Effects (Left)
-	s8 SndWetL;
+	s32 SndWetL;
 // Voice Data to Effects (Right)
-	s8 SndWetR;
+	s32 SndWetR;
 // Interrupt Enable
 	s8 IRQEnable;
 // DMA related?
