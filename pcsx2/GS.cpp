@@ -577,6 +577,7 @@ __forceinline u32 gsRead32(u32 mem)
 
 __forceinline u64 gsRead64(u32 mem)
 {
+	// fixme - PS2GS_BASE(mem+4) = (g_RealGSMem+(mem + 4 & 0x13ff))
 	GIF_LOG("GS read 64 from %8.8lx  value: %8.8lx_%8.8lx\n", mem, *(u32*)PS2GS_BASE(mem+4), *(u32*)PS2GS_BASE(mem) );
 	return *(u64*)PS2GS_BASE(mem);
 }
@@ -854,7 +855,7 @@ void RunGSState( gzLoadingState& f )
 	list<GSStatePacket>::iterator it = packets.begin();
 	g_SaveGSStream = 3;
 
-	int skipfirst = 1;
+	//int skipfirst = 1;
 
 	// first extract the data
 	while(1) {

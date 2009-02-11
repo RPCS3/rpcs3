@@ -324,18 +324,22 @@ void _applypatch(int place, IniPatch *p) {
 			}
 		}
 		break;
-	case CPU_IOP: { 
-		switch (p->type) {
-			case BYTE_T:
-				psxMemWrite8(p->addr, (u8)p->data);
-				break;
-			case SHORT_T:
-				psxMemWrite16(p->addr, (u16)p->data);
-				break;
-			case WORD_T:
-				psxMemWrite32(p->addr, (u32)p->data);
-				break;
-		}
+		case CPU_IOP: { 
+			switch (p->type) {
+				case BYTE_T:
+					psxMemWrite8(p->addr, (u8)p->data);
+					break;
+				case SHORT_T:
+					psxMemWrite16(p->addr, (u16)p->data);
+					break;
+				case WORD_T:
+					psxMemWrite32(p->addr, (u32)p->data);
+					break;
+				default:
+					break;
+			}
+		default:
+			break;
 	}
 	}
 }

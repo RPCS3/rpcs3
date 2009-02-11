@@ -20,15 +20,15 @@
 
 #define COLOR_RESET		"\033[0m"
 
+
 // Linux Note : The Linux Console is pretty simple.  It just dumps to the stdio!
 // (no console open/close/title stuff tho, so those functions are dummies)
 
-//  Fixme - A lot of extra \ns are being added in here somewhere. I think it's
-// partially in SetColor/ClearColor, as colored lines have more extra \ns then the other
-// lines.
+// Yeah, haven't really seen a need to add a console window, though I might
+// at some point. --arcum42
 namespace Console
 {
-static const char* tbl_color_codes[] =
+static const char *tbl_color_codes[] =
 {
 	"\033[30m"		// black
 	,	"\033[31m"		// red
@@ -69,7 +69,7 @@ __forceinline bool __fastcall Newline()
 __forceinline bool __fastcall Write(const char* fmt)
 {
 	if (Config.PsxOut)
-		puts(fmt);
+		fputs(fmt, stdout);
 
 	if (emuLog != NULL)
 		fputs(fmt, emuLog);

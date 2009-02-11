@@ -59,8 +59,8 @@ void statsClose() {
 }
 
 void statsVSync() {
-	static u64 accum = 0, accumvu1 = 0;
-	static u32 frame = 0;
+	//static u64 accum = 0, accumvu1 = 0;
+	//static u32 frame = 0;
 
 	stats.eeCycles+= cpuRegs.cycle - stats.eeSCycle;
 	stats.eeSCycle = cpuRegs.cycle;

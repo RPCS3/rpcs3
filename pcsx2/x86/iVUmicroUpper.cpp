@@ -327,7 +327,6 @@ void recUpdateFlags(VURegs * VU, int reg, int info)
 //------------------------------------------------------------------
 static PCSX2_ALIGNED16(u32 VU_addsuband[2][4]);
 static PCSX2_ALIGNED16(u32 VU_addsub_reg[2][4]);
-static u32 ecx_temp_loc;
 
 void VU_ADD_SUB(u32 regd, u32 regt, int is_sub, int info)  
 {

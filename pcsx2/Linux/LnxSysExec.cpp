@@ -783,7 +783,7 @@ void SysRunGui()
 void *SysMmap(uptr base, u32 size)
 {
 	u8 *Mem;
-	Mem = mmap((uptr*)base, size, PROT_EXEC | PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
+	Mem = (u8*)mmap((uptr*)base, size, PROT_EXEC | PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
 	if (Mem == MAP_FAILED) Console::Notice("Mmap Failed!");
 
 	return Mem;

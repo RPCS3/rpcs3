@@ -782,7 +782,9 @@ void injectIRX(const char *filename)
 // It might even be a good idea to just go ahead and move them into Win32/Linux
 // specific files since they're all #ifdef'd that way anyways.
 
+#ifdef _WIN32
 static LARGE_INTEGER lfreq;
+#endif
 
 void InitCPUTicks()
 {

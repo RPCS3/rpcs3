@@ -234,6 +234,7 @@ static void iDumpBlock( int startpc, u8 * ptr )
 	fclose( f );
 }
 
+#ifdef PCSX2_VM_COISSUE
 static u8 _eeLoadWritesRs(u32 tempcode)
 {
 	switch(tempcode>>26) {
@@ -294,6 +295,7 @@ static u8 _eeIsLoadStoreCoX(u32 tempcode)
 	}
 	return 0;
 }
+#endif
 
 void _eeFlushAllUnused()
 {
@@ -627,6 +629,7 @@ static void recShutdown( void )
 	x86Shutdown();
 }
 
+// Ignored by Linux
 #pragma warning(disable:4731) // frame pointer register 'ebp' modified by inline assembly code
 
 void recStep( void ) {

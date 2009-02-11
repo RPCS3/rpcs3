@@ -42,7 +42,7 @@ using namespace R5900;	// for R5900 disasm tools
 s32 EEsCycle;		// used to sync the IOP to the EE
 u32 EEoCycle;
 
-static int inter;
+//static int inter;
 
 PCSX2_ALIGNED16(cpuRegisters cpuRegs);
 PCSX2_ALIGNED16(fpuRegisters fpuRegs);

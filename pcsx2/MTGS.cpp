@@ -180,7 +180,8 @@ std::list<uint> ringposStack;
 // debug variable used to check for bad code bits where copies are started
 // but never closed, or closed without having been started.  (GSRingBufCopy calls
 // should always be followed by a call to GSRINGBUF_DONECOPY)
-static int copyLock = 0;
+// And it's not even used in the debug code.
+//static int copyLock = 0;
 #endif
 
 typedef void (*GIFRegHandler)(const u32* data);

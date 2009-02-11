@@ -329,6 +329,8 @@ void psxMemWrite32(u32 mem, u32 value)
 // TLB functions
 
 #ifdef TLB_DEBUG_MEM
+// fixme - there are a few places in the code where this is called that really shouldn't receive null.
+// cdvdReadSector in CDVD.cpp, psxDma3 in CdRom.cpp, to name two.
 void* PSXM(u32 mem)
 {
     return (psxMemRLUT[(mem) >> 16] == 0 ? NULL : (void*)(psxMemRLUT[(mem) >> 16] + ((mem) & 0xffff)));

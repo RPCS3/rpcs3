@@ -1274,7 +1274,7 @@ void recSLT_const()
 }
 
 static u32 s_sltconst = 0x80000000;
-static u32 s_sltconst64[2] = {0, 0x80000000};
+//static u32 s_sltconst64[2] = {0, 0x80000000};
 u32 s_sltone = 1;
 
 void recSLTs_consts(int info, int sign)

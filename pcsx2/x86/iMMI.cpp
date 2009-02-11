@@ -177,7 +177,7 @@ void recPLZCW()
 	GPR_DEL_CONST(_Rd_);
 }
 
-static u32 PCSX2_ALIGNED16(s_CmpMasks[]) = { 0x0000ffff, 0x0000ffff, 0x0000ffff, 0x0000ffff };
+//static u32 PCSX2_ALIGNED16(s_CmpMasks[]) = { 0x0000ffff, 0x0000ffff, 0x0000ffff, 0x0000ffff };
 
 void recPMFHL()
 {
