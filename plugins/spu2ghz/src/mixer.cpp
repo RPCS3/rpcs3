@@ -344,8 +344,8 @@ static int GetLinearSrAr( uint SrAr )
 	// the bottom 2 bits go on the left side of the shift, and
 	// the right side of the shift gets divided by 4:
 
-	const uint newSr = 0x127 - SrAr;
-	return (1+(newSr&3)) << (30UL-(newSr>>2));
+	const uint newSr = 0x7f - SrAr;
+	return ((1|(newSr&3)) << (newSr>>2));
 }
 
 static void __forceinline CalculateADSR( V_Voice& vc ) 
@@ -372,9 +372,9 @@ static void __forceinline CalculateADSR( V_Voice& vc )
 
 			if (env.Am && (env.Value>=0x60000000))
 				env.Value += PsxRates[(env.Ar^0x7f)-0x18+32];
-			else if( env.Ar < 0x7f )
-				//env.Value+=PsxRates[(env.Ar^0x7f)-0x10+32];
-				env.Value += GetLinearSrAr( env.Ar );
+			else //if( env.Ar < 0x7f )
+				env.Value+=PsxRates[(env.Ar^0x7f)-0x10+32];
+				//env.Value += GetLinearSrAr( env.Ar );
 
 			if( env.Value < 0 )
 			{
@@ -422,8 +422,8 @@ static void __forceinline CalculateADSR( V_Voice& vc )
 				} 
 				else // linear
 				{
-					//env.Value-=PsxRates[(env.Sr^0x7f)-0xf+32];
-					env.Value -= GetLinearSrAr( env.Sr );
+					env.Value-=PsxRates[(env.Sr^0x7f)-0xf+32];
+					//env.Value -= GetLinearSrAr( env.Sr );
 				}
 
 				if( env.Value <= 0 )
@@ -439,10 +439,8 @@ static void __forceinline CalculateADSR( V_Voice& vc )
 				else
 				{
 					// linear / Pseudo below 75% (they're the same)
-					//env.Value+=PsxRates[(env.Sr^0x7f)-0x10+32];
-
-					int newSr = 0x7f-env.Sr;
-					env.Value += GetLinearSrAr( env.Sr );
+					env.Value+=PsxRates[(env.Sr^0x7f)-0x10+32];
+					//env.Value += GetLinearSrAr( env.Sr );
 				}
 
 				if( env.Value < 0 )
@@ -471,7 +469,7 @@ static void __forceinline CalculateADSR( V_Voice& vc )
 			{
 				//env.Value-=PsxRates[((env.Rr^0x1f)*4)-0xc+32];
 				if( env.Rr != 0x1f )
-					env.Value -= 1 << (30UL-env.Rr);
+					env.Value -= (1 << (0x1f-env.Rr));
 			}
 
 			if( env.Value <= 0 )
@@ -1068,8 +1066,8 @@ static __forceinline void MixVoice( V_Core& thiscore, V_Voice& vc, s32& VValL, s
 
 	// Write-back of raw voice data (post ADSR applied)
 
-	if (voice==1)      spu2M_WriteFast( 0x400 + (core<<12) + OutPos, (s16)Value>>3 );
-	else if (voice==3) spu2M_WriteFast( 0x600 + (core<<12) + OutPos, (s16)Value>>3 );
+	if (voice==1)      spu2M_WriteFast( 0x400 + (core<<12) + OutPos, (s16)Value );
+	else if (voice==3) spu2M_WriteFast( 0x600 + (core<<12) + OutPos, (s16)Value );
 
 }
 

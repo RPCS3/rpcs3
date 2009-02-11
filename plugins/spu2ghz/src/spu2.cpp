@@ -1317,17 +1317,15 @@ void VoiceStart(int core,int vc)
 
 #ifndef PUBLIC
 		DebugCores[core].Voices[vc].FirstBlock=1;
-		if(core==1)
-		{
-			if(MsgKeyOnOff()) ConLog(" * SPU2: KeyOn: C%dV%02d: SSA: %8x; M: %s%s%s%s; H: %02x%02x; P: %04x V: %04x/%04x; ADSR: %04x%04x\n",
-				core,vc,Cores[core].Voices[vc].StartA,
-				(Cores[core].Voices[vc].DryL)?"+":"-",(Cores[core].Voices[vc].DryR)?"+":"-",
-				(Cores[core].Voices[vc].WetL)?"+":"-",(Cores[core].Voices[vc].WetR)?"+":"-",
-				*(u8*)GetMemPtr(Cores[core].Voices[vc].StartA),*(u8 *)GetMemPtr((Cores[core].Voices[vc].StartA)+1),
-				Cores[core].Voices[vc].Pitch,
-				Cores[core].Voices[vc].VolumeL.Value,Cores[core].Voices[vc].VolumeR.Value,
-				Cores[core].Voices[vc].ADSR.Reg_ADSR1,Cores[core].Voices[vc].ADSR.Reg_ADSR2);
-		}
+
+		if(MsgKeyOnOff()) ConLog(" * SPU2: KeyOn: C%dV%02d: SSA: %8x; M: %s%s%s%s; H: %02x%02x; P: %04x V: %04x/%04x; ADSR: %04x%04x\n",
+			core,vc,Cores[core].Voices[vc].StartA,
+			(Cores[core].Voices[vc].DryL)?"+":"-",(Cores[core].Voices[vc].DryR)?"+":"-",
+			(Cores[core].Voices[vc].WetL)?"+":"-",(Cores[core].Voices[vc].WetR)?"+":"-",
+			*(u8*)GetMemPtr(Cores[core].Voices[vc].StartA),*(u8 *)GetMemPtr((Cores[core].Voices[vc].StartA)+1),
+			Cores[core].Voices[vc].Pitch,
+			Cores[core].Voices[vc].VolumeL.Value,Cores[core].Voices[vc].VolumeR.Value,
+			Cores[core].Voices[vc].ADSR.Reg_ADSR1,Cores[core].Voices[vc].ADSR.Reg_ADSR2);
 #endif
 	}
 	else
