@@ -1,26 +1,42 @@
-#include "global.h"
-#include "PS2Edefs.h"
-#include "Config.h"
+#include "Global.h"
 #include <math.h>
+#include <Dbt.h>
+#include <stdio.h>
+
+#define PADdefs
+#include "PS2Etypes.h"
+#include "PS2Edefs.h"
+
+#include "Config.h"
 #include "InputManager.h"
 #include "DeviceEnumerator.h"
 #include "WndProcEater.h"
 #include "KeyboardQueue.h"
-#include <Dbt.h>
+#include "resource.h"
 
-// Used so don't read input and cleanup input devices at the same time.
+// Used to prevent reading input and cleaning up input devices at the same time.
+// Only an issue when not reading input in GS thread and disabling devices due to
+// lost focus.
 CRITICAL_SECTION readInputCriticalSection;
 
 HINSTANCE hInst;
 HWND hWnd;
 
+// Used to toggle mouse binding.
 u8 miceEnabled;
 
+// 2 when both pads are initialized, 1 for one pad, etc.
 int openCount = 0;
 
-HMODULE user32 = 0;
-
 int activeWindow = 0;
+
+int bufSize = 0;
+static unsigned char outBuf[50];
+static unsigned char inBuf[50];
+
+#define MODE_DIGITAL 0x41
+#define MODE_ANALOG 0x73
+#define MODE_DS2_NATIVE 0x79
 
 
 int IsWindowMaximized (HWND hWnd) {
@@ -41,11 +57,6 @@ int IsWindowMaximized (HWND hWnd) {
 	}
 	return 0;
 }
-
-#include <stdio.h>
-int bufSize = 0;
-static unsigned char outBuf[50];
-static unsigned char inBuf[50];
 
 void DEBUG_NEW_SET() {
 	if (config.debug) {
@@ -74,15 +85,11 @@ void DEBUG_NEW_SET() {
 }
 
 inline void DEBUG_IN(unsigned char c) {
-	if (bufSize < 40) inBuf[bufSize] = c;
+	if (bufSize < sizeof(inBuf)-1) inBuf[bufSize] = c;
 }
 inline void DEBUG_OUT(unsigned char c) {
-	if (bufSize < 40) outBuf[bufSize++] = c;
+	if (bufSize < sizeof(outBuf)-1) outBuf[bufSize++] = c;
 }
-
-#define MODE_DIGITAL 0x41
-#define MODE_ANALOG 0x73
-#define MODE_FULL_ANALOG 0x79
 
 struct Stick {
 	int horiz;
@@ -179,35 +186,14 @@ BOOL WINAPI DllMain(HINSTANCE hInstance, DWORD fdwReason, void* lpvReserved) {
 	hInst = hInstance;
 	if (fdwReason == DLL_PROCESS_ATTACH) {
 		InitializeCriticalSection(&readInputCriticalSection);
-		//safeShutdown = 0;
-		user32 = GetModuleHandle(L"user32.dll");
-		if (user32) {
-			pRegisterRawInputDevices = (_RegisterRawInputDevices) GetProcAddress(user32, "RegisterRawInputDevices");
-			pGetRawInputDeviceInfo = (_GetRawInputDeviceInfo) GetProcAddress(user32, "GetRawInputDeviceInfoW");
-			pGetRawInputData = (_GetRawInputData) GetProcAddress(user32, "GetRawInputData");
-			pGetRawInputDeviceList = (_GetRawInputDeviceList) GetProcAddress(user32, "GetRawInputDeviceList");
-			if (!pRegisterRawInputDevices ||
-				!pGetRawInputDeviceInfo ||
-				!pGetRawInputData ||
-				!pGetRawInputDeviceList) {
-
-				pRegisterRawInputDevices = 0;
-				pGetRawInputDeviceInfo = 0;
-				pGetRawInputData = 0;
-				pGetRawInputDeviceList = 0;
-			}
-		}
 		DisableThreadLibraryCalls(hInstance);
 	}
 	else if (fdwReason == DLL_PROCESS_DETACH) {
 		DeleteCriticalSection(&readInputCriticalSection);
-		//safeShutdown = 1;
-		//Sleep(20);
 		activeWindow = 0;
 		while (openCount)
 			PADclose();
 		PADshutdown();
-		//CleanupInput();
 	}
 	return 1;
 }
@@ -618,8 +604,36 @@ struct QueryInfo {
 	u8 response[22];
 } query = {0,0,0,0, 0,0xFF, 0xF3};
 
+int saveStateIndex = 0;
+
 ExtraWndProcResult HackWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, LRESULT *output) {
 	switch (uMsg) {
+		case WM_SETTEXT:
+			if (config.saveStateTitle) {
+				wchar_t *text;
+				int len;
+				if (IsWindowUnicode(hWnd)) {
+					text = wcsdup((wchar_t*) lParam);
+				}
+				else {
+					char *ascii = (char*) lParam;
+					len = (int)strlen(ascii)+1;
+					text = (wchar_t*) calloc(len, sizeof(wchar_t));
+					MultiByteToWideChar(CP_ACP, 0, ascii, -1, text, len);
+				}
+				if (!wcsstr(text, L"State")) {
+					int len = wcslen(text);
+					if (len < 150) {
+						wchar_t newTitle[200];
+						wsprintfW(newTitle, L"%s | State %i", text, saveStateIndex);
+						free(text);
+						SetWindowText(hWnd, newTitle);
+						return NO_WND_PROC;
+					}
+				}
+				free(text);
+			}
+			break;
 		case WM_DEVICECHANGE:
 			if (wParam == DBT_DEVNODES_CHANGED) {
 				// Need to do this when not reading input from gs thread.
@@ -806,18 +820,15 @@ u8 CALLBACK PADpoll(u8 value) {
 				query.response[3] = b1;
 				query.response[4] = b2;
 
-				if (pad->mode == MODE_DIGITAL) {
-					query.numBytes = 5;
-				}
-				else {
+				query.numBytes = 5;
+				if (pad->mode != MODE_DIGITAL) {
 					query.response[5] = Cap((sum->sticks[1].horiz+255)/2);
 					query.response[6] = Cap((sum->sticks[1].vert+255)/2);
 					query.response[7] = Cap((sum->sticks[2].horiz+255)/2);
 					query.response[8] = Cap((sum->sticks[2].vert+255)/2);
-					if (pad->mode == MODE_ANALOG) {
-						query.numBytes = 9;
-					}
-					else {
+
+					query.numBytes = 9;
+					if (pad->mode != MODE_ANALOG) {
 						// Good idea?  No clue.
 						//query.response[3] &= pad->mask[0];
 						//query.response[4] &= pad->mask[1];
@@ -841,21 +852,14 @@ u8 CALLBACK PADpoll(u8 value) {
 			}
 
 			query.lastByte=1;
-			//if (!pad->config) {
-				DEBUG_OUT(pad->mode);
-				return pad->mode;
-			/*}
-			else {
-				DEBUG_OUT(0xF3);
-				return 0xF3;
-			}//*/
+			DEBUG_OUT(pad->mode);
+			return pad->mode;
 		// SET_VREF_PARAM
 		case 0x40:
 			SET_FINAL_RESULT(noclue);
 			break;
 		// QUERY_DS2_ANALOG_MODE
 		case 0x41:
-			//if (pad->mode == MODE_FULL_ANALOG) {
 			if (pad->mode == MODE_DIGITAL) {
 				queryMaskMode[1] = queryMaskMode[2] = queryMaskMode[3] = 0;
 				queryMaskMode[6] = 0x00;
@@ -865,14 +869,10 @@ u8 CALLBACK PADpoll(u8 value) {
 				queryMaskMode[2] = pad->umask[1];
 				queryMaskMode[3] = 0x03;
 				// Not entirely sure about this.
-				//queryMaskMode[3] = 0x01 | (pad->mode == MODE_FULL_ANALOG)*2;
+				//queryMaskMode[3] = 0x01 | (pad->mode == MODE_DS2_NATIVE)*2;
 				queryMaskMode[6] = 0x5A;
 			}
 			SET_FINAL_RESULT(queryMaskMode);
-			/*}
-			else {
-				SET_FINAL_RESULT(DSNonNativeMode);
-			}//*/
 			break;
 		// SET_MODE_AND_LOCK
 		case 0x44:
@@ -881,7 +881,6 @@ u8 CALLBACK PADpoll(u8 value) {
 			break;
 		// QUERY_MODEL_AND_MODE
 		case 0x45:
-			//queryModel[1] = 3 - 2*activeConfigs[query.pad]->guitar;
 			if (!config.guitar[query.pad] || config.GH2) SET_FINAL_RESULT(queryModelDS2)
 			else SET_FINAL_RESULT(queryModelDS1);
 			query.response[5] = pad->mode != MODE_DIGITAL;
@@ -931,10 +930,6 @@ u8 CALLBACK PADpoll(u8 value) {
 			// CONFIG_MODE
 			case 0x43:
 				if (query.lastByte == 3) {
-					// If leaving config mode, return all 0's.
-					/*if (value == 0) {
-						SET_RESULT(setMode);
-					}//*/
 					query.queryDone = 1;
 					pad->config = value;
 				}
@@ -1002,7 +997,7 @@ u8 CALLBACK PADpoll(u8 value) {
 						pad->mode = MODE_ANALOG;
 					}
 					else {
-						pad->mode = MODE_FULL_ANALOG;
+						pad->mode = MODE_DS2_NATIVE;
 					}
 				}
 				break;
@@ -1060,10 +1055,24 @@ ExtraWndProcResult KillFullScreenProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARA
 	return CONTINUE_BLISSFULLY_AND_RELEASE_PROC;
 }
 
+DWORD WINAPI RenameWindowThreadProc(void *lpParameter) {
+	wchar_t newTitle[200];
+	if (hWnd) {
+		int len = GetWindowTextW(hWnd, newTitle, 200);
+		if (len > 0 && len < 199) {
+			wchar_t *end;
+			if (end = wcsstr(newTitle, L" | State ")) *end = 0;
+			SetWindowTextW(hWnd, newTitle);
+		}
+	}
+	return 0;
+}
+
 keyEvent* CALLBACK PADkeyEvent() {
 	if (!config.GSThreadUpdates) {
 		Update(2);
 	}
+	static int shiftDown = 0;
 	static keyEvent ev;
 	if (!GetQueuedKeyEvent(&ev)) return 0;
 	if (ev.key == VK_ESCAPE && ev.event == KEYPRESS && config.escapeFullscreenHack) {
@@ -1073,8 +1082,24 @@ keyEvent* CALLBACK PADkeyEvent() {
 		}
 	}
 
-	if (ev.key == VK_LSHIFT || ev.key == VK_RSHIFT) {
+	if (ev.key == VK_F2 && ev.event == KEYPRESS) {
+		if (shiftDown)
+			saveStateIndex--;
+		else 
+			saveStateIndex++;
+		saveStateIndex = (saveStateIndex+10)%10;
+		if (config.saveStateTitle) {
+			HANDLE hThread = CreateThread(0, 0, RenameWindowThreadProc, 0, 0, 0);
+			if (hThread) CloseHandle(hThread);
+		}
+	}
+
+	if (ev.key == VK_LSHIFT || ev.key == VK_RSHIFT || ev.key == VK_SHIFT) {
 		ev.key = VK_SHIFT;
+		if (ev.event == KEYPRESS)
+			shiftDown = 1;
+		else
+			shiftDown = 0;
 	}
 	else if (ev.key == VK_LCONTROL || ev.key == VK_RCONTROL) {
 		ev.key = VK_CONTROL;
@@ -1123,7 +1148,7 @@ char* CALLBACK PSEgetLibName() {
 	return PS2EgetLibName();
 }
 
-// Littly funkiness to handle rounding floating points to ints.
+// Little funkiness to handle rounding floating points to ints without the C runtime.
 // Unfortunately, means I can't use /GL optimization option.
 #ifdef NO_CRT
 extern "C" long _cdecl _ftol();

@@ -45,6 +45,8 @@
 #define IDC_DISABLE_SCREENSAVER4        1127
 #define IDC_FORCEFEEDBACK_HACK2         1127
 #define IDC_GS_THREAD_INPUT             1128
+#define IDC_GS_THREAD_INPUT2            1129
+#define IDC_SAVE_STATE_TITLE            1129
 #define IDC_SLIDER1                     0x1000
 #define IDC_FLIP1                       0x1001
 #define IDC_AXIS1                       0x1002
@@ -53,9 +55,9 @@
 #define IDC_TURBO                       0x1005
 #define IDC_AXIS_DEVICE1                0x1006
 #define ID_SENSITIVITY                  0x1007
-#define ID_DPAD							0x1008
-#define ID_LSTICK						0x1009
-#define ID_RSTICK						0x100A
+#define ID_DPAD                         0x1008
+#define ID_LSTICK                       0x1009
+#define ID_RSTICK                       0x100A
 #define ID_GUITAR_HERO                  0x10FB
 #define ID_LOCK_BUTTONS                 0x10FC
 #define ID_LOCK                         0x10FD

@@ -1,4 +1,2 @@
-#include "global.h"
-
-char *GetMouseString(unsigned char button);
+// Maps virtual key codes to strings.
 wchar_t *GetVKStringW(unsigned char vk);

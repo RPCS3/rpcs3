@@ -1,3 +1,6 @@
+// Includes Windows.h, has inlined versions of memory allocation and
+// string comparison functions needed to avoid using CRT.  This reduces
+// dll size by over 100k while avoiding any dependencies on updated CRT dlls.
 #pragma once
 
 #ifndef _DEBUG
@@ -10,66 +13,19 @@
 
 #define UNICODE
 
-#define PADdefs
-//#define SIOdefs
-#define WM_XBUTTONDOWN                  0x020B
-#define WM_XBUTTONUP                    0x020C
-#define WM_XBUTTONDBLCLK                0x020D
-
-#define XBUTTON1      0x0001
-#define XBUTTON2      0x0002
-
-#define WM_MOUSEHWHEEL 0x020E
-
-//#define WIN32_LEAN_AND_MEAN
-//#define NOGDI
 #define _CRT_SECURE_NO_DEPRECATE
-// Actually works with 0x0400, but need this to get raw input structures.
-#define WINVER 0x0501
+// Actually works with 0x0400, but need 0x500 to get XBUTTON defines,
+// 0x501 to get raw input structures, and 0x0600 to get WM_MOUSEHWHEEL.
+#define WINVER 0x0600
 #define _WIN32_WINNT WINVER
 #define __MSCW32__
 
-#include <stdio.h>
-#include <stdlib.h>
-#ifdef NDEBUG
-
-#if (_MSC_VER<1300)
-	#pragma comment(linker,"/RELEASE")
-	#pragma comment(linker,"/opt:nowin98")
-#endif
-#endif
-
-#define DIRECTINPUT_VERSION 0x0800
 
 #include <windows.h>
-#include <commctrl.h>
 
 extern HINSTANCE hInst;
 
-
-#include "resource.h"
-#include "PS2Etypes.h"
-
-/*
-inline void Log(char *s) {
-	FILE *out2 = fopen("logs\\padLog.txt", "ab");
-	if (out2) {
-		fprintf(out2, "%s\n", s);
-		fclose(out2);
-	}
-	int w = GetCurrentThreadId();
-	char junk[1000];
-	sprintf(junk, "logs\\padLog%i.txt", w);
-	out2 = fopen(junk, "ab");
-	if (out2) {
-		fprintf(out2, "%s\n", s);
-		fclose(out2);
-	}
-}
-//*/
-
 #ifdef NO_CRT
-
 inline void * malloc(size_t size) {
 	return HeapAlloc(GetProcessHeap(), 0, size);
 }
@@ -105,18 +61,18 @@ inline wchar_t * __cdecl wcsdup(const wchar_t *in) {
 	return out;
 }
 
-__forceinline void * __cdecl operator new(size_t lSize) {
+inline void * __cdecl operator new(size_t lSize) {
 	return HeapAlloc(GetProcessHeap(), 0, lSize);
 }
 
-__forceinline void __cdecl operator delete(void *pBlock) {
+inline void __cdecl operator delete(void *pBlock) {
 	HeapFree(GetProcessHeap(), 0, pBlock);
 }
 
-#endif
-
-__forceinline int __cdecl wcsicmp(const wchar_t *s1, const wchar_t *s2) {
+inline int __cdecl wcsicmp(const wchar_t *s1, const wchar_t *s2) {
 	int res = CompareStringW(LOCALE_USER_DEFAULT, NORM_IGNORECASE, s1, -1, s2, -1);
 	if (res) return res-2;
 	return res;
 }
+
+#endif

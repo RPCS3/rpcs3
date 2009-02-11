@@ -4,6 +4,7 @@
 #include "resource.h"
 #include "KeyboardQueue.h"
 #include <math.h>
+#include <commctrl.h>
 
 Device *dev;
 

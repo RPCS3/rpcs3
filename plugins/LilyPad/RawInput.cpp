@@ -1,4 +1,4 @@
-#include "global.h"
+#include "Global.h"
 #include "WindowsMessaging.h"
 #include "VKey.h"
 #include "DeviceEnumerator.h"
@@ -7,6 +7,16 @@
 #include "WindowsMouse.h"
 
 #include "Config.h"
+
+typedef BOOL (CALLBACK *_RegisterRawInputDevices)(PCRAWINPUTDEVICE pRawInputDevices, UINT uiNumDevices, UINT cbSize);
+typedef UINT (CALLBACK *_GetRawInputDeviceInfo)(HANDLE hDevice, UINT uiCommand, LPVOID pData, PUINT pcbSize);
+typedef UINT (CALLBACK *_GetRawInputData)(HRAWINPUT hRawInput, UINT uiCommand, LPVOID pData, PUINT pcbSize, UINT cbSizeHeader);
+typedef UINT (CALLBACK *_GetRawInputDeviceList)(PRAWINPUTDEVICELIST pRawInputDeviceList, PUINT puiNumDevices, UINT cbSize);
+
+_RegisterRawInputDevices pRegisterRawInputDevices = 0;
+_GetRawInputDeviceInfo pGetRawInputDeviceInfo = 0;
+_GetRawInputData pGetRawInputData = 0;
+_GetRawInputDeviceList pGetRawInputDeviceList = 0;
 
 ExtraWndProcResult RawInputWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, LRESULT *output);
 
@@ -122,7 +132,7 @@ public:
 
 		active = 1;
 
-		// HAve to be careful with order.  At worst, one unmatched call to ReleaseRawMice on
+		// Have to be careful with order.  At worst, one unmatched call to ReleaseRawMice on
 		// EatWndProc fail.  In all other cases, no unmatched initialization/cleanup
 		// lines.
 		if (!rawMouseActivatedCount++) {
@@ -163,55 +173,6 @@ public:
 			}
 		}
 	}
-	/*
-	int Activate(void *d) {
-		InitInfo *info = (InitInfo*)d;
-		// Redundant.  Should match the next line.
-		// Deactivate();
-		if (wmm) wmm->Deactivate();
-		HWND hWnd = info->hWnd;
-		if (info->hWndButton) {
-			hWnd = info->hWndButton;
-		}
-		if (GetFocus() != hWnd) return 0;
-
-		if (!EatWndProc(hWnd, WindowsMessagingWndProc)) {
-			Deactivate();
-			return 0;
-		}
-
-		SetCapture(hWnd);
-		ShowCursor(0);
-
-		GetCursorPos(&origCursorPos);
-		active = 1;
-		RECT r;
-		GetWindowRect(hWnd, &r);
-		ClipCursor(&r);
-		center.x = (r.left + r.right)/2;
-		center.y = (r.top + r.bottom)/2;
-		SetCursorPos(center.x, center.y);
-
-		wmm = this;
-		AllocState();
-
-		return 1;
-	}
-
-	void Deactivate() {
-		FreeState();
-		if (active) {
-			ClipCursor(0);
-			ReleaseCapture();
-			ShowCursor(1);
-			SetCursorPos(origCursorPos.x, origCursorPos.y);
-			if (!wmk)
-				ReleaseExtraProc(WindowsMessagingWndProc);
-			active = 0;
-			wmm = 0;
-		}
-		// hWndDlg = 0;
-	}//*/
 };
 
 ExtraWndProcResult RawInputWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, LRESULT *output) {
@@ -275,9 +236,28 @@ ExtraWndProcResult RawInputWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM l
 	return CONTINUE_BLISSFULLY;
 }
 
+int InitializeRawInput() {
+	static int RawInputFailed = 0;
+	if (RawInputFailed) return 0;
+	if (!pGetRawInputDeviceList) {
+		HMODULE user32 = LoadLibrary(L"user32.dll");
+		if (user32) {
+			if (!(pRegisterRawInputDevices = (_RegisterRawInputDevices) GetProcAddress(user32, "RegisterRawInputDevices")) ||
+				!(pGetRawInputDeviceInfo = (_GetRawInputDeviceInfo) GetProcAddress(user32, "GetRawInputDeviceInfoW")) ||
+				!(pGetRawInputData = (_GetRawInputData) GetProcAddress(user32, "GetRawInputData")) ||
+				!(pGetRawInputDeviceList = (_GetRawInputDeviceList) GetProcAddress(user32, "GetRawInputDeviceList"))) {
+					FreeLibrary(user32);
+					RawInputFailed = 1;
+					return 0;
+			}
+		}
+	}
+	return 1;
+}
+
 void EnumRawInputDevices() {
 	UINT count = 0;
-	if (pGetRawInputDeviceList && pGetRawInputDeviceList(0, &count, sizeof(RAWINPUTDEVICELIST)) != (UINT)-1) {
+	if (InitializeRawInput() && pGetRawInputDeviceList(0, &count, sizeof(RAWINPUTDEVICELIST)) != (UINT)-1) {
 		wchar_t *instanceID = (wchar_t *) malloc(41000*sizeof(wchar_t));
 		wchar_t *keyName = instanceID + 11000;
 		wchar_t *displayName = keyName + 10000;

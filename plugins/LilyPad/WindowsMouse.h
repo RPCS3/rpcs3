@@ -1,4 +1,3 @@
-#include "Global.h"
 #include "InputManager.h"
 
 // Shared functionality for WM and RAW keyboards.

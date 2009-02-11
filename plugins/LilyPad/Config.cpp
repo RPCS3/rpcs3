@@ -1,4 +1,7 @@
-#include "global.h"
+#include "Global.h"
+#include <Dbt.h>
+#include <commctrl.h>
+
 #include "Config.h"
 #include "PS2Edefs.h"
 #include "Resource.h"
@@ -11,19 +14,15 @@
 #include "InputManager.h"
 #include "KeyboardQueue.h"
 #include "WndProcEater.h"
-#include <Dbt.h>
-#include <commctrl.h>
+
+// Needed to know if raw input is available.  It requires XP or higher.
+#include "RawInput.h"
 
 GeneralConfig config;
 
 HWND hWndProp = 0;
 
 int selected = 0;
-
-_RegisterRawInputDevices pRegisterRawInputDevices = 0;
-_GetRawInputDeviceInfo pGetRawInputDeviceInfo = 0;
-_GetRawInputData pGetRawInputData = 0;
-_GetRawInputDeviceList pGetRawInputDeviceList = 0;
 
 HWND hWnds[2] = {0,0};
 HWND hWndGeneral = 0;
@@ -264,36 +263,67 @@ void SelChanged(int pad) {
 	int disableFlip = 0;
 	wchar_t temp[3][1000];
 	Device *dev;
-	Binding *b;
+	int bFound = 0;
+	int ffbFound = 0;
 	ForceFeedbackBinding *ffb = 0;
-	if (i == 1) {
-		int index = ListView_GetNextItem(hWndList, -1, LVNI_SELECTED);
-		LVITEMW item;
-		item.iItem = index;
-		item.mask = LVIF_TEXT;
-		for (j=0; j<3; j++) {
-			item.pszText = temp[j];
-			item.iSubItem = j;
-			item.cchTextMax = sizeof(temp[0])/sizeof(temp[0][0]);
-			if (!ListView_GetItem(hWndList, &item)) break;
-		}
-		if (j == 3) {
-			devName = temp[0];
-			key = temp[1];
-			command = temp[2];
-			if (GetBinding(pad, index, dev, b, ffb)) {
-				if (b) {
-					VirtualControl *control = &dev->virtualControls[b->controlIndex];
-					// Ignore
-					if (b->command != 0x7F) {
-						turbo = b->turbo;
-						sensitivity = b->sensitivity;
-						// Only relative axes can't have negative sensitivity.
-						if (((control->uid >> 16) & 0xFF) == RELAXIS) {
-							disableFlip = 1;
+	if (i >= 1) {
+		int index = -1;
+		int flipped = 0;
+		Binding *b;
+		while (1) {
+			index = ListView_GetNextItem(hWndList, index, LVNI_SELECTED);
+			if (index < 0) break;
+			LVITEMW item;
+			item.iItem = index;
+			item.mask = LVIF_TEXT;
+			for (j=0; j<3; j++) {
+				item.pszText = temp[j];
+				item.iSubItem = j;
+				item.cchTextMax = sizeof(temp[0])/sizeof(temp[0][0]);
+				if (!ListView_GetItem(hWndList, &item)) break;
+			}
+			if (j == 3) {
+				devName = temp[0];
+				key = temp[1];
+				command = temp[2];
+				if (GetBinding(pad, index, dev, b, ffb)) {
+					if (b) {
+						bFound ++;
+						VirtualControl *control = &dev->virtualControls[b->controlIndex];
+						// Ignore
+						if (b->command != 0x7F) {
+							// Only relative axes can't have negative sensitivity.
+							if (((control->uid >> 16) & 0xFF) == RELAXIS) {
+								disableFlip = 1;
+							}
+							turbo += b->turbo;
+							if (b->sensitivity < 0) {
+								flipped ++;
+								sensitivity -= b->sensitivity;
+							}
+							else {
+								sensitivity += b->sensitivity;
+							}
 						}
+						else disableFlip = 1;
 					}
+					else ffbFound++;
 				}
+			}
+		}
+		if ((bFound && ffbFound) || ffbFound > 1) {
+			ffb = 0;
+			turbo = -1;
+			sensitivity = 0;
+			disableFlip = 1;
+			bFound = ffbFound = 0;
+		}
+		else if (bFound) {
+			turbo++;
+			sensitivity /= bFound;
+			if (bFound > 1) disableFlip = 1;
+			else if (flipped) {
+				sensitivity = -sensitivity;
 			}
 		}
 	}
@@ -335,7 +365,7 @@ void SelChanged(int pad) {
 			ShowWindow(hWndTemp, enable);
 		}
 	}
-	if (!ffb) {
+	if (!ffb) { 
 		SetWindowText(GetDlgItem(hWnd, IDC_AXIS_DEVICE1), devName);
 		SetWindowText(GetDlgItem(hWnd, IDC_AXIS1), key);
 		SetWindowText(GetDlgItem(hWnd, IDC_AXIS_CONTROL1), command);
@@ -345,7 +375,14 @@ void SelChanged(int pad) {
 		if (disableFlip) EnableWindow(GetDlgItem(hWnd, IDC_FLIP1), 0);
 
 		EnableWindow(GetDlgItem(hWnd, IDC_TURBO), turbo >= 0);
-		CheckDlgButton(hWnd, IDC_TURBO, BST_CHECKED * (turbo>0));
+		if (turbo > 0 && turbo < bFound) {
+			SendMessage(GetDlgItem(hWnd, IDC_TURBO), BM_SETSTYLE, BS_AUTO3STATE, 0);
+			CheckDlgButton(hWnd, IDC_TURBO, BST_INDETERMINATE);
+		}
+		else {
+			SendMessage(GetDlgItem(hWnd, IDC_TURBO), BM_SETSTYLE, BS_AUTOCHECKBOX, 0);
+			CheckDlgButton(hWnd, IDC_TURBO, BST_CHECKED * (bFound && turbo == bFound));
+		}
 	}
 	else {
 		wchar_t temp2[2000];
@@ -450,34 +487,36 @@ int ListBoundEffect(int pad, Device *dev, ForceFeedbackBinding *b) {
 	return index;
 }
 
-// Only for use with control bindings.
+// Only for use with control bindings.  Affects all highlighted bindings.
 void ChangeValue(int pad, int *newSensitivity, int *turbo) {
 	if (!hWnds[pad]) return;
 	HWND hWndList = GetDlgItem(hWnds[pad], IDC_LIST);
-	int i = ListView_GetSelectedCount(hWndList);
-	if (i != 1) return;
-	int index = ListView_GetNextItem(hWndList, -1, LVNI_SELECTED);
-	Device *dev;
-	Binding *b;
-	ForceFeedbackBinding *ffb;
-	if (!GetBinding(pad, index, dev, b, ffb) || ffb) return;
-	if (newSensitivity) {
-		b->sensitivity = *newSensitivity;
+	int count = ListView_GetSelectedCount(hWndList);
+	if (count < 1) return;
+	int index = -1;
+	while (1) {
+		index = ListView_GetNextItem(hWndList, index, LVNI_SELECTED);
+		if (index < 0) break;
+		Device *dev;
+		Binding *b;
+		ForceFeedbackBinding *ffb;
+		if (!GetBinding(pad, index, dev, b, ffb) || ffb) return;
+		if (newSensitivity) {
+			// Don't change flip state when modifying multiple controls.
+			if (count > 1 && b->sensitivity < 0)
+				b->sensitivity = -*newSensitivity;
+			else
+				b->sensitivity = *newSensitivity;
+		}
+		if (turbo) {
+			b->turbo = *turbo;
+		}
 	}
-	if (turbo) {
-		b->turbo = *turbo;
-	}
-	// Use this because it validates values.  May inline just what I need later.
-	// index = BindCommand(dev, dev->virtualControls[b->controlIndex].uid, pad, b->command, sensitivity, b->flip2);
-	//if (index >= 0) {
 	PropSheet_Changed(hWndProp, hWnds[pad]);
 	SelChanged(pad);
-	/*	UnselectAll(hWndList);
-		ListView_SetItemState(hWndList, index, LVIS_SELECTED, LVIS_SELECTED);
-	}//*/
 }
 
-// Only for use with control bindings.
+// Only for use with effect bindings.
 void ChangeEffect(int pad, int id, int *newForce, unsigned int *newEffectType) {
 	if (!hWnds[pad]) return;
 	HWND hWndList = GetDlgItem(hWnds[pad], IDC_LIST);
@@ -593,6 +632,8 @@ int SaveSettings(wchar_t *file = 0) {
 	WritePrivateProfileInt(L"General Settings", L"XInput", config.gameApis.xInput, file);
 	WritePrivateProfileInt(L"General Settings", L"Multiple Bindings", config.multipleBinding, file);
 
+	WritePrivateProfileInt(L"General Settings", L"Save State in Title", config.saveStateTitle, file);
+
 	WritePrivateProfileInt(L"Pad1", L"Guitar", config.guitar[0], file);
 	WritePrivateProfileInt(L"Pad2", L"Guitar", config.guitar[1], file);
 	WritePrivateProfileInt(L"Pad1", L"Auto Analog", config.AutoAnalog[0], file);
@@ -703,7 +744,9 @@ int LoadSettings(int force, wchar_t *file) {
 	config.gameApis.directInput = GetPrivateProfileBool(L"General Settings", L"DirectInput Game Devices", 1, file);
 	config.gameApis.xInput = GetPrivateProfileBool(L"General Settings", L"XInput", 1, file);
 
-	if (pGetRawInputDeviceInfo==0) {
+	config.saveStateTitle = GetPrivateProfileBool(L"General Settings", L"Save State in Title", 1, file);
+
+	if (!InitializeRawInput()) {
 		if (config.keyboardApi == RAW) config.keyboardApi = WM;
 		if (config.mouseApi == RAW) config.mouseApi = WM;
 	}
@@ -1078,7 +1121,6 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 	switch (msg) {
 	case WM_INITDIALOG:
 		{
-//UnregisterDeviceNotification
 			ListView_SetExtendedListViewStyleEx(hWndList, LVS_EX_DOUBLEBUFFER, LVS_EX_DOUBLEBUFFER);
 			LVCOLUMN c;
 			c.mask = LVCF_TEXT | LVCF_WIDTH;
@@ -1100,7 +1142,6 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 				EnableWindow(GetDlgItem(hWnd, ID_IGNORE), 0);
 
 			Populate(pad);
-			//ShowScrollBar(hWndList, SB_VERT, 1);
 		}
 		break;
 	case WM_DEVICECHANGE:
@@ -1116,8 +1157,6 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 			EndBinding(hWnd);
 		}
 		else {
-			//int inst;
-			//int index;
 			unsigned int uid;
 			int value;
 			InitInfo info = {selected==0x7F, hWndProp, hWnd, GetDlgItem(hWnd, selected)};
@@ -1242,21 +1281,17 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 				switch(n->hdr.code) {
 				case PSN_QUERYCANCEL:
 				case PSN_KILLACTIVE:
-					//if (selected) EndBinding(hWnd);
+					EndBinding(hWnd);
 					return 0;
 				case PSN_SETACTIVE:
-					//selected = 0;
-					//InitInput(GetType(), hWndProp);
 					return 0;
 				case PSN_APPLY:
-					EndBinding(hWnd);
 					SetWindowLong(hWnd, DWL_MSGRESULT, PSNRET_NOERROR);
-					//selected = 0;
-					//if (SaveSettings() == -1) return 0;
 					return 1;
 				}
 			}
 			else if (n->hdr.idFrom == IDC_LIST) {
+				static int NeedUpdate = 0;
 				if (n->hdr.code == LVN_KEYDOWN) {
 					NMLVKEYDOWN *key = (NMLVKEYDOWN *) n;
 					if (key->wVKey == VK_DELETE ||
@@ -1266,7 +1301,15 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 							PropSheet_Changed(hWndProp, hWnds[0]);
 					}
 				}
+				// Update sensitivity and motor/binding display on redraw
+				// rather than on itemchanged.  This reduces blinking, as
+				// I get 3 LVN_ITEMCHANGED messages, and first is sent before
+				// the new item is set as being selected.
 				else if (n->hdr.code == LVN_ITEMCHANGED) {
+					NeedUpdate = 1;
+				}
+				else if (n->hdr.code == NM_CUSTOMDRAW && NeedUpdate) {
+					NeedUpdate = 0;
 					SelChanged(pad);
 				}
 				EndBinding(hWnd);
@@ -1383,10 +1426,15 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 				dm->PostRead();
 				SetTimer(hWnd, 1, 100, 0);
 			}
-			else if (cmd == IDC_FLIP1 || cmd == IDC_TURBO) {
+			if (cmd == IDC_TURBO) {
+				// Don't allow setting it back to indeterminate.
+				SendMessage(GetDlgItem(hWnd, IDC_TURBO), BM_SETSTYLE, BS_AUTOCHECKBOX, 0);
 				int turbo = (IsDlgButtonChecked(hWnd, IDC_TURBO) == BST_CHECKED);
+				ChangeValue(pad, 0, &turbo);
+			}
+			else if (cmd == IDC_FLIP1 || cmd == IDC_TURBO) {
 				int val = GetLogSliderVal(hWnd, IDC_SLIDER1);
-				ChangeValue(pad, &val, &turbo);
+				ChangeValue(pad, &val, 0);
 			}
 			else if (cmd >= IDC_FF_AXIS1_ENABLED && cmd < IDC_FF_AXIS8_ENABLED + 16) {
 				int index = (cmd - IDC_FF_AXIS1_ENABLED)/16;
@@ -1446,7 +1494,6 @@ HPROPSHEETPAGE CreateGeneralPage() {
 
 INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM lParam) {
 	int i;
-	//int enableAxisButtons;
 	switch (msg) {
 	case WM_INITDIALOG:
 		{
@@ -1476,6 +1523,7 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 
 		CheckDlgButton(hWnd, IDC_DISABLE_SCREENSAVER, BST_CHECKED * config.disableScreenSaver);
 		CheckDlgButton(hWnd, IDC_GH2_HACK, BST_CHECKED * config.GH2);
+		CheckDlgButton(hWnd, IDC_SAVE_STATE_TITLE, BST_CHECKED * config.saveStateTitle);
 
 		CheckDlgButton(hWnd, IDC_GUITAR1, BST_CHECKED * config.guitar[0]);
 		CheckDlgButton(hWnd, IDC_GUITAR2, BST_CHECKED * config.guitar[1]);
@@ -1485,13 +1533,16 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 		CheckDlgButton(hWnd, IDC_AXIS_BUTTONS, BST_CHECKED * config.axisButtons);
 		CheckDlgButton(hWnd, IDC_MULTIPLE_BINDING, BST_CHECKED * config.multipleBinding);
 
+
 		if (config.keyboardApi < 0 || config.keyboardApi > 3) config.keyboardApi = NO_API;
 		CheckRadioButton(hWnd, IDC_KB_DISABLE, IDC_KB_RAW, IDC_KB_DISABLE + config.keyboardApi);
 		if (config.mouseApi < 0 || config.mouseApi > 3) config.mouseApi = NO_API;
 		CheckRadioButton(hWnd, IDC_M_DISABLE, IDC_M_RAW, IDC_M_DISABLE + config.mouseApi);
 		CheckDlgButton(hWnd, IDC_G_DI, BST_CHECKED * config.gameApis.directInput);
 		CheckDlgButton(hWnd, IDC_G_XI, BST_CHECKED * config.gameApis.xInput);
-		if (pGetRawInputDeviceInfo == 0) {
+
+
+		if (!InitializeRawInput()) {
 			EnableWindow(GetDlgItem(hWnd, IDC_KB_RAW), 0);
 			EnableWindow(GetDlgItem(hWnd, IDC_M_RAW), 0);
 		}
@@ -1563,6 +1614,7 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 
 			config.disableScreenSaver = (IsDlgButtonChecked(hWnd, IDC_DISABLE_SCREENSAVER) == BST_CHECKED);
 			config.GH2 = (IsDlgButtonChecked(hWnd, IDC_GH2_HACK) == BST_CHECKED);
+			config.saveStateTitle = (IsDlgButtonChecked(hWnd, IDC_SAVE_STATE_TITLE) == BST_CHECKED);
 
 			unsigned int needUpdate = 0;
 			unsigned int disablePad1New = (IsDlgButtonChecked(hWnd, IDC_DISABLE_PAD1) == BST_CHECKED);
@@ -1651,8 +1703,7 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 				switch(n->hdr.code) {
 				case PSN_QUERYCANCEL:
 				case PSN_KILLACTIVE:
-					//selected = 0;
-					//EndBinding(hWnd);
+					EndBinding(hWnd);
 					return 0;
 				case PSN_SETACTIVE:
 					//selected = 0;

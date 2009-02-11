@@ -332,18 +332,6 @@ wchar_t *Device::GetPhysicalControlName(PhysicalControl *control) {
 	return GetDefaultControlName(control->id, control->type);
 }
 
-/*wchar_t *Device::GetControlNameByIndex(int index) {
-	static wchar_t name[20];
-	if (type & BUTTON) {
-		wsprintfW(name, "Button %i", controls);
-	}
-	else if (type & AXIS) {
-		wsprintfW(name, "Button %i", index);
-	}
-	else return L"Unknown";
-	return name;
-}//*/
-
 void InputDeviceManager::AddDevice(Device *d) {
 	devices = (Device**) realloc(devices, sizeof(Device*) * (numDevices+1));
 	devices[numDevices++] = d;

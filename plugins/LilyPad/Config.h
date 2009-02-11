@@ -1,18 +1,8 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-typedef BOOL (CALLBACK *_RegisterRawInputDevices)(PCRAWINPUTDEVICE pRawInputDevices, UINT uiNumDevices, UINT cbSize);
-typedef UINT (CALLBACK *_GetRawInputDeviceInfo)(HANDLE hDevice, UINT uiCommand, LPVOID pData, PUINT pcbSize);
-typedef UINT (CALLBACK *_GetRawInputData)(HRAWINPUT hRawInput, UINT uiCommand, LPVOID pData, PUINT pcbSize, UINT cbSizeHeader);
-typedef UINT (CALLBACK *_GetRawInputDeviceList)(PRAWINPUTDEVICELIST pRawInputDeviceList, PUINT puiNumDevices, UINT cbSize);
-
-extern _RegisterRawInputDevices pRegisterRawInputDevices;
-extern _GetRawInputDeviceInfo pGetRawInputDeviceInfo;
-extern _GetRawInputData pGetRawInputData;
-extern _GetRawInputDeviceList pGetRawInputDeviceList;
-
-#include "global.h"
 #include "InputManager.h"
+#include "PS2Etypes.h"
 
 struct GeneralConfig {
 public:
@@ -43,6 +33,8 @@ public:
 
 	u8 guitar[2];
 	u8 AutoAnalog[2];
+
+	u8 saveStateTitle;
 
 	wchar_t lastSaveConfigPath[MAX_PATH+1];
 	wchar_t lastSaveConfigFileName[MAX_PATH+1];

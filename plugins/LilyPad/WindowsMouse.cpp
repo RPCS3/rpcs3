@@ -1,4 +1,4 @@
-#include "global.h"
+#include "Global.h"
 #include "VKey.h"
 #include "WindowsMouse.h"
 

@@ -1,4 +1,4 @@
-#include "global.h"
+#include "Global.h"
 #include "VKey.h"
 #include "DirectInput.h"
 #include <xinput.h>
@@ -20,7 +20,7 @@ static int xInputActiveCount = 0;
 __forceinline int ShortToAxis(int v) {
 	// If positive and at least 1 << 14, increment.
 	v += (!((v>>15)&1)) & ((v>>14)&1);
-	// Not just double.
+	// Just double.
 	return v << 1;
 }
 
@@ -44,8 +44,7 @@ public:
 			AddPhysicalControl(PSHBTN, i + 2*(i > 9), 0);
 		}
 		for (; i<20; i++) {
-			// The i > 9 accounts for the 2 bit skip in button flags.
-			AddPhysicalControl(ABSAXIS, i + 2*(i > 9), 0);
+			AddPhysicalControl(ABSAXIS, i + 2, 0);
 		}
 		AddFFAxis(L"Slow Motor", 0);
 		AddFFAxis(L"Fast Motor", 1);
@@ -96,7 +95,6 @@ public:
 	int Update() {
 		if (!active) return 0;
 		XINPUT_STATE state;
-		// memset(&state, 0, sizeof(state));
 		if (ERROR_SUCCESS != pXInputGetState(index, &state)) {
 			Deactivate();
 			return 0;
@@ -107,12 +105,6 @@ public:
 		}
 		physicalControlState[14] = (((int)state.Gamepad.bLeftTrigger) + (state.Gamepad.bLeftTrigger>>7)) << 8;
 		physicalControlState[15] = (((int)state.Gamepad.bRightTrigger) + (state.Gamepad.bRightTrigger>>7)) << 8;
-		/*
-		state.Gamepad.sThumbLX = 0x8000;
-		state.Gamepad.sThumbLY = 0x7FFF;
-		state.Gamepad.sThumbRX = 0x3FFF;
-		state.Gamepad.sThumbRY = 0;
-		/*/
 		physicalControlState[16] = ShortToAxis(state.Gamepad.sThumbLX);
 		physicalControlState[17] = ShortToAxis(state.Gamepad.sThumbLY);
 		physicalControlState[18] = ShortToAxis(state.Gamepad.sThumbRX);
@@ -126,8 +118,9 @@ public:
 		for (int p=0; p<2; p++) {
 			for (int i=0; i<pads[p].numFFBindings; i++) {
 				// Technically should also be a *65535/BASE_SENSITIVITY, but that's close enough to 1 for me.
-				newVibration[0] += (int)((pads[p].ffBindings[i].axes[0].force * (__int64)ps2Vibration[p][pads[p].ffBindings[i].motor]) / 255);
-				newVibration[1] += (int)((pads[p].ffBindings[i].axes[1].force * (__int64)ps2Vibration[p][pads[p].ffBindings[i].motor]) / 255);
+				ForceFeedbackBinding *ffb = &pads[p].ffBindings[i];
+				newVibration[0] += (int)((ffb->axes[0].force * (__int64)ps2Vibration[p][ffb->motor]) / 255);
+				newVibration[1] += (int)((ffb->axes[1].force * (__int64)ps2Vibration[p][ffb->motor]) / 255);
 			}
 		}
 		newVibration[0] = abs(newVibration[0]);
@@ -147,15 +140,11 @@ public:
 	}
 
 	void SetEffect(ForceFeedbackBinding *binding, unsigned char force) {
-		PadBindings p[2];
-		p[0] = pads[0];
-		p[1] = pads[1];
+		PadBindings pBackup = pads[0];
 		pads[0].ffBindings = binding;
 		pads[0].numFFBindings = 1;
-		pads[1].numFFBindings = 0;
 		SetEffects(0, binding->motor, 255);
-		pads[0] = p[0];
-		pads[1] = p[1];
+		pads[0] = pBackup;
 	}
 
 	void Deactivate() {

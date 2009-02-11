@@ -1,10 +1,13 @@
-#include "global.h"
+#define DIRECTINPUT_VERSION 0x0800
+
+#include "Global.h"
 #include "VKey.h"
 #include "DirectInput.h"
 #include <dinput.h>
 #include "InputManager.h"
 #include "DeviceEnumerator.h"
-
+#include "PS2Etypes.h"
+#include <stdio.h>
 
 inline static u16 flipShort(u16 s) {
 	return (s>>8) | (s<<8);
@@ -121,11 +124,7 @@ public:
 				DICONSTANTFORCE constant;
 			};
 
-			//cf.lMagnitude = 0;
-			//memset(&dieffect, 0, sizeof(dieffect));
 			dieffect.dwSize = sizeof(dieffect);
-			//dieffect.lpEnvelope = 0;
-			dieffect.dwStartDelay = 0;
 			dieffect.lpvTypeSpecificParams = &periodic;
 			int magnitude = abs((int)((force*10000*(__int64)diEffects[index].scale)/BASE_SENSITIVITY/255));
 			if (magnitude > 10000) magnitude = 10000;
@@ -315,20 +314,6 @@ BOOL CALLBACK EnumDeviceObjectsCallback (LPCDIDEVICEOBJECTINSTANCE lpddoi, LPVOI
 	DirectInputDevice * did = (DirectInputDevice*) pvRef;
 	if (lpddoi->dwType & DIDFT_FFACTUATOR) {
 		did->AddFFAxis(lpddoi->tszName, lpddoi->dwType);
-		/*
-		void * t = realloc(DI->actuators, sizeof(DIActuator) * (DI->numActuators+1));
-		if (t) {
-			DI->actuators = (DIActuator*) t;
-			int i = DI->numActuators;
-			while (i > 0 && (lpddoi->dwType & 0xFFFF00) < (DI->actuators[i-1].id & 0xFFFF00)) {
-				DI->actuators[i] = DI->actuators[i-1];
-				i--;
-			}
-			DI->actuators[i].maxForce = lpddoi->dwFFMaxForce;
-			DI->actuators[i].id = lpddoi->dwType;
-			DI->numActuators++;
-		}
-		//*/
 	}
 
 	ControlType type;

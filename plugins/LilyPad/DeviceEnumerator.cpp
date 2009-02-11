@@ -1,4 +1,4 @@
-#include "global.h"
+#include "Global.h"
 #include "DeviceEnumerator.h"
 #include "InputManager.h"
 #include "WindowsMessaging.h"
