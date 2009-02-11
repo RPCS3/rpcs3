@@ -197,7 +197,7 @@ mem32_t __fastcall hwRead32_page_0F(u32 mem)
 	{
 		case 0xf000:
 			// This one is checked alot, so leave it commented out unless you love 600 meg logfiles.
-			//HW_LOG("DMAC_STAT Read  32bit %x\n", psHu32(0xe010));
+			//HW_LOG("INTC_STAT Read  32bit %x\n", psHu32(0xf010));
 		break;
 
 		case 0xf010:
@@ -295,7 +295,7 @@ mem32_t __fastcall hwRead32_generic(u32 mem)
 		case 0x0c:
 		case 0x0d:
 		case 0x0e:
-			if( mem == DMAC_STAT )
+			if( mem == DMAC_STAT)
 				HW_LOG("DMAC_STAT Read32, value=0x%x\n", psHu32(DMAC_STAT));
 		break;
 

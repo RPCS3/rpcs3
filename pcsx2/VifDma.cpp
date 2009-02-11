@@ -1043,14 +1043,7 @@ int  _VIF0chain() {
 	u32 *pMem;
 	u32 ret;
 
-	//Hmm, it seems some games (Fatal Frame and Twisted Metal) Try to force the VIF to stop whatever its doing and do something else
-	//Okay... so in that case we will tell the vif to do so (Refraction)
-	if (vif0ch->qwc == 0 && vif0.vifstalled == 0) {
-		vif0Regs->stat &= ~VIF0_STAT_VPS;
-		vif0.cmd = 0; 
-		vif0.tag.size = 0;
-		return 0;
-	}
+	if (vif0ch->qwc == 0 && vif0.vifstalled == 0) return 0;
 
 	pMem = (u32*)dmaGetAddr(vif0ch->madr);
 	if (pMem == NULL)
@@ -1212,11 +1205,6 @@ void dmaVIF0() {
 			"        tadr = %lx, asr0 = %lx, asr1 = %lx\n",
 			vif0ch->chcr, vif0ch->madr, vif0ch->qwc,
 			vif0ch->tadr, vif0ch->asr0, vif0ch->asr1 );
-
-	if(vif0.done == 0) {
-		SysPrintf("VIF0 Double DMA issue, ignoring\n");
-		return;
-	}
 
 	g_vifCycles = 0;
 
@@ -1876,14 +1864,7 @@ int  _VIF1chain() {
 	//u32 qwc = vif1ch->qwc;
 	u32 ret;
 
-	//Hmm, it seems some games (Fatal Frame and Twisted Metal) Try to force the VIF to stop whatever its doing and do something else
-	//Okay... so in that case we will tell the vif to do so (Refraction)
-	if (vif1ch->qwc == 0 && vif1.vifstalled == 0) {
-		vif1Regs->stat &= ~VIF1_STAT_VPS;
-		vif1.cmd = 0; 
-		vif1.tag.size = 0;
-		return 0;
-	}
+	if (vif1ch->qwc == 0 && vif1.vifstalled == 0) return 0;
 	
 	pMem = (u32*)dmaGetAddr(vif1ch->madr);
 	if (pMem == NULL)
@@ -2031,11 +2012,6 @@ void dmaVIF1()
 			"        tadr = %lx, asr0 = %lx, asr1 = %lx\n",
 			vif1ch->chcr, vif1ch->madr, vif1ch->qwc,
 			vif1ch->tadr, vif1ch->asr0, vif1ch->asr1 );
-
-	if(vif1.done == 0 && (psHu32(DMAC_CTRL) & 0xC) != 0x8) {
-		SysPrintf("VIF1 Double DMA issue, ignoring\n");
-		return;
-	}
 
 	vif1.done = 0;
 	g_vifCycles = 0;

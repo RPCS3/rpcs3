@@ -56,33 +56,35 @@ static void _setupBranchTest()
 	// But using 32-bit loads here is ok (and faster), because we mask off
 	// everything except the lower 10 bits away.
 
-	MOV32MtoR( EAX, (uptr)&psHu32(DMAC_STAT) );
-	XOR32MtoR( EAX, (uptr)&psHu32(DMAC_PCR) );
+	MOV32MtoR( EAX, (uptr)&psHu32(DMAC_PCR) );
+	NOT32R( EAX );
+	OR32MtoR( EAX, (uptr)&psHu32(DMAC_STAT) );
 	AND32ItoR( EAX, 0x3ff );
+	CMP32ItoR( EAX, 0x3ff);
 }
 
 void recBC0F()
 {
 	_setupBranchTest();
-	recDoBranchImm(JNZ32(0));
+	recDoBranchImm(JE32(0));
 }
 
 void recBC0T()
 {
 	_setupBranchTest();
-	recDoBranchImm(JZ32(0));
+	recDoBranchImm(JL32(0));
 }
 
 void recBC0FL()
 {
 	_setupBranchTest();
-	recDoBranchImm_Likely(JNZ32(0));
+	recDoBranchImm_Likely(JE32(0));
 }
 
 void recBC0TL()
 {
 	_setupBranchTest();
-	recDoBranchImm_Likely(JZ32(0));
+	recDoBranchImm_Likely(JL32(0));
 }
 
 void recTLBR() { recCall( Interp::TLBR, -1 ); }

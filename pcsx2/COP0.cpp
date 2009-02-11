@@ -221,7 +221,7 @@ void MTC0() {
 }
 
 int CPCOND0() {
-	return (((psHu16(DMAC_STAT) & psHu16(DMAC_PCR)) & 0x3ff) == (psHu16(DMAC_PCR) & 0x3ff));
+	return (((psHu16(DMAC_STAT) | ~psHu16(DMAC_PCR)) & 0x3ff) == 0x3ff);
 }
 
 //#define CPCOND0	1
