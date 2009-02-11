@@ -1,0 +1,68 @@
+#ifndef CONFIG_H
+#define CONFIG_H
+
+typedef BOOL (CALLBACK *_RegisterRawInputDevices)(PCRAWINPUTDEVICE pRawInputDevices, UINT uiNumDevices, UINT cbSize);
+typedef UINT (CALLBACK *_GetRawInputDeviceInfo)(HANDLE hDevice, UINT uiCommand, LPVOID pData, PUINT pcbSize);
+typedef UINT (CALLBACK *_GetRawInputData)(HRAWINPUT hRawInput, UINT uiCommand, LPVOID pData, PUINT pcbSize, UINT cbSizeHeader);
+typedef UINT (CALLBACK *_GetRawInputDeviceList)(PRAWINPUTDEVICELIST pRawInputDeviceList, PUINT puiNumDevices, UINT cbSize);
+
+extern _RegisterRawInputDevices pRegisterRawInputDevices;
+extern _GetRawInputDeviceInfo pGetRawInputDeviceInfo;
+extern _GetRawInputData pGetRawInputData;
+extern _GetRawInputDeviceList pGetRawInputDeviceList;
+
+#include "global.h"
+#include "InputManager.h"
+
+struct GeneralConfig {
+public:
+	u8 disablePad[2];
+
+	u8 mouseUnfocus;
+	u8 disableScreenSaver;
+	u8 closeHacks;
+
+	u8 axisButtons;
+	DeviceAPI keyboardApi;
+	DeviceAPI mouseApi;
+	struct {
+		u8 directInput;
+		u8 xInput;
+	} gameApis;
+	u8 debug;
+	u8 background;
+	u8 multipleBinding;
+	u8 forceHide;
+	u8 GH2;
+
+	// Derived value, calculated by GetInput().
+	u8 ignoreKeys;
+
+	u8 GSThreadUpdates;
+	u8 escapeFullscreenHack;
+
+	u8 guitar[2];
+	u8 AutoAnalog[2];
+
+	wchar_t lastSaveConfigPath[MAX_PATH+1];
+	wchar_t lastSaveConfigFileName[MAX_PATH+1];
+};
+
+extern GeneralConfig config;
+
+void UnloadConfigs();
+
+/*
+inline int GetNeededInput(HWND hWnd, int configMode) {
+	return GetInput(hWnd, flags, configMode);
+}*/
+void AddIgnore(LPARAM k);
+
+int LoadSettings(int force = 0, wchar_t *file = 0);
+
+void CALLBACK PADconfigure();
+
+// Refreshes the set of enabled devices.
+void RefreshEnabledDevices(int updateDeviceList = 0);
+
+#endif

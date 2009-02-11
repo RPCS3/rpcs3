@@ -1,0 +1,341 @@
+#include "global.h"
+#include "WindowsMessaging.h"
+#include "VKey.h"
+#include "DeviceEnumerator.h"
+#include "WndProcEater.h"
+#include "WindowsKeyboard.h"
+#include "WindowsMouse.h"
+
+#include "Config.h"
+
+ExtraWndProcResult RawInputWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, LRESULT *output);
+
+int GetRawKeyboards(HWND hWnd) {
+	RAWINPUTDEVICE Rid;
+	Rid.hwndTarget = hWnd;
+
+	Rid.dwFlags = 0;
+	Rid.usUsagePage = 0x01;
+	Rid.usUsage = 0x06;
+	return pRegisterRawInputDevices(&Rid, 1, sizeof(Rid));
+}
+
+void ReleaseRawKeyboards() {
+	RAWINPUTDEVICE Rid;
+	Rid.hwndTarget = 0;
+
+	Rid.dwFlags = RIDEV_REMOVE;
+	Rid.usUsagePage = 0x01;
+	Rid.usUsage = 0x06;
+	pRegisterRawInputDevices(&Rid, 1, sizeof(Rid));
+}
+
+int GetRawMice(HWND hWnd) {
+	RAWINPUTDEVICE Rid;
+	Rid.hwndTarget = hWnd;
+
+	Rid.dwFlags = RIDEV_NOLEGACY | RIDEV_CAPTUREMOUSE;
+	Rid.usUsagePage = 0x01;
+	Rid.usUsage = 0x02;
+	return pRegisterRawInputDevices(&Rid, 1, sizeof(Rid));
+}
+
+void ReleaseRawMice() {
+	RAWINPUTDEVICE Rid;
+	Rid.hwndTarget = 0;
+
+	Rid.dwFlags = RIDEV_REMOVE;
+	Rid.usUsagePage = 0x01;
+	Rid.usUsage = 0x02;
+	pRegisterRawInputDevices(&Rid, 1, sizeof(Rid));
+}
+
+// Count of active raw keyboard devices.
+// when it gets to 0, release them all.
+static int rawKeyboardActivatedCount = 0;
+// Same for mice.
+static int rawMouseActivatedCount = 0;
+
+class RawInputKeyboard : public WindowsKeyboard {
+public:
+	HANDLE hDevice;
+
+	RawInputKeyboard(HANDLE hDevice, wchar_t *name, wchar_t *instanceID=0) : WindowsKeyboard(RAW, name, instanceID) {
+		this->hDevice = hDevice;
+	}
+
+	int Activate(void *d) {
+		InitInfo *info = (InitInfo*)d;
+		Deactivate();
+		HWND hWnd = info->hWnd;
+		if (info->hWndButton) {
+			hWnd = info->hWndButton;
+		}
+		active = 1;
+		if (!rawKeyboardActivatedCount++) {
+			if (!rawMouseActivatedCount && !EatWndProc(hWnd, RawInputWndProc)) {
+				Deactivate();
+				return 0;
+			}
+			if (!GetRawKeyboards(hWnd)) {
+				Deactivate();
+				return 0;
+			}
+		}
+
+		InitState();
+		return 1;
+	}
+
+	void Deactivate() {
+		FreeState();
+		if (active) {
+			active = 0;
+			rawKeyboardActivatedCount --;
+			if (!rawKeyboardActivatedCount) {
+				ReleaseRawKeyboards();
+				if (!rawMouseActivatedCount)
+					ReleaseExtraProc(RawInputWndProc);
+			}
+		}
+	}
+};
+
+static POINT rawOrigCursorPos;
+static POINT rawCenter;
+
+class RawInputMouse : public WindowsMouse {
+public:
+	HANDLE hDevice;
+
+	RawInputMouse(HANDLE hDevice, wchar_t *name, wchar_t *instanceID=0, wchar_t *productID=0) : WindowsMouse(RAW, 0, name, instanceID, productID) {
+		this->hDevice = hDevice;
+	}
+
+	int Activate(void *d) {
+		InitInfo *info = (InitInfo*)d;
+		Deactivate();
+		HWND hWnd = info->hWnd;
+		if (info->hWndButton) {
+			hWnd = info->hWndButton;
+		}
+
+		active = 1;
+
+		// HAve to be careful with order.  At worst, one unmatched call to ReleaseRawMice on
+		// EatWndProc fail.  In all other cases, no unmatched initialization/cleanup
+		// lines.
+		if (!rawMouseActivatedCount++) {
+			GetCursorPos(&rawOrigCursorPos);
+			ShowCursor(0);
+			if (!rawKeyboardActivatedCount && !EatWndProc(hWnd, RawInputWndProc)) {
+				Deactivate();
+				return 0;
+			}
+			if (!GetRawMice(hWnd)) {
+				Deactivate();
+				return 0;
+			}
+			RECT r;
+			// No need to clip cursor, since I seem to have complete control of buttons.
+			GetWindowRect(hWnd, &r);
+			rawCenter.x = (r.left + r.right)/2;
+			rawCenter.y = (r.top + r.bottom)/2;
+			SetCursorPos(rawCenter.x, rawCenter.y);
+		}
+
+		AllocState();
+		return 1;
+	}
+
+	void Deactivate() {
+		FreeState();
+		if (active) {
+			active = 0;
+			rawMouseActivatedCount --;
+			if (!rawMouseActivatedCount) {
+				ShowCursor(1);
+				ReleaseRawMice();
+				SetCursorPos(rawOrigCursorPos.x, rawOrigCursorPos.y);
+				if (!rawKeyboardActivatedCount) {
+					ReleaseExtraProc(RawInputWndProc);
+				}
+			}
+		}
+	}
+	/*
+	int Activate(void *d) {
+		InitInfo *info = (InitInfo*)d;
+		// Redundant.  Should match the next line.
+		// Deactivate();
+		if (wmm) wmm->Deactivate();
+		HWND hWnd = info->hWnd;
+		if (info->hWndButton) {
+			hWnd = info->hWndButton;
+		}
+		if (GetFocus() != hWnd) return 0;
+
+		if (!EatWndProc(hWnd, WindowsMessagingWndProc)) {
+			Deactivate();
+			return 0;
+		}
+
+		SetCapture(hWnd);
+		ShowCursor(0);
+
+		GetCursorPos(&origCursorPos);
+		active = 1;
+		RECT r;
+		GetWindowRect(hWnd, &r);
+		ClipCursor(&r);
+		center.x = (r.left + r.right)/2;
+		center.y = (r.top + r.bottom)/2;
+		SetCursorPos(center.x, center.y);
+
+		wmm = this;
+		AllocState();
+
+		return 1;
+	}
+
+	void Deactivate() {
+		FreeState();
+		if (active) {
+			ClipCursor(0);
+			ReleaseCapture();
+			ShowCursor(1);
+			SetCursorPos(origCursorPos.x, origCursorPos.y);
+			if (!wmk)
+				ReleaseExtraProc(WindowsMessagingWndProc);
+			active = 0;
+			wmm = 0;
+		}
+		// hWndDlg = 0;
+	}//*/
+};
+
+ExtraWndProcResult RawInputWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, LRESULT *output) {
+	if (uMsg == WM_INPUT) {
+		if (GET_RAWINPUT_CODE_WPARAM (wParam) == RIM_INPUT && pGetRawInputData) {
+			RAWINPUT in;
+			unsigned int size = sizeof(RAWINPUT);
+			if (0 < pGetRawInputData((HRAWINPUT)lParam, RID_INPUT, &in, &size, sizeof(RAWINPUTHEADER))) {
+				for (int i=0; i<dm->numDevices; i++) {
+					Device *dev = dm->devices[i];
+					if (dev->api != RAW || !dev->active) continue;
+					if (in.header.dwType == RIM_TYPEKEYBOARD && dev->type == KEYBOARD) {
+						RawInputKeyboard* rik = (RawInputKeyboard*)dev;
+						if (rik->hDevice != in.header.hDevice) continue;
+
+						u32 uMsg = in.data.keyboard.Message;
+						if (!(in.data.keyboard.VKey>>8))
+							rik->UpdateKey((u8) in.data.keyboard.VKey, (uMsg == WM_KEYDOWN || uMsg == WM_SYSKEYDOWN));
+					}
+					else if (in.header.dwType == RIM_TYPEMOUSE && dev->type == MOUSE) {
+						RawInputMouse* rim = (RawInputMouse*)dev;
+						if (rim->hDevice != in.header.hDevice) continue;
+						if (in.data.mouse.usFlags) {
+							// Never been set for me, and specs on what most of them
+							// actually mean is sorely lacking.  Also, specs erroneously
+							// indicate MOUSE_MOVE_RELATIVE is a flag, when it's really
+							// 0...
+							continue;
+						}
+
+						unsigned short buttons = in.data.mouse.usButtonFlags & 0x3FF;
+						int button = 0;
+						while (buttons) {
+							if (buttons & 3) {
+								// 2 is up, 1 is down.  Up takes precedence over down.
+								rim->UpdateButton(button, !(buttons & 2));
+							}
+							button++;
+							buttons >>= 2;
+						}
+						if (in.data.mouse.usButtonFlags & 0x400) {
+							rim->UpdateAxis(2, ((short)in.data.mouse.usButtonData)/WHEEL_DELTA);
+						}
+						if (in.data.mouse.lLastX  || in.data.mouse.lLastY) {
+							rim->UpdateAxis(0, in.data.mouse.lLastX);
+							rim->UpdateAxis(1, in.data.mouse.lLastY);
+							SetCursorPos(rawCenter.x, rawCenter.y);
+						}
+					}
+				}
+			}
+		}
+	}
+	else if (uMsg == WM_ACTIVATE) {
+		for (int i=0; i<dm->numDevices; i++) {
+			Device *dev = dm->devices[i];
+			if (dev->api != RAW || dev->physicalControlState == 0) continue;
+			memset(dev->physicalControlState, 0, sizeof(int) * dev->numPhysicalControls);
+		}
+	}
+	return CONTINUE_BLISSFULLY;
+}
+
+void EnumRawInputDevices() {
+	UINT count = 0;
+	if (pGetRawInputDeviceList && pGetRawInputDeviceList(0, &count, sizeof(RAWINPUTDEVICELIST)) != (UINT)-1) {
+		wchar_t *instanceID = (wchar_t *) malloc(41000*sizeof(wchar_t));
+		wchar_t *keyName = instanceID + 11000;
+		wchar_t *displayName = keyName + 10000;
+		wchar_t *productID = displayName + 10000;
+		int keyboardCount = 1;
+		int mouseCount = 1;
+		if (count) {
+			RAWINPUTDEVICELIST *list = (RAWINPUTDEVICELIST*) malloc(sizeof(RAWINPUTDEVICELIST) * count);
+			if (list && pGetRawInputDeviceList(list, &count, sizeof(RAWINPUTDEVICELIST))) {
+				for (UINT i=0; i<count; i++) {
+					UINT nameLen = 10000;
+					if (pGetRawInputDeviceInfo(list[i].hDevice, RIDI_DEVICENAME, instanceID, &nameLen) &&
+						nameLen >= 3) {
+							wcscpy(productID, instanceID);
+							wchar_t *temp = 0;
+							for (int j=0; j<3; j++) {
+								wchar_t *s = wcschr(productID, '#');
+								if (!s) break;
+								*s = '\\';
+								if (j==2) {
+									*s = 0;
+								}
+								if (j==1) temp = s;
+							}
+							wsprintfW(keyName, L"SYSTEM\\CurrentControlSet\\Enum%s", productID+3);
+							if (temp) *temp = 0;
+							displayName[0] = 0;
+							HKEY hKey;
+							if (ERROR_SUCCESS == RegOpenKeyExW(HKEY_LOCAL_MACHINE, keyName, 0, KEY_QUERY_VALUE, &hKey)) {
+								DWORD type;
+								DWORD len = 10000 * sizeof(wchar_t);
+								if (ERROR_SUCCESS == RegQueryValueExW(hKey, L"DeviceDesc", 0, &type, (BYTE*)displayName, &len) &&
+									len && type == REG_SZ) {
+										wchar_t *temp2 = wcsrchr(displayName, ';');
+										if (!temp2) temp2 = displayName;
+										else temp2++;
+										// Could do without this, but more effort than it's worth.
+										wcscpy(keyName, temp2);
+								}
+								RegCloseKey(hKey);
+							}
+							if (list[i].dwType == RIM_TYPEKEYBOARD) {
+								if (!displayName[0]) wsprintfW(displayName, L"Raw Keyboard %i", keyboardCount++);
+								else wsprintfW(displayName, L"Raw KB: %s", keyName);
+								dm->AddDevice(new RawInputKeyboard(list[i].hDevice, displayName, instanceID));
+							}
+							else if (list[i].dwType == RIM_TYPEMOUSE) {
+								if (!displayName[0]) wsprintfW(displayName, L"Raw Mouse %i", mouseCount++);
+								else wsprintfW(displayName, L"Raw MS: %s", keyName);
+								dm->AddDevice(new RawInputMouse(list[i].hDevice, displayName, instanceID, productID));
+							}
+					}
+				}
+				free(list);
+			}
+		}
+		free(instanceID);
+		dm->AddDevice(new RawInputKeyboard(0, L"Simulated Keyboard"));
+		dm->AddDevice(new RawInputMouse(0, L"Simulated Mouse"));
+	}
+}
