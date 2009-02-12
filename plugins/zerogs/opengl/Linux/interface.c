@@ -31,7 +31,14 @@ create_Config (void)
 {
   GtkWidget *Config;
   GtkWidget *vbox4;
-  GtkWidget *checkInterlace;
+  GtkWidget *frame7;
+  GtkWidget *alignment4;
+  GtkWidget *hbox8;
+  GtkWidget *radionointerlace;
+  GSList *radionointerlace_group = NULL;
+  GtkWidget *radiointerlace0;
+  GtkWidget *radiointerlace1;
+  GtkWidget *label13;
   GtkWidget *checkBilinear;
   GtkWidget *frame4;
   GtkWidget *alignment1;
@@ -74,9 +81,41 @@ create_Config (void)
   gtk_widget_show (vbox4);
   gtk_container_add (GTK_CONTAINER (Config), vbox4);
 
-  checkInterlace = gtk_check_button_new_with_mnemonic (_("Interlace Enable (toggle with F5)\n   there are 2 modes + interlace off"));
-  gtk_widget_show (checkInterlace);
-  gtk_box_pack_start (GTK_BOX (vbox4), checkInterlace, FALSE, FALSE, 0);
+  frame7 = gtk_frame_new (NULL);
+  gtk_widget_show (frame7);
+  gtk_box_pack_start (GTK_BOX (vbox4), frame7, FALSE, FALSE, 0);
+
+  alignment4 = gtk_alignment_new (0.5, 0.5, 1, 1);
+  gtk_widget_show (alignment4);
+  gtk_container_add (GTK_CONTAINER (frame7), alignment4);
+  gtk_alignment_set_padding (GTK_ALIGNMENT (alignment4), 0, 0, 12, 0);
+
+  hbox8 = gtk_hbox_new (FALSE, 0);
+  gtk_widget_show (hbox8);
+  gtk_container_add (GTK_CONTAINER (alignment4), hbox8);
+
+  radionointerlace = gtk_radio_button_new_with_mnemonic (NULL, _("Interlace Off"));
+  gtk_widget_show (radionointerlace);
+  gtk_box_pack_start (GTK_BOX (hbox8), radionointerlace, FALSE, FALSE, 0);
+  gtk_radio_button_set_group (GTK_RADIO_BUTTON (radionointerlace), radionointerlace_group);
+  radionointerlace_group = gtk_radio_button_get_group (GTK_RADIO_BUTTON (radionointerlace));
+
+  radiointerlace0 = gtk_radio_button_new_with_mnemonic (NULL, _("Interlace 0"));
+  gtk_widget_show (radiointerlace0);
+  gtk_box_pack_start (GTK_BOX (hbox8), radiointerlace0, FALSE, FALSE, 0);
+  gtk_radio_button_set_group (GTK_RADIO_BUTTON (radiointerlace0), radionointerlace_group);
+  radionointerlace_group = gtk_radio_button_get_group (GTK_RADIO_BUTTON (radiointerlace0));
+
+  radiointerlace1 = gtk_radio_button_new_with_mnemonic (NULL, _("Interlace 1"));
+  gtk_widget_show (radiointerlace1);
+  gtk_box_pack_start (GTK_BOX (hbox8), radiointerlace1, FALSE, FALSE, 0);
+  gtk_radio_button_set_group (GTK_RADIO_BUTTON (radiointerlace1), radionointerlace_group);
+  radionointerlace_group = gtk_radio_button_get_group (GTK_RADIO_BUTTON (radiointerlace1));
+
+  label13 = gtk_label_new (_("<b>Interlacing (F5 to toggle)</b>"));
+  gtk_widget_show (label13);
+  gtk_frame_set_label_widget (GTK_FRAME (frame7), label13);
+  gtk_label_set_use_markup (GTK_LABEL (label13), TRUE);
 
   checkBilinear = gtk_check_button_new_with_mnemonic (_("Bilinear Filtering (Shift+F5)\n   Best quality is on, turn off for speed"));
   gtk_widget_show (checkBilinear);
@@ -84,7 +123,7 @@ create_Config (void)
 
   frame4 = gtk_frame_new (NULL);
   gtk_widget_show (frame4);
-  gtk_box_pack_start (GTK_BOX (vbox4), frame4, TRUE, TRUE, 0);
+  gtk_box_pack_start (GTK_BOX (vbox4), frame4, FALSE, FALSE, 0);
 
   alignment1 = gtk_alignment_new (0.5, 0.5, 1, 1);
   gtk_widget_show (alignment1);
@@ -149,7 +188,7 @@ create_Config (void)
 
   frame5 = gtk_frame_new (NULL);
   gtk_widget_show (frame5);
-  gtk_box_pack_start (GTK_BOX (vbox4), frame5, TRUE, TRUE, 0);
+  gtk_box_pack_start (GTK_BOX (vbox4), frame5, FALSE, FALSE, 0);
 
   alignment2 = gtk_alignment_new (0.5, 0.5, 1, 1);
   gtk_widget_show (alignment2);
@@ -220,7 +259,7 @@ create_Config (void)
 
   hbuttonbox1 = gtk_hbutton_box_new ();
   gtk_widget_show (hbuttonbox1);
-  gtk_box_pack_start (GTK_BOX (vbox4), hbuttonbox1, TRUE, TRUE, 0);
+  gtk_box_pack_start (GTK_BOX (vbox4), hbuttonbox1, FALSE, FALSE, 0);
   gtk_button_box_set_layout (GTK_BUTTON_BOX (hbuttonbox1), GTK_BUTTONBOX_SPREAD);
   gtk_box_set_spacing (GTK_BOX (hbuttonbox1), 30);
 
@@ -244,7 +283,13 @@ create_Config (void)
   /* Store pointers to all widgets, for use by lookup_widget(). */
   GLADE_HOOKUP_OBJECT_NO_REF (Config, Config, "Config");
   GLADE_HOOKUP_OBJECT (Config, vbox4, "vbox4");
-  GLADE_HOOKUP_OBJECT (Config, checkInterlace, "checkInterlace");
+  GLADE_HOOKUP_OBJECT (Config, frame7, "frame7");
+  GLADE_HOOKUP_OBJECT (Config, alignment4, "alignment4");
+  GLADE_HOOKUP_OBJECT (Config, hbox8, "hbox8");
+  GLADE_HOOKUP_OBJECT (Config, radionointerlace, "radionointerlace");
+  GLADE_HOOKUP_OBJECT (Config, radiointerlace0, "radiointerlace0");
+  GLADE_HOOKUP_OBJECT (Config, radiointerlace1, "radiointerlace1");
+  GLADE_HOOKUP_OBJECT (Config, label13, "label13");
   GLADE_HOOKUP_OBJECT (Config, checkBilinear, "checkBilinear");
   GLADE_HOOKUP_OBJECT (Config, frame4, "frame4");
   GLADE_HOOKUP_OBJECT (Config, alignment1, "alignment1");

@@ -34,8 +34,17 @@ extern "C" {
 
 #include <map>
 
+
+GtkWidget *Conf;
+GtkWidget *Logging;
+GList *fresl;
+GList *wresl;
+GList *cachesizel;
+GList *codecl;
+GList *filtersl;
+
 static int prevbilinearfilter;
-//static map<string, int> mapConfOpts;
+
 struct confOptsStruct
 {
 	int value;
@@ -93,14 +102,6 @@ void CALLBACK GSkeyEvent(keyEvent *ev)
 	}
 }
 
-GtkWidget *Conf;
-GtkWidget *Logging;
-GList *fresl;
-GList *wresl;
-GList *cachesizel;
-GList *codecl;
-GList *filtersl;
-
 void OnConf_Ok(GtkButton *button, gpointer user_data)
 {
 	GtkWidget *Btn;
@@ -111,14 +112,6 @@ void OnConf_Ok(GtkButton *button, gpointer user_data)
 	gchar *gbuf;
 	char *str;
 	int i;
-
-	// fixme; This doesn't look right; conf.interlace is a u8.
-	u32 newinterlace = is_checked(Conf, "checkInterlace");
-
-	if (!conf.interlace ) 
-		conf.interlace = newinterlace;
-	else if (!newinterlace ) 
-		conf.interlace = 2; // off
 
 	conf.bilinear = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lookup_widget(Conf, "checkBilinear")));
 	// restore
@@ -143,6 +136,13 @@ void OnConf_Ok(GtkButton *button, gpointer user_data)
 	conf.options |= is_checked(Conf, "checkWireframe") ? GSOPTION_WIREFRAME : 0;
 	conf.options |= is_checked(Conf, "checkfullscreen") ? GSOPTION_FULLSCREEN : 0;
 	conf.options |= is_checked(Conf, "checkTGA") ? GSOPTION_TGASNAP : 0;
+	
+	if is_checked(Conf, "radiointerlace0")
+		conf.interlace = 0;
+	else if is_checked(Conf, "radiointerlace1") 
+		conf.interlace = 1;
+	else
+		conf.interlace = 2;
 
 	//------- get advanced options from the treeview model -------//
 	treeview = lookup_widget(Conf,"treeview1");
@@ -178,7 +178,7 @@ void OnConf_Ok(GtkButton *button, gpointer user_data)
 	gtk_main_quit();
 }
 
-void OnConf_Cancel(GtkButton	   *button, gpointer		 user_data) 
+void OnConf_Cancel(GtkButton *button, gpointer user_data) 
 {
 	gtk_widget_destroy(Conf);
 	gtk_main_quit();
@@ -200,6 +200,13 @@ void CALLBACK GSconfigure()
 	Conf = create_Config();
 	
 	// fixme; Need to check "checkInterlace" as well.
+	if (conf.interlace == 0)
+		set_checked(Conf, "radiointerlace0", true);
+	else if (conf.interlace == 1)
+		set_checked(Conf, "radiointerlace1", true);
+	else
+		set_checked(Conf, "radionointerlace", true);
+	
 	set_checked(Conf, "checkBilinear", !!conf.bilinear);
 	//set_checked(Conf, "checkbutton6", conf.mrtdepth);
 	set_checked(Conf, "radioAANone", (conf.aa==0));
