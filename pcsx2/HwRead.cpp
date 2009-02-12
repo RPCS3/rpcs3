@@ -269,6 +269,7 @@ mem32_t __fastcall hwRead32_generic(u32 mem)
 		case 0x08:
 		case 0x09:
 		case 0x0a:
+		case 0x0d:
 		{
 			const char* regName = "Unknown";
 
@@ -293,7 +294,6 @@ mem32_t __fastcall hwRead32_generic(u32 mem)
 		break;
 
 		case 0x0c:
-		case 0x0d:
 		case 0x0e:
 			if( mem == DMAC_STAT)
 				HW_LOG("DMAC_STAT Read32, value=0x%x\n", psHu32(DMAC_STAT));

@@ -122,7 +122,7 @@ void _SPR0interleave() {
 	}
 
 	spr0->qwc = 0;	
-	CPU_INT(8, cycles);
+	//CPU_INT(8, cycles);
 }
 
 static __forceinline void _dmaSPR0() {
@@ -141,7 +141,7 @@ static __forceinline void _dmaSPR0() {
 	if ((spr0->chcr & 0xc) == 0x0) { // Normal Mode
 		int cycles = 0;
 		SPR0chain();
-		CPU_INT(8, cycles);
+		//CPU_INT(8, cycles);
 		
 		return;
 	} else if ((spr0->chcr & 0xc) == 0x4) {
@@ -152,7 +152,7 @@ static __forceinline void _dmaSPR0() {
 		
 			if(spr0->qwc > 0){
 				SPR0chain();
-				CPU_INT(8, cycles);
+				//CPU_INT(8, cycles);
 		
 				return;			
 				}
@@ -207,7 +207,7 @@ static __forceinline void _dmaSPR0() {
 			return;
 		}*/
 		}
-		CPU_INT(8, cycles);
+		//CPU_INT(8, cycles);
 	} else { // Interleave Mode
 		_SPR0interleave();
 	} 
@@ -216,21 +216,15 @@ static __forceinline void _dmaSPR0() {
 	
 }
 
-void SPRFROMinterrupt()
-{
-	spr0->chcr&= ~0x100;
-	hwDmacIrq(8);
-}
-
 extern void mfifoGIFtransfer(int);
 #define gif ((DMACh*)&PS2MEM_HW[0xA000])
-void dmaSPR0() { // fromSPR
+
+void SPRFROMinterrupt()
+{
 	int qwc = spr0->qwc;
 
-	SPR_LOG("dmaSPR0 chcr = %lx, madr = %lx, qwc  = %lx, sadr = %lx\n",
-			spr0->chcr, spr0->madr, spr0->qwc, spr0->sadr);
-
 	_dmaSPR0();
+
 	if ((psHu32(DMAC_CTRL) & 0xC) == 0xC) { // GIF MFIFO
 		if((spr0->madr & ~psHu32(DMAC_RBSR)) != psHu32(DMAC_RBOR)) SysPrintf("GIF MFIFO Write outside MFIFO area\n");
 		spr0->madr = psHu32(DMAC_RBOR) + (spr0->madr & psHu32(DMAC_RBSR));
@@ -244,6 +238,19 @@ void dmaSPR0() { // fromSPR
 		//vifqwc+= qwc;
 		mfifoVIF1transfer(qwc);
 	}
+	spr0->chcr&= ~0x100;
+	hwDmacIrq(8);
+}
+
+
+void dmaSPR0() { // fromSPR
+	
+
+	SPR_LOG("dmaSPR0 chcr = %lx, madr = %lx, qwc  = %lx, sadr = %lx\n",
+			spr0->chcr, spr0->madr, spr0->qwc, spr0->sadr);
+	CPU_INT(8, spr0->qwc * BIAS);
+	
+	
 	
 }
 
@@ -299,29 +306,17 @@ void _SPR1interleave() {
 	}
 
 		spr1->qwc = 0;
-		CPU_INT(9, cycles);
+		//CPU_INT(9, cycles);
 	
 }
 
-void dmaSPR1() { // toSPR
-	
-	
-#ifdef SPR_LOG
-	SPR_LOG("dmaSPR1 chcr = 0x%x, madr = 0x%x, qwc  = 0x%x\n"
-			"        tadr = 0x%x, sadr = 0x%x\n",
-			spr1->chcr, spr1->madr, spr1->qwc,
-			spr1->tadr, spr1->sadr);
-#endif
-
-	
-
-	
+void _dmaSPR1() { // toSPR work function
 	if ((spr1->chcr & 0xc) == 0) { // Normal Mode
 		int cycles = 0;
 		//if(spr1->qwc == 0 && (spr1->chcr & 0xc) == 1) spr1->qwc = 0xffff;
 		// Transfer Dn_QWC from Dn_MADR to SPR1
 		SPR1chain();
-		CPU_INT(9, cycles); 
+		//CPU_INT(9, cycles); 
 		return;
 	} else if ((spr1->chcr & 0xc) == 0x4){
 			int cycles = 0;
@@ -333,7 +328,7 @@ void dmaSPR1() { // toSPR
 		//if(spr1->qwc == 0 && (spr1->chcr & 0xc) == 1) spr1->qwc = 0xffff;
 		// Transfer Dn_QWC from Dn_MADR to SPR1
 		SPR1chain();
-		CPU_INT(9, cycles); 
+		//CPU_INT(9, cycles); 
 		return;
 	}
 	// Chain Mode
@@ -373,15 +368,28 @@ void dmaSPR1() { // toSPR
 			break;
 		}
 	}
-	CPU_INT(9, cycles);
 	} else { // Interleave Mode
 		_SPR1interleave();
 	} 
+
+}
+void dmaSPR1() { // toSPR
+	
+	
+#ifdef SPR_LOG
+	SPR_LOG("dmaSPR1 chcr = 0x%x, madr = 0x%x, qwc  = 0x%x\n"
+			"        tadr = 0x%x, sadr = 0x%x\n",
+			spr1->chcr, spr1->madr, spr1->qwc,
+			spr1->tadr, spr1->sadr);
+#endif
+	CPU_INT(9, spr1->qwc * BIAS);
+	
 	
 }
 
 void SPRTOinterrupt()
 {
+	_dmaSPR1();
 	spr1->chcr &= ~0x100;
 	hwDmacIrq(9);
 }

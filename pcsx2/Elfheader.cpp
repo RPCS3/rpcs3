@@ -410,7 +410,7 @@ struct ElfObject
 		if( secthead == NULL || header.e_shoff > (u32)data.GetLength() )
 			return;
 
-		const u8* sections_names = data.GetPtr( secthead[ header.e_shstrndx ].sh_offset );
+		const u8* sections_names = data.GetPtr( secthead[ (header.e_shstrndx == 0xffff ? 0 : header.e_shstrndx) ].sh_offset );
 			
 		int i_st = -1;
 		int i_dt = -1;
