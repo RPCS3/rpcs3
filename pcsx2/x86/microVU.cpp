@@ -26,8 +26,8 @@
 // VU Micro - Global Variables
 //------------------------------------------------------------------
 
-microVU microVU0;
-microVU microVU1;
+PCSX2_ALIGNED16(microVU microVU0);
+PCSX2_ALIGNED16(microVU microVU1);
 
 //------------------------------------------------------------------
 // Micro VU - Main Functions
@@ -91,21 +91,11 @@ microVUt(void) mVUclose() {
 microVUt(void) mVUclear(u32 addr, u32 size) {
 
 	microVU* mVU = mVUx;
-	int i = addr/8;
-	int end = i+((size+(8-(size&7)))/8); // ToDo: Can be simplified to addr+size if Size is always a multiple of 8
-	
-	if (!mVU->prog.cleared) {
-		for ( ; i < end; i++) {
-			if ( mVU->prog.prog[mVU->prog.cur].block[i]->clear() ) {
-				mVU->prog.cleared = 1;
-				i++;
-				break;
-			}
-		}
-	}
-	for ( ; i < end; i++) {
-		mVU->prog.prog[mVU->prog.cur].block[i]->clearFast();
-	}
+	mVU->prog.cleared = 1; // Next execution searches/creates a new microprogram
+	// Note: It might be better to copy old recompiled blocks to the new microprogram rec data
+	// however, if games primarily do big writes, its probably not worth it.
+	// The cost of invalidating bad blocks is also kind of expensive, which is another reason
+	// that its probably not worth it...
 }
 
 // Executes for number of cycles
@@ -122,7 +112,7 @@ microVUt(void*) __fastcall mVUexecute(u32 startPC, u32 cycles) {
 	microVU* mVU = mVUx;
 	if ( mVUsearchProg(mVU) ) { // Found Program
 		microBlock* block = mVU->prog.prog[mVU->prog.cur].block[startPC]->search(mVU->prog.lastPipelineState);
-		if (block) return block->x86ptrStart;
+		if (block) return block->x86ptrStart; // Found Block
 	}
 	// Recompile code
 	return NULL;
@@ -178,7 +168,7 @@ __forceinline int mVUfindLeastUsedProg(microVU* mVU) {
 __forceinline int mVUsearchProg(microVU* mVU) {
 	if (mVU->prog.cleared) { // If cleared, we need to search for new program
 		for (int i = 0; i <= mVU->prog.total; i++) {
-			if (i == mVU->prog.cur) continue; // We can skip the current program.
+			if (i == mVU->prog.cur) continue; // We can skip the current program. (ToDo: Verify that games don't clear, and send the same microprogram :/)
 			if (!memcmp_mmx(mVU->prog.prog[i].data, mVU->regs->Micro, mVU->microSize)) {
 				mVU->prog.cur = i;
 				mVU->prog.cleared = 0;
@@ -192,6 +182,26 @@ __forceinline int mVUsearchProg(microVU* mVU) {
 	}
 	mVU->prog.prog[mVU->prog.cur].used++;
 	return 1; // If !cleared, then we're still on the same program as last-time ;)
+}
+
+// Block Invalidation
+__forceinline void mVUinvalidateBlock(microVU* mVU, u32 addr, u32 size) {
+
+	int i = addr/8;
+	int end = i+((size+(8-(size&7)))/8); // ToDo: Can be simplified to addr+size if Size is always a multiple of 8
+
+	if (!mVU->prog.cleared) {
+		for ( ; i < end; i++) {
+			if ( mVU->prog.prog[mVU->prog.cur].block[i]->clear() ) {
+				mVU->prog.cleared = 1;
+				i++;
+				break;
+			}
+		}
+	}
+	for ( ; i < end; i++) {
+		mVU->prog.prog[mVU->prog.cur].block[i]->clearFast();
+	}
 }
 
 //------------------------------------------------------------------
