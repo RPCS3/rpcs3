@@ -248,7 +248,11 @@ void dmaSPR0() { // fromSPR
 
 	SPR_LOG("dmaSPR0 chcr = %lx, madr = %lx, qwc  = %lx, sadr = %lx\n",
 			spr0->chcr, spr0->madr, spr0->qwc, spr0->sadr);
-	CPU_INT(8, spr0->qwc * BIAS);
+
+	// COMPLETE HACK!!! For now at least..  FFX Videos dont rely on interrupts or reading DMA values
+	// It merely assumes that the last one has finished then starts another one (broke with the DMA fix)
+	// This "shouldn't" cause any problems as SPR is generally faster than the other DMAS anyway. (Refraction)
+	CPU_INT(8, spr0->qwc / 2);
 	
 	
 	
@@ -382,7 +386,11 @@ void dmaSPR1() { // toSPR
 			spr1->chcr, spr1->madr, spr1->qwc,
 			spr1->tadr, spr1->sadr);
 #endif
-	CPU_INT(9, spr1->qwc * BIAS);
+
+	// COMPLETE HACK!!! For now at least..  FFX Videos dont rely on interrupts or reading DMA values
+	// It merely assumes that the last one has finished then starts another one (broke with the DMA fix)
+	// This "shouldn't" cause any problems as SPR is generally faster than the other DMAS anyway. (Refraction)
+	CPU_INT(9, spr1->qwc / 2);
 	
 	
 }

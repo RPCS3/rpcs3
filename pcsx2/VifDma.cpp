@@ -1970,7 +1970,7 @@ __forceinline void vif1Interrupt() {
 					_chainVIF1();
 					}
 				else _VIF1chain();//CPU_INT(13, vif1ch->qwc * BIAS);
-				CPU_INT(1, 0);
+				CPU_INT(1, g_vifCycles);
 				return;
 			}
 		}
@@ -1988,7 +1988,7 @@ __forceinline void vif1Interrupt() {
 		}
 
 		_chainVIF1();
-		CPU_INT(1, 0);
+		CPU_INT(1, g_vifCycles);
 		
 		return;
 	}
