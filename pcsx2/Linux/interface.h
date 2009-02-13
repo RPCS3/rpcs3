@@ -20,3 +20,4 @@ GtkWidget* create_PatchBrowserWindow (void);
 GtkWidget* create_PatchFinderWindow (void);
 GtkWidget* create_CpuDlg (void);
 GtkWidget* create_Logging (void);
+GtkWidget* create_MemDlg (void);

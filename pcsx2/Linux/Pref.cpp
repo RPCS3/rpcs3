@@ -77,6 +77,9 @@ int LoadConfig()
 	GetValue("BiosDir",    Config.BiosDir);
 	GetValue("Mcd1", Config.Mcd1);
 	GetValue("Mcd2", Config.Mcd2);
+	
+	if (strcmp(Config.Mcd1,"") == 0) strcpy(Config.Mcd1, MEMCARDS_DIR "/" DEFAULT_MEMCARD1);
+	if (strcmp(Config.Mcd2,"") == 0) strcpy(Config.Mcd2, MEMCARDS_DIR "/" DEFAULT_MEMCARD2);
 
 	GetValue("GS",   Config.GS);
 	GetValue("SPU2", Config.SPU2);

@@ -303,6 +303,10 @@ OnConf_Fw                              (GtkMenuItem     *menuitem,
                                         gpointer         user_data);
 
 void
+OnConf_Memcards                        (GtkMenuItem     *menuitem,
+                                        gpointer         user_data);
+
+void
 OnConf_Cpu                             (GtkMenuItem     *menuitem,
                                         gpointer         user_data);
 
@@ -352,4 +356,8 @@ OnCpu_Ok                               (GtkButton       *button,
 
 void
 OnLogging_Ok                           (GtkButton       *button,
+                                        gpointer         user_data);
+
+void
+OnMemcards_Ok                          (GtkButton       *button,
                                         gpointer         user_data);

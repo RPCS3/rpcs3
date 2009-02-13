@@ -2433,6 +2433,7 @@ create_MainWindow (void)
   GtkWidget *GtkMenuItem_USB;
   GtkWidget *GtkMenuItem_FW;
   GtkWidget *separator4;
+  GtkWidget *GtkMenuItem_Memcards;
   GtkWidget *GtkMenuItem_Cpu;
   GtkWidget *GtkMenuItem_Game_Fixes;
   GtkWidget *GtkMenuItem_Speed_Hacks;
@@ -2628,6 +2629,10 @@ create_MainWindow (void)
   gtk_container_add (GTK_CONTAINER (GtkMenuItem_Configuration_menu), separator4);
   gtk_widget_set_sensitive (separator4, FALSE);
 
+  GtkMenuItem_Memcards = gtk_menu_item_new_with_mnemonic (_("Memcards"));
+  gtk_widget_show (GtkMenuItem_Memcards);
+  gtk_container_add (GTK_CONTAINER (GtkMenuItem_Configuration_menu), GtkMenuItem_Memcards);
+
   GtkMenuItem_Cpu = gtk_menu_item_new_with_mnemonic (_("C_pu"));
   gtk_widget_show (GtkMenuItem_Cpu);
   gtk_container_add (GTK_CONTAINER (GtkMenuItem_Configuration_menu), GtkMenuItem_Cpu);
@@ -2795,6 +2800,9 @@ create_MainWindow (void)
   g_signal_connect ((gpointer) GtkMenuItem_FW, "activate",
                     G_CALLBACK (OnConf_Fw),
                     NULL);
+  g_signal_connect ((gpointer) GtkMenuItem_Memcards, "activate",
+                    G_CALLBACK (OnConf_Memcards),
+                    NULL);
   g_signal_connect ((gpointer) GtkMenuItem_Cpu, "activate",
                     G_CALLBACK (OnConf_Cpu),
                     NULL);
@@ -2874,6 +2882,7 @@ create_MainWindow (void)
   GLADE_HOOKUP_OBJECT (MainWindow, GtkMenuItem_USB, "GtkMenuItem_USB");
   GLADE_HOOKUP_OBJECT (MainWindow, GtkMenuItem_FW, "GtkMenuItem_FW");
   GLADE_HOOKUP_OBJECT (MainWindow, separator4, "separator4");
+  GLADE_HOOKUP_OBJECT (MainWindow, GtkMenuItem_Memcards, "GtkMenuItem_Memcards");
   GLADE_HOOKUP_OBJECT (MainWindow, GtkMenuItem_Cpu, "GtkMenuItem_Cpu");
   GLADE_HOOKUP_OBJECT (MainWindow, GtkMenuItem_Game_Fixes, "GtkMenuItem_Game_Fixes");
   GLADE_HOOKUP_OBJECT (MainWindow, GtkMenuItem_Speed_Hacks, "GtkMenuItem_Speed_Hacks");
@@ -4013,5 +4022,101 @@ create_Logging (void)
   GLADE_HOOKUP_OBJECT (Logging, Logging2Cancel, "Logging2Cancel");
 
   return Logging;
+}
+
+GtkWidget*
+create_MemDlg (void)
+{
+  GtkWidget *MemDlg;
+  GtkWidget *dialog_vbox7;
+  GtkWidget *hbox40;
+  GtkWidget *vbox62;
+  GtkWidget *hbox42;
+  GtkWidget *label99;
+  GtkWidget *label100;
+  GtkWidget *hbox41;
+  GtkWidget *memcard1combo;
+  GtkWidget *memcard2combo;
+  GtkWidget *dialog_action_area7;
+  GtkWidget *memcardcancelbutton;
+  GtkWidget *okbutton1;
+
+  MemDlg = gtk_dialog_new ();
+  gtk_window_set_title (GTK_WINDOW (MemDlg), _("Memcards"));
+  gtk_window_set_type_hint (GTK_WINDOW (MemDlg), GDK_WINDOW_TYPE_HINT_DIALOG);
+
+  dialog_vbox7 = GTK_DIALOG (MemDlg)->vbox;
+  gtk_widget_show (dialog_vbox7);
+
+  hbox40 = gtk_hbox_new (FALSE, 0);
+  gtk_widget_show (hbox40);
+  gtk_box_pack_start (GTK_BOX (dialog_vbox7), hbox40, TRUE, TRUE, 0);
+
+  vbox62 = gtk_vbox_new (FALSE, 0);
+  gtk_widget_show (vbox62);
+  gtk_box_pack_start (GTK_BOX (hbox40), vbox62, TRUE, TRUE, 0);
+
+  hbox42 = gtk_hbox_new (FALSE, 0);
+  gtk_widget_show (hbox42);
+  gtk_box_pack_start (GTK_BOX (vbox62), hbox42, TRUE, TRUE, 0);
+
+  label99 = gtk_label_new (_("Memcard 1"));
+  gtk_widget_show (label99);
+  gtk_box_pack_start (GTK_BOX (hbox42), label99, TRUE, TRUE, 0);
+
+  label100 = gtk_label_new (_("Memcard 2"));
+  gtk_widget_show (label100);
+  gtk_box_pack_start (GTK_BOX (hbox42), label100, TRUE, TRUE, 0);
+  gtk_label_set_justify (GTK_LABEL (label100), GTK_JUSTIFY_RIGHT);
+
+  hbox41 = gtk_hbox_new (FALSE, 0);
+  gtk_widget_show (hbox41);
+  gtk_box_pack_start (GTK_BOX (vbox62), hbox41, TRUE, TRUE, 0);
+
+  memcard1combo = gtk_combo_box_new_text ();
+  gtk_widget_show (memcard1combo);
+  gtk_box_pack_start (GTK_BOX (hbox41), memcard1combo, TRUE, TRUE, 0);
+
+  memcard2combo = gtk_combo_box_new_text ();
+  gtk_widget_show (memcard2combo);
+  gtk_box_pack_start (GTK_BOX (hbox41), memcard2combo, TRUE, TRUE, 0);
+
+  dialog_action_area7 = GTK_DIALOG (MemDlg)->action_area;
+  gtk_widget_show (dialog_action_area7);
+  gtk_button_box_set_layout (GTK_BUTTON_BOX (dialog_action_area7), GTK_BUTTONBOX_END);
+
+  memcardcancelbutton = gtk_button_new_from_stock ("gtk-ok");
+  gtk_widget_show (memcardcancelbutton);
+  gtk_dialog_add_action_widget (GTK_DIALOG (MemDlg), memcardcancelbutton, GTK_RESPONSE_OK);
+  GTK_WIDGET_SET_FLAGS (memcardcancelbutton, GTK_CAN_DEFAULT);
+
+  okbutton1 = gtk_button_new_from_stock ("gtk-cancel");
+  gtk_widget_show (okbutton1);
+  gtk_dialog_add_action_widget (GTK_DIALOG (MemDlg), okbutton1, GTK_RESPONSE_CANCEL);
+  GTK_WIDGET_SET_FLAGS (okbutton1, GTK_CAN_DEFAULT);
+
+  g_signal_connect ((gpointer) memcardcancelbutton, "clicked",
+                    G_CALLBACK (OnMemcards_Ok),
+                    NULL);
+  g_signal_connect ((gpointer) okbutton1, "clicked",
+                    G_CALLBACK (OnMemcards_Ok),
+                    NULL);
+
+  /* Store pointers to all widgets, for use by lookup_widget(). */
+  GLADE_HOOKUP_OBJECT_NO_REF (MemDlg, MemDlg, "MemDlg");
+  GLADE_HOOKUP_OBJECT_NO_REF (MemDlg, dialog_vbox7, "dialog_vbox7");
+  GLADE_HOOKUP_OBJECT (MemDlg, hbox40, "hbox40");
+  GLADE_HOOKUP_OBJECT (MemDlg, vbox62, "vbox62");
+  GLADE_HOOKUP_OBJECT (MemDlg, hbox42, "hbox42");
+  GLADE_HOOKUP_OBJECT (MemDlg, label99, "label99");
+  GLADE_HOOKUP_OBJECT (MemDlg, label100, "label100");
+  GLADE_HOOKUP_OBJECT (MemDlg, hbox41, "hbox41");
+  GLADE_HOOKUP_OBJECT (MemDlg, memcard1combo, "memcard1combo");
+  GLADE_HOOKUP_OBJECT (MemDlg, memcard2combo, "memcard2combo");
+  GLADE_HOOKUP_OBJECT_NO_REF (MemDlg, dialog_action_area7, "dialog_action_area7");
+  GLADE_HOOKUP_OBJECT (MemDlg, memcardcancelbutton, "memcardcancelbutton");
+  GLADE_HOOKUP_OBJECT (MemDlg, okbutton1, "okbutton1");
+
+  return MemDlg;
 }
 

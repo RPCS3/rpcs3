@@ -32,6 +32,8 @@ void OnLanguage(GtkMenuItem *menuitem, gpointer user_data);
 extern void ExecuteCpu();
 extern void CheckSlots();
 extern bool isSlotUsed(int num);
+extern bool ParseCommandLine(int argc, char *argv[], char *file);
+extern void MemoryCard_Init();
 
 void InitLanguages();
 char *GetLanguageNext();
@@ -43,7 +45,7 @@ GtkWidget *MainWindow;
 GtkWidget *pStatusBar = NULL, *Status_Box;
 GtkWidget *CmdLine;	//2002-09-28 (Florin)
 GtkWidget *widgetCmdLine;
-GtkWidget *LogDlg;
+GtkWidget *LogDlg, *MemDlg;
 
 GtkAccelGroup *AccelGroup;
 

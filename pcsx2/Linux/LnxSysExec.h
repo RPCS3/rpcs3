@@ -25,5 +25,6 @@
 
 extern void StartGui();
 extern void CheckSlots();
-
+extern const char* g_pRunGSState;
+extern int efile;
 #endif

@@ -39,7 +39,6 @@ int main(int argc, char *argv[])
 {
 	char *file = NULL;
 	char elfname[g_MaxPath];
-	int i = 1;
 
 	efile = 0;
 #ifdef ENABLE_NLS
@@ -56,106 +55,8 @@ int main(int argc, char *argv[])
 #ifdef PCSX2_DEVBUILD
 	memset(&g_TestRun, 0, sizeof(g_TestRun));
 #endif
-
-	while (i < argc)
-	{
-		char* token = argv[i++];
-
-		if (stricmp(token, "-help") == 0 || stricmp(token, "--help") == 0 || stricmp(token, "-h") == 0)
-		{
-			//Msgbox::Alert( phelpmsg );
-			return 0;
-		}
-		else if (stricmp(token, "-efile") == 0)
-		{
-			token = argv[i++];
-			if (token != NULL)
-			{
-				efile = atoi(token);
-			}
-		}
-		else if (stricmp(token, "-nogui") == 0)
-		{
-			UseGui = FALSE;
-		}
-		else if (stricmp(token, "-loadgs") == 0)
-		{
-			g_pRunGSState = argv[i++];
-		}
-#ifdef PCSX2_DEVBUILD
-		else if (stricmp(token, "-image") == 0)
-		{
-			g_TestRun.pimagename = argv[i++];
-		}
-		else if (stricmp(token, "-log") == 0)
-		{
-			g_TestRun.plogname = argv[i++];
-		}
-		else if (stricmp(token, "-logopt") == 0)
-		{
-			token = argv[i++];
-			if (token != NULL)
-			{
-				if (token[0] == '0' && token[1] == 'x') token += 2;
-				sscanf(token, "%x", &varLog);
-			}
-		}
-		else if (stricmp(token, "-frame") == 0)
-		{
-			token = argv[i++];
-			if (token != NULL)
-			{
-				g_TestRun.frame = atoi(token);
-			}
-		}
-		else if (stricmp(token, "-numimages") == 0)
-		{
-			token = argv[i++];
-			if (token != NULL)
-			{
-				g_TestRun.numimages = atoi(token);
-			}
-		}
-		else if (stricmp(token, "-jpg") == 0)
-		{
-			g_TestRun.jpgcapture = 1;
-		}
-		else if (stricmp(token, "-gs") == 0)
-		{
-			token = argv[i++];
-			g_TestRun.pgsdll = token;
-		}
-		else if (stricmp(token, "-cdvd") == 0)
-		{
-			token = argv[i++];
-			g_TestRun.pcdvddll = token;
-		}
-		else if (stricmp(token, "-spu") == 0)
-		{
-			token = argv[i++];
-			g_TestRun.pspudll = token;
-		}
-		else if (stricmp(token, "-test") == 0)
-		{
-			g_TestRun.enabled = 1;
-		}
-#endif
-		else if (stricmp(token, "-pad") == 0)
-		{
-			token = argv[i++];
-			printf("-pad ignored\n");
-		}
-		else if (stricmp(token, "-loadgs") == 0)
-		{
-			token = argv[i++];
-			g_pRunGSState = token;
-		}
-		else
-		{
-			file = token;
-			printf("opening file %s\n", file);
-		}
-	}
+	
+	if (!ParseCommandLine(argc, argv, file)) return 0;
 
 #ifdef PCSX2_DEVBUILD
 	g_TestRun.efile = efile;
@@ -180,6 +81,8 @@ int main(int argc, char *argv[])
 		memset(&Config, 0, sizeof(Config));
 		strcpy(Config.BiosDir,    DEFAULT_BIOS_DIR "/");
 		strcpy(Config.PluginsDir, DEFAULT_PLUGINS_DIR "/");
+		strcpy(Config.Mcd1, MEMCARDS_DIR "/" DEFAULT_MEMCARD1);
+		strcpy(Config.Mcd2, MEMCARDS_DIR "/" DEFAULT_MEMCARD2);
 		Config.Patch = 0;
 		Config.PsxOut = 1;
 		Config.Options = PCSX2_EEREC | PCSX2_VU0REC | PCSX2_VU1REC | PCSX2_FRAMELIMIT_LIMIT;
@@ -358,6 +261,7 @@ void StartGui()
 	// disable anything not implemented or not working properly.
 	gtk_widget_set_sensitive(GTK_WIDGET(lookup_widget(MainWindow, "patch_browser1")), FALSE);
 	gtk_widget_set_sensitive(GTK_WIDGET(lookup_widget(MainWindow, "patch_finder2")), FALSE);
+	gtk_widget_set_sensitive(GTK_WIDGET(lookup_widget(MainWindow, "GtkMenuItem_Memcards")), FALSE);
 #ifndef PCSX2_DEVBUILD
 	gtk_widget_set_sensitive(GTK_WIDGET(lookup_widget(MainWindow, "GtkMenuItem_Logging")), FALSE);
 #endif
@@ -620,6 +524,75 @@ void OnDebug_Logging(GtkMenuItem *menuitem, gpointer user_data)
 	gtk_widget_show_all(LogDlg);
 	gtk_widget_set_sensitive(MainWindow, FALSE);
 	gtk_main();
+}
+
+void OnConf_Memcards(GtkMenuItem *menuitem, gpointer user_data) 
+{
+	char file[g_MaxPath], card[g_MaxPath];
+	DIR *dir;
+	struct dirent *entry;     
+	struct stat statinfo;
+	GtkWidget *memcombo1, *memcombo2;
+	int i = 0;
+
+	MemDlg = create_MemDlg();
+	memcombo1 = lookup_widget(MemDlg, "memcard1combo");
+	memcombo2 = lookup_widget(MemDlg, "memcard2combo");
+	
+	getcwd(file, ARRAYSIZE(file)); /* store current dir */
+	sprintf( card, "%s/%s", file, MEMCARDS_DIR );
+	chdir(card); /* change dirs so that plugins can find their config file*/
+	    
+	if ((dir = opendir(card)) == NULL)
+	{
+		Console::Error("ERROR: Could not open directory %s\n", params card);
+		return;
+	}
+
+	while ((entry = readdir(dir)) != NULL) 
+	{
+		stat(entry->d_name, &statinfo);
+		
+		if (S_ISREG(statinfo.st_mode)) 
+		{
+			char path[g_MaxPath];
+			
+			sprintf( path, "%s/%s", MEMCARDS_DIR, entry->d_name);
+			gtk_combo_box_append_text(GTK_COMBO_BOX(memcombo1), entry->d_name);
+			gtk_combo_box_append_text(GTK_COMBO_BOX(memcombo2), entry->d_name);
+			
+			if (strcmp(Config.Mcd1, path) == 0) 
+				gtk_combo_box_set_active(GTK_COMBO_BOX(memcombo1), i);
+			if (strcmp(Config.Mcd2, path) == 0) 
+				gtk_combo_box_set_active(GTK_COMBO_BOX(memcombo2), i);
+			
+			i++;
+		}
+	}
+
+	closedir(dir);
+
+	chdir(file);
+	gtk_widget_show_all(MemDlg);
+	gtk_widget_set_sensitive(MainWindow, FALSE);
+	gtk_main();
+	
+}
+	
+void OnMemcards_Ok(GtkButton *button, gpointer user_data)
+{
+	
+	strcpy(Config.Mcd1, MEMCARDS_DIR "/");
+	strcpy(Config.Mcd2, MEMCARDS_DIR "/");
+	
+	strcat(Config.Mcd1, gtk_combo_box_get_active_text(GTK_COMBO_BOX(lookup_widget(MemDlg, "memcard1combo"))));
+	strcat(Config.Mcd2, gtk_combo_box_get_active_text(GTK_COMBO_BOX(lookup_widget(MemDlg, "memcard2combo"))));
+	
+	SaveConfig();
+	
+	gtk_widget_destroy(MemDlg);
+	gtk_widget_set_sensitive(MainWindow, TRUE);
+	gtk_main_quit();
 }
 
 void on_patch_browser1_activate(GtkMenuItem *menuitem, gpointer user_data) {}

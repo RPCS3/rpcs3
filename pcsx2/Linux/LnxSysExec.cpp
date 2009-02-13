@@ -30,6 +30,111 @@ bool g_EmulationInProgress = false;	// Set TRUE if a game is actively running (s
 static bool sinit = false;
 GtkWidget *FileSel;
 
+bool ParseCommandLine(int argc, char *argv[], char *file)
+{
+	int i = 1;
+	
+	while (i < argc)
+	{
+		char* token = argv[i++];
+
+		if (stricmp(token, "-help") == 0 || stricmp(token, "--help") == 0 || stricmp(token, "-h") == 0)
+		{
+			//Msgbox::Alert( phelpmsg );
+			return false;
+		}
+		else if (stricmp(token, "-efile") == 0)
+		{
+			token = argv[i++];
+			if (token != NULL)
+			{
+				efile = atoi(token);
+			}
+		}
+		else if (stricmp(token, "-nogui") == 0)
+		{
+			UseGui = FALSE;
+		}
+		else if (stricmp(token, "-loadgs") == 0)
+		{
+			g_pRunGSState = argv[i++];
+		}
+#ifdef PCSX2_DEVBUILD
+		else if (stricmp(token, "-image") == 0)
+		{
+			g_TestRun.pimagename = argv[i++];
+		}
+		else if (stricmp(token, "-log") == 0)
+		{
+			g_TestRun.plogname = argv[i++];
+		}
+		else if (stricmp(token, "-logopt") == 0)
+		{
+			token = argv[i++];
+			if (token != NULL)
+			{
+				if (token[0] == '0' && token[1] == 'x') token += 2;
+				sscanf(token, "%x", &varLog);
+			}
+		}
+		else if (stricmp(token, "-frame") == 0)
+		{
+			token = argv[i++];
+			if (token != NULL)
+			{
+				g_TestRun.frame = atoi(token);
+			}
+		}
+		else if (stricmp(token, "-numimages") == 0)
+		{
+			token = argv[i++];
+			if (token != NULL)
+			{
+				g_TestRun.numimages = atoi(token);
+			}
+		}
+		else if (stricmp(token, "-jpg") == 0)
+		{
+			g_TestRun.jpgcapture = 1;
+		}
+		else if (stricmp(token, "-gs") == 0)
+		{
+			token = argv[i++];
+			g_TestRun.pgsdll = token;
+		}
+		else if (stricmp(token, "-cdvd") == 0)
+		{
+			token = argv[i++];
+			g_TestRun.pcdvddll = token;
+		}
+		else if (stricmp(token, "-spu") == 0)
+		{
+			token = argv[i++];
+			g_TestRun.pspudll = token;
+		}
+		else if (stricmp(token, "-test") == 0)
+		{
+			g_TestRun.enabled = 1;
+		}
+#endif
+		else if (stricmp(token, "-pad") == 0)
+		{
+			token = argv[i++];
+			printf("-pad ignored\n");
+		}
+		else if (stricmp(token, "-loadgs") == 0)
+		{
+			token = argv[i++];
+			g_pRunGSState = token;
+		}
+		else
+		{
+			file = token;
+			printf("opening file %s\n", file);
+		}
+	}
+	return true;
+}
 void SysPrintf(const char *fmt, ...)
 {
 	va_list list;
