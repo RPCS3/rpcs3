@@ -486,9 +486,10 @@ void mfifoVIF1transfer(int qwc) {
 
 	if(qwc > 0){
 		vifqwc += qwc;
-		vif1.done &= ~1;
+		
 			SPR_LOG("Added %x qw to mfifo, total now %x\n", qwc, vifqwc);
-		if((vif1ch->chcr & 0x100) == 0 || vif1.vifstalled == 1) return;
+			
+		if((vif1ch->chcr & 0x100) == 0 || vif1.vifstalled == 1 || vif1.done == 1) return;
 	}
 
 	 if(vif1ch->qwc == 0){
@@ -590,7 +591,6 @@ void vifMFIFOInterrupt()
 	if(vif1.done != 1) {
 		if(vifqwc <= 0){
 			//SysPrintf("Empty\n");
-			vif1.done |= 1;
 			hwDmacIrq(14);
 			return;
 		} 

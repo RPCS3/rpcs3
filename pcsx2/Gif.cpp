@@ -421,6 +421,7 @@ void mfifoGIFtransfer(int qwc) {
 	if(qwc > 0 ) {
 				gifqwc += qwc;
 				if(!(gif->chcr & 0x100))return;
+				if(gifdone == 1) return;
 			}
 	SPR_LOG("mfifoGIFtransfer %x madr %x, tadr %x\n", gif->chcr, gif->madr, gif->tadr);
 		
