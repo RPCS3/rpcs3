@@ -639,7 +639,7 @@ void ProcessFKeys(int fkey, int shift)
 
 		// note: VK_F5-VK_F7 are reserved for GS
 		case 8:
-			GSmakeSnapshot("snap/");
+			GSmakeSnapshot("snaps/");
 			break;
 
 #ifdef PCSX2_DEVBUILD
