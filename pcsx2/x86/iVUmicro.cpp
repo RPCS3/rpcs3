@@ -84,7 +84,6 @@
 //------------------------------------------------------------------
 // Global Variables
 //------------------------------------------------------------------
-int g_VuNanHandling = 0;
 int vucycle;
 
 PCSX2_ALIGNED16(float s_fones[8])	= {1.0f, 1.0f, 1.0f, 1.0f, -1.0f, -1.0f, -1.0f, -1.0f};
@@ -1703,11 +1702,4 @@ void testPrintOverflow() {
 void testWhenOverflow(int info, int regd, int t0reg) {
 	SSE_MOVAPS_XMM_to_M128((uptr)tempRegX, regd);
 	CALLFunc((uptr)testPrintOverflow);
-}
-
-// Sets NaN Mode, used by Patches (currently does nothing)
-void SetVUNanMode(int mode)
-{
-    g_VuNanHandling = mode;
-    if ( mode ) SysPrintf("enabling vunan mode");
 }
