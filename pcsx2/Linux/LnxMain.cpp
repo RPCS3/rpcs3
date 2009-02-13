@@ -180,15 +180,18 @@ int main(int argc, char *argv[])
 		memset(&Config, 0, sizeof(Config));
 		strcpy(Config.BiosDir,    DEFAULT_BIOS_DIR "/");
 		strcpy(Config.PluginsDir, DEFAULT_PLUGINS_DIR "/");
-		Config.Patch = 1;
-		Config.Options = PCSX2_EEREC | PCSX2_VU0REC | PCSX2_VU1REC;
+		Config.Patch = 0;
+		Config.PsxOut = 1;
+		Config.Options = PCSX2_EEREC | PCSX2_VU0REC | PCSX2_VU1REC | PCSX2_FRAMELIMIT_LIMIT;
 		Config.sseMXCSR = DEFAULT_sseMXCSR;
 		Config.sseVUMXCSR = DEFAULT_sseVUMXCSR;
+		Config.eeOptions = DEFAULT_eeOptions;
+		Config.vuOptions = DEFAULT_vuOptions;
 
 		Msgbox::Alert("Pcsx2 needs to be configured");
 		Pcsx2Configure();
 
-		return 0;
+		LoadConfig();
 	}
 
 	InitLanguages();

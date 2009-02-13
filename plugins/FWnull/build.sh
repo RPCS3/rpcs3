@@ -7,6 +7,7 @@ echo ---------------
 curdir=`pwd`
 
 cd ${curdir}/Linux
+make clean
 make $@
 
 if [ -s cfgFWnull ] && [ -s libFWnull.so ]

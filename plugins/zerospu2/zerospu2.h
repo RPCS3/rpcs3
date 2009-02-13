@@ -78,6 +78,8 @@ extern FILE *spu2Log;
 #define NSFRAMES	16	  // gather at least NSFRAMES of NSSIZE before submitting
 #define NSPACKETS 24
 
+#define SPU_NUMBER_VOICES	   48
+
 #define SAMPLE_RATE 48000L
 #define RECORD_FILENAME "zerospu2.wav"
 
@@ -210,8 +212,6 @@ static __forceinline void C_SPUADDR_SET(u32 value, int c)
 	else
 		C1_SPUADDR_SET(value);
 }
-
-#define SPU_NUMBER_VOICES	   48
 
 struct SPU_CONTROL_
 {

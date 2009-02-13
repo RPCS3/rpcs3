@@ -7,6 +7,7 @@ echo Building CDVDiso
 echo ----------------
 
 cd ${curdir}/src/Linux
+make clean
 make $@
 
 # copy the files

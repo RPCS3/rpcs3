@@ -182,6 +182,45 @@ void VOICE_PROCESSED::FModChangeFrequency(int ns)
 	iFMod[ns]=0;
 }
 
+static void __forceinline GetNoiseValues(s32& VD) 
+{
+	static s32 Seed = 0x41595321;
+
+	if(Seed&0x100) 
+		VD = (s32)((Seed&0xff)<<8);
+	else if(!(Seed&0xffff)) 
+		VD = (s32)0x8000;
+	else 
+		VD = (s32)0x7fff;
+
+#ifdef _WIN32
+	__asm {
+		MOV eax,Seed
+		ROR eax,5
+		XOR eax,0x9a
+		MOV ebx,eax
+		ROL eax,2
+		ADD eax,ebx
+		XOR eax,ebx
+		ROR eax,3
+		MOV Seed,eax
+	}
+#else
+	__asm__ (
+		".intel_syntax\n"
+		"MOV %%eax,%0\n"
+		"ROR %%eax,5\n"
+		"XOR %%eax,0x9a\n"
+		"MOV %%ebx,%%eax\n"
+		"ROL %%eax,2\n"
+		"ADD %%eax,%%ebx\n"
+		"XOR %%eax,%%ebx\n"
+		"ROR %%eax,3\n"
+		"MOV %0,%%eax\n"
+		".att_syntax\n" : :"r"(Seed));
+#endif
+}
+
 // fixme - noise handler... just produces some noise data
 // surely wrong... and no noise frequency (spuCtrl&0x3f00) will be used...
 // and sometimes the noise will be used as fmod modulation... pfff
@@ -189,14 +228,15 @@ int VOICE_PROCESSED::iGetNoiseVal()
 {
 	int fa;
 
-	if ((dwNoiseVal<<=1)&0x80000000L)
+	/*if ((dwNoiseVal<<=1)&0x80000000L)
 	{
 		dwNoiseVal^=0x0040001L;
 		fa = ((dwNoiseVal>>2)&0x7fff);
 		fa = -fa;
 	}
 	else
-		fa=(dwNoiseVal>>2)&0x7fff;
+		fa=(dwNoiseVal>>2)&0x7fff;*/
+	GetNoiseValues(fa);
 
 	// mmm... depending on the noise freq we allow bigger/smaller changes to the previous val
 	fa=iOldNoise + ((fa - iOldNoise) / ((0x001f - (GetCtrl()->noiseFreq)) + 1));
