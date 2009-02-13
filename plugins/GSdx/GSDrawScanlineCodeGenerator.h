@@ -57,14 +57,14 @@ class GSDrawScanlineCodeGenerator : public CodeGenerator
 
 	void ReadPixel(const Xmm& dst, const Reg32& addr);
 	void WritePixel(const Xmm& src, const Xmm& temp, const Reg32& addr, uint8 i, int psm);
-	void ReadTexel(const Xmm& dst, const Xmm& addr, const Reg32& base, const Xmm& temp1, const Xmm& temp2);
-	void ReadTexel(const Xmm& dst, const Xmm& addr, const Reg32& base, uint8 i);
+	void ReadTexel(const Xmm& dst, const Xmm& addr, const Xmm& temp1, const Xmm& temp2);
+	void ReadTexel(const Xmm& dst, const Xmm& addr, uint8 i);
 
 	template<int shift> void modulate16(const Xmm& a, const Operand& f);
 	template<int shift> void lerp16(const Xmm& a, const Xmm& b, const Xmm& f);
 	void mix16(const Xmm& a, const Xmm& b, const Xmm& temp);
 	void clamp16(const Xmm& a, const Xmm& temp);
-	void alltrue(const Xmm& a, const Reg32& temp, LPCTSTR label);
+	void alltrue();
 	void blend8(const Xmm& a, const Xmm& b);
 	void blend(const Xmm& a, const Xmm& b, const Xmm& mask);
 	void blend8r(const Xmm& b, const Xmm& a);

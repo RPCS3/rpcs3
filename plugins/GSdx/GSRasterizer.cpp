@@ -39,6 +39,8 @@ void GSRasterizer::Draw(const GSRasterizerData* data)
 	m_dsf.sl = NULL;
 	m_dsf.sr = NULL;
 	m_dsf.sp = NULL;
+m_dsf.ssl = NULL;
+m_dsf.ssp = NULL;
 
 	m_ds->BeginDraw(data, &m_dsf);
 
@@ -96,8 +98,10 @@ void GSRasterizer::DrawPoint(const GSVertexSW* v, const GSVector4i& scissor)
 		if((p.y % m_threads) == m_id) 
 		{
 			(m_ds->*m_dsf.sp)(v, *v);
+			// TODO: (m_dsf.ssp)(v, *v);
 
 			(m_ds->*m_dsf.sl)(p.y, p.x, p.x + 1, *v);
+			// TODO: (m_dsf.ssl)(p.y, p.x, p.x + 1, *v);
 
 			m_stats.pixels++;
 		}
@@ -254,6 +258,7 @@ void GSRasterizer::DrawTriangleTop(GSVertexSW* v, const GSVector4i& scissor)
 	if(py > 0) l += dl * py;
 
 	(m_ds->*m_dsf.sp)(v, dscan);
+	// TODO: (m_dsf.ssp)(v, dscan);
 
 	DrawTriangleSection(top, bottom, l, dl, dscan, scissor);
 }
@@ -301,6 +306,7 @@ void GSRasterizer::DrawTriangleBottom(GSVertexSW* v, const GSVector4i& scissor)
 	if(py > 0) l += dl * py;
 
 	(m_ds->*m_dsf.sp)(v, dscan);
+	// TODO: (m_dsf.ssp)(v, dscan);
 
 	DrawTriangleSection(top, bottom, l, dl, dscan, scissor);
 }
@@ -323,6 +329,7 @@ void GSRasterizer::DrawTriangleTopBottom(GSVertexSW* v, const GSVector4i& scisso
 	GSVertexSW dscan = longest * longest.p.xxxx().rcp();
 
 	(m_ds->*m_dsf.sp)(v, dscan);
+	// TODO: (m_dsf.ssp)(v, dscan);
 
 	GSVertexSW& l = v[0];
 	GSVector4 r = v[0].p;
@@ -434,6 +441,7 @@ void GSRasterizer::DrawTriangleSection(int top, int bottom, GSVertexSW& l, const
 					}
 
 					(m_ds->*m_dsf.sl)(top, left, right, scan);
+					// TODO: (m_dsf.ssl)(top, left, right, scan);
 				}
 			}
 		}
@@ -485,6 +493,7 @@ void GSRasterizer::DrawTriangleSection(int top, int bottom, GSVertexSW& l, const
 					}
 
 					(m_ds->*m_dsf.sl)(top, left, right, scan);
+					// TODO: (m_dsf.ssl)(top, left, right, scan);
 				}
 			}
 		}
@@ -568,12 +577,14 @@ void GSRasterizer::DrawSprite(const GSVertexSW* vertices, const GSVector4i& scis
 	if(scan.p.x < (float)left) scan.t += dscan.t * ((float)left - scan.p.x);
 
 	(m_ds->*m_dsf.sp)(v, dscan);
+	// TODO: (m_dsf.ssp)(v, dscan);
 
 	for(; top < bottom; top++, scan.t += dedge.t)
 	{
 		if((top % m_threads) == m_id) 
 		{
 			(m_ds->*m_dsf.sl)(top, left, right, scan);
+			// TODO: (m_dsf.ssl)(top, left, right, scan);
 
 			m_stats.pixels += right - left;
 		}

@@ -1202,7 +1202,7 @@ protected:
 	}
 	void movd(const Mmx& mmx, const Address& addr)
 	{
-		if (mmx.isXMM()) db(0x66);
+		ASSERT(!addr.isBit(32)); // don't use dword ptr, bogus, won't output 0x66 for xmm dest op
 		opModM(addr, Reg(mmx.getIdx(), Operand::REG, mmx.getBit() / 8), 0x0F, B01101110);
 	}
 	void movd(const Mmx& mmx, const Reg32& reg)

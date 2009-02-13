@@ -1328,6 +1328,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\GSSetupPrimCodeGenerator.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\GSState.cpp"
 				>
 				<FileConfiguration
@@ -1735,6 +1739,10 @@
 			</File>
 			<File
 				RelativePath=".\GSSettingsDlg.h"
+				>
+			</File>
+			<File
+				RelativePath=".\GSSetupPrimCodeGenerator.h"
 				>
 			</File>
 			<File

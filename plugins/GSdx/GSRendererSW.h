@@ -488,6 +488,7 @@ protected:
 		{
 			p.sel.zpsm = GSUtil::EncodePSM(context->ZBUF.PSM);
 			p.sel.ztst = ztest ? context->TEST.ZTST : 1;
+			p.sel.zoverflow = GSVector4i(m_vtrace.m_max.p).z == 0x80000000;
 		}
 	}
 

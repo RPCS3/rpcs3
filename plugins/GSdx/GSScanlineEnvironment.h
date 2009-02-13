@@ -59,6 +59,7 @@ union GSScanlineSelector
 		DWORD colclamp:1; // 39
 		DWORD fba:1; // 40
 		DWORD dthe:1; // 41
+		DWORD zoverflow:1; // 42 (z max >= 0x80000000)
 	};
 
 	struct
@@ -130,11 +131,8 @@ __declspec(align(16)) struct GSScanlineEnvironment
 
 	GSVector4i fm, zm;
 	struct {GSVector4i min, max, mask, invmask;} t; // [u] x 4 [v] x 4
-	GSVector4i datm;
-	GSVector4i colclamp;
-	GSVector4i fba;
 	GSVector4i aref;
-	GSVector4i afix, afix2;
+	GSVector4i afix;
 	GSVector4i frb, fga;
 
 	struct {GSVector4 z, s, t, q; GSVector4i rb, ga, f, si, ti, _pad[7];} d[4];

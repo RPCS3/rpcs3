@@ -149,13 +149,53 @@ public:
 				__int64 tpf = p->frames > 0 ? p->ticks / p->frames : 0;
 				__int64 ppf = p->frames > 0 ? p->pixels / p->frames : 0;
 
-				printf("[%08x]%c %6.2f%% | %5.2f%% | f %4I64d | p %10I64d | tpp %4I64d | tpf %9I64d | ppf %7I64d\n", 
-					key, !m_map.Lookup(key) ? '*' : ' ',
+				printf("[%012I64x]%c %6.2f%% | %5.2f%% | f %4I64d | p %10I64d | tpp %4I64d | tpf %9I64d | ppf %7I64d\n", 
+					(UINT64)key, !m_map.Lookup(key) ? '*' : ' ',
 					(float)(tpf * 10000 / 50000000) / 100, 
 					(float)(tpf * 10000 / ttpf) / 100, 
 					p->frames, p->pixels, 
 					tpp, tpf, ppf);
 			}
 		}
+	}
+};
+
+template<class CG, class KEY, class VALUE>
+class GSCodeGeneratorFunctionMap : public GSFunctionMap<KEY, VALUE>
+{
+	CRBMap<UINT64, CG*> m_cgmap;
+
+protected:
+	virtual CG* Create(KEY key) = 0;
+
+public:
+	GSCodeGeneratorFunctionMap()
+	{
+	}
+
+	virtual ~GSCodeGeneratorFunctionMap()
+	{
+		POSITION pos = m_cgmap.GetHeadPosition();
+
+		while(pos)
+		{
+			delete m_cgmap.GetNextValue(pos);
+		}
+	}
+
+	VALUE GetDefaultFunction(KEY key)
+	{
+		CG* cg = NULL;
+
+		if(!m_cgmap.Lookup(key, cg))
+		{
+			cg = Create(key);
+
+			ASSERT(cg);
+
+			m_cgmap.SetAt(key, cg);
+		}
+
+		return (VALUE)cg->getCode();
 	}
 };
