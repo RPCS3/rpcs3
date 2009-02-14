@@ -5197,7 +5197,6 @@ Version x.x</property>
 		  <child>
 		    <widget class="GtkMenuItem" id="GtkMenuItem_EnterDebugger">
 		      <property name="visible">True</property>
-		      <property name="sensitive">False</property>
 		      <property name="label" translatable="yes">Enter Debugger ...</property>
 		      <property name="use_underline">True</property>
 		      <signal name="activate" handler="OnDebug_Debugger"/>

@@ -18,11 +18,11 @@
 
 #include "DebugDlg.h"
 using namespace R5900;
+unsigned long DebuggerPC = 0;
 
-void UpdateDebugger()
+/*void UpdateDebugger()
 {
-
-	char *str;
+	char syscall_str[g_MaxPath] = "";
 	int i;
 	std::string output;
 
@@ -34,29 +34,81 @@ void UpdateDebugger()
 		GtkTreeIter iter;
 		u32 *mem;
 		u32 pc = dPC + i * 4;
-		if (DebugMode)
+		/*if (DebugMode)
 		{
 			mem = (u32*)PSXM(pc);
 		}
-		else
+		else*//*
 			mem = (u32*)PSM(pc);
 
 		if (mem == NULL)
 		{
 			sprintf(nullAddr, "%8.8lX:\tNULL MEMORY", pc);
-			str = nullAddr;
 		}
 		else
-		{
-			std::string output;
-
-			disR5900Fasm(output, *mem, pc);
-			output.copy(str, 256);
+		{	
+			*//* special procesing for syscall. This should probably be moved into the disR5900Fasm() call in the future. */
+			/*if (0x0c == *mem && 0x24030000 == (*(mem-1) & 0xFFFFFF00))
+			{
+				*//* it's a syscall preceeded by a li v1,$data instruction. */
+				/*u8 bios_call = *(mem-1) & 0xFF;
+				sprintf(syscall_str, "%08X:\tsyscall\t%s", pc, R5900::bios[bios_call]);
+			} 
+			else *//*
+			{
+				std::string str;
+				R5900::disR5900Fasm(str, *mem,pc);
+				str.copy( syscall_str, 256 );
+				syscall_str[str.length()] = 0;
+			}
 		}
 		gtk_list_store_append(ListDVModel, &iter);
-		gtk_list_store_set(ListDVModel, &iter, 0, str, -1);
+		if (syscall_str != "") gtk_list_store_set(ListDVModel, &iter, 0, syscall_str, -1);
 
 	}
+}*/
+
+void UpdateDebugger(void)
+{
+   /* unsigned long t;
+    int cnt;
+    
+	if (DebuggerPC == 0) DebuggerPC = cpuRegs.pc; //- 0x00000038;
+	
+	gtk_list_store_clear(ListDVModel);
+
+	for (t = DebuggerPC, cnt = 0; t < (DebuggerPC + 0x00000074); t += 0x00000004, cnt++)
+	{
+		GtkTreeIter iter;
+		char syscall_str[256];
+		
+		// Make the opcode.
+		u32 *mem = (u32*)PSM(t);
+		if (mem == NULL) 
+		{
+			sprintf(syscall_str, "%8.8lx 00000000: NULL MEMORY", t);
+		} 
+		else 
+		{
+			*//* special procesing for syscall. This should probably be moved into the disR5900Fasm() call in the future. */
+			/*if (0x0c == *mem && 0x24030000 == (*(mem-1) & 0xFFFFFF00))
+			{
+				*//* it's a syscall preceeded by a li v1,$data instruction. */
+				/*u8 bios_call = *(mem-1) & 0xFF;
+				sprintf(syscall_str, "%08X:\tsyscall\t%s", t, R5900::bios[bios_call]);
+			} 
+			else 
+			{
+				std::string str;
+				R5900::disR5900Fasm(str, *mem, t);
+				str.copy( syscall_str, 256 );
+				syscall_str[str.length()] = 0;
+			}
+		}
+		
+		gtk_list_store_append(ListDVModel, &iter);
+		gtk_list_store_set(ListDVModel, &iter, 0, syscall_str, -1);
+	}*/
 }
 
 void OnDebug_Close(GtkButton *button, gpointer user_data)
@@ -340,6 +392,7 @@ void OnDebug_Go(GtkButton *button, gpointer user_data)
 		if (HasBreakPoint(cpuRegs.pc)) break;
 		Cpu->Step();
 	}
+	
 	dPC = cpuRegs.pc;
 	UpdateDebugger();
 }
@@ -370,8 +423,9 @@ void OnMemWrite32_Ok(GtkButton *button, gpointer user_data)
 	char *mem  = (char*)gtk_entry_get_text(GTK_ENTRY(MemEntry));
 	char *data = (char*)gtk_entry_get_text(GTK_ENTRY(DataEntry));
 
-	printf("memWrite32: %s, %s\n", mem, data);
+	Console::Notice("memWrite32: %s, %s\n", params mem, data);
 	memWrite32(strtol(mem, (char**)NULL, 0), strtol(data, (char**)NULL, 0));
+	
 	gtk_widget_destroy(MemWriteDlg);
 	gtk_main_quit();
 	gtk_widget_set_sensitive(DebugWnd, TRUE);
@@ -398,34 +452,22 @@ void OnDebug_memWrite32(GtkButton *button, gpointer user_data)
 	UpdateDebugger();
 }
 
-void OnDebug_Debugger(GtkMenuItem *menuitem, gpointer user_data)
+void Create_Debugger()
 {
 	GtkWidget *scroll;
 	GtkCellRenderer *renderer;
 	GtkTreeViewColumn *column;
-
-	if (OpenPlugins(NULL) == -1) return;
-
-	/*if (!efile)
-		efile=GetPS2ElfName(elfname);
-	if (efile)
-		loadElfFile(elfname);
-	efile=0;*/
-
-	dPC = cpuRegs.pc;
-
+	
 	DebugWnd = create_DebugWnd();
 
 	ListDVModel = gtk_list_store_new(1, G_TYPE_STRING);
 	ListDV = lookup_widget(DebugWnd, "GtkList_DisView");
 	gtk_tree_view_set_model(GTK_TREE_VIEW(ListDV), GTK_TREE_MODEL(ListDVModel));
 	renderer = gtk_cell_renderer_text_new();
-	column = gtk_tree_view_column_new_with_attributes("heading", renderer,
-	         "text", 0,
-	         NULL);
+	column = gtk_tree_view_column_new_with_attributes("heading", renderer, "text", 0, NULL);
 	gtk_tree_view_append_column(GTK_TREE_VIEW(ListDV), column);
 	scroll = lookup_widget(DebugWnd, "GtkVScrollbar_VList");
-
+	
 	DebugAdj = GTK_RANGE(scroll)->adjustment;
 	DebugAdj->lower = (gfloat)0x00000000 / 4;
 	DebugAdj->upper = (gfloat)0xffffffff / 4;
@@ -433,10 +475,17 @@ void OnDebug_Debugger(GtkMenuItem *menuitem, gpointer user_data)
 	DebugAdj->page_increment = (gfloat)20;
 	DebugAdj->page_size = (gfloat)23;
 
-	gtk_signal_connect(GTK_OBJECT(DebugAdj),
-	                   "value_changed", GTK_SIGNAL_FUNC(OnDebug_ScrollChange),
-	                   NULL);
+	gtk_signal_connect(GTK_OBJECT(DebugAdj), "value_changed", GTK_SIGNAL_FUNC(OnDebug_ScrollChange), NULL);
+}
 
+void OnDebug_Debugger(GtkMenuItem *menuitem, gpointer user_data)
+{
+
+	if (OpenPlugins(NULL) == -1) return;
+
+	dPC = cpuRegs.pc;
+	
+	Create_Debugger();
 	UpdateDebugger();
 
 	gtk_widget_show_all(DebugWnd);

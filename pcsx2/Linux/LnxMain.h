@@ -21,33 +21,42 @@
 
 #include "Linux.h"
 
-void SignalExit(int sig);
 extern bool applychanges;
 
 extern SafeArray<u8>* g_RecoveryState;
 extern bool g_EmulationInProgress;	// Set TRUE if a game is actively running (set to false on reset)
 
 extern void RunExecute(const char* elf_file, bool use_bios = false);
-void OnLanguage(GtkMenuItem *menuitem, gpointer user_data);
 extern void ExecuteCpu();
 extern void CheckSlots();
 extern bool isSlotUsed(int num);
 extern bool ParseCommandLine(int argc, char *argv[], char *file);
 extern void MemoryCard_Init();
 
+extern void StatusBar_Notice( const std::string& text );
+extern void StatusBar_SetMsg( const std::string& text );
+
+void OnLanguage(GtkMenuItem *menuitem, gpointer user_data);
 void InitLanguages();
 char *GetLanguageNext();
 void CloseLanguages();
 
 void StartGui();
 void pcsx2_exit();
-GtkWidget *MainWindow;
-GtkWidget *pStatusBar = NULL, *Status_Box;
-GtkWidget *CmdLine;	//2002-09-28 (Florin)
-GtkWidget *widgetCmdLine;
-GtkWidget *LogDlg, *MemDlg;
 
+GtkWidget *MainWindow, *Status_Box;
+GtkWidget *pStatusBar = NULL;
+GtkWidget *CmdLine, *widgetCmdLine;
+GtkWidget *LogDlg, *MemDlg;
 GtkAccelGroup *AccelGroup;
+
+typedef struct
+{
+	char lang[g_MaxPath];
+} _langs;
+
+_langs *langs;
+unsigned int langsMax;
 
 const char* phelpmsg =
     "\tpcsx2 [options] [file]\n\n"

@@ -15,21 +15,12 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
- 
- #ifndef __LNXSYSEXEC_H__
-#define __LNXSYSEXEC_H__
+
+#ifndef __MCDDLGS_H__
+#define __MCDDLGS_H__
 
 #include "Linux.h"
-#include "GS.h"
-#include <sys/mman.h>
-#include "x86/iR5900.h"
 
-extern void StartGui();
-extern void CheckSlots();
-
-extern void SignalExit(int sig);
-extern const char* g_pRunGSState;
-extern int efile;
-extern GtkWidget *pStatusBar;
+GtkWidget *MemDlg;
 
 #endif

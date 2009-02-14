@@ -6,8 +6,8 @@ bin_PROGRAMS = pcsx2
 # the application source, library search path, and link libraries
 pcsx2_SOURCES =  \
 interface.c support.c LnxMain.cpp LnxThreads.cpp LnxConsole.cpp LnxSysExec.cpp \
-AboutDlg.cpp ConfigDlg.cpp DebugDlg.cpp AdvancedDlg.cpp CpuDlg.cpp HacksDlg.cpp Pref.cpp \
-GtkGui.h Linux.h LnxMain.h ConfigDlg.h DebugDlg.h interface.h callbacks.h memzero.h support.h
+AboutDlg.cpp ConfigDlg.cpp DebugDlg.cpp AdvancedDlg.cpp CpuDlg.cpp HacksDlg.cpp McdDlgs.cpp Pref.cpp \
+GtkGui.h Linux.h LnxMain.h ConfigDlg.h DebugDlg.h McdDlgs.h interface.h callbacks.h memzero.h support.h
 
 pcsx2_LDFLAGS =
 

@@ -19,40 +19,23 @@
 #ifndef __LINUX_H__
 #define __LINUX_H__
 
-#include <stdio.h>
-#include <stdarg.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <dirent.h>
-#include <dlfcn.h>
-#include <fcntl.h>
-#include <errno.h>
-#include <signal.h>
-#include <string.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <unistd.h>
-
-
-#include <sys/time.h>
-#include <pthread.h>
-
-#include <X11/keysym.h>
-#include <gtk/gtk.h>
-#include <glib/gthread.h>
-#include <gdk/gdkkeysyms.h>
-#include <gtk/gtkdialog.h>
-#include <glib.h>
-
 #include "PrecompiledHeader.h"
 #include "Paths.h"
 #include "Common.h"
 
+//For CpuDlg
 #include "Counters.h"
-#include "VUmicro.h"
-#include "Plugins.h"
+
+// For AdvancedDialog
 #include "x86/ix86/ix86.h"
-#include "x86/iR5900.h"
+
+#include <dirent.h>
+#include <dlfcn.h>
+
+#include <X11/keysym.h>
+#include <gtk/gtk.h>
+#include <glib/gthread.h>
+#include <glib.h>
 
  #ifdef __cplusplus
 extern "C"
@@ -68,47 +51,15 @@ extern "C"
 #endif
 
 extern void SaveConfig();
-
+extern int LoadConfig();
+extern void SysRestorableReset();
 extern bool UseGui;
 
 extern int Pcsx2Configure();
 
-extern int LoadConfig();
-extern void SaveConfig();
-
-extern void SysRestorableReset();
-extern void SignalExit(int sig);
-extern bool isSlotUsed(int num);
-typedef struct
-{
-	char lang[g_MaxPath];
-} _langs;
-
-_langs *langs;
-unsigned int langsMax;
-
-typedef enum
-{
-	GS,
-	PAD1,
-	PAD2,
-	SPU,
-	CDVD,
-	DEV9,
-	USB,
-	FW,
-	BIOS
-} plugin_types;
-
 extern GtkWidget *MainWindow;
-extern bool configuringplug;
-
 
 char cfgfile[g_MaxPath];
-
-/* Hacks */
-
-int Config_hacks_backup;
 
 #define is_checked(main_widget, widget_name) (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lookup_widget(main_widget, widget_name))))
 #define set_checked(main_widget,widget_name, state) gtk_toggle_button_set_state(GTK_TOGGLE_BUTTON(lookup_widget(main_widget, widget_name)), state)

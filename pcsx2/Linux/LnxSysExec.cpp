@@ -30,6 +30,25 @@ bool g_EmulationInProgress = false;	// Set TRUE if a game is actively running (s
 static bool sinit = false;
 GtkWidget *FileSel;
 
+// For issuing notices to both the status bar and the console at the same time.
+// Single-line text only please!  Mutli-line msgs should be directed to the
+// console directly, thanks.
+void StatusBar_Notice( const std::string& text )
+{
+	// mirror output to the console!
+	Console::Status( text.c_str() );
+
+	// don't try this in Visual C++ folks!
+	gtk_statusbar_push(GTK_STATUSBAR(pStatusBar), 0, text.c_str());
+}
+
+// Sets the status bar message without mirroring the output to the console.
+void StatusBar_SetMsg( const std::string& text )
+{
+	// don't try this in Visual C++ folks!
+	gtk_statusbar_push(GTK_STATUSBAR(pStatusBar), 0, text.c_str());
+}
+
 bool ParseCommandLine(int argc, char *argv[], char *file)
 {
 	int i = 1;
@@ -679,7 +698,6 @@ void KeyEvent(keyEvent* ev)
 		if (CAPS_LOCK_EVT(ev->key))
 		{
 			//Set up anything we want to happen while caps lock is down.
-			//Config_hacks_backup = Config.Hacks;
 		}
 
 		switch (ev->key)
@@ -761,7 +779,6 @@ void KeyEvent(keyEvent* ev)
 		if (CAPS_LOCK_EVT(ev->key))
 		{
 			//Release caps lock
-			//Config_hacks_backup = Config.Hacks;
 		}
 	}
 

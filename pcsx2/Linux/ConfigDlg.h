@@ -23,6 +23,19 @@
 #include "R3000A.h"
 #include "IopMem.h"
 
+typedef enum
+{
+	GS,
+	PAD1,
+	PAD2,
+	SPU,
+	CDVD,
+	DEV9,
+	USB,
+	FW,
+	BIOS
+} plugin_types;
+
 typedef struct
 {
 	GtkWidget *Combo;
@@ -59,10 +72,6 @@ static void ConfPlugin(PluginConf confs, char* plugin, const char* name);
 static void TestPlugin(PluginConf confs, char* plugin, const char* name);
 
 extern void CheckSlots();
-
-
-
-
-
+extern bool configuringplug;
 
 #endif // __CONFIGDLG_H__

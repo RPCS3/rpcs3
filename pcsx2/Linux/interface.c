@@ -2691,7 +2691,6 @@ create_MainWindow (void)
   GtkMenuItem_EnterDebugger = gtk_menu_item_new_with_mnemonic (_("Enter Debugger ..."));
   gtk_widget_show (GtkMenuItem_EnterDebugger);
   gtk_container_add (GTK_CONTAINER (GtkMenuItem_Debug_menu), GtkMenuItem_EnterDebugger);
-  gtk_widget_set_sensitive (GtkMenuItem_EnterDebugger, FALSE);
 
   GtkMenuItem_Logging = gtk_menu_item_new_with_mnemonic (_("Logging"));
   gtk_widget_show (GtkMenuItem_Logging);

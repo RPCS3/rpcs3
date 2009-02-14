@@ -232,8 +232,7 @@ void StartGui()
 	gtk_box_pack_start(GTK_BOX(lookup_widget(MainWindow, "status_box")), pStatusBar, TRUE, TRUE, 0);
 	gtk_widget_show(pStatusBar);
 
-	gtk_statusbar_push(GTK_STATUSBAR(pStatusBar), 0,
-	                   "F1 - save, F2 - next state, Shift+F2 - prev state, F3 - load, F8 - snapshot");
+	StatusBar_SetMsg( "F1 - save, F2 - next state, Shift+F2 - prev state, F3 - load, F8 - snapshot");
 
 	// add all the languages
 	Item = lookup_widget(MainWindow, "GtkMenuItem_Language");
@@ -261,7 +260,8 @@ void StartGui()
 	// disable anything not implemented or not working properly.
 	gtk_widget_set_sensitive(GTK_WIDGET(lookup_widget(MainWindow, "patch_browser1")), FALSE);
 	gtk_widget_set_sensitive(GTK_WIDGET(lookup_widget(MainWindow, "patch_finder2")), FALSE);
-	gtk_widget_set_sensitive(GTK_WIDGET(lookup_widget(MainWindow, "GtkMenuItem_Memcards")), FALSE);
+	gtk_widget_set_sensitive(GTK_WIDGET(lookup_widget(MainWindow, "GtkMenuItem_EnterDebugger")), FALSE);
+	//gtk_widget_set_sensitive(GTK_WIDGET(lookup_widget(MainWindow, "GtkMenuItem_Memcards")), FALSE);
 #ifndef PCSX2_DEVBUILD
 	gtk_widget_set_sensitive(GTK_WIDGET(lookup_widget(MainWindow, "GtkMenuItem_Logging")), FALSE);
 #endif
@@ -524,75 +524,6 @@ void OnDebug_Logging(GtkMenuItem *menuitem, gpointer user_data)
 	gtk_widget_show_all(LogDlg);
 	gtk_widget_set_sensitive(MainWindow, FALSE);
 	gtk_main();
-}
-
-void OnConf_Memcards(GtkMenuItem *menuitem, gpointer user_data) 
-{
-	char file[g_MaxPath], card[g_MaxPath];
-	DIR *dir;
-	struct dirent *entry;     
-	struct stat statinfo;
-	GtkWidget *memcombo1, *memcombo2;
-	int i = 0;
-
-	MemDlg = create_MemDlg();
-	memcombo1 = lookup_widget(MemDlg, "memcard1combo");
-	memcombo2 = lookup_widget(MemDlg, "memcard2combo");
-	
-	getcwd(file, ARRAYSIZE(file)); /* store current dir */
-	sprintf( card, "%s/%s", file, MEMCARDS_DIR );
-	chdir(card); /* change dirs so that plugins can find their config file*/
-	    
-	if ((dir = opendir(card)) == NULL)
-	{
-		Console::Error("ERROR: Could not open directory %s\n", params card);
-		return;
-	}
-
-	while ((entry = readdir(dir)) != NULL) 
-	{
-		stat(entry->d_name, &statinfo);
-		
-		if (S_ISREG(statinfo.st_mode)) 
-		{
-			char path[g_MaxPath];
-			
-			sprintf( path, "%s/%s", MEMCARDS_DIR, entry->d_name);
-			gtk_combo_box_append_text(GTK_COMBO_BOX(memcombo1), entry->d_name);
-			gtk_combo_box_append_text(GTK_COMBO_BOX(memcombo2), entry->d_name);
-			
-			if (strcmp(Config.Mcd1, path) == 0) 
-				gtk_combo_box_set_active(GTK_COMBO_BOX(memcombo1), i);
-			if (strcmp(Config.Mcd2, path) == 0) 
-				gtk_combo_box_set_active(GTK_COMBO_BOX(memcombo2), i);
-			
-			i++;
-		}
-	}
-
-	closedir(dir);
-
-	chdir(file);
-	gtk_widget_show_all(MemDlg);
-	gtk_widget_set_sensitive(MainWindow, FALSE);
-	gtk_main();
-	
-}
-	
-void OnMemcards_Ok(GtkButton *button, gpointer user_data)
-{
-	
-	strcpy(Config.Mcd1, MEMCARDS_DIR "/");
-	strcpy(Config.Mcd2, MEMCARDS_DIR "/");
-	
-	strcat(Config.Mcd1, gtk_combo_box_get_active_text(GTK_COMBO_BOX(lookup_widget(MemDlg, "memcard1combo"))));
-	strcat(Config.Mcd2, gtk_combo_box_get_active_text(GTK_COMBO_BOX(lookup_widget(MemDlg, "memcard2combo"))));
-	
-	SaveConfig();
-	
-	gtk_widget_destroy(MemDlg);
-	gtk_widget_set_sensitive(MainWindow, TRUE);
-	gtk_main_quit();
 }
 
 void on_patch_browser1_activate(GtkMenuItem *menuitem, gpointer user_data) {}
