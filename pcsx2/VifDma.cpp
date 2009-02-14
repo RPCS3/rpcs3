@@ -1993,7 +1993,7 @@ __forceinline void vif1Interrupt() {
 		return;
 	}
 #ifdef PCSX2_DEVBUILD
-	if(vif1ch->qwc > 0) SysPrintf("VIF1 Ending with QWC left\n");
+	if(vif1ch->qwc > 0) SysPrintf("VIF1 Ending with %x QWC left\n");
 	if(vif1.cmd != 0) SysPrintf("vif1.cmd still set %x\n", vif1.cmd);
 #endif
 
@@ -2238,6 +2238,9 @@ void vif1Reset() {
 
 void SaveState::vif1Freeze() {
 	Freeze(vif1);
-	if( IsLoading() )
+	if( IsLoading() ){		
 		SetNewMask(g_vif1Masks, g_vif1HasMask3, vif1Regs->mask, ~vif1Regs->mask);
+		if(vif1ch->chcr & 0x100)vif1.done = 0;
+		else vif1.done = 0;
+	}
 }

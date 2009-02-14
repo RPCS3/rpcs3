@@ -343,7 +343,7 @@ void dmaGIF() {
 
 static unsigned int mfifocycles;
 static unsigned int gifqwc = 0;
-static unsigned int gifdone = 0;
+unsigned int gifdone = 0;
 
 // called from only one location, so forceinline it:
 static __forceinline int mfifoGIFrbTransfer() {

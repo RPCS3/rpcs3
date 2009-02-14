@@ -813,10 +813,13 @@ void gsDynamicSkipEnable()
 	frameLimitReset();
 }
 
+extern unsigned int gifdone;
 void SaveState::gsFreeze()
 {
 	FreezeMem(PS2MEM_GS, 0x2000);
 	Freeze(CSRw);
+	if(((DMACh*)&PS2MEM_HW[0xA000])->chcr & 0x100)gifdone = 0;
+	else gifdone = 0;
 	mtgsFreeze();
 }
 
