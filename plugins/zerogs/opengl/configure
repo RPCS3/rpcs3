@@ -4409,8 +4409,8 @@ cat >>confdefs.h <<\_ACEOF
 _ACEOF
 
  CFLAGS+="-g "
- CPPFLAGS+="-g -fpermissive "
- CXXFLAGS+="-g- fpermissive "
+ CPPFLAGS+="-g "
+ CXXFLAGS+="-g -fpermissive "
 else
 
 cat >>confdefs.h <<\_ACEOF
@@ -4419,7 +4419,7 @@ _ACEOF
 
  CFLAGS+="-O3 -fomit-frame-pointer "
  CPPFLAGS+="-O3 -fomit-frame-pointer "
- CXXFLAGS+="-O3 -fomit-frame-pointer -fpermissive "
+ CXXFLAGS+="-O3 -fomit-frame-pointer "
 fi
 { $as_echo "$as_me:$LINENO: result: $debug" >&5
 $as_echo "$debug" >&6; }

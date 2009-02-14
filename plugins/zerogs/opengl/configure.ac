@@ -37,13 +37,13 @@ if test "x$debug" == xyes
 then
  AC_DEFINE(_DEBUG,1,[_DEBUG])
  CFLAGS+="-g "
- CPPFLAGS+="-g -fpermissive "
- CXXFLAGS+="-g- fpermissive "
+ CPPFLAGS+="-g "
+ CXXFLAGS+="-g -fpermissive "
 else
  AC_DEFINE(NDEBUG,1,[NDEBUG])
  CFLAGS+="-O3 -fomit-frame-pointer "
  CPPFLAGS+="-O3 -fomit-frame-pointer "
- CXXFLAGS+="-O3 -fomit-frame-pointer -fpermissive "
+ CXXFLAGS+="-O3 -fomit-frame-pointer "
 fi
 AC_MSG_RESULT($debug)
 

@@ -292,7 +292,7 @@ decl_ps2shade_##num(_tex16to8h) \
 
 // nearest
 #define decl_ps2shade_0(bit) \
-half4 ps2shade0##bit( TEX_DECL tex) \
+float4 ps2shade0##bit( TEX_DECL tex) \
 { \
     return tex2DPS##bit( ps2addr(TEX_XY)); \
 } \
@@ -716,7 +716,7 @@ half4 CRTCTargInterPS(in float2 tex0 : TEXCOORD0, in float2 ointerpos : TEXCOORD
 	float finter = texRECT(g_sInterlace, ointerpos.yy).x;
 	clip(finter * g_fOneColor.z + g_fOneColor.w);
 
-	half4 c = BilinearFloat16(tex0);
+	float4 c = BilinearFloat16(tex0);
 	c.w = g_fc0.w*c.w * g_fOneColor.x + g_fOneColor.y;
 	return c;
 }

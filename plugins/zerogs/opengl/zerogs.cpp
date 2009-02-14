@@ -1338,13 +1338,13 @@ bool ZeroGS::Create(int _width, int _height)
 	char tempstr[255];
 	char curwd[255];
 	getcwd(curwd, ARRAY_SIZE(curwd));
-
-	strcpy(tempstr, "../plugins/gs/zerogs/opengl/");
+	
+	strcpy(tempstr, "../plugins/zerogs/opengl/");
 	sprintf(EFFECT_NAME, "%sps2hw.fx", tempstr);
 	FILE* f = fopen(EFFECT_NAME, "r");
 	if( f == NULL ) {
 
-		strcpy(tempstr, "../../plugins/gs/zerogs/opengl/");
+		strcpy(tempstr, "../../plugins/zerogs/opengl/");
 		sprintf(EFFECT_NAME, "%sps2hw.fx", tempstr);
 		f = fopen(EFFECT_NAME, "r");
 
@@ -1353,7 +1353,6 @@ bool ZeroGS::Create(int _width, int _height)
 			return false;
 		}
 	}
-
 	fclose(f);
 
 	sprintf(EFFECT_DIR, "%s/%s", curwd, tempstr);
