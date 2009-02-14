@@ -2241,6 +2241,5 @@ void SaveState::vif1Freeze() {
 	if( IsLoading() ){		
 		SetNewMask(g_vif1Masks, g_vif1HasMask3, vif1Regs->mask, ~vif1Regs->mask);
 		if(vif1ch->chcr & 0x100)vif1.done = 0;
-		else vif1.done = 0;
 	}
 }
