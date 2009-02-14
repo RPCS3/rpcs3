@@ -2914,10 +2914,11 @@ void ZeroGS::Flush(int context)
 				glTexParameteri(GL_TEXTURE_RECTANGLE_NV, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 				dwFilterOpts |= 2;
 			}
-
+			
 			Vector vTexDims;
-			vTexDims.x = curvb.tex0.tw;
-			vTexDims.y = curvb.tex0.th;
+			vTexDims.x = curvb.tex0.tw << s_AAx ;
+			vTexDims.y = curvb.tex0.th << s_AAy ;
+
 
 			// look at the offset of tbp0 from fbp
 			if( curvb.tex0.tbp0 <= ptextarg->fbp ) {
@@ -2933,9 +2934,8 @@ void ZeroGS::Flush(int context)
 				vTexDims.w = (float)ycoord;
 			}
 
-			if( shadertype == 4 ) {
-				vTexDims.z += 8.0f;
-			}
+			if( shadertype == 4 ) vTexDims.z += 8.0f;
+			
 
 			cgGLSetParameter4fv(pfragment->fTexDims, vTexDims);
 
