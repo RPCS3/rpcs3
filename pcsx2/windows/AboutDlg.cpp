@@ -27,9 +27,10 @@
 HWND hW;
 HBITMAP hBMP, hSilverBMP;
 
-LRESULT WINAPI AboutDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-
-	switch(uMsg) {
+LRESULT WINAPI AboutDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+	switch(uMsg)
+	{
 		case WM_INITDIALOG:
 			hBMP = LoadBitmap(GetModuleHandle(NULL), MAKEINTRESOURCE(SPLASH_LOGO));
 			hSilverBMP = LoadBitmap(GetModuleHandle(NULL), MAKEINTRESOURCE(IDB_PS2SILVER));
@@ -43,15 +44,20 @@ LRESULT WINAPI AboutDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 			Button_SetText(GetDlgItem(hDlg, IDOK), _("OK"));
 			Static_SetText(GetDlgItem(hDlg, IDC_PCSX_ABOUT_AUTHORS), _(LabelAuthors));
 			Static_SetText(GetDlgItem(hDlg, IDC_PCSX_ABOUT_GREETS), _(LabelGreets));
-			return TRUE;
+		return TRUE;
 
 		case WM_COMMAND:
-			switch(wParam) {
+			switch(wParam)
+			{
 				case IDOK:
-					EndDialog(hDlg, TRUE );
-					return TRUE;
+					EndDialog( hDlg, TRUE );
+				return TRUE;
 			}
-			break;
+		return FALSE;
+
+		case WM_CLOSE:
+			EndDialog( hDlg, TRUE );
+		return TRUE;
 	}
 	return FALSE;
 }

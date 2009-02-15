@@ -49,7 +49,7 @@ static void _setupBranchTest()
 	_eeFlushAllUnused();
 
 	// COP0 branch conditionals are based on the following equation:
-	// (((psHu16(DMAC_STAT) & psHu16(DMAC_PCR)) & 0x3ff) == (psHu16(DMAC_PCR) & 0x3ff))
+	//  (((psHu16(DMAC_STAT) | ~psHu16(DMAC_PCR)) & 0x3ff) == 0x3ff)
 	// BC0F checks if the statement is false, BC0T checks if the statement is true.
 
 	// note: We only want to compare the 16 bit values of DMAC_STAT and PCR.
@@ -57,10 +57,11 @@ static void _setupBranchTest()
 	// everything except the lower 10 bits away.
 
 	MOV32MtoR( EAX, (uptr)&psHu32(DMAC_PCR) );
+	MOV32ItoR( ECX, 0x3ff );		// ECX is our 10-bit mask var
 	NOT32R( EAX );
 	OR32MtoR( EAX, (uptr)&psHu32(DMAC_STAT) );
-	AND32ItoR( EAX, 0x3ff );
-	CMP32ItoR( EAX, 0x3ff);
+	AND32RtoR( EAX, ECX );
+	CMP32RtoR( EAX, ECX );
 }
 
 void recBC0F()
@@ -72,7 +73,7 @@ void recBC0F()
 void recBC0T()
 {
 	_setupBranchTest();
-	recDoBranchImm(JL32(0));
+	recDoBranchImm(JNE32(0));
 }
 
 void recBC0FL()
@@ -84,7 +85,7 @@ void recBC0FL()
 void recBC0TL()
 {
 	_setupBranchTest();
-	recDoBranchImm_Likely(JL32(0));
+	recDoBranchImm_Likely(JNE32(0));
 }
 
 void recTLBR() { recCall( Interp::TLBR, -1 ); }

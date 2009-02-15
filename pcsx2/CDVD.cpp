@@ -529,9 +529,12 @@ void cdvdReadKey(u8 arg0, u16 arg1, u32 arg2, u8* key) {
 	// Now's a good time to reload the ELF info...
 	if( ElfCRC == 0 )
 	{
+		FreezeMMXRegs(1);
 		ElfCRC = loadElfCRC( str );
 		ElfApplyPatches();
 		LoadGameSpecificSettings();
+		GSsetGameCRC( ElfCRC, 0 );
+		FreezeMMXRegs(0);
 	}
 }
 

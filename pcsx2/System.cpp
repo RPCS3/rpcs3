@@ -98,7 +98,7 @@ void SysDetect()
 	if( sysInitialized ) return;
 	sysInitialized = true;
 
-	Notice("PCSX2 " PCSX2_VERSION " - compiled on %s", params __DATE__ );
+	Notice("PCSX2 " PCSX2_VERSION " - compiled on " __DATE__ );
 	Notice("Savestate version: %x", params g_SaveVersion);
 
 	// fixme: This line is here for the purpose of creating external ASM code.  Yah. >_<
