@@ -69,7 +69,7 @@ BEGIN
     CONTROL         116,IDC_STATIC,"Static",SS_BITMAP,7,196,117,52,WS_EX_CLIENTEDGE
     PUSHBUTTON      "Advanced...",IDC_OPEN_CONFIG_SOUNDTOUCH,219,130,84,12
     PUSHBUTTON      "Configure Debug Options...",IDC_OPEN_CONFIG_DEBUG,14,131,108,14
-    CHECKBOX        "Enable Debug Options",IDC_DEBUG,14,117,104,10,NOT WS_TABSTOP
+    CHECKBOX        "Enable Debug Options",IDC_DEBUG_ENABLE,14,117,104,10,NOT WS_TABSTOP
     GROUPBOX        "",IDC_STATIC,6,107,129,46
     CONTROL         "Disable Audio Expansion",IDC_EXPANSION_DISABLE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,150,152,135,10
     LTEXT           "Audio expansion detects extended speaker setups like 5.1 and 2.1 audio, and expand the SPU2's stereo stream so that all speakers are used.  Disable this if the detection causes problems on your sound system.",IDC_STATIC,162,164,146,44

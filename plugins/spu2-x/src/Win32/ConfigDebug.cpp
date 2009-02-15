@@ -88,7 +88,7 @@ void ReadSettings()
 
 void WriteSettings()
 {
-	CfgWriteBool(Section,_T("Global_Debug_Enabled"),DebugEnabled);
+	CfgWriteBool(Section,_T("Global_Enable"),DebugEnabled);
 
 	CfgWriteBool(Section,_T("Show_Messages"),             _MsgToConsole);
 	CfgWriteBool(Section,_T("Show_Messages_Key_On_Off"),  _MsgKeyOnOff);

@@ -179,6 +179,11 @@ BOOL CALLBACK ConfigProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 			
 			EnableWindow( GetDlgItem( hWnd, IDC_OPEN_CONFIG_SOUNDTOUCH ), !timeStretchDisabled );
 			EnableWindow( GetDlgItem( hWnd, IDC_OPEN_CONFIG_DEBUG ), DebugEnabled );
+			
+			SET_CHECK(IDC_EFFECTS_DISABLE,	EffectsDisabled);
+			SET_CHECK(IDC_TS_DISABLE,		timeStretchDisabled);
+			SET_CHECK(IDC_DEBUG_ENABLE,		DebugEnabled);
+
 		}
 		break;
 
@@ -227,13 +232,13 @@ BOOL CALLBACK ConfigProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 					SoundtouchCfg::OpenDialog( hWnd );
 				break;
 
-				HANDLE_CHECK(IDC_EFFECTS,EffectsDisabled);
+				HANDLE_CHECK(IDC_EFFECTS_DISABLE,EffectsDisabled);
 				HANDLE_CHECK(IDC_DSP_ENABLE,dspPluginEnabled);
-				HANDLE_CHECKNB(IDC_TS_ENABLE,timeStretchDisabled);
+				HANDLE_CHECKNB(IDC_TS_DISABLE,timeStretchDisabled);
 					EnableWindow( GetDlgItem( hWnd, IDC_OPEN_CONFIG_SOUNDTOUCH ), !timeStretchDisabled );
 				break;
 				
-				HANDLE_CHECKNB(IDC_DEBUG,DebugEnabled);
+				HANDLE_CHECKNB(IDC_DEBUG_ENABLE,DebugEnabled);
 					DebugConfig::EnableControls( hWnd );
 					EnableWindow( GetDlgItem( hWnd, IDC_OPEN_CONFIG_DEBUG ), DebugEnabled );
 				break;

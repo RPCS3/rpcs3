@@ -960,8 +960,8 @@ static void __fastcall MixCore(s32& OutL, s32& OutR, s32 ExtL, s32 ExtR)
 	TDR += SDR & thiscore.SndDryR;
 
 	// Mix in the External (nothing/core0) data
-	OutL = TDL + (ExtL & thiscore.ExtDryL);
-	OutR = TDR + (ExtR & thiscore.ExtDryR);
+	TDL += ExtL & thiscore.ExtDryL;
+	TDR += ExtR & thiscore.ExtDryR;
 	
 	if( !EffectsDisabled )
 	{
@@ -991,14 +991,21 @@ static void __fastcall MixCore(s32& OutL, s32& OutR, s32 ExtL, s32 ExtR)
 			TWR = ApplyVolume(RVR,thiscore.FxR);
 
 			//Mix Wet,Dry
-			OutL += TWL;
-			OutR += TWR;
+			OutL = TDL + TWL;
+			OutR = TDR + TWR;
 		}
 		else
 		{
 			WaveDump::WriteCore( core, CoreSrc_PreReverb, 0, 0 );
 			WaveDump::WriteCore( core, CoreSrc_PostReverb, 0, 0 );
+			OutL = TDL;
+			OutR = TDR;
 		}
+	}
+	else
+	{
+		OutL = TDL;
+		OutR = TDR;
 	}
 
 	// Apply Master Volume.  The core will need this when the function returns.

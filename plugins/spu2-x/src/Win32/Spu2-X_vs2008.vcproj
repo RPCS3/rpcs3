@@ -705,7 +705,6 @@
 						<Tool
 							Name="VCCLCompilerTool"
 							UsePrecompiledHeader="0"
-							AssemblerOutput="4"
 							BrowseInformation="1"
 							CompileAs="0"
 						/>
@@ -771,7 +770,6 @@
 						<Tool
 							Name="VCCLCompilerTool"
 							UsePrecompiledHeader="0"
-							AssemblerOutput="4"
 							BrowseInformation="1"
 						/>
 					</FileConfiguration>

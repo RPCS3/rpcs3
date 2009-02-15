@@ -214,7 +214,10 @@ using namespace Savestate;
 
 EXPORT_C_(s32) SPU2freeze(int mode, freezeData *data)
 {
-	jASSUME( mode > 0 && mode < 3 );
+	if( mode == FREEZE_SIZE )
+		return SizeIt();
+
+	jASSUME( mode == FREEZE_LOAD || mode == FREEZE_SAVE );
 	jASSUME( data != NULL );
 
 	if( data->data == NULL ) return -1;
@@ -224,7 +227,6 @@ EXPORT_C_(s32) SPU2freeze(int mode, freezeData *data)
 	{
 		case FREEZE_LOAD: return ThawIt( spud );
 		case FREEZE_SAVE: return FreezeIt( spud );
-		case FREEZE_SIZE: return SizeIt();
 		
 		jNO_DEFAULT;
 	}
