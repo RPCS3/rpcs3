@@ -173,7 +173,7 @@ BOOL CALLBACK ConfigProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 			int maxexp = (int)(pow( (double)LATENCY_MAX+2, 1.0/3.0 ) * 128.0);
 			INIT_SLIDER( IDC_LATENCY_SLIDER, minexp, maxexp, 200, 42, 12 );
 
-			SendDialogMsg( hWnd, IDC_LATENCY_SLIDER, TBM_SETPOS, TRUE, (int)(pow( (double)SndOutLatencyMS, 1.0/3.0 ) * 128.0) ); 
+			SendDialogMsg( hWnd, IDC_LATENCY_SLIDER, TBM_SETPOS, TRUE, (int)((pow( (double)SndOutLatencyMS, 1.0/3.0 ) * 128.0) + 0.5) ); 
 			swprintf_s(temp,_T("%d ms (avg)"),SndOutLatencyMS);
 			SetWindowText(GetDlgItem(hWnd,IDC_LATENCY_LABEL),temp);
 			
@@ -183,7 +183,7 @@ BOOL CALLBACK ConfigProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 			SET_CHECK(IDC_EFFECTS_DISABLE,	EffectsDisabled);
 			SET_CHECK(IDC_TS_DISABLE,		timeStretchDisabled);
 			SET_CHECK(IDC_DEBUG_ENABLE,		DebugEnabled);
-
+			SET_CHECK(IDC_DSP_ENABLE,		dspPluginEnabled);
 		}
 		break;
 
