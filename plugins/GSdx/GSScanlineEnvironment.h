@@ -53,13 +53,13 @@ union GSScanlineSelector
 		DWORD ftest:1; // 33
 		DWORD zwrite:1; // 34
 		DWORD ztest:1; // 35
-		DWORD wms:1; // 36 (0: repeat, 1: clamp)
-		DWORD wmt:1; // 37
-		DWORD datm:1; // 38
-		DWORD colclamp:1; // 39
-		DWORD fba:1; // 40
-		DWORD dthe:1; // 41
-		DWORD zoverflow:1; // 42 (z max >= 0x80000000)
+		DWORD wms:2; // 36
+		DWORD wmt:2; // 38 
+		DWORD datm:1; // 40
+		DWORD colclamp:1; // 41
+		DWORD fba:1; // 42
+		DWORD dthe:1; // 43
+		DWORD zoverflow:1; // 44 (z max >= 0x80000000)
 	};
 
 	struct

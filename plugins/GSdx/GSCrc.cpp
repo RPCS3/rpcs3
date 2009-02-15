@@ -65,6 +65,8 @@ CRC::Game CRC::m_games[] =
 	{0x98D4BC93, MetalGearSolid3, EU, false},
 	{0x86BC3040, MetalGearSolid3, US, false}, //Subsistance disc 1
 	{0x0481AD8A, MetalGearSolid3, JP, false},
+	{0x79ED26AD, MetalGearSolid3, EU, false},
+	{0x5E31EA42, MetalGearSolid3, EU, false},
 	{0x278722BF, DBZBT2, US, false},
 	{0xFE961D28, DBZBT2, US, false},
 	{0x0393B6BE, DBZBT2, EU, false},
@@ -110,6 +112,8 @@ CRC::Game CRC::m_games[] =
 	{0xA61A4C6D, GodOfWar, Unknown, false},
 	{0xE23D532B, GodOfWar, Unknown, false},
 	{0x2F123FD8, GodOfWar2, RU, false},
+	{0x2F123FD8, GodOfWar2, US, false},
+	{0x44A8A22A, GodOfWar2, EU, false},
 	{0x5D482F18, JackieChanAdv, Unknown, false},
 	{0xf0a6d880, HarvestMoon, US, true},
 	{0x75c01a04, NamcoXCapcom, US, false},

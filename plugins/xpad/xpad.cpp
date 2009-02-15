@@ -73,11 +73,34 @@ BOOL xpadApp::InitInstance()
 
 //
 
-#define PS2E_LT_PAD 0x02
-#define PS2E_PAD_VERSION 0x0002
+static struct 
+{
+	static const UINT32 revision = 0;
+	static const UINT32 build = 2;
+	static const UINT32 minor = 0;
+} s_ver;
+
+static bool s_ps2 = false;
+
+EXPORT_C_(UINT32) PSEgetLibType()
+{
+	return PSE_LT_PAD;
+}
+
+EXPORT_C_(char*) PSEgetLibName()
+{
+	return "XPad";
+}
+
+EXPORT_C_(UINT32) PSEgetLibVersion()
+{
+	return (s_ver.minor << 16) | (s_ver.revision << 8) | s_ver.build;
+}
 
 EXPORT_C_(UINT32) PS2EgetLibType()
 {
+	s_ps2 = true;
+
 	return PS2E_LT_PAD;
 }
 
@@ -88,11 +111,7 @@ EXPORT_C_(char*) PS2EgetLibName()
 
 EXPORT_C_(UINT32) PS2EgetLibVersion2(UINT32 type)
 {
-	const UINT32 revision = 0;
-	const UINT32 build = 1;
-	const UINT32 minor = 0;
-
-	return (build << 0) | (revision << 8) | (PS2E_PAD_VERSION << 16) | (minor << 24);
+	return (s_ver.build << 0) | (s_ver.revision << 8) | (PS2E_PAD_VERSION << 16) | (s_ver.minor << 24);
 }
 
 //
@@ -159,7 +178,7 @@ public:
 		: m_pad(pad)
 		, m_connected(false)
 		, m_ds2native(false)
-		, m_analog(false)
+		, m_analog(!s_ps2) // defaults to analog off for ps2
 		, m_locked(false)
 		, m_vibration(true)
 		, m_small(0)
@@ -523,19 +542,7 @@ public:
 			ret = (this->*m_handler)(m_index - 3, value);
 			break;
 		}
-/*
-//if(m_cmd != 'B')
-{
-static FILE* log = NULL;
-if(log == NULL)
-{
-	log = fopen("c:\\log.txt", "w");
-}
-if(m_index == 1) fprintf(log, "\n");
-fprintf(log, "*** %02x %d %02x %02x\n", m_cmd, m_index - 1, value, ret);
-fflush(log);
-}
-*/
+
 		return ret;
 	}
 
@@ -588,8 +595,11 @@ EXPORT_C_(UINT32) PADopen(void* pDsp)
 
 	if(s_nRefs == 0)
 	{
-		s_hWnd = *(HWND*)pDsp;
-		s_GSWndProc = (WNDPROC)SetWindowLongPtr(s_hWnd, GWLP_WNDPROC, (LPARAM)PADwndProc);
+		if(s_ps2)
+		{
+			s_hWnd = *(HWND*)pDsp;
+			s_GSWndProc = (WNDPROC)SetWindowLongPtr(s_hWnd, GWLP_WNDPROC, (LPARAM)PADwndProc);
+		}
 	}
 
 	s_nRefs++;
@@ -603,7 +613,10 @@ EXPORT_C PADclose()
 
 	if(s_nRefs == 0)
 	{
-		SetWindowLongPtr(s_hWnd, GWLP_WNDPROC, (LPARAM)s_GSWndProc);
+		if(s_ps2)
+		{
+			SetWindowLongPtr(s_hWnd, GWLP_WNDPROC, (LPARAM)s_GSWndProc);
+		}
 	}
 
 	XInputEnable(FALSE);
@@ -624,6 +637,31 @@ EXPORT_C_(BYTE) PADstartPoll(int pad)
 EXPORT_C_(BYTE) PADpoll(BYTE value)
 {
 	return s_padplugin.Poll(value);
+}
+
+EXPORT_C_(UINT32) PADreadPort(int port, PadDataS* data)
+{
+	PADstartPoll(port + 1);
+
+	data->type = PADpoll('B') >> 4;
+	PADpoll(0);
+	data->status = PADpoll(0) | (PADpoll(0) << 8);
+	data->rightJoyX = data->moveX = PADpoll(0);
+	data->rightJoyY = data->moveY = PADpoll(0);
+	data->leftJoyX = PADpoll(0);
+	data->leftJoyY = PADpoll(0);
+
+	return 0;
+}
+
+EXPORT_C_(UINT32) PADreadPort1(PadDataS* ppds)
+{
+	return PADreadPort(0, ppds);
+}
+
+EXPORT_C_(UINT32) PADreadPort2(PadDataS* ppds)
+{
+	return PADreadPort(1, ppds);
 }
 
 EXPORT_C_(KeyEvent*) PADkeyEvent()

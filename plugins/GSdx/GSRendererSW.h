@@ -310,8 +310,8 @@ protected:
 				p.sel.fst = PRIM->FST;
 				p.sel.ltf = context->TEX1.IsLinear();
 				p.sel.tlu = GSLocalMemory::m_psm[context->TEX0.PSM].pal > 0;
-				p.sel.wms = ((context->CLAMP.WMS + 1) >> 1) & 1;
-				p.sel.wmt = ((context->CLAMP.WMT + 1) >> 1) & 1;
+				p.sel.wms = context->CLAMP.WMS;
+				p.sel.wmt = context->CLAMP.WMT;
 
 				if(p.sel.iip == 0 && p.sel.tfx == TFX_MODULATE && p.sel.tcc)
 				{

@@ -4,6 +4,9 @@ LIBRARY      "xpad"
 
 EXPORTS
     ; Explicit exports can go here
+    PSEgetLibType
+    PSEgetLibName
+    PSEgetLibVersion
     PS2EgetLibType
     PS2EgetLibName
     PS2EgetLibVersion2
@@ -18,3 +21,6 @@ EXPORTS
     PADconfigure
     PADtest
     PADabout
+    PADreadPort
+    PADreadPort1
+    PADreadPort2

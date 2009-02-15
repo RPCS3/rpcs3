@@ -19,6 +19,8 @@
  *
  */
 
+// TODO: skip scissor test when vtrace.p.min/max is inside the region
+
 #include "StdAfx.h"
 #include "GSRasterizer.h"
 
@@ -39,8 +41,8 @@ void GSRasterizer::Draw(const GSRasterizerData* data)
 	m_dsf.sl = NULL;
 	m_dsf.sr = NULL;
 	m_dsf.sp = NULL;
-m_dsf.ssl = NULL;
-m_dsf.ssp = NULL;
+	m_dsf.ssl = NULL;
+	m_dsf.ssp = NULL;
 
 	m_ds->BeginDraw(data, &m_dsf);
 

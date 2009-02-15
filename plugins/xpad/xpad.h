@@ -36,6 +36,49 @@ public:
 	DECLARE_MESSAGE_MAP()
 };
 
+// ps1
+
+#define PSE_LT_PAD 8
+
+// MOUSE SCPH-1030
+#define PSE_PAD_TYPE_MOUSE			1
+// NEGCON - 16 button analog controller SLPH-00001
+#define PSE_PAD_TYPE_NEGCON			2
+// GUN CONTROLLER - gun controller SLPH-00014 from Konami
+#define PSE_PAD_TYPE_GUN			3
+// STANDARD PAD SCPH-1080, SCPH-1150
+#define PSE_PAD_TYPE_STANDARD		4
+// ANALOG JOYSTICK SCPH-1110
+#define PSE_PAD_TYPE_ANALOGJOY		5
+// GUNCON - gun controller SLPH-00034 from Namco
+#define PSE_PAD_TYPE_GUNCON			6
+// ANALOG CONTROLLER SCPH-1150
+#define PSE_PAD_TYPE_ANALOGPAD		7
+
+struct PadDataS
+{
+	// controler type - fill it withe predefined values above
+	BYTE type;
+	
+	// status of buttons - every controller fills this field
+	WORD status;
+	
+	// for analog pad fill those next 4 bytes
+	// values are analog in range 0-255 where 128 is center position
+	BYTE rightJoyX, rightJoyY, leftJoyX, leftJoyY;
+
+	// for mouse fill those next 2 bytes
+	// values are in range -128 - 127
+	BYTE moveX, moveY;
+
+	BYTE reserved[91];
+} ;
+
+// ps2
+
+#define PS2E_LT_PAD 0x02
+#define PS2E_PAD_VERSION 0x0002
+
 struct KeyEvent
 {
 	UINT32 key;
@@ -44,4 +87,3 @@ struct KeyEvent
 
 #define KEYPRESS	1
 #define KEYRELEASE	2
-
