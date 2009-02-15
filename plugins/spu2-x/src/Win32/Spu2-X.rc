@@ -1,0 +1,299 @@
+// Microsoft Visual C++ generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "afxresmw.h"
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// English (U.S.) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+#endif //_WIN32
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_ABOUT DIALOGEX 0, 0, 291, 223
+STYLE DS_SETFONT | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "About SPU2-X"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "I've Seen Enough",IDOK,91,204,111,14
+    CTEXT           "Original portions from SPU2ghz are (c) 2008 by David Quintana [gigaherz]",IDC_STATIC,9,184,273,11
+    CONTROL         114,IDC_STATIC,"Static",SS_BITMAP,45,5,203,64,WS_EX_CLIENTEDGE
+    CTEXT           "A Sound Processing Unit 2 plugin for Playstation 2 emulators.",IDC_STATIC,9,71,273,10
+    CTEXT           "For updates and news, visit the following links:",IDC_STATIC,9,98,273,10
+    CTEXT           "The SPU2-X project is derived from SPU2ghz v1.9beta released in 2008 and later modified and upgraded by the Pcsx2 Playground Team.",IDC_STATIC,25,161,242,17
+    CONTROL         "",IDC_STATIC,"Static",SS_BLACKFRAME,20,157,252,41
+    CTEXT           "Compile Date, Revision, Etc.",IDC_LABEL_VERSION_INFO,9,80,273,17
+    CTEXT           "Pcsx2 Official Svn Repository @ Googlecode",IDC_LINK_GOOGLECODE,9,121,273,10,SS_NOPREFIX | SS_NOTIFY
+    CTEXT           "Pcsx2 Official Website and Forums",IDC_LINK_WEBSITE,9,110,273,10,SS_NOPREFIX | SS_NOTIFY
+    CTEXT           "Brought to you by the collaborative efforts of the Pcsx2 Development Team.",IDC_STATIC,9,141,273,10
+END
+
+IDD_CONFIG DIALOGEX 0, 0, 319, 276
+STYLE DS_SETFONT | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "SPU2-X Settings"
+FONT 8, "MS Shell Dlg", 400, 0, 0x0
+BEGIN
+    PUSHBUTTON      "OK",IDOK,200,256,54,15,NOT WS_TABSTOP
+    PUSHBUTTON      "Cancel",IDCANCEL,259,256,54,15,NOT WS_TABSTOP
+    GROUPBOX        "Mixing Settings",IDC_STATIC,6,5,130,99
+    GROUPBOX        "Output Settings",IDC_STATIC,142,5,172,247
+    COMBOBOX        IDC_OUTPUT,164,26,126,120,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    PUSHBUTTON      "Configure...",IDC_OUTCONF,236,40,54,12
+    COMBOBOX        IDC_INTERPOLATE,14,26,114,84,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    CONTROL         "Slider2",IDC_LATENCY_SLIDER,"msctls_trackbar32",TBS_AUTOTICKS | WS_TABSTOP,167,73,116,10
+    CONTROL         "Disable Time-stretching",IDC_TS_DISABLE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,150,96,121,11
+    CONTROL         "Use a Winamp DSP plugin",IDC_DSP_ENABLE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,149,216,126,11
+    CHECKBOX        "Disable Effects Processing",IDC_EFFECTS_DISABLE,14,47,112,10,NOT WS_TABSTOP
+    LTEXT           "Latency:",IDC_STATIC,181,62,33,9,NOT WS_GROUP
+    LTEXT           "Interpolation:",IDC_STATIC,12,16,55,10,NOT WS_GROUP
+    LTEXT           "Module:",IDC_STATIC,161,16,50,9,NOT WS_GROUP
+    LTEXT           "(speedup!) Skips reverb and stereo delay effects processing, but won't sound as good in most games.",IDC_STATIC,26,60,104,36
+    LTEXT           "(currently requires manual configuration via the ini file)",IDC_STATIC,162,229,146,20
+    CTEXT           "100 ms (avg)",IDC_LATENCY_LABEL,215,62,58,9
+    LTEXT           "(small speedup) Timestretching helps reduce latency and usually eliminates audio skips.",IDC_STATIC,162,109,146,20
+    CONTROL         116,IDC_STATIC,"Static",SS_BITMAP,7,196,117,52,WS_EX_CLIENTEDGE
+    PUSHBUTTON      "Advanced...",IDC_OPEN_CONFIG_SOUNDTOUCH,219,130,84,12
+    PUSHBUTTON      "Configure Debug Options...",IDC_OPEN_CONFIG_DEBUG,14,131,108,14
+    CHECKBOX        "Enable Debug Options",IDC_DEBUG,14,117,104,10,NOT WS_TABSTOP
+    GROUPBOX        "",IDC_STATIC,6,107,129,46
+    CONTROL         "Disable Audio Expansion",IDC_EXPANSION_DISABLE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,150,152,135,10
+    LTEXT           "Audio expansion detects extended speaker setups like 5.1 and 2.1 audio, and expand the SPU2's stereo stream so that all speakers are used.  Disable this if the detection causes problems on your sound system.",IDC_STATIC,162,164,146,44
+END
+
+IDD_DEBUG DIALOGEX 0, 0, 326, 525
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "SPU2-X Debug"
+FONT 9, "Lucida Console", 400, 0, 0x0
+BEGIN
+    DEFPUSHBUTTON   "Close",IDOK,269,504,50,14
+END
+
+IDD_DSOUND DIALOGEX 0, 0, 182, 121
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "DirectSound Output Module Settings"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,67,103,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,127,103,50,14
+    COMBOBOX        IDC_DS_DEVICE,4,15,173,62,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "DirectSound Device",IDC_STATIC,4,3,63,8
+    LTEXT           "Number of Buffers",IDC_STATIC,4,40,61,11
+    CONTROL         "",IDC_BUFFERS_SLIDER,"msctls_trackbar32",TBS_AUTOTICKS | WS_TABSTOP,74,48,103,10
+    LTEXT           "Increase the buffer count if you are experiencing loopy or studdery audio even when games run at high FPS.",IDC_STATIC,8,66,169,27
+    CTEXT           "8  (80 ms latency)",IDC_LATENCY_LABEL,78,37,95,11
+END
+
+IDD_WAVEOUT DIALOGEX 0, 0, 170, 122
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "waveOut Output Module Settings"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,52,104,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,115,104,50,14
+    COMBOBOX        IDC_DS_DEVICE,4,15,161,62,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "waveOut Device",IDC_STATIC,4,3,54,8
+    LTEXT           "Number of Buffers",IDC_STATIC,4,39,61,11
+    CONTROL         "",IDC_BUFFERS_SLIDER,"msctls_trackbar32",TBS_AUTOTICKS | WS_TABSTOP,71,48,94,10
+    LTEXT           "Use extra buffers if you are experiencing loopy or studdery audio even when games run at high FPS.",IDC_STATIC,8,66,151,27
+    CTEXT           "8  (80 ms latency)",IDC_LATENCY_LABEL,70,37,95,11
+END
+
+IDD_XAUDIO2 DIALOGEX 0, 0, 202, 116
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "XAudio2 Output Module Settings"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,88,98,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,147,98,50,14
+    COMBOBOX        IDC_DS_DEVICE,4,15,193,62,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "XAudio Device",IDC_STATIC,4,3,46,8
+    CONTROL         "Use Triple Buffering",IDC_XA2_TRIBLE_BUFFER,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,8,40,109,10
+    LTEXT           "Increases latency by a few milliseconds.  Enable triple buffering you are experiencing loopy or studdery audio even when games run at high FPS.",IDC_STATIC,20,53,175,35
+END
+
+IDD_CONFIG_SOUNDTOUCH DIALOGEX 0, 0, 206, 223
+STYLE DS_SETFONT | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Soundtouch Advanced Configuration - SPU2-X"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,50,205,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,104,205,50,14
+    CTEXT           "These are advanced configuration options for fine tuning time stretching behavior.  Larger values are better for slowdown, while smaller values are better for speed-up (better than 60fps).\n\nAll options are in milliseconds (ms).",IDC_STATIC,5,5,196,52
+    CONTROL         "",IDC_SEQLEN_SLIDER,"msctls_trackbar32",TBS_AUTOTICKS | WS_TABSTOP,50,98,105,10
+    CTEXT           "Sequence Length",IDC_STATIC,72,88,64,9
+    CONTROL         "",IDC_SEEKWIN_SLIDER,"msctls_trackbar32",TBS_AUTOTICKS | WS_TABSTOP,50,136,105,10
+    CTEXT           "Seekwindow Size",IDC_STATIC,70,125,66,9
+    CONTROL         "",IDC_OVERLAP_SLIDER,"msctls_trackbar32",TBS_AUTOTICKS | WS_TABSTOP,50,170,105,10
+    CTEXT           "Overlap",IDC_STATIC,86,162,34,9
+    LTEXT           "30",IDC_STATIC,50,112,9,8
+    LTEXT           "90",IDC_STATIC,146,112,9,8
+    LTEXT           "10",IDC_STATIC,50,149,9,8
+    LTEXT           "32",IDC_STATIC,146,149,9,8
+    LTEXT           "3",IDC_STATIC,52,184,8,8
+    LTEXT           "15",IDC_STATIC,146,184,9,8
+    PUSHBUTTON      "Reset Defaults",IDC_RESET_DEFAULTS,61,62,82,12
+END
+
+IDD_CONFIG_DEBUG DIALOGEX 0, 0, 292, 154
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "SPU2-X Debugging Options"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,190,135,46,14
+    PUSHBUTTON      "Cancel",IDCANCEL,241,135,46,14
+    GROUPBOX        "",IDC_STATIC,5,5,135,93
+    GROUPBOX        "Logfile-only Logs",IDC_STATIC,151,5,136,53
+    GROUPBOX        "Dumps (on close)",IDC_STATIC,151,60,135,54
+    CONTROL         "Show In Console",IDC_MSGSHOW,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,11,5,69,10
+    CHECKBOX        "KeyOn/Off Events",IDC_MSGKEY,17,18,74,9,NOT WS_TABSTOP
+    CONTROL         "Voice Stop Events",IDC_MSGVOICE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,17,31,75,9
+    CONTROL         "DMA Operations",IDC_MSGDMA,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,17,44,68,9
+    CONTROL         "AutoDMA Operations",IDC_MSGADMA,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,25,57,83,9
+    CONTROL         "Buffer Over/Underruns",IDC_DBG_OVERRUNS,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,17,70,97,9
+    CONTROL         "ADPCM Cache Statistics",IDC_DBG_CACHE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,17,83,114,9
+    CHECKBOX        "Dump Core and Voice State",IDC_DUMPCORE,159,74,104,10,NOT WS_TABSTOP
+    CHECKBOX        "Dump Memory Contents",IDC_DUMPMEM,159,87,91,10,NOT WS_TABSTOP
+    CHECKBOX        "Dump Register Data",IDC_DUMPREGS,159,100,80,10,NOT WS_TABSTOP
+    CHECKBOX        "Log Register/DMA Actions",IDC_LOGREGS,159,18,101,10,WS_GROUP | NOT WS_TABSTOP
+    CHECKBOX        "Log DMA Writes",IDC_LOGDMA,159,31,68,10,NOT WS_TABSTOP
+    CHECKBOX        "Log Audio Output",IDC_LOGWAVE,159,44,71,10,NOT WS_TABSTOP
+    LTEXT           "Note: This is a non-devel build.  For performance reasons, some logging options are disabled; and only available in devel/debug builds.",IDC_MSG_PUBLIC_BUILD,9,118,174,30
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO 
+BEGIN
+    IDD_ABOUT, DIALOG
+    BEGIN
+        LEFTMARGIN, 9
+        RIGHTMARGIN, 282
+        TOPMARGIN, 5
+        BOTTOMMARGIN, 218
+    END
+
+    IDD_CONFIG, DIALOG
+    BEGIN
+        LEFTMARGIN, 6
+        RIGHTMARGIN, 314
+        BOTTOMMARGIN, 271
+    END
+
+    IDD_DEBUG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 319
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 518
+    END
+
+    IDD_DSOUND, DIALOG
+    BEGIN
+        LEFTMARGIN, 4
+        RIGHTMARGIN, 177
+        TOPMARGIN, 3
+        BOTTOMMARGIN, 117
+    END
+
+    IDD_WAVEOUT, DIALOG
+    BEGIN
+        LEFTMARGIN, 4
+        RIGHTMARGIN, 165
+        TOPMARGIN, 3
+        BOTTOMMARGIN, 118
+    END
+
+    IDD_XAUDIO2, DIALOG
+    BEGIN
+        LEFTMARGIN, 4
+        RIGHTMARGIN, 197
+        TOPMARGIN, 3
+        BOTTOMMARGIN, 112
+    END
+
+    IDD_CONFIG_SOUNDTOUCH, DIALOG
+    BEGIN
+        LEFTMARGIN, 5
+        RIGHTMARGIN, 201
+        TOPMARGIN, 5
+        BOTTOMMARGIN, 218
+    END
+
+    IDD_CONFIG_DEBUG, DIALOG
+    BEGIN
+        LEFTMARGIN, 5
+        RIGHTMARGIN, 287
+        TOPMARGIN, 5
+        BOTTOMMARGIN, 149
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Bitmap
+//
+
+IDB_SPU2X               BITMAP                  "..\\..\\spu2-x.bmp"
+IDB_SPU2X_SMALL         BITMAP                  "..\\..\\spu2-x-sm.bmp"
+#endif    // English (U.S.) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////////////////////
+// Spanish resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ESN)
+#ifdef _WIN32
+LANGUAGE LANG_SPANISH, SUBLANG_SPANISH_MODERN
+#pragma code_page(1252)
+#endif //_WIN32
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE 
+BEGIN
+    "#include ""afxresmw.h""\r\0"
+END
+
+3 TEXTINCLUDE 
+BEGIN
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+#endif    // Spanish resources
+/////////////////////////////////////////////////////////////////////////////
+
+
