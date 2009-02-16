@@ -239,7 +239,6 @@ void V_Voice::Stop()
 {
 	ADSR.Value = 0;
 	ADSR.Phase = 0;
-	//Cores[core].Regs.ENDX|=(1<<vc);
 }
 
 static const int TickInterval = 768;

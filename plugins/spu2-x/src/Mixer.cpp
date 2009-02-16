@@ -183,10 +183,11 @@ static void __forceinline __fastcall GetNextDataBuffered( V_Core& thiscore, V_Vo
 	{
 		if(vc.LoopFlags & XAFLAG_LOOP_END)
 		{
+			thiscore.Regs.ENDX |= (1 << voice);
+
 			if( vc.LoopFlags & XAFLAG_LOOP )
 			{
 				vc.NextA=vc.LoopStartA;
-				thiscore.Regs.ENDX|=1<<voice;
 			}
 			else
 			{
@@ -331,6 +332,7 @@ static __forceinline void CalculateADSR( V_Core& thiscore, V_Voice& vc )
 			DebugCores[core].Voices[voice].lastStopReason = 2;
 		}
 		vc.Stop();
+		thiscore.Regs.ENDX |= (1 << voice);
 	}
 
 	jASSUME( vc.ADSR.Value >= 0 );	// ADSR should never be negative...
