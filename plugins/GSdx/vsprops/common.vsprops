@@ -27,6 +27,14 @@
 	/>
 	<Tool
 		Name="VCPreBuildEventTool"
-		CommandLine="SubWCRev.exe $(ProjectDir) ..\..\common\tsvnrev\svnrev_template.h $(ProjectDir)svnrev.h"
+		CommandLine=".\vsprops\preBuild.cmd &quot;$(ProjectDir)\..&quot; &quot;$(ProjectDir)vsprops&quot;"
 	/>
+
+    <!--
+	<Tool
+		Name="VCPostBuildEventTool"
+		CommandLine=".\vsprops\postBuild.cmd &quot;$(TargetPath)&quot; &quot;$(SolutionDir)&quot; &quot;$(TargetName)&quot; $(TargetExt)"
+	/>
+    -->
+
 </VisualStudioPropertySheet>

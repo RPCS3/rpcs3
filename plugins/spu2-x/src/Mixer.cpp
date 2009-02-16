@@ -982,15 +982,22 @@ static void __fastcall MixCore(s32& OutL, s32& OutR, s32 ExtL, s32 ExtR)
 
 			WaveDump::WriteCore( core, CoreSrc_PreReverb, TWL, TWR );
 
-			//Apply Effects
-			DoReverb( thiscore, RVL, RVR, TWL<<1, TWR<<1 );
+			DoReverb( thiscore, RVL, RVR, TWL, TWR );
+
+			// Volume boost after effects application.  Boosting volume prior to effects
+			// causes slight overflows in some games, and the volume boost is required.
+			// (like all over volumes on SPU2, reverb coefficients and stuff are signed,
+			// range -50% to 50%, thus *2 is needed)
+			
+			RVL *= 2;
+			RVR *= 2;
 
 			WaveDump::WriteCore( core, CoreSrc_PostReverb, RVL, RVR );
 
 			TWL = ApplyVolume(RVL,thiscore.FxL);
 			TWR = ApplyVolume(RVR,thiscore.FxR);
 
-			//Mix Wet,Dry
+			// Mix Dry+Wet
 			OutL = TDL + TWL;
 			OutR = TDR + TWR;
 		}

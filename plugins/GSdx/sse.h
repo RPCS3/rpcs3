@@ -99,7 +99,7 @@
 
 #if _M_SSE >= 0x401
 
-	#include <smmintrin.h>
+	#include "smmintrin_gsdx.h"
 
 #else
 

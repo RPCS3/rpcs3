@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 10.00
 # Visual Studio 2008
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SPU2ghz-Pg", "spu2ghz\src\Win32\SPU2ghz_vs2008.vcproj", "{5307BBB7-EBB9-4AA4-8CB6-A94EC473C8C4}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SPU2ghz", "spu2ghz\src\Win32\SPU2ghz_vs2008.vcproj", "{5307BBB7-EBB9-4AA4-8CB6-A94EC473C8C4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
