@@ -1,0 +1,38 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GSdx", "GSdx\GSdx_vs2008.vcproj", "{18E42F6F-3A62-41EE-B42F-79366C4F1E95}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug SSE2|Win32 = Debug SSE2|Win32
+		Debug SSE4|Win32 = Debug SSE4|Win32
+		Debug SSSE3|Win32 = Debug SSSE3|Win32
+		Debug|Win32 = Debug|Win32
+		Release SSE2|Win32 = Release SSE2|Win32
+		Release SSE4|Win32 = Release SSE4|Win32
+		Release SSSE3|Win32 = Release SSSE3|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{18E42F6F-3A62-41EE-B42F-79366C4F1E95}.Debug SSE2|Win32.ActiveCfg = Debug SSE2|Win32
+		{18E42F6F-3A62-41EE-B42F-79366C4F1E95}.Debug SSE2|Win32.Build.0 = Debug SSE2|Win32
+		{18E42F6F-3A62-41EE-B42F-79366C4F1E95}.Debug SSE4|Win32.ActiveCfg = Debug SSE4|Win32
+		{18E42F6F-3A62-41EE-B42F-79366C4F1E95}.Debug SSE4|Win32.Build.0 = Debug SSE4|Win32
+		{18E42F6F-3A62-41EE-B42F-79366C4F1E95}.Debug SSSE3|Win32.ActiveCfg = Debug SSSE3|Win32
+		{18E42F6F-3A62-41EE-B42F-79366C4F1E95}.Debug SSSE3|Win32.Build.0 = Debug SSSE3|Win32
+		{18E42F6F-3A62-41EE-B42F-79366C4F1E95}.Debug|Win32.ActiveCfg = Debug|Win32
+		{18E42F6F-3A62-41EE-B42F-79366C4F1E95}.Debug|Win32.Build.0 = Debug|Win32
+		{18E42F6F-3A62-41EE-B42F-79366C4F1E95}.Release SSE2|Win32.ActiveCfg = Release SSE2|Win32
+		{18E42F6F-3A62-41EE-B42F-79366C4F1E95}.Release SSE2|Win32.Build.0 = Release SSE2|Win32
+		{18E42F6F-3A62-41EE-B42F-79366C4F1E95}.Release SSE4|Win32.ActiveCfg = Release SSE4|Win32
+		{18E42F6F-3A62-41EE-B42F-79366C4F1E95}.Release SSE4|Win32.Build.0 = Release SSE4|Win32
+		{18E42F6F-3A62-41EE-B42F-79366C4F1E95}.Release SSSE3|Win32.ActiveCfg = Release SSSE3|Win32
+		{18E42F6F-3A62-41EE-B42F-79366C4F1E95}.Release SSSE3|Win32.Build.0 = Release SSSE3|Win32
+		{18E42F6F-3A62-41EE-B42F-79366C4F1E95}.Release|Win32.ActiveCfg = Release|Win32
+		{18E42F6F-3A62-41EE-B42F-79366C4F1E95}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
