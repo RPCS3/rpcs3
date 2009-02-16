@@ -132,8 +132,8 @@ static void __forceinline XA_decode_block_unsaturated(s16* buffer, const s16* bl
 			*(buffer++) = pcm2;
 		}
 
-		prev2=pcm;
-		prev1=pcm2;
+		prev2 = pcm;
+		prev1 = pcm2;
 	}
 }
 
@@ -240,7 +240,7 @@ static void __forceinline __fastcall GetNextDataBuffered( V_Core& thiscore, V_Vo
 			s16* sbuffer = cacheLine.Sampledata;
 
 			// saturated decoder
-			XA_decode_block( sbuffer, memptr, vc.Prev1, vc.Prev2 );
+			//XA_decode_block( sbuffer, memptr, vc.Prev1, vc.Prev2 );
 
 			// [Air]: Testing use of a new unsaturated decoder. (benchmark needed)
 			//   Chances are the saturation isn't needed, but for a very few exception games.
@@ -248,7 +248,7 @@ static void __forceinline __fastcall GetNextDataBuffered( V_Core& thiscore, V_Vo
 			//   merit possible lower compatibility?  Especially now that games that make
 			//   heavy use of the SPU2 via music or sfx will mostly use the cache anyway.
 
-			//XA_decode_block_unsaturated( vc.SBuffer, memptr, vc.Prev1, vc.Prev2 );
+			XA_decode_block_unsaturated( vc.SBuffer, memptr, vc.Prev1, vc.Prev2 );
 		}
 
 		vc.SCurrent = 0;
@@ -358,7 +358,7 @@ static void __forceinline GetVoiceValues_Linear(V_Core& thiscore, V_Voice& vc, s
 
 	if(Interpolation==0)
 	{
-		Value = MulShr32( vc.PV1<<1, vc.ADSR.Value );
+		Value = ApplyVolume( vc.PV1, vc.ADSR.Value );
 	} 
 	else //if(Interpolation==1) //must be linear
 	{
@@ -693,7 +693,7 @@ static void __fastcall MixCore(s32& OutL, s32& OutR, s32 ExtL, s32 ExtR)
 
 	V_Core& thiscore( Cores[core] );
 
-	for (voice=0;voice<24;voice++)
+	for( voice=0; voice<24; ++voice )
 	{
 		s32 VValL,VValR;
 

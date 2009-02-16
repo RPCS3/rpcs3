@@ -214,20 +214,20 @@ void V_Voice::Start()
 			StartA=(StartA+0xFFFF8)+0x8;
 		}
 
-		ADSR.Releasing=false;
-		ADSR.Value=1;
-		ADSR.Phase=1;
-		PlayCycle=Cycles;
-		SCurrent=28;
-		LoopMode=0;
-		LoopFlags=0;
-		LoopStartA=StartA;
-		NextA=StartA;
-		Prev1=0;
-		Prev2=0;
+		ADSR.Releasing	= false;
+		ADSR.Value		= 1;
+		ADSR.Phase		= 1;
+		PlayCycle		= Cycles;
+		SCurrent		= 28;
+		LoopMode		= 0;
+		LoopFlags		= 0;
+		LoopStartA		= StartA;
+		NextA			= StartA;
+		Prev1			= 0;
+		Prev2			= 0;
 
-		PV1=PV2=0;
-		PV3=PV4=0;
+		PV1 = PV2		= 0;
+		PV3 = PV4		= 0;
 	}
 	else
 	{
@@ -244,8 +244,8 @@ void V_Voice::Stop()
 static const int TickInterval = 768;
 static const int SanityInterval = 4800;
 
-u32 TicksCore=0;
-u32 TicksThread=0;
+u32 TicksCore = 0;
+u32 TicksThread = 0;
 
 void __fastcall TimeUpdate(u32 cClocks)
 {
@@ -395,30 +395,40 @@ void SPU_ps1_write(u32 mem, u16 value)
 			case 0: //VOLL (Volume L)
 				Cores[0].Voices[voice].VolumeL.Mode = 0;
 				Cores[0].Voices[voice].VolumeL.Value = GetVol32( value<<1 );
-				Cores[0].Voices[voice].VolumeL.Reg_VOL = value;	break;
+				Cores[0].Voices[voice].VolumeL.Reg_VOL = value;
+			break;
+
 			case 1: //VOLR (Volume R)
 				Cores[0].Voices[voice].VolumeR.Mode = 0;
 				Cores[0].Voices[voice].VolumeR.Value = GetVol32( value<<1 );
-				Cores[0].Voices[voice].VolumeR.Reg_VOL = value;	break;
-			case 2:	Cores[0].Voices[voice].Pitch=value;			break;
-			case 3:	Cores[0].Voices[voice].StartA=(u32)value<<8;	break;
+				Cores[0].Voices[voice].VolumeR.Reg_VOL = value;
+			break;
+			
+			case 2:	Cores[0].Voices[voice].Pitch = value; break;
+			case 3:	Cores[0].Voices[voice].StartA = (u32)value<<8; break;
+
 			case 4: // ADSR1 (Envelope)
-				Cores[0].Voices[voice].ADSR.AttackMode=(value & 0x8000)>>15;
-				Cores[0].Voices[voice].ADSR.AttackRate=(value & 0x7F00)>>8;
-				Cores[0].Voices[voice].ADSR.DecayRate=(value & 0xF0)>>4;
-				Cores[0].Voices[voice].ADSR.SustainLevel=(value & 0xF);
-				Cores[0].Voices[voice].ADSR.Reg_ADSR1 = value;	break;
+				Cores[0].Voices[voice].ADSR.AttackMode = (value & 0x8000)>>15;
+				Cores[0].Voices[voice].ADSR.AttackRate = (value & 0x7F00)>>8;
+				Cores[0].Voices[voice].ADSR.DecayRate = (value & 0xF0)>>4;
+				Cores[0].Voices[voice].ADSR.SustainLevel = (value & 0xF);
+				Cores[0].Voices[voice].ADSR.Reg_ADSR1 = value;
+			break;
+
 			case 5: // ADSR2 (Envelope)
-				Cores[0].Voices[voice].ADSR.SustainMode=(value & 0xE000)>>13;
-				Cores[0].Voices[voice].ADSR.SustainRate=(value & 0x1FC0)>>6;
-				Cores[0].Voices[voice].ADSR.ReleaseMode=(value & 0x20)>>5;
-				Cores[0].Voices[voice].ADSR.ReleaseRate=(value & 0x1F);
-				Cores[0].Voices[voice].ADSR.Reg_ADSR2 = value;	break;
+				Cores[0].Voices[voice].ADSR.SustainMode = (value & 0xE000)>>13;
+				Cores[0].Voices[voice].ADSR.SustainRate = (value & 0x1FC0)>>6;
+				Cores[0].Voices[voice].ADSR.ReleaseMode = (value & 0x20)>>5;
+				Cores[0].Voices[voice].ADSR.ReleaseRate = (value & 0x1F);
+				Cores[0].Voices[voice].ADSR.Reg_ADSR2 = value;
+			break;
+			
 			case 6:
 				Cores[0].Voices[voice].ADSR.Value = ((s32)value<<16) | value;
 				ConLog( "* SPU2: Mysterious ADSR Volume Set to 0x%x", value );
 			break;
-			case 7:	Cores[0].Voices[voice].LoopStartA=(u32)value <<8;	break;
+
+			case 7:	Cores[0].Voices[voice].LoopStartA = (u32)value <<8;	break;
 
 			jNO_DEFAULT;
 		}

@@ -26,9 +26,36 @@ static const s32 ADSR_MAX_VOL = 0x7fffffff;
 static const int InvExpOffsets[] = { 0,4,6,8,9,10,11,12 };
 static u32 PsxRates[160];
 
+
+extern u32 core, voice;
+
 void InitADSR()                                    // INIT ADSR
 {
-	for (int i=0; i<(32+128); i++)
+
+	int r=3;
+	int rs=1;
+	int rd=0;
+
+	memset( PsxRates, 0, sizeof( PsxRates ) );
+
+	for( int i=32; i<160; ++i )
+	{
+		if( r < 0x3FFFFFFF )
+		{
+			r += rs;
+			rd++;
+			if( rd == 5 )
+			{
+				rd = 1;
+				rs <<= 1;
+			}
+		}
+		if( r > 0x3FFFFFFF ) r = 0x3FFFFFFF;
+
+		PsxRates[i] = r;
+	}
+
+	/*for (int i=0; i<(32+128); i++)
 	{
 		int shift=(i-32)>>2;
 		s64 rate=(i&3)+4;
@@ -38,7 +65,7 @@ void InitADSR()                                    // INIT ADSR
 			rate <<= shift;
 
 		PsxRates[i] = (int)min( rate, 0x3fffffffLL );
-	}
+	}*/
 }
 
 #define VOL(x) (((s32)x)) //24.8 volume
@@ -77,9 +104,8 @@ bool V_ADSR::Calculate()
 
 			if (AttackMode && (Value>=0x60000000))
 				Value += PsxRates[(AttackRate^0x7f)-0x18+32];
-			else //if( AttackRate < 0x7f )
-				Value+=PsxRates[(AttackRate^0x7f)-0x10+32];
-				//Value += GetLinearSrAr( AttackRate );
+			else
+				Value += PsxRates[(AttackRate^0x7f)-0x10+32];
 
 			if( Value < 0 )
 			{
@@ -92,7 +118,7 @@ bool V_ADSR::Calculate()
 		case 2: // decay
 		{
 			u32 off = InvExpOffsets[(Value>>28)&7];
-			Value-=PsxRates[((DecayRate^0x1f)*4)-0x18+off+32];
+			Value -= PsxRates[((DecayRate^0x1f)*4)-0x18+off+32];
 
 			// calculate sustain level as a factor of the ADSR maximum volume.
 
@@ -117,13 +143,10 @@ bool V_ADSR::Calculate()
 				if (SustainMode&4) // exponential
 				{
 					u32 off = InvExpOffsets[(Value>>28)&7];
-					Value-=PsxRates[(SustainRate^0x7f)-0x1b+off+32];
+					Value -= PsxRates[(SustainRate^0x7f)-0x1b+off+32];
 				} 
 				else // linear
-				{
-					Value-=PsxRates[(SustainRate^0x7f)-0xf+32];
-					//Value -= GetLinearSrAr( SustainRate );
-				}
+					Value -= PsxRates[(SustainRate^0x7f)-0xf+32];
 
 				if( Value <= 0 )
 				{
@@ -134,13 +157,10 @@ bool V_ADSR::Calculate()
 			else // increasing
 			{
 				if( (SustainMode&4) && (Value>=0x60000000) )
-					Value+=PsxRates[(SustainRate^0x7f)-0x18+32];
+					Value += PsxRates[(SustainRate^0x7f)-0x18+32];
 				else
-				{
 					// linear / Pseudo below 75% (they're the same)
-					Value+=PsxRates[(SustainRate^0x7f)-0x10+32];
-					//Value += GetLinearSrAr( SustainRate );
-				}
+					Value += PsxRates[(SustainRate^0x7f)-0x10+32];
 
 				if( Value < 0 )
 				{
