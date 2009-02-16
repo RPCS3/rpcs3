@@ -30,7 +30,8 @@ __forceinline void RegLog(int level, char *RName,u32 mem,u32 core,u16 value)
 
 void SPU2writeLog(u32 rmem, u16 value) 
 {
-#ifndef PUBLIC
+	if( !IsDevBuild ) return;
+	
 	u32 vx=0, vc=0, core=0, omem, mem;
 	omem=mem=rmem & 0x7FF; //FFFF;
 	if (mem & 0x400) { omem^=0x400; core=1; }
@@ -247,6 +248,5 @@ void SPU2writeLog(u32 rmem, u16 value)
 				RegLog(2,"UNKNOWN",rmem,core,value); spu2Ru16(mem) = value;
 		}
 	}
-#endif
 }
 

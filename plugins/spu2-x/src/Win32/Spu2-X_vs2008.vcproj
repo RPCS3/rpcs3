@@ -53,7 +53,7 @@
 				FavorSizeOrSpeed="1"
 				OmitFramePointers="true"
 				EnableFiberSafeOptimizations="true"
-				PreprocessorDefinitions="FLOAT_SAMPLES;NDEBUG;_USRDLL"
+				PreprocessorDefinitions="SPU2X_DEVBUILD;FLOAT_SAMPLES;NDEBUG;_USRDLL"
 				StringPooling="true"
 				RuntimeLibrary="0"
 				StructMemberAlignment="5"
@@ -148,7 +148,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				PreprocessorDefinitions="FLOAT_SAMPLES;_DEBUG;_USRDLL"
+				PreprocessorDefinitions="SPU2X_DEVBUILD;FLOAT_SAMPLES;_DEBUG;_USRDLL"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
@@ -245,7 +245,7 @@
 				FavorSizeOrSpeed="1"
 				OmitFramePointers="true"
 				EnableFiberSafeOptimizations="true"
-				PreprocessorDefinitions="FLOAT_SAMPLES;NDEBUG;PUBLIC;_USRDLL"
+				PreprocessorDefinitions="FLOAT_SAMPLES;NDEBUG;_USRDLL"
 				StringPooling="true"
 				RuntimeLibrary="0"
 				StructMemberAlignment="5"
@@ -344,7 +344,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				PreprocessorDefinitions="FLOAT_SAMPLES;_DEBUG_FAST;_DEBUG;_USRDLL"
+				PreprocessorDefinitions="SPU2X_DEVBUILD;FLOAT_SAMPLES;_DEBUG_FAST;_DEBUG;_USRDLL"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
@@ -727,6 +727,10 @@
 			<Filter
 				Name="SPU2"
 				>
+				<File
+					RelativePath="..\ADSR.cpp"
+					>
+				</File>
 				<File
 					RelativePath="..\defs.h"
 					>

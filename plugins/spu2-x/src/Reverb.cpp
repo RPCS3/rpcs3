@@ -21,8 +21,8 @@
 
 #include "spu2.h"
 
-//static LPF_data lowpass_left( 11000, SampleRate );
-//static LPF_data lowpass_right( 11000, SampleRate );
+static LPF_data lowpass_left( 11000, SampleRate );
+static LPF_data lowpass_right( 11000, SampleRate );
 
 static s32 EffectsBufferIndexer( V_Core& thiscore, s32 offset )
 {
@@ -34,14 +34,10 @@ static s32 EffectsBufferIndexer( V_Core& thiscore, s32 offset )
 	if( pos > thiscore.EffectsEndA )
 	{
 		pos = thiscore.EffectsStartA + ((thiscore.ReverbX + offset) % (u32)thiscore.EffectsBufferSize);
-		//pos -= thiscore.EffectsEndA+1;
-		//pos += thiscore.EffectsStartA;
 	}
 	else if( pos < thiscore.EffectsStartA )
 	{
 		pos = thiscore.EffectsEndA+1 - ((thiscore.ReverbX + offset) % (u32)thiscore.EffectsBufferSize );
-		//pos -= thiscore.EffectsStartA;
-		//pos += thiscore.EffectsEndA+1;
 	}
 	return pos;
 } 
@@ -176,7 +172,12 @@ void DoReverb( V_Core& thiscore, s32& OutL, s32& OutR, s32 InL, s32 InR)
 		_spu2mem[mix_dest_b0] = clamp_mix( (MulShr32(thiscore.Revb.FB_ALPHA<<14, ACC0) - fb_xor_a0 - ((_spu2mem[fb_src_b0] * thiscore.Revb.FB_X)>>2)) >> 14 );
 		_spu2mem[mix_dest_b1] = clamp_mix( (MulShr32(thiscore.Revb.FB_ALPHA<<14, ACC1) - fb_xor_a1 - ((_spu2mem[fb_src_b1] * thiscore.Revb.FB_X)>>2)) >> 14 );
 
-		OutL = thiscore.LastEffectL = clamp_mix(_spu2mem[mix_dest_a0] + _spu2mem[mix_dest_b0]);
-		OutR = thiscore.LastEffectR = clamp_mix(_spu2mem[mix_dest_a1] + _spu2mem[mix_dest_b1]);
+		thiscore.LastEffectL = clamp_mix(_spu2mem[mix_dest_a0] + _spu2mem[mix_dest_b0]);
+		thiscore.LastEffectR = clamp_mix(_spu2mem[mix_dest_a1] + _spu2mem[mix_dest_b1]);
+		
+		//OutL = thiscore.LastEffectL;
+		//OutR = thiscore.LastEffectR;
+		OutL = (s32)(lowpass_left.sample( thiscore.LastEffectL / 32768.0 ) * 32768.0);
+		OutR = (s32)(lowpass_right.sample( thiscore.LastEffectR / 32768.0 ) * 32768.0);
 	} 
 }

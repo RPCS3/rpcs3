@@ -28,8 +28,7 @@ void ADMAOutLogWrite(void *lpData, u32 ulSize);
 
 u32 core, voice;
 
-static const s32 ADSR_MAX_VOL = 0x7fffffff;
-static const s32 f[5][2] =
+static const s32 tbl_XA_Factor[5][2] =
 {
 	{    0,   0 },
 	{   60,   0 },
@@ -38,13 +37,10 @@ static const s32 f[5][2] =
 	{  122, -60 }
 };
 
-static const int InvExpOffsets[] = { 0,4,6,8,9,10,11,12 };
-static u32 PsxRates[160];
-
 
 // Performs a 64-bit multiplication between two values and returns the
 // high 32 bits as a result (discarding the fractional 32 bits).
-// The combined fracional bits of both inputs must be 32 bits for this
+// The combined fractional bits of both inputs must be 32 bits for this
 // to work properly.
 //
 // This is meant to be a drop-in replacement for times when the 'div' part
@@ -70,29 +66,12 @@ __forceinline s32 clamp_mix(s32 x, u8 bitshift)
 	return GetClamped( x, -0x8000<<bitshift, 0x7fff<<bitshift );
 }
 
-void InitADSR()                                    // INIT ADSR
-{
-	for (int i=0; i<(32+128); i++)
-	{
-		int shift=(i-32)>>2;
-		s64 rate=(i&3)+4;
-		if (shift<0)
-			rate >>= -shift;
-		else
-			rate <<= shift;
-
-		PsxRates[i] = (int)min( rate, 0x3fffffffLL );
-	}
-}
-
-#define VOL(x) (((s32)x)) //24.8 volume
-
 static void __forceinline XA_decode_block(s16* buffer, const s16* block, s32& prev1, s32& prev2)
 {
 	const s32 header = *block;
 	s32 shift =  ((header>> 0)&0xF)+16;
-	s32 pred1 = f[(header>> 4)&0xF][0];
-	s32 pred2 = f[(header>> 4)&0xF][1];
+	s32 pred1 = tbl_XA_Factor[(header>> 4)&0xF][0];
+	s32 pred2 = tbl_XA_Factor[(header>> 4)&0xF][1];
 
 	const s8* blockbytes = (s8*)&block[1];
 
@@ -129,8 +108,8 @@ static void __forceinline XA_decode_block_unsaturated(s16* buffer, const s16* bl
 {
 	const s32 header = *block;
 	s32 shift =  ((header>> 0)&0xF)+16;
-	s32 pred1 = f[(header>> 4)&0xF][0];
-	s32 pred2 = f[(header>> 4)&0xF][1];
+	s32 pred1 = tbl_XA_Factor[(header>> 4)&0xF][0];
+	s32 pred2 = tbl_XA_Factor[(header>> 4)&0xF][1];
 
 	const s8* blockbytes = (s8*)&block[1];
 
@@ -167,10 +146,10 @@ static void __forceinline IncrementNextA( const V_Core& thiscore, V_Voice& vc )
 	{
 		if( Cores[i].IRQEnable && (vc.NextA==Cores[i].IRQA ) )
 		{ 
-			#ifndef PUBLIC
-			ConLog(" * SPU2 Core %d: IRQ Called (IRQ passed).\n", i); 
-			#endif
-			Spdif.Info=4<<i;
+			if( IsDevBuild )
+				ConLog(" * SPU2 Core %d: IRQ Called (IRQ passed).\n", i); 
+
+			Spdif.Info = 4 << i;
 			SetIrqCall();
 		}
 	}
@@ -184,11 +163,9 @@ static void __forceinline IncrementNextA( const V_Core& thiscore, V_Voice& vc )
 // invalided when DMA transfers and memory writes are performed.
 PcmCacheEntry *pcm_cache_data = NULL;
 
-#ifndef PUBLIC
-int g_counter_cache_hits=0;
-int g_counter_cache_misses=0;
-int g_counter_cache_ignores=0;
-#endif
+int g_counter_cache_hits = 0;
+int g_counter_cache_misses = 0;
+int g_counter_cache_ignores = 0;
 
 #define XAFLAG_LOOP_END		(1ul<<0)
 #define XAFLAG_LOOP			(1ul<<1)
@@ -213,12 +190,12 @@ static void __forceinline __fastcall GetNextDataBuffered( V_Core& thiscore, V_Vo
 			}
 			else
 			{
-				VoiceStop(core,voice);
-				thiscore.Regs.ENDX|=1<<voice;
-				#ifndef PUBLIC
-				if(MsgVoiceOff()) ConLog(" * SPU2: Voice Off by EndPoint: %d \n", voice);
-				DebugCores[core].Voices[voice].lastStopReason = 1;
-				#endif
+				vc.Stop();
+				if( IsDevBuild )
+				{
+					if(MsgVoiceOff()) ConLog(" * SPU2: Voice Off by EndPoint: %d \n", voice);
+					DebugCores[core].Voices[voice].lastStopReason = 1;
+				}
 			}
 		}
 
@@ -242,9 +219,8 @@ static void __forceinline __fastcall GetNextDataBuffered( V_Core& thiscore, V_Vo
 
 			//ConLog( " * SPU2 : Cache Hit! NextA=0x%x, cacheIdx=0x%x\n", vc.NextA, cacheIdx );
 
-			#ifndef PUBLIC
-			g_counter_cache_hits++;
-			#endif
+			if( IsDevBuild )
+				g_counter_cache_hits++;
 		}
 		else
 		{
@@ -252,12 +228,13 @@ static void __forceinline __fastcall GetNextDataBuffered( V_Core& thiscore, V_Vo
 			if( vc.NextA >= SPU2_DYN_MEMLINE )
 				cacheLine.Validated = true;
 
-			#ifndef PUBLIC
-			if( vc.NextA < SPU2_DYN_MEMLINE )
-				g_counter_cache_ignores++;
-			else
-				g_counter_cache_misses++;
-			#endif
+			if( IsDevBuild )
+			{
+				if( vc.NextA < SPU2_DYN_MEMLINE )
+					g_counter_cache_ignores++;
+				else
+					g_counter_cache_misses++;
+			}
 
 			s16* sbuffer = cacheLine.Sampledata;
 
@@ -282,166 +259,6 @@ static void __forceinline __fastcall GetNextDataBuffered( V_Core& thiscore, V_Vo
 
 _skipIncrement:
 	Data = vc.SBuffer[vc.SCurrent++];
-}
-
-// Returns the linear slide value for AR and SR inputs.
-static int GetLinearSrAr( uint SrAr )
-{
-	// The Sr/Ar settings work in quarter steps, which means
-	// the bottom 2 bits go on the left side of the shift, and
-	// the right side of the shift gets divided by 4:
-
-	const uint newSr = 0x7f - SrAr;
-	return ((1|(newSr&3)) << (newSr>>2));
-}
-
-static void __forceinline CalculateADSR( V_Voice& vc ) 
-{
-	V_ADSR& env(vc.ADSR);
-
-	jASSUME( env.Phase != 0 );
-
-	if(env.Releasing && (env.Phase < 5))
-		env.Phase = 5;
-
-	switch (env.Phase)
-	{
-		case 1: // attack
-			if( env.Value == ADSR_MAX_VOL )
-			{
-				// Already maxed out.  Progress phase and nothing more:
-				env.Phase++;
-				break;
-			}
-
-			// Case 1 below is for pseudo exponential below 75%.
-			// Pseudo Exp > 75% and Linear are the same.
-
-			if (env.Am && (env.Value>=0x60000000))
-				env.Value += PsxRates[(env.Ar^0x7f)-0x18+32];
-			else //if( env.Ar < 0x7f )
-				env.Value+=PsxRates[(env.Ar^0x7f)-0x10+32];
-				//env.Value += GetLinearSrAr( env.Ar );
-
-			if( env.Value < 0 )
-			{
-				// We hit the ceiling. 
-				env.Phase++;
-				env.Value = ADSR_MAX_VOL;
-			}
-		break;
-
-		case 2: // decay
-		{
-			u32 off = InvExpOffsets[(env.Value>>28)&7];
-			env.Value-=PsxRates[((env.Dr^0x1f)*4)-0x18+off+32];
-
-			// calculate sustain level by mirroring the bits
-			// of the sustain var into the lower bits as we shift up
-			// (total shift, 27 bits)
-			
-			//s32 suslev8 = (env.Sl << 4) | env.Sl;
-			//s32 suslev = (suslev8 << 8) | suslev8;	// brings us to 16 bits!
-			//suslev = (suslev << 8) | suslev8;	// 24 bits!
-			
-			s32 suslev = 0x7fffffff / (0x10 - env.Sl);
-
-			if( env.Value <= suslev )
-			{
-				if (env.Value < 0)
-					env.Value = 0;
-				env.Phase++;
-			}
-		}
-		break;
-
-		case 3: // sustain
-		{
-			// 0x7f disables sustain (infinite sustain)
-			if( env.Sr == 0x7f ) return;
-			
-			if (env.Sm&2) // decreasing
-			{
-				if (env.Sm&4) // exponential
-				{
-					u32 off = InvExpOffsets[(env.Value>>28)&7];
-					env.Value-=PsxRates[(env.Sr^0x7f)-0x1b+off+32];
-				} 
-				else // linear
-				{
-					env.Value-=PsxRates[(env.Sr^0x7f)-0xf+32];
-					//env.Value -= GetLinearSrAr( env.Sr );
-				}
-
-				if( env.Value <= 0 )
-				{
-					env.Value = 0;
-					env.Phase++;
-				}
-			} 
-			else // increasing
-			{
-				if( (env.Sm&4) && (env.Value>=0x60000000) )
-					env.Value+=PsxRates[(env.Sr^0x7f)-0x18+32];
-				else
-				{
-					// linear / Pseudo below 75% (they're the same)
-					env.Value+=PsxRates[(env.Sr^0x7f)-0x10+32];
-					//env.Value += GetLinearSrAr( env.Sr );
-				}
-
-				if( env.Value < 0 )
-				{
-					env.Value = ADSR_MAX_VOL;
-					env.Phase++;
-				}
-			}
-		}
-		break;
-
-		case 4: // sustain end
-			env.Value = (env.Sm&2) ? 0 : ADSR_MAX_VOL;
-			if(env.Value==0)
-				env.Phase=6;
-			break;
-
-		case 5: // release
-
-			if (env.Rm) // exponential
-			{
-				u32 off=InvExpOffsets[(env.Value>>28)&7];
-				env.Value-=PsxRates[((env.Rr^0x1f)*4)-0x18+off+32];
-			} 
-			else // linear
-			{
-				//env.Value-=PsxRates[((env.Rr^0x1f)*4)-0xc+32];
-				if( env.Rr != 0x1f )
-					env.Value -= (1 << (0x1f-env.Rr));
-			}
-
-			if( env.Value <= 0 )
-			{
-				env.Value=0;
-				env.Phase++;
-			}
-		break;
-
-		case 6: // release end
-			env.Value=0;
-		break;
-
-		jNO_DEFAULT
-	}
-
-	if (env.Phase==6) {
-		#ifndef PUBLIC
-		if(MsgVoiceOff()) ConLog(" * SPU2: Voice Off by ADSR: %d \n", voice);
-		DebugCores[core].Voices[voice].lastStopReason = 2;
-		#endif
-		VoiceStop(core,voice);
-		Cores[core].Regs.ENDX|=(1<<voice);
-		env.Phase=0;
-	}
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
@@ -497,27 +314,41 @@ static void __forceinline UpdatePitch( V_Voice& vc )
 	vc.SP+=pitch;
 }
 
+
+static __forceinline void CalculateADSR( V_Core& thiscore, V_Voice& vc )
+{
+	if( vc.ADSR.Phase==0 )
+	{
+		vc.ADSR.Value = 0;
+		return;
+	}
+
+	if( !vc.ADSR.Calculate() )
+	{
+		if( IsDevBuild )
+		{
+			if(MsgVoiceOff()) ConLog(" * SPU2: Voice Off by ADSR: %d \n", voice);
+			DebugCores[core].Voices[voice].lastStopReason = 2;
+		}
+		vc.Stop();
+	}
+
+	jASSUME( vc.ADSR.Value >= 0 );	// ADSR should never be negative...
+}
+
 // Returns a 16 bit result in Value.
 static void __forceinline GetVoiceValues_Linear(V_Core& thiscore, V_Voice& vc, s32& Value)
 {
 	while( vc.SP > 0 )
 	{
-		vc.PV2=vc.PV1;
+		vc.PV2 = vc.PV1;
 
 		GetNextDataBuffered( thiscore, vc, vc.PV1 );
 
-		vc.SP-=4096;
+		vc.SP -= 4096;
 	}
 
-	if( vc.ADSR.Phase==0 )
-	{
-		Value = 0;
-		return;
-	}
-
-	CalculateADSR( vc );
-
-	jASSUME( vc.ADSR.Value >= 0 );	// ADSR should never be negative...
+	CalculateADSR( thiscore, vc );
 
 	// Note!  It's very important that ADSR stay as accurate as possible.  By the way
 	// it is used, various sound effects can end prematurely if we truncate more than
@@ -549,15 +380,7 @@ static void __forceinline GetVoiceValues_Cubic(V_Core& thiscore, V_Voice& vc, s3
 		vc.SP-=4096;
 	}
 
-	if( vc.ADSR.Phase==0 )
-	{
-		Value = 0;
-		return;
-	}
-
-	CalculateADSR( vc );
-
-	jASSUME( vc.ADSR.Value >= 0 );	// ADSR should never be negative...
+	CalculateADSR( thiscore, vc );
 
 	s32 z0 = vc.PV3 - vc.PV4 + vc.PV1 - vc.PV2;
 	s32 z1 = (vc.PV4 - vc.PV3 - z0);
@@ -591,7 +414,7 @@ static void __forceinline __fastcall GetNoiseValues(V_Core& thiscore, V_Voice& v
 	// like GetVoiceValues can.  Better assert just in case though..
 	jASSUME( vc.ADSR.Phase != 0 );	
 
-	CalculateADSR( vc );
+	CalculateADSR( thiscore, vc );
 
 	// Yup, ADSR applies even to noise sources...
 	Data = MulShr32( Data, vc.ADSR.Value );
@@ -649,12 +472,13 @@ void __fastcall ReadInput(V_Core& thiscore, s32& PDataL,s32& PDataR)
 					{
 						FileLog("[%10d] AutoDMA%c block end.\n",Cycles, (core==0)?'4':'7');
 
-						#ifndef PUBLIC
-						if(thiscore.InputDataLeft>0)
+						if( IsDevBuild )
 						{
-							if(MsgAutoDMA()) ConLog("WARNING: adma buffer didn't finish with a whole block!!\n");
+							if(thiscore.InputDataLeft>0)
+							{
+								if(MsgAutoDMA()) ConLog("WARNING: adma buffer didn't finish with a whole block!!\n");
+							}
 						}
-						#endif
 						thiscore.InputDataLeft=0;
 						thiscore.DMAICounter=1;
 					}
@@ -689,12 +513,13 @@ void __fastcall ReadInput(V_Core& thiscore, s32& PDataL,s32& PDataR)
 					{
 						FileLog("[%10d] Spdif AutoDMA%c block end.\n",Cycles, (core==0)?'4':'7');
 
-						#ifndef PUBLIC
-						if(thiscore.InputDataLeft>0)
+						if( IsDevBuild )
 						{
-							if(MsgAutoDMA()) ConLog("WARNING: adma buffer didn't finish with a whole block!!\n");
+							if(thiscore.InputDataLeft>0)
+							{
+								if(MsgAutoDMA()) ConLog("WARNING: adma buffer didn't finish with a whole block!!\n");
+							}
 						}
-						#endif
 						thiscore.InputDataLeft=0;
 						thiscore.DMAICounter=1;
 					}
@@ -741,15 +566,17 @@ void __fastcall ReadInput(V_Core& thiscore, s32& PDataL,s32& PDataR)
 					{
 						thiscore.AutoDMACtrl |= ~3;
 
-						#ifndef PUBLIC
-						FileLog("[%10d] AutoDMA%c block end.\n",Cycles, (core==0)?'4':'7');
-						if(thiscore.InputDataLeft>0)
+						if( IsDevBuild )
 						{
-							if(MsgAutoDMA()) ConLog("WARNING: adma buffer didn't finish with a whole block!!\n");
+							FileLog("[%10d] AutoDMA%c block end.\n",Cycles, (core==0)?'4':'7');
+							if(thiscore.InputDataLeft>0)
+							{
+								if(MsgAutoDMA()) ConLog("WARNING: adma buffer didn't finish with a whole block!!\n");
+							}
 						}
-						#endif
-						thiscore.InputDataLeft=0;
-						thiscore.DMAICounter=1;
+
+						thiscore.InputDataLeft = 0;
+						thiscore.DMAICounter   = 1;
 					}
 				}
 				thiscore.InputPos&=0x1ff;
@@ -795,57 +622,6 @@ static void __forceinline __fastcall ReadInputPV(V_Core& thiscore, s32& ValL,s32
 /////////////////////////////////////////////////////////////////////////////////////////
 //                                                                                     //
 
-#define VOLFLAG_REVERSE_PHASE	(1ul<<0)
-#define VOLFLAG_DECREMENT		(1ul<<1)
-#define VOLFLAG_EXPONENTIAL		(1ul<<2)
-#define VOLFLAG_SLIDE_ENABLE	(1ul<<3)
-
-static void __fastcall UpdateVolume(V_Volume& Vol)
-{
-	// Volume slides use the same basic logic as ADSR, but simplified (single-stage
-	// instead of multi-stage)
-	
-	if (Vol.Mode & VOLFLAG_DECREMENT)
-	{
-		// Decrement
-
-		if(Vol.Mode & VOLFLAG_EXPONENTIAL)
-		{
-			u32 off = InvExpOffsets[(Vol.Value>>28)&7];
-			Vol.Value -= PsxRates[(Vol.Increment^0x7f)-0x1b+off+32];
-		}
-		else
-			Vol.Value -= Vol.Increment;
-
-		if (Vol.Value < 0)
-		{
-			Vol.Value = 0;
-			Vol.Mode = 0;	// disable slide
-		}
-	}
-	else
-	{
-		// Increment
-		// Pseudo-exponential increments, as done by the SPU2 (really!)
-		// Above 75% slides slow, below 75% slides fast.  It's exponential, pseudo'ly speaking.
-
-		if( (Vol.Mode & VOLFLAG_EXPONENTIAL) && (Vol.Value>=0x60000000))
-			Vol.Value += PsxRates[(Vol.Increment^0x7f)-0x18+32];
-		else
-			Vol.Value += Vol.Increment;
-
-		if( Vol.Value < 0 )		// wrapped around the "top"?
-		{
-			Vol.Value = 0x7fffffff;
-			Vol.Mode = 0; // disable slide
-		}
-	}
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////////////////////////////
-//                                                                                     //
-
 // writes a signed value to the SPU2 ram
 // Performs no cache invalidation -- use only for dynamic memory ranges
 // of the SPU2 (between 0x0000 and SPU2_DYN_MEMLINE)
@@ -869,8 +645,8 @@ static __forceinline void MixVoice( V_Core& thiscore, V_Voice& vc, s32& VValL, s
 	// Most games don't use much volume slide effects.  So only call the UpdateVolume
 	// methods when needed by checking the flag outside the method here...
 
-	if( vc.VolumeL.Mode & VOLFLAG_SLIDE_ENABLE ) UpdateVolume( vc.VolumeL );
-	if( vc.VolumeR.Mode & VOLFLAG_SLIDE_ENABLE ) UpdateVolume( vc.VolumeR );
+	vc.VolumeL.Update();
+	vc.VolumeR.Update();
 
 	if( vc.ADSR.Phase > 0 )
 	{
@@ -889,9 +665,8 @@ static __forceinline void MixVoice( V_Core& thiscore, V_Voice& vc, s32& VValL, s
 		// Record the output (used for modulation effects)
 		vc.OutX = Value;
 
-		#ifndef PUBLIC
-		DebugCores[core].Voices[voice].displayPeak = max(DebugCores[core].Voices[voice].displayPeak,abs(Value));
-		#endif
+		if( IsDevBuild )
+			DebugCores[core].Voices[voice].displayPeak = max(DebugCores[core].Voices[voice].displayPeak,abs(Value));
 
 		// TODO : Implement this using high-def MulShr32.
 		//   vc.VolumeL/R are 15 bits.  Value should be 32 bits (but is currently 16)
@@ -1017,8 +792,8 @@ static void __fastcall MixCore(s32& OutL, s32& OutR, s32 ExtL, s32 ExtR)
 
 	// Apply Master Volume.  The core will need this when the function returns.
 	
-	if( thiscore.MasterL.Mode & VOLFLAG_SLIDE_ENABLE )  UpdateVolume(thiscore.MasterL);
-	if( thiscore.MasterR.Mode & VOLFLAG_SLIDE_ENABLE )  UpdateVolume(thiscore.MasterR);
+	thiscore.MasterL.Update();
+	thiscore.MasterR.Update();
 }
 
 // used to throttle the output rate of cache stat reports
@@ -1107,21 +882,22 @@ void Mix()
 	OutPos++;
 	if (OutPos>=0x200) OutPos=0;
 
-#ifndef PUBLIC
-	p_cachestat_counter++;
-	if(p_cachestat_counter > (48000*10) )
+	if( IsDevBuild )
 	{
-		p_cachestat_counter = 0;
-		if( MsgCache() ) ConLog( " * SPU2 > CacheStats > Hits: %d  Misses: %d  Ignores: %d\n",
-			g_counter_cache_hits,
-			g_counter_cache_misses,
-			g_counter_cache_ignores );
+		p_cachestat_counter++;
+		if(p_cachestat_counter > (48000*10) )
+		{
+			p_cachestat_counter = 0;
+			if( MsgCache() ) ConLog( " * SPU2 > CacheStats > Hits: %d  Misses: %d  Ignores: %d\n",
+				g_counter_cache_hits,
+				g_counter_cache_misses,
+				g_counter_cache_ignores );
 
-		g_counter_cache_hits = 
-		g_counter_cache_misses =
-		g_counter_cache_ignores = 0;
+			g_counter_cache_hits = 
+			g_counter_cache_misses =
+			g_counter_cache_ignores = 0;
+		}
 	}
-#endif
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////

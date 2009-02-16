@@ -44,7 +44,7 @@ namespace WaveDump
 
 	void Open()
 	{
-	#ifndef PUBLIC
+		if( !IsDevBuild ) return;
 		if( !WaveLog() ) return;
 		
 		char wavfilename[256];
@@ -69,12 +69,11 @@ namespace WaveDump
 				}
 			}
 		}
-	#endif
 	}
 
 	void Close()
 	{
-	#ifndef PUBLIC
+		if( !IsDevBuild ) return;
 		for( uint cidx=0; cidx<2; cidx++ )
 		{
 			for( int srcidx=0; srcidx<CoreSrc_Count; srcidx++ )
@@ -82,18 +81,16 @@ namespace WaveDump
 				SAFE_DELETE_OBJ( m_CoreWav[cidx][srcidx]  );
 			}
 		}
-	#endif
 	}
 
 	void WriteCore( uint coreidx, CoreSourceType src, s16 left, s16 right )
 	{
-	#ifndef PUBLIC
+		if( !IsDevBuild ) return;
 		if( m_CoreWav[coreidx][src] != NULL )
 		{
 			s16 buffer[2] = { left, right };
 			m_CoreWav[coreidx][src]->write( buffer, 2 );
 		}
-	#endif
 	}
 }
 

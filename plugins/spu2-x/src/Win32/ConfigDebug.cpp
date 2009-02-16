@@ -132,13 +132,8 @@ void EnableControls( HWND hWnd )
 {
 	EnableMessages( hWnd );
 	ENABLE_CONTROL(IDC_LOGDMA,  DebugEnabled);
-#ifdef PUBLIC
-	ENABLE_CONTROL(IDC_LOGREGS, false);
-	ENABLE_CONTROL(IDC_LOGWAVE, false);
-#else
-	ENABLE_CONTROL(IDC_LOGREGS, DebugEnabled);
-	ENABLE_CONTROL(IDC_LOGWAVE, DebugEnabled);
-#endif
+	ENABLE_CONTROL(IDC_LOGREGS, IsDevBuild ? DebugEnabled : false);
+	ENABLE_CONTROL(IDC_LOGWAVE, IsDevBuild ? DebugEnabled : false);
 	ENABLE_CONTROL(IDC_DUMPCORE,DebugEnabled);
 	ENABLE_CONTROL(IDC_DUMPMEM, DebugEnabled);
 	ENABLE_CONTROL(IDC_DUMPREGS,DebugEnabled);
@@ -174,11 +169,7 @@ static BOOL CALLBACK DialogProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 			SET_CHECK(IDC_DUMPMEM, _MemDump);
 			SET_CHECK(IDC_DUMPREGS,_RegDump);
 
-			#ifdef PUBLIC
-			ShowWindow( GetDlgItem( hWnd, IDC_MSG_PUBLIC_BUILD ), true );
-			#else
-			ShowWindow( GetDlgItem( hWnd, IDC_MSG_PUBLIC_BUILD ), false );
-			#endif
+			ShowWindow( GetDlgItem( hWnd, IDC_MSG_PUBLIC_BUILD ), !IsDevBuild );
 		}
 		break;
 

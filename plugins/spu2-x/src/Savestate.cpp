@@ -82,7 +82,6 @@ s32 __fastcall FreezeIt( SPU2freezeData& spud )
 	spud.OutPos		= OutPos;
 	spud.InputPos	= InputPos;
 	spud.Cycles		= Cycles;
-	spud.uTicks		= uTicks;
 	spud.PlayMode	= PlayMode;
 	
 	// Save our cache:
@@ -156,7 +155,6 @@ s32 __fastcall ThawIt( SPU2freezeData& spud )
 		OutPos		= spud.OutPos;
 		InputPos	= spud.InputPos;
 		Cycles		= spud.Cycles;
-		uTicks		= spud.uTicks;
 		PlayMode	= spud.PlayMode;
 
 		// Load the ADPCM cache:

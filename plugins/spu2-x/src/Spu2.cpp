@@ -51,9 +51,7 @@ u8 callirq;
 HANDLE hThreadFunc;
 u32	ThreadFuncID;
 
-#ifndef PUBLIC
 V_CoreDebug DebugCores[2];
-#endif
 V_Core Cores[2];
 V_SPDIF Spdif;
 
@@ -204,6 +202,44 @@ void V_Core::Reset()
 void V_Core::UpdateEffectsBufferSize()
 {
 	EffectsBufferSize = EffectsEndA - EffectsStartA + 1;
+}
+
+void V_Voice::Start()
+{
+	if((Cycles-PlayCycle)>=4)
+	{
+		if(StartA&7)
+		{
+			fprintf( stderr, " *** Misaligned StartA %05x!\n",StartA);
+			StartA=(StartA+0xFFFF8)+0x8;
+		}
+
+		ADSR.Releasing=false;
+		ADSR.Value=1;
+		ADSR.Phase=1;
+		PlayCycle=Cycles;
+		SCurrent=28;
+		LoopMode=0;
+		LoopFlags=0;
+		LoopStartA=StartA;
+		NextA=StartA;
+		Prev1=0;
+		Prev2=0;
+
+		PV1=PV2=0;
+		PV3=PV4=0;
+	}
+	else
+	{
+		printf(" *** KeyOn after less than 4 T disregarded.\n");
+	}
+}
+
+void V_Voice::Stop()
+{
+	ADSR.Value = 0;
+	ADSR.Phase = 0;
+	//Cores[core].Regs.ENDX|=(1<<vc);
 }
 
 static const int TickInterval = 768;
@@ -368,16 +404,16 @@ void SPU_ps1_write(u32 mem, u16 value)
 			case 2:	Cores[0].Voices[voice].Pitch=value;			break;
 			case 3:	Cores[0].Voices[voice].StartA=(u32)value<<8;	break;
 			case 4: // ADSR1 (Envelope)
-				Cores[0].Voices[voice].ADSR.Am=(value & 0x8000)>>15;
-				Cores[0].Voices[voice].ADSR.Ar=(value & 0x7F00)>>8;
-				Cores[0].Voices[voice].ADSR.Dr=(value & 0xF0)>>4;
-				Cores[0].Voices[voice].ADSR.Sl=(value & 0xF);
+				Cores[0].Voices[voice].ADSR.AttackMode=(value & 0x8000)>>15;
+				Cores[0].Voices[voice].ADSR.AttackRate=(value & 0x7F00)>>8;
+				Cores[0].Voices[voice].ADSR.DecayRate=(value & 0xF0)>>4;
+				Cores[0].Voices[voice].ADSR.SustainLevel=(value & 0xF);
 				Cores[0].Voices[voice].ADSR.Reg_ADSR1 = value;	break;
 			case 5: // ADSR2 (Envelope)
-				Cores[0].Voices[voice].ADSR.Sm=(value & 0xE000)>>13;
-				Cores[0].Voices[voice].ADSR.Sr=(value & 0x1FC0)>>6;
-				Cores[0].Voices[voice].ADSR.Rm=(value & 0x20)>>5;
-				Cores[0].Voices[voice].ADSR.Rr=(value & 0x1F);
+				Cores[0].Voices[voice].ADSR.SustainMode=(value & 0xE000)>>13;
+				Cores[0].Voices[voice].ADSR.SustainRate=(value & 0x1FC0)>>6;
+				Cores[0].Voices[voice].ADSR.ReleaseMode=(value & 0x20)>>5;
+				Cores[0].Voices[voice].ADSR.ReleaseRate=(value & 0x1F);
 				Cores[0].Voices[voice].ADSR.Reg_ADSR2 = value;	break;
 			case 6:
 				Cores[0].Voices[voice].ADSR.Value = ((s32)value<<16) | value;
@@ -614,16 +650,16 @@ __forceinline void SPU2_FastWrite( u32 rmem, u16 value )
 
 			case 2:	thisvoice.Pitch=value;			break;
 			case 3: // ADSR1 (Envelope)
-				thisvoice.ADSR.Am = (value & 0x8000)>>15;
-				thisvoice.ADSR.Ar = (value & 0x7F00)>>8;
-				thisvoice.ADSR.Dr = (value & 0xF0)>>4;
-				thisvoice.ADSR.Sl = (value & 0xF);
+				thisvoice.ADSR.AttackMode = (value & 0x8000)>>15;
+				thisvoice.ADSR.AttackRate = (value & 0x7F00)>>8;
+				thisvoice.ADSR.DecayRate = (value & 0xF0)>>4;
+				thisvoice.ADSR.SustainLevel = (value & 0xF);
 				thisvoice.ADSR.Reg_ADSR1 = value;	break;
 			case 4: // ADSR2 (Envelope)
-				thisvoice.ADSR.Sm = (value & 0xE000)>>13;
-				thisvoice.ADSR.Sr = (value & 0x1FC0)>>6;
-				thisvoice.ADSR.Rm = (value & 0x20)>>5;
-				thisvoice.ADSR.Rr = (value & 0x1F);
+				thisvoice.ADSR.SustainMode = (value & 0xE000)>>13;
+				thisvoice.ADSR.SustainRate = (value & 0x1FC0)>>6;
+				thisvoice.ADSR.ReleaseMode = (value & 0x20)>>5;
+				thisvoice.ADSR.ReleaseRate = (value & 0x1F);
 				thisvoice.ADSR.Reg_ADSR2 = value;	break;
 			case 5:
 				// [Air] : Mysterious ADSR set code.  Too bad none of my games ever use it.
@@ -646,24 +682,35 @@ __forceinline void SPU2_FastWrite( u32 rmem, u16 value )
 
 		switch (address)
 		{
-			case 0:	thisvoice.StartA = ((value & 0x0F) << 16) | (thisvoice.StartA & 0xFFF8); 
-					#ifndef PUBLIC
+			case 0:
+				thisvoice.StartA = ((value & 0x0F) << 16) | (thisvoice.StartA & 0xFFF8); 
+				if( IsDevBuild )
 					DebugCores[core].Voices[voice].lastSetStartA = thisvoice.StartA; 
-					#endif
-					break;
-			case 1:	thisvoice.StartA = (thisvoice.StartA & 0x0F0000) | (value & 0xFFF8); 
-					#ifndef PUBLIC
+			break;
+			
+			case 1:
+				thisvoice.StartA = (thisvoice.StartA & 0x0F0000) | (value & 0xFFF8); 
+				if( IsDevBuild )
 					DebugCores[core].Voices[voice].lastSetStartA = thisvoice.StartA; 
-					#endif
-					break;
-			case 2:	thisvoice.LoopStartA = ((value & 0x0F) << 16) | (thisvoice.LoopStartA & 0xFFF8);
-					thisvoice.LoopMode = 3; break;
-			case 3:	thisvoice.LoopStartA = (thisvoice.LoopStartA & 0x0F0000) | (value & 0xFFF8);break;
-					thisvoice.LoopMode = 3; break;
-			case 4:	thisvoice.NextA = ((value & 0x0F) << 16) | (thisvoice.NextA & 0xFFF8);
-					break;
-			case 5:	thisvoice.NextA = (thisvoice.NextA & 0x0F0000) | (value & 0xFFF8);
-					break;
+			break;
+			
+			case 2:	
+				thisvoice.LoopStartA = ((value & 0x0F) << 16) | (thisvoice.LoopStartA & 0xFFF8);
+				thisvoice.LoopMode = 3;
+			break;
+			
+			case 3:
+				thisvoice.LoopStartA = (thisvoice.LoopStartA & 0x0F0000) | (value & 0xFFF8);
+				thisvoice.LoopMode = 3;
+			break;
+
+			case 4:
+				thisvoice.NextA = ((value & 0x0F) << 16) | (thisvoice.NextA & 0xFFF8);
+			break;
+			
+			case 5:
+				thisvoice.NextA = (thisvoice.NextA & 0x0F0000) | (value & 0xFFF8);
+			break;
 		}
 	}
 	else if((mem>=0x07C0) && (mem<0x07CE)) 
@@ -930,60 +977,6 @@ __forceinline void SPU2_FastWrite( u32 rmem, u16 value )
 }
 
 
-void VoiceStart(int core,int vc)
-{
-	if((Cycles-Cores[core].Voices[vc].PlayCycle)>=4)
-	{
-		if(Cores[core].Voices[vc].StartA&7)
-		{
-			fprintf( stderr, " *** Misaligned StartA %05x!\n",Cores[core].Voices[vc].StartA);
-			Cores[core].Voices[vc].StartA=(Cores[core].Voices[vc].StartA+0xFFFF8)+0x8;
-		}
-
-		Cores[core].Voices[vc].ADSR.Releasing=false;
-		Cores[core].Voices[vc].ADSR.Value=1;
-		Cores[core].Voices[vc].ADSR.Phase=1;
-		Cores[core].Voices[vc].PlayCycle=Cycles;
-		Cores[core].Voices[vc].SCurrent=28;
-		Cores[core].Voices[vc].LoopMode=0;
-		Cores[core].Voices[vc].LoopFlags=0;
-		Cores[core].Voices[vc].LoopStartA=Cores[core].Voices[vc].StartA;
-		Cores[core].Voices[vc].NextA=Cores[core].Voices[vc].StartA;
-		Cores[core].Voices[vc].Prev1=0;
-		Cores[core].Voices[vc].Prev2=0;
-
-		Cores[core].Voices[vc].PV1=Cores[core].Voices[vc].PV2=0;
-		Cores[core].Voices[vc].PV3=Cores[core].Voices[vc].PV4=0;
-
-		Cores[core].Regs.ENDX&=~(1<<vc);
-
-#ifndef PUBLIC
-		DebugCores[core].Voices[vc].FirstBlock=1;
-
-		if(MsgKeyOnOff()) ConLog(" * SPU2: KeyOn: C%dV%02d: SSA: %8x; M: %s%s%s%s; H: %02x%02x; P: %04x V: %04x/%04x; ADSR: %04x%04x\n",
-			core,vc,Cores[core].Voices[vc].StartA,
-			(Cores[core].Voices[vc].DryL)?"+":"-",(Cores[core].Voices[vc].DryR)?"+":"-",
-			(Cores[core].Voices[vc].WetL)?"+":"-",(Cores[core].Voices[vc].WetR)?"+":"-",
-			*(u8*)GetMemPtr(Cores[core].Voices[vc].StartA),*(u8 *)GetMemPtr((Cores[core].Voices[vc].StartA)+1),
-			Cores[core].Voices[vc].Pitch,
-			Cores[core].Voices[vc].VolumeL.Value,Cores[core].Voices[vc].VolumeR.Value,
-			Cores[core].Voices[vc].ADSR.Reg_ADSR1,Cores[core].Voices[vc].ADSR.Reg_ADSR2);
-#endif
-	}
-	else
-	{
-		printf(" *** KeyOn after less than 4 T disregarded.\n");
-	}
-}
-
-void VoiceStop(int core,int vc)
-{
-	Cores[core].Voices[vc].ADSR.Value=0;
-	Cores[core].Voices[vc].ADSR.Phase=0;
-
-	//Cores[core].Regs.ENDX|=(1<<vc);
-}
-
 void StartVoices(int core, u32 value)
 {
 	// Optimization: Games like to write zero to the KeyOn reg a lot, so shortcut
@@ -996,7 +989,24 @@ void StartVoices(int core, u32 value)
 	for( u8 vc=0; vc<24; vc++ )
 	{
 		if ((value>>vc) & 1)
-			VoiceStart(core,vc);
+		{
+			Cores[core].Voices[vc].Start();
+			Cores[core].Regs.ENDX &= ~( 1 << vc );
+
+			if( IsDevBuild )
+			{
+				V_Voice& thisvc( Cores[core].Voices[vc] );
+
+				if(MsgKeyOnOff()) ConLog(" * SPU2: KeyOn: C%dV%02d: SSA: %8x; M: %s%s%s%s; H: %02x%02x; P: %04x V: %04x/%04x; ADSR: %04x%04x\n",
+					core,vc,thisvc.StartA,
+					(thisvc.DryL)?"+":"-",(thisvc.DryR)?"+":"-",
+					(thisvc.WetL)?"+":"-",(thisvc.WetR)?"+":"-",
+					*(u8*)GetMemPtr(thisvc.StartA),*(u8 *)GetMemPtr((thisvc.StartA)+1),
+					thisvc.Pitch,
+					thisvc.VolumeL.Value,thisvc.VolumeR.Value,
+					thisvc.ADSR.Reg_ADSR1,thisvc.ADSR.Reg_ADSR2);
+			}
+		}
 	}
 }
 

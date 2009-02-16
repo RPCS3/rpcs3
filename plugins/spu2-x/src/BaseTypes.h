@@ -51,7 +51,37 @@ static __forceinline T GetClamped( T src, T min, T max )
 	return std::min( std::max( src, min ), max );
 }
 
-
 extern void SysMessage(const char *fmt, ...);
+
+//////////////////////////////////////////////////////////////
+// Dev / Debug conditionals --
+//   Consts for using if() statements instead of uglier #ifdef macros.
+//   Abbreviated macros for dev/debug only consoles and msgboxes.
+
+#ifdef SPU2X_DEVBUILD
+
+#	define DevCon Console
+#	define DevMsg MsgBox
+	static const bool IsDevBuild = true;
+
+#else
+
+#	define DevCon 0&&Console
+#	define DevMsg 
+	static const bool IsDevBuild = false;
+
+#endif
+
+#ifdef _DEBUG
+
+#	define DbgCon Console
+	static const bool IsDebugBuild = true;
+
+#else
+
+#	define DbgCon 0&&Console
+static const bool IsDebugBuild = false;
+
+#endif
 
 #endif

@@ -438,9 +438,9 @@ void SPU2writeDMA(int core, u16* pMem, u32 size)
 		return;
 	}
 
-	#ifndef PUBLIC
-	DebugCores[core].lastsize=size;
-	#endif
+	if( IsDevBuild )
+		DebugCores[core].lastsize = size;
+
 	Cores[core].TSA&=~7;
 
 	bool adma_enable = ((Cores[core].AutoDMACtrl&(core+1))==(core+1));

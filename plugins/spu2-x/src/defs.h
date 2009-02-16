@@ -31,6 +31,9 @@ struct V_Volume
 	s32 Value;
 	s8 Increment;
 	s8 Mode;
+	
+public:
+	void Update();
 };
 
 struct V_ADSR
@@ -38,29 +41,22 @@ struct V_ADSR
 	u16 Reg_ADSR1;
 	u16 Reg_ADSR2;
 
-//also Reg_ENVX
-	s32 Value;		// Ranges from 0 to 0x7fffffff (signed values are clamped to 0)
-// Phase
+	s32 Value;		// Ranges from 0 to 0x7fffffff (signed values are clamped to 0) [Reg_ENVX]
 	u8 Phase;
-//Attack Rate
-	u8 Ar; 
-//Attack Mode
-	u8 Am; 
-//Decay Rate
-	u8 Dr; 
-//Sustain Level
-	u8 Sl; 
-//Sustain Rate
-	u8 Sr; 
-//Sustain Mode
-	u8 Sm; 
-//Release Rate
-	u8 Rr; 
-//Release Mode
-	u8 Rm;
+	u8 AttackRate;		// Ar
+	u8 AttackMode;		// Am
+	u8 DecayRate;		// Dr
+	u8 SustainLevel;	// Sl
+	u8 SustainRate;		// Sr
+	u8 SustainMode;		// Sm
+	u8 ReleaseRate;		// Rr
+	u8 ReleaseMode;		// Rm
 
-//Ready To Release
-	bool Releasing;
+	bool Releasing;		// Ready To Release, triggered by Voice.Stop();
+
+
+public:
+	bool Calculate();
 };
 
 
@@ -133,9 +129,10 @@ struct V_Voice
 // sample position within the current decoded packet.
 	s32 SCurrent;
 
+	void Start();
+	void Stop();
 };
 
-#ifndef PUBLIC
 // ** Begin Debug-only variables section **
 // Separated from the V_Voice struct to improve cache performance of
 // the Public Release build.
@@ -158,7 +155,6 @@ struct V_CoreDebug
 
 // Debug tracking information - 24 voices and 2 cores.
 extern V_CoreDebug DebugCores[2];
-#endif
 
 struct V_Reverb
 {

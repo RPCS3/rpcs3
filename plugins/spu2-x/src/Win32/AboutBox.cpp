@@ -36,12 +36,12 @@ static LRESULT WINAPI AboutProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lPar
 			ConvertStaticToHyperlink( hDlg, IDC_LINK_WEBSITE );
 			
 			wchar_t outstr[256];
-#ifdef PUBLIC
-			swprintf_s( outstr, _T("Release v%d.%d -- Compiled on ")  _T(__DATE__),
-				VersionInfo::Release, VersionInfo::Revision ); 
-#else
-			swprintf_s( outstr, _T("Build r%d -- Compiled on ") _T(__DATE__), SVN_REV );
-#endif
+			if( IsDevBuild )
+				swprintf_s( outstr, _T("Build r%d -- Compiled on ") _T(__DATE__), SVN_REV );
+			else
+				swprintf_s( outstr, _T("Release v%d.%d -- Compiled on ")  _T(__DATE__),
+					VersionInfo::Release, VersionInfo::Revision ); 
+
 			SetWindowText( GetDlgItem(hDlg, IDC_LABEL_VERSION_INFO), outstr );
 			ShowWindow( hDlg, true );
 		}

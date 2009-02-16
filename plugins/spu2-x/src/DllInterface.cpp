@@ -45,46 +45,49 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL,DWORD dwReason,LPVOID lpvReserved)
 
 static void InitLibraryName()
 {
-#ifdef PUBLIC
+	if( !IsDevBuild )
+	{
+		// Public Release!
+		// Output a simplified string that's just our name:
 
-	// Public Release!
-	// Output a simplified string that's just our name:
+		strcpy( libraryName, "SPU2-X" );
+	}
+	else
+	{
+		#ifdef SVN_REV_UNKNOWN
 
-	strcpy( libraryName, "SPU2-X" );
+		// Unknown revision.
+		// Output a name that includes devbuild status but not
+		// subversion revision tags:
 
-#elif defined( SVN_REV_UNKNOWN )
-
-	// Unknown revision.
-	// Output a name that includes devbuild status but not
-	// subversion revision tags:
-
-	strcpy( libraryName, "SPU2-X"
-#	ifdef _DEBUG_FAST
-		"-Debug"
-#	elif defined( DEBUG )
-		"-Debug/Strict"		// strict debugging is slow!
-#	else
-		"-Dev"
-#	endif
+		strcpy( libraryName, "SPU2-X"
+		#ifdef _DEBUG_FAST
+			"-Debug"
+		#elif defined( DEBUG )
+			"-Debug/Strict"		// strict debugging is slow!
+		#else
+			"-Dev"
+		#endif
 		);
-#else
 
-	// Use TortoiseSVN's SubWCRev utility's output
-	// to label the specific revision:
+		#else
 
-	sprintf_s( libraryName, "SPU2-X r%d%s"
-#	ifdef _DEBUG_FAST
-		"-Debug"
-#	elif defined( _DEBUG )
-		"-Debug/Strict"		// strict debugging is slow!
-#	else
-		"-Dev"
-#	endif
-		,SVN_REV,
-		SVN_MODS ? "m" : ""
+		// Use TortoiseSVN's SubWCRev utility's output
+		// to label the specific revision:
+
+		sprintf_s( libraryName, "SPU2-X r%d%s"
+		#ifdef _DEBUG_FAST
+			"-Debug"
+		#elif defined( _DEBUG )
+			"-Debug/Strict"		// strict debugging is slow!
+		#else
+			"-Dev"
+		#endif
+			,SVN_REV,
+			SVN_MODS ? "m" : ""
 		);
-#endif
-
+		#endif
+	}
 }
 
 EXPORT_C_(u32) PS2EgetLibType() 
@@ -309,29 +312,31 @@ bool numpad_plus = false, numpad_plus_old = false;
 
 EXPORT_C_(void) SPU2async(u32 cycles) 
 {
-#ifndef PUBLIC
-	u32 oldClocks = lClocks;
-	static u32 timer=0,time1=0,time2=0;
-	timer++;
-	if (timer == 1){
-		time1=timeGetTime();
+	if( IsDevBuild )
+	{
+		u32 oldClocks = lClocks;
+		static u32 timer=0,time1=0,time2=0;
+		timer++;
+		if (timer == 1){
+			time1=timeGetTime();
+		}
+		if (timer == 3000){
+			time2 = timeGetTime()-time1 ;
+			timer=0;
+		}
 	}
-	if (timer == 3000){
-		time2 = timeGetTime()-time1 ;
-		timer=0;
-	}
-#endif
 
 	DspUpdate();
 
-#ifndef PUBLIC
-	/*numpad_plus = (GetAsyncKeyState(VK_ADD)&0x8000)!=0;
-	if(numpad_plus && !numpad_plus_old)
+	if( IsDevBuild )
 	{
-	DoFullDump();
+		/*numpad_plus = (GetAsyncKeyState(VK_ADD)&0x8000)!=0;
+		if(numpad_plus && !numpad_plus_old)
+		{
+		DoFullDump();
+		}
+		numpad_plus_old = numpad_plus;*/
 	}
-	numpad_plus_old = numpad_plus;*/
-#endif
 
 	if(hasPtr)
 	{

@@ -142,9 +142,6 @@ extern void __inline __fastcall spu2M_Write( u32 addr, u16 value );
 #define spu2Rs16(mmem)	(*(s16 *)((s8 *)spu2regs + ((mmem) & 0x1fff)))
 #define spu2Ru16(mmem)	(*(u16 *)((s8 *)spu2regs + ((mmem) & 0x1fff)))
 
-extern void VoiceStart(int core,int vc);
-extern void VoiceStop(int core,int vc);
-
 extern u8 callirq;
 
 extern void (* _irqcallback)();
@@ -162,8 +159,6 @@ extern int PlayMode;
 extern int recording;
 extern bool disableFreezes;
 
-
-extern s32 uTicks;
 extern u32 lClocks;
 extern u32* cPtr;
 extern bool hasPtr;
@@ -192,7 +187,7 @@ extern void RecordWrite(s16 left, s16 right);
 extern void UpdateSpdifMode();
 extern void LowPassFilterInit();
 extern void InitADSR();
-extern void SndUpdateLimitMode();
+extern void CalculateADSR( V_Voice& vc );
 
 //////////////////////////////
 //    The Mixer Section     //
