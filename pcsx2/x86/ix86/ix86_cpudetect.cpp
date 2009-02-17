@@ -376,6 +376,10 @@ void cpudetectInit()
 
 	cpucaps.hasStreamingSIMD4Extensions = ( cpuinfo.x86Flags2 >> 19 ) & 1; //sse4.1   
 
+	// --> SSSE3 detection <--
+
+	cpucaps.hasSupplementalStreamingSIMD3Extensions = ( cpuinfo.x86Flags2 >> 9 ) & 1; //ssse3  
+
 	// --> SSE3 detection <--
 	// These instructions may not be recognized by some compilers, or may not have
 	// intrinsic equivalents available.  So we use our own ix86 emitter to generate

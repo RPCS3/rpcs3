@@ -1058,10 +1058,10 @@ void PSLLVW() {
 void PSRLVW() {
 	if (!_Rd_) return;
 
-	cpuRegs.GPR.r[_Rd_].UD[0] = (cpuRegs.GPR.r[_Rt_].UL[0] >>
-								(cpuRegs.GPR.r[_Rs_].UL[0] & 0x1F));
-	cpuRegs.GPR.r[_Rd_].UD[1] = (cpuRegs.GPR.r[_Rt_].UL[2] >>
-								(cpuRegs.GPR.r[_Rs_].UL[2] & 0x1F));
+	cpuRegs.GPR.r[_Rd_].UD[0] = (s32)(cpuRegs.GPR.r[_Rt_].UL[0] >>
+									 (cpuRegs.GPR.r[_Rs_].UL[0] & 0x1F));
+	cpuRegs.GPR.r[_Rd_].UD[1] = (s32)(cpuRegs.GPR.r[_Rt_].UL[2] >>
+									 (cpuRegs.GPR.r[_Rs_].UL[2] & 0x1F));
 }
 
 __forceinline void  _PMSUBW(int dd, int ss) 

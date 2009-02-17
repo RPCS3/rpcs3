@@ -126,6 +126,7 @@ struct CAPABILITIES {
    u32 hasThermalMonitor;
    u32 hasIntel64BitArchitecture;
    u32 hasStreamingSIMD3Extensions;
+   u32 hasSupplementalStreamingSIMD3Extensions;
    u32 hasStreamingSIMD4Extensions;
 
    // AMD-specific CPU Features
@@ -1413,6 +1414,9 @@ extern void SSE2_PSHUFLW_M128_to_XMM( x86SSERegType to, uptr from, u8 imm8 );
 extern void SSE2_PSHUFHW_XMM_to_XMM( x86SSERegType to, x86SSERegType from, u8 imm8 );
 extern void SSE2_PSHUFHW_M128_to_XMM( x86SSERegType to, uptr from, u8 imm8 );
 
+extern void SSE2_SHUFPD_XMM_to_XMM( x86SSERegType to, x86SSERegType from, u8 imm8 );
+extern void SSE2_SHUFPD_M128_to_XMM( x86SSERegType to, uptr from, u8 imm8 );
+
 extern void SSE_STMXCSR( uptr from );
 extern void SSE_LDMXCSR( uptr from );
 
@@ -1610,6 +1614,13 @@ extern void SSE3_MOVSLDUP_M128_to_XMM(x86SSERegType to, uptr from);
 extern void SSE3_MOVSHDUP_XMM_to_XMM(x86SSERegType to, x86SSERegType from);
 extern void SSE3_MOVSHDUP_M128_to_XMM(x86SSERegType to, uptr from);
 
+// SSSE3
+
+extern void SSSE3_PABSB_XMM_to_XMM(x86SSERegType to, x86SSERegType from);
+extern void SSSE3_PABSW_XMM_to_XMM(x86SSERegType to, x86SSERegType from);
+extern void SSSE3_PABSD_XMM_to_XMM(x86SSERegType to, x86SSERegType from);
+extern void SSSE3_PALIGNR_XMM_to_XMM(x86SSERegType to, x86SSERegType from, u8 imm8);
+
 // SSE4.1
 
 #ifndef _MM_MK_INSERTPS_NDX
@@ -1633,6 +1644,7 @@ extern void SSE4_PMAXSD_M128_to_XMM(x86SSERegType to, uptr from);
 extern void SSE4_PMINSD_M128_to_XMM(x86SSERegType to, uptr from);
 extern void SSE4_PMAXUD_M128_to_XMM(x86SSERegType to, uptr from);
 extern void SSE4_PMINUD_M128_to_XMM(x86SSERegType to, uptr from);
+extern void SSE4_PMULDQ_XMM_to_XMM(x86SSERegType to, x86SSERegType from);
 
 //*********************
 // SSE-X - uses both SSE,SSE2 code and tries to keep consistensies between the data

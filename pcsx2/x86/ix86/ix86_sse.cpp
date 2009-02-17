@@ -661,6 +661,13 @@ __forceinline void SSE_SHUFPS_RmOffset_to_XMM( x86SSERegType to, x86IntRegType f
 	write8(imm8);
 }
 
+//////////////////////////////////////////////////////////////////////////////////////
+//**********************************************************************************/
+//SHUFPD: Shuffle Packed Double-Precision FP Values                                *
+//**********************************************************************************
+__forceinline void SSE2_SHUFPD_XMM_to_XMM( x86SSERegType to, x86SSERegType from, u8 imm8 )	{ SSERtoR66( 0xC60F ); write8( imm8 ); }
+__forceinline void SSE2_SHUFPD_M128_to_XMM( x86SSERegType to, uptr from, u8 imm8 )		{ SSEMtoR66( 0xC60F ); write8( imm8 ); }
+
 ////////////////////////////////////////////////////////////////////////////////////
 //**********************************************************************************/
 //PSHUFD: Shuffle Packed DoubleWords                                               *
@@ -1076,6 +1083,41 @@ __forceinline void SSE3_MOVSLDUP_M128_to_XMM(x86SSERegType to, uptr from) { writ
 __forceinline void SSE3_MOVSHDUP_XMM_to_XMM(x86SSERegType to, x86SSERegType from) { write8(0xf3); SSERtoR(0x160f); }
 __forceinline void SSE3_MOVSHDUP_M128_to_XMM(x86SSERegType to, uptr from) { write8(0xf3); SSEMtoR(0x160f, 0); }
 
+// SSSE3
+
+__forceinline void SSSE3_PABSB_XMM_to_XMM(x86SSERegType to, x86SSERegType from)
+{
+	write8(0x66);
+	RexRB(0, to, from);
+	write24(0x1C380F);
+	ModRM(3, to, from);
+}
+
+__forceinline void SSSE3_PABSW_XMM_to_XMM(x86SSERegType to, x86SSERegType from)
+{
+	write8(0x66);
+	RexRB(0, to, from);
+	write24(0x1D380F);
+	ModRM(3, to, from);
+}
+
+__forceinline void SSSE3_PABSD_XMM_to_XMM(x86SSERegType to, x86SSERegType from)
+{
+	write8(0x66);
+	RexRB(0, to, from);
+	write24(0x1E380F);
+	ModRM(3, to, from);
+}
+
+__forceinline void SSSE3_PALIGNR_XMM_to_XMM(x86SSERegType to, x86SSERegType from, u8 imm8)
+{
+	write8(0x66);
+	RexRB(0, to, from);
+	write24(0x0F3A0F);
+	ModRM(3, to, from);
+	write8(imm8);
+}
+
 // SSE4.1
 
 __forceinline void SSE4_DPPS_XMM_to_XMM(x86SSERegType to, x86SSERegType from, u8 imm8) 
@@ -1222,6 +1264,14 @@ __forceinline void SSE4_PMINUD_M128_to_XMM(x86SSERegType to, uptr from)
 	write24(0x3B380F);
 	ModRM( 0, to, DISP32 );
 	write32(MEMADDR(from, 4));
+}
+
+__forceinline void SSE4_PMULDQ_XMM_to_XMM(x86SSERegType to, x86SSERegType from)
+{
+	write8(0x66);
+	RexRB(0, to, from);
+	write24(0x28380F);
+	ModRM(3, to, from);
 }
 
 // SSE-X

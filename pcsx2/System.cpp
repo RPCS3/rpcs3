@@ -134,11 +134,13 @@ void SysDetect()
 		"\t%sDetected SSE\n"
 		"\t%sDetected SSE2\n"
 		"\t%sDetected SSE3\n"
+		"\t%sDetected SSSE3\n"
 		"\t%sDetected SSE4.1\n", params
 			cpucaps.hasMultimediaExtensions     ? "" : "Not ",
 			cpucaps.hasStreamingSIMDExtensions  ? "" : "Not ",
 			cpucaps.hasStreamingSIMD2Extensions ? "" : "Not ",
 			cpucaps.hasStreamingSIMD3Extensions ? "" : "Not ",
+			cpucaps.hasSupplementalStreamingSIMD3Extensions ? "" : "Not ",
 			cpucaps.hasStreamingSIMD4Extensions ? "" : "Not "
 	);
 
