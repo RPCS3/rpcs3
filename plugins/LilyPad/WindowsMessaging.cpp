@@ -85,6 +85,7 @@ public:
 
 		GetCursorPos(&origCursorPos);
 		active = 1;
+
 		RECT r;
 		GetWindowRect(hWnd, &r);
 		ClipCursor(&r);
@@ -137,6 +138,7 @@ ExtraWndProcResult WindowsMessagingWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, 
 			return NO_WND_PROC;
 		}
 		else if (uMsg == WM_ACTIVATE) {
+			// Not really needed, but doesn't hurt.
 			memset(wmk->physicalControlState, 0, sizeof(int) * wmk->numPhysicalControls);
 		}
 	}
@@ -177,8 +179,9 @@ ExtraWndProcResult WindowsMessagingWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, 
 			wmm->UpdateAxis(3, ((int)wParam>>16)/WHEEL_DELTA);
 			return NO_WND_PROC;
 		}
-		/*
-		else if (uMsg == WM_KILLFOCUS) {
+		// Taken care of elsewhere.  When binding, killing focus means stop reading input.
+		// When running PCSX2, I release all mouse and keyboard input elsewhere.
+		/*else if (uMsg == WM_KILLFOCUS) {
 			wmm->Deactivate();
 		}//*/
 	}

@@ -183,16 +183,8 @@ void Device::CalcVirtualState() {
 				double angle = val * (3.141592653589793/18000.0);
 				double East = sin(angle);
 				double South = -cos(angle);
-				double fabsSouth = fabs(South);
-				double fabsEast = fabs(East);
 				// Normalize so greatest direction is 1.
-				double mul;
-				if (fabsSouth > fabsEast) {
-					mul = FULLY_DOWN / fabsSouth;
-				}
-				else {
-					mul = FULLY_DOWN / fabsEast;
-				}
+				double mul = FULLY_DOWN / max(fabs(South), fabs(East));
 				iEast = (int) floor(East * mul + 0.5);
 				iSouth = (int) floor(South * mul + 0.5);
 			}
@@ -300,10 +292,10 @@ wchar_t *Device::GetVirtualControlName(VirtualControl *control) {
 	uid &= 0xFF000000;
 	int len = (int)wcslen(baseName);
 	if (len > 99) len = 99;
-	if (uid && len > 89) len = 89;
 	memcpy(temp, baseName, len*sizeof(wchar_t));
 	temp[len] = 0;
 	if (uid) {
+		if (len > 95) len = 95;
 		wchar_t *out = temp+len;
 		if (uid == UID_AXIS_POS) {
 			wcscpy(out, L" +");

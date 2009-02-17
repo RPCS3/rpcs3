@@ -152,7 +152,7 @@ public:
 
 	int Activate(void *d) {
 		int i, j;
-		if (active) Deactivate();
+		Deactivate();
 		InitInfo *info = (InitInfo*)d;
 		// Note:  Have to use hWndTop to properly hide cursor for mouse device.
 		if (type == OTHER) {

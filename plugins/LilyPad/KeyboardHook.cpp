@@ -31,8 +31,6 @@ public:
 	}
 
 	int Update() {
-		//if (!GetKeyboardState(buttonState)) return 0;
-		for (int i=0; i<=4; i++) virtualControlState[i] = 0;
 		// So I'll bind to left/right control/shift instead of generic ones.
 		virtualControlState[VK_SHIFT] = 0;
 		virtualControlState[VK_CONTROL] = 0;

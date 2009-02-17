@@ -112,7 +112,6 @@ public:
 };
 
 static POINT rawOrigCursorPos;
-static POINT rawCenter;
 
 class RawInputMouse : public WindowsMouse {
 public:
@@ -146,12 +145,6 @@ public:
 				Deactivate();
 				return 0;
 			}
-			RECT r;
-			// No need to clip cursor, since I seem to have complete control of buttons.
-			GetWindowRect(hWnd, &r);
-			rawCenter.x = (r.left + r.right)/2;
-			rawCenter.y = (r.top + r.bottom)/2;
-			SetCursorPos(rawCenter.x, rawCenter.y);
 		}
 
 		AllocState();
@@ -213,13 +206,12 @@ ExtraWndProcResult RawInputWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM l
 							button++;
 							buttons >>= 2;
 						}
-						if (in.data.mouse.usButtonFlags & 0x400) {
+						if (in.data.mouse.usButtonFlags & RI_MOUSE_WHEEL) {
 							rim->UpdateAxis(2, ((short)in.data.mouse.usButtonData)/WHEEL_DELTA);
 						}
 						if (in.data.mouse.lLastX  || in.data.mouse.lLastY) {
 							rim->UpdateAxis(0, in.data.mouse.lLastX);
 							rim->UpdateAxis(1, in.data.mouse.lLastY);
-							SetCursorPos(rawCenter.x, rawCenter.y);
 						}
 					}
 				}

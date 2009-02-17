@@ -148,7 +148,7 @@ void RefreshEnabledDevicesAndDisplay(int updateDeviceList = 0, HWND hWnd = 0, in
 		item.iSubItem = 0;
 		item.mask = LVIF_TEXT | LVIF_PARAM;
 		for (int j=0; j<dm->numDevices; j++) {
-			if (dm->devices[j]->enabled) {
+			if (dm->devices[j]->enabled && dm->devices[j]->api != IGNORE_KEYBOARD) {
 				item.lParam = j;
 				item.pszText = dm->devices[j]->displayName;
 				if (count > 0) {

@@ -227,7 +227,7 @@ FONT 8, "MS Shell Dlg", 0, 0, 0x1
 BEGIN
     GROUPBOX        "Input APIs",IDC_STATIC,7,6,410,131
     GROUPBOX        "Keyboard API",IDC_STATIC,16,16,192,61
-    CONTROL         "Windows messaging",IDC_KB_WM,"Button",BS_AUTORADIOBUTTON | WS_GROUP,23,28,112,10
+    CONTROL         "Windows messaging (Recommended)",IDC_KB_WM,"Button",BS_AUTORADIOBUTTON | WS_GROUP,23,28,134,10
     CONTROL         "Raw input (XP and later only)",IDC_KB_RAW,"Button",BS_AUTORADIOBUTTON,23,40,112,10
     CONTROL         "DirectInput",IDC_KB_DI,"Button",BS_AUTORADIOBUTTON,23,52,112,10
     CONTROL         "Disable (Intended for use with other pad plugins)",IDC_KB_DISABLE,
@@ -262,15 +262,15 @@ BEGIN
     PUSHBUTTON      "Test Device",ID_TEST,86,289,57,15
     PUSHBUTTON      "Refresh",ID_REFRESH,152,289,48,15
     GROUPBOX        "Hacks",IDC_STATIC,216,211,201,73
-    CONTROL         "Send escape on close",IDC_CLOSE_HACK1,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,224,223,113,10
-    CONTROL         "Exit emulator on close",IDC_CLOSE_HACK2,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,224,235,86,10
-    CONTROL         "Hide on fullscreen escape",IDC_ESCAPE_FULLSCREEN_HACK,
-                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,224,247,97,10
+    CONTROL         "Send escape on window close",IDC_CLOSE_HACK1,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,224,223,113,10
+    CONTROL         "Exit emulator on window close",IDC_CLOSE_HACK2,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,224,235,112,10
+    CONTROL         "Safe fullscreen exit on escape",IDC_ESCAPE_FULLSCREEN_HACK,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,224,247,112,10
     CONTROL         "Always hide cursor",IDC_FORCE_HIDE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,224,259,71,10
     CONTROL         "Disable screensaver",IDC_DISABLE_SCREENSAVER,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,224,271,80,10
-    CONTROL         "Guitar Hero 2 Hack",IDC_GH2_HACK,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,333,223,76,10
-    CONTROL         "Use GS thread",IDC_GS_THREAD_INPUT,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,333,235,62,10
-    CONTROL         "Save state in title",IDC_SAVE_STATE_TITLE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,333,247,72,10
+    CONTROL         "Guitar Hero 2 Hack",IDC_GH2_HACK,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,336,223,76,10
+    CONTROL         "Use GS thread",IDC_GS_THREAD_INPUT,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,336,235,62,10
+    CONTROL         "Save state # in title",IDC_SAVE_STATE_TITLE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,336,247,79,10
     GROUPBOX        "Debugging",IDC_STATIC,216,285,79,25
     CONTROL         "Enable logging",IDC_DEBUG_FILE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,223,296,63,10
     PUSHBUTTON      "Save",ID_SAVE,369,295,48,15

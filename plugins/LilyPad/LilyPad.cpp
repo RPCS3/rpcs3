@@ -166,17 +166,20 @@ void UpdateEnabledDevices(int updateList = 0) {
 		if (dev->type == KEYBOARD) {
 			if (!activeWindow) dm->DisableDevice(i);
 		}
-		// Keep for cursor hiding consistency.
+		// Keep for cursor hiding consistency, unless unfocused.
+		// miceEnabled tracks state of mouse enable/disable button, not if mouse API is set to disabled.
 		else if (dev->type == MOUSE) {
 			if (!miceEnabled || !activeWindow) dm->DisableDevice(i);
 		}
 		else if (!activeWindow && !config.background) dm->DisableDevice(i);
 		else {
-			int needDevice = 0;
+			int numActiveBindings = 0;
 			for (int pad=0; pad<2; pad++) {
-				needDevice |= (padsEnabled[pad] && dev->pads[pad].numBindings+dev->pads[pad].numFFBindings);
+				if (padsEnabled[pad]) {
+					numActiveBindings += dev->pads[pad].numBindings + dev->pads[pad].numFFBindings;
+				}
 			}
-			if (!needDevice)
+			if (!numActiveBindings)
 				dm->DisableDevice(i);
 		}
 	}
@@ -190,7 +193,6 @@ BOOL WINAPI DllMain(HINSTANCE hInstance, DWORD fdwReason, void* lpvReserved) {
 	}
 	else if (fdwReason == DLL_PROCESS_DETACH) {
 		DeleteCriticalSection(&readInputCriticalSection);
-		activeWindow = 0;
 		while (openCount)
 			PADclose();
 		PADshutdown();
@@ -224,7 +226,7 @@ void AddForce(ButtonSum *sum, u8 cmd, int delta = 255) {
 	else if (cmd < 0x20) {
 		sum->buttons[cmd-0x10-4] += delta;
 	}
-	else if (cmd < 0x24) {
+	else if (cmd < 0x28) {
 		if (cmd == 32) {
 			sum->sticks[2].vert -= delta;
 		}
@@ -254,13 +256,13 @@ void AddForce(ButtonSum *sum, u8 cmd, int delta = 255) {
 	}
 }
 
-void ProcessButtonBinding(Binding *b, ButtonSum *sum, unsigned int value) {
+void ProcessButtonBinding(Binding *b, ButtonSum *sum, int value) {
 	int sensitivity = b->sensitivity;
 	if (sensitivity < 0) {
 		sensitivity = -sensitivity;
 		value = (1<<16)-value;
 	}
-	if (value) {
+	if (value > 0) {
 		AddForce(sum, b->command, (int)((((sensitivity*(255*(__int64)value)) + BASE_SENSITIVITY/2)/BASE_SENSITIVITY + FULLY_DOWN/2)/FULLY_DOWN));
 	}
 }
@@ -302,8 +304,8 @@ void CALLBACK PADupdate(int pad) {
 }
 
 void Update(int pad) {
-	if ((unsigned int)pad > 2 /* || safeShutdown//*/) return;
-	if (summed[pad]) {
+	if ((unsigned int)pad > 2) return;
+	if (summed[pad] > 0) {
 		summed[pad]--;
 		return;
 	}
@@ -410,7 +412,6 @@ void Update(int pad) {
 		}
 
 		if (pads[currentPad].mode == 0x41) {
-		//if (activeConfigs[currentPad] && pads[currentPad].mode == 0x41 && activeConfigs[currentPad]->analogDigitals) {
 			s[currentPad].sticks[0].horiz +=
 				s[currentPad].sticks[1].horiz +
 				s[currentPad].sticks[2].horiz;
@@ -422,12 +423,14 @@ void Update(int pad) {
 		CapSum(&s[currentPad]);
 		if (lockStateChanged[currentPad]) {
 			if (lockStateChanged[currentPad] & LOCK_BOTH) {
-				if (pads[currentPad].lockedState != (LOCK_DIRECTION | LOCK_BUTTONS))
-					// enable the one that's not enabled.
+				if (pads[currentPad].lockedState != (LOCK_DIRECTION | LOCK_BUTTONS)) {
+					// Enable the one that's not enabled.
 					lockStateChanged[currentPad] ^= pads[currentPad].lockedState^(LOCK_DIRECTION | LOCK_BUTTONS);
-				else
+				}
+				else {
 					// Disable both
 					lockStateChanged[currentPad] ^= LOCK_DIRECTION | LOCK_BUTTONS;
+				}
 			}
 			if (lockStateChanged[currentPad] & LOCK_DIRECTION) {
 				if (pads[currentPad].lockedState & LOCK_DIRECTION) {
@@ -560,7 +563,8 @@ s32 CALLBACK PADinit(u32 flags) {
 
 
 // Note to self:  Has to be a define for the sizeof() to work right.
-// Note to self 2: All are the same size, anyways, except for full DS2 response and digital mode response.
+// Note to self 2: All are the same size, anyways, except for longer full DS2 response
+//   and shorter digital mode response.
 #define SET_RESULT(a) { \
 	memcpy(query.response+2, a, sizeof(a)); \
 	query.numBytes = 2+sizeof(a); \
@@ -610,28 +614,20 @@ ExtraWndProcResult HackWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 	switch (uMsg) {
 		case WM_SETTEXT:
 			if (config.saveStateTitle) {
-				wchar_t *text;
+				wchar_t text[200];
 				int len;
 				if (IsWindowUnicode(hWnd)) {
-					text = wcsdup((wchar_t*) lParam);
+					len = wcslen((wchar_t*) lParam);
+					if (len < sizeof(text)/sizeof(wchar_t)) wcscpy(text, (wchar_t*) lParam);
 				}
 				else {
-					char *ascii = (char*) lParam;
-					len = (int)strlen(ascii)+1;
-					text = (wchar_t*) calloc(len, sizeof(wchar_t));
-					MultiByteToWideChar(CP_ACP, 0, ascii, -1, text, len);
+					len = MultiByteToWideChar(CP_ACP, 0, (char*) lParam, -1, text, sizeof(text)/sizeof(wchar_t));
 				}
-				if (!wcsstr(text, L"State")) {
-					int len = wcslen(text);
-					if (len < 150) {
-						wchar_t newTitle[200];
-						wsprintfW(newTitle, L"%s | State %i", text, saveStateIndex);
-						free(text);
-						SetWindowText(hWnd, newTitle);
-						return NO_WND_PROC;
-					}
+				if (len > 0 && len < 150 && !wcsstr(text, L" | State ")) {
+					wsprintfW(text+len, L" | State %i", saveStateIndex);
+					SetWindowText(hWnd, text);
+					return NO_WND_PROC;
 				}
-				free(text);
 			}
 			break;
 		case WM_DEVICECHANGE:
@@ -727,9 +723,14 @@ s32 CALLBACK PADopen(void *pDsp) {
 
 	query.lastByte = 1;
 	query.numBytes = 0;
+	// I'd really rather use this line, but GetActiveWindow() does not have complete specs.
+	// It *seems* to return null when no window from this thread has focus, but the
+	// Microsoft specs seem to imply it returns the window from this thread that would have focus,
+	// if any window did (topmost in this thread?).  Which isn't what I want, and doesn't seem
+	// to be what it actually does.
+	// activeWindow = GetActiveWindow() == hWnd;
 
-	if (GetAncestor(hWnd, GA_ROOT) == GetAncestor(GetForegroundWindow(), GA_ROOT))
-		activeWindow = 1;
+	activeWindow = (GetAncestor(hWnd, GA_ROOT) == GetAncestor(GetForegroundWindow(), GA_ROOT));
 	UpdateEnabledDevices();
 	return 0;
 }
@@ -746,7 +747,7 @@ void CALLBACK PADclose() {
 u8 CALLBACK PADstartPoll(int pad) {
 	DEBUG_NEW_SET();
 	pad--;
-	if (pad == !(!pad)) {
+	if ((unsigned int)pad <= 1) {
 		query.queryDone = 0;
 		query.pad = pad;
 		query.numBytes = 2;
@@ -809,9 +810,6 @@ u8 CALLBACK PADpoll(u8 value) {
 					sum->sticks[0].horiz = -256;
 					// Not sure about this.  Forces wammy to be from 0 to 0x7F.
 					// if (sum->sticks[2].vert > 0) sum->sticks[2].vert = 0;
-				}
-				if (sum->sticks[0].vert) {
-					sum=sum;
 				}
 				b1 -= ((sum->sticks[0].vert<=-128) << 4);
 				b1 -= ((sum->sticks[0].horiz>=128) << 5);
@@ -973,16 +971,14 @@ u8 CALLBACK PADpoll(u8 value) {
 				break;
 			// VIBRATION_TOGGLE
 			case 0x4D:
-				{
-					if (query.lastByte>=3) {
-						if (value == 0) {
-							pad->vibrateI[0] = (u8)query.lastByte;
-						}
-						else if (value == 1) {
-							pad->vibrateI[1] = (u8)query.lastByte;
-						}
-						pad->vibrate[query.lastByte-2] = value;
+				if (query.lastByte>=3) {
+					if (value == 0) {
+						pad->vibrateI[0] = (u8)query.lastByte;
 					}
+					else if (value == 1) {
+						pad->vibrateI[1] = (u8)query.lastByte;
+					}
+					pad->vibrate[query.lastByte-2] = value;
 				}
 				break;
 			case 0x4F:
@@ -1008,8 +1004,6 @@ u8 CALLBACK PADpoll(u8 value) {
 		DEBUG_OUT(query.response[query.lastByte]);
 		return query.response[query.lastByte];
 	}
-	DEBUG_OUT(0);
-	return 0;
 }
 
 // returns: 1 if supports pad1
@@ -1018,8 +1012,6 @@ u8 CALLBACK PADpoll(u8 value) {
 u32 CALLBACK PADquery() {
 	return 3;
 }
-
-// extended funcs
 
 //void CALLBACK PADgsDriverInfo(GSdriverInfo *info) {
 //}
@@ -1041,16 +1033,17 @@ s32 CALLBACK PADtest() {
 	return 0;
 }
 
-DWORD CALLBACK HideWindow(void *) {
-	ShowWindow(hWnd, 0);
-	return 0;
-}
-
-// For escape fillscreen hack.
+// For escape fullscreen hack.  This doesn't work when called from another thread, for some reason.
+// That includes a new thread, independent of GS and PCSX2 thread, so use this to make sure it's
+// called from the right spot.
 ExtraWndProcResult KillFullScreenProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, LRESULT *output) {
-	// Double check to prevent infinite recursion.
-	if (IsWindowMaximized(hWnd)) {
+	// Prevent infinite recursion.  Could also just remove this function from the list,
+	// but CONTINUE_BLISSFULLY_AND_RELEASE_PROC is a safer way to do that.
+	static int inFunction = 0;
+	if (!inFunction) {
+		inFunction = 1;
 		ShowWindow(hWnd, 0);
+		inFunction = 0;
 	}
 	return CONTINUE_BLISSFULLY_AND_RELEASE_PROC;
 }
@@ -1083,12 +1076,11 @@ keyEvent* CALLBACK PADkeyEvent() {
 	}
 
 	if (ev.key == VK_F2 && ev.event == KEYPRESS) {
-		if (shiftDown)
-			saveStateIndex--;
-		else 
-			saveStateIndex++;
+		saveStateIndex += 1 - 2*shiftDown;
 		saveStateIndex = (saveStateIndex+10)%10;
 		if (config.saveStateTitle) {
+			// GSDX only checks its window's message queue at certain points or something, so
+			// have to do this in another thread to prevent lockup.
 			HANDLE hThread = CreateThread(0, 0, RenameWindowThreadProc, 0, 0, 0);
 			if (hThread) CloseHandle(hThread);
 		}
