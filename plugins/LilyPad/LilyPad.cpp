@@ -226,7 +226,7 @@ void AddForce(ButtonSum *sum, u8 cmd, int delta = 255) {
 	else if (cmd < 0x20) {
 		sum->buttons[cmd-0x10-4] += delta;
 	}
-	else if (cmd < 0x28) {
+	else if (cmd < 0x24) {
 		if (cmd == 32) {
 			sum->sticks[2].vert -= delta;
 		}
