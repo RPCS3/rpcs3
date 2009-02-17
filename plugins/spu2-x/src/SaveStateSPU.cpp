@@ -108,7 +108,7 @@ s32 __fastcall FreezeIt( SPU2freezeData& spud )
 		}
 	}
 
-	//printf( " * SPU2 > FreezeSave > Saved %d cache blocks.\n", blksSaved++ );
+	printf( " * SPU2 > FreezeSave > Saved %d cache blocks.\n", blksSaved++ );
 	
 	return 0;
 }
@@ -201,7 +201,7 @@ s32 __fastcall SizeIt()
 	for( int bidx=0; bidx<pcm_BlockCount; bidx++ )
 	{
 		if( pcm_cache_data[bidx].Validated )
-			size += pcm_DecodedSamplesPerBlock*sizeof(PcmCacheEntry);
+			size += sizeof(PcmCacheEntry);
 	}
 	return size;
 }
@@ -213,7 +213,10 @@ using namespace Savestate;
 EXPORT_C_(s32) SPU2freeze(int mode, freezeData *data)
 {
 	if( mode == FREEZE_SIZE )
-		return SizeIt();
+	{
+		data->size = SizeIt();
+		return 0;
+	}
 
 	jASSUME( mode == FREEZE_LOAD || mode == FREEZE_SAVE );
 	jASSUME( data != NULL );

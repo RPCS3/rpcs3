@@ -1051,7 +1051,7 @@
 					>
 				</File>
 				<File
-					RelativePath="..\SaveState.cpp"
+					RelativePath="..\SaveStateSPU.cpp"
 					>
 				</File>
 			</Filter>
