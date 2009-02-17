@@ -103,7 +103,7 @@ extern SessionOverrideFlags g_Session;
 #define DEFAULT_vuOptions	0x01
 //------------ DEFAULT sseMXCSR VALUES!!! ---------------
 #define DEFAULT_sseMXCSR	0x7fc0 //FPU rounding, DaZ, "chop" - Note: Dont enable FtZ by default, it breaks games! E.g. Enthusia (Refraction)
-#define DEFAULT_sseVUMXCSR	0x7f80 //VU rounding, "chop"
+#define DEFAULT_sseVUMXCSR	0x7fc0 //VU rounding, DaZ, "chop"
 
 #define CHECK_FRAMELIMIT (Config.Options&PCSX2_FRAMELIMIT_MASK)
 
