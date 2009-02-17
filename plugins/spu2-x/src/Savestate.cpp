@@ -35,9 +35,9 @@ struct SPU2freezeData
 	s16 OutPos;
 	s16 InputPos;
 	u32 Cycles;
-	s32 uTicks;
 	int PlayMode;
 
+	// Used as a base pointer to a series PcmCache blocks.
 	PcmCacheEntry cacheData;
 };
 
@@ -47,7 +47,7 @@ static const u32 SAVE_ID = 0x1227521;
 // versioning for saves.
 // Increment this when changes to the savestate system are made.
 
-static const u32 SAVE_VERSION = 0x0001;
+static const u32 SAVE_VERSION = 0x0002;
 
 static void wipe_the_cache()
 {
@@ -126,7 +126,7 @@ s32 __fastcall ThawIt( SPU2freezeData& spud )
 		printf("\tAudio may not recover correctly.  Save your game to memorycard, reset,\n\n");
 		printf("  and then continue from there.\n\n");
 
-		disableFreezes=true;
+		disableFreezes = true;
 		resetClock = true;
 
 		// Do *not* reset the cores.

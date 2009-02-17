@@ -7,7 +7,7 @@ rem     DestDir - $(SolutionDir) - Directory of the destination, usually the sam
 rem     DestFile - Base filename of the target/dest, without extension!
 rem     DestExt - Extension of the target/dest!
 
-set pcsxoutdir=%~2\bin\plugins
+set pcsxoutdir=%~2\bin
 set pcsxoutname=%pcsxoutdir%%~3%4
 
 IF NOT EXIST %pcsxoutdir% (

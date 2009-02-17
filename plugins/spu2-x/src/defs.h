@@ -54,7 +54,6 @@ struct V_ADSR
 
 	bool Releasing;		// Ready To Release, triggered by Voice.Stop();
 
-
 public:
 	bool Calculate();
 };
@@ -113,7 +112,7 @@ struct V_Voice
 	s32 SPc;
 
 // Previous sample values - used for interpolation
-// [Air] : Inverted order of these members to match the access order in the
+// Inverted order of these members to match the access order in the
 //   code (might improve cache hits).
 	s32 PV4;
 	s32 PV3;
