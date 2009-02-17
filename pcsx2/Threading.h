@@ -89,6 +89,7 @@ namespace Threading
 		virtual ~Thread();
 		Thread();
 
+		virtual void Start();
 		virtual void Close();
 
 		// Gets the return code of the thread.

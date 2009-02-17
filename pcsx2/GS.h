@@ -195,6 +195,7 @@ public:
 	mtgsThreadObject();
 	virtual ~mtgsThreadObject();
 
+	void Start();
 	void Close();
 	void Reset();
 	void GIFSoftReset( int mask );

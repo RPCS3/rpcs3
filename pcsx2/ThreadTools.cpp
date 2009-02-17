@@ -29,13 +29,17 @@ namespace Threading
 	,	m_terminated( false )
 	,	m_post_event()
 	{
-		if( pthread_create( &m_thread, NULL, _internal_callback, this ) != 0 )
-			throw Exception::ThreadCreationError();
 	}
 
 	Thread::~Thread()
 	{
 		Close();
+	}
+
+	void Thread::Start()
+	{
+		if( pthread_create( &m_thread, NULL, _internal_callback, this ) != 0 )
+			throw Exception::ThreadCreationError();
 	}
 
 	void Thread::Close()

@@ -188,7 +188,8 @@ typedef void (*GIFRegHandler)(const u32* data);
 static GIFRegHandler s_GSHandlers[3] = { RegHandlerSIGNAL, RegHandlerFINISH, RegHandlerLABEL };
 
 mtgsThreadObject::mtgsThreadObject() :
-	m_RingPos( 0 )
+	Thread()
+,	m_RingPos( 0 )
 ,	m_WritePos( 0 )
 
 ,	m_post_InitDone()
@@ -207,12 +208,16 @@ mtgsThreadObject::mtgsThreadObject() :
 ,	m_gsMem( (u8*)m_RingBuffer.GetPtr( m_RingBufferSize ) )
 {
 	memzero_obj( m_path );
+}
+
+void mtgsThreadObject::Start()
+{
+	Thread::Start();
 
 	// Wait for the thread to finish initialization (it runs GSinit, which can take
 	// some time since it's creating a new window and all), and then check for errors.
 
-	m_post_event.Post();	// tell MTGS we're done here
-	m_post_InitDone.Wait();	// and wait for MTGS to be done there!
+	m_post_InitDone.Wait();
 
 	if( m_returncode != 0 )	// means the thread failed to init the GS plugin
 		throw Exception::PluginFailure( "GS", "The GS plugin failed to open/initialize." );
@@ -440,9 +445,6 @@ struct PacketTagType
 int mtgsThreadObject::Callback()
 {
 	Console::WriteLn("MTGS > Thread Started, Opening GS Plugin...");
-
-	// Wait for the MTGS to initialize structures.
-	m_post_event.Wait();
 
 	memcpy_aligned( m_gsMem, PS2MEM_GS, sizeof(m_gsMem) );
 	GSsetBaseMem( m_gsMem );
@@ -1018,6 +1020,7 @@ bool mtgsOpen()
 	try
 	{
 		mtgsThread = new mtgsThreadObject();
+		mtgsThread->Start();
 	}
 	catch( Exception::ThreadCreationError& )
 	{
