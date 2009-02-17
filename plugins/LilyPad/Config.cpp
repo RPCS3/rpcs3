@@ -20,6 +20,8 @@
 
 GeneralConfig config;
 
+u8 ps2e = 0;
+
 HWND hWndProp = 0;
 
 int selected = 0;
@@ -212,31 +214,6 @@ wchar_t *GetCommandStringW(u8 command, int pad) {
 	}
 	return L"";
 }
-
-inline int GetLongType(int type) {
-	const static int types[] = {PSHBTN,TGLBTN,ABSAXIS,RELAXIS,POV};
-	return types[type];
-}
-
-inline int GetShortType(int type) {
-	if (type & POV) {
-		return 4;
-	}
-	else if (type & ABSAXIS) {
-		return 2;
-	}
-	else if (type & RELAXIS) {
-		return 3;
-	}
-	else if (type & PSHBTN) {
-		return 0;
-	}
-	else if (type & TGLBTN) {
-		return 1;
-	}
-	return 0;
-}
-
 
 inline void GetSettingsFileName(wchar_t *out) {
 	wcscpy(out, L"inis\\LilyPad.ini");
@@ -721,6 +698,9 @@ int LoadSettings(int force, wchar_t *file) {
 	}
 
 	config.GSThreadUpdates = GetPrivateProfileBool(L"General Settings", L"GS Thread Updates", 1, file);
+
+	if (!ps2e) config.GSThreadUpdates = 0;
+
 	config.escapeFullscreenHack = GetPrivateProfileBool(L"General Settings", L"Escape Fullscreen Hack", 1, file);
 
 	config.disableScreenSaver = GetPrivateProfileBool(L"General Settings", L"Disable Screen Saver", 0, file);
@@ -1519,6 +1499,9 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 		CheckDlgButton(hWnd, IDC_MOUSE_UNFOCUS, BST_CHECKED * config.mouseUnfocus);
 
 		CheckDlgButton(hWnd, IDC_GS_THREAD_INPUT, BST_CHECKED * config.GSThreadUpdates);
+		if (!ps2e) {
+			EnableWindow(GetDlgItem(hWnd, IDC_GS_THREAD_INPUT), 0);
+		}
 		CheckDlgButton(hWnd, IDC_ESCAPE_FULLSCREEN_HACK, BST_CHECKED * config.escapeFullscreenHack);
 
 		CheckDlgButton(hWnd, IDC_DISABLE_SCREENSAVER, BST_CHECKED * config.disableScreenSaver);

@@ -3,10 +3,6 @@
 // dll size by over 100k while avoiding any dependencies on updated CRT dlls.
 #pragma once
 
-#ifndef _DEBUG
-#define NO_CRT
-#endif
-
 #ifdef NO_CRT
 #define _CRT_ALLOCATION_DEFINED
 #endif

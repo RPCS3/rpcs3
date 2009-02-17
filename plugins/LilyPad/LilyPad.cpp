@@ -126,11 +126,11 @@ public:
 	u8 initialized;
 } pads[2];
 
+// Force value to be from 0 to 255.
 u8 Cap (int i) {
-	// If negative, zero out i.
-	i &= ~(i>>(sizeof(i)*8-1));
-	// if i-255 is negative, return i.  Else return 255.  Slight overkill.
-	return (u8) (255 + ((i-255) & ((i-255) >> (sizeof(int)*8-1))));
+	if (i<0) return 0;
+	if (i>255) return 255;
+	return (u8) i;
 }
 
 
@@ -209,6 +209,7 @@ void AddForce(ButtonSum *sum, u8 cmd, int delta = 255) {
 	if (cmd<0x14) {
 		sum->buttons[cmd-0x10] += delta;
 	}
+	// D-pad.  Command numbering is based on ordering of digital values.  
 	else if (cmd < 0x18) {
 		if (cmd == 0x14) {
 			sum->sticks[0].vert -= delta;
@@ -226,6 +227,7 @@ void AddForce(ButtonSum *sum, u8 cmd, int delta = 255) {
 	else if (cmd < 0x20) {
 		sum->buttons[cmd-0x10-4] += delta;
 	}
+	// Left stick.
 	else if (cmd < 0x24) {
 		if (cmd == 32) {
 			sum->sticks[2].vert -= delta;
@@ -240,6 +242,7 @@ void AddForce(ButtonSum *sum, u8 cmd, int delta = 255) {
 			sum->sticks[2].horiz -= delta;
 		}
 	}
+	// Right stick.
 	else if (cmd < 0x28) {
 		if (cmd == 36) {
 			sum->sticks[1].vert -= delta;
@@ -267,15 +270,16 @@ void ProcessButtonBinding(Binding *b, ButtonSum *sum, int value) {
 	}
 }
 
+// Restricts d-pad/analog stick values to be from -255 to 255 and button values to be from 0 to 255.
+// With D-pad in DS2 native mode, the negative and positive ranges are both independently from 0 to 255,
+// which is why I use 9 bits of all sticks.  For left and right sticks, I have to remove a bit before sending.
 void CapSum(ButtonSum *sum) {
 	int i;
 	for (i=0; i<3; i++) {
-		int a1 = abs(sum->sticks[i].horiz);
-		int a2 = abs(sum->sticks[i].vert);
-		if (a1 < a2) a1 = a2;
-		if (a1 > 255) {
-			sum->sticks[i].horiz = sum->sticks[i].horiz * 255 / a1;
-			sum->sticks[i].vert = sum->sticks[i].vert * 255 / a1;
+		int div = max(abs(sum->sticks[i].horiz), abs(sum->sticks[i].vert));
+		if (div > 255) {
+			sum->sticks[i].horiz = sum->sticks[i].horiz * 255 / div;
+			sum->sticks[i].vert = sum->sticks[i].vert * 255 / div;
 		}
 	}
 	for (i=0; i<12; i++) {
@@ -296,12 +300,6 @@ int lockStateChanged[2] = {0,0};
 #define LOCK_BOTH 1
 
 extern HWND hWndStealing;
-
-void Update(int pad);
-
-void CALLBACK PADupdate(int pad) {
-	if (config.GSThreadUpdates) Update(pad);
-}
 
 void Update(int pad) {
 	if ((unsigned int)pad > 2) return;
@@ -473,6 +471,10 @@ void Update(int pad) {
 	summed[pad]--;
 }
 
+void CALLBACK PADupdate(int pad) {
+	if (config.GSThreadUpdates) Update(pad);
+}
+
 inline void SetVibrate(Pad *pad, int motor, u8 val) {
 	if (val | pad->vibrateVal[motor]) {
 		dm->SetEffect(pad - pads, motor, val);
@@ -481,23 +483,30 @@ inline void SetVibrate(Pad *pad, int motor, u8 val) {
 }
 
 u32 CALLBACK PS2EgetLibType(void) {
+	ps2e = 1;
 	return PS2E_LT_PAD;
 }
 
 #define VERSION ((0<<8) | 9 | (9<<24))
 
 u32 CALLBACK PS2EgetLibVersion2(u32 type) {
+	ps2e = 1;
 	if (type == PS2E_LT_PAD)
 		return (PS2E_PAD_VERSION<<16) | VERSION;
 	return 0;
 }
 
-char* CALLBACK PS2EgetLibName(void) {
+char* CALLBACK PSEgetLibName() {
 #ifdef _DEBUG
 	return "LilyPad Debug";
 #else
 	return "LilyPad";
 #endif
+}
+
+char* CALLBACK PS2EgetLibName(void) {
+	ps2e = 1;
+	return PSEgetLibName();
 }
 
 //void CALLBACK PADgsDriverInfo(GSdriverInfo *info) {
@@ -807,7 +816,7 @@ u8 CALLBACK PADpoll(u8 value) {
 					b2 -= (sum->buttons[i+4]>=128) << i;
 				}
 				if (config.guitar[query.pad] && !config.GH2) {
-					sum->sticks[0].horiz = -256;
+					sum->sticks[0].horiz = -255;
 					// Not sure about this.  Forces wammy to be from 0 to 0x7F.
 					// if (sum->sticks[2].vert > 0) sum->sticks[2].vert = 0;
 				}
@@ -830,12 +839,15 @@ u8 CALLBACK PADpoll(u8 value) {
 						// Good idea?  No clue.
 						//query.response[3] &= pad->mask[0];
 						//query.response[4] &= pad->mask[1];
+
+						// Each value is from -255 to 255, so have to use cap to convert
+						// negative values to 0.
 						query.response[9] = Cap(sum->sticks[0].horiz);
 						query.response[10] = Cap(-sum->sticks[0].horiz);
 						query.response[11] = Cap(-sum->sticks[0].vert);
 						query.response[12] = Cap(sum->sticks[0].vert);
 
-						// No need to cap these.
+						// No need to cap these, already done int CapSum().
 						query.response[13] = (unsigned char) sum->buttons[8];
 						query.response[14] = (unsigned char) sum->buttons[9];
 						query.response[15] = (unsigned char) sum->buttons[10];
@@ -1134,10 +1146,6 @@ u32 CALLBACK PSEgetLibType() {
 
 u32 CALLBACK PSEgetLibVersion() {
 	return (VERSION & 0xFFFFFF);
-}
-
-char* CALLBACK PSEgetLibName() {
-	return PS2EgetLibName();
 }
 
 // Little funkiness to handle rounding floating points to ints without the C runtime.

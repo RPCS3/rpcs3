@@ -246,7 +246,7 @@
 				FavorSizeOrSpeed="1"
 				OmitFramePointers="true"
 				WholeProgramOptimization="false"
-				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;TEST_EXPORTS"
+				PreprocessorDefinitions="NO_CRT;WIN32;NDEBUG;_WINDOWS;_USRDLL;TEST_EXPORTS"
 				StringPooling="true"
 				ExceptionHandling="0"
 				RuntimeLibrary="0"

@@ -154,7 +154,6 @@
 				EnableIntrinsicFunctions="true"
 				FavorSizeOrSpeed="1"
 				OmitFramePointers="true"
-				WholeProgramOptimization="false"
 				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;TEST_EXPORTS"
 				StringPooling="true"
 				ExceptionHandling="0"
@@ -184,16 +183,13 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="ntdll.lib ole32.lib advapi32.lib user32.lib kernel32.lib Comdlg32.lib dinput8.lib dxguid.lib comctl32.lib"
+				AdditionalDependencies="ole32.lib advapi32.lib user32.lib kernel32.lib Comdlg32.lib dinput8.lib dxguid.lib comctl32.lib"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
-				GenerateManifest="false"
-				IgnoreAllDefaultLibraries="true"
 				ModuleDefinitionFile=".\LilyPad.def"
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"
-				LinkTimeCodeGeneration="0"
-				EntryPointSymbol="MyDllMainCRTStartup"
+				EntryPointSymbol=""
 				RandomizedBaseAddress="1"
 				DataExecutionPrevention="0"
 				ImportLibrary=".\Release/LilyPad.lib"
@@ -204,7 +200,6 @@
 			/>
 			<Tool
 				Name="VCManifestTool"
-				EmbedManifest="false"
 			/>
 			<Tool
 				Name="VCXDCMakeTool"

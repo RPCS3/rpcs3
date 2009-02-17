@@ -4,6 +4,8 @@
 #include "InputManager.h"
 #include "PS2Etypes.h"
 
+extern u8 ps2e;
+
 struct GeneralConfig {
 public:
 	u8 disablePad[2];
@@ -44,10 +46,6 @@ extern GeneralConfig config;
 
 void UnloadConfigs();
 
-/*
-inline int GetNeededInput(HWND hWnd, int configMode) {
-	return GetInput(hWnd, flags, configMode);
-}*/
 void AddIgnore(LPARAM k);
 
 int LoadSettings(int force = 0, wchar_t *file = 0);
