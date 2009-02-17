@@ -32,13 +32,13 @@ extern u32 core, voice;
 void InitADSR()                                    // INIT ADSR
 {
 
-	int r=3;
-	int rs=1;
-	int rd=0;
+	/*u64 r=3;
+	u64 rs=1;
+	u64 rd=0;
 
 	memset( PsxRates, 0, sizeof( PsxRates ) );
 
-	for( int i=32; i<160; ++i )
+	for( uint i=32; i<160; ++i )
 	{
 		if( r < 0x3FFFFFFF )
 		{
@@ -50,12 +50,11 @@ void InitADSR()                                    // INIT ADSR
 				rs <<= 1;
 			}
 		}
-		if( r > 0x3FFFFFFF ) r = 0x3FFFFFFF;
 
-		PsxRates[i] = r;
-	}
+		PsxRates[i] = (u32)min( r, 0x3FFFFFFFULL );
+	}*/
 
-	/*for (int i=0; i<(32+128); i++)
+	for (int i=0; i<(32+128); i++)
 	{
 		int shift=(i-32)>>2;
 		s64 rate=(i&3)+4;
@@ -65,7 +64,7 @@ void InitADSR()                                    // INIT ADSR
 			rate <<= shift;
 
 		PsxRates[i] = (int)min( rate, 0x3fffffffLL );
-	}*/
+	}
 }
 
 #define VOL(x) (((s32)x)) //24.8 volume
@@ -102,7 +101,7 @@ bool V_ADSR::Calculate()
 			// Case 1 below is for pseudo exponential below 75%.
 			// Pseudo Exp > 75% and Linear are the same.
 
-			if (AttackMode && (Value>=0x60000000))
+			if( AttackMode && (Value>=0x60000000) )
 				Value += PsxRates[(AttackRate^0x7f)-0x18+32];
 			else
 				Value += PsxRates[(AttackRate^0x7f)-0x10+32];
@@ -122,7 +121,7 @@ bool V_ADSR::Calculate()
 
 			// calculate sustain level as a factor of the ADSR maximum volume.
 
-			s32 suslev = ADSR_MAX_VOL / (0x10 - SustainLevel);
+			s32 suslev = ((0x80000000 / 0x10 ) * (SustainLevel+1)) - 1;
 
 			if( Value <= suslev )
 			{
