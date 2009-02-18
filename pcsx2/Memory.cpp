@@ -853,7 +853,7 @@ void mmap_MarkCountedRamPage(void* ptr,u32 vaddr)
 
 void mmap_ResetBlockTracking()
 {
-	Console::WriteLn("vtlb/mmap: Block Tracking reset...");
+	DevCon::WriteLn("vtlb/mmap: Block Tracking reset...");
 	memzero_obj(psMPWC);
 	for(u32 i=0;i<(Ps2MemSize::Base>>12);i++)
 	{

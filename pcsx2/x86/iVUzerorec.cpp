@@ -1150,7 +1150,7 @@ static VuBaseBlock* SuperVUBuildBlocks(VuBaseBlock* parent, u32 startpc, const V
                     ((ppprevinst->regs[0].VIwrite & pinst->regs[0].VIread) & 0xffff) == ((ppprevinst->regs[0].VIwrite & pprevinst->regs[0].VIread) & 0xffff) &&
                     !(ppprevinst->regs[0].VIread&((1<<REG_STATUS_FLAG)|(1<<REG_MAC_FLAG)|(1<<REG_CLIP_FLAG)))) {
                 
-						Console::WriteLn("supervu: 2 cycle branch delay detected: %x %x", params pc, s_pFnHeader->startpc);
+						DevCon::WriteLn("supervu: 2 cycle branch delay detected: %x %x", params pc, s_pFnHeader->startpc);
 
                     // ignore if prev instruction is ILW or ILWR (xenosaga 2)
                     lowercode = *(int*)&VU->Micro[pc-24]; 
