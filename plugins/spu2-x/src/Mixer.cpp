@@ -688,8 +688,8 @@ static __forceinline StereoOut32 MixVoice( V_Core& thiscore, V_Voice& vc )
 
 		// Write-back of raw voice data (post ADSR applied)
 
-		if (voice==1)      spu2M_WriteFast( 0x400 + (core<<12) + OutPos, vc.OutX );
-		else if (voice==3) spu2M_WriteFast( 0x600 + (core<<12) + OutPos, vc.OutX );
+		if (voice==1)      spu2M_WriteFast( 0x400 + (core<<12) + OutPos, Value );
+		else if (voice==3) spu2M_WriteFast( 0x600 + (core<<12) + OutPos, Value );
 
 		return ApplyVolume( StereoOut32( Value, Value ), vc.Volume );
 	}

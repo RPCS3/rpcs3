@@ -47,7 +47,7 @@ static const u32 SAVE_ID = 0x1227521;
 // versioning for saves.
 // Increment this when changes to the savestate system are made.
 
-static const u32 SAVE_VERSION = 0x0002;
+static const u32 SAVE_VERSION = 0x0003;
 
 static void wipe_the_cache()
 {
@@ -70,7 +70,6 @@ s32 __fastcall FreezeIt( SPU2freezeData& spud )
 		strcpy( (char*)&spud, "invalid" );
 		return 0;
 	}
-
 
 	spud.id		 = SAVE_ID;
 	spud.version = SAVE_VERSION;

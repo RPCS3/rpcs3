@@ -40,12 +40,6 @@ static __forceinline s32 RevbGetIndexer( V_Core& thiscore, s32 offset )
 	return pos;
 } 
 
-/*void LowPass(s32& VL, s32& VR)
-{
-	VL = (s32)( lowpass_left.sample(VL/65536.0) * 65536.0 );
-	VR = (s32)( lowpass_right.sample(VR/65536.0) * 65536.0 );
-}*/
-
 void Reverb_AdvanceBuffer( V_Core& thiscore )
 {
 	if( (Cycles & 1) && (thiscore.EffectsBufferSize > 0) )
@@ -53,7 +47,7 @@ void Reverb_AdvanceBuffer( V_Core& thiscore )
 		//thiscore.ReverbX = RevbGetIndexer( thiscore, 1 );
 		thiscore.ReverbX += 1;
 
-		if( thiscore.ReverbX >= thiscore.EffectsBufferSize ) thiscore.ReverbX = 0;
+		if( thiscore.ReverbX >= (u32)thiscore.EffectsBufferSize ) thiscore.ReverbX = 0;
 
 		//thiscore.ReverbX += 1;
 		//if(thiscore.ReverbX >= (u32)thiscore.EffectsBufferSize )
@@ -71,7 +65,14 @@ StereoOut32 DoReverb( V_Core& thiscore, const StereoOut32& Input )
 	if( (Cycles&1)==0 )
 	{
 		StereoOut32 retval( thiscore.LastEffect );
-		thiscore.LastEffect = Input/2;
+		
+		// Make sure and pass input through the LPF.  The result can be discarded.
+		// This gives the LPF a better sampling from which to kill offending frequencies.
+
+		lowpass_left.sample( Input.Left / 32768.0 );
+		lowpass_right.sample( Input.Right / 32768.0 );
+		
+		//thiscore.LastEffect = Input;
 		return retval;
 	}
 	else  
@@ -83,7 +84,12 @@ StereoOut32 DoReverb( V_Core& thiscore, const StereoOut32& Input )
 		{
 			// StartA is past EndA, so effects are disabled.
 			//ConLog( " * SPU2: Effects disabled due to leapfrogged EffectsStart." );
-			return Input;
+			
+			// Should we return zero here, or the input sample?
+			// Because reverb gets an *2 mul, returning input seems dangerous, so I opt for silence.
+			
+			//return Input;
+			return StereoOut32::Empty;
 		}
 
 		// Advance the current reverb buffer pointer, and cache the read/write addresses we'll be
@@ -128,24 +134,39 @@ StereoOut32 DoReverb( V_Core& thiscore, const StereoOut32& Input )
 		//    End Buffer Pointers, Begin Reverb!
 		// -----------------------------------------
 
-		StereoOut32 INPUT_SAMPLE( thiscore.LastEffect + Input );
+		//StereoOut32 INPUT_SAMPLE( thiscore.LastEffect + Input );
+
+		// Note: LowPass on the input!  Very important.  Some games like DDS get terrible feedback otherwise.
+		// Decisions, Decisions!  Should we mix in the 22khz sample skipped, or not?
+		// First one mixes in the 22hkz sample.  Second one does not.
+
+		/*StereoOut32 INPUT_SAMPLE(
+			(s32)(lowpass_left.sample( (Input.Left+thiscore.LastEffect.Left) / 32768.0 ) * 32768.0),
+			(s32)(lowpass_right.sample( (Input.Right+thiscore.LastEffect.Right) / 32768.0 ) * 32768.0)
+		);*/
+
+		StereoOut32 INPUT_SAMPLE(
+			(s32)(lowpass_left.sample( Input.Left / 32768.0 ) * 32768.0),
+			(s32)(lowpass_right.sample( Input.Right / 32768.0 ) * 32768.0)
+		);
 		
 		const s32 IIR_INPUT_A0 = ((_spu2mem[src_a0] * thiscore.Revb.IIR_COEF) + (INPUT_SAMPLE.Left * thiscore.Revb.IN_COEF_L))>>16;
 		const s32 IIR_INPUT_A1 = ((_spu2mem[src_a1] * thiscore.Revb.IIR_COEF) + (INPUT_SAMPLE.Right * thiscore.Revb.IN_COEF_R))>>16;
 		const s32 IIR_INPUT_B0 = ((_spu2mem[src_b0] * thiscore.Revb.IIR_COEF) + (INPUT_SAMPLE.Left * thiscore.Revb.IN_COEF_L))>>16;
 		const s32 IIR_INPUT_B1 = ((_spu2mem[src_b1] * thiscore.Revb.IIR_COEF) + (INPUT_SAMPLE.Right * thiscore.Revb.IN_COEF_R))>>16;
 
-		/*const s32 IIR_A0 = (IIR_INPUT_A0 * thiscore.Revb.IIR_ALPHA) + (_spu2mem[dest_a0] * (0x7fff - thiscore.Revb.IIR_ALPHA));
+		const s32 IIR_A0 = (IIR_INPUT_A0 * thiscore.Revb.IIR_ALPHA) + (_spu2mem[dest_a0] * (0x7fff - thiscore.Revb.IIR_ALPHA));
 		const s32 IIR_A1 = (IIR_INPUT_A1 * thiscore.Revb.IIR_ALPHA) + (_spu2mem[dest_a1] * (0x7fff - thiscore.Revb.IIR_ALPHA));
 		const s32 IIR_B0 = (IIR_INPUT_B0 * thiscore.Revb.IIR_ALPHA) + (_spu2mem[dest_b0] * (0x7fff - thiscore.Revb.IIR_ALPHA));
 		const s32 IIR_B1 = (IIR_INPUT_B1 * thiscore.Revb.IIR_ALPHA) + (_spu2mem[dest_b1] * (0x7fff - thiscore.Revb.IIR_ALPHA));
 		_spu2mem[dest2_a0] = clamp_mix( IIR_A0 >> 16 );
 		_spu2mem[dest2_a1] = clamp_mix( IIR_A1 >> 16 );
 		_spu2mem[dest2_b0] = clamp_mix( IIR_B0 >> 16 );
-		_spu2mem[dest2_b1] = clamp_mix( IIR_B1 >> 16 );*/
+		_spu2mem[dest2_b1] = clamp_mix( IIR_B1 >> 16 );
 
 		// Faster single-mul approach to interpolation:
-		const s32 IIR_A0 = IIR_INPUT_A0 + (((_spu2mem[dest_a0]-IIR_INPUT_A0) * thiscore.Revb.IIR_ALPHA)>>16);
+		// (doesn't work yet -- breaks Digital Devil Saga badly)
+		/*const s32 IIR_A0 = IIR_INPUT_A0 + (((_spu2mem[dest_a0]-IIR_INPUT_A0) * thiscore.Revb.IIR_ALPHA)>>16);
 		const s32 IIR_A1 = IIR_INPUT_A1 + (((_spu2mem[dest_a1]-IIR_INPUT_A1) * thiscore.Revb.IIR_ALPHA)>>16);
 		const s32 IIR_B0 = IIR_INPUT_B0 + (((_spu2mem[dest_b0]-IIR_INPUT_B0) * thiscore.Revb.IIR_ALPHA)>>16);
 		const s32 IIR_B1 = IIR_INPUT_B1 + (((_spu2mem[dest_b1]-IIR_INPUT_B1) * thiscore.Revb.IIR_ALPHA)>>16);
@@ -153,7 +174,7 @@ StereoOut32 DoReverb( V_Core& thiscore, const StereoOut32& Input )
 		_spu2mem[dest2_a0] = clamp_mix( IIR_A0 );
 		_spu2mem[dest2_a1] = clamp_mix( IIR_A1 );
 		_spu2mem[dest2_b0] = clamp_mix( IIR_B0 );
-		_spu2mem[dest2_b1] = clamp_mix( IIR_B1 );
+		_spu2mem[dest2_b1] = clamp_mix( IIR_B1 );*/
 
 		const s32 ACC0 =
 			((_spu2mem[acc_src_a0] * thiscore.Revb.ACC_COEF_A)) +
@@ -170,20 +191,21 @@ StereoOut32 DoReverb( V_Core& thiscore, const StereoOut32& Input )
 		const s32 FB_A0 = (_spu2mem[fb_src_a0] * thiscore.Revb.FB_ALPHA);
 		const s32 FB_A1 = (_spu2mem[fb_src_a1] * thiscore.Revb.FB_ALPHA);
 
-		const s32 fb_xor_a0 = (_spu2mem[fb_src_a0] * ( thiscore.Revb.FB_ALPHA ^ 0x8000 ))>>2;
-		const s32 fb_xor_a1 = (_spu2mem[fb_src_a1] * ( thiscore.Revb.FB_ALPHA ^ 0x8000 ))>>2;
+		const s32 fb_xor_a0 = _spu2mem[fb_src_a0] * ( thiscore.Revb.FB_ALPHA ^ 0x8000 );
+		const s32 fb_xor_a1 = _spu2mem[fb_src_a1] * ( thiscore.Revb.FB_ALPHA ^ 0x8000 );
 
 		_spu2mem[mix_dest_a0] = clamp_mix( (ACC0 - FB_A0) >> 16 );
 		_spu2mem[mix_dest_a1] = clamp_mix( (ACC1 - FB_A1) >> 16 );
-		_spu2mem[mix_dest_b0] = clamp_mix( (MulShr32(thiscore.Revb.FB_ALPHA<<14, ACC0) - fb_xor_a0 - ((_spu2mem[fb_src_b0] * thiscore.Revb.FB_X)>>2)) >> 14 );
-		_spu2mem[mix_dest_b1] = clamp_mix( (MulShr32(thiscore.Revb.FB_ALPHA<<14, ACC1) - fb_xor_a1 - ((_spu2mem[fb_src_b1] * thiscore.Revb.FB_X)>>2)) >> 14 );
+		_spu2mem[mix_dest_b0] = clamp_mix( (MulShr32(thiscore.Revb.FB_ALPHA<<16, ACC0) - fb_xor_a0 - (_spu2mem[fb_src_b0] * thiscore.Revb.FB_X)) >> 16 );
+		_spu2mem[mix_dest_b1] = clamp_mix( (MulShr32(thiscore.Revb.FB_ALPHA<<16, ACC1) - fb_xor_a1 - (_spu2mem[fb_src_b1] * thiscore.Revb.FB_X)) >> 16 );
 
 		thiscore.LastEffect.Left  = _spu2mem[mix_dest_a0] + _spu2mem[mix_dest_b0];
 		thiscore.LastEffect.Right = _spu2mem[mix_dest_a1] + _spu2mem[mix_dest_b1];
+
 		clamp_mix( thiscore.LastEffect );
 		
-		thiscore.LastEffect.Left = (s32)(lowpass_left.sample( thiscore.LastEffect.Left / 32768.0 ) * 32768.0);
-		thiscore.LastEffect.Right = (s32)(lowpass_right.sample( thiscore.LastEffect.Right / 32768.0 ) * 32768.0);
+		//thiscore.LastEffect.Left = (s32)(lowpass_left.sample( thiscore.LastEffect.Left / 32768.0 ) * 32768.0);
+		//thiscore.LastEffect.Right = (s32)(lowpass_right.sample( thiscore.LastEffect.Right / 32768.0 ) * 32768.0);
 
 		return thiscore.LastEffect;
 	} 
