@@ -81,10 +81,56 @@ using namespace std;
 #define B_RETURNX(x, rtype)			{ if( !(x) ) { ERROR_LOG("%s:%d: %s\n", __FILE__, (u32)__LINE__, #x); return (##rtype); } }
 #define B_G(x, action)			{ if( !(x) ) { ERROR_LOG("%s:%d: %s\n", __FILE__, (u32)__LINE__, #x); action; } }
 
-#define GL_REPORT_ERROR() { err = glGetError(); if( err != GL_NO_ERROR ) { ERROR_LOG("%s:%d: gl error 0x%x\n", __FILE__, (int)__LINE__, err); ZeroGS::HandleGLError(); } }
 
-#ifdef _DEBUG
-#define GL_REPORT_ERRORD() { GLenum err = glGetError(); if( err != GL_NO_ERROR ) { ERROR_LOG("%s:%d: gl error 0x%x\n", __FILE__, (int)__LINE__, err); ZeroGS::HandleGLError(); } }
+static __forceinline char *error_name(int err)
+{
+	switch (err)
+	{
+		case GL_NO_ERROR:
+			return "GL_NO_ERROR";
+		case GL_INVALID_ENUM:
+			return "GL_INVALID_ENUM";
+		case GL_INVALID_VALUE:
+			return "GL_INVALID_VALUE";
+		case GL_INVALID_OPERATION:
+			return "GL_INVALID_OPERATION";
+		case GL_STACK_OVERFLOW:
+			return "GL_STACK_OVERFLOW";
+		case GL_STACK_UNDERFLOW:
+			return "GL_STACK_UNDERFLOW";
+		case GL_OUT_OF_MEMORY:
+			return "GL_OUT_OF_MEMORY";
+		case GL_TABLE_TOO_LARGE:
+			return "GL_TABLE_TOO_LARGE";
+		default:
+		{
+			char *str;
+			sprintf(str, "Unknown error(0x%x)", err);
+			return str;
+		}
+	}
+}
+
+#define GL_REPORT_ERROR() \
+{ \
+	err = glGetError(); \
+	if( err != GL_NO_ERROR ) \
+	{ \
+		ERROR_LOG("%s:%d: gl error %s\n", __FILE__, (int)__LINE__, error_name(err)); \
+		ZeroGS::HandleGLError(); \
+	} \
+}
+ 
+ #ifdef _DEBUG
+#define GL_REPORT_ERRORD() \
+{ \
+	GLenum err = glGetError(); \
+	if( err != GL_NO_ERROR ) \
+	{ \
+		ERROR_LOG("%s:%d: gl error %s\n", __FILE__, (int)__LINE__, error_name(err)); \
+		ZeroGS::HandleGLError(); \
+	} \
+}
 #else
 #define GL_REPORT_ERRORD()
 #endif

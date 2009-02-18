@@ -4964,15 +4964,6 @@ Version x.x</property>
 		      <signal name="activate" handler="OnEmu_Reset"/>
 		    </widget>
 		  </child>
-
-		  <child>
-		    <widget class="GtkMenuItem" id="GtkMenuItem_Arguments">
-		      <property name="visible">True</property>
-		      <property name="label" translatable="yes">_Arguments</property>
-		      <property name="use_underline">True</property>
-		      <signal name="activate" handler="OnEmu_Arguments"/>
-		    </widget>
-		  </child>
 		</widget>
 	      </child>
 	    </widget>
@@ -5180,6 +5171,16 @@ Version x.x</property>
 		      <signal name="activate" handler="on_enable_patches1_activate"/>
 		    </widget>
 		  </child>
+
+		  <child>
+		    <widget class="GtkCheckMenuItem" id="print_cdvd_info1">
+		      <property name="visible">True</property>
+		      <property name="label" translatable="yes">Print CDVD Info</property>
+		      <property name="use_underline">True</property>
+		      <property name="active">False</property>
+		      <signal name="activate" handler="OnPrintCdvdInfo" last_modification_time="Tue, 17 Feb 2009 13:26:52 GMT"/>
+		    </widget>
+		  </child>
 		</widget>
 	      </child>
 	    </widget>
@@ -5209,6 +5210,21 @@ Version x.x</property>
 		      <property name="label" translatable="yes">Logging</property>
 		      <property name="use_underline">True</property>
 		      <signal name="activate" handler="OnDebug_Logging"/>
+		    </widget>
+		  </child>
+
+		  <child>
+		    <widget class="GtkSeparatorMenuItem" id="separator8">
+		      <property name="visible">True</property>
+		    </widget>
+		  </child>
+
+		  <child>
+		    <widget class="GtkMenuItem" id="GtkMenuItem_Arguments">
+		      <property name="visible">True</property>
+		      <property name="label" translatable="yes">_Arguments</property>
+		      <property name="use_underline">True</property>
+		      <signal name="activate" handler="OnEmu_Arguments"/>
 		    </widget>
 		  </child>
 		</widget>

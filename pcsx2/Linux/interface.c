@@ -2420,7 +2420,6 @@ create_MainWindow (void)
   GtkWidget *GtkMenuItem_Emulator_menu;
   GtkWidget *GtkMenuItem_Run;
   GtkWidget *GtkMenuItem_Reset;
-  GtkWidget *GtkMenuItem_Arguments;
   GtkWidget *GtkMenuItem_Configuration;
   GtkWidget *GtkMenuItem_Configuration_menu;
   GtkWidget *GtkMenuItem_PluginsBios;
@@ -2446,10 +2445,13 @@ create_MainWindow (void)
   GtkWidget *separator7;
   GtkWidget *enable_console1;
   GtkWidget *enable_patches1;
+  GtkWidget *print_cdvd_info1;
   GtkWidget *GtkMenuItem_Debug;
   GtkWidget *GtkMenuItem_Debug_menu;
   GtkWidget *GtkMenuItem_EnterDebugger;
   GtkWidget *GtkMenuItem_Logging;
+  GtkWidget *separator8;
+  GtkWidget *GtkMenuItem_Arguments;
   GtkWidget *GtkMenuItem_Help;
   GtkWidget *GtkMenuItem_Help_menu;
   GtkWidget *GtkMenuItem_About;
@@ -2576,10 +2578,6 @@ create_MainWindow (void)
   gtk_widget_show (GtkMenuItem_Reset);
   gtk_container_add (GTK_CONTAINER (GtkMenuItem_Emulator_menu), GtkMenuItem_Reset);
 
-  GtkMenuItem_Arguments = gtk_menu_item_new_with_mnemonic (_("_Arguments"));
-  gtk_widget_show (GtkMenuItem_Arguments);
-  gtk_container_add (GTK_CONTAINER (GtkMenuItem_Emulator_menu), GtkMenuItem_Arguments);
-
   GtkMenuItem_Configuration = gtk_menu_item_new_with_mnemonic (_("_Config"));
   gtk_widget_show (GtkMenuItem_Configuration);
   gtk_container_add (GTK_CONTAINER (GtkMenuBar_Menu), GtkMenuItem_Configuration);
@@ -2681,6 +2679,10 @@ create_MainWindow (void)
   gtk_widget_show (enable_patches1);
   gtk_container_add (GTK_CONTAINER (misc1_menu), enable_patches1);
 
+  print_cdvd_info1 = gtk_check_menu_item_new_with_mnemonic (_("Print CDVD Info"));
+  gtk_widget_show (print_cdvd_info1);
+  gtk_container_add (GTK_CONTAINER (misc1_menu), print_cdvd_info1);
+
   GtkMenuItem_Debug = gtk_menu_item_new_with_mnemonic (_("_Debug"));
   gtk_widget_show (GtkMenuItem_Debug);
   gtk_container_add (GTK_CONTAINER (GtkMenuBar_Menu), GtkMenuItem_Debug);
@@ -2695,6 +2697,15 @@ create_MainWindow (void)
   GtkMenuItem_Logging = gtk_menu_item_new_with_mnemonic (_("Logging"));
   gtk_widget_show (GtkMenuItem_Logging);
   gtk_container_add (GTK_CONTAINER (GtkMenuItem_Debug_menu), GtkMenuItem_Logging);
+
+  separator8 = gtk_separator_menu_item_new ();
+  gtk_widget_show (separator8);
+  gtk_container_add (GTK_CONTAINER (GtkMenuItem_Debug_menu), separator8);
+  gtk_widget_set_sensitive (separator8, FALSE);
+
+  GtkMenuItem_Arguments = gtk_menu_item_new_with_mnemonic (_("_Arguments"));
+  gtk_widget_show (GtkMenuItem_Arguments);
+  gtk_container_add (GTK_CONTAINER (GtkMenuItem_Debug_menu), GtkMenuItem_Arguments);
 
   GtkMenuItem_Help = gtk_menu_item_new_with_mnemonic (_("_Help"));
   gtk_widget_show (GtkMenuItem_Help);
@@ -2772,9 +2783,6 @@ create_MainWindow (void)
   g_signal_connect ((gpointer) GtkMenuItem_Reset, "activate",
                     G_CALLBACK (OnEmu_Reset),
                     NULL);
-  g_signal_connect ((gpointer) GtkMenuItem_Arguments, "activate",
-                    G_CALLBACK (OnEmu_Arguments),
-                    NULL);
   g_signal_connect ((gpointer) GtkMenuItem_PluginsBios, "activate",
                     G_CALLBACK (OnConf_Conf),
                     NULL);
@@ -2826,11 +2834,17 @@ create_MainWindow (void)
   g_signal_connect ((gpointer) enable_patches1, "activate",
                     G_CALLBACK (on_enable_patches1_activate),
                     NULL);
+  g_signal_connect ((gpointer) print_cdvd_info1, "activate",
+                    G_CALLBACK (OnPrintCdvdInfo),
+                    NULL);
   g_signal_connect ((gpointer) GtkMenuItem_EnterDebugger, "activate",
                     G_CALLBACK (OnDebug_Debugger),
                     NULL);
   g_signal_connect ((gpointer) GtkMenuItem_Logging, "activate",
                     G_CALLBACK (OnDebug_Logging),
+                    NULL);
+  g_signal_connect ((gpointer) GtkMenuItem_Arguments, "activate",
+                    G_CALLBACK (OnEmu_Arguments),
                     NULL);
   g_signal_connect ((gpointer) GtkMenuItem_About, "activate",
                     G_CALLBACK (OnHelp_About),
@@ -2868,7 +2882,6 @@ create_MainWindow (void)
   GLADE_HOOKUP_OBJECT (MainWindow, GtkMenuItem_Emulator_menu, "GtkMenuItem_Emulator_menu");
   GLADE_HOOKUP_OBJECT (MainWindow, GtkMenuItem_Run, "GtkMenuItem_Run");
   GLADE_HOOKUP_OBJECT (MainWindow, GtkMenuItem_Reset, "GtkMenuItem_Reset");
-  GLADE_HOOKUP_OBJECT (MainWindow, GtkMenuItem_Arguments, "GtkMenuItem_Arguments");
   GLADE_HOOKUP_OBJECT (MainWindow, GtkMenuItem_Configuration, "GtkMenuItem_Configuration");
   GLADE_HOOKUP_OBJECT (MainWindow, GtkMenuItem_Configuration_menu, "GtkMenuItem_Configuration_menu");
   GLADE_HOOKUP_OBJECT (MainWindow, GtkMenuItem_PluginsBios, "GtkMenuItem_PluginsBios");
@@ -2894,10 +2907,13 @@ create_MainWindow (void)
   GLADE_HOOKUP_OBJECT (MainWindow, separator7, "separator7");
   GLADE_HOOKUP_OBJECT (MainWindow, enable_console1, "enable_console1");
   GLADE_HOOKUP_OBJECT (MainWindow, enable_patches1, "enable_patches1");
+  GLADE_HOOKUP_OBJECT (MainWindow, print_cdvd_info1, "print_cdvd_info1");
   GLADE_HOOKUP_OBJECT (MainWindow, GtkMenuItem_Debug, "GtkMenuItem_Debug");
   GLADE_HOOKUP_OBJECT (MainWindow, GtkMenuItem_Debug_menu, "GtkMenuItem_Debug_menu");
   GLADE_HOOKUP_OBJECT (MainWindow, GtkMenuItem_EnterDebugger, "GtkMenuItem_EnterDebugger");
   GLADE_HOOKUP_OBJECT (MainWindow, GtkMenuItem_Logging, "GtkMenuItem_Logging");
+  GLADE_HOOKUP_OBJECT (MainWindow, separator8, "separator8");
+  GLADE_HOOKUP_OBJECT (MainWindow, GtkMenuItem_Arguments, "GtkMenuItem_Arguments");
   GLADE_HOOKUP_OBJECT (MainWindow, GtkMenuItem_Help, "GtkMenuItem_Help");
   GLADE_HOOKUP_OBJECT (MainWindow, GtkMenuItem_Help_menu, "GtkMenuItem_Help_menu");
   GLADE_HOOKUP_OBJECT (MainWindow, GtkMenuItem_About, "GtkMenuItem_About");

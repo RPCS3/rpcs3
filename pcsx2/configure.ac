@@ -36,8 +36,10 @@ DEBUG_FLAGS=" -O0 -g "
 fi
 
 WARNING_FLAGS="-Wall -Wno-format -Wno-unused-value"
-#Pcsx2 now crashes if --fomit-frame-pointer is enabled and MTGS is off 
-NORMAL_FLAGS=" -pipe -O3 -fno-omit-frame-pointer -msse "
+NORMAL_FLAGS=" -pipe -msse -O3 "
+# These optimizations seem to cause issues with GCC 4.3.3, so we'll turn them off.
+NORMAL_FLAGS+=" -fno-guess-branch-probability -fno-dse -fno-tree-dse "
+
 DEBUG_FLAGS+=" -g -msse ${WARNING_FLAGS} "
 
 dnl Check for debug build
@@ -47,7 +49,7 @@ AC_ARG_ENABLE(debug, AC_HELP_STRING([--enable-debug], [debug build]),
 if test "x$debug" == xyes
 then
  AC_DEFINE(_DEBUG,1,[_DEBUG])
- CFLAGS+=" ${DEBUG_FLAGS}  -fpermissive -Xlinker -zmuldefs "
+ CFLAGS+=" ${DEBUG_FLAGS} -Xlinker -zmuldefs "
  CXXFLAGS+=" ${DEBUG_FLAGS} -fpermissive -Xlinker -zmuldefs "
  CCASFLAGS+=" -D_DEBUG ${DEBUG_FLAGS} "
  MYOBJDIR="Debug"

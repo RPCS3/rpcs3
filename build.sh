@@ -8,15 +8,17 @@
 #Normal
 export PCSX2OPTIONS="--enable-sse3 --enable-sse4 --prefix `pwd`"
 
-
 #Optimized, but a devbuild
 #export PCSX2OPTIONS="--enable-sse3 --enable-sse4 --enable-devbuild --prefix `pwd`"
 
 #Debug / Devbuild version
 #export PCSX2OPTIONS="--enable-debug --enable-devbuild --enable-sse3 --prefix `pwd`"
 
-# Make sure we have plugins, and bring the normal plugins in.
-#sh fetch.sh
+#ZeroGS Normal mode
+export ZEROGSOPTIONS="--enable-sse2"
+
+#ZeroGS Debug mode
+#export ZEROGSOPTIONS="--enable-debug --enable-devbuild --enable-sse2"
 
 option=$@
 export PCSX2PLUGINS="`pwd`/bin/plugins"

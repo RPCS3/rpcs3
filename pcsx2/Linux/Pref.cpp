@@ -72,6 +72,7 @@ int LoadConfig()
 	Config.Lang[0] = 0;
 	GetValue("Lang", Config.Lang);
 	GetValuel("Ps2Out",     Config.PsxOut);
+	GetValuel("cdvdPrint",     Config.cdvdPrint);
 	GetValuel("ThPriority", Config.ThPriority);
 	GetValue("PluginsDir", Config.PluginsDir);
 	GetValue("BiosDir",    Config.BiosDir);
@@ -137,6 +138,7 @@ void SaveConfig()
 	SetValue("PluginsDir", Config.PluginsDir);
 	SetValue("BiosDir",    Config.BiosDir);
 	SetValuel("Ps2Out",     Config.PsxOut);
+	SetValuel("cdvdPrint",     Config.cdvdPrint);
 	SetValuel("ThPriority", Config.ThPriority);
 	SetValue("Mcd1", Config.Mcd1);
 	SetValue("Mcd2", Config.Mcd2);

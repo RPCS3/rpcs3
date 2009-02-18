@@ -64,11 +64,11 @@ int main(int argc, char *argv[])
 #endif
 
 	// make gtk thread safe if using MTGS
-	if (CHECK_MULTIGS)
-	{
+	/*if (CHECK_MULTIGS)
+	{*/
 		g_thread_init(NULL);
 		gdk_threads_init();
-	}
+	/*}*/
 
 	if (UseGui)
 	{
@@ -256,14 +256,16 @@ void StartGui()
 	// check the appropriate menu items
 	gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(lookup_widget(MainWindow, "enable_console1")), Config.PsxOut);
 	gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(lookup_widget(MainWindow, "enable_patches1")), Config.Patch);
+	gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(lookup_widget(MainWindow, "print_cdvd_info1")), Config.cdvdPrint);
 
 	// disable anything not implemented or not working properly.
 	gtk_widget_set_sensitive(GTK_WIDGET(lookup_widget(MainWindow, "patch_browser1")), FALSE);
 	gtk_widget_set_sensitive(GTK_WIDGET(lookup_widget(MainWindow, "patch_finder2")), FALSE);
 	gtk_widget_set_sensitive(GTK_WIDGET(lookup_widget(MainWindow, "GtkMenuItem_EnterDebugger")), FALSE);
-	//gtk_widget_set_sensitive(GTK_WIDGET(lookup_widget(MainWindow, "GtkMenuItem_Memcards")), FALSE);
 #ifndef PCSX2_DEVBUILD
-	gtk_widget_set_sensitive(GTK_WIDGET(lookup_widget(MainWindow, "GtkMenuItem_Logging")), FALSE);
+	/*gtk_widget_set_sensitive(GTK_WIDGET(lookup_widget(MainWindow, "GtkMenuItem_Logging")), FALSE);
+	gtk_widget_set_sensitive(GTK_WIDGET(lookup_widget(MainWindow, "GtkMenuItem_Arguments")), FALSE);*/
+	gtk_widget_destroy(lookup_widget(MainWindow, "GtkMenuItem_Debug"));
 #endif
 	
 	CheckSlots();
@@ -542,3 +544,8 @@ void on_enable_patches1_activate(GtkMenuItem *menuitem, gpointer user_data)
 	SaveConfig();
 }
 
+void OnPrintCdvdInfo(GtkMenuItem *menuitem, gpointer user_data)
+{
+	Config.cdvdPrint = (int)gtk_check_menu_item_get_active((GtkCheckMenuItem*)menuitem);
+	SaveConfig();
+}

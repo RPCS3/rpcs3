@@ -267,10 +267,6 @@ OnEmu_Reset                            (GtkMenuItem     *menuitem,
                                         gpointer         user_data);
 
 void
-OnEmu_Arguments                        (GtkMenuItem     *menuitem,
-                                        gpointer         user_data);
-
-void
 OnConf_Conf                            (GtkMenuItem     *menuitem,
                                         gpointer         user_data);
 
@@ -339,11 +335,19 @@ on_enable_patches1_activate            (GtkMenuItem     *menuitem,
                                         gpointer         user_data);
 
 void
+OnPrintCdvdInfo                        (GtkMenuItem     *menuitem,
+                                        gpointer         user_data);
+
+void
 OnDebug_Debugger                       (GtkMenuItem     *menuitem,
                                         gpointer         user_data);
 
 void
 OnDebug_Logging                        (GtkMenuItem     *menuitem,
+                                        gpointer         user_data);
+
+void
+OnEmu_Arguments                        (GtkMenuItem     *menuitem,
                                         gpointer         user_data);
 
 void

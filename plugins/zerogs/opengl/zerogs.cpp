@@ -5010,6 +5010,7 @@ void ZeroGS::SetAlphaVariables(const alphaInfo& a)
 	s_srcalpha = GL_ONE;
 	s_dstalpha = GL_ZERO;
 	s_alphaeq = GL_FUNC_ADD;
+	s_rgbeq = GL_FUNC_ADD;
 
 	s_alphaInfo = a;
 

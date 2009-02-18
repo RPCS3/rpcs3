@@ -59,7 +59,7 @@ void OnCpu_Ok(GtkButton *button, gpointer user_data)
 			if (CHECK_MULTIGS)
 				Console::Notice("MTGS mode disabled.\n\tEnjoy the fruits of single-threaded simpicity.");
 			else
-				Console::Notice("MTGS mode enabled.\n\tWelcome to multi-threaded awesomeness. And random crashes.");
+				Console::Notice("MTGS mode enabled.\n\tWelcome to multi-threaded awesomeness.");
 		}
 
 		Config.Options = newopts;
