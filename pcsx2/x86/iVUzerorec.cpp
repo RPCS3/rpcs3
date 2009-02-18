@@ -50,7 +50,7 @@ extern void iDumpVU1Registers();
 // SuperVURec optimization options, uncomment only for debugging purposes
 #define SUPERVU_CACHING			// vu programs are saved and queried via memcompare (should be no reason to disable this)
 #define SUPERVU_WRITEBACKS		// don't flush the writebacks after every block
-//#define SUPERVU_X86CACHING	// use x86reg caching (faster) (not really. rather lots slower :p (rama) )
+#define SUPERVU_X86CACHING	// use x86reg caching (faster) (not really. rather lots slower :p (rama) )
 #define SUPERVU_VIBRANCHDELAY   // when integers are modified right before a branch that uses the integer,
                                 // the old integer value is used in the branch
                                 // fixes kh2
@@ -450,8 +450,9 @@ void __fastcall SuperVUClear(u32 startpc, u32 size, int vuindex)
 #ifdef SUPERVU_CACHING
 			list<VuFunctionHeader*>* plist = &s_plistCachedHeaders[vuindex][(*it)->startpc/8];
 			plist->push_back(*it);
-			if( plist->size() > 10 ) {
+			if( plist->size() > 30 ) {
 				// list is too big, delete
+				//SysPrintf("Performance warning: deleting cached VU programm!\n");
 				delete plist->front();
 				plist->pop_front();
 			}
@@ -1899,7 +1900,7 @@ void VuBaseBlock::AssignVFRegs()
 		for(i = 1; i >= 0; --i) {
 			_VURegsNum* regs = itinst->regs+i;
 
-#ifdef SUPERVU_X86CACHING
+
 			// redo the counters so that the proper regs are released
 			for(int j = 0; j < XMMREGS; ++j) {
 				if( xmmregs[j].inuse ) {
@@ -1950,7 +1951,6 @@ void VuBaseBlock::AssignVFRegs()
 					}
 				}
 			}
-#endif //SUPERVU_X86CACHING
 
 			if( regs->VFread0 ) _addNeededVFtoXMMreg(regs->VFread0);
 			if( regs->VFread1 ) _addNeededVFtoXMMreg(regs->VFread1);
