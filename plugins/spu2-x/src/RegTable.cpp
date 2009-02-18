@@ -31,14 +31,14 @@ const u16 zero=0;
 	PCORE(c,Voices[v].##p)
 
 #define PVC(c,v) \
-	PVCP(c,v,VolumeL.Reg_VOL), \
-	PVCP(c,v,VolumeR.Reg_VOL), \
+	PVCP(c,v,Volume.Left.Reg_VOL), \
+	PVCP(c,v,Volume.Right.Reg_VOL), \
 	PVCP(c,v,Pitch), \
 	PVCP(c,v,ADSR.Reg_ADSR1), \
 	PVCP(c,v,ADSR.Reg_ADSR2), \
 	PVCP(c,v,ADSR.Value)+1, \
-	PVCP(c,v,VolumeL.Value)+1, \
-	PVCP(c,v,VolumeR.Value)+1
+	PVCP(c,v,Volume.Left.Value)+1, \
+	PVCP(c,v,Volume.Right.Value)+1
 
 #define PVCA(c,v) \
 	PVCP(c,v,StartA)+1, \
@@ -247,16 +247,16 @@ u16* regtable[0x800] =
 	PRAW(0x758),PRAW(0x75A),PRAW(0x75C),PRAW(0x75E),
 
 	//0x760: weird area
-	PCORE(0,MasterL.Reg_VOL),
-	PCORE(0,MasterR.Reg_VOL),
-	PCORE(0,FxL)+1,
-	PCORE(0,FxR)+1,
-	PCORE(0,ExtL)+1,
-	PCORE(0,ExtR)+1,
-	PCORE(0,InpL)+1,
-	PCORE(0,InpR)+1,
-	PCORE(0,MasterL.Value)+1,
-	PCORE(0,MasterR.Value)+1,
+	PCORE(0,MasterVol.Left.Reg_VOL),
+	PCORE(0,MasterVol.Right.Reg_VOL),
+	PCORE(0,FxVol.Left)+1,
+	PCORE(0,FxVol.Right)+1,
+	PCORE(0,ExtVol.Left)+1,
+	PCORE(0,ExtVol.Right)+1,
+	PCORE(0,InpVol.Left)+1,
+	PCORE(0,InpVol.Right)+1,
+	PCORE(0,MasterVol.Left.Value)+1,
+	PCORE(0,MasterVol.Right.Value)+1,
 	PCORE(0,Revb.IIR_ALPHA),
 	PCORE(0,Revb.ACC_COEF_A),
 	PCORE(0,Revb.ACC_COEF_B),
@@ -268,16 +268,16 @@ u16* regtable[0x800] =
 	PCORE(0,Revb.IN_COEF_L),
 	PCORE(0,Revb.IN_COEF_R),
 
-	PCORE(1,MasterL.Reg_VOL),
-	PCORE(1,MasterR.Reg_VOL),
-	PCORE(1,FxL)+1,
-	PCORE(1,FxR)+1,
-	PCORE(1,ExtL)+1,
-	PCORE(1,ExtR)+1,
-	PCORE(1,InpL)+1,
-	PCORE(1,InpR)+1,
-	PCORE(1,MasterL.Value)+1,
-	PCORE(1,MasterR.Value)+1,
+	PCORE(1,MasterVol.Left.Reg_VOL),
+	PCORE(1,MasterVol.Right.Reg_VOL),
+	PCORE(1,FxVol.Left)+1,
+	PCORE(1,FxVol.Right)+1,
+	PCORE(1,ExtVol.Left)+1,
+	PCORE(1,ExtVol.Right)+1,
+	PCORE(1,InpVol.Left)+1,
+	PCORE(1,InpVol.Right)+1,
+	PCORE(1,MasterVol.Left.Value)+1,
+	PCORE(1,MasterVol.Right.Value)+1,
 	PCORE(1,Revb.IIR_ALPHA),
 	PCORE(1,Revb.ACC_COEF_A),
 	PCORE(1,Revb.ACC_COEF_B),

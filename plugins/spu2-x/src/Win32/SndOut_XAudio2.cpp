@@ -38,7 +38,6 @@ private:
 	class BaseStreamingVoice : public IXAudio2VoiceCallback
 	{
 	protected:
-		SndBuffer* m_sndout;
 		IXAudio2SourceVoice* pSourceVoice;
 		s16* qbuffer;
 
@@ -69,11 +68,10 @@ private:
 			DeleteCriticalSection( &cs );
 		}
 
-		BaseStreamingVoice( SndBuffer* sb, uint numChannels ) :
-			m_sndout( sb ),
+		BaseStreamingVoice( uint numChannels ) :
 			m_nBuffers( Config_XAudio2.NumBuffers ),
 			m_nChannels( numChannels ),
-			m_BufferSize( SndOutPacketSize/2 * m_nChannels * PacketsPerBuffer ),
+			m_BufferSize( SndOutPacketSize * m_nChannels * PacketsPerBuffer ),
 			m_BufferSizeBytes( m_BufferSize * sizeof(s16) )
 		{
 		}
@@ -133,18 +131,25 @@ private:
 			LeaveCriticalSection( &cs );
 		}
 
+		STDMETHOD_(void, OnVoiceProcessingPassStart) () {}
+		STDMETHOD_(void, OnVoiceProcessingPassStart) (UINT32) { };
+		STDMETHOD_(void, OnVoiceProcessingPassEnd) () {}
+		STDMETHOD_(void, OnStreamEnd) () {}
+		STDMETHOD_(void, OnBufferStart) ( void* ) {}
+		STDMETHOD_(void, OnLoopEnd) ( void* ) {}   
+		STDMETHOD_(void, OnVoiceError) (THIS_ void* pBufferContext, HRESULT Error) { };
 	};
 	
-	
-	class StreamingVoice_Stereo : public BaseStreamingVoice
+	template< typename T >
+	class StreamingVoice : public BaseStreamingVoice
 	{
 	public:
-		StreamingVoice_Stereo( SndBuffer* sb, IXAudio2* pXAudio2 ) :
-			BaseStreamingVoice( sb, 2 )
+		StreamingVoice( IXAudio2* pXAudio2 ) :
+			BaseStreamingVoice( sizeof(T) / sizeof( s16 ) )
 		{
 		}
 		
-		virtual ~StreamingVoice_Stereo() {}
+		virtual ~StreamingVoice() {}
 
 		void Init( IXAudio2* pXAudio2 )
 		{
@@ -152,11 +157,6 @@ private:
 		}
 
 	protected:
-		STDMETHOD_(void, OnVoiceProcessingPassStart) () {}
-		STDMETHOD_(void, OnVoiceProcessingPassStart) (UINT32) { };
-		STDMETHOD_(void, OnVoiceProcessingPassEnd) () {}
-		STDMETHOD_(void, OnStreamEnd) () {}
-		STDMETHOD_(void, OnBufferStart) ( void* ) {}
 		STDMETHOD_(void, OnBufferEnd) ( void* context )
 		{
 			EnterCriticalSection( &cs );
@@ -164,10 +164,10 @@ private:
 			// All of these checks are necessary because XAudio2 is wonky shizat.
 			if( pSourceVoice == NULL || context == NULL ) return;
 
-			s16* qb = (s16*)context;
+			T* qb = (T*)context;
 
 			for(int p=0; p<PacketsPerBuffer; p++, qb+=SndOutPacketSize )
-				m_sndout->ReadSamples( qb );
+				SndBuffer::ReadSamples( qb );
 
 			XAUDIO2_BUFFER buf = {0};
 			buf.AudioBytes	= m_BufferSizeBytes;
@@ -177,83 +177,6 @@ private:
 			pSourceVoice->SubmitSourceBuffer( &buf );
 			LeaveCriticalSection( &cs );
 		}
-		STDMETHOD_(void, OnLoopEnd) ( void* ) {}   
-		STDMETHOD_(void, OnVoiceError) (THIS_ void* pBufferContext, HRESULT Error) { };
-
-	};
-
-	class StreamingVoice_Surround51 : public BaseStreamingVoice
-	{
-	public:
-		//LPF_data m_lpf_left;
-		//LPF_data m_lpf_right;
-		
-		s32 buffer[2 * SndOutPacketSize * PacketsPerBuffer];
-
-		StreamingVoice_Surround51( SndBuffer* sb, IXAudio2* pXAudio2 ) :
-			BaseStreamingVoice( sb, 6 )
-			//m_lpf_left( Config_XAudio2.LowpassLFE, SampleRate ),
-			//m_lpf_right( Config_XAudio2.LowpassLFE, SampleRate )
-		{
-		}
-
-		virtual ~StreamingVoice_Surround51() {}
-
-		void Init( IXAudio2* pXAudio2 )
-		{
-			_init( pXAudio2, SPEAKER_5POINT1 );
-		}
-		
-	protected:
-		STDMETHOD_(void, OnVoiceProcessingPassStart) () {}
-		STDMETHOD_(void, OnVoiceProcessingPassStart) (UINT32) { };
-		STDMETHOD_(void, OnVoiceProcessingPassEnd) () {}
-		STDMETHOD_(void, OnStreamEnd) () {}
-		STDMETHOD_(void, OnBufferStart) ( void* ) {}
-		STDMETHOD_(void, OnBufferEnd) ( void* context )
-		{
-			EnterCriticalSection( &cs );
-
-			// All of these checks are necessary because XAudio2 is wonky shizat.
-			if( pSourceVoice == NULL || context == NULL ) return;
-
-			s16* qb = (s16*)context;
-
-			for(int p=0; p<PacketsPerBuffer; p++ )
-			{
-				m_sndout->ReadSamples( buffer );
-				const s32* src = buffer;
-
-				for( int i=0; i<SndOutPacketSize/2; i++, qb+=6, src+=2 )
-				{
-					// Left and right Front!
-					qb[0] = SndScaleVol( src[0] );
-					qb[1] = SndScaleVol( src[1] );
-					
-					// Center and Subwoofer/LFE -->
-					// This method is simple and sounds nice.  It relies on the speaker/soundcard
-					// systems do to their own low pass / crossover.  Manual lowpass is wasted effort
-					// and can't match solid state results anyway.
-					
-					qb[2] = qb[3] = (src[0] + src[1]) >> (SndOutVolumeShift+1);
-					
-					// Left and right rear!
-					qb[4] = SndScaleVol( src[0] );
-					qb[5] = SndScaleVol( src[1] );
-				}
-
-			}
-
-			XAUDIO2_BUFFER buf = { 0 };
-			buf.AudioBytes = m_BufferSizeBytes;
-			buf.pAudioData = (BYTE*)context;
-			buf.pContext = context;
-
-			pSourceVoice->SubmitSourceBuffer( &buf );
-			LeaveCriticalSection( &cs );
-		}
-		STDMETHOD_(void, OnLoopEnd) ( void* ) {}   
-		STDMETHOD_(void, OnVoiceError) (THIS_ void* pBufferContext, HRESULT Error) { };
 
 	};
 
@@ -263,7 +186,7 @@ private:
 
 public:
 
-	s32 Init( SndBuffer *sb )
+	s32 Init()
 	{
 		HRESULT hr;
 
@@ -273,9 +196,8 @@ public:
 		CoInitializeEx( NULL, COINIT_MULTITHREADED );
 
 		UINT32 flags = 0;
-#ifdef _DEBUG
-		flags |= XAUDIO2_DEBUG_ENGINE;
-#endif
+		if( IsDebugBuild )
+			flags |= XAUDIO2_DEBUG_ENGINE;
 
 		if ( FAILED(hr = XAudio2Create( &pXAudio2, flags ) ) )
 		{
@@ -298,18 +220,47 @@ public:
 			return -1;
 		}
 
-		if( Config_XAudio2.ExpandTo51 && deviceDetails.OutputFormat.Format.nChannels >= 6 )
-		{
-			ConLog( "* SPU2 > 5.1 speaker expansion enabled." );
-			voiceContext = new StreamingVoice_Surround51( sb, pXAudio2 );
-		}
-		else
-		{
-			voiceContext = new StreamingVoice_Stereo( sb, pXAudio2 );
-		}
+		if( StereoExpansionDisabled )
+			deviceDetails.OutputFormat.Format.nChannels	= 2;
 
+		// Any windows driver should support stereo at the software level, I should think!
+		jASSUME( deviceDetails.OutputFormat.Format.nChannels > 1 );
+
+		switch( deviceDetails.OutputFormat.Format.nChannels )
+		{
+			case 2:
+				ConLog( "* SPU2 > Using normal 2 speaker stereo output." );
+				voiceContext = new StreamingVoice<StereoOut16>( pXAudio2 );
+			break;
+
+			case 3:
+				ConLog( "* SPU2 > 2.1 speaker expansion enabled." );
+				voiceContext = new StreamingVoice<Stereo21Out16>( pXAudio2 );
+			break;
+
+			case 4:
+				ConLog( "* SPU2 > 4 speaker expansion enabled [quadraphenia]" );
+				voiceContext = new StreamingVoice<StereoQuadOut16>( pXAudio2 );
+			break;
+						
+			case 5:
+				ConLog( "* SPU2 > 4.1 speaker expansion enabled." );
+				voiceContext = new StreamingVoice<Stereo41Out16>( pXAudio2 );
+			break;
+
+			case 6:
+			case 7:
+				ConLog( "* SPU2 > 5.1 speaker expansion enabled." );
+				voiceContext = new StreamingVoice<Stereo51Out16>( pXAudio2 );
+			break;
+
+			default:	// anything 8 or more gets the 7.1 treatment!
+				ConLog( "* SPU2 > 7.1 speaker expansion enabled." );
+				voiceContext = new StreamingVoice<Stereo51Out16>( pXAudio2 );
+			break;
+		}
+		
 		voiceContext->Init( pXAudio2 );
-
 		return 0;
 	}
 

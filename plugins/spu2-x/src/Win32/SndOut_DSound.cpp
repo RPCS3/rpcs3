@@ -23,6 +23,7 @@
 #include "spu2.h"
 #include "dialogs.h"
 
+#define DIRECTSOUND_VERSION 0x1000
 #include <dsound.h>
 
 static ds_device_data devices[32];
@@ -37,7 +38,6 @@ private:
 
 	static const int PacketsPerBuffer = 1;
 	static const int BufferSize = SndOutPacketSize * PacketsPerBuffer;
-	static const int BufferSizeBytes = BufferSize << 1;
 
 
 	u32 numBuffers;		// cached copy of our configuration setting.
@@ -57,25 +57,26 @@ private:
 
 	HANDLE waitEvent;
 
-	SndBuffer *buff;
-
-	static DWORD CALLBACK RThread(DSound*obj)
+	template< typename T >
+	static DWORD CALLBACK RThread( DSound* obj )
 	{
-		return obj->Thread();
+		return obj->Thread<T>();
 	}
 
+	template< typename T >
 	DWORD CALLBACK Thread()
 	{
+		static const int BufferSizeBytes = BufferSize * sizeof( T );
 
 		while( dsound_running )
 		{
 			u32 rv = WaitForMultipleObjects(numBuffers,buffer_events,FALSE,200);
 	 
-			s16* p1, *oldp1;
+			T* p1, *oldp1;
 			LPVOID p2;
 			DWORD s1,s2;
 	 
-			u32 poffset=BufferSizeBytes * rv;
+			u32 poffset = BufferSizeBytes * rv;
 
 			if( FAILED(buffer->Lock(poffset,BufferSizeBytes,(LPVOID*)&p1,&s1,&p2,&s2,0) ) )
 			{
@@ -86,9 +87,9 @@ private:
 			oldp1 = p1;
 
 			for(int p=0; p<PacketsPerBuffer; p++, p1+=SndOutPacketSize )
-				buff->ReadSamples( p1 );
+				SndBuffer::ReadSamples( p1 );
 
-			buffer->Unlock(oldp1,s1,p2,s2);
+			buffer->Unlock( oldp1, s1, p2, s2 );
 
 			// Set the write pointer to the beginning of the next block.
 			myLastWrite = (poffset + BufferSizeBytes) & ~BufferSizeBytes;
@@ -97,9 +98,8 @@ private:
 	}
 
 public:
-	s32 Init(SndBuffer *sb)
+	s32 Init()
 	{
-		buff = sb;
 		numBuffers = Config_DSoundOut.NumBuffers;
 
 		//
@@ -130,37 +130,46 @@ public:
 		if( FAILED(dsound->SetCooperativeLevel(GetDesktopWindow(),DSSCL_PRIORITY)) )
 			throw std::runtime_error( "DirectSound Error: Cooperative level could not be set." );
 		
+		// Determine the user's speaker configuration, and select an expansion option as needed.
+		// FAIL : Directsound doesn't appear to support audio expansion >_<
+		
+		DWORD speakerConfig = 2;
+		//dsound->GetSpeakerConfig( &speakerConfig );
+
 		IDirectSoundBuffer* buffer_;
  		DSBUFFERDESC desc; 
 	 
 		// Set up WAV format structure. 
 	 
 		memset(&wfx, 0, sizeof(WAVEFORMATEX)); 
-		wfx.wFormatTag = WAVE_FORMAT_PCM;
-		wfx.nSamplesPerSec = SampleRate;
-		wfx.nChannels=2;
-		wfx.wBitsPerSample = 16;
-		wfx.nBlockAlign = 2*2;
-		wfx.nAvgBytesPerSec = SampleRate * wfx.nBlockAlign;
-		wfx.cbSize=0;
+		wfx.wFormatTag		= WAVE_FORMAT_PCM;
+		wfx.nSamplesPerSec	= SampleRate;
+		wfx.nChannels		= speakerConfig;
+		wfx.wBitsPerSample	= 16;
+		wfx.nBlockAlign		= 2*speakerConfig;
+		wfx.nAvgBytesPerSec	= SampleRate * wfx.nBlockAlign;
+		wfx.cbSize			= 0;
+
+		uint BufferSizeBytes = BufferSize * wfx.nBlockAlign;
 	 
 		// Set up DSBUFFERDESC structure. 
 	 
 		memset(&desc, 0, sizeof(DSBUFFERDESC)); 
 		desc.dwSize = sizeof(DSBUFFERDESC); 
 		desc.dwFlags = DSBCAPS_GETCURRENTPOSITION2 | DSBCAPS_CTRLPOSITIONNOTIFY;// _CTRLPAN | DSBCAPS_CTRLVOLUME | DSBCAPS_CTRLFREQUENCY; 
-		desc.dwBufferBytes = BufferSizeBytes * numBuffers; 
-		desc.lpwfxFormat = &wfx; 
+		desc.dwBufferBytes = BufferSizeBytes * numBuffers;
+		desc.lpwfxFormat = &wfx;
 	 
 		desc.dwFlags |= DSBCAPS_LOCSOFTWARE;
 		desc.dwFlags |= DSBCAPS_GLOBALFOCUS;
 	 
-		if( FAILED(dsound->CreateSoundBuffer(&desc,&buffer_,0) ) ||
-			FAILED(buffer_->QueryInterface(IID_IDirectSoundBuffer8,(void**)&buffer)) )
+		if( FAILED(dsound->CreateSoundBuffer(&desc,&buffer_,0) ) )
+			throw std::runtime_error( "DirectSound Error: Interface could not be queried." );
+		
+		if(	FAILED(buffer_->QueryInterface(IID_IDirectSoundBuffer8,(void**)&buffer)) )
 			throw std::runtime_error( "DirectSound Error: Interface could not be queried." );
 
 		buffer_->Release();
-	 
 		verifyc( buffer->QueryInterface(IID_IDirectSoundNotify8,(void**)&buffer_notify) );
 
 		DSBPOSITIONNOTIFY not[MAX_BUFFER_COUNT];
@@ -171,9 +180,9 @@ public:
 			// it was needed for some quirky driver?  Theoretically we want the notification as soon
 			// as possible after the buffer has finished playing.
 
-			buffer_events[i]=CreateEvent(NULL,FALSE,FALSE,NULL);
-			not[i].dwOffset=(wfx.nBlockAlign*2 + BufferSizeBytes*(i+1))%desc.dwBufferBytes;
-			not[i].hEventNotify=buffer_events[i];
+			buffer_events[i] = CreateEvent(NULL,FALSE,FALSE,NULL);
+			not[i].dwOffset = (wfx.nBlockAlign + BufferSizeBytes*(i+1)) % desc.dwBufferBytes;
+			not[i].hEventNotify = buffer_events[i];
 		}
 	 
 		buffer_notify->SetNotificationPositions(numBuffers,not);
@@ -191,9 +200,9 @@ public:
 
 		// Start Thread
 		myLastWrite = 0;
-		dsound_running=true;
-		thread=CreateThread(NULL,0,(LPTHREAD_START_ROUTINE)RThread,this,0,&tid);
-		SetThreadPriority(thread,THREAD_PRIORITY_TIME_CRITICAL);
+		dsound_running = true;
+		thread = CreateThread(NULL,0,(LPTHREAD_START_ROUTINE)RThread<StereoOut16>,this,0,&tid);
+		SetThreadPriority(thread,THREAD_PRIORITY_ABOVE_NORMAL);
 
 		return 0;
 	}

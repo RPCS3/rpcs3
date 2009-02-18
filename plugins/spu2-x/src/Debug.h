@@ -52,9 +52,10 @@ namespace WaveDump
 	,	CoreSrc_Count
 	};	
 
-	void Open();
-	void Close();
-	void WriteCore( uint coreidx, CoreSourceType src, s16 left, s16 right );
+	extern void Open();
+	extern void Close();
+	extern void WriteCore( uint coreidx, CoreSourceType src, s16 left, s16 right );
+	extern void WriteCore( uint coreidx, CoreSourceType src, const StereoOut16& sample );
 }
 
 using WaveDump::CoreSrc_Input;

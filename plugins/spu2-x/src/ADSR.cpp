@@ -216,7 +216,7 @@ bool V_ADSR::Calculate()
 #define VOLFLAG_EXPONENTIAL		(1ul<<2)
 #define VOLFLAG_SLIDE_ENABLE	(1ul<<3)
 
-void V_Volume::Update()
+void V_VolumeSlide::Update()
 {
 	if( !(Mode & VOLFLAG_SLIDE_ENABLE) ) return;
 		

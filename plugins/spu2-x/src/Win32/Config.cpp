@@ -33,29 +33,31 @@ static const int LATENCY_MIN = 40;
 int AutoDMAPlayRate[2] = {0,0};
 
 // MIXING
-int Interpolation=1;
+int Interpolation = 1;
 /* values:
 		0: no interpolation (use nearest)
 		1. linear interpolation
 		2. cubic interpolation
 */
 
-bool EffectsDisabled=false;
+bool EffectsDisabled = false;
 
 // OUTPUT
-int SndOutLatencyMS=160;
-bool timeStretchDisabled=false;
+int SndOutLatencyMS = 160;
+bool timeStretchDisabled = false;
 
-u32 OutputModule=0; //OUTPUT_DSOUND;
+u32 OutputModule = 0;
 
 CONFIG_DSOUNDOUT Config_DSoundOut;
 CONFIG_WAVEOUT Config_WaveOut;
 CONFIG_XAUDIO2 Config_XAudio2;
 
 // DSP
-bool dspPluginEnabled=false;
-int  dspPluginModule=0;
+bool dspPluginEnabled = false;
+int  dspPluginModule = 0;
 wchar_t dspPlugin[256];
+
+bool StereoExpansionDisabled = true;
 
 /*****************************************************************************/
 
@@ -69,7 +71,8 @@ void ReadSettings()
 	timeStretchDisabled = CfgReadBool( _T("OUTPUT"), _T("Disable_Timestretch"), false );
 	EffectsDisabled = CfgReadBool( _T("MIXING"), _T("Disable_Effects"), false );
 
-	SndOutLatencyMS=CfgReadInt(_T("OUTPUT"),_T("Latency"), 160);
+	StereoExpansionDisabled = CfgReadBool( _T("OUTPUT"), _T("Disable_StereoExpansion"), false );
+	SndOutLatencyMS = CfgReadInt(_T("OUTPUT"),_T("Latency"), 160);
 
 	wchar_t omodid[128];
 	CfgReadStr( _T("OUTPUT"), _T("Output_Module"), omodid, 127, XAudio2Out->GetIdent() );
@@ -118,9 +121,10 @@ void WriteSettings()
 
 	CfgWriteBool(_T("MIXING"),_T("Disable_Effects"),EffectsDisabled);
 
-	CfgWriteStr(_T("OUTPUT"),_T("Output_Module"),mods[OutputModule]->GetIdent() );
-	CfgWriteInt(_T("OUTPUT"),_T("Latency"),SndOutLatencyMS);
-	CfgWriteBool(_T("OUTPUT"),_T("Disable_Timestretch"),timeStretchDisabled);
+	CfgWriteStr(_T("OUTPUT"),_T("Output_Module"), mods[OutputModule]->GetIdent() );
+	CfgWriteInt(_T("OUTPUT"),_T("Latency"), SndOutLatencyMS);
+	CfgWriteBool(_T("OUTPUT"),_T("Disable_Timestretch"), timeStretchDisabled);
+	CfgWriteBool(_T("OUTPUT"),_T("Disable_StereoExpansion"), StereoExpansionDisabled);
 
 	if( Config_DSoundOut.Device.empty() ) Config_DSoundOut.Device = _T("default");
 	if( Config_WaveOut.Device.empty() ) Config_WaveOut.Device = _T("default");
@@ -181,6 +185,7 @@ BOOL CALLBACK ConfigProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 			EnableWindow( GetDlgItem( hWnd, IDC_OPEN_CONFIG_DEBUG ), DebugEnabled );
 			
 			SET_CHECK(IDC_EFFECTS_DISABLE,	EffectsDisabled);
+			SET_CHECK(IDC_EXPANSION_DISABLE,StereoExpansionDisabled);
 			SET_CHECK(IDC_TS_DISABLE,		timeStretchDisabled);
 			SET_CHECK(IDC_DEBUG_ENABLE,		DebugEnabled);
 			SET_CHECK(IDC_DSP_ENABLE,		dspPluginEnabled);
@@ -212,7 +217,7 @@ BOOL CALLBACK ConfigProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 				break;
 
 				case IDC_OUTCONF:
-					SndConfigure( hWnd,
+					SndBuffer::Configure( hWnd,
 						(int)SendMessage(GetDlgItem(hWnd,IDC_OUTPUT),CB_GETCURSEL,0,0)
 					);
 				break;
@@ -234,6 +239,7 @@ BOOL CALLBACK ConfigProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 
 				HANDLE_CHECK(IDC_EFFECTS_DISABLE,EffectsDisabled);
 				HANDLE_CHECK(IDC_DSP_ENABLE,dspPluginEnabled);
+				HANDLE_CHECK(IDC_EXPANSION_DISABLE,StereoExpansionDisabled);
 				HANDLE_CHECKNB(IDC_TS_DISABLE,timeStretchDisabled);
 					EnableWindow( GetDlgItem( hWnd, IDC_OPEN_CONFIG_SOUNDTOUCH ), !timeStretchDisabled );
 				break;

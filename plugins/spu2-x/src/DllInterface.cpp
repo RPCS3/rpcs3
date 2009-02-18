@@ -120,7 +120,7 @@ EXPORT_C_(void) SPU2about()
 
 EXPORT_C_(s32) SPU2test()
 {
-	return SndTest();
+	return SndBuffer::Test();
 }
 
 EXPORT_C_(s32) SPU2init() 
@@ -228,22 +228,20 @@ EXPORT_C_(s32) SPU2open(void *pDsp)
 	debugDialogOpen=1;
 	}*/
 
-	spu2open=true;
-	if (!SndInit())
+	spu2open = true;
+	try
 	{
+		SndBuffer::Init();
 		spdif_init();
-
 		DspLoadLibrary(dspPlugin,dspPluginModule);
-		
 		WaveDump::Open();
-
-		return 0;
 	}
-	else 
+	catch( ... )
 	{
 		SPU2close();
 		return -1;
-	};
+	}
+	return 0;
 }
 
 EXPORT_C_(void) SPU2close() 
@@ -253,7 +251,7 @@ EXPORT_C_(void) SPU2close()
 
 	DspCloseLibrary();
 	spdif_shutdown();
-	SndClose();
+	SndBuffer::Cleanup();
 
 	spu2open = false;
 }

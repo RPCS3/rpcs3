@@ -133,6 +133,13 @@ __inline void __fastcall spu2M_Write( u32 addr, u16 value )
 	spu2M_Write( addr, (s16)value );
 }
 
+V_VolumeLR V_VolumeLR::Max( 0x7FFFFFFF );
+V_VolumeSlideLR V_VolumeSlideLR::Max( 0x3FFF, 0x7FFFFFFF );
+
+V_Core::V_Core()
+{
+}
+
 void V_Core::Reset()
 {
 	memset( this, 0, sizeof(V_Core) );
@@ -141,16 +148,12 @@ void V_Core::Reset()
  
 	Regs.STATX=0;
 	Regs.ATTR=0;
-	ExtL = 0x7FFFFFFF;
-	ExtR = 0x7FFFFFFF;
-	InpL = 0x7FFFFFFF;
-	InpR = 0x7FFFFFFF;
-	FxL  = 0x7FFFFFFF;
-	FxR  = 0x7FFFFFFF;
-	MasterL.Reg_VOL= 0x3FFF;
-	MasterR.Reg_VOL= 0x3FFF;
-	MasterL.Value  = 0x7FFFFFFF;
-	MasterR.Value  = 0x7FFFFFFF;
+	ExtVol = V_VolumeLR::Max;
+	InpVol = V_VolumeLR::Max;
+	FxVol  = V_VolumeLR::Max;
+
+	MasterVol = V_VolumeSlideLR::Max;
+
 	ExtWetR = -1;
 	ExtWetL = -1;
 	ExtDryR = -1;
@@ -176,32 +179,94 @@ void V_Core::Reset()
  
 	for( uint v=0; v<24; ++v )
 	{
-		Voices[v].VolumeL.Reg_VOL = 0x3FFF;
-		Voices[v].VolumeR.Reg_VOL = 0x3FFF;
-
-		Voices[v].VolumeL.Value = 0x7FFFFFFF;
-		Voices[v].VolumeR.Value = 0x7FFFFFFF;
+		Voices[v].Volume = V_VolumeSlideLR::Max;
 		
-		Voices[v].ADSR.Value=0;
-		Voices[v].ADSR.Phase=0;
-		Voices[v].Pitch=0x3FFF;
+		Voices[v].ADSR.Value = 0;
+		Voices[v].ADSR.Phase = 0;
+		Voices[v].Pitch = 0x3FFF;
 		Voices[v].DryL = -1;
 		Voices[v].DryR = -1;
 		Voices[v].WetL = -1;
 		Voices[v].WetR = -1;
-		Voices[v].NextA=2800;
-		Voices[v].StartA=2800;
-		Voices[v].LoopStartA=2800;
+		Voices[v].NextA = 2800;
+		Voices[v].StartA = 2800;
+		Voices[v].LoopStartA = 2800;
 	}
-	DMAICounter=0;
-	AdmaInProgress=0;
+	DMAICounter = 0;
+	AdmaInProgress = 0;
  
-	Regs.STATX=0x80;
- }
+	Regs.STATX = 0x80;
+}
+
+s32 V_Core::EffectsBufferIndexer( s32 offset ) const
+{
+	u32 pos = EffectsStartA + ReverbX + offset;
+
+	// Need to use modulus here, because games can and will drop the buffer size
+	// without notice, and it leads to offsets several times past the end of the buffer.
+
+	if( pos > EffectsEndA )
+	{
+		pos = EffectsStartA + ((ReverbX + offset) % (u32)EffectsBufferSize);
+	}
+	else if( pos < EffectsStartA )
+	{
+		pos = EffectsEndA+1 - ((ReverbX + offset) % (u32)EffectsBufferSize );
+	}
+	return pos;
+} 
+
+void V_Core::UpdateFeedbackBuffersA()
+{
+	RevBuffers.FB_SRC_A0 = EffectsBufferIndexer( Revb.MIX_DEST_A0 - Revb.FB_SRC_A );
+	RevBuffers.FB_SRC_A1 = EffectsBufferIndexer( Revb.MIX_DEST_A1 - Revb.FB_SRC_A );
+}
+
+void V_Core::UpdateFeedbackBuffersB()
+{
+	RevBuffers.FB_SRC_B0 = EffectsBufferIndexer( Revb.MIX_DEST_B0 - Revb.FB_SRC_B );
+	RevBuffers.FB_SRC_B1 = EffectsBufferIndexer( Revb.MIX_DEST_B1 - Revb.FB_SRC_B );
+}
 
 void V_Core::UpdateEffectsBufferSize()
 {
-	EffectsBufferSize = EffectsEndA - EffectsStartA + 1;
+	ReverbX = 0;
+
+	const s32 newbufsize = EffectsEndA - EffectsStartA + 1;
+	if( !RevBuffers.NeedsUpdated && newbufsize ==  EffectsBufferSize ) return;
+	
+	RevBuffers.NeedsUpdated = false;
+
+	if( EffectsBufferSize == 0 ) return;
+
+	// Rebuild buffer indexers.
+
+	RevBuffers.ACC_SRC_A0 = EffectsBufferIndexer( Revb.ACC_SRC_A0 );
+	RevBuffers.ACC_SRC_A1 = EffectsBufferIndexer( Revb.ACC_SRC_A1 );
+	RevBuffers.ACC_SRC_B0 = EffectsBufferIndexer( Revb.ACC_SRC_B0 );
+	RevBuffers.ACC_SRC_B1 = EffectsBufferIndexer( Revb.ACC_SRC_B1 );
+	RevBuffers.ACC_SRC_C0 = EffectsBufferIndexer( Revb.ACC_SRC_C0 );
+	RevBuffers.ACC_SRC_C1 = EffectsBufferIndexer( Revb.ACC_SRC_C1 );
+	RevBuffers.ACC_SRC_D0 = EffectsBufferIndexer( Revb.ACC_SRC_D0 );
+	RevBuffers.ACC_SRC_D1 = EffectsBufferIndexer( Revb.ACC_SRC_D1 );
+
+	UpdateFeedbackBuffersA();
+	UpdateFeedbackBuffersB();
+	
+	RevBuffers.IIR_DEST_A0 = EffectsBufferIndexer( Revb.IIR_DEST_A0 );
+	RevBuffers.IIR_DEST_A1 = EffectsBufferIndexer( Revb.IIR_DEST_A1 );
+	RevBuffers.IIR_DEST_B0 = EffectsBufferIndexer( Revb.IIR_DEST_B0 );
+	RevBuffers.IIR_DEST_B1 = EffectsBufferIndexer( Revb.IIR_DEST_B1 );
+	
+	RevBuffers.IIR_SRC_A0 = EffectsBufferIndexer( Revb.IIR_SRC_A0 );
+	RevBuffers.IIR_SRC_A1 = EffectsBufferIndexer( Revb.IIR_SRC_A1 );
+	RevBuffers.IIR_SRC_B0 = EffectsBufferIndexer( Revb.IIR_SRC_B0 );
+	RevBuffers.IIR_SRC_B1 = EffectsBufferIndexer( Revb.IIR_SRC_B1 );
+	
+	RevBuffers.MIX_DEST_A0 = EffectsBufferIndexer( Revb.MIX_DEST_A0 );
+	RevBuffers.MIX_DEST_A1 = EffectsBufferIndexer( Revb.MIX_DEST_A1 );
+	RevBuffers.MIX_DEST_B0 = EffectsBufferIndexer( Revb.MIX_DEST_B0 );
+	RevBuffers.MIX_DEST_B1 = EffectsBufferIndexer( Revb.MIX_DEST_B1 );
 }
 
 void V_Voice::Start()
@@ -379,6 +444,11 @@ static s32 GetVol32( u16 src )
 	return (((s32)src) << 16 ) | ((src<<1) & 0xffff);
 }
 
+void V_VolumeSlide::RegSet( u16 src )
+{
+	Value = GetVol32( src );
+}
+
 void SPU_ps1_write(u32 mem, u16 value) 
 {
 	bool show=true;
@@ -393,15 +463,15 @@ void SPU_ps1_write(u32 mem, u16 value)
 		switch(vval)
 		{
 			case 0: //VOLL (Volume L)
-				Cores[0].Voices[voice].VolumeL.Mode = 0;
-				Cores[0].Voices[voice].VolumeL.Value = GetVol32( value<<1 );
-				Cores[0].Voices[voice].VolumeL.Reg_VOL = value;
+				Cores[0].Voices[voice].Volume.Left.Mode = 0;
+				Cores[0].Voices[voice].Volume.Left.RegSet( value << 1 );
+				Cores[0].Voices[voice].Volume.Left.Reg_VOL = value;
 			break;
 
 			case 1: //VOLR (Volume R)
-				Cores[0].Voices[voice].VolumeR.Mode = 0;
-				Cores[0].Voices[voice].VolumeR.Value = GetVol32( value<<1 );
-				Cores[0].Voices[voice].VolumeR.Reg_VOL = value;
+				Cores[0].Voices[voice].Volume.Right.Mode = 0;
+				Cores[0].Voices[voice].Volume.Right.RegSet( value << 1 );
+				Cores[0].Voices[voice].Volume.Right.Reg_VOL = value;
 			break;
 			
 			case 2:	Cores[0].Voices[voice].Pitch = value; break;
@@ -437,19 +507,22 @@ void SPU_ps1_write(u32 mem, u16 value)
 	else switch(reg)
 	{
 		case 0x1d80://         Mainvolume left
-			Cores[0].MasterL.Mode = 0;
-			Cores[0].MasterL.Value = GetVol32( value );
-			break;
+			Cores[0].MasterVol.Left.Mode = 0;
+			Cores[0].MasterVol.Left.RegSet( value );
+		break;
+
 		case 0x1d82://         Mainvolume right
-			Cores[0].MasterL.Mode = 0;
-			Cores[0].MasterR.Value = GetVol32( value );
-			break;
+			Cores[0].MasterVol.Right.Mode = 0;
+			Cores[0].MasterVol.Right.RegSet( value );
+		break;
+
 		case 0x1d84://         Reverberation depth left
-			Cores[0].FxL = GetVol32( value );
-			break;
+			Cores[0].FxVol.Left = GetVol32( value );
+		break;
+
 		case 0x1d86://         Reverberation depth right
-			Cores[0].FxR = GetVol32( value );
-			break;
+			Cores[0].FxVol.Right = GetVol32( value );
+		break;
 
 		case 0x1d88://         Voice ON  (0-15)
 			SPU2_FastWrite(REG_S_KON,value);
@@ -463,65 +536,74 @@ void SPU_ps1_write(u32 mem, u16 value)
 			break;
 		case 0x1d8e://         Voice OFF (16-23)
 			SPU2_FastWrite(REG_S_KOFF+2,value);
-			break;
+		break;
 
 		case 0x1d90://         Channel FM (pitch lfo) mode (0-15)
 			SPU2_FastWrite(REG_S_PMON,value);
-			break;
+		break;
+		
 		case 0x1d92://         Channel FM (pitch lfo) mode (16-23)
 			SPU2_FastWrite(REG_S_PMON+2,value);
-			break;
+		break;
 
 
 		case 0x1d94://         Channel Noise mode (0-15)
 			SPU2_FastWrite(REG_S_NON,value);
-			break;
+		break;
+		
 		case 0x1d96://         Channel Noise mode (16-23)
 			SPU2_FastWrite(REG_S_NON+2,value);
-			break;
+		break;
 
 		case 0x1d98://         Channel Reverb mode (0-15)
 			SPU2_FastWrite(REG_S_VMIXEL,value);
 			SPU2_FastWrite(REG_S_VMIXER,value);
-			break;
+		break;
+		
 		case 0x1d9a://         Channel Reverb mode (16-23)
 			SPU2_FastWrite(REG_S_VMIXEL+2,value);
 			SPU2_FastWrite(REG_S_VMIXER+2,value);
-			break;
+		break;
+		
 		case 0x1d9c://         Channel Reverb mode (0-15)
 			SPU2_FastWrite(REG_S_VMIXL,value);
 			SPU2_FastWrite(REG_S_VMIXR,value);
-			break;
+		break;
+		
 		case 0x1d9e://         Channel Reverb mode (16-23)
 			SPU2_FastWrite(REG_S_VMIXL+2,value);
 			SPU2_FastWrite(REG_S_VMIXR+2,value);
-			break;
+		break;
 
 		case 0x1da2://         Reverb work area start
-			{
-				u32 val=(u32)value <<8;
+		{
+			u32 val = (u32)value << 8;
 
-				SPU2_FastWrite(REG_A_ESA,  val&0xFFFF);
-				SPU2_FastWrite(REG_A_ESA+2,val>>16);
-			}
-			break;
+			SPU2_FastWrite(REG_A_ESA,  val&0xFFFF);
+			SPU2_FastWrite(REG_A_ESA+2,val>>16);
+		}
+		break;
+		
 		case 0x1da4:
 			Cores[0].IRQA=(u32)value<<8;
-			break;
+		break;
+
 		case 0x1da6:
 			Cores[0].TSA=(u32)value<<8;
-			break;
+		break;
 
 		case 0x1daa:
 			SPU2_FastWrite(REG_C_ATTR,value);
-			break;
+		break;
+
 		case 0x1dae:
 			SPU2_FastWrite(REG_P_STATX,value);
-			break;
+		break;
+
 		case 0x1da8:// Spu Write to Memory
 			DmaWrite(0,value);
 			show=false;
-			break;
+		break;
 	}
 
 	if(show) FileLog("[%10d] (!) SPU write mem %08x value %04x\n",Cycles,mem,value);
@@ -546,27 +628,31 @@ u16 SPU_ps1_read(u32 mem)
 			case 0: //VOLL (Volume L)
 				//value=Cores[0].Voices[voice].VolumeL.Mode;
 				//value=Cores[0].Voices[voice].VolumeL.Value;
-				value=Cores[0].Voices[voice].VolumeL.Reg_VOL;	break;
+				value = Cores[0].Voices[voice].Volume.Left.Reg_VOL;
+			break;
+			
 			case 1: //VOLR (Volume R)
 				//value=Cores[0].Voices[voice].VolumeR.Mode;
 				//value=Cores[0].Voices[voice].VolumeR.Value;
-				value=Cores[0].Voices[voice].VolumeR.Reg_VOL;	break;
-			case 2:	value=Cores[0].Voices[voice].Pitch;			break;
-			case 3:	value=Cores[0].Voices[voice].StartA;	break;
-			case 4: value=Cores[0].Voices[voice].ADSR.Reg_ADSR1;	break;
-			case 5: value=Cores[0].Voices[voice].ADSR.Reg_ADSR2;	break;
-			case 6:	value=Cores[0].Voices[voice].ADSR.Value >> 16;	break;
-			case 7:	value=Cores[0].Voices[voice].LoopStartA;	break;
+				value = Cores[0].Voices[voice].Volume.Right.Reg_VOL;
+			break;
+			
+			case 2:	value = Cores[0].Voices[voice].Pitch;		break;
+			case 3:	value = Cores[0].Voices[voice].StartA;		break;
+			case 4: value = Cores[0].Voices[voice].ADSR.Reg_ADSR1;	break;
+			case 5: value = Cores[0].Voices[voice].ADSR.Reg_ADSR2;	break;
+			case 6:	value = Cores[0].Voices[voice].ADSR.Value >> 16;	break;
+			case 7:	value = Cores[0].Voices[voice].LoopStartA;	break;
 
 			jNO_DEFAULT;
 		}
 	}
 	else switch(reg)
 	{
-		case 0x1d80: value = Cores[0].MasterL.Value>>16; break;
-		case 0x1d82: value = Cores[0].MasterR.Value>>16; break;
-		case 0x1d84: value = Cores[0].FxL>>16;           break;
-		case 0x1d86: value = Cores[0].FxR>>16;           break;
+		case 0x1d80: value = Cores[0].MasterVol.Left.Value >> 16;  break;
+		case 0x1d82: value = Cores[0].MasterVol.Right.Value >> 16; break;
+		case 0x1d84: value = Cores[0].FxVol.Left >> 16;            break;
+		case 0x1d86: value = Cores[0].FxVol.Right >> 16;           break;
 
 		case 0x1d88: value = 0; break;
 		case 0x1d8a: value = 0; break;
@@ -585,8 +671,11 @@ u16 SPU_ps1_read(u32 mem)
 		case 0x1d9e: value = Cores[0].Regs.VMIXL>>16;     break;
 
 		case 0x1da2:
-			value = Cores[0].EffectsStartA>>3;
-			Cores[0].UpdateEffectsBufferSize();
+			if( value != Cores[0].EffectsStartA>>3 )
+			{
+				value = Cores[0].EffectsStartA>>3;
+				Cores[0].UpdateEffectsBufferSize();
+			}
 		break;
 		case 0x1da4: value = Cores[0].IRQA>>3;            break;
 		case 0x1da6: value = Cores[0].TSA>>3;             break;
@@ -607,15 +696,49 @@ u16 SPU_ps1_read(u32 mem)
 	return value;
 }
 
-static u32 SetLoWord( u32 var, u16 writeval )
+// Ah the joys of endian-specific code! :D
+static __forceinline u32 SetHiWord( u32& src, u16 value )
 {
-	return (var & 0xFFFF0000) | writeval;
+	((u16*)&src)[1] = value;
+	return src;
 }
 
-
-static u32 SetHiWord( u32 var, u16 writeval )
+static __forceinline u32 SetLoWord( u32& src, u16 value )
 {
-	return (var & 0x0000FFFF) | (writeval<<16);
+	((u16*)&src)[0] = value;
+	return src;
+}
+
+static __forceinline s32 SetHiWord( s32& src, u16 value )
+{
+	((u16*)&src)[1] = value;
+	return src;
+}
+
+static __forceinline s32 SetLoWord( s32& src, u16 value )
+{
+	((u16*)&src)[0] = value;
+	return src;
+}
+
+static __forceinline u16 GetHiWord( u32& src )
+{
+	return ((u16*)&src)[1];
+}
+
+static __forceinline u16 GetLoWord( u32& src )
+{
+	return ((u16*)&src)[0];
+}
+
+static __forceinline u16 GetHiWord( s32& src )
+{
+	return ((u16*)&src)[1];
+}
+
+static __forceinline u16 GetLoWord( s32& src )
+{
+	return ((u16*)&src)[0];
 }
 
 __forceinline void SPU2_FastWrite( u32 rmem, u16 value )
@@ -637,7 +760,9 @@ __forceinline void SPU2_FastWrite( u32 rmem, u16 value )
 			case 0: //VOLL (Volume L)
 			case 1: //VOLR (Volume R)
 			{
-				V_Volume& thisvol = (param==0) ? thisvoice.VolumeL : thisvoice.VolumeR;
+				V_VolumeSlide& thisvol = (param==0) ? thisvoice.Volume.Left : thisvoice.Volume.Right;
+				thisvol.Reg_VOL = value;
+
 				if (value & 0x8000)		// +Lin/-Lin/+Exp/-Exp
 				{
 					thisvol.Mode = (value & 0xF000)>>12;
@@ -649,11 +774,10 @@ __forceinline void SPU2_FastWrite( u32 rmem, u16 value )
 					// Volumes range from 0x3fff to 0x7fff, with 0x4000 serving as
 					// the "sign" bit, so a simple bitwise extension will do the trick:
 
-					thisvol.Value = GetVol32( value<<1 );
+					thisvol.RegSet( value<<1 );
 					thisvol.Mode = 0;
 					thisvol.Increment = 0;
 				}
-				thisvol.Reg_VOL = value;
 			}
 			break;
 
@@ -677,8 +801,8 @@ __forceinline void SPU2_FastWrite( u32 rmem, u16 value )
 				ConLog( "* SPU2: Mysterious ADSR Volume Set to 0x%x", value );
 			break;
 			
-			case 6:	thisvoice.VolumeL.Value = GetVol32( value ); break;
-			case 7:	thisvoice.VolumeR.Value = GetVol32( value ); break;
+			case 6:	thisvoice.Volume.Left.RegSet( value ); break;
+			case 7:	thisvoice.Volume.Right.RegSet( value ); break;
 
 			jNO_DEFAULT;
 		}
@@ -726,6 +850,15 @@ __forceinline void SPU2_FastWrite( u32 rmem, u16 value )
 	{
 		*(regtable[mem>>1]) = value;
 		UpdateSpdifMode();
+	}
+	else if( mem >= R_FB_SRC_A && mem < REG_A_EEA )
+	{
+		// Signal to the Reverb code that the effects buffers need to be re-aligned.
+		// This is both simple, efficient, and safe, since we only want to re-align
+		// buffers after both hi and lo words have been written.
+
+		*(regtable[mem>>1]) = value;
+		Cores[core].RevBuffers.NeedsUpdated = true;
 	}
 	else
 	{
@@ -783,22 +916,22 @@ __forceinline void SPU2_FastWrite( u32 rmem, u16 value )
 
 			case REG_S_PMON:
 				vx=2; for (vc=1;vc<16;vc++) { Cores[core].Voices[vc].Modulated=(s8)((value & vx)/vx); vx<<=1; }
-				Cores[core].Regs.PMON = SetLoWord( Cores[core].Regs.PMON, value );
+				SetLoWord( Cores[core].Regs.PMON, value );
 			break;
 
 			case (REG_S_PMON + 2):
 				vx=1; for (vc=16;vc<24;vc++) { Cores[core].Voices[vc].Modulated=(s8)((value & vx)/vx); vx<<=1; }
-				Cores[core].Regs.PMON = SetHiWord( Cores[core].Regs.PMON, value );
+				SetHiWord( Cores[core].Regs.PMON, value );
 			break;
 
 			case REG_S_NON:
 				vx=1; for (vc=0;vc<16;vc++) { Cores[core].Voices[vc].Noise=(s8)((value & vx)/vx); vx<<=1; }
-				Cores[core].Regs.NON = SetLoWord( Cores[core].Regs.NON, value );
+				SetLoWord( Cores[core].Regs.NON, value );
 			break;
 
 			case (REG_S_NON + 2):
 				vx=1; for (vc=16;vc<24;vc++) { Cores[core].Voices[vc].Noise=(s8)((value & vx)/vx); vx<<=1; }
-				Cores[core].Regs.NON = SetHiWord( Cores[core].Regs.NON, value );
+				SetHiWord( Cores[core].Regs.NON, value );
 			break;
 
 // Games like to repeatedly write these regs over and over with the same value, hence
@@ -895,26 +1028,23 @@ __forceinline void SPU2_FastWrite( u32 rmem, u16 value )
 
 			// Reverb Start and End Address Writes!
 			//  * Yes, these are backwards from all the volumes -- the hiword comes FIRST (wtf!)
-			//  * End position is a hiword only!  Lowword is always ffff.
+			//  * End position is a hiword only!  Loword is always ffff.
 			//  * The Reverb buffer position resets on writes to StartA.  It probably resets
 			//    on writes to End too.  Docs don't say, but they're for PSX, which couldn't
 			//    change the end address anyway.
 
 			case REG_A_ESA:
-				Cores[core].EffectsStartA = (Cores[core].EffectsStartA & 0x0000FFFF) | (value<<16);
-				Cores[core].ReverbX = 0;
+				SetHiWord( Cores[core].EffectsStartA, value );
 				Cores[core].UpdateEffectsBufferSize();
 			break;
 
 			case (REG_A_ESA + 2):
-				Cores[core].EffectsStartA = (Cores[core].EffectsStartA & 0xFFFF0000) | value;
-				Cores[core].ReverbX = 0;
+				SetLoWord( Cores[core].EffectsStartA, value );
 				Cores[core].UpdateEffectsBufferSize();
 			break;
 
 			case REG_A_EEA:
 				Cores[core].EffectsEndA = ((u32)value<<16) | 0xFFFF;
-				Cores[core].ReverbX = 0;
 				Cores[core].UpdateEffectsBufferSize();
 			break;
 			
@@ -923,7 +1053,7 @@ __forceinline void SPU2_FastWrite( u32 rmem, u16 value )
 			case REG_P_MVOLL:
 			case REG_P_MVOLR:
 			{
-				V_Volume& thisvol = (omem==REG_P_MVOLL) ? Cores[core].MasterL : Cores[core].MasterR;
+				V_VolumeSlide& thisvol = (omem==REG_P_MVOLL) ? Cores[core].MasterVol.Left : Cores[core].MasterVol.Right;
 
 				if( value & 0x8000 )	// +Lin/-Lin/+Exp/-Exp
 				{ 
@@ -945,27 +1075,27 @@ __forceinline void SPU2_FastWrite( u32 rmem, u16 value )
 			break;
 
 			case REG_P_EVOLL:
-				Cores[core].FxL = GetVol32( value );
+				Cores[core].FxVol.Left = GetVol32( value );
 			break;
 
 			case REG_P_EVOLR:
-				Cores[core].FxR = GetVol32( value );
+				Cores[core].FxVol.Right = GetVol32( value );
 			break;
 			
 			case REG_P_AVOLL:
-				Cores[core].ExtL = GetVol32( value );
+				Cores[core].ExtVol.Left = GetVol32( value );
 			break;
 
 			case REG_P_AVOLR:
-				Cores[core].ExtR = GetVol32( value );
+				Cores[core].ExtVol.Right = GetVol32( value );
 			break;
 			
 			case REG_P_BVOLL:
-				Cores[core].InpL = GetVol32( value );
+				Cores[core].InpVol.Left = GetVol32( value );
 			break;
 
 			case REG_P_BVOLR:
-				Cores[core].InpR = GetVol32( value );
+				Cores[core].InpVol.Right = GetVol32( value );
 			break;
 
 			case REG_S_ADMAS:
@@ -1012,7 +1142,7 @@ void StartVoices(int core, u32 value)
 					(thisvc.WetL)?"+":"-",(thisvc.WetR)?"+":"-",
 					*(u8*)GetMemPtr(thisvc.StartA),*(u8 *)GetMemPtr((thisvc.StartA)+1),
 					thisvc.Pitch,
-					thisvc.VolumeL.Value,thisvc.VolumeR.Value,
+					thisvc.Volume.Left.Value,thisvc.Volume.Right.Value,
 					thisvc.ADSR.Reg_ADSR1,thisvc.ADSR.Reg_ADSR2);
 			}
 		}

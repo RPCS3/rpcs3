@@ -144,8 +144,8 @@ void UpdateDebugDialog()
 
 				SetDCBrushColor  (hdc,RGB(  0,255,  0));
 
-				int vl = abs(((vc.VolumeL.Value >> 16) * 24) >> 15);
-				int vr = abs(((vc.VolumeR.Value >> 16) * 24) >> 15);
+				int vl = abs(((vc.Volume.Left.Value >> 16) * 24) >> 15);
+				int vr = abs(((vc.Volume.Right.Value >> 16) * 24) >> 15);
 
 				FillRectangle(hdc,IX+38,IY+26 - vl, 4, vl);
 				FillRectangle(hdc,IX+42,IY+26 - vr, 4, vr);

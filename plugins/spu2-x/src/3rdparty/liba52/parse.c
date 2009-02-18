@@ -39,7 +39,7 @@
 void * memalign (size_t align, size_t size);
 #else
 /* assume malloc alignment is sufficient */
-#define memalign(align,size) malloc (size)
+#define memalign(align,m_size) malloc (m_size)
 #endif
 
 typedef struct {

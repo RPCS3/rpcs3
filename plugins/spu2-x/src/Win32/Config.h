@@ -82,6 +82,7 @@ extern int  dspPluginModule;
 
 extern bool	dspPluginEnabled;
 extern bool timeStretchDisabled;
+extern bool StereoExpansionDisabled;
 
 class SoundtouchCfg
 {
@@ -120,12 +121,9 @@ struct CONFIG_XAUDIO2
 	std::wstring Device;
 	s8 NumBuffers;
 
-	bool ExpandTo51;
-
 	CONFIG_XAUDIO2() :
 		Device(),
-		NumBuffers( 2 ),
-		ExpandTo51( true )
+		NumBuffers( 2 )
 	{
 	}
 };

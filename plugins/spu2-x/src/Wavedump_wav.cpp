@@ -83,14 +83,16 @@ namespace WaveDump
 		}
 	}
 
-	void WriteCore( uint coreidx, CoreSourceType src, s16 left, s16 right )
+	void WriteCore( uint coreidx, CoreSourceType src, const StereoOut16& sample )
 	{
 		if( !IsDevBuild ) return;
 		if( m_CoreWav[coreidx][src] != NULL )
-		{
-			s16 buffer[2] = { left, right };
-			m_CoreWav[coreidx][src]->write( buffer, 2 );
-		}
+			m_CoreWav[coreidx][src]->write( (s16*)&sample, 2 );
+	}
+
+	void WriteCore( uint coreidx, CoreSourceType src, s16 left, s16 right )
+	{
+		WriteCore( coreidx, src, StereoOut16( left, right ) );
 	}
 }
 
@@ -116,10 +118,8 @@ void RecordStop()
 	SAFE_DELETE_OBJ( m_wavrecord );
 }
 
-void RecordWrite(s16 left, s16 right)
+void RecordWrite( const StereoOut16& sample )
 {
 	if( m_wavrecord == NULL ) return;
-
-	s16 buffer[2] = { left, right };
-	m_wavrecord->write( buffer, 2 );
+	m_wavrecord->write( (s16*)&sample, 2 );
 }

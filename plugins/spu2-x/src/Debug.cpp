@@ -71,6 +71,27 @@ void ConLog(const char *fmt, ...) {
 #endif
 }
 
+void V_VolumeSlide::DebugDump( FILE* dump, const char* title, const char* nameLR )
+{
+	fprintf( dump, "%s Volume for %s Channel:\t%x\n"
+		"  - Value:     %x\n"
+		"  - Mode:      %x\n"
+		"  - Increment: %x\n",
+		title, nameLR, Reg_VOL, Value, Mode, Increment);
+}
+
+void V_VolumeSlideLR::DebugDump( FILE* dump, const char* title )
+{
+	Left.DebugDump( dump, title, "Left" );
+	Right.DebugDump( dump, title, "Right" );
+}
+
+void V_VolumeLR::DebugDump( FILE* dump, const char* title )
+{
+	fprintf( dump, "Volume for %s (%s Channel):\t%x\n", title, "Left", Left );
+	fprintf( dump, "Volume for %s (%s Channel):\t%x\n", title, "Right", Right );
+}
+
 void DoFullDump()
 {
 #ifdef SPU2_LOG
@@ -98,32 +119,18 @@ void DoFullDump()
 
 	if(!CoresDump()) return;
 	dump = _wfopen( CoresDumpFileName, _T("wt") );
-	if (dump) {
+	if (dump)
+	{
 		for(c=0;c<2;c++)
 		{
 			fprintf(dump,"#### CORE %d DUMP.\n",c);
-			fprintf(dump,"Master Volume for Left Channel: %x\n"
-						 "  - Value:     %x\n"
-						 "  - Mode:      %x\n"
-						 "  - Increment: %x\n",
-						 Cores[c].MasterL.Reg_VOL,
-						 Cores[c].MasterL.Value,
-						 Cores[c].MasterL.Mode,
-						 Cores[c].MasterL.Increment);
-			fprintf(dump,"Master Volume for Right Channel: %x\n"
-						 "  - Value:     %x\n"
-						 "  - Mode:      %x\n"
-						 "  - Increment: %x\n",
-						 Cores[c].MasterR.Reg_VOL,
-						 Cores[c].MasterR.Value,
-						 Cores[c].MasterR.Mode,
-						 Cores[c].MasterR.Increment);
-			fprintf(dump,"Volume for External Data Input (Left Channel):  %x\n",Cores[c].ExtL);
-			fprintf(dump,"Volume for External Data Input (Right Channel): %x\n",Cores[c].ExtR);
-			fprintf(dump,"Volume for Sound Data Input (Left Channel):     %x\n",Cores[c].InpL);
-			fprintf(dump,"Volume for Sound Data Input (Right Channel):    %x\n",Cores[c].InpR);
-			fprintf(dump,"Volume for Output from Effects (Left Channel):  %x\n",Cores[c].FxL);
-			fprintf(dump,"Volume for Output from Effects (Right Channel): %x\n",Cores[c].FxR);
+
+			Cores[c].MasterVol.DebugDump( dump, "Master" );
+
+			Cores[c].ExtVol.DebugDump( dump, "External Data Input" );
+			Cores[c].InpVol.DebugDump( dump, "Voice Data Input [dry]" );
+			Cores[c].FxVol.DebugDump( dump, "Effects/Reverb [wet]" );
+
 			fprintf(dump,"Interrupt Address:          %x\n",Cores[c].IRQA);
 			fprintf(dump,"DMA Transfer Start Address: %x\n",Cores[c].TSA);
 			fprintf(dump,"External Input to Direct Output (Left):    %s\n",Cores[c].ExtDryL?"Yes":"No");
@@ -156,24 +163,11 @@ void DoFullDump()
 			fprintf(dump,"  - ENDX:   %x\n",Cores[c].Regs.VMIXER);
 			fprintf(dump,"  - STATX:  %x\n",Cores[c].Regs.VMIXEL);
 			fprintf(dump,"  - ATTR:   %x\n",Cores[c].Regs.VMIXER);
-			for(v=0;v<24;v++) {
+			for(v=0;v<24;v++)
+			{
 				fprintf(dump,"Voice %d:\n",v);
-				fprintf(dump,"  - Volume for Left Channel: %x\n"
-							 "     - Value:     %x\n"
-							 "     - Mode:      %x\n"
-							 "     - Increment: %x\n",
-							 Cores[c].Voices[v].VolumeL.Reg_VOL,
-							 Cores[c].Voices[v].VolumeL.Value,
-							 Cores[c].Voices[v].VolumeL.Mode,
-							 Cores[c].Voices[v].VolumeL.Increment);
-				fprintf(dump,"  - Volume for Right Channel: %x\n"
-							 "     - Value:     %x\n"
-							 "     - Mode:      %x\n"
-							 "     - Increment: %x\n",
-							 Cores[c].Voices[v].VolumeR.Reg_VOL,
-							 Cores[c].Voices[v].VolumeR.Value,
-							 Cores[c].Voices[v].VolumeR.Mode,
-							 Cores[c].Voices[v].VolumeR.Increment);
+				Cores[c].Voices[v].Volume.DebugDump( dump, "" );
+				
 				fprintf(dump,"  - ADSR Envelope: %x & %x\n"
 							 "     - Ar: %x\n"
 							 "     - Am: %x\n"
@@ -197,6 +191,7 @@ void DoFullDump()
 							 Cores[c].Voices[v].ADSR.ReleaseMode,
 							 Cores[c].Voices[v].ADSR.Phase,
 							 Cores[c].Voices[v].ADSR.Value);
+
 				fprintf(dump,"  - Pitch:     %x\n",Cores[c].Voices[v].Pitch);
 				fprintf(dump,"  - Modulated: %s\n",Cores[c].Voices[v].Modulated?"Yes":"No");
 				fprintf(dump,"  - Source:    %s\n",Cores[c].Voices[v].Noise?"Noise":"Wave");
@@ -204,12 +199,12 @@ void DoFullDump()
 				fprintf(dump,"  - Direct Output for Right Channel:  %s\n",Cores[c].Voices[v].DryR?"Yes":"No");
 				fprintf(dump,"  - Effects Output for Left Channel:  %s\n",Cores[c].Voices[v].WetL?"Yes":"No");
 				fprintf(dump,"  - Effects Output for Right Channel: %s\n",Cores[c].Voices[v].WetR?"Yes":"No");
-				fprintf(dump,"  - Loop Start Adress:  %x\n",Cores[c].Voices[v].LoopStartA);
-				fprintf(dump,"  - Sound Start Adress: %x\n",Cores[c].Voices[v].StartA);
-				fprintf(dump,"  - Next Data Adress:   %x\n",Cores[c].Voices[v].NextA);
-				fprintf(dump,"  - Play Start Cycle:   %d\n",Cores[c].Voices[v].PlayCycle);
-				fprintf(dump,"  - Play Status:        %s\n",(Cores[c].Voices[v].ADSR.Phase>0)?"Playing":"Not Playing");
-				fprintf(dump,"  - Block Sample:       %d\n",Cores[c].Voices[v].SCurrent);
+				fprintf(dump,"  - Loop Start Address:  %x\n",Cores[c].Voices[v].LoopStartA);
+				fprintf(dump,"  - Sound Start Address: %x\n",Cores[c].Voices[v].StartA);
+				fprintf(dump,"  - Next Data Address:   %x\n",Cores[c].Voices[v].NextA);
+				fprintf(dump,"  - Play Start Cycle:    %d\n",Cores[c].Voices[v].PlayCycle);
+				fprintf(dump,"  - Play Status:         %s\n",(Cores[c].Voices[v].ADSR.Phase>0)?"Playing":"Not Playing");
+				fprintf(dump,"  - Block Sample:        %d\n",Cores[c].Voices[v].SCurrent);
 			}
 			fprintf(dump,"#### END OF DUMP.\n\n");
 		}

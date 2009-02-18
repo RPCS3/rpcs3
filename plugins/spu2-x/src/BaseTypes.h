@@ -27,6 +27,8 @@
 using std::string;
 using std::wstring;
 
+#include "PS2Edefs.h"
+
 //////////////////////////////////////////////////////////////////////////
 // Override Win32 min/max macros with the STL's type safe and macro
 // free varieties (much safer!)
@@ -83,5 +85,41 @@ extern void SysMessage(const char *fmt, ...);
 static const bool IsDebugBuild = false;
 
 #endif
+
+struct StereoOut16;
+struct StereoOutFloat;
+
+struct StereoOut32
+{
+	static StereoOut32 Empty;
+
+	s32 Left;
+	s32 Right;
+	
+	StereoOut32() :
+		Left( 0 ),
+		Right( 0 )
+	{
+	}
+
+	StereoOut32( s32 left, s32 right ) :
+		Left( left ),
+		Right( right )
+	{
+	}
+	
+	StereoOut32( const StereoOut16& src );
+	explicit StereoOut32( const StereoOutFloat& src );
+	
+	StereoOut16 DownSample() const;
+	
+	StereoOut32 operator+( const StereoOut32& right )
+	{
+		return StereoOut32(
+			Left + right.Left,
+			Right + right.Right
+		);
+	}
+};
 
 #endif

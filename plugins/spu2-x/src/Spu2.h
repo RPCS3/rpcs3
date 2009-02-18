@@ -182,21 +182,25 @@ extern void DspUpdate(); // to let the Dsp process window messages
 
 extern void RecordStart();
 extern void RecordStop();
-extern void RecordWrite(s16 left, s16 right);
+extern void RecordWrite( const StereoOut16& sample );
 
 extern void UpdateSpdifMode();
 extern void LowPassFilterInit();
 extern void InitADSR();
 extern void CalculateADSR( V_Voice& vc );
 
+extern void __fastcall ReadInput( V_Core& thiscore, StereoOut32& PData );
+
+
 //////////////////////////////
 //    The Mixer Section     //
 //////////////////////////////
 
 extern void Mix();
-extern s32 clamp_mix(s32 x, u8 bitshift=0);
+extern s32 clamp_mix( s32 x, u8 bitshift=0 );
+extern void clamp_mix( StereoOut32& sample, u8 bitshift=0 );
 extern void Reverb_AdvanceBuffer( V_Core& thiscore );
-extern void DoReverb( V_Core& thiscore, s32& OutL, s32& OutR, s32 InL, s32 InR);
+extern StereoOut32 DoReverb( V_Core& thiscore, const StereoOut32& Input );
 extern s32 MulShr32( s32 srcval, s32 mulval );
 
 //#define PCM24_S1_INTERLEAVE

@@ -22,7 +22,24 @@
 #ifndef DEFS_H_INCLUDED
 #define DEFS_H_INCLUDED
 
-struct V_Volume
+struct V_VolumeLR
+{
+	static V_VolumeLR Max;
+
+	s32 Left;
+	s32 Right;
+
+	V_VolumeLR() {}
+	V_VolumeLR( s32 both ) :
+		Left( both ),
+		Right( both )
+	{
+	}
+	
+	void DebugDump( FILE* dump, const char* title );
+};
+
+struct V_VolumeSlide
 {
 	// Holds the "original" value of the volume for this voice, prior to slides.
 	// (ie, the volume as written to the register)
@@ -33,8 +50,46 @@ struct V_Volume
 	s8 Mode;
 	
 public:
+	V_VolumeSlide() {}
+	V_VolumeSlide( s16 regval, s32 fullvol ) :
+		Reg_VOL( regval ),
+		Value( fullvol ),
+		Increment( 0 ),
+		Mode( 0 )
+	{
+	}
+
 	void Update();
+	void RegSet( u16 src );		// used to set the volume from a register source (16 bit signed)
+	void DebugDump( FILE* dump, const char* title, const char* nameLR );
+	
 };
+
+struct V_VolumeSlideLR
+{
+	static V_VolumeSlideLR Max;
+
+	V_VolumeSlide Left;
+	V_VolumeSlide Right;
+
+public:
+	V_VolumeSlideLR() {}
+		
+	V_VolumeSlideLR( s16 regval, s32 bothval ) :
+		Left( regval, bothval ),
+		Right( regval, bothval )
+	{
+	}
+
+	void Update()
+	{
+		Left.Update();
+		Right.Update();
+	}
+	
+	void DebugDump( FILE* dump, const char* title );
+};
+
 
 struct V_ADSR
 {
@@ -61,12 +116,10 @@ public:
 
 struct V_Voice
 {
-// SPU2 cycle where the Playing started
-	u32 PlayCycle;
-// Left Volume
-	V_Volume VolumeL;
-// Right Volume
-	V_Volume VolumeR;
+	u32 PlayCycle;		// SPU2 cycle where the Playing started
+
+	V_VolumeSlideLR Volume;
+
 // Envelope
 	V_ADSR ADSR;
 // Pitch (also Reg_PITCH)
@@ -198,6 +251,39 @@ struct V_Reverb
 	u32 MIX_DEST_B1;
 };
 
+struct V_ReverbBuffers
+{
+	s32 FB_SRC_A0;
+	s32 FB_SRC_B0;
+	s32 FB_SRC_A1;
+	s32 FB_SRC_B1;
+
+	s32 IIR_SRC_A0;
+	s32 IIR_SRC_A1;
+	s32 IIR_SRC_B1;
+	s32 IIR_SRC_B0;
+	s32 IIR_DEST_A0;
+	s32 IIR_DEST_A1;
+	s32 IIR_DEST_B0;
+	s32 IIR_DEST_B1;
+
+	s32 ACC_SRC_A0;
+	s32 ACC_SRC_A1;
+	s32 ACC_SRC_B0;
+	s32 ACC_SRC_B1;
+	s32 ACC_SRC_C0;
+	s32 ACC_SRC_C1;
+	s32 ACC_SRC_D0;
+	s32 ACC_SRC_D1;
+
+	s32 MIX_DEST_A0;
+	s32 MIX_DEST_A1;
+	s32 MIX_DEST_B0;
+	s32 MIX_DEST_B1;
+	
+	bool NeedsUpdated;
+};
+
 struct V_SPDIF
 {
 	u16 Out;
@@ -228,22 +314,14 @@ struct V_Core
 {
 // Core Voices
 	V_Voice Voices[24];
-// Master Volume for Left Channel
-	V_Volume MasterL;
-// Master Volume for Right Channel
-	V_Volume MasterR;
-// Volume for External Data Input (Left Channel)
-	s32 ExtL;
-// Volume for External Data Input (Right Channel)
-	s32 ExtR;
-// Volume for Sound Data Input (Left Channel)
-	s32 InpL;
-// Volume for Sound Data Input (Right Channel)
-	s32 InpR;
-// Volume for Output from Effects (Left Channel)
-	s32 FxL;
-// Volume for Output from Effects (Right Channel)
-	s32 FxR;
+
+
+	V_VolumeSlideLR MasterVol;// Master Volume
+	
+	V_VolumeLR ExtVol;		// Volume for External Data Input
+	V_VolumeLR InpVol;		// Volume for Sound Data Input
+	V_VolumeLR FxVol;		// Volume for Output from Effects 
+	
 // Interrupt Address
 	u32 IRQA;
 // DMA Transfer Start Address
@@ -296,6 +374,7 @@ struct V_Core
 
 // Reverb
 	V_Reverb Revb;
+	V_ReverbBuffers RevBuffers;		// buffer pointers for reverb, pre-calculated and pre-clipped.
 	u32 EffectsStartA;
 	u32 EffectsEndA;
 	u32 ReverbX;
@@ -311,8 +390,7 @@ struct V_Core
 	// Last samples to pass through the effects processor.
 	// Used because the effects processor works at 24khz and just pulls
 	// from this for the odd Ts.
-	s16 LastEffectL;
-	s16 LastEffectR;
+	StereoOut32 LastEffect;
 
 	u8 InitDelay;
 
@@ -329,12 +407,15 @@ struct V_Core
 	s16 ADMATempBuffer[0x1000];
 
 	u32 ADMAPV;
-	u32 ADMAPL;
-	u32 ADMAPR;
-
+	StereoOut32 ADMAP;
 
 	void Reset();
 	void UpdateEffectsBufferSize();
+
+	V_Core();		// our badass constructor
+	s32 EffectsBufferIndexer( s32 offset ) const;
+	void UpdateFeedbackBuffersA();
+	void UpdateFeedbackBuffersB();
 };
 
 extern V_Core Cores[2];

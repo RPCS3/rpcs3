@@ -53,6 +53,7 @@
 				FavorSizeOrSpeed="1"
 				OmitFramePointers="true"
 				EnableFiberSafeOptimizations="true"
+				AdditionalIncludeDirectories=""
 				PreprocessorDefinitions="SPU2X_DEVBUILD;FLOAT_SAMPLES;NDEBUG;_USRDLL"
 				StringPooling="true"
 				RuntimeLibrary="0"
@@ -606,6 +607,10 @@
 				</File>
 				<File
 					RelativePath=".\SndOut_XAudio2.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\Timestretcher.cpp"
 					>
 				</File>
 			</Filter>

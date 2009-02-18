@@ -31,14 +31,13 @@ private:
 
 	static const int PacketsPerBuffer = (1024 / SndOutPacketSize);
 	static const int BufferSize = SndOutPacketSize*PacketsPerBuffer;
-	static const int BufferSizeBytes = BufferSize << 1;
 
 	u32 numBuffers;
 	HWAVEOUT hwodevice;
 	WAVEFORMATEX wformat;
 	WAVEHDR whbuffer[MAX_BUFFER_COUNT];
 
-	s16* qbuffer;
+	StereoOut16* qbuffer;
 
 	#define QBUFFER(x) (qbuffer + BufferSize * (x))
 
@@ -46,17 +45,13 @@ private:
 	HANDLE thread;
 	DWORD tid;
 
-	SndBuffer *buff;
-
 	wchar_t ErrText[256];
 
-	static DWORD CALLBACK RThread(WaveOutModule*obj)
-	{
-		return obj->Thread();
-	}
-
+	template< typename T >
 	DWORD CALLBACK Thread()
 	{
+		static const int BufferSizeBytes = BufferSize * sizeof( T );
+
 		while( waveout_running )
 		{
 			bool didsomething = false;
@@ -64,16 +59,16 @@ private:
 			{
 				if(!(whbuffer[i].dwFlags & WHDR_DONE) ) continue;
 
-				WAVEHDR *buf=whbuffer+i;
+				WAVEHDR *buf = whbuffer+i;
 
 				buf->dwBytesRecorded = buf->dwBufferLength;
 
-				s16 *t = (s16*)buf->lpData;
+				T* t = (T*)buf->lpData;
 				for(int p=0; p<PacketsPerBuffer; p++, t+=SndOutPacketSize )
-					buff->ReadSamples( t );
+					SndBuffer::ReadSamples( t );
 
-				whbuffer[i].dwFlags&=~WHDR_DONE;
-				waveOutWrite(hwodevice,buf,sizeof(WAVEHDR));
+				whbuffer[i].dwFlags &= ~WHDR_DONE;
+				waveOutWrite( hwodevice, buf, sizeof(WAVEHDR) );
 				didsomething = true;
 			}
 
@@ -85,25 +80,71 @@ private:
 		return 0;
 	}
 
-public:
-	s32 Init(SndBuffer *sb)
+	template< typename T >
+	static DWORD CALLBACK RThread(WaveOutModule*obj)
 	{
-		buff = sb;
+		return obj->Thread<T>();
+	}
+
+public:
+	s32 Init()
+	{
 		numBuffers = Config_WaveOut.NumBuffers;
 
 		MMRESULT woores;
 
 		if (Test()) return -1;
 
-		wformat.wFormatTag=WAVE_FORMAT_PCM;
-		wformat.nSamplesPerSec=SampleRate;
-		wformat.wBitsPerSample=16;
-		wformat.nChannels=2;
-		wformat.nBlockAlign=((wformat.wBitsPerSample * wformat.nChannels) / 8);
-		wformat.nAvgBytesPerSec=(wformat.nSamplesPerSec * wformat.nBlockAlign);
-		wformat.cbSize=0;
+		// TODO : Use dsound to determine the speaker configuration, and expand audio from there.
+
+		#if 0
+		int speakerConfig;
+
+		if( StereoExpansionDisabled )
+			speakerConfig = 2;
+
+		// Any windows driver should support stereo at the software level, I should think!
+		jASSUME( speakerConfig > 1 );
+		LPTHREAD_START_ROUTINE threadproc;
+
+		switch( speakerConfig )
+		{
+		case 2:
+			ConLog( "* SPU2 > Using normal 2 speaker stereo output." );
+			threadproc = (LPTHREAD_START_ROUTINE)&RThread<StereoOut16>;
+			speakerConfig = 2;
+		break;
+
+		case 4:
+			ConLog( "* SPU2 > 4 speaker expansion enabled [quadraphenia]" );
+			threadproc = (LPTHREAD_START_ROUTINE)&RThread<StereoQuadOut16>;
+			speakerConfig = 4;
+		break;
+
+		case 6:
+		case 7:
+			ConLog( "* SPU2 > 5.1 speaker expansion enabled." );
+			threadproc = (LPTHREAD_START_ROUTINE)&RThread<Stereo51Out16>;
+			speakerConfig = 6;
+		break;
+
+		default:
+			ConLog( "* SPU2 > 7.1 speaker expansion enabled." );
+			threadproc = (LPTHREAD_START_ROUTINE)&RThread<Stereo51Out16>;
+			speakerConfig = 8;
+		break;
+		}
+		#endif
+
+		wformat.wFormatTag		= WAVE_FORMAT_PCM;
+		wformat.nSamplesPerSec	= SampleRate;
+		wformat.wBitsPerSample	= 16;
+		wformat.nChannels		= 2;
+		wformat.nBlockAlign		= ((wformat.wBitsPerSample * wformat.nChannels) / 8);
+		wformat.nAvgBytesPerSec	= (wformat.nSamplesPerSec * wformat.nBlockAlign);
+		wformat.cbSize			= 0;
 		
-		qbuffer=new s16[BufferSize*numBuffers];
+		qbuffer = new StereoOut16[BufferSize*numBuffers];
 
 		woores = waveOutOpen(&hwodevice,WAVE_MAPPER,&wformat,0,0,0);
 		if (woores != MMSYSERR_NOERROR)
@@ -112,6 +153,8 @@ public:
 			SysMessage("WaveOut Error: %s",ErrText);
 			return -1;
 		}
+
+		const int BufferSizeBytes = wformat.nBlockAlign * BufferSize;
 
 		for(u32 i=0;i<numBuffers;i++)
 		{
@@ -133,7 +176,7 @@ public:
 		// love it needs and won't suck resources idling pointlessly.  Just don't try to
 		// run it in uber-low-latency mode.
 		waveout_running = true;
-		thread = CreateThread(NULL,0,(LPTHREAD_START_ROUTINE)RThread,this,0,&tid);
+		thread = CreateThread(NULL,0,(LPTHREAD_START_ROUTINE)RThread<StereoOut16>,this,0,&tid);
 
 		return 0;
 	}
@@ -276,4 +319,4 @@ public:
 
 } WO;
 
-SndOutModule *WaveOut=&WO;
+SndOutModule *WaveOut = &WO;

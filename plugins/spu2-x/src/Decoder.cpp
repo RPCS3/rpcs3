@@ -58,7 +58,6 @@ int state=0;
 FILE *fSpdifDump;
 
 extern u32 core;
-void __fastcall ReadInput(V_Core& thiscore, s32& PDataL,s32& PDataR);
 
 union spdif_frame { // total size: 32bits
 	struct {
@@ -132,22 +131,23 @@ s32 stoi(sample_t n) //input: [-1..1]
 
 void spdif_update()
 {
-	s32 Data,Zero;
+	StereoOut32 Data;
 
 	core=0;
 	V_Core& thiscore( Cores[core] );
 	for(int i=0;i<data_rate;i++)
 	{
-		ReadInput(thiscore, Data,Zero);
+		// Right side data should be zero / ignored
+		ReadInput( thiscore, Data );
 		
 		if(fSpdifDump)
 		{
-			fwrite(&Data,4,1,fSpdifDump);
-			fwrite(&Zero,4,1,fSpdifDump);
+			fwrite(&Data.Left,4,1,fSpdifDump);
+			fwrite(&Data.Right,4,1,fSpdifDump);		// zero side.
 		}
 
 		if(ac3dec)
-			spdif_Write(Data);
+			spdif_Write(Data.Left);
 	}
 
 	if(!ac3dec) return;
