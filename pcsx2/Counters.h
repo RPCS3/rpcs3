@@ -133,8 +133,8 @@ extern bool rcntUpdate_vSync();
 extern bool rcntUpdate();
 
 extern void rcntInit();
-extern void __fastcall rcntStartGate(unsigned int mode, u32 sCycle);
-extern void __fastcall rcntEndGate(unsigned int mode, u32 sCycle);
+extern void __fastcall rcntStartGate(bool mode, u32 sCycle);
+extern void __fastcall rcntEndGate(bool mode, u32 sCycle);
 extern void __fastcall rcntWcount(int index, u32 value);
 extern void __fastcall rcntWmode(int index, u32 value);
 extern void __fastcall rcntWtarget(int index, u32 value);

@@ -409,7 +409,7 @@ static __forceinline void VSyncStart(u32 sCycle)
 	hwIntcIrq(2);
 	psxVBlankStart();
 
-	if (gates) rcntStartGate(0x8, sCycle); // Counters Start Gate code
+	if (gates) rcntStartGate(true, sCycle); // Counters Start Gate code
 	if (Config.Patch) applypatch(1); // Apply patches (ToDo: clean up patch code)
 
 	// INTC - VB Blank Start Hack --
@@ -452,7 +452,7 @@ static __forceinline void VSyncEnd(u32 sCycle)
 
 	hwIntcIrq(3);  // HW Irq
 	psxVBlankEnd(); // psxCounters vBlank End
-	if (gates) rcntEndGate(0x8, sCycle); // Counters End Gate Code
+	if (gates) rcntEndGate(true, sCycle); // Counters End Gate Code
 	frameLimit(); // limit FPS
 
 	// This doesn't seem to be needed here.  Games only seem to break with regard to the
@@ -472,7 +472,7 @@ __forceinline void rcntUpdate_hScanline()
 
 	//iopBranchAction = 1;
 	if (counters[4].modeval & MODE_HBLANK) { //HBLANK Start
-		rcntStartGate(0, counters[4].sCycle);
+		rcntStartGate(false, counters[4].sCycle);
 		psxCheckStartGate16(0);
 		
 		// Setup the hRender's start and end cycle information:
@@ -483,7 +483,7 @@ __forceinline void rcntUpdate_hScanline()
 	else { //HBLANK END / HRENDER Begin
 		if (CSRw & 0x4) GSCSRr |= 4; // signal
 		if (!(GSIMR&0x400)) gsIrq();
-		if (gates) rcntEndGate(0, counters[4].sCycle);
+		if (gates) rcntEndGate(false, counters[4].sCycle);
 		if (psxhblankgate) psxCheckEndGate16(0);
 
 		// set up the hblank's start and end cycle information:
@@ -637,14 +637,14 @@ static void _rcntSetGate( int index )
 }
 
 // mode - 0 means hblank source, 8 means vblank source.
-void __fastcall rcntStartGate(uint mode, u32 sCycle)
+void __fastcall rcntStartGate(bool isVblank, u32 sCycle)
 {
 	int i;
 
 	for (i=0; i <=3; i++) {
 
 		//if ((mode == 0) && ((counters[i].mode & 0x83) == 0x83))
-		if ((mode == 0) && counters[i].mode.IsCounting && (counters[i].mode.ClockSource == 3) )
+		if (!isVblank && counters[i].mode.IsCounting && (counters[i].mode.ClockSource == 3) )
 		{
 			// Update counters using the hblank as the clock.  This keeps the hblank source
 			// nicely in sync with the counters and serves as an optimization also, since these
@@ -659,7 +659,7 @@ void __fastcall rcntStartGate(uint mode, u32 sCycle)
 		}
 
 		if (!(gates & (1<<i))) continue;
-		if (counters[i].mode.GateSource != mode) continue;
+		if ((!!counters[i].mode.GateSource) != isVblank) continue;
 
 		switch (counters[i].mode.GateMode) {
 			case 0x0: //Count When Signal is low (off)
@@ -670,7 +670,7 @@ void __fastcall rcntStartGate(uint mode, u32 sCycle)
 				counters[i].mode.IsCounting = 1;
 				counters[i].sCycleT = sCycle;
 				EECNT_LOG("EE Counter[%d] %s StartGate Type0, count = %x\n",
-					mode ? "vblank" : "hblank", i, counters[i].count );
+					isVblank ? "vblank" : "hblank", i, counters[i].count );
 				break;
 				
 			case 0x2:	// reset and start counting on vsync end
@@ -684,7 +684,7 @@ void __fastcall rcntStartGate(uint mode, u32 sCycle)
 				counters[i].target &= 0xffff;
 				counters[i].sCycleT = sCycle;
 				EECNT_LOG("EE Counter[%d] %s StartGate Type%d, count = %x\n",
-					mode ? "vblank" : "hblank", i, counters[i].mode.GateMode, counters[i].count );
+					isVblank ? "vblank" : "hblank", i, counters[i].mode.GateMode, counters[i].count );
 				break;
 		}
 	}
@@ -698,13 +698,13 @@ void __fastcall rcntStartGate(uint mode, u32 sCycle)
 }
 
 // mode - 0 means hblank signal, 8 means vblank signal.
-void __fastcall rcntEndGate(uint mode, u32 sCycle)
+void __fastcall rcntEndGate(bool isVblank , u32 sCycle)
 {
 	int i;
 
 	for(i=0; i <=3; i++) { //Gates for counters
 		if (!(gates & (1<<i))) continue;
-		if (counters[i].mode.GateSource != mode) continue;
+		if ((!!counters[i].mode.GateSource) != isVblank) continue;
 
 		switch (counters[i].mode.GateMode) {
 			case 0x0: //Count When Signal is low (off)
@@ -717,7 +717,7 @@ void __fastcall rcntEndGate(uint mode, u32 sCycle)
 				counters[i].mode.IsCounting = 0;
 				counters[i].sCycleT = sCycle;
 				EECNT_LOG("EE Counter[%d] %s EndGate Type0, count = %x\n",
-					mode ? "vblank" : "hblank", i, counters[i].count );
+					isVblank ? "vblank" : "hblank", i, counters[i].count );
 			break;
 
 			case 0x1:	// Reset and start counting on Vsync start
@@ -731,7 +731,7 @@ void __fastcall rcntEndGate(uint mode, u32 sCycle)
 				counters[i].target &= 0xffff;
 				counters[i].sCycleT = sCycle;
 				EECNT_LOG("EE Counter[%d] %s EndGate Type%d, count = %x\n",
-					mode ? "vblank" : "hblank", i, counters[i].mode.GateMode, counters[i].count );
+					isVblank ? "vblank" : "hblank", i, counters[i].mode.GateMode, counters[i].count );
 			break;
 		}
 	}

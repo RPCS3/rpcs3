@@ -42,7 +42,9 @@ static void __fastcall psxDmaGeneric(u32 madr, u32 bcr, u32 chcr, u32 spuCore, _
 
 	if(SPU2async)
 	{
+		FreezeMMXRegs( 1 );
 		SPU2async(psxRegs.cycle - psxCounters[6].sCycleT);	
+		FreezeMMXRegs( 0 );
 		//Console::Status("cycles sent to SPU2 %x\n", psxRegs.cycle - psxCounters[6].sCycleT);
 		
 		psxCounters[6].sCycleT = psxRegs.cycle;

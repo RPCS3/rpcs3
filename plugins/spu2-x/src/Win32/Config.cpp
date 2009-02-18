@@ -159,7 +159,7 @@ BOOL CALLBACK ConfigProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 			SendDialogMsg( hWnd, IDC_INTERPOLATE, CB_RESETCONTENT,0,0 ); 
 			SendDialogMsg( hWnd, IDC_INTERPOLATE, CB_ADDSTRING,0,(LPARAM) _T("0 - Nearest (none/fast)") );
 			SendDialogMsg( hWnd, IDC_INTERPOLATE, CB_ADDSTRING,0,(LPARAM) _T("1 - Linear (recommended)") );
-			SendDialogMsg( hWnd, IDC_INTERPOLATE, CB_ADDSTRING,0,(LPARAM) _T("2 - Cubic (better/slower)") );
+			SendDialogMsg( hWnd, IDC_INTERPOLATE, CB_ADDSTRING,0,(LPARAM) _T("2 - Cubic (not good with effects)") );
 			SendDialogMsg( hWnd, IDC_INTERPOLATE, CB_SETCURSEL,Interpolation,0 ); 
 
 			SendDialogMsg( hWnd, IDC_OUTPUT, CB_RESETCONTENT,0,0 );

@@ -697,28 +697,24 @@ u16 SPU_ps1_read(u32 mem)
 }
 
 // Ah the joys of endian-specific code! :D
-static __forceinline u32 SetHiWord( u32& src, u16 value )
+static __forceinline void SetHiWord( u32& src, u16 value )
 {
 	((u16*)&src)[1] = value;
-	return src;
 }
 
-static __forceinline u32 SetLoWord( u32& src, u16 value )
+static __forceinline void SetLoWord( u32& src, u16 value )
 {
 	((u16*)&src)[0] = value;
-	return src;
 }
 
-static __forceinline s32 SetHiWord( s32& src, u16 value )
+static __forceinline void SetHiWord( s32& src, u16 value )
 {
 	((u16*)&src)[1] = value;
-	return src;
 }
 
-static __forceinline s32 SetLoWord( s32& src, u16 value )
+static __forceinline void SetLoWord( s32& src, u16 value )
 {
 	((u16*)&src)[0] = value;
-	return src;
 }
 
 static __forceinline u16 GetHiWord( u32& src )
@@ -941,7 +937,11 @@ __forceinline void SPU2_FastWrite( u32 rmem, u16 value )
 { \
 	const uint start_bit	= hiword ? 16 : 0; \
 	const uint end_bit		= hiword ? 24 : 16; \
-	const u32 result		= hiword ? SetHiWord( thiscore.Regs.reg_out, value ) : SetLoWord( thiscore.Regs.reg_out, value ); \
+	const u32 result		= thiscore.Regs.reg_out; \
+	if( hiword ) \
+		SetHiWord( thiscore.Regs.reg_out, value ); \
+	else \
+		SetLoWord( thiscore.Regs.reg_out, value ); \
 	if( result == thiscore.Regs.reg_out ) return; \
  \
 	thiscore.Regs.reg_out = result; \

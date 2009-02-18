@@ -349,17 +349,15 @@ EXPORT_C_(void) SPU2async(u32 cycles)
 
 EXPORT_C_(void) SPU2irqCallback(void (*SPU2callback)(),void (*DMA4callback)(),void (*DMA7callback)())
 {
-	_irqcallback=SPU2callback;
-	dma4callback=DMA4callback;
-	dma7callback=DMA7callback;
+	_irqcallback = SPU2callback;
+	dma4callback = DMA4callback;
+	dma7callback = DMA7callback;
 }
 
 EXPORT_C_(u16) SPU2read(u32 rmem) 
 {
 	//	if(!replay_mode)
 	//		s2r_readreg(Cycles,rmem);
-
-	if(hasPtr) TimeUpdate(*cPtr);
 
 	u16 ret=0xDEAD; u32 core=0, mem=rmem&0xFFFF, omem=mem;
 	if (mem & 0x400) { omem^=0x400; core=1; }
@@ -419,8 +417,6 @@ EXPORT_C_(void) SPU2write(u32 rmem, u16 value)
 	}
 	else
 	{
-		if(hasPtr) TimeUpdate(*cPtr);
-
 		if (rmem>>16 == 0x1f80)
 			SPU_ps1_write(rmem,value);
 		else
