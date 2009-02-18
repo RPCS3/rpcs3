@@ -225,7 +225,7 @@ void C_LT() {
 
 void CFC1() {
 	if ( !_Rt_ || ( (_Fs_ != 0) && (_Fs_ != 31) ) ) return;
-	cpuRegs.GPR.r[_Rt_].SD[0] = (s64)fpuRegs.fprc[_Fs_];
+	cpuRegs.GPR.r[_Rt_].SD[0] = (s64)(s32)fpuRegs.fprc[_Fs_];
 }
 
 void CTC1() {
@@ -276,7 +276,7 @@ void MAX_S() {
 
 void MFC1() {
 	if ( !_Rt_ ) return;
-	cpuRegs.GPR.r[_Rt_].SD[0] = (s64)_FsValUl_;
+	cpuRegs.GPR.r[_Rt_].SD[0] = (s64)(s32)_FsValUl_;
 }
 
 void MIN_S() {
@@ -285,7 +285,7 @@ void MIN_S() {
 }
 
 void MOV_S() {
-	_FdValUl_  = _FsValUl_;
+	_FdValUl_ = _FsValUl_;
 } 
 
 void MSUB_S() {
