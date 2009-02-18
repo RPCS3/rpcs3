@@ -1783,7 +1783,7 @@ int VIF1transfer(u32 *data, int size, int istag) {
 			continue;
 		}	
 		
-		if(vif1.tag.size != 0) SysPrintf("no vif1 cmd but tag size is left last cmd read %x\n", vif1Regs->code);
+		if(vif1.tag.size != 0) DevCon::Error("no vif1 cmd but tag size is left last cmd read %x\n", params vif1Regs->code);
 
 		if(vif1.irq) break;
 		

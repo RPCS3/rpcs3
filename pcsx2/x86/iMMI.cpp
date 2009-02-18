@@ -3401,7 +3401,6 @@ CPU_SSE2_XMMCACHE_START((((_Rs_)&&(_Rt_))?XMMINFO_READS:0)|(((_Rs_)&&(_Rt_))?XMM
 			SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
 			SSE2_PMULUDQ_XMM_to_XMM(EEREC_D, EEREC_T);
 		}
-		SSEX_MOVDQA_XMM_to_XMM(EEREC_HI, EEREC_D);
 	}
 	else {
 		if( !_Rs_ || !_Rt_ ) SSE2_PXOR_XMM_to_XMM(EEREC_HI, EEREC_HI);
@@ -3412,7 +3411,10 @@ CPU_SSE2_XMMCACHE_START((((_Rs_)&&(_Rt_))?XMMINFO_READS:0)|(((_Rs_)&&(_Rt_))?XMM
 	}
 
 	// add from LO/HI
-	if ( _Rd_ ) SSE2_PADDQ_XMM_to_XMM(EEREC_D, EEREC_LO);
+	if ( _Rd_ ) {
+		SSE2_PADDQ_XMM_to_XMM(EEREC_D, EEREC_LO);
+		SSEX_MOVDQA_XMM_to_XMM(EEREC_HI, EEREC_D);
+	}
 	else SSE2_PADDQ_XMM_to_XMM(EEREC_HI, EEREC_LO);
 
 	// interleave & sign extend
