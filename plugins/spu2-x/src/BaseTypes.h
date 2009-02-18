@@ -113,12 +113,17 @@ struct StereoOut32
 	
 	StereoOut16 DownSample() const;
 	
-	StereoOut32 operator+( const StereoOut32& right )
+	StereoOut32 operator+( const StereoOut32& right ) const
 	{
 		return StereoOut32(
 			Left + right.Left,
 			Right + right.Right
 		);
+	}
+
+	StereoOut32 operator/( int src ) const 
+	{
+		return StereoOut32( Left / src, Right / src );
 	}
 };
 

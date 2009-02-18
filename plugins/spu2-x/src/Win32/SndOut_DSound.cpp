@@ -144,9 +144,9 @@ public:
 		memset(&wfx, 0, sizeof(WAVEFORMATEX)); 
 		wfx.wFormatTag		= WAVE_FORMAT_PCM;
 		wfx.nSamplesPerSec	= SampleRate;
-		wfx.nChannels		= speakerConfig;
+		wfx.nChannels		= (WORD)speakerConfig;
 		wfx.wBitsPerSample	= 16;
-		wfx.nBlockAlign		= 2*speakerConfig;
+		wfx.nBlockAlign		= 2*(WORD)speakerConfig;
 		wfx.nAvgBytesPerSec	= SampleRate * wfx.nBlockAlign;
 		wfx.cbSize			= 0;
 

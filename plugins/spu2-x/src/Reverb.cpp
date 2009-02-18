@@ -50,7 +50,11 @@ void Reverb_AdvanceBuffer( V_Core& thiscore )
 {
 	if( (Cycles & 1) && (thiscore.EffectsBufferSize > 0) )
 	{
-		thiscore.ReverbX = RevbGetIndexer( thiscore, 1 );
+		//thiscore.ReverbX = RevbGetIndexer( thiscore, 1 );
+		thiscore.ReverbX += 1;
+
+		if( thiscore.ReverbX >= thiscore.EffectsBufferSize ) thiscore.ReverbX = 0;
+
 		//thiscore.ReverbX += 1;
 		//if(thiscore.ReverbX >= (u32)thiscore.EffectsBufferSize )
 		//	thiscore.ReverbX %= (u32)thiscore.EffectsBufferSize;
@@ -64,23 +68,23 @@ StereoOut32 DoReverb( V_Core& thiscore, const StereoOut32& Input )
 	// Reverb processing occurs at 24khz, so we skip processing every other sample,
 	// and use the previous calculation for this core instead.
 
-	if( thiscore.EffectsBufferSize <= 0 )
-	{
-		// StartA is past EndA, so effects are disabled.
-		//ConLog( " * SPU2: Effects disabled due to leapfrogged EffectsStart." );
-		return Input;
-	}
-
 	if( (Cycles&1)==0 )
 	{
 		StereoOut32 retval( thiscore.LastEffect );
-		thiscore.LastEffect = Input;
+		thiscore.LastEffect = Input/2;
 		return retval;
 	}
 	else  
 	{
 		if( thiscore.RevBuffers.NeedsUpdated )
 			thiscore.UpdateEffectsBufferSize();
+
+		if( thiscore.EffectsBufferSize <= 0 )
+		{
+			// StartA is past EndA, so effects are disabled.
+			//ConLog( " * SPU2: Effects disabled due to leapfrogged EffectsStart." );
+			return Input;
+		}
 
 		// Advance the current reverb buffer pointer, and cache the read/write addresses we'll be
 		// needing for this session of reverb.
@@ -131,21 +135,20 @@ StereoOut32 DoReverb( V_Core& thiscore, const StereoOut32& Input )
 		const s32 IIR_INPUT_B0 = ((_spu2mem[src_b0] * thiscore.Revb.IIR_COEF) + (INPUT_SAMPLE.Left * thiscore.Revb.IN_COEF_L))>>16;
 		const s32 IIR_INPUT_B1 = ((_spu2mem[src_b1] * thiscore.Revb.IIR_COEF) + (INPUT_SAMPLE.Right * thiscore.Revb.IN_COEF_R))>>16;
 
-		//const s32 IIR_A0 = (IIR_INPUT_A0 * thiscore.Revb.IIR_ALPHA) + (_spu2mem[dest_a0] * (0x7fff - thiscore.Revb.IIR_ALPHA));
-		//const s32 IIR_A1 = (IIR_INPUT_A1 * thiscore.Revb.IIR_ALPHA) + (_spu2mem[dest_a1] * (0x7fff - thiscore.Revb.IIR_ALPHA));
-		//const s32 IIR_B0 = (IIR_INPUT_B0 * thiscore.Revb.IIR_ALPHA) + (_spu2mem[dest_b0] * (0x7fff - thiscore.Revb.IIR_ALPHA));
-		//const s32 IIR_B1 = (IIR_INPUT_B1 * thiscore.Revb.IIR_ALPHA) + (_spu2mem[dest_b1] * (0x7fff - thiscore.Revb.IIR_ALPHA));
-
-		//_spu2mem[dest2_a0] = clamp_mix( IIR_A0 >> 16 );
-		//_spu2mem[dest2_a1] = clamp_mix( IIR_A1 >> 16 );
-		//_spu2mem[dest2_b0] = clamp_mix( IIR_B0 >> 16 );
-		//_spu2mem[dest2_b1] = clamp_mix( IIR_B1 >> 16 );
+		/*const s32 IIR_A0 = (IIR_INPUT_A0 * thiscore.Revb.IIR_ALPHA) + (_spu2mem[dest_a0] * (0x7fff - thiscore.Revb.IIR_ALPHA));
+		const s32 IIR_A1 = (IIR_INPUT_A1 * thiscore.Revb.IIR_ALPHA) + (_spu2mem[dest_a1] * (0x7fff - thiscore.Revb.IIR_ALPHA));
+		const s32 IIR_B0 = (IIR_INPUT_B0 * thiscore.Revb.IIR_ALPHA) + (_spu2mem[dest_b0] * (0x7fff - thiscore.Revb.IIR_ALPHA));
+		const s32 IIR_B1 = (IIR_INPUT_B1 * thiscore.Revb.IIR_ALPHA) + (_spu2mem[dest_b1] * (0x7fff - thiscore.Revb.IIR_ALPHA));
+		_spu2mem[dest2_a0] = clamp_mix( IIR_A0 >> 16 );
+		_spu2mem[dest2_a1] = clamp_mix( IIR_A1 >> 16 );
+		_spu2mem[dest2_b0] = clamp_mix( IIR_B0 >> 16 );
+		_spu2mem[dest2_b1] = clamp_mix( IIR_B1 >> 16 );*/
 
 		// Faster single-mul approach to interpolation:
-		const s32 IIR_A0 = IIR_INPUT_A0 + ((_spu2mem[dest_a0]-IIR_INPUT_A0) * thiscore.Revb.IIR_ALPHA)>>16;
-		const s32 IIR_A1 = IIR_INPUT_A1 + ((_spu2mem[dest_a1]-IIR_INPUT_A1) * thiscore.Revb.IIR_ALPHA)>>16;
-		const s32 IIR_B0 = IIR_INPUT_B0 + ((_spu2mem[dest_b0]-IIR_INPUT_B0) * thiscore.Revb.IIR_ALPHA)>>16;
-		const s32 IIR_B1 = IIR_INPUT_B1 + ((_spu2mem[dest_b1]-IIR_INPUT_B1) * thiscore.Revb.IIR_ALPHA)>>16;
+		const s32 IIR_A0 = IIR_INPUT_A0 + (((_spu2mem[dest_a0]-IIR_INPUT_A0) * thiscore.Revb.IIR_ALPHA)>>16);
+		const s32 IIR_A1 = IIR_INPUT_A1 + (((_spu2mem[dest_a1]-IIR_INPUT_A1) * thiscore.Revb.IIR_ALPHA)>>16);
+		const s32 IIR_B0 = IIR_INPUT_B0 + (((_spu2mem[dest_b0]-IIR_INPUT_B0) * thiscore.Revb.IIR_ALPHA)>>16);
+		const s32 IIR_B1 = IIR_INPUT_B1 + (((_spu2mem[dest_b1]-IIR_INPUT_B1) * thiscore.Revb.IIR_ALPHA)>>16);
 
 		_spu2mem[dest2_a0] = clamp_mix( IIR_A0 );
 		_spu2mem[dest2_a1] = clamp_mix( IIR_A1 );
