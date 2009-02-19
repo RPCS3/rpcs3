@@ -36,11 +36,11 @@ class GSDrawScanline : public GSAlignedClass<16>, public IDrawScanline
 
 	class GSSetupPrimMap : public GSCodeGeneratorFunctionMap<GSSetupPrimCodeGenerator, UINT64, SetupPrimStaticPtr>
 	{
-		GSDrawScanline* m_ds;
+		GSScanlineEnvironment& m_env;
 
 	public:
-		GSSetupPrimMap(GSDrawScanline* ds);
-		GSSetupPrimCodeGenerator* Create(UINT64 key);
+		GSSetupPrimMap(GSScanlineEnvironment& env);
+		GSSetupPrimCodeGenerator* Create(UINT64 key, void* ptr, size_t maxsize);
 	} m_sp;
 
 	SetupPrimStaticPtr m_spf;
@@ -51,16 +51,12 @@ class GSDrawScanline : public GSAlignedClass<16>, public IDrawScanline
 
 	class GSDrawScanlineMap : public GSCodeGeneratorFunctionMap<GSDrawScanlineCodeGenerator, UINT64, DrawScanlineStaticPtr>
 	{
-		GSDrawScanline* m_ds;
+		GSScanlineEnvironment& m_env;
 
 	public:
-		GSDrawScanlineMap(GSDrawScanline* ds);
-		GSDrawScanlineCodeGenerator* Create(UINT64 key);
+		GSDrawScanlineMap(GSScanlineEnvironment& env);
+		GSDrawScanlineCodeGenerator* Create(UINT64 key, void* ptr, size_t maxsize);
 	} m_ds;
-
-	DrawScanlineStaticPtr m_dsf;
-
-	void DrawScanline(int top, int left, int right, const GSVertexSW& v);
 
 	//
 

@@ -73,14 +73,6 @@
 		(row3) = _mm_castps_si128(_mm_shuffle_ps(tmp2, tmp3, 0xDD)); \
 	}
 
-	__forceinline __m128 _mm_rcpnr_ps(__m128 r)
-	{
-	  __m128 t = _mm_rcp_ps(r);
-
-	  return _mm_sub_ps(_mm_add_ps(t, t), _mm_mul_ps(_mm_mul_ps(t, t), r));
-	}
-
-
 #else
 
 #error TODO: GSVector4 and GSRasterizer needs SSE2
@@ -99,29 +91,6 @@
 
 #if _M_SSE >= 0x401
 
-	#include "smmintrin_gsdx.h"
-
-#else
-
-	__forceinline __m128 _mm_round_ps(__m128 x)
-	{
-		__m128 t = _mm_or_ps(_mm_and_ps(ps_80000000, x), ps_4b000000);
-
-		return _mm_sub_ps(_mm_add_ps(x, t), t);
-	}
-
-	__forceinline __m128 _mm_floor_ps(__m128 x)
-	{
-		__m128 t = _mm_round_ps(x);
-
-		return _mm_sub_ps(t, _mm_and_ps(_mm_cmplt_ps(x, t), ps_3f800000));
-	}
-
-	__forceinline __m128 _mm_ceil_ps(__m128 x)
-	{
-		__m128 t = _mm_round_ps(x);
-
-		return _mm_add_ps(t, _mm_and_ps(_mm_cmpgt_ps(x, t), ps_3f800000));
-	}
+	#include <smmintrin.h>
 
 #endif

@@ -214,8 +214,27 @@ __forceinline GSVertexSW operator / (const GSVertexSW& v, float f)
 	return v0;
 }
 
-__declspec(align(16)) struct GSVertexTrace
+#include "GSFunctionMap.h"
+#include "xbyak/xbyak.h"
+
+__declspec(align(16)) class GSVertexTrace
 {
+	class GSVertexTraceCodeGenerator : public Xbyak::CodeGenerator
+	{
+	public:
+		GSVertexTraceCodeGenerator(DWORD key, void* ptr, size_t maxsize);
+	};
+
+	typedef void (*VertexTracePtr)(const GSVertexSW* v, int count, GSVertexSW& min, GSVertexSW& max);
+
+	class GSVertexTraceMap : public GSCodeGeneratorFunctionMap<GSVertexTraceCodeGenerator, DWORD, VertexTracePtr>
+	{
+	public:
+		GSVertexTraceMap() {}
+		GSVertexTraceCodeGenerator* Create(DWORD key, void* ptr, size_t maxsize) {return new GSVertexTraceCodeGenerator(key, ptr, maxsize);}
+	} m_map;
+
+public:
 	GSVertexSW m_min, m_max;
 
 	union
@@ -225,16 +244,28 @@ __declspec(align(16)) struct GSVertexTrace
 		struct {DWORD xyzf:4, stq:4, rgba:4;};
 	} m_eq;
 
+	void Update(const GSVertexSW* v, int count, GS_PRIM_CLASS primclass, DWORD iip, DWORD tme, DWORD tfx)
+	{
+		if(!tme) tfx = 0;
+
+		DWORD key = primclass | (iip << 2) | (tme << 3) | (tfx << 4);
+
+		m_map.Lookup(key)(v, count, m_min, m_max);
+
+		m_eq.value = (m_min.p == m_max.p).mask() | ((m_min.t == m_max.t).mask() << 4) | ((m_min.c == m_max.c).mask() << 8);
+	}
+/*
+*/
 	void Update(const GSVertexSW* v, int count)
 	{
 		GSVertexSW min, max;
 
-		min.p = v[0].p;
-		max.p = v[0].p;
-		min.t = v[0].t;
-		max.t = v[0].t;
 		min.c = v[0].c;
 		max.c = v[0].c;
+		min.t = v[0].t;
+		max.t = v[0].t;
+		min.p = v[0].p;
+		max.p = v[0].p;
 
 		for(int i = 1; i < count; i++)
 		{

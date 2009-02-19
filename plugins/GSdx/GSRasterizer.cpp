@@ -38,7 +38,6 @@ GSRasterizer::~GSRasterizer()
 
 void GSRasterizer::Draw(const GSRasterizerData* data)
 {
-	m_dsf.sl = NULL;
 	m_dsf.sr = NULL;
 	m_dsf.sp = NULL;
 	m_dsf.ssl = NULL;
@@ -102,8 +101,7 @@ void GSRasterizer::DrawPoint(const GSVertexSW* v, const GSVector4i& scissor)
 			(m_ds->*m_dsf.sp)(v, *v);
 			// TODO: (m_dsf.ssp)(v, *v);
 
-			(m_ds->*m_dsf.sl)(p.y, p.x, p.x + 1, *v);
-			// TODO: (m_dsf.ssl)(p.y, p.x, p.x + 1, *v);
+			m_dsf.ssl(p.y, p.x, p.x + 1, *v);
 
 			m_stats.pixels++;
 		}
@@ -420,6 +418,10 @@ void GSRasterizer::DrawTriangleSection(int top, int bottom, GSVertexSW& l, const
 				int left = lr.extract32<0>();
 				int right = lr.extract32<2>();
 
+				// TODO: 
+				// left coverage = l.p.ceil().x - l.p.x
+				// right coverage = r.ceil() - r
+
 				if(left < scissor.x) left = scissor.x;
 				if(right > scissor.z) right = scissor.z;
 
@@ -442,8 +444,7 @@ void GSRasterizer::DrawTriangleSection(int top, int bottom, GSVertexSW& l, const
 						scan = l;
 					}
 
-					(m_ds->*m_dsf.sl)(top, left, right, scan);
-					// TODO: (m_dsf.ssl)(top, left, right, scan);
+					m_dsf.ssl(top, left, right, scan);
 				}
 			}
 		}
@@ -472,6 +473,10 @@ void GSRasterizer::DrawTriangleSection(int top, int bottom, GSVertexSW& l, const
 				int left = lr.extract32<0>();
 				int right = lr.extract32<1>();
 
+				// TODO: 
+				// left coverage = l.p.ceil().x - l.p.x
+				// right coverage = l.p.ceil().y - l.p.y
+
 				if(left < scissor.x) left = scissor.x;
 				if(right > scissor.z) right = scissor.z;
 
@@ -494,8 +499,7 @@ void GSRasterizer::DrawTriangleSection(int top, int bottom, GSVertexSW& l, const
 						scan = l;
 					}
 
-					(m_ds->*m_dsf.sl)(top, left, right, scan);
-					// TODO: (m_dsf.ssl)(top, left, right, scan);
+					m_dsf.ssl(top, left, right, scan);
 				}
 			}
 		}
@@ -585,8 +589,7 @@ void GSRasterizer::DrawSprite(const GSVertexSW* vertices, const GSVector4i& scis
 	{
 		if((top % m_threads) == m_id) 
 		{
-			(m_ds->*m_dsf.sl)(top, left, right, scan);
-			// TODO: (m_dsf.ssl)(top, left, right, scan);
+			m_dsf.ssl(top, left, right, scan);
 
 			m_stats.pixels += right - left;
 		}

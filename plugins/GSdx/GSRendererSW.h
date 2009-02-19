@@ -60,7 +60,8 @@ protected:
 			m_reset = false;
 		}
 
-		// if((m_perfmon.GetFrame() & 255) == 0) m_rl.PrintStats();
+		// 
+		if((m_perfmon.GetFrame() & 255) == 0) m_rl.PrintStats();
 	}
 
 	void ResetDevice() 
@@ -266,7 +267,7 @@ protected:
 		p.sel.sprite = primclass == GS_SPRITE_CLASS ? 1 : 0;
 
 		p.fm = context->FRAME.FBMSK;
-		p.zm = context->ZBUF.ZMSK || context->TEST.ZTE == 0 ? 0xffffffff : 0;
+		p.zm = context->ZBUF.ZMSK || context->TEST.ZTE == 0 || PRIM->AA1 && primclass == GS_LINE_CLASS ? 0xffffffff : 0;
 
 		if(context->TEST.ZTE && context->TEST.ZTST == ZTST_NEVER)
 		{
@@ -460,7 +461,7 @@ protected:
 
 			if(PRIM->AA1)
 			{
-				// TODO: automatic alpha blending (ABE=1, A=0 B=1 C=0 D=1)
+				p.sel.aa1 = 1;
 			}
 
 			if(p.sel.date 
@@ -494,9 +495,9 @@ protected:
 
 	void Draw()
 	{
-		m_vtrace.Update(m_vertices, m_count);
-
 		GS_PRIM_CLASS primclass = GSUtil::GetPrimClass(PRIM->PRIM);
+
+		m_vtrace.Update(m_vertices, m_count, primclass, PRIM->IIP, PRIM->TME, m_context->TEX0.TFX);
 
 		GSScanlineParam p;
 
@@ -796,6 +797,17 @@ public:
 				break;
 			}
 
+			switch(prim)
+			{
+			case GS_TRIANGLELIST:
+			case GS_TRIANGLESTRIP:
+			case GS_TRIANGLEFAN:
+				// are in line or just two of them are the same (cross product == 0)
+				GSVector4 tmp = (v[1].p - v[0].p) * (v[2].p - v[0].p).yxwz();
+				test |= tmp == tmp.yxwz();
+				break;
+			}
+			
 			if(test.mask() & 3)
 			{
 				return;
@@ -818,7 +830,7 @@ public:
 				break;
 			}
 
-			if(m_count >= 3 && m_count < 30)
+			if(m_count < 30 && m_count >= 3)
 			{
 				GSVertexSW* v = &m_vertices[m_count - 3];
 

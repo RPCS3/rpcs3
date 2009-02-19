@@ -21,30 +21,43 @@
 
 #pragma once
 
-#include "GSScanlineEnvironment.h"
+#include "GPUScanlineEnvironment.h"
 #include "xbyak/xbyak.h"
 #include "xbyak/xbyak_util.h"
 
 using namespace Xbyak;
 
-class GSSetupPrimCodeGenerator : public CodeGenerator
+class GPUDrawScanlineCodeGenerator : public CodeGenerator
 {
-	void operator = (const GSSetupPrimCodeGenerator&);
+	void operator = (const GPUDrawScanlineCodeGenerator&);
 
-	static const GSVector4 m_shift[5];
+	static const GSVector4i m_test[8];
+	static const WORD m_dither[4][16];
 
 	util::Cpu m_cpu;
 
-	GSScanlineEnvironment& m_env;
-
-	struct {DWORD z:1, f:1, t:1, c:1;} m_en;
+	GPUScanlineEnvironment& m_env;
 
 	void Generate();
 
-	void Depth();
-	void Texture();
-	void Color();
+	void Init(int params);
+	void Step();
+	void TestMask();
+	void SampleTexture();
+	void ColorTFX();
+	void AlphaBlend();
+	void Dither();
+	void WriteFrame();
+
+	void ReadTexel(const Xmm& dst, const Xmm& addr);
+
+	template<int shift> void modulate16(const Xmm& a, const Operand& f);
+	template<int shift> void lerp16(const Xmm& a, const Xmm& b, const Operand& f);
+	void clamp16(const Xmm& a, const Xmm& zero);
+	void alltrue();
+	void blend8(const Xmm& a, const Xmm& b);
+	void blend(const Xmm& a, const Xmm& b, const Xmm& mask);
 
 public:
-	GSSetupPrimCodeGenerator(GSScanlineEnvironment& env, void* ptr, size_t maxsize);
+	GPUDrawScanlineCodeGenerator(GPUScanlineEnvironment& env, void* ptr, size_t maxsize);
 };

@@ -109,6 +109,7 @@ CRC::Game CRC::m_games[] =
 	{0x9E98B8AE, IkkiTousen, JP, false},
 	{0xD6385328, GodOfWar, US, false},
 	{0xFB0E6D72, GodOfWar, EU, false},
+	{0xEB001875, GodOfWar, EU, false},
 	{0xA61A4C6D, GodOfWar, Unknown, false},
 	{0xE23D532B, GodOfWar, Unknown, false},
 	{0x2F123FD8, GodOfWar2, RU, false},

@@ -21,30 +21,17 @@
 
 #pragma once
 
-#include "GSScanlineEnvironment.h"
-#include "xbyak/xbyak.h"
-#include "xbyak/xbyak_util.h"
-
-using namespace Xbyak;
-
-class GSSetupPrimCodeGenerator : public CodeGenerator
+class GSCodeBuffer
 {
-	void operator = (const GSSetupPrimCodeGenerator&);
-
-	static const GSVector4 m_shift[5];
-
-	util::Cpu m_cpu;
-
-	GSScanlineEnvironment& m_env;
-
-	struct {DWORD z:1, f:1, t:1, c:1;} m_en;
-
-	void Generate();
-
-	void Depth();
-	void Texture();
-	void Color();
+	CAtlList<void*> m_buffers;
+	size_t m_blocksize;
+	size_t m_pos, m_reserved;
+	BYTE* m_ptr;
 
 public:
-	GSSetupPrimCodeGenerator(GSScanlineEnvironment& env, void* ptr, size_t maxsize);
+	GSCodeBuffer(size_t blocksize = 4096 * 64); // 256k
+	virtual ~GSCodeBuffer();
+
+	void* GetBuffer(size_t size);
+	void ReleaseBuffer(size_t size);
 };

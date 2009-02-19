@@ -24,8 +24,8 @@
 #include "StdAfx.h"
 #include "GSDrawScanlineCodeGenerator.h"
 
-GSDrawScanlineCodeGenerator::GSDrawScanlineCodeGenerator(GSScanlineEnvironment& env)
-	: CodeGenerator(DEFAULT_MAX_CODE_SIZE, 0)
+GSDrawScanlineCodeGenerator::GSDrawScanlineCodeGenerator(GSScanlineEnvironment& env, void* ptr, size_t maxsize)
+	: CodeGenerator(maxsize, ptr)
 	, m_env(env)
 {
 	#if _M_AMD64
@@ -392,11 +392,14 @@ void GSDrawScanlineCodeGenerator::Init(int params)
 				}
 				else
 				{
-					movdqa(xmm4, xmm3);
-					pshuflw(xmm4, xmm4, _MM_SHUFFLE(2, 2, 0, 0));
-					pshufhw(xmm4, xmm4, _MM_SHUFFLE(2, 2, 0, 0));
-					psrlw(xmm4, 1);
-					movdqa(xmmword[&m_env.temp.vf], xmm4);
+					if(m_env.sel.ltf)
+					{
+						movdqa(xmm4, xmm3);
+						pshuflw(xmm4, xmm4, _MM_SHUFFLE(2, 2, 0, 0));
+						pshufhw(xmm4, xmm4, _MM_SHUFFLE(2, 2, 0, 0));
+						psrlw(xmm4, 1);
+						movdqa(xmmword[&m_env.temp.vf], xmm4);
+					}
 				}
 
 				movdqa(xmmword[&m_env.temp.s], xmm2);
@@ -918,14 +921,14 @@ void GSDrawScanlineCodeGenerator::SampleTexture()
 		// xmm7 = used
 
 		// GSVector4i rb10 = c10 & mask;
-		// GSVector4i rb11 = c11 & mask;
+		// GSVector4i ga10 = (c10 >> 8) & mask;
 
 		movdqa(xmm2, xmm1);
 		psllw(xmm1, 8);
 		psrlw(xmm1, 8);
 		psrlw(xmm2, 8);
 
-		// GSVector4i ga10 = (c10 >> 8) & mask;
+		// GSVector4i rb11 = c11 & mask;
 		// GSVector4i ga11 = (c11 >> 8) & mask;
 
 		movdqa(xmm6, xmm5);
@@ -1511,7 +1514,28 @@ void GSDrawScanlineCodeGenerator::WriteZBuf()
 
 void GSDrawScanlineCodeGenerator::AlphaBlend()
 {
-	if(!m_env.sel.fwrite || m_env.sel.abe == 255)
+	if(!m_env.sel.fwrite)
+	{
+		return;
+	}
+/*
+	if(m_env.sel.aa1)
+	{
+		printf("aa1 %016I64x\n", m_env.sel.key);
+
+		if(m_env.sel.fpsm != 1) // TODO: fm == 0xffxxxxxx
+		{
+			// a = 0x80
+
+			pcmpeqd(xmm0, xmm0);
+			psllw(xmm0, 15);
+			mix16(xmm6, xmm0, xmm1);
+		}
+
+		return;
+	}
+*/
+	if(m_env.sel.abe == 255)
 	{
 		return;
 	}
@@ -1734,7 +1758,7 @@ void GSDrawScanlineCodeGenerator::AlphaBlend()
 	}
 	else
 	{
-		if(m_env.sel.fpsm != 1) // TODO: fpsm == 0 && fm == 0xffxxxxxx
+		if(m_env.sel.fpsm != 1) // TODO: fm == 0xffxxxxxx
 		{
 			mix16(xmm6, xmm4, xmm7);
 		}

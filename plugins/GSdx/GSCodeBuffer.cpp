@@ -19,32 +19,53 @@
  *
  */
 
-#pragma once
+#include "StdAfx.h"
+#include "GSCodeBuffer.h"
 
-#include "GSScanlineEnvironment.h"
-#include "xbyak/xbyak.h"
-#include "xbyak/xbyak_util.h"
-
-using namespace Xbyak;
-
-class GSSetupPrimCodeGenerator : public CodeGenerator
+GSCodeBuffer::GSCodeBuffer(size_t blocksize)
+	: m_ptr(NULL)
+	, m_blocksize(blocksize)
+	, m_pos(0)
+	, m_reserved(0)
 {
-	void operator = (const GSSetupPrimCodeGenerator&);
+}
 
-	static const GSVector4 m_shift[5];
+GSCodeBuffer::~GSCodeBuffer()
+{
+	while(!m_buffers.IsEmpty())
+	{
+		VirtualFree(m_buffers.RemoveHead(), 0, MEM_RELEASE);
+	}
+}
 
-	util::Cpu m_cpu;
+void* GSCodeBuffer::GetBuffer(size_t size)
+{
+	ASSERT(size < m_blocksize);
+	ASSERT(m_reserved == 0);
 
-	GSScanlineEnvironment& m_env;
+	size = (size + 15) & ~15;
 
-	struct {DWORD z:1, f:1, t:1, c:1;} m_en;
+	if(m_ptr == NULL || m_pos + size > m_blocksize)
+	{
+		m_ptr = (BYTE*)VirtualAlloc(NULL, m_blocksize, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
 
-	void Generate();
+		m_pos = 0;
 
-	void Depth();
-	void Texture();
-	void Color();
+		m_buffers.AddTail(m_ptr);
+	}
 
-public:
-	GSSetupPrimCodeGenerator(GSScanlineEnvironment& env, void* ptr, size_t maxsize);
-};
+	BYTE* ptr = &m_ptr[m_pos];
+
+	m_reserved = size;
+
+	return ptr;
+}
+
+void GSCodeBuffer::ReleaseBuffer(size_t size)
+{
+	ASSERT(size <= m_reserved);
+
+	m_pos = ((m_pos + size) + 15) & ~15;
+
+	m_reserved = 0;
+}

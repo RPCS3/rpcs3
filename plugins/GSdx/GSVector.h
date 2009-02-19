@@ -2208,17 +2208,52 @@ public:
 
 	GSVector4 rcpnr() const 
 	{
-		return GSVector4(_mm_rcpnr_ps(m));
+		GSVector4 v = rcp();
+
+		return (v + v) - (v * v) * *this;
+	}
+
+	enum RoundMode {NearestInt = 8, NegInf = 9, PosInf = 10};
+
+	template<int mode> GSVector4 round() const 
+	{
+		#if _M_SSE >= 0x401
+
+		return GSVector4(_mm_round_ps(m, mode));
+
+		#else
+
+		GSVector4 a = *this;
+
+		GSVector4 b = (a & GSVector4(ps_80000000)) | GSVector4(ps_4b000000);
+
+		b = a + b - b;
+
+		if((mode & 7) == (NegInf & 7))
+		{
+			return b - ((a < b) & GSVector4(ps_3f800000));
+		}
+
+		if((mode & 7) == (PosInf & 7))
+		{
+			return b + ((a > b) & GSVector4(ps_3f800000));
+		}
+
+		ASSERT((mode & 7) == (NearestInt & 7)); // other modes aren't implemented
+
+		return b;
+
+		#endif
 	}
 
 	GSVector4 floor() const 
 	{
-		return GSVector4(_mm_floor_ps(m));
+		return round<NegInf>();
 	}
 
 	GSVector4 ceil() const 
 	{
-		return GSVector4(_mm_ceil_ps(m));
+		return round<PosInf>();
 	}
 
 	GSVector4 mod2x(const GSVector4& f, const int scale = 256) const 

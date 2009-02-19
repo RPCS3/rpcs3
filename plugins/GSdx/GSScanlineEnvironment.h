@@ -60,6 +60,7 @@ union GSScanlineSelector
 		DWORD fba:1; // 42
 		DWORD dthe:1; // 43
 		DWORD zoverflow:1; // 44 (z max >= 0x80000000)
+		DWORD aa1:1; // 45
 	};
 
 	struct

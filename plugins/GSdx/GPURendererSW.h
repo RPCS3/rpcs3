@@ -128,17 +128,22 @@ protected:
 		p.sel.key = 0;
 		p.sel.iip = env.PRIM.IIP;
 		p.sel.me = env.STATUS.ME;
-		p.sel.abe = env.PRIM.ABE;
-		p.sel.abr = env.STATUS.ABR;
+
+		if(env.PRIM.ABE)
+		{
+			p.sel.abe = env.PRIM.ABE;
+			p.sel.abr = env.STATUS.ABR;
+		}
+
 		p.sel.tge = env.PRIM.TGE;
-		p.sel.tme = env.PRIM.TME;
-		p.sel.tlu = env.STATUS.TP < 2;
-		p.sel.twin = (env.TWIN.ai32 & 0xfffff) != 0;
-		p.sel.dtd = m_dither ? env.STATUS.DTD : 0;
-		p.sel.ltf = m_filter == 1 && env.PRIM.TYPE == GPU_POLYGON || m_filter == 2 ? 1 : 0;
 
 		if(env.PRIM.TME)
 		{
+			p.sel.tme = env.PRIM.TME;
+			p.sel.tlu = env.STATUS.TP < 2;
+			p.sel.twin = (env.TWIN.ai32 & 0xfffff) != 0;
+			p.sel.ltf = m_filter == 1 && env.PRIM.TYPE == GPU_POLYGON || m_filter == 2 ? 1 : 0;
+
 			const void* t = m_mem.GetTexture(env.STATUS.TP, env.STATUS.TX, env.STATUS.TY);
 
 			if(!t) {ASSERT(0); return;}
@@ -146,6 +151,10 @@ protected:
 			p.tex = t;
 			p.clut = m_mem.GetCLUT(env.STATUS.TP, env.CLUT.X, env.CLUT.Y);
 		}
+
+		p.sel.dtd = m_dither ? env.STATUS.DTD : 0;
+		p.sel.md = env.STATUS.MD;
+		p.sel.sprite = env.PRIM.TYPE == GPU_SPRITE;
 
 		//
 

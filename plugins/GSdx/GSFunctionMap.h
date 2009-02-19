@@ -160,13 +160,18 @@ public:
 	}
 };
 
+#include "GSCodeBuffer.h"
+
 template<class CG, class KEY, class VALUE>
 class GSCodeGeneratorFunctionMap : public GSFunctionMap<KEY, VALUE>
 {
 	CRBMap<UINT64, CG*> m_cgmap;
+	GSCodeBuffer m_cb;
+
+	enum {MAX_SIZE = 4096};
 
 protected:
-	virtual CG* Create(KEY key) = 0;
+	virtual CG* Create(KEY key, void* ptr, size_t maxsize = MAX_SIZE) = 0;
 
 public:
 	GSCodeGeneratorFunctionMap()
@@ -189,9 +194,13 @@ public:
 
 		if(!m_cgmap.Lookup(key, cg))
 		{
-			cg = Create(key);
+			void* ptr = m_cb.GetBuffer(MAX_SIZE);
+
+			cg = Create(key, ptr, MAX_SIZE);
 
 			ASSERT(cg);
+
+			m_cb.ReleaseBuffer(cg->getSize());
 
 			m_cgmap.SetAt(key, cg);
 		}

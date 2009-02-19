@@ -26,8 +26,8 @@
 GSDrawScanline::GSDrawScanline(GSState* state, int id)
 	: m_state(state)
 	, m_id(id)
-	, m_sp(this)
-	, m_ds(this)
+	, m_sp(m_env)
+	, m_ds(m_env)
 {
 	memset(&m_env, 0, sizeof(m_env));
 }
@@ -163,13 +163,7 @@ void GSDrawScanline::BeginDraw(const GSRasterizerData* data, Functions* f)
 
 	//
 
-	f->sl = (DrawScanlinePtr)&GSDrawScanline::DrawScanline;
-
-	m_dsf = m_ds.Lookup(m_env.sel);
-	
-	f->ssl = m_dsf;
-
-	//
+	f->ssl = m_ds.Lookup(m_env.sel);
 
 	if(m_env.sel.IsSolidRect())
 	{
@@ -207,16 +201,7 @@ void GSDrawScanline::EndDraw(const GSRasterizerStats& stats)
 
 void GSDrawScanline::SetupPrim(const GSVertexSW* vertices, const GSVertexSW& dscan)
 {
-	// TODO: call this directly from rasterizer
-
-	m_spf(vertices, dscan);
-}
-
-void GSDrawScanline::DrawScanline(int top, int left, int right, const GSVertexSW& v)
-{
-	// TODO: call this directly from rasterizer
-
-	m_dsf(top, left, right, v);
+	m_spf(vertices, dscan); // TODO: call this directly from rasterizer
 }
 
 void GSDrawScanline::DrawSolidRect(const GSVector4i& r, const GSVertexSW& v)
@@ -371,24 +356,24 @@ void GSDrawScanline::FillBlock(const GSVector4i* row, int* col, const GSVector4i
 
 //
 
-GSDrawScanline::GSSetupPrimMap::GSSetupPrimMap(GSDrawScanline* ds)
-	: m_ds(ds)
+GSDrawScanline::GSSetupPrimMap::GSSetupPrimMap(GSScanlineEnvironment& env)
+	: m_env(env)
 {
 }
 
-GSSetupPrimCodeGenerator* GSDrawScanline::GSSetupPrimMap::Create(UINT64 key)
+GSSetupPrimCodeGenerator* GSDrawScanline::GSSetupPrimMap::Create(UINT64 key, void* ptr, size_t maxsize)
 {
-	return new GSSetupPrimCodeGenerator(m_ds->m_env);
+	return new GSSetupPrimCodeGenerator(m_env, ptr, maxsize);
 }
 
 //
 
-GSDrawScanline::GSDrawScanlineMap::GSDrawScanlineMap(GSDrawScanline* ds)
-	: m_ds(ds)
+GSDrawScanline::GSDrawScanlineMap::GSDrawScanlineMap(GSScanlineEnvironment& env)
+	: m_env(env)
 {
 }
 
-GSDrawScanlineCodeGenerator* GSDrawScanline::GSDrawScanlineMap::Create(UINT64 key)
+GSDrawScanlineCodeGenerator* GSDrawScanline::GSDrawScanlineMap::Create(UINT64 key, void* ptr, size_t maxsize)
 {
-	return new GSDrawScanlineCodeGenerator(m_ds->m_env);
+	return new GSDrawScanlineCodeGenerator(m_env, ptr, maxsize);
 }

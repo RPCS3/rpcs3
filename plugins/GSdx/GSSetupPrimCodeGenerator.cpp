@@ -24,8 +24,8 @@
 #include "StdAfx.h"
 #include "GSSetupPrimCodeGenerator.h"
 
-GSSetupPrimCodeGenerator::GSSetupPrimCodeGenerator(GSScanlineEnvironment& env)
-	: CodeGenerator(DEFAULT_MAX_CODE_SIZE, 0)
+GSSetupPrimCodeGenerator::GSSetupPrimCodeGenerator(GSScanlineEnvironment& env, void* ptr, size_t maxsize)
+	: CodeGenerator(maxsize, ptr)
 	, m_env(env)
 {
 	m_en.z = m_env.sel.zb ? 1 : 0;

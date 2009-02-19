@@ -89,8 +89,6 @@ const WORD* GPULocalMemory::GetCLUT(int tp, int cx, int cy)
 		WORD* src = GetPixelAddressScaled(cx << 4, cy);
 		WORD* dst = m_clut.buff;
 
-		// TODO: at normal horizontal resolution just return src
-
 		if(m_scale.cx == 0)
 		{
 			memcpy(dst, src, (tp == 0 ? 16 : 256) * 2);

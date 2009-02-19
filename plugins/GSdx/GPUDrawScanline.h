@@ -24,80 +24,12 @@
 #include "GPUState.h"
 #include "GSRasterizer.h"
 #include "GSAlignedClass.h"
-
-union GPUScanlineSelector
-{
-	struct
-	{
-		DWORD iip:1; // 0
-		DWORD me:1; // 1
-		DWORD abe:1; // 2
-		DWORD abr:2; // 3
-		DWORD tge:1; // 5
-		DWORD tme:1; // 6
-		DWORD twin:1; // 7
-		DWORD tlu:1; // 8
-		DWORD dtd:1; // 9
-		DWORD ltf:1; // 10
-		// DWORD dte:1: // 11
-	};
-
-	struct
-	{
-		DWORD _pad1:1; // 0
-		DWORD rfb:2; // 1
-		DWORD _pad2:2; // 3
-		DWORD tfx:2; // 5
-	};
-
-	DWORD key;
-
-	operator DWORD() {return key & 0xff;}
-};
-
-__declspec(align(16)) struct GPUScanlineEnvironment
-{
-	GPUScanlineSelector sel;
-
-	GPULocalMemory* mem;
-	const void* tex;
-	const WORD* clut;
-
-	GSVector4i u[3];
-	GSVector4i v[3];
-
-	GSVector4i a;
-	GSVector4i md; // similar to gs fba
-
-	GSVector4i ds, dt, dst8;
-	GSVector4i dr, dg, db, dc8;
-};
-
-__declspec(align(16)) struct GPUScanlineParam
-{
-	GPUScanlineSelector sel;
-
-	const void* tex;
-	const WORD* clut;
-};
+#include "GPUScanlineEnvironment.h"
+#include "GPUDrawScanlineCodeGenerator.h"
 
 class GPUDrawScanline : public GSAlignedClass<16>, public IDrawScanline
 {
 	GPUScanlineEnvironment m_env;
-
-	//
-
-	class GPUDrawScanlineMap : public GSFunctionMap<DWORD, DrawScanlinePtr>
-	{
-		DrawScanlinePtr m_default[256];
-
-	public:
-		GPUDrawScanlineMap();
-
-		DrawScanlinePtr GetDefaultFunction(DWORD key);
-	};
-	
-	GPUDrawScanlineMap m_ds;
 
 	//
 
@@ -113,22 +45,21 @@ class GPUDrawScanline : public GSAlignedClass<16>, public IDrawScanline
 	
 	GPUSetupPrimMap m_sp;
 
-	//
-
 	template<DWORD sprite, DWORD tme, DWORD iip>
 	void SetupPrim(const GSVertexSW* vertices, const GSVertexSW& dscan);
 
 	//
 
-	__forceinline void SampleTexture(DWORD ltf, DWORD tlu, DWORD twin, GSVector4i& test, const GSVector4i& s, const GSVector4i& t, GSVector4i* c);
-	__forceinline void ColorTFX(DWORD tfx, const GSVector4i& r, const GSVector4i& g, const GSVector4i& b, GSVector4i* c);
-	__forceinline void AlphaBlend(UINT32 abr, UINT32 tme, const GSVector4i& d, GSVector4i* c);
-	__forceinline void WriteFrame(WORD* RESTRICT fb, const GSVector4i& test, const GSVector4i* c, int pixels);
+	class GPUDrawScanlineMap : public GSCodeGeneratorFunctionMap<GPUDrawScanlineCodeGenerator, DWORD, DrawScanlineStaticPtr>
+	{
+		GPUScanlineEnvironment& m_env;
+
+	public:
+		GPUDrawScanlineMap(GPUScanlineEnvironment& env);
+		GPUDrawScanlineCodeGenerator* Create(DWORD key, void* ptr, size_t maxsize);
+	} m_ds;
 
 	void DrawScanline(int top, int left, int right, const GSVertexSW& v);
-
-	template<DWORD sel>
-	void DrawScanlineEx(int top, int left, int right, const GSVertexSW& v);
 
 protected:
 	GPUState* m_state;
