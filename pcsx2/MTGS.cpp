@@ -450,10 +450,12 @@ int mtgsThreadObject::Callback()
 	GSsetBaseMem( m_gsMem );
 
 	m_returncode = GSopen((void *)&pDsp, "PCSX2", 1);
+
+	Console::WriteLn( "MTGS > GSopen Finished, return code: 0x%x", params m_returncode );
+
 	GSCSRr = 0x551B400F; // 0x55190000
 	m_post_InitDone.Post();
 	if (m_returncode != 0) { return m_returncode; }		// error msg will be issued to the user by Plugins.c
-	Console::WriteLn("MTGS > GSopen Finished.");
 
 #ifdef RINGBUF_DEBUG_STACK
 	PacketTagType prevCmd;

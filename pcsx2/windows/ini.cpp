@@ -288,7 +288,7 @@ bool LoadConfig()
 			// Warn the user of a version mismatch.
 			Msgbox::Alert(
 				"Configuration versions do not match.  Pcsx2 may be unstable.\n"
-				"If you experience problems, delete the pcsx2-pg.ini file from the ini dir."
+				"If you experience problems, delete the pcsx2.ini file from the ini dir."
 			);
 
 			// save the new version -- gets rid of the warning on subsequent startups
