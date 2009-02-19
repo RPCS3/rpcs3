@@ -177,6 +177,7 @@ public:
 	s8 vfwrite[2], vfread0[2], vfread1[2], vfacc[2];
 	s8 vfflush[2]; // extra flush regs
     s8 vicached; // if >= 0, then use the cached integer s_VIBranchDelay
+	VuInstruction *pPrevInst;
 
 	int SetCachedRegs(int upper, u32 vuxyz);
 	void Recompile(list<VuInstruction>::iterator& itinst, u32 vuxyz);
@@ -267,6 +268,7 @@ struct VUPIPELINES
 	fmacPipe fmac[8];
 	fdivPipe fdiv;
 	efuPipe efu;
+	ialuPipe ialu[8];
 	list< WRITEBACK > listWritebacks;
 };
 
@@ -822,6 +824,7 @@ static VuFunctionHeader* SuperVURecompileProgram(u32 startpc, int vuindex)
 	memzero_obj(pipes.fmac);
 	memzero_obj(pipes.fdiv);
 	memzero_obj(pipes.efu);
+	memzero_obj(pipes.ialu);
 	SuperVUBuildBlocks(NULL, startpc, pipes);
 
 	// fill parents
@@ -930,6 +933,38 @@ void SuperVUAddWritebacks(VuBaseBlock* pblock, const list<WRITEBACK>& listWriteb
 #endif
 }
 
+#ifdef SUPERVU_VIBRANCHDELAY
+static VuInstruction* getDelayInst(VuInstruction* pInst)
+{
+	// check for the N cycle branch delay
+	// example of 2 cycles delay (monster house) :
+	//     sqi vi05
+	//     sqi vi05
+	//     ibeq vi05, vi03
+	//   The ibeq should read the vi05 before the first sqi
+
+	int delay = 1;
+	VuInstruction* pDelayInst = NULL;
+	VuInstruction* pTargetInst = pInst->pPrevInst;
+	while( 1 ) { // fixme: is 3-cycle delay really maximum? 
+		if( pTargetInst != NULL
+			&& pTargetInst->info.cycle+delay==pInst->info.cycle
+			&& (pTargetInst->regs[0].pipe == VUPIPE_IALU||pTargetInst->regs[0].pipe == VUPIPE_FMAC)
+			&& ((pTargetInst->regs[0].VIwrite & pInst->regs[0].VIread) & 0xffff)
+			&& ((pTargetInst->regs[0].VIwrite & pInst->regs[0].VIread) & 0xffff) == ((pTargetInst->regs[0].VIwrite & pInst->pPrevInst->regs[0].VIread) & 0xffff)
+			&& !(pTargetInst->regs[0].VIread&((1<<REG_STATUS_FLAG)|(1<<REG_MAC_FLAG)|(1<<REG_CLIP_FLAG))) )
+		{
+			pDelayInst = pTargetInst;
+			pTargetInst = pTargetInst->pPrevInst;
+			delay++;
+		}
+		else break;
+	}
+	if( delay > 1 ) DevCon::WriteLn("supervu: %d cycle branch delay detected: %x %x", params delay-1, pc, s_pFnHeader->startpc);
+	return pDelayInst;
+}
+#endif
+
 static VuBaseBlock* SuperVUBuildBlocks(VuBaseBlock* parent, u32 startpc, const VUPIPELINES& pipes)
 {
 	// check if block already exists
@@ -1036,6 +1071,7 @@ static VuBaseBlock* SuperVUBuildBlocks(VuBaseBlock* parent, u32 startpc, const V
 	memcpy(VU->fmac, pipes.fmac, sizeof(pipes.fmac));
 	memcpy(&VU->fdiv, &pipes.fdiv, sizeof(pipes.fdiv));
 	memcpy(&VU->efu, &pipes.efu, sizeof(pipes.efu));
+	memcpy(VU->ialu, pipes.ialu, sizeof(pipes.ialu));
 //	memset(VU->fmac, 0, sizeof(VU->fmac));
 //	memset(&VU->fdiv, 0, sizeof(VU->fdiv));
 //	memset(&VU->efu, 0, sizeof(VU->efu));
@@ -1105,7 +1141,7 @@ static VuBaseBlock* SuperVUBuildBlocks(VuBaseBlock* parent, u32 startpc, const V
 	// second full pass
 	pc = startpc;
 	branch = 0;
-    VuInstruction* pprevinst=NULL, *ppprevinst=NULL, *pinst = NULL;
+    VuInstruction* pprevinst=NULL, *pinst = NULL;
 
 	while(1) {
 
@@ -1128,59 +1164,29 @@ static VuBaseBlock* SuperVUBuildBlocks(VuBaseBlock* parent, u32 startpc, const V
 
 		pblock->insts.push_back(VuInstruction());
 
-        ppprevinst = pprevinst;
-        pprevinst = pinst;
+		pprevinst = pinst;
 		pinst = &pblock->insts.back();
+		pinst->pPrevInst = pprevinst;
 		SuperVUAnalyzeOp(VU, &pinst->info, pinst->regs);
 
 #ifdef SUPERVU_VIBRANCHDELAY
         if( pinst->regs[0].pipe == VUPIPE_BRANCH && pblock->insts.size() > 1 ) {
 		
-            if( pprevinst != NULL && pprevinst->info.cycle+1==pinst->info.cycle && 
-                (pprevinst->regs[0].pipe == VUPIPE_IALU||pprevinst->regs[0].pipe == VUPIPE_FMAC) && ((pprevinst->regs[0].VIwrite & pinst->regs[0].VIread) & 0xffff) 
-                && !(pprevinst->regs[0].VIread&((1<<REG_STATUS_FLAG)|(1<<REG_MAC_FLAG)|(1<<REG_CLIP_FLAG))) ) {
+			VuInstruction* pdelayinst = getDelayInst(pinst);
+			if( pdelayinst ) {
+				pdelayinst->type |= INST_CACHE_VI;
 
-                VuInstruction* pdelayinst = pprevinst;
-                int lowercode = *(int*)&VU->Micro[pc-16]; 
+				// find the correct register
+				u32 mask = pdelayinst->regs[0].VIwrite & pinst->regs[0].VIread;
+				for(int i = 0; i < 16; ++i) {
+					if( mask & (1<<i) ) {
+						pdelayinst->vicached = i;
+						break;
+					}   
+				}
 
-                // check for the previous instruction. If that has the same register used, then have a 2 cycle delay!
-                // (monsterhouse has sqi vi05, sqi vi05, ibeq vi05, vi03). The ibeq should read the vi05 before the first sqi
-                if( ppprevinst != NULL && ppprevinst->info.cycle+2==pinst->info.cycle && (ppprevinst->regs[0].pipe == VUPIPE_FMAC||ppprevinst->regs[0].pipe == VUPIPE_IALU) &&
-                    ((ppprevinst->regs[0].VIwrite & pinst->regs[0].VIread) & 0xffff) &&
-                    ((ppprevinst->regs[0].VIwrite & pinst->regs[0].VIread) & 0xffff) == ((ppprevinst->regs[0].VIwrite & pprevinst->regs[0].VIread) & 0xffff) &&
-                    !(ppprevinst->regs[0].VIread&((1<<REG_STATUS_FLAG)|(1<<REG_MAC_FLAG)|(1<<REG_CLIP_FLAG)))) {
-                
-						DevCon::WriteLn("supervu: 2 cycle branch delay detected: %x %x", params pc, s_pFnHeader->startpc);
-
-                    // ignore if prev instruction is ILW or ILWR (xenosaga 2)
-                    lowercode = *(int*)&VU->Micro[pc-24]; 
-                    pdelayinst = ppprevinst;
-                }
-				
-
-                //SysPrintf("vurec: %x\n", pc);
-                // ignore if prev instruction is ILW or ILWR (xenosaga 2)
-                if( (lowercode>>25) != 4 // ILW
-                    && !((lowercode>>25) == 0x40 && (lowercode&0x3ff)==0x3fe) ) { // ILWR
-
-                    //SysPrintf("branchdelay: %x: %x\n", s_pFnHeader->startpc, pc-8);
-
-                    // share the same register
-                    if (CHECK_VUBRANCHHACK) pinst->type |= INST_CACHE_VI;
-					else					pdelayinst->type |= INST_CACHE_VI;
-
-                    // find the correct register
-                    u32 mask = pdelayinst->regs[0].VIwrite & pinst->regs[0].VIread;
-                    for(int i = 0; i < 16; ++i) {
-                        if( mask & (1<<i) ) {
-                            pdelayinst->vicached = i;
-                            break;
-                        }   
-                    }
-
-                    pinst->vicached = pdelayinst->vicached;
-                }
-            }
+				pinst->vicached = pdelayinst->vicached;
+			}
         }
 #endif
 
@@ -1330,10 +1336,12 @@ static VuBaseBlock* SuperVUBuildBlocks(VuBaseBlock* parent, u32 startpc, const V
 	memcpy(newpipes.fmac, VU->fmac, sizeof(newpipes.fmac));
 	memcpy(&newpipes.fdiv, &VU->fdiv, sizeof(newpipes.fdiv));
 	memcpy(&newpipes.efu, &VU->efu, sizeof(newpipes.efu));
+	memcpy(newpipes.ialu, VU->ialu, sizeof(newpipes.ialu));
 
 	for(i = 0; i < 8; ++i) newpipes.fmac[i].sCycle -= vucycle;
 	newpipes.fdiv.sCycle -= vucycle;
 	newpipes.efu.sCycle -= vucycle;
+	for(i = 0; i < 8; ++i) newpipes.ialu[i].sCycle -= vucycle;
 
 	if( listWritebacks.size() > 0 ) {
         // flush all when jumping, send down the pipe when in branching

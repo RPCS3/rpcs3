@@ -109,6 +109,13 @@ struct fmacPipe {
 	u32 clipflag;
 };
 
+struct ialuPipe {
+	int enable;
+	int reg;
+	u32 sCycle;
+	u32 Cycle;
+};
+
 struct VURegs {
 	VECTOR	VF[32]; // VF and VI need to be first in this struct for proper mapping
 	REG_VI	VI[32]; // needs to be 128bit x 32 (cottonvibes)
@@ -140,6 +147,7 @@ struct VURegs {
 	fmacPipe fmac[8];
 	fdivPipe fdiv;
 	efuPipe efu;
+	ialuPipe ialu[8];
 
 	VURegs() :
 		Mem( NULL )

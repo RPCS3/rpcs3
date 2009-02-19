@@ -2210,6 +2210,7 @@ void _vuRegs##OP(VURegs * VU, _VURegsNum *VUregsn) { \
 	VUregsn->VFread1 = 0; \
 	VUregsn->VIwrite = 1 << _Fd_; \
 	VUregsn->VIread  = (1 << _Fs_) | (1 << _Ft_); \
+	VUregsn->cycles  = 0; \
 }
 
 #define VUREGS_ITIS(OP) \
@@ -2220,6 +2221,7 @@ void _vuRegs##OP(VURegs * VU, _VURegsNum *VUregsn) { \
 	VUregsn->VFread1 = 0; \
 	VUregsn->VIwrite = 1 << _Ft_; \
 	VUregsn->VIread  = 1 << _Fs_; \
+	VUregsn->cycles  = 0; \
 }
 
 #define VUREGS_PFS(OP, _cycles) \
@@ -2592,6 +2594,7 @@ void _vuRegsILW(VURegs * VU, _VURegsNum *VUregsn) {
 	VUregsn->VFread1 = 0;
     VUregsn->VIwrite = 1 << _Ft_;
     VUregsn->VIread  = 1 << _Fs_;
+	VUregsn->cycles  = 3;
 }
 
 void _vuRegsISW(VURegs * VU, _VURegsNum *VUregsn) {
@@ -2610,6 +2613,7 @@ void _vuRegsILWR(VURegs * VU, _VURegsNum *VUregsn) {
 	VUregsn->VFread1 = 0;
     VUregsn->VIwrite = (1 << _Ft_);
     VUregsn->VIread  = (1 << _Fs_);
+	VUregsn->cycles  = 3;
 }
 
 void _vuRegsISWR(VURegs * VU, _VURegsNum *VUregsn) {
@@ -2908,6 +2912,7 @@ void _vuRegsXITOP(VURegs * VU, _VURegsNum *VUregsn) {
     VUregsn->VFread1 = 0;
     VUregsn->VIwrite = 1 << _Ft_;
     VUregsn->VIread  = 0;
+	VUregsn->cycles  = 0;
 }
 
 void _vuRegsXGKICK(VURegs * VU, _VURegsNum *VUregsn) {
@@ -2926,4 +2931,5 @@ void _vuRegsXTOP(VURegs * VU, _VURegsNum *VUregsn) {
     VUregsn->VFread1 = 0;
     VUregsn->VIwrite = 1 << _Ft_;
     VUregsn->VIread  = 0;
+	VUregsn->cycles  = 0;
 }

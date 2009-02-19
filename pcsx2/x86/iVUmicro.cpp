@@ -137,41 +137,87 @@ PCSX2_ALIGNED16(u32 g_maxvals_XYZW[16][4])=
 //------------------------------------------------------------------
 // VU Pipeline/Test Stalls/Analyzing Functions
 //------------------------------------------------------------------
-void _recvuFMACflush(VURegs * VU) {
+void _recvuFMACflush(VURegs * VU, bool intermediate) {
 	int i;
 
 	for (i=0; i<8; i++) {
 		if (VU->fmac[i].enable == 0) continue;
 
-		if ((vucycle - VU->fmac[i].sCycle) >= VU->fmac[i].Cycle) {
-//			VUM_LOG("flushing FMAC pipe[%d]\n", i);
-			VU->fmac[i].enable = 0;
+		if( intermediate ) {
+			if ((vucycle - VU->fmac[i].sCycle) > VU->fmac[i].Cycle) {
+//				VUM_LOG("flushing FMAC pipe[%d]\n", i);
+				VU->fmac[i].enable = 0;
+			}
+		}
+		else {
+			if ((vucycle - VU->fmac[i].sCycle) >= VU->fmac[i].Cycle) {
+//				VUM_LOG("flushing FMAC pipe[%d]\n", i);
+				VU->fmac[i].enable = 0;
+			}
 		}
 	}
 }
 
-void _recvuFDIVflush(VURegs * VU) {
+void _recvuFDIVflush(VURegs * VU, bool intermediate) {
 	if (VU->fdiv.enable == 0) return;
 
-	if ((vucycle - VU->fdiv.sCycle) >= VU->fdiv.Cycle) {
-//		SysPrintf("flushing FDIV pipe\n");
-		VU->fdiv.enable = 0;
+	if( intermediate ) {
+		if ((vucycle - VU->fdiv.sCycle) > VU->fdiv.Cycle) {
+//			SysPrintf("flushing FDIV pipe\n");
+			VU->fdiv.enable = 0;
+		}
+	}
+	else {
+		if ((vucycle - VU->fdiv.sCycle) >= VU->fdiv.Cycle) {
+//			SysPrintf("flushing FDIV pipe\n");
+			VU->fdiv.enable = 0;
+		}
 	}
 }
 
-void _recvuEFUflush(VURegs * VU) {
+void _recvuEFUflush(VURegs * VU, bool intermediate) {
 	if (VU->efu.enable == 0) return;
 
-	if ((vucycle - VU->efu.sCycle) >= VU->efu.Cycle) {
-//		SysPrintf("flushing FDIV pipe\n");
-		VU->efu.enable = 0;
+	if( intermediate ) {
+		if ((vucycle - VU->efu.sCycle) > VU->efu.Cycle) {
+//			SysPrintf("flushing FDIV pipe\n");
+			VU->efu.enable = 0;
+		}
+	}
+	else {
+		if ((vucycle - VU->efu.sCycle) >= VU->efu.Cycle) {
+//			SysPrintf("flushing FDIV pipe\n");
+			VU->efu.enable = 0;
+		}
 	}
 }
 
-void _recvuTestPipes(VURegs * VU) {
-	_recvuFMACflush(VU);
-	_recvuFDIVflush(VU);
-	_recvuEFUflush(VU);
+void _recvuIALUflush(VURegs * VU, bool intermediate) {
+	int i;
+
+	for (i=0; i<8; i++) {
+		if (VU->ialu[i].enable == 0) continue;
+
+		if( intermediate ) {
+			if ((vucycle - VU->ialu[i].sCycle) > VU->ialu[i].Cycle) {
+//				VUM_LOG("flushing IALU pipe[%d]\n", i);
+				VU->ialu[i].enable = 0;
+			}
+		}
+		else {
+			if ((vucycle - VU->ialu[i].sCycle) >= VU->ialu[i].Cycle) {
+//				VUM_LOG("flushing IALU pipe[%d]\n", i);
+				VU->ialu[i].enable = 0;
+			}
+		}
+	}
+}
+
+void _recvuTestPipes(VURegs * VU, bool intermediate) { // intermediate = true if called by upper FMAC stall detection
+	_recvuFMACflush(VU, intermediate);
+	_recvuFDIVflush(VU, intermediate);
+	_recvuEFUflush(VU, intermediate);
+	_recvuIALUflush(VU, intermediate);
 }
 
 void _recvuFMACTestStall(VURegs * VU, int reg, int xyzw) {
@@ -213,7 +259,28 @@ void _recvuFMACTestStall(VURegs * VU, int reg, int xyzw) {
 
 	VU->fmac[i].enable = 0;
 	vucycle+= cycle;
-	_recvuTestPipes(VU);
+	_recvuTestPipes(VU, true); // for lower instructions
+}
+
+void _recvuIALUTestStall(VURegs * VU, int reg) {
+	int cycle;
+	int i;
+	u32 latency;
+
+	for (i=0; i<8; i++) {
+		if (VU->ialu[i].enable == 0) continue;
+		if (VU->ialu[i].reg == reg) break;
+	}
+
+	if (i == 8) return;
+
+	latency = VU->ialu[i].Cycle + 1;
+	cycle = 0;
+	if( vucycle - VU->ialu[i].sCycle < latency )
+		cycle = latency - (vucycle - VU->ialu[i].sCycle);
+
+	VU->ialu[i].enable = 0;
+	vucycle+= cycle;
 }
 
 void _recvuFMACAdd(VURegs * VU, int reg, int xyzw) {
@@ -249,7 +316,54 @@ void _recvuEFUAdd(VURegs * VU, int cycles) {
 	VU->efu.Cycle  = cycles;
 }
 
-void _recvuTestFMACStalls(VURegs * VU, _VURegsNum *VUregsn) {
+void _recvuIALUAdd(VURegs * VU, int reg, int cycles) {
+	int i;
+
+	/* find a free ialu pipe */
+	for (i=0; i<8; i++) {
+		if (VU->ialu[i].enable == 1) continue;
+		break;
+	}
+
+	if (i==8) SysPrintf("*PCSX2*: error , out of ialus\n");
+	
+	VU->ialu[i].enable = 1;
+	VU->ialu[i].sCycle = vucycle;
+	VU->ialu[i].Cycle = cycles;
+	VU->ialu[i].reg = reg;
+}
+
+void _recvuTestIALUStalls(VURegs * VU, _VURegsNum *VUregsn) {
+
+	int VIread0 = 0, VIread1 = 0; // max 2 integer registers are read simulataneously
+	int i;
+
+	for(i=0;i<16;i++) { // find used integer(vi00-vi15) registers
+		if( (VUregsn->VIread >> i) & 1 ) {
+			if( VIread0 ) VIread1 = i;
+			else VIread0 = i;
+		}
+	}
+
+	if( VIread0 ) _recvuIALUTestStall(VU, VIread0);
+	if( VIread1 ) _recvuIALUTestStall(VU, VIread1);
+}
+
+void _recvuAddIALUStalls(VURegs * VU, _VURegsNum *VUregsn) {
+	if (VUregsn->VIwrite && VUregsn->cycles) {
+		int VIWrite0 = 0;
+		int i;
+
+		for(i=0;i<16;i++) { // find used(vi00-vi15) registers
+			if( (VUregsn->VIwrite >> i) & 1 ) {
+				VIWrite0 = i;
+			}
+		}
+		if( VIWrite0 ) _recvuIALUAdd(VU, VIWrite0, VUregsn->cycles);
+	}
+}
+
+void _recvuTestFMACStalls(VURegs * VU, _VURegsNum *VUregsn, bool upper) {
 
 	if( VUregsn->VFread0 && (VUregsn->VFread0 == VUregsn->VFread1) ) {
 		_recvuFMACTestStall(VU, VUregsn->VFread0, VUregsn->VFr0xyzw|VUregsn->VFr1xyzw);
@@ -258,13 +372,15 @@ void _recvuTestFMACStalls(VURegs * VU, _VURegsNum *VUregsn) {
 		if (VUregsn->VFread0) _recvuFMACTestStall(VU, VUregsn->VFread0, VUregsn->VFr0xyzw);
 		if (VUregsn->VFread1) _recvuFMACTestStall(VU, VUregsn->VFread1, VUregsn->VFr1xyzw);
 	}
+
+	if( !upper && VUregsn->VIread ) _recvuTestIALUStalls(VU, VUregsn); // for lower instructions which read integer reg
 }
 
 void _recvuAddFMACStalls(VURegs * VU, _VURegsNum *VUregsn) {
 
 	if (VUregsn->VFwrite) _recvuFMACAdd(VU, VUregsn->VFwrite, VUregsn->VFwxyzw);
 	else if (VUregsn->VIwrite & (1 << REG_CLIP_FLAG)) _recvuFMACAdd(VU, -REG_CLIP_FLAG, 0); // REG_CLIP_FLAG pipe
-	else _recvuFMACAdd(VU, 0, 0);
+	else _recvuFMACAdd(VU, 0, 0); // cause no data dependency with fp registers
 }
 
 void _recvuFlushFDIV(VURegs * VU) {
@@ -315,15 +431,17 @@ void _recvuAddEFUStalls(VURegs * VU, _VURegsNum *VUregsn) {
 
 void _recvuTestUpperStalls(VURegs * VU, _VURegsNum *VUregsn) {
 	switch (VUregsn->pipe) {
-		case VUPIPE_FMAC: _recvuTestFMACStalls(VU, VUregsn); break;
+		case VUPIPE_FMAC: _recvuTestFMACStalls(VU, VUregsn, true); break;
 	}
 }
 
 void _recvuTestLowerStalls(VURegs * VU, _VURegsNum *VUregsn) {
 	switch (VUregsn->pipe) {
-		case VUPIPE_FMAC: _recvuTestFMACStalls(VU, VUregsn); break;
+		case VUPIPE_FMAC: _recvuTestFMACStalls(VU, VUregsn, false); break;
 		case VUPIPE_FDIV: _recvuTestFDIVStalls(VU, VUregsn); break;
 		case VUPIPE_EFU:  _recvuTestEFUStalls(VU, VUregsn);	 break;
+		case VUPIPE_IALU: _recvuTestIALUStalls(VU, VUregsn); break;
+		case VUPIPE_BRANCH: _recvuTestIALUStalls(VU, VUregsn); break;
 	}
 }
 
@@ -338,6 +456,7 @@ void _recvuAddLowerStalls(VURegs * VU, _VURegsNum *VUregsn) {
 		case VUPIPE_FMAC: _recvuAddFMACStalls(VU, VUregsn); break;
 		case VUPIPE_FDIV: _recvuAddFDIVStalls(VU, VUregsn); break;
 		case VUPIPE_EFU:  _recvuAddEFUStalls(VU, VUregsn);	break;
+		case VUPIPE_IALU: _recvuAddIALUStalls(VU, VUregsn);	break; // note: only ILW and ILWR cause stall in IALU pipe
 	}
 }
 
@@ -486,7 +605,7 @@ void SuperVUAnalyzeOp(VURegs *VU, _vuopinfo *info, _VURegsNum* pCodeRegs)
 	}
 
 	_recvuAddUpperStalls(VU, uregs);
-	_recvuTestPipes(VU);
+	_recvuTestPipes(VU, false);
 
 	vucycle++;
 }
