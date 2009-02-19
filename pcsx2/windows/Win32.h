@@ -53,6 +53,61 @@ struct AppData
 	HMENU hMenu;         // Main window menu
 };
 
+class IniFile
+{
+protected:
+	string m_filename;
+	string m_section;
+
+public:
+	virtual ~IniFile();
+	IniFile();
+
+	void SetCurrentSection( const string& newsection );
+
+	virtual void Entry( const string& var, string& value, const string& defvalue=string() )=0;
+	virtual void Entry( const string& var, char (&value)[g_MaxPath], const string& defvalue=string() )=0;
+	virtual void Entry( const string& var, int& value, const int defvalue=0 )=0;
+	virtual void Entry( const string& var, uint& value, const uint defvalue=0 )=0;
+	virtual void Entry( const string& var, bool& value, const bool defvalue=0 )=0;
+	virtual void EnumEntry( const string& var, int& value, const char* const* enumArray, const int defvalue=0 )=0;
+
+	void DoConfig( PcsxConfig& Conf );
+	void MemcardSettings( PcsxConfig& Conf );
+};
+
+class IniFileLoader : public IniFile
+{
+protected:
+	SafeArray<char> m_workspace;
+
+public:
+	virtual ~IniFileLoader();
+	IniFileLoader();
+
+	void Entry( const string& var, string& value, const string& defvalue=string() );
+	void Entry( const string& var, char (&value)[g_MaxPath], const string& defvalue=string() );
+	void Entry( const string& var, int& value, const int defvalue=0 );
+	void Entry( const string& var, uint& value, const uint defvalue=0 );
+	void Entry( const string& var, bool& value, const bool defvalue=false );
+	void EnumEntry( const string& var, int& value, const char* const* enumArray, const int defvalue=0 );
+};
+
+class IniFileSaver : public IniFile
+{
+public:
+	virtual ~IniFileSaver();
+	IniFileSaver();
+	
+	void Entry( const string& var, const string& value, const string& defvalue=string() );
+	void Entry( const string& var, string& value, const string& defvalue=string() );
+	void Entry( const string& var, char (&value)[g_MaxPath], const string& defvalue=string() );
+	void Entry( const string& var, int& value, const int defvalue=0 );
+	void Entry( const string& var, uint& value, const uint defvalue=0 );
+	void Entry( const string& var, bool& value, const bool defvalue=false );
+	void EnumEntry( const string& var, int& value, const char* const* enumArray, const int defvalue=0 );
+};
+
 LRESULT WINAPI MainWndProc(HWND, UINT, WPARAM, LPARAM);
 void CreateMainWindow(int nCmdShow);
 void RunGui();
@@ -112,9 +167,10 @@ extern void StreamException_ThrowFromErrno( const string& streamname, errno_t er
 extern bool StreamException_LogFromErrno( const string& streamname, const char* action, errno_t result );
 extern bool StreamException_LogLastError( const string& streamname, const char* action, HANDLE result=INVALID_HANDLE_VALUE );
 
-// Sets the NTFS compression flag for a directory or file.
-// This function does not operate recursively.  If the given directory
-extern void NTFS_CompressFile( const char* file );
+// Sets the NTFS compression flag for a directory or file. This function does not operate
+// recursively.  Set compressStatus to false to decompress compressed files (and do nothing
+// to already decompressed files).
+extern void NTFS_CompressFile( const char* file, bool compressStatus=true );
 
 #endif
 

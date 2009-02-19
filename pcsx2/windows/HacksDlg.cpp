@@ -29,6 +29,7 @@ BOOL APIENTRY HacksProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 
 			if(CHECK_IOP_CYCLERATE) CheckDlgButton(hDlg, IDC_IOPSYNC, TRUE);
 			if(CHECK_WAITCYCLE_HACK) CheckDlgButton(hDlg, IDC_WAITCYCLES, TRUE);
+			if(CHECK_INTC_STAT_HACK) CheckDlgButton(hDlg, IDC_INTCSTATHACK, TRUE);
 			if(CHECK_ESCAPE_HACK) CheckDlgButton(hDlg, IDC_ESCHACK, TRUE);
 
 		return TRUE;
@@ -50,6 +51,7 @@ BOOL APIENTRY HacksProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 
 					newhacks |= IsDlgButtonChecked(hDlg, IDC_IOPSYNC) << 3;
 					newhacks |= IsDlgButtonChecked(hDlg, IDC_WAITCYCLES) << 4;
+					newhacks |= IsDlgButtonChecked(hDlg, IDC_INTCSTATHACK) << 5;
 					newhacks |= IsDlgButtonChecked(hDlg, IDC_ESCHACK) << 10;
 
 					EndDialog(hDlg, TRUE);

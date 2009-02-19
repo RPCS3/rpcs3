@@ -766,9 +766,9 @@ LRESULT WINAPI MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				return FALSE;
 
 			case ID_CONFIG_MEMCARDS:
-				DialogBox(gApp.hInstance, MAKEINTRESOURCE(IDD_MCDCONF), hWnd, (DLGPROC)ConfigureMcdsDlgProc);
-				SaveConfig();
+				MemcardConfig::OpenDialog();
 				return FALSE;
+
 			case ID_PROCESSLOW: 
                Config.ThPriority = THREAD_PRIORITY_LOWEST;
                 SaveConfig();
@@ -776,6 +776,7 @@ LRESULT WINAPI MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 CheckMenuItem(gApp.hMenu,ID_PROCESSNORMAL,MF_UNCHECKED);
                 CheckMenuItem(gApp.hMenu,ID_PROCESSHIGH,MF_UNCHECKED);
                 return FALSE;
+                
 			case ID_PROCESSNORMAL:
                 Config.ThPriority = THREAD_PRIORITY_NORMAL;
                 SaveConfig();
@@ -783,6 +784,7 @@ LRESULT WINAPI MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 CheckMenuItem(gApp.hMenu,ID_PROCESSLOW,MF_UNCHECKED);
                 CheckMenuItem(gApp.hMenu,ID_PROCESSHIGH,MF_UNCHECKED);
                 return FALSE;
+
 			case ID_PROCESSHIGH:
                 Config.ThPriority = THREAD_PRIORITY_HIGHEST;
                 SaveConfig();

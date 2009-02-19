@@ -22,7 +22,7 @@
 #include "Common.h"
 #include "Paths.h"
 
-static const u32 IniVersion = 100;
+static const u32 IniVersion = 101;
 
 const char* g_CustomConfigFile;
 char g_WorkingFolder[g_MaxPath];		// Working folder at application startup
@@ -53,210 +53,193 @@ static void GetConfigFilename( string& dest )
 	}
 }
 
-class IniFile
+//////////////////////////////////////////////////////////////////////////////////////////
+//  InitFileLoader
+
+IniFileLoader::~IniFileLoader() {}
+IniFileLoader::IniFileLoader() : IniFile(),
+	m_workspace( 4096, "IniFileLoader Workspace" )
 {
-protected:
-	string m_filename;
-	string m_section;
+}
 
-public:
-	virtual ~IniFile() {}
-	IniFile() : m_filename(), m_section("Misc")
+void IniFileLoader::Entry( const string& var, string& value, const string& defvalue )
+{
+	int retval = GetPrivateProfileString(
+		m_section.c_str(), var.c_str(), defvalue.c_str(), m_workspace.GetPtr(), m_workspace.GetLength(), m_filename.c_str()
+	);
+
+	if( retval >= m_workspace.GetLength() - 2 )
+		Console::Notice( "Loadini Warning > Possible truncated value on key '%hs'", params &var );
+	//Console::WriteLn( "WTF!! %s ", params m_workspace.GetPtr() );
+	value = m_workspace.GetPtr();
+}
+
+void IniFileLoader::Entry( const string& var, char (&value)[g_MaxPath], const string& defvalue )
+{
+	int retval = GetPrivateProfileString(
+		m_section.c_str(), var.c_str(), defvalue.c_str(), value, sizeof( value ), m_filename.c_str()
+	);
+
+	if( retval >= sizeof(value) - 2 )
+		Console::Notice( "Loadini Warning > Possible truncated value on key '%hs'", params &var );
+}
+
+void IniFileLoader::Entry( const string& var, int& value, const int defvalue )
+{
+	string retval;
+	Entry( var, retval, to_string( defvalue ) );
+	value = atoi( retval.c_str() );
+}
+
+void IniFileLoader::Entry( const string& var, uint& value, const uint defvalue )
+{
+	string retval;
+	Entry( var, retval, to_string( defvalue ) );
+	value = atoi( retval.c_str() );
+}
+
+void IniFileLoader::Entry( const string& var, bool& value, const bool defvalue )
+{
+	string retval;
+	Entry( var, retval, defvalue ? "enabled" : "disabled" );
+	value = (retval == "enabled");
+}
+
+void IniFileLoader::EnumEntry( const string& var, int& value, const char* const* enumArray, const int defvalue )
+{
+	string retval;
+	Entry( var, retval, enumArray[defvalue] );
+
+	int i=0;
+	while( enumArray[i] != NULL && ( retval != enumArray[i] ) ) i++;
+
+	if( enumArray[i] == NULL )
 	{
-		GetConfigFilename( m_filename );
+		Console::Notice( "Loadini Warning > Unrecognized value '%hs' on key '%hs'\n\tUsing the default setting of '%s'.",
+			params &retval, &var, enumArray[defvalue] );
+		value = defvalue;
 	}
+	else
+		value = i;
+}
 
-	void SetCurrentSection( const string& newsection )
-	{
-		m_section = newsection;
-	}
+//////////////////////////////////////////////////////////////////////////////////////////
+//  InitFileSaver
 
-	virtual void Entry( const string& var, string& value, const string& defvalue=string() )=0;
-	virtual void Entry( const string& var, char (&value)[g_MaxPath], const string& defvalue=string() )=0;
-	virtual void Entry( const string& var, int& value, const int defvalue=0 )=0;
-	virtual void Entry( const string& var, uint& value, const uint defvalue=0 )=0;
-	virtual void Entry( const string& var, bool& value, const bool defvalue=0 )=0;
-	virtual void EnumEntry( const string& var, int& value, const char* const* enumArray, const int defvalue=0 )=0;
+IniFileSaver::~IniFileSaver() {}
 
-	void DoConfig( PcsxConfig& Conf )
-	{
-		SetCurrentSection( "Misc" );
+IniFileSaver::IniFileSaver() : IniFile()
+{
+	char versionStr[20];
+	_itoa( IniVersion, versionStr, 10 );
+	WritePrivateProfileString( "Misc", "IniVersion", versionStr, m_filename.c_str() );
+}
 
-		Entry( "Patching", Conf.Patch, false );
-		Entry( "GameFixes", Conf.GameFixes);
+void IniFileSaver::Entry( const string& var, const string& value, const string& defvalue )
+{
+	WritePrivateProfileString( m_section.c_str(), var.c_str(), value.c_str(), m_filename.c_str() );
+}
+
+void IniFileSaver::Entry( const string& var, string& value, const string& defvalue )
+{
+	WritePrivateProfileString( m_section.c_str(), var.c_str(), value.c_str(), m_filename.c_str() );
+}
+
+void IniFileSaver::Entry( const string& var, char (&value)[g_MaxPath], const string& defvalue )
+{
+	WritePrivateProfileString( m_section.c_str(), var.c_str(), value, m_filename.c_str() );
+}
+
+void IniFileSaver::Entry( const string& var, int& value, const int defvalue )
+{
+	Entry( var, to_string( value ) );
+}
+
+void IniFileSaver::Entry( const string& var, uint& value, const uint defvalue )
+{
+	Entry( var, to_string( value ) );
+}
+
+void IniFileSaver::Entry( const string& var, bool& value, const bool defvalue )
+{
+	Entry( var, value ? "enabled" : "disabled" );
+}
+
+void IniFileSaver::EnumEntry( const string& var, int& value, const char* const* enumArray, const int defvalue )
+{
+	Entry( var, enumArray[value] );
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////
+//  InitFile -- Base class implementation.
+
+IniFile::~IniFile() {}
+IniFile::IniFile() : m_filename(), m_section("Misc")
+{
+	GetConfigFilename( m_filename );
+}
+
+void IniFile::SetCurrentSection( const string& newsection )
+{
+	m_section = newsection;
+}
+
+void IniFile::DoConfig( PcsxConfig& Conf )
+{
+	SetCurrentSection( "Misc" );
+
+	Entry( "Patching", Conf.Patch, false );
+	Entry( "GameFixes", Conf.GameFixes);
 #ifdef PCSX2_DEVBUILD
-		Entry( "DevLogFlags", varLog );
+	Entry( "DevLogFlags", varLog );
 #endif
 
-		//interface
-		SetCurrentSection( "Interface" );
-		Entry( "Bios", Conf.Bios );
-		Entry( "Language", Conf.Lang );
-		Entry( "PluginsDir", Conf.PluginsDir, DEFAULT_PLUGINS_DIR );
-		Entry( "BiosDir", Conf.BiosDir, DEFAULT_BIOS_DIR );
-		Entry( "CloseGsOnEscape", Conf.closeGSonEsc, true );
+	//interface
+	SetCurrentSection( "Interface" );
+	Entry( "Bios", Conf.Bios );
+	Entry( "Language", Conf.Lang );
+	Entry( "PluginsDir", Conf.PluginsDir, DEFAULT_PLUGINS_DIR );
+	Entry( "BiosDir", Conf.BiosDir, DEFAULT_BIOS_DIR );
+	Entry( "CloseGsOnEscape", Conf.closeGSonEsc, true );
 
-		SetCurrentSection( "Console" );
-		Entry( "ConsoleWindow", Conf.PsxOut, true );
-		Entry( "Profiler", Conf.Profiler, false );
-		Entry( "CdvdVerbose", Conf.cdvdPrint, false );
+	SetCurrentSection( "Console" );
+	Entry( "ConsoleWindow", Conf.PsxOut, true );
+	Entry( "Profiler", Conf.Profiler, false );
+	Entry( "CdvdVerbose", Conf.cdvdPrint, false );
 
-		Entry( "ThreadPriority", Conf.ThPriority, THREAD_PRIORITY_NORMAL );
-		Entry( "Memorycard1", Conf.Mcd1, MEMCARDS_DIR "\\" DEFAULT_MEMCARD1 );
-		Entry( "Memorycard2", Conf.Mcd2, MEMCARDS_DIR "\\" DEFAULT_MEMCARD2 );
+	Entry( "ThreadPriority", Conf.ThPriority, THREAD_PRIORITY_NORMAL );
 
-		SetCurrentSection( "Framelimiter" );
-		Entry( "CustomFps", Conf.CustomFps );
-		Entry( "FrameskipMode", Conf.CustomFrameSkip );
-		Entry( "ConsecutiveFramesToRender", Conf.CustomConsecutiveFrames );
-		Entry( "ConsecutiveFramesToSkip", Conf.CustomConsecutiveSkip );
+	SetCurrentSection( "Framelimiter" );
+	Entry( "CustomFps", Conf.CustomFps );
+	Entry( "FrameskipMode", Conf.CustomFrameSkip );
+	Entry( "ConsecutiveFramesToRender", Conf.CustomConsecutiveFrames );
+	Entry( "ConsecutiveFramesToSkip", Conf.CustomConsecutiveSkip );
 
-		// Plugins are saved from the winConfig struct.
-		// It contains the user config settings and not the
-		// runtime cmdline overrides.
+	MemcardSettings( Conf );
 
-		SetCurrentSection( "Plugins" );
+	SetCurrentSection( "Plugins" );
 
-		Entry( "GS", Conf.GS );
-		Entry( "SPU2", Conf.SPU2 );
-		Entry( "CDVD", Conf.CDVD );
-		Entry( "PAD1", Conf.PAD1 );
-		Entry( "PAD2", Conf.PAD2 );
-		Entry( "DEV9", Conf.DEV9 );
-		Entry( "USB", Conf.USB );
-		Entry( "FW", Conf.FW );
+	Entry( "GS", Conf.GS );
+	Entry( "SPU2", Conf.SPU2 );
+	Entry( "CDVD", Conf.CDVD );
+	Entry( "PAD1", Conf.PAD1 );
+	Entry( "PAD2", Conf.PAD2 );
+	Entry( "DEV9", Conf.DEV9 );
+	Entry( "USB", Conf.USB );
+	Entry( "FW", Conf.FW );
 
-		//cpu
-		SetCurrentSection( "Cpu" );
-		Entry( "Options", Conf.Options, PCSX2_EEREC|PCSX2_VU0REC|PCSX2_VU1REC|PCSX2_GSMULTITHREAD|PCSX2_FRAMELIMIT_LIMIT );
-		Entry( "sseMXCSR", Conf.sseMXCSR, DEFAULT_sseMXCSR );
-		Entry( "sseVUMXCSR", Conf.sseVUMXCSR, DEFAULT_sseVUMXCSR );
-		Entry( "eeOptions", Conf.eeOptions, DEFAULT_eeOptions );
-		Entry( "vuOptions", Conf.vuOptions, DEFAULT_vuOptions );
-		Entry( "SpeedHacks", Conf.Hacks );
-	}
-};
+	//cpu
+	SetCurrentSection( "Cpu" );
+	Entry( "Options", Conf.Options, PCSX2_EEREC|PCSX2_VU0REC|PCSX2_VU1REC|PCSX2_GSMULTITHREAD|PCSX2_FRAMELIMIT_LIMIT );
+	Entry( "sseMXCSR", Conf.sseMXCSR, DEFAULT_sseMXCSR );
+	Entry( "sseVUMXCSR", Conf.sseVUMXCSR, DEFAULT_sseVUMXCSR );
+	Entry( "eeOptions", Conf.eeOptions, DEFAULT_eeOptions );
+	Entry( "vuOptions", Conf.vuOptions, DEFAULT_vuOptions );
+	Entry( "SpeedHacks", Conf.Hacks );
+}
 
-class IniFileLoader : public IniFile
-{
-protected:
-	SafeArray<char> m_workspace;
-
-public:
-	virtual ~IniFileLoader() {}
-	IniFileLoader() : IniFile(),
-		m_workspace( 4096, "IniFileLoader Workspace" )
-	{
-	}
-
-	void Entry( const string& var, string& value, const string& defvalue=string() )
-	{
-		int retval = GetPrivateProfileString(
-			m_section.c_str(), var.c_str(), defvalue.c_str(), m_workspace.GetPtr(), m_workspace.GetLength(), m_filename.c_str()
-		);
-
-		if( retval >= m_workspace.GetLength() - 2 )
-			Console::Notice( "Loadini Warning > Possible truncated value on key '%hs'", params &var );
-		value = m_workspace.GetPtr();
-	}
-
-	void Entry( const string& var, char (&value)[g_MaxPath], const string& defvalue=string() )
-	{
-		int retval = GetPrivateProfileString(
-			m_section.c_str(), var.c_str(), defvalue.c_str(), value, sizeof( value ), m_filename.c_str()
-		);
-
-		if( retval >= sizeof(value) - 2 )
-			Console::Notice( "Loadini Warning > Possible truncated value on key '%hs'", params &var );
-	}
-
-	void Entry( const string& var, int& value, const int defvalue=0 )
-	{
-		string retval;
-		Entry( var, retval, to_string( defvalue ) );
-		value = atoi( retval.c_str() );
-	}
-
-	void Entry( const string& var, uint& value, const uint defvalue=0 )
-	{
-		string retval;
-		Entry( var, retval, to_string( defvalue ) );
-		value = atoi( retval.c_str() );
-	}
-
-	void Entry( const string& var, bool& value, const bool defvalue=false )
-	{
-		string retval;
-		Entry( var, retval, defvalue ? "enabled" : "disabled" );
-		value = (retval == "enabled");
-	}
-
-	void EnumEntry( const string& var, int& value, const char* const* enumArray, const int defvalue=0 )
-	{
-		string retval;
-		Entry( var, retval, enumArray[defvalue] );
-
-		int i=0;
-		while( enumArray[i] != NULL && ( retval != enumArray[i] ) ) i++;
-
-		if( enumArray[i] == NULL )
-		{
-			Console::Notice( "Loadini Warning > Unrecognized value '%hs' on key '%hs'\n\tUsing the default setting of '%s'.",
-				params &retval, &var, enumArray[defvalue] );
-			value = defvalue;
-		}
-		else
-			value = i;
-	}
-
-};
-
-class IniFileSaver : public IniFile
-{
-public:
-	virtual ~IniFileSaver() {}
-	IniFileSaver() : IniFile()
-	{
-		char versionStr[20];
-		_itoa( IniVersion, versionStr, 10 );
-		WritePrivateProfileString( "Misc", "IniVersion", versionStr, m_filename.c_str() );
-	}
-
-	void Entry( const string& var, const string& value, const string& defvalue=string() )
-	{
-		WritePrivateProfileString( m_section.c_str(), var.c_str(), value.c_str(), m_filename.c_str() );
-	}
-
-	void Entry( const string& var, string& value, const string& defvalue=string() )
-	{
-		WritePrivateProfileString( m_section.c_str(), var.c_str(), value.c_str(), m_filename.c_str() );
-	}
-
-	void Entry( const string& var, char (&value)[g_MaxPath], const string& defvalue=string() )
-	{
-		WritePrivateProfileString( m_section.c_str(), var.c_str(), value, m_filename.c_str() );
-	}
-
-	void Entry( const string& var, int& value, const int defvalue=0 )
-	{
-		Entry( var, to_string( value ) );
-	}
-
-	void Entry( const string& var, uint& value, const uint defvalue=0 )
-	{
-		Entry( var, to_string( value ) );
-	}
-
-	void Entry( const string& var, bool& value, const bool defvalue=false )
-	{
-		Entry( var, value ? "enabled" : "disabled" );
-	}
-
-	void EnumEntry( const string& var, int& value, const char* const* enumArray, const int defvalue=0 )
-	{
-		Entry( var, enumArray[value] );
-	}
-};
+//////////////////////////////////////////////////////////////////////////////////////////
+//  Public API -- LoadConfig / SaveConfig
 
 bool LoadConfig()
 {

@@ -97,7 +97,7 @@ bool StreamException_LogLastError( const string& streamname, const char* action,
 }
 
 // Exceptions thrown: None.  Errors are logged to console.  Failures are considered non-critical
-void NTFS_CompressFile( const char* file )
+void NTFS_CompressFile( const char* file, bool compressStatus )
 {
 	bool isFile = Path::isFile( file );
 	
@@ -117,7 +117,7 @@ void NTFS_CompressFile( const char* file )
 	if( !StreamException_LogLastError( file, "NTFS Compression Enable", bloated_crap ) )
 	{
 		DWORD bytesReturned = 0;
-		DWORD compressMode = COMPRESSION_FORMAT_DEFAULT;
+		DWORD compressMode = compressStatus ? COMPRESSION_FORMAT_DEFAULT : COMPRESSION_FORMAT_NONE;
 		
 		BOOL result = DeviceIoControl(
 			bloated_crap, FSCTL_SET_COMPRESSION,

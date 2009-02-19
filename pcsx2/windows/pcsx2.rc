@@ -8,6 +8,8 @@
 // Generated from the TEXTINCLUDE 2 resource.
 //
 #include "afxresmw.h"
+
+
 /////////////////////////////////////////////////////////////////////////////
 #undef APSTUDIO_READONLY_SYMBOLS
 
@@ -938,6 +940,34 @@ BEGIN
     LTEXT           "None - No clamping. (Fastest Mode)\nNormal - Clamps the result.\nExtra - Clamps the operands, the result, and anywhere in between.\nExtra + Preserve Sign - Same as ""Extra"", except preserves NaN's sign when clamping the operands. (Slowest Mode)",IDC_STATIC,286,114,224,45
 END
 
+IDD_CONF_MEMCARD DIALOGEX 0, 0, 451, 215
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Memorycard Config - Pcsx2"
+FONT 8, "MS Shell Dlg", 0, 0, 0x0
+BEGIN
+    GROUPBOX        "",IDC_MCD_GROUP1,6,6,223,49
+    GROUPBOX        "",IDC_MCD_GROUP2,6,62,223,49
+    GROUPBOX        "Advanced Options",IDC_STATIC,237,6,206,129
+    CONTROL         "Memory Card Slot 1",IDC_MCD_ENABLE1,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,13,6,82,11
+    EDITTEXT        IDC_MCD_FILE1,14,32,160,15,ES_MULTILINE | ES_AUTOHSCROLL
+    PUSHBUTTON      "Browse...",IDC_MCD_BROWSE1,176,32,46,15
+    CONTROL         "Memory Card Slot 2",IDC_MCD_ENABLE2,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,13,62,82,11
+    EDITTEXT        IDC_MCD_FILE2,14,88,160,15,ES_AUTOHSCROLL
+    PUSHBUTTON      "Browse...",IDC_MCD_BROWSE2,176,88,46,15
+    CONTROL         "Enable NTFS Compression",IDC_NTFS_ENABLE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,245,20,119,12
+    CONTROL         "Eject Mcds when loading SaveStates",IDC_MCD_EJECT_ENABLE,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,244,72,154,10
+    DEFPUSHBUTTON   "OK",IDOK,337,195,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,395,195,50,14
+    LTEXT           "Filename:",IDC_MCD_LABEL1,10,21,150,9
+    LTEXT           "Filename:",IDC_MCD_LABEL2,10,76,150,9
+    LTEXT           "Sets the NTFS compression flag on the MCD folder and files. (Recommended!)  If unset, files and folders will be returned to normal.",IDC_STATIC,257,35,182,26
+    LTEXT           "This feature tells games when the mcd contents have changed so that they re-index the new Mcd contents.  WARNING: Disabling this option is NOT recommended, and could lead to MemCard corruption if you also use SaveStates.",IDC_STATIC,255,86,184,45
+    LTEXT           "MemoryCard slots can be enabled or disabled above.  Disabling a slot is the same as removing the card from your PS2 in emulation terms.",IDC_STATIC,6,120,224,17
+    LTEXT           "Remember to make backups of your MemoryCards reguarly.  Mcd support in Pcsx is pretty reliable, but not foolproof.  Cards could get corrupted.",IDC_STATIC,6,183,224,26
+    LTEXT           "You can hot-swap memory cards at any time during emulation.  Just press escape, open up this dialog box, select a new memory card (or two!), and return to the action. :)",IDC_STATIC,6,147,224,27
+END
+
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -1011,6 +1041,14 @@ BEGIN
         HORZGUIDE, 214
         HORZGUIDE, 232
     END
+
+    IDD_CONF_MEMCARD, DIALOG
+    BEGIN
+        LEFTMARGIN, 6
+        RIGHTMARGIN, 445
+        TOPMARGIN, 6
+        BOTTOMMARGIN, 209
+    END
 END
 #endif    // APSTUDIO_INVOKED
 
@@ -1053,7 +1091,7 @@ BEGIN
     CONTROL         132,IDC_PS2SILVER_RECT,"Static",SS_BITMAP,2,183,70,74
 END
 
-IDD_HACKS DIALOGEX 0, 0, 328, 263
+IDD_HACKS DIALOGEX 0, 0, 335, 263
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "PCSX2 Speed Hacks"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
@@ -1062,22 +1100,24 @@ BEGIN
     CONTROL         "Use x1.5 Cycle Rate",IDC_EESYNC1,"Button",BS_AUTORADIOBUTTON,13,79,87,10
     CONTROL         "Use x2 Cycle Rate",IDC_EESYNC2,"Button",BS_AUTORADIOBUTTON,13,113,83,10
     CONTROL         "Use x3 Cycle Rate",IDC_EESYNC3,"Button",BS_AUTORADIOBUTTON,13,147,80,10
-    CONTROL         "Enable IOP x2 Cycle Rate",IDC_IOPSYNC,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,174,41,98,10
-    CONTROL         "WaitCycles Sync Hack",IDC_WAITCYCLES,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,174,82,90,10
+    CONTROL         "Enable IOP x2 Cycle Rate",IDC_IOPSYNC,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,174,97,98,10
+    CONTROL         "WaitCycles Sync Hack",IDC_WAITCYCLES,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,174,138,90,10
     CONTROL         "Escape Hack - Use Esc key to fully exit PCSX2.",IDC_ESCHACK,
                     "Button",BS_AUTOCHECKBOX | WS_TABSTOP,13,234,180,10
     DEFPUSHBUTTON   "OK",IDOK,217,242,50,14
-    PUSHBUTTON      "Cancel",IDCANCEL,271,242,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,278,242,50,14
     CTEXT           "These hacks will speed up emulation but reduce emulation compatibility or cause visual errors.  If you have problems, disable all these and try again!",IDC_HACKDESC,18,7,286,19
     GROUPBOX        "EmotionEngine (EE) Sync Hacks",IDC_STATIC,7,31,159,180
     GROUPBOX        "Miscellaneous",IDC_STATIC,7,220,194,33
     LTEXT           "Important:  X2 and X3 sync hacks *will* cause choppy/skippy audio on many FMV movies.",IDC_STATIC,13,183,149,25
-    LTEXT           "Bigger speedup, but causes flickering or missing geometry on many games.",IDC_STATIC,25,158,133,19
+    LTEXT           "*OBSOLETE*  Better off using the INTC Sync Hack instead.",IDC_STATIC,25,158,133,19
     LTEXT           "Big speedup!  Works well with many games.",IDC_STATIC,25,124,125,19
     LTEXT           "Most compatible option - recommended for everyone with high-end machines.",IDC_STATIC,25,55,136,19
-    LTEXT           "Small speedup and works well with most games.",IDC_STATIC,186,53,134,22
-    LTEXT           "Small speedup. Works well with most games, but may cause certain games to crash or freeze up during bootup or stage changes.",IDC_STATIC,186,94,134,39
+    LTEXT           "Small speedup and works well with most games.",IDC_STATIC,186,109,134,22
+    LTEXT           "Small speedup. Works well with most games, but may cause certain games to crash or freeze up during bootup or stage changes.",IDC_STATIC,186,150,141,39
     LTEXT           "Moderate speedup and works well with most games.",IDC_STATIC,25,90,129,19
+    CONTROL         "INTC Sync Hack (experimental)",IDC_INTCSTATHACK,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,174,43,127,10
+    LTEXT           "Huge speedup! And few negative side effects in most games.  When enabling this it might be best to leave the EE sync hack set to Default.",IDC_STATIC,186,55,140,36
 END
 
 
@@ -1098,7 +1138,7 @@ BEGIN
     IDD_HACKS, DIALOG
     BEGIN
         LEFTMARGIN, 7
-        RIGHTMARGIN, 321
+        RIGHTMARGIN, 328
         VERTGUIDE, 13
         TOPMARGIN, 7
         BOTTOMMARGIN, 256
@@ -1354,7 +1394,7 @@ END
 
 3 TEXTINCLUDE 
 BEGIN
-    "\r\0"
+    "\0"
 END
 
 #endif    // APSTUDIO_INVOKED
@@ -1692,7 +1732,7 @@ END
 
 2 TEXTINCLUDE 
 BEGIN
-    "#include ""afxres.h""\r\n"
+    "#include ""afxresmw.h""\r\n"
     "\0"
 END
 
@@ -1706,4 +1746,5 @@ END
 
 #endif    // Greek resources
 /////////////////////////////////////////////////////////////////////////////
+
 

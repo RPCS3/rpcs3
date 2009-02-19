@@ -196,6 +196,8 @@ mem32_t __fastcall hwRead32_page_0F(u32 mem)
 	switch( mem )
 	{
 		case 0xf000:
+			if( CHECK_INTC_STAT_HACK )
+				cpuRegs.cycle = g_nextBranchCycle;
 			// This one is checked alot, so leave it commented out unless you love 600 meg logfiles.
 			//HW_LOG("INTC_STAT Read  32bit %x\n", psHu32(0xf010));
 		break;
@@ -325,6 +327,9 @@ void __fastcall hwRead64_page_02(u32 mem, mem64_t* result )
 
 void __fastcall hwRead64_generic(u32 mem, mem64_t* result )
 {
+	if( mem == INTC_STAT && CHECK_INTC_STAT_HACK )
+		cpuRegs.cycle = g_nextBranchCycle;
+
 	*result = psHu64(mem);
 	HW_LOG("Unknown Hardware Read 64 at %x\n",mem);
 }

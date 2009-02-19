@@ -29,7 +29,7 @@
 // Savestate Versioning!
 //  If you make changes to the savestate version, please increment the value below.
 
-static const u32 g_SaveVersion = 0x8b400002;
+static const u32 g_SaveVersion = 0x8b400003;
 
 // this function is meant to be sued in the place of GSfreeze, and provides a safe layer
 // between the GS saving function and the MTGS's needs. :)

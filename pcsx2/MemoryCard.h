@@ -22,15 +22,26 @@
 static const int MCD_SIZE = 1024 *  8  * 16;
 static const int MC2_SIZE = 1024 * 528 * 16;
  
-extern void MemoryCard_Init();
-extern void MemoryCard_Shutdown();
+class MemoryCard
+{
+protected:
+	static FILE* cardfile[2];
 
-extern bool TestMcdIsPresent(int mcd);
-extern FILE *LoadMcd(int mcd);
-extern void ReadMcd(int mcd, u8 *data, u32 adr, int size);
-extern void SaveMcd(int mcd, const u8 *data, u32 adr, int size);
-extern void EraseMcd(int mcd, u32 adr);
-extern void CreateMcd(const char *mcd);
+	static FILE* Load( uint mcdId );
+	static void Seek( FILE* mcdfp, u32 adr );
+	static void Create( const char *mcd );
+
+public:
+	static void Init();
+	static void Shutdown();
+	static bool IsPresent( uint mcdId );
+	static void Read( uint mcdId, u8 *data, u32 adr, int size );
+	static void Save( uint mcdId, const u8 *data, u32 adr, int size );
+	static void Erase( uint mcdId, u32 adr );
+	
+	static bool HasChanged( uint mcdId );
+	static u64 GetCRC( uint mcdId );
+};
 
 #if 0		// unused code?
 struct McdBlock

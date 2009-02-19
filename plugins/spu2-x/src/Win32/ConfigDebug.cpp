@@ -221,9 +221,8 @@ static BOOL CALLBACK DialogProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 
 void OpenDialog()
 {
-	INT_PTR ret;
-	ret = DialogBoxParam(hInstance,MAKEINTRESOURCE(IDD_CONFIG_DEBUG),GetActiveWindow(),(DLGPROC)DialogProc,1);
-	if(ret==-1)
+	INT_PTR ret = DialogBoxParam(hInstance,MAKEINTRESOURCE(IDD_CONFIG_DEBUG),GetActiveWindow(),(DLGPROC)DialogProc,1);
+	if(ret == -1)
 	{
 		MessageBoxEx(GetActiveWindow(),_T("Error Opening the debug configuration dialog."),_T("OMG ERROR!"),MB_OK,0);
 		return;

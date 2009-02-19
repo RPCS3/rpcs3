@@ -23,65 +23,67 @@
 #include "Paths.h"
 
 #ifdef WIN32
-extern void NTFS_CompressFile( const char* file );
+extern void NTFS_CompressFile( const char* file, bool compressMode );
 #endif
 
-static FILE* MemoryCard[2] = { NULL, NULL };
+FILE* MemoryCard::cardfile[2] = { NULL, NULL };
+
 
 // Ensures memory card files are created/initialized.
-void MemoryCard_Init()
+void MemoryCard::Init()
 {
 	for( int i=0; i<2; i++ )
 	{
-		if( MemoryCard[i] == NULL )
-			MemoryCard[i] = LoadMcd(i);
+		if( Config.Mcd[i].Enabled && cardfile[i] == NULL )
+			cardfile[i] = Load(i);
 	}
 }
 
-void MemoryCard_Shutdown()
+void MemoryCard::Shutdown()
 {
 	for( int i=0; i<2; i++ )
 	{
-		if(MemoryCard[0]) fclose(MemoryCard[i]);
-		MemoryCard[0] = NULL;
+		if(cardfile[0] == NULL) continue;
+		fclose( cardfile[i] );
+		cardfile[0] = NULL;
 	}
 }
 
-bool TestMcdIsPresent( int mcd )
+bool MemoryCard::IsPresent( uint mcd )
 {
-	jASSUME( mcd == 0 || mcd == 1 );
-	return MemoryCard[mcd] != NULL;
+	jASSUME( mcd < 2 );
+	return cardfile[mcd] != NULL;
 }
 
-FILE *LoadMcd(int mcd)
+FILE *MemoryCard::Load( uint mcd )
 {
-	string str;
 	FILE *f;
 
-	jASSUME( mcd == 0 || mcd == 1 );
-	str = (mcd == 0) ? Config.Mcd1 : Config.Mcd2;
+	jASSUME( mcd < 2 );
+	string str( Config.Mcd[mcd].Filename );
 
 	if( str.empty() )
 		Path::Combine( str, MEMCARDS_DIR, fmt_string( "Mcd00%d.ps2", mcd ) );
 
 	if( !Path::Exists(str) )
-		CreateMcd(str.c_str());
+		Create( str.c_str() );
 
 #ifdef WIN32
-	NTFS_CompressFile( str.c_str() );
+	NTFS_CompressFile( str.c_str(), Config.McdEnableNTFS );
 #endif
 
-	f = fopen(str.c_str(), "r+b");
+	f = fopen( str.c_str(), "r+b" );
 
-	if (f == NULL) {
-		Msgbox::Alert("Failed loading MemCard from file: %hs", params &str); 
+	if (f == NULL)
+	{
+		Msgbox::Alert("Failed loading MemoryCard from file: %hs", params &str); 
 		return NULL;
 	}
 
 	return f;
 }
 
-void SeekMcd(FILE *f, u32 adr)
+void MemoryCard::Seek( FILE *f, u32 adr )
 {
 	u32 size;
 
@@ -94,65 +96,97 @@ void SeekMcd(FILE *f, u32 adr)
 		fseek(f, adr, SEEK_SET);
 }
 
-void ReadMcd(int mcd, u8 *data, u32 adr, int size)
+void MemoryCard::Read( uint mcd, u8 *data, u32 adr, int size )
 {
-	jASSUME( mcd == 0 || mcd == 1 );
-	FILE* const mcfp = MemoryCard[mcd];
+	jASSUME( mcd < 2 );
+	FILE* const mcfp = cardfile[mcd];
 
-	if (mcfp == NULL) {
+	if( mcfp == NULL )
+	{
+		Console::Error( "MemoryCard > Ignoring attempted read from disabled card." );
 		memset(data, 0, size);
 		return;
 	}
-	SeekMcd(mcfp, adr);
+	Seek(mcfp, adr);
 	fread(data, 1, size, mcfp);
 }
 
-void SaveMcd(int mcd, const u8 *data, u32 adr, int size)
+void MemoryCard::Save( uint mcd, const u8 *data, u32 adr, int size )
 {
-	jASSUME( mcd == 0 || mcd == 1 );
-	FILE* const mcfp = MemoryCard[mcd];
+	jASSUME( mcd < 2 );
+	FILE* const mcfp = cardfile[mcd];
 
-	SeekMcd(mcfp, adr);
+	if( mcfp == NULL )
+	{
+		Console::Error( "MemoryCard > Ignoring attempted save/write to disabled card." );
+		return;
+	}
+
+	Seek(mcfp, adr);
 	u8 *currentdata = (u8 *)malloc(size);
 	fread(currentdata, 1, size, mcfp);
+
 	for (int i=0; i<size; i++)
 	{
 		if ((currentdata[i] & data[i]) != data[i])
 			Console::Notice("MemoryCard : writing odd data");
 		currentdata[i] &= data[i];
 	}
-	SeekMcd(mcfp, adr);
-	fwrite(currentdata, 1, size, mcfp);
 
+	Seek(mcfp, adr);
+	fwrite(currentdata, 1, size, mcfp);
 	free(currentdata);
 }
 
 
-void EraseMcd(int mcd, u32 adr)
+void MemoryCard::Erase( uint mcd, u32 adr )
 {
 	u8 data[528*16];
 	memset8_obj<0xff>(data);		// clears to -1's
 
-	jASSUME( mcd == 0 || mcd == 1 );
-	FILE* const mcfp = MemoryCard[mcd];
-	SeekMcd(mcfp, adr);
+	jASSUME( mcd < 2 );
+	FILE* const mcfp = cardfile[mcd];
+
+	if( mcfp == NULL )
+	{
+		DevCon::Notice( "MemoryCard > Ignoring seek for disabled card." );
+		return;
+	}
+
+	Seek(mcfp, adr);
 	fwrite(data, 1, 528*16, mcfp);
 }
 
 
-void CreateMcd(const char *mcd)
+void MemoryCard::Create( const char *mcdFile )
 {
-	FILE *fp;	
-	int i=0, j=0;
 	//int enc[16] = {0x77,0x7f,0x7f,0x77,0x7f,0x7f,0x77,0x7f,0x7f,0x77,0x7f,0x7f,0,0,0,0};
 
-	fp = fopen(mcd, "wb");
-	if (fp == NULL) return;
-	for(i=0; i < 16384; i++) 
+	FILE* fp = fopen( mcdFile, "wb" );
+	if( fp == NULL ) return;
+	for( uint i=0; i<16384; i++ ) 
 	{
-		for(j=0; j < 528; j++) fputc(0xFF,fp);
-		//		for(j=0; j < 16; j++) fputc(enc[j],fp);
+		for( uint j=0; j<528; j++ ) fputc( 0xFF,fp );
+		//		for(j=0; j<16; j++) fputc(enc[j],fp);
 	}
-	fclose(fp);
+	fclose( fp );
 }
 
+u64 MemoryCard::GetCRC( uint mcd )
+{
+	jASSUME( mcd < 2 );
+
+	FILE* const mcfp = cardfile[mcd];
+	if( mcfp == NULL ) return 0;
+
+	Seek( mcfp, 0 );
+
+	u64 retval = 0;
+	for( uint i=MC2_SIZE/sizeof(u64); i; --i )
+	{
+		u64 temp; fread( &temp, sizeof(temp), 1, mcfp );
+		retval ^= temp;
+	}
+
+	return retval;
+}

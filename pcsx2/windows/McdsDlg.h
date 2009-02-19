@@ -19,6 +19,19 @@
 #ifndef __MCDSDLG_H__
 #define __MCDSDLG_H__
 
-BOOL CALLBACK ConfigureMcdsDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam);
+// Old school memcard manager that never got finished/working :(
+//BOOL CALLBACK ConfigureMcdsDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
-#endif /* __MCDSDLG_H__ */
+class MemcardConfig
+{
+protected:
+	static void Open_Mcd_Proc(HWND hW, int mcd);
+	static BOOL CALLBACK DialogProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam);
+
+public:
+	static void OpenDialog();
+	static void LoadSettings();
+};
+
+
+#endif

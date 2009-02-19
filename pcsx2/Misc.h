@@ -85,6 +85,7 @@ extern SessionOverrideFlags g_Session;
 #define CHECK_EE_CYCLERATE (Config.Hacks & 0x03)
 #define CHECK_IOP_CYCLERATE (Config.Hacks & (1<<3))
 #define CHECK_WAITCYCLE_HACK (Config.Hacks & (1<<4))
+#define CHECK_INTC_STAT_HACK (Config.Hacks & (1<<5))
 #define CHECK_ESCAPE_HACK	(Config.Hacks & 0x400)
 //------------ SPECIAL GAME FIXES!!! ---------------
 #define CHECK_VUADDSUBHACK	(Config.GameFixes & 0x1) // Special Fix for Tri-ace games, they use an encryption algorithm that requires VU addi opcode to be bit-accurate.
@@ -110,9 +111,21 @@ extern SessionOverrideFlags g_Session;
 #define CHECK_VU0REC (!g_Session.ForceDisableVU0rec && Config.Options&PCSX2_VU0REC)
 #define CHECK_VU1REC (!g_Session.ForceDisableVU1rec && (Config.Options&PCSX2_VU1REC))
 
+// Memory Card configuration, per slot.
+struct McdConfig
+{
+	// filename of the memory card for this slot.
+	// If the string is empty characters long then the default is used.
+	char Filename[g_MaxPath];
+	
+	// Enables the memory card at the emulation level.  When false, games will treat this
+	// slot as if the memory card has been physically removed from the PS2.
+	bool Enabled;
+};
 
 struct PcsxConfig
 {
+public:
 	char Bios[g_MaxPath];
 	char GS[g_MaxPath];
 	char PAD1[g_MaxPath];
@@ -122,11 +135,14 @@ struct PcsxConfig
 	char DEV9[g_MaxPath];
 	char USB[g_MaxPath];
 	char FW[g_MaxPath];
-	char Mcd1[g_MaxPath];
-	char Mcd2[g_MaxPath];
 	char PluginsDir[g_MaxPath];
 	char BiosDir[g_MaxPath];
 	char Lang[g_MaxPath];
+
+	McdConfig Mcd[2];
+	
+	bool McdEnableNTFS;		// enables NTFS compression on cards and the mcd folder.
+	bool McdEnableEject;	// enables auto-ejection of cards after loading savestates.
 
 	u32 Options; // PCSX2_X options
 

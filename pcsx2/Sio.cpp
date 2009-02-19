@@ -46,15 +46,15 @@ __forceinline void SIO_INT()
 #endif
 
 static void _ReadMcd(u8 *data, u32 adr, int size) {
-	ReadMcd(sio.GetMemcardIndex(), data, adr, size);
+	MemoryCard::Read(sio.GetMemcardIndex(), data, adr, size);
 }
 
 static void _SaveMcd(const u8 *data, u32 adr, int size) {
-	SaveMcd(sio.GetMemcardIndex(), data, adr, size);
+	MemoryCard::Save(sio.GetMemcardIndex(), data, adr, size);
 }
 
 static void _EraseMCDBlock(u32 adr) {
-	EraseMcd(sio.GetMemcardIndex(), adr);
+	MemoryCard::Erase(sio.GetMemcardIndex(), adr);
 }
 
 u8 sio_xor(u8 *buf, uint length){
@@ -74,12 +74,12 @@ void sioInit()
 	sio.packetsize = 0;
 	sio.terminator =0x55; // Command terminator 'U'
 	
-	MemoryCard_Init();
+	MemoryCard::Init();
 }
 
 void psxSIOShutdown()
 {
-	MemoryCard_Shutdown();
+	MemoryCard::Shutdown();
 }
 
 u8 sioRead8() {
@@ -506,13 +506,13 @@ void InitializeSIO(u8 value)
 			{
 				m_PostSavestateCards[mcidx]--;
 				sio2.packet.recvVal1 = 0x1D100;
-				PAD_LOG( "START MEMCARD[%d] - post-savestate - reported as missing!\n", sio.GetMemcardIndex() );
+				PAD_LOG( "START MEMCARD[%d] - post-savestate ejection - reported as missing!\n", sio.GetMemcardIndex() );
 			}
 			else
 			{
-				sio2.packet.recvVal1 = TestMcdIsPresent( sio.GetMemcardIndex() ) ? 0x1100 : 0x1D100;
+				sio2.packet.recvVal1 = MemoryCard::IsPresent( sio.GetMemcardIndex() ) ? 0x1100 : 0x1D100;
 				PAD_LOG("START MEMCARD [%d] - %s\n",
-					sio.GetMemcardIndex(), TestMcdIsPresent( sio.GetMemcardIndex() ) ? "Present" : "Missing" );
+					sio.GetMemcardIndex(), MemoryCard::IsPresent( sio.GetMemcardIndex() ) ? "Present" : "Missing" );
 			}
 
 			SIO_INT();
@@ -548,18 +548,59 @@ void SIO_FORCEINLINE sioInterrupt() {
 	psxHu32(0x1070)|=0x80;
 }
 
+// Signals the sio to eject the specified memory card.
+// Called from the memory card configuration when a user changes memory cards.
+void sioEjectCard( uint mcdId )
+{
+	jASSUME( mcdId < 2 );
+	m_PostSavestateCards[mcdId] = 64;
+}
+
 void SaveState::sioFreeze()
 {
+	// CRCs for memory cards.
+	u64 m_mcdCRCs[2];
+
     Freeze( sio );
 
-	if( IsLoading() )
+	// versions prior to 13 didn't have CRCs.
+	if( GetVersion() >= 0x13 )
+	{
+		if( IsSaving() )
+		{
+			for( int i=0; i<2; ++i )
+				m_mcdCRCs[i] = MemoryCard::GetCRC( i );
+		}
+		Freeze( m_mcdCRCs );
+	}
+	else
+	{
+		m_mcdCRCs[0] = m_mcdCRCs[1] = 0;
+	}
+
+	if( IsLoading() && Config.McdEnableEject )
 	{
 		// Note: TOTA works with values as low as 20 here.
 		// It "times out" with values around 1800 (forces user to check the memcard
 		// twice to find it).  Other games could be different. :|
+		
+		// At 64: Disgaea 1 and 2, and Grandia 2 end up displaying a quick "no memcard!"
+		// notice before finding the memorycard and re-enumerating it.  A very minor
+		// annoyance, but no breakages.
+		
+		// GuitarHero will break completely with almost any value here, by design, because
+		// it has a "rule" that the memcard should never be ejected during a song.  So by
+		// ejecting it, the game freezes (which is actually good emulation, but annoying!)
 	
-		m_PostSavestateCards[0] = 64;
-		m_PostSavestateCards[1] = 64;
+		for( int i=0; i<2; ++i )
+		{
+			uint newCRC = MemoryCard::GetCRC( i );
+			if( newCRC != m_mcdCRCs[i] )
+			{
+				m_PostSavestateCards[i] = 64;
+				m_mcdCRCs[i] = newCRC;
+			}
+		}
 	}
 }
 

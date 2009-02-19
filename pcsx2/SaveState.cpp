@@ -39,8 +39,6 @@ extern int g_psxWriteOk;
 extern void recResetEE();
 extern void recResetIOP();
 
-// STATES
-
 static void PreLoadPrep()
 {
 	SysResetExecutionState();
