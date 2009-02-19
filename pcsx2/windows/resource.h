@@ -574,6 +574,8 @@
 #define IDC_GAMEFIX5                    1304
 #define IDC_GAMEFIX1                    1304
 #define IDC_EE_ROUNDMODE0               1305
+#define IDC_FCOR                        1305
+#define IDC_GAMEFIX7                    1305
 #define IDC_EE_ROUNDMODE1               1306
 #define IDC_EE_ROUNDMODE2               1307
 #define IDC_EE_ROUNDMODE3               1308
@@ -602,12 +604,12 @@
 #define IDC_EE_CLAMPMODE1               1320
 #define IDC_MCD_BROWSE1                 1320
 #define IDC_EE_CLAMPMODE2               1321
-#define IDC_INTCSTATHACK                1326
 #define IDC_MCD_BROWSE2                 1321
 #define IDC_MCD_FILE1                   1322
 #define IDC_MCD_FILE2                   1323
 #define IDC_MCD_LABEL1                  1324
 #define IDC_MCD_LABEL2                  1325
+#define IDC_INTCSTATHACK                1326
 #define IDC_CPULOG                      1500
 #define IDC_MEMLOG                      1501
 #define IDC_HWLOG                       1502

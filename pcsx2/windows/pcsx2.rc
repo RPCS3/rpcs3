@@ -74,19 +74,20 @@ LANGUAGE LANG_GERMAN, SUBLANG_GERMAN
 // Dialog
 //
 
-IDD_GAMEFIXES DIALOGEX 0, 0, 278, 119
+IDD_GAMEFIXES DIALOGEX 0, 0, 278, 127
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Game Special Fixes"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
-    DEFPUSHBUTTON   "OK",IDOK,85,85,50,14
-    PUSHBUTTON      "Cancel",IDCANCEL,139,85,50,14
+    DEFPUSHBUTTON   "OK",IDOK,85,99,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,139,99,50,14
     CTEXT           "Some games need special settings.\nConfigure them here.",IDC_STATIC,7,7,264,17
-    GROUPBOX        "PCSX2 Gamefixes",IDC_STATIC,7,31,264,77
+    GROUPBOX        "PCSX2 Gamefixes",IDC_STATIC,7,31,264,89
     CONTROL         "FPU Clamp Hack - Special fix for Tekken 5.",IDC_GAMEFIX3,
                     "Button",BS_AUTOCHECKBOX | WS_TABSTOP,12,51,249,10
-    CONTROL         "VU Add / Sub Hack - Special fix for Tri-Ace games!",IDC_GAMEFIX1,
+    CONTROL         "VU Add / Sub Hack - Special fix for Tri-Ace games!",IDC_GAMEFIX2,
                     "Button",BS_AUTOCHECKBOX | WS_TABSTOP,12,65,252,10
+    CONTROL         "VU FCOR Hack - Fixes ICO SPS",IDC_GAMEFIX7,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,12,79,252,10
 END
 
 
@@ -104,7 +105,7 @@ BEGIN
         RIGHTMARGIN, 271
         VERTGUIDE, 12
         TOPMARGIN, 7
-        BOTTOMMARGIN, 112
+        BOTTOMMARGIN, 120
     END
 END
 #endif    // APSTUDIO_INVOKED

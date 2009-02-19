@@ -1459,10 +1459,15 @@ void recVUMI_FCOR( VURegs *VU, int info )
 	MOV32MtoR( EAX, VU_VI_ADDR(REG_CLIP_FLAG, 1) );
 	XOR32RtoR( ftreg, ftreg );
 	OR32ItoR( EAX, VU->code );
+	NOT32R( EAX );
 	AND32ItoR( EAX, 0xffffff );
 	CMP32ItoR( EAX, 0xffffff );
 
-	SETZ8R(ftreg);
+	if(CHECK_FCORHACK) //ICO Misscalculated CLIP flag (bits missing id guess)
+		SETNZ8R(ftreg);
+	else
+		SETZ8R(ftreg);
+	
 }
 //------------------------------------------------------------------
 
