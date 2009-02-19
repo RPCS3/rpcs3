@@ -128,6 +128,7 @@ union GPR_reg64 {
 union FPRreg {
 	float f;
 	u32 UL;
+	s32 SL;				// signed 32bit used for sign extension in interpreters.
 };
 
 struct fpuRegisters {

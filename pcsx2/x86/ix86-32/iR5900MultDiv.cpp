@@ -749,7 +749,6 @@ static PCSX2_ALIGNED16(u32 s_MaddMask[]) = { 0x80000000, 0, 0x80000000, 0 };
 
 void recMADDU()
 {
-	_eeOnWriteReg(_Rd_, 1);
 	EEINST_SETSIGNEXT(_Rs_);
 	EEINST_SETSIGNEXT(_Rt_);
 
@@ -765,6 +764,7 @@ void recMADDU()
 		ADC32ItoR( ECX, (u32)(result>>32) );
 		CDQ();
 		if( _Rd_) {
+			_eeOnWriteReg(_Rd_, 1);
 			_deleteEEreg(_Rd_, 0);
 			MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], EAX );
 			MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], EDX );
@@ -789,15 +789,15 @@ void recMADDU()
 
 	if( GPR_IS_CONST1(_Rs_) ) {
 		MOV32ItoR( EAX, g_cpuConstRegs[_Rs_].UL[0] );
-		IMUL32M( (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] );
+		MUL32M( (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] );
 	}
 	else if ( GPR_IS_CONST1(_Rt_) ) {
 		MOV32ItoR( EAX, g_cpuConstRegs[_Rt_].UL[0] );
-		IMUL32M( (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
+		MUL32M( (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
 	}
 	else {
 		MOV32MtoR( EAX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
-		IMUL32M( (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] );
+		MUL32M( (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] );
 	}
 
 	MOV32RtoR( ECX, EDX );
@@ -805,6 +805,7 @@ void recMADDU()
 	ADC32MtoR( ECX, (u32)&cpuRegs.HI.UL[0] );
 	CDQ();
 	if( _Rd_ ) {
+		_eeOnWriteReg(_Rd_, 1);
 		_deleteEEreg(_Rd_, 0);
 		MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], EAX );
 		MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], EDX );

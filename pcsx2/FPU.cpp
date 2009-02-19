@@ -58,6 +58,12 @@ using namespace std;			// for min / max
 #define _FdValUl_    fpuRegs.fpr[ _Fd_ ].UL
 #define _FAValUl_    fpuRegs.ACC.UL
 
+// S32's - useful for ensuring sign extension when needed.
+#define _FtValSl_    fpuRegs.fpr[ _Ft_ ].SL
+#define _FsValSl_    fpuRegs.fpr[ _Fs_ ].SL
+#define _FdValSl_    fpuRegs.fpr[ _Fd_ ].SL
+#define _FAValSl_    fpuRegs.ACC.SL
+
 // FPU Control Reg (FCR31)
 #define _ContVal_    fpuRegs.fprc[ 31 ]
 
@@ -225,7 +231,7 @@ void C_LT() {
 
 void CFC1() {
 	if ( !_Rt_ || ( (_Fs_ != 0) && (_Fs_ != 31) ) ) return;
-	cpuRegs.GPR.r[_Rt_].SD[0] = (s64)(s32)fpuRegs.fprc[_Fs_];
+	cpuRegs.GPR.r[_Rt_].SD[0] = (s32)fpuRegs.fprc[_Fs_];	// force sign extension to 64 bit
 }
 
 void CTC1() {
@@ -234,12 +240,12 @@ void CTC1() {
 }
 
 void CVT_S() {
-	_FdValf_ = (float)(*(s32*)&_FsValUl_);
+	_FdValf_ = (float)_FsValSl_;
 	_FdValf_ = fpuDouble( _FdValUl_ );
 }
 
 void CVT_W() {
-	if ( ( _FsValUl_ & 0x7F800000 ) <= 0x4E800000 ) { _FdValUl_ = (s32)_FsValf_; }
+	if ( ( _FsValUl_ & 0x7F800000 ) <= 0x4E800000 ) { _FdValSl_ = (s32)_FsValf_; }
 	else if ( ( _FsValUl_ & 0x80000000 ) == 0 ) { _FdValUl_ = 0x7fffffff; }
 	else { _FdValUl_ = 0x80000000; }
 }
@@ -276,7 +282,7 @@ void MAX_S() {
 
 void MFC1() {
 	if ( !_Rt_ ) return;
-	cpuRegs.GPR.r[_Rt_].SD[0] = (s64)(s32)_FsValUl_;
+	cpuRegs.GPR.r[_Rt_].SD[0] = _FsValSl_;		// sign extension into 64bit
 }
 
 void MIN_S() {
@@ -373,15 +379,15 @@ void SUBA_S() {
 
 void LWC1() {
 	u32 addr;
-	addr = cpuRegs.GPR.r[_Rs_].UL[0] + (s32)(s16)(cpuRegs.code & 0xffff);
-	if (addr & 0x00000003) { Console::Error( "FPU (LWC1 Opcode): Invalid Memory Address" ); return; }  // Should signal an exception?
+	addr = cpuRegs.GPR.r[_Rs_].UL[0] + (s16)(cpuRegs.code & 0xffff);	// force sign extension to 32bit
+	if (addr & 0x00000003) { Console::Error( "FPU (LWC1 Opcode): Invalid Unaligned Memory Address" ); return; }  // Should signal an exception?
 	memRead32(addr, &fpuRegs.fpr[_Rt_].UL);
 }
 
 void SWC1() {
 	u32 addr;
-	addr = cpuRegs.GPR.r[_Rs_].UL[0] + (s32)(s16)(cpuRegs.code & 0xffff);
-	if (addr & 0x00000003) { Console::Error( "FPU (SWC1 Opcode): Invalid Memory Address" ); return; }  // Should signal an exception?
+	addr = cpuRegs.GPR.r[_Rs_].UL[0] + (s16)(cpuRegs.code & 0xffff);	// force sign extension to 32bit
+	if (addr & 0x00000003) { Console::Error( "FPU (SWC1 Opcode): Invalid Unaligned Memory Address" ); return; }  // Should signal an exception?
 	memWrite32(addr,  fpuRegs.fpr[_Rt_].UL); 
 }
 
