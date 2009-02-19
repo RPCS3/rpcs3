@@ -61,7 +61,7 @@ extern "C" PCSX2_ALIGNED16(u32 s_TempDecompress[4]) = {0};
 #include <xmmintrin.h>
 #include <emmintrin.h>
 
-void SetNewMask(u32* vif1masks, u32* hasmask, u32 mask, u32 oldmask)
+void __fastcall SetNewMask(u32* vif1masks, u32* hasmask, u32 mask, u32 oldmask)
 {
     u32 i;
 	u32 prev = 0;
@@ -98,7 +98,7 @@ void SetNewMask(u32* vif1masks, u32* hasmask, u32 mask, u32 oldmask)
 
 #else // gcc
 
-void SetNewMask(u32* vif1masks, u32* hasmask, u32 mask, u32 oldmask)
+void __fastcall SetNewMask(u32* vif1masks, u32* hasmask, u32 mask, u32 oldmask)
 {
     u32 i;
 	u32 prev = 0;

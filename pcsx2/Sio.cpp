@@ -554,6 +554,11 @@ void sioEjectCard( uint mcdId )
 {
 	jASSUME( mcdId < 2 );
 	m_PostSavestateCards[mcdId] = 64;
+
+	// Reload the new memory card:
+
+	MemoryCard::Unload( mcdId );
+	MemoryCard::Init();
 }
 
 void SaveState::sioFreeze()

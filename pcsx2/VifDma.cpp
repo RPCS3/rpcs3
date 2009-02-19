@@ -68,12 +68,12 @@ static const unsigned int VIF1dmanum = 1;
 int g_vifCycles = 0;
 int path3hack = 0;
 
-typedef void (*UNPACKFUNCTYPE)( u32 *dest, u32 *data, int size );
+typedef void (__fastcall *UNPACKFUNCTYPE)( u32 *dest, u32 *data, int size );
 typedef int  (*UNPACKPARTFUNCTYPESSE)( u32 *dest, u32 *data, int size );
 extern void (*Vif1CMDTLB[82])();
 extern void (*Vif0CMDTLB[75])();
-extern int (*Vif1TransTLB[128])(u32 *data);
-extern int (*Vif0TransTLB[128])(u32 *data);
+extern int (__fastcall *Vif1TransTLB[128])(u32 *data);
+extern int (__fastcall *Vif0TransTLB[128])(u32 *data);
 
 struct VIFUnpackFuncTable {
 	UNPACKFUNCTYPE       funcU;
@@ -395,24 +395,29 @@ static void VIFunpack(u32 *data, vifCode *v, int size, const unsigned int VIFdma
 #ifdef _DEBUG
 	memsize = size;
 #endif
-    if( _vifRegs->offset > 0) {
+    if( _vifRegs->offset > 0)
+    {
         int destinc, unpacksize;
 	    
         VIFUNPACK_LOG("aligning packet size = %d offset %d addr %x\n", size, vifRegs->offset, vif->tag.addr);
   
 	    // SSE doesn't handle such small data
-	if (v->size != (size>>2))ProcessMemSkip(size, unpackType, VIFdmanum);
+		if (v->size != (size>>2))
+			ProcessMemSkip(size, unpackType, VIFdmanum);
 
-        if(vifRegs->offset < (u32)ft->qsize){
-			if(((u32)size/(u32)ft->dsize) < ((u32)ft->qsize - vifRegs->offset)){
+		if(vifRegs->offset < (u32)ft->qsize)
+		{
+			if(((u32)size/(u32)ft->dsize) < ((u32)ft->qsize - vifRegs->offset))
+			{
 				SysPrintf("wasnt enough left size/dsize = %x left to write %x\n", (size/ft->dsize), (ft->qsize - vifRegs->offset));
 			}
-            unpacksize = min(((u32)size/(u32)ft->dsize), ((u32)ft->qsize - vifRegs->offset));
-        } 
-	else {
-            unpacksize = 0;
-            SysPrintf("Unpack align offset = 0\n");
-        }
+			unpacksize = min(((u32)size/(u32)ft->dsize), ((u32)ft->qsize - vifRegs->offset));
+		} 
+		else
+		{
+			unpacksize = 0;
+			SysPrintf("Unpack align offset = 0\n");
+		}
         destinc = (4 - ft->qsize) + unpacksize;
 
         func(dest, (u32*)cdata, unpacksize);
@@ -434,7 +439,9 @@ static void VIFunpack(u32 *data, vifCode *v, int size, const unsigned int VIFdma
         }
         VIFUNPACK_LOG("aligning packet done size = %d offset %d addr %x\n", size, vifRegs->offset, vif->tag.addr);
 
-    } else if (v->size != (size>>2))ProcessMemSkip(size, unpackType, VIFdmanum);
+    }
+    else if (v->size != (size>>2))
+		ProcessMemSkip(size, unpackType, VIFdmanum);
 	
 	if (vifRegs->cycle.cl >= vifRegs->cycle.wl) { // skipping write
 
@@ -620,7 +627,7 @@ static void VIFunpack(u32 *data, vifCode *v, int size, const unsigned int VIFdma
 		
 	}
 	else { /* filling write */
-		VIF_LOG("*PCSX2*: filling write\n");
+		VIF_LOG("VIFunpack - filling write\n");
 		
 		VIFUNPACK_LOG("filling write %d cl %d, wl %d mask %x mode %x unpacktype %x\n", vifRegs->num, vifRegs->cycle.cl, vifRegs->cycle.wl, vifRegs->mask, vifRegs->mode, unpackType);
 		while (size >= ft->gsize || vifRegs->num > 0) {
@@ -656,10 +663,6 @@ static void vuExecMicro( u32 addr, const u32 VIFdmanum )
 {
 	int _cycles;
 	VURegs * VU;
-	//void (*_vuExecMicro)();
-
-//	MessageBox(NULL, "3d doesn't work\n", "Query", MB_OK);
-//	return;
 
 	if (VIFdmanum == 0) {
 		VU = &VU0;
@@ -773,12 +776,12 @@ static __forceinline void _vif0mpgTransfer(u32 addr, u32 *data, int size) {
 // Vif1 Data Transfer Commands
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static int Vif0TransNull(u32 *data){ // Shouldnt go here
+static int __fastcall Vif0TransNull(u32 *data){ // Shouldnt go here
 	SysPrintf("VIF0 Shouldnt go here CMD = %x\n", vif0Regs->code);
 	vif0.cmd = 0;
 	return 0;
 }
-static int Vif0TransSTMask(u32 *data){ // STMASK
+static int __fastcall Vif0TransSTMask(u32 *data){ // STMASK
 	SetNewMask(g_vif0Masks, g_vif0HasMask3, data[0], vif0Regs->mask);
 	vif0Regs->mask = data[0];
 	VIF_LOG("STMASK == %x\n", vif0Regs->mask);
@@ -788,7 +791,7 @@ static int Vif0TransSTMask(u32 *data){ // STMASK
 	return 1;
 }
 
-static int Vif0TransSTRow(u32 *data){ // STROW
+static int __fastcall Vif0TransSTRow(u32 *data){ // STROW
     int ret;
 
 	u32* pmem = &vif0Regs->r0+(vif0.tag.addr<<2);
@@ -811,7 +814,7 @@ static int Vif0TransSTRow(u32 *data){ // STROW
 	return ret;
 }
 
-static int Vif0TransSTCol(u32 *data){ // STCOL
+static int __fastcall Vif0TransSTCol(u32 *data){ // STCOL
 	int ret;
 
 	u32* pmem = &vif0Regs->c0+(vif0.tag.addr<<2);
@@ -831,7 +834,7 @@ static int Vif0TransSTCol(u32 *data){ // STCOL
 	return ret;
 }
 
-static int Vif0TransMPG(u32 *data){ // MPG
+static int __fastcall Vif0TransMPG(u32 *data){ // MPG
 	if (vif0.vifpacketsize < vif0.tag.size) {
 		_vif0mpgTransfer(vif0.tag.addr, data, vif0.vifpacketsize);
         vif0.tag.addr += vif0.vifpacketsize << 2;
@@ -847,26 +850,29 @@ static int Vif0TransMPG(u32 *data){ // MPG
     }
 }
 
-static int Vif0TransUnpack(u32 *data){ // UNPACK
+static int __fastcall Vif0TransUnpack(u32 *data)	// UNPACK
+{
 	FreezeXMMRegs(1);
-	if (vif0.vifpacketsize < vif0.tag.size) {
-			/* size is less that the total size, transfer is 
-			   'in pieces' */
-			VIFunpack(data, &vif0.tag, vif0.vifpacketsize, VIF0dmanum);
-			vif0.tag.size -= vif0.vifpacketsize; 
-			FreezeXMMRegs(0);
-			return vif0.vifpacketsize;
-		} else {
-			int ret;
-			/* we got all the data, transfer it fully */
-			VIFunpack(data, &vif0.tag, vif0.tag.size, VIF0dmanum);
-			ret = vif0.tag.size;
-			vif0.tag.size = 0;
-			vif0.cmd = 0;
-			FreezeXMMRegs(0);
-			return ret;
-		}
-	
+	if (vif0.vifpacketsize < vif0.tag.size)
+	{
+		/* size is less that the total size, transfer is 
+		   'in pieces' */
+		VIFunpack(data, &vif0.tag, vif0.vifpacketsize, VIF0dmanum);
+		vif0.tag.size -= vif0.vifpacketsize; 
+		FreezeXMMRegs(0);
+		return vif0.vifpacketsize;
+	}
+	else
+	{
+		int ret;
+		/* we got all the data, transfer it fully */
+		VIFunpack(data, &vif0.tag, vif0.tag.size, VIF0dmanum);
+		ret = vif0.tag.size;
+		vif0.tag.size = 0;
+		vif0.cmd = 0;
+		FreezeXMMRegs(0);
+		return ret;
+	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1165,7 +1171,7 @@ void  vif0Interrupt() {
 }
 
 //  Vif1 Data Transfer Table
-int (*Vif0TransTLB[128])(u32 *data) = 
+int (__fastcall *Vif0TransTLB[128])(u32 *data) = 
 {
 	Vif0TransNull	 , Vif0TransNull    , Vif0TransNull	  , Vif0TransNull   , Vif0TransNull   , Vif0TransNull   , Vif0TransNull   , Vif0TransNull   , /*0x7*/
 	Vif0TransNull	 , Vif0TransNull    , Vif0TransNull	  , Vif0TransNull   , Vif0TransNull   , Vif0TransNull   , Vif0TransNull   , Vif0TransNull   , /*0xF*/
@@ -1306,8 +1312,10 @@ void vif0Write32(u32 mem, u32 value) {
 		if( mem >= 0x10003900 && mem < 0x10003980 ) {
 			
 			assert( (mem&0xf) == 0 );
-			if( mem < 0x10003940 ) g_vifRow0[(mem>>4)&3] = value;
-			else g_vifCol0[(mem>>4)&3] = value;
+			if( mem < 0x10003940 )
+				g_vifRow0[(mem>>4)&3] = value;
+			else
+				g_vifCol0[(mem>>4)&3] = value;
 		} else psHu32(mem) = value;
 	}
 
@@ -1327,10 +1335,19 @@ void vif0Reset() {
 	vif0Regs->stat&= ~0xF000000; // FQC=0
 }
 
-void SaveState::vif0Freeze() {
-	Freeze(vif0);
-	if( IsLoading() )
-		SetNewMask(g_vif0Masks, g_vif0HasMask3, vif0Regs->mask, ~vif0Regs->mask);
+void SaveState::vif0Freeze()
+{
+	// Dunno if this one is needed, but whatever, it's small. :)
+	Freeze( g_vifCycles );
+
+	Freeze( vif0 );
+	if( GetVersion() >= 0x14 )
+	{
+		Freeze( g_vif1HasMask3 );
+		Freeze( g_vif1Masks );
+		Freeze( g_vifRow1 );
+		Freeze( g_vifCol1 );
+	}
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1402,12 +1419,12 @@ static __forceinline void _vif1mpgTransfer(u32 addr, u32 *data, int size) {
 // Vif1 Data Transfer Commands
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static int Vif1TransNull(u32 *data){ // Shouldnt go here
+static int __fastcall Vif1TransNull(u32 *data){ // Shouldnt go here
 	SysPrintf("Shouldnt go here CMD = %x\n", vif1Regs->code);
 	vif1.cmd = 0;
 	return 0;
 }
-static int Vif1TransSTMask(u32 *data){ // STMASK
+static int __fastcall Vif1TransSTMask(u32 *data){ // STMASK
 	SetNewMask(g_vif1Masks, g_vif1HasMask3, data[0], vif1Regs->mask);
 	vif1Regs->mask = data[0];
 	VIF_LOG("STMASK == %x\n", vif1Regs->mask);
@@ -1417,7 +1434,7 @@ static int Vif1TransSTMask(u32 *data){ // STMASK
 	return 1;
 }
 
-static int Vif1TransSTRow(u32 *data){
+static int __fastcall Vif1TransSTRow(u32 *data){
     int ret;
 
 	u32* pmem = &vif1Regs->r0+(vif1.tag.addr<<2);
@@ -1439,7 +1456,7 @@ static int Vif1TransSTRow(u32 *data){
 	return ret;
 }
 
-static int Vif1TransSTCol(u32 *data){
+static int __fastcall Vif1TransSTCol(u32 *data){
 	int ret;
 
 	u32* pmem = &vif1Regs->c0+(vif1.tag.addr<<2);
@@ -1458,7 +1475,7 @@ static int Vif1TransSTCol(u32 *data){
 	return ret;
 }
 
-static int Vif1TransMPG(u32 *data){
+static int __fastcall Vif1TransMPG(u32 *data){
 	if (vif1.vifpacketsize < vif1.tag.size) {
 		_vif1mpgTransfer(vif1.tag.addr, data, vif1.vifpacketsize);
         vif1.tag.addr += vif1.vifpacketsize << 2;
@@ -1476,7 +1493,7 @@ static int Vif1TransMPG(u32 *data){
 u32 splittransfer[4];
 u32 splitptr = 0;
 
-static int Vif1TransDirectHL(u32 *data){
+static int __fastcall Vif1TransDirectHL(u32 *data){
 	int ret = 0;
 	
 	
@@ -1558,7 +1575,7 @@ static int Vif1TransDirectHL(u32 *data){
 }
 
 
-static int Vif1TransUnpack(u32 *data){
+static int  __fastcall Vif1TransUnpack(u32 *data){
 	FreezeXMMRegs(1);
 
 	if (vif1.vifpacketsize < vif1.tag.size)
@@ -1718,7 +1735,7 @@ static void Vif1CMDNull(){ // invalid opcode
 
 //  Vif1 Data Transfer Table
 
-int (*Vif1TransTLB[128])(u32 *data) = 
+int (__fastcall *Vif1TransTLB[128])(u32 *data) = 
 {
 	Vif1TransNull	 , Vif1TransNull    , Vif1TransNull	  , Vif1TransNull   , Vif1TransNull   , Vif1TransNull   , Vif1TransNull   , Vif1TransNull   , /*0x7*/
 	Vif1TransNull	 , Vif1TransNull    , Vif1TransNull	  , Vif1TransNull   , Vif1TransNull   , Vif1TransNull   , Vif1TransNull   , Vif1TransNull   , /*0xF*/
@@ -2236,10 +2253,20 @@ void vif1Reset() {
 	vif1Regs->stat&= ~0x1F000000; // FQC=0
 }
 
-void SaveState::vif1Freeze() {
+void SaveState::vif1Freeze()
+{
 	Freeze(vif1);
-	if( IsLoading() ){		
+	
+	if( GetVersion() >= 0x14 )
+	{
+		Freeze( g_vif1HasMask3 );
+		Freeze( g_vif1Masks );
+		Freeze( g_vifRow1 );
+		Freeze( g_vifCol1 );
+	}
+
+	/*if( IsLoading() ){
 		SetNewMask(g_vif1Masks, g_vif1HasMask3, vif1Regs->mask, ~vif1Regs->mask);
 		if(vif1ch->chcr & 0x100)vif1.done = 0;
-	}
+	}*/
 }

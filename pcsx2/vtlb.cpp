@@ -113,9 +113,9 @@ __forceinline DataType __fastcall MemOp_r0(u32 addr)
 
 	switch( DataSize )
 	{
-		case 8: return ((vltbMemR8FP*)RWFT[0][0][hand])(paddr);
-		case 16: return ((vltbMemR16FP*)RWFT[1][0][hand])(paddr);
-		case 32: return ((vltbMemR32FP*)RWFT[2][0][hand])(paddr);
+		case 8: return ((vtlbMemR8FP*)RWFT[0][0][hand])(paddr);
+		case 16: return ((vtlbMemR16FP*)RWFT[1][0][hand])(paddr);
+		case 32: return ((vtlbMemR32FP*)RWFT[2][0][hand])(paddr);
 
 		jNO_DEFAULT;
 	}
@@ -144,8 +144,8 @@ __forceinline void __fastcall MemOp_r1(u32 addr, DataType* data)
 
 		switch( DataSize )
 		{
-			case 64: ((vltbMemR64FP*)RWFT[3][0][hand])(paddr, data); break;
-			case 128: ((vltbMemR128FP*)RWFT[4][0][hand])(paddr, data); break;
+			case 64: ((vtlbMemR64FP*)RWFT[3][0][hand])(paddr, data); break;
+			case 128: ((vtlbMemR128FP*)RWFT[4][0][hand])(paddr, data); break;
 
 			jNO_DEFAULT;
 		}
@@ -170,9 +170,9 @@ __forceinline void __fastcall MemOp_w0(u32 addr, DataType data)
 
 		switch( DataSize )
 		{
-			case 8: return ((vltbMemW8FP*)RWFT[0][1][hand])(paddr, (u8)data);
-			case 16: return ((vltbMemW16FP*)RWFT[1][1][hand])(paddr, (u16)data);
-			case 32: return ((vltbMemW32FP*)RWFT[2][1][hand])(paddr, (u32)data);
+			case 8: return ((vtlbMemW8FP*)RWFT[0][1][hand])(paddr, (u8)data);
+			case 16: return ((vtlbMemW16FP*)RWFT[1][1][hand])(paddr, (u16)data);
+			case 32: return ((vtlbMemW32FP*)RWFT[2][1][hand])(paddr, (u32)data);
 
 			jNO_DEFAULT;
 		}
@@ -198,8 +198,8 @@ __forceinline void __fastcall MemOp_w1(u32 addr,const DataType* data)
 		//SysPrintf("Translted 0x%08X to 0x%08X\n",addr,paddr);
 		switch( DataSize )
 		{
-			case 64: return ((vltbMemW64FP*)RWFT[3][1][hand])(paddr, data);
-			case 128: return ((vltbMemW128FP*)RWFT[4][1][hand])(paddr, data);
+			case 64: return ((vtlbMemW64FP*)RWFT[3][1][hand])(paddr, data);
+			case 128: return ((vtlbMemW128FP*)RWFT[4][1][hand])(paddr, data);
 
 			jNO_DEFAULT;
 		}
@@ -348,8 +348,8 @@ void __fastcall vtlbDefaultPhyWrite128(u32 addr,const mem128_t* data) { Console:
 // Note: All handlers persist across calls to vtlb_Reset(), but are wiped/invalidated by calls to vtlb_Init()
 //
 // Returns a handle for the newly created handler  See .vtlb_MapHandler for use of the return value.
-vtlbHandler vtlb_RegisterHandler(	vltbMemR8FP* r8,vltbMemR16FP* r16,vltbMemR32FP* r32,vltbMemR64FP* r64,vltbMemR128FP* r128,
-									vltbMemW8FP* w8,vltbMemW16FP* w16,vltbMemW32FP* w32,vltbMemW64FP* w64,vltbMemW128FP* w128)
+vtlbHandler vtlb_RegisterHandler(	vtlbMemR8FP* r8,vtlbMemR16FP* r16,vtlbMemR32FP* r32,vtlbMemR64FP* r64,vtlbMemR128FP* r128,
+									vtlbMemW8FP* w8,vtlbMemW16FP* w16,vtlbMemW32FP* w32,vtlbMemW64FP* w64,vtlbMemW128FP* w128)
 {
 	//write the code :p
 	vtlbHandler rv=vtlbHandlerCount++;

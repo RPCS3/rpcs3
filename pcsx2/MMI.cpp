@@ -106,17 +106,6 @@ namespace OpcodeImpl {
 	void MULTU1() {
 		u64 tempu = (u64)cpuRegs.GPR.r[_Rs_].UL[0] * (u64)cpuRegs.GPR.r[_Rt_].UL[0];
 
-		// The EE says that results are "undefined" if the source operands are not correctly
-		// sign extended into the full 64 bits.  Since this is InterpreterLand, let's put a
-		// check in and issue a message if it ever happens.
-		// Could be a clue to something else someday.
-
-		if( cpuRegs.GPR.r[_Rs_].SL[0] != cpuRegs.GPR.r[_Rs_].SD[0] )
-			DevCon::Notice( "MULTU1 > Non-extended sign bit on Rs: %8.8x", params cpuRegs.GPR.r[_Rs_].SL[0] );
-
-		if( cpuRegs.GPR.r[_Rt_].SL[0] != cpuRegs.GPR.r[_Rt_].SD[0] )
-			DevCon::Notice( "MULTU1 > Non-extended sign bit on Rt: %8.8x", params cpuRegs.GPR.r[_Rt_].SL[0] );
-
 		// According to docs, sign-extend into 64 bits even though it's an unsigned mult.
 		cpuRegs.LO.UD[1] = (s32)(tempu & 0xffffffff);
 		cpuRegs.HI.UD[1] = (s32)(tempu >> 32);
@@ -133,14 +122,6 @@ namespace OpcodeImpl {
 
 	void DIVU1() {
 		if (cpuRegs.GPR.r[_Rt_].UL[0] != 0) {
-
-			// See MULTU above for notes on the following sanity check
-
-			if( cpuRegs.GPR.r[_Rs_].SL[0] != cpuRegs.GPR.r[_Rs_].SD[0] )
-				DevCon::Notice( "DIVU1 > Non-extended sign bit on Rs: %8.8x", params cpuRegs.GPR.r[_Rs_].SL[0] );
-
-			if( cpuRegs.GPR.r[_Rt_].SL[0] != cpuRegs.GPR.r[_Rt_].SD[0] )
-				DevCon::Notice( "DIVU1 > Non-extended sign bit on Rt: %8.8x", params cpuRegs.GPR.r[_Rt_].SL[0] );
 
 			// note: DIVU has no sign extension when assigning back to 64 bits
 			cpuRegs.LO.UD[1] = cpuRegs.GPR.r[_Rs_].UL[0] / cpuRegs.GPR.r[_Rt_].UL[0];

@@ -8,18 +8,18 @@ typedef u64 mem64_t;
 typedef u64 mem128_t;
 
 // Specialized function pointers for each read type
-typedef  mem8_t __fastcall vltbMemR8FP(u32 addr);
-typedef  mem16_t __fastcall vltbMemR16FP(u32 addr);
-typedef  mem32_t __fastcall vltbMemR32FP(u32 addr);
-typedef  void __fastcall vltbMemR64FP(u32 addr,mem64_t* data);
-typedef  void __fastcall vltbMemR128FP(u32 addr,mem128_t* data);
+typedef  mem8_t __fastcall vtlbMemR8FP(u32 addr);
+typedef  mem16_t __fastcall vtlbMemR16FP(u32 addr);
+typedef  mem32_t __fastcall vtlbMemR32FP(u32 addr);
+typedef  void __fastcall vtlbMemR64FP(u32 addr,mem64_t* data);
+typedef  void __fastcall vtlbMemR128FP(u32 addr,mem128_t* data);
 
 // Specialized function pointers for each write type
-typedef  void __fastcall vltbMemW8FP(u32 addr,mem8_t data);
-typedef  void __fastcall vltbMemW16FP(u32 addr,mem16_t data);
-typedef  void __fastcall vltbMemW32FP(u32 addr,mem32_t data);
-typedef  void __fastcall vltbMemW64FP(u32 addr,const mem64_t* data);
-typedef  void __fastcall vltbMemW128FP(u32 addr,const mem128_t* data);
+typedef  void __fastcall vtlbMemW8FP(u32 addr,mem8_t data);
+typedef  void __fastcall vtlbMemW16FP(u32 addr,mem16_t data);
+typedef  void __fastcall vtlbMemW32FP(u32 addr,mem32_t data);
+typedef  void __fastcall vtlbMemW64FP(u32 addr,const mem64_t* data);
+typedef  void __fastcall vtlbMemW128FP(u32 addr,const mem128_t* data);
 
 typedef u32 vtlbHandler;
 
@@ -31,8 +31,8 @@ extern void vtlb_free( void* pmem, uint size );
 
 
 //physical stuff
-vtlbHandler vtlb_RegisterHandler(	vltbMemR8FP* r8,vltbMemR16FP* r16,vltbMemR32FP* r32,vltbMemR64FP* r64,vltbMemR128FP* r128,
-									vltbMemW8FP* w8,vltbMemW16FP* w16,vltbMemW32FP* w32,vltbMemW64FP* w64,vltbMemW128FP* w128);
+vtlbHandler vtlb_RegisterHandler(	vtlbMemR8FP* r8,vtlbMemR16FP* r16,vtlbMemR32FP* r32,vtlbMemR64FP* r64,vtlbMemR128FP* r128,
+									vtlbMemW8FP* w8,vtlbMemW16FP* w16,vtlbMemW32FP* w32,vtlbMemW64FP* w64,vtlbMemW128FP* w128);
 
 extern void vtlb_MapHandler(vtlbHandler handler,u32 start,u32 size);
 extern void vtlb_MapBlock(void* base,u32 start,u32 size,u32 blocksize=0);

@@ -42,7 +42,7 @@ static int n;
 
 __forceinline static int _limit( int a, int max ) 
 {
-	return ( a > max ? max : a );
+	return ( a > max ) ? max : a;
 }
 
 #define _UNPACKpart( offnum, func )                         \
@@ -58,7 +58,16 @@ __forceinline static int _limit( int a, int max )
 		_vifRegs->offset++;                                  \
 	}
 
-static void writeX( u32 *dest, u32 data ) {
+// Forceinline macro that is enabled for RELEASE/PUBLIC builds ONLY.
+// This is useful because forceinline can make certain types of debugging problematic since
+// functions that look like they should be called won't breakpoint since their code is inlined.
+#ifdef PCSX2_DEVBUILD
+#	define __pub_inline
+#else
+#	define __pub_inline __forceinline
+#endif
+
+static __pub_inline void writeX( u32 *dest, u32 data ) {
 	if (_vifRegs->code & 0x10000000) { 
 		switch ( _vif->cl ) {
 			case 0:  n = (_vifRegs->mask) & 0x3; break;
@@ -97,7 +106,7 @@ static void writeX( u32 *dest, u32 data ) {
 //	VIF_LOG("writeX %8.8x : Mode %d, r0 = %x, data %8.8x\n", *dest,_vifRegs->mode,_vifRegs->r0,data);
 }
 
-static void writeY( u32 *dest, u32 data ) {
+static __pub_inline void writeY( u32 *dest, u32 data ) {
 	if (_vifRegs->code & 0x10000000) { 
 		switch ( _vif->cl ) {
 			case 0:  n = (_vifRegs->mask >> 2) & 0x3; break;
@@ -136,7 +145,7 @@ static void writeY( u32 *dest, u32 data ) {
 //	VIF_LOG("writeY %8.8x : Mode %d, r1 = %x, data %8.8x\n", *dest,_vifRegs->mode,_vifRegs->r1,data);
 }
 
-static void writeZ( u32 *dest, u32 data ) {
+static __pub_inline void writeZ( u32 *dest, u32 data ) {
 	if (_vifRegs->code & 0x10000000) { 
 		switch ( _vif->cl ) {
 			case 0:  n = (_vifRegs->mask >> 4) & 0x3; break;
@@ -175,7 +184,7 @@ static void writeZ( u32 *dest, u32 data ) {
 //	VIF_LOG("writeZ %8.8x : Mode %d, r2 = %x, data %8.8x\n", *dest,_vifRegs->mode,_vifRegs->r2,data);
 }
 
-static void writeW( u32 *dest, u32 data ) {
+static __pub_inline void writeW( u32 *dest, u32 data ) {
 	if (_vifRegs->code & 0x10000000) { 
 		switch ( _vif->cl ) {
 			case 0:  n = (_vifRegs->mask >> 6) & 0x3; break;
@@ -214,7 +223,7 @@ static void writeW( u32 *dest, u32 data ) {
 //	VIF_LOG("writeW %8.8x : Mode %d, r3 = %x, data %8.8x\n", *dest,_vifRegs->mode,_vifRegs->r3,data);
 }
 
-void UNPACK_S_32(u32 *dest, u32 *data, int size) {
+void __fastcall UNPACK_S_32(u32 *dest, u32 *data, int size) {
 	_UNPACKpart(0, writeX(dest++, *data) );
 	_UNPACKpart(1, writeY(dest++, *data) );
 	_UNPACKpart(2, writeZ(dest++, *data) );
@@ -222,7 +231,7 @@ void UNPACK_S_32(u32 *dest, u32 *data, int size) {
 	if (_vifRegs->offset == 4) _vifRegs->offset = 0;
 }
 
-void UNPACK_S_16s( u32 *dest, u32 *data, int size) {
+void __fastcall UNPACK_S_16s( u32 *dest, u32 *data, int size) {
 	s16 *sdata = (s16*)data;
 	_UNPACKpart(0, writeX(dest++, *sdata) ); 
 	_UNPACKpart(1, writeY(dest++, *sdata) ); 
@@ -231,8 +240,8 @@ void UNPACK_S_16s( u32 *dest, u32 *data, int size) {
 	if (_vifRegs->offset == 4) _vifRegs->offset = 0; 
 }
 
-void UNPACK_S_16u( u32 *dest, u32 *data, int size) {
-	u16 *sdata = (u16*)data;
+void __fastcall UNPACK_S_16u( u32 *dest, u32 *data, int size) {
+	const u16 *sdata = (u16*)data;
 	_UNPACKpart(0, writeX(dest++, *sdata) ); 
 	_UNPACKpart(1, writeY(dest++, *sdata) ); 
 	_UNPACKpart(2, writeZ(dest++, *sdata) ); 
@@ -240,7 +249,7 @@ void UNPACK_S_16u( u32 *dest, u32 *data, int size) {
 	if (_vifRegs->offset == 4) _vifRegs->offset = 0;
 }
 
-void UNPACK_S_8s(u32 *dest, u32 *data, int size) {
+void __fastcall UNPACK_S_8s(u32 *dest, u32 *data, int size) {
 	s8 *cdata = (s8*)data;
 	_UNPACKpart(0, writeX(dest++, *cdata) ); 
 	_UNPACKpart(1, writeY(dest++, *cdata) ); 
@@ -249,7 +258,7 @@ void UNPACK_S_8s(u32 *dest, u32 *data, int size) {
 	if (_vifRegs->offset == 4) _vifRegs->offset = 0;
 }
 
-void UNPACK_S_8u(u32 *dest, u32 *data, int size) {
+void __fastcall UNPACK_S_8u(u32 *dest, u32 *data, int size) {
 	u8 *cdata = (u8*)data;
 	_UNPACKpart(0, writeX(dest++, *cdata) ); 
 	_UNPACKpart(1, writeY(dest++, *cdata) ); 
@@ -258,7 +267,7 @@ void UNPACK_S_8u(u32 *dest, u32 *data, int size) {
 	if (_vifRegs->offset == 4) _vifRegs->offset = 0;
 }
 
-void UNPACK_V2_32( u32 *dest, u32 *data, int size ) {
+void __fastcall UNPACK_V2_32( u32 *dest, u32 *data, int size ) {
 	_UNPACKpart(0, writeX(dest++, *data++));
 	_UNPACKpart(1, writeY(dest++, *data--));
 	_UNPACKpart_nosize(2, writeZ(dest++, *data));
@@ -267,7 +276,7 @@ void UNPACK_V2_32( u32 *dest, u32 *data, int size ) {
 	
 }
 
-void UNPACK_V2_16s(u32 *dest, u32 *data, int size) {
+void __fastcall UNPACK_V2_16s(u32 *dest, u32 *data, int size) {
 	s16 *sdata = (s16*)data;
 	_UNPACKpart(0, writeX(dest++, *sdata++)); 
 	_UNPACKpart(1, writeY(dest++, *sdata--)); 
@@ -276,7 +285,7 @@ void UNPACK_V2_16s(u32 *dest, u32 *data, int size) {
 	if (_vifRegs->offset == 4) _vifRegs->offset = 0;
 }
 
-void UNPACK_V2_16u(u32 *dest, u32 *data, int size) {
+void __fastcall UNPACK_V2_16u(u32 *dest, u32 *data, int size) {
 	u16 *sdata = (u16*)data;
 	_UNPACKpart(0, writeX(dest++, *sdata++)); 
 	_UNPACKpart(1, writeY(dest++, *sdata--)); 
@@ -285,7 +294,7 @@ void UNPACK_V2_16u(u32 *dest, u32 *data, int size) {
 	if (_vifRegs->offset == 4) _vifRegs->offset = 0;
 }
 
-void UNPACK_V2_8s(u32 *dest, u32 *data, int size) {
+void __fastcall UNPACK_V2_8s(u32 *dest, u32 *data, int size) {
 	s8 *cdata = (s8*)data;
 	_UNPACKpart(0, writeX(dest++, *cdata++)); 
 	_UNPACKpart(1, writeY(dest++, *cdata--)); 
@@ -294,7 +303,7 @@ void UNPACK_V2_8s(u32 *dest, u32 *data, int size) {
 	if (_vifRegs->offset == 4) _vifRegs->offset = 0;
 }
 
-void UNPACK_V2_8u(u32 *dest, u32 *data, int size) {
+void __fastcall UNPACK_V2_8u(u32 *dest, u32 *data, int size) {
 	u8 *cdata = (u8*)data;
 	_UNPACKpart(0, writeX(dest++, *cdata++)); 
 	_UNPACKpart(1, writeY(dest++, *cdata--)); 
@@ -303,7 +312,7 @@ void UNPACK_V2_8u(u32 *dest, u32 *data, int size) {
 	if (_vifRegs->offset == 4) _vifRegs->offset = 0;
 }
 
-void UNPACK_V3_32(u32 *dest, u32 *data, int size) {
+void __fastcall UNPACK_V3_32(u32 *dest, u32 *data, int size) {
 	_UNPACKpart(0, writeX(dest++, *data++); );
 	_UNPACKpart(1, writeY(dest++, *data++); );
 	_UNPACKpart(2, writeZ(dest++, *data++); );
@@ -311,7 +320,7 @@ void UNPACK_V3_32(u32 *dest, u32 *data, int size) {
 	if (_vifRegs->offset == 4) _vifRegs->offset = 0;
 }
 
-void UNPACK_V3_16s(u32 *dest, u32 *data, int size) {
+void __fastcall UNPACK_V3_16s(u32 *dest, u32 *data, int size) {
 	s16 *sdata = (s16*)data;
 	_UNPACKpart(0, writeX(dest++, *sdata++)); 
 	_UNPACKpart(1, writeY(dest++, *sdata++)); 
@@ -320,7 +329,7 @@ void UNPACK_V3_16s(u32 *dest, u32 *data, int size) {
 	if (_vifRegs->offset == 4) _vifRegs->offset = 0;
 }
 
-void UNPACK_V3_16u(u32 *dest, u32 *data, int size) {
+void __fastcall UNPACK_V3_16u(u32 *dest, u32 *data, int size) {
 	u16 *sdata = (u16*)data;
 	_UNPACKpart(0, writeX(dest++, *sdata++)); 
 	_UNPACKpart(1, writeY(dest++, *sdata++)); 
@@ -329,7 +338,7 @@ void UNPACK_V3_16u(u32 *dest, u32 *data, int size) {
 	if (_vifRegs->offset == 4) _vifRegs->offset = 0;
 }
 
-void UNPACK_V3_8s(u32 *dest, u32 *data, int size) {
+void __fastcall UNPACK_V3_8s(u32 *dest, u32 *data, int size) {
 	s8 *cdata = (s8*)data;
 	_UNPACKpart(0, writeX(dest++, *cdata++)); 
 	_UNPACKpart(1, writeY(dest++, *cdata++)); 
@@ -338,7 +347,7 @@ void UNPACK_V3_8s(u32 *dest, u32 *data, int size) {
 	if (_vifRegs->offset == 4) _vifRegs->offset = 0;
 }
 
-void UNPACK_V3_8u(u32 *dest, u32 *data, int size) {
+void __fastcall UNPACK_V3_8u(u32 *dest, u32 *data, int size) {
 	u8 *cdata = (u8*)data;
 	_UNPACKpart(0, writeX(dest++, *cdata++)); 
 	_UNPACKpart(1, writeY(dest++, *cdata++)); 
@@ -347,7 +356,7 @@ void UNPACK_V3_8u(u32 *dest, u32 *data, int size) {
 	if (_vifRegs->offset == 4) _vifRegs->offset = 0;
 }
 
-void UNPACK_V4_32( u32 *dest, u32 *data , int size) {
+void __fastcall UNPACK_V4_32( u32 *dest, u32 *data , int size) {
 	_UNPACKpart(0, writeX(dest++, *data++) );
 	_UNPACKpart(1, writeY(dest++, *data++) );
 	_UNPACKpart(2, writeZ(dest++, *data++) );
@@ -355,7 +364,7 @@ void UNPACK_V4_32( u32 *dest, u32 *data , int size) {
 	if (_vifRegs->offset == 4) _vifRegs->offset = 0;
 }
 
-void UNPACK_V4_16s(u32 *dest, u32 *data, int size) {
+void __fastcall UNPACK_V4_16s(u32 *dest, u32 *data, int size) {
 	s16 *sdata = (s16*)data;
 	_UNPACKpart(0, writeX(dest++, *sdata++) ); 
 	_UNPACKpart(1, writeY(dest++, *sdata++) ); 
@@ -364,7 +373,7 @@ void UNPACK_V4_16s(u32 *dest, u32 *data, int size) {
 	if (_vifRegs->offset == 4) _vifRegs->offset = 0; 
 }
 
-void UNPACK_V4_16u(u32 *dest, u32 *data, int size) {
+void __fastcall UNPACK_V4_16u(u32 *dest, u32 *data, int size) {
 	u16 *sdata = (u16*)data;
 	_UNPACKpart(0, writeX(dest++, *sdata++) ); 
 	_UNPACKpart(1, writeY(dest++, *sdata++) ); 
@@ -373,7 +382,7 @@ void UNPACK_V4_16u(u32 *dest, u32 *data, int size) {
 	if (_vifRegs->offset == 4) _vifRegs->offset = 0; 
 }
 
-void UNPACK_V4_8s(u32 *dest, u32 *data, int size) {
+void __fastcall UNPACK_V4_8s(u32 *dest, u32 *data, int size) {
 	s8 *cdata = (s8*)data;
 	_UNPACKpart(0, writeX(dest++, *cdata++) ); 
 	_UNPACKpart(1, writeY(dest++, *cdata++) ); 
@@ -382,7 +391,7 @@ void UNPACK_V4_8s(u32 *dest, u32 *data, int size) {
 	if (_vifRegs->offset == 4) _vifRegs->offset = 0; 
 }
 
-void UNPACK_V4_8u(u32 *dest, u32 *data, int size) {
+void __fastcall UNPACK_V4_8u(u32 *dest, u32 *data, int size) {
 	u8 *cdata = (u8*)data;
 	_UNPACKpart(0, writeX(dest++, *cdata++) ); 
 	_UNPACKpart(1, writeY(dest++, *cdata++) ); 
@@ -391,7 +400,7 @@ void UNPACK_V4_8u(u32 *dest, u32 *data, int size) {
 	if (_vifRegs->offset == 4) _vifRegs->offset = 0; 
 }
 
-void UNPACK_V4_5(u32 *dest, u32 *data, int size) {
+void __fastcall UNPACK_V4_5(u32 *dest, u32 *data, int size) {
 	
 	_UNPACKpart(0, writeX(dest++, (*data & 0x001f) << 3); );
 	_UNPACKpart(1, writeY(dest++, (*data & 0x03e0) >> 2); );

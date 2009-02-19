@@ -34,6 +34,19 @@
 
 using namespace R5900;
 
+static __forceinline void IntCHackCheck()
+{
+	if( !CHECK_INTC_STAT_HACK ) return;
+	cpuRegs.cycle = g_nextBranchCycle;
+	
+	// Threshold method, might fix games that have problems with the simple
+	// implementation above (none known that break yet)
+	/*if( ( g_nextBranchCycle - cpuRegs.cycle ) > 500 )
+		cpuRegs.cycle += 498;
+	else
+		cpuRegs.cycle = g_nextBranchCycle - 2;*/
+}
+
 /////////////////////////////////////////////////////////////////////////
 // Hardware READ 8 bit
 
@@ -186,7 +199,8 @@ mem32_t __fastcall hwRead32_page_01(u32 mem)
 }
 
 // Reads hardware registers for page 15 (0x0F).
-mem32_t __fastcall hwRead32_page_0F(u32 mem)
+// This is used internally to produce two inline versions, one with INTC_HACK, and one without.
+static __forceinline mem32_t __hwRead32_page_0F( u32 mem, bool intchack )
 {
 	// *Performance Warning*  This function is called -A-LOT.  Be weary when making changes.  It
 	// could impact FPS significantly.
@@ -196,8 +210,7 @@ mem32_t __fastcall hwRead32_page_0F(u32 mem)
 	switch( mem )
 	{
 		case 0xf000:
-			if( CHECK_INTC_STAT_HACK )
-				cpuRegs.cycle = g_nextBranchCycle;
+			if( intchack ) IntCHackCheck();
 			// This one is checked alot, so leave it commented out unless you love 600 meg logfiles.
 			//HW_LOG("INTC_STAT Read  32bit %x\n", psHu32(0xf010));
 		break;
@@ -245,6 +258,16 @@ mem32_t __fastcall hwRead32_page_0F(u32 mem)
 			return 0;
 	}
 	return *((u32*)&PS2MEM_HW[mem]);
+}
+
+mem32_t __fastcall hwRead32_page_0F(u32 mem)
+{
+	return __hwRead32_page_0F( mem, false );
+}
+
+mem32_t __fastcall hwRead32_page_0F_INTC_HACK(u32 mem)
+{
+	return __hwRead32_page_0F( mem, true );
 }
 
 mem32_t __fastcall hwRead32_page_02(u32 mem)
@@ -327,8 +350,7 @@ void __fastcall hwRead64_page_02(u32 mem, mem64_t* result )
 
 void __fastcall hwRead64_generic(u32 mem, mem64_t* result )
 {
-	if( mem == INTC_STAT && CHECK_INTC_STAT_HACK )
-		cpuRegs.cycle = g_nextBranchCycle;
+	if( mem == INTC_STAT ) IntCHackCheck();
 
 	*result = psHu64(mem);
 	HW_LOG("Unknown Hardware Read 64 at %x\n",mem);

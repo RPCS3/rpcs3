@@ -42,11 +42,16 @@ void MemoryCard::Init()
 void MemoryCard::Shutdown()
 {
 	for( int i=0; i<2; i++ )
-	{
-		if(cardfile[0] == NULL) continue;
-		fclose( cardfile[i] );
-		cardfile[0] = NULL;
-	}
+		Unload( i );
+}
+
+void MemoryCard::Unload( uint mcd )
+{
+	jASSUME( mcd < 2 );
+
+	if(cardfile[mcd] == NULL) return;
+	fclose( cardfile[mcd] );
+	cardfile[mcd] = NULL;
 }
 
 bool MemoryCard::IsPresent( uint mcd )

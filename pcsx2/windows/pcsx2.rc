@@ -1097,8 +1097,8 @@ BEGIN
     CONTROL         "Use x1.5 Cycle Rate",IDC_EESYNC1,"Button",BS_AUTORADIOBUTTON,13,79,87,10
     CONTROL         "Use x2 Cycle Rate",IDC_EESYNC2,"Button",BS_AUTORADIOBUTTON,13,113,83,10
     CONTROL         "Use x3 Cycle Rate",IDC_EESYNC3,"Button",BS_AUTORADIOBUTTON,13,147,80,10
-    CONTROL         "Enable IOP x2 Cycle Rate",IDC_IOPSYNC,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,174,97,98,10
-    CONTROL         "WaitCycles Sync Hack",IDC_WAITCYCLES,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,174,138,90,10
+    CONTROL         "Enable IOP x2 Cycle Rate",IDC_IOPSYNC,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,174,88,98,10
+    CONTROL         "WaitCycles Sync Hack",IDC_WAITCYCLES,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,174,127,90,10
     CONTROL         "Escape Hack - Use Esc key to fully exit PCSX2.",IDC_ESCHACK,
                     "Button",BS_AUTOCHECKBOX | WS_TABSTOP,13,234,180,10
     DEFPUSHBUTTON   "OK",IDOK,217,242,50,14
@@ -1106,15 +1106,15 @@ BEGIN
     CTEXT           "These hacks will speed up emulation but reduce emulation compatibility or cause visual errors.  If you have problems, disable all these and try again!",IDC_HACKDESC,18,7,286,19
     GROUPBOX        "EmotionEngine (EE) Sync Hacks",IDC_STATIC,7,31,159,180
     GROUPBOX        "Miscellaneous",IDC_STATIC,7,220,194,33
-    LTEXT           "Important:  X2 and X3 sync hacks *will* cause choppy/skippy audio on many FMV movies.",IDC_STATIC,13,183,149,25
-    LTEXT           "*OBSOLETE*  Better off using the INTC Sync Hack instead.",IDC_STATIC,25,158,133,19
+    LTEXT           "Important:  X2 and X3 sync hacks *will* cause choppy/skippy audio on many FMV movies.",IDC_STATIC,13,188,149,21
+    LTEXT           "Known to work well with a couple games, namely Shadow of the Colossus (but breaks most other games).",IDC_STATIC,25,158,133,28
     LTEXT           "Big speedup!  Works well with many games.",IDC_STATIC,25,124,125,19
     LTEXT           "Most compatible option - recommended for everyone with high-end machines.",IDC_STATIC,25,55,136,19
-    LTEXT           "Small speedup and works well with most games.",IDC_STATIC,186,109,134,22
-    LTEXT           "Small speedup. Works well with most games, but may cause certain games to crash or freeze up during bootup or stage changes.",IDC_STATIC,186,150,141,39
+    LTEXT           "Small speedup and works well with most games.",IDC_STATIC,186,100,134,22
+    LTEXT           "Small speedup. Works well with most games, but may cause certain games to crash or freeze up during bootup or stage changes.",IDC_STATIC,186,139,141,39
     LTEXT           "Moderate speedup and works well with most games.",IDC_STATIC,25,90,129,19
     CONTROL         "INTC Sync Hack (experimental)",IDC_INTCSTATHACK,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,174,43,127,10
-    LTEXT           "Huge speedup! And few negative side effects in most games.  When enabling this it might be best to leave the EE sync hack set to Default.",IDC_STATIC,186,55,140,36
+    LTEXT           "Huge speedup in many games, and a pretty high compatibility rate (some games still work better with EE sync hacks).",IDC_STATIC,186,55,140,28
 END
 
 

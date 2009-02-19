@@ -153,14 +153,6 @@ void DIV() {
 void DIVU() {
 	if (cpuRegs.GPR.r[_Rt_].UL[0] != 0) {
 	
-		// See MULTU below for notes on the following sanity check
-
-		if( cpuRegs.GPR.r[_Rs_].SL[0] != cpuRegs.GPR.r[_Rs_].SD[0] )
-			DevCon::Notice( "DIVU > Non-extended sign bit on Rs: %8.8x", params cpuRegs.GPR.r[_Rs_].SL[0] );
-
-		if( cpuRegs.GPR.r[_Rt_].SL[0] != cpuRegs.GPR.r[_Rt_].SD[0] )
-			DevCon::Notice( "DIVU > Non-extended sign bit on Rt: %8.8x", params cpuRegs.GPR.r[_Rt_].SL[0] );
-
 		// note: DIVU has no sign extension when assigning back to 64 bits
 		cpuRegs.LO.SD[0] = cpuRegs.GPR.r[_Rs_].UL[0] / cpuRegs.GPR.r[_Rt_].UL[0];
 		cpuRegs.HI.SD[0] = cpuRegs.GPR.r[_Rs_].UL[0] % cpuRegs.GPR.r[_Rt_].UL[0];
@@ -179,17 +171,6 @@ void MULT() { //different in ps2...
 
 void MULTU() { //different in ps2..
 	u64 res = (u64)cpuRegs.GPR.r[_Rs_].UL[0] * (u64)cpuRegs.GPR.r[_Rt_].UL[0];
-
-	// The EE says that results are "undefined" if the source operands are not correctly
-	// sign extended into the full 64 bits.  Since this is InterpreterLand, let's put a
-	// check in and issue a message if it ever happens.
-	// Could be a clue to something else someday.
-
-	if( cpuRegs.GPR.r[_Rs_].SL[0] != cpuRegs.GPR.r[_Rs_].SD[0] )
-		DevCon::Notice( "MULTU > Non-extended sign bit on Rs: %8.8x", params cpuRegs.GPR.r[_Rs_].SL[0] );
-
-	if( cpuRegs.GPR.r[_Rt_].SL[0] != cpuRegs.GPR.r[_Rt_].SD[0] )
-		DevCon::Notice( "MULTU > Non-extended sign bit on Rt: %8.8x", params cpuRegs.GPR.r[_Rt_].SL[0] );
 
 	// According to docs, sign-extend into 64 bits even though it's an unsigned mult.
 	cpuRegs.LO.UD[0] = (s32)(res & 0xffffffff);

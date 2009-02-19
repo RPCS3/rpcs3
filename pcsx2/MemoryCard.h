@@ -34,6 +34,8 @@ protected:
 public:
 	static void Init();
 	static void Shutdown();
+	static void Unload( uint mcd );
+
 	static bool IsPresent( uint mcdId );
 	static void Read( uint mcdId, u8 *data, u32 adr, int size );
 	static void Save( uint mcdId, const u8 *data, u32 adr, int size );

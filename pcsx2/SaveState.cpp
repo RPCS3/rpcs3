@@ -113,11 +113,10 @@ void SaveState::FreezeAll()
 	Freeze(g_psxNextBranchCycle);
 
 	Freeze(s_iLastCOP0Cycle);
-	if( m_version >= 0x7a30000e )
-		Freeze(s_iLastPERFCycle);
+	Freeze(s_iLastPERFCycle);
 
 	Freeze(g_psxWriteOk);
-
+	
 	//hope didn't forgot any cpu....
 
 	rcntFreeze();
