@@ -1285,6 +1285,7 @@ void recVUMI_FSEQ( VURegs *VU, int info )
 
 	CMP16ItoR(EAX, imm);
 	SETE8R(ftreg);
+	AND32ItoR(ftreg, 0x1);
 }
 //------------------------------------------------------------------
 
@@ -1381,6 +1382,7 @@ void recVUMI_FMEQ( VURegs *VU, int info )
 		CMP16MtoR(fsreg, VU_VI_ADDR(REG_MAC_FLAG, 1));
 		SETE8R(ftreg);
 	}
+	AND32ItoR(ftreg, 0x1);
 }
 //------------------------------------------------------------------
 
@@ -1428,6 +1430,7 @@ void recVUMI_FCAND( VURegs *VU, int info )
 	AND32ItoR( EAX, VU->code & 0xFFFFFF );
 
 	SETNZ8R(ftreg);
+	AND32ItoR(ftreg, 0x1);
 }
 //------------------------------------------------------------------
 
@@ -1445,6 +1448,7 @@ void recVUMI_FCEQ( VURegs *VU, int info )
 	CMP32ItoR( EAX, VU->code&0xffffff );
 
 	SETE8R(ftreg);
+	AND32ItoR(ftreg, 0x1);
 }
 //------------------------------------------------------------------
 
@@ -1459,7 +1463,6 @@ void recVUMI_FCOR( VURegs *VU, int info )
 	MOV32MtoR( EAX, VU_VI_ADDR(REG_CLIP_FLAG, 1) );
 	XOR32RtoR( ftreg, ftreg );
 	OR32ItoR( EAX, VU->code );
-	NOT32R( EAX );
 	AND32ItoR( EAX, 0xffffff );
 	CMP32ItoR( EAX, 0xffffff );
 
@@ -1467,7 +1470,8 @@ void recVUMI_FCOR( VURegs *VU, int info )
 		SETNZ8R(ftreg);
 	else
 		SETZ8R(ftreg);
-	
+
+	AND32ItoR(ftreg, 0x1);
 }
 //------------------------------------------------------------------
 
