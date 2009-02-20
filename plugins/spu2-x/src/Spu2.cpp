@@ -810,13 +810,13 @@ __forceinline void SPU2_FastWrite( u32 rmem, u16 value )
 
 		switch (address)
 		{
-			case 0:
+			case 0:	// SSA (Waveform Start Addr) (hiword, 4 bits only)
 				thisvoice.StartA = ((value & 0x0F) << 16) | (thisvoice.StartA & 0xFFF8); 
 				if( IsDevBuild )
 					DebugCores[core].Voices[voice].lastSetStartA = thisvoice.StartA; 
 			break;
 			
-			case 1:
+			case 1:	// SSA (loword)
 				thisvoice.StartA = (thisvoice.StartA & 0x0F0000) | (value & 0xFFF8); 
 				if( IsDevBuild )
 					DebugCores[core].Voices[voice].lastSetStartA = thisvoice.StartA; 
@@ -934,17 +934,16 @@ __forceinline void SPU2_FastWrite( u32 rmem, u16 value )
 // the shortcut that skips the bitloop if the values are equal.
 #define vx_SetSomeBits( reg_out, mask_out, hiword ) \
 { \
-	const uint start_bit	= hiword ? 16 : 0; \
-	const uint end_bit		= hiword ? 24 : 16; \
 	const u32 result		= thiscore.Regs.reg_out; \
 	if( hiword ) \
 		SetHiWord( thiscore.Regs.reg_out, value ); \
 	else \
 		SetLoWord( thiscore.Regs.reg_out, value ); \
-	if( result == thiscore.Regs.reg_out ) return; \
+	if( result == thiscore.Regs.reg_out ) break; \
  \
-	thiscore.Regs.reg_out = result; \
-	for (uint vc=start_bit, vx=1; vc<end_bit; vc++, vx<<=1) \
+	const uint start_bit	= hiword ? 16 : 0; \
+	const uint end_bit		= hiword ? 24 : 16; \
+	for (uint vc=start_bit, vx=1; vc<end_bit; ++vc, vx<<=1) \
 		thiscore.Voices[vc].mask_out = (value & vx) ? -1 : 0; \
 }
 
@@ -1133,7 +1132,6 @@ void StartVoices(int core, u32 value)
 		if ((value>>vc) & 1)
 		{
 			Cores[core].Voices[vc].Start();
-			Cores[core].Regs.ENDX &= ~( 1 << vc );
 
 			if( IsDevBuild )
 			{
@@ -1145,7 +1143,7 @@ void StartVoices(int core, u32 value)
 					(thisvc.WetL)?"+":"-",(thisvc.WetR)?"+":"-",
 					*(u8*)GetMemPtr(thisvc.StartA),*(u8 *)GetMemPtr((thisvc.StartA)+1),
 					thisvc.Pitch,
-					thisvc.Volume.Left.Value,thisvc.Volume.Right.Value,
+					thisvc.Volume.Left.Value>>16,thisvc.Volume.Right.Value>>16,
 					thisvc.ADSR.Reg_ADSR1,thisvc.ADSR.Reg_ADSR2);
 			}
 		}
