@@ -198,6 +198,8 @@ mtgsThreadObject::mtgsThreadObject() :
 ,	m_CopyCommandTally( 0 )
 ,	m_CopyDataTally( 0 )
 ,	m_RingBufferIsBusy( 0 )
+,	m_QueuedFrames( 0 )
+,	m_lock_FrameQueueCounter()
 ,	m_packet_size( 0 )
 ,	m_packet_ringpos( 0 )
 
@@ -436,6 +438,26 @@ __forceinline u32 mtgsThreadObject::_gifTransferDummy( GIF_PATH pathidx, const u
 	return size;
 }
 
+void mtgsThreadObject::PostVsyncEnd( bool updategs )
+{
+	while( m_QueuedFrames > 8 )
+	{
+		Sleep( 2 );		// Sleep off quite a bit of time, since we're obviously *waaay* ahead.
+		SpinWait();
+	}
+
+	m_lock_FrameQueueCounter.Lock();
+	m_QueuedFrames++;
+	m_lock_FrameQueueCounter.Unlock();
+
+	SendSimplePacket( GS_RINGTYPE_VSYNC,
+		(*(u32*)(PS2MEM_GS+0x1000)&0x2000), updategs, 0);
+
+	// No need to freeze MMX/XMM registers here since this
+	// code is always called from the context of a BranchTest.
+	SetEvent();
+}
+
 struct PacketTagType
 {
 	u32 command;
@@ -448,6 +470,7 @@ int mtgsThreadObject::Callback()
 
 	memcpy_aligned( m_gsMem, PS2MEM_GS, sizeof(m_gsMem) );
 	GSsetBaseMem( m_gsMem );
+	GSirqCallback( NULL );
 
 	m_returncode = GSopen((void *)&pDsp, "PCSX2", 1);
 
@@ -534,8 +557,12 @@ int mtgsThreadObject::Callback()
 				case GS_RINGTYPE_VSYNC:
 				{
 					GSvsync(tag.data[0]);
-
 					gsFrameSkip( !tag.data[1] );
+
+					m_lock_FrameQueueCounter.Lock();
+					m_QueuedFrames--;
+					jASSUME( m_QueuedFrames >= 0 );
+					m_lock_FrameQueueCounter.Unlock();
 
 					if( PAD1update != NULL ) PAD1update(0);
 					if( PAD2update != NULL ) PAD2update(1);

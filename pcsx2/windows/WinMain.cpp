@@ -1071,15 +1071,11 @@ void CreateMainWindow(int nCmdShow) {
 	RegisterClass(&wc);
 	GetObject(hbitmap_background, sizeof(bm), &bm);
 
-	{
-		const char* pvm = "VTLB";
-
 #ifdef PCSX2_DEVBUILD
-		sprintf(buf, _("PCSX2 %s - %s Compile Date - %s %s"), PCSX2_VERSION, pvm, COMPILEDATE, COMPILER);
+	sprintf(buf, _("PCSX2 %s - Compile Date - %s %s"), PCSX2_VERSION, COMPILEDATE, COMPILER);
 #else
-		sprintf(buf, _("PCSX2 %s - %s"), PCSX2_VERSION, pvm);
+	sprintf(buf, _("PCSX2 %s"), PCSX2_VERSION);
 #endif
-	}
 
 	hWnd = CreateWindow(
 		"PCSX2 Main",

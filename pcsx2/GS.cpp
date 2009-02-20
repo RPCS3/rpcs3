@@ -195,10 +195,6 @@ s32 gsOpen()
 {
 	if( m_gsOpened ) return 0;
 
-	// mtgs overrides these as necessary...
-	GSsetBaseMem( PS2MEM_GS );
-	GSirqCallback( gsIrq );
-
 	//video
 	// Only bind the gsIrq if we're not running the MTGS.
 	// The MTGS simulates its own gsIrq in order to maintain proper sync.
@@ -208,6 +204,9 @@ s32 gsOpen()
 	{
 		// MTGS failed to init or is disabled.  Try the GS instead!
 		// ... and set the memptr again just in case (for switching between GS/MTGS on the fly)
+
+		GSsetBaseMem( PS2MEM_GS );
+		GSirqCallback( gsIrq );
 
 		m_gsOpened = !GSopen((void *)&pDsp, "PCSX2", 0);
 	}
@@ -769,14 +768,7 @@ void gsPostVsyncEnd( bool updategs )
 	*(u32*)(PS2MEM_GS+0x1000) ^= 0x2000; // swap the vsync field
 
 	if( mtgsThread != NULL ) 
-	{
-		mtgsThread->SendSimplePacket( GS_RINGTYPE_VSYNC,
-			(*(u32*)(PS2MEM_GS+0x1000)&0x2000), updategs, 0);
-
-		// No need to freeze MMX/XMM registers here since this
-		// code is always called from the context of a BranchTest.
-		mtgsThread->SetEvent();
-	}
+		mtgsThread->PostVsyncEnd( updategs );
 	else
 	{
 		GSvsync((*(u32*)(PS2MEM_GS+0x1000)&0x2000));

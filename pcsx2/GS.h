@@ -171,6 +171,15 @@ protected:
 	int m_CopyDataTally;
 	volatile u32 m_RingBufferIsBusy;
 
+	// Counts the number of vsync frames queued in the MTGS ringbuffer.  This is used to
+	// throttle the number of frames allowed to be rendered ahead of time for games that
+	// run very fast and have little or no ringbuffer overhead (typically opening menus)
+	volatile u32 m_QueuedFrames;
+
+	// Protection lock for the frame queue counter -- needed because we can't safely
+	// AtomicExchange from two threads.
+	Threading::MutexLock m_lock_FrameQueueCounter;
+
 	// These vars maintain instance data for sending Data Packets.
 	// Only one data packet can be constructed and uploaded at a time.
 
@@ -188,7 +197,7 @@ protected:
 	SafeAlignedArray<u128,16> m_RingBuffer;
 
 	// mtgs needs its own memory space separate from the PS2.  The PS2 memory is in
-	// synch with the EE while this stays in sync with the GS (ie, it lags behind)
+	// sync with the EE while this stays in sync with the GS (ie, it lags behind)
 	u8* const m_gsMem;
 
 public:
@@ -215,6 +224,8 @@ public:
 	u8* GetDataPacketPtr() const;
 	void Freeze( SaveState& state );
 	void SetEvent();
+
+	void PostVsyncEnd( bool updategs );
 
 	uptr FnPtr_SimplePacket() const
 	{

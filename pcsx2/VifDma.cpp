@@ -1338,15 +1338,21 @@ void vif0Reset() {
 void SaveState::vif0Freeze()
 {
 	// Dunno if this one is needed, but whatever, it's small. :)
-	Freeze( g_vifCycles );
+	if( GetVersion() >= 0x14 )
+		Freeze( g_vifCycles );
 
 	Freeze( vif0 );
 	if( GetVersion() >= 0x14 )
 	{
-		Freeze( g_vif1HasMask3 );
-		Freeze( g_vif1Masks );
-		Freeze( g_vifRow1 );
-		Freeze( g_vifCol1 );
+		Freeze( g_vif0HasMask3 );
+		Freeze( g_vif0Masks );
+		Freeze( g_vifRow0 );
+		Freeze( g_vifCol0 );
+	}
+	else if( IsLoading() )
+	{
+		// Hack to "help" old savestates recover...
+		SetNewMask(g_vif0Masks, g_vif0HasMask3, vif0Regs->mask, ~vif0Regs->mask);
 	}
 }
 
@@ -2264,9 +2270,9 @@ void SaveState::vif1Freeze()
 		Freeze( g_vifRow1 );
 		Freeze( g_vifCol1 );
 	}
-
-	/*if( IsLoading() ){
+	else if( IsLoading() )
+	{
 		SetNewMask(g_vif1Masks, g_vif1HasMask3, vif1Regs->mask, ~vif1Regs->mask);
-		if(vif1ch->chcr & 0x100)vif1.done = 0;
-	}*/
+		//if(vif1ch->chcr & 0x100) vif1.done = 0;
+	}
 }

@@ -32,12 +32,12 @@ LRESULT WINAPI AboutDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	switch(uMsg)
 	{
 		case WM_INITDIALOG:
-			hBMP = LoadBitmap(GetModuleHandle(NULL), MAKEINTRESOURCE(SPLASH_LOGO));
+			//hBMP = LoadBitmap(GetModuleHandle(NULL), MAKEINTRESOURCE(SPLASH_LOGO));
 			hSilverBMP = LoadBitmap(GetModuleHandle(NULL), MAKEINTRESOURCE(IDB_PS2SILVER));
 
-			hW = CreateWindow("STATIC", "", WS_VISIBLE | WS_CHILD | SS_BITMAP, 
+			/*hW = CreateWindow("STATIC", "", WS_VISIBLE | WS_CHILD | SS_BITMAP, 
 					  230, 10, 211, 110, hDlg, (HMENU)IDC_STATIC, GetModuleHandle(NULL), NULL);
-			SendMessage(hW, STM_SETIMAGE, (WPARAM)IMAGE_BITMAP, (LPARAM)hBMP);
+			SendMessage(hW, STM_SETIMAGE, (WPARAM)IMAGE_BITMAP, (LPARAM)hBMP);*/
 
 			SetWindowText(hDlg, _("About PCSX2"));
 

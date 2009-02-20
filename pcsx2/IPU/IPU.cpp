@@ -62,6 +62,10 @@ using namespace std;			// for min / max
 #define IPU_DMA_FIREINT1 64
 #define IPU_DMA_VIFSTALL 128
 
+// FIXME - g_nIPU0Data and Pointer are not saved in the savestate, which breaks savestates for some
+// FMVs at random (if they get saved during the half frame of a 30fps rate).  The fix is complicated
+// since coroutine is such a pita.  (air)
+
 static int g_nDMATransfer = 0;
 int g_nIPU0Data = 0; // data left to transfer
 u8* g_pIPU0Pointer = NULL;
@@ -165,7 +169,12 @@ void ipuShutdown()
 void SaveState::ipuFreeze() {
 	IPUProcessInterrupt();
 
-	FreezeMem(ipuRegs, sizeof(IPUregisters));
+	if( GetVersion() < 0x14 )
+	{
+		// old versions saved the IPU regs, but they're already saved as part of HW!
+		FreezeMem(ipuRegs, sizeof(IPUregisters));
+	}
+	
 	Freeze(g_nDMATransfer);
 	Freeze(FIreadpos);
 	Freeze(FIwritepos);
@@ -1574,7 +1583,7 @@ int IPU1dma()
 }
 
 
-int FIFOfrom_write(u32 *value,int size)
+int FIFOfrom_write(const u32 *value,int size)
 {
 	int transsize;
 	int firsttrans;

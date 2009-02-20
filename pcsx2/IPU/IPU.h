@@ -256,7 +256,7 @@ extern u8 __fastcall getBits8(u8 *address, u32 advance);
 extern int __fastcall getBits(u8 *address, u32 size, u32 advance);
 
 // returns number of qw read
-int FIFOfrom_write(u32 * value, int size);
+int FIFOfrom_write(const u32 * value, int size);
 void FIFOfrom_read(void *value,int size);
 int FIFOto_read(void *value);
 int FIFOto_write(u32* pMem, int size);
