@@ -1348,10 +1348,9 @@ void recVUMI_FMAND( VURegs *VU, int info )
 	if( fsreg >= 0 ) {
 		if( ftreg != fsreg ) MOV32RtoR(ftreg, fsreg);
 	}
-	else MOV16MtoR(ftreg, VU_VI_ADDR(_Fs_, 1));
+	else MOVZX32M16toR(ftreg, VU_VI_ADDR(_Fs_, 1));
 
 	AND16MtoR( ftreg, VU_VI_ADDR(REG_MAC_FLAG, 1));
-	//MOVZX32R16toR(ftreg, ftreg);
 }
 //------------------------------------------------------------------
 
