@@ -82,7 +82,7 @@ using namespace std;
 #define B_G(x, action)			{ if( !(x) ) { ERROR_LOG("%s:%d: %s\n", __FILE__, (u32)__LINE__, #x); action; } }
 
 
-static __forceinline char *error_name(int err)
+static __forceinline const char *error_name(int err)
 {
 	switch (err)
 	{

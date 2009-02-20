@@ -1167,7 +1167,7 @@ class MemoryCard
 			*(u16 *)&dir[0] = Dir::DF_EXISTS | Dir::DF_DIRECTORY | Dir::DF_READ; // mode flag
 			*(u32 *)&dir[4] = numfiles; // number of files inside the dir
 			*(u8 *)&dir[8] = 0; // creation time seconds
-			*(u8 *)&dir[9] = 0; // creation time minuts
+			*(u8 *)&dir[9] = 0; // creation time minutes
 			*(u8 *)&dir[10] = 0; // creation time hours
 			*(u8 *)&dir[11] = 1; // creation time day
 			*(u8 *)&dir[12] = 1; // creation time month
@@ -1175,7 +1175,7 @@ class MemoryCard
 			*(u32 *)&dir[16] = 0; // cluster with the contents of the dir
 			*(u32 *)&dir[20] = 0; // dir entry for '.'
 			*(u8 *)&dir[24] = 0; // modification time seconds
-			*(u8 *)&dir[25] = 0; // modification time minuts
+			*(u8 *)&dir[25] = 0; // modification time minutes
 			*(u8 *)&dir[26] = 0; // modification time hours
 			*(u8 *)&dir[27] = 1; // modification time day
 			*(u8 *)&dir[28] = 1; // modification time month
@@ -1189,7 +1189,7 @@ class MemoryCard
 			*(u16 *)&dir[0] = Dir::DF_EXISTS | Dir::DF_DIRECTORY | Dir::DF_READ; // mode flag
 			*(u32 *)&dir[4] = 2; // number of files inside the dir
 			*(u8 *)&dir[8] = 0; // creation time seconds
-			*(u8 *)&dir[9] = 0; // creation time minuts
+			*(u8 *)&dir[9] = 0; // creation time minutes
 			*(u8 *)&dir[10] = 0; // creation time hours
 			*(u8 *)&dir[11] = 1; // creation time day
 			*(u8 *)&dir[12] = 1; // creation time month
@@ -1197,7 +1197,7 @@ class MemoryCard
 			*(u32 *)&dir[16] = 0; // cluster with the contents of the dir
 			*(u32 *)&dir[20] = 0; // dir entry for '.'
 			*(u8 *)&dir[24] = 0; // modification time seconds
-			*(u8 *)&dir[25] = 0; // modification time minuts
+			*(u8 *)&dir[25] = 0; // modification time minutes
 			*(u8 *)&dir[26] = 0; // modification time hours
 			*(u8 *)&dir[27] = 1; // modification time day
 			*(u8 *)&dir[28] = 1; // modification time month
@@ -1225,7 +1225,7 @@ class MemoryCard
 				*(u16 *)&dir[0] = Dir::DF_EXISTS | Dir::DF_FILE | Dir::DF_READ; // mode flag
 				*(u32 *)&dir[4] = 0; // SIZE OF FILE
 				*(u8 *)&dir[8] = 0; // creation time seconds
-				*(u8 *)&dir[9] = 0; // creation time minuts
+				*(u8 *)&dir[9] = 0; // creation time minutes
 				*(u8 *)&dir[10] = 0; // creation time hours
 				*(u8 *)&dir[11] = 1; // creation time day
 				*(u8 *)&dir[12] = 1; // creation time month
@@ -1233,7 +1233,7 @@ class MemoryCard
 				*(u32 *)&dir[16] = 0; // cluster with the contents of the file
 				*(u32 *)&dir[20] = 0; // dir entry for '.'
 				*(u8 *)&dir[24] = 0; // modification time seconds
-				*(u8 *)&dir[25] = 0; // modification time minuts
+				*(u8 *)&dir[25] = 0; // modification time minutes
 				*(u8 *)&dir[26] = 0; // modification time hours
 				*(u8 *)&dir[27] = 1; // modification time day
 				*(u8 *)&dir[28] = 1; // modification time month
@@ -1314,7 +1314,7 @@ class MemoryCard
 			*(u16 *)&dir[0] = Dir::DF_EXISTS | Dir::DF_DIRECTORY | Dir::DF_READ; // mode flag
 			*(u32 *)&dir[4] = 2; // number of files inside the dir
 			*(u8 *)&dir[8] = 0; // creation time seconds
-			*(u8 *)&dir[9] = 0; // creation time minuts
+			*(u8 *)&dir[9] = 0; // creation time minutes
 			*(u8 *)&dir[10] = 0; // creation time hours
 			*(u8 *)&dir[11] = 1; // creation time day
 			*(u8 *)&dir[12] = 1; // creation time month
@@ -1322,7 +1322,7 @@ class MemoryCard
 			*(u32 *)&dir[16] = dircluster; // cluster with the contents of the dir
 			*(u32 *)&dir[20] = 0; // dir entry for '.'
 			*(u8 *)&dir[24] = 0; // modification time seconds
-			*(u8 *)&dir[25] = 0; // modification time minuts
+			*(u8 *)&dir[25] = 0; // modification time minutes
 			*(u8 *)&dir[26] = 0; // modification time hours
 			*(u8 *)&dir[27] = 1; // modification time day
 			*(u8 *)&dir[28] = 1; // modification time month
@@ -1367,7 +1367,7 @@ class MemoryCard
 			*(u16 *)&dir[0] = Dir::DF_EXISTS | Dir::DF_DIRECTORY | Dir::DF_READ; // mode flag
 			*(u32 *)&dir[4] = numfiles; // number of files inside the dir
 			*(u8 *)&dir[8] = 0; // creation time seconds
-			*(u8 *)&dir[9] = 0; // creation time minuts
+			*(u8 *)&dir[9] = 0; // creation time minutes
 			*(u8 *)&dir[10] = 0; // creation time hours
 			*(u8 *)&dir[11] = 1; // creation time day
 			*(u8 *)&dir[12] = 1; // creation time month
@@ -1375,7 +1375,7 @@ class MemoryCard
 			*(u32 *)&dir[16] = 0; // cluster with the contents of the dir
 			*(u32 *)&dir[20] = 0; // dir entry for '.'
 			*(u8 *)&dir[24] = 0; // modification time seconds
-			*(u8 *)&dir[25] = 0; // modification time minuts
+			*(u8 *)&dir[25] = 0; // modification time minutes
 			*(u8 *)&dir[26] = 0; // modification time hours
 			*(u8 *)&dir[27] = 1; // modification time day
 			*(u8 *)&dir[28] = 1; // modification time month
@@ -1389,7 +1389,7 @@ class MemoryCard
 			*(u16 *)&dir[0] = Dir::DF_EXISTS | Dir::DF_DIRECTORY | Dir::DF_READ; // mode flag
 			*(u32 *)&dir[4] = 2; // number of files inside the dir
 			*(u8 *)&dir[8] = 0; // creation time seconds
-			*(u8 *)&dir[9] = 0; // creation time minuts
+			*(u8 *)&dir[9] = 0; // creation time minutes
 			*(u8 *)&dir[10] = 0; // creation time hours
 			*(u8 *)&dir[11] = 1; // creation time day
 			*(u8 *)&dir[12] = 1; // creation time month
@@ -1397,7 +1397,7 @@ class MemoryCard
 			*(u32 *)&dir[16] = 0; // cluster with the contents of the dir
 			*(u32 *)&dir[20] = 0; // dir entry for '.'
 			*(u8 *)&dir[24] = 0; // modification time seconds
-			*(u8 *)&dir[25] = 0; // modification time minuts
+			*(u8 *)&dir[25] = 0; // modification time minutes
 			*(u8 *)&dir[26] = 0; // modification time hours
 			*(u8 *)&dir[27] = 1; // modification time day
 			*(u8 *)&dir[28] = 1; // modification time month
@@ -1425,7 +1425,7 @@ class MemoryCard
 				*(u16 *)&dir[0] = Dir::DF_EXISTS | Dir::DF_FILE | Dir::DF_READ; // mode flag
 				*(u32 *)&dir[4] = 2; // number of files inside the dir
 				*(u8 *)&dir[8] = 0; // creation time seconds
-				*(u8 *)&dir[9] = 0; // creation time minuts
+				*(u8 *)&dir[9] = 0; // creation time minutes
 				*(u8 *)&dir[10] = 0; // creation time hours
 				*(u8 *)&dir[11] = 1; // creation time day
 				*(u8 *)&dir[12] = 1; // creation time month
@@ -1433,7 +1433,7 @@ class MemoryCard
 				*(u32 *)&dir[16] = 0; // cluster with the contents of the file
 				*(u32 *)&dir[20] = 0; // dir entry for '.'
 				*(u8 *)&dir[24] = 0; // modification time seconds
-				*(u8 *)&dir[25] = 0; // modification time minuts
+				*(u8 *)&dir[25] = 0; // modification time minutes
 				*(u8 *)&dir[26] = 0; // modification time hours
 				*(u8 *)&dir[27] = 1; // modification time day
 				*(u8 *)&dir[28] = 1; // modification time month

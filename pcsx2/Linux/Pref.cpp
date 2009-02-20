@@ -76,12 +76,17 @@ int LoadConfig()
 	GetValuel("ThPriority", Config.ThPriority);
 	GetValue("PluginsDir", Config.PluginsDir);
 	GetValue("BiosDir",    Config.BiosDir);
-	GetValue("Mcd1", Config.Mcd1);
-	GetValue("Mcd2", Config.Mcd2);
 	
-	if (strcmp(Config.Mcd1,"") == 0) strcpy(Config.Mcd1, MEMCARDS_DIR "/" DEFAULT_MEMCARD1);
-	if (strcmp(Config.Mcd2,"") == 0) strcpy(Config.Mcd2, MEMCARDS_DIR "/" DEFAULT_MEMCARD2);
-
+	GetValuel("EnabledCard1", Config.Mcd[0].Enabled);
+	GetValue("Mcd1", Config.Mcd[0].Filename);
+	if (strcmp(Config.Mcd[0].Filename,"") == 0) strcpy(Config.Mcd[0].Filename, MEMCARDS_DIR "/" DEFAULT_MEMCARD1);
+	
+	GetValuel("EnabledCard2", Config.Mcd[1].Enabled);
+	GetValue("Mcd2", Config.Mcd[1].Filename);
+	if (strcmp(Config.Mcd[1].Filename,"") == 0) strcpy(Config.Mcd[1].Filename, MEMCARDS_DIR "/" DEFAULT_MEMCARD2);
+	
+	GetValuel("McdEnableEject", Config.McdEnableEject);
+	
 	GetValue("GS",   Config.GS);
 	GetValue("SPU2", Config.SPU2);
 	GetValue("CDVD", Config.CDVD);
@@ -140,8 +145,13 @@ void SaveConfig()
 	SetValuel("Ps2Out",     Config.PsxOut);
 	SetValuel("cdvdPrint",     Config.cdvdPrint);
 	SetValuel("ThPriority", Config.ThPriority);
-	SetValue("Mcd1", Config.Mcd1);
-	SetValue("Mcd2", Config.Mcd2);
+	
+	SetValuel("EnabledCard1", Config.Mcd[0].Enabled);
+	SetValue("Mcd1", Config.Mcd[0].Filename);
+	
+	SetValuel("EnabledCard2", Config.Mcd[1].Enabled);
+	SetValue("Mcd2", Config.Mcd[1].Filename);
+	SetValuel("McdEnableEject", Config.McdEnableEject);
 
 	SetValue("GS",   Config.GS);
 	SetValue("SPU2", Config.SPU2);
@@ -153,9 +163,6 @@ void SaveConfig()
 	SetValue("FW",  Config.FW);
 
 	SetValuel("Options",        Config.Options);
-
-	// Remove Fast Branches hack for now:
-	Config.Hacks &= ~0x80;
 
 	SetValuel("Hacks",        Config.Hacks);
 	SetValuel("Fixes",        Config.GameFixes);

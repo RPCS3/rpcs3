@@ -102,9 +102,8 @@ char iop_log_names[9][32] =
 };
 
 #define FLAG_VU_ADD_SUB 0x1
-#define FLAG_VU_CLIP 0x2
 #define FLAG_FPU_CLAMP 0x4
-#define FLAG_VU_BRANCH 0x8
+#define FLAG_VU_FCOR_HACK 0x8
 #define FLAG_AVOID_DELAY_HANDLING 0x10
 
 #define FLAG_VU_NO_OVERFLOW 0x2

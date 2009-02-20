@@ -26,7 +26,7 @@ GtkWidget *GameFixDlg, *SpeedHacksDlg;
 
 	set_checked(GameFixDlg, "check_VU_Add_Sub", (Config.GameFixes & FLAG_VU_ADD_SUB));
 	set_checked(GameFixDlg, "check_FPU_Clamp", (Config.GameFixes & FLAG_FPU_CLAMP));
-	set_checked(GameFixDlg, "check_VU_Branch", (Config.GameFixes & FLAG_VU_BRANCH));
+	set_checked(GameFixDlg, "check_VU_FCOR_hack", (Config.GameFixes & FLAG_VU_FCOR_HACK));
 
 	gtk_widget_show_all(GameFixDlg);
 	gtk_widget_set_sensitive(MainWindow, FALSE);
@@ -39,7 +39,7 @@ void on_Game_Fix_OK(GtkButton *button, gpointer user_data)
 	Config.GameFixes = 0;
 	Config.GameFixes |= is_checked(GameFixDlg, "check_VU_Add_Sub") ? FLAG_VU_ADD_SUB : 0;
 	Config.GameFixes |= is_checked(GameFixDlg, "check_FPU_Clamp") ? FLAG_FPU_CLAMP : 0;
-	Config.GameFixes |= is_checked(GameFixDlg, "check_VU_Branch") ? FLAG_VU_BRANCH : 0;
+	Config.GameFixes |= is_checked(GameFixDlg, "check_VU_FCOR_hack") ? FLAG_VU_FCOR_HACK : 0;
 
 	SaveConfig();
 	gtk_widget_destroy(GameFixDlg);
@@ -72,6 +72,7 @@ void on_Speed_Hacks(GtkMenuItem *menuitem, gpointer user_data)
 
 	set_checked(SpeedHacksDlg, "check_iop_cycle_rate", CHECK_IOP_CYCLERATE);
 	set_checked(SpeedHacksDlg, "check_wait_cycles_sync_hack", CHECK_WAITCYCLE_HACK);
+	set_checked(SpeedHacksDlg, "check_intc_sync_hack", CHECK_INTC_STAT_HACK);
 	set_checked(SpeedHacksDlg, "check_ESC_hack", CHECK_ESCAPE_HACK);
 
 	gtk_widget_show_all(SpeedHacksDlg);
@@ -94,6 +95,7 @@ void on_Speed_Hack_OK(GtkButton *button, gpointer user_data)
 
 	Config.Hacks |= is_checked(SpeedHacksDlg, "check_iop_cycle_rate") << 3;
 	Config.Hacks |= is_checked(SpeedHacksDlg, "check_wait_cycles_sync_hack") << 4;
+	Config.Hacks |= is_checked(SpeedHacksDlg, "check_intc_sync_hack") << 5;
 	Config.Hacks |= is_checked(SpeedHacksDlg, "check_ESC_hack") << 10;
 
 	SaveConfig();

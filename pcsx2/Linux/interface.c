@@ -335,26 +335,26 @@ create_AdvDlg (void)
   check_VU_Flush_Zero = gtk_check_button_new_with_mnemonic (_("Flush to Zero"));
   gtk_widget_show (check_VU_Flush_Zero);
   gtk_table_attach (GTK_TABLE (table7), check_VU_Flush_Zero, 0, 1, 0, 1,
-                    (GtkAttachOptions) (GTK_FILL),
+                    (GtkAttachOptions) (0),
                     (GtkAttachOptions) (0), 0, 0);
 
   check_VU_Denormal_Zero = gtk_check_button_new_with_mnemonic (_("Denormals are Zero"));
   gtk_widget_show (check_VU_Denormal_Zero);
   gtk_table_attach (GTK_TABLE (table7), check_VU_Denormal_Zero, 1, 2, 0, 1,
-                    (GtkAttachOptions) (GTK_FILL),
+                    (GtkAttachOptions) (0),
                     (GtkAttachOptions) (0), 0, 0);
 
   Check_Set_OU_Flags = gtk_check_button_new_with_mnemonic (_("Set O & U Flags"));
   gtk_widget_show (Check_Set_OU_Flags);
   gtk_table_attach (GTK_TABLE (table7), Check_Set_OU_Flags, 0, 1, 1, 2,
-                    (GtkAttachOptions) (GTK_FILL),
+                    (GtkAttachOptions) (0),
                     (GtkAttachOptions) (0), 0, 0);
   gtk_widget_set_sensitive (Check_Set_OU_Flags, FALSE);
 
   check_Emulate_DaZ = gtk_check_button_new_with_mnemonic (_("Software Emulate DaZ"));
   gtk_widget_show (check_Emulate_DaZ);
   gtk_table_attach (GTK_TABLE (table7), check_Emulate_DaZ, 1, 2, 1, 2,
-                    (GtkAttachOptions) (GTK_FILL),
+                    (GtkAttachOptions) (0),
                     (GtkAttachOptions) (0), 0, 0);
   gtk_widget_set_sensitive (check_Emulate_DaZ, FALSE);
 
@@ -551,12 +551,14 @@ create_SpeedHacksDlg (void)
   GtkWidget *label95;
   GtkWidget *hseparator1;
   GtkWidget *label91;
-  GtkWidget *label90;
+  GtkWidget *label105;
   GtkWidget *vbox60;
   GtkWidget *check_iop_cycle_rate;
   GtkWidget *label96;
   GtkWidget *check_wait_cycles_sync_hack;
   GtkWidget *label97;
+  GtkWidget *check_intc_sync_hack;
+  GtkWidget *label101;
   GtkWidget *frame36;
   GtkWidget *alignment31;
   GtkWidget *check_ESC_hack;
@@ -603,7 +605,7 @@ create_SpeedHacksDlg (void)
   gtk_radio_button_set_group (GTK_RADIO_BUTTON (check_default_cycle_rate), check_default_cycle_rate_group);
   check_default_cycle_rate_group = gtk_radio_button_get_group (GTK_RADIO_BUTTON (check_default_cycle_rate));
 
-  label98 = gtk_label_new (_("Most compatable option - recommended for everyone with high-end machines."));
+  label98 = gtk_label_new (_("Most compatible option - recommended for everyone with high-end machines."));
   gtk_widget_show (label98);
   gtk_box_pack_start (GTK_BOX (vbox61), label98, FALSE, FALSE, 0);
   gtk_label_set_line_wrap (GTK_LABEL (label98), TRUE);
@@ -649,15 +651,15 @@ create_SpeedHacksDlg (void)
   gtk_widget_show (hseparator1);
   gtk_box_pack_start (GTK_BOX (vbox61), hseparator1, FALSE, FALSE, 0);
 
-  label91 = gtk_label_new (_("Important: X2 & X3 sync hacks *will* cause choppy/skippy audio on many FMV movies."));
+  label91 = gtk_label_new (_("Important: X2 & X3 sync hacks *will* cause choppy/skippy audio on many FMV movies.\nKnown to work well with a couple games, namely Shadow of the Colossus (but breaks most other games)."));
   gtk_widget_show (label91);
   gtk_box_pack_start (GTK_BOX (vbox61), label91, FALSE, FALSE, 0);
   gtk_label_set_line_wrap (GTK_LABEL (label91), TRUE);
 
-  label90 = gtk_label_new (_("<b>frame37</b>"));
-  gtk_widget_show (label90);
-  gtk_frame_set_label_widget (GTK_FRAME (frame37), label90);
-  gtk_label_set_use_markup (GTK_LABEL (label90), TRUE);
+  label105 = gtk_label_new (_("<b>EmotionEngine (EE) Sync Hacks</b>"));
+  gtk_widget_show (label105);
+  gtk_frame_set_label_widget (GTK_FRAME (frame37), label105);
+  gtk_label_set_use_markup (GTK_LABEL (label105), TRUE);
 
   vbox60 = gtk_vbox_new (FALSE, 0);
   gtk_widget_show (vbox60);
@@ -680,6 +682,15 @@ create_SpeedHacksDlg (void)
   gtk_widget_show (label97);
   gtk_box_pack_start (GTK_BOX (vbox60), label97, FALSE, FALSE, 0);
   gtk_label_set_line_wrap (GTK_LABEL (label97), TRUE);
+
+  check_intc_sync_hack = gtk_check_button_new_with_mnemonic (_("INTC Sync Hack (experimental)"));
+  gtk_widget_show (check_intc_sync_hack);
+  gtk_box_pack_start (GTK_BOX (vbox60), check_intc_sync_hack, FALSE, FALSE, 0);
+
+  label101 = gtk_label_new (_("Huge speedup in many games, and a pretty high compatibility rate (some games still work better with EE sync hacks)."));
+  gtk_widget_show (label101);
+  gtk_box_pack_start (GTK_BOX (vbox60), label101, FALSE, FALSE, 0);
+  gtk_label_set_line_wrap (GTK_LABEL (label101), TRUE);
 
   frame36 = gtk_frame_new (NULL);
   gtk_widget_show (frame36);
@@ -739,12 +750,14 @@ create_SpeedHacksDlg (void)
   GLADE_HOOKUP_OBJECT (SpeedHacksDlg, label95, "label95");
   GLADE_HOOKUP_OBJECT (SpeedHacksDlg, hseparator1, "hseparator1");
   GLADE_HOOKUP_OBJECT (SpeedHacksDlg, label91, "label91");
-  GLADE_HOOKUP_OBJECT (SpeedHacksDlg, label90, "label90");
+  GLADE_HOOKUP_OBJECT (SpeedHacksDlg, label105, "label105");
   GLADE_HOOKUP_OBJECT (SpeedHacksDlg, vbox60, "vbox60");
   GLADE_HOOKUP_OBJECT (SpeedHacksDlg, check_iop_cycle_rate, "check_iop_cycle_rate");
   GLADE_HOOKUP_OBJECT (SpeedHacksDlg, label96, "label96");
   GLADE_HOOKUP_OBJECT (SpeedHacksDlg, check_wait_cycles_sync_hack, "check_wait_cycles_sync_hack");
   GLADE_HOOKUP_OBJECT (SpeedHacksDlg, label97, "label97");
+  GLADE_HOOKUP_OBJECT (SpeedHacksDlg, check_intc_sync_hack, "check_intc_sync_hack");
+  GLADE_HOOKUP_OBJECT (SpeedHacksDlg, label101, "label101");
   GLADE_HOOKUP_OBJECT (SpeedHacksDlg, frame36, "frame36");
   GLADE_HOOKUP_OBJECT (SpeedHacksDlg, alignment31, "alignment31");
   GLADE_HOOKUP_OBJECT (SpeedHacksDlg, check_ESC_hack, "check_ESC_hack");
@@ -765,8 +778,8 @@ create_GameFixDlg (void)
   GtkWidget *alignment5;
   GtkWidget *vbox30;
   GtkWidget *check_FPU_Clamp;
-  GtkWidget *check_VU_Branch;
   GtkWidget *check_VU_Add_Sub;
+  GtkWidget *check_VU_FCOR_hack;
   GtkWidget *label42;
   GtkWidget *dialog_action_area1;
   GtkWidget *cancelbutton1;
@@ -797,13 +810,13 @@ create_GameFixDlg (void)
   gtk_widget_show (check_FPU_Clamp);
   gtk_box_pack_start (GTK_BOX (vbox30), check_FPU_Clamp, FALSE, FALSE, 0);
 
-  check_VU_Branch = gtk_check_button_new_with_mnemonic (_("VU Branch Hack - Special fix for Magna Carta; Breaks Crash Bandicoot!"));
-  gtk_widget_show (check_VU_Branch);
-  gtk_box_pack_start (GTK_BOX (vbox30), check_VU_Branch, FALSE, FALSE, 0);
-
   check_VU_Add_Sub = gtk_check_button_new_with_mnemonic (_("VU Add / Sub Hack - Special fix for Tri-Ace games!"));
   gtk_widget_show (check_VU_Add_Sub);
   gtk_box_pack_start (GTK_BOX (vbox30), check_VU_Add_Sub, FALSE, FALSE, 0);
+
+  check_VU_FCOR_hack = gtk_check_button_new_with_mnemonic (_("VU FCOR Hack - Fixes ICO SPS"));
+  gtk_widget_show (check_VU_FCOR_hack);
+  gtk_box_pack_start (GTK_BOX (vbox30), check_VU_FCOR_hack, FALSE, FALSE, 0);
 
   label42 = gtk_label_new (_("<b>Some games need special settings.\nConfigure them here.</b>"));
   gtk_widget_show (label42);
@@ -838,8 +851,8 @@ create_GameFixDlg (void)
   GLADE_HOOKUP_OBJECT (GameFixDlg, alignment5, "alignment5");
   GLADE_HOOKUP_OBJECT (GameFixDlg, vbox30, "vbox30");
   GLADE_HOOKUP_OBJECT (GameFixDlg, check_FPU_Clamp, "check_FPU_Clamp");
-  GLADE_HOOKUP_OBJECT (GameFixDlg, check_VU_Branch, "check_VU_Branch");
   GLADE_HOOKUP_OBJECT (GameFixDlg, check_VU_Add_Sub, "check_VU_Add_Sub");
+  GLADE_HOOKUP_OBJECT (GameFixDlg, check_VU_FCOR_hack, "check_VU_FCOR_hack");
   GLADE_HOOKUP_OBJECT (GameFixDlg, label42, "label42");
   GLADE_HOOKUP_OBJECT_NO_REF (GameFixDlg, dialog_action_area1, "dialog_action_area1");
   GLADE_HOOKUP_OBJECT (GameFixDlg, cancelbutton1, "cancelbutton1");
@@ -3032,8 +3045,11 @@ create_PatchFinderWindow (void)
   GtkWidget *radiobutton3;
   GSList *radiobutton3_group = NULL;
   GtkWidget *radiobutton4;
+  GSList *radiobutton4_group = NULL;
   GtkWidget *radiobutton5;
+  GSList *radiobutton5_group = NULL;
   GtkWidget *radiobutton6;
+  GSList *radiobutton6_group = NULL;
   GtkWidget *checkbutton1;
   GtkWidget *label56;
   GtkWidget *frame21;
@@ -3130,7 +3146,7 @@ create_PatchFinderWindow (void)
   radiobutton3 = gtk_radio_button_new_with_mnemonic (NULL, _("8 bits"));
   gtk_widget_show (radiobutton3);
   gtk_table_attach (GTK_TABLE (table6), radiobutton3, 0, 1, 0, 1,
-                    (GtkAttachOptions) (GTK_FILL),
+                    (GtkAttachOptions) (0),
                     (GtkAttachOptions) (0), 0, 0);
   gtk_radio_button_set_group (GTK_RADIO_BUTTON (radiobutton3), radiobutton3_group);
   radiobutton3_group = gtk_radio_button_get_group (GTK_RADIO_BUTTON (radiobutton3));
@@ -3138,31 +3154,31 @@ create_PatchFinderWindow (void)
   radiobutton4 = gtk_radio_button_new_with_mnemonic (NULL, _("16 bits"));
   gtk_widget_show (radiobutton4);
   gtk_table_attach (GTK_TABLE (table6), radiobutton4, 1, 2, 0, 1,
-                    (GtkAttachOptions) (GTK_FILL),
+                    (GtkAttachOptions) (0),
                     (GtkAttachOptions) (0), 0, 0);
-  gtk_radio_button_set_group (GTK_RADIO_BUTTON (radiobutton4), radiobutton3_group);
-  radiobutton3_group = gtk_radio_button_get_group (GTK_RADIO_BUTTON (radiobutton4));
+  gtk_radio_button_set_group (GTK_RADIO_BUTTON (radiobutton4), radiobutton4_group);
+  radiobutton4_group = gtk_radio_button_get_group (GTK_RADIO_BUTTON (radiobutton4));
 
   radiobutton5 = gtk_radio_button_new_with_mnemonic (NULL, _("32 bits"));
   gtk_widget_show (radiobutton5);
   gtk_table_attach (GTK_TABLE (table6), radiobutton5, 0, 1, 1, 2,
-                    (GtkAttachOptions) (GTK_FILL),
+                    (GtkAttachOptions) (0),
                     (GtkAttachOptions) (0), 0, 0);
-  gtk_radio_button_set_group (GTK_RADIO_BUTTON (radiobutton5), radiobutton3_group);
-  radiobutton3_group = gtk_radio_button_get_group (GTK_RADIO_BUTTON (radiobutton5));
+  gtk_radio_button_set_group (GTK_RADIO_BUTTON (radiobutton5), radiobutton5_group);
+  radiobutton5_group = gtk_radio_button_get_group (GTK_RADIO_BUTTON (radiobutton5));
 
   radiobutton6 = gtk_radio_button_new_with_mnemonic (NULL, _("64 bits"));
   gtk_widget_show (radiobutton6);
   gtk_table_attach (GTK_TABLE (table6), radiobutton6, 1, 2, 1, 2,
-                    (GtkAttachOptions) (GTK_FILL),
+                    (GtkAttachOptions) (0),
                     (GtkAttachOptions) (0), 0, 0);
-  gtk_radio_button_set_group (GTK_RADIO_BUTTON (radiobutton6), radiobutton3_group);
-  radiobutton3_group = gtk_radio_button_get_group (GTK_RADIO_BUTTON (radiobutton6));
+  gtk_radio_button_set_group (GTK_RADIO_BUTTON (radiobutton6), radiobutton6_group);
+  radiobutton6_group = gtk_radio_button_get_group (GTK_RADIO_BUTTON (radiobutton6));
 
   checkbutton1 = gtk_check_button_new_with_mnemonic (_("Unsigned"));
   gtk_widget_show (checkbutton1);
   gtk_table_attach (GTK_TABLE (table6), checkbutton1, 0, 1, 2, 3,
-                    (GtkAttachOptions) (GTK_FILL),
+                    (GtkAttachOptions) (0),
                     (GtkAttachOptions) (0), 0, 0);
 
   label56 = gtk_label_new (_("<b>Values of Size</b>"));
@@ -4045,13 +4061,26 @@ create_MemDlg (void)
   GtkWidget *MemDlg;
   GtkWidget *dialog_vbox7;
   GtkWidget *hbox40;
-  GtkWidget *vbox62;
-  GtkWidget *hbox42;
-  GtkWidget *label99;
-  GtkWidget *label100;
   GtkWidget *hbox41;
+  GtkWidget *vbox64;
+  GtkWidget *vbox70;
+  GtkWidget *hbox46;
+  GtkWidget *check_enable_mcd1;
+  GtkWidget *check_enable_mcd2;
+  GtkWidget *vbox65;
+  GtkWidget *vbox66;
+  GtkWidget *hbox44;
+  GtkWidget *label106;
+  GtkWidget *label107;
+  GtkWidget *hbox45;
   GtkWidget *memcard1combo;
   GtkWidget *memcard2combo;
+  GtkWidget *frame38;
+  GtkWidget *alignment33;
+  GtkWidget *vbox63;
+  GtkWidget *check_eject_mcds;
+  GtkWidget *label103;
+  GtkWidget *label102;
   GtkWidget *dialog_action_area7;
   GtkWidget *memcardcancelbutton;
   GtkWidget *okbutton1;
@@ -4067,34 +4096,90 @@ create_MemDlg (void)
   gtk_widget_show (hbox40);
   gtk_box_pack_start (GTK_BOX (dialog_vbox7), hbox40, TRUE, TRUE, 0);
 
-  vbox62 = gtk_vbox_new (FALSE, 0);
-  gtk_widget_show (vbox62);
-  gtk_box_pack_start (GTK_BOX (hbox40), vbox62, TRUE, TRUE, 0);
-
-  hbox42 = gtk_hbox_new (FALSE, 0);
-  gtk_widget_show (hbox42);
-  gtk_box_pack_start (GTK_BOX (vbox62), hbox42, TRUE, TRUE, 0);
-
-  label99 = gtk_label_new (_("Memcard 1"));
-  gtk_widget_show (label99);
-  gtk_box_pack_start (GTK_BOX (hbox42), label99, TRUE, TRUE, 0);
-
-  label100 = gtk_label_new (_("Memcard 2"));
-  gtk_widget_show (label100);
-  gtk_box_pack_start (GTK_BOX (hbox42), label100, TRUE, TRUE, 0);
-  gtk_label_set_justify (GTK_LABEL (label100), GTK_JUSTIFY_RIGHT);
-
   hbox41 = gtk_hbox_new (FALSE, 0);
   gtk_widget_show (hbox41);
-  gtk_box_pack_start (GTK_BOX (vbox62), hbox41, TRUE, TRUE, 0);
+  gtk_box_pack_start (GTK_BOX (hbox40), hbox41, TRUE, TRUE, 0);
+
+  vbox64 = gtk_vbox_new (FALSE, 0);
+  gtk_widget_show (vbox64);
+  gtk_box_pack_start (GTK_BOX (hbox41), vbox64, TRUE, TRUE, 0);
+
+  vbox70 = gtk_vbox_new (FALSE, 0);
+  gtk_widget_show (vbox70);
+  gtk_box_pack_start (GTK_BOX (vbox64), vbox70, TRUE, TRUE, 0);
+
+  hbox46 = gtk_hbox_new (TRUE, 0);
+  gtk_widget_show (hbox46);
+  gtk_box_pack_start (GTK_BOX (vbox70), hbox46, TRUE, TRUE, 0);
+
+  check_enable_mcd1 = gtk_check_button_new_with_mnemonic (_("Enabled"));
+  gtk_widget_show (check_enable_mcd1);
+  gtk_box_pack_start (GTK_BOX (hbox46), check_enable_mcd1, FALSE, FALSE, 0);
+
+  check_enable_mcd2 = gtk_check_button_new_with_mnemonic (_("Enabled"));
+  gtk_widget_show (check_enable_mcd2);
+  gtk_box_pack_start (GTK_BOX (hbox46), check_enable_mcd2, FALSE, FALSE, 0);
+  gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (check_enable_mcd2), TRUE);
+
+  vbox65 = gtk_vbox_new (FALSE, 0);
+  gtk_widget_show (vbox65);
+  gtk_box_pack_start (GTK_BOX (vbox64), vbox65, TRUE, TRUE, 0);
+
+  vbox66 = gtk_vbox_new (FALSE, 0);
+  gtk_widget_show (vbox66);
+  gtk_box_pack_start (GTK_BOX (vbox65), vbox66, TRUE, TRUE, 0);
+
+  hbox44 = gtk_hbox_new (TRUE, 0);
+  gtk_widget_show (hbox44);
+  gtk_box_pack_start (GTK_BOX (vbox66), hbox44, TRUE, TRUE, 0);
+
+  label106 = gtk_label_new (_("Memcard 1"));
+  gtk_widget_show (label106);
+  gtk_box_pack_start (GTK_BOX (hbox44), label106, TRUE, TRUE, 0);
+
+  label107 = gtk_label_new (_("Memcard 2"));
+  gtk_widget_show (label107);
+  gtk_box_pack_start (GTK_BOX (hbox44), label107, FALSE, FALSE, 0);
+  gtk_label_set_justify (GTK_LABEL (label107), GTK_JUSTIFY_RIGHT);
+
+  hbox45 = gtk_hbox_new (FALSE, 0);
+  gtk_widget_show (hbox45);
+  gtk_box_pack_start (GTK_BOX (vbox66), hbox45, TRUE, TRUE, 0);
 
   memcard1combo = gtk_combo_box_new_text ();
   gtk_widget_show (memcard1combo);
-  gtk_box_pack_start (GTK_BOX (hbox41), memcard1combo, TRUE, TRUE, 0);
+  gtk_box_pack_start (GTK_BOX (hbox45), memcard1combo, TRUE, TRUE, 0);
 
   memcard2combo = gtk_combo_box_new_text ();
   gtk_widget_show (memcard2combo);
-  gtk_box_pack_start (GTK_BOX (hbox41), memcard2combo, TRUE, TRUE, 0);
+  gtk_box_pack_start (GTK_BOX (hbox45), memcard2combo, TRUE, TRUE, 0);
+
+  frame38 = gtk_frame_new (NULL);
+  gtk_widget_show (frame38);
+  gtk_box_pack_start (GTK_BOX (hbox41), frame38, TRUE, TRUE, 0);
+
+  alignment33 = gtk_alignment_new (0.5, 0.5, 1, 1);
+  gtk_widget_show (alignment33);
+  gtk_container_add (GTK_CONTAINER (frame38), alignment33);
+  gtk_alignment_set_padding (GTK_ALIGNMENT (alignment33), 0, 0, 12, 0);
+
+  vbox63 = gtk_vbox_new (FALSE, 0);
+  gtk_widget_show (vbox63);
+  gtk_container_add (GTK_CONTAINER (alignment33), vbox63);
+
+  check_eject_mcds = gtk_check_button_new_with_mnemonic (_("Eject Mcds when loading SaveStates"));
+  gtk_widget_show (check_eject_mcds);
+  gtk_box_pack_start (GTK_BOX (vbox63), check_eject_mcds, FALSE, FALSE, 0);
+
+  label103 = gtk_label_new (_("This feature tells games when the mcd contents have changed so that they re-index the new Mcd contents.  WARNING: Disabling this option is NOT recommended, and could lead to MemCard corruption if you also use SaveStates."));
+  gtk_widget_show (label103);
+  gtk_box_pack_start (GTK_BOX (vbox63), label103, FALSE, FALSE, 0);
+  gtk_label_set_line_wrap (GTK_LABEL (label103), TRUE);
+
+  label102 = gtk_label_new (_("<b>Options</b>"));
+  gtk_widget_show (label102);
+  gtk_frame_set_label_widget (GTK_FRAME (frame38), label102);
+  gtk_label_set_use_markup (GTK_LABEL (label102), TRUE);
 
   dialog_action_area7 = GTK_DIALOG (MemDlg)->action_area;
   gtk_widget_show (dialog_action_area7);
@@ -4121,13 +4206,26 @@ create_MemDlg (void)
   GLADE_HOOKUP_OBJECT_NO_REF (MemDlg, MemDlg, "MemDlg");
   GLADE_HOOKUP_OBJECT_NO_REF (MemDlg, dialog_vbox7, "dialog_vbox7");
   GLADE_HOOKUP_OBJECT (MemDlg, hbox40, "hbox40");
-  GLADE_HOOKUP_OBJECT (MemDlg, vbox62, "vbox62");
-  GLADE_HOOKUP_OBJECT (MemDlg, hbox42, "hbox42");
-  GLADE_HOOKUP_OBJECT (MemDlg, label99, "label99");
-  GLADE_HOOKUP_OBJECT (MemDlg, label100, "label100");
   GLADE_HOOKUP_OBJECT (MemDlg, hbox41, "hbox41");
+  GLADE_HOOKUP_OBJECT (MemDlg, vbox64, "vbox64");
+  GLADE_HOOKUP_OBJECT (MemDlg, vbox70, "vbox70");
+  GLADE_HOOKUP_OBJECT (MemDlg, hbox46, "hbox46");
+  GLADE_HOOKUP_OBJECT (MemDlg, check_enable_mcd1, "check_enable_mcd1");
+  GLADE_HOOKUP_OBJECT (MemDlg, check_enable_mcd2, "check_enable_mcd2");
+  GLADE_HOOKUP_OBJECT (MemDlg, vbox65, "vbox65");
+  GLADE_HOOKUP_OBJECT (MemDlg, vbox66, "vbox66");
+  GLADE_HOOKUP_OBJECT (MemDlg, hbox44, "hbox44");
+  GLADE_HOOKUP_OBJECT (MemDlg, label106, "label106");
+  GLADE_HOOKUP_OBJECT (MemDlg, label107, "label107");
+  GLADE_HOOKUP_OBJECT (MemDlg, hbox45, "hbox45");
   GLADE_HOOKUP_OBJECT (MemDlg, memcard1combo, "memcard1combo");
   GLADE_HOOKUP_OBJECT (MemDlg, memcard2combo, "memcard2combo");
+  GLADE_HOOKUP_OBJECT (MemDlg, frame38, "frame38");
+  GLADE_HOOKUP_OBJECT (MemDlg, alignment33, "alignment33");
+  GLADE_HOOKUP_OBJECT (MemDlg, vbox63, "vbox63");
+  GLADE_HOOKUP_OBJECT (MemDlg, check_eject_mcds, "check_eject_mcds");
+  GLADE_HOOKUP_OBJECT (MemDlg, label103, "label103");
+  GLADE_HOOKUP_OBJECT (MemDlg, label102, "label102");
   GLADE_HOOKUP_OBJECT_NO_REF (MemDlg, dialog_action_area7, "dialog_action_area7");
   GLADE_HOOKUP_OBJECT (MemDlg, memcardcancelbutton, "memcardcancelbutton");
   GLADE_HOOKUP_OBJECT (MemDlg, okbutton1, "okbutton1");

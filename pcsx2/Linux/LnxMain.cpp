@@ -81,8 +81,11 @@ int main(int argc, char *argv[])
 		memset(&Config, 0, sizeof(Config));
 		strcpy(Config.BiosDir,    DEFAULT_BIOS_DIR "/");
 		strcpy(Config.PluginsDir, DEFAULT_PLUGINS_DIR "/");
-		strcpy(Config.Mcd1, MEMCARDS_DIR "/" DEFAULT_MEMCARD1);
-		strcpy(Config.Mcd2, MEMCARDS_DIR "/" DEFAULT_MEMCARD2);
+		strcpy(Config.Mcd[0].Filename, MEMCARDS_DIR "/" DEFAULT_MEMCARD1);
+		strcpy(Config.Mcd[1].Filename, MEMCARDS_DIR "/" DEFAULT_MEMCARD2);
+		Config.Mcd[0].Enabled = 1;
+		Config.Mcd[1].Enabled = 1;
+		Config.McdEnableEject = 1;
 		Config.Patch = 0;
 		Config.PsxOut = 1;
 		Config.Options = PCSX2_EEREC | PCSX2_VU0REC | PCSX2_VU1REC | PCSX2_FRAMELIMIT_LIMIT;

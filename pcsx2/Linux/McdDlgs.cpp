@@ -24,12 +24,18 @@ void OnConf_Memcards(GtkMenuItem *menuitem, gpointer user_data)
 	DIR *dir;
 	struct dirent *entry;     
 	struct stat statinfo;
-	GtkWidget *memcombo1, *memcombo2;
-	int i = 0;
+	GtkWidget *memcombo[2];
+	int i = 0, j = 0;
+	bool active[2] ={false, false};
 
 	MemDlg = create_MemDlg();
-	memcombo1 = lookup_widget(MemDlg, "memcard1combo");
-	memcombo2 = lookup_widget(MemDlg, "memcard2combo");
+	
+	memcombo[0] = lookup_widget(MemDlg, "memcard1combo");
+	memcombo[1] = lookup_widget(MemDlg, "memcard2combo");
+	
+	set_checked(MemDlg, "check_enable_mcd1", Config.Mcd[0].Enabled);
+	set_checked(MemDlg, "check_enable_mcd2", Config.Mcd[1].Enabled);
+	set_checked(MemDlg, "check_eject_mcds", Config.McdEnableEject);
 	
 	getcwd(file, ARRAYSIZE(file)); /* store current dir */
 	sprintf( card, "%s/%s", file, MEMCARDS_DIR );
@@ -50,18 +56,21 @@ void OnConf_Memcards(GtkMenuItem *menuitem, gpointer user_data)
 			char path[g_MaxPath];
 			
 			sprintf( path, "%s/%s", MEMCARDS_DIR, entry->d_name);
-			gtk_combo_box_append_text(GTK_COMBO_BOX(memcombo1), entry->d_name);
-			gtk_combo_box_append_text(GTK_COMBO_BOX(memcombo2), entry->d_name);
 			
-			if (strcmp(Config.Mcd1, path) == 0) 
-				gtk_combo_box_set_active(GTK_COMBO_BOX(memcombo1), i);
-			if (strcmp(Config.Mcd2, path) == 0) 
-				gtk_combo_box_set_active(GTK_COMBO_BOX(memcombo2), i);
-			
+			for (j = 0; j < 2; j++)
+			{
+				gtk_combo_box_append_text(GTK_COMBO_BOX(memcombo[j]), entry->d_name);
+				
+				if (strcmp(Config.Mcd[j].Filename, path) == 0) 
+				{
+					gtk_combo_box_set_active(GTK_COMBO_BOX(memcombo[j]), i);
+					active[j] = true;
+				}
+			}
 			i++;
 		}
 	}
-
+	
 	closedir(dir);
 
 	chdir(file);
@@ -74,11 +83,15 @@ void OnConf_Memcards(GtkMenuItem *menuitem, gpointer user_data)
 void OnMemcards_Ok(GtkButton *button, gpointer user_data)
 {
 	
-	strcpy(Config.Mcd1, MEMCARDS_DIR "/");
-	strcpy(Config.Mcd2, MEMCARDS_DIR "/");
+	strcpy(Config.Mcd[0].Filename, MEMCARDS_DIR "/");
+	strcpy(Config.Mcd[1].Filename, MEMCARDS_DIR "/");
 	
-	strcat(Config.Mcd1, gtk_combo_box_get_active_text(GTK_COMBO_BOX(lookup_widget(MemDlg, "memcard1combo"))));
-	strcat(Config.Mcd2, gtk_combo_box_get_active_text(GTK_COMBO_BOX(lookup_widget(MemDlg, "memcard2combo"))));
+	strcat(Config.Mcd[0].Filename, gtk_combo_box_get_active_text(GTK_COMBO_BOX(lookup_widget(MemDlg, "memcard1combo"))));
+	strcat(Config.Mcd[1].Filename, gtk_combo_box_get_active_text(GTK_COMBO_BOX(lookup_widget(MemDlg, "memcard2combo"))));
+	
+	Config.Mcd[0].Enabled = is_checked(MemDlg, "check_enable_mcd1");
+	Config.Mcd[1].Enabled = is_checked(MemDlg, "check_enable_mcd2");
+	Config.McdEnableEject = is_checked(MemDlg, "check_eject_mcds");
 	
 	SaveConfig();
 	
