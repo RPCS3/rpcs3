@@ -27,8 +27,12 @@ void s2r_writedma4(u32 ticks,u16*data,u32 len);
 void s2r_writedma7(u32 ticks,u16*data,u32 len);
 void s2r_close();
 
+#ifdef _MSC_VER
 // s2r playing
 void CALLBACK s2r_replay(HWND hwnd, HINSTANCE hinst, LPSTR filename, int nCmdShow);
+#else
+#define s2r_replay 0&&
+#endif
 
 extern bool replay_mode;
 

@@ -19,7 +19,7 @@
 #include <stdexcept>
 #include <new>
 
-#include "spu2.h"
+#include "Spu2.h"
 
 #include "SoundTouch/WavFile.h"
 

@@ -19,7 +19,7 @@
  * 
  */
 
-#include "SPU2.h"
+#include "Spu2.h"
 
 namespace Savestate {
 

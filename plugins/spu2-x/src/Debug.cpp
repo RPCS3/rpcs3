@@ -16,7 +16,7 @@
 //Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 
-#include "spu2.h"
+#include "Spu2.h"
 
 int crazy_debug=0;
 
@@ -94,6 +94,7 @@ void V_VolumeLR::DebugDump( FILE* dump, const char* title )
 
 void DoFullDump()
 {
+#ifdef _MSC_VER
 #ifdef SPU2_LOG
 	FILE *dump;
 	u8 c=0, v=0;
@@ -257,5 +258,6 @@ void DoFullDump()
 		}
 		fclose(dump);
 	}
+#endif
 #endif
 }

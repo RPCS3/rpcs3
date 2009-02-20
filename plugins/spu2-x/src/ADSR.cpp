@@ -19,7 +19,7 @@
 * 
 */
 
-#include "spu2.h"
+#include "Spu2.h"
 
 static const s32 ADSR_MAX_VOL = 0x7fffffff;
 

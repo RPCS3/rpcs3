@@ -19,7 +19,7 @@
 * 
 */
 
-#include "spu2.h"
+#include "Spu2.h"
 
 void __fastcall ReadInput( uint core, StereoOut32& PData ) 
 {

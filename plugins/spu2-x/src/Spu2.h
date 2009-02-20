@@ -25,6 +25,14 @@
 #include "BaseTypes.h"
 #include "PS2Edefs.h"
 
+#ifdef __LINUX__
+#include <stdio.h>
+#include <string.h>
+
+//Until I get around to putting in Linux svn code, this is an unknown svn version.
+#define SVN_REV_UNKNOWN
+#endif
+
 namespace VersionInfo
 {
 	static const u8 PluginApi = PS2E_SPU2_VERSION;
@@ -32,8 +40,11 @@ namespace VersionInfo
 	static const u8 Revision = 0;	// increase that with each version
 }
 
-
-#define EXPORT_C_(type) extern "C" __declspec(dllexport) type __stdcall
+#ifdef _MSC_VER
+#define EXPORT_C_(type) extern "C" __declspec(dllexport) type CALLBACK
+#else
+#define EXPORT_C_(type) extern "C" type
+#endif
 
 // We have our own versions that have the DLLExport attribute configured:
 
@@ -76,17 +87,17 @@ EXPORT_C_(s32)  SPU2test();
 //#define EFFECTS_DUMP
 
 //Plugin parts
-#include "config.h"
+#include "Config.h"
 #include "defs.h"
 #include "regs.h"
-#include "dma.h"
-#include "sndout.h"
+#include "Dma.h"
+#include "SndOut.h"
 
-#include "spu2replay.h"
+#include "Spu2replay.h"
 
 #define SPU2_LOG
 
-#include "debug.h"
+#include "Debug.h"
 
 //--------------------------------------------------------------------------------------
 // Helper macros

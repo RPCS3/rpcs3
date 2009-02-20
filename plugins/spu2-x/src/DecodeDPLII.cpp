@@ -19,7 +19,7 @@
  * 
  */
 
-#include "spu2.h"
+#include "Spu2.h"
 #include "DPLII.h"
 #include <string.h>
 

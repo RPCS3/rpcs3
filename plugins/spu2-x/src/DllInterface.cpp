@@ -19,11 +19,16 @@
  * 
  */
 
-#include "spu2.h"
-#include "regtable.h"
-#include "dialogs.h"
+#include "Spu2.h"
+#include "RegTable.h"
+#include "Dialogs.h"
 
+#ifdef _MSC_VER
 #include "svnrev.h"
+#else
+#include <stdio.h>
+#include <string.h>
+#endif
 
 // [Air]: Adding the spu2init boolean wasn't necessary except to help me in
 //   debugging the spu2 suspend/resume behavior (when user hits escape).
@@ -36,12 +41,14 @@ static u32  pClocks=0;
 // Pcsx2 expects ASNI, not unicode, so this MUST always be char...
 static char libraryName[256];
 
+#ifdef _MSC_VER
 BOOL WINAPI DllMain(HINSTANCE hinstDLL,DWORD dwReason,LPVOID lpvReserved)
 {
 	if( dwReason == DLL_PROCESS_ATTACH )
 		hInstance = hinstDLL;
 	return TRUE;
 }
+#endif
 
 static void InitLibraryName()
 {
@@ -137,7 +144,11 @@ EXPORT_C_(s32) SPU2init()
 #ifdef SPU2_LOG
 	if(AccessLog()) 
 	{
+#ifdef _MSC_VER
 		spu2Log = _wfopen( AccessLogFileName, _T("w") );
+#else
+		spu2Log = fopen((char*)AccessLogFileName, "w");
+#endif
 		setvbuf(spu2Log, NULL,  _IONBF, 0);
 		FileLog("SPU2init\n");
 	}

@@ -427,5 +427,17 @@ extern s16 InputPos;
 // SPU Mixing Cycles ("Ticks mixed" counter)
 extern u32 Cycles;
 
+#ifdef __LINUX__
+
+#include <sys/types.h>
+#include <sys/timeb.h>
+
+static __forceinline u32 timeGetTime()
+{
+	struct timeb t;
+	ftime(&t);
+	return (u32)(t.time*1000+t.millitm);
+}
+#endif
 
 #endif // DEFS_H_INCLUDED //

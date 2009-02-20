@@ -19,54 +19,60 @@
  * 
  */
 
-#include "Lowpass.h"
-#include <math.h>
-#include <float.h>
+#include "Spu2.h"
+#include "Dialogs.h"
 
-LPF_data::LPF_data( double freq, double srate )
+#ifdef SPU2X_DEVBUILD
+static const int LATENCY_MAX = 3000;
+#else
+static const int LATENCY_MAX = 750;
+#endif
+
+static const int LATENCY_MIN = 40;
+
+int AutoDMAPlayRate[2] = {0,0};
+
+// MIXING
+int Interpolation = 1;
+/* values:
+		0: no interpolation (use nearest)
+		1. linear interpolation
+		2. cubic interpolation
+*/
+
+bool EffectsDisabled = false;
+
+// OUTPUT
+int SndOutLatencyMS = 160;
+bool timeStretchDisabled = false;
+
+u32 OutputModule = 0;
+
+CONFIG_DSOUNDOUT Config_DSoundOut;
+CONFIG_WAVEOUT Config_WaveOut;
+CONFIG_XAUDIO2 Config_XAudio2;
+
+// DSP
+bool dspPluginEnabled = false;
+int  dspPluginModule = 0;
+wchar_t dspPlugin[256];
+
+bool StereoExpansionDisabled = true;
+
+/*****************************************************************************/
+
+void ReadSettings()
 {
-	double omega = 2.0 * freq / srate;
-	static const double g = 1.0; 
-
-	// calculating coefficients:
-
-	double k,p,q,a;
-	double a0,a1,a2,a3,a4;
-
-	k=(4.0*g-3.0)/(g+1.0);
-	p=1.0-0.25*k;p*=p;
-
-	// LP:
-	a=1.0/(tan(0.5*omega)*(1.0+p));
-	p=1.0+a;
-	q=1.0-a;
-	        
-	a0=1.0/(k+p*p*p*p);
-	a1=4.0*(k+p*p*p*q);
-	a2=6.0*(k+p*p*q*q);
-	a3=4.0*(k+p*q*q*q);
-	a4=    (k+q*q*q*q);
-	p=a0*(k+1.0);
-	        
-	coef[0] = p;
-	coef[1] = 4.0*p;
-	coef[2] = 6.0*p;
-	coef[3] = 4.0*p;
-	coef[4] = p;
-	coef[5] = -a1*a0;
-	coef[6] = -a2*a0;
-	coef[7] = -a3*a0;
-	coef[8] = -a4*a0;
 }
 
-// Processes a single sample into the LPF.
-double LPF_data::sample( double inval )
-{
-	const double out = (coef[0]*inval) + d[0];
-	d[0] = (coef[1]*inval) + (coef[5]*out) + d[1];
-	d[1] = (coef[2]*inval) + (coef[6]*out) + d[2];
-	d[2] = (coef[3]*inval) + (coef[7]*out) + d[3];
-	d[3] = (coef[4]*inval) + (coef[8]*out);	
+/*****************************************************************************/
 
-	return out;
+void WriteSettings()
+{
+}
+
+ 
+void configure()
+{
+	ReadSettings();
 }

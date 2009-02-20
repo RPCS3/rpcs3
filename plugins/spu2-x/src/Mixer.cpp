@@ -19,7 +19,7 @@
  * 
  */
 
-#include "spu2.h"
+#include "Spu2.h"
 #include <float.h>
 
 extern void	spdif_update();
@@ -274,10 +274,13 @@ static s32 __forceinline GetNoiseValues()
 {
 	static s32 Seed = 0x41595321;
 	s32 retval = 0x8000;
+	
+	if( Seed&0x100 ) 
+		retval = (Seed&0xff) << 8;
+	else if( Seed&0xffff ) 
+		retval = 0x7fff;
 
-	if( Seed&0x100 ) retval = (Seed&0xff) << 8;
-	else if( Seed&0xffff ) retval = 0x7fff;
-
+#ifdef _WIN32
 	__asm {
 		MOV eax,Seed
 		ROR eax,5
@@ -289,6 +292,20 @@ static s32 __forceinline GetNoiseValues()
 		ROR eax,3
 		MOV Seed,eax
 	}
+#else
+	__asm__ (
+		".intel_syntax\n"
+		"MOV %%eax,%0\n"
+		"ROR %%eax,5\n"
+		"XOR %%eax,0x9a\n"
+		"MOV %%ebx,%%eax\n"
+		"ROL %%eax,2\n"
+		"ADD %%eax,%%ebx\n"
+		"XOR %%eax,%%ebx\n"
+		"ROR %%eax,3\n"
+		"MOV %0,%%eax\n"
+		".att_syntax\n" : :"r"(Seed));
+#endif
 	return retval;
 }
 

@@ -19,7 +19,7 @@
  * 
  */
 
-#include "spu2.h"
+#include "Spu2.h"
 
 static LPF_data lowpass_left( 11000, SampleRate );
 static LPF_data lowpass_right( 11000, SampleRate );

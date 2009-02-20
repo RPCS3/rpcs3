@@ -21,15 +21,20 @@
 
 
 #include "Spu2.h"
-#include "regtable.h"
+#include "RegTable.h"
+
+#ifdef __LINUX__
+#include "Linux.h"
+#endif
 
 void StartVoices(int core, u32 value);
 void StopVoices(int core, u32 value);
 
 void InitADSR();
 
+#ifdef _MSC_VER
 DWORD CALLBACK TimeThread(PVOID /* unused param */);
-
+#endif
 
 // [Air]: fixed the hacky part of UpdateTimer with this:
 bool resetClock = true;
@@ -48,9 +53,6 @@ s32 uTicks;
 
 u8 callirq;
 
-HANDLE hThreadFunc;
-u32	ThreadFuncID;
-
 V_CoreDebug DebugCores[2];
 V_Core Cores[2];
 V_SPDIF Spdif;
@@ -68,9 +70,12 @@ int PlayMode;
 
 s16 attrhack[2]={0,0};
 
+#ifdef _MSC_VER
 HINSTANCE hInstance;
-
 CRITICAL_SECTION threadSync;
+HANDLE hThreadFunc;
+u32	ThreadFuncID;
+#endif
 
 bool has_to_call_irq=false;
 
@@ -79,6 +84,7 @@ void SetIrqCall()
 	has_to_call_irq=true;
 }
 
+#ifdef _MSC_VER
 void SysMessage(const char *fmt, ...) 
 {
 	va_list list;
@@ -91,6 +97,9 @@ void SysMessage(const char *fmt, ...)
 	swprintf_s(wtmp, _T("%S"), tmp);
 	MessageBox(0, wtmp, _T("SPU2-X System Message"), 0);
 }
+#else
+extern void SysMessage(const char *fmt, ...);
+#endif
 
 __forceinline s16 * __fastcall GetMemPtr(u32 addr)
 {

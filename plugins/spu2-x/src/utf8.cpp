@@ -280,7 +280,7 @@ static int convert_string(const char *fromcode, const char *tocode,
   if (ret != -1)
     return ret;
 
-  s = malloc(fromlen + 1);
+  s = (char*)malloc(fromlen + 1);
   if (!s)
     return -1;
   strcpy(s, from);
@@ -297,7 +297,7 @@ int utf8_encode(const char *from, char **to)
 
   if (!current_charset)
     convert_set_charset(0);
-  charset = current_charset ? current_charset : "US-ASCII";
+  charset = current_charset ? current_charset : (char *)"US-ASCII";
   return convert_string(charset, "UTF-8", from, to, '#');
 }
 
@@ -306,14 +306,14 @@ int utf8_decode(const char *from, char **to)
   char *charset;
 
   if(*from == 0) {
-      *to = malloc(1);
+      *to = (char*)malloc(1);
       **to = 0;
       return 1;
   }
 
   if (!current_charset)
     convert_set_charset(0);
-  charset = current_charset ? current_charset : "US-ASCII";
+  charset = current_charset ? current_charset : (char*)"US-ASCII";
   return convert_string("UTF-8", charset, from, to, '?');
 }
 

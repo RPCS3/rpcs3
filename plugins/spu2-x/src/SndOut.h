@@ -19,7 +19,7 @@
 #define SNDOUT_H_INCLUDE
 
 #include "BaseTypes.h"
-#include "lowpass.h"
+#include "Lowpass.h"
 
 // Number of stereo samples per SndOut block.
 // All drivers must work in units of this size when communicating with
@@ -272,7 +272,12 @@ public:
 	static void Cleanup();
 	static void Write( const StereoOut32& Sample );
 	static s32 Test();
+
+#ifdef _MSC_VER
 	static void Configure(HWND parent, u32 module );
+#else
+	static void Configure(uptr parent, u32 module );
+#endif
 	
 	// Note: When using with 32 bit output buffers, the user of this function is responsible
 	// for shifting the values to where they need to be manually.  The fixed point depth of
@@ -347,7 +352,11 @@ public:
 	virtual s32  Init()=0;
 	virtual void Close()=0;
 	virtual s32  Test() const=0;
+#ifdef _MSC_VER
 	virtual void Configure(HWND parent)=0;
+#else
+	virtual void Configure(uptr parent)=0;
+#endif
 	virtual bool Is51Out() const=0;
 
 	// Returns the number of empty samples in the output buffer.
