@@ -164,8 +164,7 @@ extern u32* cPtr;
 extern bool hasPtr;
 extern bool resetClock;
 
-extern void RegLog(int level, char *RName,u32 mem,u32 core,u16 value);
-extern void SPU2writeLog(u32 rmem, u16 value);
+extern void SPU2writeLog( const char* action, u32 rmem, u16 value );
 
 extern void __fastcall TimeUpdate(u32 cClocks);
 extern u16 SPU_ps1_read(u32 mem);
@@ -189,7 +188,7 @@ extern void LowPassFilterInit();
 extern void InitADSR();
 extern void CalculateADSR( V_Voice& vc );
 
-extern void __fastcall ReadInput( V_Core& thiscore, StereoOut32& PData );
+extern void __fastcall ReadInput( uint core, StereoOut32& PData );
 
 
 //////////////////////////////

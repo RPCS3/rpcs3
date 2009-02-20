@@ -27,33 +27,8 @@ static const int InvExpOffsets[] = { 0,4,6,8,9,10,11,12 };
 static u32 PsxRates[160];
 
 
-extern u32 core, voice;
-
 void InitADSR()                                    // INIT ADSR
 {
-
-	/*u64 r=3;
-	u64 rs=1;
-	u64 rd=0;
-
-	memset( PsxRates, 0, sizeof( PsxRates ) );
-
-	for( uint i=32; i<160; ++i )
-	{
-		if( r < 0x3FFFFFFF )
-		{
-			r += rs;
-			rd++;
-			if( rd == 5 )
-			{
-				rd = 1;
-				rs <<= 1;
-			}
-		}
-
-		PsxRates[i] = (u32)min( r, 0x3FFFFFFFULL );
-	}*/
-
 	for (int i=0; i<(32+128); i++)
 	{
 		int shift=(i-32)>>2;

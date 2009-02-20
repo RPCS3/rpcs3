@@ -124,6 +124,7 @@ void UpdateDebugDialog()
 				{
 					SetDCBrushColor(hdc,RGB(  0,  0,128));
 				}
+				/*
 				else
 				{
 					if(vcd.lastStopReason==1)
@@ -134,7 +135,7 @@ void UpdateDebugDialog()
 					{
 						SetDCBrushColor(hdc,RGB(  0,128,  0));
 					}
-				}
+				}*/
 
 				FillRectangle(hdc,IX,IY,252,30);
 

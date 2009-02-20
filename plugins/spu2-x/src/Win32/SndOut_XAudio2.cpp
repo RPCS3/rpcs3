@@ -58,14 +58,6 @@ private:
 
 		virtual ~BaseStreamingVoice()
 		{
-			IXAudio2SourceVoice* killMe = pSourceVoice;
-			pSourceVoice = NULL;
-			killMe->FlushSourceBuffers();
-			EnterCriticalSection( &cs );
-			killMe->DestroyVoice();
-			SAFE_DELETE_ARRAY( qbuffer );
-			LeaveCriticalSection( &cs );
-			DeleteCriticalSection( &cs );
 		}
 
 		BaseStreamingVoice( uint numChannels ) :
@@ -149,7 +141,17 @@ private:
 		{
 		}
 		
-		virtual ~StreamingVoice() {}
+		virtual ~StreamingVoice()
+		{
+			IXAudio2SourceVoice* killMe = pSourceVoice;
+			pSourceVoice = NULL;
+			killMe->FlushSourceBuffers();
+			EnterCriticalSection( &cs );
+			killMe->DestroyVoice();
+			SAFE_DELETE_ARRAY( qbuffer );
+			LeaveCriticalSection( &cs );
+			DeleteCriticalSection( &cs );
+		}
 
 		void Init( IXAudio2* pXAudio2 )
 		{

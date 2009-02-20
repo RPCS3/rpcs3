@@ -57,8 +57,6 @@ int state=0;
 
 FILE *fSpdifDump;
 
-extern u32 core;
-
 union spdif_frame { // total size: 32bits
 	struct {
 		u32 preamble:4;		//4
@@ -133,12 +131,10 @@ void spdif_update()
 {
 	StereoOut32 Data;
 
-	core=0;
-	V_Core& thiscore( Cores[core] );
 	for(int i=0;i<data_rate;i++)
 	{
 		// Right side data should be zero / ignored
-		ReadInput( thiscore, Data );
+		ReadInput( 0, Data );	// read from core 0
 		
 		if(fSpdifDump)
 		{

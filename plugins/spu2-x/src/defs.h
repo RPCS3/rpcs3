@@ -195,7 +195,6 @@ struct V_VoiceDebug
 	s32 PeakX;
 	s32 displayPeak;
 	s32 lastSetStartA;
-	s32 lastStopReason;
 };
 
 struct V_CoreDebug

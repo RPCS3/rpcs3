@@ -496,6 +496,10 @@
 					>
 				</File>
 				<File
+					RelativePath="..\RegLog.cpp"
+					>
+				</File>
+				<File
 					RelativePath="..\spu2replay.cpp"
 					>
 					<FileConfiguration
@@ -679,8 +683,12 @@
 				</Filter>
 			</Filter>
 			<Filter
-				Name="dma"
+				Name="SPU2"
 				>
+				<File
+					RelativePath="..\defs.h"
+					>
+				</File>
 				<File
 					RelativePath="..\dma.cpp"
 					>
@@ -728,65 +736,6 @@
 					RelativePath="dma.h"
 					>
 				</File>
-			</Filter>
-			<Filter
-				Name="SPU2"
-				>
-				<File
-					RelativePath="..\ADSR.cpp"
-					>
-				</File>
-				<File
-					RelativePath="..\defs.h"
-					>
-				</File>
-				<File
-					RelativePath="..\Mixer.cpp"
-					>
-					<FileConfiguration
-						Name="Devel|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							UsePrecompiledHeader="0"
-							BrowseInformation="1"
-							CompileAs="0"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="DebugStrict|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							UsePrecompiledHeader="0"
-							AssemblerOutput="4"
-							BrowseInformation="1"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							UsePrecompiledHeader="0"
-							BrowseInformation="1"
-							CompileAs="0"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							UsePrecompiledHeader="0"
-							BrowseInformation="1"
-						/>
-					</FileConfiguration>
-				</File>
-				<File
-					RelativePath="..\RegLog.cpp"
-					>
-				</File>
 				<File
 					RelativePath="..\regs.h"
 					>
@@ -797,10 +746,6 @@
 				</File>
 				<File
 					RelativePath="..\RegTable.h"
-					>
-				</File>
-				<File
-					RelativePath="..\Reverb.cpp"
 					>
 				</File>
 				<File
@@ -849,6 +794,65 @@
 					RelativePath="..\Spu2.h"
 					>
 				</File>
+				<Filter
+					Name="Mixer"
+					>
+					<File
+						RelativePath="..\ADSR.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\Mixer.cpp"
+						>
+						<FileConfiguration
+							Name="Devel|Win32"
+							>
+							<Tool
+								Name="VCCLCompilerTool"
+								UsePrecompiledHeader="0"
+								BrowseInformation="1"
+								CompileAs="0"
+							/>
+						</FileConfiguration>
+						<FileConfiguration
+							Name="DebugStrict|Win32"
+							>
+							<Tool
+								Name="VCCLCompilerTool"
+								UsePrecompiledHeader="0"
+								AssemblerOutput="4"
+								BrowseInformation="1"
+							/>
+						</FileConfiguration>
+						<FileConfiguration
+							Name="Release|Win32"
+							>
+							<Tool
+								Name="VCCLCompilerTool"
+								UsePrecompiledHeader="0"
+								BrowseInformation="1"
+								CompileAs="0"
+							/>
+						</FileConfiguration>
+						<FileConfiguration
+							Name="Debug|Win32"
+							>
+							<Tool
+								Name="VCCLCompilerTool"
+								UsePrecompiledHeader="0"
+								BrowseInformation="1"
+							/>
+						</FileConfiguration>
+					</File>
+					<File
+						RelativePath="..\ReadInput.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\Reverb.cpp"
+						>
+					</File>
+				</Filter>
 			</Filter>
 			<Filter
 				Name="Winamp DSP"

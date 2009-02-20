@@ -26,8 +26,6 @@ extern void	spdif_update();
 
 void ADMAOutLogWrite(void *lpData, u32 ulSize);
 
-u32 core, voice;
-
 static const s32 tbl_XA_Factor[5][2] =
 {
 	{    0,   0 },
@@ -75,9 +73,9 @@ __forceinline void clamp_mix( StereoOut32& sample, u8 bitshift )
 static void __forceinline XA_decode_block(s16* buffer, const s16* block, s32& prev1, s32& prev2)
 {
 	const s32 header = *block;
-	s32 shift =  ((header>> 0)&0xF)+16;
-	s32 pred1 = tbl_XA_Factor[(header>> 4)&0xF][0];
-	s32 pred2 = tbl_XA_Factor[(header>> 4)&0xF][1];
+	const s32 shift =  ((header>> 0)&0xF)+16;
+	const s32 pred1 = tbl_XA_Factor[(header>> 4)&0xF][0];
+	const s32 pred2 = tbl_XA_Factor[(header>> 4)&0xF][1];
 
 	const s8* blockbytes = (s8*)&block[1];
 
@@ -112,10 +110,10 @@ static void __forceinline XA_decode_block(s16* buffer, const s16* block, s32& pr
 
 static void __forceinline XA_decode_block_unsaturated(s16* buffer, const s16* block, s32& prev1, s32& prev2)
 {
-	const s32 header = *block;
-	s32 shift =  ((header>> 0)&0xF)+16;
-	s32 pred1 = tbl_XA_Factor[(header>> 4)&0xF][0];
-	s32 pred2 = tbl_XA_Factor[(header>> 4)&0xF][1];
+	const u8 header = *(u8*)block;
+	s32 shift =  (header&0xF) + 16;
+	s32 pred1 = tbl_XA_Factor[header>>4][0];
+	s32 pred2 = tbl_XA_Factor[header>>4][1];
 
 	const s8* blockbytes = (s8*)&block[1];
 
@@ -126,7 +124,6 @@ static void __forceinline XA_decode_block_unsaturated(s16* buffer, const s16* bl
 			s32 data = ((*blockbytes)<<28) & 0xF0000000;
 			pcm = data>>shift;
 			pcm+=((pred1*prev1)+(pred2*prev2))>>6;
-			// [Air] : Fast method, no saturation is performed.
 			*(buffer++) = pcm;
 		}
 
@@ -134,7 +131,6 @@ static void __forceinline XA_decode_block_unsaturated(s16* buffer, const s16* bl
 			s32 data = ((*blockbytes)<<24) & 0xF0000000;
 			pcm2 = data>>shift;
 			pcm2+=((pred1*pcm)+(pred2*prev1))>>6;
-			// [Air] : Fast method, no saturation is performed.
 			*(buffer++) = pcm2;
 		}
 
@@ -177,31 +173,26 @@ int g_counter_cache_ignores = 0;
 #define XAFLAG_LOOP			(1ul<<1)
 #define XAFLAG_LOOP_START	(1ul<<2)
 
-static s32 __forceinline __fastcall GetNextDataBuffered( V_Core& thiscore, V_Voice& vc ) 
+static __forceinline s32 __fastcall GetNextDataBuffered( V_Core& thiscore, uint voiceidx ) 
 {
-	if (vc.SCurrent<28)
-	{
-		// [Air] : skip the increment?
-		//    (witness one of the rare ideal uses of a goto statement!)
-		if( (vc.SCurrent&3) != 3 ) goto _skipIncrement;
-	}
-	else
+	V_Voice& vc( thiscore.Voices[voiceidx] );
+
+	if( vc.SCurrent == 28 )
 	{
 		if(vc.LoopFlags & XAFLAG_LOOP_END)
 		{
-			thiscore.Regs.ENDX |= (1 << voice);
+			thiscore.Regs.ENDX |= (1 << voiceidx);
 
 			if( vc.LoopFlags & XAFLAG_LOOP )
 			{
-				vc.NextA=vc.LoopStartA;
+				vc.NextA = vc.LoopStartA;
 			}
 			else
 			{
 				vc.Stop();
 				if( IsDevBuild )
 				{
-					if(MsgVoiceOff()) ConLog(" * SPU2: Voice Off by EndPoint: %d \n", voice);
-					DebugCores[core].Voices[voice].lastStopReason = 1;
+					if(MsgVoiceOff()) ConLog(" * SPU2: Voice Off by EndPoint: %d \n", voiceidx);
 				}
 			}
 		}
@@ -245,6 +236,9 @@ static s32 __forceinline __fastcall GetNextDataBuffered( V_Core& thiscore, V_Voi
 
 			s16* sbuffer = cacheLine.Sampledata;
 
+			//if( vc.LoopFlags & XAFLAG_LOOP )
+			//	vc.Prev1 = vc.Prev2 = 0;
+
 			// saturated decoder
 			//XA_decode_block( sbuffer, memptr, vc.Prev1, vc.Prev2 );
 
@@ -260,11 +254,16 @@ static s32 __forceinline __fastcall GetNextDataBuffered( V_Core& thiscore, V_Voi
 		vc.SCurrent = 0;
 		if( (vc.LoopFlags & XAFLAG_LOOP_START) && !vc.LoopMode )
 			vc.LoopStartA = vc.NextA;
+			
+		goto _Increment;
 	}
 
-	IncrementNextA( thiscore, vc );
+	if( (vc.SCurrent&3) == 3 )
+	{
+_Increment:
+		IncrementNextA( thiscore, vc );
+	}
 
-_skipIncrement:
 	return vc.SBuffer[vc.SCurrent++];
 }
 
@@ -322,25 +321,28 @@ static __forceinline StereoOut32 ApplyVolume( const StereoOut32& data, const V_V
 	);
 }
 
-static void __forceinline UpdatePitch( V_Voice& vc )
+static void __forceinline UpdatePitch( uint coreidx, uint voiceidx )
 {
+	V_Voice& vc( Cores[coreidx].Voices[voiceidx] );
 	s32 pitch;
 
 	// [Air] : re-ordered comparisons: Modulated is much more likely to be zero than voice,
 	//   and so the way it was before it's have to check both voice and modulated values
 	//   most of the time.  Now it'll just check Modulated and short-circuit past the voice
 	//   check (not that it amounts to much, but eh every little bit helps).
-	if( (vc.Modulated==0) || (voice==0) )
+	if( (vc.Modulated==0) || (voiceidx==0) )
 		pitch = vc.Pitch;
 	else
-		pitch = (vc.Pitch*(32768 + abs(Cores[core].Voices[voice-1].OutX)))>>15;
+		pitch = (vc.Pitch*(32768 + abs(Cores[coreidx].Voices[voiceidx-1].OutX)))>>15;
 	
 	vc.SP+=pitch;
 }
 
 
-static __forceinline void CalculateADSR( V_Core& thiscore, V_Voice& vc )
+static __forceinline void CalculateADSR( V_Core& thiscore, uint voiceidx )
 {
+	V_Voice& vc( thiscore.Voices[voiceidx] );
+
 	if( vc.ADSR.Phase==0 )
 	{
 		vc.ADSR.Value = 0;
@@ -351,27 +353,28 @@ static __forceinline void CalculateADSR( V_Core& thiscore, V_Voice& vc )
 	{
 		if( IsDevBuild )
 		{
-			if(MsgVoiceOff()) ConLog(" * SPU2: Voice Off by ADSR: %d \n", voice);
-			DebugCores[core].Voices[voice].lastStopReason = 2;
+			if(MsgVoiceOff()) ConLog(" * SPU2: Voice Off by ADSR: %d \n", voiceidx);
 		}
 		vc.Stop();
-		thiscore.Regs.ENDX |= (1 << voice);
+		thiscore.Regs.ENDX |= (1 << voiceidx);
 	}
 
 	jASSUME( vc.ADSR.Value >= 0 );	// ADSR should never be negative...
 }
 
 // Returns a 16 bit result in Value.
-static s32 __forceinline GetVoiceValues_Linear( V_Core& thiscore, V_Voice& vc )
+static s32 __forceinline GetVoiceValues_Linear( V_Core& thiscore, uint voiceidx )
 {
+	V_Voice& vc( thiscore.Voices[voiceidx] );
+
 	while( vc.SP > 0 )
 	{
 		vc.PV2 = vc.PV1;
-		vc.PV1 = GetNextDataBuffered( thiscore, vc );
+		vc.PV1 = GetNextDataBuffered( thiscore, voiceidx );
 		vc.SP -= 4096;
 	}
 
-	CalculateADSR( thiscore, vc );
+	CalculateADSR( thiscore, voiceidx );
 
 	// Note!  It's very important that ADSR stay as accurate as possible.  By the way
 	// it is used, various sound effects can end prematurely if we truncate more than
@@ -389,21 +392,23 @@ static s32 __forceinline GetVoiceValues_Linear( V_Core& thiscore, V_Voice& vc )
 }
 
 // Returns a 16 bit result in Value.
-static s32 __forceinline GetVoiceValues_Cubic( V_Core& thiscore, V_Voice& vc )
+static s32 __forceinline GetVoiceValues_Cubic( V_Core& thiscore, uint voiceidx )
 {
+	V_Voice& vc( thiscore.Voices[voiceidx] );
+
 	while( vc.SP > 0 )
 	{
 		vc.PV4 = vc.PV3;
 		vc.PV3 = vc.PV2;
 		vc.PV2 = vc.PV1;
 
-		vc.PV1 = GetNextDataBuffered( thiscore, vc );
+		vc.PV1 = GetNextDataBuffered( thiscore, voiceidx );
 		vc.PV1 <<= 2;
 		vc.SPc = vc.SP&4095;	// just the fractional part, please!
 		vc.SP -= 4096;
 	}
 
-	CalculateADSR( thiscore, vc );
+	CalculateADSR( thiscore, voiceidx );
 
 	s32 z0 = vc.PV3 - vc.PV4 + vc.PV1 - vc.PV2;
 	s32 z1 = (vc.PV4 - vc.PV3 - z0);
@@ -425,8 +430,10 @@ static s32 __forceinline GetVoiceValues_Cubic( V_Core& thiscore, V_Voice& vc )
 // Noise values need to be mixed without going through interpolation, since it
 // can wreak havoc on the noise (causing muffling or popping).  Not that this noise
 // generator is accurate in its own right.. but eh, ah well :)
-static s32 __forceinline __fastcall GetNoiseValues( V_Core& thiscore, V_Voice& vc )
+static s32 __forceinline __fastcall GetNoiseValues( V_Core& thiscore, uint voiceidx )
 {
+	V_Voice& vc( thiscore.Voices[voiceidx] );
+
 	s32 retval = GetNoiseValues();
 
 	/*while(vc.SP>=4096)
@@ -439,7 +446,7 @@ static s32 __forceinline __fastcall GetNoiseValues( V_Core& thiscore, V_Voice& v
 	// like GetVoiceValues can.  Better assert just in case though..
 	jASSUME( vc.ADSR.Phase != 0 );
 
-	CalculateADSR( thiscore, vc );
+	CalculateADSR( thiscore, voiceidx );
 
 	// Yup, ADSR applies even to noise sources...
 	return ApplyVolume( retval, vc.ADSR.Value );
@@ -449,186 +456,17 @@ static s32 __forceinline __fastcall GetNoiseValues( V_Core& thiscore, V_Voice& v
 /////////////////////////////////////////////////////////////////////////////////////////
 //                                                                                     //
 
-void __fastcall ReadInput( V_Core& thiscore, StereoOut32& PData ) 
+static __forceinline StereoOut32 ReadInputPV( uint core ) 
 {
-	if((thiscore.AutoDMACtrl&(core+1))==(core+1))
-	{
-		s32 tl,tr;
-
-		if((core==1)&&((PlayMode&8)==8))
-		{
-			thiscore.InputPos&=~1;
-
-			// CDDA mode
-			// Source audio data is 32 bits.
-			// We don't yet have the capability to handle this high res input data
-			// so we just downgrade it to 16 bits for now.
-			
-#ifdef PCM24_S1_INTERLEAVE
-			*PData.Left=*(((s32*)(thiscore.ADMATempBuffer+(thiscore.InputPos<<1))));
-			*PData.Right=*(((s32*)(thiscore.ADMATempBuffer+(thiscore.InputPos<<1)+2)));
-#else
-			s32 *pl=(s32*)&(thiscore.ADMATempBuffer[thiscore.InputPos]);
-			s32 *pr=(s32*)&(thiscore.ADMATempBuffer[thiscore.InputPos+0x200]);
-			PData.Left = *pl;
-			PData.Right = *pr;
-#endif
-
-			PData.Left >>= 2; //give 30 bit data (SndOut downsamples the rest of the way)
-			PData.Right >>= 2;
-
-			thiscore.InputPos+=2;
-			if((thiscore.InputPos==0x100)||(thiscore.InputPos>=0x200)) {
-				thiscore.AdmaInProgress=0;
-				if(thiscore.InputDataLeft>=0x200)
-				{
-					u8 k=thiscore.InputDataLeft>=thiscore.InputDataProgress;
-
-#ifdef PCM24_S1_INTERLEAVE
-					AutoDMAReadBuffer(core,1);
-#else
-					AutoDMAReadBuffer(core,0);
-#endif
-					thiscore.AdmaInProgress=1;
-
-					thiscore.TSA=(core<<10)+thiscore.InputPos;
-
-					if (thiscore.InputDataLeft<0x200) 
-					{
-						FileLog("[%10d] AutoDMA%c block end.\n",Cycles, (core==0)?'4':'7');
-
-						if( IsDevBuild )
-						{
-							if(thiscore.InputDataLeft>0)
-							{
-								if(MsgAutoDMA()) ConLog("WARNING: adma buffer didn't finish with a whole block!!\n");
-							}
-						}
-						thiscore.InputDataLeft=0;
-						thiscore.DMAICounter=1;
-					}
-				}
-				thiscore.InputPos&=0x1ff;
-			}
-
-		}
-		else if((core==0)&&((PlayMode&4)==4))
-		{
-			thiscore.InputPos&=~1;
-
-			s32 *pl=(s32*)&(thiscore.ADMATempBuffer[thiscore.InputPos]);
-			s32 *pr=(s32*)&(thiscore.ADMATempBuffer[thiscore.InputPos+0x200]);
-			PData.Left  = *pl;
-			PData.Right = *pr;
-
-			thiscore.InputPos+=2;
-			if(thiscore.InputPos>=0x200) {
-				thiscore.AdmaInProgress=0;
-				if(thiscore.InputDataLeft>=0x200)
-				{
-					u8 k=thiscore.InputDataLeft>=thiscore.InputDataProgress;
-
-					AutoDMAReadBuffer(core,0);
-
-					thiscore.AdmaInProgress=1;
-
-					thiscore.TSA=(core<<10)+thiscore.InputPos;
-
-					if (thiscore.InputDataLeft<0x200) 
-					{
-						FileLog("[%10d] Spdif AutoDMA%c block end.\n",Cycles, (core==0)?'4':'7');
-
-						if( IsDevBuild )
-						{
-							if(thiscore.InputDataLeft>0)
-							{
-								if(MsgAutoDMA()) ConLog("WARNING: adma buffer didn't finish with a whole block!!\n");
-							}
-						}
-						thiscore.InputDataLeft=0;
-						thiscore.DMAICounter=1;
-					}
-				}
-				thiscore.InputPos&=0x1ff;
-			}
-
-		}
-		else
-		{
-			if((core==1)&&((PlayMode&2)!=0))
-			{
-				tl=0;
-				tr=0;
-			}
-			else
-			{
-				// Using the temporary buffer because this area gets overwritten by some other code.
-				//*PData.Left  = (s32)*(s16*)(spu2mem+0x2000+(core<<10)+thiscore.InputPos);
-				//*PData.Right = (s32)*(s16*)(spu2mem+0x2200+(core<<10)+thiscore.InputPos);
-
-				tl = (s32)thiscore.ADMATempBuffer[thiscore.InputPos];
-				tr = (s32)thiscore.ADMATempBuffer[thiscore.InputPos+0x200];
-
-			}
-
-			PData.Left  = tl;
-			PData.Right = tr;
-
-			thiscore.InputPos++;
-			if((thiscore.InputPos==0x100)||(thiscore.InputPos>=0x200)) {
-				thiscore.AdmaInProgress=0;
-				if(thiscore.InputDataLeft>=0x200)
-				{
-					u8 k=thiscore.InputDataLeft>=thiscore.InputDataProgress;
-
-					AutoDMAReadBuffer(core,0);
-
-					thiscore.AdmaInProgress=1;
-
-					thiscore.TSA=(core<<10)+thiscore.InputPos;
-
-					if (thiscore.InputDataLeft<0x200) 
-					{
-						thiscore.AutoDMACtrl |= ~3;
-
-						if( IsDevBuild )
-						{
-							FileLog("[%10d] AutoDMA%c block end.\n",Cycles, (core==0)?'4':'7');
-							if(thiscore.InputDataLeft>0)
-							{
-								if(MsgAutoDMA()) ConLog("WARNING: adma buffer didn't finish with a whole block!!\n");
-							}
-						}
-
-						thiscore.InputDataLeft = 0;
-						thiscore.DMAICounter   = 1;
-					}
-				}
-				thiscore.InputPos&=0x1ff;
-			}
-		}
-	}
-	else
-	{
-		PData.Left  = 0;
-		PData.Right = 0;
-	}
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////////////////////////////
-//                                                                                     //
-
-static __forceinline StereoOut32 ReadInputPV( V_Core& thiscore ) 
-{
-	u32 pitch=AutoDMAPlayRate[core];
+	V_Core& thiscore( Cores[core] );
+	u32 pitch = AutoDMAPlayRate[core];
 
 	if(pitch==0) pitch=48000;
 	
 	thiscore.ADMAPV += pitch;
 	while(thiscore.ADMAPV>=48000) 
 	{
-		ReadInput( thiscore, thiscore.ADMAP );
+		ReadInput( core, thiscore.ADMAP );
 		thiscore.ADMAPV -= 48000;
 	}
 
@@ -653,8 +491,11 @@ static __forceinline void spu2M_WriteFast( u32 addr, s16 value )
 }
 
 
-static __forceinline StereoOut32 MixVoice( V_Core& thiscore, V_Voice& vc )
+static __forceinline StereoOut32 MixVoice( uint coreidx, uint voiceidx )
 {
+	V_Core& thiscore( Cores[coreidx] );
+	V_Voice& vc( thiscore.Voices[voiceidx] );
+
 	// Most games don't use much volume slide effects.  So only call the UpdateVolume
 	// methods when needed by checking the flag outside the method here...
 
@@ -666,30 +507,30 @@ static __forceinline StereoOut32 MixVoice( V_Core& thiscore, V_Voice& vc )
 	
 	if( vc.ADSR.Phase > 0 )
 	{
-		UpdatePitch( vc );
+		UpdatePitch( coreidx, voiceidx );
 
 		s32 Value;
 
 		if( vc.Noise )
-			Value = GetNoiseValues( thiscore, vc );
+			Value = GetNoiseValues( thiscore, voiceidx );
 		else
 		{
 			if( Interpolation == 2 )
-				Value = GetVoiceValues_Cubic( thiscore, vc );
+				Value = GetVoiceValues_Cubic( thiscore, voiceidx );
 			else
-				Value = GetVoiceValues_Linear( thiscore, vc );
+				Value = GetVoiceValues_Linear( thiscore, voiceidx );
 		}
 
 		// Note: All values recorded into OutX (may be used for modulation later)
 		vc.OutX = Value;
 
 		if( IsDevBuild )
-			DebugCores[core].Voices[voice].displayPeak = max(DebugCores[core].Voices[voice].displayPeak,abs(vc.OutX));
+			DebugCores[coreidx].Voices[voiceidx].displayPeak = max(DebugCores[coreidx].Voices[voiceidx].displayPeak,abs(vc.OutX));
 
 		// Write-back of raw voice data (post ADSR applied)
 
-		if (voice==1)      spu2M_WriteFast( 0x400 + (core<<12) + OutPos, Value );
-		else if (voice==3) spu2M_WriteFast( 0x600 + (core<<12) + OutPos, Value );
+		if (voiceidx==1)      spu2M_WriteFast( 0x400 + (coreidx<<12) + OutPos, Value );
+		else if (voiceidx==3) spu2M_WriteFast( 0x600 + (coreidx<<12) + OutPos, Value );
 
 		return ApplyVolume( StereoOut32( Value, Value ), vc.Volume );
 	}
@@ -697,28 +538,28 @@ static __forceinline StereoOut32 MixVoice( V_Core& thiscore, V_Voice& vc )
 	{
 		// Write-back of raw voice data (some zeros since the voice is "dead")
 
-		if (voice==1)      spu2M_WriteFast( 0x400 + (core<<12) + OutPos, 0 );
-		else if (voice==3) spu2M_WriteFast( 0x600 + (core<<12) + OutPos, 0 );
+		if (voiceidx==1)      spu2M_WriteFast( 0x400 + (coreidx<<12) + OutPos, 0 );
+		else if (voiceidx==3) spu2M_WriteFast( 0x600 + (coreidx<<12) + OutPos, 0 );
 		
 		return StereoOut32( 0, 0 );
 	}
 }
 
 
-static StereoOut32 __fastcall MixCore( const StereoOut32& Input, const StereoOut32& Ext )
+static StereoOut32 __fastcall MixCore( uint coreidx, const StereoOut32& Input, const StereoOut32& Ext )
 {
-	V_Core& thiscore( Cores[core] );
+	V_Core& thiscore( Cores[coreidx] );
 	thiscore.MasterVol.Update();
 
 	StereoOut32 Dry(0,0), Wet(0,0);
 
-	for( voice=0; voice<24; ++voice )
+	for( uint voiceidx=0; voiceidx<24; ++voiceidx )
 	{
-		V_Voice& vc( thiscore.Voices[voice] );
-		StereoOut32 VVal( MixVoice( thiscore, vc ) );
+		StereoOut32 VVal( MixVoice( coreidx, voiceidx ) );
 		
 		// Note: Results from MixVoice are ranged at 16 bits.
 
+		V_Voice& vc( thiscore.Voices[voiceidx] );
 		Dry.Left += VVal.Left & vc.DryL;
 		Dry.Right += VVal.Right & vc.DryR;
 		Wet.Left += VVal.Left & vc.WetL;
@@ -730,15 +571,15 @@ static StereoOut32 __fastcall MixCore( const StereoOut32& Input, const StereoOut
 	clamp_mix( Wet );
 	
 	// Write Mixed results To Output Area
-	spu2M_WriteFast( 0x1000 + (core<<12) + OutPos, Dry.Left );
-	spu2M_WriteFast( 0x1200 + (core<<12) + OutPos, Dry.Right );
-	spu2M_WriteFast( 0x1400 + (core<<12) + OutPos, Wet.Left );
-	spu2M_WriteFast( 0x1600 + (core<<12) + OutPos, Wet.Right );
+	spu2M_WriteFast( 0x1000 + (coreidx<<12) + OutPos, Dry.Left );
+	spu2M_WriteFast( 0x1200 + (coreidx<<12) + OutPos, Dry.Right );
+	spu2M_WriteFast( 0x1400 + (coreidx<<12) + OutPos, Wet.Left );
+	spu2M_WriteFast( 0x1600 + (coreidx<<12) + OutPos, Wet.Right );
 	
 	// Write mixed results to logfile (if enabled)
 	
-	WaveDump::WriteCore( core, CoreSrc_DryVoiceMix, Dry );
-	WaveDump::WriteCore( core, CoreSrc_WetVoiceMix, Wet );
+	WaveDump::WriteCore( coreidx, CoreSrc_DryVoiceMix, Dry );
+	WaveDump::WriteCore( coreidx, CoreSrc_WetVoiceMix, Wet );
 
 	// Mix in the Input data
 
@@ -773,7 +614,7 @@ static StereoOut32 __fastcall MixCore( const StereoOut32& Input, const StereoOut
 			TW.Left += Ext.Left & thiscore.ExtWetL; 
 			TW.Right += Ext.Right & thiscore.ExtWetR;
 
-			WaveDump::WriteCore( core, CoreSrc_PreReverb, TW );
+			WaveDump::WriteCore( coreidx, CoreSrc_PreReverb, TW );
 
 			StereoOut32 RV( DoReverb( thiscore, TW ) );
 
@@ -785,15 +626,15 @@ static StereoOut32 __fastcall MixCore( const StereoOut32& Input, const StereoOut
 			RV.Left  *= 2;
 			RV.Right *= 2;
 
-			WaveDump::WriteCore( core, CoreSrc_PostReverb, RV );
+			WaveDump::WriteCore( coreidx, CoreSrc_PostReverb, RV );
 
 			// Mix Dry+Wet
 			return StereoOut32( TD + ApplyVolume( RV, thiscore.FxVol ) );
 		}
 		else
 		{
-			WaveDump::WriteCore( core, CoreSrc_PreReverb, 0, 0 );
-			WaveDump::WriteCore( core, CoreSrc_PostReverb, 0, 0 );
+			WaveDump::WriteCore( coreidx, CoreSrc_PreReverb, 0, 0 );
+			WaveDump::WriteCore( coreidx, CoreSrc_PostReverb, 0, 0 );
 		}
 	}
 	return TD;
@@ -805,13 +646,11 @@ static int p_cachestat_counter=0;
 __forceinline void Mix() 
 {
 	// ****  CORE ZERO  ****
-	core = 0;
-
 	// Note: Playmode 4 is SPDIF, which overrides other inputs.
-	StereoOut32 Ext( (PlayMode&4) ? StereoOut32::Empty : ReadInputPV( Cores[0] ) );
+	StereoOut32 Ext( (PlayMode&4) ? StereoOut32::Empty : ReadInputPV( 0 ) );
 	WaveDump::WriteCore( 0, CoreSrc_Input, Ext );
 
-	Ext = MixCore( Ext, StereoOut32::Empty );
+	Ext = MixCore( 0, Ext, StereoOut32::Empty );
 
 	if( (PlayMode & 4) || (Cores[0].Mute!=0) )
 		Ext = StereoOut32( 0, 0 );
@@ -829,19 +668,18 @@ __forceinline void Mix()
 
 	// ****  CORE ONE  ****
 
-	core = 1;
-	StereoOut32 Out( (PlayMode&8) ? StereoOut32::Empty : ReadInputPV( Cores[1] ) );
+	StereoOut32 Out( (PlayMode&8) ? StereoOut32::Empty : ReadInputPV( 1 ) );
 	WaveDump::WriteCore( 1, CoreSrc_Input, Out );
 
 	ApplyVolume( Ext, Cores[1].ExtVol );
-	Out = MixCore( Out, Ext );
+	Out = MixCore( 1, Out, Ext );
 
 	if( PlayMode & 8 )
 	{
 		// Experimental CDDA support
 		// The CDDA overrides all other mixer output.  It's a direct feed!
 
-		ReadInput( Cores[1], Out );
+		ReadInput( 1, Out );
 		//WaveLog::WriteCore( 1, "CDDA-32", OutL, OutR );
 	}
 	else

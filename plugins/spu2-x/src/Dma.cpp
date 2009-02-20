@@ -315,7 +315,7 @@ void DoDMAWrite(int core,u16 *pMem,u32 size)
 			if( ( Cores[core].IRQA >= Cores[core].TSA ) ||
 				( Cores[core].IRQA <= Cores[core].TDA ) )
 			{
-				Spdif.Info=4<<core;
+				Spdif.Info = 4 << core;
 				SetIrqCall();
 			}
 		}
@@ -335,7 +335,7 @@ void DoDMAWrite(int core,u16 *pMem,u32 size)
 			if( ( Cores[core].IRQA >= Cores[core].TSA ) &&
 				( Cores[core].IRQA <= Cores[core].TDA ) )
 			{
-				Spdif.Info=4<<core;
+				Spdif.Info = 4 << core;
 				SetIrqCall();
 			}
 		}

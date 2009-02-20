@@ -285,7 +285,8 @@ void V_Voice::Start()
 		SCurrent		= 28;
 		LoopMode		= 0;
 		LoopFlags		= 0;
-		LoopStartA		= StartA;
+		// Setting the loopstart to NextA breaks Squaresoft games (KH2 intro gets crackly)
+		//LoopStartA		= StartA;
 		NextA			= StartA;
 		Prev1			= 0;
 		Prev2			= 0;
@@ -743,8 +744,6 @@ __forceinline void SPU2_FastWrite( u32 rmem, u16 value )
 	omem=mem=rmem & 0x7FF; //FFFF;
 	if (mem & 0x400) { omem^=0x400; core=1; }
 
-	SPU2writeLog(mem,value);
-
 	if (omem < 0x0180)	// Voice Params
 	{ 
 		const u32 voice = (omem & 0x1F0) >> 4;
@@ -881,7 +880,7 @@ __forceinline void SPU2_FastWrite( u32 rmem, u16 value )
 				}
 
 				thiscore.AttrBit0   =(value>> 0) & 0x01; //1 bit
-				thiscore.DMABits	   =(value>> 1) & 0x07; //3 bits
+				thiscore.DMABits	=(value>> 1) & 0x07; //3 bits
 				thiscore.AttrBit4   =(value>> 4) & 0x01; //1 bit
 				thiscore.AttrBit5   =(value>> 5) & 0x01; //1 bit
 				thiscore.IRQEnable  =(value>> 6) & 0x01; //1 bit

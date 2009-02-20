@@ -22,13 +22,16 @@
 const char *ParamNames[8]={"VOLL","VOLR","PITCH","ADSR1","ADSR2","ENVX","VOLXL","VOLXR"};
 const char *AddressNames[6]={"SSAH","SSAL","LSAH","LSAL","NAXH","NAXL"};
 
-__forceinline void RegLog(int level, char *RName,u32 mem,u32 core,u16 value) 
+__forceinline void _RegLog_( const char* action, int level, char *RName, u32 mem, u32 core, u16 value ) 
 {
 	if( level > 1 )
-		FileLog("[%10d] SPU2 write mem %08x (core %d, register %s) value %04x\n",Cycles,mem,core,RName,value);
+		FileLog("[%10d] SPU2 %s mem %08x (core %d, register %s) value %04x\n",
+			Cycles, action, mem, core, RName, value);
 }
 
-void SPU2writeLog(u32 rmem, u16 value) 
+#define RegLog( lev, rname, mem, core, val ) _RegLog_( action, lev, rname, mem, core, val )
+
+void SPU2writeLog( const char* action, u32 rmem, u16 value ) 
 {
 	if( !IsDevBuild ) return;
 	
@@ -198,7 +201,7 @@ void SPU2writeLog(u32 rmem, u16 value)
 				break;
 			case REG_S_ADMAS:
 				RegLog(3,"ADMAS",rmem,core,value);
-				ConLog(" * SPU2: Core %d AutoDMAControl set to %d\n",core,value);
+				//ConLog(" * SPU2: Core %d AutoDMAControl set to %d\n",core,value);
 				break;
 			case REG_P_STATX:
 				RegLog(3,"STATX",rmem,core,value);
