@@ -128,6 +128,8 @@ static void InitLibraryName()
 	strcpy( libraryName, "ZeroSPU2"
 #	ifdef _DEBUG
 		"-Debug"
+#	elseif ZEROSPU2_DEVBUILD
+		"-Dev"
 #	endif
 		);
 #else
@@ -138,7 +140,7 @@ static void InitLibraryName()
 	sprintf_s( libraryName, "ZeroSPU2 r%d%s"
 #	ifdef _DEBUG
 		"-Debug"
-#	else
+#	elif ZEROSPU2_DEVBUILD
 		"-Dev"
 #	endif
 		,SVN_REV,
@@ -151,6 +153,8 @@ static void InitLibraryName()
 	strcpy( libraryName, "ZeroSPU2 Playground"
 #	ifdef _DEBUG
 		"-Debug"
+#	elif ZEROSPU2_DEVBUILD
+		"-Dev"
 #	endif
 		);
 #	endif
@@ -181,6 +185,20 @@ void __Log(char *fmt, ...)
 
 	va_start(list, fmt);
 	vfprintf(spu2Log, fmt, list);
+	va_end(list);
+}
+
+void __LogToConsole(const char *fmt, ...) 
+{
+	va_list list;
+
+	va_start(list, fmt);
+
+	if (!conf.Log || spu2Log == NULL)
+		vfprintf(spu2Log, fmt, list);
+
+	printf("ZeroSPU2: ");
+	vprintf(fmt, list);
 	va_end(list);
 }
 
@@ -559,7 +577,7 @@ void MixChannels(int core)
 					if (interrupt & (0x2 * (core + 1)))
 					{
 						interrupt &= ~(0x2 * (core + 1));
-						printf("Stopping double interrupt DMA7\n");
+						WARN_LOG("Stopping double interrupt DMA7\n");
 					}
 					if (core == 0)
 						irqCallbackDMA4();
@@ -767,7 +785,7 @@ ENDX:
 				static int lastrectime = 0;
 				if (timeGetTime() - lastrectime > 5000) 
 				{
-					printf("ZeroSPU2: recording\n");
+					WARN_LOG("ZeroSPU2: recording\n");
 					lastrectime = timeGetTime();
 				}
 				LogRawSound(s_pAudioBuffers[s_nCurBuffer].pbuf, 4, s_pAudioBuffers[s_nCurBuffer].pbuf+2, 4, NSSIZE*NSFRAMES);
@@ -781,7 +799,7 @@ ENDX:
 			}
 			else {
 				// submit to final mixer
-#ifdef _DEBUG
+#ifdef ZEROSPU2_DEVBUILD
 				if ( g_logsound ) 
 					LogRawSound(s_pAudioBuffers[s_nCurBuffer].pbuf, 4, s_pAudioBuffers[s_nCurBuffer].pbuf+2, 4, NSSIZE*NSFRAMES);
 #endif
@@ -893,7 +911,7 @@ void* SPU2ThreadProc(void* lpParam)
 			// check the current timestamp, if too far apart, speed up audio
 			else if ( bytesbuf > 40000 ) 
 			{
-				//printf("making faster %d\n", timeGetTime() - s_pAudioBuffers[nReadBuf].timestamp);
+				//WARN_LOG("making faster %d\n", timeGetTime() - s_pAudioBuffers[nReadBuf].timestamp);
 				NewSamples -= (bytesbuf-40000)/10;//*(ps2delay-NewSamples*8/1000);
 			}
 
@@ -1428,12 +1446,12 @@ int CALLBACK SPU2setupRecording(int start, void* pData)
 	if ( start ) 
 	{
 		conf.options |= OPTION_RECORDING;
-		printf("ZeroSPU2: started recording at %s\n", RECORD_FILENAME);
+		WARN_LOG("ZeroSPU2: started recording at %s\n", RECORD_FILENAME);
 	}
 	else 
 	{
 		conf.options &= ~OPTION_RECORDING;
-		printf("ZeroSPU2: stopped recording\n");
+		WARN_LOG("ZeroSPU2: stopped recording\n");
 	}
 	
 	return 1;
@@ -1451,7 +1469,7 @@ s32  CALLBACK SPU2freeze(int mode, freezeData *data)
 		spud = (SPU2freezeData*)data->data; 
 		if (spud->version != 0x70000001) 
 		{
-			printf("zerospu2: data wrong format\n");
+			ERROR_LOG("zerospu2: data wrong format\n");
 			return 0;
 		}
 

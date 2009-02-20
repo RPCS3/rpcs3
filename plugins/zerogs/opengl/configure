@@ -4419,7 +4419,7 @@ _ACEOF
 
  CFLAGS+="-O3 -fomit-frame-pointer "
  CPPFLAGS+="-O3 -fomit-frame-pointer "
- CXXFLAGS+="-O3 -fomit-frame-pointer "
+ CXXFLAGS+="-O3 -fomit-frame-pointer -fpermissive "
 fi
 { $as_echo "$as_me:$LINENO: result: $debug" >&5
 $as_echo "$debug" >&6; }
@@ -4540,11 +4540,11 @@ else
   devbuild=no
 fi
 
-if test "x$devbuild" == xno
+if test "x$devbuild" == xyes
 then
 
 cat >>confdefs.h <<\_ACEOF
-#define RELEASE_TO_PUBLIC 1
+#define ZEROGS_DEVBUILD 1
 _ACEOF
 
 fi

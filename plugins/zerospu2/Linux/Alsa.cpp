@@ -42,14 +42,16 @@ int AlsaSetupSound()
 	int err;
 	
 	err = snd_pcm_open(&handle, "default", SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
-	if(err < 0) {
-		printf("Audio open error: %s\n", snd_strerror(err));
+	if(err < 0) 
+	{
+		ERROR_LOG("Audio open error: %s\n", snd_strerror(err));
 		return -1;
 	}
 	
 	err = snd_pcm_nonblock(handle, 0);
-	if(err < 0) {
-		printf("Can't set blocking moded: %s\n", snd_strerror(err));
+	if(err < 0) 
+	{
+		ERROR_LOG("Can't set blocking mode: %s\n", snd_strerror(err));
 		return -1;
 	}
     
@@ -57,56 +59,64 @@ int AlsaSetupSound()
 	snd_pcm_sw_params_alloca(&swparams);
 	
 	err = snd_pcm_hw_params_any(handle, hwparams);
-	if (err < 0) {
-		printf("Broken configuration for this PCM: %s\n", snd_strerror(err));
+	if (err < 0) 
+	{
+		ERROR_LOG("Broken configuration for this PCM: %s\n", snd_strerror(err));
 		return -1;
 	}
 	
 	err = snd_pcm_hw_params_set_access(handle, hwparams, SND_PCM_ACCESS_RW_INTERLEAVED);
-	if (err < 0) {
-		printf("Access type not available: %s\n", snd_strerror(err));
+	if (err < 0) 
+	{
+		ERROR_LOG("Access type not available: %s\n", snd_strerror(err));
 		return -1;
 	}
 
 	err = snd_pcm_hw_params_set_format(handle, hwparams, format);
-	if (err < 0) {
-		printf("Sample format not available: %s\n", snd_strerror(err));
+	if (err < 0) 
+	{
+		ERROR_LOG("Sample format not available: %s\n", snd_strerror(err));
 		return -1;
 	}
 	
 	err = snd_pcm_hw_params_set_channels(handle, hwparams, pchannels);
-	if (err < 0) {
-		printf("Channels count not available: %s\n", snd_strerror(err));
+	if (err < 0) 
+	{
+		ERROR_LOG("Channels count not available: %s\n", snd_strerror(err));
 		return -1;
 	}
 	err = snd_pcm_hw_params_set_rate_near(handle, hwparams, &pspeed, 0);
-	if (err < 0) {
-		printf("Rate not available: %s\n", snd_strerror(err));
+	if (err < 0) 
+	{
+		ERROR_LOG("Rate not available: %s\n", snd_strerror(err));
 		return -1;
 	}
 	
 	err = snd_pcm_hw_params_set_buffer_time_near(handle, hwparams, &buffer_time, 0);
 	if(err < 0) {
-		printf("Buffer time error: %s\n", snd_strerror(err));
+		ERROR_LOG("Buffer time error: %s\n", snd_strerror(err));
 		return -1;
 	}
    
 	err = snd_pcm_hw_params_set_period_time_near(handle, hwparams, &period_time, 0);
-	if (err < 0) {
-		printf("Period time error: %s\n", snd_strerror(err));
+	if (err < 0)
+	{
+		ERROR_LOG("Period time error: %s\n", snd_strerror(err));
 		return -1;
 	}
 	
 	err = snd_pcm_hw_params(handle, hwparams);
-	if (err < 0) {
-		printf("Unable to install hw params: %s\n", snd_strerror(err));
+	if (err < 0) 
+	{
+		ERROR_LOG("Unable to install hw params: %s\n", snd_strerror(err));
 		return -1;
 	}
     
 	snd_pcm_status_alloca(&status);
 	err = snd_pcm_status(handle, status);
-	if(err < 0) {
-		printf("Unable to get status: %s\n", snd_strerror(err));
+	if(err < 0) 
+	{
+		ERROR_LOG("Unable to get status: %s\n", snd_strerror(err));
 		return -1;
 	}
     

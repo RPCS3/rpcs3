@@ -47,11 +47,14 @@ extern FILE *spu2Log;
 #define LOG_CALLBACK 0&&
 #endif
 
-#ifdef _DEBUG
-#define SPU2_LOG __Log  //debug mode
+#ifdef ZEROSPU2_DEVBUILD
+#define SPU2_LOG __Log  //dev mode
 #else
 #define SPU2_LOG 0&&
 #endif
+
+#define ERROR_LOG printf
+#define WARN_LOG printf
 
 #define  SPU2_VERSION  PS2E_SPU2_VERSION
 #define SPU2_REVISION 0
@@ -108,6 +111,7 @@ typedef struct {
 extern Config conf;
 
 void __Log(char *fmt, ...);
+void __LogToConsole(const char *fmt, ...);
 void SaveConfig();
 void LoadConfig();
 void SysMessage(char *fmt, ...);

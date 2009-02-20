@@ -143,12 +143,6 @@ struct Vector_16F
 };
 
 /////////////////////
-// define when releasing
-// The only code that uses it is commented out!
-//#define ZEROGS_CACHEDCLEAR // much better performance
-//#define RELEASE_TO_PUBLIC
-// fixme - We should use ZEROGS_DEVBUILD to determine devel/debug builds from "public release" builds.
-//  Means a lot of search-and-replace though. (air)
 
 #ifdef ZEROGS_DEVBUILD
 #define GS_LOG __Log
@@ -159,7 +153,7 @@ struct Vector_16F
 #define ERROR_LOG __LogToConsole
 #define DEBUG_LOG printf
 
-#ifdef RELEASE_TO_PUBLIC
+#ifndef ZEROGS_DEVBUILD
 #define WARN_LOG 0&&
 #define PRIM_LOG 0&&
 #else

@@ -43,7 +43,7 @@ else
  AC_DEFINE(NDEBUG,1,[NDEBUG])
  CFLAGS+="-O3 -fomit-frame-pointer "
  CPPFLAGS+="-O3 -fomit-frame-pointer "
- CXXFLAGS+="-O3 -fomit-frame-pointer "
+ CXXFLAGS+="-O3 -fomit-frame-pointer -fpermissive "
 fi
 AC_MSG_RESULT($debug)
 
@@ -53,9 +53,9 @@ dnl Check for dev build
 AC_MSG_CHECKING(for development build...)
 AC_ARG_ENABLE(devbuild, AC_HELP_STRING([--enable-devbuild], [Special Build for developers that simplifies testing and adds extra checks]),
  devbuild=$enableval,devbuild=no)
-if test "x$devbuild" == xno
+if test "x$devbuild" == xyes
 then
- AC_DEFINE(RELEASE_TO_PUBLIC,1,[RELEASE_TO_PUBLIC])
+ AC_DEFINE(ZEROGS_DEVBUILD,1,[ZEROGS_DEVBUILD])
 fi
 AC_MSG_RESULT($devbuild)
 AM_CONDITIONAL(RELEASE_TO_PUBLIC, test x$devbuild = xno)

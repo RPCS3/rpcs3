@@ -937,7 +937,7 @@ void __fastcall GIFRegHandlerTRXDIR(u32* data)
 		}
 	}
 	else {
-#ifndef RELEASE_TO_PUBLIC
+#ifdef ZEROGS_DEVBUILD
 		WARN_LOG("ZeroGS: dummy transfer\n");
 #endif
 		gs.imageTransfer = -1;
@@ -951,7 +951,7 @@ void __fastcall GIFRegHandlerHWREG(u32* data)
 		ZeroGS::TransferHostLocal(data, 2);
 	}
 	else {
-#ifndef RELEASE_TO_PUBLIC
+#ifdef ZEROGS_DEVBUILD
 		ERROR_LOG("ZeroGS: HWREG!? %8.8x_%8.8x\n", data[0], data[1]);
 		//assert(0);
 #endif

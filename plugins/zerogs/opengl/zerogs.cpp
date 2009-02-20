@@ -79,7 +79,7 @@ BOOL g_bIsLost = 0;
 int g_nFrameRender = 10;
 int g_nFramesSkipped = 0;
 
-#ifdef RELEASE_TO_PUBLIC
+#ifndef ZEROGS_DEVBUILD
 
 #define INC_GENVARS()
 #define INC_TEXVARS()
@@ -1307,7 +1307,7 @@ bool ZeroGS::Create(int _width, int _height)
 	GPU_TEXWIDTH = g_MaxTexWidth/8;
 	g_fiGPU_TEXWIDTH = 1.0f / GPU_TEXWIDTH;
 
-#ifdef RELEASE_TO_PUBLIC
+#ifndef ZEROGS_DEVBUILD
 #ifdef _WIN32
 	HRSRC hShaderSrc = FindResource(hInst, MAKEINTRESOURCE(IDR_SHADERS), RT_RCDATA);
 	assert( hShaderSrc != NULL );
@@ -1359,7 +1359,7 @@ bool ZeroGS::Create(int _width, int _height)
 	sprintf(EFFECT_NAME, "%sps2hw.fx", EFFECT_DIR);
 #endif
 
-#endif // RELEASE_TO_PUBLIC
+#endif // ZEROGS_DEVBUILD
 
 	// load the effect, find the best profiles (if any)
 	if( cgGLIsProfileSupported(CG_PROFILE_ARBVP1) != CG_TRUE ) {
@@ -2097,7 +2097,7 @@ void SetupVertexProgramParameters(CGprogram prog, int context)
 		cgGLSetParameter4fv(p, Vector(0,1, 0.001f, 0.5f));
 }
 
-#ifdef RELEASE_TO_PUBLIC
+#ifndef ZEROGS_DEVBUILD
 
 #define LOAD_VS(Index, prog) {						  \
 	assert( mapShaderResources.find(Index) != mapShaderResources.end() ); \
@@ -2300,7 +2300,7 @@ FRAGMENTSHADER* ZeroGS::LoadShadeEffect(int type, int texfilter, int fog, int te
 	return NULL;
 }
 	
-#else // not RELEASE_TO_PUBLIC
+#else // ZEROGS_DEVBUILD
 
 #define LOAD_VS(name, prog, shaderver) { \
 	prog = cgCreateProgramFromFile(g_cgcontext, CG_SOURCE, EFFECT_NAME, shaderver, name, args); \
@@ -2498,7 +2498,7 @@ FRAGMENTSHADER* ZeroGS::LoadShadeEffect(int type, int texfilter, int fog, int te
 	return NULL;
 }
 
-#endif // RELEASE_TO_PUBLIC
+#endif // ZEROGS_DEVBUILD
 
 void ZeroGS::Prim()
 {
@@ -2540,7 +2540,7 @@ int GetTexFilter(const tex1Info& tex1)
 
 void ZeroGS::ReloadEffects()
 {
-#ifndef RELEASE_TO_PUBLIC
+#ifdef ZEROGS_DEVBUILD
 	for(int i = 0; i < ARRAY_SIZE(ppsTexture); ++i) {
 		SAFE_RELEASE_PROG(ppsTexture[i].prog);
 	}
@@ -2555,7 +2555,7 @@ void ZeroGS::Flush(int context)
 	GL_REPORT_ERRORD();
 	assert( context >= 0 && context <= 1 );
 
-#ifndef RELEASE_TO_PUBLIC
+#ifdef ZEROGS_DEVBUILD
 	if( g_bUpdateEffect ) {
 		ReloadEffects();
 		g_bUpdateEffect = 0;
@@ -3387,7 +3387,7 @@ void ZeroGS::Flush(int context)
 		if( dwFilterOpts & 2 ) glTexParameteri(GL_TEXTURE_RECTANGLE_NV, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	}
 
-//#ifndef RELEASE_TO_PUBLIC
+//#ifdef ZEROGS_DEVBUILD
 	ppf += curvb.nCount+0x100000;
 //#endif
 
@@ -3537,7 +3537,7 @@ void ZeroGS::RenderCRTC(int interlace)
 	if( g_bIsLost ) return;
 
 // Crashes Final Fantasy X at startup if uncommented. --arcum42
-//#ifdef RELEASE_TO_PUBLIC
+//#ifndef ZEROGS_DEVBUILD
 //	if(g_nRealFrame < 80 ) {
 //		RenderCustom( min(1.0f, 2.0f - (float)g_nRealFrame / 40.0f) );
 //
@@ -5425,7 +5425,7 @@ Return:
 		"jmp Start\n"
 "Return:\n"
 		"emms\n"
-		".att_syntax\n" : "=m"(bRet) : "c"(dst), "d"(src), "b"(entries) : "rax", "memory");
+		".att_syntax\n" : "=m"(bRet) : "c"(dst), "d"(src), "b"(entries) : "rax", "memory");// Breaks -fPIC
 #else
 	// do a fast test with MMX
 	__asm__(
@@ -5478,7 +5478,7 @@ Return:
 		"jmp Start\n"
 "Return:\n"
 		"emms\n"
-		".att_syntax\n" : "=m"(bRet) : "c"(dst), "d"(src), "b"(entries) : "eax", "memory");
+		".att_syntax\n" : "=m"(bRet) : "c"(dst), "d"(src), "b"(entries) : "eax", "memory"); // Breaks -fPIC
 #endif // __x86_64__
 
 #endif // _WIN32
@@ -5577,7 +5577,7 @@ void ZeroGS::texClutWrite(int ctx)
 			
 			default:
 			{
-#ifndef RELEASE_TO_PUBLIC
+#ifdef ZEROGS_DEVBUILD
 			//DEBUG_LOG("unknown cpsm: %x (%x)\n", tex0.cpsm, tex0.psm);
 #endif
 				break;

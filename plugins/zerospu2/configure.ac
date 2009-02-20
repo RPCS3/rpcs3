@@ -31,11 +31,11 @@ CXXFLAGS=
 dnl Check for debug build
 AC_MSG_CHECKING(debug build)
 AC_ARG_ENABLE(debug, AC_HELP_STRING([--enable-debug], [debug build]),
- debug=$enableval,debug=no)
+debug=$enableval,debug=no)
 if test "x$debug" == xyes
 then
  AC_DEFINE(_DEBUG,1,[_DEBUG])
- CFLAGS+="-g -fPIC Wall  -Wno-unused-value "
+ CFLAGS+="-g -fPIC -Wall  -Wno-unused-value "
  CPPFLAGS+="-g -fPIC -Wall  -Wno-unused-value "
  CXXFLAGS+="-g -fPIC -Wall  -Wno-unused-value "
 else
@@ -46,6 +46,17 @@ else
 fi
 AM_CONDITIONAL(DEBUGBUILD, test x$debug = xyes)
 AC_MSG_RESULT($debug)
+
+dnl Check for dev build
+AC_MSG_CHECKING(for development build...)
+AC_ARG_ENABLE(devbuild, AC_HELP_STRING([--enable-devbuild], [Special Build for developers that simplifies testing and adds extra checks]),
+ devbuild=$enableval,devbuild=no)
+if test "x$devbuild" == xyes
+then
+ AC_DEFINE(ZEROSPU2_DEVBUILD,1,[ZEROSPU2_DEVBUILD])
+fi
+AC_MSG_RESULT($devbuild)
+AM_CONDITIONAL(RELEASE_TO_PUBLIC, test x$devbuild = xno)
 
 dnl Check for 64bit CPU
 AC_MSG_CHECKING(for a x86-64 CPU)
@@ -100,4 +111,5 @@ AC_OUTPUT([
 
 echo "Configuration:"
 echo "  Debug build?	       $debug"
+echo "  Dev build?	       $devbuild"
 echo "  x86-64 build?	       $cpu64"

@@ -42,14 +42,16 @@ int OSSSetupSound()
 	oss_stereo = pstereo;
     
 	oss_audio_fd=open("/dev/dsp",O_WRONLY,0);
-	if (oss_audio_fd == -1) {
-		printf("Sound device not available!\n");
+	if (oss_audio_fd == -1) 
+	{
+		ERROR_LOG("Sound device not available!\n");
 		return -1;
 	}
     
 	err= ioctl(oss_audio_fd,SNDCTL_DSP_RESET,0);
-	if (err == -1) {
-		printf("Sound reset failed\n");
+	if (err == -1) 
+	{
+		ERROR_LOG("Sound reset failed\n");
 		return -1;
 	}
     
@@ -57,27 +59,31 @@ int OSSSetupSound()
 	fragsize = 10;
 	myfrag = (63 << 16) | fragsize;
 	err = ioctl(oss_audio_fd,SNDCTL_DSP_SETFRAGMENT,&myfrag);
-	if (err == -1) {
-		printf("Sound set fragment failed!\n");
+	if (err == -1) 
+	{
+		ERROR_LOG("Sound set fragment failed!\n");
 		return -1;        
 	}
     
 	format = AFMT_S16_LE;
 	err = ioctl(oss_audio_fd,SNDCTL_DSP_SETFMT,&format);
-	if ((err == -1) || (format!=AFMT_S16_LE)) {
-		printf("Sound format not supported!\n");
+	if ((err == -1) || (format!=AFMT_S16_LE)) 
+	{
+		ERROR_LOG("Sound format not supported!\n");
 		return -1;
 	}
     
 	err = ioctl(oss_audio_fd,SNDCTL_DSP_STEREO,&oss_stereo);
-	if (err == -1) {
-		printf("Stereo mode not supported!\n");
+	if (err == -1) 
+	{
+		ERROR_LOG("Stereo mode not supported!\n");
 		return -1;
 	}
     
 	err = ioctl(oss_audio_fd,SNDCTL_DSP_SPEED,&oss_speed);
-	if ((err == -1) || (oss_speed!=pspeed) {
-		printf("Sound frequency not supported\n");
+	if ((err == -1) || (oss_speed!=pspeed) 
+	{
+		ERROR_LOG("Sound frequency not supported\n");
 		return -1;
 	}
 

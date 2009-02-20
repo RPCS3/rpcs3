@@ -70,7 +70,7 @@ unsigned char zgsminor = 7;
 
 #ifdef _DEBUG
 char *libraryName	 = "ZeroGS-Pg OpenGL (Debug) ";
-#elif defined(RELEASE_TO_PUBLIC)
+#elif !defined(ZEROGS_DEVBUILD)
 char *libraryName	 = "ZeroGS Playground OpenGL ";
 #else
 char *libraryName	 = "ZeroGS-Pg OpenGL (Dev) ";
@@ -86,7 +86,7 @@ extern int g_nPixelShaderVer;
 extern int g_nFrameRender;
 extern int g_nFramesSkipped;
 
-#ifdef RELEASE_TO_PUBLIC
+#ifndef ZEROGS_DEVBUILD
 #define g_bWriteProfile 0
 #else
 BOOL g_bWriteProfile = 0;
@@ -767,7 +767,7 @@ void CALLBACK GSvsync(int interlace)
 		dwTime = d;
 		g_nFrame += UPDATE_FRAMES;
 
-#ifdef RELEASE_TO_PUBLIC
+#ifndef ZEROGS_DEVBUILD
 		const char* g_pShaders[4] = { "full", "reduced", "accurate", "accurate-reduced" };
 
 		sprintf(strtitle, "ZeroGS KOSMOS 0.%d.%d %.1f fps | %s%s%s%s %s (%.1f)", zgsbuild, zgsminor, fFPS,
@@ -818,7 +818,7 @@ void CALLBACK GSvsync(int interlace)
 		g_nFramesSkipped = 0;
 	}
 
-#ifndef RELEASE_TO_PUBLIC
+#ifdef ZEROGS_DEVBUILD
 	if( g_bWriteProfile ) {
 		//g_bWriteProfile = 0;
 		DVProfWrite("prof.txt", UPDATE_FRAMES);

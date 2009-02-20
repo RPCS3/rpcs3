@@ -20,6 +20,9 @@ export ZEROGSOPTIONS="--enable-sse2"
 #ZeroGS Debug mode
 #export ZEROGSOPTIONS="--enable-debug --enable-devbuild --enable-sse2"
 
+#ZeroSPU2 Debug mode (Don't enable right now)
+#export ZEROSPU2OPTIONS="--enable-debug --enable-devbuild"
+
 option=$@
 export PCSX2PLUGINS="`pwd`/bin/plugins"
 curdir=`pwd`

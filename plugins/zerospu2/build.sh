@@ -6,13 +6,17 @@ echo -----------------
 echo Building ZeroSPU2
 echo -----------------
 
+if test "${ZEROSPU2OPTIONS+set}" != set ; then
+export ZEROSPU2OPTIONS=""
+fi
+
 if [ $# -gt 0 ] && [ $1 = "all" ]
 then
 
 aclocal
 automake -a
 autoconf
-./configure --prefix=${PCSX2PLUGINS}
+./configure ${ZEROSPU2OPTIONS} --prefix=${PCSX2PLUGINS}
 make clean
 make install
 

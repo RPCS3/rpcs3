@@ -162,14 +162,16 @@ void CALLBACK SPU2about()
 	SysMessage("%s %d.%d\ndeveloper: zerofrog", libraryName, SPU2_VERSION, SPU2_BUILD);
 }
 
-void SaveConfig() {
+void SaveConfig() 
+{
 	FILE *f;
 	char cfg[255];
 
 	strcpy(cfg, s_strIniPath.c_str());
 	f = fopen(cfg,"w");
-	if (f == NULL) {
-		printf("Failed to open %s\n", s_strIniPath.c_str());
+	if (f == NULL) 
+	{
+		ERROR_LOG("Failed to open %s\n", s_strIniPath.c_str());
 		return;
 	}
 	fprintf(f, "log = %d\n", conf.Log);
@@ -177,7 +179,8 @@ void SaveConfig() {
 	fclose(f);
 }
 
-void LoadConfig() {
+void LoadConfig() 
+{
 	FILE *f;
 	char cfg[255];
 
@@ -185,8 +188,9 @@ void LoadConfig() {
 
 	strcpy(cfg, s_strIniPath.c_str());
 	f = fopen(cfg, "r");
-	if (f == NULL) {
-		printf("Failed to open %s\n", s_strIniPath.c_str());
+	if (f == NULL) 
+	{
+		ERROR_LOG("Failed to open %s\n", s_strIniPath.c_str());
 		conf.Log = 0;
 		conf.options = 0;
 		SaveConfig();//save and return
