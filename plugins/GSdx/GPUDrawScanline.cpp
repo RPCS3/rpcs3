@@ -25,6 +25,7 @@
 GPUDrawScanline::GPUDrawScanline(GPUState* state, int id)
 	: m_state(state)
 	, m_id(id)
+	, m_sp(m_env)
 	, m_ds(m_env)
 {
 }
@@ -73,96 +74,35 @@ void GPUDrawScanline::BeginDraw(const GSRasterizerData* data, Functions* f)
 
 	f->sr = NULL; // TODO
 
-	//
-	
-	DWORD sel = 0;
+	// doesn't need all bits => less functions generated
 
-	sel |= (data->primclass == GS_SPRITE_CLASS ? 1 : 0) << 0;
-	sel |= m_env.sel.tme << 1;
-	sel |= m_env.sel.iip << 2;
+	GPUScanlineSelector sel;
 
-	f->sp = m_sp.Lookup(sel);
+	sel.key = 0;
+
+	sel.iip = m_env.sel.iip;
+	sel.tfx = m_env.sel.tfx;
+	sel.twin = m_env.sel.twin;
+	sel.sprite = m_env.sel.sprite;
+
+	f->ssp = m_sp.Lookup(sel);
 }
 
-template<DWORD sprite, DWORD tme, DWORD iip>
-void GPUDrawScanline::SetupPrim(const GSVertexSW* vertices, const GSVertexSW& dscan)
+void GPUDrawScanline::EndDraw(const GSRasterizerStats& stats)
 {
-	if(m_env.sel.tme && !m_env.sel.twin)
-	{
-		if(sprite)
-		{
-			GSVector4i t;
-
-			t = (GSVector4i(vertices[1].t) >> 8) - GSVector4i::x00000001();
-			t = t.ps32(t);
-			t = t.upl16(t);
-
-			m_env.twin[2].u = t.xxxx();
-			m_env.twin[2].v = t.yyyy();
-		}
-		else
-		{
-			m_env.twin[2].u = GSVector4i::x00ff();
-			m_env.twin[2].v = GSVector4i::x00ff();
-		}
-	}
-
-	GSVector4 ps0123 = GSVector4::ps0123();
-	GSVector4 ps4567 = GSVector4::ps4567();
-
-	GSVector4 dt = dscan.t;
-	GSVector4 dc = dscan.c;
-
-	GSVector4i dtc8 = GSVector4i(dt * 8.0f).ps32(GSVector4i(dc * 8.0f));
-
-	if(tme)
-	{
-		m_env.d8.st = dtc8.upl16(dtc8);
-
-		m_env.d.s = GSVector4i(dt.xxxx() * ps0123).ps32(GSVector4i(dt.xxxx() * ps4567));
-		m_env.d.t = GSVector4i(dt.yyyy() * ps0123).ps32(GSVector4i(dt.yyyy() * ps4567));
-	}
-
-	if(iip)
-	{
-		m_env.d8.c = dtc8.uph16(dtc8);
-
-		m_env.d.r = GSVector4i(dc.xxxx() * ps0123).ps32(GSVector4i(dc.xxxx() * ps4567));
-		m_env.d.g = GSVector4i(dc.yyyy() * ps0123).ps32(GSVector4i(dc.yyyy() * ps4567));
-		m_env.d.b = GSVector4i(dc.zzzz() * ps0123).ps32(GSVector4i(dc.zzzz() * ps4567));
-	}
-	else
-	{
-		// TODO: m_env.c.r/g/b = ...
-	}
+	m_ds.UpdateStats(stats, m_state->m_perfmon.GetFrame());
 }
 
 //
 
-GPUDrawScanline::GPUSetupPrimMap::GPUSetupPrimMap()
+GPUDrawScanline::GPUSetupPrimMap::GPUSetupPrimMap(GPUScanlineEnvironment& env)
+	: m_env(env)
 {
-	#define InitSP_IIP(sprite, tme, iip) \
-		m_default[sprite][tme][iip] = (SetupPrimPtr)&GPUDrawScanline::SetupPrim<sprite, tme, iip>; \
-
-	#define InitSP_TME(sprite, tme) \
-		InitSP_IIP(sprite, tme, 0) \
-		InitSP_IIP(sprite, tme, 1) \
-
-	#define InitSP_SPRITE(sprite) \
-		InitSP_TME(sprite, 0) \
-		InitSP_TME(sprite, 1) \
-
-	InitSP_SPRITE(0);
-	InitSP_SPRITE(1);
 }
 
-IDrawScanline::SetupPrimPtr GPUDrawScanline::GPUSetupPrimMap::GetDefaultFunction(DWORD key)
+GPUSetupPrimCodeGenerator* GPUDrawScanline::GPUSetupPrimMap::Create(DWORD key, void* ptr, size_t maxsize)
 {
-	DWORD sprite = (key >> 0) & 1;
-	DWORD tme = (key >> 1) & 1;
-	DWORD iip = (key >> 2) & 1;
-
-	return m_default[sprite][tme][iip];
+	return new GPUSetupPrimCodeGenerator(m_env, ptr, maxsize);
 }
 
 //

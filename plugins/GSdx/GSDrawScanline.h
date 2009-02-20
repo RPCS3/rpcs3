@@ -43,10 +43,6 @@ class GSDrawScanline : public GSAlignedClass<16>, public IDrawScanline
 		GSSetupPrimCodeGenerator* Create(UINT64 key, void* ptr, size_t maxsize);
 	} m_sp;
 
-	SetupPrimStaticPtr m_spf;
-
-	void SetupPrim(const GSVertexSW* vertices, const GSVertexSW& dscan);
-
 	//
 
 	class GSDrawScanlineMap : public GSCodeGeneratorFunctionMap<GSDrawScanlineCodeGenerator, UINT64, DrawScanlineStaticPtr>

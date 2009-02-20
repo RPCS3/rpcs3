@@ -23,9 +23,10 @@
 
 #include "GPUState.h"
 #include "GSRasterizer.h"
-#include "GSAlignedClass.h"
 #include "GPUScanlineEnvironment.h"
+#include "GPUSetupPrimCodeGenerator.h"
 #include "GPUDrawScanlineCodeGenerator.h"
+#include "GSAlignedClass.h"
 
 class GPUDrawScanline : public GSAlignedClass<16>, public IDrawScanline
 {
@@ -33,20 +34,14 @@ class GPUDrawScanline : public GSAlignedClass<16>, public IDrawScanline
 
 	//
 
-	class GPUSetupPrimMap : public GSFunctionMap<DWORD, SetupPrimPtr>
+	class GPUSetupPrimMap : public GSCodeGeneratorFunctionMap<GPUSetupPrimCodeGenerator, DWORD, SetupPrimStaticPtr>
 	{
-		SetupPrimPtr m_default[2][2][2];
+		GPUScanlineEnvironment& m_env;
 
 	public:
-		GPUSetupPrimMap();
-
-		SetupPrimPtr GetDefaultFunction(DWORD key);
-	};
-	
-	GPUSetupPrimMap m_sp;
-
-	template<DWORD sprite, DWORD tme, DWORD iip>
-	void SetupPrim(const GSVertexSW* vertices, const GSVertexSW& dscan);
+		GPUSetupPrimMap(GPUScanlineEnvironment& env);
+		GPUSetupPrimCodeGenerator* Create(DWORD key, void* ptr, size_t maxsize);
+	} m_sp;
 
 	//
 
@@ -59,8 +54,6 @@ class GPUDrawScanline : public GSAlignedClass<16>, public IDrawScanline
 		GPUDrawScanlineCodeGenerator* Create(DWORD key, void* ptr, size_t maxsize);
 	} m_ds;
 
-	void DrawScanline(int top, int left, int right, const GSVertexSW& v);
-
 protected:
 	GPUState* m_state;
 	int m_id;
@@ -72,6 +65,6 @@ public:
 	// IDrawScanline
 
 	void BeginDraw(const GSRasterizerData* data, Functions* f);
-	void EndDraw(const GSRasterizerStats& stats) {}
-	void PrintStats() {}
+	void EndDraw(const GSRasterizerStats& stats);
+	void PrintStats() {m_ds.PrintStats();}
 };

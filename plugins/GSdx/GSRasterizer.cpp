@@ -19,7 +19,7 @@
  *
  */
 
-// TODO: skip scissor test when vtrace.p.min/max is inside the region
+// TODO: JIT Draw* (flags: depth, texture, color (+iip), scissor)
 
 #include "StdAfx.h"
 #include "GSRasterizer.h"
@@ -39,7 +39,6 @@ GSRasterizer::~GSRasterizer()
 void GSRasterizer::Draw(const GSRasterizerData* data)
 {
 	m_dsf.sr = NULL;
-	m_dsf.sp = NULL;
 	m_dsf.ssl = NULL;
 	m_dsf.ssp = NULL;
 
@@ -98,8 +97,7 @@ void GSRasterizer::DrawPoint(const GSVertexSW* v, const GSVector4i& scissor)
 	{
 		if((p.y % m_threads) == m_id) 
 		{
-			(m_ds->*m_dsf.sp)(v, *v);
-			// TODO: (m_dsf.ssp)(v, *v);
+			m_dsf.ssp(v, *v);
 
 			m_dsf.ssl(p.y, p.x, p.x + 1, *v);
 
@@ -139,7 +137,7 @@ void GSRasterizer::DrawLine(const GSVertexSW* v, const GSVector4i& scissor)
 			{
 				GSVertexSW dscan = dv / dv.p.xxxx();
 
-				(m_ds->*m_dsf.sp)(v, dscan);
+				m_dsf.ssp(v, dscan);
 
 				l.p = l.p.upl(r).xyzw(l.p); // r.x => l.y
 
@@ -257,8 +255,7 @@ void GSRasterizer::DrawTriangleTop(GSVertexSW* v, const GSVector4i& scissor)
 
 	if(py > 0) l += dl * py;
 
-	(m_ds->*m_dsf.sp)(v, dscan);
-	// TODO: (m_dsf.ssp)(v, dscan);
+	m_dsf.ssp(v, dscan);
 
 	DrawTriangleSection(top, bottom, l, dl, dscan, scissor);
 }
@@ -305,8 +302,7 @@ void GSRasterizer::DrawTriangleBottom(GSVertexSW* v, const GSVector4i& scissor)
 
 	if(py > 0) l += dl * py;
 
-	(m_ds->*m_dsf.sp)(v, dscan);
-	// TODO: (m_dsf.ssp)(v, dscan);
+	m_dsf.ssp(v, dscan);
 
 	DrawTriangleSection(top, bottom, l, dl, dscan, scissor);
 }
@@ -328,8 +324,7 @@ void GSRasterizer::DrawTriangleTopBottom(GSVertexSW* v, const GSVector4i& scisso
 
 	GSVertexSW dscan = longest * longest.p.xxxx().rcp();
 
-	(m_ds->*m_dsf.sp)(v, dscan);
-	// TODO: (m_dsf.ssp)(v, dscan);
+	m_dsf.ssp(v, dscan);
 
 	GSVertexSW& l = v[0];
 	GSVector4 r = v[0].p;
@@ -582,8 +577,7 @@ void GSRasterizer::DrawSprite(const GSVertexSW* vertices, const GSVector4i& scis
 	if(scan.p.y < (float)top) scan.t += dedge.t * ((float)top - scan.p.y);
 	if(scan.p.x < (float)left) scan.t += dscan.t * ((float)left - scan.p.x);
 
-	(m_ds->*m_dsf.sp)(v, dscan);
-	// TODO: (m_dsf.ssp)(v, dscan);
+	m_dsf.ssp(v, dscan);
 
 	for(; top < bottom; top++, scan.t += dedge.t)
 	{
