@@ -112,6 +112,7 @@ protected:
 	void vif1Freeze();
 	void sifFreeze();
 	void ipuFreeze();
+	void gifFreeze();
 
 	void sioFreeze();
 	void cdrFreeze();

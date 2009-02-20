@@ -31,7 +31,7 @@ using std::min;
 
 #define gif ((DMACh*)&psH[0xA000])
 
-static u64 s_gstag=0; // used for querying the last tag
+static u64 s_gstag = 0; // used for querying the last tag
 static int gspath3done=0;
 static int gscycles = 0;
 
@@ -149,7 +149,6 @@ int  _GIFchain() {
 
 int gscount = 0;
 static int prevcycles = 0;
-static u32* prevtag = NULL;
 
 void GIFdma() 
 {
@@ -312,7 +311,6 @@ void GIFdma()
 			}
 		}
 	}
-	prevtag = NULL;
 	prevcycles = 0;
 	if (!(vif1Regs->mskpath3 || (psHu32(GIF_MODE) & 0x1)))	{
 		CPU_INT(2, gscycles);
@@ -341,9 +339,18 @@ void dmaGIF() {
 
 #define spr0 ((DMACh*)&PS2MEM_HW[0xD000])
 
+enum gifstate_t
+{
+	GIF_STATE_EMPTY = 0,
+	GIF_STATE_STALL,
+	GIF_STATE_DONE
+};
+
 static unsigned int mfifocycles;
 static unsigned int gifqwc = 0;
-unsigned int gifdone = 0;
+
+// A three-way toggle used to determine if the GIF is stalling (transferring) or done (finished).
+static gifstate_t gifstate = GIF_STATE_EMPTY;
 
 // called from only one location, so forceinline it:
 static __forceinline int mfifoGIFrbTransfer() {
@@ -421,7 +428,7 @@ void mfifoGIFtransfer(int qwc) {
 	if(qwc > 0 ) {
 				gifqwc += qwc;
 				if(!(gif->chcr & 0x100))return;
-				if(gifdone == 1) return;
+				if(gifstate == GIF_STATE_STALL) return;
 			}
 	SPR_LOG("mfifoGIFtransfer %x madr %x, tadr %x\n", gif->chcr, gif->madr, gif->tadr);
 		
@@ -451,37 +458,37 @@ void mfifoGIFtransfer(int qwc) {
 			switch (id) {
 				case 0: // Refe - Transfer Packet According to ADDR field
 					gif->tadr = psHu32(DMAC_RBOR) + ((gif->tadr + 16) & psHu32(DMAC_RBSR));
-					gifdone = 2;										//End Transfer
+					gifstate = GIF_STATE_DONE;										//End Transfer
 					break;
 
 				case 1: // CNT - Transfer QWC following the tag.
 					gif->madr = psHu32(DMAC_RBOR) + ((gif->tadr + 16) & psHu32(DMAC_RBSR));						//Set MADR to QW after Tag            
 					gif->tadr = psHu32(DMAC_RBOR) + ((gif->madr + (gif->qwc << 4)) & psHu32(DMAC_RBSR));			//Set TADR to QW following the data
-					gifdone = 0;
+					gifstate = GIF_STATE_EMPTY;
 					break;
 
 				case 2: // Next - Transfer QWC following tag. TADR = ADDR
 					temp = gif->madr;								//Temporarily Store ADDR
 					gif->madr = psHu32(DMAC_RBOR) + ((gif->tadr + 16) & psHu32(DMAC_RBSR)); 					  //Set MADR to QW following the tag
 					gif->tadr = temp;								//Copy temporarily stored ADDR to Tag
-					gifdone = 0;
+					gifstate = GIF_STATE_EMPTY;
 					break;
 
 				case 3: // Ref - Transfer QWC from ADDR field
 				case 4: // Refs - Transfer QWC from ADDR field (Stall Control) 
 					gif->tadr = psHu32(DMAC_RBOR) + ((gif->tadr + 16) & psHu32(DMAC_RBSR));							//Set TADR to next tag
-					gifdone = 0;
+					gifstate = GIF_STATE_EMPTY;
 					break;
 
 				case 7: // End - Transfer QWC following the tag
 					gif->madr = psHu32(DMAC_RBOR) + ((gif->tadr + 16) & psHu32(DMAC_RBSR));		//Set MADR to data following the tag
 					gif->tadr = psHu32(DMAC_RBOR) + ((gif->madr + (gif->qwc << 4)) & psHu32(DMAC_RBSR));			//Set TADR to QW following the data
-					gifdone = 2;										//End Transfer
+					gifstate = GIF_STATE_DONE;						//End Transfer
 					break;
 				}
 				if ((gif->chcr & 0x80) && (ptag[0] >> 31)) {
 				SPR_LOG("dmaIrq Set\n");
-				gifdone = 2;
+				gifstate = GIF_STATE_DONE;
 			}
 	 }
 	FreezeXMMRegs(1); 
@@ -489,12 +496,12 @@ void mfifoGIFtransfer(int qwc) {
 		if (mfifoGIFchain() == -1) {
 			SysPrintf("GIF dmaChain error size=%d, madr=%lx, tadr=%lx\n",
 					gif->qwc, gif->madr, gif->tadr);
-			gifdone = 1;
+			gifstate = GIF_STATE_STALL;
 		}
 	FreezeXMMRegs(0); 
 	FreezeMMXRegs(0);
 		
-	if(gif->qwc == 0 && gifdone == 2) gifdone = 1;
+	if(gif->qwc == 0 && gifstate == GIF_STATE_DONE) gifstate = GIF_STATE_STALL;
 	CPU_INT(11,mfifocycles);
 		
 	SPR_LOG("mfifoGIFtransfer end %x madr %x, tadr %x\n", gif->chcr, gif->madr, gif->tadr);	
@@ -504,7 +511,7 @@ void gifMFIFOInterrupt()
 {
 	if(!(gif->chcr & 0x100)) { SysPrintf("WTF GIFMFIFO\n");cpuRegs.interrupt &= ~(1 << 11); return ; }
 	
-	if(gifdone != 1) {
+	if(gifstate != GIF_STATE_STALL) {
 		if(gifqwc <= 0) {
 		//SysPrintf("Empty\n");
 			psHu32(GIF_STAT)&= ~0xE00; // OPH=0 | APATH=0
@@ -515,14 +522,14 @@ void gifMFIFOInterrupt()
 		return;
 	}
 #ifdef PCSX2_DEVBUILD
-	if(gifdone == 0 || gif->qwc > 0) {
-		Console::Error("gifMFIFO Panic > Shouldnt go here!");
+	if(gifstate == GIF_STATE_EMPTY || gif->qwc > 0) {
+		Console::Error("gifMFIFO Panic > Shouldn't go here!");
 		return;
 	}
 #endif
 	//if(gifqwc > 0)SysPrintf("GIF MFIFO ending with stuff in it %x\n", gifqwc);
 	gifqwc = 0;
-	gifdone = 0;
+	gifstate = GIF_STATE_EMPTY;
 	gif->chcr &= ~0x100;
 	hwDmacIrq(DMAC_GIF);
 	GSCSRr &= ~0xC000; //Clear FIFO stuff
@@ -532,3 +539,15 @@ void gifMFIFOInterrupt()
 	psHu32(GIF_STAT)&= ~0x1F000000; // QFC=0
 }
 
+void SaveState::gifFreeze()
+{
+	if( GetVersion() >= 0x14 )
+	{
+		Freeze( gifstate );
+		Freeze( gifqwc );
+		Freeze( gspath3done );
+		Freeze( gscycles );
+
+		// Note: mfifocycles is not a persistent var, so no need to save it here.
+	}
+}
