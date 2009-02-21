@@ -17,11 +17,8 @@
  *
  *  PCSX2 members can be contacted through their website at www.pcsx2.net.
  */
-
-
 #ifndef CONVERT_H
 #define CONVERT_H
-
 
 #include <sys/types.h> // off64_t
 #include "PS2Etypes.h"
@@ -31,19 +28,15 @@
 #define CONVERTLITTLEENDIAN
 #endif /* __BYTE_ORDER */
 #endif /* __linux__ */
-
 #ifdef _WIN32
 #define CONVERTLITTLEENDIAN
 #endif /* _WIN32 */
-
 #define HEXTOBCD(i)  (((i)/10*16) + ((i)%10))
 #define BCDTOHEX(i)  (((i)/16*10) + ((i)%16))
-
 
 extern off64_t ConvertEndianOffset(off64_t number);
 extern unsigned int ConvertEndianUInt(unsigned int number);
 extern unsigned short ConvertEndianUShort(unsigned short number);
-
 extern void LBAtoMSF(unsigned long lsn, char *buffer);
 extern unsigned long MSFtoLBA(char *buffer);
 

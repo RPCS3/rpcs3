@@ -17,11 +17,8 @@
  *
  *  PCSX2 members can be contacted through their website at www.pcsx2.net.
  */
-
-
 #ifndef TOC_H
 #define TOC_H
-
 
 // #ifndef __LINUX__
 // #ifdef __linux__
@@ -31,54 +28,46 @@
 
 // #define CDVDdefs
 // #include "PS2Edefs.h"
-
 #include "isofile.h"
 
-
 // #define VERBOSE_FUNCTION_TOC
-
 
 #ifdef _WIN32
 #pragma pack(1)
 #endif /* _WIN32 */
-
-struct tocTD {
-  unsigned long lsn;
-  unsigned char type;
+struct tocTD
+{
+	unsigned long lsn;
+	unsigned char type;
 #ifdef _WIN32
 };
 #else
-} __attribute__ ((packed));
+} __attribute__((packed));
 #endif /* _WIN32 */
 
-struct tocTN {
-  unsigned char strack;
-  unsigned char etrack;
+struct tocTN
+{
+	unsigned char strack;
+	unsigned char etrack;
 #ifdef _WIN32
 };
 #else
-} __attribute__ ((packed));
+} __attribute__((packed));
 #endif /* _WIN32 */
-
 #ifdef _WIN32
 #pragma pack()
 #endif /* _WIN32 */
-
 
 // PCSX2's .toc file format:
 // 1 unsigned char - CDVD_TYPE_????
 // 1 tocTN
 // As many tocTDs as it takes.
-
-
 extern void IsoInitTOC(struct IsoFile *isofile);
 extern void IsoAddTNToTOC(struct IsoFile *isofile, struct tocTN toctn);
 extern void IsoAddTDToTOC(struct IsoFile *isofile,
-                          unsigned char track,
-                          struct tocTD toctd);
-
+	                          unsigned char track,
+	                          struct tocTD toctd);
 extern int IsoLoadTOC(struct IsoFile *isofile);
 extern int IsoSaveTOC(struct IsoFile *isofile);
-
 
 #endif /* TOC_H */
