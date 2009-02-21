@@ -174,7 +174,7 @@ protected:
 	// Counts the number of vsync frames queued in the MTGS ringbuffer.  This is used to
 	// throttle the number of frames allowed to be rendered ahead of time for games that
 	// run very fast and have little or no ringbuffer overhead (typically opening menus)
-	volatile u32 m_QueuedFrames;
+	volatile s32 m_QueuedFrames;
 
 	// Protection lock for the frame queue counter -- needed because we can't safely
 	// AtomicExchange from two threads.

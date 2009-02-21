@@ -442,6 +442,13 @@ void mtgsThreadObject::PostVsyncEnd( bool updategs )
 {
 	while( m_QueuedFrames > 8 )
 	{
+		if( m_WritePos == volatize( m_RingPos ) )
+		{
+			// MTGS ringbuffer is empty, but we still have queued frames in the counter?  Ouch!
+			Console::Error( "MTGS > Queued framecount mismatch = %d", params m_QueuedFrames );
+			m_QueuedFrames = 0;
+			break;
+		}
 		Sleep( 2 );		// Sleep off quite a bit of time, since we're obviously *waaay* ahead.
 		SpinWait();
 	}
@@ -560,7 +567,7 @@ int mtgsThreadObject::Callback()
 					gsFrameSkip( !tag.data[1] );
 
 					m_lock_FrameQueueCounter.Lock();
-					m_QueuedFrames--;
+					AtomicDecrement( m_QueuedFrames );
 					jASSUME( m_QueuedFrames >= 0 );
 					m_lock_FrameQueueCounter.Unlock();
 
