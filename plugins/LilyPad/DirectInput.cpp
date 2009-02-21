@@ -25,6 +25,31 @@ static void GUIDtoString(wchar_t *data, const GUID *pg) {
 		flipLong(((u32*)pg->Data4)[1]));
 }
 
+struct DirectInput8Data {
+	IDirectInput8* lpDI8;
+	int refCount;
+	int deviceCount;
+};
+
+DirectInput8Data di8d = {0,0,0};
+
+IDirectInput8* GetDirectInput() {
+	if (!di8d.lpDI8) {
+		if (FAILED(DirectInput8Create(hInst, 0x800, IID_IDirectInput8, (void**) &di8d.lpDI8, 0))) return 0;
+	}
+	di8d.refCount++;
+	return di8d.lpDI8;
+}
+void ReleaseDirectInput() {
+	if (di8d.refCount) {
+		di8d.refCount--;
+		if (!di8d.refCount) {
+			di8d.lpDI8->Release();
+			di8d.lpDI8 = 0;
+		}
+	}
+}
+
 static int StringToGUID(GUID *pg, wchar_t *dataw) {
 	char data[100];
 	if (wcslen(dataw) > 50) return 0;
@@ -59,54 +84,14 @@ public:
 	DI8Effect *diEffects;
 
 	IDirectInputDevice8 *did;
-	DirectInputDevice(DeviceType type, IDirectInputDevice8* did, wchar_t *displayName, wchar_t *instanceID, wchar_t *productID) : Device(DI, type, displayName, instanceID, productID) {
-		int i;
+	GUID guidInstance;
+	DirectInputDevice(DeviceType type, IDirectInputDevice8* did, wchar_t *displayName, wchar_t *instanceID, wchar_t *productID, GUID guid) : Device(DI, type, displayName, instanceID, productID) {
 		diEffects = 0;
-		this->did = did;
+		guidInstance = guid;
+		this->did = 0;
 		did->EnumEffects(EnumEffectsCallback, this, DIEFT_ALL);
 		did->EnumObjects(EnumDeviceObjectsCallback, this, DIDFT_ALL);
-		DIOBJECTDATAFORMAT *formats = (DIOBJECTDATAFORMAT*)malloc(sizeof(DIOBJECTDATAFORMAT) * numPhysicalControls);
-		for (i=0; i<numPhysicalControls; i++) {
-			formats[i].pguid = 0;
-			formats[i].dwType = physicalControls[i].type | DIDFT_MAKEINSTANCE(physicalControls[i].id);
-			formats[i].dwOfs = 4*i;
-			formats[i].dwFlags = 0;
-		}
-		DIDATAFORMAT format;
-		format.dwSize = sizeof(format);
-		format.dwDataSize = 4 * numPhysicalControls;
-		format.dwObjSize = sizeof(DIOBJECTDATAFORMAT);
-		format.dwFlags = 0;
-		format.dwNumObjs = numPhysicalControls;
-		format.rgodf = formats;
-		int res = did->SetDataFormat(&format);
-		for (i=0; i<numPhysicalControls; i++) {
-			if (physicalControls[i].type == ABSAXIS) {
-				DIPROPRANGE prop;
-				prop.diph.dwHeaderSize = sizeof(DIPROPHEADER);
-				prop.diph.dwSize = sizeof(DIPROPRANGE);
-				prop.diph.dwObj = formats[i].dwType;
-				prop.diph.dwHow = DIPH_BYID;
-				prop.lMin = -FULLY_DOWN;
-				prop.lMax = FULLY_DOWN;
-				did->SetProperty(DIPROP_RANGE, &prop.diph);
-
-				// May do something like this again, if there's any need.
-				/*
-				if (FAILED(DI->did->SetProperty(DIPROP_RANGE, &prop.diph))) {
-					if (FAILED(DI->did->GetProperty(DIPROP_RANGE, &prop.diph))) {
-						// ????
-						DI->objects[i].min = prop.lMin;
-						DI->objects[i].max = prop.lMax;
-						continue;
-					}
-				}
-				DI->objects[i].min = prop.lMin;
-				DI->objects[i].max = prop.lMax;
-				//*/
-			}
-		}
-		free(formats);
+		did->Release();
 	}
 
 	void SetEffect(ForceFeedbackBinding *binding, unsigned char force) {
@@ -152,7 +137,59 @@ public:
 
 	int Activate(void *d) {
 		int i, j;
+		IDirectInput8 *di8 = GetDirectInput();
 		Deactivate();
+		if (!di8) return 0;
+		if (DI_OK != di8->CreateDevice(guidInstance, &did, 0)) {
+			ReleaseDirectInput();
+			did = 0;
+			return 0;
+		}
+
+		{
+			DIOBJECTDATAFORMAT *formats = (DIOBJECTDATAFORMAT*)malloc(sizeof(DIOBJECTDATAFORMAT) * numPhysicalControls);
+			for (i=0; i<numPhysicalControls; i++) {
+				formats[i].pguid = 0;
+				formats[i].dwType = physicalControls[i].type | DIDFT_MAKEINSTANCE(physicalControls[i].id);
+				formats[i].dwOfs = 4*i;
+				formats[i].dwFlags = 0;
+			}
+			DIDATAFORMAT format;
+			format.dwSize = sizeof(format);
+			format.dwDataSize = 4 * numPhysicalControls;
+			format.dwObjSize = sizeof(DIOBJECTDATAFORMAT);
+			format.dwFlags = 0;
+			format.dwNumObjs = numPhysicalControls;
+			format.rgodf = formats;
+			int res = did->SetDataFormat(&format);
+			for (i=0; i<numPhysicalControls; i++) {
+				if (physicalControls[i].type == ABSAXIS) {
+					DIPROPRANGE prop;
+					prop.diph.dwHeaderSize = sizeof(DIPROPHEADER);
+					prop.diph.dwSize = sizeof(DIPROPRANGE);
+					prop.diph.dwObj = formats[i].dwType;
+					prop.diph.dwHow = DIPH_BYID;
+					prop.lMin = -FULLY_DOWN;
+					prop.lMax = FULLY_DOWN;
+					did->SetProperty(DIPROP_RANGE, &prop.diph);
+
+					// May do something like this again, if there's any need.
+					/*
+					if (FAILED(DI->did->SetProperty(DIPROP_RANGE, &prop.diph))) {
+						if (FAILED(DI->did->GetProperty(DIPROP_RANGE, &prop.diph))) {
+							// ????
+							DI->objects[i].min = prop.lMin;
+							DI->objects[i].max = prop.lMax;
+							continue;
+						}
+					}
+					DI->objects[i].min = prop.lMin;
+					DI->objects[i].max = prop.lMax;
+					//*/
+				}
+			}
+			free(formats);
+		}
 		InitInfo *info = (InitInfo*)d;
 		// Note:  Have to use hWndTop to properly hide cursor for mouse device.
 		if (type == OTHER) {
@@ -165,6 +202,9 @@ public:
 			did->SetCooperativeLevel(info->hWndTop, DISCL_FOREGROUND | DISCL_EXCLUSIVE);
 		}
 		if (did->Acquire() != DI_OK) {
+			did->Release();
+			did = 0;
+			ReleaseDirectInput();
 			return 0;
 		}
 		AllocState();
@@ -278,12 +318,13 @@ public:
 		}
 		if (active) {
 			did->Unacquire();
+			did->Release();
+			ReleaseDirectInput();
 			active = 0;
 		}
 	}
 
 	~DirectInputDevice() {
-		did->Release();
 	}
 };
 
@@ -376,15 +417,8 @@ BOOL CALLBACK EnumDeviceObjectsCallback (LPCDIDEVICEOBJECTINSTANCE lpddoi, LPVOI
 	return DIENUM_CONTINUE;
 }
 
-struct CreationInfo {
-	LPDIRECTINPUT8 lpDI8;
-	int count;
-};
-
-
 BOOL CALLBACK EnumCallback (LPCDIDEVICEINSTANCE lpddi, LPVOID pvRef) {
-	CreationInfo *ci = (CreationInfo*) pvRef;
-	int *count = (int*) pvRef;
+	IDirectInput8* di8 = (IDirectInput8*)pvRef;
 	const wchar_t *name;
 	wchar_t temp[40];
 	if (lpddi->tszInstanceName[0]) {
@@ -394,10 +428,10 @@ BOOL CALLBACK EnumCallback (LPCDIDEVICEINSTANCE lpddi, LPVOID pvRef) {
 		name = lpddi->tszProductName;
 	}
 	else {
-		wsprintfW (temp, L"Device %i", ci->count);
+		wsprintfW (temp, L"Device %i", di8d.deviceCount);
 		name = temp;
 	}
-	ci->count++;
+	di8d.deviceCount++;
 	wchar_t *fullName = (wchar_t *) malloc((wcslen(name) + 4) * sizeof(wchar_t));
 	wsprintf(fullName, L"DX %s", name);
 	wchar_t instanceID[100];
@@ -412,17 +446,18 @@ BOOL CALLBACK EnumCallback (LPCDIDEVICEINSTANCE lpddi, LPVOID pvRef) {
 		type = MOUSE;
 	}
 	IDirectInputDevice8 *did;
-	if (DI_OK == ci->lpDI8->CreateDevice(lpddi->guidInstance, &did, 0)) {
-		dm->AddDevice(new DirectInputDevice(type, did, fullName, instanceID, productID));
+	if (DI_OK == di8->CreateDevice(lpddi->guidInstance, &did, 0)) {
+		dm->AddDevice(new DirectInputDevice(type, did, fullName, instanceID, productID, lpddi->guidInstance));
 	}
 	free(fullName);
 	return DIENUM_CONTINUE;
 }
 
 void EnumDirectInputDevices() {
-	CreationInfo ci = {0,0};
-	if (FAILED(DirectInput8Create(hInst, 0x800, IID_IDirectInput8, (void**) &ci.lpDI8, 0))) return;
-	ci.lpDI8->EnumDevices(DI8DEVCLASS_ALL, EnumCallback, &ci, DIEDFL_ATTACHEDONLY);
-	ci.lpDI8->Release();
+	IDirectInput8* di8 = GetDirectInput();
+	if (!di8) return;
+	di8d.deviceCount = 0;
+	di8->EnumDevices(DI8DEVCLASS_ALL, EnumCallback, di8, DIEDFL_ATTACHEDONLY);
+	ReleaseDirectInput();
 }
 

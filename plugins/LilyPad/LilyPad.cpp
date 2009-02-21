@@ -209,7 +209,7 @@ void AddForce(ButtonSum *sum, u8 cmd, int delta = 255) {
 	if (cmd<0x14) {
 		sum->buttons[cmd-0x10] += delta;
 	}
-	// D-pad.  Command numbering is based on ordering of digital values.  
+	// D-pad.  Command numbering is based on ordering of digital values.
 	else if (cmd < 0x18) {
 		if (cmd == 0x14) {
 			sum->sticks[0].vert -= delta;
@@ -487,7 +487,7 @@ u32 CALLBACK PS2EgetLibType(void) {
 	return PS2E_LT_PAD;
 }
 
-#define VERSION ((0<<8) | 9 | (9<<24))
+#define VERSION ((0<<8) | 9 | (10<<24))
 
 u32 CALLBACK PS2EgetLibVersion2(u32 type) {
 	ps2e = 1;
@@ -644,7 +644,7 @@ ExtraWndProcResult HackWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 				// Need to do this when not reading input from gs thread.
 				// Checking for that case not worth the effort.
 				EnterCriticalSection(&readInputCriticalSection);
-				RefreshEnabledDevices(1);
+				UpdateEnabledDevices(1);
 				LeaveCriticalSection(&readInputCriticalSection);
 			}
 			break;
