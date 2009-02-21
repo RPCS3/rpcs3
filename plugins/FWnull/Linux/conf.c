@@ -93,8 +93,6 @@ void CFGabout() {
 GtkWidget *Conf;
 
 void OnConf_Ok(GtkButton *button, gpointer user_data) {
-	gchar *str;
-
 	SaveConfig();
 
 	gtk_widget_destroy(Conf);

@@ -88,7 +88,7 @@ s32 CALLBACK FWopen(void *pDsp) {
 
 #ifdef _WIN32
 #else
-    Display* dsp = *(Display**)pDsp;
+    //Display* dsp = *(Display**)pDsp;
 #endif
 
 	return 0;

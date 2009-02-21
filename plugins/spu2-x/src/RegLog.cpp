@@ -111,7 +111,7 @@ void SPU2writeLog( const char* action, u32 rmem, u16 value )
 				break;
 			case SPDIF_PROTECT:
 				if(Spdif.Protection != value) ConLog(" * SPU2: SPDIF Copy set to %04x\n",value);
-				RegLog(2,"SPDIF_COPY",rmem,-1,value);
+				RegLog(2,"SPDIF_PROTECT",rmem,-1,value);
 				break;
 		}
 		UpdateSpdifMode();

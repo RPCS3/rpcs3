@@ -64,11 +64,11 @@ int main(int argc, char *argv[])
 #endif
 
 	// make gtk thread safe if using MTGS
-	/*if (CHECK_MULTIGS)
-	{*/
+	if (CHECK_MULTIGS)
+	{
 		g_thread_init(NULL);
 		gdk_threads_init();
-	/*}*/
+	}
 
 	if (UseGui)
 	{
@@ -366,7 +366,7 @@ void pcsx2_exit()
 			sprintf(plugin, "%s%s", Config.PluginsDir, ent->d_name);
 
 			if (strstr(plugin, ".so") == NULL) continue;
-			Handle = dlopen(plugin, RTLD_NOW);
+			Handle = SysLoadLibrary(plugin);
 			if (Handle == NULL) continue;
 		}
 	}
@@ -388,7 +388,7 @@ void pcsx2_exit()
 
 void SignalExit(int sig)
 {
-	ClosePlugins( true );
+	ClosePlugins(true);
 	pcsx2_exit();
 }
 

@@ -515,30 +515,22 @@ void FindPlugins()
 		sprintf(plugin, "%s%s", Config.PluginsDir, ent->d_name);
 
 		if (strstr(plugin, ".so") == NULL) continue;
-		Handle = dlopen(plugin, RTLD_NOW);
+		Handle = SysLoadLibrary(plugin);
 		if (Handle == NULL)
 		{
-			Console::Error("Can't open %s: %s\n", params ent->d_name, dlerror());
+			Console::Error("Can't open %s: %s\n", params ent->d_name, SysLibError());
 			continue;
 		}
+		
+		PS2EgetLibType = (_PS2EgetLibType) SysLoadSym(Handle, "PS2EgetLibType");
+		PS2EgetLibName = (_PS2EgetLibName) SysLoadSym(Handle, "PS2EgetLibName");
+		PS2EgetLibVersion2 = (_PS2EgetLibVersion2) SysLoadSym(Handle, "PS2EgetLibVersion2");
 
-		PS2EgetLibType = (_PS2EgetLibType) dlsym(Handle, "PS2EgetLibType");
-		PS2EgetLibName = (_PS2EgetLibName) dlsym(Handle, "PS2EgetLibName");
-		PS2EgetLibVersion2 = (_PS2EgetLibVersion2) dlsym(Handle, "PS2EgetLibVersion2");
-
-		if (PS2EgetLibType == NULL)
+		if ((PS2EgetLibType == NULL) || (PS2EgetLibName == NULL) || (PS2EgetLibVersion2 == NULL))
 		{
-			Console::Error("PS2EgetLibType==NULL for %s", params ent->d_name);
-			continue;
-		}
-		if (PS2EgetLibName == NULL)
-		{
-			Console::Error("PS2EgetLibName==NULL for %s", params ent->d_name);
-			continue;
-		}
-		if (PS2EgetLibVersion2 == NULL)
-		{
-			Console::Error("PS2EgetLibVersion2==NULL for %s", params ent->d_name);
+			if (PS2EgetLibType == NULL) Console::Error("PS2EgetLibType==NULL for %s", params ent->d_name);
+			if (PS2EgetLibName == NULL) Console::Error("PS2EgetLibName==NULL for %s", params ent->d_name);
+			if (PS2EgetLibVersion2 == NULL) Console::Error("PS2EgetLibVersion2==NULL for %s", params ent->d_name);
 			continue;
 		}
 
