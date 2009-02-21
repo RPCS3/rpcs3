@@ -382,6 +382,7 @@ extern mem32_t __fastcall hwRead32_generic(u32 mem);
 extern void __fastcall hwRead64_page_00(u32 mem, mem64_t* result );
 extern void __fastcall hwRead64_page_01(u32 mem, mem64_t* result );
 extern void __fastcall hwRead64_page_02(u32 mem, mem64_t* result );
+extern void __fastcall hwRead64_generic_INTC_HACK(u32 mem, mem64_t *out);
 extern void __fastcall hwRead64_generic(u32 mem, mem64_t* result );
 
 extern void __fastcall hwRead128_page_00(u32 mem, mem128_t* result );

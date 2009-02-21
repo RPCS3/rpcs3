@@ -40,6 +40,7 @@
 
 #include "PS2Etypes.h"
 
+#include <stdexcept>
 #include <string>
 #include "ConvertUTF.h"
 

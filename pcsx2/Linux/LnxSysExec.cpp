@@ -296,7 +296,7 @@ void RunExecute(const char* elf_file, bool use_bios)
 
 				// Take the user back to the GUI...
 				safe_delete(g_RecoveryState);
-				ClosePlugins();
+				ClosePlugins( true );
 				return;
 			}
 			safe_delete(g_RecoveryState);
@@ -750,11 +750,11 @@ void KeyEvent(keyEvent* ev)
 					PluginsResetGS();
 				}
 
-				ClosePlugins();
+				ClosePlugins( Config.closeGSonEsc );
 				
 				if (!UseGui) exit(0);
 
-				// fixme: The GUI is now capable of recieving control back from the
+				// fixme: The GUI is now capable of receiving control back from the
 				// emulator.  Which means that when I set g_ReturnToGui here, the emulation
 				// loop in ExecuteCpu() will exit.  You should be able to set it up so
 				// that it returns control to the existing GTK event loop, instead of
@@ -866,7 +866,7 @@ void SysClose()
 {
 	if (sinit == 0) return;
 	cpuShutdown();
-	ClosePlugins();
+	ClosePlugins( true );
 	ReleasePlugins();
 
 	if (emuLog != NULL)

@@ -586,69 +586,13 @@ struct PluginOpenStatusFlags
 
 static PluginOpenStatusFlags OpenStatus = {0};
 
-static bool loadp=false;
+static bool loadp = false;
+static bool initp = false;
 
-int InitPlugins() {
-	int ret;
-
-	ret = GSinit();
-	if (ret != 0) { Msgbox::Alert("GSinit error: %d", params ret); return -1; }
-	ret = PAD1init(1);
-	if (ret != 0) { Msgbox::Alert("PAD1init error: %d", params ret); return -1; }
-	ret = PAD2init(2);
-	if (ret != 0) { Msgbox::Alert("PAD2init error: %d", params ret); return -1; }
-	ret = SPU2init();
-	if (ret != 0) { Msgbox::Alert("SPU2init error: %d", params ret); return -1; }
-	ret = CDVDinit();
-	if (ret != 0) { Msgbox::Alert("CDVDinit error: %d", params ret); return -1; }
-	ret = DEV9init();
-	if (ret != 0) { Msgbox::Alert("DEV9init error: %d", params ret); return -1; }
-	ret = USBinit();
-	if (ret != 0) { Msgbox::Alert("USBinit error: %d", params ret); return -1; }
-	ret = FWinit();
-	if (ret != 0) { Msgbox::Alert("FWinit error: %d", params ret); return -1; }
-	return 0;
-}
-
-void ShutdownPlugins()
+int LoadPlugins()
 {
-	ClosePlugins();
-
-	// GS is a special case: It needs closed first usually.
-	// (the GS isn't always closed during emulation pauses)
-	if( OpenStatus.GS )
-	{
-		gsClose();
-		OpenStatus.GS = false;
-	}
-
-	if( GSshutdown != NULL )
-		GSshutdown();
-	
-	if( PAD1shutdown != NULL )
-		PAD1shutdown();
-	if( PAD2shutdown != NULL )
-		PAD2shutdown();
-
-	if( SPU2shutdown != NULL )
-		SPU2shutdown();
-
-	if( CDVDshutdown != NULL )
-		CDVDshutdown();
-
-	if( DEV9shutdown != NULL )
-		DEV9shutdown();
-
-	if( USBshutdown != NULL )
-		USBshutdown();
-
-	if( FWshutdown != NULL )
-		FWshutdown();
-}
-
-int LoadPlugins() {
-
 	if( loadp ) return 0;
+
 	string Plugin;
 
 	Path::Combine( Plugin, Config.PluginsDir, Config.GS );
@@ -672,14 +616,78 @@ int LoadPlugins() {
 	Path::Combine( Plugin, Config.PluginsDir, Config.USB);
 	if (LoadUSBplugin(Plugin) == -1) return -1;
 
-    Path::Combine( Plugin, Config.PluginsDir, Config.FW);
+	Path::Combine( Plugin, Config.PluginsDir, Config.FW);
 	if (LoadFWplugin(Plugin) == -1) return -1;
 
-	if (InitPlugins() == -1) return -1;
-
-	loadp=true;
+	loadp = true;
 
 	return 0;
+}
+
+
+int InitPlugins()
+{
+	if( initp ) return 0;
+
+	// Ensure plugins have been loaded....
+	if( LoadPlugins() == -1 ) return -1;
+
+	//if( !loadp )
+	//	throw Exception::InvalidOperation( "Bad coder mojo - InitPlugins called prior to plugins having been loaded." );
+
+	int ret;
+
+	ret = GSinit();
+	if (ret != 0) { Msgbox::Alert("GSinit error: %d", params ret); return -1; }
+	ret = PAD1init(1);
+	if (ret != 0) { Msgbox::Alert("PAD1init error: %d", params ret); return -1; }
+	ret = PAD2init(2);
+	if (ret != 0) { Msgbox::Alert("PAD2init error: %d", params ret); return -1; }
+	ret = SPU2init();
+	if (ret != 0) { Msgbox::Alert("SPU2init error: %d", params ret); return -1; }
+	ret = CDVDinit();
+	if (ret != 0) { Msgbox::Alert("CDVDinit error: %d", params ret); return -1; }
+	ret = DEV9init();
+	if (ret != 0) { Msgbox::Alert("DEV9init error: %d", params ret); return -1; }
+	ret = USBinit();
+	if (ret != 0) { Msgbox::Alert("USBinit error: %d", params ret); return -1; }
+	ret = FWinit();
+	if (ret != 0) { Msgbox::Alert("FWinit error: %d", params ret); return -1; }
+
+	initp = true;
+	return 0;
+}
+
+void ShutdownPlugins()
+{
+	if( !initp ) return;
+	
+	ClosePlugins( true );
+
+	if( GSshutdown != NULL )
+		GSshutdown();
+	
+	if( PAD1shutdown != NULL )
+		PAD1shutdown();
+	if( PAD2shutdown != NULL )
+		PAD2shutdown();
+
+	if( SPU2shutdown != NULL )
+		SPU2shutdown();
+
+	if( CDVDshutdown != NULL )
+		CDVDshutdown();
+
+	if( DEV9shutdown != NULL )
+		DEV9shutdown();
+
+	if( USBshutdown != NULL )
+		USBshutdown();
+
+	if( FWshutdown != NULL )
+		FWshutdown();
+
+	initp = false;
 }
 
 uptr pDsp;
@@ -687,12 +695,14 @@ extern void spu2DMA4Irq();
 extern void spu2DMA7Irq();
 extern void spu2Irq();
 
-int OpenPlugins(const char* pTitleFilename) {
+int OpenPlugins(const char* pTitleFilename)
+{
 	GSdriverInfo info;
 	int ret;
 
-	if ( !loadp )
-		throw Exception::InvalidOperation( "OpenPlugins cannot be called while the plugin state is uninitialized." );
+	if ( !initp )
+		InitPlugins();
+		//throw Exception::InvalidOperation( "Bad coder mojo -- OpenPlugins called prior to InitPlugins." );
 
 #ifndef _WIN32
     // change dir so that CDVD can find its config file
@@ -796,7 +806,7 @@ int OpenPlugins(const char* pTitleFilename) {
 	return 0;
 
 OpenError:
-	ClosePlugins();
+	ClosePlugins( true );
 #ifdef __LINUX__
     chdir(file);
 #endif
@@ -812,24 +822,43 @@ OpenError:
 	}
 
 
-void ClosePlugins()
+void ClosePlugins( bool closegs )
 {
-	// GS plugin is special and is not always closed during emulation pauses.
-	// (that's because the GS is the most complicated plugin and to close it would
-	// require we save the GS state -- plus, Gsdx doesn't really support being
-	// closed)
-
-	if( OpenStatus.GS )
-		mtgsWaitGS();
-
+	// Close pads first since they attatch to the GS's window.
+	
 	CLOSE_PLUGIN( PAD1 );
 	CLOSE_PLUGIN( PAD2 );
+
+	// GS plugin is special and is not always closed during emulation pauses.
+	// (that's because the GS is the most complicated plugin and to close it would
+	// require we save the GS state)
+
+	if( OpenStatus.GS )
+	{
+		if( closegs )
+		{
+			gsClose();
+			OpenStatus.GS = false;
+		}
+		else
+			mtgsWaitGS();
+	}
 
 	CLOSE_PLUGIN( CDVD );
 	CLOSE_PLUGIN( DEV9 );
 	CLOSE_PLUGIN( USB );
 	CLOSE_PLUGIN( FW );
 	CLOSE_PLUGIN( SPU2 );
+	
+	// More special treatment for the GS.  It needs a complete shutdown and re-init
+	// or else it will tend to error out when we try to use it again.
+	if( 0 ) //closegs )
+	{
+		GSshutdown();
+
+		int ret = GSinit();
+		if (ret != 0) { Msgbox::Alert("GSinit error: %d", params ret);  }
+	}
 }
 
 void ResetPlugins()
@@ -863,6 +892,8 @@ void ReleasePlugins()
 
 void PluginsResetGS()
 {
+	// PADs are tied to the GS window, so shut them down together with the GS.
+	
 	CLOSE_PLUGIN( PAD1 );
 	CLOSE_PLUGIN( PAD2 );
 
@@ -870,11 +901,6 @@ void PluginsResetGS()
 	{
 		gsClose();
 		OpenStatus.GS = false;
-	}
-
-	if( OpenStatus.PAD1 )
-	{
-		PAD1close();
 	}
 
 	GSshutdown();

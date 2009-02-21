@@ -131,7 +131,7 @@
 #define IRQINFO          0x07C2	
 #define SPDIF_MODE       0x07C6			
 #define SPDIF_MEDIA      0x07C8		// SPDIF Media: 'CD'/DVD	
-#define SPDIF_COPY		 0x07CC		// SPDIF Copy Protection
+#define SPDIF_PROTECT		 0x07CC		// SPDIF Copy Protection
 
 
 /*********************************************************************
@@ -161,8 +161,8 @@ Core attributes (SD_C)
 #define SPDIF_MEDIA_CDVD     0x0200
 #define SPDIF_MEDIA_400      0x0000
 
-#define SPDIF_COPY_NORMAL      0x0000	// spdif stream is not protected
-#define SPDIF_COPY_PROHIBIT    0x8000	// spdif stream can't be copied
+#define SPDIF_PROTECT_NORMAL      0x0000	// spdif stream is not protected
+#define SPDIF_PROTECT_PROHIBIT    0x8000	// spdif stream can't be copied
 
 /********************************************************************/
 

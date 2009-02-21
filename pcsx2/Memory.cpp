@@ -754,10 +754,11 @@ void memReset()
 		_ext_memWrite8<1>, _ext_memWrite16<1>, hwWrite32_page_0E, hwWrite64_page_0E, hwWrite128_generic
 	);
 
-	vtlbMemR32FP* page0F( CHECK_INTC_STAT_HACK ? hwRead32_page_0F_INTC_HACK : hwRead32_page_0F );
+	vtlbMemR32FP* page0F32( CHECK_INTC_STAT_HACK ? hwRead32_page_0F_INTC_HACK : hwRead32_page_0F );
+	vtlbMemR64FP* page0F64( CHECK_INTC_STAT_HACK ? hwRead64_generic_INTC_HACK : hwRead64_generic );
 
 	hw_by_page[0xf] = vtlb_RegisterHandler(
-		_ext_memRead8<1>, _ext_memRead16<1>, page0F, hwRead64_generic, hwRead128_generic,
+		_ext_memRead8<1>, _ext_memRead16<1>, page0F32, page0F64, hwRead128_generic,
 		_ext_memWrite8<1>, _ext_memWrite16<1>, hwWrite32_page_0F, hwWrite64_generic, hwWrite128_generic
 	);
 

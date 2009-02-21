@@ -388,7 +388,7 @@ void pcsx2_exit()
 
 void SignalExit(int sig)
 {
-	ClosePlugins();
+	ClosePlugins( true );
 	pcsx2_exit();
 }
 

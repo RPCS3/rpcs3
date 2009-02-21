@@ -613,7 +613,7 @@ BOOL APIENTRY DebuggerProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam
 					EndDialog(hDlg,TRUE);
 					EndDialog(hIopDlg,TRUE);
 
-                    ClosePlugins();
+                    ClosePlugins( true );
 					isRunning = 0;
                     return TRUE;
 

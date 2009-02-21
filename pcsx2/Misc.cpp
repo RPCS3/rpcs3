@@ -580,7 +580,7 @@ void ProcessFKeys(int fkey, int shift)
 					"Pcsx2 encountered an error while trying to load the savestate\n"
 					"and emulation had to be aborted." );
 
-				ClosePlugins();
+				ClosePlugins( true );
 
 				throw Exception::CpuStateShutdown(
 					"Saveslot load failed; PS2 emulated state had to be shut down." );	// let the GUI handle the error "gracefully"

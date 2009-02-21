@@ -36,7 +36,6 @@ using namespace R5900;
 
 static __forceinline void IntCHackCheck()
 {
-	if( !CHECK_INTC_STAT_HACK ) return;
 	cpuRegs.cycle = g_nextBranchCycle;
 	
 	// Threshold method, might fix games that have problems with the simple
@@ -121,7 +120,8 @@ __forceinline u16 hwRead16(u32 mem)
 	if( mem >= 0x10002000 && mem < 0x10008000 )
 		Console::Notice("Unexpected hwRead16 from 0x%x", params mem);
 
-	switch (mem) {
+	switch (mem)
+	{
 		case 0x10000000: ret = (u16)rcntRcount(0); break;
 		case 0x10000010: ret = (u16)counters[0].modeval; break;
 		case 0x10000020: ret = (u16)counters[0].target; break;
@@ -141,13 +141,15 @@ __forceinline u16 hwRead16(u32 mem)
 		case 0x10001820: ret = (u16)counters[3].target; break;
 
 		default:
-			if ((mem & 0xffffff0f) == 0x1000f200) {
+			if ((mem & 0xffffff0f) == 0x1000f200)
+			{
 				if(mem == 0x1000f260) ret = 0;
 				else if(mem == 0x1000F240) {
 					ret = psHu16(mem) | 0x0102;
 					psHu32(mem) &= ~0x4000;
 				}
-				else ret = psHu32(mem);
+				else
+					ret = psHu32(mem);
 				return (u16)ret;
 			}
 			ret = psHu16(mem);
@@ -348,10 +350,16 @@ void __fastcall hwRead64_page_02(u32 mem, mem64_t* result )
 	*result = ipuRead64(mem);
 }
 
-void __fastcall hwRead64_generic(u32 mem, mem64_t* result )
+void __fastcall hwRead64_generic_INTC_HACK(u32 mem, mem64_t* result )
 {
 	if( mem == INTC_STAT ) IntCHackCheck();
 
+	*result = psHu64(mem);
+	HW_LOG("Unknown Hardware Read 64 at %x\n",mem);
+}
+
+void __fastcall hwRead64_generic(u32 mem, mem64_t* result )
+{
 	*result = psHu64(mem);
 	HW_LOG("Unknown Hardware Read 64 at %x\n",mem);
 }

@@ -113,7 +113,7 @@ void UpdateDebugger(void)
 
 void OnDebug_Close(GtkButton *button, gpointer user_data)
 {
-	ClosePlugins();
+	ClosePlugins( true );
 	gtk_widget_destroy(DebugWnd);
 	gtk_main_quit();
 	gtk_widget_set_sensitive(MainWindow, TRUE);

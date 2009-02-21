@@ -36,6 +36,7 @@ namespace Exception
 	public:
 		const ResultType PartialResult;
 		
+		virtual ~UTFConversion() throw() {}
 		UTFConversion( const ResultType& result, std::string msg ) :
 			runtime_error( msg ),
 			PartialResult( result ) {}

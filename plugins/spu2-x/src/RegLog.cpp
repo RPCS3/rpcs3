@@ -109,7 +109,7 @@ void SPU2writeLog( const char* action, u32 rmem, u16 value )
 				if(Spdif.Unknown2 != value) ConLog(" * SPU2: SPDIF Unknown Register 2 set to %04x\n",value);
 				RegLog(2,"SPDIF_UNKNOWN2",rmem,-1,value);
 				break;
-			case SPDIF_COPY:
+			case SPDIF_PROTECT:
 				if(Spdif.Protection != value) ConLog(" * SPU2: SPDIF Copy set to %04x\n",value);
 				RegLog(2,"SPDIF_COPY",rmem,-1,value);
 				break;

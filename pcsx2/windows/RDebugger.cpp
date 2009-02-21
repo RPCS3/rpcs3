@@ -273,7 +273,7 @@ LRESULT WINAPI RemoteDebuggerProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lP
 			//open socket & thread
 			ListBox_SetHorizontalExtent(GetDlgItem(hDlg, IDC_COMMUNICATION), 1700);
 			if (CreateSocket(hDlg, port)==FALSE){
-				ClosePlugins();
+				ClosePlugins( false );
 				EndDialog(hDlg, FALSE );
 				return FALSE;
 			}
@@ -287,7 +287,7 @@ LRESULT WINAPI RemoteDebuggerProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lP
 				MessageBox(hDlg, _("Could not create threads or event"), 0, MB_OK);
 				connected=0;
 				closesocket(serversocket);
-				ClosePlugins();
+				ClosePlugins( false );
 				EndDialog(hDlg, FALSE );
 				return FALSE;
 			}
@@ -332,7 +332,7 @@ LRESULT WINAPI RemoteDebuggerProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lP
 						CloseHandle(runEvent);
 						closesocket(serversocket);
 						WSACleanup();
-						ClosePlugins();
+						ClosePlugins( false );
 						EndDialog(hDlg, TRUE );
 						return TRUE;
 				}

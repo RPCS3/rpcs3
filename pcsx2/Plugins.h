@@ -31,7 +31,7 @@ int  LoadPlugins();
 void ReleasePlugins();
 
 int  OpenPlugins(const char* pTitleFilename);
-void ClosePlugins();
+void ClosePlugins( bool closegs );
 
 int InitPlugins();
 
