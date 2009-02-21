@@ -1273,16 +1273,15 @@ void recVUMI_FSAND( VURegs *VU, int info )
 void recVUMI_FSEQ( VURegs *VU, int info )
 {
 	int ftreg;
-	u32 imm;
+	u16 imm;
 	if ( _Ft_ == 0 ) return;
-	//SysPrintf("recVUMI_FSEQ  \n");
+	//SysPrintf("recVUMI_FSEQ\n");
 	imm = (((VU->code >> 21 ) & 0x1) << 11) | (VU->code & 0x7ff);
 
-	ftreg = ALLOCVI(_Ft_, MODE_WRITE);
+	ftreg = ALLOCVI(_Ft_, MODE_WRITE|MODE_8BITREG);
 
 	MOVZX32M16toR( EAX, VU_VI_ADDR(REG_STATUS_FLAG, 1) );
 	XOR32RtoR(ftreg, ftreg);
-
 	CMP16ItoR(EAX, imm);
 	SETE8R(ftreg);
 }
@@ -1364,7 +1363,7 @@ void recVUMI_FMEQ( VURegs *VU, int info )
 	if ( _Ft_ == 0 ) return;
 	//SysPrintf("recVUMI_FMEQ  \n");
 	if( _Ft_ == _Fs_ ) {
-		ftreg = ALLOCVI(_Ft_, MODE_WRITE|MODE_READ|MODE_8BITREG);
+		ftreg = ALLOCVI(_Ft_, MODE_WRITE|MODE_READ);//|MODE_8BITREG
 
 		CMP16MtoR(ftreg, VU_VI_ADDR(REG_MAC_FLAG, 1));
 		SETE8R(EAX);
@@ -1372,9 +1371,9 @@ void recVUMI_FMEQ( VURegs *VU, int info )
 	}
 	else {
 		ADD_VI_NEEDED(_Fs_);
-		fsreg = ALLOCVI(_Fs_, MODE_READ);
 		ftreg = ALLOCVI(_Ft_, MODE_WRITE|MODE_8BITREG);
-
+		fsreg = ALLOCVI(_Fs_, MODE_READ);
+		
 		XOR32RtoR(ftreg, ftreg);
 		
 		CMP16MtoR(fsreg, VU_VI_ADDR(REG_MAC_FLAG, 1));
