@@ -40,13 +40,8 @@ u16* DMABaseAddr;
 void DMALogOpen()
 {
 	if(!DMALog()) return;
-#ifdef _MSC_VER
-	DMA4LogFile    = _wfopen( DMA4LogFileName, _T("wb") );
-	DMA7LogFile    = _wfopen( DMA7LogFileName, _T("wb") );
-#else
-	DMA4LogFile    = fopen((char*)DMA4LogFileName, "wb");
-	DMA7LogFile    = fopen((char*)DMA7LogFileName, "wb");
-#endif
+	DMA4LogFile    = fopen( Unicode::Convert( DMA4LogFileName ).c_str(), "wb");
+	DMA7LogFile    = fopen( Unicode::Convert( DMA7LogFileName ).c_str(), "wb");
 	ADMA4LogFile   = fopen( "logs/adma4.raw", "wb" );
 	ADMA7LogFile   = fopen( "logs/adma7.raw", "wb" );
 	ADMAOutLogFile = fopen( "logs/admaOut.raw", "wb" );

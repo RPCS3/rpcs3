@@ -23,7 +23,7 @@
 
 //////
 
-const TCHAR CfgFile[] = _T("inis\\SPU2-X.ini");
+const TCHAR CfgFile[] = L"inis\\SPU2-X.ini";
 
 
 /*| Config File Format: |¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯*\
@@ -43,7 +43,7 @@ const TCHAR CfgFile[] = _T("inis\\SPU2-X.ini");
 
 void CfgWriteBool(const TCHAR* Section, const TCHAR* Name, bool Value)
 {
-	const TCHAR *Data = Value ? _T("TRUE") : _T("FALSE");
+	const TCHAR *Data = Value ? L"TRUE" : L"FALSE";
 	WritePrivateProfileString( Section, Name, Data, CfgFile );
 }
 
@@ -70,18 +70,18 @@ bool CfgReadBool(const TCHAR *Section,const TCHAR* Name, bool Default)
 {
 	TCHAR Data[255] = {0};
 
-	GetPrivateProfileString( Section, Name, _T(""), Data, 255, CfgFile );
+	GetPrivateProfileString( Section, Name, L"", Data, 255, CfgFile );
 	Data[254]=0;
 	if(wcslen(Data)==0) {
 		CfgWriteBool(Section,Name,Default);
 		return Default;
 	}
 
-	if(wcscmp(Data,_T("1"))==0) return true;
-	if(wcscmp(Data,_T("Y"))==0) return true;
-	if(wcscmp(Data,_T("T"))==0) return true;
-	if(wcscmp(Data,_T("YES"))==0) return true;
-	if(wcscmp(Data,_T("TRUE"))==0) return true;
+	if(wcscmp(Data,L"1")==0) return true;
+	if(wcscmp(Data,L"Y")==0) return true;
+	if(wcscmp(Data,L"T")==0) return true;
+	if(wcscmp(Data,L"YES")==0) return true;
+	if(wcscmp(Data,L"TRUE")==0) return true;
 	return false;
 }
 
@@ -89,7 +89,7 @@ bool CfgReadBool(const TCHAR *Section,const TCHAR* Name, bool Default)
 int CfgReadInt(const TCHAR* Section, const TCHAR* Name,int Default)
 {
 	TCHAR Data[255]={0};
-	GetPrivateProfileString(Section,Name,_T(""),Data,255,CfgFile);
+	GetPrivateProfileString(Section,Name,L"",Data,255,CfgFile);
 	Data[254]=0;
 
 	if(wcslen(Data)==0) {
@@ -102,10 +102,10 @@ int CfgReadInt(const TCHAR* Section, const TCHAR* Name,int Default)
 
 void CfgReadStr(const TCHAR* Section, const TCHAR* Name, TCHAR* Data, int DataSize, const TCHAR* Default)
 {
-	GetPrivateProfileString(Section,Name,_T(""),Data,DataSize,CfgFile);
+	GetPrivateProfileString(Section,Name,L"",Data,DataSize,CfgFile);
 
 	if(wcslen(Data)==0) { 
-		swprintf_s( Data, DataSize, _T("%s"), Default );
+		swprintf_s( Data, DataSize, L"%s", Default );
 		CfgWriteStr( Section, Name, Data );
 	}
 }
@@ -113,7 +113,7 @@ void CfgReadStr(const TCHAR* Section, const TCHAR* Name, TCHAR* Data, int DataSi
 void CfgReadStr(const TCHAR* Section, const TCHAR* Name, wstring Data, int DataSize, const TCHAR* Default)
 {
 	wchar_t workspace[512];
-	GetPrivateProfileString(Section,Name,_T(""),workspace,DataSize,CfgFile);
+	GetPrivateProfileString(Section,Name,L"",workspace,DataSize,CfgFile);
 
 	Data = workspace;
 
@@ -130,7 +130,7 @@ bool CfgFindName( const TCHAR *Section, const TCHAR* Name)
 {
 	// Only load 24 characters.  No need to load more.
 	TCHAR Data[24]={0};
-	GetPrivateProfileString(Section,Name,_T(""),Data,24,CfgFile);
+	GetPrivateProfileString(Section,Name,L"",Data,24,CfgFile);
 	Data[23]=0;
 
 	if(wcslen(Data)==0) return false;

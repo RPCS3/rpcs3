@@ -110,26 +110,26 @@ public:
 		switch( speakerConfig )
 		{
 		case 2:
-			ConLog( "* SPU2 > Using normal 2 speaker stereo output." );
+			ConLog( "* SPU2 > Using normal 2 speaker stereo output.\n" );
 			threadproc = (LPTHREAD_START_ROUTINE)&RThread<StereoOut16>;
 			speakerConfig = 2;
 		break;
 
 		case 4:
-			ConLog( "* SPU2 > 4 speaker expansion enabled [quadraphenia]" );
+			ConLog( "* SPU2 > 4 speaker expansion enabled [quadraphenia]\n" );
 			threadproc = (LPTHREAD_START_ROUTINE)&RThread<StereoQuadOut16>;
 			speakerConfig = 4;
 		break;
 
 		case 6:
 		case 7:
-			ConLog( "* SPU2 > 5.1 speaker expansion enabled." );
+			ConLog( "* SPU2 > 5.1 speaker expansion enabled.\n" );
 			threadproc = (LPTHREAD_START_ROUTINE)&RThread<Stereo51Out16>;
 			speakerConfig = 6;
 		break;
 
 		default:
-			ConLog( "* SPU2 > 7.1 speaker expansion enabled." );
+			ConLog( "* SPU2 > 7.1 speaker expansion enabled.\n" );
 			threadproc = (LPTHREAD_START_ROUTINE)&RThread<Stereo51Out16>;
 			speakerConfig = 8;
 		break;
@@ -219,7 +219,7 @@ private:
 				wchar_t temp[128];
 				INIT_SLIDER( IDC_BUFFERS_SLIDER, 3, MAX_BUFFER_COUNT, 2, 1, 1 );
 				SendMessage(GetDlgItem(hWnd,IDC_BUFFERS_SLIDER),TBM_SETPOS,TRUE,Config_WaveOut.NumBuffers); 
-				swprintf_s(temp, 128, _T("%d (%d ms latency)"),Config_WaveOut.NumBuffers, 1000 / (96000 / (Config_WaveOut.NumBuffers * BufferSize)));
+				swprintf_s(temp, 128, L"%d (%d ms latency)",Config_WaveOut.NumBuffers, 1000 / (96000 / (Config_WaveOut.NumBuffers * BufferSize)));
 				SetWindowText(GetDlgItem(hWnd,IDC_LATENCY_LABEL),temp);
 			break;
 
@@ -261,7 +261,7 @@ private:
 						if( wmEvent < 3 ) wmEvent = 3;
 						if( wmEvent > MAX_BUFFER_COUNT ) wmEvent = MAX_BUFFER_COUNT;
 						SendMessage((HWND)lParam,TBM_SETPOS,TRUE,wmEvent);
-						swprintf_s(temp, _T("%d (%d ms latency)"),wmEvent, 1000 / (96000 / (wmEvent * BufferSize)));
+						swprintf_s(temp, L"%d (%d ms latency)",wmEvent, 1000 / (96000 / (wmEvent * BufferSize)));
 						SetWindowText(GetDlgItem(hWnd,IDC_LATENCY_LABEL),temp);
 						break;
 					default:
@@ -282,7 +282,7 @@ public:
 		ret=DialogBoxParam(hInstance,MAKEINTRESOURCE(IDD_WAVEOUT),GetActiveWindow(),(DLGPROC)ConfigProc,1);
 		if(ret==-1)
 		{
-			MessageBoxEx(GetActiveWindow(), _T("Error Opening the config dialog."), _T("OMG ERROR!"), MB_OK, 0);
+			MessageBoxEx(GetActiveWindow(), L"Error Opening the config dialog.", L"OMG ERROR!", MB_OK, 0);
 			return;
 		}
 	}
@@ -309,12 +309,12 @@ public:
 
 	const wchar_t* GetIdent() const
 	{
-		return _T("waveout");
+		return L"waveout";
 	}
 
 	const wchar_t* GetLongName() const
 	{
-		return _T("waveOut (Laggy)");
+		return L"waveOut (Laggy)";
 	}
 
 } WO;

@@ -37,9 +37,9 @@ static LRESULT WINAPI AboutProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lPar
 			
 			wchar_t outstr[256];
 			if( IsDevBuild )
-				swprintf_s( outstr, _T("Build r%d -- Compiled on ") _T(__DATE__), SVN_REV );
+				swprintf_s( outstr, L"Build r%d -- Compiled on " _T(__DATE__), SVN_REV );
 			else
-				swprintf_s( outstr, _T("Release v%d.%d -- Compiled on ")  _T(__DATE__),
+				swprintf_s( outstr, L"Release v%d.%d -- Compiled on "  _T(__DATE__),
 					VersionInfo::Release, VersionInfo::Revision ); 
 
 			SetWindowText( GetDlgItem(hDlg, IDC_LABEL_VERSION_INFO), outstr );
@@ -55,12 +55,12 @@ static LRESULT WINAPI AboutProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lPar
 				return TRUE;
 
 				case IDC_LINK_WEBSITE:
-					ShellExecute(hDlg, _T("open"), _T("http://www.pcsx2.net/"),
+					ShellExecute(hDlg, L"open", L"http://www.pcsx2.net/",
 						NULL, NULL, SW_SHOWNORMAL);
 				return TRUE;
 
 				case IDC_LINK_GOOGLECODE:
-					ShellExecute(hDlg, _T("open"), _T("http://code.google.com/p/pcsx2"),
+					ShellExecute(hDlg, L"open", L"http://code.google.com/p/pcsx2",
 						NULL, NULL, SW_SHOWNORMAL);
 				return TRUE;
 			}

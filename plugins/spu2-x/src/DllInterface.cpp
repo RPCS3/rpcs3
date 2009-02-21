@@ -144,11 +144,7 @@ EXPORT_C_(s32) SPU2init()
 #ifdef SPU2_LOG
 	if(AccessLog()) 
 	{
-#ifdef _MSC_VER
-		spu2Log = _wfopen( AccessLogFileName, _T("w") );
-#else
-		spu2Log = fopen((char*)AccessLogFileName, "w");
-#endif
+		spu2Log = fopen( Unicode::Convert( AccessLogFileName ).c_str(), "w" );
 		setvbuf(spu2Log, NULL,  _IONBF, 0);
 		FileLog("SPU2init\n");
 	}

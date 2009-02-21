@@ -70,20 +70,12 @@ public:
 	
 	const wchar_t* GetIdent() const
 	{
-#ifdef _MSC_VER
-		return _T("nullout");
-#else
-		return ((wchar_t*)"nullout");
-#endif
+		return L"nullout";
 	}
 
 	const wchar_t* GetLongName() const
 	{
-#ifdef _MSC_VER
-		return _T("No Sound (Emulate SPU2 only)");
-#else
-		return((wchar_t*)"No Sound (Emulate SPU2 only)");
-#endif
+		return L"No Sound (Emulate SPU2 only)";
 	}
 
 } NullOut;

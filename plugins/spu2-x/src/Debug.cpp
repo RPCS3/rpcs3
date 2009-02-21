@@ -101,7 +101,7 @@ void DoFullDump()
 
 	if(MemDump())
 	{
-		dump = _wfopen( MemDumpFileName, _T("wb") );
+		dump = fopen( Unicode::Convert( MemDumpFileName ).c_str(), "wb" );
 		if (dump)
 		{
 			fwrite(_spu2mem,0x200000,1,dump);
@@ -110,7 +110,7 @@ void DoFullDump()
 	}
 	if(RegDump())
 	{
-		dump = _wfopen( RegDumpFileName, _T("wb") );
+		dump = fopen( Unicode::Convert( RegDumpFileName ).c_str(), "wb" );
 		if (dump)
 		{
 			fwrite(spu2regs,0x2000,1,dump);
@@ -119,7 +119,7 @@ void DoFullDump()
 	}
 
 	if(!CoresDump()) return;
-	dump = _wfopen( CoresDumpFileName, _T("wt") );
+	dump = fopen( Unicode::Convert( CoresDumpFileName ).c_str(), "wt" );
 	if (dump)
 	{
 		for(c=0;c<2;c++)

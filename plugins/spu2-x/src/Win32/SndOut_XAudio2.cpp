@@ -231,33 +231,33 @@ public:
 		switch( deviceDetails.OutputFormat.Format.nChannels )
 		{
 			case 2:
-				ConLog( "* SPU2 > Using normal 2 speaker stereo output." );
+				ConLog( "* SPU2 > Using normal 2 speaker stereo output.\n" );
 				voiceContext = new StreamingVoice<StereoOut16>( pXAudio2 );
 			break;
 
 			case 3:
-				ConLog( "* SPU2 > 2.1 speaker expansion enabled." );
+				ConLog( "* SPU2 > 2.1 speaker expansion enabled.\n" );
 				voiceContext = new StreamingVoice<Stereo21Out16>( pXAudio2 );
 			break;
 
 			case 4:
-				ConLog( "* SPU2 > 4 speaker expansion enabled [quadraphenia]" );
+				ConLog( "* SPU2 > 4 speaker expansion enabled [quadraphenia]\n" );
 				voiceContext = new StreamingVoice<StereoQuadOut16>( pXAudio2 );
 			break;
 						
 			case 5:
-				ConLog( "* SPU2 > 4.1 speaker expansion enabled." );
+				ConLog( "* SPU2 > 4.1 speaker expansion enabled.\n" );
 				voiceContext = new StreamingVoice<Stereo41Out16>( pXAudio2 );
 			break;
 
 			case 6:
 			case 7:
-				ConLog( "* SPU2 > 5.1 speaker expansion enabled." );
+				ConLog( "* SPU2 > 5.1 speaker expansion enabled.\n" );
 				voiceContext = new StreamingVoice<Stereo51Out16>( pXAudio2 );
 			break;
 
 			default:	// anything 8 or more gets the 7.1 treatment!
-				ConLog( "* SPU2 > 7.1 speaker expansion enabled." );
+				ConLog( "* SPU2 > 7.1 speaker expansion enabled.\n" );
 				voiceContext = new StreamingVoice<Stereo51Out16>( pXAudio2 );
 			break;
 		}
@@ -310,12 +310,12 @@ public:
 
 	const wchar_t* GetIdent() const
 	{
-		return _T("xaudio2");
+		return L"xaudio2";
 	}
 
 	const wchar_t* GetLongName() const
 	{
-		return _T("XAudio 2 (Recommended)");
+		return L"XAudio 2 (Recommended)";
 	}
 
 } XA2;

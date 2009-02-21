@@ -35,18 +35,18 @@ void SoundtouchCfg::ClampValues()
 
 void SoundtouchCfg::ReadSettings()
 {
-	SequenceLenMS	= CfgReadInt( _T("SOUNDTOUCH"), _T("SequenceLengthMS"), 63 );
-	SeekWindowMS	= CfgReadInt( _T("SOUNDTOUCH"), _T("SeekWindowMS"), 16 );
-	OverlapMS		= CfgReadInt( _T("SOUNDTOUCH"), _T("OverlapMS"), 7 );
+	SequenceLenMS	= CfgReadInt( L"SOUNDTOUCH", L"SequenceLengthMS", 63 );
+	SeekWindowMS	= CfgReadInt( L"SOUNDTOUCH", L"SeekWindowMS", 16 );
+	OverlapMS		= CfgReadInt( L"SOUNDTOUCH", L"OverlapMS", 7 );
 
 	ClampValues();		
 }
 
 void SoundtouchCfg::WriteSettings()
 {
-	CfgWriteInt( _T("SOUNDTOUCH"), _T("SequenceLengthMS"), SequenceLenMS );
-	CfgWriteInt( _T("SOUNDTOUCH"), _T("SeekWindowMS"), SeekWindowMS );
-	CfgWriteInt( _T("SOUNDTOUCH"), _T("OverlapMS"), OverlapMS );
+	CfgWriteInt( L"SOUNDTOUCH", L"SequenceLengthMS", SequenceLenMS );
+	CfgWriteInt( L"SOUNDTOUCH", L"SeekWindowMS", SeekWindowMS );
+	CfgWriteInt( L"SOUNDTOUCH", L"OverlapMS", OverlapMS );
 }
 
 BOOL CALLBACK SoundtouchCfg::DialogProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
@@ -106,7 +106,7 @@ void SoundtouchCfg::OpenDialog( HWND hWnd )
 	ret = DialogBox( hInstance, MAKEINTRESOURCE(IDD_CONFIG_SOUNDTOUCH), hWnd, (DLGPROC)DialogProc );
 	if(ret==-1)
 	{
-		MessageBoxEx(GetActiveWindow(),_T("Error Opening the Soundtouch advanced dialog."),_T("OMG ERROR!"),MB_OK,0);
+		MessageBoxEx(GetActiveWindow(),L"Error Opening the Soundtouch advanced dialog.",L"OMG ERROR!",MB_OK,0);
 		return;
 	}
 	ReadSettings();

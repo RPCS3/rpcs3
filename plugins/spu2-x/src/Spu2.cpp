@@ -94,8 +94,8 @@ void SysMessage(const char *fmt, ...)
 	va_start(list,fmt);
 	sprintf_s(tmp,fmt,list);
 	va_end(list);
-	swprintf_s(wtmp, _T("%S"), tmp);
-	MessageBox(0, wtmp, _T("SPU2-X System Message"), 0);
+	swprintf_s(wtmp, L"%S", tmp);
+	MessageBox(0, wtmp, L"SPU2-X System Message", 0);
 }
 #else
 extern void SysMessage(const char *fmt, ...);

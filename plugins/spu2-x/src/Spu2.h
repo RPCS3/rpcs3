@@ -33,6 +33,8 @@
 #define SVN_REV_UNKNOWN
 #endif
 
+#include "ConvertUTF.h"
+
 namespace VersionInfo
 {
 	static const u8 PluginApi = PS2E_SPU2_VERSION;

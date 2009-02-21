@@ -70,7 +70,7 @@ void AssignSliderValue( HWND idcwnd, HWND hwndDisplay, int value )
 	SendMessage(idcwnd,TBM_SETPOS,TRUE,value); 
 
 	wchar_t tbox[32];
-	swprintf_s( tbox, _T("%d"), value );
+	swprintf_s( tbox, L"%d", value );
 	SetWindowText( hwndDisplay, tbox );
 }
 

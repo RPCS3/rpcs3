@@ -419,6 +419,14 @@
 				>
 			</File>
 			<File
+				RelativePath="..\ConvertUTF.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\ConvertUTF.h"
+				>
+			</File>
+			<File
 				RelativePath="..\utf8.cpp"
 				>
 				<FileConfiguration

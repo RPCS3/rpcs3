@@ -24,19 +24,11 @@
 // (it can't have too many because that would generate a compiler error).
 const u16 zero=0;
 
-#ifdef __LINUX__
 #define PCORE(c,p) \
 	U16P(Cores[c].p)
 
 #define PVCP(c,v,p) \
 	PCORE(c,Voices[v].p)
-#else
-#define PCORE(c,p) \
-	U16P(Cores[c].##p)
-
-#define PVCP(c,v,p) \
-	PCORE(c,Voices[v].##p)
-#endif
 
 #define PVC(c,v) \
 	PVCP(c,v,Volume.Left.Reg_VOL), \
@@ -59,15 +51,9 @@ const u16 zero=0;
 #define PRAW(a) \
 	((u16*)NULL)
 
-#ifdef __LINUX__
 #define PREVB_REG(c,n) \
 	PCORE(c,Revb.n)+1, \
 	PCORE(c,Revb.n)
-#else
-#define PREVB_REG(c,n) \
-	PCORE(c,Revb.##n)+1, \
-	PCORE(c,Revb.##n)
-#endif
 
 #pragma pack(1)
 u16* regtable[0x800] =

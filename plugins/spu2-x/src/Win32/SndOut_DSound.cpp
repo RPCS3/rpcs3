@@ -296,7 +296,7 @@ private:
 
 				INIT_SLIDER( IDC_BUFFERS_SLIDER, 2, MAX_BUFFER_COUNT, 2, 1, 1 );
 				SendMessage(GetDlgItem(hWnd,IDC_BUFFERS_SLIDER),TBM_SETPOS,TRUE,Config_DSoundOut.NumBuffers); 
-				swprintf_s(temp, _T("%d (%d ms latency)"),Config_DSoundOut.NumBuffers, 1000 / (96000 / (Config_DSoundOut.NumBuffers * BufferSize)));
+				swprintf_s(temp, L"%d (%d ms latency)",Config_DSoundOut.NumBuffers, 1000 / (96000 / (Config_DSoundOut.NumBuffers * BufferSize)));
 				SetWindowText(GetDlgItem(hWnd,IDC_LATENCY_LABEL),temp);
 			}
 			break;
@@ -320,7 +320,7 @@ private:
 							}
 							else
 							{
-								swprintf_s(temp, _T("{%08x-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x}"),
+								swprintf_s(temp, L"{%08x-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x}",
 									devices[i].guid.Data1,
 									devices[i].guid.Data2,
 									devices[i].guid.Data3,
@@ -370,7 +370,7 @@ private:
 						if( wmEvent < 2 ) wmEvent = 2;
 						if( wmEvent > MAX_BUFFER_COUNT ) wmEvent = MAX_BUFFER_COUNT;
 						SendMessage((HWND)lParam,TBM_SETPOS,TRUE,wmEvent);
-						swprintf_s(temp,_T("%d (%d ms latency)"),wmEvent, 1000 / (96000 / (wmEvent * BufferSize)));
+						swprintf_s(temp,L"%d (%d ms latency)",wmEvent, 1000 / (96000 / (wmEvent * BufferSize)));
 						SetWindowText(GetDlgItem(hWnd,IDC_LATENCY_LABEL),temp);
 						break;
 					}
@@ -393,7 +393,7 @@ public:
 		ret=DialogBoxParam(hInstance,MAKEINTRESOURCE(IDD_DSOUND),GetActiveWindow(),(DLGPROC)ConfigProc,1);
 		if(ret==-1)
 		{
-			MessageBoxEx(GetActiveWindow(),_T("Error Opening the config dialog."),_T("OMG ERROR!"),MB_OK,0);
+			MessageBoxEx(GetActiveWindow(),L"Error Opening the config dialog.",L"OMG ERROR!",MB_OK,0);
 			return;
 		}
 	}
@@ -421,12 +421,12 @@ public:
 
 	const wchar_t* GetIdent() const
 	{
-		return _T("dsound");
+		return L"dsound";
 	}
 
 	const wchar_t* GetLongName() const
 	{
-		return _T("DirectSound (nice)");
+		return L"DirectSound (nice)";
 	}
 
 } DS;

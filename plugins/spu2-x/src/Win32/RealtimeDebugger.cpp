@@ -103,7 +103,7 @@ void UpdateDebugDialog()
 		if(!hf)
 		{
 			hf = CreateFont( 8, 0, 0, 0, 0, FALSE, FALSE, FALSE, ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-				DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, _T("Lucida Console") );
+				DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Lucida Console" );
 		}
 
 		SelectObject(hdc,hf);
@@ -164,13 +164,13 @@ void UpdateDebugDialog()
 
 				static wchar_t t[1024];
 
-				swprintf_s(t,_T("%06x"),vc.StartA);
+				swprintf_s(t,L"%06x",vc.StartA);
 				TextOut(hdc,IX+4,IY+3,t,6);
 
-				swprintf_s(t,_T("%06x"),vc.NextA);
+				swprintf_s(t,L"%06x",vc.NextA);
 				TextOut(hdc,IX+4,IY+12,t,6);
 
-				swprintf_s(t,_T("%06x"),vc.LoopStartA);
+				swprintf_s(t,L"%06x",vc.LoopStartA);
 				TextOut(hdc,IX+4,IY+21,t,6);
 
 				vcd.displayPeak = 0;
