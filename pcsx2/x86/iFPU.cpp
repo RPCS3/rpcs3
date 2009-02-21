@@ -371,69 +371,60 @@ REC_FPUFUNC(RSQRT_S);
 //------------------------------------------------------------------
 // Clamp Functions (Converts NaN's and Infinities to Normal Numbers)
 //------------------------------------------------------------------
-void fpuFloat(int regd) {  // +/-NaN -> +fMax, +Inf -> +fMax, -Inf -> -fMax
-	if (CHECK_FPU_OVERFLOW && !CHECK_FPUCLAMPHACK) { // Tekken 5 doesn't like clamping infinities.
+
+PCSX2_ALIGNED16(u64 FPU_FLOAT_TEMP[2]);
+__forceinline void fpuFloat4(int regd) { // +NaN -> +fMax, -NaN -> -fMax, +Inf -> +fMax, -Inf -> -fMax
+	int t1reg = _allocTempXMMreg(XMMT_FPS, -1);
+	if (t1reg >= 0) {
+		SSE_MOVSS_XMM_to_XMM(t1reg, regd);
+		SSE_ANDPS_M128_to_XMM(t1reg, (uptr)&s_neg[0]);
+		SSE_MINSS_M32_to_XMM(regd, (uptr)&g_maxvals[0]);
+		SSE_MAXSS_M32_to_XMM(regd, (uptr)&g_minvals[0]);
+		SSE_ORPS_XMM_to_XMM(regd, t1reg);
+		_freeXMMreg(t1reg);
+	}
+	else {
+		Console::Error("fpuFloat2() allocation error"); 
+		t1reg = (regd == 0) ? 1 : 0; // get a temp reg thats not regd
+		SSE_MOVAPS_XMM_to_M128( (uptr)&FPU_FLOAT_TEMP[0], t1reg ); // backup data in t1reg to a temp address
+		SSE_MOVSS_XMM_to_XMM(t1reg, regd);
+		SSE_ANDPS_M128_to_XMM(t1reg, (uptr)&s_neg[0]);
+		SSE_MINSS_M32_to_XMM(regd, (uptr)&g_maxvals[0]);
+		SSE_MAXSS_M32_to_XMM(regd, (uptr)&g_minvals[0]);
+		SSE_ORPS_XMM_to_XMM(regd, t1reg);
+		SSE_MOVAPS_M128_to_XMM( t1reg, (uptr)&FPU_FLOAT_TEMP[0] ); // restore t1reg data
+	}
+}
+
+__forceinline void fpuFloat(int regd) {  // +/-NaN -> +fMax, +Inf -> +fMax, -Inf -> -fMax
+	if (CHECK_FPU_OVERFLOW) {
 		SSE_MINSS_M32_to_XMM(regd, (uptr)&g_maxvals[0]); // MIN() must be before MAX()! So that NaN's become +Maximum
 		SSE_MAXSS_M32_to_XMM(regd, (uptr)&g_minvals[0]);
 	}
 }
 
-PCSX2_ALIGNED16(u64 FPU_FLOAT_TEMP[2]);
-void fpuFloat2(int regd) { // +NaN -> +fMax, -NaN -> -fMax, +Inf -> +fMax, -Inf -> -fMax
-	if (CHECK_FPU_OVERFLOW && !CHECK_FPUCLAMPHACK) { // Tekken 5 doesn't like clamping infinities.
-		int t1reg = _allocTempXMMreg(XMMT_FPS, -1);
-		if (t1reg >= 0) {
-			SSE_MOVSS_XMM_to_XMM(t1reg, regd);
-			SSE_ANDPS_M128_to_XMM(t1reg, (uptr)&s_neg[0]);
-			SSE_MINSS_M32_to_XMM(regd, (uptr)&g_maxvals[0]);
-			SSE_MAXSS_M32_to_XMM(regd, (uptr)&g_minvals[0]);
-			SSE_ORPS_XMM_to_XMM(regd, t1reg);
-			_freeXMMreg(t1reg);
-		}
-		else {
-			Console::Error("fpuFloat2() allocation error"); 
-			t1reg = (regd == 0) ? 1 : 0; // get a temp reg thats not regd
-			SSE_MOVAPS_XMM_to_M128( (uptr)&FPU_FLOAT_TEMP[0], t1reg ); // backup data in t1reg to a temp address
-			SSE_MOVSS_XMM_to_XMM(t1reg, regd);
-			SSE_ANDPS_M128_to_XMM(t1reg, (uptr)&s_neg[0]);
-			SSE_MINSS_M32_to_XMM(regd, (uptr)&g_maxvals[0]);
-			SSE_MAXSS_M32_to_XMM(regd, (uptr)&g_minvals[0]);
-			SSE_ORPS_XMM_to_XMM(regd, t1reg);
-			SSE_MOVAPS_M128_to_XMM( t1reg, (uptr)&FPU_FLOAT_TEMP[0] ); // restore t1reg data
-		}
+__forceinline void fpuFloat2(int regd) { // +NaN -> +fMax, -NaN -> -fMax, +Inf -> +fMax, -Inf -> -fMax
+	if (CHECK_FPU_OVERFLOW) {
+		fpuFloat4(regd);
 	}
 }
 
 __forceinline void fpuFloat3(int regd) {
-	// This clamp function used in the recC_xx opcodes
+	// This clamp function is used in the recC_xx opcodes
 	// Rule of Rose needs clamping or else it crashes (minss or maxss both fix the crash)
+	// Tekken 5 has disappearing characters unless preserving NaN sign (fpuFloat4() preserves NaN sign).
 	// Digimon Rumble Arena 2 needs MAXSS clamping (if you only use minss, it spins on the intro-menus; 
-	// it also doesn't like preserving NaN sign with fpuFloat2, so the only way to make Digimon work
+	// it also doesn't like preserving NaN sign with fpuFloat4, so the only way to make Digimon work
 	// is by calling MAXSS first)
-	SSE_MAXSS_M32_to_XMM(regd, (uptr)&g_minvals[0]);
-	//SSE_MINSS_M32_to_XMM(regd, (uptr)&g_maxvals[0]);
+	if (CHECK_FPUCOMPAREHACK) {
+		//SSE_MINSS_M32_to_XMM(regd, (uptr)&g_maxvals[0]);
+		SSE_MAXSS_M32_to_XMM(regd, (uptr)&g_minvals[0]);
+	}
+	else fpuFloat4(regd);
 }
 
 void ClampValues(int regd) { 
 	fpuFloat(regd);
-}
-
-void ClampValues2(int regd) { 
-	if (CHECK_FPUCLAMPHACK) { // Fixes Tekken 5 ( Makes NaN equal 0, infinities stay the same )
-		int t5reg = _allocTempXMMreg(XMMT_FPS, -1);
-
-		SSE_XORPS_XMM_to_XMM(t5reg, t5reg); 
-		SSE_CMPORDSS_XMM_to_XMM(t5reg, regd); 
-
-		SSE_ANDPS_XMM_to_XMM(regd, t5reg); 
-
-		/* --- Its odd but tekken dosn't like Infinities to be clamped. --- */
-		//SSE_MINSS_M32_to_XMM(regd, (uptr)&g_maxvals[0]);
-		//SSE_MAXSS_M32_to_XMM(regd, (uptr)&g_minvals[0]);
-		
-		_freeXMMreg(t5reg); 
-	}
-	else fpuFloat(regd);
 }
 //------------------------------------------------------------------
 
@@ -639,7 +630,7 @@ int recCommutativeOp(int info, int regd, int op)
 void recADD_S_xmm(int info)
 {
 	//AND32ItoM((uptr)&fpuRegs.fprc[31], ~(FPUflagO|FPUflagU)); // Clear O and U flags
-    ClampValues2(recCommutativeOp(info, EEREC_D, 0));
+    ClampValues(recCommutativeOp(info, EEREC_D, 0));
 	//REC_FPUOP(ADD_S);
 }
 
@@ -1561,7 +1552,7 @@ void recSUBop(int info, int regd)
 			break;
 	}
 
-	ClampValues2(regd);
+	ClampValues(regd);
 	_freeXMMreg(t0reg);
 }
 

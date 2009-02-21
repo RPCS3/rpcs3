@@ -8,7 +8,6 @@
 // Generated from the TEXTINCLUDE 2 resource.
 //
 #include "afxresmw.h"
-
 /////////////////////////////////////////////////////////////////////////////
 #undef APSTUDIO_READONLY_SYMBOLS
 
@@ -84,11 +83,12 @@ BEGIN
     PUSHBUTTON      "Cancel",IDCANCEL,139,99,50,14
     CTEXT           "Some games need special settings.\nConfigure them here.",IDC_STATIC,7,7,264,17
     GROUPBOX        "PCSX2 Gamefixes",IDC_STATIC,7,31,264,89
-    CONTROL         "FPU Clamp Hack - Special fix for Tekken 5.",IDC_GAMEFIX3,
+    CONTROL         "FPU Compare Hack - Special fix for Digimon Rumble Arena 2.",IDC_GAMEFIX3,
                     "Button",BS_AUTOCHECKBOX | WS_TABSTOP,12,51,249,10
     CONTROL         "VU Add / Sub Hack - Special fix for Tri-Ace games!",IDC_GAMEFIX2,
                     "Button",BS_AUTOCHECKBOX | WS_TABSTOP,12,65,252,10
-    CONTROL         "VU FCOR Hack - Fixes ICO SPS",IDC_GAMEFIX7,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,12,79,252,10
+    CONTROL         "VU FCOR Hack - Special Fix for ICO SPS.",IDC_GAMEFIX7,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,12,79,252,10
 END
 
 
@@ -1388,7 +1388,7 @@ END
 
 2 TEXTINCLUDE 
 BEGIN
-    "#include ""afxresmw.h\0"
+    "#include ""afxresmw.h""\0"
 END
 
 3 TEXTINCLUDE 

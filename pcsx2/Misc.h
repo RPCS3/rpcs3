@@ -82,23 +82,23 @@ extern SessionOverrideFlags g_Session;
 #define CHECK_MULTIGS (Config.Options&PCSX2_GSMULTITHREAD)
 #define CHECK_EEREC (!g_Session.ForceDisableEErec && Config.Options&PCSX2_EEREC)
 //------------ SPEED/MISC HACKS!!! ---------------
-#define CHECK_EE_CYCLERATE (Config.Hacks & 0x03)
-#define CHECK_IOP_CYCLERATE (Config.Hacks & (1<<3))
-#define CHECK_WAITCYCLE_HACK (Config.Hacks & (1<<4))
-#define CHECK_INTC_STAT_HACK (Config.Hacks & (1<<5))
-#define CHECK_ESCAPE_HACK	(Config.Hacks & 0x400)
+#define CHECK_EE_CYCLERATE	 (Config.Hacks & 0x03)
+#define CHECK_IOP_CYCLERATE	 (Config.Hacks & 0x08)
+#define CHECK_WAITCYCLE_HACK (Config.Hacks & 0x10)
+#define CHECK_INTC_STAT_HACK (Config.Hacks & 0x20)
+#define CHECK_ESCAPE_HACK	 (Config.Hacks & 0x400)
 //------------ SPECIAL GAME FIXES!!! ---------------
-#define CHECK_VUADDSUBHACK	(Config.GameFixes & 0x1) // Special Fix for Tri-ace games, they use an encryption algorithm that requires VU addi opcode to be bit-accurate.
-#define CHECK_FPUCLAMPHACK	(Config.GameFixes & 0x4) // Special Fix for Tekken 5, different clamping for FPU (sets NaN to zero; doesn't clamp infinities)
-#define CHECK_FCORHACK		(Config.GameFixes & 0x8) // Special Fix for ICO, cures SPS due to some misscalculation of the clip flag.
+#define CHECK_VUADDSUBHACK	 (Config.GameFixes & 0x1) // Special Fix for Tri-ace games, they use an encryption algorithm that requires VU addi opcode to be bit-accurate.
+#define CHECK_FPUCOMPAREHACK (Config.GameFixes & 0x4) // Special Fix for Digimon Rumble Arena 2, fixes spinning/hanging on intro-menu.
+#define CHECK_FCORHACK		 (Config.GameFixes & 0x8) // Special Fix for ICO, cures SPS due to some misscalculation of the clip flag.
 //------------ Advanced Options!!! ---------------
-#define CHECK_VU_OVERFLOW		(Config.vuOptions & 0x1)
-#define CHECK_VU_EXTRA_OVERFLOW	(Config.vuOptions & 0x2) // If enabled, Operands are clamped before being used in the VU recs
-#define CHECK_VU_SIGN_OVERFLOW	(Config.vuOptions & 0x4)
-#define CHECK_VU_UNDERFLOW		(Config.vuOptions & 0x8)
+#define CHECK_VU_OVERFLOW		 (Config.vuOptions & 0x1)
+#define CHECK_VU_EXTRA_OVERFLOW	 (Config.vuOptions & 0x2) // If enabled, Operands are clamped before being used in the VU recs
+#define CHECK_VU_SIGN_OVERFLOW	 (Config.vuOptions & 0x4)
+#define CHECK_VU_UNDERFLOW		 (Config.vuOptions & 0x8)
 #define CHECK_VU_EXTRA_FLAGS 0	// Always disabled now // Sets correct flags in the VU recs
-#define CHECK_FPU_OVERFLOW			(Config.eeOptions & 0x1)
-#define CHECK_FPU_EXTRA_OVERFLOW	(Config.eeOptions & 0x2) // If enabled, Operands are checked for infinities before being used in the FPU recs
+#define CHECK_FPU_OVERFLOW		 (Config.eeOptions & 0x1)
+#define CHECK_FPU_EXTRA_OVERFLOW (Config.eeOptions & 0x2) // If enabled, Operands are checked for infinities before being used in the FPU recs
 #define CHECK_FPU_EXTRA_FLAGS 1	// Always enabled now // Sets D/I flags on FPU instructions
 #define DEFAULT_eeOptions	0x01
 #define DEFAULT_vuOptions	0x01

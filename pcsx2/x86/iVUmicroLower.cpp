@@ -1364,7 +1364,7 @@ void recVUMI_FMEQ( VURegs *VU, int info )
 	if ( _Ft_ == 0 ) return;
 	//SysPrintf("recVUMI_FMEQ  \n");
 	if( _Ft_ == _Fs_ ) {
-		ftreg = ALLOCVI(_Ft_, MODE_WRITE|MODE_READ);//|MODE_8BITREG);
+		ftreg = ALLOCVI(_Ft_, MODE_WRITE|MODE_READ|MODE_8BITREG);
 
 		CMP16MtoR(ftreg, VU_VI_ADDR(REG_MAC_FLAG, 1));
 		SETE8R(EAX);
@@ -1397,7 +1397,7 @@ void recVUMI_FMOR( VURegs *VU, int info )
 		MOVZX32M16toR( ftreg, VU_VI_ADDR(REG_MAC_FLAG, 1) );
 	}
 	else if( _Ft_ == _Fs_ ) {
-		ftreg = ALLOCVI(_Ft_, MODE_WRITE);//|MODE_READ|MODE_8BITREG);
+		ftreg = ALLOCVI(_Ft_, MODE_WRITE|MODE_READ);//|MODE_8BITREG);
 		OR16MtoR( ftreg, VU_VI_ADDR(REG_MAC_FLAG, 1) );
 	}
 	else {
@@ -1453,18 +1453,20 @@ void recVUMI_FCEQ( VURegs *VU, int info )
 //------------------------------------------------------------------
 void recVUMI_FCOR( VURegs *VU, int info )
 {
-	int ftreg = ALLOCVI(1, MODE_WRITE|MODE_8BITREG);
-	//SysPrintf("recVUMI_FCOR  \n");
-	MOV32MtoR( EAX, VU_VI_ADDR(REG_CLIP_FLAG, 1) );
-	XOR32RtoR( ftreg, ftreg );
-	OR32ItoR( EAX, VU->code );
-	AND32ItoR( EAX, 0xffffff );
-	CMP32ItoR( EAX, 0xffffff );
-
-	if(CHECK_FCORHACK) //ICO Misscalculated CLIP flag (bits missing id guess)
-		SETNZ8R(ftreg);
-	else
-		SETZ8R(ftreg);
+	int ftreg;
+	//SysPrintf("recVUMI_FCOR\n");
+	if(CHECK_FCORHACK) {//ICO Miss-calculated CLIP flag so always set to true (probably a zerorec pipeline problem)
+		ftreg = ALLOCVI(1, MODE_WRITE|MODE_8BITREG);
+		MOV32ItoR( ftreg, 1 );
+	}
+	else {
+		ftreg = ALLOCVI(1, MODE_WRITE);
+		MOV32MtoR( ftreg, VU_VI_ADDR(REG_CLIP_FLAG, 1) );
+		OR32ItoR ( ftreg, VU->code );
+		AND32ItoR( ftreg, 0xffffff );
+		ADD32ItoR( ftreg, 1 );	// If 24 1's will make 25th bit 1, else 0
+		SHR32ItoR( ftreg, 24 );	// Get the 25th bit (also clears the rest of the garbage in the reg)
+	}
 }
 //------------------------------------------------------------------
 
