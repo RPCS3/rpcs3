@@ -40,6 +40,7 @@
 #include "implement.h"		// pthreads-win32 defines for startup/shutdown
 
 unsigned int langsMax;
+bool shouldQuitOnDestroy = true;
 
 
 struct _langs {
@@ -843,6 +844,7 @@ LRESULT WINAPI MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 			default:
 				if (LOWORD(wParam) >= ID_LANGS && LOWORD(wParam) <= (ID_LANGS + langsMax)) {
+					shouldQuitOnDestroy = false;
 					DestroyWindow(gApp.hWnd);
 					ChangeLanguage(langs[LOWORD(wParam) - ID_LANGS].lang);
 					CreateMainWindow(SW_SHOWNORMAL);
@@ -852,9 +854,12 @@ LRESULT WINAPI MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			return TRUE;
 
 		case WM_DESTROY:
-			DeleteObject(hbitmap_background);
-			PostQuitMessage(0);
-			gApp.hWnd = NULL;
+			if( shouldQuitOnDestroy ) {
+				DeleteObject(hbitmap_background);
+				PostQuitMessage(0);
+				gApp.hWnd = NULL;
+			}
+			else shouldQuitOnDestroy = true;
 		return FALSE;
 
 		// Explicit handling of WM_CLOSE.

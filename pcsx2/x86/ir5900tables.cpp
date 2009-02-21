@@ -301,8 +301,8 @@ __forceinline void BSCPropagate::rpropSPECIAL()
 		case 34: // sub
 		case 35: // subu
 			rpropSetWrite(_Rd_, EEINST_LIVE1);
-			if( _Rs_ ) rpropSetRead(_Rs_, 0);
-			if( _Rt_ ) rpropSetRead(_Rt_, 0);
+			if( _Rs_ ) rpropSetRead(_Rs_, EEINST_LIVE1);
+			if( _Rt_ ) rpropSetRead(_Rt_, EEINST_LIVE1);
 			pinst.info |= EEINST_MMX;
 			break;
 
@@ -940,7 +940,7 @@ void BSCPropagate::rprop()
 		case 8: // addi
 		case 9: // addiu
 			rpropSetWrite(_Rt_, EEINST_LIVE1);
-			rpropSetRead(_Rs_, 0);
+			rpropSetRead(_Rs_, EEINST_LIVE1);
 			pinst.info |= EEINST_MMX;
 			break;
 
