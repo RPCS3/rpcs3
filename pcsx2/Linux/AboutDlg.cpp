@@ -42,12 +42,12 @@ void OnHelp_About(GtkMenuItem *menuitem, gpointer user_data)
 	Label = lookup_widget(AboutDlg, "GtkAbout_LabelVersion");
 
 	// Include the SVN revision
-	if (SVN_REV != 0)
-		sprintf(str, _("PCSX2 For Linux\nVersion %s %s\n"), PCSX2_VERSION, SVN_REV);
-	else
-		//Use this instead for a non-svn version
-		sprintf(str, _("PCSX2 For Linux\nVersion %s\n"), PCSX2_VERSION);
-
+#ifdef PCSX2_DEVBUILD
+	sprintf(str, _("PCSX2 For Linux\nVersion %s %s\n"), PCSX2_VERSION, SVN_REV);
+#else
+	//Use this instead for a non-svn version
+	sprintf(str, _("PCSX2 For Linux\nVersion %s\n"), PCSX2_VERSION);
+#endif
 	gtk_label_set_text(GTK_LABEL(Label), str);
 
 	Label = lookup_widget(AboutDlg, "GtkAbout_LabelAuthors");

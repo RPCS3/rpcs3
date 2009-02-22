@@ -228,11 +228,12 @@ void StartGui()
 	add_pixmap_directory(".pixmaps");
 	MainWindow = create_MainWindow();
 
-	if (SVN_REV != 0)
-		gtk_window_set_title(GTK_WINDOW(MainWindow), "PCSX2 "PCSX2_VERSION" "SVN_REV);
-	else
-		gtk_window_set_title(GTK_WINDOW(MainWindow), "PCSX2 "PCSX2_VERSION);
 
+#ifdef PCSX2_DEVBUILD
+	gtk_window_set_title(GTK_WINDOW(MainWindow), "PCSX2 "PCSX2_VERSION" "SVN_REV);
+#else
+	gtk_window_set_title(GTK_WINDOW(MainWindow), "PCSX2 "PCSX2_VERSION);
+#endif
 	// status bar
 	pStatusBar = gtk_statusbar_new();
 	gtk_box_pack_start(GTK_BOX(lookup_widget(MainWindow, "status_box")), pStatusBar, TRUE, TRUE, 0);
