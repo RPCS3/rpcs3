@@ -34,6 +34,7 @@ bool Slots[5] = { false, false, false, false, false };
 TESTRUNARGS g_TestRun;
 #endif
 
+char MAIN_DIR[g_MaxPath];
 
 int main(int argc, char *argv[])
 {

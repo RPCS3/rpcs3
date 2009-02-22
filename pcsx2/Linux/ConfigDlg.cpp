@@ -84,12 +84,10 @@ static void TestPlugin(PluginConf confs, char* plugin, const char* name)
 	strcat(file, plugin);
 
 	drv = SysLoadLibrary(file);
-//	chdir(Config.PluginsDir); /* change dirs so that plugins can find their config file*/
 	if (drv == NULL) return;
 
 	conf = (s32(* (*)())()) SysLoadSym(drv, name);
 	if (SysLibError() == NULL) ret = (s32) conf();
-//	chdir(MAIN_DIR);
 	SysCloseLibrary(drv);
 
 	if (ret == 0)
@@ -110,69 +108,45 @@ void OnConf_Gs(GtkMenuItem *menuitem, gpointer user_data)
 
 void OnConf_Pads(GtkMenuItem *menuitem, gpointer user_data)
 {
-	char file[255];
-
-//	chdir(Config.PluginsDir);
 	gtk_widget_set_sensitive(MainWindow, FALSE);
 	PAD1configure();
 	if (strcmp(Config.PAD1, Config.PAD2)) PAD2configure();
-//	chdir(MAIN_DIR);
 	gtk_widget_set_sensitive(MainWindow, TRUE);
 }
 
 void OnConf_Spu2(GtkMenuItem *menuitem, gpointer user_data)
 {
-	char file[255];
-
-//	chdir(Config.PluginsDir);
 	gtk_widget_set_sensitive(MainWindow, FALSE);
 	SPU2configure();
 	gtk_widget_set_sensitive(MainWindow, TRUE);
-//	chdir(MAIN_DIR);
 }
 
 void OnConf_Cdvd(GtkMenuItem *menuitem, gpointer user_data)
 {
-	char file[255];
-
-//	chdir(Config.PluginsDir);
 	gtk_widget_set_sensitive(MainWindow, FALSE);
 	CDVDconfigure();
 	gtk_widget_set_sensitive(MainWindow, TRUE);
-//	chdir(MAIN_DIR);
 }
 
 void OnConf_Dev9(GtkMenuItem *menuitem, gpointer user_data)
 {
-	char file[255];
-
-//	chdir(Config.PluginsDir);
 	gtk_widget_set_sensitive(MainWindow, FALSE);
 	DEV9configure();
 	gtk_widget_set_sensitive(MainWindow, TRUE);
-//	chdir(MAIN_DIR);
 }
 
 void OnConf_Usb(GtkMenuItem *menuitem, gpointer user_data)
 {
-	char file[255];
-
-//	chdir(Config.PluginsDir);
 	gtk_widget_set_sensitive(MainWindow, FALSE);
 	USBconfigure();
 	gtk_widget_set_sensitive(MainWindow, TRUE);
-//	chdir(MAIN_DIR);
 }
 
 void OnConf_Fw(GtkMenuItem *menuitem, gpointer user_data)
 {
-	char file[255];
-
-//	chdir(Config.PluginsDir);
 	gtk_widget_set_sensitive(MainWindow, FALSE);
 	FWconfigure();
 	gtk_widget_set_sensitive(MainWindow, TRUE);
-//	chdir(MAIN_DIR);
 }
 
 void SetActiveComboItem(GtkComboBox *widget, char plist[255][255], GList *list, char *conf)
@@ -242,9 +216,6 @@ void OnConfConf_Ok(GtkButton *button, gpointer user_data)
 	gtk_widget_destroy(ConfDlg);
 	if (MainWindow) gtk_widget_set_sensitive(MainWindow, TRUE);
 	gtk_main_quit();
-	
-	
-	chdir(MAIN_DIR);
 }
 
 void OnConfConf_GsConf(GtkButton *button, gpointer user_data)
@@ -412,7 +383,6 @@ void UpdateConfDlg()
 	ConfCreatePConf("Usb",  &USBConfS, Config.USB);
 	ConfCreatePConf("FW",  &FWConfS, Config.FW);
 	ConfCreatePConf("Bios", &BiosConfS, Config.Bios);
-	chdir(MAIN_DIR);
 }
 
 void GetDirectory(GtkWidget *topWindow, const char *message, char *reply)
@@ -460,7 +430,6 @@ void OnConfConf_BiosPath(GtkButton *button, gpointer user_data)
 
 void OnConf_Conf(GtkMenuItem *menuitem, gpointer user_data)
 {
-	chdir(MAIN_DIR);
 	FindPlugins();
 
 	ConfDlg = create_ConfDlg();
