@@ -1,8 +1,0 @@
-gametitle=Pro Rally 2002 [SLES 50637] (E)
-comment= patches by nachbrenner
-//Skip Videos (sceMpegIsEnd)
-//patch=0,EE,0010cbd0,word,24020001
-//Skip sceIpuSync
-//patch=1,EE,0010e174,word,00000000
-//Skip "HX sound" IOP modules (obsolete)
-// patch=1,EE,002029e0,word,00000000

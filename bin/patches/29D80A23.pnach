@@ -1,9 +1,0 @@
-gametitle=Sidewinder V [SLPS 25271] (J)
-comment=patches by Nachbrenner
-//Language = English
-patch=1,EE,0039b484,word,00000001
-//Skip Videos (sceMpegIsEnd)
-//patch=0,EE,00280398,word,24020001
-//Skip DualBgmOn
-//patch=0,EE,002439f8,word,03e00008
-//patch=0,EE,002439fc,word,00000000

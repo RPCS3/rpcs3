@@ -1,8 +1,0 @@
-gametitle=The Mouse Police [SLES 52370] (E)
-comment=patches by Nachbrenner
-//Skip LOGO.PSS
-//patch=0,EE,0012945c,word,24020001
-//Skip INTRO.PSS
-//patch=0,EE,001293f8,word,24020001
-//Skip DALAMATIO.PSS
-//patch=0,EE,0012a69c,word,00000000

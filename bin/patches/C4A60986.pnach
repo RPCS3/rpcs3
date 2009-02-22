@@ -1,4 +1,0 @@
-gametitle=Sega Ages 2500 Volume 01 - Phantasy Star generation:1 (J)
-comment=patches by Nachbrenner
-//Get money for buying wares
-patch=0,EE,0010e690,word,00a2282d

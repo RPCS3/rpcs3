@@ -3,5 +3,3 @@ comment= patches by Nachbrenner
 // ee838b5c.pnach
 //Skip OP.PSS
 patch=0,EE,001d6258,word,24020001
-// Money=9999
-patch=0,EE,00124bf4,word,2403270f

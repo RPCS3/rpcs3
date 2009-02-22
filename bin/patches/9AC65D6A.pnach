@@ -1,4 +1,0 @@
-gametitle=Atelier Iris 2
-comment=Skips Video by bositman
-//Skip Videos
-patch=0,EE,002bdbb8,word,24020001

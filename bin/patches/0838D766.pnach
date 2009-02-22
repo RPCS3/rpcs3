@@ -1,6 +1,0 @@
-gametitle=Raiden III [SLES 53829] (E)
-comment=patches by Nachbrenner, made with Phaste 1.20
-//Infinite Lives
-patch=1,EE,002d7458,byte,08
-//Infinite Bombs
-patch=1,EE,002d74bc,byte,08

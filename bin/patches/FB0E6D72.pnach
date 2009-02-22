@@ -1,6 +1,0 @@
-gametitle=God Of War [SCES 53133] (E)
-comment=patches by Nachbrenner
-//D_STAT fix for Kosmos 0.95.7+
-patch=0,EE,0026dce8,word,00000000
-//crash fix ingame (breaks hero's legs)
-patch=0,EE,00111604,word,24060000

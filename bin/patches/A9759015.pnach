@@ -1,9 +1,0 @@
-gametitle=Flucht von Monkey Island [SLES 50227] (G)
-comment=patches by nachbrenner
-//Skip Videos
-//patch=0,EE,001c5220,word,24020001
-//patch=0,EE,0018b850,word,03E00008
-//patch=0,EE,0018b854,word,00000000
-//fix MTGS loop at GS_CSR in sceGsExecStoreImage 
-//patch=0,EE,001bb858,word,34630002
-//patch=0,EE,001bb888,word,34420002

@@ -1,4 +1,0 @@
-//fix inf. $GP loop
-//patch=0,EE,00165068,word,24020000
-//fix GS_IMR crash = no 3D gfx
-//patch=0,EE,00174360,word,3403ff00

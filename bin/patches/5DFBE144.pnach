@@ -1,8 +1,0 @@
-gametitle=The Getaway [SCES 51159] (E)
-comment= patches by Nachbrenner
-//skip IPU videos (for blockdump)
-patch=0,EE,00296c14,word,00000000
-patch=0,EE,00223bc8,word,03e00008
-patch=0,EE,00223bcc,word,00000000
-patch=0,EE,002218a8,word,03e00008
-patch=0,EE,002218ac,word,00000000

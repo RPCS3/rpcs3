@@ -1,9 +1,0 @@
-gametitle=Garfield 2 - Tale of Two Kitties [SLES 54172] (E)
-comment=patches by Nachbrenner
-fastmemory
-//Skip Videos (for blockdump)
-patch=0,EE,00225bc0,word,03e00008
-patch=0,EE,00225bc4,word,00000000
-//Skip Music (for blockdump) 
-patch=0,EE,0033e270,word,03e00008
-patch=0,EE,0033e274,word,00000000
