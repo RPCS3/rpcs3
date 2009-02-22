@@ -40,6 +40,7 @@ union GPUScanlineSelector
 		DWORD ltf:1; // 10
 		DWORD md:1; // 11
 		DWORD sprite:1; // 12
+		DWORD scalex:2; // 13
 	};
 
 	struct
@@ -71,7 +72,6 @@ __declspec(align(16)) struct GPUScanlineEnvironment
 	void* vm;
 	const void* tex;
 	const WORD* clut;
-	DWORD fbw; // 10 + m_scale.cx
 
 	// GSVector4i md; // similar to gs fba
 

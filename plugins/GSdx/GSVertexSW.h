@@ -230,7 +230,7 @@ __declspec(align(16)) class GSVertexTrace
 	class GSVertexTraceMap : public GSCodeGeneratorFunctionMap<GSVertexTraceCodeGenerator, DWORD, VertexTracePtr>
 	{
 	public:
-		GSVertexTraceMap() {}
+		GSVertexTraceMap() : GSCodeGeneratorFunctionMap("VertexTrace") {}
 		GSVertexTraceCodeGenerator* Create(DWORD key, void* ptr, size_t maxsize) {return new GSVertexTraceCodeGenerator(key, ptr, maxsize);}
 	} m_map;
 

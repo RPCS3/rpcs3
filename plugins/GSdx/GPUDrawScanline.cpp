@@ -43,7 +43,6 @@ void GPUDrawScanline::BeginDraw(const GSRasterizerData* data, Functions* f)
 	m_env.sel = p->sel;
 
 	m_env.vm = m_state->m_mem.GetPixelAddress(0, 0);
-	m_env.fbw = 10 + m_state->m_mem.GetScale().cx;
 
 	if(m_env.sel.tme)
 	{
@@ -96,7 +95,8 @@ void GPUDrawScanline::EndDraw(const GSRasterizerStats& stats)
 //
 
 GPUDrawScanline::GPUSetupPrimMap::GPUSetupPrimMap(GPUScanlineEnvironment& env)
-	: m_env(env)
+	: GSCodeGeneratorFunctionMap("GPUSetupPrim")
+	, m_env(env)
 {
 }
 
@@ -108,7 +108,8 @@ GPUSetupPrimCodeGenerator* GPUDrawScanline::GPUSetupPrimMap::Create(DWORD key, v
 //
 
 GPUDrawScanline::GPUDrawScanlineMap::GPUDrawScanlineMap(GPUScanlineEnvironment& env)
-	: m_env(env)
+	: GSCodeGeneratorFunctionMap("GPUDrawScanline")
+	, m_env(env)
 {
 }
 

@@ -44,12 +44,6 @@ void GSSetupPrimCodeGenerator::Generate()
 {
 	const int params = 0;
 
-	const int _vertices = params + 4;
-	const int _dscan = params + 8;
-
-	mov(ecx, dword[esp + _vertices]);
-	mov(edx, dword[esp + _dscan]);
-
 	if((m_en.z || m_en.f) && !m_env.sel.sprite || m_en.t || m_en.c && m_env.sel.iip)
 	{
 		for(int i = 0; i < 5; i++)

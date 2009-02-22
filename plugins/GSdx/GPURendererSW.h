@@ -155,6 +155,7 @@ protected:
 		p.sel.dtd = m_dither ? env.STATUS.DTD : 0;
 		p.sel.md = env.STATUS.MD;
 		p.sel.sprite = env.PRIM.TYPE == GPU_SPRITE;
+		p.sel.scalex = m_mem.GetScale().cx;
 
 		//
 

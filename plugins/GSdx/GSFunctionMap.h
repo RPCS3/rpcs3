@@ -161,10 +161,13 @@ public:
 };
 
 #include "GSCodeBuffer.h"
+#include "vtune/JITProfiling.h"
 
 template<class CG, class KEY, class VALUE>
 class GSCodeGeneratorFunctionMap : public GSFunctionMap<KEY, VALUE>
 {
+	DWORD m_id;
+	CStringA m_name;
 	CRBMap<UINT64, CG*> m_cgmap;
 	GSCodeBuffer m_cb;
 
@@ -174,7 +177,9 @@ protected:
 	virtual CG* Create(KEY key, void* ptr, size_t maxsize = MAX_SIZE) = 0;
 
 public:
-	GSCodeGeneratorFunctionMap()
+	GSCodeGeneratorFunctionMap(LPCSTR name)
+		: m_id(0x100000)
+		, m_name(name)
 	{
 	}
 
@@ -203,6 +208,23 @@ public:
 			m_cb.ReleaseBuffer(cg->getSize());
 
 			m_cgmap.SetAt(key, cg);
+
+			// vtune method registration
+
+			CStringA name;
+
+			name.Format("%s<%016I64x>()", m_name, (UINT64)key);
+
+			iJIT_Method_Load ml;
+
+			memset(&ml, 0, sizeof(ml));
+
+			ml.method_id = m_id++;
+			ml.method_name = (LPSTR)(LPCSTR)name;
+			ml.method_load_address = (void*)cg->getCode();
+			ml.method_size = cg->getSize();
+
+			iJIT_NotifyEvent(iJVM_EVENT_TYPE_METHOD_LOAD_FINISHED, &ml);
 		}
 
 		return (VALUE)cg->getCode();

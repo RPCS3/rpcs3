@@ -346,7 +346,8 @@ void GSDrawScanline::FillBlock(const GSVector4i* row, int* col, const GSVector4i
 //
 
 GSDrawScanline::GSSetupPrimMap::GSSetupPrimMap(GSScanlineEnvironment& env)
-	: m_env(env)
+	: GSCodeGeneratorFunctionMap("GSSetupPrim")
+	, m_env(env)
 {
 }
 
@@ -358,7 +359,8 @@ GSSetupPrimCodeGenerator* GSDrawScanline::GSSetupPrimMap::Create(UINT64 key, voi
 //
 
 GSDrawScanline::GSDrawScanlineMap::GSDrawScanlineMap(GSScanlineEnvironment& env)
-	: m_env(env)
+	: GSCodeGeneratorFunctionMap("GSDrawScanline")
+	, m_env(env)
 {
 }
 

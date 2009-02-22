@@ -40,12 +40,6 @@ void GPUSetupPrimCodeGenerator::Generate()
 {
 	const int params = 0;
 
-	const int _vertices = params + 4;
-	const int _dscan = params + 8;
-
-	mov(ecx, dword[esp + _vertices]);
-	mov(edx, dword[esp + _dscan]);
-
 	if(m_env.sel.tme && !m_env.sel.twin)
 	{
 		pcmpeqd(xmm0, xmm0);

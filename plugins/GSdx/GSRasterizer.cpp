@@ -99,7 +99,7 @@ void GSRasterizer::DrawPoint(const GSVertexSW* v, const GSVector4i& scissor)
 		{
 			m_dsf.ssp(v, *v);
 
-			m_dsf.ssl(p.y, p.x, p.x + 1, *v);
+			m_dsf.ssl(p.x + 1, p.x, p.y, *v);
 
 			m_stats.pixels++;
 		}
@@ -439,7 +439,7 @@ void GSRasterizer::DrawTriangleSection(int top, int bottom, GSVertexSW& l, const
 						scan = l;
 					}
 
-					m_dsf.ssl(top, left, right, scan);
+					m_dsf.ssl(right, left, top, scan);
 				}
 			}
 		}
@@ -494,7 +494,7 @@ void GSRasterizer::DrawTriangleSection(int top, int bottom, GSVertexSW& l, const
 						scan = l;
 					}
 
-					m_dsf.ssl(top, left, right, scan);
+					m_dsf.ssl(right, left, top, scan);
 				}
 			}
 		}
@@ -583,7 +583,7 @@ void GSRasterizer::DrawSprite(const GSVertexSW* vertices, const GSVector4i& scis
 	{
 		if((top % m_threads) == m_id) 
 		{
-			m_dsf.ssl(top, left, right, scan);
+			m_dsf.ssl(right, left, top, scan);
 
 			m_stats.pixels += right - left;
 		}
@@ -665,9 +665,11 @@ DWORD GSRasterizerMT::ThreadProc()
 
 GSRasterizerList::GSRasterizerList()
 {
-	// get a whole cache line (twice the size for future cpus ;)
+	// User/Source Coding Rule 24. (M impact, ML generality) Place each 
+	// synchronization variable alone, separated by 128 bytes or in a separate cache
+	// line.
 
-	m_sync = (long*)_aligned_malloc(sizeof(*m_sync), 128);
+	m_sync = (long*)_aligned_malloc(128, 64);
 
 	*m_sync = 0;
 }

@@ -18,8 +18,9 @@
 	/>
 	<Tool
 		Name="VCLinkerTool"
-		AdditionalDependencies="d3d10.lib d3dx10.lib d3d9.lib d3dx9.lib ddraw.lib dxguid.lib winmm.lib strmiids.lib xinput.lib"
+		AdditionalDependencies="JITProfiling.lib d3d10.lib d3dx10.lib d3d9.lib d3dx9.lib ddraw.lib dxguid.lib winmm.lib strmiids.lib xinput.lib"
 		OutputFile="..\..\bin\plugins\$(ProjectName).dll"
+		AdditionalLibraryDirectories="./vtune"
 		DelayLoadDLLs="d3d9.dll;d3dx9_40.dll;d3d10.dll;d3dx10_40.dll"
 		GenerateDebugInformation="true"
 		SubSystem="2"
@@ -29,12 +30,4 @@
 		Name="VCPreBuildEventTool"
 		CommandLine=".\vsprops\preBuild.cmd &quot;$(ProjectDir)\&quot; &quot;$(ProjectDir)vsprops&quot;"
 	/>
-
-    <!--
-	<Tool
-		Name="VCPostBuildEventTool"
-		CommandLine=".\vsprops\postBuild.cmd &quot;$(TargetPath)&quot; &quot;$(SolutionDir)&quot; &quot;$(TargetName)&quot; $(TargetExt)"
-	/>
-    -->
-
 </VisualStudioPropertySheet>
