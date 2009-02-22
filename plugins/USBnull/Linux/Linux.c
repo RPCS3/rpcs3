@@ -23,26 +23,39 @@
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 #include <pthread.h>
+#include <unistd.h>
 
+#include "USB.h"
 
-int ExecCfg(char *arg) {
+int ExecCfg(char *arg)
+{
 	char cfg[256];
 	struct stat buf;
 
 	strcpy(cfg, "./cfgUSBnull");
-	if (stat(cfg, &buf) != -1) {
+	if (stat(cfg, &buf) != -1) 
+	{
 		sprintf(cfg, "%s %s", cfg, arg);
 		return system(cfg);
 	}
 
-	strcpy(cfg, "./cfg/cfgUSBnull");
-	if (stat(cfg, &buf) != -1) {
+	strcpy(cfg, "./plugins/cfgUSBnull");
+	if (stat(cfg, &buf) != -1) 
+	{
 		sprintf(cfg, "%s %s", cfg, arg);
+		return system(cfg);
+	}
+	
+	strcpy(cfg, "./cfg/cfgUSBnull");
+	if (stat(cfg, &buf) != -1) 
+		
+	{	sprintf(cfg, "%s %s", cfg, arg);
 		return system(cfg);
 	}
 
 	sprintf(cfg, "%s/cfgUSBnull", getenv("HOME"));
-	if (stat(cfg, &buf) != -1) {
+	if (stat(cfg, &buf) != -1) 
+	{
 		sprintf(cfg, "%s %s", cfg, arg);
 		return system(cfg);
 	}
@@ -51,7 +64,8 @@ int ExecCfg(char *arg) {
 	return -1;
 }
 
-void SysMessage(char *fmt, ...) {
+void SysMessage(char *fmt, ...) 
+{
 	va_list list;
 	char msg[512];
 	char cmd[512];
@@ -64,11 +78,21 @@ void SysMessage(char *fmt, ...) {
 	ExecCfg(cmd);
 }
 
-void USBconfigure() {
+void USBconfigure() 
+{
+	char *file;
+	getcwd(file, ARRAYSIZE(file));
+	chdir("plugins");
 	ExecCfg("configure");
+	chdir(file);
 }
 
-void USBabout() {
+void USBabout() 
+{
+	char *file;
+	getcwd(file, ARRAYSIZE(file));
+	chdir("plugins");
 	ExecCfg("about");
+	chdir(file);
 }
 

@@ -38,7 +38,7 @@ void OnConf_Memcards(GtkMenuItem *menuitem, gpointer user_data)
 	set_checked(MemDlg, "check_eject_mcds", Config.McdEnableEject);
 	
 	getcwd(file, ARRAYSIZE(file)); /* store current dir */
-	sprintf( card, "%s/%s", file, MEMCARDS_DIR );
+	sprintf(card, "%s/%s", file, MEMCARDS_DIR );
 	chdir(card); /* change dirs so that plugins can find their config file*/
 	    
 	if ((dir = opendir(card)) == NULL)
@@ -55,7 +55,7 @@ void OnConf_Memcards(GtkMenuItem *menuitem, gpointer user_data)
 		{
 			char path[g_MaxPath];
 			
-			sprintf( path, "%s/%s", MEMCARDS_DIR, entry->d_name);
+			sprintf(path, "%s/%s/%s", MAIN_DIR, MEMCARDS_DIR, entry->d_name);
 			
 			for (j = 0; j < 2; j++)
 			{
@@ -82,12 +82,18 @@ void OnConf_Memcards(GtkMenuItem *menuitem, gpointer user_data)
 	
 void OnMemcards_Ok(GtkButton *button, gpointer user_data)
 {
+	if (gtk_combo_box_get_active(GTK_COMBO_BOX(lookup_widget(MemDlg, "memcard1combo"))) != -1)
+		sprintf(Config.Mcd[0].Filename, "%s/%s/%s", MAIN_DIR, MEMCARDS_DIR, 
+		gtk_combo_box_get_active_text(GTK_COMBO_BOX(lookup_widget(MemDlg, "memcard1combo"))));
+	else
+		sprintf(Config.Mcd[0].Filename, "%s/%s/%s", MAIN_DIR, MEMCARDS_DIR, DEFAULT_MEMCARD1);
 	
-	strcpy(Config.Mcd[0].Filename, MEMCARDS_DIR "/");
-	strcpy(Config.Mcd[1].Filename, MEMCARDS_DIR "/");
 	
-	strcat(Config.Mcd[0].Filename, gtk_combo_box_get_active_text(GTK_COMBO_BOX(lookup_widget(MemDlg, "memcard1combo"))));
-	strcat(Config.Mcd[1].Filename, gtk_combo_box_get_active_text(GTK_COMBO_BOX(lookup_widget(MemDlg, "memcard2combo"))));
+	if (gtk_combo_box_get_active(GTK_COMBO_BOX(lookup_widget(MemDlg, "memcard2combo"))) != -1)
+		sprintf(Config.Mcd[1].Filename, "%s/%s/%s", MAIN_DIR, MEMCARDS_DIR, 
+		gtk_combo_box_get_active_text(GTK_COMBO_BOX(lookup_widget(MemDlg, "memcard2combo"))));
+	else
+		sprintf(Config.Mcd[1].Filename, "%s/%s/%s", MAIN_DIR, MEMCARDS_DIR, DEFAULT_MEMCARD2);
 	
 	Config.Mcd[0].Enabled = is_checked(MemDlg, "check_enable_mcd1");
 	Config.Mcd[1].Enabled = is_checked(MemDlg, "check_enable_mcd2");

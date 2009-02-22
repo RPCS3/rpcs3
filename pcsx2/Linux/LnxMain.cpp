@@ -41,6 +41,9 @@ int main(int argc, char *argv[])
 	char elfname[g_MaxPath];
 
 	efile = 0;
+	
+	getcwd(MAIN_DIR, ARRAYSIZE(MAIN_DIR)); /* store main dir */
+	Console::Notice("MAIN_DIR is %s", params MAIN_DIR);
 #ifdef ENABLE_NLS
 	setlocale(LC_ALL, "");
 	bindtextdomain(PACKAGE, "Langs");
@@ -79,10 +82,10 @@ int main(int argc, char *argv[])
 	{
 
 		memset(&Config, 0, sizeof(Config));
-		strcpy(Config.BiosDir,    DEFAULT_BIOS_DIR "/");
-		strcpy(Config.PluginsDir, DEFAULT_PLUGINS_DIR "/");
-		strcpy(Config.Mcd[0].Filename, MEMCARDS_DIR "/" DEFAULT_MEMCARD1);
-		strcpy(Config.Mcd[1].Filename, MEMCARDS_DIR "/" DEFAULT_MEMCARD2);
+		sprintf(Config.BiosDir, "%s/%s/", MAIN_DIR, DEFAULT_BIOS_DIR);
+		sprintf(Config.PluginsDir, "%s/%s/", MAIN_DIR, DEFAULT_PLUGINS_DIR);
+		sprintf(Config.Mcd[0].Filename, "%s/%s/%s", MAIN_DIR, MEMCARDS_DIR, DEFAULT_MEMCARD1);
+		sprintf(Config.Mcd[1].Filename, "%s/%s/%s", MAIN_DIR, MEMCARDS_DIR, DEFAULT_MEMCARD2);
 		Config.Mcd[0].Enabled = 1;
 		Config.Mcd[1].Enabled = 1;
 		Config.McdEnableEject = 1;

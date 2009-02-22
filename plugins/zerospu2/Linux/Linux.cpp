@@ -29,6 +29,9 @@ extern "C" {
 #include "zerospu2.h"
 #include "Linux.h"
 
+extern char *libraryName;
+extern string s_strIniPath;
+
 // This is a bit ugly. I'll see if I can work out a better way to do this later.
 int SetupSound()
 {	
@@ -113,6 +116,11 @@ void SysMessage(char *fmt, ...) {
 
 void CALLBACK SPU2configure() 
 {
+	char strcurdir[256];
+	getcwd(strcurdir, 256);
+	s_strIniPath = strcurdir;
+	s_strIniPath += "/inis/zerospu2.ini";
+	
 	LOG_CALLBACK("SPU2configure()\n");
 	ConfDlg = create_Config();
 	LoadConfig();
@@ -152,9 +160,6 @@ void on_Conf_Cancel (GtkButton *button, gpointer user_data)
 	gtk_main_quit();
 
 }
-
-extern char *libraryName;
-extern string s_strIniPath;
 
 void CALLBACK SPU2about() 
 {

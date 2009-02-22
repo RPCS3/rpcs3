@@ -603,6 +603,11 @@ void OnConf_Cancel(GtkButton *button, gpointer user_data)
 
 void CALLBACK PADconfigure()
 {
+	char strcurdir[256];
+	getcwd(strcurdir, 256);
+	s_strIniPath = strcurdir;
+	s_strIniPath += "/inis/zeropad.ini";
+	
 	LoadConfig();
 
 	Conf = create_Conf();

@@ -294,7 +294,7 @@ int LoadGSplugin(const string& filename)
 	MapSymbol_Error(GSgifTransfer2);
 	MapSymbol_Error(GSgifTransfer3);
 	MapSymbol_Error(GSreadFIFO);
-    MapSymbol(GSgetLastTag);
+	MapSymbol(GSgetLastTag);
 	MapSymbol(GSreadFIFO2); // optional
 	MapSymbol_Error(GSvsync);
 
@@ -312,7 +312,7 @@ int LoadGSplugin(const string& filename)
 	MapSymbol(GSgetDriverInfo);
 
 	MapSymbol(GSsetFrameSkip);
-    MapSymbol(GSsetupRecording);
+	MapSymbol(GSsetupRecording);
 
 #ifdef _WIN32
 	MapSymbol(GSsetWindowInfo);
@@ -346,7 +346,7 @@ int LoadPAD1plugin(const string& filename) {
 	MapSymbolPAD_Error(PAD1,PAD,startPoll);
 	MapSymbolPAD_Error(PAD1,PAD,poll);
 	MapSymbolPAD_Error(PAD1,PAD,query);
-    MapSymbolPAD(PAD1,PAD,update);
+	MapSymbolPAD(PAD1,PAD,update);
 
 	MapSymbolPAD(PAD1,PAD,gsDriverInfo);
 	MapSymbolPAD_Fallback(PAD1,PAD,configure);
@@ -377,7 +377,7 @@ int LoadPAD2plugin(const string& filename) {
 	MapSymbolPAD_Error(PAD2,PAD,startPoll);
 	MapSymbolPAD_Error(PAD2,PAD,poll);
 	MapSymbolPAD_Error(PAD2,PAD,query);
-    MapSymbolPAD(PAD2,PAD,update);
+	MapSymbolPAD(PAD2,PAD,update);
 
 	MapSymbolPAD(PAD2,PAD,gsDriverInfo);
 	MapSymbolPAD_Fallback(PAD2,PAD,configure);
@@ -407,18 +407,18 @@ int LoadSPU2plugin(const string& filename) {
 	MapSymbol_Error(SPU2close);
 	MapSymbol_Error(SPU2write);
 	MapSymbol_Error(SPU2read);
-    MapSymbol_Error(SPU2readDMA4Mem);     
-    MapSymbol_Error(SPU2writeDMA4Mem);   
+	MapSymbol_Error(SPU2readDMA4Mem);     
+	MapSymbol_Error(SPU2writeDMA4Mem);   
 	MapSymbol_Error(SPU2interruptDMA4);
-    MapSymbol_Error(SPU2readDMA7Mem);     
-    MapSymbol_Error(SPU2writeDMA7Mem);  
+	MapSymbol_Error(SPU2readDMA7Mem);     
+	MapSymbol_Error(SPU2writeDMA7Mem);  
 	MapSymbol_Error(SPU2interruptDMA7);
-    MapSymbol(SPU2setDMABaseAddr);
+	MapSymbol(SPU2setDMABaseAddr);
 	MapSymbol_Error(SPU2ReadMemAddr);
 	MapSymbol_Error(SPU2WriteMemAddr);
 	MapSymbol_Error(SPU2irqCallback);
 
-    MapSymbol(SPU2setClockPtr);
+	MapSymbol(SPU2setClockPtr);
 
 	MapSymbol(SPU2setupRecording);
 
@@ -635,6 +635,9 @@ int InitPlugins()
 	//if( !loadp )
 	//	throw Exception::InvalidOperation( "Bad coder mojo - InitPlugins called prior to plugins having been loaded." );
 
+#ifndef _WIN32
+	chdir(MAIN_DIR);
+#endif
 	int ret;
 
 	ret = GSinit();
@@ -700,21 +703,21 @@ int OpenPlugins(const char* pTitleFilename)
 	GSdriverInfo info;
 	int ret;
 
-	if ( !initp )
-		InitPlugins();
+	if ( !initp ) InitPlugins();
 		//throw Exception::InvalidOperation( "Bad coder mojo -- OpenPlugins called prior to InitPlugins." );
 
 #ifndef _WIN32
-    // change dir so that CDVD can find its config file
-    char file[255], pNewTitle[255];
-    getcwd(file, ARRAYSIZE(file));
-    chdir(Config.PluginsDir);
+	// change dir so that CDVD can find its config file
+	char file[255], pNewTitle[255];
+	chdir(MAIN_DIR);
+	chdir(Config.PluginsDir);
 
-    if( pTitleFilename != NULL && pTitleFilename[0] != '/' ) {
-        // because we are changing the dir, we have to set a new title if it is a relative dir
-        sprintf(pNewTitle, "%s/%s", file, pTitleFilename);
-        pTitleFilename = pNewTitle;
-    }
+	if( pTitleFilename != NULL && pTitleFilename[0] != '/' ) 
+	{
+		// because we are changing the dir, we have to set a new title if it is a relative dir
+		sprintf(pNewTitle, "%s/%s", file, pTitleFilename);
+		pTitleFilename = pNewTitle;
+	}
 #endif
 
 	if( !OpenStatus.CDVD )
@@ -800,15 +803,15 @@ int OpenPlugins(const char* pTitleFilename)
 		OpenStatus.FW = true;
 	}
 
-#ifdef __LINUX__
-    chdir(file);
+#ifndef _WIN32
+	chdir(MAIN_DIR);
 #endif
 	return 0;
 
 OpenError:
 	ClosePlugins( true );
-#ifdef __LINUX__
-    chdir(file);
+#ifndef _WIN32
+	chdir(MAIN_DIR);
 #endif
 
     return -1;
@@ -863,6 +866,7 @@ void ClosePlugins( bool closegs )
 
 void ResetPlugins()
 {
+	
 	mtgsWaitGS();
 
 	ShutdownPlugins();
