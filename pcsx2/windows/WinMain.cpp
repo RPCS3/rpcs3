@@ -40,7 +40,8 @@
 #include "implement.h"		// pthreads-win32 defines for startup/shutdown
 
 unsigned int langsMax;
-bool shouldQuitOnDestroy = true;
+static bool m_RestartGui = false;	// used to signal a GUI restart after DestroyWindow()
+static HBITMAP hbitmap_background = NULL;
 
 
 struct _langs {
@@ -202,7 +203,7 @@ static bool TestRunMode()
 	return false;
 }
 
-void WinRun( int nCmdShow )
+void WinRun()
 {
 	// Load the command line overrides for plugins.
 	// Back up the user's preferences in winConfig.
@@ -247,8 +248,6 @@ void WinRun( int nCmdShow )
 		return;
 	}
 #endif
-
-	CreateMainWindow( nCmdShow );
 
 	if( Config.PsxOut )
 	{
@@ -362,7 +361,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		else
 			Console::Close();
 
-		WinRun( nCmdShow );
+		WinRun();
 	}
 	catch( Exception::BaseException& ex )
 	{
@@ -396,20 +395,30 @@ void RunGui()
 
 	PCSX2_MEM_PROTECT_BEGIN();
 
-	LoadPatch(str_Default);
+	LoadPatch( str_Default );
 
-	while( true )
+	do 
 	{
-		if( PeekMessage(&msg, NULL, 0U, 0U, PM_REMOVE) != 0 )
+		CreateMainWindow();
+		m_RestartGui = false;
+
+		while( true )
 		{
-			if( msg.message == WM_QUIT ) return;
+			if( PeekMessage(&msg, NULL, 0U, 0U, PM_REMOVE) != 0 )
+			{
+				if( msg.message == WM_QUIT )
+				{
+					gApp.hWnd = NULL;
+					break;
+				}
 
-			TranslateMessage(&msg);
-			DispatchMessage(&msg);
+				TranslateMessage(&msg);
+				DispatchMessage(&msg);
+			}
+
+			Sleep(10);
 		}
-
-		Sleep(10);
-	}
+	} while( m_RestartGui );
 
 	PCSX2_MEM_PROTECT_END();
 }
@@ -560,14 +569,12 @@ BOOL APIENTRY GameFixes(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
     return FALSE;
 }
 
-HBITMAP hbitmap_background;//the background image
-
 LRESULT WINAPI MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	switch (msg)
 	{
-        case WM_CREATE:
-	        return TRUE;
+		case WM_CREATE:
+			return TRUE;
 
 		case WM_PAINT:
 		{
@@ -589,36 +596,36 @@ LRESULT WINAPI MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			SelectObject(hdcMem, hbmOld);
 			DeleteDC(hdcMem);
 			EndPaint(gApp.hWnd, &ps);
-		 }
-		 return TRUE;
+		}
+		return TRUE;
 
 		case WM_COMMAND:
 			switch (LOWORD(wParam)) 
 			{
 			case ID_GAMEFIXES:
 				 DialogBox(gApp.hInstance, MAKEINTRESOURCE(IDD_GAMEFIXES), hWnd, (DLGPROC)GameFixes);
-				 return FALSE;
+				 break;
 
 			case ID_HACKS:
 				 DialogBox(gApp.hInstance, MAKEINTRESOURCE(IDD_HACKS), hWnd, (DLGPROC)HacksProc);
-				 return FALSE;
+				 break;
 
 			case ID_ADVANCED_OPTIONS:
 				 DialogBox(gApp.hInstance, MAKEINTRESOURCE(IDD_ADVANCED_OPTIONS), hWnd, (DLGPROC)AdvancedOptionsProc);
-				 return FALSE;
+				 break;
 
 			case ID_CHEAT_FINDER_SHOW:
 				ShowFinder(pInstance,hWnd);
-				return FALSE;
+				break;
 
 			case ID_CHEAT_BROWSER_SHOW:
 				ShowCheats(pInstance,hWnd);
-				return FALSE;
+				break;
 
 			case ID_FILE_EXIT:
 				DestroyWindow( hWnd );
 				// WM_DESTROY will do the shutdown work for us.
-				return FALSE;
+				break;
 
 			case ID_FILEOPEN:
 			{
@@ -626,32 +633,32 @@ LRESULT WINAPI MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				if( Open_File_Proc( outstr ) )
 					RunExecute( outstr.c_str() );
 			}
-			return FALSE;
+			break;
 
 			case ID_RUN_EXECUTE:
 				if( g_EmulationInProgress )
 					ExecuteCpu();
 				else
 					RunExecute( NULL, true );	// boots bios if no savestate is to be recovered
-			return FALSE;
+			break;
 
 			case ID_FILE_RUNCD:
 				SysReset();
 				RunExecute( NULL );
-			return FALSE;
+			break;
 
 			case ID_RUN_RESET:
 				SysReset();
-			return FALSE;
+			break;
 
 			//2002-09-20 (Florin)
 			case ID_RUN_CMDLINE:
 				DialogBox(gApp.hInstance, MAKEINTRESOURCE(IDD_CMDLINE), hWnd, (DLGPROC)CmdlineProc);
-				return FALSE;
+				break;
 			//-------------------
            	case ID_PATCHBROWSER:
                 DialogBox(gApp.hInstance, MAKEINTRESOURCE(IDD_PATCHBROWSER), hWnd, (DLGPROC)PatchBDlgProc);
-				return FALSE;
+				break;
 
 			case ID_CONFIG_CONFIGURE:
 				Pcsx2Configure(hWnd);
@@ -659,38 +666,38 @@ LRESULT WINAPI MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				// Configure may unload plugins if the user changes settings, so reload
 				// them here.  If they weren't unloaded these functions do nothing.
 				LoadPlugins();
-				return FALSE;
+				break;
 
 			case ID_CONFIG_GRAPHICS:
 				if (GSconfigure) GSconfigure();
-				return FALSE;
+				break;
 
 			case ID_CONFIG_CONTROLLERS:
 				if (PAD1configure) PAD1configure();
 				if (PAD2configure) {
 					if (strcmp(Config.PAD1, Config.PAD2))PAD2configure();
 				}
-				return FALSE;
+				break;
 
 			case ID_CONFIG_SOUND:
 				if (SPU2configure) SPU2configure();
-				return FALSE;
+				break;
 
 			case ID_CONFIG_CDVDROM:
 				if (CDVDconfigure) CDVDconfigure();
-				return FALSE;
+				break;
 
 			case ID_CONFIG_DEV9:
 				if (DEV9configure) DEV9configure();
-				return FALSE;
+				break;
 
 			case ID_CONFIG_USB:
 				if (USBconfigure) USBconfigure();
-				return FALSE;
+				break;
   
 			case ID_CONFIG_FW:
 				if (FWconfigure) FWconfigure();
-				return FALSE;
+				break;
 
 			case ID_FILE_STATES_LOAD_SLOT1: 
 			case ID_FILE_STATES_LOAD_SLOT2: 
@@ -698,11 +705,11 @@ LRESULT WINAPI MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			case ID_FILE_STATES_LOAD_SLOT4: 
 			case ID_FILE_STATES_LOAD_SLOT5:
 				States_Load(LOWORD(wParam) - ID_FILE_STATES_LOAD_SLOT1);
-			return FALSE;
+			break;
 
 			case ID_FILE_STATES_LOAD_OTHER:
 				OnStates_LoadOther();
-			return FALSE;
+			break;
 
 			case ID_FILE_STATES_SAVE_SLOT1: 
 			case ID_FILE_STATES_SAVE_SLOT2: 
@@ -710,20 +717,20 @@ LRESULT WINAPI MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			case ID_FILE_STATES_SAVE_SLOT4: 
 			case ID_FILE_STATES_SAVE_SLOT5: 
 				States_Save(LOWORD(wParam) - ID_FILE_STATES_SAVE_SLOT1);
-			return FALSE;
+			break;
 
 			case ID_FILE_STATES_SAVE_OTHER:
 				OnStates_SaveOther();
-			return FALSE;
+			break;
 
 			case ID_CONFIG_CPU:
                 DialogBox(gApp.hInstance, MAKEINTRESOURCE(IDD_CPUDLG), hWnd, (DLGPROC)CpuDlgProc);
-				return FALSE;
+				break;
 
 #ifdef PCSX2_DEVBUILD
 			case ID_DEBUG_ENTERDEBUGGER:
                 DialogBox(gApp.hInstance, MAKEINTRESOURCE(IDD_DEBUG), NULL, (DLGPROC)DebuggerProc);
-                return FALSE;
+                break;
 
 			case ID_DEBUG_REMOTEDEBUGGING:
 				//read debugging params
@@ -744,29 +751,29 @@ LRESULT WINAPI MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 						//RunGui();
 					}
 				}
-                return FALSE;
+                break;
 
 			case ID_DEBUG_MEMORY_DUMP:
 			    DialogBox(gApp.hInstance, MAKEINTRESOURCE(IDD_MEMORY), hWnd, (DLGPROC)MemoryProc);
-				return FALSE;
+				break;
 
 			case ID_DEBUG_LOGGING:
 			    DialogBox(gApp.hInstance, MAKEINTRESOURCE(IDD_LOGGING), hWnd, (DLGPROC)LogProc);
-				return FALSE;
+				break;
 #endif
 
 			case ID_HELP_ABOUT:
 				DialogBox(gApp.hInstance, MAKEINTRESOURCE(ABOUT_DIALOG), hWnd, (DLGPROC)AboutDlgProc);
-				return FALSE;
+				break;
 
 			case ID_HELP_HELP:
 				//system("help\\index.html");
 				system("compat_list\\compat_list.html");
-				return FALSE;
+				break;
 
 			case ID_CONFIG_MEMCARDS:
 				MemcardConfig::OpenDialog();
-				return FALSE;
+				break;
 
 			case ID_PROCESSLOW: 
                Config.ThPriority = THREAD_PRIORITY_LOWEST;
@@ -774,7 +781,7 @@ LRESULT WINAPI MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				CheckMenuItem(gApp.hMenu,ID_PROCESSLOW,MF_CHECKED);
                 CheckMenuItem(gApp.hMenu,ID_PROCESSNORMAL,MF_UNCHECKED);
                 CheckMenuItem(gApp.hMenu,ID_PROCESSHIGH,MF_UNCHECKED);
-                return FALSE;
+                break;
                 
 			case ID_PROCESSNORMAL:
                 Config.ThPriority = THREAD_PRIORITY_NORMAL;
@@ -782,7 +789,7 @@ LRESULT WINAPI MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				CheckMenuItem(gApp.hMenu,ID_PROCESSNORMAL,MF_CHECKED);
                 CheckMenuItem(gApp.hMenu,ID_PROCESSLOW,MF_UNCHECKED);
                 CheckMenuItem(gApp.hMenu,ID_PROCESSHIGH,MF_UNCHECKED);
-                return FALSE;
+                break;
 
 			case ID_PROCESSHIGH:
                 Config.ThPriority = THREAD_PRIORITY_HIGHEST;
@@ -790,7 +797,7 @@ LRESULT WINAPI MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				CheckMenuItem(gApp.hMenu,ID_PROCESSHIGH,MF_CHECKED);
                 CheckMenuItem(gApp.hMenu,ID_PROCESSNORMAL,MF_UNCHECKED);
                 CheckMenuItem(gApp.hMenu,ID_PROCESSLOW,MF_UNCHECKED);
-                return FALSE;
+                break;
 
 			case ID_CONSOLE:
 				Config.PsxOut = !Config.PsxOut;
@@ -805,25 +812,25 @@ LRESULT WINAPI MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				   Console::Close();
 				}
 				SaveConfig();
-				return FALSE;
+				break;
 
 			case ID_PATCHES:
 				Config.Patch = !Config.Patch;
 				CheckMenuItem(gApp.hMenu, ID_PATCHES, Config.Patch ? MF_CHECKED : MF_UNCHECKED);
 				SaveConfig();
-				return FALSE;
+				break;
 
 			case ID_CDVDPRINT:
 				Config.cdvdPrint = !Config.cdvdPrint;
 				CheckMenuItem(gApp.hMenu, ID_CDVDPRINT, Config.cdvdPrint ? MF_CHECKED : MF_UNCHECKED);
 				SaveConfig();
-				return FALSE;
+				break;
 
 			case ID_CLOSEGS:
 				Config.closeGSonEsc = !Config.closeGSonEsc;
 				CheckMenuItem(gApp.hMenu, ID_CLOSEGS, Config.closeGSonEsc ? MF_CHECKED : MF_UNCHECKED);
 				SaveConfig();
-				return FALSE;
+				break;
 
 #ifndef _DEBUG
 			case ID_PROFILER:
@@ -839,28 +846,34 @@ LRESULT WINAPI MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 					ProfilerTerm();
 				}
 				SaveConfig();
-				return FALSE;
+				break;
 #endif
 
 			default:
-				if (LOWORD(wParam) >= ID_LANGS && LOWORD(wParam) <= (ID_LANGS + langsMax)) {
-					shouldQuitOnDestroy = false;
+				if (LOWORD(wParam) >= ID_LANGS && LOWORD(wParam) <= (ID_LANGS + langsMax))
+				{
+					m_RestartGui = true;
 					DestroyWindow(gApp.hWnd);
 					ChangeLanguage(langs[LOWORD(wParam) - ID_LANGS].lang);
-					CreateMainWindow(SW_SHOWNORMAL);
-					return TRUE;
+					break;
 				}
+				return TRUE;
 			}
-			return TRUE;
+		return FALSE;
 
 		case WM_DESTROY:
-			if( shouldQuitOnDestroy ) {
-				DeleteObject(hbitmap_background);
-				PostQuitMessage(0);
-				gApp.hWnd = NULL;
+			if( hbitmap_background != NULL )
+			{
+				DeleteObject( hbitmap_background );
+				hbitmap_background = NULL;
 			}
-			else shouldQuitOnDestroy = true;
-		return FALSE;
+			gApp.hWnd = NULL;
+		break;
+
+		case WM_NCDESTROY:
+			PostQuitMessage(0);
+		break;
+
 
 		// Explicit handling of WM_CLOSE.
 		// This is Windows default behavior, but we handle it here sot hat we might add a
@@ -1041,7 +1054,8 @@ void CreateMainMenu() {
 		EnableMenuItem(GetSubMenu(gApp.hMenu, 4), ID_DEBUG_LOGGING, MF_GRAYED);
 }
 
-void CreateMainWindow(int nCmdShow) {
+void CreateMainWindow()
+{
 	WNDCLASS wc;
 	HWND hWnd;
 	char buf[256];
@@ -1057,8 +1071,9 @@ void CreateMainWindow(int nCmdShow) {
 #elif __BORLANDC__
 	sprintf(COMPILER, "(BC)");
 #endif
-	/* Load Background Bitmap from the ressource */ 
-	hbitmap_background = LoadBitmap(GetModuleHandle(NULL), MAKEINTRESOURCE(SPLASH_LOGO));
+	/* Load Background Bitmap from the ressource */
+	if( hbitmap_background == NULL )
+		hbitmap_background = LoadBitmap(GetModuleHandle(NULL), MAKEINTRESOURCE(SPLASH_LOGO));
 
 	wc.lpszClassName = "PCSX2 Main";
 	wc.lpfnWndProc = MainWndProc;
@@ -1114,7 +1129,7 @@ void CreateMainWindow(int nCmdShow) {
 
 	StatusBar_SetMsg("F1 - save, F2 - next state, Shift+F2 - prev state, F3 - load, F8 - snapshot");
 
-	ShowWindow(hWnd, nCmdShow);
+	ShowWindow(hWnd, true);
 	SetWindowPos(hWnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE|SWP_NOSIZE);
 }
 

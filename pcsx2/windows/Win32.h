@@ -109,7 +109,7 @@ public:
 };
 
 LRESULT WINAPI MainWndProc(HWND, UINT, WPARAM, LPARAM);
-void CreateMainWindow(int nCmdShow);
+void CreateMainWindow();
 void RunGui();
 
 BOOL Pcsx2Configure(HWND hWnd);

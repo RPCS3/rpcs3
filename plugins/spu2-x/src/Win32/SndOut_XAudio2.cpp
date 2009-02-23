@@ -27,6 +27,46 @@
 #include <xaudio2.h>
 
 
+namespace Exception
+{
+	class XAudio2Error : public std::runtime_error
+	{
+	protected:
+		static const char* SomeKindaErrorString( HRESULT hr )
+		{
+			switch( hr )
+			{
+			case XAUDIO2_E_INVALID_CALL:
+				return "Invalid call for the XA2 object state.";
+
+			case XAUDIO2_E_DEVICE_INVALIDATED:
+				return "Device is unavailable, unplugged, unsupported, or has been consumed by The Nothing.";
+			}
+			return "Unknown error code!";
+		}
+
+	public:
+		const HRESULT ErrorCode;
+		string m_Message;
+
+		const char* CMessage() const
+		{
+			return m_Message.c_str();
+		}
+
+		virtual ~XAudio2Error() throw() {}
+		XAudio2Error( const HRESULT result, const std::string& msg ) :
+			runtime_error( msg ),
+			ErrorCode( result ),
+			m_Message()
+		{
+			char omg[1024];
+			sprintf_s( omg, "%s (code 0x%x)\n\n%s", what(), ErrorCode, SomeKindaErrorString( ErrorCode ) );
+			m_Message = omg;
+		}
+	};
+}
+
 static const double SndOutNormalizer = (double)(1UL<<(SndOutVolumeShift+16));
 
 class XAudio2Mod: public SndOutModule
@@ -95,9 +135,7 @@ private:
 			if( FAILED(hr = pXAudio2->CreateSourceVoice( &pSourceVoice, &wfx,
 				XAUDIO2_VOICE_NOSRC, 1.0f, this ) ) )
 			{
-				SysMessage( "Error %#X creating source voice\n", hr );
-				SAFE_RELEASE( pXAudio2 );
-				return;
+				throw Exception::XAudio2Error( hr, "XAudio2 CreateSourceVoice failure." );
 			}
 
 			InitializeCriticalSection( &cs );
@@ -192,6 +230,8 @@ public:
 	{
 		HRESULT hr;
 
+		jASSUME( pXAudio2 == NULL );
+
 		//
 		// Initialize XAudio2
 		//
@@ -201,68 +241,78 @@ public:
 		if( IsDebugBuild )
 			flags |= XAUDIO2_DEBUG_ENGINE;
 
-		if ( FAILED(hr = XAudio2Create( &pXAudio2, flags ) ) )
+		try
 		{
-			SysMessage( "Failed to init XAudio2 engine: %#X\n", hr );
-			CoUninitialize();
-			return -1;
+			if ( FAILED(hr = XAudio2Create( &pXAudio2, flags ) ) )
+				throw Exception::XAudio2Error( hr,
+					"Failed to init XAudio2 engine.  XA2 may not be available on your system.\n"
+					"Ensure that you have the latest DirectX runtimes installed, or use \n"
+					"DirectX / WaveOut drivers instead.  Error Details:"
+				);
+
+			XAUDIO2_DEVICE_DETAILS deviceDetails;
+			pXAudio2->GetDeviceDetails( 0, &deviceDetails );
+
+			//
+			// Create a mastering voice
+			//
+			if ( FAILED(hr = pXAudio2->CreateMasteringVoice( &pMasteringVoice, 0, SampleRate ) ) )
+			{
+				SysMessage( "Failed creating mastering voice: %#X\n", hr );
+				CoUninitialize();
+				return -1;
+			}
+
+			if( StereoExpansionDisabled )
+				deviceDetails.OutputFormat.Format.nChannels	= 2;
+
+			// Any windows driver should support stereo at the software level, I should think!
+			jASSUME( deviceDetails.OutputFormat.Format.nChannels > 1 );
+
+			switch( deviceDetails.OutputFormat.Format.nChannels )
+			{
+				case 2:
+					ConLog( "* SPU2 > Using normal 2 speaker stereo output.\n" );
+					voiceContext = new StreamingVoice<StereoOut16>( pXAudio2 );
+				break;
+
+				case 3:
+					ConLog( "* SPU2 > 2.1 speaker expansion enabled.\n" );
+					voiceContext = new StreamingVoice<Stereo21Out16>( pXAudio2 );
+				break;
+
+				case 4:
+					ConLog( "* SPU2 > 4 speaker expansion enabled [quadraphenia]\n" );
+					voiceContext = new StreamingVoice<StereoQuadOut16>( pXAudio2 );
+				break;
+							
+				case 5:
+					ConLog( "* SPU2 > 4.1 speaker expansion enabled.\n" );
+					voiceContext = new StreamingVoice<Stereo41Out16>( pXAudio2 );
+				break;
+
+				case 6:
+				case 7:
+					ConLog( "* SPU2 > 5.1 speaker expansion enabled.\n" );
+					voiceContext = new StreamingVoice<Stereo51Out16>( pXAudio2 );
+				break;
+
+				default:	// anything 8 or more gets the 7.1 treatment!
+					ConLog( "* SPU2 > 7.1 speaker expansion enabled.\n" );
+					voiceContext = new StreamingVoice<Stereo51Out16>( pXAudio2 );
+				break;
+			}
+			
+			voiceContext->Init( pXAudio2 );
 		}
-
-		XAUDIO2_DEVICE_DETAILS deviceDetails;
-		pXAudio2->GetDeviceDetails( 0, &deviceDetails );
-
-		//
-		// Create a mastering voice
-		//
-		if ( FAILED(hr = pXAudio2->CreateMasteringVoice( &pMasteringVoice, 0, SampleRate ) ) )
+		catch( Exception::XAudio2Error& ex )
 		{
-			SysMessage( "Failed creating mastering voice: %#X\n", hr );
+			SysMessage( ex.CMessage() );
 			SAFE_RELEASE( pXAudio2 );
 			CoUninitialize();
 			return -1;
 		}
 
-		if( StereoExpansionDisabled )
-			deviceDetails.OutputFormat.Format.nChannels	= 2;
-
-		// Any windows driver should support stereo at the software level, I should think!
-		jASSUME( deviceDetails.OutputFormat.Format.nChannels > 1 );
-
-		switch( deviceDetails.OutputFormat.Format.nChannels )
-		{
-			case 2:
-				ConLog( "* SPU2 > Using normal 2 speaker stereo output.\n" );
-				voiceContext = new StreamingVoice<StereoOut16>( pXAudio2 );
-			break;
-
-			case 3:
-				ConLog( "* SPU2 > 2.1 speaker expansion enabled.\n" );
-				voiceContext = new StreamingVoice<Stereo21Out16>( pXAudio2 );
-			break;
-
-			case 4:
-				ConLog( "* SPU2 > 4 speaker expansion enabled [quadraphenia]\n" );
-				voiceContext = new StreamingVoice<StereoQuadOut16>( pXAudio2 );
-			break;
-						
-			case 5:
-				ConLog( "* SPU2 > 4.1 speaker expansion enabled.\n" );
-				voiceContext = new StreamingVoice<Stereo41Out16>( pXAudio2 );
-			break;
-
-			case 6:
-			case 7:
-				ConLog( "* SPU2 > 5.1 speaker expansion enabled.\n" );
-				voiceContext = new StreamingVoice<Stereo51Out16>( pXAudio2 );
-			break;
-
-			default:	// anything 8 or more gets the 7.1 treatment!
-				ConLog( "* SPU2 > 7.1 speaker expansion enabled.\n" );
-				voiceContext = new StreamingVoice<Stereo51Out16>( pXAudio2 );
-			break;
-		}
-		
-		voiceContext->Init( pXAudio2 );
 		return 0;
 	}
 

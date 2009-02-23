@@ -496,10 +496,6 @@
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="debug.h"
-					>
-				</File>
-				<File
 					RelativePath=".\RealtimeDebugger.cpp"
 					>
 				</File>
