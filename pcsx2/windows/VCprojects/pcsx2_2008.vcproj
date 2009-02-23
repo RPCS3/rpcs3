@@ -2923,6 +2923,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\Paths.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\PathUtils.cpp"
 				>
 			</File>

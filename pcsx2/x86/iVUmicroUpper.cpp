@@ -2095,7 +2095,7 @@ void recVUMI_MSUB_toD(VURegs *VU, int regd, int info)
 	//SysPrintf ("recVUMI_MSUB_toD  \n");
 	if (CHECK_VU_EXTRA_OVERFLOW) {
 		if (_Fs_) vuFloat5_useEAX( EEREC_S, EEREC_TEMP, _X_Y_Z_W );
-		if (_Ft_) vuFloat5_useEAX( EEREC_S, EEREC_TEMP, _X_Y_Z_W );
+		if (_Ft_) vuFloat5_useEAX( EEREC_T, EEREC_TEMP, _X_Y_Z_W );
 		vuFloat5_useEAX( EEREC_ACC, EEREC_TEMP, _X_Y_Z_W );
 	}
 
@@ -2154,10 +2154,6 @@ void recVUMI_MSUB_toD(VURegs *VU, int regd, int info)
 void recVUMI_MSUB_temp_toD(VURegs *VU, int regd, int info)
 {
 	//SysPrintf ("recVUMI_MSUB_temp_toD  \n");
-	if (CHECK_VU_EXTRA_OVERFLOW) {
-		if (_Fs_) vuFloat5_useEAX( EEREC_S, EEREC_TEMP, _X_Y_Z_W );
-		vuFloat5_useEAX( EEREC_ACC, EEREC_TEMP, _X_Y_Z_W );
-	}
 
 	if (_X_Y_Z_W != 0xf) {
 		int t1reg = _vuGetTempXMMreg(info);
@@ -2210,6 +2206,11 @@ void recVUMI_MSUB_temp_toD(VURegs *VU, int regd, int info)
 void recVUMI_MSUB_iq_toD(VURegs *VU, int regd, int addr, int info)
 {
 	//SysPrintf ("recVUMI_MSUB_iq_toD  \n");
+	if (CHECK_VU_EXTRA_OVERFLOW) {
+		if (_Fs_) vuFloat5_useEAX( EEREC_S, EEREC_TEMP, _X_Y_Z_W );
+		vuFloat5_useEAX( EEREC_ACC, EEREC_TEMP, _X_Y_Z_W );
+		vuFloat3(addr);
+	}
 	SSE_MOVSS_M32_to_XMM(EEREC_TEMP, addr); 
 	SSE_SHUFPS_XMM_to_XMM(EEREC_TEMP, EEREC_TEMP, 0x00);
 	recVUMI_MSUB_temp_toD(VU, regd, info);
@@ -2218,6 +2219,11 @@ void recVUMI_MSUB_iq_toD(VURegs *VU, int regd, int addr, int info)
 void recVUMI_MSUB_xyzw_toD(VURegs *VU, int regd, int xyzw, int info)
 {
 	//SysPrintf ("recVUMI_MSUB_xyzw_toD  \n");
+	if (CHECK_VU_EXTRA_OVERFLOW) {
+		if (_Fs_) vuFloat5_useEAX( EEREC_S, EEREC_TEMP, _X_Y_Z_W );
+		if (_Ft_) vuFloat5_useEAX( EEREC_T, EEREC_TEMP, 1 << (3 - xyzw));
+		vuFloat5_useEAX( EEREC_ACC, EEREC_TEMP, _X_Y_Z_W );
+	}
 	_unpackVF_xyzw(EEREC_TEMP, EEREC_T, xyzw);
 	recVUMI_MSUB_temp_toD(VU, regd, info);
 }
