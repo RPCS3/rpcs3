@@ -425,7 +425,11 @@ EXPORT_C_(void) SPU2write(u32 rmem, u16 value)
 	}
 	else
 	{
-		//TimeUpdate( *cPtr );
+		// Note: Reverb/Effects are very sensitive to having precise update timings.
+		// If the SPU2 isn't in in sync with the IOP, samples can end up playing at rather
+		// incorrect pitches and loop lengths.
+
+		TimeUpdate( *cPtr );
 		if (rmem>>16 == 0x1f80)
 			SPU_ps1_write(rmem,value);
 		else
