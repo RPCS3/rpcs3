@@ -486,12 +486,16 @@ static __forceinline int mfifoVIF1chain() {
 
 #define spr0 ((DMACh*)&PS2MEM_HW[0xD000])
 
+u32 mfifodmairq = 0;
+
 void mfifoVIF1transfer(int qwc) {
 	u32 *ptag;
 	int id;
 	int ret, temp;
 	
 	g_vifCycles = 0;
+     
+	mfifodmairq = 0; //Clear any previous TIE interrupt
 
 	if(qwc > 0){
 		vifqwc += qwc;
@@ -563,6 +567,7 @@ void mfifoVIF1transfer(int qwc) {
 			if ((vif1ch->chcr & 0x80) && (ptag[0] >> 31)) {
 			VIF_LOG("dmaIrq Set\n");
 			vif1.done = 2;
+			mfifodmairq = 1; //Let the handler know we have prematurely ended MFIFO
 		}
 	 }
 		ret = mfifoVIF1chain();
@@ -607,7 +612,11 @@ void vifMFIFOInterrupt()
 		return;
 	}
 
-	vifqwc = 0;
+	//On a TIE break we do not clear the MFIFO (Art of Fighting)
+	//If we dont clear it on MFIFO end, Tekken Tag breaks, understandably (Refraction)
+	if(mfifodmairq == 0) 
+			vifqwc = 0; 
+
 	vif1.done = 1;
 	vif1ch->chcr &= ~0x100;
 	hwDmacIrq(DMAC_VIF1);
