@@ -1435,15 +1435,15 @@ void vFloat11c_useEAX(int regd, int regTemp) { //1101 // EAX is modified
 	}
 	else {
 		SSE2_PSHUFLW_XMM_to_XMM(regd, regd, 0x4e);
-		SSE2_MOVD_XMM_to_R(EAX, regTemp);
+		SSE2_MOVD_XMM_to_R(EAX, regd);
 		SSE_MOVAPS_XMM_to_XMM(regTemp, regd);
 		SSE_ANDPS_M128_to_XMM(regTemp, (uptr)&const_clip[4]);
 		SSE_MINPS_M128_to_XMM(regd, (uptr)g_maxvals);
 		SSE_MAXPS_M128_to_XMM(regd, (uptr)g_minvals);
-		SSE_ORPS_XMM_to_XMM(regTemp, regd);
-		SSE2_MOVD_R_to_XMM(regd, EAX);
-		SSE_MOVLHPS_XMM_to_XMM(regd, regTemp);
-		SSE_SHUFPS_XMM_to_XMM(regd, regTemp, 0xe2);
+		SSE_ORPS_XMM_to_XMM(regd, regTemp);
+		SSE2_MOVD_R_to_XMM(regTemp, EAX);
+		SSE_MOVSS_XMM_to_XMM(regd, regTemp);
+		SSE2_PSHUFLW_XMM_to_XMM(regd, regd, 0x4e);
 	}
 }
 void vFloat12(int regd, int regTemp) { //0011
@@ -1542,16 +1542,16 @@ void vFloat13c_useEAX(int regd, int regTemp) { //1011 // EAX is modified
 		CLAMP_SIGN_SSE4(13);
 	}
 	else {
-		SSE2_PSHUFD_XMM_to_XMM(regTemp, regd, 0xd2);
-		SSE2_MOVD_XMM_to_R(EAX, regTemp);
+		SSE2_PSHUFD_XMM_to_XMM(regd, regd, 0xc6);
+		SSE2_MOVD_XMM_to_R(EAX, regd);
 		SSE_MOVAPS_XMM_to_XMM(regTemp, regd);
 		SSE_ANDPS_M128_to_XMM(regTemp, (uptr)&const_clip[4]);
 		SSE_MINPS_M128_to_XMM(regd, (uptr)g_maxvals);
 		SSE_MAXPS_M128_to_XMM(regd, (uptr)g_minvals);
 		SSE_ORPS_XMM_to_XMM(regd, regTemp);
 		SSE2_MOVD_R_to_XMM(regTemp, EAX);
-		SSE_SHUFPS_XMM_to_XMM(regTemp, regd, 0xf0);
-		SSE_SHUFPS_XMM_to_XMM(regd, regTemp, 0x84);
+		SSE_MOVSS_XMM_to_XMM(regd, regTemp);
+		SSE2_PSHUFD_XMM_to_XMM(regd, regd, 0xc6);
 	}
 }
 void vFloat14(int regd, int regTemp) { //0111
@@ -1615,16 +1615,16 @@ void vFloat14c_useEAX(int regd, int regTemp) { //0111 // EAX is modified
 		CLAMP_SIGN_SSE4(14);
 	}
 	else {
-		SSE2_PSHUFD_XMM_to_XMM(regTemp, regd, 0x93);
-		SSE2_MOVD_XMM_to_R(EAX, regTemp);
+		SSE2_PSHUFD_XMM_to_XMM(regd, regd, 0x27);
+		SSE2_MOVD_XMM_to_R(EAX, regd);
 		SSE_MOVAPS_XMM_to_XMM(regTemp, regd);
 		SSE_ANDPS_M128_to_XMM(regTemp, (uptr)&const_clip[4]);
 		SSE_MINPS_M128_to_XMM(regd, (uptr)g_maxvals);
 		SSE_MAXPS_M128_to_XMM(regd, (uptr)g_minvals);
 		SSE_ORPS_XMM_to_XMM(regd, regTemp);
 		SSE2_MOVD_R_to_XMM(regTemp, EAX);
-		SSE_SHUFPS_XMM_to_XMM(regTemp, regd, 0xa0);
-		SSE_SHUFPS_XMM_to_XMM(regd, regTemp, 0x24);
+		SSE_MOVSS_XMM_to_XMM(regd, regTemp);
+		SSE2_PSHUFD_XMM_to_XMM(regd, regd, 0x27);
 	}
 }
 void vFloat15(int regd, int regTemp) { //1111
