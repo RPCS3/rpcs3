@@ -1000,17 +1000,6 @@ void vFloat1(int regd, int regTemp) { //1000
 	SSE_MAXSS_M32_to_XMM(regd, (uptr)g_minvals);
 	SSE_SHUFPS_XMM_to_XMM(regd, regd, 0x27);
 }
-void vFloat1b(int regd, int regTemp) { //1000 //regTemp is Modified
-	if ( cpucaps.hasStreamingSIMD4Extensions ) {
-		CLAMP_NORMAL_SSE4(1);
-	}
-	else {
-		SSE_SHUFPS_XMM_to_XMM(regd, regd, 0x27);
-		SSE_MINSS_M32_to_XMM(regd, (uptr)g_maxvals);
-		SSE_MAXSS_M32_to_XMM(regd, (uptr)g_minvals);
-		SSE_SHUFPS_XMM_to_XMM(regd, regd, 0x27);
-	}
-}
 void vFloat1c(int regd, int regTemp) { //1000
 	if ( cpucaps.hasStreamingSIMD4Extensions ) {
 		CLAMP_SIGN_SSE4(1);
@@ -1030,17 +1019,6 @@ void vFloat2(int regd, int regTemp) { //0100
 	SSE_MINSS_M32_to_XMM(regd, (uptr)g_maxvals);
 	SSE_MAXSS_M32_to_XMM(regd, (uptr)g_minvals);
 	SSE_SHUFPS_XMM_to_XMM(regd, regd, 0xc6);
-}
-void vFloat2b(int regd, int regTemp) { //0100 //regTemp is Modified
-	if ( cpucaps.hasStreamingSIMD4Extensions ) {
-		CLAMP_NORMAL_SSE4(2);
-	}
-	else {
-		SSE_SHUFPS_XMM_to_XMM(regd, regd, 0xc6);
-		SSE_MINSS_M32_to_XMM(regd, (uptr)g_maxvals);
-		SSE_MAXSS_M32_to_XMM(regd, (uptr)g_minvals);
-		SSE_SHUFPS_XMM_to_XMM(regd, regd, 0xc6);
-	}
 }
 void vFloat2c(int regd, int regTemp) { //0100
 	if ( cpucaps.hasStreamingSIMD4Extensions ) {
@@ -1066,15 +1044,10 @@ void vFloat3(int regd, int regTemp) { //1100
 	SSE_SHUFPS_XMM_to_XMM(regd, regd, 0x36);
 }
 void vFloat3b(int regd, int regTemp) { //1100 //regTemp is Modified
-	if ( cpucaps.hasStreamingSIMD4Extensions ) {
-		CLAMP_NORMAL_SSE4(3);
-	}
-	else {
-		SSE2_MOVSD_XMM_to_XMM(regTemp, regd);
-		SSE_MINPS_M128_to_XMM(regd, (uptr)g_maxvals);
-		SSE_MAXPS_M128_to_XMM(regd, (uptr)g_minvals);
-		SSE2_MOVSD_XMM_to_XMM(regd, regTemp);
-	}
+	SSE2_MOVSD_XMM_to_XMM(regTemp, regd);
+	SSE_MINPS_M128_to_XMM(regd, (uptr)g_maxvals);
+	SSE_MAXPS_M128_to_XMM(regd, (uptr)g_minvals);
+	SSE2_MOVSD_XMM_to_XMM(regd, regTemp);
 }
 void vFloat3c(int regd, int regTemp) { //1100
 	if ( cpucaps.hasStreamingSIMD4Extensions ) {
@@ -1098,17 +1071,6 @@ void vFloat4(int regd, int regTemp) { //0010
 	SSE_MINSS_M32_to_XMM(regd, (uptr)g_maxvals);
 	SSE_MAXSS_M32_to_XMM(regd, (uptr)g_minvals);
 	SSE2_PSHUFLW_XMM_to_XMM(regd, regd, 0x4e);
-}
-void vFloat4b(int regd, int regTemp) { //0010 //regTemp is Modified
-	if ( cpucaps.hasStreamingSIMD4Extensions ) {
-		CLAMP_NORMAL_SSE4(4);
-	}
-	else {
-		SSE2_PSHUFLW_XMM_to_XMM(regd, regd, 0x4e);
-		SSE_MINSS_M32_to_XMM(regd, (uptr)g_maxvals);
-		SSE_MAXSS_M32_to_XMM(regd, (uptr)g_minvals);
-		SSE2_PSHUFLW_XMM_to_XMM(regd, regd, 0x4e);
-	}
 }
 void vFloat4c(int regd, int regTemp) { //0010
 	if ( cpucaps.hasStreamingSIMD4Extensions ) {
@@ -1229,15 +1191,10 @@ void vFloat7_useEAX(int regd, int regTemp) { //1110 //EAX is Modified
 	}
 }
 void vFloat7b(int regd, int regTemp) { //1110 //regTemp is Modified
-	if ( cpucaps.hasStreamingSIMD4Extensions ) {
-		CLAMP_NORMAL_SSE4(7);
-	}
-	else {
-		SSE_MOVSS_XMM_to_XMM(regTemp, regd);
-		SSE_MINPS_M128_to_XMM(regd, (uptr)g_maxvals);
-		SSE_MAXPS_M128_to_XMM(regd, (uptr)g_minvals);
-		SSE_MOVSS_XMM_to_XMM(regd, regTemp);
-	}
+	SSE_MOVSS_XMM_to_XMM(regTemp, regd);
+	SSE_MINPS_M128_to_XMM(regd, (uptr)g_maxvals);
+	SSE_MAXPS_M128_to_XMM(regd, (uptr)g_minvals);
+	SSE_MOVSS_XMM_to_XMM(regd, regTemp);
 }
 void vFloat7c(int regd, int regTemp) { //1110
 	if ( cpucaps.hasStreamingSIMD4Extensions ) {
@@ -1277,15 +1234,6 @@ void vFloat7c_useEAX(int regd, int regTemp) { //1110 //EAX is Modified
 void vFloat8(int regd, int regTemp) { //0001
 	SSE_MINSS_M32_to_XMM(regd, (uptr)g_maxvals);
 	SSE_MAXSS_M32_to_XMM(regd, (uptr)g_minvals);
-}
-void vFloat8b(int regd, int regTemp) { //0001 //regTemp is Modified
-	if ( cpucaps.hasStreamingSIMD4Extensions ) {
-		CLAMP_NORMAL_SSE4(8);
-	}
-	else {
-		SSE_MINSS_M32_to_XMM(regd, (uptr)g_maxvals);
-		SSE_MAXSS_M32_to_XMM(regd, (uptr)g_minvals);
-	}
 }
 void vFloat8c(int regd, int regTemp) { //0001
 	if ( cpucaps.hasStreamingSIMD4Extensions ) {
@@ -1399,16 +1347,11 @@ void vFloat11_useEAX(int regd, int regTemp) { //1101 //EAX is Modified
 	SSE2_PSHUFLW_XMM_to_XMM(regd, regd, 0x4e);
 }
 void vFloat11b(int regd, int regTemp) { //1101 //regTemp is Modified
-	if ( cpucaps.hasStreamingSIMD4Extensions ) {
-		CLAMP_NORMAL_SSE4(11);
-	}
-	else {
-		SSE_MOVAPS_XMM_to_XMM(regTemp, regd);
-		SSE_MINPS_M128_to_XMM(regd, (uptr)g_maxvals);
-		SSE_MAXPS_M128_to_XMM(regd, (uptr)g_minvals);
-		SSE_MOVSS_XMM_to_XMM(regTemp, regd);
-		SSE2_MOVSD_XMM_to_XMM(regd, regTemp);
-	}
+	SSE_MOVAPS_XMM_to_XMM(regTemp, regd);
+	SSE_MINPS_M128_to_XMM(regd, (uptr)g_maxvals);
+	SSE_MAXPS_M128_to_XMM(regd, (uptr)g_minvals);
+	SSE_MOVSS_XMM_to_XMM(regTemp, regd);
+	SSE2_MOVSD_XMM_to_XMM(regd, regTemp);
 }
 void vFloat11c(int regd, int regTemp) { //1101
 	if ( cpucaps.hasStreamingSIMD4Extensions ) {
@@ -1455,15 +1398,10 @@ void vFloat12(int regd, int regTemp) { //0011
 	SSE2_PSHUFLW_XMM_to_XMM(regd, regd, 0x4e);
 }
 void vFloat12b(int regd, int regTemp) { //0011 //regTemp is Modified
-	if ( cpucaps.hasStreamingSIMD4Extensions ) {
-		CLAMP_NORMAL_SSE4(12);
-	}
-	else {
-		SSE_MOVHLPS_XMM_to_XMM(regTemp, regd);
-		SSE_MINPS_M128_to_XMM(regd, (uptr)g_maxvals);
-		SSE_MAXPS_M128_to_XMM(regd, (uptr)g_minvals);
-		SSE2_PUNPCKLQDQ_XMM_to_XMM(regd, regTemp);
-	}
+	SSE_MOVHLPS_XMM_to_XMM(regTemp, regd);
+	SSE_MINPS_M128_to_XMM(regd, (uptr)g_maxvals);
+	SSE_MAXPS_M128_to_XMM(regd, (uptr)g_minvals);
+	SSE2_PUNPCKLQDQ_XMM_to_XMM(regd, regTemp);
 }
 void vFloat12c(int regd, int regTemp) { //0011
 	if ( cpucaps.hasStreamingSIMD4Extensions ) {
@@ -1507,16 +1445,11 @@ void vFloat13_useEAX(int regd, int regTemp) { //1011 // EAX is modified
 	SSE_SHUFPS_XMM_to_XMM(regd, regd, 0xc6);
 }
 void vFloat13b(int regd, int regTemp) { //1011 //regTemp is Modified
-	if ( cpucaps.hasStreamingSIMD4Extensions ) {
-		CLAMP_NORMAL_SSE4(13);
-	}
-	else {
-		SSE_MOVAPS_XMM_to_XMM(regTemp, regd);
-		SSE_MINPS_M128_to_XMM(regd, (uptr)g_maxvals);
-		SSE_MAXPS_M128_to_XMM(regd, (uptr)g_minvals);
-		SSE_MOVHLPS_XMM_to_XMM(regTemp, regd);
-		SSE_SHUFPS_XMM_to_XMM(regd, regTemp, 0x64);
-	}
+	SSE_MOVAPS_XMM_to_XMM(regTemp, regd);
+	SSE_MINPS_M128_to_XMM(regd, (uptr)g_maxvals);
+	SSE_MAXPS_M128_to_XMM(regd, (uptr)g_minvals);
+	SSE_MOVHLPS_XMM_to_XMM(regTemp, regd);
+	SSE_SHUFPS_XMM_to_XMM(regd, regTemp, 0x64);
 }
 void vFloat13c(int regd, int regTemp) { //1011
 	if ( cpucaps.hasStreamingSIMD4Extensions ) {
@@ -1580,16 +1513,11 @@ void vFloat14_useEAX(int regd, int regTemp) { //0111 // EAX is modified
 	SSE_SHUFPS_XMM_to_XMM(regd, regd, 0x27);
 }
 void vFloat14b(int regd, int regTemp) { //0111 //regTemp is Modified
-	if ( cpucaps.hasStreamingSIMD4Extensions ) {
-		CLAMP_NORMAL_SSE4(14);
-	}
-	else {
-		SSE_MOVAPS_XMM_to_XMM(regTemp, regd);
-		SSE_MINPS_M128_to_XMM(regd, (uptr)g_maxvals);
-		SSE_MAXPS_M128_to_XMM(regd, (uptr)g_minvals);
-		SSE_MOVHLPS_XMM_to_XMM(regTemp, regd);
-		SSE_SHUFPS_XMM_to_XMM(regd, regTemp, 0xc4);
-	}
+	SSE_MOVAPS_XMM_to_XMM(regTemp, regd);
+	SSE_MINPS_M128_to_XMM(regd, (uptr)g_maxvals);
+	SSE_MAXPS_M128_to_XMM(regd, (uptr)g_minvals);
+	SSE_MOVHLPS_XMM_to_XMM(regTemp, regd);
+	SSE_SHUFPS_XMM_to_XMM(regd, regTemp, 0xc4);
 }
 void vFloat14c(int regd, int regTemp) { //0111
 	if ( cpucaps.hasStreamingSIMD4Extensions ) {
@@ -1631,15 +1559,6 @@ void vFloat15(int regd, int regTemp) { //1111
 	SSE_MINPS_M128_to_XMM(regd, (uptr)g_maxvals);
 	SSE_MAXPS_M128_to_XMM(regd, (uptr)g_minvals);
 }
-void vFloat15b(int regd, int regTemp) { //1111
-	if ( cpucaps.hasStreamingSIMD4Extensions ) {
-		CLAMP_NORMAL_SSE4(15);
-	}
-	else {
-		SSE_MINPS_M128_to_XMM(regd, (uptr)g_maxvals);
-		SSE_MAXPS_M128_to_XMM(regd, (uptr)g_minvals);
-	}
-}
 void vFloat15c(int regd, int regTemp) { //1111
 	if ( cpucaps.hasStreamingSIMD4Extensions ) {
 		CLAMP_SIGN_SSE4(15);
@@ -1670,12 +1589,6 @@ vFloat vFloats2[16] = { //regTemp is modified
 	vFloat4, vFloat5b, vFloat6b, vFloat7b,
 	vFloat8, vFloat9b, vFloat10b, vFloat11b,
 	vFloat12b, vFloat13b, vFloat14b, vFloat15 };
-
-vFloat vFloats2_MUL_MADD[16] = { //regTemp is modified (Faster than vFloats2 if dealing with Denormals and using SSE4)
-	vFloat0, vFloat1b, vFloat2b, vFloat3b,
-	vFloat4b, vFloat5b, vFloat6b, vFloat7b,
-	vFloat8b, vFloat9b, vFloat10b, vFloat11b,
-	vFloat12b, vFloat13b, vFloat14b, vFloat15b };
 
 vFloat vFloats4[16] = { //regTemp is modified
 	vFloat0, vFloat1c, vFloat2c, vFloat3c,

@@ -820,7 +820,7 @@ void recVUMI_ADD(VURegs *VU, int info)
 	if ( _Fs_ == 0 && _Ft_ == 0 ) { // if adding VF00 with VF00, then the result is always 0,0,0,2
 		if ( _X_Y_Z_W != 0xf ) {
 			SSE_MOVAPS_M128_to_XMM(EEREC_TEMP, (uptr)s_two);
-			if( EEREC_D != EEREC_TEMP ) VU_MERGE_REGS(EEREC_D, EEREC_TEMP);
+			VU_MERGE_REGS(EEREC_D, EEREC_TEMP);
 		}
 		else SSE_MOVAPS_M128_to_XMM(EEREC_D, (uptr)s_two);
 	}
@@ -840,7 +840,7 @@ void recVUMI_ADD(VURegs *VU, int info)
 		else if (_X_Y_Z_W != 0xf) { // If xyzw != 1111, then we have to use a temp reg
 			SSE_MOVAPS_XMM_to_XMM(EEREC_TEMP, EEREC_S);
 			SSE_ADDPS_XMM_to_XMM(EEREC_TEMP, EEREC_T);
-			if( EEREC_D != EEREC_TEMP ) VU_MERGE_REGS(EEREC_D, EEREC_TEMP);
+			VU_MERGE_REGS(EEREC_D, EEREC_TEMP);
 		}
 		else { // All xyzw being modified (xyzw == 1111)
 			if (EEREC_D == EEREC_S) SSE_ADDPS_XMM_to_XMM(EEREC_D, EEREC_T);
@@ -899,7 +899,7 @@ void recVUMI_ADD_iq(VURegs *VU, uptr addr, int info)
 
 		if (_X_Y_Z_W != 0xf) {
 			SSE_ADDPS_XMM_to_XMM(EEREC_TEMP, EEREC_S);
-			if( EEREC_D != EEREC_TEMP ) VU_MERGE_REGS(EEREC_D, EEREC_TEMP);
+			VU_MERGE_REGS(EEREC_D, EEREC_TEMP);
 		} 
 		else {
 			if ( EEREC_D == EEREC_TEMP ) SSE_ADDPS_XMM_to_XMM(EEREC_D, EEREC_S);
@@ -929,7 +929,7 @@ void recVUMI_ADD_xyzw(VURegs *VU, int xyzw, int info)
 		if ( _X_Y_Z_W == 0x8 ) { VU_MERGE_REGS(EEREC_D, EEREC_S); }
 		else if ( _X_Y_Z_W != 0xf ) {
 			SSE_MOVAPS_XMM_to_XMM(EEREC_TEMP, EEREC_S);
-			if( EEREC_D != EEREC_TEMP ) VU_MERGE_REGS(EEREC_D, EEREC_TEMP);
+			VU_MERGE_REGS(EEREC_D, EEREC_TEMP);
 		}
 		else SSE_MOVAPS_XMM_to_XMM(EEREC_D, EEREC_S);
 	}
@@ -949,13 +949,13 @@ void recVUMI_ADD_xyzw(VURegs *VU, int xyzw, int info)
 	}
 	else if( _Fs_ == 0 && !_W ) { // just move
 		_unpackVF_xyzw(EEREC_TEMP, EEREC_T, xyzw);
-		if( EEREC_D != EEREC_TEMP ) VU_MERGE_REGS(EEREC_D, EEREC_TEMP);
+		VU_MERGE_REGS(EEREC_D, EEREC_TEMP);
 	}
 	else {
 		if ( _X_Y_Z_W != 0xf ) {
 			_unpackVF_xyzw(EEREC_TEMP, EEREC_T, xyzw);
 			SSE_ADDPS_XMM_to_XMM(EEREC_TEMP, EEREC_S);
-			if( EEREC_D != EEREC_TEMP ) VU_MERGE_REGS(EEREC_D, EEREC_TEMP);
+			VU_MERGE_REGS(EEREC_D, EEREC_TEMP);
 		} 
 		else {
 			if( EEREC_D == EEREC_TEMP )	  { _unpackVF_xyzw(EEREC_TEMP, EEREC_T, xyzw); SSE_ADDPS_XMM_to_XMM(EEREC_D, EEREC_S); }
@@ -1164,7 +1164,7 @@ void recVUMI_SUB(VURegs *VU, int info)
 			SSE_MOVAPS_XMM_to_XMM(EEREC_TEMP, EEREC_S);
 			if( ( _Ft_ > 0 ) || _W ) SSE_SUBPS_XMM_to_XMM(EEREC_TEMP, EEREC_T);
 
-			if( EEREC_D != EEREC_TEMP ) VU_MERGE_REGS(EEREC_D, EEREC_TEMP);
+			VU_MERGE_REGS(EEREC_D, EEREC_TEMP);
 		}
 		else {
 			if (EEREC_D == EEREC_S) SSE_SUBPS_XMM_to_XMM(EEREC_D, EEREC_T);
@@ -1238,7 +1238,7 @@ void recVUMI_SUB_iq(VURegs *VU, uptr addr, int info)
 				// negate
 				SSE_XORPS_M128_to_XMM(EEREC_TEMP, (uptr)&const_clip[4]);
 				SSE_ADDPS_XMM_to_XMM(EEREC_TEMP, EEREC_S);
-				if( EEREC_D != EEREC_TEMP ) VU_MERGE_REGS(EEREC_D, EEREC_TEMP);
+				VU_MERGE_REGS(EEREC_D, EEREC_TEMP);
 			}
 		}
 		else {
@@ -1304,7 +1304,7 @@ void recVUMI_SUB_xyzw(VURegs *VU, int xyzw, int info)
 				// negate
 				SSE_XORPS_M128_to_XMM(EEREC_TEMP, (uptr)&const_clip[4]);
 				SSE_ADDPS_XMM_to_XMM(EEREC_TEMP, EEREC_S);
-				if( EEREC_D != EEREC_TEMP ) VU_MERGE_REGS(EEREC_D, EEREC_TEMP);
+				VU_MERGE_REGS(EEREC_D, EEREC_TEMP);
 			}
 		}
 		else {
@@ -1507,7 +1507,7 @@ void recVUMI_MUL_toD(VURegs *VU, int regd, int info)
 
 	if (_X_Y_Z_W == 1 && (_Ft_ == 0 || _Fs_==0) ) { // W
 		SSE_MOVAPS_XMM_to_XMM(EEREC_TEMP, _Ft_ ? EEREC_T : EEREC_S);
-		if( regd != EEREC_TEMP ) VU_MERGE_REGS(regd, EEREC_TEMP);
+		VU_MERGE_REGS(regd, EEREC_TEMP);
 	}
 	else if( _Fd_ == _Fs_ && _Fs_ == _Ft_ && _XYZW_SS ) {
 		_vuFlipRegSS(VU, EEREC_D);
@@ -1526,7 +1526,7 @@ void recVUMI_MUL_toD(VURegs *VU, int regd, int info)
 		SSE_MOVAPS_XMM_to_XMM(EEREC_TEMP, EEREC_S);
 		SSE_MULPS_XMM_to_XMM(EEREC_TEMP, EEREC_T);
 
-		if( regd != EEREC_TEMP ) VU_MERGE_REGS(regd, EEREC_TEMP);
+		VU_MERGE_REGS(regd, EEREC_TEMP);
 	}
 	else {
 		if (regd == EEREC_S) SSE_MULPS_XMM_to_XMM(regd, EEREC_T);
@@ -1579,7 +1579,7 @@ void recVUMI_MUL_iq_toD(VURegs *VU, uptr addr, int regd, int info)
 
 		if (_X_Y_Z_W != 0xf) {
 			SSE_MULPS_XMM_to_XMM(EEREC_TEMP, EEREC_S);
-			if( regd != EEREC_TEMP ) VU_MERGE_REGS(regd, EEREC_TEMP);
+			VU_MERGE_REGS(regd, EEREC_TEMP);
 		}
 		else {
 			if( regd == EEREC_TEMP ) SSE_MULPS_XMM_to_XMM(regd, EEREC_S);
@@ -1601,13 +1601,13 @@ void recVUMI_MUL_xyzw_toD(VURegs *VU, int xyzw, int regd, int info)
 	}
 	if (_Fs_) { // This is needed for alot of games; so always clamp this operand
 		if (CHECK_VU_SIGN_OVERFLOW) vFloats4_useEAX[_X_Y_Z_W]( EEREC_S, EEREC_TEMP ); // Always clamp EEREC_S, regardless if CHECK_VU_OVERFLOW is set
-		else vFloats2_MUL_MADD[_X_Y_Z_W]( EEREC_S, EEREC_TEMP ); // Always clamp EEREC_S, regardless if CHECK_VU_OVERFLOW is set
+		else vFloats2[_X_Y_Z_W]( EEREC_S, EEREC_TEMP ); // Always clamp EEREC_S, regardless if CHECK_VU_OVERFLOW is set
 	}
 	if( _Ft_ == 0 ) {
 		if( xyzw < 3 ) {
 			if (_X_Y_Z_W != 0xf) {	
 				SSE_XORPS_XMM_to_XMM(EEREC_TEMP, EEREC_TEMP);
-				if( regd != EEREC_TEMP ) VU_MERGE_REGS(regd, EEREC_TEMP);
+				VU_MERGE_REGS(regd, EEREC_TEMP);
 			}
 			else SSE_XORPS_XMM_to_XMM(regd, regd);
 		}
@@ -1615,7 +1615,7 @@ void recVUMI_MUL_xyzw_toD(VURegs *VU, int xyzw, int regd, int info)
 			assert(xyzw==3);
 			if (_X_Y_Z_W != 0xf) {
 				SSE_MOVAPS_XMM_to_XMM(EEREC_TEMP, EEREC_S);
-				if( regd != EEREC_TEMP ) VU_MERGE_REGS(regd, EEREC_TEMP);
+				VU_MERGE_REGS(regd, EEREC_TEMP);
 			}
 			else SSE_MOVAPS_XMM_to_XMM(regd, EEREC_S);
 		}
@@ -1648,7 +1648,7 @@ void recVUMI_MUL_xyzw_toD(VURegs *VU, int xyzw, int regd, int info)
 
 		if (_X_Y_Z_W != 0xf) {	
 			SSE_MULPS_XMM_to_XMM(EEREC_TEMP, EEREC_S);
-			if( regd != EEREC_TEMP ) VU_MERGE_REGS(regd, EEREC_TEMP);
+			VU_MERGE_REGS(regd, EEREC_TEMP);
 		}
 		else {
 			if( regd == EEREC_TEMP ) SSE_MULPS_XMM_to_XMM(regd, EEREC_S);
@@ -1770,7 +1770,7 @@ void recVUMI_MADD_toD(VURegs *VU, int regd, int info)
 		if (CHECK_VU_EXTRA_OVERFLOW) { vuFloat_useEAX( info, EEREC_TEMP, _X_Y_Z_W ); }
 		SSE_ADDPS_XMM_to_XMM(EEREC_TEMP, EEREC_ACC);
 
-		if( regd != EEREC_TEMP ) VU_MERGE_REGS(regd, EEREC_TEMP);
+		VU_MERGE_REGS(regd, EEREC_TEMP);
 	}
 	else {
 		if( regd == EEREC_ACC ) {
@@ -1857,7 +1857,7 @@ void recVUMI_MADD_iq_toD(VURegs *VU, uptr addr, int regd, int info)
 			if (CHECK_VU_EXTRA_OVERFLOW) { vuFloat_useEAX( info, EEREC_TEMP, _X_Y_Z_W ); }
 			SSE_ADDPS_XMM_to_XMM(EEREC_TEMP, EEREC_ACC);
 
-			if( regd != EEREC_TEMP ) VU_MERGE_REGS(regd, EEREC_TEMP);
+			VU_MERGE_REGS(regd, EEREC_TEMP);
 		}
 		else {
 			if( regd == EEREC_ACC ) {
@@ -1895,7 +1895,7 @@ void recVUMI_MADD_xyzw_toD(VURegs *VU, int xyzw, int regd, int info)
 	}
 	if (_Fs_) { // This is needed for alot of games; so always clamp this operand
 		if (CHECK_VU_SIGN_OVERFLOW) vFloats4_useEAX[_X_Y_Z_W]( EEREC_S, EEREC_TEMP ); // Always clamp EEREC_S, regardless if CHECK_VU_OVERFLOW is set
-		else vFloats2_MUL_MADD[_X_Y_Z_W]( EEREC_S, EEREC_TEMP ); // Always clamp EEREC_S, regardless if CHECK_VU_OVERFLOW is set
+		else vFloats2[_X_Y_Z_W]( EEREC_S, EEREC_TEMP ); // Always clamp EEREC_S, regardless if CHECK_VU_OVERFLOW is set
 	}
 	if( _Ft_ == 0 ) {
 
@@ -1913,7 +1913,7 @@ void recVUMI_MADD_xyzw_toD(VURegs *VU, int xyzw, int regd, int info)
 					SSE_MOVAPS_XMM_to_XMM(EEREC_TEMP, EEREC_S);
 					SSE_ADDPS_XMM_to_XMM(EEREC_TEMP, EEREC_ACC);
 
-					if( regd != EEREC_TEMP ) VU_MERGE_REGS(regd, EEREC_TEMP);
+					VU_MERGE_REGS(regd, EEREC_TEMP);
 				}
 				else {
 					if( regd == EEREC_S ) SSE_ADDPS_XMM_to_XMM(regd, EEREC_ACC);
@@ -1928,7 +1928,7 @@ void recVUMI_MADD_xyzw_toD(VURegs *VU, int xyzw, int regd, int info)
 			// just move acc to regd
 			if( _X_Y_Z_W != 0xf ) {
 				SSE_MOVAPS_XMM_to_XMM(EEREC_TEMP, EEREC_ACC);
-				if( regd != EEREC_TEMP ) VU_MERGE_REGS(regd, EEREC_TEMP);
+				VU_MERGE_REGS(regd, EEREC_TEMP);
 			}
 			else SSE_MOVAPS_XMM_to_XMM(regd, EEREC_ACC);
 		}
@@ -1971,7 +1971,7 @@ void recVUMI_MADD_xyzw_toD(VURegs *VU, int xyzw, int regd, int info)
 			if (CHECK_VU_EXTRA_OVERFLOW) { vuFloat_useEAX( info, EEREC_TEMP, _X_Y_Z_W ); }
 			SSE_ADDPS_XMM_to_XMM(EEREC_TEMP, EEREC_ACC);
 
-			if( regd != EEREC_TEMP ) VU_MERGE_REGS(regd, EEREC_TEMP);
+			VU_MERGE_REGS(regd, EEREC_TEMP);
 		}
 		else {
 			if( regd == EEREC_ACC ) {
@@ -2116,7 +2116,7 @@ void recVUMI_MSUB_toD(VURegs *VU, int regd, int info)
 		else {
 			SSE_XORPS_M128_to_XMM(EEREC_TEMP, (uptr)&const_clip[4]);
 			SSE_ADDPS_XMM_to_XMM(EEREC_TEMP, EEREC_ACC);
-			if( regd != EEREC_TEMP ) VU_MERGE_REGS(regd, EEREC_TEMP);
+			VU_MERGE_REGS(regd, EEREC_TEMP);
 		}
 	}
 	else {
@@ -2173,7 +2173,7 @@ void recVUMI_MSUB_temp_toD(VURegs *VU, int regd, int info)
 		else {
 			SSE_XORPS_M128_to_XMM(EEREC_TEMP, (uptr)&const_clip[4]);
 			SSE_ADDPS_XMM_to_XMM(EEREC_TEMP, EEREC_ACC);
-			if( regd != EEREC_TEMP ) VU_MERGE_REGS(regd, EEREC_TEMP);
+			VU_MERGE_REGS(regd, EEREC_TEMP);
 		}
 	}
 	else {
@@ -2832,7 +2832,7 @@ void recVUMI_OPMSUB( VURegs *VU, int info )
 	// negate and add
 	SSE_XORPS_M128_to_XMM(EEREC_TEMP, (uptr)&const_clip[4]);
 	SSE_ADDPS_XMM_to_XMM(EEREC_TEMP, EEREC_ACC);
-	if( EEREC_D != EEREC_TEMP ) VU_MERGE_REGS_CUSTOM(EEREC_D, EEREC_TEMP, 14);
+	VU_MERGE_REGS_CUSTOM(EEREC_D, EEREC_TEMP, 14);
 	
 	// revert EEREC_T
 	if( EEREC_T != EEREC_D ) SSE_SHUFPS_XMM_to_XMM(EEREC_T, EEREC_T, 0xC9);
