@@ -1808,20 +1808,20 @@ void recVUMI_MADD_iq_toD(VURegs *VU, uptr addr, int regd, int info)
 	}
 
 	if( _X_Y_Z_W == 8 ) {
+		if( _Fs_ == 0 ) {
+			// do nothing if regd == ACC (ACCx <= ACCx + 0.0 * *addr)
+			if( regd != EEREC_ACC ) {
+				SSE_MOVSS_XMM_to_XMM(regd, EEREC_ACC);
+			}
+			return;
+		}
+
 		if( regd == EEREC_ACC ) {
-			if( _Fs_ == 0 ) {
-				// add addr to w
-				SSE_SHUFPS_XMM_to_XMM(regd, regd, 0x27);
-				SSE_ADDSS_M32_to_XMM(regd, addr);
-				SSE_SHUFPS_XMM_to_XMM(regd, regd, 0x27);
-			}
-			else {
-				assert( EEREC_TEMP < XMMREGS );
-				SSE_MOVSS_M32_to_XMM(EEREC_TEMP, addr);
-				SSE_MULSS_XMM_to_XMM(EEREC_TEMP, EEREC_S);
-				if (CHECK_VU_EXTRA_OVERFLOW) { vuFloat_useEAX( info, EEREC_TEMP, 8); }
-				SSE_ADDSS_XMM_to_XMM(regd, EEREC_TEMP);
-			}
+			assert( EEREC_TEMP < XMMREGS );
+			SSE_MOVSS_M32_to_XMM(EEREC_TEMP, addr);
+			SSE_MULSS_XMM_to_XMM(EEREC_TEMP, EEREC_S);
+			if (CHECK_VU_EXTRA_OVERFLOW) { vuFloat_useEAX( info, EEREC_TEMP, 8); }
+			SSE_ADDSS_XMM_to_XMM(regd, EEREC_TEMP);
 		}
 		else if( regd == EEREC_S ) {
 			SSE_MULSS_M32_to_XMM(regd, addr);
@@ -1837,11 +1837,21 @@ void recVUMI_MADD_iq_toD(VURegs *VU, uptr addr, int regd, int info)
 	}
 	else {
 		if( _Fs_ == 0 ) {
-			// add addr to w
-			if( _W ) {
-				SSE_SHUFPS_XMM_to_XMM(regd, regd, 0x27);
-				SSE_ADDSS_M32_to_XMM(regd, addr);
-				SSE_SHUFPS_XMM_to_XMM(regd, regd, 0x27);
+			if( regd == EEREC_ACC ) { // ACCxyz is unchanged, ACCw <= ACCw + *addr
+				if( _W ) { // if _W is zero, do nothing
+					SSE_MOVSS_M32_to_XMM(EEREC_TEMP, addr); // { *addr, 0, 0, 0 }
+					SSE_SHUFPS_XMM_to_XMM(EEREC_TEMP, EEREC_TEMP, 0x27); // { 0, 0, 0, *addr }
+					SSE_ADDPS_XMM_to_XMM(regd, EEREC_TEMP); // { ACCx, ACCy, ACCz, ACCw + *addr }
+				}
+			}
+			else { // DESTxyz <= ACCxyz, DESTw <= ACCw + *addr
+				if( _W ) {
+					SSE_MOVSS_M32_to_XMM(EEREC_TEMP, addr); // { *addr, 0, 0, 0 }
+					SSE_SHUFPS_XMM_to_XMM(EEREC_TEMP, EEREC_TEMP, 0x27); // { 0, 0, 0, *addr }
+					SSE_ADDPS_XMM_to_XMM(EEREC_TEMP, EEREC_ACC); // { ACCx, ACCy, ACCz, ACCw + *addr }
+				}
+				else SSE_MOVAPS_XMM_to_XMM(EEREC_TEMP, EEREC_ACC);
+				VU_MERGE_REGS(regd, EEREC_TEMP);
 			}
 
 			return;
