@@ -20,7 +20,6 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			IntermediateDirectory="$(ConfigurationName)"
 			ConfigurationType="1"
 			InheritedPropertySheets=".\vsprops\common.vsprops;..\..\..\common\vsprops\BaseProperties.vsprops;..\..\..\common\vsprops\3rdpartyDeps.vsprops;.\vsprops\debug.vsprops;.\vsprops\devbuild.vsprops;..\..\..\common\vsprops\pthreads.vsprops"
 			UseOfMFC="0"
@@ -187,7 +186,6 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			IntermediateDirectory="$(ConfigurationName)"
 			ConfigurationType="1"
 			InheritedPropertySheets=".\vsprops\common.vsprops;..\..\..\common\vsprops\BaseProperties.vsprops;..\..\..\common\vsprops\3rdpartyDeps.vsprops;.\vsprops\release.vsprops;..\..\..\common\vsprops\pthreads.vsprops"
 			UseOfMFC="0"
