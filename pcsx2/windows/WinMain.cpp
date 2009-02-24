@@ -769,8 +769,8 @@ LRESULT WINAPI MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				break;
 
 			case ID_HELP_HELP:
-				//system("help\\index.html");
-				system("compat_list\\compat_list.html");
+				ShellExecute( hWnd, "open", "http://www.pcsx2.net", NULL, NULL, SW_SHOWNORMAL );
+				//system("compat_list\\compat_list.html");
 				break;
 
 			case ID_CONFIG_MEMCARDS:
@@ -1049,7 +1049,7 @@ void CreateMainMenu() {
 
 
     ADDSUBMENU(0, _("&Help"));
-	ADDMENUITEM(0,_("&Compatibility List..."), ID_HELP_HELP);
+	ADDMENUITEM(0,_("&Pcsx2 Website..."), ID_HELP_HELP);
 	ADDMENUITEM(0,_("&About..."), ID_HELP_ABOUT);
 
 	if( !IsDevBuild )

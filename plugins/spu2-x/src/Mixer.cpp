@@ -436,7 +436,7 @@ static s32 __forceinline GetVoiceValues_Cubic( V_Core& thiscore, uint voiceidx )
 	s32 val = (z0 * mu) >> 12;
 	val = ((val + z1) * mu) >> 12;
 	val = ((val + z2) * mu) >> 12;
-	val += vc.PV2;
+	val += vc.PV3;
 
 	// Note!  It's very important that ADSR stay as accurate as possible.  By the way
 	// it is used, various sound effects can end prematurely if we truncate more than
