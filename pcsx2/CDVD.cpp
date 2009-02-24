@@ -108,7 +108,9 @@ enum CDVD_MODE_TYPE
 // if a seek is within this many blocks, read instead of seek.
 // I picked 9 as an arbitrary value.  Not sure what the real PS2 uses.
 static const int Cdvd_Contigious_Seek = 9;
-static const uint Cdvd_Avg_SeekCycles = (PSXCLK*40) / 1000;		// average number of cycles per seek (40ms)
+//Note: This timing causes many games to load very slow, but it likely not the real problem.
+//Games breaking with it set to PSXCLK*40 : "wrath unleashed" and "Shijou Saikyou no Deshi Kenichi".
+static const uint Cdvd_Avg_SeekCycles = (PSXCLK*95) / 1000;		// average number of cycles per seek (95ms)
 
 
 

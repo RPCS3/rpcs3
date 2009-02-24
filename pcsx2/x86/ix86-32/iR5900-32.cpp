@@ -1526,7 +1526,7 @@ void badespfn() {
 
 void __fastcall dyna_block_discard(u32 start,u32 sz)
 {
-	Console::WriteLn("dyna_block_discard %08X , count %d", params start,sz);
+	DevCon::WriteLn("dyna_block_discard %08X , count %d", params start,sz);
 	Cpu->Clear(start,sz);
 }
 
