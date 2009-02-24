@@ -29,7 +29,7 @@
 	/>
 	<Tool
 		Name="VCPreBuildEventTool"
-		CommandLine="$(SvnCommonDir)\vsprops\preBuild.cmd &quot;$(ProjectRootDir)&quot;"
+		CommandLine="&quot;$(SvnCommonDir)\vsprops\preBuild.cmd&quot; &quot;$(ProjectRootDir)&quot;"
 	/>
 	<Tool
 		Name="VCResourceCompilerTool"
