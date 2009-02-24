@@ -150,8 +150,10 @@ void recUpdateFlags(VURegs * VU, int reg, int info)
 	static const int flipMask[16] = {0, 8, 4, 12, 2, 10, 6, 14, 1, 9, 5, 13, 3, 11, 7, 15};
 
 	if( !(info & PROCESS_VU_UPDATEFLAGS) ) {
-		if (reg != EEREC_TEMP) vuFloat2(reg, EEREC_TEMP, _X_Y_Z_W);
-		else vuFloat_useEAX(info, reg, _X_Y_Z_W);
+		if (CHECK_VU_EXTRA_OVERFLOW) {
+			if (reg != EEREC_TEMP) vuFloat2(reg, EEREC_TEMP, _X_Y_Z_W);
+			else vuFloat_useEAX(info, reg, _X_Y_Z_W);
+		}
 		return;
 	}
 

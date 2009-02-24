@@ -4,6 +4,7 @@ Microsoft Visual Studio Solution File, Format Version 10.00
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pcsx2", "pcsx2\windows\VCprojects\pcsx2_2008.vcproj", "{1CEFD830-2B76-4596-A4EE-BCD7280A60BD}"
 	ProjectSection(ProjectDependencies) = postProject
 		{26511268-2902-4997-8421-ECD7055F9E28} = {26511268-2902-4997-8421-ECD7055F9E28}
+		{2F6C0388-20CB-4242-9F6C-A6EBB6A83F47} = {2F6C0388-20CB-4242-9F6C-A6EBB6A83F47}
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ZeroGS", "plugins\zerogs\dx\Win32\zerogs_2008.vcproj", "{5C6B7D28-E73D-4F71-8FC0-17ADA640EBD8}"
