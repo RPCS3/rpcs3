@@ -1,4 +1,4 @@
-INCLUDES = -I@srcdir@/../   -I@srcdir@/../common/ -I@srcdir@/../IPU/
+INCLUDES = -I@srcdir@/../   -I@srcdir@/../../common/include -I@srcdir@/../IPU/ -I@srcdir@/../../3rdparty
 noinst_LIBRARIES = libx86recomp.a
 
 # have to add the sources instead of making a library since the linking is complicated

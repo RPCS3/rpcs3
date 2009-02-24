@@ -1,4 +1,4 @@
-INCLUDES = -I@srcdir@/../ -I@srcdir@/../common/
+INCLUDES = -I@srcdir@/../ -I@srcdir@/../../common/include -I@srcdir@/../../3rdparty
 noinst_LIBRARIES = libDebugTools.a
 
 libDebugTools_a_SOURCES = \

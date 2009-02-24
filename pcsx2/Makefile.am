@@ -1,5 +1,5 @@
 AUTOMAKE_OPTIONS = foreign
-INCLUDES = -I@srcdir@/x86/  -I@srcdir@/common/
+INCLUDES = -I@srcdir@/x86/  -I@srcdir@/../common/include -I@srcdir@/../3rdparty
 noinst_LIBRARIES = libpcsx2.a
 
 libpcsx2_a_SOURCES = \
