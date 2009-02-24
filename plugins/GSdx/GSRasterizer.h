@@ -84,8 +84,8 @@ protected:
 	void DrawTriangleBottom(GSVertexSW* v, const GSVector4i& scissor);
 	void DrawTriangleTopBottom(GSVertexSW* v, const GSVector4i& scissor);
 
-	__forceinline void DrawTriangleSection(int top, int bottom, GSVertexSW& l, const GSVertexSW& dl, GSVector4& r, const GSVector4& dr, const GSVertexSW& dscan, const GSVector4i& scissor);
-	__forceinline void DrawTriangleSection(int top, int bottom, GSVertexSW& l, const GSVertexSW& dl, const GSVertexSW& dscan, const GSVector4i& scissor);
+	__forceinline void DrawTriangleSection(int top, int bottom, GSVertexSW& l, const GSVertexSW& dl, GSVector4& r, const GSVector4& dr, const GSVertexSW& dscan, const GSVector4& scissor);
+	__forceinline void DrawTriangleSection(int top, int bottom, GSVertexSW& l, const GSVertexSW& dl, const GSVertexSW& dscan, const GSVector4& scissor);
 
 public:
 	GSRasterizer(IDrawScanline* ds, int id = 0, int threads = 0);
