@@ -1406,7 +1406,9 @@ void cdvdWrite04(u8 rt) { // NCOMMAND
 			CDR_LOG( "CdRead > startSector=%d, nSectors=%d, RetryCnt=%x, Speed=%x(%x), ReadMode=%x(%x) (1074=%x)\n",
 				cdvd.Sector, cdvd.nSectors, cdvd.RetryCnt, cdvd.Speed, cdvd.Param[9], cdvd.ReadMode, cdvd.Param[10], psxHu32(0x1074));
 
-			if (Config.cdvdPrint) SysPrintf("CdRead: Reading Sector %d(%d Blocks of Size %d) at Speed=%dx\n", cdvd.Sector, cdvd.nSectors,cdvd.BlockSize,cdvd.Speed);
+			if( Config.cdvdPrint )
+				Console::WriteLn("CdRead: Reading Sector %d(%d Blocks of Size %d) at Speed=%dx",
+					params cdvd.Sector, cdvd.nSectors,cdvd.BlockSize,cdvd.Speed);
 
 			cdvd.ReadTime = cdvdBlockReadTime( MODE_CDROM );
 			CDVDREAD_INT( cdvdStartSeek( cdvd.SeekToSector ) );
@@ -1445,7 +1447,9 @@ void cdvdWrite04(u8 rt) { // NCOMMAND
 			CDR_LOG( "CdReadCDDA > startSector=%d, nSectors=%d, RetryCnt=%x, Speed=%xx(%x), ReadMode=%x(%x) (1074=%x)\n",
 				cdvd.Sector, cdvd.nSectors, cdvd.RetryCnt, cdvd.Speed, cdvd.Param[9], cdvd.ReadMode, cdvd.Param[10], psxHu32(0x1074));
 
-			if (Config.cdvdPrint) SysPrintf("CdAudioRead: Reading Sector %d(%d Blocks of Size %d) at Speed=%dx\n", cdvd.Sector, cdvd.nSectors,cdvd.BlockSize,cdvd.Speed);
+			if( Config.cdvdPrint )
+				Console::WriteLn("CdAudioRead: Reading Sector %d(%d Blocks of Size %d) at Speed=%dx",
+					params cdvd.Sector, cdvd.nSectors,cdvd.BlockSize,cdvd.Speed);
 			
 			cdvd.ReadTime = cdvdBlockReadTime( MODE_CDROM );
 			CDVDREAD_INT( cdvdStartSeek( cdvd.SeekToSector ) );
@@ -1474,7 +1478,9 @@ void cdvdWrite04(u8 rt) { // NCOMMAND
 			CDR_LOG( "DvdRead > startSector=%d, nSectors=%d, RetryCnt=%x, Speed=%x(%x), ReadMode=%x(%x) (1074=%x)\n",
 				cdvd.Sector, cdvd.nSectors, cdvd.RetryCnt, cdvd.Speed, cdvd.Param[9], cdvd.ReadMode, cdvd.Param[10], psxHu32(0x1074));
 			
-			if (Config.cdvdPrint) SysPrintf("DvdRead: Reading Sector %d(%d Blocks of Size %d) at Speed=%dx\n", cdvd.Sector, cdvd.nSectors,cdvd.BlockSize,cdvd.Speed);
+			if( Config.cdvdPrint )
+				Console::WriteLn("DvdRead: Reading Sector %d(%d Blocks of Size %d) at Speed=%dx",
+					params cdvd.Sector, cdvd.nSectors,cdvd.BlockSize,cdvd.Speed);
 			
 			cdvd.ReadTime = cdvdBlockReadTime( MODE_DVDROM );
 			CDVDREAD_INT( cdvdStartSeek( cdvd.SeekToSector ) );

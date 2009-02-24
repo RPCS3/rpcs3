@@ -103,7 +103,7 @@ __forceinline u8 hwRead8(u32 mem)
 			}
 
 			ret = psHu8(mem);
-			HW_LOG("Unknown Hardware Read 8 at %x\n",mem);
+			HW_LOG("Unknown Hardware Read 8 from 0x%x = 0x%x\n", mem, ret);
 			break;
 	}
 

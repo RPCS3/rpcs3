@@ -466,6 +466,14 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\pcsxAbout.bmp"
+					>
+				</File>
+				<File
+					RelativePath="..\ps2_silver.bmp"
+					>
+				</File>
+				<File
 					RelativePath="..\resource.h"
 					>
 				</File>
@@ -2431,14 +2439,6 @@
 		</Filter>
 		<File
 			RelativePath="..\..\Common.h"
-			>
-		</File>
-		<File
-			RelativePath="..\..\pcsxAbout.bmp"
-			>
-		</File>
-		<File
-			RelativePath="..\ps2_silver.bmp"
 			>
 		</File>
 		<File

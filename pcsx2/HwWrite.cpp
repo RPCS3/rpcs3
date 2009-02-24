@@ -94,10 +94,21 @@ int sio_count;
 
 void hwWrite8(u32 mem, u8 value) {
 
-#ifdef PCSX2_DEVBUILD
+	if( (mem>=0x10003800) && (mem<0x10004000) )
+	{
+		u32 bytemod = mem & 0x3;
+		u32 bitpos = 8 * bytemod;
+		u32 newval = psHu8(mem) & (255UL << bitpos);
+		if( mem < 0x10003c00 )
+			vif0Write32( mem & ~0x3, newval | (value<<bitpos));
+		else
+			vif1Write32( mem & ~0x3, newval | (value<<bitpos));
+			
+		return;
+	}
+
 	if( mem >= 0x10002000 && mem < 0x10008000 )
-		SysPrintf("hwWrite8 to %x\n", mem);
-#endif
+		DevCon::Notice( "hwWrite8 to 0x%x = 0x%x", params mem, value );
 
 	switch (mem) {
 		case 0x10000000: rcntWcount(0, value); break;
@@ -134,57 +145,57 @@ void hwWrite8(u32 mem, u8 value) {
 			}
 			break;
 		
-		case 0x10003c02: //Tony Hawks Project 8 uses this
-			vif1Write32(mem & ~0x2, value << 16);
-			break;
+		//case 0x10003c02: //Tony Hawks Project 8 uses this
+		//	vif1Write32(mem & ~0x2, value << 16);
+		//	break;
 		case 0x10008001: // dma0 - vif0
-			DMA_LOG("VIF0dma %lx\n", value);
+			DMA_LOG("VIF0dma EXECUTE, value=0x%x\n", value);
 			DmaExec8(dmaVIF0, mem, value);
 			break;
 
 		case 0x10009001: // dma1 - vif1
-			DMA_LOG("VIF1dma %lx\n", value);
+			DMA_LOG("VIF1dma EXECUTE, value=0x%x\n", value);
 			DmaExec8(dmaVIF1, mem, value);
 			break;
 
 		case 0x1000a001: // dma2 - gif
-			DMA_LOG("0x%8.8x hwWrite8: GSdma %lx 0x%lx\n", cpuRegs.cycle, value);
+			DMA_LOG("GSdma EXECUTE, value=0x%x\n", value);
 			DmaExec8(dmaGIF, mem, value);
 			break;
 
 		case 0x1000b001: // dma3 - fromIPU
-			DMA_LOG("IPU0dma %lx\n", value);
+			DMA_LOG("IPU0dma EXECUTE, value=0x%x\n", value);
 			DmaExec8(dmaIPU0, mem, value);
 			break;
 
 		case 0x1000b401: // dma4 - toIPU
-			DMA_LOG("IPU1dma %lx\n", value);
+			DMA_LOG("IPU1dma EXECUTE, value=0x%x\n", value);
 			DmaExec8(dmaIPU1, mem, value);
 			break;
 
 		case 0x1000c001: // dma5 - sif0
-			DMA_LOG("SIF0dma %lx\n", value);
+			DMA_LOG("SIF0dma EXECUTE, value=0x%x\n", value);
 //			if (value == 0) psxSu32(0x30) = 0x40000;
 			DmaExec8(dmaSIF0, mem, value);
 			break;
 
 		case 0x1000c401: // dma6 - sif1
-			DMA_LOG("SIF1dma %lx\n", value);
+			DMA_LOG("SIF1dma EXECUTE, value=0x%x\n", value);
 			DmaExec8(dmaSIF1, mem, value);
 			break;
 
 		case 0x1000c801: // dma7 - sif2
-			DMA_LOG("SIF2dma %lx\n", value);
+			DMA_LOG("SIF2dma EXECUTE, value=0x%x\n", value);
 			DmaExec8(dmaSIF2, mem, value);
 			break;
 
 		case 0x1000d001: // dma8 - fromSPR
-			DMA_LOG("fromSPRdma8 %lx\n", value);
+			DMA_LOG("fromSPRdma8 EXECUTE, value=0x%x\n", value);
 			DmaExec8(dmaSPR0, mem, value);
 			break;
 
 		case 0x1000d401: // dma9 - toSPR
-			DMA_LOG("toSPRdma8 %lx\n", value);
+			DMA_LOG("toSPRdma8 EXECUTE, value=0x%x\n", value);
 			DmaExec8(dmaSPR1, mem, value);
 			break;
 

@@ -72,9 +72,8 @@ u8 psxHwRead8(u32 add) {
 		case 0x1f8014a0:
 		case 0x1f8014a4:
 		case 0x1f8014a8:
-			SysPrintf("8bit counter read %x\n", add);
-			hard = psxHu8(add);
-			return hard;
+			DevCon::Notice( "IOP Counter Read8 from addr0x%x = 0x%x", params add, psxHu8(add) );
+			return psxHu8(add);
 #endif
 
 		case 0x1f801800: hard = cdrRead0(); break;
@@ -635,7 +634,9 @@ void psxHwWrite8(u32 add, u8 value) {
 	if (add >= 0x1f801600 && add < 0x1f801700) {
 		USBwrite8(add, value); return;
 	}
-	if((add & 0xf) == 0xa) SysPrintf("8bit write (possible chcr set) %x value %x\n", add, value);
+	if((add & 0xf) == 0xa)
+		Console::Error("8bit write (possible chcr set) to addr 0x%x = 0x%x", params add, value );
+
 	switch (add) {
 		case 0x1f801040:
             sioWrite8(value); 
@@ -660,13 +661,14 @@ void psxHwWrite8(u32 add, u8 value) {
 		case 0x1f8014a0:
 		case 0x1f8014a4:
 		case 0x1f8014a8:
-			SysPrintf("8bit counter write %x\n", add);
+			DevCon::Notice( "IOP Counter Write8 to addr 0x%x = 0x%x", params add, value );
 			psxHu8(add) = value;
-			return;
+		return;
+
 		case 0x1f801450:
 			if (value) { PSXHW_LOG("%08X ICFG 8bit write %lx\n", psxRegs.pc, value); }
 			psxHu8(0x1450) = value;
-			return;
+		return;
 
 		case 0x1f801800: cdrWrite0(value); break;
 		case 0x1f801801: cdrWrite1(value); break;
@@ -677,11 +679,11 @@ void psxHwWrite8(u32 add, u8 value) {
 			if (value == '\r') break;
 			if (value == '\n' || g_pbufi >= 1023) {
 				g_pbuf[g_pbufi++] = 0; g_pbufi = 0;
-				SysPrintf("%s\n", g_pbuf);
+				DevCon::WriteLn( Color_Cyan, g_pbuf );
 			}
 			else g_pbuf[g_pbufi++] = value;
             psxHu8(add) = value;
-            return;
+		return;
 
 		case 0x1F808260:
 			PSXHW_LOG("SIO2 write8 DATAIN <- %08X\n", value);
@@ -1357,12 +1359,12 @@ u8 psxHw4Read8(u32 add) {
 		default:
 			// note: use SysPrintF to notify console since this is a potentially serious
 			// emulation problem:
-			//PSXHW_LOG("*Unknown 8bit read at address %lx\n", add);
-			SysPrintf("*Unknown 8bit read at address %lx\n", add);
+			PSXHW_LOG("*Unknown 8bit read at address 0x%x\n", add);
+			Console::Error( "IOP Unknown 8bit read from addr 0x%x", params add );
 			return 0;
 	}
 	
-	PSXHW_LOG("*Known 8bit read at address %lx value %x\n", add, hard);
+	PSXHW_LOG( "Known 8bit read from addr 0x%x = 0x%x\n", add, hard );
 
 	return hard;
 }
@@ -1384,10 +1386,10 @@ void psxHw4Write8(u32 add, u8 value) {
 		case 0x1f40203A: cdvdWrite3A(value); return;
 		default:
 			//PSXHW_LOG("*Unknown 8bit write at address %lx value %x\n", add, value);
-			Console::Notice("*Unknown 8bit write at address %lx value %x", params add, value);
+			Console::Notice("IOP Unknown 8bit write to addr 0x%x = 0x%x", params add, value);
 			return;
 	}
-	PSXHW_LOG("*Known 8bit write at address %lx value %x\n", add, value);
+	PSXHW_LOG("Known 8bit write to addr 0x%x = 0x%x\n", add, value);
 }
 
 void psxDmaInterrupt(int n) {

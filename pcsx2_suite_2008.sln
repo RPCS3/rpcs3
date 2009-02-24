@@ -56,6 +56,9 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Nulls", "Nulls", "{E1828E40-2FBB-48FE-AE7F-5587755DCE0E}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "3rdparty", "3rdparty", "{78EBE642-7A4D-4EA7-86BE-5639C6646C38}"
+	ProjectSection(SolutionItems) = preProject
+		3rdparty\svn_readme.txt = 3rdparty\svn_readme.txt
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Zerofrog", "Zerofrog", "{4CFBEFA8-2D4F-4B62-99D4-7E54F95B3FD9}"
 EndProject
@@ -65,6 +68,18 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ZeroPAD", "plugins\zeropad\
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Plugins", "Plugins", "{703FD00B-D7A0-41E3-BD03-CEC86B385DAF}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Common", "Common", "{88F517F9-CE1C-4005-9BDF-4481FEB55053}"
+	ProjectSection(SolutionItems) = preProject
+		common\svn_readme.txt = common\svn_readme.txt
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Include", "Include", "{0FADC26C-0E9D-4DD7-84B1-BF4F7754E90C}"
+	ProjectSection(SolutionItems) = preProject
+		common\include\afxresmw.h = common\include\afxresmw.h
+		common\include\PS2Edefs.h = common\include\PS2Edefs.h
+		common\include\PS2Etypes.h = common\include\PS2Etypes.h
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -279,5 +294,6 @@ Global
 		{3D0EB14D-32F3-4D82-9C6D-B806ADBB859C} = {E1828E40-2FBB-48FE-AE7F-5587755DCE0E}
 		{04439C5F-05FB-4A9C-AAD1-5388C25377DB} = {E1828E40-2FBB-48FE-AE7F-5587755DCE0E}
 		{F38D9DF0-F68D-49D9-B3A0-932E74FB74A0} = {E1828E40-2FBB-48FE-AE7F-5587755DCE0E}
+		{0FADC26C-0E9D-4DD7-84B1-BF4F7754E90C} = {88F517F9-CE1C-4005-9BDF-4481FEB55053}
 	EndGlobalSection
 EndGlobal
