@@ -655,7 +655,8 @@ LRESULT WINAPI MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 			//2002-09-20 (Florin)
 			case ID_RUN_CMDLINE:
-				DialogBox(gApp.hInstance, MAKEINTRESOURCE(IDD_CMDLINE), hWnd, (DLGPROC)CmdlineProc);
+				if( IsDevBuild )
+					DialogBox(gApp.hInstance, MAKEINTRESOURCE(IDD_CMDLINE), hWnd, (DLGPROC)CmdlineProc);
 				break;
 			//-------------------
            	case ID_PATCHBROWSER:
@@ -994,7 +995,8 @@ void CreateMainMenu() {
 	ADDMENUITEM(1, _("&Low"), ID_PROCESSLOW );
 	ADDMENUITEM(1, _("High"), ID_PROCESSHIGH);
 	ADDMENUITEM(1, _("Normal"), ID_PROCESSNORMAL);
-	ADDMENUITEM(0,_("&Arguments"), ID_RUN_CMDLINE);
+	if( IsDevBuild )
+		ADDMENUITEM(0,_("&Arguments"), ID_RUN_CMDLINE);
 	ADDMENUITEM(0,_("Re&set"), ID_RUN_RESET);
 	ADDMENUITEM(0,_("E&xecute"), ID_RUN_EXECUTE);
 
