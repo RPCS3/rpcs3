@@ -15,7 +15,7 @@
 //License along with this library; if not, write to the Free Software
 //Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
-#include "spu2.h"
+#include "../spu2.h"
 
 extern "C" {
 #include "dsp.h"

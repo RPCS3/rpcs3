@@ -19,7 +19,7 @@
 * 
 */
 
-#include "dialogs.h"
+#include "Dialogs.h"
 
 int SendDialogMsg( HWND hwnd, int dlgId, UINT code, WPARAM wParam, LPARAM lParam)
 {

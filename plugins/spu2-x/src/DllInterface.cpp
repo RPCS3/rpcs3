@@ -20,8 +20,8 @@
  */
 
 #include "Spu2.h"
-#include "RegTable.h"
 #include "Dialogs.h"
+#include "RegTable.h"
 
 #ifdef _MSC_VER
 #include "svnrev.h"

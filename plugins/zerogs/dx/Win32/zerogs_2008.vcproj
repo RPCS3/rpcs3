@@ -18,7 +18,7 @@
 		<Configuration
 			Name="Devel|Win32"
 			ConfigurationType="2"
-			InheritedPropertySheets=".\vsprops\pcsx2_plugin_common.vsprops"
+			InheritedPropertySheets="..\..\..\..\common\vsprops\plugin_svnroot.vsprops;..\..\..\..\common\vsprops\BaseProperties.vsprops;..\..\..\..\common\vsprops\3rdpartyDeps.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="2"
@@ -77,7 +77,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="ddraw.lib dxerr9.lib dxguid.lib d3dx9.lib d3d9.lib odbc32.lib odbccp32.lib winmm.lib Vfw32.lib"
+				AdditionalDependencies="zlib.lib ddraw.lib dxerr9.lib dxguid.lib d3dx9.lib d3d9.lib odbc32.lib odbccp32.lib winmm.lib Vfw32.lib"
 				OutputFile="$(OutDir)\$(ProjectName)-dev.dll"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
@@ -113,7 +113,7 @@
 		<Configuration
 			Name="Debug|Win32"
 			ConfigurationType="2"
-			InheritedPropertySheets=".\vsprops\pcsx2_plugin_common.vsprops"
+			InheritedPropertySheets="..\..\..\..\common\vsprops\plugin_svnroot.vsprops;..\..\..\..\common\vsprops\BaseProperties.vsprops;..\..\..\..\common\vsprops\3rdpartyDeps.vsprops"
 			CharacterSet="2"
 			>
 			<Tool
@@ -154,7 +154,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="ddraw.lib dxerr9.lib dxguid.lib d3dx9.lib d3d9.lib odbc32.lib odbccp32.lib winmm.lib Vfw32.lib"
+				AdditionalDependencies="zlib.lib ddraw.lib dxerr9.lib dxguid.lib d3dx9.lib d3d9.lib odbc32.lib odbccp32.lib winmm.lib Vfw32.lib"
 				OutputFile="$(OutDir)\$(ProjectName)-dbg.dll"
 				AdditionalLibraryDirectories="..\"
 				IgnoreDefaultLibraryNames=""
@@ -188,7 +188,7 @@
 		<Configuration
 			Name="Release|Win32"
 			ConfigurationType="2"
-			InheritedPropertySheets=".\vsprops\pcsx2_plugin_common.vsprops"
+			InheritedPropertySheets="..\..\..\..\common\vsprops\plugin_svnroot.vsprops;..\..\..\..\common\vsprops\BaseProperties.vsprops;..\..\..\..\common\vsprops\3rdpartyDeps.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="2"
@@ -247,7 +247,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="ddraw.lib dxerr9.lib dxguid.lib d3dx9.lib d3d9.lib odbc32.lib odbccp32.lib winmm.lib Vfw32.lib"
+				AdditionalDependencies="zlib.lib ddraw.lib dxerr9.lib dxguid.lib d3dx9.lib d3d9.lib odbc32.lib odbccp32.lib winmm.lib Vfw32.lib"
 				OutputFile="$(OutDir)\$(ProjectName).dll"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
@@ -257,7 +257,6 @@
 				LinkTimeCodeGeneration="1"
 				RandomizedBaseAddress="1"
 				DataExecutionPrevention="0"
-				ImportLibrary=""
 				TargetMachine="1"
 			/>
 			<Tool

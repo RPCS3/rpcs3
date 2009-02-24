@@ -2,7 +2,7 @@
 #include <windows.h>
 #include <windowsx.h>
 
-#include "USB.h"
+#include "../USB.h"
 #include "resource.h"
 
 HINSTANCE hInst;

@@ -9,7 +9,10 @@
 
 #define UNICODE
 
+#ifndef _CRT_SECURE_NO_DEPRECATE
 #define _CRT_SECURE_NO_DEPRECATE
+#endif
+
 // Actually works with 0x0400, but need 0x500 to get XBUTTON defines,
 // 0x501 to get raw input structures, and 0x0600 to get WM_MOUSEHWHEEL.
 #define WINVER 0x0600

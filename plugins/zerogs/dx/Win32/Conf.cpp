@@ -5,7 +5,6 @@
 
 #include <stdlib.h>
 
-#include "GS.h"
 #include "Win32.h"
 
 extern HINSTANCE hInst;

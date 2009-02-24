@@ -4,7 +4,7 @@
 
 
 #include "resource.h"
-#include "FW.h"
+#include "../FW.h"
 
 HINSTANCE hInst;
 

@@ -12,8 +12,8 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include "3rdparty/zlib/zlib.h"
-#include "3rdparty/bzip2/bzlib.h"
+#include "zlib/zlib.h"
+#include "bzip2/bzlib.h"
 
 #include "CDVDiso.h"
 #include "libiso.h"

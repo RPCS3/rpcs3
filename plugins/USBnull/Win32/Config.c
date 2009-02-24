@@ -1,6 +1,6 @@
 #include <stdlib.h>
 
-#include "USB.h"
+#include "../USB.h"
 
 extern HINSTANCE hInst;
 void SaveConfig() 

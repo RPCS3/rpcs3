@@ -56,6 +56,9 @@ namespace Threading
 		return m_returncode;
 	}
 
+// pthread Cond is an evil api that is not suited for Pcsx2 needs.
+// Let's not use it. (Air)
+#if 0
 	WaitEvent::WaitEvent() 
 	{
 		int err = 0;
@@ -83,7 +86,7 @@ namespace Threading
 		pthread_cond_wait( &cond, &mutex );
 		pthread_mutex_unlock( &mutex );
 	}
-
+#endif
 	Semaphore::Semaphore()
 	{
 		sem_init( &sema, false, 0 );

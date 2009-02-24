@@ -1080,14 +1080,14 @@ keyEvent* CALLBACK PADkeyEvent() {
 	static int shiftDown = 0;
 	static keyEvent ev;
 	if (!GetQueuedKeyEvent(&ev)) return 0;
-	if (ev.key == VK_ESCAPE && ev.event == KEYPRESS && config.escapeFullscreenHack) {
+	if (ev.key == VK_ESCAPE && ev.evt == KEYPRESS && config.escapeFullscreenHack) {
 		if (IsWindowMaximized(hWnd)) {
 			EatWndProc(hWnd, KillFullScreenProc);
 			return 0;
 		}
 	}
 
-	if (ev.key == VK_F2 && ev.event == KEYPRESS) {
+	if (ev.key == VK_F2 && ev.evt == KEYPRESS) {
 		saveStateIndex += 1 - 2*shiftDown;
 		saveStateIndex = (saveStateIndex+10)%10;
 		if (config.saveStateTitle) {
@@ -1100,7 +1100,7 @@ keyEvent* CALLBACK PADkeyEvent() {
 
 	if (ev.key == VK_LSHIFT || ev.key == VK_RSHIFT || ev.key == VK_SHIFT) {
 		ev.key = VK_SHIFT;
-		if (ev.event == KEYPRESS)
+		if (ev.evt == KEYPRESS)
 			shiftDown = 1;
 		else
 			shiftDown = 0;

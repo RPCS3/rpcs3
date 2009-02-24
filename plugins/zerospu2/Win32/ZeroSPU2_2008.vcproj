@@ -19,7 +19,7 @@
 		<Configuration
 			Name="Debug|Win32"
 			ConfigurationType="2"
-			InheritedPropertySheets=".\vsprops\pcsx2_plugin_common.vsprops"
+			InheritedPropertySheets="..\..\..\common\vsprops\plugin_svnroot.vsprops;.\ProjectRootDir.vsprops;..\..\..\common\vsprops\BaseProperties.vsprops;..\..\..\common\vsprops\3rdpartyDeps.vsprops"
 			CharacterSet="2"
 			>
 			<Tool
@@ -60,7 +60,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="dsound.lib winmm.lib"
+				AdditionalDependencies="dsound.lib winmm.lib soundtouch.lib"
 				OutputFile="$(OutDir)\$(ProjectName)-dbg.dll"
 				LinkIncremental="2"
 				IgnoreDefaultLibraryNames=""
@@ -96,7 +96,7 @@
 		<Configuration
 			Name="Release|Win32"
 			ConfigurationType="2"
-			InheritedPropertySheets=".\vsprops\pcsx2_plugin_common.vsprops"
+			InheritedPropertySheets="..\..\..\common\vsprops\plugin_svnroot.vsprops;.\ProjectRootDir.vsprops;..\..\..\common\vsprops\BaseProperties.vsprops;..\..\..\common\vsprops\3rdpartyDeps.vsprops"
 			CharacterSet="2"
 			WholeProgramOptimization="1"
 			>
@@ -142,7 +142,91 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="dsound.lib winmm.lib"
+				AdditionalDependencies="dsound.lib winmm.lib soundtouch.lib"
+				IgnoreDefaultLibraryNames=""
+				ModuleDefinitionFile="ZeroSPU2.def"
+				GenerateDebugInformation="true"
+				SubSystem="2"
+				OptimizeReferences="0"
+				EnableCOMDATFolding="0"
+				RandomizedBaseAddress="1"
+				DataExecutionPrevention="0"
+				TargetMachine="1"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCManifestTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCAppVerifierTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+		</Configuration>
+		<Configuration
+			Name="Devel|Win32"
+			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
+			IntermediateDirectory="$(ConfigurationName)"
+			ConfigurationType="2"
+			InheritedPropertySheets="..\..\..\common\vsprops\plugin_svnroot.vsprops;.\ProjectRootDir.vsprops;..\..\..\common\vsprops\BaseProperties.vsprops;..\..\..\common\vsprops\3rdpartyDeps.vsprops"
+			CharacterSet="2"
+			WholeProgramOptimization="1"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+				CommandLine=""
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				Optimization="2"
+				InlineFunctionExpansion="2"
+				EnableIntrinsicFunctions="true"
+				FavorSizeOrSpeed="1"
+				OmitFramePointers="true"
+				PreprocessorDefinitions="FLOAT_SAMPLES;NDEBUG;_USRDLL;ZEROSPU2_EXPORTS"
+				StringPooling="true"
+				RuntimeLibrary="0"
+				BufferSecurityCheck="false"
+				UsePrecompiledHeader="0"
+				WarningLevel="3"
+				DebugInformationFormat="3"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalDependencies="dsound.lib winmm.lib soundtouch.lib"
 				IgnoreDefaultLibraryNames=""
 				ModuleDefinitionFile="ZeroSPU2.def"
 				GenerateDebugInformation="true"
@@ -223,7 +307,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\zerospu2.h"
+				RelativePath="..\zerospu2.h"
 				>
 			</File>
 		</Filter>
@@ -234,114 +318,6 @@
 			>
 			<File
 				RelativePath=".\ZeroSPU2.rc"
-				>
-			</File>
-		</Filter>
-		<Filter
-			Name="SoundTouch"
-			>
-			<File
-				RelativePath="..\3rdparty\SoundTouch\3dnow_win.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\3rdparty\SoundTouch\AAFilter.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\3rdparty\SoundTouch\AAFilter.h"
-				>
-			</File>
-			<File
-				RelativePath="..\3rdparty\SoundTouch\BPMDetect.h"
-				>
-			</File>
-			<File
-				RelativePath="..\3rdparty\SoundTouch\cpu_detect.h"
-				>
-			</File>
-			<File
-				RelativePath="..\3rdparty\SoundTouch\cpu_detect_x86_win.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\3rdparty\SoundTouch\FIFOSampleBuffer.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\3rdparty\SoundTouch\FIFOSampleBuffer.h"
-				>
-			</File>
-			<File
-				RelativePath="..\3rdparty\SoundTouch\FIFOSamplePipe.h"
-				>
-			</File>
-			<File
-				RelativePath="..\3rdparty\SoundTouch\FIRFilter.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\3rdparty\SoundTouch\FIRFilter.h"
-				>
-			</File>
-			<File
-				RelativePath="..\3rdparty\SoundTouch\mmx_optimized.cpp"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\3rdparty\SoundTouch\RateTransposer.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\3rdparty\SoundTouch\RateTransposer.h"
-				>
-			</File>
-			<File
-				RelativePath="..\3rdparty\SoundTouch\SoundTouch.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\3rdparty\SoundTouch\SoundTouch.h"
-				>
-			</File>
-			<File
-				RelativePath="..\3rdparty\SoundTouch\sse_optimized.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\3rdparty\SoundTouch\STTypes.h"
-				>
-			</File>
-			<File
-				RelativePath="..\3rdparty\SoundTouch\TDStretch.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\3rdparty\SoundTouch\TDStretch.h"
-				>
-			</File>
-			<File
-				RelativePath="..\3rdparty\SoundTouch\WavFile.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\3rdparty\SoundTouch\WavFile.h"
 				>
 			</File>
 		</Filter>

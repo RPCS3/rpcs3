@@ -19,8 +19,7 @@
  * 
  */
 
-#include "spu2.h"
-#include "dialogs.h"
+#include "Dialogs.h"
 
 #ifdef SPU2X_DEVBUILD
 static const int LATENCY_MAX = 3000;

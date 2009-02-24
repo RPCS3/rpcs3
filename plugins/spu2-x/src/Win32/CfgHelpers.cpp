@@ -19,7 +19,7 @@
  * 
  */
 
-#include "dialogs.h"
+#include "Dialogs.h"
 
 //////
 

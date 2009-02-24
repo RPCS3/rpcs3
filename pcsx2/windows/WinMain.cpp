@@ -83,10 +83,14 @@ static const char* phelpmsg =
     "\n"
 #endif
 
-    "Load Plugins:\n"
-    "\t-cdvd [dllpath] {specify the dll load path of the CDVD plugin}\n"
-    "\t-gs [dllpath] {specify the dll load path of the GS plugin}\n"
-    "\t-spu [dllpath] {specify the dll load path of the SPU2 plugin}\n"
+    "Plugin Overrides (specified dlls will be used in place of configured dlls):\n"
+    "\t-cdvd [dllpath] {specifies an override for the CDVD plugin}\n"
+    "\t-gs [dllpath] {specifies an override for the GS plugin}\n"
+    "\t-spu [dllpath] {specifies an override for the SPU2 plugin}\n"
+	"\t-pads [dllpath] {specifies an override for *both* pad plugins}\n"
+	"\t-pad1 [dllpath] {specifies an override for the PAD1 plugin only}\n"
+	"\t-pad2 [dllpath] {specifies an override for the PAD2 plugin only}\n"
+	"\t-dev9 [dllpath] {specifies an override for the DEV9 plugin}\n"
     "\n";
 
 /// This code is courtesy of http://alter.org.ua/en/docs/win/args/
@@ -188,7 +192,7 @@ void WinClose()
 
 BOOL SysLoggedSetLockPagesPrivilege ( HANDLE hProcess, BOOL bEnable);
 
-// Returns TRUE if the test run mode was activaated (game was run and has been exited)
+// Returns TRUE if the test run mode was activated (game was run and has been exited)
 static bool TestRunMode()
 {
 	if( IsDevBuild && (g_TestRun.enabled || g_TestRun.ptitle != NULL) )
@@ -203,6 +207,14 @@ static bool TestRunMode()
 	return false;
 }
 
+static void _doPluginOverride( const char* name, const char* src, char (&dest)[g_MaxPath] )
+{
+	if( src == NULL ) return;
+
+	_tcscpy_s( dest, g_TestRun.pgsdll );
+	Console::Notice( "* %s plugin override: \n\t%s\n", params name, Config.GS );
+}
+
 void WinRun()
 {
 	// Load the command line overrides for plugins.
@@ -210,23 +222,13 @@ void WinRun()
 
 	memcpy( &winConfig, &Config, sizeof( PcsxConfig ) );
 
-	if( g_TestRun.pgsdll )
-	{
-		_tcscpy_s( Config.GS, g_MaxPath, g_TestRun.pgsdll );
-		Console::Notice( "* GS plugin override: \n\t%s\n", params Config.GS );
-	}
-	if( g_TestRun.pcdvddll )
-	{
-		_tcscpy_s( Config.CDVD, g_MaxPath, g_TestRun.pcdvddll );
-		Console::Notice( "* CDVD plugin override: \n\t%s\n", params Config.CDVD );
-	}
-	if( g_TestRun.pspudll )
-	{
-		_tcscpy_s( Config.SPU2, g_MaxPath, g_TestRun.pspudll );
-		Console::Notice( "* SPU2 plugin override: \n\t%s\n", params Config.SPU2 );
-	}
+	_doPluginOverride( "GS", g_TestRun.pgsdll, Config.GS );
+	_doPluginOverride( "CDVD", g_TestRun.pcdvddll, Config.CDVD );
+	_doPluginOverride( "SPU2", g_TestRun.pspudll, Config.SPU2 );
+	_doPluginOverride( "PAD1", g_TestRun.ppad1dll, Config.PAD1 );
+	_doPluginOverride( "PAD2", g_TestRun.ppad2dll, Config.PAD2 );
+	_doPluginOverride( "DEV9", g_TestRun.pdev9dll, Config.DEV9 );
 
-	// [TODO] : Add the other plugin overrides here...
 
 #ifndef _DEBUG
 	if( Config.Profiler )

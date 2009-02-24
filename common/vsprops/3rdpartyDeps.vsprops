@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="windows-1250"?>
+<VisualStudioPropertySheet
+	ProjectType="Visual C++"
+	Version="8.00"
+	Name="Pcsx3rdpartyDependencies"
+	>
+	<Tool
+		Name="VCCLCompilerTool"
+		AdditionalIncludeDirectories="&quot;$(SvnRootDir)\3rdparty&quot;"
+		PreprocessorDefinitions="PTW32_STATIC_LIB;WIN32_PTHREADS;__CLEANUP_SEH"
+	/>
+	<Tool
+		Name="VCLinkerTool"
+		AdditionalLibraryDirectories="&quot;$(SvnRootDir)\deps\$(PlatformName)\$(ConfigurationName)&quot;"
+	/>
+</VisualStudioPropertySheet>

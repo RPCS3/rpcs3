@@ -23,7 +23,7 @@
 
 #include "resource.h"
 #include "Debugger.h"
-#include "Debug.h"
+#include "DebugTools/Debug.h"
 #include "R5900.h"
 #include "R3000a.h"
 #include "VUmicro.h"

@@ -26,7 +26,6 @@
 
 #include "Common.h"
 #include "Threading.h"
-#include "zlib.h"
 
 #define GSPATH3FIX
 

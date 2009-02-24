@@ -25,12 +25,9 @@
 #define IDD_RDEBUGPARAMS                121
 #define ID_DEBUG_REMOTEDEBUGGING        122
 #define IDD_RDEBUG                      123
-#define IDD_DIALOGBAR                   124
 #define IDD_IOP_DEBUG                   125
 #define IDD_CPUDLG                      126
-#define IDD_ADVANCED                    127
 #define IDD_IOPREGS                     128
-#define IDD_USERNAME                    129
 #define IDB_PS2SILVER                   132
 #define IDD_CHEATS                      133
 #define IDD_GAMEFIXES                   134
@@ -457,12 +454,6 @@
 #define IDC_FAMILYINPUT                 1202
 #define IDC_CPUSPEEDINPUT               1203
 #define IDC_FEATURESINPUT               1204
-#define IDC_REGCACHING                  1208
-#define IDC_ADVRESET                    1214
-#define IDC_SYNCHACK                    1217
-#define IDC_SPU2HACK                    1218
-#define IDC_SYNCHACK2                   1218
-#define IDC_SYNCHACK3                   1219
 #define IDC_IOPGPR0                     1220
 #define IDC_IOPGPR1                     1221
 #define IDC_IOPGPR2                     1222
@@ -500,7 +491,6 @@
 #define IDC_BIOSDIR                     1254
 #define IDC_IOPGPR3                     1254
 #define IDC_PLUGINSDIR                  1255
-#define IDC_USER_NAME                   1257
 #define IDC_CPU_GSMULTI                 1259
 #define IDC_PS2SILVER_RECT              1259
 #define IDC_CPU_EEREC                   1262
@@ -539,7 +529,6 @@
 #define IDC_DATA                        1282
 #define IDC_PNACHWRITER                 1282
 #define IDC_CUSTOM_CONSECUTIVE_SKIP     1282
-#define IDC_PNACHWRITER2                1283
 #define IDC_SKIPMPEG                    1283
 #define IDC_FRAMESKIP_LABEL4            1283
 #define IDC_SPIN1                       1284
@@ -568,7 +557,6 @@
 #define IDC_FRAMELIMIT_OPTIONS          1303
 #define IDC_VU_CHECK2                   1303
 #define IDC_GAMEFIX4                    1303
-#define IDC_SOUNDHACK2                  1304
 #define IDC_ESCHACK                     1304
 #define IDC_VU_CHECK3                   1304
 #define IDC_GAMEFIX5                    1304

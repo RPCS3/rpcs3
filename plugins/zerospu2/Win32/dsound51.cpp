@@ -19,7 +19,7 @@
 #include <stdio.h>
 #include <windows.h>
 #include <windowsx.h>
-#include "zerospu2.h"
+#include "../zerospu2.h"
 /////////////////////////////////////
 // use DirectSound for the sound
 #include <dsound.h>

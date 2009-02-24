@@ -20,9 +20,8 @@
  */
 
 
-#include "SPU2.h"
 #include "Dialogs.h"
-#include "RegTable.h"
+#include "../RegTable.h"
 
 
 static bool debugDialogOpen=false;

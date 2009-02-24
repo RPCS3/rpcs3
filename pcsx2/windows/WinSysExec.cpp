@@ -137,6 +137,19 @@ int ParseCommandLine( int tokenCount, TCHAR *const *const tokens )
 			else if( CmdSwitchIs( "spu" ) ) {
 				g_TestRun.pspudll = param;
 			}
+			else if( CmdSwitchIs( "pads" ) ) {
+				g_TestRun.ppad1dll = param;
+				g_TestRun.ppad2dll = param;
+			}
+			else if( CmdSwitchIs( "pad1" ) ) {
+				g_TestRun.ppad1dll = param;
+			}
+			else if( CmdSwitchIs( "pad2" ) ) {
+				g_TestRun.ppad2dll = param;
+			}
+			else if( CmdSwitchIs( "dev9" ) ) {
+				g_TestRun.pdev9dll = param;
+			}
 
 #ifdef PCSX2_DEVBUILD
 			else if( CmdSwitchIs( "image" ) ) {

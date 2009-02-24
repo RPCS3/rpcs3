@@ -11,7 +11,7 @@
 
 
 #include "Config.h"
-#include "CDVDiso.h"
+#include "../CDVDiso.h"
 #include "resource.h"
 
 HINSTANCE hInst;

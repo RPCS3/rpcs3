@@ -1,7 +1,7 @@
 ; USBlinuz.def : Declares the module parameters for the DLL.
 
 LIBRARY      "USBnull"
-DESCRIPTION  'USBnull Driver'
+;DESCRIPTION  'USBnull Driver'
 
 EXPORTS
     ; Explicit exports can go here

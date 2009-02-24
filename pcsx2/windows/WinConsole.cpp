@@ -19,7 +19,7 @@
 #include "PrecompiledHeader.h"
 
 #include "System.h"
-#include "Debug.h"
+#include "DebugTools/Debug.h"
 
 namespace Console
 {

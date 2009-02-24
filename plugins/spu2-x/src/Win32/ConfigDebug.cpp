@@ -19,8 +19,7 @@
  * 
  */
 
-#include "spu2.h"
-#include "dialogs.h"
+#include "Dialogs.h"
 
 
 bool DebugEnabled=false;

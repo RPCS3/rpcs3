@@ -19,8 +19,7 @@
  * 
  */
 
-#include "spu2.h"
-#include "dialogs.h"
+#include "Dialogs.h"
 
 int SoundtouchCfg::SequenceLenMS = 63;
 int SoundtouchCfg::SeekWindowMS = 16;

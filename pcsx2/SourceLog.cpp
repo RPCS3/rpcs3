@@ -22,7 +22,6 @@
 #include "RDebug/deci2.h"
 #else
 #include <sys/time.h>
-#include "DebugTools/Debug.h"
 #endif
 
 #include <cstdarg>
@@ -31,6 +30,7 @@
 #include "R3000A.h"
 #include "iR5900.h"
 #include "System.h"
+#include "DebugTools/Debug.h"
 
 using namespace R5900;
 

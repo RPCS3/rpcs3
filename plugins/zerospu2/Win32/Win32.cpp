@@ -20,7 +20,7 @@
 #include <windows.h>
 #include <windowsx.h>
 
-#include "zerospu2.h"
+#include "../zerospu2.h"
 #include "resource.h"
 
 extern HINSTANCE hInst;

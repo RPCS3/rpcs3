@@ -3,21 +3,11 @@
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="common"
-	OutputDirectory="$(ProjectDir)\bin\"
-	IntermediateDirectory="$(ConfigurationName)"
 	>
 	<Tool
-		Name="VCPreBuildEventTool"
-		CommandLine=".\vsprops\preBuild.cmd &quot;$(ProjectDir)\..\..&quot; &quot;$(ProjectDir)vsprops&quot;"
-	/>
-	<Tool
-		Name="VCPostBuildEventTool"
-		CommandLine=".\vsprops\postBuild.cmd &quot;$(TargetPath)&quot; &quot;$(SolutionDir)&quot; &quot;$(TargetName)&quot; $(TargetExt)"
-	/>
-	<Tool
 		Name="VCCLCompilerTool"
-		AdditionalIncludeDirectories="./;../../common;../../;../../IPU;../../3rdparty/ZLIB;../../DebugTools;../../x86;&quot;../../x86/ix86-32&quot;;../libs;../pthreads"
-		PreprocessorDefinitions="WIN32;_WINDOWS;__i386__;PTW32_STATIC_LIB;ENABLE_NLS;PACKAGE=\&quot;pcsx2\&quot;;_CRT_SECURE_NO_DEPRECATE;TIXML_USE_STL"
+		AdditionalIncludeDirectories="./;../../;../../x86;&quot;../../x86/ix86-32&quot;;../libs;../../IPU"
+		PreprocessorDefinitions="__i386__;ENABLE_NLS;PACKAGE=\&quot;pcsx2\&quot;;TIXML_USE_STL"
 		StructMemberAlignment="5"
 		RuntimeTypeInfo="false"
 		PrecompiledHeaderFile="$(IntDir)/pcsx2.pch"
@@ -32,5 +22,21 @@
 		AdditionalLibraryDirectories="..\;..\libs"
 		GenerateDebugInformation="true"
 		SubSystem="2"
+	/>
+	<UserMacro
+		Name="ProjectRootDir"
+		Value="$(ProjectDir)\..\.."
+	/>
+	<UserMacro
+		Name="SvnRootDir"
+		Value="$(ProjectRootDir)\.."
+	/>
+	<UserMacro
+		Name="SvnCommonDir"
+		Value="$(SvnRootDir)\common"
+	/>
+	<UserMacro
+		Name="PcsxSubsection"
+		Value=""
 	/>
 </VisualStudioPropertySheet>

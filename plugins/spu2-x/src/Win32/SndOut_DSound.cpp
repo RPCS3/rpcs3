@@ -20,8 +20,7 @@
  */
 
 #define _WIN32_DCOM
-#include "spu2.h"
-#include "dialogs.h"
+#include "Dialogs.h"
 
 #define DIRECTSOUND_VERSION 0x1000
 #include <dsound.h>

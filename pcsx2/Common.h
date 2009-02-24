@@ -37,6 +37,7 @@ struct TESTRUNARGS
 	const char* pimagename;
 	const char* plogname;
 	const char* pgsdll, *pcdvddll, *pspudll;
+	const char* ppad1dll, *ppad2dll, *pdev9dll;
 
 };
 

@@ -19,8 +19,6 @@
 #ifndef _SAVESTATE_H_
 #define _SAVESTATE_H_
 
-#include <zlib.h>
-
 // This shouldn't break Win compiles, but it does.
 #ifdef __LINUX__
 #include "PS2Edefs.h"

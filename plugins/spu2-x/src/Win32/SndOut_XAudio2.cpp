@@ -21,8 +21,7 @@
 
 #define _WIN32_DCOM
 
-#include "spu2.h"
-#include "dialogs.h"
+#include "Dialogs.h"
 #include <MMReg.h>
 #include <xaudio2.h>
 

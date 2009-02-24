@@ -55,7 +55,7 @@
 
 using std::string;		// we use it enough, so bring it into the global namespace.
 
-#include "zlib.h"
+#include "zlib/zlib.h"
 #include "PS2Etypes.h"
 #include "StringUtils.h"
 

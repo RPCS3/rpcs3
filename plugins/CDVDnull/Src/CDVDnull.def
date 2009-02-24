@@ -1,7 +1,7 @@
 ; CDVDnull.def : Declares the module parameters for the DLL.
 
 LIBRARY      "CDVDnull"
-DESCRIPTION  'CDVD Null Driver'
+;DESCRIPTION  'CDVD Null Driver'
 
 EXPORTS
     ; Explicit exports can go here

@@ -32,7 +32,7 @@ void QueueKeyEvent(int key, int event) {
 		}
 	}
 	queuedEvents[index].key = key;
-	queuedEvents[index].event = event;
+	queuedEvents[index].evt = event;
 	numQueuedEvents ++;
 	LeaveCriticalSection(&cSection);
 }

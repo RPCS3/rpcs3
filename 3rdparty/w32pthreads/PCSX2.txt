@@ -1,0 +1,15 @@
+-----------------------------------
+-- Air's Notes on Using PThreads --
+-----------------------------------
+
+We use pthreads as a static link because it allows for inlined calls of several methods,
+most notably the InterlockedExchange implementations.  These would be DLL invocations
+otherwise, and would be roughly twice to three times the total overhead.
+
+I created a subfolder for pthreads' publicall exposed header files, since "config.h" was
+rather brutal include file namespace pollution. >_<
+
+Important: pthread_cond is an inherently flawed concept, and is quite incredibly slow
+on top of it.  It's primarily meant for inter-process thread regulation, of which we 
+do none.  Therefore it has been excluded from the library builds.  Don't use it!
+

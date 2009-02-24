@@ -27,7 +27,6 @@
 #include <assert.h>
 
 #include "System.h"
-#include <zlib.h>
 
 extern long LoadCdBios;
 extern int cdOpenCase;

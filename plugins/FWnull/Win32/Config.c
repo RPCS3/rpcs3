@@ -1,6 +1,6 @@
 #include <stdlib.h>
 
-#include "FW.h"
+#include "../FW.h"
 
 extern HINSTANCE hInst;
 void SaveConfig() 
