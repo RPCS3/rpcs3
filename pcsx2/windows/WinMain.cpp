@@ -539,8 +539,7 @@ BOOL APIENTRY GameFixes(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
     switch (message) {
         case WM_INITDIALOG:
 			if(Config.GameFixes & 0x1) CheckDlgButton(hDlg, IDC_GAMEFIX2, TRUE);//Tri-Ace fix
-			if(Config.GameFixes & 0x4) CheckDlgButton(hDlg, IDC_GAMEFIX3, TRUE);//Tekken 5 fix
-			if(Config.GameFixes & 0x8) CheckDlgButton(hDlg, IDC_GAMEFIX7, TRUE);//ICO fix
+			if(Config.GameFixes & 0x4) CheckDlgButton(hDlg, IDC_GAMEFIX3, TRUE);//Digimon FPU compare fix
 		return TRUE;
 
         case WM_COMMAND:
@@ -549,7 +548,6 @@ BOOL APIENTRY GameFixes(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 				uint newfixes = 0;
 				newfixes |= IsDlgButtonChecked(hDlg, IDC_GAMEFIX2) ? 0x1 : 0;
 				newfixes |= IsDlgButtonChecked(hDlg, IDC_GAMEFIX3) ? 0x4 : 0;
-				newfixes |= IsDlgButtonChecked(hDlg, IDC_GAMEFIX7) ? 0x8 : 0;
 				
 				EndDialog(hDlg, TRUE);
 

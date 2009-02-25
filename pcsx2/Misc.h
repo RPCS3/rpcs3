@@ -90,7 +90,6 @@ extern SessionOverrideFlags g_Session;
 //------------ SPECIAL GAME FIXES!!! ---------------
 #define CHECK_VUADDSUBHACK	 (Config.GameFixes & 0x1) // Special Fix for Tri-ace games, they use an encryption algorithm that requires VU addi opcode to be bit-accurate.
 #define CHECK_FPUCOMPAREHACK (Config.GameFixes & 0x4) // Special Fix for Digimon Rumble Arena 2, fixes spinning/hanging on intro-menu.
-#define CHECK_FCORHACK		 (Config.GameFixes & 0x8) // Special Fix for ICO, cures SPS due to some misscalculation of the clip flag.
 //------------ Advanced Options!!! ---------------
 #define CHECK_VU_OVERFLOW		 (Config.vuOptions & 0x1)
 #define CHECK_VU_EXTRA_OVERFLOW	 (Config.vuOptions & 0x2) // If enabled, Operands are clamped before being used in the VU recs

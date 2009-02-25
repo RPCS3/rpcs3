@@ -1454,18 +1454,12 @@ void recVUMI_FCOR( VURegs *VU, int info )
 {
 	int ftreg;
 	//SysPrintf("recVUMI_FCOR\n");
-	if(CHECK_FCORHACK) {//ICO Miss-calculated CLIP flag so always set to true (probably a zerorec pipeline problem)
-		ftreg = ALLOCVI(1, MODE_WRITE|MODE_8BITREG);
-		MOV32ItoR( ftreg, 1 );
-	}
-	else {
-		ftreg = ALLOCVI(1, MODE_WRITE);
-		MOV32MtoR( ftreg, VU_VI_ADDR(REG_CLIP_FLAG, 1) );
-		OR32ItoR ( ftreg, VU->code );
-		AND32ItoR( ftreg, 0xffffff );
-		ADD32ItoR( ftreg, 1 );	// If 24 1's will make 25th bit 1, else 0
-		SHR32ItoR( ftreg, 24 );	// Get the 25th bit (also clears the rest of the garbage in the reg)
-	}
+	ftreg = ALLOCVI(1, MODE_WRITE);
+	MOV32MtoR( ftreg, VU_VI_ADDR(REG_CLIP_FLAG, 1) );
+	OR32ItoR ( ftreg, VU->code );
+	AND32ItoR( ftreg, 0xffffff );
+	ADD32ItoR( ftreg, 1 );	// If 24 1's will make 25th bit 1, else 0
+	SHR32ItoR( ftreg, 24 );	// Get the 25th bit (also clears the rest of the garbage in the reg)	
 }
 //------------------------------------------------------------------
 
