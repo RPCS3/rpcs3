@@ -317,7 +317,6 @@ void LWU() {
 
 static const s32 LWL_MASK[4] = { 0xffffff, 0x0000ffff, 0x000000ff, 0x00000000 };
 static const s32 LWR_MASK[4] = { 0x000000, 0xff000000, 0xffff0000, 0xffffff00 };
-
 static const u8 LWL_SHIFT[4] = { 24, 16, 8, 0 };
 static const u8 LWR_SHIFT[4] = { 0, 8, 16, 24 };
 
@@ -343,31 +342,31 @@ void LWL() {
 	*/
 }
 
-
 void LWR() {
 
 	if (!_Rt_) return;
 
 	s32 addr = cpuRegs.GPR.r[_Rs_].UL[0] + _Imm_;
 	u32 shift = addr & 3;
-	s32 mem;	// ensure the compiler does correct sign extension into 64 bits by using s32
-	memRead32(addr & ~3, (u32*)&mem);
 
-	mem = (cpuRegs.GPR.r[_Rt_].SL[0] & LWR_MASK[shift]) | 
-		  (mem >> LWR_SHIFT[shift]);
+	u32 mem;
+	memRead32(addr & ~3, &mem);
+
+	// Use unsigned math here, and conditionally sign extend below, when needed.
+	mem = (cpuRegs.GPR.r[_Rt_].UL[0] & LWR_MASK[shift]) | (mem >> LWR_SHIFT[shift]);
 
 	if( shift == 0 )
 	{
 		// This special case requires sign extension into the full 64 bit dest.
-		cpuRegs.GPR.r[_Rt_].SD[0] =	mem;
+		cpuRegs.GPR.r[_Rt_].SD[0] =	(s32)mem;
 	}
 	else
-	{	
-		// This case can simply set the lower 32 bits of the target register.  Upper
+	{
+		// This case sets the lower 32 bits of the target register.  Upper
 		// 32 bits are always preserved.
 		cpuRegs.GPR.r[_Rt_].UL[0] =	mem;
 	}
-	
+
 	/*
 	Mem = 1234.  Reg = abcd
 
