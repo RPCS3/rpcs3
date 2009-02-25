@@ -199,7 +199,7 @@ void __fastcall WriteFIFO_page_7(u32 mem, const mem128_t *value)
 	// All addresses in this page map to 0x7000 and 0x7010:
 	mem &= 0x10;
 
-	IPU_LOG( "WriteFIFO/IPU, addr=0x%x", params mem );
+	IPU_LOG( "WriteFIFO/IPU, addr=0x%x\n", params mem );
 
 	if( mem == 0 )
 	{

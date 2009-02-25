@@ -257,7 +257,7 @@ void __fastcall memRead32(u32 mem, u32 *out) { *out = vtlb_memRead32( mem ); }
 // Error / TLB Miss Handlers
 // 
 
-// Generates a VtlbMiss Exception
+// Generates a tlbMiss Exception
 static __forceinline void vtlb_Miss(u32 addr,u32 mode)
 {
 	Console::Error("vtlb miss : addr 0x%X, mode %d", params addr,mode);
@@ -270,7 +270,7 @@ static __forceinline void vtlb_Miss(u32 addr,u32 mode)
 }
 
 // Just dies a horrible death for now.
-// 
+// Eventually should generate a BusError exception.
 static __forceinline void vtlb_BusError(u32 addr,u32 mode)
 {
 	Console::Error("vtlb bus error : addr 0x%X, mode %d\n",params addr,mode);

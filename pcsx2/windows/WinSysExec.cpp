@@ -668,6 +668,10 @@ static void __fastcall KeyEvent(keyEvent* ev)
 			}
 		break;
 
+		case VK_TAB:
+			CycleFrameLimit(0);
+			break;
+
 		case VK_ESCAPE:
 #ifdef PCSX2_DEVBUILD
 			if( g_SaveGSStream >= 3 ) {

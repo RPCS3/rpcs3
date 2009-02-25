@@ -507,7 +507,7 @@ void __fastcall gsWrite128_generic( u32 mem, const mem128_t* value )
 {
 	const u32* const srcval32 = (u32*)value;
 
-	GIF_LOG("GS Write64 at %8.8lx with data %8.8x_%8.8x_%8.8x_%8.8x \n", mem,
+	GIF_LOG("GS Write128 at %8.8lx with data %8.8x_%8.8x_%8.8x_%8.8x \n", mem,
 		srcval32[3], srcval32[2], srcval32[1], srcval32[0]);
 
 	const uint masked_mem = mem & 0x13ff;
@@ -582,7 +582,7 @@ __forceinline u64 gsRead64(u32 mem)
 }
 
 void gsIrq() {
-	hwIntcIrq(0);
+	hwIntcIrq(INTC_GS);
 }
 
 void gsSyncLimiterLostTime( s32 deltaTime )

@@ -592,7 +592,7 @@ void vifMFIFOInterrupt()
 {
 	if(vif1.irq && vif1.tag.size == 0) {
 			vif1Regs->stat|= VIF1_STAT_INT;
-			hwIntcIrq(5);
+			hwIntcIrq(INTC_VIF1);
 			--vif1.irq;
 			if(vif1Regs->stat & (VIF1_STAT_VSS|VIF1_STAT_VIS|VIF1_STAT_VFS))
 				{

@@ -269,13 +269,12 @@ __forceinline u64 ipuRead64(u32 mem)
 
 #ifdef PCSX2_DEVBUILD
 	if( mem == 0x10002010 ) {
-		SysPrintf("reading 64bit IPU ctrl\n");
+		Console::Notice("reading 64bit IPU ctrl");
 	}
 	if( mem == 0x10002020 ) {
-		SysPrintf("reading 64bit IPU top\n");
+		Console::Notice("reading 64bit IPU top");
 	}
 #endif
-
 	switch (mem){
 		case 0x10002000: // IPU_CMD
 

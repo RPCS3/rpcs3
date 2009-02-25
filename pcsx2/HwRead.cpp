@@ -218,7 +218,7 @@ static __forceinline mem32_t __hwRead32_page_0F( u32 mem, bool intchack )
 		break;
 
 		case 0xf010:
-			HW_LOG("INTC_MASK Read32, value=0x%x", psHu32(INTC_MASK));
+			HW_LOG("INTC_MASK Read32, value=0x%x\n", psHu32(INTC_MASK));
 		break;
 
 		case 0xf130:	// 0x1000f130

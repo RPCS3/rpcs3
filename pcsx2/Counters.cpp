@@ -400,13 +400,13 @@ static __forceinline void frameLimit()
 
 static __forceinline void VSyncStart(u32 sCycle)
 {
-	EECNT_LOG( "/////////  EE COUNTER VSYNC START  \\\\\\\\\\  (frame: %d)\n", iFrame );
+	EECNT_LOG( "/////////  EE COUNTER VSYNC START  \\\\\\\\\\\\\\\\\\\\  (frame: %d)\n", iFrame );
 	vSyncDebugStuff(); // EE Profiling and Debug code
 
 	if ((CSRw & 0x8)) GSCSRr|= 0x8;
 	if (!(GSIMR&0x800)) gsIrq();
 
-	hwIntcIrq(2);
+	hwIntcIrq(INTC_VBLANK_S);
 	psxVBlankStart();
 
 	if (gates) rcntStartGate(true, sCycle); // Counters Start Gate code
@@ -434,7 +434,7 @@ static __forceinline void VSyncStart(u32 sCycle)
 
 static __forceinline void VSyncEnd(u32 sCycle)
 {
-	EECNT_LOG( "/////////  EE COUNTER VSYNC END  \\\\\\\\\\  (frame: %d)\n", iFrame );
+	EECNT_LOG( "/////////  EE COUNTER VSYNC END  \\\\\\\\\\\\\\\\\\\\  (frame: %d)\n", iFrame );
 
 	iFrame++;
 
@@ -450,7 +450,7 @@ static __forceinline void VSyncEnd(u32 sCycle)
 		vu1MicroDisableSkip();
 	}
 
-	hwIntcIrq(3);  // HW Irq
+	hwIntcIrq(INTC_VBLANK_E);  // HW Irq
 	psxVBlankEnd(); // psxCounters vBlank End
 	if (gates) rcntEndGate(true, sCycle); // Counters End Gate Code
 	frameLimit(); // limit FPS

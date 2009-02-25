@@ -184,6 +184,7 @@ void SaveGSState(const string& file);
 void LoadGSState(const string& file);
 
 char *ParseLang(char *id);
+void CycleFrameLimit(int dir);
 void ProcessFKeys(int fkey, int shift); // processes fkey related commands value 1-12
 
 #define DIRENTRY_SIZE 16

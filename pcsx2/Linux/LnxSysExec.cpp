@@ -728,6 +728,10 @@ void KeyEvent(keyEvent* ev)
 				}
 				break;
 
+			case XK_Tab:
+				CycleFrameLimit(0);
+				break;
+
 			case XK_Escape:
 				signal(SIGINT, SIG_DFL);
 				signal(SIGPIPE, SIG_DFL);

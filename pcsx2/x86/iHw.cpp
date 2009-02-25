@@ -227,16 +227,13 @@ int hwConstRead32(u32 x86reg, u32 mem)
 			iFlushCall(0);
 			PUSH32I(0);
 			CALLFunc((uptr)rcntRcount);
-			EECNT_LOG("Counter 0 count read = %x\n", rcntRcount(0));
 			ADD32ItoR(ESP, 4);
 			return 1;
 		case 0x10000010:
 			_eeReadConstMem32(x86reg, (uptr)&counters[0].mode);
-			EECNT_LOG("Counter 0 mode read = %x\n", counters[0].modeval);
 			return 0;
 		case 0x10000020:
 			_eeReadConstMem32(x86reg, (uptr)&counters[0].target);
-			EECNT_LOG("Counter 0 target read = %x\n", counters[0].target);
 			return 0;
 		case 0x10000030:
 			_eeReadConstMem32(x86reg, (uptr)&counters[0].hold);
@@ -246,16 +243,13 @@ int hwConstRead32(u32 x86reg, u32 mem)
 			iFlushCall(0);
 			PUSH32I(1);
 			CALLFunc((uptr)rcntRcount);
-			EECNT_LOG("Counter 1 count read = %x\n", rcntRcount(1));
 			ADD32ItoR(ESP, 4);
 			return 1;
 		case 0x10000810:
 			_eeReadConstMem32(x86reg, (uptr)&counters[1].mode);
-			EECNT_LOG("Counter 1 mode read = %x\n", counters[1].modeval);
 			return 0;
 		case 0x10000820:
 			_eeReadConstMem32(x86reg, (uptr)&counters[1].target);
-			EECNT_LOG("Counter 1 target read = %x\n", counters[1].target);
 			return 0;
 		case 0x10000830:
 			_eeReadConstMem32(x86reg, (uptr)&counters[1].hold);
@@ -265,16 +259,13 @@ int hwConstRead32(u32 x86reg, u32 mem)
 			iFlushCall(0);
 			PUSH32I(2);
 			CALLFunc((uptr)rcntRcount);
-			EECNT_LOG("Counter 2 count read = %x\n", rcntRcount(2));
 			ADD32ItoR(ESP, 4);
 			return 1;
 		case 0x10001010:
 			_eeReadConstMem32(x86reg, (uptr)&counters[2].mode);
-			EECNT_LOG("Counter 2 mode read = %x\n", counters[2].modeval);
 			return 0;
 		case 0x10001020:
 			_eeReadConstMem32(x86reg, (uptr)&counters[2].target);
-			EECNT_LOG("Counter 2 target read = %x\n", counters[2].target);
 			return 0;
 		case 0x10001030:
 			// fixme: Counters[2].hold and Counters[3].hold are never assigned values
@@ -286,16 +277,13 @@ int hwConstRead32(u32 x86reg, u32 mem)
 			iFlushCall(0);
 			PUSH32I(3);
 			CALLFunc((uptr)rcntRcount);
-			EECNT_LOG("Counter 3 count read = %x\n", rcntRcount(3));
 			ADD32ItoR(ESP, 4);
 			return 1;
 		case 0x10001810:
 			_eeReadConstMem32(x86reg, (uptr)&counters[3].mode);
-			EECNT_LOG("Counter 3 mode read = %x\n", counters[3].modeval);
 			return 0;
 		case 0x10001820:
 			_eeReadConstMem32(x86reg, (uptr)&counters[3].target);
-			EECNT_LOG("Counter 3 target read = %x\n", counters[3].target);
 			return 0;
 		case 0x10001830:
 			// fixme: Counters[2].hold and Counters[3].hold are never assigned values
