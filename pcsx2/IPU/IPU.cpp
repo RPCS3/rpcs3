@@ -297,7 +297,7 @@ __forceinline u64 ipuRead64(u32 mem)
 			DevCon::Notice("reading 64bit IPU top");
 			break;
 
-		case 0x10002030: // IPU_TOP
+		case 0x30: // IPU_TOP
 			IPU_LOG("Ipu read64: IPU_TOP=%x,  bp = %d\n",ipuRegs->top,g_BP.BP);
 
 			//return *(u64*)&ipuRegs->top;
@@ -350,15 +350,17 @@ __forceinline void ipuWrite32(u32 mem, u32 value)
 	// of memory (if not, it's probably bad code).
 
 	jASSUME( ( mem & ~0xfff ) == 0x10002000 );
+	mem &= 0xfff;
 
 	IPUProcessInterrupt();
 
 	switch (mem){
-		case 0x10002000: // IPU_CMD
+		case 0x00: // IPU_CMD
 	        IPU_LOG("Ipu write32: IPU_CMD=0x%08X\n",value);
 			IPUCMD_WRITE(value);
 			break;
-		case 0x10002010: // IPU_CTRL
+
+		case 0x10: // IPU_CTRL
 			ipuRegs->ctrl._u32 = (value&0x47f30000)|(ipuRegs->ctrl._u32&0x8000ffff);
             if( ipuRegs->ctrl.IDP == 3 ) {
                 SysPrintf("IPU Invalid Intra DC Precision, switching to 9 bits\n");
@@ -369,8 +371,8 @@ __forceinline void ipuWrite32(u32 mem, u32 value)
 			}
 
 	        IPU_LOG("Ipu write32: IPU_CTRL=0x%08X\n",value);
-
 			break;
+
 		default:
 			IPU_LOG("Ipu write32: Unknown=%x\n", mem);
 			*(u32*)((u8*)ipuRegs + mem) = value;
@@ -384,11 +386,13 @@ __forceinline void ipuWrite64(u32 mem, u64 value)
 	// of memory (if not, it's probably bad code).
 
 	jASSUME( ( mem & ~0xfff ) == 0x10002000 );
+	mem &= 0xfff;
 
 	IPUProcessInterrupt();
 
-	switch (mem){
-		case 0x10002000:
+	switch( mem )
+	{
+		case 0x10:
 	        IPU_LOG("Ipu write64: IPU_CMD=0x%08X\n",value);
 			IPUCMD_WRITE((u32)value);
 			break;
