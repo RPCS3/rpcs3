@@ -3686,8 +3686,18 @@ void recVUMI_IBEQ( VURegs* vuu, s32 info )
 
 void recVUMI_IBGEZ( VURegs* vuu, s32 info )
 {
-	int fsreg = _checkX86reg(X86TYPE_VI|(VU==&VU1?X86TYPE_VU1:0), _Fs_, MODE_READ);
+	int fsreg;
 	s_JumpX86 = _allocX86reg(-1, X86TYPE_VUJUMP, 0, MODE_WRITE);
+
+#ifdef SUPERVU_VIBRANCHDELAY
+	if( s_pCurInst->vicached >= 0 && s_pCurInst->vicached == _Fs_ ) {
+		fsreg = -1;
+	}
+    else
+#endif
+	{
+		fsreg = _checkX86reg(X86TYPE_VI|(VU==&VU1?X86TYPE_VU1:0), _Fs_, MODE_READ);
+	}
 
 	if( fsreg >= 0 ) {
 		OR16RtoR(fsreg, fsreg);
@@ -3703,8 +3713,18 @@ void recVUMI_IBGEZ( VURegs* vuu, s32 info )
 
 void recVUMI_IBGTZ( VURegs* vuu, s32 info )
 {
-	int fsreg = _checkX86reg(X86TYPE_VI|(VU==&VU1?X86TYPE_VU1:0), _Fs_, MODE_READ);
+	int fsreg;
 	s_JumpX86 = _allocX86reg(-1, X86TYPE_VUJUMP, 0, MODE_WRITE);
+
+#ifdef SUPERVU_VIBRANCHDELAY
+	if( s_pCurInst->vicached >= 0 && s_pCurInst->vicached == _Fs_ ) {
+		fsreg = -1;
+	}
+    else
+#endif
+	{
+		fsreg = _checkX86reg(X86TYPE_VI|(VU==&VU1?X86TYPE_VU1:0), _Fs_, MODE_READ);
+	}
 
 	if( fsreg >= 0 ) {
 		CMP16ItoR(fsreg, 0);
@@ -3719,8 +3739,18 @@ void recVUMI_IBGTZ( VURegs* vuu, s32 info )
 
 void recVUMI_IBLEZ( VURegs* vuu, s32 info )
 {
-	int fsreg = _checkX86reg(X86TYPE_VI|(VU==&VU1?X86TYPE_VU1:0), _Fs_, MODE_READ);
+	int fsreg;
 	s_JumpX86 = _allocX86reg(-1, X86TYPE_VUJUMP, 0, MODE_WRITE);
+
+#ifdef SUPERVU_VIBRANCHDELAY
+	if( s_pCurInst->vicached >= 0 && s_pCurInst->vicached == _Fs_ ) {
+		fsreg = -1;
+	}
+    else
+#endif
+	{
+		fsreg = _checkX86reg(X86TYPE_VI|(VU==&VU1?X86TYPE_VU1:0), _Fs_, MODE_READ);
+	}
 
 	if( fsreg >= 0 ) {
 		CMP16ItoR(fsreg, 0);
@@ -3735,8 +3765,18 @@ void recVUMI_IBLEZ( VURegs* vuu, s32 info )
 
 void recVUMI_IBLTZ( VURegs* vuu, s32 info )
 {
-	int fsreg = _checkX86reg(X86TYPE_VI|(VU==&VU1?X86TYPE_VU1:0), _Fs_, MODE_READ);
+	int fsreg;
 	s_JumpX86 = _allocX86reg(-1, X86TYPE_VUJUMP, 0, MODE_WRITE);
+
+#ifdef SUPERVU_VIBRANCHDELAY
+	if( s_pCurInst->vicached >= 0 && s_pCurInst->vicached == _Fs_ ) {
+		fsreg = -1;
+	}
+    else
+#endif
+	{
+		fsreg = _checkX86reg(X86TYPE_VI|(VU==&VU1?X86TYPE_VU1:0), _Fs_, MODE_READ);
+	}
 
 	if( fsreg >= 0 ) {
 		OR16RtoR(fsreg, fsreg);
