@@ -236,11 +236,17 @@ bool ipuCanFreeze()
 
 __forceinline u32 ipuRead32(u32 mem)
 {
+	// Note: It's assumed that mem's input value is always in the 0x10002000 page
+	// of memory (if not, it's probably bad code).
+
+	jASSUME( ( mem & ~0xff ) == 0x10002000 );
+	mem &= 0xff;	// ipu repeats every 0x100
+
 	IPUProcessInterrupt();
 
-	switch (mem){
-
-		case 0x10002010: // IPU_CTRL
+	switch( mem )
+	{
+		case 0x10: // IPU_CTRL
 			ipuRegs->ctrl.IFC = g_BP.IFC;
 			//ipuRegs->ctrl.OFC = min(g_nIPU0Data, 8); // check if transfering to ipu0
 			ipuRegs->ctrl.CBP = coded_block_pattern;
@@ -250,7 +256,7 @@ __forceinline u32 ipuRead32(u32 mem)
 
 			return ipuRegs->ctrl._u32;
 
-		case 0x10002020: // IPU_BP
+		case 0x20: // IPU_BP
 
 			ipuRegs->ipubp = g_BP.BP & 0x7f;
 			ipuRegs->ipubp |= g_BP.IFC<<8;
@@ -260,28 +266,35 @@ __forceinline u32 ipuRead32(u32 mem)
 			return ipuRegs->ipubp;
 	}
 
-	return *(u32*)(((u8*)ipuRegs)+(mem&0xff)); // ipu repeats every 0x100
+	return *(u32*)(((u8*)ipuRegs)+mem);
 }
 
 __forceinline u64 ipuRead64(u32 mem)
 {
+	// Note: It's assumed that mem's input value is always in the 0x10002000 page
+	// of memory (if not, it's probably bad code).
+	
+	jASSUME( ( mem & ~0xff ) == 0x10002000 );
+	mem &= 0xff;	// ipu repeats every 0x100
+
 	IPUProcessInterrupt();
 
-#ifdef PCSX2_DEVBUILD
-	if( mem == 0x10002010 ) {
-		Console::Notice("reading 64bit IPU ctrl");
-	}
-	if( mem == 0x10002020 ) {
-		Console::Notice("reading 64bit IPU top");
-	}
-#endif
-	switch (mem){
-		case 0x10002000: // IPU_CMD
+	switch( mem )
+	{
+		case 0x00: // IPU_CMD
 
 			//if(!ipuRegs->cmd.BUSY){
 			if( ipuRegs->cmd.DATA&0xffffff )
 				IPU_LOG("Ipu read64: IPU_CMD=BUSY=%x, DATA=%08X\n", ipuRegs->cmd.BUSY?1:0,ipuRegs->cmd.DATA);
 			//return *(u64*)&ipuRegs->cmd;
+			break;
+
+		case 0x10:
+			DevCon::Notice("reading 64bit IPU ctrl");
+			break;
+
+		case 0x20:
+			DevCon::Notice("reading 64bit IPU top");
 			break;
 
 		case 0x10002030: // IPU_TOP
@@ -293,9 +306,8 @@ __forceinline u64 ipuRead64(u32 mem)
 		default:
 			IPU_LOG("Ipu read64: Unknown=%x\n", mem);
 			break;
-
 	}
-	return *(u64*)(((u8*)ipuRegs)+(mem&0xff));
+	return *(u64*)(((u8*)ipuRegs)+mem);
 }
 
 void ipuSoftReset()
@@ -332,8 +344,13 @@ void ipuSoftReset()
 	g_nCmdPos[0] = 0; g_nCmdPos[1] = 0;
 }
 
-__forceinline void ipuWrite32(u32 mem,u32 value)
+__forceinline void ipuWrite32(u32 mem, u32 value)
 {
+	// Note: It's assumed that mem's input value is always in the 0x10002000 page
+	// of memory (if not, it's probably bad code).
+
+	jASSUME( ( mem & ~0xfff ) == 0x10002000 );
+
 	IPUProcessInterrupt();
 
 	switch (mem){
@@ -356,13 +373,18 @@ __forceinline void ipuWrite32(u32 mem,u32 value)
 			break;
 		default:
 			IPU_LOG("Ipu write32: Unknown=%x\n", mem);
-			*(u32*)((u8*)ipuRegs + (mem&0xfff)) = value;
+			*(u32*)((u8*)ipuRegs + mem) = value;
 			break;
 	}
 }
 
 __forceinline void ipuWrite64(u32 mem, u64 value)
 {
+	// Note: It's assumed that mem's input value is always in the 0x10002000 page
+	// of memory (if not, it's probably bad code).
+
+	jASSUME( ( mem & ~0xfff ) == 0x10002000 );
+
 	IPUProcessInterrupt();
 
 	switch (mem){
@@ -373,7 +395,7 @@ __forceinline void ipuWrite64(u32 mem, u64 value)
 
 		default:
 			IPU_LOG("Ipu write64: Unknown=%x\n", mem);
-			*(u64*)((u8*)ipuRegs + (mem&0xfff)) = value;
+			*(u64*)((u8*)ipuRegs + mem) = value;
 			break;
 	}
 }

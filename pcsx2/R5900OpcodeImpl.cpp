@@ -315,8 +315,11 @@ void LWU() {
 	}
 }
 
-u32 LWL_MASK[4] = { 0xffffff, 0xffff, 0xff, 0 };
-u32 LWL_SHIFT[4] = { 24, 16, 8, 0 };
+static const s32 LWL_MASK[4] = { 0xffffff, 0x0000ffff, 0x000000ff, 0x00000000 };
+static const s32 LWR_MASK[4] = { 0x000000, 0xff000000, 0xffff0000, 0xffffff00 };
+
+static const u8 LWL_SHIFT[4] = { 24, 16, 8, 0 };
+static const u8 LWR_SHIFT[4] = { 0, 8, 16, 24 };
 
 void LWL() {
 	s32 addr = cpuRegs.GPR.r[_Rs_].UL[0] + _Imm_;
@@ -325,11 +328,14 @@ void LWL() {
 
 	if (!_Rt_) return;
 	memRead32(addr & ~3, &mem);
-	cpuRegs.GPR.r[_Rt_].UD[0] =	(cpuRegs.GPR.r[_Rt_].UL[0] & LWL_MASK[shift]) | 
+
+	// Reassignment note: ensure the compiler does sign extension into 64 bits, by using (s32).
+	cpuRegs.GPR.r[_Rt_].UD[0] =	(s32)(cpuRegs.GPR.r[_Rt_].SL[0] & LWL_MASK[shift]) | 
 								(mem << LWL_SHIFT[shift]);
 
 	/*
 	Mem = 1234.  Reg = abcd
+	(result is always sign extended into the upper 32 bits of the Rt)
 
 	0   4bcd   (mem << 24) | (reg & 0x00ffffff)
 	1   34cd   (mem << 16) | (reg & 0x0000ffff)
@@ -338,23 +344,35 @@ void LWL() {
 	*/
 }
 
-u32 LWR_MASK[4] = { 0, 0xff000000, 0xffff0000, 0xffffff00 };
-u32 LWR_SHIFT[4] = { 0, 8, 16, 24 };
 
 void LWR() {
 	s32 addr = cpuRegs.GPR.r[_Rs_].UL[0] + _Imm_;
 	u32 shift = addr & 3;
-	u32 mem;
 
 	if (!_Rt_) return;
-	memRead32(addr & ~3, &mem);
-	cpuRegs.GPR.r[_Rt_].UD[0] =	(cpuRegs.GPR.r[_Rt_].UL[0] & LWR_MASK[shift]) | 
-								(mem >> LWR_SHIFT[shift]);
 
+	u32 mem;
+	memRead32(addr & ~3, &mem);
+
+	mem = (cpuRegs.GPR.r[_Rt_].SL[0] & LWR_MASK[shift]) | 
+		  (mem >> LWR_SHIFT[shift]);
+
+	if( shift == 0 )
+	{
+		// This special case requires sign extension into the full 64 bit dest.
+		cpuRegs.GPR.r[_Rt_].SD[0] =	(s32)mem;
+	}
+	else
+	{	
+		// This case can simply set the lower 32 bits of the target register.  Upper
+		// 32 bits are always preserved.
+		cpuRegs.GPR.r[_Rt_].UL[0] =	mem;
+	}
+	
 	/*
 	Mem = 1234.  Reg = abcd
 
-	0   1234   (mem      ) | (reg & 0x00000000)
+	0   1234   (mem      ) | (reg & 0x00000000)	[sign extend into upper 32 bits!]
 	1   a123   (mem >>  8) | (reg & 0xff000000)
 	2   ab12   (mem >> 16) | (reg & 0xffff0000)
 	3   abc1   (mem >> 24) | (reg & 0xffffff00)
@@ -373,9 +391,18 @@ void LD() {
 	}
 }
 
-u64 LDL_MASK[8] = { 0x00ffffffffffffffLL, 0x0000ffffffffffffLL, 0x000000ffffffffffLL, 0x00000000ffffffffLL, 
-					0x0000000000ffffffLL, 0x000000000000ffffLL, 0x00000000000000ffLL, 0x0000000000000000LL };
-u32 LDL_SHIFT[8] = { 56, 48, 40, 32, 24, 16, 8, 0 };
+static const u64 LDL_MASK[8] =
+{	0x00ffffffffffffffLL, 0x0000ffffffffffffLL, 0x000000ffffffffffLL, 0x00000000ffffffffLL, 
+	0x0000000000ffffffLL, 0x000000000000ffffLL, 0x00000000000000ffLL, 0x0000000000000000LL
+};
+static const u64 LDR_MASK[8] =
+{	0x0000000000000000LL, 0xff00000000000000LL, 0xffff000000000000LL, 0xffffff0000000000LL,
+	0xffffffff00000000LL, 0xffffffffff000000LL, 0xffffffffffff0000LL, 0xffffffffffffff00LL
+};
+
+static const u8 LDR_SHIFT[8] = { 0, 8, 16, 24, 32, 40, 48, 56 };
+static const u8 LDL_SHIFT[8] = { 56, 48, 40, 32, 24, 16, 8, 0 };
+
 
 void LDL() {
 	u32 addr = cpuRegs.GPR.r[_Rs_].UL[0] + _Imm_;
@@ -387,10 +414,6 @@ void LDL() {
 	cpuRegs.GPR.r[_Rt_].UD[0] =	(cpuRegs.GPR.r[_Rt_].UD[0] & LDL_MASK[shift]) | 
 								(mem << LDL_SHIFT[shift]);
 }
-
-u64 LDR_MASK[8] = { 0x0000000000000000LL, 0xff00000000000000LL, 0xffff000000000000LL, 0xffffff0000000000LL,
-					0xffffffff00000000LL, 0xffffffffff000000LL, 0xffffffffffff0000LL, 0xffffffffffffff00LL };
-u32 LDR_SHIFT[8] = { 0, 8, 16, 24, 32, 40, 48, 56 };
 
 void LDR() {  
 	u32 addr = cpuRegs.GPR.r[_Rs_].UL[0] + _Imm_;
@@ -438,8 +461,11 @@ void SW(){
     memWrite32(addr, cpuRegs.GPR.r[_Rt_].UL[0]); 
 }
 
-u32 SWL_MASK[4] = { 0xffffff00, 0xffff0000, 0xff000000, 0x00000000 };
-u32 SWL_SHIFT[4] = { 24, 16, 8, 0 };
+static const u32 SWL_MASK[4] = { 0xffffff00, 0xffff0000, 0xff000000, 0x00000000 };
+static const u32 SWR_MASK[4] = { 0x00000000, 0x000000ff, 0x0000ffff, 0x00ffffff };
+
+static const u8 SWR_SHIFT[4] = { 0, 8, 16, 24 };
+static const u8 SWL_SHIFT[4] = { 24, 16, 8, 0 };
 
 void SWL() {
 	u32 addr = cpuRegs.GPR.r[_Rs_].UL[0] + _Imm_;
@@ -448,8 +474,10 @@ void SWL() {
 
 	memRead32(addr & ~3, &mem);
 
-	memWrite32(addr & ~3,  (cpuRegs.GPR.r[_Rt_].UL[0] >> SWL_SHIFT[shift]) |
-		      (  mem & SWL_MASK[shift]) );
+	memWrite32( addr & ~3,
+		(cpuRegs.GPR.r[_Rt_].UL[0] >> SWL_SHIFT[shift]) |
+		(mem & SWL_MASK[shift])
+	);
 	/*
 	Mem = 1234.  Reg = abcd
 
@@ -460,9 +488,6 @@ void SWL() {
 	*/
 }
 
-u32 SWR_MASK[4] = { 0x00000000, 0x000000ff, 0x0000ffff, 0x00ffffff };
-u32 SWR_SHIFT[4] = { 0, 8, 16, 24 };
-
 void SWR() {
 	u32 addr = cpuRegs.GPR.r[_Rs_].UL[0] + _Imm_;
 	u32 shift = addr & 3;
@@ -470,8 +495,10 @@ void SWR() {
 
 	memRead32(addr & ~3, &mem);
 
-	memWrite32(addr & ~3,  (cpuRegs.GPR.r[_Rt_].UL[0] << SWR_SHIFT[shift]) |
-		      ( mem & SWR_MASK[shift]) );
+	memWrite32( addr & ~3,
+		(cpuRegs.GPR.r[_Rt_].UL[0] << SWR_SHIFT[shift]) |
+		(mem & SWR_MASK[shift])
+	);
 
 	/*
 	Mem = 1234.  Reg = abcd
@@ -490,9 +517,17 @@ void SD() {
     memWrite64(addr,&cpuRegs.GPR.r[_Rt_].UD[0]); 
 }
 
-u64 SDL_MASK[8] = { 0xffffffffffffff00LL, 0xffffffffffff0000LL, 0xffffffffff000000LL, 0xffffffff00000000LL, 
-					0xffffff0000000000LL, 0xffff000000000000LL, 0xff00000000000000LL, 0x0000000000000000LL };
-u32 SDL_SHIFT[8] = { 56, 48, 40, 32, 24, 16, 8, 0 };
+static const u64 SDL_MASK[8] =
+{	0xffffffffffffff00LL, 0xffffffffffff0000LL, 0xffffffffff000000LL, 0xffffffff00000000LL, 
+	0xffffff0000000000LL, 0xffff000000000000LL, 0xff00000000000000LL, 0x0000000000000000LL
+};
+static const u64 SDR_MASK[8] =
+{	0x0000000000000000LL, 0x00000000000000ffLL, 0x000000000000ffffLL, 0x0000000000ffffffLL,
+	0x00000000ffffffffLL, 0x000000ffffffffffLL, 0x0000ffffffffffffLL, 0x00ffffffffffffffLL
+};
+
+static const u8 SDL_SHIFT[8] = { 56, 48, 40, 32, 24, 16, 8, 0 };
+static const u8 SDR_SHIFT[8] = { 0, 8, 16, 24, 32, 40, 48, 56 };
 
 void SDL() {
 	u32 addr = cpuRegs.GPR.r[_Rs_].UL[0] + _Imm_;
@@ -500,14 +535,11 @@ void SDL() {
 	u64 mem;
 
 	memRead64(addr & ~7, &mem);
-	mem =(cpuRegs.GPR.r[_Rt_].UD[0] >> SDL_SHIFT[shift]) |
-		      ( mem & SDL_MASK[shift]);
+	mem = (cpuRegs.GPR.r[_Rt_].UD[0] >> SDL_SHIFT[shift]) |
+		  (mem & SDL_MASK[shift]);
 	memWrite64(addr & ~7, &mem);
 }
 
-u64 SDR_MASK[8] = { 0x0000000000000000LL, 0x00000000000000ffLL, 0x000000000000ffffLL, 0x0000000000ffffffLL,
-					0x00000000ffffffffLL, 0x000000ffffffffffLL, 0x0000ffffffffffffLL, 0x00ffffffffffffffLL };
-u32 SDR_SHIFT[8] = { 0, 8, 16, 24, 32, 40, 48, 56 };
 
 void SDR() {
 	u32 addr = cpuRegs.GPR.r[_Rs_].UL[0] + _Imm_;
@@ -515,8 +547,8 @@ void SDR() {
 	u64 mem;
 
 	memRead64(addr & ~7, &mem);
-	mem=(cpuRegs.GPR.r[_Rt_].UD[0] << SDR_SHIFT[shift]) |
-		      ( mem & SDR_MASK[shift]);
+	mem = (cpuRegs.GPR.r[_Rt_].UD[0] << SDR_SHIFT[shift]) |
+		  (mem & SDR_MASK[shift]);
 	memWrite64(addr & ~7, &mem );
 }
 

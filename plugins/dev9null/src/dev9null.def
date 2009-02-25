@@ -1,10 +1,16 @@
-; DEV9null.def : Declares the module parameters for the DLL.
-
+; DEV9null.def : Declares the module parameters for the DLL.
+
+
+
 LIBRARY      "DEV9null"
-DESCRIPTION  'DEV9null Driver'
-
-EXPORTS
-    ; Explicit exports can go here
+;DESCRIPTION  'DEV9null Driver'
+
+
+
+EXPORTS
+
+    ; Explicit exports can go here
+
 	PS2EgetLibType		@2
 	PS2EgetLibName		@3
 	PS2EgetLibVersion2	@4
