@@ -322,15 +322,14 @@ static const u8 LWL_SHIFT[4] = { 24, 16, 8, 0 };
 static const u8 LWR_SHIFT[4] = { 0, 8, 16, 24 };
 
 void LWL() {
+	if (!_Rt_) return;
+
 	s32 addr = cpuRegs.GPR.r[_Rs_].UL[0] + _Imm_;
 	u32 shift = addr & 3;
-	u32 mem;
+	s32 mem;	// ensure the compiler does correct sign extension into 64 bits by using s32
+	memRead32(addr & ~3, (u32*)&mem);
 
-	if (!_Rt_) return;
-	memRead32(addr & ~3, &mem);
-
-	// Reassignment note: ensure the compiler does sign extension into 64 bits, by using (s32).
-	cpuRegs.GPR.r[_Rt_].UD[0] =	(s32)(cpuRegs.GPR.r[_Rt_].SL[0] & LWL_MASK[shift]) | 
+	cpuRegs.GPR.r[_Rt_].SD[0] =	(cpuRegs.GPR.r[_Rt_].SL[0] & LWL_MASK[shift]) | 
 								(mem << LWL_SHIFT[shift]);
 
 	/*
@@ -346,13 +345,13 @@ void LWL() {
 
 
 void LWR() {
-	s32 addr = cpuRegs.GPR.r[_Rs_].UL[0] + _Imm_;
-	u32 shift = addr & 3;
 
 	if (!_Rt_) return;
 
-	u32 mem;
-	memRead32(addr & ~3, &mem);
+	s32 addr = cpuRegs.GPR.r[_Rs_].UL[0] + _Imm_;
+	u32 shift = addr & 3;
+	s32 mem;	// ensure the compiler does correct sign extension into 64 bits by using s32
+	memRead32(addr & ~3, (u32*)&mem);
 
 	mem = (cpuRegs.GPR.r[_Rt_].SL[0] & LWR_MASK[shift]) | 
 		  (mem >> LWR_SHIFT[shift]);
@@ -360,7 +359,7 @@ void LWR() {
 	if( shift == 0 )
 	{
 		// This special case requires sign extension into the full 64 bit dest.
-		cpuRegs.GPR.r[_Rt_].SD[0] =	(s32)mem;
+		cpuRegs.GPR.r[_Rt_].SD[0] =	mem;
 	}
 	else
 	{	
