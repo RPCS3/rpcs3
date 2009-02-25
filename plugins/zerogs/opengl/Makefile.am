@@ -1,7 +1,7 @@
 # Create a shared library libZeroGSogl
 AUTOMAKE_OPTIONS = foreign
 noinst_LIBRARIES = libZeroGSogl.a
-INCLUDES = -I@srcdir@/common -I@srcdir@/3rdparty
+INCLUDES = -I@srcdir@/../../../common/include -I@srcdir@/../../../3rdparty
 
 libZeroGSogl_a_CPPFLAGS = $(shell pkg-config --cflags gtk+-2.0)
 libZeroGSogl_a_CXXFLAGS = $(shell pkg-config --cflags gtk+-2.0)

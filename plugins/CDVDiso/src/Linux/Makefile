@@ -9,7 +9,7 @@ OBJS = ../CDVDisop.o Config.o Linux.o ../libiso.o
 CFGOBJS = conf.o interface.o support.o ${OBJS}
 LIBS = -lz -lbz2 -lstdc++
 CFGLIBS = $(shell pkg-config --libs gtk+-2.0) ${LIBS}
-CFLAGS += $(shell pkg-config --cflags gtk+-2.0) -I../common
+CFLAGS += $(shell pkg-config --cflags gtk+-2.0) -I../../../../common/include  -I../../../../3rdparty
 DEPS:= $(OBJS:.o=.d) $(CFGOBJS:.o=.d) 
 
 all: plugin cfg

@@ -39,7 +39,8 @@ RateTransposer.cpp SoundTouch.cpp TDStretch.cpp WavFile.cpp cpu_detect_x86_gcc.c
 
 # ??? test for -fcheck-new in configure.ac
 # other compiler flags to add
-AM_CXXFLAGS=-O3 -msse -fcheck-new -I../../include
+AM_CXXFLAGS=-O3 -msse -fcheck-new
+#-I../../include
 
 # other linking flags to add
 #libSoundTouch_la_LIBADD=

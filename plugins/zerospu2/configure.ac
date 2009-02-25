@@ -105,7 +105,7 @@ AC_CHECK_LIB(dl,main,[LIBS="$LIBS -ldl"])
 AC_CHECK_LIB(asound,main,[LIBS="$LIBS -lasound"])
 
 AC_OUTPUT([
- 3rdparty/SoundTouch/Makefile
+ ../../3rdparty/SoundTouch/Makefile
  Makefile
  ])
 

@@ -2,7 +2,7 @@
 CC = gcc
 
 PLUGIN = libSPU2null.so
-CFLAGS+= -fPIC -Wall -O2 -fomit-frame-pointer -D__LINUX__
+CFLAGS+= -fPIC -Wall -O2 -fomit-frame-pointer -D__LINUX__ -I../../../common/include
 OBJS = SPU2.o
 DEPS:= $(OBJS:.o=.d)
 LIBS = $(shell pkg-config --libs gtk+-2.0)

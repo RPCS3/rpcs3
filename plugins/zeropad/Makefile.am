@@ -1,7 +1,7 @@
 # Create a shared library libZeroPAD
 AUTOMAKE_OPTIONS = foreign
 noinst_LIBRARIES = libZeroPAD.a
-INCLUDES = -I@srcdir@/common
+INCLUDES = -I@srcdir@/../../common/include
 
 libZeroPAD_a_CXXFLAGS = $(shell pkg-config --cflags gtk+-2.0)
 libZeroPAD_a_CFLAGS = $(shell pkg-config --cflags gtk+-2.0)

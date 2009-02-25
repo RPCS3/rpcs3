@@ -2,7 +2,6 @@
 # Makefile for MINGW32
 #
 
-
 all: cdvdnull
 install: all
 
@@ -23,10 +22,9 @@ RESOBJ = cdvdnull.o
 
 OBJS = CDVD.o
 
-
 DEPS:= $(OBJS:.o=.d)
 
-CFLAGS = -Wall ${OPTIMIZE} -I. -I/usr/local/include ${FLAGS} -fPIC
+CFLAGS = -Wall ${OPTIMIZE} -I../../../common/include -I. -I/usr/local/include ${FLAGS} -fPIC
 
 cdvdnull: ${OBJS}
 #	dllwrap --def plugin.def -o ${PLUGIN} ${OBJS} ${LIBS}

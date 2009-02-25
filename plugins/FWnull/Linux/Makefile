@@ -1,7 +1,7 @@
 
 PLUGIN = libFWnull.so
 CFG = cfgFWnull
-CFLAGS+= -fPIC -Wall -I. -I.. -O3 -fomit-frame-pointer -fno-strict-aliasing
+CFLAGS+= -fPIC -Wall -I. -I.. -I../../../common/include -O3 -fomit-frame-pointer -fno-strict-aliasing
 OBJS = ../FW.o
 OBJS+= Linux.o Config.o
 CFGOBJS = conf.o interface.o support.o Config.o

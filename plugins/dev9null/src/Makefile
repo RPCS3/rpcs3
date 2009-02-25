@@ -2,7 +2,7 @@
 CC = gcc
 
 PLUGIN = libDEV9null.so
-CFLAGS+= -fPIC -Wall -O2 -fomit-frame-pointer -D__LINUX__
+CFLAGS+= -fPIC -Wall -O2 -fomit-frame-pointer -D__LINUX__ -I../../../common/include
 OBJS = dev9null.o
 DEPS:= $(OBJS:.o=.d)
 

@@ -2,7 +2,6 @@
 
 #include "CDVD.h"
 
-
 char *LibName       = "CDVDnull Driver";
 
 const unsigned char version = PS2E_CDVD_VERSION;
