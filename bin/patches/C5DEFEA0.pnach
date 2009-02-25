@@ -1,7 +1,3 @@
 gametitle=Okami [SLPM 66375] (J)
-//fix sceSifDmaStat loop
-patch=0,EE,00212a78,word,24020001
 //ZeroGS Patch - GAME_FULL16BITRES|GAME_NODEPTHRESOLVE|GAME_FASTUPDATE
 zerogs=00058000
-//alternate ZeroGS Patch for speed VS pretty GFX - disable all lighting|blur effects
-//zerogs=01000000

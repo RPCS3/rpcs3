@@ -1,6 +1,0 @@
-gametitle=Samurai Warriors
-comment=Skips Video,by bositman
-//Skip Videos
-patch=0,EE,00126af0,word,24020001
-//ZeroGS patch - GAME_AUTORESET
-zerogs=00000002

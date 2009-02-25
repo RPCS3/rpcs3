@@ -1,3 +1,0 @@
-gametitle=GodHand [SLPM 66550] (J)
-//fix DMA loop
-patch=0,EE,002bdd28,word,24020001

@@ -1,6 +1,0 @@
-gametitle=Nano Breaker [SLKA 25263] (J)
-comment=patches by Nachbrenner
-//Skip Videos (sceMpegIsEnd)
-patch=0,EE,0010a330,word,24020001
-//fix psxUNK crash: skip RotateThreadReadyQueue
-patch=0,EE,0019f708,word,00000000
