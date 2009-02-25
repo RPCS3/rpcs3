@@ -55,10 +55,10 @@ __forceinline void gsInterrupt() {
 		// re-reaise the IRQ as part of the mysterious Path3fix.
 		// fixme - this hack *should* have the gs_irq raised from the VIF, I think.  It would be
 		// more efficient and more correct.  (air)
-		if (!(vif1Regs->mskpath3 && (vif1ch->chcr & 0x100)) || (psHu32(GIF_MODE) & 0x1))
-			CPU_INT( 2, 64 );
+		/*if (!(vif1Regs->mskpath3 && (vif1ch->chcr & 0x100)) || (psHu32(GIF_MODE) & 0x1))
+			CPU_INT( 2, 64 );*/
 #endif
-		return;
+		if(gspath3done == 0) return;
 	}
 
 	gspath3done = 0;
@@ -254,6 +254,7 @@ void GIFdma()
 		FreezeXMMRegs(0); 
 		FreezeMMXRegs(0);	 
 		if(gif->qwc == 0 && (gif->chcr & 0xc) == 0) gspath3done = 1;
+		return;
 	}
 	else {
 		// Chain Mode
@@ -311,9 +312,18 @@ void GIFdma()
 			}
 		}
 	}
+
 	prevcycles = 0;
 	if (!(vif1Regs->mskpath3 || (psHu32(GIF_MODE) & 0x1)))	{
-		CPU_INT(2, gscycles);
+		if(gspath3done == 0){
+			ptag = (u32*)dmaGetAddr(gif->tadr);  //Set memory pointer to TADR
+			gif->qwc  = (u16)ptag[0];			    //QWC set to lower 16bits of the tag
+			gif->chcr = ( gif->chcr & 0xFFFF ) | ( (*ptag) & 0xFFFF0000 );  //Transfer upper part of tag to CHCR bits 31-15
+			CPU_INT(2, gif->qwc * BIAS);
+			gif->qwc = 0;
+			return;
+		}
+		//CPU_INT(2, gif->qwc * BIAS);
 		gscycles = 0;
 	}
 }
@@ -323,18 +333,46 @@ void dmaGIF() {
 	//	CPU_INT(2, 48); //Wait time for the buffer to fill, fixes some timing problems in path 3 masking
 	//}				//It takes the time of 24 QW for the BUS to become ready - The Punisher, And1 Streetball
 	//else
-	gspath3done = 0; // For some reason this doesnt clear? So when the system starts the thread, we will clear it :)
+	
 
-	if(gif->qwc > 0 && (gif->chcr & 0x4) == 0x4)
-        gspath3done = 1; //Halflife sets a QWC amount in chain mode, no tadr set.
+	
 
 	if ((psHu32(DMAC_CTRL) & 0xC) == 0xC ) { // GIF MFIFO
-		//SysPrintf("GIF MFIFO\n");
+		SysPrintf("GIF MFIFO\n");
 		gifMFIFOInterrupt();
 		return;
 	}
 
-	GIFdma();
+	gspath3done = 0; // For some reason this doesnt clear? So when the system starts the thread, we will clear it :)
+
+	GSCSRr &= ~0xC000;  //Clear FIFO stuff
+	GSCSRr |= 0x8000;   //FIFO full
+	//psHu32(GIF_STAT)|= 0xE00; // OPH=1 | APATH=3
+	psHu32(GIF_STAT)|= 0x10000000; // FQC=31, hack ;)
+
+	if ((gif->chcr & 0xc) != 0 && gif->qwc == 0){
+		u32 *ptag;
+		ptag = (u32*)dmaGetAddr(gif->tadr); 
+		gif->qwc  = (u16)ptag[0];			    //QWC set to lower 16bits of the tag
+		gif->chcr = ( gif->chcr & 0xFFFF ) | ( (*ptag) & 0xFFFF0000 );  //Transfer upper part of tag to CHCR bits 31-15
+		CPU_INT(2, gif->qwc * BIAS);
+		gif->qwc = 0;
+		return;
+	}
+
+	if(gif->qwc > 0 && (gif->chcr & 0x4) == 0x4) {
+		//SysPrintf("HL Hack\n");
+        gspath3done = 1; //Halflife sets a QWC amount in chain mode, no tadr set.
+		CPU_INT(2, gif->qwc * BIAS);
+		GIFdma();
+		return;
+	}
+
+	
+
+	//GIFdma();
+	CPU_INT(2, gif->qwc * BIAS);
+	
 }
 
 #define spr0 ((DMACh*)&PS2MEM_HW[0xD000])
@@ -417,7 +455,7 @@ static __forceinline int mfifoGIFchain() {
 
 	return 0;
 }
-
+int gifmfifoirq = 0;
 
 void mfifoGIFtransfer(int qwc) {
 	u32 *ptag;
@@ -425,6 +463,8 @@ void mfifoGIFtransfer(int qwc) {
 	u32 temp = 0;
 	mfifocycles = 0;
 	
+	gifmfifoirq = 0;
+
 	if(qwc > 0 ) {
 				gifqwc += qwc;
 				if(!(gif->chcr & 0x100))return;
@@ -432,6 +472,8 @@ void mfifoGIFtransfer(int qwc) {
 			}
 	SPR_LOG("mfifoGIFtransfer %x madr %x, tadr %x\n", gif->chcr, gif->madr, gif->tadr);
 		
+	
+
 	if(gif->qwc == 0){
 			if(gif->tadr == spr0->madr) {
 	#ifdef PCSX2_DEVBUILD
@@ -489,6 +531,7 @@ void mfifoGIFtransfer(int qwc) {
 				if ((gif->chcr & 0x80) && (ptag[0] >> 31)) {
 				SPR_LOG("dmaIrq Set\n");
 				gifstate = GIF_STATE_DONE;
+				gifmfifoirq = 1;
 			}
 	 }
 	FreezeXMMRegs(1); 
@@ -528,7 +571,7 @@ void gifMFIFOInterrupt()
 	}
 #endif
 	//if(gifqwc > 0)SysPrintf("GIF MFIFO ending with stuff in it %x\n", gifqwc);
-	gifqwc = 0;
+	if( gifmfifoirq == 0) gifqwc = 0;
 	gifstate = GIF_STATE_EMPTY;
 	gif->chcr &= ~0x100;
 	hwDmacIrq(DMAC_GIF);

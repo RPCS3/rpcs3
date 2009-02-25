@@ -26,6 +26,9 @@
 #define spr0 ((DMACh*)&PS2MEM_HW[0xD000])
 #define spr1 ((DMACh*)&PS2MEM_HW[0xD400])
 
+int spr0finished = 0;
+int spr1finished = 0;
+u32 mfifotransferred = 0;
 void sprInit() {
 }
 
@@ -74,6 +77,7 @@ int  _SPR0chain() {
 		hwMFIFOWrite(spr0->madr, (u8*)&PS2MEM_SCRATCH[spr0->sadr & 0x3fff], spr0->qwc << 4);
 		spr0->madr += spr0->qwc << 4;
 		spr0->madr = psHu32(DMAC_RBOR) + (spr0->madr & psHu32(DMAC_RBSR));
+		mfifotransferred += spr0->qwc;
 	} else {
 		memcpy_fast((u8*)pMem, &PS2MEM_SCRATCH[spr0->sadr & 0x3fff], spr0->qwc << 4);
 		Cpu->Clear(spr0->madr, spr0->qwc<<2);
@@ -110,6 +114,7 @@ void _SPR0interleave() {
 		if ((psHu32(DMAC_CTRL) & 0xC) == 0xC || // GIF MFIFO
 			(psHu32(DMAC_CTRL) & 0xC) == 0x8) { // VIF1 MFIFO
 			hwMFIFOWrite(spr0->madr, (u8*)&PS2MEM_SCRATCH[spr0->sadr & 0x3fff], spr0->qwc<<4);
+			mfifotransferred += spr0->qwc;
 		} else {
 			Cpu->Clear(spr0->madr, spr0->qwc<<2);
 			// clear VU mem also!
@@ -122,6 +127,7 @@ void _SPR0interleave() {
 	}
 
 	spr0->qwc = 0;	
+	spr0finished = 1;
 	//CPU_INT(8, cycles);
 }
 
@@ -142,6 +148,7 @@ static __forceinline void _dmaSPR0() {
 		int cycles = 0;
 		SPR0chain();
 		//CPU_INT(8, cycles);
+		spr0finished = 1;
 		
 		return;
 	} else if ((spr0->chcr & 0xc) == 0x4) {
@@ -153,12 +160,12 @@ static __forceinline void _dmaSPR0() {
 			if(spr0->qwc > 0){
 				SPR0chain();
 				//CPU_INT(8, cycles);
-		
+				spr0finished = 1;
 				return;			
 				}
 	// Destination Chain Mode
 
-	while (done == 0) {  // Loop while Dn_CHCR.STR is 1
+	//while (done == 0) {  // Loop while Dn_CHCR.STR is 1
 		ptag = (u32*)&PS2MEM_SCRATCH[spr0->sadr & 0x3fff];
 		spr0->sadr+= 16;
 
@@ -171,7 +178,7 @@ static __forceinline void _dmaSPR0() {
 		spr0->qwc  = (u16)ptag[0];				//QWC set to lower 16bits of the tag
 		spr0->madr = ptag[1];					//MADR = ADDR field
 
-		SPR_LOG("dmaChain %8.8x_%8.8x size=%d, id=%d, addr=%lx\n",
+		SPR_LOG("spr0 dmaChain %8.8x_%8.8x size=%d, id=%d, addr=%lx spr=%lx\n",
 				ptag[1], ptag[0], spr0->qwc, id, spr0->madr);
 
 		if ((psHu32(DMAC_CTRL) & 0x30) == 0x20) { // STS == fromSPR
@@ -184,6 +191,7 @@ static __forceinline void _dmaSPR0() {
 				break;
 
 			case 1: // CNT - Transfer QWC following the tag.
+				done = 0;
 				break;
 
 			case 7: // End - Transfer QWC following the tag
@@ -195,7 +203,7 @@ static __forceinline void _dmaSPR0() {
 			//SysPrintf("SPR0 TIE\n");
 			done = 1;
 			spr0->qwc = 0;
-			break;
+			//break;
 		}
 		
 
@@ -206,7 +214,17 @@ static __forceinline void _dmaSPR0() {
 			hwDmacIrq(8);
 			return;
 		}*/
+		//}
+		spr0finished = done;
+		if(done == 0) {
+			ptag = (u32*)&PS2MEM_SCRATCH[spr0->sadr & 0x3fff];		//Set memory pointer to SADR
+			spr0->qwc  = (u16)ptag[0];					//QWC set to lower 16bits of the tag
+			CPU_INT(8, spr0->qwc / BIAS);
+			spr0->qwc = 0;
+			return;
 		}
+		SPR_LOG("spr0 dmaChain complete %8.8x_%8.8x size=%d, id=%d, addr=%lx spr=%lx\n",
+				ptag[1], ptag[0], spr0->qwc, id, spr0->madr);
 		//CPU_INT(8, cycles);
 	} else { // Interleave Mode
 		_SPR0interleave();
@@ -221,7 +239,7 @@ extern void mfifoGIFtransfer(int);
 
 void SPRFROMinterrupt()
 {
-	int qwc = spr0->qwc;
+	//int qwc = spr0->qwc;
 
 	_dmaSPR0();
 
@@ -229,15 +247,18 @@ void SPRFROMinterrupt()
 		if((spr0->madr & ~psHu32(DMAC_RBSR)) != psHu32(DMAC_RBOR)) SysPrintf("GIF MFIFO Write outside MFIFO area\n");
 		spr0->madr = psHu32(DMAC_RBOR) + (spr0->madr & psHu32(DMAC_RBSR));
 		//SysPrintf("mfifoGIFtransfer %x madr %x, tadr %x\n", gif->chcr, gif->madr, gif->tadr);
-		mfifoGIFtransfer(qwc);
+		mfifoGIFtransfer(mfifotransferred);
+		mfifotransferred = 0;
 	} else
 	if ((psHu32(DMAC_CTRL) & 0xC) == 0x8) { // VIF1 MFIFO
 		if((spr0->madr & ~psHu32(DMAC_RBSR)) != psHu32(DMAC_RBOR)) SysPrintf("VIF MFIFO Write outside MFIFO area\n");
 		spr0->madr = psHu32(DMAC_RBOR) + (spr0->madr & psHu32(DMAC_RBSR));
 		//SysPrintf("mfifoVIF1transfer %x madr %x, tadr %x\n", vif1ch->chcr, vif1ch->madr, vif1ch->tadr);
 		//vifqwc+= qwc;
-		mfifoVIF1transfer(qwc);
+		mfifoVIF1transfer(mfifotransferred);
+		mfifotransferred = 0;
 	}
+	if(spr0finished == 0) return;
 	spr0->chcr&= ~0x100;
 	hwDmacIrq(8);
 }
@@ -249,10 +270,18 @@ void dmaSPR0() { // fromSPR
 	SPR_LOG("dmaSPR0 chcr = %lx, madr = %lx, qwc  = %lx, sadr = %lx\n",
 			spr0->chcr, spr0->madr, spr0->qwc, spr0->sadr);
 
+	if ((spr0->chcr & 0xc) == 0x4){
+			u32 *ptag;
+			ptag = (u32*)&PS2MEM_SCRATCH[spr0->sadr & 0x3fff];		//Set memory pointer to SADR
+			spr0->qwc  = (u16)ptag[0];					//QWC set to lower 16bits of the tag
+			CPU_INT(8, spr0->qwc / BIAS);
+			spr0->qwc = 0;
+			return;
+		}
 	// COMPLETE HACK!!! For now at least..  FFX Videos dont rely on interrupts or reading DMA values
 	// It merely assumes that the last one has finished then starts another one (broke with the DMA fix)
 	// This "shouldn't" cause any problems as SPR is generally faster than the other DMAS anyway. (Refraction)
-	CPU_INT(8, spr0->qwc / 2);
+	CPU_INT(8, spr0->qwc / BIAS);
 	
 	
 	
@@ -310,6 +339,7 @@ void _SPR1interleave() {
 	}
 
 		spr1->qwc = 0;
+		spr1finished = 1;
 		//CPU_INT(9, cycles);
 	
 }
@@ -320,31 +350,35 @@ void _dmaSPR1() { // toSPR work function
 		//if(spr1->qwc == 0 && (spr1->chcr & 0xc) == 1) spr1->qwc = 0xffff;
 		// Transfer Dn_QWC from Dn_MADR to SPR1
 		SPR1chain();
+		spr1finished = 1;
 		//CPU_INT(9, cycles); 
 		return;
-	} else if ((spr1->chcr & 0xc) == 0x4){
+	} else 
+		if ((spr1->chcr & 0xc) == 0x4){
 			int cycles = 0;
 			u32 *ptag;
 			int id, done=0;
 		
 
-	if(spr1->qwc > 0){
-		//if(spr1->qwc == 0 && (spr1->chcr & 0xc) == 1) spr1->qwc = 0xffff;
-		// Transfer Dn_QWC from Dn_MADR to SPR1
-		SPR1chain();
-		//CPU_INT(9, cycles); 
-		return;
-	}
+		if(spr1->qwc > 0){
+			//if(spr1->qwc == 0 && (spr1->chcr & 0xc) == 1) spr1->qwc = 0xffff;
+			// Transfer Dn_QWC from Dn_MADR to SPR1
+			SPR1chain();
+			spr1finished = 1;
+			//CPU_INT(9, cycles); 
+			return;
+		}
 	// Chain Mode
 
-	while (done == 0) {  // Loop while Dn_CHCR.STR is 1
+//	while (done == 0) {  // Loop while Dn_CHCR.STR is 1
 		ptag = (u32*)dmaGetAddr(spr1->tadr);		//Set memory pointer to TADR
 		if (ptag == NULL) {							//Is ptag empty?
 			SysPrintf("SPR1 Tag BUSERR\n");
 			spr1->chcr = ( spr1->chcr & 0xFFFF ) | ( (*ptag) & 0xFFFF0000 );	//Transfer upper part of tag to CHCR bits 31-15
 			psHu32(DMAC_STAT)|= 1<<15;				//If yes, set BEIS (BUSERR) in DMAC_STAT register
 			done = 1;
-			break;
+			spr1finished = done;
+			return;
 		}
 		spr1->chcr = ( spr1->chcr & 0xFFFF ) | ( (*ptag) & 0xFFFF0000 );	//Transfer upper part of tag to CHCR bits 31-15
 
@@ -358,7 +392,7 @@ void _dmaSPR1() { // toSPR work function
 			SPR1transfer(ptag, 4);				//Transfer Tag
 		}
 
-		SPR_LOG("dmaChain %8.8x_%8.8x size=%d, id=%d, addr=%lx\n",
+		SPR_LOG("spr1 dmaChain %8.8x_%8.8x size=%d, id=%d, addr=%lx\n",
 				ptag[1], ptag[0], spr1->qwc, id, spr1->madr);
 		
 		done = hwDmacSrcChain(spr1, id);
@@ -369,9 +403,17 @@ void _dmaSPR1() { // toSPR work function
 			
 			//SysPrintf("SPR1 TIE\n");
 			spr1->qwc = 0;
-			break;
+			done = 1;
+		//	break;
 		}
-	}
+	//}
+		spr1finished = done;
+		if(done == 0) {
+			ptag = (u32*)dmaGetAddr(spr1->tadr);		//Set memory pointer to TADR
+			spr1->qwc  = (u16)ptag[0];					//QWC set to lower 16bits of the tag
+			CPU_INT(9, spr1->qwc / BIAS);
+			spr1->qwc = 0;
+		}
 	} else { // Interleave Mode
 		_SPR1interleave();
 	} 
@@ -387,10 +429,18 @@ void dmaSPR1() { // toSPR
 			spr1->tadr, spr1->sadr);
 #endif
 
+	if ((spr1->chcr & 0xc) == 0x4){
+			u32 *ptag;
+			ptag = (u32*)dmaGetAddr(spr1->tadr);		//Set memory pointer to TADR
+			spr1->qwc  = (u16)ptag[0];					//QWC set to lower 16bits of the tag
+			CPU_INT(9, spr1->qwc / BIAS);
+			spr1->qwc = 0;
+			return;
+		}
 	// COMPLETE HACK!!! For now at least..  FFX Videos dont rely on interrupts or reading DMA values
 	// It merely assumes that the last one has finished then starts another one (broke with the DMA fix)
 	// This "shouldn't" cause any problems as SPR is generally faster than the other DMAS anyway. (Refraction)
-	CPU_INT(9, spr1->qwc / 2);
+	CPU_INT(9, spr1->qwc / BIAS);
 	
 	
 }
@@ -398,6 +448,7 @@ void dmaSPR1() { // toSPR
 void SPRTOinterrupt()
 {
 	_dmaSPR1();
+	if( spr1finished == 0 ) return;
 	spr1->chcr &= ~0x100;
 	hwDmacIrq(9);
 }
