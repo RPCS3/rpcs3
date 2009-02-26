@@ -366,31 +366,34 @@ EXPORT_C_(u16) SPU2read(u32 rmem)
 	//	if(!replay_mode)
 	//		s2r_readreg(Cycles,rmem);
 
-	//TimeUpdate( *cPtr );
-
 	u16 ret=0xDEAD; u32 core=0, mem=rmem&0xFFFF, omem=mem;
 	if (mem & 0x400) { omem^=0x400; core=1; }
 
 	if(rmem==0x1f9001AC)
 	{
-		ret =  DmaRead(core);
+		ret = DmaRead(core);
 	}
-	else if (rmem>>16 == 0x1f80)
+	else
 	{
-		ret = SPU_ps1_read(rmem);
-	}
-	else if ((mem&0xFFFF)>=0x800)
-	{
-		ret=spu2Ru16(mem);
-		ConLog(" * SPU2: Read from reg>=0x800: %x value %x\n",mem,ret);
-	}
-	else 
-	{
-		ret = *(regtable[(mem>>1)]);
-		//FileLog("[%10d] SPU2 read mem %x (core %d, register %x): %x\n",Cycles, mem, core, (omem & 0x7ff), ret);
-		SPU2writeLog( "read", rmem, ret );
-	}
+		TimeUpdate( *cPtr );
 
+		if (rmem>>16 == 0x1f80)
+		{
+			ret = SPU_ps1_read(rmem);
+		}
+		else if( (mem&0xFFFF) >= 0x800 )
+		{
+			ret = spu2Ru16(mem);
+			ConLog(" * SPU2: Read from reg>=0x800: %x value %x\n",mem,ret);
+		}
+		else 
+		{
+			ret = *(regtable[(mem>>1)]);
+			//FileLog("[%10d] SPU2 read mem %x (core %d, register %x): %x\n",Cycles, mem, core, (omem & 0x7ff), ret);
+			SPU2writeLog( "read", rmem, ret );
+		}
+	}
+	
 	return ret;
 }
 

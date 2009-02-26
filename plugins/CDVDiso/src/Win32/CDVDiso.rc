@@ -7,7 +7,7 @@
 //
 // Generated from the TEXTINCLUDE 2 resource.
 //
-#include "afxres.h"
+#include "afxresmw.h"
 
 /////////////////////////////////////////////////////////////////////////////
 #undef APSTUDIO_READONLY_SYMBOLS
@@ -34,14 +34,12 @@ END
 
 2 TEXTINCLUDE 
 BEGIN
-    "#include ""afxres.h""\r\n"
-    "\0"
+    "#include ""afxresmw.h""\r\0"
 END
 
 3 TEXTINCLUDE 
 BEGIN
-    "\r\n"
-    "\0"
+    "\r\0"
 END
 
 #endif    // APSTUDIO_INVOKED
@@ -63,10 +61,8 @@ BEGIN
     PUSHBUTTON      "Select Iso",IDC_SELECTISO,160,10,45,14
     PUSHBUTTON      "Compress Iso",IDC_COMPRESSISO,33,75,65,14
     PUSHBUTTON      "Decompress Iso",IDC_DECOMPRESSISO,113,75,65,14
-    COMBOBOX        IDC_METHOD,120,55,85,50,CBS_DROPDOWNLIST | WS_VSCROLL | 
-                    WS_TABSTOP
-    CONTROL         "Progress1",IDC_PROGRESS,"msctls_progress32",WS_BORDER | 
-                    0x1,10,35,145,14
+    COMBOBOX        IDC_METHOD,120,55,85,50,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    CONTROL         "Progress1",IDC_PROGRESS,"msctls_progress32",PBS_SMOOTH | WS_BORDER,10,35,145,14
     LTEXT           "Compression Method:",IDC_STATIC,29,57,69,8
     PUSHBUTTON      "Stop",IDC_STOP,160,35,45,14
     GROUPBOX        "",IDC_STATIC,5,0,205,95
@@ -76,18 +72,15 @@ BEGIN
 END
 
 IDD_ABOUT DIALOG  0, 0, 177, 106
-STYLE DS_SETFONT | DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | 
-    WS_SYSMENU
+STYLE DS_SETFONT | DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "CDVDabout"
 FONT 8, "MS Sans Serif"
 BEGIN
     DEFPUSHBUTTON   "OK",IDOK,65,85,50,14
     LTEXT           "CDVDiso Driver",IDC_NAME,70,10,50,8
     GROUPBOX        "",IDC_STATIC,5,35,170,40
-    LTEXT           "Thanks to:\n    mooby - coding hints and .bz support\n    Brenden Conte - linux conf bugfix",
-                    IDC_STATIC,10,45,160,25
-    LTEXT           "Author: linuzappz <linuzappz@hotmail.com>",IDC_STATIC,
-                    20,20,141,10
+    LTEXT           "Thanks to:\n    mooby - coding hints and .bz support\n    Brenden Conte - linux conf bugfix",IDC_STATIC,10,45,160,25
+    LTEXT           "Author: linuzappz <linuzappz@hotmail.com>",IDC_STATIC,20,20,141,10
 END
 
 

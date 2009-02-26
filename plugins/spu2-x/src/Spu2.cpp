@@ -321,6 +321,66 @@ static const int SanityInterval = 4800;
 u32 TicksCore = 0;
 u32 TicksThread = 0;
 
+PCSX2_ALIGNED16( static u64 g_globalMMXData[8] );
+
+static __forceinline void SaveMMXRegs()
+{
+#ifdef _MSC_VER
+	__asm {
+		movntq mmword ptr [g_globalMMXData + 0], mm0
+		movntq mmword ptr [g_globalMMXData + 8], mm1
+		movntq mmword ptr [g_globalMMXData + 16], mm2
+		movntq mmword ptr [g_globalMMXData + 24], mm3
+		movntq mmword ptr [g_globalMMXData + 32], mm4
+		movntq mmword ptr [g_globalMMXData + 40], mm5
+		movntq mmword ptr [g_globalMMXData + 48], mm6
+		movntq mmword ptr [g_globalMMXData + 56], mm7
+		emms
+	}
+#else
+    __asm__(".intel_syntax\n"
+            "movq [%0+0x00], %%mm0\n"
+            "movq [%0+0x08], %%mm1\n"
+            "movq [%0+0x10], %%mm2\n"
+            "movq [%0+0x18], %%mm3\n"
+            "movq [%0+0x20], %%mm4\n"
+            "movq [%0+0x28], %%mm5\n"
+            "movq [%0+0x30], %%mm6\n"
+            "movq [%0+0x38], %%mm7\n"
+            "emms\n"
+            ".att_syntax\n" : : "r"(g_globalMMXData) );
+#endif
+}
+
+static __forceinline void RestoreMMXRegs()
+{
+#ifdef _MSC_VER
+	__asm {
+		movq mm0, mmword ptr [g_globalMMXData + 0]
+		movq mm1, mmword ptr [g_globalMMXData + 8]
+		movq mm2, mmword ptr [g_globalMMXData + 16]
+		movq mm3, mmword ptr [g_globalMMXData + 24]
+		movq mm4, mmword ptr [g_globalMMXData + 32]
+		movq mm5, mmword ptr [g_globalMMXData + 40]
+		movq mm6, mmword ptr [g_globalMMXData + 48]
+		movq mm7, mmword ptr [g_globalMMXData + 56]
+		emms
+	}
+#else
+    __asm__(".intel_syntax\n"
+            "movq %%mm0, [%0+0x00]\n"
+            "movq %%mm1, [%0+0x08]\n"
+            "movq %%mm2, [%0+0x10]\n"
+            "movq %%mm3, [%0+0x18]\n"
+            "movq %%mm4, [%0+0x20]\n"
+            "movq %%mm5, [%0+0x28]\n"
+            "movq %%mm6, [%0+0x30]\n"
+            "movq %%mm7, [%0+0x38]\n"
+            "emms\n"
+            ".att_syntax\n" : : "r"(g_globalMMXData) );
+#endif
+}
+
 void __fastcall TimeUpdate(u32 cClocks)
 {
 	u32 dClocks = cClocks-lClocks;
@@ -401,7 +461,10 @@ void __fastcall TimeUpdate(u32 cClocks)
 		lClocks+=TickInterval;
 		Cycles++;
 
+		SaveMMXRegs();
 		Mix();
+		RestoreMMXRegs();
+
 	}
 }
 

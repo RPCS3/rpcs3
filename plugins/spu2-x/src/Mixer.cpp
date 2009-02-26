@@ -440,8 +440,8 @@ static s32 __forceinline GetVoiceValues_Cubic( V_Core& thiscore, uint voiceidx )
 
 	// Note!  It's very important that ADSR stay as accurate as possible.  By the way
 	// it is used, various sound effects can end prematurely if we truncate more than
-	// one or two bits.
-	return MulShr32( val, vc.ADSR.Value>>1 );
+	// one or two bits.  (or maybe it's better with no truncation at all?)
+	return MulShr32( val>>1, vc.ADSR.Value );
 }
 
 // Noise values need to be mixed without going through interpolation, since it
