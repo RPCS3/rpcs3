@@ -179,7 +179,7 @@ static __forceinline void _dmaSPR0() {
 		spr0->madr = ptag[1];					//MADR = ADDR field
 
 		SPR_LOG("spr0 dmaChain %8.8x_%8.8x size=%d, id=%d, addr=%lx spr=%lx\n",
-				ptag[1], ptag[0], spr0->qwc, id, spr0->madr);
+				ptag[1], ptag[0], spr0->qwc, id, spr0->madr, spr0->sadr);
 
 		if ((psHu32(DMAC_CTRL) & 0x30) == 0x20) { // STS == fromSPR
 			SysPrintf("SPR stall control\n");
@@ -270,12 +270,12 @@ void dmaSPR0() { // fromSPR
 	SPR_LOG("dmaSPR0 chcr = %lx, madr = %lx, qwc  = %lx, sadr = %lx\n",
 			spr0->chcr, spr0->madr, spr0->qwc, spr0->sadr);
 
-	if ((spr0->chcr & 0xc) == 0x4){
+	if ((spr0->chcr & 0xc) == 0x4 && spr0->qwc == 0){
 			u32 *ptag;
 			ptag = (u32*)&PS2MEM_SCRATCH[spr0->sadr & 0x3fff];		//Set memory pointer to SADR
-			spr0->qwc  = (u16)ptag[0];					//QWC set to lower 16bits of the tag
-			CPU_INT(8, spr0->qwc / BIAS);
-			spr0->qwc = 0;
+			ptag[0] &= 0xffff;					//QWC set to lower 16bits of the tag
+			CPU_INT(8, ptag[0] / BIAS);
+		//	spr0->qwc = 0;
 			return;
 		}
 	// COMPLETE HACK!!! For now at least..  FFX Videos dont rely on interrupts or reading DMA values
@@ -429,12 +429,12 @@ void dmaSPR1() { // toSPR
 			spr1->tadr, spr1->sadr);
 #endif
 
-	if ((spr1->chcr & 0xc) == 0x4){
+	if ((spr1->chcr & 0xc) == 0x4 && spr1->qwc == 0){
 			u32 *ptag;
 			ptag = (u32*)dmaGetAddr(spr1->tadr);		//Set memory pointer to TADR
-			spr1->qwc  = (u16)ptag[0];					//QWC set to lower 16bits of the tag
-			CPU_INT(9, spr1->qwc / BIAS);
-			spr1->qwc = 0;
+			ptag[0] &= 0xffff;					//QWC set to lower 16bits of the tag
+			CPU_INT(9, ptag[0] / BIAS);
+			//spr1->qwc = 0;
 			return;
 		}
 	// COMPLETE HACK!!! For now at least..  FFX Videos dont rely on interrupts or reading DMA values
