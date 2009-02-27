@@ -295,7 +295,7 @@ s32 CALLBACK GSinit()
 void CALLBACK GSshutdown()
 {
 #ifdef GS_LOG
-	fclose(gsLog);
+	if (gsLog != NULL) fclose(gsLog);
 #endif
 }
 
