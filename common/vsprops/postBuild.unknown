@@ -39,7 +39,7 @@ IF NOT EXIST "%pcsxoutdir%" (
 )
 
 copy /Y "%~2" "%pcsxoutname%"
-if %ERRORLEVEL% NEQ 0 (
+if %ERRORLEVEL% EQU 0 (
     echo Target copied to %pcsxoutname%
 )
 

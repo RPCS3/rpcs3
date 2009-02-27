@@ -134,7 +134,7 @@ extern void recDoBranchImm_Likely( u32* jmpSkip );
 }
 
 extern void (*recBSC_co[64])();
-extern PCSX2_ALIGNED16_DECL(GPR_reg64 g_cpuConstRegs[32]);
+PCSX2_ALIGNED16_EXTERN(GPR_reg64 g_cpuConstRegs[32]);
 extern u32 g_cpuHasConstReg, g_cpuFlushedConstReg;
 
 // gets a memory pointer to the constant reg

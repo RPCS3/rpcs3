@@ -24,9 +24,6 @@
 #include "iR5900.h"
 #include "iFPU.h"
 
-extern PCSX2_ALIGNED16_DECL(u32 g_minvals[4]);
-extern PCSX2_ALIGNED16_DECL(u32 g_maxvals[4]);
-
 //------------------------------------------------------------------
 // Misc...
 //------------------------------------------------------------------

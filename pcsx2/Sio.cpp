@@ -599,7 +599,7 @@ void SaveState::sioFreeze()
 	
 		for( int i=0; i<2; ++i )
 		{
-			uint newCRC = MemoryCard::GetCRC( i );
+			u64 newCRC = MemoryCard::GetCRC( i );
 			if( newCRC != m_mcdCRCs[i] )
 			{
 				m_PostSavestateCards[i] = 64;

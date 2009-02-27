@@ -32,6 +32,7 @@ int iopsifbusy[2] = { 0, 0 };
 static void __fastcall psxDmaGeneric(u32 madr, u32 bcr, u32 chcr, u32 spuCore, _SPU2writeDMA4Mem spu2WriteFunc, _SPU2readDMA4Mem spu2ReadFunc )
 {
 	const char dmaNum = spuCore ? '7' : '4';
+
     /*if (chcr & 0x400) DevCon::Status("SPU 2 DMA %c linked list chain mode! chcr = %x madr = %x bcr = %x\n", dmaNum, chcr, madr, bcr);
     if (chcr & 0x40000000) DevCon::Notice("SPU 2 DMA %c Unusual bit set on 'to' direction chcr = %x madr = %x bcr = %x\n", dmaNum, chcr, madr, bcr);
     if ((chcr & 0x1) == 0) DevCon::Status("SPU 2 DMA %c loading from spu2 memory chcr = %x madr = %x bcr = %x\n", dmaNum, chcr, madr, bcr);*/
@@ -59,18 +60,18 @@ static void __fastcall psxDmaGeneric(u32 madr, u32 bcr, u32 chcr, u32 spuCore, _
 	switch (chcr)
 	{
 		case 0x01000201: //cpu to spu2 transfer
-			PSXDMA_LOG("*** DMA %c - mem2spu *** %lx addr = %lx size = %lx\n", dmaNum, chcr, madr, bcr);
+			PSXDMA_LOG("*** DMA %c - mem2spu *** %x addr = %x size = %x\n", dmaNum, chcr, madr, bcr);
 			spu2WriteFunc((u16 *)PSXM(madr), size*2);
 		break;
 
 		case 0x01000200: //spu2 to cpu transfer
-			PSXDMA_LOG("*** DMA %c - spu2mem *** %lx addr = %lx size = %lx\n", dmaNum, chcr, madr, bcr);
+			PSXDMA_LOG("*** DMA %c - spu2mem *** %x addr = %x size = %x\n", dmaNum, chcr, madr, bcr);
 			spu2ReadFunc((u16 *)PSXM(madr), size*2);
 			psxCpu->Clear(spuCore ? HW_DMA7_MADR : HW_DMA4_MADR, size);
 		break;
 
 		default:
-			Console::Error("*** DMA %c - SPU unknown *** %lx addr = %lx size = %lx\n", params dmaNum, chcr, madr, bcr);
+			Console::Error("*** DMA %c - SPU unknown *** %x addr = %x size = %x\n", params dmaNum, chcr, madr, bcr);
 		break;
 	}
 }

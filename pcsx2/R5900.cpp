@@ -195,7 +195,9 @@ void cpuException(u32 code, u32 bd)
 }
 
 void cpuTlbMiss(u32 addr, u32 bd, u32 excode) {
-	Console::Error("cpuTlbMiss pc:%x, cycl:%x, addr: %x, status=%x, code=%x", params cpuRegs.pc, cpuRegs.cycle, addr, cpuRegs.CP0.n.Status.val, excode);
+	Console::Error("cpuTlbMiss pc:%x, cycl:%x, addr: %x, status=%x, code=%x",
+		params cpuRegs.pc, cpuRegs.cycle, addr, cpuRegs.CP0.n.Status.val, excode);
+		
 	if (bd) {
 		Console::Notice("branch delay!!");
 	}

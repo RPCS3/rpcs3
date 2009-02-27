@@ -46,10 +46,10 @@ extern "C"
 	extern u32* _vifCol;
 }
 
-extern PCSX2_ALIGNED16_DECL(u32 g_vifRow0[4]);
-extern PCSX2_ALIGNED16_DECL(u32 g_vifCol0[4]);
-extern PCSX2_ALIGNED16_DECL(u32 g_vifRow1[4]);
-extern PCSX2_ALIGNED16_DECL(u32 g_vifCol1[4]);
+PCSX2_ALIGNED16_EXTERN(u32 g_vifRow0[4]);
+PCSX2_ALIGNED16_EXTERN(u32 g_vifCol0[4]);
+PCSX2_ALIGNED16_EXTERN(u32 g_vifRow1[4]);
+PCSX2_ALIGNED16_EXTERN(u32 g_vifCol1[4]);
 
 extern vifStruct *_vif;
 

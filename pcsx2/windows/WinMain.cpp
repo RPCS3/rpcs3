@@ -209,10 +209,10 @@ static bool TestRunMode()
 
 static void _doPluginOverride( const char* name, const char* src, char (&dest)[g_MaxPath] )
 {
-	if( src == NULL ) return;
+	if( src == NULL || src[0] == 0 ) return;
 
-	_tcscpy_s( dest, g_TestRun.pgsdll );
-	Console::Notice( "* %s plugin override: \n\t%s\n", params name, Config.GS );
+	_tcscpy_s( dest, src );
+	Console::Notice( "* %s plugin override: \n\t%s\n", params name, dest);
 }
 
 void WinRun()

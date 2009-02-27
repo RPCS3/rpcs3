@@ -193,9 +193,9 @@ struct tlbs
 void JumpCheckSym(u32 addr, u32 pc);
 void JumpCheckSymRet(u32 addr);
 
-extern PCSX2_ALIGNED16_DECL(cpuRegisters cpuRegs);
-extern PCSX2_ALIGNED16_DECL(fpuRegisters fpuRegs);
-extern PCSX2_ALIGNED16_DECL(tlbs tlb[48]);
+PCSX2_ALIGNED16_EXTERN(cpuRegisters cpuRegs);
+PCSX2_ALIGNED16_EXTERN(fpuRegisters fpuRegs);
+PCSX2_ALIGNED16_EXTERN(tlbs tlb[48]);
 
 extern u32 g_nextBranchCycle;
 extern bool eeEventTestIsActive;
@@ -270,8 +270,5 @@ extern void cpuTestTIMRInts();
 #define EXC_CODE_WATCH  EXC_CODE(23)
 #define EXC_CODE__MASK  0x0000007c
 #define EXC_CODE__SHIFT 2
-
-#define EXC_TLB_STORE 1
-#define EXC_TLB_LOAD  0
 
 #endif /* __R5900_H__ */
