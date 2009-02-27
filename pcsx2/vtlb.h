@@ -61,6 +61,10 @@ extern void vtlb_DynGenWrite(u32 sz);
 extern void vtlb_DynGenRead32(u32 bits, bool sign);
 extern void vtlb_DynGenRead64(u32 sz);
 
+extern void vtlb_DynGenWrite_Const( u32 bits, u32 addr_const );
+extern void vtlb_DynGenRead64_Const( u32 bits, u32 addr_const );
+extern void vtlb_DynGenRead32_Const( u32 bits, bool sign, u32 addr_const );
+
 namespace vtlb_private
 {
 	static const uint VTLB_PAGE_BITS = 12;

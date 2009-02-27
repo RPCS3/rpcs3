@@ -27,6 +27,21 @@
 
 using namespace vtlb_private;
 
+// NOTICE: This function *destroys* EAX!!
+// Moves 128 bits of memory from the source register ptr to the dest register ptr.
+// (used as an equivalent to movaps, when a free XMM register is unavailable for some reason)
+void MOV128_MtoM( x86IntRegType destRm, x86IntRegType srcRm )
+{
+	MOV32RmtoR(EAX,srcRm);
+	MOV32RtoRm(destRm,EAX);
+	MOV32RmtoROffset(EAX,srcRm,4);
+	MOV32RtoRmOffset(destRm,EAX,4);
+	MOV32RmtoROffset(EAX,srcRm,8);
+	MOV32RtoRmOffset(destRm,EAX,8);
+	MOV32RmtoROffset(EAX,srcRm,12);
+	MOV32RtoRmOffset(destRm,EAX,12);
+}
+
 /*
 	// Pseudo-Code For the following Dynarec Implementations -->
 
@@ -78,18 +93,31 @@ using namespace vtlb_private;
 
 	*/
 
+//////////////////////////////////////////////////////////////////////////////////////////
+//                            Dynarec Load Implementations
 
-//ecx = addr
-//edx = ptr
-void vtlb_DynGenRead64(u32 bits)
+static void _vtlb_DynGen_DirectRead( u32 bits, bool sign )
 {
-	MOV32RtoR(EAX,ECX);
-	SHR32ItoR(EAX,VTLB_PAGE_BITS);
-	MOV32RmSOffsettoR(EAX,EAX,(int)vmap,2);
-	ADD32RtoR(ECX,EAX);
-	u8* _fullread=JS8(0);
-	switch(bits)
+	switch( bits )
 	{
+		case 8:
+			if( sign )
+				MOVSX32Rm8toR(EAX,ECX);
+			else
+				MOVZX32Rm8toR(EAX,ECX);
+		break;
+
+		case 16:
+			if( sign )
+				MOVSX32Rm16toR(EAX,ECX);
+			else
+				MOVZX32Rm16toR(EAX,ECX);
+		break;
+
+		case 32:
+			MOV32RmtoR(EAX,ECX);
+		break;
+
 		case 64:
 			if( _hasFreeMMXreg() )
 			{
@@ -106,7 +134,7 @@ void vtlb_DynGenRead64(u32 bits)
 				MOV32RmtoROffset(EAX,ECX,4);
 				MOV32RtoRmOffset(EDX,EAX,4);
 			}
-			break;
+		break;
 
 		case 128:
 			if( _hasFreeXMMreg() )
@@ -121,31 +149,25 @@ void vtlb_DynGenRead64(u32 bits)
 				// Could put in an MMX optimization here as well, but no point really.
 				// It's almost never used since there's almost always a free XMM reg.
 
-				MOV32RmtoR(EAX,ECX);
-				MOV32RtoRm(EDX,EAX);
-
-				MOV32RmtoROffset(EAX,ECX,4);
-				MOV32RtoRmOffset(EDX,EAX,4);
-
-				MOV32RmtoROffset(EAX,ECX,8);
-				MOV32RtoRmOffset(EDX,EAX,8);
-
-				MOV32RmtoROffset(EAX,ECX,12);
-				MOV32RtoRmOffset(EDX,EAX,12);
+				MOV128_MtoM( EDX, ECX );		// dest <- src!
 			}
-			break;
+		break;
 
 		jNO_DEFAULT
 	}
+}
 
-	u8* cont=JMP8(0);
-	x86SetJ8(_fullread);
+static void _vtlb_DynGen_IndirectRead( u32 bits )
+{
 	int szidx;
 
-	switch(bits)
+	switch( bits )
 	{
-		case 64:   szidx=3;	break;
-		case 128:  szidx=4; break;
+		case 8:  szidx=0;	break;
+		case 16: szidx=1;	break;
+		case 32: szidx=2;	break;
+		case 64: szidx=3;	break;
+		case 128: szidx=4;	break;
 		jNO_DEFAULT
 	}
 
@@ -155,12 +177,33 @@ void vtlb_DynGenRead64(u32 bits)
 	MOV32RmSOffsettoR(EAX,EAX,(int)RWFT[szidx][0],2);
 	SUB32ItoR(ECX,0x80000000);
 	CALL32R(EAX);
+}
+
+// Recompiled input registers:
+//   ecx = source addr to read from
+//   edx = ptr to dest to write to
+void vtlb_DynGenRead64(u32 bits)
+{
+	jASSUME( bits == 64 || bits == 128 );
+
+	MOV32RtoR(EAX,ECX);
+	SHR32ItoR(EAX,VTLB_PAGE_BITS);
+	MOV32RmSOffsettoR(EAX,EAX,(int)vmap,2);
+	ADD32RtoR(ECX,EAX);
+	u8* _fullread = JS8(0);
+
+	_vtlb_DynGen_DirectRead( bits, false );
+	u8* cont = JMP8(0);
+
+	x86SetJ8(_fullread);
+	_vtlb_DynGen_IndirectRead( bits );
 
 	x86SetJ8(cont);
 }
 
-// ecx - source address to read from
-// Returns read value in eax.
+// Recompiled input registers:
+//   ecx - source address to read from
+//   Returns read value in eax.
 void vtlb_DynGenRead32(u32 bits, bool sign)
 {
 	jASSUME( bits <= 32 );
@@ -169,49 +212,13 @@ void vtlb_DynGenRead32(u32 bits, bool sign)
 	SHR32ItoR(EAX,VTLB_PAGE_BITS);
 	MOV32RmSOffsettoR(EAX,EAX,(int)vmap,2);
 	ADD32RtoR(ECX,EAX);
-	u8* _fullread=JS8(0);
+	u8* _fullread = JS8(0);
 
-	switch(bits)
-	{
-		case 8:
-			if( sign )
-				MOVSX32Rm8toR(EAX,ECX);
-			else
-				MOVZX32Rm8toR(EAX,ECX);
-			break;
+	_vtlb_DynGen_DirectRead( bits, sign );
+	u8* cont = JMP8(0);
 
-		case 16:
-			if( sign )
-				MOVSX32Rm16toR(EAX,ECX);
-			else
-				MOVZX32Rm16toR(EAX,ECX);
-			break;
-
-		case 32:
-			MOV32RmtoR(EAX,ECX);
-			break;
-
-		jNO_DEFAULT
-	}
-
-	u8* cont=JMP8(0);
 	x86SetJ8(_fullread);
-	int szidx;
-
-	switch(bits)
-	{
-		case 8:  szidx=0;	break;
-		case 16: szidx=1;	break;
-		case 32: szidx=2;	break;
-		jNO_DEFAULT
-	}
-
-	MOVZX32R8toR(EAX,EAX);
-	SUB32RtoR(ECX,EAX);
-	//eax=[funct+eax]
-	MOV32RmSOffsettoR(EAX,EAX,(int)RWFT[szidx][0],2);
-	SUB32ItoR(ECX,0x80000000);
-	CALL32R(EAX);
+	_vtlb_DynGen_IndirectRead( bits );
 
 	// perform sign extension on the result:
 
@@ -233,25 +240,83 @@ void vtlb_DynGenRead32(u32 bits, bool sign)
 	x86SetJ8(cont);
 }
 
-void vtlb_DynGenWrite(u32 sz)
+void vtlb_DynGenRead64_Const( u32 bits, u32 addr_const )
 {
-	MOV32RtoR(EAX,ECX);
-	SHR32ItoR(EAX,VTLB_PAGE_BITS);
-	MOV32RmSOffsettoR(EAX,EAX,(int)vmap,2);
-	ADD32RtoR(ECX,EAX);
-	u8* _full=JS8(0);
-	switch(sz)
+	jASSUME( bits == 64 || bits == 128 );
+
+	void* vmv_ptr = &vmap[addr_const>>VTLB_PAGE_BITS];
+
+	MOV32MtoR(EAX,(uptr)vmv_ptr);
+	MOV32ItoR(ECX,addr_const);
+	ADD32RtoR(ECX,EAX);		// ecx=ppf
+	u8* _fullread = JS8(0);
+
+	_vtlb_DynGen_DirectRead( bits, false );
+	u8* cont = JMP8(0);
+
+	x86SetJ8(_fullread);
+	_vtlb_DynGen_IndirectRead( bits );
+
+	x86SetJ8(cont);
+}
+
+// Recompiled input registers:
+//   ecx - source address to read from
+//   Returns read value in eax.
+void vtlb_DynGenRead32_Const( u32 bits, bool sign, u32 addr_const )
+{
+	jASSUME( bits <= 32 );
+
+	void* vmv_ptr = &vmap[addr_const>>VTLB_PAGE_BITS];
+
+	MOV32MtoR(EAX,(uptr)vmv_ptr);
+	MOV32ItoR(ECX,addr_const);
+	ADD32RtoR(ECX,EAX);		// ecx=ppf
+	u8* _fullread = JS8(0);
+
+	_vtlb_DynGen_DirectRead( bits, sign );
+	u8* cont = JMP8(0);
+
+	x86SetJ8(_fullread);
+	_vtlb_DynGen_IndirectRead( bits );
+
+	// perform sign extension on the result:
+
+	if( bits==8 )
+	{
+		if( sign )
+			MOVSX32R8toR(EAX,EAX);
+		else
+			MOVZX32R8toR(EAX,EAX);
+	}
+	else if( bits==16 )
+	{
+		if( sign )
+			MOVSX32R16toR(EAX,EAX);
+		else
+			MOVZX32R16toR(EAX,EAX);
+	}
+
+	x86SetJ8(cont);
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////
+//                            Dynarec Store Implementations
+
+static void _vtlb_DynGen_DirectWrite( u32 bits )
+{
+	switch(bits)
 	{
 		//8 , 16, 32 : data on EDX
 		case 8:
 			MOV8RtoRm(ECX,EDX);
-			break;
+		break;
 		case 16:
 			MOV16RtoRm(ECX,EDX);
-			break;
+		break;
 		case 32:
 			MOV32RtoRm(ECX,EDX);
-			break;
+		break;
 
 		case 64:
 			if( _hasFreeMMXreg() )
@@ -269,7 +334,7 @@ void vtlb_DynGenWrite(u32 sz)
 				MOV32RmtoROffset(EAX,EDX,4);
 				MOV32RtoRmOffset(ECX,EAX,4);
 			}
-			break;
+		break;
 
 		case 128:
 			if( _hasFreeXMMreg() )
@@ -284,23 +349,16 @@ void vtlb_DynGenWrite(u32 sz)
 				// Could put in an MMX optimization here as well, but no point really.
 				// It's almost never used since there's almost always a free XMM reg.
 
-				MOV32RmtoR(EAX,EDX);
-				MOV32RtoRm(ECX,EAX);
-				MOV32RmtoROffset(EAX,EDX,4);
-				MOV32RtoRmOffset(ECX,EAX,4);
-				MOV32RmtoROffset(EAX,EDX,8);
-				MOV32RtoRmOffset(ECX,EAX,8);
-				MOV32RmtoROffset(EAX,EDX,12);
-				MOV32RtoRmOffset(ECX,EAX,12);
+				MOV128_MtoM( ECX, EDX );	// dest <- src!
 			}
-			break;
+		break;
 	}
-	u8* cont=JMP8(0);
+}
 
-	x86SetJ8(_full);
-
+static void _vtlb_DynGen_IndirectWrite( u32 bits )
+{
 	int szidx=0;
-	switch(sz)
+	switch( bits )
 	{
 		case 8:  szidx=0;	break;
 		case 16:   szidx=1;	break;
@@ -314,6 +372,45 @@ void vtlb_DynGenWrite(u32 sz)
 	MOV32RmSOffsettoR(EAX,EAX,(int)RWFT[szidx][1],2);
 	SUB32ItoR(ECX,0x80000000);
 	CALL32R(EAX);
+}
+
+void vtlb_DynGenWrite(u32 sz)
+{
+	MOV32RtoR(EAX,ECX);
+	SHR32ItoR(EAX,VTLB_PAGE_BITS);
+	MOV32RmSOffsettoR(EAX,EAX,(int)vmap,2);
+	ADD32RtoR(ECX,EAX);
+	u8* _full=JS8(0);
+
+	_vtlb_DynGen_DirectWrite( sz );
+	u8* cont = JMP8(0);
+
+	x86SetJ8(_full);
+	_vtlb_DynGen_IndirectWrite( sz );
+
+	x86SetJ8(cont);
+}
+
+
+// Generates code for a store instruction, where the address is a known constant.
+void vtlb_DynGenWrite_Const( u32 bits, u32 addr_const )
+{
+	// Important: It's not technically safe to do a const lookup of the VTLB here, since
+	// the VTLB could feasibly be remapped by other recompiled code at any time.
+	// So we're limited in exactly how much we can pre-calcuate.
+
+	void* vmv_ptr = &vmap[addr_const>>VTLB_PAGE_BITS];
+
+	MOV32MtoR(EAX,(uptr)vmv_ptr);
+	MOV32ItoR(ECX,addr_const);
+	ADD32RtoR(ECX,EAX);		// ecx=ppf
+	u8* _full = JS8(0);
+
+	_vtlb_DynGen_DirectWrite( bits );
+	u8* cont = JMP8(0);
+
+	x86SetJ8(_full);
+	_vtlb_DynGen_IndirectWrite( bits );
 
 	x86SetJ8(cont);
 }

@@ -37,7 +37,6 @@ static std::string disOut;
 #ifdef PCSX2_DEVBUILD
 static void debugI()
 {
-	//CPU_LOG("%s\n", disR5900Current.getCString());
 	if (cpuRegs.GPR.n.r0.UD[0] || cpuRegs.GPR.n.r0.UD[1]) Console::Error("R0 is not zero!!!!");
 }
 #else
@@ -63,6 +62,17 @@ static void execI()
 	//		SysPrintf ("Load %s\n",opcode.Name);
 	//	}
 	//}
+
+	// Another method of instruction dumping:
+	/*if( cpuRegs.cycle > 0x4f24d714 )
+	{
+		//CPU_LOG( "%s\n", disR5900Current.getCString());
+		disOut.clear();
+		opcode.disasm( disOut );
+		disOut += '\n';
+		CPU_LOG( disOut.c_str() );
+	}*/
+
 
 	cpuBlockCycles += opcode.cycles;
 	cpuRegs.pc += 4;
