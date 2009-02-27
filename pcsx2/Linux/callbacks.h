@@ -110,75 +110,15 @@ OnDebug_memWrite32                     (GtkButton       *button,
                                         gpointer         user_data);
 
 void
-OnConfConf_FWConf                      (GtkButton       *button,
+OnConfConf_Pad2Conf                    (GtkButton       *button,
                                         gpointer         user_data);
 
 void
-OnConfConf_FWTest                      (GtkButton       *button,
+OnConfConf_Pad2Test                    (GtkButton       *button,
                                         gpointer         user_data);
 
 void
-OnConfConf_FWAbout                     (GtkButton       *button,
-                                        gpointer         user_data);
-
-void
-OnConfConf_UsbConf                     (GtkButton       *button,
-                                        gpointer         user_data);
-
-void
-OnConfConf_UsbTest                     (GtkButton       *button,
-                                        gpointer         user_data);
-
-void
-OnConfConf_UsbAbout                    (GtkButton       *button,
-                                        gpointer         user_data);
-
-void
-OnConfConf_CdvdConf                    (GtkButton       *button,
-                                        gpointer         user_data);
-
-void
-OnConfConf_CdvdTest                    (GtkButton       *button,
-                                        gpointer         user_data);
-
-void
-OnConfConf_CdvdAbout                   (GtkButton       *button,
-                                        gpointer         user_data);
-
-void
-OnConfConf_Dev9Conf                    (GtkButton       *button,
-                                        gpointer         user_data);
-
-void
-OnConfConf_Dev9Test                    (GtkButton       *button,
-                                        gpointer         user_data);
-
-void
-OnConfConf_Dev9About                   (GtkButton       *button,
-                                        gpointer         user_data);
-
-void
-OnConfConf_Spu2Conf                    (GtkButton       *button,
-                                        gpointer         user_data);
-
-void
-OnConfConf_Spu2Test                    (GtkButton       *button,
-                                        gpointer         user_data);
-
-void
-OnConfConf_Spu2About                   (GtkButton       *button,
-                                        gpointer         user_data);
-
-void
-OnConfConf_GsConf                      (GtkButton       *button,
-                                        gpointer         user_data);
-
-void
-OnConfConf_GsTest                      (GtkButton       *button,
-                                        gpointer         user_data);
-
-void
-OnConfConf_GsAbout                     (GtkButton       *button,
+OnConfConf_Pad2About                   (GtkButton       *button,
                                         gpointer         user_data);
 
 void
@@ -194,15 +134,75 @@ OnConfConf_Pad1About                   (GtkButton       *button,
                                         gpointer         user_data);
 
 void
-OnConfConf_Pad2Conf                    (GtkButton       *button,
+OnConfConf_GsConf                      (GtkButton       *button,
                                         gpointer         user_data);
 
 void
-OnConfConf_Pad2Test                    (GtkButton       *button,
+OnConfConf_GsTest                      (GtkButton       *button,
                                         gpointer         user_data);
 
 void
-OnConfConf_Pad2About                   (GtkButton       *button,
+OnConfConf_GsAbout                     (GtkButton       *button,
+                                        gpointer         user_data);
+
+void
+OnConfConf_Spu2Conf                    (GtkButton       *button,
+                                        gpointer         user_data);
+
+void
+OnConfConf_Spu2Test                    (GtkButton       *button,
+                                        gpointer         user_data);
+
+void
+OnConfConf_Spu2About                   (GtkButton       *button,
+                                        gpointer         user_data);
+
+void
+OnConfConf_Dev9Conf                    (GtkButton       *button,
+                                        gpointer         user_data);
+
+void
+OnConfConf_Dev9Test                    (GtkButton       *button,
+                                        gpointer         user_data);
+
+void
+OnConfConf_Dev9About                   (GtkButton       *button,
+                                        gpointer         user_data);
+
+void
+OnConfConf_CdvdConf                    (GtkButton       *button,
+                                        gpointer         user_data);
+
+void
+OnConfConf_CdvdTest                    (GtkButton       *button,
+                                        gpointer         user_data);
+
+void
+OnConfConf_CdvdAbout                   (GtkButton       *button,
+                                        gpointer         user_data);
+
+void
+OnConfConf_UsbConf                     (GtkButton       *button,
+                                        gpointer         user_data);
+
+void
+OnConfConf_UsbTest                     (GtkButton       *button,
+                                        gpointer         user_data);
+
+void
+OnConfConf_UsbAbout                    (GtkButton       *button,
+                                        gpointer         user_data);
+
+void
+OnConfConf_FWConf                      (GtkButton       *button,
+                                        gpointer         user_data);
+
+void
+OnConfConf_FWTest                      (GtkButton       *button,
+                                        gpointer         user_data);
+
+void
+OnConfConf_FWAbout                     (GtkButton       *button,
                                         gpointer         user_data);
 
 void

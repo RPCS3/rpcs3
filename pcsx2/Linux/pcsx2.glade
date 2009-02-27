@@ -448,24 +448,11 @@
                                 <property name="n_rows">2</property>
                                 <property name="n_columns">2</property>
                                 <child>
-                                  <widget class="GtkCheckButton" id="check_VU_Flush_Zero">
+                                  <widget class="GtkCheckButton" id="check_Emulate_DaZ">
                                     <property name="visible">True</property>
+                                    <property name="sensitive">False</property>
                                     <property name="can_focus">True</property>
-                                    <property name="label" translatable="yes">Flush to Zero</property>
-                                    <property name="use_underline">True</property>
-                                    <property name="response_id">0</property>
-                                    <property name="draw_indicator">True</property>
-                                  </widget>
-                                  <packing>
-                                    <property name="x_options"></property>
-                                    <property name="y_options"></property>
-                                  </packing>
-                                </child>
-                                <child>
-                                  <widget class="GtkCheckButton" id="check_VU_Denormal_Zero">
-                                    <property name="visible">True</property>
-                                    <property name="can_focus">True</property>
-                                    <property name="label" translatable="yes">Denormals are Zero</property>
+                                    <property name="label" translatable="yes">Software Emulate DaZ</property>
                                     <property name="use_underline">True</property>
                                     <property name="response_id">0</property>
                                     <property name="draw_indicator">True</property>
@@ -473,6 +460,8 @@
                                   <packing>
                                     <property name="left_attach">1</property>
                                     <property name="right_attach">2</property>
+                                    <property name="top_attach">1</property>
+                                    <property name="bottom_attach">2</property>
                                     <property name="x_options"></property>
                                     <property name="y_options"></property>
                                   </packing>
@@ -495,11 +484,10 @@
                                   </packing>
                                 </child>
                                 <child>
-                                  <widget class="GtkCheckButton" id="check_Emulate_DaZ">
+                                  <widget class="GtkCheckButton" id="check_VU_Denormal_Zero">
                                     <property name="visible">True</property>
-                                    <property name="sensitive">False</property>
                                     <property name="can_focus">True</property>
-                                    <property name="label" translatable="yes">Software Emulate DaZ</property>
+                                    <property name="label" translatable="yes">Denormals are Zero</property>
                                     <property name="use_underline">True</property>
                                     <property name="response_id">0</property>
                                     <property name="draw_indicator">True</property>
@@ -507,8 +495,20 @@
                                   <packing>
                                     <property name="left_attach">1</property>
                                     <property name="right_attach">2</property>
-                                    <property name="top_attach">1</property>
-                                    <property name="bottom_attach">2</property>
+                                    <property name="x_options"></property>
+                                    <property name="y_options"></property>
+                                  </packing>
+                                </child>
+                                <child>
+                                  <widget class="GtkCheckButton" id="check_VU_Flush_Zero">
+                                    <property name="visible">True</property>
+                                    <property name="can_focus">True</property>
+                                    <property name="label" translatable="yes">Flush to Zero</property>
+                                    <property name="use_underline">True</property>
+                                    <property name="response_id">0</property>
+                                    <property name="draw_indicator">True</property>
+                                  </widget>
+                                  <packing>
                                     <property name="x_options"></property>
                                     <property name="y_options"></property>
                                   </packing>
@@ -1131,20 +1131,6 @@ Known to work well with a couple games, namely Shadow of the Colossus (but break
                         <property name="expand">False</property>
                         <property name="fill">False</property>
                         <property name="position">1</property>
-                      </packing>
-                    </child>
-                    <child>
-                      <widget class="GtkCheckButton" id="check_VU_FCOR_hack">
-                        <property name="visible">True</property>
-                        <property name="can_focus">True</property>
-                        <property name="label" translatable="yes">VU FCOR Hack - Fixes ICO SPS</property>
-                        <property name="response_id">0</property>
-                        <property name="draw_indicator">True</property>
-                      </widget>
-                      <packing>
-                        <property name="expand">False</property>
-                        <property name="fill">False</property>
-                        <property name="position">2</property>
                       </packing>
                     </child>
                   </widget>
@@ -2287,74 +2273,142 @@ Configure them here.&lt;/b&gt;</property>
               <placeholder/>
             </child>
             <child>
-              <widget class="GtkLabel" id="GtkLabel_Bios">
+              <widget class="GtkComboBox" id="GtkCombo_Bios">
                 <property name="visible">True</property>
-                <property name="xalign">0</property>
-                <property name="label" translatable="yes">Bios</property>
-                <property name="justify">GTK_JUSTIFY_CENTER</property>
+                <property name="items" translatable="yes"></property>
               </widget>
               <packing>
                 <property name="left_attach">1</property>
                 <property name="right_attach">2</property>
-                <property name="top_attach">12</property>
-                <property name="bottom_attach">13</property>
-                <property name="x_options"></property>
-                <property name="y_options"></property>
+                <property name="top_attach">13</property>
+                <property name="bottom_attach">14</property>
               </packing>
             </child>
             <child>
-              <widget class="GtkLabel" id="label30">
+              <widget class="GtkComboBox" id="GtkCombo_Gs">
                 <property name="visible">True</property>
-                <property name="xalign">0</property>
-                <property name="label" translatable="yes">FireWire</property>
-                <property name="justify">GTK_JUSTIFY_CENTER</property>
+                <property name="items" translatable="yes"></property>
+              </widget>
+              <packing>
+                <property name="top_attach">1</property>
+                <property name="bottom_attach">2</property>
+              </packing>
+            </child>
+            <child>
+              <widget class="GtkComboBox" id="GtkCombo_Spu2">
+                <property name="visible">True</property>
+                <property name="items" translatable="yes"></property>
               </widget>
               <packing>
                 <property name="left_attach">1</property>
                 <property name="right_attach">2</property>
-                <property name="top_attach">9</property>
-                <property name="bottom_attach">10</property>
-                <property name="x_options"></property>
-                <property name="y_options"></property>
+                <property name="top_attach">1</property>
+                <property name="bottom_attach">2</property>
               </packing>
             </child>
             <child>
-              <widget class="GtkHButtonBox" id="hbuttonbox24">
+              <widget class="GtkComboBox" id="GtkCombo_Pad1">
+                <property name="visible">True</property>
+                <property name="items" translatable="yes"></property>
+              </widget>
+              <packing>
+                <property name="top_attach">4</property>
+                <property name="bottom_attach">5</property>
+              </packing>
+            </child>
+            <child>
+              <widget class="GtkComboBox" id="GtkCombo_Pad2">
+                <property name="visible">True</property>
+                <property name="items" translatable="yes"></property>
+              </widget>
+              <packing>
+                <property name="left_attach">1</property>
+                <property name="right_attach">2</property>
+                <property name="top_attach">4</property>
+                <property name="bottom_attach">5</property>
+              </packing>
+            </child>
+            <child>
+              <widget class="GtkComboBox" id="GtkCombo_Dev9">
+                <property name="visible">True</property>
+                <property name="items" translatable="yes"></property>
+              </widget>
+              <packing>
+                <property name="top_attach">7</property>
+                <property name="bottom_attach">8</property>
+              </packing>
+            </child>
+            <child>
+              <widget class="GtkComboBox" id="GtkCombo_Cdvd">
+                <property name="visible">True</property>
+                <property name="items" translatable="yes"></property>
+              </widget>
+              <packing>
+                <property name="left_attach">1</property>
+                <property name="right_attach">2</property>
+                <property name="top_attach">7</property>
+                <property name="bottom_attach">8</property>
+              </packing>
+            </child>
+            <child>
+              <widget class="GtkComboBox" id="GtkCombo_Usb">
+                <property name="visible">True</property>
+                <property name="items" translatable="yes"></property>
+              </widget>
+              <packing>
+                <property name="top_attach">10</property>
+                <property name="bottom_attach">11</property>
+              </packing>
+            </child>
+            <child>
+              <widget class="GtkComboBox" id="GtkCombo_FW">
+                <property name="visible">True</property>
+                <property name="items" translatable="yes"></property>
+              </widget>
+              <packing>
+                <property name="left_attach">1</property>
+                <property name="right_attach">2</property>
+                <property name="top_attach">10</property>
+                <property name="bottom_attach">11</property>
+              </packing>
+            </child>
+            <child>
+              <widget class="GtkHButtonBox" id="hbuttonbox6">
                 <property name="visible">True</property>
                 <child>
-                  <widget class="GtkButton" id="GtkButton_FWconfigure">
+                  <widget class="GtkButton" id="GtkButton_PAD2configure">
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="can_default">True</property>
                     <property name="label" translatable="yes">Configure</property>
                     <property name="use_underline">True</property>
                     <property name="response_id">0</property>
-                    <signal name="clicked" handler="OnConfConf_FWConf"/>
+                    <signal name="clicked" handler="OnConfConf_Pad2Conf"/>
                   </widget>
                 </child>
                 <child>
-                  <widget class="GtkButton" id="GtkButton_FWtest">
+                  <widget class="GtkButton" id="GtkButton_PAD2test">
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="can_default">True</property>
                     <property name="label" translatable="yes">Test</property>
                     <property name="use_underline">True</property>
                     <property name="response_id">0</property>
-                    <signal name="clicked" handler="OnConfConf_FWTest"/>
+                    <signal name="clicked" handler="OnConfConf_Pad2Test"/>
                   </widget>
                   <packing>
                     <property name="position">1</property>
                   </packing>
                 </child>
                 <child>
-                  <widget class="GtkButton" id="GtkButton_FireWireabout">
+                  <widget class="GtkButton" id="GtkButton_PAD2about">
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="can_default">True</property>
                     <property name="label" translatable="yes">About</property>
                     <property name="use_underline">True</property>
                     <property name="response_id">0</property>
-                    <signal name="clicked" handler="OnConfConf_FWAbout"/>
+                    <signal name="clicked" handler="OnConfConf_Pad2About"/>
                   </widget>
                   <packing>
                     <property name="position">2</property>
@@ -2364,49 +2418,48 @@ Configure them here.&lt;/b&gt;</property>
               <packing>
                 <property name="left_attach">1</property>
                 <property name="right_attach">2</property>
-                <property name="top_attach">11</property>
-                <property name="bottom_attach">12</property>
+                <property name="top_attach">5</property>
+                <property name="bottom_attach">6</property>
                 <property name="x_options"></property>
-                <property name="y_options"></property>
               </packing>
             </child>
             <child>
-              <widget class="GtkHButtonBox" id="hbuttonbox23">
+              <widget class="GtkHButtonBox" id="hbuttonbox7">
                 <property name="visible">True</property>
                 <child>
-                  <widget class="GtkButton" id="GtkButton_USBconfigure">
+                  <widget class="GtkButton" id="GtkButton_PAD1configure">
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="can_default">True</property>
                     <property name="label" translatable="yes">Configure</property>
                     <property name="use_underline">True</property>
                     <property name="response_id">0</property>
-                    <signal name="clicked" handler="OnConfConf_UsbConf"/>
+                    <signal name="clicked" handler="OnConfConf_Pad1Conf"/>
                   </widget>
                 </child>
                 <child>
-                  <widget class="GtkButton" id="GtkButton_USBtest">
+                  <widget class="GtkButton" id="GtkButton_PAD1test">
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="can_default">True</property>
                     <property name="label" translatable="yes">Test</property>
                     <property name="use_underline">True</property>
                     <property name="response_id">0</property>
-                    <signal name="clicked" handler="OnConfConf_UsbTest"/>
+                    <signal name="clicked" handler="OnConfConf_Pad1Test"/>
                   </widget>
                   <packing>
                     <property name="position">1</property>
                   </packing>
                 </child>
                 <child>
-                  <widget class="GtkButton" id="GtkButton_USBabout">
+                  <widget class="GtkButton" id="GtkButton_PAD1about">
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="can_default">True</property>
                     <property name="label" translatable="yes">About</property>
                     <property name="use_underline">True</property>
                     <property name="response_id">0</property>
-                    <signal name="clicked" handler="OnConfConf_UsbAbout"/>
+                    <signal name="clicked" handler="OnConfConf_Pad1About"/>
                   </widget>
                   <packing>
                     <property name="position">2</property>
@@ -2414,21 +2467,244 @@ Configure them here.&lt;/b&gt;</property>
                 </child>
               </widget>
               <packing>
-                <property name="top_attach">11</property>
-                <property name="bottom_attach">12</property>
+                <property name="top_attach">5</property>
+                <property name="bottom_attach">6</property>
+                <property name="x_options"></property>
+                <property name="y_options"></property>
+              </packing>
+            </child>
+            <child>
+              <widget class="GtkHButtonBox" id="hbuttonbox8">
+                <property name="visible">True</property>
+                <child>
+                  <widget class="GtkButton" id="GtkButton_GSconfigure">
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="can_default">True</property>
+                    <property name="label" translatable="yes">Configure</property>
+                    <property name="use_underline">True</property>
+                    <property name="response_id">0</property>
+                    <signal name="clicked" handler="OnConfConf_GsConf"/>
+                  </widget>
+                </child>
+                <child>
+                  <widget class="GtkButton" id="GtkButton_GStest">
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="can_default">True</property>
+                    <property name="label" translatable="yes">Test</property>
+                    <property name="use_underline">True</property>
+                    <property name="response_id">0</property>
+                    <signal name="clicked" handler="OnConfConf_GsTest"/>
+                  </widget>
+                  <packing>
+                    <property name="position">1</property>
+                  </packing>
+                </child>
+                <child>
+                  <widget class="GtkButton" id="GtkButton_GSabout">
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="can_default">True</property>
+                    <property name="label" translatable="yes">About</property>
+                    <property name="use_underline">True</property>
+                    <property name="response_id">0</property>
+                    <signal name="clicked" handler="OnConfConf_GsAbout"/>
+                  </widget>
+                  <packing>
+                    <property name="position">2</property>
+                  </packing>
+                </child>
+              </widget>
+              <packing>
+                <property name="top_attach">2</property>
+                <property name="bottom_attach">3</property>
                 <property name="x_options"></property>
               </packing>
             </child>
             <child>
-              <widget class="GtkLabel" id="label29">
+              <widget class="GtkLabel" id="GtkLabel_Graphics">
                 <property name="visible">True</property>
                 <property name="xalign">0</property>
-                <property name="label" translatable="yes">Usb</property>
+                <property name="label" translatable="yes">Graphics</property>
                 <property name="justify">GTK_JUSTIFY_CENTER</property>
               </widget>
               <packing>
-                <property name="top_attach">9</property>
-                <property name="bottom_attach">10</property>
+                <property name="x_options"></property>
+                <property name="y_options"></property>
+              </packing>
+            </child>
+            <child>
+              <widget class="GtkLabel" id="GtkLabel_FirstController">
+                <property name="visible">True</property>
+                <property name="xalign">0</property>
+                <property name="label" translatable="yes">First Controller</property>
+                <property name="justify">GTK_JUSTIFY_CENTER</property>
+              </widget>
+              <packing>
+                <property name="top_attach">3</property>
+                <property name="bottom_attach">4</property>
+                <property name="x_options"></property>
+                <property name="y_options"></property>
+              </packing>
+            </child>
+            <child>
+              <widget class="GtkLabel" id="GtkLabel_SecondController">
+                <property name="visible">True</property>
+                <property name="xalign">0</property>
+                <property name="label" translatable="yes">Second Controller</property>
+                <property name="justify">GTK_JUSTIFY_CENTER</property>
+              </widget>
+              <packing>
+                <property name="left_attach">1</property>
+                <property name="right_attach">2</property>
+                <property name="top_attach">3</property>
+                <property name="bottom_attach">4</property>
+                <property name="x_options"></property>
+                <property name="y_options"></property>
+              </packing>
+            </child>
+            <child>
+              <widget class="GtkLabel" id="GtkLabel_Sound">
+                <property name="visible">True</property>
+                <property name="xalign">0</property>
+                <property name="label" translatable="yes">Sound</property>
+                <property name="justify">GTK_JUSTIFY_CENTER</property>
+              </widget>
+              <packing>
+                <property name="left_attach">1</property>
+                <property name="right_attach">2</property>
+                <property name="x_options"></property>
+                <property name="y_options"></property>
+              </packing>
+            </child>
+            <child>
+              <widget class="GtkHButtonBox" id="hbuttonbox12">
+                <property name="visible">True</property>
+                <child>
+                  <widget class="GtkButton" id="GtkButton_SPU2configure">
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="can_default">True</property>
+                    <property name="label" translatable="yes">Configure</property>
+                    <property name="use_underline">True</property>
+                    <property name="response_id">0</property>
+                    <signal name="clicked" handler="OnConfConf_Spu2Conf"/>
+                  </widget>
+                </child>
+                <child>
+                  <widget class="GtkButton" id="GtkButton_SPU2test">
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="can_default">True</property>
+                    <property name="label" translatable="yes">Test</property>
+                    <property name="use_underline">True</property>
+                    <property name="response_id">0</property>
+                    <signal name="clicked" handler="OnConfConf_Spu2Test"/>
+                  </widget>
+                  <packing>
+                    <property name="position">1</property>
+                  </packing>
+                </child>
+                <child>
+                  <widget class="GtkButton" id="GtkButton_SPU2about">
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="can_default">True</property>
+                    <property name="label" translatable="yes">About</property>
+                    <property name="use_underline">True</property>
+                    <property name="response_id">0</property>
+                    <signal name="clicked" handler="OnConfConf_Spu2About"/>
+                  </widget>
+                  <packing>
+                    <property name="position">2</property>
+                  </packing>
+                </child>
+              </widget>
+              <packing>
+                <property name="left_attach">1</property>
+                <property name="right_attach">2</property>
+                <property name="top_attach">2</property>
+                <property name="bottom_attach">3</property>
+                <property name="x_options"></property>
+                <property name="y_options"></property>
+              </packing>
+            </child>
+            <child>
+              <widget class="GtkHButtonBox" id="hbuttonbox21">
+                <property name="visible">True</property>
+                <child>
+                  <widget class="GtkButton" id="GtkButton_DEV9configure">
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="can_default">True</property>
+                    <property name="label" translatable="yes">Configure</property>
+                    <property name="use_underline">True</property>
+                    <property name="response_id">0</property>
+                    <signal name="clicked" handler="OnConfConf_Dev9Conf"/>
+                  </widget>
+                </child>
+                <child>
+                  <widget class="GtkButton" id="GtkButton_DEV9test">
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="can_default">True</property>
+                    <property name="label" translatable="yes">Test</property>
+                    <property name="use_underline">True</property>
+                    <property name="response_id">0</property>
+                    <signal name="clicked" handler="OnConfConf_Dev9Test"/>
+                  </widget>
+                  <packing>
+                    <property name="position">1</property>
+                  </packing>
+                </child>
+                <child>
+                  <widget class="GtkButton" id="GtkButton_DEV9about">
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="can_default">True</property>
+                    <property name="label" translatable="yes">About</property>
+                    <property name="use_underline">True</property>
+                    <property name="response_id">0</property>
+                    <signal name="clicked" handler="OnConfConf_Dev9About"/>
+                  </widget>
+                  <packing>
+                    <property name="position">2</property>
+                  </packing>
+                </child>
+              </widget>
+              <packing>
+                <property name="top_attach">8</property>
+                <property name="bottom_attach">9</property>
+                <property name="x_options"></property>
+              </packing>
+            </child>
+            <child>
+              <widget class="GtkLabel" id="label23">
+                <property name="visible">True</property>
+                <property name="xalign">0</property>
+                <property name="label" translatable="yes">Dev9</property>
+                <property name="justify">GTK_JUSTIFY_CENTER</property>
+              </widget>
+              <packing>
+                <property name="top_attach">6</property>
+                <property name="bottom_attach">7</property>
+                <property name="x_options"></property>
+                <property name="y_options"></property>
+              </packing>
+            </child>
+            <child>
+              <widget class="GtkLabel" id="GtkLabel_Cdvdrom">
+                <property name="visible">True</property>
+                <property name="xalign">0</property>
+                <property name="label" translatable="yes">Cdvdrom</property>
+                <property name="justify">GTK_JUSTIFY_CENTER</property>
+              </widget>
+              <packing>
+                <property name="left_attach">1</property>
+                <property name="right_attach">2</property>
+                <property name="top_attach">6</property>
+                <property name="bottom_attach">7</property>
                 <property name="x_options"></property>
                 <property name="y_options"></property>
               </packing>
@@ -2486,72 +2762,56 @@ Configure them here.&lt;/b&gt;</property>
               </packing>
             </child>
             <child>
-              <widget class="GtkLabel" id="GtkLabel_Cdvdrom">
+              <widget class="GtkLabel" id="label29">
                 <property name="visible">True</property>
                 <property name="xalign">0</property>
-                <property name="label" translatable="yes">Cdvdrom</property>
+                <property name="label" translatable="yes">Usb</property>
                 <property name="justify">GTK_JUSTIFY_CENTER</property>
               </widget>
               <packing>
-                <property name="left_attach">1</property>
-                <property name="right_attach">2</property>
-                <property name="top_attach">6</property>
-                <property name="bottom_attach">7</property>
+                <property name="top_attach">9</property>
+                <property name="bottom_attach">10</property>
                 <property name="x_options"></property>
                 <property name="y_options"></property>
               </packing>
             </child>
             <child>
-              <widget class="GtkLabel" id="label23">
-                <property name="visible">True</property>
-                <property name="xalign">0</property>
-                <property name="label" translatable="yes">Dev9</property>
-                <property name="justify">GTK_JUSTIFY_CENTER</property>
-              </widget>
-              <packing>
-                <property name="top_attach">6</property>
-                <property name="bottom_attach">7</property>
-                <property name="x_options"></property>
-                <property name="y_options"></property>
-              </packing>
-            </child>
-            <child>
-              <widget class="GtkHButtonBox" id="hbuttonbox21">
+              <widget class="GtkHButtonBox" id="hbuttonbox23">
                 <property name="visible">True</property>
                 <child>
-                  <widget class="GtkButton" id="GtkButton_DEV9configure">
+                  <widget class="GtkButton" id="GtkButton_USBconfigure">
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="can_default">True</property>
                     <property name="label" translatable="yes">Configure</property>
                     <property name="use_underline">True</property>
                     <property name="response_id">0</property>
-                    <signal name="clicked" handler="OnConfConf_Dev9Conf"/>
+                    <signal name="clicked" handler="OnConfConf_UsbConf"/>
                   </widget>
                 </child>
                 <child>
-                  <widget class="GtkButton" id="GtkButton_DEV9test">
+                  <widget class="GtkButton" id="GtkButton_USBtest">
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="can_default">True</property>
                     <property name="label" translatable="yes">Test</property>
                     <property name="use_underline">True</property>
                     <property name="response_id">0</property>
-                    <signal name="clicked" handler="OnConfConf_Dev9Test"/>
+                    <signal name="clicked" handler="OnConfConf_UsbTest"/>
                   </widget>
                   <packing>
                     <property name="position">1</property>
                   </packing>
                 </child>
                 <child>
-                  <widget class="GtkButton" id="GtkButton_DEV9about">
+                  <widget class="GtkButton" id="GtkButton_USBabout">
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="can_default">True</property>
                     <property name="label" translatable="yes">About</property>
                     <property name="use_underline">True</property>
                     <property name="response_id">0</property>
-                    <signal name="clicked" handler="OnConfConf_Dev9About"/>
+                    <signal name="clicked" handler="OnConfConf_UsbAbout"/>
                   </widget>
                   <packing>
                     <property name="position">2</property>
@@ -2559,48 +2819,48 @@ Configure them here.&lt;/b&gt;</property>
                 </child>
               </widget>
               <packing>
-                <property name="top_attach">8</property>
-                <property name="bottom_attach">9</property>
+                <property name="top_attach">11</property>
+                <property name="bottom_attach">12</property>
                 <property name="x_options"></property>
               </packing>
             </child>
             <child>
-              <widget class="GtkHButtonBox" id="hbuttonbox12">
+              <widget class="GtkHButtonBox" id="hbuttonbox24">
                 <property name="visible">True</property>
                 <child>
-                  <widget class="GtkButton" id="GtkButton_SPU2configure">
+                  <widget class="GtkButton" id="GtkButton_FWconfigure">
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="can_default">True</property>
                     <property name="label" translatable="yes">Configure</property>
                     <property name="use_underline">True</property>
                     <property name="response_id">0</property>
-                    <signal name="clicked" handler="OnConfConf_Spu2Conf"/>
+                    <signal name="clicked" handler="OnConfConf_FWConf"/>
                   </widget>
                 </child>
                 <child>
-                  <widget class="GtkButton" id="GtkButton_SPU2test">
+                  <widget class="GtkButton" id="GtkButton_FWtest">
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="can_default">True</property>
                     <property name="label" translatable="yes">Test</property>
                     <property name="use_underline">True</property>
                     <property name="response_id">0</property>
-                    <signal name="clicked" handler="OnConfConf_Spu2Test"/>
+                    <signal name="clicked" handler="OnConfConf_FWTest"/>
                   </widget>
                   <packing>
                     <property name="position">1</property>
                   </packing>
                 </child>
                 <child>
-                  <widget class="GtkButton" id="GtkButton_SPU2about">
+                  <widget class="GtkButton" id="GtkButton_FireWireabout">
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="can_default">True</property>
                     <property name="label" translatable="yes">About</property>
                     <property name="use_underline">True</property>
                     <property name="response_id">0</property>
-                    <signal name="clicked" handler="OnConfConf_Spu2About"/>
+                    <signal name="clicked" handler="OnConfConf_FWAbout"/>
                   </widget>
                   <packing>
                     <property name="position">2</property>
@@ -2610,316 +2870,42 @@ Configure them here.&lt;/b&gt;</property>
               <packing>
                 <property name="left_attach">1</property>
                 <property name="right_attach">2</property>
-                <property name="top_attach">2</property>
-                <property name="bottom_attach">3</property>
+                <property name="top_attach">11</property>
+                <property name="bottom_attach">12</property>
                 <property name="x_options"></property>
                 <property name="y_options"></property>
               </packing>
             </child>
             <child>
-              <widget class="GtkLabel" id="GtkLabel_Sound">
+              <widget class="GtkLabel" id="label30">
                 <property name="visible">True</property>
                 <property name="xalign">0</property>
-                <property name="label" translatable="yes">Sound</property>
+                <property name="label" translatable="yes">FireWire</property>
                 <property name="justify">GTK_JUSTIFY_CENTER</property>
               </widget>
               <packing>
                 <property name="left_attach">1</property>
                 <property name="right_attach">2</property>
+                <property name="top_attach">9</property>
+                <property name="bottom_attach">10</property>
                 <property name="x_options"></property>
                 <property name="y_options"></property>
               </packing>
             </child>
             <child>
-              <widget class="GtkLabel" id="GtkLabel_SecondController">
+              <widget class="GtkLabel" id="GtkLabel_Bios">
                 <property name="visible">True</property>
                 <property name="xalign">0</property>
-                <property name="label" translatable="yes">Second Controller</property>
+                <property name="label" translatable="yes">Bios</property>
                 <property name="justify">GTK_JUSTIFY_CENTER</property>
               </widget>
               <packing>
                 <property name="left_attach">1</property>
                 <property name="right_attach">2</property>
-                <property name="top_attach">3</property>
-                <property name="bottom_attach">4</property>
+                <property name="top_attach">12</property>
+                <property name="bottom_attach">13</property>
                 <property name="x_options"></property>
                 <property name="y_options"></property>
-              </packing>
-            </child>
-            <child>
-              <widget class="GtkLabel" id="GtkLabel_FirstController">
-                <property name="visible">True</property>
-                <property name="xalign">0</property>
-                <property name="label" translatable="yes">First Controller</property>
-                <property name="justify">GTK_JUSTIFY_CENTER</property>
-              </widget>
-              <packing>
-                <property name="top_attach">3</property>
-                <property name="bottom_attach">4</property>
-                <property name="x_options"></property>
-                <property name="y_options"></property>
-              </packing>
-            </child>
-            <child>
-              <widget class="GtkLabel" id="GtkLabel_Graphics">
-                <property name="visible">True</property>
-                <property name="xalign">0</property>
-                <property name="label" translatable="yes">Graphics</property>
-                <property name="justify">GTK_JUSTIFY_CENTER</property>
-              </widget>
-              <packing>
-                <property name="x_options"></property>
-                <property name="y_options"></property>
-              </packing>
-            </child>
-            <child>
-              <widget class="GtkHButtonBox" id="hbuttonbox8">
-                <property name="visible">True</property>
-                <child>
-                  <widget class="GtkButton" id="GtkButton_GSconfigure">
-                    <property name="visible">True</property>
-                    <property name="can_focus">True</property>
-                    <property name="can_default">True</property>
-                    <property name="label" translatable="yes">Configure</property>
-                    <property name="use_underline">True</property>
-                    <property name="response_id">0</property>
-                    <signal name="clicked" handler="OnConfConf_GsConf"/>
-                  </widget>
-                </child>
-                <child>
-                  <widget class="GtkButton" id="GtkButton_GStest">
-                    <property name="visible">True</property>
-                    <property name="can_focus">True</property>
-                    <property name="can_default">True</property>
-                    <property name="label" translatable="yes">Test</property>
-                    <property name="use_underline">True</property>
-                    <property name="response_id">0</property>
-                    <signal name="clicked" handler="OnConfConf_GsTest"/>
-                  </widget>
-                  <packing>
-                    <property name="position">1</property>
-                  </packing>
-                </child>
-                <child>
-                  <widget class="GtkButton" id="GtkButton_GSabout">
-                    <property name="visible">True</property>
-                    <property name="can_focus">True</property>
-                    <property name="can_default">True</property>
-                    <property name="label" translatable="yes">About</property>
-                    <property name="use_underline">True</property>
-                    <property name="response_id">0</property>
-                    <signal name="clicked" handler="OnConfConf_GsAbout"/>
-                  </widget>
-                  <packing>
-                    <property name="position">2</property>
-                  </packing>
-                </child>
-              </widget>
-              <packing>
-                <property name="top_attach">2</property>
-                <property name="bottom_attach">3</property>
-                <property name="x_options"></property>
-              </packing>
-            </child>
-            <child>
-              <widget class="GtkHButtonBox" id="hbuttonbox7">
-                <property name="visible">True</property>
-                <child>
-                  <widget class="GtkButton" id="GtkButton_PAD1configure">
-                    <property name="visible">True</property>
-                    <property name="can_focus">True</property>
-                    <property name="can_default">True</property>
-                    <property name="label" translatable="yes">Configure</property>
-                    <property name="use_underline">True</property>
-                    <property name="response_id">0</property>
-                    <signal name="clicked" handler="OnConfConf_Pad1Conf"/>
-                  </widget>
-                </child>
-                <child>
-                  <widget class="GtkButton" id="GtkButton_PAD1test">
-                    <property name="visible">True</property>
-                    <property name="can_focus">True</property>
-                    <property name="can_default">True</property>
-                    <property name="label" translatable="yes">Test</property>
-                    <property name="use_underline">True</property>
-                    <property name="response_id">0</property>
-                    <signal name="clicked" handler="OnConfConf_Pad1Test"/>
-                  </widget>
-                  <packing>
-                    <property name="position">1</property>
-                  </packing>
-                </child>
-                <child>
-                  <widget class="GtkButton" id="GtkButton_PAD1about">
-                    <property name="visible">True</property>
-                    <property name="can_focus">True</property>
-                    <property name="can_default">True</property>
-                    <property name="label" translatable="yes">About</property>
-                    <property name="use_underline">True</property>
-                    <property name="response_id">0</property>
-                    <signal name="clicked" handler="OnConfConf_Pad1About"/>
-                  </widget>
-                  <packing>
-                    <property name="position">2</property>
-                  </packing>
-                </child>
-              </widget>
-              <packing>
-                <property name="top_attach">5</property>
-                <property name="bottom_attach">6</property>
-                <property name="x_options"></property>
-                <property name="y_options"></property>
-              </packing>
-            </child>
-            <child>
-              <widget class="GtkHButtonBox" id="hbuttonbox6">
-                <property name="visible">True</property>
-                <child>
-                  <widget class="GtkButton" id="GtkButton_PAD2configure">
-                    <property name="visible">True</property>
-                    <property name="can_focus">True</property>
-                    <property name="can_default">True</property>
-                    <property name="label" translatable="yes">Configure</property>
-                    <property name="use_underline">True</property>
-                    <property name="response_id">0</property>
-                    <signal name="clicked" handler="OnConfConf_Pad2Conf"/>
-                  </widget>
-                </child>
-                <child>
-                  <widget class="GtkButton" id="GtkButton_PAD2test">
-                    <property name="visible">True</property>
-                    <property name="can_focus">True</property>
-                    <property name="can_default">True</property>
-                    <property name="label" translatable="yes">Test</property>
-                    <property name="use_underline">True</property>
-                    <property name="response_id">0</property>
-                    <signal name="clicked" handler="OnConfConf_Pad2Test"/>
-                  </widget>
-                  <packing>
-                    <property name="position">1</property>
-                  </packing>
-                </child>
-                <child>
-                  <widget class="GtkButton" id="GtkButton_PAD2about">
-                    <property name="visible">True</property>
-                    <property name="can_focus">True</property>
-                    <property name="can_default">True</property>
-                    <property name="label" translatable="yes">About</property>
-                    <property name="use_underline">True</property>
-                    <property name="response_id">0</property>
-                    <signal name="clicked" handler="OnConfConf_Pad2About"/>
-                  </widget>
-                  <packing>
-                    <property name="position">2</property>
-                  </packing>
-                </child>
-              </widget>
-              <packing>
-                <property name="left_attach">1</property>
-                <property name="right_attach">2</property>
-                <property name="top_attach">5</property>
-                <property name="bottom_attach">6</property>
-                <property name="x_options"></property>
-              </packing>
-            </child>
-            <child>
-              <widget class="GtkComboBox" id="GtkCombo_FW">
-                <property name="visible">True</property>
-                <property name="items" translatable="yes"></property>
-              </widget>
-              <packing>
-                <property name="left_attach">1</property>
-                <property name="right_attach">2</property>
-                <property name="top_attach">10</property>
-                <property name="bottom_attach">11</property>
-              </packing>
-            </child>
-            <child>
-              <widget class="GtkComboBox" id="GtkCombo_Usb">
-                <property name="visible">True</property>
-                <property name="items" translatable="yes"></property>
-              </widget>
-              <packing>
-                <property name="top_attach">10</property>
-                <property name="bottom_attach">11</property>
-              </packing>
-            </child>
-            <child>
-              <widget class="GtkComboBox" id="GtkCombo_Cdvd">
-                <property name="visible">True</property>
-                <property name="items" translatable="yes"></property>
-              </widget>
-              <packing>
-                <property name="left_attach">1</property>
-                <property name="right_attach">2</property>
-                <property name="top_attach">7</property>
-                <property name="bottom_attach">8</property>
-              </packing>
-            </child>
-            <child>
-              <widget class="GtkComboBox" id="GtkCombo_Dev9">
-                <property name="visible">True</property>
-                <property name="items" translatable="yes"></property>
-              </widget>
-              <packing>
-                <property name="top_attach">7</property>
-                <property name="bottom_attach">8</property>
-              </packing>
-            </child>
-            <child>
-              <widget class="GtkComboBox" id="GtkCombo_Pad2">
-                <property name="visible">True</property>
-                <property name="items" translatable="yes"></property>
-              </widget>
-              <packing>
-                <property name="left_attach">1</property>
-                <property name="right_attach">2</property>
-                <property name="top_attach">4</property>
-                <property name="bottom_attach">5</property>
-              </packing>
-            </child>
-            <child>
-              <widget class="GtkComboBox" id="GtkCombo_Pad1">
-                <property name="visible">True</property>
-                <property name="items" translatable="yes"></property>
-              </widget>
-              <packing>
-                <property name="top_attach">4</property>
-                <property name="bottom_attach">5</property>
-              </packing>
-            </child>
-            <child>
-              <widget class="GtkComboBox" id="GtkCombo_Spu2">
-                <property name="visible">True</property>
-                <property name="items" translatable="yes"></property>
-              </widget>
-              <packing>
-                <property name="left_attach">1</property>
-                <property name="right_attach">2</property>
-                <property name="top_attach">1</property>
-                <property name="bottom_attach">2</property>
-              </packing>
-            </child>
-            <child>
-              <widget class="GtkComboBox" id="GtkCombo_Gs">
-                <property name="visible">True</property>
-                <property name="items" translatable="yes"></property>
-              </widget>
-              <packing>
-                <property name="top_attach">1</property>
-                <property name="bottom_attach">2</property>
-              </packing>
-            </child>
-            <child>
-              <widget class="GtkComboBox" id="GtkCombo_Bios">
-                <property name="visible">True</property>
-                <property name="items" translatable="yes"></property>
-              </widget>
-              <packing>
-                <property name="left_attach">1</property>
-                <property name="right_attach">2</property>
-                <property name="top_attach">13</property>
-                <property name="bottom_attach">14</property>
               </packing>
             </child>
           </widget>
@@ -3834,50 +3820,17 @@ Version x.x</property>
                           <placeholder/>
                         </child>
                         <child>
-                          <widget class="GtkRadioButton" id="radiobutton3">
+                          <widget class="GtkCheckButton" id="checkbutton1">
                             <property name="visible">True</property>
                             <property name="can_focus">True</property>
-                            <property name="label" translatable="yes">8 bits</property>
+                            <property name="label" translatable="yes">Unsigned</property>
                             <property name="use_underline">True</property>
                             <property name="response_id">0</property>
                             <property name="draw_indicator">True</property>
-                            <property name="group">radiobutton6</property>
                           </widget>
                           <packing>
-                            <property name="x_options"></property>
-                            <property name="y_options"></property>
-                          </packing>
-                        </child>
-                        <child>
-                          <widget class="GtkRadioButton" id="radiobutton4">
-                            <property name="visible">True</property>
-                            <property name="can_focus">True</property>
-                            <property name="label" translatable="yes">16 bits</property>
-                            <property name="use_underline">True</property>
-                            <property name="response_id">0</property>
-                            <property name="draw_indicator">True</property>
-                            <property name="group">radiobutton6</property>
-                          </widget>
-                          <packing>
-                            <property name="left_attach">1</property>
-                            <property name="right_attach">2</property>
-                            <property name="x_options"></property>
-                            <property name="y_options"></property>
-                          </packing>
-                        </child>
-                        <child>
-                          <widget class="GtkRadioButton" id="radiobutton5">
-                            <property name="visible">True</property>
-                            <property name="can_focus">True</property>
-                            <property name="label" translatable="yes">32 bits</property>
-                            <property name="use_underline">True</property>
-                            <property name="response_id">0</property>
-                            <property name="draw_indicator">True</property>
-                            <property name="group">radiobutton6</property>
-                          </widget>
-                          <packing>
-                            <property name="top_attach">1</property>
-                            <property name="bottom_attach">2</property>
+                            <property name="top_attach">2</property>
+                            <property name="bottom_attach">3</property>
                             <property name="x_options"></property>
                             <property name="y_options"></property>
                           </packing>
@@ -3901,17 +3854,50 @@ Version x.x</property>
                           </packing>
                         </child>
                         <child>
-                          <widget class="GtkCheckButton" id="checkbutton1">
+                          <widget class="GtkRadioButton" id="radiobutton5">
                             <property name="visible">True</property>
                             <property name="can_focus">True</property>
-                            <property name="label" translatable="yes">Unsigned</property>
+                            <property name="label" translatable="yes">32 bits</property>
                             <property name="use_underline">True</property>
                             <property name="response_id">0</property>
                             <property name="draw_indicator">True</property>
+                            <property name="group">radiobutton6</property>
                           </widget>
                           <packing>
-                            <property name="top_attach">2</property>
-                            <property name="bottom_attach">3</property>
+                            <property name="top_attach">1</property>
+                            <property name="bottom_attach">2</property>
+                            <property name="x_options"></property>
+                            <property name="y_options"></property>
+                          </packing>
+                        </child>
+                        <child>
+                          <widget class="GtkRadioButton" id="radiobutton4">
+                            <property name="visible">True</property>
+                            <property name="can_focus">True</property>
+                            <property name="label" translatable="yes">16 bits</property>
+                            <property name="use_underline">True</property>
+                            <property name="response_id">0</property>
+                            <property name="draw_indicator">True</property>
+                            <property name="group">radiobutton6</property>
+                          </widget>
+                          <packing>
+                            <property name="left_attach">1</property>
+                            <property name="right_attach">2</property>
+                            <property name="x_options"></property>
+                            <property name="y_options"></property>
+                          </packing>
+                        </child>
+                        <child>
+                          <widget class="GtkRadioButton" id="radiobutton3">
+                            <property name="visible">True</property>
+                            <property name="can_focus">True</property>
+                            <property name="label" translatable="yes">8 bits</property>
+                            <property name="use_underline">True</property>
+                            <property name="response_id">0</property>
+                            <property name="draw_indicator">True</property>
+                            <property name="group">radiobutton6</property>
+                          </widget>
+                          <packing>
                             <property name="x_options"></property>
                             <property name="y_options"></property>
                           </packing>
@@ -4204,28 +4190,18 @@ Version x.x</property>
                 <property name="n_rows">2</property>
                 <property name="n_columns">2</property>
                 <child>
-                  <widget class="GtkButton" id="button92">
+                  <widget class="GtkButton" id="button95">
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
-                    <property name="label">gtk-clear</property>
-                    <property name="use_stock">True</property>
-                    <property name="response_id">0</property>
-                  </widget>
-                  <packing>
-                    <property name="y_options"></property>
-                  </packing>
-                </child>
-                <child>
-                  <widget class="GtkButton" id="button93">
-                    <property name="visible">True</property>
-                    <property name="can_focus">True</property>
-                    <property name="label">gtk-find</property>
+                    <property name="label">gtk-close</property>
                     <property name="use_stock">True</property>
                     <property name="response_id">0</property>
                   </widget>
                   <packing>
                     <property name="left_attach">1</property>
                     <property name="right_attach">2</property>
+                    <property name="top_attach">1</property>
+                    <property name="bottom_attach">2</property>
                     <property name="y_options"></property>
                   </packing>
                 </child>
@@ -4244,18 +4220,28 @@ Version x.x</property>
                   </packing>
                 </child>
                 <child>
-                  <widget class="GtkButton" id="button95">
+                  <widget class="GtkButton" id="button93">
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
-                    <property name="label">gtk-close</property>
+                    <property name="label">gtk-find</property>
                     <property name="use_stock">True</property>
                     <property name="response_id">0</property>
                   </widget>
                   <packing>
                     <property name="left_attach">1</property>
                     <property name="right_attach">2</property>
-                    <property name="top_attach">1</property>
-                    <property name="bottom_attach">2</property>
+                    <property name="y_options"></property>
+                  </packing>
+                </child>
+                <child>
+                  <widget class="GtkButton" id="button92">
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="label">gtk-clear</property>
+                    <property name="use_stock">True</property>
+                    <property name="response_id">0</property>
+                  </widget>
+                  <packing>
                     <property name="y_options"></property>
                   </packing>
                 </child>

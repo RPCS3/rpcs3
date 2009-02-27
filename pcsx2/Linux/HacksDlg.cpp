@@ -26,7 +26,6 @@ GtkWidget *GameFixDlg, *SpeedHacksDlg;
 
 	set_checked(GameFixDlg, "check_VU_Add_Sub", (Config.GameFixes & FLAG_VU_ADD_SUB));
 	set_checked(GameFixDlg, "check_FPU_Clamp", (Config.GameFixes & FLAG_FPU_CLAMP));
-	set_checked(GameFixDlg, "check_VU_FCOR_hack", (Config.GameFixes & FLAG_VU_FCOR_HACK));
 
 	gtk_widget_show_all(GameFixDlg);
 	gtk_widget_set_sensitive(MainWindow, FALSE);
@@ -39,7 +38,6 @@ void on_Game_Fix_OK(GtkButton *button, gpointer user_data)
 	Config.GameFixes = 0;
 	Config.GameFixes |= is_checked(GameFixDlg, "check_VU_Add_Sub") ? FLAG_VU_ADD_SUB : 0;
 	Config.GameFixes |= is_checked(GameFixDlg, "check_FPU_Clamp") ? FLAG_FPU_CLAMP : 0;
-	Config.GameFixes |= is_checked(GameFixDlg, "check_VU_FCOR_hack") ? FLAG_VU_FCOR_HACK : 0;
 
 	SaveConfig();
 	gtk_widget_destroy(GameFixDlg);
