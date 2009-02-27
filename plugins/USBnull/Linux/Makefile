@@ -1,7 +1,7 @@
 
 PLUGIN = libUSBnull.so
 CFG = cfgUSBnull
-CFLAGS+= -fPIC -Wall -I. -I.. -O3 -fomit-frame-pointer -fno-strict-aliasing
+CFLAGS+= -fPIC -Wall -I. -I.. -I../../../common/include -O3 -fomit-frame-pointer -fno-strict-aliasing
 OBJS = ../USB.o
 OBJS+= Config.o Linux.o 
 CFGOBJS = conf.o interface.o support.o

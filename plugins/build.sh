@@ -12,18 +12,11 @@ exit 1
 fi
 }
 
-#buildplugin gs $@
-#buildplugin cdvd $@
-#buildplugin dev9 $@
-#buildplugin fw $@
-#buildplugin pad $@
-#buildplugin spu2 $@
-#buildplugin usb $@
-
 buildplugin CDVDnull $@
 buildplugin dev9null $@
 buildplugin FWnull $@
 buildplugin USBnull $@
+buildplugin SPU2null $@
 
 buildplugin zerogs $@
 buildplugin zeropad $@
