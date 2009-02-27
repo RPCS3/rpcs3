@@ -12,6 +12,7 @@
 #include "DeviceEnumerator.h"
 #include "WndProcEater.h"
 #include "KeyboardQueue.h"
+#include "svnrev.h"
 #include "resource.h"
 
 // Used to prevent reading input and cleaning up input devices at the same time.
@@ -496,9 +497,19 @@ u32 CALLBACK PS2EgetLibVersion2(u32 type) {
 	return 0;
 }
 
+void GetNameAndVersionString(wchar_t *out) {
+#ifdef _DEBUG
+	wsprintfW(out, L"LilyPad Debug %i.%i.%i (r%i)", (VERSION>>8)&0xFF, VERSION&0xFF, (VERSION>>24)&0xFF, SVN_REV);
+#else
+	wsprintfW(out, L"LilyPad %i.%i.%i", (VERSION>>8)&0xFF, VERSION&0xFF, (VERSION>>24)&0xFF, SVN_REV);
+#endif
+}
+
 char* CALLBACK PSEgetLibName() {
 #ifdef _DEBUG
-	return "LilyPad Debug";
+	static char version[50];
+	sprintf(version, "LilyPad Debug (r%i)", SVN_REV);
+	return version;
 #else
 	return "LilyPad";
 #endif
@@ -1028,9 +1039,14 @@ u32 CALLBACK PADquery() {
 //void CALLBACK PADgsDriverInfo(GSdriverInfo *info) {
 //}
 
-INT_PTR CALLBACK AboutDialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-	if (uMsg == WM_COMMAND && LOWORD(wParam) == IDOK) {
-		EndDialog(hwndDlg, 0);
+INT_PTR CALLBACK AboutDialogProc(HWND hWndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+	if (uMsg == WM_INITDIALOG) {
+		wchar_t idString[100];
+		GetNameAndVersionString(idString);
+		SetDlgItemTextW(hWndDlg, IDC_VERSION, idString);
+	}
+	else if (uMsg == WM_COMMAND && (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)) {
+		EndDialog(hWndDlg, 0);
 		return 1;
 	}
 	return 0;

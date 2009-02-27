@@ -23,6 +23,8 @@
 #include <windows.h>
 
 extern HINSTANCE hInst;
+// Needed for config screen
+void GetNameAndVersionString(wchar_t *out);
 
 #ifdef NO_CRT
 inline void * malloc(size_t size) {

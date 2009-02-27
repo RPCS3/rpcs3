@@ -336,6 +336,12 @@ void SelChanged(int pad) {
 					}
 					else if (type == IDC_FF_AXIS1_ENABLED) {
 						CheckDlgButton(hWnd, i, BST_CHECKED * (info->force!=0));
+						wsprintfW(temp[0], L"Axis %i", index+1);
+						if (dev->ffAxes[index].displayName && wcslen(dev->ffAxes[index].displayName) < 50) {
+							wchar_t *end = wcschr(temp[0], 0);
+							wsprintfW(end, L": %s", dev->ffAxes[index].displayName);
+						}
+						SetWindowText(hWndTemp, temp[0]);
 					}
 				}
 			}
@@ -1733,7 +1739,10 @@ void CALLBACK PADconfigure() {
 	psh.hwndParent = GetActiveWindow();
 	psh.nPages = 1;
 	psh.phpage = &page;
-	psh.pszCaption = L"LilyPad Settings";
+	wchar_t title[200];
+	GetNameAndVersionString(title);
+	wcscat(title, L" Settings");
+	psh.pszCaption = title;
 	PropertySheet(&psh);
 	LoadSettings(1);
 	hWnds[0] = hWnds[1] = 0;
