@@ -684,8 +684,8 @@ static __naked void Dispatcher()
 	assert( g_EEDispatchTemp );
 #endif
 
+	// Modify the prev block's jump address, and jump to the new block:
 	__asm {
-		//and eax, 0x0fffffff
 		shl eax, 4
 		pop ecx // x86Ptr to mod
 		mov edx, eax
@@ -718,7 +718,6 @@ static __naked void DispatcherClear()
 			mov eax, s_pDispatchBlock
 			add esp, 4 // ignore stack
 			mov eax, dword ptr [eax]
-			//and eax, 0x0fffffff
 			shl eax, 4
 			jmp eax
 		}
@@ -732,7 +731,6 @@ static __naked void DispatcherClear()
 
 		pop ecx // old fnptr
 
-		//and eax, 0x0fffffff
 		shl eax, 4
 		mov byte ptr [ecx], 0xe9 // jmp32
 		mov edx, eax
@@ -764,7 +762,6 @@ static __naked void DispatcherReg()
 #endif
 
 	__asm {
-		//and eax, 0x0fffffff
 		shl eax, 4
 		jmp eax
 	}
@@ -774,7 +771,8 @@ __forceinline void recExecute()
 {
 	// Optimization note : Compared pushad against manually pushing the regs one-by-one.
 	// Manually pushing is faster, especially on Core2's and such. :)
-	do {
+	do
+	{
 		g_EEFreezeRegs = true;
 		__asm
 		{

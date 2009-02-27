@@ -43,9 +43,7 @@ static void __fastcall psxDmaGeneric(u32 madr, u32 bcr, u32 chcr, u32 spuCore, _
 
 	if(SPU2async)
 	{
-		FreezeMMXRegs( 1 );
 		SPU2async(psxRegs.cycle - psxCounters[6].sCycleT);	
-		FreezeMMXRegs( 0 );
 		//Console::Status("cycles sent to SPU2 %x\n", psxRegs.cycle - psxCounters[6].sCycleT);
 		
 		psxCounters[6].sCycleT = psxRegs.cycle;
@@ -61,12 +59,12 @@ static void __fastcall psxDmaGeneric(u32 madr, u32 bcr, u32 chcr, u32 spuCore, _
 	{
 		case 0x01000201: //cpu to spu2 transfer
 			PSXDMA_LOG("*** DMA %c - mem2spu *** %x addr = %x size = %x\n", dmaNum, chcr, madr, bcr);
-			spu2WriteFunc((u16 *)PSXM(madr), size*2);
+			spu2WriteFunc((u16 *)iopPhysMem(madr), size*2);
 		break;
 
 		case 0x01000200: //spu2 to cpu transfer
 			PSXDMA_LOG("*** DMA %c - spu2mem *** %x addr = %x size = %x\n", dmaNum, chcr, madr, bcr);
-			spu2ReadFunc((u16 *)PSXM(madr), size*2);
+			spu2ReadFunc((u16 *)iopPhysMem(madr), size*2);
 			psxCpu->Clear(spuCore ? HW_DMA7_MADR : HW_DMA4_MADR, size);
 		break;
 
@@ -97,7 +95,7 @@ void psxDma2(u32 madr, u32 bcr, u32 chcr)		// GPU
 
 void psxDma6(u32 madr, u32 bcr, u32 chcr)
 {
-	u32 *mem = (u32 *)PSXM(madr);
+	u32 *mem = (u32 *)iopPhysMem(madr);
 
 	PSXDMA_LOG("*** DMA 6 - OT *** %lx addr = %lx size = %lx\n", chcr, madr, bcr);
 
@@ -166,12 +164,12 @@ void psxDma8(u32 madr, u32 bcr, u32 chcr) {
 	switch (chcr & 0x01000201) {
 		case 0x01000201: //cpu to dev9 transfer
 			PSXDMA_LOG("*** DMA 8 - DEV9 mem2dev9 *** %lx addr = %lx size = %lx\n", chcr, madr, bcr);
-			DEV9writeDMA8Mem((u32*)PSXM(madr), size);
+			DEV9writeDMA8Mem((u32*)iopPhysMem(madr), size);
 		break;
 
 		case 0x01000200: //dev9 to cpu transfer
 			PSXDMA_LOG("*** DMA 8 - DEV9 dev9mem *** %lx addr = %lx size = %lx\n", chcr, madr, bcr);
-			DEV9readDMA8Mem((u32*)PSXM(madr), size);
+			DEV9readDMA8Mem((u32*)iopPhysMem(madr), size);
 		break;
 
 		default:

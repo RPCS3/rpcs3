@@ -26,13 +26,31 @@ extern u8 *psxS;
 extern uptr *psxMemWLUT;
 extern const uptr *psxMemRLUT;
 
-#ifdef TLB_DEBUG_MEM
-void* PSXM(u32 mem);
-void* _PSXM(u32 mem);
-#else
-#define PSXM(mem) (psxMemRLUT[(mem) >> 16] == 0 ? NULL : (void*)(psxMemRLUT[(mem) >> 16] + ((mem) & 0xffff)))
-#define _PSXM(mem) ((const void*)(psxMemRLUT[(mem) >> 16] + ((mem) & 0xffff)))
-#endif
+
+// Obtains a write-safe pointer into the IOP's memory, with TLB address translation.
+// Hacky!  This should really never be used, since anything reading or writing through the
+// TLB should be using iopMemRead/Write instead.
+template<typename T>
+static __forceinline T* iopVirtMemW( u32 mem )
+{
+	return (psxMemWLUT[(mem) >> 16] == 0) ? NULL : (T*)(psxMemRLUT[(mem) >> 16] + ((mem) & 0xffff));
+}
+
+// Obtains a read-safe pointer into the IOP's memory, with TLB address translation.
+// Hacky!  This should really never be used, since anything reading or writing through the
+// TLB should be using iopMemRead/Write instead.
+template<typename T>
+static __forceinline const T* iopVirtMemR( u32 mem )
+{
+	return (psxMemRLUT[(mem) >> 16] == 0) ? NULL : (const T*)(psxMemRLUT[(mem) >> 16] + ((mem) & 0xffff));
+	//return ((const T*)(psxMemRLUT[(mem) >> 16] + ((mem) & 0xffff)));
+}
+
+// Obtains a pointer to the IOP's physical mapping (bypasses the TLB)
+static __forceinline u8* iopPhysMem( u32 addr )
+{
+	return &psxM[addr & 0x1fffff];
+}
 
 #define psxSs8(mem)		psxS[(mem) & 0xffff]
 #define psxSs16(mem)	(*(s16*)&psxS[(mem) & 0xffff])
@@ -40,14 +58,6 @@ void* _PSXM(u32 mem);
 #define psxSu8(mem)		(*(u8*) &psxS[(mem) & 0xffff])
 #define psxSu16(mem)	(*(u16*)&psxS[(mem) & 0xffff])
 #define psxSu32(mem)	(*(u32*)&psxS[(mem) & 0xffff])
-
-#define psxMs8(mem)		psxM[(mem) & 0x1fffff]
-#define psxMs16(mem)	(*(s16*)&psxM[(mem) & 0x1fffff])
-#define psxMs32(mem)	(*(s32*)&psxM[(mem) & 0x1fffff])
-#define psxMu8(mem)		(*(u8*) &psxM[(mem) & 0x1fffff])
-#define psxMu16(mem)	(*(u16*)&psxM[(mem) & 0x1fffff])
-#define psxMu32(mem)	(*(u32*)&psxM[(mem) & 0x1fffff])
-#define psxMu64(mem)	(*(u64*)&psxM[(mem) & 0x1fffff])
 
 #define psxPs8(mem)		psxP[(mem) & 0xffff]
 #define psxPs16(mem)	(*(s16*)&psxP[(mem) & 0xffff])
@@ -63,23 +73,23 @@ void* _PSXM(u32 mem);
 #define psxHu16(mem)	(*(u16*)&psxH[(mem) & 0xffff])
 #define psxHu32(mem)	(*(u32*)&psxH[(mem) & 0xffff])
 
-#define PSXMs8(mem)  (*(s8 *)_PSXM(mem))
-#define PSXMs16(mem) (*(s16*)_PSXM(mem))
-#define PSXMs32(mem) (*(s32*)_PSXM(mem))
-#define PSXMu8(mem)  (*(u8 *)_PSXM(mem))
-#define PSXMu16(mem) (*(u16*)_PSXM(mem))
-#define PSXMu32(mem) (*(u32*)_PSXM(mem))
+//#define PSXMs8(mem)  (*(s8 *)_PSXM(mem))
+//#define PSXMs16(mem) (*(s16*)_PSXM(mem))
+//#define PSXMs32(mem) (*(s32*)_PSXM(mem))
+//#define PSXMu8(mem)  (*(u8 *)_PSXM(mem))
+//#define PSXMu16(mem) (*(u16*)_PSXM(mem))
+//#define PSXMu32(mem) (*(u32*)_PSXM(mem))
 
 void psxMemAlloc();
 void psxMemReset();
 void psxMemShutdown();
 
-u8   psxMemRead8 (u32 mem);
-u16  psxMemRead16(u32 mem);
-u32  psxMemRead32(u32 mem);
-void psxMemWrite8 (u32 mem, u8 value);
-void psxMemWrite16(u32 mem, u16 value);
-void psxMemWrite32(u32 mem, u32 value);
+u8   iopMemRead8 (u32 mem);
+u16  iopMemRead16(u32 mem);
+u32  iopMemRead32(u32 mem);
+void iopMemWrite8 (u32 mem, u8 value);
+void iopMemWrite16(u32 mem, u16 value);
+void iopMemWrite32(u32 mem, u32 value);
 
 // x86reg and mmreg are always x86 regs
 void psxRecMemRead8();

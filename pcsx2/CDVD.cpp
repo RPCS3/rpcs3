@@ -531,12 +531,10 @@ void cdvdReadKey(u8 arg0, u16 arg1, u32 arg2, u8* key) {
 	// Now's a good time to reload the ELF info...
 	if( ElfCRC == 0 )
 	{
-		FreezeMMXRegs(1);
 		ElfCRC = loadElfCRC( str );
 		ElfApplyPatches();
 		LoadGameSpecificSettings();
 		GSsetGameCRC( ElfCRC, 0 );
-		FreezeMMXRegs(0);
 	}
 }
 
@@ -840,7 +838,7 @@ void cdvdNewDiskCB()
 	}
 }
 
-void mechaDecryptBytes(unsigned char* buffer, int size)
+void mechaDecryptBytes( u32 madr, int size )
 {
 	int i;
 
@@ -848,10 +846,11 @@ void mechaDecryptBytes(unsigned char* buffer, int size)
 	int doXor = (cdvd.decSet) & 1;
 	int doShift = (cdvd.decSet) & 2;
 	
-	for (i=0; i<size; i++) 
+	u8* curval = iopPhysMem( madr );
+	for( i=0; i<size; ++i, ++curval )
 	{
-		if (doXor) buffer[i] ^= cdvd.Key[4];
-		if (doShift) buffer[i] = (buffer[i]>>shiftAmount) | (buffer[i]<<(8-shiftAmount));
+		if( doXor ) *curval ^= cdvd.Key[4];
+		if( doShift ) *curval = (*curval >> shiftAmount) | (*curval << (8-shiftAmount) );
 	}
 }
 
@@ -870,10 +869,12 @@ int cdvdReadSector() {
 		return -1;
 	}
 
-	const u32 madr = HW_DMA3_MADR;
+	// DMAs use physical addresses (air)
+	u8* mdest = iopPhysMem( HW_DMA3_MADR );
 
 	// if raw dvd sector 'fill in the blanks'
-	if (cdvd.BlockSize == 2064) {
+	if (cdvd.BlockSize == 2064)
+	{
 		// get info on dvd type and layer1 start
 		u32 layer1Start;
 		s32 dualType;
@@ -882,57 +883,62 @@ int cdvdReadSector() {
 
 		cdvdReadDvdDualInfo(&dualType, &layer1Start);
 		
-		if((dualType == 1) && (lsn >= layer1Start)) {
+		if((dualType == 1) && (lsn >= layer1Start))
+		{
 			// dual layer ptp disc
 			layerNum = 1;
 			lsn = lsn-layer1Start + 0x30000;
-		} else if((dualType == 2) && (lsn >= layer1Start)) {
+		} else if((dualType == 2) && (lsn >= layer1Start))
+		{
 			// dual layer otp disc
 			layerNum = 1;
 			lsn = ~(layer1Start+0x30000 - 1);
-		} else {
+		} else
+		{
 			// single layer disc
 			// or on first layer of dual layer disc
 			layerNum = 0;
 			lsn += 0x30000;
 		} // ENDLONGIF- Assumed the other dualType is 0.
+		
+		mdest[0] = 0x20 | layerNum;
+		mdest[1] = (u8)(lsn >> 16);
+		mdest[2] = (u8)(lsn >>  8);
+		mdest[3] = (u8)(lsn      );
 
-		PSXMu8(madr+0) = 0x20 | layerNum;
-		PSXMu8(madr+1) = (u8)(lsn >> 16);
-		PSXMu8(madr+2) = (u8)(lsn >>  8);
-		PSXMu8(madr+3) = (u8)(lsn      );
-		
 		// sector IED (not calculated at present)
-		PSXMu8(madr+4) = 0;
-		PSXMu8(madr+5) = 0;
-		
+		mdest[4] = 0;
+		mdest[5] = 0;
+
 		// sector CPR_MAI (not calculated at present)
-		PSXMu8(madr+ 6) = 0;
-		PSXMu8(madr+ 7) = 0;
-		PSXMu8(madr+ 8) = 0;
-		PSXMu8(madr+ 9) = 0;
-		PSXMu8(madr+10) = 0;
-		PSXMu8(madr+11) = 0;
-		
+		mdest[6] = 0;
+		mdest[7] = 0;
+		mdest[8] = 0;
+		mdest[9] = 0;
+		mdest[10] = 0;
+		mdest[11] = 0;
+
 		// normal 2048 bytes of sector data
-		memcpy_fast(PSXM(madr+12), cdr.pTransfer, 2048);
-		
+		memcpy_fast( &mdest[12], cdr.pTransfer, 2048);
+
 		// 4 bytes of edc (not calculated at present)
-		PSXMu8(madr+2060) = 0;
-		PSXMu8(madr+2061) = 0;
-		PSXMu8(madr+2062) = 0;
-		PSXMu8(madr+2063) = 0;
-	} else {
-		// normal read
-		memcpy_fast((u8*)PSXM(madr), cdr.pTransfer, cdvd.BlockSize);
+		mdest[2060] = 0;
+		mdest[2061] = 0;
+		mdest[2062] = 0;
+		mdest[2063] = 0;			
 	}
+	else
+	{
+		memcpy_fast( mdest, cdr.pTransfer, cdvd.BlockSize);
+	}
+	
 	// decrypt sector's bytes
-	if(cdvd.decSet)
-		mechaDecryptBytes((u8*)PSXM(madr), cdvd.BlockSize);
+	if( cdvd.decSet )
+		mechaDecryptBytes( HW_DMA3_MADR, cdvd.BlockSize );
 
 	// Added a clear after memory write .. never seemed to be necessary before but *should*
 	// be more correct. (air)
-	psxCpu->Clear( madr, cdvd.BlockSize/4);
+	psxCpu->Clear( HW_DMA3_MADR, cdvd.BlockSize/4 );
 
 //	SysPrintf("sector %x;%x;%x\n", PSXMu8(madr+0), PSXMu8(madr+1), PSXMu8(madr+2));
 
@@ -1329,7 +1335,7 @@ static uint cdvdStartSeek( uint newsector )
 	}
 	else
 	{
-		CDR_LOG( "CdSeek Begin > Contigious block without seek - delta=%d sectors\n", delta );
+		CDR_LOG( "CdSeek Begin > Contiguous block without seek - delta=%d sectors\n", delta );
 		
 		// seektime is the time it takes to read to the destination block:
 		seektime = delta * cdvd.ReadTime;
@@ -1419,7 +1425,7 @@ void cdvdWrite04(u8 rt) { // NCOMMAND
 			cdvd.RErr = CDVDreadTrack( cdvd.SeekToSector, cdvd.ReadMode );
 
 			// Set the reading block flag.  If a seek is pending then Readed will
-			// take priority in the handler anyway.  If the read is contigeous then
+			// take priority in the handler anyway.  If the read is contiguous then
 			// this'll skip the seek delay.
 			cdvd.Reading = 1;
 		break;
@@ -1460,7 +1466,7 @@ void cdvdWrite04(u8 rt) { // NCOMMAND
 			cdvd.RErr = CDVDreadTrack( cdvd.SeekToSector, cdvd.ReadMode );
 
 			// Set the reading block flag.  If a seek is pending then Readed will
-			// take priority in the handler anyway.  If the read is contigeous then
+			// take priority in the handler anyway.  If the read is contiguous then
 			// this'll skip the seek delay.
 			cdvd.Reading = 1;
 		break;
@@ -1491,7 +1497,7 @@ void cdvdWrite04(u8 rt) { // NCOMMAND
 			cdvd.RErr = CDVDreadTrack( cdvd.SeekToSector, cdvd.ReadMode );
 
 			// Set the reading block flag.  If a seek is pending then Readed will
-			// take priority in the handler anyway.  If the read is contigeous then
+			// take priority in the handler anyway.  If the read is contiguous then
 			// this'll skip the seek delay.
 			cdvd.Reading = 1;
 		break;
@@ -1503,7 +1509,7 @@ void cdvdWrite04(u8 rt) { // NCOMMAND
 			//{
 			DevCon::WriteLn("CDGetToc Param[0]=%d, Param[1]=%d", params cdvd.Param[0],cdvd.Param[1]);
 			//}
-			cdvdGetToc( PSXM( HW_DMA3_MADR ) );
+			cdvdGetToc( iopPhysMem( HW_DMA3_MADR ) );
 			cdvdSetIrq( (1<<Irq_CommandComplete) ); //| (1<<Irq_DataReady) );
 			HW_DMA3_CHCR &= ~0x01000000;
 			psxDmaInterrupt(3);

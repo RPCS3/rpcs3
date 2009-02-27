@@ -174,10 +174,10 @@ irxlib irxlibs[32] = {
     26 }
 };
 
-#define Ra0 ((char*)PSXM(psxRegs.GPR.n.a0))
-#define Ra1 ((char*)PSXM(psxRegs.GPR.n.a1))
-#define Ra2 ((char*)PSXM(psxRegs.GPR.n.a2))
-#define Ra3 ((char*)PSXM(psxRegs.GPR.n.a3))
+#define Ra0 (iopVirtMemR<char>(psxRegs.GPR.n.a0))
+#define Ra1 (iopVirtMemR<char>(psxRegs.GPR.n.a1))
+#define Ra2 (iopVirtMemR<char>(psxRegs.GPR.n.a2))
+#define Ra3 (iopVirtMemR<char>(psxRegs.GPR.n.a3))
 
 const char* intrname[]={
 "INT_VBLANK",   "INT_GM",       "INT_CDROM",   "INT_DMA",	//00
@@ -204,17 +204,17 @@ void zeroEx()
 #ifdef PCSX2_DEVBUILD
 	u32 pc;
 	u32 code;
-	char *lib;
+	const char *lib;
 	char *fname = NULL;
 	int i;
 
 	if (!Config.PsxOut) return;
 
 	pc = psxRegs.pc;
-	while (PSXMu32(pc) != 0x41e00000) pc-=4;
+	while (iopMemRead32(pc) != 0x41e00000) pc-=4;
 
-	lib  = (char*)PSXM(pc+12);
-	code = PSXMu32(psxRegs.pc - 4) & 0xffff;
+	lib  = iopVirtMemR<char>(pc+12);
+	code = iopMemRead32(psxRegs.pc - 4) & 0xffff;
 
 	for (i=0; i<IRXLIBS; i++) {
 		if (!strncmp(lib, irxlibs[i].name, 8)) {
@@ -263,7 +263,7 @@ void zeroEx()
 	}
 
 	if (!strncmp(lib, "loadcore", 8) && code == 6) {
-		DevCon::WriteLn("loadcore RegisterLibraryEntries (%x): %8.8s", params psxRegs.pc, PSXM(psxRegs.GPR.n.a0+12));
+		DevCon::WriteLn("loadcore RegisterLibraryEntries (%x): %8.8s", params psxRegs.pc, iopVirtMemR<char>(psxRegs.GPR.n.a0+12));
 	}
 
 	if (!strncmp(lib, "intrman", 7) && code == 4) {
@@ -377,8 +377,9 @@ void psxJALR() { if (_Rd_) { _SetLink(_Rd_); } doBranch(_u32(_rRs_)); }
 ///////////////////////////////////////////
 // These macros are used to assemble the repassembler functions
 
-static __forceinline void execI() {
-	psxRegs.code = PSXMu32(psxRegs.pc);
+static __forceinline void execI()
+{
+	psxRegs.code = iopMemRead32(psxRegs.pc);
 
 	PSXCPU_LOG("%s\n", disR3000AF(psxRegs.code, psxRegs.pc));
 

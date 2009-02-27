@@ -921,7 +921,7 @@ void psxDma3(u32 madr, u32 bcr, u32 chcr) {
 			}
 
 			cdsize = (bcr & 0xffff) * 4;
-			memcpy_fast((u8*)PSXM(madr), cdr.pTransfer, cdsize);
+			memcpy_fast(iopPhysMem(madr), cdr.pTransfer, cdsize);
 			psxCpu->Clear(madr, cdsize/4);
 			cdr.pTransfer+=cdsize;
 

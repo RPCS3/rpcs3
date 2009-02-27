@@ -175,47 +175,47 @@ void psxRFE() {
 
 void psxLB() {
 	if (_Rt_) {
-		_rRt_ = (s8 )psxMemRead8(_oB_); 
+		_rRt_ = (s8 )iopMemRead8(_oB_); 
 	} else {
-		psxMemRead8(_oB_); 
+		iopMemRead8(_oB_); 
 	}
 }
 
 void psxLBU() {
 	if (_Rt_) {
-		_rRt_ = psxMemRead8(_oB_);
+		_rRt_ = iopMemRead8(_oB_);
 	} else {
-		psxMemRead8(_oB_); 
+		iopMemRead8(_oB_); 
 	}
 }
 
 void psxLH() {
 	if (_Rt_) {
-		_rRt_ = (s16)psxMemRead16(_oB_);
+		_rRt_ = (s16)iopMemRead16(_oB_);
 	} else {
-		psxMemRead16(_oB_);
+		iopMemRead16(_oB_);
 	}
 }
 
 void psxLHU() {
 	if (_Rt_) {
-		_rRt_ = psxMemRead16(_oB_);
+		_rRt_ = iopMemRead16(_oB_);
 	} else {
-		psxMemRead16(_oB_);
+		iopMemRead16(_oB_);
 	}
 }
 
 void psxLW() {
 	if (_Rt_) {
-		_rRt_ = psxMemRead32(_oB_);
+		_rRt_ = iopMemRead32(_oB_);
 	} else {
-		psxMemRead32(_oB_);
+		iopMemRead32(_oB_);
 	}
 }
 
 void psxLWL() {
 	u32 shift = (_oB_ & 3) << 3;
-	u32 mem = psxMemRead32(_oB_ & 0xfffffffc);
+	u32 mem = iopMemRead32(_oB_ & 0xfffffffc);
 
 	if (!_Rt_) return;
 	_rRt_ =	( _u32(_rRt_) & (0x00ffffff >> shift) ) | 
@@ -234,11 +234,11 @@ void psxLWL() {
 
 void psxLWR() {
 	u32 shift = (_oB_ & 3) << 3;
-	u32 mem = psxMemRead32(_oB_ & 0xfffffffc);
+	u32 mem = iopMemRead32(_oB_ & 0xfffffffc);
 
 	if (!_Rt_) return;
 	_rRt_ =	( _u32(_rRt_) & (0xffffff00 << (24 - shift)) ) |
-				( mem  >> shift );
+			( mem  >> shift );
 
 	/*
 	Mem = 1234.  Reg = abcd
@@ -251,15 +251,15 @@ void psxLWR() {
 	*/
 }
 
-void psxSB() { psxMemWrite8 (_oB_, _u8 (_rRt_)); }
-void psxSH() { psxMemWrite16(_oB_, _u16(_rRt_)); }
-void psxSW() { psxMemWrite32(_oB_, _u32(_rRt_)); }
+void psxSB() { iopMemWrite8 (_oB_, _u8 (_rRt_)); }
+void psxSH() { iopMemWrite16(_oB_, _u16(_rRt_)); }
+void psxSW() { iopMemWrite32(_oB_, _u32(_rRt_)); }
 
 void psxSWL() {
 	u32 shift = (_oB_ & 3) << 3;
-	u32 mem = psxMemRead32(_oB_ & 0xfffffffc);
+	u32 mem = iopMemRead32(_oB_ & 0xfffffffc);
 
-	psxMemWrite32((_oB_ & 0xfffffffc),  ( ( _u32(_rRt_) >>  (24 - shift) ) ) |
+	iopMemWrite32((_oB_ & 0xfffffffc),  ( ( _u32(_rRt_) >>  (24 - shift) ) ) |
 			     (  mem & (0xffffff00 << shift) ));
 	/*
 	Mem = 1234.  Reg = abcd
@@ -274,9 +274,9 @@ void psxSWL() {
 
 void psxSWR() {
 	u32 shift = (_oB_ & 3) << 3;
-	u32 mem = psxMemRead32(_oB_ & 0xfffffffc);
+	u32 mem = iopMemRead32(_oB_ & 0xfffffffc);
 
-	psxMemWrite32((_oB_ & 0xfffffffc), ( ( _u32(_rRt_) << shift ) |
+	iopMemWrite32((_oB_ & 0xfffffffc), ( ( _u32(_rRt_) << shift ) |
 			     (mem  & (0x00ffffff >> (24 - shift)) ) ) );
 	/*
 	Mem = 1234.  Reg = abcd

@@ -164,18 +164,18 @@ const char *biosC0n[256] = {
 #define ra (psxRegs.GPR.n.ra)
 #define pc0 (psxRegs.pc)
 
-#define Ra0 ((char*)PSXM(a0))
-#define Ra1 ((char*)PSXM(a1))
-#define Ra2 ((char*)PSXM(a2))
-#define Ra3 ((char*)PSXM(a3))
-#define Rv0 ((char*)PSXM(v0))
-#define Rsp ((char*)PSXM(sp))
+#define Ra0 (iopVirtMemR<char>(a0))
+#define Ra1 (iopVirtMemR<char>(a1))
+#define Ra2 (iopVirtMemR<char>(a2))
+#define Ra3 (iopVirtMemR<char>(a3))
+#define Rv0 (iopVirtMemR<char>(v0))
+#define Rsp (iopVirtMemR<char>(sp))
 
 void bios_write() { // 0x35/0x03
 
 
     if (a0 == 1) { // stdout
-		char *ptr = Ra1;
+		const char *ptr = Ra1;
 
 		while (a2 > 0) {
 			SysPrintf("%c", *ptr++); a2--;
@@ -195,11 +195,19 @@ void bios_printf() { // 3f
 	char *ptmp = tmp;
 	int n=1, i=0, j;
 
-	memcpy(save, (char*)PSXM(sp), 4*4);
-	psxMu32(sp) = a0;
-	psxMu32(sp + 4) = a1;
-	psxMu32(sp + 8) = a2;
-	psxMu32(sp + 12) = a3;
+	memcpy(save, iopVirtMemR<void>(sp), 4*4);
+
+	iopMemWrite32(sp, a0);
+	iopMemWrite32(sp + 4, a1);
+	iopMemWrite32(sp + 8, a2);
+	iopMemWrite32(sp + 12, a3);
+	
+
+	// old code used phys... is tlb more correct?
+	//psxMu32(sp) = a0;
+	//psxMu32(sp + 4) = a1;
+	//psxMu32(sp + 8) = a2;
+	//psxMu32(sp + 12) = a3;
 
 	while (Ra0[i]) {
 		switch (Ra0[i]) {
@@ -223,21 +231,21 @@ _start:
 
 				switch (Ra0[i]) {
 					case 'f': case 'F':
-						ptmp+= sprintf(ptmp, tmp2, (float)psxMu32(sp + n * 4)); n++; break;
+						ptmp+= sprintf(ptmp, tmp2, (float)iopMemRead32(sp + n * 4)); n++; break;
 					case 'a': case 'A':
 					case 'e': case 'E':
 					case 'g': case 'G':
-						ptmp+= sprintf(ptmp, tmp2, (double)psxMu32(sp + n * 4)); n++; break;
+						ptmp+= sprintf(ptmp, tmp2, (double)iopMemRead32(sp + n * 4)); n++; break;
 					case 'p':
 					case 'i':
 					case 'd': case 'D':
 					case 'o': case 'O':
 					case 'x': case 'X':
-						ptmp+= sprintf(ptmp, tmp2, (unsigned int)psxMu32(sp + n * 4)); n++; break;
+						ptmp+= sprintf(ptmp, tmp2, (unsigned int)iopMemRead32(sp + n * 4)); n++; break;
 					case 'c':
-						ptmp+= sprintf(ptmp, tmp2, (unsigned char)psxMu32(sp + n * 4)); n++; break;
+						ptmp+= sprintf(ptmp, tmp2, (unsigned char)iopMemRead32(sp + n * 4)); n++; break;
 					case 's':
-						ptmp+= sprintf(ptmp, tmp2, (char*)PSXM(psxMu32(sp + n * 4))); n++; break;
+						ptmp+= sprintf(ptmp, tmp2, iopVirtMemR<char>(iopMemRead32(sp + n * 4))); n++; break;
 					case '%':
 						*ptmp++ = Ra0[i]; break;
 				}
@@ -249,7 +257,9 @@ _start:
 	}
 	*ptmp = 0;
 
-	memcpy((char*)PSXM(sp), save, 4*4);
+	// Note: Use Read to obtain a write pointer here, since we're just writing back the 
+	// temp buffer we saved earlier.
+	memcpy( (void*)iopVirtMemR<void>(sp), save, 4*4);
 
 	Console::Write( Color_Cyan, "%s", params tmp);
 

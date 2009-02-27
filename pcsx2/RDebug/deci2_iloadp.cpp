@@ -58,7 +58,7 @@ void D2_ILOADP(const u8 *inbuffer, u8 *outbuffer, char *message){
 	DECI2_ILOADP_HEADER	*in=(DECI2_ILOADP_HEADER*)inbuffer,
 				*out=(DECI2_ILOADP_HEADER*)outbuffer;
 	u8	*data=(u8*)in+sizeof(DECI2_ILOADP_HEADER);
-	irxImageInfo	*iii;
+	const irxImageInfo	*iii;
 	static char line[1024];
 
 	memcpy(outbuffer, inbuffer, 128*1024);//BUFFERSIZE
@@ -76,7 +76,7 @@ void D2_ILOADP(const u8 *inbuffer, u8 *outbuffer, char *message){
 		case 4:
 			sprintf(line, "code=LIST action=%d stamp=%d moduleId=0x%X", in->action, in->stamp, in->moduleId);
 			data=(u8*)out+sizeof(DECI2_ILOADP_HEADER);
-				for (iii=(irxImageInfo*)PSXM(0x800); iii; iii=iii->next?(irxImageInfo*)PSXM(iii->next):0, data+=4)
+				for (iii=iopVirtMemR<irxImageInfo>(0x800); iii; iii=iii->next?iopVirtMemR<irxImageInfo>(iii->next):0, data+=4)
 					*(u32*)data=iii->index;
 
 			out->h.length=data-(u8*)out;
@@ -84,13 +84,13 @@ void D2_ILOADP(const u8 *inbuffer, u8 *outbuffer, char *message){
 		case 6:
 			sprintf(line, "code=INFO action=%d stamp=%d moduleId=0x%X", in->action, in->stamp, in->moduleId);
 			data=(u8*)out+sizeof(DECI2_ILOADP_HEADER);
-				for(iii=(irxImageInfo*)PSXM(0x800); iii; iii=iii->next?(irxImageInfo*)PSXM(iii->next):0)
+				for(iii=iopVirtMemR<irxImageInfo>(0x800); iii; iii=iii->next?iopVirtMemR<irxImageInfo>(iii->next):0)
 					if (iii->index==in->moduleId){
 						writeInfo((DECI2_ILOADP_INFO*)data,
 							iii->version, iii->flags, iii->vaddr, iii->text_size, iii->data_size, iii->bss_size);
 						data+=sizeof(DECI2_ILOADP_INFO);
-						strcpy((char*)data, (char*)PSXM(iii->name));
-						data+=strlen((char*)PSXM(iii->name))+4;
+						strcpy((char*)data, iopVirtMemR<char>(iii->name));
+						data+=strlen(iopVirtMemR<char>(iii->name))+4;
 						data=(u8*)((int)data & 0xFFFFFFFC);
 						break;
 					

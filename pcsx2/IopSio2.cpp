@@ -222,7 +222,7 @@ void psxDma11(u32 madr, u32 bcr, u32 chcr) {
 		sio.count = 1;
 		for(j = 0; j < ((bcr & 0xFFFF) * 4); j++)
 		{
-			sio2_fifoIn(PSXMu8(madr));
+			sio2_fifoIn(iopMemRead8(madr));
 			madr++;
 			if(sio2.packet.sendSize == BUFSIZE)
 				goto finished;
@@ -250,7 +250,7 @@ void psxDma12(u32 madr, u32 bcr, u32 chcr) {
 
 	bcr = size;
 	while (bcr > 0) {
-		PSXMu8(madr) = sio2_fifoOut();
+		iopMemWrite8( madr, sio2_fifoOut() );
 		bcr--; madr++;
 		if(sio2.recvIndex == sio2.packet.sendSize) break;
 	}

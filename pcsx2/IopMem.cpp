@@ -42,7 +42,7 @@ void psxMemShutdown()
 {
 }
 
-u8 psxMemRead8(u32 mem)
+u8 iopMemRead8(u32 mem)
 {
 	u32 t = (mem >> 16) & 0x1fff;
 	
@@ -71,7 +71,7 @@ u8 psxMemRead8(u32 mem)
 	}
 }
 
-u16 psxMemRead16(u32 mem)
+u16 iopMemRead16(u32 mem)
 {
 	u32 t = (mem >> 16) & 0x1fff;
 
@@ -105,7 +105,7 @@ u16 psxMemRead16(u32 mem)
 	}
 }
 
-u32 psxMemRead32(u32 mem)
+u32 iopMemRead32(u32 mem)
 {
 	u32 t = (mem >> 16) & 0x1fff;
 
@@ -144,7 +144,7 @@ u32 psxMemRead32(u32 mem)
 	}
 }
 
-void psxMemWrite8(u32 mem, u8 value)
+void iopMemWrite8(u32 mem, u8 value)
 {
 	u32 t = (mem >> 16) & 0x1fff;
 
@@ -179,7 +179,7 @@ void psxMemWrite8(u32 mem, u8 value)
 	}
 }
 
-void psxMemWrite16(u32 mem, u16 value)
+void iopMemWrite16(u32 mem, u16 value)
 {
 	u32 t = (mem >> 16) & 0x1fff;
 	switch(t) {
@@ -235,7 +235,7 @@ void psxMemWrite16(u32 mem, u16 value)
 	}
 }
 
-void psxMemWrite32(u32 mem, u32 value)
+void iopMemWrite32(u32 mem, u32 value)
 {
 	u32 t = (mem >> 16) & 0x1fff;
 	switch(t) {
@@ -325,22 +325,6 @@ void psxMemWrite32(u32 mem, u32 value)
 }
 
 #else
-
-// TLB functions
-
-#ifdef TLB_DEBUG_MEM
-// fixme - there are a few places in the code where this is called that really shouldn't receive null.
-// cdvdReadSector in CDVD.cpp, psxDma3 in CdRom.cpp, to name two.
-void* PSXM(u32 mem)
-{
-    return (psxMemRLUT[(mem) >> 16] == 0 ? NULL : (void*)(psxMemRLUT[(mem) >> 16] + ((mem) & 0xffff)));
-}
-
-void* _PSXM(u32 mem)
-{
-    return ((void*)(psxMemRLUT[(mem) >> 16] + ((mem) & 0xffff)));
-}
-#endif
 
 u8 *psxM = NULL;
 u8 *psxP = NULL;
@@ -442,7 +426,6 @@ void psxMemShutdown()
 {
 	vtlb_free( m_psxAllMem, m_psxMemSize );
 	m_psxAllMem = NULL;
-	//safe_aligned_free( m_psxAllMem );
 
 	psxM = psxP = psxH = psxS = NULL;
 
@@ -450,7 +433,7 @@ void psxMemShutdown()
 	psxMemRLUT = NULL;
 }
 
-u8 psxMemRead8(u32 mem) {
+u8 iopMemRead8(u32 mem) {
 	const u8* p;
 	u32 t;
 
@@ -477,7 +460,7 @@ u8 psxMemRead8(u32 mem) {
 	}
 }
 
-u16 psxMemRead16(u32 mem) {
+u16 iopMemRead16(u32 mem) {
 	const u8* p;
 	u32 t;
 
@@ -525,7 +508,7 @@ u16 psxMemRead16(u32 mem) {
 	}
 }
 
-u32 psxMemRead32(u32 mem) {
+u32 iopMemRead32(u32 mem) {
 	const u8* p;
 	u32 t;
 	t = (mem >> 16) & 0x1fff;
@@ -573,9 +556,7 @@ u32 psxMemRead32(u32 mem) {
 			if (t == 0x1000) return DEV9read32(mem & 0x1FFFFFFF);
 			
 			if (mem != 0xfffe0130) {
-#ifdef PSXMEM_LOG
 				if (g_psxWriteOk) PSXMEM_LOG("err lw %8.8lx\n", mem);
-#endif
 			} else {
 				return writectrl;
 			}
@@ -584,7 +565,7 @@ u32 psxMemRead32(u32 mem) {
 	}
 }
 
-void psxMemWrite8(u32 mem, u8 value) {
+void iopMemWrite8(u32 mem, u8 value) {
 	char *p;
 	u32 t;
 
@@ -617,7 +598,7 @@ void psxMemWrite8(u32 mem, u8 value) {
 	}
 }
 
-void psxMemWrite16(u32 mem, u16 value) {
+void iopMemWrite16(u32 mem, u16 value) {
 	char *p;
 	u32 t;
 
@@ -674,7 +655,7 @@ void psxMemWrite16(u32 mem, u16 value) {
 	}
 }
 
-void psxMemWrite32(u32 mem, u32 value) {
+void iopMemWrite32(u32 mem, u32 value) {
 	char *p;
 	u32 t;
 	

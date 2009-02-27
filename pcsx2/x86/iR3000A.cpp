@@ -100,7 +100,6 @@ static void iPsxBranchTest(u32 newpc, u32 cpuBranch);
 void psxRecompileNextInstruction(int delayslot);
 
 extern void (*rpsxBSC[64])();
-extern void (*rpsxBSC_co[64])();
 void rpsxpropBSC(EEINST* prev, EEINST* pinst);
 
 #ifdef _DEBUG
@@ -157,7 +156,7 @@ static void iIopDumpBlock( int startpc, u8 * ptr )
 	f = fopen( filename, "w" );
 	assert( f != NULL );
 	for ( i = startpc; i < s_nEndBlock; i += 4 ) {
-		fprintf( f, "%s\n", disR3000Fasm( *(u32*)PSXM( i ), i ) );
+		fprintf( f, "%s\n", disR3000Fasm( iopMemRead32( i ), i ) );
 	}
 
 	// write the instruction info
@@ -655,17 +654,9 @@ static void recShutdown()
 
 #pragma warning(disable:4731) // frame pointer register 'ebp' modified by inline assembly code
 
-static u32 s_uSaveESP = 0;
-
+/*
 static __forceinline void R3000AExecute()
 {
-#ifdef _DEBUG
-	u8* fnptr;
-	u32 oldesi;
-/*#else
-	R3000AFNPTR pfn;*/
-#endif
-
 	BASEBLOCK* pblock;
 
 	pblock = PSX_GETBLOCK(psxRegs.pc);
@@ -709,40 +700,29 @@ static __forceinline void R3000AExecute()
 #else
     ((R3000AFNPTR)pblock->GetFnptr())();
 #endif
-}
+}*/
 
 u32 g_psxlastpc = 0;
 
-#if defined(_MSC_VER)
+#ifdef _MSC_VER
 
 static u32 g_temp;
 
 // jumped to when invalid psxpc address
-__declspec(naked,noreturn) void psxDispatcher()
+__declspec(naked) void psxDispatcher()
 {
 	// EDX contains the current psxpc to jump to, stack contains the jump addr to modify
 	__asm push edx
 
-	// calc PSX_GETBLOCK
-	s_pDispatchBlock = PSX_GETBLOCK(psxRegs.pc);
-	
-	__asm {
-		mov eax, s_pDispatchBlock
+	//jASSUME( psxRegs.pc <= PSX_MEMMASK );
+	s_pDispatchBlock = PSX_GETBLOCK( psxRegs.pc );
 
-		// check if startpc&PSX_MEMMASK == psxRegs.pc&PSX_MEMMASK
-		mov ecx, psxRegs.pc
-        mov edx, [eax+BLOCKTYPE_STARTPC];
-		and ecx, PSX_MEMMASK // remove higher bits
-        and edx, PSX_MEMMASK
-		cmp ecx, edx
-		je CheckPtr
+	if( s_pDispatchBlock->startpc != psxRegs.pc )
+		psxRecRecompile(psxRegs.pc);
 
-		// recompile
-		push psxRegs.pc // psxpc
-		call psxRecRecompile
-		add esp, 4 // pop old param
+	__asm
+	{
 		mov eax, s_pDispatchBlock
-CheckPtr:
 		mov eax, dword ptr [eax]
 	}
 
@@ -751,11 +731,12 @@ CheckPtr:
 	assert( g_temp );
 #endif
 
-	__asm {
-		//and eax, 0x0fffffff
+	// Modify the prev block's jump address, and jump to the new block:
+	__asm
+	{
 		shl eax,4
-		mov edx, eax
 		pop ecx // x86Ptr to mod
+		mov edx, eax
 		sub edx, ecx
 		sub edx, 4
 		mov dword ptr [ecx], edx
@@ -764,20 +745,23 @@ CheckPtr:
 	}
 }
 
-__declspec(naked,noreturn) void psxDispatcherClear()
+__declspec(naked) void psxDispatcherClear()
 {
 	// EDX contains the current psxpc
 	__asm mov psxRegs.pc, edx
 	__asm push edx
 
+	//jASSUME( psxRegs.pc <= PSX_MEMMASK );
+
 	// calc PSX_GETBLOCK
 	s_pDispatchBlock = PSX_GETBLOCK(psxRegs.pc);
 
-	if( (s_pDispatchBlock->startpc&PSX_MEMMASK) == (psxRegs.pc&PSX_MEMMASK) ) {
+	if( s_pDispatchBlock->startpc == psxRegs.pc ) {
 		assert( s_pDispatchBlock->GetFnptr() != 0 );
 
 		// already modded the code, jump to the new place
-		__asm {
+		__asm
+		{
 			pop edx
 			add esp, 4 // ignore stack
 			mov eax, s_pDispatchBlock
@@ -788,7 +772,8 @@ __declspec(naked,noreturn) void psxDispatcherClear()
 		}
 	}
 
-	__asm {
+	__asm
+	{
 		call psxRecRecompile
 		add esp, 4 // pop old param
 		mov eax, s_pDispatchBlock
@@ -809,32 +794,18 @@ __declspec(naked,noreturn) void psxDispatcherClear()
 }
 
 // called when jumping to variable psxpc address
-__declspec(naked,noreturn) void psxDispatcherReg()
+__declspec(naked) void psxDispatcherReg()
 {
-	__asm {
-		//s_pDispatchBlock = PSX_GETBLOCK(psxRegs.pc);
-		mov edx, psxRegs.pc
-		mov ecx, edx
-	}
+	//jASSUME( psxRegs.pc <= PSX_MEMMASK );
+	s_pDispatchBlock = PSX_GETBLOCK( psxRegs.pc );
 
-	__asm {
-		shr edx, 14
-		and edx, 0xfffffffc
-		add edx, psxRecLUT
-		mov edx, dword ptr [edx]
+	if( s_pDispatchBlock->startpc != psxRegs.pc )
+		psxRecRecompile(psxRegs.pc);
 
-		mov eax, ecx
-		and eax, 0xfffc
-		// edx += 2*eax
-		shl eax, 1
-		add edx, eax
-		
-		// check if startpc == psxRegs.pc
-		mov eax, ecx
-		cmp eax, dword ptr [edx+BLOCKTYPE_STARTPC]
-		jne recomp
-
-		mov eax, dword ptr [edx]
+	__asm
+	{
+		mov eax, s_pDispatchBlock
+		mov eax, dword ptr [eax]
 	}
 
 #ifdef _DEBUG
@@ -842,23 +813,10 @@ __declspec(naked,noreturn) void psxDispatcherReg()
 	assert( g_temp );
 #endif
 
-	__asm {
-		//and eax, 0x0fffffff
-		shl eax,4
-		jmp eax // fnptr
-
-recomp:
-		sub esp, 8
-		mov dword ptr [esp+4], edx
-		mov dword ptr [esp], ecx
-		call psxRecRecompile
-		mov edx, dword ptr [esp+4]
-		add esp, 8
-		
-		mov eax, dword ptr [edx]
-		//and eax, 0x0fffffff
-		shl eax,4
-		jmp eax // fnptr
+	__asm
+	{
+		shl eax, 4
+		jmp eax
 	}
 }
 
@@ -875,6 +833,58 @@ void psxDispatcherReg();
 #endif
 
 #endif // _MSC_VER
+
+static void recExecute()
+{
+	// note: this function is currently never used.
+	//for (;;) R3000AExecute();
+}
+
+static s32 recExecuteBlock( s32 eeCycles )
+{
+	psxBreak = 0;
+	psxCycleEE = eeCycles;
+
+	// Register freezing note:
+	//  The IOP does not use mmx/xmm registers, so we don't modify the status
+	//  of the g_EEFreezeRegs here.
+
+#ifdef _MSC_VER
+	__asm
+	{
+		push ebx
+		push esi
+		push edi
+		push ebp
+
+		call psxDispatcherReg
+
+		pop ebp
+		pop edi
+		pop esi
+		pop ebx
+	}
+#else
+	__asm__
+	(
+		".intel_syntax\n"
+		"push %ebx\n"
+		"push %esi\n"
+		"push %edi\n"
+		"push %ebp\n"
+
+		"call psxDispatcherReg\n"
+		
+		"pop %ebp\n"
+		"pop %edi\n"
+		"pop %esi\n"
+		"pop %ebx\n"
+		".att_syntax\n"
+	);
+#endif
+
+	return psxBreak + psxCycleEE;
+}
 
 static void recClear(u32 Addr, u32 Size)
 {
@@ -1034,7 +1044,7 @@ static void iPsxBranchTest(u32 newpc, u32 cpuBranch)
 	x86SetJ8( j8Ptr[0] );
 }
 
-static int *s_pCode;
+static const int *s_pCode;
 
 #if !defined(_MSC_VER)
 static void checkcodefn()
@@ -1148,7 +1158,7 @@ void psxRecompileNextInstruction(int delayslot)
 	MOV32ItoR(EAX, psxpc);
 #endif
 
-	s_pCode = (int *)PSXM( psxpc );
+	s_pCode = iopVirtMemR<int>( psxpc );
 	assert(s_pCode);
 
 	psxRegs.code = *(int *)s_pCode;
@@ -1183,18 +1193,6 @@ void psxRecompileNextInstruction(int delayslot)
 	else s_bFlushReg = 1;
 
 	_clearNeededX86regs();
-}
-
-static void recExecute() {
-	for (;;) R3000AExecute();
-}
-
-static s32 recExecuteBlock( s32 eeCycles )
-{
-	psxBreak = 0;
-	psxCycleEE = eeCycles;
-	R3000AExecute();
-	return psxBreak + psxCycleEE;
 }
 
 #include "IopHw.h"
@@ -1354,7 +1352,7 @@ void psxRecRecompile(u32 startpc)
 			}
 		}
 
-		psxRegs.code = *(int *)PSXM(i);
+		psxRegs.code = iopMemRead32(i);
 
 		switch(psxRegs.code >> 26) {
 			case 0: // special
@@ -1414,7 +1412,7 @@ StartRecomp:
 		pcur->info = 0;
 
 		for(i = s_nEndBlock; i > startpc; i -= 4 ) {
-			psxRegs.code = *(int *)PSXM(i-4);
+			psxRegs.code = iopMemRead32(i-4);
 			pcur[-1] = pcur[0];
 			rpsxpropBSC(pcur-1, pcur);
 			pcur--;

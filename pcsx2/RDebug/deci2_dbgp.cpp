@@ -244,8 +244,8 @@ void D2_DBGP(const u8 *inbuffer, u8 *outbuffer, char *message, char *eepc, char 
 				break;
 			}
 			if (in->h.destination=='I')
-				if (PSXM(mem->address & 0x1FFFFFFF))
-					memcpy(data, PSXM(mem->address & 0x1FFFFFFF), mem->length);
+				if (iopVirtMemR<void>(mem->address & 0x1FFFFFFF))
+					memcpy(data, iopVirtMemR<void>(mem->address & 0x1FFFFFFF), mem->length);
 				else{
 					out->result=0x11;
 					strcat(line, " ADDRESS ERROR");
@@ -298,8 +298,8 @@ void D2_DBGP(const u8 *inbuffer, u8 *outbuffer, char *message, char *eepc, char 
 				break;
 			}
 			if (in->h.destination=='I')
-				if (PSXM(mem->address & 0x1FFFFFFF))
-					memcpy(PSXM(mem->address & 0x1FFFFFFF), data, mem->length);
+				if (iopVirtMemR<void>(mem->address & 0x1FFFFFFF))
+					memcpy( (void*)iopVirtMemR<void>(mem->address & 0x1FFFFFFF), data, mem->length);
 				else{
 					out->result=0x11;
 					strcat(line, " ADDRESS ERROR");

@@ -57,7 +57,7 @@ void MakeDebugOpcode(void)
 
 void MakeIOPDebugOpcode(void)
 {
-	psxRegs.code = PSXMu32( opcode_addr);
+	psxRegs.code = iopMemRead32( opcode_addr );
 }
 
 BOOL HasBreakpoint()
@@ -671,7 +671,7 @@ void RefreshIOPDebugger(void)
     for (t = DebuggerIOPPC, cnt = 0; t < (DebuggerIOPPC + 0x00000029); t += 0x00000004, cnt++)
     {
 		// Make the opcode.
-		u32 mem = PSXMu32(t);
+		u32 mem = iopMemRead32( t );
 		char *str = R3000A::disR3000Fasm(mem, t);
         SendMessage(hWnd_IOP_debugdisasm, LB_ADDSTRING, 0, (LPARAM)str);
 	}
