@@ -4,7 +4,7 @@ CC = gcc
 PLUGIN = libCDVDiso.so
 CFG = cfgCDVDiso
 MKISO = mkiso
-CFLAGS = -fPIC -Wall -g  -I.. -I. -D__LINUX__
+CFLAGS = -fPIC -Wall -g  -I.. -I. -D__LINUX__ -D_FILE_OFFSET_BITS=64 -Wextra
 OBJS = ../CDVDisop.o Config.o Linux.o ../libiso.o
 CFGOBJS = conf.o interface.o support.o ${OBJS}
 LIBS = -lz -lbz2 -lstdc++
