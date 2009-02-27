@@ -173,11 +173,11 @@ psxDispatcherReg_CallFn2:
 
 psxDispatcherReg_recomp:
 		// changed this to use push/pop instead (faster on cores) - air
-		push edx
-		push ecx
+		push %edx
+		push %ecx
 		call psxRecRecompile
-		pop ecx
-		pop edx
+		pop %ecx
+		pop %edx
 
 		mov %eax, dword ptr [%edx]
 		//and %eax, 0x0fffffff

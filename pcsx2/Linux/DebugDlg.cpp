@@ -36,7 +36,7 @@ unsigned long DebuggerPC = 0;
 		u32 pc = dPC + i * 4;
 		/*if (DebugMode)
 		{
-			mem = (u32*)PSXM(pc);
+			mem = (u32*)iopMemRead32(pc);
 		}
 		else*//*
 			mem = (u32*)PSM(pc);
@@ -246,7 +246,7 @@ void OnDumpC_Ok(GtkButton *button, gpointer user_data)
 
 		if (DebugMode)
 		{
-			mem = (u32*)PSXM(addrf);
+			mem = (u32*)iopMemRead32(addrf);
 		}
 		else
 		{
@@ -317,7 +317,7 @@ void OnDumpR_Ok(GtkButton *button, gpointer user_data)
 
 		if (DebugMode)
 		{
-			mem = (u32*)PSXM(addrf);
+			mem = (u32*)iopMemRead32(addrf);
 		}
 		else
 		{
