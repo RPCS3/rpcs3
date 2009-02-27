@@ -13,17 +13,11 @@ AC_PROG_RANLIB
 dnl necessary for compiling assembly
 AM_PROG_AS
 
-ZEROGS_CURRENT=0
-ZEROGS_REVISION=96
-ZEROGS_AGE=2
-ZEROGS_SONAME=libZeroGSogl.so.[$ZEROGS_CURRENT].[$ZEROGS_REVISION].[$ZEROGS_AGE]
-ZEROGS_RELEASE=[$ZEROGS_CURRENT].[$ZEROGS_REVISION].[$ZEROGS_AGE]
-
-AC_SUBST(ZEROGS_CURRENT)
-AC_SUBST(ZEROGS_REVISION)
-AC_SUBST(ZEROGS_AGE)
-AC_SUBST(ZEROGS_RELEASE)
-AC_SUBST(ZEROGS_SONAME)
+AC_SUBST(ZEROGS_CURRENT, 0)
+AC_SUBST(ZEROGS_REVISION, 96)
+AC_SUBST(ZEROGS_AGE, 2)
+AC_SUBST(ZEROGS_RELEASE,[$ZEROGS_CURRENT].[$ZEROGS_REVISION].[$ZEROGS_AGE])
+AC_SUBST(ZEROGS_SONAME, libZeroGSogl.so.[$ZEROGS_CURRENT].[$ZEROGS_REVISION].[$ZEROGS_AGE])
 
 CFLAGS=" -I/opt/cg/include -L/opt/cg/lib "
 CPPFLAGS=" -I/opt/cg/include -L/opt/cg/lib "
@@ -125,6 +119,7 @@ AC_CHECK_LIB(GLU,main,[LIBS="$LIBS -lGLU"])
 AC_CHECK_LIB(GLEW,main,[LIBS="$LIBS -lGLEW"])
 AC_MSG_CHECKING(Cg)
 #AC_CHECK_HEADERS([Cg/cg.h Cg/cgGL.h])
+AC_CHECK_HEADERS([jpeglib.h],,[AC_MSG_ERROR(Install libjpeg-dev)])
 
 AC_CHECK_LIB(jpeg,main,[LIBS="$LIBS -ljpeg"])
 AC_CHECK_LIB(pthread,main,[LIBS="$LIBS -lpthread"])
@@ -132,6 +127,7 @@ AC_CHECK_LIB(stdc++,main,[LIBS="$LIBS -lstdc++"])
 AC_CHECK_LIB(z,main,[LIBS="$LIBS -lz"])
 AC_CHECK_LIB(dl,main,[LIBS="$LIBS -ldl"])
 AC_CHECK_LIB(Xxf86vm,main,[LIBS="$LIBS -lXxf86vm"],[echo "Error! You need to have libXxf86vm-dev." ; exit -1])
+
 
 dnl AC_CHECK_LIB(Cg,cgCreateContext,[LIBS="$LIBS -lCg"])
 dnl AC_CHECK_LIB(CgGL,cgGLEnableProfile,[LIBS="$LIBS -lCgGL"])
@@ -145,6 +141,6 @@ AC_OUTPUT([
 echo "Configuration:"
 echo "  Target system type:    $target"
 echo "  x86-64 build?	       $cpu64"
+echo "  SSE2 enabled?		   $sse2"
 echo "  Debug build?	       $debug"
 echo "  Dev build?	           $devbuild"
-echo "  SSE2 enabled?		   $sse2"
