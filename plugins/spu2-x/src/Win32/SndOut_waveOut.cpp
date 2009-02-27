@@ -316,6 +316,14 @@ public:
 		return L"waveOut (Laggy)";
 	}
 
+	void ReadSettings()
+	{
+	}
+
+	void WriteSettings() const
+	{
+	}
+
 } WO;
 
 SndOutModule *WaveOut = &WO;

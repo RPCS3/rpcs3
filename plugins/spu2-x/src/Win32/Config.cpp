@@ -47,7 +47,6 @@ bool timeStretchDisabled = false;
 
 u32 OutputModule = 0;
 
-CONFIG_DSOUNDOUT Config_DSoundOut;
 CONFIG_WAVEOUT Config_WaveOut;
 CONFIG_XAUDIO2 Config_XAudio2;
 
@@ -65,7 +64,7 @@ void ReadSettings()
 	AutoDMAPlayRate[0] = CfgReadInt(L"MIXING",L"AutoDMA_Play_Rate_0",0);
 	AutoDMAPlayRate[1] = CfgReadInt(L"MIXING",L"AutoDMA_Play_Rate_1",0);
 
-	Interpolation = CfgReadInt(L"MIXING",L"Interpolation",1);
+	Interpolation = CfgReadInt( L"MIXING",L"Interpolation", 1 );
 
 	timeStretchDisabled = CfgReadBool( L"OUTPUT", L"Disable_Timestretch", false );
 	EffectsDisabled = CfgReadBool( L"MIXING", L"Disable_Effects", false );
@@ -84,10 +83,10 @@ void ReadSettings()
 	dspPluginEnabled= CfgReadBool(L"DSP PLUGIN",L"Enabled",false);
 
 	// Read DSOUNDOUT and WAVEOUT configs:
-	CfgReadStr( L"DSOUNDOUT", L"Device", Config_DSoundOut.Device, 254, L"default" );
 	CfgReadStr( L"WAVEOUT", L"Device", Config_WaveOut.Device, 254, L"default" );
-	Config_DSoundOut.NumBuffers = CfgReadInt( L"DSOUNDOUT", L"Buffer_Count", 5 );
 	Config_WaveOut.NumBuffers = CfgReadInt( L"WAVEOUT", L"Buffer_Count", 4 );
+
+	DSoundOut->ReadSettings();
 
 	SoundtouchCfg::ReadSettings();
 	DebugConfig::ReadSettings();
@@ -97,9 +96,6 @@ void ReadSettings()
 
 	Clampify( SndOutLatencyMS, LATENCY_MIN, LATENCY_MAX );
 	
-	Clampify( Config_DSoundOut.NumBuffers, (s8)2, (s8)8 );
-	Clampify( Config_DSoundOut.NumBuffers, (s8)3, (s8)8 );
-
 	if( mods[OutputModule] == NULL )
 	{
 		// Unsupported or legacy module.
@@ -125,19 +121,15 @@ void WriteSettings()
 	CfgWriteBool(L"OUTPUT",L"Disable_Timestretch", timeStretchDisabled);
 	CfgWriteBool(L"OUTPUT",L"Disable_StereoExpansion", StereoExpansionDisabled);
 
-	if( Config_DSoundOut.Device.empty() ) Config_DSoundOut.Device = L"default";
 	if( Config_WaveOut.Device.empty() ) Config_WaveOut.Device = L"default";
-
-	CfgWriteStr(L"DSOUNDOUT",L"Device",Config_DSoundOut.Device);
-	CfgWriteInt(L"DSOUNDOUT",L"Buffer_Count",Config_DSoundOut.NumBuffers);
-
 	CfgWriteStr(L"WAVEOUT",L"Device",Config_WaveOut.Device);
 	CfgWriteInt(L"WAVEOUT",L"Buffer_Count",Config_WaveOut.NumBuffers);
 
 	CfgWriteStr(L"DSP PLUGIN",L"Filename",dspPlugin);
 	CfgWriteInt(L"DSP PLUGIN",L"ModuleNum",dspPluginModule);
 	CfgWriteBool(L"DSP PLUGIN",L"Enabled",dspPluginEnabled);
-	
+
+	DSoundOut->WriteSettings();	
 	SoundtouchCfg::WriteSettings();
 	DebugConfig::WriteSettings();
 

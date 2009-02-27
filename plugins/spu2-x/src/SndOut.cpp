@@ -78,6 +78,14 @@ public:
 		return L"No Sound (Emulate SPU2 only)";
 	}
 
+	void ReadSettings()
+	{
+	}
+
+	void WriteSettings() const
+	{
+	}
+
 } NullOut;
 
 SndOutModule* mods[]=

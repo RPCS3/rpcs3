@@ -367,6 +367,14 @@ public:
 		return L"XAudio 2 (Recommended)";
 	}
 
+	void ReadSettings()
+	{
+	}
+	
+	void WriteSettings() const
+	{
+	}
+
 } XA2;
 
 SndOutModule *XAudio2Out = &XA2;

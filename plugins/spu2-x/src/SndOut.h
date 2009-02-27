@@ -339,7 +339,7 @@ class SndOutModule
 {
 public:
 	// Virtual destructor, because it helps fight C+++ funny-business.
-	virtual ~SndOutModule(){};
+	virtual ~SndOutModule() {}
 
 	// Returns a unique identification string for this driver.
 	// (usually just matches the driver's cpp filename)
@@ -352,11 +352,20 @@ public:
 	virtual s32  Init()=0;
 	virtual void Close()=0;
 	virtual s32  Test() const=0;
+
+	// Gui function: Used to open the configuration box for this driver.
 #ifdef _MSC_VER
 	virtual void Configure(HWND parent)=0;
 #else
 	virtual void Configure(uptr parent)=0;
 #endif
+
+	// Loads settings from the INI file for this driver
+	virtual void ReadSettings()=0;
+
+	// Saves settings to the INI file for this driver
+	virtual void WriteSettings() const=0;
+
 	virtual bool Is51Out() const=0;
 
 	// Returns the number of empty samples in the output buffer.

@@ -83,19 +83,22 @@ BEGIN
     DEFPUSHBUTTON   "Close",IDOK,269,504,50,14
 END
 
-IDD_DSOUND DIALOGEX 0, 0, 182, 121
+IDD_DSOUND DIALOGEX 0, 0, 196, 218
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "DirectSound Output Module Settings"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
-    DEFPUSHBUTTON   "OK",IDOK,67,103,50,14
-    PUSHBUTTON      "Cancel",IDCANCEL,127,103,50,14
-    COMBOBOX        IDC_DS_DEVICE,4,15,173,62,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    DEFPUSHBUTTON   "OK",IDOK,83,200,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,141,200,50,14
+    COMBOBOX        IDC_DS_DEVICE,4,15,146,62,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
     LTEXT           "DirectSound Device",IDC_STATIC,4,3,63,8
-    LTEXT           "Number of Buffers",IDC_STATIC,4,40,61,11
-    CONTROL         "",IDC_BUFFERS_SLIDER,"msctls_trackbar32",TBS_AUTOTICKS | WS_TABSTOP,74,48,103,10
-    LTEXT           "Increase the buffer count if you are experiencing loopy or studdery audio even when games run at high FPS.",IDC_STATIC,8,66,169,27
-    CTEXT           "8  (80 ms latency)",IDC_LATENCY_LABEL,78,37,95,11
+    CONTROL         "",IDC_BUFFERS_SLIDER,"msctls_trackbar32",TBS_AUTOTICKS | WS_TABSTOP,38,137,108,10
+    LTEXT           "Increase the buffer count if you are experiencing loopy or studdery audio even when games run at high FPS.",IDC_STATIC,11,157,169,27
+    CTEXT           "8  (80 ms latency)",IDC_LATENCY_LABEL,44,123,95,11
+    CONTROL         "Disable Global Focus",IDC_GLOBALFOCUS_DISABLE,"Button",BS_AUTOCHECKBOX | WS_DISABLED | WS_TABSTOP,4,38,140,10
+    LTEXT           "If you have audio problems, try checking one or both of the options above.  They don't really affect sound processing, but some drivers are picky and work nicer with different seetings.",IDC_STATIC,16,68,175,38
+    CONTROL         "Use Hardware Buffers",IDC_USE_HARDWARE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,4,53,140,10
+    GROUPBOX        "Output Buffers",IDC_STATIC,4,111,185,79
 END
 
 IDD_WAVEOUT DIALOGEX 0, 0, 170, 122
@@ -210,9 +213,9 @@ BEGIN
     IDD_DSOUND, DIALOG
     BEGIN
         LEFTMARGIN, 4
-        RIGHTMARGIN, 177
+        RIGHTMARGIN, 191
         TOPMARGIN, 3
-        BOTTOMMARGIN, 117
+        BOTTOMMARGIN, 214
     END
 
     IDD_WAVEOUT, DIALOG
