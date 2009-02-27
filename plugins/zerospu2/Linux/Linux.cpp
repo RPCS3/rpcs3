@@ -26,8 +26,8 @@ extern "C" {
 #include "callbacks.h"
 }
 
-#include "zerospu2.h"
 #include "Linux.h"
+#include "zerospu2.h"
 
 extern char *libraryName;
 extern string s_strIniPath;

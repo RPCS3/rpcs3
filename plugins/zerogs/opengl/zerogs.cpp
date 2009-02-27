@@ -4118,7 +4118,7 @@ __forceinline void MOVFOG(VertexGPU *p, Vertex gsf)
 	p->f = ((s16)(gsf).f<<7)|0x7f;
 }
 
-__forceinline void SET_VERTEX(VertexGPU *p, int Index, const VB& curvb) 
+void SET_VERTEX(VertexGPU *p, int Index, const VB& curvb) 
 { 
 	int index = Index; 
 	
@@ -4274,7 +4274,7 @@ void ZeroGS::KickTriangleFan()
 #endif
 }
 
-__forceinline void SetKickVertex(VertexGPU *p, Vertex v, int next, const VB& curvb) 
+void SetKickVertex(VertexGPU *p, Vertex v, int next, const VB& curvb) 
 {
 	SET_VERTEX(p, next, curvb); 
 	MOVZ(p, v.z, curvb);	

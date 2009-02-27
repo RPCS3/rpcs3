@@ -27,6 +27,8 @@ option=$@
 export PCSX2PLUGINS="`pwd`/bin/plugins"
 curdir=`pwd`
 
+echo "Building the Pcsx2 Suite."
+echo "Note: will not compile on Linux x64."
 cd ${curdir}/plugins
 sh build.sh $option
 
@@ -36,6 +38,8 @@ echo Error with building plugins
 exit 1
 fi
 
+echo "Building Pcsx2."
+echo "Note: will not compile on Linux x64."
 cd ${curdir}/pcsx2
 sh build.sh $option
 
