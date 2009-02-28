@@ -154,9 +154,9 @@ struct CONFIG_WAVEOUT
 	}
 };
 
-extern CONFIG_DSOUNDOUT Config_DSoundOut;
+/*extern CONFIG_DSOUNDOUT Config_DSoundOut;
 extern CONFIG_WAVEOUT Config_WaveOut;
-extern CONFIG_XAUDIO2 Config_XAudio2;
+extern CONFIG_XAUDIO2 Config_XAudio2;*/
 
 //////
 

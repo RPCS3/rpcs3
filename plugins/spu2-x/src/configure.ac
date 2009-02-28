@@ -12,17 +12,11 @@ AC_PROG_RANLIB
 dnl necessary for compiling assembly
 AM_PROG_AS
 
-SPU2X_CURRENT=0
-SPU2X_REVISION=1
-SPU2X_AGE=0
-SPU2X_SONAME=libSPU2X.so.[$SPU2X_CURRENT].[$SPU2X_REVISION].[$SPU2X_AGE]
-SPU2X_RELEASE=[$SPU2X_CURRENT].[$SPU2X_REVISION].[$SPU2X_AGE]
-
-AC_SUBST(SPU2X_CURRENT)
-AC_SUBST(SPU2X_REVISION)
-AC_SUBST(SPU2X_AGE)
-AC_SUBST(SPU2X_RELEASE)
-AC_SUBST(SPU2X_SONAME)
+AC_SUBST(SPU2X_CURRENT, 0)
+AC_SUBST(SPU2X_REVISION, 1)
+AC_SUBST(SPU2X_AGE, 0)
+AC_SUBST(SPU2X_RELEASE,[$SPU2X_CURRENT].[$SPU2X_REVISION].[$SPU2X_AGE])
+AC_SUBST(SPU2X_SONAME,libSPU2X.so.[$SPU2X_CURRENT].[$SPU2X_REVISION].[$SPU2X_AGE])
 
 CFLAGS=
 CPPFLAGS=
@@ -66,9 +60,6 @@ dnl gtk
 AC_MSG_CHECKING(gtk2+)
 AC_CHECK_PROG(GTK_CONFIG, pkg-config, pkg-config)
 LIBS+=$(pkg-config --libs gtk+-2.0)
-
-dnl bindir = pcsx2exe
-
 dnl Check for 64bit CPU
 AC_MSG_CHECKING(for a x86-64 CPU)
 dnl if test "$build_os" == "target_os"
@@ -96,19 +87,20 @@ fi
 AC_MSG_RESULT($cpu64)
 AM_CONDITIONAL(X86_64, test x$cpu64 = xyes)
 
+dnl bindir = pcsx2exe
+
 dnl assuming linux environment
 so_ext=".so.$SPU2X_RELEASE"
 SHARED_LDFLAGS="-shared"
 AC_SUBST(so_ext)
 AC_SUBST(SHARED_LDFLAGS)
-AC_CHECK_FUNCS(iconv, [ have_iconv="1" ], [ have_iconv="0" ])
 
 AC_CHECK_LIB(stdc++,main,[LIBS="$LIBS -lstdc++"])
 AC_CHECK_LIB(dl,main,[LIBS="$LIBS -ldl"])
 AC_CHECK_LIB(asound,main,[LIBS="$LIBS -lasound"])
+AC_CHECK_FUNCS(iconv, [ have_iconv="1" ], [ have_iconv="0" ])
 
 AC_OUTPUT([
- 3rdparty/SoundTouch/Makefile
  Makefile
  ])
 

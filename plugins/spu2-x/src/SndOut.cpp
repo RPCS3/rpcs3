@@ -91,9 +91,11 @@ public:
 SndOutModule* mods[]=
 {
 	&NullOut,
+#ifdef _MSC_VER
 	XAudio2Out,
 	DSoundOut,
 	WaveOut,
+#endif
 	NULL		// signals the end of our list
 };
 

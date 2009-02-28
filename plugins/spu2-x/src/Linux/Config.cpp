@@ -22,6 +22,36 @@
 #include "Spu2.h"
 #include "Dialogs.h"
 
+bool DebugEnabled=false;
+bool _MsgToConsole=false;
+bool _MsgKeyOnOff=false;
+bool _MsgVoiceOff=false;
+bool _MsgDMA=false;
+bool _MsgAutoDMA=false;
+bool _MsgOverruns=false;
+bool _MsgCache=false;
+
+bool _AccessLog=false;
+bool _DMALog=false;
+bool _WaveLog=false;
+
+bool _CoresDump=false;
+bool _MemDump=false;
+bool _RegDump=false;
+
+
+
+wchar_t AccessLogFileName[255];
+wchar_t WaveLogFileName[255];
+
+wchar_t DMA4LogFileName[255];
+wchar_t DMA7LogFileName[255];
+
+wchar_t CoresDumpFileName[255];
+wchar_t MemDumpFileName[255];
+wchar_t RegDumpFileName[255];
+
+
 #ifdef SPU2X_DEVBUILD
 static const int LATENCY_MAX = 3000;
 #else

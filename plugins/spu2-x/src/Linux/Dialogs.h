@@ -22,6 +22,6 @@
 #ifndef DIALOG_H_INCLUDED
 #define DIALOG_H_INCLUDED
 
-#include "../spu2.h"
+#include "../Spu2.h"
 
 #endif

@@ -333,9 +333,10 @@ void ZeroGS::CRenderTarget::Update(int context, ZeroGS::CRenderTarget* pdepth)
 		cgGLEnableTextureParameter(ppsBaseTexture.sFinal);
 
 		//assert( ittarg->second->fbw == fbw );
-		int offset = (fbp-ittarg->second->fbp)*64/fbw;
-		if( psm & 2 ) // 16 bit
-			offset *= 2;
+		int offset = (fbp-ittarg->second->fbp)*64/fbw; 
+		
+		// 16 bit
+		if (psm & 2) offset *= 2;
 
 		v.x = (float)(fbw << s_AAx);
 		v.y = (float)(fbh << s_AAy);
@@ -667,7 +668,7 @@ void ZeroGS::CRenderTarget::ConvertTo16()
 	SAFE_RELEASE_TEX(ptexFeedback);
 	ptex = ptexConv;
 
-	free(psys);
+	_aligned_free(psys);
 	psys = _aligned_malloc( (fbh<<s_AAy) * (fbw<<s_AAx) * (GetRenderFormat() == RFT_float16 ? 8 : 4), 16 );
 
 	if( conf.options & GSOPTION_WIREFRAME ) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);

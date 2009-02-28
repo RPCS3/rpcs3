@@ -374,10 +374,12 @@ public:
 };
 
 
+#ifdef _MSC_VER
 //internal
 extern SndOutModule* WaveOut;
 extern SndOutModule* DSoundOut;
 extern SndOutModule* XAudio2Out;
+#endif
 
 extern SndOutModule* mods[];
 
