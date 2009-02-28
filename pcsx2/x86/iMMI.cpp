@@ -256,6 +256,24 @@ CPU_SSE_XMMCACHE_END
 
 void recPMTHL()
 {
+	if ( _Sa_ != 0 ) return;
+
+CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READLO|XMMINFO_READHI|XMMINFO_WRITELO|XMMINFO_WRITEHI)
+
+	if ( cpucaps.hasStreamingSIMD4Extensions ) {
+		SSE4_BLENDPS_XMM_to_XMM(EEREC_LO, EEREC_S, 0x5);
+		SSE_SHUFPS_XMM_to_XMM(EEREC_HI, EEREC_S, 0xdd);
+		SSE_SHUFPS_XMM_to_XMM(EEREC_HI, EEREC_HI, 0x72);
+	}
+	else {
+		SSE_SHUFPS_XMM_to_XMM(EEREC_LO, EEREC_S, 0x8d);
+		SSE_SHUFPS_XMM_to_XMM(EEREC_HI, EEREC_S, 0xdd);
+		SSE_SHUFPS_XMM_to_XMM(EEREC_LO, EEREC_LO, 0x72);
+		SSE_SHUFPS_XMM_to_XMM(EEREC_HI, EEREC_HI, 0x72);
+	}
+
+CPU_SSE_XMMCACHE_END
+
 	recCall( Interp::PMTHL, 0 );
 }
 
@@ -1838,7 +1856,13 @@ void recPSUBUB()
 
 CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
 	if( EEREC_D == EEREC_S ) SSE2_PSUBUSB_XMM_to_XMM(EEREC_D, EEREC_T);
-	else if( EEREC_D == EEREC_T ) SSE2_PSUBUSB_XMM_to_XMM(EEREC_D, EEREC_S);
+	else if( EEREC_D == EEREC_T ) {
+		int t0reg = _allocTempXMMreg(XMMT_INT, -1);
+		SSEX_MOVDQA_XMM_to_XMM(t0reg, EEREC_T);
+		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
+		SSE2_PSUBUSB_XMM_to_XMM(EEREC_D, t0reg);
+		_freeXMMreg(t0reg);
+	}
 	else {
 		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
 		SSE2_PSUBUSB_XMM_to_XMM(EEREC_D, EEREC_T);
@@ -1855,7 +1879,13 @@ void recPSUBUH()
 
 CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
 	if( EEREC_D == EEREC_S ) SSE2_PSUBUSW_XMM_to_XMM(EEREC_D, EEREC_T);
-	else if( EEREC_D == EEREC_T ) SSE2_PSUBUSW_XMM_to_XMM(EEREC_D, EEREC_S);
+	else if( EEREC_D == EEREC_T ) {
+		int t0reg = _allocTempXMMreg(XMMT_INT, -1);
+		SSEX_MOVDQA_XMM_to_XMM(t0reg, EEREC_T);
+		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
+		SSE2_PSUBUSW_XMM_to_XMM(EEREC_D, t0reg);
+		_freeXMMreg(t0reg);
+	}
 	else {
 		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
 		SSE2_PSUBUSW_XMM_to_XMM(EEREC_D, EEREC_T);
@@ -1868,6 +1898,48 @@ CPU_SSE_XMMCACHE_END
 ////////////////////////////////////////////////////
 void recPSUBUW()
 {
+	if ( ! _Rd_ ) return;
+
+CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
+	int t0reg = _allocTempXMMreg(XMMT_INT, -1);
+	int t1reg = _allocTempXMMreg(XMMT_INT, -1);
+
+	SSE2_PCMPEQB_XMM_to_XMM(t0reg, t0reg);
+	SSE2_PSLLD_I8_to_XMM(t0reg, 31); // 0x80000000
+
+	// normal 32-bit subtraction
+	// and invert MSB of Rs and Rt (for unsigned comparison)
+	if( EEREC_D == EEREC_S ) {
+		SSEX_MOVDQA_XMM_to_XMM(t1reg, t0reg);
+		SSE2_PXOR_XMM_to_XMM(t0reg, EEREC_S);
+		SSE2_PXOR_XMM_to_XMM(t1reg, EEREC_T);
+		SSE2_PSUBD_XMM_to_XMM(EEREC_D, EEREC_T);
+	}
+	else if( EEREC_D == EEREC_T ) {
+		SSEX_MOVDQA_XMM_to_XMM(t1reg, EEREC_T);
+		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
+		SSE2_PSUBD_XMM_to_XMM(EEREC_D, t1reg);
+		SSE2_PXOR_XMM_to_XMM(t1reg, t0reg);
+		SSE2_PXOR_XMM_to_XMM(t0reg, EEREC_S);
+	}
+	else {
+		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
+		SSE2_PSUBD_XMM_to_XMM(EEREC_D, EEREC_T);
+		SSEX_MOVDQA_XMM_to_XMM(t1reg, t0reg);
+		SSE2_PXOR_XMM_to_XMM(t0reg, EEREC_S);
+		SSE2_PXOR_XMM_to_XMM(t1reg, EEREC_T);
+	}
+
+	// ungigned 32-bit comparison
+	SSE2_PCMPGTD_XMM_to_XMM(t0reg, t1reg);
+
+	// saturate
+	SSE2_PAND_XMM_to_XMM(EEREC_D, t0reg); // clear word with zero if (Rs <= Rt)
+	
+	_freeXMMreg(t0reg);
+	_freeXMMreg(t1reg);
+CPU_SSE_XMMCACHE_END
+
 	recCall( Interp::PSUBUW, _Rd_ );
 }
 
