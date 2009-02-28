@@ -926,12 +926,17 @@ void recClearMem(BASEBLOCK* p)
 	int lastdelay;
 
 	// necessary since recompiler doesn't call femms/emms
-#ifdef _MSC_VER
-	if (cpucaps.has3DNOWInstructionExtensions) __asm femms;
-	else __asm emms;
+#ifdef __INTEL_COMPILER
+		__asm__("emms");
 #else
-    if( cpucaps.has3DNOWInstructionExtensions )__asm__("femms");
-    else __asm__("emms");
+	#ifdef _MSC_VER
+		if (cpucaps.has3DNOWInstructionExtensions) __asm femms;
+		else __asm emms;
+	#else
+		if( cpucaps.has3DNOWInstructionExtensions )__asm__("femms");
+		else 
+			__asm__("emms");
+	#endif
 #endif
 		
 	assert( p != NULL );

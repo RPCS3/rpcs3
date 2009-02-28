@@ -198,8 +198,10 @@ void IniFile::DoConfig( PcsxConfig& Conf )
 	SetCurrentSection( "Interface" );
 	Entry( "Bios", Conf.Bios );
 	Entry( "Language", Conf.Lang );
-	Entry( "PluginsDir", Conf.PluginsDir, DEFAULT_PLUGINS_DIR );
-	Entry( "BiosDir", Conf.BiosDir, DEFAULT_BIOS_DIR );
+	string plug = DEFAULT_PLUGINS_DIR;
+	Entry( "PluginsDir", Conf.PluginsDir, plug );
+	string bios = DEFAULT_BIOS_DIR;
+	Entry( "BiosDir", Conf.BiosDir, bios );
 	Entry( "CloseGsOnEscape", Conf.closeGSonEsc, true );
 
 	SetCurrentSection( "Console" );
