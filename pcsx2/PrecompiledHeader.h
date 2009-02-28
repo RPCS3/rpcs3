@@ -7,21 +7,6 @@
 
 #ifndef _WIN32
 #	include <unistd.h>
-#else
-
-// For now Windows headers are needed by all modules, so include it here so
-// that it compiles nice and fast...
-
-// Force availability of to WinNT APIs (change to 0x600 to enable XP-specific APIs)
-#	define WINVER 0x0501
-#	define _WIN32_WINNT 0x0501
-
-#	include <windows.h>
-
-// disable Windows versions of min/max -- we'll use the typesafe STL versions instead.
-#undef min
-#undef max
-
 #endif
 
 // Include the STL junk that's actually handy.
@@ -59,6 +44,13 @@ using std::string;		// we use it enough, so bring it into the global namespace.
 #include "PS2Etypes.h"
 #include "StringUtils.h"
 
+typedef int BOOL;
+
+#	undef TRUE
+#	undef FALSE
+#	define TRUE  1
+#	define FALSE 0
+
 ////////////////////////////////////////////////////////////////////
 // Compiler/OS specific macros and defines -- Begin Section
 
@@ -77,24 +69,12 @@ using std::string;		// we use it enough, so bring it into the global namespace.
 #		define __declspec(x)
 #	endif
 
-// functions that linux lacks...
-// fixme: this should probably be in a __LINUX__ conditional rather than
-// a GCC conditional (since GCC on a windows platform would have these functions)
-#	define Sleep(seconds) usleep(1000*(seconds))
-
 static __forceinline u32 timeGetTime()
 {
 	struct timeb t;
 	ftime(&t);
 	return (u32)(t.time*1000+t.millitm);
 }
-
-#	define BOOL int
-
-#	undef TRUE
-#	undef FALSE
-#	define TRUE  1
-#	define FALSE 0
 
 #	ifndef strnicmp
 #		define strnicmp strncasecmp

@@ -17,6 +17,7 @@
  */
 
 #include "PrecompiledHeader.h"
+#include "RedtapeWindows.h"
 
 #include "Common.h"
 #include "PsxCommon.h"
@@ -48,7 +49,7 @@ _GSsetupRecording GSsetupRecording;
 _GSreset		   GSreset;
 _GSwriteCSR		   GSwriteCSR;
 _GSgetDriverInfo   GSgetDriverInfo;
-#ifdef _WIN32
+#ifdef _WINDOWS_
 _GSsetWindowInfo   GSsetWindowInfo;
 #endif
 _GSfreeze          GSfreeze;

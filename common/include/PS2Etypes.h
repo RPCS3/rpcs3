@@ -26,8 +26,9 @@
 #define __LINUX__
 #endif
 
-#ifndef ARRAYSIZE
-#define ARRAYSIZE(x) (sizeof(x)/sizeof((x)[0]))
+// Renamed ARRAYSIZE to ArraySize -- looks nice and gets rid of Windows.h conflicts (air)
+#ifndef ArraySize
+#define ArraySize(x) (sizeof(x)/sizeof((x)[0]))
 #endif
 
 #ifdef __LINUX__

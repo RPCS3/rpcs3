@@ -53,7 +53,7 @@ struct BASEBLOCKEX
 
 #ifdef PCSX2_DEVBUILD
 	u32 visited; // number of times called
-	LARGE_INTEGER ltime; // regs it assumes to have set already
+	u64 ltime; // regs it assumes to have set already
 #endif
 
 };

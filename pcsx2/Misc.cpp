@@ -659,26 +659,7 @@ void ProcessFKeys(int fkey, int shift)
 			break;
 
 #ifdef PCSX2_DEVBUILD
-		case 10:
-		{
-			int num;
-			FILE* f;
-			BASEBLOCKEX** ppblocks = GetAllBaseBlocks(&num, 0);
-
-			f = fopen("perflog.txt", "w");
-			while(num-- > 0 ) {
-				if( ppblocks[0]->visited > 0 ) {
-					fprintf(f, "%u %u %u %u\n", ppblocks[0]->startpc, (u32)(ppblocks[0]->ltime.QuadPart / ppblocks[0]->visited), ppblocks[0]->visited, ppblocks[0]->size);
-				}
-				ppblocks[0]->visited = 0;
-				ppblocks[0]->ltime.QuadPart = 0;
-				ppblocks++;
-			}
-			fclose(f);
-			Console::Status( "perflog.txt written" );
-			break;
-		}
-		
+	
 		case 11:
 			if( mtgsThread != NULL ) {
 				Console::Notice( "Cannot make gsstates in MTGS mode" );

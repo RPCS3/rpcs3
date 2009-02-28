@@ -56,15 +56,23 @@ u8 *SysMmapEx(uptr base, u32 size, uptr bounds, const char *caller="Unnamed");
 // Unmaps a block allocated by SysMmap
 void SysMunmap(uptr base, u32 size);
 
-// Writes text to the console.
-// *DEPRECIATED* Use Console namespace methods instead.
-void SysPrintf(const char *fmt, ...);	// *DEPRECIATED* 
-
 static __forceinline void SysMunmap( void* base, u32 size )
 {
 	SysMunmap( (uptr)base, size );
 }
 
+enum PageProtectionMode
+{
+	Protect_NoAccess = 0,
+	Protect_ReadOnly,
+	Protect_ReadWrite
+};
+
+void SysMemProtect( void* baseaddr, size_t size, PageProtectionMode mode, bool allowExecution=false );
+
+// Writes text to the console.
+// *DEPRECIATED* Use Console namespace methods instead.
+void SysPrintf(const char *fmt, ...);	// *DEPRECIATED* 
 
 #ifdef _MSC_VER
 #	define PCSX2_MEM_PROTECT_BEGIN() __try {

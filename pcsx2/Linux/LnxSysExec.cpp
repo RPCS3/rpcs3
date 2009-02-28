@@ -920,3 +920,17 @@ void SysMunmap(uptr base, u32 size)
 	munmap((uptr*)base, size);
 }
 
+void SysMemProtect( void* baseaddr, size_t size, PageProtectionMode mode, bool allowExecution )
+{
+	int lnxmode = 0;
+
+	switch( mode )
+	{
+		case Protect_NoAccess: break;
+		case Protect_ReadOnly: lnxmode = PROT_READ; break;
+		case Protect_ReadWrite: lnxmode = PROT_READ | PROT_WRITE; break;
+	}
+
+	if( allowExecution ) lnxmode |= PROT_EXECUTE;
+	mprotect( baseaddr, size, lnxmode );
+}

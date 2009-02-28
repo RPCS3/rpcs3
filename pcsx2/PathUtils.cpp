@@ -27,6 +27,8 @@
 #ifndef _S_IFREG
 #define _S_IFREG S_IFREG
 #endif
+#else
+#include <direct.h>
 #endif
 
 namespace Path
@@ -231,4 +233,15 @@ void GetRootDirectory( const string& src, string& dest )
 	else
 		dest.assign( src.begin(), src.begin()+pos );
 }
+
+void CreateDirectory( const string& src )
+{
+#ifdef _WIN32
+	_mkdir( src.c_str() );
+#else
+	mkdir( src.c_str(), 0755);
+#endif
 }
+
+}
+

@@ -17,7 +17,7 @@
  */
 
 
-#include "PrecompiledHeader.h"
+#include "Win32.h"
 
 #include "System.h"
 #include "Threading.h"
@@ -58,7 +58,12 @@ namespace Threading
 
 	__forceinline void Timeslice()
 	{
-		Sleep(0);
+		::Sleep(0);
+	}
+
+	__forceinline void Sleep( int ms )
+	{
+		::Sleep( 1000*ms );
 	}
 
 	// For use in spin/wait loops,  Acts as a hint to Intel CPUs and should, in theory

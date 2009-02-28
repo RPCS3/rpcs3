@@ -19,6 +19,11 @@
 #ifndef _PCSX2_WIN32_H__
 #define _PCSX2_WIN32_H__
 
+#include "RedtapeWindows.h"		// our "safe" include of windows (sets version and undefs uselessness)
+#include <commctrl.h>
+
+#include "PrecompiledHeader.h"
+
 #include <windowsx.h>
 #include <tchar.h>
 
@@ -26,6 +31,9 @@
 #include "resource.h"
 
 #define COMPILEDATE         __DATE__
+
+//Exception handler for the VTLB-based recompilers.
+int SysPageFaultExceptionFilter(EXCEPTION_POINTERS* eps);
 
 // --->>  Ini Configuration [ini.c]
 

@@ -16,10 +16,6 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
-//////////
-// Rewritten by zerofrog to add os virtual memory
-//////////
-
 #ifndef __MEMORY_H__
 #define __MEMORY_H__
 
@@ -144,8 +140,6 @@ extern void memMapVUmicro();
 void SysPageFaultExceptionFilter( int signal, siginfo_t *info, void * );
 void __fastcall InstallLinuxExceptionHandler();
 void __fastcall ReleaseLinuxExceptionHandler();
-#else
-int SysPageFaultExceptionFilter(EXCEPTION_POINTERS* eps);
 #endif
 
 #include "vtlb.h"

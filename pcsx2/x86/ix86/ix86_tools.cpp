@@ -30,10 +30,6 @@ u8 g_globalXMMSaved = 0;
 PCSX2_ALIGNED16( static u64 g_globalMMXData[8] );
 PCSX2_ALIGNED16( static u64 g_globalXMMData[2*XMMREGS] );
 
-// performance counter vars.
-LARGE_INTEGER lbase = {0}, lfinal = {0};
-u32 s_pCurBlock_ltime;
-
 
 /////////////////////////////////////////////////////////////////////
 // SetCPUState -- for assugnment of SSE roundmodes and clampmodes.
@@ -228,48 +224,3 @@ __forceinline void FreezeXMMRegs_(int save)
 #endif // _MSC_VER
 	}
 }
-
-#ifdef PCSX2_DEVBUILD
-#ifdef _WIN32
-__declspec(naked) void _StartPerfCounter()
-{
-	__asm {
-		push eax
-		push ebx
-		push ecx
-	
-		rdtsc
-		mov dword ptr [offset lbase], eax
-		mov dword ptr [offset lbase + 4], edx
-
-		pop ecx
-		pop ebx
-		pop eax
-		ret
-	}
-}
-
-__declspec(naked) void _StopPerfCounter()
-{
-	__asm {
-		push eax
-		push ebx
-		push ecx
-	
-		rdtsc
-	
-		sub eax, dword ptr [offset lbase]
-		sbb edx, dword ptr [offset lbase + 4]
-		mov ecx, s_pCurBlock_ltime
-		add eax, dword ptr [ecx]
-		adc edx, dword ptr [ecx + 4]
-		mov dword ptr [ecx], eax
-		mov dword ptr [ecx + 4], edx
-		pop ecx
-		pop ebx
-		pop eax
-		ret
-	}
-}
-#endif // WIN32
-#endif // PCSX2_DEVBUILD

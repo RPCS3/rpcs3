@@ -16,11 +16,8 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
-#include "PrecompiledHeader.h"
-#include "win32.h"
-
+#include "Win32.h"
 #include <winnt.h>
-#include <commctrl.h>
 
 #include "Common.h"
 //#include "PsxCommon.h"
@@ -833,15 +830,14 @@ const char *SysLibError() {
 	return NULL;
 }
 
-void SysCloseLibrary(void *lib) {
+void SysCloseLibrary(void *lib)
+{
 	FreeLibrary((HINSTANCE)lib);
 }
 
-void *SysMmap(uptr base, u32 size) {
-	void *mem;
-
-	mem = VirtualAlloc((void*)base, size, MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE);
-	return mem;
+void *SysMmap(uptr base, u32 size)
+{
+	return VirtualAlloc((void*)base, size, MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE);
 }
 
 void SysMunmap(uptr base, u32 size)
@@ -849,4 +845,27 @@ void SysMunmap(uptr base, u32 size)
 	if( base == NULL ) return;
 	VirtualFree((void*)base, size, MEM_DECOMMIT);
 	VirtualFree((void*)base, 0, MEM_RELEASE);
+}
+
+void SysMemProtect( void* baseaddr, size_t size, PageProtectionMode mode, bool allowExecution )
+{
+	DWORD winmode = 0;
+
+	switch( mode )
+	{
+		case Protect_NoAccess:
+			winmode = ( allowExecution ) ? PAGE_EXECUTE : PAGE_NOACCESS;
+		break;
+		
+		case Protect_ReadOnly:
+			winmode = ( allowExecution ) ? PAGE_EXECUTE_READ : PAGE_READONLY;
+		break;
+		
+		case Protect_ReadWrite:
+			winmode = ( allowExecution ) ? PAGE_EXECUTE_READWRITE : PAGE_READWRITE;
+		break;
+	}
+
+	DWORD OldProtect;	// enjoy my uselessness, yo!
+	VirtualProtect( baseaddr, size, winmode, &OldProtect );
 }

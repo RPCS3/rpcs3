@@ -1055,13 +1055,13 @@ void ZeroGS::Destroy(BOOL bD3D)
 	vb[0].Destroy();
 	vb[1].Destroy();
 
-	for(int i = 0; i < ARRAYSIZE(pvs); ++i) {
+	for(int i = 0; i < ArraySize(pvs); ++i) {
 		SAFE_RELEASE(pvs[i]);
 	}
-	for(int i = 0; i < ARRAYSIZE(ppsRegular); ++i) {
+	for(int i = 0; i < ArraySize(ppsRegular); ++i) {
 		SAFE_RELEASE(ppsRegular[i]);
 	}
-	for(int i = 0; i < ARRAYSIZE(ppsTexture); ++i) {
+	for(int i = 0; i < ArraySize(ppsTexture); ++i) {
 		SAFE_RELEASE(ppsTexture[i]);
 	}
 
@@ -1279,7 +1279,7 @@ HRESULT ZeroGS::LoadEffects()
 	}
 
 	// clear the textures
-	for(int i = 0; i < ARRAYSIZE(ppsTexture); ++i) {
+	for(int i = 0; i < ArraySize(ppsTexture); ++i) {
 		SAFE_RELEASE(ppsTexture[i]);
 	}
 	memset(ppsTexture, 0, sizeof(ppsTexture));
@@ -1351,7 +1351,7 @@ LPD3DPS ZeroGS::LoadShadeEffect(int type, int texfilter, int fog, int testaem, i
 
 	int index = GET_SHADER_INDEX(type, texfilter, texwrap, fog, s_bWriteDepth, testaem, exactcolor, context, 0);
 
-	assert( index < ARRAYSIZE(ppsTexture) );
+	assert( index < ArraySize(ppsTexture) );
 	LPD3DPS* pps = ppsTexture+index;
 
 	if( *pps != NULL ) 
@@ -1461,7 +1461,7 @@ public:
 HRESULT ZeroGS::LoadEffects()
 {
 	// clear the textures
-	for(int i = 0; i < ARRAYSIZE(ppsTexture); ++i) {
+	for(int i = 0; i < ArraySize(ppsTexture); ++i) {
 		SAFE_RELEASE(ppsTexture[i]);
 	}
 	memset(ppsTexture, 0, sizeof(ppsTexture));
@@ -1790,7 +1790,7 @@ int GetTexFilter(const tex1Info& tex1)
 void ZeroGS::ReloadEffects()
 {
 #ifndef RELEASE_TO_PUBLIC
-	for(int i = 0; i < ARRAYSIZE(ppsTexture); ++i) {
+	for(int i = 0; i < ArraySize(ppsTexture); ++i) {
 		SAFE_RELEASE(ppsTexture[i]);
 	}
 	memset(ppsTexture, 0, sizeof(ppsTexture));
@@ -3457,12 +3457,12 @@ void ZeroGS::RenderCRTC(int interlace)
 
 	if( g_GameSettings & GAME_AUTORESET ) {
 		s_nResolveCounts[s_nCurResolveIndex] = s_nResolved;
-		s_nCurResolveIndex = (s_nCurResolveIndex+1)%ARRAYSIZE(s_nResolveCounts);
+		s_nCurResolveIndex = (s_nCurResolveIndex+1)%ArraySize(s_nResolveCounts);
 
 		int total = 0;
-		for(int i = 0; i < ARRAYSIZE(s_nResolveCounts); ++i) total += s_nResolveCounts[i];
+		for(int i = 0; i < ArraySize(s_nResolveCounts); ++i) total += s_nResolveCounts[i];
 
-		if( total / ARRAYSIZE(s_nResolveCounts) > 3 ) {
+		if( total / ArraySize(s_nResolveCounts) > 3 ) {
 			if( s_nLastResolveReset > (int)(fFPS * 8) ) {
 				// reset
 				DEBUG_LOG("ZeroGS: video mem reset\n");
@@ -3566,7 +3566,7 @@ void ZeroGS::KickPoint()
 		Flush(prim->ctxt);
 
 	curvb.Lock();
-	int last = (gs.primIndex+2)%ARRAYSIZE(gs.gsvertex);
+	int last = (gs.primIndex+2)%ArraySize(gs.gsvertex);
 
 	VertexGPU* p = curvb.pbuf+curvb.dwCount;
 	SET_VERTEX(&p[0], last, curvb);
@@ -3594,8 +3594,8 @@ void ZeroGS::KickLine()
 		Flush(prim->ctxt);
 
 	curvb.Lock();
-	int next = (gs.primIndex+1)%ARRAYSIZE(gs.gsvertex);
-	int last = (gs.primIndex+2)%ARRAYSIZE(gs.gsvertex);
+	int next = (gs.primIndex+1)%ArraySize(gs.gsvertex);
+	int last = (gs.primIndex+2)%ArraySize(gs.gsvertex);
 
 	VertexGPU* p = curvb.pbuf+curvb.dwCount*2;
 	SET_VERTEX(&p[0], next, curvb);
@@ -3664,7 +3664,7 @@ void ZeroGS::KickTriangleFan()
 
 	// add 1 to skip the first vertex
 	if( gs.primIndex == gs.nTriFanVert )
-		gs.primIndex = (gs.primIndex+1)%ARRAYSIZE(gs.gsvertex);
+		gs.primIndex = (gs.primIndex+1)%ArraySize(gs.gsvertex);
 
 #ifdef PRIM_LOG
 	OUTPUT_VERT(PRIM_LOG, p[0], 0);
@@ -3696,8 +3696,8 @@ void ZeroGS::KickSprite()
 	if (curvb.dwCount >= POINT_BUFFERFLUSH/3) Flush(prim->ctxt);
 
 	curvb.Lock();
-	int next = (gs.primIndex+1)%ARRAYSIZE(gs.gsvertex);
-	int last = (gs.primIndex+2)%ARRAYSIZE(gs.gsvertex);
+	int next = (gs.primIndex+1)%ArraySize(gs.gsvertex);
+	int last = (gs.primIndex+2)%ArraySize(gs.gsvertex);
 
 	// sprite is too small and AA shows lines (tek4)
 	if( s_AAx ) 

@@ -126,7 +126,7 @@ void loadBiosRom( const char *ext, u8 *dest, long maxSize )
 	// if we made it this far, we have a successful file found:
 
 	FILE *fp = fopen(Bios1.c_str(), "rb");
-	fread(dest, 1, std::min( maxSize, filesize ), fp);
+	fread(dest, 1, min( maxSize, filesize ), fp);
 	fclose(fp);
 }
 
@@ -406,6 +406,7 @@ void __fastcall _ext_memWrite16(u32 mem, u16 value)
 	MEM_LOG("Unknown Memory write16  to  address %x with data %4.4x\n", mem, value);
 	cpuTlbMissW(mem, cpuRegs.branch);
 }
+
 template<int p>
 void __fastcall _ext_memWrite32(u32 mem, u32 value)
 {
@@ -422,6 +423,7 @@ void __fastcall _ext_memWrite32(u32 mem, u32 value)
 	MEM_LOG("Unknown Memory write32  to  address %x with data %8.8x\n", mem, value);
 	cpuTlbMissW(mem, cpuRegs.branch);
 }
+
 template<int p>
 void __fastcall _ext_memWrite64(u32 mem, const u64* value)
 {
@@ -437,6 +439,7 @@ void __fastcall _ext_memWrite64(u32 mem, const u64* value)
 	MEM_LOG("Unknown Memory write64  to  address %x with data %8.8x_%8.8x\n", mem, (u32)(*value>>32), (u32)*value);
 	cpuTlbMissW(mem, cpuRegs.branch);
 }
+
 template<int p>
 void __fastcall _ext_memWrite128(u32 mem, const u64 *value)
 {
@@ -656,13 +659,7 @@ void memReset()
 {
 	// VTLB Protection Preparations.
 
-#ifdef _WIN32
-	DWORD OldProtect;
-	// make sure can write
-	VirtualProtect(m_psAllMem, m_allMemSize, PAGE_READWRITE, &OldProtect);
-#else
-	mprotect(m_psAllMem, m_allMemSize, PROT_READ|PROT_WRITE);
-#endif
+	SysMemProtect( m_psAllMem, m_allMemSize, Protect_ReadWrite );
 
 	// Note!!  Ideally the vtlb should only be initialized once, and then subsequent
 	// resets of the system hardware would only clear vtlb mappings, but since the
@@ -810,7 +807,7 @@ void memReset()
 	}
 
 	fp = fopen(Bios.c_str(), "rb");
-	fread(PS2MEM_ROM, 1, std::min( (long)Ps2MemSize::Rom, filesize ), fp);
+	fread(PS2MEM_ROM, 1, min( (long)Ps2MemSize::Rom, filesize ), fp);
 	fclose(fp);
 
 	BiosVersion = GetBiosVersion();

@@ -16,13 +16,11 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
-#include "PrecompiledHeader.h"
 #include "Win32.h"
 
 #include <shlobj.h>
 #include "common.h"
 #include "plugins.h"
-#include "resource.h"
 
 struct ComboInitializer
 {

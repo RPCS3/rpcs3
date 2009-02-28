@@ -164,7 +164,7 @@ static void iIopDumpBlock( int startpc, u8 * ptr )
 
 	memzero_obj(used);
 	numused = 0;
-	for(i = 0; i < ARRAYSIZE(s_pInstCache->regs); ++i) {
+	for(i = 0; i < ArraySize(s_pInstCache->regs); ++i) {
 		if( s_pInstCache->regs[i] & EEINST_USED ) {
 			used[i] = 1;
 			numused++;
@@ -172,13 +172,13 @@ static void iIopDumpBlock( int startpc, u8 * ptr )
 	}
 
 	fprintf(f, "       ");
-	for(i = 0; i < ARRAYSIZE(s_pInstCache->regs); ++i) {
+	for(i = 0; i < ArraySize(s_pInstCache->regs); ++i) {
 		if( used[i] ) fprintf(f, "%2d ", i);
 	}
 	fprintf(f, "\n");
 
 	fprintf(f, "       ");
-	for(i = 0; i < ARRAYSIZE(s_pInstCache->regs); ++i) {
+	for(i = 0; i < ArraySize(s_pInstCache->regs); ++i) {
 		if( used[i] ) fprintf(f, "%s ", disRNameGPR[i]);
 	}
 	fprintf(f, "\n");
@@ -188,7 +188,7 @@ static void iIopDumpBlock( int startpc, u8 * ptr )
 		fprintf(f, "%2d: %2.2x ", i+1, pcur->info);
 		
 		count = 1;
-		for(j = 0; j < ARRAYSIZE(s_pInstCache->regs); j++) {
+		for(j = 0; j < ArraySize(s_pInstCache->regs); j++) {
 			if( used[j] ) {
 				fprintf(f, "%2.2x%s", pcur->regs[j], ((count%8)&&count<numused)?"_":" ");
 				++count;
@@ -1421,7 +1421,7 @@ StartRecomp:
 
 #ifdef _DEBUG
 	// dump code
-	for(i = 0; i < ARRAYSIZE(s_psxrecblocks); ++i) {
+	for(i = 0; i < ArraySize(s_psxrecblocks); ++i) {
 		if( startpc == s_psxrecblocks[i] ) {
 			iIopDumpBlock(startpc, recPtr);
 		}
@@ -1459,7 +1459,7 @@ StartRecomp:
 	AddBaseBlockEx(s_pCurBlockEx, 1);
 
 	if( !(psxpc&0x10000000) )
-		g_psxMaxRecMem = std::max( (psxpc&~0xa0000000), g_psxMaxRecMem );
+		g_psxMaxRecMem = max( (psxpc&~0xa0000000), g_psxMaxRecMem );
 
 	if( psxbranch == 2 ) {
 		_psxFlushCall(FLUSH_EVERYTHING);

@@ -124,7 +124,7 @@ void __forceinline KICK_VERTEX3()
 		{ 
 			/* tri fans need special processing */ 
 			if (gs.nTriFanVert == gs.primIndex) 
-				gs.primIndex = (gs.primIndex+1) % ARRAYSIZE(gs.gsvertex); 
+				gs.primIndex = (gs.primIndex+1) % ArraySize(gs.gsvertex); 
 		} 
 	} 
 } 
@@ -136,7 +136,7 @@ void __fastcall GIFPackedRegHandlerXYZF2(u32* data)
 	gs.vertexregs.z = (data[2] >> 4) & 0xffffff;
 	gs.vertexregs.f = (data[3] >> 4) & 0xff;
 	gs.gsvertex[gs.primIndex] = gs.vertexregs;
-	gs.primIndex = (gs.primIndex+1) % ARRAYSIZE(gs.gsvertex);
+	gs.primIndex = (gs.primIndex+1) % ArraySize(gs.gsvertex);
 
 	if( data[3] & 0x8000 ) {
 		KICK_VERTEX3();
@@ -152,7 +152,7 @@ void __fastcall GIFPackedRegHandlerXYZ2(u32* data)
 	gs.vertexregs.y = (data[1] >> 0) & 0xffff;
 	gs.vertexregs.z = data[2];
 	gs.gsvertex[gs.primIndex] = gs.vertexregs;
-	gs.primIndex = (gs.primIndex+1) % ARRAYSIZE(gs.gsvertex);
+	gs.primIndex = (gs.primIndex+1) % ArraySize(gs.gsvertex);
 
 	if( data[3] & 0x8000 ) {
 		KICK_VERTEX3();
@@ -420,7 +420,7 @@ void __fastcall GIFRegHandlerXYZF2(u32* data)
 	gs.vertexregs.z = data[1] & 0xffffff;
 	gs.vertexregs.f = data[1] >> 24;
 	gs.gsvertex[gs.primIndex] = gs.vertexregs;
-	gs.primIndex = (gs.primIndex+1)%ARRAYSIZE(gs.gsvertex);
+	gs.primIndex = (gs.primIndex+1)%ArraySize(gs.gsvertex);
 
 	KICK_VERTEX2();
 }
@@ -431,7 +431,7 @@ void __fastcall GIFRegHandlerXYZ2(u32* data)
 	gs.vertexregs.y = (data[0] >> (16)) & 0xffff;
 	gs.vertexregs.z = data[1];
 	gs.gsvertex[gs.primIndex] = gs.vertexregs;
-	gs.primIndex = (gs.primIndex+1)%ARRAYSIZE(gs.gsvertex);
+	gs.primIndex = (gs.primIndex+1)%ArraySize(gs.gsvertex);
 
 	KICK_VERTEX2();
 }
@@ -481,7 +481,7 @@ void __fastcall GIFRegHandlerXYZF3(u32* data)
 	gs.vertexregs.z = data[1] & 0xffffff;
 	gs.vertexregs.f = data[1] >> 24;
 	gs.gsvertex[gs.primIndex] = gs.vertexregs;
-	gs.primIndex = (gs.primIndex+1)%ARRAYSIZE(gs.gsvertex);
+	gs.primIndex = (gs.primIndex+1)%ArraySize(gs.gsvertex);
 
 	KICK_VERTEX3();
 }
@@ -492,7 +492,7 @@ void __fastcall GIFRegHandlerXYZ3(u32* data)
 	gs.vertexregs.y = (data[0] >> (16)) & 0xffff;
 	gs.vertexregs.z = data[1];
 	gs.gsvertex[gs.primIndex] = gs.vertexregs;
-	gs.primIndex = (gs.primIndex+1)%ARRAYSIZE(gs.gsvertex);
+	gs.primIndex = (gs.primIndex+1)%ArraySize(gs.gsvertex);
 
 	KICK_VERTEX3();
 }

@@ -243,7 +243,7 @@ s32 CALLBACK SPU2init()
 		voices[i+24].memoffset = 0x400;
 
 	// init each channel
-	for (u32 i = 0; i < ARRAYSIZE(voices); ++i) {
+	for (u32 i = 0; i < ArraySize(voices); ++i) {
 		voices[i].chanid = i;
 		voices[i].pLoop = voices[i].pStart = voices[i].pCurr = (u8*)spu2mem;
 
@@ -294,7 +294,7 @@ s32 CALLBACK SPU2open(void *pDsp)
 
 	if ( g_bPlaySound ) {
 		// initialize the audio buffers
-		for (u32 i = 0; i < ARRAYSIZE(s_pAudioBuffers); ++i) 
+		for (u32 i = 0; i < ArraySize(s_pAudioBuffers); ++i) 
 		{
 			s_pAudioBuffers[i].pbuf = (u8*)_aligned_malloc(4*NSSIZE*NSFRAMES, 16); // 4 bytes for each sample
 			s_pAudioBuffers[i].len = 0;
@@ -305,11 +305,11 @@ s32 CALLBACK SPU2open(void *pDsp)
 		s_pCurOutput = (s16*)s_pAudioBuffers[0].pbuf;
 		assert( s_pCurOutput != NULL);
 	
-		for (int i = 0; i < ARRAYSIZE(s_nDurations); ++i) 
+		for (int i = 0; i < ArraySize(s_nDurations); ++i) 
 		{
 			s_nDurations[i] = NSFRAMES*1000;
 		}
-		s_nTotalDuration = ARRAYSIZE(s_nDurations)*NSFRAMES*1000;
+		s_nTotalDuration = ArraySize(s_nDurations)*NSFRAMES*1000;
 		s_nCurDuration = 0;
 		
 		// launch the thread
@@ -355,7 +355,7 @@ void CALLBACK SPU2close()
 	delete g_pWavRecord; g_pWavRecord = NULL;
 	delete pSoundTouch; pSoundTouch = NULL;
 	
-	for (u32 i = 0; i < ARRAYSIZE(s_pAudioBuffers); ++i) 
+	for (u32 i = 0; i < ArraySize(s_pAudioBuffers); ++i) 
 	{
 		_aligned_free(s_pAudioBuffers[i].pbuf);
 	}
@@ -793,7 +793,7 @@ ENDX:
 				LogRawSound(s_pAudioBuffers[s_nCurBuffer].pbuf, 4, s_pAudioBuffers[s_nCurBuffer].pbuf+2, 4, NSSIZE*NSFRAMES);
 			}
 
-			if ( s_nQueuedBuffers >= ARRAYSIZE(s_pAudioBuffers)-1 ) 
+			if ( s_nQueuedBuffers >= ArraySize(s_pAudioBuffers)-1 ) 
 			{
 				//ZeroSPU2: dropping packets! game too fast
 				s_nDropPacket += NSFRAMES;
@@ -820,16 +820,16 @@ ENDX:
 					u32 duration = (u32)(newtime-s_GlobalTimeStamp);
 					s_nDurations[s_nCurDuration] = duration;
 					s_nTotalDuration = newtotal + duration;
-					s_nCurDuration = (s_nCurDuration+1)%ARRAYSIZE(s_nDurations);
+					s_nCurDuration = (s_nCurDuration+1)%ArraySize(s_nDurations);
 					s_GlobalTimeStamp = newtime;
 					s_pAudioBuffers[s_nCurBuffer].timestamp = timeGetTime();
-					s_pAudioBuffers[s_nCurBuffer].avgtime = s_nTotalDuration/ARRAYSIZE(s_nDurations);
+					s_pAudioBuffers[s_nCurBuffer].avgtime = s_nTotalDuration/ArraySize(s_nDurations);
 				}
 
 				s_pAudioBuffers[s_nCurBuffer].len = 4*NSSIZE*NSFRAMES;
 				InterlockedExchangeAdd((long*)&s_nQueuedBuffers, 1);
 
-				s_nCurBuffer = (s_nCurBuffer+1)%ARRAYSIZE(s_pAudioBuffers);
+				s_nCurBuffer = (s_nCurBuffer+1)%ArraySize(s_pAudioBuffers);
 				s_pAudioBuffers[s_nCurBuffer].newchannels = 0; // reset
 			}
 
@@ -959,7 +959,7 @@ void* SPU2ThreadProc(void* lpParam)
 			SoundFeedVoiceData(s_pAudioBuffers[nReadBuf].pbuf, s_pAudioBuffers[nReadBuf].len);
 
 		// don't go to the next buffer unless there is more data buffered
-		nReadBuf = (nReadBuf+1)%ARRAYSIZE(s_pAudioBuffers);
+		nReadBuf = (nReadBuf+1)%ArraySize(s_pAudioBuffers);
 		InterlockedExchangeAdd((long*)&s_nQueuedBuffers, -1);
 
 		if ( s_bThreadExit ) break;
@@ -1493,16 +1493,16 @@ void save_data(freezeData *data)
 	memcpy(spud->SPUStartCycle, SPUStartCycle, sizeof(SPUStartCycle));
 	memcpy(spud->SPUTargetCycle, SPUTargetCycle, sizeof(SPUTargetCycle));
 
-	for (i = 0; i < ARRAYSIZE(s_nDurations); ++i) 
+	for (i = 0; i < ArraySize(s_nDurations); ++i) 
 	{
 		s_nDurations[i] = NSFRAMES*1000;
 	}
 	
-	s_nTotalDuration = ARRAYSIZE(s_nDurations)*NSFRAMES*1000;
+	s_nTotalDuration = ArraySize(s_nDurations)*NSFRAMES*1000;
 	s_nCurDuration = 0;
 	
 	spud->voicesize = SPU_VOICE_STATE_SIZE;
-	for (i = 0; i < ARRAYSIZE(voices); ++i) 
+	for (i = 0; i < ArraySize(voices); ++i) 
 	{
 		memcpy(&spud->voices[i], &voices[i], SPU_VOICE_STATE_SIZE);
 		spud->voices[i].pStart = (u8*)((uptr)voices[i].pStart-(uptr)spu2mem);
@@ -1554,7 +1554,7 @@ void load_data(freezeData *data)
 	memcpy(SPUStartCycle, spud->SPUStartCycle, sizeof(SPUStartCycle));
 	memcpy(SPUTargetCycle, spud->SPUTargetCycle, sizeof(SPUTargetCycle));
 
-	for (i = 0; i < ARRAYSIZE(voices); ++i) 
+	for (i = 0; i < ArraySize(voices); ++i) 
 	{
 		memcpy(&voices[i], &spud->voices[i], min((int)SPU_VOICE_STATE_SIZE, spud->voicesize));
 		voices[i].pStart = (u8*)((uptr)spud->voices[i].pStart+(uptr)spu2mem);
@@ -1565,12 +1565,12 @@ void load_data(freezeData *data)
 	s_GlobalTimeStamp = 0;
 	g_startcount = 0xffffffff;
 		
-	for (int i = 0; i < ARRAYSIZE(s_nDurations); ++i) 
+	for (int i = 0; i < ArraySize(s_nDurations); ++i) 
 	{
 		s_nDurations[i] = NSFRAMES*1000;
 	}
 		
-	s_nTotalDuration = ARRAYSIZE(s_nDurations)*NSFRAMES*1000;
+	s_nTotalDuration = ArraySize(s_nDurations)*NSFRAMES*1000;
 	s_nCurDuration = 0;
 	s_nQueuedBuffers = 0;
 	s_nDropPacket = 0;

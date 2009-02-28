@@ -22,6 +22,8 @@
 #include "Misc.h"
 #include "Threading.h"
 
+#include "RedtapeWindows.h"
+
 #if defined (_MSC_VER) && _MSC_VER >= 1400
 
 	extern "C"

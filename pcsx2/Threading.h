@@ -49,6 +49,7 @@ namespace Threading
 		Semaphore();
 		~Semaphore();
 
+		void Reset();
 		void Post();
 		void Post( int multiple );
 		void Wait();
@@ -75,6 +76,9 @@ namespace Threading
 
 	// For use in spin/wait loops.
 	extern void SpinWait();
+	
+	// sleeps the current thread for the given number of milliseconds.
+	extern void Sleep( int ms );
 
 	class Thread : NoncopyableObject
 	{

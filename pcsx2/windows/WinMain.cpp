@@ -20,7 +20,6 @@
 #include "win32.h"
 
 #include <winnt.h>
-#include <commctrl.h>
 #include <direct.h>
 
 #include <ntsecapi.h>

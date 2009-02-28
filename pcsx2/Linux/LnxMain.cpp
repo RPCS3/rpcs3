@@ -43,7 +43,7 @@ int main(int argc, char *argv[])
 
 	efile = 0;
 	
-	getcwd(MAIN_DIR, ARRAYSIZE(MAIN_DIR)); /* store main dir */
+	getcwd(MAIN_DIR, ArraySize(MAIN_DIR)); /* store main dir */
 	Console::Notice("MAIN_DIR is %s", params MAIN_DIR);
 #ifdef ENABLE_NLS
 	setlocale(LC_ALL, "");

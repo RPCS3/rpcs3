@@ -42,6 +42,7 @@
 #include "vtlb.h"
 
 #include "SamplProf.h"
+#include "Paths.h"
 
 using namespace R5900;
 
@@ -135,7 +136,7 @@ BASEBLOCKEX* PC_GETBLOCKEX(BASEBLOCK* p)
 static void iDumpBlock( int startpc, u8 * ptr )
 {
 	FILE *f;
-	char filename[ g_MaxPath ];
+	string filename;
 	u32 i, j;
 	EEINST* pcur;
 	u8 used[34];
@@ -143,13 +144,8 @@ static void iDumpBlock( int startpc, u8 * ptr )
 	int numused, count, fpunumused;
 
 	Console::Status( "dump1 %x:%x, %x", params startpc, pc, cpuRegs.cycle );
-#ifdef _WIN32
-	CreateDirectory("dumps", NULL);
-	sprintf_s( filename, g_MaxPath, "dumps\\dump%.8X.txt", startpc);
-#else
-	mkdir("dumps", 0755);
-	sprintf( filename, "dumps/dump%.8X.txt", startpc);
-#endif
+	Path::CreateDirectory( "dumps" );
+	ssprintf( filename, "dumps\\R5900dump%.8X.txt", startpc );
 
 	fflush( stdout );
 //	f = fopen( "dump1", "wb" );
@@ -159,7 +155,7 @@ static void iDumpBlock( int startpc, u8 * ptr )
 //	sprintf( command, "objdump -D --target=binary --architecture=i386 dump1 > %s", filename );
 //	system( command );
 
-	f = fopen( filename, "w" );
+	f = fopen( filename.c_str(), "w" );
 
 	std::string output;
 
@@ -177,7 +173,7 @@ static void iDumpBlock( int startpc, u8 * ptr )
 
 	memzero_obj(used);
 	numused = 0;
-	for(i = 0; i < ARRAYSIZE(s_pInstCache->regs); ++i) {
+	for(i = 0; i < ArraySize(s_pInstCache->regs); ++i) {
 		if( s_pInstCache->regs[i] & EEINST_USED ) {
 			used[i] = 1;
 			numused++;
@@ -186,7 +182,7 @@ static void iDumpBlock( int startpc, u8 * ptr )
 
 	memzero_obj(fpuused);
 	fpunumused = 0;
-	for(i = 0; i < ARRAYSIZE(s_pInstCache->fpuregs); ++i) {
+	for(i = 0; i < ArraySize(s_pInstCache->fpuregs); ++i) {
 		if( s_pInstCache->fpuregs[i] & EEINST_USED ) {
 			fpuused[i] = 1;
 			fpunumused++;
@@ -194,19 +190,19 @@ static void iDumpBlock( int startpc, u8 * ptr )
 	}
 
 	fprintf(f, "       ");
-	for(i = 0; i < ARRAYSIZE(s_pInstCache->regs); ++i) {
+	for(i = 0; i < ArraySize(s_pInstCache->regs); ++i) {
 		if( used[i] ) fprintf(f, "%2d ", i);
 	}
-	for(i = 0; i < ARRAYSIZE(s_pInstCache->fpuregs); ++i) {
+	for(i = 0; i < ArraySize(s_pInstCache->fpuregs); ++i) {
 		if( fpuused[i] ) fprintf(f, "%2d ", i);
 	}
 	fprintf(f, "\n");
 
 	fprintf(f, "       ");
-	for(i = 0; i < ARRAYSIZE(s_pInstCache->regs); ++i) {
+	for(i = 0; i < ArraySize(s_pInstCache->regs); ++i) {
 		if( used[i] ) fprintf(f, "%s ", disRNameGPR[i]);
 	}
-	for(i = 0; i < ARRAYSIZE(s_pInstCache->fpuregs); ++i) {
+	for(i = 0; i < ArraySize(s_pInstCache->fpuregs); ++i) {
 		if( fpuused[i] ) fprintf(f, "%s ", i<32?"FR":"FA");
 	}
 	fprintf(f, "\n");
@@ -216,14 +212,14 @@ static void iDumpBlock( int startpc, u8 * ptr )
 		fprintf(f, "%2d: %2.2x ", i+1, pcur->info);
 		
 		count = 1;
-		for(j = 0; j < ARRAYSIZE(s_pInstCache->regs); j++) {
+		for(j = 0; j < ArraySize(s_pInstCache->regs); j++) {
 			if( used[j] ) {
 				fprintf(f, "%2.2x%s", pcur->regs[j], ((count%8)&&count<numused)?"_":" ");
 				++count;
 			}
 		}
 		count = 1;
-		for(j = 0; j < ARRAYSIZE(s_pInstCache->fpuregs); j++) {
+		for(j = 0; j < ArraySize(s_pInstCache->fpuregs); j++) {
 			if( fpuused[j] ) {
 				fprintf(f, "%2.2x%s", pcur->fpuregs[j], ((count%8)&&count<fpunumused)?"_":" ");
 				++count;
@@ -1884,7 +1880,7 @@ StartRecomp:
 
 #ifdef _DEBUG
 	// dump code
-	for(i = 0; i < ARRAYSIZE(s_recblocks); ++i) {
+	for(i = 0; i < ArraySize(s_recblocks); ++i) {
 		if( startpc == s_recblocks[i] ) {
 			iDumpBlock(startpc, recPtr);
 		}

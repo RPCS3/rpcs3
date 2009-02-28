@@ -519,20 +519,17 @@ u32 SuperVUGetVIAddr(int reg, int read)
 void SuperVUDumpBlock(list<VuBaseBlock*>& blocks, int vuindex)
 {
 	FILE *f;
-	char filename[ g_MaxPath ], str[256];
+	string filename;
+	char str[256];
 	u32 *mem;
 	u32 i;
 
-#ifdef _WIN32
-	CreateDirectory("dumps", NULL);
-	sprintf_s( filename, g_MaxPath, "dumps\\svu%c_%.4X.txt", s_vu?'1':'0', s_pFnHeader->startpc );
-#else
-	mkdir("dumps", 0755);
-	sprintf( filename, "dumps/svu%c_%.4X.txt", s_vu?'1':'0', s_pFnHeader->startpc );
-#endif
+	Path::CreateDirectory( "dumps" );
+	ssprintf( filename, "dumps\\svu%cdump%.4X.txt", s_vu?'0':'1', s_pFnHeader->startpc );
+
 	//SysPrintf( "dump1 %x => %s\n", s_pFnHeader->startpc, filename );
 
-	f = fopen( filename, "w" );
+	f = fopen( filename.c_str(), "w" );
 
 	fprintf(f, "Format: upper_inst lower_inst\ntype f:vf_live_vars vf_used_vars i:vi_live_vars vi_used_vars inst_cycle pq_inst\n");
 	fprintf(f, "Type: %.2x - qread, %.2x - pread, %.2x - clip_write, %.2x - status_write\n"
@@ -648,9 +645,6 @@ void SuperVUDumpBlock(list<VuBaseBlock*>& blocks, int vuindex)
 
 	fclose( f );
 }
-
-LARGE_INTEGER svubase, svufinal;
-static u64 svutime;
 
 // uncomment to count svu exec time
 //#define SUPERVU_COUNT
@@ -2319,9 +2313,6 @@ void SuperVUCleanupProgram(u32 startpc, int vuindex)
 // entry point of all vu programs from emulator calls
 __declspec(naked) void SuperVUExecuteProgram(u32 startpc, int vuindex)
 {
-#ifdef SUPERVU_COUNT
-	QueryPerformanceCounter(&svubase);
-#endif
 	__asm {
 		mov eax, dword ptr [esp]
 		mov s_TotalVUCycles, 0 // necessary to be here!
@@ -2457,7 +2448,7 @@ static void SuperVURecompile()
 	FORIT(itblock, s_listBlocks) {
 		VuBaseBlock::LISTBLOCKS::iterator itchild;
 
-		assert( (*itblock)->blocks.size() <= ARRAYSIZE((*itblock)->pChildJumps) );
+		assert( (*itblock)->blocks.size() <= ArraySize((*itblock)->pChildJumps) );
 
         int i = 0;
 		FORIT(itchild, (*itblock)->blocks) {
@@ -2537,12 +2528,12 @@ void svudispfntemp()
 	if( ((vudump&8) && g_curdebugvu) || ((vudump&0x80) && !g_curdebugvu) ) { //&& g_vu1lastrec != g_vu1last ) {
 
 		if( skipparent != g_vu1lastrec ) {
-			for(i = 0; i < ARRAYSIZE(badaddrs); ++i) {
+			for(i = 0; i < ArraySize(badaddrs); ++i) {
 				if( s_svulast == badaddrs[i][1] && g_vu1lastrec == badaddrs[i][0] )
 					break;
 			}
 			
-			if( i == ARRAYSIZE(badaddrs) )
+			if( i == ArraySize(badaddrs) )
 			{
                 //static int curesp;
                 //__asm mov curesp, esp
@@ -3881,19 +3872,6 @@ void recVUMI_JALR( VURegs* vuu, s32 info )
 
 	branch |= 4;
 }
-
-#ifdef SUPERVU_COUNT
-void StopSVUCounter()
-{
-	QueryPerformanceCounter(&svufinal);
-	svutime += (u32)(svufinal.QuadPart-svubase.QuadPart);
-}
-
-void StartSVUCounter()
-{
-	QueryPerformanceCounter(&svubase);
-}
-#endif
 
 #ifdef PCSX2_DEVBUILD
 void vu1xgkick(u32* pMem, u32 addr)

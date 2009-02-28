@@ -1,7 +1,5 @@
 
-#include "PrecompiledHeader.h"
-
-#ifndef _DEBUG
+#include "Win32.h"
 
 #include "SamplProf.h"
 #include <map>
@@ -321,5 +319,3 @@ void ProfilerSetEnabled(bool Enabled)
 	else
 		SuspendThread(hProfThread);
 }
-
-#endif

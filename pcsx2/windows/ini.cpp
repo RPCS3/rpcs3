@@ -16,8 +16,7 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "PrecompiledHeader.h"
-#include "win32.h"
+#include "Win32.h"
 
 #include "Common.h"
 #include "Paths.h"

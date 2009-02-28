@@ -19,7 +19,6 @@
 #include "PrecompiledHeader.h"
 #include "Win32.h"
 
-#include <commctrl.h>
 #include <math.h>
 #include "libintlmsc.h"
 

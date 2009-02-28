@@ -16,7 +16,7 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
-#include <windows.h>
+#include "RedtapeWindows.h"
 #include <commdlg.h>
 #include <stdio.h>
 

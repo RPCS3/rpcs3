@@ -52,6 +52,11 @@ namespace Threading
 		usleep(500);
 	}
 
+	__forceinline void Sleep( int ms )
+	{
+		usleep( 1000*ms );
+	}
+
 	// For use in spin/wait loops,  Acts as a hint to Intel CPUs and should, in theory
 	// improve performance and reduce cpu power consumption.
 	__forceinline void SpinWait()
@@ -60,7 +65,7 @@ namespace Threading
 		// performance hint and isn't required).
 		__asm__ ( "pause" );
 	}
-
+	
 	void* Thread::_internal_callback( void* itsme )
 	{
 		jASSUME( itsme != NULL );

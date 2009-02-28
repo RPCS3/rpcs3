@@ -16,10 +16,8 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
-#include "PrecompiledHeader.h"
 #include "Win32.h"
 
-#include <commctrl.h>
 #include "Debugger.h"
 #include "RDebugger.h"
 #include "Common.h"
@@ -32,7 +30,7 @@ char	message[1024];		//message to add to listbox
 
 volatile long runStatus=STOP;
 int runCode=0, runCount=1;
-HANDLE	runEvent=NULL;
+Threading::Semaphore* runEvent = NULL;
 
 DECI2_DBGP_BRK	ebrk[32],
 				ibrk[32];
@@ -254,8 +252,8 @@ DWORD WINAPI Run2(LPVOID lpParam){
 		else{
 			cpuRegs.CP0.n.EPC=cpuRegs.pc;
 			psxRegs.CP0.n.EPC=psxRegs.pc;
-			ResetEvent(runEvent);
-			WaitForSingleObject(runEvent, INFINITE);
+			runEvent->Wait();
+			//WaitForSingleObject(runEvent, INFINITE);
 			runStatus=RUN;
 		}
 	}
@@ -282,8 +280,8 @@ LRESULT WINAPI RemoteDebuggerProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lP
 				CREATE_SUSPENDED, &thid);
 			runth=CreateThread(NULL, 0, Run2, (LPVOID)hDlg, 
 				CREATE_SUSPENDED, &thid);
-			runEvent=CreateEvent(NULL, TRUE, FALSE, "RunState");
-			if (th==NULL || runth==NULL || runEvent==NULL){
+			runEvent = new Threading::Semaphore();
+			if (th==NULL || runth==NULL ){
 				MessageBox(hDlg, _("Could not create threads or event"), 0, MB_OK);
 				connected=0;
 				closesocket(serversocket);
@@ -329,7 +327,7 @@ LRESULT WINAPI RemoteDebuggerProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lP
 						connected=0;
 						CloseHandle(th);
 						CloseHandle(runth);
-						CloseHandle(runEvent);
+						safe_delete( runEvent );
 						closesocket(serversocket);
 						WSACleanup();
 						ClosePlugins( false );

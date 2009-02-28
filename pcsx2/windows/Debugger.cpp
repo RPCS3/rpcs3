@@ -16,11 +16,8 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
-#include "PrecompiledHeader.h"
-
 #include "win32.h"
 
-#include "resource.h"
 #include "R5900OpcodeTables.h"
 #include "Debugger.h"
 #include "Common.h"

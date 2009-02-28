@@ -449,7 +449,7 @@ void mtgsThreadObject::PostVsyncEnd( bool updategs )
 			m_QueuedFrames = 0;
 			break;
 		}
-		Sleep( 2 );		// Sleep off quite a bit of time, since we're obviously *waaay* ahead.
+		Threading::Sleep( 2 );		// Sleep off quite a bit of time, since we're obviously *waaay* ahead.
 		SpinWait();
 	}
 

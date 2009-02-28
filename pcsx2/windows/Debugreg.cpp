@@ -16,12 +16,10 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
-#include "PrecompiledHeader.h"
 #include "Win32.h"
 
 #include <commdlg.h>
 
-#include "resource.h"
 #include "Debugger.h"
 #include "DebugTools/Debug.h"
 #include "R5900.h"
