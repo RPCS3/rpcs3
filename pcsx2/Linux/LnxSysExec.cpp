@@ -48,7 +48,7 @@ void ReleaseLinuxExceptionHandler()
 	// Code this later.
 }
 
-static const uint m_pagemask = getpagesize()-1;
+static const uptr m_pagemask = getpagesize()-1;
 
 // Linux implementation of SIGSEGV handler.  Bind it using sigaction().
 void SysPageFaultExceptionFilter( int signal, siginfo_t *info, void * )
@@ -68,7 +68,7 @@ void SysPageFaultExceptionFilter( int signal, siginfo_t *info, void * )
 		assert( false );
 	}
 	
-	mmap_ClearCpuBlock( offset & m_pagemask );
+	mmap_ClearCpuBlock( offset & ~m_pagemask );
 }
 
 // For issuing notices to both the status bar and the console at the same time.
