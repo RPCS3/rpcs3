@@ -1558,6 +1558,7 @@ void recVUMI_MUL_iq_toD(VURegs *VU, uptr addr, int regd, int info)
 			SSE_MOVSS_XMM_to_XMM(regd, EEREC_S);
 			SSE_MULSS_M32_to_XMM(regd, addr);
 			_vuFlipRegSS(VU, EEREC_S);
+			_vuFlipRegSS(VU, regd);
 		}
 		else if( regd == EEREC_S ) {
 			_vuFlipRegSS(VU, regd);
