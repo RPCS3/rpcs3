@@ -30,6 +30,10 @@
 // ix86 instructions
 //------------------------------------------------------------------
 
+#include "PrecompiledHeader.h"
+#include "System.h"
+#include "ix86.h"
+
 emitterT void WriteRmOffset(x86IntRegType to, s32 offset)
 {
 	if( (to&7) == ESP ) {
@@ -244,7 +248,7 @@ emitterT void ex86AlignExecutable( int align )
 	{
 	case 0: break;
 
-	case 1: eeNOP<I>(); break;
+	case 1: eNOP<I>(); break;
 	case 2: eMOV32RtoR<I>( ESI, ESI ); break;
 	case 3: write8<I>(0x08D); write8<I>(0x024); write8<I>(0x024); break;
 	case 5: eNOP<I>();	// falls through to 4...
@@ -256,7 +260,7 @@ emitterT void ex86AlignExecutable( int align )
 	default:
 		{
 			// for larger alignments, just use a JMP...
-			u8* aligned_target = eJMP8(0);
+			u8* aligned_target = eJMP8<I>(0);
 			x86Ptr[I] = (u8*)newx86;
 			ex86SetJ8<I>( aligned_target );
 		}

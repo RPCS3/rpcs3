@@ -75,7 +75,7 @@ emitterT void write64( u64 val ){
 	x86Ptr[I] += 8; 
 }
 //------------------------------------------------------------------
-/*
+
 //------------------------------------------------------------------
 // jump/align functions
 //------------------------------------------------------------------
@@ -104,7 +104,23 @@ emitterT u8*  J8Rel( int cc, int to );
 emitterT u32* J32Rel( int cc, u32 to );
 emitterT u64  GetCPUTick( void );
 //------------------------------------------------------------------
-*/
+
+emitterT void eMOV32RtoR( x86IntRegType to, x86IntRegType from );
+emitterT u32* eJMP32( uptr to );
+emitterT u8* eJMP8( u8 to );
+emitterT void eCALL32( u32 to );
+emitterT void eLEA32RtoR(x86IntRegType to, x86IntRegType from, u32 offset);
+emitterT void eLEA32RStoR(x86IntRegType to, x86IntRegType from, u32 scale);
+emitterT void eNOP( void );
+emitterT void eAND32I8toR( x86IntRegType to, u8 from );
+emitterT void eAND32ItoM( uptr to, u32 from );
+emitterT void eLEA32RRtoR(x86IntRegType to, x86IntRegType from0, x86IntRegType from1);
+emitterT void eAND32I8toM( uptr to, u8 from );
+emitterT void eLEA32RStoR(x86IntRegType to, x86IntRegType from, u32 scale);
+
+
+
+
 #define MMXONLY(code) code
 #define _MM_MK_INSERTPS_NDX(srcField, dstField, zeroMask) (((srcField)<<6) | ((dstField)<<4) | (zeroMask))
 
