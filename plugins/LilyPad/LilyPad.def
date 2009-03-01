@@ -1,22 +1,22 @@
 EXPORTS
-    PS2EgetLibType
-    PS2EgetLibName
-    PS2EgetLibVersion2
+	PS2EgetLibType
+	PS2EgetLibName
+	PS2EgetLibVersion2
 	PSEgetLibType
 	PSEgetLibName
 	PSEgetLibVersion
 	PADreadPort1
 	PADreadPort2
-    PADinit
-    PADshutdown
-    PADopen
-    PADclose
-    PADkeyEvent
-    PADstartPoll
-    PADpoll
-    PADquery
-    PADconfigure
-    PADtest
-    PADabout
-    PADupdate
+	PADinit
+	PADshutdown
+	PADopen
+	PADclose
+	PADkeyEvent
+	PADstartPoll
+	PADpoll
+	PADquery
+	PADconfigure
+	PADtest
+	PADabout
+	PADupdate
 

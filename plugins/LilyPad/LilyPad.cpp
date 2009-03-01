@@ -1130,14 +1130,6 @@ keyEvent* CALLBACK PADkeyEvent() {
 	return &ev;
 }
 
-typedef struct {
-	unsigned char controllerType;
-	unsigned short buttonStatus;
-	unsigned char rightJoyX, rightJoyY, leftJoyX, leftJoyY;
-	unsigned char moveX, moveY;
-	unsigned char reserved[91];
-} PadDataS;
-
 u32 CALLBACK PADreadPort1 (PadDataS* pads) {
 	PADstartPoll(1);
 	PADpoll(0x42);
