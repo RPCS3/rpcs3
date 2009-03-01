@@ -32,8 +32,6 @@
 
 #include "PsxCommon.h"
 #include "VU.h"
-
-#include "ix86/ix86.h"
 #include "iCore.h"
 
 #include "SamplProf.h"

@@ -18,6 +18,8 @@
 
 #include "PrecompiledHeader.h"
 
+#define _EmitterId_ 0
+
 #include "ix86.h"
 #include "Misc.h"
 #include "Threading.h"

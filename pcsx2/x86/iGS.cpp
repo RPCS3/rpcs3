@@ -21,7 +21,6 @@
 #include "Common.h"
 #include "VU.h"
 
-#include "ix86/ix86.h"
 #include "iR5900.h"
 
 #include "GS.h"

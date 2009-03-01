@@ -21,7 +21,6 @@
 #include "Common.h"
 #include "R5900OpcodeTables.h"
 #include "iR5900LoadStore.h"
-#include "ix86/ix86.h"
 #include "iR5900.h"
 
 // Implemented at the bottom of the module:

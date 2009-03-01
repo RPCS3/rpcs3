@@ -17,7 +17,6 @@
  */
 
 #pragma once
-//#include "PrecompiledHeader.h"
 
 //------------------------------------------------------------------
 // MMX instructions

@@ -19,7 +19,6 @@
 #include "PrecompiledHeader.h"
 
 #include "Common.h"
-#include "ix86/ix86.h"
 #include "Vif.h"
 #include "VUmicro.h"
 

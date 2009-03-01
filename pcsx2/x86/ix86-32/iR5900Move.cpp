@@ -20,13 +20,12 @@
 
 #include "Common.h"
 #include "R5900OpcodeTables.h"
-#include "ix86/ix86.h"
 #include "iR5900.h"
 
 
 #ifdef _WIN32
-#pragma warning(disable:4244)
-#pragma warning(disable:4761)
+//#pragma warning(disable:4244)
+//#pragma warning(disable:4761)
 #endif
 
 namespace R5900 { 

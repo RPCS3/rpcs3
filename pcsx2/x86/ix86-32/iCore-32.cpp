@@ -22,11 +22,16 @@
 #include "Vif.h"
 #include "VU.h"
 #include "ix86/ix86.h"
-#include "iR3000A.h"
+#include "R3000A.h"
 
 #include <vector>
 
 using namespace std;
+
+// yay sloppy crap needed until we can remove dependency on this hippopotamic
+// landmass of shared code. (air)
+extern u32 g_psxConstRegs[32];
+
 
 u16 x86FpuState, iCWstate;
 u16 g_mmxAllocCounter = 0;

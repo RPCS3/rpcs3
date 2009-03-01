@@ -35,7 +35,6 @@
 #include "GS.h"
 #include "R5900.h"
 #include "VU.h"
-#include "ix86/ix86.h"
 #include "iR5900.h"
 
 #include "iVUzerorec.h"

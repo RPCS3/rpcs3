@@ -21,7 +21,7 @@
 
 #include "System.h"
 #include "Threading.h"
-#include "ix86/ix86.h"
+#include "ix86/ix86_types.h"
 
 #ifdef _WIN32
 #include "implement.h"		// win32 pthreads implementations.

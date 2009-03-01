@@ -23,12 +23,10 @@
 #include "Threading.h"
 
 #include "iR5900.h"
-#include "iR3000A.h"
+#include "R3000A.h"
 #include "IopMem.h"
 #include "iVUzerorec.h"		// for SuperVUReset
 
-
-#include "x86/ix86/ix86.h"
 
 using namespace std;
 using namespace Console;

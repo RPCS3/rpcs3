@@ -24,18 +24,18 @@
  *			cottonvibes(@gmail.com)
  */
 
-#pragma once
 #include "PrecompiledHeader.h"
+
 #include "System.h"
 #include "ix86.h"
 
-u8  *x86Ptr[3]; // 3 rec instances (can be increased if needed)
-				// <0> = Main Instance, <1> = VU0 Instance, <2> = VU1 Instance
+u8  *x86Ptr[EmitterId_Count];
+
 u8  *j8Ptr[32];
 u32 *j32Ptr[32];
 
-PCSX2_ALIGNED16(unsigned int p[4]);
-PCSX2_ALIGNED16(unsigned int p2[4]);
+PCSX2_ALIGNED16(u32 p[4]);
+PCSX2_ALIGNED16(u32 p2[4]);
 PCSX2_ALIGNED16(float f[4]);
 
 XMMSSEType g_xmmtypes[XMMREGS] = { XMMT_INT };

@@ -23,7 +23,6 @@
 #include "Common.h"
 #include "Memory.h"
 #include "R5900OpcodeTables.h"
-#include "ix86/ix86.h"
 #include "iR5900.h"
 #include "iR5900AritImm.h"
 #include "iR5900Arit.h"

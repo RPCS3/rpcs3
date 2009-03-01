@@ -21,7 +21,6 @@
 #include "Common.h"
 #include "vtlb.h"
 
-#include "x86/ix86/ix86.h"
 #include "iCore.h"
 #include "iR5900.h"
 
