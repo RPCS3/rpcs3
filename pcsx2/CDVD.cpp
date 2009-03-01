@@ -19,11 +19,6 @@
 #include "PrecompiledHeader.h"
 
 #include <ctype.h>
-#include <time.h>
-
-#ifndef _WIN32
-#include <sys/time.h>
-#endif
 
 #include "PsxCommon.h"
 #include "CDVDiso.h"
@@ -224,11 +219,10 @@ FILE *_cdvdOpenMechaVer() {
 	char *ptr;
 	int i;
 	char file[g_MaxPath];
-	string Bios;
 	FILE* fd;
 
 	// get the name of the bios file
-	Path::Combine( Bios, Config.BiosDir, Config.Bios );
+	string Bios( Path::Combine( Config.BiosDir, Config.Bios ) );
 	
 	// use the bios filename to get the name of the mecha ver file
 	// [TODO] : Upgrade this to use std::string!
@@ -269,12 +263,11 @@ s32 cdvdGetMechaVer(u8* ver)
 FILE *_cdvdOpenNVM() {
 	char *ptr;
 	int i;
-	string Bios;
 	char file[g_MaxPath];
 	FILE* fd;
 
 	// get the name of the bios file
-	Path::Combine( Bios, Config.BiosDir, Config.Bios );
+	string Bios( Path::Combine( Config.BiosDir, Config.Bios ) );
 	
 	// use the bios filename to get the name of the nvm file
 	// [TODO] : Upgrade this to use std::string!
@@ -743,17 +736,6 @@ static uint cdvdBlockReadTime( CDVD_MODE_TYPE mode )
 
 void cdvdReset()
 {
-#ifdef _WIN32
-	SYSTEMTIME st;
-    //Get and set the internal clock to time
-	GetSystemTime(&st);
-#else
-    time_t traw;
-    struct tm* ptlocal;
-    time(&traw);
-    ptlocal = localtime(&traw);
-#endif
-
 	memzero_obj(cdvd);
 
 	cdvd.Type = CDVD_TYPE_NODISC;
@@ -772,25 +754,6 @@ void cdvdReset()
     cdvd.RTC.day = 25;
     cdvd.RTC.month = 5;
     cdvd.RTC.year = 7; //2007
-
-#ifndef _DEBUG
-#ifdef _WIN32
-	cdvd.RTC.second = (u8)(st.wSecond);
-	cdvd.RTC.minute = (u8)(st.wMinute);
-	cdvd.RTC.hour = (u8)(st.wHour+1)%24;
-	cdvd.RTC.day = (u8)(st.wDay);
-	cdvd.RTC.month = (u8)(st.wMonth);
-	cdvd.RTC.year = (u8)(st.wYear - 2000);
-#else
-    cdvd.RTC.second = ptlocal->tm_sec;
-    cdvd.RTC.minute = ptlocal->tm_min;
-    cdvd.RTC.hour = ptlocal->tm_hour;
-    cdvd.RTC.day = ptlocal->tm_mday;
-    cdvd.RTC.month = ptlocal->tm_mon;
-    cdvd.RTC.year = ptlocal->tm_year;
-#endif
-#endif
-
 }
 
 struct Freeze_v10Compat

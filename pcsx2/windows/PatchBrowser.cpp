@@ -24,7 +24,6 @@
 
 #include "Win32.h"
 #include "Common.h"
-#include "resource.h"
 
 /*
  * TODO:

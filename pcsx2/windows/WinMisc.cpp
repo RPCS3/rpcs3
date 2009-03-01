@@ -1,4 +1,5 @@
-/*  Pcsx2 - Pc Ps2 Emulator *  Copyright (C) 2002-2008  Pcsx2 Team
+/*  Pcsx2 - Pc Ps2 Emulator
+ *  Copyright (C) 2002-2009  Pcsx2 Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -14,35 +15,38 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
+ 
+#include "Win32.h"
+#include "cdvd.h"
 
-#ifndef __PSXCOMMON_H__
-#define __PSXCOMMON_H__
+static LARGE_INTEGER lfreq;
 
-#include "PS2Etypes.h"
+void InitCPUTicks()
+{
+	QueryPerformanceFrequency( &lfreq );
+}
 
-#include <assert.h>
+u64 GetTickFrequency()
+{
+	return lfreq.QuadPart;
+}
 
-#include "System.h"
+u64 GetCPUTicks()
+{
+	LARGE_INTEGER count;
+	QueryPerformanceCounter( &count );
+	return count.QuadPart;
+}
 
-extern long LoadCdBios;
-extern int cdOpenCase;
+void cdvdSetSystemTime( cdvdStruct& cdvd )
+{
+	SYSTEMTIME st;
+	GetSystemTime(&st);
 
-#define PSXCLK	(36864000ULL)	/* 36.864 Mhz */
-
-#include "Plugins.h"
-#include "R3000A.h"
-#include "IopMem.h"
-#include "IopHw.h"
-#include "IopBios.h"
-#include "IopDma.h"
-#include "IopCounters.h"
-#include "CdRom.h"
-#include "Sio.h"
-#include "DebugTools/Debug.h"
-#include "IopSio2.h"
-#include "CDVD.h"
-#include "Memory.h"
-#include "Hw.h"
-#include "Sif.h"
-
-#endif /* __PSXCOMMON_H__ */
+	cdvd.RTC.second = (u8)(st.wSecond);
+	cdvd.RTC.minute = (u8)(st.wMinute);
+	cdvd.RTC.hour = (u8)(st.wHour+1)%24;
+	cdvd.RTC.day = (u8)(st.wDay);
+	cdvd.RTC.month = (u8)(st.wMonth);
+	cdvd.RTC.year = (u8)(st.wYear - 2000);
+}

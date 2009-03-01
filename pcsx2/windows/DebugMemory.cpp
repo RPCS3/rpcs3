@@ -18,7 +18,6 @@
 
 #include "Win32.h"
 #include "Common.h"
-#include "resource.h"
 
 unsigned long memory_addr;
 BOOL mem_inupdate = FALSE;

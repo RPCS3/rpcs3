@@ -1,6 +1,8 @@
 #ifndef _PCSX2_PRECOMPILED_HEADER_
 #define _PCSX2_PRECOMPILED_HEADER_
 
+#define NOMINMAX		// Disables other libs inclusion of their own min/max macros (we use std instead)
+
 #if defined (__linux__)  // some distributions are lower case
 #	define __LINUX__
 #endif
@@ -39,6 +41,8 @@
 #endif
 
 using std::string;		// we use it enough, so bring it into the global namespace.
+using std::min;
+using std::max;
 
 #include "zlib/zlib.h"
 #include "PS2Etypes.h"

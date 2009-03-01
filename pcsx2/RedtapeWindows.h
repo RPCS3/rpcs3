@@ -27,6 +27,8 @@
 #ifndef _REDTAPE_WINDOWS_H_
 #define _REDTAPE_WINDOWS_H_
 
+#define NOMINMAX		// Disables other libs inclusion of their own min/max macros (we use std instead)
+
 #ifdef _WIN32
 
 // Force availability of to WinNT APIs (change to 0x600 to enable XP-specific APIs)

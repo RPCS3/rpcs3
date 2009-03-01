@@ -35,6 +35,10 @@
 //Exception handler for the VTLB-based recompilers.
 int SysPageFaultExceptionFilter(EXCEPTION_POINTERS* eps);
 
+#define PCSX2_MEM_PROTECT_BEGIN() __try {
+#define PCSX2_MEM_PROTECT_END() } __except(SysPageFaultExceptionFilter(GetExceptionInformation())) {}
+
+
 // --->>  Ini Configuration [ini.c]
 
 extern char g_WorkingFolder[g_MaxPath];

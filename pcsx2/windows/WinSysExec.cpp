@@ -45,8 +45,29 @@ AppData gApp;
 
 const char* g_pRunGSState = NULL;
 
-
 #define CmdSwitchIs( text ) ( stricmp( command, text ) == 0 )
+
+int SysPageFaultExceptionFilter( EXCEPTION_POINTERS* eps )
+{
+	const _EXCEPTION_RECORD& ExceptionRecord = *eps->ExceptionRecord;
+	//const _CONTEXT& ContextRecord = *eps->ContextRecord;
+	
+	if (ExceptionRecord.ExceptionCode != EXCEPTION_ACCESS_VIOLATION)
+	{
+		return EXCEPTION_CONTINUE_SEARCH;
+	}
+
+	// get bad virtual address
+	u32 offset = (u8*)ExceptionRecord.ExceptionInformation[1]-psM;
+
+	if (offset>=Ps2MemSize::Base)
+		return EXCEPTION_CONTINUE_SEARCH;
+
+	mmap_ClearCpuBlock( offset );
+
+	return EXCEPTION_CONTINUE_EXECUTION;
+}
+
 
 // For issuing notices to both the status bar and the console at the same time.
 // Single-line text only please!  Mutli-line msgs should be directed to the
@@ -517,8 +538,7 @@ void States_Save(int num)
 		// have likely been cleared out.  So save from the Recovery buffer instead of
 		// doing a "standard" save:
 
-		string text;
-		SaveState::GetFilename( text, num );
+		string text( SaveState::GetFilename( num ) );
 		gzFile fileptr = gzopen( text.c_str(), "wb" );
 		if( fileptr == NULL )
 		{

@@ -136,17 +136,12 @@ extern void memClearPageAddr(u32 vaddr);
 
 extern void memMapVUmicro();
 
-#ifdef __LINUX__
-void SysPageFaultExceptionFilter( int signal, siginfo_t *info, void * );
-void __fastcall InstallLinuxExceptionHandler();
-void __fastcall ReleaseLinuxExceptionHandler();
-#endif
-
 #include "vtlb.h"
 
-int mmap_GetRamPageInfo(void* ptr);
-void mmap_MarkCountedRamPage(void* ptr,u32 vaddr);
-void mmap_ResetBlockTracking();
+extern int mmap_GetRamPageInfo(void* ptr);
+extern void mmap_MarkCountedRamPage(void* ptr,u32 vaddr);
+extern void mmap_ResetBlockTracking();
+extern void mmap_ClearCpuBlock( uint offset );
 
 extern void __fastcall memRead8(u32 mem, u8  *out);
 extern void __fastcall memRead16(u32 mem, u16 *out);

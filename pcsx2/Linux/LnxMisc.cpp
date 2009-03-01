@@ -16,27 +16,41 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
  
- #ifndef __LNXSYSEXEC_H__
-#define __LNXSYSEXEC_H__
+#include "PrecompiledHeader.h"
 
-#include "Linux.h"
-#include "GS.h"
-#include <sys/mman.h>
-#include "x86/iR5900.h"
+#include <ctype.h>
+#include <time.h>
+#include <sys/time.h>
 
-void SysPageFaultExceptionFilter( int signal, siginfo_t *info, void * );
-void __fastcall InstallLinuxExceptionHandler();
-void __fastcall ReleaseLinuxExceptionHandler();
+#include "cdvd.h"
 
-#define PCSX2_MEM_PROTECT_BEGIN() InstallLinuxExceptionHandler()
-#define PCSX2_MEM_PROTECT_END() ReleaseLinuxExceptionHandler()
+void InitCPUTicks()
+{
+}
 
-extern void StartGui();
-extern void CheckSlots();
+u64 GetTickFrequency()
+{
+	return 1000000;		// unix measures in microseconds
+}
 
-extern void SignalExit(int sig);
-extern const char* g_pRunGSState;
-extern int efile;
-extern GtkWidget *pStatusBar;
+u64 GetCPUTicks()
+{
+	struct timeval t;
+	gettimeofday(&t, NULL);
+	return ((u64)t.tv_sec*GetTickFrequency())+t.tv_usec;
+}
 
-#endif
+void cdvdSetSystemTime( cdvdStruct& cdvd )
+{
+	time_t traw;
+	struct tm* ptlocal;
+	time(&traw);
+	ptlocal = localtime(&traw);
+
+	cdvd.RTC.second = ptlocal->tm_sec;
+	cdvd.RTC.minute = ptlocal->tm_min;
+	cdvd.RTC.hour = ptlocal->tm_hour;
+	cdvd.RTC.day = ptlocal->tm_mday;
+	cdvd.RTC.month = ptlocal->tm_mon;
+	cdvd.RTC.year = ptlocal->tm_year;
+}

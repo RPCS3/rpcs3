@@ -51,20 +51,10 @@ static void PostLoadPrep()
 	for(int i=0; i<48; i++) MapTLB(i);
 }
 
-void SaveState::GetFilename( string& dest, int slot )
-{
-	string elfcrcText;
-	ssprintf( elfcrcText, "%8.8X.%3.3d", ElfCRC, slot );
-	Path::Combine( dest, SSTATES_DIR, elfcrcText );
-}
-
 string SaveState::GetFilename( int slot )
 {
-	string elfcrcText, dest;
-	GetFilename( dest, slot );
-	return dest;
+	return Path::Combine( SSTATES_DIR, fmt_string( "%8.8X.%3.3d", ElfCRC, slot ) );
 }
-
 
 SaveState::SaveState( const char* msg, const string& destination ) : m_version( g_SaveVersion )
 {

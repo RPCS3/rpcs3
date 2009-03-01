@@ -133,7 +133,6 @@ using namespace R3000A;
 static void iIopDumpBlock( int startpc, u8 * ptr )
 {
 	FILE *f;
-	char filename[ g_MaxPath ];
 #ifdef __LINUX__
 	char command[256];
 #endif
@@ -143,17 +142,13 @@ static void iIopDumpBlock( int startpc, u8 * ptr )
 	int numused, count;
 
 	SysPrintf( "dump1 %x:%x, %x\n", startpc, psxpc, psxRegs.cycle );
-#ifdef _WIN32
-	CreateDirectory("dumps", NULL);
-	sprintf_s( filename, g_MaxPath, "dumps\\psxdump%.8X.txt", startpc);
-#else
-	mkdir("dumps", 0755);
-	sprintf( filename, "dumps/psxdump%.8X.txt", startpc);
-#endif
+	Path::CreateDirectory( "dumps" );
+
+	string filename( Path::Combine( "dumps", fmt_string( "psxdump%.8X.txt", startpc ) ) );
 
 	fflush( stdout );
 
-	f = fopen( filename, "w" );
+	f = fopen( filename.c_str(), "w" );
 	assert( f != NULL );
 	for ( i = startpc; i < s_nEndBlock; i += 4 ) {
 		fprintf( f, "%s\n", disR3000Fasm( iopMemRead32( i ), i ) );

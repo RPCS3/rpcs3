@@ -74,15 +74,6 @@ void SysMemProtect( void* baseaddr, size_t size, PageProtectionMode mode, bool a
 // *DEPRECIATED* Use Console namespace methods instead.
 void SysPrintf(const char *fmt, ...);	// *DEPRECIATED* 
 
-#ifdef _MSC_VER
-#	define PCSX2_MEM_PROTECT_BEGIN() __try {
-#	define PCSX2_MEM_PROTECT_END() } __except(SysPageFaultExceptionFilter(GetExceptionInformation())) {}
-#else
-#	define PCSX2_MEM_PROTECT_BEGIN() InstallLinuxExceptionHandler()
-#	define PCSX2_MEM_PROTECT_END() ReleaseLinuxExceptionHandler()
-#endif
-
-
 // Console Namespace -- Replacements for SysPrintf.
 // SysPrintf is depreciated -- We should phase these in over time.
 namespace Console

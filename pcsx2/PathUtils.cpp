@@ -92,23 +92,21 @@ bool isRooted( const string& path )
 
 // Concatenates two pathnames together, inserting delimiters (backslash on win32)
 // as needed! Assumes the 'dest' is allocated to at least g_MaxPath length.
-void Combine( string& dest, const string& srcPath, const string& srcFile )
+string Combine( const string& srcPath, const string& srcFile )
 {
 	int pathlen, guesslen;
 
 	if( srcFile.empty() )
 	{
 		// No source filename?  Return the path unmodified.
-		dest = srcPath;
-		return;
+		return srcPath;
 	}
 
 	if( isRooted( srcFile ) || srcPath.empty() )
 	{
 		// No source path?  Or source filename is rooted?
 		// Return the filename unmodified.
-		dest = srcFile;
-		return;
+		return srcFile;
 	}
 
 	// strip off the srcPath's trailing backslashes (if any)
@@ -127,14 +125,17 @@ void Combine( string& dest, const string& srcPath, const string& srcFile )
 
 	// Concatenate!
 
-	dest.assign( srcPath.begin(), srcPath.begin()+pathlen );
+	string dest( srcPath.begin(), srcPath.begin()+pathlen );
 	dest += Separator;
 	dest += srcFile;
+	return dest;
 }
 
 // Replaces the extension of the file with the one given.
-void ReplaceExtension( string& dest, const string& src, const string& ext )
+string ReplaceExtension( const string& src, const string& ext )
 {
+	string dest;
+
 	int pos = src.find_last_of( '.' );
 	if( pos == string::npos || pos == 0 )
 		dest = src;
@@ -146,6 +147,8 @@ void ReplaceExtension( string& dest, const string& src, const string& ext )
 		dest += '.';
 		dest += ext;
 	}
+	
+	return dest;
 }
 
 // finds the starting character position of a filename for the given source path.
@@ -176,10 +179,11 @@ static int _findFilenamePosition( const string& src)
 	return pos;
 }
 
-void ReplaceFilename( string& dest, const string& src, const string& newfilename )
+string ReplaceFilename( const string& src, const string& newfilename )
 {
+	string dest;
 	int pos = _findFilenamePosition( src );
-	
+
 	if( pos == 0 )
 		dest = src;
 	else
@@ -190,6 +194,7 @@ void ReplaceFilename( string& dest, const string& src, const string& newfilename
 		dest += '.';
 		dest += newfilename;
 	}
+	return dest;
 }
 
 void GetFilename( const string& src, string& dest )

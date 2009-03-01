@@ -46,7 +46,6 @@ public:
 	SaveState( const char* msg, const string& destination );
 	virtual ~SaveState() { }
 
-	static void GetFilename( string& dest, int slot );
 	static string GetFilename( int slot );
 
 	// Gets the version of savestate that this object is acting on.

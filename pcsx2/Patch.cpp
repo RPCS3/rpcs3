@@ -26,13 +26,6 @@
 #include "Patch.h"
 #include "VU.h"
 
-#ifdef _WIN32
-#include "windows/cheats/cheats.h"
-#else
-#include <stdio.h>
-#include <ctype.h>
-#endif
-
 #ifdef _MSC_VER
 #pragma warning(disable:4996) //ignore the stricmp deprecated warning
 #endif

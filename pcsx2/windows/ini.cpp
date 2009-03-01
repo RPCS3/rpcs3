@@ -33,23 +33,12 @@ static bool hasCustomConfig()
 }
 
 // Returns the FULL (absolute) path and filename of the configuration file.
-static void GetConfigFilename( string& dest )
+static string GetConfigFilename()
 {
-	if( hasCustomConfig() )
-	{
-		// Load a user-specified configuration.
-		// If the configuration isn't found, fail outright (see below)
+	// Load a user-specified configuration, or use the ini relative to the application's working directory.
+	// (Our current working directory can change, so we use the one we detected at startup)
 
-		Path::Combine( dest, g_WorkingFolder, g_CustomConfigFile );
-	}
-	else
-	{
-		// use the ini relative to the application's working directory.
-		// Our current working directory can change, so we use the one we detected
-		// at startup:
-
-		Path::Combine( dest, g_WorkingFolder, CONFIG_DIR "\\pcsx2.ini" );
-	}
+	return Path::Combine( g_WorkingFolder, hasCustomConfig() ? g_CustomConfigFile : (CONFIG_DIR "\\pcsx2.ini") );
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -173,9 +162,8 @@ void IniFileSaver::EnumEntry( const string& var, int& value, const char* const* 
 //  InitFile -- Base class implementation.
 
 IniFile::~IniFile() {}
-IniFile::IniFile() : m_filename(), m_section("Misc")
+IniFile::IniFile() : m_filename( GetConfigFilename() ), m_section("Misc")
 {
-	GetConfigFilename( m_filename );
 }
 
 void IniFile::SetCurrentSection( const string& newsection )
@@ -244,10 +232,9 @@ void IniFile::DoConfig( PcsxConfig& Conf )
 
 bool LoadConfig()
 {
-	string szIniFile;
 	bool status  = true;
 
-	GetConfigFilename( szIniFile );
+	string szIniFile( GetConfigFilename() );
 
 	if( !Path::Exists( szIniFile ) )
 	{

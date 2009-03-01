@@ -24,15 +24,15 @@ extern char MAIN_DIR[g_MaxPath];
 
 namespace Path
 {
-	extern void Combine( std::string& dest, const std::string& srcPath, const std::string& srcFile );
 	extern bool isRooted( const std::string& path );
 	extern bool isDirectory( const std::string& path );
 	extern bool isFile( const std::string& path );
 	extern bool Exists( const std::string& path );
 	extern int getFileSize( const std::string& path );
 
-	extern void ReplaceExtension( std::string& dest, const std::string& src, const std::string& ext );
-	extern void ReplaceFilename( std::string& dest, const std::string& src, const std::string& newfilename );
+	extern std::string Combine( const std::string& srcPath, const std::string& srcFile );
+	extern std::string ReplaceExtension( const std::string& src, const std::string& ext );
+	extern std::string ReplaceFilename( const std::string& src, const std::string& newfilename );
 	extern void GetFilename( const std::string& src, std::string& dest );
 	extern void GetDirectory( const std::string& src, std::string& dest );
 	extern void GetRootDirectory( const std::string& src, std::string& dest );

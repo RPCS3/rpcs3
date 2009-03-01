@@ -121,7 +121,7 @@ _CRTIMP extern int errno;
 #define EILSEQ          42
 
 /*
- * Support EDEADLOCK for compatibiity with older MS-C versions.
+ * Support EDEADLOCK for compatibility with older MS-C versions.
  */
 #define EDEADLOCK       EDEADLK
 

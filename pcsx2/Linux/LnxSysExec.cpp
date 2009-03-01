@@ -19,6 +19,9 @@
 #include "Linux.h"
 #include "LnxSysExec.h"
 
+#include <sys/mman.h>	// needed here? (air)
+
+
 bool UseGui = true;
 
 SafeArray<u8>* g_RecoveryState = NULL;
@@ -29,6 +32,45 @@ bool g_EmulationInProgress = false;	// Set TRUE if a game is actively running (s
 
 static bool sinit = false;
 GtkWidget *FileSel;
+
+void InstallLinuxExceptionHandler()
+{
+	struct sigaction sa;
+	
+	sigemptyset(&sa.sa_mask);
+	sa.sa_flags = SA_SIGINFO;
+	sa.sa_sigaction = &SysPageFaultExceptionFilter;
+	sigaction(SIGSEGV, &sa, NULL); 
+}
+
+void ReleaseLinuxExceptionHandler()
+{
+	// Code this later.
+}
+
+
+// Linux implementation of SIGSEGV handler.  Bind it using sigaction().
+// This is my shot in the dark.  Probably needs some work.  Good luck! (air)
+void SysPageFaultExceptionFilter( int signal, siginfo_t *info, void * )
+{
+	int err;
+
+	//DevCon::Error("SysPageFaultExceptionFilter!");
+	// get bad virtual address
+	u32 offset = (u8*)info->si_addr - psM;
+	
+	DevCon::Status( "Protected memory cleanup. Offset 0x%x", params offset );
+
+	if (offset>=Ps2MemSize::Base)
+	{
+		// Bad mojo!  Completely invalid address.
+		// Instigate a crash or abort emulation or something.
+		assert( false );
+	}
+
+	mmap_ClearCpuBlock( offset );
+}
+
 
 // For issuing notices to both the status bar and the console at the same time.
 // Single-line text only please!  Mutli-line msgs should be directed to the
@@ -521,8 +563,7 @@ void States_Save(int num)
 		// have likely been cleared out.  So save from the Recovery buffer instead of
 		// doing a "standard" save:
 
-		string text;
-		SaveState::GetFilename( text, num );
+		string text( SaveState::GetFilename( num ) );
 		gzFile fileptr = gzopen( text.c_str(), "wb" );
 		if( fileptr == NULL )
 		{
@@ -920,9 +961,14 @@ void SysMunmap(uptr base, u32 size)
 	munmap((uptr*)base, size);
 }
 
+static const int m_pagemask = getpagesize()-1;
+
 void SysMemProtect( void* baseaddr, size_t size, PageProtectionMode mode, bool allowExecution )
 {
 	int lnxmode = 0;
+
+	// make sure size is aligned to the system page size:
+	size = (size + m_pagemask) & ~m_pagemask;
 
 	switch( mode )
 	{
