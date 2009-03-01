@@ -48,17 +48,17 @@ void ReleaseLinuxExceptionHandler()
 	// Code this later.
 }
 
+static const uint m_pagemask = getpagesize()-1;
 
 // Linux implementation of SIGSEGV handler.  Bind it using sigaction().
-// This is my shot in the dark.  Probably needs some work.  Good luck! (air)
 void SysPageFaultExceptionFilter( int signal, siginfo_t *info, void * )
 {
 	int err;
 
 	//DevCon::Error("SysPageFaultExceptionFilter!");
 	// get bad virtual address
-	u32 offset = (u8*)info->si_addr - psM;
-	
+	uptr offset = (u8*)info->si_addr - psM;
+
 	DevCon::Status( "Protected memory cleanup. Offset 0x%x", params offset );
 
 	if (offset>=Ps2MemSize::Base)
@@ -67,10 +67,9 @@ void SysPageFaultExceptionFilter( int signal, siginfo_t *info, void * )
 		// Instigate a crash or abort emulation or something.
 		assert( false );
 	}
-
-	mmap_ClearCpuBlock( offset );
+	
+	mmap_ClearCpuBlock( offset & m_pagemask );
 }
-
 
 // For issuing notices to both the status bar and the console at the same time.
 // Single-line text only please!  Mutli-line msgs should be directed to the
@@ -960,8 +959,6 @@ void SysMunmap(uptr base, u32 size)
 {
 	munmap((uptr*)base, size);
 }
-
-static const int m_pagemask = getpagesize()-1;
 
 void SysMemProtect( void* baseaddr, size_t size, PageProtectionMode mode, bool allowExecution )
 {
