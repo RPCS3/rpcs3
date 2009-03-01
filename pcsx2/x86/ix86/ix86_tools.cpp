@@ -68,8 +68,10 @@ void SetCPUState(u32 sseMXCSR, u32 sseVUMXCSR)
 
 /////////////////////////////////////////////////////////////////////
 //
+#ifndef __INTEL_COMPILER
 extern "C"
 {
+#endif
 __forceinline void FreezeMMXRegs_(int save)
 {
 	assert( g_EEFreezeRegs );
@@ -226,4 +228,6 @@ __forceinline void FreezeXMMRegs_(int save)
 #endif // _MSC_VER
 	}
 }
+#ifndef __INTEL_COMPILER
 }
+#endif

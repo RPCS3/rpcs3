@@ -72,6 +72,5 @@ static void ConfPlugin(PluginConf confs, char* plugin, const char* name);
 static void TestPlugin(PluginConf confs, char* plugin, const char* name);
 
 extern void CheckSlots();
-extern bool configuringplug;
 
 #endif // __CONFIGDLG_H__

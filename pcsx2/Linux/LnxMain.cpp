@@ -23,7 +23,6 @@ using namespace R5900;
 DIR *dir;
 GtkWidget *FileSel;
 GtkWidget *MsgDlg;
-bool configuringplug = FALSE;
 const char* g_pRunGSState = NULL;
 
 int efile = 0;
@@ -295,10 +294,8 @@ int Pcsx2Configure()
 {
 	if (!UseGui) return 0;
 
-	configuringplug = TRUE;
 	MainWindow = NULL;
 	OnConf_Conf(NULL, 0);
-	configuringplug = FALSE;
 
 	return applychanges;
 }
@@ -314,8 +311,7 @@ void OnLanguage(GtkMenuItem *menuitem, gpointer user_data)
 
 void OnFile_RunCD(GtkMenuItem *menuitem, gpointer user_data)
 {
-	safe_free(g_RecoveryState);
-	ResetPlugins();
+	SysReset();
 	RunExecute(NULL);
 }
 

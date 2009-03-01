@@ -72,14 +72,14 @@ then
 fi
 AC_MSG_RESULT($memcpyfast)
 
-AC_MSG_CHECKING(turn on microVU)
-AC_ARG_ENABLE(microVU, AC_HELP_STRING([--enable-microVU], [Turns on the currently incomplete microVU files - Not a good idea]),
- microVU=$enableval,microVU=no)
-if test "x$microVU" == xyes
-then
- AC_DEFINE(PCSX2_MICROVU,1,[PCSX2_MICROVU])
-fi
-AC_MSG_RESULT($microVU)
+#AC_MSG_CHECKING(turn on microVU)
+#AC_ARG_ENABLE(microVU, AC_HELP_STRING([--enable-microVU], [Turns on the currently incomplete microVU files - Not a good idea]),
+# microVU=$enableval,microVU=no)
+#if test "x$microVU" == xyes
+#then
+# AC_DEFINE(PCSX2_MICROVU,1,[PCSX2_MICROVU])
+#fi
+#AC_MSG_RESULT($microVU)
 
 dnl Check for dev build
 AC_MSG_CHECKING(for development build)
@@ -157,4 +157,4 @@ echo " nls support?   $nls"
 echo " local plugin inis? $localinis"
 echo " custom cflags? $customcflags"
 echo " memcpy_fast? $memcpyfast"
-echo " microVU? $microVU"
+#echo " microVU? $microVU"

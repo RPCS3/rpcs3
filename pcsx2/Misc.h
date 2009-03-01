@@ -211,8 +211,14 @@ void SetCPUState(u32 sseMXCSR, u32 sseVUMXCSR);
 
 // when using mmx/xmm regs, use; 0 is load
 // freezes no matter the state
+#ifndef __INTEL_COMPILER
 extern "C" void FreezeXMMRegs_(int save);
 extern "C" void FreezeMMXRegs_(int save);
+#else
+extern void FreezeXMMRegs_(int save);
+extern void FreezeMMXRegs_(int save);
+#endif
+
 extern bool g_EEFreezeRegs;
 extern u8 g_globalMMXSaved;
 extern u8 g_globalXMMSaved;

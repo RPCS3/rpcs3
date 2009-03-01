@@ -340,7 +340,6 @@ void RunExecute(const char* elf_file, bool use_bios)
 				ClosePlugins( true );
 				return;
 			}
-			safe_delete(g_RecoveryState);
 		}
 		else if( g_gsRecoveryState == NULL )
 		{
@@ -476,8 +475,7 @@ void States_Load(const string& file, int num = -1)
 		else
 			sprintf (Text, _("*PCSX2*: Loaded State %s"), file.c_str());
 
-		//StatusBar_Notice( Text );
-		Console::Notice(Text);
+		StatusBar_Notice( Text );
 
 		if( GSsetGameCRC != NULL ) GSsetGameCRC(ElfCRC, g_ZeroGSOptions);
 	}
@@ -536,7 +534,7 @@ void States_Save( const string& file, int num = -1 )
 		else
 			ssprintf( text, _( "State saved to file: %s" ), file.c_str() );
 
-		Console::Notice(text.c_str());
+		StatusBar_Notice( text );
 	}
 	catch( Exception::BaseException& ex )
 	{
@@ -856,6 +854,9 @@ void SysReset()
 {
 	if (!sinit) return;
 
+	StatusBar_Notice(_("Resetting..."));
+	//Console::SetTitle(_("Resetting..."));
+	
 	g_EmulationInProgress = false;
 	safe_delete( g_RecoveryState );
 	safe_delete( g_gsRecoveryState );
@@ -865,6 +866,9 @@ void SysReset()
 
 	// Note : No need to call cpuReset() here.  It gets called automatically before the
 	// emulator resumes execution.
+	
+	StatusBar_Notice(_("Ready"));
+	//Console::SetTitle(_("*PCSX2* Emulation state is reset."));
 }
 
 bool SysInit()
@@ -908,7 +912,7 @@ bool SysInit()
 
 void SysClose()
 {
-	if (sinit == 0) return;
+	if (sinit == false) return;
 	cpuShutdown();
 	ClosePlugins( true );
 	ReleasePlugins();
@@ -918,7 +922,7 @@ void SysClose()
 		fclose(emuLog);
 		emuLog = NULL;
 	}
-	sinit = 0;
+	sinit = false;
 }
 
 void *SysLoadLibrary(const char *lib)

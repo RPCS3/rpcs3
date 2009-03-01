@@ -51,17 +51,13 @@ static void ConfPlugin(PluginConf confs, char* plugin, const char* name)
 {
 	void *drv;
 	void (*conf)();
-	char file[g_MaxPath], file2[g_MaxPath];
 
 	GetComboText(confs.Combo, confs.plist, plugin);
-	strcpy(file, Config.PluginsDir);
-	strcat(file, plugin);
-	
-	drv = SysLoadLibrary(file);
+	drv = SysLoadLibrary( Path::Combine( Config.PluginsDir, plugin ).c_str() );
+	if (drv == NULL) return;
 //#ifndef LOCAL_PLUGIN_INIS
 //	chdir(Config.PluginsDir); /* change dirs so that plugins can find their config file*/
 //#endif
-	if (drv == NULL) return;
 
 	conf = (void (*)()) SysLoadSym(drv, name);
 	if (SysLibError() == NULL) conf();
@@ -76,16 +72,13 @@ static void TestPlugin(PluginConf confs, char* plugin, const char* name)
 {
 	void *drv;
 	s32(* (*conf)())();
-	char file[g_MaxPath];
 	int ret = 0;
 
 	GetComboText(confs.Combo, confs.plist, plugin);
-	strcpy(file, Config.PluginsDir);
-	strcat(file, plugin);
-
-	drv = SysLoadLibrary(file);
+	if (plugin == NULL) return;
+	drv = SysLoadLibrary( Path::Combine( Config.PluginsDir, plugin ).c_str() );
 	if (drv == NULL) return;
-
+	
 	conf = (s32(* (*)())()) SysLoadSym(drv, name);
 	if (SysLibError() == NULL) ret = (s32) conf();
 	SysCloseLibrary(drv);
@@ -206,12 +199,8 @@ void OnConfConf_Ok(GtkButton *button, gpointer user_data)
 		applychanges = FALSE;
 
 	SaveConfig();
-
-	if (configuringplug == FALSE)
-	{
-		ReleasePlugins();
-		LoadPlugins();
-	}
+	SysRestorableReset();
+	ReleasePlugins();
 
 	gtk_widget_destroy(ConfDlg);
 	if (MainWindow) gtk_widget_set_sensitive(MainWindow, TRUE);
