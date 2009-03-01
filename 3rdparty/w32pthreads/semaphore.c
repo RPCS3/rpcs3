@@ -45,15 +45,15 @@
  *      59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  */
 
+#include "ptw32pch.h"
+
 #ifndef NEED_FTIME
 #  include <sys/timeb.h>
 #endif
 
 #include <limits.h>
 
-#include "pthread.h"
 #include "semaphore.h"
-#include "implement.h"
 
 
 #include "sem_init.c"

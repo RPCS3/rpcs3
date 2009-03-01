@@ -81,8 +81,7 @@
  * pthread_t structure.
  */
 
-#include "pthread.h"
-#include "implement.h"
+#include "ptw32pch.h"
 
 #if HAVE_SIGSET_T
 

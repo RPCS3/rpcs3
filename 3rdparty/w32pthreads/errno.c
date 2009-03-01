@@ -35,10 +35,9 @@
  *      59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  */
 
-#if defined(NEED_ERRNO)
+#include "ptw32pch.h"
 
-#include "pthread.h"
-#include "implement.h"
+#if defined(NEED_ERRNO)
 
 static int reallyBad = ENOMEM;
 

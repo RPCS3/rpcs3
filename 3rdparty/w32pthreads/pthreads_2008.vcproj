@@ -235,18 +235,138 @@
 			<File
 				RelativePath=".\attr.c"
 				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Devel|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
 			</File>
 			<File
 				RelativePath=".\barrier.c"
 				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Devel|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
 			</File>
 			<File
 				RelativePath=".\cancel.c"
 				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Devel|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
 			</File>
 			<File
 				RelativePath=".\cleanup.c"
 				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Devel|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
 			</File>
 			<File
 				RelativePath=".\condvar.c"
@@ -257,6 +377,9 @@
 					>
 					<Tool
 						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
 					/>
 				</FileConfiguration>
 				<FileConfiguration
@@ -265,6 +388,9 @@
 					>
 					<Tool
 						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
 					/>
 				</FileConfiguration>
 				<FileConfiguration
@@ -273,6 +399,9 @@
 					>
 					<Tool
 						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
 					/>
 				</FileConfiguration>
 			</File>
@@ -283,66 +412,584 @@
 			<File
 				RelativePath=".\create.c"
 				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Devel|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
 			</File>
 			<File
 				RelativePath=".\errno.c"
 				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Devel|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
 			</File>
 			<File
 				RelativePath=".\exit.c"
 				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Devel|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
 			</File>
 			<File
 				RelativePath=".\fork.c"
 				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Devel|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
 			</File>
 			<File
 				RelativePath=".\global.c"
 				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Devel|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
 			</File>
 			<File
 				RelativePath=".\misc.c"
 				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Devel|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
 			</File>
 			<File
 				RelativePath=".\mutex.c"
 				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Devel|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
 			</File>
 			<File
 				RelativePath=".\nonportable.c"
 				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Devel|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
 			</File>
 			<File
 				RelativePath=".\private.c"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Devel|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\ptw32pch.c"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="1"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="1"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Devel|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="1"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\ptw32pch.h"
 				>
 			</File>
 			<File
 				RelativePath=".\rwlock.c"
 				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Devel|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
 			</File>
 			<File
 				RelativePath=".\sched.c"
 				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Devel|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
 			</File>
 			<File
 				RelativePath=".\semaphore.c"
 				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Devel|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
 			</File>
 			<File
 				RelativePath=".\signal.c"
 				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Devel|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
 			</File>
 			<File
 				RelativePath=".\spin.c"
 				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Devel|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
 			</File>
 			<File
 				RelativePath=".\sync.c"
 				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Devel|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
 			</File>
 			<File
 				RelativePath=".\tsd.c"
 				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Devel|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="2"
+						PrecompiledHeaderThrough="ptw32pch.h"
+						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
+					/>
+				</FileConfiguration>
 			</File>
 		</Filter>
 		<Filter

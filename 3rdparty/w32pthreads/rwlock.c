@@ -34,6 +34,8 @@
  *      59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  */
 
+#include "ptw32pch.h"
+
 #include "ptw32_rwlock_check_need_init.c"
 #include "ptw32_rwlock_cancelwrwait.c"
 #include "pthread_rwlock_init.c"

@@ -34,14 +34,14 @@
  *      59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  */
 
+#include "ptw32pch.h"
+
 #ifndef _UWIN
 #   include <process.h>
 #endif
 #ifndef NEED_FTIME
 #include <sys/timeb.h>
 #endif
-#include "pthread.h"
-#include "implement.h"
 
 
 #include "ptw32_mutex_check_need_init.c"

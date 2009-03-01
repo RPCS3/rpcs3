@@ -36,9 +36,7 @@
  *      59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  */
 
-#include "pthread.h"
-#include "implement.h"
-
+#include "ptw32pch.h"
 
 /*
  * The functions ptw32_pop_cleanup and ptw32_push_cleanup

@@ -34,8 +34,7 @@
  *      59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  */
 
-#include "pthread.h"
-#include "implement.h"
+#include "ptw32pch.h"
 
 #include "pthread_mutexattr_setkind_np.c"
 #include "pthread_mutexattr_getkind_np.c"
