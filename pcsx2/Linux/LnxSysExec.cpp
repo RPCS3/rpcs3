@@ -18,9 +18,7 @@
  
 #include "Linux.h"
 #include "LnxSysExec.h"
-
-#include <sys/mman.h>	// needed here? (air)
-
+#include "R5900Exceptions.h"
 
 bool UseGui = true;
 
@@ -261,22 +259,29 @@ void ExecuteCpu()
 	// Optimization: We hardcode two versions of the EE here -- one for recs and one for ints.
 	// This is because recs are performance critical, and being able to inline them into the
 	// function here helps a small bit (not much but every small bit counts!).
-
-	if (CHECK_EEREC)
+	try
 	{
-		while (!g_ReturnToGui)
+		if (CHECK_EEREC)
 		{
-			recExecute();
-			SysUpdate();
+			while (!g_ReturnToGui)
+			{
+				recExecute();
+				SysUpdate();
+			}
+		}
+		else
+		{
+			while (!g_ReturnToGui)
+			{
+				Cpu->Execute();
+				SysUpdate();
+			}
 		}
 	}
-	else
+	catch( R5900Exception::BaseExcept& ex )
 	{
-		while (!g_ReturnToGui)
-		{
-			Cpu->Execute();
-			SysUpdate();
-		}
+		Console::Error( ex.cMessage() );
+		Console::Error( fmt_string( "(EE) PC: 0x%8.8x  \tCycle:0x8.8x", ex.cpuState.pc, ex.cpuState.cycle ).c_str() );
 	}
 }
 

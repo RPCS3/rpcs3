@@ -56,7 +56,7 @@ static uint eeWaitCycles = 1024;
 
 bool eeEventTestIsActive = false;
 
-R5900Exception::BaseExcept::~BaseExcept() {}
+R5900Exception::BaseExcept::~BaseExcept() throw (){}
 
 // A run-once procedure for initializing the emulation state.
 // Can be done anytime after allocating memory, and before calling Cpu->Execute().
