@@ -65,7 +65,7 @@ microVUt(void) mVUreset() {
 	if ( mVU->cache == NULL ) throw Exception::OutOfMemory(fmt_string( "microVU Error: failed to allocate recompiler memory! (addr: 0x%x)", params (u32)mVU->cache));
 
 	// Other Variables
-	ZeroMemory(&mVU->prog, sizeof(mVU->prog));
+	memset(&mVU->prog, 0, sizeof(mVU->prog));
 	mVU->prog.finished = 1;
 	mVU->prog.cleared = 1;
 	mVU->prog.cur = -1;
@@ -221,7 +221,7 @@ __declspec(naked) void __fastcall startVU0(u32 startPC, u32 cycles) {
 		push edi;
 
 		ldmxcsr g_sseVUMXCSR
-
+		/* Should set xmmZ? */
 		jmp eax
 	}
 }

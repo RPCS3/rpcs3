@@ -18,8 +18,6 @@
 
 #pragma once
 
-#define microVUf(aType) template<int vuIndex, int recPass> aType
-
 //------------------------------------------------------------------
 // Micro VU Micromode Upper instructions
 //------------------------------------------------------------------

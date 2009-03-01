@@ -19,6 +19,8 @@
 #pragma once
 #include "Common.h"
 #include "VU.h"
+#include "microVU_Misc.h"
+#include "microVU_Alloc.h"
 #include "microVU_Tables.h"
 //#include <vector>
 
@@ -82,8 +84,8 @@ template<u32 progSize>
 struct microProgram {
 	u8 data[progSize];
 	u32 used;	// Number of times its been used
-	//int cached;	// Has been Cached? (can be omitted because every new program will be cached?)
 	microBlockManager* block[progSize];
+	microAllocInfo<progSize> allocInfo;
 };
 
 #define mMaxProg 16 // The amount of Micro Programs Recs will 'remember' (For n = 1, 2, 4, 8, 16, etc...)
@@ -121,21 +123,9 @@ struct microVU {
 	microProgManager<0x800> prog; // Micro Program Data
 };
 
-// Template Stuff
-#define mVUx (vuIndex ? &microVU1 : &microVU0)
-#define microVUt(aType) template<int vuIndex> __forceinline aType
-
 // Opcode Tables
 extern void (*mVU_UPPER_OPCODE[64])( VURegs* VU, s32 info );
 extern void (*mVU_LOWER_OPCODE[128])( VURegs* VU, s32 info );
-
-//void invalidateBlocks(u32 addr, u32 size); // Invalidates Blocks in the range [addr, addr+size)
-//__forceinline void mVUinit(microVU* mVU, VURegs* vuRegsPtr, const int vuIndex);
-//__forceinline void mVUreset(microVU* mVU);
-//__forceinline void mVUclose(microVU* mVU);
-//__forceinline void mVUclear(microVU* mVU, u32 addr, u32 size); // Clears part of a Micro Program (must use before modifying micro program!)
-//void* mVUexecute(microVU* mVU, u32 startPC, u32 cycles); // Recompiles/Executes code for the number of cycles indicated (will always run for >= 'cycles' amount unless 'finished')
-//void* mVUexecuteF(microVU* mVU, u32 startPC); // Recompiles/Executes code till finished
 
 __forceinline void	mVUclearProg(microVU* mVU, int progIndex);
 __forceinline int	mVUfindLeastUsedProg(microVU* mVU);

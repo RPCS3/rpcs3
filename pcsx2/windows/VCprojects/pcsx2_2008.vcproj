@@ -2422,7 +2422,27 @@
 							>
 						</File>
 						<File
+							RelativePath="..\..\x86\microVU_Alloc.cpp"
+							>
+						</File>
+						<File
+							RelativePath="..\..\x86\microVU_Alloc.h"
+							>
+						</File>
+						<File
+							RelativePath="..\..\x86\microVU_Compile.cpp"
+							>
+						</File>
+						<File
 							RelativePath="..\..\x86\microVU_Lower.cpp"
+							>
+						</File>
+						<File
+							RelativePath="..\..\x86\microVU_Misc.cpp"
+							>
+						</File>
+						<File
+							RelativePath="..\..\x86\microVU_Misc.h"
 							>
 						</File>
 						<File

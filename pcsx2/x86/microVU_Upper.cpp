@@ -40,9 +40,9 @@ xmmT1	= xmm0
 xmmFd	= xmm1
 xmmFs	= xmm2
 xmmFt	= xmm3
-xmmAcc	= xmm4
-xmmT2	= xmm5
-xmmT3	= xmm6
+xmmACC1	= xmm4
+xmmACC2	= xmm5
+xmmPQ	= xmm6
 xmmZ	= xmm7
 
 Most of the time the above mapping will be true, unless I find a reason not to do it this way :)
@@ -77,7 +77,10 @@ have an idea of how things work. Right now its all theoretical and I'll change t
 //------------------------------------------------------------------
 
 microVUf(void) mVU_ABS(){}
-microVUf(void) mVU_ADD(){}
+microVUf(void) mVU_ADD(){
+	if (recPass == 0) {}
+	else {}
+}
 microVUf(void) mVU_ADDi(){}
 microVUf(void) mVU_ADDq(){}
 microVUf(void) mVU_ADDx(){}
