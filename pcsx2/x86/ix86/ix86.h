@@ -171,16 +171,6 @@ extern u32 *j32Ptr[32];
 #define RexRB(w, reg, base) if( w||(reg) >= 8 || (base)>=8 ) assert(0);
 #define RexRXB(w, reg, index, base) if( w||(reg) >= 8 || (index) >= 8 || (base) >= 8 ) assert(0);
 
-// perf counters
-#ifdef PCSX2_DEVBUILD
-extern void StartPerfCounter();
-extern void StopPerfCounter();
-#else
-#define StartPerfCounter()
-#define StopPerfCounter()
-#endif
-
-
 extern __forceinline void write8( u8 val );
 extern __forceinline void write16( u16 val );
 extern __forceinline void write32( u32 val );

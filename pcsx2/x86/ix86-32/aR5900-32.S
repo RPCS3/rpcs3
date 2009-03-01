@@ -4,9 +4,6 @@
 
 .extern cpuRegs
 .extern recRecompile
-//.extern recLUT
-.extern lbase
-.extern s_pCurBlock_ltime
 
 #define BLOCKTYPE_STARTPC	4		// startpc offset
 #define BLOCKTYPE_DELAYSLOT	1		// if bit set, delay slot
@@ -170,41 +167,3 @@ DispatcherReg_CallFn:
 	//and %eax, 0x0fffffff
     shl %eax, 4
 	jmp %eax
-
-
-.globl _StartPerfCounter
-_StartPerfCounter:
-
-	push %eax
-	push %ebx
-	push %ecx
-
-	rdtsc
-	mov dword ptr [lbase], %eax
-	mov dword ptr [lbase + 4], %edx
-
-	pop %ecx
-	pop %ebx
-	pop %eax
-	ret
-
-.globl _StopPerfCounter
-_StopPerfCounter:
-
-	push %eax
-	push %ebx
-	push %ecx
-
-	rdtsc
-
-	sub %eax, dword ptr [lbase]
-	sbb %edx, dword ptr [lbase + 4]
-	mov %ecx, s_pCurBlock_ltime
-	add %eax, dword ptr [%ecx]
-	adc %edx, dword ptr [%ecx + 4]
-	mov dword ptr [%ecx], %eax
-	mov dword ptr [%ecx + 4], %edx
-	pop %ecx
-	pop %ebx
-	pop %eax
-	ret

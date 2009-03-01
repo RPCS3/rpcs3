@@ -26,8 +26,8 @@
 #define __LINUX__
 #endif
 
-#ifndef ARRAYSIZE
-#define ARRAYSIZE(x) (sizeof(x)/sizeof((x)[0]))
+#ifndef ArraySize
+#define ArraySize(x) (sizeof(x)/sizeof((x)[0]))
 #endif
 
 #ifdef __LINUX__

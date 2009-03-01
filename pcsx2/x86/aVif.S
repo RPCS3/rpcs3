@@ -22,16 +22,6 @@
 .extern _vifMaskRegs
 .extern _vifRow
         
-#ifdef __x86_64__
-#define VIF_ESP %rsp
-#define VIF_SRC	%rsi
-#define VIF_INC	%rcx
-#define VIF_DST %rdi
-#define VIF_SIZE %edx
-#define VIF_TMPADDR %rax
-#define VIF_SAVEEBX %r8
-#define VIF_SAVEEBXd %r8d
-#else
 #define VIF_ESP %esp
 #define VIF_SRC	%esi
 #define VIF_INC	%ecx
@@ -40,7 +30,6 @@
 #define VIF_TMPADDR %eax
 #define VIF_SAVEEBX %ebx
 #define VIF_SAVEEBXd %ebx
-#endif
 
 #define XMM_R0			%xmm0
 #define XMM_R1			%xmm1
@@ -1336,15 +1325,6 @@
 
 #define SAVE_NO_REG
 
-#ifdef __x86_64__
-#define INIT_ARGS()
-
-#define POP_REGS()
-
-#define INC_STACK(reg) add %rsp, 8;
-
-#else
-
 // 32 bit versions have the args on the stack
 #define INIT_ARGS() \
     push %edi; \
@@ -1361,8 +1341,6 @@
     pop %edi; \
 
 #define INC_STACK(reg) add %esp, 4;
-        
-#endif
         
 // qsize - bytes of compressed size of 1 decompressed xmmword
 // int UNPACK_SkippingWrite_##name##_##sign##_##MaskType##_##ModeType(u32* dest, u32* data, int dmasize)

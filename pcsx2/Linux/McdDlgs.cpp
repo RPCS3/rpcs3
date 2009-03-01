@@ -37,7 +37,7 @@ void OnConf_Memcards(GtkMenuItem *menuitem, gpointer user_data)
 	set_checked(MemDlg, "check_enable_mcd2", Config.Mcd[1].Enabled);
 	set_checked(MemDlg, "check_eject_mcds", Config.McdEnableEject);
 	
-	getcwd(file, ARRAYSIZE(file)); /* store current dir */
+	getcwd(file, ArraySize(file)); /* store current dir */
 	sprintf(card, "%s/%s", file, MEMCARDS_DIR );
 	chdir(card); /* change dirs so that plugins can find their config file*/
 	    

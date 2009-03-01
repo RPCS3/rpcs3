@@ -69,7 +69,7 @@ void ExecCfg(char *arg)
 void CDVDconfigure()
 {
 	char *file;
-	getcwd(file, ARRAYSIZE(file));
+	getcwd(file, ArraySize(file));
 	chdir("plugins");
 	ExecCfg("configure");
 	chdir(file);
@@ -78,7 +78,7 @@ void CDVDconfigure()
 void CDVDabout()
 {
 	char *file;
-	getcwd(file, ARRAYSIZE(file));
+	getcwd(file, ArraySize(file));
 	chdir("plugins");
 	ExecCfg("about");
 	chdir(file);
@@ -87,7 +87,7 @@ void CDVDabout()
 void CfgOpenFile()
 {
 	char *file;
-	getcwd(file, ARRAYSIZE(file));
+	getcwd(file, ArraySize(file));
 	chdir("plugins");
 	ExecCfg("open");
 	chdir(file);

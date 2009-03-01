@@ -23,6 +23,7 @@
 
 #include "PrecompiledHeader.h"
 
+#include "iR3000A.h"
 #include <time.h>
 
 #ifndef _WIN32
@@ -34,7 +35,6 @@
 
 #include "ix86/ix86.h"
 #include "iCore.h"
-#include "iR3000A.h"
 
 #include "SamplProf.h"
 
@@ -1459,7 +1459,7 @@ StartRecomp:
 	AddBaseBlockEx(s_pCurBlockEx, 1);
 
 	if( !(psxpc&0x10000000) )
-		g_psxMaxRecMem = max( (psxpc&~0xa0000000), g_psxMaxRecMem );
+		g_psxMaxRecMem = std::max( (psxpc&~0xa0000000), g_psxMaxRecMem );
 
 	if( psxbranch == 2 ) {
 		_psxFlushCall(FLUSH_EVERYTHING);

@@ -931,6 +931,6 @@ void SysMemProtect( void* baseaddr, size_t size, PageProtectionMode mode, bool a
 		case Protect_ReadWrite: lnxmode = PROT_READ | PROT_WRITE; break;
 	}
 
-	if( allowExecution ) lnxmode |= PROT_EXECUTE;
+	if( allowExecution ) lnxmode |= PROT_EXEC;
 	mprotect( baseaddr, size, lnxmode );
 }

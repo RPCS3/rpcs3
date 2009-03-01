@@ -128,7 +128,7 @@ s32 CALLBACK SPU2init() {
         voices[i+24].memoffset = 0x400;
 
     // init each channel
-    for(u32 i = 0; i < ARRAYSIZE(voices); ++i) {
+    for(u32 i = 0; i < ArraySize(voices); ++i) {
 
         voices[i].pLoop = voices[i].pStart = voices[i].pCurr = (u8*)spu2mem;
 

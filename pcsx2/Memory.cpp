@@ -126,7 +126,7 @@ void loadBiosRom( const char *ext, u8 *dest, long maxSize )
 	// if we made it this far, we have a successful file found:
 
 	FILE *fp = fopen(Bios1.c_str(), "rb");
-	fread(dest, 1, min( maxSize, filesize ), fp);
+	fread(dest, 1, std::min( maxSize, filesize ), fp);
 	fclose(fp);
 }
 
@@ -807,7 +807,7 @@ void memReset()
 	}
 
 	fp = fopen(Bios.c_str(), "rb");
-	fread(PS2MEM_ROM, 1, min( (long)Ps2MemSize::Rom, filesize ), fp);
+	fread(PS2MEM_ROM, 1, std::min( (long)Ps2MemSize::Rom, filesize ), fp);
 	fclose(fp);
 
 	BiosVersion = GetBiosVersion();

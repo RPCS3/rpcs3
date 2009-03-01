@@ -6,13 +6,13 @@
 # Uncomment if building by itself, rather then with all the plugins
 
 #Normal
-export PCSX2OPTIONS="--enable-sse3 --enable-sse4 --prefix `pwd`"
+#export PCSX2OPTIONS="--enable-sse3 --enable-sse4 --prefix `pwd`"
 
 #Optimized, but a devbuild
 #export PCSX2OPTIONS="--enable-sse3 --enable-sse4 --enable-devbuild --prefix `pwd`"
 
 #Debug / Devbuild version
-#export PCSX2OPTIONS="--enable-debug --enable-devbuild --enable-sse3 --prefix `pwd`"
+export PCSX2OPTIONS="--enable-debug --enable-devbuild --enable-sse3 --prefix `pwd`"
 
 #ZeroGS Normal mode
 export ZEROGSOPTIONS="--enable-sse2"

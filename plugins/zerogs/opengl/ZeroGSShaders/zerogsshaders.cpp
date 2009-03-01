@@ -23,8 +23,8 @@ using namespace std;
 char* srcfilename = "ps2hw.fx";
 char* dstfilename = "ps2hw.dat";
 
-#ifndef ARRAYSIZE
-#define ARRAYSIZE(x) (sizeof(x) / sizeof((x)[0]))
+#ifndef ArraySize
+#define ArraySize(x) (sizeof(x) / sizeof((x)[0]))
 #endif
 
 struct SHADERINFO
@@ -168,7 +168,7 @@ int main(int argc, char** argv)
 
 	strdir[i] = 0;
 
-	for(i = 0; i < ARRAYSIZE(vsshaders); ++i) {
+	for(i = 0; i < ArraySize(vsshaders); ++i) {
 		for(int writedepth = 0; writedepth < 2; ++writedepth ) {
 
 			if( writedepth ) vmacros.push_back("-DWRITE_DEPTH");
@@ -181,7 +181,7 @@ int main(int argc, char** argv)
 	const int psshaders[2] = { SH_REGULARPS, SH_REGULARFOGPS };
 	const char* ppsshaders[2] = { "RegularPS", "RegularFogPS" };
 
-	for(i = 0; i < ARRAYSIZE(psshaders); ++i) {
+	for(i = 0; i < ArraySize(psshaders); ++i) {
 		for(int writedepth = 0; writedepth < 2; ++writedepth ) {
 			if( writedepth ) vmacros.push_back("-DWRITE_DEPTH");
 			LoadShader(psshaders[i]|(writedepth?SH_WRITEDEPTH:0), ppsshaders[i], cgfProf, vmacros, 0);

@@ -415,7 +415,7 @@ void UpdateConf(int pad)
 
 	int i;
     GtkWidget *Btn;
-	for (i=0; i<ARRAYSIZE(s_pGuiKeyMap); i++) {
+	for (i=0; i<ArraySize(s_pGuiKeyMap); i++) {
         
         if( s_pGuiKeyMap[i] == NULL )
             continue;

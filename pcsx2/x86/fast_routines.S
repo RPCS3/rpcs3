@@ -27,19 +27,12 @@
 // ~10 times faster than standard memcmp
 // (zerofrog)
 // u8 memcmp_mmx(const void* src1, const void* src2, int cmpsize)
-#ifdef __x86_64__
-#define MEMCMP_SRC1 %rdi
-#define MEMCMP_SRC2 %rsi
-#define MEMCMP_SIZE %edx
-#else
 #define MEMCMP_SRC1 %edx
 #define MEMCMP_SRC2 %esi
 #define MEMCMP_SIZE %ecx
-#endif
 
 .globl memcmp_mmx
 memcmp_mmx:
-#ifndef __x86_64__
 		// make sure mmx regs are stored
 		// FreezeMMXRegs(1);
 		cmp dword ptr [g_EEFreezeRegs], 0
@@ -53,7 +46,6 @@ memcmp_mmx_begin:
 		mov MEMCMP_SRC1, dword ptr [%esp+8]
 		mov MEMCMP_SRC2, dword ptr [%esp+12]
 		mov MEMCMP_SIZE, dword ptr [%esp+16]
-#endif
 
         cmp MEMCMP_SIZE, 32
 		jl memcmp_Done4
@@ -222,19 +214,12 @@ memcmp_End:
 		ret
         
 // memxor_mmx
-#ifdef __x86_64__
-#define MEMXOR_SRC1 %rdi
-#define MEMXOR_SRC2 %rsi
-#define MEMXOR_SIZE %edx
-#else
 #define MEMXOR_SRC1 %edx
 #define MEMXOR_SRC2 %esi
 #define MEMXOR_SIZE %ecx
-#endif
 
 .globl memxor_mmx
 memxor_mmx:
-#ifndef __x86_64__
 		// make sure mmx regs are stored
 		// FreezeMMXRegs(1);
 		cmp dword ptr [g_EEFreezeRegs], 0
@@ -248,7 +233,6 @@ memxor_mmx_begin:
 		mov MEMXOR_SRC1, dword ptr [%esp+8]
 		mov MEMXOR_SRC2, dword ptr [%esp+12]
 		mov MEMXOR_SIZE, dword ptr [%esp+16]
-#endif		
 		cmp MEMXOR_SIZE, 64
 	jl memxor_Setup4
 
@@ -343,7 +327,5 @@ memxor_Setup1:
 	movq [MEMXOR_SRC1], %mm0
 memxor_End:
 	emms
-#ifndef __x86_64__
 	pop %esi
-#endif
 	ret
