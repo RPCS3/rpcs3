@@ -50,14 +50,15 @@ void _memset16_unaligned( void* dest, u16 data, size_t size );
 	extern "C" void memxor_mmx(void* dst, const void* src1, int cmpsize);
 
 #	include "Linux/memzero.h"
+#if defined(LINUX_USE_FAST_MEMORY)
+#	define memcpy_fast memcpy_amd_
+#	define memcpy_aligned memcpy_amd_
+	extern "C" void __fastcall memcpy_amd_(void *dest, const void *src, size_t bytes);
+#else
 #	define memcpy_fast memcpy
 #	define memcpy_aligned memcpy
+#endif // LINUX_USE_FAST_MEMORY
 
-	// Currently broken.
-//#	define memcpy_fast memcpy_amd_
-//#	define memcpy_aligned memcpy_amd_
-//	extern "C" void __fastcall memcpy_amd_(void *dest, const void *src, size_t bytes);
+#endif // WIN32
 
-#endif
-
-#endif
+#endif //Header

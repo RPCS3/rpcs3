@@ -11,6 +11,10 @@
 #Optimized, but a devbuild
 export PCSX2OPTIONS="--enable-sse3 --enable-sse4 --enable-devbuild --prefix `pwd`"
 
+
+#Optimized, but a devbuild - with memcpy_fast_ enabled.
+#export PCSX2OPTIONS="--enable-sse3 --enable-sse4 --enable-devbuild --enable-memcpyfast --prefix `pwd`"
+
 #Debug / Devbuild version
 #export PCSX2OPTIONS="--enable-debug --enable-devbuild --enable-sse3 --prefix `pwd`"
 

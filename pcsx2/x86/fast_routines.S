@@ -359,7 +359,7 @@ memcpy_amd_:
 $memcpy_do_align:
 	mov		%eax, 8			// a trick that's faster than rep movsb...
 	sub		%eax, %edi		// align destination to qword
-	and		%eax, 0x111b		// get the low bits
+	andb	%eax, 111		// get the low bits
 	sub		%ecx, %eax		// update copy count
 	neg		%eax				// set up to jump into the array
 	add		%eax, offset $memcpy_align_done
@@ -427,7 +427,7 @@ $memcpy_ic_2:
 	mov		%eax, %ecx		// has valid low 6 bits of the byte count
 $memcpy_ic_3:
 	shr		%eax, 2			// dword count
-	and		%eax, 0x1111b		// only look at the "remainder" bits
+	andb	%eax, 1111		// only look at the "remainder" bits
 	neg		%eax				// set up to jump into the array
 	add		%eax, offset $memcpy_last_few
 	jmp		%eax				// jump to array of movsd's
@@ -512,7 +512,7 @@ $memcpy_uc_1:				// 64-byte blocks, uncached copy
 
 $memcpy_last_few:		// dword aligned from before movsd's
 	mov		%eax, %ecx	// has valid low 2 bits of the byte count
-	and		%eax, 0x11b	// the last few cows must come home
+	andb	%eax, 11	// the last few cows must come home
 	jz		$memcpy_final	// no more, let's leave
 	rep		movsb		// the last 1, 2, or 3 bytes
 
