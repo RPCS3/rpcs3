@@ -100,9 +100,9 @@ struct cpuRegisters {
 	GPR_reg LO;			// hi & log 128bit wide
 	CP0regs CP0;		// is COP0 32bit?
 	u32 sa;				// shift amount (32bit), needs to be 16 byte aligned
-	u32 constzero;		// always 0, for MFSA
+	u32 IsDelaySlot;	// set true when the current instruction is a delay slot.
     u32 pc;				// Program counter, when changing offset in struct, check iR5900-X.S to make sure offset is correct
-    u32 code;			// The instruction
+    u32 code;			// current instruction
     PERFregs PERF;
 	u32 eCycle[32];
 	u32 sCycle[32];		// for internal counters
@@ -110,7 +110,7 @@ struct cpuRegisters {
 	u32 interrupt;
 	int branch;
 	int opmode;			// operating mode
-	u32 tempcycles;	
+	u32 tempcycles;
 };
 
 // used for optimization
@@ -184,9 +184,10 @@ struct tlbs
 #define _Opcode_ (cpuRegs.code >> 26 )
 
 #define _JumpTarget_     ((_Target_ << 2) + (_PC_ & 0xf0000000))   // Calculates the target during a jump instruction
-#define _BranchTarget_  (((s32)(s16)_Im_ * 4) + _PC_)                 // Calculates the target during a branch instruction
+#define _BranchTarget_   (((s32)(s16)_Im_ * 4) + _PC_)                 // Calculates the target during a branch instruction
+#define _TrapCode_       ((u16)cpuRegs.code >> 6)	// error code for non-immediate trap instructions.
 
-#define _SetLink(x)     cpuRegs.GPR.r[x].UD[0] = _PC_ + 4;       // Sets the return address in the link register
+#define _SetLink(x)     (cpuRegs.GPR.r[x].UD[0] = _PC_ + 4)       // Sets the return address in the link register
 
 #endif
 

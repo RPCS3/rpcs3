@@ -707,9 +707,6 @@
 #define IDC_PATCHNAMELIST               40050
 #define IDC_GAMENAMESEARCH              40051
 #define IDC_SEARCHPATCHTEXT             40052
-#define ID_PROCESSLOW                   40053
-#define ID_PROCESSNORMAL                40054
-#define ID_PROCESSHIGH                  40055
 #define ID_CONSOLE                      40056
 #define ID_PATCHES                      40057
 #define ID_CONFIG_ADVANCED              40058

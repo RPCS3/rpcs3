@@ -510,15 +510,12 @@ u32 SuperVUGetVIAddr(int reg, int read)
 void SuperVUDumpBlock(list<VuBaseBlock*>& blocks, int vuindex)
 {
 	FILE *f;
-	string filename;
 	char str[256];
 	u32 *mem;
 	u32 i;
 
 	Path::CreateDirectory( "dumps" );
-	ssprintf( filename, "svu%cdump%.4X.txt", s_vu?'0':'1', s_pFnHeader->startpc );
-	filename = Path::Combine( "dumps", filename );
-
+	string filename( Path::Combine( "dumps", fmt_string( "svu%cdump%.4X.txt", s_vu?'0':'1', s_pFnHeader->startpc ) ) );
 	//SysPrintf( "dump1 %x => %s\n", s_pFnHeader->startpc, filename );
 
 	f = fopen( filename.c_str(), "w" );

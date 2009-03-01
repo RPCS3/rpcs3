@@ -61,6 +61,7 @@ protected:
 
 namespace Exception
 {
+	//////////////////////////////////////////////////////////////////////////////////
 	// std::exception sucks, so I made a replacement.
 	// Note, this class is "abstract" which means you shouldn't use it directly like, ever.
 	// Use Exception::RuntimeError or Exception::LogicError instead.
@@ -78,7 +79,24 @@ namespace Exception
 		const std::string& Message() const { return m_message; }
 		const char* cMessage() const { return m_message.c_str(); }
 	};
+	
+	// This class is used as a base exception for things tossed by PS2 cpus (EE, IOP, etc).
+	class Ps2Generic : public BaseException
+	{
+	public:
+		virtual ~Ps2Generic() throw() {}
 
+		explicit Ps2Generic( const std::string& msg="The Ps2/MIPS state encountered a general exception." ) : 
+		Exception::BaseException( msg )
+		{
+		}
+
+		virtual u32 GetPc() const=0;
+		virtual bool IsDelaySlot() const=0;
+	};
+
+	//////////////////////////////////////////////////////////////////////////////////
+	//
 	class RuntimeError : public BaseException
 	{
 	public:
@@ -97,6 +115,8 @@ namespace Exception
 		{}
 	};
 	
+	//////////////////////////////////////////////////////////////////////////////////
+	//
 	class OutOfMemory : public RuntimeError
 	{
 	public:
@@ -134,6 +154,8 @@ namespace Exception
 			LogicError( msg ) {}
 	};
 
+	//////////////////////////////////////////////////////////////////////////////////
+	//
 	class HardwareDeficiency : public RuntimeError
 	{
 	public:
@@ -184,8 +206,8 @@ namespace Exception
 			RuntimeError( msg ) {}
 	};
 
-	///////////////////////////////////////////////////////////////////////
-	//                        STREAMING EXCEPTIONS
+	//////////////////////////////////////////////////////////////////////////////////
+	//                             STREAMING EXCEPTIONS
 
 	// Generic stream error.  Contains the name of the stream and a message.
 	// This exception is usually thrown via derrived classes, except in the (rare) case of a generic / unknown error.
@@ -264,8 +286,8 @@ namespace Exception
 			Stream( objname, msg ) {}
 	};
 
-	//////////////////////////////////////////////////////////////////////////
-	//                       SAVESTATE EXCEPTIONS
+	//////////////////////////////////////////////////////////////////////////////////
+	//                            SAVESTATE EXCEPTIONS
 
 	// Exception thrown when a corrupted or truncated savestate is encountered.
 	class BadSavedState : public BadStream
@@ -321,6 +343,7 @@ namespace Exception
 
 	// A recoverable exception thrown when the CRC of the savestate does not match the
 	// CRC returned by the Cdvd driver.
+	// [feature not implemented yet]
 	class StateCrcMismatch : public StateLoadError_Recoverable
 	{
 	public:

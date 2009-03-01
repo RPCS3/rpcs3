@@ -1840,6 +1840,10 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\R5900Exceptions.h"
+					>
+				</File>
+				<File
 					RelativePath="..\..\R5900OpcodeImpl.cpp"
 					>
 				</File>

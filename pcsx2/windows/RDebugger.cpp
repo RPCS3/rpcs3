@@ -204,16 +204,17 @@ DWORD WINAPI Run2(LPVOID lpParam){
 		
 	while (1){
 		if (runStatus==RUN){
-			if (PSMu32(cpuRegs.pc)==0x0000000D){
+			const u32 opcode = memRead32(cpuRegs.pc);
+			if (opcode==0x0000000D){
 				sendBREAK('E', 0, runCode, 0x22, runCount);
 				InterlockedExchange(&runStatus, STOP);
 				continue;
 			}
 			if ((runCode==2) && (//next
-				((PSMu32(cpuRegs.pc) & 0xFC000000)==0x0C000000) ||//JAL
-				((PSMu32(cpuRegs.pc) & 0xFC00003F)==0x00000009) ||//JALR
-				((PSMu32(cpuRegs.pc) & 0xFC00003F)==0x0000000C)	  //SYSCALL
-				)){u32 tmppc=cpuRegs.pc, skip=(PSMu32(cpuRegs.pc) & 0xFC00003F)==0x0000000C ? 4 : 8;
+				((opcode & 0xFC000000)==0x0C000000) ||//JAL
+				((opcode & 0xFC00003F)==0x00000009) ||//JALR
+				((opcode & 0xFC00003F)==0x0000000C)	  //SYSCALL
+				)){u32 tmppc=cpuRegs.pc, skip=(opcode & 0xFC00003F)==0x0000000C ? 4 : 8;
 				while (cpuRegs.pc!=tmppc+skip)
 					Cpu->Step();
 			}else

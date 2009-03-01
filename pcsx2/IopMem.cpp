@@ -373,6 +373,9 @@ void psxMemReset()
 
 	// Trick!  We're accessing RLUT here through WLUT, since it's the non-const pointer.
 	// So the ones with a 1 prefixed (ala 0x18000, etc) are RLUT tables.
+	
+	// Map IOP main memory, which is Read/Write, and mirrored three times
+	// at 0x0, 0x8000, and 0xa000:
 	for (int i=0; i<0x0080; i++)
 	{
 		psxMemWLUT[i + 0x0000] = (uptr)&psxM[(i & 0x1f) << 16];
@@ -385,7 +388,7 @@ void psxMemReset()
 		psxMemWLUT[i + 0x1a000] = (uptr)&psxM[(i & 0x1f) << 16];
 	}
 
-	// A few single-page allocations...
+	// A few single-page allocations for things we store in special locations.
 	psxMemWLUT[0x11f00] = (uptr)psxP;
 	psxMemWLUT[0x11f80] = (uptr)psxH;
 	psxMemWLUT[0x1bf80] = (uptr)psxH;

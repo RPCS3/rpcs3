@@ -775,30 +775,6 @@ LRESULT WINAPI MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				MemcardConfig::OpenDialog();
 				break;
 
-			case ID_PROCESSLOW: 
-               Config.ThPriority = THREAD_PRIORITY_LOWEST;
-                SaveConfig();
-				CheckMenuItem(gApp.hMenu,ID_PROCESSLOW,MF_CHECKED);
-                CheckMenuItem(gApp.hMenu,ID_PROCESSNORMAL,MF_UNCHECKED);
-                CheckMenuItem(gApp.hMenu,ID_PROCESSHIGH,MF_UNCHECKED);
-                break;
-                
-			case ID_PROCESSNORMAL:
-                Config.ThPriority = THREAD_PRIORITY_NORMAL;
-                SaveConfig();
-				CheckMenuItem(gApp.hMenu,ID_PROCESSNORMAL,MF_CHECKED);
-                CheckMenuItem(gApp.hMenu,ID_PROCESSLOW,MF_UNCHECKED);
-                CheckMenuItem(gApp.hMenu,ID_PROCESSHIGH,MF_UNCHECKED);
-                break;
-
-			case ID_PROCESSHIGH:
-                Config.ThPriority = THREAD_PRIORITY_HIGHEST;
-                SaveConfig();
-				CheckMenuItem(gApp.hMenu,ID_PROCESSHIGH,MF_CHECKED);
-                CheckMenuItem(gApp.hMenu,ID_PROCESSNORMAL,MF_UNCHECKED);
-                CheckMenuItem(gApp.hMenu,ID_PROCESSLOW,MF_UNCHECKED);
-                break;
-
 			case ID_CONSOLE:
 				Config.PsxOut = !Config.PsxOut;
 				if(Config.PsxOut)
@@ -919,36 +895,36 @@ void ResetMenuSlots() {
 
 
 #define _ADDSUBMENU(menu, menun, string) \
-	submenu[menun] = CreatePopupMenu(); \
-	AppendMenu(menu, MF_STRING | MF_POPUP, (UINT)submenu[menun], string);
+{	submenu[menun] = CreatePopupMenu(); \
+	AppendMenu(menu, MF_STRING | MF_POPUP, (UINT)submenu[menun], string); }
 
 #define ADDSUBMENU(menun, string) \
 	_ADDSUBMENU(gApp.hMenu, menun, string);
 
 #define ADDSUBMENUS(submn, menun, string) \
-	submenu[menun] = CreatePopupMenu(); \
-	InsertMenu(submenu[submn], 0, MF_BYPOSITION | MF_STRING | MF_POPUP, (UINT)submenu[menun], string);
+{	submenu[menun] = CreatePopupMenu(); \
+	InsertMenu(submenu[submn], 0, MF_BYPOSITION | MF_STRING | MF_POPUP, (UINT)submenu[menun], string); }
 
 #define ADDMENUITEM(menun, string, id) \
-	item.fType = MFT_STRING; \
+{	item.fType = MFT_STRING; \
 	item.fMask = MIIM_STATE | MIIM_TYPE | MIIM_ID; \
 	item.fState = MFS_ENABLED; \
 	item.wID = id; \
 	sprintf(buf, string); \
-	InsertMenuItem(submenu[menun], 0, TRUE, &item);
+	InsertMenuItem(submenu[menun], 0, TRUE, &item); }
 
 #define ADDMENUITEMC(menun, string, id) \
-	item.fType = MFT_STRING; \
+{	item.fType = MFT_STRING; \
 	item.fMask = MIIM_STATE | MIIM_TYPE | MIIM_ID; \
 	item.fState = MFS_ENABLED | MFS_CHECKED; \
 	item.wID = id; \
 	sprintf(buf, string); \
-	InsertMenuItem(submenu[menun], 0, TRUE, &item);
+	InsertMenuItem(submenu[menun], 0, TRUE, &item); }
 
 #define ADDSEPARATOR(menun) \
-	item.fMask = MIIM_TYPE; \
+{	item.fMask = MIIM_TYPE; \
 	item.fType = MFT_SEPARATOR; \
-	InsertMenuItem(submenu[menun], 0, TRUE, &item);
+	InsertMenuItem(submenu[menun], 0, TRUE, &item); }
 
 void CreateMainMenu() {
 	MENUITEMINFO item;
@@ -989,9 +965,6 @@ void CreateMainMenu() {
     ADDSUBMENU(0, _("&Run"));
 
     ADDSUBMENUS(0, 1, _("&Process Priority"));
-	ADDMENUITEM(1, _("&Low"), ID_PROCESSLOW );
-	ADDMENUITEM(1, _("High"), ID_PROCESSHIGH);
-	ADDMENUITEM(1, _("Normal"), ID_PROCESSNORMAL);
 	if( IsDevBuild ) {
 		ADDMENUITEM(0,_("&Arguments"), ID_RUN_CMDLINE);
 	}
@@ -1110,9 +1083,6 @@ void CreateMainWindow()
 	CreateMainMenu();
    
 	SetMenu(gApp.hWnd, gApp.hMenu);
-    if(Config.ThPriority==THREAD_PRIORITY_NORMAL) CheckMenuItem(gApp.hMenu,ID_PROCESSNORMAL,MF_CHECKED);
-	if(Config.ThPriority==THREAD_PRIORITY_HIGHEST) CheckMenuItem(gApp.hMenu,ID_PROCESSHIGH,MF_CHECKED);
-	if(Config.ThPriority==THREAD_PRIORITY_LOWEST)  CheckMenuItem(gApp.hMenu,ID_PROCESSLOW,MF_CHECKED);
 	if(Config.PsxOut)	CheckMenuItem(gApp.hMenu,ID_CONSOLE,MF_CHECKED);
 	if(Config.Patch)	CheckMenuItem(gApp.hMenu,ID_PATCHES,MF_CHECKED);
 	if(Config.Profiler)	CheckMenuItem(gApp.hMenu,ID_PROFILER,MF_CHECKED);

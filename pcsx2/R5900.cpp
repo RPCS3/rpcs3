@@ -37,12 +37,12 @@
 
 #include "Paths.h"
 
+#include "R5900Exceptions.h"
+
 using namespace R5900;	// for R5900 disasm tools
 
 s32 EEsCycle;		// used to sync the IOP to the EE
 u32 EEoCycle;
-
-//static int inter;
 
 PCSX2_ALIGNED16(cpuRegisters cpuRegs);
 PCSX2_ALIGNED16(fpuRegisters fpuRegs);
@@ -55,6 +55,8 @@ static bool cpuIsInitialized = false;
 static uint eeWaitCycles = 1024;
 
 bool eeEventTestIsActive = false;
+
+R5900Exception::BaseExcept::~BaseExcept() {}
 
 // A run-once procedure for initializing the emulation state.
 // Can be done anytime after allocating memory, and before calling Cpu->Execute().

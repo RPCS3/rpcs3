@@ -50,22 +50,10 @@ extern TESTRUNARGS g_TestRun;
 #define PS2CLK 294912000 //hz	/* 294.912 mhz */
 
 
-/* Config.PsxType == 1: PAL:
-	 VBlank interlaced		50.00 Hz
-	 VBlank non-interlaced	49.76 Hz
-	 HBlank					15.625 KHz 
-   Config.PsxType == 0: NSTC
-	 VBlank interlaced		59.94 Hz
-	 VBlank non-interlaced	59.82 Hz
-	 HBlank					15.73426573 KHz */
-
-//Misc Clocks
-#define PSXPIXEL        ((int)(PSXCLK / 13500000))
-#define PSXSOUNDCLK		((int)(48000))
-
 #include "Plugins.h"
 #include "Misc.h"
 #include "SaveState.h"
+
 #include "DebugTools/Debug.h"
 #include "R5900.h"
 #include "Memory.h"

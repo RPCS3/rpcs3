@@ -196,8 +196,6 @@ void IniFile::DoConfig( PcsxConfig& Conf )
 	Entry( "Profiler", Conf.Profiler, false );
 	Entry( "CdvdVerbose", Conf.cdvdPrint, false );
 
-	Entry( "ThreadPriority", Conf.ThPriority, THREAD_PRIORITY_NORMAL );
-
 	SetCurrentSection( "Framelimiter" );
 	Entry( "CustomFps", Conf.CustomFps );
 	Entry( "FrameskipMode", Conf.CustomFrameSkip );

@@ -34,25 +34,19 @@ static std::string disOut;
 
 // These macros are used to assemble the repassembler functions
 
-#ifdef PCSX2_DEVBUILD
 static void debugI()
 {
-	if (cpuRegs.GPR.n.r0.UD[0] || cpuRegs.GPR.n.r0.UD[1]) Console::Error("R0 is not zero!!!!");
+	if( !IsDevBuild ) return;
+	if( cpuRegs.GPR.n.r0.UD[0] || cpuRegs.GPR.n.r0.UD[1] ) Console::Error("R0 is not zero!!!!");
 }
-#else
-static void debugI() {}
-#endif
 
 //long int runs=0;
 
 static void execI()
 {
-#ifdef _DEBUG
-    memRead32(cpuRegs.pc, &cpuRegs.code);
-	debugI();
-#else
-    cpuRegs.code = *(u32 *)PSM(cpuRegs.pc);
-#endif
+	cpuRegs.code = memRead32( cpuRegs.pc );
+	if( IsDebugBuild )
+		debugI();
 
 	const OPCODE& opcode = GetCurrentInstruction();
 	//use this to find out what opcodes your game uses. very slow! (rama)

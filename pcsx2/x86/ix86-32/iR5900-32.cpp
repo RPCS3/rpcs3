@@ -153,7 +153,7 @@ static void iDumpBlock( int startpc, u8 * ptr )
     if( disR5900GetSym(startpc) != NULL )
         fprintf(f, "%s\n", disR5900GetSym(startpc));
 	for ( i = startpc; i < s_nEndBlock; i += 4 ) {
-		disR5900Fasm( output, PSMu32( i ), i );
+		disR5900Fasm( output, memRead32( i ), i );
 		fprintf( f, output.c_str() );
 	}
 

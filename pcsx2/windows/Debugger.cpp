@@ -49,7 +49,7 @@ void RefreshDebugAll()//refresh disasm and register window
 
 void MakeDebugOpcode(void)
 {
-	memRead32( opcode_addr, &cpuRegs.code );
+	cpuRegs.code = memRead32( opcode_addr );
 }
 
 void MakeIOPDebugOpcode(void)
@@ -459,7 +459,7 @@ BOOL APIENTRY DebuggerProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam
 					 */
 					EnterRunningState(hDlg);
 
-					memRead32(cpuRegs.pc, &cpuRegs.code);
+					cpuRegs.code = memRead32(cpuRegs.pc);
 
 					{
 						u32 target_pc = 0;

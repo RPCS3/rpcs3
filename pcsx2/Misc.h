@@ -154,7 +154,6 @@ public:
 	int Cdda;
 	int Mdec;
 	int Patch;
-	int ThPriority;
 	int CustomFps;
 	int Hacks;
 	int GameFixes;

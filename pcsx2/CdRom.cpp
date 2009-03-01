@@ -19,6 +19,7 @@
 #include "PrecompiledHeader.h"
 
 #include "PsxCommon.h"
+#include "Common.h"
 
 //THIS ALL IS FOR THE CDROM REGISTERS HANDLING
 

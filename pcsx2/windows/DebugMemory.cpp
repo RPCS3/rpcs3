@@ -33,7 +33,7 @@ unsigned char Debug_Read8(unsigned long addr)//just for anycase..
 	{
 #endif
       u8 val8;
-      memRead8(addr, &val8);
+      val8 = memRead8(addr);
 		return val8;
 #ifdef _WIN32
 	}
@@ -132,7 +132,7 @@ BOOL APIENTRY DumpMemProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 				else
 				{
 					for (addr = start_pc; addr < end_pc; addr ++) {
-						memRead8( addr, &data );
+						data = memRead8( addr );
 						fwrite(&data, 1, 1, fp);
 					}
 

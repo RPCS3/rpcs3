@@ -971,7 +971,7 @@ void psxSetBranchImm( u32 imm )
 
 //fixme : this is all a huge hack, we base the counter advancements on the average an opcode should take (wtf?)
 //		  If that wasn't bad enough we have default values like 9/8 which will get cast to int later
-//		  (yeah, that means all sync code couldn't have worked to beginn with)
+//		  (yeah, that means all sync code couldn't have worked to begin with)
 //		  So for now these are new settings that work.
 //		  (rama)
 
@@ -998,7 +998,7 @@ static void iPsxBranchTest(u32 newpc, u32 cpuBranch)
 	// Continue onward with branching here:
 	x86SetJ8( j8Ptr[2] );
 
-	// check if should branch
+	// check if an event is pending
 	SUB32MtoR(ECX, (uptr)&g_psxNextBranchCycle);
 	j8Ptr[0] = JS8( 0 );
 
@@ -1128,10 +1128,7 @@ void psxRecompileNextInstruction(int delayslot)
 	MOV32ItoR(EAX, psxpc);
 #endif
 
-	s_pCode = iopVirtMemR<int>( psxpc );
-	assert(s_pCode);
-
-	psxRegs.code = *(int *)s_pCode;
+	psxRegs.code = iopMemRead32( psxpc );
 	s_psxBlockCycles++;
 	psxpc += 4;
 
@@ -1145,10 +1142,6 @@ void psxRecompileNextInstruction(int delayslot)
 
 
 	g_pCurInstInfo++;
-
-#ifdef PCSX2_VM_COISSUE
-	assert( g_pCurInstInfo->info & EEINSTINFO_COREC );
-#endif
 
 	g_iopCyclePenalty = 0;
 	rpsxBSC[ psxRegs.code >> 26 ]();

@@ -56,10 +56,9 @@ extern u8  *psS; //0.015 mb, scratch pad
 #define PS2MEM_EROM		psER
 #define PS2MEM_SCRATCH	psS
 
-extern u8 g_RealGSMem[0x2000];
+extern u8 g_RealGSMem[Ps2MemSize::GSregs];
 #define PS2MEM_GS	g_RealGSMem
 
-//#define _PSM(mem)	(memLUTR[(mem) >> 12] == 0 ? NULL : (void*)(memLUTR[(mem) >> 12] + ((mem) & 0xfff)))
 #define PSM(mem)	(vtlb_GetPhyPtr(mem&0x1fffffff)) //pcsx2 is a competition.The one with most hacks wins :D
 
 #define psMs8(mem)	(*(s8 *)&PS2MEM_BASE[(mem) & 0x1ffffff])
@@ -116,14 +115,14 @@ extern u8 g_RealGSMem[0x2000];
 #define psSu32(mem)	(*(u32*)&PS2MEM_SCRATCH[(mem) & 0x3fff])
 #define psSu64(mem)	(*(u64*)&PS2MEM_SCRATCH[(mem) & 0x3fff])
 
-#define PSMs8(mem)	(*(s8 *)PSM(mem))
-#define PSMs16(mem)	(*(s16*)PSM(mem))
-#define PSMs32(mem)	(*(s32*)PSM(mem))
-#define PSMs64(mem)	(*(s64*)PSM(mem))
-#define PSMu8(mem)	(*(u8 *)PSM(mem))
-#define PSMu16(mem)	(*(u16*)PSM(mem))
-#define PSMu32(mem)	(*(u32*)PSM(mem))
-#define PSMu64(mem)	(*(u64*)PSM(mem))
+//#define PSMs8(mem)	(*(s8 *)PSM(mem))
+//#define PSMs16(mem)	(*(s16*)PSM(mem))
+//#define PSMs32(mem)	(*(s32*)PSM(mem))
+//#define PSMs64(mem)	(*(s64*)PSM(mem))
+//#define PSMu8(mem)	(*(u8 *)PSM(mem))
+//#define PSMu16(mem)	(*(u16*)PSM(mem))
+//#define PSMu32(mem)	(*(u32*)PSM(mem))
+//#define PSMu64(mem)	(*(u64*)PSM(mem))
 
 extern void memAlloc();
 extern void memReset();		// clears PS2 ram and loads the bios.  Throws Exception::FileNotFound on error.
@@ -143,10 +142,9 @@ extern void mmap_MarkCountedRamPage(void* ptr,u32 vaddr);
 extern void mmap_ResetBlockTracking();
 extern void mmap_ClearCpuBlock( uint offset );
 
-extern void __fastcall memRead8(u32 mem, u8  *out);
-extern void __fastcall memRead16(u32 mem, u16 *out);
-extern void __fastcall memRead32(u32 mem, u32 *out);
-
+#define memRead8 vtlb_memRead8
+#define memRead16 vtlb_memRead16
+#define memRead32 vtlb_memRead32
 #define memRead64 vtlb_memRead64
 #define memRead128 vtlb_memRead128
 
@@ -168,6 +166,8 @@ extern void __fastcall memRead32(u32 mem, u32 *out);
 #define _eeMoveMMREGtoR 0&&
 
 // extra ops
+// These allow the old unused const versions of various HW accesses to continue to compile.
+// (code left in for reference purposes, but is not needed by Vtlb)
 #define _eeWriteConstMem16OP 0&&
 #define _eeWriteConstMem32OP 0&&
 
@@ -185,108 +185,5 @@ extern void __fastcall memRead32(u32 mem, u32 *out);
 
 extern void loadBiosRom( const char *ext, u8 *dest, long maxSize );
 extern u16 ba0R16(u32 mem);
-
-//////////////////////////////////////////////////////////////////////////
-// The rest of this header contains the old VM version of the Memory.h API.
-// Left in for references purposes.
-
-#ifdef PCSX2_VIRTUAL_MEM
-
-#define PS2MEM_BASE_	0x15000000
-#define PS2MEM_PSX_		(PS2MEM_BASE_+0x1c000000)
-
-#ifdef _WIN32
-struct PSMEMORYMAP
-{
-	uptr* aPFNs, *aVFNs;
-};
-#endif
-
-#define TRANSFORM_ADDR(memaddr) ( ((u32)(memaddr)>=0x40000000) ? ((memaddr)&~0xa0000000) : (memaddr) )
-
-//new memory model
-#define PS2MEM_BASE		((u8*)PS2MEM_BASE_)
-#define PS2MEM_HW		((u8*)((u32)PS2MEM_BASE+0x10000000))
-#define PS2MEM_ROM		((u8*)((u32)PS2MEM_BASE+0x1fc00000))
-#define PS2MEM_ROM1		((u8*)((u32)PS2MEM_BASE+0x1e000000))
-#define PS2MEM_ROM2		((u8*)((u32)PS2MEM_BASE+0x1e400000))
-#define PS2MEM_EROM		((u8*)((u32)PS2MEM_BASE+0x1e040000))
-#define PS2MEM_PSX		((u8*)PS2MEM_PSX_)
-#define PS2MEM_SCRATCH	((u8*)((u32)PS2MEM_BASE+0x50000000))
-#define PS2MEM_VU0MICRO	((u8*)((u32)PS2MEM_BASE+0x11000000))
-#define PS2MEM_VU0MEM	((u8*)((u32)PS2MEM_BASE+0x11004000))
-#define PS2MEM_VU1MICRO	((u8*)((u32)PS2MEM_BASE+0x11008000))
-#define PS2MEM_VU1MEM	((u8*)((u32)PS2MEM_BASE+0x1100c000))
-
-// function for mapping memory
-#define PS2MEM_PSXHW	((u8*)((u32)PS2MEM_BASE+0x1f800000))
-//#define PS2MEM_PSXHW2	((u8*)((u32)PS2MEM_BASE+0x1fa00000))
-#define PS2MEM_PSXHW4	((u8*)((u32)PS2MEM_BASE+0x1f400000))
-#define PS2MEM_GS		((u8*)((u32)PS2MEM_BASE+0x12000000))
-#define PS2MEM_DEV9		((u8*)((u32)PS2MEM_BASE+0x14000000))
-#define PS2MEM_SPU2		((u8*)((u32)PS2MEM_BASE+0x1f900000))
-#define PS2MEM_SPU2_	((u8*)((u32)PS2MEM_BASE+0x1f000000)) // ?
-#define PS2MEM_B80		((u8*)((u32)PS2MEM_BASE+0x18000000))
-#define PS2MEM_BA0		((u8*)((u32)PS2MEM_BASE+0x1a000000))
-
-#define PSM(mem)	(PS2MEM_BASE + TRANSFORM_ADDR(mem))
-
-int __fastcall memRead8(u32 mem, u8  *out);
-int __fastcall memRead8RS(u32 mem, u64 *out);
-int __fastcall memRead8RU(u32 mem, u64 *out);
-int __fastcall memRead16(u32 mem, u16 *out);
-int __fastcall memRead16RS(u32 mem, u64 *out);
-int __fastcall memRead16RU(u32 mem, u64 *out);
-int __fastcall memRead32(u32 mem, u32 *out);
-int __fastcall memRead32RS(u32 mem, u64 *out);
-int __fastcall memRead32RU(u32 mem, u64 *out);
-int __fastcall memRead64(u32 mem, u64 *out);
-int __fastcall memRead128(u32 mem, u64 *out);
-void __fastcall memWrite8 (u32 mem, u8  value);
-void __fastcall memWrite16(u32 mem, u16 value);
-void __fastcall memWrite32(u32 mem, u32 value);
-void __fastcall memWrite64(u32 mem, const u64 *value);
-void __fastcall memWrite128(u32 mem, const u64 *value);
-
-// recMemConstRead8, recMemConstRead16, recMemConstRead32 return 1 if a call was made, 0 otherwise
-u8 recMemRead8();
-u16 recMemRead16();
-u32 recMemRead32();
-void recMemRead64(u64 *out);
-void recMemRead128(u64 *out);
-
-void recMemWrite8();
-void recMemWrite16();
-void recMemWrite32();
-void recMemWrite64();
-void recMemWrite128();
-
-void _eeReadConstMem8(int mmreg, u32 mem, int sign);
-void _eeReadConstMem16(int mmreg, u32 mem, int sign);
-void _eeReadConstMem32(int mmreg, u32 mem);
-void _eeReadConstMem128(int mmreg, u32 mem);
-void _eeWriteConstMem8(u32 mem, int mmreg);
-void _eeWriteConstMem16(u32 mem, int mmreg);
-void _eeWriteConstMem32(u32 mem, int mmreg);
-void _eeWriteConstMem64(u32 mem, int mmreg);
-void _eeWriteConstMem128(u32 mem, int mmreg);
-void _eeMoveMMREGtoR(int to, int mmreg);
-
-// extra ops
-void _eeWriteConstMem16OP(u32 mem, int mmreg, int op);
-void _eeWriteConstMem32OP(u32 mem, int mmreg, int op);
-
-int recMemConstRead8(u32 x86reg, u32 mem, u32 sign);
-int recMemConstRead16(u32 x86reg, u32 mem, u32 sign);
-int recMemConstRead32(u32 x86reg, u32 mem);
-void recMemConstRead64(u32 mem, int mmreg);
-void recMemConstRead128(u32 mem, int xmmreg);
-
-int recMemConstWrite8(u32 mem, int mmreg);
-int recMemConstWrite16(u32 mem, int mmreg);
-int recMemConstWrite32(u32 mem, int mmreg);
-int recMemConstWrite64(u32 mem, int mmreg);
-int recMemConstWrite128(u32 mem, int xmmreg);
-#endif
 
 #endif

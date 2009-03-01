@@ -94,7 +94,7 @@ namespace OpcodeImpl {
 	}
 
 	void MULT1() {
-		s64 temp = (s64)cpuRegs.GPR.r[_Rs_].SL[0] * (s64)cpuRegs.GPR.r[_Rt_].SL[0];
+		s64 temp = (s64)cpuRegs.GPR.r[_Rs_].SL[0] * cpuRegs.GPR.r[_Rt_].SL[0];
 
 		// Sign-extend into 64 bits:
 		cpuRegs.LO.SD[1] = (s32)(temp & 0xffffffff);
@@ -104,11 +104,11 @@ namespace OpcodeImpl {
 	}
 
 	void MULTU1() {
-		u64 tempu = (u64)cpuRegs.GPR.r[_Rs_].UL[0] * (u64)cpuRegs.GPR.r[_Rt_].UL[0];
+		u64 tempu = (u64)cpuRegs.GPR.r[_Rs_].UL[0] * cpuRegs.GPR.r[_Rt_].UL[0];
 
 		// According to docs, sign-extend into 64 bits even though it's an unsigned mult.
-		cpuRegs.LO.UD[1] = (s32)(tempu & 0xffffffff);
-		cpuRegs.HI.UD[1] = (s32)(tempu >> 32);
+		cpuRegs.LO.SD[1] = (s32)(tempu & 0xffffffff);
+		cpuRegs.HI.SD[1] = (s32)(tempu >> 32);
 
 		if (_Rd_) cpuRegs.GPR.r[_Rd_].UD[0] = cpuRegs.LO.UD[1];
 	}
@@ -120,12 +120,14 @@ namespace OpcodeImpl {
 		}
 	}
 
-	void DIVU1() {
-		if (cpuRegs.GPR.r[_Rt_].UL[0] != 0) {
-
+	void DIVU1()
+	{
+		if (cpuRegs.GPR.r[_Rt_].UL[0] != 0)
+		{
 			// note: DIVU has no sign extension when assigning back to 64 bits
-			cpuRegs.LO.UD[1] = cpuRegs.GPR.r[_Rs_].UL[0] / cpuRegs.GPR.r[_Rt_].UL[0];
-			cpuRegs.HI.UD[1] = cpuRegs.GPR.r[_Rs_].UL[0] % cpuRegs.GPR.r[_Rt_].UL[0];
+			// note 2: reference material strongly disagrees. (air)
+			cpuRegs.LO.SD[1] = (s32)(cpuRegs.GPR.r[_Rs_].UL[0] / cpuRegs.GPR.r[_Rt_].UL[0]);
+			cpuRegs.HI.SD[1] = (s32)(cpuRegs.GPR.r[_Rs_].UL[0] % cpuRegs.GPR.r[_Rt_].UL[0]);
 		}
 	}
 

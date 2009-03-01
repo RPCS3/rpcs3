@@ -228,6 +228,9 @@ static void TryRecoverFromGsState()
 	}
 }
 
+
+#include "R5900Exceptions.h"
+
 void ExecuteCpu()
 {
 	// Make sure any left-over recovery states are cleaned up.
@@ -259,20 +262,34 @@ void ExecuteCpu()
 
 	timeBeginPeriod( 1 );
 
-	if( CHECK_EEREC )
+	try
 	{
-		while( !g_ReturnToGui )
+		if( CHECK_EEREC )
 		{
-			recExecute();
-			SysUpdate();
+			while( !g_ReturnToGui )
+			{
+				recExecute();
+				SysUpdate();
+			}
+		}
+		else
+		{
+			while( !g_ReturnToGui )
+			{
+				Cpu->Execute();
+				SysUpdate();
+			}
 		}
 	}
-	else
+	catch( R5900Exception::BaseExcept& ex )
 	{
-		while( !g_ReturnToGui )
+		Console::Error( ex.cMessage() );
+		Console::Error( fmt_string( "(EE) PC: 0x%8.8x  \tCycle:0x8.8x", ex.cpuState.pc, ex.cpuState.cycle ).c_str() );
+		
+		if( !Config.PsxOut )
 		{
-			Cpu->Execute();
-			SysUpdate();
+			// TODO : no console opened, so use a popup to msg the user.
+			// Need to take care to shut down the GS first, or else it'll cause ugliness on fullscreen execution.
 		}
 	}
 
@@ -286,8 +303,6 @@ void ExecuteCpu()
 // Used by Run::FromCD and such
 void RunExecute( const char* elf_file, bool use_bios )
 {
-	SetThreadPriority(GetCurrentThread(), Config.ThPriority);
-	SetPriorityClass(GetCurrentProcess(), Config.ThPriority == THREAD_PRIORITY_HIGHEST ? ABOVE_NORMAL_PRIORITY_CLASS : NORMAL_PRIORITY_CLASS);
     nDisableSC = 1;
 
 	try

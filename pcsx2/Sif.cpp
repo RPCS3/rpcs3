@@ -18,8 +18,10 @@
 
 #include "PrecompiledHeader.h"
 
-#include "Sif.h"
-#include "IopHw.h"
+#define _PC_	// disables MIPS opcode macros.
+
+#include "PsxCommon.h"
+#include "Common.h"
 #include "Sifcmd.h"
 
 using namespace std;
@@ -27,8 +29,6 @@ using namespace std;
 #define sif0dma ((DMACh*)&PS2MEM_HW[0xc000])
 #define sif1dma ((DMACh*)&PS2MEM_HW[0xc400])
 #define sif2dma ((DMACh*)&PS2MEM_HW[0xc800])
-
-int eeSifTransfer;
 
 DMACh *sif0ch;
 DMACh *sif1ch;
