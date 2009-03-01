@@ -44,9 +44,9 @@ microVUt(void) mVUallocFMAC1a(u32 code, int& Fd, int& Fs, int& Ft, const int mak
 	microVU* mVU = mVUx;
 	if (_Fs_ == 0) { Fs = xmmZ; } else { Fs = xmmFs; }
 	if (_Ft_ == 0) { Ft = xmmZ; } else { Ft = xmmFt; }
-	if		(makeFdFd) {Fd = xmmFd}
-	else if (makeFdFs) {Fd = Fs}
-	else if (makeFdFt) {Fd = Ft}
+	if		(makeFdFd) {Fd = xmmFd;}
+	else if (makeFdFs) {Fd = Fs;}
+	else if (makeFdFt) {Fd = Ft;}
 
 	if (_Fs_) SSE_MOVAPS_M128_to_XMM(Fs, (uptr)&mVU->regs->VF[_Fs_].UL[0]);
 	if (_Ft_ == _Ft_) SSE_MOVAPS_M128_to_XMM(Ft, (uptr)&mVU->regs->VF[_Ft_].UL[0]);

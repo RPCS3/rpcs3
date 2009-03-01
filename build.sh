@@ -11,12 +11,14 @@
 #Optimized, but a devbuild
 export PCSX2OPTIONS="--enable-sse3 --enable-sse4 --enable-devbuild --prefix `pwd`"
 
-
-#Optimized, but a devbuild - with memcpy_fast_ enabled.
-#export PCSX2OPTIONS="--enable-sse3 --enable-sse4 --enable-devbuild --enable-memcpyfast --prefix `pwd`"
-
 #Debug / Devbuild version
 #export PCSX2OPTIONS="--enable-debug --enable-devbuild --enable-sse3 --prefix `pwd`"
+
+#Optimized, but a devbuild - with memcpy_fast_ enabled. - BROKEN!
+#export PCSX2OPTIONS="--enable-sse3 --enable-sse4 --enable-devbuild --enable-memcpyfast --prefix `pwd`"
+
+#Optimized, but a devbuild - with microVU enabled. - NOT FULLY IMPLEMENTED!!
+#export PCSX2OPTIONS="--enable-sse3 --enable-sse4 --enable-devbuild --enable-microVU --prefix `pwd`"
 
 #ZeroGS Normal mode
 export ZEROGSOPTIONS="--enable-sse2"

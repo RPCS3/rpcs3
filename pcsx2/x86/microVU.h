@@ -131,3 +131,8 @@ __forceinline void	mVUclearProg(microVU* mVU, int progIndex);
 __forceinline int	mVUfindLeastUsedProg(microVU* mVU);
 __forceinline int	mVUsearchProg(microVU* mVU);
 __forceinline void	mVUcacheProg(microVU* mVU, int progIndex);
+
+#ifdef __LINUX__
+microVUt(void) mVUreset();
+microVUt(void) mVUclose();
+#endif
