@@ -141,7 +141,7 @@ static void iDumpBlock( int startpc, u8 * ptr )
 
 	fflush( stdout );
 //	f = fopen( "dump1", "wb" );
-//	fwrite( ptr, 1, (u32)x86Ptr - (u32)ptr, f );
+//	fwrite( ptr, 1, (u32)x86Ptr[0] - (u32)ptr, f );
 //	fclose( f );
 //
 //	sprintf( command, "objdump -D --target=binary --architecture=i386 dump1 > %s", filename );
@@ -585,8 +585,8 @@ void recResetEE( void )
 	// so a fix will have to wait until later. -_- (air)
 
 	//x86SetPtr(recMem+REC_CACHEMEM);
-	//dyna_block_discard_recmem=(u8*)x86Ptr;
-	//JMP32( (uptr)&dyna_block_discard - ( (u32)x86Ptr + 5 ));
+	//dyna_block_discard_recmem=(u8*)x86Ptr[0];
+	//JMP32( (uptr)&dyna_block_discard - ( (u32)x86Ptr[0] + 5 ));
 
 	x86SetPtr(recMem);
 
@@ -613,8 +613,6 @@ static void recShutdown( void )
 
 	safe_free( s_pInstCache );
 	s_nInstCacheSize = 0;
-
-	x86Shutdown();
 }
 
 // Ignored by Linux
@@ -675,7 +673,7 @@ static __naked void Dispatcher()
 	// Modify the prev block's jump address, and jump to the new block:
 	__asm {
 		shl eax, 4
-		pop ecx // x86Ptr to mod
+		pop ecx // x86Ptr[0] to mod
 		mov edx, eax
 		sub edx, ecx
 		sub edx, 4
@@ -686,7 +684,7 @@ static __naked void Dispatcher()
 }
 
 // edx -  baseblock->startpc
-// stack - x86Ptr
+// stack - x86Ptr[0]
 static __naked void DispatcherClear()
 {
 	// EDX contains the current pc
@@ -869,7 +867,7 @@ void recSYSCALL( void ) {
 	CMP32ItoM((uptr)&cpuRegs.pc, pc);
 	j8Ptr[0] = JE8(0);
 	ADD32ItoM((uptr)&cpuRegs.cycle, eeScaleBlockCycles());
-	JMP32((uptr)DispatcherReg - ( (uptr)x86Ptr + 5 ));
+	JMP32((uptr)DispatcherReg - ( (uptr)x86Ptr[0] + 5 ));
 	x86SetJ8(j8Ptr[0]);
 	//branch = 2;
 }
@@ -933,13 +931,13 @@ void recClearMem(BASEBLOCK* p)
 	assert( p->GetFnptr() != 0 );
 	assert( p->startpc );
 
-	x86Ptr = (u8*)p->GetFnptr();
+	x86Ptr[0] = (u8*)p->GetFnptr();
 
 	// there is a small problem: mem can be ored with 0xa<<28 or 0x8<<28, and don't know which
 	MOV32ItoR(EDX, p->startpc);
-	PUSH32I((u32)x86Ptr); // will be replaced by JMP32
-	JMP32((u32)DispatcherClear - ( (u32)x86Ptr + 5 ));
-	assert( x86Ptr == (u8*)p->GetFnptr() + EE_MIN_BLOCK_BYTES );
+	PUSH32I((u32)x86Ptr[0]); // will be replaced by JMP32
+	JMP32((u32)DispatcherClear - ( (u32)x86Ptr[0] + 5 ));
+	assert( x86Ptr[0] == (u8*)p->GetFnptr() + EE_MIN_BLOCK_BYTES );
 
 	pstart = PC_GETBLOCK(p->startpc);
 	pexblock = PC_GETBLOCKEX(pstart);
@@ -1231,7 +1229,7 @@ static void iBranchTest(u32 newpc, bool noDispatch)
 		// to; creating a static link of blocks that doesn't require the overhead
 		// of a dispatcher.
 		MOV32ItoR(EDX, 0);
-		ptr = (u32*)(x86Ptr-4);
+		ptr = (u32*)(x86Ptr[0]-4);
 	}
 
 	// Check the Event scheduler if our "cycle target" has been reached.
@@ -1245,12 +1243,12 @@ static void iBranchTest(u32 newpc, bool noDispatch)
 	if( newpc != 0xffffffff )
 	{
 		// This is the jump instruction which gets modified by Dispatcher.
-		*ptr = (u32)JS32((u32)Dispatcher - ( (u32)x86Ptr + 6 ));
+		*ptr = (u32)JS32((u32)Dispatcher - ( (u32)x86Ptr[0] + 6 ));
 	}
 	else if( !noDispatch )
 	{
 		// This instruction is a dynamic link, so it's never modified.
-		JS32((uptr)DispatcherReg - ( (uptr)x86Ptr + 6 ));
+		JS32((uptr)DispatcherReg - ( (uptr)x86Ptr[0] + 6 ));
 	}
 
 	RET2();
@@ -1313,22 +1311,22 @@ void recompileNextInstruction(int delayslot)
 				
 //			if( pexblock->pOldFnptr ) {
 //				// code already in place, so jump to it and exit recomp
-//				JMP32((u32)pexblock->pOldFnptr - ((u32)x86Ptr + 5));
+//				JMP32((u32)pexblock->pOldFnptr - ((u32)x86Ptr[0] + 5));
 //				branch = 3;
 //				return;
 //			}
 			
-			JMP32((uptr)pblock->GetFnptr() - ((uptr)x86Ptr + 5));
+			JMP32((uptr)pblock->GetFnptr() - ((uptr)x86Ptr[0] + 5));
 			branch = 3;
 			return;
 		}
 		else {
 
 			if( !(delayslot && pblock->startpc == pc) ) {
-				u8* oldX86 = x86Ptr;
+				u8* oldX86 = x86Ptr[0];
 				//__Log("clear block %x\n", pblock->startpc);
 				recClearMem(pblock);
-				x86Ptr = oldX86;
+				x86Ptr[0] = oldX86;
 				if( delayslot )
 					Console::Notice("delay slot %x", params pc);
 			}
@@ -1576,8 +1574,8 @@ void recRecompile( const u32 startpc )
 
 	x86SetPtr( recPtr );
 	x86Align(16);
-	recPtr = x86Ptr;
-	s_pCurBlock->SetFnptr( (uptr)x86Ptr );
+	recPtr = x86Ptr[0];
+	s_pCurBlock->SetFnptr( (uptr)x86Ptr[0] );
 	s_pCurBlock->startpc = startpc;
 
 	branch = 0;
@@ -1906,7 +1904,7 @@ StartRecomp:
 			{
 				//MOV32ItoR(EAX,*pageVer);
 				//CMP32MtoR(EAX,(uptr)pageVer);
-				//JNE32(((u32)dyna_block_discard_recmem)- ( (u32)x86Ptr + 6 ));
+				//JNE32(((u32)dyna_block_discard_recmem)- ( (u32)x86Ptr[0] + 6 ));
 
 				mmap_MarkCountedRamPage(PSM(inpage_ptr),inpage_ptr&~0xFFF);
 			}
@@ -1918,7 +1916,7 @@ StartRecomp:
 				{
 					// was dyna_block_discard_recmem.  See note in recResetEE for details.
 					CMP32ItoM((uptr)PSM(lpc),*(u32*)PSM(lpc));
-					JNE32(((u32)&dyna_block_discard)- ( (u32)x86Ptr + 6 ));
+					JNE32(((u32)&dyna_block_discard)- ( (u32)x86Ptr[0] + 6 ));
 
 					stg-=4;
 					lpc+=4;
@@ -1997,7 +1995,7 @@ StartRecomp:
 			assert( pc == s_nEndBlock );
 			iFlushCall(FLUSH_EVERYTHING);
 			MOV32ItoM((uptr)&cpuRegs.pc, pc);
-			JMP32((uptr)pblock->GetFnptr() - ((uptr)x86Ptr + 5));
+			JMP32((uptr)pblock->GetFnptr() - ((uptr)x86Ptr[0] + 5));
 			branch = 3;
 		}
 		else if( !branch ) {
@@ -2010,12 +2008,12 @@ StartRecomp:
 		}
 	}
 
-	assert( x86Ptr >= (u8*)s_pCurBlock->GetFnptr() + EE_MIN_BLOCK_BYTES );
-	assert( x86Ptr < recMem+REC_CACHEMEM );
+	assert( x86Ptr[0] >= (u8*)s_pCurBlock->GetFnptr() + EE_MIN_BLOCK_BYTES );
+	assert( x86Ptr[0] < recMem+REC_CACHEMEM );
 	assert( recStackPtr < recStack+RECSTACK_SIZE );
 	assert( x86FpuState == 0 );
 
-	recPtr = x86Ptr;
+	recPtr = x86Ptr[0];
 
 	assert( (g_cpuHasConstReg&g_cpuFlushedConstReg) == g_cpuHasConstReg );
 

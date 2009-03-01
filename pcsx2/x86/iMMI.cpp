@@ -1976,14 +1976,14 @@ CPU_SSE_XMMCACHE_END
 // Both Macros are 16 bytes so we can use a shift instead of a Mul instruction
 #define QFSRVhelper0() {  \
 	ajmp[0] = JMP32(0);  \
-	x86Ptr += 11;  \
+	x86Ptr[0] += 11;  \
 }
 
 #define QFSRVhelper(shift1, shift2) {  \
 	SSE2_PSRLDQ_I8_to_XMM(EEREC_D, shift1);  \
 	SSE2_PSLLDQ_I8_to_XMM(t0reg, shift2);  \
 	ajmp[shift1] = JMP32(0);  \
-	x86Ptr += 1;  \
+	x86Ptr[0] += 1;  \
 }
 
 void recQFSRV()
@@ -2003,7 +2003,7 @@ void recQFSRV()
 		MOV32MtoR(EAX, (uptr)&cpuRegs.sa);
 		SHL32ItoR(EAX, 1); // Multiply SA bytes by 16 bytes (the amount of bytes in QFSRVhelper() macros)
 		AND32I8toR(EAX, 0xf0); // This can possibly be removed but keeping it incase theres garbage in SA (cottonvibes)
-		ADD32ItoEAX((uptr)x86Ptr + 7); // ADD32 = 5 bytes, JMPR = 2 bytes
+		ADD32ItoEAX((uptr)x86Ptr[0] + 7); // ADD32 = 5 bytes, JMPR = 2 bytes
 		JMPR(EAX); // Jumps to a QFSRVhelper() case below (a total of 16 different cases)
 	
 		// Case 0:

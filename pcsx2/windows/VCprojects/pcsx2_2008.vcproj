@@ -2854,7 +2854,11 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\x86\ix86\ix86_3dnow.cpp"
+				RelativePath="..\..\x86\ix86\ix86.inl"
+				>
+			</File>
+			<File
+				RelativePath="..\..\x86\ix86\ix86_3dnow.inl"
 				>
 				<FileConfiguration
 					Name="Devel vm|Win32"
@@ -2886,7 +2890,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\x86\ix86\ix86_fpu.cpp"
+				RelativePath="..\..\x86\ix86\ix86_fpu.inl"
 				>
 				<FileConfiguration
 					Name="Debug|Win32"
@@ -2922,7 +2926,11 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\..\x86\ix86\ix86_mmx.cpp"
+				RelativePath="..\..\x86\ix86\ix86_macros.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\x86\ix86\ix86_mmx.inl"
 				>
 				<FileConfiguration
 					Name="Debug|Win32"
@@ -2958,7 +2966,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\..\x86\ix86\ix86_sse.cpp"
+				RelativePath="..\..\x86\ix86\ix86_sse.inl"
 				>
 				<FileConfiguration
 					Name="Debug|Win32"
