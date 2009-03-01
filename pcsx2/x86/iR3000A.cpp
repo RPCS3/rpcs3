@@ -194,7 +194,7 @@ static void iIopDumpBlock( int startpc, u8 * ptr )
 	system( command );
     sprintf(command, "mv tempdump %s", filename);
     system(command);
-    f = fopen( filename, "a+" );
+    f = fopen( filename.c_str(), "a+" );
 #endif
 }
 #endif

@@ -517,7 +517,8 @@ void SuperVUDumpBlock(list<VuBaseBlock*>& blocks, int vuindex)
 	u32 i;
 
 	Path::CreateDirectory( "dumps" );
-	ssprintf( filename, "dumps\\svu%cdump%.4X.txt", s_vu?'0':'1', s_pFnHeader->startpc );
+	ssprintf( filename, "svu%cdump%.4X.txt", s_vu?'0':'1', s_pFnHeader->startpc );
+	filename = Path::Combine( "dumps", filename );
 
 	//SysPrintf( "dump1 %x => %s\n", s_pFnHeader->startpc, filename );
 

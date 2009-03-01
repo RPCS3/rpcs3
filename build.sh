@@ -9,10 +9,10 @@
 #export PCSX2OPTIONS="--enable-sse3 --enable-sse4 --prefix `pwd`"
 
 #Optimized, but a devbuild
-#export PCSX2OPTIONS="--enable-sse3 --enable-sse4 --enable-devbuild --prefix `pwd`"
+export PCSX2OPTIONS="--enable-sse3 --enable-sse4 --enable-devbuild --prefix `pwd`"
 
 #Debug / Devbuild version
-export PCSX2OPTIONS="--enable-debug --enable-devbuild --enable-sse3 --prefix `pwd`"
+#export PCSX2OPTIONS="--enable-debug --enable-devbuild --enable-sse3 --prefix `pwd`"
 
 #ZeroGS Normal mode
 export ZEROGSOPTIONS="--enable-sse2"

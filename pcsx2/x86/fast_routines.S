@@ -15,12 +15,21 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
+ 
+
+#define TINY_BLOCK_COPY 64  
+#define IN_CACHE_COPY 2 * 1024 
+#define UNCACHED_COPY 4 * 1024 /
+#define BLOCK_PREFETCH_COPY  infinity // no limit for movq/movntq w/block prefetch 
+#define CACHEBLOCK 80h 
 
 // Fast assembly routines for x86-64
 // zerofrog(@gmail.com)
+// and added to by arcum42@gmail.com
 .intel_syntax
 .extern g_EEFreezeRegs
 .extern FreezeMMXRegs_
+.extern _mmx_backup
 
 // mmx memcmp implementation, size has to be a multiple of 8
 // returns 0 is equal, nonzero value if not equal
@@ -208,9 +217,7 @@ memcmp_Done:
 
 memcmp_End:
 		emms
-#ifndef __x86_64__
 		pop %esi
-#endif
 		ret
         
 // memxor_mmx
@@ -329,3 +336,192 @@ memxor_End:
 	emms
 	pop %esi
 	ret
+
+// void __fastcall memcpy_amd_(void *dest, const void *src, size_t n)
+.globl memcpy_amd_
+memcpy_amd_:
+	push    %edi  
+	push    %esi  
+
+	mov		%edi, %ecx		// destination
+	mov		%esi, %edx		// source
+	mov		%ecx, [%esp+12]	// number of bytes to copy
+	mov		%eax, %ecx		// keep a copy of count
+
+	cld
+	cmp		%eax, TINY_BLOCK_COPY
+	jb		$memcpy_ic_3	// tiny? skip mmx copy
+
+	cmp		%eax, 32*1024		// don't align between 32k-64k because
+	jbe		$memcpy_do_align //  it appears to be slower
+	cmp		%eax, 64*1024
+	jbe		$memcpy_align_done
+$memcpy_do_align:
+	mov		%eax, 8			// a trick that's faster than rep movsb...
+	sub		%eax, %edi		// align destination to qword
+	and		%eax, 0x111b		// get the low bits
+	sub		%ecx, %eax		// update copy count
+	neg		%eax				// set up to jump into the array
+	add		%eax, offset $memcpy_align_done
+	jmp		%eax				// jump to array of movsb's
+
+.align 4
+	movsb
+	movsb
+	movsb
+	movsb
+	movsb
+	movsb
+	movsb
+	movsb
+
+$memcpy_align_done:			// destination is dword aligned
+	mov		%eax, %ecx		// number of bytes left to copy
+	shr		%eax, 6			// get 64-byte block count
+	jz		$memcpy_ic_2	// finish the last few bytes
+
+	cmp		%eax, IN_CACHE_COPY/64	// too big 4 cache? use uncached copy
+	jae		$memcpy_uc_test
+
+	movq	[_mmx_backup+0x00],%mm0
+	movq	[_mmx_backup+0x08],%mm1
+	movq	[_mmx_backup+0x10],%mm2
+	movq	[_mmx_backup+0x18],%mm3
+
+// This is small block copy that uses the MMX registers to copy 8 bytes
+// at a time.  It uses the "unrolled loop" optimization, and also uses
+// the software prefetch instruction to get the data into the cache.
+.align 16
+$memcpy_ic_1:			// 64-byte block copies, in-cache copy
+
+	prefetchnta [%esi + (200*64/34+192)]		// start reading ahead
+
+	movq	%mm0, [%esi+0]	// read 64 bits
+	movq	%mm1, [%esi+8]
+	movq	[%edi+0], %mm0	//write 64 bits
+	movq	[%edi+8], %mm1	//    note:  the normal movq writes the
+	movq	%mm2, [%esi+16]	//    data to cache; a cache line will be
+	movq	%mm3, [%esi+24]	//    allocated as needed, to store the data
+	movq	[%edi+16], %mm2
+	movq	[%edi+24], %mm3
+	movq	%mm0, [%esi+32]
+	movq	%mm1, [%esi+40]
+	movq	[%edi+32], %mm0
+	movq	[%edi+40], %mm1
+	movq	%mm2, [%esi+48]
+	movq	%mm3, [%esi+56]
+	movq	[%edi+48], %mm2
+	movq	[%edi+56], %mm3
+
+	add		%esi, 64			// update source pointer
+	add		%edi, 64			// update destination pointer
+	dec		%eax				// count down
+	jnz		$memcpy_ic_1	// last 64-byte block?
+
+	movq	%mm0,[_mmx_backup+0x00]
+	movq	%mm1,[_mmx_backup+0x08]
+	movq	%mm2,[_mmx_backup+0x10]
+	movq	%mm3,[_mmx_backup+0x18]
+
+$memcpy_ic_2:
+	mov		%eax, %ecx		// has valid low 6 bits of the byte count
+$memcpy_ic_3:
+	shr		%eax, 2			// dword count
+	and		%eax, 0x1111b		// only look at the "remainder" bits
+	neg		%eax				// set up to jump into the array
+	add		%eax, offset $memcpy_last_few
+	jmp		%eax				// jump to array of movsd's
+
+$memcpy_uc_test:
+//	cmp		%ecx, UNCACHED_COPY/64	// big enough? use block prefetch copy
+//	jae		$memcpy_bp_1
+//$memcpy_64_test:
+	or		%eax, %eax		// tail end of block prefetch will jump here
+	jz		$memcpy_ic_2	// no more 64-byte blocks left
+
+// For larger blocks, which will spill beyond the cache, it's faster to
+// use the Streaming Store instruction MOVNTQ.   This write instruction
+// bypasses the cache and writes straight to main memory.  This code also
+// uses the software prefetch instruction to pre-read the data.
+
+	movq	[_mmx_backup+0x00],%mm0
+	movq	[_mmx_backup+0x08],%mm1
+	movq	[_mmx_backup+0x10],%mm2
+
+.align 16
+$memcpy_uc_1:				// 64-byte blocks, uncached copy
+
+	prefetchnta [%esi + (200*64/34+192)]		// start reading ahead
+
+	movq	%mm0,[%esi+0]		// read 64 bits
+	add		%edi,64			// update destination pointer
+	movq	%mm1,[%esi+8]
+	add		%esi,64			// update source pointer
+	movq	%mm2,[%esi-48]
+	movntq	[%edi-64], %mm0	// write 64 bits, bypassing the cache
+	movq	%mm0,[%esi-40]	//    note: movntq also prevents the CPU
+	movntq	[%edi-56], %mm1	//    from READING the destination address
+	movq	%mm1,[%esi-32]	//    into the cache, only to be over-written
+	movntq	[%edi-48], %mm2	//    so that also helps performance
+	movq	%mm2,[%esi-24]
+	movntq	[%edi-40], %mm0
+	movq	%mm0,[%esi-16]
+	movntq	[%edi-32], %mm1
+	movq	%mm1,[%esi-8]
+	movntq	[%edi-24], %mm2
+	movntq	[%edi-16], %mm0
+	dec		%eax
+	movntq	[%edi-8], %mm1
+	jnz		$memcpy_uc_1	// last 64-byte block?
+
+	movq	%mm0,[_mmx_backup+0x00]
+	movq	%mm1,[_mmx_backup+0x08]
+	movq	%mm2,[_mmx_backup+0x10]
+
+	jmp		$memcpy_ic_2		// almost done  (not needed because large copy below was removed)
+
+// For the largest size blocks, a special technique called Block Prefetch
+// can be used to accelerate the read operations.   Block Prefetch reads
+// one address per cache line, for a series of cache lines, in a short loop.
+// This is faster than using software prefetch.  The technique is great for
+// getting maximum read bandwidth, especially in DDR memory systems.
+
+// Note: Pcsx2 rarely invokes large copies, so this mode has been disabled to
+// help keep the code cache footprint of memcpy_fast to a minimum.
+// <Code removed here>
+
+// The smallest copy uses the X86 "movsd" instruction, in an optimized
+// form which is an "unrolled loop".   Then it handles the last few bytes.
+.align 4
+	movsd
+	movsd			// perform last 1-15 dword copies
+	movsd
+	movsd
+	movsd
+	movsd
+	movsd
+	movsd
+	movsd
+	movsd			// perform last 1-7 dword copies
+	movsd
+	movsd
+	movsd
+	movsd
+	movsd
+	movsd
+
+$memcpy_last_few:		// dword aligned from before movsd's
+	mov		%eax, %ecx	// has valid low 2 bits of the byte count
+	and		%eax, 0x11b	// the last few cows must come home
+	jz		$memcpy_final	// no more, let's leave
+	rep		movsb		// the last 1, 2, or 3 bytes
+
+$memcpy_final: 
+	emms				// clean up the MMX state
+	sfence				// flush the write buffer
+	//mov		%eax, [dest]	// ret value = destination pointer
+
+	pop    %esi  
+	pop    %edi
+
+	ret 4

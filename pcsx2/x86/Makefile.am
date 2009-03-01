@@ -11,7 +11,8 @@ ix86-32/iR5900Templates.cpp ix86-32/recVTLB.cpp
 libx86recomp_a_SOURCES = \
 BaseblockEx.cpp iCOP0.cpp iCOP2.cpp iCore.cpp iFPU.cpp iGS.cpp iHw.cpp iIPU.cpp iMMI.cpp iPsxHw.cpp iPsxMem.cpp \
 iR3000A.cpp iR3000Atables.cpp iR5900CoissuedLoadStore.cpp iR5900Misc.cpp iVU0micro.cpp iVU1micro.cpp iVUmicro.cpp \
-iVUmicroLower.cpp iVUmicroUpper.cpp iVUzerorec.cpp iVif.cpp ir5900tables.cpp  fast_routines.S aR3000A.S aVUzerorec.S aVif.S $(archfiles)
+iVUmicroLower.cpp iVUmicroUpper.cpp iVUzerorec.cpp iVif.cpp ir5900tables.cpp  fast_routines.S aR3000A.S aVUzerorec.S \
+aVif.S $(archfiles)
 
 libx86recomp_a_SOURCES += \
 BaseblockEx.h iCOP0.h iCore.h iFPU.h iMMI.h iR3000A.h iR5900.h iR5900Arit.h iR5900AritImm.h iR5900Branch.h iR5900Jump.h \

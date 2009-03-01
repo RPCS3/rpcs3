@@ -40,6 +40,10 @@ void psxRecRecompile(u32 startpc);
 
 // Linux specific
 #ifdef __LINUX__
+
+PCSX2_ALIGNED16( u8 _xmm_backup[16*2] );
+PCSX2_ALIGNED16( u8 _mmx_backup[8*4] );
+
 extern "C" 
 {
 
@@ -57,10 +61,6 @@ void psxDispatcherReg();
 void Dispatcher();
 void DispatcherClear();
 void DispatcherReg();
-
-// fast_routines.S
-u8 memcmp_mmx(const void* src1, const void* src2, int cmpsize);
-void memxor_mmx(void* dst, const void* src1, int cmpsize);
 }
 #endif
 #endif
