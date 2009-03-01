@@ -68,6 +68,8 @@ void SetCPUState(u32 sseMXCSR, u32 sseVUMXCSR)
 
 /////////////////////////////////////////////////////////////////////
 //
+extern "C"
+{
 __forceinline void FreezeMMXRegs_(int save)
 {
 	assert( g_EEFreezeRegs );
@@ -223,4 +225,5 @@ __forceinline void FreezeXMMRegs_(int save)
 
 #endif // _MSC_VER
 	}
+}
 }

@@ -52,8 +52,9 @@ void _memset16_unaligned( void* dest, u16 data, size_t size );
 
 #endif
 
-
+#ifndef __LINUX__
 extern u8 memcmp_mmx(const void* src1, const void* src2, int cmpsize);
 extern void memxor_mmx(void* dst, const void* src1, int cmpsize);
+#endif
 
 #endif

@@ -37,6 +37,7 @@
 #include "iCore.h"
 
 #include "SamplProf.h"
+#include "NakedAsm.h"
 
 extern u32 g_psxNextBranchCycle;
 extern void psxBREAK();
@@ -44,15 +45,6 @@ extern void zeroEx();
 
 u32 g_psxMaxRecMem = 0;
 u32 s_psxrecblocks[] = {0};
-
-//Using assembly code from an external file.
-#ifdef __LINUX__
-extern "C" {
-#endif
-void psxRecRecompile(u32 startpc);
-#ifdef __LINUX__
-}
-#endif
 
 uptr *psxRecLUT;
 
@@ -814,19 +806,6 @@ __declspec(naked) void psxDispatcherReg()
 		jmp eax
 	}
 }
-
-#else // _MSC_VER
-// Linux uses an assembly version of these routines.
-#ifdef __LINUX__
-extern "C" {
-#endif
-void psxDispatcher();
-void psxDispatcherClear();
-void psxDispatcherReg();
-#ifdef __LINUX__
-}
-#endif
-
 #endif // _MSC_VER
 
 static void recExecute()

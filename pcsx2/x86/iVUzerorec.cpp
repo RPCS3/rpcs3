@@ -40,6 +40,7 @@
 
 #include "iVUzerorec.h"
 #include "SamplProf.h"
+#include "NakedAsm.h"
 
 using namespace std;
 
@@ -297,15 +298,6 @@ static u32 s_vu = 0;
 static u32 s_UnconditionalDelay = 0; // 1 if there are two sequential branches and the last is unconditional
 static u32 g_nLastBlockExecuted = 0;
 
-// Global functions
-#ifdef __LINUX__
-extern "C" {
-#endif
-void* SuperVUGetProgram(u32 startpc, int vuindex);
-void SuperVUCleanupProgram(u32 startpc, int vuindex);
-#ifdef __LINUX__
-}
-#endif
 static VuFunctionHeader* SuperVURecompileProgram(u32 startpc, int vuindex);
 static VuBaseBlock* SuperVUBuildBlocks(VuBaseBlock* parent, u32 startpc, const VUPIPELINES& pipes);
 static void SuperVUInitLiveness(VuBaseBlock* pblock);
@@ -525,9 +517,7 @@ void SuperVUDumpBlock(list<VuBaseBlock*>& blocks, int vuindex)
 	u32 i;
 
 	Path::CreateDirectory( "dumps" );
-	ssprintf( filename, "svu%cdump%.4X.txt", s_vu?'0':'1', s_pFnHeader->startpc );
-	
-	filename = Path::Combine( "dumps", filename );
+	ssprintf( filename, "dumps\\svu%cdump%.4X.txt", s_vu?'0':'1', s_pFnHeader->startpc );
 
 	//SysPrintf( "dump1 %x => %s\n", s_pFnHeader->startpc, filename );
 
@@ -718,11 +708,12 @@ bool VuFunctionHeader::IsSame(void* pmem)
 		//if( checksum[0] != it->checksum[0] || checksum[1] != it->checksum[1] )
 		//	return false;
         // memcmp_mmx doesn't work on x86-64 machines
-#if defined(_MSC_VER)
+	// and neither does pcsx2. 
+//#if defined(_MSC_VER)
 	if( memcmp_mmx((u8*)pmem+it->start, it->pmem, it->size) )
-#else
-        if( memcmp((u8*)pmem+it->start, it->pmem, it->size) )
-#endif
+//#else
+//         if( memcmp((u8*)pmem+it->start, it->pmem, it->size) )
+//#endif
 			return false;
 	}
 #endif
@@ -2512,13 +2503,6 @@ __declspec(naked) static void svudispfn()
 		mov s_saveebp, ebp
 	}
 #else
-#ifdef __LINUX__
-extern "C" {
-#endif
-void svudispfn();
-#ifdef __LINUX__
-}
-#endif
 
 void svudispfntemp()
 {

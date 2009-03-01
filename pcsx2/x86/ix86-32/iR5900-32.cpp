@@ -44,21 +44,13 @@
 #include "SamplProf.h"
 #include "Paths.h"
 
+#include "NakedAsm.h"
+
 using namespace R5900;
 
 // used to disable register freezing during cpuBranchTests (registers
 // are safe then since they've been completely flushed)
 bool g_EEFreezeRegs = false;
-
-// I can't find where the Linux recRecompile is defined.  Is it used anymore?
-// If so, namespacing might break it. :/  (air)
-#ifdef __LINUX__
-extern "C" {
-#endif
-void recRecompile( u32 startpc );
-#ifdef __LINUX__
-}
-#endif
 
 u32 maxrecmem = 0;
 uptr *recLUT = NULL;
@@ -811,12 +803,7 @@ static void recExecuteBlock()
 }
 
 #else // _MSC_VER
-// Linux uses an assembly version of these routines.
-extern "C" {
-extern void Dispatcher();
-extern void DispatcherClear();
-extern void DispatcherReg();
-}
+
 __forceinline void recExecute()
 {
 	// Optimization note : Compared pushad against manually pushing the regs one-by-one.
