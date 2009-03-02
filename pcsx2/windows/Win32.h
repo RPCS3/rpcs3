@@ -29,6 +29,7 @@
 
 #include "Misc.h"
 #include "resource.h"
+#include "WinDebugResource.h"
 
 #define COMPILEDATE         __DATE__
 

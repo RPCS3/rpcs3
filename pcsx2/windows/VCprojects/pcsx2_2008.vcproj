@@ -824,6 +824,10 @@
 					>
 				</File>
 				<File
+					RelativePath="..\debugger.rc"
+					>
+				</File>
+				<File
 					RelativePath="..\pcsx2.rc"
 					>
 				</File>
@@ -3092,19 +3096,15 @@
 			>
 		</File>
 		<File
-			RelativePath=".\debugger.rc"
-			>
-		</File>
-		<File
-			RelativePath=".\resource1.h"
-			>
-		</File>
-		<File
 			RelativePath="..\..\Stats.cpp"
 			>
 		</File>
 		<File
 			RelativePath="..\..\Stats.h"
+			>
+		</File>
+		<File
+			RelativePath="..\WinDebugResource.h"
 			>
 		</File>
 	</Files>
