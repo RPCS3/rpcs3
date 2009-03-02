@@ -26,52 +26,49 @@
 #error Dependency fail: Please define _EmitterId_ and include ix86.h first.
 #endif
 
+// Added AlwaysUseMovaps check to the relevant functions here, which helps reduce the
+// overhead of dynarec instructions that use these.
+
 static __forceinline void SSEX_MOVDQA_M128_to_XMM( x86SSERegType to, uptr from )
 {
-	if( g_xmmtypes[to] == XMMT_INT ) SSE2_MOVDQA_M128_to_XMM(to, from);
+	if( !AlwaysUseMovaps && g_xmmtypes[to] == XMMT_INT ) SSE2_MOVDQA_M128_to_XMM(to, from);
 	else SSE_MOVAPS_M128_to_XMM(to, from);
 }
 
 static __forceinline void SSEX_MOVDQA_XMM_to_M128( uptr to, x86SSERegType from )
 {
-	if( g_xmmtypes[from] == XMMT_INT ) SSE2_MOVDQA_XMM_to_M128(to, from);
+	if( !AlwaysUseMovaps && g_xmmtypes[from] == XMMT_INT ) SSE2_MOVDQA_XMM_to_M128(to, from);
 	else SSE_MOVAPS_XMM_to_M128(to, from);
 }
 
 static __forceinline void SSEX_MOVDQA_XMM_to_XMM( x86SSERegType to, x86SSERegType from )
 {
-	if( g_xmmtypes[from] == XMMT_INT ) SSE2_MOVDQA_XMM_to_XMM(to, from);
+	if( !AlwaysUseMovaps && g_xmmtypes[from] == XMMT_INT ) SSE2_MOVDQA_XMM_to_XMM(to, from);
 	else SSE_MOVAPS_XMM_to_XMM(to, from);
 }
 
 static __forceinline void SSEX_MOVDQARmtoROffset( x86SSERegType to, x86IntRegType from, int offset )
 {
-	if( g_xmmtypes[to] == XMMT_INT ) SSE2_MOVDQARmtoROffset(to, from, offset);
+	if( !AlwaysUseMovaps && g_xmmtypes[to] == XMMT_INT ) SSE2_MOVDQARmtoROffset(to, from, offset);
 	else SSE_MOVAPSRmtoROffset(to, from, offset);
 }
 
 static __forceinline void SSEX_MOVDQARtoRmOffset( x86IntRegType to, x86SSERegType from, int offset )
 {
-	if( g_xmmtypes[from] == XMMT_INT ) SSE2_MOVDQARtoRmOffset(to, from, offset);
+	if( !AlwaysUseMovaps && g_xmmtypes[from] == XMMT_INT ) SSE2_MOVDQARtoRmOffset(to, from, offset);
 	else SSE_MOVAPSRtoRmOffset(to, from, offset);
 }
 
 static __forceinline void SSEX_MOVDQU_M128_to_XMM( x86SSERegType to, uptr from )
 {
-	if( g_xmmtypes[to] == XMMT_INT ) SSE2_MOVDQU_M128_to_XMM(to, from);
+	if( !AlwaysUseMovaps && g_xmmtypes[to] == XMMT_INT ) SSE2_MOVDQU_M128_to_XMM(to, from);
 	else SSE_MOVAPS_M128_to_XMM(to, from);
 }
 
 static __forceinline void SSEX_MOVDQU_XMM_to_M128( uptr to, x86SSERegType from )
 {
-	if( g_xmmtypes[from] == XMMT_INT ) SSE2_MOVDQU_XMM_to_M128(to, from);
+	if( !AlwaysUseMovaps && g_xmmtypes[from] == XMMT_INT ) SSE2_MOVDQU_XMM_to_M128(to, from);
 	else SSE_MOVAPS_XMM_to_M128(to, from);
-}
-
-static __forceinline void SSEX_MOVDQU_XMM_to_XMM( x86SSERegType to, x86SSERegType from )
-{
-	if( g_xmmtypes[from] == XMMT_INT ) SSE2_MOVDQU_XMM_to_XMM(to, from);
-	else SSE_MOVAPS_XMM_to_XMM(to, from);
 }
 
 static __forceinline void SSEX_MOVD_M32_to_XMM( x86SSERegType to, uptr from )

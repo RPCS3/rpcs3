@@ -22,6 +22,14 @@
 // SSE instructions
 //------------------------------------------------------------------
 
+// This tells the recompiler's emitter to always use movaps instead of movdqa.  Both instructions
+// do the exact same thing, but movaps is 1 byte shorter, and thus results in a cleaner L1 cache
+// and some marginal speed gains as a result.  (it's possible someday in the future the per-
+// formance of the two instructions could change, so this constant is provided to restore MOVDQA
+// use easily at a later time, if needed).
+
+static const bool AlwaysUseMovaps = true;
+
 #define SSEMtoR( code, overb ) \
 	assert( to < XMMREGS ) ; \
 	RexR(0, to);             \
@@ -203,19 +211,29 @@ emitterT void eSSE_MOVAPSRtoRmOffset( x86IntRegType to, x86SSERegType from, int 
 // movdqa [r32+offset] to r32
 emitterT void eSSE2_MOVDQARmtoROffset( x86SSERegType to, x86IntRegType from, int offset )
 {
-	write8<I>(0x66);
-    RexRB(0, to, from);
-	write16<I>( 0x6f0f );
-    WriteRmOffsetFrom<I>(to, from, offset);
+	if( AlwaysUseMovaps )
+		eSSE_MOVAPSRmtoROffset<I>( to, from, offset );
+	else
+	{
+		write8<I>(0x66);
+		RexRB(0, to, from);
+		write16<I>( 0x6f0f );
+		WriteRmOffsetFrom<I>(to, from, offset);
+	}
 }
 
 // movdqa r32 to [r32+offset]
 emitterT void eSSE2_MOVDQARtoRmOffset( x86IntRegType to, x86SSERegType from, int offset ) 
 {
-	write8<I>(0x66);
-    RexRB(0, from, to);
-	write16<I>( 0x7f0f );
-    WriteRmOffsetFrom<I>(from, to, offset);
+	if( AlwaysUseMovaps )
+		eSSE_MOVAPSRtoRmOffset<I>( to, from, offset );
+	else
+	{
+		write8<I>(0x66);
+		RexRB(0, from, to);
+		write16<I>( 0x7f0f );
+		WriteRmOffsetFrom<I>(from, to, offset);
+	}
 }
 
 // movups [r32+offset] to r32
@@ -833,13 +851,30 @@ emitterT void eSSE2_PXOR_XMM_to_XMM( x86SSERegType to, x86SSERegType from )		{ S
 emitterT void eSSE2_PXOR_M128_to_XMM( x86SSERegType to, uptr from )				{ SSEMtoR66( 0xEF0F ) }; 
 ///////////////////////////////////////////////////////////////////////////////////////
 
-emitterT void eSSE2_MOVDQA_M128_to_XMM(x86SSERegType to, uptr from)				{ SSEMtoR66(0x6F0F); }
-emitterT void eSSE2_MOVDQA_XMM_to_M128( uptr to, x86SSERegType from )			{ SSERtoM66(0x7F0F); } 
-emitterT void eSSE2_MOVDQA_XMM_to_XMM( x86SSERegType to, x86SSERegType from)	{ if (to != from) { SSERtoR66(0x6F0F); } }
+emitterT void eSSE2_MOVDQA_M128_to_XMM(x86SSERegType to, uptr from)				{ if( AlwaysUseMovaps ) eSSE_MOVAPS_M128_to_XMM<I>( to, from ); else SSEMtoR66(0x6F0F); }
+emitterT void eSSE2_MOVDQA_XMM_to_M128( uptr to, x86SSERegType from )			{ if( AlwaysUseMovaps ) eSSE_MOVAPS_XMM_to_M128<I>( to, from ); else SSERtoM66(0x7F0F); } 
+emitterT void eSSE2_MOVDQA_XMM_to_XMM( x86SSERegType to, x86SSERegType from)	{ if (to != from) { if( AlwaysUseMovaps ) eSSE_MOVAPS_XMM_to_XMM<I>( to, from ); else SSERtoR66(0x6F0F); } }
 
-emitterT void eSSE2_MOVDQU_M128_to_XMM(x86SSERegType to, uptr from)				{ write8<I>(0xF3); SSEMtoR(0x6F0F, 0); }
-emitterT void eSSE2_MOVDQU_XMM_to_M128( uptr to, x86SSERegType from)			{ write8<I>(0xF3); SSERtoM(0x7F0F, 0); }
-emitterT void eSSE2_MOVDQU_XMM_to_XMM( x86SSERegType to, x86SSERegType from)	{ write8<I>(0xF3); SSERtoR(0x6F0F); }
+emitterT void eSSE2_MOVDQU_M128_to_XMM(x86SSERegType to, uptr from)
+{
+	if( AlwaysUseMovaps )
+		eSSE_MOVUPS_M128_to_XMM<I>( to, from );
+	else
+	{
+		write8<I>(0xF3);
+		SSEMtoR(0x6F0F, 0);
+	}
+}
+emitterT void eSSE2_MOVDQU_XMM_to_M128( uptr to, x86SSERegType from)
+{
+	if( AlwaysUseMovaps )
+		eSSE_MOVUPS_XMM_to_M128<I>( to, from );
+	else
+	{
+		write8<I>(0xF3);
+		SSERtoM(0x7F0F, 0);
+	}
+}
 
 // shift right logical
 
