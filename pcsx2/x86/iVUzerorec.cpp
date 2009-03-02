@@ -3007,9 +3007,29 @@ void VuInstruction::Recompile(list<VuInstruction>::iterator& itinst, u32 vuxyz)
 #endif
 
 		if( type & INST_CLIP_WRITE ) {
-			if( nParentPc < s_pCurBlock->startpc || nParentPc >= (int)pc )
-				// reading from out of this block, so already flushed to mem
-				s_ClipRead = (uptr)&VU->VI[REG_CLIP_FLAG];
+			if( nParentPc < s_pCurBlock->startpc || nParentPc >= (int)pc ) {
+
+				if( pparentinst != NULL ) {
+
+					if( pparentinst->pClipWrite == 0 ) {
+						pparentinst->pClipWrite = (uptr)SuperVUStaticAlloc(4);
+					}
+
+					if( nParentCheckForExecution >= 0 ) {
+						if( s_ClipRead == 0 )
+							s_ClipRead = (uptr)&VU->VI[REG_CLIP_FLAG];
+
+						CMP32ItoM((uptr)&g_nLastBlockExecuted, nParentCheckForExecution);
+						u8* jptr = JNE8(0);
+						MOV32MtoR(EAX, pparentinst->pClipWrite);
+						MOV32ItoM(pparentinst->pClipWrite, 0);
+						MOV32RtoM(s_ClipRead, EAX);
+						x86SetJ8(jptr);
+					}
+					else s_ClipRead = (uptr)&VU->VI[REG_CLIP_FLAG];
+				}
+				else s_ClipRead = (uptr)&VU->VI[REG_CLIP_FLAG];
+			}
 			else {
 				s_ClipRead = s_pCurBlock->GetInstIterAtPc(nParentPc)->pClipWrite;
 				if (s_ClipRead == 0) SysPrintf("super ClipRead allocation error! \n");
