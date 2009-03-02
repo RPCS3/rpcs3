@@ -115,7 +115,7 @@ void dummy7()
 #define Cread(a,b,c,d) if(fread(a,b,c,d)<b) break;
 
 #ifdef _MSC_VER
-void CALLBACK s2r_replay(HWND hwnd, HINSTANCE hinst, LPSTR filename, int nCmdShow)
+EXPORT_C_(void) s2r_replay(HWND hwnd, HINSTANCE hinst, LPSTR filename, int nCmdShow)
 {
 	// load file
 	FILE *file=fopen(filename,"rb");

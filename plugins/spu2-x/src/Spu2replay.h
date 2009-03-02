@@ -29,7 +29,7 @@ void s2r_close();
 
 #ifdef _MSC_VER
 // s2r playing
-void CALLBACK s2r_replay(HWND hwnd, HINSTANCE hinst, LPSTR filename, int nCmdShow);
+EXPORT_C_(void) s2r_replay(HWND hwnd, HINSTANCE hinst, LPSTR filename, int nCmdShow);
 #else
 #define s2r_replay 0&&
 #endif

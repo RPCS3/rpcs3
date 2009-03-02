@@ -895,36 +895,36 @@ void ResetMenuSlots() {
 
 
 #define _ADDSUBMENU(menu, menun, string) \
-{	submenu[menun] = CreatePopupMenu(); \
-	AppendMenu(menu, MF_STRING | MF_POPUP, (UINT)submenu[menun], string); }
+	submenu[menun] = CreatePopupMenu(), \
+	AppendMenu(menu, MF_STRING | MF_POPUP, (UINT)submenu[menun], string)
 
 #define ADDSUBMENU(menun, string) \
 	_ADDSUBMENU(gApp.hMenu, menun, string);
 
 #define ADDSUBMENUS(submn, menun, string) \
-{	submenu[menun] = CreatePopupMenu(); \
-	InsertMenu(submenu[submn], 0, MF_BYPOSITION | MF_STRING | MF_POPUP, (UINT)submenu[menun], string); }
+	submenu[menun] = CreatePopupMenu(), \
+	InsertMenu(submenu[submn], 0, MF_BYPOSITION | MF_STRING | MF_POPUP, (UINT)submenu[menun], string)
 
 #define ADDMENUITEM(menun, string, id) \
-{	item.fType = MFT_STRING; \
-	item.fMask = MIIM_STATE | MIIM_TYPE | MIIM_ID; \
-	item.fState = MFS_ENABLED; \
-	item.wID = id; \
-	sprintf(buf, string); \
-	InsertMenuItem(submenu[menun], 0, TRUE, &item); }
+	item.fType = MFT_STRING, \
+	item.fMask = MIIM_STATE | MIIM_TYPE | MIIM_ID, \
+	item.fState = MFS_ENABLED, \
+	item.wID = id, \
+	sprintf(buf, string), \
+	InsertMenuItem(submenu[menun], 0, TRUE, &item)
 
 #define ADDMENUITEMC(menun, string, id) \
-{	item.fType = MFT_STRING; \
-	item.fMask = MIIM_STATE | MIIM_TYPE | MIIM_ID; \
-	item.fState = MFS_ENABLED | MFS_CHECKED; \
-	item.wID = id; \
-	sprintf(buf, string); \
-	InsertMenuItem(submenu[menun], 0, TRUE, &item); }
+	item.fType = MFT_STRING, \
+	item.fMask = MIIM_STATE | MIIM_TYPE | MIIM_ID, \
+	item.fState = MFS_ENABLED | MFS_CHECKED, \
+	item.wID = id, \
+	sprintf(buf, string), \
+	InsertMenuItem(submenu[menun], 0, TRUE, &item)
 
 #define ADDSEPARATOR(menun) \
-{	item.fMask = MIIM_TYPE; \
-	item.fType = MFT_SEPARATOR; \
-	InsertMenuItem(submenu[menun], 0, TRUE, &item); }
+	item.fMask = MIIM_TYPE, \
+	item.fType = MFT_SEPARATOR, \
+	InsertMenuItem(submenu[menun], 0, TRUE, &item)
 
 void CreateMainMenu() {
 	MENUITEMINFO item;
@@ -964,10 +964,9 @@ void CreateMainMenu() {
 
     ADDSUBMENU(0, _("&Run"));
 
-    ADDSUBMENUS(0, 1, _("&Process Priority"));
-	if( IsDevBuild ) {
+	if( IsDevBuild )
 		ADDMENUITEM(0,_("&Arguments"), ID_RUN_CMDLINE);
-	}
+
 	ADDMENUITEM(0,_("Re&set"), ID_RUN_RESET);
 	ADDMENUITEM(0,_("E&xecute"), ID_RUN_EXECUTE);
 
@@ -991,12 +990,12 @@ void CreateMainMenu() {
 
     ADDSUBMENU(0,_("&Language"));
 
-	for (i=langsMax-1; i>=0; i--) {
-		if (!strcmp(Config.Lang, langs[i].lang)) {
+	for (i=langsMax-1; i>=0; i--)
+	{
+		if (!strcmp(Config.Lang, langs[i].lang))
 			ADDMENUITEMC(0,ParseLang(langs[i].lang), ID_LANGS + i);
-		} else {
+		else
 			ADDMENUITEM(0,ParseLang(langs[i].lang), ID_LANGS + i);
-		}
 	}
 
 #ifdef PCSX2_DEVBUILD

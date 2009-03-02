@@ -263,8 +263,10 @@ void DoDMAWrite(int core,u16 *pMem,u32 size)
 		//const u32 endpt2 = (buff2end + roundUp) / indexer_scalar;
 		//memset( pcm_cache_flags, 0, endpt2 );
 
-		memcpy( GetMemPtr( 0 ), &pMem[buff1size], buff2end*2 );
+		// Emulation Grayarea: Should addresses wrap around to zero, or wrap around to
+		// 0x2800?  Hard to know for usre (almost no games depend on this)
 
+		memcpy( GetMemPtr( 0 ), &pMem[buff1size], buff2end*2 );
 		Cores[core].TDA = (buff2end+1) & 0xfffff;
 
 		if(Cores[core].IRQEnable)
@@ -274,7 +276,7 @@ void DoDMAWrite(int core,u16 *pMem,u32 size)
 			// Since the buffer wraps, the conditional might seem odd, but it works.
 
 			if( ( Cores[core].IRQA >= Cores[core].TSA ) ||
-				( Cores[core].IRQA <= Cores[core].TDA ) )
+				( Cores[core].IRQA < Cores[core].TDA ) )
 			{
 				Spdif.Info = 4 << core;
 				SetIrqCall();
@@ -291,10 +293,12 @@ void DoDMAWrite(int core,u16 *pMem,u32 size)
 		if(Cores[core].IRQEnable)
 		{
 			// Flag interrupt?
-			// If IRQA occurs between start and dest, flag it:
+			// If IRQA occurs between start and dest, flag it.
+			// (start is inclusive, dest exclusive -- fixes DMC1 and hopefully won't break
+			// other games. ;)
 
 			if( ( Cores[core].IRQA >= Cores[core].TSA ) &&
-				( Cores[core].IRQA <= Cores[core].TDA ) )
+				( Cores[core].IRQA < Cores[core].TDA ) )
 			{
 				Spdif.Info = 4 << core;
 				SetIrqCall();
@@ -353,8 +357,6 @@ void SPU2readDMA(int core, u16* pMem, u32 size)
 				}
 			}
 		}
-
-		Cores[core].TDA = buff2end;
 	}
 	else
 	{
@@ -371,14 +373,13 @@ void SPU2readDMA(int core, u16* pMem, u32 size)
 				// If IRQA occurs between start and dest, flag it:
 
 				if( ( Cores[i].IRQA >= Cores[i].TSA ) &&
-					( Cores[i].IRQA <= Cores[i].TDA+0x1f ) )
+					( Cores[i].IRQA < Cores[i].TDA ) )
 				{
 					Spdif.Info=4<<i;
 					SetIrqCall();
 				}
 			}
 		}
-		Cores[core].TDA = buff1end;
 	}
 
 
