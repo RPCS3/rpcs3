@@ -36,11 +36,11 @@
 
 #define MEMADDR(addr, oplen)	(addr)
 
-#define Rex(w,r,x,b) assert(0);
-#define RexR(w, reg) if( w||(reg)>=8 ) assert(0);
-#define RexB(w, base) if( w||(base)>=8 ) assert(0);
-#define RexRB(w, reg, base) if( w||(reg) >= 8 || (base)>=8 ) assert(0);
-#define RexRXB(w, reg, index, base) if( w||(reg) >= 8 || (index) >= 8 || (base) >= 8 ) assert(0);
+#define Rex(w,r,x,b) assert(0)
+#define RexR(w, reg) assert( !(w || (reg)>=8) )
+#define RexB(w, base) assert( !(w || (base)>=8) )
+#define RexRB(w, reg, base) assert( !(w || (reg) >= 8 || (base)>=8) )
+#define RexRXB(w, reg, index, base) assert( !(w || (reg) >= 8 || (index) >= 8 || (base) >= 8) )
 
 //------------------------------------------------------------------
 // write functions

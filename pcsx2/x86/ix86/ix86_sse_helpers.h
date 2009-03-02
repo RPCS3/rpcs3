@@ -62,13 +62,13 @@ static __forceinline void SSEX_MOVDQARtoRmOffset( x86IntRegType to, x86SSERegTyp
 static __forceinline void SSEX_MOVDQU_M128_to_XMM( x86SSERegType to, uptr from )
 {
 	if( !AlwaysUseMovaps && g_xmmtypes[to] == XMMT_INT ) SSE2_MOVDQU_M128_to_XMM(to, from);
-	else SSE_MOVAPS_M128_to_XMM(to, from);
+	else SSE_MOVUPS_M128_to_XMM(to, from);
 }
 
 static __forceinline void SSEX_MOVDQU_XMM_to_M128( uptr to, x86SSERegType from )
 {
 	if( !AlwaysUseMovaps && g_xmmtypes[from] == XMMT_INT ) SSE2_MOVDQU_XMM_to_M128(to, from);
-	else SSE_MOVAPS_XMM_to_M128(to, from);
+	else SSE_MOVUPS_XMM_to_M128(to, from);
 }
 
 static __forceinline void SSEX_MOVD_M32_to_XMM( x86SSERegType to, uptr from )

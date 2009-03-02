@@ -31,82 +31,82 @@
 static const bool AlwaysUseMovaps = true;
 
 #define SSEMtoR( code, overb ) \
-	assert( to < XMMREGS ) ; \
-	RexR(0, to);             \
-	write16<I>( code ); \
-	ModRM<I>( 0, to, DISP32 ); \
-	write32<I>( MEMADDR(from, 4 + overb) ); \
+	assert( to < XMMREGS ), \
+	RexR(0, to),             \
+	write16<I>( code ), \
+	ModRM<I>( 0, to, DISP32 ), \
+	write32<I>( MEMADDR(from, 4 + overb) )
 
 #define SSERtoM( code, overb ) \
-	assert( from < XMMREGS) ; \
-    RexR(0, from);  \
-	write16<I>( code ); \
-	ModRM<I>( 0, from, DISP32 ); \
-	write32<I>( MEMADDR(to, 4 + overb) ); \
+	assert( from < XMMREGS), \
+    RexR(0, from),  \
+	write16<I>( code ), \
+	ModRM<I>( 0, from, DISP32 ), \
+	write32<I>( MEMADDR(to, 4 + overb) )
 
 #define SSE_SS_MtoR( code, overb ) \
-	assert( to < XMMREGS ) ; \
-	write8<I>( 0xf3 ); \
-    RexR(0, to);                      \
-	write16<I>( code ); \
-	ModRM<I>( 0, to, DISP32 ); \
-	write32<I>( MEMADDR(from, 4 + overb) ); \
+	assert( to < XMMREGS ), \
+	write8<I>( 0xf3 ), \
+    RexR(0, to),                      \
+	write16<I>( code ), \
+	ModRM<I>( 0, to, DISP32 ), \
+	write32<I>( MEMADDR(from, 4 + overb) )
 
 #define SSE_SS_RtoM( code, overb ) \
-	assert( from < XMMREGS) ; \
-	write8<I>( 0xf3 ); \
-	RexR(0, from); \
-	write16<I>( code ); \
-	ModRM<I>( 0, from, DISP32 ); \
-	write32<I>( MEMADDR(to, 4 + overb) ); \
+	assert( from < XMMREGS), \
+	write8<I>( 0xf3 ), \
+	RexR(0, from), \
+	write16<I>( code ), \
+	ModRM<I>( 0, from, DISP32 ), \
+	write32<I>( MEMADDR(to, 4 + overb) )
 
 #define SSERtoR( code ) \
-	assert( to < XMMREGS && from < XMMREGS) ; \
-    RexRB(0, to, from);            \
-	write16<I>( code ); \
-	ModRM<I>( 3, to, from );
+	assert( to < XMMREGS && from < XMMREGS), \
+    RexRB(0, to, from),            \
+	write16<I>( code ), \
+	ModRM<I>( 3, to, from )
 
 #define SSEMtoR66( code ) \
-	write8<I>( 0x66 ); \
-	SSEMtoR( code, 0 );
+	write8<I>( 0x66 ), \
+	SSEMtoR( code, 0 )
 
 #define SSERtoM66( code ) \
-	write8<I>( 0x66 ); \
-	SSERtoM( code, 0 );
+	write8<I>( 0x66 ), \
+	SSERtoM( code, 0 )
 
 #define SSERtoR66( code ) \
-	write8<I>( 0x66 ); \
-	SSERtoR( code );
+	write8<I>( 0x66 ), \
+	SSERtoR( code )
 
 #define _SSERtoR66( code ) \
-	assert( to < XMMREGS && from < XMMREGS) ; \
-	write8<I>( 0x66 ); \
-	RexRB(0, from, to); \
-	write16<I>( code ); \
-	ModRM<I>( 3, from, to );
+	assert( to < XMMREGS && from < XMMREGS), \
+	write8<I>( 0x66 ), \
+	RexRB(0, from, to), \
+	write16<I>( code ), \
+	ModRM<I>( 3, from, to )
 
 #define SSE_SS_RtoR( code ) \
-	assert( to < XMMREGS && from < XMMREGS) ; \
-	write8<I>( 0xf3 ); \
-    RexRB(0, to, from);              \
-	write16<I>( code ); \
-	ModRM<I>( 3, to, from );
+	assert( to < XMMREGS && from < XMMREGS), \
+	write8<I>( 0xf3 ), \
+    RexRB(0, to, from),              \
+	write16<I>( code ), \
+	ModRM<I>( 3, to, from )
 
 #define CMPPSMtoR( op ) \
-   SSEMtoR( 0xc20f, 1 ); \
-   write8<I>( op );
+   SSEMtoR( 0xc20f, 1 ), \
+   write8<I>( op )
 
 #define CMPPSRtoR( op ) \
-   SSERtoR( 0xc20f ); \
-   write8<I>( op );
+   SSERtoR( 0xc20f ), \
+   write8<I>( op )
 
 #define CMPSSMtoR( op ) \
-   SSE_SS_MtoR( 0xc20f, 1 ); \
-   write8<I>( op );
+   SSE_SS_MtoR( 0xc20f, 1 ), \
+   write8<I>( op )
 
 #define CMPSSRtoR( op ) \
-   SSE_SS_RtoR( 0xc20f ); \
-   write8<I>( op );
+   SSE_SS_RtoR( 0xc20f ), \
+   write8<I>( op )
 
 /* movups [r32][r32*scale] to xmm1 */
 emitterT void eSSE_MOVUPSRmStoR( x86SSERegType to, x86IntRegType from, x86IntRegType from2, int scale )
@@ -848,7 +848,7 @@ emitterT void eSSE2_PANDN_M128_to_XMM( x86SSERegType to, uptr from )			{ SSEMtoR
 //PXOR : SSE Bitwise XOR                                                             *
 //**********************************************************************************
 emitterT void eSSE2_PXOR_XMM_to_XMM( x86SSERegType to, x86SSERegType from )		{ SSERtoR66( 0xEF0F ); }
-emitterT void eSSE2_PXOR_M128_to_XMM( x86SSERegType to, uptr from )				{ SSEMtoR66( 0xEF0F ) }; 
+emitterT void eSSE2_PXOR_M128_to_XMM( x86SSERegType to, uptr from )				{ SSEMtoR66( 0xEF0F ); }
 ///////////////////////////////////////////////////////////////////////////////////////
 
 emitterT void eSSE2_MOVDQA_M128_to_XMM(x86SSERegType to, uptr from)				{ if( AlwaysUseMovaps ) eSSE_MOVAPS_M128_to_XMM<I>( to, from ); else SSEMtoR66(0x6F0F); }

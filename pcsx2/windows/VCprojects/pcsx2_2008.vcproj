@@ -3092,6 +3092,14 @@
 			>
 		</File>
 		<File
+			RelativePath=".\debugger.rc"
+			>
+		</File>
+		<File
+			RelativePath=".\resource1.h"
+			>
+		</File>
+		<File
 			RelativePath="..\..\Stats.cpp"
 			>
 		</File>
