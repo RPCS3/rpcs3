@@ -484,6 +484,7 @@ void FindPlugins()
 			if (PS2EgetLibType == NULL) Console::Error("PS2EgetLibType==NULL for %s", params ent->d_name);
 			if (PS2EgetLibName == NULL) Console::Error("PS2EgetLibName==NULL for %s", params ent->d_name);
 			if (PS2EgetLibVersion2 == NULL) Console::Error("PS2EgetLibVersion2==NULL for %s", params ent->d_name);
+			SysCloseLibrary(Handle);
 			continue;
 		}
 
@@ -558,6 +559,7 @@ void FindPlugins()
 			else
 				Console::Notice("FWPlugin %s: Version %x != %x", params plugin, (version >> 16)&0xff, PS2E_FW_VERSION);
 		}
+	SysCloseLibrary(Handle);
 	}
 	closedir(dir);
 
