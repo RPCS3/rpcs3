@@ -164,49 +164,95 @@ void handle_extended_t( IniPatch *p)
 			break;
 							
 		case 0x6000:							  // 000Xnnnn  iiiiiiii  
-			// Get Number of pointers 
-			if (IterationCount == 0) IterationCount = (u32)p->addr&0x0000FFFF;
-		
-			// Read first pointer
-			LastType = ((u32)p->addr&0x000F0000)/0x10000;
-			u32Val = memRead32(PrevCheataddr);
-			PrevCheataddr = u32Val+(u32)p->data;
-			IterationCount--;
 
-			// Check if needed to read another pointer
-			if (IterationCount == 0)
+			if (IterationIncrement == 0x0)
 			{
-				PrevCheatType = 0;
-				writeCheat();
-			}
-			else
-				PrevCheatType = 0x6001;
-							
-		case 0x6001:							// 000Xnnnn  iiiiiiii  
-			// Read first pointer
-			u32Val = memRead32(PrevCheataddr);
-			PrevCheataddr =u32Val+(u32)p->addr;
-			IterationCount--;
-
-			// Check if needed to read another pointer
-			if (IterationCount == 0)
-			{
-				PrevCheatType = 0;
-				writeCheat();
-			}
-			else
-			{
+				LastType = ((u32)p->addr&0x000F0000)/0x10000;
 				u32Val = memRead32(PrevCheataddr);
+				if ((u32)p->addr < 0x100)
+				{
+					LastType = 0x0;
+					PrevCheataddr =u32Val+((u32)p->addr);
+				}
+				else if ((u32)p->addr < 0x1000)
+				{
+					LastType = 0x1;
+					PrevCheataddr =u32Val+((u32)p->addr*2);
+				}
+				else 
+				{
+					LastType = 0x2;
+					PrevCheataddr =u32Val+((u32)p->addr*4);
+				}
+
+				
+				// Check if needed to read another pointer
+				PrevCheatType = 0;
+				if (((u32Val&0x0FFFFFFF) & 0x3FFFFFFC) != 0)
+				{
+					if (LastType=0x0)
+						memWrite8(PrevCheataddr,(u8)p->data&0xFF);
+					else if (LastType=0x1)
+						memWrite16(PrevCheataddr,(u16)p->data&0x0FFFF);
+					else if (LastType=0x2)
+						memWrite32(PrevCheataddr,(u32)p->data);
+				}
+				
+			}
+			else
+			{
+				
+				// Get Number of pointers 
+				if (((u32)p->addr&0x0000FFFF) == 0)
+					IterationCount = 1;
+				else
+					IterationCount = (u32)p->addr&0x0000FFFF;
+		
+				
+				// Read first pointer
+				LastType = ((u32)p->addr&0x000F0000)/0x10000;
+				u32Val = memRead32(PrevCheataddr);
+				
 				PrevCheataddr =u32Val+(u32)p->data;
 				IterationCount--;
-									
-				if (IterationCount == 0)
-				{
+				// Check if needed to read another pointer
+				if (IterationCount == 0){
 					PrevCheatType = 0;
-					writeCheat();
+					if (((u32Val&0x0FFFFFFF) & 0x3FFFFFFC) != 0) writeCheat();
+				
+				}else{
+				
+					if (((u32Val&0x0FFFFFFF) & 0x3FFFFFFC) != 0)
+						PrevCheatType = 0;
+					else
+						PrevCheatType = 0x6001;
 				}
 			}
-							
+			break;					
+		case 0x6001:							// 000Xnnnn  iiiiiiii  
+			// Read first pointer
+			u32Val = memRead32(PrevCheataddr&0x0FFFFFFF);
+
+			PrevCheataddr =u32Val+(u32)p->addr;
+			IterationCount--;
+			
+			// Check if needed to read another pointer
+			if (IterationCount == 0){
+				
+				PrevCheatType = 0;
+				if (((u32Val&0x0FFFFFFF) & 0x3FFFFFFC) != 0) writeCheat();
+			}else{
+				
+				u32Val = memRead32(PrevCheataddr);
+
+				PrevCheataddr =u32Val+(u32)p->data;
+				IterationCount--;
+				if (IterationCount == 0){
+					PrevCheatType = 0;
+					if (((u32Val&0x0FFFFFFF) & 0x3FFFFFFC) != 0) writeCheat();
+				}
+			}
+		break;					
 		default:
 		if ((p->addr&0xF0000000) == 0x00000000) // 0aaaaaaa 0000000vv
 		{ 
