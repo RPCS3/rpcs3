@@ -405,12 +405,12 @@ void _recvuFlushEFU(VURegs * VU) {
 }
 
 void _recvuTestFDIVStalls(VURegs * VU, _VURegsNum *VUregsn) {
-//	_vuTestFMACStalls(VURegs * VU, _VURegsNum *VUregsn);
+	_recvuTestFMACStalls(VU,VUregsn, false);
 	_recvuFlushFDIV(VU);
 }
 
 void _recvuTestEFUStalls(VURegs * VU, _VURegsNum *VUregsn) {
-//	_vuTestFMACStalls(VURegs * VU, _VURegsNum *VUregsn);
+	_recvuTestFMACStalls(VU,VUregsn, false);
 	_recvuFlushEFU(VU);
 }
 

@@ -2224,12 +2224,24 @@ void _vuRegs##OP(VURegs * VU, _VURegsNum *VUregsn) { \
 	VUregsn->cycles  = 0; \
 }
 
-#define VUREGS_PFS(OP, _cycles) \
+#define VUREGS_PFS_xyzw(OP, _cycles) \
 void _vuRegs##OP(VURegs * VU, _VURegsNum *VUregsn) { \
 	VUregsn->pipe = VUPIPE_EFU; \
 	VUregsn->VFwrite = 0; \
 	VUregsn->VFread0 = _Fs_; \
 	VUregsn->VFr0xyzw= _XYZW; \
+	VUregsn->VFread1 = 0; \
+    VUregsn->VIwrite = 1 << REG_P; \
+	VUregsn->VIread  = GET_VF0_FLAG(_Fs_); \
+	VUregsn->cycles  = _cycles; \
+}
+
+#define VUREGS_PFS_fsf(OP, _cycles) \
+void _vuRegs##OP(VURegs * VU, _VURegsNum *VUregsn) { \
+	VUregsn->pipe = VUPIPE_EFU; \
+	VUregsn->VFwrite = 0; \
+	VUregsn->VFread0 = _Fs_; \
+	VUregsn->VFr0xyzw= 1 << (3-_Fsf_); \
 	VUregsn->VFread1 = 0; \
     VUregsn->VIwrite = 1 << REG_P; \
 	VUregsn->VIread  = GET_VF0_FLAG(_Fs_); \
@@ -2891,19 +2903,19 @@ void _vuRegsWAITP(VURegs * VU, _VURegsNum *VUregsn) {
     VUregsn->VIread  = 0;
 }
 
-VUREGS_PFS(ESADD, 10);
-VUREGS_PFS(ERSADD, 17);
-VUREGS_PFS(ELENG, 17);
-VUREGS_PFS(ERLENG, 23);
-VUREGS_PFS(EATANxy, 53);
-VUREGS_PFS(EATANxz, 53);
-VUREGS_PFS(ESUM, 11);
-VUREGS_PFS(ERCPR, 11);
-VUREGS_PFS(ESQRT, 11);
-VUREGS_PFS(ERSQRT, 17);
-VUREGS_PFS(ESIN, 28);
-VUREGS_PFS(EATAN, 53);
-VUREGS_PFS(EEXP, 43);
+VUREGS_PFS_xyzw(ESADD, 10);
+VUREGS_PFS_xyzw(ERSADD, 17);
+VUREGS_PFS_xyzw(ELENG, 17);
+VUREGS_PFS_xyzw(ERLENG, 23);
+VUREGS_PFS_xyzw(EATANxy, 53);
+VUREGS_PFS_xyzw(EATANxz, 53);
+VUREGS_PFS_xyzw(ESUM, 11);
+VUREGS_PFS_fsf(ERCPR, 11);
+VUREGS_PFS_fsf(ESQRT, 11);
+VUREGS_PFS_fsf(ERSQRT, 17);
+VUREGS_PFS_fsf(ESIN, 28);
+VUREGS_PFS_fsf(EATAN, 53);
+VUREGS_PFS_fsf(EEXP, 43);
 
 void _vuRegsXITOP(VURegs * VU, _VURegsNum *VUregsn) {
 	VUregsn->pipe = VUPIPE_IALU;

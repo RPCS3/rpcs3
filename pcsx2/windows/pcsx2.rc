@@ -84,9 +84,11 @@ BEGIN
     CTEXT           "Some games need special settings.\nConfigure them here.",IDC_STATIC,7,7,264,17
     GROUPBOX        "PCSX2 Gamefixes",IDC_STATIC,7,31,264,89
     CONTROL         "FPU Compare Hack - Special fix for Digimon Rumble Arena 2.",IDC_GAMEFIX3,
-                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,12,51,249,10
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,12,47,249,10
     CONTROL         "VU Add / Sub Hack - Special fix for Tri-Ace games!",IDC_GAMEFIX2,
-                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,12,65,252,10
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,12,61,252,10
+    CONTROL         "VU Clip Hack - Special fix for God of War",IDC_GAMEFIX4,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,12,75,144,10
 END
 
 
