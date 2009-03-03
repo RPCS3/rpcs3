@@ -474,7 +474,7 @@ public:
 		CfgWriteBool( L"DSOUNDOUT", L"Use_Hardware", m_UseHardware );
 	}
 
-} DS;
+} static DS;
 
 BOOL CALLBACK DSound::ConfigProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 {

@@ -324,6 +324,6 @@ public:
 	{
 	}
 
-} WO;
+} static WO;
 
 SndOutModule *WaveOut = &WO;

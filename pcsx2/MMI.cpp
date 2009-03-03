@@ -694,10 +694,10 @@ void PPACB() {
 
 __forceinline void  _PEXT5(int n) 
 {
-	cpuRegs.GPR.r[_Rd_].UL[n] = \
-		((cpuRegs.GPR.r[_Rt_].UL[n] & 0x0000001F) <<  3) | \
-		((cpuRegs.GPR.r[_Rt_].UL[n] & 0x000003E0) <<  6) | \
-		((cpuRegs.GPR.r[_Rt_].UL[n] & 0x00007C00) <<  9) | \
+	cpuRegs.GPR.r[_Rd_].UL[n] =
+		((cpuRegs.GPR.r[_Rt_].UL[n] & 0x0000001F) <<  3) |
+		((cpuRegs.GPR.r[_Rt_].UL[n] & 0x000003E0) <<  6) |
+		((cpuRegs.GPR.r[_Rt_].UL[n] & 0x00007C00) <<  9) |
 		((cpuRegs.GPR.r[_Rt_].UL[n] & 0x00008000) << 16);
 }
 
@@ -709,10 +709,10 @@ void PEXT5() {
 
 __forceinline void  _PPAC5(int n) 
 {
-	cpuRegs.GPR.r[_Rd_].UL[n] = \
-		((cpuRegs.GPR.r[_Rt_].UL[n] >>  3) & 0x0000001F) | \
-		((cpuRegs.GPR.r[_Rt_].UL[n] >>  6) & 0x000003E0) | \
-		((cpuRegs.GPR.r[_Rt_].UL[n] >>  9) & 0x00007C00) | \
+	cpuRegs.GPR.r[_Rd_].UL[n] =
+		((cpuRegs.GPR.r[_Rt_].UL[n] >>  3) & 0x0000001F) |
+		((cpuRegs.GPR.r[_Rt_].UL[n] >>  6) & 0x000003E0) |
+		((cpuRegs.GPR.r[_Rt_].UL[n] >>  9) & 0x00007C00) |
 		((cpuRegs.GPR.r[_Rt_].UL[n] >> 16) & 0x00008000);
 }
 

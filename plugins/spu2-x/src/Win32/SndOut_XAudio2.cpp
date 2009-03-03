@@ -22,7 +22,6 @@
 #define _WIN32_DCOM
 
 #include "Dialogs.h"
-#include <MMReg.h>
 #include <xaudio2.h>
 
 
@@ -35,11 +34,11 @@ namespace Exception
 		{
 			switch( hr )
 			{
-			case XAUDIO2_E_INVALID_CALL:
-				return "Invalid call for the XA2 object state.";
+				case XAUDIO2_E_INVALID_CALL:
+					return "Invalid call for the XA2 object state.";
 
-			case XAUDIO2_E_DEVICE_INVALIDATED:
-				return "Device is unavailable, unplugged, unsupported, or has been consumed by The Nothing.";
+				case XAUDIO2_E_DEVICE_INVALIDATED:
+					return "Device is unavailable, unplugged, unsupported, or has been consumed by The Nothing.";
 			}
 			return "Unknown error code!";
 		}
@@ -375,6 +374,6 @@ public:
 	{
 	}
 
-} XA2;
+} static XA2;
 
 SndOutModule *XAudio2Out = &XA2;
