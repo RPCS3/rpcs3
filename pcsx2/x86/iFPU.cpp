@@ -62,6 +62,33 @@ namespace Dynarec {
 namespace OpcodeImpl {
 namespace COP1 {
 
+namespace DOUBLE {
+
+void recABS_S_xmm(int info);
+void recADD_S_xmm(int info);
+void recADDA_S_xmm(int info);
+void recC_EQ_xmm(int info);
+void recC_LE_xmm(int info);
+void recC_LT_xmm(int info);
+void recCVT_S_xmm(int info);
+void recDIV_S_xmm(int info);
+void recMADD_S_xmm(int info);
+void recMADDA_S_xmm(int info);
+void recMAX_S_xmm(int info);
+void recMIN_S_xmm(int info);
+void recMOV_S_xmm(int info);
+void recMSUB_S_xmm(int info);
+void recMSUBA_S_xmm(int info);
+void recMUL_S_xmm(int info);
+void recMULA_S_xmm(int info);
+void recNEG_S_xmm(int info);
+void recSUB_S_xmm(int info);
+void recSUBA_S_xmm(int info);
+void recSQRT_S_xmm(int info);
+void recRSQRT_S_xmm(int info);
+
+};
+
 //------------------------------------------------------------------
 // Helper Macros
 //------------------------------------------------------------------

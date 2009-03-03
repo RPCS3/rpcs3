@@ -227,13 +227,14 @@ BEGIN
     RADIOBUTTON     "None",IDC_EE_CLAMPMODE0,20,76,44,16
     RADIOBUTTON     "Normal",IDC_EE_CLAMPMODE1,64,76,47,16
     RADIOBUTTON     "Extra + Preserve Sign",IDC_EE_CLAMPMODE2,111,76,91,16
+    RADIOBUTTON     "Full",IDC_EE_CLAMPMODE3,202,76,44,16
     LTEXT           "These options specify how your CPU rounds floating point values.\n\nTry changing the roundmode for EE if your game hangs, it could make it work again.",IDC_STATIC,287,33,216,35
     GROUPBOX        "Round Mode",IDC_STATIC,281,22,235,51,BS_LEFT
     GROUPBOX        "Clamp Mode",IDC_STATIC,281,80,236,84,BS_LEFT
-    GROUPBOX        "Other Options",IDC_STATIC,280,172,237,67,BS_LEFT
+    GROUPBOX        "EE-only Clamp Mode",IDC_STATIC,280,172,237,67,BS_LEFT
     LTEXT           "These options specify how PCSX2's recompilers will clamp Infinities and NaN (Not a Number) values in the opcode instructions.",IDC_STATIC,286,94,224,19
-    LTEXT           "Flush to Zero - Your CPU makes Floating Point Underflows become Zero, so it does less work. (Speed Up)\n\nDenormals are Zero - Your CPU makes Floating Point Denormals become Zero, so it does less work. (Speed Up)",IDC_STATIC,286,186,224,46
-    LTEXT           "None - No clamping. (Fastest Mode)\nNormal - Clamps the result.\nExtra - Clamps the operands, the result, and anywhere in between.\nExtra + Preserve Sign - Same as ""Extra"", except preserves NaN's sign when clamping the operands. (Slowest Mode)",IDC_STATIC,286,114,224,45
+    LTEXT           "None - No clamping. (Fastest Mode)\nNormal - Clamps the result.\nExtra - Clamps the operands, the result, and anywhere in between.\nExtra + Preserve Sign - Same as ""Extra"", except preserves NaN's sign when clamping the operands.",IDC_STATIC,286,114,224,45
+	LTEXT           "Full - Emulates large numbers correctly. Not fully compatible with VU clamp options aside from ""Extra + Preserve Sign"" (but still works for most games even with ""Normal"")",IDC_STATIC,286,186,214,46
 END
 
 IDD_CONF_MEMCARD DIALOGEX 0, 0, 451, 215

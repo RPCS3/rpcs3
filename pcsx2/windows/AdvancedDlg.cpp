@@ -29,12 +29,16 @@ static void InitRoundClampModes( HWND hDlg, u32 new_eeopt, u32 new_vuopt )
 {
 	CheckRadioButton(hDlg, IDC_EE_ROUNDMODE0, IDC_EE_ROUNDMODE3, IDC_EE_ROUNDMODE0 + ((Config.sseMXCSR & 0x6000) >> 13));
 	CheckRadioButton(hDlg, IDC_VU_ROUNDMODE0, IDC_VU_ROUNDMODE3, IDC_VU_ROUNDMODE0 + ((Config.sseVUMXCSR & 0x6000) >> 13));
-	CheckRadioButton(hDlg, IDC_EE_CLAMPMODE0, IDC_EE_CLAMPMODE2, IDC_EE_CLAMPMODE0 + ((new_eeopt & 0x2) ? 2 : (new_eeopt & 0x1)));
 
 	if		(new_vuopt & 0x4)	CheckRadioButton(hDlg, IDC_VU_CLAMPMODE0, IDC_VU_CLAMPMODE3, IDC_VU_CLAMPMODE0 + 3);
 	else if (new_vuopt & 0x2)	CheckRadioButton(hDlg, IDC_VU_CLAMPMODE0, IDC_VU_CLAMPMODE3, IDC_VU_CLAMPMODE0 + 2);
 	else if (new_vuopt & 0x1)	CheckRadioButton(hDlg, IDC_VU_CLAMPMODE0, IDC_VU_CLAMPMODE3, IDC_VU_CLAMPMODE0 + 1);
 	else						CheckRadioButton(hDlg, IDC_VU_CLAMPMODE0, IDC_VU_CLAMPMODE3, IDC_VU_CLAMPMODE0 + 0);
+
+	if		(new_eeopt & 0x4)	CheckRadioButton(hDlg, IDC_EE_CLAMPMODE0, IDC_EE_CLAMPMODE3, IDC_EE_CLAMPMODE0 + 3);
+	else if (new_eeopt & 0x2)	CheckRadioButton(hDlg, IDC_EE_CLAMPMODE0, IDC_EE_CLAMPMODE3, IDC_EE_CLAMPMODE0 + 2);
+	else if (new_eeopt & 0x1)	CheckRadioButton(hDlg, IDC_EE_CLAMPMODE0, IDC_EE_CLAMPMODE3, IDC_EE_CLAMPMODE0 + 1);
+	else						CheckRadioButton(hDlg, IDC_EE_CLAMPMODE0, IDC_EE_CLAMPMODE3, IDC_EE_CLAMPMODE0 + 0);
 
 	if (Config.sseMXCSR & 0x8000)	CheckDlgButton(hDlg, IDC_EE_CHECK1, TRUE);
 	if (Config.sseVUMXCSR & 0x8000) CheckDlgButton(hDlg, IDC_VU_CHECK1, TRUE);
@@ -88,6 +92,7 @@ BOOL APIENTRY AdvancedOptionsProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM
 					new_eeopt |= IsDlgButtonChecked(hDlg, IDC_EE_CLAMPMODE0) ? 0x0 : 0;
 					new_eeopt |= IsDlgButtonChecked(hDlg, IDC_EE_CLAMPMODE1) ? 0x1 : 0;
 					new_eeopt |= IsDlgButtonChecked(hDlg, IDC_EE_CLAMPMODE2) ? 0x3 : 0;
+					new_eeopt |= IsDlgButtonChecked(hDlg, IDC_EE_CLAMPMODE3) ? 0x7 : 0;
 
 					new_vuopt |= IsDlgButtonChecked(hDlg, IDC_VU_CLAMPMODE0) ? 0x0 : 0;
 					new_vuopt |= IsDlgButtonChecked(hDlg, IDC_VU_CLAMPMODE1) ? 0x1 : 0;
@@ -161,8 +166,9 @@ BOOL APIENTRY AdvancedOptionsProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM
 				case IDC_EE_CLAMPMODE0:
 				case IDC_EE_CLAMPMODE1:
 				case IDC_EE_CLAMPMODE2:
+				case IDC_EE_CLAMPMODE3:
 
-					CheckRadioButton(hDlg, IDC_EE_CLAMPMODE0, IDC_EE_CLAMPMODE2, IDC_EE_CLAMPMODE0 + ( LOWORD(wParam) % IDC_EE_CLAMPMODE0 )  );
+					CheckRadioButton(hDlg, IDC_EE_CLAMPMODE0, IDC_EE_CLAMPMODE3, IDC_EE_CLAMPMODE0 + ( LOWORD(wParam) % IDC_EE_CLAMPMODE0 )  );
 					break;
 
 				case IDC_VU_CLAMPMODE0:

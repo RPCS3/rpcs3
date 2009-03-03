@@ -22,7 +22,6 @@
 #define _EmitterId_ EmitterId_R5900
 #include "ix86/ix86.h"
 #include "ix86/ix86_sse_helpers.h"
-
 #include "R5900.h"
 #include "VU.h"
 #include "iCore.h"
@@ -263,7 +262,10 @@ void eeRecompileCodeConstSPECIAL(R5900FNPTR constcode, R5900FNPTR_INFO multicode
 #define FPURECOMPILE_CONSTCODE(fn, xmminfo) \
 void rec##fn(void) \
 { \
-	eeFPURecompileCode(rec##fn##_xmm, R5900::Interpreter::OpcodeImpl::COP1::fn, xmminfo); \
+	if (CHECK_FPU_FULL) \
+		eeFPURecompileCode(DOUBLE::rec##fn##_xmm, R5900::Interpreter::OpcodeImpl::COP1::fn, xmminfo); \
+	else \
+		eeFPURecompileCode(rec##fn##_xmm, R5900::Interpreter::OpcodeImpl::COP1::fn, xmminfo); \
 }
 
 // rd = rs op rt (all regs need to be in xmm)

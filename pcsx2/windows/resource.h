@@ -265,6 +265,7 @@
 #define IDC_MCD_BROWSE1                 1320
 #define IDC_EE_CLAMPMODE2               1321
 #define IDC_MCD_BROWSE2                 1321
+#define IDC_EE_CLAMPMODE3               1322
 #define IDC_MCD_FILE1                   1322
 #define IDC_MCD_FILE2                   1323
 #define IDC_MCD_LABEL1                  1324

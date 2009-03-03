@@ -1939,6 +1939,10 @@
 						>
 					</File>
 					<File
+						RelativePath="..\..\x86\iFPUd.cpp"
+						>
+					</File>
+					<File
 						RelativePath="..\..\x86\iMMI.cpp"
 						>
 					</File>
