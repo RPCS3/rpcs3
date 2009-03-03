@@ -102,6 +102,7 @@ char iop_log_names[9][32] =
 };
 
 #define FLAG_VU_ADD_SUB 0x1
+#define FLAG_VU_CLIP 0x2
 #define FLAG_FPU_CLAMP 0x4
 #define FLAG_VU_FCOR_HACK 0x8
 #define FLAG_AVOID_DELAY_HANDLING 0x10
@@ -133,5 +134,6 @@ char iop_log_names[9][32] =
 #define FLAG_EE_CLAMP_NONE 0x0
 #define FLAG_EE_CLAMP_NORMAL 0x1
 #define FLAG_EE_CLAMP_EXTRA_PRESERVE 0x3
+#define FLAG_EE_CLAMP_FULL 0x7
 
 #endif /* __LINUX_H__ */

@@ -25,6 +25,7 @@ GtkWidget *GameFixDlg, *SpeedHacksDlg;
 	GameFixDlg = create_GameFixDlg();
 
 	set_checked(GameFixDlg, "check_VU_Add_Sub", (Config.GameFixes & FLAG_VU_ADD_SUB));
+	set_checked(GameFixDlg, "check_VU_Clip", (Config.GameFixes & FLAG_VU_CLIP));
 	set_checked(GameFixDlg, "check_FPU_Clamp", (Config.GameFixes & FLAG_FPU_CLAMP));
 
 	gtk_widget_show_all(GameFixDlg);
@@ -37,6 +38,7 @@ void on_Game_Fix_OK(GtkButton *button, gpointer user_data)
 
 	Config.GameFixes = 0;
 	Config.GameFixes |= is_checked(GameFixDlg, "check_VU_Add_Sub") ? FLAG_VU_ADD_SUB : 0;
+	Config.GameFixes |= is_checked(GameFixDlg, "check_VU_Clip") ? FLAG_VU_CLIP : 0;
 	Config.GameFixes |= is_checked(GameFixDlg, "check_FPU_Clamp") ? FLAG_FPU_CLAMP : 0;
 
 	SaveConfig();

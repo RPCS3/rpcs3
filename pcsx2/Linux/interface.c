@@ -52,6 +52,8 @@ create_AdvDlg (void)
   GSList *radio_EE_Clamp_None_group = NULL;
   GtkWidget *radio_EE_Clamp_Normal;
   GtkWidget *radio_EE_Clamp_Extra_Preserve;
+  GtkWidget *radio_EE_Clamp_Full;
+  GSList *radio_EE_Clamp_Full_group = NULL;
   GtkWidget *label73;
   GtkWidget *hbox34;
   GtkWidget *check_EE_Flush_Zero;
@@ -205,6 +207,13 @@ create_AdvDlg (void)
   gtk_box_pack_start (GTK_BOX (hbox37), radio_EE_Clamp_Extra_Preserve, FALSE, FALSE, 0);
   gtk_radio_button_set_group (GTK_RADIO_BUTTON (radio_EE_Clamp_Extra_Preserve), radio_EE_Clamp_None_group);
   radio_EE_Clamp_None_group = gtk_radio_button_get_group (GTK_RADIO_BUTTON (radio_EE_Clamp_Extra_Preserve));
+
+  radio_EE_Clamp_Full = gtk_radio_button_new_with_mnemonic (NULL, _("Full"));
+  gtk_widget_show (radio_EE_Clamp_Full);
+  gtk_box_pack_start (GTK_BOX (hbox37), radio_EE_Clamp_Full, TRUE, TRUE, 0);
+  gtk_radio_button_set_group (GTK_RADIO_BUTTON (radio_EE_Clamp_Full), radio_EE_Clamp_Full_group);
+  radio_EE_Clamp_Full_group = gtk_radio_button_get_group (GTK_RADIO_BUTTON (radio_EE_Clamp_Full));
+  gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (radio_EE_Clamp_Full), TRUE);
 
   label73 = gtk_label_new (_("<b>Clamp Mode</b>"));
   gtk_widget_show (label73);
@@ -478,6 +487,7 @@ create_AdvDlg (void)
   GLADE_HOOKUP_OBJECT (AdvDlg, radio_EE_Clamp_None, "radio_EE_Clamp_None");
   GLADE_HOOKUP_OBJECT (AdvDlg, radio_EE_Clamp_Normal, "radio_EE_Clamp_Normal");
   GLADE_HOOKUP_OBJECT (AdvDlg, radio_EE_Clamp_Extra_Preserve, "radio_EE_Clamp_Extra_Preserve");
+  GLADE_HOOKUP_OBJECT (AdvDlg, radio_EE_Clamp_Full, "radio_EE_Clamp_Full");
   GLADE_HOOKUP_OBJECT (AdvDlg, label73, "label73");
   GLADE_HOOKUP_OBJECT (AdvDlg, hbox34, "hbox34");
   GLADE_HOOKUP_OBJECT (AdvDlg, check_EE_Flush_Zero, "check_EE_Flush_Zero");
@@ -779,6 +789,7 @@ create_GameFixDlg (void)
   GtkWidget *vbox30;
   GtkWidget *check_FPU_Clamp;
   GtkWidget *check_VU_Add_Sub;
+  GtkWidget *check_VU_Clip;
   GtkWidget *label42;
   GtkWidget *dialog_action_area1;
   GtkWidget *cancelbutton1;
@@ -812,6 +823,10 @@ create_GameFixDlg (void)
   check_VU_Add_Sub = gtk_check_button_new_with_mnemonic (_("VU Add / Sub Hack - Special fix for Tri-Ace games!"));
   gtk_widget_show (check_VU_Add_Sub);
   gtk_box_pack_start (GTK_BOX (vbox30), check_VU_Add_Sub, FALSE, FALSE, 0);
+
+  check_VU_Clip = gtk_check_button_new_with_mnemonic (_("VU Clip Hack - Special fix for God of War"));
+  gtk_widget_show (check_VU_Clip);
+  gtk_box_pack_start (GTK_BOX (vbox30), check_VU_Clip, FALSE, TRUE, 0);
 
   label42 = gtk_label_new (_("<b>Some games need special settings.\nConfigure them here.</b>"));
   gtk_widget_show (label42);
@@ -847,6 +862,7 @@ create_GameFixDlg (void)
   GLADE_HOOKUP_OBJECT (GameFixDlg, vbox30, "vbox30");
   GLADE_HOOKUP_OBJECT (GameFixDlg, check_FPU_Clamp, "check_FPU_Clamp");
   GLADE_HOOKUP_OBJECT (GameFixDlg, check_VU_Add_Sub, "check_VU_Add_Sub");
+  GLADE_HOOKUP_OBJECT (GameFixDlg, check_VU_Clip, "check_VU_Clip");
   GLADE_HOOKUP_OBJECT (GameFixDlg, label42, "label42");
   GLADE_HOOKUP_OBJECT_NO_REF (GameFixDlg, dialog_action_area1, "dialog_action_area1");
   GLADE_HOOKUP_OBJECT (GameFixDlg, cancelbutton1, "cancelbutton1");

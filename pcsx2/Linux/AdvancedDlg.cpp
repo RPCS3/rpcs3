@@ -74,6 +74,9 @@ void setAdvancedOptions()
 		case FLAG_EE_CLAMP_EXTRA_PRESERVE:
 			set_checked(AdvDlg, "radio_EE_Clamp_Extra_Preserve", TRUE);
 			break;
+		case FLAG_EE_CLAMP_FULL:
+			set_checked(AdvDlg, "radio_EE_Clamp_Full", TRUE);
+			break;
 	}
 
 	switch (Config.vuOptions)
@@ -145,6 +148,7 @@ void on_Advanced_OK(GtkButton *button, gpointer user_data)
 	Config.eeOptions |= is_checked(AdvDlg, "radio_EE_Clamp_None") ? FLAG_EE_CLAMP_NONE : 0;
 	Config.eeOptions |= is_checked(AdvDlg, "radio_EE_Clamp_Normal") ? FLAG_EE_CLAMP_NORMAL : 0;
 	Config.eeOptions |= is_checked(AdvDlg, "radio_EE_Clamp_Extra_Preserve") ? FLAG_EE_CLAMP_EXTRA_PRESERVE : 0;
+	Config.eeOptions |= is_checked(AdvDlg, "radio_EE_Clamp_Full") ? FLAG_EE_CLAMP_FULL : 0;
 
 	Config.vuOptions |= is_checked(AdvDlg, "radio_VU_Clamp_None") ? FLAG_VU_CLAMP_NONE : 0;
 	Config.vuOptions |= is_checked(AdvDlg, "radio_VU_Clamp_Normal") ? FLAG_VU_CLAMP_NORMAL : 0;
