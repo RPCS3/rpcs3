@@ -53,7 +53,6 @@ create_AdvDlg (void)
   GtkWidget *radio_EE_Clamp_Normal;
   GtkWidget *radio_EE_Clamp_Extra_Preserve;
   GtkWidget *radio_EE_Clamp_Full;
-  GSList *radio_EE_Clamp_Full_group = NULL;
   GtkWidget *label73;
   GtkWidget *hbox34;
   GtkWidget *check_EE_Flush_Zero;
@@ -211,8 +210,8 @@ create_AdvDlg (void)
   radio_EE_Clamp_Full = gtk_radio_button_new_with_mnemonic (NULL, _("Full"));
   gtk_widget_show (radio_EE_Clamp_Full);
   gtk_box_pack_start (GTK_BOX (hbox37), radio_EE_Clamp_Full, TRUE, TRUE, 0);
-  gtk_radio_button_set_group (GTK_RADIO_BUTTON (radio_EE_Clamp_Full), radio_EE_Clamp_Full_group);
-  radio_EE_Clamp_Full_group = gtk_radio_button_get_group (GTK_RADIO_BUTTON (radio_EE_Clamp_Full));
+  gtk_radio_button_set_group (GTK_RADIO_BUTTON (radio_EE_Clamp_Full), radio_EE_Clamp_None_group);
+  radio_EE_Clamp_None_group = gtk_radio_button_get_group (GTK_RADIO_BUTTON (radio_EE_Clamp_Full));
   gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (radio_EE_Clamp_Full), TRUE);
 
   label73 = gtk_label_new (_("<b>Clamp Mode</b>"));
