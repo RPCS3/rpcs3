@@ -332,18 +332,19 @@ struct V_Core
 {
 	static const uint NumVoices = 24;
 
-// Core Voices
-	V_Voice Voices[NumVoices];
+	// Voice Gates -- These are SSE-related values, and must always be
+	// first to ensure 16 byte alignment
+
 	V_VoiceGates VoiceGates[NumVoices];
+	V_CoreGates DryGate;
+	V_CoreGates WetGate;
 
 	V_VolumeSlideLR MasterVol;// Master Volume
-
 	V_VolumeLR ExtVol;		// Volume for External Data Input
 	V_VolumeLR InpVol;		// Volume for Sound Data Input
 	V_VolumeLR FxVol;		// Volume for Output from Effects 
 
-	V_CoreGates DryGate;
-	V_CoreGates WetGate;
+	V_Voice Voices[NumVoices];
 	
 // Interrupt Address
 	u32 IRQA;
