@@ -169,7 +169,7 @@ void SaveState::vuMicroFreeze()
 	FreezeMem(VU0.Micro, 4*1024);
 
 	Freeze(VU0.VF);
-	if( GetVersion() >= 0x0012 )
+	if( GetVersion() >= 0x02 )
 		Freeze(VU0.VI);
 	else
 	{
@@ -185,7 +185,7 @@ void SaveState::vuMicroFreeze()
 	FreezeMem(VU1.Micro, 16*1024);
 
 	Freeze(VU1.VF);
-	if( GetVersion() >= 0x0012 )
+	if( GetVersion() >= 0x02 )
 		Freeze(VU1.VI);
 	else
 	{

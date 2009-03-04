@@ -766,17 +766,7 @@ struct Freeze_v10Compat
 
 void SaveState::cdvdFreeze()
 {
-	if( GetVersion() <= 0x10 )
-	{
-		// the old cdvd struct didn't save the last few items.
-		FreezeLegacy( cdvd, sizeof(Freeze_v10Compat) );
-		cdvd.SeekToSector = cdvd.Sector;
-		cdvd.Action = cdvdAction_None;
-		cdvd.ReadTime = cdvdBlockReadTime( MODE_DVDROM );
-		cdvd.Spinning = true;
-	}
-	else
-		Freeze( cdvd );
+	Freeze( cdvd );
 
 	if( IsLoading() )
 	{

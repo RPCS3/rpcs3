@@ -169,7 +169,7 @@ void ipuShutdown()
 void SaveState::ipuFreeze() {
 	IPUProcessInterrupt();
 
-	if( GetVersion() < 0x14 )
+	if( GetVersion() < 0x04 )
 	{
 		// old versions saved the IPU regs, but they're already saved as part of HW!
 		FreezeMem(ipuRegs, sizeof(IPUregisters));

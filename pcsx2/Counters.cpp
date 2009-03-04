@@ -770,8 +770,8 @@ void SaveState::rcntFreeze()
 	Freeze(nextCounter);
 	Freeze(nextsCounter);
 
-	// New in version 11 -- save the PAL/NTSC info!
-	if( GetVersion() > 0x10 )
+	// New in version 1 -- save the PAL/NTSC info!
+	if( GetVersion() >= 0x1 )
 	{
 		Freeze( Config.PsxType );
 	}

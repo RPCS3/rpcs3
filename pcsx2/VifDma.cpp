@@ -55,8 +55,8 @@ extern vifStruct *_vif;
 
 vifStruct vif0, vif1;
 
-PCSX2_ALIGNED16(u32 g_vif1Masks[64]);
-PCSX2_ALIGNED16(u32 g_vif0Masks[64]);
+static PCSX2_ALIGNED16(u32 g_vif1Masks[64]);
+static PCSX2_ALIGNED16(u32 g_vif0Masks[64]);
 u32 g_vif1HasMask3[4] = {0}, g_vif0HasMask3[4] = {0};
 
 // Generic constants
@@ -1338,11 +1338,11 @@ void vif0Reset() {
 void SaveState::vif0Freeze()
 {
 	// Dunno if this one is needed, but whatever, it's small. :)
-	if( GetVersion() >= 0x14 )
+	if( GetVersion() >= 0x04 )
 		Freeze( g_vifCycles );
 
 	Freeze( vif0 );
-	if( GetVersion() >= 0x14 )
+	if( GetVersion() >= 0x04 )
 	{
 		Freeze( g_vif0HasMask3 );
 		Freeze( g_vif0Masks );
@@ -2263,7 +2263,7 @@ void SaveState::vif1Freeze()
 {
 	Freeze(vif1);
 	
-	if( GetVersion() >= 0x14 )
+	if( GetVersion() >= 0x04 )
 	{
 		Freeze( g_vif1HasMask3 );
 		Freeze( g_vif1Masks );

@@ -591,7 +591,7 @@ void SaveState::sifFreeze() {
 	Freeze(sif0);
 	Freeze(sif1);
 
-	if( GetVersion() >= 0x0012 )
+	if( GetVersion() >= 0x0002 )
 	{
 		Freeze(eesifbusy);
 		Freeze(iopsifbusy);

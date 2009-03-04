@@ -26,9 +26,10 @@
 #define spr0 ((DMACh*)&PS2MEM_HW[0xD000])
 #define spr1 ((DMACh*)&PS2MEM_HW[0xD400])
 
-int spr0finished = 0;
-int spr1finished = 0;
-u32 mfifotransferred = 0;
+static int spr0finished = 0;
+static int spr1finished = 0;
+static u32 mfifotransferred = 0;
+
 void sprInit() {
 }
 
@@ -451,3 +452,13 @@ void SPRTOinterrupt()
 	hwDmacIrq(9);
 }
 
+void SaveState::sprFreeze()
+{
+	// Gotta save the weird ref-style DMA timing vars!
+	if( GetVersion() >= 0x05 )
+	{
+		Freeze(spr0finished);
+		Freeze(spr1finished);
+		Freeze(mfifotransferred);
+	}
+}

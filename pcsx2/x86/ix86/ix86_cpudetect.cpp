@@ -32,8 +32,10 @@
 	{
 		void __cpuid(int* CPUInfo, int InfoType);
 		unsigned __int64 __rdtsc();
+#ifndef __INTEL_COMPILER
 #		pragma intrinsic(__cpuid)
 #		pragma intrinsic(__rdtsc)
+#endif
 	}
 
 #endif

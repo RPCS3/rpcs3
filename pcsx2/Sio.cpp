@@ -568,8 +568,8 @@ void SaveState::sioFreeze()
 
     Freeze( sio );
 
-	// versions prior to 13 didn't have CRCs.
-	if( GetVersion() >= 0x13 )
+	// versions prior to 3 didn't have CRCs.
+	if( GetVersion() >= 0x03 )
 	{
 		if( IsSaving() )
 		{

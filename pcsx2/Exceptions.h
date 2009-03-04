@@ -122,6 +122,7 @@ namespace Exception
 	public:
 		explicit OutOfMemory( const std::string& msg="Out of memory!" ) :
 			RuntimeError( msg ) {}
+		virtual ~OutOfMemory() throw() {}
 	};
 
 	// This exception thrown any time an operation is attempted when an object
@@ -161,6 +162,7 @@ namespace Exception
 	public:
 		explicit HardwareDeficiency( const std::string& msg="Your machine's hardware is incapable of running Pcsx2.  Sorry dood." ) :
 			RuntimeError( msg ) {}
+		virtual ~HardwareDeficiency() throw() {}
 	};
 
 	// This exception is thrown by the PS2 emulation (R5900, etc) when bad things happen

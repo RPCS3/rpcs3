@@ -1027,8 +1027,6 @@ void CreateMainWindow()
 	RECT rect;
 	int w, h;
 
-	//g_ReturnToGui = true;
-
 #ifdef _MSC_VER
 	sprintf(COMPILER, "(VC%d)", (_MSC_VER+100)/200);//hacky:) works for VC6 & VC.NET
 #elif __BORLANDC__

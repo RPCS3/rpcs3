@@ -28,7 +28,7 @@
 
 #include "Common.h"
 #include "PsxCommon.h"
-#include "SaveState.h"
+#include "HostGui.h"
 
 #include "CDVDisodrv.h"
 #include "VUmicro.h"
@@ -583,6 +583,7 @@ void ProcessFKeys(int fkey, int shift)
 			try
 			{
 				gzSavingState( SaveState::GetFilename( StatesC ) ).FreezeAll();
+				HostGui::ResetMenuSlots();
 			}
 			catch( Exception::BaseException& ex )
 			{

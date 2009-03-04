@@ -584,7 +584,7 @@ void gifMFIFOInterrupt()
 
 void SaveState::gifFreeze()
 {
-	if( GetVersion() >= 0x14 )
+	if( GetVersion() >= 0x04 )
 	{
 		Freeze( gifstate );
 		Freeze( gifqwc );

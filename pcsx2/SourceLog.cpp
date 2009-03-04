@@ -98,7 +98,7 @@ static __forceinline void _vSourceLog( u16 protocol, u8 source, u32 cpuPc, u32 c
 #ifdef PCSX2_DEVBUILD
 #ifdef _WIN32
 	// Send log data to the (remote?) debugger.
-	if (connected && logProtocol>=0 && logProtocol<0x10)
+	if (connected && logProtocol<0x10)
 	{
 		sendTTYP(logProtocol, logSource, tmp);
 	}
