@@ -224,7 +224,10 @@ BEGIN
     GROUPBOX        "Clamp Mode",IDC_STATIC,281,80,236,127,BS_LEFT
     GROUPBOX        "Other Options",IDC_STATIC,281,210,237,34,BS_LEFT
     LTEXT           "These options specify how PCSX2's recompilers will clamp Infinities and NaN (Not a Number) values in the opcode instructions.",IDC_STATIC,286,94,224,19
-    LTEXT           "*None* - No clamping. (Fastest Mode)\n*Normal* - Clamps the result.\n*Extra* - Clamps the operands, the result, and anywhere in between.\n*Extra + Preserve Sign* - Same as ""Extra"", except preserves NaN's sign when clamping the operands.",IDC_STATIC,286,114,224,48    LTEXT           "*Full* - Attempts to emulate large numbers correctly for the EE's FPU. VU's clamp mode should be set to ""Extra + Preserve Sign"" for this to work best. (but still works for most games even with ""Normal"" VU clamping)",IDC_STATIC,287,163,214,36    LTEXT           "Flush to Zero - Makes floating point underflows become zero.\nDenormals are Zero - Makes floating point denormals become zero.",IDC_STATIC,287,222,224,18END
+    LTEXT           "*None* - No clamping. (Fastest Mode)\n*Normal* - Clamps the result.\n*Extra* - Clamps the operands, the result, and anywhere in between.\n*Extra + Preserve Sign* - Same as ""Extra"", except preserves NaN's sign when clamping the operands.",IDC_STATIC,286,114,224,48
+    LTEXT           "*Full* - Attempts to emulate large numbers correctly for the EE's FPU. VU's clamp mode should be set to ""Extra + Preserve Sign"" for this to work best. (but still works for most games even with ""Normal"" VU clamping)",IDC_STATIC,287,163,214,36
+    LTEXT           "Flush to Zero - Makes floating point underflows become zero.\nDenormals are Zero - Makes floating point denormals become zero.",IDC_STATIC,287,222,224,18
+END
 
 IDD_CONF_MEMCARD DIALOGEX 0, 0, 451, 215
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
