@@ -18,57 +18,36 @@
 
 #pragma once
 
-#ifdef __LINUX__
-#include "ix86/ix86.h"
-#endif
-
 //------------------------------------------------------------------
 // Helper Macros
 //------------------------------------------------------------------
-#define _Ft_ ((code >> 16) & 0x1F)  // The rt part of the instruction register 
-#define _Fs_ ((code >> 11) & 0x1F)  // The rd part of the instruction register 
-#define _Fd_ ((code >>  6) & 0x1F)  // The sa part of the instruction register
+#define _Ft_ ((mVU->code >> 16) & 0x1F)  // The rt part of the instruction register 
+#define _Fs_ ((mVU->code >> 11) & 0x1F)  // The rd part of the instruction register 
+#define _Fd_ ((mVU->code >>  6) & 0x1F)  // The sa part of the instruction register
 
-#define _X ((code>>24) & 0x1)
-#define _Y ((code>>23) & 0x1)
-#define _Z ((code>>22) & 0x1)
-#define _W ((code>>21) & 0x1)
+#define _X ((mVU->code>>24) & 0x1)
+#define _Y ((mVU->code>>23) & 0x1)
+#define _Z ((mVU->code>>22) & 0x1)
+#define _W ((mVU->code>>21) & 0x1)
 
 #define _XYZW_SS (_X+_Y+_Z+_W==1)
 
-#define _X_Y_Z_W  (((code >> 21 ) & 0xF ) )
+#define _X_Y_Z_W  (((mVU->code >> 21 ) & 0xF ) )
 
-#define _Fsf_ ((code >> 21) & 0x03)
-#define _Ftf_ ((code >> 23) & 0x03)
+#define _Fsf_ ((mVU->code >> 21) & 0x03)
+#define _Ftf_ ((mVU->code >> 23) & 0x03)
 
-#define _Imm11_ 	(s32)(code & 0x400 ? 0xfffffc00 | (code & 0x3ff) : code & 0x3ff)
-#define _UImm11_	(s32)(code & 0x7ff)
-/*
-#define VU_VFx_ADDR(x)  (uptr)&VU->VF[x].UL[0]
-#define VU_VFy_ADDR(x)  (uptr)&VU->VF[x].UL[1]
-#define VU_VFz_ADDR(x)  (uptr)&VU->VF[x].UL[2]
-#define VU_VFw_ADDR(x)  (uptr)&VU->VF[x].UL[3]
+#define _Imm11_ 	(s32)(mVU->code & 0x400 ? 0xfffffc00 | (mVU->code & 0x3ff) : mVU->code & 0x3ff)
+#define _UImm11_	(s32)(mVU->code & 0x7ff)
 
-#define VU_REGR_ADDR    (uptr)&VU->VI[REG_R]
-#define VU_REGQ_ADDR    (uptr)&VU->VI[REG_Q]
-#define VU_REGMAC_ADDR  (uptr)&VU->VI[REG_MAC_FLAG]
-
-#define VU_VI_ADDR(x, read) GetVIAddr(VU, x, read, info)
-
-#define VU_ACCx_ADDR    (uptr)&VU->ACC.UL[0]
-#define VU_ACCy_ADDR    (uptr)&VU->ACC.UL[1]
-#define VU_ACCz_ADDR    (uptr)&VU->ACC.UL[2]
-#define VU_ACCw_ADDR    (uptr)&VU->ACC.UL[3]
-*/
-
-#define xmmT1	0 // XMM0
-#define xmmFd	1 // XMM1
-#define xmmFs	2 // XMM2
-#define xmmFt	3 // XMM3
-#define xmmACC1	4 // XMM4
-#define xmmACC2	5 // XMM5
-#define xmmPQ	6 // XMM6
-#define xmmZ	7 // XMM7
+#define xmmT1	0 // XMM0 // Temp Reg
+#define xmmFd	1 // XMM1 // Holds the Value of Fd
+#define xmmFs	2 // XMM2 // Holds the Value of Fs
+#define xmmFt	3 // XMM3 // Holds the Value of Ft
+#define xmmACC1	4 // XMM4 // Holds the Value of ACC
+#define xmmACC2	5 // XMM5 // Holds the Backup Value of ACC
+#define xmmPQ	6 // XMM6 // Holds the Value and Backup Values of P and Q regs
+#define xmmF	7 // XMM7 // Holds 4 instances of the status and mac flags (macflagX4::statusflagX4)
 
 // Template Stuff
 #define mVUx (vuIndex ? &microVU1 : &microVU0)
@@ -76,4 +55,11 @@
 #define microVUx(aType) template<int vuIndex> aType
 #define microVUf(aType) template<int vuIndex, int recPass> aType
 
-microVUx(void) mVUsaveReg(u32 code, int reg, u32 offset);
+#define mVUallocInfo mVU->prog.prog[mVU->prog.cur].allocInfo
+
+#define isNOP	(mVUallocInfo.info[mVUallocInfo.curPC] & (1<<0))
+#define getFd	(mVUallocInfo.info[mVUallocInfo.curPC] & (1<<1))
+#define getFs	(mVUallocInfo.info[mVUallocInfo.curPC] & (1<<2))
+#define getFt	(mVUallocInfo.info[mVUallocInfo.curPC] & (1<<3))
+#define setFd	(mVUallocInfo.info[mVUallocInfo.curPC] & (1<<7))
+#define doFlags	(mVUallocInfo.info[mVUallocInfo.curPC] & (3<<8))

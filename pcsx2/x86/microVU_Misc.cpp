@@ -24,27 +24,54 @@ extern PCSX2_ALIGNED16(microVU microVU0);
 extern PCSX2_ALIGNED16(microVU microVU1);
 
 //------------------------------------------------------------------
+// Micro VU - Clamp Functions
+//------------------------------------------------------------------
+
+// Used for Result Clamping
+microVUx(void) mVUclamp1(int reg, int regTemp, int xyzw) {
+}
+
+// Used for Operand Clamping
+microVUx(void) mVUclamp2(int reg, int regTemp, int xyzw) {
+}
+
+//------------------------------------------------------------------
 // Micro VU - Misc Functions
 //------------------------------------------------------------------
 
-microVUx(void) mVUsaveReg(u32 code, int reg, u32 offset) {
-	switch ( _X_Y_Z_W ) {
+microVUx(void) mVUunpack_xyzw(int dstreg, int srcreg, int xyzw) {
+	switch ( xyzw ) {
+		case 0: SSE2_PSHUFD_XMM_to_XMM(dstreg, srcreg, 0x00); break;
+		case 1: SSE2_PSHUFD_XMM_to_XMM(dstreg, srcreg, 0x55); break;
+		case 2: SSE2_PSHUFD_XMM_to_XMM(dstreg, srcreg, 0xaa); break;
+		case 3: SSE2_PSHUFD_XMM_to_XMM(dstreg, srcreg, 0xff); break;
+	}
+}
+
+microVUx(void) mVUloadReg(int reg, u32 offset, int xyzw) {
+	switch( xyzw ) {
+		case 8:		SSE_MOVSS_M32_to_XMM(reg, offset);		break; // X
+		case 4:		SSE_MOVSS_M32_to_XMM(reg, offset+4);	break; // Y
+		case 2:		SSE_MOVSS_M32_to_XMM(reg, offset+8);	break; // Z
+		case 1:		SSE_MOVSS_M32_to_XMM(reg, offset+12);	break; // W
+		case 3:		SSE_MOVHPS_M64_to_XMM(reg, offset+8);	break; // ZW (not sure if this is faster than default)
+		case 12:	SSE_MOVLPS_M64_to_XMM(reg, offset);		break; // XY (not sure if this is faster than default)
+		default:	SSE_MOVAPS_M128_to_XMM(reg, offset);	break;
+	}
+}
+
+microVUx(void) mVUsaveReg(int reg, u32 offset, int xyzw) {
+	switch ( xyzw ) {
 		case 1: // W
-			//SSE2_PSHUFD_XMM_to_XMM(xmmT1, reg, 0x27);
-			//SSE_MOVSS_XMM_to_M32(offset+12, xmmT1);
 			SSE_MOVSS_XMM_to_M32(offset+12, reg);
 			break;
 		case 2: // Z
-			//SSE_MOVHLPS_XMM_to_XMM(xmmT1, reg);
-			//SSE_MOVSS_XMM_to_M32(offset+8, xmmT1);
 			SSE_MOVSS_XMM_to_M32(offset+8, reg);
 			break;
 		case 3: // ZW
 			SSE_MOVHPS_XMM_to_M64(offset+8, reg);
 			break;
 		case 4: // Y
-			//SSE2_PSHUFLW_XMM_to_XMM(xmmT1, reg, 0x4e);
-			//SSE_MOVSS_XMM_to_M32(offset+4, xmmT1);
 			SSE_MOVSS_XMM_to_M32(offset+4, reg);
 			break;
 		case 5: // YW
@@ -52,7 +79,6 @@ microVUx(void) mVUsaveReg(u32 code, int reg, u32 offset) {
 			SSE_MOVHLPS_XMM_to_XMM(xmmT1, reg);
 			SSE_MOVSS_XMM_to_M32(offset+4, reg);
 			SSE_MOVSS_XMM_to_M32(offset+12, xmmT1);
-			SSE_SHUFPS_XMM_to_XMM(reg, reg, 0xB1);
 			break;
 		case 6: // YZ
 			SSE2_PSHUFD_XMM_to_XMM(xmmT1, reg, 0xc9);
@@ -96,8 +122,7 @@ microVUx(void) mVUsaveReg(u32 code, int reg, u32 offset) {
 			SSE_MOVSS_XMM_to_M32(offset+8, xmmT1);
 			break;
 		case 15: // XYZW				
-			if( offset & 15 ) SSE_MOVUPS_XMM_to_M128(offset, reg);
-			else SSE_MOVAPS_XMM_to_M128(offset, reg);
+			SSE_MOVAPS_XMM_to_M128(offset, reg);
 			break;
 	}
 }

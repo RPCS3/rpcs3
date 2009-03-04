@@ -30,32 +30,59 @@ extern PCSX2_ALIGNED16(microVU microVU1);
 //------------------------------------------------------------------
 // Micro VU - recPass 1 Functions
 //------------------------------------------------------------------
-/*
-#define setFd (mVU->prog.prog[mVU->prog.cur].allocInfo.info[pc] & (1<<7))
-#define getFd (mVU->prog.prog[mVU->prog.cur].allocInfo.info[pc] & (1<<1))
-#define getFs (mVU->prog.prog[mVU->prog.cur].allocInfo.info[pc] & (1<<2))
-#define getFt (mVU->prog.prog[mVU->prog.cur].allocInfo.info[pc] & (1<<3))
-*/
+
 #define makeFdFd (makeFd == 0)
 #define makeFdFs (makeFd == 1)
-#define makeFdFt (makeFd == 2)
 
-microVUt(void) mVUallocFMAC1a(u32 code, int& Fd, int& Fs, int& Ft, const int makeFd) {
-	microVU* mVU = mVUx;
-	if (_Fs_ == 0) { Fs = xmmZ; } else { Fs = xmmFs; }
-	if (_Ft_ == 0) { Ft = xmmZ; } else { Ft = xmmFt; }
-	if		(makeFdFd) {Fd = xmmFd;}
-	else if (makeFdFs) {Fd = Fs;}
-	else if (makeFdFt) {Fd = Ft;}
-
-	if (_Fs_) SSE_MOVAPS_M128_to_XMM(Fs, (uptr)&mVU->regs->VF[_Fs_].UL[0]);
-	if (_Ft_ == _Ft_) SSE_MOVAPS_M128_to_XMM(Ft, (uptr)&mVU->regs->VF[_Ft_].UL[0]);
+#define getReg(reg, _reg_) {  \
+	mVUloadReg(reg, (uptr)&mVU->regs->VF[_reg_].UL[0], _X_Y_Z_W);  \
+	if (CHECK_VU_EXTRA_OVERFLOW) mVUclamp2<vuIndex>(reg, xmmT1, _X_Y_Z_W);  \
 }
 
-microVUt(void) mVUallocFMAC1b(u32 code, u32 pc, int& Fd) {
+#define getZeroSS(reg) {  \
+	if (_W)	{ mVUloadReg(reg, (uptr)&mVU->regs->VF[0].UL[0], _X_Y_Z_W); }  \
+	else	{ SSE_XORPS_XMM_to_XMM(reg, reg); }  \
+}
+
+#define getZero(reg) {  \
+	if (_W)	{ mVUloadReg(reg, (uptr)&mVU->regs->VF[0].UL[0], _X_Y_Z_W); }  \
+	else	{ SSE_XORPS_XMM_to_XMM(reg, reg); }  \
+}
+
+// Note: If _Ft_ is 0, then don't modify xmm reg Ft, because its equal to xmmZ (unless _XYZW_SS, then you can modify xmm reg Ft)
+microVUt(void) mVUallocFMAC1a(int& Fd, int& Fs, int& Ft, const bool makeFd) {
 	microVU* mVU = mVUx;
-	if (_Fd_ == 0) return;
-	else mVUsaveReg<vuIndex>(code, Fd, (uptr)&mVU->regs->VF[_Fd_].UL[0]);
+	Fs = xmmFs;
+	Ft = xmmFt;
+	if (_XYZW_SS) {
+		if (!_Fs_)	{ getZeroSS(Fs); }
+		else		{ getReg(Fs, _Fs_); }
+
+		if (_Ft_ == _Fs_) { Ft = Fs; }
+		else {
+			if (!_Ft_)	{ getZeroSS(Ft); }
+			else		{ getReg(Ft, _Ft_); }
+		}
+	}
+	else {
+		if (!_Fs_)	{ getZero(Fs); }
+		else		{ getReg(Fs, _Fs_); }
+		
+		if (_Ft_ == _Fs_) { Ft = Fs; }
+		else {
+			if (!_Ft_)	{ getZero(Ft); } 
+			else		{ getReg(Ft, _Ft_); }
+		}
+	}
+	if (makeFdFs) {Fd = Fs;}
+	else		  {Fd = xmmFd;}
+}
+
+microVUt(void) mVUallocFMAC1b(int& Fd) {
+	microVU* mVU = mVUx;
+	if (!_Fd_) return;
+	if (CHECK_VU_OVERFLOW) mVUclamp1<vuIndex>(Fd, xmmT1, _X_Y_Z_W);
+	mVUsaveReg<vuIndex>(Fd, (uptr)&mVU->regs->VF[_Fd_].UL[0], _X_Y_Z_W);
 }
 
 #endif //PCSX2_MICROVU

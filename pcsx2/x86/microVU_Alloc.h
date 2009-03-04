@@ -44,6 +44,13 @@ struct microAllocInfo {
 					// bit 4 = ACC1 or ACC2?
 					// bit 5 = Read Q1/P1 or backup?
 					// bit 6 = Write to Q2/P2?
-					// bit 7 = Write Fd/Acc to backup memory?
+					// bit 7 = Write Fd/Acc/Result to backup memory?
+					// bit 8 = Update Status Flags?
+					// bit 9 = Update Mac Flags?
+					// bit 10 = Used with bit 11 to make a 2-bit key for status/mac flag instance
+					// bit 11 = (00 = instance #0, 01 = instance #1, 10 = instance #2, 11 = instance #3)
 	u32 curPC;
 };
+
+microVUt(void) mVUallocFMAC1a(int& Fd, int& Fs, int& Ft, const bool makeFd);
+microVUt(void) mVUallocFMAC1b(int& Fd);

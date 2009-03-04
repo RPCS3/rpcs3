@@ -20,66 +20,85 @@
 #include "microVU.h"
 #ifdef PCSX2_MICROVU
 
-/*
-Cotton's Notes on how things will work (*experimental*, subject to change if I get different ideas):
+//------------------------------------------------------------------
+// mVUupdateFlags() - Updates status/mac flags
+//------------------------------------------------------------------
 
-Guide:
-Fd, Fs, Ft = operands in the Micro Instructions
-Acc = VU's Accumulator register
-Fs/t = shorthand notation I made-up for "Fs or Ft"
-xmmFd, xmmFs, xmmFt, xmmAcc = XMM regs that hold Fd, Fs, Ft, and Acc values respectively.
-xmmZ = XMM reg that holds the zero Register; always {0, 0, 0, 1.0}
-xmmT1, xmmT2, xmmT3 = temp regs.
+microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw) {
+	microVU* mVU = mVUx;
+	static u8 *pjmp, *pjmp2;
+	static u32 *pjmp32;
+	static u32 macaddr, stataddr, prevstataddr;
+	static int x86macflag, x86statflag, x86temp;
 
-General:
-XMM0 is a volatile temp reg throughout the recs. You can always freely use it.
-EAX is a volatile temp reg. You can always freely use it.
+	//SysPrintf ("mVUupdateFlags\n");
+	if( !(doFlags) ) return;
 
-Mapping:
-xmmT1	= xmm0
-xmmFd	= xmm1
-xmmFs	= xmm2
-xmmFt	= xmm3
-xmmACC1	= xmm4
-xmmACC2	= xmm5
-xmmPQ	= xmm6
-xmmZ	= xmm7
+	//macaddr = VU_VI_ADDR(REG_MAC_FLAG, 0);
+	//stataddr = VU_VI_ADDR(REG_STATUS_FLAG, 0); // write address
+	//prevstataddr = VU_VI_ADDR(REG_STATUS_FLAG, 2); // previous address
 
-Most of the time the above mapping will be true, unless I find a reason not to do it this way :)
 
-Opcodes:
-Fd's 4-vectors must be preserved (kept valid); Unless operation is single-scalar, then only 'x' XMM vector 
-will contain valid data for X, Y, Z, or W, and the other XMM vectors will be garbage and freely modifiable.
+	SSE2_PSHUFD_XMM_to_XMM(regT1, reg, 0x1B); // Flip wzyx to xyzw 
+	MOV32MtoR(x86statflag, prevstataddr); // Load the previous status in to x86statflag
+	AND16ItoR(x86statflag, 0xff0); // Keep Sticky and D/I flags
 
-Fs and Ft are temp regs that won't be used after the opcode, so their values can be freely modified.
+	//-------------------------Check for Signed flags------------------------------
 
-If (Fd == 0), Then you don't need to explicitly handle this case in the opcode implementation, 
-				   since its dealt-with in the analyzing microVU pipeline functions.
-				   (So just do the normal operation and don't worry about it.)
+	// The following code makes sure the Signed Bit isn't set with Negative Zero
+	SSE_XORPS_XMM_to_XMM(regT2, regT2); // Clear regT2
+	SSE_CMPEQPS_XMM_to_XMM(regT2, regT1); // Set all F's if each vector is zero
+	SSE_MOVMSKPS_XMM_to_R32(EAX, regT2); // Used for Zero Flag Calculation
+	SSE_ANDNPS_XMM_to_XMM(regT2, regT1);
 
-If (_X_Y_Z_W == 0) Then same as above. (btw, I'm'm not sure if this case ever happens...)
+	SSE_MOVMSKPS_XMM_to_R32(x86macflag, regT2); // Move the sign bits of the t1reg
 
-If (Fd == Fs/t), Then xmmFd != xmmFs/t (unless its more optimized this way! it'll be commented on the opcode)
+	AND16ItoR(x86macflag, _X_Y_Z_W );  // Grab "Is Signed" bits from the previous calculation
+	pjmp = JZ8(0); // Skip if none are
+		OR16ItoR(x86statflag, 0x82); // SS, S flags
+		SHL16ItoR(x86macflag, 4);
+		if (_XYZW_SS) pjmp2 = JMP8(0); // If negative and not Zero, we can skip the Zero Flag checking
+	x86SetJ8(pjmp);
 
-Clamping:
-Fs/t can always be clamped by case 15 (all vectors modified) since they won't be written back.
+	//-------------------------Check for Zero flags------------------------------
 
-Problems:
-The biggest problem I think I'll have is xgkick opcode having variable timing/stalling.
+	AND16ItoR(EAX, _X_Y_Z_W );  // Grab "Is Zero" bits from the previous calculation
+	pjmp = JZ8(0); // Skip if none are
+		OR16ItoR(x86statflag, 0x41); // ZS, Z flags
+		OR32RtoR(x86macflag, EAX);
+	x86SetJ8(pjmp);
 
-Other Notes:
-These notes are mostly to help me (cottonvibes) remember good ideas and to help confused devs to
-have an idea of how things work. Right now its all theoretical and I'll change things once implemented ;p
-*/
+	//-------------------------Finally: Send the Flags to the Mac Flag Address------------------------------
+
+	if (_XYZW_SS) x86SetJ8(pjmp2); // If we skipped the Zero Flag Checking, return here
+
+	MOV16RtoM(macaddr, x86macflag);
+	MOV16RtoM(stataddr, x86statflag);
+}
+
+//------------------------------------------------------------------
+// Helper Macros
+//------------------------------------------------------------------
+
+#define mVU_FMAC1(operation) {								\
+	if (isNOP) return;										\
+	int Fd, Fs, Ft;											\
+	mVUallocFMAC1a<vuIndex>(Fd, Fs, Ft, 1);					\
+	if (_XYZW_SS) SSE_##operation##SS_XMM_to_XMM(Fs, Ft);	\
+	else		  SSE_##operation##PS_XMM_to_XMM(Fs, Ft);	\
+	mVUupdateFlags<vuIndex>(Fd, xmmT1, Ft, _X_Y_Z_W);		\
+	mVUallocFMAC1b<vuIndex>(Fd);							\
+}
 
 //------------------------------------------------------------------
 // Micro VU Micromode Upper instructions
 //------------------------------------------------------------------
 
 microVUf(void) mVU_ABS(){}
-microVUf(void) mVU_ADD(){
+microVUf(void) mVU_ADD() {
+	microVU* mVU = mVUx;
 	if (recPass == 0) {}
-	else {}
+	else { mVU_FMAC1(ADD); }
 }
 microVUf(void) mVU_ADDi(){}
 microVUf(void) mVU_ADDq(){}
@@ -94,7 +113,11 @@ microVUf(void) mVU_ADDAx(){}
 microVUf(void) mVU_ADDAy(){}
 microVUf(void) mVU_ADDAz(){}
 microVUf(void) mVU_ADDAw(){}
-microVUf(void) mVU_SUB(){}
+microVUf(void) mVU_SUB(){
+	microVU* mVU = mVUx;
+	if (recPass == 0) {}
+	else { mVU_FMAC1(SUB); }
+}
 microVUf(void) mVU_SUBi(){}
 microVUf(void) mVU_SUBq(){}
 microVUf(void) mVU_SUBx(){}
@@ -108,7 +131,11 @@ microVUf(void) mVU_SUBAx(){}
 microVUf(void) mVU_SUBAy(){}
 microVUf(void) mVU_SUBAz(){}
 microVUf(void) mVU_SUBAw(){}
-microVUf(void) mVU_MUL(){}
+microVUf(void) mVU_MUL(){
+	microVU* mVU = mVUx;
+	if (recPass == 0) {}
+	else { mVU_FMAC1(MUL); }
+}
 microVUf(void) mVU_MULi(){}
 microVUf(void) mVU_MULq(){}
 microVUf(void) mVU_MULx(){}

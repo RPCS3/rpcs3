@@ -17,8 +17,10 @@
  */
 
 #pragma once
+#define _EmitterId_ (vuIndex+1)
 #include "Common.h"
 #include "VU.h"
+#include "ix86/ix86.h"
 #include "microVU_Misc.h"
 #include "microVU_Alloc.h"
 #include "microVU_Tables.h"
@@ -110,6 +112,7 @@ struct microVU {
 	VURegs*	regs;	// VU Regs Struct
 	u8*		cache;	// Dynarec Cache Start (where we will start writing the recompiled code to)
 	u8*		ptr;	// Pointer to next place to write recompiled code to
+	u32		code;	// Contains the current Instruction
 /*
 	uptr x86eax; // Accumulator register. Used in arithmetic operations.
 	uptr x86ecx; // Counter register. Used in shift/rotate instructions.
