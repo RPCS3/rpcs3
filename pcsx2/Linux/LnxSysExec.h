@@ -32,7 +32,7 @@ void __fastcall ReleaseLinuxExceptionHandler();
 #define PCSX2_MEM_PROTECT_END() ReleaseLinuxExceptionHandler()
 
 extern void StartGui();
-extern void CheckSlots();
+extern void  RefreshMenuSlots();
 
 extern void SignalExit(int sig);
 extern const char* g_pRunGSState;

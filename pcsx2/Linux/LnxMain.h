@@ -20,9 +20,11 @@
 #define __LNXMAIN_H__
 
 #include "Linux.h"
+#include "LnxMain.h"
 #include "HostGui.h"
 
 extern bool applychanges;
+extern bool Slots[5];
 
 extern bool ParseCommandLine(int argc, char *argv[], char *file);
 extern void MemoryCard_Init();
@@ -34,6 +36,8 @@ void CloseLanguages();
 
 void StartGui();
 void pcsx2_exit();
+extern bool SysInit();
+extern void SysClose();
 
 GtkWidget *MainWindow, *Status_Box;
 GtkWidget *pStatusBar = NULL;

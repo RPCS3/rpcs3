@@ -18,11 +18,14 @@
  
 #include "Linux.h"
 #include "LnxSysExec.h"
+#include "HostGui.h"
 
 bool UseGui = true;
 
 static bool sinit = false;
 GtkWidget *FileSel;
+
+bool Slots[5] = { false, false, false, false, false };
 
 void InstallLinuxExceptionHandler()
 {
@@ -201,8 +204,9 @@ void OnStates_Load(GtkMenuItem *menuitem, gpointer user_data)
 	}
 	
 	sscanf(name, "Slot %d", &i);
-	if( States_Load(i) )
-		ExecuteCpu();
+	//if (States_Load(i)) ExecuteCpu();
+	States_Load(i);
+	RefreshMenuSlots();
 }
 
 void OnLoadOther_Ok(GtkButton* button, gpointer user_data)
@@ -214,8 +218,9 @@ void OnLoadOther_Ok(GtkButton* button, gpointer user_data)
 	strcpy(str, File);
 	gtk_widget_destroy(FileSel);
 
-	if( States_Load(str) )
-		ExecuteCpu();
+	//if (States_Load(str)) ExecuteCpu();
+	States_Load(str);
+	RefreshMenuSlots();
 }
 
 void OnLoadOther_Cancel(GtkButton* button, gpointer user_data)
@@ -429,28 +434,17 @@ namespace HostGui
 	{
 		// mirror output to the console!
 		Console::Status( text.c_str() );
-		SetStatusMsg( test );
+		SetStatusMsg( text );
 	}
 
 	void ResetMenuSlots()
 	{
 		GtkWidget *Item;
 		char str[g_MaxPath], str2[g_MaxPath];
-
+		
 		for (int i = 0; i < 5; i++)
 		{
-			sprintf(str, "load_slot_%d", i);
-			sprintf(str2, "save_slot_%d", i);
-			Item = lookup_widget(MainWindow, str);
-
-			if GTK_IS_WIDGET(Item) 
-				gtk_widget_set_sensitive(Item, Slots[i]);
-			else
-				Console::Error("No such widget: %s", params str);
-
-			Item = lookup_widget(MainWindow, str2);
-			gtk_widget_set_sensitive(Item, (ElfCRC != 0));
-
+			Slots[i] = States_isSlotUsed(i);
 		}
 	}
 

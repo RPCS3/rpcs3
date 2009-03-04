@@ -19,9 +19,9 @@ BaseblockEx.h iCOP0.h iCore.h iFPU.h iMMI.h iR3000A.h iR5900.h iR5900Arit.h iR59
 iR5900LoadStore.h iR5900Move.h iR5900MultDiv.h iR5900Shift.h iVUmicro.h iVUops.h iVUzerorec.h 
 
 #ifdef PCSX2_MICROVU
-libx86recomp_a_SOURCES += \
-microVU.cpp microVU_Alloc.cpp microVU_Compile.cpp microVU_Lower.cpp microVU_Misc.cpp microVU_Upper.cpp aMicroVU.S \
-microVU.h microVU_Alloc.h microVU_Misc.h microVU_Tables.h
+#libx86recomp_a_SOURCES += \
+#microVU.cpp microVU_Alloc.cpp microVU_Compile.cpp microVU_Lower.cpp microVU_Misc.cpp microVU_Upper.cpp aMicroVU.S \
+#microVU.h microVU_Alloc.h microVU_Misc.h microVU_Tables.h
 #endif
 
 libx86recomp_a_DEPENDENCIES = ix86/libix86.a

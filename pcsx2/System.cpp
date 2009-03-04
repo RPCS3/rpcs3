@@ -314,10 +314,16 @@ void SysClearExecutionCache()
 
 __forceinline void SysUpdate()
 {
+#ifdef __LINUX__
+	// Doing things the other way results in no keys functioning under Linux!
+	HostGui::KeyEvent(PAD1keyEvent());
+	HostGui::KeyEvent(PAD2keyEvent());
+#else
 	keyEvent* ev1 = PAD1keyEvent();
 	keyEvent* ev2 = PAD2keyEvent();
 
 	HostGui::KeyEvent( (ev1 != NULL) ? ev1 : ev2);
+#endif
 }
 
 void SysExecute()

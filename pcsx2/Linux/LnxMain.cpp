@@ -139,7 +139,7 @@ int main(int argc, char *argv[])
 	if (!efile) efile = GetPS2ElfName(elfname);
 	loadElfFile(elfname);
 
-	ExecuteCpu();
+	//ExecuteCpu();
 
 	return 0;
 }
@@ -211,7 +211,27 @@ void On_Dialog_Cancelled(GtkButton* button, gpointer user_data)
 	gtk_widget_set_sensitive(MainWindow, TRUE);
 	gtk_main_quit();
 }
+	
+void  RefreshMenuSlots()
+{
+	GtkWidget *Item;
+	char str[g_MaxPath], str2[g_MaxPath];
+		
+	for (int i = 0; i < 5; i++)
+	{
+		sprintf(str, "load_slot_%d", i);
+		sprintf(str2, "save_slot_%d", i);
+		Item = lookup_widget(MainWindow, str);
 
+		if GTK_IS_WIDGET(Item) 
+			gtk_widget_set_sensitive(Item, Slots[i]);
+		else
+			Console::Error("No such widget: %s", params str);
+
+		Item = lookup_widget(MainWindow, str2);
+		gtk_widget_set_sensitive(Item, (ElfCRC != 0));
+	}
+}
 void StartGui()
 {
 	GtkWidget *Menu;
@@ -233,7 +253,7 @@ void StartGui()
 	gtk_box_pack_start(GTK_BOX(lookup_widget(MainWindow, "status_box")), pStatusBar, TRUE, TRUE, 0);
 	gtk_widget_show(pStatusBar);
 
-	StatusBar_SetMsg( "F1 - save, F2 - next state, Shift+F2 - prev state, F3 - load, F8 - snapshot");
+	HostGui::SetStatusMsg( "F1 - save, F2 - next state, Shift+F2 - prev state, F3 - load, F8 - snapshot");
 
 	// add all the languages
 	Item = lookup_widget(MainWindow, "GtkMenuItem_Language");
@@ -269,7 +289,7 @@ void StartGui()
 	gtk_widget_destroy(lookup_widget(MainWindow, "GtkMenuItem_Debug"));
 #endif
 	
-	ResetMenuSlots();
+	RefreshMenuSlots();
 	
 	gtk_widget_show_all(MainWindow);
 	gtk_window_activate_focus(GTK_WINDOW(MainWindow));
