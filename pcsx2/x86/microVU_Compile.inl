@@ -16,11 +16,7 @@
 *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
 
-#include "PrecompiledHeader.h"
-#include "microVU.h"
+#pragma once
 #ifdef PCSX2_MICROVU
-
-extern PCSX2_ALIGNED16(microVU microVU0);
-extern PCSX2_ALIGNED16(microVU microVU1);
 
 #endif //PCSX2_MICROVU

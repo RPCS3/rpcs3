@@ -63,3 +63,5 @@
 #define getFt	(mVUallocInfo.info[mVUallocInfo.curPC] & (1<<3))
 #define setFd	(mVUallocInfo.info[mVUallocInfo.curPC] & (1<<7))
 #define doFlags	(mVUallocInfo.info[mVUallocInfo.curPC] & (3<<8))
+
+#include "microVU_Misc.inl"

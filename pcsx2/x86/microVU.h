@@ -21,9 +21,7 @@
 #include "Common.h"
 #include "VU.h"
 #include "ix86/ix86.h"
-#include "microVU_Misc.h"
 #include "microVU_Alloc.h"
-#include "microVU_Tables.h"
 //#include <vector>
 
 struct microBlock {
@@ -126,6 +124,10 @@ struct microVU {
 	microProgManager<0x800> prog; // Micro Program Data
 };
 
+// microVU rec structs
+extern PCSX2_ALIGNED16(microVU microVU0);
+extern PCSX2_ALIGNED16(microVU microVU1);
+
 // Opcode Tables
 extern void (*mVU_UPPER_OPCODE[64])( VURegs* VU, s32 info );
 extern void (*mVU_LOWER_OPCODE[128])( VURegs* VU, s32 info );
@@ -139,3 +141,7 @@ __forceinline void	mVUcacheProg(microVU* mVU, int progIndex);
 microVUt(void) mVUreset();
 microVUt(void) mVUclose();
 #endif
+
+#include "microVU_Misc.h"
+#include "microVU_Alloc.inl"
+#include "microVU_Tables.inl"

@@ -2486,23 +2486,19 @@
 							>
 						</File>
 						<File
-							RelativePath="..\..\x86\microVU_Alloc.cpp"
-							>
-						</File>
-						<File
 							RelativePath="..\..\x86\microVU_Alloc.h"
 							>
 						</File>
 						<File
-							RelativePath="..\..\x86\microVU_Compile.cpp"
+							RelativePath="..\..\x86\microVU_Alloc.inl"
 							>
 						</File>
 						<File
-							RelativePath="..\..\x86\microVU_Lower.cpp"
+							RelativePath="..\..\x86\microVU_Compile.inl"
 							>
 						</File>
 						<File
-							RelativePath="..\..\x86\microVU_Misc.cpp"
+							RelativePath="..\..\x86\microVU_Lower.inl"
 							>
 						</File>
 						<File
@@ -2510,15 +2506,15 @@
 							>
 						</File>
 						<File
-							RelativePath="..\..\x86\microVU_Tables.cpp"
+							RelativePath="..\..\x86\microVU_Misc.inl"
 							>
 						</File>
 						<File
-							RelativePath="..\..\x86\microVU_Tables.h"
+							RelativePath="..\..\x86\microVU_Tables.inl"
 							>
 						</File>
 						<File
-							RelativePath="..\..\x86\microVU_Upper.cpp"
+							RelativePath="..\..\x86\microVU_Upper.inl"
 							>
 						</File>
 					</Filter>

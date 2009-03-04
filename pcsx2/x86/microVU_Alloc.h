@@ -52,5 +52,3 @@ struct microAllocInfo {
 	u32 curPC;
 };
 
-microVUt(void) mVUallocFMAC1a(int& Fd, int& Fs, int& Ft, const bool makeFd);
-microVUt(void) mVUallocFMAC1b(int& Fd);

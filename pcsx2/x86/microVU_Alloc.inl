@@ -16,12 +16,8 @@
 *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
 
-#include "PrecompiledHeader.h"
-#include "microVU.h"
+#pragma once
 #ifdef PCSX2_MICROVU
-
-extern PCSX2_ALIGNED16(microVU microVU0);
-extern PCSX2_ALIGNED16(microVU microVU1);
 
 //------------------------------------------------------------------
 // Micro VU - recPass 0 Functions
@@ -35,17 +31,17 @@ extern PCSX2_ALIGNED16(microVU microVU1);
 #define makeFdFs (makeFd == 1)
 
 #define getReg(reg, _reg_) {  \
-	mVUloadReg(reg, (uptr)&mVU->regs->VF[_reg_].UL[0], _X_Y_Z_W);  \
+	mVUloadReg<vuIndex>(reg, (uptr)&mVU->regs->VF[_reg_].UL[0], _X_Y_Z_W);  \
 	if (CHECK_VU_EXTRA_OVERFLOW) mVUclamp2<vuIndex>(reg, xmmT1, _X_Y_Z_W);  \
 }
 
 #define getZeroSS(reg) {  \
-	if (_W)	{ mVUloadReg(reg, (uptr)&mVU->regs->VF[0].UL[0], _X_Y_Z_W); }  \
+	if (_W)	{ mVUloadReg<vuIndex>(reg, (uptr)&mVU->regs->VF[0].UL[0], _X_Y_Z_W); }  \
 	else	{ SSE_XORPS_XMM_to_XMM(reg, reg); }  \
 }
 
 #define getZero(reg) {  \
-	if (_W)	{ mVUloadReg(reg, (uptr)&mVU->regs->VF[0].UL[0], _X_Y_Z_W); }  \
+	if (_W)	{ mVUloadReg<vuIndex>(reg, (uptr)&mVU->regs->VF[0].UL[0], _X_Y_Z_W); }  \
 	else	{ SSE_XORPS_XMM_to_XMM(reg, reg); }  \
 }
 
