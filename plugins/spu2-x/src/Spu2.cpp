@@ -163,18 +163,19 @@ void V_Core::Reset()
 
 	MasterVol = V_VolumeSlideLR::Max;
 
-	ExtWetR = -1;
-	ExtWetL = -1;
-	ExtDryR = -1;
-	ExtDryL = -1;
-	InpWetR = -1;
-	InpWetL = -1;
-	InpDryR = -1;
-	InpDryL = -1;
-	SndWetR = -1;
-	SndWetL = -1;
-	SndDryR = -1;
-	SndDryL = -1;
+	DryGate.ExtL = -1;
+	DryGate.ExtR = -1;
+	WetGate.ExtL = -1;
+	WetGate.ExtR = -1;
+	DryGate.InpL = -1;
+	DryGate.InpR = -1;
+	WetGate.InpR = -1;
+	WetGate.InpL = -1;
+	DryGate.SndL = -1;
+	DryGate.SndR = -1;
+	WetGate.SndL = -1;
+	WetGate.SndR = -1;
+	
 	Regs.MMIX = 0xFFCF;
 	Regs.VMIXL = 0xFFFFFF;
 	Regs.VMIXR = 0xFFFFFF;
@@ -186,17 +187,18 @@ void V_Core::Reset()
 	IRQA=0xFFFF0;
 	IRQEnable=1;
  
-	for( uint v=0; v<24; ++v )
+	for( uint v=0; v<NumVoices; ++v )
 	{
+		VoiceGates[v].DryL = -1;
+		VoiceGates[v].DryR = -1;
+		VoiceGates[v].WetL = -1;
+		VoiceGates[v].WetR = -1;
+	
 		Voices[v].Volume = V_VolumeSlideLR::Max;
 		
 		Voices[v].ADSR.Value = 0;
 		Voices[v].ADSR.Phase = 0;
 		Voices[v].Pitch = 0x3FFF;
-		Voices[v].DryL = -1;
-		Voices[v].DryR = -1;
-		Voices[v].WetL = -1;
-		Voices[v].WetR = -1;
 		Voices[v].NextA = 2800;
 		Voices[v].StartA = 2800;
 		Voices[v].LoopStartA = 2800;
@@ -461,10 +463,10 @@ void __fastcall TimeUpdate(u32 cClocks)
 		lClocks+=TickInterval;
 		Cycles++;
 
-		SaveMMXRegs();
+		// Note: IPU does not use MMX regs, so no need to save them.
+		//SaveMMXRegs();
 		Mix();
-		RestoreMMXRegs();
-
+		//RestoreMMXRegs();
 	}
 }
 
@@ -1016,7 +1018,7 @@ __forceinline void SPU2_FastWrite( u32 rmem, u16 value )
 	const uint start_bit	= hiword ? 16 : 0; \
 	const uint end_bit		= hiword ? 24 : 16; \
 	for (uint vc=start_bit, vx=1; vc<end_bit; ++vc, vx<<=1) \
-		thiscore.Voices[vc].mask_out = (value & vx) ? -1 : 0; \
+		thiscore.VoiceGates[vc].mask_out = (value & vx) ? -1 : 0; \
 }
 
 			case REG_S_VMIXL:
@@ -1058,18 +1060,18 @@ __forceinline void SPU2_FastWrite( u32 rmem, u16 value )
 			
 				vx = value;
 				if (core == 0) vx&=0xFF0;
-				thiscore.ExtWetR = (vx & 0x001) ? -1 : 0;
-				thiscore.ExtWetL = (vx & 0x002) ? -1 : 0;
-				thiscore.ExtDryR = (vx & 0x004) ? -1 : 0;
-				thiscore.ExtDryL = (vx & 0x008) ? -1 : 0;
-				thiscore.InpWetR = (vx & 0x010) ? -1 : 0;
-				thiscore.InpWetL = (vx & 0x020) ? -1 : 0;
-				thiscore.InpDryR = (vx & 0x040) ? -1 : 0;
-				thiscore.InpDryL = (vx & 0x080) ? -1 : 0;
-				thiscore.SndWetR = (vx & 0x100) ? -1 : 0;
-				thiscore.SndWetL = (vx & 0x200) ? -1 : 0;
-				thiscore.SndDryR = (vx & 0x400) ? -1 : 0;
-				thiscore.SndDryL = (vx & 0x800) ? -1 : 0;
+				thiscore.WetGate.ExtR = (vx & 0x001) ? -1 : 0;
+				thiscore.WetGate.ExtL = (vx & 0x002) ? -1 : 0;
+				thiscore.DryGate.ExtR = (vx & 0x004) ? -1 : 0;
+				thiscore.DryGate.ExtL = (vx & 0x008) ? -1 : 0;
+				thiscore.WetGate.InpR = (vx & 0x010) ? -1 : 0;
+				thiscore.WetGate.InpL = (vx & 0x020) ? -1 : 0;
+				thiscore.DryGate.InpR = (vx & 0x040) ? -1 : 0;
+				thiscore.DryGate.InpL = (vx & 0x080) ? -1 : 0;
+				thiscore.WetGate.SndR = (vx & 0x100) ? -1 : 0;
+				thiscore.WetGate.SndL = (vx & 0x200) ? -1 : 0;
+				thiscore.DryGate.SndR = (vx & 0x400) ? -1 : 0;
+				thiscore.DryGate.SndL = (vx & 0x800) ? -1 : 0;
 				thiscore.Regs.MMIX = value;
 			break;
 
@@ -1199,7 +1201,7 @@ void StartVoices(int core, u32 value)
 
 	Cores[core].Regs.ENDX &= ~value;
 	
-	for( u8 vc=0; vc<24; vc++ )
+	for( u8 vc=0; vc<V_Core::NumVoices; vc++ )
 	{
 		if ((value>>vc) & 1)
 		{
@@ -1211,8 +1213,8 @@ void StartVoices(int core, u32 value)
 
 				if(MsgKeyOnOff()) ConLog(" * SPU2: KeyOn: C%dV%02d: SSA: %8x; M: %s%s%s%s; H: %02x%02x; P: %04x V: %04x/%04x; ADSR: %04x%04x\n",
 					core,vc,thisvc.StartA,
-					(thisvc.DryL)?"+":"-",(thisvc.DryR)?"+":"-",
-					(thisvc.WetL)?"+":"-",(thisvc.WetR)?"+":"-",
+					(Cores[core].VoiceGates[vc].DryL)?"+":"-",(Cores[core].VoiceGates[vc].DryR)?"+":"-",
+					(Cores[core].VoiceGates[vc].WetL)?"+":"-",(Cores[core].VoiceGates[vc].WetR)?"+":"-",
 					*(u8*)GetMemPtr(thisvc.StartA),*(u8 *)GetMemPtr((thisvc.StartA)+1),
 					thisvc.Pitch,
 					thisvc.Volume.Left.Value>>16,thisvc.Volume.Right.Value>>16,
@@ -1225,7 +1227,7 @@ void StartVoices(int core, u32 value)
 void StopVoices(int core, u32 value)
 {
 	if( value == 0 ) return;
-	for( u8 vc=0; vc<24; vc++ )
+	for( u8 vc=0; vc<V_Core::NumVoices; vc++ )
 	{
 		if ((value>>vc) & 1)
 		{

@@ -64,10 +64,12 @@ __forceinline s32 clamp_mix( s32 x, u8 bitshift )
 	return GetClamped( x, -0x8000<<bitshift, 0x7fff<<bitshift );
 }
 
-__forceinline void clamp_mix( StereoOut32& sample, u8 bitshift )
+__forceinline StereoOut32 clamp_mix( const StereoOut32& sample, u8 bitshift )
 {
-	Clampify( sample.Left, -0x8000<<bitshift, 0x7fff<<bitshift );
-	Clampify( sample.Right, -0x8000<<bitshift, 0x7fff<<bitshift );
+	return StereoOut32( 
+		GetClamped( sample.Left, -0x8000<<bitshift, 0x7fff<<bitshift ),
+		GetClamped( sample.Right, -0x8000<<bitshift, 0x7fff<<bitshift )
+	);
 }
 
 static void __forceinline XA_decode_block(s16* buffer, const s16* block, s32& prev1, s32& prev2)
@@ -562,56 +564,71 @@ static __forceinline StereoOut32 MixVoice( uint coreidx, uint voiceidx )
 	}
 }
 
+struct VoiceMixSet
+{
+	static const VoiceMixSet Empty;
+	StereoOut32 Dry, Wet;
+	
+	VoiceMixSet() {}
+	VoiceMixSet( const StereoOut32& dry, const StereoOut32& wet ) :
+		Dry( dry ),
+		Wet( wet )
+	{
+	}
+};
 
-static StereoOut32 __fastcall MixCore( uint coreidx, const StereoOut32& Input, const StereoOut32& Ext )
+const VoiceMixSet VoiceMixSet::Empty( StereoOut32::Empty, StereoOut32::Empty );
+
+static void __fastcall MixCoreVoices( VoiceMixSet& dest, const uint coreidx )
+{
+	V_Core& thiscore( Cores[coreidx] );
+
+	for( uint voiceidx=0; voiceidx<V_Core::NumVoices; ++voiceidx )
+	{
+		StereoOut32 VVal( MixVoice( coreidx, voiceidx ) );
+
+		// Note: Results from MixVoice are ranged at 16 bits.
+		
+		dest.Dry.Left += VVal.Left & thiscore.VoiceGates[voiceidx].DryL;
+		dest.Dry.Right += VVal.Right & thiscore.VoiceGates[voiceidx].DryR;
+		dest.Wet.Left += VVal.Left & thiscore.VoiceGates[voiceidx].WetL;
+		dest.Wet.Right += VVal.Right & thiscore.VoiceGates[voiceidx].WetR;
+	}
+}
+
+static StereoOut32 __fastcall MixCore( const uint coreidx, const VoiceMixSet& inVoices, const StereoOut32& Input, const StereoOut32& Ext )
 {
 	V_Core& thiscore( Cores[coreidx] );
 	thiscore.MasterVol.Update();
 
-	StereoOut32 Dry(0,0), Wet(0,0);
-
-	for( uint voiceidx=0; voiceidx<24; ++voiceidx )
-	{
-		StereoOut32 VVal( MixVoice( coreidx, voiceidx ) );
-		
-		// Note: Results from MixVoice are ranged at 16 bits.
-
-		V_Voice& vc( thiscore.Voices[voiceidx] );
-		Dry.Left += VVal.Left & vc.DryL;
-		Dry.Right += VVal.Right & vc.DryR;
-		Wet.Left += VVal.Left & vc.WetL;
-		Wet.Right += VVal.Right & vc.WetR;
-	}
-	
 	// Saturate final result to standard 16 bit range.
-	clamp_mix( Dry );
-	clamp_mix( Wet );
+	const VoiceMixSet Voices( clamp_mix( inVoices.Dry ), clamp_mix( inVoices.Wet ) );
 	
 	// Write Mixed results To Output Area
-	spu2M_WriteFast( 0x1000 + (coreidx<<12) + OutPos, Dry.Left );
-	spu2M_WriteFast( 0x1200 + (coreidx<<12) + OutPos, Dry.Right );
-	spu2M_WriteFast( 0x1400 + (coreidx<<12) + OutPos, Wet.Left );
-	spu2M_WriteFast( 0x1600 + (coreidx<<12) + OutPos, Wet.Right );
+	spu2M_WriteFast( 0x1000 + (coreidx<<12) + OutPos, Voices.Dry.Left );
+	spu2M_WriteFast( 0x1200 + (coreidx<<12) + OutPos, Voices.Dry.Right );
+	spu2M_WriteFast( 0x1400 + (coreidx<<12) + OutPos, Voices.Wet.Left );
+	spu2M_WriteFast( 0x1600 + (coreidx<<12) + OutPos, Voices.Wet.Right );
 	
 	// Write mixed results to logfile (if enabled)
 	
-	WaveDump::WriteCore( coreidx, CoreSrc_DryVoiceMix, Dry );
-	WaveDump::WriteCore( coreidx, CoreSrc_WetVoiceMix, Wet );
+	WaveDump::WriteCore( coreidx, CoreSrc_DryVoiceMix, Voices.Dry );
+	WaveDump::WriteCore( coreidx, CoreSrc_WetVoiceMix, Voices.Wet );
 
 	// Mix in the Input data
 
 	StereoOut32 TD(
-		Input.Left & thiscore.InpDryL,
-		Input.Right & thiscore.InpDryR
+		Input.Left & thiscore.DryGate.InpL,
+		Input.Right & thiscore.DryGate.InpR
 	);
 	
 	// Mix in the Voice data
-	TD.Left += Dry.Left & thiscore.SndDryL;
-	TD.Right += Dry.Right & thiscore.SndDryR;
+	TD.Left += Voices.Dry.Left & thiscore.DryGate.SndL;
+	TD.Right += Voices.Dry.Right & thiscore.DryGate.SndR;
 
 	// Mix in the External (nothing/core0) data
-	TD.Left += Ext.Left & thiscore.ExtDryL;
-	TD.Right += Ext.Right & thiscore.ExtDryR;
+	TD.Left += Ext.Left & thiscore.DryGate.ExtL;
+	TD.Right += Ext.Right & thiscore.DryGate.ExtR;
 	
 	if( !EffectsDisabled )
 	{
@@ -622,14 +639,14 @@ static StereoOut32 __fastcall MixCore( uint coreidx, const StereoOut32& Input, c
 		{
 			// Mix Input, Voice, and External data:
 			StereoOut32 TW(
-				Input.Left & thiscore.InpWetL,
-				Input.Right & thiscore.InpWetR
+				Input.Left & thiscore.WetGate.InpL,
+				Input.Right & thiscore.WetGate.InpR
 			);
 			
-			TW.Left += Wet.Left & thiscore.SndWetL;
-			TW.Right += Wet.Right & thiscore.SndWetR;
-			TW.Left += Ext.Left & thiscore.ExtWetL; 
-			TW.Right += Ext.Right & thiscore.ExtWetR;
+			TW.Left += Voices.Wet.Left & thiscore.WetGate.SndL;
+			TW.Right += Voices.Wet.Right & thiscore.WetGate.SndR;
+			TW.Left += Ext.Left & thiscore.WetGate.ExtL; 
+			TW.Right += Ext.Right & thiscore.WetGate.ExtR;
 
 			WaveDump::WriteCore( coreidx, CoreSrc_PreReverb, TW );
 
@@ -646,7 +663,7 @@ static StereoOut32 __fastcall MixCore( uint coreidx, const StereoOut32& Input, c
 			WaveDump::WriteCore( coreidx, CoreSrc_PostReverb, RV );
 
 			// Mix Dry+Wet
-			return StereoOut32( TD + ApplyVolume( RV, thiscore.FxVol ) );
+			return TD + ApplyVolume( RV, thiscore.FxVol );
 		}
 		else
 		{
@@ -662,15 +679,25 @@ static int p_cachestat_counter=0;
 
 __forceinline void Mix() 
 {
-	// ****  CORE ZERO  ****
 	// Note: Playmode 4 is SPDIF, which overrides other inputs.
-	StereoOut32 Ext( (PlayMode&4) ? StereoOut32::Empty : ReadInputPV( 0 ) );
-	WaveDump::WriteCore( 0, CoreSrc_Input, Ext );
+	StereoOut32 InputData[2] =
+	{
+		(PlayMode&4) ? StereoOut32::Empty : ReadInputPV( 0 ),
+		(PlayMode&8) ? StereoOut32::Empty : ReadInputPV( 1 )
+	};
+	
+	WaveDump::WriteCore( 0, CoreSrc_Input, InputData[0] );
+	WaveDump::WriteCore( 1, CoreSrc_Input, InputData[1] );
 
-	Ext = MixCore( 0, Ext, StereoOut32::Empty );
+	// Todo: Replace me with memzero initializer!
+	VoiceMixSet VoiceData[2] = { VoiceMixSet::Empty, VoiceMixSet::Empty };	// mixed voice data for each core.
+	MixCoreVoices( VoiceData[0], 0 );
+	MixCoreVoices( VoiceData[1], 1 );
+
+	StereoOut32 Ext( MixCore( 0, VoiceData[0], InputData[0], StereoOut32::Empty ) );
 
 	if( (PlayMode & 4) || (Cores[0].Mute!=0) )
-		Ext = StereoOut32( 0, 0 );
+		Ext = StereoOut32::Empty;
 	else
 	{
 		Ext = ApplyVolume( Ext, Cores[0].MasterVol );
@@ -683,13 +710,8 @@ __forceinline void Mix()
 	spu2M_WriteFast( 0xA00 + OutPos, Ext.Right );
 	WaveDump::WriteCore( 0, CoreSrc_External, Ext );
 
-	// ****  CORE ONE  ****
-
-	StereoOut32 Out( (PlayMode&8) ? StereoOut32::Empty : ReadInputPV( 1 ) );
-	WaveDump::WriteCore( 1, CoreSrc_Input, Out );
-
 	ApplyVolume( Ext, Cores[1].ExtVol );
-	Out = MixCore( 1, Out, Ext );
+	StereoOut32 Out( MixCore( 1, VoiceData[1], InputData[1], Ext ) );
 
 	if( PlayMode & 8 )
 	{
