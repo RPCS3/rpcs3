@@ -77,7 +77,7 @@ microVUt(void) mVUclose() {
 
 	microVU* mVU = mVUx;
 
-	if ( mVU->cache ) { SysMunmap( mVU->cache, mVU->cacheSize ); mVU->cache = NULL; }
+	if ( mVU->cache ) { HostSys::Munmap( mVU->cache, mVU->cacheSize ); mVU->cache = NULL; }
 
 	// Delete Block Managers
 	for (int i; i <= mVU->prog.max; i++) {

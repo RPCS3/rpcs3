@@ -21,28 +21,6 @@
 
 #include "PS2Etypes.h"
 
-struct TESTRUNARGS
-{
-	u8 enabled;
-	u8 jpgcapture;
-
-	int frame; // if < 0, frame is unlimited (run until crash).
-	int numimages;
-	int curimage;
-	u32 autopad; // mask for auto buttons
-	bool efile;
-	int snapdone;
-
-	const char* ptitle;
-	const char* pimagename;
-	const char* plogname;
-	const char* pgsdll, *pcdvddll, *pspudll;
-	const char* ppad1dll, *ppad2dll, *pdev9dll;
-
-};
-
-extern TESTRUNARGS g_TestRun;
-
 #define BIAS 2   // Bus is half of the actual ps2 speed
 //#define PS2CLK   36864000	/* 294.912 mhz */
 //#define PSXCLK	 9216000	/* 36.864 Mhz */

@@ -63,7 +63,7 @@ const char *LabelAuthors = { N_(
 	"\n"
 	"Betatesting: Bositman, ChaosCode,\n"
 	"CKemu, crushtest, GeneralPlot,\n"
-	"Krakatos, Paorotaku, Rudy_X\n"
+	"Krakatos, Parotaku, Rudy_X\n"
 	"\n"
 	"Webmasters: CKemu, Falcon4ever"
 	)
@@ -611,7 +611,7 @@ void ProcessFKeys(int fkey, int shift)
 			{
 				gzLoadingState joe( SaveState::GetFilename( StatesC ) );	// throws exception on version mismatch
 				cpuReset();
-				SysResetExecutionState();
+				SysClearExecutionCache();
 				joe.FreezeAll();
 			}
 			catch( Exception::StateLoadError_Recoverable& )
@@ -647,7 +647,7 @@ void ProcessFKeys(int fkey, int shift)
 
 		// note: VK_F5-VK_F7 are reserved for GS
 		case 8:
-			GSmakeSnapshot("snaps/");
+			GSmakeSnapshot( SNAPSHOTS_DIR "/" );
 			break;
 
 #ifdef PCSX2_DEVBUILD

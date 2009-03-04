@@ -63,7 +63,7 @@ struct ComboInitializer
 	bool LoadNextLibrary()
 	{
 		string tmpStr( Path::Combine( Config.PluginsDir, FindData.cFileName ) );
-		Lib = LoadLibrary( tmpStr.c_str() );
+		Lib = HostSys::LoadLibrary( tmpStr.c_str() );
 		if (Lib == NULL)
 		{
 			Console::Error( "Plugin load failure: %hs\n\tSysLibError Message: %s", params &tmpStr, SysLibError() );

@@ -21,28 +21,29 @@
 #include "AboutDlg.h"
 #include "Common.h"
 
+#include "Hyperlinks.h"
+
 #define IDC_STATIC	(-1)
 
-HWND hW;
-HBITMAP hBMP, hSilverBMP;
+static HWND hW;
+static HBITMAP hSilverBMP;
 
 LRESULT WINAPI AboutDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	switch(uMsg)
 	{
 		case WM_INITDIALOG:
-			//hBMP = LoadBitmap(GetModuleHandle(NULL), MAKEINTRESOURCE(SPLASH_LOGO));
 			hSilverBMP = LoadBitmap(GetModuleHandle(NULL), MAKEINTRESOURCE(IDB_PS2SILVER));
-
-			/*hW = CreateWindow("STATIC", "", WS_VISIBLE | WS_CHILD | SS_BITMAP, 
-					  230, 10, 211, 110, hDlg, (HMENU)IDC_STATIC, GetModuleHandle(NULL), NULL);
-			SendMessage(hW, STM_SETIMAGE, (WPARAM)IMAGE_BITMAP, (LPARAM)hBMP);*/
 
 			SetWindowText(hDlg, _("About PCSX2"));
 
 			Button_SetText(GetDlgItem(hDlg, IDOK), _("OK"));
 			Static_SetText(GetDlgItem(hDlg, IDC_PCSX_ABOUT_AUTHORS), _(LabelAuthors));
 			Static_SetText(GetDlgItem(hDlg, IDC_PCSX_ABOUT_GREETS), _(LabelGreets));
+
+			ConvertStaticToHyperlink( hDlg, IDC_LINK_GOOGLECODE );
+			ConvertStaticToHyperlink( hDlg, IDC_LINK_WEBSITE );
+
 		return TRUE;
 
 		case WM_COMMAND:
@@ -51,6 +52,16 @@ LRESULT WINAPI AboutDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 				case IDOK:
 					EndDialog( hDlg, TRUE );
 				return TRUE;
+
+				case IDC_LINK_WEBSITE:
+					ShellExecute(hDlg, "open", "http://www.pcsx2.net/",
+						NULL, NULL, SW_SHOWNORMAL);
+					return TRUE;
+
+				case IDC_LINK_GOOGLECODE:
+					ShellExecute(hDlg, "open", "http://code.google.com/p/pcsx2",
+						NULL, NULL, SW_SHOWNORMAL);
+					return TRUE;
 			}
 		return FALSE;
 

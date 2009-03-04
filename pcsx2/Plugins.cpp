@@ -648,7 +648,8 @@ int InitPlugins()
 void ShutdownPlugins()
 {
 	if( !initp ) return;
-	
+
+	mtgsWaitGS();
 	ClosePlugins( true );
 
 	if( GSshutdown != NULL )
@@ -846,15 +847,6 @@ void ClosePlugins( bool closegs )
 		int ret = GSinit();
 		if (ret != 0) { Msgbox::Alert("GSinit error: %d", params ret);  }
 	}
-}
-
-void ResetPlugins()
-{
-	
-	mtgsWaitGS();
-
-	ShutdownPlugins();
-	InitPlugins();
 }
 
 void ReleasePlugins()

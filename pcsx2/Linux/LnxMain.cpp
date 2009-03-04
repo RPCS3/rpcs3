@@ -27,12 +27,6 @@ const char* g_pRunGSState = NULL;
 
 int efile = 0;
 char elfname[g_MaxPath];
-bool Slots[5] = { false, false, false, false, false };
-
-#ifdef PCSX2_DEVBUILD
-TESTRUNARGS g_TestRun;
-#endif
-
 char MAIN_DIR[g_MaxPath];
 
 int main(int argc, char *argv[])
@@ -275,7 +269,7 @@ void StartGui()
 	gtk_widget_destroy(lookup_widget(MainWindow, "GtkMenuItem_Debug"));
 #endif
 	
-	CheckSlots();
+	ResetMenuSlots();
 	
 	gtk_widget_show_all(MainWindow);
 	gtk_window_activate_focus(GTK_WINDOW(MainWindow));
@@ -312,7 +306,7 @@ void OnLanguage(GtkMenuItem *menuitem, gpointer user_data)
 void OnFile_RunCD(GtkMenuItem *menuitem, gpointer user_data)
 {
 	SysReset();
-	RunExecute(NULL);
+	SysPrepareExecution(NULL);
 }
 
 void OnRunElf_Ok(GtkButton* button, gpointer user_data)
@@ -323,7 +317,7 @@ void OnRunElf_Ok(GtkButton* button, gpointer user_data)
 	strcpy(elfname, File);
 	gtk_widget_destroy(FileSel);
 
-	RunExecute(elfname);
+	SysPrepareExecution(elfname);
 }
 
 void OnRunElf_Cancel(GtkButton* button, gpointer user_data)
@@ -400,56 +394,12 @@ void OnFile_Exit(GtkMenuItem *menuitem, gpointer user_data)
 
 void OnEmu_Run(GtkMenuItem *menuitem, gpointer user_data)
 {
-	if (g_EmulationInProgress)
-		ExecuteCpu();
-	else
-		RunExecute(NULL, true);	// boots bios if no savestate is to be recovered
-
+	SysPrepareExecution(NULL, true);	// boots bios if no savestate is to be recovered
 }
 
 void OnEmu_Reset(GtkMenuItem *menuitem, gpointer user_data)
 {
 	SysReset();
-}
-
-void ResetMenuSlots()
-{
-	GtkWidget *Item;
-	char str[g_MaxPath], str2[g_MaxPath];
-	int i;
-
-	for (i = 0; i < 5; i++)
-	{
-		
-		sprintf(str, "load_slot_%d", i);
-		sprintf(str2, "save_slot_%d", i);
-		Item = lookup_widget(MainWindow, str);
-		
-		if GTK_IS_WIDGET(Item) 
-			gtk_widget_set_sensitive(Item, Slots[i]);
-		else
-			Console::Error("No such widget: %s", params str);
-		
-		Item = lookup_widget(MainWindow, str2);
-		gtk_widget_set_sensitive(Item, (ElfCRC != 0));
-			
-	}
-}
-
-void CheckSlots()
-{
-	int i = 0;
-	
-	if (ElfCRC == 0) Console::Notice("Disabling game slots until a game is loaded.");
-	
-	for (i=0; i<5; i++) 
-	{
-		if (isSlotUsed(i))
-			Slots[i] = true;
-		else
-			Slots[i] = false;
-	}
-	ResetMenuSlots();
 }
 
 //2002-09-28 (Florin)

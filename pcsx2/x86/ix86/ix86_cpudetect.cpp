@@ -389,14 +389,14 @@ void cpudetectInit()
 	// intrinsic equivalents available.  So we use our own ix86 emitter to generate
 	// some code and run it that way. :)
 
-	u8* recSSE = (u8*)SysMmap( NULL, 0x1000 );
+	u8* recSSE = (u8*)HostSys::Mmap( NULL, 0x1000 );
 	if( recSSE != NULL )
 	{
 		x86SetPtr(recSSE);
 		SSE3_MOVSLDUP_XMM_to_XMM(XMM0, XMM0);
 		RET();
 		cpudetectSSE3(recSSE);
-		SysMunmap( recSSE, 0x1000 );
+		HostSys::Munmap( recSSE, 0x1000 );
 	}
 
 	//////////////////////////////////////

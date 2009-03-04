@@ -18,6 +18,7 @@ extern char MAIN_DIR[g_MaxPath];
 #define SSTATES_DIR "sstates"
 #define LANGS_DIR "Langs"
 #define LOGS_DIR "logs"
+#define SNAPSHOTS_DIR "snaps"
 
 #define DEFAULT_MEMCARD1 "Mcd001.ps2"
 #define DEFAULT_MEMCARD2 "Mcd002.ps2"

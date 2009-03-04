@@ -6,6 +6,7 @@
 #define IDD_BPCNT                       105
 #define IDD_DEBUG                       108
 #define IDD_VU0REGS                     111
+#define IDD_JUMP                        112
 #define IDD_VU0INTEGER                  113
 #define IDD_GPREGS                      114
 #define IDD_CP0REGS                     115
@@ -172,6 +173,7 @@
 #define IDC_VU1_VF26                    1097
 #define IDC_DEBUG_DUMP                  1097
 #define IDC_CP04                        1097
+#define IDC_JUMP_PC                     1097
 #define IDC_VU1_VF27                    1098
 #define IDC_DUMP_END                    1098
 #define IDC_DEBUG_MEMORY                1098

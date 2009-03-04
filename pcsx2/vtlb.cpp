@@ -581,7 +581,7 @@ void vtlb_free( void* pmem, uint size )
 	SafeSysMunmap( pmem, size );
 #else
 	// Make sure and unprotect memory first, since CrtDebug will try to write to it.
-	SysMemProtect( pmem, size, Protect_ReadWrite );
+	HostSys::MemProtect( pmem, size, Protect_ReadWrite );
 	safe_aligned_free( pmem );
 #endif
 }

@@ -651,7 +651,7 @@ void memReset()
 {
 	// VTLB Protection Preparations.
 
-	SysMemProtect( m_psAllMem, m_allMemSize, Protect_ReadWrite );
+	HostSys::MemProtect( m_psAllMem, m_allMemSize, Protect_ReadWrite );
 
 	// Note!!  Ideally the vtlb should only be initialized once, and then subsequent
 	// resets of the system hardware would only clear vtlb mappings, but since the
@@ -821,7 +821,7 @@ int mmap_GetRamPageInfo(void* ptr)
 
 void mmap_MarkCountedRamPage(void* ptr,u32 vaddr)
 {
-	SysMemProtect( ptr, 1, Protect_ReadOnly );
+	HostSys::MemProtect( ptr, 1, Protect_ReadOnly );
 
 	u32 offset=((u8*)ptr-psM);
 	offset>>=12;
@@ -842,12 +842,12 @@ void mmap_ResetBlockTracking()
 	{
 		psMPWVA[i].clear();
 	}
-	SysMemProtect( psM, Ps2MemSize::Base, Protect_ReadWrite );
+	HostSys::MemProtect( psM, Ps2MemSize::Base, Protect_ReadWrite );
 }
 
 void mmap_ClearCpuBlock( uint offset )
 {
-	SysMemProtect( &psM[offset], 1, Protect_ReadWrite );
+	HostSys::MemProtect( &psM[offset], 1, Protect_ReadWrite );
 	
 	offset>>=12;
 	psMPWC[(offset/32)]|=(1<<(offset&31));

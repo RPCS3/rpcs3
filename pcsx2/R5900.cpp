@@ -58,31 +58,11 @@ bool eeEventTestIsActive = false;
 
 R5900Exception::BaseExcept::~BaseExcept() throw (){}
 
-// A run-once procedure for initializing the emulation state.
-// Can be done anytime after allocating memory, and before calling Cpu->Execute().
-// Multiple calls to this function are automatically ignored.
-/*void cpuInit()
-{
-	DevCon::WriteLn( "cpuInit > %s", params  cpuIsInitialized ? "Initializing..." : "Skipping (already initialized)" );
-
-	if( cpuIsInitialized ) return;
-
-	cpuIsInitialized = true;
-
-	// non memInit() currently since we don't support soft resets.  memory is initialized in full
-	// instead during cpuReset()   [using memReset()]
-	//memInit();
-}*/
 
 void cpuReset()
 {
 	mtgsWaitGS();		// GS better be done processing before we reset the EE, just in case.
-	//cpuInit();			// more just-in-caseness!
-
-	//if( !cpuIsInitialized ) 
-	{
-		cpuIsInitialized = true;
-	}
+	cpuIsInitialized = true;
 
 	memReset();
 	psxMemReset();
@@ -118,9 +98,6 @@ void cpuReset()
 
 void cpuShutdown()
 {
-	//if( !cpuIsInitialized ) return;
-	//cpuIsInitialized = false;
-
 	mtgsWaitGS();
 
 	hwShutdown();

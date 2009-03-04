@@ -95,15 +95,6 @@ char* CALLBACK PS2EgetLibName(void);
 	linux: the XK_XXX will be used (XFree86)
 */
 
-// event values:
-#define KEYPRESS	1
-#define KEYRELEASE	2
-
-typedef struct _keyEvent {
-	u32 key;
-	u32 evt;
-} keyEvent;
-
 // for 64bit compilers
 typedef char __keyEvent_Size__[(sizeof(keyEvent) == 8)?1:-1];
 

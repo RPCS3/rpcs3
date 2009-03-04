@@ -200,4 +200,15 @@ public:
 	bool IsSaving() const { return false; }
 };
 
+namespace StateRecovery
+{
+	extern bool HasState();
+	extern void Recover();
+	extern void SaveToFile( const string& file );
+	extern void SaveToSlot( uint num );
+	extern void MakeGsOnly();
+	extern void MakeFull();
+	extern void Clear();
+}
+
 #endif

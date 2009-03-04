@@ -28,6 +28,7 @@
 #include <tchar.h>
 
 #include "Misc.h"
+#include "HostGui.h"
 #include "resource.h"
 #include "WinDebugResource.h"
 
@@ -121,54 +122,41 @@ public:
 	void EnumEntry( const string& var, int& value, const char* const* enumArray, const int defvalue=0 );
 };
 
-LRESULT WINAPI MainWndProc(HWND, UINT, WPARAM, LPARAM);
-void CreateMainWindow();
-void RunGui();
+extern LRESULT WINAPI MainWndProc(HWND, UINT, WPARAM, LPARAM);
+extern void CreateMainWindow();
+extern void RunGui();
+extern bool HostGuiInit();
 
-BOOL Pcsx2Configure(HWND hWnd);
-void InitLanguages();
-char *GetLanguageNext();
-void CloseLanguages();
-void ChangeLanguage(char *lang);
+extern BOOL Pcsx2Configure(HWND hWnd);
+extern void InitLanguages();
+extern char *GetLanguageNext();
+extern void CloseLanguages();
+extern void ChangeLanguage(char *lang);
 
-void SysRestorableReset();
+extern void WinClose();
+extern void ExecuteCpu();
+extern void OnStates_LoadOther();
+extern void OnStates_SaveOther();
+extern int ParseCommandLine( int tokenCount, TCHAR *const *const tokens );
+extern void strcatz(char *dst, char *src);
 
-void WinClose();
-void States_Load( const string& file, int num=-1 );
-void States_Save( const string& file, int num=-1 );
-void States_Load(int num);
-void States_Save(int num);
-void OnStates_LoadOther();
-void OnStates_SaveOther();
-int ParseCommandLine( int tokenCount, TCHAR *const *const tokens );
-void RunExecute( const char* elf_file, bool use_bios=false );
-void ExecuteCpu();
-void strcatz(char *dst, char *src);
-
-BOOL CALLBACK PatchBDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam);
-BOOL CALLBACK CpuDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam);
-BOOL CALLBACK AdvancedOptionsProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam);
-BOOL CALLBACK HacksProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);
+extern BOOL CALLBACK PatchBDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam);
+extern BOOL CALLBACK CpuDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam);
+extern BOOL CALLBACK AdvancedOptionsProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam);
+extern BOOL CALLBACK HacksProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);
 
 extern AppData gApp;
 extern HWND hStatusWnd;
 extern PcsxConfig winConfig;		// local storage of the configuration options.
-extern bool g_ReturnToGui;			// set to exit the execution of the emulator and return control to the GUI
-extern bool g_EmulationInProgress;	// Set TRUE if a game is actively running (set to false on reset)
 
-extern int UseGui;
-extern int nDisableSC; // screensaver
+extern bool UseGui;
+extern bool nDisableSC; // screensaver
 extern unsigned int langsMax;
 
 extern SafeArray<u8>* g_RecoveryState;
 extern SafeArray<u8>* g_gsRecoveryState;
 extern const char* g_pRunGSState;
 extern int g_SaveGSStream;
-
-
-// sets the contents of the Pcsx2 status bar...
-extern void StatusBar_Notice( const std::string& text );
-extern void StatusBar_SetMsg( const std::string& text );
 
 // Throws an exception based on the value returned from GetLastError.
 // Performs an option return value success/fail check on hresult.

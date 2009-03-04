@@ -19,14 +19,16 @@
 #include "PrecompiledHeader.h"
 
 #include "Common.h"
-#include "VUmicro.h"
 #include "Threading.h"
+#include "HostGui.h"
 
+#include "VUmicro.h"
 #include "iR5900.h"
 #include "R3000A.h"
 #include "IopMem.h"
 #include "iVUzerorec.h"		// for SuperVUReset
 
+#include "R5900Exceptions.h"
 
 using namespace std;
 using namespace Console;
@@ -279,12 +281,16 @@ void SysShutdownDynarecs()
 	recCpu.Shutdown();
 }
 
-// Resets all PS2 cpu execution states, which does not affect that actual PS2 state/condition.
+
+bool g_ReturnToGui = false;			// set to exit the execution of the emulator and return control to the GUI
+bool g_EmulationInProgress = false;	// Set TRUE if a game is actively running (set to false on reset)
+
+// Resets all PS2 cpu execution caches, which does not affect that actual PS2 state/condition.
 // This can be called at any time outside the context of a Cpu->Execute() block without
 // bad things happening (recompilers will slow down for a brief moment since rec code blocks
 // are dumped).
 // Use this method to reset the recs when important global pointers like the MTGS are re-assigned.
-void SysResetExecutionState()
+void SysClearExecutionCache()
 {
 	if( CHECK_EEREC )
 	{
@@ -306,9 +312,146 @@ void SysResetExecutionState()
 	vu1MicroDisableSkip();
 }
 
+__forceinline void SysUpdate()
+{
+	keyEvent* ev1 = PAD1keyEvent();
+	keyEvent* ev2 = PAD2keyEvent();
+
+	HostGui::KeyEvent( (ev1 != NULL) ? ev1 : ev2);
+}
+
+void SysExecute()
+{
+	g_EmulationInProgress = true;
+	g_ReturnToGui = false;
+
+	// Optimization: We hardcode two versions of the EE here -- one for recs and one for ints.
+	// This is because recs are performance critical, and being able to inline them into the
+	// function here helps a small bit (not much but every small bit counts!).
+
+	try
+	{
+		if( CHECK_EEREC )
+		{
+			while( !g_ReturnToGui )
+			{
+				recExecute();
+				SysUpdate();
+			}
+		}
+		else
+		{
+			while( !g_ReturnToGui )
+			{
+				Cpu->Execute();
+				SysUpdate();
+			}
+		}
+	}
+	catch( R5900Exception::BaseExcept& ex )
+	{
+		Console::Error( ex.cMessage() );
+		Console::Error( fmt_string( "(EE) PC: 0x%8.8x  \tCycle:0x8.8x", ex.cpuState.pc, ex.cpuState.cycle ).c_str() );
+	}
+}
+
+// Function provided to escape the emulation state, by shutting down plugins and saving
+// the GS state.  The execution state is effectively preserved, and can be resumed with a
+// call to SysExecute.
+void SysEndExecution()
+{
+	if( Config.closeGSonEsc )
+		StateRecovery::MakeGsOnly();
+
+	ClosePlugins( Config.closeGSonEsc );
+	g_ReturnToGui = true;
+}
+
+// Runs an ELF image directly (ISO or ELF program or BIN)
+// Used by Run::FromCD, and Run->Execute when no active emulation state is present.
+// elf_file - if NULL, the CDVD plugin is queried for the ELF file.
+// use_bios - forces the game to boot through the PS2 bios, instead of bypassing it.
+void SysPrepareExecution( const char* elf_file, bool use_bios )
+{
+	if( !g_EmulationInProgress )
+	{
+		try
+		{
+			cpuReset();
+		}
+		catch( Exception::BaseException& ex )
+		{
+			Msgbox::Alert( ex.cMessage() );
+			return;
+		}
+
+		if (OpenPlugins(g_TestRun.ptitle) == -1)
+			return;
+
+		if( elf_file == NULL )
+		{
+			if( !StateRecovery::HasState() )
+			{
+				// Not recovering a state, so need to execute the bios and load the ELF information.
+				// (note: gsRecoveries are done from ExecuteCpu)
+
+				// if the elf_file is null we use the CDVD elf file.
+				// But if the elf_file is an empty string then we boot the bios instead.
+
+				char ename[g_MaxPath];
+				ename[0] = 0;
+				if( !use_bios )
+					GetPS2ElfName( ename );
+
+				loadElfFile( ename );
+			}
+		}
+		else
+		{
+			// Custom ELF specified (not using CDVD).
+			// Run the BIOS and load the ELF.
+
+			loadElfFile( elf_file );
+		}
+	}
+
+	StateRecovery::Recover();
+	HostGui::BeginExecution();
+}
+
+void SysRestorableReset()
+{
+	if( !g_EmulationInProgress ) return;
+	StateRecovery::MakeFull();
+}
+
+void SysReset()
+{
+	// fixme - this code  sets the statusbar but never returns control to the window message pump
+	// so the status bar won't receive the WM_PAINT messages needed to update itself anyway.
+	// Oops! (air)
+
+	HostGui::Notice(_("Resetting..."));
+	Console::SetTitle(_("Resetting..."));
+
+	g_EmulationInProgress = false;
+	StateRecovery::Clear();
+
+	cpuShutdown();
+	ShutdownPlugins();
+
+	ElfCRC = 0;
+
+	// Note : No need to call cpuReset() here.  It gets called automatically before the
+	// emulator resumes execution.
+
+	HostGui::Notice(_("Ready"));
+	Console::SetTitle(_("*PCSX2* Emulation state is reset."));
+}
+
 u8 *SysMmapEx(uptr base, u32 size, uptr bounds, const char *caller)
 {
-	u8 *Mem = (u8*)SysMmap( base, size );
+	u8 *Mem = (u8*)HostSys::Mmap( base, size );
 
 	if( (Mem == NULL) || (bounds != 0 && (((uptr)Mem + size) > bounds)) )
 	{
@@ -319,7 +462,7 @@ u8 *SysMmapEx(uptr base, u32 size, uptr bounds, const char *caller)
 
 		SafeSysMunmap( Mem, size );
 
-		Mem = (u8*)SysMmap( NULL, size );
+		Mem = (u8*)HostSys::Mmap( NULL, size );
 		if( bounds != 0 && (((uptr)Mem + size) > bounds) )
 		{
 			DevCon::Error( "Fatal Error:\n\tSecond try failed allocating %s, block ptr 0x%x does not meet required criteria.", params caller, Mem );
@@ -331,3 +474,7 @@ u8 *SysMmapEx(uptr base, u32 size, uptr bounds, const char *caller)
 	return Mem;
 }
 
+void *SysLoadLibrary(const char *lib) { return HostSys::LoadLibrary( lib ); }
+void *SysLoadSym(void *lib, const char *sym) { return HostSys::LoadSym( lib, sym ); }
+const char *SysLibError() { return HostSys::LibError(); }
+void SysCloseLibrary(void *lib) { HostSys::CloseLibrary( lib ); }

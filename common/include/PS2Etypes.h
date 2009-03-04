@@ -219,6 +219,15 @@ typedef struct {
 	s8 *data;
 } freezeData;
 
+// event values:
+#define KEYPRESS	1
+#define KEYRELEASE	2
+
+typedef struct _keyEvent {
+	u32 key;
+	u32 evt;
+} keyEvent;
+
 /* common defines */
 #ifndef C_ASSERT
 #define C_ASSERT(e) typedef char __C_ASSERT__[(e)?1:-1]

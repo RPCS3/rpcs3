@@ -137,7 +137,7 @@ void rcntInit() {
 
 // debug code, used for stats
 int g_nCounters[4];
-static int iFrame = 0;	
+static uint iFrame = 0;	
 
 #ifndef _WIN32
 #include <sys/time.h>
@@ -270,81 +270,6 @@ u32 UpdateVSyncRate()
 
 extern u32 vu0time;
 
-
-void vSyncDebugStuff() {
-
-#ifdef PCSX2_DEVBUILD
-		if( g_TestRun.enabled && g_TestRun.frame > 0 ) {
-			if( iFrame > g_TestRun.frame ) {
-				// take a snapshot
-				if( g_TestRun.pimagename != NULL && GSmakeSnapshot2 != NULL ) {
-					if( g_TestRun.snapdone ) {
-						g_TestRun.curimage++;
-						g_TestRun.snapdone = 0;
-						g_TestRun.frame += 20;
-						if( g_TestRun.curimage >= g_TestRun.numimages ) {
-							// exit
-							SysClose();
-							exit(0);
-						}
-					}
-					else {
-						// query for the image
-						GSmakeSnapshot2(g_TestRun.pimagename, &g_TestRun.snapdone, g_TestRun.jpgcapture);
-					}
-				}
-				else {
-					// exit
-					SysClose();
-					exit(0);
-				}
-			}
-		}
-
-		GSVSYNC();
-
-		if( g_SaveGSStream == 1 ) {
-			freezeData fP;
-
-			g_SaveGSStream = 2;
-			g_fGSSave->gsFreeze();
-			
-			if (GSfreeze(FREEZE_SIZE, &fP) == -1) {
-				safe_delete( g_fGSSave );
-				g_SaveGSStream = 0;
-			}
-			else {
-				fP.data = (s8*)malloc(fP.size);
-				if (fP.data == NULL) {
-					safe_delete( g_fGSSave );
-					g_SaveGSStream = 0;
-				}
-				else {
-					if (GSfreeze(FREEZE_SAVE, &fP) == -1) {
-						safe_delete( g_fGSSave );
-						g_SaveGSStream = 0;
-					}
-					else {
-						g_fGSSave->Freeze( fP.size );
-						if (fP.size) {
-							g_fGSSave->FreezeMem( fP.data, fP.size );
-							free(fP.data);
-						}
-					}
-				}
-			}
-		}
-		else if( g_SaveGSStream == 2 ) {
-			
-			if( --g_nLeftGSFrames <= 0 ) {
-				safe_delete( g_fGSSave );
-				g_SaveGSStream = 0;
-				Console::WriteLn("Done saving GS stream");
-			}
-		}
-#endif
-}
-
 void frameLimitReset()
 {
 	m_iStart = GetCPUTicks();
@@ -401,7 +326,7 @@ static __forceinline void frameLimit()
 static __forceinline void VSyncStart(u32 sCycle)
 {
 	EECNT_LOG( "/////////  EE COUNTER VSYNC START  \\\\\\\\\\\\\\\\\\\\  (frame: %d)\n", iFrame );
-	vSyncDebugStuff(); // EE Profiling and Debug code
+	vSyncDebugStuff( iFrame ); // EE Profiling and Debug code
 
 	if ((CSRw & 0x8)) GSCSRr|= 0x8;
 	if (!(GSIMR&0x800)) gsIrq();
@@ -512,7 +437,6 @@ __forceinline bool rcntUpdate_vSync()
 		counters[5].modeval = MODE_VRENDER;
 
 		return true;
-//		SysUpdate();  // check for and handle keyevents
 	}
 	else	// VSYNC end / VRENDER begin
 	{

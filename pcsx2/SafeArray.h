@@ -62,7 +62,7 @@ extern void pcsx2_aligned_free(void* pmem);
 
 #define SafeSysMunmap( ptr, size ) \
 	if( ptr != NULL ) { \
-		SysMunmap( (uptr)ptr, size ); \
+		HostSys::Munmap( (uptr)ptr, size ); \
 		ptr = NULL; \
 	}
 

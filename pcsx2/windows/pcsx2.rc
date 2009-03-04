@@ -129,17 +129,6 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 // Dialog
 //
 
-IDD_JUMP DIALOGEX 0, 0, 175, 64
-STYLE DS_SETFONT | DS_MODALFRAME | DS_3DLOOK | DS_FIXEDSYS | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
-CAPTION "Jump to specific address"
-FONT 8, "MS Shell Dlg", 0, 0, 0x0
-BEGIN
-    EDITTEXT        IDC_JUMP_PC,73,14,82,13
-    DEFPUSHBUTTON   "OK",IDOK,25,43,50,14
-    PUSHBUTTON      "Cancel",IDCANCEL,101,42,50,14
-    LTEXT           "Enter new PC Address:",IDC_STATIC,3,16,65,8
-END
-
 IDD_MEMORY DIALOG  0, 0, 317, 270
 STYLE DS_SETFONT | DS_MODALFRAME | DS_3DLOOK | WS_MINIMIZEBOX | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
 CAPTION "Memory"
@@ -235,10 +224,7 @@ BEGIN
     GROUPBOX        "Clamp Mode",IDC_STATIC,281,80,236,127,BS_LEFT
     GROUPBOX        "Other Options",IDC_STATIC,281,210,237,34,BS_LEFT
     LTEXT           "These options specify how PCSX2's recompilers will clamp Infinities and NaN (Not a Number) values in the opcode instructions.",IDC_STATIC,286,94,224,19
-    LTEXT           "*None* - No clamping. (Fastest Mode)\n*Normal* - Clamps the result.\n*Extra* - Clamps the operands, the result, and anywhere in between.\n*Extra + Preserve Sign* - Same as ""Extra"", except preserves NaN's sign when clamping the operands.",IDC_STATIC,286,114,224,48
-    LTEXT           "*Full* - Attempts to emulate large numbers correctly for the EE's FPU. VU's clamp mode should be set to ""Extra + Preserve Sign"" for this to work best. (but still works for most games even with ""Normal"" VU clamping)",IDC_STATIC,287,163,214,36
-    LTEXT           "Flush to Zero - Makes floating point underflows become zero.\nDenormals are Zero - Makes floating point denormals become zero.",IDC_STATIC,287,222,224,18
-END
+    LTEXT           "*None* - No clamping. (Fastest Mode)\n*Normal* - Clamps the result.\n*Extra* - Clamps the operands, the result, and anywhere in between.\n*Extra + Preserve Sign* - Same as ""Extra"", except preserves NaN's sign when clamping the operands.",IDC_STATIC,286,114,224,48    LTEXT           "*Full* - Attempts to emulate large numbers correctly for the EE's FPU. VU's clamp mode should be set to ""Extra + Preserve Sign"" for this to work best. (but still works for most games even with ""Normal"" VU clamping)",IDC_STATIC,287,163,214,36    LTEXT           "Flush to Zero - Makes floating point underflows become zero.\nDenormals are Zero - Makes floating point denormals become zero.",IDC_STATIC,287,222,224,18END
 
 IDD_CONF_MEMCARD DIALOGEX 0, 0, 451, 215
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
@@ -343,11 +329,13 @@ FONT 8, "MS Shell Dlg", 400, 0, 0x0
 BEGIN
     DEFPUSHBUTTON   "OK",IDOK,205,274,50,14
     CTEXT           "PCSX2, a PS2 Emulator...",IDC_PCSX_ABOUT_AUTHORS,9,10,135,127,0,WS_EX_TRANSPARENT
-    CTEXT           "Greets to...",IDC_PCSX_ABOUT_GREETS,94,178,319,77
+    CTEXT           "Greets to...",IDC_PCSX_ABOUT_GREETS,94,186,319,77
     GROUPBOX        "",IDC_STATIC,5,3,145,141
-    GROUPBOX        "",IDC_STATIC,87,169,333,91
-    CONTROL         132,IDC_PS2SILVER_RECT,"Static",SS_BITMAP | SS_SUNKEN,10,179,71,75
+    GROUPBOX        "",IDC_STATIC,87,177,333,91
+    CONTROL         132,IDC_PS2SILVER_RECT,"Static",SS_BITMAP | SS_SUNKEN,10,187,71,75
     CONTROL         113,IDC_STATIC,"Static",SS_BITMAP,162,7,259,137,WS_EX_CLIENTEDGE
+    CTEXT           "Pcsx2 Official Svn Repository @ Googlecode",IDC_LINK_GOOGLECODE,79,164,273,10,SS_NOPREFIX | SS_NOTIFY
+    CTEXT           "Pcsx2 Official Website and Forums",IDC_LINK_WEBSITE,79,151,273,10,SS_NOPREFIX | SS_NOTIFY
 END
 
 IDD_HACKS DIALOGEX 0, 0, 335, 263

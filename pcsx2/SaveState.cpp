@@ -32,7 +32,6 @@
 #include "COP0.h"
 #include "Cache.h"
 
-
 using namespace R5900;
 
 extern int g_psxWriteOk;
@@ -41,7 +40,7 @@ extern void recResetIOP();
 
 static void PreLoadPrep()
 {
-	SysResetExecutionState();
+	SysClearExecutionCache();
 }
 
 static void PostLoadPrep()

@@ -59,8 +59,6 @@ void strcatz(char *dst, char *src)
 BOOL APIENTRY CmdlineProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);//forward def
 //-------------------
 
-TESTRUNARGS g_TestRun;
-
 static const char* phelpmsg = 
     "pcsx2 [options] [file]\n\n"
     "-cfg [file] {configuration file}\n"
@@ -175,7 +173,7 @@ static PTCHAR* _CommandLineToArgv( const TCHAR *CmdLine, int* _argc )
 
 void WinClose()
 {
-	SysClose();
+	cpuShutdown();
 
 	// Don't check Config.Profiler here -- the Profiler will know if it's running or not.
 	ProfilerTerm();
@@ -197,9 +195,9 @@ static bool TestRunMode()
 	if( IsDevBuild && (g_TestRun.enabled || g_TestRun.ptitle != NULL) )
 	{
 		// run without ui
-		UseGui = 0;
+		UseGui = false;
 		PCSX2_MEM_PROTECT_BEGIN();
-		RunExecute( g_TestRun.efile ? g_TestRun.ptitle : NULL );
+		SysPrepareExecution( g_TestRun.efile ? g_TestRun.ptitle : NULL );
 		PCSX2_MEM_PROTECT_END();
 		return true;
 	}
@@ -347,7 +345,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		// Important!  Always allocate dynarecs before loading plugins, to give the dynarecs
 		// the best possible chance of claiming ideal memory space!
 
-		SysInit();
+		HostGuiInit();
 
 		if( needsToConfig )
 		{
@@ -630,22 +628,24 @@ LRESULT WINAPI MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 			case ID_FILEOPEN:
 			{
-				std::string outstr;
+				string outstr;
 				if( Open_File_Proc( outstr ) )
-					RunExecute( outstr.c_str() );
+				{
+					SysReset();
+					SysPrepareExecution( outstr.c_str() );
+				}
 			}
 			break;
 
 			case ID_RUN_EXECUTE:
-				if( g_EmulationInProgress )
-					ExecuteCpu();
-				else
-					RunExecute( NULL, true );	// boots bios if no savestate is to be recovered
+				// Execute without reset -- resumes existing states or runs the BIOS if
+				// the state is cleared/reset.
+				SysPrepareExecution( NULL, true );
 			break;
 
 			case ID_FILE_RUNCD:
 				SysReset();
-				RunExecute( NULL );
+				SysPrepareExecution( NULL );
 			break;
 
 			case ID_RUN_RESET:
@@ -745,7 +745,7 @@ LRESULT WINAPI MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 					if (remoteDebugBios)
 					{
 						cpuReset();
-						SysResetExecutionState();
+						SysClearExecutionCache();
 						cpuExecuteBios();
 
 						DialogBox(gApp.hInstance, MAKEINTRESOURCE(IDD_RDEBUG), NULL, (DLGPROC)RemoteDebuggerProc);
@@ -868,19 +868,6 @@ LRESULT WINAPI MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	}
 
 	return DefWindowProc(hWnd, msg, wParam, lParam);
-}
-
-int Slots[5] = { -1, -1, -1, -1, -1 };
-
-void ResetMenuSlots() {
-	int i;
-
-	for (i=0; i<5; i++) {
-		if (Slots[i] == -1)
-			EnableMenuItem(GetSubMenu(gApp.hMenu, 0), ID_FILE_STATES_LOAD_SLOT1+i, MF_GRAYED);
-		else 
-			EnableMenuItem(GetSubMenu(gApp.hMenu, 0), ID_FILE_STATES_LOAD_SLOT1+i, MF_ENABLED);
-	}
 }
 
 // fixme - this looks like the beginnings of a dynamic "list of valid saveslots"
@@ -1040,7 +1027,7 @@ void CreateMainWindow()
 	RECT rect;
 	int w, h;
 
-	g_ReturnToGui = true;
+	//g_ReturnToGui = true;
 
 #ifdef _MSC_VER
 	sprintf(COMPILER, "(VC%d)", (_MSC_VER+100)/200);//hacky:) works for VC6 & VC.NET
@@ -1080,7 +1067,7 @@ void CreateMainWindow()
 	);
 
 	gApp.hWnd = hWnd;
-    ResetMenuSlots();
+    HostGui::ResetMenuSlots();
 	CreateMainMenu();
    
 	SetMenu(gApp.hWnd, gApp.hMenu);
@@ -1100,7 +1087,7 @@ void CreateMainWindow()
 	MoveWindow(hWnd, 60, 60, w, h, TRUE);
 	SendMessage( hStatusWnd, WM_SIZE, 0, 0 );
 
-	StatusBar_SetMsg("F1 - save, F2 - next state, Shift+F2 - prev state, F3 - load, F8 - snapshot");
+	HostGui::SetStatusMsg("F1 - save, F2 - next state, Shift+F2 - prev state, F3 - load, F8 - snapshot");
 
 	ShowWindow(hWnd, true);
 	SetWindowPos(hWnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE|SWP_NOSIZE);

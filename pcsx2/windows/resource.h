@@ -8,7 +8,6 @@
 #define ABOUT_DIALOG                    104
 #define IDI_ICON                        108
 #define IDD_MEMORY                      110
-#define IDD_JUMP                        112
 #define SPLASH_LOGO                     113
 #define IDD_LOGGING                     119
 #define IDD_CMDLINE                     120
@@ -69,8 +68,10 @@
 #define IDC_LISTCDVD                    1054
 #define IDC_DEBUG_L17                   1055
 #define IDC_LISTBIOS                    1055
+#define IDC_LINK_WEBSITE                1055
 #define IDC_DEBUG_L18                   1056
 #define IDC_CONFIGGS                    1056
+#define IDC_LINK_GOOGLECODE             1056
 #define IDC_DEBUG_L19                   1057
 #define IDC_TESTGS                      1057
 #define IDC_DEBUG_L20                   1058
@@ -139,7 +140,6 @@
 #define IDC_DEBUG_R27                   1094
 #define IDC_DEBUG_R28                   1095
 #define IDC_DEBUG_R29                   1096
-#define IDC_JUMP_PC                     1097
 #define IDC_DEBUG_LOGGING               1098
 #define IDC_CMDLINE                     1155
 #define IDC_PCSX_ABOUT_GREETS           1163

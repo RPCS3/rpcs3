@@ -306,10 +306,6 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\AboutDlg.h"
-				>
-			</File>
-			<File
 				RelativePath="..\AdvancedDlg.cpp"
 				>
 				<FileConfiguration
@@ -434,6 +430,37 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\Hyperlinks.cpp"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PrecompiledHeaderThrough="Win32.h"
+						PrecompiledHeaderFile="$(IntDir)\win32.pch"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Devel|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PrecompiledHeaderThrough="Win32.h"
+						PrecompiledHeaderFile="$(IntDir)\win32.pch"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PrecompiledHeaderThrough="Win32.h"
+						PrecompiledHeaderFile="$(IntDir)\win32.pch"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
 				RelativePath="..\ini.cpp"
 				>
 				<FileConfiguration
@@ -521,10 +548,6 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\McdsDlg.h"
-				>
-			</File>
-			<File
 				RelativePath="..\PatchBrowser.cpp"
 				>
 				<FileConfiguration
@@ -578,11 +601,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\RDebugger.h"
-				>
-			</File>
-			<File
-				RelativePath="..\Win32.h"
+				RelativePath="..\..\Saveslots.cpp"
 				>
 			</File>
 			<File
@@ -839,8 +858,40 @@
 					RelativePath="..\ps2_silver.bmp"
 					>
 				</File>
+			</Filter>
+			<Filter
+				Name="Include"
+				>
+				<File
+					RelativePath="..\AboutDlg.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\HostGui.h"
+					>
+				</File>
+				<File
+					RelativePath="..\Hyperlinks.h"
+					>
+				</File>
+				<File
+					RelativePath="..\McdsDlg.h"
+					>
+				</File>
+				<File
+					RelativePath="..\RDebugger.h"
+					>
+				</File>
 				<File
 					RelativePath="..\resource.h"
+					>
+				</File>
+				<File
+					RelativePath="..\Win32.h"
+					>
+				</File>
+				<File
+					RelativePath="..\WinDebugResource.h"
 					>
 				</File>
 			</Filter>
@@ -2287,14 +2338,6 @@
 						>
 					</File>
 				</Filter>
-				<Filter
-					Name="Dynarec"
-					>
-					<File
-						RelativePath="..\..\x86\iIPU.cpp"
-						>
-					</File>
-				</Filter>
 			</Filter>
 			<Filter
 				Name="memory"
@@ -2343,38 +2386,6 @@
 					RelativePath="..\..\MTGS.cpp"
 					>
 				</File>
-				<Filter
-					Name="Dynarec"
-					>
-					<File
-						RelativePath="..\..\x86\iGS.cpp"
-						>
-						<FileConfiguration
-							Name="Debug|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Devel|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-					</File>
-				</Filter>
 			</Filter>
 			<Filter
 				Name="VUmicro"
@@ -2595,42 +2606,6 @@
 					RelativePath="..\..\SPR.h"
 					>
 				</File>
-				<Filter
-					Name="Dynarec"
-					>
-					<File
-						RelativePath="..\..\x86\iHw.cpp"
-						>
-					</File>
-					<File
-						RelativePath="..\..\x86\iPsxHw.cpp"
-						>
-						<FileConfiguration
-							Name="Debug|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Devel|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-					</File>
-				</Filter>
 			</Filter>
 			<Filter
 				Name="Sif"
@@ -2730,6 +2705,10 @@
 			</File>
 			<File
 				RelativePath="..\..\Plugins.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\RecoverySystem.cpp"
 				>
 			</File>
 			<File
@@ -3096,7 +3075,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\WinDebugResource.h"
+			RelativePath="..\WinDebugResource"
 			>
 		</File>
 	</Files>
