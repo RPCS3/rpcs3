@@ -45,7 +45,6 @@
 	else	{ SSE_XORPS_XMM_to_XMM(reg, reg); }  \
 }
 
-// Note: If _Ft_ is 0, then don't modify xmm reg Ft, because its equal to xmmZ (unless _XYZW_SS, then you can modify xmm reg Ft)
 microVUt(void) mVUallocFMAC1a(int& Fd, int& Fs, int& Ft, const bool makeFd) {
 	microVU* mVU = mVUx;
 	Fs = xmmFs;

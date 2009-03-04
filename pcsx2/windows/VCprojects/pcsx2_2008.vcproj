@@ -2435,15 +2435,7 @@
 						>
 					</File>
 					<File
-						RelativePath="..\..\x86\iVU0micro.h"
-						>
-					</File>
-					<File
 						RelativePath="..\..\x86\iVU1micro.cpp"
-						>
-					</File>
-					<File
-						RelativePath="..\..\x86\iVU1micro.h"
 						>
 					</File>
 					<File
