@@ -116,6 +116,7 @@ void SaveState::FreezeAll()
 	sifFreeze();
 	ipuFreeze();
 	gifFreeze();
+	sprFreeze();
 
 	// iop now
 	FreezeMem(psxM, Ps2MemSize::IopRam);        // 2 MB main memory
