@@ -27,6 +27,7 @@
 static bool sinit = false;
 bool UseGui = true;
 bool nDisableSC = false; // screensaver
+bool renderswitch = 0;
 
 
 // This instance is not modified by command line overrides so
@@ -427,7 +428,7 @@ namespace HostGui
 
 			case VK_F1: case VK_F2:  case VK_F3:  case VK_F4:
 			case VK_F5: case VK_F6:  case VK_F7:  case VK_F8:
-			case VK_F9: case VK_F10: case VK_F11: case VK_F12:
+			case VK_F9: case VK_F10: case VK_F12: 
 				try
 				{
 					ProcessFKeys(ev->key-VK_F1 + 1, shiftkey);
@@ -441,7 +442,25 @@ namespace HostGui
 					SysEndExecution();
 				}
 			break;
-
+			
+			case VK_F11: //gsdx "on the fly" renderer switching 
+				if (!renderswitch) {
+					StateRecovery::MakeGsOnly();
+					g_EmulationInProgress = false;
+					ClosePlugins( 1 );
+					renderswitch = true;	//go to dx9 sw
+					StateRecovery::Recover();
+					HostGui::BeginExecution(); //also sets g_EmulationInProgress to true later
+				}
+				else {
+					StateRecovery::MakeGsOnly();
+					g_EmulationInProgress = false;
+					ClosePlugins( 1 );
+					renderswitch = false;	//return to default renderer
+					StateRecovery::Recover();
+					HostGui::BeginExecution(); //also sets g_EmulationInProgress to true later
+				}
+				break;
 			case VK_TAB:
 				CycleFrameLimit(0);
 				break;

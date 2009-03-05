@@ -471,7 +471,7 @@ struct PacketTagType
 	u32 command;
 	u32 data[3];
 };
-
+extern bool renderswitch;
 int mtgsThreadObject::Callback()
 {
 	Console::WriteLn("MTGS > Thread Started, Opening GS Plugin...");
@@ -479,8 +479,11 @@ int mtgsThreadObject::Callback()
 	memcpy_aligned( m_gsMem, PS2MEM_GS, sizeof(m_gsMem) );
 	GSsetBaseMem( m_gsMem );
 	GSirqCallback( NULL );
-
-	m_returncode = GSopen((void *)&pDsp, "PCSX2", 1);
+	
+	//tells GSdx to go into dx9 sw if "renderswitch" is set. Abusing the isMultiThread int
+	//for that so we don't need a new callback
+	if (!renderswitch) m_returncode = GSopen((void *)&pDsp, "PCSX2", 1);
+	else if (renderswitch) m_returncode = GSopen((void *)&pDsp, "PCSX2", 2);
 
 	Console::WriteLn( "MTGS > GSopen Finished, return code: 0x%x", params m_returncode );
 

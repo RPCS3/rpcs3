@@ -154,9 +154,15 @@ static INT32 GSopen(void* dsp, char* title, int mt, int renderer)
 EXPORT_C_(INT32) GSopen(void* dsp, char* title, int mt)
 {
 	AFX_MANAGE_STATE(AfxGetStaticModuleState());
-
-	int renderer = AfxGetApp()->GetProfileInt(_T("Settings"), _T("renderer"), 0);
-
+	int renderer;
+	
+	if (mt == 2){ //pcsx2 sent a switch renderer request
+		renderer = 1; //DX9 sw
+		mt = 1;	
+	}
+	else { //normal init
+		renderer = AfxGetApp()->GetProfileInt(_T("Settings"), _T("renderer"), 0);
+	}
 	return GSopen(dsp, title, mt, renderer);
 }
 
