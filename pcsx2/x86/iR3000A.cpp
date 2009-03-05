@@ -830,7 +830,7 @@ static s32 recExecuteBlock( s32 eeCycles )
 		"push %edi\n"
 		"push %ebp\n"
 
-		"call psxDispatcherReg\n"
+		"call iopDispatcherReg\n"
 		
 		"pop %ebp\n"
 		"pop %edi\n"

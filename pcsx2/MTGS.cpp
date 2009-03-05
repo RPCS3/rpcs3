@@ -471,7 +471,11 @@ struct PacketTagType
 	u32 command;
 	u32 data[3];
 };
+// Until such time as there is a Gsdx port for Linux, or a Linux plugin needs the functionality,
+// lets only declare this for Windows.
+#ifndef __LINUX__
 extern bool renderswitch;
+#endif
 int mtgsThreadObject::Callback()
 {
 	Console::WriteLn("MTGS > Thread Started, Opening GS Plugin...");
@@ -480,11 +484,15 @@ int mtgsThreadObject::Callback()
 	GSsetBaseMem( m_gsMem );
 	GSirqCallback( NULL );
 	
+	#ifdef __LINUX__
+	m_returncode = GSopen((void *)&pDsp, "PCSX2", 1);
+	#else
 	//tells GSdx to go into dx9 sw if "renderswitch" is set. Abusing the isMultiThread int
 	//for that so we don't need a new callback
 	if (!renderswitch) m_returncode = GSopen((void *)&pDsp, "PCSX2", 1);
 	else if (renderswitch) m_returncode = GSopen((void *)&pDsp, "PCSX2", 2);
-
+	#endif
+	
 	Console::WriteLn( "MTGS > GSopen Finished, return code: 0x%x", params m_returncode );
 
 	GSCSRr = 0x551B400F; // 0x55190000

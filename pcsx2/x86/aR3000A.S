@@ -26,7 +26,7 @@
 //////////////////////////////////////////////////////////////////////////
 // The address for all cleared blocks.  It recompiles the current pc and then
 // dispatches to the recompiled block address.
-.global JITCompile
+.global iopJITCompile
 iopJITCompile:
 
 	mov esi, dword ptr [REGINFO + PCOFFSET]
