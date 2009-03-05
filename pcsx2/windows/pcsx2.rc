@@ -357,9 +357,9 @@ BEGIN
     DEFPUSHBUTTON   "OK",IDOK,217,242,50,14
     PUSHBUTTON      "Cancel",IDCANCEL,278,242,50,14
     CTEXT           "These hacks will speed up emulation but reduce emulation compatibility or cause visual errors.  If you have problems, disable all these and try again!",IDC_HACKDESC,18,7,286,19
-    GROUPBOX        "EmotionEngine (EE) Sync Hacks",IDC_STATIC,7,31,159,180
+    GROUPBOX        "EmotionEngine (EE) Sync Hacks",IDC_STATIC,7,31,159,185
     GROUPBOX        "Miscellaneous",IDC_STATIC,7,220,194,33
-    LTEXT           "Important:  X2 and X3 sync hacks *will* cause choppy/skippy audio on many FMV movies.",IDC_STATIC,13,188,149,21
+    LTEXT           "Important:  X2 and X3 sync hacks *will* cause choppy/skippy audio on many FMV movies.",IDC_STATIC,20,188,137,25
     LTEXT           "Known to work well with a couple games, namely Shadow of the Colossus (but breaks most other games).",IDC_STATIC,25,158,133,28
     LTEXT           "Big speedup!  Works well with many games.",IDC_STATIC,25,124,125,19
     LTEXT           "Most compatible option - recommended for everyone with high-end machines.",IDC_STATIC,25,55,136,19

@@ -22,7 +22,6 @@
 #include "VU.h"
 #include "ix86/ix86.h"
 #include "microVU_Alloc.h"
-//#include <vector>
 
 struct microBlock {
 	u32 pipelineState; // FMACx|y|z|w | FDiv | EFU | IALU | BRANCH // Still thinking of how I'm going to do this

@@ -19,15 +19,19 @@
 // Micro VU recompiler! - author: cottonvibes(@gmail.com)
 
 #include "PrecompiledHeader.h"
-#include "microVU.h"
 #ifdef PCSX2_MICROVU
+#include "microVU.h"
 
 //------------------------------------------------------------------
-// VU Micro - Global Variables
+// Micro VU - Global Variables
 //------------------------------------------------------------------
 
 PCSX2_ALIGNED16(microVU microVU0);
 PCSX2_ALIGNED16(microVU microVU1);
+
+PCSX2_ALIGNED16(const u32 mVU_signbit[4])	= {0x80000000, 0x80000000, 0x80000000, 0x80000000};
+PCSX2_ALIGNED16(const u32 mVU_minvals[4])	= {0xff7fffff, 0xff7fffff, 0xff7fffff, 0xff7fffff};
+PCSX2_ALIGNED16(const u32 mVU_maxvals[4])	= {0x7f7fffff, 0x7f7fffff, 0x7f7fffff, 0x7f7fffff};
 
 //------------------------------------------------------------------
 // Micro VU - Main Functions

@@ -45,10 +45,12 @@ struct microAllocInfo {
 					// bit 5 = Read Q1/P1 or backup?
 					// bit 6 = Write to Q2/P2?
 					// bit 7 = Write Fd/Acc/Result to backup memory?
-					// bit 8 = Update Status Flags?
-					// bit 9 = Update Mac Flags?
-					// bit 10 = Used with bit 11 to make a 2-bit key for status/mac flag instance
+					// bit 8 = Update Mac Flags?
+					// bit 9 = Update Status Flags?
+					// bit 10 = Used with bit 11 to make a 2-bit key for mac flag instance
 					// bit 11 = (00 = instance #0, 01 = instance #1, 10 = instance #2, 11 = instance #3)
+					// bit 12 = Used with bit 13 to make a 2-bit key for status flag instance
+					// bit 13 = (00 = instance #0, 01 = instance #1, 10 = instance #2, 11 = instance #3)
 	u32 curPC;
 };
 

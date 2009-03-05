@@ -19,6 +19,13 @@
 #pragma once
 
 //------------------------------------------------------------------
+// Global Variables
+//------------------------------------------------------------------
+PCSX2_ALIGNED16_EXTERN(const u32 mVU_signbit[4]);
+PCSX2_ALIGNED16_EXTERN(const u32 mVU_minvals[4]);
+PCSX2_ALIGNED16_EXTERN(const u32 mVU_maxvals[4]);
+
+//------------------------------------------------------------------
 // Helper Macros
 //------------------------------------------------------------------
 #define _Ft_ ((mVU->code >> 16) & 0x1F)  // The rt part of the instruction register 
@@ -40,14 +47,23 @@
 #define _Imm11_ 	(s32)(mVU->code & 0x400 ? 0xfffffc00 | (mVU->code & 0x3ff) : mVU->code & 0x3ff)
 #define _UImm11_	(s32)(mVU->code & 0x7ff)
 
-#define xmmT1	0 // XMM0 // Temp Reg
-#define xmmFd	1 // XMM1 // Holds the Value of Fd
-#define xmmFs	2 // XMM2 // Holds the Value of Fs
-#define xmmFt	3 // XMM3 // Holds the Value of Ft
-#define xmmACC1	4 // XMM4 // Holds the Value of ACC
-#define xmmACC2	5 // XMM5 // Holds the Backup Value of ACC
-#define xmmPQ	6 // XMM6 // Holds the Value and Backup Values of P and Q regs
-#define xmmF	7 // XMM7 // Holds 4 instances of the status and mac flags (macflagX4::statusflagX4)
+#define xmmT1	0 // Temp Reg
+#define xmmFs	1 // Holds the Value of Fs (writes back result Fd)
+#define xmmFt	2 // Holds the Value of Ft
+#define xmmACC1	3 // Holds the Value of ACC
+#define xmmACC2	4 // Holds the Backup Value of ACC
+#define xmmPQ	5 // Holds the Value and Backup Values of P and Q regs
+#define xmmVI	6 // Holds VI regs 8, 9, 10, 11, 12, 13, 14, and 15
+#define xmmF	7 // Holds 4 instances of the status and mac flags (macflagX4::statusflagX4)
+
+#define gprT1	0 // Temp Reg
+#define gprT2	1 // Temp Reg
+#define gprT3	2 // Temp Reg
+#define gprVI7	3 // VI 7
+#define gprESP	4 // Don't use?
+#define gprVI5	5 // VI 6::5
+#define gprVI3	6 // VI 4::3
+#define gprVI1	7 // VI 2::1
 
 // Template Stuff
 #define mVUx (vuIndex ? &microVU1 : &microVU0)
@@ -57,11 +73,17 @@
 
 #define mVUallocInfo mVU->prog.prog[mVU->prog.cur].allocInfo
 
-#define isNOP	(mVUallocInfo.info[mVUallocInfo.curPC] & (1<<0))
-#define getFd	(mVUallocInfo.info[mVUallocInfo.curPC] & (1<<1))
-#define getFs	(mVUallocInfo.info[mVUallocInfo.curPC] & (1<<2))
-#define getFt	(mVUallocInfo.info[mVUallocInfo.curPC] & (1<<3))
-#define setFd	(mVUallocInfo.info[mVUallocInfo.curPC] & (1<<7))
-#define doFlags	(mVUallocInfo.info[mVUallocInfo.curPC] & (3<<8))
+#define isNOP		(mVUallocInfo.info[mVUallocInfo.curPC] & (1<<0))
+#define getFd		(mVUallocInfo.info[mVUallocInfo.curPC] & (1<<1))
+#define getFs		(mVUallocInfo.info[mVUallocInfo.curPC] & (1<<2))
+#define getFt		(mVUallocInfo.info[mVUallocInfo.curPC] & (1<<3))
+#define setFd		(mVUallocInfo.info[mVUallocInfo.curPC] & (1<<7))
+#define doFlags		(mVUallocInfo.info[mVUallocInfo.curPC] & (3<<8))
+#define doMac		(mVUallocInfo.info[mVUallocInfo.curPC] & (1<<8))
+#define doStatus	(mVUallocInfo.info[mVUallocInfo.curPC] & (1<<9))
+#define fmInstance	((mVUallocInfo.info[mVUallocInfo.curPC] & (3<<10)) + 4)
+#define fsInstance	((mVUallocInfo.info[mVUallocInfo.curPC] & (3<<12)) + 0)
+#define fpmInstance	((((u8)(mVUallocInfo.info[mVUallocInfo.curPC] & (3<<10)) - 1) & 0x3) + 4)
+#define fpsInstance	((((u8)(mVUallocInfo.info[mVUallocInfo.curPC] & (3<<10)) - 1) & 0x3) + 0)
 
 #include "microVU_Misc.inl"

@@ -22,56 +22,54 @@
 // mVUupdateFlags() - Updates status/mac flags
 //------------------------------------------------------------------
 
+#define AND_XYZW (_XYZW_SS ? (1) : (doMac ? (_X_Y_Z_W) : (flipMask[_X_Y_Z_W])))
+
 microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw) {
 	microVU* mVU = mVUx;
 	static u8 *pjmp, *pjmp2;
-	static u32 *pjmp32;
-	static u32 macaddr, stataddr, prevstataddr;
-	static int x86macflag, x86statflag, x86temp;
+	static const int flipMask[16] = {0, 8, 4, 12, 2, 10, 6, 14, 1, 9, 5, 13, 3, 11, 7, 15};
 
 	//SysPrintf ("mVUupdateFlags\n");
 	if( !(doFlags) ) return;
 
-	//macaddr = VU_VI_ADDR(REG_MAC_FLAG, 0);
-	//stataddr = VU_VI_ADDR(REG_STATUS_FLAG, 0); // write address
-	//prevstataddr = VU_VI_ADDR(REG_STATUS_FLAG, 2); // previous address
-
-
-	SSE2_PSHUFD_XMM_to_XMM(regT1, reg, 0x1B); // Flip wzyx to xyzw 
-	MOV32MtoR(x86statflag, prevstataddr); // Load the previous status in to x86statflag
-	AND16ItoR(x86statflag, 0xff0); // Keep Sticky and D/I flags
+	if (!doMac) { regT1 = reg; }
+	else SSE2_PSHUFD_XMM_to_XMM(regT1, reg, 0x1B); // Flip wzyx to xyzw
+	if (doStatus) {
+		SSE_PEXTRW_XMM_to_R32(gprT1, xmmF, fpsInstance); // Get Prev Status Flag
+		AND16ItoR(gprT1, 0xff0); // Keep Sticky and D/I flags
+	}
 
 	//-------------------------Check for Signed flags------------------------------
 
 	// The following code makes sure the Signed Bit isn't set with Negative Zero
 	SSE_XORPS_XMM_to_XMM(regT2, regT2); // Clear regT2
 	SSE_CMPEQPS_XMM_to_XMM(regT2, regT1); // Set all F's if each vector is zero
-	SSE_MOVMSKPS_XMM_to_R32(EAX, regT2); // Used for Zero Flag Calculation
+	SSE_MOVMSKPS_XMM_to_R32(gprT3, regT2); // Used for Zero Flag Calculation
 	SSE_ANDNPS_XMM_to_XMM(regT2, regT1);
 
-	SSE_MOVMSKPS_XMM_to_R32(x86macflag, regT2); // Move the sign bits of the t1reg
+	SSE_MOVMSKPS_XMM_to_R32(gprT2, regT2); // Move the sign bits of the t1reg
 
-	AND16ItoR(x86macflag, _X_Y_Z_W );  // Grab "Is Signed" bits from the previous calculation
+	AND16ItoR(gprT2, AND_XYZW );  // Grab "Is Signed" bits from the previous calculation
 	pjmp = JZ8(0); // Skip if none are
-		OR16ItoR(x86statflag, 0x82); // SS, S flags
-		SHL16ItoR(x86macflag, 4);
+		if (doMac)	  SHL16ItoR(gprT2, 4);
+		if (doStatus) OR16ItoR(gprT1, 0x82); // SS, S flags
 		if (_XYZW_SS) pjmp2 = JMP8(0); // If negative and not Zero, we can skip the Zero Flag checking
 	x86SetJ8(pjmp);
 
 	//-------------------------Check for Zero flags------------------------------
 
-	AND16ItoR(EAX, _X_Y_Z_W );  // Grab "Is Zero" bits from the previous calculation
+	AND16ItoR(gprT3, AND_XYZW );  // Grab "Is Zero" bits from the previous calculation
 	pjmp = JZ8(0); // Skip if none are
-		OR16ItoR(x86statflag, 0x41); // ZS, Z flags
-		OR32RtoR(x86macflag, EAX);
+		if (doMac)	  OR32RtoR(gprT2, gprT3);	
+		if (doStatus) OR16ItoR(gprT1, 0x41); // ZS, Z flags		
 	x86SetJ8(pjmp);
 
 	//-------------------------Finally: Send the Flags to the Mac Flag Address------------------------------
 
 	if (_XYZW_SS) x86SetJ8(pjmp2); // If we skipped the Zero Flag Checking, return here
 
-	MOV16RtoM(macaddr, x86macflag);
-	MOV16RtoM(stataddr, x86statflag);
+	if (doMac)	  SSE_PINSRW_R32_to_XMM(xmmF, gprT2, fmInstance); // Set Mac Flag
+	if (doStatus) SSE_PINSRW_R32_to_XMM(xmmF, gprT1, fsInstance); // Set Status Flag
 }
 
 //------------------------------------------------------------------
@@ -81,7 +79,7 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw) {
 #define mVU_FMAC1(operation) {								\
 	if (isNOP) return;										\
 	int Fd, Fs, Ft;											\
-	mVUallocFMAC1a<vuIndex>(Fd, Fs, Ft, 1);					\
+	mVUallocFMAC1a<vuIndex>(Fd, Fs, Ft);					\
 	if (_XYZW_SS) SSE_##operation##SS_XMM_to_XMM(Fs, Ft);	\
 	else		  SSE_##operation##PS_XMM_to_XMM(Fs, Ft);	\
 	mVUupdateFlags<vuIndex>(Fd, xmmT1, Ft, _X_Y_Z_W);		\

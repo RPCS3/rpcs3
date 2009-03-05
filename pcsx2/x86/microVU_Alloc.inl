@@ -45,10 +45,11 @@
 	else	{ SSE_XORPS_XMM_to_XMM(reg, reg); }  \
 }
 
-microVUt(void) mVUallocFMAC1a(int& Fd, int& Fs, int& Ft, const bool makeFd) {
+microVUt(void) mVUallocFMAC1a(int& Fd, int& Fs, int& Ft) {
 	microVU* mVU = mVUx;
 	Fs = xmmFs;
 	Ft = xmmFt;
+	Fd = xmmFs;
 	if (_XYZW_SS) {
 		if (!_Fs_)	{ getZeroSS(Fs); }
 		else		{ getReg(Fs, _Fs_); }
@@ -69,8 +70,6 @@ microVUt(void) mVUallocFMAC1a(int& Fd, int& Fs, int& Ft, const bool makeFd) {
 			else		{ getReg(Ft, _Ft_); }
 		}
 	}
-	if (makeFdFs) {Fd = Fs;}
-	else		  {Fd = xmmFd;}
 }
 
 microVUt(void) mVUallocFMAC1b(int& Fd) {
