@@ -34,9 +34,10 @@ namespace Path
 	extern std::string Combine( const std::string& srcPath, const std::string& srcFile );
 	extern std::string ReplaceExtension( const std::string& src, const std::string& ext );
 	extern std::string ReplaceFilename( const std::string& src, const std::string& newfilename );
-	extern void GetFilename( const std::string& src, std::string& dest );
-	extern void GetDirectory( const std::string& src, std::string& dest );
-	extern void GetRootDirectory( const std::string& src, std::string& dest );
+	extern std::string GetFilename( const std::string& src );
+	extern std::string GetDirectory( const std::string& src );
+	extern std::string GetFilenameWithoutExt( const string& src );
+	extern std::string GetRootDirectory( const std::string& src );
 	extern void Split( const std::string& src, std::string& destpath, std::string& destfile );
 
 	extern void CreateDirectory( const std::string& src );

@@ -191,27 +191,40 @@ string ReplaceFilename( const string& src, const string& newfilename )
 
 	if( !newfilename.empty() )
 	{
-		dest += '.';
+		dest += Separator;
 		dest += newfilename;
 	}
 	return dest;
 }
 
-void GetFilename( const string& src, string& dest )
+string GetFilename( const string& src )
 {
 	int pos = _findFilenamePosition( src );
-	dest.assign( src.begin()+pos, src.end() );
+	return string( src.begin()+pos, src.end() );
 }
 
-void GetDirectory( const string& src, string& dest )
+string GetFilenameWithoutExt( const string& src )
+{
+	string fname( GetFilename( src ) );
+
+	int pos = fname.find_last_of( '.' );
+	if( pos == string::npos || pos == 0 )
+		return fname;
+	else
+		return string( fname.begin(), fname.begin()+pos );
+}
+
+string GetDirectory( const string& src )
 {
 	int pos = _findFilenamePosition( src );
 	if( pos == 0 )
-		dest.clear();
+		return string();
 	else
-		dest.assign( src.begin(), src.begin()+pos );
+		return string( src.begin(), src.begin()+pos );
 }
 
+// This function mimics the old ANSI C splitpath function.  It's more or less superceeded
+// by one of the many other Path utility functions, but someone might find it useful.
 void Split( const string& src, string& destpath, string& destfile )
 {
 	int pos = _findFilenamePosition( src );
@@ -230,13 +243,13 @@ void Split( const string& src, string& destpath, string& destfile )
 
 // Assigns the base/root directory of the given path into dest.
 // Example /this/that/something.txt -> dest == "/"
-void GetRootDirectory( const string& src, string& dest )
+string GetRootDirectory( const string& src )
 {
 	int pos = src.find_first_of( Delimiters );
 	if( pos == string::npos )
-		dest.clear();
+		return string();
 	else
-		dest.assign( src.begin(), src.begin()+pos );
+		return string( src.begin(), src.begin()+pos );
 }
 
 void CreateDirectory( const string& src )
