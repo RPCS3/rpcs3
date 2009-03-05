@@ -8,12 +8,14 @@
 // function names and the following two defines should ever differ:
 
 #define REGINFO cpuRegs
+#define RECLUT recLUT
 #define PCOFFSET 0x2a8 // this must always match what Pcsx2 displays at startup
 
 //////////////////////////////////////////////////////////////////////////
 // Preprocessor Mess!
 
 .extern REGINFO
+.extern RECLUT
 .extern recRecompile
 
 #define BLOCKTYPE_STARTPC	4		// startpc offset
@@ -33,7 +35,7 @@ JITCompile:
 	add esp, 4
 	mov ebx, esi
 	shr esi, 16
-	mov ecx, dword ptr [recLUT+esi*4]
+	mov ecx, dword ptr [RECLUT+esi*4]
 	jmp dword ptr [ecx+ebx*2]
 
 
@@ -52,7 +54,7 @@ Dispatcher:
 	mov eax, dword ptr [REGINFO + PCOFFSET]
 	mov ebx, eax
 	shr eax, 16
-	mov ecx, dword ptr [recLUT+eax*4]
+	mov ecx, dword ptr [RECLUT+eax*4]
 	mov eax, dword ptr [ecx+ebx*2]
 
 	cmp eax, offset JITCompile
@@ -89,7 +91,7 @@ DispatcherClear:
 
 	mov ebx, edx
 	shr edx, 16
-	mov ecx, dword ptr [recLUT+edx*4]
+	mov ecx, dword ptr [RECLUT+edx*4]
 	mov eax, dword ptr [ecx+ebx*2]
 
 	cmp eax, offset JITCompile
@@ -123,5 +125,5 @@ DispatcherReg:
 	mov eax, dword ptr [REGINFO + PCOFFSET]
 	mov ebx, eax
 	shr eax, 16
-	mov ecx, dword ptr [recLUT+eax*4]
+	mov ecx, dword ptr [RECLUT+eax*4]
 	jmp dword ptr [ecx+ebx*2]

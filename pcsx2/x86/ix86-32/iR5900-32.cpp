@@ -556,28 +556,28 @@ void recResetEE( void )
 
 	for ( int i = 0x0000; i < 0x0200; i++ )
 	{
-		RECLUT_SETPAGE(recLUT, i + 0x0000, &recRAM[ i << 14 ]);
-		RECLUT_SETPAGE(recLUT, i + 0x2000, &recRAM[ i << 14 ]);
-		RECLUT_SETPAGE(recLUT, i + 0x3000, &recRAM[ i << 14 ]);
-		RECLUT_SETPAGE(recLUT, i + 0x8000, &recRAM[ i << 14 ]);
-		RECLUT_SETPAGE(recLUT, i + 0xa000, &recRAM[ i << 14 ]);
-		RECLUT_SETPAGE(recLUT, i + 0xb000, &recRAM[ i << 14 ]);
-		RECLUT_SETPAGE(recLUT, i + 0xc000, &recRAM[ i << 14 ]);
-		RECLUT_SETPAGE(recLUT, i + 0xd000, &recRAM[ i << 14 ]);
+		recLUT_SetPage(recLUT, i + 0x0000, &recRAM[ i << 14 ]);
+		recLUT_SetPage(recLUT, i + 0x2000, &recRAM[ i << 14 ]);
+		recLUT_SetPage(recLUT, i + 0x3000, &recRAM[ i << 14 ]);
+		recLUT_SetPage(recLUT, i + 0x8000, &recRAM[ i << 14 ]);
+		recLUT_SetPage(recLUT, i + 0xa000, &recRAM[ i << 14 ]);
+		recLUT_SetPage(recLUT, i + 0xb000, &recRAM[ i << 14 ]);
+		recLUT_SetPage(recLUT, i + 0xc000, &recRAM[ i << 14 ]);
+		recLUT_SetPage(recLUT, i + 0xd000, &recRAM[ i << 14 ]);
 	}
 
 	for ( int i = 0x0000; i < 0x0040; i++ )
 	{
-		RECLUT_SETPAGE(recLUT, i + 0x1fc0, &recROM[ i << 14 ]);
-		RECLUT_SETPAGE(recLUT, i + 0x9fc0, &recROM[ i << 14 ]);
-		RECLUT_SETPAGE(recLUT, i + 0xbfc0, &recROM[ i << 14 ]);
+		recLUT_SetPage(recLUT, i + 0x1fc0, &recROM[ i << 14 ]);
+		recLUT_SetPage(recLUT, i + 0x9fc0, &recROM[ i << 14 ]);
+		recLUT_SetPage(recLUT, i + 0xbfc0, &recROM[ i << 14 ]);
 	}
 
 	for ( int i = 0x0000; i < 0x0004; i++ )
 	{
-		RECLUT_SETPAGE(recLUT, i + 0x1e00, &recROM1[ i << 14 ]);
-		RECLUT_SETPAGE(recLUT, i + 0x9e00, &recROM1[ i << 14 ]);
-		RECLUT_SETPAGE(recLUT, i + 0xbe00, &recROM1[ i << 14 ]);
+		recLUT_SetPage(recLUT, i + 0x1e00, &recROM1[ i << 14 ]);
+		recLUT_SetPage(recLUT, i + 0x9e00, &recROM1[ i << 14 ]);
+		recLUT_SetPage(recLUT, i + 0xbe00, &recROM1[ i << 14 ]);
 	}
 
 	// drk||Raziel says this is useful but I'm not sure why.  Something to do with forward jumps.
@@ -1243,18 +1243,6 @@ static void checkcodefn()
 	Console::Error("code changed! %x", params pctemp);
 	assert(0);
 }
-
-//#ifdef _DEBUG
-//#define CHECK_XMMCHANGED() CALLFunc((uptr)checkxmmchanged);
-//#else
-//#define CHECK_XMMCHANGED()
-//#endif
-//
-//static void checkxmmchanged()
-//{
-//	assert( !g_globalMMXSaved );
-//	assert( !g_globalXMMSaved );
-//}
 
 u32 recompileCodeSafe(u32 temppc)
 {

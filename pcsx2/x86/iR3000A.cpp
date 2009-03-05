@@ -590,23 +590,23 @@ void recResetIOP()
 	// 0x80 comes from : (Ps2MemSize::IopRam / 0x10000) * 4
 	for (int i=0; i<0x80; i++)
 	{
-		RECLUT_SETPAGE(psxRecLUT, i + 0x0000, &recRAM[(i & 0x1f) << 14]);
-		RECLUT_SETPAGE(psxRecLUT, i + 0x8000, &recRAM[(i & 0x1f) << 14]);
-		RECLUT_SETPAGE(psxRecLUT, i + 0xa000, &recRAM[(i & 0x1f) << 14]);
+		recLUT_SetPage(psxRecLUT, i + 0x0000, &recRAM[(i & 0x1f) << 14]);
+		recLUT_SetPage(psxRecLUT, i + 0x8000, &recRAM[(i & 0x1f) << 14]);
+		recLUT_SetPage(psxRecLUT, i + 0xa000, &recRAM[(i & 0x1f) << 14]);
 	}
 
 	for (int i=0; i<(Ps2MemSize::Rom / 0x10000); i++)
 	{
-		RECLUT_SETPAGE(psxRecLUT, i + 0x1fc0, &recROM[i << 14]);
-		RECLUT_SETPAGE(psxRecLUT, i + 0x9fc0, &recROM[i << 14]);
-		RECLUT_SETPAGE(psxRecLUT, i + 0xbfc0, &recROM[i << 14]);
+		recLUT_SetPage(psxRecLUT, i + 0x1fc0, &recROM[i << 14]);
+		recLUT_SetPage(psxRecLUT, i + 0x9fc0, &recROM[i << 14]);
+		recLUT_SetPage(psxRecLUT, i + 0xbfc0, &recROM[i << 14]);
 	}
 
 	for (int i=0; i<(Ps2MemSize::Rom1 / 0x10000); i++)
 	{
-		RECLUT_SETPAGE(psxRecLUT, i + 0x1e00, &recROM1[i << 14]);
-		RECLUT_SETPAGE(psxRecLUT, i + 0x9e00, &recROM1[i << 14]);
-		RECLUT_SETPAGE(psxRecLUT, i + 0xbe00, &recROM1[i << 14]);
+		recLUT_SetPage(psxRecLUT, i + 0x1e00, &recROM1[i << 14]);
+		recLUT_SetPage(psxRecLUT, i + 0x9e00, &recROM1[i << 14]);
+		recLUT_SetPage(psxRecLUT, i + 0xbe00, &recROM1[i << 14]);
 	}
 
 	if( s_pInstCache )

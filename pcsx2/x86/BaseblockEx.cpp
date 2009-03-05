@@ -16,10 +16,10 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
-#define _SECURE_SCL 0
-
 #include "PrecompiledHeader.h"
 #include "BaseblockEx.h"
+
+#define _SECURE_SCL 0
 
 #include <vector>
 

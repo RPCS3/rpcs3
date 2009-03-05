@@ -56,7 +56,12 @@ struct BASEBLOCKEX
 // x * (sizeof(BASEBLOCK) / 4) sacrifices safety for speed compared to
 // x / 4 * sizeof(BASEBLOCK) or a higher level approach.
 #define PC_GETBLOCK_(x, reclut) ((BASEBLOCK*)(reclut[((u32)(x)) >> 16] + (x)*(sizeof(BASEBLOCK)/4)))
-#define RECLUT_SETPAGE(reclut, page, p) do { reclut[page] = (uptr)(p) - ((page) << 14) * sizeof(BASEBLOCK); } while (0)
+
+static void recLUT_SetPage( uptr reclut[0x10000], uint page, void* mapping )
+{
+	jASSUME( page < 0x10000 );
+	reclut[page] = ((uptr)mapping) - ((page << 14) * sizeof(BASEBLOCK));
+}
 
 // This is needed because of the retarded GETBLOCK macro above.
 C_ASSERT( sizeof(BASEBLOCK) == 8 );
