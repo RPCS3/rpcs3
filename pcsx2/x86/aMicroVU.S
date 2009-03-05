@@ -1,6 +1,6 @@
 // microVU.cpp assembly routines
 // arcum42(@gmail.com)
-.intel_syntax
+.intel_syntax noprefix
 
 .extern mVUexecuteVU0
 .extern mVUexecuteVU1
@@ -19,14 +19,14 @@ startVU0:
 		call mVUexecuteVU0
 
 		// backup cpu state
-		push %ebx
-		push %ebp
-		push %esi
-		push %edi
+		push ebx
+		push ebp
+		push esi
+		push edi
 
 		ldmxcsr g_sseVUMXCSR
 		// Should set xmmZ?
-		jmp %eax
+		jmp eax
 
 // Runs VU1 for number of cycles
 // void __fastcall startVU1(u32 startPC, u32 cycles) 
@@ -35,14 +35,14 @@ startVU01:
 		call mVUexecuteVU1
 
 		// backup cpu state
-		push %ebx
-		push %ebp
-		push %esi
-		push %edi
+		push ebx
+		push ebp
+		push esi
+		push edi
 
 		ldmxcsr g_sseVUMXCSR
 
-		jmp %eax
+		jmp eax
 
 // Exit point
 // void __fastcall endVU0(u32 startPC, u32 cycles)
@@ -51,10 +51,10 @@ endVU0:
 		//call mVUcleanUpVU0
 
 		/*restore cpu state*/
-		pop %edi;
-		pop %esi;
-		pop %ebp;
-		pop %ebx;
+		pop edi;
+		pop esi;
+		pop ebp;
+		pop ebx;
 		
 		ldmxcsr g_sseMXCSR
 

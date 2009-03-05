@@ -129,15 +129,15 @@ namespace Threading
 		if( true ) //isMultiCore )
 		{
 			__asm__ __volatile__(
-				".intel_syntax\n"
-				 "lock xadd [%0], %%eax\n"
+				".intel_syntax noprefix\n"
+				 "lock xadd [%0], eax\n"
 				 ".att_syntax\n" : : "r"(Addend), "a"(Value) : "memory");
 		}
 		else
 		{
 			__asm__ __volatile__(
-				".intel_syntax\n"
-				 "xadd [%0], %%eax\n"
+				".intel_syntax noprefix\n"
+				 "xadd [%0], eax\n"
 				 ".att_syntax\n" : : "r"(Addend), "a"(Value) : "memory");
 		}
 	}
@@ -175,8 +175,8 @@ namespace Threading
 	__forceinline void pcsx2_InterlockedExchange64(volatile s64* Target, s64 Value)
 	{
 		__asm__ __volatile__(
-			".intel_syntax\n"
-			 "lock xchg [%0], %%rax\n"
+			".intel_syntax noprefix\n"
+			 "lock xchg [%0], rax\n"
 			 ".att_syntax\n" : : "r"(Target), "a"(Value) : "memory"
 		);
 		return 0;

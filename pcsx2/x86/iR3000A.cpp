@@ -824,18 +824,18 @@ static s32 recExecuteBlock( s32 eeCycles )
 #else
 	__asm__
 	(
-		".intel_syntax\n"
-		"push %ebx\n"
-		"push %esi\n"
-		"push %edi\n"
-		"push %ebp\n"
+		".intel_syntax noprefix\n"
+		"push ebx\n"
+		"push esi\n"
+		"push edi\n"
+		"push ebp\n"
 
 		"call iopDispatcherReg\n"
 		
-		"pop %ebp\n"
-		"pop %edi\n"
-		"pop %esi\n"
-		"pop %ebx\n"
+		"pop ebp\n"
+		"pop edi\n"
+		"pop esi\n"
+		"pop ebx\n"
 		".att_syntax\n"
 	);
 #endif

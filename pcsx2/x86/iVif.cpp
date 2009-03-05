@@ -96,7 +96,7 @@ void __fastcall SetNewMask(u32* vif1masks, u32* hasmask, u32 mask, u32 oldmask)
 
 
 #else // gcc
-
+// Is this really supposed to be assembly for gcc and C for Windows?
 void __fastcall SetNewMask(u32* vif1masks, u32* hasmask, u32 mask, u32 oldmask)
 {
     u32 i;
@@ -112,23 +112,23 @@ void __fastcall SetNewMask(u32* vif1masks, u32* hasmask, u32 mask, u32 oldmask)
             u8* p0 = (u8*)&s_maskarr[mask&15][0];
             u8* p1 = (u8*)&s_maskarr[(mask>>4)&15][0];
 
-            __asm__(".intel_syntax\n"
-                "movaps %%xmm0, [%0]\n"
-                "movaps %%xmm1, [%1]\n"
-                "movaps %%xmm2, %%xmm0\n"
-                "punpcklwd %%xmm0, %%xmm0\n"
-                "punpckhwd %%xmm2, %%xmm2\n"
-                "movaps %%xmm3, %%xmm1\n"
-                "punpcklwd %%xmm1, %%xmm1\n"
-                "punpckhwd %%xmm3, %%xmm3\n"
-                "movq [%2], %%xmm0\n"
-                "movq [%2+8], %%xmm1\n"
-                "movhps [%2+16], %%xmm0\n"
-                "movhps [%2+24], %%xmm1\n"
-                "movq [%2+32], %%xmm2\n"
-                "movq [%2+40], %%xmm3\n"
-                "movhps [%2+48], %%xmm2\n"
-                "movhps [%2+56], %%xmm3\n"
+            __asm__(".intel_syntax noprefix\n"
+                "movaps xmm0, [%0]\n"
+                "movaps xmm1, [%1]\n"
+                "movaps xmm2, xmm0\n"
+                "punpcklwd xmm0, xmm0\n"
+                "punpckhwd xmm2, xmm2\n"
+                "movaps xmm3, xmm1\n"
+                "punpcklwd xmm1, xmm1\n"
+                "punpckhwd xmm3, xmm3\n"
+                "movq [%2], xmm0\n"
+                "movq [%2+8], xmm1\n"
+                "movhps [%2+16], xmm0\n"
+                "movhps [%2+24], xmm1\n"
+                "movq [%2+32], xmm2\n"
+                "movq [%2+40], xmm3\n"
+                "movhps [%2+48], xmm2\n"
+                "movhps [%2+56], xmm3\n"
                     ".att_syntax\n" : : "r"(p0), "r"(p1), "r"(vif1masks) );
 		}
 	}

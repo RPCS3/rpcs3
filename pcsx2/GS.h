@@ -231,7 +231,9 @@ public:
 #ifndef __LINUX__
 		__asm mov eax, SendSimplePacket
 #else
-		__asm ("mov %eax, SendSimplePacket");
+		__asm__ (".intel_syntax noprefix\n"
+			     "mov eax, SendSimplePacket\n"
+			      ".att_syntax\n");
 #endif
 		//return (uptr)&SendSimplePacket;
 	}

@@ -800,18 +800,18 @@ __forceinline void recExecute()
 		g_EEFreezeRegs = true;
 		__asm__
 		(
-			".intel_syntax\n"
-			"push %ebx\n"
-			"push %esi\n"
-			"push %edi\n"
-			"push %ebp\n"
+			".intel_syntax noprefix\n"
+			"push ebx\n"
+			"push esi\n"
+			"push edi\n"
+			"push ebp\n"
 
 			"call DispatcherReg\n"
 			
-			"pop %ebp\n"
-			"pop %edi\n"
-			"pop %esi\n"
-			"pop %ebx\n"
+			"pop ebp\n"
+			"pop edi\n"
+			"pop esi\n"
+			"pop ebx\n"
 			".att_syntax\n"
 		);
 		g_EEFreezeRegs = false;
@@ -824,18 +824,18 @@ static void recExecuteBlock()
 	g_EEFreezeRegs = true;
 	__asm__
 	(
-		".intel_syntax\n"
-		"push %ebx\n"
-		"push %esi\n"
-		"push %edi\n"
-		"push %ebp\n"
+		".intel_syntax noprefix\n"
+		"push ebx\n"
+		"push esi\n"
+		"push edi\n"
+		"push ebp\n"
 
 		"call DispatcherReg\n"
 
-		"pop %ebp\n"
-		"pop %edi\n"
-		"pop %esi\n"
-		"pop %ebx\n"
+		"pop ebp\n"
+		"pop edi\n"
+		"pop esi\n"
+		"pop ebx\n"
 		".att_syntax\n"
 	);
 	g_EEFreezeRegs = false;

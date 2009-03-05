@@ -107,10 +107,10 @@ static __forceinline void memset_8( void *dest )
 		case 3:
 			__asm__ 
 			(
-				".intel_syntax\n"
+				".intel_syntax noprefix\n"
 				"cld\n"
-//				"mov %edi, %0\n"
-//				"mov %eax, %1\n"
+//				"mov edi, %0\n"
+//				"mov eax, %1\n"
 				"stosd\n"
 				"stosd\n"
 				"stosd\n"
@@ -125,10 +125,10 @@ static __forceinline void memset_8( void *dest )
 		case 4:
 			__asm__ 
 			(			
-				".intel_syntax\n"
+				".intel_syntax noprefix\n"
 				"cld\n"
-//				"mov %edi, %0\n"
-//				"mov %eax, %1\n"
+//				"mov edi, %0\n"
+//				"mov eax, %1\n"
 				"stosd\n"
 				"stosd\n"
 				"stosd\n"
@@ -144,10 +144,10 @@ static __forceinline void memset_8( void *dest )
 		case 5:
 			__asm__
 			(
-				".intel_syntax\n"
+				".intel_syntax noprefix\n"
 				"cld\n"
-//				"mov %edi, %0\n"
-//				"mov %eax, %1\n"
+//				"mov edi, %0\n"
+//				"mov eax, %1\n"
 				"stosd\n"
 				"stosd\n"
 				"stosd\n"
@@ -164,7 +164,7 @@ static __forceinline void memset_8( void *dest )
 		default:
 			__asm__
 			(
-				".intel_syntax\n"
+				".intel_syntax noprefix\n"
 				"cld\n"
 //				"mov ecx, %0\n"
 //				"mov edi, %1\n"

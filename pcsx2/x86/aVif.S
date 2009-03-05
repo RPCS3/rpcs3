@@ -16,29 +16,29 @@
   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 */
-.intel_syntax
+.intel_syntax noprefix
         
 .extern _vifRegs
 .extern _vifMaskRegs
 .extern _vifRow
         
-#define VIF_ESP %esp
-#define VIF_SRC	%esi
-#define VIF_INC	%ecx
-#define VIF_DST %edi
-#define VIF_SIZE %edx
-#define VIF_TMPADDR %eax
-#define VIF_SAVEEBX %ebx
-#define VIF_SAVEEBXd %ebx
+#define VIF_ESP esp
+#define VIF_SRC	esi
+#define VIF_INC	ecx
+#define VIF_DST edi
+#define VIF_SIZE edx
+#define VIF_TMPADDR eax
+#define VIF_SAVEEBX ebx
+#define VIF_SAVEEBXd ebx
 
-#define XMM_R0			%xmm0
-#define XMM_R1			%xmm1
-#define XMM_R2			%xmm2
-#define XMM_WRITEMASK	%xmm3
-#define XMM_ROWMASK		%xmm4
-#define XMM_ROWCOLMASK	%xmm5
-#define XMM_ROW			%xmm6
-#define XMM_COL			%xmm7
+#define XMM_R0			xmm0
+#define XMM_R1			xmm1
+#define XMM_R2			xmm2
+#define XMM_WRITEMASK	xmm3
+#define XMM_ROWMASK		xmm4
+#define XMM_ROWCOLMASK	xmm5
+#define XMM_ROW			xmm6
+#define XMM_COL			xmm7
 
 #define XMM_R3			XMM_COL
 
@@ -1189,35 +1189,35 @@
 .extern s_TempDecompress
 
 #define DECOMPRESS_RGBA(OFFSET) \
-	mov %bl, %al; \
-	shl %bl, 3; \
-	mov byte ptr [s_TempDecompress+OFFSET], %bl; \
+	mov bl, al; \
+	shl bl, 3; \
+	mov byte ptr [s_TempDecompress+OFFSET], bl; \
 	\
-	mov %bx, %ax; \
-	shr %bx, 2; \
-	and %bx, 0xf8; \
-	mov byte ptr [s_TempDecompress+OFFSET+1], %bl; \
+	mov bx, ax; \
+	shr bx, 2; \
+	and bx, 0xf8; \
+	mov byte ptr [s_TempDecompress+OFFSET+1], bl; \
 	\
-	mov %bx, %ax; \
-	shr %bx, 7; \
-	and %bx, 0xf8; \
-	mov byte ptr [s_TempDecompress+OFFSET+2], %bl; \
-	mov %bx, %ax; \
-	shr %bx, 8; \
-	and %bx, 0x80; \
-	mov byte ptr [s_TempDecompress+OFFSET+3], %bl; \
+	mov bx, ax; \
+	shr bx, 7; \
+	and bx, 0xf8; \
+	mov byte ptr [s_TempDecompress+OFFSET+2], bl; \
+	mov bx, ax; \
+	shr bx, 8; \
+	and bx, 0x80; \
+	mov byte ptr [s_TempDecompress+OFFSET+3], bl; \
 
 #define UNPACK_V4_5SSE_4(CL, TOTALCL, MaskType, ModeType) \
-	mov %eax, dword ptr [VIF_SRC]; \
+	mov eax, dword ptr [VIF_SRC]; \
 	DECOMPRESS_RGBA(0); \
 	\
-	shr %eax, 16; \
+	shr eax, 16; \
 	DECOMPRESS_RGBA(4); \
 	\
-	mov %eax, dword ptr [VIF_SRC+4]; \
+	mov eax, dword ptr [VIF_SRC+4]; \
 	DECOMPRESS_RGBA(8); \
 	\
-	shr %eax, 16; \
+	shr eax, 16; \
 	DECOMPRESS_RGBA(12); \
 	\
 	movdqa XMM_R0, xmmword ptr [s_TempDecompress]; \
@@ -1242,13 +1242,13 @@
 #define UNPACK_V4_5SSE_4A UNPACK_V4_5SSE_4
 
 #define UNPACK_V4_5SSE_3(CL, TOTALCL, MaskType, ModeType) \
-	mov %eax, dword ptr [VIF_SRC]; \
+	mov eax, dword ptr [VIF_SRC]; \
 	DECOMPRESS_RGBA(0); \
 	\
-	shr %eax, 16; \
+	shr eax, 16; \
 	DECOMPRESS_RGBA(4); \
 	\
-    mov %eax, dword ptr [VIF_SRC]; \
+    mov eax, dword ptr [VIF_SRC]; \
 	DECOMPRESS_RGBA(8); \
 	\
 	movdqa XMM_R0, xmmword ptr [s_TempDecompress]; \
@@ -1271,10 +1271,10 @@
 #define UNPACK_V4_5SSE_3A UNPACK_V4_5SSE_3
 
 #define UNPACK_V4_5SSE_2(CL, TOTALCL, MaskType, ModeType) \
-	mov %eax, dword ptr [VIF_SRC]; \
+	mov eax, dword ptr [VIF_SRC]; \
 	DECOMPRESS_RGBA(0); \
 	\
-	shr %eax, 16; \
+	shr eax, 16; \
 	DECOMPRESS_RGBA(4); \
 	\
 	movq XMM_R0, qword ptr [s_TempDecompress]; \
@@ -1294,7 +1294,7 @@
 #define UNPACK_V4_5SSE_2A UNPACK_V4_5SSE_2
 
 #define UNPACK_V4_5SSE_1(CL, TOTALCL, MaskType, ModeType) \
-	mov %ax, word ptr [VIF_SRC]; \
+	mov ax, word ptr [VIF_SRC]; \
 	DECOMPRESS_RGBA(0) \
 	\
 	movd XMM_R0, dword ptr [s_TempDecompress]; \
@@ -1327,20 +1327,20 @@
 
 // 32 bit versions have the args on the stack
 #define INIT_ARGS() \
-    push %edi; \
-    push %esi; \
-    push %ebx; \
-    mov VIF_DST, dword ptr [%esp+4+12]; \
-    mov VIF_SRC, dword ptr [%esp+8+12]; \
-    mov VIF_SIZE, dword ptr [%esp+12+12]; \
+    push edi; \
+    push esi; \
+    push ebx; \
+    mov VIF_DST, dword ptr [esp+4+12]; \
+    mov VIF_SRC, dword ptr [esp+8+12]; \
+    mov VIF_SIZE, dword ptr [esp+12+12]; \
 
 
 #define POP_REGS() \
-    pop %ebx; \
-    pop %esi; \
-    pop %edi; \
+    pop ebx; \
+    pop esi; \
+    pop edi; \
 
-#define INC_STACK(reg) add %esp, 4;
+#define INC_STACK(reg) add esp, 4;
         
 // qsize - bytes of compressed size of 1 decompressed xmmword
 // int UNPACK_SkippingWrite_##name##_##sign##_##MaskType##_##ModeType(u32* dest, u32* data, int dmasize)
@@ -1431,7 +1431,7 @@ name##_##sign##_##MaskType##_##ModeType##_C1_DoneWithDec: \
 	sub VIF_SIZE, qsize; \
 name##_##sign##_##MaskType##_##ModeType##_C1_Done3: \
 	SAVE_ROW_REG; \
-    mov %eax, VIF_SIZE; \
+    mov eax, VIF_SIZE; \
     POP_REGS(); \
     ret; \
     \
@@ -1460,7 +1460,7 @@ name##_##sign##_##MaskType##_##ModeType##_C2_Done3: \
 name##_##sign##_##MaskType##_##ModeType##_C2_Done4: \
 	\
 	SAVE_ROW_REG; \
-    mov %eax, VIF_SIZE; \
+    mov eax, VIF_SIZE; \
     POP_REGS(); \
 	ret; \
 	\
@@ -1497,7 +1497,7 @@ name##_##sign##_##MaskType##_##ModeType##_C3_Done3: \
 	UNPACK_##name##SSE_1(0, 0, MaskType, ModeType); \
 name##_##sign##_##MaskType##_##ModeType##_C3_Done4: \
 	SAVE_ROW_REG; \
-    mov %eax, VIF_SIZE; \
+    mov eax, VIF_SIZE; \
     POP_REGS(); \
     ret; \
 	\
@@ -1552,7 +1552,7 @@ name##_##sign##_##MaskType##_##ModeType##_C4_Done: \
 	\
 	SAVE_ROW_REG; \
 	INC_STACK(); \
-    mov %eax, VIF_SIZE; \
+    mov eax, VIF_SIZE; \
     POP_REGS(); \
     ret; \
         
