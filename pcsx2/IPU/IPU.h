@@ -19,6 +19,8 @@
 #ifndef __IPU_H__
 #define __IPU_H__
 
+#include "mpeg2lib/Mpeg.h"
+
 // IPU_INLINE_IRQS
 // Scheduling ints into the future is a purist approach to emulation, and
 // is mostly cosmetic since the emulator itself performs all actions instantly
@@ -222,6 +224,10 @@ extern int coded_block_pattern;
 extern int g_nIPU0Data; // or 0x80000000 whenever transferring
 extern u8* g_pIPU0Pointer;
 
+// The IPU can only do one task at once and never uses other buffers so these
+// should be made available to functions in other modules to save registers.
+PCSX2_ALIGNED16(extern macroblock_rgb32 rgb32);
+PCSX2_ALIGNED16(extern macroblock_8 mb8);
 
 void dmaIPU0();
 void dmaIPU1();

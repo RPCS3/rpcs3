@@ -64,12 +64,10 @@ struct macroblock_16{
 	short Cr[8][8];				//2
 };
 
-struct rgb32{
-	unsigned char r, g, b, a;
-};
-
 struct macroblock_rgb32{
-	struct rgb32	c[16][16];
+	struct {
+		unsigned char r, g, b, a;
+	} c[16][16];
 };
 
 struct rgb16{

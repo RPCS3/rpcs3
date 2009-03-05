@@ -993,7 +993,7 @@ void CheckForBIOSEnd()
 	x86SetJ8( j8Ptr[1] );
 
 	// bios end
-	RET2();
+	RET();
 
 	x86SetJ8( j8Ptr[2] );
 }
@@ -1250,7 +1250,7 @@ static void iBranchTest(u32 newpc, bool noDispatch)
 		JS32((uptr)DispatcherReg - ( (uptr)x86Ptr[0] + 6 ));
 	}
 
-	RET2();
+	RET();
 }
 
 static void checkcodefn()

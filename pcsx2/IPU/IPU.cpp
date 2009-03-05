@@ -96,9 +96,6 @@ int IPU1dma();
 //char convert_data_buffer[sizeof(convert_rgb_t)];
 char convert_data_buffer[0x1C];
 
-convert_init_t convert_init={convert_data_buffer, sizeof(convert_data_buffer)};
-convert_t *convert;
-
 // Quantization matrix
 static u8 niq[64],			//non-intraquant matrix
 		iq[64];			//intraquant matrix
@@ -216,8 +213,7 @@ void SaveState::ipuFreeze() {
 
 		if (!mpeg2_inited){
 			mpeg2_idct_init();
-			convert=convert_rgb (CONVERT_RGB, 32);
-			convert(16, 16, 0, NULL, &convert_init);
+			yuv2rgb_init();
 			memzero_obj(mb8.Y);
 			memzero_obj(mb8.Cb);
 			memzero_obj(mb8.Cr);
@@ -314,8 +310,7 @@ void ipuSoftReset()
 {
 	if (!mpeg2_inited){
         mpeg2_idct_init();
-		convert=convert_rgb (CONVERT_RGB, 32);
-		convert(16, 16, 0, NULL, &convert_init);
+		yuv2rgb_init();
 		memzero_obj(mb8.Y);
 		memzero_obj(mb8.Cb);
 		memzero_obj(mb8.Cr);
@@ -1274,8 +1269,7 @@ void __fastcall ipu_csc(macroblock_8 *mb8, macroblock_rgb32 *rgb32, int sgn){
 	int i;
 	u8* p = (u8*)rgb32;
 
-	convert_init.start(convert_init.id, (u8*)rgb32, CONVERT_FRAME);
-	convert_init.copy(convert_init.id, (u8*)mb8->Y, (u8*)mb8->Cr, (u8*)mb8->Cb, 0);
+	yuv2rgb_sse2();
 
 	if( s_thresh[0] > 0 ) {
 		for(i = 0; i < 64*4; i++, p += 4) {

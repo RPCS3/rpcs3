@@ -394,7 +394,6 @@
 #define PUSHFD ePUSHFD<_EmitterId_>
 #define POPFD ePOPFD<_EmitterId_>
 #define RET eRET<_EmitterId_>
-#define RET2 eRET2<_EmitterId_>
 #define CBW eCBW<_EmitterId_>
 #define CWDE eCWDE<_EmitterId_>
 #define CWD eCWD<_EmitterId_>

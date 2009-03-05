@@ -993,7 +993,7 @@ static void iPsxBranchTest(u32 newpc, u32 cpuBranch)
 
 	j8Ptr[2] = JG8( 0 );	// jump if psxCycleEE > 0
 
-	RET2();		// returns control to the EE
+	RET();		// returns control to the EE
 
 	// Continue onward with branching here:
 	x86SetJ8( j8Ptr[2] );
