@@ -19,8 +19,6 @@
 #include "PrecompiledHeader.h"
 #include "BaseblockEx.h"
 
-#define _SECURE_SCL 0
-
 #include <vector>
 
 using namespace std;

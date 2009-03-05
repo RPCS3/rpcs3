@@ -1,5 +1,21 @@
+#pragma once
+
 #ifndef _PCSX2_PRECOMPILED_HEADER_
 #define _PCSX2_PRECOMPILED_HEADER_
+#endif // pragma once
+
+//////////////////////////////////////////////////////////////////////////////////////////
+// Microsoft specific STL extensions for bounds checking and stuff: Enabled in devbuilds,
+// disabled in release builds. :)
+
+#ifdef _MSC_VER
+#ifdef PCSX2_DEVBUILD
+#	define _SECURE_SCL 1
+#	define _SECURE_SCL_THROWS 1
+#else
+#	define _SECURE_SCL 0
+#endif
+#endif
 
 #define NOMINMAX		// Disables other libs inclusion of their own min/max macros (we use std instead)
 
@@ -7,10 +23,14 @@
 #	define __LINUX__
 #endif
 
-#ifndef _WIN32
-#	include <unistd.h>
+#ifdef _WIN32
+// disable warning C4244: '=' : conversion from 'big' to 'small', possible loss of data
+#	pragma warning(disable:4244)
+#else
+#	include <unistd.h>		// Non-Windows platforms need this
 #endif
 
+//////////////////////////////////////////////////////////////////////////////////////////
 // Include the STL junk that's actually handy.
 
 #include <algorithm>
@@ -32,21 +52,9 @@
 #include <sys/stat.h>
 #include <pthread.h>
 
-// TODO : Add items here that are local to Pcsx2 but stay relatively unchanged for
-// long periods of time.
-
-#ifdef _WIN32
-// disable warning C4244: '=' : conversion from 'big' to 'small', possible loss of data
-#pragma warning(disable:4244)
-#endif
-
 using std::string;		// we use it enough, so bring it into the global namespace.
 using std::min;
 using std::max;
-
-#include "zlib/zlib.h"
-#include "PS2Etypes.h"
-#include "StringUtils.h"
 
 typedef int BOOL;
 
@@ -54,6 +62,14 @@ typedef int BOOL;
 #	undef FALSE
 #	define TRUE  1
 #	define FALSE 0
+
+//////////////////////////////////////////////////////////////////////////////////////////
+// Begin Pcsx2 Includes: Add items here that are local to Pcsx2 but stay relatively
+// unchanged for long periods of time.
+
+#include "zlib/zlib.h"
+#include "PS2Etypes.h"
+#include "StringUtils.h"
 
 ////////////////////////////////////////////////////////////////////
 // Compiler/OS specific macros and defines -- Begin Section
@@ -119,5 +135,3 @@ enum
 		
 	EmitterId_Count			// must always be last!
 };
-
-#endif
