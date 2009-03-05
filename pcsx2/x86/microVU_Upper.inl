@@ -76,32 +76,57 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw) {
 // Helper Macros
 //------------------------------------------------------------------
 
-#define mVU_FMAC1(operation) {								\
-	if (isNOP) return;										\
-	int Fd, Fs, Ft;											\
-	mVUallocFMAC1a<vuIndex>(Fd, Fs, Ft);					\
-	if (_XYZW_SS) SSE_##operation##SS_XMM_to_XMM(Fs, Ft);	\
-	else		  SSE_##operation##PS_XMM_to_XMM(Fs, Ft);	\
-	mVUupdateFlags<vuIndex>(Fd, xmmT1, Ft, _X_Y_Z_W);		\
-	mVUallocFMAC1b<vuIndex>(Fd);							\
+#define mVU_FMAC1(operation) {									\
+	microVU* mVU = mVUx;										\
+	if (recPass == 0) {}										\
+	else {														\
+		int Fd, Fs, Ft;											\
+		if (isNOP) return;										\
+		mVUallocFMAC1a<vuIndex>(Fd, Fs, Ft);					\
+		if (_XYZW_SS) SSE_##operation##SS_XMM_to_XMM(Fs, Ft);	\
+		else		  SSE_##operation##PS_XMM_to_XMM(Fs, Ft);	\
+		mVUupdateFlags<vuIndex>(Fd, xmmT1, Ft, _X_Y_Z_W);		\
+		mVUallocFMAC1b<vuIndex>(Fd);							\
+	}															\
+}
+
+#define mVU_FMAC3(operation) {									\
+	microVU* mVU = mVUx;										\
+	if (recPass == 0) {}										\
+	else {														\
+		int Fd, Fs, Ft;											\
+		if (isNOP) return;										\
+		mVUallocFMAC3a<vuIndex>(Fd, Fs, Ft);					\
+		if (_XYZW_SS) SSE_##operation##SS_XMM_to_XMM(Fs, Ft);	\
+		else		  SSE_##operation##PS_XMM_to_XMM(Fs, Ft);	\
+		mVUupdateFlags<vuIndex>(Fd, xmmT1, Ft, _X_Y_Z_W);		\
+		mVUallocFMAC3b<vuIndex>(Fd);							\
+	}															\
 }
 
 //------------------------------------------------------------------
 // Micro VU Micromode Upper instructions
 //------------------------------------------------------------------
 
-microVUf(void) mVU_ABS(){}
-microVUf(void) mVU_ADD() {
+microVUf(void) mVU_ABS() {
 	microVU* mVU = mVUx;
 	if (recPass == 0) {}
-	else { mVU_FMAC1(ADD); }
+	else { 
+		int Fs, Ft;
+		if (isNOP) return;
+		mVUallocFMAC2a<vuIndex>(Fs, Ft);
+		SSE_ANDPS_M128_to_XMM(Fs, (uptr)mVU_absclip);
+		mVUallocFMAC1b<vuIndex>(Ft);
+	}
 }
+microVUf(void) mVU_ADD()	 { mVU_FMAC1(ADD); }
 microVUf(void) mVU_ADDi(){}
 microVUf(void) mVU_ADDq(){}
-microVUf(void) mVU_ADDx(){}
-microVUf(void) mVU_ADDy(){}
-microVUf(void) mVU_ADDz(){}
-microVUf(void) mVU_ADDw(){}
+microVUq(void) mVU_ADDxyzw() { mVU_FMAC3(ADD); }
+microVUf(void) mVU_ADDx()	 { mVU_ADDxyzw<vuIndex, recPass>(); }
+microVUf(void) mVU_ADDy()	 { mVU_ADDxyzw<vuIndex, recPass>(); }
+microVUf(void) mVU_ADDz()	 { mVU_ADDxyzw<vuIndex, recPass>(); }
+microVUf(void) mVU_ADDw()	 { mVU_ADDxyzw<vuIndex, recPass>(); }
 microVUf(void) mVU_ADDA(){}
 microVUf(void) mVU_ADDAi(){}
 microVUf(void) mVU_ADDAq(){}
@@ -109,17 +134,14 @@ microVUf(void) mVU_ADDAx(){}
 microVUf(void) mVU_ADDAy(){}
 microVUf(void) mVU_ADDAz(){}
 microVUf(void) mVU_ADDAw(){}
-microVUf(void) mVU_SUB(){
-	microVU* mVU = mVUx;
-	if (recPass == 0) {}
-	else { mVU_FMAC1(SUB); }
-}
+microVUf(void) mVU_SUB()	 { mVU_FMAC1(SUB); }
 microVUf(void) mVU_SUBi(){}
 microVUf(void) mVU_SUBq(){}
-microVUf(void) mVU_SUBx(){}
-microVUf(void) mVU_SUBy(){}
-microVUf(void) mVU_SUBz(){}
-microVUf(void) mVU_SUBw(){}
+microVUq(void) mVU_SUBxyzw() { mVU_FMAC3(SUB); }
+microVUf(void) mVU_SUBx()	 { mVU_SUBxyzw<vuIndex, recPass>(); }
+microVUf(void) mVU_SUBy()	 { mVU_SUBxyzw<vuIndex, recPass>(); }
+microVUf(void) mVU_SUBz()	 { mVU_SUBxyzw<vuIndex, recPass>(); }
+microVUf(void) mVU_SUBw()	 { mVU_SUBxyzw<vuIndex, recPass>(); }
 microVUf(void) mVU_SUBA(){}
 microVUf(void) mVU_SUBAi(){}
 microVUf(void) mVU_SUBAq(){}
@@ -127,17 +149,14 @@ microVUf(void) mVU_SUBAx(){}
 microVUf(void) mVU_SUBAy(){}
 microVUf(void) mVU_SUBAz(){}
 microVUf(void) mVU_SUBAw(){}
-microVUf(void) mVU_MUL(){
-	microVU* mVU = mVUx;
-	if (recPass == 0) {}
-	else { mVU_FMAC1(MUL); }
-}
+microVUf(void) mVU_MUL()	 { mVU_FMAC1(MUL); }
 microVUf(void) mVU_MULi(){}
 microVUf(void) mVU_MULq(){}
-microVUf(void) mVU_MULx(){}
-microVUf(void) mVU_MULy(){}
-microVUf(void) mVU_MULz(){}
-microVUf(void) mVU_MULw(){}
+microVUq(void) mVU_MULxyzw() { mVU_FMAC3(MUL); }
+microVUf(void) mVU_MULx()	 { mVU_MULxyzw<vuIndex, recPass>(); }
+microVUf(void) mVU_MULy()	 { mVU_MULxyzw<vuIndex, recPass>(); }
+microVUf(void) mVU_MULz()	 { mVU_MULxyzw<vuIndex, recPass>(); }
+microVUf(void) mVU_MULw()	 { mVU_MULxyzw<vuIndex, recPass>(); }
 microVUf(void) mVU_MULA(){}
 microVUf(void) mVU_MULAi(){}
 microVUf(void) mVU_MULAq(){}
@@ -173,28 +192,67 @@ microVUf(void) mVU_MSUBAx(){}
 microVUf(void) mVU_MSUBAy(){}
 microVUf(void) mVU_MSUBAz(){}
 microVUf(void) mVU_MSUBAw(){}
-microVUf(void) mVU_MAX(){}
+microVUf(void) mVU_MAX()	 { mVU_FMAC1(MAX); }
 microVUf(void) mVU_MAXi(){}
-microVUf(void) mVU_MAXx(){}
-microVUf(void) mVU_MAXy(){}
-microVUf(void) mVU_MAXz(){}
-microVUf(void) mVU_MAXw(){}
-microVUf(void) mVU_MINI(){}
+microVUq(void) mVU_MAXxyzw() { mVU_FMAC3(MAX); }
+microVUf(void) mVU_MAXx()	 { mVU_MAXxyzw<vuIndex, recPass>(); }
+microVUf(void) mVU_MAXy()	 { mVU_MAXxyzw<vuIndex, recPass>(); }
+microVUf(void) mVU_MAXz()	 { mVU_MAXxyzw<vuIndex, recPass>(); }
+microVUf(void) mVU_MAXw()	 { mVU_MAXxyzw<vuIndex, recPass>(); }
+microVUf(void) mVU_MINI()	 { mVU_FMAC1(MIN); }
 microVUf(void) mVU_MINIi(){}
-microVUf(void) mVU_MINIx(){}
-microVUf(void) mVU_MINIy(){}
-microVUf(void) mVU_MINIz(){}
-microVUf(void) mVU_MINIw(){}
+microVUq(void) mVU_MINIxyzw(){ mVU_FMAC3(MIN); }
+microVUf(void) mVU_MINIx()	 { mVU_MINIxyzw<vuIndex, recPass>(); }
+microVUf(void) mVU_MINIy()	 { mVU_MINIxyzw<vuIndex, recPass>(); }
+microVUf(void) mVU_MINIz()	 { mVU_MINIxyzw<vuIndex, recPass>(); }
+microVUf(void) mVU_MINIw()	 { mVU_MINIxyzw<vuIndex, recPass>(); }
 microVUf(void) mVU_OPMULA(){}
 microVUf(void) mVU_OPMSUB(){}
 microVUf(void) mVU_NOP(){}
-microVUf(void) mVU_FTOI0(){}
-microVUf(void) mVU_FTOI4(){}
-microVUf(void) mVU_FTOI12(){}
-microVUf(void) mVU_FTOI15(){}
-microVUf(void) mVU_ITOF0(){}
-microVUf(void) mVU_ITOF4(){}
-microVUf(void) mVU_ITOF12(){}
-microVUf(void) mVU_ITOF15(){}
+microVUq(void) mVU_FTOIx(uptr addr) {
+	microVU* mVU = mVUx;
+	if (recPass == 0) {}
+	else { 
+		int Fs, Ft;
+		if (isNOP) return;
+		mVUallocFMAC2a<vuIndex>(Fs, Ft);
+
+		// Note: For help understanding this algorithm see recVUMI_FTOI_Saturate()
+		SSE_MOVAPS_XMM_to_XMM(xmmT1, Fs);
+		if (addr) { SSE_MULPS_M128_to_XMM(Fs, addr); }
+		SSE2_CVTTPS2DQ_XMM_to_XMM(Fs, Fs);
+		SSE2_PXOR_M128_to_XMM(xmmT1, (uptr)mVU_signbit);
+		SSE2_PSRAD_I8_to_XMM(xmmT1, 31);
+		SSE_MOVAPS_XMM_to_XMM(xmmFt, Fs);
+		SSE2_PCMPEQD_M128_to_XMM(xmmFt, (uptr)mVU_signbit);
+		SSE_ANDPS_XMM_to_XMM(xmmT1, xmmFt);
+		SSE2_PADDD_XMM_to_XMM(Fs, xmmT1);
+
+		mVUallocFMAC1b<vuIndex>(Ft);
+	}
+}
+microVUf(void) mVU_FTOI0()	 { mVU_FTOIx<vuIndex, recPass>(0); }
+microVUf(void) mVU_FTOI4()	 { mVU_FTOIx<vuIndex, recPass>((uptr)mVU_FTOI_4); }
+microVUf(void) mVU_FTOI12()	 { mVU_FTOIx<vuIndex, recPass>((uptr)mVU_FTOI_12); }
+microVUf(void) mVU_FTOI15()	 { mVU_FTOIx<vuIndex, recPass>((uptr)mVU_FTOI_15); }
+microVUq(void) mVU_ITOFx(uptr addr) {
+	microVU* mVU = mVUx;
+	if (recPass == 0) {}
+	else { 
+		int Fs, Ft;
+		if (isNOP) return;
+		mVUallocFMAC2a<vuIndex>(Fs, Ft);
+
+		SSE2_CVTDQ2PS_XMM_to_XMM(Ft, Fs);
+		if (addr) { SSE_MULPS_M128_to_XMM(Ft, addr); }
+		//mVUclamp2(Ft, xmmT1, 15); // Clamp infinities (not sure if this is needed)
+		
+		mVUallocFMAC1b<vuIndex>(Ft);
+	}
+}
+microVUf(void) mVU_ITOF0()	 { mVU_ITOFx<vuIndex, recPass>(0); }
+microVUf(void) mVU_ITOF4()	 { mVU_ITOFx<vuIndex, recPass>((uptr)mVU_ITOF_4); }
+microVUf(void) mVU_ITOF12()	 { mVU_ITOFx<vuIndex, recPass>((uptr)mVU_ITOF_12); }
+microVUf(void) mVU_ITOF15()	 { mVU_ITOFx<vuIndex, recPass>((uptr)mVU_ITOF_15); }
 microVUf(void) mVU_CLIP(){}
 #endif //PCSX2_MICROVU
