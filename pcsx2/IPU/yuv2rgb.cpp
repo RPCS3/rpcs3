@@ -27,21 +27,20 @@
 
 // Everything below is bit accurate to the IPU specification (except maybe rounding).
 // Know the specification before you touch it.
-
-PCSX2_ALIGNED16(u16 C_bias)[8] = {0x8000,0x8000,0x8000,0x8000,0x8000,0x8000,0x8000,0x8000};
-PCSX2_ALIGNED16(u8 Y_bias)[16] = {16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16};
+PCSX2_ALIGNED16(u16 C_bias[8]) = {0x8000,0x8000,0x8000,0x8000,0x8000,0x8000,0x8000,0x8000};
+PCSX2_ALIGNED16(u8 Y_bias[16]) = {16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16};
 #define SSE_COEFFICIENTS(name, x) \
-	PCSX2_ALIGNED16(u16 name)[8] = {x<<2,x<<2,x<<2,x<<2,x<<2,x<<2,x<<2,x<<2};
+	PCSX2_ALIGNED16(u16 name[8]) = {x<<2,x<<2,x<<2,x<<2,x<<2,x<<2,x<<2,x<<2};
 SSE_COEFFICIENTS(Y_coefficients, 0x95);    // 1.1640625
 SSE_COEFFICIENTS(RCr_coefficients, 0xcc);  // 1.59375
 SSE_COEFFICIENTS(GCr_coefficients, (-0x68));  // -0.8125
 SSE_COEFFICIENTS(GCb_coefficients, (-0x32));  // -0.390625
 SSE_COEFFICIENTS(BCb_coefficients, 0x102); // 2.015625
-PCSX2_ALIGNED16(u16 Y_mask)[8] = {0xff00,0xff00,0xff00,0xff00,0xff00,0xff00,0xff00,0xff00};
+PCSX2_ALIGNED16(u16 Y_mask[8]) = {0xff00,0xff00,0xff00,0xff00,0xff00,0xff00,0xff00,0xff00};
 // Specifying round off instead of round down as everywhere else
 // implies that this is right
-PCSX2_ALIGNED16(u16 round_1bit)[8] = {1,1,1,1,1,1,1,1};
-PCSX2_ALIGNED16(u16 yuv2rgb_temp)[3][8];
+PCSX2_ALIGNED16(u16 round_1bit[8]) = {1,1,1,1,1,1,1,1};
+PCSX2_ALIGNED16(u16 yuv2rgb_temp[3][8]);
 
 // This could potentially be improved for SSE4
 void yuv2rgb_sse2(void)
