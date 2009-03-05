@@ -38,7 +38,7 @@ static const int psxInstCycles_Load = 0;
 #define PSX_HI XMMGPR_HI
 #define PSX_LO XMMGPR_LO
 
-extern uptr *psxRecLUT;
+extern uptr psxRecLUT[];
 
 u8 _psxLoadWritesRs(u32 tempcode);
 u8 _psxIsLoadStore(u32 tempcode);
@@ -70,7 +70,7 @@ void psxLoadBranchState();
 void psxSetBranchReg(u32 reg);
 void psxSetBranchImm( u32 imm );
 void psxRecompileNextInstruction(int delayslot);
-void psxRecClearMem(BASEBLOCK* p);
+void psxRecClearMem(u32 p);
 
 ////////////////////////////////////////////////////////////////////
 // IOP Constant Propagation Defines, Vars, and API - From here down!

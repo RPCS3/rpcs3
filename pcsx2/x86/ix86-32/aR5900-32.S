@@ -1,169 +1,127 @@
-// iR5900.c assembly routines
-// zerofrog(@gmail.com)
-.intel_syntax
 
-.extern cpuRegs
+// iR5900.c assembly routines
+
+.intel_syntax noprefix
+
+//////////////////////////////////////////////////////////////////////////
+// Note that iR3000A.S and iR5900.S asm code is now identical.  Only some
+// function names and the following two defines should ever differ:
+
+#define REGINFO cpuRegs
+#define PCOFFSET 0x2a8 // this must always match what Pcsx2 displays at startup
+
+//////////////////////////////////////////////////////////////////////////
+// Preprocessor Mess!
+
+.extern REGINFO
 .extern recRecompile
 
 #define BLOCKTYPE_STARTPC	4		// startpc offset
 #define BLOCKTYPE_DELAYSLOT	1		// if bit set, delay slot
 
 #define BASEBLOCK_SIZE 2 // in dwords
-#define PCOFFSET 0x2a8 // this must always match what Pcsx2 displays at startup
 
-#define REG_BLOCK %esi
+//////////////////////////////////////////////////////////////////////////
+// The address for all cleared blocks.  It recompiles the current pc and then
+// dispatches to the recompiled block address.
+.global JITCompile
+JITCompile:
+
+	mov esi, dword ptr [REGINFO + PCOFFSET]
+	push esi
+	call recRecompile
+	add esp, 4
+	mov ebx, esi
+	shr esi, 16
+	mov ecx, dword ptr [recLUT+esi*4]
+	jmp dword ptr [ecx+ebx*2]
+
 
 //////////////////////////////////////////////////////////////////////////
 // Recompiles the next block, and links the old block directly to it.
-// This is a on-shot execution for ny block which uses it.  Once the block
+// This is a on-shot execution for any block which uses it.  Once the block
 // has been statically linked to the new block, this function will be bypassed
 //
+// edx - jump address to modify
 .globl Dispatcher
 Dispatcher:
-	# EDX contains the jump addr to modify
-	push %edx
 
 	# calc PC_GETBLOCK
-	# ((BASEBLOCK*)(recLUT[((u32)(x)) >> 16] + (sizeof(BASEBLOCK)/4)*((x) & 0xffff)))
+	# ((BASEBLOCK*)(reclut[((u32)(x)) >> 16] + (x)*(sizeof(BASEBLOCK)/4)))
 
-	mov %eax,dword ptr [cpuRegs+PCOFFSET] 
-	mov %ecx,%eax		// ecx is the BLOCK address
-	mov %esi,%eax		// esi is the PC address (leave unmodified!)
-	shr %eax,0x10 
-	and %ecx,0xFFFF
-	mov %edx,dword ptr [recLUT] 
-	mov %eax,dword ptr [%edx+%eax*4]
-	lea %ecx,[%eax+%ecx*2] 
+	mov eax, dword ptr [REGINFO + PCOFFSET]
+	mov ebx, eax
+	shr eax, 16
+	mov ecx, dword ptr [recLUT+eax*4]
+	mov eax, dword ptr [ecx+ebx*2]
 
-	// check if startpc == cpuRegs.pc
-	//and %ecx, 0x5fffffff // remove higher bits
-	cmp %esi, dword ptr [%ecx+BLOCKTYPE_STARTPC]
-	je Dispatcher_CheckPtr
+	cmp eax, offset JITCompile
+	je Dispatch_notcompiled
+	lea ebx, [eax-4]
+	sub ebx, edx
+	mov dword ptr [edx], ebx
+	jmp eax
 
-	// recompile
-	push %ecx
-	push %esi // pc
+	.align 16
+Dispatch_notcompiled:
+	mov esi, edx
+	lea edi, [ecx+ebx*2]
+	push ebx
 	call recRecompile
-	add %esp, 4
-	pop %ecx	// ecx is now the REG_BLOCK
-Dispatcher_CheckPtr:
-	mov %eax, dword ptr [%ecx]
+	add esp, 4
 
-#ifdef _DEBUG
-	test %eax, %eax
-	jnz Dispatcher_CallFn
-	// throw an exception
-	int 10
-	
-Dispatcher_CallFn:
-#endif
-	//and %eax, 0x0fffffff
-	shl %eax, 4
-	pop %ecx // x86Ptr to mod
-	mov %edx, %eax
-	sub %edx, %ecx
-	sub %edx, 4
-	mov dword ptr [%ecx], %edx
+	mov eax, dword ptr [edi]
+	lea ebx, [eax-4]
+	sub ebx, esi
+	mov dword ptr [esi], ebx
+	jmp eax
 
-	jmp %eax
 
 //////////////////////////////////////////////////////////////////////////
 // edx -  baseblock->startpc
 // stack - x86Ptr
 .globl DispatcherClear
 DispatcherClear:
-	// EDX contains the current pc
-	mov dword ptr [cpuRegs + PCOFFSET], %edx
+	mov [REGINFO + PCOFFSET], edx
 
-	// calc PC_GETBLOCK
-	# ((BASEBLOCK*)(recLUT[((u32)(x)) >> 16] + (sizeof(BASEBLOCK)/4)*((x) & 0xffff)))
-    mov %eax, %edx
-	mov REG_BLOCK, %edx
-	shr %eax, 16
-	and REG_BLOCK, 0xffff
-    shl %eax, 2
-    add %eax, dword ptr [recLUT]
-    shl REG_BLOCK, 1
-	add REG_BLOCK, dword ptr [%eax]
+	# calc PC_GETBLOCK
+	# ((BASEBLOCK*)(reclut[((u32)(x)) >> 16] + (x)*(sizeof(BASEBLOCK)/4)))
 
-	cmp %edx, dword ptr [REG_BLOCK + 4]
-	jne DispatcherClear_Recompile
-	
-	add %esp, 4 // ignore stack
-	mov %eax, dword ptr [REG_BLOCK]
-	
-#ifdef _DEBUG
-	test %eax, %eax
-	jnz DispatcherClear_CallFn
-	# throw an exception
-	int 10
-	
-DispatcherClear_CallFn:
-#endif
+	mov ebx, edx
+	shr edx, 16
+	mov ecx, dword ptr [recLUT+edx*4]
+	mov eax, dword ptr [ecx+ebx*2]
 
-	//and %eax, 0x0fffffff
-	shl %eax, 4
-	jmp %eax
+	cmp eax, offset JITCompile
+	je Clear_notcompiled
+	add esp, 4
+	jmp eax
 
-DispatcherClear_Recompile:
-	push REG_BLOCK
-	push %edx
+	.align 16
+Clear_notcompiled:
+	lea edi, [ecx+ebx*2]
+	push ebx
 	call recRecompile
-	add %esp, 4 // pop old param
-	pop REG_BLOCK
-	mov %eax, dword ptr [REG_BLOCK]
+	add esp, 4
+	mov eax, dword ptr [edi]
 
-	pop %ecx // old fnptr
+	pop ecx
+	mov byte ptr [ecx], 0xe9 // jmp32
+	lea ebx, [eax-5]
+	sub ebx, ecx
+	mov dword ptr [ecx+1], ebx
 
-	//and %eax, 0x0fffffff
-    shl %eax, 4
-	mov byte ptr [%ecx], 0xe9 // jmp32
-	mov %edx, %eax
-	sub %edx, %ecx
-	sub %edx, 5
-	mov dword ptr [%ecx+1], %edx
+	jmp eax
 
-	jmp %eax
 
 //////////////////////////////////////////////////////////////////////////
-// called when jumping to variable pc address
-// This is basically the same as Dispatcher but without the part at the end
-// that modifies the block's jmp instruction.  (ie, no static block linking)
+// called when jumping to variable pc address.
 
 .globl DispatcherReg
 DispatcherReg:
 
-	mov %eax,dword ptr [cpuRegs+PCOFFSET] 
-	mov %ecx,%eax		// ecx will be the BLOCK 
-	mov %esi,%eax		// esi is the PC address (leave unmodified!)
-	shr %eax,0x10
-	and %ecx,0xFFFF 
-	mov %edx,dword ptr [recLUT] 
-	mov %eax,dword ptr [%edx+%eax*4] 
-	lea %ecx,[%eax+%ecx*2] 
-
-	// check if startpc == cpuRegs.pc
-	//and %ecx, 0x5fffffff // remove higher bits
-	cmp %esi, dword ptr [%ecx+BLOCKTYPE_STARTPC]
-	je DispatcherReg_CheckPtr
-
-	// recompile
-	push %ecx // block
-	push %esi // pc
-	call recRecompile
-	add %esp, 4
-	pop %ecx  // block
-DispatcherReg_CheckPtr:
-	mov %eax, dword ptr [%ecx]
-
-#ifdef _DEBUG
-	test %eax, %eax
-	jnz DispatcherReg_CallFn
-	// throw an exception
-	int 10
-	
-DispatcherReg_CallFn:
-#endif
-	//and %eax, 0x0fffffff
-    shl %eax, 4
-	jmp %eax
+	mov eax, dword ptr [REGINFO + PCOFFSET]
+	mov ebx, eax
+	shr eax, 16
+	mov ecx, dword ptr [recLUT+eax*4]
+	jmp dword ptr [ecx+ebx*2]

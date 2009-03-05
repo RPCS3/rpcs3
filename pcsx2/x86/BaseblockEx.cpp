@@ -16,6 +16,8 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
+#define _SECURE_SCL 0
+
 #include "PrecompiledHeader.h"
 #include "BaseblockEx.h"
 
@@ -66,7 +68,6 @@ void BASEBLOCKS::Add(BASEBLOCKEX* pex)
 			}
 
 			assert( imin == blocks.size() || blocks[imin]->startpc > pex->startpc );
-			if( imin > 0 ) assert( blocks[imin-1]->startpc < pex->startpc );
 			blocks.insert(blocks.begin()+imin, pex);
 
 			return;
@@ -77,10 +78,15 @@ void BASEBLOCKS::Add(BASEBLOCKEX* pex)
 int BASEBLOCKS::Get(u32 startpc)
 {
 	switch(blocks.size()) {
+		case 0:
+			return -1;
 		case 1:
-			return 0;
-		case 2:
-			return blocks.front()->startpc < startpc;
+			if (blocks.front()->startpc + blocks.front()->size*4 <= startpc)
+				return -1;
+			else
+				return 0;
+		/*case 2:
+			return blocks.front()->startpc < startpc;*/
 
 		default:
 		{
@@ -94,8 +100,12 @@ int BASEBLOCKS::Get(u32 startpc)
 				else imin = imid+1;
 			}
 
-			assert( blocks[imin]->startpc == startpc );
-			return imin;
+			//assert( blocks[imin]->startpc == startpc );
+			if (startpc < blocks[imin]->startpc ||
+				startpc >= blocks[imin]->startpc + blocks[imin]->size*4)
+				return -1;
+			else
+				return imin;
 		}
 	}
 }
@@ -130,7 +140,11 @@ void AddBaseBlockEx(BASEBLOCKEX* pex, int cpu)
 
 BASEBLOCKEX* GetBaseBlockEx(u32 startpc, int cpu)
 {
-	return s_vecBaseBlocksEx[cpu].blocks[s_vecBaseBlocksEx[cpu].Get(startpc)];
+	int i = s_vecBaseBlocksEx[cpu].Get(startpc);
+	if (i < 0)
+		return 0;
+	else
+		return s_vecBaseBlocksEx[cpu].blocks[i];
 }
 
 void RemoveBaseBlockEx(BASEBLOCKEX* pex, int cpu)

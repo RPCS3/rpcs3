@@ -51,7 +51,7 @@
 
 extern u32 pc;
 extern int branch;
-extern uptr* recLUT;
+extern uptr recLUT[];
 
 extern u32 maxrecmem;
 extern u32 pc;			         // recompiler pc (also used by the SuperVU! .. why? (air))
@@ -92,7 +92,7 @@ extern GPR_reg64 s_ConstGPRreg;
 
 
 // Used to clear recompiled code blocks during memory/dma write operations.
-void recClearMem(BASEBLOCK* p);
+void recClearMem(u32 pc);
 void REC_CLEARM( u32 mem );
 
 // used when processing branches

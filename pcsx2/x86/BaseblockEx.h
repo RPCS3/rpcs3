@@ -20,7 +20,6 @@
 #define _BASEBLOCKEX_H_
 
 // used to keep block information
-#define BLOCKTYPE_STARTPC	4		// startpc offset
 #define BLOCKTYPE_DELAYSLOT	1		// if bit set, delay slot
 
 // Every potential jump point in the PS2's addressable memory has a BASEBLOCK
@@ -28,28 +27,22 @@
 // addressable memory.  Yay!
 struct BASEBLOCK
 {
-	u32 m_pFnptr : 28;
-	u32 uType : 4;
-	u32 startpc;
+	u32 m_pFnptr;
+	u32 startpc : 30;
+	u32 uType : 2;
 
-	const uptr GetFnptr() const { return ((u32)m_pFnptr)<<4; }
-	void SetFnptr( uptr ptr )
-	{
-		// 16 byte alignments only, please!
-		jASSUME( (ptr & 0xf) == 0 );
-		m_pFnptr = ptr>>4;
-	}
+	const __inline uptr GetFnptr() const { return m_pFnptr; }
+	void __inline SetFnptr( uptr ptr ) { m_pFnptr = ptr; }
+	const __inline uptr GetStartPC() const { return startpc << 2; }
+	void __inline SetStartPC( uptr pc ) { startpc = pc >> 2; }
 };
 
 // extra block info (only valid for start of fn)
-// The only "important" piece of information is size.  Startpc is used as a debug/check
-// var to make sure the baseblock is sane.  (and it's used for some FFX hack involving
-// a big snake in a sewer, but no one knows if the hack is relevant anymore).
 struct BASEBLOCKEX
 {
-	u16 size; // size in dwords	
+	u16 size;	// size in dwords	
 	u16 dummy;
-	u32 startpc; // for debugging?
+	u32 startpc;
 
 #ifdef PCSX2_DEVBUILD
 	u32 visited; // number of times called
@@ -60,7 +53,10 @@ struct BASEBLOCKEX
 
 // This is an asinine macro that bases indexing on sizeof(BASEBLOCK) for no reason. (air)
 #define GET_BLOCKTYPE(b) ((b)->Type)
-#define PC_GETBLOCK_(x, reclut) ((BASEBLOCK*)(reclut[((u32)(x)) >> 16] + (sizeof(BASEBLOCK)/4)*((x) & 0xffff)))
+// x * (sizeof(BASEBLOCK) / 4) sacrifices safety for speed compared to
+// x / 4 * sizeof(BASEBLOCK) or a higher level approach.
+#define PC_GETBLOCK_(x, reclut) ((BASEBLOCK*)(reclut[((u32)(x)) >> 16] + (x)*(sizeof(BASEBLOCK)/4)))
+#define RECLUT_SETPAGE(reclut, page, p) do { reclut[page] = (uptr)(p) - ((page) << 14) * sizeof(BASEBLOCK); } while (0)
 
 // This is needed because of the retarded GETBLOCK macro above.
 C_ASSERT( sizeof(BASEBLOCK) == 8 );

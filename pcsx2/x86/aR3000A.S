@@ -1,185 +1,126 @@
-// iR3000A.c assembly routines
-// zerofrog(@gmail.com)
-.intel_syntax
 
-.extern psxRegs
-.extern psxRecLUT
-.extern psxRecRecompile
-.extern b440
-.extern b440table
+// iR3000a.c assembly routines
 
-       
+.intel_syntax noprefix
+
+//////////////////////////////////////////////////////////////////////////
+// Note that iR3000A.S and iR5900.S asm code is now identical.  Only some
+// function names and the following two defines should ever differ:
+
+#define REGINFO psxRegs
+#define PCOFFSET 0x208 // this must always match what Pcsx2 displays at startup
+
+//////////////////////////////////////////////////////////////////////////
+// Preprocessor Mess!
+.extern REGINFO
+.extern iopRecRecompile
+
 #define BLOCKTYPE_STARTPC	4		// startpc offset
 #define BLOCKTYPE_DELAYSLOT	1		// if bit set, delay slot
-        
+
 #define BASEBLOCK_SIZE 2 // in dwords
-#define PCOFFSET 0x208
 
-              
-#define REG_PC %ecx
-#define REG_BLOCK %esi
+//////////////////////////////////////////////////////////////////////////
+// The address for all cleared blocks.  It recompiles the current pc and then
+// dispatches to the recompiled block address.
+.global JITCompile
+iopJITCompile:
 
-// jumped to when invalid psxpc address
-.globl psxDispatcher
-psxDispatcher:
-        // EDX contains the current psxpc to jump to, stack contains the jump addr to modify
-        push %edx
+	mov esi, dword ptr [REGINFO + PCOFFSET]
+	push esi
+	call iopRecRecompile
+	add esp, 4
+	mov ebx, esi
+	shr esi, 16
+	mov ecx, dword ptr [recLUT+esi*4]
+	jmp dword ptr [ecx+ebx*2]
 
-        // calc PSX_GETBLOCK
-        // ((BASEBLOCK*)(recLUT[((u32)(x)) >> 16] + (sizeof(BASEBLOCK)/4)*((x) & 0xffff)))
-        mov %eax, dword ptr [psxRegs + PCOFFSET]
-        mov REG_BLOCK, %eax
-        mov REG_PC, %eax
-        shr %eax, 16
-        and REG_BLOCK, 0xffff
-        shl %eax, 2
-        add %eax, [psxRecLUT]
-        shl REG_BLOCK, 1
-        add REG_BLOCK, dword ptr [%eax]
 
-        // check if startpc&PSX_MEMMASK == psxRegs.pc&PSX_MEMMASK
-        mov %eax, REG_PC
-        mov %edx, [REG_BLOCK+BLOCKTYPE_STARTPC]
-        //and %eax, PSX_MEMMASK // remove higher bits
-        //and %edx, PSX_MEMMASK
-        cmp %eax, %edx
-        je psxDispatcher_CheckPtr
+//////////////////////////////////////////////////////////////////////////
+// Recompiles the next block, and links the old block directly to it.
+// This is a on-shot execution for any block which uses it.  Once the block
+// has been statically linked to the new block, this function will be bypassed
+//
+// edx - jump address to modify
+.globl iopDispatcher
+iopDispatcher:
 
-        // recompile
-        push REG_BLOCK
-        push REG_PC // psxpc
-        call psxRecRecompile
-        add %esp, 4 // pop old param
-        pop REG_BLOCK
-psxDispatcher_CheckPtr:
-		mov REG_BLOCK, dword ptr [REG_BLOCK]
+	# calc PC_GETBLOCK
+	# ((BASEBLOCK*)(reclut[((u32)(x)) >> 16] + (x)*(sizeof(BASEBLOCK)/4)))
 
-#ifdef _DEBUG
-        test REG_BLOCK, REG_BLOCK
-        jnz psxDispatcher_CallFn
-        // throw an exception
-        int 10
-	
-psxDispatcher_CallFn:
-#endif
-        
-		//and REG_BLOCK, 0x0fffffff
-		shl REG_BLOCK, 4
-		mov %edx, REG_BLOCK
-		pop %ecx // x86Ptr to mod
-		sub %edx, %ecx
-		sub %edx, 4
-		mov dword ptr [%ecx], %edx
+	mov eax, dword ptr [REGINFO + PCOFFSET]
+	mov ebx, eax
+	shr eax, 16
+	mov ecx, dword ptr [recLUT+eax*4]
+	mov eax, dword ptr [ecx+ebx*2]
 
-		jmp REG_BLOCK
+	cmp eax, offset JITCompile
+	je Dispatch_notcompiled
+	lea ebx, [eax-4]
+	sub ebx, edx
+	mov dword ptr [edx], ebx
+	jmp eax
 
-.globl psxDispatcherClear
-psxDispatcherClear:
-        // %EDX contains the current psxpc
-        mov dword ptr [psxRegs + PCOFFSET], %edx
+	.align 16
+Dispatch_notcompiled:
+	mov esi, edx
+	lea edi, [ecx+ebx*2]
+	push ebx
+	call iopRecRecompile
+	add esp, 4
 
-        // calc PSX_GETBLOCK
-        // ((BASEBLOCK*)(recLUT[((u32)(x)) >> 16] + (sizeof(BASEBLOCK)/4)*((x) & 0xffff)))
-        mov %eax, %edx
-        mov REG_BLOCK, %edx
-        shr %eax, 16
-        and REG_BLOCK, 0xffff
-        shl %eax, 2
-        add %eax, [psxRecLUT]
-        shl REG_BLOCK, 1
-        add REG_BLOCK, dword ptr [%eax];
-        
-        // check if startpc&PSX_MEMMASK == psxRegs.pc&PSX_MEMMASK
-        mov %eax, %edx
-        mov REG_PC, %edx
-        mov %edx, [REG_BLOCK+BLOCKTYPE_STARTPC]
-        //and %eax, PSX_MEMMASK // remove higher bits
-        //and %edx, PSX_MEMMASK
-        cmp %eax, %edx
-        jne psxDispatcherClear_Recompile
+	mov eax, dword ptr [edi]
+	lea ebx, [eax-4]
+	sub ebx, esi
+	mov dword ptr [esi], ebx
+	jmp eax
 
-        add %esp, 4 // ignore stack
-        mov %eax, dword ptr [REG_BLOCK]
-        
-#ifdef _DEBUG
-        test %eax, %eax
-        jnz psxDispatcherClear_CallFn
-        // throw an exception
-        int 10
-	
-psxDispatcherClear_CallFn:
-#endif
 
-        //and %eax, 0x0fffffff
-        shl %eax, 4
-        jmp %eax
-                
-psxDispatcherClear_Recompile:
-        push REG_BLOCK
-        push REG_PC
-		call psxRecRecompile
-		add %esp, 4 // pop old param
-		pop REG_BLOCK
-		mov %eax, dword ptr [REG_BLOCK]
+//////////////////////////////////////////////////////////////////////////
+// edx -  baseblock->startpc
+// stack - x86Ptr
+.globl iopDispatcherClear
+iopDispatcherClear:
+	mov [REGINFO + PCOFFSET], edx
 
-		pop %ecx // old fnptr
+	# calc PC_GETBLOCK
+	# ((BASEBLOCK*)(reclut[((u32)(x)) >> 16] + (x)*(sizeof(BASEBLOCK)/4)))
 
-		//and %eax, 0x0fffffff
-		shl %eax, 4
-		mov byte ptr [%ecx], 0xe9 // jmp32
-		mov %edx, %eax
-		sub %edx, %ecx
-		sub %edx, 5
-		mov dword ptr [%ecx+1], %edx
+	mov ebx, edx
+	shr edx, 16
+	mov ecx, dword ptr [recLUT+edx*4]
+	mov eax, dword ptr [ecx+ebx*2]
 
-		jmp %eax
+	cmp eax, offset JITCompile
+	je Clear_notcompiled
+	add esp, 4
+	jmp eax
 
-// called when jumping to variable psxpc address
-.globl psxDispatcherReg
-psxDispatcherReg:
+	.align 16
+Clear_notcompiled:
+	lea edi, [ecx+ebx*2]
+	push ebx
+	call iopRecRecompile
+	add esp, 4
+	mov eax, dword ptr [edi]
 
-        //s_pDispatchBlock = PSX_GETBLOCK(psxRegs.pc);
-		mov %edx, dword ptr [psxRegs+PCOFFSET]
-		mov %ecx, %edx
+	pop ecx
+	mov byte ptr [ecx], 0xe9 // jmp32
+	lea ebx, [eax-5]
+	sub ebx, ecx
+	mov dword ptr [ecx+1], ebx
 
-		shr %edx, 14
-		and %edx, 0xfffffffc
-		add %edx, [psxRecLUT]
-		mov %edx, dword ptr [%edx]
+	jmp eax
 
-		mov %eax, %ecx
-		and %eax, 0xfffc
-		// %edx += 2*%eax
-		shl %eax, 1
-		add %edx, %eax
-		
-		// check if startpc == psxRegs.pc
-		mov %eax, %ecx
-		cmp %eax, dword ptr [%edx+BLOCKTYPE_STARTPC]
-		jne psxDispatcherReg_recomp
 
-		mov %eax, dword ptr [%edx]
+//////////////////////////////////////////////////////////////////////////
+// called when jumping to variable pc address.
 
-#ifdef _DEBUG
-        test %eax, %eax
-        jnz psxDispatcherReg_CallFn2
-        // throw an exception
-        int 10
-psxDispatcherReg_CallFn2:
-#endif
-		//and %eax, 0x0fffffff
-		shl %eax, 4
-		jmp %eax // fnptr
+.globl iopDispatcherReg
+iopDispatcherReg:
 
-psxDispatcherReg_recomp:
-		// changed this to use push/pop instead (faster on cores) - air
-		push %edx
-		push %ecx
-		call psxRecRecompile
-		pop %ecx
-		pop %edx
-
-		mov %eax, dword ptr [%edx]
-		//and %eax, 0x0fffffff
-		shl %eax, 4
-		jmp %eax // fnptr
+	mov eax, dword ptr [REGINFO + PCOFFSET]
+	mov ebx, eax
+	shr eax, 16
+	mov ecx, dword ptr [recLUT+eax*4]
+	jmp dword ptr [ecx+ebx*2]

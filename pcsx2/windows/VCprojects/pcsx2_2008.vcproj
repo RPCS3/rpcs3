@@ -1438,10 +1438,6 @@
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\..\Linux\ConfigDlg.h"
-					>
-				</File>
-				<File
 					RelativePath="..\..\Linux\CpuDlg.cpp"
 					>
 					<FileConfiguration
@@ -1496,10 +1492,6 @@
 							Name="VCCLCompilerTool"
 						/>
 					</FileConfiguration>
-				</File>
-				<File
-					RelativePath="..\..\Linux\DebugDlg.h"
-					>
 				</File>
 				<File
 					RelativePath="..\..\Linux\HacksDlg.cpp"
@@ -1586,10 +1578,6 @@
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\..\Linux\LnxMain.h"
-					>
-				</File>
-				<File
 					RelativePath="..\..\Linux\LnxMisc.cpp"
 					>
 					<FileConfiguration
@@ -1646,10 +1634,6 @@
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\..\Linux\LnxSysExec.h"
-					>
-				</File>
-				<File
 					RelativePath="..\..\Linux\LnxThreads.cpp"
 					>
 					<FileConfiguration
@@ -1676,10 +1660,6 @@
 							Name="VCCLCompilerTool"
 						/>
 					</FileConfiguration>
-				</File>
-				<File
-					RelativePath="..\..\Linux\memzero.h"
-					>
 				</File>
 				<File
 					RelativePath="..\..\Linux\Pref.cpp"
@@ -1709,6 +1689,58 @@
 						/>
 					</FileConfiguration>
 				</File>
+				<Filter
+					Name="asm"
+					>
+					<File
+						RelativePath="..\..\x86\aMicroVU.S"
+						>
+					</File>
+					<File
+						RelativePath="..\..\x86\aR3000A.S"
+						>
+					</File>
+					<File
+						RelativePath="..\..\x86\ix86-32\aR5900-32.S"
+						>
+					</File>
+					<File
+						RelativePath="..\..\x86\aVif.S"
+						>
+					</File>
+					<File
+						RelativePath="..\..\x86\aVUzerorec.S"
+						>
+					</File>
+					<File
+						RelativePath="..\..\x86\fast_routines.S"
+						>
+					</File>
+				</Filter>
+				<Filter
+					Name="Include"
+					>
+					<File
+						RelativePath="..\..\Linux\ConfigDlg.h"
+						>
+					</File>
+					<File
+						RelativePath="..\..\Linux\DebugDlg.h"
+						>
+					</File>
+					<File
+						RelativePath="..\..\Linux\LnxMain.h"
+						>
+					</File>
+					<File
+						RelativePath="..\..\Linux\LnxSysExec.h"
+						>
+					</File>
+					<File
+						RelativePath="..\..\Linux\memzero.h"
+						>
+					</File>
+				</Filter>
 			</Filter>
 		</Filter>
 		<Filter

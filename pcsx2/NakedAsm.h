@@ -35,7 +35,7 @@ void so_exit(void);
 void recRecompile( u32 startpc );
 
 // aR3000A.S
-void psxRecRecompile(u32 startpc);
+void iopRecRecompile(u32 startpc);
 }
 
 // Linux specific
@@ -46,21 +46,23 @@ PCSX2_ALIGNED16( u8 _mmx_backup[8*4] );
 
 extern "C" 
 {
-
 // aVUzerorec.S
 void* SuperVUGetProgram(u32 startpc, int vuindex);
 void SuperVUCleanupProgram(u32 startpc, int vuindex);
 void svudispfn();
 	
 // aR3000A.S
-void psxDispatcher();
-void psxDispatcherClear();
-void psxDispatcherReg();
+void iopJITCompile();
+void iopDispatcher();
+void iopDispatcherClear();
+void iopDispatcherReg();
 	
 // aR5900-32.S
+void JITCompile();
 void Dispatcher();
 void DispatcherClear();
 void DispatcherReg();
+
 }
 #endif
 #endif
