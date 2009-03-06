@@ -53,6 +53,9 @@ bool g_EEFreezeRegs = false;
 
 u32 maxrecmem = 0;
 uptr recLUT[0x10000];
+uptr hwLUT[0x10000];
+
+#define HWADDR(mem) (hwLUT[mem >> 16] + (mem))
 
 u32 s_nBlockCycles = 0; // cycles of current block recompiling
 //u8* dyna_block_discard_recmem=0;
@@ -77,7 +80,7 @@ static u8* recStack = NULL;			// stack mem
 static BASEBLOCK *recRAM = NULL;		// and the ptr to the blocks here
 static BASEBLOCK *recROM = NULL;		// and here
 static BASEBLOCK *recROM1 = NULL;		// also here
-static BASEBLOCKEX *recBlocks = NULL;
+static BaseBlocks recBlocks(EE_NUMBLOCKS);
 static u8* recPtr = NULL, *recStackPtr = NULL;
 static EEINST* s_pInstCache = NULL;
 static u32 s_nInstCacheSize = 0;
@@ -86,8 +89,6 @@ static BASEBLOCK* s_pCurBlock = NULL;
 static BASEBLOCKEX* s_pCurBlockEx = NULL;
 static u32 s_nEndBlock = 0; // what pc the current block ends	
 static u32 s_nHasDelay = 0;
-
-static u32 s_nNextBlock = 0; // next free block in recBlocks
 
 // save states for branches
 static u16 s_savex86FpuState, s_saveiCWstate;
@@ -111,17 +112,7 @@ static u32 dumplog = 0;
 #endif
 
 static void iBranchTest(u32 newpc, bool noDispatch=false);
-static void InitRecLUT(BASEBLOCK* base, int count);
-
-BASEBLOCKEX* PC_GETBLOCKEX(u32 pc)
-{
-//	BASEBLOCKEX* pex = *(BASEBLOCKEX**)(p+1);
-//	if( pex >= recBlocks && pex < recBlocks+EE_NUMBLOCKS )
-//		return pex;
-
-	// otherwise, use the sorted list
-	return GetBaseBlockEx(pc, 0);
-}
+static void ClearRecLUT(BASEBLOCK* base, int count);
 
 ////////////////////////////////////////////////////
 static void iDumpBlock( int startpc, u8 * ptr )
@@ -464,7 +455,6 @@ static u8* m_recBlockAlloc = NULL;
 
 static const uint m_recBlockAllocSize = 
 	(((Ps2MemSize::Base + Ps2MemSize::Rom + Ps2MemSize::Rom1) / 4) * sizeof(BASEBLOCK))
-+	(EE_NUMBLOCKS*sizeof(BASEBLOCKEX))		// recBlocks
 +	RECSTACK_SIZE;		// recStack
 
 static void recAlloc() 
@@ -507,7 +497,6 @@ static void recAlloc()
 	recRAM = (BASEBLOCK*)curpos; curpos += (Ps2MemSize::Base / 4) * sizeof(BASEBLOCK);
 	recROM = (BASEBLOCK*)curpos; curpos += (Ps2MemSize::Rom / 4) * sizeof(BASEBLOCK);
 	recROM1 = (BASEBLOCK*)curpos; curpos += (Ps2MemSize::Rom1 / 4) * sizeof(BASEBLOCK);
-	recBlocks = (BASEBLOCKEX*)curpos; curpos += sizeof(BASEBLOCKEX)*EE_NUMBLOCKS;
 	recStack = (u8*)curpos;
 
 	if( s_pInstCache == NULL )
@@ -531,19 +520,17 @@ void recResetEE( void )
 {
 	DbgCon::Status( "iR5900-32 > Resetting recompiler memory and structures." );
 
-	s_nNextBlock = 0;
 	maxrecmem = 0;
 
 	memset_8<0xcd, REC_CACHEMEM>(recMem);
 	memzero_ptr<m_recBlockAllocSize>( m_recBlockAlloc );
-	memzero_ptr<EE_NUMBLOCKS*sizeof(BASEBLOCKEX)>(recBlocks);
-	InitRecLUT((BASEBLOCK*)m_recBlockAlloc,
+	ClearRecLUT((BASEBLOCK*)m_recBlockAlloc,
 		(((Ps2MemSize::Base + Ps2MemSize::Rom + Ps2MemSize::Rom1) / 4)));
 
 	if( s_pInstCache )
 		memset( s_pInstCache, 0, sizeof(EEINST)*s_nInstCacheSize );
 
-	ResetBaseBlockEx(0);
+	recBlocks.Reset();
 	mmap_ResetBlockTracking();
 
 #ifdef _MSC_VER
@@ -552,32 +539,35 @@ void recResetEE( void )
     __asm__("emms");
 #endif
 
-	memzero_ptr<sizeof recLUT>( recLUT );
+	#define GET_HWADDR(mem) 
+
+	for (int i = 0; i < 0x10000; i++)
+		recLUT_SetPage(recLUT, 0, 0, 0, i, 0);
 
 	for ( int i = 0x0000; i < 0x0200; i++ )
 	{
-		recLUT_SetPage(recLUT, i + 0x0000, &recRAM[ i << 14 ]);
-		recLUT_SetPage(recLUT, i + 0x2000, &recRAM[ i << 14 ]);
-		recLUT_SetPage(recLUT, i + 0x3000, &recRAM[ i << 14 ]);
-		recLUT_SetPage(recLUT, i + 0x8000, &recRAM[ i << 14 ]);
-		recLUT_SetPage(recLUT, i + 0xa000, &recRAM[ i << 14 ]);
-		recLUT_SetPage(recLUT, i + 0xb000, &recRAM[ i << 14 ]);
-		recLUT_SetPage(recLUT, i + 0xc000, &recRAM[ i << 14 ]);
-		recLUT_SetPage(recLUT, i + 0xd000, &recRAM[ i << 14 ]);
+		recLUT_SetPage(recLUT, hwLUT, recRAM, 0x0000, i, i);
+		recLUT_SetPage(recLUT, hwLUT, recRAM, 0x2000, i, i);
+		recLUT_SetPage(recLUT, hwLUT, recRAM, 0x3000, i, i);
+		recLUT_SetPage(recLUT, hwLUT, recRAM, 0x8000, i, i);
+		recLUT_SetPage(recLUT, hwLUT, recRAM, 0xa000, i, i);
+		recLUT_SetPage(recLUT, hwLUT, recRAM, 0xb000, i, i);
+		recLUT_SetPage(recLUT, hwLUT, recRAM, 0xc000, i, i);
+		recLUT_SetPage(recLUT, hwLUT, recRAM, 0xd000, i, i);
 	}
 
-	for ( int i = 0x0000; i < 0x0040; i++ )
+	for ( int i = 0x1fc0; i < 0x2000; i++ )
 	{
-		recLUT_SetPage(recLUT, i + 0x1fc0, &recROM[ i << 14 ]);
-		recLUT_SetPage(recLUT, i + 0x9fc0, &recROM[ i << 14 ]);
-		recLUT_SetPage(recLUT, i + 0xbfc0, &recROM[ i << 14 ]);
+		recLUT_SetPage(recLUT, hwLUT, recROM, 0x0000, i, i - 0x1fc0);
+		recLUT_SetPage(recLUT, hwLUT, recROM, 0x8000, i, i - 0x1fc0);
+		recLUT_SetPage(recLUT, hwLUT, recROM, 0xa000, i, i - 0x1fc0);
 	}
 
-	for ( int i = 0x0000; i < 0x0004; i++ )
+	for ( int i = 0x1e00; i < 0x1e04; i++ )
 	{
-		recLUT_SetPage(recLUT, i + 0x1e00, &recROM1[ i << 14 ]);
-		recLUT_SetPage(recLUT, i + 0x9e00, &recROM1[ i << 14 ]);
-		recLUT_SetPage(recLUT, i + 0xbe00, &recROM1[ i << 14 ]);
+		recLUT_SetPage(recLUT, hwLUT, recROM1, 0x0000, i, i - 0x1e00);
+		recLUT_SetPage(recLUT, hwLUT, recROM1, 0x8000, i, i - 0x1e00);
+		recLUT_SetPage(recLUT, hwLUT, recROM1, 0xa000, i, i - 0x1e00);
 	}
 
 	// drk||Raziel says this is useful but I'm not sure why.  Something to do with forward jumps.
@@ -603,12 +593,11 @@ void recResetEE( void )
 static void recShutdown( void )
 {
 	ProfilerTerminateSource( "EERec" );
-	ResetBaseBlockEx(0);
+	recBlocks.Reset();
 
 	SafeSysMunmap( recMem, REC_CACHEMEM );
 	safe_aligned_free( m_recBlockAlloc );
 	recRAM = recROM = recROM1 = NULL;
-	recBlocks = NULL;
 	recStack = NULL;
 
 	safe_free( s_pInstCache );
@@ -880,21 +869,23 @@ void recBREAK( void ) {
 } } }		// end namespace R5900::Dynarec::OpcodeImpl
 
 ////////////////////////////////////////////////////
-static void REC_CLEARM( u32 mem )
+static u32 REC_CLEARM( u32 mem )
 {
 	if ((mem) < maxrecmem && (recLUT[(mem) >> 16] + mem))
-		recClearMem(mem);
+		return recClearMem(mem);
+	else
+		return 4;
 }
 
 void recClear( u32 Addr, u32 Size )
 {
-	u32 i;
-	for(i = 0; i < Size; ++i, Addr+=4)
-		REC_CLEARM(Addr);
+	u32 pc = Addr;
+	while (pc < Addr + Size*4)
+		pc += REC_CLEARM(pc);
 }
 
 // Clears the recLUT table so that all blocks are mapped to the JIT recompiler by default.
-static void InitRecLUT(BASEBLOCK* base, int count)
+static void ClearRecLUT(BASEBLOCK* base, int count)
 {
 	for (int i = 0; i < count; i++)
 	{
@@ -904,52 +895,74 @@ static void InitRecLUT(BASEBLOCK* base, int count)
 	}
 }
 
-void recClearMem(u32 pc)
+// Returns the offset to the next instruction after any cleared memory
+u32 recClearMem(u32 pc)
 {
 	BASEBLOCKEX* pexblock;
-	BASEBLOCK* pstart;
-	BASEBLOCK* p;
-	
-	p= PC_GETBLOCK(pc);
-	pc = p->GetStartPC();
-	if (!pc)
-		return;
-	pexblock = PC_GETBLOCKEX(pc);
-	if (!pexblock)
-		return;
-	pstart = PC_GETBLOCK(pexblock->startpc);
+	BASEBLOCK* pblock;
 
-	// necessary since recompiler doesn't call femms/emms
-#ifdef __INTEL_COMPILER
-		__asm__("emms");
-#else
-	#ifdef _MSC_VER
-		if (cpucaps.has3DNOWInstructionExtensions) __asm femms;
-		else __asm emms;
-	#else
-		if( cpucaps.has3DNOWInstructionExtensions )__asm__("femms");
-		else 
-			__asm__("emms");
-	#endif
-#endif
+	pblock = PC_GETBLOCK(pc);
+	// if ((u8*)JITCompile == pblock->GetFnptr())
+	if (!pblock->GetStartPC())
+		return 4;
 
-	for (int i = 0; i < pexblock->size; i++)
-	{
-		x86Ptr[0] = (u8*)pstart[i].GetFnptr();
-		if (x86Ptr[0] == (u8*)JITCompile)
-			continue;
+	pc = HWADDR(pc);
 
-		// there is a small problem: mem can be ored with 0xa<<28 or 0x8<<28, and don't know which
-		MOV32ItoR(EDX, pexblock->startpc + i*4);
-		PUSH32I((u32)x86Ptr[0]); // will be replaced by JMP32
-		JMP32((u32)DispatcherClear - ( (u32)x86Ptr[0] + 5 ));
+	u32 lowerextent = pc, upperextent = pc + 4;
+	int blockidx = recBlocks.Index(pc);
+
+	jASSUME(blockidx != -1);
+
+	while (pexblock = recBlocks[blockidx - 1]) {
+		if (pexblock->startpc + pexblock->size*4 <= lowerextent)
+			break;
+
+		lowerextent = min(lowerextent, pexblock->startpc);
+		blockidx--;
 	}
 
-	InitRecLUT(pstart, pexblock->size);
+	while (pexblock = recBlocks[blockidx]) {
+		if (pexblock->startpc >= upperextent)
+			break;
 
-	RemoveBaseBlockEx(pexblock, 0);
-	pexblock->size = 0;
-	pexblock->startpc = 0;
+		pblock = PC_GETBLOCK(pexblock->startpc);
+		x86Ptr[_EmitterId_] = (u8*)pblock->GetFnptr();
+
+		jASSUME((u8*)JITCompile != x86Ptr[_EmitterId_]);
+		// jASSUME((u8*)JITCompileInside != x86Ptr[_EmitterId_]);
+
+		// This is breaking things currently, rather than figure it out
+		// I'm just using DispatcherReg, it's fast enough now.
+		// Actually, if we want to do this at all maybe keeping a hash
+		// table of const jumps and modifying the jumps straight from
+		// here is the way to go.
+#if 0
+		// there is a small problem: mem can be ored with 0xa<<28 or 0x8<<28, and don't know which
+		MOV32ItoR(EDX, pexblock->startpc);
+		assert((uptr)x86Ptr[_EmitterId_] <= 0xffffffff);
+		PUSH32I((uptr)x86Ptr[_EmitterId_]); // will be replaced by JMP32
+		JMP32((uptr)DispatcherClear - ((uptr)x86Ptr[_EmitterId_] + 5));
+#else
+		MOV32ItoM((uptr)&cpuRegs.pc, pexblock->startpc);
+		JMP32((uptr)DispatcherReg - ((uptr)x86Ptr[_EmitterId_] + 5));
+#endif
+
+		lowerextent = min(lowerextent, pexblock->startpc);
+		upperextent = max(upperextent, pexblock->startpc + pexblock->size * 4);
+		recBlocks.Remove(blockidx);
+	}
+
+#ifdef PCSX2_DEVBUILD
+	for (int i = 0; pexblock = recBlocks[i]; i++)
+		if (pc >= pexblock->startpc && pc < pexblock->startpc + pexblock->size * 4) {
+			Console::Error("Impossible block clearing failure");
+			jASSUME(0);
+		}
+#endif
+
+	ClearRecLUT(PC_GETBLOCK(lowerextent), (upperextent - lowerextent) / 4);
+
+	return upperextent - pc;
 }
 
 // check for end of bios
@@ -1269,7 +1282,7 @@ void recompileNextInstruction(int delayslot)
 		if( !delayslot && pc == pblock->GetStartPC() )
 		{
 			// code already in place, so jump to it and exit recomp
-			assert( PC_GETBLOCKEX(pc)->startpc == pblock->GetStartPC() );
+			assert( recBlocks.Get(HWADDR(pc))->startpc == HWADDR(pc) );
 
 			iFlushCall(FLUSH_EVERYTHING);
 			MOV32ItoM((uptr)&cpuRegs.pc, pc);			
@@ -1501,27 +1514,17 @@ void recRecompile( const u32 startpc )
 	}
 
 	if( s_pCurBlock->GetStartPC() == startpc ) {
-		s_pCurBlockEx = PC_GETBLOCKEX(startpc);
-		assert( s_pCurBlockEx->startpc == startpc );
+		s_pCurBlockEx = recBlocks.Get(HWADDR(startpc));
+		assert( s_pCurBlockEx->startpc == HWADDR(startpc) );
 	}
 	else {
-		s_pCurBlockEx = NULL;
-		for(i = 0; i < EE_NUMBLOCKS; ++i) {
-			if( recBlocks[(i+s_nNextBlock)%EE_NUMBLOCKS].size == 0 ) {
-				s_pCurBlockEx = recBlocks+(i+s_nNextBlock)%EE_NUMBLOCKS;
-				s_nNextBlock = (i+s_nNextBlock+1)%EE_NUMBLOCKS;
-				break;
-			}
-		}
+		s_pCurBlockEx = recBlocks.New(HWADDR(startpc));
 
 		if( s_pCurBlockEx == NULL ) {
 			//SysPrintf("ee reset (blocks)\n");
 			recResetEE();
-			s_nNextBlock = 0;
-			s_pCurBlockEx = recBlocks;
+			s_pCurBlockEx = recBlocks.New(HWADDR(startpc));
 		}
-
-		s_pCurBlockEx->startpc = startpc;
 	}
 
 	x86SetPtr( recPtr );
@@ -1896,9 +1899,9 @@ StartRecomp:
 	assert( (pc-startpc)>>2 <= 0xffff );
 	s_pCurBlockEx->size = (pc-startpc)>>2;
 
-	for(i = 1; i < (u32)s_pCurBlockEx->size; ++i) {
+	for(i = 1; i < (u32)s_pCurBlockEx->size; i++) {
 		if (!s_pCurBlock[i].GetStartPC())
-			s_pCurBlock[i].SetStartPC( startpc );
+			s_pCurBlock[i].SetStartPC(startpc);
 	}
 
 
@@ -1919,9 +1922,6 @@ StartRecomp:
 		s_pCurBlock[i].SetStartPC(0);
 	}
 #endif
-
-	// set the block ptr
-	AddBaseBlockEx(s_pCurBlockEx, 0);
 
 	if( !(pc&0x10000000) )
 		maxrecmem = std::max( (pc&~0xa0000000), maxrecmem );

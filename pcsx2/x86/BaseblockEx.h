@@ -16,8 +16,10 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
-#ifndef _BASEBLOCKEX_H_
-#define _BASEBLOCKEX_H_
+#pragma once
+
+#include "PrecompiledHeader.h"
+#include <vector>
 
 // used to keep block information
 #define BLOCKTYPE_DELAYSLOT	1		// if bit set, delay slot
@@ -51,28 +53,58 @@ struct BASEBLOCKEX
 
 };
 
-// This is an asinine macro that bases indexing on sizeof(BASEBLOCK) for no reason. (air)
+class BaseBlocks
+{
+private:
+	std::vector<BASEBLOCKEX> blocks;
+	unsigned long size;
+
+public:
+	BaseBlocks(unsigned long max) :
+		size(max),
+		blocks(0)
+	{
+		blocks.reserve(size);
+	}
+
+	BASEBLOCKEX* New(u32 startpc);
+	int Index (u32 startpc) const;
+
+	inline BASEBLOCKEX* operator[](int idx)
+	{
+		if (idx < 0 || idx >= (int)blocks.size())
+			return 0;
+		return &blocks[idx];
+	}
+
+	inline BASEBLOCKEX* Get(u32 startpc)
+	{
+		return (*this)[Index(startpc)];
+	}
+
+	inline void Remove(int idx)
+	{
+		blocks.erase(blocks.begin() + idx);
+	}
+
+	inline void Reset()
+	{
+		blocks.clear();
+	}
+};
+
 #define GET_BLOCKTYPE(b) ((b)->Type)
-// x * (sizeof(BASEBLOCK) / 4) sacrifices safety for speed compared to
-// x / 4 * sizeof(BASEBLOCK) or a higher level approach.
 #define PC_GETBLOCK_(x, reclut) ((BASEBLOCK*)(reclut[((u32)(x)) >> 16] + (x)*(sizeof(BASEBLOCK)/4)))
 
-static void recLUT_SetPage( uptr reclut[0x10000], uint page, void* mapping )
+static void recLUT_SetPage(uptr reclut[0x10000], uptr hwlut[0x10000],
+						   BASEBLOCK *mapbase, uint pagebase, uint pageidx, uint mappage)
 {
+	uint page = pagebase + pageidx;
+
 	jASSUME( page < 0x10000 );
-	reclut[page] = ((uptr)mapping) - ((page << 14) * sizeof(BASEBLOCK));
+	reclut[page] = (uptr)&mapbase[(mappage - page) << 14];
+	if (hwlut)
+		hwlut[page] = 0u - (pagebase << 16);
 }
 
-// This is needed because of the retarded GETBLOCK macro above.
 C_ASSERT( sizeof(BASEBLOCK) == 8 );
-
-// 0 - ee, 1 - iop
-extern void AddBaseBlockEx(BASEBLOCKEX*, int cpu);
-extern void RemoveBaseBlockEx(BASEBLOCKEX*, int cpu);
-extern BASEBLOCKEX* GetBaseBlockEx(u32 startpc, int cpu);
-extern void ResetBaseBlockEx(int cpu);
-
-extern BASEBLOCKEX** GetAllBaseBlocks(int* pnum, int cpu);
-
-
-#endif

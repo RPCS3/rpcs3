@@ -70,7 +70,7 @@ void psxLoadBranchState();
 void psxSetBranchReg(u32 reg);
 void psxSetBranchImm( u32 imm );
 void psxRecompileNextInstruction(int delayslot);
-void psxRecClearMem(u32 p);
+u32 psxRecClearMem(u32 p);
 
 ////////////////////////////////////////////////////////////////////
 // IOP Constant Propagation Defines, Vars, and API - From here down!

@@ -92,8 +92,8 @@ extern GPR_reg64 s_ConstGPRreg;
 
 
 // Used to clear recompiled code blocks during memory/dma write operations.
-void recClearMem(u32 pc);
-void REC_CLEARM( u32 mem );
+u32 recClearMem(u32 pc);
+u32 REC_CLEARM( u32 mem );
 
 // used when processing branches
 void SaveBranchState();
