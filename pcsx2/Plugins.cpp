@@ -849,6 +849,21 @@ void ClosePlugins( bool closegs )
 	}
 }
 
+//used to close the GS plugin window and pads, to switch gsdx renderer
+void CloseGS()
+{
+	if( CHECK_MULTIGS ) mtgsWaitGS();
+
+	CLOSE_PLUGIN( PAD1 );
+	CLOSE_PLUGIN( PAD2 );
+
+	if( OpenStatus.GS )
+	{
+		gsClose();
+		OpenStatus.GS = false;
+	}
+}
+
 void ReleasePlugins()
 {
 	if (!loadp) return;

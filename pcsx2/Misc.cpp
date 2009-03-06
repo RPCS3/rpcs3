@@ -50,6 +50,7 @@ PcsxConfig Config;
 u32 BiosVersion;
 char CdromId[12];
 static int g_Pcsx2Recording = 0; // true 1 if recording video and sound
+bool renderswitch = 0;
 
 const char *LabelAuthors = { N_(
 	"PCSX2, a PS2 emulator\n\n"
@@ -650,7 +651,25 @@ void ProcessFKeys(int fkey, int shift)
 		case 8:
 			GSmakeSnapshot( SNAPSHOTS_DIR "/" );
 			break;
-
+		
+		case 9: //gsdx "on the fly" renderer switching 
+			if (!renderswitch) {
+				StateRecovery::MakeGsOnly();
+				g_EmulationInProgress = false;
+				CloseGS();
+				renderswitch = true;	//go to dx9 sw
+				StateRecovery::Recover();
+				HostGui::BeginExecution(); //also sets g_EmulationInProgress to true later
+			}
+			else {
+				StateRecovery::MakeGsOnly();
+				g_EmulationInProgress = false;
+				CloseGS();
+				renderswitch = false;	//return to default renderer
+				StateRecovery::Recover();
+				HostGui::BeginExecution(); //also sets g_EmulationInProgress to true later
+			}
+			break;
 #ifdef PCSX2_DEVBUILD
 	
 		case 11:

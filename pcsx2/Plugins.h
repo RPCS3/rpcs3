@@ -32,6 +32,7 @@ void ReleasePlugins();
 
 int  OpenPlugins(const char* pTitleFilename);
 void ClosePlugins( bool closegs );
+void CloseGS();
 
 int InitPlugins();
 void ShutdownPlugins();
