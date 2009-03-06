@@ -578,7 +578,7 @@ void recResetIOP()
 	jASSUME( recMem != NULL );
 	jASSUME( m_recBlockAlloc != NULL );
 
-	DbgCon::Status( "iR3000A > Resetting recompiler memory and structures!" );
+	DevCon::Status( "iR3000A Resetting recompiler memory and structures" );
 
 	memzero_ptr<sizeof(psxRecLUT)>( psxRecLUT );
 	memset_8<0xcd,RECMEM_SIZE>( recMem );
@@ -1167,18 +1167,8 @@ static void printfn()
 
     //*(int*)PSXM(0x27990) = 1; // enables cdvd bios output for scph10000
 
-    if( psxRegs.cycle == 0x113a1be5 ) {
-//        FILE* tempf = fopen("tempdmciop.txt", "wb");
-//        fwrite(PSXM(0), 0x200000, 1, tempf);
-//        fclose(tempf);
-        //psxdump |= 2;
-    }
-
-//    if( psxRegs.cycle == 0x114152d8 ) {
-//        psxRegs.GPR.n.s0 = 0x55000;
-//    }
-
-    if( (psxdump&2) && lastrec != g_psxlastpc ) {
+    if( (psxdump&2) && lastrec != g_psxlastpc )
+    {
 		curcount++;
 
 		if( curcount > skip ) {
@@ -1199,7 +1189,6 @@ void iopRecRecompile(u32 startpc)
 	u32* ptr;
 
 #ifdef _DEBUG
-	//psxdump |= 4;
 	if( psxdump & 4 )
 		iDumpPsxRegisters(startpc, 0);
 #endif
@@ -1207,10 +1196,8 @@ void iopRecRecompile(u32 startpc)
 	assert( startpc );
 
 	// if recPtr reached the mem limit reset whole mem
-	if (((uptr)recPtr - (uptr)recMem) >= (RECMEM_SIZE - 0x10000)) {
-		DevCon::WriteLn("IOP Recompiler data reset");
+	if (((uptr)recPtr - (uptr)recMem) >= (RECMEM_SIZE - 0x10000))
 		recResetIOP();
-	}
 
 	s_pCurBlock = PSX_GETBLOCK(startpc);
 	
@@ -1375,7 +1362,7 @@ StartRecomp:
 	assert( (psxpc-startpc)>>2 <= 0xffff );
 	s_pCurBlockEx->size = (psxpc-startpc)>>2;
 
-	for(i = 1; i <= (u32)s_pCurBlockEx->size-1; ++i) {
+	for(i = 1; i < (u32)s_pCurBlockEx->size; ++i) {
 		if (!s_pCurBlock[i].GetStartPC())
 			s_pCurBlock[i].SetStartPC( startpc );
 	}

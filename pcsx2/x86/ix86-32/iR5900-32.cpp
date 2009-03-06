@@ -1896,7 +1896,7 @@ StartRecomp:
 	assert( (pc-startpc)>>2 <= 0xffff );
 	s_pCurBlockEx->size = (pc-startpc)>>2;
 
-	for(i = 1; i <= (u32)s_pCurBlockEx->size-1; ++i) {
+	for(i = 1; i < (u32)s_pCurBlockEx->size; ++i) {
 		if (!s_pCurBlock[i].GetStartPC())
 			s_pCurBlock[i].SetStartPC( startpc );
 	}
