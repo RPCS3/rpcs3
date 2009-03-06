@@ -647,7 +647,14 @@ static __declspec(naked) void JITCompile()
 		mov ebx, esi
 		shr esi, 16
 		mov ecx, dword ptr [recLUT+esi*4]
-		jmp dword ptr [ecx+ebx*2]
+		jmp dword ptr [ecx+ebx]
+	}
+}
+
+static __declspec(naked) void JITCompileInBlock()
+{
+	__asm {
+		jmp JITCompile
 	}
 }
 
@@ -661,9 +668,11 @@ static __naked void Dispatcher()
 		mov ebx, eax
 		shr eax, 16
 		mov ecx, dword ptr [recLUT+eax*4]
-		mov eax, dword ptr [ecx+ebx*2]
+		mov eax, dword ptr [ecx+ebx]
 
 		cmp eax, offset JITCompile
+		je notcompiled
+		cmp eax, offset JITCompileInBlock
 		je notcompiled
 		lea ebx, [eax-4]
 		sub ebx, edx
@@ -673,7 +682,7 @@ static __naked void Dispatcher()
 		align 16
 notcompiled:
 		mov esi, edx
-		lea edi, [ecx+ebx*2]
+		lea edi, [ecx+ebx]
 		push ebx
 		call recRecompile
 		add esp, 4
@@ -686,7 +695,7 @@ notcompiled:
 	}
 }
 
-// edx -  baseblock->GetStartPC()
+// edx -  block start pc
 // stack - x86Ptr[0]
 static __naked void DispatcherClear()
 {
@@ -695,16 +704,18 @@ static __naked void DispatcherClear()
 		mov ebx, edx
 		shr edx, 16
 		mov ecx, dword ptr [recLUT+edx*4]
-		mov eax, dword ptr [ecx+ebx*2]
+		mov eax, dword ptr [ecx+ebx]
 
 		cmp eax, offset JITCompile
+		je notcompiled
+		cmp eax, offset JITCompileInBlock
 		je notcompiled
 		add esp, 4
 		jmp eax
 
 		align 16
 notcompiled:
-		lea edi, [ecx+ebx*2]
+		lea edi, [ecx+ebx]
 		push ebx
 		call recRecompile
 		add esp, 4
@@ -728,7 +739,7 @@ static void __naked DispatcherReg()
 		mov ebx, eax
 		shr eax, 16
 		mov ecx, dword ptr [recLUT+eax*4]
-		jmp dword ptr [ecx+ebx*2]
+		jmp dword ptr [ecx+ebx]
 	}
 }
 
@@ -888,11 +899,7 @@ void recClear( u32 Addr, u32 Size )
 static void ClearRecLUT(BASEBLOCK* base, int count)
 {
 	for (int i = 0; i < count; i++)
-	{
 		base[i].SetFnptr((uptr)JITCompile);
-		base[i].SetStartPC(0);
-		base[i].uType = 0;
-	}
 }
 
 // Returns the offset to the next instruction after any cleared memory
@@ -901,9 +908,25 @@ u32 recClearMem(u32 pc)
 	BASEBLOCKEX* pexblock;
 	BASEBLOCK* pblock;
 
+	//why the hell?
+#if 1
+	// necessary since recompiler doesn't call femms/emms
+#ifdef __INTEL_COMPILER
+                __asm__("emms");
+#else
+        #ifdef _MSC_VER
+                if (cpucaps.has3DNOWInstructionExtensions) __asm femms;
+                else __asm emms;
+        #else
+                if( cpucaps.has3DNOWInstructionExtensions )__asm__("femms");
+                else 
+                        __asm__("emms");
+        #endif
+#endif
+#endif
+
 	pblock = PC_GETBLOCK(pc);
-	// if ((u8*)JITCompile == pblock->GetFnptr())
-	if (!pblock->GetStartPC())
+	if (pblock->GetFnptr() == (uptr)JITCompile)
 		return 4;
 
 	pc = HWADDR(pc);
@@ -929,23 +952,17 @@ u32 recClearMem(u32 pc)
 		x86Ptr[_EmitterId_] = (u8*)pblock->GetFnptr();
 
 		jASSUME((u8*)JITCompile != x86Ptr[_EmitterId_]);
-		// jASSUME((u8*)JITCompileInside != x86Ptr[_EmitterId_]);
+		jASSUME((u8*)JITCompileInBlock != x86Ptr[_EmitterId_]);
 
-		// This is breaking things currently, rather than figure it out
-		// I'm just using DispatcherReg, it's fast enough now.
 		// Actually, if we want to do this at all maybe keeping a hash
 		// table of const jumps and modifying the jumps straight from
 		// here is the way to go.
-#if 0
+
 		// there is a small problem: mem can be ored with 0xa<<28 or 0x8<<28, and don't know which
 		MOV32ItoR(EDX, pexblock->startpc);
 		assert((uptr)x86Ptr[_EmitterId_] <= 0xffffffff);
 		PUSH32I((uptr)x86Ptr[_EmitterId_]); // will be replaced by JMP32
 		JMP32((uptr)DispatcherClear - ((uptr)x86Ptr[_EmitterId_] + 5));
-#else
-		MOV32ItoM((uptr)&cpuRegs.pc, pexblock->startpc);
-		JMP32((uptr)DispatcherReg - ((uptr)x86Ptr[_EmitterId_] + 5));
-#endif
 
 		lowerextent = min(lowerextent, pexblock->startpc);
 		upperextent = max(upperextent, pexblock->startpc + pexblock->size * 4);
@@ -1257,18 +1274,6 @@ static void checkcodefn()
 	assert(0);
 }
 
-u32 recompileCodeSafe(u32 temppc)
-{
-	BASEBLOCK* pblock = PC_GETBLOCK(temppc);
-
-	if( pblock->GetFnptr() != (uptr)JITCompile && pblock->GetStartPC() != s_pCurBlock->GetStartPC() ) {
-		if( pc == pblock->GetStartPC() )
-			return 0;
-	}
-
-	return 1;
-}
-
 void recompileNextInstruction(int delayslot)
 {
 	static u8 s_bFlushReg = 1;
@@ -1277,9 +1282,9 @@ void recompileNextInstruction(int delayslot)
 	BASEBLOCK* pblock = PC_GETBLOCK(pc);
 
 	// need *ppblock != s_pCurBlock because of branches
-	if( pblock->GetFnptr() != (uptr)JITCompile && pblock->GetStartPC() != s_pCurBlock->GetStartPC() )
+	if (HWADDR(pc) != s_pCurBlockEx->startpc && pblock->GetFnptr() != (uptr)JITCompile && pblock->GetFnptr() != (uptr)JITCompileInBlock)
 	{
-		if( !delayslot && pc == pblock->GetStartPC() )
+		if (!delayslot)
 		{
 			// code already in place, so jump to it and exit recomp
 			assert( recBlocks.Get(HWADDR(pc))->startpc == HWADDR(pc) );
@@ -1290,25 +1295,8 @@ void recompileNextInstruction(int delayslot)
 			branch = 3;
 			return;
 		}
-		else
-		{
-			if( !(delayslot && pblock->GetStartPC() == pc) )
-			{
-				u8* oldX86 = x86Ptr[0];
-				//__Log("clear block %x\n", pblock->GetStartPC());
-				recClearMem(pc);
-				x86Ptr[0] = oldX86;
-				if( delayslot )
-					Console::Notice("delay slot %x", params pc);
-			}
-		}
 	}
 
-#if 1
-	if( delayslot )
-		pblock->uType = BLOCKTYPE_DELAYSLOT;
-#endif
-		
 	s_pCode = (int *)PSM( pc );
 	assert(s_pCode);
 
@@ -1506,18 +1494,12 @@ void recRecompile( const u32 startpc )
 	}
 
 	s_pCurBlock = PC_GETBLOCK(startpc);
-	
-	if( s_pCurBlock->GetFnptr() != (uptr)JITCompile ) {
-		// clear if already taken
-		assert( s_pCurBlock->GetStartPC() < startpc );
-		recClearMem(startpc);	
-	}
 
-	if( s_pCurBlock->GetStartPC() == startpc ) {
-		s_pCurBlockEx = recBlocks.Get(HWADDR(startpc));
-		assert( s_pCurBlockEx->startpc == HWADDR(startpc) );
-	}
-	else {
+	assert(s_pCurBlock->GetFnptr() == (uptr)JITCompile
+		|| s_pCurBlock->GetFnptr() == (uptr)JITCompileInBlock);
+
+	s_pCurBlockEx = recBlocks.Get(HWADDR(startpc));
+	if (!s_pCurBlockEx || s_pCurBlockEx->startpc != HWADDR(startpc)) {
 		s_pCurBlockEx = recBlocks.New(HWADDR(startpc));
 
 		if( s_pCurBlockEx == NULL ) {
@@ -1527,11 +1509,12 @@ void recRecompile( const u32 startpc )
 		}
 	}
 
+	assert(s_pCurBlockEx);
+
 	x86SetPtr( recPtr );
 	x86Align(16);
 	recPtr = x86Ptr[0];
 	s_pCurBlock->SetFnptr( (uptr)x86Ptr[0] );
-	s_pCurBlock->SetStartPC(startpc);
 
 	branch = 0;
 
@@ -1568,14 +1551,11 @@ void recRecompile( const u32 startpc )
 	
 	while(1) {
 		BASEBLOCK* pblock = PC_GETBLOCK(i);
-		if( pblock->GetFnptr() != (uptr)JITCompile && pblock->GetStartPC() != s_pCurBlock->GetStartPC() ) {
-
-			if( i == pblock->GetStartPC() ) {
-				// branch = 3
-				willbranch3 = 1;
-				s_nEndBlock = i;
-				break;
-			}
+		if (i != startpc && pblock->GetFnptr() != (uptr)JITCompile && pblock->GetFnptr() != (uptr)JITCompileInBlock) {
+			// branch = 3
+			willbranch3 = 1;
+			s_nEndBlock = i;
+			break;
 		}
 		//HUH ? PSM ? whut ? THIS IS VIRTUAL ACCESS GOD DAMMIT
 		cpuRegs.code = *(int *)PSM(i);
@@ -1900,28 +1880,9 @@ StartRecomp:
 	s_pCurBlockEx->size = (pc-startpc)>>2;
 
 	for(i = 1; i < (u32)s_pCurBlockEx->size; i++) {
-		if (!s_pCurBlock[i].GetStartPC())
-			s_pCurBlock[i].SetStartPC(startpc);
+		if ((uptr)JITCompile == s_pCurBlock[i].GetFnptr())
+			s_pCurBlock[i].SetFnptr((uptr)JITCompileInBlock);
 	}
-
-
-// This is just wrong, right? How can setting a jump to any point in this block
-// to jump to the beginning of the block possibly be right? -pseudonym
-// - Jumping to the beginning of the block will work fine so long as the registers
-//   are flushed first before the jump is made.  Of course that's how all static
-//   links work so I still don't see the point of any complication for it -air
-#ifdef ZERO_TOLERANCE
-	for(i = 1; i < (u32)s_pCurBlockEx->size-1; ++i) {
-		s_pCurBlock[i].SetFnptr( s_pCurBlock->GetFnptr() );
-		s_pCurBlock[i].SetStartPC( p_CurBlock->startpc );
-	}
-
-	// don't overwrite if delay slot
-	if( i < (u32)s_pCurBlockEx->size && !(s_pCurBlock[i].uType & BLOCKTYPE_DELAYSLOT) ) {
-		s_pCurBlock[i].SetFnptr(0);
-		s_pCurBlock[i].SetStartPC(0);
-	}
-#endif
 
 	if( !(pc&0x10000000) )
 		maxrecmem = std::max( (pc&~0xa0000000), maxrecmem );
@@ -1972,23 +1933,14 @@ StartRecomp:
 	assert( (g_cpuHasConstReg&g_cpuFlushedConstReg) == g_cpuHasConstReg );
 
 	if( !branch ) {
-		BASEBLOCK* pcurblock = s_pCurBlock;
-		u32 nEndBlock = s_nEndBlock;
-		s_pCurBlock = PC_GETBLOCK(pc);
 		assert( ptr != NULL );
+		s_pCurBlock = PC_GETBLOCK(pc);
 
-		if( s_pCurBlock->GetStartPC() != pc ) 
+		if (s_pCurBlock->GetFnptr() == (uptr)JITCompile
+		 || s_pCurBlock->GetFnptr() == (uptr)JITCompileInBlock)
  			recRecompile(pc);
 
-		if( pcurblock->GetStartPC() == startpc ) {
-			assert( pcurblock->GetFnptr() != (uptr)JITCompile );
-			assert( s_pCurBlock->GetStartPC() == nEndBlock );
-			*ptr = s_pCurBlock->GetFnptr() - ( (u32)ptr + 4 );
-		}
-		else {
-			recRecompile(startpc);
-			assert( pcurblock->GetFnptr() != (uptr)JITCompile );
-		}
+		*ptr = s_pCurBlock->GetFnptr() - ((u32)ptr + 4);
 	}
 }
 

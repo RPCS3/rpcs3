@@ -30,13 +30,9 @@
 struct BASEBLOCK
 {
 	u32 m_pFnptr;
-	u32 startpc : 30;
-	u32 uType : 2;
 
 	const __inline uptr GetFnptr() const { return m_pFnptr; }
 	void __inline SetFnptr( uptr ptr ) { m_pFnptr = ptr; }
-	const __inline uptr GetStartPC() const { return startpc << 2; }
-	void __inline SetStartPC( uptr pc ) { startpc = pc >> 2; }
 };
 
 // extra block info (only valid for start of fn)
@@ -107,4 +103,4 @@ static void recLUT_SetPage(uptr reclut[0x10000], uptr hwlut[0x10000],
 		hwlut[page] = 0u - (pagebase << 16);
 }
 
-C_ASSERT( sizeof(BASEBLOCK) == 8 );
+C_ASSERT( sizeof(BASEBLOCK) == 4 );
