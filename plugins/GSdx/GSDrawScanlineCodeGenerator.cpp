@@ -1775,8 +1775,8 @@ void GSDrawScanlineCodeGenerator::WriteFrame(int params)
 
 	if(m_env.sel.colclamp == 0)
 	{
-		// c[0] &= m_env.colclamp;
-		// c[1] &= m_env.colclamp;
+		// c[0] &= 0x000000ff;
+		// c[1] &= 0x000000ff;
 
 		pcmpeqd(xmm7, xmm7);
 		psrlw(xmm7, 8);
@@ -1802,7 +1802,7 @@ void GSDrawScanlineCodeGenerator::WriteFrame(int params)
 
 	if(m_env.sel.fba && m_env.sel.fpsm != 1)
 	{
-		// fs |= m_env.fba;
+		// fs |= 0x80000000;
 
 		pcmpeqd(xmm7, xmm7);
 		pslld(xmm7, 31);

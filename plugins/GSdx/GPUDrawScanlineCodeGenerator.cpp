@@ -711,13 +711,14 @@ void GPUDrawScanlineCodeGenerator::ColorTFX()
 		// c[0] = c[0].modulate16<1>(r).clamp8();
 		// c[1] = c[1].modulate16<1>(g).clamp8();
 		// c[2] = c[2].modulate16<1>(b).clamp8();
-		if(!m_cpu.has(util::Cpu::tSSE41)) pxor(xmm0, xmm0);
+		pcmpeqd(xmm0, xmm0);
+		psrlw(xmm0, 8);
 		modulate16<1>(xmm4, xmmword[&m_env.temp.r]);
-		clamp16(xmm4, xmm0);
+		pminsw(xmm4, xmm0);
 		modulate16<1>(xmm5, xmmword[&m_env.temp.g]);
-		clamp16(xmm5, xmm0);
+		pminsw(xmm5, xmm0);
 		modulate16<1>(xmm6, xmmword[&m_env.temp.b]);
-		clamp16(xmm6, xmm0);
+		pminsw(xmm6, xmm0);
 		break;
 	case 3: // decal (tfx = tme)
 		break;
@@ -978,20 +979,6 @@ void GPUDrawScanlineCodeGenerator::lerp16(const Xmm& a, const Xmm& b, const Oper
 	psubw(a, b);
 	modulate16<shift>(a, f);
 	paddw(a, b);
-}
-
-void GPUDrawScanlineCodeGenerator::clamp16(const Xmm& a, const Xmm& zero)
-{
-	packuswb(a, a);
-
-	if(m_cpu.has(util::Cpu::tSSE41))
-	{
-		pmovzxbw(a, a);
-	}
-	else
-	{
-		punpcklbw(a, zero);
-	}
 }
 
 void GPUDrawScanlineCodeGenerator::alltrue()

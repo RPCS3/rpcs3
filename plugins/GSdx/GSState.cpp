@@ -1063,7 +1063,7 @@ if((len % ((m_env.TRXREG.RRW - m_x) * GSLocalMemory::m_psm[m_env.BITBLTBUF.DPSM]
 		str.Format(_T("c:\\temp1\\[%04d]_%05x_%d_%d_%d_%d_%d_%d.bmp"), 
 			n++, (int)m_env.BITBLTBUF.DBP, (int)m_env.BITBLTBUF.DBW, (int)m_env.BITBLTBUF.DPSM, 
 			r.left, r.top, r.right, r.bottom);
-		m_mem.SaveBMP(str, m_env.BITBLTBUF.DBP, m_env.BITBLTBUF.DBW, m_env.BITBLTBUF.DPSM, r.Width(), r.Height());
+		m_mem.SaveBMP(str, m_env.BITBLTBUF.DBP, m_env.BITBLTBUF.DBW, m_env.BITBLTBUF.DPSM, r.right, r.bottom);
 */
 	}
 }

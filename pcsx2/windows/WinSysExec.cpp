@@ -93,6 +93,9 @@ int ParseCommandLine( int tokenCount, TCHAR *const *const tokens )
         else if( CmdSwitchIs( "nogui" ) ) {
 			UseGui = false;
 		}
+        else if( CmdSwitchIs( "highpriority" ) ) {
+			SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
+		}		
 #ifdef PCSX2_DEVBUILD
 			else if( CmdSwitchIs( "jpg" ) ) {
 				g_TestRun.jpgcapture = 1;

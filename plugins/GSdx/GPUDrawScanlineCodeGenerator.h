@@ -53,7 +53,6 @@ class GPUDrawScanlineCodeGenerator : public CodeGenerator
 
 	template<int shift> void modulate16(const Xmm& a, const Operand& f);
 	template<int shift> void lerp16(const Xmm& a, const Xmm& b, const Operand& f);
-	void clamp16(const Xmm& a, const Xmm& zero);
 	void alltrue();
 	void blend8(const Xmm& a, const Xmm& b);
 	void blend(const Xmm& a, const Xmm& b, const Xmm& mask);

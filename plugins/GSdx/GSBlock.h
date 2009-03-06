@@ -1277,7 +1277,6 @@ public:
 		GSVector4i rm = m_rxxx;
 		GSVector4i gm = m_xgxx;
 		GSVector4i bm = m_xxbx;
-		// GSVector4i am = m_xxxa;
 		GSVector4i l, h;
 
 		if(TEXA.AEM)
@@ -1285,13 +1284,7 @@ public:
 			for(int i = 0; i < 8; i++, dst += dstpitch)
 			{
 				GSVector4i v0 = s[i * 2 + 0];
-/*
-				l = v0.upl16();
-				h = v0.uph16();
 
-				((GSVector4i*)dst)[0] = ((l & rm) << 3) | ((l & gm) << 6) | ((l & bm) << 9) | TA1.blend(TA0, l < am).andnot(l == GSVector4i::zero());
-				((GSVector4i*)dst)[1] = ((h & rm) << 3) | ((h & gm) << 6) | ((h & bm) << 9) | TA1.blend(TA0, h < am).andnot(h == GSVector4i::zero());
-*/
 				l = v0.upl16(v0);
 				h = v0.uph16(v0);
 
@@ -1299,13 +1292,7 @@ public:
 				((GSVector4i*)dst)[1] = ((h & rm) << 3) | ((h & gm) << 6) | ((h & bm) << 9) | TA0.blend8(TA1, h.sra16(15)).andnot(h == GSVector4i::zero());
 
 				GSVector4i v1 = s[i * 2 + 1];
-/*
-				l = v1.upl16();
-				h = v1.uph16();
 
-				((GSVector4i*)dst)[2] = ((l & rm) << 3) | ((l & gm) << 6) | ((l & bm) << 9) | TA1.blend(TA0, l < am).andnot(l == GSVector4i::zero());
-				((GSVector4i*)dst)[3] = ((h & rm) << 3) | ((h & gm) << 6) | ((h & bm) << 9) | TA1.blend(TA0, h < am).andnot(h == GSVector4i::zero());
-*/
 				l = v1.upl16(v1);
 				h = v1.uph16(v1);
 
@@ -1318,13 +1305,7 @@ public:
 			for(int i = 0; i < 8; i++, dst += dstpitch)
 			{
 				GSVector4i v0 = s[i * 2 + 0];
-/*
-				l = v0.upl16();
-				h = v0.uph16();
 
-				((GSVector4i*)dst)[0] = ((l & rm) << 3) | ((l & gm) << 6) | ((l & bm) << 9) | TA1.blend(TA0, l < am);
-				((GSVector4i*)dst)[1] = ((h & rm) << 3) | ((h & gm) << 6) | ((h & bm) << 9) | TA1.blend(TA0, h < am);
-*/
 				l = v0.upl16(v0);
 				h = v0.uph16(v0);
 
@@ -1332,13 +1313,7 @@ public:
 				((GSVector4i*)dst)[1] = ((h & rm) << 3) | ((h & gm) << 6) | ((h & bm) << 9) | TA0.blend(TA1, h.sra16(15));
 
 				GSVector4i v1 = s[i * 2 + 1];
-/*
-				l = v1.upl16();
-				h = v1.uph16();
 
-				((GSVector4i*)dst)[2] = ((l & rm) << 3) | ((l & gm) << 6) | ((l & bm) << 9) | TA1.blend(TA0, l < am);
-				((GSVector4i*)dst)[3] = ((h & rm) << 3) | ((h & gm) << 6) | ((h & bm) << 9) | TA1.blend(TA0, h < am);
-*/
 				l = v1.upl16(v1);
 				h = v1.uph16(v1);
 
