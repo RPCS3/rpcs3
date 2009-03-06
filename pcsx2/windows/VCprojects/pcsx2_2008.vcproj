@@ -757,10 +757,6 @@
 					/>
 				</FileConfiguration>
 			</File>
-			<File
-				RelativePath="..\WinVM.cpp"
-				>
-			</File>
 			<Filter
 				Name="Debugger"
 				>
@@ -911,6 +907,14 @@
 		<Filter
 			Name="Misc"
 			>
+			<File
+				RelativePath="..\..\HashMap.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\HashTools.cpp"
+				>
+			</File>
 			<File
 				RelativePath="..\..\Misc.cpp"
 				>
@@ -2050,10 +2054,6 @@
 						>
 					</File>
 					<File
-						RelativePath="..\..\x86\iR5900CoissuedLoadStore.cpp"
-						>
-					</File>
-					<File
 						RelativePath="..\..\x86\iR5900Jump.h"
 						>
 					</File>
@@ -2230,34 +2230,6 @@
 					Name="Dynarec"
 					>
 					<File
-						RelativePath="..\..\x86\iPsxMem.cpp"
-						>
-						<FileConfiguration
-							Name="Debug|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Devel|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release|Win32"
-							ExcludedFromBuild="true"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-							/>
-						</FileConfiguration>
-					</File>
-					<File
 						RelativePath="..\..\x86\iR3000A.cpp"
 						>
 					</File>
@@ -2380,10 +2352,6 @@
 				</File>
 				<File
 					RelativePath="..\..\Memory.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\MemoryVM.cpp"
 					>
 				</File>
 				<File
@@ -3104,10 +3072,6 @@
 		</File>
 		<File
 			RelativePath="..\..\Stats.h"
-			>
-		</File>
-		<File
-			RelativePath="..\WinDebugResource"
 			>
 		</File>
 	</Files>

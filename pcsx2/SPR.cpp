@@ -81,7 +81,7 @@ int  _SPR0chain() {
 		mfifotransferred += spr0->qwc;
 	} else {
 		memcpy_fast((u8*)pMem, &PS2MEM_SCRATCH[spr0->sadr & 0x3fff], spr0->qwc << 4);
-		Cpu->Clear(spr0->madr, spr0->qwc<<2);
+		//Cpu->Clear(spr0->madr, spr0->qwc<<2);
 		// clear VU mem also!
 		TestClearVUs(spr0->madr, spr0->qwc << 2); // Wtf is going on here? AFAIK, only VIF should affect VU micromem (cottonvibes)
 		
@@ -117,7 +117,7 @@ void _SPR0interleave() {
 			hwMFIFOWrite(spr0->madr, (u8*)&PS2MEM_SCRATCH[spr0->sadr & 0x3fff], spr0->qwc<<4);
 			mfifotransferred += spr0->qwc;
 		} else {
-			Cpu->Clear(spr0->madr, spr0->qwc<<2);
+			//Cpu->Clear(spr0->madr, spr0->qwc<<2);
 			// clear VU mem also!
 			TestClearVUs(spr0->madr, spr0->qwc<<2);
 			memcpy_fast((u8*)pMem, &PS2MEM_SCRATCH[spr0->sadr & 0x3fff], spr0->qwc<<4);
