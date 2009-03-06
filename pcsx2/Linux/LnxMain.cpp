@@ -43,11 +43,20 @@ int main(int argc, char *argv[])
 	bindtextdomain(PACKAGE, "Langs");
 	textdomain(PACKAGE);
 #endif
-
-	printf("\n");
-	mkdir(CONFIG_DIR, 0755);
-
-	strcpy(cfgfile, CONFIG_DIR "/pcsx2.cfg");
+	
+	// Note: Config.InisDir won't do anything till we set up windows and the plugins to use it.
+#ifndef LOCAL_PLUGIN_INIS
+	mkdir(DEFAULT_INIS_DIR, 0755);
+	sprintf(Config.InisDir, "%s/%s/", MAIN_DIR, DEFAULT_INIS_DIR);
+	sprintf(cfgfile, "%s/pcsx2.cfg", Config.InisDir);
+#else
+	mkdir("~/.pcsx2");
+	chdir("~/.pcsx2");
+	mkdir(DEFAULT_INIS_DIR, 0755);
+	sprintf(Config.InisDir, "~/.pcsx2/%s/", DEFAULT_INIS_DIR);
+	sprintf(cfgfile, "%s/pcsx2.cfg", Config.InisDir);
+	chdir(MAIN_DIR);
+#endif
 
 #ifdef PCSX2_DEVBUILD
 	memset(&g_TestRun, 0, sizeof(g_TestRun));

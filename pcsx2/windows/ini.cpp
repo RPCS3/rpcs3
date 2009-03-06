@@ -38,7 +38,7 @@ static string GetConfigFilename()
 	// Load a user-specified configuration, or use the ini relative to the application's working directory.
 	// (Our current working directory can change, so we use the one we detected at startup)
 
-	return Path::Combine( g_WorkingFolder, hasCustomConfig() ? g_CustomConfigFile : (CONFIG_DIR "\\pcsx2.ini") );
+	return Path::Combine( g_WorkingFolder, hasCustomConfig() ? g_CustomConfigFile : (DEFAULT_INIS_DIR "\\pcsx2.ini") );
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////

@@ -7,8 +7,8 @@
 #ifdef __LINUX__
 extern char MAIN_DIR[g_MaxPath];
 #endif
-#define CONFIG_DIR "inis"
 
+#define DEFAULT_INIS_DIR "inis"
 #define DEFAULT_BIOS_DIR "bios"
 #define DEFAULT_PLUGINS_DIR "plugins"
 

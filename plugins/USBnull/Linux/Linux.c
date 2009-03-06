@@ -81,7 +81,7 @@ void SysMessage(char *fmt, ...)
 void USBconfigure() 
 {
 	char *file;
-	getcwd(file, ARRAYSIZE(file));
+	getcwd(file, ArraySize(file));
 	chdir("plugins");
 	ExecCfg("configure");
 	chdir(file);
@@ -90,7 +90,7 @@ void USBconfigure()
 void USBabout() 
 {
 	char *file;
-	getcwd(file, ARRAYSIZE(file));
+	getcwd(file, ArraySize(file));
 	chdir("plugins");
 	ExecCfg("about");
 	chdir(file);

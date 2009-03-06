@@ -1197,8 +1197,11 @@ void iopRecRecompile(u32 startpc)
 
 	// if recPtr reached the mem limit reset whole mem
 	if (((uptr)recPtr - (uptr)recMem) >= (RECMEM_SIZE - 0x10000))
+	{
+		// This is getting called pretty often in Linux. (21 times in the course of getting to the starting screen of KH1) --arcum42
 		recResetIOP();
-
+	}
+	
 	s_pCurBlock = PSX_GETBLOCK(startpc);
 	
 	if( s_pCurBlock->GetFnptr() != (uptr)iopJITCompile ) {

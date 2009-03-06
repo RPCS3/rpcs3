@@ -936,6 +936,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\common\include\Pcsx2Config.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\PrecompiledHeader.cpp"
 				>
 				<FileConfiguration

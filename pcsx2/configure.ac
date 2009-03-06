@@ -97,7 +97,7 @@ AC_ARG_ENABLE(sse3, AC_HELP_STRING([--enable-sse3], [Forces sse3 detection on CP
  sse3=$enableval,sse3=no)
 if test "x$sse3" == xyes
 then
- AC_DEFINE(PCSX2_FORCESSE3,1,[PCSX2_DEVBUILD])
+ AC_DEFINE(PCSX2_FORCESSE3,1,[PCSX2_FORCESSE3])
 fi
 AC_MSG_RESULT(sse3)
 
@@ -106,7 +106,7 @@ AC_ARG_ENABLE(sse4, AC_HELP_STRING([--enable-sse4], [Forces sse4 detection on CP
  sse4=$enableval,sse4=no)
 if test "x$sse4" == xyes
 then
- AC_DEFINE(PCSX2_FORCESSE4,1,[PCSX2_DEVBUILD])
+ AC_DEFINE(PCSX2_FORCESSE4,1,[PCSX2_FORCESSE4])
 fi
 AC_MSG_RESULT(sse4)
 
