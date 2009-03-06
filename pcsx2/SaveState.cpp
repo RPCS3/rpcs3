@@ -197,7 +197,16 @@ gzLoadingState::gzLoadingState( const string& filename ) :
 
 	gzread( m_file, &m_version, 4 );
 
-	if( m_version < g_SaveVersion )
+	if( (m_version >> 16) != (g_SaveVersion >> 16) )
+	{
+		Console::Error(
+			"Savestate load aborted:\n"
+			"\tUnknown or invalid savestate identifier, either from a (very!) old version of\n"
+			"\tPcsx2, or the file is corrupted"
+		);
+		throw Exception::UnsupportedStateVersion( m_version );
+	}
+	else if( m_version > g_SaveVersion )
 	{
 		Console::Error(
 			"Savestate load aborted:\n"
