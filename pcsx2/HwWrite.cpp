@@ -83,6 +83,8 @@ static void DmaExec( void (*func)(), u32 mem, u32 value )
 
 	if ((psHu32(mem) & 0x100) && (psHu32(DMAC_CTRL) & 0x1))
 		func();
+	
+		
 }
 
 
@@ -155,6 +157,7 @@ void hwWrite8(u32 mem, u8 value) {
 
 		case 0x10009001: // dma1 - vif1
 			DMA_LOG("VIF1dma EXECUTE, value=0x%x\n", value);
+			if(value & 0x1) vif1.done = 0;  //This must be done here! some games (ala Crash of the Titans) pause the dma to start MFIFO
 			DmaExec8(dmaVIF1, mem, value);
 			break;
 
@@ -261,6 +264,7 @@ __forceinline void hwWrite16(u32 mem, u16 value)
 
 		case 0x10009000: // dma1 - vif1 - chcr
 			DMA_LOG("VIF1dma CHCR %lx\n", value);
+			if(value & 0x100) vif1.done = 0;  //This must be done here! some games (ala Crash of the Titans) pause the dma to start MFIFO
 			DmaExec16(dmaVIF1, mem, value);
 			break;
 
@@ -680,6 +684,10 @@ void __fastcall hwWrite32_generic( u32 mem, u32 value )
 //------------------------------------------------------------------
 		case D1_CHCR: // dma1 - vif1 - chcr
 			DMA_LOG("VIF1dma EXECUTE, value=0x%x\n", value);
+			if(value & 0x100) 
+			{
+				vif1.done = 0;  //This must be done here! some games (ala Crash of the Titans) pause the dma to start MFIFO
+				}
 			DmaExec(dmaVIF1, mem, value);
 			return;
 

@@ -2023,6 +2023,7 @@ __forceinline void vif1Interrupt() {
 	prevviftag = NULL;
 	prevvifcycles = 0;
 	vif1ch->chcr &= ~0x100;
+	g_vifCycles = 0;
 	hwDmacIrq(DMAC_VIF1);
 	if(vif1Regs->mskpath3 == 0 || (vif1ch->chcr & 0x1) == 0x1)vif1Regs->stat&= ~0x1F000000; // FQC=0
 }
@@ -2036,7 +2037,7 @@ void dmaVIF1()
 			vif1ch->chcr, vif1ch->madr, vif1ch->qwc,
 			vif1ch->tadr, vif1ch->asr0, vif1ch->asr1 );
 
-	vif1.done = 0;
+	
 	g_vifCycles = 0;
 
 	if (((psHu32(DMAC_CTRL) & 0xC) == 0x8)) { // VIF MFIFO

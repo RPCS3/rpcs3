@@ -499,7 +499,7 @@ void mfifoVIF1transfer(int qwc) {
 	if(qwc > 0){
 		vifqwc += qwc;
 		
-			SPR_LOG("Added %x qw to mfifo, total now %x\n", qwc, vifqwc);
+			SPR_LOG("Added %x qw to mfifo, total now %x - Vif CHCR %x Stalled %x done %x\n", qwc, vifqwc, vif1ch->chcr, vif1.vifstalled, vif1.done);
 			
 		if((vif1ch->chcr & 0x100) == 0 || vif1.vifstalled == 1 || vif1.done == 1) return;
 	}
@@ -589,6 +589,8 @@ void mfifoVIF1transfer(int qwc) {
 
 void vifMFIFOInterrupt()
 {
+	g_vifCycles = 0;
+
 	if(vif1.irq && vif1.tag.size == 0) {
 			vif1Regs->stat|= VIF1_STAT_INT;
 			hwIntcIrq(INTC_VIF1);
@@ -617,6 +619,7 @@ void vifMFIFOInterrupt()
 			vifqwc = 0; 
 
 	vif1.done = 1;
+	g_vifCycles = 0;
 	vif1ch->chcr &= ~0x100;
 	hwDmacIrq(DMAC_VIF1);
 	VIF_LOG("vif mfifo dma end\n");
