@@ -3682,7 +3682,7 @@ Configure them here.&lt;/b&gt;</property>
 	  </child>
 
 	  <child>
-	    <widget class="GtkComboBox" id="GtkCombo_Gs">
+	    <widget class="GtkComboBox" id="GtkCombo_GS">
 	      <property name="visible">True</property>
 	      <property name="items" translatable="yes"></property>
 	      <property name="add_tearoffs">False</property>
@@ -3697,7 +3697,7 @@ Configure them here.&lt;/b&gt;</property>
 	  </child>
 
 	  <child>
-	    <widget class="GtkComboBox" id="GtkCombo_Spu2">
+	    <widget class="GtkComboBox" id="GtkCombo_SPU2">
 	      <property name="visible">True</property>
 	      <property name="items" translatable="yes"></property>
 	      <property name="add_tearoffs">False</property>
@@ -3712,7 +3712,7 @@ Configure them here.&lt;/b&gt;</property>
 	  </child>
 
 	  <child>
-	    <widget class="GtkComboBox" id="GtkCombo_Pad1">
+	    <widget class="GtkComboBox" id="GtkCombo_PAD1">
 	      <property name="visible">True</property>
 	      <property name="items" translatable="yes"></property>
 	      <property name="add_tearoffs">False</property>
@@ -3727,7 +3727,7 @@ Configure them here.&lt;/b&gt;</property>
 	  </child>
 
 	  <child>
-	    <widget class="GtkComboBox" id="GtkCombo_Pad2">
+	    <widget class="GtkComboBox" id="GtkCombo_PAD2">
 	      <property name="visible">True</property>
 	      <property name="items" translatable="yes"></property>
 	      <property name="add_tearoffs">False</property>
@@ -3742,7 +3742,7 @@ Configure them here.&lt;/b&gt;</property>
 	  </child>
 
 	  <child>
-	    <widget class="GtkComboBox" id="GtkCombo_Dev9">
+	    <widget class="GtkComboBox" id="GtkCombo_DEV9">
 	      <property name="visible">True</property>
 	      <property name="items" translatable="yes"></property>
 	      <property name="add_tearoffs">False</property>
@@ -3757,7 +3757,7 @@ Configure them here.&lt;/b&gt;</property>
 	  </child>
 
 	  <child>
-	    <widget class="GtkComboBox" id="GtkCombo_Cdvd">
+	    <widget class="GtkComboBox" id="GtkCombo_CDVD">
 	      <property name="visible">True</property>
 	      <property name="items" translatable="yes"></property>
 	      <property name="add_tearoffs">False</property>
@@ -3772,7 +3772,7 @@ Configure them here.&lt;/b&gt;</property>
 	  </child>
 
 	  <child>
-	    <widget class="GtkComboBox" id="GtkCombo_Usb">
+	    <widget class="GtkComboBox" id="GtkCombo_USB">
 	      <property name="visible">True</property>
 	      <property name="items" translatable="yes"></property>
 	      <property name="add_tearoffs">False</property>
@@ -3816,7 +3816,7 @@ Configure them here.&lt;/b&gt;</property>
 		  <property name="use_underline">True</property>
 		  <property name="relief">GTK_RELIEF_NORMAL</property>
 		  <property name="focus_on_click">True</property>
-		  <signal name="clicked" handler="OnConfConf_Pad2Conf"/>
+		  <signal name="clicked" handler="OnConfButton"/>
 		</widget>
 	      </child>
 
@@ -3829,7 +3829,7 @@ Configure them here.&lt;/b&gt;</property>
 		  <property name="use_underline">True</property>
 		  <property name="relief">GTK_RELIEF_NORMAL</property>
 		  <property name="focus_on_click">True</property>
-		  <signal name="clicked" handler="OnConfConf_Pad2Test"/>
+		  <signal name="clicked" handler="OnConfButton"/>
 		</widget>
 	      </child>
 
@@ -3842,7 +3842,7 @@ Configure them here.&lt;/b&gt;</property>
 		  <property name="use_underline">True</property>
 		  <property name="relief">GTK_RELIEF_NORMAL</property>
 		  <property name="focus_on_click">True</property>
-		  <signal name="clicked" handler="OnConfConf_Pad2About"/>
+		  <signal name="clicked" handler="OnConfButton"/>
 		</widget>
 	      </child>
 	    </widget>
@@ -3870,7 +3870,7 @@ Configure them here.&lt;/b&gt;</property>
 		  <property name="use_underline">True</property>
 		  <property name="relief">GTK_RELIEF_NORMAL</property>
 		  <property name="focus_on_click">True</property>
-		  <signal name="clicked" handler="OnConfConf_Pad1Conf"/>
+		  <signal name="clicked" handler="OnConfButton"/>
 		</widget>
 	      </child>
 
@@ -3883,7 +3883,7 @@ Configure them here.&lt;/b&gt;</property>
 		  <property name="use_underline">True</property>
 		  <property name="relief">GTK_RELIEF_NORMAL</property>
 		  <property name="focus_on_click">True</property>
-		  <signal name="clicked" handler="OnConfConf_Pad1Test"/>
+		  <signal name="clicked" handler="OnConfButton"/>
 		</widget>
 	      </child>
 
@@ -3896,7 +3896,7 @@ Configure them here.&lt;/b&gt;</property>
 		  <property name="use_underline">True</property>
 		  <property name="relief">GTK_RELIEF_NORMAL</property>
 		  <property name="focus_on_click">True</property>
-		  <signal name="clicked" handler="OnConfConf_Pad1About"/>
+		  <signal name="clicked" handler="OnConfButton"/>
 		</widget>
 	      </child>
 	    </widget>
@@ -3925,7 +3925,7 @@ Configure them here.&lt;/b&gt;</property>
 		  <property name="use_underline">True</property>
 		  <property name="relief">GTK_RELIEF_NORMAL</property>
 		  <property name="focus_on_click">True</property>
-		  <signal name="clicked" handler="OnConfConf_GsConf"/>
+		  <signal name="clicked" handler="OnConfButton"/>
 		</widget>
 	      </child>
 
@@ -3938,7 +3938,7 @@ Configure them here.&lt;/b&gt;</property>
 		  <property name="use_underline">True</property>
 		  <property name="relief">GTK_RELIEF_NORMAL</property>
 		  <property name="focus_on_click">True</property>
-		  <signal name="clicked" handler="OnConfConf_GsTest"/>
+		  <signal name="clicked" handler="OnConfButton"/>
 		</widget>
 	      </child>
 
@@ -3951,7 +3951,7 @@ Configure them here.&lt;/b&gt;</property>
 		  <property name="use_underline">True</property>
 		  <property name="relief">GTK_RELIEF_NORMAL</property>
 		  <property name="focus_on_click">True</property>
-		  <signal name="clicked" handler="OnConfConf_GsAbout"/>
+		  <signal name="clicked" handler="OnConfButton"/>
 		</widget>
 	      </child>
 	    </widget>
@@ -4091,7 +4091,7 @@ Configure them here.&lt;/b&gt;</property>
 		  <property name="use_underline">True</property>
 		  <property name="relief">GTK_RELIEF_NORMAL</property>
 		  <property name="focus_on_click">True</property>
-		  <signal name="clicked" handler="OnConfConf_Spu2Conf"/>
+		  <signal name="clicked" handler="OnConfButton"/>
 		</widget>
 	      </child>
 
@@ -4104,7 +4104,7 @@ Configure them here.&lt;/b&gt;</property>
 		  <property name="use_underline">True</property>
 		  <property name="relief">GTK_RELIEF_NORMAL</property>
 		  <property name="focus_on_click">True</property>
-		  <signal name="clicked" handler="OnConfConf_Spu2Test"/>
+		  <signal name="clicked" handler="OnConfButton"/>
 		</widget>
 	      </child>
 
@@ -4117,7 +4117,7 @@ Configure them here.&lt;/b&gt;</property>
 		  <property name="use_underline">True</property>
 		  <property name="relief">GTK_RELIEF_NORMAL</property>
 		  <property name="focus_on_click">True</property>
-		  <signal name="clicked" handler="OnConfConf_Spu2About"/>
+		  <signal name="clicked" handler="OnConfButton"/>
 		</widget>
 	      </child>
 	    </widget>
@@ -4146,7 +4146,7 @@ Configure them here.&lt;/b&gt;</property>
 		  <property name="use_underline">True</property>
 		  <property name="relief">GTK_RELIEF_NORMAL</property>
 		  <property name="focus_on_click">True</property>
-		  <signal name="clicked" handler="OnConfConf_Dev9Conf"/>
+		  <signal name="clicked" handler="OnConfButton"/>
 		</widget>
 	      </child>
 
@@ -4159,7 +4159,7 @@ Configure them here.&lt;/b&gt;</property>
 		  <property name="use_underline">True</property>
 		  <property name="relief">GTK_RELIEF_NORMAL</property>
 		  <property name="focus_on_click">True</property>
-		  <signal name="clicked" handler="OnConfConf_Dev9Test"/>
+		  <signal name="clicked" handler="OnConfButton"/>
 		</widget>
 	      </child>
 
@@ -4172,7 +4172,7 @@ Configure them here.&lt;/b&gt;</property>
 		  <property name="use_underline">True</property>
 		  <property name="relief">GTK_RELIEF_NORMAL</property>
 		  <property name="focus_on_click">True</property>
-		  <signal name="clicked" handler="OnConfConf_Dev9About"/>
+		  <signal name="clicked" handler="OnConfButton"/>
 		</widget>
 	      </child>
 	    </widget>
@@ -4256,7 +4256,7 @@ Configure them here.&lt;/b&gt;</property>
 		  <property name="use_underline">True</property>
 		  <property name="relief">GTK_RELIEF_NORMAL</property>
 		  <property name="focus_on_click">True</property>
-		  <signal name="clicked" handler="OnConfConf_CdvdConf"/>
+		  <signal name="clicked" handler="OnConfButton"/>
 		</widget>
 	      </child>
 
@@ -4269,7 +4269,7 @@ Configure them here.&lt;/b&gt;</property>
 		  <property name="use_underline">True</property>
 		  <property name="relief">GTK_RELIEF_NORMAL</property>
 		  <property name="focus_on_click">True</property>
-		  <signal name="clicked" handler="OnConfConf_CdvdTest"/>
+		  <signal name="clicked" handler="OnConfButton"/>
 		</widget>
 	      </child>
 
@@ -4282,7 +4282,7 @@ Configure them here.&lt;/b&gt;</property>
 		  <property name="use_underline">True</property>
 		  <property name="relief">GTK_RELIEF_NORMAL</property>
 		  <property name="focus_on_click">True</property>
-		  <signal name="clicked" handler="OnConfConf_CdvdAbout"/>
+		  <signal name="clicked" handler="OnConfButton"/>
 		</widget>
 	      </child>
 	    </widget>
@@ -4339,7 +4339,7 @@ Configure them here.&lt;/b&gt;</property>
 		  <property name="use_underline">True</property>
 		  <property name="relief">GTK_RELIEF_NORMAL</property>
 		  <property name="focus_on_click">True</property>
-		  <signal name="clicked" handler="OnConfConf_UsbConf"/>
+		  <signal name="clicked" handler="OnConfButton"/>
 		</widget>
 	      </child>
 
@@ -4352,7 +4352,7 @@ Configure them here.&lt;/b&gt;</property>
 		  <property name="use_underline">True</property>
 		  <property name="relief">GTK_RELIEF_NORMAL</property>
 		  <property name="focus_on_click">True</property>
-		  <signal name="clicked" handler="OnConfConf_UsbTest"/>
+		  <signal name="clicked" handler="OnConfButton"/>
 		</widget>
 	      </child>
 
@@ -4365,7 +4365,7 @@ Configure them here.&lt;/b&gt;</property>
 		  <property name="use_underline">True</property>
 		  <property name="relief">GTK_RELIEF_NORMAL</property>
 		  <property name="focus_on_click">True</property>
-		  <signal name="clicked" handler="OnConfConf_UsbAbout"/>
+		  <signal name="clicked" handler="OnConfButton"/>
 		</widget>
 	      </child>
 	    </widget>
@@ -4393,7 +4393,7 @@ Configure them here.&lt;/b&gt;</property>
 		  <property name="use_underline">True</property>
 		  <property name="relief">GTK_RELIEF_NORMAL</property>
 		  <property name="focus_on_click">True</property>
-		  <signal name="clicked" handler="OnConfConf_FWConf"/>
+		  <signal name="clicked" handler="OnConfButton"/>
 		</widget>
 	      </child>
 
@@ -4406,7 +4406,7 @@ Configure them here.&lt;/b&gt;</property>
 		  <property name="use_underline">True</property>
 		  <property name="relief">GTK_RELIEF_NORMAL</property>
 		  <property name="focus_on_click">True</property>
-		  <signal name="clicked" handler="OnConfConf_FWTest"/>
+		  <signal name="clicked" handler="OnConfButton"/>
 		</widget>
 	      </child>
 
@@ -4419,7 +4419,7 @@ Configure them here.&lt;/b&gt;</property>
 		  <property name="use_underline">True</property>
 		  <property name="relief">GTK_RELIEF_NORMAL</property>
 		  <property name="focus_on_click">True</property>
-		  <signal name="clicked" handler="OnConfConf_FWAbout"/>
+		  <signal name="clicked" handler="OnConfButton"/>
 		</widget>
 	      </child>
 	    </widget>
@@ -5059,47 +5059,47 @@ Version x.x</property>
 		  </child>
 
 		  <child>
-		    <widget class="GtkMenuItem" id="GtkMenuItem_Graphics">
+		    <widget class="GtkMenuItem" id="GtkMenuItem_GS">
 		      <property name="visible">True</property>
 		      <property name="label" translatable="yes">_Graphics</property>
 		      <property name="use_underline">True</property>
-		      <signal name="activate" handler="OnConf_Gs"/>
+		      <signal name="activate" handler="OnConf_Menu" last_modification_time="Fri, 06 Mar 2009 06:06:06 GMT"/>
 		    </widget>
 		  </child>
 
 		  <child>
-		    <widget class="GtkMenuItem" id="GtkMenuItem_Controllers">
+		    <widget class="GtkMenuItem" id="GtkMenuItem_PAD1">
 		      <property name="visible">True</property>
 		      <property name="label" translatable="yes">C_ontrollers</property>
 		      <property name="use_underline">True</property>
-		      <signal name="activate" handler="OnConf_Pads"/>
+		      <signal name="activate" handler="OnConf_Menu" last_modification_time="Fri, 06 Mar 2009 06:06:06 GMT"/>
 		    </widget>
 		  </child>
 
 		  <child>
-		    <widget class="GtkMenuItem" id="GtkMenuItem_Sound">
+		    <widget class="GtkMenuItem" id="GtkMenuItem_SPU2">
 		      <property name="visible">True</property>
 		      <property name="label" translatable="yes">_Sound</property>
 		      <property name="use_underline">True</property>
-		      <signal name="activate" handler="OnConf_Spu2"/>
+		      <signal name="activate" handler="OnConf_Menu" last_modification_time="Fri, 06 Mar 2009 06:06:06 GMT"/>
 		    </widget>
 		  </child>
 
 		  <child>
-		    <widget class="GtkMenuItem" id="GtkMenuItem_Cdvdrom">
+		    <widget class="GtkMenuItem" id="GtkMenuItem_CDVD">
 		      <property name="visible">True</property>
 		      <property name="label" translatable="yes">_Cdvdrom</property>
 		      <property name="use_underline">True</property>
-		      <signal name="activate" handler="OnConf_Cdvd"/>
+		      <signal name="activate" handler="OnConf_Menu" last_modification_time="Fri, 06 Mar 2009 06:06:06 GMT"/>
 		    </widget>
 		  </child>
 
 		  <child>
-		    <widget class="GtkMenuItem" id="GtkMenuItem_Dev9">
+		    <widget class="GtkMenuItem" id="GtkMenuItem_DEV9">
 		      <property name="visible">True</property>
 		      <property name="label" translatable="yes">D_ev9</property>
 		      <property name="use_underline">True</property>
-		      <signal name="activate" handler="OnConf_Dev9"/>
+		      <signal name="activate" handler="OnConf_Menu" last_modification_time="Fri, 06 Mar 2009 06:06:06 GMT"/>
 		    </widget>
 		  </child>
 
@@ -5108,7 +5108,7 @@ Version x.x</property>
 		      <property name="visible">True</property>
 		      <property name="label" translatable="yes">U_SB</property>
 		      <property name="use_underline">True</property>
-		      <signal name="activate" handler="OnConf_Usb"/>
+		      <signal name="activate" handler="OnConf_Menu" last_modification_time="Fri, 06 Mar 2009 06:06:06 GMT"/>
 		    </widget>
 		  </child>
 
@@ -5117,7 +5117,7 @@ Version x.x</property>
 		      <property name="visible">True</property>
 		      <property name="label" translatable="yes">Fire_Wire</property>
 		      <property name="use_underline">True</property>
-		      <signal name="activate" handler="OnConf_Fw"/>
+		      <signal name="activate" handler="OnConf_Menu" last_modification_time="Fri, 06 Mar 2009 06:06:06 GMT"/>
 		    </widget>
 		  </child>
 

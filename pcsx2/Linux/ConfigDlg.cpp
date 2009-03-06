@@ -47,98 +47,52 @@ static bool GetComboText(GtkWidget *combo, char plist[255][255], char *conf)
 	return TRUE;
 }
 
-static void ConfPlugin(PluginConf confs, char* plugin, const char* name)
+static void ConfPlugin(plugin_types type, plugin_callback call, bool pullcombo = true)
 {
 	void *drv;
-	void (*conf)();
-
-	GetComboText(confs.Combo, confs.plist, plugin);
-	drv = SysLoadLibrary( Path::Combine( Config.PluginsDir, plugin ).c_str() );
-	if (drv == NULL) return;
-//#ifndef LOCAL_PLUGIN_INIS
-//	chdir(Config.PluginsDir); /* change dirs so that plugins can find their config file*/
-//#endif
-
-	conf = (void (*)()) SysLoadSym(drv, name);
-	if (SysLibError() == NULL) conf();
-//#ifndef LOCAL_PLUGIN_INIS
-//	chdir(MAIN_DIR); /* change back*/
-//#endif
-	SysCloseLibrary(drv);
-}
-
-
-static void TestPlugin(PluginConf confs, char* plugin, const char* name)
-{
-	void *drv;
-	s32(* (*conf)())();
 	int ret = 0;
-
-	GetComboText(confs.Combo, confs.plist, plugin);
+	
+	PluginConf *confs = ConfS(type);
+	char* plugin = (char*)PluginName(type);
+	const char* name = PluginCallbackName(type, call);
+	
+	if (pullcombo) GetComboText(confs->Combo, confs->plist, plugin);
 	if (plugin == NULL) return;
 	drv = SysLoadLibrary( Path::Combine( Config.PluginsDir, plugin ).c_str() );
 	if (drv == NULL) return;
-	
-	conf = (s32(* (*)())()) SysLoadSym(drv, name);
-	if (SysLibError() == NULL) ret = (s32) conf();
-	SysCloseLibrary(drv);
 
-	if (ret == 0)
-		Msgbox::Alert("This plugin reports that should work correctly");
+	if (call != PLUGIN_TEST)
+	{
+		void (*conf)();
+		
+		conf = (void (*)()) SysLoadSym(drv, name);
+		if (SysLibError() == NULL) conf();
+		
+		SysCloseLibrary(drv);
+	}
 	else
-		Msgbox::Alert("This plugin reports that should not work correctly");
+	{
+		s32(* (*conf)())();
+		
+		conf = (s32(* (*)())()) SysLoadSym(drv, name);
+		if (SysLibError() == NULL) ret = (s32) conf();
+		
+		SysCloseLibrary(drv);
+		
+		if (ret == 0)
+			Msgbox::Alert("This plugin reports that should work correctly");
+		else
+			Msgbox::Alert("This plugin reports that should not work correctly");
+	}
 }
 
-void OnConf_Gs(GtkMenuItem *menuitem, gpointer user_data)
+void OnConf_Menu(GtkMenuItem *menuitem, gpointer user_data)
 {
-	char file[255];
-
-//	chdir(Config.PluginsDir);
+	char *name = gtk_widget_get_name(GTK_WIDGET(menuitem));
+	plugin_types type = strToPluginType(name);
+	
 	gtk_widget_set_sensitive(MainWindow, FALSE);
-	GSconfigure();
-	gtk_widget_set_sensitive(MainWindow, TRUE);
-}
-
-void OnConf_Pads(GtkMenuItem *menuitem, gpointer user_data)
-{
-	gtk_widget_set_sensitive(MainWindow, FALSE);
-	PAD1configure();
-	if (strcmp(Config.PAD1, Config.PAD2)) PAD2configure();
-	gtk_widget_set_sensitive(MainWindow, TRUE);
-}
-
-void OnConf_Spu2(GtkMenuItem *menuitem, gpointer user_data)
-{
-	gtk_widget_set_sensitive(MainWindow, FALSE);
-	SPU2configure();
-	gtk_widget_set_sensitive(MainWindow, TRUE);
-}
-
-void OnConf_Cdvd(GtkMenuItem *menuitem, gpointer user_data)
-{
-	gtk_widget_set_sensitive(MainWindow, FALSE);
-	CDVDconfigure();
-	gtk_widget_set_sensitive(MainWindow, TRUE);
-}
-
-void OnConf_Dev9(GtkMenuItem *menuitem, gpointer user_data)
-{
-	gtk_widget_set_sensitive(MainWindow, FALSE);
-	DEV9configure();
-	gtk_widget_set_sensitive(MainWindow, TRUE);
-}
-
-void OnConf_Usb(GtkMenuItem *menuitem, gpointer user_data)
-{
-	gtk_widget_set_sensitive(MainWindow, FALSE);
-	USBconfigure();
-	gtk_widget_set_sensitive(MainWindow, TRUE);
-}
-
-void OnConf_Fw(GtkMenuItem *menuitem, gpointer user_data)
-{
-	gtk_widget_set_sensitive(MainWindow, FALSE);
-	FWconfigure();
+	ConfPlugin(type, PLUGIN_CONFIG, false);
 	gtk_widget_set_sensitive(MainWindow, TRUE);
 }
 
@@ -177,26 +131,16 @@ void SetActiveComboItem(GtkComboBox *widget, char plist[255][255], GList *list, 
 
 void OnConfConf_Ok(GtkButton *button, gpointer user_data)
 {
+	plugin_types type;
 	applychanges = TRUE;
 
-	if (!GetComboText(GSConfS.Combo, GSConfS.plist, Config.GS))
-		applychanges = FALSE;
-	if (!GetComboText(PAD1ConfS.Combo, PAD1ConfS.plist, Config.PAD1))
-		applychanges = FALSE;
-	if (!GetComboText(PAD2ConfS.Combo, PAD2ConfS.plist, Config.PAD2))
-		applychanges = FALSE;
-	if (!GetComboText(SPU2ConfS.Combo, SPU2ConfS.plist, Config.SPU2))
-		applychanges = FALSE;
-	if (!GetComboText(CDVDConfS.Combo, CDVDConfS.plist, Config.CDVD))
-		applychanges = FALSE;
-	if (!GetComboText(DEV9ConfS.Combo, DEV9ConfS.plist, Config.DEV9))
-		applychanges = FALSE;
-	if (!GetComboText(USBConfS.Combo,  USBConfS.plist,  Config.USB))
-		applychanges = FALSE;
-	if (!GetComboText(FWConfS.Combo,   FWConfS.plist,   Config.FW))
-		applychanges = FALSE;
-	if (!GetComboText(BiosConfS.Combo, BiosConfS.plist, Config.Bios))
-		applychanges = FALSE;
+	for (type = GS; type <= BIOS; type = type + 1)
+	{
+		PluginConf *confs = ConfS(type);
+		
+		if (!GetComboText(confs->Combo, confs->plist, PluginName(type)))
+			applychanges = FALSE;
+	}
 
 	SaveConfig();
 	SysRestorableReset();
@@ -207,126 +151,17 @@ void OnConfConf_Ok(GtkButton *button, gpointer user_data)
 	gtk_main_quit();
 }
 
-void OnConfConf_GsConf(GtkButton *button, gpointer user_data)
+void OnConfButton(GtkButton *button, gpointer user_data)
 {
-	ConfPlugin(GSConfS, Config.GS, "GSconfigure");
+	char *name = gtk_widget_get_name(GTK_WIDGET(button));
+	plugin_types type = strToPluginType(name);
+	plugin_callback call = strToPluginCall(name);
+	
+	// Don't uncomment till fixing CDVDIso's dialog box.
+	//gtk_widget_set_sensitive(ConfDlg, FALSE);
+	ConfPlugin(type, call, false);
+	//gtk_widget_set_sensitive(ConfDlg, TRUE);
 }
-
-void OnConfConf_GsTest(GtkButton *button, gpointer user_data)
-{
-	TestPlugin(GSConfS, Config.GS, "GStest");
-}
-
-void OnConfConf_GsAbout(GtkButton *button, gpointer user_data)
-{
-	ConfPlugin(GSConfS, Config.GS, "GSabout");
-}
-
-void OnConfConf_Pad1Conf(GtkButton *button, gpointer user_data)
-{
-	ConfPlugin(PAD1ConfS, Config.PAD1, "PADconfigure");
-}
-
-void OnConfConf_Pad1Test(GtkButton *button, gpointer user_data)
-{
-	TestPlugin(PAD1ConfS, Config.PAD1, "PADtest");
-}
-
-void OnConfConf_Pad1About(GtkButton *button, gpointer user_data)
-{
-	ConfPlugin(PAD1ConfS, Config.PAD1, "PADabout");
-}
-
-void OnConfConf_Pad2Conf(GtkButton *button, gpointer user_data)
-{
-	ConfPlugin(PAD2ConfS, Config.PAD2, "PADconfigure");
-}
-
-void OnConfConf_Pad2Test(GtkButton *button, gpointer user_data)
-{
-	TestPlugin(PAD2ConfS, Config.PAD2, "PADtest");
-}
-
-void OnConfConf_Pad2About(GtkButton *button, gpointer user_data)
-{
-	ConfPlugin(PAD2ConfS, Config.PAD2, "PADabout");
-}
-
-void OnConfConf_Spu2Conf(GtkButton *button, gpointer user_data)
-{
-	ConfPlugin(SPU2ConfS, Config.SPU2, "SPU2configure");
-}
-
-void OnConfConf_Spu2Test(GtkButton *button, gpointer user_data)
-{
-	TestPlugin(SPU2ConfS, Config.SPU2, "SPU2test");
-}
-
-void OnConfConf_Spu2About(GtkButton *button, gpointer user_data)
-{
-	ConfPlugin(SPU2ConfS, Config.SPU2, "SPU2about");
-}
-
-void OnConfConf_CdvdConf(GtkButton *button, gpointer user_data)
-{
-	ConfPlugin(CDVDConfS, Config.CDVD, "CDVDconfigure");
-}
-
-void OnConfConf_CdvdTest(GtkButton *button, gpointer user_data)
-{
-	TestPlugin(CDVDConfS, Config.CDVD, "CDVDtest");
-}
-
-void OnConfConf_CdvdAbout(GtkButton *button, gpointer user_data)
-{
-	ConfPlugin(CDVDConfS, Config.CDVD, "CDVDabout");
-}
-
-void OnConfConf_Dev9Conf(GtkButton *button, gpointer user_data)
-{
-	ConfPlugin(DEV9ConfS, Config.DEV9, "DEV9configure");
-}
-
-void OnConfConf_Dev9Test(GtkButton *button, gpointer user_data)
-{
-	TestPlugin(DEV9ConfS, Config.DEV9, "DEV9test");
-}
-
-void OnConfConf_Dev9About(GtkButton *button, gpointer user_data)
-{
-	ConfPlugin(DEV9ConfS, Config.DEV9, "DEV9about");
-}
-
-void OnConfConf_UsbConf(GtkButton *button, gpointer user_data)
-{
-	ConfPlugin(USBConfS, Config.USB, "USBconfigure");
-}
-
-void OnConfConf_UsbTest(GtkButton *button, gpointer user_data)
-{
-	TestPlugin(USBConfS, Config.USB, "USBtest");
-}
-
-void OnConfConf_UsbAbout(GtkButton *button, gpointer user_data)
-{
-	ConfPlugin(USBConfS, Config.USB, "USBabout");
-}
-
-void OnConfConf_FWConf(GtkButton *button, gpointer user_data)
-{
-	ConfPlugin(FWConfS, Config.FW, "FWconfigure");
-}
-
-void OnConfConf_FWTest(GtkButton *button, gpointer user_data)
-{
-	TestPlugin(FWConfS, Config.FW, "FWtest");
-}
-
-void OnConfConf_FWAbout(GtkButton *button, gpointer user_data)
-{
-	ConfPlugin(FWConfS, Config.FW, "FWabout");
-}
-
 
 void SetComboToGList(GtkComboBox *widget, GList *list)
 {
@@ -349,29 +184,22 @@ void SetComboToGList(GtkComboBox *widget, GList *list)
 	gtk_combo_box_set_active(GTK_COMBO_BOX(widget), 0);
 }
 
-static void ConfCreatePConf(const char *name, PluginConf *confs, char *config)
-{
-	char tmp[50];
-
-	sprintf(tmp, "GtkCombo_%s", name);
-	confs->Combo = lookup_widget(ConfDlg, tmp);
-	SetComboToGList(GTK_COMBO_BOX(confs->Combo), confs->PluginNameList);
-	FindComboText(confs->Combo, confs->plist, confs->PluginNameList, config);
-}
-
 void UpdateConfDlg()
 {
+	plugin_types type;
 	FindPlugins();
 
-	ConfCreatePConf("Gs", &GSConfS, Config.GS);
-	ConfCreatePConf("Pad1", &PAD1ConfS, Config.PAD1);
-	ConfCreatePConf("Pad2", &PAD2ConfS, Config.PAD2);
-	ConfCreatePConf("Spu2", &SPU2ConfS, Config.SPU2);
-	ConfCreatePConf("Cdvd", &CDVDConfS, Config.CDVD);
-	ConfCreatePConf("Dev9", &DEV9ConfS, Config.DEV9);
-	ConfCreatePConf("Usb",  &USBConfS, Config.USB);
-	ConfCreatePConf("FW",  &FWConfS, Config.FW);
-	ConfCreatePConf("Bios", &BiosConfS, Config.Bios);
+	for (type = GS; type <= BIOS; type = type + 1)
+	{
+		char tmp[50];
+		PluginConf *confs = ConfS(type);
+		
+		sprintf(tmp, "GtkCombo_%s", PluginTypeToStr(type));
+		confs->Combo = lookup_widget(ConfDlg, tmp);
+		SetComboToGList(GTK_COMBO_BOX(confs->Combo), confs->PluginNameList);
+		FindComboText(confs->Combo, confs->plist, confs->PluginNameList, PluginName(type));
+		
+	}
 }
 
 void GetDirectory(GtkWidget *topWindow, const char *message, char *reply)
@@ -419,7 +247,6 @@ void OnConfConf_BiosPath(GtkButton *button, gpointer user_data)
 
 void OnConf_Conf(GtkMenuItem *menuitem, gpointer user_data)
 {
-	FindPlugins();
 
 	ConfDlg = create_ConfDlg();
 	gtk_window_set_title(GTK_WINDOW(ConfDlg), "Configuration");
@@ -446,13 +273,15 @@ void FindPlugins()
 	struct dirent *ent;
 	void *Handle;
 	char plugin[g_MaxPath], name[g_MaxPath];
+	plugin_types type;
 
-	GSConfS.plugins  = 0; CDVDConfS.plugins = 0; DEV9ConfS.plugins = 0; 
-	PAD1ConfS.plugins = 0; PAD2ConfS.plugins = 0; SPU2ConfS.plugins = 0; 
-	USBConfS.plugins = 0; FWConfS.plugins = 0; BiosConfS.plugins = 0;
-	GSConfS.PluginNameList  = NULL; CDVDConfS.PluginNameList = NULL; DEV9ConfS.PluginNameList = NULL;
-	PAD1ConfS.PluginNameList = NULL; PAD2ConfS.PluginNameList = NULL; SPU2ConfS.PluginNameList = NULL;
-	USBConfS.PluginNameList = NULL; FWConfS.PluginNameList = NULL; BiosConfS.PluginNameList = NULL;
+	for (type = GS; type <= BIOS; type = type + 1)
+	{
+		PluginConf *confs = ConfS(type);
+		
+		confs->plugins = 0;
+		confs->PluginNameList = NULL;
+	}
 
 	dir = opendir(Config.PluginsDir);
 	if (dir == NULL)

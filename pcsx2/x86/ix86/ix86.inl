@@ -3207,7 +3207,7 @@ emitterT void ePUSHFD( void ) { write8<I>( 0x9C ); }
 /* popfd */
 emitterT void ePOPFD( void ) { write8<I>( 0x9D ); }
 
-emitterT void eRET( void ) { /*write8<I>( 0xf3 );  /*<-- K8 opt?*/ write8<I>( 0xC3 ); }
+emitterT void eRET( void ) { /*write8<I>( 0xf3 );  <-- K8 opt?*/ write8<I>( 0xC3 ); }
 
 emitterT void eCBW( void ) { write16<I>( 0x9866 );  }
 emitterT void eCWD( void )  { write8<I>( 0x98 ); }
