@@ -23,6 +23,8 @@
 #include "ix86/ix86.h"
 #include "iR5900.h"
 #include "iFPU.h"
+
+/* Version of the FPU that emulates an exponent of 0xff and overflow/underflow flags */
  
 //set overflow flag (set only if FPU_RESULT is 1)
 #define FPU_FLAGS_OVERFLOW 1 
@@ -32,9 +34,6 @@
 //if 1, result is not clamped (MORE correct,	
 //but can cause problems due to insuffecient clamping levels in the VUs)
 #define FPU_RESULT 1 
- 
-//should be more correct when 1. see madd/msub documentation
-#define FPU_CLAMPISH_MADD_MSUB 1 
  
 //also impacts other aspects of DIV/R/SQRT correctness
 #define FPU_FLAGS_ID 1 
@@ -138,6 +137,12 @@ void recCFC1(void)
  
 	MOV32MtoR( EAX, (uptr)&fpuRegs.fprc[ _Fs_ ] );
 	_deleteEEreg(_Rt_, 0);
+	
+	if (_Fs_ == 31)
+	{
+		AND32ItoR(EAX, 0x0083c078); //remove always-zero bits
+		OR32ItoR(EAX,  0x01000001); //set always-one bits
+	}
  
 	if(EEINST_ISLIVE1(_Rt_)) 
 	{
@@ -150,6 +155,7 @@ void recCFC1(void)
 		EEINST_RESETHASLIVE1(_Rt_);
 		MOV32RtoM( (uptr)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ], EAX );
 	}
+	
 }
  
 void recCTC1( void )
@@ -439,8 +445,13 @@ void ToDouble(int reg)
 // converts really large normal numbers to PS2 signed max
 // converts really small normal numbers to zero (flush)
 // doesn't handle inf/nan/denormal
-void ToPS2FPU_Full(int reg, int flags, int absreg)
+void ToPS2FPU_Full(int reg, bool flags, int absreg, bool acc)
 {
+	if (flags)
+		AND32ItoM((uptr)&fpuRegs.fprc[31], ~(FPUflagO | FPUflagU));
+	if (flags && acc)
+		AND32ItoM((uptr)&fpuRegs.ACCflag, ~1);
+
 	SSE_MOVAPS_XMM_to_XMM(absreg, reg);
 	SSE2_ANDPD_M128_to_XMM(absreg, (uptr)&dbl_s_pos); 
  
@@ -467,6 +478,8 @@ void ToPS2FPU_Full(int reg, int flags, int absreg)
 	SSE_ORPS_M128_to_XMM(reg, (uptr)&s_pos); //clamp
 	if (flags && FPU_FLAGS_OVERFLOW)
 		OR32ItoM((uptr)&fpuRegs.fprc[31], (FPUflagO | FPUflagSO));
+	if (flags && FPU_FLAGS_OVERFLOW && acc)
+		OR32ItoM((uptr)&fpuRegs.ACCflag, 1);
 	u8 *end3 = JMP8(0);
  
 	x86SetJ8(to_underflow);
@@ -488,10 +501,10 @@ void ToPS2FPU_Full(int reg, int flags, int absreg)
 	x86SetJ8(end3);
 }
  
-void ToPS2FPU(int reg, int flags, int absreg)
+void ToPS2FPU(int reg, bool flags, int absreg, bool acc)
 {
 	if (FPU_RESULT)
-		ToPS2FPU_Full(reg, flags, absreg);
+		ToPS2FPU_Full(reg, flags, absreg, acc);
 	else
 	{
 		SSE2_CVTSD2SS_XMM_to_XMM(reg, reg); //clamp
@@ -530,9 +543,7 @@ void SetMaxValue(int regd)
  
 #define ALLOC_ACC(areg) { areg = _allocTempXMMreg(XMMT_FPS, -1);  GET_ACC(areg); }
  
-//doesn't hurt to clear flags even if not emulated
-#define CLEAR_OU_FLAGS { if (FPU_FLAGS_OVERFLOW || FPU_FLAGS_UNDERFLOW) \
-							AND32ItoM((uptr)&fpuRegs.fprc[31], ~(FPUflagO|FPUflagU)); }
+#define CLEAR_OU_FLAGS { AND32ItoM((uptr)&fpuRegs.fprc[31], ~(FPUflagO | FPUflagU)); }
  
  
 //------------------------------------------------------------------
@@ -638,7 +649,7 @@ void FPU_ADD_SUB(int tempd, int tempt) //tempd and tempt are overwritten, they a
 static void (*recFPUOpXMM_to_XMM[] )(x86SSERegType, x86SSERegType) = {
 	SSE2_ADDSD_XMM_to_XMM, SSE2_MULSD_XMM_to_XMM, SSE2_MAXSD_XMM_to_XMM, SSE2_MINSD_XMM_to_XMM, SSE2_SUBSD_XMM_to_XMM };
  
-void recFPUOp(int info, int regd, int op) 
+void recFPUOp(int info, int regd, int op, bool acc) 
 {
 	int sreg, treg;
 	ALLOC_S(sreg); ALLOC_T(treg);
@@ -648,11 +659,9 @@ void recFPUOp(int info, int regd, int op)
  
 	ToDouble(sreg); ToDouble(treg);
  
-	CLEAR_OU_FLAGS;
- 
 	recFPUOpXMM_to_XMM[op](sreg, treg);
  
-	ToPS2FPU(sreg, 1, treg);
+	ToPS2FPU(sreg, true, treg, acc);
 	SSE_MOVSS_XMM_to_XMM(regd, sreg);
  
 	_freeXMMreg(sreg); _freeXMMreg(treg);
@@ -665,14 +674,14 @@ void recFPUOp(int info, int regd, int op)
 //------------------------------------------------------------------
 void recADD_S_xmm(int info)
 {
-    recFPUOp(info, EEREC_D, 0);
+    recFPUOp(info, EEREC_D, 0, false);
 }
  
 FPURECOMPILE_CONSTCODE(ADD_S, XMMINFO_WRITED|XMMINFO_READS|XMMINFO_READT);
  
 void recADDA_S_xmm(int info)
 {
-    recFPUOp(info, EEREC_ACC, 0);
+    recFPUOp(info, EEREC_ACC, 0, true);
 }
  
 FPURECOMPILE_CONSTCODE(ADDA_S, XMMINFO_WRITEACC|XMMINFO_READS|XMMINFO_READT);
@@ -681,7 +690,7 @@ FPURECOMPILE_CONSTCODE(ADDA_S, XMMINFO_WRITEACC|XMMINFO_READS|XMMINFO_READT);
 //------------------------------------------------------------------
 // BC1x XMM
 //------------------------------------------------------------------
- 
+ /*
 static void _setupBranchTest()
 {
 	_eeFlushAllUnused();
@@ -716,7 +725,7 @@ void recBC1TL( void )
 {
 	_setupBranchTest();
 	recDoBranchImm_Likely(JZ32(0));
-}
+}*/
 //------------------------------------------------------------------
  
 //TOKNOW : how does C.??.S behave with denormals?
@@ -747,13 +756,11 @@ void recC_EQ_xmm(int info)
 }
  
 FPURECOMPILE_CONSTCODE(C_EQ, XMMINFO_READS|XMMINFO_READT);
-//REC_FPUFUNC(C_EQ);
  
-void recC_F()
+/*void recC_F()
 {
 	AND32ItoM( (uptr)&fpuRegs.fprc[31], ~FPUflagC );
-}
-//REC_FPUFUNC(C_F);
+}*/
  
 void recC_LE_xmm(int info )
 {
@@ -878,7 +885,7 @@ void recDIVhelper1(int regd, int regt) // Sets flags
  
 	SSE2_DIVSD_XMM_to_XMM(regd, regt);
  
-	ToPS2FPU(regd, 0, regt);
+	ToPS2FPU(regd, false, regt, false);
  
 	x86SetJ32(bjmp32);
  
@@ -892,7 +899,7 @@ void recDIVhelper2(int regd, int regt) // Doesn't sets flags
  
 	SSE2_DIVSD_XMM_to_XMM(regd, regt);
  
-	ToPS2FPU(regd, 0, regt);
+	ToPS2FPU(regd, false, regt, false);
 }
  
 void recDIV_S_xmm(int info)
@@ -934,147 +941,79 @@ FPURECOMPILE_CONSTCODE(DIV_S, XMMINFO_WRITED|XMMINFO_READS|XMMINFO_READT);
 //------------------------------------------------------------------
 // MADD/MSUB XMM
 //------------------------------------------------------------------
- 
-// currently : flags might not be set too correctly (underflows)
-void recMaddsub(int info, int regd, int op)
+
+// Unlike what the documentation implies, it seems that MADD/MSUB support all numbers just like other operations
+// The complex overflow conditions the document describes apparently test whether the multiplication's result
+// has overflowed and whether the last operation that used ACC as a destination has overflowed.
+// For example,   { adda.s -MAX, 0.0 ; madd.s fd, MAX, 1.0 } -> fd = 0
+// while          { adda.s -MAX, -MAX ; madd.s fd, MAX, 1.0 } -> fd = -MAX
+// (where MAX is 0x7fffffff and -MAX is 0xffffffff)
+void recMaddsub(int info, int regd, int op, bool acc)
 {	
-	if (FPU_CLAMPISH_MADD_MSUB)
-	{
-		int sreg, treg;
- 
-		ALLOC_S(sreg); ALLOC_T(treg);
-		ToDouble(sreg); ToDouble(treg);
- 
-		//CLEAR_OU_FLAGS; //no point, done later again
- 
-		SSE2_MULSD_XMM_to_XMM(sreg, treg);
- 
-		ToPS2FPU(sreg, 1, treg);
-		CLEAR_OU_FLAGS; //again
- 
-		GET_ACC(treg); 
- 
-		if (FPU_ADD_SUB_HACK) //ADD or SUB
-			FPU_ADD_SUB(treg, sreg); //might be problematic for something!!!!
- 
- 
-		//			TEST RESULT AND ACCUMULATOR FOR "INFINITIES", RETURN CORRECTLY-SIGNED "INFINITY" IF NEEDED.
-		//			OTHERWISE, CONVERT TO DOUBLE (NO NEED FOR SPECIAL CONVERSION)
- 
-		SSE_UCOMISS_M32_to_XMM(sreg, (uptr)&pos_inf); //sets ZF if equal or uncomparable
-		u8 *mulovf = JE8(0); 
-		SSE_UCOMISS_M32_to_XMM(sreg, (uptr)&neg_inf); 
-		u8 *mulovf2 = JE8(0); 	
-		SSE2_CVTSS2SD_XMM_to_XMM(sreg, sreg); //else, simply convert
- 
-		SSE_UCOMISS_M32_to_XMM(treg, (uptr)&pos_inf); //sets ZF if equal or uncomparable
-		u8 *accovf = JE8(0); 
-		SSE_UCOMISS_M32_to_XMM(treg, (uptr)&neg_inf); 
-		u8 *accovf2 = JE8(0); 	
-		SSE2_CVTSS2SD_XMM_to_XMM(treg, treg); //else, simply convert
-		u8 *operation = JMP8(0);
- 
-		x86SetJ8(mulovf);
-		x86SetJ8(mulovf2);
-		if (op == 1) //sub
-			SSE_XORPS_M128_to_XMM(sreg, (uptr)&s_neg);
-		SSE_MOVAPS_XMM_to_XMM(treg, sreg); 
-		SetMaxValue(treg); //clamp and continue to set ovf flag below
- 
-		x86SetJ8(accovf);
-		x86SetJ8(accovf2);
-		if (FPU_FLAGS_OVERFLOW)  //do not SetMaxValue (maybe...)
-			OR32ItoM((uptr)&fpuRegs.fprc[31], FPUflagO | FPUflagSO);
-		u32 *skipall = JMP32(0);
- 
-		x86SetJ8(operation);
- 
- 
-		//			PERFORM THE ACCUMULATION AND TEST RESULT. CONVERT TO SINGLE (DIFFERENT THAN USUAL)
- 
-		if (op == 1)
-			SSE2_SUBSD_XMM_to_XMM(treg, sreg);
-		else
-			SSE2_ADDSD_XMM_to_XMM(treg, sreg);
- 
-		//test for overflow and underflow (different than usual)
-		int absreg = sreg;
- 
-		SSE_MOVAPS_XMM_to_XMM(absreg, treg);
-		SSE2_ANDPD_M128_to_XMM(absreg, (uptr)&dbl_s_pos); 
- 
-		SSE2_UCOMISD_M64_to_XMM(absreg, (uptr)&dbl_cvt_overflow);
-		u8 *to_overflow = JAE8(0);
- 
-		SSE2_UCOMISD_M64_to_XMM(absreg, (uptr)&dbl_underflow);
-		u8 *to_underflow = JB8(0); 
- 
-		SSE2_CVTSD2SS_XMM_to_XMM(treg, treg); //simply convert
-		u8 *end = JMP8(0);
- 
-		x86SetJ8(to_overflow); 
-		SSE2_CVTSD2SS_XMM_to_XMM(treg, treg); 
-		SetMaxValue(treg);
-		if (FPU_FLAGS_OVERFLOW)
-			OR32ItoM((uptr)&fpuRegs.fprc[31], (FPUflagO | FPUflagSO));
-		u8 *end2 = JMP8(0);
- 
-		x86SetJ8(to_underflow);
-		if (FPU_FLAGS_UNDERFLOW) //set underflow flags if not zero
-		{
-			SSE2_XORPD_XMM_to_XMM(absreg, absreg);
-			SSE2_UCOMISD_XMM_to_XMM(treg, absreg);
-			u8 *is_zero = JE8(0);
- 
-			OR32ItoM((uptr)&fpuRegs.fprc[31], (FPUflagU | FPUflagSU));
- 
-			x86SetJ8(is_zero);
-		}
-		SSE2_CVTSD2SS_XMM_to_XMM(treg, treg);
-		SSE_ANDPS_M128_to_XMM(treg, (uptr)&s_neg); //flush to zero
- 
-		x86SetJ8(end);
-		x86SetJ8(end2);
-		x86SetJ32(skipall);
- 
-		SSE_MOVSS_XMM_to_XMM(regd, treg);
- 
-		_freeXMMreg(sreg); _freeXMMreg(treg);
-	}
+	int sreg, treg;
+
+	ALLOC_S(sreg); ALLOC_T(treg);
+	ToDouble(sreg); ToDouble(treg);
+
+	SSE2_MULSD_XMM_to_XMM(sreg, treg);
+
+	ToPS2FPU(sreg, true, treg, false); 
+	GET_ACC(treg); 
+
+	if (FPU_ADD_SUB_HACK) //ADD or SUB
+		FPU_ADD_SUB(treg, sreg); //might be problematic for something!!!!
+
+	//          TEST FOR ACC/MUL OVERFLOWS, PROPOGATE THEM IF THEY OCCUR
+
+	TEST32ItoM((uptr)&fpuRegs.fprc[31], FPUflagO);
+	u8 *mulovf = JNZ8(0); 	
+	ToDouble(sreg); //else, convert
+
+	TEST32ItoM((uptr)&fpuRegs.ACCflag, 1);
+	u8 *accovf = JNZ8(0); 	
+	ToDouble(treg); //else, convert
+	u8 *operation = JMP8(0);
+
+	x86SetJ8(mulovf);
+	if (op == 1) //sub
+		SSE_XORPS_M128_to_XMM(sreg, (uptr)&s_neg);
+	SSE_MOVAPS_XMM_to_XMM(treg, sreg);  //fall through below
+
+	x86SetJ8(accovf);
+	SetMaxValue(treg); //just in case... I think it has to be a MaxValue already here
+	CLEAR_OU_FLAGS; //clear U flag
+	if (FPU_FLAGS_OVERFLOW) 
+		OR32ItoM((uptr)&fpuRegs.fprc[31], FPUflagO | FPUflagSO);
+	if (FPU_FLAGS_OVERFLOW && acc) 
+		OR32ItoM((uptr)&fpuRegs.ACCflag, 1);
+	u32 *skipall = JMP32(0);
+
+	//			PERFORM THE ACCUMULATION AND TEST RESULT. CONVERT TO SINGLE 
+
+	x86SetJ8(operation);
+	if (op == 1)
+		SSE2_SUBSD_XMM_to_XMM(treg, sreg);
 	else
-	{
-		int sreg, treg;
-		ALLOC_S(sreg); ALLOC_T(treg);
-		ToDouble(sreg); ToDouble(treg);
- 
-		CLEAR_OU_FLAGS;
- 
-		SSE2_MULSD_XMM_to_XMM(sreg, treg);
- 
-		GET_ACC(treg); ToDouble(treg);
- 
-		if (op == 1)
-			SSE2_SUBSD_XMM_to_XMM(treg, sreg);
-		else
-			SSE2_ADDSD_XMM_to_XMM(treg, sreg);
- 
-		ToPS2FPU(treg, 1, sreg);
-		SSE_MOVSS_XMM_to_XMM(regd, treg);
- 
-		_freeXMMreg(sreg); _freeXMMreg(treg);
-	}
+		SSE2_ADDSD_XMM_to_XMM(treg, sreg);
+
+	ToPS2FPU(treg, true, sreg, acc);
+	x86SetJ32(skipall);
+
+	SSE_MOVSS_XMM_to_XMM(regd, treg);
+
+	_freeXMMreg(sreg); _freeXMMreg(treg);
 }
  
 void recMADD_S_xmm(int info)
 {
-	recMaddsub(info, EEREC_D, 0);
+	recMaddsub(info, EEREC_D, 0, false);
 }
  
 FPURECOMPILE_CONSTCODE(MADD_S, XMMINFO_WRITED|XMMINFO_READACC|XMMINFO_READS|XMMINFO_READT);
  
 void recMADDA_S_xmm(int info)
 {
-	recMaddsub(info, EEREC_ACC, 0);
+	recMaddsub(info, EEREC_ACC, 0, true);
 }
  
 FPURECOMPILE_CONSTCODE(MADDA_S, XMMINFO_WRITEACC|XMMINFO_READACC|XMMINFO_READS|XMMINFO_READT);
@@ -1088,14 +1027,14 @@ FPURECOMPILE_CONSTCODE(MADDA_S, XMMINFO_WRITEACC|XMMINFO_READACC|XMMINFO_READS|X
 //TOKNOW : handles denormals like VU, maybe?
 void recMAX_S_xmm(int info)
 {
-    recFPUOp(info, EEREC_D, 2);
+    recFPUOp(info, EEREC_D, 2, false);
 }
  
 FPURECOMPILE_CONSTCODE(MAX_S, XMMINFO_WRITED|XMMINFO_READS|XMMINFO_READT);
  
 void recMIN_S_xmm(int info)
 {
-    recFPUOp(info, EEREC_D, 3);
+    recFPUOp(info, EEREC_D, 3, false);
 }
  
 FPURECOMPILE_CONSTCODE(MIN_S, XMMINFO_WRITED|XMMINFO_READS|XMMINFO_READT);
@@ -1120,33 +1059,32 @@ FPURECOMPILE_CONSTCODE(MOV_S, XMMINFO_WRITED|XMMINFO_READS);
  
 void recMSUB_S_xmm(int info)
 {
-	recMaddsub(info, EEREC_D, 1);
+	recMaddsub(info, EEREC_D, 1, false);
 }
  
 FPURECOMPILE_CONSTCODE(MSUB_S, XMMINFO_WRITED|XMMINFO_READACC|XMMINFO_READS|XMMINFO_READT);
  
 void recMSUBA_S_xmm(int info)
 {
-	recMaddsub(info, EEREC_ACC, 1);
+	recMaddsub(info, EEREC_ACC, 1, true);
 }
  
 FPURECOMPILE_CONSTCODE(MSUBA_S, XMMINFO_WRITEACC|XMMINFO_READACC|XMMINFO_READS|XMMINFO_READT);
 //------------------------------------------------------------------
- 
- 
+
 //------------------------------------------------------------------
 // MUL XMM
 //------------------------------------------------------------------
 void recMUL_S_xmm(int info)
 {			
-    recFPUOp(info, EEREC_D, 1); 
+	recFPUOp(info, EEREC_D, 1, false); 
 }
  
 FPURECOMPILE_CONSTCODE(MUL_S, XMMINFO_WRITED|XMMINFO_READS|XMMINFO_READT);
  
 void recMULA_S_xmm(int info) 
 { 
-	recFPUOp(info, EEREC_ACC, 1);
+	recFPUOp(info, EEREC_ACC, 1, true);
 }
  
 FPURECOMPILE_CONSTCODE(MULA_S, XMMINFO_WRITEACC|XMMINFO_READS|XMMINFO_READT);
@@ -1175,7 +1113,7 @@ FPURECOMPILE_CONSTCODE(NEG_S, XMMINFO_WRITED|XMMINFO_READS);
  
 void recSUB_S_xmm(int info)
 {
-	recFPUOp(info, EEREC_D, 4);
+	recFPUOp(info, EEREC_D, 4, false);
 }
  
 FPURECOMPILE_CONSTCODE(SUB_S, XMMINFO_WRITED|XMMINFO_READS|XMMINFO_READT);
@@ -1183,7 +1121,7 @@ FPURECOMPILE_CONSTCODE(SUB_S, XMMINFO_WRITED|XMMINFO_READS|XMMINFO_READT);
  
 void recSUBA_S_xmm(int info) 
 { 
-	recFPUOp(info, EEREC_ACC, 4);
+	recFPUOp(info, EEREC_ACC, 4, true);
 }
  
 FPURECOMPILE_CONSTCODE(SUBA_S, XMMINFO_WRITEACC|XMMINFO_READS|XMMINFO_READT);
@@ -1243,7 +1181,7 @@ void recSQRT_S_xmm(int info)
  
 	SSE2_SQRTSD_XMM_to_XMM(EEREC_D, EEREC_D);
  
-	ToPS2FPU(EEREC_D, 0, t1reg);
+	ToPS2FPU(EEREC_D, false, t1reg, false);
  
 	x86SetJ32(pjmpx);
  
@@ -1278,7 +1216,7 @@ void recRSQRThelper1(int regd, int regt) // Preforms the RSQRT function when reg
 	SSE_MOVMSKPS_XMM_to_R32(tempReg, t1reg);
 	AND32ItoR(tempReg, 1);  //Check sign (if regt == zero, sign will be set)
 	pjmp1 = JZ8(0); //Skip if not set
-		OR32ItoM((uptr)&fpuRegs.fprc[31], FPUflagD|FPUflagSD); // Set D and SD flags
+		OR32ItoM((uptr)&fpuRegs.fprc[31], FPUflagD|FPUflagSD); // Set D and SD flags (even when 0/0)
 		SSE_XORPS_XMM_to_XMM(regd, regt); // Make regd Positive or Negative
 		SetMaxValue(regd); //clamp to max
 		pjmp32 = JMP32(0);
@@ -1297,7 +1235,7 @@ void recRSQRThelper1(int regd, int regt) // Preforms the RSQRT function when reg
 	SSE2_SQRTSD_XMM_to_XMM(regt, regt);
 	SSE2_DIVSD_XMM_to_XMM(regd, regt);
  
-	ToPS2FPU(regd, 0, regt);
+	ToPS2FPU(regd, false, regt, false);
 	x86SetJ32(pjmp32);
  
 	_freeXMMreg(t1reg);
@@ -1313,7 +1251,7 @@ void recRSQRThelper2(int regd, int regt) // Preforms the RSQRT function when reg
 	SSE2_SQRTSD_XMM_to_XMM(regt, regt);
 	SSE2_DIVSD_XMM_to_XMM(regd, regt);
  
-	ToPS2FPU(regd, 0, regt);
+	ToPS2FPU(regd, false, regt, false);
 }
  
 void recRSQRT_S_xmm(int info)

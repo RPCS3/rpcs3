@@ -71,6 +71,7 @@ void recC_EQ_xmm(int info);
 void recC_LE_xmm(int info);
 void recC_LT_xmm(int info);
 void recCVT_S_xmm(int info);
+void recCVT_W();
 void recDIV_S_xmm(int info);
 void recMADD_S_xmm(int info);
 void recMADDA_S_xmm(int info);
@@ -148,6 +149,12 @@ void recCFC1(void)
 
 	MOV32MtoR( EAX, (uptr)&fpuRegs.fprc[ _Fs_ ] );
 	_deleteEEreg(_Rt_, 0);
+
+	if (_Fs_ == 31)
+	{
+		AND32ItoR(EAX, 0x0083c078); //remove always-zero bits
+		OR32ItoR(EAX,  0x01000001); //set always-one bits
+	}
 
 	if(EEINST_ISLIVE1(_Rt_)) 
 	{
@@ -952,6 +959,12 @@ FPURECOMPILE_CONSTCODE(CVT_S, XMMINFO_WRITED|XMMINFO_READS);
 
 void recCVT_W() 
 {
+	if (CHECK_FPU_FULL)
+	{
+		DOUBLE::recCVT_W();
+		return;
+	}
+
 	int regs = _checkXMMreg(XMMTYPE_FPREG, _Fs_, MODE_READ);
 
 	if( regs >= 0 )

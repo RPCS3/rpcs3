@@ -53,8 +53,6 @@ uptr psxhwLUT[0x10000];
 #define MAPBASE			0x48000000
 #define RECMEM_SIZE		(8*1024*1024)
 
-#define PSX_MEMMASK     0x5fffffff // mask when comparing two pcs
-
 // R3000A statics
 int psxreclog = 0;
 
@@ -572,7 +570,11 @@ void recResetIOP()
 
 	for (int i = 0; i < 0x10000; i++)
 		recLUT_SetPage(psxRecLUT, 0, 0, 0, i, 0);
-
+	// IOP knows 64k pages, hence for the 0x10000's
+	
+	// The bottom 2 bits of PC are always zero, so we <<14 to "compress"
+	// the pc indexer into it's lower common denominator.
+	
 	// We're only mapping 20 pages here in 4 places.
 	// 0x80 comes from : (Ps2MemSize::IopRam / 0x10000) * 4
 	for (int i=0; i<0x80; i++)
@@ -618,54 +620,6 @@ static void recShutdown()
 }
 
 #pragma warning(disable:4731) // frame pointer register 'ebp' modified by inline assembly code
-
-/*
-static __forceinline void R3000AExecute()
-{
-	BASEBLOCK* pblock;
-
-	pblock = PSX_GETBLOCK(psxRegs.pc);
-
-	if ( !pblock->GetFnptr() || (pblock->GetStartPC()&PSX_MEMMASK) != (psxRegs.pc&PSX_MEMMASK) ) {
-		psxRecRecompile(psxRegs.pc);
-	}
-
-	assert( pblock->GetFnptr() != 0 );
-
-#ifdef _DEBUG
-
-	fnptr = (u8*)pblock->GetFnptr();
-
-#ifdef _MSC_VER
-
-    __asm {
-        // save data
-        mov oldesi, esi;
-        mov s_uSaveESP, esp;
-        sub s_uSaveESP, 8;
-        push ebp;
-        
-        call fnptr; // jump into function
-        // restore data
-        pop ebp;
-        mov esi, oldesi;
-    }
-    
-#else // linux
-    
-    __asm__("movl %%esi, %0\n"
-            "movl %%esp, %1\n"
-            "sub $8, %%esp\n"
-            "push %%ebp\n"
-            "call *%2\n"
-            "pop %%ebp\n"
-            "movl %0, %%esi\n" : "=m"(oldesi), "=m"(s_uSaveESP) : "c"(fnptr) : );
-#endif // _MSC_VER
-    
-#else
-    ((R3000AFNPTR)pblock->GetFnptr())();
-#endif
-}*/
 
 u32 g_psxlastpc = 0;
 

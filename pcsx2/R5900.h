@@ -135,6 +135,7 @@ struct fpuRegisters {
 	FPRreg fpr[32];		// 32bit floating point registers
 	u32 fprc[32];		// 32bit floating point control registers
 	FPRreg ACC;			// 32 bit accumulator 
+	u32 ACCflag;        // an internal accumulator overflow flag
 };
 
 struct tlbs

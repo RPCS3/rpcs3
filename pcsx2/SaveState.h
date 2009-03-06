@@ -27,14 +27,14 @@
 // Savestate Versioning!
 //  If you make changes to the savestate version, please increment the value below.
 
-static const u32 g_SaveVersion = 0x8b400005;
+static const u32 g_SaveVersion = 0x8b400006;
 
-// this function is meant to be sued in the place of GSfreeze, and provides a safe layer
+// this function is meant to be used in the place of GSfreeze, and provides a safe layer
 // between the GS saving function and the MTGS's needs. :)
 extern s32 CALLBACK gsSafeFreeze( int mode, freezeData *data );
 
 // This class provides the base API for both loading and saving savestates.
-// Normally you'll want to use one of the four "functional" derrived classes rather
+// Normally you'll want to use one of the four "functional" derived classes rather
 // than this class directly: gzLoadingState, gzSavingState (gzipped disk-saved
 // states), and memLoadingState, memSavingState (uncompressed memory states).
 class SaveState

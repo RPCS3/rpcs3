@@ -165,8 +165,6 @@ extern s32 psxCycleEE;		// tracks IOP's current sych status with the EE
 
 #define _JumpTarget_    ((_Target_ << 2) + (_PC_ & 0xf0000000))   // Calculates the target during a jump instruction
 #define _BranchTarget_  (((s32)(s16)_Imm_ * 4) + _PC_)                 // Calculates the target during a branch instruction
-//#define _JumpTarget_    ((_Target_ * 4) + (_PC_ & 0xf0000000))   // Calculates the target during a jump instruction
-//#define _BranchTarget_  ((short)_Im_ * 4 + _PC_)                 // Calculates the target during a branch instruction
 
 #define _SetLink(x)     psxRegs.GPR.r[x] = _PC_ + 4;       // Sets the return address in the link register
 

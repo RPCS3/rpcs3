@@ -92,7 +92,14 @@ void SaveState::FreezeAll()
 
 	Freeze(cpuRegs);   // cpu regs + COP0
 	Freeze(psxRegs);   // iop regs
-	Freeze(fpuRegs);   // fpu regs
+	if (GetVersion() >= 0x6)
+		Freeze(fpuRegs);
+	else 
+	{
+		// Old versiosn didn't save the ACCflags...
+		FreezeLegacy(fpuRegs, sizeof(u32));   // fpu regs
+		fpuRegs.ACCflag = 0;
+	}
 	Freeze(tlb);           // tlbs
 
 	Freeze(EEsCycle);
@@ -190,15 +197,12 @@ gzLoadingState::gzLoadingState( const string& filename ) :
 
 	gzread( m_file, &m_version, 4 );
 
-	if( m_version != g_SaveVersion )
+	if( m_version < g_SaveVersion )
 	{
-		if( ( m_version >> 16 ) == 0x7a30 )
-		{
-			Console::Error(
-				"Savestate load aborted:\n"
-				"\tVTLB edition cannot safely load savestates created by the VM edition." );
-			throw Exception::UnsupportedStateVersion( m_version );
-		}
+		Console::Error(
+			"Savestate load aborted:\n"
+			"\tThe savestate was created with a newer version of Pcsx2.  I don't know how to load it!" );
+		throw Exception::UnsupportedStateVersion( m_version );
 	}
 
 	_testCdvdCrc();
