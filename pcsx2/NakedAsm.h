@@ -53,12 +53,14 @@ void svudispfn();
 	
 // aR3000A.S
 void iopJITCompile();
+void iopJITCompileInBlock();
 void iopDispatcher();
 void iopDispatcherClear();
 void iopDispatcherReg();
 	
 // aR5900-32.S
 void JITCompile();
+void JITCompileInBlock();
 void Dispatcher();
 void DispatcherClear();
 void DispatcherReg();

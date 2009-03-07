@@ -36,9 +36,12 @@ JITCompile:
 	mov ebx, esi
 	shr esi, 16
 	mov ecx, dword ptr [RECLUT+esi*4]
-	jmp dword ptr [ecx+ebx*2]
+	jmp dword ptr [ecx+ebx]
 
-
+.global JITCompileInBlock
+JITCompileInBlock:
+	jmp JITCompile
+	
 //////////////////////////////////////////////////////////////////////////
 // Recompiles the next block, and links the old block directly to it.
 // This is a on-shot execution for any block which uses it.  Once the block
@@ -55,9 +58,11 @@ Dispatcher:
 	mov ebx, eax
 	shr eax, 16
 	mov ecx, dword ptr [RECLUT+eax*4]
-	mov eax, dword ptr [ecx+ebx*2]
+	mov eax, dword ptr [ecx+ebx]
 
 	cmp eax, offset JITCompile
+	je Dispatch_notcompiled
+	cmp eax, offset JITCompileInBlock
 	je Dispatch_notcompiled
 	lea ebx, [eax-4]
 	sub ebx, edx
@@ -67,7 +72,7 @@ Dispatcher:
 	.align 16
 Dispatch_notcompiled:
 	mov esi, edx
-	lea edi, [ecx+ebx*2]
+	lea edi, [ecx+ebx]
 	push ebx
 	call recRecompile
 	add esp, 4
@@ -92,16 +97,18 @@ DispatcherClear:
 	mov ebx, edx
 	shr edx, 16
 	mov ecx, dword ptr [RECLUT+edx*4]
-	mov eax, dword ptr [ecx+ebx*2]
+	mov eax, dword ptr [ecx+ebx]
 
 	cmp eax, offset JITCompile
+	je Clear_notcompiled
+	cmp eax, offset JITCompileInBlock
 	je Clear_notcompiled
 	add esp, 4
 	jmp eax
 
 	.align 16
 Clear_notcompiled:
-	lea edi, [ecx+ebx*2]
+	lea edi, [ecx+ebx]
 	push ebx
 	call recRecompile
 	add esp, 4
@@ -126,4 +133,4 @@ DispatcherReg:
 	mov ebx, eax
 	shr eax, 16
 	mov ecx, dword ptr [RECLUT+eax*4]
-	jmp dword ptr [ecx+ebx*2]
+	jmp dword ptr [ecx+ebx]

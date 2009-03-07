@@ -19,7 +19,7 @@
 #ifndef __SAFEARRAY_H__
 #define __SAFEARRAY_H__
 
-#include "MemcpyFast.h"
+#include "System.h"
 
 extern void* __fastcall pcsx2_aligned_malloc(size_t size, size_t align);
 extern void* __fastcall pcsx2_aligned_realloc(void* handle, size_t size, size_t align);
@@ -219,9 +219,15 @@ protected:
 	const static std::string m_str_Unnamed;
 
 protected:
+	virtual T* _virtual_realloc( int newsize )
+	{
+		return (T*)realloc( m_ptr, newsize * sizeof(T) );
+	}
+	
 	void _boundsCheck( uint i )
 	{
-		if( IsDevBuild && i >= (uint)m_length )
+#ifdef PCSX2_DEVBUILD
+		if( i >= (uint)m_length )
 		{
 			assert( 0 );	// makes debugging easier sometimes. :)
 			throw Exception::IndexBoundsFault(
@@ -230,6 +236,7 @@ protected:
 				", length=" + to_string(m_length) + ")"
 			);
 		}
+#endif
 	}
 
 public:	
