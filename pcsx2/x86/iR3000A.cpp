@@ -792,31 +792,8 @@ static s32 recExecuteBlock( s32 eeCycles )
 	return psxBreak + psxCycleEE;
 }
 
-static void recClear(u32 Addr, u32 Size)
-{
-	u32 pc = Addr;
-	while (pc < Addr + Size*4)
-		pc += PSXREC_CLEARM(pc);
-}
-
-// not used and not right for now
-#if 0
-void rpsxMemConstClear(u32 mem)
-{
-	// NOTE! This assumes recLUT never changes its mapping
-	if( !(psxRecLUT[mem>>16] + mem) )
-		return;
-
-	CMP32ItoM((uptr)PSX_GETBLOCK(mem), iopJITCompile);
-	j8Ptr[6] = JE8(0);
-
-    _callFunctionArg1((uptr)psxRecClearMem, MEM_CONSTTAG, mem);
-	x86SetJ8(j8Ptr[6]);
-}
-#endif
-
 // Returns the offset to the next instruction after any cleared memory
-u32 psxRecClearMem(u32 pc)
+static __forceinline u32 psxRecClearMem(u32 pc)
 {
 	BASEBLOCKEX* pexblock;
 	BASEBLOCK* pblock;
@@ -883,6 +860,13 @@ u32 psxRecClearMem(u32 pc)
 	iopClearRecLUT(PSX_GETBLOCK(lowerextent), (upperextent - lowerextent) / 4);
 
 	return upperextent - pc;
+}
+
+static void recClear(u32 Addr, u32 Size)
+{
+	u32 pc = Addr;
+	while (pc < Addr + Size*4)
+		pc += PSXREC_CLEARM(pc);
 }
 
 void psxSetBranchReg(u32 reg)

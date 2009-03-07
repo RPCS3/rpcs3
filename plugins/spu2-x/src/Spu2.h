@@ -170,7 +170,6 @@ extern u32 input_data_ptr;
 
 extern int PlayMode;
 extern int recording;
-extern bool disableFreezes;
 
 extern u32 lClocks;
 extern u32* cPtr;

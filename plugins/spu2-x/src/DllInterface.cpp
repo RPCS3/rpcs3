@@ -151,8 +151,6 @@ EXPORT_C_(s32) SPU2init()
 #endif
 	srand((unsigned)time(NULL));
 
-	disableFreezes=false;
-
 	if (spu2init)
 	{
 		ConLog( " * SPU2: Already initialized - Ignoring SPU2init signal." );
@@ -448,9 +446,6 @@ EXPORT_C_(void) SPU2write(u32 rmem, u16 value)
 // for now, pData is not used
 EXPORT_C_(int) SPU2setupRecording(int start, void* pData)
 {
-	// Don't record if we have a bogus state.
-	if( disableFreezes ) return 0;
-
 	if(start==0)
 		RecordStop();
 	else if(start==1)

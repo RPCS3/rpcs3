@@ -61,16 +61,6 @@ typedef s32 __fastcall FreezeHandlerFunction( SPU2freezeData& data );
 
 s32 __fastcall FreezeIt( SPU2freezeData& spud )
 {
-	if( disableFreezes )
-	{
-		// No point in making a save state since the SPU2
-		// state is completely bogus anyway... Let's just
-		// give this some random ID that no one will recognize.
-
-		strcpy( (char*)&spud, "invalid" );
-		return 0;
-	}
-
 	spud.id		 = SAVE_ID;
 	spud.version = SAVE_VERSION;
 
@@ -125,7 +115,6 @@ s32 __fastcall ThawIt( SPU2freezeData& spud )
 		printf("\tAudio may not recover correctly.  Save your game to memorycard, reset,\n\n");
 		printf("  and then continue from there.\n\n");
 
-		disableFreezes = true;
 		resetClock = true;
 
 		// Do *not* reset the cores.
@@ -143,8 +132,6 @@ s32 __fastcall ThawIt( SPU2freezeData& spud )
 	}
 	else
 	{
-		disableFreezes=false;
-
 		// base stuff
 		memcpy(spu2regs, spud.unkregs, 0x010000);
 		memcpy(_spu2mem, spud.mem,     0x200000);
@@ -191,8 +178,6 @@ s32 __fastcall ThawIt( SPU2freezeData& spud )
 
 s32 __fastcall SizeIt()
 {
-	if( disableFreezes ) return 8;	// length of the string id "invalid" (plus a zero!)
-
 	int size = sizeof(SPU2freezeData);
 
 	// calculate the amount of memory consumed by our cache:

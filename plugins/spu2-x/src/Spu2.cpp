@@ -39,10 +39,6 @@ DWORD CALLBACK TimeThread(PVOID /* unused param */);
 // [Air]: fixed the hacky part of UpdateTimer with this:
 bool resetClock = true;
 
-// Used to make spu2 more robust at loading incompatible saves.
-// Disables re-freezing of save state data.
-bool disableFreezes = false;
-
 void (* _irqcallback)();
 void (* dma4callback)();
 void (* dma7callback)();

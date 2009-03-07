@@ -67,10 +67,9 @@ extern u32 g_iopCyclePenalty;
 void psxSaveBranchState();
 void psxLoadBranchState();
 
-void psxSetBranchReg(u32 reg);
-void psxSetBranchImm( u32 imm );
-void psxRecompileNextInstruction(int delayslot);
-u32 psxRecClearMem(u32 p);
+extern void psxSetBranchReg(u32 reg);
+extern void psxSetBranchImm( u32 imm );
+extern void psxRecompileNextInstruction(int delayslot);
 
 ////////////////////////////////////////////////////////////////////
 // IOP Constant Propagation Defines, Vars, and API - From here down!

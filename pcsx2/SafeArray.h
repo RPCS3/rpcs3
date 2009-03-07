@@ -19,8 +19,6 @@
 #ifndef __SAFEARRAY_H__
 #define __SAFEARRAY_H__
 
-#include "System.h"
-
 extern void* __fastcall pcsx2_aligned_malloc(size_t size, size_t align);
 extern void* __fastcall pcsx2_aligned_realloc(void* handle, size_t size, size_t align);
 extern void pcsx2_aligned_free(void* pmem);
@@ -202,7 +200,7 @@ protected:
 //
 //
 template< typename T >
-class SafeList : public SafeArray<T>
+class SafeList
 {
 public:
 	static const int DefaultChunkSize = 0x80 * sizeof(T);
