@@ -48,6 +48,7 @@
 //------------------------------------------------------------------
 // FMAC1 - Normal FMAC Opcodes
 //------------------------------------------------------------------
+
 microVUt(void) mVUallocFMAC1a(int& Fd, int& Fs, int& Ft) {
 	microVU* mVU = mVUx;
 	Fs = xmmFs;
@@ -85,6 +86,7 @@ microVUt(void) mVUallocFMAC1b(int& Fd) {
 //------------------------------------------------------------------
 // FMAC2 - ABS/FTOI/ITOF Opcodes
 //------------------------------------------------------------------
+
 microVUt(void) mVUallocFMAC2a(int& Fs, int& Ft) {
 	microVU* mVU = mVUx;
 	Fs = xmmFs;
@@ -162,6 +164,129 @@ microVUt(void) mVUallocFMAC3a(int& Fd, int& Fs, int& Ft) {
 
 microVUt(void) mVUallocFMAC3b(int& Fd) {
 	mVUallocFMAC1b<vuIndex>(Fd);
+}
+
+//------------------------------------------------------------------
+// FMAC4 - FMAC Opcodes Storing Result to ACC
+//------------------------------------------------------------------
+
+#define getReg4(reg, _reg_) {  \
+	mVUloadReg<vuIndex>(reg, (uptr)&mVU->regs->VF[_reg_].UL[0], (_XYZW_SS) ? 15 : _X_Y_Z_W);  \
+	if (CHECK_VU_EXTRA_OVERFLOW) mVUclamp2<vuIndex>(reg, xmmT1, (_XYZW_SS) ? 15 : _X_Y_Z_W);  \
+}
+
+#define getZero4(reg) {  \
+	if (_W)	{ mVUloadReg<vuIndex>(reg, (uptr)&mVU->regs->VF[0].UL[0], (_XYZW_SS) ? 15 : _X_Y_Z_W); }  \
+	else	{ SSE_XORPS_XMM_to_XMM(reg, reg); }  \
+}
+
+#define getACC(reg) {  \
+	reg = xmmACC0 + writeACC;  \
+	if (_X_Y_Z_W != 15) { SSE_MOVAPS_XMM_to_XMM(reg, (xmmACC0 + prevACC)); }  \
+}
+
+microVUt(void) mVUallocFMAC4a(int& ACC, int& Fs, int& Ft) {
+	microVU* mVU = mVUx;
+	Fs = xmmFs;
+	Ft = xmmFt;
+	getACC(ACC);
+	if (_XYZW_SS && _X) {
+		if (!_Fs_)	{ getZeroSS(Fs); }
+		else		{ getReg(Fs, _Fs_); }
+
+		if (_Ft_ == _Fs_) { Ft = Fs; }
+		else {
+			if (!_Ft_)	{ getZeroSS(Ft); }
+			else		{ getReg(Ft, _Ft_); }
+		}
+	}
+	else {
+		if (!_Fs_)	{ getZero4(Fs); }
+		else		{ getReg4(Fs, _Fs_); }
+
+		if (_Ft_ == _Fs_) { Ft = Fs; }
+		else {
+			if (!_Ft_)	{ getZero4(Ft); } 
+			else		{ getReg4(Ft, _Ft_); }
+		}
+	}
+}
+
+microVUt(void) mVUallocFMAC4b(int& ACC, int& Fs) {
+	microVU* mVU = mVUx;
+	if (!_Fd_) return;
+	if (CHECK_VU_OVERFLOW) mVUclamp1<vuIndex>(Fs, xmmT1, (_XYZW_SS && !_X) ? 15 : _X_Y_Z_W);
+	mVUmergeRegs<vuIndex>(ACC, Fs, _X_Y_Z_W);
+}
+
+//------------------------------------------------------------------
+// FMAC5 - FMAC BC(xyzw) Opcodes Storing Result to ACC
+//------------------------------------------------------------------
+
+microVUt(void) mVUallocFMAC5a(int& ACC, int& Fs, int& Ft) {
+	microVU* mVU = mVUx;
+	Fs = xmmFs;
+	Ft = xmmFt;
+	getACC(ACC);
+	if (_XYZW_SS && _X) {
+		if (!_Fs_)	{ getZeroSS(Fs); }
+		else		{ getReg(Fs, _Fs_); }
+
+		if ( (_Ft_ == _Fs_) && _bc_x) {
+			Ft = Fs; 
+		}
+		else {
+			if (!_Ft_)	{ getZero3SS(Ft); }
+			else		{ getReg3SS(Ft, _Ft_); }
+		}
+	}
+	else {
+		if (!_Fs_)	{ getZero4(Fs); }
+		else		{ getReg4(Fs, _Fs_); }
+
+		if (!_Ft_)	{ getZero3(Ft); } 
+		else		{ getReg3(Ft, _Ft_); }
+	}
+}
+
+microVUt(void) mVUallocFMAC5b(int& ACC, int& Fs) {
+	mVUallocFMAC4b<vuIndex>(ACC, Fs);
+}
+
+//------------------------------------------------------------------
+// Flag Allocators
+//------------------------------------------------------------------
+
+#define getFlagReg(regX, fInst) {  \
+	switch (fInst) { \
+		case 0: regX = gprF0;	break;  \
+		case 1: regX = gprF1;	break;  \
+		case 2: regX = gprF2;	break;  \
+		case 3: regX = gprF3;	break;  \
+	}  \
+}
+
+microVUt(void) mVUallocSFLAGa(int reg, int fInstance) {
+	getFlagReg(fInstance, fInstance);
+	MOVZX32R16toR(reg, fInstance);
+}
+
+microVUt(void) mVUallocSFLAGb(int reg, int fInstance) {
+	getFlagReg(fInstance, fInstance);
+	MOV32RtoR(fInstance, reg);
+}
+
+microVUt(void) mVUallocMFLAGa(int reg, int fInstance) {
+	getFlagReg(fInstance, fInstance);
+	MOV32RtoR(reg, fInstance);
+	SHR32ItoR(reg, 16);
+}
+
+microVUt(void) mVUallocMFLAGb(int reg, int fInstance) {
+	getFlagReg(fInstance, fInstance);
+	AND32ItoR(fInstance, 0xffff);
+	SHL32ItoR(reg, 16);
+	OR32RtoR(fInstance, reg);
 }
 
 #endif //PCSX2_MICROVU

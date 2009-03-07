@@ -38,19 +38,21 @@ struct microAllocInfo {
 	u8 p;
 	u8 r;
 	u16 info[pSize];// bit 0 = NOP?
-					// bit 1 = Read Fd from backup memory?
-					// bit 2 = Read Fs from backup memory?
-					// bit 3 = Read Ft from backup memory?
-					// bit 4 = ACC1 or ACC2?
+					// bit 1 = Used with bit 2 to make a 2-bit key for ACC write instance
+					// bit 2 = (00 = instance #0, 01 = instance #1, 10 = instance #2, 11 = instance #3)
+					// bit 3 = Used with bit 4 to make a 2-bit key for ACC read instance
+					// bit 4 = (00 = instance #0, 01 = instance #1, 10 = instance #2, 11 = instance #3)
 					// bit 5 = Read Q1/P1 or backup?
 					// bit 6 = Write to Q2/P2?
-					// bit 7 = Write Fd/Acc/Result to backup memory?
+					// bit 7 = Write VI(Fd) Result to backup memory?
 					// bit 8 = Update Mac Flags?
 					// bit 9 = Update Status Flags?
 					// bit 10 = Used with bit 11 to make a 2-bit key for mac flag instance
 					// bit 11 = (00 = instance #0, 01 = instance #1, 10 = instance #2, 11 = instance #3)
 					// bit 12 = Used with bit 13 to make a 2-bit key for status flag instance
 					// bit 13 = (00 = instance #0, 01 = instance #1, 10 = instance #2, 11 = instance #3)
+					// bit 14 = Read VI(Fs) from backup memory?
+					// bit 15 = Read VI(Ft) from backup memory?
 	u32 curPC;
 };
 

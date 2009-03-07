@@ -152,4 +152,62 @@ microVUx(void) mVUsaveReg(int reg, u32 offset, int xyzw) {
 	}
 }
 
+// Modifies the Source Reg!
+microVUx(void) mVUmergeRegs(int dest, int src, int xyzw) {
+	xyzw &= 0xf;
+	if ( (dest != src) && (xyzw != 0) ) {
+		if ( cpucaps.hasStreamingSIMD4Extensions && (xyzw != 0x8) && (xyzw != 0xf) ) {
+			xyzw = ((xyzw & 1) << 3) | ((xyzw & 2) << 1) | ((xyzw & 4) >> 1) | ((xyzw & 8) >> 3); 
+			SSE4_BLENDPS_XMM_to_XMM(dest, src, xyzw);
+		}
+		else {
+			switch (xyzw) {
+				case 1:  SSE_MOVHLPS_XMM_to_XMM(src, dest);
+						 SSE_SHUFPS_XMM_to_XMM(dest, src, 0xc4);
+						 break;
+				case 2:  SSE_MOVHLPS_XMM_to_XMM(src, dest);
+						 SSE_SHUFPS_XMM_to_XMM(dest, src, 0x64);
+						 break;
+				case 3:	 SSE_SHUFPS_XMM_to_XMM(dest, src, 0xe4);
+						 break;
+				case 4:	 SSE_MOVSS_XMM_to_XMM(src, dest);
+						 SSE2_MOVSD_XMM_to_XMM(dest, src);
+						 break;
+				case 5:	 SSE_SHUFPS_XMM_to_XMM(dest, src, 0xd8);
+						 SSE_SHUFPS_XMM_to_XMM(dest, dest, 0xd8);
+						 break;
+				case 6:	 SSE_SHUFPS_XMM_to_XMM(dest, src, 0x9c);
+						 SSE_SHUFPS_XMM_to_XMM(dest, dest, 0x78);
+						 break;
+				case 7:	 SSE_MOVSS_XMM_to_XMM(src, dest);
+						 SSE_MOVAPS_XMM_to_XMM(dest, src);
+						 break;
+				case 8:	 SSE_MOVSS_XMM_to_XMM(dest, src);
+						 break;
+				case 9:	 SSE_SHUFPS_XMM_to_XMM(dest, src, 0xc9);
+						 SSE_SHUFPS_XMM_to_XMM(dest, dest, 0xd2);
+						 break;
+				case 10: SSE_SHUFPS_XMM_to_XMM(dest, src, 0x8d);
+						 SSE_SHUFPS_XMM_to_XMM(dest, dest, 0x72);
+						 break;
+				case 11: SSE_MOVSS_XMM_to_XMM(dest, src);
+						 SSE_SHUFPS_XMM_to_XMM(dest, src, 0xe4);
+						 break;
+				case 12: SSE2_MOVSD_XMM_to_XMM(dest, src);
+						 break;
+				case 13: SSE_MOVHLPS_XMM_to_XMM(dest, src);
+						 SSE_SHUFPS_XMM_to_XMM(src, dest, 0x64);
+						 SSE_MOVAPS_XMM_to_XMM(dest, src);
+						 break;
+				case 14: SSE_MOVHLPS_XMM_to_XMM(dest, src);
+						 SSE_SHUFPS_XMM_to_XMM(src, dest, 0xc4);
+						 SSE_MOVAPS_XMM_to_XMM(dest, src);
+						 break;
+				default: SSE_MOVAPS_XMM_to_XMM(dest, src); 
+						 break;
+			}
+		}
+	}
+}
+
 #endif //PCSX2_MICROVU

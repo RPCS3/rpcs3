@@ -33,12 +33,12 @@ PCSX2_ALIGNED16(const u32 mVU_absclip[4])	= {0x7fffffff, 0x7fffffff, 0x7fffffff,
 PCSX2_ALIGNED16(const u32 mVU_signbit[4])	= {0x80000000, 0x80000000, 0x80000000, 0x80000000};
 PCSX2_ALIGNED16(const u32 mVU_minvals[4])	= {0xff7fffff, 0xff7fffff, 0xff7fffff, 0xff7fffff};
 PCSX2_ALIGNED16(const u32 mVU_maxvals[4])	= {0x7f7fffff, 0x7f7fffff, 0x7f7fffff, 0x7f7fffff};
-PCSX2_ALIGNED16(const float mVU_FTOI_4[4])	= { 16.0, 16.0, 16.0, 16.0 };
-PCSX2_ALIGNED16(const float mVU_FTOI_12[4])	= { 4096.0, 4096.0, 4096.0, 4096.0 };
-PCSX2_ALIGNED16(const float mVU_FTOI_15[4])	= { 32768.0, 32768.0, 32768.0, 32768.0 };
-PCSX2_ALIGNED16(const float mVU_ITOF_4[4])	= { 0.0625f, 0.0625f, 0.0625f, 0.0625f };
-PCSX2_ALIGNED16(const float mVU_ITOF_12[4])	= { 0.000244140625, 0.000244140625, 0.000244140625, 0.000244140625 };
-PCSX2_ALIGNED16(const float mVU_ITOF_15[4])	= { 0.000030517578125, 0.000030517578125, 0.000030517578125, 0.000030517578125 };
+PCSX2_ALIGNED16(const float mVU_FTOI_4[4])	= {16.0, 16.0, 16.0, 16.0};
+PCSX2_ALIGNED16(const float mVU_FTOI_12[4])	= {4096.0, 4096.0, 4096.0, 4096.0};
+PCSX2_ALIGNED16(const float mVU_FTOI_15[4])	= {32768.0, 32768.0, 32768.0, 32768.0};
+PCSX2_ALIGNED16(const float mVU_ITOF_4[4])	= {0.0625f, 0.0625f, 0.0625f, 0.0625f};
+PCSX2_ALIGNED16(const float mVU_ITOF_12[4])	= {0.000244140625, 0.000244140625, 0.000244140625, 0.000244140625};
+PCSX2_ALIGNED16(const float mVU_ITOF_15[4])	= {0.000030517578125, 0.000030517578125, 0.000030517578125, 0.000030517578125};
 
 
 //------------------------------------------------------------------
@@ -270,6 +270,7 @@ __declspec(naked) void __fastcall endVU0(u32 startPC, u32 cycles) {
 		pop ebx;
 		
 		ldmxcsr g_sseMXCSR
+		emms
 
 		ret
 	}

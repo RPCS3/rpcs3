@@ -24,7 +24,7 @@
 //------------------------------------------------------------------
 // Declarations
 //------------------------------------------------------------------
-#define mVUgetCode (vuIndex ? microVU1.regs->code : microVU0.regs->code)
+#define mVUgetCode (vuIndex ? microVU1.code : microVU0.code)
 
 microVUf(void) mVU_UPPER_FD_00();
 microVUf(void) mVU_UPPER_FD_01();
@@ -729,15 +729,15 @@ void (* mVU_UPPER_FD_11_TABLE11 [32])() = {
 //------------------------------------------------------------------
 // Table Functions
 //------------------------------------------------------------------
-#define doTableStuff(tableName, args) {		\
-	if (recPass) {							\
-	if (vuIndex) tableName##11[ args ]();	\
-		else tableName##01[ args ]();		\
-	}										\
-	else {									\
-	if (vuIndex) tableName##10[ args ]();	\
-		else tableName##00[ args ]();		\
-	}										\
+#define doTableStuff(tableName, args) {			\
+	if (recPass) {								\
+		if (vuIndex) tableName##11[ args ]();	\
+		else tableName##01[ args ]();			\
+	}											\
+	else {										\
+		if (vuIndex) tableName##10[ args ]();	\
+		else tableName##00[ args ]();			\
+	}											\
 }
 
 microVUf(void) mVU_UPPER_FD_00()	{ doTableStuff(mVU_UPPER_FD_00_TABLE,	((mVUgetCode >> 6) & 0x1f)); } 
