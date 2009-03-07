@@ -428,7 +428,6 @@ void InputDeviceManager::DisableAllDevices() {
 
 void InputDeviceManager::DisableDevice(int index) {
 	devices[index]->enabled = 0;
-	// Should never happen, but just in case...
 	if (devices[index]->active) devices[index]->Deactivate();
 }
 

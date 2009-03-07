@@ -106,8 +106,6 @@ class Pad {
 public:
 	ButtonSum sum, lockedSum;
 
-	Stick rStick, lStick;
-
 	int lockedState;
 	u8 vibrate[8];
 
@@ -497,6 +495,7 @@ u32 CALLBACK PS2EgetLibVersion2(u32 type) {
 	return 0;
 }
 
+// Used in about and config screens.
 void GetNameAndVersionString(wchar_t *out) {
 #ifdef _DEBUG
 	wsprintfW(out, L"LilyPad Debug %i.%i.%i (r%i)", (VERSION>>8)&0xFF, VERSION&0xFF, (VERSION>>24)&0xFF, SVN_REV);
@@ -1089,6 +1088,19 @@ DWORD WINAPI RenameWindowThreadProc(void *lpParameter) {
 	return 0;
 }
 
+/*DWORD WINAPI MaximizeWindowThreadProc(void *lpParameter) {
+	while ((HWND)lpParameter == hWnd || hWnd) {
+		Sleep(10);
+	}
+	Sleep(100);
+	keybd_event(VK_LMENU, MapVirtualKey(VK_LMENU, MAPVK_VK_TO_VSC), 0, 0);
+	keybd_event(VK_RETURN, MapVirtualKey(VK_RETURN, MAPVK_VK_TO_VSC), 0, 0);
+	Sleep(10);
+	keybd_event(VK_RETURN, MapVirtualKey(VK_RETURN, MAPVK_VK_TO_VSC), KEYEVENTF_KEYUP, 0);
+	keybd_event(VK_LMENU, MapVirtualKey(VK_LMENU, MAPVK_VK_TO_VSC), KEYEVENTF_KEYUP, 0);
+	return 0;
+}//*/
+
 keyEvent* CALLBACK PADkeyEvent() {
 	if (!config.GSThreadUpdates) {
 		Update(2);
@@ -1096,12 +1108,31 @@ keyEvent* CALLBACK PADkeyEvent() {
 	static int shiftDown = 0;
 	static keyEvent ev;
 	if (!GetQueuedKeyEvent(&ev)) return 0;
-	if (ev.key == VK_ESCAPE && ev.evt == KEYPRESS && config.escapeFullscreenHack) {
+	if ((ev.key == VK_ESCAPE || ev.key == -2) && ev.evt == KEYPRESS && config.escapeFullscreenHack) {
 		if (IsWindowMaximized(hWnd)) {
-			EatWndProc(hWnd, KillFullScreenProc);
+			QueueKeyEvent(-2, KEYPRESS);
+			if (ev.key != -2)
+				EatWndProc(hWnd, KillFullScreenProc);
 			return 0;
 		}
+		ev.key = VK_ESCAPE;
 	}
+
+	/*
+	if ((ev.key == VK_F9 || ev.key == -1) && ev.evt == KEYPRESS) {
+		if (IsWindowMaximized(hWnd)) {
+			QueueKeyEvent(-1, KEYPRESS);
+			if (ev.key == VK_F9)
+				EatWndProc(hWnd, KillFullScreenProc);
+			return 0;
+		}
+		return 0;
+		if (ev.key == -1) {
+			HANDLE hThread = CreateThread(0, 0, MaximizeWindowThreadProc, hWnd, 0, 0);
+			if (hThread) CloseHandle(hThread);
+		}
+		ev.key = VK_F9;
+	}//*/
 
 	if (ev.key == VK_F2 && ev.evt == KEYPRESS) {
 		saveStateIndex += 1 - 2*shiftDown;
@@ -1157,7 +1188,7 @@ u32 CALLBACK PSEgetLibVersion() {
 }
 
 // Little funkiness to handle rounding floating points to ints without the C runtime.
-// Unfortunately, means I can't use /GL optimization option.
+// Unfortunately, means I can't use /GL optimization option when NO_CRT is defined.
 #ifdef NO_CRT
 extern "C" long _cdecl _ftol();
 extern "C" long _cdecl _ftol2_sse() {

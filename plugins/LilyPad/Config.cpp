@@ -20,6 +20,9 @@
 
 GeneralConfig config;
 
+// 1 if running inside a PS2 emulator.  Set to 1 on any
+// of the PS2-specific functions (PS2EgetLibVersion2, PS2EgetLibType).
+// Only affects if I allow read input in GS thread to be set.
 u8 ps2e = 0;
 
 HWND hWndProp = 0;
