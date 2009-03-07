@@ -1593,13 +1593,13 @@ vFloat vFloats4[16] = { //regTemp is modified
 	vFloat0, vFloat1c, vFloat2c, vFloat3c,
 	vFloat4c, vFloat5c, vFloat6c, vFloat7c,
 	vFloat8c, vFloat9c, vFloat10c, vFloat11c,
-	vFloat1c, vFloat13c, vFloat14c, vFloat15c };
+	vFloat12c, vFloat13c, vFloat14c, vFloat15c };
 
 vFloat vFloats4_useEAX[16] = { //regTemp is modified and EAX is used
 	vFloat0, vFloat1c, vFloat2c, vFloat3c,
 	vFloat4c, vFloat5c, vFloat6c, vFloat7c_useEAX,
 	vFloat8c, vFloat9c, vFloat10c, vFloat11c_useEAX,
-	vFloat1c, vFloat13c_useEAX, vFloat14c_useEAX, vFloat15c };
+	vFloat12c, vFloat13c_useEAX, vFloat14c_useEAX, vFloat15c };
 
 //------------------------------------------------------------------
 //	Clamping Functions (wrapper for vFloat* functions)
