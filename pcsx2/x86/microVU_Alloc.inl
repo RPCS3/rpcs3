@@ -214,7 +214,6 @@ microVUt(void) mVUallocFMAC4a(int& ACC, int& Fs, int& Ft) {
 
 microVUt(void) mVUallocFMAC4b(int& ACC, int& Fs) {
 	microVU* mVU = mVUx;
-	if (!_Fd_) return;
 	if (CHECK_VU_OVERFLOW) mVUclamp1<vuIndex>(Fs, xmmT1, (_XYZW_SS && !_X) ? 15 : _X_Y_Z_W);
 	mVUmergeRegs<vuIndex>(ACC, Fs, _X_Y_Z_W);
 }
@@ -251,6 +250,87 @@ microVUt(void) mVUallocFMAC5a(int& ACC, int& Fs, int& Ft) {
 
 microVUt(void) mVUallocFMAC5b(int& ACC, int& Fs) {
 	mVUallocFMAC4b<vuIndex>(ACC, Fs);
+}
+
+//------------------------------------------------------------------
+// FMAC6 - Normal FMAC Opcodes (I Reg)
+//------------------------------------------------------------------
+
+#define getIreg(reg) {  \
+	MOV32ItoR(gprT1, mVU->iReg);  \
+	SSE2_MOVD_R_to_XMM(reg, gprT1);  \
+	if (CHECK_VU_EXTRA_OVERFLOW) mVUclamp2<vuIndex>(reg, xmmT1, 8);  \
+	if (!_XYZW_SS) { mVUunpack_xyzw<vuIndex>(reg, reg, 0); }  \
+}
+
+microVUt(void) mVUallocFMAC6a(int& Fd, int& Fs, int& Ft) {
+	microVU* mVU = mVUx;
+	Fs = xmmFs;
+	Ft = xmmFt;
+	Fd = xmmFs;
+	getIreg(Ft);
+	if (_XYZW_SS) {
+		if (!_Fs_)	{ getZeroSS(Fs); }
+		else		{ getReg(Fs, _Fs_); }
+	}
+	else {
+		if (!_Fs_)	{ getZero(Fs); }
+		else		{ getReg(Fs, _Fs_); }
+	}
+}
+
+microVUt(void) mVUallocFMAC6b(int& Fd) {
+	mVUallocFMAC1b<vuIndex>(Fd);
+}
+
+//------------------------------------------------------------------
+// FMAC7 - FMAC Opcodes Storing Result to ACC (I Reg)
+//------------------------------------------------------------------
+
+microVUt(void) mVUallocFMAC7a(int& ACC, int& Fs, int& Ft) {
+	microVU* mVU = mVUx;
+	Fs = xmmFs;
+	Ft = xmmFt;
+	getACC(ACC);
+	getIreg(Ft);
+	if (_XYZW_SS && _X) {
+		if (!_Fs_)	{ getZeroSS(Fs); }
+		else		{ getReg(Fs, _Fs_); }
+	}
+	else {
+		if (!_Fs_)	{ getZero4(Fs); }
+		else		{ getReg4(Fs, _Fs_); }
+	}
+}
+
+microVUt(void) mVUallocFMAC7b(int& ACC, int& Fs) {
+	mVUallocFMAC4b<vuIndex>(ACC, Fs);
+}
+
+//------------------------------------------------------------------
+// FMAC17 - OPMULA FMAC Opcode
+//------------------------------------------------------------------
+
+microVUt(void) mVUallocFMAC17a(int& ACC, int& Fs, int& Ft) {
+	microVU* mVU = mVUx;
+	Fs = xmmFs;
+	Ft = xmmFt;
+	getACC(ACC);
+
+	if (!_Fs_)	{ getZero4(Fs); }
+	else		{ getReg4(Fs, _Fs_); }
+
+	if (!_Ft_)	{ getZero4(Ft); } 
+	else		{ getReg4(Ft, _Ft_); }
+
+	SSE_SHUFPS_XMM_to_XMM( Fs, Fs, 0xC9 ); // WXZY
+	SSE_SHUFPS_XMM_to_XMM( Ft, Ft, 0xD2 ); // WYXZ
+}
+
+microVUt(void) mVUallocFMAC17b(int& ACC, int& Fs) {
+	microVU* mVU = mVUx;
+	if (CHECK_VU_OVERFLOW) mVUclamp1<vuIndex>(Fs, xmmT1, _X_Y_Z_W);
+	mVUmergeRegs<vuIndex>(ACC, Fs, _X_Y_Z_W);
 }
 
 //------------------------------------------------------------------

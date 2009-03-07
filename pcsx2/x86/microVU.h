@@ -110,6 +110,8 @@ struct microVU {
 	u8*		cache;	// Dynarec Cache Start (where we will start writing the recompiled code to)
 	u8*		ptr;	// Pointer to next place to write recompiled code to
 	u32		code;	// Contains the current Instruction
+	u32		iReg;	// iReg
+
 /*
 	uptr x86eax; // Accumulator register. Used in arithmetic operations.
 	uptr x86ecx; // Counter register. Used in shift/rotate instructions.
