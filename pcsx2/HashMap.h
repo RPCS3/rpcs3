@@ -619,7 +619,7 @@ public:
 	}		
 
 private:
-	UnicodeDictionary( const Dictionary& src ) {}
+	UnicodeDictionary( const UnicodeDictionary& src ) {}
 };
 
 }

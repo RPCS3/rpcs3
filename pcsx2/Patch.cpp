@@ -190,11 +190,11 @@ void handle_extended_t( IniPatch *p)
 				PrevCheatType = 0;
 				if (((u32Val&0x0FFFFFFF) & 0x3FFFFFFC) != 0)
 				{
-					if (LastType=0x0)
+					if (LastType==0x0)
 						memWrite8(PrevCheataddr,(u8)p->data&0xFF);
-					else if (LastType=0x1)
+					else if (LastType==0x1)
 						memWrite16(PrevCheataddr,(u16)p->data&0x0FFFF);
-					else if (LastType=0x2)
+					else if (LastType==0x2)
 						memWrite32(PrevCheataddr,(u32)p->data);
 				}
 				
