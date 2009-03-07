@@ -639,6 +639,9 @@ void LoadGameSpecificSettings()
 			path3hack = 1; // We can move this to patch files right now
 			break;
 
+		case 0xb4414ea1: // ffx(rus)
+		case 0xee97db5b: // ffx(rus)
+		case 0xaec495cc: // ffx(rus)
 		case 0x6a4efe60: // ffx(j)
 		case 0xA39517AB: // ffx(e)
 		case 0xBB3D833A: // ffx(u)
@@ -655,6 +658,7 @@ void LoadGameSpecificSettings()
 		case 0x8A6D7F14: // ffx2 (j)
 		case 0x9AAC530B: // ffx2 (i)
 		case 0x9AAC530A: // ffx2 (f)
+		case 0x9aac530c: // ffx2 (f)
 		case 0xe1fd9a2d: // ffx2 last mission (?)
 		case 0x93f9b89a: // ffx2 demo (g)
 		case 0x304C115C: // harvest moon - awl
