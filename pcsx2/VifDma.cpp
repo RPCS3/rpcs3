@@ -1000,13 +1000,17 @@ int VIF0transfer(u32 *data, int size, int istag) {
 		
 		if ((vif0.cmd & 0x80)) { //i bit on vifcode and not masked by VIF0_ERR
 			if(!(vif0Regs->err & 0x1)){
-			VIF_LOG( "Interrupt on VIFcmd: %x (INTC_MASK = %x)\n", vif0.cmd, psHu32(INTC_MASK) );
+
+				VIF_LOG( "Interrupt on VIFcmd: %x (INTC_MASK = %x)\n", vif0.cmd, psHu32(INTC_MASK) );
 			
 				++vif0.irq;
+
 				if(istag && vif0.tag.size <= vif0.vifpacketsize) vif0.stallontag = 1;
-				}
-				vif0.cmd &= 0x7f;
 				if(vif0.tag.size == 0) break;
+
+			}
+			vif0.cmd &= 0x7f;
+				
 		} 
 	}
 	transferred += size - vif0.vifpacketsize;
@@ -1839,9 +1843,11 @@ int VIF1transfer(u32 *data, int size, int istag) {
 			if(!(vif1Regs->err & 0x1)){
 				++vif1.irq;				
 				if(istag && vif1.tag.size <= vif1.vifpacketsize) vif1.stallontag = 1;
+
+				if(vif1.tag.size == 0) break;
 			}
 			vif1.cmd &= 0x7f;
-			if(vif1.tag.size == 0) break;
+			
 		} 
 	}
 
