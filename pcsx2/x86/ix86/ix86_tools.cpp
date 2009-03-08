@@ -195,7 +195,7 @@ __forceinline void FreezeXMMRegs_(int save)
 			"movaps [%0+0x50], xmm5\n"
 			"movaps [%0+0x60], xmm6\n"
 			"movaps [%0+0x70], xmm7\n"
-			".att_syntax\n" : : "r"(g_globalXMMData) );
+			".att_syntax\n" : : "r"(g_globalXMMData)
 		);
 
 #endif // _MSC_VER
@@ -237,7 +237,7 @@ __forceinline void FreezeXMMRegs_(int save)
 			"movaps xmm5, [%0+0x50]\n"
 			"movaps xmm6, [%0+0x60]\n"
 			"movaps xmm7, [%0+0x70]\n"
-			".att_syntax\n" : : "r"(g_globalXMMData) );
+			".att_syntax\n" : : "r"(g_globalXMMData)
 		);
 
 #endif // _MSC_VER

@@ -44,16 +44,19 @@ struct SSE2_Tables
 	u16 BCb_coefficients[8];// offset 64
 };
 
-#define C_BIAS     (-64)
-#define Y_BIAS     (-48)
-#define Y_MASK     (-32)
-#define ROUND_1BIT (-16)
+enum
+{
+	C_BIAS     = -0x40,
+	Y_BIAS     = -0x30,
+	Y_MASK     = -0x20,
+	ROUND_1BIT = -0x10,
 
-#define Y_COEFF      0
-#define GCr_COEFF   16
-#define GCb_COEFF   32
-#define RCr_COEFF   48
-#define BCb_COEFF   64
+	Y_COEFF     = 0x00,
+	GCr_COEFF   = 0x10,
+	GCb_COEFF   = 0x20,
+	RCr_COEFF   = 0x30,
+	BCb_COEFF   = 0x40
+};
 
 static PCSX2_ALIGNED16(const SSE2_Tables sse2_tables) = 
 {
