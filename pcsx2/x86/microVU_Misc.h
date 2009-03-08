@@ -47,6 +47,7 @@ PCSX2_ALIGNED16_EXTERN(const float mVU_ITOF_15[4]);
 #define _XYZW_SS (_X+_Y+_Z+_W==1)
 
 #define _X_Y_Z_W  (((mVU->code >> 21 ) & 0xF ))
+#define _xyzw_ACC ((_XYZW_SS && !_X) ? 15 : _X_Y_Z_W)
 
 #define _bc_	 (mVU->code & 0x03)
 #define _bc_x	((mVU->code & 0x03) == 0)
@@ -99,8 +100,7 @@ PCSX2_ALIGNED16_EXTERN(const float mVU_ITOF_15[4]);
 #define isNOP		 (mVUallocInfo.info[mVUallocInfo.curPC] & (1<<0))
 #define writeACC	((mVUallocInfo.info[mVUallocInfo.curPC] & (3<<1)) >> 1)
 #define prevACC		(((u8)((mVUallocInfo.info[mVUallocInfo.curPC] & (3<<1)) >> 1) - 1) & 0x3)
-//#define setACCreg	((mVUallocInfo.info[mVUallocInfo.curPC] & (1<<1)) >> 1)
-//#define setACCmem	 (mVUallocInfo.info[mVUallocInfo.curPC] & (1<<2))
+#define readACC		((mVUallocInfo.info[mVUallocInfo.curPC] & (3<<3)) >> 3)
 //#define setFd		 (mVUallocInfo.info[mVUallocInfo.curPC] & (1<<7))
 #define doFlags		 (mVUallocInfo.info[mVUallocInfo.curPC] & (3<<8))
 #define doMac		 (mVUallocInfo.info[mVUallocInfo.curPC] & (1<<8))
@@ -109,7 +109,7 @@ PCSX2_ALIGNED16_EXTERN(const float mVU_ITOF_15[4]);
 #define fsInstance	((mVUallocInfo.info[mVUallocInfo.curPC] & (3<<12)) >> 12)
 #define fpmInstance	(((u8)((mVUallocInfo.info[mVUallocInfo.curPC] & (3<<10)) >> 10) - 1) & 0x3)
 #define fpsInstance	(((u8)((mVUallocInfo.info[mVUallocInfo.curPC] & (3<<12)) >> 12) - 1) & 0x3)
-//#define getFs		 (mVUallocInfo.info[mVUallocInfo.curPC] & (1<<2))
-//#define getFt		 (mVUallocInfo.info[mVUallocInfo.curPC] & (1<<3))
+//#define getFs		 (mVUallocInfo.info[mVUallocInfo.curPC] & (1<<13))
+//#define getFt		 (mVUallocInfo.info[mVUallocInfo.curPC] & (1<<14))
 
 #include "microVU_Misc.inl"
