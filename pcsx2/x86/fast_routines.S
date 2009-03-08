@@ -19,9 +19,9 @@
 
 #define TINY_BLOCK_COPY 64  
 #define IN_CACHE_COPY 2 * 1024 
-#define UNCACHED_COPY 4 * 1024 /
+#define UNCACHED_COPY 4 * 1024
 #define BLOCK_PREFETCH_COPY  infinity // no limit for movq/movntq w/block prefetch 
-#define CACHEBLOCK 80h 
+#define CACHEBLOCK 80
 
 // Fast assembly routines for x86-64
 // zerofrog(@gmail.com)
@@ -40,7 +40,7 @@
 #define MEMCMP_SRC2 esi
 #define MEMCMP_SIZE ecx
 
-.globl memcmp_mmx
+.global memcmp_mmx
 memcmp_mmx:
 		// make sure mmx regs are stored
 		// FreezeMMXRegs(1);
@@ -225,7 +225,7 @@ memcmp_End:
 #define MEMXOR_SRC2 esi
 #define MEMXOR_SIZE ecx
 
-.globl memxor_mmx
+.global memxor_mmx
 memxor_mmx:
 		// make sure mmx regs are stored
 		// FreezeMMXRegs(1);
@@ -338,7 +338,7 @@ memxor_End:
 	ret
 
 // void __fastcall memcpy_amd_(void *dest, const void *src, size_t n)
-.globl memcpy_amd_
+.global memcpy_amd_
 memcpy_amd_:
 	push    edi  
 	push    esi  
@@ -356,10 +356,11 @@ memcpy_amd_:
 	jbe		$memcpy_do_align //  it appears to be slower
 	cmp		eax, 64*1024
 	jbe		$memcpy_align_done
+	
 $memcpy_do_align:
 	mov		eax, 8			// a trick that's faster than rep movsb...
 	sub		eax, edi		// align destination to qword
-	andb	eax, 111		// get the low bits
+	and		eax, 0b111		// get the low bits
 	sub		ecx, eax		// update copy count
 	neg		eax				// set up to jump into the array
 	add		eax, offset $memcpy_align_done
@@ -427,7 +428,7 @@ $memcpy_ic_2:
 	mov		eax, ecx		// has valid low 6 bits of the byte count
 $memcpy_ic_3:
 	shr		eax, 2			// dword count
-	andb	eax, 1111		// only look at the "remainder" bits
+	and		eax, 0b1111		// only look at the "remainder" bits
 	neg		eax				// set up to jump into the array
 	add		eax, offset $memcpy_last_few
 	jmp		eax				// jump to array of movsd's
@@ -512,7 +513,7 @@ $memcpy_uc_1:				// 64-byte blocks, uncached copy
 
 $memcpy_last_few:		// dword aligned from before movsd's
 	mov		eax, ecx	// has valid low 2 bits of the byte count
-	andb	eax, 11	// the last few cows must come home
+	and		eax, 0b11	// the last few cows must come home
 	jz		$memcpy_final	// no more, let's leave
 	rep		movsb		// the last 1, 2, or 3 bytes
 

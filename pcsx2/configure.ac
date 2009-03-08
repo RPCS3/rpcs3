@@ -36,11 +36,11 @@ DEBUG_FLAGS=" -O0 -g "
 fi
 
 WARNING_FLAGS="-Wall -Wno-format -Wno-unused-value"
-NORMAL_FLAGS=" -pipe -msse -O3 "
+NORMAL_FLAGS=" -pipe -msse -msse2 -O2 "
 # These optimizations seem to cause issues with GCC 4.3.3, so we'll turn them off.
 NORMAL_FLAGS+=" -fno-guess-branch-probability -fno-dse -fno-tree-dse "
 
-DEBUG_FLAGS+=" -g -msse ${WARNING_FLAGS} "
+DEBUG_FLAGS+=" -g -msse -msse2 ${WARNING_FLAGS} "
 
 dnl Check for debug build
 AC_MSG_CHECKING(debug build)

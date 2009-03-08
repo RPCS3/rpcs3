@@ -25,10 +25,10 @@
 
 #include "VifDma.h" 
 
-#ifdef _MSC_VER
+//#ifdef _MSC_VER
 #include <xmmintrin.h>
 #include <emmintrin.h>
-#endif
+//#endif
 
 using namespace std;			// for min / max
 
@@ -330,9 +330,9 @@ static void VIFunpack(u32 *data, vifCode *v, int size, const unsigned int VIFdma
 	u32 memsize = VIFdmanum ? 0x4000 : 0x1000;
 #endif
 
-#ifdef _MSC_VER
+//#ifdef _MSC_VER
 	_mm_prefetch((char*)data, _MM_HINT_NTA);
-#endif
+//#endif
 
 	if (VIFdmanum == 0) 
 	{
@@ -381,9 +381,9 @@ static void VIFunpack(u32 *data, vifCode *v, int size, const unsigned int VIFdma
 		VIFUNPACK_LOG("*PCSX2*: Unpack %x with size 0!! v->size = %d cl = %d, wl = %d, mode %d mask %x\n", v->cmd, v->size, vifRegs->cycle.cl, vifRegs->cycle.wl, vifRegs->mode, vifRegs->mask);
 	}
     
-#ifdef _MSC_VER
+//#ifdef _MSC_VER
 	_mm_prefetch((char*)data+128, _MM_HINT_NTA);
-#endif
+//#endif
 	_vifRegs = (VIFregisters*)vifRegs;
 	_vifMaskRegs = VIFdmanum ? g_vif1Masks : g_vif0Masks;
 	_vif = vif;

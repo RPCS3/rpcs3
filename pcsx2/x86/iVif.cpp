@@ -22,6 +22,9 @@
 #include "Vif.h"
 #include "VUmicro.h"
 
+#include <xmmintrin.h>
+#include <emmintrin.h>
+
 // sse2 highly optimized vif (~200 separate functions are built) zerofrog(@gmail.com)
 extern u32 g_vif1Masks[48], g_vif0Masks[48];
 extern u32 g_vif1HasMask3[4], g_vif0HasMask3[4];
@@ -55,10 +58,7 @@ extern u8 s_maskwrite[256];
 
 extern "C" PCSX2_ALIGNED16(u32 s_TempDecompress[4]) = {0};
 
-#if defined(_MSC_VER)
-
-#include <xmmintrin.h>
-#include <emmintrin.h>
+//#if defined(_MSC_VER)
 
 void __fastcall SetNewMask(u32* vif1masks, u32* hasmask, u32 mask, u32 oldmask)
 {
@@ -95,7 +95,7 @@ void __fastcall SetNewMask(u32* vif1masks, u32* hasmask, u32 mask, u32 oldmask)
 }
 
 
-#else // gcc
+/*#else // gcc
 // Is this really supposed to be assembly for gcc and C for Windows?
 void __fastcall SetNewMask(u32* vif1masks, u32* hasmask, u32 mask, u32 oldmask)
 {
@@ -135,4 +135,4 @@ void __fastcall SetNewMask(u32* vif1masks, u32* hasmask, u32 mask, u32 oldmask)
 	FreezeXMMRegs(0);
 }
 
-#endif
+#endif*/

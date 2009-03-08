@@ -264,44 +264,16 @@ void mpeg2_idct_mmx_init (void);
 
 void mpeg2_idct_init()
 {
-#if !defined(_MSC_VER) || _MSC_VER < 1400 // ignore vc2005 and beyond
-	int i, j;
+	   int i, j;
 	
-/*	if(hasMultimediaExtensions == 1)
-	{
-		mpeg2_idct_copy = mpeg2_idct_copy_mmx;
-		mpeg2_idct_add = mpeg2_idct_add_mmx;
-		mpeg2_idct_mmx_init ();
-	}else if(hasMultimediaExtensionsExt == 1)
-	{
-		mpeg2_idct_copy = mpeg2_idct_copy_mmxext;
-		mpeg2_idct_add = mpeg2_idct_add_mmxext;
-		mpeg2_idct_mmx_init ();
-	}else*/
-	{
-		mpeg2_idct_copy = mpeg2_idct_copy_c;
-		mpeg2_idct_add = mpeg2_idct_add_c;
-		for (i = -384; i < 640; i++)
-			clip_lut[i+384] = (i < 0) ? 0 : ((i > 255) ? 255 : i);
-		for (i = 0; i < 64; i++) {
-			j = mpeg2_scan_norm[i];
-			mpeg2_scan_norm[i] = ((j & 0x36) >> 1) | ((j & 0x09) << 2);
-			j = mpeg2_scan_alt[i];
-			mpeg2_scan_alt[i] = ((j & 0x36) >> 1) | ((j & 0x09) << 2);
-		}
+	mpeg2_idct_copy = mpeg2_idct_copy_c;
+	mpeg2_idct_add = mpeg2_idct_add_c;
+	for (i = -384; i < 640; i++)
+		clip_lut[i+384] = (i < 0) ? 0 : ((i > 255) ? 255 : i);
+	for (i = 0; i < 64; i++) {
+		j = mpeg2_scan_norm[i];
+		mpeg2_scan_norm[i] = ((j & 0x36) >> 1) | ((j & 0x09) << 2);
+		j = mpeg2_scan_alt[i];
+		mpeg2_scan_alt[i] = ((j & 0x36) >> 1) | ((j & 0x09) << 2);
 	}
-
-#else //blah vcnet2005 idiocity :D
-	   int i,j;
-  		mpeg2_idct_copy = mpeg2_idct_copy_c;
-		mpeg2_idct_add = mpeg2_idct_add_c;
-		for (i = -384; i < 640; i++)
-			clip_lut[i+384] = (i < 0) ? 0 : ((i > 255) ? 255 : i);
-		for (i = 0; i < 64; i++) {
-			j = mpeg2_scan_norm[i];
-			mpeg2_scan_norm[i] = ((j & 0x36) >> 1) | ((j & 0x09) << 2);
-			j = mpeg2_scan_alt[i];
-			mpeg2_scan_alt[i] = ((j & 0x36) >> 1) | ((j & 0x09) << 2);
-		}
-#endif
 }

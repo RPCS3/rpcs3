@@ -187,9 +187,11 @@ void mpeg2_idct_init ();
 #ifdef _MSC_VER
 #define BigEndian(out, in) out = _byteswap_ulong(in)
 #else
-#define BigEndian(out, in) \
-	out = (((((in) >> 24) & 0xFF) <<  0) + ((((in) >> 16) & 0xFF) <<  8) + \
-		   ((((in) >>  8) & 0xFF) << 16) + ((((in) >>  0) & 0xFF) << 24));
+#define BigEndian(out, in) out = __builtin_bswap32(in) // or we could use the asm function bswap...
+// No need to reimplement something already in the compiler. 
+//#define BigEndian(out, in) \
+//	out = (((((in) >> 24) & 0xFF) <<  0) + ((((in) >> 16) & 0xFF) <<  8) + \
+//		   ((((in) >>  8) & 0xFF) << 16) + ((((in) >>  0) & 0xFF) << 24));
 
 #endif
 	
