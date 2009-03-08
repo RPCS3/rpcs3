@@ -54,6 +54,8 @@ void DlgItem_GetText( HWND hwnd, int dlgId, string& dest )
 	}
 }
 
+// strips path information so that absolute paths are reduced to relative paths
+// where appropriate.
 static const char* _stripPathInfo( const char* src )
 {
 	const char* retval = src;
@@ -65,7 +67,9 @@ static const char* _stripPathInfo( const char* src )
 		workingfold++;
 	}
 
-	if( *retval == 0 ) return src;
+	// If a difference is found before we reach the end of our pcsx2 working folder, it
+	// means we need to use the fully absolute path form the user.
+	if( *workingfold != 0 ) return src;
 
 	while( (*retval != 0) && (*retval == '\\') ) retval++;
 
@@ -246,7 +250,7 @@ void IniFile::MemcardSettings( PcsxConfig& conf )
 		Path::Combine( g_WorkingFolder, m_Default_MemcardsDir[0] ) );
 
 	Entry( "Slot2_Path", conf.Mcd[1].Filename,
-		Path::Combine( g_WorkingFolder, m_Default_MemcardsDir[0] ) );
+		Path::Combine( g_WorkingFolder, m_Default_MemcardsDir[1] ) );
 
 	Entry( "Slot1_Enabled", conf.Mcd[0].Enabled, true );
 	Entry( "Slot2_Enabled", conf.Mcd[1].Enabled, true );

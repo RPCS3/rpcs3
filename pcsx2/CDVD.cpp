@@ -692,7 +692,7 @@ __forceinline void cdvdGetDiskType()
 //          gets value for start lsn of layer1
 // returns: 1 if on dual layer disc
 //          0 if not on dual layer disc
-s32 cdvdReadDvdDualInfo(s32* dualType, u32* layer1Start)
+static s32 cdvdReadDvdDualInfo(s32* dualType, u32* layer1Start)
 {
 	u8 toc[2064];
 	*dualType = 0;
@@ -754,6 +754,8 @@ void cdvdReset()
     cdvd.RTC.day = 25;
     cdvd.RTC.month = 5;
     cdvd.RTC.year = 7; //2007
+    
+    cdvdSetSystemTime( cdvd );
 }
 
 struct Freeze_v10Compat

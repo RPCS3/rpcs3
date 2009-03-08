@@ -57,16 +57,7 @@ __forceinline static int _limit( int a, int max )
 		_vifRegs->offset++;                                  \
 	}
 
-// Forceinline macro that is enabled for RELEASE/PUBLIC builds ONLY.
-// This is useful because forceinline can make certain types of debugging problematic since
-// functions that look like they should be called won't breakpoint since their code is inlined.
-#ifdef PCSX2_DEVBUILD
-#	define __pub_inline
-#else
-#	define __pub_inline __forceinline
-#endif
-
-static __pub_inline void writeX( u32 *dest, u32 data ) {
+static __releaseinline void writeX( u32 *dest, u32 data ) {
 	if (_vifRegs->code & 0x10000000) { 
 		switch ( _vif->cl ) {
 			case 0:  n = (_vifRegs->mask) & 0x3; break;
@@ -105,7 +96,7 @@ static __pub_inline void writeX( u32 *dest, u32 data ) {
 //	VIF_LOG("writeX %8.8x : Mode %d, r0 = %x, data %8.8x\n", *dest,_vifRegs->mode,_vifRegs->r0,data);
 }
 
-static __pub_inline void writeY( u32 *dest, u32 data ) {
+static __releaseinline void writeY( u32 *dest, u32 data ) {
 	if (_vifRegs->code & 0x10000000) { 
 		switch ( _vif->cl ) {
 			case 0:  n = (_vifRegs->mask >> 2) & 0x3; break;
@@ -144,7 +135,7 @@ static __pub_inline void writeY( u32 *dest, u32 data ) {
 //	VIF_LOG("writeY %8.8x : Mode %d, r1 = %x, data %8.8x\n", *dest,_vifRegs->mode,_vifRegs->r1,data);
 }
 
-static __pub_inline void writeZ( u32 *dest, u32 data ) {
+static __releaseinline void writeZ( u32 *dest, u32 data ) {
 	if (_vifRegs->code & 0x10000000) { 
 		switch ( _vif->cl ) {
 			case 0:  n = (_vifRegs->mask >> 4) & 0x3; break;
@@ -183,7 +174,7 @@ static __pub_inline void writeZ( u32 *dest, u32 data ) {
 //	VIF_LOG("writeZ %8.8x : Mode %d, r2 = %x, data %8.8x\n", *dest,_vifRegs->mode,_vifRegs->r2,data);
 }
 
-static __pub_inline void writeW( u32 *dest, u32 data ) {
+static __releaseinline void writeW( u32 *dest, u32 data ) {
 	if (_vifRegs->code & 0x10000000) { 
 		switch ( _vif->cl ) {
 			case 0:  n = (_vifRegs->mask >> 6) & 0x3; break;

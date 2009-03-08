@@ -21,35 +21,74 @@
 
 #include "PrecompiledHeader.h"
 
-#include "System.h"
+#include "Misc.h"
 #include "IPU.h"
 #include "yuv2rgb.h"
 
 // Everything below is bit accurate to the IPU specification (except maybe rounding).
 // Know the specification before you touch it.
-PCSX2_ALIGNED16(u16 C_bias[8]) = {0x8000,0x8000,0x8000,0x8000,0x8000,0x8000,0x8000,0x8000};
-PCSX2_ALIGNED16(u8 Y_bias[16]) = {16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16};
-#define SSE_COEFFICIENTS(name, x) \
-	PCSX2_ALIGNED16(u16 name[8]) = {x<<2,x<<2,x<<2,x<<2,x<<2,x<<2,x<<2,x<<2};
-SSE_COEFFICIENTS(Y_coefficients, 0x95);    // 1.1640625
-SSE_COEFFICIENTS(RCr_coefficients, 0xcc);  // 1.59375
-SSE_COEFFICIENTS(GCr_coefficients, (-0x68));  // -0.8125
-SSE_COEFFICIENTS(GCb_coefficients, (-0x32));  // -0.390625
-SSE_COEFFICIENTS(BCb_coefficients, 0x102); // 2.015625
-PCSX2_ALIGNED16(u16 Y_mask[8]) = {0xff00,0xff00,0xff00,0xff00,0xff00,0xff00,0xff00,0xff00};
-// Specifying round off instead of round down as everywhere else
-// implies that this is right
-PCSX2_ALIGNED16(u16 round_1bit[8]) = {1,1,1,1,1,1,1,1};
-PCSX2_ALIGNED16(u16 yuv2rgb_temp[3][8]);
+#define SSE_COEFFICIENTS(x) \
+	{(x)<<2,(x)<<2,(x)<<2,(x)<<2,(x)<<2,(x)<<2,(x)<<2,(x)<<2}
+
+struct SSE2_Tables
+{
+	u16 C_bias[8];			// offset -64
+	u8 Y_bias[16];			// offset -48
+	u16 Y_mask[8];			// offset -32
+	u16 round_1bit[8];		// offset -16
+	
+	u16 Y_coefficients[8];	// offset 0
+	u16 GCr_coefficients[8];// offset 16
+	u16 GCb_coefficients[8];// offset 32
+	u16 RCr_coefficients[8];// offset 48
+	u16 BCb_coefficients[8];// offset 64
+};
+
+#define C_BIAS     (-64)
+#define Y_BIAS     (-48)
+#define Y_MASK     (-32)
+#define ROUND_1BIT (-16)
+
+#define Y_COEFF      0
+#define GCr_COEFF   16
+#define GCb_COEFF   32
+#define RCr_COEFF   48
+#define BCb_COEFF   64
+
+static PCSX2_ALIGNED16(const SSE2_Tables sse2_tables) = 
+{
+	{0x8000,0x8000,0x8000,0x8000,0x8000,0x8000,0x8000,0x8000},	// c_bias
+	{16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16},			// y_bias
+	{0xff00,0xff00,0xff00,0xff00,0xff00,0xff00,0xff00,0xff00},	// y_mask
+	
+	// Specifying round off instead of round down as everywhere else
+	// implies that this is right
+	{1,1,1,1,1,1,1,1},		// round_1bit
+	
+	SSE_COEFFICIENTS(0x95),   // 1.1640625 [Y_coefficients]
+	SSE_COEFFICIENTS(-0x68),  // -0.8125 [GCr_coefficients]
+	SSE_COEFFICIENTS(-0x32),  // -0.390625 [GCb_coefficients]
+	SSE_COEFFICIENTS(0xcc),   // 1.59375 [RCr_coefficients]
+	SSE_COEFFICIENTS(0x102),  // 2.015625 [BCb_coefficients]
+};
+
+static PCSX2_ALIGNED16(u16 yuv2rgb_temp[3][8]);
 
 // This could potentially be improved for SSE4
-void yuv2rgb_sse2(void)
+__releaseinline void yuv2rgb_sse2(void)
 {
+	FreezeXMMRegs(1);
+	
 #if defined(_MSC_VER) || defined(__INTEL_COMPILER)
 	__asm {
 		mov eax, 1
-		mov esi, 0
-		mov edi, 0
+		xor esi, esi
+		xor edi, edi
+
+		// Use ecx and edx as base pointers, to allow for Mod/RM form on memOps.
+		// This saves 2-3 bytes per instruction where these are used. :)
+		mov ecx, offset yuv2rgb_temp
+		mov edx, offset sse2_tables+64;
 
 		align 16
 tworows:
@@ -65,29 +104,29 @@ tworows:
 		// unfortunately I don't think this will matter despite being
 		// technically potentially a little faster, but this is
 		// equivalent to an add or sub
-		pxor xmm2, xmmword ptr [C_bias] // xmm2 <-- 8 x (Cb - 128) << 8
-		pxor xmm0, xmmword ptr [C_bias] // xmm0 <-- 8 x (Cr - 128) << 8
+		pxor xmm2, xmmword ptr [edx+C_BIAS] // xmm2 <-- 8 x (Cb - 128) << 8
+		pxor xmm0, xmmword ptr [edx+C_BIAS] // xmm0 <-- 8 x (Cr - 128) << 8
 
 		movaps xmm1, xmm0
 		movaps xmm3, xmm2
-		pmulhw xmm1, xmmword ptr [GCr_coefficients]
-		pmulhw xmm3, xmmword ptr [GCb_coefficients]
-		pmulhw xmm0, xmmword ptr [RCr_coefficients]
-		pmulhw xmm2, xmmword ptr [BCb_coefficients]
+		pmulhw xmm1, xmmword ptr [edx+GCr_COEFF]
+		pmulhw xmm3, xmmword ptr [edx+GCb_COEFF]
+		pmulhw xmm0, xmmword ptr [edx+RCr_COEFF]
+		pmulhw xmm2, xmmword ptr [edx+BCb_COEFF]
 		paddsw xmm1, xmm3
 		// store for the next line; looking at the code above
 		// compared to the code below, I have to wonder whether
 		// this was worth the hassle
-		movaps xmmword ptr [yuv2rgb_temp], xmm0
-		movaps xmmword ptr [yuv2rgb_temp+16], xmm1
-		movaps xmmword ptr [yuv2rgb_temp+32], xmm2
+		movaps xmmword ptr [ecx], xmm0
+		movaps xmmword ptr [ecx+16], xmm1
+		movaps xmmword ptr [ecx+32], xmm2
 		jmp ihatemsvc
 
 		align 16
 onerow:
-		movaps xmm0, xmmword ptr [yuv2rgb_temp]
-		movaps xmm1, xmmword ptr [yuv2rgb_temp+16]
-		movaps xmm2, xmmword ptr [yuv2rgb_temp+32]
+		movaps xmm0, xmmword ptr [ecx]
+		movaps xmm1, xmmword ptr [ecx+16]
+		movaps xmm2, xmmword ptr [ecx+32]
 
 // If masm directives worked properly in inline asm, I'd be using them,
 // but I'm not inclined to write ~70 line #defines to simulate them.
@@ -100,13 +139,13 @@ ihatemsvc:
 		movaps xmm5, xmm2
 
 		movaps xmm6, xmmword ptr [mb8+edi]
-		psubusb xmm6, xmmword ptr [Y_bias]
+		psubusb xmm6, xmmword ptr [edx+Y_BIAS]
 		movaps xmm7, xmm6
 		psllw xmm6, 8                    // xmm6 <- Y << 8 for pixels 0,2,4,6,8,10,12,14
-		pand xmm7, xmmword ptr [Y_mask]  // xmm7 <- Y << 8 for pixels 1,3,5,7,9,11,13,15
+		pand xmm7, xmmword ptr [edx+Y_MASK]  // xmm7 <- Y << 8 for pixels 1,3,5,7,9,11,13,15
 
-		pmulhuw xmm6, xmmword ptr [Y_coefficients]
-		pmulhuw xmm7, xmmword ptr [Y_coefficients]
+		pmulhuw xmm6, xmmword ptr [edx+Y_COEFF]
+		pmulhuw xmm7, xmmword ptr [edx+Y_COEFF]
 
 		paddsw xmm0, xmm6
 		paddsw xmm3, xmm7
@@ -116,7 +155,7 @@ ihatemsvc:
 		paddsw xmm5, xmm7
 
 		// round
-		movaps xmm6, xmmword ptr [round_1bit]
+		movaps xmm6, xmmword ptr [edx+ROUND_1BIT]
 		paddw xmm0, xmm6
 		paddw xmm1, xmm6
 		paddw xmm2, xmm6
@@ -176,8 +215,13 @@ ihatemsvc:
 	asm(
 		".intel_syntax noprefix\n"
 		"mov eax, 1\n"
-		"mov esi, 0\n"
-		"mov edi, 0\n"
+		"xor esi, esi\n"
+		"xor edi, edi\n"
+
+		// Use ecx and edx as base pointers, to allow for Mod/RM form on memOps.
+		// This saves 2-3 bytes per instruction where these are used. :)
+		"mov ecx, offset yuv2rgb_temp\n"
+		"mov edx, offset sse2_tables+64\n"
 
 		".align 16\n"
 "tworows:\n"
@@ -193,29 +237,29 @@ ihatemsvc:
 		// unfortunately I don't think this will matter despite being
 		// technically potentially a little faster, but this is
 		// equivalent to an add or sub
-		"pxor xmm2, xmmword ptr [C_bias]\n" // xmm2 <-- 8 x (Cb - 128) << 8
-		"pxor xmm0, xmmword ptr [C_bias]\n" // xmm0 <-- 8 x (Cr - 128) << 8
+		"pxor xmm2, xmmword ptr [edx+C_BIAS]\n" // xmm2 <-- 8 x (Cb - 128) << 8
+		"pxor xmm0, xmmword ptr [edx+C_BIAS]\n" // xmm0 <-- 8 x (Cr - 128) << 8
 
 		"movaps xmm1, xmm0\n"
 		"movaps xmm3, xmm2\n"
-		"pmulhw xmm1, xmmword ptr [GCr_coefficients]\n"
-		"pmulhw xmm3, xmmword ptr [GCb_coefficients]\n"
-		"pmulhw xmm0, xmmword ptr [RCr_coefficients]\n"
-		"pmulhw xmm2, xmmword ptr [BCb_coefficients]\n"
+		"pmulhw xmm1, xmmword ptr [edx+GCr_COEFF]\n"
+		"pmulhw xmm3, xmmword ptr [edx+GCb_COEFF]\n"
+		"pmulhw xmm0, xmmword ptr [edx+RCr_COEFF]\n"
+		"pmulhw xmm2, xmmword ptr [edx+BCb_COEFF]\n"
 		"paddsw xmm1, xmm3\n"
 		// store for the next line; looking at the code above
 		// compared to the code below, I have to wonder whether
 		// this was worth the hassle
-		"movaps xmmword ptr [yuv2rgb_temp], xmm0\n"
-		"movaps xmmword ptr [yuv2rgb_temp+16], xmm1\n"
-		"movaps xmmword ptr [yuv2rgb_temp+32], xmm2\n"
+		"movaps xmmword ptr [ecx], xmm0\n"
+		"movaps xmmword ptr [ecx+16], xmm1\n"
+		"movaps xmmword ptr [ecx+32], xmm2\n"
 		"jmp ihategcctoo\n"
 
 		".align 16\n"
 "onerow:\n"
-		"movaps xmm0, xmmword ptr [yuv2rgb_temp]\n"
-		"movaps xmm1, xmmword ptr [yuv2rgb_temp+16]\n"
-		"movaps xmm2, xmmword ptr [yuv2rgb_temp+32]\n"
+		"movaps xmm0, xmmword ptr [ecx]\n"
+		"movaps xmm1, xmmword ptr [ecx+16]\n"
+		"movaps xmm2, xmmword ptr [ecx+32]\n"
 
 "ihategcctoo:\n"
 		"movaps xmm3, xmm0\n"
@@ -223,13 +267,13 @@ ihatemsvc:
 		"movaps xmm5, xmm2\n"
 
 		"movaps xmm6, xmmword ptr [mb8+edi]\n"
-		"psubusb xmm6, xmmword ptr [Y_bias]\n"
+		"psubusb xmm6, xmmword ptr [edx+Y_BIAS]\n"
 		"movaps xmm7, xmm6\n"
 		"psllw xmm6, 8\n"                   // xmm6 <- Y << 8 for pixels 0,2,4,6,8,10,12,14
-		"pand xmm7, xmmword ptr [Y_mask]\n" // xmm7 <- Y << 8 for pixels 1,3,5,7,9,11,13,15
+		"pand xmm7, xmmword ptr [edx+Y_MASK]\n" // xmm7 <- Y << 8 for pixels 1,3,5,7,9,11,13,15
 
-		"pmulhuw xmm6, xmmword ptr [Y_coefficients]\n"
-		"pmulhuw xmm7, xmmword ptr [Y_coefficients]\n"
+		"pmulhuw xmm6, xmmword ptr [edx+Y_COEFF]\n"
+		"pmulhuw xmm7, xmmword ptr [edx+Y_COEFF]\n"
 
 		"paddsw xmm0, xmm6\n"
 		"paddsw xmm3, xmm7\n"
@@ -239,7 +283,7 @@ ihatemsvc:
 		"paddsw xmm5, xmm7\n"
 
 		// round
-		"movaps xmm6, xmmword ptr [round_1bit]\n"
+		"movaps xmm6, xmmword ptr [edx+ROUND_1BIT]\n"
 		"paddw xmm0, xmm6\n"
 		"paddw xmm1, xmm6\n"
 		"paddw xmm2, xmm6\n"
@@ -299,6 +343,8 @@ ihatemsvc:
 #else
 #error Unsupported compiler
 #endif
+
+	FreezeXMMRegs(0);
 }
 
 void yuv2rgb_init(void)

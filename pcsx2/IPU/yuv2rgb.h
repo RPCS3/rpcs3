@@ -18,5 +18,5 @@
 
 #pragma once
 
-void yuv2rgb_sse2(void);
-void yuv2rgb_init(void);
+extern void yuv2rgb_sse2(void);
+extern void yuv2rgb_init(void);

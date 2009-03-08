@@ -116,9 +116,23 @@ static __forceinline u32 timeGetTime()
 #endif
 
 //////////////////////////////////////////////////////////////////////////////////////////
+// Forceinline macro that is enabled for RELEASE/PUBLIC builds ONLY.  (non-inline in devel)
+// This is useful because forceinline can make certain types of debugging problematic since
+// functions that look like they should be called won't breakpoint since their code is inlined.
+// Henceforth, use release_inline for things which we want inlined on public/release builds but
+// *not* in devel builds.
+
+#ifdef PCSX2_DEVBUILD
+#	define __releaseinline
+#else
+#	define __releaseinline __forceinline
+#endif
+
+//////////////////////////////////////////////////////////////////////////////////////////
 // Emitter Instance Identifiers.  If you add a new emitter, do it here also.
 // Note: Currently most of the instances map back to 0, since existing dynarec code all
 // shares iCore and must therefore all share the same emitter instance.
+// (note: these don't really belong here per-se, but it's an easy spot to use for now)
 enum
 {
 	EmitterId_R5900 = 0,

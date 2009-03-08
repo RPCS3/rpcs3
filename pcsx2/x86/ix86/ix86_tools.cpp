@@ -67,7 +67,7 @@ void SetCPUState(u32 sseMXCSR, u32 sseVUMXCSR)
 }
 
 /////////////////////////////////////////////////////////////////////
-//
+// MMX Register Freezing
 #ifndef __INTEL_COMPILER
 extern "C"
 {
@@ -86,28 +86,31 @@ __forceinline void FreezeMMXRegs_(int save)
 
 #ifdef _MSC_VER
 		__asm {
-			movntq mmword ptr [g_globalMMXData + 0], mm0
-			movntq mmword ptr [g_globalMMXData + 8], mm1
-			movntq mmword ptr [g_globalMMXData + 16], mm2
-			movntq mmword ptr [g_globalMMXData + 24], mm3
-			movntq mmword ptr [g_globalMMXData + 32], mm4
-			movntq mmword ptr [g_globalMMXData + 40], mm5
-			movntq mmword ptr [g_globalMMXData + 48], mm6
-			movntq mmword ptr [g_globalMMXData + 56], mm7
+			mov ecx, offset g_globalMMXData
+			movntq mmword ptr [ecx+0], mm0
+			movntq mmword ptr [ecx+8], mm1
+			movntq mmword ptr [ecx+16], mm2
+			movntq mmword ptr [ecx+24], mm3
+			movntq mmword ptr [ecx+32], mm4
+			movntq mmword ptr [ecx+40], mm5
+			movntq mmword ptr [ecx+48], mm6
+			movntq mmword ptr [ecx+56], mm7
 			emms
 		}
 #else
-        __asm__(".intel_syntax noprefix\n"
-                "movq [%0+0x00], mm0\n"
-                "movq [%0+0x08], mm1\n"
-                "movq [%0+0x10], mm2\n"
-                "movq [%0+0x18], mm3\n"
-                "movq [%0+0x20], mm4\n"
-                "movq [%0+0x28], mm5\n"
-                "movq [%0+0x30], mm6\n"
-                "movq [%0+0x38], mm7\n"
-                "emms\n"
-                ".att_syntax\n" : : "r"(g_globalMMXData) );
+        __asm__(
+			".intel_syntax noprefix\n"
+			"movq [%0+0x00], mm0\n"
+			"movq [%0+0x08], mm1\n"
+			"movq [%0+0x10], mm2\n"
+			"movq [%0+0x18], mm3\n"
+			"movq [%0+0x20], mm4\n"
+			"movq [%0+0x28], mm5\n"
+			"movq [%0+0x30], mm6\n"
+			"movq [%0+0x38], mm7\n"
+			"emms\n"
+			".att_syntax\n" : : "r"(g_globalMMXData)
+		);
 #endif
 
 	}
@@ -123,40 +126,44 @@ __forceinline void FreezeMMXRegs_(int save)
 
 #ifdef _MSC_VER
 		__asm {
-			movq mm0, mmword ptr [g_globalMMXData + 0]
-			movq mm1, mmword ptr [g_globalMMXData + 8]
-			movq mm2, mmword ptr [g_globalMMXData + 16]
-			movq mm3, mmword ptr [g_globalMMXData + 24]
-			movq mm4, mmword ptr [g_globalMMXData + 32]
-			movq mm5, mmword ptr [g_globalMMXData + 40]
-			movq mm6, mmword ptr [g_globalMMXData + 48]
-			movq mm7, mmword ptr [g_globalMMXData + 56]
+			mov ecx, offset g_globalMMXData
+			movq mm0, mmword ptr [ecx+0]
+			movq mm1, mmword ptr [ecx+8]
+			movq mm2, mmword ptr [ecx+16]
+			movq mm3, mmword ptr [ecx+24]
+			movq mm4, mmword ptr [ecx+32]
+			movq mm5, mmword ptr [ecx+40]
+			movq mm6, mmword ptr [ecx+48]
+			movq mm7, mmword ptr [ecx+56]
 			emms
 		}
 #else
-        __asm__(".intel_syntax noprefix\n"
-                "movq mm0, [%0+0x00]\n"
-                "movq mm1, [%0+0x08]\n"
-                "movq mm2, [%0+0x10]\n"
-                "movq mm3, [%0+0x18]\n"
-                "movq mm4, [%0+0x20]\n"
-                "movq mm5, [%0+0x28]\n"
-                "movq mm6, [%0+0x30]\n"
-                "movq mm7, [%0+0x38]\n"
-                "emms\n"
-                ".att_syntax\n" : : "r"(g_globalMMXData) );
+        __asm__(
+			".intel_syntax noprefix\n"
+			"movq mm0, [%0+0x00]\n"
+			"movq mm1, [%0+0x08]\n"
+			"movq mm2, [%0+0x10]\n"
+			"movq mm3, [%0+0x18]\n"
+			"movq mm4, [%0+0x20]\n"
+			"movq mm5, [%0+0x28]\n"
+			"movq mm6, [%0+0x30]\n"
+			"movq mm7, [%0+0x38]\n"
+			"emms\n"
+			".att_syntax\n" : : "r"(g_globalMMXData)
+		);
 #endif
 	}
 }
 
 //////////////////////////////////////////////////////////////////////
-
+// XMM Register Freezing
 __forceinline void FreezeXMMRegs_(int save)
 {
 	//SysPrintf("FreezeXMMRegs_(%d); [%d]\n", save, g_globalXMMSaved);
 	assert( g_EEFreezeRegs );
 
-	if( save ) {
+	if( save )
+	{
 		g_globalXMMSaved++;
 		if( g_globalXMMSaved > 1 ){
 			//SysPrintf("XMM Already saved\n");
@@ -166,31 +173,35 @@ __forceinline void FreezeXMMRegs_(int save)
 
 #ifdef _MSC_VER
         __asm {
-			movaps xmmword ptr [g_globalXMMData + 0x00], xmm0
-			movaps xmmword ptr [g_globalXMMData + 0x10], xmm1
-			movaps xmmword ptr [g_globalXMMData + 0x20], xmm2
-			movaps xmmword ptr [g_globalXMMData + 0x30], xmm3
-			movaps xmmword ptr [g_globalXMMData + 0x40], xmm4
-			movaps xmmword ptr [g_globalXMMData + 0x50], xmm5
-			movaps xmmword ptr [g_globalXMMData + 0x60], xmm6
-			movaps xmmword ptr [g_globalXMMData + 0x70], xmm7
+			mov ecx, offset g_globalXMMData
+			movaps xmmword ptr [ecx+0x00], xmm0
+			movaps xmmword ptr [ecx+0x10], xmm1
+			movaps xmmword ptr [ecx+0x20], xmm2
+			movaps xmmword ptr [ecx+0x30], xmm3
+			movaps xmmword ptr [ecx+0x40], xmm4
+			movaps xmmword ptr [ecx+0x50], xmm5
+			movaps xmmword ptr [ecx+0x60], xmm6
+			movaps xmmword ptr [ecx+0x70], xmm7
         }
 
 #else
-        __asm__(".intel_syntax noprefix\n"
-                "movaps [%0+0x00], xmm0\n"
-                "movaps [%0+0x10], xmm1\n"
-                "movaps [%0+0x20], xmm2\n"
-                "movaps [%0+0x30], xmm3\n"
-                "movaps [%0+0x40], xmm4\n"
-                "movaps [%0+0x50], xmm5\n"
-                "movaps [%0+0x60], xmm6\n"
-                "movaps [%0+0x70], xmm7\n"
-                ".att_syntax\n" : : "r"(g_globalXMMData) );
+        __asm__(
+			".intel_syntax noprefix\n"
+			"movaps [%0+0x00], xmm0\n"
+			"movaps [%0+0x10], xmm1\n"
+			"movaps [%0+0x20], xmm2\n"
+			"movaps [%0+0x30], xmm3\n"
+			"movaps [%0+0x40], xmm4\n"
+			"movaps [%0+0x50], xmm5\n"
+			"movaps [%0+0x60], xmm6\n"
+			"movaps [%0+0x70], xmm7\n"
+			".att_syntax\n" : : "r"(g_globalXMMData) );
+		);
 
 #endif // _MSC_VER
 	}
-	else {
+	else
+	{
 		if( g_globalXMMSaved==0 )
 		{
 			//SysPrintf("XMM Regs not saved!\n");
@@ -202,28 +213,32 @@ __forceinline void FreezeXMMRegs_(int save)
 		if( g_globalXMMSaved > 0 ) return;
 
 #ifdef _MSC_VER
-        __asm {
-			movaps xmm0, xmmword ptr [g_globalXMMData + 0x00]
-			movaps xmm1, xmmword ptr [g_globalXMMData + 0x10]
-			movaps xmm2, xmmword ptr [g_globalXMMData + 0x20]
-			movaps xmm3, xmmword ptr [g_globalXMMData + 0x30]
-			movaps xmm4, xmmword ptr [g_globalXMMData + 0x40]
-			movaps xmm5, xmmword ptr [g_globalXMMData + 0x50]
-			movaps xmm6, xmmword ptr [g_globalXMMData + 0x60]
-			movaps xmm7, xmmword ptr [g_globalXMMData + 0x70]
+        __asm
+        {
+			mov ecx, offset g_globalXMMData
+			movaps xmm0, xmmword ptr [ecx+0x00]
+			movaps xmm1, xmmword ptr [ecx+0x10]
+			movaps xmm2, xmmword ptr [ecx+0x20]
+			movaps xmm3, xmmword ptr [ecx+0x30]
+			movaps xmm4, xmmword ptr [ecx+0x40]
+			movaps xmm5, xmmword ptr [ecx+0x50]
+			movaps xmm6, xmmword ptr [ecx+0x60]
+			movaps xmm7, xmmword ptr [ecx+0x70]
         }
 
 #else
-        __asm__(".intel_syntax noprefix\n"
-                "movaps xmm0, [%0+0x00]\n"
-                "movaps xmm1, [%0+0x10]\n"
-                "movaps xmm2, [%0+0x20]\n"
-                "movaps xmm3, [%0+0x30]\n"
-                "movaps xmm4, [%0+0x40]\n"
-                "movaps xmm5, [%0+0x50]\n"
-                "movaps xmm6, [%0+0x60]\n"
-                "movaps xmm7, [%0+0x70]\n"
-                ".att_syntax\n" : : "r"(g_globalXMMData) );
+        __asm__(
+			".intel_syntax noprefix\n"
+			"movaps xmm0, [%0+0x00]\n"
+			"movaps xmm1, [%0+0x10]\n"
+			"movaps xmm2, [%0+0x20]\n"
+			"movaps xmm3, [%0+0x30]\n"
+			"movaps xmm4, [%0+0x40]\n"
+			"movaps xmm5, [%0+0x50]\n"
+			"movaps xmm6, [%0+0x60]\n"
+			"movaps xmm7, [%0+0x70]\n"
+			".att_syntax\n" : : "r"(g_globalXMMData) );
+		);
 
 #endif // _MSC_VER
 	}

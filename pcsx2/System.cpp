@@ -357,7 +357,7 @@ void SysExecute()
 	catch( R5900Exception::BaseExcept& ex )
 	{
 		Console::Error( ex.cMessage() );
-		Console::Error( fmt_string( "(EE) PC: 0x%8.8x  \tCycle:0x8.8x", ex.cpuState.pc, ex.cpuState.cycle ).c_str() );
+		Console::Error( fmt_string( "(EE) PC: 0x%8.8x  \tCycle: 0x%8.8x", ex.cpuState.pc, ex.cpuState.cycle ).c_str() );
 	}
 }
 

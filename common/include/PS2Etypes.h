@@ -31,13 +31,7 @@
 #define ArraySize(x) (sizeof(x)/sizeof((x)[0]))
 #endif
 
-#ifdef __LINUX__
-#define CALLBACK
-#else
-#define CALLBACK    __stdcall
-#endif
-
-
+//////////////////////////////////////////////////////////////////////////////////////////
 // jASSUME - give hints to the optimizer
 //  This is primarily useful for the default case switch optimizer, which enables VC to
 //  generate more compact switches.
@@ -68,8 +62,9 @@ default: \
 	break; \
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////
+//                                 Basic Atomic Types
 
-// Basic types
 #if defined(_MSC_VER)
 
 typedef __int8  s8;
@@ -92,6 +87,7 @@ typedef unsigned int uint;
 #define PCSX2_ALIGNED16_EXTERN(x) extern __declspec(align(16)) x
 
 #define __naked __declspec(naked)
+#define CALLBACK    __stdcall
 
 #else // _MSC_VER
 
@@ -140,6 +136,7 @@ typedef union _LARGE_INTEGER
 #define _inline __inline__ __attribute__((unused))
 #define __forceinline __attribute__((always_inline,unused))
 #define __naked		// GCC lacks the naked specifier
+#define CALLBACK	// CALLBACK is win32-specific mess
 
 #endif  // __LINUX__
 
@@ -164,6 +161,7 @@ typedef s32 sptr;
 #endif
 #endif
 
+//////////////////////////////////////////////////////////////////////////////////////////
 // A rough-and-ready cross platform 128-bit datatype, Non-SSE style.
 #ifdef __cplusplus
 struct u128
