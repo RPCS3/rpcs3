@@ -101,6 +101,8 @@ PCSX2_ALIGNED16_EXTERN(const float mVU_ITOF_15[4]);
 #define writeACC	((mVUallocInfo.info[mVUallocInfo.curPC] & (3<<1)) >> 1)
 #define prevACC		(((u8)((mVUallocInfo.info[mVUallocInfo.curPC] & (3<<1)) >> 1) - 1) & 0x3)
 #define readACC		((mVUallocInfo.info[mVUallocInfo.curPC] & (3<<3)) >> 3)
+#define writeQ		((mVUallocInfo.info[mVUallocInfo.curPC] & (1<<5)) >> 5)
+#define readQ		((mVUallocInfo.info[mVUallocInfo.curPC] & (1<<6)) >> 6)
 //#define setFd		 (mVUallocInfo.info[mVUallocInfo.curPC] & (1<<7))
 #define doFlags		 (mVUallocInfo.info[mVUallocInfo.curPC] & (3<<8))
 #define doMac		 (mVUallocInfo.info[mVUallocInfo.curPC] & (1<<8))

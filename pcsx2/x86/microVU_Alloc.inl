@@ -659,6 +659,189 @@ microVUt(void) mVUallocFMAC19b(int& Fd) {
 }
 
 //------------------------------------------------------------------
+// FMAC20 - MADDA FMAC Opcode (I Reg)
+//------------------------------------------------------------------
+
+microVUt(void) mVUallocFMAC20a(int& ACCw, int&ACCr, int& Fs, int& Ft) {
+	microVU* mVU = mVUx;
+	getACC(ACCw);
+	Fs = (_X_Y_Z_W == 15) ? ACCw : xmmFs;
+	Ft = xmmFt;
+	ACCr = xmmACC0 + readACC;
+	getIreg(Ft);
+	if (_XYZW_SS && _X) {
+		if (!_Fs_)	{ getZeroSS(Fs); }
+		else		{ getReg(Fs, _Fs_); }
+	}
+	else {
+		if (!_Fs_)	{ getZero4(Fs); }
+		else		{ getReg4(Fs, _Fs_); }
+	}
+}
+
+microVUt(void) mVUallocFMAC20b(int& ACCw, int& Fs) {
+	mVUallocFMAC14b<vuIndex>(ACCw, Fs);
+}
+
+//------------------------------------------------------------------
+// FMAC21 - MSUBA FMAC Opcode (I Reg)
+//------------------------------------------------------------------
+
+microVUt(void) mVUallocFMAC21a(int& ACCw, int&ACCr, int& Fs, int& Ft) {
+	mVUallocFMAC20a<vuIndex>(ACCw, ACCr, Fs, Ft);
+	SSE_MOVAPS_XMM_to_XMM(xmmT1, ACCr);
+	ACCr = xmmT1;
+}
+
+microVUt(void) mVUallocFMAC21b(int& ACCw, int& ACCr) {
+	mVUallocFMAC15b<vuIndex>(ACCw, ACCr);
+}
+
+//------------------------------------------------------------------
+// FMAC22 - Normal FMAC Opcodes (Q Reg)
+//------------------------------------------------------------------
+
+#define getQreg(reg) {  \
+	mVUunpack_xyzw<vuIndex>(reg, xmmPQ, writeQ);  \
+	/*if (CHECK_VU_EXTRA_OVERFLOW) mVUclamp2<vuIndex>(reg, xmmT1, 15);*/  \
+}
+
+microVUt(void) mVUallocFMAC22a(int& Fd, int& Fs, int& Ft) {
+	microVU* mVU = mVUx;
+	Fs = xmmFs;
+	Ft = xmmFt;
+	Fd = xmmFs;
+	getQreg(Ft);
+	if (_XYZW_SS) {
+		if (!_Fs_)	{ getZeroSS(Fs); }
+		else		{ getReg(Fs, _Fs_); }
+	}
+	else {
+		if (!_Fs_)	{ getZero(Fs); }
+		else		{ getReg(Fs, _Fs_); }
+	}
+}
+
+microVUt(void) mVUallocFMAC22b(int& Fd) {
+	mVUallocFMAC1b<vuIndex>(Fd);
+}
+
+//------------------------------------------------------------------
+// FMAC23 - FMAC Opcodes Storing Result to ACC (Q Reg)
+//------------------------------------------------------------------
+
+microVUt(void) mVUallocFMAC23a(int& ACC, int& Fs, int& Ft) {
+	microVU* mVU = mVUx;
+	Fs = xmmFs;
+	Ft = xmmFt;
+	getACC(ACC);
+	getQreg(Ft);
+	if (_XYZW_SS && _X) {
+		if (!_Fs_)	{ getZeroSS(Fs); }
+		else		{ getReg(Fs, _Fs_); }
+	}
+	else {
+		if (!_Fs_)	{ getZero4(Fs); }
+		else		{ getReg4(Fs, _Fs_); }
+	}
+}
+
+microVUt(void) mVUallocFMAC23b(int& ACC, int& Fs) {
+	mVUallocFMAC4b<vuIndex>(ACC, Fs);
+}
+
+
+//------------------------------------------------------------------
+// FMAC24 - MADD FMAC Opcode Storing Result to Fd (Q Reg)
+//------------------------------------------------------------------
+
+microVUt(void) mVUallocFMAC24a(int& Fd, int&ACC, int& Fs, int& Ft) {
+	microVU* mVU = mVUx;
+	Fs = xmmFs;
+	Ft = xmmFt;
+	Fd = xmmFs;
+	ACC = xmmACC0 + readACC;
+	getQreg(Ft);
+	if (_XYZW_SS && _X) {
+		if (!_Fs_)	{ getZeroSS(Fs); }
+		else		{ getReg(Fs, _Fs_); }
+	}
+	else {
+		if (!_Fs_)	{ getZero4(Fs); }
+		else		{ getReg4(Fs, _Fs_); }
+	}
+}
+
+microVUt(void) mVUallocFMAC24b(int& Fd) {
+	mVUallocFMAC8b<vuIndex>(Fd);
+}
+
+//------------------------------------------------------------------
+// FMAC25 - MSUB FMAC Opcode Storing Result to Fd (Q Reg)
+//------------------------------------------------------------------
+
+microVUt(void) mVUallocFMAC25a(int& Fd, int&ACC, int& Fs, int& Ft) {
+	microVU* mVU = mVUx;
+	Fs = xmmFs;
+	Ft = xmmFt;
+	Fd = xmmT1;
+	ACC = xmmT1;
+	SSE_MOVAPS_XMM_to_XMM(ACC, xmmACC0 + readACC);
+	getQreg(Ft);
+	if (_XYZW_SS && _X) {
+		if (!_Fs_)	{ getZeroSS(Fs); }
+		else		{ getReg(Fs, _Fs_); }
+	}
+	else {
+		if (!_Fs_)	{ getZero4(Fs); }
+		else		{ getReg4(Fs, _Fs_); }
+	}
+}
+
+microVUt(void) mVUallocFMAC25b(int& Fd) {
+	mVUallocFMAC9b<vuIndex>(Fd);
+}
+
+//------------------------------------------------------------------
+// FMAC26 - MADDA FMAC Opcode (Q Reg)
+//------------------------------------------------------------------
+
+microVUt(void) mVUallocFMAC26a(int& ACCw, int&ACCr, int& Fs, int& Ft) {
+	microVU* mVU = mVUx;
+	getACC(ACCw);
+	Fs = (_X_Y_Z_W == 15) ? ACCw : xmmFs;
+	Ft = xmmFt;
+	ACCr = xmmACC0 + readACC;
+	getQreg(Ft);
+	if (_XYZW_SS && _X) {
+		if (!_Fs_)	{ getZeroSS(Fs); }
+		else		{ getReg(Fs, _Fs_); }
+	}
+	else {
+		if (!_Fs_)	{ getZero4(Fs); }
+		else		{ getReg4(Fs, _Fs_); }
+	}
+}
+
+microVUt(void) mVUallocFMAC26b(int& ACCw, int& Fs) {
+	mVUallocFMAC14b<vuIndex>(ACCw, Fs);
+}
+
+//------------------------------------------------------------------
+// FMAC27 - MSUBA FMAC Opcode (Q Reg)
+//------------------------------------------------------------------
+
+microVUt(void) mVUallocFMAC27a(int& ACCw, int&ACCr, int& Fs, int& Ft) {
+	mVUallocFMAC26a<vuIndex>(ACCw, ACCr, Fs, Ft);
+	SSE_MOVAPS_XMM_to_XMM(xmmT1, ACCr);
+	ACCr = xmmT1;
+}
+
+microVUt(void) mVUallocFMAC27b(int& ACCw, int& ACCr) {
+	mVUallocFMAC15b<vuIndex>(ACCw, ACCr);
+}
+
+//------------------------------------------------------------------
 // Flag Allocators
 //------------------------------------------------------------------
 

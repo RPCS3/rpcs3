@@ -79,8 +79,8 @@ microVUx(void) mVUloadReg(int reg, u32 offset, int xyzw) {
 		case 4:		SSE_MOVSS_M32_to_XMM(reg, offset+4);	break; // Y
 		case 2:		SSE_MOVSS_M32_to_XMM(reg, offset+8);	break; // Z
 		case 1:		SSE_MOVSS_M32_to_XMM(reg, offset+12);	break; // W
-		case 3:		SSE_MOVHPS_M64_to_XMM(reg, offset+8);	break; // ZW (not sure if this is faster than default)
-		case 12:	SSE_MOVLPS_M64_to_XMM(reg, offset);		break; // XY (not sure if this is faster than default)
+		//case 3:	SSE_MOVHPS_M64_to_XMM(reg, offset+8);	break; // ZW (not sure if this is faster than default)
+		//case 12:	SSE_MOVLPS_M64_to_XMM(reg, offset);		break; // XY (not sure if this is faster than default)
 		default:	SSE_MOVAPS_M128_to_XMM(reg, offset);	break;
 	}
 }
