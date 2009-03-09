@@ -703,6 +703,17 @@ ExtraWndProcResult HideCursorProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
 	return CONTINUE_BLISSFULLY_AND_RELEASE_PROC;
 }
 
+char restoreFullScreen = 0;
+DWORD WINAPI MaximizeWindowThreadProc(void *lpParameter) {
+	Sleep(100);
+	keybd_event(VK_LMENU, MapVirtualKey(VK_LMENU, MAPVK_VK_TO_VSC), 0, 0);
+	keybd_event(VK_RETURN, MapVirtualKey(VK_RETURN, MAPVK_VK_TO_VSC), 0, 0);
+	Sleep(10);
+	keybd_event(VK_RETURN, MapVirtualKey(VK_RETURN, MAPVK_VK_TO_VSC), KEYEVENTF_KEYUP, 0);
+	keybd_event(VK_LMENU, MapVirtualKey(VK_LMENU, MAPVK_VK_TO_VSC), KEYEVENTF_KEYUP, 0);
+	return 0;
+}
+
 s32 CALLBACK PADopen(void *pDsp) {
 	if (openCount++) return 0;
 
@@ -733,6 +744,13 @@ s32 CALLBACK PADopen(void *pDsp) {
 		}
 	}
 
+	if (restoreFullScreen) {
+		if (!IsWindowMaximized(hWnd)) {
+			HANDLE hThread = CreateThread(0, 0, MaximizeWindowThreadProc, hWnd, 0, 0);
+			if (hThread) CloseHandle(hThread);
+		}
+		restoreFullScreen = 0;
+	}
 	memset(&pads[0].sum, 0, sizeof(pads[0].sum));
 	memset(&pads[0].lockedSum, 0, sizeof(pads[0].lockedSum));
 	pads[0].lockedState = 0;
@@ -1059,21 +1077,7 @@ void CALLBACK PADabout() {
 s32 CALLBACK PADtest() {
 	return 0;
 }
-
-// For escape fullscreen hack.  This doesn't work when called from another thread, for some reason.
-// That includes a new thread, independent of GS and PCSX2 thread, so use this to make sure it's
-// called from the right spot.
-ExtraWndProcResult KillFullScreenProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, LRESULT *output) {
-	// Prevent infinite recursion.  Could also just remove this function from the list,
-	// but CONTINUE_BLISSFULLY_AND_RELEASE_PROC is a safer way to do that.
-	static int inFunction = 0;
-	if (!inFunction) {
-		inFunction = 1;
-		ShowWindow(hWnd, 0);
-		inFunction = 0;
-	}
-	return CONTINUE_BLISSFULLY_AND_RELEASE_PROC;
-}
+#include <time.h>
 
 DWORD WINAPI RenameWindowThreadProc(void *lpParameter) {
 	wchar_t newTitle[200];
@@ -1088,51 +1092,47 @@ DWORD WINAPI RenameWindowThreadProc(void *lpParameter) {
 	return 0;
 }
 
-/*DWORD WINAPI MaximizeWindowThreadProc(void *lpParameter) {
-	while ((HWND)lpParameter == hWnd || hWnd) {
-		Sleep(10);
+// For escape fullscreen hack.  This doesn't work when called from another thread, for some reason.
+// That includes a new thread, independent of GS and PCSX2 thread, so use this to make sure it's
+// called from the right spot.
+ExtraWndProcResult KillFullScreenProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, LRESULT *output) {
+	// Prevent infinite recursion.  Could also just remove this function from the list,
+	// but CONTINUE_BLISSFULLY_AND_RELEASE_PROC is a safer way to do that.
+	static int inFunction = 0;
+	if (!inFunction) {
+		inFunction = 1;
+		ShowWindow(hWnd, SW_MINIMIZE);
+		inFunction = 0;
 	}
-	Sleep(100);
-	keybd_event(VK_LMENU, MapVirtualKey(VK_LMENU, MAPVK_VK_TO_VSC), 0, 0);
-	keybd_event(VK_RETURN, MapVirtualKey(VK_RETURN, MAPVK_VK_TO_VSC), 0, 0);
-	Sleep(10);
-	keybd_event(VK_RETURN, MapVirtualKey(VK_RETURN, MAPVK_VK_TO_VSC), KEYEVENTF_KEYUP, 0);
-	keybd_event(VK_LMENU, MapVirtualKey(VK_LMENU, MAPVK_VK_TO_VSC), KEYEVENTF_KEYUP, 0);
-	return 0;
-}//*/
+	return CONTINUE_BLISSFULLY_AND_RELEASE_PROC;
+}
 
 keyEvent* CALLBACK PADkeyEvent() {
 	if (!config.GSThreadUpdates) {
 		Update(2);
 	}
-	static int shiftDown = 0;
+	static char shiftDown = 0;
 	static keyEvent ev;
 	if (!GetQueuedKeyEvent(&ev)) return 0;
-	if ((ev.key == VK_ESCAPE || ev.key == -2) && ev.evt == KEYPRESS && config.escapeFullscreenHack) {
-		if (IsWindowMaximized(hWnd)) {
+	if ((ev.key == VK_ESCAPE || (int)ev.key == -2) && ev.evt == KEYPRESS && config.escapeFullscreenHack) {
+		static int t;
+		if ((int)ev.key != -2 && IsWindowMaximized(hWnd)) {
+			t = timeGetTime();
 			QueueKeyEvent(-2, KEYPRESS);
-			if (ev.key != -2)
-				EatWndProc(hWnd, KillFullScreenProc);
+			HANDLE hThread = CreateThread(0, 0, MaximizeWindowThreadProc, 0, 0, 0);
+			if (hThread) CloseHandle(hThread);
+			//ShowWindowAsync(hWnd, SW_HIDE);
+			restoreFullScreen = 1;
 			return 0;
+		}
+		if (ev.key != VK_ESCAPE) {
+			if (timeGetTime() - t < 1000) {
+				QueueKeyEvent(-2, KEYPRESS);
+				return 0;
+			}
 		}
 		ev.key = VK_ESCAPE;
 	}
-
-	/*
-	if ((ev.key == VK_F9 || ev.key == -1) && ev.evt == KEYPRESS) {
-		if (IsWindowMaximized(hWnd)) {
-			QueueKeyEvent(-1, KEYPRESS);
-			if (ev.key == VK_F9)
-				EatWndProc(hWnd, KillFullScreenProc);
-			return 0;
-		}
-		return 0;
-		if (ev.key == -1) {
-			HANDLE hThread = CreateThread(0, 0, MaximizeWindowThreadProc, hWnd, 0, 0);
-			if (hThread) CloseHandle(hThread);
-		}
-		ev.key = VK_F9;
-	}//*/
 
 	if (ev.key == VK_F2 && ev.evt == KEYPRESS) {
 		saveStateIndex += 1 - 2*shiftDown;
