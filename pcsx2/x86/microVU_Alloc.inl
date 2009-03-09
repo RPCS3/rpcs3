@@ -702,7 +702,7 @@ microVUt(void) mVUallocFMAC21b(int& ACCw, int& ACCr) {
 //------------------------------------------------------------------
 
 #define getQreg(reg) {  \
-	mVUunpack_xyzw<vuIndex>(reg, xmmPQ, writeQ);  \
+	mVUunpack_xyzw<vuIndex>(reg, xmmPQ, readQ);  \
 	/*if (CHECK_VU_EXTRA_OVERFLOW) mVUclamp2<vuIndex>(reg, xmmT1, 15);*/  \
 }
 
@@ -903,6 +903,15 @@ microVUt(void) mVUallocVIb(int GPRreg, int _reg_) {
 #define getPreg(reg) {  \
 	mVUunpack_xyzw<vuIndex>(reg, xmmPQ, (2 + writeP));  \
 	/*if (CHECK_VU_EXTRA_OVERFLOW) mVUclamp2<vuIndex>(reg, xmmT1, 15);*/  \
+}
+
+//------------------------------------------------------------------
+// Div/Sqrt/Rsqrt Allocator Helpers
+//------------------------------------------------------------------
+
+#define getReg5(reg, _reg_, _fxf_) {  \
+	mVUloadReg<vuIndex>(reg, (uptr)&mVU->regs->VF[_reg_].UL[0], (1 << (3 - _fxf_)));  \
+	if (CHECK_VU_EXTRA_OVERFLOW) mVUclamp2<vuIndex>(reg, xmmT1, (1 << (3 - _fxf_)));  \
 }
 
 #endif //PCSX2_MICROVU

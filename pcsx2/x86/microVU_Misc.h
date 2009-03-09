@@ -61,6 +61,8 @@ PCSX2_ALIGNED16_EXTERN(const float mVU_ITOF_15[4]);
 #define _Imm11_ 	(s32)(mVU->code & 0x400 ? 0xfffffc00 | (mVU->code & 0x3ff) : mVU->code & 0x3ff)
 #define _UImm11_	(s32)(mVU->code & 0x7ff)
 #define _Imm12_		(((mVU->code >> 21 ) & 0x1) << 11) | (mVU->code & 0x7ff)
+#define _Imm5_		(((mVU->code & 0x400) ? 0xfff0 : 0) | ((mVU->code >> 6) & 0xf))
+#define _Imm15_		(((mVU->code >> 10) & 0x7800) | (mVU->code & 0x7ff))
 
 #define xmmT1	0 // Temp Reg
 #define xmmFs	1 // Holds the Value of Fs (writes back result Fd)
