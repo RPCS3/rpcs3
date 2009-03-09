@@ -404,13 +404,14 @@ $memcpy_align_done:			; destination is dword aligned
 	shr		eax, 6			; get 64-byte block count
 	jz		$memcpy_ic_2	; finish the last few bytes
 
+	mov     edx, offset _mmx_backup ; will probably need this to save/restore mmx
 	cmp		eax, IN_CACHE_COPY/64	; too big 4 cache? use uncached copy
 	jae		$memcpy_uc_test
 
-	movq	[_mmx_backup+0x00],mm0
-	movq	[_mmx_backup+0x08],mm1
-	movq	[_mmx_backup+0x10],mm2
-	movq	[_mmx_backup+0x18],mm3
+	movq	[edx+0x00],mm0
+	movq	[edx+0x08],mm1
+	movq	[edx+0x10],mm2
+	movq	[edx+0x18],mm3
 
 // This is small block copy that uses the MMX registers to copy 8 bytes
 // at a time.  It uses the "unrolled loop" optimization, and also uses
@@ -442,10 +443,10 @@ $memcpy_ic_1:			; 64-byte block copies, in-cache copy
 	dec		eax				; count down
 	jnz		$memcpy_ic_1	; last 64-byte block?
 
-	movq	mm0,[_mmx_backup+0x00]
-	movq	mm1,[_mmx_backup+0x08]
-	movq	mm2,[_mmx_backup+0x10]
-	movq	mm3,[_mmx_backup+0x18]
+	movq	mm0,[edx+0x00]
+	movq	mm1,[edx+0x08]
+	movq	mm2,[edx+0x10]
+	movq	mm3,[edx+0x18]
 
 $memcpy_ic_2:
 	mov		eax, ecx		; has valid low 6 bits of the byte count
@@ -457,9 +458,6 @@ $memcpy_ic_3:
 	jmp		eax				; jump to array of movsd's
 
 $memcpy_uc_test:
-	/*cmp		ecx, UNCACHED_COPY/64	; big enough? use block prefetch copy
-	jae		$memcpy_bp_1
-$memcpy_64_test:*/
 	or		eax, eax		; tail end of block prefetch will jump here
 	jz		$memcpy_ic_2	; no more 64-byte blocks left
 
@@ -468,9 +466,9 @@ $memcpy_64_test:*/
 // bypasses the cache and writes straight to main memory.  This code also
 // uses the software prefetch instruction to pre-read the data.
 
-	movq	[_mmx_backup+0x00],mm0
-	movq	[_mmx_backup+0x08],mm1
-	movq	[_mmx_backup+0x10],mm2
+	movq	[edx+0x00],mm0
+	movq	[edx+0x08],mm1
+	movq	[edx+0x10],mm2
 
 align 16
 $memcpy_uc_1:				; 64-byte blocks, uncached copy
@@ -498,9 +496,9 @@ $memcpy_uc_1:				; 64-byte blocks, uncached copy
 	movntq	[edi-8], mm1
 	jnz		$memcpy_uc_1	; last 64-byte block?
 
-	movq	mm0,[_mmx_backup+0x00]
-	movq	mm1,[_mmx_backup+0x08]
-	movq	mm2,[_mmx_backup+0x10]
+	movq	mm0,[edx+0x00]
+	movq	mm1,[edx+0x08]
+	movq	mm2,[edx+0x10]
 
 	jmp		$memcpy_ic_2		; almost done  (not needed because large copy below was removed)
 
@@ -559,7 +557,7 @@ $memcpy_bp_3:
 
 // The smallest copy uses the X86 "movsd" instruction, in an optimized
 // form which is an "unrolled loop".   Then it handles the last few bytes.
-align 4
+align 16
 	movsd
 	movsd			; perform last 1-15 dword copies
 	movsd
@@ -578,8 +576,7 @@ align 4
 	movsd
 
 $memcpy_last_few:		; dword aligned from before movsd's
-	mov		eax, ecx	; has valid low 2 bits of the byte count
-	and		eax, 11b	; the last few cows must come home
+	and		ecx, 11b	; the last few cows must come home
 	jz		$memcpy_final	; no more, let's leave
 	rep		movsb		; the last 1, 2, or 3 bytes
 

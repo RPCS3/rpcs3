@@ -16,8 +16,7 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
-#ifndef __MEMORY_H__
-#define __MEMORY_H__
+#pragma once
 
 #ifdef __LINUX__
 #include <signal.h>
@@ -185,5 +184,3 @@ extern void mmap_ClearCpuBlock( uint offset );
 
 extern void loadBiosRom( const char *ext, u8 *dest, long maxSize );
 extern u16 ba0R16(u32 mem);
-
-#endif

@@ -688,8 +688,10 @@ int OpenPlugins(const char* pTitleFilename)
 	GSdriverInfo info;
 	int ret;
 
-	if ( !initp ) InitPlugins();
-		//throw Exception::InvalidOperation( "Bad coder mojo -- OpenPlugins called prior to InitPlugins." );
+	if ( !initp )
+	{
+		if( InitPlugins() == -1 ) return -1;
+	}
 
 #ifndef _WIN32
 	// change dir so that CDVD can find its config file

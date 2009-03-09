@@ -380,7 +380,7 @@ struct ElfObject
 								proghead[ i ].p_paddr, proghead[ i ].p_vaddr);
 
 						// used to be paddr
-						memcpy(
+						memcpy_fast(
 							&PS2MEM_BASE[proghead[ i ].p_vaddr & 0x1ffffff],
 							data.GetPtr(proghead[ i ].p_offset), size
 						);
@@ -400,10 +400,8 @@ struct ElfObject
 			ELF_LOG("flags:     %08x\n",proghead[i].p_flags);
 			ELF_LOG("palign:    %08x\n",proghead[i].p_align);
 			ELF_LOG("\n");
-			
 		}
 	}
-
 
 	void loadSectionHeaders() 
 	{
@@ -604,6 +602,7 @@ int loadElfFile(const char *filename)
 
 	ElfApplyPatches();
 	LoadGameSpecificSettings();
+
 	return 0;
 }
 
