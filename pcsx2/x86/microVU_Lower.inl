@@ -134,9 +134,80 @@ microVUf(void) mVU_RSQRT() {
 	}
 }
 
-microVUf(void) mVU_EATAN() {}
-microVUf(void) mVU_EATANxy() {}
-microVUf(void) mVU_EATANxz() {}
+#define EATANhelper(addr) {						\
+	SSE_MULSS_XMM_to_XMM(xmmT1, xmmFs);			\
+	SSE_MULSS_XMM_to_XMM(xmmT1, xmmFs);			\
+	SSE_MOVSS_XMM_to_XMM(xmmFt, xmmT1);			\
+	SSE_MULSS_M32_to_XMM(xmmFt, (uptr)addr);	\
+	SSE_ADDSS_XMM_to_XMM(xmmPQ, xmmFt);			\
+}
+microVUt(void) mVU_EATAN_() {
+	microVU* mVU = mVUx;
+
+	// ToDo: Can Be Optimized Further? (takes approximately (~115 cycles + mem access time) on a c2d)
+	SSE_MOVSS_XMM_to_XMM(xmmPQ, xmmFs);
+	SSE_MULSS_M32_to_XMM(xmmPQ, (uptr)mVU_T1);
+	SSE_MOVSS_XMM_to_XMM(xmmT1, xmmFs);
+
+	EATANhelper(mVU_T2);
+	EATANhelper(mVU_T3);
+	EATANhelper(mVU_T4);
+	EATANhelper(mVU_T5);
+	EATANhelper(mVU_T6);
+	EATANhelper(mVU_T7);
+	EATANhelper(mVU_T8);
+
+	SSE_ADDSS_M32_to_XMM(xmmPQ, (uptr)mVU_Pi4);
+	SSE_SHUFPS_XMM_to_XMM(xmmPQ, xmmPQ, writeP ? 0x27 : 0xC6);
+}
+microVUf(void) mVU_EATAN() {
+	microVU* mVU = mVUx;
+	if (recPass == 0) {}
+	else { 
+		getReg5(xmmFs, _Fs_, _Fsf_);
+		SSE_SHUFPS_XMM_to_XMM(xmmPQ, xmmPQ, writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
+
+		// ToDo: Can Be Optimized Further? (takes approximately (~125 cycles + mem access time) on a c2d)
+		SSE_MOVSS_XMM_to_XMM(xmmPQ, xmmFs);
+		SSE_SUBSS_M32_to_XMM(xmmFs, (uptr)mVU_one);
+		SSE_ADDSS_M32_to_XMM(xmmPQ, (uptr)mVU_one);
+		SSE_DIVSS_XMM_to_XMM(xmmFs, xmmPQ);
+
+		mVU_EATAN_<vuIndex>();
+	}
+}
+microVUf(void) mVU_EATANxy() {
+	microVU* mVU = mVUx;
+	if (recPass == 0) {}
+	else { 
+		getReg5(xmmFs, _Fs_, 1);
+		getReg5(xmmFt, _Fs_, 0);
+		SSE_SHUFPS_XMM_to_XMM(xmmPQ, xmmPQ, writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
+
+		SSE_MOVSS_XMM_to_XMM(xmmPQ, xmmFs);
+		SSE_SUBSS_M32_to_XMM(xmmFs, (uptr)mVU_one);
+		SSE_ADDSS_XMM_to_XMM(xmmFt, xmmPQ);
+		SSE_DIVSS_XMM_to_XMM(xmmFs, xmmFt);
+
+		mVU_EATAN_<vuIndex>();
+	}
+}
+microVUf(void) mVU_EATANxz() {
+	microVU* mVU = mVUx;
+	if (recPass == 0) {}
+	else { 
+		getReg5(xmmFs, _Fs_, 2);
+		getReg5(xmmFt, _Fs_, 0);
+		SSE_SHUFPS_XMM_to_XMM(xmmPQ, xmmPQ, writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
+
+		SSE_MOVSS_XMM_to_XMM(xmmPQ, xmmFs);
+		SSE_SUBSS_XMM_to_XMM(xmmFs, xmmFt);
+		SSE_ADDSS_XMM_to_XMM(xmmFt, xmmPQ);
+		SSE_DIVSS_XMM_to_XMM(xmmFs, xmmFt);
+
+		mVU_EATAN_<vuIndex>();
+	}
+}
 microVUf(void) mVU_EEXP() {}
 microVUf(void) mVU_ELENG() {}
 microVUf(void) mVU_ERCPR() {}

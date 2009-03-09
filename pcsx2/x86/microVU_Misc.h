@@ -31,6 +31,15 @@ PCSX2_ALIGNED16_EXTERN(const float mVU_FTOI_15[4]);
 PCSX2_ALIGNED16_EXTERN(const float mVU_ITOF_4[4]);
 PCSX2_ALIGNED16_EXTERN(const float mVU_ITOF_12[4]);
 PCSX2_ALIGNED16_EXTERN(const float mVU_ITOF_15[4]);
+PCSX2_ALIGNED16_EXTERN(const u32 mVU_T1[4]);
+PCSX2_ALIGNED16_EXTERN(const u32 mVU_T2[4]);
+PCSX2_ALIGNED16_EXTERN(const u32 mVU_T3[4]);
+PCSX2_ALIGNED16_EXTERN(const u32 mVU_T4[4]);
+PCSX2_ALIGNED16_EXTERN(const u32 mVU_T5[4]);
+PCSX2_ALIGNED16_EXTERN(const u32 mVU_T6[4]);
+PCSX2_ALIGNED16_EXTERN(const u32 mVU_T7[4]);
+PCSX2_ALIGNED16_EXTERN(const u32 mVU_T8[4]);
+PCSX2_ALIGNED16_EXTERN(const u32 mVU_Pi4[4]);
 
 //------------------------------------------------------------------
 // Helper Macros

@@ -901,7 +901,7 @@ microVUt(void) mVUallocVIb(int GPRreg, int _reg_) {
 //------------------------------------------------------------------
 
 #define getPreg(reg) {  \
-	mVUunpack_xyzw<vuIndex>(reg, xmmPQ, (2 + writeP));  \
+	mVUunpack_xyzw<vuIndex>(reg, xmmPQ, (2 + readP));  \
 	/*if (CHECK_VU_EXTRA_OVERFLOW) mVUclamp2<vuIndex>(reg, xmmT1, 15);*/  \
 }
 
