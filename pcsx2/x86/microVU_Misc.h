@@ -55,11 +55,12 @@ PCSX2_ALIGNED16_EXTERN(const float mVU_ITOF_15[4]);
 #define _bc_z	((mVU->code & 0x03) == 2)
 #define _bc_w	((mVU->code & 0x03) == 3)
 
-#define _Fsf_ ((mVU->code >> 21) & 0x03)
-#define _Ftf_ ((mVU->code >> 23) & 0x03)
+#define _Fsf_	((mVU->code >> 21) & 0x03)
+#define _Ftf_	((mVU->code >> 23) & 0x03)
 
 #define _Imm11_ 	(s32)(mVU->code & 0x400 ? 0xfffffc00 | (mVU->code & 0x3ff) : mVU->code & 0x3ff)
 #define _UImm11_	(s32)(mVU->code & 0x7ff)
+#define _Imm12_		(((mVU->code >> 21 ) & 0x1) << 11) | (mVU->code & 0x7ff)
 
 #define xmmT1	0 // Temp Reg
 #define xmmFs	1 // Holds the Value of Fs (writes back result Fd)
@@ -70,14 +71,14 @@ PCSX2_ALIGNED16_EXTERN(const float mVU_ITOF_15[4]);
 #define xmmACC3	6 // Holds ACC Instance #3
 #define xmmPQ	7 // Holds the Value and Backup Values of P and Q regs
 
-#define mmxT1	0 // Temp Reg
-#define mmxC	1 // Clip Flag?
-#define mmxVI0	2 // Holds VI 00 to 03?
-#define mmxVI1	3 // Holds VI 04 to 07?
-#define mmxVI2	4 // Holds VI 08 to 11?
-#define mmxVI3	5 // Holds VI 12 to 15?
-#define mmxM	6 // ?
-#define mmxS	7 // ?
+#define mmxVI1	0 // Holds VI 1
+#define mmxVI2	1 // Holds VI 2
+#define mmxVI3	2 // Holds VI 3
+#define mmxVI4	3 // Holds VI 4
+#define mmxVI5	4 // Holds VI 5
+#define mmxVI6	5 // Holds VI 6
+#define mmxVI7	6 // Holds VI 7
+#define mmxVI8	7 // Holds VI 8
 
 #define gprT1	0 // Temp Reg
 #define gprT2	1 // Temp Reg
@@ -103,7 +104,8 @@ PCSX2_ALIGNED16_EXTERN(const float mVU_ITOF_15[4]);
 #define readACC		((mVUallocInfo.info[mVUallocInfo.curPC] & (3<<3)) >> 3)
 #define writeQ		((mVUallocInfo.info[mVUallocInfo.curPC] & (1<<5)) >> 5)
 #define readQ		((mVUallocInfo.info[mVUallocInfo.curPC] & (1<<6)) >> 6)
-//#define setFd		 (mVUallocInfo.info[mVUallocInfo.curPC] & (1<<7))
+#define writeP		((mVUallocInfo.info[mVUallocInfo.curPC] & (1<<7)) >> 7)
+#define readP		((mVUallocInfo.info[mVUallocInfo.curPC] & (1<<7)) >> 7) // same as write
 #define doFlags		 (mVUallocInfo.info[mVUallocInfo.curPC] & (3<<8))
 #define doMac		 (mVUallocInfo.info[mVUallocInfo.curPC] & (1<<8))
 #define doStatus	 (mVUallocInfo.info[mVUallocInfo.curPC] & (1<<9))
@@ -111,6 +113,8 @@ PCSX2_ALIGNED16_EXTERN(const float mVU_ITOF_15[4]);
 #define fsInstance	((mVUallocInfo.info[mVUallocInfo.curPC] & (3<<12)) >> 12)
 #define fpmInstance	(((u8)((mVUallocInfo.info[mVUallocInfo.curPC] & (3<<10)) >> 10) - 1) & 0x3)
 #define fpsInstance	(((u8)((mVUallocInfo.info[mVUallocInfo.curPC] & (3<<12)) >> 12) - 1) & 0x3)
+#define fvmInstance	((mVUallocInfo.info[mVUallocInfo.curPC] & (3<<14)) >> 14)
+#define fvsInstance	((mVUallocInfo.info[mVUallocInfo.curPC] & (3<<16)) >> 16)
 //#define getFs		 (mVUallocInfo.info[mVUallocInfo.curPC] & (1<<13))
 //#define getFt		 (mVUallocInfo.info[mVUallocInfo.curPC] & (1<<14))
 

@@ -44,7 +44,7 @@ struct microAllocInfo {
 					// bit 4 = (00 = instance #0, 01 = instance #1, 10 = instance #2, 11 = instance #3)
 					// bit 5 = Write to Q1 or Q2?
 					// bit 6 = Read Q1 or Q2?
-					// bit 7 = Write VI(Fd) Result to backup memory?
+					// bit 7 = Read/Write to P1 or P2?
 					// bit 8 = Update Mac Flags?
 					// bit 9 = Update Status Flags?
 					// bit 10 = Used with bit 11 to make a 2-bit key for mac flag instance

@@ -861,7 +861,8 @@ microVUt(void) mVUallocSFLAGa(int reg, int fInstance) {
 
 microVUt(void) mVUallocSFLAGb(int reg, int fInstance) {
 	getFlagReg(fInstance, fInstance);
-	MOV32RtoR(fInstance, reg);
+	AND32ItoR(fInstance, 0xffff0000);
+	OR16RtoR(fInstance, reg);
 }
 
 microVUt(void) mVUallocMFLAGa(int reg, int fInstance) {
@@ -875,6 +876,33 @@ microVUt(void) mVUallocMFLAGb(int reg, int fInstance) {
 	AND32ItoR(fInstance, 0xffff);
 	SHL32ItoR(reg, 16);
 	OR32RtoR(fInstance, reg);
+}
+
+//------------------------------------------------------------------
+// VI Reg Allocators
+//------------------------------------------------------------------
+
+microVUt(void) mVUallocVIa(int GPRreg, int _reg_) {
+	microVU* mVU = mVUx;
+	if (_reg_ == 0)		{ XOR32RtoR(GPRreg, GPRreg); }
+	else if (_reg_ < 9)	{ MOVD32MMXtoR(GPRreg, mmxVI1 + (_reg_ - 1)); }
+	else				{ MOVZX32M16toR(GPRreg, (uptr)&mVU->regs->VI[_reg_].UL); }
+}
+
+microVUt(void) mVUallocVIb(int GPRreg, int _reg_) {
+	microVU* mVU = mVUx;
+	if (_reg_ == 0)		{ return; }
+	else if (_reg_ < 9)	{ MOVD32RtoMMX(mmxVI1 + (_reg_ - 1), GPRreg); }
+	else				{ MOV16RtoM((uptr)&mVU->regs->VI[_reg_].UL, GPRreg); }
+}
+
+//------------------------------------------------------------------
+// P Reg Allocator
+//------------------------------------------------------------------
+
+#define getPreg(reg) {  \
+	mVUunpack_xyzw<vuIndex>(reg, xmmPQ, (2 + writeP));  \
+	/*if (CHECK_VU_EXTRA_OVERFLOW) mVUclamp2<vuIndex>(reg, xmmT1, 15);*/  \
 }
 
 #endif //PCSX2_MICROVU
