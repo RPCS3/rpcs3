@@ -271,6 +271,7 @@
 #define IDC_MCD_LABEL1                  1324
 #define IDC_MCD_LABEL2                  1325
 #define IDC_INTCSTATHACK                1326
+#define IDC_EE_CHECK3                   1327
 #define IDC_CPULOG                      1500
 #define IDC_MEMLOG                      1501
 #define IDC_HWLOG                       1502

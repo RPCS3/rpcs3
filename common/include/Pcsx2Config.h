@@ -77,6 +77,7 @@ extern SessionOverrideFlags g_Session;
 #define CHECK_FPU_EXTRA_OVERFLOW (Config.eeOptions & 0x2) // If enabled, Operands are checked for infinities before being used in the FPU recs
 #define CHECK_FPU_EXTRA_FLAGS 1	// Always enabled now // Sets D/I flags on FPU instructions
 #define CHECK_FPU_FULL			 (Config.eeOptions & 0x4)
+#define CHECK_FPU_ATTEMPT_MUL    (Config.eeOptions & 0x8)
 #define DEFAULT_eeOptions	0x01
 #define DEFAULT_vuOptions	0x01
 //------------ DEFAULT sseMXCSR VALUES!!! ---------------

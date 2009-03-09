@@ -76,6 +76,9 @@ namespace R5900 {
 namespace Dynarec {
 namespace OpcodeImpl {
 namespace COP1 {
+	
+u32 __fastcall FPU_MUL_MANTISSA(u32 s, u32 t);
+
 namespace DOUBLE {
  
 //------------------------------------------------------------------
@@ -408,6 +411,8 @@ static u64 PCSX2_ALIGNED16(dbl_s_neg[2]) = {0x8000000000000000ULL, 0};
  
 // converts small normal numbers to double equivalent
 // converts large normal numbers (which represent NaN/inf in IEEE) to double equivalent
+
+//mustn't use EAX/ECX/EDX/x86regs (MUL)
 void ToDouble(int reg)
 {
 	SSE_UCOMISS_M32_to_XMM(reg, (uptr)&pos_inf); //sets ZF if equal or uncomparable
@@ -439,6 +444,7 @@ void ToDouble(int reg)
 	otherwise, results are still usually better than iFPU.cpp.
 */
  
+//mustn't use EAX/ECX/EDX/x86regs (MUL)
  
 // converts small normal numbers to PS2 equivalent
 // converts large normal numbers to PS2 equivalent (which represent NaN/inf in IEEE)
@@ -501,6 +507,7 @@ void ToPS2FPU_Full(int reg, bool flags, int absreg, bool acc)
 	x86SetJ8(end3);
 }
  
+//mustn't use EAX/ECX/EDX/x86regs (MUL)
 void ToPS2FPU(int reg, bool flags, int absreg, bool acc)
 {
 	if (FPU_RESULT)
@@ -642,12 +649,36 @@ void FPU_ADD_SUB(int tempd, int tempt) //tempd and tempt are overwritten, they a
 }
  
  
- 
+void FPU_MUL(int info, int regd, int sreg, int treg, bool acc)
+{
+	if (CHECK_FPU_ATTEMPT_MUL)
+	{
+		SSE2_MOVD_XMM_to_R(ECX, sreg);
+		SSE2_MOVD_XMM_to_R(EDX, treg);
+		CALLFunc( (uptr)&FPU_MUL_MANTISSA );
+		ToDouble(sreg); ToDouble(treg); 
+		SSE2_MULSD_XMM_to_XMM(sreg, treg);
+		ToPS2FPU(sreg, true, treg, acc);
+		SSE_MOVSS_XMM_to_XMM(regd, sreg);
+		SSE2_MOVD_XMM_to_R(ECX, regd);
+		AND32ItoR(ECX, 0xff800000);
+		OR32RtoR(EAX, ECX);
+		SSE2_MOVD_R_to_XMM(regd, EAX);
+	}
+	else
+	{
+		ToDouble(sreg); ToDouble(treg); 
+		SSE2_MULSD_XMM_to_XMM(sreg, treg);
+		ToPS2FPU(sreg, true, treg, acc);
+		SSE_MOVSS_XMM_to_XMM(regd, sreg);
+	}
+}
+
 //------------------------------------------------------------------
 // CommutativeOp XMM (used for ADD, MUL, MAX, MIN and SUB opcodes)
 //------------------------------------------------------------------
 static void (*recFPUOpXMM_to_XMM[] )(x86SSERegType, x86SSERegType) = {
-	SSE2_ADDSD_XMM_to_XMM, SSE2_MULSD_XMM_to_XMM, SSE2_MAXSD_XMM_to_XMM, SSE2_MINSD_XMM_to_XMM, SSE2_SUBSD_XMM_to_XMM };
+	SSE2_ADDSD_XMM_to_XMM, NULL, SSE2_MAXSD_XMM_to_XMM, SSE2_MINSD_XMM_to_XMM, SSE2_SUBSD_XMM_to_XMM };
  
 void recFPUOp(int info, int regd, int op, bool acc) 
 {
@@ -951,13 +982,10 @@ FPURECOMPILE_CONSTCODE(DIV_S, XMMINFO_WRITED|XMMINFO_READS|XMMINFO_READT);
 void recMaddsub(int info, int regd, int op, bool acc)
 {	
 	int sreg, treg;
-
 	ALLOC_S(sreg); ALLOC_T(treg);
-	ToDouble(sreg); ToDouble(treg);
 
-	SSE2_MULSD_XMM_to_XMM(sreg, treg);
+	FPU_MUL(info, sreg, sreg, treg, false); 
 
-	ToPS2FPU(sreg, true, treg, false); 
 	GET_ACC(treg); 
 
 	if (FPU_ADD_SUB_HACK) //ADD or SUB
@@ -1077,14 +1105,22 @@ FPURECOMPILE_CONSTCODE(MSUBA_S, XMMINFO_WRITEACC|XMMINFO_READACC|XMMINFO_READS|X
 //------------------------------------------------------------------
 void recMUL_S_xmm(int info)
 {			
-	recFPUOp(info, EEREC_D, 1, false); 
+	int sreg, treg;
+	ALLOC_S(sreg); ALLOC_T(treg);
+
+	FPU_MUL(info, EEREC_D, sreg, treg, false);
+	_freeXMMreg(sreg); _freeXMMreg(treg); 
 }
  
 FPURECOMPILE_CONSTCODE(MUL_S, XMMINFO_WRITED|XMMINFO_READS|XMMINFO_READT);
  
 void recMULA_S_xmm(int info) 
 { 
-	recFPUOp(info, EEREC_ACC, 1, true);
+	int sreg, treg;
+	ALLOC_S(sreg); ALLOC_T(treg);
+
+	FPU_MUL(info, EEREC_ACC, sreg, treg, true);
+	_freeXMMreg(sreg); _freeXMMreg(treg);
 }
  
 FPURECOMPILE_CONSTCODE(MULA_S, XMMINFO_WRITEACC|XMMINFO_READS|XMMINFO_READT);
