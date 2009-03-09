@@ -20,17 +20,20 @@
  */
 
 // TODO: x64 (use the extra regs to avoid spills of zs, zd, uf, vf, rb, ga and keep a few constants in the last two like aref or afix)
+// TODO: for edges doing 4 pixels is wasteful (needed memory access * 4)
 
 #include "StdAfx.h"
 #include "GSDrawScanlineCodeGenerator.h"
 
-GSDrawScanlineCodeGenerator::GSDrawScanlineCodeGenerator(GSScanlineEnvironment& env, void* ptr, size_t maxsize)
+GSDrawScanlineCodeGenerator::GSDrawScanlineCodeGenerator(GSScanlineEnvironment& env, UINT64 key, void* ptr, size_t maxsize)
 	: CodeGenerator(maxsize, ptr)
 	, m_env(env)
 {
 	#if _M_AMD64
 	#error TODO
 	#endif
+
+	m_sel.key = key;
 
 	Generate();
 }
@@ -46,7 +49,10 @@ void GSDrawScanlineCodeGenerator::Generate()
 
 	Init(params);
 
-	align(16);
+	if(!m_sel.edge)
+	{
+		align(16);
+	}
 
 L("loop");
 
@@ -60,7 +66,7 @@ L("loop");
 	// xmm6 = ga (!tme)
 	// xmm7 = test
 
-	bool tme = m_env.sel.tfx != TFX_NONE;
+	bool tme = m_sel.tfx != TFX_NONE;
 
 	TestZ(tme ? xmm5 : xmm2, tme ? xmm6 : xmm3);
 
@@ -98,12 +104,12 @@ L("loop");
 	// xmm6 = ga
 	// xmm7 = test
 
-	if(m_env.sel.fwrite)
+	if(m_sel.fwrite)
 	{
 		movdqa(xmm3, xmmword[&m_env.fm]);
 	}
 
-	if(m_env.sel.zwrite)
+	if(m_sel.zwrite)
 	{
 		movdqa(xmm4, xmmword[&m_env.zm]);
 	}
@@ -174,12 +180,12 @@ L("loop");
 	// fm |= test;
 	// zm |= test;
 
-	if(m_env.sel.fwrite)
+	if(m_sel.fwrite)
 	{
 		por(xmm3, xmm7);
 	}
 
-	if(m_env.sel.zwrite)
+	if(m_sel.zwrite)
 	{
 		por(xmm4, xmm7);
 	}
@@ -188,19 +194,19 @@ L("loop");
 
 	pcmpeqd(xmm1, xmm1);
 
-	if(m_env.sel.fwrite && m_env.sel.zwrite)
+	if(m_sel.fwrite && m_sel.zwrite)
 	{
 		movdqa(xmm0, xmm1);
 		pcmpeqd(xmm1, xmm3);
 		pcmpeqd(xmm0, xmm4);
 		packssdw(xmm1, xmm0);
 	}
-	else if(m_env.sel.fwrite)
+	else if(m_sel.fwrite)
 	{
 		pcmpeqd(xmm1, xmm3);
 		packssdw(xmm1, xmm1);
 	}
-	else if(m_env.sel.zwrite)
+	else if(m_sel.zwrite)
 	{
 		pcmpeqd(xmm1, xmm4);
 		packssdw(xmm1, xmm1);
@@ -253,12 +259,15 @@ L("step");
 	
 	// if(steps <= 0) break;
 
-	test(ecx, ecx);
-	jle("exit", T_NEAR);
+	if(!m_sel.edge)
+	{
+		test(ecx, ecx);
+		jle("exit", T_NEAR);
 
-	Step();
+		Step();
 
-	jmp("loop", T_NEAR);
+		jmp("loop", T_NEAR);
+	}
 
 L("exit");
 
@@ -313,7 +322,7 @@ void GSDrawScanlineCodeGenerator::Init(int params)
 	lea(edi, ptr[ebx * 2]);
 	add(edi, dword[&m_env.fzbc]);
 
-	if(!m_env.sel.sprite && (m_env.sel.fwrite && m_env.sel.fge || m_env.sel.zb) || m_env.sel.fb && (m_env.sel.tfx != TFX_NONE || m_env.sel.iip))
+	if(!m_sel.sprite && (m_sel.fwrite && m_sel.fge || m_sel.zb) || m_sel.fb && (m_sel.edge || m_sel.tfx != TFX_NONE || m_sel.iip))
 	{
 		// edx = &m_env.d[skip]
 
@@ -325,13 +334,13 @@ void GSDrawScanlineCodeGenerator::Init(int params)
 		mov(ebx, dword[esp + _v]);
 	}
 
-	if(!m_env.sel.sprite)
+	if(!m_sel.sprite)
 	{
-		if(m_env.sel.fwrite && m_env.sel.fge || m_env.sel.zb)
+		if(m_sel.fwrite && m_sel.fge || m_sel.zb)
 		{
 			movaps(xmm0, xmmword[ebx + 16]); // v.p
 
-			if(m_env.sel.fwrite && m_env.sel.fge)
+			if(m_sel.fwrite && m_sel.fge)
 			{
 				// f = GSVector4i(vp).zzzzh().zzzz().add16(m_env.d[skip].f);
 
@@ -343,7 +352,7 @@ void GSDrawScanlineCodeGenerator::Init(int params)
 				movdqa(xmmword[&m_env.temp.f], xmm1);
 			}
 
-			if(m_env.sel.zb)
+			if(m_sel.zb)
 			{
 				// z = vp.zzzz() + m_env.d[skip].z;
 
@@ -356,19 +365,31 @@ void GSDrawScanlineCodeGenerator::Init(int params)
 	}
 	else
 	{
-		if(m_env.sel.ztest)
+		if(m_sel.ztest)
 		{
 			movdqa(xmm0, xmmword[&m_env.p.z]);
 		}
 	}
 
-	if(m_env.sel.fb)
+	if(m_sel.fb)
 	{
-		if(m_env.sel.tfx != TFX_NONE)
+		if(m_sel.edge)
 		{
 			movaps(xmm4, xmmword[ebx + 32]); // v.t
 
-			if(m_env.sel.fst)
+			cvttps2dq(xmm4, xmm4);
+
+			pshufhw(xmm4, xmm4, _MM_SHUFFLE(2, 2, 2, 2));
+			pshufd(xmm4, xmm4, _MM_SHUFFLE(3, 3, 3, 3));
+
+			movdqa(xmmword[&m_env.temp.cov], xmm4);
+		}
+
+		if(m_sel.tfx != TFX_NONE)
+		{
+			movaps(xmm4, xmmword[ebx + 32]); // v.t
+
+			if(m_sel.fst)
 			{
 				// GSVector4i vti(vt);
 
@@ -382,13 +403,13 @@ void GSDrawScanlineCodeGenerator::Init(int params)
 
 				paddd(xmm2, xmmword[edx + 16 * 7]);
 				
-				if(!m_env.sel.sprite)
+				if(!m_sel.sprite)
 				{
 					paddd(xmm3, xmmword[edx + 16 * 8]);
 				}
 				else
 				{
-					if(m_env.sel.ltf)
+					if(m_sel.ltf)
 					{
 						movdqa(xmm4, xmm3);
 						pshuflw(xmm4, xmm4, _MM_SHUFFLE(2, 2, 0, 0));
@@ -428,9 +449,9 @@ void GSDrawScanlineCodeGenerator::Init(int params)
 			}
 		}
 
-		if(m_env.sel.tfx != TFX_DECAL)
+		if(m_sel.tfx != TFX_DECAL)
 		{
-			if(m_env.sel.iip)
+			if(m_sel.iip)
 			{
 				// GSVector4i vc = GSVector4i(v.c);
 
@@ -455,7 +476,7 @@ void GSDrawScanlineCodeGenerator::Init(int params)
 			}
 			else
 			{
-				if(m_env.sel.tfx == TFX_NONE)
+				if(m_sel.tfx == TFX_NONE)
 				{
 					movdqa(xmm5, xmmword[&m_env.c.rb]);
 					movdqa(xmm6, xmmword[&m_env.c.ga]);
@@ -475,11 +496,11 @@ void GSDrawScanlineCodeGenerator::Step()
 
 	add(edi, 8);
 
-	if(!m_env.sel.sprite)
+	if(!m_sel.sprite)
 	{
 		// z += m_env.d4.z;
 
-		if(m_env.sel.zb)
+		if(m_sel.zb)
 		{
 			movaps(xmm0, xmmword[&m_env.temp.z]);
 			addps(xmm0, xmmword[&m_env.d4.z]);
@@ -488,7 +509,7 @@ void GSDrawScanlineCodeGenerator::Step()
 
 		// f = f.add16(m_env.d4.f);
 
-		if(m_env.sel.fwrite && m_env.sel.fge)
+		if(m_sel.fwrite && m_sel.fge)
 		{
 			movdqa(xmm1, xmmword[&m_env.temp.f]);
 			paddw(xmm1, xmmword[&m_env.d4.f]);
@@ -497,17 +518,17 @@ void GSDrawScanlineCodeGenerator::Step()
 	}
 	else
 	{
-		if(m_env.sel.ztest)
+		if(m_sel.ztest)
 		{
 			movdqa(xmm0, xmmword[&m_env.p.z]);
 		}
 	}
 
-	if(m_env.sel.fb)
+	if(m_sel.fb)
 	{
-		if(m_env.sel.tfx != TFX_NONE)
+		if(m_sel.tfx != TFX_NONE)
 		{
-			if(m_env.sel.fst)
+			if(m_sel.fst)
 			{
 				// GSVector4i st = m_env.d4.st;
 
@@ -520,7 +541,7 @@ void GSDrawScanlineCodeGenerator::Step()
 				paddd(xmm2, xmmword[&m_env.temp.s]);
 				movdqa(xmmword[&m_env.temp.s], xmm2);
 
-				if(!m_env.sel.sprite)
+				if(!m_sel.sprite)
 				{
 					pshufd(xmm3, xmm4, _MM_SHUFFLE(1, 1, 1, 1));
 					paddd(xmm3, xmmword[&m_env.temp.t]);
@@ -561,9 +582,9 @@ void GSDrawScanlineCodeGenerator::Step()
 			}
 		}
 
-		if(m_env.sel.tfx != TFX_DECAL)
+		if(m_sel.tfx != TFX_DECAL)
 		{
-			if(m_env.sel.iip)
+			if(m_sel.iip)
 			{
 				// GSVector4i c = m_env.d4.c;
 
@@ -583,7 +604,7 @@ void GSDrawScanlineCodeGenerator::Step()
 			}
 			else
 			{
-				if(m_env.sel.tfx == TFX_NONE)
+				if(m_sel.tfx == TFX_NONE)
 				{
 					movdqa(xmm5, xmmword[&m_env.c.rb]);
 					movdqa(xmm6, xmmword[&m_env.c.ga]);
@@ -604,7 +625,7 @@ void GSDrawScanlineCodeGenerator::Step()
 
 void GSDrawScanlineCodeGenerator::TestZ(const Xmm& temp1, const Xmm& temp2)
 {
-	if(!m_env.sel.zb) 
+	if(!m_sel.zb) 
 	{
 		return;
 	}
@@ -616,9 +637,9 @@ void GSDrawScanlineCodeGenerator::TestZ(const Xmm& temp1, const Xmm& temp2)
 
 	// GSVector4i zs = zi;
 
-	if(!m_env.sel.sprite)
+	if(!m_sel.sprite)
 	{
-		if(m_env.sel.zoverflow)
+		if(m_sel.zoverflow)
 		{
 			// zs = (GSVector4i(z * 0.5f) << 1) | (GSVector4i(z) & GSVector4i::x00000001());
 
@@ -644,30 +665,30 @@ void GSDrawScanlineCodeGenerator::TestZ(const Xmm& temp1, const Xmm& temp2)
 			cvttps2dq(xmm0, xmm0);
 		}
 
-		if(m_env.sel.zwrite)
+		if(m_sel.zwrite)
 		{
 			movdqa(xmmword[&m_env.temp.zs], xmm0);
 		}
 	}
 
-	if(m_env.sel.ztest)
+	if(m_sel.ztest)
 	{
 		ReadPixel(xmm1, ebp);
 
-		if(m_env.sel.zwrite && m_env.sel.zpsm < 2)
+		if(m_sel.zwrite && m_sel.zpsm < 2)
 		{
 			movdqa(xmmword[&m_env.temp.zd], xmm1);
 		}
 
-		// zd &= 0xffffffff >> m_env.sel.zpsm * 8;
+		// zd &= 0xffffffff >> m_sel.zpsm * 8;
 
-		if(m_env.sel.zpsm)
+		if(m_sel.zpsm)
 		{
-			pslld(xmm1, m_env.sel.zpsm * 8);
-			psrld(xmm1, m_env.sel.zpsm * 8);
+			pslld(xmm1, m_sel.zpsm * 8);
+			psrld(xmm1, m_sel.zpsm * 8);
 		}
 
-		if(m_env.sel.zoverflow || m_env.sel.zpsm == 0)
+		if(m_sel.zoverflow || m_sel.zpsm == 0)
 		{
 			// GSVector4i o = GSVector4i::x80000000();
 
@@ -683,7 +704,7 @@ void GSDrawScanlineCodeGenerator::TestZ(const Xmm& temp1, const Xmm& temp2)
 			psubd(xmm1, xmm4);
 		}
 
-		switch(m_env.sel.ztst)
+		switch(m_sel.ztst)
 		{
 		case ZTST_GEQUAL: 
 			// test |= zso < zdo; 
@@ -707,7 +728,7 @@ void GSDrawScanlineCodeGenerator::TestZ(const Xmm& temp1, const Xmm& temp2)
 
 void GSDrawScanlineCodeGenerator::SampleTexture()
 {
-	if(!m_env.sel.fb || m_env.sel.tfx == TFX_NONE)
+	if(!m_sel.fb || m_sel.tfx == TFX_NONE)
 	{
 		return;
 	}
@@ -716,14 +737,14 @@ void GSDrawScanlineCodeGenerator::SampleTexture()
 
 	// ebx = tex
 
-	if(!m_env.sel.fst)
+	if(!m_sel.fst)
 	{
 		// TODO: move these into Init/Step too?
 
 		cvttps2dq(xmm2, xmm2);
 		cvttps2dq(xmm3, xmm3);
 
-		if(m_env.sel.ltf)
+		if(m_sel.ltf)
 		{
 			// u -= 0x8000;
 			// v -= 0x8000;
@@ -739,7 +760,7 @@ void GSDrawScanlineCodeGenerator::SampleTexture()
 	// xmm2 = u
 	// xmm3 = v
 
-	if(m_env.sel.ltf)
+	if(m_sel.ltf)
 	{
 		// GSVector4i uf = u.xxzzlh().srl16(1);
 
@@ -749,7 +770,7 @@ void GSDrawScanlineCodeGenerator::SampleTexture()
 		psrlw(xmm0, 1);
 		movdqa(xmmword[&m_env.temp.uf], xmm0);
 
-		if(!m_env.sel.sprite)
+		if(!m_sel.sprite)
 		{
 			// GSVector4i vf = v.xxzzlh().srl16(1);
 
@@ -767,7 +788,7 @@ void GSDrawScanlineCodeGenerator::SampleTexture()
 	psrad(xmm3, 16);
 	packssdw(xmm2, xmm3);
 
-	if(m_env.sel.ltf)
+	if(m_sel.ltf)
 	{
 		// GSVector4i uv1 = uv0.add16(GSVector4i::x0001());
 
@@ -812,7 +833,7 @@ void GSDrawScanlineCodeGenerator::SampleTexture()
 	// xmm5, xmm6 = free
 	// xmm7 = used
 
-	if(m_env.sel.ltf)
+	if(m_sel.ltf)
 	{
 		// GSVector4i y1 = uv1.uph16() << tw;
 		// GSVector4i x1 = uv1.upl16();
@@ -989,10 +1010,10 @@ void GSDrawScanlineCodeGenerator::Wrap(const Xmm& uv)
 {
 	// xmm0, xmm1, xmm4, xmm5, xmm6 = free
 
-	int wms_clamp = ((m_env.sel.wms + 1) >> 1) & 1;
-	int wmt_clamp = ((m_env.sel.wmt + 1) >> 1) & 1;
+	int wms_clamp = ((m_sel.wms + 1) >> 1) & 1;
+	int wmt_clamp = ((m_sel.wmt + 1) >> 1) & 1;
 
-	int region = ((m_env.sel.wms | m_env.sel.wmt) >> 1) & 1;
+	int region = ((m_sel.wms | m_sel.wmt) >> 1) & 1;
 
 	if(wms_clamp == wmt_clamp)
 	{
@@ -1052,10 +1073,10 @@ void GSDrawScanlineCodeGenerator::Wrap(const Xmm& uv0, const Xmm& uv1)
 {
 	// xmm0, xmm1, xmm4, xmm5, xmm6 = free
 
-	int wms_clamp = ((m_env.sel.wms + 1) >> 1) & 1;
-	int wmt_clamp = ((m_env.sel.wmt + 1) >> 1) & 1;
+	int wms_clamp = ((m_sel.wms + 1) >> 1) & 1;
+	int wmt_clamp = ((m_sel.wmt + 1) >> 1) & 1;
 
-	int region = ((m_env.sel.wms | m_env.sel.wmt) >> 1) & 1;
+	int region = ((m_sel.wms | m_sel.wmt) >> 1) & 1;
 
 	if(wms_clamp == wmt_clamp)
 	{
@@ -1149,18 +1170,18 @@ void GSDrawScanlineCodeGenerator::Wrap(const Xmm& uv0, const Xmm& uv1)
 
 void GSDrawScanlineCodeGenerator::AlphaTFX()
 {
-	if(!m_env.sel.fb)
+	if(!m_sel.fb)
 	{
 		return;
 	}
 
-	switch(m_env.sel.tfx)
+	switch(m_sel.tfx)
 	{
 	case TFX_MODULATE:
 
 		// GSVector4i ga = iip ? gaf : m_env.c.ga;
 
-		movdqa(xmm4, xmmword[m_env.sel.iip ? &m_env.temp.ga : &m_env.c.ga]);
+		movdqa(xmm4, xmmword[m_sel.iip ? &m_env.temp.ga : &m_env.c.ga]);
 
 		// gat = gat.modulate16<1>(ga).clamp8();
 
@@ -1170,7 +1191,7 @@ void GSDrawScanlineCodeGenerator::AlphaTFX()
 
 		// if(!tcc) gat = gat.mix16(ga.srl16(7));
 		
-		if(!m_env.sel.tcc)
+		if(!m_sel.tcc)
 		{
 			psrlw(xmm4, 7);
 
@@ -1187,14 +1208,14 @@ void GSDrawScanlineCodeGenerator::AlphaTFX()
 
 		// GSVector4i ga = iip ? gaf : m_env.c.ga;
 
-		movdqa(xmm4, xmmword[m_env.sel.iip ? &m_env.temp.ga : &m_env.c.ga]);
+		movdqa(xmm4, xmmword[m_sel.iip ? &m_env.temp.ga : &m_env.c.ga]);
 		movdqa(xmm2, xmm4);
 
 		// gat = gat.mix16(!tcc ? ga.srl16(7) : gat.addus8(ga.srl16(7)));
 
 		psrlw(xmm4, 7);
 
-		if(m_env.sel.tcc)
+		if(m_sel.tcc)
 		{
 			paddusb(xmm4, xmm6);
 		}
@@ -1207,11 +1228,11 @@ void GSDrawScanlineCodeGenerator::AlphaTFX()
 
 		// if(!tcc) gat = gat.mix16(ga.srl16(7));
 
-		if(!m_env.sel.tcc)
+		if(!m_sel.tcc)
 		{
 			// GSVector4i ga = iip ? gaf : m_env.c.ga;
 
-			movdqa(xmm4, xmmword[m_env.sel.iip ? &m_env.temp.ga : &m_env.c.ga]);
+			movdqa(xmm4, xmmword[m_sel.iip ? &m_env.temp.ga : &m_env.c.ga]);
 			movdqa(xmm2, xmm4);
 
 			psrlw(xmm4, 7);
@@ -1225,33 +1246,81 @@ void GSDrawScanlineCodeGenerator::AlphaTFX()
 
 		// gat = iip ? ga.srl16(7) : ga;
 
-		if(m_env.sel.iip)
+		if(m_sel.iip)
 		{
 			psrlw(xmm6, 7);
 		}
 
 		break; 
 	}
+
+	if(m_sel.aa1)
+	{
+		// gs_user figure 3-2: anti-aliasing after tfx, before tests, modifies alpha
+
+		// FIXME: bios config screen cubes
+
+		if(!m_sel.abe)
+		{
+			// a = cov
+
+			if(m_sel.edge)
+			{
+				movdqa(xmm0, xmmword[&m_env.temp.cov]);
+			}
+			else
+			{
+				pcmpeqd(xmm0, xmm0);
+				psllw(xmm0, 15);
+				psrlw(xmm0, 8);
+			}
+
+			mix16(xmm6, xmm0, xmm1);
+		}
+		else
+		{
+			// a = a == 0x80 ? cov : a
+
+			pcmpeqd(xmm0, xmm0);
+			psllw(xmm0, 15);
+			psrlw(xmm0, 8);
+
+			if(m_sel.edge)
+			{
+				movdqa(xmm1, xmmword[&m_env.temp.cov]);
+			}
+			else
+			{
+				movdqa(xmm1, xmm0);
+			}
+
+			pcmpeqw(xmm0, xmm6);
+			psrld(xmm0, 16);
+			pslld(xmm0, 16);
+
+			blend8(xmm6, xmm1);
+		}
+	}
 }
 
 void GSDrawScanlineCodeGenerator::TestAlpha()
 {
-	switch(m_env.sel.afail)
+	switch(m_sel.afail)
 	{
 	case AFAIL_FB_ONLY:
-		if(!m_env.sel.zwrite) return;
+		if(!m_sel.zwrite) return;
 		break;
 
 	case AFAIL_ZB_ONLY:
-		if(!m_env.sel.fwrite) return;
+		if(!m_sel.fwrite) return;
 		break;
 
 	case AFAIL_RGB_ONLY:
-		if(!m_env.sel.zwrite && m_env.sel.fpsm == 1) return;
+		if(!m_sel.zwrite && m_sel.fpsm == 1) return;
 		break;
 	}
 
-	switch(m_env.sel.atst)
+	switch(m_sel.atst)
 	{
 	case ATST_NEVER:
 		// t = GSVector4i::xffffffff();
@@ -1295,7 +1364,7 @@ void GSDrawScanlineCodeGenerator::TestAlpha()
 		break;
 	}
 
-	switch(m_env.sel.afail)
+	switch(m_sel.afail)
 	{
 	case AFAIL_KEEP:
 		// test |= t;
@@ -1326,12 +1395,12 @@ void GSDrawScanlineCodeGenerator::TestAlpha()
 
 void GSDrawScanlineCodeGenerator::ColorTFX()
 {
-	if(!m_env.sel.fwrite)
+	if(!m_sel.fwrite)
 	{
 		return;
 	}
 
-	switch(m_env.sel.tfx)
+	switch(m_sel.tfx)
 	{
 	case TFX_MODULATE:
 
@@ -1339,7 +1408,7 @@ void GSDrawScanlineCodeGenerator::ColorTFX()
 
 		// rbt = rbt.modulate16<1>(rb).clamp8();
 
-		modulate16<1>(xmm5, xmmword[m_env.sel.iip ? &m_env.temp.rb : &m_env.c.rb]);
+		modulate16<1>(xmm5, xmmword[m_sel.iip ? &m_env.temp.rb : &m_env.c.rb]);
 
 		clamp16(xmm5, xmm1);
 
@@ -1352,11 +1421,11 @@ void GSDrawScanlineCodeGenerator::ColorTFX()
 	case TFX_HIGHLIGHT:
 	case TFX_HIGHLIGHT2:
 
-		if(m_env.sel.tfx == TFX_HIGHLIGHT2 && m_env.sel.tcc)
+		if(m_sel.tfx == TFX_HIGHLIGHT2 && m_sel.tcc)
 		{
 			// GSVector4i ga = iip ? gaf : m_env.c.ga;
 
-			movdqa(xmm2, xmmword[m_env.sel.iip ? &m_env.temp.ga : &m_env.c.ga]);
+			movdqa(xmm2, xmmword[m_sel.iip ? &m_env.temp.ga : &m_env.c.ga]);
 		}
 
 		// gat = gat.modulate16<1>(ga).add16(af).clamp8().mix16(gat);
@@ -1379,7 +1448,7 @@ void GSDrawScanlineCodeGenerator::ColorTFX()
 
 		// rbt = rbt.modulate16<1>(rb).add16(af).clamp8();
 
-		modulate16<1>(xmm5, xmmword[m_env.sel.iip ? &m_env.temp.rb : &m_env.c.rb]);
+		modulate16<1>(xmm5, xmmword[m_sel.iip ? &m_env.temp.rb : &m_env.c.rb]);
 
 		paddw(xmm5, xmm2);
 
@@ -1391,7 +1460,7 @@ void GSDrawScanlineCodeGenerator::ColorTFX()
 
 		// rbt = iip ? rb.srl16(7) : rb;
 
-		if(m_env.sel.iip)
+		if(m_sel.iip)
 		{
 			psrlw(xmm5, 7);
 		}
@@ -1402,7 +1471,7 @@ void GSDrawScanlineCodeGenerator::ColorTFX()
 
 void GSDrawScanlineCodeGenerator::Fog()
 {
-	if(!m_env.sel.fwrite || !m_env.sel.fge)
+	if(!m_sel.fwrite || !m_sel.fge)
 	{
 		return;
 	}
@@ -1410,7 +1479,7 @@ void GSDrawScanlineCodeGenerator::Fog()
 	// rb = m_env.frb.lerp16<0>(rb, f);
 	// ga = m_env.fga.lerp16<0>(ga, f).mix16(ga);
 
-	movdqa(xmm0, xmmword[!m_env.sel.sprite ? &m_env.temp.f : &m_env.p.f]);
+	movdqa(xmm0, xmmword[!m_sel.sprite ? &m_env.temp.f : &m_env.p.f]);
 	movdqa(xmm1, xmm6);
 
 	movdqa(xmm2, xmmword[&m_env.frb]);
@@ -1424,7 +1493,7 @@ void GSDrawScanlineCodeGenerator::Fog()
 
 void GSDrawScanlineCodeGenerator::ReadFrame()
 {
-	if(!m_env.sel.fb)
+	if(!m_sel.fb)
 	{
 		return;
 	}
@@ -1434,7 +1503,7 @@ void GSDrawScanlineCodeGenerator::ReadFrame()
 	mov(ebx, dword[esi]);
 	add(ebx, dword[edi]);
 
-	if(!m_env.sel.rfb)
+	if(!m_sel.rfb)
 	{
 		return;
 	}
@@ -1444,7 +1513,7 @@ void GSDrawScanlineCodeGenerator::ReadFrame()
 
 void GSDrawScanlineCodeGenerator::TestDestAlpha()
 {
-	if(!m_env.sel.date || m_env.sel.fpsm != 0 && m_env.sel.fpsm != 2)
+	if(!m_sel.date || m_sel.fpsm != 0 && m_sel.fpsm != 2)
 	{
 		return;
 	}
@@ -1453,9 +1522,9 @@ void GSDrawScanlineCodeGenerator::TestDestAlpha()
 
 	movdqa(xmm1, xmm2);
 
-	if(m_env.sel.datm)
+	if(m_sel.datm)
 	{
-		if(m_env.sel.fpsm == 2)
+		if(m_sel.fpsm == 2)
 		{
 			pxor(xmm0, xmm0);
 			psrld(xmm1, 15);
@@ -1470,7 +1539,7 @@ void GSDrawScanlineCodeGenerator::TestDestAlpha()
 	}
 	else
 	{
-		if(m_env.sel.fpsm == 2)
+		if(m_sel.fpsm == 2)
 		{
 			pslld(xmm1, 16);
 		}
@@ -1485,16 +1554,16 @@ void GSDrawScanlineCodeGenerator::TestDestAlpha()
 
 void GSDrawScanlineCodeGenerator::WriteZBuf()
 {
-	if(!m_env.sel.zwrite)
+	if(!m_sel.zwrite)
 	{
 		return;
 	}
 
-	movdqa(xmm1, xmmword[!m_env.sel.sprite ? &m_env.temp.zs : &m_env.p.z]);
+	movdqa(xmm1, xmmword[!m_sel.sprite ? &m_env.temp.zs : &m_env.p.z]);
 
 	bool fast = false;
 
-	if(m_env.sel.ztest && m_env.sel.zpsm < 2)
+	if(m_sel.ztest && m_sel.zpsm < 2)
 	{
 		// zs = zs.blend8(zd, zm);
 
@@ -1505,43 +1574,24 @@ void GSDrawScanlineCodeGenerator::WriteZBuf()
 		fast = true;
 	}
 
-	WritePixel(xmm1, xmm0, ebp, dh, fast, m_env.sel.zpsm);
+	WritePixel(xmm1, xmm0, ebp, dh, fast, m_sel.zpsm);
 }
 
 void GSDrawScanlineCodeGenerator::AlphaBlend()
 {
-	if(!m_env.sel.fwrite)
-	{
-		return;
-	}
-/*
-	if(m_env.sel.aa1)
-	{
-		// hmm, the playstation logo does not look good...
-
-		printf("aa1 %016I64x\n", m_env.sel.key);
-
-		if(m_env.sel.fpsm != 1) // TODO: fm == 0xffxxxxxx
-		{
-			// a = 0x80
-
-			pcmpeqd(xmm0, xmm0);
-			psllw(xmm0, 15);
-			psrlw(xmm0, 8);
-			mix16(xmm6, xmm0, xmm1);
-		}
-
-		return;
-	}
-*/
-	if(m_env.sel.abe == 255)
+	if(!m_sel.fwrite)
 	{
 		return;
 	}
 
-	if((m_env.sel.abea != m_env.sel.abeb) && (m_env.sel.abea == 1 || m_env.sel.abeb == 1 || m_env.sel.abec == 1) || m_env.sel.abed == 1)
+	if(m_sel.abe == 0 && m_sel.aa1 == 0)
 	{
-		switch(m_env.sel.fpsm)
+		return;
+	}
+
+	if((m_sel.aba != m_sel.abb) && (m_sel.aba == 1 || m_sel.abb == 1 || m_sel.abc == 1) || m_sel.abd == 1)
+	{
+		switch(m_sel.fpsm)
 		{
 		case 0:
 		case 1:
@@ -1599,40 +1649,40 @@ void GSDrawScanlineCodeGenerator::AlphaBlend()
 	// xmm2, xmm3 = used
 	// xmm4, xmm7 = free
 
-	if(m_env.sel.pabe || (m_env.sel.abea != m_env.sel.abeb) && (m_env.sel.abeb == 0 || m_env.sel.abed == 0))
+	if(m_sel.pabe || (m_sel.aba != m_sel.abb) && (m_sel.abb == 0 || m_sel.abd == 0))
 	{
 		movdqa(xmm4, xmm5);
 	}
 
-	if(m_env.sel.abea != m_env.sel.abeb)
+	if(m_sel.aba != m_sel.abb)
 	{
-		// rb = c[abea * 2 + 0];
+		// rb = c[aba * 2 + 0];
 
-		switch(m_env.sel.abea)
+		switch(m_sel.aba)
 		{
 		case 0: break;
 		case 1: movdqa(xmm5, xmm0); break;
 		case 2: pxor(xmm5, xmm5); break;
 		}
 
-		// rb = rb.sub16(c[abeb * 2 + 0]);
+		// rb = rb.sub16(c[abb * 2 + 0]);
 
-		switch(m_env.sel.abeb)
+		switch(m_sel.abb)
 		{
 		case 0: psubw(xmm5, xmm4); break;
 		case 1: psubw(xmm5, xmm0); break;
 		case 2: break;
 		}
 
-		if(!(m_env.sel.fpsm == 1 && m_env.sel.abec == 1))
+		if(!(m_sel.fpsm == 1 && m_sel.abc == 1))
 		{
-			// GSVector4i a = abec < 2 ? c[abec * 2 + 1].yywwlh().sll16(7) : m_env.afix;
+			// GSVector4i a = abc < 2 ? c[abc * 2 + 1].yywwlh().sll16(7) : m_env.afix;
 
-			switch(m_env.sel.abec)
+			switch(m_sel.abc)
 			{
 			case 0: 
 			case 1: 
-				movdqa(xmm7, m_env.sel.abec ? xmm1 : xmm6);
+				movdqa(xmm7, m_sel.abc ? xmm1 : xmm6);
 				pshuflw(xmm7, xmm7, _MM_SHUFFLE(3, 3, 1, 1));
 				pshufhw(xmm7, xmm7, _MM_SHUFFLE(3, 3, 1, 1));
 				psllw(xmm7, 7);
@@ -1647,9 +1697,9 @@ void GSDrawScanlineCodeGenerator::AlphaBlend()
 			modulate16<1>(xmm5, xmm7);
 		}
 
-		// rb = rb.add16(c[abed * 2 + 0]);
+		// rb = rb.add16(c[abd * 2 + 0]);
 
-		switch(m_env.sel.abed)
+		switch(m_sel.abd)
 		{
 		case 0: paddw(xmm5, xmm4); break;
 		case 1: paddw(xmm5, xmm0); break;
@@ -1658,9 +1708,9 @@ void GSDrawScanlineCodeGenerator::AlphaBlend()
 	}
 	else
 	{
-		// rb = c[abed * 2 + 0];
+		// rb = c[abd * 2 + 0];
 
-		switch(m_env.sel.abed)
+		switch(m_sel.abd)
 		{
 		case 0: break;
 		case 1: movdqa(xmm5, xmm0); break;
@@ -1668,7 +1718,7 @@ void GSDrawScanlineCodeGenerator::AlphaBlend()
 		}
 	}
 
-	if(m_env.sel.pabe)
+	if(m_sel.pabe)
 	{
 		// mask = (c[1] << 8).sra32(31);
 
@@ -1690,11 +1740,11 @@ void GSDrawScanlineCodeGenerator::AlphaBlend()
 
 	movdqa(xmm4, xmm6);
 
-	if(m_env.sel.abea != m_env.sel.abeb)
+	if(m_sel.aba != m_sel.abb)
 	{
-		// ga = c[abea * 2 + 1];
+		// ga = c[aba * 2 + 1];
 
-		switch(m_env.sel.abea)
+		switch(m_sel.aba)
 		{
 		case 0: break;
 		case 1: movdqa(xmm6, xmm1); break;
@@ -1703,23 +1753,23 @@ void GSDrawScanlineCodeGenerator::AlphaBlend()
 
 		// ga = ga.sub16(c[abeb * 2 + 1]);
 
-		switch(m_env.sel.abeb)
+		switch(m_sel.abb)
 		{
 		case 0: psubw(xmm6, xmm4); break;
 		case 1: psubw(xmm6, xmm1); break;
 		case 2: break;
 		}
 
-		if(!(m_env.sel.fpsm == 1 && m_env.sel.abec == 1))
+		if(!(m_sel.fpsm == 1 && m_sel.abc == 1))
 		{
 			// ga = ga.modulate16<1>(a);
 
 			modulate16<1>(xmm6, xmm7);
 		}
 
-		// ga = ga.add16(c[abed * 2 + 1]);
+		// ga = ga.add16(c[abd * 2 + 1]);
 
-		switch(m_env.sel.abed)
+		switch(m_sel.abd)
 		{
 		case 0: paddw(xmm6, xmm4); break;
 		case 1: paddw(xmm6, xmm1); break;
@@ -1728,9 +1778,9 @@ void GSDrawScanlineCodeGenerator::AlphaBlend()
 	}
 	else
 	{
-		// ga = c[abed * 2 + 1];
+		// ga = c[abd * 2 + 1];
 
-		switch(m_env.sel.abed)
+		switch(m_sel.abd)
 		{
 		case 0: break;
 		case 1: movdqa(xmm6, xmm1); break;
@@ -1738,7 +1788,13 @@ void GSDrawScanlineCodeGenerator::AlphaBlend()
 		}
 	}
 
-	if(m_env.sel.pabe)
+	// xmm4 = src ga
+	// xmm5 = rb
+	// xmm6 = ga
+	// xmm2, xmm3 = used
+	// xmm0, xmm1, xmm7 = free
+
+	if(m_sel.pabe)
 	{
 		if(!m_cpu.has(util::Cpu::tSSE41))
 		{
@@ -1757,7 +1813,7 @@ void GSDrawScanlineCodeGenerator::AlphaBlend()
 	}
 	else
 	{
-		if(m_env.sel.fpsm != 1) // TODO: fm == 0xffxxxxxx
+		if(m_sel.fpsm != 1) // TODO: fm == 0xffxxxxxx
 		{
 			mix16(xmm6, xmm4, xmm7);
 		}
@@ -1768,12 +1824,12 @@ void GSDrawScanlineCodeGenerator::WriteFrame(int params)
 {
 	const int _top = params + 4;
 
-	if(!m_env.sel.fwrite)
+	if(!m_sel.fwrite)
 	{
 		return;
 	}
 
-	if(m_env.sel.colclamp == 0)
+	if(m_sel.colclamp == 0)
 	{
 		// c[0] &= 0x000000ff;
 		// c[1] &= 0x000000ff;
@@ -1784,7 +1840,7 @@ void GSDrawScanlineCodeGenerator::WriteFrame(int params)
 		pand(xmm6, xmm7);
 	}
 
-	if(m_env.sel.fpsm == 2 && m_env.sel.dthe)
+	if(m_sel.fpsm == 2 && m_sel.dthe)
 	{
 		mov(eax, dword[esp + _top]);
 		and(eax, 3);
@@ -1800,7 +1856,7 @@ void GSDrawScanlineCodeGenerator::WriteFrame(int params)
 	punpckhwd(xmm7, xmm6);
 	packuswb(xmm5, xmm7);
 
-	if(m_env.sel.fba && m_env.sel.fpsm != 1)
+	if(m_sel.fba && m_sel.fpsm != 1)
 	{
 		// fs |= 0x80000000;
 
@@ -1809,7 +1865,7 @@ void GSDrawScanlineCodeGenerator::WriteFrame(int params)
 		por(xmm5, xmm7);
 	}
 
-	if(m_env.sel.fpsm == 2)
+	if(m_sel.fpsm == 2)
 	{
 		// GSVector4i rb = fs & 0x00f800f8;
 		// GSVector4i ga = fs & 0x8000f800;
@@ -1841,16 +1897,16 @@ void GSDrawScanlineCodeGenerator::WriteFrame(int params)
 		por(xmm5, xmm7);
 	}
 
-	if(m_env.sel.rfb)
+	if(m_sel.rfb)
 	{
 		// fs = fs.blend(fd, fm);
 
 		blend(xmm5, xmm2, xmm3); // TODO: could be skipped in certain cases, depending on fpsm and fm
 	}
 
-	bool fast = m_env.sel.rfb && m_env.sel.fpsm < 2;
+	bool fast = m_sel.rfb && m_sel.fpsm < 2;
 
-	WritePixel(xmm5, xmm0, ebx, dl, fast, m_env.sel.fpsm);
+	WritePixel(xmm5, xmm0, ebx, dl, fast, m_sel.fpsm);
 }
 
 void GSDrawScanlineCodeGenerator::ReadPixel(const Xmm& dst, const Reg32& addr)
@@ -1992,9 +2048,9 @@ void GSDrawScanlineCodeGenerator::ReadTexel(const Xmm& dst, const Xmm& addr, uin
 	if(i == 0) movd(eax, addr);
 	else pextrd(eax, addr, i);
 
-	if(m_env.sel.tlu) movzx(eax, byte[ebx + eax]);
+	if(m_sel.tlu) movzx(eax, byte[ebx + eax]);
 
-	const Address& src = m_env.sel.tlu ? ptr[eax * 4 + (size_t)m_env.clut] : ptr[ebx + eax * 4];
+	const Address& src = m_sel.tlu ? ptr[eax * 4 + (size_t)m_env.clut] : ptr[ebx + eax * 4];
 
 	if(i == 0) movd(dst, src);
 	else pinsrd(dst, src, i);

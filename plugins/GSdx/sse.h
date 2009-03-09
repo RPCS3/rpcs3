@@ -47,19 +47,6 @@
 
 	const __m128 ps_3f800000 = _mm_castsi128_ps(_mm_set1_epi32(0x3f800000));
 	const __m128 ps_4b000000 = _mm_castsi128_ps(_mm_set1_epi32(0x4b000000));
-	const __m128 ps_7fffffff = _mm_castsi128_ps(_mm_set1_epi32(0x7fffffff));
-	const __m128 ps_80000000 = _mm_castsi128_ps(_mm_set1_epi32(0x80000000));
-	const __m128 ps_ffffffff = _mm_castsi128_ps(_mm_set1_epi32(0xffffffff));
-
-	__forceinline __m128 _mm_neg_ps(__m128 r)
-	{
-		return _mm_xor_ps(ps_80000000, r);
-	}
-
-	__forceinline __m128 _mm_abs_ps(__m128 r)
-	{
-		return _mm_and_ps(ps_7fffffff, r);
-	}
 
 	#define _MM_TRANSPOSE4_SI128(row0, row1, row2, row3) \
 	{ \

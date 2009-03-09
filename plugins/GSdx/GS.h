@@ -685,32 +685,6 @@ REG64_(GIFReg, PABE)
 	UINT32 _PAD2:32;
 REG_END
 
-/*
-
-AA1 == 1 (for triangles, as tested on the real thing)
-
-C ABE A  Ae Ao Aoe
-0  0  c  c  c  c
-0  1  s  c  s* c
-1  0  d  d  c  c
-1  1  d  d  s* c
-2  0  f  f  ?  ?
-2  1  f  f  ?  ?
-
-C = ALPHA::C
-A = alpha used for blending
-Ae = edge alpha used for blending
-Ao = alpha to output
-Aoe = edge alpha to output
-
-c = coverage
-s = source alpha
-d = destination alpha
-f = fixed alpha (TODO: test with 0x80/2)
-* = only if s != 0x80 (s == 0x80 => s == c, but what about s > 0x80? s or 0x80? TODO)
-
-*/
-
 REG64_(GIFReg, PRIM)
 	UINT32 PRIM:3;
 	UINT32 IIP:1;

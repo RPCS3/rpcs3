@@ -34,6 +34,7 @@ struct GSRendererSettings
 	int m_filter;
 	bool m_vsync;
 	bool m_nativeres;
+	bool m_aa1;
 };
 
 class GSRendererBase : public GSState, protected GSRendererSettings
@@ -84,6 +85,12 @@ protected:
 				m_osd = !m_osd;
 				return true;
 			}
+
+			if(msg.wParam == VK_DELETE)
+			{
+				m_aa1 = !m_aa1;
+				return true;
+			}			
 		}
 
 		return false;
@@ -103,6 +110,7 @@ public:
 		m_filter = rs.m_filter;
 		m_vsync = rs.m_vsync;
 		m_nativeres = rs.m_nativeres;
+		m_aa1 = rs.m_aa1;
 	};
 
 	virtual bool Create(LPCTSTR title) = 0;

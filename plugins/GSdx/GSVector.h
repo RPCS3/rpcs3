@@ -2193,12 +2193,12 @@ public:
 
 	GSVector4 abs() const 
 	{
-		return GSVector4(_mm_abs_ps(m));
+		return *this & cast(GSVector4i::x7fffffff());
 	}
 
 	GSVector4 neg() const 
 	{
-		return GSVector4(_mm_neg_ps(m));
+		return *this ^ cast(GSVector4i::x80000000());
 	}
 
 	GSVector4 rcp() const 

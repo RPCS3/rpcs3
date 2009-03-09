@@ -262,11 +262,11 @@ protected:
 		p.sel.zpsm = 3;
 		p.sel.atst = ATST_ALWAYS;
 		p.sel.tfx = TFX_NONE;
-		p.sel.abe = 255;
+		p.sel.ababcd = 255;
 		p.sel.sprite = primclass == GS_SPRITE_CLASS ? 1 : 0;
 
 		p.fm = context->FRAME.FBMSK;
-		p.zm = context->ZBUF.ZMSK || context->TEST.ZTE == 0 || PRIM->AA1 && primclass == GS_LINE_CLASS ? 0xffffffff : 0;
+		p.zm = context->ZBUF.ZMSK || context->TEST.ZTE == 0 ? 0xffffffff : 0;
 
 		if(context->TEST.ZTE && context->TEST.ZTST == ZTST_NEVER)
 		{
@@ -449,22 +449,24 @@ protected:
 				p.sel.datm = context->TEST.DATM;
 			}
 
-			if(PRIM->ABE)
+			if(PRIM->ABE && !context->ALPHA.IsOpaque() || PRIM->AA1)
 			{
-				if(!context->ALPHA.IsOpaque())
+				p.sel.abe = PRIM->ABE;
+				p.sel.ababcd = context->ALPHA.ai32[0];
+
+				if(env.PABE.PABE)
 				{
-					p.sel.abe = context->ALPHA.ai32[0];
-					p.sel.pabe = env.PABE.PABE;
+					p.sel.pabe = 1;
+				}
+
+				if(PRIM->AA1 && (primclass == GS_LINE_CLASS || primclass == GS_TRIANGLE_CLASS))
+				{
+					p.sel.aa1 = m_aa1 ? 1 : 0;
 				}
 			}
 
-			if(PRIM->AA1)
-			{
-				p.sel.aa1 = 1;
-			}
-
 			if(p.sel.date 
-			|| p.sel.abea == 1 || p.sel.abeb == 1 || p.sel.abec == 1 || p.sel.abed == 1
+			|| p.sel.aba == 1 || p.sel.abb == 1 || p.sel.abc == 1 || p.sel.abd == 1
 			|| p.sel.atst != ATST_ALWAYS && p.sel.afail == AFAIL_RGB_ONLY 
 			|| p.sel.fpsm == 0 && p.fm != 0 && p.fm != 0xffffffff
 			|| p.sel.fpsm == 1 && (p.fm & 0x00ffffff) != 0 && (p.fm & 0x00ffffff) != 0x00ffffff
@@ -532,7 +534,7 @@ protected:
 		GSRasterizerStats stats;
 
 		m_rl.GetStats(stats);
-	
+
 		m_perfmon.Put(GSPerfMon::Draw, 1);
 		m_perfmon.Put(GSPerfMon::Prim, stats.prims);
 		m_perfmon.Put(GSPerfMon::Fillrate, stats.pixels);
@@ -575,6 +577,15 @@ protected:
 			if(s_save) {m_mem.SaveBMP(str, m_context->FRAME.Block(), m_context->FRAME.FBW, m_context->FRAME.PSM, GetFrameSize(1).cx, 512);}//GetFrameSize(1).cy);
 			str.Format(_T("c:\\temp1\\_%05d_f%I64d_rz1_%05x_%d.bmp"), s_n-1, m_perfmon.GetFrame(), m_context->ZBUF.Block(), m_context->ZBUF.PSM);
 			if(s_savez) {m_mem.SaveBMP(str, m_context->ZBUF.Block(), m_context->FRAME.FBW, m_context->ZBUF.PSM, GetFrameSize(1).cx, 512);}
+		}
+
+		if(0)//stats.ticks > 1000000)
+		{
+			printf("* [%I64d | %012I64x] ticks %I64d prims %d (%d) pixels %d (%d)\n", 
+				m_perfmon.GetFrame(), p.sel.key, 
+				stats.ticks, 
+				stats.prims, stats.prims > 0 ? (int)(stats.ticks / stats.prims) : -1, 
+				stats.pixels, stats.pixels > 0 ? (int)(stats.ticks / stats.pixels) : -1);
 		}
 	}
 

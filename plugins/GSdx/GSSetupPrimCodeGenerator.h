@@ -36,6 +36,7 @@ class GSSetupPrimCodeGenerator : public CodeGenerator
 	util::Cpu m_cpu;
 
 	GSScanlineEnvironment& m_env;
+	GSScanlineSelector m_sel;
 
 	struct {DWORD z:1, f:1, t:1, c:1;} m_en;
 
@@ -46,5 +47,5 @@ class GSSetupPrimCodeGenerator : public CodeGenerator
 	void Color();
 
 public:
-	GSSetupPrimCodeGenerator(GSScanlineEnvironment& env, void* ptr, size_t maxsize);
+	GSSetupPrimCodeGenerator(GSScanlineEnvironment& env, UINT64 key, void* ptr, size_t maxsize);
 };

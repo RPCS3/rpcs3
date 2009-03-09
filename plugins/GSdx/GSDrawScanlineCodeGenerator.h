@@ -36,6 +36,7 @@ class GSDrawScanlineCodeGenerator : public CodeGenerator
 	util::Cpu m_cpu;
 
 	GSScanlineEnvironment& m_env;
+	GSScanlineSelector m_sel;
 
 	void Generate();
 
@@ -72,5 +73,5 @@ class GSDrawScanlineCodeGenerator : public CodeGenerator
 	void blendr(const Xmm& b, const Xmm& a, const Xmm& mask);
 
 public:
-	GSDrawScanlineCodeGenerator(GSScanlineEnvironment& env, void* ptr, size_t maxsize);
+	GSDrawScanlineCodeGenerator(GSScanlineEnvironment& env, UINT64 key, void* ptr, size_t maxsize);
 };

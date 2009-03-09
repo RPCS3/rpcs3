@@ -13,6 +13,7 @@
 #define IDC_EDIT1                       2009
 #define IDC_EDIT2                       2010
 #define IDC_BUTTON1                     2011
+#define IDC_CHECK8                      2011
 #define IDC_BUTTON2                     2012
 #define IDC_EDIT3                       2012
 #define IDC_CUSTOM1                     2013

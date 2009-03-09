@@ -41,34 +41,37 @@ union GSScanlineSelector
 		DWORD tlu:1; // 18
 		DWORD fge:1; // 19
 		DWORD date:1; // 20
-		DWORD abea:2; // 21
-		DWORD abeb:2; // 23
-		DWORD abec:2; // 25
-		DWORD abed:2; // 27
-		DWORD pabe:1; // 29
-		DWORD rfb:1; // 30
-		DWORD sprite:1; // 31
+		DWORD abe:1; // 21
+		DWORD aba:2; // 22
+		DWORD abb:2; // 24
+		DWORD abc:2; // 26
+		DWORD abd:2; // 28
+		DWORD pabe:1; // 30
+		DWORD aa1:1; // 31
 
 		DWORD fwrite:1; // 32
 		DWORD ftest:1; // 33
-		DWORD zwrite:1; // 34
-		DWORD ztest:1; // 35
-		DWORD wms:2; // 36
-		DWORD wmt:2; // 38 
-		DWORD datm:1; // 40
-		DWORD colclamp:1; // 41
-		DWORD fba:1; // 42
-		DWORD dthe:1; // 43
-		DWORD zoverflow:1; // 44 (z max >= 0x80000000)
-		DWORD aa1:1; // 45
+		DWORD rfb:1; // 34
+		DWORD zwrite:1; // 35
+		DWORD ztest:1; // 36
+		DWORD zoverflow:1; // 37 (z max >= 0x80000000)
+		DWORD wms:2; // 38
+		DWORD wmt:2; // 40
+		DWORD datm:1; // 42
+		DWORD colclamp:1; // 43
+		DWORD fba:1; // 44
+		DWORD dthe:1; // 45
+		DWORD sprite:1; // 46
+		DWORD edge:1; // 47
 	};
 
 	struct
 	{
-		DWORD _pad1:21;
-		DWORD abe:8;
-		DWORD _pad2:3;
+		DWORD _pad1:22;
+		DWORD ababcd:8;
+		DWORD _pad2:2;
 		DWORD fb:2;
+		DWORD _pad3:1;
 		DWORD zb:2;
 	};
 
@@ -88,7 +91,7 @@ union GSScanlineSelector
 		return sprite
 			&& iip == 0
 			&& tfx == TFX_NONE
-			&& abe == 255 
+			&& abe == 0 
 			&& ztst <= 1 
 			&& atst <= 1
 			&& date == 0
@@ -114,8 +117,6 @@ __declspec(align(16)) struct GSScanlineParam
 
 __declspec(align(16)) struct GSScanlineEnvironment
 {
-	GSScanlineSelector sel;
-
 	void* vm;
 	const void* tex;
 	const DWORD* clut;
@@ -140,5 +141,5 @@ __declspec(align(16)) struct GSScanlineEnvironment
 	struct {GSVector4 z, stq; GSVector4i c, f, st;} d4;
 	struct {GSVector4i rb, ga;} c;
 	struct {GSVector4i z, f;} p;
-	struct {GSVector4i z, f, s, t, q, rb, ga, zs, zd, uf, vf;} temp;
+	struct {GSVector4i z, f, s, t, q, rb, ga, zs, zd, uf, vf, cov;} temp;
 };

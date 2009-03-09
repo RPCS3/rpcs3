@@ -60,6 +60,7 @@ public:
 	BOOL m_vsync;
 	BOOL m_logz;
 	BOOL m_fba;
+	BOOL m_aa1;
 
 protected:
 	virtual LRESULT DefWindowProc(UINT message, WPARAM wParam, LPARAM lParam);

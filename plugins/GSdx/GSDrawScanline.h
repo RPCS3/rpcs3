@@ -31,6 +31,7 @@
 class GSDrawScanline : public GSAlignedClass<16>, public IDrawScanline
 {
 	GSScanlineEnvironment m_env;
+	GSScanlineSelector m_sel;
 
 	//
 

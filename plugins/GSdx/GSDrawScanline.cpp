@@ -43,7 +43,7 @@ void GSDrawScanline::BeginDraw(const GSRasterizerData* data, Functions* f)
 
 	const GSScanlineParam* p = (const GSScanlineParam*)data->param;
 
-	m_env.sel = p->sel;
+	m_sel = p->sel;
 
 	m_env.vm = p->vm;
 	m_env.fbr = p->fbo->row;
@@ -60,11 +60,11 @@ void GSDrawScanline::BeginDraw(const GSRasterizerData* data, Functions* f)
 	m_env.fga = GSVector4i((int)(env.FOGCOL.ai32[0] >> 8) & 0x00ff00ff);
 	m_env.dimx = env.dimx;
 
-	if(m_env.sel.fpsm == 1)
+	if(m_sel.fpsm == 1)
 	{
 		m_env.fm |= GSVector4i::xff000000();
 	}
-	else if(m_env.sel.fpsm == 2)
+	else if(m_sel.fpsm == 2)
 	{
 		GSVector4i rb = m_env.fm & 0x00f800f8;
 		GSVector4i ga = m_env.fm & 0x8000f800;
@@ -72,29 +72,29 @@ void GSDrawScanline::BeginDraw(const GSRasterizerData* data, Functions* f)
 		m_env.fm = (ga >> 16) | (rb >> 9) | (ga >> 6) | (rb >> 3) | GSVector4i::xffff0000();
 	}
 
-	if(m_env.sel.zpsm == 1)
+	if(m_sel.zpsm == 1)
 	{
 		m_env.zm |= GSVector4i::xff000000();
 	}
-	else if(m_env.sel.zpsm == 2)
+	else if(m_sel.zpsm == 2)
 	{
 		m_env.zm |= GSVector4i::xffff0000();
 	}
 
-	if(m_env.sel.atst == ATST_LESS)
+	if(m_sel.atst == ATST_LESS)
 	{
-		m_env.sel.atst = ATST_LEQUAL;
+		m_sel.atst = ATST_LEQUAL;
 
 		m_env.aref -= GSVector4i::x00000001();
 	}
-	else if(m_env.sel.atst == ATST_GREATER)
+	else if(m_sel.atst == ATST_GREATER)
 	{
-		m_env.sel.atst = ATST_GEQUAL;
+		m_sel.atst = ATST_GEQUAL;
 
 		m_env.aref += GSVector4i::x00000001();
 	}
 
-	if(m_env.sel.tfx != TFX_NONE)
+	if(m_sel.tfx != TFX_NONE)
 	{
 		m_env.tex = p->tex;
 		m_env.clut = p->clut;
@@ -163,9 +163,20 @@ void GSDrawScanline::BeginDraw(const GSRasterizerData* data, Functions* f)
 
 	//
 
-	f->ssl = m_ds.Lookup(m_env.sel);
+	f->ssl = m_ds.Lookup(m_sel);
 
-	if(m_env.sel.IsSolidRect())
+	if(m_sel.aa1)// && (m_state->m_perfmon.GetFrame() & 0x40))
+	{
+		GSScanlineSelector sel;
+
+		sel.key = m_sel.key;
+		sel.zwrite = 0;
+		sel.edge = 1;
+
+		f->ssle = m_ds.Lookup(sel);
+	}
+
+	if(m_sel.IsSolidRect())
 	{
 		f->sr = (DrawSolidRectPtr)&GSDrawScanline::DrawSolidRect;
 	}
@@ -176,14 +187,14 @@ void GSDrawScanline::BeginDraw(const GSRasterizerData* data, Functions* f)
 
 	sel.key = 0;
 
-	sel.iip = m_env.sel.iip;
-	sel.tfx = m_env.sel.tfx;
-	sel.fst = m_env.sel.fst;
-	sel.fge = m_env.sel.fge;
-	sel.sprite = m_env.sel.sprite;
-	sel.fb = m_env.sel.fb;
-	sel.zb = m_env.sel.zb;
-	sel.zoverflow = m_env.sel.zoverflow;
+	sel.iip = m_sel.iip;
+	sel.tfx = m_sel.tfx;
+	sel.fst = m_sel.fst;
+	sel.fge = m_sel.fge;
+	sel.sprite = m_sel.sprite;
+	sel.fb = m_sel.fb;
+	sel.zb = m_sel.zb;
+	sel.zoverflow = m_sel.zoverflow;
 
 	f->ssp = m_sp.Lookup(sel);
 }
@@ -208,7 +219,7 @@ void GSDrawScanline::DrawSolidRect(const GSVector4i& r, const GSVertexSW& v)
 	{
 		DWORD z = (DWORD)(float)v.p.z;
 
-		if(m_env.sel.zpsm != 2)
+		if(m_sel.zpsm != 2)
 		{
 			if(m == 0)
 			{
@@ -243,7 +254,7 @@ void GSDrawScanline::DrawSolidRect(const GSVector4i& r, const GSVertexSW& v)
 			c |= 0x80000000;
 		}
 		
-		if(m_env.sel.fpsm != 2)
+		if(m_sel.fpsm != 2)
 		{
 			if(m == 0)
 			{
@@ -353,7 +364,7 @@ GSDrawScanline::GSSetupPrimMap::GSSetupPrimMap(GSScanlineEnvironment& env)
 
 GSSetupPrimCodeGenerator* GSDrawScanline::GSSetupPrimMap::Create(UINT64 key, void* ptr, size_t maxsize)
 {
-	return new GSSetupPrimCodeGenerator(m_env, ptr, maxsize);
+	return new GSSetupPrimCodeGenerator(m_env, key, ptr, maxsize);
 }
 
 //
@@ -366,5 +377,5 @@ GSDrawScanline::GSDrawScanlineMap::GSDrawScanlineMap(GSScanlineEnvironment& env)
 
 GSDrawScanlineCodeGenerator* GSDrawScanline::GSDrawScanlineMap::Create(UINT64 key, void* ptr, size_t maxsize)
 {
-	return new GSDrawScanlineCodeGenerator(m_env, ptr, maxsize);
+	return new GSDrawScanlineCodeGenerator(m_env, key, ptr, maxsize);
 }

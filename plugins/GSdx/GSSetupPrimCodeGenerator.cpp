@@ -24,14 +24,16 @@
 #include "StdAfx.h"
 #include "GSSetupPrimCodeGenerator.h"
 
-GSSetupPrimCodeGenerator::GSSetupPrimCodeGenerator(GSScanlineEnvironment& env, void* ptr, size_t maxsize)
+GSSetupPrimCodeGenerator::GSSetupPrimCodeGenerator(GSScanlineEnvironment& env, UINT64 key, void* ptr, size_t maxsize)
 	: CodeGenerator(maxsize, ptr)
 	, m_env(env)
 {
-	m_en.z = m_env.sel.zb ? 1 : 0;
-	m_en.f = m_env.sel.fb && m_env.sel.fge ? 1 : 0;
-	m_en.t = m_env.sel.fb && m_env.sel.tfx != TFX_NONE ? 1 : 0;
-	m_en.c = m_env.sel.fb && m_env.sel.tfx != TFX_DECAL ? 1 : 0;
+	m_sel.key = key;
+
+	m_en.z = m_sel.zb ? 1 : 0;
+	m_en.f = m_sel.fb && m_sel.fge ? 1 : 0;
+	m_en.t = m_sel.fb && m_sel.tfx != TFX_NONE ? 1 : 0;
+	m_en.c = m_sel.fb && m_sel.tfx != TFX_DECAL ? 1 : 0;
 
 	#if _M_AMD64
 	#error TODO
@@ -44,7 +46,7 @@ void GSSetupPrimCodeGenerator::Generate()
 {
 	const int params = 0;
 
-	if((m_en.z || m_en.f) && !m_env.sel.sprite || m_en.t || m_en.c && m_env.sel.iip)
+	if((m_en.z || m_en.f) && !m_sel.sprite || m_en.t || m_en.c && m_sel.iip)
 	{
 		for(int i = 0; i < 5; i++)
 		{
@@ -68,7 +70,7 @@ void GSSetupPrimCodeGenerator::Depth()
 		return;
 	}
 
-	if(!m_env.sel.sprite)
+	if(!m_sel.sprite)
 	{
 		// GSVector4 t = dscan.p;
 
@@ -148,7 +150,7 @@ void GSSetupPrimCodeGenerator::Depth()
 
 			shufps(xmm0, xmm0, _MM_SHUFFLE(2, 2, 2, 2));
 
-			if(m_env.sel.zoverflow)
+			if(m_sel.zoverflow)
 			{
 				// m_env.p.z = (GSVector4i(z * 0.5f) << 1) | (GSVector4i(z) & GSVector4i::x00000001());
 
@@ -193,7 +195,7 @@ void GSSetupPrimCodeGenerator::Texture()
 	movaps(xmm1, xmm0);
 	mulps(xmm1, xmm3);
 
-	if(m_env.sel.fst)
+	if(m_sel.fst)
 	{
 		// m_env.d4.st = GSVector4i(t * 4.0f);
 
@@ -207,7 +209,7 @@ void GSSetupPrimCodeGenerator::Texture()
 		movaps(xmmword[&m_env.d4.stq], xmm1);
 	}
 
-	for(int j = 0, k = m_env.sel.fst ? 2 : 3; j < k; j++)
+	for(int j = 0, k = m_sel.fst ? 2 : 3; j < k; j++)
 	{
 		// GSVector4 ds = t.xxxx();
 		// GSVector4 dt = t.yyyy();
@@ -223,7 +225,7 @@ void GSSetupPrimCodeGenerator::Texture()
 			movaps(xmm2, xmm1);
 			mulps(xmm2, Xmm(4 + i));
 
-			if(m_env.sel.fst)
+			if(m_sel.fst)
 			{
 				// m_env.d[i].si/ti = GSVector4i(v);
 
@@ -257,7 +259,7 @@ void GSSetupPrimCodeGenerator::Color()
 		return;
 	}
 
-	if(m_env.sel.iip)
+	if(m_sel.iip)
 	{
 		// GSVector4 c = dscan.c;
 
@@ -351,7 +353,7 @@ void GSSetupPrimCodeGenerator::Color()
 
 		// if(!tme) c = c.srl16(7);
 
-		if(m_env.sel.tfx == TFX_NONE)
+		if(m_sel.tfx == TFX_NONE)
 		{
 			psrlw(xmm0, 7);
 		}

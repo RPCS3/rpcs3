@@ -117,6 +117,7 @@ static INT32 GSopen(void* dsp, char* title, int mt, int renderer)
 	rs.m_filter = AfxGetApp()->GetProfileInt(_T("Settings"), _T("filter"), 1);
 	rs.m_vsync = !!AfxGetApp()->GetProfileInt(_T("Settings"), _T("vsync"), FALSE);
 	rs.m_nativeres = !!AfxGetApp()->GetProfileInt(_T("Settings"), _T("nativeres"), FALSE);
+	rs.m_aa1 = !!AfxGetApp()->GetProfileInt(_T("Settings"), _T("aa1"), FALSE);
 
 	int threads = AfxGetApp()->GetProfileInt(_T("Settings"), _T("swthreads"), 1);
 
