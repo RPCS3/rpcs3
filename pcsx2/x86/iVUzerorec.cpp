@@ -3022,7 +3022,6 @@ void VuInstruction::Recompile(list<VuInstruction>::iterator& itinst, u32 vuxyz)
 						CMP32ItoM((uptr)&g_nLastBlockExecuted, nParentCheckForExecution);
 						u8* jptr = JNE8(0);
 						MOV32MtoR(EAX, pparentinst->pClipWrite);
-						MOV32ItoM(pparentinst->pClipWrite, 0);
 						MOV32RtoM(s_ClipRead, EAX);
 						x86SetJ8(jptr);
 					}

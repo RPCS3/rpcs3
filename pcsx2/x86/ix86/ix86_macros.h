@@ -950,6 +950,9 @@
 #define SSSE3_PABSW_XMM_to_XMM		eSSSE3_PABSW_XMM_to_XMM<_EmitterId_>
 #define SSSE3_PABSD_XMM_to_XMM		eSSSE3_PABSD_XMM_to_XMM<_EmitterId_>
 #define SSSE3_PALIGNR_XMM_to_XMM	eSSSE3_PALIGNR_XMM_to_XMM<_EmitterId_>
+#define SSSE3_PSIGNB_XMM_to_XMM		eSSSE3_PSIGNB_XMM_to_XMM<_EmitterId_>
+#define SSSE3_PSIGNW_XMM_to_XMM		eSSSE3_PSIGNW_XMM_to_XMM<_EmitterId_>
+#define SSSE3_PSIGND_XMM_to_XMM		eSSSE3_PSIGND_XMM_to_XMM<_EmitterId_>
 //------------------------------------------------------------------
 
 //------------------------------------------------------------------
@@ -963,6 +966,7 @@
 #define SSE4_BLENDVPS_XMM_to_XMM	eSSE4_BLENDVPS_XMM_to_XMM<_EmitterId_>
 #define SSE4_BLENDVPS_M128_to_XMM	eSSE4_BLENDVPS_M128_to_XMM<_EmitterId_>
 #define SSE4_PMOVSXDQ_XMM_to_XMM	eSSE4_PMOVSXDQ_XMM_to_XMM<_EmitterId_>
+#define SSE4_PMOVZXDQ_XMM_to_XMM	eSSE4_PMOVZXDQ_XMM_to_XMM<_EmitterId_>
 #define SSE4_PINSRD_R32_to_XMM		eSSE4_PINSRD_R32_to_XMM<_EmitterId_>
 #define SSE4_PMAXSD_XMM_to_XMM		eSSE4_PMAXSD_XMM_to_XMM<_EmitterId_>
 #define SSE4_PMINSD_XMM_to_XMM		eSSE4_PMINSD_XMM_to_XMM<_EmitterId_>

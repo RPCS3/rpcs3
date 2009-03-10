@@ -1023,99 +1023,46 @@ CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
 	int t0reg = _allocTempXMMreg(XMMT_INT, -1);
 	int t1reg = _allocTempXMMreg(XMMT_INT, -1);
 	int t2reg = _allocTempXMMreg(XMMT_INT, -1);
-	int t3reg = _allocTempXMMreg(XMMT_INT, -1);
 
-	if ( cpucaps.hasStreamingSIMD4Extensions ) {
-		SSE4_PMOVSXDQ_XMM_to_XMM(t0reg, EEREC_S);
-		SSE4_PMOVSXDQ_XMM_to_XMM(t1reg, EEREC_T);
-		SSE2_PADDQ_XMM_to_XMM(t0reg, t1reg);
-		SSE2_PSHUFD_XMM_to_XMM(t1reg, EEREC_S, 0x0e);
-		SSE2_PSHUFD_XMM_to_XMM(t2reg, EEREC_T, 0x0e);
-		SSE4_PMOVSXDQ_XMM_to_XMM(t1reg, t1reg);
-		SSE4_PMOVSXDQ_XMM_to_XMM(t2reg, t2reg);
-	}
-	else {
-		SSEX_MOVDQA_XMM_to_XMM(t0reg, EEREC_S);
-		SSEX_MOVDQA_XMM_to_XMM(t1reg, EEREC_T);
-		SSE2_PXOR_XMM_to_XMM(t2reg, t2reg);
-		SSE2_PXOR_XMM_to_XMM(t3reg, t3reg);
-		SSE2_PCMPGTD_XMM_to_XMM(t2reg, t0reg);
-		SSE2_PCMPGTD_XMM_to_XMM(t3reg, t1reg);
-		SSE2_PUNPCKLDQ_XMM_to_XMM(t0reg, t2reg);
-		SSE2_PUNPCKLDQ_XMM_to_XMM(t1reg, t3reg);
-		SSE2_PADDQ_XMM_to_XMM(t0reg, t1reg);
-		SSEX_MOVDQA_XMM_to_XMM(t1reg, EEREC_S);
-		SSE2_PUNPCKHDQ_XMM_to_XMM(t1reg, t2reg);
-		SSEX_MOVDQA_XMM_to_XMM(t2reg, EEREC_T);
-		SSE2_PUNPCKHDQ_XMM_to_XMM(t2reg, t3reg);
-	}
-	SSE2_PADDQ_XMM_to_XMM(t1reg, t2reg);
-	/*
-		t0reg = { Rs[0]+Rt[0], Rs[1]+Rt[1] }
-		t1reg = { Rs[2]+Rt[2], Rs[3]+Rt[3] }
-	*/
+	// The idea is:
+	//  s = x + y; (wrap-arounded)
+	//  if Sign(x) == Sign(y) && Sign(s) != Sign(x) && Sign(x) == 0 then positive overflow (clamp with 0x7fffffff)
+	//  if Sign(x) == Sign(y) && Sign(s) != Sign(x) && Sign(x) == 1 then negative overflow (clamp with 0x80000000)
 
-	SSEX_MOVDQA_XMM_to_XMM(t2reg, t0reg);
-	SSE_SHUFPS_XMM_to_XMM(t2reg, t1reg, 0xdd);
-	SSE2_PSRAD_I8_to_XMM(t2reg, 31);
-	/*
-		t2reg = { (Rs[0]+Rt[0]) < 0 ? 0xFFFFFFFF : 0,
-		          (Rs[1]+Rt[1]) < 0 ? 0xFFFFFFFF : 0,
-		          (Rs[2]+Rt[2]) < 0 ? 0xFFFFFFFF : 0,
-		          (Rs[3]+Rt[3]) < 0 ? 0xFFFFFFFF : 0 }
-	*/
+	// get sign bit
+	SSEX_MOVDQA_XMM_to_XMM(t0reg, EEREC_S);
+	SSEX_MOVDQA_XMM_to_XMM(t1reg, EEREC_T);
+	SSE2_PSRLD_I8_to_XMM(t0reg, 31);
+	SSE2_PSRLD_I8_to_XMM(t1reg, 31);
 
-	SSE2_PSHUFD_XMM_to_XMM(t3reg, t2reg, 0x50);
-	SSE2_PXOR_XMM_to_XMM(t0reg, t3reg);
-	SSE2_PSRLQ_I8_to_XMM(t3reg, 63);
-	SSE2_PADDQ_XMM_to_XMM(t0reg, t3reg);
-	/*
-		t0reg = { abs(Rs[0]+Rt[0]), abs(Rs[1]+Rt[1]) }
-	*/
-	SSE2_PSHUFD_XMM_to_XMM(t3reg, t2reg, 0xfa);
-	SSE2_PXOR_XMM_to_XMM(t1reg, t3reg);
-	SSE2_PSRLQ_I8_to_XMM(t3reg, 63);
-	SSE2_PADDQ_XMM_to_XMM(t1reg, t3reg);
-	/*
-		t1reg = { abs(Rs[2]+Rt[2]), abs(Rs[3]+Rt[3]) }
-	*/
-	SSE2_PSLLQ_I8_to_XMM(t0reg, 1);
-	SSE2_PSLLQ_I8_to_XMM(t1reg, 1);
-	SSE2_PCMPEQB_XMM_to_XMM(t3reg, t3reg);
-	SSE2_PSRLD_I8_to_XMM(t3reg, 1);
-	SSE2_PXOR_XMM_to_XMM(t2reg, t3reg);
-	SSE_SHUFPS_XMM_to_XMM(t0reg, t1reg, 0xdd);
-	SSE2_PXOR_XMM_to_XMM(t1reg, t1reg);
-	SSE2_PCMPEQD_XMM_to_XMM(t1reg, t0reg);
-	/*
-		t1reg = { abs(Rs[0]+Rt[0]) > 0x7FFFFFFF ? 0 : 0xFFFFFFFF,
-		          abs(Rs[1]+Rt[1]) > 0x7FFFFFFF ? 0 : 0xFFFFFFFF,
-		          abs(Rs[2]+Rt[2]) > 0x7FFFFFFF ? 0 : 0xFFFFFFFF,
-		          abs(Rs[3]+Rt[3]) > 0x7FFFFFFF ? 0 : 0xFFFFFFFF }
-		t2reg = { (Rs[0]+Rt[0]) < 0 ? 0x80000000 : 0x7FFFFFFF,
-		          (Rs[1]+Rt[1]) < 0 ? 0x80000000 : 0x7FFFFFFF,
-		          (Rs[2]+Rt[2]) < 0 ? 0x80000000 : 0x7FFFFFFF,
-		          (Rs[3]+Rt[3]) < 0 ? 0x80000000 : 0x7FFFFFFF }
-	*/
+	// normal addition
 	if( EEREC_D == EEREC_S ) SSE2_PADDD_XMM_to_XMM(EEREC_D, EEREC_T);
 	else if( EEREC_D == EEREC_T ) SSE2_PADDD_XMM_to_XMM(EEREC_D, EEREC_S);
 	else {
 		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
 		SSE2_PADDD_XMM_to_XMM(EEREC_D, EEREC_T);
 	}
-	SSE2_PAND_XMM_to_XMM(EEREC_D, t1reg);
-	SSE2_PANDN_XMM_to_XMM(t1reg, t2reg);
-	SSE2_POR_XMM_to_XMM(EEREC_D, t1reg);
-	/*
-		Rd = { t1reg[0] ? Rs[0]+Rt[0] : t2reg[0],
-		       t1reg[1] ? Rs[1]+Rt[1] : t2reg[1],
-		       t1reg[2] ? Rs[2]+Rt[2] : t2reg[2],
-		       t1reg[3] ? Rs[3]+Rt[3] : t2reg[3] }
-	*/
+
+	// overflow check
+	// t2reg = 0xffffffff if overflow, else 0
+	SSEX_MOVDQA_XMM_to_XMM(t2reg, EEREC_D);
+	SSE2_PSRLD_I8_to_XMM(t2reg, 31);
+	SSE2_PCMPEQD_XMM_to_XMM(t1reg, t0reg); // Sign(Rs) == Sign(Rt)
+	SSE2_PCMPEQD_XMM_to_XMM(t2reg, t0reg); // Sign(Rs) == Sign(Rd)
+	SSE2_PANDN_XMM_to_XMM(t2reg, t1reg); // (Sign(Rs) == Sign(Rt)) & ~(Sign(Rs) == Sign(Rd))
+	SSE2_PCMPEQD_XMM_to_XMM(t1reg, t1reg);
+	SSE2_PSRLD_I8_to_XMM(t1reg, 1); // 0x7fffffff
+	SSE2_PADDD_XMM_to_XMM(t1reg, t0reg); // t1reg = (Rs < 0) ? 0x80000000 : 0x7fffffff
+
+	// saturation
+	SSE2_PAND_XMM_to_XMM(t1reg, t2reg);
+	SSE2_PANDN_XMM_to_XMM(t2reg, EEREC_D);
+	SSE2_POR_XMM_to_XMM(t1reg, t2reg);
+	SSEX_MOVDQA_XMM_to_XMM(EEREC_D, t1reg);
+
 	_freeXMMreg(t0reg);
 	_freeXMMreg(t1reg);
 	_freeXMMreg(t2reg);
-	_freeXMMreg(t3reg);
 CPU_SSE_XMMCACHE_END
 
 	if( _Rd_ ) _deleteEEreg(_Rd_, 0);
@@ -1136,11 +1083,17 @@ void recPSUBSB( void )
 CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
 	if( EEREC_D == EEREC_S ) SSE2_PSUBSB_XMM_to_XMM(EEREC_D, EEREC_T);
 	else if( EEREC_D == EEREC_T ) {
-		int t0reg = _allocTempXMMreg(XMMT_INT, -1);
-		SSEX_MOVDQA_XMM_to_XMM(t0reg, EEREC_T);
-		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
-		SSE2_PSUBSB_XMM_to_XMM(EEREC_D, t0reg);
-		_freeXMMreg(t0reg);
+		if ( cpucaps.hasSupplementalStreamingSIMD3Extensions ) {
+			SSSE3_PSIGNB_XMM_to_XMM(EEREC_D, EEREC_D);
+			SSE2_PADDSB_XMM_to_XMM(EEREC_D, EEREC_S); // -Rt + Rs
+		}
+		else {
+			int t0reg = _allocTempXMMreg(XMMT_INT, -1);
+			SSEX_MOVDQA_XMM_to_XMM(t0reg, EEREC_T);
+			SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
+			SSE2_PSUBSB_XMM_to_XMM(EEREC_D, t0reg);
+			_freeXMMreg(t0reg);
+		}
 	}
 	else {
 		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
@@ -1172,11 +1125,17 @@ void recPSUBSH( void )
 CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
 	if( EEREC_D == EEREC_S ) SSE2_PSUBSW_XMM_to_XMM(EEREC_D, EEREC_T);
 	else if( EEREC_D == EEREC_T ) {
-		int t0reg = _allocTempXMMreg(XMMT_INT, -1);
-		SSEX_MOVDQA_XMM_to_XMM(t0reg, EEREC_T);
-		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
-		SSE2_PSUBSW_XMM_to_XMM(EEREC_D, t0reg);
-		_freeXMMreg(t0reg);
+		if ( cpucaps.hasSupplementalStreamingSIMD3Extensions ) {
+			SSSE3_PSIGNW_XMM_to_XMM(EEREC_D, EEREC_D);
+			SSE2_PADDSW_XMM_to_XMM(EEREC_D, EEREC_S); // -Rt + Rs
+		}
+		else {
+			int t0reg = _allocTempXMMreg(XMMT_INT, -1);
+			SSEX_MOVDQA_XMM_to_XMM(t0reg, EEREC_T);
+			SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
+			SSE2_PSUBSW_XMM_to_XMM(EEREC_D, t0reg);
+			_freeXMMreg(t0reg);
+		}
 	}
 	else {
 		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
@@ -1210,71 +1169,55 @@ CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
 	int t0reg = _allocTempXMMreg(XMMT_INT, -1);
 	int t1reg = _allocTempXMMreg(XMMT_INT, -1);
 	int t2reg = _allocTempXMMreg(XMMT_INT, -1);
-	int t3reg = _allocTempXMMreg(XMMT_INT, -1);
 
-	if ( cpucaps.hasStreamingSIMD4Extensions ) {
-		SSE4_PMOVSXDQ_XMM_to_XMM(t0reg, EEREC_S);
-		SSE4_PMOVSXDQ_XMM_to_XMM(t1reg, EEREC_T);
-		SSE2_PSUBQ_XMM_to_XMM(t0reg, t1reg);
-		SSE2_PSHUFD_XMM_to_XMM(t1reg, EEREC_S, 0x0e);
-		SSE2_PSHUFD_XMM_to_XMM(t2reg, EEREC_T, 0x0e);
-		SSE4_PMOVSXDQ_XMM_to_XMM(t1reg, t1reg);
-		SSE4_PMOVSXDQ_XMM_to_XMM(t2reg, t2reg);
-	}
-	else {
-		SSEX_MOVDQA_XMM_to_XMM(t0reg, EEREC_S);
-		SSEX_MOVDQA_XMM_to_XMM(t1reg, EEREC_T);
-		SSE2_PXOR_XMM_to_XMM(t2reg, t2reg);
-		SSE2_PXOR_XMM_to_XMM(t3reg, t3reg);
-		SSE2_PCMPGTD_XMM_to_XMM(t2reg, t0reg);
-		SSE2_PCMPGTD_XMM_to_XMM(t3reg, t1reg);
-		SSE2_PUNPCKLDQ_XMM_to_XMM(t0reg, t2reg);
-		SSE2_PUNPCKLDQ_XMM_to_XMM(t1reg, t3reg);
-		SSE2_PSUBQ_XMM_to_XMM(t0reg, t1reg);
-		SSEX_MOVDQA_XMM_to_XMM(t1reg, EEREC_S);
-		SSE2_PUNPCKHDQ_XMM_to_XMM(t1reg, t2reg);
-		SSEX_MOVDQA_XMM_to_XMM(t2reg, EEREC_T);
-		SSE2_PUNPCKHDQ_XMM_to_XMM(t2reg, t3reg);
-	}
-	SSE2_PSUBQ_XMM_to_XMM(t1reg, t2reg);
+	// The idea is:
+	//  s = x - y; (wrap-arounded)
+	//  if Sign(x) != Sign(y) && Sign(s) != Sign(x) && Sign(x) == 0 then positive overflow (clamp with 0x7fffffff)
+	//  if Sign(x) != Sign(y) && Sign(s) != Sign(x) && Sign(x) == 1 then negative overflow (clamp with 0x80000000)
 
-	SSEX_MOVDQA_XMM_to_XMM(t2reg, t0reg);
-	SSE_SHUFPS_XMM_to_XMM(t2reg, t1reg, 0xdd);
-	SSE2_PSRAD_I8_to_XMM(t2reg, 31);
+	// get sign bit
+	SSEX_MOVDQA_XMM_to_XMM(t0reg, EEREC_S);
+	SSEX_MOVDQA_XMM_to_XMM(t1reg, EEREC_T);
+	SSE2_PSRLD_I8_to_XMM(t0reg, 31);
+	SSE2_PSRLD_I8_to_XMM(t1reg, 31);
 
-	SSE2_PSHUFD_XMM_to_XMM(t3reg, t2reg, 0x50);
-	SSE2_PXOR_XMM_to_XMM(t0reg, t3reg);
-	SSE2_PSRLQ_I8_to_XMM(t3reg, 63);
-	SSE2_PADDQ_XMM_to_XMM(t0reg, t3reg);
-	SSE2_PSHUFD_XMM_to_XMM(t3reg, t2reg, 0xfa);
-	SSE2_PXOR_XMM_to_XMM(t1reg, t3reg);
-	SSE2_PSRLQ_I8_to_XMM(t3reg, 63);
-	SSE2_PADDQ_XMM_to_XMM(t1reg, t3reg);
-	SSE2_PSLLQ_I8_to_XMM(t0reg, 1);
-	SSE2_PSLLQ_I8_to_XMM(t1reg, 1);
-	SSE2_PCMPEQB_XMM_to_XMM(t3reg, t3reg);
-	SSE2_PSRLD_I8_to_XMM(t3reg, 1);
-	SSE2_PXOR_XMM_to_XMM(t2reg, t3reg);
-	SSE_SHUFPS_XMM_to_XMM(t0reg, t1reg, 0xdd);
-	SSE2_PXOR_XMM_to_XMM(t1reg, t1reg);
-	SSE2_PCMPEQD_XMM_to_XMM(t1reg, t0reg);
+	// normal subtraction
 	if( EEREC_D == EEREC_S ) SSE2_PSUBD_XMM_to_XMM(EEREC_D, EEREC_T);
 	else if( EEREC_D == EEREC_T ) {
-		SSEX_MOVDQA_XMM_to_XMM(t0reg, EEREC_T);
-		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
-		SSE2_PSUBD_XMM_to_XMM(EEREC_D, t0reg);
+		if ( cpucaps.hasSupplementalStreamingSIMD3Extensions ) {
+			SSSE3_PSIGND_XMM_to_XMM(EEREC_D, EEREC_D);
+			SSE2_PADDD_XMM_to_XMM(EEREC_D, EEREC_S); // -Rt + Rs
+		}
+		else {
+			SSEX_MOVDQA_XMM_to_XMM(t2reg, EEREC_T);
+			SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
+			SSE2_PSUBD_XMM_to_XMM(EEREC_D, t2reg);
+		}
 	}
 	else {
 		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
 		SSE2_PSUBD_XMM_to_XMM(EEREC_D, EEREC_T);
 	}
-	SSE2_PAND_XMM_to_XMM(EEREC_D, t1reg);
-	SSE2_PANDN_XMM_to_XMM(t1reg, t2reg);
-	SSE2_POR_XMM_to_XMM(EEREC_D, t1reg);
+
+	// overflow check
+	// t2reg = 0xffffffff if NOT overflow, else 0
+	SSEX_MOVDQA_XMM_to_XMM(t2reg, EEREC_D);
+	SSE2_PSRLD_I8_to_XMM(t2reg, 31);
+	SSE2_PCMPEQD_XMM_to_XMM(t1reg, t0reg); // Sign(Rs) == Sign(Rt)
+	SSE2_PCMPEQD_XMM_to_XMM(t2reg, t0reg); // Sign(Rs) == Sign(Rd)
+	SSE2_POR_XMM_to_XMM(t2reg, t1reg); // (Sign(Rs) == Sign(Rt)) | (Sign(Rs) == Sign(Rd))
+	SSE2_PCMPEQD_XMM_to_XMM(t1reg, t1reg);
+	SSE2_PSRLD_I8_to_XMM(t1reg, 1); // 0x7fffffff
+	SSE2_PADDD_XMM_to_XMM(t1reg, t0reg); // t1reg = (Rs < 0) ? 0x80000000 : 0x7fffffff
+
+	// saturation
+	SSE2_PAND_XMM_to_XMM(EEREC_D, t2reg);
+	SSE2_PANDN_XMM_to_XMM(t2reg, t1reg);
+	SSE2_POR_XMM_to_XMM(EEREC_D, t2reg);
+
 	_freeXMMreg(t0reg);
 	_freeXMMreg(t1reg);
 	_freeXMMreg(t2reg);
-	_freeXMMreg(t3reg);
 CPU_SSE_XMMCACHE_END
 
 	if( _Rd_ ) _deleteEEreg(_Rd_, 0);
@@ -1403,11 +1346,17 @@ void recPSUBB( void )
 CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
 	if( EEREC_D == EEREC_S ) SSE2_PSUBB_XMM_to_XMM(EEREC_D, EEREC_T);
 	else if( EEREC_D == EEREC_T ) {
-		int t0reg = _allocTempXMMreg(XMMT_INT, -1);
-		SSEX_MOVDQA_XMM_to_XMM(t0reg, EEREC_T);
-		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
-		SSE2_PSUBB_XMM_to_XMM(EEREC_D, t0reg);
-		_freeXMMreg(t0reg);
+		if ( cpucaps.hasSupplementalStreamingSIMD3Extensions ) {
+			SSSE3_PSIGNB_XMM_to_XMM(EEREC_D, EEREC_D);
+			SSE2_PADDB_XMM_to_XMM(EEREC_D, EEREC_S); // -Rt + Rs
+		}
+		else {
+			int t0reg = _allocTempXMMreg(XMMT_INT, -1);
+			SSEX_MOVDQA_XMM_to_XMM(t0reg, EEREC_T);
+			SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
+			SSE2_PSUBB_XMM_to_XMM(EEREC_D, t0reg);
+			_freeXMMreg(t0reg);
+		}
 	}
 	else {
 		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
@@ -1439,11 +1388,17 @@ void recPSUBH( void )
 CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
 	if( EEREC_D == EEREC_S ) SSE2_PSUBW_XMM_to_XMM(EEREC_D, EEREC_T);
 	else if( EEREC_D == EEREC_T ) {
-		int t0reg = _allocTempXMMreg(XMMT_INT, -1);
-		SSEX_MOVDQA_XMM_to_XMM(t0reg, EEREC_T);
-		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
-		SSE2_PSUBW_XMM_to_XMM(EEREC_D, t0reg);
-		_freeXMMreg(t0reg);
+		if ( cpucaps.hasSupplementalStreamingSIMD3Extensions ) {
+			SSSE3_PSIGNW_XMM_to_XMM(EEREC_D, EEREC_D);
+			SSE2_PADDW_XMM_to_XMM(EEREC_D, EEREC_S); // -Rt + Rs
+		}
+		else {
+			int t0reg = _allocTempXMMreg(XMMT_INT, -1);
+			SSEX_MOVDQA_XMM_to_XMM(t0reg, EEREC_T);
+			SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
+			SSE2_PSUBW_XMM_to_XMM(EEREC_D, t0reg);
+			_freeXMMreg(t0reg);
+		}
 	}
 	else {
 		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
@@ -1475,11 +1430,17 @@ void recPSUBW( void )
 CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
 	if( EEREC_D == EEREC_S ) SSE2_PSUBD_XMM_to_XMM(EEREC_D, EEREC_T);
 	else if( EEREC_D == EEREC_T ) {
-		int t0reg = _allocTempXMMreg(XMMT_INT, -1);
-		SSEX_MOVDQA_XMM_to_XMM(t0reg, EEREC_T);
-		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
-		SSE2_PSUBD_XMM_to_XMM(EEREC_D, t0reg);
-		_freeXMMreg(t0reg);
+		if ( cpucaps.hasSupplementalStreamingSIMD3Extensions ) {
+			SSSE3_PSIGND_XMM_to_XMM(EEREC_D, EEREC_D);
+			SSE2_PADDD_XMM_to_XMM(EEREC_D, EEREC_S); // -Rt + Rs
+		}
+		else {
+			int t0reg = _allocTempXMMreg(XMMT_INT, -1);
+			SSEX_MOVDQA_XMM_to_XMM(t0reg, EEREC_T);
+			SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
+			SSE2_PSUBD_XMM_to_XMM(EEREC_D, t0reg);
+			_freeXMMreg(t0reg);
+		}
 	}
 	else {
 		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
@@ -1899,11 +1860,17 @@ void recPSUBUB()
 CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
 	if( EEREC_D == EEREC_S ) SSE2_PSUBUSB_XMM_to_XMM(EEREC_D, EEREC_T);
 	else if( EEREC_D == EEREC_T ) {
-		int t0reg = _allocTempXMMreg(XMMT_INT, -1);
-		SSEX_MOVDQA_XMM_to_XMM(t0reg, EEREC_T);
-		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
-		SSE2_PSUBUSB_XMM_to_XMM(EEREC_D, t0reg);
-		_freeXMMreg(t0reg);
+		if ( cpucaps.hasSupplementalStreamingSIMD3Extensions ) {
+			SSSE3_PSIGNB_XMM_to_XMM(EEREC_D, EEREC_D);
+			SSE2_PADDUSB_XMM_to_XMM(EEREC_D, EEREC_S); // -Rt + Rs
+		}
+		else {
+			int t0reg = _allocTempXMMreg(XMMT_INT, -1);
+			SSEX_MOVDQA_XMM_to_XMM(t0reg, EEREC_T);
+			SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
+			SSE2_PSUBUSB_XMM_to_XMM(EEREC_D, t0reg);
+			_freeXMMreg(t0reg);
+		}
 	}
 	else {
 		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
@@ -1922,11 +1889,17 @@ void recPSUBUH()
 CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
 	if( EEREC_D == EEREC_S ) SSE2_PSUBUSW_XMM_to_XMM(EEREC_D, EEREC_T);
 	else if( EEREC_D == EEREC_T ) {
-		int t0reg = _allocTempXMMreg(XMMT_INT, -1);
-		SSEX_MOVDQA_XMM_to_XMM(t0reg, EEREC_T);
-		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
-		SSE2_PSUBUSW_XMM_to_XMM(EEREC_D, t0reg);
-		_freeXMMreg(t0reg);
+		if ( cpucaps.hasSupplementalStreamingSIMD3Extensions ) {
+			SSSE3_PSIGNW_XMM_to_XMM(EEREC_D, EEREC_D);
+			SSE2_PADDUSW_XMM_to_XMM(EEREC_D, EEREC_S); // -Rt + Rs
+		}
+		else {
+			int t0reg = _allocTempXMMreg(XMMT_INT, -1);
+			SSEX_MOVDQA_XMM_to_XMM(t0reg, EEREC_T);
+			SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
+			SSE2_PSUBUSW_XMM_to_XMM(EEREC_D, t0reg);
+			_freeXMMreg(t0reg);
+		}
 	}
 	else {
 		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
