@@ -3,8 +3,8 @@
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="3rdparty"
-	OutputDirectory="$(ProjectDir)..\..\deps\$(PlatformName)\$(ConfigurationName)"
-	IntermediateDirectory="$(ProjectDir)\$(PlatformName)\$(ConfigurationName)"
+	OutputDirectory="..\..\deps\$(PlatformName)\$(ConfigurationName)"
+	IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 	>
 	<Tool
 		Name="VCCLCompilerTool"
