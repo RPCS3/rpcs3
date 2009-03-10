@@ -144,79 +144,137 @@ void WriteTLB(int i)
 	MapTLB(i);
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////
+// Note regarding updates of PERF and TIMR registers: never allow increment to be 0.
+// That happens when a game loads the MFC0 twice in the same recompiled block (before the
+// cpuRegs.cycles update), and can cause games to lock up since it's an unexpected result.
+
+__forceinline void COP0_UpdatePCR0()
+{
+	if((cpuRegs.PERF.n.pccr & 0x800003E0) == 0x80000020)
+	{
+		u32 incr = cpuRegs.cycle-s_iLastPERFCycle[0];
+		if( incr == 0 ) incr++;
+
+		cpuRegs.PERF.n.pcr0 += incr;
+		s_iLastPERFCycle[0] = cpuRegs.cycle;
+	}
+}
+
+__forceinline void COP0_UpdatePCR1()
+{
+	if((cpuRegs.PERF.n.pccr & 0x800F8000) == 0x80008000)
+	{
+		u32 incr = cpuRegs.cycle-s_iLastPERFCycle[1];
+		if( incr == 0 ) incr++;
+
+		cpuRegs.PERF.n.pcr1 += incr;
+		s_iLastPERFCycle[1] = cpuRegs.cycle;
+	}
+}
+
+
 namespace R5900 {
 namespace Interpreter {
 namespace OpcodeImpl {
 namespace COP0 {
 
-void MFC0() {
-	if (!_Rt_) return;
-	if (_Rd_ != 9) { COP0_LOG("%s\n", disR5900Current.getCString() ); }
+void MFC0()
+{
+	// Note on _Rd_ Condition 9: CP0.Count should be updated even if _Rt_ is 0.
+	if( (_Rd_ != 9) && !_Rt_ ) return;
+	if(_Rd_ != 9) { COP0_LOG("%s\n", disR5900Current.getCString() ); }
 	
 	//if(bExecBIOS == FALSE && _Rd_ == 25) SysPrintf("MFC0 _Rd_ %x = %x\n", _Rd_, cpuRegs.CP0.r[_Rd_]);
-	switch (_Rd_) {
+	switch (_Rd_)
+	{
 		
-		case 12: cpuRegs.GPR.r[_Rt_].UD[0] = (s64)(cpuRegs.CP0.r[_Rd_] & 0xf0c79c1f); break;
+		case 12:
+			cpuRegs.GPR.r[_Rt_].SD[0] = (s32)(cpuRegs.CP0.r[_Rd_] & 0xf0c79c1f);
+		break;
+
 		case 25: 
-		    switch(_Imm_ & 0x3F){
-			    case 0: cpuRegs.GPR.r[_Rt_].UD[0] = (s64)cpuRegs.PERF.n.pccr; break;
-			    case 1:
-					if((cpuRegs.PERF.n.pccr & 0x800003E0) == 0x80000020) {
-						cpuRegs.PERF.n.pcr0 += cpuRegs.cycle-s_iLastPERFCycle[0];
-						s_iLastPERFCycle[0] = cpuRegs.cycle;
-					}
-        
-                    cpuRegs.GPR.r[_Rt_].UD[0] = (s64)cpuRegs.PERF.n.pcr0;
-                    break;
-			    case 3:
-					if((cpuRegs.PERF.n.pccr & 0x800F8000) == 0x80008000) {
-						cpuRegs.PERF.n.pcr1 += cpuRegs.cycle-s_iLastPERFCycle[1];
-						s_iLastPERFCycle[1] = cpuRegs.cycle;
-					}
-					cpuRegs.GPR.r[_Rt_].UD[0] = (s64)cpuRegs.PERF.n.pcr1;
-					break;
+		    switch(_Imm_ & 0x3F)
+		    {
+			    case 0:		// MFPS  [LSB is clear]
+					cpuRegs.GPR.r[_Rt_].SD[0] = (s32)cpuRegs.PERF.n.pccr;
+				break;
+
+			    case 1:		// MFPC [LSB is set] - read PCR0
+					COP0_UpdatePCR0();
+                    cpuRegs.GPR.r[_Rt_].SD[0] = (s32)cpuRegs.PERF.n.pcr0;
+				break;
+
+			    case 3:		// MFPC [LSB is set] - read PCR1
+					COP0_UpdatePCR1();
+					cpuRegs.GPR.r[_Rt_].SD[0] = (s32)cpuRegs.PERF.n.pcr1;
+				break;
 		    }
 		    /*SysPrintf("MFC0 PCCR = %x PCR0 = %x PCR1 = %x IMM= %x\n", 
 		    cpuRegs.PERF.n.pccr, cpuRegs.PERF.n.pcr0, cpuRegs.PERF.n.pcr1, _Imm_ & 0x3F);*/
-		    break;
+		break;
+
 		case 24: 
-			SysPrintf("MFC0 Breakpoint debug Registers code = %x\n", cpuRegs.code & 0x3FF);
-			break;
+			Console::WriteLn("MFC0 Breakpoint debug Registers code = %x", params cpuRegs.code & 0x3FF);
+		break;
+
 		case 9:
-			// update
-			cpuRegs.CP0.n.Count += cpuRegs.cycle-s_iLastCOP0Cycle;
+		{
+			u32 incr = cpuRegs.cycle-s_iLastCOP0Cycle;
+			if( incr == 0 ) incr++;
+			cpuRegs.CP0.n.Count += incr;
 			s_iLastCOP0Cycle = cpuRegs.cycle;
-		default: cpuRegs.GPR.r[_Rt_].UD[0] = (s64)cpuRegs.CP0.r[_Rd_];
+			if( !_Rt_ ) break;
+		}
+
+		default:
+			cpuRegs.GPR.r[_Rt_].UD[0] = (s64)cpuRegs.CP0.r[_Rd_];
 	}
 }
 
-void MTC0() {
+void MTC0()
+{
 	COP0_LOG("%s\n", disR5900Current.getCString());
 	//if(bExecBIOS == FALSE && _Rd_ == 25) SysPrintf("MTC0 _Rd_ %x = %x\n", _Rd_, cpuRegs.CP0.r[_Rd_]);
-	switch (_Rd_) {
+	switch (_Rd_)
+	{
 		case 25: 
 			/*if(bExecBIOS == FALSE && _Rd_ == 25) SysPrintf("MTC0 PCCR = %x PCR0 = %x PCR1 = %x IMM= %x\n", 
 				cpuRegs.PERF.n.pccr, cpuRegs.PERF.n.pcr0, cpuRegs.PERF.n.pcr1, _Imm_ & 0x3F);*/
-			switch(_Imm_ & 0x3F){
-				case 0:
-					if((cpuRegs.PERF.n.pccr & 0x800003E0) == 0x80000020)
-						cpuRegs.PERF.n.pcr0 += cpuRegs.cycle-s_iLastPERFCycle[0];
-					if((cpuRegs.PERF.n.pccr & 0x800F8000) == 0x80008000)
-						cpuRegs.PERF.n.pcr1 += cpuRegs.cycle-s_iLastPERFCycle[1];
+			switch(_Imm_ & 0x3F)
+			{
+				case 0:		// MTPS  [LSB is clear]
+					// Updates PCRs and sets the PCCR.
+					COP0_UpdatePCR0();
+					COP0_UpdatePCR1();
 					cpuRegs.PERF.n.pccr = cpuRegs.GPR.r[_Rt_].UL[0];
+				break;
+				
+				case 1:		// MTPC [LSB is set] - set PCR0
+					cpuRegs.PERF.n.pcr0 = cpuRegs.GPR.r[_Rt_].UL[0];
 					s_iLastPERFCycle[0] = cpuRegs.cycle;
+				break;
+				
+				case 3:		// MTPC [LSB is set] - set PCR0
+					cpuRegs.PERF.n.pcr1 = cpuRegs.GPR.r[_Rt_].UL[0];
 					s_iLastPERFCycle[1] = cpuRegs.cycle;
-					break;
-				case 1: cpuRegs.PERF.n.pcr0 = cpuRegs.GPR.r[_Rt_].UL[0]; s_iLastPERFCycle[0] = cpuRegs.cycle; break;
-				case 3: cpuRegs.PERF.n.pcr1 = cpuRegs.GPR.r[_Rt_].UL[0]; s_iLastPERFCycle[1] = cpuRegs.cycle; break;
+				break;
 			}
-			break;
+		break;
+		
 		case 24: 
-			SysPrintf("MTC0 Breakpoint debug Registers code = %x\n", cpuRegs.code & 0x3FF);
-			break;
+			Console::WriteLn("MTC0 Breakpoint debug Registers code = %x", params cpuRegs.code & 0x3FF);
+		break;
+
 		case 12: WriteCP0Status(cpuRegs.GPR.r[_Rt_].UL[0]); break;
-		case 9: s_iLastCOP0Cycle = cpuRegs.cycle; cpuRegs.CP0.r[9] = cpuRegs.GPR.r[_Rt_].UL[0]; break;
-		default: cpuRegs.CP0.r[_Rd_] = cpuRegs.GPR.r[_Rt_].UL[0]; break;
+		case 9:
+			s_iLastCOP0Cycle = cpuRegs.cycle;
+			cpuRegs.CP0.r[9] = cpuRegs.GPR.r[_Rt_].UL[0];
+		break;
+		
+		default:
+			cpuRegs.CP0.r[_Rd_] = cpuRegs.GPR.r[_Rt_].UL[0]; 
+		break;
 	}
 }
 

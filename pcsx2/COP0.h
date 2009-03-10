@@ -19,10 +19,14 @@
 #ifndef __COP0_H__
 #define __COP0_H__
 
-void WriteCP0Status(u32 value);
-void UpdateCP0Status();
-void WriteTLB(int i);
-void UnmapTLB(int i);
-void MapTLB(int i);
+extern void WriteCP0Status(u32 value);
+extern void UpdateCP0Status();
+extern void WriteTLB(int i);
+extern void UnmapTLB(int i);
+extern void MapTLB(int i);
+
+extern void COP0_UpdatePCR0();
+extern void COP0_UpdatePCR1();
+
 
 #endif /* __COP0_H__ */
