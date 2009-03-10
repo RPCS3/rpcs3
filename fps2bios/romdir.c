@@ -43,6 +43,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	for (i=1; i<argc; i++) {
+		memset(&rd, 0, sizeof(rd));
 		if (strcmp(argv[i], "ROMDIR") == 0) {
 			strncpy(rd.fileName, argv[i], 9);
 			rd.extInfoSize = 0;
@@ -55,7 +56,7 @@ int main(int argc, char *argv[]) {
 			continue;
 		}
 		for (j=0; j<9; j++) {
-			if (argv[i][j] == ',') break;
+			if (argv[i][j] == ',' || argv[i][j] == 0) break;
 			rd.fileName[j] = argv[i][j];
 		}
 		memset(rd.fileName+j, 0, 10-j);
