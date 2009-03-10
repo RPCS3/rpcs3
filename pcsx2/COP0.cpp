@@ -149,6 +149,10 @@ void WriteTLB(int i)
 // That happens when a game loads the MFC0 twice in the same recompiled block (before the
 // cpuRegs.cycles update), and can cause games to lock up since it's an unexpected result.
 
+// PERF Overflow exceptions:  The exception is raised when the MSB of the Performance
+// Counter Register is set (basic arithmetic overflow, which means it does *not* include
+// when the bit is later cleared).
+
 __forceinline void COP0_UpdatePCR0()
 {
 	if((cpuRegs.PERF.n.pccr & 0x800003E0) == 0x80000020)
@@ -156,8 +160,18 @@ __forceinline void COP0_UpdatePCR0()
 		u32 incr = cpuRegs.cycle-s_iLastPERFCycle[0];
 		if( incr == 0 ) incr++;
 
+		u32 prev = cpuRegs.PERF.n.pcr0;
 		cpuRegs.PERF.n.pcr0 += incr;
 		s_iLastPERFCycle[0] = cpuRegs.cycle;
+		
+		if( cpuRegs.PERF.n.pccr & (1UL<<31) )	// MSB is the overflow enable bit.
+		{
+			prev ^= (1UL<<31);		// XOR is fun!
+			if( (prev & cpuRegs.PERF.n.pcr0) & (1UL<<31) )
+			{
+				// TODO: Vector to the appropriate exception here.
+			}
+		}
 	}
 }
 
@@ -168,8 +182,18 @@ __forceinline void COP0_UpdatePCR1()
 		u32 incr = cpuRegs.cycle-s_iLastPERFCycle[1];
 		if( incr == 0 ) incr++;
 
+		u32 prev = cpuRegs.PERF.n.pcr1;
 		cpuRegs.PERF.n.pcr1 += incr;
 		s_iLastPERFCycle[1] = cpuRegs.cycle;
+
+		if( cpuRegs.PERF.n.pccr & (1UL<<31) )	// MSB is the overflow enable bit.
+		{
+			prev ^= (1UL<<31);		// XOR?  I don't even know OR!  Harhar!
+			if( (prev & cpuRegs.PERF.n.pcr1) & (1UL<<31) )
+			{
+				// TODO: Vector to the appropriate exception here.
+			}
+		}
 	}
 }
 
