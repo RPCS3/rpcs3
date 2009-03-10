@@ -58,7 +58,7 @@ enum
 	BCb_COEFF   = 0x40
 };
 
-static PCSX2_ALIGNED16(const SSE2_Tables sse2_tables) = 
+static volatile PCSX2_ALIGNED16(const SSE2_Tables sse2_tables) = 
 {
 	{0x8000,0x8000,0x8000,0x8000,0x8000,0x8000,0x8000,0x8000},	// c_bias
 	{16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16},			// y_bias
@@ -223,8 +223,8 @@ ihatemsvc:
 
 		// Use ecx and edx as base pointers, to allow for Mod/RM form on memOps.
 		// This saves 2-3 bytes per instruction where these are used. :)
-		"mov ecx, offset yuv2rgb_temp\n"
-		"mov edx, offset sse2_tables+64\n"
+		"mov ecx, offset %c[yuv2rgb_temp]\n"
+		"mov edx, offset %c[sse2_tables]+64\n"
 
 		".align 16\n"
 "tworows:\n"
@@ -240,15 +240,15 @@ ihatemsvc:
 		// unfortunately I don't think this will matter despite being
 		// technically potentially a little faster, but this is
 		// equivalent to an add or sub
-		"pxor xmm2, xmmword ptr [edx-0x40]\n" // xmm2 <-- 8 x (Cb - 128) << 8
-		"pxor xmm0, xmmword ptr [edx-0x40]\n" // xmm0 <-- 8 x (Cr - 128) << 8
+		"pxor xmm2, xmmword ptr [edx+%c[C_BIAS]]\n" // xmm2 <-- 8 x (Cb - 128) << 8
+		"pxor xmm0, xmmword ptr [edx+%c[C_BIAS]]\n" // xmm0 <-- 8 x (Cr - 128) << 8
 
 		"movaps xmm1, xmm0\n"
 		"movaps xmm3, xmm2\n"
-		"pmulhw xmm1, xmmword ptr [edx+0x10]\n"
-		"pmulhw xmm3, xmmword ptr [edx+0x20]\n"
-		"pmulhw xmm0, xmmword ptr [edx+0x30]\n"
-		"pmulhw xmm2, xmmword ptr [edx+0x40]\n"
+		"pmulhw xmm1, xmmword ptr [edx+%c[GCr_COEFF]]\n"
+		"pmulhw xmm3, xmmword ptr [edx+%c[GCb_COEFF]]\n"
+		"pmulhw xmm0, xmmword ptr [edx+%c[RCr_COEFF]]\n"
+		"pmulhw xmm2, xmmword ptr [edx+%c[BCb_COEFF]]\n"
 		"paddsw xmm1, xmm3\n"
 		// store for the next line; looking at the code above
 		// compared to the code below, I have to wonder whether
@@ -270,13 +270,13 @@ ihatemsvc:
 		"movaps xmm5, xmm2\n"
 
 		"movaps xmm6, xmmword ptr [mb8+edi]\n"
-		"psubusb xmm6, xmmword ptr [edx-0x30]\n"
+		"psubusb xmm6, xmmword ptr [edx+%c[Y_BIAS]]\n"
 		"movaps xmm7, xmm6\n"
 		"psllw xmm6, 8\n"                   // xmm6 <- Y << 8 for pixels 0,2,4,6,8,10,12,14
-		"pand xmm7, xmmword ptr [edx+Y_MASK]\n" // xmm7 <- Y << 8 for pixels 1,3,5,7,9,11,13,15
+		"pand xmm7, xmmword ptr [edx+%c[Y_MASK]]\n" // xmm7 <- Y << 8 for pixels 1,3,5,7,9,11,13,15
 
-		"pmulhuw xmm6, xmmword ptr [edx+0x00]\n"
-		"pmulhuw xmm7, xmmword ptr [edx+0x00]\n"
+		"pmulhuw xmm6, xmmword ptr [edx+%c[Y_COEFF]]\n"
+		"pmulhuw xmm7, xmmword ptr [edx+%c[Y_COEFF]]\n"
 
 		"paddsw xmm0, xmm6\n"
 		"paddsw xmm3, xmm7\n"
@@ -286,7 +286,7 @@ ihatemsvc:
 		"paddsw xmm5, xmm7\n"
 
 		// round
-		"movaps xmm6, xmmword ptr [edx-0x10]\n"
+		"movaps xmm6, xmmword ptr [edx+%c[ROUND_1BIT]]\n"
 		"paddw xmm0, xmm6\n"
 		"paddw xmm1, xmm6\n"
 		"paddw xmm2, xmm6\n"
@@ -342,6 +342,12 @@ ihatemsvc:
 		"cmp esi, 64\n"
 		"jne tworows\n"
 		".att_syntax\n"
+		:
+		:[C_BIAS]"i"(C_BIAS), [Y_BIAS]"i"(Y_BIAS), [Y_MASK]"i"(Y_MASK), 
+			[ROUND_1BIT]"i"(ROUND_1BIT), [Y_COEFF]"i"(Y_COEFF), [GCr_COEFF]"i"(GCr_COEFF), 
+			[GCb_COEFF]"i"(GCb_COEFF), [RCr_COEFF]"i"(RCr_COEFF), [BCb_COEFF]"i"(BCb_COEFF),
+			[yuv2rgb_temp]"i"(yuv2rgb_temp), [sse2_tables]"i"(&sse2_tables)
+		:
 	);
 #else
 #error Unsupported compiler
