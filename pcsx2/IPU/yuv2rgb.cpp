@@ -240,15 +240,15 @@ ihatemsvc:
 		// unfortunately I don't think this will matter despite being
 		// technically potentially a little faster, but this is
 		// equivalent to an add or sub
-		"pxor xmm2, xmmword ptr [edx+C_BIAS]\n" // xmm2 <-- 8 x (Cb - 128) << 8
-		"pxor xmm0, xmmword ptr [edx+C_BIAS]\n" // xmm0 <-- 8 x (Cr - 128) << 8
+		"pxor xmm2, xmmword ptr [edx-0x40]\n" // xmm2 <-- 8 x (Cb - 128) << 8
+		"pxor xmm0, xmmword ptr [edx-0x40]\n" // xmm0 <-- 8 x (Cr - 128) << 8
 
 		"movaps xmm1, xmm0\n"
 		"movaps xmm3, xmm2\n"
-		"pmulhw xmm1, xmmword ptr [edx+GCr_COEFF]\n"
-		"pmulhw xmm3, xmmword ptr [edx+GCb_COEFF]\n"
-		"pmulhw xmm0, xmmword ptr [edx+RCr_COEFF]\n"
-		"pmulhw xmm2, xmmword ptr [edx+BCb_COEFF]\n"
+		"pmulhw xmm1, xmmword ptr [edx+0x10]\n"
+		"pmulhw xmm3, xmmword ptr [edx+0x20]\n"
+		"pmulhw xmm0, xmmword ptr [edx+0x30]\n"
+		"pmulhw xmm2, xmmword ptr [edx+0x40]\n"
 		"paddsw xmm1, xmm3\n"
 		// store for the next line; looking at the code above
 		// compared to the code below, I have to wonder whether
@@ -270,13 +270,13 @@ ihatemsvc:
 		"movaps xmm5, xmm2\n"
 
 		"movaps xmm6, xmmword ptr [mb8+edi]\n"
-		"psubusb xmm6, xmmword ptr [edx+Y_BIAS]\n"
+		"psubusb xmm6, xmmword ptr [edx-0x30]\n"
 		"movaps xmm7, xmm6\n"
 		"psllw xmm6, 8\n"                   // xmm6 <- Y << 8 for pixels 0,2,4,6,8,10,12,14
 		"pand xmm7, xmmword ptr [edx+Y_MASK]\n" // xmm7 <- Y << 8 for pixels 1,3,5,7,9,11,13,15
 
-		"pmulhuw xmm6, xmmword ptr [edx+Y_COEFF]\n"
-		"pmulhuw xmm7, xmmword ptr [edx+Y_COEFF]\n"
+		"pmulhuw xmm6, xmmword ptr [edx+0x00]\n"
+		"pmulhuw xmm7, xmmword ptr [edx+0x00]\n"
 
 		"paddsw xmm0, xmm6\n"
 		"paddsw xmm3, xmm7\n"
@@ -286,7 +286,7 @@ ihatemsvc:
 		"paddsw xmm5, xmm7\n"
 
 		// round
-		"movaps xmm6, xmmword ptr [edx+ROUND_1BIT]\n"
+		"movaps xmm6, xmmword ptr [edx-0x10]\n"
 		"paddw xmm0, xmm6\n"
 		"paddw xmm1, xmm6\n"
 		"paddw xmm2, xmm6\n"

@@ -73,6 +73,12 @@ void StreamException_ThrowLastError( const string& streamname, HANDLE result )
 		case ERROR_ACCESS_DENIED:
 			throw Exception::AccessDenied( streamname );
 
+		case ERROR_INVALID_HANDLE:
+			throw Exception::InvalidOperation( "Stream object or handle is invalid." );
+
+		case ERROR_SHARING_VIOLATION:
+			throw Exception::AccessDenied( streamname, "Sharing violation." );
+
 		default:
 		{
 			throw Exception::Stream( streamname,
@@ -107,6 +113,7 @@ bool StreamException_LogLastError( const string& streamname, const char* action,
 	catch( Exception::Stream& ex )
 	{
 		Console::Notice( "%s > %s", params action, ex.cMessage() );
+		return true;
 	}
 	return false;
 }
@@ -129,7 +136,7 @@ void NTFS_CompressFile( const char* file, bool compressStatus )
 
 	// Fail silently -- non-compression of files and folders is not an errorable offense.
 
-	if( !StreamException_LogLastError( file, "NTFS Compression Enable", bloated_crap ) )
+	if( !StreamException_LogLastError( file, "NTFS Compress Notice", bloated_crap ) )
 	{
 		DWORD bytesReturned = 0;
 		DWORD compressMode = compressStatus ? COMPRESSION_FORMAT_DEFAULT : COMPRESSION_FORMAT_NONE;
@@ -141,7 +148,7 @@ void NTFS_CompressFile( const char* file, bool compressStatus )
 		);
 		
 		if( !result )
-			StreamException_LogLastError( file, "NTFS Compression Enable" );
+			StreamException_LogLastError( file, "NTFS Compress Notice" );
 
 		CloseHandle( bloated_crap );
 	}
