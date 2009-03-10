@@ -1083,17 +1083,11 @@ void recPSUBSB( void )
 CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
 	if( EEREC_D == EEREC_S ) SSE2_PSUBSB_XMM_to_XMM(EEREC_D, EEREC_T);
 	else if( EEREC_D == EEREC_T ) {
-		if ( cpucaps.hasSupplementalStreamingSIMD3Extensions ) {
-			SSSE3_PSIGNB_XMM_to_XMM(EEREC_D, EEREC_D);
-			SSE2_PADDSB_XMM_to_XMM(EEREC_D, EEREC_S); // -Rt + Rs
-		}
-		else {
-			int t0reg = _allocTempXMMreg(XMMT_INT, -1);
-			SSEX_MOVDQA_XMM_to_XMM(t0reg, EEREC_T);
-			SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
-			SSE2_PSUBSB_XMM_to_XMM(EEREC_D, t0reg);
-			_freeXMMreg(t0reg);
-		}
+		int t0reg = _allocTempXMMreg(XMMT_INT, -1);
+		SSEX_MOVDQA_XMM_to_XMM(t0reg, EEREC_T);
+		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
+		SSE2_PSUBSB_XMM_to_XMM(EEREC_D, t0reg);
+		_freeXMMreg(t0reg);
 	}
 	else {
 		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
@@ -1125,17 +1119,11 @@ void recPSUBSH( void )
 CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
 	if( EEREC_D == EEREC_S ) SSE2_PSUBSW_XMM_to_XMM(EEREC_D, EEREC_T);
 	else if( EEREC_D == EEREC_T ) {
-		if ( cpucaps.hasSupplementalStreamingSIMD3Extensions ) {
-			SSSE3_PSIGNW_XMM_to_XMM(EEREC_D, EEREC_D);
-			SSE2_PADDSW_XMM_to_XMM(EEREC_D, EEREC_S); // -Rt + Rs
-		}
-		else {
-			int t0reg = _allocTempXMMreg(XMMT_INT, -1);
-			SSEX_MOVDQA_XMM_to_XMM(t0reg, EEREC_T);
-			SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
-			SSE2_PSUBSW_XMM_to_XMM(EEREC_D, t0reg);
-			_freeXMMreg(t0reg);
-		}
+		int t0reg = _allocTempXMMreg(XMMT_INT, -1);
+		SSEX_MOVDQA_XMM_to_XMM(t0reg, EEREC_T);
+		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
+		SSE2_PSUBSW_XMM_to_XMM(EEREC_D, t0reg);
+		_freeXMMreg(t0reg);
 	}
 	else {
 		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
@@ -1184,15 +1172,9 @@ CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
 	// normal subtraction
 	if( EEREC_D == EEREC_S ) SSE2_PSUBD_XMM_to_XMM(EEREC_D, EEREC_T);
 	else if( EEREC_D == EEREC_T ) {
-		if ( cpucaps.hasSupplementalStreamingSIMD3Extensions ) {
-			SSSE3_PSIGND_XMM_to_XMM(EEREC_D, EEREC_D);
-			SSE2_PADDD_XMM_to_XMM(EEREC_D, EEREC_S); // -Rt + Rs
-		}
-		else {
-			SSEX_MOVDQA_XMM_to_XMM(t2reg, EEREC_T);
-			SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
-			SSE2_PSUBD_XMM_to_XMM(EEREC_D, t2reg);
-		}
+		SSEX_MOVDQA_XMM_to_XMM(t2reg, EEREC_T);
+		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
+		SSE2_PSUBD_XMM_to_XMM(EEREC_D, t2reg);
 	}
 	else {
 		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
@@ -1346,17 +1328,11 @@ void recPSUBB( void )
 CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
 	if( EEREC_D == EEREC_S ) SSE2_PSUBB_XMM_to_XMM(EEREC_D, EEREC_T);
 	else if( EEREC_D == EEREC_T ) {
-		if ( cpucaps.hasSupplementalStreamingSIMD3Extensions ) {
-			SSSE3_PSIGNB_XMM_to_XMM(EEREC_D, EEREC_D);
-			SSE2_PADDB_XMM_to_XMM(EEREC_D, EEREC_S); // -Rt + Rs
-		}
-		else {
-			int t0reg = _allocTempXMMreg(XMMT_INT, -1);
-			SSEX_MOVDQA_XMM_to_XMM(t0reg, EEREC_T);
-			SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
-			SSE2_PSUBB_XMM_to_XMM(EEREC_D, t0reg);
-			_freeXMMreg(t0reg);
-		}
+		int t0reg = _allocTempXMMreg(XMMT_INT, -1);
+		SSEX_MOVDQA_XMM_to_XMM(t0reg, EEREC_T);
+		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
+		SSE2_PSUBB_XMM_to_XMM(EEREC_D, t0reg);
+		_freeXMMreg(t0reg);
 	}
 	else {
 		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
@@ -1388,17 +1364,11 @@ void recPSUBH( void )
 CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
 	if( EEREC_D == EEREC_S ) SSE2_PSUBW_XMM_to_XMM(EEREC_D, EEREC_T);
 	else if( EEREC_D == EEREC_T ) {
-		if ( cpucaps.hasSupplementalStreamingSIMD3Extensions ) {
-			SSSE3_PSIGNW_XMM_to_XMM(EEREC_D, EEREC_D);
-			SSE2_PADDW_XMM_to_XMM(EEREC_D, EEREC_S); // -Rt + Rs
-		}
-		else {
-			int t0reg = _allocTempXMMreg(XMMT_INT, -1);
-			SSEX_MOVDQA_XMM_to_XMM(t0reg, EEREC_T);
-			SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
-			SSE2_PSUBW_XMM_to_XMM(EEREC_D, t0reg);
-			_freeXMMreg(t0reg);
-		}
+		int t0reg = _allocTempXMMreg(XMMT_INT, -1);
+		SSEX_MOVDQA_XMM_to_XMM(t0reg, EEREC_T);
+		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
+		SSE2_PSUBW_XMM_to_XMM(EEREC_D, t0reg);
+		_freeXMMreg(t0reg);
 	}
 	else {
 		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
@@ -1430,17 +1400,11 @@ void recPSUBW( void )
 CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
 	if( EEREC_D == EEREC_S ) SSE2_PSUBD_XMM_to_XMM(EEREC_D, EEREC_T);
 	else if( EEREC_D == EEREC_T ) {
-		if ( cpucaps.hasSupplementalStreamingSIMD3Extensions ) {
-			SSSE3_PSIGND_XMM_to_XMM(EEREC_D, EEREC_D);
-			SSE2_PADDD_XMM_to_XMM(EEREC_D, EEREC_S); // -Rt + Rs
-		}
-		else {
-			int t0reg = _allocTempXMMreg(XMMT_INT, -1);
-			SSEX_MOVDQA_XMM_to_XMM(t0reg, EEREC_T);
-			SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
-			SSE2_PSUBD_XMM_to_XMM(EEREC_D, t0reg);
-			_freeXMMreg(t0reg);
-		}
+		int t0reg = _allocTempXMMreg(XMMT_INT, -1);
+		SSEX_MOVDQA_XMM_to_XMM(t0reg, EEREC_T);
+		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
+		SSE2_PSUBD_XMM_to_XMM(EEREC_D, t0reg);
+		_freeXMMreg(t0reg);
 	}
 	else {
 		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
@@ -1860,17 +1824,11 @@ void recPSUBUB()
 CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
 	if( EEREC_D == EEREC_S ) SSE2_PSUBUSB_XMM_to_XMM(EEREC_D, EEREC_T);
 	else if( EEREC_D == EEREC_T ) {
-		if ( cpucaps.hasSupplementalStreamingSIMD3Extensions ) {
-			SSSE3_PSIGNB_XMM_to_XMM(EEREC_D, EEREC_D);
-			SSE2_PADDUSB_XMM_to_XMM(EEREC_D, EEREC_S); // -Rt + Rs
-		}
-		else {
-			int t0reg = _allocTempXMMreg(XMMT_INT, -1);
-			SSEX_MOVDQA_XMM_to_XMM(t0reg, EEREC_T);
-			SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
-			SSE2_PSUBUSB_XMM_to_XMM(EEREC_D, t0reg);
-			_freeXMMreg(t0reg);
-		}
+		int t0reg = _allocTempXMMreg(XMMT_INT, -1);
+		SSEX_MOVDQA_XMM_to_XMM(t0reg, EEREC_T);
+		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
+		SSE2_PSUBUSB_XMM_to_XMM(EEREC_D, t0reg);
+		_freeXMMreg(t0reg);
 	}
 	else {
 		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
@@ -1889,17 +1847,11 @@ void recPSUBUH()
 CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
 	if( EEREC_D == EEREC_S ) SSE2_PSUBUSW_XMM_to_XMM(EEREC_D, EEREC_T);
 	else if( EEREC_D == EEREC_T ) {
-		if ( cpucaps.hasSupplementalStreamingSIMD3Extensions ) {
-			SSSE3_PSIGNW_XMM_to_XMM(EEREC_D, EEREC_D);
-			SSE2_PADDUSW_XMM_to_XMM(EEREC_D, EEREC_S); // -Rt + Rs
-		}
-		else {
-			int t0reg = _allocTempXMMreg(XMMT_INT, -1);
-			SSEX_MOVDQA_XMM_to_XMM(t0reg, EEREC_T);
-			SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
-			SSE2_PSUBUSW_XMM_to_XMM(EEREC_D, t0reg);
-			_freeXMMreg(t0reg);
-		}
+		int t0reg = _allocTempXMMreg(XMMT_INT, -1);
+		SSEX_MOVDQA_XMM_to_XMM(t0reg, EEREC_T);
+		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
+		SSE2_PSUBUSW_XMM_to_XMM(EEREC_D, t0reg);
+		_freeXMMreg(t0reg);
 	}
 	else {
 		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
