@@ -217,7 +217,20 @@ microVUf(void) mVU_ERSQRT() {}
 microVUf(void) mVU_ESADD() {}
 microVUf(void) mVU_ESIN() {} 
 microVUf(void) mVU_ESQRT() {}
-microVUf(void) mVU_ESUM() {}
+microVUf(void) mVU_ESUM() {
+	microVU* mVU = mVUx;
+	if (recPass == 0) {}
+	else { 
+		getReg6(xmmFs, _Fs_);
+		SSE_SHUFPS_XMM_to_XMM(xmmPQ, xmmPQ, writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
+		SSE2_PSHUFD_XMM_to_XMM(xmmFt, xmmFs, 0x1b);
+		SSE_ADDPS_XMM_to_XMM(xmmFs, xmmFt);
+		SSE2_PSHUFD_XMM_to_XMM(xmmFt, xmmFs, 0x01);
+		SSE_ADDSS_XMM_to_XMM(xmmFs, xmmFt);
+		SSE_MOVSS_XMM_to_XMM(xmmPQ, xmmFs);
+		SSE_SHUFPS_XMM_to_XMM(xmmPQ, xmmPQ, writeP ? 0x27 : 0xC6); // Flip back
+	}
+}
 
 microVUf(void) mVU_FCAND() {}
 microVUf(void) mVU_FCEQ() {}
