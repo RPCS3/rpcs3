@@ -63,7 +63,7 @@ void States_Load( const string& file )
 	try
 	{
 		_loadStateOrExcept( file );
-		HostGui::Notice( fmt_string(_("*PCSX2*: Loaded State %s"), file) );
+		HostGui::Notice( fmt_string( "*PCSX2*: Loaded State %s", file) );
 	}
 	catch( Exception::StateLoadError_Recoverable& ex)
 	{
@@ -106,7 +106,7 @@ void States_Load(int num)
 	try
 	{
 		_loadStateOrExcept( file );
-		HostGui::Notice( fmt_string( _("*PCSX2*: Loaded State %d"), num ) );
+		HostGui::Notice( fmt_string( "*PCSX2*: Loaded State %d", num ) );
 	}
 	catch( Exception::StateLoadError_Recoverable& ex)
 	{
@@ -145,7 +145,7 @@ void States_Save( const string& file )
 	try
 	{
 		StateRecovery::SaveToFile( file );
-		HostGui::Notice( fmt_string( _( "State saved to file: %s" ), file ) );
+		HostGui::Notice( fmt_string( "State saved to file: %s", file ) );
 	}
 	catch( Exception::BaseException& ex )
 	{
@@ -164,7 +164,7 @@ void States_Save(int num)
 	try
 	{
 		StateRecovery::SaveToSlot( num );
-		HostGui::Notice( fmt_string( _( "State saved to slot %d" ) , num ) );
+		HostGui::Notice( fmt_string( "State saved to slot %d", num ) );
 	}
 	catch( Exception::BaseException& ex )
 	{

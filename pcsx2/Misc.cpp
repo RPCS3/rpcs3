@@ -52,7 +52,7 @@ char CdromId[12];
 static int g_Pcsx2Recording = 0; // true 1 if recording video and sound
 bool renderswitch = 0;
 
-const char *LabelAuthors = { N_(
+const char *LabelAuthors = { 
 	"PCSX2, a PS2 emulator\n\n"
 	"Active Devs: Arcum42, Refraction,\n"
 	"drk||raziel, cottonvibes, gigaherz,\n"
@@ -67,10 +67,9 @@ const char *LabelAuthors = { N_(
 	"Krakatos, Parotaku, Rudy_X\n"
 	"\n"
 	"Webmasters: CKemu, Falcon4ever"
-	)
 };
 
-const char *LabelGreets = { N_(
+const char *LabelGreets = { 
 	"Contributors: Hiryu and Sjeep for libcvd (the iso parsing and\n"
 	"filesystem driver code), nneeve, pseudonym\n"
 	"\n"
@@ -79,7 +78,6 @@ const char *LabelGreets = { N_(
 	"\n"
 	"Special thanks to: black_wd, Belmont, BGome, _Demo_, Dreamtime,\n"
 	"F|RES, MrBrown, razorblade, Seta-san, Skarmeth"
-	)
 };
 
 static struct {
@@ -387,7 +385,7 @@ void SaveGSState(const string& file)
 {
 	if( g_SaveGSStream ) return;
 
-	Console::WriteLn( _("Saving GS State...") );
+	Console::WriteLn( "Saving GS State..." );
 	Console::WriteLn( "\t%hs", params file.c_str() );
 
 	g_fGSSave = new gzSavingState( file );
@@ -449,52 +447,6 @@ void LoadGSState(const string& file)
 }
 
 #endif
-
-struct LangDef {
-	char id[8];
-	char name[64];
-};
-
-LangDef sLangs[] = {
-	{ "ar_AR", N_("Arabic") },
-	{ "bg_BG", N_("Bulgarian") },
-	{ "ca_CA", N_("Catalan") },
-	{ "cz_CZ", N_("Czech") },
-	{ "du_DU",  N_("Dutch")  },
-	{ "de_DE", N_("German") },
-	{ "el_EL", N_("Greek") },
-	{ "en_US", N_("English") },
-	{ "fr_FR", N_("French") },
-	{ "hb_HB" , N_("Hebrew") },
-	{ "hu_HU", N_("Hungarian") },
-	{ "it_IT", N_("Italian") },
-	{ "ja_JA", N_("Japanese") },
-	{ "pe_PE", N_("Persian") },
-	{ "po_PO", N_("Portuguese") },
-	{ "po_BR", N_("Portuguese BR") },
-	{ "pl_PL" , N_("Polish") },
-	{ "ro_RO", N_("Romanian") },
-	{ "ru_RU", N_("Russian") },
-	{ "es_ES", N_("Spanish") },
-	{ "sh_SH" , N_("S-Chinese") },
-    { "sw_SW", N_("Swedish") },
-	{ "tc_TC", N_("T-Chinese") },
-	{ "tr_TR", N_("Turkish") },
-	{ "", "" },
-};
-
-
-char *ParseLang(char *id) {
-	int i=0;
-
-	while (sLangs[i].id[0] != 0) {
-		if (!strcmp(id, sLangs[i].id))
-			return _(sLangs[i].name);
-		i++;
-	}
-
-	return id;
-}
 
 #define NUM_STATES 10
 int StatesC = 0;
@@ -591,7 +543,7 @@ void ProcessFKeys(int fkey, int shift)
 				// 99% of the time this is a file permission error and the
 				// cpu state is intact so just display a passive msg to console.
 
-				Console::Error( _( "Error > Could not save state to slot %d" ), params StatesC );
+				Console::Error( "Error > Could not save state to slot %d", params StatesC );
 				Console::Error( ex.cMessage() );
 			}
 			break;
@@ -602,7 +554,7 @@ void ProcessFKeys(int fkey, int shift)
 			else
 				StatesC = (StatesC+1) % NUM_STATES;
 
-			Console::Notice( _( " > Selected savestate slot %d" ), params StatesC);
+			Console::Notice( " > Selected savestate slot %d", params StatesC);
 
 			if( GSchangeSaveState != NULL )
 				GSchangeSaveState(StatesC, SaveState::GetFilename(StatesC).c_str());
@@ -623,14 +575,14 @@ void ProcessFKeys(int fkey, int shift)
 			}
 			catch( Exception::FileNotFound& )
 			{
-				Console::Notice( _("Saveslot %d cannot be loaded; slot does not exist (file not found)"), params StatesC );
+				Console::Notice( "Saveslot %d cannot be loaded; slot does not exist (file not found)", params StatesC );
 			}
 			catch( Exception::RuntimeError& ex )
 			{
 				// This is the bad one.  Chances are the cpu has been reset, so emulation has
 				// to be aborted.  Sorry user!  We'll give you some info for your trouble:
 
-				Console::Error( _("An error occured while trying to load saveslot %d"), params StatesC );
+				Console::Error( "An error occured while trying to load saveslot %d", params StatesC );
 				Console::Error( ex.cMessage() );
 				Msgbox::Alert(
 					"Pcsx2 encountered an error while trying to load the savestate\n"

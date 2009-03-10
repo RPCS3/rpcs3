@@ -462,17 +462,17 @@ static void recAlloc()
 	// Hardware Requirements Check...
 
 	if ( !( cpucaps.hasMultimediaExtensions  ) )
-		throw Exception::HardwareDeficiency( _( "Processor doesn't support MMX" ) );
+		throw Exception::HardwareDeficiency( "Processor doesn't support MMX" );
 
 	if ( !( cpucaps.hasStreamingSIMDExtensions ) )
-		throw Exception::HardwareDeficiency( _( "Processor doesn't support SSE" ) );
+		throw Exception::HardwareDeficiency( "Processor doesn't support SSE" );
 
 	if ( !( cpucaps.hasStreamingSIMD2Extensions ) )
-		throw Exception::HardwareDeficiency( _( "Processor doesn't support SSE2" ) );
+		throw Exception::HardwareDeficiency( "Processor doesn't support SSE2" );
 
 	if( recMem == NULL )
 	{
-		// Note: the VUrec depends on being able to grab an allocatione below the 0x10000000 line,
+		// Note: the VUrec depends on being able to grab an allocation below the 0x10000000 line,
 		// so we give the EErec an address above that to try first as it's basemem address, hence
 		// the 0x20000000 pick.
 

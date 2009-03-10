@@ -272,7 +272,7 @@ void WinRun()
 	RunGui();
 }
 
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
+/*int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
 	char *lang;
 	int i;
@@ -384,7 +384,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	WinClose();
 
 	return 0;
-}
+}*/
 
 static std::string str_Default( "default" );
 
@@ -979,13 +979,13 @@ void CreateMainMenu() {
 
     ADDSUBMENU(0,_("&Language"));
 
-	for (i=langsMax-1; i>=0; i--)
+	/*for (i=langsMax-1; i>=0; i--)
 	{
 		if (!strcmp(Config.Lang, langs[i].lang))
 			ADDMENUITEMC(0,ParseLang(langs[i].lang), ID_LANGS + i);
 		else
 			ADDMENUITEM(0,ParseLang(langs[i].lang), ID_LANGS + i);
-	}
+	}*/
 
 #ifdef PCSX2_DEVBUILD
 	ADDSUBMENU(0, _("&Debug"));

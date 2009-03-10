@@ -88,12 +88,12 @@ void MemcardConfig::Open_Mcd_Proc(HWND hW, int mcd)
 	memzero_obj( szFileTitle );
 	memzero_obj( szFilter );
 
-	strcpy(szFilter, _("Ps2 Memory Card (*.ps2)"));
+	strcpy(szFilter, "Ps2 Memory Card (*.ps2)");
 	str = szFilter + strlen(szFilter) + 1; 
 	strcpy(str, "*.ps2");
 
 	str += strlen(str) + 1;
-	strcpy(str, _("All Files"));
+	strcpy(str, "All Files");
 	str += strlen(str) + 1;
 	strcpy(str, "*.*");
 
@@ -132,16 +132,16 @@ BOOL CALLBACK MemcardConfig::DialogProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPA
 		case WM_INITDIALOG:
 		{
 			mcdDlg = hWnd;
-			SetWindowText(hWnd, _("MemoryCard Config - Pcsx2"));
+			SetWindowText(hWnd, "MemoryCard Config - Pcsx2");
 
-			Button_SetText(GetDlgItem(hWnd, IDOK),        _("OK"));
-			Button_SetText(GetDlgItem(hWnd, IDCANCEL),    _("Cancel"));
+			Button_SetText(GetDlgItem(hWnd, IDOK),        "OK");
+			Button_SetText(GetDlgItem(hWnd, IDCANCEL),    "Cancel");
 
-			Button_SetText(GetDlgItem(hWnd, IDC_MCDSEL1), _("Browse..."));
-			Button_SetText(GetDlgItem(hWnd, IDC_MCDSEL2), _("Browse..."));
+			Button_SetText(GetDlgItem(hWnd, IDC_MCDSEL1), "Browse...");
+			Button_SetText(GetDlgItem(hWnd, IDC_MCDSEL2), "Browse...");
 
-			Static_SetText(GetDlgItem(hWnd, IDC_MCD_ENABLE1), _("Memory Card Slot 1"));
-			Static_SetText(GetDlgItem(hWnd, IDC_MCD_ENABLE2), _("Memory Card Slot 2"));
+			Static_SetText(GetDlgItem(hWnd, IDC_MCD_ENABLE1), "Memory Card Slot 1");
+			Static_SetText(GetDlgItem(hWnd, IDC_MCD_ENABLE2), "Memory Card Slot 2");
 
 			if( Config.Mcd[0].Filename[0] == 0 )
 			{

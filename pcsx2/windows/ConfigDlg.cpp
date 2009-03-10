@@ -169,7 +169,7 @@ BOOL OnConfigureDialog(HWND hW) {
 
 	/*lp=(char *)malloc(strlen("HLE") + 1);
 	sprintf(lp, "HLE");
-	i=ComboBox_AddString(hWC_BIOS, _("Internal HLE Bios"));
+	i=ComboBox_AddString(hWC_BIOS, "Internal HLE Bios");
 	ComboBox_SetItemData(hWC_BIOS, i, lp);
 	if (_stricmp(Config.Bios, lp)==0)
 		ComboBox_SetCurSel(hWC_BIOS, i);*/
@@ -455,7 +455,7 @@ int SelectPath(HWND hW, char *Title, char *Path) {
 void SetPluginsDir(HWND hW) {
 	char Path[g_MaxPath];
 
-	if (SelectPath(hW, _("Select Plugins Directory"), Path) == -1) return;
+	if (SelectPath(hW, "Select Plugins Directory", Path) == -1) return;
 	strcpy(Config.PluginsDir, Path);
 	CleanUpCombos(hW);
 	OnConfigureDialog(hW);
@@ -464,7 +464,7 @@ void SetPluginsDir(HWND hW) {
 void SetBiosDir(HWND hW) {
 	char Path[g_MaxPath];
 
-	if (SelectPath(hW, _("Select Bios Directory"), Path) == -1) return;
+	if (SelectPath(hW, "Select Bios Directory", Path) == -1) return;
 	strcpy(Config.BiosDir, Path);
 	CleanUpCombos(hW);
 	OnConfigureDialog(hW);
@@ -473,45 +473,45 @@ void SetBiosDir(HWND hW) {
 BOOL CALLBACK ConfigureDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 	switch(uMsg) {
 		case WM_INITDIALOG:
-			SetWindowText(hW, _("Configuration"));
+			SetWindowText(hW, "Configuration");
 
-			Button_SetText(GetDlgItem(hW, IDOK), _("OK"));
-			Button_SetText(GetDlgItem(hW, IDCANCEL), _("Cancel"));
-			Static_SetText(GetDlgItem(hW, IDC_GRAPHICS), _("Graphics"));
-			Static_SetText(GetDlgItem(hW, IDC_FIRSTCONTROLLER), _("First Controller"));
-			Static_SetText(GetDlgItem(hW, IDC_SECONDCONTROLLER), _("Second Controller"));
-			Static_SetText(GetDlgItem(hW, IDC_SOUND), _("Sound"));
-			Static_SetText(GetDlgItem(hW, IDC_CDVDROM), _("Cdvdrom"));
-			Static_SetText(GetDlgItem(hW, IDC_BIOS), _("Bios"));
-			Static_SetText(GetDlgItem(hW, IDC_USB), _("Usb"));
-			Static_SetText(GetDlgItem(hW, IDC_FW), _("FireWire"));
-			Static_SetText(GetDlgItem(hW, IDC_DEV9), _("Dev9"));
-			Button_SetText(GetDlgItem(hW, IDC_BIOSDIR), _("Set Bios Directory"));
-			Button_SetText(GetDlgItem(hW, IDC_PLUGINSDIR), _("Set Plugins Directory"));
-			Button_SetText(GetDlgItem(hW, IDC_CONFIGGS), _("Configure..."));
-			Button_SetText(GetDlgItem(hW, IDC_TESTGS), _("Test..."));
-			Button_SetText(GetDlgItem(hW, IDC_ABOUTGS), _("About..."));
-			Button_SetText(GetDlgItem(hW, IDC_CONFIGSPU2), _("Configure..."));
-			Button_SetText(GetDlgItem(hW, IDC_TESTSPU2), _("Test..."));
-			Button_SetText(GetDlgItem(hW, IDC_ABOUTSPU2), _("About..."));
-			Button_SetText(GetDlgItem(hW, IDC_CONFIGCDVD), _("Configure..."));
-			Button_SetText(GetDlgItem(hW, IDC_TESTCDVD), _("Test..."));
-			Button_SetText(GetDlgItem(hW, IDC_ABOUTCDVD), _("About..."));
-			Button_SetText(GetDlgItem(hW, IDC_CONFIGPAD1), _("Configure..."));
-			Button_SetText(GetDlgItem(hW, IDC_TESTPAD1), _("Test..."));
-			Button_SetText(GetDlgItem(hW, IDC_ABOUTPAD1), _("About..."));
-			Button_SetText(GetDlgItem(hW, IDC_CONFIGPAD2), _("Configure..."));
-			Button_SetText(GetDlgItem(hW, IDC_TESTPAD2), _("Test..."));
-			Button_SetText(GetDlgItem(hW, IDC_ABOUTPAD2), _("About..."));
-			Button_SetText(GetDlgItem(hW, IDC_CONFIGDEV9), _("Configure..."));
-			Button_SetText(GetDlgItem(hW, IDC_TESTDEV9), _("Test..."));
-			Button_SetText(GetDlgItem(hW, IDC_ABOUTDEV9), _("About..."));
-			Button_SetText(GetDlgItem(hW, IDC_CONFIGUSB), _("Configure..."));
-			Button_SetText(GetDlgItem(hW, IDC_TESTUSB), _("Test..."));
-			Button_SetText(GetDlgItem(hW, IDC_ABOUTUSB), _("About..."));
-			Button_SetText(GetDlgItem(hW, IDC_CONFIGFW), _("Configure..."));
-			Button_SetText(GetDlgItem(hW, IDC_TESTFW), _("Test..."));
-			Button_SetText(GetDlgItem(hW, IDC_ABOUTFW), _("About..."));
+			Button_SetText(GetDlgItem(hW, IDOK), "OK");
+			Button_SetText(GetDlgItem(hW, IDCANCEL), "Cancel");
+			Static_SetText(GetDlgItem(hW, IDC_GRAPHICS), "Graphics");
+			Static_SetText(GetDlgItem(hW, IDC_FIRSTCONTROLLER), "First Controller");
+			Static_SetText(GetDlgItem(hW, IDC_SECONDCONTROLLER), "Second Controller");
+			Static_SetText(GetDlgItem(hW, IDC_SOUND), "Sound");
+			Static_SetText(GetDlgItem(hW, IDC_CDVDROM), "Cdvdrom");
+			Static_SetText(GetDlgItem(hW, IDC_BIOS), "Bios");
+			Static_SetText(GetDlgItem(hW, IDC_USB), "Usb");
+			Static_SetText(GetDlgItem(hW, IDC_FW), "FireWire");
+			Static_SetText(GetDlgItem(hW, IDC_DEV9), "Dev9");
+			Button_SetText(GetDlgItem(hW, IDC_BIOSDIR), "Set Bios Directory");
+			Button_SetText(GetDlgItem(hW, IDC_PLUGINSDIR), "Set Plugins Directory");
+			Button_SetText(GetDlgItem(hW, IDC_CONFIGGS), "Configure...");
+			Button_SetText(GetDlgItem(hW, IDC_TESTGS), "Test...");
+			Button_SetText(GetDlgItem(hW, IDC_ABOUTGS), "About...");
+			Button_SetText(GetDlgItem(hW, IDC_CONFIGSPU2), "Configure...");
+			Button_SetText(GetDlgItem(hW, IDC_TESTSPU2), "Test...");
+			Button_SetText(GetDlgItem(hW, IDC_ABOUTSPU2), "About...");
+			Button_SetText(GetDlgItem(hW, IDC_CONFIGCDVD), "Configure...");
+			Button_SetText(GetDlgItem(hW, IDC_TESTCDVD), "Test...");
+			Button_SetText(GetDlgItem(hW, IDC_ABOUTCDVD), "About...");
+			Button_SetText(GetDlgItem(hW, IDC_CONFIGPAD1), "Configure...");
+			Button_SetText(GetDlgItem(hW, IDC_TESTPAD1), "Test...");
+			Button_SetText(GetDlgItem(hW, IDC_ABOUTPAD1), "About...");
+			Button_SetText(GetDlgItem(hW, IDC_CONFIGPAD2), "Configure...");
+			Button_SetText(GetDlgItem(hW, IDC_TESTPAD2), "Test...");
+			Button_SetText(GetDlgItem(hW, IDC_ABOUTPAD2), "About...");
+			Button_SetText(GetDlgItem(hW, IDC_CONFIGDEV9), "Configure...");
+			Button_SetText(GetDlgItem(hW, IDC_TESTDEV9), "Test...");
+			Button_SetText(GetDlgItem(hW, IDC_ABOUTDEV9), "About...");
+			Button_SetText(GetDlgItem(hW, IDC_CONFIGUSB), "Configure...");
+			Button_SetText(GetDlgItem(hW, IDC_TESTUSB), "Test...");
+			Button_SetText(GetDlgItem(hW, IDC_ABOUTUSB), "About...");
+			Button_SetText(GetDlgItem(hW, IDC_CONFIGFW), "Configure...");
+			Button_SetText(GetDlgItem(hW, IDC_TESTFW), "Test...");
+			Button_SetText(GetDlgItem(hW, IDC_ABOUTFW), "About...");
 			return OnConfigureDialog(hW);
 
 		case WM_COMMAND:

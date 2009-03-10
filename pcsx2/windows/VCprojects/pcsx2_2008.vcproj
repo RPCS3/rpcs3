@@ -73,7 +73,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalOptions="/MACHINE:I386"
-				AdditionalDependencies="zlib.lib"
+				AdditionalDependencies="zlib.lib rpcrt4.lib"
 				OutputFile="$(OutDir)\$(ProjectName)-dbg.exe"
 				LinkIncremental="2"
 			/>
@@ -295,15 +295,6 @@
 						PrecompiledHeaderFile="$(IntDir)\win32.pch"
 					/>
 				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PrecompiledHeaderThrough="Win32.h"
-						PrecompiledHeaderFile="$(IntDir)\win32.pch"
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\AdvancedDlg.cpp"
@@ -319,15 +310,6 @@
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Devel|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PrecompiledHeaderThrough="Win32.h"
-						PrecompiledHeaderFile="$(IntDir)\win32.pch"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -357,15 +339,6 @@
 						PrecompiledHeaderFile="$(IntDir)\win32.pch"
 					/>
 				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PrecompiledHeaderThrough="Win32.h"
-						PrecompiledHeaderFile="$(IntDir)\win32.pch"
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\CpuDlg.cpp"
@@ -381,15 +354,6 @@
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Devel|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PrecompiledHeaderThrough="Win32.h"
-						PrecompiledHeaderFile="$(IntDir)\win32.pch"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -419,15 +383,6 @@
 						PrecompiledHeaderFile="$(IntDir)\win32.pch"
 					/>
 				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PrecompiledHeaderThrough="Win32.h"
-						PrecompiledHeaderFile="$(IntDir)\win32.pch"
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\Hyperlinks.cpp"
@@ -443,15 +398,6 @@
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Devel|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PrecompiledHeaderThrough="Win32.h"
-						PrecompiledHeaderFile="$(IntDir)\win32.pch"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -503,49 +449,6 @@
 						PrecompiledHeaderFile="$(IntDir)\win32.pch"
 					/>
 				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PrecompiledHeaderThrough="Win32.h"
-						PrecompiledHeaderFile="$(IntDir)\win32.pch"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\McdManagerDlg.cpp"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PrecompiledHeaderThrough="Win32.h"
-						PrecompiledHeaderFile="$(IntDir)\win32.pch"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Devel|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PrecompiledHeaderThrough="Win32.h"
-						PrecompiledHeaderFile="$(IntDir)\win32.pch"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PrecompiledHeaderThrough="Win32.h"
-						PrecompiledHeaderFile="$(IntDir)\win32.pch"
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\PatchBrowser.cpp"
@@ -590,19 +493,6 @@
 						PrecompiledHeaderFile="$(IntDir)\win32.pch"
 					/>
 				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PrecompiledHeaderThrough="Win32.h"
-						PrecompiledHeaderFile="$(IntDir)\win32.pch"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\..\Saveslots.cpp"
-				>
 			</File>
 			<File
 				RelativePath="..\WinConsole.cpp"
@@ -618,15 +508,6 @@
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Devel|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PrecompiledHeaderThrough="Win32.h"
-						PrecompiledHeaderFile="$(IntDir)\win32.pch"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -676,35 +557,8 @@
 					>
 					<Tool
 						Name="VCCLCompilerTool"
-						BufferSecurityCheck="false"
 						PrecompiledHeaderThrough="Win32.h"
 						PrecompiledHeaderFile="$(IntDir)\win32.pch"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						BufferSecurityCheck="false"
-						PrecompiledHeaderThrough="Win32.h"
-						PrecompiledHeaderFile="$(IntDir)\win32.pch"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Devel vm|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						BufferSecurityCheck="false"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release vm|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						BufferSecurityCheck="false"
 					/>
 				</FileConfiguration>
 			</File>
@@ -725,35 +579,8 @@
 					>
 					<Tool
 						Name="VCCLCompilerTool"
-						BufferSecurityCheck="false"
 						PrecompiledHeaderThrough="Win32.h"
 						PrecompiledHeaderFile="$(IntDir)\win32.pch"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						BufferSecurityCheck="false"
-						PrecompiledHeaderThrough="Win32.h"
-						PrecompiledHeaderFile="$(IntDir)\win32.pch"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Devel vm|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						BufferSecurityCheck="false"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release vm|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						BufferSecurityCheck="false"
 					/>
 				</FileConfiguration>
 			</File>
@@ -2747,6 +2574,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\..\Saveslots.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\SaveState.cpp"
 				>
 			</File>
@@ -3063,6 +2894,30 @@
 			</File>
 			<File
 				RelativePath="..\..\x86\ix86\ix86_types.h"
+				>
+			</File>
+		</Filter>
+		<Filter
+			Name="NewGUI"
+			>
+			<File
+				RelativePath="..\..\NewGUI\frmGameFixes.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\NewGUI\frmGameFixes.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\NewGUI\frmMain.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\NewGUI\frmMain.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\NewGUI\main.cpp"
 				>
 			</File>
 		</Filter>

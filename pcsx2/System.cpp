@@ -437,8 +437,8 @@ void SysReset()
 	// so the status bar won't receive the WM_PAINT messages needed to update itself anyway.
 	// Oops! (air)
 
-	HostGui::Notice(_("Resetting..."));
-	Console::SetTitle(_("Resetting..."));
+	HostGui::Notice("Resetting...");
+	Console::SetTitle("Resetting...");
 
 	g_EmulationInProgress = false;
 	StateRecovery::Clear();
@@ -451,8 +451,8 @@ void SysReset()
 	// Note : No need to call cpuReset() here.  It gets called automatically before the
 	// emulator resumes execution.
 
-	HostGui::Notice(_("Ready"));
-	Console::SetTitle(_("*PCSX2* Emulation state is reset."));
+	HostGui::Notice("Ready");
+	Console::SetTitle("*PCSX2* Emulation state is reset.");
 }
 
 u8 *SysMmapEx(uptr base, u32 size, uptr bounds, const char *caller)

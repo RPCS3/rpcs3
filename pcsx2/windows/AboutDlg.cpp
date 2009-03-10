@@ -35,11 +35,11 @@ LRESULT WINAPI AboutDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		case WM_INITDIALOG:
 			hSilverBMP = LoadBitmap(GetModuleHandle(NULL), MAKEINTRESOURCE(IDB_PS2SILVER));
 
-			SetWindowText(hDlg, _("About PCSX2"));
+			SetWindowText(hDlg, "About PCSX2");
 
-			Button_SetText(GetDlgItem(hDlg, IDOK), _("OK"));
-			Static_SetText(GetDlgItem(hDlg, IDC_PCSX_ABOUT_AUTHORS), _(LabelAuthors));
-			Static_SetText(GetDlgItem(hDlg, IDC_PCSX_ABOUT_GREETS), _(LabelGreets));
+			Button_SetText(GetDlgItem(hDlg, IDOK), "OK");
+			Static_SetText(GetDlgItem(hDlg, IDC_PCSX_ABOUT_AUTHORS), LabelAuthors);
+			Static_SetText(GetDlgItem(hDlg, IDC_PCSX_ABOUT_GREETS), LabelGreets);
 
 			ConvertStaticToHyperlink( hDlg, IDC_LINK_GOOGLECODE );
 			ConvertStaticToHyperlink( hDlg, IDC_LINK_WEBSITE );

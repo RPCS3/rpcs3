@@ -23,32 +23,19 @@
 #include "Pcsx2Config.h"
 
 /////////////////////////////////////////////////////////////////////////
-// GNU GetText / NLS 
-// Move to System.h, perhaps?
+// Pcsx2 Custom Translation System
+// Work-in-progress!
+//
+static const char* _t( const char* translate_me_please )
+{
+	return translate_me_please;
+}
 
-#ifdef ENABLE_NLS
-
-#ifdef _WIN32
-#include "libintlmsc.h"
-#else
-#include <locale.h>
-#include <libintl.h>
-#endif
-
-#undef _
-#define _(String) dgettext (PACKAGE, String)
-#ifdef gettext_noop
-#  define N_(String) gettext_noop (String)
-#else
-#  define N_(String) (String)
-#endif
-
-#else
-
-#define _(msgid) msgid
-#define N_(msgid) msgid
-
-#endif		// ENABLE_NLS
+// Temporary placebo?
+static const char* _( const char* translate_me_please )
+{
+	return translate_me_please;
+}
 
 // what the hell is this unused piece of crap passed to every plugin for? (air)
 // Agreed. It ought to get removed in the next version of the plugin api. (arcum42)
@@ -89,7 +76,6 @@ extern u64 GetTickFrequency();
 // Used in Misc,and Windows/Linux files.
 void ProcessFKeys(int fkey, int shift); // processes fkey related commands value 1-12
 int IsBIOS(char *filename, char *description);
-char *ParseLang(char *id);
 extern const char *LabelAuthors;
 extern const char *LabelGreets;
 void CycleFrameLimit(int dir);

@@ -285,15 +285,6 @@ bool LoadConfig()
 
 	IniFileLoader().DoConfig( Config );
 
-#ifdef ENABLE_NLS
-	{
-		string text;
-		extern int _nl_msg_cat_cntr;
-		ssprintf(text, "LANGUAGE=%s", Config.Lang);
-		gettext_putenv(text.c_str());
-	}
-#endif
-
 	return status;
 }
 

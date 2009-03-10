@@ -178,7 +178,7 @@ gzBaseStateInfo::~gzBaseStateInfo()
 
 
 gzSavingState::gzSavingState( const string& filename ) :
-  gzBaseStateInfo( _("Saving state to: "), filename )
+  gzBaseStateInfo( "Saving state to: ", filename )
 {
 	m_file = gzopen(filename.c_str(), "wb");
 	if( m_file == NULL )
@@ -189,7 +189,7 @@ gzSavingState::gzSavingState( const string& filename ) :
 
 
 gzLoadingState::gzLoadingState( const string& filename ) :
-  gzBaseStateInfo( _("Loading state from: "), filename )
+  gzBaseStateInfo( "Loading state from: ", filename )
 {
 	m_file = gzopen(filename.c_str(), "rb");
 	if( m_file == NULL )
@@ -291,7 +291,7 @@ memBaseStateInfo::memBaseStateInfo( SafeArray<u8>& memblock, const char* msg ) :
 	mtgsWaitGS();
 }
 
-memSavingState::memSavingState( SafeArray<u8>& save_to ) : memBaseStateInfo( save_to, _("Saving state to: ") )
+memSavingState::memSavingState( SafeArray<u8>& save_to ) : memBaseStateInfo( save_to, "Saving state to: " )
 {
 	save_to.ChunkSize = ReallocThreshold;
 	save_to.MakeRoomFor( MemoryBaseAllocSize );
@@ -311,7 +311,7 @@ void memSavingState::FreezeMem( void* data, int size )
 }
 
 memLoadingState::memLoadingState(SafeArray<u8>& load_from ) : 
-	memBaseStateInfo( load_from, _("Loading state from: ") )
+	memBaseStateInfo( load_from, "Loading state from: " )
 {
 }
 

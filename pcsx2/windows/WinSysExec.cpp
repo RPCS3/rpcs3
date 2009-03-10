@@ -277,7 +277,7 @@ bool HostGuiInit()
 }
 
 
-static const char *err = N_("Error Loading Symbol");
+static const char *err = "Error Loading Symbol";
 static int errval;
 
 namespace HostSys

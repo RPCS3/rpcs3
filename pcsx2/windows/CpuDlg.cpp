@@ -42,35 +42,35 @@ BOOL CALLBACK CpuDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 	switch(uMsg) {
 		case WM_INITDIALOG:
-            SetWindowText(hW, _("Cpu Config"));
+            SetWindowText(hW, "Cpu Config");
 			SetDlgItemText(hW, IDC_VENDORINPUT,cpuinfo.x86ID );
             SetDlgItemText(hW, IDC_FAMILYINPUT, cpuinfo.x86Fam);
 			sprintf(cpuspeedc,"%d MHZ",cpuinfo.cpuspeed);
 			SetDlgItemText(hW, IDC_CPUSPEEDINPUT, cpuspeedc);
-			Static_SetText(GetDlgItem(hW, IDC_VENDORNAME), _("CPU Vendor"));
-			Static_SetText(GetDlgItem(hW, IDC_FAMILYNAME), _("Family"));
-			Static_SetText(GetDlgItem(hW, IDC_CPUSPEEDNAME), _("CPU Speed"));
-			Static_SetText(GetDlgItem(hW, IDC_FEATURESNAME), _("Features"));
-			Static_SetText(GetDlgItem(hW, IDC_CPU_EEREC), _("EERec -  EE/IOP recompiler (need MMX/SSE)"));
-			Static_SetText(GetDlgItem(hW, IDC_CPU_VUGROUP), _("VU Recompilers - All options are set by default"));
-			Static_SetText(GetDlgItem(hW, IDC_CPU_VU0REC), _("VU0rec - enable recompiler for VU0 unit"));
-			Static_SetText(GetDlgItem(hW, IDC_CPU_VU1REC), _("VU1rec - enable recompiler for VU1 unit"));
-			Static_SetText(GetDlgItem(hW, IDC_CPU_GSMULTI), _("Multi threaded GS mode (MTGS)\n(faster on dual core/HT procs, requires pcsx2 restart)"));
-			Static_SetText(GetDlgItem(hW, IDC_FRAMELIMIT), _("Frame Limiting (F4 key switches the mode in-game!)"));
-			Static_SetText(GetDlgItem(hW, IDC_CPU_FL_NORMAL), _("Normal - All frames are rendered as fast as possible."));
-			Static_SetText(GetDlgItem(hW, IDC_CPU_FL_LIMIT), _("Limit - Force frames to normal speeds if too fast."));
-			Static_SetText(GetDlgItem(hW, IDC_CPU_FL_SKIP), _("Frame Skip - In order to achieve normal speeds,\nsome frames are skipped (fast).\nFps displayed counts skipped frames too."));
-			Static_SetText(GetDlgItem(hW, IDC_CPU_FL_SKIPVU), _("VU Skip - Same as 'Frame Skip', but tries to skip more.\nArtifacts might be present, but will be faster."));
-			Static_SetText(GetDlgItem(hW, IDC_CUSTOM_FPS), _("Custom FPS Limit (0=auto):"));
-			Static_SetText(GetDlgItem(hW, IDC_FRAMESKIP_LABEL1), _("Skip Frames when slower than:\n(See Note 1)"));
-			Static_SetText(GetDlgItem(hW, IDC_FRAMESKIP_LABEL2), _("Consecutive Frames before skipping:\n(See Note 2)"));
-			Static_SetText(GetDlgItem(hW, IDC_FRAMESKIP_LABEL3), _("*Note 1: Will only skip when slower than this fps number.\n (0 = Auto) ; (9999 = Forced-Frameskip regardless of speed.)\n (e.g. If set to 45, will only skip when slower than 45fps.)"));
-			Static_SetText(GetDlgItem(hW, IDC_FRAMESKIP_LABEL4), _("*Note 2: Will render this number of consecutive frames before\n  skipping the next frame. (0=default)\n (e.g. If set to 2, will render 2 frames before skipping 1.)"));
-			Static_SetText(GetDlgItem(hW, IDC_FRAMESKIP_LABEL5), _("Consecutive Frames to skip:\n(See Note 3)"));
-			Static_SetText(GetDlgItem(hW, IDC_FRAMESKIP_LABEL6), _("*Note 3: Will skip this number of frames before\n  rendering the next sequence of frames. (0=default)\n (e.g. If set to 2, will skip 2 consecutive frames whenever its time\n  to skip.)"));
+			Static_SetText(GetDlgItem(hW, IDC_VENDORNAME), "CPU Vendor");
+			Static_SetText(GetDlgItem(hW, IDC_FAMILYNAME), "Family");
+			Static_SetText(GetDlgItem(hW, IDC_CPUSPEEDNAME), "CPU Speed");
+			Static_SetText(GetDlgItem(hW, IDC_FEATURESNAME), "Features");
+			Static_SetText(GetDlgItem(hW, IDC_CPU_EEREC), "EERec -  EE/IOP recompiler (need MMX/SSE)");
+			Static_SetText(GetDlgItem(hW, IDC_CPU_VUGROUP), "VU Recompilers - All options are set by default");
+			Static_SetText(GetDlgItem(hW, IDC_CPU_VU0REC), "VU0rec - enable recompiler for VU0 unit");
+			Static_SetText(GetDlgItem(hW, IDC_CPU_VU1REC), "VU1rec - enable recompiler for VU1 unit");
+			Static_SetText(GetDlgItem(hW, IDC_CPU_GSMULTI), "Multi threaded GS mode (MTGS)\n(faster on dual core/HT procs, requires pcsx2 restart)");
+			Static_SetText(GetDlgItem(hW, IDC_FRAMELIMIT), "Frame Limiting (F4 key switches the mode in-game!)");
+			Static_SetText(GetDlgItem(hW, IDC_CPU_FL_NORMAL), "Normal - All frames are rendered as fast as possible.");
+			Static_SetText(GetDlgItem(hW, IDC_CPU_FL_LIMIT), "Limit - Force frames to normal speeds if too fast.");
+			Static_SetText(GetDlgItem(hW, IDC_CPU_FL_SKIP), "Frame Skip - In order to achieve normal speeds,\nsome frames are skipped (fast).\nFps displayed counts skipped frames too.");
+			Static_SetText(GetDlgItem(hW, IDC_CPU_FL_SKIPVU), "VU Skip - Same as 'Frame Skip', but tries to skip more.\nArtifacts might be present, but will be faster.");
+			Static_SetText(GetDlgItem(hW, IDC_CUSTOM_FPS), "Custom FPS Limit (0=auto):");
+			Static_SetText(GetDlgItem(hW, IDC_FRAMESKIP_LABEL1), "Skip Frames when slower than:\n(See Note 1)");
+			Static_SetText(GetDlgItem(hW, IDC_FRAMESKIP_LABEL2), "Consecutive Frames before skipping:\n(See Note 2)");
+			Static_SetText(GetDlgItem(hW, IDC_FRAMESKIP_LABEL3), "*Note 1: Will only skip when slower than this fps number.\n (0 = Auto) ; (9999 = Forced-Frameskip regardless of speed.)\n (e.g. If set to 45, will only skip when slower than 45fps.)");
+			Static_SetText(GetDlgItem(hW, IDC_FRAMESKIP_LABEL4), "*Note 2: Will render this number of consecutive frames before\n  skipping the next frame. (0=default)\n (e.g. If set to 2, will render 2 frames before skipping 1.)");
+			Static_SetText(GetDlgItem(hW, IDC_FRAMESKIP_LABEL5), "Consecutive Frames to skip:\n(See Note 3)");
+			Static_SetText(GetDlgItem(hW, IDC_FRAMESKIP_LABEL6), "*Note 3: Will skip this number of frames before\n  rendering the next sequence of frames. (0=default)\n (e.g. If set to 2, will skip 2 consecutive frames whenever its time\n  to skip.)");
 
-			Button_SetText(GetDlgItem(hW, IDOK), _("OK"));
-			Button_SetText(GetDlgItem(hW, IDCANCEL), _("Cancel"));
+			Button_SetText(GetDlgItem(hW, IDOK), "OK");
+			Button_SetText(GetDlgItem(hW, IDCANCEL), "Cancel");
 
 			//features[0]=':';
 			//strcat(features,"");

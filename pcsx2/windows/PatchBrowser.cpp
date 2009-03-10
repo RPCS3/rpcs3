@@ -40,12 +40,12 @@ BOOL CALLBACK PatchBDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 	switch(uMsg) {
 
 		case WM_INITDIALOG:
-            SetWindowText(hW, _("Patches Browser"));
-            Button_SetText(GetDlgItem(hW,IDC_REFRESHPATCHLIST), _("Refresh List"));
-            Button_SetText(GetDlgItem(hW,IDC_NEWPATCH), _("New Patch"));
-			Button_SetText(GetDlgItem(hW,IDC_SAVEPATCH), _("Save Patch"));
-			Button_SetText(GetDlgItem(hW,IDC_EXITPB), _("Exit"));
-            Static_SetText(GetDlgItem(hW,IDC_GAMENAMESEARCH), _("Search game name patch:")); 
+            SetWindowText(hW, "Patches Browser");
+            Button_SetText(GetDlgItem(hW,IDC_REFRESHPATCHLIST), "Refresh List");
+            Button_SetText(GetDlgItem(hW,IDC_NEWPATCH), "New Patch");
+			Button_SetText(GetDlgItem(hW,IDC_SAVEPATCH), "Save Patch");
+			Button_SetText(GetDlgItem(hW,IDC_EXITPB), "Exit");
+            Static_SetText(GetDlgItem(hW,IDC_GAMENAMESEARCH), "Search game name patch:"); 
 			//List Patches
 			ListPatches ((HWND) hW);
 			return TRUE;

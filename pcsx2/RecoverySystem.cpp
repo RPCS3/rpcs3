@@ -123,7 +123,7 @@ namespace StateRecovery {
 			gzFile fileptr = gzopen( file.c_str(), "wb" );
 			if( fileptr == NULL )
 			{
-				Msgbox::Alert( _("File permissions error while trying to save to file:\n\t%ts"), params &file );
+				Msgbox::Alert( "File permissions error while trying to save to file:\n\t%ts", params &file );
 				return;
 			}
 			gzwrite( fileptr, &g_SaveVersion, sizeof( u32 ) );
