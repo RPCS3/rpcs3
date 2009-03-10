@@ -45,9 +45,6 @@
 
 	#endif
 
-	const __m128 ps_3f800000 = _mm_castsi128_ps(_mm_set1_epi32(0x3f800000));
-	const __m128 ps_4b000000 = _mm_castsi128_ps(_mm_set1_epi32(0x4b000000));
-
 	#define _MM_TRANSPOSE4_SI128(row0, row1, row2, row3) \
 	{ \
 		__m128 tmp0 = _mm_shuffle_ps(_mm_castsi128_ps(row0), _mm_castsi128_ps(row1), 0x44); \

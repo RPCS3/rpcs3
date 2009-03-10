@@ -2093,6 +2093,9 @@ public:
 	static const GSVector4 m_ps0123;
 	static const GSVector4 m_ps4567;
 
+	static const GSVector4 m_x3f800000;
+	static const GSVector4 m_x4b000000;
+
 	GSVector4()
 	{
 	}
@@ -2225,18 +2228,18 @@ public:
 
 		GSVector4 a = *this;
 
-		GSVector4 b = (a & GSVector4(ps_80000000)) | GSVector4(ps_4b000000);
+		GSVector4 b = (a & cast(GSVector4i::x80000000())) | m_x4b000000;
 
 		b = a + b - b;
 
 		if((mode & 7) == (NegInf & 7))
 		{
-			return b - ((a < b) & GSVector4(ps_3f800000));
+			return b - ((a < b) & m_x3f800000);
 		}
 
 		if((mode & 7) == (PosInf & 7))
 		{
-			return b + ((a > b) & GSVector4(ps_3f800000));
+			return b + ((a > b) & m_x3f800000);
 		}
 
 		ASSERT((mode & 7) == (NearestInt & 7)); // other modes aren't implemented
