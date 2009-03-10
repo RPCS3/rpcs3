@@ -25,17 +25,19 @@
 #include "iFPU.h"
 
 /* Version of the FPU that emulates an exponent of 0xff and overflow/underflow flags */
+
+/* Can be made faster by not converting stuff back and forth between instructions. */
  
 //set overflow flag (set only if FPU_RESULT is 1)
 #define FPU_FLAGS_OVERFLOW 1 
 //set underflow flag (set only if FPU_RESULT is 1)
 #define FPU_FLAGS_UNDERFLOW 1 
  
-//if 1, result is not clamped (MORE correct,	
+//if 1, result is not clamped (Gives correct results as in PS2,	
 //but can cause problems due to insuffecient clamping levels in the VUs)
 #define FPU_RESULT 1 
  
-//also impacts other aspects of DIV/R/SQRT correctness
+//set I&D flags. also impacts other aspects of DIV/R/SQRT correctness
 #define FPU_FLAGS_ID 1 
  
 //------------------------------------------------------------------
@@ -126,270 +128,8 @@ static u32 PCSX2_ALIGNED16(s_pos[4]) = { 0x7fffffff, 0xffffffff, 0xffffffff, 0xf
  
 //------------------------------------------------------------------
 // *FPU Opcodes!*
-//------------------------------------------------------------------
- 
- 
-//------------------------------------------------------------------
-// CFC1 / CTC1
-//------------------------------------------------------------------
-void recCFC1(void)
-{
-	if ( !_Rt_ || ( (_Fs_ != 0) && (_Fs_ != 31) ) ) return;
- 
-	_eeOnWriteReg(_Rt_, 1);
- 
-	MOV32MtoR( EAX, (uptr)&fpuRegs.fprc[ _Fs_ ] );
-	_deleteEEreg(_Rt_, 0);
-	
-	if (_Fs_ == 31)
-	{
-		AND32ItoR(EAX, 0x0083c078); //remove always-zero bits
-		OR32ItoR(EAX,  0x01000001); //set always-one bits
-	}
- 
-	if(EEINST_ISLIVE1(_Rt_)) 
-	{
-		CDQ( );
-		MOV32RtoM( (uptr)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ], EAX );
-		MOV32RtoM( (uptr)&cpuRegs.GPR.r[ _Rt_ ].UL[ 1 ], EDX );
-	}
-	else 
-	{
-		EEINST_RESETHASLIVE1(_Rt_);
-		MOV32RtoM( (uptr)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ], EAX );
-	}
-	
-}
- 
-void recCTC1( void )
-{
-	if ( _Fs_ != 31 ) return;
- 
-	if ( GPR_IS_CONST1(_Rt_) ) 
-	{
-		MOV32ItoM((uptr)&fpuRegs.fprc[ _Fs_ ], g_cpuConstRegs[_Rt_].UL[0]);
-	}
-	else 
-	{
-		int mmreg = _checkXMMreg(XMMTYPE_GPRREG, _Rt_, MODE_READ);
- 
-		if( mmreg >= 0 ) 
-		{
-			SSEX_MOVD_XMM_to_M32((uptr)&fpuRegs.fprc[ _Fs_ ], mmreg);
-		}
- 
-		else 
-		{
-			mmreg = _checkMMXreg(MMX_GPR+_Rt_, MODE_READ);
- 
-			if ( mmreg >= 0 ) 
-			{
-				MOVDMMXtoM((uptr)&fpuRegs.fprc[ _Fs_ ], mmreg);
-				SetMMXstate();
-			}
-			else 
-			{
-				_deleteGPRtoXMMreg(_Rt_, 1);
-				_deleteMMXreg(MMX_GPR+_Rt_, 1);
- 
-				MOV32MtoR( EAX, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] );
-				MOV32RtoM( (uptr)&fpuRegs.fprc[ _Fs_ ], EAX );
-			}
-		}
-	}
-}
-//------------------------------------------------------------------
- 
- 
-//------------------------------------------------------------------
-// MFC1
-//------------------------------------------------------------------
- 
-void recMFC1(void) 
-{
-	int regt, regs;
-	if ( ! _Rt_ ) return;
- 
-	_eeOnWriteReg(_Rt_, 1);
- 
-	regs = _checkXMMreg(XMMTYPE_FPREG, _Fs_, MODE_READ);
- 
-	if( regs >= 0 ) 
-	{
-		_deleteGPRtoXMMreg(_Rt_, 2);
-		regt = _allocCheckGPRtoMMX(g_pCurInstInfo, _Rt_, MODE_WRITE);
- 
-		if( regt >= 0 ) 
-		{
-			SSE2_MOVDQ2Q_XMM_to_MM(regt, regs);
- 
-			if(EEINST_ISLIVE1(_Rt_)) 
-				_signExtendGPRtoMMX(regt, _Rt_, 0);
-			else 
-				EEINST_RESETHASLIVE1(_Rt_);
-		}
-		else 
-		{
-			if(EEINST_ISLIVE1(_Rt_)) 
-			{
-				_signExtendXMMtoM((uptr)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ], regs, 0);
-			}
-			else 
-			{
-				EEINST_RESETHASLIVE1(_Rt_);
-				SSE_MOVSS_XMM_to_M32((uptr)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ], regs);
-			}
-		}
-	}
-	else 
-	{
-		regs = _checkMMXreg(MMX_FPU+_Fs_, MODE_READ);
- 
-		if( regs >= 0 ) 
-		{
-			// convert to mmx reg
-			mmxregs[regs].reg = MMX_GPR+_Rt_;
-			mmxregs[regs].mode |= MODE_READ|MODE_WRITE;
-			_signExtendGPRtoMMX(regs, _Rt_, 0);
-		}
-		else 
-		{
-			regt = _checkXMMreg(XMMTYPE_GPRREG, _Rt_, MODE_READ);
- 
-			if( regt >= 0 ) 
-			{
-				if( xmmregs[regt].mode & MODE_WRITE ) 
-				{
-					SSE_MOVHPS_XMM_to_M64((uptr)&cpuRegs.GPR.r[_Rt_].UL[2], regt);
-				}
-				xmmregs[regt].inuse = 0;
-			}
- 
-			_deleteEEreg(_Rt_, 0);
-			MOV32MtoR( EAX, (uptr)&fpuRegs.fpr[ _Fs_ ].UL );
- 
-			if(EEINST_ISLIVE1(_Rt_)) 
-			{
-				CDQ( );
-				MOV32RtoM( (uptr)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ], EAX );
-				MOV32RtoM( (uptr)&cpuRegs.GPR.r[ _Rt_ ].UL[ 1 ], EDX );
-			}
-			else 
-			{
-				EEINST_RESETHASLIVE1(_Rt_);
-				MOV32RtoM( (uptr)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ], EAX );
-			}
-		}
-	}
-}
- 
-//------------------------------------------------------------------
- 
- 
-//------------------------------------------------------------------
-// MTC1
-//------------------------------------------------------------------
-void recMTC1(void)
-{
-	if( GPR_IS_CONST1(_Rt_) ) 
-	{
-		_deleteFPtoXMMreg(_Fs_, 0);
-		MOV32ItoM((uptr)&fpuRegs.fpr[ _Fs_ ].UL, g_cpuConstRegs[_Rt_].UL[0]);
-	}
-	else 
-	{
-		int mmreg = _checkXMMreg(XMMTYPE_GPRREG, _Rt_, MODE_READ);
- 
-		if( mmreg >= 0 ) 
-		{
-			if( g_pCurInstInfo->regs[_Rt_] & EEINST_LASTUSE ) 
-			{
-				// transfer the reg directly
-				_deleteGPRtoXMMreg(_Rt_, 2);
-				_deleteFPtoXMMreg(_Fs_, 2);
-				_allocFPtoXMMreg(mmreg, _Fs_, MODE_WRITE);
-			}
-			else 
-			{
-				int mmreg2 = _allocCheckFPUtoXMM(g_pCurInstInfo, _Fs_, MODE_WRITE);
- 
-				if( mmreg2 >= 0 ) 
-					SSE_MOVSS_XMM_to_XMM(mmreg2, mmreg);
-				else 
-					SSE_MOVSS_XMM_to_M32((uptr)&fpuRegs.fpr[ _Fs_ ].UL, mmreg);
-			}
-		}
-		else 
-		{
-			int mmreg2;
- 
-			mmreg = _checkMMXreg(MMX_GPR+_Rt_, MODE_READ);
-			mmreg2 = _allocCheckFPUtoXMM(g_pCurInstInfo, _Fs_, MODE_WRITE);
- 
-			if( mmreg >= 0 ) 
-			{
-				if( mmreg2 >= 0 ) 
-				{
-					SetMMXstate();
-					SSE2_MOVQ2DQ_MM_to_XMM(mmreg2, mmreg);
-				}
-				else 
-				{
-					SetMMXstate();
-					MOVDMMXtoM((uptr)&fpuRegs.fpr[ _Fs_ ].UL, mmreg);
-				}	
-			}
-			else 
-			{
-				if( mmreg2 >= 0 ) 
-				{
-					SSE_MOVSS_M32_to_XMM(mmreg2, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ]);
-				}
-				else 
-				{
-					MOV32MtoR(EAX, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ]);
-					MOV32RtoM((uptr)&fpuRegs.fpr[ _Fs_ ].UL, EAX);
-				}
-			}
-		}
-	}
-}
-//------------------------------------------------------------------
- 
- 
-/*#ifndef FPU_RECOMPILE // If FPU_RECOMPILE is not defined, then use the interpreter opcodes. (CFC1, CTC1, MFC1, and MTC1 are special because they work specifically with the EE rec so they're defined above)
- 
-REC_FPUFUNC(ABS_S);
-REC_FPUFUNC(ADD_S);
-REC_FPUFUNC(ADDA_S);
-REC_FPUBRANCH(BC1F);
-REC_FPUBRANCH(BC1T);
-REC_FPUBRANCH(BC1FL);
-REC_FPUBRANCH(BC1TL);
-REC_FPUFUNC(C_EQ);
-REC_FPUFUNC(C_F);
-REC_FPUFUNC(C_LE);
-REC_FPUFUNC(C_LT);
-REC_FPUFUNC(CVT_S);
-REC_FPUFUNC(CVT_W);
-REC_FPUFUNC(DIV_S);
-REC_FPUFUNC(MAX_S);
-REC_FPUFUNC(MIN_S);
-REC_FPUFUNC(MADD_S);
-REC_FPUFUNC(MADDA_S);
-REC_FPUFUNC(MOV_S);
-REC_FPUFUNC(MSUB_S);
-REC_FPUFUNC(MSUBA_S);
-REC_FPUFUNC(MUL_S);
-REC_FPUFUNC(MULA_S);
-REC_FPUFUNC(NEG_S);
-REC_FPUFUNC(SUB_S);
-REC_FPUFUNC(SUBA_S);
-REC_FPUFUNC(SQRT_S);
-REC_FPUFUNC(RSQRT_S);
- 
-#else // FPU_RECOMPILE*/
- 
+//------------------------------------------------------------------ 
+  
 //------------------------------------------------------------------
 // PS2 -> DOUBLE
 //------------------------------------------------------------------
@@ -678,7 +418,7 @@ void FPU_MUL(int info, int regd, int sreg, int treg, bool acc)
 // CommutativeOp XMM (used for ADD, MUL, MAX, MIN and SUB opcodes)
 //------------------------------------------------------------------
 static void (*recFPUOpXMM_to_XMM[] )(x86SSERegType, x86SSERegType) = {
-	SSE2_ADDSD_XMM_to_XMM, NULL, SSE2_MAXSD_XMM_to_XMM, SSE2_MINSD_XMM_to_XMM, SSE2_SUBSD_XMM_to_XMM };
+	SSE2_ADDSD_XMM_to_XMM, NULL, NULL, NULL, SSE2_SUBSD_XMM_to_XMM };
  
 void recFPUOp(int info, int regd, int op, bool acc) 
 {
@@ -718,48 +458,6 @@ void recADDA_S_xmm(int info)
 FPURECOMPILE_CONSTCODE(ADDA_S, XMMINFO_WRITEACC|XMMINFO_READS|XMMINFO_READT);
 //------------------------------------------------------------------
  
-//------------------------------------------------------------------
-// BC1x XMM
-//------------------------------------------------------------------
- /*
-static void _setupBranchTest()
-{
-	_eeFlushAllUnused();
- 
-	// COP1 branch conditionals are based on the following equation:
-	// (fpuRegs.fprc[31] & 0x00800000)
-	// BC2F checks if the statement is false, BC2T checks if the statement is true.
- 
-	MOV32MtoR(EAX, (uptr)&fpuRegs.fprc[31]);
-	TEST32ItoR(EAX, FPUflagC);
-}
- 
-void recBC1F( void )
-{
-	_setupBranchTest();
-	recDoBranchImm(JNZ32(0));
-}
- 
-void recBC1T( void )
-{
-	_setupBranchTest();
-	recDoBranchImm(JZ32(0));
-}
- 
-void recBC1FL( void )
-{
-	_setupBranchTest();
-	recDoBranchImm_Likely(JNZ32(0));
-}
- 
-void recBC1TL( void )
-{
-	_setupBranchTest();
-	recDoBranchImm_Likely(JZ32(0));
-}*/
-//------------------------------------------------------------------
- 
-//TOKNOW : how does C.??.S behave with denormals?
 void recCMP(int info)
 {
 	int sreg, treg;
@@ -787,12 +485,7 @@ void recC_EQ_xmm(int info)
 }
  
 FPURECOMPILE_CONSTCODE(C_EQ, XMMINFO_READS|XMMINFO_READT);
- 
-/*void recC_F()
-{
-	AND32ItoM( (uptr)&fpuRegs.fprc[31], ~FPUflagC );
-}*/
- 
+  
 void recC_LE_xmm(int info )
 {
 	recCMP(info);
@@ -806,7 +499,6 @@ void recC_LE_xmm(int info )
 }
  
 FPURECOMPILE_CONSTCODE(C_LE, XMMINFO_READS|XMMINFO_READT);
-//REC_FPUFUNC(C_LE);
  
 void recC_LT_xmm(int info)
 {
@@ -821,7 +513,6 @@ void recC_LT_xmm(int info)
 }
  
 FPURECOMPILE_CONSTCODE(C_LT, XMMINFO_READS|XMMINFO_READT);
-//REC_FPUFUNC(C_LT);
 //------------------------------------------------------------------
  
  
@@ -840,7 +531,7 @@ void recCVT_S_xmm(int info)
  
 FPURECOMPILE_CONSTCODE(CVT_S, XMMINFO_WRITED|XMMINFO_READS);
  
-void recCVT_W() 
+void recCVT_W() //called from iFPU.cpp's recCVT_W
 {
 	int regs = _checkXMMreg(XMMTYPE_FPREG, _Fs_, MODE_READ);
  
@@ -1052,17 +743,42 @@ FPURECOMPILE_CONSTCODE(MADDA_S, XMMINFO_WRITEACC|XMMINFO_READACC|XMMINFO_READS|X
 // MAX / MIN XMM
 //------------------------------------------------------------------
  
-//TOKNOW : handles denormals like VU, maybe?
+static const u32 PCSX2_ALIGNED16(minmax_mask[4]) = {0xffffffff, 0x80000000, 0, 0};
+static const u32 PCSX2_ALIGNED16(minmax_mask2[4]) = {0, 0x40000000, 0, 0};
+// FPU's MAX/MIN work with all numbers (including "denormals"). Check VU's logical min max for more info.
+void recMINMAX(int info, bool ismin)
+{
+	int sreg, treg;
+	ALLOC_S(sreg); ALLOC_T(treg);
+
+	CLEAR_OU_FLAGS;
+ 
+	SSE2_PSHUFD_XMM_to_XMM(sreg, sreg, 0x00);
+	SSE2_PAND_M128_to_XMM(sreg, (uptr)minmax_mask);
+	SSE2_POR_M128_to_XMM(sreg, (uptr)minmax_mask2);
+	SSE2_PSHUFD_XMM_to_XMM(treg, treg, 0x00);
+	SSE2_PAND_M128_to_XMM(treg, (uptr)minmax_mask);
+	SSE2_POR_M128_to_XMM(treg, (uptr)minmax_mask2);
+	if (ismin)
+		SSE2_MINSD_XMM_to_XMM(sreg, treg);
+	else
+		SSE2_MAXSD_XMM_to_XMM(sreg, treg);
+
+	SSE_MOVSS_XMM_to_XMM(EEREC_D, sreg);
+ 
+	_freeXMMreg(sreg); _freeXMMreg(treg);
+}
+
 void recMAX_S_xmm(int info)
 {
-    recFPUOp(info, EEREC_D, 2, false);
+	recMINMAX(info, false);
 }
  
 FPURECOMPILE_CONSTCODE(MAX_S, XMMINFO_WRITED|XMMINFO_READS|XMMINFO_READT);
  
 void recMIN_S_xmm(int info)
 {
-    recFPUOp(info, EEREC_D, 3, false);
+	recMINMAX(info, true);
 }
  
 FPURECOMPILE_CONSTCODE(MIN_S, XMMINFO_WRITED|XMMINFO_READS|XMMINFO_READT);
@@ -1322,6 +1038,5 @@ void recRSQRT_S_xmm(int info)
  
 FPURECOMPILE_CONSTCODE(RSQRT_S, XMMINFO_WRITED|XMMINFO_READS|XMMINFO_READT);
  
-//#endif // FPU_RECOMPILE
  
 } } } } }
