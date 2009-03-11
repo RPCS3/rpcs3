@@ -1198,9 +1198,10 @@ u32 eeScaleBlockCycles()
 		jNO_DEFAULT
 	}
 
-	const u32 temp = s_nBlockCycles * 
+	const u32 temp = s_nBlockCycles * (
 		(s_nBlockCycles <= (10<<3)) ? scalarLow :
-		((s_nBlockCycles > (21<<3)) ? scalarHigh : scalarMid );
+		((s_nBlockCycles > (21<<3)) ? scalarHigh : scalarMid )
+	);
 
 	return temp >> (3+2);
 }

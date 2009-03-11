@@ -25,8 +25,7 @@ extern void WriteTLB(int i);
 extern void UnmapTLB(int i);
 extern void MapTLB(int i);
 
-extern void COP0_UpdatePCR0();
-extern void COP0_UpdatePCR1();
+extern void COP0_UpdatePCR();
 
 
 #endif /* __COP0_H__ */

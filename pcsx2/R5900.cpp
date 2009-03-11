@@ -392,8 +392,7 @@ static __forceinline void _cpuTestPERF()
 	// around twice on us btween updates.  Hence this function is called from the cpu's
 	// Counters update.
 
-	COP0_UpdatePCR0();
-	COP0_UpdatePCR1();
+	COP0_UpdatePCR();
 }
 
 // Checks the COP0.Status for exception enablings.

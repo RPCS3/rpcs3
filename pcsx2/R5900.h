@@ -52,8 +52,35 @@ union GPRregs {
 };
 
 union PERFregs {
-	struct {
-		u32 pccr, pcr0, pcr1, pad;
+	struct
+	{
+		union
+		{
+			struct  
+			{
+				u32 pad0:1;			// LSB should always be zero (or undefined)
+				u32 EXL0:1;			// enable PCR0 during Level 1 exception handling
+				u32 K0:1;			// enable PCR0 during Kernel Mode execution
+				u32 S0:1;			// enable PCR0 during Supervisor mode execution
+				u32 U0:1;			// enable PCR0 during User-mode execution
+				u32 Event0:5;		// PCR0 event counter (all values except 1 ignored at this time)
+
+				u32 pad1:1;			// more zero/undefined padding [bit 10]
+
+				u32 EXL1:1;			// enable PCR1 during Level 1 exception handling
+				u32 K1:1;			// enable PCR1 during Kernel Mode execution
+				u32 S1:1;			// enable PCR1 during Supervisor mode execution
+				u32 U1:1;			// enable PCR1 during User-mode execution
+				u32 Event1:5;		// PCR1 event counter (all values except 1 ignored at this time)
+				
+				u32 Reserved:11;
+				u32 CTE:1;			// Counter enable bit, no counting if set to zero.
+			} b;
+			
+			u32 val;
+		} pccr;
+
+		u32 pcr0, pcr1, pad;
 	} n;
 	u32 r[4];
 };

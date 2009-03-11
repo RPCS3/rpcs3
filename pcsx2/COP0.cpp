@@ -145,58 +145,103 @@ void WriteTLB(int i)
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
+// Performance Counters Update Stuff!
+// 
 // Note regarding updates of PERF and TIMR registers: never allow increment to be 0.
 // That happens when a game loads the MFC0 twice in the same recompiled block (before the
 // cpuRegs.cycles update), and can cause games to lock up since it's an unexpected result.
-
+//
 // PERF Overflow exceptions:  The exception is raised when the MSB of the Performance
-// Counter Register is set (basic arithmetic overflow, which means it does *not* include
-// when the bit is later cleared).
+// Counter Register is set.  I'm assuming the exception continues to re-raise until the
+// app clears the bit manually (needs testing).
+//
+// PERF Events:
+//  * Event 0 on PCR 0 is unused (counter disable)
+//  * Event 15 is usable as a specific counter disable bit (since CTE affects both counters)
+//  * Events 16-31 are reserved (act as counter disable)
+//
+// Most event mode aren't supported, and issue a warning and do a standard instruction
+// count.  But only mode 1 (instruction counter) has been found to be used by games thus far.
+//
 
-__forceinline void COP0_UpdatePCR0()
+__forceinline void COP0_UpdatePCR()
 {
-	if((cpuRegs.PERF.n.pccr & 0x800003E0) == 0x80000020)
+	if( cpuRegs.CP0.n.Status.b.ERL || !cpuRegs.PERF.n.pccr.b.CTE ) return;
+
+	// TODO : Implement memory mode checks here (kernel/super/user)
+	// For now we just assume user mode.
+	
+	if( cpuRegs.PERF.n.pccr.b.U0 && (cpuRegs.PERF.n.pccr.b.Event0 != 0 && cpuRegs.PERF.n.pccr.b.Event0 < 15) )
 	{
-		u32 incr = cpuRegs.cycle-s_iLastPERFCycle[0];
+		// ----------------------------------
+		//    Update Performance Counter 0
+		// ----------------------------------
+
+		if( cpuRegs.PERF.n.pccr.b.Event0 != 1 )
+			Console::Notice( "COP0 - PCR0 Unsupported Update Event Mode = 0x%x", params cpuRegs.PERF.n.pccr.b.Event0 );
+
+		u32 incr = cpuRegs.cycle - s_iLastPERFCycle[0];
 		if( incr == 0 ) incr++;
 
-		u32 prev = cpuRegs.PERF.n.pcr0;
+		// use prev/XOR method for one-time exceptions (but likely less correct)
+		//u32 prev = cpuRegs.PERF.n.pcr0;
 		cpuRegs.PERF.n.pcr0 += incr;
 		s_iLastPERFCycle[0] = cpuRegs.cycle;
 		
-		if( cpuRegs.PERF.n.pccr & (1UL<<31) )	// MSB is the overflow enable bit.
+		//prev ^= (1UL<<31);		// XOR is fun!
+		//if( (prev & cpuRegs.PERF.n.pcr0) & (1UL<<31) )
+		if( cpuRegs.PERF.n.pcr0 & 0x80000000 )
 		{
-			prev ^= (1UL<<31);		// XOR is fun!
-			if( (prev & cpuRegs.PERF.n.pcr0) & (1UL<<31) )
+			// TODO: Vector to the appropriate exception here.
+			// This code *should* be correct, but is untested (and other parts of the emu are
+			// not prepared to handle proper Level 2 exception vectors yet)
+			
+			/*if( delay_slot )
 			{
-				// TODO: Vector to the appropriate exception here.
+				cpuRegs.CP0.ErrorEPC = cpuRegs.pc - 4;
+				cpuRegs.CP0.Cause.BD2 = 1;
 			}
+			else
+			{
+				cpuRegs.CP0.ErrorEPC = cpuRegs.pc;
+				cpuRegs.CP0.Cause.BD2 = 0;
+			}
+			
+			if( cpuRegs.CP0.Status.DEV )
+			{
+				// Bootstrap vector
+				cpuRegs.pc = 0xbfc00280;
+			}
+			else
+			{
+				cpuRegs.pc = 0x80000080;
+			}
+			cpuRegs.CP0.Status.ERL = 1;
+			cpuRegs.CP0.Cause.EXC2 = 2;*/
 		}
 	}
-}
-
-__forceinline void COP0_UpdatePCR1()
-{
-	if((cpuRegs.PERF.n.pccr & 0x800F8000) == 0x80008000)
+	
+	if( cpuRegs.PERF.n.pccr.b.U1 && cpuRegs.PERF.n.pccr.b.Event1 < 15)
 	{
-		u32 incr = cpuRegs.cycle-s_iLastPERFCycle[1];
+		// ----------------------------------
+		//    Update Performance Counter 1
+		// ----------------------------------
+		
+		if( cpuRegs.PERF.n.pccr.b.Event1 != 1 )
+			Console::Notice( "COP0 - PCR1 Unsupported Update Event Mode = 0x%x", params cpuRegs.PERF.n.pccr.b.Event1 );
+
+		u32 incr = cpuRegs.cycle - s_iLastPERFCycle[1];
 		if( incr == 0 ) incr++;
 
-		u32 prev = cpuRegs.PERF.n.pcr1;
 		cpuRegs.PERF.n.pcr1 += incr;
 		s_iLastPERFCycle[1] = cpuRegs.cycle;
 
-		if( cpuRegs.PERF.n.pccr & (1UL<<31) )	// MSB is the overflow enable bit.
+		if( cpuRegs.PERF.n.pcr1 & 0x80000000 )
 		{
-			prev ^= (1UL<<31);		// XOR?  I don't even know OR!  Harhar!
-			if( (prev & cpuRegs.PERF.n.pcr1) & (1UL<<31) )
-			{
-				// TODO: Vector to the appropriate exception here.
-			}
+			// See PCR0 comments for notes on exceptions
 		}
 	}
 }
-
 
 namespace R5900 {
 namespace Interpreter {
@@ -221,16 +266,16 @@ void MFC0()
 		    switch(_Imm_ & 0x3F)
 		    {
 			    case 0:		// MFPS  [LSB is clear]
-					cpuRegs.GPR.r[_Rt_].SD[0] = (s32)cpuRegs.PERF.n.pccr;
+					cpuRegs.GPR.r[_Rt_].SD[0] = (s32)cpuRegs.PERF.n.pccr.val;
 				break;
 
 			    case 1:		// MFPC [LSB is set] - read PCR0
-					COP0_UpdatePCR0();
+					COP0_UpdatePCR();
                     cpuRegs.GPR.r[_Rt_].SD[0] = (s32)cpuRegs.PERF.n.pcr0;
 				break;
 
 			    case 3:		// MFPC [LSB is set] - read PCR1
-					COP0_UpdatePCR1();
+					COP0_UpdatePCR();
 					cpuRegs.GPR.r[_Rt_].SD[0] = (s32)cpuRegs.PERF.n.pcr1;
 				break;
 		    }
@@ -269,9 +314,8 @@ void MTC0()
 			{
 				case 0:		// MTPS  [LSB is clear]
 					// Updates PCRs and sets the PCCR.
-					COP0_UpdatePCR0();
-					COP0_UpdatePCR1();
-					cpuRegs.PERF.n.pccr = cpuRegs.GPR.r[_Rt_].UL[0];
+					COP0_UpdatePCR();
+					cpuRegs.PERF.n.pccr.val = cpuRegs.GPR.r[_Rt_].UL[0];
 				break;
 				
 				case 1:		// MTPC [LSB is set] - set PCR0
