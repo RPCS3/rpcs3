@@ -270,7 +270,19 @@ microVUf(void) mVU_ELENG() {
 		SSE_SHUFPS_XMM_to_XMM(xmmPQ, xmmPQ, writeP ? 0x27 : 0xC6); // Flip back
 	}
 }
-microVUf(void) mVU_ERCPR() {}
+microVUf(void) mVU_ERCPR() {
+	microVU* mVU = mVUx;
+	if (recPass == 0) {}
+	else { 
+		getReg5(xmmFs, _Fs_, _Fsf_);
+		SSE_SHUFPS_XMM_to_XMM(xmmPQ, xmmPQ, writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
+		SSE_MOVSS_XMM_to_XMM(xmmPQ, xmmFs);
+		SSE_MOVSS_M32_to_XMM(xmmFs, (uptr)mVU_one);
+		SSE_DIVSS_XMM_to_XMM(xmmFs, xmmPQ);
+		SSE_MOVSS_XMM_to_XMM(xmmPQ, xmmFs);
+		SSE_SHUFPS_XMM_to_XMM(xmmPQ, xmmPQ, writeP ? 0x27 : 0xC6); // Flip back
+	}
+}
 microVUf(void) mVU_ERLENG() {
 	microVU* mVU = mVUx;
 	if (recPass == 0) {}
