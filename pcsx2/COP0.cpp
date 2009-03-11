@@ -157,12 +157,52 @@ void WriteTLB(int i)
 //
 // PERF Events:
 //  * Event 0 on PCR 0 is unused (counter disable)
-//  * Event 15 is usable as a specific counter disable bit (since CTE affects both counters)
-//  * Events 16-31 are reserved (act as counter disable)
+//  * Event 16 is usable as a specific counter disable bit (since CTE affects both counters)
+//  * Events 17-31 are reserved (act as counter disable)
 //
 // Most event mode aren't supported, and issue a warning and do a standard instruction
 // count.  But only mode 1 (instruction counter) has been found to be used by games thus far.
 //
+
+__forceinline bool PERF_ShouldCountEvent( uint evt )
+{
+	switch( evt )
+	{
+		// This is a rough table of actions for various PCR modes.  Some of these
+		// can be implemented more accurately later.  Others (WBBs in particular)
+		// probably cannot without some severe complications.
+
+		// left sides are PCR0 / right sides are PCR1
+
+		case 1:		// cpu cycle counter.
+		case 2:		// single/dual instruction issued
+		case 3:		// Branch issued / Branch mispredicated
+			return true;
+
+		case 4:		// BTAC/TLB miss
+		case 5:		// ITLB/DTLB miss
+		case 6:		// Data/Instruction cache miss
+			return false;
+
+		case 7:		// Access to DTLB / WBB single request fail
+		case 8:		// Non-blocking load / WBB burst request fail
+		case 9:
+		case 10:
+			Console::Notice( "COP0 - PCR0 Unsupported Update Event Mode = 0x%x\n\t(Nneeve says this should probably never happen!)", params cpuRegs.PERF.n.pccr.b.Event0 );
+			return false;
+
+		case 11:	// CPU address bus busy / CPU data bus busy
+			return false;
+
+		case 12:	// Instruction completed
+		case 13:	// non-delayslot instruction completed
+		case 14:	// COP2/COP1 instruction complete
+		case 15:	// Load/Store completed
+			return true;
+	}
+
+	return false;
+}
 
 __forceinline void COP0_UpdatePCR()
 {
@@ -171,74 +211,74 @@ __forceinline void COP0_UpdatePCR()
 	// TODO : Implement memory mode checks here (kernel/super/user)
 	// For now we just assume user mode.
 	
-	if( cpuRegs.PERF.n.pccr.b.U0 && (cpuRegs.PERF.n.pccr.b.Event0 != 0 && cpuRegs.PERF.n.pccr.b.Event0 < 15) )
+	if( cpuRegs.PERF.n.pccr.b.U0 )
 	{
 		// ----------------------------------
 		//    Update Performance Counter 0
 		// ----------------------------------
 
-		if( cpuRegs.PERF.n.pccr.b.Event0 != 1 )
-			Console::Notice( "COP0 - PCR0 Unsupported Update Event Mode = 0x%x", params cpuRegs.PERF.n.pccr.b.Event0 );
-
-		u32 incr = cpuRegs.cycle - s_iLastPERFCycle[0];
-		if( incr == 0 ) incr++;
-
-		// use prev/XOR method for one-time exceptions (but likely less correct)
-		//u32 prev = cpuRegs.PERF.n.pcr0;
-		cpuRegs.PERF.n.pcr0 += incr;
-		s_iLastPERFCycle[0] = cpuRegs.cycle;
-		
-		//prev ^= (1UL<<31);		// XOR is fun!
-		//if( (prev & cpuRegs.PERF.n.pcr0) & (1UL<<31) )
-		if( cpuRegs.PERF.n.pcr0 & 0x80000000 )
+		if( PERF_ShouldCountEvent( cpuRegs.PERF.n.pccr.b.Event0 ) )
 		{
-			// TODO: Vector to the appropriate exception here.
-			// This code *should* be correct, but is untested (and other parts of the emu are
-			// not prepared to handle proper Level 2 exception vectors yet)
+			u32 incr = cpuRegs.cycle - s_iLastPERFCycle[0];
+			if( incr == 0 ) incr++;
+
+			// use prev/XOR method for one-time exceptions (but likely less correct)
+			//u32 prev = cpuRegs.PERF.n.pcr0;
+			cpuRegs.PERF.n.pcr0 += incr;
+			s_iLastPERFCycle[0] = cpuRegs.cycle;
 			
-			/*if( delay_slot )
+			//prev ^= (1UL<<31);		// XOR is fun!
+			//if( (prev & cpuRegs.PERF.n.pcr0) & (1UL<<31) )
+			if( cpuRegs.PERF.n.pcr0 & 0x80000000 )
 			{
-				cpuRegs.CP0.ErrorEPC = cpuRegs.pc - 4;
-				cpuRegs.CP0.Cause.BD2 = 1;
+				// TODO: Vector to the appropriate exception here.
+				// This code *should* be correct, but is untested (and other parts of the emu are
+				// not prepared to handle proper Level 2 exception vectors yet)
+				
+				/*if( delay_slot )
+				{
+					cpuRegs.CP0.ErrorEPC = cpuRegs.pc - 4;
+					cpuRegs.CP0.Cause.BD2 = 1;
+				}
+				else
+				{
+					cpuRegs.CP0.ErrorEPC = cpuRegs.pc;
+					cpuRegs.CP0.Cause.BD2 = 0;
+				}
+				
+				if( cpuRegs.CP0.Status.DEV )
+				{
+					// Bootstrap vector
+					cpuRegs.pc = 0xbfc00280;
+				}
+				else
+				{
+					cpuRegs.pc = 0x80000080;
+				}
+				cpuRegs.CP0.Status.ERL = 1;
+				cpuRegs.CP0.Cause.EXC2 = 2;*/
 			}
-			else
-			{
-				cpuRegs.CP0.ErrorEPC = cpuRegs.pc;
-				cpuRegs.CP0.Cause.BD2 = 0;
-			}
-			
-			if( cpuRegs.CP0.Status.DEV )
-			{
-				// Bootstrap vector
-				cpuRegs.pc = 0xbfc00280;
-			}
-			else
-			{
-				cpuRegs.pc = 0x80000080;
-			}
-			cpuRegs.CP0.Status.ERL = 1;
-			cpuRegs.CP0.Cause.EXC2 = 2;*/
 		}
 	}
 	
-	if( cpuRegs.PERF.n.pccr.b.U1 && cpuRegs.PERF.n.pccr.b.Event1 < 15)
+	if( cpuRegs.PERF.n.pccr.b.U1 )
 	{
 		// ----------------------------------
 		//    Update Performance Counter 1
 		// ----------------------------------
 		
-		if( cpuRegs.PERF.n.pccr.b.Event1 != 1 )
-			Console::Notice( "COP0 - PCR1 Unsupported Update Event Mode = 0x%x", params cpuRegs.PERF.n.pccr.b.Event1 );
-
-		u32 incr = cpuRegs.cycle - s_iLastPERFCycle[1];
-		if( incr == 0 ) incr++;
-
-		cpuRegs.PERF.n.pcr1 += incr;
-		s_iLastPERFCycle[1] = cpuRegs.cycle;
-
-		if( cpuRegs.PERF.n.pcr1 & 0x80000000 )
+		if( PERF_ShouldCountEvent( cpuRegs.PERF.n.pccr.b.Event1 ) )
 		{
-			// See PCR0 comments for notes on exceptions
+			u32 incr = cpuRegs.cycle - s_iLastPERFCycle[1];
+			if( incr == 0 ) incr++;
+
+			cpuRegs.PERF.n.pcr1 += incr;
+			s_iLastPERFCycle[1] = cpuRegs.cycle;
+
+			if( cpuRegs.PERF.n.pcr1 & 0x80000000 )
+			{
+				// See PCR0 comments for notes on exceptions
+			}
 		}
 	}
 }
