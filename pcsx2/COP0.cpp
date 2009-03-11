@@ -164,7 +164,7 @@ void WriteTLB(int i)
 // count.  But only mode 1 (instruction counter) has been found to be used by games thus far.
 //
 
-__forceinline bool PERF_ShouldCountEvent( uint evt )
+static __forceinline bool PERF_ShouldCountEvent( uint evt )
 {
 	switch( evt )
 	{
@@ -188,7 +188,6 @@ __forceinline bool PERF_ShouldCountEvent( uint evt )
 		case 8:		// Non-blocking load / WBB burst request fail
 		case 9:
 		case 10:
-			Console::Notice( "COP0 - PCR0 Unsupported Update Event Mode = 0x%x\n\t(Nneeve says this should probably never happen!)", params cpuRegs.PERF.n.pccr.b.Event0 );
 			return false;
 
 		case 11:	// CPU address bus busy / CPU data bus busy
@@ -204,7 +203,19 @@ __forceinline bool PERF_ShouldCountEvent( uint evt )
 	return false;
 }
 
-__forceinline void COP0_UpdatePCR()
+// Diagnostics for event modes that we just ignore for now.  Using these perf units could
+// cause compat issues in some very odd/rare games, so if this msg comes up who knows,
+// might save some debugging effort. :)
+void COP0_DiagnosticPCCR()
+{
+	if( cpuRegs.PERF.n.pccr.b.Event0 >= 7 && cpuRegs.PERF.n.pccr.b.Event0 <= 10 )
+		Console::Notice( "PERF/PCR0 Unsupported Update Event Mode = 0x%x", params cpuRegs.PERF.n.pccr.b.Event0 );
+
+	if( cpuRegs.PERF.n.pccr.b.Event1 >= 7 && cpuRegs.PERF.n.pccr.b.Event1 <= 10 )
+		Console::Notice( "PERF/PCR1 Unsupported Update Event Mode = 0x%x", params cpuRegs.PERF.n.pccr.b.Event1 );
+}
+
+__forceinline void COP0_UpdatePCCR()
 {
 	if( cpuRegs.CP0.n.Status.b.ERL || !cpuRegs.PERF.n.pccr.b.CTE ) return;
 
@@ -283,6 +294,9 @@ __forceinline void COP0_UpdatePCR()
 	}
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////
+//
+
 namespace R5900 {
 namespace Interpreter {
 namespace OpcodeImpl {
@@ -297,7 +311,6 @@ void MFC0()
 	//if(bExecBIOS == FALSE && _Rd_ == 25) SysPrintf("MFC0 _Rd_ %x = %x\n", _Rd_, cpuRegs.CP0.r[_Rd_]);
 	switch (_Rd_)
 	{
-		
 		case 12:
 			cpuRegs.GPR.r[_Rt_].SD[0] = (s32)(cpuRegs.CP0.r[_Rd_] & 0xf0c79c1f);
 		break;
@@ -310,12 +323,12 @@ void MFC0()
 				break;
 
 			    case 1:		// MFPC [LSB is set] - read PCR0
-					COP0_UpdatePCR();
+					COP0_UpdatePCCR();
                     cpuRegs.GPR.r[_Rt_].SD[0] = (s32)cpuRegs.PERF.n.pcr0;
 				break;
 
 			    case 3:		// MFPC [LSB is set] - read PCR1
-					COP0_UpdatePCR();
+					COP0_UpdatePCCR();
 					cpuRegs.GPR.r[_Rt_].SD[0] = (s32)cpuRegs.PERF.n.pcr1;
 				break;
 		    }
@@ -354,8 +367,9 @@ void MTC0()
 			{
 				case 0:		// MTPS  [LSB is clear]
 					// Updates PCRs and sets the PCCR.
-					COP0_UpdatePCR();
+					COP0_UpdatePCCR();
 					cpuRegs.PERF.n.pccr.val = cpuRegs.GPR.r[_Rt_].UL[0];
+					COP0_DiagnosticPCCR();
 				break;
 				
 				case 1:		// MTPC [LSB is set] - set PCR0

@@ -166,8 +166,7 @@ void recMFC0( void )
 
 			case 1:
 			case 3:
-				CALLFunc( (uptr)COP0_UpdatePCR );
-				CALLFunc( (uptr)COP0_UpdatePCR );
+				CALLFunc( (uptr)COP0_UpdatePCCR );
 			break;
 		}
 		_deleteEEreg(_Rt_, 0);
@@ -231,30 +230,6 @@ void recMFC0( void )
 	}
 }
 
-void updatePCCR()
-{
-	// read the old pccr and update pcr0/1
-	MOV32MtoR(EAX, (uptr)&cpuRegs.PERF.n.pccr);
-	MOV32RtoR(EDX, EAX);
-	MOV32MtoR(ECX, (uptr)&cpuRegs.cycle);
-
-	AND32ItoR(EAX, 0x800003E0);
-	CMP32ItoR(EAX, 0x80000020);
-	j8Ptr[0] = JNE8(0);
-	MOV32MtoR(EAX, (uptr)&s_iLastPERFCycle[0]);
-	ADD32RtoM((uptr)&cpuRegs.PERF.n.pcr0, ECX);
-	SUB32RtoM((uptr)&cpuRegs.PERF.n.pcr0, EAX);
-	x86SetJ8(j8Ptr[0]);
-
-	AND32ItoR(EDX, 0x800F8000);
-	CMP32ItoR(EDX, 0x80008000);
-	j8Ptr[0] = JNE8(0);
-	MOV32MtoR(EAX, (uptr)&s_iLastPERFCycle[1]);
-	ADD32RtoM((uptr)&cpuRegs.PERF.n.pcr1, ECX);
-	SUB32RtoM((uptr)&cpuRegs.PERF.n.pcr1, EAX);
-	x86SetJ8(j8Ptr[0]);
-}
-
 void recMTC0()
 {
 	if( GPR_IS_CONST1(_Rt_) )
@@ -277,8 +252,9 @@ void recMTC0()
 				switch(_Imm_ & 0x3F)
 				{
 					case 0:
-						CALLFunc( (uptr)COP0_UpdatePCR );
+						CALLFunc( (uptr)COP0_UpdatePCCR );
 						MOV32ItoM((uptr)&cpuRegs.PERF.n.pccr, g_cpuConstRegs[_Rt_].UL[0]);
+						CALLFunc( (uptr)COP0_DiagnosticPCCR );
 					break;
 
 					case 1:
@@ -324,8 +300,9 @@ void recMTC0()
 				switch(_Imm_ & 0x3F)
 				{
 					case 0:
-						CALLFunc( (uptr)COP0_UpdatePCR );
+						CALLFunc( (uptr)COP0_UpdatePCCR );
 						_eeMoveGPRtoM((uptr)&cpuRegs.PERF.n.pccr, _Rt_);
+						CALLFunc( (uptr)COP0_DiagnosticPCCR );
 					break;
 
 					case 1:
