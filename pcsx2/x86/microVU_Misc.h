@@ -21,6 +21,7 @@
 //------------------------------------------------------------------
 // Global Variables
 //------------------------------------------------------------------
+
 PCSX2_ALIGNED16_EXTERN(const u32 mVU_absclip[4]);
 PCSX2_ALIGNED16_EXTERN(const u32 mVU_signbit[4]);
 PCSX2_ALIGNED16_EXTERN(const u32 mVU_minvals[4]);
@@ -40,6 +41,17 @@ PCSX2_ALIGNED16_EXTERN(const u32 mVU_T6[4]);
 PCSX2_ALIGNED16_EXTERN(const u32 mVU_T7[4]);
 PCSX2_ALIGNED16_EXTERN(const u32 mVU_T8[4]);
 PCSX2_ALIGNED16_EXTERN(const u32 mVU_Pi4[4]);
+//PCSX2_ALIGNED16_EXTERN(const u32 mVU_S1[4]);
+PCSX2_ALIGNED16_EXTERN(const u32 mVU_S2[4]);
+PCSX2_ALIGNED16_EXTERN(const u32 mVU_S3[4]);
+PCSX2_ALIGNED16_EXTERN(const u32 mVU_S4[4]);
+PCSX2_ALIGNED16_EXTERN(const u32 mVU_S5[4]);
+PCSX2_ALIGNED16_EXTERN(const u32 mVU_E1[4]);
+PCSX2_ALIGNED16_EXTERN(const u32 mVU_E2[4]);
+PCSX2_ALIGNED16_EXTERN(const u32 mVU_E3[4]);
+PCSX2_ALIGNED16_EXTERN(const u32 mVU_E4[4]);
+PCSX2_ALIGNED16_EXTERN(const u32 mVU_E5[4]);
+PCSX2_ALIGNED16_EXTERN(const u32 mVU_E6[4]);
 
 //------------------------------------------------------------------
 // Helper Macros
@@ -128,5 +140,8 @@ PCSX2_ALIGNED16_EXTERN(const u32 mVU_Pi4[4]);
 #define fvsInstance	((mVUallocInfo.info[mVUallocInfo.curPC] & (3<<16)) >> 16)
 //#define getFs		 (mVUallocInfo.info[mVUallocInfo.curPC] & (1<<13))
 //#define getFt		 (mVUallocInfo.info[mVUallocInfo.curPC] & (1<<14))
+
+#define isMMX(_VIreg_)	(_VIreg_ >= 1 && _VIreg_ <=9)
+#define mmVI(_VIreg_)	(_VIreg_ - 1)
 
 #include "microVU_Misc.inl"

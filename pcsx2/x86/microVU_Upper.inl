@@ -84,7 +84,6 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 	if (recPass == 0) {}											\
 	else {															\
 		int Fd, Fs, Ft;												\
-		if (isNOP) return;											\
 		mVUallocFMAC1a<vuIndex>(Fd, Fs, Ft);						\
 		if (_XYZW_SS) SSE_##operation##SS_XMM_to_XMM(Fs, Ft);		\
 		else		  SSE_##operation##PS_XMM_to_XMM(Fs, Ft);		\
@@ -98,7 +97,6 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 	if (recPass == 0) {}											\
 	else {															\
 		int Fd, Fs, Ft;												\
-		if (isNOP) return;											\
 		mVUallocFMAC3a<vuIndex>(Fd, Fs, Ft);						\
 		if (_XYZW_SS) SSE_##operation##SS_XMM_to_XMM(Fs, Ft);		\
 		else		  SSE_##operation##PS_XMM_to_XMM(Fs, Ft);		\
@@ -112,7 +110,6 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 	if (recPass == 0) {}											\
 	else {															\
 		int ACC, Fs, Ft;											\
-		if (isNOP) return;											\
 		mVUallocFMAC4a<vuIndex>(ACC, Fs, Ft);						\
 		if (_XYZW_SS && _X) SSE_##operation##SS_XMM_to_XMM(Fs, Ft);	\
 		else				SSE_##operation##PS_XMM_to_XMM(Fs, Ft);	\
@@ -126,7 +123,6 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 	if (recPass == 0) {}											\
 	else {															\
 		int ACC, Fs, Ft;											\
-		if (isNOP) return;											\
 		mVUallocFMAC5a<vuIndex>(ACC, Fs, Ft);						\
 		if (_XYZW_SS && _X) SSE_##operation##SS_XMM_to_XMM(Fs, Ft);	\
 		else				SSE_##operation##PS_XMM_to_XMM(Fs, Ft);	\
@@ -140,7 +136,6 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 	if (recPass == 0) {}											\
 	else {															\
 		int Fd, Fs, Ft;												\
-		if (isNOP) return;											\
 		mVUallocFMAC6a<vuIndex>(Fd, Fs, Ft);						\
 		if (_XYZW_SS) SSE_##operation##SS_XMM_to_XMM(Fs, Ft);		\
 		else		  SSE_##operation##PS_XMM_to_XMM(Fs, Ft);		\
@@ -154,7 +149,6 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 	if (recPass == 0) {}											\
 	else {															\
 		int ACC, Fs, Ft;											\
-		if (isNOP) return;											\
 		mVUallocFMAC7a<vuIndex>(ACC, Fs, Ft);						\
 		if (_XYZW_SS && _X) SSE_##operation##SS_XMM_to_XMM(Fs, Ft);	\
 		else				SSE_##operation##PS_XMM_to_XMM(Fs, Ft);	\
@@ -168,7 +162,6 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 	if (recPass == 0) {}											\
 	else {															\
 		int Fd, ACC, Fs, Ft;										\
-		if (isNOP) return;											\
 		mVUallocFMAC8a<vuIndex>(Fd, ACC, Fs, Ft);					\
 		if (_XYZW_SS && _X) {										\
 			SSE_MULSS_XMM_to_XMM(Fs, Ft);							\
@@ -188,7 +181,6 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 	if (recPass == 0) {}											\
 	else {															\
 		int Fd, ACC, Fs, Ft;										\
-		if (isNOP) return;											\
 		mVUallocFMAC9a<vuIndex>(Fd, ACC, Fs, Ft);					\
 		if (_XYZW_SS && _X) {										\
 			SSE_MULSS_XMM_to_XMM(Fs, Ft);							\
@@ -208,7 +200,6 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 	if (recPass == 0) {}											\
 	else {															\
 		int Fd, ACC, Fs, Ft;										\
-		if (isNOP) return;											\
 		mVUallocFMAC10a<vuIndex>(Fd, ACC, Fs, Ft);					\
 		if (_XYZW_SS && _X) {										\
 			SSE_MULSS_XMM_to_XMM(Fs, Ft);							\
@@ -228,7 +219,6 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 	if (recPass == 0) {}											\
 	else {															\
 		int Fd, ACC, Fs, Ft;										\
-		if (isNOP) return;											\
 		mVUallocFMAC11a<vuIndex>(Fd, ACC, Fs, Ft);					\
 		if (_XYZW_SS && _X) {										\
 			SSE_MULSS_XMM_to_XMM(Fs, Ft);							\
@@ -248,7 +238,6 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 	if (recPass == 0) {}											\
 	else {															\
 		int Fd, ACC, Fs, Ft;										\
-		if (isNOP) return;											\
 		mVUallocFMAC12a<vuIndex>(Fd, ACC, Fs, Ft);					\
 		if (_XYZW_SS && _X) {										\
 			SSE_MULSS_XMM_to_XMM(Fs, Ft);							\
@@ -268,7 +257,6 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 	if (recPass == 0) {}											\
 	else {															\
 		int Fd, ACC, Fs, Ft;										\
-		if (isNOP) return;											\
 		mVUallocFMAC13a<vuIndex>(Fd, ACC, Fs, Ft);					\
 		if (_XYZW_SS && _X) {										\
 			SSE_MULSS_XMM_to_XMM(Fs, Ft);							\
@@ -288,7 +276,6 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 	if (recPass == 0) {}											\
 	else {															\
 		int ACCw, ACCr, Fs, Ft;										\
-		if (isNOP) return;											\
 		mVUallocFMAC14a<vuIndex>(ACCw, ACCr, Fs, Ft);				\
 		if (_XYZW_SS && _X) {										\
 			SSE_MULSS_XMM_to_XMM(Fs, Ft);							\
@@ -308,7 +295,6 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 	if (recPass == 0) {}											\
 	else {															\
 		int ACCw, ACCr, Fs, Ft;										\
-		if (isNOP) return;											\
 		mVUallocFMAC15a<vuIndex>(ACCw, ACCr, Fs, Ft);				\
 		if (_XYZW_SS && _X) {										\
 			SSE_MULSS_XMM_to_XMM(Fs, Ft);							\
@@ -328,7 +314,6 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 	if (recPass == 0) {}											\
 	else {															\
 		int ACCw, ACCr, Fs, Ft;										\
-		if (isNOP) return;											\
 		mVUallocFMAC16a<vuIndex>(ACCw, ACCr, Fs, Ft);				\
 		if (_XYZW_SS && _X) {										\
 			SSE_MULSS_XMM_to_XMM(Fs, Ft);							\
@@ -348,7 +333,6 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 	if (recPass == 0) {}											\
 	else {															\
 		int ACCw, ACCr, Fs, Ft;										\
-		if (isNOP) return;											\
 		mVUallocFMAC17a<vuIndex>(ACCw, ACCr, Fs, Ft);				\
 		if (_XYZW_SS && _X) {										\
 			SSE_MULSS_XMM_to_XMM(Fs, Ft);							\
@@ -368,7 +352,6 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 	if (recPass == 0) {}											\
 	else {															\
 		int ACC, Fs, Ft;											\
-		if (isNOP) return;											\
 		mVUallocFMAC18a<vuIndex>(ACC, Fs, Ft);						\
 		SSE_##operation##PS_XMM_to_XMM(Fs, Ft);						\
 		mVUupdateFlags<vuIndex>(Fs, xmmT1, Ft, _X_Y_Z_W, 0);		\
@@ -381,7 +364,6 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 	if (recPass == 0) {}											\
 	else {															\
 		int Fd, ACC, Fs, Ft;										\
-		if (isNOP) return;											\
 		mVUallocFMAC19a<vuIndex>(Fd, ACC, Fs, Ft);					\
 		SSE_MULPS_XMM_to_XMM(Fs, Ft);								\
 		SSE_##operation##PS_XMM_to_XMM(ACC, Fs);					\
@@ -395,7 +377,6 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 	if (recPass == 0) {}											\
 	else {															\
 		int ACCw, ACCr, Fs, Ft;										\
-		if (isNOP) return;											\
 		mVUallocFMAC20a<vuIndex>(ACCw, ACCr, Fs, Ft);				\
 		if (_XYZW_SS && _X) {										\
 			SSE_MULSS_XMM_to_XMM(Fs, Ft);							\
@@ -415,7 +396,6 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 	if (recPass == 0) {}											\
 	else {															\
 		int ACCw, ACCr, Fs, Ft;										\
-		if (isNOP) return;											\
 		mVUallocFMAC21a<vuIndex>(ACCw, ACCr, Fs, Ft);				\
 		if (_XYZW_SS && _X) {										\
 			SSE_MULSS_XMM_to_XMM(Fs, Ft);							\
@@ -435,7 +415,6 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 	if (recPass == 0) {}											\
 	else {															\
 		int Fd, Fs, Ft;												\
-		if (isNOP) return;											\
 		mVUallocFMAC22a<vuIndex>(Fd, Fs, Ft);						\
 		if (_XYZW_SS) SSE_##operation##SS_XMM_to_XMM(Fs, Ft);		\
 		else		  SSE_##operation##PS_XMM_to_XMM(Fs, Ft);		\
@@ -449,7 +428,6 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 	if (recPass == 0) {}											\
 	else {															\
 		int ACC, Fs, Ft;											\
-		if (isNOP) return;											\
 		mVUallocFMAC23a<vuIndex>(ACC, Fs, Ft);						\
 		if (_XYZW_SS && _X) SSE_##operation##SS_XMM_to_XMM(Fs, Ft);	\
 		else				SSE_##operation##PS_XMM_to_XMM(Fs, Ft);	\
@@ -463,7 +441,6 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 	if (recPass == 0) {}											\
 	else {															\
 		int Fd, ACC, Fs, Ft;										\
-		if (isNOP) return;											\
 		mVUallocFMAC24a<vuIndex>(Fd, ACC, Fs, Ft);					\
 		if (_XYZW_SS && _X) {										\
 			SSE_MULSS_XMM_to_XMM(Fs, Ft);							\
@@ -483,7 +460,6 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 	if (recPass == 0) {}											\
 	else {															\
 		int Fd, ACC, Fs, Ft;										\
-		if (isNOP) return;											\
 		mVUallocFMAC25a<vuIndex>(Fd, ACC, Fs, Ft);					\
 		if (_XYZW_SS && _X) {										\
 			SSE_MULSS_XMM_to_XMM(Fs, Ft);							\
@@ -503,7 +479,6 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 	if (recPass == 0) {}											\
 	else {															\
 		int ACCw, ACCr, Fs, Ft;										\
-		if (isNOP) return;											\
 		mVUallocFMAC26a<vuIndex>(ACCw, ACCr, Fs, Ft);				\
 		if (_XYZW_SS && _X) {										\
 			SSE_MULSS_XMM_to_XMM(Fs, Ft);							\
@@ -523,7 +498,6 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 	if (recPass == 0) {}											\
 	else {															\
 		int ACCw, ACCr, Fs, Ft;										\
-		if (isNOP) return;											\
 		mVUallocFMAC27a<vuIndex>(ACCw, ACCr, Fs, Ft);				\
 		if (_XYZW_SS && _X) {										\
 			SSE_MULSS_XMM_to_XMM(Fs, Ft);							\
@@ -547,7 +521,6 @@ microVUf(void) mVU_ABS() {
 	if (recPass == 0) {}
 	else { 
 		int Fs, Ft;
-		if (isNOP) return;
 		mVUallocFMAC2a<vuIndex>(Fs, Ft);
 		SSE_ANDPS_M128_to_XMM(Fs, (uptr)mVU_absclip);
 		mVUallocFMAC1b<vuIndex>(Ft);
@@ -647,7 +620,6 @@ microVUq(void) mVU_FTOIx(uptr addr) {
 	if (recPass == 0) {}
 	else { 
 		int Fs, Ft;
-		if (isNOP) return;
 		mVUallocFMAC2a<vuIndex>(Fs, Ft);
 
 		// Note: For help understanding this algorithm see recVUMI_FTOI_Saturate()
@@ -673,7 +645,6 @@ microVUq(void) mVU_ITOFx(uptr addr) {
 	if (recPass == 0) {}
 	else { 
 		int Fs, Ft;
-		if (isNOP) return;
 		mVUallocFMAC2a<vuIndex>(Fs, Ft);
 
 		SSE2_CVTDQ2PS_XMM_to_XMM(Ft, Fs);

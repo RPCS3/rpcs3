@@ -748,14 +748,14 @@ microVUt(void) mVUallocMFLAGb(int reg, int fInstance) {
 microVUt(void) mVUallocVIa(int GPRreg, int _reg_) {
 	microVU* mVU = mVUx;
 	if (_reg_ == 0)		{ XOR32RtoR(GPRreg, GPRreg); }
-	else if (_reg_ < 9)	{ MOVD32MMXtoR(GPRreg, mmxVI1 + (_reg_ - 1)); }
+	else if (_reg_ < 9)	{ MOVD32MMXtoR(GPRreg, mmVI(_reg_)); }
 	else				{ MOVZX32M16toR(GPRreg, (uptr)&mVU->regs->VI[_reg_].UL); }
 }
 
 microVUt(void) mVUallocVIb(int GPRreg, int _reg_) {
 	microVU* mVU = mVUx;
 	if (_reg_ == 0)		{ return; }
-	else if (_reg_ < 9)	{ MOVD32RtoMMX(mmxVI1 + (_reg_ - 1), GPRreg); }
+	else if (_reg_ < 9)	{ MOVD32RtoMMX(mmVI(_reg_), GPRreg); }
 	else				{ MOV16RtoM((uptr)&mVU->regs->VI[_reg_].UL, GPRreg); }
 }
 
@@ -773,8 +773,14 @@ microVUt(void) mVUallocVIb(int GPRreg, int _reg_) {
 //------------------------------------------------------------------
 
 #define getReg5(reg, _reg_, _fxf_) {  \
-	mVUloadReg<vuIndex>(reg, (uptr)&mVU->regs->VF[_reg_].UL[0], (1 << (3 - _fxf_)));  \
-	if (CHECK_VU_EXTRA_OVERFLOW) mVUclamp2<vuIndex>(reg, xmmT1, (1 << (3 - _fxf_)));  \
+	if (!_reg_) {  \
+		if (_fxf_ < 3) { SSE_XORPS_XMM_to_XMM(reg, reg); }  \
+		else { mVUloadReg<vuIndex>(reg, (uptr)&mVU->regs->VF[_reg_].UL[0], 3); }  \
+	}  \
+	else {  \
+		mVUloadReg<vuIndex>(reg, (uptr)&mVU->regs->VF[_reg_].UL[0], (1 << (3 - _fxf_)));  \
+		if (CHECK_VU_EXTRA_OVERFLOW) mVUclamp2<vuIndex>(reg, xmmT1, (1 << (3 - _fxf_)));  \
+	}  \
 }
 
 #endif //PCSX2_MICROVU
