@@ -132,10 +132,14 @@ u8 Cap (int i) {
 	return (u8) i;
 }
 
-
-// Just like RefreshEnabledDevices(), but takes into account
-// mouse and focus state and which devices have bindings for
-// enabled pads.  Also releases keyboards if window is not focused.
+// RefreshEnabledDevices() enables everything that can potentially
+// be bound to, as well as the "Ignore keyboard" device.
+//
+// This enables everything that input should be read from while the
+// emulator is running.  Takes into account  mouse and focus state
+// and which devices have bindings for enabled pads.  Releases
+// keyboards if window is not focused.  Releases game devices if
+// background monitoring is not checked.
 // And releases games if not focused and config.background is not set.
 void UpdateEnabledDevices(int updateList = 0) {
 	// Enable all devices I might want.  Can ignore the rest.
@@ -156,7 +160,7 @@ void UpdateEnabledDevices(int updateList = 0) {
 
 		// Disable ignore keyboard if don't have focus or there are no keys to ignore.
 		if (dev->api == IGNORE_KEYBOARD) {
-			if (config.keyboardApi == NO_API || !activeWindow || !dev->pads[0].numBindings) {
+			if ((!config.vistaVolume && (config.keyboardApi == NO_API || !dev->pads[0].numBindings)) || !activeWindow) {
 				dm->DisableDevice(i);
 			}
 			continue;
@@ -629,6 +633,8 @@ struct QueryInfo {
 
 int saveStateIndex = 0;
 
+// Implements a couple of the hacks, also responsible for monitoring device addition/removal and focus
+// changes.
 ExtraWndProcResult HackWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, LRESULT *output) {
 	switch (uMsg) {
 		case WM_SETTEXT:
@@ -659,6 +665,12 @@ ExtraWndProcResult HackWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 			}
 			break;
 		case WM_ACTIVATEAPP:
+			// Release any buttons PCSX2 may think are down when
+			// losing/gaining focus.
+			QueueKeyEvent(VK_SHIFT, KEYRELEASE);
+			QueueKeyEvent(VK_MENU, KEYRELEASE);
+			QueueKeyEvent(VK_CONTROL, KEYRELEASE);
+
 			// Need to do this when not reading input from gs thread.
 			// Checking for that case not worth the effort.
 			EnterCriticalSection(&readInputCriticalSection);
@@ -1112,6 +1124,7 @@ keyEvent* CALLBACK PADkeyEvent() {
 		Update(2);
 	}
 	static char shiftDown = 0;
+	static char altDown = 0;
 	static keyEvent ev;
 	if (!GetQueuedKeyEvent(&ev)) return 0;
 	if ((ev.key == VK_ESCAPE || (int)ev.key == -2) && ev.evt == KEYPRESS && config.escapeFullscreenHack) {
@@ -1145,18 +1158,21 @@ keyEvent* CALLBACK PADkeyEvent() {
 		}
 	}
 
+	// So don't change skip mode on alt-F4.
+	if (ev.key == VK_F4 && altDown) {
+		return 0;
+	}
+
 	if (ev.key == VK_LSHIFT || ev.key == VK_RSHIFT || ev.key == VK_SHIFT) {
 		ev.key = VK_SHIFT;
-		if (ev.evt == KEYPRESS)
-			shiftDown = 1;
-		else
-			shiftDown = 0;
+		shiftDown = (ev.evt == KEYPRESS);
 	}
 	else if (ev.key == VK_LCONTROL || ev.key == VK_RCONTROL) {
 		ev.key = VK_CONTROL;
 	}
-	else if (ev.key == VK_LMENU || ev.key == VK_RMENU) {
+	else if (ev.key == VK_LMENU || ev.key == VK_RMENU || ev.key == VK_SHIFT) {
 		ev.key = VK_MENU;
+		altDown = (ev.evt == KEYPRESS);
 	}
 	return &ev;
 }

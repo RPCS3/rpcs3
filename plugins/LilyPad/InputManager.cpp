@@ -428,7 +428,9 @@ void InputDeviceManager::DisableAllDevices() {
 
 void InputDeviceManager::DisableDevice(int index) {
 	devices[index]->enabled = 0;
-	if (devices[index]->active) devices[index]->Deactivate();
+	if (devices[index]->active) {
+		devices[index]->Deactivate();
+	}
 }
 
 ForceFeedbackEffectType *Device::GetForcefeedbackEffect(wchar_t *id) {

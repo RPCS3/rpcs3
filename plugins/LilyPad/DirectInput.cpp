@@ -20,7 +20,7 @@ inline static u32 flipLong(u32 l) {
 static void GUIDtoString(wchar_t *data, const GUID *pg) {
 	wsprintfW(data, L"%08X-%04X-%04X-%04X-%04X%08X",
 		pg->Data1, (u32)pg->Data2, (u32)pg->Data3,
-		flipShort(((u16*)pg->Data4)[0]), 
+		flipShort(((u16*)pg->Data4)[0]),
 		flipShort(((u16*)pg->Data4)[1]),
 		flipLong(((u32*)pg->Data4)[1]));
 }
@@ -320,6 +320,7 @@ public:
 			did->Unacquire();
 			did->Release();
 			ReleaseDirectInput();
+			did = 0;
 			active = 0;
 		}
 	}

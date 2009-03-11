@@ -576,7 +576,21 @@ int WritePrivateProfileInt(wchar_t *s1, wchar_t *s2, int v, wchar_t *ini) {
 	return WritePrivateProfileStringW(s1, s2, temp, ini);
 }
 
-int SaveSettings(wchar_t *file = 0) {
+void SetVolume(int volume) {
+	if (volume > 100) volume = 100;
+	if (volume < 0) volume = 0;
+	config.volume = volume;
+	unsigned int val = 0xFFFF * volume/100;
+	val = val | (val<<16);
+	for (int i=waveOutGetNumDevs()-1; i>=0; i--) {
+		waveOutSetVolume((HWAVEOUT)i, val);
+	}
+	wchar_t ini[MAX_PATH+20];
+	GetSettingsFileName(ini);
+	WritePrivateProfileInt(L"General Settings", L"Volume", config.volume, ini);
+}
+
+int SaveSettings(wchar_t *file=0) {
 	wchar_t ini[MAX_PATH+20];
 
 	// Need this either way for saving path.
@@ -619,6 +633,9 @@ int SaveSettings(wchar_t *file = 0) {
 	WritePrivateProfileInt(L"General Settings", L"Multiple Bindings", config.multipleBinding, file);
 
 	WritePrivateProfileInt(L"General Settings", L"Save State in Title", config.saveStateTitle, file);
+
+	WritePrivateProfileInt(L"General Settings", L"Vista Volume", config.vistaVolume, file);
+	WritePrivateProfileInt(L"General Settings", L"Volume", config.volume, file);
 
 	WritePrivateProfileInt(L"Pad1", L"Guitar", config.guitar[0], file);
 	WritePrivateProfileInt(L"Pad2", L"Guitar", config.guitar[1], file);
@@ -734,6 +751,18 @@ int LoadSettings(int force, wchar_t *file) {
 	config.gameApis.xInput = GetPrivateProfileBool(L"General Settings", L"XInput", 1, file);
 
 	config.saveStateTitle = GetPrivateProfileBool(L"General Settings", L"Save State in Title", 1, file);
+
+	config.vistaVolume = GetPrivateProfileBool(L"General Settings", L"Vista Volume", 1, file);
+	config.volume = GetPrivateProfileInt(L"General Settings", L"Volume", 100, file);
+	OSVERSIONINFO os;
+	os.dwOSVersionInfoSize = sizeof(os);
+	config.osVersion = 0;
+	if (GetVersionEx(&os)) {
+		config.osVersion = os.dwMajorVersion;
+	}
+	if (config.osVersion < 6) config.vistaVolume = 0;
+	if (!config.vistaVolume) config.volume = 100;
+	if (config.vistaVolume) SetVolume(config.volume);
 
 	if (!InitializeRawInput()) {
 		if (config.keyboardApi == RAW) config.keyboardApi = WM;
@@ -1517,6 +1546,9 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 		CheckDlgButton(hWnd, IDC_GH2_HACK, BST_CHECKED * config.GH2);
 		CheckDlgButton(hWnd, IDC_SAVE_STATE_TITLE, BST_CHECKED * config.saveStateTitle);
 
+		CheckDlgButton(hWnd, IDC_VISTA_VOLUME, BST_CHECKED * config.vistaVolume);
+		if (config.osVersion < 6) EnableWindow(GetDlgItem(hWnd, IDC_VISTA_VOLUME), 0);
+
 		CheckDlgButton(hWnd, IDC_GUITAR1, BST_CHECKED * config.guitar[0]);
 		CheckDlgButton(hWnd, IDC_GUITAR2, BST_CHECKED * config.guitar[1]);
 		CheckDlgButton(hWnd, IDC_ANALOG_START1, BST_CHECKED * config.AutoAnalog[0]);
@@ -1607,6 +1639,13 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 			config.disableScreenSaver = (IsDlgButtonChecked(hWnd, IDC_DISABLE_SCREENSAVER) == BST_CHECKED);
 			config.GH2 = (IsDlgButtonChecked(hWnd, IDC_GH2_HACK) == BST_CHECKED);
 			config.saveStateTitle = (IsDlgButtonChecked(hWnd, IDC_SAVE_STATE_TITLE) == BST_CHECKED);
+
+			u8 newVistaVolume = (IsDlgButtonChecked(hWnd, IDC_VISTA_VOLUME) == BST_CHECKED);
+			if (config.vistaVolume != newVistaVolume) {
+				config.vistaVolume = newVistaVolume;
+				SetVolume(100);
+			}
+
 
 			unsigned int needUpdate = 0;
 			unsigned int disablePad1New = (IsDlgButtonChecked(hWnd, IDC_DISABLE_PAD1) == BST_CHECKED);

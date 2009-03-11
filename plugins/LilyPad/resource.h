@@ -42,6 +42,8 @@
 #define IDC_FORCE_HIDE2                 1125
 #define IDC_GH2_HACK                    1125
 #define IDC_FORCEFEEDBACK_HACK1         1126
+#define IDC_GH2_HACK2                   1126
+#define IDC_VISTA_VOLUME                1126
 #define IDC_DISABLE_SCREENSAVER4        1127
 #define IDC_FORCEFEEDBACK_HACK2         1127
 #define IDC_GS_THREAD_INPUT             1128
@@ -115,7 +117,7 @@
 #define IDC_FF_MOTOR                    0x1303
 #define ID_FF                           0x1304
 #define IDC_FF_EFFECT                   0x1305
-#define IDC_VERSION						0x1306
+#define IDC_VERSION                     0x1306
 #define IDC_FF_AXIS1_ENABLED            0x1310
 #define IDC_FF_AXIS1                    0x1311
 #define IDC_FF_AXIS1_FLIP               0x1312
@@ -150,7 +152,7 @@
 #define IDC_FF_AXIS8_SCALE              0x1383
 
 // Next default values for new objects
-//
+// 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        112

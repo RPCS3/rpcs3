@@ -38,6 +38,12 @@ public:
 
 	u8 saveStateTitle;
 
+	u8 vistaVolume;
+	int volume;
+
+	// Unlike the others, not a changeable value.
+	DWORD osVersion;
+
 	wchar_t lastSaveConfigPath[MAX_PATH+1];
 	wchar_t lastSaveConfigFileName[MAX_PATH+1];
 };
@@ -47,6 +53,8 @@ extern GeneralConfig config;
 void UnloadConfigs();
 
 void AddIgnore(LPARAM k);
+
+void SetVolume(int volume);
 
 int LoadSettings(int force = 0, wchar_t *file = 0);
 

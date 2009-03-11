@@ -97,6 +97,16 @@ LRESULT CALLBACK IgnoreKeyboardHook(int code, WPARAM wParam, LPARAM lParam) {
 							return 1;
 						}
 					}
+					if (config.vistaVolume) {
+						if (key->vkCode == VK_VOLUME_DOWN) {
+							SetVolume(config.volume-3);
+							return 1;
+						}
+						if (key->vkCode == VK_VOLUME_UP) {
+							SetVolume(config.volume+3);
+							return 1;
+						}
+					}
 				}
 				else if (wParam == WM_KEYUP || wParam == WM_SYSKEYUP) {
 					KBDLLHOOKSTRUCT* key = (KBDLLHOOKSTRUCT*) lParam;
