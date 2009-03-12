@@ -391,7 +391,7 @@ void SysPrepareExecution( const char* elf_file, bool use_bios )
 			return;
 		}
 
-		if (OpenPlugins(g_TestRun.ptitle) == -1)
+		if (OpenPlugins(NULL) == -1)
 			return;
 
 		if( elf_file == NULL )
@@ -400,9 +400,6 @@ void SysPrepareExecution( const char* elf_file, bool use_bios )
 			{
 				// Not recovering a state, so need to execute the bios and load the ELF information.
 				// (note: gsRecoveries are done from ExecuteCpu)
-
-				// if the elf_file is null we use the CDVD elf file.
-				// But if the elf_file is an empty string then we boot the bios instead.
 
 				char ename[g_MaxPath];
 				ename[0] = 0;

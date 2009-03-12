@@ -67,7 +67,7 @@ int SysPageFaultExceptionFilter( EXCEPTION_POINTERS* eps )
 int ParseCommandLine( int tokenCount, TCHAR *const *const tokens )
 {
 	int tidx = 0;
-	g_TestRun.efile = 0;
+	g_Startup.BootMode = BootMode_Bios;
 
 	while( tidx < tokenCount )
 	{
@@ -75,8 +75,8 @@ int ParseCommandLine( int tokenCount, TCHAR *const *const tokens )
 
 		if( command[0] != '-' )
 		{
-			g_TestRun.ptitle = command;
-            printf("opening file %s\n", command);
+			g_Startup.ImageName = command;
+			g_Startup.Enabled = true;
 			continue;
 		}
 
@@ -89,16 +89,11 @@ int ParseCommandLine( int tokenCount, TCHAR *const *const tokens )
 			return -1;
 		}
         else if( CmdSwitchIs( "nogui" ) ) {
-			UseGui = false;
+			g_Startup.NoGui = true;
 		}
         else if( CmdSwitchIs( "highpriority" ) ) {
 			SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
 		}		
-#ifdef PCSX2_DEVBUILD
-			else if( CmdSwitchIs( "jpg" ) ) {
-				g_TestRun.jpgcapture = 1;
-			}
-#endif
 		else
 		{
 			const TCHAR* param;
@@ -112,9 +107,9 @@ int ParseCommandLine( int tokenCount, TCHAR *const *const tokens )
 			if( CmdSwitchIs( "cfg" ) ) {
 				g_CustomConfigFile = param;
 			}
-
-			else if( CmdSwitchIs( "efile" ) ) {
-				g_TestRun.efile = !!atoi( param );
+			else if( CmdSwitchIs( "bootmode" ) ) {
+				g_Startup.BootMode = (StartupMode)atoi( param );
+				g_Startup.Enabled = true;
 			}
 			else if( CmdSwitchIs( "loadgs" ) ) {
 				g_pRunGSState = param;
@@ -123,46 +118,28 @@ int ParseCommandLine( int tokenCount, TCHAR *const *const tokens )
 			// Options to configure plugins:
 
 			else if( CmdSwitchIs( "gs" ) ) {
-				g_TestRun.pgsdll = param;
+				g_Startup.gsdll = param;
 			}
 			else if( CmdSwitchIs( "cdvd" ) ) {
-				g_TestRun.pcdvddll = param;
+				g_Startup.cdvddll = param;
 			}
 			else if( CmdSwitchIs( "spu" ) ) {
-				g_TestRun.pspudll = param;
+				g_Startup.spudll = param;
 			}
-			else if( CmdSwitchIs( "pads" ) ) {
-				g_TestRun.ppad1dll = param;
-				g_TestRun.ppad2dll = param;
+			else if( CmdSwitchIs( "pad" ) ) {
+				g_Startup.pad1dll = param;
+				g_Startup.pad2dll = param;
 			}
 			else if( CmdSwitchIs( "pad1" ) ) {
-				g_TestRun.ppad1dll = param;
+				g_Startup.pad1dll = param;
 			}
 			else if( CmdSwitchIs( "pad2" ) ) {
-				g_TestRun.ppad2dll = param;
+				g_Startup.pad2dll = param;
 			}
 			else if( CmdSwitchIs( "dev9" ) ) {
-				g_TestRun.pdev9dll = param;
+				g_Startup.dev9dll = param;
 			}
 
-#ifdef PCSX2_DEVBUILD
-			else if( CmdSwitchIs( "image" ) ) {
-				g_TestRun.pimagename = param;
-			}
-			else if( CmdSwitchIs( "log" ) ) {
-				g_TestRun.plogname = param;
-			}
-			else if( CmdSwitchIs( "logopt" ) ) {
-				if( param[0] == '0' && param[1] == 'x' ) param += 2;
-				sscanf(param, "%x", &varLog);
-			}
-			else if( CmdSwitchIs( "frame" ) ) {
-				g_TestRun.frame = atoi( param );
-			}
-			else if( CmdSwitchIs( "numimages" ) ) {
-				g_TestRun.numimages = atoi( param );
-			}
-#endif
 		}
 	}
 	return 0;
@@ -259,9 +236,10 @@ bool HostGuiInit()
 	
 	NTFS_CompressFile( MEMCARDS_DIR, Config.McdEnableNTFS );
 
+#ifdef OLD_TESTBUILD_STUFF
 	if( IsDevBuild && emuLog == NULL && g_TestRun.plogname != NULL )
 		emuLog = fopen(g_TestRun.plogname, "w");
-
+#endif
 	if( emuLog == NULL )
 		emuLog = fopen(LOGS_DIR "\\emuLog.txt","w");
 
