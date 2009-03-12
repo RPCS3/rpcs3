@@ -520,8 +520,8 @@ microVUt(void) mVUallocFMAC18a(int& ACC, int& Fs, int& Ft) {
 	if (!_Ft_)	{ getZero4(Ft); } 
 	else		{ getReg4(Ft, _Ft_); }
 
-	SSE_SHUFPS_XMM_to_XMM(Fs, Fs, 0xC9); // WXZY
-	SSE_SHUFPS_XMM_to_XMM(Ft, Ft, 0xD2); // WYXZ
+	SSE2_PSHUFD_XMM_to_XMM(Fs, Fs, 0xC9); // WXZY
+	SSE2_PSHUFD_XMM_to_XMM(Ft, Ft, 0xD2); // WYXZ
 }
 
 microVUt(void) mVUallocFMAC18b(int& ACC, int& Fs) {
@@ -546,8 +546,8 @@ microVUt(void) mVUallocFMAC19a(int& Fd, int&ACC, int& Fs, int& Ft) {
 	if (!_Ft_)	{ getZero4(Ft); } 
 	else		{ getReg4(Ft, _Ft_); }
 
-	SSE_SHUFPS_XMM_to_XMM(Fs, Fs, 0xC9); // WXZY
-	SSE_SHUFPS_XMM_to_XMM(Ft, Ft, 0xD2); // WYXZ
+	SSE2_PSHUFD_XMM_to_XMM(Fs, Fs, 0xC9); // WXZY
+	SSE2_PSHUFD_XMM_to_XMM(Ft, Ft, 0xD2); // WYXZ
 }
 
 microVUt(void) mVUallocFMAC19b(int& Fd) {
