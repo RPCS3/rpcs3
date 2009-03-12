@@ -20,8 +20,6 @@
 #include "LnxSysExec.h"
 #include "HostGui.h"
 
-bool UseGui = true;
-
 static bool sinit = false;
 GtkWidget *FileSel;
 
@@ -68,6 +66,7 @@ void SysPageFaultExceptionFilter( int signal, siginfo_t *info, void * )
 bool ParseCommandLine(int argc, char *argv[], char *file)
 {
 	int i = 1;
+	g_Startup.BootMode = BootMode_Bios;
 	
 	while (i < argc)
 	{
@@ -78,84 +77,50 @@ bool ParseCommandLine(int argc, char *argv[], char *file)
 			//Msgbox::Alert( phelpmsg );
 			return false;
 		}
-		else if (stricmp(token, "-efile") == 0)
-		{
-			token = argv[i++];
-			if (token != NULL)
-			{
-				efile = atoi(token);
-			}
-		}
 		else if (stricmp(token, "-nogui") == 0)
 		{
-			UseGui = FALSE;
+			g_Startup.NoGui = FALSE;
 		}
 		else if (stricmp(token, "-loadgs") == 0)
 		{
 			g_pRunGSState = argv[i++];
-		}
-#ifdef PCSX2_DEVBUILD
-		else if (stricmp(token, "-image") == 0)
-		{
-			g_TestRun.pimagename = argv[i++];
-		}
-		else if (stricmp(token, "-log") == 0)
-		{
-			g_TestRun.plogname = argv[i++];
-		}
-		else if (stricmp(token, "-logopt") == 0)
+		}			
+		else if( strcmp(token, "-bootmode" ) == 0) 
 		{
 			token = argv[i++];
-			if (token != NULL)
-			{
-				if (token[0] == '0' && token[1] == 'x') token += 2;
-				sscanf(token, "%x", &varLog);
-			}
-		}
-		else if (stricmp(token, "-frame") == 0)
-		{
-			token = argv[i++];
-			if (token != NULL)
-			{
-				g_TestRun.frame = atoi(token);
-			}
-		}
-		else if (stricmp(token, "-numimages") == 0)
-		{
-			token = argv[i++];
-			if (token != NULL)
-			{
-				g_TestRun.numimages = atoi(token);
-			}
-		}
-		else if (stricmp(token, "-jpg") == 0)
-		{
-			g_TestRun.jpgcapture = 1;
+			g_Startup.BootMode = (StartupMode)atoi( token);
+			g_Startup.Enabled = true;
 		}
 		else if (stricmp(token, "-gs") == 0)
 		{
 			token = argv[i++];
-			g_TestRun.pgsdll = token;
+			g_Startup.gsdll = token;
 		}
 		else if (stricmp(token, "-cdvd") == 0)
 		{
 			token = argv[i++];
-			g_TestRun.pcdvddll = token;
+			g_Startup.cdvddll = token;
 		}
 		else if (stricmp(token, "-spu") == 0)
 		{
 			token = argv[i++];
-			g_TestRun.pspudll = token;
+			g_Startup.spudll = token;
 		}
-		else if (stricmp(token, "-test") == 0)
-		{
-			g_TestRun.enabled = 1;
-		}
-#endif
 		else if (stricmp(token, "-pad") == 0)
 		{
 			token = argv[i++];
-			printf("-pad ignored\n");
+			g_Startup.pad1dll = token;
+			g_Startup.pad2dll = token;
+		}
+		else if (stricmp(token, "-pad1") == 0)
+		{
+			token = argv[i++];
+			g_Startup.pad1dll = token;
+		}
+		else if (stricmp(token, "-pad2") == 0)
+		{
+			token = argv[i++];
+			g_Startup.pad2dll = token;
 		}
 		else if (stricmp(token, "-loadgs") == 0)
 		{
@@ -183,9 +148,33 @@ void SysPrintf(const char *fmt, ...)
 	Console::Write(msg);
 }
 
+static std::string str_Default( "default" );
+
 void RunGui()
 {
+	PCSX2_MEM_PROTECT_BEGIN();
+
+	LoadPatch( str_Default );
+	if( g_Startup.NoGui || g_Startup.Enabled )
+	{
+		// Initially bypass GUI and start PCSX2 directly.
+		// Manually load plugins using the user's configured image (if non-elf).
+		
+		if( g_Startup.Enabled && (g_Startup.BootMode != BootMode_Elf) )
+		{
+			if (OpenPlugins(g_Startup.ImageName) == -1)
+				return;
+		}
+
+		SysPrepareExecution(
+			(g_Startup.BootMode == BootMode_Elf) ? g_Startup.ImageName : NULL, 
+			(g_Startup.BootMode == BootMode_Bios)
+		);
+	}
+	
 	StartGui();
+	
+	PCSX2_MEM_PROTECT_END();
 }
 
 void OnStates_Load(GtkMenuItem *menuitem, gpointer user_data)
@@ -319,8 +308,6 @@ bool SysInit()
 	mkdir(LOGS_DIR, 0755);
 
 #ifdef PCSX2_DEVBUILD
-	if (g_TestRun.plogname != NULL)
-		emuLog = fopen(g_TestRun.plogname, "w");
 	if (emuLog == NULL)
 		emuLog = fopen(LOGS_DIR "/emuLog.txt", "wb");
 #endif
@@ -525,7 +512,7 @@ namespace HostGui
 	#endif
 					SysEndExecution();
 
-					if (!UseGui) exit(0);
+					if (g_Startup.NoGui) exit(0);
 
 					// fixme: The GUI is now capable of receiving control back from the
 					// emulator.  Which means that when we call SysEscapeExecute() here, the

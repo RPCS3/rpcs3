@@ -22,6 +22,7 @@
 #include "PrecompiledHeader.h"
 #include "Paths.h"
 #include "Common.h"
+#include "HostGui.h"
 
 //For CpuDlg
 #include "Counters.h"
@@ -53,7 +54,6 @@ extern "C"
 extern void SaveConfig();
 extern int LoadConfig();
 extern void SysRestorableReset();
-extern bool UseGui;
 
 extern int Pcsx2Configure();
 

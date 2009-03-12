@@ -94,7 +94,7 @@ bool Alert(const char* fmt)
 {
 	GtkWidget *dialog;
 
-	if (!UseGui)
+	if (g_Startup.NoGui)
 	{
 		Console::Error(fmt);
 		return false;
@@ -126,7 +126,7 @@ bool Alert(const char* fmt, VARG_PARAM dummy, ...)
 	if (msg[msg.length()-1] == '\n')
 		msg[msg.length()-1] = 0;
 
-	if (!UseGui)
+	if (g_Startup.NoGui)
 	{
 		Console::Error(msg.c_str());
 		return false;
