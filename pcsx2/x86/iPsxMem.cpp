@@ -18,7 +18,7 @@
 
 #include "PrecompiledHeader.h"
 
-#include "PsxCommon.h"
+#include "IopCommon.h"
 #include "iR3000A.h"
 #include "VU.h"
 

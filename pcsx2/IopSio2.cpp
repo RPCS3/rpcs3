@@ -18,7 +18,7 @@
 
 #include "PrecompiledHeader.h"
 
-#include "PsxCommon.h"
+#include "IopCommon.h"
 
 sio2Struct sio2;
 

@@ -26,8 +26,7 @@
 
 #include <ctype.h>
 
-#include "Common.h"
-#include "PsxCommon.h"
+#include "IopCommon.h"
 #include "HostGui.h"
 
 #include "CDVDisodrv.h"
@@ -51,6 +50,61 @@ u32 BiosVersion;
 char CdromId[12];
 static int g_Pcsx2Recording = 0; // true 1 if recording video and sound
 bool renderswitch = 0;
+
+#define NUM_STATES 10
+int StatesC = 0;
+
+extern char strgametitle[256];
+
+struct LangDef {
+	char id[8];
+	char name[64];
+};
+
+LangDef sLangs[] = {
+	{ "ar_AR", N_("Arabic") },
+	{ "bg_BG", N_("Bulgarian") },
+	{ "ca_CA", N_("Catalan") },
+	{ "cz_CZ", N_("Czech") },
+	{ "du_DU",  N_("Dutch")  },
+	{ "de_DE", N_("German") },
+	{ "el_EL", N_("Greek") },
+	{ "en_US", N_("English") },
+	{ "fr_FR", N_("French") },
+	{ "hb_HB" , N_("Hebrew") },
+	{ "hu_HU", N_("Hungarian") },
+	{ "it_IT", N_("Italian") },
+	{ "ja_JA", N_("Japanese") },
+	{ "pe_PE", N_("Persian") },
+	{ "po_PO", N_("Portuguese") },
+	{ "po_BR", N_("Portuguese BR") },
+	{ "pl_PL" , N_("Polish") },
+	{ "ro_RO", N_("Romanian") },
+	{ "ru_RU", N_("Russian") },
+	{ "es_ES", N_("Spanish") },
+	{ "sh_SH" , N_("S-Chinese") },
+    { "sw_SW", N_("Swedish") },
+	{ "tc_TC", N_("T-Chinese") },
+	{ "tr_TR", N_("Turkish") },
+	{ "", "" },
+};
+
+#define DIRENTRY_SIZE 16
+
+#if defined(_MSC_VER)
+#pragma pack(1)
+#endif
+
+struct romdir{
+	char fileName[10];
+	u16 extInfoSize;
+	u32 fileSize;
+#if defined(_MSC_VER)
+};		
+#pragma pack()				//+22
+#else
+} __attribute__((packed));
+#endif
 
 const char *LabelAuthors = { N_(
 	"PCSX2, a PS2 emulator\n\n"
@@ -81,74 +135,6 @@ const char *LabelGreets = { N_(
 	"F|RES, MrBrown, razorblade, Seta-san, Skarmeth"
 	)
 };
-
-static struct {
-	const char	*name;
-	u32		size;
-} ioprps[]={
-	{"IOPRP14",    43845},
-	{"IOPRP142",   48109},
-	{"IOPRP143",   58317},
-	{"IOPRP144",   58525},
-	{"IOPRP15",    82741},
-	{"IOPRP151",   82917},
-	{"IOPRP153",   82949},
-	{"IOPRP16",    91909},
-	{"IOPRP165",   98901},
-	{"IOPRP20",   109809},
-	{"IOPRP202",  110993},
-	{"IOPRP205",  119797},
-	{"IOPRP21",   126857},
-	{"IOPRP211",  129577},
-	{"IOPRP213",  129577},
-	{"IOPRP214",  140945},
-	{"IOPRP22",   199257},
-	{"IOPRP221",  196937},
-	{"IOPRP222",  198233},
-	{"IOPRP224",  201065},
-	{"IOPRP23",   230329},
-	{"IOPRP234",  247641},
-	{"IOPRP24",   251065},
-	{"IOPRP241",  251049},
-	{"IOPRP242",  252409},
-	{"IOPRP243",  253201},
-	{"IOPRP250",  264897},
-	{"IOPRP252",  265233},
-	{"IOPRP253",  267217},
-	{"IOPRP254",  264449},
-	{"IOPRP255",  264449},
-	{"IOPRP260",  248945},
-	{"IOPRP270",  249121},
-	{"IOPRP271",  266817},
-	{"IOPRP280",  269889},
-	{"IOPRP300",  275345},
-	{"DNAS280",   272753},
-	{"DNAS270",   251729},
-	{"DNAS271",   268977},
-	{"DNAS300",   278641},
-	{"DNAS280",   272705},
-	{"DNAS255",   264945},
-	{NULL,             0}
-};
-
-void GetRPCVersion(char *ioprp, char *rpcver){
-	char	*p=ioprp; 
-	int i;
-	struct TocEntry te;
-	
-	if (p && (CDVD_findfile(p+strlen("cdromN:"), &te) != -1)){
-		for (i=0; ioprps[i].size>0; i++)
-			if (te.fileSize==ioprps[i].size)
-				break;
-			if (ioprps[i].size>0)
-				p=(char *)ioprps[i].name;
-	}
-	// fixme - Is p really supposed to be set in the middle of an if statement?
-	if (p && (p=strstr(p, "IOPRP")+strlen("IOPRP"))){
-		for (i=0;(i<4) && p && (*p>='0') && (*p<='9');i++, p++)	rpcver[i]=*p;
-		for (   ; i<4								 ;i++     ) rpcver[i]='0';
-	}
-}
 
 u32 GetBiosVersion() {
 	unsigned int fileOffset=0;
@@ -269,44 +255,6 @@ int IsBIOS(char *filename, char *description)
 	return FALSE;	//fail quietly
 }
 
-// LOAD STUFF
-
-// fixme - Is there any reason why we shouldn't delete this define, and replace the array lengths
-// with the actual numbers?
-#define ISODCL(from, to) (to - from + 1)
-
-struct iso_directory_record {
-	char length			[ISODCL (1, 1)]; /* length[1];  711 */
-	char ext_attr_length		[ISODCL (2, 2)]; /* ext_attr_length[1]; 711 */
-	char extent			[ISODCL (3, 10)]; /* extent[8]; 733 */
-	char size			[ISODCL (11, 18)]; /* size[8]; 733 */
-	char date			[ISODCL (19, 25)]; /* date[7]; 7 by 711 */
-	char flags			[ISODCL (26, 26)]; /* flags[1]; */
-	char file_unit_size		[ISODCL (27, 27)]; /* file_unit_size[1]; 711 */
-	char interleave			[ISODCL (28, 28)]; /* interleave[1]; 711 */
-	char volume_sequence_number	[ISODCL (29, 32)]; /*  volume_sequence_number[3]; 723 */
-	unsigned char name_len		[ISODCL (33, 33)]; /* name_len[1]; 711 */
-	char name			[1];
-};
-
-int LoadCdrom() {
-	return 0;
-}
-
-int CheckCdrom() {
-	u8 *buf;
-
-	if (CDVDreadTrack(16, CDVD_MODE_2352) == -1) 
-		return -1; 
-	buf = CDVDgetBuffer();
-	if (buf == NULL) 
-		return -1;
-	
-	strncpy(CdromId, (char*)buf+52, 10);
-
-	return 0;
-}
-
 int GetPS2ElfName(char *name){
 	int f;
 	char buffer[g_MaxPath];//if a file is longer...it should be shorter :D
@@ -353,7 +301,6 @@ int GetPS2ElfName(char *name){
 	FILE *fp;
 	int i;
 
-	// inifile_read(CdromId);
 	fp = fopen("System.map", "r");
 	if( fp == NULL ) return 2;
 
@@ -398,7 +345,6 @@ void SaveGSState(const string& file)
 	g_fGSSave->Freeze( g_nLeftGSFrames );
 }
 
-extern uptr pDsp;
 void LoadGSState(const string& file)
 {
 	int ret;
@@ -450,40 +396,6 @@ void LoadGSState(const string& file)
 
 #endif
 
-struct LangDef {
-	char id[8];
-	char name[64];
-};
-
-LangDef sLangs[] = {
-	{ "ar_AR", N_("Arabic") },
-	{ "bg_BG", N_("Bulgarian") },
-	{ "ca_CA", N_("Catalan") },
-	{ "cz_CZ", N_("Czech") },
-	{ "du_DU",  N_("Dutch")  },
-	{ "de_DE", N_("German") },
-	{ "el_EL", N_("Greek") },
-	{ "en_US", N_("English") },
-	{ "fr_FR", N_("French") },
-	{ "hb_HB" , N_("Hebrew") },
-	{ "hu_HU", N_("Hungarian") },
-	{ "it_IT", N_("Italian") },
-	{ "ja_JA", N_("Japanese") },
-	{ "pe_PE", N_("Persian") },
-	{ "po_PO", N_("Portuguese") },
-	{ "po_BR", N_("Portuguese BR") },
-	{ "pl_PL" , N_("Polish") },
-	{ "ro_RO", N_("Romanian") },
-	{ "ru_RU", N_("Russian") },
-	{ "es_ES", N_("Spanish") },
-	{ "sh_SH" , N_("S-Chinese") },
-    { "sw_SW", N_("Swedish") },
-	{ "tc_TC", N_("T-Chinese") },
-	{ "tr_TR", N_("Turkish") },
-	{ "", "" },
-};
-
-
 char *ParseLang(char *id) {
 	int i=0;
 
@@ -495,11 +407,6 @@ char *ParseLang(char *id) {
 
 	return id;
 }
-
-#define NUM_STATES 10
-int StatesC = 0;
-
-extern char strgametitle[256];
 
 char* mystrlwr( char* string )
 {
@@ -577,10 +484,10 @@ void CycleFrameLimit(int dir)
 
 void ProcessFKeys(int fkey, int shift)
 {
-    assert(fkey >= 1 && fkey <= 12 );
+	assert(fkey >= 1 && fkey <= 12 );
 
-    switch(fkey) {
-        case 1:
+	switch(fkey) {
+		case 1:
 			try
 			{
 				gzSavingState( SaveState::GetFilename( StatesC ) ).FreezeAll();
@@ -701,92 +608,25 @@ void ProcessFKeys(int fkey, int shift)
 #endif
 
 		case 12:
-            if( shift ) {
+			if( shift ) {
 #ifdef PCSX2_DEVBUILD
-			    iDumpRegisters(cpuRegs.pc, 0);
+				iDumpRegisters(cpuRegs.pc, 0);
 				Console::Notice("hardware registers dumped EE:%x, IOP:%x\n", params cpuRegs.pc, psxRegs.pc);
 #endif
-            }
-            else {
-                g_Pcsx2Recording ^= 1;
-                if( mtgsThread != NULL ) {
+			}
+			else {
+				g_Pcsx2Recording ^= 1;
+				if( mtgsThread != NULL ) {
 					mtgsThread->SendSimplePacket(GS_RINGTYPE_RECORD, g_Pcsx2Recording, 0, 0);
-                }
-                else {
-                    if( GSsetupRecording != NULL ) GSsetupRecording(g_Pcsx2Recording, NULL);
-                }
+				}
+				else {
+					if( GSsetupRecording != NULL ) GSsetupRecording(g_Pcsx2Recording, NULL);
+				}
 				if( SPU2setupRecording != NULL ) SPU2setupRecording(g_Pcsx2Recording, NULL);  
-            }
+			}
 			break;
-    }
-}
-
-/*void injectIRX(const char *filename)
-{
-	char name[260], *p, *q;
-	struct romdir *rd;
-	int iROMDIR=-1, iIOPBTCONF=-1, iBLANK=-1, i, filesize;
-	FILE *fp;
-
-	strcpy(name, filename);
-	for (i=0; name[i] && name[i]!='.' && i<10; i++) name[i]=toupper(name[i]);name[i]=0;
-
-	//phase 1: find ROMDIR in bios
-	for (p=(char*)PS2MEM_ROM; p<(char*)PS2MEM_ROM+0x80000; p++)
-		if (strncmp(p, "RESET", 5)==0)
-			break;
-	rd=(struct romdir*)p;
-
-	for (i=0; rd[i].fileName[0]; i++)if (strncmp(rd[i].fileName, name, strlen(name))==0)break;
-	if (rd[i].fileName[0])return;//already in;)
-
-	//phase 2: make room in IOPBTCONF & ROMDIR
-	for (i=0; rd[i].fileName[0]; i++)if (strncmp(rd[i].fileName, "ROMDIR",    6)==0)iROMDIR=i;
-	for (i=0; rd[i].fileName[0]; i++)if (strncmp(rd[i].fileName, "IOPBTCONF", 9)==0)iIOPBTCONF=i;
-	
-	for (i=0; rd[i].fileName[0]; i++)if (rd[i].fileName[0]=='-')break;				iBLANK=i;
-	rd[iBLANK].fileSize-=DIRENTRY_SIZE+DIRENTRY_SIZE;
-	p=(char*)PS2MEM_ROM;for (i=0; i<iBLANK; i++)p+=(rd[i].fileSize+0xF)&(~0xF);p+=DIRENTRY_SIZE;
-
-	// fixme - brevity, yes, but at the expense of readability?
-	q=(char*)PS2MEM_ROM;for (i=0; i<=iIOPBTCONF; i++)	q+=(rd[i].fileSize+0xF)&(~0xF);
-	while (p-16>q){*((u64*)p)=*((u64*)p-4);*((u64*)p+1)=*((u64*)p-3);p-=DIRENTRY_SIZE;}
-	*((u64*)p)=*((u64*)p+1)=0;p-=DIRENTRY_SIZE;rd[iIOPBTCONF].fileSize+=DIRENTRY_SIZE;
-	
-	q=(char*)PS2MEM_ROM;for (i=0; i<=iROMDIR; i++)	q+=(rd[i].fileSize+0xF)&(~0xF);
-	while (p   >q){*((u64*)p)=*((u64*)p-2);*((u64*)p+1)=*((u64*)p-1);p-=DIRENTRY_SIZE;}
-	*((u64*)p)=*((u64*)p+1)=0;p-=DIRENTRY_SIZE;rd[iROMDIR].fileSize+=DIRENTRY_SIZE;
-	
-	//phase 3: add the name to the end of IOPBTCONF
-	p=(char*)PS2MEM_ROM;for (i=0; i<iIOPBTCONF; i++)	p+=(rd[i].fileSize+0xF)&(~0xF);while(*p) p++;//go to end of file
-	strcpy(p, name);p[strlen(name)]=0xA;
-
-	//phase 4: find file
-	string path( Path::Combine( Config.BiosDir, filename ) );
-
-	if( !Path::isFile( path ) )
-	{
-		Msgbox::Alert("Unable to hack in %s%s\n", params Config.BiosDir, filename);
-		return;
 	}
-
-	//phase 5: add the file to the end of the bios
-	p=(char*)PS2MEM_ROM;for (i=0; rd[i].fileName[0]; i++)p+=(rd[i].fileSize+0xF)&(~0xF);
-
-	fp=fopen(path.c_str(), "rb");
-	fseek(fp, 0, SEEK_END);
-	filesize=ftell(fp);
-	fseek(fp, 0, SEEK_SET);
-	fread(p, 1, filesize, fp);
-	fclose(fp);
-
-	//phase 6: register it in ROMDIR
-	memset(rd[i].fileName, 0, 10);
-	memcpy(rd[i].fileName, name, strlen(name));
-	rd[i].fileSize=filesize;
-	rd[i].extInfoSize=0;
-}*/
-
+}
 
 void _memset16_unaligned( void* dest, u16 data, size_t size )
 {

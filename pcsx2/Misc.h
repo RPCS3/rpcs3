@@ -19,37 +19,6 @@
 #ifndef __MISC_H__
 #define __MISC_H__
 
-#include "System.h"
-#include "Pcsx2Config.h"
-
-/////////////////////////////////////////////////////////////////////////
-// GNU GetText / NLS 
-// Move to System.h, perhaps?
-
-#ifdef ENABLE_NLS
-
-#ifdef _WIN32
-#include "libintlmsc.h"
-#else
-#include <locale.h>
-#include <libintl.h>
-#endif
-
-#undef _
-#define _(String) dgettext (PACKAGE, String)
-#ifdef gettext_noop
-#  define N_(String) gettext_noop (String)
-#else
-#  define N_(String) (String)
-#endif
-
-#else
-
-#define _(msgid) msgid
-#define N_(msgid) msgid
-
-#endif		// ENABLE_NLS
-
 // what the hell is this unused piece of crap passed to every plugin for? (air)
 // Agreed. It ought to get removed in the next version of the plugin api. (arcum42)
 extern uptr pDsp;	//Used in  GS, MTGS, Plugins, Misc
@@ -80,9 +49,6 @@ extern void FreezeRegs(int save);
 #define FreezeXMMRegs(save) if( g_EEFreezeRegs ) { FreezeXMMRegs_(save); }
 #define FreezeMMXRegs(save) if( g_EEFreezeRegs ) { FreezeMMXRegs_(save); }
 
-// Not used.
-//void injectIRX(const char *filename);
-
 // If we move the rest of this stuff, we can probably move these, too.
 extern void InitCPUTicks();
 extern u64 GetCPUTicks();
@@ -96,30 +62,8 @@ extern const char *LabelAuthors;
 extern const char *LabelGreets;
 void CycleFrameLimit(int dir);
 
-// Only used in Misc.cpp
 void SaveGSState(const string& file);
 void LoadGSState(const string& file);
-
-extern char CdromId[12];
-int LoadCdrom();
-int CheckCdrom();
-
-#define DIRENTRY_SIZE 16
-
-#if defined(_MSC_VER)
-#pragma pack(1)
-#endif
-
-struct romdir{
-	char fileName[10];
-	u16 extInfoSize;
-	u32 fileSize;
-#if defined(_MSC_VER)
-};		
-#pragma pack()				//+22
-#else
-} __attribute__((packed));
-#endif
 
 #endif /* __MISC_H__ */
 

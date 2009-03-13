@@ -18,7 +18,7 @@
 
 #include "PrecompiledHeader.h"
 
-#include "PsxCommon.h"
+#include "IopCommon.h"
 #include "MemoryCard.h"
 
 _sio sio;

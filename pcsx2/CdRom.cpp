@@ -18,8 +18,7 @@
 
 #include "PrecompiledHeader.h"
 
-#include "PsxCommon.h"
-#include "Common.h"
+#include "IopCommon.h"
 
 //THIS ALL IS FOR THE CDROM REGISTERS HANDLING
 
@@ -73,7 +72,6 @@ const char *CmdName[0x100]= {
 
 cdrStruct cdr;
 long LoadCdBios;
-int cdOpenCase;
 
 u8 Test04[] = { 0 };
 u8 Test05[] = { 0 };

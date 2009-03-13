@@ -20,8 +20,7 @@
 
 #include <time.h>
 
-#include "Common.h"
-#include "PsxCommon.h"
+#include "IopCommon.h"
 #include "Stats.h"
 
 #include "Paths.h"

@@ -30,7 +30,7 @@
 #include <sys/types.h>
 #endif
 
-#include "PsxCommon.h"
+#include "IopCommon.h"
 #include "VU.h"
 #include "iCore.h"
 

@@ -25,6 +25,7 @@
 	#include "Linux/memzero.h"
 #endif // WIN32
 
+	// Only used in the Windows version of memzero.h. But it's in Misc.cpp for some reason.
 	void _memset16_unaligned( void* dest, u16 data, size_t size );
 
 	// The new simplified memcpy_amd_ is now faster than memcpy_raz_.

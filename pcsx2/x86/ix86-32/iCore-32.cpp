@@ -444,7 +444,7 @@ int  _getFreeMMXreg()
 	// check for dead regs
 	for (i=0; i<MMXREGS; i++) {
 		if (mmxregs[i].needed) continue;
-		if (mmxregs[i].reg >= MMX_GPR && mmxregs[i].reg < MMX_GPR+34 ) {
+		if (mmxregs[i].reg >= MMX_GPR && mmxregs[i].reg < MMX_GPR+34 ) { // mmxregs[i] is unsigned, and MMX_GPR == 0, so the first part is always true. 
 			if( !(g_pCurInstInfo->regs[mmxregs[i].reg-MMX_GPR] & (EEINST_LIVE0|EEINST_LIVE1)) ) {
 				_freeMMXreg(i);
 				return i;

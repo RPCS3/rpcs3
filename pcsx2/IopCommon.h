@@ -15,37 +15,25 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
-#ifndef __PSXCOMMON_H__
-#define __PSXCOMMON_H__
-
-#include "PS2Etypes.h"
-
-#include <assert.h>
-
-#include "System.h"
-
-extern long LoadCdBios;
-extern int cdOpenCase;
+#ifndef __IOPCOMMON_H__
+#define __IOPCOMMON_H__
 
 #define PSXCLK	(36864000ULL)	/* 36.864 Mhz */
 
-#include "Plugins.h"
-#include "Misc.h"
-#include "SaveState.h"
-
 #include "R3000A.h"
+#include "Common.h"
+
+#include "CdRom.h"
+#include "CDVD.h"
+
+#include "Sio.h"
+#include "Sif.h"
+
 #include "IopMem.h"
 #include "IopHw.h"
 #include "IopBios.h"
 #include "IopDma.h"
 #include "IopCounters.h"
-#include "CdRom.h"
-#include "Sio.h"
-#include "DebugTools/Debug.h"
 #include "IopSio2.h"
-#include "CDVD.h"
-#include "Memory.h"
-#include "Hw.h"
-#include "Sif.h"
 
-#endif /* __PSXCOMMON_H__ */
+#endif /* __IOPCOMMON_H__ */

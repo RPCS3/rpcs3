@@ -23,7 +23,7 @@
 #ifdef __LINUX__
 #include "PS2Edefs.h"
 #endif
-
+#include "System.h"
 // Savestate Versioning!
 //  If you make changes to the savestate version, please increment the value below.
 

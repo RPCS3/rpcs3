@@ -21,8 +21,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "Misc.h"
-#include "PsxCommon.h"
+#include "IopCommon.h"
 #include "Mdec.h"
 
 int iq_y[DCTSIZE2],iq_uv[DCTSIZE2];

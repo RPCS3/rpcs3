@@ -115,6 +115,33 @@ static __forceinline u32 timeGetTime()
 #	define __unused
 #endif
 
+/////////////////////////////////////////////////////////////////////////
+// GNU GetText / NLS 
+
+#ifdef ENABLE_NLS
+
+#ifdef _WIN32
+#include "libintlmsc.h"
+#else
+#include <locale.h>
+#include <libintl.h>
+#endif
+
+#undef _
+#define _(String) dgettext (PACKAGE, String)
+#ifdef gettext_noop
+#  define N_(String) gettext_noop (String)
+#else
+#  define N_(String) (String)
+#endif
+
+#else
+
+#define _(msgid) msgid
+#define N_(msgid) msgid
+
+#endif		// ENABLE_NLS
+
 //////////////////////////////////////////////////////////////////////////////////////////
 // Forceinline macro that is enabled for RELEASE/PUBLIC builds ONLY.  (non-inline in devel)
 // This is useful because forceinline can make certain types of debugging problematic since

@@ -27,7 +27,7 @@
 #include <windowsx.h>
 #include <tchar.h>
 
-#include "Misc.h"
+#include "System.h"
 #include "HostGui.h"
 #include "resource.h"
 #include "WinDebugResource.h"

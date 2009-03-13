@@ -20,10 +20,12 @@
 #define __SYSTEM_H__
 
 #include "PS2Etypes.h"
+#include "Pcsx2Config.h"
 #include "Exceptions.h"
 #include "Paths.h"
 #include "MemcpyFast.h"
 #include "SafeArray.h"
+#include "Misc.h"
 
 
 enum PageProtectionMode

@@ -19,8 +19,7 @@
 #include "PrecompiledHeader.h"
 #include "RedtapeWindows.h"
 
-#include "Common.h"
-#include "PsxCommon.h"
+#include "IopCommon.h"
 #include "GS.h"
 
 _GSinit            GSinit;

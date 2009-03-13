@@ -19,7 +19,7 @@
 #ifndef __CDVD_H__
 #define __CDVD_H__
 
-#include "PsxCommon.h"
+#include "IopCommon.h"
 
 struct cdvdRTC {
 	u8 status;

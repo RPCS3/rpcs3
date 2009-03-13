@@ -20,7 +20,7 @@
 #ifndef __DEBUG_H__
 #define __DEBUG_H__
 
-#include "Misc.h"
+#include "Pcsx2Config.h"
 
 extern FILE *emuLog;
 

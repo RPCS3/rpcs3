@@ -43,10 +43,9 @@ BIOS
 
 #include <vector>
 
-#include "Common.h"
+#include "IopCommon.h"
 #include "iR5900.h"
 
-#include "PsxCommon.h"
 #include "VUmicro.h"
 #include "GS.h"
 #include "IPU/IPU.h"

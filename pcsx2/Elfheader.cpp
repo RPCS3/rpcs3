@@ -148,7 +148,7 @@ static uint parseCommandLine( const char *filename )
 	{	// 4 + 4 + 256
 		const char * p;
 		int  argc;
-        int i;
+		int i;
 
 		args_ptr -= 256;
 
@@ -159,59 +159,47 @@ static uint parseCommandLine( const char *filename )
 		p = strrchr( filename, '\\' );
 #else	//linux
 		p = strrchr( filename, '/' );
-        if( p == NULL )
-            p = strchr(filename, '\\');
+		if( p == NULL ) p = strchr(filename, '\\');
 #endif
-		if ( p )
-      {
-         p++;
-      }
+		if (p)
+			p++;
 		else
-      {
-         p = filename;
-      }
+			p = filename;
+		
 		args_ptr -= strlen( p ) + 1;
-     /* if ( args_ptr < 0 ) // fixme- This is still impossible.
-      {
-         return 0;
-      }*/
+		
 		strcpy( (char*)&PS2MEM_BASE[ args_ptr ], p );						//fill param 0; i.e. name of the program
 
 		for ( i = strlen( p ) + 1 + 256, argc = 0; i > 0; i-- )
-      {
-			while ( i && ( ( PS2MEM_BASE[ args_ptr + i ] == 0 ) || ( PS2MEM_BASE[ args_ptr + i ] == 32 ) ) )
-         {
-            i--;
-         }
-			if ( PS2MEM_BASE[ args_ptr + i + 1 ] == ' ' )
-         {
-            PS2MEM_BASE[ args_ptr + i + 1 ] = 0;
-         }
-			while ( i && ( PS2MEM_BASE[ args_ptr + i ] != 0 ) && ( PS2MEM_BASE[ args_ptr + i] != 32 ) )
-         {
-            i--;
-         }
-			if ( ( PS2MEM_BASE[ args_ptr + i ] != 0 ) && ( PS2MEM_BASE[ args_ptr + i ] != 32  ) )
+		{
+			while (i && ((PS2MEM_BASE[ args_ptr + i ] == 0) || (PS2MEM_BASE[ args_ptr + i ] == 32))) 
+			{ i--; }
+			
+			if ( PS2MEM_BASE[ args_ptr + i + 1 ] == ' ') PS2MEM_BASE[ args_ptr + i + 1 ] = 0;
+			
+			while (i && (PS2MEM_BASE[ args_ptr + i ] != 0) && (PS2MEM_BASE[ args_ptr + i] != 32))
+			{ i--; }
+			
+			if ((PS2MEM_BASE[ args_ptr + i ] != 0) && (PS2MEM_BASE[ args_ptr + i ] != 32))
 			{	//i==0
 				argc++;
+				
 				if ( args_ptr - 4 - 4 - argc * 4 < 0 ) // fixme - Should this be cast to a signed int?
-				{
-				   return 0;
-				}
+					return 0;
+
 				((u32*)PS2MEM_BASE)[ args_ptr / 4 - argc ] = args_ptr + i;
 			}
-         else
-         {
+			else
+			{
 				if ( ( PS2MEM_BASE[ args_ptr + i + 1 ] != 0 ) && ( PS2MEM_BASE[ args_ptr + i + 1 ] != 32 ) )
 				{
 					argc++;
 					if ( args_ptr - 4 - 4 - argc * 4 < 0 ) // fixme - Should this be cast to a signed int?
-					{
 						return 0;
-					}
+
 					((u32*)PS2MEM_BASE)[ args_ptr / 4 - argc ] = args_ptr + i + 1;
 				}
-         }
+			}
 		}
 		((u32*)PS2MEM_BASE)[ args_ptr /4 - argc - 1 ] = argc;		      //how many args
 		((u32*)PS2MEM_BASE)[ args_ptr /4 - argc - 2 ] = ( argc > 0);	//have args?	//not used, cannot be filled at all
@@ -311,10 +299,10 @@ struct ElfObject
 		if ((strnicmp( filename.c_str(), "cdrom0:", strlen("cdromN:")) == 0) ||
 			(strnicmp( filename.c_str(), "cdrom1:", strlen("cdromN:")) == 0))
 		{
-			int fi;
-			fi = CDVDFS_open(filename.c_str() + strlen("cdromN:"), 1);//RDONLY
-			if (fi < 0)
-				throw Exception::FileNotFound( filename );
+			int fi = CDVDFS_open(filename.c_str() + strlen("cdromN:"), 1);//RDONLY
+			
+			if (fi < 0) throw Exception::FileNotFound( filename );
+			
 			CDVDFS_lseek( fi, 0, SEEK_SET );
 			rsize = CDVDFS_read( fi, (char*)data.GetPtr(), data.GetSizeInBytes() );
 			CDVDFS_close( fi );
@@ -324,15 +312,14 @@ struct ElfObject
 			FILE *f;
 
 			f = fopen( filename.c_str(), "rb" );
-			if( f == NULL )
-				Exception::FileNotFound( filename );
+			if( f == NULL ) Exception::FileNotFound( filename );
+			
 			fseek( f, 0, SEEK_SET );
 			rsize = fread( data.GetPtr(), 1, data.GetSizeInBytes(), f );
 			fclose( f );
 		}
 
-		if( rsize < data.GetSizeInBytes() )
-			throw Exception::EndOfStream( filename );
+		if( rsize < data.GetSizeInBytes() ) throw Exception::EndOfStream( filename );
 	}
 
 	u32 GetCRC() const
@@ -426,37 +413,14 @@ struct ElfObject
 			
 			switch ( secthead[ i ].sh_type )
 			{
-				default:
-					ELF_LOG("unknown %08x",secthead[i].sh_type);
-					break;
-
-				case 0x0:
-					ELF_LOG("null");
-					break;
-
-				case 0x1:
-					ELF_LOG("progbits");
-					break;
-
-				case 0x2:
-					ELF_LOG("symtab");
-					break;
-
-				case 0x3:
-					ELF_LOG("strtab");
-					break;
-
-				case 0x4:
-					ELF_LOG("rela");
-					break;
-
-				case 0x8:
-					ELF_LOG("no bits");
-					break;
-
-				case 0x9:
-					ELF_LOG("rel");
-					break;
+				case 0x0: ELF_LOG("null"); break;
+				case 0x1: ELF_LOG("progbits"); break;
+				case 0x2: ELF_LOG("symtab"); break;
+				case 0x3: ELF_LOG("strtab"); break;
+				case 0x4: ELF_LOG("rela"); break;
+				case 0x8: ELF_LOG("no bits"); break;
+				case 0x9: ELF_LOG("rel"); break;
+				default: ELF_LOG("unknown %08x",secthead[i].sh_type); break;
 			}
 			
 			ELF_LOG("\n");
@@ -619,17 +583,6 @@ void LoadGameSpecificSettings()
 	g_FFXHack = 0;
 
 	switch(ElfCRC) {
-		// The code involving VUFIX_SIGNEDZERO & VUFIX_EXTRAFLAGS
-		// is no longer in pcsx2.
-		
-		//case 0x0c414549: // spacefisherman, missing gfx
-		//	g_VUGameFixes |= VUFIX_SIGNEDZERO;
-		//	break;
-		//case 0x4C9EE7DF: // crazy taxi (u)
-		//case 0xC9C145BF: // crazy taxi, missing gfx
-		//	g_VUGameFixes |= VUFIX_EXTRAFLAGS;
-		//	break;
-
 		case 0xb99379b7: // erementar gerad (discolored chars)
 			g_VUGameFixes |= VUFIX_XGKICKDELAY2; // Tested - still needed - arcum42
 			break;

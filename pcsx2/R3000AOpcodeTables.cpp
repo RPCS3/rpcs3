@@ -18,8 +18,7 @@
 
 #include "PrecompiledHeader.h"
 
-#include "PsxCommon.h"
-#include "Common.h"
+#include "IopCommon.h"
 
 extern void zeroEx();
 
