@@ -100,11 +100,13 @@ struct microProgManager {
 };
 
 struct microVU {
-	int index;		// VU Index (VU0 or VU1)
+	u32 index;		// VU Index (VU0 or VU1)
 	u32 microSize;	// VU Micro Memory Size
 	u32 progSize;	// VU Micro Program Size (microSize/8)
 	u32 cacheAddr;	// VU Cache Start Address
 	static const u32 cacheSize = 0x400000; // VU Cache Size
+
+	microProgManager<0x800> prog; // Micro Program Data
 	
 	VURegs*	regs;	// VU Regs Struct
 	u8*		cache;	// Dynarec Cache Start (where we will start writing the recompiled code to)
@@ -122,7 +124,6 @@ struct microVU {
 	uptr x86esi; // Source register. Used as a pointer to a source in stream operations.
 	uptr x86edi; // Destination register. Used as a pointer to a destination in stream operations.
 */
-	microProgManager<0x800> prog; // Micro Program Data
 };
 
 // microVU rec structs

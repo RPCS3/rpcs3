@@ -769,7 +769,7 @@ microVUt(void) mVUallocVIb(int GPRreg, int _reg_) {
 }
 
 //------------------------------------------------------------------
-// Div/Sqrt/Rsqrt Allocator Helpers
+// Lower Instruction Allocator Helpers
 //------------------------------------------------------------------
 
 #define getReg5(reg, _reg_, _fxf_) {  \
@@ -783,4 +783,9 @@ microVUt(void) mVUallocVIb(int GPRreg, int _reg_) {
 	}  \
 }
 
+// Doesn't Clamp
+#define getReg7(reg, _reg_) {  \
+	if (!_reg_)	{ getZero(reg); }  \
+	else		{ mVUloadReg<vuIndex>(reg, (uptr)&mVU->regs->VF[_reg_].UL[0], _X_Y_Z_W); }  \
+}
 #endif //PCSX2_MICROVU
