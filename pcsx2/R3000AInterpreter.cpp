@@ -380,8 +380,9 @@ void psxJALR() { if (_Rd_) { _SetLink(_Rd_); } doBranch(_u32(_rRs_)); }
 static __forceinline void execI()
 {
 	psxRegs.code = iopMemRead32(psxRegs.pc);
-
-	PSXCPU_LOG("%s\n", disR3000AF(psxRegs.code, psxRegs.pc));
+	
+	//if( (psxRegs.pc >= 0x1200 && psxRegs.pc <= 0x1400) || (psxRegs.pc >= 0x0b40 && psxRegs.pc <= 0x1000))
+		PSXCPU_LOG("%s\n", disR3000AF(psxRegs.code, psxRegs.pc));
 
 	psxRegs.pc+= 4;
 	psxRegs.cycle++;
@@ -395,6 +396,7 @@ static void doBranch(s32 tar) {
 	branch2 = iopIsDelaySlot = true;
 	branchPC = tar;
 	execI();
+	PSXCPU_LOG( "\n" );
 	iopIsDelaySlot = false;
 	psxRegs.pc = branchPC;
 

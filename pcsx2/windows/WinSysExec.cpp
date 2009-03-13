@@ -25,7 +25,6 @@
 #include "iR5900.h"
 
 static bool sinit = false;
-bool UseGui = true;
 bool nDisableSC = false; // screensaver
 
 // This instance is not modified by command line overrides so
@@ -442,11 +441,6 @@ namespace HostGui
 				}
 				else
 				{
-					if( !UseGui ) {
-						// not using GUI and user just quit, so exit
-						WinClose();
-					}
-					
 					nDisableSC = 0;
 				}
 
