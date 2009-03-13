@@ -56,17 +56,16 @@ extern bool g_EEFreezeRegs;
 #ifndef __INTEL_COMPILER
 extern "C" void FreezeXMMRegs_(int save);
 extern "C" void FreezeMMXRegs_(int save);
+extern "C" void FreezeRegs(int save);
 #else
 extern void FreezeXMMRegs_(int save);
 extern void FreezeMMXRegs_(int save);
+extern void FreezeRegs(int save);
 #endif
 
 // these macros check to see if needs freezing
 #define FreezeXMMRegs(save) if( g_EEFreezeRegs ) { FreezeXMMRegs_(save); }
 #define FreezeMMXRegs(save) if( g_EEFreezeRegs ) { FreezeMMXRegs_(save); }
-
-// Not used.
-//void injectIRX(const char *filename);
 
 // If we move the rest of this stuff, we can probably move these, too.
 extern void InitCPUTicks();
@@ -80,30 +79,8 @@ extern const char *LabelAuthors;
 extern const char *LabelGreets;
 void CycleFrameLimit(int dir);
 
-// Only used in Misc.cpp
 void SaveGSState(const string& file);
 void LoadGSState(const string& file);
-
-extern char CdromId[12];
-int LoadCdrom();
-int CheckCdrom();
-
-#define DIRENTRY_SIZE 16
-
-#if defined(_MSC_VER)
-#pragma pack(1)
-#endif
-
-struct romdir{
-	char fileName[10];
-	u16 extInfoSize;
-	u32 fileSize;
-#if defined(_MSC_VER)
-};		
-#pragma pack()				//+22
-#else
-} __attribute__((packed));
-#endif
 
 #endif /* __MISC_H__ */
 

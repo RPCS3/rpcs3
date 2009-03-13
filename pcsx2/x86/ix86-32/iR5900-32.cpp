@@ -613,9 +613,12 @@ void recStep( void ) {
 static __forceinline bool recEventTest()
 {
 #ifdef PCSX2_DEVBUILD
-    // dont' remove this check unless doing an official release
-    if( g_globalXMMSaved || g_globalMMXSaved)
+	// dont' remove this check unless doing an official release
+	if( g_globalXMMSaved || g_globalMMXSaved)
+	{
 		DevCon::Error("Pcsx2 Foopah!  Frozen regs have not been restored!!!");
+		DevCon::Error("g_globalXMMSaved = %d,g_globalMMXSaved = %d",params g_globalXMMSaved, g_globalMMXSaved);
+	}
 	assert( !g_globalXMMSaved && !g_globalMMXSaved);
 #endif
 
@@ -1198,11 +1201,12 @@ u32 eeScaleBlockCycles()
 		jNO_DEFAULT
 	}
 
-	s_nBlockCycles *= 
+	const u32 temp = s_nBlockCycles * (
 		(s_nBlockCycles <= (10<<3)) ? scalarLow :
-		((s_nBlockCycles > (21<<3)) ? scalarHigh : scalarMid );
+		((s_nBlockCycles > (21<<3)) ? scalarHigh : scalarMid )
+	);
 
-	return s_nBlockCycles >> (3+2);
+	return temp >> (3+2);
 }
 
 // Generates dynarec code for Event tests followed by a block dispatch (branch).

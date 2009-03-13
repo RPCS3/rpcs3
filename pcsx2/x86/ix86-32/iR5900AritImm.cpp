@@ -486,19 +486,6 @@ void recADDIU( void )
 ////////////////////////////////////////////////////
 void recDADDI( void ) 
 {
-#ifdef __x86_64_
-   if ( ! _Rt_ )
-   {
-      return;
-   }
-
-	MOV64MtoR( RAX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
-	if ( _Imm_ != 0 )
-	   {
-		   ADD64ItoR( EAX, _Imm_ );
-	   }
-	MOV64RtoM( (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ], RAX );
-#else
    if ( ! _Rt_ )
    {
       return;
@@ -520,7 +507,6 @@ void recDADDI( void )
 	   }
 	   MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ], EAX );
 	   MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 1 ], EDX );
-#endif  
 }
 
 ////////////////////////////////////////////////////

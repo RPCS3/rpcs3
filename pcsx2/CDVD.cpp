@@ -20,7 +20,7 @@
 
 #include <ctype.h>
 
-#include "PsxCommon.h"
+#include "IopCommon.h"
 #include "CDVDiso.h"
 
 static cdvdStruct cdvd;
@@ -462,7 +462,7 @@ void cdvdReadKey(u8 arg0, u16 arg1, u32 arg2, u8* key) {
 	
 	// get main elf name
 	GetPS2ElfName(str);
-    sprintf(exeName, "%c%c%c%c%c%c%c%c%c%c%c",str[8],str[9],str[10],str[11],str[12],str[13],str[14],str[15],str[16],str[17],str[18]);
+	sprintf(exeName, "%c%c%c%c%c%c%c%c%c%c%c",str[8],str[9],str[10],str[11],str[12],str[13],str[14],str[15],str[16],str[17],str[18]);
 	DevCon::Notice("exeName = %s", params &str[8]);
 	
 	// convert the number characters to a real 32bit number

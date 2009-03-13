@@ -18,7 +18,7 @@
 
 #include "PrecompiledHeader.h"
 
-#include "Misc.h"
+#include "System.h"
 #include "MemoryCard.h"
 #include "Paths.h"
 

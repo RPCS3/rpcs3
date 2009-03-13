@@ -27,20 +27,20 @@
 //#define PSXCLK	186864000	/* 36.864 Mhz */
 #define PS2CLK 294912000 //hz	/* 294.912 mhz */
 
+#define PCSX2_VERSION "(beta)"
 
 #include "Plugins.h"
-#include "Misc.h"
 #include "SaveState.h"
 
 #include "DebugTools/Debug.h"
-#include "R5900.h"
 #include "Memory.h"
-#include "Elfheader.h"
 #include "Hw.h"
-// Moving this before one of the other includes causes compilation issues. 
-//#include "Misc.h"
+
+#include "R5900.h"
+#include "Elfheader.h"
 #include "Patch.h"
 
-#define PCSX2_VERSION "(beta)"
+#include "System.h"
+#include "Pcsx2Config.h"
 
 #endif /* __COMMON_H__ */

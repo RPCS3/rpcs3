@@ -19,7 +19,7 @@
 #ifndef __CDROM_H__
 #define __CDROM_H__
 
-#include "PsxCommon.h"
+#include "IopCommon.h"
 #include "Decode_XA.h"
 #include "PS2Edefs.h"
 

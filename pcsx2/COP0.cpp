@@ -144,79 +144,259 @@ void WriteTLB(int i)
 	MapTLB(i);
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////
+// Performance Counters Update Stuff!
+// 
+// Note regarding updates of PERF and TIMR registers: never allow increment to be 0.
+// That happens when a game loads the MFC0 twice in the same recompiled block (before the
+// cpuRegs.cycles update), and can cause games to lock up since it's an unexpected result.
+//
+// PERF Overflow exceptions:  The exception is raised when the MSB of the Performance
+// Counter Register is set.  I'm assuming the exception continues to re-raise until the
+// app clears the bit manually (needs testing).
+//
+// PERF Events:
+//  * Event 0 on PCR 0 is unused (counter disable)
+//  * Event 16 is usable as a specific counter disable bit (since CTE affects both counters)
+//  * Events 17-31 are reserved (act as counter disable)
+//
+// Most event mode aren't supported, and issue a warning and do a standard instruction
+// count.  But only mode 1 (instruction counter) has been found to be used by games thus far.
+//
+
+static __forceinline bool PERF_ShouldCountEvent( uint evt )
+{
+	switch( evt )
+	{
+		// This is a rough table of actions for various PCR modes.  Some of these
+		// can be implemented more accurately later.  Others (WBBs in particular)
+		// probably cannot without some severe complications.
+
+		// left sides are PCR0 / right sides are PCR1
+
+		case 1:		// cpu cycle counter.
+		case 2:		// single/dual instruction issued
+		case 3:		// Branch issued / Branch mispredicated
+			return true;
+
+		case 4:		// BTAC/TLB miss
+		case 5:		// ITLB/DTLB miss
+		case 6:		// Data/Instruction cache miss
+			return false;
+
+		case 7:		// Access to DTLB / WBB single request fail
+		case 8:		// Non-blocking load / WBB burst request fail
+		case 9:
+		case 10:
+			return false;
+
+		case 11:	// CPU address bus busy / CPU data bus busy
+			return false;
+
+		case 12:	// Instruction completed
+		case 13:	// non-delayslot instruction completed
+		case 14:	// COP2/COP1 instruction complete
+		case 15:	// Load/Store completed
+			return true;
+	}
+
+	return false;
+}
+
+// Diagnostics for event modes that we just ignore for now.  Using these perf units could
+// cause compat issues in some very odd/rare games, so if this msg comes up who knows,
+// might save some debugging effort. :)
+void COP0_DiagnosticPCCR()
+{
+	if( cpuRegs.PERF.n.pccr.b.Event0 >= 7 && cpuRegs.PERF.n.pccr.b.Event0 <= 10 )
+		Console::Notice( "PERF/PCR0 Unsupported Update Event Mode = 0x%x", params cpuRegs.PERF.n.pccr.b.Event0 );
+
+	if( cpuRegs.PERF.n.pccr.b.Event1 >= 7 && cpuRegs.PERF.n.pccr.b.Event1 <= 10 )
+		Console::Notice( "PERF/PCR1 Unsupported Update Event Mode = 0x%x", params cpuRegs.PERF.n.pccr.b.Event1 );
+}
+
+__forceinline void COP0_UpdatePCCR()
+{
+	if( cpuRegs.CP0.n.Status.b.ERL || !cpuRegs.PERF.n.pccr.b.CTE ) return;
+
+	// TODO : Implement memory mode checks here (kernel/super/user)
+	// For now we just assume user mode.
+	
+	if( cpuRegs.PERF.n.pccr.b.U0 )
+	{
+		// ----------------------------------
+		//    Update Performance Counter 0
+		// ----------------------------------
+
+		if( PERF_ShouldCountEvent( cpuRegs.PERF.n.pccr.b.Event0 ) )
+		{
+			u32 incr = cpuRegs.cycle - s_iLastPERFCycle[0];
+			if( incr == 0 ) incr++;
+
+			// use prev/XOR method for one-time exceptions (but likely less correct)
+			//u32 prev = cpuRegs.PERF.n.pcr0;
+			cpuRegs.PERF.n.pcr0 += incr;
+			s_iLastPERFCycle[0] = cpuRegs.cycle;
+			
+			//prev ^= (1UL<<31);		// XOR is fun!
+			//if( (prev & cpuRegs.PERF.n.pcr0) & (1UL<<31) )
+			if( cpuRegs.PERF.n.pcr0 & 0x80000000 )
+			{
+				// TODO: Vector to the appropriate exception here.
+				// This code *should* be correct, but is untested (and other parts of the emu are
+				// not prepared to handle proper Level 2 exception vectors yet)
+				
+				/*if( delay_slot )
+				{
+					cpuRegs.CP0.ErrorEPC = cpuRegs.pc - 4;
+					cpuRegs.CP0.Cause.BD2 = 1;
+				}
+				else
+				{
+					cpuRegs.CP0.ErrorEPC = cpuRegs.pc;
+					cpuRegs.CP0.Cause.BD2 = 0;
+				}
+				
+				if( cpuRegs.CP0.Status.DEV )
+				{
+					// Bootstrap vector
+					cpuRegs.pc = 0xbfc00280;
+				}
+				else
+				{
+					cpuRegs.pc = 0x80000080;
+				}
+				cpuRegs.CP0.Status.ERL = 1;
+				cpuRegs.CP0.Cause.EXC2 = 2;*/
+			}
+		}
+	}
+	
+	if( cpuRegs.PERF.n.pccr.b.U1 )
+	{
+		// ----------------------------------
+		//    Update Performance Counter 1
+		// ----------------------------------
+		
+		if( PERF_ShouldCountEvent( cpuRegs.PERF.n.pccr.b.Event1 ) )
+		{
+			u32 incr = cpuRegs.cycle - s_iLastPERFCycle[1];
+			if( incr == 0 ) incr++;
+
+			cpuRegs.PERF.n.pcr1 += incr;
+			s_iLastPERFCycle[1] = cpuRegs.cycle;
+
+			if( cpuRegs.PERF.n.pcr1 & 0x80000000 )
+			{
+				// See PCR0 comments for notes on exceptions
+			}
+		}
+	}
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////
+//
+
 namespace R5900 {
 namespace Interpreter {
 namespace OpcodeImpl {
 namespace COP0 {
 
-void MFC0() {
-	if (!_Rt_) return;
-	if (_Rd_ != 9) { COP0_LOG("%s\n", disR5900Current.getCString() ); }
+void MFC0()
+{
+	// Note on _Rd_ Condition 9: CP0.Count should be updated even if _Rt_ is 0.
+	if( (_Rd_ != 9) && !_Rt_ ) return;
+	if(_Rd_ != 9) { COP0_LOG("%s\n", disR5900Current.getCString() ); }
 	
 	//if(bExecBIOS == FALSE && _Rd_ == 25) SysPrintf("MFC0 _Rd_ %x = %x\n", _Rd_, cpuRegs.CP0.r[_Rd_]);
-	switch (_Rd_) {
-		
-		case 12: cpuRegs.GPR.r[_Rt_].UD[0] = (s64)(cpuRegs.CP0.r[_Rd_] & 0xf0c79c1f); break;
+	switch (_Rd_)
+	{
+		case 12:
+			cpuRegs.GPR.r[_Rt_].SD[0] = (s32)(cpuRegs.CP0.r[_Rd_] & 0xf0c79c1f);
+		break;
+
 		case 25: 
-		    switch(_Imm_ & 0x3F){
-			    case 0: cpuRegs.GPR.r[_Rt_].UD[0] = (s64)cpuRegs.PERF.n.pccr; break;
-			    case 1:
-					if((cpuRegs.PERF.n.pccr & 0x800003E0) == 0x80000020) {
-						cpuRegs.PERF.n.pcr0 += cpuRegs.cycle-s_iLastPERFCycle[0];
-						s_iLastPERFCycle[0] = cpuRegs.cycle;
-					}
-        
-                    cpuRegs.GPR.r[_Rt_].UD[0] = (s64)cpuRegs.PERF.n.pcr0;
-                    break;
-			    case 3:
-					if((cpuRegs.PERF.n.pccr & 0x800F8000) == 0x80008000) {
-						cpuRegs.PERF.n.pcr1 += cpuRegs.cycle-s_iLastPERFCycle[1];
-						s_iLastPERFCycle[1] = cpuRegs.cycle;
-					}
-					cpuRegs.GPR.r[_Rt_].UD[0] = (s64)cpuRegs.PERF.n.pcr1;
-					break;
+		    switch(_Imm_ & 0x3F)
+		    {
+			    case 0:		// MFPS  [LSB is clear]
+					cpuRegs.GPR.r[_Rt_].SD[0] = (s32)cpuRegs.PERF.n.pccr.val;
+				break;
+
+			    case 1:		// MFPC [LSB is set] - read PCR0
+					COP0_UpdatePCCR();
+                    cpuRegs.GPR.r[_Rt_].SD[0] = (s32)cpuRegs.PERF.n.pcr0;
+				break;
+
+			    case 3:		// MFPC [LSB is set] - read PCR1
+					COP0_UpdatePCCR();
+					cpuRegs.GPR.r[_Rt_].SD[0] = (s32)cpuRegs.PERF.n.pcr1;
+				break;
 		    }
 		    /*SysPrintf("MFC0 PCCR = %x PCR0 = %x PCR1 = %x IMM= %x\n", 
 		    cpuRegs.PERF.n.pccr, cpuRegs.PERF.n.pcr0, cpuRegs.PERF.n.pcr1, _Imm_ & 0x3F);*/
-		    break;
+		break;
+
 		case 24: 
-			SysPrintf("MFC0 Breakpoint debug Registers code = %x\n", cpuRegs.code & 0x3FF);
-			break;
+			Console::WriteLn("MFC0 Breakpoint debug Registers code = %x", params cpuRegs.code & 0x3FF);
+		break;
+
 		case 9:
-			// update
-			cpuRegs.CP0.n.Count += cpuRegs.cycle-s_iLastCOP0Cycle;
+		{
+			u32 incr = cpuRegs.cycle-s_iLastCOP0Cycle;
+			if( incr == 0 ) incr++;
+			cpuRegs.CP0.n.Count += incr;
 			s_iLastCOP0Cycle = cpuRegs.cycle;
-		default: cpuRegs.GPR.r[_Rt_].UD[0] = (s64)cpuRegs.CP0.r[_Rd_];
+			if( !_Rt_ ) break;
+		}
+
+		default:
+			cpuRegs.GPR.r[_Rt_].UD[0] = (s64)cpuRegs.CP0.r[_Rd_];
 	}
 }
 
-void MTC0() {
+void MTC0()
+{
 	COP0_LOG("%s\n", disR5900Current.getCString());
 	//if(bExecBIOS == FALSE && _Rd_ == 25) SysPrintf("MTC0 _Rd_ %x = %x\n", _Rd_, cpuRegs.CP0.r[_Rd_]);
-	switch (_Rd_) {
+	switch (_Rd_)
+	{
 		case 25: 
 			/*if(bExecBIOS == FALSE && _Rd_ == 25) SysPrintf("MTC0 PCCR = %x PCR0 = %x PCR1 = %x IMM= %x\n", 
 				cpuRegs.PERF.n.pccr, cpuRegs.PERF.n.pcr0, cpuRegs.PERF.n.pcr1, _Imm_ & 0x3F);*/
-			switch(_Imm_ & 0x3F){
-				case 0:
-					if((cpuRegs.PERF.n.pccr & 0x800003E0) == 0x80000020)
-						cpuRegs.PERF.n.pcr0 += cpuRegs.cycle-s_iLastPERFCycle[0];
-					if((cpuRegs.PERF.n.pccr & 0x800F8000) == 0x80008000)
-						cpuRegs.PERF.n.pcr1 += cpuRegs.cycle-s_iLastPERFCycle[1];
-					cpuRegs.PERF.n.pccr = cpuRegs.GPR.r[_Rt_].UL[0];
+			switch(_Imm_ & 0x3F)
+			{
+				case 0:		// MTPS  [LSB is clear]
+					// Updates PCRs and sets the PCCR.
+					COP0_UpdatePCCR();
+					cpuRegs.PERF.n.pccr.val = cpuRegs.GPR.r[_Rt_].UL[0];
+					COP0_DiagnosticPCCR();
+				break;
+				
+				case 1:		// MTPC [LSB is set] - set PCR0
+					cpuRegs.PERF.n.pcr0 = cpuRegs.GPR.r[_Rt_].UL[0];
 					s_iLastPERFCycle[0] = cpuRegs.cycle;
+				break;
+				
+				case 3:		// MTPC [LSB is set] - set PCR0
+					cpuRegs.PERF.n.pcr1 = cpuRegs.GPR.r[_Rt_].UL[0];
 					s_iLastPERFCycle[1] = cpuRegs.cycle;
-					break;
-				case 1: cpuRegs.PERF.n.pcr0 = cpuRegs.GPR.r[_Rt_].UL[0]; s_iLastPERFCycle[0] = cpuRegs.cycle; break;
-				case 3: cpuRegs.PERF.n.pcr1 = cpuRegs.GPR.r[_Rt_].UL[0]; s_iLastPERFCycle[1] = cpuRegs.cycle; break;
+				break;
 			}
-			break;
+		break;
+		
 		case 24: 
-			SysPrintf("MTC0 Breakpoint debug Registers code = %x\n", cpuRegs.code & 0x3FF);
-			break;
+			Console::WriteLn("MTC0 Breakpoint debug Registers code = %x", params cpuRegs.code & 0x3FF);
+		break;
+
 		case 12: WriteCP0Status(cpuRegs.GPR.r[_Rt_].UL[0]); break;
-		case 9: s_iLastCOP0Cycle = cpuRegs.cycle; cpuRegs.CP0.r[9] = cpuRegs.GPR.r[_Rt_].UL[0]; break;
-		default: cpuRegs.CP0.r[_Rd_] = cpuRegs.GPR.r[_Rt_].UL[0]; break;
+		case 9:
+			s_iLastCOP0Cycle = cpuRegs.cycle;
+			cpuRegs.CP0.r[9] = cpuRegs.GPR.r[_Rt_].UL[0];
+		break;
+		
+		default:
+			cpuRegs.CP0.r[_Rd_] = cpuRegs.GPR.r[_Rt_].UL[0]; 
+		break;
 	}
 }
 
@@ -233,12 +413,10 @@ int CPCOND0() {
 
 void BC0F() {
 	BC0(== 0);
-	COP0_LOG( "COP0 > BC0F\n" );
 }
 
 void BC0T() {
 	BC0(== 1);
-	COP0_LOG( "COP0 > BC0T\n" );
 }
 
 #define BC0L(cond) \
@@ -248,12 +426,10 @@ void BC0T() {
 
 void BC0FL() {
 	BC0L(== 0);
-	COP0_LOG( "COP0 > BC0FL\n" );
 }
 
 void BC0TL() {
 	BC0L(== 1);
-	COP0_LOG( "COP0 > BCOTL\n" );
 }
 
 void TLBR() {
@@ -263,7 +439,6 @@ void TLBR() {
 
 	int i = cpuRegs.CP0.n.Index&0x1f;
 
-	COP0_LOG("COP0 > TLBR\n");
 	cpuRegs.CP0.n.PageMask = tlb[i].PageMask;
 	cpuRegs.CP0.n.EntryHi = tlb[i].EntryHi&~(tlb[i].PageMask|0x1f00);
 	cpuRegs.CP0.n.EntryLo0 = (tlb[i].EntryLo0&~1)|((tlb[i].EntryHi>>12)&1);

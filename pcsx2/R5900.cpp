@@ -387,19 +387,12 @@ static __forceinline void _cpuTestTIMR()
 
 static __forceinline void _cpuTestPERF()
 {
-	// fixme - The interpreter and recompiler both re-calculate these values
-	// whenever they are read, so updating them at regular intervals *should be*
-	// merely a common courtesy.  But when I set them up to be called less
-	// frequently some games would crash.  I'd like to figure out why someday. [Air]
+	// Perfs are updated when read by games (COP0's MFC0/MTC0 instructions), so we need
+	// only update them at semi-regular intervals to keep cpuRegs.cycle from wrapping
+	// around twice on us btween updates.  Hence this function is called from the cpu's
+	// Counters update.
 
-	if((cpuRegs.PERF.n.pccr & 0x800003E0) == 0x80000020) {
-		cpuRegs.PERF.n.pcr0 += cpuRegs.cycle-s_iLastPERFCycle[0];
-		s_iLastPERFCycle[0] = cpuRegs.cycle;
-	}
-	if((cpuRegs.PERF.n.pccr & 0x800F8000) == 0x80008000) {
-		cpuRegs.PERF.n.pcr1 += cpuRegs.cycle-s_iLastPERFCycle[1];
-		s_iLastPERFCycle[1] = cpuRegs.cycle;
-	}
+	COP0_UpdatePCCR();
 }
 
 // Checks the COP0.Status for exception enablings.

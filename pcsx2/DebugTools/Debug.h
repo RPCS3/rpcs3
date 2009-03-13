@@ -20,7 +20,7 @@
 #ifndef __DEBUG_H__
 #define __DEBUG_H__
 
-#include "Misc.h"
+#include "Pcsx2Config.h"
 
 extern FILE *emuLog;
 
@@ -73,15 +73,47 @@ namespace R3000A
 
 #ifdef PCSX2_DEVBUILD
 
-extern u32 varLog;
+struct LogSources
+{
+	bool
+		R5900:1,		// instructions and exception vectors for the R5900 (EE)
+		R3000A:1,	// instructions and exception vectors for the R3000a (IOP)
+	
+		Memory:1,	// memory accesses (loads and stores)
+		Hardware:1,
+		DMA:1,
+		Bios:1,
+		ELF:1,
+		VU0:1,
+		COP0:1,		// TLB logs, PERF logs, Debug register logs
+		VIF:1,
+		SPR:1,		// Scratchpad
+		GIF:1,
+		SIF:1,
+		IPU:1,
+		VUM:1,		// VU memory access logs
+		RPC:1,
+		Counters:1,	// EE's counters!
+		
+		IopMemory:1,
+		IopHardware:1,
+		IopBios:1,
+		IopDMA:1,
+		IopCnt:1,
+		Memcards:1,
+		Pad:1,
+		CDVD:1,
+		GPU:1,		// PS1's GPU (currently unimplemented)
+		LogToConsole:1;
+};
+
+extern LogSources varLog;
 
 void SourceLog( u16 protocol, u8 source, u32 cpuPc, u32 cpuCycle, const char *fmt, ...);
 void __Log( const char* fmt, ... );
 
 extern bool SrcLog_CPU( const char* fmt, ... );
 extern bool SrcLog_COP0( const char* fmt, ... );
-extern bool SrcLog_FPU( const char* fmt, ... );
-extern bool SrcLog_MMI( const char* fmt, ... );
 
 extern bool SrcLog_MEM( const char* fmt, ... );
 extern bool SrcLog_HW( const char* fmt, ... );
@@ -108,42 +140,38 @@ extern bool SrcLog_PSXCNT( const char* fmt, ... );
 
 extern bool SrcLog_MEMCARDS( const char* fmt, ... );
 extern bool SrcLog_PAD( const char* fmt, ... );
-extern bool SrcLog_GTE( const char* fmt, ... );
 extern bool SrcLog_CDR( const char* fmt, ... );
 extern bool SrcLog_GPU( const char* fmt, ... );
 
-#define CPU_LOG  (varLog & 0x00000001) && SrcLog_CPU
-#define MEM_LOG  (varLog & 0x00000002) && SrcLog_MEM
-#define HW_LOG   (varLog & 0x00000004) && SrcLog_HW
-#define DMA_LOG  (varLog & 0x00000008) && SrcLog_DMA
-#define BIOS_LOG (varLog & 0x00000010) && SrcLog_BIOS
-#define ELF_LOG  (varLog & 0x00000020) && SrcLog_ELF
-#define FPU_LOG  (varLog & 0x00000040) && SrcLog_FPU
-#define MMI_LOG  (varLog & 0x00000080) && SrcLog_MMI
-#define VU0_LOG  (varLog & 0x00000100) && SrcLog_VU0
-#define COP0_LOG (varLog & 0x00000200) && SrcLog_COP0
-#define VIF_LOG  (varLog & 0x00000400) && SrcLog_VIF
-#define SPR_LOG  (varLog & 0x00000800) && SrcLog_SPR
-#define GIF_LOG  (varLog & 0x00001000) && SrcLog_GIF
-#define SIF_LOG  (varLog & 0x00002000) && SrcLog_SIF
-#define IPU_LOG  (varLog & 0x00004000) && SrcLog_IPU
-#define VUM_LOG  (varLog & 0x00008000) && SrcLog_VUM
-#define RPC_LOG  (varLog & 0x00010000) && SrcLog_RPC
-#define EECNT_LOG (varLog & 0x40000000) && SrcLog_EECNT
+#define CPU_LOG  (varLog.R5900) && SrcLog_CPU
+#define MEM_LOG  (varLog.Memory) && SrcLog_MEM
+#define HW_LOG   (varLog.Hardware) && SrcLog_HW
+#define DMA_LOG  (varLog.DMA) && SrcLog_DMA
+#define BIOS_LOG (varLog.Bios) && SrcLog_BIOS
+#define ELF_LOG  (varLog.ELF) && SrcLog_ELF
+#define VU0_LOG  (varLog.VU0) && SrcLog_VU0
+#define COP0_LOG (varLog.COP0) && SrcLog_COP0
+#define VIF_LOG  (varLog.VIF) && SrcLog_VIF
+#define SPR_LOG  (varLog.SPR) && SrcLog_SPR
+#define GIF_LOG  (varLog.GIF) && SrcLog_GIF
+#define SIF_LOG  (varLog.SIF) && SrcLog_SIF
+#define IPU_LOG  (varLog.IPU) && SrcLog_IPU
+#define VUM_LOG  (varLog.VUM) && SrcLog_VUM
+#define RPC_LOG  (varLog.RPC) && SrcLog_RPC
+#define EECNT_LOG (varLog.Counters) && SrcLog_EECNT
 
-#define PSXCPU_LOG  (varLog & 0x00100000) && SrcLog_PSXCPU
-#define PSXMEM_LOG  (varLog & 0x00200000) && SrcLog_PSXMEM
-#define PSXHW_LOG   (varLog & 0x00400000) && SrcLog_PSXHW
-#define PSXBIOS_LOG (varLog & 0x00800000) && SrcLog_PSXBIOS
-#define PSXDMA_LOG  (varLog & 0x01000000) && SrcLog_PSXDMA
-#define PSXCNT_LOG  (varLog & 0x20000000) && SrcLog_PSXCNT
+#define PSXCPU_LOG  (varLog.R3000A) && SrcLog_PSXCPU
+#define PSXMEM_LOG  (varLog.IopMemory) && SrcLog_PSXMEM
+#define PSXHW_LOG   (varLog.IopHardware) && SrcLog_PSXHW
+#define PSXBIOS_LOG (varLog.IopBios) && SrcLog_PSXBIOS
+#define PSXDMA_LOG  (varLog.IopDMA) && SrcLog_PSXDMA
+#define PSXCNT_LOG  (varLog.IopCnt) && SrcLog_PSXCNT
 
 //memcard has the same number as PAD_LOG for now
-#define MEMCARDS_LOG (varLog & 0x02000000) && SrcLog_MEMCARDS
-#define PAD_LOG  (varLog & 0x02000000) && SrcLog_PAD
-#define GTE_LOG  (varLog & 0x04000000) && SrcLog_GTE
-#define CDR_LOG  (varLog & 0x08000000) && SrcLog_CDR
-#define GPU_LOG  (varLog & 0x10000000) && SrcLog_GPU
+#define MEMCARDS_LOG (varLog.Memcards) && SrcLog_MEMCARDS
+#define PAD_LOG  (varLog.Pad) && SrcLog_PAD
+#define CDR_LOG  (varLog.CDVD) && SrcLog_CDR
+#define GPU_LOG  (varLog.GPU) && SrcLog_GPU
 
 // fixme - currently we don't log cache
 #define CACHE_LOG 0&&

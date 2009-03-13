@@ -19,7 +19,7 @@
 #include "PrecompiledHeader.h"
 
 #include <ctype.h>
-#include "PsxCommon.h"
+#include "IopCommon.h"
 
 namespace R3000A {
 

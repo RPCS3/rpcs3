@@ -184,11 +184,9 @@ void __fastcall WriteFIFO_page_6(u32 mem, const mem128_t *value)
 	}
 	else
 	{
-		FreezeXMMRegs(1);
-		FreezeMMXRegs(1);
+		FreezeRegs(1);
 		GSGIFTRANSFER3((u32*)value, 1);
-		FreezeMMXRegs(0);
-		FreezeXMMRegs(0);
+		FreezeRegs(0);
 	}
 }
 		

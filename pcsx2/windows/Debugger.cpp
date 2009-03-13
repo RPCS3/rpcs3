@@ -552,10 +552,7 @@ BOOL APIENTRY DebuggerProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam
 
 				#ifdef PCSX2_DEVBUILD
                 case IDC_DEBUG_LOG:
-					if( varLog )
-						varLog &= ~0x80000000;
-					else
-						varLog |= 0x80000000;
+					varLog.LogToConsole = !varLog.LogToConsole;
                     return TRUE;
 				#endif
 

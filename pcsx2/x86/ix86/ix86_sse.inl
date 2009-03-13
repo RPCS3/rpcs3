@@ -1224,6 +1224,30 @@ emitterT void eSSSE3_PALIGNR_XMM_to_XMM(x86SSERegType to, x86SSERegType from, u8
 	write8<I>(imm8);
 }
 
+emitterT void eSSSE3_PSIGNB_XMM_to_XMM(x86SSERegType to, x86SSERegType from)
+{
+	write8<I>(0x66);
+	RexRB(0, to, from);
+	write24<I>(0x08380F);
+	ModRM<I>(3, to, from);
+}
+
+emitterT void eSSSE3_PSIGNW_XMM_to_XMM(x86SSERegType to, x86SSERegType from)
+{
+	write8<I>(0x66);
+	RexRB(0, to, from);
+	write24<I>(0x09380F);
+	ModRM<I>(3, to, from);
+}
+
+emitterT void eSSSE3_PSIGND_XMM_to_XMM(x86SSERegType to, x86SSERegType from)
+{
+	write8<I>(0x66);
+	RexRB(0, to, from);
+	write24<I>(0x0A380F);
+	ModRM<I>(3, to, from);
+}
+
 // SSE4.1
 
 emitterT void eSSE4_DPPS_XMM_to_XMM(x86SSERegType to, x86SSERegType from, u8 imm8) 
@@ -1292,6 +1316,14 @@ emitterT void eSSE4_PMOVSXDQ_XMM_to_XMM(x86SSERegType to, x86SSERegType from)
 	write8<I>(0x66);
     RexRB(0, to, from);
 	write24<I>(0x25380F);
+	ModRM<I>(3, to, from);
+}
+
+emitterT void eSSE4_PMOVZXDQ_XMM_to_XMM(x86SSERegType to, x86SSERegType from)
+{
+	write8<I>(0x66);
+    RexRB(0, to, from);
+	write24<I>(0x35380F);
 	ModRM<I>(3, to, from);
 }
 

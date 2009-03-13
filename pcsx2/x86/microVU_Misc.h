@@ -21,16 +21,11 @@
 //------------------------------------------------------------------
 // Global Variables
 //------------------------------------------------------------------
+
 PCSX2_ALIGNED16_EXTERN(const u32 mVU_absclip[4]);
 PCSX2_ALIGNED16_EXTERN(const u32 mVU_signbit[4]);
 PCSX2_ALIGNED16_EXTERN(const u32 mVU_minvals[4]);
 PCSX2_ALIGNED16_EXTERN(const u32 mVU_maxvals[4]);
-PCSX2_ALIGNED16_EXTERN(const float mVU_FTOI_4[4]);
-PCSX2_ALIGNED16_EXTERN(const float mVU_FTOI_12[4]);
-PCSX2_ALIGNED16_EXTERN(const float mVU_FTOI_15[4]);
-PCSX2_ALIGNED16_EXTERN(const float mVU_ITOF_4[4]);
-PCSX2_ALIGNED16_EXTERN(const float mVU_ITOF_12[4]);
-PCSX2_ALIGNED16_EXTERN(const float mVU_ITOF_15[4]);
 PCSX2_ALIGNED16_EXTERN(const u32 mVU_T1[4]);
 PCSX2_ALIGNED16_EXTERN(const u32 mVU_T2[4]);
 PCSX2_ALIGNED16_EXTERN(const u32 mVU_T3[4]);
@@ -40,6 +35,22 @@ PCSX2_ALIGNED16_EXTERN(const u32 mVU_T6[4]);
 PCSX2_ALIGNED16_EXTERN(const u32 mVU_T7[4]);
 PCSX2_ALIGNED16_EXTERN(const u32 mVU_T8[4]);
 PCSX2_ALIGNED16_EXTERN(const u32 mVU_Pi4[4]);
+PCSX2_ALIGNED16_EXTERN(const u32 mVU_S2[4]);
+PCSX2_ALIGNED16_EXTERN(const u32 mVU_S3[4]);
+PCSX2_ALIGNED16_EXTERN(const u32 mVU_S4[4]);
+PCSX2_ALIGNED16_EXTERN(const u32 mVU_S5[4]);
+PCSX2_ALIGNED16_EXTERN(const u32 mVU_E1[4]);
+PCSX2_ALIGNED16_EXTERN(const u32 mVU_E2[4]);
+PCSX2_ALIGNED16_EXTERN(const u32 mVU_E3[4]);
+PCSX2_ALIGNED16_EXTERN(const u32 mVU_E4[4]);
+PCSX2_ALIGNED16_EXTERN(const u32 mVU_E5[4]);
+PCSX2_ALIGNED16_EXTERN(const u32 mVU_E6[4]);
+PCSX2_ALIGNED16_EXTERN(const float mVU_FTOI_4[4]);
+PCSX2_ALIGNED16_EXTERN(const float mVU_FTOI_12[4]);
+PCSX2_ALIGNED16_EXTERN(const float mVU_FTOI_15[4]);
+PCSX2_ALIGNED16_EXTERN(const float mVU_ITOF_4[4]);
+PCSX2_ALIGNED16_EXTERN(const float mVU_ITOF_12[4]);
+PCSX2_ALIGNED16_EXTERN(const float mVU_ITOF_15[4]);
 
 //------------------------------------------------------------------
 // Helper Macros
@@ -72,6 +83,9 @@ PCSX2_ALIGNED16_EXTERN(const u32 mVU_Pi4[4]);
 #define _Imm12_		(((mVU->code >> 21 ) & 0x1) << 11) | (mVU->code & 0x7ff)
 #define _Imm5_		(((mVU->code & 0x400) ? 0xfff0 : 0) | ((mVU->code >> 6) & 0xf))
 #define _Imm15_		(((mVU->code >> 10) & 0x7800) | (mVU->code & 0x7ff))
+
+#define getVUmem(x)	(((vuIndex == 1) ? (x & 0x3ff) : ((x >= 0x400) ? (x & 0x43f) : (x & 0xff))) * 16)
+#define offsetSS	((_X) ? (0) : ((_Y) ? (4) : ((_Z) ? 8: 12)))
 
 #define xmmT1	0 // Temp Reg
 #define xmmFs	1 // Holds the Value of Fs (writes back result Fd)
@@ -128,5 +142,8 @@ PCSX2_ALIGNED16_EXTERN(const u32 mVU_Pi4[4]);
 #define fvsInstance	((mVUallocInfo.info[mVUallocInfo.curPC] & (3<<16)) >> 16)
 //#define getFs		 (mVUallocInfo.info[mVUallocInfo.curPC] & (1<<13))
 //#define getFt		 (mVUallocInfo.info[mVUallocInfo.curPC] & (1<<14))
+
+#define isMMX(_VIreg_)	(_VIreg_ >= 1 && _VIreg_ <=9)
+#define mmVI(_VIreg_)	(_VIreg_ - 1)
 
 #include "microVU_Misc.inl"

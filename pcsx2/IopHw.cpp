@@ -18,8 +18,7 @@
 
 #include "PrecompiledHeader.h"
 
-#include "PsxCommon.h"
-#include "Misc.h"
+#include "IopCommon.h"
 #include "iR5900.h"
 
 // NOTE: Any modifications to read/write fns should also go into their const counterparts

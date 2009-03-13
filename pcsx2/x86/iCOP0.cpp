@@ -128,16 +128,21 @@ void recMFC0( void )
 {
 	int mmreg;
 
-	if ( ! _Rt_ ) return;
-
-	if( _Rd_ == 9 ) {
+	if( _Rd_ == 9 )
+	{
+		// This case needs to be handled even if the write-back is ignored (_Rt_ == 0 )
         MOV32MtoR(ECX, (uptr)&cpuRegs.cycle);
-        MOV32RtoR(EAX,ECX);
+        MOV32RtoR(EAX, ECX);
 		SUB32MtoR(EAX, (uptr)&s_iLastCOP0Cycle);
+		u8* skipInc = JNZ8( 0 );
+		INC32R(EAX);
+		x86SetJ8( skipInc );
         ADD32RtoM((uptr)&cpuRegs.CP0.n.Count, EAX);
 		MOV32RtoM((uptr)&s_iLastCOP0Cycle, ECX);
         MOV32MtoR( EAX, (uptr)&cpuRegs.CP0.r[ _Rd_ ] );
-		
+
+		if( !_Rt_ ) return;
+
 		_deleteEEreg(_Rt_, 0);
 		MOV32RtoM((uptr)&cpuRegs.GPR.r[_Rt_].UL[0],EAX);
 
@@ -148,52 +153,24 @@ void recMFC0( void )
 		else EEINST_RESETHASLIVE1(_Rt_);
 		return;
 	}
-	if( _Rd_ == 25 ) {		
-		
-		_deleteEEreg(_Rt_, 0);
-		switch(_Imm_ & 0x3F){
+
+	if ( !_Rt_ ) return;
+
+	if( _Rd_ == 25 )
+	{
+		switch(_Imm_ & 0x3F)
+		{
 			case 0:
 				MOV32MtoR(EAX, (uptr)&cpuRegs.PERF.n.pccr);
+			break;
 
-                break;
 			case 1:
-				// check if needs to be incremented
-				MOV32MtoR(ECX, (uptr)&cpuRegs.PERF.n.pccr);
-				MOV32MtoR(EAX, (uptr)&cpuRegs.PERF.n.pcr0);
-				AND32ItoR(ECX, 0x800003E0);
-
-				CMP32ItoR(ECX, 0x80000020);
-				j8Ptr[0] = JNE8(0);
-				
-				MOV32MtoR(EDX, (uptr)&cpuRegs.cycle);
-				SUB32MtoR(EAX, (uptr)&s_iLastPERFCycle[0]);
-				ADD32RtoR(EAX, EDX);
-				MOV32RtoM((uptr)&s_iLastPERFCycle[0], EDX);
-				MOV32RtoM((uptr)&cpuRegs.PERF.n.pcr0, EAX);
-
-				x86SetJ8(j8Ptr[0]);
-				break;
 			case 3:
-				// check if needs to be incremented
-				MOV32MtoR(ECX, (uptr)&cpuRegs.PERF.n.pccr);
-				MOV32MtoR(EAX, (uptr)&cpuRegs.PERF.n.pcr1);
-				AND32ItoR(ECX, 0x800F8000);
-
-				CMP32ItoR(ECX, 0x80008000);
-				j8Ptr[0] = JNE8(0);
-				
-				MOV32MtoR(EDX, (uptr)&cpuRegs.cycle);
-				SUB32MtoR(EAX, (uptr)&s_iLastPERFCycle[1]);
-				ADD32RtoR(EAX, EDX);
-				MOV32RtoM((uptr)&s_iLastPERFCycle[1], EDX);
-				MOV32RtoM((uptr)&cpuRegs.PERF.n.pcr1, EAX);
-
-				x86SetJ8(j8Ptr[0]);
-				
-				break;
+				CALLFunc( (uptr)COP0_UpdatePCCR );
+			break;
 		}
-	
-        MOV32RtoM((uptr)&cpuRegs.GPR.r[_Rt_].UL[0],EAX);
+		_deleteEEreg(_Rt_, 0);
+		MOV32RtoM((uptr)&cpuRegs.GPR.r[_Rt_].UL[0],EAX);
 
 		if(EEINST_ISLIVE1(_Rt_)) {
 			CDQ();
@@ -201,10 +178,6 @@ void recMFC0( void )
 		}
 		else EEINST_RESETHASLIVE1(_Rt_);
 
-#ifdef PCSX2_DEVBUILD
-		COP0_LOG("MFC0 PCCR = %x PCR0 = %x PCR1 = %x IMM= %x\n", 
-				cpuRegs.PERF.n.pccr, cpuRegs.PERF.n.pcr0, cpuRegs.PERF.n.pcr1, _Imm_ & 0x3F);
-#endif
 		return;
 	}
 	else if( _Rd_ == 24){
@@ -257,119 +230,102 @@ void recMFC0( void )
 	}
 }
 
-void updatePCCR()
-{
-	// read the old pccr and update pcr0/1
-	MOV32MtoR(EAX, (uptr)&cpuRegs.PERF.n.pccr);
-	MOV32RtoR(EDX, EAX);
-	MOV32MtoR(ECX, (uptr)&cpuRegs.cycle);
-
-	AND32ItoR(EAX, 0x800003E0);
-	CMP32ItoR(EAX, 0x80000020);
-	j8Ptr[0] = JNE8(0);
-	MOV32MtoR(EAX, (uptr)&s_iLastPERFCycle[0]);
-	ADD32RtoM((uptr)&cpuRegs.PERF.n.pcr0, ECX);
-	SUB32RtoM((uptr)&cpuRegs.PERF.n.pcr0, EAX);
-	x86SetJ8(j8Ptr[0]);
-
-	AND32ItoR(EDX, 0x800F8000);
-	CMP32ItoR(EDX, 0x80008000);
-	j8Ptr[0] = JNE8(0);
-	MOV32MtoR(EAX, (uptr)&s_iLastPERFCycle[1]);
-	ADD32RtoM((uptr)&cpuRegs.PERF.n.pcr1, ECX);
-	SUB32RtoM((uptr)&cpuRegs.PERF.n.pcr1, EAX);
-	x86SetJ8(j8Ptr[0]);
-}
-
 void recMTC0()
 {
-	if( GPR_IS_CONST1(_Rt_) ) {
-		switch (_Rd_) {
+	if( GPR_IS_CONST1(_Rt_) )
+	{
+		switch (_Rd_)
+		{
 			case 12: 
 				iFlushCall(FLUSH_NODESTROY);
 				//_flushCachedRegs(); //NOTE: necessary?
 				_callFunctionArg1((uptr)WriteCP0Status, MEM_CONSTTAG, g_cpuConstRegs[_Rt_].UL[0]);
-				break;
+			break;
+
 			case 9:
 				MOV32MtoR(ECX, (uptr)&cpuRegs.cycle);
 				MOV32RtoM((uptr)&s_iLastCOP0Cycle, ECX);
 				MOV32ItoM((uptr)&cpuRegs.CP0.r[9], g_cpuConstRegs[_Rt_].UL[0]);
-				break;
-			case 25:
-				COP0_LOG("MTC0 PCCR = %x PCR0 = %x PCR1 = %x IMM= %x\n", 
-				cpuRegs.PERF.n.pccr, cpuRegs.PERF.n.pcr0, cpuRegs.PERF.n.pcr1, _Imm_ & 0x3F);
-				switch(_Imm_ & 0x3F){
-					case 0:
-						
-						updatePCCR();
-						MOV32ItoM((uptr)&cpuRegs.PERF.n.pccr, g_cpuConstRegs[_Rt_].UL[0]);
+			break;
 
-						// update the cycles
-						MOV32RtoM((uptr)&s_iLastPERFCycle[0], ECX);
-						MOV32RtoM((uptr)&s_iLastPERFCycle[1], ECX);
-						break;
+			case 25:
+				switch(_Imm_ & 0x3F)
+				{
+					case 0:
+						CALLFunc( (uptr)COP0_UpdatePCCR );
+						MOV32ItoM((uptr)&cpuRegs.PERF.n.pccr, g_cpuConstRegs[_Rt_].UL[0]);
+						CALLFunc( (uptr)COP0_DiagnosticPCCR );
+					break;
+
 					case 1:
 						MOV32MtoR(EAX, (uptr)&cpuRegs.cycle);
 						MOV32ItoM((uptr)&cpuRegs.PERF.n.pcr0, g_cpuConstRegs[_Rt_].UL[0]);
 						MOV32RtoM((uptr)&s_iLastPERFCycle[0], EAX);
-						break;
+					break;
+
 					case 3:
 						MOV32MtoR(EAX, (uptr)&cpuRegs.cycle);
 						MOV32ItoM((uptr)&cpuRegs.PERF.n.pcr1, g_cpuConstRegs[_Rt_].UL[0]);
 						MOV32RtoM((uptr)&s_iLastPERFCycle[1], EAX);
-						break;
+					break;
 				}
-				break;
+			break;
+
 			case 24: 
 				COP0_LOG("MTC0 Breakpoint debug Registers code = %x\n", cpuRegs.code & 0x3FF);
-				break;
+			break;
+
 			default:
 				MOV32ItoM((uptr)&cpuRegs.CP0.r[_Rd_], g_cpuConstRegs[_Rt_].UL[0]);
-				break;
+			break;
 		}
 	}
-	else {
-		switch (_Rd_) {
+	else
+	{
+		switch (_Rd_)
+		{
 			case 12: 
 				iFlushCall(FLUSH_NODESTROY);
 				//_flushCachedRegs(); //NOTE: necessary?
 				_callFunctionArg1((uptr)WriteCP0Status, MEM_GPRTAG|_Rt_, 0);
-				break;
+			break;
+
 			case 9:
 				MOV32MtoR(ECX, (uptr)&cpuRegs.cycle);
 				_eeMoveGPRtoM((uptr)&cpuRegs.CP0.r[9], _Rt_);
 				MOV32RtoM((uptr)&s_iLastCOP0Cycle, ECX);
-				break;
-			case 25:
-				COP0_LOG("MTC0 PCCR = %x PCR0 = %x PCR1 = %x IMM= %x\n", 
-				cpuRegs.PERF.n.pccr, cpuRegs.PERF.n.pcr0, cpuRegs.PERF.n.pcr1, _Imm_ & 0x3F);
-				switch(_Imm_ & 0x3F){
-					case 0:
-						updatePCCR();
-						_eeMoveGPRtoM((uptr)&cpuRegs.PERF.n.pccr, _Rt_);
+			break;
 
-						// update the cycles
-						MOV32RtoM((uptr)&s_iLastPERFCycle[0], ECX);
-						MOV32RtoM((uptr)&s_iLastPERFCycle[1], ECX);
-						break;
+			case 25:
+				switch(_Imm_ & 0x3F)
+				{
+					case 0:
+						CALLFunc( (uptr)COP0_UpdatePCCR );
+						_eeMoveGPRtoM((uptr)&cpuRegs.PERF.n.pccr, _Rt_);
+						CALLFunc( (uptr)COP0_DiagnosticPCCR );
+					break;
+
 					case 1:
 						MOV32MtoR(ECX, (uptr)&cpuRegs.cycle);
 						_eeMoveGPRtoM((uptr)&cpuRegs.PERF.n.pcr0, _Rt_);
 						MOV32RtoM((uptr)&s_iLastPERFCycle[0], ECX);
-						break;
+					break;
+
 					case 3:
 						MOV32MtoR(ECX, (uptr)&cpuRegs.cycle);
 						_eeMoveGPRtoM((uptr)&cpuRegs.PERF.n.pcr1, _Rt_);
 						MOV32RtoM((uptr)&s_iLastPERFCycle[1], ECX);
-						break;
+					break;
 				}
-				break;
+			break;
+		
 			case 24: 
 				COP0_LOG("MTC0 Breakpoint debug Registers code = %x\n", cpuRegs.code & 0x3FF);
-				break;
+			break;
+		
 			default:
 				_eeMoveGPRtoM((uptr)&cpuRegs.CP0.r[_Rd_], _Rt_);
-				break;
+			break;
 		}
 	}
 }

@@ -220,14 +220,12 @@ void GIFdma()
 		// When MTGS is enabled, Gifchain calls WRITERING_DMA, which calls GSRINGBUF_DONECOPY, which freezes 
 		// the registers inside of the FreezeXMMRegs calls here and in the other two below..
 		// I'm not really sure that is intentional. --arcum42
-		FreezeXMMRegs(1); 
-		FreezeMMXRegs(1);
+		FreezeRegs(1); 
 		GIFchain(); 
-		FreezeXMMRegs(0); // Theres a comment below that says not to unfreeze the xmm regs, so not sure about this.
-		FreezeMMXRegs(0);
+		FreezeRegs(0); // Theres a comment below that says not to unfreeze the xmm regs, so not sure about this.
 
 		if((gspath3done == 1 || (gif->chcr & 0xc) == 0) && gif->qwc == 0){ 
-			if(gif->qwc > 0) SysPrintf("Horray\n");
+			if(gif->qwc > 0) SysPrintf("Hurray\n");
 			gspath3done = 0;
 			gif->chcr &= ~0x100;
 			//psHu32(GIF_MODE)&= ~0x4;
@@ -248,11 +246,9 @@ void GIFdma()
 		if ((psHu32(DMAC_CTRL) & 0xC0) == 0x80 && (gif->chcr & 0xc) == 0) { 
 			SysPrintf("DMA Stall Control on GIF normal\n");
 		}
-		FreezeXMMRegs(1);  
-		FreezeMMXRegs(1);  
+		FreezeRegs(1);  
 		GIFchain();	//Transfers the data set by the switch
-		FreezeXMMRegs(0); 
-		FreezeMMXRegs(0);	 
+		FreezeRegs(0); 	 
 		if(gif->qwc == 0 && (gif->chcr & 0xc) == 0) gspath3done = 1;
 		return;
 	}
@@ -298,12 +294,9 @@ void GIFdma()
 					return;
 				}
 			}
-
-			FreezeXMMRegs(1);  
-			FreezeMMXRegs(1);  
+			FreezeRegs(1);  
 			GIFchain();	//Transfers the data set by the switch
-			FreezeXMMRegs(0); 
-			FreezeMMXRegs(0); 
+			FreezeRegs(0); 
 
 			if ((gif->chcr & 0x80) && ptag[0] >> 31) { //Check TIE bit of CHCR and IRQ bit of tag
 				GIF_LOG("dmaIrq Set\n");
@@ -534,15 +527,13 @@ void mfifoGIFtransfer(int qwc) {
 				gifmfifoirq = 1;
 			}
 	 }
-	FreezeXMMRegs(1); 
-	FreezeMMXRegs(1);
+	FreezeRegs(1); 
 		if (mfifoGIFchain() == -1) {
 			SysPrintf("GIF dmaChain error size=%d, madr=%lx, tadr=%lx\n",
 					gif->qwc, gif->madr, gif->tadr);
 			gifstate = GIF_STATE_STALL;
 		}
-	FreezeXMMRegs(0); 
-	FreezeMMXRegs(0);
+	FreezeRegs(0); 
 		
 	if(gif->qwc == 0 && gifstate == GIF_STATE_DONE) gifstate = GIF_STATE_STALL;
 	CPU_INT(11,mfifocycles);

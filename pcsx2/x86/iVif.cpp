@@ -29,11 +29,6 @@
 extern u32 g_vif1Masks[48], g_vif0Masks[48];
 extern u32 g_vif1HasMask3[4], g_vif0HasMask3[4];
 
-//static const u32 writearr[4] = { 0xffffffff, 0, 0, 0 };
-//static const u32 rowarr[4] = { 0, 0xffffffff, 0, 0 };
-//static const u32 colarr[4] = { 0, 0, 0xffffffff, 0 };
-//static const u32 updatearr[4] = {0xffffffff, 0xffffffff, 0xffffffff, 0 };
-
 // arranged in writearr, rowarr, colarr, updatearr
 static PCSX2_ALIGNED16(u32 s_maskarr[16][4]) = {
 	0xffffffff, 0x00000000, 0x00000000, 0xffffffff,
@@ -58,8 +53,6 @@ extern u8 s_maskwrite[256];
 
 extern "C" PCSX2_ALIGNED16(u32 s_TempDecompress[4]) = {0};
 
-//#if defined(_MSC_VER)
-
 void __fastcall SetNewMask(u32* vif1masks, u32* hasmask, u32 mask, u32 oldmask)
 {
     u32 i;
@@ -67,7 +60,7 @@ void __fastcall SetNewMask(u32* vif1masks, u32* hasmask, u32 mask, u32 oldmask)
 	FreezeXMMRegs(1);
 	for(i = 0; i < 4; ++i, mask >>= 8, oldmask >>= 8, vif1masks += 16) {
 
-		prev |= s_maskwrite[mask&0xff];//((mask&3)==3)||((mask&0xc)==0xc)||((mask&0x30)==0x30)||((mask&0xc0)==0xc0);
+		prev |= s_maskwrite[mask&0xff];
 		hasmask[i] = prev;
 
 		if( (mask&0xff) != (oldmask&0xff) ) {
@@ -93,46 +86,3 @@ void __fastcall SetNewMask(u32* vif1masks, u32* hasmask, u32 mask, u32 oldmask)
 	}
 	FreezeXMMRegs(0);
 }
-
-
-/*#else // gcc
-// Is this really supposed to be assembly for gcc and C for Windows?
-void __fastcall SetNewMask(u32* vif1masks, u32* hasmask, u32 mask, u32 oldmask)
-{
-    u32 i;
-	u32 prev = 0;
-	FreezeXMMRegs(1);
-
-	for(i = 0; i < 4; ++i, mask >>= 8, oldmask >>= 8, vif1masks += 16) {
-
-		prev |= s_maskwrite[mask&0xff];//((mask&3)==3)||((mask&0xc)==0xc)||((mask&0x30)==0x30)||((mask&0xc0)==0xc0);
-		hasmask[i] = prev;
-
-		if( (mask&0xff) != (oldmask&0xff) ) {
-            u8* p0 = (u8*)&s_maskarr[mask&15][0];
-            u8* p1 = (u8*)&s_maskarr[(mask>>4)&15][0];
-
-            __asm__(".intel_syntax noprefix\n"
-                "movaps xmm0, [%0]\n"
-                "movaps xmm1, [%1]\n"
-                "movaps xmm2, xmm0\n"
-                "punpcklwd xmm0, xmm0\n"
-                "punpckhwd xmm2, xmm2\n"
-                "movaps xmm3, xmm1\n"
-                "punpcklwd xmm1, xmm1\n"
-                "punpckhwd xmm3, xmm3\n"
-                "movq [%2], xmm0\n"
-                "movq [%2+8], xmm1\n"
-                "movhps [%2+16], xmm0\n"
-                "movhps [%2+24], xmm1\n"
-                "movq [%2+32], xmm2\n"
-                "movq [%2+40], xmm3\n"
-                "movhps [%2+48], xmm2\n"
-                "movhps [%2+56], xmm3\n"
-                    ".att_syntax\n" : : "r"(p0), "r"(p1), "r"(vif1masks) );
-		}
-	}
-	FreezeXMMRegs(0);
-}
-
-#endif*/

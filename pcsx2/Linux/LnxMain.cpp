@@ -59,15 +59,10 @@ int main(int argc, char *argv[])
 #endif
 
 #ifdef PCSX2_DEVBUILD
-	memset(&g_TestRun, 0, sizeof(g_TestRun));
+	memset(&g_Startup, 0, sizeof(g_Startup));
 #endif
 	
 	if (!ParseCommandLine(argc, argv, file)) return 0;
-
-#ifdef PCSX2_DEVBUILD
-	g_TestRun.efile = efile;
-	g_TestRun.ptitle = file;
-#endif
 
 	// make gtk thread safe if using MTGS
 	if (CHECK_MULTIGS)
@@ -76,7 +71,7 @@ int main(int argc, char *argv[])
 		gdk_threads_init();
 	}
 
-	if (UseGui)
+	if (!g_Startup.NoGui)
 	{
 		gtk_init(NULL, NULL);
 	}
@@ -133,7 +128,7 @@ int main(int argc, char *argv[])
 	}
 #endif
 	
-	if (UseGui && (file == NULL))
+	if (!g_Startup.NoGui && (file == NULL))
 	{
 		StartGui();
 		return 0;
@@ -315,7 +310,7 @@ gboolean OnDelete(GtkWidget       *widget, GdkEvent *event, gpointer user_data)
 
 int Pcsx2Configure()
 {
-	if (!UseGui) return 0;
+	if (g_Startup.NoGui) return 0;
 
 	MainWindow = NULL;
 	OnConf_Conf(NULL, 0);
@@ -397,16 +392,16 @@ void pcsx2_exit()
 
 	printf("PCSX2 Quitting\n");
 
-	if (UseGui)
+	if (g_Startup.NoGui)
+	{
+		SysClose();
+		exit(0);
+	}
+	else
 	{
 		gtk_main_quit();
 		SysClose();
 		gtk_exit(0);
-	}
-	else
-	{
-		SysClose();
-		exit(0);
 	}
 }
 

@@ -19,7 +19,7 @@
 #include "PrecompiledHeader.h"
 #include <time.h>
 
-#include "PsxCommon.h"
+#include "IopCommon.h"
 #include "iR3000A.h"
 #include "IopMem.h"
 #include "IopDma.h"
@@ -97,7 +97,7 @@ PSXRECOMPILE_CONSTCODE1(SLTI);
 //// SLTIU
 void rpsxSLTIU_const()
 {
-	g_psxConstRegs[_Rt_] = g_psxConstRegs[_Rs_] < _ImmU_;
+	g_psxConstRegs[_Rt_] = g_psxConstRegs[_Rs_] < (u32)_Imm_;
 }
 
 void rpsxSLTUconst(int info, int dreg, int sreg, int imm)

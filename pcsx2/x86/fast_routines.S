@@ -44,11 +44,11 @@
 memcmp_mmx:
 		// make sure mmx regs are stored
 		// FreezeMMXRegs(1);
-		cmp dword ptr [g_EEFreezeRegs], 0
-		je memcmp_mmx_begin
-		push 1
-		call FreezeMMXRegs_
-		add esp, 4
+		//cmp dword ptr [g_EEFreezeRegs], 0
+		//je memcmp_mmx_begin
+		//push 1
+		//call FreezeMMXRegs_
+		//add esp, 4
 
 memcmp_mmx_begin:		
 		push esi
@@ -381,7 +381,7 @@ $memcpy_align_done:			// destination is dword aligned
 	shr		eax, 6			// get 64-byte block count
 	jz		$memcpy_ic_2	// finish the last few bytes
 
-	mov     edx, offset _mmx_backup ; will probably need this to save/restore mmx
+	mov     edx, offset _mmx_backup // will probably need this to save/restore mmx
 	cmp		eax, IN_CACHE_COPY/64	// too big 4 cache? use uncached copy
 	jae		$memcpy_uc_test
 

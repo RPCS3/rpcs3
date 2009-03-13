@@ -19,28 +19,34 @@
 #pragma once
 
 //////////////////////////////////////////////////////////////////////////////////////////
-// TestRun Parameters.
+// Startup Parameters.
 
-struct TESTRUNARGS
+enum StartupMode
 {
-	u8 enabled;
-	u8 jpgcapture;
-
-	uint frame; // if == 0, frame is unlimited (run until crash).
-	int numimages;
-	int curimage;
-	u32 autopad; // mask for auto buttons
-	bool efile;
-	int snapdone;
-
-	const char* ptitle;
-	const char* pimagename;
-	const char* plogname;
-	const char* pgsdll, *pcdvddll, *pspudll;
-	const char* ppad1dll, *ppad2dll, *pdev9dll;
+	BootMode_Bios,
+	BootMode_Quick,
+	BootMode_Elf
 };
 
-extern TESTRUNARGS g_TestRun;
+class StartupParams
+{
+public:
+	// Name of the CDVD or ELF image to load.
+	// if NULL, the CDVD configured settings are used.
+	const char* ImageName;
+
+	bool NoGui;
+	bool Enabled;
+	StartupMode BootMode;
+
+	// Plugin overrides
+	const char* gsdll, *cdvddll, *spudll;
+	const char* pad1dll, *pad2dll, *dev9dll;
+
+	StartupParams() { memzero_obj(*this); }
+};
+
+extern StartupParams g_Startup;
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // Core Gui APIs  (shared by all platforms)

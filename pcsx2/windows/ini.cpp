@@ -177,8 +177,9 @@ void IniFile::DoConfig( PcsxConfig& Conf )
 
 	Entry( "Patching", Conf.Patch, false );
 	Entry( "GameFixes", Conf.GameFixes);
+
 #ifdef PCSX2_DEVBUILD
-	Entry( "DevLogFlags", varLog );
+	Entry( "DevLogFlags", (uint&)varLog );
 #endif
 
 	//interface

@@ -73,82 +73,113 @@ microVUx(void) mVUunpack_xyzw(int dstreg, int srcreg, int xyzw) {
 	}
 }
 
-microVUx(void) mVUloadReg(int reg, u32 offset, int xyzw) {
+microVUx(void) mVUloadReg(int reg, uptr offset, int xyzw) {
 	switch( xyzw ) {
 		case 8:		SSE_MOVSS_M32_to_XMM(reg, offset);		break; // X
 		case 4:		SSE_MOVSS_M32_to_XMM(reg, offset+4);	break; // Y
 		case 2:		SSE_MOVSS_M32_to_XMM(reg, offset+8);	break; // Z
 		case 1:		SSE_MOVSS_M32_to_XMM(reg, offset+12);	break; // W
-		//case 3:	SSE_MOVHPS_M64_to_XMM(reg, offset+8);	break; // ZW (not sure if this is faster than default)
-		//case 12:	SSE_MOVLPS_M64_to_XMM(reg, offset);		break; // XY (not sure if this is faster than default)
 		default:	SSE_MOVAPS_M128_to_XMM(reg, offset);	break;
 	}
 }
 
-microVUx(void) mVUsaveReg(int reg, u32 offset, int xyzw) {
+microVUx(void) mVUloadReg2(int reg, int gprReg, uptr offset, int xyzw) {
+	switch( xyzw ) {
+		case 8:		SSE_MOVSS_RmOffset_to_XMM(reg, gprReg, offset);		break; // X
+		case 4:		SSE_MOVSS_RmOffset_to_XMM(reg, gprReg, offset+4);	break; // Y
+		case 2:		SSE_MOVSS_RmOffset_to_XMM(reg, gprReg, offset+8);	break; // Z
+		case 1:		SSE_MOVSS_RmOffset_to_XMM(reg, gprReg, offset+12);	break; // W
+		default:	SSE_MOVAPSRmtoROffset(reg, gprReg, offset);			break;
+	}
+}
+
+microVUx(void) mVUsaveReg(int reg, uptr offset, int xyzw) {
 	switch ( xyzw ) {
-		case 1: // W
-			SSE_MOVSS_XMM_to_M32(offset+12, reg);
-			break;
-		case 2: // Z
-			SSE_MOVSS_XMM_to_M32(offset+8, reg);
-			break;
-		case 3: // ZW
-			SSE_MOVHPS_XMM_to_M64(offset+8, reg);
-			break;
-		case 4: // Y
-			SSE_MOVSS_XMM_to_M32(offset+4, reg);
-			break;
-		case 5: // YW
-			SSE_SHUFPS_XMM_to_XMM(reg, reg, 0xB1);
-			SSE_MOVHLPS_XMM_to_XMM(xmmT1, reg);
-			SSE_MOVSS_XMM_to_M32(offset+4, reg);
-			SSE_MOVSS_XMM_to_M32(offset+12, xmmT1);
-			break;
-		case 6: // YZ
-			SSE2_PSHUFD_XMM_to_XMM(xmmT1, reg, 0xc9);
-			SSE_MOVLPS_XMM_to_M64(offset+4, xmmT1);
-			break;
-		case 7: // YZW
-			SSE2_PSHUFD_XMM_to_XMM(xmmT1, reg, 0x93); //ZYXW
-			SSE_MOVHPS_XMM_to_M64(offset+4, xmmT1);
-			SSE_MOVSS_XMM_to_M32(offset+12, xmmT1);
-			break;
-		case 8: // X
-			SSE_MOVSS_XMM_to_M32(offset, reg);
-			break;
-		case 9: // XW
-			SSE_MOVHLPS_XMM_to_XMM(xmmT1, reg);
-			SSE_MOVSS_XMM_to_M32(offset, reg);
-			if ( cpucaps.hasStreamingSIMD3Extensions ) SSE3_MOVSLDUP_XMM_to_XMM(xmmT1, xmmT1);
-			else SSE_SHUFPS_XMM_to_XMM(xmmT1, xmmT1, 0x55);
-			SSE_MOVSS_XMM_to_M32(offset+12, xmmT1);
-			break;
-		case 10: //XZ
-			SSE_MOVHLPS_XMM_to_XMM(xmmT1, reg);
-			SSE_MOVSS_XMM_to_M32(offset, reg);
-			SSE_MOVSS_XMM_to_M32(offset+8, xmmT1);
-			break;
-		case 11: //XZW
-			SSE_MOVSS_XMM_to_M32(offset, reg);
-			SSE_MOVHPS_XMM_to_M64(offset+8, reg);
-			break;
-		case 12: // XY
-			SSE_MOVLPS_XMM_to_M64(offset, reg);
-			break;
-		case 13: // XYW
-			SSE2_PSHUFD_XMM_to_XMM(xmmT1, reg, 0x4b); //YXZW				
-			SSE_MOVHPS_XMM_to_M64(offset, xmmT1);
-			SSE_MOVSS_XMM_to_M32(offset+12, xmmT1);
-			break;
-		case 14: // XYZ
-			SSE_MOVHLPS_XMM_to_XMM(xmmT1, reg);
-			SSE_MOVLPS_XMM_to_M64(offset, reg);
-			SSE_MOVSS_XMM_to_M32(offset+8, xmmT1);
-			break;
-		case 15: // XYZW				
-			SSE_MOVAPS_XMM_to_M128(offset, reg);
-			break;
+		case 5:		SSE2_PSHUFD_XMM_to_XMM(reg, reg, 0xB1);
+					SSE_MOVHLPS_XMM_to_XMM(xmmT1, reg);
+					SSE_MOVSS_XMM_to_M32(offset+4, reg);
+					SSE_MOVSS_XMM_to_M32(offset+12, xmmT1);
+					break; // YW
+		case 6:		SSE2_PSHUFD_XMM_to_XMM(xmmT1, reg, 0xc9);
+					SSE_MOVLPS_XMM_to_M64(offset+4, xmmT1);
+					break; // YZ
+		case 7:		SSE2_PSHUFD_XMM_to_XMM(xmmT1, reg, 0x93); //ZYXW
+					SSE_MOVHPS_XMM_to_M64(offset+4, xmmT1);
+					SSE_MOVSS_XMM_to_M32(offset+12, xmmT1);
+					break; // YZW
+		case 9:		SSE_MOVHLPS_XMM_to_XMM(xmmT1, reg);
+					SSE_MOVSS_XMM_to_M32(offset, reg);
+					if ( cpucaps.hasStreamingSIMD3Extensions ) SSE3_MOVSLDUP_XMM_to_XMM(xmmT1, xmmT1);
+					else SSE2_PSHUFD_XMM_to_XMM(xmmT1, xmmT1, 0x55);
+					SSE_MOVSS_XMM_to_M32(offset+12, xmmT1);
+					break; // XW
+		case 10:	SSE_MOVHLPS_XMM_to_XMM(xmmT1, reg);
+					SSE_MOVSS_XMM_to_M32(offset, reg);
+					SSE_MOVSS_XMM_to_M32(offset+8, xmmT1);
+					break; //XZ
+		case 11:	SSE_MOVSS_XMM_to_M32(offset, reg);
+					SSE_MOVHPS_XMM_to_M64(offset+8, reg);
+					break; //XZW
+		case 13:	SSE2_PSHUFD_XMM_to_XMM(xmmT1, reg, 0x4b); //YXZW				
+					SSE_MOVHPS_XMM_to_M64(offset, xmmT1);
+					SSE_MOVSS_XMM_to_M32(offset+12, xmmT1);
+					break; // XYW
+		case 14:	SSE_MOVHLPS_XMM_to_XMM(xmmT1, reg);
+					SSE_MOVLPS_XMM_to_M64(offset, reg);
+					SSE_MOVSS_XMM_to_M32(offset+8, xmmT1);
+					break; // XYZ
+		case 8:		SSE_MOVSS_XMM_to_M32(offset, reg);		break; // X
+		case 4:		SSE_MOVSS_XMM_to_M32(offset+4, reg);	break; // Y
+		case 2:		SSE_MOVSS_XMM_to_M32(offset+8, reg);	break; // Z
+		case 1:		SSE_MOVSS_XMM_to_M32(offset+12, reg);	break; // W
+		case 12:	SSE_MOVLPS_XMM_to_M64(offset, reg);		break; // XY
+		case 3:		SSE_MOVHPS_XMM_to_M64(offset+8, reg);	break; // ZW
+		default:	SSE_MOVAPS_XMM_to_M128(offset, reg);	break; // XYZW
+	}
+}
+
+microVUx(void) mVUsaveReg2(int reg, int gprReg, u32 offset, int xyzw) {
+	switch ( xyzw ) {
+		case 5:		SSE2_PSHUFD_XMM_to_XMM(reg, reg, 0xB1);
+					SSE_MOVHLPS_XMM_to_XMM(xmmT1, reg);
+					SSE_MOVSS_XMM_to_RmOffset(gprReg, offset+4, reg);
+					SSE_MOVSS_XMM_to_RmOffset(gprReg, offset+12, xmmT1);
+					break; // YW
+		case 6:		SSE2_PSHUFD_XMM_to_XMM(xmmT1, reg, 0xc9);
+					SSE_MOVLPS_XMM_to_RmOffset(gprReg, offset+4, xmmT1);
+					break; // YZ
+		case 7:		SSE2_PSHUFD_XMM_to_XMM(xmmT1, reg, 0x93); //ZYXW
+					SSE_MOVHPS_XMM_to_RmOffset(gprReg, offset+4, xmmT1);
+					SSE_MOVSS_XMM_to_RmOffset(gprReg, offset+12, xmmT1);
+					break; // YZW
+		case 9:		SSE_MOVHLPS_XMM_to_XMM(xmmT1, reg);
+					SSE_MOVSS_XMM_to_RmOffset(gprReg, offset, reg);
+					if ( cpucaps.hasStreamingSIMD3Extensions ) SSE3_MOVSLDUP_XMM_to_XMM(xmmT1, xmmT1);
+					else SSE2_PSHUFD_XMM_to_XMM(xmmT1, xmmT1, 0x55);
+					SSE_MOVSS_XMM_to_RmOffset(gprReg, offset+12, xmmT1);
+					break; // XW
+		case 10:	SSE_MOVHLPS_XMM_to_XMM(xmmT1, reg);
+					SSE_MOVSS_XMM_to_RmOffset(gprReg, offset, reg);
+					SSE_MOVSS_XMM_to_RmOffset(gprReg, offset+8, xmmT1);
+					break; //XZ
+		case 11:	SSE_MOVSS_XMM_to_RmOffset(gprReg, offset, reg);
+					SSE_MOVHPS_XMM_to_RmOffset(gprReg, offset+8, reg);
+					break; //XZW
+		case 13:	SSE2_PSHUFD_XMM_to_XMM(xmmT1, reg, 0x4b); //YXZW				
+					SSE_MOVHPS_XMM_to_RmOffset(gprReg, offset, xmmT1);
+					SSE_MOVSS_XMM_to_RmOffset(gprReg, offset+12, xmmT1);
+					break; // XYW
+		case 14:	SSE_MOVHLPS_XMM_to_XMM(xmmT1, reg);
+					SSE_MOVLPS_XMM_to_RmOffset(gprReg, offset, reg);
+					SSE_MOVSS_XMM_to_RmOffset(gprReg, offset+8, xmmT1);
+					break; // XYZ
+		case 8:		SSE_MOVSS_XMM_to_RmOffset(gprReg, offset, reg);		break; // X
+		case 4:		SSE_MOVSS_XMM_to_RmOffset(gprReg, offset+4, reg);	break; // Y
+		case 2:		SSE_MOVSS_XMM_to_RmOffset(gprReg, offset+8, reg);	break; // Z
+		case 1:		SSE_MOVSS_XMM_to_RmOffset(gprReg, offset+12, reg);	break; // W
+		case 12:	SSE_MOVLPS_XMM_to_RmOffset(gprReg, offset, reg);	break; // XY
+		case 3:		SSE_MOVHPS_XMM_to_RmOffset(gprReg, offset+8, reg);	break; // ZW
+		default:	SSE_MOVAPSRtoRmOffset(gprReg, offset, reg);			break; // XYZW
 	}
 }
 
@@ -174,10 +205,10 @@ microVUx(void) mVUmergeRegs(int dest, int src, int xyzw) {
 						 SSE2_MOVSD_XMM_to_XMM(dest, src);
 						 break;
 				case 5:	 SSE_SHUFPS_XMM_to_XMM(dest, src, 0xd8);
-						 SSE_SHUFPS_XMM_to_XMM(dest, dest, 0xd8);
+						 SSE2_PSHUFD_XMM_to_XMM(dest, dest, 0xd8);
 						 break;
 				case 6:	 SSE_SHUFPS_XMM_to_XMM(dest, src, 0x9c);
-						 SSE_SHUFPS_XMM_to_XMM(dest, dest, 0x78);
+						 SSE2_PSHUFD_XMM_to_XMM(dest, dest, 0x78);
 						 break;
 				case 7:	 SSE_MOVSS_XMM_to_XMM(src, dest);
 						 SSE_MOVAPS_XMM_to_XMM(dest, src);
@@ -185,10 +216,10 @@ microVUx(void) mVUmergeRegs(int dest, int src, int xyzw) {
 				case 8:	 SSE_MOVSS_XMM_to_XMM(dest, src);
 						 break;
 				case 9:	 SSE_SHUFPS_XMM_to_XMM(dest, src, 0xc9);
-						 SSE_SHUFPS_XMM_to_XMM(dest, dest, 0xd2);
+						 SSE2_PSHUFD_XMM_to_XMM(dest, dest, 0xd2);
 						 break;
 				case 10: SSE_SHUFPS_XMM_to_XMM(dest, src, 0x8d);
-						 SSE_SHUFPS_XMM_to_XMM(dest, dest, 0x72);
+						 SSE2_PSHUFD_XMM_to_XMM(dest, dest, 0x72);
 						 break;
 				case 11: SSE_MOVSS_XMM_to_XMM(dest, src);
 						 SSE_SHUFPS_XMM_to_XMM(dest, src, 0xe4);
@@ -207,6 +238,25 @@ microVUx(void) mVUmergeRegs(int dest, int src, int xyzw) {
 						 break;
 			}
 		}
+	}
+}
+
+// Transforms the Address in gprReg to valid VU0/VU1 Address
+microVUt(void) mVUaddrFix(int gprReg) {
+	if ( vuIndex == 1 ) {
+		AND32ItoR(EAX, 0x3ff); // wrap around
+		SHL32ItoR(EAX, 4);
+	}
+	else {
+		u8 *jmpA, *jmpB; 
+		CMP32ItoR(EAX, 0x400);
+		jmpA = JL8(0); // if addr >= 0x4000, reads VU1's VF regs and VI regs
+			AND32ItoR(EAX, 0x43f);
+			jmpB = JMP8(0);
+		x86SetJ8(jmpA);
+			AND32ItoR(EAX, 0xff); // if addr < 0x4000, wrap around
+		x86SetJ8(jmpB);
+		SHL32ItoR(EAX, 4); // multiply by 16 (shift left by 4)
 	}
 }
 

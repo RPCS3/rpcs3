@@ -18,7 +18,7 @@
 
 #include "PrecompiledHeader.h"
 
-#include "PsxCommon.h"
+#include "IopCommon.h"
 
 using namespace R3000A;
 

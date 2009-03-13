@@ -27,7 +27,7 @@
 #include <windowsx.h>
 #include <tchar.h>
 
-#include "Misc.h"
+#include "System.h"
 #include "HostGui.h"
 #include "resource.h"
 #include "WinDebugResource.h"
@@ -149,7 +149,6 @@ extern AppData gApp;
 extern HWND hStatusWnd;
 extern PcsxConfig winConfig;		// local storage of the configuration options.
 
-extern bool UseGui;
 extern bool nDisableSC; // screensaver
 extern unsigned int langsMax;
 

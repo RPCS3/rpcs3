@@ -324,6 +324,7 @@ void SetFPUstate();
 #define MMX_TEMP 0x7f
 
 #define MMX_IS32BITS(x) (((x)>=MMX_FPU&&(x)<MMX_COP0+32)||(x)==MMX_FPUACC)
+// If x is unsigned, the first part of this is always true, and it usually is.
 #define MMX_ISGPR(x) ((x) >= MMX_GPR && (x) < MMX_GPR+34)
 
 struct _mmxregs {

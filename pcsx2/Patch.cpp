@@ -23,7 +23,7 @@
 
 #define _PC_	// disables MIPS opcode macros.
 
-#include "PsxCommon.h"
+#include "IopCommon.h"
 #include "Paths.h"
 #include "Patch.h"
 #include "VU.h"

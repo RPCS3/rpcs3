@@ -55,36 +55,26 @@ void strcatz(char *dst, char *src)
 	strcpy(dst + len, src);
 }
 
+
 //2002-09-20 (Florin)
 BOOL APIENTRY CmdlineProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);//forward def
 //-------------------
 
 static const char* phelpmsg = 
-    "pcsx2 [options] [file]\n\n"
-    "-cfg [file] {configuration file}\n"
-    "-efile [efile] {0 - reset, 1 - runcd (default), 2 - loadelf}\n"
-    "-help {display this help file}\n"
-    "-nogui {Don't use gui when launching}\n"
-	"-loadgs [file] {Loads a gsstate}\n"
+    "pcsx2 [options] [cdimage/elf file]\n\n"
+    "\t-cfg [file] {configuration file}\n"
+    "\t-bootmode [mode] {0 - quick (default), 1 - bios,  2 - load elf}\n"
+    "\t-nogui {disables display of the gui - skips right to opening the GS window}"
+    "\t-help {display this help file}\n"
+	"\t-loadgs [file] {Loads a gsstate}\n\n"
+	"Run without GUI Options:\n"
     "\n"
-
-#ifdef PCSX2_DEVBUILD
-    "Testing Options: \n"
-    "\t-frame [frame] {game will run up to this frame before exiting}\n"
-	"\t-image [name] {path and base name of image (do not include the .ext)}\n"
-    "\t-jpg {save images to jpg format}\n"
-	"\t-log [name] {log path to save log file in}\n"
-	"\t-logopt [hex] {log options in hex (see debug.h) }\n"
-	"\t-numimages [num] {after hitting frame, this many images will be captures every 20 frames}\n"
-    "\t-test {Triggers testing mode (only for dev builds)}\n"
-    "\n"
-#endif
 
     "Plugin Overrides (specified dlls will be used in place of configured dlls):\n"
     "\t-cdvd [dllpath] {specifies an override for the CDVD plugin}\n"
     "\t-gs [dllpath] {specifies an override for the GS plugin}\n"
     "\t-spu [dllpath] {specifies an override for the SPU2 plugin}\n"
-	"\t-pads [dllpath] {specifies an override for *both* pad plugins}\n"
+	"\t-pad [dllpath] {specifies an override for *both* pad plugins}\n"
 	"\t-pad1 [dllpath] {specifies an override for the PAD1 plugin only}\n"
 	"\t-pad2 [dllpath] {specifies an override for the PAD2 plugin only}\n"
 	"\t-dev9 [dllpath] {specifies an override for the DEV9 plugin}\n"
@@ -189,21 +179,6 @@ void WinClose()
 
 BOOL SysLoggedSetLockPagesPrivilege ( HANDLE hProcess, BOOL bEnable);
 
-// Returns TRUE if the test run mode was activated (game was run and has been exited)
-static bool TestRunMode()
-{
-	if( IsDevBuild && (g_TestRun.enabled || g_TestRun.ptitle != NULL) )
-	{
-		// run without ui
-		UseGui = false;
-		PCSX2_MEM_PROTECT_BEGIN();
-		SysPrepareExecution( g_TestRun.efile ? g_TestRun.ptitle : NULL );
-		PCSX2_MEM_PROTECT_END();
-		return true;
-	}
-	return false;
-}
-
 static void _doPluginOverride( const char* name, const char* src, char (&dest)[g_MaxPath] )
 {
 	if( src == NULL || src[0] == 0 ) return;
@@ -219,12 +194,12 @@ void WinRun()
 
 	memcpy( &winConfig, &Config, sizeof( PcsxConfig ) );
 
-	_doPluginOverride( "GS", g_TestRun.pgsdll, Config.GS );
-	_doPluginOverride( "CDVD", g_TestRun.pcdvddll, Config.CDVD );
-	_doPluginOverride( "SPU2", g_TestRun.pspudll, Config.SPU2 );
-	_doPluginOverride( "PAD1", g_TestRun.ppad1dll, Config.PAD1 );
-	_doPluginOverride( "PAD2", g_TestRun.ppad2dll, Config.PAD2 );
-	_doPluginOverride( "DEV9", g_TestRun.pdev9dll, Config.DEV9 );
+	_doPluginOverride( "GS", g_Startup.gsdll, Config.GS );
+	_doPluginOverride( "CDVD", g_Startup.cdvddll, Config.CDVD );
+	_doPluginOverride( "SPU2", g_Startup.spudll, Config.SPU2 );
+	_doPluginOverride( "PAD1", g_Startup.pad1dll, Config.PAD1 );
+	_doPluginOverride( "PAD2", g_Startup.pad2dll, Config.PAD2 );
+	_doPluginOverride( "DEV9", g_Startup.dev9dll, Config.DEV9 );
 
 
 #ifndef _DEBUG
@@ -238,8 +213,6 @@ void WinRun()
 	{
 		if (Pcsx2Configure(NULL) == FALSE) return;
 	}
-
-	if( TestRunMode() ) return;
 
 #ifdef PCSX2_DEVBUILD
 	if( g_pRunGSState ) {
@@ -294,8 +267,6 @@ void WinRun()
 	textdomain(PACKAGE);
 #endif
 
-	memzero_obj(g_TestRun);
-
 	_getcwd( g_WorkingFolder, g_MaxPath );
 
 	int argc;
@@ -303,7 +274,7 @@ void WinRun()
 
 	if( argv == NULL )
 	{
-		Msgbox::Alert( "A fatal error occured while attempting to parse the command line.\n" );
+		Msgbox::Alert( "A fatal error occurred while attempting to parse the command line.\n" );
 		return 2;
 	}
 
@@ -395,6 +366,23 @@ void RunGui()
 	PCSX2_MEM_PROTECT_BEGIN();
 
 	LoadPatch( str_Default );
+
+	if( g_Startup.NoGui || g_Startup.Enabled )
+	{
+		// Initially bypass GUI and start PCSX2 directly.
+		// Manually load plugins using the user's configured image (if non-elf).
+		
+		if( g_Startup.Enabled && (g_Startup.BootMode != BootMode_Elf) )
+		{
+			if (OpenPlugins(g_Startup.ImageName) == -1)
+				return;
+		}
+
+		SysPrepareExecution(
+			(g_Startup.BootMode == BootMode_Elf) ? g_Startup.ImageName : NULL, 
+			(g_Startup.BootMode == BootMode_Bios)
+		);
+	}
 
 	do 
 	{
@@ -501,22 +489,26 @@ BOOL APIENTRY CmdlineProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 
 BOOL APIENTRY LogProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam) {
 	int i;
+	
+	// Note: varLog layout has been changed, so this code won't be applicable to the new wx version
+	// of this dialog box.
+	
     switch (message) {
         case WM_INITDIALOG:
-			for (i=0; i<32; i++)
-				if (varLog & (1<<i))
-					CheckDlgButton(hDlg, IDC_CPULOG+i, TRUE);
+			//for (i=0; i<32; i++)
+			//	if (varLog & (1<<i))
+			//		CheckDlgButton(hDlg, IDC_CPULOG+i, TRUE);
 
             return TRUE;
 
         case WM_COMMAND:
 
             if (LOWORD(wParam) == IDOK) {
-				for (i=0; i<32; i++) {
-	 			    int ret = Button_GetCheck(GetDlgItem(hDlg, IDC_CPULOG+i));
-					if (ret) varLog|= 1<<i;
-					else varLog&=~(1<<i);
-				}
+				//for (i=0; i<32; i++) {
+	 			//    int ret = Button_GetCheck(GetDlgItem(hDlg, IDC_CPULOG+i));
+				//	if (ret) varLog|= 1<<i;
+				//	else varLog&=~(1<<i);
+				//}
 
 				SaveConfig();              
 

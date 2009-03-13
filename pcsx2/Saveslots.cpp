@@ -22,8 +22,7 @@
 
 #include "GS.h"
 
-TESTRUNARGS g_TestRun;
-
+StartupParams g_Startup;
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // Save Slot Detection System
@@ -63,11 +62,11 @@ void States_Load( const string& file )
 	try
 	{
 		_loadStateOrExcept( file );
-		HostGui::Notice( fmt_string( "*PCSX2*: Loaded State %s", file) );
+		HostGui::Notice( fmt_string( "*PCSX2*: Loaded State %hs", &file) );
 	}
 	catch( Exception::StateLoadError_Recoverable& ex)
 	{
-		Console::Notice( "Could not load savestate file: %s.\n\n%s", params file, ex.cMessage() );
+		Console::Notice( "Could not load savestate file: %hs.\n\n%s", params &file, ex.cMessage() );
 
 		// At this point the cpu hasn't been reset, so we can return
 		// control to the user safely... (that's why we use a console notice instead of a popup)
@@ -79,7 +78,7 @@ void States_Load( const string& file )
 		// The emulation state is ruined.  Might as well give them a popup and start the gui.
 
 		string message( fmt_string(
-			"Encountered an error while loading savestate from file: %s.\n", file ) );
+			"Encountered an error while loading savestate from file: %hs.\n", &file ) );
 
 		if( g_EmulationInProgress )
 			message += "Since the savestate load was incomplete, the emulator must reset.\n";
@@ -145,12 +144,12 @@ void States_Save( const string& file )
 	try
 	{
 		StateRecovery::SaveToFile( file );
-		HostGui::Notice( fmt_string( "State saved to file: %s", file ) );
+		HostGui::Notice( fmt_string( "State saved to file: %hs", &file ) );
 	}
 	catch( Exception::BaseException& ex )
 	{
 		Console::Error( (fmt_string(
-			"An error occurred while trying to save to file %s\n", file ) +
+			"An error occurred while trying to save to file %hs\n", &file ) +
 			"Your emulation state has not been saved!\n\nError: " + ex.Message()).c_str()
 		);
 	}
@@ -180,7 +179,7 @@ void States_Save(int num)
 //
 void vSyncDebugStuff( uint frame )
 {
-#ifdef PCSX2_DEVBUILD
+#ifdef OLD_TESTBUILD_STUFF
 	if( g_TestRun.enabled && g_TestRun.frame > 0 ) {
 		if( frame > g_TestRun.frame ) {
 			// take a snapshot

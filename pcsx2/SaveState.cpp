@@ -18,8 +18,7 @@
 
 #include "PrecompiledHeader.h"
 
-#include "Common.h"
-#include "PsxCommon.h"
+#include "IopCommon.h"
 #include "SaveState.h"
 
 #include "CDVDisodrv.h"
