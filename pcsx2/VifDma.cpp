@@ -1534,11 +1534,9 @@ static int __fastcall Vif1TransDirectHL(u32 *data){
 		}
 		else
 		{
-			FreezeXMMRegs(1);
-			FreezeMMXRegs(1);
+			FreezeRegs(1);
 			GSGIFTRANSFER2((u32*)splittransfer[0], 1);
-			FreezeMMXRegs(0);
-			FreezeXMMRegs(0);
+			FreezeRegs(0);
 		}
 		
 		if(vif1.tag.size == 0) vif1.cmd = 0;
@@ -1576,12 +1574,9 @@ static int __fastcall Vif1TransDirectHL(u32 *data){
 		mtgsThread->SendDataPacket();
 	}
 	else {
-		
-		FreezeXMMRegs(1);
-		FreezeMMXRegs(1);
+		FreezeRegs(1);
 		GSGIFTRANSFER2(data, (ret >> 2));
-		FreezeMMXRegs(0);
-		FreezeXMMRegs(0);
+		FreezeRegs(0);
 	}
 
 	return ret;
@@ -2128,9 +2123,7 @@ void dmaVIF1()
             vif1ch->madr += vif1ch->qwc * 16; // mgs3 scene changes
 			vif1ch->qwc = 0;
 			CPU_INT(1, g_vifCycles);
-			
 		}
-		
 		vif1.done = 1;
 		return;
 	}

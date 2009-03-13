@@ -721,7 +721,7 @@ void ProcessFKeys(int fkey, int shift)
     }
 }
 
-void injectIRX(const char *filename)
+/*void injectIRX(const char *filename)
 {
 	char name[260], *p, *q;
 	struct romdir *rd;
@@ -785,7 +785,7 @@ void injectIRX(const char *filename)
 	memcpy(rd[i].fileName, name, strlen(name));
 	rd[i].fileSize=filesize;
 	rd[i].extInfoSize=0;
-}
+}*/
 
 
 void _memset16_unaligned( void* dest, u16 data, size_t size )

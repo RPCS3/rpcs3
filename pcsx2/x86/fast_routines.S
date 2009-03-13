@@ -44,11 +44,11 @@
 memcmp_mmx:
 		// make sure mmx regs are stored
 		// FreezeMMXRegs(1);
-		cmp dword ptr [g_EEFreezeRegs], 0
-		je memcmp_mmx_begin
-		push 1
-		call FreezeMMXRegs_
-		add esp, 4
+		//cmp dword ptr [g_EEFreezeRegs], 0
+		//je memcmp_mmx_begin
+		//push 1
+		//call FreezeMMXRegs_
+		//add esp, 4
 
 memcmp_mmx_begin:		
 		push esi

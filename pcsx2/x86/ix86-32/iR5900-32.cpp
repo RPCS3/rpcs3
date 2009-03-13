@@ -613,9 +613,12 @@ void recStep( void ) {
 static __forceinline bool recEventTest()
 {
 #ifdef PCSX2_DEVBUILD
-    // dont' remove this check unless doing an official release
-    if( g_globalXMMSaved || g_globalMMXSaved)
+	// dont' remove this check unless doing an official release
+	if( g_globalXMMSaved || g_globalMMXSaved)
+	{
 		DevCon::Error("Pcsx2 Foopah!  Frozen regs have not been restored!!!");
+		DevCon::Error("g_globalXMMSaved = %d,g_globalMMXSaved = %d",params g_globalXMMSaved, g_globalMMXSaved);
+	}
 	assert( !g_globalXMMSaved && !g_globalMMXSaved);
 #endif
 

@@ -153,7 +153,7 @@ void psxDma10(u32 madr, u32 bcr, u32 chcr) {
 		psHu32(0x1000F240) &= ~0x40;
 		psHu32(0x1000F240) &= ~0x100;
 		psHu32(0x1000F240) &= ~0x4000;
-		FreezeXMMRegs(0);
+		FreezeXMMRegs(0)
 	}
 }
 

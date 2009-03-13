@@ -69,9 +69,11 @@ extern bool g_EEFreezeRegs;
 #ifndef __INTEL_COMPILER
 extern "C" void FreezeXMMRegs_(int save);
 extern "C" void FreezeMMXRegs_(int save);
+extern "C" void FreezeRegs(int save);
 #else
 extern void FreezeXMMRegs_(int save);
 extern void FreezeMMXRegs_(int save);
+extern void FreezeRegs(int save);
 #endif
 
 // these macros check to see if needs freezing

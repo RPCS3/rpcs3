@@ -72,15 +72,23 @@ void SetCPUState(u32 sseMXCSR, u32 sseVUMXCSR)
 extern "C"
 {
 #endif
+
+__forceinline void FreezeRegs(int save)
+{
+	FreezeXMMRegs(save);
+	FreezeMMXRegs(save);
+}
+
 __forceinline void FreezeMMXRegs_(int save)
 {
+	//DevCon::Notice("FreezeMMXRegs_(%d); [%d]\n", save, g_globalMMXSaved);
 	assert( g_EEFreezeRegs );
 
 	if( save ) {
 		g_globalMMXSaved++;
 		if( g_globalMMXSaved>1 )
 		{
-			//SysPrintf("MMX Already Saved!\n");
+			//DevCon::Notice("MMX Already Saved!\n");
 			return;
 		}
 
@@ -117,7 +125,7 @@ __forceinline void FreezeMMXRegs_(int save)
 	else {
 		if( g_globalMMXSaved==0 )
 		{
-			//SysPrintf("MMX Not Saved!\n");
+			//DevCon::Notice("MMX Not Saved!\n");
 			return;
 		}
 		g_globalMMXSaved--;
@@ -159,14 +167,14 @@ __forceinline void FreezeMMXRegs_(int save)
 // XMM Register Freezing
 __forceinline void FreezeXMMRegs_(int save)
 {
-	//SysPrintf("FreezeXMMRegs_(%d); [%d]\n", save, g_globalXMMSaved);
+	//DevCon::Notice("FreezeXMMRegs_(%d); [%d]\n", save, g_globalXMMSaved);
 	assert( g_EEFreezeRegs );
 
 	if( save )
 	{
 		g_globalXMMSaved++;
 		if( g_globalXMMSaved > 1 ){
-			//SysPrintf("XMM Already saved\n");
+			//DevCon::Notice("XMM Already saved\n");
 			return;
 		}
 
@@ -204,7 +212,7 @@ __forceinline void FreezeXMMRegs_(int save)
 	{
 		if( g_globalXMMSaved==0 )
 		{
-			//SysPrintf("XMM Regs not saved!\n");
+			//DevCon::Notice("XMM Regs not saved!\n");
 			return;
 		}
 

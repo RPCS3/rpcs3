@@ -677,16 +677,14 @@ int mtgsThreadObject::Callback()
 void mtgsThreadObject::WaitGS()
 {
 	// Freeze registers because some kernel code likes to destroy them
-	FreezeXMMRegs(1);
-	FreezeMMXRegs(1);
+	FreezeRegs(1);
 	SetEvent();
 	while( volatize(m_RingPos) != volatize(m_WritePos) )
 	{
 		Timeslice();
 		//SpinWait();
 	}
-	FreezeXMMRegs(0);
-	FreezeMMXRegs(0);
+	FreezeRegs(0);
 }
 
 // Sets the gsEvent flag and releases a timeslice.
@@ -701,8 +699,7 @@ void mtgsThreadObject::SetEvent()
 void mtgsThreadObject::PrepEventWait()
 {
 	// Freeze registers because some kernel code likes to destroy them
-	FreezeXMMRegs(1);
-	FreezeMMXRegs(1);
+	FreezeRegs(1);
 	//Console::Notice( "MTGS Stall!  EE waits for nothing! ... except your GPU sometimes." );
 	SetEvent();
 	Timeslice();
@@ -710,8 +707,7 @@ void mtgsThreadObject::PrepEventWait()
 
 void mtgsThreadObject::PostEventWait() const
 {
-	FreezeMMXRegs(0);
-	FreezeXMMRegs(0); 
+	FreezeRegs(0);
 }
 
 u8* mtgsThreadObject::GetDataPacketPtr() const
@@ -770,12 +766,10 @@ void mtgsThreadObject::SendDataPacket()
 	m_CopyDataTally += m_packet_size;
 	if( ( m_CopyDataTally > 0x8000 ) || ( ++m_CopyCommandTally > 16 ) )
 	{
-		FreezeXMMRegs(1); 
-		FreezeMMXRegs(1);
+		FreezeRegs(1);
 		//Console::Status( "MTGS Kick! DataSize : 0x%5.8x, CommandTally : %d", m_CopyDataTally, m_CopyCommandTally );
 		SetEvent();
-		FreezeMMXRegs(0);
-		FreezeXMMRegs(0); 
+		FreezeRegs(0);
 	}
 }
 
