@@ -65,8 +65,9 @@ extern SessionOverrideFlags g_Session;
 #define CHECK_ESCAPE_HACK	 (Config.Hacks & 0x400)
 //------------ SPECIAL GAME FIXES!!! ---------------
 #define CHECK_VUADDSUBHACK	 (Config.GameFixes & 0x1) // Special Fix for Tri-ace games, they use an encryption algorithm that requires VU addi opcode to be bit-accurate.
-#define CHECK_FPUCOMPAREHACK (Config.GameFixes & 0x4) // Special Fix for Digimon Rumble Arena 2, fixes spinning/hanging on intro-menu.
 #define CHECK_VUCLIPFLAGHACK (Config.GameFixes & 0x2) // Special Fix for God of War, fixes SPS.
+#define CHECK_FPUCOMPAREHACK (Config.GameFixes & 0x4) // Special Fix for Digimon Rumble Arena 2, fixes spinning/hanging on intro-menu.
+#define CHECK_FPUMULHACK	 (Config.GameFixes & 0x8) // Special Fix for Tales of Destiny hangs.
 //------------ Advanced Options!!! ---------------
 #define CHECK_VU_OVERFLOW		 (Config.vuOptions & 0x1)
 #define CHECK_VU_EXTRA_OVERFLOW	 (Config.vuOptions & 0x2) // If enabled, Operands are clamped before being used in the VU recs
@@ -77,7 +78,6 @@ extern SessionOverrideFlags g_Session;
 #define CHECK_FPU_EXTRA_OVERFLOW (Config.eeOptions & 0x2) // If enabled, Operands are checked for infinities before being used in the FPU recs
 #define CHECK_FPU_EXTRA_FLAGS 1	// Always enabled now // Sets D/I flags on FPU instructions
 #define CHECK_FPU_FULL			 (Config.eeOptions & 0x4)
-#define CHECK_FPU_ATTEMPT_MUL    (Config.eeOptions & 0x8)
 #define DEFAULT_eeOptions	0x01
 #define DEFAULT_vuOptions	0x01
 //------------ DEFAULT sseMXCSR VALUES!!! ---------------
