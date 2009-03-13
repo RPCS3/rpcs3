@@ -250,6 +250,13 @@ void GIFdma()
 		GIFchain();	//Transfers the data set by the switch
 		FreezeRegs(0); 	 
 		if(gif->qwc == 0 && (gif->chcr & 0xc) == 0) gspath3done = 1;
+		else
+		{
+				if(psHu32(GIF_MODE) & 0x4) 
+					CPU_INT(2, min( 8, (int)gif->qwc )/** BIAS*/);
+				else
+					CPU_INT(2, gif->qwc/* * BIAS*/);
+		}
 		return;
 	}
 	else {
@@ -312,19 +319,24 @@ void GIFdma()
 		{
 			if((psHu32(GIF_MODE) & 0x4) && gif->qwc != 0)
 			{
-				CPU_INT(2, min( 8, (int)gif->qwc )* BIAS);
+				CPU_INT(2, min( 8, (int)gif->qwc )/** BIAS*/);
 			} 
 			else
 			{
 				ptag = (u32*)dmaGetAddr(gif->tadr);  //Set memory pointer to TADR
 				gif->qwc  = (u16)ptag[0];			    //QWC set to lower 16bits of the tag
 				gif->chcr = ( gif->chcr & 0xFFFF ) | ( (*ptag) & 0xFFFF0000 );  //Transfer upper part of tag to CHCR bits 31-15
-				CPU_INT(2, gif->qwc * BIAS);
+				
+				if(psHu32(GIF_MODE) & 0x4) 
+					CPU_INT(2, min( 8, (int)gif->qwc )/** BIAS*/);
+				else
+					CPU_INT(2, gif->qwc /** BIAS*/);
+
 				gif->qwc = 0;
 				return;
 			}
 		}
-		//CPU_INT(2, gif->qwc * BIAS);
+		//CPU_INT(2, gif->qwc /** BIAS*/);
 		gscycles = 0;
 	}
 }
@@ -358,11 +370,11 @@ void dmaGIF() {
 		gif->chcr = ( gif->chcr & 0xFFFF ) | ( (*ptag) & 0xFFFF0000 );  //Transfer upper part of tag to CHCR bits 31-15
 		if((psHu32(GIF_MODE) & 0x4) && gif->qwc != 0)
 		{
-			CPU_INT(2, min( 8, (int)gif->qwc ) * BIAS);
+			CPU_INT(2, min( 8, (int)gif->qwc ) /** BIAS*/);
 		} 
 		else
 		{
-			CPU_INT(2, gif->qwc * BIAS);
+			CPU_INT(2, gif->qwc /** BIAS*/);
 		}
 		gif->qwc = 0;
 		return;
@@ -373,13 +385,12 @@ void dmaGIF() {
         gspath3done = 1; //Halflife sets a QWC amount in chain mode, no tadr set.
 		if((psHu32(GIF_MODE) & 0x4) && gif->qwc != 0)
 		{
-			CPU_INT(2, min( 8, (int)gif->qwc ) * BIAS);
+			CPU_INT(2, min( 8, (int)gif->qwc ) /** BIAS*/);
 		} 
 		else
 		{
-			CPU_INT(2, gif->qwc * BIAS);
+			CPU_INT(2, gif->qwc /** BIAS*/);
 		}
-		GIFdma();
 		return;
 	}
 
@@ -388,11 +399,11 @@ void dmaGIF() {
 	//GIFdma();
 	if((psHu32(GIF_MODE) & 0x4) && gif->qwc != 0)
 	{
-		CPU_INT(2, min( 8, (int)gif->qwc ) * BIAS);
+		CPU_INT(2, min( 8, (int)gif->qwc ) /** BIAS*/);
 	} 
 	else
 	{
-		CPU_INT(2, gif->qwc * BIAS);
+		CPU_INT(2, gif->qwc /** BIAS*/);
 	}
 	
 }
