@@ -592,7 +592,7 @@ void FPU_SUB(int regd, int regt) {
 // FPU_MUL (Used to approximate PS2's FPU mul behavior)
 //------------------------------------------------------------------
 // PS2's multiplication uses some modification (possibly not the one used in this function)
-//    of booth multiplication with wallace trees (not used in this function)
+// of booth multiplication with wallace trees (not used in this function)
 // it cuts of some bits, resulting in inaccurate and non-commutative results.
 // This function attempts to replicate this. It is currently inaccurate. But still not too bad.
 //------------------------------------------------------------------
@@ -653,7 +653,7 @@ u32 __fastcall FPU_MUL_MANTISSA(u32 s, u32 t)
 
 void FPU_MUL(int regd, int regt)
 {
-	if (CHECK_FPU_ATTEMPT_MUL)
+	if (CHECK_FPUMULHACK)
 	{
 		SSE2_MOVD_XMM_to_R(ECX, regd);
 		SSE2_MOVD_XMM_to_R(EDX, regt);

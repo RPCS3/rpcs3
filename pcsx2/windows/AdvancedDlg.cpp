@@ -35,8 +35,6 @@ static void InitRoundClampModes( HWND hDlg, u32 new_eeopt, u32 new_vuopt )
 	else if (new_vuopt & 0x1)	CheckRadioButton(hDlg, IDC_VU_CLAMPMODE0, IDC_VU_CLAMPMODE3, IDC_VU_CLAMPMODE0 + 1);
 	else						CheckRadioButton(hDlg, IDC_VU_CLAMPMODE0, IDC_VU_CLAMPMODE3, IDC_VU_CLAMPMODE0 + 0);
 
-	CheckDlgButton(hDlg, IDC_EE_CHECK3, (new_eeopt & 0x8) ? TRUE : FALSE);
-
 	if		(new_eeopt & 0x4)	CheckRadioButton(hDlg, IDC_EE_CLAMPMODE0, IDC_EE_CLAMPMODE3, IDC_EE_CLAMPMODE0 + 3);
 	else if (new_eeopt & 0x2)	CheckRadioButton(hDlg, IDC_EE_CLAMPMODE0, IDC_EE_CLAMPMODE3, IDC_EE_CLAMPMODE0 + 2);
 	else if (new_eeopt & 0x1)	CheckRadioButton(hDlg, IDC_EE_CLAMPMODE0, IDC_EE_CLAMPMODE3, IDC_EE_CLAMPMODE0 + 1);
@@ -95,8 +93,6 @@ BOOL APIENTRY AdvancedOptionsProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM
 					new_eeopt |= IsDlgButtonChecked(hDlg, IDC_EE_CLAMPMODE1) ? 0x1 : 0;
 					new_eeopt |= IsDlgButtonChecked(hDlg, IDC_EE_CLAMPMODE2) ? 0x3 : 0;
 					new_eeopt |= IsDlgButtonChecked(hDlg, IDC_EE_CLAMPMODE3) ? 0x7 : 0;
-
-					new_eeopt |= IsDlgButtonChecked(hDlg, IDC_EE_CHECK3) ? 0x8 : 0;
 
 					new_vuopt |= IsDlgButtonChecked(hDlg, IDC_VU_CLAMPMODE0) ? 0x0 : 0;
 					new_vuopt |= IsDlgButtonChecked(hDlg, IDC_VU_CLAMPMODE1) ? 0x1 : 0;
