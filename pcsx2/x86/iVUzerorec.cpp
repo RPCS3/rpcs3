@@ -698,19 +698,10 @@ void* SuperVUGetProgram(u32 startpc, int vuindex)
 bool VuFunctionHeader::IsSame(void* pmem)
 {
 #ifdef SUPERVU_CACHING
-	//u32 checksum[2];
 	vector<RANGE>::iterator it;
-	FORIT(it, ranges) {
-		//memxor_mmx(checksum, (u8*)pmem+it->start, it->size);
-		//if( checksum[0] != it->checksum[0] || checksum[1] != it->checksum[1] )
-		//	return false;
-        // memcmp_mmx doesn't work on x86-64 machines
-	// and neither does pcsx2. 
-//#if defined(_MSC_VER)
-	if( memcmp_mmx((u8*)pmem+it->start, it->pmem, it->size) )
-//#else
-//         if( memcmp((u8*)pmem+it->start, it->pmem, it->size) )
-//#endif
+	FORIT(it, ranges) 
+	{
+		if( memcmp_mmx((u8*)pmem+it->start, it->pmem, it->size) )
 			return false;
 	}
 #endif
