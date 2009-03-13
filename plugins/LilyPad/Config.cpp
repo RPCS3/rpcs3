@@ -612,7 +612,9 @@ int SaveSettings(wchar_t *file=0) {
 	WritePrivateProfileStringW(L"General Settings", L"Last Config Path", config.lastSaveConfigPath, ini);
 	WritePrivateProfileStringW(L"General Settings", L"Last Config Name", config.lastSaveConfigFileName, ini);
 
-	WritePrivateProfileInt(L"General Settings", L"Force Cursor Hide", config.forceHide, file);
+	// Just check first, last, and all pad bindings.  Should be more than enough.  No real need to check
+	// config path.
+	int noError = WritePrivateProfileInt(L"General Settings", L"Force Cursor Hide", config.forceHide, file);
 	WritePrivateProfileInt(L"General Settings", L"Close Hacks", config.closeHacks, file);
 	WritePrivateProfileInt(L"General Settings", L"Background", config.background, file);
 
@@ -640,7 +642,7 @@ int SaveSettings(wchar_t *file=0) {
 	WritePrivateProfileInt(L"Pad1", L"Guitar", config.guitar[0], file);
 	WritePrivateProfileInt(L"Pad2", L"Guitar", config.guitar[1], file);
 	WritePrivateProfileInt(L"Pad1", L"Auto Analog", config.AutoAnalog[0], file);
-	WritePrivateProfileInt(L"Pad2", L"Auto Analog", config.AutoAnalog[1], file);
+	noError &= WritePrivateProfileInt(L"Pad2", L"Auto Analog", config.AutoAnalog[1], file);
 
 	for (int i=0; i<dm->numDevices; i++) {
 		wchar_t id[50];
@@ -668,7 +670,7 @@ int SaveSettings(wchar_t *file=0) {
 				VirtualControl *c = &dev->virtualControls[b->controlIndex];
 				wsprintfW(temp, L"Binding %i", bindingCount++);
 				wsprintfW(temp2, L"0x%08X, %i, %i, %i, %i", c->uid, pad, b->command, b->sensitivity, b->turbo);
-				WritePrivateProfileStringW(id, temp, temp2, file);
+				noError &= WritePrivateProfileStringW(id, temp, temp2, file);
 			}
 		}
 		bindingCount = 0;
@@ -683,11 +685,14 @@ int SaveSettings(wchar_t *file=0) {
 					AxisEffectInfo *info = b->axes + k;
 					wsprintfW(wcschr(temp2,0), L", %i, %i", axis->id, info->force);
 				}
-				WritePrivateProfileStringW(id, temp, temp2, file);
+				noError &= WritePrivateProfileStringW(id, temp, temp2, file);
 			}
 		}
 	}
-	return 0;
+	if (!noError) {
+		MessageBoxA(hWndProp, "Unable to save settings.  Make sure the disk is not full or write protected, the file isn't write protected, and that the app has permissions to write to the directory.  On Vista, try running in administrator mode.", "Error Writing Configuration File", MB_OK | MB_ICONERROR);
+	}
+	return !noError;
 }
 
 static int loaded = 0;
@@ -1741,7 +1746,10 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 					return 0;
 				case PSN_APPLY:
 					selected = 0;
-					if (SaveSettings() == -1) return 0;
+					if (SaveSettings()) {
+						SetWindowLong(hWnd, DWL_MSGRESULT, PSNRET_INVALID_NOCHANGEPAGE);
+						return 0;
+					}
 					SetWindowLong(hWnd, DWL_MSGRESULT, PSNRET_NOERROR);
 					return 1;
 				}

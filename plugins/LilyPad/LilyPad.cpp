@@ -203,10 +203,6 @@ BOOL WINAPI DllMain(HINSTANCE hInstance, DWORD fdwReason, void* lpvReserved) {
 	return 1;
 }
 
-BOOL WINAPI MyDllMainCRTStartup(HANDLE hDllHandle, DWORD dwReason, LPVOID lpReserved) {
-	return DllMain((HINSTANCE) hDllHandle, dwReason, lpReserved);
-}
-
 void AddForce(ButtonSum *sum, u8 cmd, int delta = 255) {
 	if (!delta) return;
 	if (cmd<0x14) {

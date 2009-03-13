@@ -51,6 +51,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
+				AdditionalIncludeDirectories="..\..\common\include"
 				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;TEST_EXPORTS"
 				MinimalRebuild="true"
 				ExceptionHandling="2"
@@ -246,6 +247,7 @@
 				FavorSizeOrSpeed="1"
 				OmitFramePointers="true"
 				WholeProgramOptimization="false"
+				AdditionalIncludeDirectories="..\..\common\include"
 				PreprocessorDefinitions="NO_CRT;WIN32;NDEBUG;_WINDOWS;_USRDLL;TEST_EXPORTS"
 				StringPooling="true"
 				ExceptionHandling="0"
@@ -285,7 +287,7 @@
 				EnableCOMDATFolding="2"
 				OptimizeForWindows98="1"
 				LinkTimeCodeGeneration="0"
-				EntryPointSymbol="MyDllMainCRTStartup"
+				EntryPointSymbol="DllMain"
 				ImportLibrary=".\Release/LilyPad.lib"
 				TargetMachine="1"
 			/>
