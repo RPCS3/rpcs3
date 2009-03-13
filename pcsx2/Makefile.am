@@ -22,4 +22,5 @@ Memory.h MemoryCard.h Misc.h Patch.h Paths.h Plugins.h PrecompiledHeader.h IopCo
 SPR.h SamplProf.h SaveState.h Sif.h Sifcmd.h Sio.h SafeArray.h Stats.h StringUtils.h System.h Threading.h \
 VU.h VUflags.h VUmicro.h VUops.h Vif.h VifDma.h cheatscpp.h vtlb.h NakedAsm.h R5900Exceptions.h HostGui.h Pcsx2Config.h
 
-SUBDIRS = x86 . DebugTools IPU RDebug tinyxml Linux
+SUBDIRS = x86 . DebugTools IPU RDebug tinyxml NewGUI
+#Linux

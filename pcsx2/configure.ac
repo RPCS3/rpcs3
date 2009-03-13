@@ -116,6 +116,31 @@ AC_MSG_CHECKING(gtk+)
 AC_CHECK_PROG(GTK_CONFIG, pkg-config, pkg-config)
 LIBS+=$(pkg-config --libs gtk+-2.0 gthread-2.0)
 
+# Check for wxWidgets
+AC_ARG_WITH(
+  [wx],
+  AC_HELP_STRING(
+    [--with-wx=dir],
+    [use wxWidgets configuration program wx-config in dir]
+  )
+)
+if test $with_wx; then
+  AC_CHECK_PROG([WX_CONFIG],[wx-config],[$with_wx/wx-config],[],[$with_wx])
+else 
+  AC_CHECK_PROG([WX_CONFIG],[wx-config],[wx-config])
+fi
+if test $WX_CONFIG; then
+  USE_WX=1
+ MYGUIDIR="NewGUI"
+ LIBS+=$(wx-config --libs)
+ else
+ MYGUIDIR="Linux"
+fi
+AC_SUBST([USE_WX],[])
+AC_SUBST([WX_CONFIG],[])
+AC_SUBST([WX_CPPFLAGS],[])
+AC_SUBST([WX_LDFLAGS],[])
+
 dnl AC_CHECK_LIB(pthread,main,[LIBS="$LIBS -lpthread"])
 AC_CHECK_LIB(stdc++,main,[LIBS="$LIBS -lstdc++"])
 AC_CHECK_LIB(z,main,[LIBS="$LIBS -lz"])
@@ -137,7 +162,7 @@ fi
 AC_OUTPUT([
  Makefile
  DebugTools/Makefile
- Linux/Makefile
+ NewGUI/Makefile
  IPU/Makefile
  IPU/mpeg2lib/Makefile
  RDebug/Makefile
@@ -157,5 +182,5 @@ echo "  Force sse3?	           $sse3"
 echo " nls support?   $nls"
 echo " local plugin inis? $localinis"
 echo " custom cflags? $customcflags"
-echo " memcpy_fast? $memcpyfast"
+#echo " memcpy_fast? $memcpyfast"
 #echo " microVU? $microVU"

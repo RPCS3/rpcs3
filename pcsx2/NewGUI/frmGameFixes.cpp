@@ -4,20 +4,20 @@
 #include "frmGameFixes.h"
 
 frmGameFixes::frmGameFixes(wxWindow* parent, int id, const wxPoint& pos, const wxSize& size, long style):
-    wxDialog( parent, id, _t("Game Special Fixes"), pos, size )
+wxDialog( parent, id, _T("Game Special Fixes"), pos, size )
 {
-	wxStaticBox* groupbox			= new wxStaticBox( this, -1, _t("PCSX2 Gamefixes"));
+	wxStaticBox* groupbox			= new wxStaticBox( this, -1, _T("PCSX2 Gamefixes"));
 	wxStaticText* label_Title		= new wxStaticText(
-		this, wxID_ANY, "Some games need special settings.\nConfigure them here.", wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE
+		this, wxID_ANY, _T("Some games need special settings.\nConfigure them here."), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE
 	);
 	wxCheckBox* chk_FPUCompareHack	= new wxCheckBox(
-		this, wxID_ANY, "FPU Compare Hack - Special fix for Digimon Rumble Arena 2."
+		this, wxID_ANY, _T("FPU Compare Hack - Special fix for Digimon Rumble Arena 2.")
 	);
 	wxCheckBox* chk_TriAce			= new wxCheckBox(
-		this, wxID_ANY, "VU Add / Sub Hack - Special fix for Tri-Ace games!"
+		this, wxID_ANY, _T("VU Add / Sub Hack - Special fix for Tri-Ace games!")
 	);
 	wxCheckBox* chk_GodWar			= new wxCheckBox(
-		this, wxID_ANY, "VU Clip Hack - Special fix for God of War"
+		this, wxID_ANY, _T("VU Clip Hack - Special fix for God of War")
 	);
 
 	wxBoxSizer& mainSizer	= *new wxBoxSizer( wxVERTICAL );

@@ -37,7 +37,6 @@ using namespace R5900;
 FILE *emuLog;
 
 #ifdef PCSX2_DEVBUILD
-
 LogSources varLog;
 
 // these used by the depreciated _old_Log only
@@ -68,6 +67,7 @@ void __Log( const char* fmt, ... )
 		// fixme: should throw an exception here once we have proper exception handling implemented.
 	}
 
+#ifdef PCSX2_DEVBUILD
 	if (varLog.LogToConsole)		// log to console enabled?
 	{
 		Console::Write(tmp);
@@ -79,6 +79,7 @@ void __Log( const char* fmt, ... )
 		//fputs( "\r\n", emuLog );
 		fflush( emuLog );
 	}
+#endif
 }
 
 static __forceinline void _vSourceLog( u16 protocol, u8 source, u32 cpuPc, u32 cpuCycle, const char *fmt, va_list list )
@@ -104,7 +105,6 @@ static __forceinline void _vSourceLog( u16 protocol, u8 source, u32 cpuPc, u32 c
 		sendTTYP(logProtocol, logSource, tmp);
 	}
 #endif
-#endif
 
 	if (varLog.LogToConsole)		// log to console enabled?
 	{
@@ -116,6 +116,7 @@ static __forceinline void _vSourceLog( u16 protocol, u8 source, u32 cpuPc, u32 c
 		//fputs( "\r\n", emuLog );
 		fflush( emuLog );
 	}
+#endif
 }
 
 // Note: This function automatically appends a newline character always!
