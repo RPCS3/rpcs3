@@ -64,7 +64,17 @@ public:
 	}
 
 	BASEBLOCKEX* New(u32 startpc);
-	int Index (u32 startpc) const;
+	int LastIndex (u32 startpc) const;
+
+	inline int Index (u32 startpc) const
+	{
+		int idx = LastIndex(startpc);
+		if (idx == -1 || startpc < blocks[idx].startpc ||
+			startpc >= blocks[idx].startpc + blocks[idx].size * 4)
+			return -1;
+		else
+			return idx;
+	}
 
 	inline BASEBLOCKEX* operator[](int idx)
 	{

@@ -80,6 +80,7 @@ static u8* recStack = NULL;			// stack mem
 static BASEBLOCK *recRAM = NULL;		// and the ptr to the blocks here
 static BASEBLOCK *recROM = NULL;		// and here
 static BASEBLOCK *recROM1 = NULL;		// also here
+static u32 *recRAMCopy = NULL;
 static BaseBlocks recBlocks(EE_NUMBLOCKS);
 static u8* recPtr = NULL, *recStackPtr = NULL;
 static EEINST* s_pInstCache = NULL;
@@ -455,7 +456,7 @@ static u8* m_recBlockAlloc = NULL;
 
 static const uint m_recBlockAllocSize = 
 	(((Ps2MemSize::Base + Ps2MemSize::Rom + Ps2MemSize::Rom1) / 4) * sizeof(BASEBLOCK))
-+	RECSTACK_SIZE;		// recStack
++	RECSTACK_SIZE + Ps2MemSize::Base;
 
 static void recAlloc() 
 {
@@ -497,7 +498,8 @@ static void recAlloc()
 	recRAM = (BASEBLOCK*)curpos; curpos += (Ps2MemSize::Base / 4) * sizeof(BASEBLOCK);
 	recROM = (BASEBLOCK*)curpos; curpos += (Ps2MemSize::Rom / 4) * sizeof(BASEBLOCK);
 	recROM1 = (BASEBLOCK*)curpos; curpos += (Ps2MemSize::Rom1 / 4) * sizeof(BASEBLOCK);
-	recStack = (u8*)curpos;
+	recStack = (u8*)curpos; curpos += RECSTACK_SIZE;
+	recRAMCopy = (u32*)curpos;
 
 	if( s_pInstCache == NULL )
 	{
@@ -882,22 +884,6 @@ void recBREAK( void ) {
 
 } } }		// end namespace R5900::Dynarec::OpcodeImpl
 
-////////////////////////////////////////////////////
-static u32 REC_CLEARM( u32 mem )
-{
-	if ((mem) < maxrecmem && (recLUT[(mem) >> 16] + mem))
-		return recClearMem(mem);
-	else
-		return 4;
-}
-
-void recClear( u32 Addr, u32 Size )
-{
-	u32 pc = Addr;
-	while (pc < Addr + Size*4)
-		pc += REC_CLEARM(pc);
-}
-
 // Clears the recLUT table so that all blocks are mapped to the JIT recompiler by default.
 static void ClearRecLUT(BASEBLOCK* base, int count)
 {
@@ -906,7 +892,7 @@ static void ClearRecLUT(BASEBLOCK* base, int count)
 }
 
 // Returns the offset to the next instruction after any cleared memory
-u32 recClearMem(u32 pc)
+void recClear(u32 addr, u32 size)
 {
 	BASEBLOCKEX* pexblock;
 	BASEBLOCK* pblock;
@@ -928,30 +914,36 @@ u32 recClearMem(u32 pc)
 #endif
 #endif
 
-	pblock = PC_GETBLOCK(pc);
-	if (pblock->GetFnptr() == (uptr)JITCompile)
-		return 4;
+	if ((addr) >= maxrecmem || !(recLUT[(addr) >> 16] + (addr & ~0xFFFFUL)))
+		return;
+	addr = HWADDR(addr);
 
-	pc = HWADDR(pc);
+	int blockidx = recBlocks.LastIndex(addr + size * 4 - 4);
 
-	u32 lowerextent = pc, upperextent = pc + 4;
-	int blockidx = recBlocks.Index(pc);
+	if (blockidx == -1)
+		return;
 
-	jASSUME(blockidx != -1);
+	u32 lowerextent = (u32)-1, upperextent = 0, ceiling = (u32)-1;
 
-	while (pexblock = recBlocks[blockidx - 1]) {
-		if (pexblock->startpc + pexblock->size*4 <= lowerextent)
-			break;
-
-		lowerextent = min(lowerextent, pexblock->startpc);
-		blockidx--;
-	}
+	pexblock = recBlocks[blockidx + 1];
+	if (pexblock)
+		ceiling = pexblock->startpc;
 
 	while (pexblock = recBlocks[blockidx]) {
-		if (pexblock->startpc >= upperextent)
-			break;
+		u32 blockstart = pexblock->startpc;
+		u32 blockend = pexblock->startpc + pexblock->size * 4;
+		pblock = PC_GETBLOCK(blockstart);
 
-		pblock = PC_GETBLOCK(pexblock->startpc);
+		if (pblock == s_pCurBlock) {
+			blockidx--;
+			continue;
+		}
+
+		if (blockend <= addr) {
+			lowerextent = max(lowerextent, blockend);
+			break;
+		}
+
 		x86Ptr[_EmitterId_] = (u8*)pblock->GetFnptr();
 
 		jASSUME((u8*)JITCompile != x86Ptr[_EmitterId_]);
@@ -962,27 +954,36 @@ u32 recClearMem(u32 pc)
 		// here is the way to go.
 
 		// there is a small problem: mem can be ored with 0xa<<28 or 0x8<<28, and don't know which
-		MOV32ItoR(EDX, pexblock->startpc);
+		MOV32ItoR(EDX, blockstart);
 		assert((uptr)x86Ptr[_EmitterId_] <= 0xffffffff);
 		PUSH32I((uptr)x86Ptr[_EmitterId_]); // will be replaced by JMP32
 		JMP32((uptr)DispatcherClear - ((uptr)x86Ptr[_EmitterId_] + 5));
 
-		lowerextent = min(lowerextent, pexblock->startpc);
-		upperextent = max(upperextent, pexblock->startpc + pexblock->size * 4);
-		recBlocks.Remove(blockidx);
+		lowerextent = min(lowerextent, blockstart);
+		upperextent = max(upperextent, blockend);
+		// This might end up inside a block that doesn't contain the clearing range,
+		// so set it to recompile now.  This will become JITCompile if we clear it.
+		pblock->SetFnptr((uptr)JITCompileInBlock);
+		recBlocks.Remove(blockidx--);
 	}
 
+	upperextent = min(upperextent, ceiling);
+
 #ifdef PCSX2_DEVBUILD
-	for (int i = 0; pexblock = recBlocks[i]; i++)
-		if (pc >= pexblock->startpc && pc < pexblock->startpc + pexblock->size * 4) {
+	for (int i = 0; pexblock = recBlocks[i]; i++) {
+		if (s_pCurBlock == PC_GETBLOCK(pexblock->startpc))
+			continue;
+		u32 blockend = pexblock->startpc + pexblock->size * 4;
+		if (pexblock->startpc >= addr && pexblock->startpc < addr + size * 4
+		 || pexblock->startpc < addr && blockend > addr) {
 			Console::Error("Impossible block clearing failure");
 			jASSUME(0);
 		}
+	}
 #endif
 
-	ClearRecLUT(PC_GETBLOCK(lowerextent), (upperextent - lowerextent) / 4);
-
-	return upperextent - pc;
+	if (upperextent > lowerextent)
+		ClearRecLUT(PC_GETBLOCK(lowerextent), (upperextent - lowerextent) / 4);
 }
 
 // check for end of bios
@@ -1283,54 +1284,39 @@ void recompileNextInstruction(int delayslot)
 	static u8 s_bFlushReg = 1;
 	int i, count;
 
-	BASEBLOCK* pblock = PC_GETBLOCK(pc);
-
-	// need *ppblock != s_pCurBlock because of branches
-	if (HWADDR(pc) != s_pCurBlockEx->startpc && pblock->GetFnptr() != (uptr)JITCompile && pblock->GetFnptr() != (uptr)JITCompileInBlock)
-	{
-		if (!delayslot)
-		{
-			// code already in place, so jump to it and exit recomp
-			assert( recBlocks.Get(HWADDR(pc))->startpc == HWADDR(pc) );
-
-			iFlushCall(FLUSH_EVERYTHING);
-			MOV32ItoM((uptr)&cpuRegs.pc, pc);			
-			JMP32((uptr)pblock->GetFnptr() - ((uptr)x86Ptr[0] + 5));
-			branch = 3;
-			return;
-		}
-	}
-
 	s_pCode = (int *)PSM( pc );
 	assert(s_pCode);
 
+	// why?
 #ifdef _DEBUG
 	MOV32ItoR(EAX, pc);
 #endif
 
 	cpuRegs.code = *(int *)s_pCode;
 	pc += 4;
-	
-//#ifdef _DEBUG
-//	CMP32ItoM((u32)s_pCode, cpuRegs.code);
-//	j8Ptr[0] = JE8(0);
-//	MOV32ItoR(EAX, pc);
-//	CALLFunc((uptr)checkcodefn);
-//	x86SetJ8( j8Ptr[ 0 ] );
-//
-//	if( !delayslot ) {
-//		CMP32ItoM((u32)&cpuRegs.pc, s_pCurBlockEx->startpc);
-//		j8Ptr[0] = JB8(0);
-//		CMP32ItoM((u32)&cpuRegs.pc, pc);
-//		j8Ptr[1] = JA8(0);
-//		j8Ptr[2] = JMP8(0);
-//		x86SetJ8( j8Ptr[ 0 ] );
-//		x86SetJ8( j8Ptr[ 1 ] );
-//		PUSH32I(s_pCurBlockEx->startpc);
-//		ADD32ItoR(ESP, 4);
-//		x86SetJ8( j8Ptr[ 2 ] );	
-//	}
-//#endif
+
+#if 0
+#ifdef _DEBUG
+	CMP32ItoM((u32)s_pCode, cpuRegs.code);
+	j8Ptr[0] = JE8(0);
+	MOV32ItoR(EAX, pc);
+	CALLFunc((uptr)checkcodefn);
+	x86SetJ8( j8Ptr[ 0 ] );
+
+	if( !delayslot ) {
+		CMP32ItoM((u32)&cpuRegs.pc, s_pCurBlockEx->startpc);
+		j8Ptr[0] = JB8(0);
+		CMP32ItoM((u32)&cpuRegs.pc, pc);
+		j8Ptr[1] = JA8(0);
+		j8Ptr[2] = JMP8(0);
+		x86SetJ8( j8Ptr[ 0 ] );
+		x86SetJ8( j8Ptr[ 1 ] );
+		PUSH32I(s_pCurBlockEx->startpc);
+		ADD32ItoR(ESP, 4);
+		x86SetJ8( j8Ptr[ 2 ] );	
+	}
+#endif
+#endif
 
 	g_pCurInstInfo++;
 
@@ -1482,7 +1468,7 @@ void recRecompile( const u32 startpc )
 #ifdef _DEBUG
     //dumplog |= 4;
     if( dumplog & 4 )
-		iDumpRegisters(startpc, 0);	
+		iDumpRegisters(startpc, 0);
 #endif
 
 	assert( startpc );
@@ -1503,14 +1489,14 @@ void recRecompile( const u32 startpc )
 		|| s_pCurBlock->GetFnptr() == (uptr)JITCompileInBlock);
 
 	s_pCurBlockEx = recBlocks.Get(HWADDR(startpc));
-	if (!s_pCurBlockEx || s_pCurBlockEx->startpc != HWADDR(startpc)) {
-		s_pCurBlockEx = recBlocks.New(HWADDR(startpc));
+	assert(!s_pCurBlockEx || s_pCurBlockEx->startpc != HWADDR(startpc));
 
-		if( s_pCurBlockEx == NULL ) {
-			//SysPrintf("ee reset (blocks)\n");
-			recResetEE();
-			s_pCurBlockEx = recBlocks.New(HWADDR(startpc));
-		}
+	s_pCurBlockEx = recBlocks.New(HWADDR(startpc));
+
+	if( s_pCurBlockEx == NULL ) {
+		//SysPrintf("ee reset (blocks)\n");
+		recResetEE();
+		s_pCurBlockEx = recBlocks.New(HWADDR(startpc));
 	}
 
 	assert(s_pCurBlockEx);
@@ -1518,7 +1504,6 @@ void recRecompile( const u32 startpc )
 	x86SetPtr( recPtr );
 	x86Align(16);
 	recPtr = x86Ptr[0];
-	s_pCurBlock->SetFnptr( (uptr)x86Ptr[0] );
 
 	branch = 0;
 
@@ -1815,40 +1800,25 @@ StartRecomp:
 #endif
 
 	u32 sz=(s_nEndBlock-startpc)>>2;
-#ifdef lulz
-	/*
-		Block checking (ADDED BY RAZ-TEMP)
-	*/
-	
-	MOV32ItoR(ECX,startpc);
-	MOV32ItoR(EDX,sz);
 
-#endif
-
-	u32 inpage_offs=startpc&0xFFF;
 	u32 inpage_ptr=startpc;
 	u32 inpage_sz=sz*4;
 
-	MOV32ItoR(ECX,startpc);
-	MOV32ItoR(EDX,sz);
-
 	while(inpage_sz)
 	{
-		int PageType=mmap_GetRamPageInfo((u32*)PSM(inpage_ptr));
-		u32 pgsz=std::min(0x1000-inpage_offs,inpage_sz);
+		int PageType = mmap_GetRamPageInfo((u32*)PSM(inpage_ptr));
+		u32 inpage_offs = inpage_ptr & 0xFFF;
+		u32 pgsz = std::min(0x1000 - inpage_offs, inpage_sz);
 
 		if(PageType!=-1)
 		{
 			if (PageType==0)
-			{
-				//MOV32ItoR(EAX,*pageVer);
-				//CMP32MtoR(EAX,(uptr)pageVer);
-				//JNE32(((u32)dyna_block_discard_recmem)- ( (u32)x86Ptr[0] + 6 ));
-
 				mmap_MarkCountedRamPage(PSM(inpage_ptr),inpage_ptr&~0xFFF);
-			}
 			else
 			{
+				MOV32ItoR(ECX, startpc);
+				MOV32ItoR(EDX, sz);
+
 				u32 lpc=inpage_ptr;
 				u32 stg=pgsz;
 				while(stg>0)
@@ -1866,7 +1836,6 @@ StartRecomp:
 		}
 		inpage_ptr+=pgsz;
 		inpage_sz-=pgsz;
-		inpage_offs=inpage_ptr&0xFFF;
 	}
 
 	// finally recompile //
@@ -1882,6 +1851,34 @@ StartRecomp:
 
 	assert( (pc-startpc)>>2 <= 0xffff );
 	s_pCurBlockEx->size = (pc-startpc)>>2;
+
+	if (HWADDR(pc) <= Ps2MemSize::Base) {
+		BASEBLOCKEX *oldBlock;
+		int i;
+
+		i = recBlocks.LastIndex(HWADDR(pc) - 4);
+		while (oldBlock = recBlocks[i--]) {
+			if (oldBlock == s_pCurBlockEx)
+				continue;
+			if (oldBlock->startpc >= HWADDR(pc))
+				continue;
+			if (oldBlock->startpc + oldBlock->size * 4 <= HWADDR(startpc))
+				break;
+			if (memcmp(&recRAMCopy[oldBlock->startpc / 4], PSM(oldBlock->startpc),
+			           oldBlock->size * 4)) {
+				u8* oldX86 = x86Ptr[_EmitterId_];
+				recClear(startpc, (pc - startpc) / 4);
+				x86Ptr[_EmitterId_] = oldX86;
+				s_pCurBlockEx = recBlocks.Get(HWADDR(startpc));
+				assert(s_pCurBlockEx->startpc == HWADDR(startpc));
+				break;
+			}
+		}
+
+		memcpy(&recRAMCopy[HWADDR(startpc) / 4], PSM(startpc), pc - startpc);
+	}
+
+	s_pCurBlock->SetFnptr((uptr)recPtr);
 
 	for(i = 1; i < (u32)s_pCurBlockEx->size; i++) {
 		if ((uptr)JITCompile == s_pCurBlock[i].GetFnptr())
@@ -1938,14 +1935,16 @@ StartRecomp:
 
 	if( !branch ) {
 		assert( ptr != NULL );
-		s_pCurBlock = PC_GETBLOCK(pc);
+		BASEBLOCK *pblock = PC_GETBLOCK(pc);
 
-		if (s_pCurBlock->GetFnptr() == (uptr)JITCompile
-		 || s_pCurBlock->GetFnptr() == (uptr)JITCompileInBlock)
- 			recRecompile(pc);
-
-		*ptr = s_pCurBlock->GetFnptr() - ((u32)ptr + 4);
+		if (pblock->GetFnptr() == (uptr)JITCompile
+		 || pblock->GetFnptr() == (uptr)JITCompileInBlock)
+			recRecompile(pc);
+		*ptr = pblock->GetFnptr() - ((u32)ptr + 4);
 	}
+
+	s_pCurBlock = NULL;
+	s_pCurBlockEx = NULL;
 }
 
 R5900cpu recCpu = {

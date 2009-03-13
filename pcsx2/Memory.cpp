@@ -853,7 +853,7 @@ void mmap_ClearCpuBlock( uint offset )
 
 	for (u32 i=0;i<psMPWVA[offset].size();i++)
 	{
-		Cpu->Clear(psMPWVA[offset][i],0x1000);
+		Cpu->Clear(psMPWVA[offset][i],0x400);
 	}
 	psMPWVA[offset].clear();
 }

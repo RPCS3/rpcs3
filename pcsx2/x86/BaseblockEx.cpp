@@ -45,7 +45,7 @@ BASEBLOCKEX* BaseBlocks::New(u32 startpc)
 	return &*iter;
 }
 
-int BaseBlocks::Index(u32 startpc) const
+int BaseBlocks::LastIndex(u32 startpc) const
 {
 	if (0 == blocks.size())
 		return -1;
@@ -61,9 +61,5 @@ int BaseBlocks::Index(u32 startpc) const
 			imin = imid;
 	}
 
-	if (startpc < blocks[imin].startpc ||
-		startpc >= blocks[imin].startpc + blocks[imin].size*4)
-		return -1;
-	else
-		return imin;
+	return imin;
 }
