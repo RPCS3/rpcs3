@@ -134,6 +134,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="3"
+				WholeProgramOptimization="false"
 				AdditionalIncludeDirectories=""
 				PreprocessorDefinitions="NDEBUG"
 				StringPooling="true"
