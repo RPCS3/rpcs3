@@ -21,20 +21,48 @@
 
 #pragma once
 
-class frmGameFixes: public wxDialog
+class frmLogging: public wxDialog
 {
 public:
 
-    frmGameFixes(wxWindow* parent, int id, const wxPoint& pos=wxDefaultPosition, const wxSize& size=wxDefaultSize, long style=wxDEFAULT_FRAME_STYLE);
+	frmLogging(wxWindow* parent, int id, const wxPoint& pos=wxDefaultPosition, const wxSize& size=wxDefaultSize, long style=wxDEFAULT_FRAME_STYLE);
 
 protected:
 
-    DECLARE_EVENT_TABLE();
-
+	// DECLARE_EVENT_TABLE();
+	enum {
+		EE_CPU_LOG = 100,
+		EE_MEM_LOG,
+		EE_HW_LOG,
+		EE_DMA_LOG,
+		EE_BIOS_LOG,
+		EE_ELF_LOG,
+		EE_FPU_LOG,
+		EE_MMI_LOG,
+		EE_VU0_LOG,
+		EE_COP0_LOG,
+		EE_VIF_LOG,
+		EE_SPR_LOG,
+		EE_GIF_LOG,
+		EE_SIF_LOG,
+		EE_IPU_LOG,
+		EE_VU_MACRO_LOG,
+		EE_RPC_LOG,
+		
+		IOP_IOP_LOG,
+		IOP_MEM_LOG,
+		IOP_HW_LOG,
+		IOP_BIOS_LOG,
+		IOP_DMA_LOG,
+		IOP_PAD_LOG,
+		IOP_GTE_LOG,
+		IOP_CDR_LOG,
+		IOP_GPU_LOG,
+		
+		STDOUT_LOG,
+		SYMS_LOG
+	} LogChecks;
+	
 public:
-    void FPUCompareHack_Click(wxCommandEvent &event);
-    void TriAce_Click(wxCommandEvent &event);
-    void GodWar_Click(wxCommandEvent &event);
-    void Ok_Click(wxCommandEvent &event);
-    void Cancel_Click(wxCommandEvent &event);
+	void LogChecked(wxCommandEvent &event);
 };

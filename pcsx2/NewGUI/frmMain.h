@@ -1,4 +1,22 @@
-#pragma once
+/*  Pcsx2 - Pc Ps2 Emulator
+ *  Copyright (C) 2002-2009  Pcsx2 Team
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
+ */
+ 
+ #pragma once
 
 #include <wx/wx.h>
 #include <wx/image.h>
@@ -96,7 +114,7 @@ protected:
 	void PopulateVideoMenu();
 	void PopulateAudioMenu();
 	void PopulatePadMenu();
-	
+	void ConnectMenus();
 
 private:
     void set_properties();
@@ -109,6 +127,7 @@ protected:
 	wxMenu& m_menuRun;
 	wxMenu& m_menuConfig;
 	wxMenu& m_menuMisc;
+	wxMenu& m_menuDebug;
 
 	wxMenu& m_menuVideo;
 	wxMenu& m_menuAudio;
@@ -117,25 +136,28 @@ protected:
 	wxMenu& m_LoadStatesSubmenu;
 	wxMenu& m_SaveStatesSubmenu;
 
-    DECLARE_EVENT_TABLE();
-
 	//////////////////////////////////////////////////////////////////////////////////////////
 	// Menu Options for the Main Window! :D
 	
 public:
 	void Menu_QuickBootCD_Click(wxCommandEvent &event);
-    void Menu_BootCD_Click(wxCommandEvent &event);
+	void Menu_BootCD_Click(wxCommandEvent &event);
 	void Menu_BootNoCD_Click(wxCommandEvent &event);
 
-    void Menu_OpenELF_Click(wxCommandEvent &event);
-    void Menu_LoadStateOther_Click(wxCommandEvent &event);
-    void Menu_SaveStateOther_Click(wxCommandEvent &event);
-    void Menu_Exit_Click(wxCommandEvent &event);
+	void Menu_OpenELF_Click(wxCommandEvent &event);
+	void Menu_LoadStateOther_Click(wxCommandEvent &event);
+	void Menu_SaveStateOther_Click(wxCommandEvent &event);
+	void Menu_Exit_Click(wxCommandEvent &event);
 
-    void Menu_Suspend_Click(wxCommandEvent &event);
+	void Menu_Suspend_Click(wxCommandEvent &event);
 	void Menu_Resume_Click(wxCommandEvent &event);
-    void Menu_Reset_Click(wxCommandEvent &event);
+	void Menu_Reset_Click(wxCommandEvent &event);
 
 	void Menu_Gamefixes_Click( wxCommandEvent& event );
+
+	void Menu_Debug_Open_Click(wxCommandEvent &event);
+	void Menu_Debug_MemoryDump_Click(wxCommandEvent &event);
+	void Menu_Debug_Logging_Click(wxCommandEvent &event);
+
 };
 

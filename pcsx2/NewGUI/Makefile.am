@@ -5,7 +5,7 @@ bin_PROGRAMS = pcsx2
 
 # the application source, library search path, and link libraries
 pcsx2_SOURCES =  \
-frmGameFixes.cpp  frmGameFixes.h  frmMain.cpp  frmMain.h  main.cpp \
+frmGameFixes.cpp  frmGameFixes.h  frmMain.cpp  frmMain.h frmLogging.cpp frmLogging.h  main.cpp \
 memzero.h
 
 pcsx2_LDFLAGS =
