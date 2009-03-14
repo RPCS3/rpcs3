@@ -787,7 +787,7 @@ void psxSetBranchImm( u32 imm )
 	iPsxBranchTest(imm, imm <= psxpc);
 
 	ptr = JMP32(0);
-	recBlocks.Link(imm, (uptr)ptr);
+	recBlocks.Link(HWADDR(imm), (uptr)ptr);
 }
 
 //fixme : this is all a huge hack, we base the counter advancements on the average an opcode should take (wtf?)
@@ -1175,7 +1175,7 @@ StartRecomp:
 			_psxFlushCall(FLUSH_EVERYTHING);
 			MOV32ItoM((uptr)&psxRegs.pc, psxpc);
 			u32 *ptr = JMP32(0);
-			recBlocks.Link(s_nEndBlock, (uptr)ptr);
+			recBlocks.Link(HWADDR(s_nEndBlock), (uptr)ptr);
 			psxbranch = 3;
 		}
 	}
