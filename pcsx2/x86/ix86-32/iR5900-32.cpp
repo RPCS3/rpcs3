@@ -65,8 +65,6 @@ int branch;		         // set for branch
 
 PCSX2_ALIGNED16(GPR_reg64 g_cpuConstRegs[32]) = {0};
 u32 g_cpuHasConstReg = 0, g_cpuFlushedConstReg = 0;
-u32 s_saveConstGPRreg = 0;
-GPR_reg64 s_ConstGPRreg;
 
 ////////////////////////////////////////////////////////////////
 // Static Private Variables - R5900 Dynarec
@@ -92,6 +90,7 @@ static u32 s_nEndBlock = 0; // what pc the current block ends
 static u32 s_nHasDelay = 0;
 
 // save states for branches
+GPR_reg64 s_saveConstRegs[32];
 static u16 s_savex86FpuState, s_saveiCWstate;
 static u32 s_saveHasConstReg = 0, s_saveFlushedConstReg = 0, s_saveRegHasLive1 = 0, s_saveRegHasSignExt = 0;
 static EEINST* s_psaveInstInfo = NULL;
@@ -1077,7 +1076,7 @@ void SaveBranchState()
 	s_savex86FpuState = x86FpuState;
 	s_saveiCWstate = iCWstate;
 	s_savenBlockCycles = s_nBlockCycles;
-	s_saveConstGPRreg = 0xffffffff; // indicate searching
+	memcpy(s_saveConstRegs, g_cpuConstRegs, sizeof(g_cpuConstRegs));
 	s_saveHasConstReg = g_cpuHasConstReg;
 	s_saveFlushedConstReg = g_cpuFlushedConstReg;
 	s_psaveInstInfo = g_pCurInstInfo;
@@ -1095,19 +1094,7 @@ void LoadBranchState()
 	iCWstate = s_saveiCWstate;
 	s_nBlockCycles = s_savenBlockCycles;
 
-	if( s_saveConstGPRreg != 0xffffffff ) {
-		assert( s_saveConstGPRreg > 0 );
-
-		// make sure right GPR was saved
-		assert( g_cpuHasConstReg == s_saveHasConstReg || (g_cpuHasConstReg ^ s_saveHasConstReg) == (1<<s_saveConstGPRreg) );
-
-		// restore the GPR reg
-		g_cpuConstRegs[s_saveConstGPRreg] = s_ConstGPRreg;
-		GPR_SET_CONST(s_saveConstGPRreg);
-
-		s_saveConstGPRreg = 0;
-	}
-
+	memcpy(g_cpuConstRegs, s_saveConstRegs, sizeof(g_cpuConstRegs));
 	g_cpuHasConstReg = s_saveHasConstReg;
 	g_cpuFlushedConstReg = s_saveFlushedConstReg;
 	g_pCurInstInfo = s_psaveInstInfo;
@@ -1512,7 +1499,6 @@ void recRecompile( const u32 startpc )
 	pc = startpc;
 	x86FpuState = FPU_STATE;
 	iCWstate = 0;
-	s_saveConstGPRreg = 0;
 	g_cpuHasConstReg = g_cpuFlushedConstReg = 1;
 	g_cpuPrevRegHasLive1 = g_cpuRegHasLive1 = 0xffffffff;
 	g_cpuPrevRegHasSignExt = g_cpuRegHasSignExt = 0;

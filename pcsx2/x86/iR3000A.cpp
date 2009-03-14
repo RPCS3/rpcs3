@@ -74,8 +74,8 @@ static BASEBLOCKEX* s_pCurBlockEx = NULL;
 
 static u32 s_nEndBlock = 0; // what psxpc the current block ends
 
-static u32 s_ConstGPRreg;
-static u32 s_saveConstGPRreg = 0, s_saveHasConstReg = 0, s_saveFlushedConstReg = 0;
+static u32 s_saveConstRegs[32];
+static u32 s_saveHasConstReg = 0, s_saveFlushedConstReg = 0;
 static EEINST* s_psaveInstInfo = NULL;
 
 u32 s_psxBlockCycles = 0; // cycles of current block recompiling
@@ -334,7 +334,7 @@ void _psxFlushCall(int flushtype)
 void psxSaveBranchState()
 {
 	s_savenBlockCycles = s_psxBlockCycles;
-	s_saveConstGPRreg = 0xffffffff; // indicate searching
+	memcpy(s_saveConstRegs, g_psxConstRegs, sizeof(g_psxConstRegs));
 	s_saveHasConstReg = g_psxHasConstReg;
 	s_saveFlushedConstReg = g_psxFlushedConstReg;
 	s_psaveInstInfo = g_pCurInstInfo;
@@ -347,18 +347,7 @@ void psxLoadBranchState()
 {
 	s_psxBlockCycles = s_savenBlockCycles;
 
-	if( s_saveConstGPRreg != 0xffffffff ) {
-		assert( s_saveConstGPRreg > 0 );
-
-		// make sure right GPR was saved
-		assert( g_psxHasConstReg == s_saveHasConstReg || (g_psxHasConstReg ^ s_saveHasConstReg) == (1<<s_saveConstGPRreg) );
-
-		// restore the GPR reg
-		g_psxConstRegs[s_saveConstGPRreg] = s_ConstGPRreg;
-		PSX_SET_CONST(s_saveConstGPRreg);
-		//s_saveConstGPRreg = 0;
-	}
-
+	memcpy(g_psxConstRegs, s_saveConstRegs, sizeof(g_psxConstRegs));
 	g_psxHasConstReg = s_saveHasConstReg;
 	g_psxFlushedConstReg = s_saveFlushedConstReg;
 	g_pCurInstInfo = s_psaveInstInfo;
@@ -371,23 +360,8 @@ void psxLoadBranchState()
 // Code Templates //
 ////////////////////
 
-void PSX_CHECK_SAVE_REG(int reg)
-{
-	if( s_saveConstGPRreg == 0xffffffff ) {
-		if( PSX_IS_CONST1(reg) ) {
-			s_saveConstGPRreg = reg;
-			s_ConstGPRreg = g_psxConstRegs[reg];
-		}
-	}
-	else {
-		// can be non zero when double loading
-		//assert( s_saveConstGPRreg == 0 );
-	}
-}
-
 void _psxOnWriteReg(int reg)
 {
-	PSX_CHECK_SAVE_REG(reg);
 	PSX_DEL_CONST(reg);
 }
 
@@ -397,7 +371,6 @@ void psxRecompileCodeConst0(R3000AFNPTR constcode, R3000AFNPTR_INFO constscode, 
 	if ( ! _Rd_ ) return;
 
 	// for now, don't support xmm
-	PSX_CHECK_SAVE_REG(_Rd_);
 
 	_deleteX86reg(X86TYPE_PSX, _Rs_, 1);
 	_deleteX86reg(X86TYPE_PSX, _Rt_, 1);
@@ -447,7 +420,6 @@ void psxRecompileCodeConst1(R3000AFNPTR constcode, R3000AFNPTR_INFO noconstcode)
     }
 
 	// for now, don't support xmm
-	PSX_CHECK_SAVE_REG(_Rt_);
 
 	_deleteX86reg(X86TYPE_PSX, _Rs_, 1);
 	_deleteX86reg(X86TYPE_PSX, _Rt_, 0);
@@ -468,7 +440,6 @@ void psxRecompileCodeConst2(R3000AFNPTR constcode, R3000AFNPTR_INFO noconstcode)
 	if ( ! _Rd_ ) return;
 
 	// for now, don't support xmm
-	PSX_CHECK_SAVE_REG(_Rd_);
 
 	_deleteX86reg(X86TYPE_PSX, _Rt_, 1);
 	_deleteX86reg(X86TYPE_PSX, _Rd_, 0);
@@ -1170,7 +1141,6 @@ void iopRecRecompile(u32 startpc)
 
 	// reset recomp state variables
 	psxpc = startpc;
-	s_saveConstGPRreg = 0;
 	g_psxHasConstReg = g_psxFlushedConstReg = 1;
 
 	_initX86regs();
