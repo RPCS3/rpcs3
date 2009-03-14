@@ -425,12 +425,9 @@ void recMTLO1( void )
 //// MOVZ
 void recMOVZtemp_const()
 {
-	GPR_DEL_CONST(_Rd_);
-	_deleteEEreg(_Rd_, 1);
-	_eeOnWriteReg(_Rd_, 0);
 	if (g_cpuConstRegs[_Rt_].UD[0] == 0) {
-		MOV32ItoM((uptr)&cpuRegs.GPR.r[_Rd_].UL[0], g_cpuConstRegs[_Rs_].UL[0]);
-		MOV32ItoM((uptr)&cpuRegs.GPR.r[_Rd_].UL[1], g_cpuConstRegs[_Rs_].UL[1]);
+		g_cpuConstRegs[_Rd_].UL[0] = g_cpuConstRegs[_Rs_].UL[0];
+		g_cpuConstRegs[_Rd_].UL[1] = g_cpuConstRegs[_Rs_].UL[1];
 	}
 }
 
@@ -546,20 +543,13 @@ void recMOVZ()
 	if( _Rs_ == _Rd_ )
 		return;
 
+	// aren't the templates meant to take care of this kind of thing?
 	if( GPR_IS_CONST1(_Rd_) ) {
-
 		if( !GPR_IS_CONST2(_Rs_, _Rt_) ) {
 			// remove the const, since move is conditional
 			_deleteEEreg(_Rd_, 0);
 			MOV32ItoM((uptr)&cpuRegs.GPR.r[_Rd_].UL[0], g_cpuConstRegs[_Rd_].UL[0]);
 			MOV32ItoM((uptr)&cpuRegs.GPR.r[_Rd_].UL[1], g_cpuConstRegs[_Rd_].UL[1]);
-		}
-		else {
-			if (g_cpuConstRegs[_Rt_].UD[0] == 0) {
-				g_cpuConstRegs[_Rd_].UL[0] = g_cpuConstRegs[_Rs_].UL[0];
-				g_cpuConstRegs[_Rd_].UL[1] = g_cpuConstRegs[_Rs_].UL[1];
-			}
-			return;
 		}
 	}
 
@@ -569,12 +559,9 @@ void recMOVZ()
 //// MOVN
 void recMOVNtemp_const()
 {
-	GPR_DEL_CONST(_Rd_);
-	_deleteEEreg(_Rd_, 1);
-	_eeOnWriteReg(_Rd_, 0);
 	if (g_cpuConstRegs[_Rt_].UD[0] != 0) {
-		MOV32ItoM((uptr)&cpuRegs.GPR.r[_Rd_].UL[0], g_cpuConstRegs[_Rs_].UL[0]);
-		MOV32ItoM((uptr)&cpuRegs.GPR.r[_Rd_].UL[1], g_cpuConstRegs[_Rs_].UL[1]);
+		g_cpuConstRegs[_Rd_].UL[0] = g_cpuConstRegs[_Rs_].UL[0];
+		g_cpuConstRegs[_Rd_].UL[1] = g_cpuConstRegs[_Rs_].UL[1];
 	}
 }
 
@@ -686,19 +673,11 @@ void recMOVN()
 		return;
 
 	if( GPR_IS_CONST1(_Rd_) ) {
-
 		if( !GPR_IS_CONST2(_Rs_, _Rt_) ) {
 			// remove the const, since move is conditional
 			_deleteEEreg(_Rd_, 0);
 			MOV32ItoM((uptr)&cpuRegs.GPR.r[_Rd_].UL[0], g_cpuConstRegs[_Rd_].UL[0]);
 			MOV32ItoM((uptr)&cpuRegs.GPR.r[_Rd_].UL[1], g_cpuConstRegs[_Rd_].UL[1]);
-		}
-		else {
-			if (g_cpuConstRegs[_Rt_].UD[0] != 0) {
-				g_cpuConstRegs[_Rd_].UL[0] = g_cpuConstRegs[_Rs_].UL[0];
-				g_cpuConstRegs[_Rd_].UL[1] = g_cpuConstRegs[_Rs_].UL[1];
-			}
-			return;
 		}
 	}
 
