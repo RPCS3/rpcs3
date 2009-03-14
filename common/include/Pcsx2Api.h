@@ -69,13 +69,6 @@ PS2E_FW_VERSION =  0x0002,
 PS2E_SIO_VERSION = 0x0001
 } PluginLibVersion;
 
-enum {
-SIO_TYPE_PAD = 0x00000001,
-SIO_TYPE_MTAP = 0x00000004,
-SIO_TYPE_RM = 0x00000040,
-SIO_TYPE_MC = 0x00000100
-} SioTypes;
-
 // freeze modes:
 enum {
 FREEZE_LOAD = 0,

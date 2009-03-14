@@ -17,8 +17,8 @@
  */
  
  
-#ifndef __PLUGINCALLBACKS_H__
-#define __PLUGINCALLBACKS_H__
+#ifndef __pDisplayS_H__
+#define __pDisplayS_H__
 
 extern "C" {
 typedef u32  (CALLBACK* _PS2EgetLibType)(void);
@@ -29,7 +29,7 @@ typedef char*(CALLBACK* _PS2EgetLibName)(void);
 // NOTE: GSreadFIFOX/GSwriteCSR functions CANNOT use XMM/MMX regs
 // If you want to use them, need to save and restore current ones
 typedef s32  (CALLBACK* _GSinit)(char *configpath);
-typedef s32  (CALLBACK* _GSopen)(char *Title, bool multithread);
+typedef s32  (CALLBACK* _GSopen)(void *pDisplay, char *Title, bool multithread);
 typedef void (CALLBACK* _GSclose)();
 typedef void (CALLBACK* _GSshutdown)();
 typedef void (CALLBACK* _GSvsync)(int field);
@@ -60,12 +60,13 @@ typedef void (CALLBACK* _GSmakeSnapshot)(const char *path);
 typedef void (CALLBACK* _GSmakeSnapshot2)(const char *path, int*, int);
 typedef s32  (CALLBACK* _GSfreeze)(u8 mode, freezeData *data);
 typedef void (CALLBACK* _GSconfigure)();
+typedef void (CALLBACK* _GSconfigpath)(char *configpath);
 typedef s32  (CALLBACK* _GStest)();
 typedef void (CALLBACK* _GSabout)();
 
 // PAD
 typedef s32  (CALLBACK* _PADinit)(char *configpath, u32 flags);
-typedef s32  (CALLBACK* _PADopen)();
+typedef s32  (CALLBACK* _PADopen)(void *pDisplay);
 typedef void (CALLBACK* _PADclose)();
 typedef void (CALLBACK* _PADshutdown)();
 typedef keyEvent* (CALLBACK* _PADkeyEvent)();
@@ -75,20 +76,25 @@ typedef u32  (CALLBACK* _PADquery)();
 typedef void (CALLBACK* _PADupdate)(u8 pad);
 
 typedef void (CALLBACK* _PADgsDriverInfo)(GSdriverInfo *info);
+typedef s32  (CALLBACK* _PADfreeze)(u8 mode, freezeData *data);
 typedef void (CALLBACK* _PADconfigure)();
+typedef void (CALLBACK* _PADconfigpath)(char *configpath);
 typedef s32  (CALLBACK* _PADtest)();
 typedef void (CALLBACK* _PADabout)();
 
 // SIO
-typedef s32  (CALLBACK* _SIOinit)(char *configpath, u32 port, u32 slot, SIOchangeSlotCB f);
-typedef s32  (CALLBACK* _SIOopen)();
+typedef s32  (CALLBACK* _SIOinit)();
+typedef s32  (CALLBACK* _SIOopen)(void *pDisplay);
 typedef void (CALLBACK* _SIOclose)();
 typedef void (CALLBACK* _SIOshutdown)();
-typedef u8   (CALLBACK* _SIOstartPoll)(u8 value);
-typedef u8   (CALLBACK* _SIOpoll)(u8 value);
+typedef s32   (CALLBACK* _SIOstartPoll)(u8 deviceType, u32 port, u32 slot, u8 *returnValue);
+typedef s32   (CALLBACK* _SIOpoll)(u8 value, u8 *returnValue);
 typedef u32  (CALLBACK* _SIOquery)();
 
+typedef void (CALLBACK* _SIOkeyEvent)(keyEvent* ev);
+typedef s32  (CALLBACK* _SIOfreeze)(u8 mode, freezeData *data);
 typedef void (CALLBACK* _SIOconfigure)();
+typedef void (CALLBACK* _SIOconfigpath)(char *configpath);
 typedef s32  (CALLBACK* _SIOtest)();
 typedef void (CALLBACK* _SIOabout)();
 
@@ -96,11 +102,19 @@ typedef void (CALLBACK* _SIOabout)();
 // NOTE: The read/write functions CANNOT use XMM/MMX regs
 // If you want to use them, need to save and restore current ones
 typedef s32  (CALLBACK* _SPU2init)(char *configpath);
-typedef s32  (CALLBACK* _SPU2open)();
+typedef s32  (CALLBACK* _SPU2open)(void *pDisplay);
 typedef void (CALLBACK* _SPU2close)();
 typedef void (CALLBACK* _SPU2shutdown)();
 typedef void (CALLBACK* _SPU2write)(u32 mem, u16 value);
 typedef u16  (CALLBACK* _SPU2read)(u32 mem);
+
+typedef void (CALLBACK* _SPU2readDMA4Mem)(u16 *pMem, u32 size);
+typedef void (CALLBACK* _SPU2writeDMA4Mem)(u16 *pMem, u32 size);
+typedef void (CALLBACK* _SPU2interruptDMA4)();
+typedef void (CALLBACK* _SPU2readDMA7Mem)(u16 *pMem, u32 size);
+typedef void (CALLBACK* _SPU2writeDMA7Mem)(u16 *pMem, u32 size);
+typedef void (CALLBACK* _SPU2interruptDMA7)();
+
 typedef void (CALLBACK* _SPU2readDMAMem)(u16 *pMem, u32 size, u8 core);
 typedef void (CALLBACK* _SPU2writeDMAMem)(u16 *pMem, u32 size, u8 core);
 typedef void (CALLBACK* _SPU2interruptDMA)(u8 core);
@@ -114,8 +128,10 @@ typedef void (CALLBACK* _SPU2setTimeStretcher)(short int enable);
 typedef u32 (CALLBACK* _SPU2ReadMemAddr)(u8 core);
 typedef void (CALLBACK* _SPU2WriteMemAddr)(u8 core,u32 value);
 typedef void (CALLBACK* _SPU2async)(u32 cycles);
-typedef s32  (CALLBACK* _SPU2freeze)(int mode, freezeData *data);
+typedef s32  (CALLBACK* _SPU2freeze)(u8 mode, freezeData *data);
+typedef void (CALLBACK* _SPU2keyEvent)(keyEvent* ev);
 typedef void (CALLBACK* _SPU2configure)();
+typedef void (CALLBACK* _SPU2configpath)(char *configpath);
 typedef s32  (CALLBACK* _SPU2test)();
 typedef void (CALLBACK* _SPU2about)();
 
@@ -137,7 +153,10 @@ typedef s32  (CALLBACK* _CDVDgetTrayStatus)();
 typedef s32  (CALLBACK* _CDVDctrlTrayOpen)();
 typedef s32  (CALLBACK* _CDVDctrlTrayClose)();
 
+typedef void (CALLBACK* _CDVDkeyEvent)(keyEvent* ev);
+typedef s32  (CALLBACK* _CDVDfreeze)(u8 mode, freezeData *data);
 typedef void (CALLBACK* _CDVDconfigure)();
+typedef void (CALLBACK* _CDVDconfigpath)(char *configpath);
 typedef s32  (CALLBACK* _CDVDtest)();
 typedef void (CALLBACK* _CDVDabout)();
 typedef void (CALLBACK* _CDVDnewDiskCB)(void (*callback)());
@@ -146,7 +165,7 @@ typedef void (CALLBACK* _CDVDnewDiskCB)(void (*callback)());
 // NOTE: The read/write functions CANNOT use XMM/MMX regs
 // If you want to use them, need to save and restore current ones
 typedef s32  (CALLBACK* _DEV9init)(char *configpath);
-typedef s32  (CALLBACK* _DEV9open)();
+typedef s32  (CALLBACK* _DEV9open)(void *pDisplay);
 typedef void (CALLBACK* _DEV9close)();
 typedef void (CALLBACK* _DEV9shutdown)();
 typedef u8   (CALLBACK* _DEV9read8)(u32 mem);
@@ -160,8 +179,10 @@ typedef void (CALLBACK* _DEV9writeDMA8Mem)(u32 *pMem, int size);
 typedef void (CALLBACK* _DEV9irqCallback)(DEV9callback callback);
 typedef DEV9handler (CALLBACK* _DEV9irqHandler)(void);
 
+typedef void (CALLBACK* _DEV9keyEvent)(keyEvent* ev);
 typedef s32  (CALLBACK* _DEV9freeze)(int mode, freezeData *data);
 typedef void (CALLBACK* _DEV9configure)();
+typedef void (CALLBACK* _DEV9configpath)(char *configpath);
 typedef s32  (CALLBACK* _DEV9test)();
 typedef void (CALLBACK* _DEV9about)();
 
@@ -169,7 +190,7 @@ typedef void (CALLBACK* _DEV9about)();
 // NOTE: The read/write functions CANNOT use XMM/MMX regs
 // If you want to use them, need to save and restore current ones
 typedef s32  (CALLBACK* _USBinit)(char *configpath);
-typedef s32  (CALLBACK* _USBopen)();
+typedef s32  (CALLBACK* _USBopen)(void *pDisplay);
 typedef void (CALLBACK* _USBclose)();
 typedef void (CALLBACK* _USBshutdown)();
 typedef u8   (CALLBACK* _USBread8)(u32 mem);
@@ -185,22 +206,26 @@ typedef void (CALLBACK* _USBirqCallback)(USBcallback callback);
 typedef USBhandler (CALLBACK* _USBirqHandler)(void);
 typedef void (CALLBACK* _USBsetRAM)(void *mem);
 
+typedef void (CALLBACK* _USBkeyEvent)(keyEvent* ev);
 typedef s32  (CALLBACK* _USBfreeze)(int mode, freezeData *data);
 typedef void (CALLBACK* _USBconfigure)();
+typedef void (CALLBACK* _USBconfigpath)(char *configpath);
 typedef s32  (CALLBACK* _USBtest)();
 typedef void (CALLBACK* _USBabout)();
 
 //FW
 typedef s32  (CALLBACK* _FWinit)(char *configpath);
-typedef s32  (CALLBACK* _FWopen)();
+typedef s32  (CALLBACK* _FWopen)(void *pDisplay);
 typedef void (CALLBACK* _FWclose)();
 typedef void (CALLBACK* _FWshutdown)();
 typedef u32  (CALLBACK* _FWread32)(u32 mem);
 typedef void (CALLBACK* _FWwrite32)(u32 mem, u32 value);
 typedef void (CALLBACK* _FWirqCallback)(void (*callback)());
 
+typedef void (CALLBACK* _FWkeyEvent)(keyEvent* ev);
 typedef s32  (CALLBACK* _FWfreeze)(int mode, freezeData *data);
 typedef void (CALLBACK* _FWconfigure)();
+typedef void (CALLBACK* _FWconfigpath)(char *configpath);
 typedef s32  (CALLBACK* _FWtest)();
 typedef void (CALLBACK* _FWabout)();
 
@@ -236,6 +261,7 @@ extern _GSsetWindowInfo   GSsetWindowInfo;
 #endif
 extern _GSfreeze          GSfreeze;
 extern _GSconfigure       GSconfigure;
+extern _GSconfigpath	GSconfigpath;
 extern _GStest            GStest;
 extern _GSabout           GSabout;
 
@@ -250,8 +276,10 @@ extern _PADpoll           PAD1poll;
 extern _PADquery          PAD1query;
 extern _PADupdate         PAD1update;
 
+extern _PADfreeze          PAD1freeze;
 extern _PADgsDriverInfo   PAD1gsDriverInfo;
 extern _PADconfigure      PAD1configure;
+extern _PADconfigpath	PAD1configpath;
 extern _PADtest           PAD1test;
 extern _PADabout          PAD1about;
 
@@ -266,8 +294,10 @@ extern _PADpoll           PAD2poll;
 extern _PADquery          PAD2query;
 extern _PADupdate         PAD2update;
 
+extern _PADfreeze          PAD2freeze;
 extern _PADgsDriverInfo   PAD2gsDriverInfo;
 extern _PADconfigure      PAD2configure;
+extern _PADconfigpath	PAD2configpath;
 extern _PADtest           PAD2test;
 extern _PADabout          PAD2about;
 
@@ -279,8 +309,11 @@ extern _SIOshutdown       SIOshutdown[2][9];
 extern _SIOstartPoll      SIOstartPoll[2][9];
 extern _SIOpoll           SIOpoll[2][9];
 extern _SIOquery          SIOquery[2][9];
+extern _SIOkeyEvent      SIOkeyEvent;
 
+extern _SIOfreeze          SIOfreeze[2][9];
 extern _SIOconfigure      SIOconfigure[2][9];
+extern _SIOconfigpath	SIOconfigpath[2][9];
 extern _SIOtest           SIOtest[2][9];
 extern _SIOabout          SIOabout[2][9];
 
@@ -306,9 +339,11 @@ extern _SPU2irqCallback   SPU2irqCallback;
 extern _SPU2setClockPtr   SPU2setClockPtr;
 extern _SPU2setTimeStretcher SPU2setTimeStretcher;
 
+extern _SPU2keyEvent        SPU2keyEvent;
 extern _SPU2async         SPU2async;
 extern _SPU2freeze        SPU2freeze;
 extern _SPU2configure     SPU2configure;
+extern _SPU2configpath	SPU2configpath;
 extern _SPU2test          SPU2test;
 extern _SPU2about         SPU2about;
 
@@ -328,7 +363,10 @@ extern _CDVDgetTrayStatus CDVDgetTrayStatus;
 extern _CDVDctrlTrayOpen  CDVDctrlTrayOpen;
 extern _CDVDctrlTrayClose CDVDctrlTrayClose;
 
+extern _CDVDkeyEvent        CDVDkeyEvent;
+extern _CDVDfreeze          CDVDfreeze;
 extern _CDVDconfigure     CDVDconfigure;
+extern _CDVDconfigpath	CDVDconfigpath;
 extern _CDVDtest          CDVDtest;
 extern _CDVDabout         CDVDabout;
 extern _CDVDnewDiskCB     CDVDnewDiskCB;
@@ -349,7 +387,9 @@ extern _DEV9writeDMA8Mem  DEV9writeDMA8Mem;
 extern _DEV9irqCallback   DEV9irqCallback;
 extern _DEV9irqHandler    DEV9irqHandler;
 
+extern _DEV9keyEvent        DEV9keyEvent;
 extern _DEV9configure     DEV9configure;
+extern _DEV9configpath	DEV9configpath;
 extern _DEV9freeze        DEV9freeze;
 extern _DEV9test          DEV9test;
 extern _DEV9about         DEV9about;
@@ -371,7 +411,9 @@ extern _USBirqCallback    USBirqCallback;
 extern _USBirqHandler     USBirqHandler;
 extern _USBsetRAM         USBsetRAM;
 
+extern _USBkeyEvent       USBkeyEvent;
 extern _USBconfigure      USBconfigure;
+extern _USBconfigpath	USBconfigpath;
 extern _USBfreeze         USBfreeze;
 extern _USBtest           USBtest;
 extern _USBabout          USBabout;
@@ -385,10 +427,12 @@ extern _FWread32          FWread32;
 extern _FWwrite32         FWwrite32;
 extern _FWirqCallback     FWirqCallback;
 
+extern _FWkeyEvent        FWkeyEvent;
 extern _FWconfigure       FWconfigure;
+extern _FWconfigpath	FWconfigpath;
 extern _FWfreeze          FWfreeze;
 extern _FWtest            FWtest;
 extern _FWabout           FWabout;
 }
 
-#endif // __PLUGINCALLBACKS_H__
+#endif // __pDisplayS_H__

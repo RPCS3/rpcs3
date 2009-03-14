@@ -15,8 +15,8 @@
  *  along with this program; if not, write to the Free Software
  *	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
-
-
+ 
+ 
 #ifndef __SIOAPI_H__
 #define __SIOAPI_H__
 
@@ -28,36 +28,45 @@
  *          shadowpcsx2@yahoo.gr,
  *          and florinsasu@hotmail.com
  */
-
+ 
 #include "Pcsx2Api.h"
 
 /* SIO plugin API */
 
-// basic funcs
+// Basic functions.
 
+EXPORT_C_(s32) SIOinit();
 // Single plugin can only be PAD, MTAP, RM, or MC.  Only load one plugin of each type,
 // but not both a PAD and MTAP.  Simplifies plugin selection and interface, as well
 // as API.
-s32  CALLBACK SIOinit(char *configpath);
-s32  CALLBACK SIOopen(void *pDisplay);
-void CALLBACK SIOclose();
-void CALLBACK SIOshutdown();
+// pDisplay normally is passed a handle to the GS plugins window.
+EXPORT_C_(s32) SIOopen(void *pDisplay);
+EXPORT_C_(void) SIOclose();
+EXPORT_C_(void) SIOshutdown();
 // Returns 0 if device doesn't exist.  Simplifies things.  Also means you don't
 // have to distinguish between MTAP and PAD SIO plugins.
-s32   CALLBACK SIOstartPoll(u8 deviceType, u32 port, u32 slot, u8 *returnValue);
+EXPORT_C_(s32) SIOstartPoll(u8 deviceType, u32 port, u32 slot, u8 *returnValue);
 // Returns 0 on the last output byte.
-s32   CALLBACK SIOpoll(u8 value, u8 *returnValue);
-
-EXPORT_C_(keyEvent*) CALLBACK SIOkeyEvent();
+EXPORT_C_(s32) SIOpoll(u8 value, u8 *returnValue);
 
 // returns: SIO_TYPE_{PAD,MTAP,RM,MC}
-u32  CALLBACK SIOquery();
+EXPORT_C_(u32) SIOquery();
 
 // extended funcs
 
-void CALLBACK SIOconfigure();
-void CALLBACK SIOabout();
-s32  CALLBACK SIOtest();
+EXPORT_C_(void) SIOconfigure();
+EXPORT_C_(keyEvent*) CALLBACK SIOkeyEvent();
+EXPORT_C_(s32) SIOfreeze(u8 mode, freezeData *data);
+EXPORT_C_(void) SIOconfigpath(char *configpath);
+EXPORT_C_(void) SIOabout();
+EXPORT_C_(s32) SIOtest();
+
+enum {
+SIO_TYPE_PAD = 0x00000001,
+SIO_TYPE_MTAP = 0x00000004,
+SIO_TYPE_RM = 0x00000040,
+SIO_TYPE_MC = 0x00000100
+} SioTypes;
 
 #endif
 

@@ -15,8 +15,8 @@
  *  along with this program; if not, write to the Free Software
  *	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
-
-
+ 
+ 
 #ifndef __SPU2API_H__
 #define __SPU2API_H__
 
@@ -28,15 +28,26 @@
  *          shadowpcsx2@yahoo.gr,
  *          and florinsasu@hotmail.com
  */
-
+ 
 #include "Pcsx2Api.h"
 
-EXPORT_C_(s32)  SPU2init(char *configpath);
+EXPORT_C_(s32)  SPU2init();
+// pDisplay normally is passed a handle to the GS plugins window.
 EXPORT_C_(s32)  SPU2open(void *pDisplay);
 EXPORT_C_(void) SPU2close();
 EXPORT_C_(void) SPU2shutdown();
 EXPORT_C_(void) SPU2write(u32 mem, u16 value);
 EXPORT_C_(u16)  SPU2read(u32 mem);
+
+// The following calls are depreciated.
+EXPORT_C_(void) SPU2readDMA4Mem(u16 *pMem, u32 size);
+EXPORT_C_(void) SPU2readDMA7Mem(u16 *pMem, u32 size);
+EXPORT_C_(void) SPU2writeDMA4Mem(u16 *pMem, u32 size);
+EXPORT_C_(void) SPU2writeDMA7Mem(u16 *pMem, u32 size);
+EXPORT_C_(void) SPU2interruptDMA4();
+EXPORT_C_(void) SPU2interruptDMA7();
+
+// These calls replace the calls above.
 EXPORT_C_(void) SPU2readDMAMem(u16 *pMem, u32 size, u8 core);
 EXPORT_C_(void) SPU2writeDMAMem(u16 *pMem, u32 size, u8 core);
 EXPORT_C_(void) SPU2interruptDMA(u8 core);
@@ -50,15 +61,17 @@ EXPORT_C_(void) SPU2WriteMemAddr(u8 core,u32 value);
 EXPORT_C_(void) SPU2irqCallback(void (*SPU2callback)(),void (*DMA4callback)(),void (*DMA7callback)());
 
 // extended funcs
+
 // if start is true, starts recording spu2 data, else stops
 // returns true if successful
 EXPORT_C_(bool) SPU2setupRecording(bool start);
 
+EXPORT_C_(void) SPU2keyEvent(keyEvent *ev);
 EXPORT_C_(void) SPU2setClockPtr(u32* ptr);
-
 EXPORT_C_(void) SPU2async(u32 cycles);
 EXPORT_C_(s32) SPU2freeze(u8 mode, freezeData *data);
 EXPORT_C_(void) SPU2configure();
+EXPORT_C_(void) SPU2configpath(char *configpath);
 EXPORT_C_(void) SPU2about();
 EXPORT_C_(s32)  SPU2test();
 

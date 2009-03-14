@@ -15,8 +15,8 @@
  *  along with this program; if not, write to the Free Software
  *	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
-
-
+ 
+ 
 #ifndef __DEV9API_H__
 #define __DEV9API_H__
 
@@ -28,7 +28,7 @@
  *          shadowpcsx2@yahoo.gr,
  *          and florinsasu@hotmail.com
  */
-
+ 
 #include "Pcsx2Api.h"
 
 typedef void (*DEV9callback)(int cycles);
@@ -37,7 +37,9 @@ typedef int  (*DEV9handler)(void);
 // Basic functions.
 // NOTE: The read/write functions CANNOT use XMM/MMX regs
 // If you want to use them, need to save and restore current ones
-EXPORT_C_(s32) DEV9init(char *configpath);
+EXPORT_C_(s32) DEV9init();
+
+// pDisplay normally is passed a handle to the GS plugins window.
 EXPORT_C_(s32) DEV9open(void *pDisplay);
 EXPORT_C_(void) DEV9close();
 EXPORT_C_(void) DEV9shutdown();
@@ -57,8 +59,10 @@ EXPORT_C_(DEV9handler) DEV9irqHandler(void);
 
 // Extended functions
 
-EXPORT_C_(s32) DEV9freeze(int mode, freezeData *data);
+EXPORT_C_(void) DEV9keyEvent(keyEvent *ev);
+EXPORT_C_(s32) DEV9freeze(u8 mode, freezeData *data);
 EXPORT_C_(void) DEV9configure();
+EXPORT_C_(void) DEV9configpath(char *configpath);
 EXPORT_C_(void) DEV9about();
 EXPORT_C_(s32)  DEV9test();
 

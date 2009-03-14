@@ -15,8 +15,8 @@
  *  along with this program; if not, write to the Free Software
  *	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
-
-
+ 
+ 
 #ifndef __FWAPI_H__
 #define __FWAPI_H__
 
@@ -28,7 +28,7 @@
  *          shadowpcsx2@yahoo.gr,
  *          and florinsasu@hotmail.com
  */
-
+ 
 #include "Pcsx2Api.h"
 
 /* FW plugin API */
@@ -37,20 +37,23 @@
 
 // NOTE: The read/write functions CANNOT use XMM/MMX regs
 // If you want to use them, need to save and restore current ones
-EXPORT_C_(s32)  CALLBACK FWinit(char *configpath);
-EXPORT_C_(s32)  CALLBACK FWopen(void *pDisplay);
-EXPORT_C_(void) CALLBACK FWclose();
-EXPORT_C_(void) CALLBACK FWshutdown();
-EXPORT_C_(u32)  CALLBACK FWread32(u32 addr);
-EXPORT_C_(void) CALLBACK FWwrite32(u32 addr, u32 value);
-EXPORT_C_(void) CALLBACK FWirqCallback(void (*callback)());
+EXPORT_C_(s32) FWinit();
+// pDisplay normally is passed a handle to the GS plugins window.
+EXPORT_C_(s32) FWopen(void *pDisplay);
+EXPORT_C_(void) FWclose();
+EXPORT_C_(void) FWshutdown();
+EXPORT_C_(u32)  FWread32(u32 addr);
+EXPORT_C_(void) FWwrite32(u32 addr, u32 value);
+EXPORT_C_(void) FWirqCallback(void (*callback)());
 
 // Extended functions
 
-EXPORT_C_(s32)  CALLBACK FWfreeze(int mode, freezeData *data);
-EXPORT_C_(void) CALLBACK FWconfigure();
-EXPORT_C_(void) CALLBACK FWabout();
-EXPORT_C_(s32)  CALLBACK FWtest();
+EXPORT_C_(void) FWkeyEvent(keyEvent *ev);
+EXPORT_C_(s32)  FWfreeze(u8 mode, freezeData *data);
+EXPORT_C_(void) FWconfigure();
+EXPORT_C_(void) SPU2configpath(char *configpath);
+EXPORT_C_(void) FWabout();
+EXPORT_C_(s32)  FWtest();
 #endif
 
 #endif // __USBAPI_H__

@@ -15,8 +15,8 @@
  *  along with this program; if not, write to the Free Software
  *	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
-
-
+ 
+ 
 #ifndef __PADAPI_H__
 #define __PADAPI_H__
 
@@ -28,25 +28,26 @@
  *          shadowpcsx2@yahoo.gr,
  *          and florinsasu@hotmail.com
  */
-
+ 
 #include "Pcsx2Api.h"
 
 /* PAD plugin API  */
 /* So obsolete that everyone uses it. */
 
 // Basic functions.
-EXPORT_C_(s32)  CALLBACK PADinitEx(char *configpath);
-EXPORT_C_(s32)  CALLBACK PADopen(void *pDsp);
-EXPORT_C_(void) CALLBACK PADclose();
-EXPORT_C_(void) CALLBACK PADshutdown();
+EXPORT_C_(s32) PADinit(u32 flags);
+// pDisplay normally is passed a handle to the GS plugins window.
+EXPORT_C_(s32) PADopen(void *pDisplay);
+EXPORT_C_(void) PADclose();
+EXPORT_C_(void) PADshutdown();
 // PADkeyEvent is called every vsync (return NULL if no event)
-EXPORT_C_(keyEvent*) CALLBACK PADkeyEvent();
-EXPORT_C_(u8)   CALLBACK PADstartPoll(u8 pad);
-EXPORT_C_(u8)   CALLBACK PADpoll(u8 value);
+EXPORT_C_(keyEvent*) PADkeyEvent();
+EXPORT_C_(u8) PADstartPoll(u8 pad);
+EXPORT_C_(u8) PADpoll(u8 value);
 // returns: 1 if supported pad1
 //			2 if supported pad2
 //			3 if both are supported
-EXPORT_C_(u8)  CALLBACK PADquery();
+EXPORT_C_(u8) PADquery();
 
 // call to give a hint to the PAD plugin to query for the keyboard state. A
 // good plugin will query the OS for keyboard state ONLY in this function.
@@ -55,13 +56,14 @@ EXPORT_C_(u8)  CALLBACK PADquery();
 // the window (and input). Note that PADupdate can be called from a different
 // thread than the other functions, so mutex or other multithreading primitives
 // have to be added to maintain data integrity.
-EXPORT_C_(void) CALLBACK PADupdate(u8 pad);
+EXPORT_C_(void) PADupdate(u8 pad);
 
 // Extended functions
-EXPORT_C_(s32)  CALLBACK PADfreeze(int mode, freezeData *data);
-EXPORT_C_(void) CALLBACK PADgsDriverInfo(GSdriverInfo *info);
-EXPORT_C_(void) CALLBACK PADconfigure();
-EXPORT_C_(void) CALLBACK PADabout();
-EXPORT_C_(s32)  CALLBACK PADtest();
+EXPORT_C_(void) PADgsDriverInfo(GSdriverInfo *info);
+EXPORT_C_(s32) PADfreeze(u8 mode, freezeData *data);
+EXPORT_C_(void) PADconfigure();
+EXPORT_C_(void) PADconfigpath(char *configpath);
+EXPORT_C_(void) PADabout();
+EXPORT_C_(s32)  PADtest();
 
 #endif // __PADAPI_H__

@@ -15,8 +15,8 @@
  *  along with this program; if not, write to the Free Software
  *	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
-
-
+ 
+ 
 #ifndef __GSAPI_H__
 #define __GSAPI_H__
 
@@ -28,7 +28,7 @@
  *          shadowpcsx2@yahoo.gr,
  *          and florinsasu@hotmail.com
  */
-
+ 
 #include "Pcsx2Api.h"
 
 typedef struct _GSdriverInfo {
@@ -37,7 +37,8 @@ typedef struct _GSdriverInfo {
 } GSdriverInfo;
 
 // Basic functions.
-EXPORT_C_(s32)   GSinit(char *configpath);
+EXPORT_C_(s32)   GSinit();
+// pDisplay normally is passed a handle to the GS plugins window.
 EXPORT_C_(s32)   GSopen(void *pDisplay, char *Title, bool multithread);
 EXPORT_C_(void)  GSclose();
 EXPORT_C_(void)  GSshutdown();
@@ -78,6 +79,7 @@ EXPORT_C_(s32)  CALLBACK GSsetWindowInfo(winInfo *info);
 #endif
 EXPORT_C_(s32)   GSfreeze(u8 mode, freezeData *data);
 EXPORT_C_(void)  GSconfigure();
+EXPORT_C_(void) SGSconfigpath(char *configpath);
 EXPORT_C_(void)  GSabout();
 EXPORT_C_(s32)   GStest();
 
