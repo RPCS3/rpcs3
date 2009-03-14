@@ -65,7 +65,6 @@ extern SessionOverrideFlags g_Session;
 #define CHECK_ESCAPE_HACK	 (Config.Hacks & 0x400)
 //------------ SPECIAL GAME FIXES!!! ---------------
 #define CHECK_VUADDSUBHACK	 (Config.GameFixes & 0x1) // Special Fix for Tri-ace games, they use an encryption algorithm that requires VU addi opcode to be bit-accurate.
-#define CHECK_VUCLIPFLAGHACK (Config.GameFixes & 0x2) // Special Fix for God of War, fixes SPS.
 #define CHECK_FPUCOMPAREHACK (Config.GameFixes & 0x4) // Special Fix for Digimon Rumble Arena 2, fixes spinning/hanging on intro-menu.
 #define CHECK_FPUMULHACK	 (Config.GameFixes & 0x8) // Special Fix for Tales of Destiny hangs.
 //------------ Advanced Options!!! ---------------
