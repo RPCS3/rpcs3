@@ -17,8 +17,8 @@
  */
  
  
-#ifndef __pDisplayS_H__
-#define __pDisplayS_H__
+#ifndef __PLUGINCALLBACKS_H__
+#define __PLUGINCALLBACKS_H__
 
 extern "C" {
 typedef u32  (CALLBACK* _PS2EgetLibType)(void);
@@ -435,4 +435,4 @@ extern _FWtest            FWtest;
 extern _FWabout           FWabout;
 }
 
-#endif // __pDisplayS_H__
+#endif // __PLUGINCALLBACKS_H__
