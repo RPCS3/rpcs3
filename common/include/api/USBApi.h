@@ -15,8 +15,8 @@
  *  along with this program; if not, write to the Free Software
  *	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
- 
- 
+
+
 #ifndef __USBAPI_H__
 #define __USBAPI_H__
 
@@ -28,7 +28,7 @@
  *          shadowpcsx2@yahoo.gr,
  *          and florinsasu@hotmail.com
  */
- 
+
 #include "Pcsx2Api.h"
 
 typedef void (*USBcallback)(int cycles);
@@ -36,7 +36,7 @@ typedef int  (*USBhandler)(void);
 
 // Basic functions.
 EXPORT_C_(s32)  CALLBACK USBinit(char *configpath);
-EXPORT_C_(s32)  CALLBACK USBopen();
+EXPORT_C_(s32)  CALLBACK USBopen(void *pDisplay);
 EXPORT_C_(void) CALLBACK USBclose();
 EXPORT_C_(void) CALLBACK USBshutdown();
 EXPORT_C_(u8)   CALLBACK USBread8(u32 addr);

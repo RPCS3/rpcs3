@@ -15,8 +15,8 @@
  *  along with this program; if not, write to the Free Software
  *	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
- 
- 
+
+
 #ifndef __SIOAPI_H__
 #define __SIOAPI_H__
 
@@ -28,19 +28,27 @@
  *          shadowpcsx2@yahoo.gr,
  *          and florinsasu@hotmail.com
  */
- 
+
 #include "Pcsx2Api.h"
 
 /* SIO plugin API */
 
 // basic funcs
 
-s32  CALLBACK SIOinit(char *configpath, u32 port, u32 slot, SIOchangeSlotCB f);
-s32  CALLBACK SIOopen();
+// Single plugin can only be PAD, MTAP, RM, or MC.  Only load one plugin of each type,
+// but not both a PAD and MTAP.  Simplifies plugin selection and interface, as well
+// as API.
+s32  CALLBACK SIOinit(char *configpath);
+s32  CALLBACK SIOopen(void *pDisplay);
 void CALLBACK SIOclose();
 void CALLBACK SIOshutdown();
-u8   CALLBACK SIOstartPoll(u8 value);
-u8   CALLBACK SIOpoll(u8 value);
+// Returns 0 if device doesn't exist.  Simplifies things.  Also means you don't
+// have to distinguish between MTAP and PAD SIO plugins.
+s32   CALLBACK SIOstartPoll(u8 deviceType, u32 port, u32 slot, u8 *returnValue);
+// Returns 0 on the last output byte.
+s32   CALLBACK SIOpoll(u8 value, u8 *returnValue);
+
+EXPORT_C_(keyEvent*) CALLBACK SIOkeyEvent();
 
 // returns: SIO_TYPE_{PAD,MTAP,RM,MC}
 u32  CALLBACK SIOquery();

@@ -15,8 +15,8 @@
  *  along with this program; if not, write to the Free Software
  *	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
- 
- 
+
+
 #ifndef __FWAPI_H__
 #define __FWAPI_H__
 
@@ -28,7 +28,7 @@
  *          shadowpcsx2@yahoo.gr,
  *          and florinsasu@hotmail.com
  */
- 
+
 #include "Pcsx2Api.h"
 
 /* FW plugin API */
@@ -38,7 +38,7 @@
 // NOTE: The read/write functions CANNOT use XMM/MMX regs
 // If you want to use them, need to save and restore current ones
 EXPORT_C_(s32)  CALLBACK FWinit(char *configpath);
-EXPORT_C_(s32)  CALLBACK FWopen();
+EXPORT_C_(s32)  CALLBACK FWopen(void *pDisplay);
 EXPORT_C_(void) CALLBACK FWclose();
 EXPORT_C_(void) CALLBACK FWshutdown();
 EXPORT_C_(u32)  CALLBACK FWread32(u32 addr);

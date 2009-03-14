@@ -15,8 +15,8 @@
  *  along with this program; if not, write to the Free Software
  *	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
- 
- 
+
+
 #ifndef __DEV9API_H__
 #define __DEV9API_H__
 
@@ -28,7 +28,7 @@
  *          shadowpcsx2@yahoo.gr,
  *          and florinsasu@hotmail.com
  */
- 
+
 #include "Pcsx2Api.h"
 
 typedef void (*DEV9callback)(int cycles);
@@ -38,7 +38,7 @@ typedef int  (*DEV9handler)(void);
 // NOTE: The read/write functions CANNOT use XMM/MMX regs
 // If you want to use them, need to save and restore current ones
 EXPORT_C_(s32) DEV9init(char *configpath);
-EXPORT_C_(s32) DEV9open();
+EXPORT_C_(s32) DEV9open(void *pDisplay);
 EXPORT_C_(void) DEV9close();
 EXPORT_C_(void) DEV9shutdown();
 EXPORT_C_(u8) DEV9read8(u32 addr);

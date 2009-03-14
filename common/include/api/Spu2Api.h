@@ -15,8 +15,8 @@
  *  along with this program; if not, write to the Free Software
  *	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
- 
- 
+
+
 #ifndef __SPU2API_H__
 #define __SPU2API_H__
 
@@ -28,11 +28,11 @@
  *          shadowpcsx2@yahoo.gr,
  *          and florinsasu@hotmail.com
  */
- 
+
 #include "Pcsx2Api.h"
 
 EXPORT_C_(s32)  SPU2init(char *configpath);
-EXPORT_C_(s32)  SPU2open();
+EXPORT_C_(s32)  SPU2open(void *pDisplay);
 EXPORT_C_(void) SPU2close();
 EXPORT_C_(void) SPU2shutdown();
 EXPORT_C_(void) SPU2write(u32 mem, u16 value);

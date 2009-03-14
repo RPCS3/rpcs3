@@ -15,8 +15,8 @@
  *  along with this program; if not, write to the Free Software
  *	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
- 
- 
+
+
 #ifndef __PADAPI_H__
 #define __PADAPI_H__
 
@@ -28,15 +28,15 @@
  *          shadowpcsx2@yahoo.gr,
  *          and florinsasu@hotmail.com
  */
- 
+
 #include "Pcsx2Api.h"
 
 /* PAD plugin API  */
 /* So obsolete that everyone uses it. */
 
 // Basic functions.
-EXPORT_C_(s32)  CALLBACK PADinit(char *configpath, u32 flags);
-EXPORT_C_(s32)  CALLBACK PADopen();
+EXPORT_C_(s32)  CALLBACK PADinitEx(char *configpath);
+EXPORT_C_(s32)  CALLBACK PADopen(void *pDsp);
 EXPORT_C_(void) CALLBACK PADclose();
 EXPORT_C_(void) CALLBACK PADshutdown();
 // PADkeyEvent is called every vsync (return NULL if no event)
@@ -58,6 +58,7 @@ EXPORT_C_(u8)  CALLBACK PADquery();
 EXPORT_C_(void) CALLBACK PADupdate(u8 pad);
 
 // Extended functions
+EXPORT_C_(s32)  CALLBACK PADfreeze(int mode, freezeData *data);
 EXPORT_C_(void) CALLBACK PADgsDriverInfo(GSdriverInfo *info);
 EXPORT_C_(void) CALLBACK PADconfigure();
 EXPORT_C_(void) CALLBACK PADabout();

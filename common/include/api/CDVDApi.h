@@ -15,8 +15,8 @@
  *  along with this program; if not, write to the Free Software
  *	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
- 
- 
+
+
 #ifndef __CDVDAPI_H__
 #define __CDVDAPI_H__
 
@@ -28,7 +28,7 @@
  *          shadowpcsx2@yahoo.gr,
  *          and florinsasu@hotmail.com
  */
- 
+
 #include "Pcsx2Api.h"
 
 /* CDVD plugin API */
@@ -36,7 +36,7 @@
 // Basic functions.
 
 EXPORT_C_(s32)   CDVDinit(char *configpath);
-EXPORT_C_(s32)   CDVDopen(const char* pTitleFilename);
+EXPORT_C_(s32)   CDVDopen(void *pDisplay, const char* pTitleFilename);
 EXPORT_C_(void)  CDVDclose();
 EXPORT_C_(void)  CDVDshutdown();
 EXPORT_C_(s32)   CDVDreadTrack(u32 lsn, int mode);
@@ -92,7 +92,7 @@ CDVD_MODE_2328	2,	// skip sync+head+sub (24) bytes
 CDVD_MODE_2048	3,	// skip sync+head+sub (24) bytes
 CDVD_MODE_2368	4	// full 2352 bytes + 16 subq
 } TrackModes
-	
+
 // CDVDgetDiskType returns:
 enum {
 CDVD_TYPE_ILLEGAL		= 0xff,	// Illegal Disc
@@ -110,7 +110,7 @@ CDVD_TYPE_DETCTCD 		= 0x02,	// Detecting Cd
 CDVD_TYPE_DETCT			= 0x01,	// Detecting
 CDVD_TYPE_NODISC 		= 0x00	// No Disc
 } DiskType;
-	
+
 // CDVDgetTrayStatus returns:
 enum {
 CDVD_TRAY_CLOSE	= 0x00,
