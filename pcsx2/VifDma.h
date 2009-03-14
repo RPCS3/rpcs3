@@ -40,6 +40,8 @@ struct vifStruct {
 	u8 irqoffset; // 32bit offset where next vif code is
     u32 savedtag; // need this for backwards compat with save states
 	u32 vifpacketsize;
+	u8 inprogress;
+	u8 dmamode;
 };
 
 extern vifStruct vif0, vif1;
