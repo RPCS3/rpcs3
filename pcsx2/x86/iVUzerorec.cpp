@@ -3002,21 +3002,22 @@ void VuInstruction::Recompile(list<VuInstruction>::iterator& itinst, u32 vuxyz)
 
 				if( !CHECK_VUCLIPFLAGHACK && pparentinst != NULL ) {
 
-					if( pparentinst->pClipWrite == 0 ) {
-						pparentinst->pClipWrite = (uptr)SuperVUStaticAlloc(4);
-					}
-
 					if( nParentCheckForExecution >= 0 ) {
+						if( pparentinst->pClipWrite == 0 )
+							pparentinst->pClipWrite = (uptr)SuperVUStaticAlloc(4);
+
 						if( s_ClipRead == 0 )
 							s_ClipRead = (uptr)&VU->VI[REG_CLIP_FLAG];
 
 						CMP32ItoM((uptr)&g_nLastBlockExecuted, nParentCheckForExecution);
 						u8* jptr = JNE8(0);
+						CMP32ItoM((uptr)&s_ClipRead, (uptr)&VU->VI[REG_CLIP_FLAG]);
+						u8* jptr2 = JE8(0);
 						MOV32MtoR(EAX, pparentinst->pClipWrite);
 						MOV32RtoM(s_ClipRead, EAX);
 						x86SetJ8(jptr);
+						x86SetJ8(jptr2);
 					}
-					else s_ClipRead = (uptr)&VU->VI[REG_CLIP_FLAG];
 				}
 				else s_ClipRead = (uptr)&VU->VI[REG_CLIP_FLAG];
 			}
