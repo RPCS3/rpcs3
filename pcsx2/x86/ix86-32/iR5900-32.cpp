@@ -79,7 +79,8 @@ static BASEBLOCK *recRAM = NULL;		// and the ptr to the blocks here
 static BASEBLOCK *recROM = NULL;		// and here
 static BASEBLOCK *recROM1 = NULL;		// also here
 static u32 *recRAMCopy = NULL;
-static BaseBlocks recBlocks(EE_NUMBLOCKS);
+void JITCompile();
+static BaseBlocks recBlocks(EE_NUMBLOCKS, (uptr)JITCompile);
 static u8* recPtr = NULL, *recStackPtr = NULL;
 static EEINST* s_pInstCache = NULL;
 static u32 s_nInstCacheSize = 0;
@@ -111,7 +112,7 @@ static u32 dumplog = 0;
 //static const char *txt2 = "M32 = %x\n";
 #endif
 
-static void iBranchTest(u32 newpc, bool noDispatch=false);
+static void iBranchTest(u32 newpc = 0xffffffff, bool noDispatch=false);
 static void ClearRecLUT(BASEBLOCK* base, int count);
 
 ////////////////////////////////////////////////////
@@ -446,7 +447,6 @@ u32* recAllocStackMem(int size, int align)
 	return (u32*)(recStackPtr-size);
 }
 
-
 static const int REC_CACHEMEM = 0x01000000;
 static void __fastcall dyna_block_discard(u32 start,u32 sz);
 
@@ -600,6 +600,7 @@ static void recShutdown( void )
 	safe_aligned_free( m_recBlockAlloc );
 	recRAM = recROM = recROM1 = NULL;
 	recStack = NULL;
+	recRAMCopy = NULL;
 
 	safe_free( s_pInstCache );
 	s_nInstCacheSize = 0;
@@ -659,79 +660,6 @@ static __declspec(naked) void JITCompileInBlock()
 {
 	__asm {
 		jmp JITCompile
-	}
-}
-
-// jumped to when an immediate branch (EE side) hasn't been statically linked yet.
-// Block is compiled if needed, and the link is made.
-// EDX contains the jump addr to modify
-static __naked void Dispatcher()
-{
-	__asm {
-		mov eax, dword ptr [cpuRegs.pc]
-		mov ebx, eax
-		shr eax, 16
-		mov ecx, dword ptr [recLUT+eax*4]
-		mov eax, dword ptr [ecx+ebx]
-
-		cmp eax, offset JITCompile
-		je notcompiled
-		cmp eax, offset JITCompileInBlock
-		je notcompiled
-		lea ebx, [eax-4]
-		sub ebx, edx
-		mov dword ptr [edx], ebx
-		jmp eax
-
-		align 16
-notcompiled:
-		mov esi, edx
-		lea edi, [ecx+ebx]
-		push ebx
-		call recRecompile
-		add esp, 4
-
-		mov eax, dword ptr [edi]
-		lea ebx, [eax-4]
-		sub ebx, esi
-		mov dword ptr [esi], ebx
-		jmp eax
-	}
-}
-
-// edx -  block start pc
-// stack - x86Ptr[0]
-static __naked void DispatcherClear()
-{
-	__asm {
-		mov [cpuRegs.pc], edx
-		mov ebx, edx
-		shr edx, 16
-		mov ecx, dword ptr [recLUT+edx*4]
-		mov eax, dword ptr [ecx+ebx]
-
-		cmp eax, offset JITCompile
-		je notcompiled
-		cmp eax, offset JITCompileInBlock
-		je notcompiled
-		add esp, 4
-		jmp eax
-
-		align 16
-notcompiled:
-		lea edi, [ecx+ebx]
-		push ebx
-		call recRecompile
-		add esp, 4
-		mov eax, dword ptr [edi]
-
-		pop ecx
-		mov byte ptr [ecx], 0xe9 // jmp32
-		lea ebx, [eax-5]
-		sub ebx, ecx
-		mov dword ptr [ecx+1], ebx
-
-		jmp eax
 	}
 }
 
@@ -943,21 +871,6 @@ void recClear(u32 addr, u32 size)
 			break;
 		}
 
-		x86Ptr[_EmitterId_] = (u8*)pblock->GetFnptr();
-
-		jASSUME((u8*)JITCompile != x86Ptr[_EmitterId_]);
-		jASSUME((u8*)JITCompileInBlock != x86Ptr[_EmitterId_]);
-
-		// Actually, if we want to do this at all maybe keeping a hash
-		// table of const jumps and modifying the jumps straight from
-		// here is the way to go.
-
-		// there is a small problem: mem can be ored with 0xa<<28 or 0x8<<28, and don't know which
-		MOV32ItoR(EDX, blockstart);
-		assert((uptr)x86Ptr[_EmitterId_] <= 0xffffffff);
-		PUSH32I((uptr)x86Ptr[_EmitterId_]); // will be replaced by JMP32
-		JMP32((uptr)DispatcherClear - ((uptr)x86Ptr[_EmitterId_] + 5));
-
 		lowerextent = min(lowerextent, blockstart);
 		upperextent = max(upperextent, blockend);
 		// This might end up inside a block that doesn't contain the clearing range,
@@ -1055,7 +968,7 @@ void SetBranchReg( u32 reg )
 
 	iFlushCall(FLUSH_EVERYTHING);
 
-	iBranchTest(0xffffffff);
+	iBranchTest();
 }
 
 void SetBranchImm( u32 imm )
@@ -1065,9 +978,7 @@ void SetBranchImm( u32 imm )
 	assert( imm );
 
 	// end the current block
-	MOV32ItoM( (uptr)&cpuRegs.pc, imm );
 	iFlushCall(FLUSH_EVERYTHING);
-
 	iBranchTest(imm);
 }
 
@@ -1197,6 +1108,19 @@ u32 eeScaleBlockCycles()
 	return temp >> (3+2);
 }
 
+static void iBranch(u32 newpc, int type)
+{
+	u32* ptr;
+
+	MOV32ItoM((uptr)&cpuRegs.pc, newpc);
+	if (type == 0)
+		ptr = JMP32(0);
+	else if (type == 1)
+		ptr = JS32(0);
+
+	recBlocks.Link(HWADDR(newpc), (uptr)ptr);
+}
+
 // Generates dynarec code for Event tests followed by a block dispatch (branch).
 // Parameters:
 //   newpc - address to jump to at the end of the block.  If newpc == 0xffffffff then
@@ -1212,41 +1136,23 @@ static void iBranchTest(u32 newpc, bool noDispatch)
 #ifdef _DEBUG
 	//CALLFunc((uptr)testfpu);
 #endif
-	u32* ptr;
 
 	if( bExecBIOS ) CheckForBIOSEnd();
-
-	MOV32MtoR(EAX, (uptr)&cpuRegs.cycle);
-	if( !noDispatch && newpc != 0xffffffff )
-	{
-		// Optimization note: Instructions order to pair EDX with EAX's load above.
-
-		// Load EDX with the address of the JS32 jump below.
-		// We do this because the the Dispatcher will use this info to modify
-		// the JS instruction later on with the address of the block it's jumping
-		// to; creating a static link of blocks that doesn't require the overhead
-		// of a dispatcher.
-		MOV32ItoR(EDX, 0);
-		ptr = (u32*)(x86Ptr[0]-4);
-	}
 
 	// Check the Event scheduler if our "cycle target" has been reached.
 	// Equiv code to:
 	//    cpuRegs.cycle += blockcycles;
 	//    if( cpuRegs.cycle > g_nextBranchCycle ) { DoEvents(); }
+	MOV32MtoR(EAX, (uptr)&cpuRegs.cycle);
 	ADD32ItoR(EAX, eeScaleBlockCycles());
 	MOV32RtoM((uptr)&cpuRegs.cycle, EAX); // update cycles
 	SUB32MtoR(EAX, (uptr)&g_nextBranchCycle);
 
-	if( newpc != 0xffffffff )
-	{
-		// This is the jump instruction which gets modified by Dispatcher.
-		*ptr = (u32)JS32((u32)Dispatcher - ( (u32)x86Ptr[0] + 6 ));
-	}
-	else if( !noDispatch )
-	{
-		// This instruction is a dynamic link, so it's never modified.
-		JS32((uptr)DispatcherReg - ( (uptr)x86Ptr[0] + 6 ));
+	if (!noDispatch) {
+		if (newpc == 0xffffffff)
+			JS32((uptr)DispatcherReg - ( (uptr)x86Ptr[0] + 6 ));
+		else
+			iBranch(newpc, 1);
 	}
 
 	RET();
@@ -1449,7 +1355,6 @@ void recRecompile( const u32 startpc )
 	u32 i = 0;
 	u32 branchTo;
 	u32 willbranch3 = 0;
-	u32* ptr;
 	u32 usecop2;
 
 #ifdef _DEBUG
@@ -1470,6 +1375,10 @@ void recRecompile( const u32 startpc )
 		recResetEE();
 	}
 
+	x86SetPtr( recPtr );
+	x86Align(16);
+	recPtr = x86Ptr[_EmitterId_];
+
 	s_pCurBlock = PC_GETBLOCK(startpc);
 
 	assert(s_pCurBlock->GetFnptr() == (uptr)JITCompile
@@ -1478,19 +1387,16 @@ void recRecompile( const u32 startpc )
 	s_pCurBlockEx = recBlocks.Get(HWADDR(startpc));
 	assert(!s_pCurBlockEx || s_pCurBlockEx->startpc != HWADDR(startpc));
 
-	s_pCurBlockEx = recBlocks.New(HWADDR(startpc));
+	s_pCurBlockEx = recBlocks.New(HWADDR(startpc), (uptr)recPtr);
 
 	if( s_pCurBlockEx == NULL ) {
 		//SysPrintf("ee reset (blocks)\n");
 		recResetEE();
-		s_pCurBlockEx = recBlocks.New(HWADDR(startpc));
+		x86SetPtr( recPtr );
+		s_pCurBlockEx = recBlocks.New(HWADDR(startpc), (uptr)recPtr);
 	}
 
 	assert(s_pCurBlockEx);
-
-	x86SetPtr( recPtr );
-	x86Align(16);
-	recPtr = x86Ptr[0];
 
 	branch = 0;
 
@@ -1852,9 +1758,7 @@ StartRecomp:
 				break;
 			if (memcmp(&recRAMCopy[oldBlock->startpc / 4], PSM(oldBlock->startpc),
 			           oldBlock->size * 4)) {
-				u8* oldX86 = x86Ptr[_EmitterId_];
 				recClear(startpc, (pc - startpc) / 4);
-				x86Ptr[_EmitterId_] = oldX86;
 				s_pCurBlockEx = recBlocks.Get(HWADDR(startpc));
 				assert(s_pCurBlockEx->startpc == HWADDR(startpc));
 				break;
@@ -1893,21 +1797,9 @@ StartRecomp:
 		else
 			ADD32ItoM((int)&cpuRegs.cycle, eeScaleBlockCycles() );
 
-		if( willbranch3 ) {
-			BASEBLOCK* pblock = PC_GETBLOCK(s_nEndBlock);
-			assert( pc == s_nEndBlock );
+		if( willbranch3 || !branch) {
 			iFlushCall(FLUSH_EVERYTHING);
-			MOV32ItoM((uptr)&cpuRegs.pc, pc);
-			JMP32((uptr)pblock->GetFnptr() - ((uptr)x86Ptr[0] + 5));
-			branch = 3;
-		}
-		else if( !branch ) {
-			// didn't branch, but had to stop
-			MOV32ItoM( (uptr)&cpuRegs.pc, pc );
-
-			iFlushCall(FLUSH_EVERYTHING);
-
-			ptr = JMP32(0);
+			iBranch(pc, 0);
 		}
 	}
 
@@ -1915,19 +1807,12 @@ StartRecomp:
 	assert( recStackPtr < recStack+RECSTACK_SIZE );
 	assert( x86FpuState == 0 );
 
+	assert(x86Ptr[_EmitterId_] - recPtr < 0x10000);
+	s_pCurBlockEx->x86size = x86Ptr[_EmitterId_] - recPtr;
+
 	recPtr = x86Ptr[0];
 
 	assert( (g_cpuHasConstReg&g_cpuFlushedConstReg) == g_cpuHasConstReg );
-
-	if( !branch ) {
-		assert( ptr != NULL );
-		BASEBLOCK *pblock = PC_GETBLOCK(pc);
-
-		if (pblock->GetFnptr() == (uptr)JITCompile
-		 || pblock->GetFnptr() == (uptr)JITCompileInBlock)
-			recRecompile(pc);
-		*ptr = pblock->GetFnptr() - ((u32)ptr + 4);
-	}
 
 	s_pCurBlock = NULL;
 	s_pCurBlockEx = NULL;
