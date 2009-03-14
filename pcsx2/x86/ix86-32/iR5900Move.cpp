@@ -425,10 +425,7 @@ void recMTLO1( void )
 //// MOVZ
 void recMOVZtemp_const()
 {
-	if (g_cpuConstRegs[_Rt_].UD[0] == 0) {
-		g_cpuConstRegs[_Rd_].UL[0] = g_cpuConstRegs[_Rs_].UL[0];
-		g_cpuConstRegs[_Rd_].UL[1] = g_cpuConstRegs[_Rs_].UL[1];
-	}
+	g_cpuConstRegs[_Rd_].UD[0] = g_cpuConstRegs[_Rs_].UD[0];
 }
 
 //static PCSX2_ALIGNED16(u32 s_zero[4]) = {0,0,0xffffffff, 0xffffffff};
@@ -472,24 +469,22 @@ void recMOVZtemp_consts(int info)
 
 void recMOVZtemp_constt(int info)
 {
-	if (g_cpuConstRegs[_Rt_].UD[0] == 0) {
-		if( info & PROCESS_EE_MMX ) {
-			if( EEREC_D != EEREC_S ) MOVQRtoR(EEREC_D, EEREC_S);
-			return;
-		}
-		
-		if( _hasFreeXMMreg() ) {
-			int t0reg = _allocMMXreg(-1, MMX_TEMP, 0);
-			MOVQMtoR(t0reg, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ]);
-			MOVQRtoM((int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], t0reg);
-			_freeMMXreg(t0reg);
-		}
-		else {
-			MOV32MtoR(EAX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ]);
-			MOV32MtoR(EDX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 1 ]);
-			MOV32RtoM((int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], EAX);
-			MOV32RtoM((int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], EDX);
-		}
+	if( info & PROCESS_EE_MMX ) {
+		if( EEREC_D != EEREC_S ) MOVQRtoR(EEREC_D, EEREC_S);
+		return;
+	}
+	
+	if( _hasFreeXMMreg() ) {
+		int t0reg = _allocMMXreg(-1, MMX_TEMP, 0);
+		MOVQMtoR(t0reg, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ]);
+		MOVQRtoM((int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], t0reg);
+		_freeMMXreg(t0reg);
+	}
+	else {
+		MOV32MtoR(EAX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ]);
+		MOV32MtoR(EDX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 1 ]);
+		MOV32RtoM((int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], EAX);
+		MOV32RtoM((int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], EDX);
 	}
 }
 
@@ -543,15 +538,11 @@ void recMOVZ()
 	if( _Rs_ == _Rd_ )
 		return;
 
-	// aren't the templates meant to take care of this kind of thing?
-	if( GPR_IS_CONST1(_Rd_) ) {
-		if( !GPR_IS_CONST2(_Rs_, _Rt_) ) {
-			// remove the const, since move is conditional
-			_deleteEEreg(_Rd_, 0);
-			MOV32ItoM((uptr)&cpuRegs.GPR.r[_Rd_].UL[0], g_cpuConstRegs[_Rd_].UL[0]);
-			MOV32ItoM((uptr)&cpuRegs.GPR.r[_Rd_].UL[1], g_cpuConstRegs[_Rd_].UL[1]);
-		}
-	}
+	if(GPR_IS_CONST1(_Rt_)) {
+		if (g_cpuConstRegs[_Rt_].UD[0] != 0)
+			return;
+	} else if (GPR_IS_CONST1(_Rd_))
+		_deleteEEreg(_Rd_, 1);
 
 	recMOVZtemp();
 }
@@ -559,10 +550,7 @@ void recMOVZ()
 //// MOVN
 void recMOVNtemp_const()
 {
-	if (g_cpuConstRegs[_Rt_].UD[0] != 0) {
-		g_cpuConstRegs[_Rd_].UL[0] = g_cpuConstRegs[_Rs_].UL[0];
-		g_cpuConstRegs[_Rd_].UL[1] = g_cpuConstRegs[_Rs_].UL[1];
-	}
+	g_cpuConstRegs[_Rd_].UD[0] = g_cpuConstRegs[_Rs_].UD[0];
 }
 
 void recMOVNtemp_consts(int info)
@@ -605,19 +593,17 @@ void recMOVNtemp_consts(int info)
 
 void recMOVNtemp_constt(int info)
 {
-	if (g_cpuConstRegs[_Rt_].UD[0] != 0) {
-		if( _hasFreeXMMreg() ) {
-			int t0reg = _allocMMXreg(-1, MMX_TEMP, 0);
-			MOVQMtoR(t0reg, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ]);
-			MOVQRtoM((int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], t0reg);
-			_freeMMXreg(t0reg);
-		}
-		else {
-			MOV32MtoR(EAX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ]);
-			MOV32MtoR(EDX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 1 ]);
-			MOV32RtoM((int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], EAX);
-			MOV32RtoM((int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], EDX);
-		}
+	if( _hasFreeXMMreg() ) {
+		int t0reg = _allocMMXreg(-1, MMX_TEMP, 0);
+		MOVQMtoR(t0reg, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ]);
+		MOVQRtoM((int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], t0reg);
+		_freeMMXreg(t0reg);
+	}
+	else {
+		MOV32MtoR(EAX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ]);
+		MOV32MtoR(EDX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 1 ]);
+		MOV32RtoM((int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], EAX);
+		MOV32RtoM((int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], EDX);
 	}
 }
 
@@ -672,14 +658,11 @@ void recMOVN()
 	if( _Rs_ == _Rd_ )
 		return;
 
-	if( GPR_IS_CONST1(_Rd_) ) {
-		if( !GPR_IS_CONST2(_Rs_, _Rt_) ) {
-			// remove the const, since move is conditional
-			_deleteEEreg(_Rd_, 0);
-			MOV32ItoM((uptr)&cpuRegs.GPR.r[_Rd_].UL[0], g_cpuConstRegs[_Rd_].UL[0]);
-			MOV32ItoM((uptr)&cpuRegs.GPR.r[_Rd_].UL[1], g_cpuConstRegs[_Rd_].UL[1]);
-		}
-	}
+	if (GPR_IS_CONST1(_Rt_)) {
+		if (g_cpuConstRegs[_Rt_].UD[0] == 0)
+			return;
+	} else if (GPR_IS_CONST1(_Rd_))
+		_deleteEEreg(_Rd_, 1);
 
 	recMOVNtemp();
 }
