@@ -1253,12 +1253,7 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 			unsigned int uid;
 			int value;
 			InitInfo info = {selected==0x7F, hWndProp, hWnd, GetDlgItem(hWnd, selected)};
-			int hint = 0;
-			if (selected < 0x7F) {
-				// 2 will accept relative axes, absolute axes, and POV controls.
-				hint = 2;
-			}
-			Device *dev = dm->GetActiveDevice(&info, hint, &uid, &index, &value);
+			Device *dev = dm->GetActiveDevice(&info, &uid, &index, &value);
 			if (dev) {
 				int command = selected;
 				// Good idea to do this first, as BindCommand modifies the ListView, which will
@@ -1274,75 +1269,6 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 				else if (command < 0x30) {
 					if (!(uid & UID_POV)) {
 						index = BindCommand(dev, uid, pad, command, BASE_SENSITIVITY, 0);
-					}
-				}
-				else {
-					int v[4];
-					int base = 0;
-					if (command == 0x30 || command == 0x31) {
-						base = 0x14;
-					}
-					else if (command == 0x32 || command == 0x33) {
-						base = 0x20;
-					}
-					else if (command == 0x34 || command == 0x35) {
-						base = 0x24;
-					}
-					else if (command == 0x36) {
-						base = 0x1B;
-					}
-					else if (command == 0x37) {
-						base = 0x19;
-					}
-					else if (command == 0x38) {
-						base = 0x12;
-					}
-					if (base) {
-						// Lx/Rx
-						if (base & 3) {
-							v[0] = base;
-							v[2] = base-1;
-							v[1]=v[3] = 0;
-						}
-						else {
-							if (command & 1) {
-								v[0] = base;
-								v[1] = base+1;
-								v[2] = base+2;
-								v[3] = base+3;
-							}
-							else {
-								v[0] = base+1;
-								v[1] = base+2;
-								v[2] = base+3;
-								v[3] = base;
-							}
-						}
-						if (uid & UID_POV) {
-							int rotate = 0;
-							while (value > 4500) {
-								rotate++;
-								value -= 9000;
-							}
-							index = BindCommand(dev, (uid&~UID_POV)|UID_POV_N, pad, v[(4-rotate)%4], BASE_SENSITIVITY, 0);
-							ListView_SetItemState(hWndList, index, LVIS_SELECTED, LVIS_SELECTED);
-							index = BindCommand(dev, (uid&~UID_POV)|UID_POV_E, pad, v[(5-rotate)%4], BASE_SENSITIVITY, 0);
-							ListView_SetItemState(hWndList, index, LVIS_SELECTED, LVIS_SELECTED);
-							index = BindCommand(dev, (uid&~UID_POV)|UID_POV_S, pad, v[(6-rotate)%4], BASE_SENSITIVITY, 0);
-							ListView_SetItemState(hWndList, index, LVIS_SELECTED, LVIS_SELECTED);
-							index = BindCommand(dev, (uid&~UID_POV)|UID_POV_W, pad, v[(7-rotate)%4], BASE_SENSITIVITY, 0);
-						}
-						else if (uid & UID_AXIS) {
-							int b1 = v[0];
-							int b2 = v[2];
-							if (value < 0) {
-								b1 = v[2];
-								b2 = v[0];
-							}
-							index = BindCommand(dev, (uid&~UID_AXIS)|UID_AXIS_POS, pad, b1, BASE_SENSITIVITY, 0);
-							ListView_SetItemState(hWndList, index, LVIS_SELECTED, LVIS_SELECTED);
-							index = BindCommand(dev, (uid&~UID_AXIS)|UID_AXIS_NEG, pad, b2, BASE_SENSITIVITY, 0);
-						}
 					}
 				}
 				if (index >= 0) {
@@ -1504,7 +1430,7 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 					}
 				}
 			}
-			else if ((cmd >= ID_GUITAR_HERO && cmd <= ID_L3R3) || cmd == ID_IGNORE) {// || cmd == ID_FORCE_FEEDBACK) {
+			else if ((cmd >= ID_GUITAR_HERO && cmd <= ID_ANALOG) || cmd == ID_IGNORE) {// || cmd == ID_FORCE_FEEDBACK) {
 				// Messes up things, unfortunately.
 				// End binding on a bunch of notification messages, and
 				// this will send a bunch.
@@ -1527,13 +1453,18 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 
 				InitInfo info = {selected==0x7F, hWndProp, hWnd, GetDlgItem(hWnd, cmd)};
 				EatWndProc(info.hWndButton, DoNothingWndProc);
+				int w = timeGetTime();
 				dm->Update(&info);
 				dm->PostRead();
 				// Workaround for things that return 0 on first poll and something else ever after.
-				Sleep(200);
+				Sleep(40);
 				dm->Update(&info);
 				dm->PostRead();
-				SetTimer(hWnd, 1, 100, 0);
+				int w2 = timeGetTime();
+				if (dm->devices[0xe]->oldVirtualControlState[6] != 0x8000) {
+					dm->devices[0xe]->oldVirtualControlState[6]=dm->devices[0xe]->oldVirtualControlState[6];
+				}
+				SetTimer(hWnd, 1, 30, 0);
 			}
 			if (cmd == IDC_TURBO) {
 				// Don't allow setting it back to indeterminate.

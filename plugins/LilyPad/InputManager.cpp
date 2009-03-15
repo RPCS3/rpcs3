@@ -350,7 +350,7 @@ void InputDeviceManager::PostRead() {
 	}
 }
 
-Device *InputDeviceManager::GetActiveDevice(void *info, int axisHint, unsigned int *uid, int *index, int *value) {
+Device *InputDeviceManager::GetActiveDevice(void *info, unsigned int *uid, int *index, int *value) {
 	int i, j;
 	Update(info);
 	int bestDiff = FULLY_DOWN/2;
@@ -359,34 +359,30 @@ Device *InputDeviceManager::GetActiveDevice(void *info, int axisHint, unsigned i
 		if (devices[i]->active) {
 			for (j=0; j<devices[i]->numVirtualControls; j++) {
 				if (devices[i]->virtualControlState[j] == devices[i]->oldVirtualControlState[j]) continue;
+				if (devices[i]->virtualControls[j].uid & UID_POV) continue;
 				// Fix for two things:
 				// Releasing button used to click on bind button, and
 				// DirectInput not updating control state.
 				//Note:  Handling latter not great for pressure sensitive button handling, but should still work...
 				// with some effort.
-				if (!((devices[i]->virtualControls[j].uid >> 16) & (POV|RELAXIS))) {
+				if (!(devices[i]->virtualControls[j].uid & (POV|RELAXIS))) {
 					if (abs(devices[i]->oldVirtualControlState[j]) > abs(devices[i]->virtualControlState[j])) {
 						devices[i]->oldVirtualControlState[j] = 0;
 					}
 				}
 				int diff = abs(devices[i]->virtualControlState[j] - devices[i]->oldVirtualControlState[j]);
-				if ((devices[i]->virtualControls[j].uid & UID_POV) && diff) {
-					if (devices[i]->virtualControlState[j] == -1) diff = 0;
-					else diff = 2*FULLY_DOWN;
-				}
 				// Make it require a bit more work to bind relative axes.
-				else if (((devices[i]->virtualControls[j].uid>>16) & 0xFF) == RELAXIS) {
+				if (((devices[i]->virtualControls[j].uid>>16) & 0xFF) == RELAXIS) {
 					diff = diff/4+1;
 				}
 				if (diff > bestDiff) {
-					if (axisHint != 2) {
-						if (devices[i]->virtualControls[j].uid & UID_POV) continue;
-						if (devices[i]->virtualControls[j].uid & UID_AXIS) {
-							if ((((devices[i]->virtualControls[j].uid>>16)&0xFF) != ABSAXIS)) continue;
-							// Very picky when binding entire axes.  Prefer binding half-axes.
-							if (devices[i]->oldVirtualControlState[j] >= FULLY_DOWN/8 &&
-								devices[i]->oldVirtualControlState[j] <= FULLY_DOWN*7/8) continue;
-						}
+					if (devices[i]->virtualControls[j].uid & UID_AXIS) {
+						if ((((devices[i]->virtualControls[j].uid>>16)&0xFF) != ABSAXIS)) continue;
+						// Very picky when binding entire axes.  Prefer binding half-axes.
+						if (!((devices[i]->oldVirtualControlState[j] < FULLY_DOWN/16 && devices[i]->virtualControlState[j] > FULLY_DOWN/8) ||
+							  (devices[i]->oldVirtualControlState[j] > 15*FULLY_DOWN/16 && devices[i]->virtualControlState[j] < 7*FULLY_DOWN/8)))
+									continue;
+						devices[i]->virtualControls[j].uid = devices[i]->virtualControls[j].uid;
 					}
 					bestDiff = diff;
 					*uid = devices[i]->virtualControls[j].uid;

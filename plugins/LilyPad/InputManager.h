@@ -298,8 +298,7 @@ public:
 	~InputDeviceManager();
 
 	void AddDevice(Device *d);
-	// If axisHint is 1, prefer axes.
-	Device *GetActiveDevice(void *info, int axisHint, unsigned int *uid, int *index, int *value);
+	Device *GetActiveDevice(void *info, unsigned int *uid, int *index, int *value);
 	void Update(void *attachInfo);
 	// Called after reading state, after Update().
 	void PostRead();

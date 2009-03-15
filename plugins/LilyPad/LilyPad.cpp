@@ -15,6 +15,10 @@
 #include "svnrev.h"
 #include "resource.h"
 
+#ifdef _DEBUG
+#include "crtdbg.h"
+#endif
+
 // Used to prevent reading input and cleaning up input devices at the same time.
 // Only an issue when not reading input in GS thread and disabling devices due to
 // lost focus.
@@ -32,8 +36,8 @@ int openCount = 0;
 int activeWindow = 0;
 
 int bufSize = 0;
-static unsigned char outBuf[50];
-static unsigned char inBuf[50];
+unsigned char outBuf[50];
+unsigned char inBuf[50];
 
 #define MODE_DIGITAL 0x41
 #define MODE_ANALOG 0x73
@@ -79,10 +83,10 @@ void DEBUG_NEW_SET() {
 			end++[0] = '\n';
 			DWORD junk;
 			WriteFile(hFile, temp, end-temp, &junk, 0);
-			bufSize = 0;
 			CloseHandle(hFile);;
 		}
 	}
+	bufSize = 0;
 }
 
 inline void DEBUG_IN(unsigned char c) {
@@ -298,7 +302,6 @@ int lockStateChanged[2] = {0,0};
 #define LOCK_BUTTONS 4
 #define LOCK_BOTH 1
 
-extern HWND hWndStealing;
 
 void Update(int pad) {
 	if ((unsigned int)pad > 2) return;
@@ -529,11 +532,6 @@ void CALLBACK PADshutdown() {
 	UnloadConfigs();
 }
 
-#ifdef _DEBUG
-#include "crtdbg.h"
-#endif
-
-
 inline void StopVibrate() {
 	for (int i=0; i<4; i++) {
 		SetVibrate(&pads[i/2], i&1, 0);
@@ -626,7 +624,7 @@ struct QueryInfo {
 	u8 currentCommand;
 	u8 numBytes;
 	u8 queryDone;
-	u8 response[22];
+	u8 response[42];
 } query = {0,0,0,0, 0,0xFF, 0xF3};
 
 int saveStateIndex = 0;
@@ -823,6 +821,19 @@ u8 CALLBACK PADpoll(u8 value) {
 		DEBUG_OUT(query.response[1+query.lastByte]);
 		return query.response[++query.lastByte];
 	}
+	/*
+	{
+		query.numBytes = 35;
+		u8 test[35] = {0xFF, 0x80, 0x5A, 
+			0x73, 0x5A, 0xFF, 0xFF, 0x80, 0x80, 0x80, 0x80,
+			0x73, 0x5A, 0xFF, 0xFF, 0x80, 0x80, 0x80, 0x80,
+			0x73, 0x5A, 0xFF, 0xFF, 0x80, 0x80, 0x80, 0x80,
+			0x73, 0x5A, 0xFF, 0xFF, 0x80, 0x80, 0x80, 0x80
+		};
+		memcpy(query.response, test, sizeof(test));
+		DEBUG_OUT(query.response[1+query.lastByte]);
+		return query.response[++query.lastByte];
+	}//*/
 	int i;
 	Pad *pad = &pads[query.pad];
 	if (query.lastByte == 0) {
@@ -1190,7 +1201,11 @@ struct PadPluginFreezeData {
 	// Currently all different versions are incompatible.
 	// May split into major/minor with some compatibility rules.
 	u32 version;
-	PadFreezeData padData[2];
+	// So when loading, know which plugin's settings I'm loading.
+	// Not a big deal.  Use a static variable when saving to figure it out.
+	u8 port;
+	// Currently only use padData[0].  Save room for all 4 slots for simplicity.
+	PadFreezeData padData[4];
 };
 
 s32 CALLBACK PADfreeze(int mode, freezeData *data) {
@@ -1200,58 +1215,68 @@ s32 CALLBACK PADfreeze(int mode, freezeData *data) {
 	else if (mode == FREEZE_LOAD) {
 		if (data->size < sizeof(PadPluginFreezeData)) return 0;
 		PadPluginFreezeData &pdata = *(PadPluginFreezeData*)(data->data);
-		strcpy(pdata.format, "PadMode");
-		pdata.version = PAD_SAVE_STATE_VERSION;
-		for (int i=0; i<2; i++) {
-			pdata.padData[i].mode = pads[i].mode;
-			pdata.padData[i].locked = pads[i].modeLock;
-			memcpy(pdata.padData[i].umask, pads[i].umask, sizeof(pads[i].umask));
-			memcpy(pdata.padData[i].vibrate, pads[i].vibrate, sizeof(pads[i].vibrate));
-
+		if (pdata.version != PAD_SAVE_STATE_VERSION || strcmp(pdata.format, "PadMode")) return 0;
+		StopVibrate();
+		int port = pdata.port;
+		for (int i=0; i<1; i++) {
+			u8 mode = pads[port].mode = pdata.padData[i].mode;
+			if (mode != MODE_DIGITAL && mode != MODE_ANALOG && mode != MODE_DS2_NATIVE) {
+				ResetPad(i);
+				continue;
+			}
+			pads[port].config = pdata.padData[i].config;
+			pads[port].modeLock = pdata.padData[i].locked;
+			memcpy(pads[port].umask, pdata.padData[i].umask, sizeof(pads[port].umask));
 
 			// Means I only have to have one chunk of code to parse vibrate info.
 			// Other plugins don't store it exactly, but think it's technically correct
 			// to do so, though I could be wrong.
-			pads[i].config = 1;
 			PADstartPoll(i+1);
 			PADpoll(0x4D);
 			PADpoll(0x00);
 			for (int j=0; j<7; j++) {
 				PADpoll(pdata.padData[i].vibrate[j]);
 			}
-
-			pdata.padData[i].config = pads[i].config;
 		}
 	}
 	else if (mode == FREEZE_SAVE) {
 		if (data->size != sizeof(PadPluginFreezeData)) return 0;
 		PadPluginFreezeData &pdata = *(PadPluginFreezeData*)(data->data);
-		if (pdata.version != PAD_SAVE_STATE_VERSION || !stricmp(pdata.format, "PadMode")) return 0;
-		StopVibrate();
-		for (int i=0; i<2; i++) {
-			u8 mode = pads[i].mode = pdata.padData[i].mode;
-			if (mode != MODE_DIGITAL && mode != MODE_ANALOG && mode != MODE_DS2_NATIVE) {
-				ResetPad(i);
-				continue;
-			}
-			pads[i].config = pdata.padData[i].config;
-			pads[i].modeLock = pdata.padData[i].locked;
-			memcpy(pads[i].umask, pdata.padData[i].umask, sizeof(pads[i].umask));
+		static int nextPort = 0;
+		if (!pads[nextPort].initialized) nextPort ^= 1;
+		int port = nextPort;
+		if (!pads[nextPort^1].initialized) nextPort = 0;
+		else nextPort ^= 1;
+
+
+		memset(&pdata, 0, sizeof(pdata));
+		strcpy(pdata.format, "PadMode");
+		pdata.version = PAD_SAVE_STATE_VERSION;
+		pdata.port = port;
+		for (int i=0; i<1; i++) {
+			pdata.padData[i].mode = pads[port].mode;
+			pdata.padData[i].locked = pads[port].modeLock;
+			memcpy(pdata.padData[i].umask, pads[port].umask, sizeof(pads[port].umask));
+			memcpy(pdata.padData[i].vibrate, pads[port].vibrate, sizeof(pads[port].vibrate));
+
 
 			// Means I only have to have one chunk of code to parse vibrate info.
 			// Other plugins don't store it exactly, but think it's technically correct
 			// to do so, though I could be wrong.
-			PADstartPoll(i+1);
+			pads[port].config = 1;
+			PADstartPoll(port+1);
 			PADpoll(0x4D);
 			PADpoll(0x00);
 			for (int j=0; j<7; j++) {
-				PADpoll(pdata.padData[i].vibrate[j]);
+				PADpoll(pdata.padData[port].vibrate[j]);
 			}
+
+			pdata.padData[port].config = pads[port].config;
 		}
 	}
 	else return -1;
 	return 0;
-}
+ }
 
 u32 CALLBACK PADreadPort1 (PadDataS* pads) {
 	PADstartPoll(1);

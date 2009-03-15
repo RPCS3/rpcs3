@@ -34,11 +34,18 @@
 #define IDC_DISABLE_SCREENSAVER         1119
 #define IDC_MOUSE_UNFOCUS               1120
 #define IDC_MOUSE_UNFOCUS2              1121
+#define IDC_AXIS_BUTTONS                1121
 #define IDC_BACKGROUND                  1122
 #define IDC_MULTIPLE_BINDING            1123
+#define IDC_DISABLE_SCREENSAVER2        1124
 #define IDC_FORCE_HIDE                  1124
+#define IDC_FORCE_HIDE2                 1125
 #define IDC_GH2_HACK                    1125
+#define IDC_FORCEFEEDBACK_HACK1         1126
+#define IDC_GH2_HACK2                   1126
 #define IDC_VISTA_VOLUME                1126
+#define IDC_DISABLE_SCREENSAVER4        1127
+#define IDC_FORCEFEEDBACK_HACK2         1127
 #define IDC_FORCE_HIDE3                 1127
 #define IDC_GS_THREAD_INPUT             1128
 #define IDC_SAVE_STATE_TITLE            1129
@@ -50,6 +57,9 @@
 #define IDC_TURBO                       0x1005
 #define IDC_AXIS_DEVICE1                0x1006
 #define ID_SENSITIVITY                  0x1007
+#define IDC_DPAD                        0x1008
+#define IDC_LSTICK                      0x1009
+#define IDC_RSTICK                      0x100A
 #define ID_GUITAR_HERO                  0x10FB
 #define ID_LOCK_BUTTONS                 0x10FC
 #define ID_LOCK                         0x10FD
@@ -80,15 +90,6 @@
 #define ID_RSTICK_DOWN                  0x1116
 #define ID_RSTICK_LEFT                  0x1117
 #define ID_ANALOG                       0x1118
-#define ID_DPAD_LRAXIS                  0x1120
-#define ID_DPAD_UDAXIS                  0x1121
-#define ID_LSTICK_LRAXIS                0x1122
-#define ID_LSTICK_UDAXIS                0x1123
-#define ID_RSTICK_LRAXIS                0x1124
-#define ID_RSTICK_UDAXIS                0x1125
-#define ID_L1R1                         0x1126
-#define ID_L2R2                         0x1127
-#define ID_L3R3                         0x1128
 #define ID_DELETE                       0x11FF
 #define ID_DEBUG                        0x1200
 #define ID_IGNORE                       0x1201
@@ -147,7 +148,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        112
 #define _APS_NEXT_COMMAND_VALUE         40001
-#define _APS_NEXT_CONTROL_VALUE         1127
+#define _APS_NEXT_CONTROL_VALUE         1130
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif
