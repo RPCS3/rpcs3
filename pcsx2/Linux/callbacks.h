@@ -110,30 +110,6 @@ OnDebug_memWrite32                     (GtkButton       *button,
                                         gpointer         user_data);
 
 void
-OnConfConf_Pad2Conf                    (GtkButton       *button,
-                                        gpointer         user_data);
-
-void
-OnConfConf_Pad2Test                    (GtkButton       *button,
-                                        gpointer         user_data);
-
-void
-OnConfConf_Pad2About                   (GtkButton       *button,
-                                        gpointer         user_data);
-
-void
-OnConfConf_Pad1Conf                    (GtkButton       *button,
-                                        gpointer         user_data);
-
-void
-OnConfConf_Pad1Test                    (GtkButton       *button,
-                                        gpointer         user_data);
-
-void
-OnConfConf_Pad1About                   (GtkButton       *button,
-                                        gpointer         user_data);
-
-void
 OnConfButton                           (GtkButton       *button,
                                         gpointer         user_data);
 

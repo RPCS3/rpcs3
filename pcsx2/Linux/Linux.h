@@ -100,12 +100,12 @@ char iop_log_names[9][32] =
 	"Cdr Log",
 	"GPU Log"
 };
-
+//Tri-Ace - IDC_GAMEFIX2
 #define FLAG_VU_ADD_SUB 0x1
-#define FLAG_VU_CLIP 0x2
-#define FLAG_FPU_CLAMP 0x4
-#define FLAG_VU_FCOR_HACK 0x8
-#define FLAG_AVOID_DELAY_HANDLING 0x10
+// Digimon Rumble Arena - IDC_GAMEFIX3
+#define FLAG_FPU_Compare 0x4
+//Tales of Destiny - IDC_GAMEFIX5
+#define FLAG_FPU_MUL 0x8
 
 #define FLAG_VU_NO_OVERFLOW 0x2
 #define FLAG_VU_EXTRA_OVERFLOW 0x40

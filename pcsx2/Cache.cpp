@@ -27,6 +27,7 @@ namespace R5900{
 namespace Interpreter 
 {
 
+// fixme - this code no longer compiles if PCSX2_CACHE_EMU_MEM is defined - do we need it any more?
 #ifdef PCSX2_CACHE_EMU_MEM
 int getFreeCache(u32 mem, int mode, int * way) {
 	u8 * out;

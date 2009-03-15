@@ -84,6 +84,7 @@
  * Macros for sceCdGetDiskType()	//comments translated from japanese;)
  */
 
+// These are already declared with different names in PS2Edefs.h. And aren't used.
 #define SCECdIllgalMedia 0xff	// ILIMEDIA (Illegal Media) A non-PS / non-PS2 Disc.
 #define SCECdDVDV		0xfe	// DVDV (DVD Video) A non-PS / non-PS2 Disc, but a DVD Video Disc
 #define SCECdCDDA		0xfd	// CDDA (CD DA) A non-PS / non-PS2 Disc that include a DA track
@@ -94,7 +95,6 @@
 #define SCECdPSCD		0x10	// PSCD    PS CD that does not include a DA track
 #define SCECdDETCT		0x01	// DETCT (Detecting) Disc distinction action
 #define SCECdNODISC 	0x00	// NODISC (No disc) No disc entered
-
 
 /*
  *      Media mode
