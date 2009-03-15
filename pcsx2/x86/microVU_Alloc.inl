@@ -741,6 +741,16 @@ microVUt(void) mVUallocMFLAGb(int reg, int fInstance) {
 	OR32RtoR(fInstance, reg);
 }
 
+microVUt(void) mVUallocCFLAGa(int reg, int fInstance) {
+	microVU* mVU = mVUx;
+	MOV32MtoR(reg, mVU->clipFlag[fInstance]);
+}
+
+microVUt(void) mVUallocCFLAGb(int reg, int fInstance) {
+	microVU* mVU = mVUx;
+	MOV32RtoM(mVU->clipFlag[fInstance], reg);
+}
+
 //------------------------------------------------------------------
 // VI Reg Allocators
 //------------------------------------------------------------------
@@ -787,5 +797,11 @@ microVUt(void) mVUallocVIb(int GPRreg, int _reg_) {
 #define getReg7(reg, _reg_) {  \
 	if (!_reg_)	{ getZero(reg); }  \
 	else		{ mVUloadReg<vuIndex>(reg, (uptr)&mVU->regs->VF[_reg_].UL[0], _X_Y_Z_W); }  \
+}
+
+// VF to GPR
+#define getReg8(GPRreg, _reg_, _fxf_) {  \
+	if (!_reg_ && (_fxf_ < 3))	{ XOR32RtoR(GPRreg, GPRreg); }  \
+	else						{ MOV32MtoR(GPRreg, (uptr)&mVU->regs->VF[_reg_].UL[0]); }  \
 }
 #endif //PCSX2_MICROVU

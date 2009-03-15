@@ -64,7 +64,7 @@ PCSX2_ALIGNED16(const float mVU_ITOF_15[4])	= {0.000030517578125, 0.000030517578
 // Micro VU - Main Functions
 //------------------------------------------------------------------
 
-// Only run this once! ;)
+// Only run this once per VU! ;)
 microVUt(void) mVUinit(VURegs* vuRegsPtr) {
 
 	microVU* mVU	= mVUx;

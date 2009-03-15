@@ -83,6 +83,7 @@ PCSX2_ALIGNED16_EXTERN(const float mVU_ITOF_15[4]);
 #define _Imm12_		(((mVU->code >> 21 ) & 0x1) << 11) | (mVU->code & 0x7ff)
 #define _Imm5_		(((mVU->code & 0x400) ? 0xfff0 : 0) | ((mVU->code >> 6) & 0xf))
 #define _Imm15_		(((mVU->code >> 10) & 0x7800) | (mVU->code & 0x7ff))
+#define _Imm24_		(u32)(mVU->code & 0xffffff)
 
 #define getVUmem(x)	(((vuIndex == 1) ? (x & 0x3ff) : ((x >= 0x400) ? (x & 0x43f) : (x & 0xff))) * 16)
 #define offsetSS	((_X) ? (0) : ((_Y) ? (4) : ((_Z) ? 8: 12)))
@@ -107,7 +108,7 @@ PCSX2_ALIGNED16_EXTERN(const float mVU_ITOF_15[4]);
 
 #define gprT1	0 // Temp Reg
 #define gprT2	1 // Temp Reg
-#define gprT3	2 // Temp Reg?
+#define gprR	2 // R Reg
 #define gprF0	3 // MAC Flag::Status Flag 0
 #define gprESP	4 // Don't use?
 #define gprF1	5 // MAC Flag::Status Flag 1
@@ -140,6 +141,8 @@ PCSX2_ALIGNED16_EXTERN(const float mVU_ITOF_15[4]);
 #define fpsInstance	(((u8)((mVUallocInfo.info[mVUallocInfo.curPC] & (3<<12)) >> 12) - 1) & 0x3)
 #define fvmInstance	((mVUallocInfo.info[mVUallocInfo.curPC] & (3<<14)) >> 14)
 #define fvsInstance	((mVUallocInfo.info[mVUallocInfo.curPC] & (3<<16)) >> 16)
+#define fvcInstance	1//((mVUallocInfo.info[mVUallocInfo.curPC] & (3<<14)) >> 14)
+#define fcInstance	1//((mVUallocInfo.info[mVUallocInfo.curPC] & (3<<14)) >> 14)
 //#define getFs		 (mVUallocInfo.info[mVUallocInfo.curPC] & (1<<13))
 //#define getFt		 (mVUallocInfo.info[mVUallocInfo.curPC] & (1<<14))
 

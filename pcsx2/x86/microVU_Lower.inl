@@ -207,11 +207,11 @@ microVUf(void) mVU_EATANxz() {
 		mVU_EATAN_<vuIndex>();
 	}
 }
-#define eexpHelper(addr) {  \
-	SSE_MULSS_XMM_to_XMM(xmmT1, xmmFs);  \
-	SSE_MOVAPS_XMM_to_XMM(xmmFt, xmmT1);  \
-	SSE_MULSS_M32_to_XMM(xmmFt, (uptr)addr);  \
-	SSE_ADDSS_XMM_to_XMM(xmmPQ, xmmFt);  \
+#define eexpHelper(addr) {						\
+	SSE_MULSS_XMM_to_XMM(xmmT1, xmmFs);			\
+	SSE_MOVAPS_XMM_to_XMM(xmmFt, xmmT1);		\
+	SSE_MULSS_M32_to_XMM(xmmFt, (uptr)addr);	\
+	SSE_ADDSS_XMM_to_XMM(xmmPQ, xmmFt);			\
 }
 microVUf(void) mVU_EEXP() {
 	microVU* mVU = mVUx;
@@ -334,11 +334,11 @@ microVUf(void) mVU_ESADD() {
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, writeP ? 0x27 : 0xC6); // Flip back
 	}
 }
-#define esinHelper(addr) {  \
-	SSE_MULSS_XMM_to_XMM(xmmT1, xmmFt);  \
-	SSE_MOVAPS_XMM_to_XMM(xmmFs, xmmT1);  \
-	SSE_MULSS_M32_to_XMM(xmmFs, (uptr)addr);  \
-	SSE_ADDSS_XMM_to_XMM(xmmPQ, xmmFs);  \
+#define esinHelper(addr) {						\
+	SSE_MULSS_XMM_to_XMM(xmmT1, xmmFt);			\
+	SSE_MOVAPS_XMM_to_XMM(xmmFs, xmmT1);		\
+	SSE_MULSS_M32_to_XMM(xmmFs, (uptr)addr);	\
+	SSE_ADDSS_XMM_to_XMM(xmmPQ, xmmFs);			\
 }
 microVUf(void) mVU_ESIN() {
 	microVU* mVU = mVUx;
@@ -390,11 +390,56 @@ microVUf(void) mVU_ESUM() {
 	}
 }
 
-microVUf(void) mVU_FCAND() {}
-microVUf(void) mVU_FCEQ() {}
-microVUf(void) mVU_FCOR() {}
-microVUf(void) mVU_FCSET() {}
-microVUf(void) mVU_FCGET() {}
+microVUf(void) mVU_FCAND() {
+	microVU* mVU = mVUx;
+	if (recPass == 0) {}
+	else { 
+		mVUallocCFLAGa<vuIndex>(gprT2, fvcInstance);
+		XOR32RtoR(gprT1, gprT1);
+		AND32ItoR(gprT2, _Imm24_);
+		SETNZ8R(gprT1);
+		mVUallocVIb<vuIndex>(gprT1, 1);
+	}
+}
+microVUf(void) mVU_FCEQ() {
+	microVU* mVU = mVUx;
+	if (recPass == 0) {}
+	else { 
+		mVUallocCFLAGa<vuIndex>(gprT2, fvcInstance);
+		XOR32RtoR(gprT1, gprT1);
+		CMP32ItoR(gprT2, _Imm24_);
+		SETNZ8R(gprT1);
+		mVUallocVIb<vuIndex>(gprT1, 1);
+	}
+}
+microVUf(void) mVU_FCGET() {
+	microVU* mVU = mVUx;
+	if (recPass == 0) {}
+	else { 
+		mVUallocCFLAGa<vuIndex>(gprT1, fvcInstance);
+		AND32ItoR(gprT1, 0xfff);
+		mVUallocVIb<vuIndex>(gprT1, _Ft_);
+	}
+}
+microVUf(void) mVU_FCOR() {
+	microVU* mVU = mVUx;
+	if (recPass == 0) {}
+	else { 
+		mVUallocCFLAGa<vuIndex>(gprT1, fvcInstance);
+		OR32ItoR(gprT1, _Imm24_);
+		ADD32ItoR(gprT1, 1);  // If 24 1's will make 25th bit 1, else 0
+		SHR32ItoR(gprT1, 24); // Get the 25th bit (also clears the rest of the garbage in the reg)
+		mVUallocVIb<vuIndex>(gprT1, 1);
+	}
+}
+microVUf(void) mVU_FCSET() {
+	microVU* mVU = mVUx;
+	if (recPass == 0) {}
+	else { 
+		MOV32ItoR(gprT1, _Imm24_);
+		mVUallocCFLAGb<vuIndex>(gprT1, fcInstance);
+	}
+}
 
 microVUf(void) mVU_FMAND() {
 	microVU* mVU = mVUx;
@@ -800,15 +845,76 @@ microVUf(void) mVU_SQI() {
 	}
 }
 
-microVUf(void) mVU_RINIT() {}
-microVUf(void) mVU_RGET() {}
-microVUf(void) mVU_RNEXT() {}
-microVUf(void) mVU_RXOR() {}
+microVUf(void) mVU_RINIT() {
+	microVU* mVU = mVUx;
+	if (recPass == 0) {}
+	else { 
+		if (_Fs_ || (_Fsf_ == 3)) {
+			getReg8(gprR, _Fs_, _Fsf_);
+			AND32ItoR(gprR, 0x007fffff);
+			OR32ItoR (gprR, 0x3f800000);
+		}
+		else MOV32ItoR(gprR, 0x3f800000);
+	}
+}
+microVUt(void) mVU_RGET_() {
+	microVU* mVU = mVUx;
+	if (_Ft_) {
+		if (_X) MOV32RtoM((uptr)&mVU->regs->VF[_Ft_].UL[0], gprR);
+		if (_Y) MOV32RtoM((uptr)&mVU->regs->VF[_Ft_].UL[1], gprR);
+		if (_Z) MOV32RtoM((uptr)&mVU->regs->VF[_Ft_].UL[2], gprR);
+		if (_W) MOV32RtoM((uptr)&mVU->regs->VF[_Ft_].UL[3], gprR);
+	}
+}
+microVUf(void) mVU_RGET() {
+	microVU* mVU = mVUx;
+	if (recPass == 0) { /*if (!_Ft_) nop();*/ }
+	else { mVU_RGET_<vuIndex>(); }
+}
+microVUf(void) mVU_RNEXT() {
+	microVU* mVU = mVUx;
+	if (recPass == 0) { /*if (!_Ft_) nop();*/ }
+	else { 
+		// algorithm from www.project-fao.org
+		MOV32RtoR(gprT1, gprR);
+		SHR32ItoR(gprT1, 4);
+		AND32ItoR(gprT1, 1);
 
-microVUf(void) mVU_WAITP() {}
-microVUf(void) mVU_WAITQ() {}
+		MOV32RtoR(gprT2, gprR);
+		SHR32ItoR(gprT2, 22);
+		AND32ItoR(gprT2, 1);
 
-microVUf(void) mVU_XGKICK() {}
+		SHL32ItoR(gprR, 1);
+		XOR32RtoR(gprT1, gprT2);
+		XOR32RtoR(gprR,  gprT1);
+		AND32ItoR(gprR, 0x007fffff);
+		OR32ItoR (gprR, 0x3f800000);
+		mVU_RGET_<vuIndex>(); 
+	}
+}
+microVUf(void) mVU_RXOR() {
+	microVU* mVU = mVUx;
+	if (recPass == 0) {}
+	else { 
+		if (_Fs_ || (_Fsf_ == 3)) {
+			getReg8(gprT1, _Fs_, _Fsf_);
+			AND32ItoR(gprT1, 0x7fffff);
+			XOR32RtoR(gprR,  gprT1);
+		}
+	}
+}
+
+microVUf(void) mVU_WAITP() {
+	microVU* mVU = mVUx;
+	if (recPass == 0) {}
+	else {}
+}
+microVUf(void) mVU_WAITQ() {
+	microVU* mVU = mVUx;
+	if (recPass == 0) {}
+	else {}
+}
+
 microVUf(void) mVU_XTOP() {
 	microVU* mVU = mVUx;
 	if (recPass == 0) {}
@@ -823,6 +929,27 @@ microVUf(void) mVU_XITOP() {
 	else { 
 		MOVZX32M16toR( gprT1, (uptr)&mVU->regs->vifRegs->itop );
 		mVUallocVIb<vuIndex>(gprT1, _Ft_);
+	}
+}
+
+microVUt(void) __fastcall mVU_XGKICK_(u32 addr) {
+	microVU* mVU = mVUx;
+	u32 *data = (u32*)(mVU->regs->Mem + (addr&0x3fff));
+	u32  size = mtgsThread->PrepDataPacket( GIF_PATH_1, data, (0x4000-(addr&0x3fff)) >> 4);
+	u8 *pDest = mtgsThread->GetDataPacketPtr();
+	memcpy_aligned(pDest, mVU->regs->Mem + addr, size<<4);
+	mtgsThread->SendDataPacket();
+}
+void __fastcall mVU_XGKICK0(u32 addr) { mVU_XGKICK_<0>(addr); }
+void __fastcall mVU_XGKICK1(u32 addr) { mVU_XGKICK_<1>(addr); }
+
+microVUf(void) mVU_XGKICK() {
+	microVU* mVU = mVUx;
+	if (recPass == 0) {}
+	else {
+		mVUallocVIa<vuIndex>(gprT2, _Fs_); // gprT2 = ECX for __fastcall
+		if (!vuIndex)  CALLFunc((uptr)mVU_XGKICK0);
+		else		   CALLFunc((uptr)mVU_XGKICK1);
 	}
 }
 #endif //PCSX2_MICROVU

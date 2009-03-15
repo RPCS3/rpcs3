@@ -20,6 +20,7 @@
 #define _EmitterId_ (vuIndex+1)
 #include "Common.h"
 #include "VU.h"
+#include "GS.h"
 #include "ix86/ix86.h"
 #include "microVU_Alloc.h"
 
@@ -104,15 +105,16 @@ struct microVU {
 	u32 microSize;	// VU Micro Memory Size
 	u32 progSize;	// VU Micro Program Size (microSize/8)
 	u32 cacheAddr;	// VU Cache Start Address
-	static const u32 cacheSize = 0x400000; // VU Cache Size
+	static const u32 cacheSize = 0x500000; // VU Cache Size
 
 	microProgManager<0x800> prog; // Micro Program Data
 	
-	VURegs*	regs;	// VU Regs Struct
-	u8*		cache;	// Dynarec Cache Start (where we will start writing the recompiled code to)
-	u8*		ptr;	// Pointer to next place to write recompiled code to
-	u32		code;	// Contains the current Instruction
-	u32		iReg;	// iReg
+	VURegs*	regs;		 // VU Regs Struct
+	u8*		cache;		 // Dynarec Cache Start (where we will start writing the recompiled code to)
+	u8*		ptr;		 // Pointer to next place to write recompiled code to
+	u32		code;		 // Contains the current Instruction
+	u32		iReg;		 // iReg (only used in recompilation, not execution)
+	u32		clipFlag[4]; // 4 instances of clip flag (used in execution)
 
 /*
 	uptr x86eax; // Accumulator register. Used in arithmetic operations.
