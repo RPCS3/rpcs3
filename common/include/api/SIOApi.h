@@ -15,8 +15,8 @@
  *  along with this program; if not, write to the Free Software
  *	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
- 
- 
+
+
 #ifndef __SIOAPI_H__
 #define __SIOAPI_H__
 
@@ -28,14 +28,23 @@
  *          shadowpcsx2@yahoo.gr,
  *          and florinsasu@hotmail.com
  */
- 
+
 #include "Pcsx2Api.h"
 
 /* SIO plugin API */
 
+// Called by SIO_TYPE_MTAP plugins to change the slot.
+// Slot is then passed to memcard and pad plugins on SIOstartPoll.
+// MTAP SIO plugins should ignore slot vvalues on startPoll, as should RMs (probably).
+typedef int (CALLBACK * SIOchangeSlotCB)(int slot);
+
 // Basic functions.
 
-EXPORT_C_(s32) SIOinit();
+// Types is an or-ed combination of SioTypes to initialize.  It'd probably be simplest
+// just to make each SIO plugin support only one type, for simplicity.
+// SIOchangeSlotCB should *only* be called by MTAP plugins.
+EXPORT_C_(s32) SIOinit(int types, SIOchangeSlotCB f);
+
 // Single plugin can only be PAD, MTAP, RM, or MC.  Only load one plugin of each type,
 // but not both a PAD and MTAP.  Simplifies plugin selection and interface, as well
 // as API.
@@ -43,9 +52,11 @@ EXPORT_C_(s32) SIOinit();
 EXPORT_C_(s32) SIOopen(void *pDisplay);
 EXPORT_C_(void) SIOclose();
 EXPORT_C_(void) SIOshutdown();
-// Returns 0 if device doesn't exist.  Simplifies things.  Also means you don't
-// have to distinguish between MTAP and PAD SIO plugins.
+
+// Returns 0 if device doesn't exist.  Means old pad plugins can just say nothing
+// connected to other slots, and SIOpoll won't be called on those slots, ideally.
 EXPORT_C_(s32) SIOstartPoll(u8 deviceType, u32 port, u32 slot, u8 *returnValue);
+
 // Returns 0 on the last output byte.
 EXPORT_C_(s32) SIOpoll(u8 value, u8 *returnValue);
 
