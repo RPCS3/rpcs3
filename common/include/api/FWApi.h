@@ -51,7 +51,6 @@ EXPORT_C_(void) FWirqCallback(void (*callback)());
 EXPORT_C_(void) FWkeyEvent(keyEvent *ev);
 EXPORT_C_(s32)  FWfreeze(u8 mode, freezeData *data);
 EXPORT_C_(void) FWconfigure();
-EXPORT_C_(void) SPU2configpath(char *configpath);
 EXPORT_C_(void) FWabout();
 EXPORT_C_(s32)  FWtest();
 #endif

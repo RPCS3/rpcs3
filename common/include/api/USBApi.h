@@ -59,7 +59,6 @@ EXPORT_C_(void) USBsetRAM(void *mem);
 EXPORT_C_(void) USBkeyEvent(keyEvent *ev);
 EXPORT_C_(s32) USBfreeze(u8 mode, freezeData *data);
 EXPORT_C_(void) USBconfigure();
-EXPORT_C_(void) USBconfigpath(char *configpath);
 EXPORT_C_(void) USBabout();
 EXPORT_C_(s32) USBtest();
 

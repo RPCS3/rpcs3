@@ -31,6 +31,7 @@
  
 #include "Pcsx2Types.h"
 #include "Pcsx2Defs.h"
+#include "Pcsx2Config.h"
 
 // Indicate to use the new versions.
 #define NEW_PLUGIN_APIS
@@ -44,6 +45,12 @@
 EXPORT_C(u32) PS2EgetLibType(void);
 EXPORT_C(u32) PS2EgetLibVersion2(u32 type);
 EXPORT_C(char*) PS2EgetLibName(void);
+
+// Extended functions.
+
+// allows the plugin to see the whole configuration when started up.
+// Intended for them to get the ini and plugin paths, but could allow for other things as well.
+EXPORT_C_(void) PS2EpassConfig(PcsxConfig Config);
 
 // PS2EgetLibType returns (may be OR'd)
 enum {

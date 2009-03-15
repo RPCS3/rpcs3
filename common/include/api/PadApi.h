@@ -62,7 +62,6 @@ EXPORT_C_(void) PADupdate(u8 pad);
 EXPORT_C_(void) PADgsDriverInfo(GSdriverInfo *info);
 EXPORT_C_(s32) PADfreeze(u8 mode, freezeData *data);
 EXPORT_C_(void) PADconfigure();
-EXPORT_C_(void) PADconfigpath(char *configpath);
 EXPORT_C_(void) PADabout();
 EXPORT_C_(s32)  PADtest();
 

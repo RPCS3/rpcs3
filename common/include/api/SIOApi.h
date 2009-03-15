@@ -68,7 +68,6 @@ EXPORT_C_(u32) SIOquery();
 EXPORT_C_(void) SIOconfigure();
 EXPORT_C_(keyEvent*) CALLBACK SIOkeyEvent();
 EXPORT_C_(s32) SIOfreeze(u8 mode, freezeData *data);
-EXPORT_C_(void) SIOconfigpath(char *configpath);
 EXPORT_C_(void) SIOabout();
 EXPORT_C_(s32) SIOtest();
 

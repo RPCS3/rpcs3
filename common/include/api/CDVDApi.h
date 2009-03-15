@@ -58,7 +58,6 @@ EXPORT_C_(s32)   CDVDctrlTrayClose();					//close disc tray
 EXPORT_C_(void)  CDVDkeyEvent(keyEvent *ev);
 EXPORT_C_(void)  CDVDconfigure();
 EXPORT_C_(s32)   CDVDfreeze(u8 mode, freezeData *data);
-EXPORT_C_(void) CDVDconfigpath(char *configpath);
 EXPORT_C_(void)  CDVDabout();
 EXPORT_C_(s32)   CDVDtest();
 EXPORT_C_(void)  CDVDnewDiskCB(void (*callback)());

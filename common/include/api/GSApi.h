@@ -79,7 +79,6 @@ EXPORT_C_(s32)  CALLBACK GSsetWindowInfo(winInfo *info);
 #endif
 EXPORT_C_(s32)   GSfreeze(u8 mode, freezeData *data);
 EXPORT_C_(void)  GSconfigure();
-EXPORT_C_(void)  GSconfigpath(char *configpath);
 EXPORT_C_(void)  GSabout();
 EXPORT_C_(s32)   GStest();
 

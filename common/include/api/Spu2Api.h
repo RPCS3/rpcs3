@@ -71,7 +71,6 @@ EXPORT_C_(void) SPU2setClockPtr(u32* ptr);
 EXPORT_C_(void) SPU2async(u32 cycles);
 EXPORT_C_(s32) SPU2freeze(u8 mode, freezeData *data);
 EXPORT_C_(void) SPU2configure();
-EXPORT_C_(void) SPU2configpath(char *configpath);
 EXPORT_C_(void) SPU2about();
 EXPORT_C_(s32)  SPU2test();
 
