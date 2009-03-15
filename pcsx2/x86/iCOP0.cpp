@@ -165,8 +165,12 @@ void recMFC0( void )
 			break;
 
 			case 1:
+				CALLFunc( (uptr)COP0_UpdatePCCR );
+				MOV32MtoR(EAX, (uptr)&cpuRegs.PERF.n.pcr0);
+				break;
 			case 3:
 				CALLFunc( (uptr)COP0_UpdatePCCR );
+				MOV32MtoR(EAX, (uptr)&cpuRegs.PERF.n.pcr1);
 			break;
 		}
 		_deleteEEreg(_Rt_, 0);
