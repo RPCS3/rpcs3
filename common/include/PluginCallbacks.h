@@ -15,18 +15,18 @@
  *  along with this program; if not, write to the Free Software
  *	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
- 
- 
+
+
 #ifndef __PLUGINCALLBACKS_H__
 #define __PLUGINCALLBACKS_H__
 
-extern "C" 
-{	
+extern "C"
+{
 // General
 typedef u32  (CALLBACK* _PS2EgetLibType)(void);
 typedef u32  (CALLBACK* _PS2EgetLibVersion2)(u32 type);
 typedef char*(CALLBACK* _PS2EgetLibName)(void);
-typedef void (CALLBACK* _PS2EpassConfig)(PcsxConfig Config);
+typedef void (CALLBACK* _PS2EpassConfig)(PcsxConfig *Config);
 
 // GS
 // NOTE: GSreadFIFOX/GSwriteCSR functions CANNOT use XMM/MMX regs
@@ -224,7 +224,7 @@ typedef void (CALLBACK* _FWconfigure)();
 typedef s32  (CALLBACK* _FWtest)();
 typedef void (CALLBACK* _FWabout)();
 
-// General 
+// General
 extern _PS2EgetLibType PS2EgetLibType;
 extern _PS2EgetLibVersion2 PS2EgetLibVersion2;
 extern _PS2EgetLibName PS2EgetLibName;
@@ -276,7 +276,7 @@ extern _PADpoll           PAD1poll;
 extern _PADquery          PAD1query;
 extern _PADupdate         PAD1update;
 
-extern _PADfreeze          PAD1freeze;
+extern _PADfreeze         PAD1freeze;
 extern _PADgsDriverInfo   PAD1gsDriverInfo;
 extern _PADconfigure      PAD1configure;
 extern _PADtest           PAD1test;
@@ -293,7 +293,7 @@ extern _PADpoll           PAD2poll;
 extern _PADquery          PAD2query;
 extern _PADupdate         PAD2update;
 
-extern _PADfreeze          PAD2freeze;
+extern _PADfreeze         PAD2freeze;
 extern _PADgsDriverInfo   PAD2gsDriverInfo;
 extern _PADconfigure      PAD2configure;
 extern _PADtest           PAD2test;
@@ -307,9 +307,9 @@ extern _SIOshutdown       SIOshutdown[2][9];
 extern _SIOstartPoll      SIOstartPoll[2][9];
 extern _SIOpoll           SIOpoll[2][9];
 extern _SIOquery          SIOquery[2][9];
-extern _SIOkeyEvent      SIOkeyEvent;
+extern _SIOkeyEvent       SIOkeyEvent;
 
-extern _SIOfreeze          SIOfreeze[2][9];
+extern _SIOfreeze         SIOfreeze[2][9];
 extern _SIOconfigure      SIOconfigure[2][9];
 extern _SIOtest           SIOtest[2][9];
 extern _SIOabout          SIOabout[2][9];

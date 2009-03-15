@@ -139,6 +139,8 @@ void SaveState::FreezeAll()
 	FreezePlugin( "SPU2", SPU2freeze );
 	FreezePlugin( "DEV9", DEV9freeze );
 	FreezePlugin( "USB", USBfreeze );
+	FreezePlugin( "PAD1", PAD1freeze );
+	FreezePlugin( "PAD2", PAD2freeze );
 
 	if( IsLoading() )
 		PostLoadPrep();
@@ -267,9 +269,9 @@ void gzLoadingState::FreezePlugin( const char* name, s32 (CALLBACK *freezer)(int
 	fP.data = (s8*)malloc(fP.size);
 	if (fP.data == NULL)
 		throw Exception::OutOfMemory();
-	gzread(m_file, fP.data, fP.size);
+	int read = gzread(m_file, fP.data, fP.size);
 
-	if( gzeof( m_file ) )
+	if( read != fP.size )
 		throw Exception::BadSavedState( m_filename );
 
 	if(freezer(FREEZE_LOAD, &fP) == -1)

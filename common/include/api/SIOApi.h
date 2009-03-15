@@ -35,8 +35,10 @@
 
 // Called by SIO_TYPE_MTAP plugins to change the slot.
 // Slot is then passed to memcard and pad plugins on SIOstartPoll.
-// MTAP SIO plugins should ignore slot vvalues on startPoll, as should RMs (probably).
-typedef int (CALLBACK * SIOchangeSlotCB)(int slot);
+// MTAP SIO plugins should ignore slot values on startPoll, as should RMs (probably).
+
+// Port isn't strictly necessary, but doesn't hurt.
+typedef int (CALLBACK * SIOchangeSlotCB)(int port, int slot);
 
 // Basic functions.
 
@@ -67,7 +69,10 @@ EXPORT_C_(u32) SIOquery();
 
 EXPORT_C_(void) SIOconfigure();
 EXPORT_C_(keyEvent*) CALLBACK SIOkeyEvent();
-EXPORT_C_(s32) SIOfreeze(u8 mode, freezeData *data);
+
+// Save one type at a time.  If a plugin supports all 4 types,
+// should expect 4 calls.  Increases savestate compatibility.
+EXPORT_C_(s32) SIOfreeze(u8 mode, freezeData *data, int type);
 EXPORT_C_(void) SIOabout();
 EXPORT_C_(s32) SIOtest();
 
@@ -77,7 +82,5 @@ SIO_TYPE_MTAP = 0x00000004,
 SIO_TYPE_RM = 0x00000040,
 SIO_TYPE_MC = 0x00000100
 } SioTypes;
-
-#endif
 
 #endif // __SIOAPI_H__
