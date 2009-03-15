@@ -17,7 +17,6 @@
 #define IDC_KB_WM                       1102
 #define IDC_KB_RAW                      1103
 #define IDC_DISABLE_PAD1                1104
-#define IDC_DISABLE_PAD2                1105
 #define IDC_M_DISABLE                   1106
 #define IDC_M_DI                        1107
 #define IDC_M_WM                        1108
@@ -28,27 +27,22 @@
 #define IDC_CLOSE_HACK3                 1113
 #define IDC_DEBUG_FILE                  1114
 #define IDC_GUITAR1                     1115
-#define IDC_GUITAR2                     1116
 #define IDC_ANALOG_START1               1117
-#define IDC_ANALOG_START2               1118
 #define IDC_DISABLE_SCREENSAVER         1119
 #define IDC_MOUSE_UNFOCUS               1120
-#define IDC_MOUSE_UNFOCUS2              1121
 #define IDC_AXIS_BUTTONS                1121
 #define IDC_BACKGROUND                  1122
 #define IDC_MULTIPLE_BINDING            1123
 #define IDC_DISABLE_SCREENSAVER2        1124
 #define IDC_FORCE_HIDE                  1124
-#define IDC_FORCE_HIDE2                 1125
 #define IDC_GH2_HACK                    1125
 #define IDC_FORCEFEEDBACK_HACK1         1126
-#define IDC_GH2_HACK2                   1126
 #define IDC_VISTA_VOLUME                1126
-#define IDC_DISABLE_SCREENSAVER4        1127
-#define IDC_FORCEFEEDBACK_HACK2         1127
-#define IDC_FORCE_HIDE3                 1127
 #define IDC_GS_THREAD_INPUT             1128
 #define IDC_SAVE_STATE_TITLE            1129
+#define IDC_PAD_LIST                    1133
+#define IDC_COMBO1                      1134
+#define IDC_PAD_TYPE                    1134
 #define IDC_SLIDER1                     0x1000
 #define IDC_FLIP1                       0x1001
 #define IDC_AXIS_DIRECTION              0x1002
@@ -148,7 +142,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        112
 #define _APS_NEXT_COMMAND_VALUE         40001
-#define _APS_NEXT_CONTROL_VALUE         1130
+#define _APS_NEXT_CONTROL_VALUE         1135
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

@@ -6,9 +6,20 @@
 
 extern u8 ps2e;
 
+enum PadType {
+	DisabledPad,
+	Dualshock2Pad,
+	GuitarPad
+};
+
+struct PadConfig {
+	PadType type;
+	u8 autoAnalog;
+};
+
 struct GeneralConfig {
 public:
-	u8 disablePad[2];
+	PadConfig padConfigs[2][4];
 
 	u8 mouseUnfocus;
 	u8 disableScreenSaver;
@@ -31,9 +42,6 @@ public:
 
 	u8 GSThreadUpdates;
 	u8 escapeFullscreenHack;
-
-	u8 guitar[2];
-	u8 AutoAnalog[2];
 
 	u8 saveStateTitle;
 

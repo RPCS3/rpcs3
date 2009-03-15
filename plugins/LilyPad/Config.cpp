@@ -29,10 +29,10 @@ HWND hWndProp = 0;
 
 int selected = 0;
 
-HWND hWnds[2] = {0,0};
+HWND hWnds[2][4];
 HWND hWndGeneral = 0;
 
-void Populate(int pad);
+void Populate(int port, int slot);
 
 void SetupLogSlider(HWND hWndSlider) {
 	SendMessage(hWndSlider, TBM_SETRANGEMIN, 0, 1);
@@ -173,16 +173,17 @@ void RefreshEnabledDevicesAndDisplay(int updateDeviceList = 0, HWND hWnd = 0, in
 		}
 	}
 	if (populate) {
-		Populate(0);
-		Populate(1);
+		for (int i=0; i<8; i++) {
+			Populate(i&1, i>>1);
+		}
 	}
 }
 
-wchar_t *GetCommandStringW(u8 command, int pad) {
+wchar_t *GetCommandStringW(u8 command, int port, int slot) {
 	static wchar_t temp[34];
 	if (command >= 0x20 && command <= 0x27) {
-		if (config.guitar[pad] && (command == 0x20 || command == 0x22)) {
-			HWND hWnd = GetDlgItem(hWnds[pad], 0x10F0+command);
+		if (config.padConfigs[port][slot].type == GuitarPad && (command == 0x20 || command == 0x22)) {
+			HWND hWnd = GetDlgItem(hWnds[port][slot], 0x10F0+command);
 			int res = GetWindowTextW(hWnd, temp, 20);
 			if ((unsigned int)res-1 <= 18) return temp;
 		}
@@ -195,7 +196,7 @@ wchar_t *GetCommandStringW(u8 command, int pad) {
 	}
 	/* Get text from the buttons. */
 	if (command >= 0x0C && command <=0x28) {
-		HWND hWnd = GetDlgItem(hWnds[pad], 0x10F0+command);
+		HWND hWnd = GetDlgItem(hWnds[port][slot], 0x10F0+command);
 		if (!hWnd) {
 			wchar_t *strings[] = {
 				L"Lock Buttons",
@@ -243,13 +244,13 @@ inline void GetSettingsFileName(wchar_t *out) {
 	wcscpy(out, L"inis\\LilyPad.ini");
 }
 
-int GetBinding(int pad, int index, Device *&dev, Binding *&b, ForceFeedbackBinding *&ffb);
-int BindCommand(Device *dev, unsigned int uid, unsigned int pad, int command, int sensitivity, int turbo);
+int GetBinding(int port, int slot, int index, Device *&dev, Binding *&b, ForceFeedbackBinding *&ffb);
+int BindCommand(Device *dev, unsigned int uid, unsigned int port, unsigned int slot, int command, int sensitivity, int turbo);
 
-int CreateEffectBinding(Device *dev, wchar_t *effectName, unsigned int pad, unsigned int motor, ForceFeedbackBinding **binding);
+int CreateEffectBinding(Device *dev, wchar_t *effectName, unsigned int port, unsigned int slot, unsigned int motor, ForceFeedbackBinding **binding);
 
-void SelChanged(int pad) {
-	HWND hWnd = hWnds[pad];
+void SelChanged(int port, int slot) {
+	HWND hWnd = hWnds[port][slot];
 	if (!hWnd) return;
 	HWND hWndTemp, hWndList = GetDlgItem(hWnd, IDC_LIST);
 	int j, i = ListView_GetSelectedCount(hWndList);
@@ -308,7 +309,7 @@ void SelChanged(int pad) {
 				devName = temp[0];
 				key = temp[1];
 				command = temp[2];
-				if (GetBinding(pad, index, dev, b, ffb)) {
+				if (GetBinding(port, slot, index, dev, b, ffb)) {
 					if (b) {
 						bFound ++;
 						VirtualControl *control = &dev->virtualControls[b->controlIndex];
@@ -466,40 +467,40 @@ void UnselectAll(HWND hWnd) {
 }
 
 
-int GetItemIndex(int pad, Device *dev, ForceFeedbackBinding *binding) {
+int GetItemIndex(int port, int slot, Device *dev, ForceFeedbackBinding *binding) {
 	int count = 0;
 	for (int i = 0; i<dm->numDevices; i++) {
 		Device *dev2 = dm->devices[i];
 		if (!dev2->enabled) continue;
 		if (dev2 != dev) {
-			count += dev2->pads[pad].numBindings + dev2->pads[pad].numFFBindings;
+			count += dev2->pads[port][slot].numBindings + dev2->pads[port][slot].numFFBindings;
 			continue;
 		}
-		return count += dev2->pads[pad].numBindings + (binding - dev2->pads[pad].ffBindings);
+		return count += dev2->pads[port][slot].numBindings + (binding - dev2->pads[port][slot].ffBindings);
 	}
 	return -1;
 }
-int GetItemIndex(int pad, Device *dev, Binding *binding) {
+int GetItemIndex(int port, int slot, Device *dev, Binding *binding) {
 	int count = 0;
 	for (int i = 0; i<dm->numDevices; i++) {
 		Device *dev2 = dm->devices[i];
 		if (!dev2->enabled) continue;
 		if (dev2 != dev) {
-			count += dev2->pads[pad].numBindings + dev2->pads[pad].numFFBindings;
+			count += dev2->pads[port][slot].numBindings + dev2->pads[port][slot].numFFBindings;
 			continue;
 		}
-		return count += binding - dev->pads[pad].bindings;
+		return count += binding - dev->pads[port][slot].bindings;
 	}
 	return -1;
 }
 
 // Doesn't check if already displayed.
-int ListBoundCommand(int pad, Device *dev, Binding *b) {
-	if (!hWnds[pad]) return -1;
-	HWND hWndList = GetDlgItem(hWnds[pad], IDC_LIST);
+int ListBoundCommand(int port, int slot, Device *dev, Binding *b) {
+	if (!hWnds[port][slot]) return -1;
+	HWND hWndList = GetDlgItem(hWnds[port][slot], IDC_LIST);
 	int index = -1;
 	if (hWndList) {
-		index = GetItemIndex(pad, dev, b);
+		index = GetItemIndex(port, slot, dev, b);
 		if (index >= 0) {
 			LVITEM item;
 			item.mask = LVIF_TEXT;
@@ -512,19 +513,19 @@ int ListBoundCommand(int pad, Device *dev, Binding *b) {
 			item.pszText = dev->GetVirtualControlName(&dev->virtualControls[b->controlIndex]);
 			SendMessage(hWndList, LVM_SETITEM, 0, (LPARAM)&item);
 			item.iSubItem = 2;
-			item.pszText = GetCommandStringW(b->command, pad);
+			item.pszText = GetCommandStringW(b->command, port, slot);
 			SendMessage(hWndList, LVM_SETITEM, 0, (LPARAM)&item);
 		}
 	}
 	return index;
 }
 
-int ListBoundEffect(int pad, Device *dev, ForceFeedbackBinding *b) {
-	if (!hWnds[pad]) return -1;
-	HWND hWndList = GetDlgItem(hWnds[pad], IDC_LIST);
+int ListBoundEffect(int port, int slot, Device *dev, ForceFeedbackBinding *b) {
+	if (!hWnds[port][slot]) return -1;
+	HWND hWndList = GetDlgItem(hWnds[port][slot], IDC_LIST);
 	int index = -1;
 	if (hWndList) {
-		index = GetItemIndex(pad, dev, b);
+		index = GetItemIndex(port, slot, dev, b);
 		if (index >= 0) {
 			LVITEM item;
 			item.mask = LVIF_TEXT;
@@ -546,9 +547,9 @@ int ListBoundEffect(int pad, Device *dev, ForceFeedbackBinding *b) {
 }
 
 // Only for use with control bindings.  Affects all highlighted bindings.
-void ChangeValue(int pad, int *newSensitivity, int *turbo) {
-	if (!hWnds[pad]) return;
-	HWND hWndList = GetDlgItem(hWnds[pad], IDC_LIST);
+void ChangeValue(int port, int slot, int *newSensitivity, int *turbo) {
+	if (!hWnds[port][slot]) return;
+	HWND hWndList = GetDlgItem(hWnds[port][slot], IDC_LIST);
 	int count = ListView_GetSelectedCount(hWndList);
 	if (count < 1) return;
 	int index = -1;
@@ -558,7 +559,7 @@ void ChangeValue(int pad, int *newSensitivity, int *turbo) {
 		Device *dev;
 		Binding *b;
 		ForceFeedbackBinding *ffb;
-		if (!GetBinding(pad, index, dev, b, ffb) || ffb) return;
+		if (!GetBinding(port, slot, index, dev, b, ffb) || ffb) return;
 		if (newSensitivity) {
 			// Don't change flip state when modifying multiple controls.
 			if (count > 1 && b->sensitivity < 0)
@@ -570,21 +571,21 @@ void ChangeValue(int pad, int *newSensitivity, int *turbo) {
 			b->turbo = *turbo;
 		}
 	}
-	PropSheet_Changed(hWndProp, hWnds[pad]);
-	SelChanged(pad);
+	PropSheet_Changed(hWndProp, hWnds[port][slot]);
+	SelChanged(port, slot);
 }
 
 // Only for use with effect bindings.
-void ChangeEffect(int pad, int id, int *newForce, unsigned int *newEffectType) {
-	if (!hWnds[pad]) return;
-	HWND hWndList = GetDlgItem(hWnds[pad], IDC_LIST);
+void ChangeEffect(int port, int slot, int id, int *newForce, unsigned int *newEffectType) {
+	if (!hWnds[port][slot]) return;
+	HWND hWndList = GetDlgItem(hWnds[port][slot], IDC_LIST);
 	int i = ListView_GetSelectedCount(hWndList);
 	if (i != 1) return;
 	int index = ListView_GetNextItem(hWndList, -1, LVNI_SELECTED);
 	Device *dev;
 	Binding *b;
 	ForceFeedbackBinding *ffb;
-	if (!GetBinding(pad, index, dev, b, ffb) || b) return;
+	if (!GetBinding(port, slot, index, dev, b, ffb) || b) return;
 	if (newForce) {
 		unsigned int axisIndex = (id - IDC_FF_AXIS1_ENABLED)/16;
 		if (axisIndex < (unsigned int)dev->numFFAxes) {
@@ -594,18 +595,18 @@ void ChangeEffect(int pad, int id, int *newForce, unsigned int *newEffectType) {
 	if (newEffectType && *newEffectType < (unsigned int)dev->numFFEffectTypes) {
 		ffb->effectIndex = *newEffectType;
 		ListView_DeleteItem(hWndList, index);
-		index = ListBoundEffect(pad, dev, ffb);
+		index = ListBoundEffect(port, slot, dev, ffb);
 		ListView_SetItemState(hWndList, index, LVIS_SELECTED, LVIS_SELECTED);
 	}
-	PropSheet_Changed(hWndProp, hWnds[pad]);
-	SelChanged(pad);
+	PropSheet_Changed(hWndProp, hWnds[port][slot]);
+	SelChanged(port, slot);
 }
 
 
 
-void Populate(int pad) {
-	if (!hWnds[pad]) return;
-	HWND hWnd = GetDlgItem(hWnds[pad], IDC_LIST);
+void Populate(int port, int slot) {
+	if (!hWnds[port][slot]) return;
+	HWND hWnd = GetDlgItem(hWnds[port][slot], IDC_LIST);
 	ListView_DeleteAllItems(hWnd);
 	int i, j;
 
@@ -614,16 +615,16 @@ void Populate(int pad) {
 	for (j=0; j<dm->numDevices; j++) {
 		Device *dev = dm->devices[j];
 		if (!dev->enabled) continue;
-		for (i=0; i<dev->pads[pad].numBindings; i++) {
-			ListBoundCommand(pad, dev, dev->pads[pad].bindings+i);
+		for (i=0; i<dev->pads[port][slot].numBindings; i++) {
+			ListBoundCommand(port, slot, dev, dev->pads[port][slot].bindings+i);
 		}
-		for (i=0; i<dev->pads[pad].numFFBindings; i++) {
-			ListBoundEffect(pad, dev, dev->pads[pad].ffBindings+i);
+		for (i=0; i<dev->pads[port][slot].numFFBindings; i++) {
+			ListBoundEffect(port, slot, dev, dev->pads[port][slot].ffBindings+i);
 		}
 	}
 	config.multipleBinding = multipleBinding;
 
-	hWnd = GetDlgItem(hWnds[pad], IDC_FORCEFEEDBACK);
+	hWnd = GetDlgItem(hWnds[port][slot], IDC_FORCEFEEDBACK);
 	SendMessage(hWnd, CB_RESETCONTENT, 0, 0);
 	int added = 0;
 	for (i=0; i<dm->numDevices; i++) {
@@ -636,10 +637,10 @@ void Populate(int pad) {
 	}
 	SendMessage(hWnd, CB_SETCURSEL, 0, 0);
 	EnableWindow(hWnd, added!=0);
-	EnableWindow(GetDlgItem(hWnds[pad], ID_BIG_MOTOR), added!=0);
-	EnableWindow(GetDlgItem(hWnds[pad], ID_SMALL_MOTOR), added!=0);
+	EnableWindow(GetDlgItem(hWnds[port][slot], ID_BIG_MOTOR), added!=0);
+	EnableWindow(GetDlgItem(hWnds[port][slot], ID_SMALL_MOTOR), added!=0);
 
-	SelChanged(pad);
+	SelChanged(port, slot);
 }
 
 int WritePrivateProfileInt(wchar_t *s1, wchar_t *s2, int v, wchar_t *ini) {
@@ -696,8 +697,6 @@ int SaveSettings(wchar_t *file=0) {
 	WritePrivateProfileInt(L"General Settings", L"Disable Screen Saver", config.disableScreenSaver, file);
 	WritePrivateProfileInt(L"General Settings", L"GH2", config.GH2, file);
 	WritePrivateProfileInt(L"General Settings", L"Mouse Unfocus", config.mouseUnfocus, file);
-	WritePrivateProfileInt(L"General Settings", L"Pad1 Disable", config.disablePad[0], file);
-	WritePrivateProfileInt(L"General Settings", L"Pad2 Disable", config.disablePad[1], file);
 	WritePrivateProfileInt(L"General Settings", L"Logging", config.debug, file);
 	WritePrivateProfileInt(L"General Settings", L"Keyboard Mode", config.keyboardApi, file);
 	WritePrivateProfileInt(L"General Settings", L"Mouse Mode", config.mouseApi, file);
@@ -710,10 +709,14 @@ int SaveSettings(wchar_t *file=0) {
 	WritePrivateProfileInt(L"General Settings", L"Vista Volume", config.vistaVolume, file);
 	WritePrivateProfileInt(L"General Settings", L"Volume", config.volume, file);
 
-	WritePrivateProfileInt(L"Pad1", L"Guitar", config.guitar[0], file);
-	WritePrivateProfileInt(L"Pad2", L"Guitar", config.guitar[1], file);
-	WritePrivateProfileInt(L"Pad1", L"Auto Analog", config.AutoAnalog[0], file);
-	noError &= WritePrivateProfileInt(L"Pad2", L"Auto Analog", config.AutoAnalog[1], file);
+	for (int port=0; port<2; port++) {
+		for (int slot=0; slot<4; slot++) {
+			wchar_t temp[50];
+			wsprintf(temp, L"Pad %i %i", port, slot);
+			WritePrivateProfileInt(temp, L"Mode", config.padConfigs[port][slot].type, file);
+			noError &= WritePrivateProfileInt(temp, L"Auto Analog", config.padConfigs[port][slot].autoAnalog, file);
+		}
+	}
 
 	for (int i=0; i<dm->numDevices; i++) {
 		wchar_t id[50];
@@ -734,29 +737,29 @@ int SaveSettings(wchar_t *file=0) {
 		}
 		WritePrivateProfileInt(id, L"API", dev->api, file);
 		WritePrivateProfileInt(id, L"Type", dev->type, file);
+		int ffBindingCount = 0;
 		int bindingCount = 0;
-		for (int pad=0; pad<2; pad++) {
-			for (int j=0; j<dev->pads[pad].numBindings; j++) {
-				Binding *b = dev->pads[pad].bindings+j;
-				VirtualControl *c = &dev->virtualControls[b->controlIndex];
-				wsprintfW(temp, L"Binding %i", bindingCount++);
-				wsprintfW(temp2, L"0x%08X, %i, %i, %i, %i", c->uid, pad, b->command, b->sensitivity, b->turbo);
-				noError &= WritePrivateProfileStringW(id, temp, temp2, file);
-			}
-		}
-		bindingCount = 0;
-		for (int pad=0; pad<2; pad++) {
-			for (int j=0; j<dev->pads[pad].numFFBindings; j++) {
-				ForceFeedbackBinding *b = dev->pads[pad].ffBindings+j;
-				ForceFeedbackEffectType *eff = &dev->ffEffectTypes[b->effectIndex];
-				wsprintfW(temp, L"FF Binding %i", bindingCount++);
-				wsprintfW(temp2, L"%s %i, %i", eff->effectID, pad, b->motor);
-				for (int k=0; k<dev->numFFAxes; k++) {
-					ForceFeedbackAxis *axis = dev->ffAxes + k;
-					AxisEffectInfo *info = b->axes + k;
-					wsprintfW(wcschr(temp2,0), L", %i, %i", axis->id, info->force);
+		for (int port=0; port<2; port++) {
+			for (int slot=0; slot<4; slot++) {
+				for (int j=0; j<dev->pads[port][slot].numBindings; j++) {
+					Binding *b = dev->pads[port][slot].bindings+j;
+					VirtualControl *c = &dev->virtualControls[b->controlIndex];
+					wsprintfW(temp, L"Binding %i", bindingCount++);
+					wsprintfW(temp2, L"0x%08X, %i, %i, %i, %i, %i", c->uid, port, b->command, b->sensitivity, b->turbo, slot);
+					noError &= WritePrivateProfileStringW(id, temp, temp2, file);
 				}
-				noError &= WritePrivateProfileStringW(id, temp, temp2, file);
+				for (int j=0; j<dev->pads[port][slot].numFFBindings; j++) {
+					ForceFeedbackBinding *b = dev->pads[port][slot].ffBindings+j;
+					ForceFeedbackEffectType *eff = &dev->ffEffectTypes[b->effectIndex];
+					wsprintfW(temp, L"FF Binding %i", ffBindingCount++);
+					wsprintfW(temp2, L"%s %i, %i, %i", eff->effectID, port, b->motor, slot);
+					for (int k=0; k<dev->numFFAxes; k++) {
+						ForceFeedbackAxis *axis = dev->ffAxes + k;
+						AxisEffectInfo *info = b->axes + k;
+						wsprintfW(wcschr(temp2,0), L", %i, %i", axis->id, info->force);
+					}
+					noError &= WritePrivateProfileStringW(id, temp, temp2, file);
+				}
 			}
 		}
 	}
@@ -814,8 +817,6 @@ int LoadSettings(int force, wchar_t *file) {
 
 	config.closeHacks = (u8)GetPrivateProfileIntW(L"General Settings", L"Close Hacks", 0, file);
 	if (config.closeHacks&1) config.closeHacks &= ~2;
-	config.disablePad[0] = GetPrivateProfileBool(L"General Settings", L"Pad1 Disable", 0, file);
-	config.disablePad[1] = GetPrivateProfileBool(L"General Settings", L"Pad2 Disable", 0, file);
 	config.debug = GetPrivateProfileBool(L"General Settings", L"Logging", 0, file);
 	config.multipleBinding = GetPrivateProfileBool(L"General Settings", L"Multiple Bindings", 0, file);
 	config.forceHide = GetPrivateProfileBool(L"General Settings", L"Force Cursor Hide", 0, file);
@@ -850,11 +851,15 @@ int LoadSettings(int force, wchar_t *file) {
 		else CreateDirectory(L"logs", 0);
 	}
 
-	const int slot = 1;
-	config.guitar[0] = GetPrivateProfileBool(L"Pad1", L"Guitar", 0, file);
-	config.guitar[1] = GetPrivateProfileBool(L"Pad2", L"Guitar", 0, file);
-	config.AutoAnalog[0] = GetPrivateProfileBool(L"Pad1", L"Auto Analog", 0, file);
-	config.AutoAnalog[1] = GetPrivateProfileBool(L"Pad2", L"Auto Analog", 0, file);
+
+	for (int port=0; port<2; port++) {
+		for (int slot=0; slot<4; slot++) {
+			wchar_t temp[50];
+			wsprintf(temp, L"Pad %i %i", port, slot);
+			config.padConfigs[port][slot].type = (PadType) GetPrivateProfileInt(temp, L"Mode", Dualshock2Pad, file);
+			config.padConfigs[port][slot].autoAnalog = GetPrivateProfileBool(temp, L"Auto Analog", 0, file);
+		}
+	}
 
 	loaded = 1;
 
@@ -895,7 +900,7 @@ int LoadSettings(int force, wchar_t *file) {
 			}
 			last = 1;
 			unsigned int uid;
-			int pad, command, sensitivity, turbo;
+			int port, command, sensitivity, turbo, slot = 0;
 			int w = 0;
 			char string[1000];
 			while (temp2[w]) {
@@ -903,11 +908,12 @@ int LoadSettings(int force, wchar_t *file) {
 				w++;
 			}
 			string[w] = 0;
-			if (sscanf(string, " %i , %i , %i , %i , %i", &uid, &pad, &command, &sensitivity, &turbo) == 5 && type) {
+			int len = sscanf(string, " %i , %i , %i , %i , %i , %i", &uid, &port, &command, &sensitivity, &turbo, &slot);
+			if (len >= 5 && type) {
 				VirtualControl *c = dev->GetVirtualControl(uid);
 				if (!c) c = dev->AddVirtualControl(uid, -1);
 				if (c) {
-					BindCommand(dev, uid, pad, command, sensitivity, turbo);
+					BindCommand(dev, uid, port, slot, command, sensitivity, turbo);
 				}
 			}
 		}
@@ -922,7 +928,7 @@ int LoadSettings(int force, wchar_t *file) {
 				continue;
 			}
 			last = 1;
-			int pad, motor;
+			int port, slot, motor;
 			int w = 0;
 			char string[1000];
 			char effect[1000];
@@ -933,8 +939,8 @@ int LoadSettings(int force, wchar_t *file) {
 			string[w] = 0;
 			// wcstok not in ntdll.  More effore than its worth to shave off
 			// whitespace without it.
-			if (sscanf(string, " %s %i , %i", effect, &pad, &motor) == 3) {
-				char *s = strchr(strchr(string, ',')+1, ',');
+			if (sscanf(string, " %s %i , %i , %i", effect, &port, &motor, &slot) == 4) {
+				char *s = strchr(strchr(strchr(string, ',')+1, ',')+1, ',');
 				if (!s) continue;
 				s++;
 				w = 0;
@@ -951,7 +957,7 @@ int LoadSettings(int force, wchar_t *file) {
 					// eff = &dev->ffEffectTypes[dev->numFFEffectTypes-1];
 				}
 				ForceFeedbackBinding *b;
-				int res = CreateEffectBinding(dev, temp2, pad, motor, &b);
+				CreateEffectBinding(dev, temp2, port, slot, motor, &b);
 				if (b) {
 					while (1) {
 						int axisID = atoi(s);
@@ -980,10 +986,14 @@ int LoadSettings(int force, wchar_t *file) {
 	return 0;
 }
 
-inline int GetPAD(HWND hWnd) {
-	for (int i=0; i<sizeof(hWnds)/sizeof(hWnds[0]); i++) {
-		if (hWnds[i] == hWnd) return i;
+inline int GetPort(HWND hWnd, int *slot) {
+	for (int i=0; i<sizeof(hWnds)/sizeof(hWnds[0][0]); i++) {
+		if (hWnds[i&1][i>>1] == hWnd) {
+			*slot = i>>1;
+			return i&1;
+		}
 	}
+	*slot = 0;
 	return 0;
 }
 
@@ -1002,95 +1012,94 @@ void Diagnostics(HWND hWnd) {
 	RefreshEnabledDevicesAndDisplay(0, hWnd, 1);
 }
 
-int GetBinding(int pad, int index, Device *&dev, Binding *&b, ForceFeedbackBinding *&ffb) {
+int GetBinding(int port, int slot, int index, Device *&dev, Binding *&b, ForceFeedbackBinding *&ffb) {
 	ffb = 0;
 	b = 0;
 	for (int i = 0; i<dm->numDevices; i++) {
 		dev = dm->devices[i];
 		if (!dev->enabled) continue;
-		if (index < dev->pads[pad].numBindings) {
-			b = dev->pads[pad].bindings + index;
+		if (index < dev->pads[port][slot].numBindings) {
+			b = dev->pads[port][slot].bindings + index;
 			return 1;
 		}
-		index -= dev->pads[pad].numBindings;
+		index -= dev->pads[port][slot].numBindings;
 
-		if (index < dev->pads[pad].numFFBindings) {
-			ffb = dev->pads[pad].ffBindings + index;
+		if (index < dev->pads[port][slot].numFFBindings) {
+			ffb = dev->pads[port][slot].ffBindings + index;
 			return 1;
 		}
-		index -= dev->pads[pad].numFFBindings;
+		index -= dev->pads[port][slot].numFFBindings;
 	}
 	return 0;
 }
 
 // Only used when deleting things from ListView. Will remove from listview if needed.
-void DeleteBinding(int pad, Device *dev, Binding *b) {
-	if (dev->enabled && hWnds[pad]) {
-		int count = GetItemIndex(pad, dev, b);
+void DeleteBinding(int port, int slot, Device *dev, Binding *b) {
+	if (dev->enabled && hWnds[port][slot]) {
+		int count = GetItemIndex(port, slot, dev, b);
 		if (count >= 0) {
-			HWND hWndList = GetDlgItem(hWnds[pad], IDC_LIST);
+			HWND hWndList = GetDlgItem(hWnds[port][slot], IDC_LIST);
 			if (hWndList) {
 				ListView_DeleteItem(hWndList, count);
 			}
 		}
 	}
-	Binding *bindings = dev->pads[pad].bindings;
+	Binding *bindings = dev->pads[port][slot].bindings;
 	int i = b - bindings;
-	memmove(bindings+i, bindings+i+1, sizeof(Binding) * (dev->pads[pad].numBindings - i - 1));
-	dev->pads[pad].numBindings--;
+	memmove(bindings+i, bindings+i+1, sizeof(Binding) * (dev->pads[port][slot].numBindings - i - 1));
+	dev->pads[port][slot].numBindings--;
 }
 
-void DeleteBinding(int pad, Device *dev, ForceFeedbackBinding *b) {
-	if (dev->enabled && hWnds[pad]) {
-		int count = GetItemIndex(pad, dev, b);
+void DeleteBinding(int port, int slot, Device *dev, ForceFeedbackBinding *b) {
+	if (dev->enabled && hWnds[port][slot]) {
+		int count = GetItemIndex(port, slot, dev, b);
 		if (count >= 0) {
-			HWND hWndList = GetDlgItem(hWnds[pad], IDC_LIST);
+			HWND hWndList = GetDlgItem(hWnds[port][slot], IDC_LIST);
 			if (hWndList) {
 				ListView_DeleteItem(hWndList, count);
 			}
 		}
 	}
-	ForceFeedbackBinding *bindings = dev->pads[pad].ffBindings;
+	ForceFeedbackBinding *bindings = dev->pads[port][slot].ffBindings;
 	int i = b - bindings;
-	memmove(bindings+i, bindings+i+1, sizeof(Binding) * (dev->pads[pad].numFFBindings - i - 1));
-	dev->pads[pad].numFFBindings--;
+	memmove(bindings+i, bindings+i+1, sizeof(Binding) * (dev->pads[port][slot].numFFBindings - i - 1));
+	dev->pads[port][slot].numFFBindings--;
 }
 
-int DeleteByIndex(int pad, int index) {
+int DeleteByIndex(int port, int slot, int index) {
 	ForceFeedbackBinding *ffb;
 	Binding *b;
 	Device *dev;
-	if (GetBinding(pad, index, dev, b, ffb)) {
+	if (GetBinding(port, slot, index, dev, b, ffb)) {
 		if (b) {
-			DeleteBinding(pad, dev, b);
+			DeleteBinding(port, slot, dev, b);
 		}
 		else {
-			DeleteBinding(pad, dev, ffb);
+			DeleteBinding(port, slot, dev, ffb);
 		}
 		return 1;
 	}
 	return 0;
 }
 
-int DeleteSelected(int pad) {
-	if (!hWnds[pad]) return 0;
-	HWND hWnd = GetDlgItem(hWnds[pad], IDC_LIST);
-	int i = ListView_GetSelectedCount(hWnd);
+int DeleteSelected(int port, int slot) {
+	if (!hWnds[port][slot]) return 0;
+	HWND hWnd = GetDlgItem(hWnds[port][slot], IDC_LIST);
 	int changes = 0;
-	while (i-- > 0) {
+	while (1) {
 		int index = ListView_GetNextItem(hWnd, -1, LVNI_SELECTED);
-		if (index >= 0) {
-			changes += DeleteByIndex(pad, index);
-		}
+		if (index < 0) break;
+		changes += DeleteByIndex(port, slot, index);
 	}
 	//ShowScrollBar(hWnd, SB_VERT, 1);
 	return changes;
 }
 
-int CreateEffectBinding(Device *dev, wchar_t *effectID, unsigned int pad, unsigned int motor, ForceFeedbackBinding **binding) {
+int CreateEffectBinding(Device *dev, wchar_t *effectID, unsigned int port, unsigned int slot, unsigned int motor, ForceFeedbackBinding **binding) {
 	// Checks needed because I use this directly when loading bindings.
 	// Note: dev->numFFAxes *can* be 0, for loading from file.
-	if (pad > 1 || motor > 1 || !dev->numFFEffectTypes) {
+	*binding = 0;
+	if (port > 1 || slot>3 || motor > 1 || !dev->numFFEffectTypes) {
 		return -1;
 	}
 	if (!effectID) {
@@ -1099,24 +1108,24 @@ int CreateEffectBinding(Device *dev, wchar_t *effectID, unsigned int pad, unsign
 	ForceFeedbackEffectType *eff = dev->GetForcefeedbackEffect(effectID);
 	if (!eff) return -1;
 	int effectIndex = eff - dev->ffEffectTypes;
-	dev->pads[pad].ffBindings = (ForceFeedbackBinding*) realloc(dev->pads[pad].ffBindings, (dev->pads[pad].numFFBindings+1) * sizeof(ForceFeedbackBinding));
-	int newIndex = dev->pads[pad].numFFBindings;
-	while (newIndex && dev->pads[pad].ffBindings[newIndex-1].motor >= motor) {
-		dev->pads[pad].ffBindings[newIndex] = dev->pads[pad].ffBindings[newIndex-1];
+	dev->pads[port][slot].ffBindings = (ForceFeedbackBinding*) realloc(dev->pads[port][slot].ffBindings, (dev->pads[port][slot].numFFBindings+1) * sizeof(ForceFeedbackBinding));
+	int newIndex = dev->pads[port][slot].numFFBindings;
+	while (newIndex && dev->pads[port][slot].ffBindings[newIndex-1].motor >= motor) {
+		dev->pads[port][slot].ffBindings[newIndex] = dev->pads[port][slot].ffBindings[newIndex-1];
 		newIndex--;
 	}
-	ForceFeedbackBinding *b = dev->pads[pad].ffBindings + newIndex;
+	ForceFeedbackBinding *b = dev->pads[port][slot].ffBindings + newIndex;
 	b->axes = (AxisEffectInfo*) calloc(dev->numFFAxes, sizeof(AxisEffectInfo));
 	b->motor = motor;
 	b->effectIndex = effectIndex;
-	dev->pads[pad].numFFBindings++;
+	dev->pads[port][slot].numFFBindings++;
 	if (binding) *binding = b;
-	return ListBoundEffect(pad, dev, b);
+	return ListBoundEffect(port, slot, dev, b);
 }
 
-int BindCommand(Device *dev, unsigned int uid, unsigned int pad, int command, int sensitivity, int turbo) {
+int BindCommand(Device *dev, unsigned int uid, unsigned int port, unsigned int slot, int command, int sensitivity, int turbo) {
 	// Checks needed because I use this directly when loading bindings.
-	if (pad > 1) {
+	if (port > 1 || slot>3) {
 		return -1;
 	}
 	if (!sensitivity) sensitivity = BASE_SENSITIVITY;
@@ -1129,7 +1138,7 @@ int BindCommand(Device *dev, unsigned int uid, unsigned int pad, int command, in
 	// Add before deleting.  Means I won't scroll up one line when scrolled down to bottom.
 	int controlIndex = c - dev->virtualControls;
 	int index = 0;
-	PadBindings *p = dev->pads+pad;
+	PadBindings *p = dev->pads[port]+slot;
 	p->bindings = (Binding*) realloc(p->bindings, (p->numBindings+1) * sizeof(Binding));
 	for (index = p->numBindings; index > 0; index--) {
 		if (p->bindings[index-1].controlIndex < controlIndex) break;
@@ -1142,7 +1151,7 @@ int BindCommand(Device *dev, unsigned int uid, unsigned int pad, int command, in
 	b->turbo = turbo;
 	b->sensitivity = sensitivity;
 	// Where it appears in listview.
-	int count = ListBoundCommand(pad, dev, b);
+	int count = ListBoundCommand(port, slot, dev, b);
 
 	int newBindingIndex = index;
 	index = 0;
@@ -1170,7 +1179,7 @@ int BindCommand(Device *dev, unsigned int uid, unsigned int pad, int command, in
 			newBindingIndex--;
 			count --;
 		}
-		DeleteBinding(pad, dev, b);
+		DeleteBinding(port, slot, dev, b);
 	}
 
 	return count;
@@ -1209,7 +1218,8 @@ void EndBinding(HWND hWnd) {
 
 INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM lParam) {
 	int index = (hWnd == PropSheet_IndexToHwnd(hWndProp, 1));
-	int pad = GetPAD(hWnd);
+	int slot;
+	int port = GetPort(hWnd, &slot);
 	HWND hWndList = GetDlgItem(hWnd, IDC_LIST);
 	switch (msg) {
 	case WM_INITDIALOG:
@@ -1227,14 +1237,16 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 			c.pszText = L"PS2 Control";
 			ListView_InsertColumn(hWndList, 2, &c);
 			selected = 0;
-			hWnds[pad = (int)((PROPSHEETPAGE *)lParam)->lParam] = hWnd;
+			port = (int)((PROPSHEETPAGE *)lParam)->lParam & 1;
+			slot = (int)((PROPSHEETPAGE *)lParam)->lParam >> 1;
+			hWnds[port][slot] = hWnd;
 			SendMessage(hWndList, LVM_SETEXTENDEDLISTVIEWSTYLE, 0, LVS_EX_FULLROWSELECT);
 			HWND hWndSlider = GetDlgItem(hWnd, IDC_SLIDER1);
 			SetupLogSlider(hWndSlider);
-			if (pad == 1)
+			if (port || slot)
 				EnableWindow(GetDlgItem(hWnd, ID_IGNORE), 0);
 
-			Populate(pad);
+			Populate(port, slot);
 		}
 		break;
 	case WM_DEVICECHANGE:
@@ -1263,16 +1275,16 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 				int index = -1;
 				if (command == 0x7F) {
 					if (dev->api == IGNORE_KEYBOARD) {
-						index = BindCommand(dev, uid, 0, command, BASE_SENSITIVITY, 0);
+						index = BindCommand(dev, uid, 0, 0, command, BASE_SENSITIVITY, 0);
 					}
 				}
 				else if (command < 0x30) {
 					if (!(uid & UID_POV)) {
-						index = BindCommand(dev, uid, pad, command, BASE_SENSITIVITY, 0);
+						index = BindCommand(dev, uid, port, slot, command, BASE_SENSITIVITY, 0);
 					}
 				}
 				if (index >= 0) {
-					PropSheet_Changed(hWndProp, hWnds[pad]);
+					PropSheet_Changed(hWndProp, hWnds[port][slot]);
 					if (index >= 0)
 						ListView_SetItemState(hWndList, index, LVIS_SELECTED, LVIS_SELECTED);
 				}
@@ -1312,7 +1324,7 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 					if (key->wVKey == VK_DELETE ||
 						key->wVKey == VK_BACK) {
 
-						if (DeleteSelected(pad))
+						if (DeleteSelected(port, slot))
 							PropSheet_Changed(hWndProp, hWnds[0]);
 					}
 				}
@@ -1325,7 +1337,7 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 				}
 				else if (n->hdr.code == NM_CUSTOMDRAW && NeedUpdate) {
 					NeedUpdate = 0;
-					SelChanged(pad);
+					SelChanged(port, slot);
 				}
 				EndBinding(hWnd);
 			}
@@ -1339,10 +1351,10 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 			int id = GetDlgCtrlID((HWND)lParam);
 			int val = GetLogSliderVal(hWnd, id);
 			if (id == IDC_SLIDER1) {
-				ChangeValue(pad, &val, 0);
+				ChangeValue(port, slot, &val, 0);
 			}
 			else {
-				ChangeEffect(pad, id, &val, 0);
+				ChangeEffect(port, slot, id, &val, 0);
 			}
 		}
 		break;
@@ -1355,13 +1367,13 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 					ForceFeedbackBinding *ffb;
 					Binding *b;
 					Device *dev;
-					if (GetBinding(pad, index, dev, b, ffb)) {
+					if (GetBinding(port, slot, index, dev, b, ffb)) {
 						int uid = dev->virtualControls[b->controlIndex].uid;
 						const static unsigned int axisUIDs[3] = {UID_AXIS_NEG, UID_AXIS_POS, UID_AXIS};
 						uid = (uid&0x00FFFFFF) | axisUIDs[cbsel];
 						Binding backup = *b;
-						DeleteSelected(pad);
-						int index = BindCommand(dev, uid, pad, backup.command, backup.sensitivity, backup.turbo);
+						DeleteSelected(port, slot);
+						int index = BindCommand(dev, uid, port, slot, backup.command, backup.sensitivity, backup.turbo);
 						ListView_SetItemState(hWndList, index, LVIS_SELECTED, LVIS_SELECTED);
 					}
 				}
@@ -1370,18 +1382,18 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 		else if (HIWORD(wParam)==CBN_SELCHANGE && LOWORD(wParam) == IDC_FF_EFFECT) {
 			unsigned int typeIndex = SendMessage((HWND)lParam, CB_GETCURSEL, 0, 0);
 			if (typeIndex >= 0)
-				ChangeEffect(pad, 0, 0, &typeIndex);
+				ChangeEffect(port, slot, 0, 0, &typeIndex);
 		}
 		else if (HIWORD(wParam)==BN_CLICKED) {
 			EndBinding(hWnd);
 			int cmd = LOWORD(wParam);
 			if (cmd == ID_DELETE) {
-				if (DeleteSelected(pad))
+				if (DeleteSelected(port, slot))
 					PropSheet_Changed(hWndProp, hWnd);
 			}
 			else if (cmd == ID_CLEAR) {
 				int changed=0;
-				while (DeleteByIndex(pad, 0)) changed++;
+				while (DeleteByIndex(port, slot, 0)) changed++;
 				if (changed)
 					PropSheet_Changed(hWndProp, hWnd);
 			}
@@ -1391,7 +1403,7 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 					unsigned int index = (unsigned int)SendMessage(GetDlgItem(hWnd, IDC_FORCEFEEDBACK), CB_GETITEMDATA, i, 0);
 					if (index < (unsigned int) dm->numDevices) {
 						ForceFeedbackBinding *b;
-						int count = CreateEffectBinding(dm->devices[index], 0, pad, cmd-ID_BIG_MOTOR, &b);
+						int count = CreateEffectBinding(dm->devices[index], 0, port, slot, cmd-ID_BIG_MOTOR, &b);
 						if (b) {
 							for (int j=0; j<2 && j <dm->devices[index]->numFFAxes; j++) {
 								b->axes[j].force = BASE_SENSITIVITY;
@@ -1414,7 +1426,7 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 				ForceFeedbackBinding *ffb = 0;
 				int selIndex = ListView_GetNextItem(hWndList, -1, LVNI_SELECTED);
 				if (selIndex >= 0) {
-					if (GetBinding(pad, selIndex, dev, b, ffb)) {
+					if (GetBinding(port, slot, selIndex, dev, b, ffb)) {
 						selected = 0xFF;
 						InitInfo info = {0, hWndProp, hWnd, GetDlgItem(hWnd, cmd)};
 						EatWndProc(info.hWndButton, DoNothingWndProc);
@@ -1470,11 +1482,11 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 				// Don't allow setting it back to indeterminate.
 				SendMessage(GetDlgItem(hWnd, IDC_TURBO), BM_SETSTYLE, BS_AUTOCHECKBOX, 0);
 				int turbo = (IsDlgButtonChecked(hWnd, IDC_TURBO) == BST_CHECKED);
-				ChangeValue(pad, 0, &turbo);
+				ChangeValue(port, slot, 0, &turbo);
 			}
 			else if (cmd == IDC_FLIP1 || cmd == IDC_TURBO) {
 				int val = GetLogSliderVal(hWnd, IDC_SLIDER1);
-				ChangeValue(pad, &val, 0);
+				ChangeValue(port, slot, &val, 0);
 			}
 			else if (cmd >= IDC_FF_AXIS1_ENABLED && cmd < IDC_FF_AXIS8_ENABLED + 16) {
 				int index = (cmd - IDC_FF_AXIS1_ENABLED)/16;
@@ -1482,7 +1494,7 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 				if (IsDlgButtonChecked(hWnd, 16*index + IDC_FF_AXIS1_ENABLED) != BST_CHECKED) {
 					val = 0;
 				}
-				ChangeEffect(pad, cmd, &val, 0);
+				ChangeEffect(port, slot, cmd, &val, 0);
 			}
 		}
 		break;
@@ -1492,29 +1504,37 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 	return 0;
 }
 
-int CreatePadPages(HPROPSHEETPAGE *pages) {
+void UpdatePadPages() {
+	HPROPSHEETPAGE pages[10];
 	int count = 0;
-	for (int pad=0; pad<2; pad++) {
-		if (config.disablePad[pad]) continue;
+	memset(hWnds, 0, sizeof(hWnds));
+	int slot = 0;
+	for (int port=0; port<2; port++) {
+		if (config.padConfigs[port][slot].type == DisabledPad) continue;
 		PROPSHEETPAGE psp;
 		ZeroMemory(&psp, sizeof(psp));
 		psp.dwSize = sizeof(psp);
 		psp.dwFlags = PSP_USETITLE | PSP_PREMATURE;
 		psp.hInstance = hInst;
 		psp.pfnDlgProc = (DLGPROC) DialogProc;
-		psp.lParam = pad;
-		if (pad == 0)
+		psp.lParam = port | (slot<<1);
+		if (port == 0)
 			psp.pszTitle = L"Pad 1";
 		else
 			psp.pszTitle = L"Pad 2";
-		if (!config.guitar[pad])
+		if (config.padConfigs[port][slot].type != GuitarPad)
 			psp.pszTemplate = MAKEINTRESOURCE(IDD_CONFIG);
 		else
 			psp.pszTemplate = MAKEINTRESOURCE(IDD_CONFIG_GUITAR);
 		pages[count] = CreatePropertySheetPage(&psp);
 		if (pages[count]) count++;
 	}
-	return count;
+	while (SendMessage(hWndProp, PSM_INDEXTOPAGE, 1, 0)) {
+		PropSheet_RemovePage(hWndProp, 1, 0);
+	}
+	for (int i=0; i<count; i++) {
+		PropSheet_AddPage(hWndProp, pages[i]);
+	}
 }
 
 INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM lParam);
@@ -1531,21 +1551,88 @@ HPROPSHEETPAGE CreateGeneralPage() {
 	return CreatePropertySheetPage(&psp);
 }
 
+void UpdatePadList(HWND hWnd) {
+	HWND hWndList = GetDlgItem(hWnd, IDC_PAD_LIST);
+	HWND hWndCombo = GetDlgItem(hWnd, IDC_PAD_TYPE);
+	HWND hWndAnalog = GetDlgItem(hWnd, IDC_ANALOG_START1);
+	int slot = 0;
+	int index = 0;
+	for (int port=0; port<2; port++) {
+		wchar_t text[100];
+		wsprintf(text, L"Pad %i", port);
+		LVITEM item;
+		item.iItem = index;
+		item.iSubItem = 0;
+		item.mask = LVIF_TEXT;
+		item.pszText = text;
+		if (SendMessage(hWndList, LVM_GETITEMCOUNT, 0, 0) <= index) {
+			ListView_InsertItem(hWndList, &item);
+		}
+		else {
+			ListView_SetItem(hWndList, &item);
+		}
+
+		item.iSubItem = 1;
+		wchar_t *strings[] = {L"Disabled", L"Dualshock 2", L"Guitar"};
+		if (2 < (unsigned int)config.padConfigs[port][slot].type) config.padConfigs[port][slot].type = Dualshock2Pad;
+		item.pszText = strings[config.padConfigs[port][slot].type];
+		ListView_SetItem(hWndList, &item);
+
+		item.iSubItem = 2;
+		int count = 0;
+		for (int i = 0; i<dm->numDevices; i++) {
+			Device *dev = dm->devices[i];
+			if (!dev->enabled) continue;
+			count += dev->pads[port][slot].numBindings + dev->pads[port][slot].numFFBindings;
+		}
+		wsprintf(text, L"%i", count);
+		item.pszText = text;
+		ListView_SetItem(hWndList, &item);
+		index++;
+	}
+	int sel = ListView_GetNextItem(hWndList, -1, LVNI_SELECTED);
+
+	EnableWindow(hWndCombo, sel>=0);
+	EnableWindow(hWndAnalog, sel>=0);
+	if (sel < 0) {
+		SendMessage(hWndCombo, CB_SETCURSEL, -1, 0);
+		CheckDlgButton(hWnd, IDC_ANALOG_START1, BST_UNCHECKED);
+	}
+	else {
+		SendMessage(hWndCombo, CB_SETCURSEL, config.padConfigs[sel][0].type, 0);
+		CheckDlgButton(hWnd, IDC_ANALOG_START1, BST_CHECKED*config.padConfigs[sel][0].autoAnalog);
+	}
+}
 
 INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM lParam) {
 	int i;
+	HWND hWndList = GetDlgItem(hWnd, IDC_PAD_LIST);
 	switch (msg) {
 	case WM_INITDIALOG:
 		{
-			HPROPSHEETPAGE pages[10];
-			int count = CreatePadPages(pages);
-			while (SendMessage(hWndProp, PSM_INDEXTOPAGE, 1, 0)) {
-				PropSheet_RemovePage(hWndProp, 1, 0);
-			}
-			for (int i=0; i<count; i++) {
-				PropSheet_AddPage(hWndProp, pages[i]);
+			HWND hWndCombo = GetDlgItem(hWnd, IDC_PAD_TYPE);
+			if (SendMessage(hWndCombo, CB_GETCOUNT, 0, 0) == 0) {
+				ListView_SetExtendedListViewStyleEx(hWndList, LVS_EX_DOUBLEBUFFER, LVS_EX_DOUBLEBUFFER);
+				LVCOLUMN c;
+				c.mask = LVCF_TEXT | LVCF_WIDTH;
+				c.cx = 50;
+				c.pszText = L"Pad";
+				ListView_InsertColumn(hWndList, 0, &c);
+				c.cx = 90;
+				c.pszText = L"Type";
+				ListView_InsertColumn(hWndList, 1, &c);
+				c.cx = 70;
+				c.pszText = L"Bindings";
+				ListView_InsertColumn(hWndList, 2, &c);
+				selected = 0;
+				SendMessage(hWndList, LVM_SETEXTENDEDLISTVIEWSTYLE, 0, LVS_EX_FULLROWSELECT);
+				SendMessage(hWndCombo, CB_ADDSTRING, 0, (LPARAM) L"Disabled");
+				SendMessage(hWndCombo, CB_ADDSTRING, 0, (LPARAM) L"Dualshock 2");
+				SendMessage(hWndCombo, CB_ADDSTRING, 0, (LPARAM) L"Guitar");
 			}
 		}
+		UpdatePadList(hWnd);
+		UpdatePadPages();
 		hWndGeneral = hWnd;
 		RefreshEnabledDevicesAndDisplay(0, hWnd, 0);
 
@@ -1554,8 +1641,6 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 		CheckDlgButton(hWnd, IDC_CLOSE_HACK1, BST_CHECKED * (config.closeHacks&1));
 		CheckDlgButton(hWnd, IDC_CLOSE_HACK2, BST_CHECKED * ((config.closeHacks&2)>>1));
 		CheckDlgButton(hWnd, IDC_CLOSE_HACK3, BST_CHECKED * ((config.closeHacks&4)>>2));
-		CheckDlgButton(hWnd, IDC_DISABLE_PAD1, BST_CHECKED * config.disablePad[0]);
-		CheckDlgButton(hWnd, IDC_DISABLE_PAD2, BST_CHECKED * config.disablePad[1]);
 		CheckDlgButton(hWnd, IDC_MOUSE_UNFOCUS, BST_CHECKED * config.mouseUnfocus);
 
 		CheckDlgButton(hWnd, IDC_GS_THREAD_INPUT, BST_CHECKED * config.GSThreadUpdates);
@@ -1571,10 +1656,6 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 		CheckDlgButton(hWnd, IDC_VISTA_VOLUME, BST_CHECKED * config.vistaVolume);
 		if (config.osVersion < 6) EnableWindow(GetDlgItem(hWnd, IDC_VISTA_VOLUME), 0);
 
-		CheckDlgButton(hWnd, IDC_GUITAR1, BST_CHECKED * config.guitar[0]);
-		CheckDlgButton(hWnd, IDC_GUITAR2, BST_CHECKED * config.guitar[1]);
-		CheckDlgButton(hWnd, IDC_ANALOG_START1, BST_CHECKED * config.AutoAnalog[0]);
-		CheckDlgButton(hWnd, IDC_ANALOG_START2, BST_CHECKED * config.AutoAnalog[1]);
 		CheckDlgButton(hWnd, IDC_DEBUG_FILE, BST_CHECKED * config.debug);
 		CheckDlgButton(hWnd, IDC_MULTIPLE_BINDING, BST_CHECKED * config.multipleBinding);
 
@@ -1598,7 +1679,18 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 		}
 		break;
 	case WM_COMMAND:
-		if (HIWORD(wParam)==BN_CLICKED && (LOWORD(wParam) == ID_LOAD || LOWORD(wParam) == ID_SAVE)) {
+		if (LOWORD(wParam) == IDC_PAD_TYPE) {
+			if (HIWORD(wParam) == CBN_SELCHANGE) {
+				int pad = ListView_GetNextItem(hWndList, -1, LVNI_SELECTED);
+				HWND hWndCombo = GetDlgItem(hWnd, IDC_PAD_TYPE);
+				int sel = SendMessage(hWndCombo, CB_GETCURSEL, 0, 0);
+				if (pad >= 0 && sel >= 0 && sel != config.padConfigs[sel][0].type) {
+					config.padConfigs[sel][0].type = (PadType)sel;
+					PropSheet_Changed(hWndProp, hWnd);
+				}
+			}
+		}
+		else if (HIWORD(wParam)==BN_CLICKED && (LOWORD(wParam) == ID_LOAD || LOWORD(wParam) == ID_SAVE)) {
 			OPENFILENAMEW ofn;
 			memset (&ofn, 0, sizeof(ofn));
 			ofn.lStructSize = sizeof(ofn);
@@ -1616,6 +1708,7 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 				if (GetOpenFileNameW(&ofn)) {
 					LoadSettings(1, ofn.lpstrFile);
 					GeneralDialogProc(hWnd, WM_INITDIALOG, 0, 0);
+					PropSheet_Changed(hWndProp, hWnd);
 				}
 			}
 			else {
@@ -1636,6 +1729,13 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 		}
 		else if (HIWORD(wParam)==BN_CLICKED && LOWORD(wParam) == ID_REFRESH) {
 			RefreshEnabledDevicesAndDisplay(1, hWnd, 1);
+		}
+		else if (HIWORD(wParam)==BN_CLICKED && LOWORD(wParam) == IDC_ANALOG_START1) {
+			int pad = ListView_GetNextItem(hWndList, -1, LVNI_SELECTED);
+			if (pad >= 0) {
+				config.padConfigs[pad][0].autoAnalog = (IsDlgButtonChecked(hWnd, IDC_ANALOG_START1) == BST_CHECKED);
+				PropSheet_Changed(hWndProp, hWnd);
+			}
 		}
 		else {
 			int t = IDC_CLOSE_HACK1;
@@ -1668,26 +1768,6 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 			}
 
 
-			unsigned int needUpdate = 0;
-			unsigned int disablePad1New = (IsDlgButtonChecked(hWnd, IDC_DISABLE_PAD1) == BST_CHECKED);
-			unsigned int disablePad2New = (IsDlgButtonChecked(hWnd, IDC_DISABLE_PAD2) == BST_CHECKED);
-			unsigned int guitarNew1 = (IsDlgButtonChecked(hWnd, IDC_GUITAR1) == BST_CHECKED);
-			unsigned int guitarNew2 = (IsDlgButtonChecked(hWnd, IDC_GUITAR2) == BST_CHECKED);
-			if (config.disablePad[0] != disablePad1New ||
-				config.disablePad[1] != disablePad2New ||
-				config.guitar[0] != guitarNew1 ||
-				config.guitar[1] != guitarNew2) {
-
-					config.disablePad[0] = disablePad1New;
-					config.disablePad[1] = disablePad2New;
-					config.guitar[0] = guitarNew1;
-					config.guitar[1] = guitarNew2;
-
-					needUpdate = 1;
-			}
-
-			config.AutoAnalog[0] = (IsDlgButtonChecked(hWnd, IDC_ANALOG_START1) == BST_CHECKED);
-			config.AutoAnalog[1] = (IsDlgButtonChecked(hWnd, IDC_ANALOG_START2) == BST_CHECKED);
 			config.debug = (IsDlgButtonChecked(hWnd, IDC_DEBUG_FILE) == BST_CHECKED);
 			config.multipleBinding = (IsDlgButtonChecked(hWnd, IDC_MULTIPLE_BINDING) == BST_CHECKED);
 
@@ -1719,9 +1799,10 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 			RefreshEnabledDevicesAndDisplay(0, hWnd, 1);
 
 			PropSheet_Changed(hWndProp, hWnd);
+			/*
 			if (needUpdate) {
-				GeneralDialogProc(hWnd, WM_INITDIALOG, 0, 0);
-			}
+				UpdatePadPages();
+			}//*/
 		}
 		break;
 	case WM_NOTIFY:
@@ -1746,9 +1827,12 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 					return 1;
 				}
 			}
-			else {
-				if (n->hdr.idFrom == IDC_LIST && n->hdr.code == NM_DBLCLK) {
-					Diagnostics(hWnd);
+			else if (n->hdr.idFrom == IDC_LIST && n->hdr.code == NM_DBLCLK) {
+				Diagnostics(hWnd);
+			}
+			else if (n->hdr.idFrom == IDC_PAD_LIST) {
+				if (n->hdr.code == NM_CLICK) {
+					UpdatePadList(hWnd);
 				}
 			}
 		}
@@ -1787,7 +1871,7 @@ void CALLBACK PADconfigure() {
 	psh.pszCaption = title;
 	PropertySheet(&psh);
 	LoadSettings(1);
-	hWnds[0] = hWnds[1] = 0;
+	memset(hWnds, 0, sizeof(hWnds));
 }
 
 void UnloadConfigs() {

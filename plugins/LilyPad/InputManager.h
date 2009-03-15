@@ -194,7 +194,7 @@ public:
 		};
 	};
 
-	PadBindings pads[2];
+	PadBindings pads[2][4];
 
 	// Virtual controls.  All basically act like pressure sensitivity buttons, with
 	// values between 0 and 2^16.  2^16 is fully down, 0 is up.  Larger values
@@ -267,7 +267,7 @@ public:
 	// Note:  Only used externally for binding, so if override the other one, can assume
 	// all other forces are currently 0.
 	inline virtual void SetEffect(ForceFeedbackBinding *binding, unsigned char force) {}
-	inline virtual void SetEffects(unsigned char pad, unsigned char motor, unsigned char force);
+	inline virtual void SetEffects(unsigned char port, unsigned int slot, unsigned char motor, unsigned char force);
 
 	// Called after reading.  Basically calls FlipState().
 	// Some device types (Those that don't incrementally update)
@@ -303,7 +303,7 @@ public:
 	// Called after reading state, after Update().
 	void PostRead();
 
-	void SetEffect(unsigned char pad, unsigned char motor, unsigned char force);
+	void SetEffect(unsigned char port, unsigned int slot, unsigned char motor, unsigned char force);
 
 	// Update does this as needed.
 	// void GetInput(void *v);

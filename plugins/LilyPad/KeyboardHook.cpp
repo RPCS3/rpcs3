@@ -87,8 +87,8 @@ LRESULT CALLBACK IgnoreKeyboardHook(int code, WPARAM wParam, LPARAM lParam) {
 				if (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN) {
 					KBDLLHOOKSTRUCT* key = (KBDLLHOOKSTRUCT*) lParam;
 					if (key->vkCode < 256) {
-						for (int i=0; i<ikhd->pads[0].numBindings; i++) {
-							if (ikhd->pads[0].bindings[i].controlIndex == key->vkCode) {
+						for (int i=0; i<ikhd->pads[0][0].numBindings; i++) {
+							if (ikhd->pads[0][0].bindings[i].controlIndex == key->vkCode) {
 								return 1;
 							}
 						}
