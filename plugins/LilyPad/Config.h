@@ -14,7 +14,6 @@ public:
 	u8 disableScreenSaver;
 	u8 closeHacks;
 
-	u8 axisButtons;
 	DeviceAPI keyboardApi;
 	DeviceAPI mouseApi;
 	struct {

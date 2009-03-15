@@ -547,7 +547,15 @@ inline void ResetVibrate(Pad *pad) {
 	((int*)(pad->vibrate))[1] = 0xFFFFFFFF;
 }
 
-
+void ResetPad(int pad) {
+	memset(&pads[pad], 0, sizeof(pads[0]));
+	pads[pad].mode = MODE_DIGITAL;
+	pads[pad].umask[0] = pads[pad].umask[1] = 0xFF;
+	ResetVibrate(pads+pad);
+	if (config.AutoAnalog[pad]) {
+		pads[pad].mode = MODE_ANALOG;
+	}
+}
 
 s32 CALLBACK PADinit(u32 flags) {
 	// Note:  Won't load settings if already loaded.
@@ -566,13 +574,7 @@ s32 CALLBACK PADinit(u32 flags) {
 	#endif
 	pad --;
 
-	memset(&pads[pad], 0, sizeof(pads[0]));
-	pads[pad].mode = MODE_DIGITAL;
-	pads[pad].umask[0] = pads[pad].umask[1] = 0xFF;
-	ResetVibrate(pads+pad);
-	if (config.AutoAnalog[pad]) {
-		pads[pad].mode = MODE_ANALOG;
-	}
+	ResetPad(pad);
 
 	pads[pad].initialized = 1;
 
@@ -1171,6 +1173,84 @@ keyEvent* CALLBACK PADkeyEvent() {
 		altDown = (ev.evt == KEYPRESS);
 	}
 	return &ev;
+}
+
+#define PAD_SAVE_STATE_VERSION	0
+
+struct PadFreezeData {
+	u8 mode;
+	u8 locked;
+	u8 config;
+	u8 vibrate[8];
+	u8 umask[2];
+};
+
+struct PadPluginFreezeData {
+	char format[8];
+	// Currently all different versions are incompatible.
+	// May split into major/minor with some compatibility rules.
+	u32 version;
+	PadFreezeData padData[2];
+};
+
+s32 CALLBACK PADfreeze(int mode, freezeData *data) {
+	if (mode == FREEZE_SIZE) {
+		data->size = sizeof(PadPluginFreezeData);
+	}
+	else if (mode == FREEZE_LOAD) {
+		if (data->size < sizeof(PadPluginFreezeData)) return 0;
+		PadPluginFreezeData &pdata = *(PadPluginFreezeData*)(data->data);
+		strcpy(pdata.format, "PadMode");
+		pdata.version = PAD_SAVE_STATE_VERSION;
+		for (int i=0; i<2; i++) {
+			pdata.padData[i].mode = pads[i].mode;
+			pdata.padData[i].locked = pads[i].modeLock;
+			memcpy(pdata.padData[i].umask, pads[i].umask, sizeof(pads[i].umask));
+			memcpy(pdata.padData[i].vibrate, pads[i].vibrate, sizeof(pads[i].vibrate));
+
+
+			// Means I only have to have one chunk of code to parse vibrate info.
+			// Other plugins don't store it exactly, but think it's technically correct
+			// to do so, though I could be wrong.
+			pads[i].config = 1;
+			PADstartPoll(i+1);
+			PADpoll(0x4D);
+			PADpoll(0x00);
+			for (int j=0; j<7; j++) {
+				PADpoll(pdata.padData[i].vibrate[j]);
+			}
+
+			pdata.padData[i].config = pads[i].config;
+		}
+	}
+	else if (mode == FREEZE_SAVE) {
+		if (data->size != sizeof(PadPluginFreezeData)) return 0;
+		PadPluginFreezeData &pdata = *(PadPluginFreezeData*)(data->data);
+		if (pdata.version != PAD_SAVE_STATE_VERSION || !stricmp(pdata.format, "PadMode")) return 0;
+		StopVibrate();
+		for (int i=0; i<2; i++) {
+			u8 mode = pads[i].mode = pdata.padData[i].mode;
+			if (mode != MODE_DIGITAL && mode != MODE_ANALOG && mode != MODE_DS2_NATIVE) {
+				ResetPad(i);
+				continue;
+			}
+			pads[i].config = pdata.padData[i].config;
+			pads[i].modeLock = pdata.padData[i].locked;
+			memcpy(pads[i].umask, pdata.padData[i].umask, sizeof(pads[i].umask));
+
+			// Means I only have to have one chunk of code to parse vibrate info.
+			// Other plugins don't store it exactly, but think it's technically correct
+			// to do so, though I could be wrong.
+			PADstartPoll(i+1);
+			PADpoll(0x4D);
+			PADpoll(0x00);
+			for (int j=0; j<7; j++) {
+				PADpoll(pdata.padData[i].vibrate[j]);
+			}
+		}
+	}
+	else return -1;
+	return 0;
 }
 
 u32 CALLBACK PADreadPort1 (PadDataS* pads) {

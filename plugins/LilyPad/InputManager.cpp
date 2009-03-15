@@ -161,7 +161,7 @@ void Device::CalcVirtualState() {
 			}
 		}
 		else if (c->type & ABSAXIS) {
-			virtualControlState[index] = val;
+			virtualControlState[index] = (val + FULLY_DOWN)/2;
 			// Positive.  Overkill.
 			virtualControlState[index+1] = (val & ~(val>>31));
 			// Negative
@@ -382,7 +382,10 @@ Device *InputDeviceManager::GetActiveDevice(void *info, int axisHint, unsigned i
 					if (axisHint != 2) {
 						if (devices[i]->virtualControls[j].uid & UID_POV) continue;
 						if (devices[i]->virtualControls[j].uid & UID_AXIS) {
-							if (!axisHint || (((devices[i]->virtualControls[j].uid>>16)&0xFF) != ABSAXIS)) continue;
+							if ((((devices[i]->virtualControls[j].uid>>16)&0xFF) != ABSAXIS)) continue;
+							// Very picky when binding entire axes.  Prefer binding half-axes.
+							if (devices[i]->oldVirtualControlState[j] >= FULLY_DOWN/8 &&
+								devices[i]->oldVirtualControlState[j] <= FULLY_DOWN*7/8) continue;
 						}
 					}
 					bestDiff = diff;

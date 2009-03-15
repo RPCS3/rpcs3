@@ -180,18 +180,6 @@ void RefreshEnabledDevicesAndDisplay(int updateDeviceList = 0, HWND hWnd = 0, in
 
 wchar_t *GetCommandStringW(u8 command, int pad) {
 	static wchar_t temp[34];
-	if (command >= 0x30 && command <= 0x35) {
-		if (config.guitar[pad] && (command == 0x31 || command == 0x33)) {
-			HWND hWnd = GetDlgItem(hWnds[pad], 0x10F0+command);
-			int res = GetWindowTextW(hWnd, temp, 20);
-			if ((unsigned int)res-1 <= 18) return temp;
-		}
-		static wchar_t *axisCommands[] = {
-			L"D-Pad Horiz", L"D-Pad Vert",
-			L"L-Stick Horiz", L"L-Stick Vert",
-			L"R-Stick Horiz", L"R-Stick Vert"};
-		return axisCommands[command-0x30];
-	}
 	if (command >= 0x20 && command <= 0x27) {
 		if (config.guitar[pad] && (command == 0x20 || command == 0x22)) {
 			HWND hWnd = GetDlgItem(hWnds[pad], 0x10F0+command);
@@ -206,9 +194,42 @@ wchar_t *GetCommandStringW(u8 command, int pad) {
 		return temp;
 	}
 	/* Get text from the buttons. */
-	if (command >= 0x0B && command <=0x28 ||
-		(command >= 0x36 && command <=0x38)) {
+	if (command >= 0x0C && command <=0x28) {
 		HWND hWnd = GetDlgItem(hWnds[pad], 0x10F0+command);
+		if (!hWnd) {
+			wchar_t *strings[] = {
+				L"Lock Buttons",
+				L"Lock Input",
+				L"Lock Direction",
+				L"Mouse",
+				L"Select",
+				L"L3",
+				L"R3",
+				L"Start",
+				L"Up",
+				L"Right",
+				L"Down",
+				L"Left",
+				L"L2",
+				L"R2",
+				L"L1",
+				L"R1",
+				L"Triangle",
+				L"Circle",
+				L"Square",
+				L"Cross",
+				L"L-Stick Up",
+				L"L-Stick Right",
+				L"L-Stick Down",
+				L"L-Stick Left",
+				L"R-Stick Up",
+				L"R-Stick Right",
+				L"R-Stick Down",
+				L"R-Stick Left",
+				L"Analog",
+			};
+			return strings[command - 0xC];
+		}
 		int res = GetWindowTextW(hWnd, temp, 20);
 		if ((unsigned int)res-1 <= 18) return temp;
 	}
@@ -241,15 +262,15 @@ void SelChanged(int pad) {
 	// Set if sensitivity != 0, but need to disable flip anyways.
 	// Only used to relative axes.
 	int disableFlip = 0;
-	wchar_t temp[3][1000];
+	wchar_t temp[4][1000];
 	Device *dev;
 	int bFound = 0;
 	int ffbFound = 0;
 	ForceFeedbackBinding *ffb = 0;
+	Binding *b = 0;
 	if (i >= 1) {
 		int index = -1;
 		int flipped = 0;
-		Binding *b;
 		while (1) {
 			index = ListView_GetNextItem(hWndList, index, LVNI_SELECTED);
 			if (index < 0) break;
@@ -257,10 +278,31 @@ void SelChanged(int pad) {
 			item.iItem = index;
 			item.mask = LVIF_TEXT;
 			for (j=0; j<3; j++) {
-				item.pszText = temp[j];
+				item.pszText = temp[3];
 				item.iSubItem = j;
-				item.cchTextMax = sizeof(temp[0])/sizeof(temp[0][0]);
+				item.cchTextMax = sizeof(temp[0])/sizeof(temp[3][0]);
 				if (!ListView_GetItem(hWndList, &item)) break;
+				if (!bFound && !ffbFound)
+					wcscpy(temp[j], temp[3]);
+				else if (wcsicmp(temp[j], temp[3])) {
+					int q = 0;
+					while (temp[j][q] == temp[3][q]) q++;
+					if (q && temp[j][q-1] == ' ' && temp[j][q] && temp[j][q+1] == 0) q--;
+					if (j == 1) {
+						// Really ugly, but merges labels for multiple directions for same axis.
+						if ((temp[j][q] == 0 || (temp[j][q] == ' ' && temp[j][q+2] == 0)) &&
+							(temp[3][q] == 0 || (temp[3][q] == ' ' && temp[3][q+2] == 0))) {
+								temp[j][q] = 0;
+								continue;
+						}
+					}
+					// Merge different directions for same stick.
+					else if (j == 2 && q > 4) {
+						temp[j][q] = 0;
+						continue;
+					}
+					wcscpy(temp[j], L"*");
+				}
 			}
 			if (j == 3) {
 				devName = temp[0];
@@ -352,10 +394,6 @@ void SelChanged(int pad) {
 		}
 	}
 	if (!ffb) { 
-		SetWindowText(GetDlgItem(hWnd, IDC_AXIS_DEVICE1), devName);
-		SetWindowText(GetDlgItem(hWnd, IDC_AXIS1), key);
-		SetWindowText(GetDlgItem(hWnd, IDC_AXIS_CONTROL1), command);
-
 		SetLogSliderVal(hWnd, IDC_SLIDER1, GetDlgItem(hWnd, IDC_AXIS_SENSITIVITY1), sensitivity);
 
 		if (disableFlip) EnableWindow(GetDlgItem(hWnd, IDC_FLIP1), 0);
@@ -369,11 +407,45 @@ void SelChanged(int pad) {
 			SendMessage(GetDlgItem(hWnd, IDC_TURBO), BM_SETSTYLE, BS_AUTOCHECKBOX, 0);
 			CheckDlgButton(hWnd, IDC_TURBO, BST_CHECKED * (bFound && turbo == bFound));
 		}
+		HWND hWndCombo = GetDlgItem(hWnd, IDC_AXIS_DIRECTION);
+		int enableCombo = 0;
+		SendMessage(hWndCombo, CB_RESETCONTENT, 0, 0);
+		if (b && bFound == 1) {
+			VirtualControl *control = &dev->virtualControls[b->controlIndex];
+			unsigned int uid = control->uid;
+			if (((uid>>16) & 0xFF) == ABSAXIS) {
+				enableCombo = 1;
+				wchar_t *endings[3] = {L" -", L" +", L""};
+				wchar_t *string = temp[3];
+				wcscpy(string, key);
+				wchar_t *end = wcschr(string, 0);
+				int sel = 2;
+				if (!(uid & UID_AXIS)) {
+					end[-2] = 0;
+					sel = (end[-1] == '+');
+					end -= 2;
+				}
+				for (int i=0; i<3; i++) {
+					wcscpy(end, endings[i]);
+					SendMessage(hWndCombo, CB_ADDSTRING, 0, (LPARAM) string);
+					if (i == sel)
+						SendMessage(hWndCombo, CB_SETCURSEL, i, 0);
+				}
+			}
+		}
+		EnableWindow(hWndCombo, enableCombo);
+		if (!enableCombo) {
+			SendMessage(hWndCombo, CB_ADDSTRING, 0, (LPARAM) key);
+			SendMessage(hWndCombo, CB_SELECTSTRING, i, (LPARAM) key);
+		}
+
+		SetDlgItemText(hWnd, IDC_AXIS_DEVICE1, devName);
+		SetDlgItemText(hWnd, IDC_AXIS_CONTROL1, command);
 	}
 	else {
 		wchar_t temp2[2000];
 		wsprintfW(temp2, L"%s / %s", devName, command);
-		SetWindowText(GetDlgItem(hWnd, ID_FF), temp2);
+		SetDlgItemText(hWnd, ID_FF, temp2);
 
 		hWndTemp = GetDlgItem(hWnd, IDC_FF_EFFECT);
 		SendMessage(hWndTemp, CB_RESETCONTENT, 0, 0);
@@ -626,7 +698,6 @@ int SaveSettings(wchar_t *file=0) {
 	WritePrivateProfileInt(L"General Settings", L"Mouse Unfocus", config.mouseUnfocus, file);
 	WritePrivateProfileInt(L"General Settings", L"Pad1 Disable", config.disablePad[0], file);
 	WritePrivateProfileInt(L"General Settings", L"Pad2 Disable", config.disablePad[1], file);
-	WritePrivateProfileInt(L"General Settings", L"Axis Buttons", config.axisButtons, file);
 	WritePrivateProfileInt(L"General Settings", L"Logging", config.debug, file);
 	WritePrivateProfileInt(L"General Settings", L"Keyboard Mode", config.keyboardApi, file);
 	WritePrivateProfileInt(L"General Settings", L"Mouse Mode", config.mouseApi, file);
@@ -746,7 +817,6 @@ int LoadSettings(int force, wchar_t *file) {
 	config.disablePad[0] = GetPrivateProfileBool(L"General Settings", L"Pad1 Disable", 0, file);
 	config.disablePad[1] = GetPrivateProfileBool(L"General Settings", L"Pad2 Disable", 0, file);
 	config.debug = GetPrivateProfileBool(L"General Settings", L"Logging", 0, file);
-	config.axisButtons = GetPrivateProfileBool(L"General Settings", L"Axis Buttons", 0, file);
 	config.multipleBinding = GetPrivateProfileBool(L"General Settings", L"Multiple Bindings", 0, file);
 	config.forceHide = GetPrivateProfileBool(L"General Settings", L"Force Cursor Hide", 0, file);
 
@@ -1184,11 +1254,7 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 			int value;
 			InitInfo info = {selected==0x7F, hWndProp, hWnd, GetDlgItem(hWnd, selected)};
 			int hint = 0;
-			if (selected < 0x30) {
-				// 1 will accept absolute axes, in addition to buttons.
-				hint = config.axisButtons;
-			}
-			else if (selected < 0x7F) {
+			if (selected < 0x7F) {
 				// 2 will accept relative axes, absolute axes, and POV controls.
 				hint = 2;
 			}
@@ -1355,7 +1421,27 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 		}
 		break;
 	case WM_COMMAND:
-		if (HIWORD(wParam)==CBN_SELCHANGE && LOWORD(wParam) == IDC_FF_EFFECT) {
+		if (HIWORD(wParam)==CBN_SELCHANGE && LOWORD(wParam) == IDC_AXIS_DIRECTION) {
+			int index = ListView_GetNextItem(hWndList, -1, LVNI_SELECTED);
+			if (index >= 0) {
+				int cbsel = SendMessage((HWND)lParam, CB_GETCURSEL, 0, 0);
+				if (cbsel >= 0) {
+					ForceFeedbackBinding *ffb;
+					Binding *b;
+					Device *dev;
+					if (GetBinding(pad, index, dev, b, ffb)) {
+						int uid = dev->virtualControls[b->controlIndex].uid;
+						const static unsigned int axisUIDs[3] = {UID_AXIS_NEG, UID_AXIS_POS, UID_AXIS};
+						uid = (uid&0x00FFFFFF) | axisUIDs[cbsel];
+						Binding backup = *b;
+						DeleteSelected(pad);
+						int index = BindCommand(dev, uid, pad, backup.command, backup.sensitivity, backup.turbo);
+						ListView_SetItemState(hWndList, index, LVIS_SELECTED, LVIS_SELECTED);
+					}
+				}
+			}
+		}
+		else if (HIWORD(wParam)==CBN_SELCHANGE && LOWORD(wParam) == IDC_FF_EFFECT) {
 			unsigned int typeIndex = SendMessage((HWND)lParam, CB_GETCURSEL, 0, 0);
 			if (typeIndex >= 0)
 				ChangeEffect(pad, 0, 0, &typeIndex);
@@ -1559,7 +1645,6 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 		CheckDlgButton(hWnd, IDC_ANALOG_START1, BST_CHECKED * config.AutoAnalog[0]);
 		CheckDlgButton(hWnd, IDC_ANALOG_START2, BST_CHECKED * config.AutoAnalog[1]);
 		CheckDlgButton(hWnd, IDC_DEBUG_FILE, BST_CHECKED * config.debug);
-		CheckDlgButton(hWnd, IDC_AXIS_BUTTONS, BST_CHECKED * config.axisButtons);
 		CheckDlgButton(hWnd, IDC_MULTIPLE_BINDING, BST_CHECKED * config.multipleBinding);
 
 
@@ -1673,24 +1758,7 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 			config.AutoAnalog[0] = (IsDlgButtonChecked(hWnd, IDC_ANALOG_START1) == BST_CHECKED);
 			config.AutoAnalog[1] = (IsDlgButtonChecked(hWnd, IDC_ANALOG_START2) == BST_CHECKED);
 			config.debug = (IsDlgButtonChecked(hWnd, IDC_DEBUG_FILE) == BST_CHECKED);
-			int temp = config.axisButtons;
-			config.axisButtons = (IsDlgButtonChecked(hWnd, IDC_AXIS_BUTTONS) == BST_CHECKED);
-			if (!temp && config.axisButtons) {
-				int res = MessageBoxA(hWnd,
-					"Enabling this completely changes the way that binding objects other than buttons works.\n"
-					"Such devices include POV controls and joysticks. It has no effect on the bind to axis buttons,    \n"
-					"but many people seem to have trouble figuring out how to click on those buttons.\n\n"
-					"Are you sure you want to enable this?\n\n"
-					"If you do, and then you have issues, don't waste my time complaining.\n\n",
-					"Are you sure?", MB_YESNO | MB_ICONEXCLAMATION);
-				if (res != IDYES) {
-					config.axisButtons = 0;
-					CheckDlgButton(hWnd, IDC_AXIS_BUTTONS, BST_CHECKED * config.axisButtons);
-				}
-			}
 			config.multipleBinding = (IsDlgButtonChecked(hWnd, IDC_MULTIPLE_BINDING) == BST_CHECKED);
-
-			CheckDlgButton(hWnd, IDC_AXIS_BUTTONS, BST_CHECKED * config.axisButtons);
 
 			for (i=0; i<4; i++) {
 				if (IsDlgButtonChecked(hWnd, IDC_KB_DISABLE+i) == BST_CHECKED) {
@@ -1714,13 +1782,6 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 			}
 			config.gameApis.directInput = (IsDlgButtonChecked(hWnd, IDC_G_DI) == BST_CHECKED);
 			config.gameApis.xInput = (IsDlgButtonChecked(hWnd, IDC_G_XI) == BST_CHECKED);
-
-			if (test == IDC_FORCEFEEDBACK_HACK1) {
-				CheckDlgButton(hWnd, IDC_FORCEFEEDBACK_HACK2, BST_UNCHECKED);
-			}
-			else if (test == IDC_FORCEFEEDBACK_HACK2) {
-				CheckDlgButton(hWnd, IDC_FORCEFEEDBACK_HACK1, BST_UNCHECKED);
-			}
 
 			config.forceHide = (IsDlgButtonChecked(hWnd, IDC_FORCE_HIDE) == BST_CHECKED);
 
