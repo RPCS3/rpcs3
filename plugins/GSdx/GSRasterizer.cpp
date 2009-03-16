@@ -478,6 +478,8 @@ void GSRasterizer::DrawTriangleSection(int top, int bottom, GSVertexSW& l, const
 
 					GSVertexSW scan = l + dscan * (lrmax - l.p).xxxx();
 
+					ASSERT(m_dsf.ssl);
+
 					m_dsf.ssl(right, left, top, scan);
 				}
 			}
@@ -518,6 +520,8 @@ void GSRasterizer::DrawTriangleSection(int top, int bottom, GSVertexSW& l, const
 					m_stats.pixels += pixels;
 
 					GSVertexSW scan = l + dscan * (lrmax - l.p).xxxx();
+
+					ASSERT(m_dsf.ssl);
 
 					m_dsf.ssl(right, left, top, scan);
 				}
@@ -667,28 +671,29 @@ void GSRasterizer::DrawEdge(const GSVertexSW& v0, const GSVertexSW& v1, const GS
 			edge += dedge * (tbmax.wwww() - edge.p.yyyy());
 		}
 
+		GSVector4i p = GSVector4i(edge.p.upl(dedge.p) * 0x10000);
+
+		int x = p.extract32<0>();
+		int dx = p.extract32<1>();
+
 		if(side)
 		{
 			while(1)
 			{
 				do
 				{
-					if((top % m_threads) == m_id) 
+					int xi = x >> 16;
+					int xf = x & 0xffff;
+
+					if(scissor.x <= xi && xi < scissor.z && (xi % m_threads) == m_id)
 					{
-						GSVector4 p = edge.p.ceil();
-					
-						if(((fscissor.xxxx() < p) & (p <= fscissor.zzzz())).mask() & 1)
-						{
-							GSVector4 coverage = (p - edge.p).xxxx();
+						m_stats.pixels++;
 
-							edge.t = edge.t.xyxy(edge.t.uph(coverage * 0x80)); // coverage => t.w
+						edge.t.u32[3] = (0x10000 - xf) & 0xffff;
 
-							int x = GSVector4i(p).extract32<0>() - 1;
-
-							m_stats.pixels++;
-
-							m_dsf.ssle(x + 1, x, top, edge);
-						}
+						m_dsf.ssle(xi + 1, xi, top, edge);
+						
+						edge.t.u32[3] = 0;
 					}
 				}
 				while(0);
@@ -696,6 +701,7 @@ void GSRasterizer::DrawEdge(const GSVertexSW& v0, const GSVertexSW& v1, const GS
 				if(++top >= bottom) break;
 
 				edge += dedge;
+				x += dx;
 			}
 		}
 		else
@@ -704,22 +710,18 @@ void GSRasterizer::DrawEdge(const GSVertexSW& v0, const GSVertexSW& v1, const GS
 			{
 				do
 				{
-					if((top % m_threads) == m_id) 
+					int xi = (x >> 16) + 1;
+					int xf = x & 0xffff;
+
+					if(scissor.x <= xi && xi < scissor.z && (xi % m_threads) == m_id)
 					{
-						GSVector4 p = edge.p.floor();
-					
-						if(((fscissor.xxxx() <= p) & (p < fscissor.zzzz())).mask() & 1)
-						{
-							GSVector4 coverage = (edge.p - p).xxxx();
+						m_stats.pixels++;
 
-							edge.t = edge.t.xyxy(edge.t.uph(coverage * 0x80)); // coverage => t.w
+						edge.t.u32[3] = xf;
 
-							int x = GSVector4i(p).extract32<0>() + 1;
+						m_dsf.ssle(xi + 1, xi, top, edge);
 
-							m_stats.pixels++;
-
-							m_dsf.ssle(x + 1, x, top, edge);
-						}
+						edge.t.u32[3] = 0;
 					}
 				}
 				while(0);
@@ -727,6 +729,7 @@ void GSRasterizer::DrawEdge(const GSVertexSW& v0, const GSVertexSW& v1, const GS
 				if(++top >= bottom) break;
 
 				edge += dedge;
+				x += dx;
 			}
 		}
 	}
@@ -766,28 +769,29 @@ void GSRasterizer::DrawEdge(const GSVertexSW& v0, const GSVertexSW& v1, const GS
 			edge += dedge * (lrmax.yyyy() - edge.p.xxxx());
 		}
 
+		GSVector4i p = GSVector4i(edge.p.upl(dedge.p) * 0x10000);
+
+		int y = p.extract32<2>();
+		int dy = p.extract32<3>();
+
 		if(side)
 		{
 			while(1)
 			{
 				do
 				{
-					GSVector4 p = edge.p.ceil();
-				
-					if(((fscissor.yyyy() < p) & (p <= fscissor.wwww())).mask() & 2)
+					int yi = y >> 16;
+					int yf = y & 0xffff;
+
+					if(scissor.y <= yi && yi < scissor.w && (yi % m_threads) == m_id)
 					{
-						int y = GSVector4i(p).extract32<1>() - 1;
+						m_stats.pixels++;
 
-						if((y % m_threads) == m_id) 
-						{
-							GSVector4 coverage = (p - edge.p).yyyy();
+						edge.t.u32[3] = (0x10000 - yf) & 0xffff;
 
-							edge.t = edge.t.xyxy(edge.t.uph(coverage * 0x80)); // coverage => t.w
-
-							m_stats.pixels++;
-
-							m_dsf.ssle(left + 1, left, y, edge);
-						}
+						m_dsf.ssle(left + 1, left, yi, edge);
+						
+						edge.t.u32[3] = 0;
 					}
 				}
 				while(0);
@@ -795,6 +799,7 @@ void GSRasterizer::DrawEdge(const GSVertexSW& v0, const GSVertexSW& v1, const GS
 				if(++left >= right) break;
 
 				edge += dedge;
+				y += dy;
 			}
 		}
 		else
@@ -803,22 +808,18 @@ void GSRasterizer::DrawEdge(const GSVertexSW& v0, const GSVertexSW& v1, const GS
 			{
 				do
 				{
-					GSVector4 p = edge.p.floor();
-				
-					if(((fscissor.yyyy() <= p) & (p < fscissor.wwww())).mask() & 2)
+					int yi = (y >> 16) + 1;
+					int yf = y & 0xffff;
+
+					if(scissor.y <= yi && yi < scissor.w && (yi % m_threads) == m_id)
 					{
-						int y = GSVector4i(p).extract32<1>() + 1;
+						m_stats.pixels++;
 
-						if((y % m_threads) == m_id) 
-						{
-							GSVector4 coverage = (edge.p - p).yyyy();
+						edge.t.u32[3] = yf;
 
-							edge.t = edge.t.xyxy(edge.t.uph(coverage * 0x80)); // coverage => t.w
-
-							m_stats.pixels++;
-
-							m_dsf.ssle(left + 1, left, y, edge);
-						}
+						m_dsf.ssle(left + 1, left, yi, edge);
+						
+						edge.t.u32[3] = 0;
 					}
 				}
 				while(0);
@@ -826,6 +827,7 @@ void GSRasterizer::DrawEdge(const GSVertexSW& v0, const GSVertexSW& v1, const GS
 				if(++left >= right) break;
 
 				edge += dedge;
+				y += dy;
 			}
 		}
 	}

@@ -373,22 +373,22 @@ void GSDrawScanlineCodeGenerator::Init(int params)
 
 	if(m_sel.fb)
 	{
-		if(m_sel.edge)
+		if(m_sel.edge || m_sel.tfx != TFX_NONE)
 		{
 			movaps(xmm4, xmmword[ebx + 32]); // v.t
+		}
 
-			cvttps2dq(xmm4, xmm4);
+		if(m_sel.edge)
+		{
+			pshufhw(xmm3, xmm4, _MM_SHUFFLE(2, 2, 2, 2));
+			pshufd(xmm3, xmm3, _MM_SHUFFLE(3, 3, 3, 3));
+			psrlw(xmm3, 9);
 
-			pshufhw(xmm4, xmm4, _MM_SHUFFLE(2, 2, 2, 2));
-			pshufd(xmm4, xmm4, _MM_SHUFFLE(3, 3, 3, 3));
-
-			movdqa(xmmword[&m_env.temp.cov], xmm4);
+			movdqa(xmmword[&m_env.temp.cov], xmm3);
 		}
 
 		if(m_sel.tfx != TFX_NONE)
 		{
-			movaps(xmm4, xmmword[ebx + 32]); // v.t
-
 			if(m_sel.fst)
 			{
 				// GSVector4i vti(vt);

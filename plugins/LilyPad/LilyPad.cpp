@@ -568,7 +568,7 @@ inline void ResetVibrate(int port, int slot) {
 }
 
 void ResetPad(int port, int slot) {
-	memset(&pads[port][slot], 0, sizeof(pads[0]));
+	memset(&pads[port][slot], 0, sizeof(pads[0][0]));
 	pads[port][slot].mode = MODE_DIGITAL;
 	pads[port][slot].umask[0] = pads[port][slot].umask[1] = 0xFF;
 	ResetVibrate(port, slot);
