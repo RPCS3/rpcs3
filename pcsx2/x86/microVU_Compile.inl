@@ -19,4 +19,36 @@
 #pragma once
 #ifdef PCSX2_MICROVU
 
+#define mVUbranch	mVUallocInfo.branch
+#define iPC			mVUcurProg.curPC
+#define curI		mVUcurProg.data[iPC]
+#define setCode() { mVU->code = curI; }
+#define incPC()	  { iPC = ((iPC + 1) & (mVU->progSize-1)); setCode();}
+
+microVUx(void) mVUcompile(u32 startPC, u32 pipelineState, u8* x86ptrStart) {
+	microVU* mVU = mVUx;
+	int x;
+	iPC = startPC;
+	setCode();
+	for (x = 0; ; x++) {
+		if (curI & _Ibit_) { SysPrintf("microVU: I-bit set!\n"); }
+		if (curI & _Ebit_) { SysPrintf("microVU: E-bit set!\n"); }
+		if (curI & _Mbit_) { SysPrintf("microVU: M-bit set!\n"); }
+		if (curI & _Dbit_) { SysPrintf("microVU: D-bit set!\n"); mVUbranch = 4; }
+		if (curI & _Tbit_) { SysPrintf("microVU: T-bit set!\n"); mVUbranch = 4; }
+		mVUopU<vuIndex, 0>();
+		incPC();
+		mVUopL<vuIndex, 0>();
+		if (mVUbranch == 4) { mVUbranch = 0; break; }
+		else if (mVUbranch) { mVUbranch = 4; }
+	}
+	iPC = startPC;
+	setCode();
+	for (int i = 0; i < x; i++) {
+		mVUopU<vuIndex, 1>();
+		incPC();
+		if (!isNop) mVUopL<vuIndex, 1>();
+	}
+}
+
 #endif //PCSX2_MICROVU

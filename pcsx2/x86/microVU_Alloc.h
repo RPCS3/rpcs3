@@ -28,8 +28,7 @@ union regInfo {
 	};
 };
 
-template<u32 pSize>
-struct microAllocInfo {
+struct microRegInfo {
 	regInfo VF[32];
 	regInfo Acc;
 	u8 VI[32];
@@ -37,11 +36,19 @@ struct microAllocInfo {
 	u8 q;
 	u8 p;
 	u8 r;
+};
+
+template<u32 pSize>
+struct microAllocInfo {
+	microRegInfo regs;
+	u8  branch; // 0 = No Branch, 1 = Branch, 2 = Conditional Branch, 3 = Jump (JALR/JR)
+	u32 curPC;  // Current PC
+	u32 cycles; // Cycles for current block
 	u32 info[pSize];// bit 00 = Lower Instruction is NOP
-					// bit 01 = Used with bit 2 to make a 2-bit key for ACC write instance
-					// bit 02 = (00 = instance #0, 01 = instance #1, 10 = instance #2, 11 = instance #3)
-					// bit 03 = Used with bit 4 to make a 2-bit key for ACC read instance
-					// bit 04 = (00 = instance #0, 01 = instance #1, 10 = instance #2, 11 = instance #3)
+					// bit 01
+					// bit 02
+					// bit 03
+					// bit 04
 					// bit 05 = Write to Q1 or Q2?
 					// bit 06 = Read Q1 or Q2?
 					// bit 07 = Read/Write to P1 or P2?
@@ -59,6 +66,4 @@ struct microAllocInfo {
 					// bit 19
 					// bit 20 = Read VI(Fs) from backup memory?
 					// bit 21 = Read VI(Ft) from backup memory?
-	u32 curPC;
 };
-

@@ -594,17 +594,6 @@ microVUf(void) mVU_ISUBIU() {
 	}
 }
 
-microVUf(void) mVU_B() {}
-microVUf(void) mVU_BAL() {}
-microVUf(void) mVU_IBEQ() {}
-microVUf(void) mVU_IBGEZ() {}
-microVUf(void) mVU_IBGTZ() {}
-microVUf(void) mVU_IBLTZ() {}
-microVUf(void) mVU_IBLEZ() {}
-microVUf(void) mVU_IBNE() {}
-microVUf(void) mVU_JR() {}
-microVUf(void) mVU_JALR() {}
-
 microVUf(void) mVU_MOVE() {
 	microVU* mVU = mVUx;
 	if (recPass == 0) { /*If (!_Ft_ || (_Ft_ == _Fs_)) nop();*/ }
@@ -952,4 +941,60 @@ microVUf(void) mVU_XGKICK() {
 		else		   CALLFunc((uptr)mVU_XGKICK1);
 	}
 }
+
+//------------------------------------------------------------------
+// Branches
+//------------------------------------------------------------------
+
+microVUf(void) mVU_B() {
+	microVU* mVU = mVUx;
+	if (recPass == 0) { mVUallocInfo.branch = 1; }
+	else {}
+}
+microVUf(void) mVU_BAL() {
+	microVU* mVU = mVUx;
+	if (recPass == 0) { mVUallocInfo.branch = 1; }
+	else {}
+}
+microVUf(void) mVU_IBEQ() {
+	microVU* mVU = mVUx;
+	if (recPass == 0) { mVUallocInfo.branch = 2; }
+	else {}
+}
+microVUf(void) mVU_IBGEZ() {
+	microVU* mVU = mVUx;
+	if (recPass == 0) { mVUallocInfo.branch = 2; }
+	else {}
+}
+microVUf(void) mVU_IBGTZ() {
+	microVU* mVU = mVUx;
+	if (recPass == 0) { mVUallocInfo.branch = 2; }
+	else {}
+}
+microVUf(void) mVU_IBLTZ() {
+	microVU* mVU = mVUx;
+	if (recPass == 0) { mVUallocInfo.branch = 2; }
+	else {}
+}
+microVUf(void) mVU_IBLEZ() {
+	microVU* mVU = mVUx;
+	if (recPass == 0) { mVUallocInfo.branch = 2; }
+	else {}
+}
+microVUf(void) mVU_IBNE() {
+	microVU* mVU = mVUx;
+	if (recPass == 0) { mVUallocInfo.branch = 2; }
+	else {}
+}
+microVUf(void) mVU_JR() {
+	microVU* mVU = mVUx;
+	if (recPass == 0) { mVUallocInfo.branch = 3; }
+	else {}
+}
+microVUf(void) mVU_JALR() {
+	microVU* mVU = mVUx;
+	if (recPass == 0) { mVUallocInfo.branch = 3; }
+	else {}
+}
+
 #endif //PCSX2_MICROVU

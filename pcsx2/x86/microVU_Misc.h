@@ -59,15 +59,14 @@ PCSX2_ALIGNED16_EXTERN(const float mVU_ITOF_15[4]);
 #define _Fs_ ((mVU->code >> 11) & 0x1F)  // The rd part of the instruction register 
 #define _Fd_ ((mVU->code >>  6) & 0x1F)  // The sa part of the instruction register
 
-#define _X ((mVU->code>>24) & 0x1)
-#define _Y ((mVU->code>>23) & 0x1)
-#define _Z ((mVU->code>>22) & 0x1)
-#define _W ((mVU->code>>21) & 0x1)
+#define _X	 ((mVU->code>>24) & 0x1)
+#define _Y	 ((mVU->code>>23) & 0x1)
+#define _Z	 ((mVU->code>>22) & 0x1)
+#define _W	 ((mVU->code>>21) & 0x1)
 
-#define _XYZW_SS (_X+_Y+_Z+_W==1)
-
-#define _X_Y_Z_W  (((mVU->code >> 21 ) & 0xF ))
-#define _xyzw_ACC ((_XYZW_SS && !_X) ? 15 : _X_Y_Z_W)
+#define _XYZW_SS	(_X+_Y+_Z+_W==1)
+#define _X_Y_Z_W	(((mVU->code >> 21 ) & 0xF ))
+#define _xyzw_ACC	((_XYZW_SS && !_X) ? 15 : _X_Y_Z_W)
 
 #define _bc_	 (mVU->code & 0x03)
 #define _bc_x	((mVU->code & 0x03) == 0)
@@ -78,12 +77,17 @@ PCSX2_ALIGNED16_EXTERN(const float mVU_ITOF_15[4]);
 #define _Fsf_	((mVU->code >> 21) & 0x03)
 #define _Ftf_	((mVU->code >> 23) & 0x03)
 
-#define _Imm11_ 	(s32)(mVU->code & 0x400 ? 0xfffffc00 | (mVU->code & 0x3ff) : mVU->code & 0x3ff)
-#define _UImm11_	(s32)(mVU->code & 0x7ff)
-#define _Imm12_		(((mVU->code >> 21 ) & 0x1) << 11) | (mVU->code & 0x7ff)
-#define _Imm5_		(((mVU->code & 0x400) ? 0xfff0 : 0) | ((mVU->code >> 6) & 0xf))
-#define _Imm15_		(((mVU->code >> 10) & 0x7800) | (mVU->code & 0x7ff))
-#define _Imm24_		(u32)(mVU->code & 0xffffff)
+#define _Imm5_	(((mVU->code & 0x400) ? 0xfff0 : 0) | ((mVU->code >> 6) & 0xf))
+#define _Imm11_	(s32)(mVU->code & 0x400 ? 0xfffffc00 | (mVU->code & 0x3ff) : mVU->code & 0x3ff)
+#define _Imm12_	(((mVU->code >> 21 ) & 0x1) << 11) | (mVU->code & 0x7ff)
+#define _Imm15_	(((mVU->code >> 10) & 0x7800) | (mVU->code & 0x7ff))
+#define _Imm24_	(u32)(mVU->code & 0xffffff)
+
+#define _Ibit_ (1<<31)
+#define _Ebit_ (1<<30)
+#define _Mbit_ (1<<29)
+#define _Dbit_ (1<<28)
+#define _Tbit_ (1<<27)
 
 #define getVUmem(x)	(((vuIndex == 1) ? (x & 0x3ff) : ((x >= 0x400) ? (x & 0x43f) : (x & 0xff))) * 16)
 #define offsetSS	((_X) ? (0) : ((_Y) ? (4) : ((_Z) ? 8: 12)))
@@ -92,9 +96,9 @@ PCSX2_ALIGNED16_EXTERN(const float mVU_ITOF_15[4]);
 #define xmmFs	1 // Holds the Value of Fs (writes back result Fd)
 #define xmmFt	2 // Holds the Value of Ft
 #define xmmACC	3 // Holds ACC
-#define xmmT2	4 // Temp Reg?
-#define xmmT3	5 // Temp Reg?
-#define xmmT4	6 // Temp Reg?
+#define xmmMax	4 // Holds mVU_maxvals
+#define xmmMin	5 // Holds mVU_minvals
+#define xmmT2	6 // Temp Reg?
 #define xmmPQ	7 // Holds the Value and Backup Values of P and Q regs
 
 #define mmxVI1	0 // Holds VI 1
@@ -122,12 +126,13 @@ PCSX2_ALIGNED16_EXTERN(const float mVU_ITOF_15[4]);
 #define microVUf(aType) template<int vuIndex, int recPass> aType
 #define microVUq(aType) template<int vuIndex, int recPass>  __forceinline aType
 
+#define mVUcurProg	 mVU->prog.prog[mVU->prog.cur]
 #define mVUallocInfo mVU->prog.prog[mVU->prog.cur].allocInfo
 
 #define isNOP		 (mVUallocInfo.info[mVUallocInfo.curPC] & (1<<0))
-#define writeACC	((mVUallocInfo.info[mVUallocInfo.curPC] & (3<<1)) >> 1)
-#define prevACC		(((u8)((mVUallocInfo.info[mVUallocInfo.curPC] & (3<<1)) >> 1) - 1) & 0x3)
-#define readACC		((mVUallocInfo.info[mVUallocInfo.curPC] & (3<<3)) >> 3)
+//#define writeACC	((mVUallocInfo.info[mVUallocInfo.curPC] & (3<<1)) >> 1)
+//#define prevACC		(((u8)((mVUallocInfo.info[mVUallocInfo.curPC] & (3<<1)) >> 1) - 1) & 0x3)
+//#define readACC		((mVUallocInfo.info[mVUallocInfo.curPC] & (3<<3)) >> 3)
 #define writeQ		((mVUallocInfo.info[mVUallocInfo.curPC] & (1<<5)) >> 5)
 #define readQ		((mVUallocInfo.info[mVUallocInfo.curPC] & (1<<6)) >> 6)
 #define writeP		((mVUallocInfo.info[mVUallocInfo.curPC] & (1<<7)) >> 7)
@@ -143,7 +148,6 @@ PCSX2_ALIGNED16_EXTERN(const float mVU_ITOF_15[4]);
 #define fvmInstance	((mVUallocInfo.info[mVUallocInfo.curPC] & (3<<16)) >> 16)
 #define fvsInstance	((mVUallocInfo.info[mVUallocInfo.curPC] & (3<<18)) >> 18)
 #define fvcInstance	((mVUallocInfo.info[mVUallocInfo.curPC] & (3<<14)) >> 14)
-
 //#define getFs		 (mVUallocInfo.info[mVUallocInfo.curPC] & (1<<13))
 //#define getFt		 (mVUallocInfo.info[mVUallocInfo.curPC] & (1<<14))
 

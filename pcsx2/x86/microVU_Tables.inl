@@ -750,4 +750,7 @@ microVUf(void) mVULowerOP_T3_01()	{ doTableStuff(mVULowerOP_T3_01_OPCODE,	((mVUg
 microVUf(void) mVULowerOP_T3_10()	{ doTableStuff(mVULowerOP_T3_10_OPCODE,	((mVUgetCode >> 6) & 0x1f)); } 
 microVUf(void) mVULowerOP_T3_11()	{ doTableStuff(mVULowerOP_T3_11_OPCODE,	((mVUgetCode >> 6) & 0x1f)); }
 microVUf(void) mVUunknown() { SysPrintf("mVUunknown<%d,%d> : Unknown Micro VU opcode called\n", vuIndex, recPass); }
+microVUf(void) mVUopU() { doTableStuff(mVU_UPPER_OPCODE, (mVUgetCode & 0x3f)); } // Gets Upper Opcode
+microVUf(void) mVUopL() { doTableStuff(mVULOWER_OPCODE,  (mVUgetCode >>  25)); } // Gets Lower Opcode
+
 #endif //PCSX2_MICROVU
