@@ -26,6 +26,7 @@
 #include "MemcpyFast.h"
 #include "SafeArray.h"
 #include "Misc.h"
+#include "Threading.h"		// to use threading stuff, include the Threading namespace in your file.
 
 
 enum PageProtectionMode

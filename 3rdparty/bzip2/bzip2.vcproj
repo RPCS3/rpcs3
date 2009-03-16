@@ -142,7 +142,7 @@
 			ConfigurationType="4"
 			InheritedPropertySheets="..\3rdparty.vsprops"
 			CharacterSet="2"
-			WholeProgramOptimization="1"
+			WholeProgramOptimization="0"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -166,6 +166,7 @@
 				EnableIntrinsicFunctions="true"
 				FavorSizeOrSpeed="1"
 				OmitFramePointers="true"
+				WholeProgramOptimization="false"
 				StringPooling="true"
 				RuntimeLibrary="0"
 				BufferSecurityCheck="false"

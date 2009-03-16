@@ -157,7 +157,7 @@
 			ConfigurationType="4"
 			InheritedPropertySheets="..\3rdparty.vsprops"
 			CharacterSet="2"
-			WholeProgramOptimization="1"
+			WholeProgramOptimization="0"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -181,6 +181,7 @@
 				EnableIntrinsicFunctions="true"
 				FavorSizeOrSpeed="1"
 				EnableFiberSafeOptimizations="true"
+				WholeProgramOptimization="false"
 				AdditionalIncludeDirectories="&quot;$(ProjectDir)&quot;;&quot;$(ProjectDir)\include&quot;"
 				PreprocessorDefinitions="PTW32_STATIC_LIB;PTW32_BUILD_INLINED;__CLEANUP_SEH;WIN32;NDEBUG;_LIB"
 				StringPooling="true"

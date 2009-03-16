@@ -20,7 +20,6 @@
 #include "Win32.h"
 
 #include "System.h"
-#include "Threading.h"
 #include "ix86/ix86_types.h"
 
 #ifdef _WIN32
@@ -120,30 +119,26 @@ namespace Threading
 		{
 			__asm
 			{
-				//PUSH         ecx
 				mov          ecx,dword ptr [target]
 				mov          eax,dword ptr [srcval]
 				lock xadd    dword ptr [ecx],eax
-				mov          dword ptr [result], eax
-				//POP          ecx
+
+				// msvc smartly returns eax for us without so much as a compiler warning even...
+				//mov          dword ptr [result], eax
 			}
 		}
 		else
 		{
 			__asm
 			{
-				//PUSH         ecx
-				//PUSH         edx
 				mov          ecx,dword ptr [target]
-			//L1:
 				mov          eax,dword ptr [srcval]
 				xadd         dword ptr [ecx],eax
-				//jnz          L1
-				mov          dword ptr [result], eax
-				//POP          edx
-				//POP          ecx
+
+				// msvc smartly returns eax for us without so much as a compiler warning even...
+				//mov          dword ptr [result], eax
 			}
 		}
-		return result;
+// 		return result;
 	}
 }

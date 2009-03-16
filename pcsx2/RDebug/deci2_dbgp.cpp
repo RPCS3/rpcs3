@@ -22,7 +22,6 @@
 #include "VUmicro.h"
 #include "deci2.h"
 
-#include "Threading.h"
 using namespace Threading;
 
 using namespace R5900;

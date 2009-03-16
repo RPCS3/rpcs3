@@ -66,7 +66,6 @@
 				OutputFile="$(OutDir)\$(ProjectName)-dbg.dll"
 				ModuleDefinitionFile=".\CDVDiso.def"
 				GenerateDebugInformation="true"
-				SubSystem="2"
 				TargetMachine="1"
 			/>
 			<Tool
@@ -148,7 +147,6 @@
 				GenerateManifest="false"
 				ModuleDefinitionFile=".\CDVDiso.def"
 				GenerateDebugInformation="true"
-				SubSystem="2"
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"
 				TargetMachine="1"
@@ -180,7 +178,7 @@
 			ConfigurationType="2"
 			InheritedPropertySheets="..\..\..\..\common\vsprops\plugin_svnroot.vsprops;..\..\..\..\common\vsprops\BaseProperties.vsprops;..\..\..\..\common\vsprops\3rdpartyDeps.vsprops"
 			CharacterSet="2"
-			WholeProgramOptimization="1"
+			WholeProgramOptimization="0"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -204,6 +202,7 @@
 				EnableIntrinsicFunctions="true"
 				FavorSizeOrSpeed="1"
 				OmitFramePointers="true"
+				WholeProgramOptimization="false"
 				PreprocessorDefinitions="NDEBUG;_USRDLL"
 				StringPooling="true"
 				MinimalRebuild="false"
@@ -228,12 +227,10 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="bzip2.lib zlib.lib"
 				OutputFile="$(OutDir)\$(ProjectName).dll"
+				LinkIncremental="2"
 				GenerateManifest="false"
 				ModuleDefinitionFile=".\CDVDiso.def"
 				GenerateDebugInformation="true"
-				SubSystem="2"
-				OptimizeReferences="2"
-				EnableCOMDATFolding="2"
 				TargetMachine="1"
 			/>
 			<Tool
