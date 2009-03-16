@@ -91,10 +91,10 @@ PCSX2_ALIGNED16_EXTERN(const float mVU_ITOF_15[4]);
 #define xmmT1	0 // Temp Reg
 #define xmmFs	1 // Holds the Value of Fs (writes back result Fd)
 #define xmmFt	2 // Holds the Value of Ft
-#define xmmACC0	3 // Holds ACC Instance #0
-#define xmmACC1	4 // Holds ACC Instance #1
-#define xmmACC2	5 // Holds ACC Instance #2
-#define xmmACC3	6 // Holds ACC Instance #3
+#define xmmACC	3 // Holds ACC
+#define xmmT2	4 // Temp Reg?
+#define xmmT3	5 // Temp Reg?
+#define xmmT4	6 // Temp Reg?
 #define xmmPQ	7 // Holds the Value and Backup Values of P and Q regs
 
 #define mmxVI1	0 // Holds VI 1
@@ -137,12 +137,13 @@ PCSX2_ALIGNED16_EXTERN(const float mVU_ITOF_15[4]);
 #define doStatus	 (mVUallocInfo.info[mVUallocInfo.curPC] & (1<<9))
 #define fmInstance	((mVUallocInfo.info[mVUallocInfo.curPC] & (3<<10)) >> 10)
 #define fsInstance	((mVUallocInfo.info[mVUallocInfo.curPC] & (3<<12)) >> 12)
+#define fcInstance	((mVUallocInfo.info[mVUallocInfo.curPC] & (3<<14)) >> 14)
 #define fpmInstance	(((u8)((mVUallocInfo.info[mVUallocInfo.curPC] & (3<<10)) >> 10) - 1) & 0x3)
 #define fpsInstance	(((u8)((mVUallocInfo.info[mVUallocInfo.curPC] & (3<<12)) >> 12) - 1) & 0x3)
-#define fvmInstance	((mVUallocInfo.info[mVUallocInfo.curPC] & (3<<14)) >> 14)
-#define fvsInstance	((mVUallocInfo.info[mVUallocInfo.curPC] & (3<<16)) >> 16)
-#define fvcInstance	1//((mVUallocInfo.info[mVUallocInfo.curPC] & (3<<14)) >> 14)
-#define fcInstance	1//((mVUallocInfo.info[mVUallocInfo.curPC] & (3<<14)) >> 14)
+#define fvmInstance	((mVUallocInfo.info[mVUallocInfo.curPC] & (3<<16)) >> 16)
+#define fvsInstance	((mVUallocInfo.info[mVUallocInfo.curPC] & (3<<18)) >> 18)
+#define fvcInstance	((mVUallocInfo.info[mVUallocInfo.curPC] & (3<<14)) >> 14)
+
 //#define getFs		 (mVUallocInfo.info[mVUallocInfo.curPC] & (1<<13))
 //#define getFt		 (mVUallocInfo.info[mVUallocInfo.curPC] & (1<<14))
 

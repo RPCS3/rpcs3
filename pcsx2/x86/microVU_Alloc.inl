@@ -146,18 +146,18 @@ microVUt(void) mVUallocFMAC3b(int& Fd) {
 	if (_W)	{ mVUloadReg<vuIndex>(reg, (uptr)&mVU->regs->VF[0].UL[0], _xyzw_ACC); }  \
 	else	{ SSE_XORPS_XMM_to_XMM(reg, reg); }  \
 }
-
+/*
 #define getACC(reg) {  \
 	reg = xmmACC0 + writeACC;  \
 	if (_X_Y_Z_W != 15) { SSE_MOVAPS_XMM_to_XMM(reg, (xmmACC0 + prevACC)); }  \
 }
-
+*/
 microVUt(void) mVUallocFMAC4a(int& ACC, int& Fs, int& Ft) {
 	microVU* mVU = mVUx;
-	Fs = xmmFs;
+	ACC = xmmACC;
+	Fs = (_X_Y_Z_W == 15) ? xmmACC : xmmFs;
 	Ft = xmmFt;
-	getACC(ACC);
-	if (_XYZW_SS && _X) {
+	if (_X_Y_Z_W == 8) {
 		getReg6(Fs, _Fs_);
 		if (_Ft_ == _Fs_) { Ft = Fs; }
 		else			  { getReg6(Ft, _Ft_); }
@@ -184,10 +184,10 @@ microVUt(void) mVUallocFMAC4b(int& ACC, int& Fs) {
 
 microVUt(void) mVUallocFMAC5a(int& ACC, int& Fs, int& Ft) {
 	microVU* mVU = mVUx;
-	Fs = xmmFs;
+	ACC = xmmACC;
+	Fs = (_X_Y_Z_W == 15) ? xmmACC : xmmFs;
 	Ft = xmmFt;
-	getACC(ACC);
-	if (_XYZW_SS && _X) {
+	if (_X_Y_Z_W == 8) {
 		getReg6(Fs, _Fs_);
 		if ((_Ft_ == _Fs_) && _bc_x) { Ft = Fs; }
 		else if (!_Ft_)				 { getZero3SS(Ft); }
@@ -236,11 +236,11 @@ microVUt(void) mVUallocFMAC6b(int& Fd) {
 
 microVUt(void) mVUallocFMAC7a(int& ACC, int& Fs, int& Ft) {
 	microVU* mVU = mVUx;
-	Fs = xmmFs;
+	ACC = xmmACC;
+	Fs = (_X_Y_Z_W == 15) ? xmmACC : xmmFs;
 	Ft = xmmFt;
-	getACC(ACC);
 	getIreg(Ft);
-	if (_XYZW_SS && _X) { getReg6(Fs, _Fs_); }
+	if (_X_Y_Z_W == 8)	{ getReg6(Fs, _Fs_); }
 	else if (!_Fs_)		{ getZero4(Fs); }
 	else				{ getReg4(Fs, _Fs_); }
 }
@@ -253,13 +253,13 @@ microVUt(void) mVUallocFMAC7b(int& ACC, int& Fs) {
 // FMAC8 - MADD FMAC Opcode Storing Result to Fd
 //------------------------------------------------------------------
 
-microVUt(void) mVUallocFMAC8a(int& Fd, int&ACC, int& Fs, int& Ft) {
+microVUt(void) mVUallocFMAC8a(int& Fd, int& ACC, int& Fs, int& Ft) {
 	microVU* mVU = mVUx;
 	Fs = xmmFs;
 	Ft = xmmFt;
 	Fd = xmmFs;
-	ACC = xmmACC0 + readACC;
-	if (_XYZW_SS && _X) {
+	ACC = xmmACC;
+	if (_X_Y_Z_W == 8) {
 		getReg6(Fs, _Fs_);
 		if (_Ft_ == _Fs_) { Ft = Fs; }
 		else			  { getReg6(Ft, _Ft_); }
@@ -285,14 +285,14 @@ microVUt(void) mVUallocFMAC8b(int& Fd) {
 // FMAC9 - MSUB FMAC Opcode Storing Result to Fd
 //------------------------------------------------------------------
 
-microVUt(void) mVUallocFMAC9a(int& Fd, int&ACC, int& Fs, int& Ft) {
+microVUt(void) mVUallocFMAC9a(int& Fd, int& ACC, int& Fs, int& Ft) {
 	microVU* mVU = mVUx;
 	Fs = xmmFs;
 	Ft = xmmFt;
 	Fd = xmmT1;
 	ACC = xmmT1;
-	SSE_MOVAPS_XMM_to_XMM(ACC, xmmACC0 + readACC);
-	if (_XYZW_SS && _X) {
+	SSE_MOVAPS_XMM_to_XMM(ACC, xmmACC);
+	if (_X_Y_Z_W == 8) {
 		getReg6(Fs, _Fs_);
 		if (_Ft_ == _Fs_) { Ft = Fs; }
 		else			  { getReg6(Ft, _Ft_); }
@@ -323,8 +323,8 @@ microVUt(void) mVUallocFMAC10a(int& Fd, int& ACC, int& Fs, int& Ft) {
 	Fs = xmmFs;
 	Ft = xmmFt;
 	Fd = xmmFs;
-	ACC = xmmACC0 + readACC;
-	if (_XYZW_SS && _X) {
+	ACC = xmmACC;
+	if (_X_Y_Z_W == 8) {
 		getReg6(Fs, _Fs_);
 		if ( (_Ft_ == _Fs_) && _bc_x) { Ft = Fs; }
 		else if (!_Ft_)				  { getZero3SS(Ft); }
@@ -353,8 +353,8 @@ microVUt(void) mVUallocFMAC11a(int& Fd, int& ACC, int& Fs, int& Ft) {
 	Ft = xmmFt;
 	Fd = xmmT1;
 	ACC = xmmT1;
-	SSE_MOVAPS_XMM_to_XMM(ACC, xmmACC0 + readACC);
-	if (_XYZW_SS && _X) {
+	SSE_MOVAPS_XMM_to_XMM(ACC, xmmACC);
+	if (_X_Y_Z_W == 8) {
 		getReg6(Fs, _Fs_);
 		if ( (_Ft_ == _Fs_) && _bc_x) { Ft = Fs; }
 		else if (!_Ft_)				  { getZero3SS(Ft); }
@@ -377,14 +377,14 @@ microVUt(void) mVUallocFMAC11b(int& Fd) {
 // FMAC12 - MADD FMAC Opcode Storing Result to Fd (I Reg)
 //------------------------------------------------------------------
 
-microVUt(void) mVUallocFMAC12a(int& Fd, int&ACC, int& Fs, int& Ft) {
+microVUt(void) mVUallocFMAC12a(int& Fd, int& ACC, int& Fs, int& Ft) {
 	microVU* mVU = mVUx;
 	Fs = xmmFs;
 	Ft = xmmFt;
 	Fd = xmmFs;
-	ACC = xmmACC0 + readACC;
+	ACC = xmmACC;
 	getIreg(Ft);
-	if (_XYZW_SS && _X) { getReg6(Fs, _Fs_); }
+	if (_X_Y_Z_W == 8)	{ getReg6(Fs, _Fs_); }
 	else if (!_Fs_)		{ getZero4(Fs); }
 	else				{ getReg4(Fs, _Fs_); }
 }
@@ -397,15 +397,15 @@ microVUt(void) mVUallocFMAC12b(int& Fd) {
 // FMAC13 - MSUB FMAC Opcode Storing Result to Fd (I Reg)
 //------------------------------------------------------------------
 
-microVUt(void) mVUallocFMAC13a(int& Fd, int&ACC, int& Fs, int& Ft) {
+microVUt(void) mVUallocFMAC13a(int& Fd, int& ACC, int& Fs, int& Ft) {
 	microVU* mVU = mVUx;
 	Fs = xmmFs;
 	Ft = xmmFt;
 	Fd = xmmT1;
 	ACC = xmmT1;
-	SSE_MOVAPS_XMM_to_XMM(ACC, xmmACC0 + readACC);
+	SSE_MOVAPS_XMM_to_XMM(ACC, xmmACC);
 	getIreg(Ft);
-	if (_XYZW_SS && _X) { getReg6(Fs, _Fs_); }
+	if (_X_Y_Z_W == 8)	{ getReg6(Fs, _Fs_); }
 	else if (!_Fs_)		{ getZero4(Fs); }
 	else				{ getReg4(Fs, _Fs_); }
 }
@@ -415,16 +415,18 @@ microVUt(void) mVUallocFMAC13b(int& Fd) {
 }
 
 //------------------------------------------------------------------
-// FMAC14 - MADDA FMAC Opcode
+// FMAC14 - MADDA/MSUBA FMAC Opcodes
 //------------------------------------------------------------------
 
-microVUt(void) mVUallocFMAC14a(int& ACCw, int&ACCr, int& Fs, int& Ft) {
+microVUt(void) mVUallocFMAC14a(int& ACCw, int& ACCr, int& Fs, int& Ft) {
 	microVU* mVU = mVUx;
-	getACC(ACCw);
-	Fs = (_X_Y_Z_W == 15) ? ACCw : xmmFs;
+	Fs = xmmFs;
 	Ft = xmmFt;
-	ACCr = xmmACC0 + readACC;
-	if (_XYZW_SS && _X) {
+	ACCw = xmmACC;
+	ACCr = ((_X_Y_Z_W == 15) || (_X_Y_Z_W == 8)) ? xmmACC : xmmT1;
+	SSE_MOVAPS_XMM_to_XMM(ACCr, xmmACC);
+
+	if (_X_Y_Z_W == 8) {
 		getReg6(Fs, _Fs_);
 		if (_Ft_ == _Fs_) { Ft = Fs; }
 		else			  { getReg6(Ft, _Ft_); }
@@ -439,39 +441,25 @@ microVUt(void) mVUallocFMAC14a(int& ACCw, int&ACCr, int& Fs, int& Ft) {
 	}
 }
 
-microVUt(void) mVUallocFMAC14b(int& ACCw, int& Fs) {
-	microVU* mVU = mVUx;
-	if (CHECK_VU_OVERFLOW) mVUclamp1<vuIndex>(Fs, xmmT1, _xyzw_ACC);
-	mVUmergeRegs<vuIndex>(ACCw, Fs, _X_Y_Z_W);
-}
-
-//------------------------------------------------------------------
-// FMAC15 - MSUBA FMAC Opcode
-//------------------------------------------------------------------
-
-microVUt(void) mVUallocFMAC15a(int& ACCw, int&ACCr, int& Fs, int& Ft) {
-	mVUallocFMAC14a<vuIndex>(ACCw, ACCr, Fs, Ft);
-	SSE_MOVAPS_XMM_to_XMM(xmmT1, ACCr);
-	ACCr = xmmT1;
-}
-
-microVUt(void) mVUallocFMAC15b(int& ACCw, int& ACCr) {
+microVUt(void) mVUallocFMAC14b(int& ACCw, int& ACCr) {
 	microVU* mVU = mVUx;
 	if (CHECK_VU_OVERFLOW) mVUclamp1<vuIndex>(ACCr, xmmFt, _xyzw_ACC);
 	mVUmergeRegs<vuIndex>(ACCw, ACCr, _X_Y_Z_W);
 }
 
 //------------------------------------------------------------------
-// FMAC16 - MADDA BC(xyzw) FMAC Opcode
+// FMAC15 - MADDA/MSUBA BC(xyzw) FMAC Opcode
 //------------------------------------------------------------------
 
-microVUt(void) mVUallocFMAC16a(int& ACCw, int&ACCr, int& Fs, int& Ft) {
+microVUt(void) mVUallocFMAC15a(int& ACCw, int& ACCr, int& Fs, int& Ft) {
 	microVU* mVU = mVUx;
-	getACC(ACCw);
-	Fs = (_X_Y_Z_W == 15) ? ACCw : xmmFs;
+	Fs = xmmFs;
 	Ft = xmmFt;
-	ACCr = xmmACC0 + readACC;
-	if (_XYZW_SS && _X) {
+	ACCw = xmmACC;
+	ACCr = ((_X_Y_Z_W == 15) || (_X_Y_Z_W == 8)) ? xmmACC : xmmT1;
+	SSE_MOVAPS_XMM_to_XMM(ACCr, xmmACC);
+
+	if (_X_Y_Z_W == 8) {
 		getReg6(Fs, _Fs_);
 		if ((_Ft_ == _Fs_) && _bc_x) { Ft = Fs; }
 		else if (!_Ft_)				 { getZero3SS(Ft); }
@@ -486,22 +474,29 @@ microVUt(void) mVUallocFMAC16a(int& ACCw, int&ACCr, int& Fs, int& Ft) {
 	}
 }
 
-microVUt(void) mVUallocFMAC16b(int& ACCw, int& Fs) {
-	mVUallocFMAC14b<vuIndex>(ACCw, Fs);
+microVUt(void) mVUallocFMAC15b(int& ACCw, int& ACCr) {
+	mVUallocFMAC14b<vuIndex>(ACCw, ACCr);
 }
 
 //------------------------------------------------------------------
-// FMAC17 - MSUBA BC(xyzw) FMAC Opcode
+// FMAC16 - MADDA/MSUBA FMAC Opcode (I Reg)
 //------------------------------------------------------------------
 
-microVUt(void) mVUallocFMAC17a(int& ACCw, int&ACCr, int& Fs, int& Ft) {
-	mVUallocFMAC16a<vuIndex>(ACCw, ACCr, Fs, Ft);
-	SSE_MOVAPS_XMM_to_XMM(xmmT1, ACCr);
-	ACCr = xmmT1;
+microVUt(void) mVUallocFMAC16a(int& ACCw, int& ACCr, int& Fs, int& Ft) {
+	microVU* mVU = mVUx;
+	Fs = xmmFs;
+	Ft = xmmFt;
+	ACCw = xmmACC;
+	ACCr = ((_X_Y_Z_W == 15) || (_X_Y_Z_W == 8)) ? xmmACC : xmmT1;
+	SSE_MOVAPS_XMM_to_XMM(ACCr, xmmACC);
+	getIreg(Ft);
+	if (_X_Y_Z_W == 8)	{ getReg6(Fs, _Fs_); }
+	else if (!_Fs_)		{ getZero4(Fs); }
+	else				{ getReg4(Fs, _Fs_); }
 }
 
-microVUt(void) mVUallocFMAC17b(int& ACCw, int& ACCr) {
-	mVUallocFMAC15b<vuIndex>(ACCw, ACCr);
+microVUt(void) mVUallocFMAC16b(int& ACCw, int& ACCr) {
+	mVUallocFMAC14b<vuIndex>(ACCw, ACCr);
 }
 
 //------------------------------------------------------------------
@@ -512,7 +507,7 @@ microVUt(void) mVUallocFMAC18a(int& ACC, int& Fs, int& Ft) {
 	microVU* mVU = mVUx;
 	Fs = xmmFs;
 	Ft = xmmFt;
-	getACC(ACC);
+	ACC = xmmACC;
 
 	if (!_Fs_)	{ getZero4(Fs); }
 	else		{ getReg4(Fs, _Fs_); }
@@ -532,13 +527,13 @@ microVUt(void) mVUallocFMAC18b(int& ACC, int& Fs) {
 // FMAC19 - OPMULA FMAC Opcode
 //------------------------------------------------------------------
 
-microVUt(void) mVUallocFMAC19a(int& Fd, int&ACC, int& Fs, int& Ft) {
+microVUt(void) mVUallocFMAC19a(int& Fd, int& ACC, int& Fs, int& Ft) {
 	microVU* mVU = mVUx;
 	Fs = xmmFs;
 	Ft = xmmFt;
 	Fd = xmmT1;
 	ACC = xmmT1;
-	SSE_MOVAPS_XMM_to_XMM(ACC, xmmACC0 + readACC);
+	SSE_MOVAPS_XMM_to_XMM(ACC, xmmACC);
 
 	if (!_Fs_)	{ getZero4(Fs); }
 	else		{ getReg4(Fs, _Fs_); }
@@ -552,40 +547,6 @@ microVUt(void) mVUallocFMAC19a(int& Fd, int&ACC, int& Fs, int& Ft) {
 
 microVUt(void) mVUallocFMAC19b(int& Fd) {
 	mVUallocFMAC9b<vuIndex>(Fd);
-}
-
-//------------------------------------------------------------------
-// FMAC20 - MADDA FMAC Opcode (I Reg)
-//------------------------------------------------------------------
-
-microVUt(void) mVUallocFMAC20a(int& ACCw, int&ACCr, int& Fs, int& Ft) {
-	microVU* mVU = mVUx;
-	getACC(ACCw);
-	Fs = (_X_Y_Z_W == 15) ? ACCw : xmmFs;
-	Ft = xmmFt;
-	ACCr = xmmACC0 + readACC;
-	getIreg(Ft);
-	if (_XYZW_SS && _X) { getReg6(Fs, _Fs_); }
-	else if (!_Fs_)		{ getZero4(Fs); }
-	else				{ getReg4(Fs, _Fs_); }
-}
-
-microVUt(void) mVUallocFMAC20b(int& ACCw, int& Fs) {
-	mVUallocFMAC14b<vuIndex>(ACCw, Fs);
-}
-
-//------------------------------------------------------------------
-// FMAC21 - MSUBA FMAC Opcode (I Reg)
-//------------------------------------------------------------------
-
-microVUt(void) mVUallocFMAC21a(int& ACCw, int&ACCr, int& Fs, int& Ft) {
-	mVUallocFMAC20a<vuIndex>(ACCw, ACCr, Fs, Ft);
-	SSE_MOVAPS_XMM_to_XMM(xmmT1, ACCr);
-	ACCr = xmmT1;
-}
-
-microVUt(void) mVUallocFMAC21b(int& ACCw, int& ACCr) {
-	mVUallocFMAC15b<vuIndex>(ACCw, ACCr);
 }
 
 //------------------------------------------------------------------
@@ -616,11 +577,11 @@ microVUt(void) mVUallocFMAC22b(int& Fd) {
 
 microVUt(void) mVUallocFMAC23a(int& ACC, int& Fs, int& Ft) {
 	microVU* mVU = mVUx;
-	Fs = xmmFs;
+	ACC = xmmACC;
+	Fs = (_X_Y_Z_W == 15) ? xmmACC : xmmFs;
 	Ft = xmmFt;
-	getACC(ACC);
 	getQreg(Ft);
-	if (_XYZW_SS && _X) { getReg6(Fs, _Fs_); }
+	if (_X_Y_Z_W == 8)	{ getReg6(Fs, _Fs_); }
 	else if (!_Fs_)		{ getZero4(Fs); }
 	else				{ getReg4(Fs, _Fs_); }
 }
@@ -633,14 +594,14 @@ microVUt(void) mVUallocFMAC23b(int& ACC, int& Fs) {
 // FMAC24 - MADD FMAC Opcode Storing Result to Fd (Q Reg)
 //------------------------------------------------------------------
 
-microVUt(void) mVUallocFMAC24a(int& Fd, int&ACC, int& Fs, int& Ft) {
+microVUt(void) mVUallocFMAC24a(int& Fd, int& ACC, int& Fs, int& Ft) {
 	microVU* mVU = mVUx;
 	Fs = xmmFs;
 	Ft = xmmFt;
 	Fd = xmmFs;
-	ACC = xmmACC0 + readACC;
+	ACC = xmmACC;
 	getQreg(Ft);
-	if (_XYZW_SS && _X) { getReg6(Fs, _Fs_); }
+	if (_X_Y_Z_W == 8)	{ getReg6(Fs, _Fs_); }
 	else if (!_Fs_)		{ getZero4(Fs); }
 	else				{ getReg4(Fs, _Fs_); }
 }
@@ -653,15 +614,15 @@ microVUt(void) mVUallocFMAC24b(int& Fd) {
 // FMAC25 - MSUB FMAC Opcode Storing Result to Fd (Q Reg)
 //------------------------------------------------------------------
 
-microVUt(void) mVUallocFMAC25a(int& Fd, int&ACC, int& Fs, int& Ft) {
+microVUt(void) mVUallocFMAC25a(int& Fd, int& ACC, int& Fs, int& Ft) {
 	microVU* mVU = mVUx;
 	Fs = xmmFs;
 	Ft = xmmFt;
 	Fd = xmmT1;
 	ACC = xmmT1;
-	SSE_MOVAPS_XMM_to_XMM(ACC, xmmACC0 + readACC);
+	SSE_MOVAPS_XMM_to_XMM(ACC, xmmACC);
 	getQreg(Ft);
-	if (_XYZW_SS && _X) { getReg6(Fs, _Fs_); }
+	if (_X_Y_Z_W == 8)	{ getReg6(Fs, _Fs_); }
 	else if (!_Fs_)		{ getZero4(Fs); }
 	else				{ getReg4(Fs, _Fs_); }
 }
@@ -671,37 +632,24 @@ microVUt(void) mVUallocFMAC25b(int& Fd) {
 }
 
 //------------------------------------------------------------------
-// FMAC26 - MADDA FMAC Opcode (Q Reg)
+// FMAC26 - MADDA/MSUBA FMAC Opcode (Q Reg)
 //------------------------------------------------------------------
 
-microVUt(void) mVUallocFMAC26a(int& ACCw, int&ACCr, int& Fs, int& Ft) {
+microVUt(void) mVUallocFMAC26a(int& ACCw, int& ACCr, int& Fs, int& Ft) {
 	microVU* mVU = mVUx;
-	getACC(ACCw);
-	Fs = (_X_Y_Z_W == 15) ? ACCw : xmmFs;
+	Fs = xmmFs;
 	Ft = xmmFt;
-	ACCr = xmmACC0 + readACC;
+	ACCw = xmmACC;
+	ACCr = ((_X_Y_Z_W == 15) || (_X_Y_Z_W == 8)) ? xmmACC : xmmT1;
+	SSE_MOVAPS_XMM_to_XMM(ACCr, xmmACC);
 	getQreg(Ft);
-	if (_XYZW_SS && _X) { getReg6(Fs, _Fs_); }
+	if (_X_Y_Z_W == 8)	{ getReg6(Fs, _Fs_); }
 	else if (!_Fs_)		{ getZero4(Fs); }
 	else				{ getReg4(Fs, _Fs_); }
 }
 
-microVUt(void) mVUallocFMAC26b(int& ACCw, int& Fs) {
-	mVUallocFMAC14b<vuIndex>(ACCw, Fs);
-}
-
-//------------------------------------------------------------------
-// FMAC27 - MSUBA FMAC Opcode (Q Reg)
-//------------------------------------------------------------------
-
-microVUt(void) mVUallocFMAC27a(int& ACCw, int&ACCr, int& Fs, int& Ft) {
-	mVUallocFMAC26a<vuIndex>(ACCw, ACCr, Fs, Ft);
-	SSE_MOVAPS_XMM_to_XMM(xmmT1, ACCr);
-	ACCr = xmmT1;
-}
-
-microVUt(void) mVUallocFMAC27b(int& ACCw, int& ACCr) {
-	mVUallocFMAC15b<vuIndex>(ACCw, ACCr);
+microVUt(void) mVUallocFMAC26b(int& ACCw, int& ACCr) {
+	mVUallocFMAC14b<vuIndex>(ACCw, ACCr);
 }
 
 //------------------------------------------------------------------

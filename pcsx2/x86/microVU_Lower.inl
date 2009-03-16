@@ -405,10 +405,10 @@ microVUf(void) mVU_FCEQ() {
 	microVU* mVU = mVUx;
 	if (recPass == 0) {}
 	else { 
-		mVUallocCFLAGa<vuIndex>(gprT2, fvcInstance);
-		XOR32RtoR(gprT1, gprT1);
-		CMP32ItoR(gprT2, _Imm24_);
-		SETNZ8R(gprT1);
+		mVUallocCFLAGa<vuIndex>(gprT1, fvcInstance);
+		XOR32ItoR(gprT1, _Imm24_);
+		SUB32ItoR(gprT1, 1);
+		SHR32ItoR(gprT1, 31);
 		mVUallocVIb<vuIndex>(gprT1, 1);
 	}
 }
@@ -457,9 +457,9 @@ microVUf(void) mVU_FMEQ() {
 	else { 
 		mVUallocMFLAGa<vuIndex>(gprT1, fvmInstance);
 		mVUallocVIa<vuIndex>(gprT2, _Fs_);
-		CMP16RtoR(gprT1, gprT2);
-		SETE8R(gprT1);
-		AND16ItoR(gprT1, 0x1);
+		XOR32RtoR(gprT1, gprT2);
+		SUB32ItoR(gprT1, 1);
+		SHR32ItoR(gprT1, 31);
 		mVUallocVIb<vuIndex>(gprT1, _Ft_);
 	}
 }
@@ -488,9 +488,9 @@ microVUf(void) mVU_FSEQ() {
 	if (recPass == 0) {}
 	else { 
 		mVUallocSFLAGa<vuIndex>(gprT1, fvsInstance);
-		CMP16ItoR(gprT1, _Imm12_);
-		SETE8R(gprT1);
-		AND16ItoR(gprT1, 0x1);
+		XOR16ItoR(gprT1, _Imm12_);
+		SUB16ItoR(gprT1, 1);
+		SHR16ItoR(gprT1, 15);
 		mVUallocVIb<vuIndex>(gprT1, _Ft_);
 	}
 }
