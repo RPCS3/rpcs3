@@ -1181,6 +1181,22 @@ int BindCommand(Device *dev, unsigned int uid, unsigned int port, unsigned int s
 		}
 		DeleteBinding(port, slot, dev, b);
 	}
+	if (!config.multipleBinding) {
+		for (int port2=0; port2<2; port2++) {
+			for (int slot2=0; slot2<4; slot2++) {
+				if (port2==port && slot2 == slot) continue;
+				PadBindings *p = dev->pads[port2]+slot2;
+				for (int i=0; i < p->numBindings; i++) {
+					Binding *b = p->bindings+i;
+					int uid2 = dev->virtualControls[b->controlIndex].uid;
+					if (b->controlIndex == controlIndex || (!((uid2^uid) & 0xFFFFFF) && ((uid|uid2) & (UID_POV | UID_AXIS)))) {
+						DeleteBinding(port2, slot2, dev, b);
+						i--;
+					}
+				}
+			}
+		}
+	}
 
 	return count;
 }
@@ -1631,10 +1647,10 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 				SendMessage(hWndCombo, CB_ADDSTRING, 0, (LPARAM) L"Guitar");
 			}
 		}
-		UpdatePadList(hWnd);
 		UpdatePadPages();
 		hWndGeneral = hWnd;
 		RefreshEnabledDevicesAndDisplay(0, hWnd, 0);
+		UpdatePadList(hWnd);
 
 		CheckDlgButton(hWnd, IDC_BACKGROUND, BST_CHECKED * config.background);
 		CheckDlgButton(hWnd, IDC_FORCE_HIDE, BST_CHECKED * config.forceHide);
@@ -1676,6 +1692,7 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 	case WM_DEVICECHANGE:
 		if (wParam == DBT_DEVNODES_CHANGED) {
 			RefreshEnabledDevicesAndDisplay(1, hWndGeneral, 1);
+			UpdatePadList(hWnd);
 		}
 		break;
 	case WM_COMMAND:
@@ -1684,8 +1701,11 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 				int pad = ListView_GetNextItem(hWndList, -1, LVNI_SELECTED);
 				HWND hWndCombo = GetDlgItem(hWnd, IDC_PAD_TYPE);
 				int sel = SendMessage(hWndCombo, CB_GETCURSEL, 0, 0);
-				if (pad >= 0 && sel >= 0 && sel != config.padConfigs[sel][0].type) {
-					config.padConfigs[sel][0].type = (PadType)sel;
+				if (pad >= 0 && sel >= 0 && sel != config.padConfigs[pad][0].type) {
+					config.padConfigs[pad][0].type = (PadType)sel;
+					UpdatePadList(hWnd);
+					UpdatePadPages();
+					RefreshEnabledDevicesAndDisplay(0, hWnd, 1);
 					PropSheet_Changed(hWndProp, hWnd);
 				}
 			}
@@ -1729,6 +1749,7 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 		}
 		else if (HIWORD(wParam)==BN_CLICKED && LOWORD(wParam) == ID_REFRESH) {
 			RefreshEnabledDevicesAndDisplay(1, hWnd, 1);
+			UpdatePadList(hWnd);
 		}
 		else if (HIWORD(wParam)==BN_CLICKED && LOWORD(wParam) == IDC_ANALOG_START1) {
 			int pad = ListView_GetNextItem(hWndList, -1, LVNI_SELECTED);
@@ -1797,6 +1818,7 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 			config.forceHide = (IsDlgButtonChecked(hWnd, IDC_FORCE_HIDE) == BST_CHECKED);
 
 			RefreshEnabledDevicesAndDisplay(0, hWnd, 1);
+			UpdatePadList(hWnd);
 
 			PropSheet_Changed(hWndProp, hWnd);
 			/*
