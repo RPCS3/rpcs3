@@ -99,8 +99,6 @@ EXPORT_C_(UINT32) PSEgetLibVersion()
 
 EXPORT_C_(UINT32) PS2EgetLibType()
 {
-	s_ps2 = true;
-
 	return PS2E_LT_PAD;
 }
 
@@ -111,6 +109,8 @@ EXPORT_C_(char*) PS2EgetLibName()
 
 EXPORT_C_(UINT32) PS2EgetLibVersion2(UINT32 type)
 {
+	s_ps2 = true;
+
 	return (s_ver.build << 0) | (s_ver.revision << 8) | (PS2E_PAD_VERSION << 16) | (s_ver.minor << 24);
 }
 
@@ -553,7 +553,34 @@ public:
 static int s_nRefs = 0;
 static HWND s_hWnd = NULL;
 static WNDPROC s_GSWndProc = NULL;
-static KeyEvent s_event = {0, 0};
+
+static class CKeyEventList : protected CAtlList<KeyEvent>, protected CCritSec 
+{
+public:
+	void Push(UINT32 event, UINT32 key)
+	{
+		CAutoLock cAutoLock(this);
+
+		KeyEvent e;
+
+        e.event = event;
+        e.key = key;
+
+		AddTail(e);
+	}
+
+	bool Pop(KeyEvent& e)
+	{
+		CAutoLock cAutoLock(this);
+
+		if(IsEmpty()) return false;
+		
+		e = RemoveHead();
+		
+		return true;
+	}
+
+} s_event;
 
 LRESULT WINAPI PADwndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -561,17 +588,14 @@ LRESULT WINAPI PADwndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	{
 	case WM_KEYDOWN:
 		if(lParam & 0x40000000) return TRUE;
-        s_event.event = KEYPRESS;
-        s_event.key = wParam;
+		s_event.Push(KEYPRESS, wParam);
 		return TRUE;
 	case WM_KEYUP:
-        s_event.event = KEYRELEASE;
-        s_event.key = wParam;
+		s_event.Push(KEYRELEASE, wParam);
 		return TRUE;
 	case WM_DESTROY:
 	case WM_QUIT:
-		s_event.event = KEYPRESS;
-		s_event.key = VK_ESCAPE;
+		s_event.Push(KEYPRESS, VK_ESCAPE);
 		break;
 	}
 
@@ -666,10 +690,9 @@ EXPORT_C_(UINT32) PADreadPort2(PadDataS* ppds)
 
 EXPORT_C_(KeyEvent*) PADkeyEvent()
 {
-	static KeyEvent event;
-	event = s_event;
-	s_event.event = 0;
-	return &event;
+	static KeyEvent e;
+
+	return s_event.Pop(e) ? &e : NULL;
 }
 
 EXPORT_C PADconfigure()
