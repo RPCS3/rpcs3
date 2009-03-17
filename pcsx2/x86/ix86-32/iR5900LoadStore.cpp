@@ -2077,13 +2077,6 @@ void recLoad64( u32 bits, bool sign )
 	//no int 3? i love to get my hands dirty ;p - Raz
 	//write8(0xCC);
 
-	_deleteEEreg(_Rs_, 1);
-	_eeOnLoadWrite(_Rt_);
-
-	EEINST_RESETSIGNEXT(_Rt_); // remove the sign extension
-
-	_deleteEEreg(_Rt_, 0);
-
 	// Load EDX with the destination.
 	// 64/128 bit modes load the result directly into the cpuRegs.GPR struct.
 
@@ -2094,14 +2087,21 @@ void recLoad64( u32 bits, bool sign )
 
 	if( GPR_IS_CONST1( _Rs_ ) )
 	{
+		_eeOnLoadWrite(_Rt_);
+		EEINST_RESETSIGNEXT(_Rt_); // remove the sign extension
+		_deleteEEreg(_Rt_, 0);
 		u32 srcadr = g_cpuConstRegs[_Rs_].UL[0] + _Imm_;
 		if( bits == 128 ) srcadr &= ~0x0f;
 		vtlb_DynGenRead64_Const( bits, srcadr );
 	}
 	else
 	{
+		_deleteEEreg(_Rs_, 1);
 		// Load ECX with the source memory address that we're reading from.
 		MOV32MtoR( ECX, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
+		_eeOnLoadWrite(_Rt_);
+		EEINST_RESETSIGNEXT(_Rt_); // remove the sign extension
+		_deleteEEreg(_Rt_, 0);
 		if ( _Imm_ != 0 )
 			ADD32ItoR( ECX, _Imm_ );
 
@@ -2119,21 +2119,23 @@ void recLoad32(u32 bits,bool sign)
 	//no int 3? i love to get my hands dirty ;p - Raz
 	//write8(0xCC);
 
-	_deleteEEreg(_Rs_, 1);
-	_eeOnLoadWrite(_Rt_);
-	_deleteEEreg(_Rt_, 0);
-
 	// 8/16/32 bit modes return the loaded value in EAX.
 
 	if( GPR_IS_CONST1( _Rs_ ) )
 	{
+		_eeOnLoadWrite(_Rt_);
+		_deleteEEreg(_Rt_, 0);
+
 		u32 srcadr = g_cpuConstRegs[_Rs_].UL[0] + _Imm_;
 		vtlb_DynGenRead32_Const( bits, sign, srcadr );
 	}
 	else
 	{
+		_deleteEEreg(_Rs_, 1);
 		// Load ECX with the source memory address that we're reading from.
 		MOV32MtoR( ECX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
+		_eeOnLoadWrite(_Rt_);
+		_deleteEEreg(_Rt_, 0);
 		if ( _Imm_ != 0 )
 			ADD32ItoR( ECX, _Imm_ );
 	
@@ -2463,7 +2465,6 @@ void recStore(u32 sz)
 	//no int 3? i love to get my hands dirty ;p - Raz
 	//write8(0xCC);
 
-	_deleteEEreg(_Rs_, 1);
 	_deleteEEreg(_Rt_, 1);
 
 	// Performance note: Const prop for the store address is good, always.
@@ -2498,6 +2499,7 @@ void recStore(u32 sz)
 	}
 	else
 	{
+		_deleteEEreg(_Rs_, 1);
 		MOV32MtoR( ECX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
 		if ( _Imm_ != 0 )
 			ADD32ItoR(ECX, _Imm_);
