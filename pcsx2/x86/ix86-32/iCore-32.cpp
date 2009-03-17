@@ -139,17 +139,63 @@ void _flushConstReg(int reg)
 
 void _flushConstRegs()
 {
-	int i;
+	int i, j;
+	int zero_cnt = 0, minusone_cnt = 0;
+	int eaxval = 1; // 0, -1
+	unsigned long done[4] = {0, 0, 0, 0};
+	u8* rewindPtr;
 
 	// flush constants
 
+	// flush 0 and -1 first
 	// ignore r0
-	for(i = 1; i < 32; ++i) {
-		if( g_cpuHasConstReg & (1<<i) ) {
-			
-			if( !(g_cpuFlushedConstReg&(1<<i)) ) {
-				MOV32ItoM((uptr)&cpuRegs.GPR.r[i].UL[0], g_cpuConstRegs[i].UL[0]);
-				MOV32ItoM((uptr)&cpuRegs.GPR.r[i].UL[1], g_cpuConstRegs[i].UL[1]);
+	for (i = 1, j = 0; i < 32; j++ && ++i, j %= 2) {
+		if (!GPR_IS_CONST1(i) || g_cpuFlushedConstReg & (1<<i))
+			continue;
+		if (g_cpuConstRegs[i].SL[j] != 0)
+			continue;
+		if (eaxval != 0)
+			XOR32RtoR(EAX, EAX), eaxval = 0;
+		MOV32RtoM((uptr)&cpuRegs.GPR.r[i].SL[j], EAX);
+		done[j] |= 1<<i;
+		zero_cnt++;
+	}
+
+	rewindPtr = x86Ptr[_EmitterId_];
+
+	for (i = 1, j = 0; i < 32; j++ && ++i, j %= 2) {
+		if (!GPR_IS_CONST1(i) || g_cpuFlushedConstReg & (1<<i))
+			continue;
+		if (g_cpuConstRegs[i].SL[j] != -1)
+			continue;
+#if 1
+		if (eaxval > 0)
+			XOR32RtoR(EAX, EAX), eaxval = 0;
+#else
+		if (eaxval > 0)
+			MOV32ItoR(EAX, -1), eaxval = -1;
+#endif
+		if (eaxval == 0)
+			NOT32R(EAX), eaxval = -1;
+		MOV32RtoM((uptr)&cpuRegs.GPR.r[i].SL[j], EAX);
+		done[j + 2] |= 1<<i;
+		minusone_cnt++;
+	}
+
+	if (minusone_cnt == 1 && !zero_cnt) { // not worth it for one byte
+		x86Ptr[_EmitterId_] = rewindPtr;
+	} else {
+		done[0] |= done[2];
+		done[1] |= done[3];
+	}
+
+	for (i = 1; i < 32; ++i) {
+		if (GPR_IS_CONST1(i)) {
+			if (!(g_cpuFlushedConstReg&(1<<i))) {
+				if (!(done[0] & (1<<i)))
+					MOV32ItoM((uptr)&cpuRegs.GPR.r[i].UL[0], g_cpuConstRegs[i].UL[0]);
+				if (!(done[1] & (1<<i)))
+					MOV32ItoM((uptr)&cpuRegs.GPR.r[i].UL[1], g_cpuConstRegs[i].UL[1]);
 				g_cpuFlushedConstReg |= 1<<i;
 			}
 #if defined(_DEBUG)&&0
@@ -171,8 +217,8 @@ void _flushConstRegs()
 				x86SetJ8( ptemp[2] );
 			}
 #else
-			if( g_cpuHasConstReg == g_cpuFlushedConstReg )
-				break;
+		if( g_cpuHasConstReg == g_cpuFlushedConstReg )
+			break;
 #endif
 		}
 	}
