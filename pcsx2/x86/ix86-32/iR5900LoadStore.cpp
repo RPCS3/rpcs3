@@ -2092,7 +2092,7 @@ void recLoad64( u32 bits, bool sign )
 	else
 		MOV32ItoR(EDX, (uptr)&dummyValue[0] );
 
-	if( IS_EECONSTREG( _Rs_ ) )
+	if( GPR_IS_CONST1( _Rs_ ) )
 	{
 		u32 srcadr = g_cpuConstRegs[_Rs_].UL[0] + _Imm_;
 		if( bits == 128 ) srcadr &= ~0x0f;
@@ -2125,7 +2125,7 @@ void recLoad32(u32 bits,bool sign)
 
 	// 8/16/32 bit modes return the loaded value in EAX.
 
-	if( IS_EECONSTREG( _Rs_ ) )
+	if( GPR_IS_CONST1( _Rs_ ) )
 	{
 		u32 srcadr = g_cpuConstRegs[_Rs_].UL[0] + _Imm_;
 		vtlb_DynGenRead32_Const( bits, sign, srcadr );

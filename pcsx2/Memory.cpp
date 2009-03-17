@@ -104,11 +104,7 @@ void loadBiosRom( const char *ext, u8 *dest, long maxSize )
 			Bios1 = Path::Combine( Config.BiosDir, ext ) + ".bin";
 			if( (filesize=Path::getFileSize( Bios1 ) ) <= 0 )
 			{
-				Console::Error( "\n\n\n"
-					"**************\n"
-					"%s NOT FOUND\n"
-					"**************\n\n\n", params ext
-					);
+				Console::Notice( "Bios Warning > %s not found.", params ext );
 				return;
 			}
 		}
