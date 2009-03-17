@@ -276,7 +276,6 @@ public:
 	virtual void PostRead();
 };
 
-// Don't need objects for devices with no bound controls.
 class InputDeviceManager {
 public:
 	Device **devices;
@@ -289,8 +288,8 @@ public:
 	// All old bindings are copied to matching devices.
 
 	// When old devices are missing, I do a slightly more careful search
-	// using id2s and create new dummy devices if no matches.
-
+	// using productIDs and then (in desperation) displayName.
+	// Finally create new dummy devices if no matches found.
 	void CopyBindings(int numDevices, Device **devices);
 
 
@@ -300,6 +299,7 @@ public:
 	void AddDevice(Device *d);
 	Device *GetActiveDevice(void *info, unsigned int *uid, int *index, int *value);
 	void Update(void *attachInfo);
+
 	// Called after reading state, after Update().
 	void PostRead();
 

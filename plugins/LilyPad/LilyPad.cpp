@@ -3,6 +3,9 @@
 #include <Dbt.h>
 #include <stdio.h>
 
+// For escape timer, so as not to break GSDX+DX9.
+#include <time.h>
+
 #define PADdefs
 #include "PS2Etypes.h"
 #include "PS2Edefs.h"
@@ -27,7 +30,7 @@ CRITICAL_SECTION readInputCriticalSection;
 HINSTANCE hInst;
 HWND hWnd;
 
-// Used to toggle mouse binding.
+// Used to toggle mouse listening.
 u8 miceEnabled;
 
 // 2 when both pads are initialized, 1 for one pad, etc.
@@ -42,7 +45,6 @@ unsigned char inBuf[50];
 #define MODE_DIGITAL 0x41
 #define MODE_ANALOG 0x73
 #define MODE_DS2_NATIVE 0x79
-
 
 int IsWindowMaximized (HWND hWnd) {
 	RECT rect;
@@ -108,8 +110,9 @@ struct ButtonSum {
 
 
 struct PadFreezeData {
-	// Digital / Analog / Full Analog (aka DS2 Native)
+	// Digital / Analog / DS2 Native
 	u8 mode;
+
 	u8 modeLock;
 
 	// In config mode
@@ -125,8 +128,13 @@ public:
 
 	int lockedState;
 
+	// Vibration indices.
 	u8 vibrateI[2];
+
+	// Last vibration value.  Only used so as not to call vibration
+	// functions when old and new values are both 0.
 	u8 vibrateVal[2];
+
 	// Used to keep track of which pads I'm running.
 	// Note that initialized pads *can* be disabled.
 	// I keep track of state of non-disabled non-initialized
@@ -159,16 +167,12 @@ void UpdateEnabledDevices(int updateList = 0) {
 	// Enable all devices I might want.  Can ignore the rest.
 	RefreshEnabledDevices(updateList);
 	// Figure out which pads I'm getting input for.
-	int padsEnabled[2][4] = {
-		{pads[0][0].initialized && config.padConfigs[0][0].type != DisabledPad,
-		 pads[0][1].initialized && config.padConfigs[0][1].type != DisabledPad,
-		 pads[0][2].initialized && config.padConfigs[0][2].type != DisabledPad,
-		 pads[0][3].initialized && config.padConfigs[0][3].type != DisabledPad},
-		{pads[1][0].initialized && config.padConfigs[1][0].type != DisabledPad,
-		 pads[1][1].initialized && config.padConfigs[1][1].type != DisabledPad,
-		 pads[1][2].initialized && config.padConfigs[1][2].type != DisabledPad,
-		 pads[1][3].initialized && config.padConfigs[1][3].type != DisabledPad}
-	};
+	int padsEnabled[2][4];
+	for (int port = 0; port<2; port++) {
+		for (int slot = 0; slot<4; slot++) {
+			padsEnabled[port][slot] = pads[port][slot].initialized && config.padConfigs[port][slot].type != DisabledPad;
+		}
+	}
 	for (int i=0; i<dm->numDevices; i++) {
 		Device *dev = dm->devices[i];
 
@@ -482,7 +486,6 @@ void Update(int pad) {
 					pads[port][slot].lockedState = 0;
 				}
 			}
-			lockStateChanged[port][slot] = 0;
 		}
 	}
 	for (i=0; i<8; i++) {
@@ -510,7 +513,7 @@ u32 CALLBACK PS2EgetLibType(void) {
 	return PS2E_LT_PAD;
 }
 
-#define VERSION ((0<<8) | 9 | (10<<24))
+#define VERSION ((0<<8) | 9 | (11<<24))
 
 u32 CALLBACK PS2EgetLibVersion2(u32 type) {
 	ps2e = 1;
@@ -851,7 +854,7 @@ u8 CALLBACK PADpoll(u8 value) {
 	/*
 	{
 		query.numBytes = 35;
-		u8 test[35] = {0xFF, 0x80, 0x5A, 
+		u8 test[35] = {0xFF, 0x80, 0x5A,
 			0x73, 0x5A, 0xFF, 0xFF, 0x80, 0x80, 0x80, 0x80,
 			0x73, 0x5A, 0xFF, 0xFF, 0x80, 0x80, 0x80, 0x80,
 			0x73, 0x5A, 0xFF, 0xFF, 0x80, 0x80, 0x80, 0x80,
@@ -1125,7 +1128,6 @@ void CALLBACK PADabout() {
 s32 CALLBACK PADtest() {
 	return 0;
 }
-#include <time.h>
 
 DWORD WINAPI RenameWindowThreadProc(void *lpParameter) {
 	wchar_t newTitle[200];

@@ -9,10 +9,12 @@
 #include "PS2Etypes.h"
 #include <stdio.h>
 
+// Aka htons, without the winsock dependency.
 inline static u16 flipShort(u16 s) {
 	return (s>>8) | (s<<8);
 }
 
+// Aka htonl, without the winsock dependency.
 inline static u32 flipLong(u32 l) {
 	return (((u32)flipShort((u16)l))<<16) | flipShort((u16)(l>>16));
 }
@@ -158,12 +160,10 @@ public:
 		}
 
 		{
-			DIOBJECTDATAFORMAT *formats = (DIOBJECTDATAFORMAT*)malloc(sizeof(DIOBJECTDATAFORMAT) * numPhysicalControls);
+			DIOBJECTDATAFORMAT *formats = (DIOBJECTDATAFORMAT*)calloc(numPhysicalControls, sizeof(DIOBJECTDATAFORMAT));
 			for (i=0; i<numPhysicalControls; i++) {
-				formats[i].pguid = 0;
 				formats[i].dwType = physicalControls[i].type | DIDFT_MAKEINSTANCE(physicalControls[i].id);
 				formats[i].dwOfs = 4*i;
-				formats[i].dwFlags = 0;
 			}
 			DIDATAFORMAT format;
 			format.dwSize = sizeof(format);
@@ -336,7 +336,6 @@ public:
 				if (diEffects[i].die) {
 					diEffects[i].die->Stop();
 					diEffects[i].die->Release();
-					diEffects[i].die = 0;
 				}
 			}
 			free(diEffects);

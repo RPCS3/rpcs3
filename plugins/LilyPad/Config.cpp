@@ -122,18 +122,6 @@ void RefreshEnabledDevices(int updateDeviceList) {
 		else
 					dm->DisableDevice(i);
 	}
-
-	// Older code.  Newer version is a bit uglier, but doesn't
-	// release devices that are enabled both before and afterwards.
-	// So a bit nicer, in theory.
-	/*
-	dm->DisableAllDevices();
-	dm->EnableDevices(KEYBOARD, config.keyboardApi);
-	dm->EnableDevices(MOUSE, config.mouseApi);
-	if (config.gameApis.directInput) {
-		dm->EnableDevices(OTHER, DI);
-	}
-	//*/
 }
 
 // Disables/enables devices as necessary.  Also updates diagnostic list
@@ -278,8 +266,8 @@ void SelChanged(int port, int slot) {
 			LVITEMW item;
 			item.iItem = index;
 			item.mask = LVIF_TEXT;
+			item.pszText = temp[3];
 			for (j=0; j<3; j++) {
-				item.pszText = temp[3];
 				item.iSubItem = j;
 				item.cchTextMax = sizeof(temp[0])/sizeof(temp[3][0]);
 				if (!ListView_GetItem(hWndList, &item)) break;
@@ -1289,20 +1277,15 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 				EndBinding(hWnd);
 				UnselectAll(hWndList);
 				int index = -1;
-				if (command == 0x7F) {
-					if (dev->api == IGNORE_KEYBOARD) {
-						index = BindCommand(dev, uid, 0, 0, command, BASE_SENSITIVITY, 0);
-					}
+				if (command == 0x7F && dev->api == IGNORE_KEYBOARD) {
+					index = BindCommand(dev, uid, 0, 0, command, BASE_SENSITIVITY, 0);
 				}
 				else if (command < 0x30) {
-					if (!(uid & UID_POV)) {
-						index = BindCommand(dev, uid, port, slot, command, BASE_SENSITIVITY, 0);
-					}
+					index = BindCommand(dev, uid, port, slot, command, BASE_SENSITIVITY, 0);
 				}
 				if (index >= 0) {
 					PropSheet_Changed(hWndProp, hWnds[port][slot]);
-					if (index >= 0)
-						ListView_SetItemState(hWndList, index, LVIS_SELECTED, LVIS_SELECTED);
+					ListView_SetItemState(hWndList, index, LVIS_SELECTED, LVIS_SELECTED);
 				}
 			}
 		}
@@ -1332,6 +1315,7 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 					SetWindowLong(hWnd, DWL_MSGRESULT, PSNRET_NOERROR);
 					return 1;
 				}
+				break;
 			}
 			else if (n->hdr.idFrom == IDC_LIST) {
 				static int NeedUpdate = 0;
@@ -1355,11 +1339,9 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 					NeedUpdate = 0;
 					SelChanged(port, slot);
 				}
-				EndBinding(hWnd);
 			}
-			else {
-				EndBinding(hWnd);
-			}
+			// Stop binding when user does something else.
+			EndBinding(hWnd);
 		}
 		break;
 	case WM_HSCROLL:
@@ -1384,21 +1366,22 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 					Binding *b;
 					Device *dev;
 					if (GetBinding(port, slot, index, dev, b, ffb)) {
-						int uid = dev->virtualControls[b->controlIndex].uid;
 						const static unsigned int axisUIDs[3] = {UID_AXIS_NEG, UID_AXIS_POS, UID_AXIS};
+						int uid = dev->virtualControls[b->controlIndex].uid;
 						uid = (uid&0x00FFFFFF) | axisUIDs[cbsel];
 						Binding backup = *b;
 						DeleteSelected(port, slot);
 						int index = BindCommand(dev, uid, port, slot, backup.command, backup.sensitivity, backup.turbo);
 						ListView_SetItemState(hWndList, index, LVIS_SELECTED, LVIS_SELECTED);
+						PropSheet_Changed(hWndProp, hWnd);
 					}
 				}
 			}
 		}
 		else if (HIWORD(wParam)==CBN_SELCHANGE && LOWORD(wParam) == IDC_FF_EFFECT) {
-			unsigned int typeIndex = SendMessage((HWND)lParam, CB_GETCURSEL, 0, 0);
+			int typeIndex = SendMessage((HWND)lParam, CB_GETCURSEL, 0, 0);
 			if (typeIndex >= 0)
-				ChangeEffect(port, slot, 0, 0, &typeIndex);
+				ChangeEffect(port, slot, 0, 0, (unsigned int*)&typeIndex);
 		}
 		else if (HIWORD(wParam)==BN_CLICKED) {
 			EndBinding(hWnd);
@@ -1408,10 +1391,7 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 					PropSheet_Changed(hWndProp, hWnd);
 			}
 			else if (cmd == ID_CLEAR) {
-				int changed=0;
-				while (DeleteByIndex(port, slot, 0)) changed++;
-				if (changed)
-					PropSheet_Changed(hWndProp, hWnd);
+				while (DeleteByIndex(port, slot, 0)) PropSheet_Changed(hWndProp, hWnd);
 			}
 			else if (cmd == ID_BIG_MOTOR || cmd == ID_SMALL_MOTOR) {
 				int i = (int)SendMessage(GetDlgItem(hWnd, IDC_FORCEFEEDBACK), CB_GETCURSEL, 0, 0);
@@ -1788,7 +1768,6 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 				SetVolume(100);
 			}
 
-
 			config.debug = (IsDlgButtonChecked(hWnd, IDC_DEBUG_FILE) == BST_CHECKED);
 			config.multipleBinding = (IsDlgButtonChecked(hWnd, IDC_MULTIPLE_BINDING) == BST_CHECKED);
 
@@ -1821,10 +1800,6 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 			UpdatePadList(hWnd);
 
 			PropSheet_Changed(hWndProp, hWnd);
-			/*
-			if (needUpdate) {
-				UpdatePadPages();
-			}//*/
 		}
 		break;
 	case WM_NOTIFY:
@@ -1838,6 +1813,7 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 					return 0;
 				case PSN_SETACTIVE:
 					//selected = 0;
+					UpdatePadList(hWnd);
 					return 0;
 				case PSN_APPLY:
 					selected = 0;
