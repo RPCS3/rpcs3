@@ -88,6 +88,7 @@ PCSX2_ALIGNED16_EXTERN(const float mVU_ITOF_15[4]);
 #define _Mbit_ (1<<29)
 #define _Dbit_ (1<<28)
 #define _Tbit_ (1<<27)
+#define _MDTbit_ ( _Mbit_ | _Dbit_ | _Tbit_ )
 
 #define getVUmem(x)	(((vuIndex == 1) ? (x & 0x3ff) : ((x >= 0x400) ? (x & 0x43f) : (x & 0xff))) * 16)
 #define offsetSS	((_X) ? (0) : ((_Y) ? (4) : ((_Z) ? 8: 12)))
@@ -127,29 +128,54 @@ PCSX2_ALIGNED16_EXTERN(const float mVU_ITOF_15[4]);
 #define microVUq(aType) template<int vuIndex, int recPass>  __forceinline aType
 
 #define mVUcurProg	 mVU->prog.prog[mVU->prog.cur]
+#define mVUblock	 mVU->prog.prog[mVU->prog.cur].block
 #define mVUallocInfo mVU->prog.prog[mVU->prog.cur].allocInfo
+#define mVUbranch	 mVUallocInfo.branch
+#define mVUinfo		 mVUallocInfo.info[mVUallocInfo.curPC / 2]
+#define iPC			 mVUallocInfo.curPC
+#define xPC			 ((iPC / 2) * 8)
 
-#define isNOP		 (mVUallocInfo.info[mVUallocInfo.curPC] & (1<<0))
-//#define writeACC	((mVUallocInfo.info[mVUallocInfo.curPC] & (3<<1)) >> 1)
-//#define prevACC		(((u8)((mVUallocInfo.info[mVUallocInfo.curPC] & (3<<1)) >> 1) - 1) & 0x3)
-//#define readACC		((mVUallocInfo.info[mVUallocInfo.curPC] & (3<<3)) >> 3)
-#define writeQ		((mVUallocInfo.info[mVUallocInfo.curPC] & (1<<5)) >> 5)
-#define readQ		((mVUallocInfo.info[mVUallocInfo.curPC] & (1<<6)) >> 6)
-#define writeP		((mVUallocInfo.info[mVUallocInfo.curPC] & (1<<7)) >> 7)
-#define readP		((mVUallocInfo.info[mVUallocInfo.curPC] & (1<<7)) >> 7) // same as write
-#define doFlags		 (mVUallocInfo.info[mVUallocInfo.curPC] & (3<<8))
-#define doMac		 (mVUallocInfo.info[mVUallocInfo.curPC] & (1<<8))
-#define doStatus	 (mVUallocInfo.info[mVUallocInfo.curPC] & (1<<9))
-#define fmInstance	((mVUallocInfo.info[mVUallocInfo.curPC] & (3<<10)) >> 10)
-#define fsInstance	((mVUallocInfo.info[mVUallocInfo.curPC] & (3<<12)) >> 12)
-#define fcInstance	((mVUallocInfo.info[mVUallocInfo.curPC] & (3<<14)) >> 14)
-#define fpmInstance	(((u8)((mVUallocInfo.info[mVUallocInfo.curPC] & (3<<10)) >> 10) - 1) & 0x3)
-#define fpsInstance	(((u8)((mVUallocInfo.info[mVUallocInfo.curPC] & (3<<12)) >> 12) - 1) & 0x3)
-#define fvmInstance	((mVUallocInfo.info[mVUallocInfo.curPC] & (3<<16)) >> 16)
-#define fvsInstance	((mVUallocInfo.info[mVUallocInfo.curPC] & (3<<18)) >> 18)
-#define fvcInstance	((mVUallocInfo.info[mVUallocInfo.curPC] & (3<<14)) >> 14)
-//#define getFs		 (mVUallocInfo.info[mVUallocInfo.curPC] & (1<<13))
-//#define getFt		 (mVUallocInfo.info[mVUallocInfo.curPC] & (1<<14))
+#define _isNOP		 (1<<0) // Skip Lower Instruction
+#define _isBranch	 (1<<1) // Cur Instruction is a Branch
+#define _isEOB		 (1<<2) // End of Block
+#define _isBdelay	 (1<<3) // Cur Instruction in Branch Delay slot
+#define _writeQ		 (1<<5)
+#define _readQ		 (1<<6)
+#define _writeP		 (1<<7)
+#define _readP		 (1<<7)
+#define _doFlags	 (3<<8)
+#define _doMac		 (1<<8)
+#define _doStatus	 (1<<9)
+#define _fmInstance	 (3<<10)
+#define _fsInstance	 (3<<12)
+#define _fcInstance	 (3<<14)
+#define _fpmInstance (3<<10)
+#define _fpsInstance (3<<12)
+#define _fvmInstance (3<<16)
+#define _fvsInstance (3<<18)
+#define _fvcInstance (3<<14)
+
+#define isNOP		 (mVUinfo & (1<<0))
+#define isBranch	 (mVUinfo & (1<<1))
+#define isEOB		 (mVUinfo & (1<<2))
+#define isBdelay	 (mVUinfo & (1<<3))
+#define writeQ		((mVUinfo & (1<<5)) >> 5)
+#define readQ		((mVUinfo & (1<<6)) >> 6)
+#define writeP		((mVUinfo & (1<<7)) >> 7)
+#define readP		((mVUinfo & (1<<7)) >> 7) // same as write
+#define doFlags		 (mVUinfo & (3<<8))
+#define doMac		 (mVUinfo & (1<<8))
+#define doStatus	 (mVUinfo & (1<<9))
+#define fmInstance	((mVUinfo & (3<<10)) >> 10)
+#define fsInstance	((mVUinfo & (3<<12)) >> 12)
+#define fcInstance	((mVUinfo & (3<<14)) >> 14)
+#define fpmInstance	(((u8)((mVUinfo & (3<<10)) >> 10) - 1) & 0x3)
+#define fpsInstance	(((u8)((mVUinfo & (3<<12)) >> 12) - 1) & 0x3)
+#define fvmInstance	((mVUinfo & (3<<16)) >> 16)
+#define fvsInstance	((mVUinfo & (3<<18)) >> 18)
+#define fvcInstance	((mVUinfo & (3<<14)) >> 14)
+//#define getFs		 (mVUinfo & (1<<13))
+//#define getFt		 (mVUinfo & (1<<14))
 
 #define isMMX(_VIreg_)	(_VIreg_ >= 1 && _VIreg_ <=9)
 #define mmVI(_VIreg_)	(_VIreg_ - 1)

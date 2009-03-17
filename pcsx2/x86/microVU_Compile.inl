@@ -19,35 +19,77 @@
 #pragma once
 #ifdef PCSX2_MICROVU
 
-#define mVUbranch	mVUallocInfo.branch
-#define iPC			mVUcurProg.curPC
+#ifdef mVUdebug
+#define mVUdebugStuff1() {										\
+	if (curI & _Ibit_)	{ SysPrintf("microVU: I-bit set!\n"); }	\
+	if (curI & _Ebit_)	{ SysPrintf("microVU: E-bit set!\n"); }	\
+	if (curI & _Mbit_)	{ SysPrintf("microVU: M-bit set!\n"); }	\
+	if (curI & _Dbit_)	{ SysPrintf("microVU: D-bit set!\n"); }	\
+	if (curI & _Tbit_)	{ SysPrintf("microVU: T-bit set!\n"); }	\
+}
+#else
+#define mVUdebugStuff1() {}
+#endif
+
 #define curI		mVUcurProg.data[iPC]
 #define setCode() { mVU->code = curI; }
-#define incPC()	  { iPC = ((iPC + 1) & (mVU->progSize-1)); setCode();}
+#define incPC(x)  { iPC = ((iPC + x) & (mVU->progSize-1)); setCode(); }
 
-microVUx(void) mVUcompile(u32 startPC, u32 pipelineState, u8* x86ptrStart) {
+#define createBlock(blockEndPtr) {									\
+	block.pipelineState = pipelineState;							\
+	block.x86ptrStart = x86ptrStart;								\
+	block.x86ptrEnd = blockEndPtr;									\
+	/*block.x86ptrBranch;*/											\
+	if (!(pipelineState & 1)) {										\
+		memcpy_fast(&block.pState, pState, sizeof(microRegInfo));	\
+	}																\
+}
+
+microVUx(void) mVUcompile(u32 startPC, u32 pipelineState, microRegInfo* pState, u8* x86ptrStart) {
 	microVU* mVU = mVUx;
-	int x;
-	iPC = startPC;
+	microBlock block;
+	iPC = startPC / 4;
+
+	// Searches for Existing Compiled Block (if found, then returns; else, compile)
+	microBlock* pblock = mVUblock[iPC]->search(pipelineState, pState);
+	if (block) { x86SetPtr(pblock->x86ptrEnd); return; }
+
+	// First Pass
 	setCode();
-	for (x = 0; ; x++) {
-		if (curI & _Ibit_) { SysPrintf("microVU: I-bit set!\n"); }
-		if (curI & _Ebit_) { SysPrintf("microVU: E-bit set!\n"); }
-		if (curI & _Mbit_) { SysPrintf("microVU: M-bit set!\n"); }
-		if (curI & _Dbit_) { SysPrintf("microVU: D-bit set!\n"); mVUbranch = 4; }
-		if (curI & _Tbit_) { SysPrintf("microVU: T-bit set!\n"); mVUbranch = 4; }
+	for (;;) {
+		mVUdebugStuff1();
 		mVUopU<vuIndex, 0>();
-		incPC();
-		mVUopL<vuIndex, 0>();
-		if (mVUbranch == 4) { mVUbranch = 0; break; }
-		else if (mVUbranch) { mVUbranch = 4; }
+		if (curI & _Ebit_)		 { mVUbranch = 5; }
+		if (curI & _MDTbit_)	 { mVUbranch = 4; }
+		if (curI & _Ibit_)		 { incPC(1); mVUinfo |= _isNOP; }
+		else					 { incPC(1); mVUopL<vuIndex, 0>(); }
+		if		(mVUbranch == 4) { mVUbranch = 0; mVUinfo |= _isEOB; break; }
+		else if (mVUbranch == 5) { mVUbranch = 4; }
+		else if (mVUbranch)		 { mVUbranch = 4; mVUinfo |= _isBranch; }
+		incPC(1);
 	}
+
+	// Second Pass
 	iPC = startPC;
 	setCode();
-	for (int i = 0; i < x; i++) {
+	for (bool x = 1; x==1; ) {
+		if (isEOB)			{ x = 0; }
+		else if (isBranch)	{ mVUopU<vuIndex, 1>(); incPC(2); }
+		
 		mVUopU<vuIndex, 1>();
-		incPC();
-		if (!isNop) mVUopL<vuIndex, 1>();
+		if (isNop)	   { incPC(1); }
+		else		   { incPC(1); mVUopL<vuIndex, 1>(); }
+		if (!isBdelay) { incPC(1); }
+		else { 
+			incPC(-2); // Go back to Branch Opcode
+			mVUopL<vuIndex, 1>(); // Run Branch Opcode
+			switch (mVUbranch) {
+				case 1: break;
+				case 2: break;
+				case 3: break;
+			}
+			break;
+		}
 	}
 }
 

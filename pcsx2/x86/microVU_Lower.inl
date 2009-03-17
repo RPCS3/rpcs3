@@ -394,10 +394,10 @@ microVUf(void) mVU_FCAND() {
 	microVU* mVU = mVUx;
 	if (recPass == 0) {}
 	else { 
-		mVUallocCFLAGa<vuIndex>(gprT2, fvcInstance);
-		XOR32RtoR(gprT1, gprT1);
-		AND32ItoR(gprT2, _Imm24_);
-		SETNZ8R(gprT1);
+		mVUallocCFLAGa<vuIndex>(gprT1, fvcInstance);
+		AND32ItoR(gprT1, _Imm24_);
+		ADD32ItoR(gprT1, 0xffffff);
+		SHR32ItoR(gprT1, 24);
 		mVUallocVIb<vuIndex>(gprT1, 1);
 	}
 }
@@ -948,53 +948,47 @@ microVUf(void) mVU_XGKICK() {
 
 microVUf(void) mVU_B() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) { mVUallocInfo.branch = 1; }
-	else {}
+	mVUbranch = 1; 
 }
 microVUf(void) mVU_BAL() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) { mVUallocInfo.branch = 1; }
-	else {}
+	mVUbranch = 1; 
+	if (recPass) {
+		MOV32ItoR(gprT1, (xPC + (2 * 8)) & 0xffff);
+		mVUallocVIb<vuIndex>(gprT1, _Ft_);
+	}
 }
 microVUf(void) mVU_IBEQ() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) { mVUallocInfo.branch = 2; }
-	else {}
+	mVUbranch = 2;
 }
 microVUf(void) mVU_IBGEZ() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) { mVUallocInfo.branch = 2; }
-	else {}
+	mVUbranch = 2;
 }
 microVUf(void) mVU_IBGTZ() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) { mVUallocInfo.branch = 2; }
-	else {}
+	mVUbranch = 2;
 }
 microVUf(void) mVU_IBLTZ() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) { mVUallocInfo.branch = 2; }
-	else {}
+	mVUbranch = 2;
 }
 microVUf(void) mVU_IBLEZ() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) { mVUallocInfo.branch = 2; }
-	else {}
+	mVUbranch = 2;
 }
 microVUf(void) mVU_IBNE() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) { mVUallocInfo.branch = 2; }
-	else {}
+	mVUbranch = 2;
 }
 microVUf(void) mVU_JR() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) { mVUallocInfo.branch = 3; }
-	else {}
+	mVUbranch = 3;
 }
 microVUf(void) mVU_JALR() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) { mVUallocInfo.branch = 3; }
-	else {}
+	mVUbranch = 3;
 }
 
 #endif //PCSX2_MICROVU

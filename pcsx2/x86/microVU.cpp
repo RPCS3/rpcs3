@@ -142,8 +142,8 @@ microVUt(void*) __fastcall mVUexecute(u32 startPC, u32 cycles) {
 */
 	microVU* mVU = mVUx;
 	if ( mVUsearchProg(mVU) ) { // Found Program
-		microBlock* block = mVU->prog.prog[mVU->prog.cur].block[startPC]->search(mVU->prog.lastPipelineState);
-		if (block) return block->x86ptrStart; // Found Block
+		//microBlock* block = mVU->prog.prog[mVU->prog.cur].block[startPC]->search(mVU->prog.lastPipelineState);
+		//if (block) return block->x86ptrStart; // Found Block
 	}
 	// Recompile code
 	return NULL;

@@ -17,6 +17,7 @@
  */
 
 #pragma once
+#define mVUdebug // Prints Extra Info to Console
 #define _EmitterId_ (vuIndex+1)
 #include "Common.h"
 #include "VU.h"
@@ -25,10 +26,11 @@
 #include "microVU_Alloc.h"
 
 struct microBlock {
-	u32 pipelineState; // FMACx|y|z|w | FDiv | EFU | IALU | BRANCH // Still thinking of how I'm going to do this
-	u8* x86ptrStart;
-	u8* x86ptrEnd;
-	u8* x86ptrBranch;
+	microRegInfo pState; // Detailed State of Pipeline
+	u32 pipelineState;	 // | FDiv x 4 | EFU x 6 | Needs pState Info? x 1 | // Simple State of Pipeline
+	u8* x86ptrStart;	 // Start of code
+	u8* x86ptrEnd;		 // End of code (first byte outside of block)
+	u8* x86ptrBranch;	 // 
 	//u32 size;
 };
 
@@ -54,17 +56,24 @@ public:
 	}
 	void reset() { init(); };
 	void close() {}; // Can be Omitted?
-	void add(u32 pipelineState, u8* x86ptrStart) {
+	/*void add(u32 pipelineState, u8* x86ptrStart) {
 		if (!search(pipelineState)) {
 			listSize++;
 			listSize &= MaxBlocks;
 			blockList[listSize].pipelineState = pipelineState;
 			blockList[listSize].x86ptrStart = x86ptrStart;
 		}
-	}
-	microBlock* search(u32 pipelineState) {
-		for (int i = 0; i < listSize; i++) {
-			if (blockList[i].pipelineState == pipelineState) return &blockList[i];
+	}*/
+	microBlock* search(u32 pipelineState, microRegInfo* pState) {
+		if (pipelineState & 1) { // Needs Detailed Search (Exact Match of Pipeline State)
+			for (int i = 0; i < listSize; i++) {
+				if (!memcmp(pState, &blockList[i].pState, sizeof(microRegInfo))) return &blockList[i];
+			}
+		}
+		else { // Can do Simple Search (Only Matches the Important Pipeline Stuff)
+			for (int i = 0; i < listSize; i++) {
+				if (blockList[i].pipelineState == pipelineState) return &blockList[i];
+			}
 		}
 		return NULL;
 	}
