@@ -79,35 +79,53 @@ enum cdvdActions
 ,	cdvdAction_Read			// note: not used yet.
 };
 
-//////////////////////////////////////////////////////////////////////////
-// -- Cdvd Block Read Cycle Timings --
-// These timings are based on a median average block read speed.  In theory the read
-// speeds differ based on the location of the sector being read (outer rings have
-// a different read speed from inner rings).  But for our purposes an average is good
-// enough, since all of Pcsx2's instruction cycle counting is hardly accurate anyway.
+//////////////////////////////////////////////////////////////////////////////////////////
+// Cdvd Block Read Cycle Timings
+//
+// The PS2 CDVD effectively has two seek modes -- the normal/slow one (est. avg seeks being
+// around 120-160ms), and a faster seek which has an estimated seek time of about 35-40ms.
+// Fast seeks happen when the destination sector is within a certain range of the starting
+// point, such that abs(start-dest) is less than the value in the tbl_FastSeekDelta.
+//
+// CDVDs also have a secondary seeking method used when the destination is close enough
+// that a contiguous sector read can reach the sector faster than initiating a full seek.
+// Typically this value is very low.
 
-// Morale of the story:  don't get too caught up micro-managing your cycle timings. :)
+enum CDVD_MODE_TYPE
+{
+	MODE_CDROM = 0,
+	MODE_DVDROM,
+};
+
+static const uint tbl_FastSeekDelta[3] =
+{
+	4371,	// CD-ROM
+	14764,	// Single-layer DVD-ROM
+	13360	// dual-layer DVD-ROM [currently unused]
+};
+
+// if a seek is within this many blocks, read instead of seek.
+// These values are arbitrary assumptions.  Not sure what the real PS2 uses.
+static const uint tbl_ContigiousSeekDelta[3] =
+{
+	8,		// CD-ROM
+	16,		// single-layer DVD-ROM
+	16,		// dual-layer DVD-ROM [currently unused]
+};
 
 // Note: DVD read times are modified to be faster, because games seem to be a lot more
 // concerned with accurate(ish) seek delays and less concerned with actual block read speeds.
+// Translation: it's a minor speedhack :D
 
 static const uint PSX_CD_READSPEED = 153600;   // 1 Byte Time @ x1 (150KB = cd x 1)
 static const uint PSX_DVD_READSPEED = 1382400 + 256000; // normal is 1 Byte Time @ x1 (1350KB = dvd x 1).
 
-enum CDVD_MODE_TYPE
-{
-	MODE_DVDROM,
-	MODE_CDROM
-};
 
-// if a seek is within this many blocks, read instead of seek.
-// I picked 9 as an arbitrary value.  Not sure what the real PS2 uses.
-static const int Cdvd_Contigious_Seek = 9;
-//Note: This timing causes many games to load very slow, but it likely not the real problem.
-//Games breaking with it set to PSXCLK*40 : "wrath unleashed" and "Shijou Saikyou no Deshi Kenichi".
-static const uint Cdvd_Avg_SeekCycles = (PSXCLK*95) / 1000;		// average number of cycles per seek (95ms)
+// Legacy Note: FullSeek timing causes many games to load very slow, but it likely not the real problem.
+// Games breaking with it set to PSXCLK*40 : "wrath unleashed" and "Shijou Saikyou no Deshi Kenichi".
 
-
+static const uint Cdvd_FullSeek_Cycles = (PSXCLK*100) / 1000;		// average number of cycles per fullseek (100ms)
+static const uint Cdvd_FastSeek_Cycles = (PSXCLK*30) / 1000;		// average number of cycles per fastseek (37ms)
 
 static const char *mg_zones[8] = {"Japan", "USA", "Europe", "Oceania", "Asia", "Russia", "China", "Mexico"};
 
@@ -941,8 +959,8 @@ __forceinline void cdvdActionInterrupt()
 }
 
 // inlined due to being referenced in only one place.
-__forceinline void cdvdReadInterrupt() {
-
+__forceinline void cdvdReadInterrupt()
+{
 	//SysPrintf("cdvdReadInterrupt %x %x %x %x %x\n", cpuRegs.interrupt, cdvd.Readed, cdvd.Reading, cdvd.nSectors, (HW_DMA3_BCR_H16 * HW_DMA3_BCR_L16) *4);
 
 	cdvd.Ready   = 0x00;
@@ -1265,7 +1283,7 @@ u8   cdvdRead3A(void) {	// DEC_SET
 
 
 // Returns the number of IOP cycles until the event completes.
-static uint cdvdStartSeek( uint newsector )
+static uint cdvdStartSeek( uint newsector, CDVD_MODE_TYPE mode )
 {
 	cdvd.SeekToSector = newsector;
 
@@ -1283,10 +1301,21 @@ static uint cdvdStartSeek( uint newsector )
 		seektime = PSXCLK / 3;		// 333ms delay
 		cdvd.Spinning = true;
 	}
-	else if( (Cdvd_Contigious_Seek >= 0) && (delta >= Cdvd_Contigious_Seek) )
+	else if( (tbl_ContigiousSeekDelta[mode] == 0) || (delta >= tbl_ContigiousSeekDelta[mode]) )
 	{
-		CDR_LOG( "CdSeek Begin > to sector %d, from %d - delta=%d\n", cdvd.SeekToSector, cdvd.Sector, delta );
-		seektime = Cdvd_Avg_SeekCycles;
+		// Select either Full or Fast seek depending on delta:
+		
+		if( delta >= tbl_FastSeekDelta[mode] )
+		{
+			// Full Seek
+			CDR_LOG( "CdSeek Begin > to sector %d, from %d - delta=%d [FULL]\n", cdvd.SeekToSector, cdvd.Sector, delta );
+			seektime = Cdvd_FullSeek_Cycles;
+		}
+		else
+		{
+			CDR_LOG( "CdSeek Begin > to sector %d, from %d - delta=%d [FAST]\n", cdvd.SeekToSector, cdvd.Sector, delta );
+			seektime = Cdvd_FastSeek_Cycles;
+		}
 	}
 	else
 	{
@@ -1332,7 +1361,7 @@ void cdvdWrite04(u8 rt) { // NCOMMAND
 			DevCon::Notice( "CdStandby : %d", params rt );
 			cdvd.Action = cdvdAction_Standby;
 			cdvd.ReadTime = cdvdBlockReadTime( MODE_DVDROM );
-			CDVD_INT( cdvdStartSeek( 0 ) );
+			CDVD_INT( cdvdStartSeek( 0, MODE_DVDROM ) );
 		break;
 
 		case 0x03: // CdStop
@@ -1349,7 +1378,7 @@ void cdvdWrite04(u8 rt) { // NCOMMAND
 		case 0x05: // CdSeek
 			cdvd.Action = cdvdAction_Seek;
 			cdvd.ReadTime = cdvdBlockReadTime( MODE_DVDROM );
-			CDVD_INT( cdvdStartSeek( *(uint*)(cdvd.Param+0) ) );
+			CDVD_INT( cdvdStartSeek( *(uint*)(cdvd.Param+0), MODE_DVDROM ) );
 		break;
 		
 		case 0x06: // CdRead
@@ -1372,7 +1401,7 @@ void cdvdWrite04(u8 rt) { // NCOMMAND
 					params cdvd.Sector, cdvd.nSectors,cdvd.BlockSize,cdvd.Speed);
 
 			cdvd.ReadTime = cdvdBlockReadTime( MODE_CDROM );
-			CDVDREAD_INT( cdvdStartSeek( cdvd.SeekToSector ) );
+			CDVDREAD_INT( cdvdStartSeek( cdvd.SeekToSector,MODE_CDROM ) );
 
 			// Read-ahead by telling the plugin about the track now.
 			// This helps improve performance on actual from-cd emulation
@@ -1413,7 +1442,7 @@ void cdvdWrite04(u8 rt) { // NCOMMAND
 					params cdvd.Sector, cdvd.nSectors,cdvd.BlockSize,cdvd.Speed);
 			
 			cdvd.ReadTime = cdvdBlockReadTime( MODE_CDROM );
-			CDVDREAD_INT( cdvdStartSeek( cdvd.SeekToSector ) );
+			CDVDREAD_INT( cdvdStartSeek( cdvd.SeekToSector, MODE_CDROM ) );
 
 			// Read-ahead by telling the plugin about the track now.
 			// This helps improve performance on actual from-cd emulation
@@ -1444,7 +1473,7 @@ void cdvdWrite04(u8 rt) { // NCOMMAND
 					params cdvd.Sector, cdvd.nSectors,cdvd.BlockSize,cdvd.Speed);
 			
 			cdvd.ReadTime = cdvdBlockReadTime( MODE_DVDROM );
-			CDVDREAD_INT( cdvdStartSeek( cdvd.SeekToSector ) );
+			CDVDREAD_INT( cdvdStartSeek( cdvd.SeekToSector, MODE_DVDROM ) );
 			
 			// Read-ahead by telling the plugin about the track now.
 			// This helps improve performance on actual from-cd emulation

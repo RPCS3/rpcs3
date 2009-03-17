@@ -36,8 +36,11 @@ using namespace R5900;
 
 static __forceinline void IntCHackCheck()
 {
-	cpuRegs.cycle = g_nextBranchCycle;
-	
+	// Sanity check: To protect from accidentally "rewinding" the cyclecount
+	// on the few times nextBranchCycle can be behind our current cycle.
+	s32 diff = g_nextBranchCycle - cpuRegs.cycle;
+	if( diff > 0 ) cpuRegs.cycle = g_nextBranchCycle;
+
 	// Threshold method, might fix games that have problems with the simple
 	// implementation above (none known that break yet)
 	/*if( ( g_nextBranchCycle - cpuRegs.cycle ) > 500 )
