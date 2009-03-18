@@ -209,10 +209,21 @@ static void number(std::string& dest, T num, int base, int size, int precision, 
 		tmp[i++] = '0';
 	else
 	{
-		while (num != 0)
+		if( base == 16 )
 		{
-			tmp[i++] = dig[num % (uint) base];
-			num = num / (uint) base;
+			while (num != 0)
+			{
+				tmp[i++] = dig[num & 0xf];
+				num = (uint)num >> 4;
+			}
+		}
+		else
+		{
+			while (num != 0)
+			{
+				tmp[i++] = dig[num % (uint) base];
+				num /= (uint) base;
+			}
 		}
 	}
 
@@ -232,10 +243,16 @@ static void number(std::string& dest, T num, int base, int size, int precision, 
 		}
 	}
 
-	if (!(type & LEFT)) while (size-- > 0) dest += c;
-	while (i < precision--) dest += '0';
+
+	if( !(type & LEFT) && size > 0) { dest.append( size, c ); size = 0; }
+	if( i < precision ) dest.append( precision-i, '0' );
 	while (i-- > 0) dest += tmp[i];
-	while (size-- > 0) dest += ' ';
+	if( size > 0 ) dest.append( size, ' ' );
+
+	//if (!(type & LEFT)) while (size-- > 0) dest += c;
+	//while (i < precision--) dest += '0';
+	//while (i-- > 0) dest += tmp[i];
+	//while (size-- > 0) dest += ' ';
 }
 
 static void eaddr( std::string& dest, unsigned char *addr, int size, int precision, int type)
@@ -451,7 +468,7 @@ static void flt( std::string& dest, double num, int size, int precision, char fm
 {
   char tmp[80];
   char c, sign;
-  int n, i;
+  int n;
 
   // Left align means no zero padding
   if (flags & LEFT) flags &= ~ZEROPAD;
@@ -498,11 +515,12 @@ static void flt( std::string& dest, double num, int size, int precision, char fm
 
   // Output number with alignment and padding
   size -= n;
-  if (!(flags & (ZEROPAD | LEFT))) while (size-- > 0) dest += ' ';
+
+  if (!(flags & (ZEROPAD | LEFT)) && size > 0) { dest.append( size, ' ' ); size = 0; }
   if (sign) dest += sign;
-  if (!(flags & LEFT)) while (size-- > 0) dest += c;
-  for (i = 0; i < n; i++) dest += tmp[i];
-  while (size-- > 0) dest += ' ';
+  if (!(flags & LEFT) && size > 0) { dest.append( size, c ); size = 0; }
+  dest.append( tmp, n );
+  if(size > 0) dest.append( size, ' ' );
 }
 
 #endif
@@ -520,11 +538,7 @@ void vssappendf(std::string& dest, const char* format, va_list args)
 	int precision;        // Min. # of digits for integers; max number of chars for from string
 	int qualifier;        // 'h', 'l', or 'L' for integer fields
 
-	// Optimization: Memory is cheap.  Allocating it on the fly is not.  Allocate more room
-	// than we'll likely need right upfront!
-	dest.reserve( strlen( format ) * 2 );
-
-	for( const char* fmt = format; *fmt; fmt++ )
+	for( const char* fmt = format; *fmt; ++fmt )
 	{
 		if (*fmt != '%')
 		{
@@ -607,16 +621,26 @@ repeat:
 					if( precision < 0 )
 					{
 						// no precision override so just copy the whole string.
-						if (!(flags & LEFT)) while (len < field_width--) dest += ' ';
+						if (!(flags & LEFT) && (len < field_width))
+						{
+							dest.append( field_width - len, ' ' );
+							field_width = 0;
+						}
 						dest += *ss;
 					}
 					else
 					{
 						if( len > precision ) len = precision;
-						if (!(flags & LEFT)) while (len < field_width--) dest += ' ';
+						if (!(flags & LEFT) && (len < field_width))
+						{
+							dest.append( field_width - len, ' ' );
+							field_width = 0;
+						}
 						dest.append( ss->begin(), ss->begin()+len );
 					}
-					while (len < field_width--) dest += ' ';
+
+					if( len < field_width )
+						dest.append( field_width - len, ' ' );
 				}
 				else
 				{
@@ -736,7 +760,12 @@ repeat:
 
 void vssprintf( std::string& dest, const char* format, va_list args )
 {
+	// Optimization: Memory is cheap.  Allocating it on the fly is not.  Allocate more room
+	// than we'll likely need right upfront!  Also, strlen is slow, so better to just pick an
+	// arbitrarily generous value to reserve instead of basing it on string length.
+
 	dest.clear();
+	dest.reserve( 96 );
 	vssappendf( dest, format, args );
 }
 
@@ -807,6 +836,5 @@ std::string vfmt_string( const char* fmt, va_list args )
 
 	std::string retval;
 	vssprintf( retval, fmt, args );
-
 	return retval;
 }
