@@ -56,7 +56,7 @@ microVUf(void) mVU_DIV() {
 
 			SSE_XORPS_XMM_to_XMM(xmmFs, xmmFt);
 			SSE_ANDPS_M128_to_XMM(xmmFs, (uptr)mVU_signbit);
-			SSE_ORPS_M128_to_XMM(xmmFs, (uptr)mVU_maxvals); // If division by zero, then xmmFs = +/- fmax
+			SSE_ORPS_XMM_to_XMM(xmmFs, xmmMax); // If division by zero, then xmmFs = +/- fmax
 
 			bjmp32 = JMP32(0);
 		x86SetJ32(ajmp32);
@@ -86,7 +86,7 @@ microVUf(void) mVU_SQRT() {
 		//x86SetJ8(pjmp);
 
 		SSE_ANDPS_M128_to_XMM(xmmFt, (uptr)mVU_absclip); // Do a cardinal sqrt
-		if (CHECK_VU_OVERFLOW) SSE_MINSS_M32_to_XMM(xmmFt, (uptr)mVU_maxvals); // Clamp infinities (only need to do positive clamp since xmmFt is positive)
+		if (CHECK_VU_OVERFLOW) SSE_MINSS_XMM_to_XMM(xmmFt, xmmMax); // Clamp infinities (only need to do positive clamp since xmmFt is positive)
 		SSE_SQRTSS_XMM_to_XMM(xmmFt, xmmFt);
 		mVUunpack_xyzw<vuIndex>(xmmFt, xmmFt, 0);
 		mVUmergeRegs<vuIndex>(xmmPQ, xmmFt, writeQ ? 4 : 8);
@@ -122,7 +122,7 @@ microVUf(void) mVU_RSQRT() {
 		ajmp8 = JZ8(0); // Skip if none are
 			//OR32ItoM(VU_VI_ADDR(REG_STATUS_FLAG, 2), 0x820); // Zero divide flag
 			SSE_ANDPS_M128_to_XMM(xmmFs, (uptr)mVU_signbit);
-			SSE_ORPS_M128_to_XMM(xmmFs, (uptr)mVU_maxvals); // EEREC_TEMP = +/-Max
+			SSE_ORPS_XMM_to_XMM(xmmFs, xmmMax); // EEREC_TEMP = +/-Max
 			bjmp8 = JMP8(0);
 		x86SetJ8(ajmp8);
 			SSE_DIVSS_XMM_to_XMM(xmmFs, xmmFt);

@@ -22,35 +22,46 @@
 // Global Variables
 //------------------------------------------------------------------
 
-PCSX2_ALIGNED16_EXTERN(const u32 mVU_absclip[4]);
-PCSX2_ALIGNED16_EXTERN(const u32 mVU_signbit[4]);
-PCSX2_ALIGNED16_EXTERN(const u32 mVU_minvals[4]);
-PCSX2_ALIGNED16_EXTERN(const u32 mVU_maxvals[4]);
-PCSX2_ALIGNED16_EXTERN(const u32 mVU_T1[4]);
-PCSX2_ALIGNED16_EXTERN(const u32 mVU_T2[4]);
-PCSX2_ALIGNED16_EXTERN(const u32 mVU_T3[4]);
-PCSX2_ALIGNED16_EXTERN(const u32 mVU_T4[4]);
-PCSX2_ALIGNED16_EXTERN(const u32 mVU_T5[4]);
-PCSX2_ALIGNED16_EXTERN(const u32 mVU_T6[4]);
-PCSX2_ALIGNED16_EXTERN(const u32 mVU_T7[4]);
-PCSX2_ALIGNED16_EXTERN(const u32 mVU_T8[4]);
-PCSX2_ALIGNED16_EXTERN(const u32 mVU_Pi4[4]);
-PCSX2_ALIGNED16_EXTERN(const u32 mVU_S2[4]);
-PCSX2_ALIGNED16_EXTERN(const u32 mVU_S3[4]);
-PCSX2_ALIGNED16_EXTERN(const u32 mVU_S4[4]);
-PCSX2_ALIGNED16_EXTERN(const u32 mVU_S5[4]);
-PCSX2_ALIGNED16_EXTERN(const u32 mVU_E1[4]);
-PCSX2_ALIGNED16_EXTERN(const u32 mVU_E2[4]);
-PCSX2_ALIGNED16_EXTERN(const u32 mVU_E3[4]);
-PCSX2_ALIGNED16_EXTERN(const u32 mVU_E4[4]);
-PCSX2_ALIGNED16_EXTERN(const u32 mVU_E5[4]);
-PCSX2_ALIGNED16_EXTERN(const u32 mVU_E6[4]);
-PCSX2_ALIGNED16_EXTERN(const float mVU_FTOI_4[4]);
-PCSX2_ALIGNED16_EXTERN(const float mVU_FTOI_12[4]);
-PCSX2_ALIGNED16_EXTERN(const float mVU_FTOI_15[4]);
-PCSX2_ALIGNED16_EXTERN(const float mVU_ITOF_4[4]);
-PCSX2_ALIGNED16_EXTERN(const float mVU_ITOF_12[4]);
-PCSX2_ALIGNED16_EXTERN(const float mVU_ITOF_15[4]);
+#define declareAllVariables											\
+initVariable( _somePrefix_,	u32,   mVU_absclip,	0x7fffffff );		\
+initVariable( _somePrefix_,	u32,   mVU_signbit,	0x80000000 );		\
+initVariable( _somePrefix_,	u32,   mVU_minvals,	0xff7fffff );		\
+initVariable( _somePrefix_,	u32,   mVU_maxvals,	0x7f7fffff );		\
+initVariable( _somePrefix_, u32,   mVU_one,		0x3f800000 );		\
+initVariable( _somePrefix_, u32,   mVU_T1,		0x3f7ffff5 );		\
+initVariable( _somePrefix_, u32,   mVU_T2,		0xbeaaa61c );		\
+initVariable( _somePrefix_, u32,   mVU_T3,		0x3e4c40a6 );		\
+initVariable( _somePrefix_, u32,   mVU_T4,		0xbe0e6c63 );		\
+initVariable( _somePrefix_, u32,   mVU_T5,		0x3dc577df );		\
+initVariable( _somePrefix_, u32,   mVU_T6,		0xbd6501c4 );		\
+initVariable( _somePrefix_, u32,   mVU_T7,		0x3cb31652 );		\
+initVariable( _somePrefix_, u32,   mVU_T8,		0xbb84d7e7 );		\
+initVariable( _somePrefix_, u32,   mVU_Pi4,		0x3f490fdb );		\
+initVariable( _somePrefix_, u32,   mVU_S2,		0xbe2aaaa4 );		\
+initVariable( _somePrefix_, u32,   mVU_S3,		0x3c08873e );		\
+initVariable( _somePrefix_, u32,   mVU_S4,		0xb94fb21f );		\
+initVariable( _somePrefix_, u32,   mVU_S5,		0x362e9c14 );		\
+initVariable( _somePrefix_, u32,   mVU_E1,		0x3e7fffa8 );		\
+initVariable( _somePrefix_, u32,   mVU_E2,		0x3d0007f4 );		\
+initVariable( _somePrefix_, u32,   mVU_E3,		0x3b29d3ff );		\
+initVariable( _somePrefix_, u32,   mVU_E4,		0x3933e553 );		\
+initVariable( _somePrefix_, u32,   mVU_E5,		0x36b63510 );		\
+initVariable( _somePrefix_,	u32,   mVU_E6,		0x353961ac );		\
+initVariable( _somePrefix_, float, mVU_FTOI_4,	16.0 );				\
+initVariable( _somePrefix_, float, mVU_FTOI_12,	4096.0 );			\
+initVariable( _somePrefix_, float, mVU_FTOI_15,	32768.0 );			\
+initVariable( _somePrefix_, float, mVU_ITOF_4,	0.0625f );			\
+initVariable( _somePrefix_, float, mVU_ITOF_12,	0.000244140625 );	\
+initVariable( _somePrefix_, float, mVU_ITOF_15,	0.000030517578125 );
+
+#define _somePrefix_ PCSX2_ALIGNED16_EXTERN
+#define initVariable(aprefix, atype, aname, avalue) aprefix (const atype aname [4]);
+declareAllVariables
+#undef	_somePrefix_
+#undef	initVariable
+
+#define _somePrefix_ PCSX2_ALIGNED16
+#define initVariable(aprefix, atype, aname, avalue) aprefix (const atype aname [4])	= {avalue, avalue, avalue, avalue};
 
 //------------------------------------------------------------------
 // Helper Macros
@@ -142,7 +153,7 @@ PCSX2_ALIGNED16_EXTERN(const float mVU_ITOF_15[4]);
 #define _writeQ		 (1<<5)
 #define _readQ		 (1<<6)
 #define _writeP		 (1<<7)
-#define _readP		 (1<<7)
+#define _readP		 (1<<7) // same as writeP
 #define _doFlags	 (3<<8)
 #define _doMac		 (1<<8)
 #define _doStatus	 (1<<9)
@@ -159,23 +170,24 @@ PCSX2_ALIGNED16_EXTERN(const float mVU_ITOF_15[4]);
 #define isBranch	 (mVUinfo & (1<<1))
 #define isEOB		 (mVUinfo & (1<<2))
 #define isBdelay	 (mVUinfo & (1<<3))
-#define writeQ		((mVUinfo & (1<<5)) >> 5)
-#define readQ		((mVUinfo & (1<<6)) >> 6)
-#define writeP		((mVUinfo & (1<<7)) >> 7)
-#define readP		((mVUinfo & (1<<7)) >> 7) // same as write
+#define writeQ		((mVUinfo >> 5) & 1)
+#define readQ		((mVUinfo >> 6) & 1)
+#define writeP		((mVUinfo >> 7) & 1)
+#define readP		((mVUinfo >> 7) & 1) // same as writeP
 #define doFlags		 (mVUinfo & (3<<8))
 #define doMac		 (mVUinfo & (1<<8))
 #define doStatus	 (mVUinfo & (1<<9))
-#define fmInstance	((mVUinfo & (3<<10)) >> 10)
-#define fsInstance	((mVUinfo & (3<<12)) >> 12)
-#define fcInstance	((mVUinfo & (3<<14)) >> 14)
-#define fpmInstance	(((u8)((mVUinfo & (3<<10)) >> 10) - 1) & 0x3)
-#define fpsInstance	(((u8)((mVUinfo & (3<<12)) >> 12) - 1) & 0x3)
-#define fvmInstance	((mVUinfo & (3<<16)) >> 16)
-#define fvsInstance	((mVUinfo & (3<<18)) >> 18)
-#define fvcInstance	((mVUinfo & (3<<14)) >> 14)
+#define fmInstance	((mVUinfo >> 10) & 3)
+#define fsInstance	((mVUinfo >> 12) & 3)
+#define fpsInstance	((((mVUinfo>>12) & 3) - 1) & 0x3)
+#define fcInstance	((mVUinfo >> 14) & 3)
+#define fvcInstance	((mVUinfo >> 14) & 3)
+#define fvmInstance	((mVUinfo >> 16) & 3)
+#define fvsInstance	((mVUinfo >> 18) & 3)
+
 //#define getFs		 (mVUinfo & (1<<13))
 //#define getFt		 (mVUinfo & (1<<14))
+//#define fpmInstance	(((u8)((mVUinfo & (3<<10)) >> 10) - 1) & 0x3)
 
 #define isMMX(_VIreg_)	(_VIreg_ >= 1 && _VIreg_ <=9)
 #define mmVI(_VIreg_)	(_VIreg_ - 1)

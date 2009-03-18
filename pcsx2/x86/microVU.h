@@ -31,7 +31,7 @@ struct microBlock {
 	u8* x86ptrStart;	 // Start of code
 	u8* x86ptrEnd;		 // End of code (first byte outside of block)
 	u8* x86ptrBranch;	 // 
-	//u32 size;
+	u32 size;			 // Number of 64bit VU Instructions in Block
 };
 
 #define mMaxBlocks 32 // Max Blocks With Different Pipeline States (For n = 1, 2, 4, 8, 16, etc...)

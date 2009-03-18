@@ -109,7 +109,7 @@ namespace Threading
 
 	__forceinline long pcsx2_InterlockedExchangeAdd( volatile long* target, long srcval )
 	{
-		long result;
+		//long result;
 
 		// Use our own implementation...
 		// Pcsx2 won't use threads unless it's a multicore cpu, so no need to use

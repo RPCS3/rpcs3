@@ -29,37 +29,7 @@
 PCSX2_ALIGNED16(microVU microVU0);
 PCSX2_ALIGNED16(microVU microVU1);
 
-PCSX2_ALIGNED16(const u32 mVU_absclip[4])	= {0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff};
-PCSX2_ALIGNED16(const u32 mVU_signbit[4])	= {0x80000000, 0x80000000, 0x80000000, 0x80000000};
-PCSX2_ALIGNED16(const u32 mVU_minvals[4])	= {0xff7fffff, 0xff7fffff, 0xff7fffff, 0xff7fffff};
-PCSX2_ALIGNED16(const u32 mVU_maxvals[4])	= {0x7f7fffff, 0x7f7fffff, 0x7f7fffff, 0x7f7fffff};
-PCSX2_ALIGNED16(const u32 mVU_one[4])		= {0x3f800000, 0x3f800000, 0x3f800000, 0x3f800000};
-PCSX2_ALIGNED16(const u32 mVU_T1[4])		= {0x3f7ffff5, 0x3f7ffff5, 0x3f7ffff5, 0x3f7ffff5};
-PCSX2_ALIGNED16(const u32 mVU_T2[4])		= {0xbeaaa61c, 0xbeaaa61c, 0xbeaaa61c, 0xbeaaa61c};
-PCSX2_ALIGNED16(const u32 mVU_T3[4])		= {0x3e4c40a6, 0x3e4c40a6, 0x3e4c40a6, 0x3e4c40a6};
-PCSX2_ALIGNED16(const u32 mVU_T4[4])		= {0xbe0e6c63, 0xbe0e6c63, 0xbe0e6c63, 0xbe0e6c63};
-PCSX2_ALIGNED16(const u32 mVU_T5[4])		= {0x3dc577df, 0x3dc577df, 0x3dc577df, 0x3dc577df};
-PCSX2_ALIGNED16(const u32 mVU_T6[4])		= {0xbd6501c4, 0xbd6501c4, 0xbd6501c4, 0xbd6501c4};
-PCSX2_ALIGNED16(const u32 mVU_T7[4])		= {0x3cb31652, 0x3cb31652, 0x3cb31652, 0x3cb31652};
-PCSX2_ALIGNED16(const u32 mVU_T8[4])		= {0xbb84d7e7, 0xbb84d7e7, 0xbb84d7e7, 0xbb84d7e7};
-PCSX2_ALIGNED16(const u32 mVU_Pi4[4])		= {0x3f490fdb, 0x3f490fdb, 0x3f490fdb, 0x3f490fdb};
-PCSX2_ALIGNED16(const u32 mVU_S2[4])		= {0xbe2aaaa4, 0xbe2aaaa4, 0xbe2aaaa4, 0xbe2aaaa4};
-PCSX2_ALIGNED16(const u32 mVU_S3[4])		= {0x3c08873e, 0x3c08873e, 0x3c08873e, 0x3c08873e};
-PCSX2_ALIGNED16(const u32 mVU_S4[4])		= {0xb94fb21f, 0xb94fb21f, 0xb94fb21f, 0xb94fb21f};
-PCSX2_ALIGNED16(const u32 mVU_S5[4])		= {0x362e9c14, 0x362e9c14, 0x362e9c14, 0x362e9c14};
-PCSX2_ALIGNED16(const u32 mVU_E1[4])		= {0x3e7fffa8, 0x3e7fffa8, 0x3e7fffa8, 0x3e7fffa8};
-PCSX2_ALIGNED16(const u32 mVU_E2[4])		= {0x3d0007f4, 0x3d0007f4, 0x3d0007f4, 0x3d0007f4};
-PCSX2_ALIGNED16(const u32 mVU_E3[4])		= {0x3b29d3ff, 0x3b29d3ff, 0x3b29d3ff, 0x3b29d3ff};
-PCSX2_ALIGNED16(const u32 mVU_E4[4])		= {0x3933e553, 0x3933e553, 0x3933e553, 0x3933e553};
-PCSX2_ALIGNED16(const u32 mVU_E5[4])		= {0x36b63510, 0x36b63510, 0x36b63510, 0x36b63510};
-PCSX2_ALIGNED16(const u32 mVU_E6[4])		= {0x353961ac, 0x353961ac, 0x353961ac, 0x353961ac};
-PCSX2_ALIGNED16(const float mVU_FTOI_4[4])	= {16.0, 16.0, 16.0, 16.0};
-PCSX2_ALIGNED16(const float mVU_FTOI_12[4])	= {4096.0, 4096.0, 4096.0, 4096.0};
-PCSX2_ALIGNED16(const float mVU_FTOI_15[4])	= {32768.0, 32768.0, 32768.0, 32768.0};
-PCSX2_ALIGNED16(const float mVU_ITOF_4[4])	= {0.0625f, 0.0625f, 0.0625f, 0.0625f};
-PCSX2_ALIGNED16(const float mVU_ITOF_12[4])	= {0.000244140625, 0.000244140625, 0.000244140625, 0.000244140625};
-PCSX2_ALIGNED16(const float mVU_ITOF_15[4])	= {0.000030517578125, 0.000030517578125, 0.000030517578125, 0.000030517578125};
-
+declareAllVariables // Declares All Global Variables :D
 //------------------------------------------------------------------
 // Micro VU - Main Functions
 //------------------------------------------------------------------
