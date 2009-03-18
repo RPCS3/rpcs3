@@ -130,7 +130,8 @@ namespace Threading
 	//////////////////////////////////////////////////////////////////////////////////////////
 	// ScopedLock: Helper class for using Mutexes.
 	// Using this class provides an exception-safe (and generally clean) method of locking
-	// code inside a mutex.
+	// code inside a function or conditional block.
+	//
 	class ScopedLock : NoncopyableObject
 	{
 	protected:
@@ -149,6 +150,104 @@ namespace Threading
 		}
 	};
 
+	//////////////////////////////////////////////////////////////////////////////////////////
+	// BaseTaskThread - an abstract base class which provides simple parallel execution of
+	// single tasks.
+	//
+	// Implementation:
+	//   To use this class your derived class will need to implement its own Task() function
+	//   and also a "StartTask( parameters )" function which suits the need of your task, along
+	//   with any local variables your task needs to do its job.  You may additionally want to
+	//   implement a "GetResult()" function, which would be a combination of WaitForResult()
+	//   and a return value of the computational result.
+	//
+	// Thread Safety:
+	//   If operating on local variables, you must execute WaitForResult() before leaving the
+	//   variable scope -- or alternatively have your StartTask() implementation make full
+	//   copies of dependent data.  Also, by default PostTask() always assumes the previous
+	//   task has completed.  If your system can post a new task before the previous one has
+	//   completed, then it needs to explicitly call WaitForResult() or provide a mechanism
+	//   to cancel the previous task (which is probably more work than it's worth).
+	//
+	// Performance notes:
+	//  * Remember that thread creation is generally slow, so you should make your object
+	//    instance once early and then feed it tasks repeatedly over the course of program
+	//    execution.
+	//
+	//  * For threading to be a successful speedup, the task being performed should be as lock
+	//    free as possible.  For example using STL containers in parallel usually fails to
+	//    yield any speedup due to the gratuitous amount of locking that the STL performs
+	//    internally.
+	//
+	//  * The best application of tasking threads is to divide a large loop over a linear array
+	//    into smaller sections.  For example, if you have 20,000 items to process, the task
+	//    can be divided into two threads of 10,000 items each.
+	// 
+	class BaseTaskThread : public Thread
+	{
+	protected:
+		volatile bool m_done;
+		volatile bool m_TaskComplete;
+
+	public:
+		virtual ~BaseTaskThread() {}
+		BaseTaskThread() :
+			m_done( false )
+		,	m_TaskComplete( false )
+		{
+		}
+
+		// Tells the thread to exit and then waits for thread termination.
+		// To force-terminate the thread without "nicely" waiting for the task to complete,
+		// explicitly use the Thread::Close parent implementation instead.
+		void Close()
+		{
+			if( m_terminated ) return;
+			m_done = true;
+			m_post_event.Post();
+			pthread_join( m_thread, NULL );
+		}
+		
+		// Initiates the new task.  This should be called after your own StartTask has
+		// initialized internal variables / preparations for task execution.
+		void PostTask()
+		{
+			jASSUME( !m_terminated );
+			m_TaskComplete = false;
+			m_post_event.Post();
+		}
+
+		// Blocks current thread execution pending the completion of the parallel task.
+		void WaitForResult() const
+		{
+			if( m_terminated ) return;
+			while( !m_TaskComplete )
+			{
+				Timeslice();
+				SpinWait();
+			}
+		}
+		
+	protected:
+		// Abstract method run when a task has been posted.  Implementing classes should do
+		// all your necessary processing work here.
+		virtual void Task()=0;
+
+		int Callback()
+		{
+			do
+			{
+				// Wait for a job!
+				m_post_event.Wait();
+
+				if( m_done ) break;
+				Task();
+				m_TaskComplete = true;
+			} while( !m_done );
+			
+			return 0;
+		}
+	};
 
 	//////////////////////////////////////////////////////////////////////////////////////////
 	// Our fundamental interlocking functions.  All other useful interlocks can be derived
