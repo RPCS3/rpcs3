@@ -33,7 +33,6 @@
 
 using namespace R5900;
 
-extern int g_psxWriteOk;
 extern void recResetEE();
 extern void recResetIOP();
 
@@ -110,7 +109,9 @@ void SaveState::FreezeAll()
 	Freeze(s_iLastCOP0Cycle);
 	Freeze(s_iLastPERFCycle);
 
-	Freeze(g_psxWriteOk);
+	u32 dummy = 1;
+	Freeze( dummy );		// was g_psxWriteOk
+	
 	
 	//hope didn't forgot any cpu....
 

@@ -24,9 +24,6 @@
 #include "Hw.h"
 #include "iR3000A.h"
 
-int g_psxWriteOk=1;
-static u32 writectrl;
-
 #ifdef PCSX2_VIRTUAL_MEM
 void psxMemAlloc()
 {
@@ -451,10 +448,11 @@ u8 iopMemRead8(u32 mem) {
 	if (t == 0x1f40) {
 		mem&= 0x1fffffff;
 		return psxHw4Read8(mem);
-	} else {
+	} else
+	{
 		p = (const u8*)(psxMemRLUT[mem >> 16]);
 		if (p != NULL) {
-			return *(const u8 *)(p + (mem & 0xffff));
+			return ( psxRegs.CP0.n.Status & 0x10000 ) ? 0 : *(const u8 *)(p + (mem & 0xffff));
 		} else {
 			if (t == 0x1000) return DEV9read8(mem & 0x1FFFFFFF);
 			PSXMEM_LOG("err lb %8.8lx\n", mem);
@@ -474,7 +472,8 @@ u16 iopMemRead16(u32 mem) {
 			return psxHu16(mem);
 		else
 			return psxHwRead16(mem);
-	} else {
+	} else
+	{
 		p = (const u8*)(psxMemRLUT[mem >> 16]);
 		if (p != NULL) {
 			if (t == 0x1d00) {
@@ -494,7 +493,10 @@ u16 iopMemRead16(u32 mem) {
 					ret = 0;
 					break;
 				default:
-					ret = psxHu16(mem);
+					if( !(psxRegs.CP0.n.Status & 0x10000) )
+						ret = psxHu16(mem);
+					else
+						ret = 0;
 					break;
 				}
 				SIF_LOG("Sif reg read %x value %x\n", mem, ret);
@@ -521,7 +523,8 @@ u32 iopMemRead32(u32 mem) {
 			return psxHu32(mem);
 		else
 			return psxHwRead32(mem);
-	} else {
+	} else
+	{
 		//see also Hw.c
 		p = (const u8*)(psxMemRLUT[mem >> 16]);
 		if (p != NULL) {
@@ -548,7 +551,10 @@ u32 iopMemRead32(u32 mem) {
 					ret = 0;
 					break;
 				default:
-					ret = psxHu32(mem);
+					if( !(psxRegs.CP0.n.Status & 0x10000) )
+						ret = psxHu32(mem);
+					else
+						ret = 0;
 					break;
 				}
 				SIF_LOG("Sif reg read %x value %x\n", mem, ret);
@@ -558,11 +564,6 @@ u32 iopMemRead32(u32 mem) {
 		} else {
 			if (t == 0x1000) return DEV9read32(mem & 0x1FFFFFFF);
 			
-			if (mem != 0xfffe0130) {
-				if (g_psxWriteOk) PSXMEM_LOG("err lw %8.8lx\n", mem);
-			} else {
-				return writectrl;
-			}
 			return 0;
 		}
 	}
@@ -583,12 +584,16 @@ void iopMemWrite8(u32 mem, u8 value) {
 	if (t == 0x1f40) {
 		mem&= 0x1fffffff;
 		psxHw4Write8(mem, value);
-	} else {
+	} else
+	{
 		p = (char *)(psxMemWLUT[mem >> 16]);
-		if (p != NULL) {
+		if (p != NULL && !(psxRegs.CP0.n.Status & 0x10000) )
+		{
 			*(u8  *)(p + (mem & 0xffff)) = value;
 			psxCpu->Clear(mem&~3, 1);
-		} else {
+		}
+		else
+		{
 			if ((t & 0x1FFF)==0x1D00) SysPrintf("sw8 [0x%08X]=0x%08X\n", mem, value);
 			if (t == 0x1d00) {
 				psxSu8(mem) = value; return;
@@ -612,39 +617,45 @@ void iopMemWrite16(u32 mem, u16 value) {
 			psxHu16(mem) = value;
 		else
 			psxHwWrite16(mem, value);
-	} else {
+	} else
+	{
 		p = (char *)(psxMemWLUT[mem >> 16]);
-		if (p != NULL) {
+		if (p != NULL && !(psxRegs.CP0.n.Status & 0x10000) )
+		{
 			if ((t & 0x1FFF)==0x1D00) SysPrintf("sw16 [0x%08X]=0x%08X\n", mem, value);
 			*(u16 *)(p + (mem & 0xffff)) = value;
 			psxCpu->Clear(mem&~3, 1);
-		} else {
-			if (t == 0x1d00) {
-					switch (mem & 0xf0) {
-						case 0x10:
-							// write to ps2 mem
-							psHu16(0x1000F210) = value;
-							return;
-						case 0x40:
+		}
+		else
+		{
+			if (t == 0x1d00)
+			{
+				switch (mem & 0xf0)
+				{
+					case 0x10:
+						// write to ps2 mem
+						psHu16(0x1000F210) = value;
+						return;
+					case 0x40:
+					{
+						u32 temp = value & 0xF0;
+						// write to ps2 mem
+						if(value & 0x20 || value & 0x80)
 						{
-							u32 temp = value & 0xF0;
-							// write to ps2 mem
-							if(value & 0x20 || value & 0x80)
-							{
-								psHu16(0x1000F240) &= ~0xF000;
-								psHu16(0x1000F240) |= 0x2000;
-							}
-
-							
-							if(psHu16(0x1000F240) & temp) psHu16(0x1000F240) &= ~temp;
-							else psHu16(0x1000F240) |= temp;
-							return;
+							psHu16(0x1000F240) &= ~0xF000;
+							psHu16(0x1000F240) |= 0x2000;
 						}
-						case 0x60:
-							psHu32(0x1000F260) = 0;
-							return;
 
+						
+						if(psHu16(0x1000F240) & temp) psHu16(0x1000F240) &= ~temp;
+						else psHu16(0x1000F240) |= temp;
+						return;
 					}
+					case 0x60:
+						psHu32(0x1000F260) = 0;
+						return;
+
+				}
 				psxSu16(mem) = value; return;
 			}
 			if (t == 0x1F90) {
@@ -669,98 +680,64 @@ void iopMemWrite32(u32 mem, u32 value) {
 			psxHu32(mem) = value;
 		else
 			psxHwWrite32(mem, value);
-	} else {
+	} else
+	{
 		//see also Hw.c
 		p = (char *)(psxMemWLUT[mem >> 16]);
-		if (p != NULL) {
+		if( p != NULL && !(psxRegs.CP0.n.Status & 0x10000) )
+		{
 			*(u32 *)(p + (mem & 0xffff)) = value;
 			psxCpu->Clear(mem&~3, 1);
-		} else {
-			if (mem != 0xfffe0130) {
-				if (t == 0x1d00) {
+		}
+		else 
+		{
+			if (t == 0x1d00)
+			{
 				MEM_LOG("iop Sif reg write %x value %x\n", mem, value);
-					switch (mem & 0xf0) {
-						case 0x10:
-							// write to ps2 mem
-							psHu32(0x1000F210) = value;
-							return;
-						case 0x20:
-							// write to ps2 mem
-							psHu32(0x1000F220) &= ~value;
-							return;
-						case 0x30:
-							// write to ps2 mem
-							psHu32(0x1000F230) |= value;
-							return;
-						case 0x40:
+				switch (mem & 0xf0)
+				{
+					case 0x10:
+						// write to ps2 mem
+						psHu32(0x1000F210) = value;
+						return;
+					case 0x20:
+						// write to ps2 mem
+						psHu32(0x1000F220) &= ~value;
+						return;
+					case 0x30:
+						// write to ps2 mem
+						psHu32(0x1000F230) |= value;
+						return;
+					case 0x40:
+					{
+						u32 temp = value & 0xF0;
+						// write to ps2 mem
+						if(value & 0x20 || value & 0x80)
 						{
-							u32 temp = value & 0xF0;
-							// write to ps2 mem
-							if(value & 0x20 || value & 0x80)
-							{
-								psHu32(0x1000F240) &= ~0xF000;
-								psHu32(0x1000F240) |= 0x2000;
-							}
-
-							
-							if(psHu32(0x1000F240) & temp) psHu32(0x1000F240) &= ~temp;
-							else psHu32(0x1000F240) |= temp;
-							return;
+							psHu32(0x1000F240) &= ~0xF000;
+							psHu32(0x1000F240) |= 0x2000;
 						}
-						case 0x60:
-							psHu32(0x1000F260) = 0;
-							return;
 
+						
+						if(psHu32(0x1000F240) & temp) psHu32(0x1000F240) &= ~temp;
+						else psHu32(0x1000F240) |= temp;
+						return;
 					}
-					psxSu32(mem) = value; 
+					case 0x60:
+						psHu32(0x1000F260) = 0;
+						return;
 
-					// write to ps2 mem
-					if( (mem & 0xf0) != 0x60 )
-						*(u32*)(PS2MEM_HW+0xf200+(mem&0xf0)) = value;
-					return;   
 				}
-				if (t == 0x1000) {
-					DEV9write32(mem & 0x1fffffff, value); return;
-				}
+				psxSu32(mem) = value; 
 
-				//if (!g_psxWriteOk) psxCpu->Clear(mem&~3, 1);
-				if (g_psxWriteOk) { PSXMEM_LOG("err sw %8.8lx = %x\n", mem, value); }
-			} else {
-				writectrl = value;
-				switch (value) {
-					case 0x800: case 0x804:
-					case 0xc00: case 0xc04:
-					case 0xcc0: case 0xcc4:
-					case 0x0c4:
-						if (g_psxWriteOk == 0) break;
-						g_psxWriteOk = 0;
-
-						// Performance note: Use a for loop instead of memset/memzero
-						// This generates *much* more efficient code in this particular case (due to few iterations)
-						for (int i=0; i<0x0080; i++)
-						{
-							psxMemWLUT[i + 0x0000] = 0;
-							psxMemWLUT[i + 0x8000] = 0;
-							psxMemWLUT[i + 0xa000] = 0;
-						}
-						//PSXMEM_LOG("writectrl: writenot ok\n");
-						break;
-					case 0x1e988:
-					case 0x1edd8:
-						if (g_psxWriteOk == 1) break;
-						g_psxWriteOk = 1;
-						for (int i=0; i<0x0080; i++)
-						{
-							psxMemWLUT[i + 0x0000] = (uptr)&psxM[(i & 0x1f) << 16];
-							psxMemWLUT[i + 0x8000] = (uptr)&psxM[(i & 0x1f) << 16];
-							psxMemWLUT[i + 0xa000] = (uptr)&psxM[(i & 0x1f) << 16];
-						}
-						//PSXMEM_LOG("writectrl: write ok\n");
-						break;
-					default:
-						PSXMEM_LOG("unk %8.8lx = %x\n", mem, value);
-						break;
-				}
+				// write to ps2 mem
+				if( (mem & 0xf0) != 0x60 )
+					*(u32*)(PS2MEM_HW+0xf200+(mem&0xf0)) = value;
+				return; 
+			}
+			else if (t == 0x1000)
+			{
+				DEV9write32(mem & 0x1fffffff, value); return;
 			}
 		}
 	}
