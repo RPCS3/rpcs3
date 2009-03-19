@@ -505,15 +505,15 @@ static void VIFunpack(u32 *data, vifCode *v, int size, const unsigned int VIFdma
 #else
 			if( VIFdmanum ) {
 				__asm__(".intel_syntax noprefix\n"
-						"movaps xmm6, xmmword ptr [%0]\n"
-						"movaps xmm7, xmmword ptr [%1]\n"
-						".att_syntax\n" : :"r"(g_vifRow1), "r"(g_vifCol1) );
+						"movaps xmm6, xmmword ptr [%[g_vifRow1]]\n"
+						"movaps xmm7, xmmword ptr [%[g_vifCol1]]\n"
+						".att_syntax\n" : :[g_vifRow1]"r"(g_vifRow1), [g_vifCol1]"r"(g_vifCol1) );
 			}
 			else {
 				__asm__(".intel_syntax noprefix\n"
-						"movaps xmm6, xmmword ptr [%0]\n"
-						"movaps xmm7, xmmword ptr [%1]\n"
-						".att_syntax\n" : : "r"(g_vifRow0), "r"(g_vifCol0) );
+						"movaps xmm6, xmmword ptr [%[g_vifRow0]]\n"
+						"movaps xmm7, xmmword ptr [%[g_vifCol0]]\n"
+						".att_syntax\n" : : [g_vifRow0]"r"(g_vifRow0),  [g_vifCol0]"r"(g_vifCol0) );
 			}
 #endif
 

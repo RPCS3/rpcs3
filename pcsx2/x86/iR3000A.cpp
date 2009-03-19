@@ -845,7 +845,7 @@ static void checkcodefn()
 #ifdef _MSC_VER
 	__asm mov pctemp, eax;
 #else
-    __asm__("movl %%eax, %0" : : "m"(pctemp) );
+    __asm__("movl %%eax, %[pctemp]" : : [pctemp]"m"(pctemp) );
 #endif
 	SysPrintf("iop code changed! %x\n", pctemp);
 }

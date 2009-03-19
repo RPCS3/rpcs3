@@ -115,7 +115,7 @@ extern s32 iCpuId( u32 cmd, u32 *regs )
       "pushf\n"
       "pop %%eax\n"
       "xor %%edx, %%eax\n"
-      "mov %%eax, %0\n"
+      "mov %%eax, %[flag]\n"
 	  "add $0x18, %%esp\n"
       "cmpl $0x0,%%eax\n"
       "jne 1f\n"
@@ -123,7 +123,7 @@ extern s32 iCpuId( u32 cmd, u32 *regs )
       "leave\n"
       "ret\n"
       "1:\n"
-      : "=r"(flag) :
+      : [flag]"=r"(flag) :
    );
 
    cpuid(cmd, regs[0], regs[1], regs[2], regs[3]);
