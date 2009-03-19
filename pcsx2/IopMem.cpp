@@ -17,12 +17,7 @@
  */
 
 #include "PrecompiledHeader.h"
-
 #include "IopCommon.h"
-#include "VU.h"
-#include "iCore.h"
-#include "Hw.h"
-#include "iR3000A.h"
 
 u8 *psxM = NULL;
 u8 *psxP = NULL;

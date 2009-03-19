@@ -19,9 +19,6 @@
 #ifndef __PSXCOUNTERS_H__
 #define __PSXCOUNTERS_H__
 
-// fixme: sCycle, Cycle, and otarget are unused
-// Can't remove them without making a new savestate version though.
-
 struct psxCounter {
 	u64 count, target;
     u32 mode;

@@ -55,7 +55,7 @@ namespace vtlb_private
 
 	// first indexer -- 8/16/32/64/128 bit tables [values 0-4]
 	// second indexer -- read/write  [0 or 1]
-	// third indexer -- 128 pages of memory!
+	// third indexer -- 128 possible handlers!
 	void* RWFT[5][2][128];
 }
 
@@ -97,7 +97,7 @@ callfunction:
 // Interpreter Implementations of VTLB Memory Operations.
 // See recVTLB.cpp for the dynarec versions.
 
-// Interpreterd VTLB lookup for 8, 16, and 32 bit accesses
+// Interpreted VTLB lookup for 8, 16, and 32 bit accesses
 template<int DataSize,typename DataType>
 __forceinline DataType __fastcall MemOp_r0(u32 addr)
 {
