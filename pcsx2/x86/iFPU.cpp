@@ -1749,6 +1749,7 @@ void recRSQRThelper1(int regd, int t0reg) // Preforms the RSQRT function when re
 {
 	u8 *pjmp1, *pjmp2;
 	u32 *pjmp32;
+	u8 *qjmp1, *qjmp2;
 	int t1reg = _allocTempXMMreg(XMMT_FPS, -1);
 	int tempReg = _allocX86reg(-1, X86TYPE_TEMP, 0, 0);
 	//if (t1reg == -1) {Console::Error("FPU: RSQRT Allocation Error!");}
@@ -1756,26 +1757,37 @@ void recRSQRThelper1(int regd, int t0reg) // Preforms the RSQRT function when re
 
 	AND32ItoM((uptr)&fpuRegs.fprc[31], ~(FPUflagI|FPUflagD)); // Clear I and D flags
 
-	/*--- Check for zero ---*/
-	SSE_XORPS_XMM_to_XMM(t1reg, t1reg);
-	SSE_CMPEQSS_XMM_to_XMM(t1reg, t0reg);
-	SSE_MOVMSKPS_XMM_to_R32(tempReg, t1reg);
-	AND32ItoR(tempReg, 1);  //Check sign (if t0reg == zero, sign will be set)
-	pjmp1 = JZ8(0); //Skip if not set
-		OR32ItoM((uptr)&fpuRegs.fprc[31], FPUflagD|FPUflagSD); // Set D and SD flags
-		SSE_XORPS_XMM_to_XMM(regd, t0reg); // Make regd Positive or Negative
-		SSE_ANDPS_M128_to_XMM(regd, (uptr)&s_neg[0]); // Get the sign bit
-		SSE_ORPS_M128_to_XMM(regd, (uptr)&g_maxvals[0]); // regd = +/- Maximum
-		pjmp32 = JMP32(0);
-	x86SetJ8(pjmp1);
-
-	/*--- Check for negative SQRT ---*/
+	/*--- (first) Check for negative SQRT ---*/
 	SSE_MOVMSKPS_XMM_to_R32(tempReg, t0reg);
 	AND32ItoR(tempReg, 1);  //Check sign
 	pjmp2 = JZ8(0); //Skip if not set
 		OR32ItoM((uptr)&fpuRegs.fprc[31], FPUflagI|FPUflagSI); // Set I and SI flags
 		SSE_ANDPS_M128_to_XMM(t0reg, (uptr)&s_pos[0]); // Make t0reg Positive
 	x86SetJ8(pjmp2);
+
+	/*--- Check for zero ---*/
+	SSE_XORPS_XMM_to_XMM(t1reg, t1reg);
+	SSE_CMPEQSS_XMM_to_XMM(t1reg, t0reg);
+	SSE_MOVMSKPS_XMM_to_R32(tempReg, t1reg);
+	AND32ItoR(tempReg, 1);  //Check sign (if t0reg == zero, sign will be set)
+	pjmp1 = JZ8(0); //Skip if not set
+		/*--- Check for 0/0 ---*/
+		SSE_XORPS_XMM_to_XMM(t1reg, t1reg);
+		SSE_CMPEQSS_XMM_to_XMM(t1reg, regd);
+		SSE_MOVMSKPS_XMM_to_R32(tempReg, t1reg);
+		AND32ItoR(tempReg, 1);  //Check sign (if regd == zero, sign will be set)
+		qjmp1 = JZ8(0); //Skip if not set
+			OR32ItoM((uptr)&fpuRegs.fprc[31], FPUflagI|FPUflagSI); // Set I and SI flags ( 0/0 )
+			qjmp2 = JMP8(0);
+		x86SetJ8(qjmp1); //x/0 but not 0/0
+			OR32ItoM((uptr)&fpuRegs.fprc[31], FPUflagD|FPUflagSD); // Set D and SD flags ( x/0 )
+		x86SetJ8(qjmp2);
+
+		/*--- Make regd +/- Maximum ---*/
+		SSE_ANDPS_M128_to_XMM(regd, (uptr)&s_neg[0]); // Get the sign bit
+		SSE_ORPS_M128_to_XMM(regd, (uptr)&g_maxvals[0]); // regd = +/- Maximum
+		pjmp32 = JMP32(0);
+	x86SetJ8(pjmp1);
 
 	if (CHECK_FPU_EXTRA_OVERFLOW) {
 		SSE_MINSS_M32_to_XMM(t0reg, (uptr)&g_maxvals[0]); // Only need to do positive clamp, since t0reg is positive

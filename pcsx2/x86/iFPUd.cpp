@@ -886,7 +886,6 @@ FPURECOMPILE_CONSTCODE(SUBA_S, XMMINFO_WRITEACC|XMMINFO_READS|XMMINFO_READT);
 void recSQRT_S_xmm(int info)
 {
 	u8 *pjmp;
-	u32 *pjmpx;
 	static u32 PCSX2_ALIGNED16(roundmode_temp[4]) = { 0x00000000, 0x00000000, 0x00000000, 0x00000000 };
 	int roundmodeFlag = 0;
 	int tempReg = _allocX86reg(-1, X86TYPE_TEMP, 0, 0);
@@ -907,15 +906,8 @@ void recSQRT_S_xmm(int info)
  
 	if (FPU_FLAGS_ID) {
 		AND32ItoM((uptr)&fpuRegs.fprc[31], ~(FPUflagI|FPUflagD)); // Clear I and D flags
- 
-		//--- Check for zero (skip sqrt if zero)
-		SSE_XORPS_XMM_to_XMM(t1reg, t1reg);
-		SSE_CMPEQSS_XMM_to_XMM(t1reg, EEREC_D);
-		SSE_MOVMSKPS_XMM_to_R32(tempReg, t1reg);
-		AND32ItoR(tempReg, 1); 
-		pjmpx = JNE32(0);
- 
-		//--- Check for negative SQRT ---
+  
+		//--- Check for negative SQRT --- (sqrt(-0) = 0, unlike what the docs say)
 		SSE_MOVMSKPS_XMM_to_R32(tempReg, EEREC_D);
 		AND32ItoR(tempReg, 1);  //Check sign
 		pjmp = JZ8(0); //Skip if none are
@@ -934,9 +926,7 @@ void recSQRT_S_xmm(int info)
 	SSE2_SQRTSD_XMM_to_XMM(EEREC_D, EEREC_D);
  
 	ToPS2FPU(EEREC_D, false, t1reg, false);
- 
-	x86SetJ32(pjmpx);
- 
+  
 	if (roundmodeFlag == 1) { // Set roundmode back if it was changed
 		SSE_LDMXCSR ((uptr)&roundmode_temp[1]);
 	}
@@ -954,6 +944,7 @@ FPURECOMPILE_CONSTCODE(SQRT_S, XMMINFO_WRITED|XMMINFO_READT);
 void recRSQRThelper1(int regd, int regt) // Preforms the RSQRT function when regd <- Fs and regt <- Ft (Sets correct flags)
 {
 	u8 *pjmp1, *pjmp2;
+	u8 *qjmp1, *qjmp2;
 	u32 *pjmp32;
 	int t1reg = _allocTempXMMreg(XMMT_FPS, -1);
 	int tempReg = _allocX86reg(-1, X86TYPE_TEMP, 0, 0);
@@ -962,25 +953,36 @@ void recRSQRThelper1(int regd, int regt) // Preforms the RSQRT function when reg
  
 	AND32ItoM((uptr)&fpuRegs.fprc[31], ~(FPUflagI|FPUflagD)); // Clear I and D flags
  
-	//--- Check for zero ---
-	SSE_XORPS_XMM_to_XMM(t1reg, t1reg);
-	SSE_CMPEQSS_XMM_to_XMM(t1reg, regt);
-	SSE_MOVMSKPS_XMM_to_R32(tempReg, t1reg);
-	AND32ItoR(tempReg, 1);  //Check sign (if regt == zero, sign will be set)
-	pjmp1 = JZ8(0); //Skip if not set
-		OR32ItoM((uptr)&fpuRegs.fprc[31], FPUflagD|FPUflagSD); // Set D and SD flags (even when 0/0)
-		SSE_XORPS_XMM_to_XMM(regd, regt); // Make regd Positive or Negative
-		SetMaxValue(regd); //clamp to max
-		pjmp32 = JMP32(0);
-	x86SetJ8(pjmp1);
- 
-	//--- Check for negative SQRT ---
+	//--- (first) Check for negative SQRT ---
 	SSE_MOVMSKPS_XMM_to_R32(tempReg, regt);
 	AND32ItoR(tempReg, 1);  //Check sign
 	pjmp2 = JZ8(0); //Skip if not set
 		OR32ItoM((uptr)&fpuRegs.fprc[31], FPUflagI|FPUflagSI); // Set I and SI flags
 		SSE_ANDPS_M128_to_XMM(regt, (uptr)&s_pos[0]); // Make regt Positive
 	x86SetJ8(pjmp2);
+ 
+	//--- Check for zero ---
+	SSE_XORPS_XMM_to_XMM(t1reg, t1reg);
+	SSE_CMPEQSS_XMM_to_XMM(t1reg, regt);
+	SSE_MOVMSKPS_XMM_to_R32(tempReg, t1reg);
+	AND32ItoR(tempReg, 1);  //Check sign (if regt == zero, sign will be set)
+	pjmp1 = JZ8(0); //Skip if not set
+	
+		//--- Check for 0/0 ---
+		SSE_XORPS_XMM_to_XMM(t1reg, t1reg);
+		SSE_CMPEQSS_XMM_to_XMM(t1reg, regd);
+		SSE_MOVMSKPS_XMM_to_R32(tempReg, t1reg);
+		AND32ItoR(tempReg, 1);  //Check sign (if regd == zero, sign will be set)
+		qjmp1 = JZ8(0); //Skip if not set
+			OR32ItoM((uptr)&fpuRegs.fprc[31], FPUflagI|FPUflagSI); // Set I and SI flags ( 0/0 )
+			qjmp2 = JMP8(0);
+		x86SetJ8(qjmp1); //x/0 but not 0/0
+			OR32ItoM((uptr)&fpuRegs.fprc[31], FPUflagD|FPUflagSD); // Set D and SD flags ( x/0 )
+		x86SetJ8(qjmp2);
+
+		SetMaxValue(regd); //clamp to max
+		pjmp32 = JMP32(0);
+	x86SetJ8(pjmp1);
  
 	ToDouble(regt); ToDouble(regd);
  

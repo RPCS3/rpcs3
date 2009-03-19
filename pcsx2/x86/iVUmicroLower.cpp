@@ -181,6 +181,7 @@ PCSX2_ALIGNED16(u64 RSQRT_TEMP_XMM[2]);
 void recVUMI_RSQRT(VURegs *VU, int info)
 {
 	u8 *ajmp8, *bjmp8;
+	u8 *qjmp1, *qjmp2;
 	int t1reg, t1boolean;
 	//SysPrintf("recVUMI_RSQRT()\n");
 
@@ -215,11 +216,24 @@ void recVUMI_RSQRT(VURegs *VU, int info)
 
 	AND32ItoR( EAX, 0x01 );  // Grab "Is Zero" bits from the previous calculation
 	ajmp8 = JZ8(0); // Skip if none are
-		OR32ItoM(VU_VI_ADDR(REG_STATUS_FLAG, 2), 0x820); // Zero divide flag
-		
+
+		//check for 0/0
 		_unpackVFSS_xyzw(EEREC_TEMP, EEREC_S, _Fsf_);
+
+		SSE_XORPS_XMM_to_XMM(t1reg, t1reg); // Clear EEREC_TEMP
+		SSE_CMPEQPS_XMM_to_XMM(t1reg, EEREC_TEMP); // Set all F's if each vector is zero
+		SSE_MOVMSKPS_XMM_to_R32(EAX, t1reg); // Move the sign bits of the previous calculation
+
+		AND32ItoR( EAX, 0x01 );  // Grab "Is Zero" bits from the previous calculation
+		qjmp1 = JZ8(0);
+			OR32ItoM( VU_VI_ADDR(REG_STATUS_FLAG, 2), 0x410 ); // Set invalid flag (0/0)
+			qjmp2 = JMP8(0);
+		x86SetJ8(qjmp1);
+			OR32ItoM( VU_VI_ADDR(REG_STATUS_FLAG, 2), 0x820 ); // Zero divide (only when not 0/0)
+		x86SetJ8(qjmp2);
+
 		SSE_ANDPS_M128_to_XMM(EEREC_TEMP, (uptr)&const_clip[4]);
-		SSE_ORPS_M128_to_XMM(EEREC_TEMP, (uptr)&g_maxvals[0]); // EEREC_TEMP = +/-Max
+		SSE_ORPS_M128_to_XMM(EEREC_TEMP, (uptr)&g_maxvals[0]); // If division by zero, then EEREC_TEMP = +/- fmax
 		SSE_MOVSS_XMM_to_M32(VU_VI_ADDR(REG_Q, 0), EEREC_TEMP);
 		bjmp8 = JMP8(0);
 	x86SetJ8(ajmp8);
