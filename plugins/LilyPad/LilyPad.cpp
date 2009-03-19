@@ -3,6 +3,9 @@
 #include <Dbt.h>
 #include <stdio.h>
 
+// For escape timer, so as not to break GSDX+DX9.
+#include <time.h>
+
 #define PADdefs
 #include "PS2Etypes.h"
 #include "PS2Edefs.h"
@@ -15,6 +18,10 @@
 #include "svnrev.h"
 #include "resource.h"
 
+#ifdef _DEBUG
+#include "crtdbg.h"
+#endif
+
 // Used to prevent reading input and cleaning up input devices at the same time.
 // Only an issue when not reading input in GS thread and disabling devices due to
 // lost focus.
@@ -23,7 +30,7 @@ CRITICAL_SECTION readInputCriticalSection;
 HINSTANCE hInst;
 HWND hWnd;
 
-// Used to toggle mouse binding.
+// Used to toggle mouse listening.
 u8 miceEnabled;
 
 // 2 when both pads are initialized, 1 for one pad, etc.
@@ -32,13 +39,12 @@ int openCount = 0;
 int activeWindow = 0;
 
 int bufSize = 0;
-static unsigned char outBuf[50];
-static unsigned char inBuf[50];
+unsigned char outBuf[50];
+unsigned char inBuf[50];
 
 #define MODE_DIGITAL 0x41
 #define MODE_ANALOG 0x73
 #define MODE_DS2_NATIVE 0x79
-
 
 int IsWindowMaximized (HWND hWnd) {
 	RECT rect;
@@ -79,10 +85,10 @@ void DEBUG_NEW_SET() {
 			end++[0] = '\n';
 			DWORD junk;
 			WriteFile(hFile, temp, end-temp, &junk, 0);
-			bufSize = 0;
 			CloseHandle(hFile);;
 		}
 	}
+	bufSize = 0;
 }
 
 inline void DEBUG_IN(unsigned char c) {
@@ -102,28 +108,44 @@ struct ButtonSum {
 	Stick sticks[3];
 };
 
-class Pad {
+
+struct PadFreezeData {
+	// Digital / Analog / DS2 Native
+	u8 mode;
+
+	u8 modeLock;
+
+	// In config mode
+	u8 config;
+
+	u8 vibrate[8];
+	u8 umask[2];
+};
+
+class Pad : public PadFreezeData {
 public:
 	ButtonSum sum, lockedSum;
 
 	int lockedState;
-	u8 vibrate[8];
 
-	u8 umask[2];
-
+	// Vibration indices.
 	u8 vibrateI[2];
+
+	// Last vibration value.  Only used so as not to call vibration
+	// functions when old and new values are both 0.
 	u8 vibrateVal[2];
-	// Digital / Analog / Full Analog (aka DS2 Native)
-	u8 mode;
-	u8 modeLock;
-	// In config mode
-	u8 config;
+
 	// Used to keep track of which pads I'm running.
 	// Note that initialized pads *can* be disabled.
 	// I keep track of state of non-disabled non-initialized
 	// pads, but should never be asked for their state.
 	u8 initialized;
-} pads[2];
+} pads[2][4];
+
+// Active slots for each port.
+int slots[2];
+// Which ports we're running on.
+int portInitialized[2];
 
 // Force value to be from 0 to 255.
 u8 Cap (int i) {
@@ -132,19 +154,25 @@ u8 Cap (int i) {
 	return (u8) i;
 }
 
-
-// Just like RefreshEnabledDevices(), but takes into account
-// mouse and focus state and which devices have bindings for
-// enabled pads.  Also releases keyboards if window is not focused.
+// RefreshEnabledDevices() enables everything that can potentially
+// be bound to, as well as the "Ignore keyboard" device.
+//
+// This enables everything that input should be read from while the
+// emulator is running.  Takes into account  mouse and focus state
+// and which devices have bindings for enabled pads.  Releases
+// keyboards if window is not focused.  Releases game devices if
+// background monitoring is not checked.
 // And releases games if not focused and config.background is not set.
 void UpdateEnabledDevices(int updateList = 0) {
 	// Enable all devices I might want.  Can ignore the rest.
 	RefreshEnabledDevices(updateList);
 	// Figure out which pads I'm getting input for.
-	int padsEnabled[2] = {
-		pads[0].initialized && !config.disablePad[0],
-		pads[1].initialized && !config.disablePad[1]
-	};
+	int padsEnabled[2][4];
+	for (int port = 0; port<2; port++) {
+		for (int slot = 0; slot<4; slot++) {
+			padsEnabled[port][slot] = pads[port][slot].initialized && config.padConfigs[port][slot].type != DisabledPad;
+		}
+	}
 	for (int i=0; i<dm->numDevices; i++) {
 		Device *dev = dm->devices[i];
 
@@ -156,7 +184,7 @@ void UpdateEnabledDevices(int updateList = 0) {
 
 		// Disable ignore keyboard if don't have focus or there are no keys to ignore.
 		if (dev->api == IGNORE_KEYBOARD) {
-			if (config.keyboardApi == NO_API || !activeWindow || !dev->pads[0].numBindings) {
+			if ((!config.vistaVolume && (config.keyboardApi == NO_API || !dev->pads[0][0].numBindings)) || !activeWindow) {
 				dm->DisableDevice(i);
 			}
 			continue;
@@ -173,9 +201,11 @@ void UpdateEnabledDevices(int updateList = 0) {
 		else if (!activeWindow && !config.background) dm->DisableDevice(i);
 		else {
 			int numActiveBindings = 0;
-			for (int pad=0; pad<2; pad++) {
-				if (padsEnabled[pad]) {
-					numActiveBindings += dev->pads[pad].numBindings + dev->pads[pad].numFFBindings;
+			for (int port=0; port<2; port++) {
+				for (int slot=0; slot<4; slot++) {
+					if (padsEnabled[port][slot]) {
+						numActiveBindings += dev->pads[port][slot].numBindings + dev->pads[port][slot].numFFBindings;
+					}
 				}
 			}
 			if (!numActiveBindings)
@@ -197,10 +227,6 @@ BOOL WINAPI DllMain(HINSTANCE hInstance, DWORD fdwReason, void* lpvReserved) {
 		PADshutdown();
 	}
 	return 1;
-}
-
-BOOL WINAPI MyDllMainCRTStartup(HANDLE hDllHandle, DWORD dwReason, LPVOID lpReserved) {
-	return DllMain((HINSTANCE) hDllHandle, dwReason, lpReserved);
 }
 
 void AddForce(ButtonSum *sum, u8 cmd, int delta = 255) {
@@ -293,12 +319,10 @@ void CapSum(ButtonSum *sum) {
 // key press info requests.
 int summed[3] = {0, 0, 0};
 
-int lockStateChanged[2] = {0,0};
 #define LOCK_DIRECTION 2
 #define LOCK_BUTTONS 4
 #define LOCK_BOTH 1
 
-extern HWND hWndStealing;
 
 void Update(int pad) {
 	if ((unsigned int)pad > 2) return;
@@ -307,9 +331,13 @@ void Update(int pad) {
 		return;
 	}
 	int i;
-	ButtonSum s[2];
-	s[0] = pads[0].lockedSum;
-	s[1] = pads[1].lockedSum;
+	ButtonSum s[2][4];
+	u8 lockStateChanged[2][4];
+	memset(lockStateChanged, 0, sizeof(lockStateChanged));
+
+	for (i=0; i<8; i++) {
+		s[i&1][i>>1] = pads[i&1][i>>1].lockedSum;
+	}
 	InitInfo info = {
 		0, hWnd, hWnd, 0
 	};
@@ -325,36 +353,38 @@ void Update(int pad) {
 		// Skip both disabled devices and inactive enabled devices.
 		// Shouldn't be any of the latter, in general, but just in case...
 		if (!dev->virtualControlState) continue;
-		for (int pad=0; pad<2; pad++) {
-			if (config.disablePad[pad]) continue;
-			for (int j=0; j<dev->pads[pad].numBindings; j++) {
-				Binding *b = dev->pads[pad].bindings+j;
-				int cmd = b->command;
-				int state = dev->virtualControlState[b->controlIndex];
-				if (!(turbo & b->turbo)) {
-					if (cmd > 0x0F && cmd != 0x28) {
-						ProcessButtonBinding(b, s+pad, state);
-					}
-					else if ((state>>15) && !(dev->oldVirtualControlState[b->controlIndex]>>15)) {
-						if (cmd == 0x0F) {
-							miceEnabled = !miceEnabled;
-							UpdateEnabledDevices();
+		for (int port=0; port<2; port++) {
+			for (int slot=0; slot<4; slot++) {
+				if (config.padConfigs[port][slot].type == DisabledPad || !pads[port][slot].initialized) continue;
+				for (int j=0; j<dev->pads[port][slot].numBindings; j++) {
+					Binding *b = dev->pads[port][slot].bindings+j;
+					int cmd = b->command;
+					int state = dev->virtualControlState[b->controlIndex];
+					if (!(turbo & b->turbo)) {
+						if (cmd > 0x0F && cmd != 0x28) {
+							ProcessButtonBinding(b, &s[port][slot], state);
 						}
-						else if (cmd == 0x0C) {
-							lockStateChanged[pad] |= LOCK_BUTTONS;
-						}
-						else if (cmd == 0x0E) {
-							lockStateChanged[pad] |= LOCK_DIRECTION;
-						}
-						else if (cmd == 0x0D) {
-							lockStateChanged[pad] |= LOCK_BOTH;
-						}
-						else if (cmd == 0x28) {
-							if (!pads[pad].modeLock) {
-								if (pads[pad].mode != MODE_DIGITAL)
-									pads[pad].mode = MODE_DIGITAL;
-								else
-									pads[pad].mode = MODE_ANALOG;
+						else if ((state>>15) && !(dev->oldVirtualControlState[b->controlIndex]>>15)) {
+							if (cmd == 0x0F) {
+								miceEnabled = !miceEnabled;
+								UpdateEnabledDevices();
+							}
+							else if (cmd == 0x0C) {
+								lockStateChanged[port][slot] |= LOCK_BUTTONS;
+							}
+							else if (cmd == 0x0E) {
+								lockStateChanged[port][slot] |= LOCK_DIRECTION;
+							}
+							else if (cmd == 0x0D) {
+								lockStateChanged[port][slot] |= LOCK_BOTH;
+							}
+							else if (cmd == 0x28) {
+								if (!pads[port][slot].modeLock) {
+									if (pads[port][slot].mode != MODE_DIGITAL)
+										pads[port][slot].mode = MODE_DIGITAL;
+									else
+										pads[port][slot].mode = MODE_ANALOG;
+								}
 							}
 						}
 					}
@@ -368,101 +398,98 @@ void Update(int pad) {
 		LeaveCriticalSection(&readInputCriticalSection);
 	}
 
-	for (int currentPad = 0; currentPad<2; currentPad++) {
-		if (config.guitar[currentPad]) {
-			if (!config.GH2) {
-				s[currentPad].sticks[1].vert = -s[currentPad].sticks[1].vert;
-			}
-			// GH2 hack.
-			else if (config.GH2) {
-				const unsigned int oldIdList[5] = {ID_R2, ID_CIRCLE, ID_TRIANGLE, ID_CROSS, ID_SQUARE};
-				const unsigned int idList[5] = {ID_L2, ID_L1, ID_R1, ID_R2, ID_CROSS};
-				int values[5];
-				int i;
-				for (i=0; i<5; i++) {
-					int id = oldIdList[i] - 0x1104;
-					values[i] = s[currentPad].buttons[id];
-					s[currentPad].buttons[id] = 0;
+	for (int port=0; port<2; port++) {
+		for (int slot=0; slot<4; slot++) {
+			if (config.padConfigs[port][slot].type == DisabledPad || !pads[port][slot].initialized) continue;
+			if (config.padConfigs[port][slot].type == GuitarPad) {
+				if (!config.GH2) {
+					s[port][slot].sticks[1].vert = -s[port][slot].sticks[1].vert;
 				}
-				s[currentPad].buttons[ID_TRIANGLE-0x1104] = values[1];
-				for (i=0; i<5; i++) {
-					int id = idList[i] - 0x1104;
-					s[currentPad].buttons[id] = values[i];
-				}
-				if (abs(s[currentPad].sticks[0].vert) <= 48) {
-					for (int i=0; i<5; i++) {
-						unsigned int id = idList[i] - 0x1104;
-						if (pads[currentPad].sum.buttons[id] < s[currentPad].buttons[id]) {
-							s[currentPad].buttons[id] = pads[currentPad].sum.buttons[id];
+				// GH2 hack.
+				else if (config.GH2) {
+					const unsigned int oldIdList[5] = {ID_R2, ID_CIRCLE, ID_TRIANGLE, ID_CROSS, ID_SQUARE};
+					const unsigned int idList[5] = {ID_L2, ID_L1, ID_R1, ID_R2, ID_CROSS};
+					int values[5];
+					int i;
+					for (i=0; i<5; i++) {
+						int id = oldIdList[i] - 0x1104;
+						values[i] = s[port][slot].buttons[id];
+						s[port][slot].buttons[id] = 0;
+					}
+					s[port][slot].buttons[ID_TRIANGLE-0x1104] = values[1];
+					for (i=0; i<5; i++) {
+						int id = idList[i] - 0x1104;
+						s[port][slot].buttons[id] = values[i];
+					}
+					if (abs(s[port][slot].sticks[0].vert) <= 48) {
+						for (int i=0; i<5; i++) {
+							unsigned int id = idList[i] - 0x1104;
+							if (pads[port][slot].sum.buttons[id] < s[port][slot].buttons[id]) {
+								s[port][slot].buttons[id] = pads[port][slot].sum.buttons[id];
+							}
+						}
+					}
+					else if (abs(pads[port][slot].sum.sticks[0].vert) <= 48) {
+						for (int i=0; i<5; i++) {
+							unsigned int id = idList[i] - 0x1104;
+							if (pads[port][slot].sum.buttons[id]) {
+								s[port][slot].buttons[id] = 0;
+							}
 						}
 					}
 				}
-				else if (abs(pads[currentPad].sum.sticks[0].vert) <= 48) {
-					for (int i=0; i<5; i++) {
-						unsigned int id = idList[i] - 0x1104;
-						if (pads[currentPad].sum.buttons[id]) {
-							s[currentPad].buttons[id] = 0;
-						}
+			}
+
+			if (pads[port][slot].mode == 0x41) {
+				s[port][slot].sticks[0].horiz +=
+					s[port][slot].sticks[1].horiz +
+					s[port][slot].sticks[2].horiz;
+				s[port][slot].sticks[0].vert +=
+					s[port][slot].sticks[1].vert +
+					s[port][slot].sticks[2].vert;
+			}
+
+			CapSum(&s[port][slot]);
+			if (lockStateChanged[port][slot]) {
+				if (lockStateChanged[port][slot] & LOCK_BOTH) {
+					if (pads[port][slot].lockedState != (LOCK_DIRECTION | LOCK_BUTTONS)) {
+						// Enable the one that's not enabled.
+						lockStateChanged[port][slot] ^= pads[port][slot].lockedState^(LOCK_DIRECTION | LOCK_BUTTONS);
+					}
+					else {
+						// Disable both
+						lockStateChanged[port][slot] ^= LOCK_DIRECTION | LOCK_BUTTONS;
 					}
 				}
+				if (lockStateChanged[port][slot] & LOCK_DIRECTION) {
+					if (pads[port][slot].lockedState & LOCK_DIRECTION) {
+						memset(pads[port][slot].lockedSum.sticks, 0, sizeof(pads[port][slot].lockedSum.sticks));
+					}
+					else {
+						memcpy(pads[port][slot].lockedSum.sticks, s[port][slot].sticks, sizeof(pads[port][slot].lockedSum.sticks));
+					}
+					pads[port][slot].lockedState ^= LOCK_DIRECTION;
+				}
+				if (lockStateChanged[port][slot] & LOCK_BUTTONS) {
+					if (pads[port][slot].lockedState & LOCK_BUTTONS) {
+						memset(pads[port][slot].lockedSum.buttons, 0, sizeof(pads[port][slot].lockedSum.buttons));
+					}
+					else {
+						memcpy(pads[port][slot].lockedSum.buttons, s[port][slot].buttons, sizeof(pads[port][slot].lockedSum.buttons));
+					}
+					pads[port][slot].lockedState ^= LOCK_BUTTONS;
+				}
+				for (i=0; i<sizeof(pads[port][slot].lockedSum)/4; i++) {
+					if (((int*)&pads[port][slot].lockedSum)[i]) break;
+				}
+				if (i==sizeof(pads[port][slot].lockedSum)/4) {
+					pads[port][slot].lockedState = 0;
+				}
 			}
 		}
-
-		if (pads[currentPad].mode == 0x41) {
-			s[currentPad].sticks[0].horiz +=
-				s[currentPad].sticks[1].horiz +
-				s[currentPad].sticks[2].horiz;
-			s[currentPad].sticks[0].vert +=
-				s[currentPad].sticks[1].vert +
-				s[currentPad].sticks[2].vert;
-		}
-
-		CapSum(&s[currentPad]);
-		if (lockStateChanged[currentPad]) {
-			if (lockStateChanged[currentPad] & LOCK_BOTH) {
-				if (pads[currentPad].lockedState != (LOCK_DIRECTION | LOCK_BUTTONS)) {
-					// Enable the one that's not enabled.
-					lockStateChanged[currentPad] ^= pads[currentPad].lockedState^(LOCK_DIRECTION | LOCK_BUTTONS);
-				}
-				else {
-					// Disable both
-					lockStateChanged[currentPad] ^= LOCK_DIRECTION | LOCK_BUTTONS;
-				}
-			}
-			if (lockStateChanged[currentPad] & LOCK_DIRECTION) {
-				if (pads[currentPad].lockedState & LOCK_DIRECTION) {
-					memset(pads[currentPad].lockedSum.sticks, 0, sizeof(pads[currentPad].lockedSum.sticks));
-				}
-				else {
-					memcpy(pads[currentPad].lockedSum.sticks, s[currentPad].sticks, sizeof(pads[currentPad].lockedSum.sticks));
-				}
-				pads[currentPad].lockedState ^= LOCK_DIRECTION;
-			}
-			if (lockStateChanged[currentPad] & LOCK_BUTTONS) {
-				if (pads[currentPad].lockedState & LOCK_BUTTONS) {
-					memset(pads[currentPad].lockedSum.buttons, 0, sizeof(pads[currentPad].lockedSum.buttons));
-				}
-				else {
-					memcpy(pads[currentPad].lockedSum.buttons, s[currentPad].buttons, sizeof(pads[currentPad].lockedSum.buttons));
-				}
-				pads[currentPad].lockedState ^= LOCK_BUTTONS;
-			}
-			for (i=0; i<sizeof(pads[0].lockedSum)/4; i++) {
-				if (((int*)&pads[0].lockedSum)[i]) break;
-			}
-			if (i==sizeof(pads[0].lockedSum)/4) {
-				pads[currentPad].lockedState = 0;
-			}
-		}
-		lockStateChanged[currentPad] = 0;
 	}
-	pads[0].sum = s[0];
-	pads[1].sum = s[1];
-	if (config.disablePad[0]) {
-		memset(&pads[0].sum, 0, sizeof(pads[0].sum));
-	}
-	if (config.disablePad[1]) {
-		memset(&pads[1].sum, 0, sizeof(pads[1].sum));
+	for (i=0; i<8; i++) {
+		pads[i&1][i>>1].sum = s[i&1][i>>1];
 	}
 	summed[0] = 1;
 	summed[1] = 1;
@@ -474,10 +501,10 @@ void CALLBACK PADupdate(int pad) {
 	if (config.GSThreadUpdates) Update(pad);
 }
 
-inline void SetVibrate(Pad *pad, int motor, u8 val) {
-	if (val | pad->vibrateVal[motor]) {
-		dm->SetEffect(pad - pads, motor, val);
-		pad->vibrateVal[motor] = val;
+inline void SetVibrate(int port, int slot, int motor, u8 val) {
+	if (val || pads[port][slot].vibrateVal[motor]) {
+		dm->SetEffect(port,slot, motor, val);
+		pads[port][slot].vibrateVal[motor] = val;
 	}
 }
 
@@ -486,7 +513,7 @@ u32 CALLBACK PS2EgetLibType(void) {
 	return PS2E_LT_PAD;
 }
 
-#define VERSION ((0<<8) | 9 | (10<<24))
+#define VERSION ((0<<8) | 9 | (11<<24))
 
 u32 CALLBACK PS2EgetLibVersion2(u32 type) {
 	ps2e = 1;
@@ -499,6 +526,8 @@ u32 CALLBACK PS2EgetLibVersion2(u32 type) {
 void GetNameAndVersionString(wchar_t *out) {
 #ifdef _DEBUG
 	wsprintfW(out, L"LilyPad Debug %i.%i.%i (r%i)", (VERSION>>8)&0xFF, VERSION&0xFF, (VERSION>>24)&0xFF, SVN_REV);
+#elif (_MSC_VER != 1400)
+	wsprintfW(out, L"LilyPad svn %i.%i.%i (r%i)", (VERSION>>8)&0xFF, VERSION&0xFF, (VERSION>>24)&0xFF, SVN_REV);
 #else
 	wsprintfW(out, L"LilyPad %i.%i.%i", (VERSION>>8)&0xFF, VERSION&0xFF, (VERSION>>24)&0xFF, SVN_REV);
 #endif
@@ -510,6 +539,11 @@ char* CALLBACK PSEgetLibName() {
 	sprintf(version, "LilyPad Debug (r%i)", SVN_REV);
 	return version;
 #else
+	#if (_MSC_VER != 1400)
+		static char version[50];
+		sprintf(version, "LilyPad svn (r%i)", SVN_REV);
+		return version;
+	#endif
 	return "LilyPad";
 #endif
 }
@@ -524,30 +558,47 @@ char* CALLBACK PS2EgetLibName(void) {
 //}
 
 void CALLBACK PADshutdown() {
-	pads[0].initialized = 0;
-	pads[1].initialized = 0;
+	for (int i=0; i<8; i++)
+		pads[i&1][i>>1].initialized = 0;
 	UnloadConfigs();
 }
 
-#ifdef _DEBUG
-#include "crtdbg.h"
-#endif
-
-
 inline void StopVibrate() {
-	for (int i=0; i<4; i++) {
-		SetVibrate(&pads[i/2], i&1, 0);
+	for (int i=0; i<8; i++) {
+		SetVibrate(i&1, i>>1, 0, 0);
+		SetVibrate(i&1, i>>1, 1, 0);
 	}
 }
 
-inline void ResetVibrate(Pad *pad) {
-	SetVibrate(pad, 0, 0);
-	SetVibrate(pad, 1, 0);
-	((int*)(pad->vibrate))[0] = 0xFFFFFF5A;
-	((int*)(pad->vibrate))[1] = 0xFFFFFFFF;
+inline void ResetVibrate(int port, int slot) {
+	SetVibrate(port, slot, 0, 0);
+	SetVibrate(port, slot, 1, 0);
+	((int*)(pads[port][slot].vibrate))[0] = 0xFFFFFF5A;
+	((int*)(pads[port][slot].vibrate))[1] = 0xFFFFFFFF;
+}
+
+void ResetPad(int port, int slot) {
+	memset(&pads[port][slot], 0, sizeof(pads[0][0]));
+	pads[port][slot].mode = MODE_DIGITAL;
+	pads[port][slot].umask[0] = pads[port][slot].umask[1] = 0xFF;
+	ResetVibrate(port, slot);
+	if (config.padConfigs[port][slot].autoAnalog) {
+		pads[port][slot].mode = MODE_ANALOG;
+	}
 }
 
 
+struct QueryInfo {
+	u8 port;
+	u8 slot;
+	u8 lastByte;
+	u8 currentCommand;
+	u8 numBytes;
+	u8 queryDone;
+	u8 response[42];
+} query = {0,0,0,0, 0,0xFF, 0xF3};
+
+int saveStateIndex = 0;
 
 s32 CALLBACK PADinit(u32 flags) {
 	// Note:  Won't load settings if already loaded.
@@ -566,16 +617,18 @@ s32 CALLBACK PADinit(u32 flags) {
 	#endif
 	pad --;
 
-	memset(&pads[pad], 0, sizeof(pads[0]));
-	pads[pad].mode = MODE_DIGITAL;
-	pads[pad].umask[0] = pads[pad].umask[1] = 0xFF;
-	ResetVibrate(pads+pad);
-	if (config.AutoAnalog[pad]) {
-		pads[pad].mode = MODE_ANALOG;
-	}
+	ResetPad(pad, 0);
 
-	pads[pad].initialized = 1;
+	pads[pad][0].initialized = 1;
+	memset(slots, 0, sizeof(slots));
 
+	query.lastByte = 1;
+	query.numBytes = 0;
+	ClearKeyQueue();
+	// Just in case, when resuming emulation.
+	QueueKeyEvent(VK_SHIFT, KEYRELEASE);
+	QueueKeyEvent(VK_MENU, KEYRELEASE);
+	QueueKeyEvent(VK_CONTROL, KEYRELEASE);
 	return 0;
 }
 
@@ -618,17 +671,8 @@ static const u8 queryMode[7] =		{0x5A, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
 static const u8 setNativeMode[7] =  {0x5A, 0x00, 0x00, 0x00, 0x00, 0x00, 0x5A};
 
-struct QueryInfo {
-	u8 pad;
-	u8 lastByte;
-	u8 currentCommand;
-	u8 numBytes;
-	u8 queryDone;
-	u8 response[22];
-} query = {0,0,0,0, 0,0xFF, 0xF3};
-
-int saveStateIndex = 0;
-
+// Implements a couple of the hacks, also responsible for monitoring device addition/removal and focus
+// changes.
 ExtraWndProcResult HackWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, LRESULT *output) {
 	switch (uMsg) {
 		case WM_SETTEXT:
@@ -659,6 +703,12 @@ ExtraWndProcResult HackWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 			}
 			break;
 		case WM_ACTIVATEAPP:
+			// Release any buttons PCSX2 may think are down when
+			// losing/gaining focus.
+			QueueKeyEvent(VK_SHIFT, KEYRELEASE);
+			QueueKeyEvent(VK_MENU, KEYRELEASE);
+			QueueKeyEvent(VK_CONTROL, KEYRELEASE);
+
 			// Need to do this when not reading input from gs thread.
 			// Checking for that case not worth the effort.
 			EnterCriticalSection(&readInputCriticalSection);
@@ -751,15 +801,14 @@ s32 CALLBACK PADopen(void *pDsp) {
 		}
 		restoreFullScreen = 0;
 	}
-	memset(&pads[0].sum, 0, sizeof(pads[0].sum));
-	memset(&pads[0].lockedSum, 0, sizeof(pads[0].lockedSum));
-	pads[0].lockedState = 0;
-	memset(&pads[1].sum, 0, sizeof(pads[0].sum));
-	memset(&pads[1].lockedSum, 0, sizeof(pads[0].lockedSum));
-	pads[1].lockedState = 0;
+	for (int port=0; port<2; port++) {
+		for (int slot=0; slot<4; slot++) {
+			memset(&pads[port][slot].sum, 0, sizeof(pads[port][slot].sum));
+			memset(&pads[port][slot].lockedSum, 0, sizeof(pads[port][slot].lockedSum));
+			pads[port][slot].lockedState = 0;
+		}
+	}
 
-	query.lastByte = 1;
-	query.numBytes = 0;
 	// I'd really rather use this line, but GetActiveWindow() does not have complete specs.
 	// It *seems* to return null when no window from this thread has focus, but the
 	// Microsoft specs seem to imply it returns the window from this thread that would have focus,
@@ -786,7 +835,8 @@ u8 CALLBACK PADstartPoll(int pad) {
 	pad--;
 	if ((unsigned int)pad <= 1) {
 		query.queryDone = 0;
-		query.pad = pad;
+		query.port = pad;
+		query.slot = slots[query.port];
 		query.numBytes = 2;
 		query.lastByte = 0;
 		DEBUG_IN(pad);
@@ -813,8 +863,21 @@ u8 CALLBACK PADpoll(u8 value) {
 		DEBUG_OUT(query.response[1+query.lastByte]);
 		return query.response[++query.lastByte];
 	}
+	/*
+	{
+		query.numBytes = 35;
+		u8 test[35] = {0xFF, 0x80, 0x5A,
+			0x73, 0x5A, 0xFF, 0xFF, 0x80, 0x80, 0x80, 0x80,
+			0x73, 0x5A, 0xFF, 0xFF, 0x80, 0x80, 0x80, 0x80,
+			0x73, 0x5A, 0xFF, 0xFF, 0x80, 0x80, 0x80, 0x80,
+			0x73, 0x5A, 0xFF, 0xFF, 0x80, 0x80, 0x80, 0x80
+		};
+		memcpy(query.response, test, sizeof(test));
+		DEBUG_OUT(query.response[1+query.lastByte]);
+		return query.response[++query.lastByte];
+	}//*/
 	int i;
-	Pad *pad = &pads[query.pad];
+	Pad *pad = &pads[query.port][query.slot];
 	if (query.lastByte == 0) {
 		query.lastByte++;
 		query.currentCommand = value;
@@ -832,7 +895,7 @@ u8 CALLBACK PADpoll(u8 value) {
 			query.response[2] = 0x5A;
 			{
 				if (!config.GSThreadUpdates) {
-					Update(pad != pads);
+					Update(query.port);
 				}
 				ButtonSum *sum = &pad->sum;
 
@@ -843,7 +906,7 @@ u8 CALLBACK PADpoll(u8 value) {
 				for (i = 0; i<8; i++) {
 					b2 -= (sum->buttons[i+4]>=128) << i;
 				}
-				if (config.guitar[query.pad] && !config.GH2) {
+				if (config.padConfigs[query.port][query.slot].type == GuitarPad && !config.GH2) {
 					sum->sticks[0].horiz = -255;
 					// Not sure about this.  Forces wammy to be from 0 to 0x7F.
 					// if (sum->sticks[2].vert > 0) sum->sticks[2].vert = 0;
@@ -915,11 +978,11 @@ u8 CALLBACK PADpoll(u8 value) {
 		// SET_MODE_AND_LOCK
 		case 0x44:
 			SET_RESULT(setMode);
-			ResetVibrate(pad);
+			ResetVibrate(query.port, query.slot);
 			break;
 		// QUERY_MODEL_AND_MODE
 		case 0x45:
-			if (!config.guitar[query.pad] || config.GH2) SET_FINAL_RESULT(queryModelDS2)
+			if (config.padConfigs[query.port][query.slot].type != GuitarPad || config.GH2) SET_FINAL_RESULT(queryModelDS2)
 			else SET_FINAL_RESULT(queryModelDS1);
 			query.response[5] = pad->mode != MODE_DIGITAL;
 			break;
@@ -939,7 +1002,7 @@ u8 CALLBACK PADpoll(u8 value) {
 		case 0x4D:
 			memcpy(query.response+2, pad->vibrate, 7);
 			query.numBytes = 9;
-			ResetVibrate(pad);
+			ResetVibrate(query.port, query.slot);
 			break;
 		// SET_DS2_NATIVE_MODE
 		case 0x4F:
@@ -959,10 +1022,10 @@ u8 CALLBACK PADpoll(u8 value) {
 			// READ_DATA_AND_VIBRATE
 			case 0x42:
 				if (query.lastByte == pad->vibrateI[0]) {
-					SetVibrate(pad, 1, 255*(0!=value));
+					SetVibrate(query.port, query.slot, 1, 255*(0!=value));
 				}
 				else if (query.lastByte == pad->vibrateI[1]) {
-					SetVibrate(pad, 0, value);
+					SetVibrate(query.port, query.slot, 0, value);
 				}
 				break;
 			// CONFIG_MODE
@@ -984,7 +1047,7 @@ u8 CALLBACK PADpoll(u8 value) {
 					}
 					else {
 						pad->modeLock = 0;
-						if (pad->mode == MODE_DIGITAL && config.AutoAnalog[query.pad]) {
+						if (pad->mode == MODE_DIGITAL && config.padConfigs[query.port][query.slot].autoAnalog) {
 							pad->mode = MODE_ANALOG;
 						}
 					}
@@ -1077,7 +1140,6 @@ void CALLBACK PADabout() {
 s32 CALLBACK PADtest() {
 	return 0;
 }
-#include <time.h>
 
 DWORD WINAPI RenameWindowThreadProc(void *lpParameter) {
 	wchar_t newTitle[200];
@@ -1092,26 +1154,12 @@ DWORD WINAPI RenameWindowThreadProc(void *lpParameter) {
 	return 0;
 }
 
-// For escape fullscreen hack.  This doesn't work when called from another thread, for some reason.
-// That includes a new thread, independent of GS and PCSX2 thread, so use this to make sure it's
-// called from the right spot.
-ExtraWndProcResult KillFullScreenProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, LRESULT *output) {
-	// Prevent infinite recursion.  Could also just remove this function from the list,
-	// but CONTINUE_BLISSFULLY_AND_RELEASE_PROC is a safer way to do that.
-	static int inFunction = 0;
-	if (!inFunction) {
-		inFunction = 1;
-		ShowWindow(hWnd, SW_MINIMIZE);
-		inFunction = 0;
-	}
-	return CONTINUE_BLISSFULLY_AND_RELEASE_PROC;
-}
-
 keyEvent* CALLBACK PADkeyEvent() {
 	if (!config.GSThreadUpdates) {
 		Update(2);
 	}
 	static char shiftDown = 0;
+	static char altDown = 0;
 	static keyEvent ev;
 	if (!GetQueuedKeyEvent(&ev)) return 0;
 	if ((ev.key == VK_ESCAPE || (int)ev.key == -2) && ev.evt == KEYPRESS && config.escapeFullscreenHack) {
@@ -1121,7 +1169,6 @@ keyEvent* CALLBACK PADkeyEvent() {
 			QueueKeyEvent(-2, KEYPRESS);
 			HANDLE hThread = CreateThread(0, 0, MaximizeWindowThreadProc, 0, 0, 0);
 			if (hThread) CloseHandle(hThread);
-			//ShowWindowAsync(hWnd, SW_HIDE);
 			restoreFullScreen = 1;
 			return 0;
 		}
@@ -1139,27 +1186,103 @@ keyEvent* CALLBACK PADkeyEvent() {
 		saveStateIndex = (saveStateIndex+10)%10;
 		if (config.saveStateTitle) {
 			// GSDX only checks its window's message queue at certain points or something, so
-			// have to do this in another thread to prevent lockup.
+			// have to do this in another thread to prevent deadlock.
 			HANDLE hThread = CreateThread(0, 0, RenameWindowThreadProc, 0, 0, 0);
 			if (hThread) CloseHandle(hThread);
 		}
 	}
 
+	// So don't change skip mode on alt-F4.
+	if (ev.key == VK_F4 && altDown) {
+		return 0;
+	}
+
 	if (ev.key == VK_LSHIFT || ev.key == VK_RSHIFT || ev.key == VK_SHIFT) {
 		ev.key = VK_SHIFT;
-		if (ev.evt == KEYPRESS)
-			shiftDown = 1;
-		else
-			shiftDown = 0;
+		shiftDown = (ev.evt == KEYPRESS);
 	}
 	else if (ev.key == VK_LCONTROL || ev.key == VK_RCONTROL) {
 		ev.key = VK_CONTROL;
 	}
-	else if (ev.key == VK_LMENU || ev.key == VK_RMENU) {
+	else if (ev.key == VK_LMENU || ev.key == VK_RMENU || ev.key == VK_SHIFT) {
 		ev.key = VK_MENU;
+		altDown = (ev.evt == KEYPRESS);
 	}
 	return &ev;
 }
+
+#define PAD_SAVE_STATE_VERSION	0
+
+struct PadPluginFreezeData {
+	char format[8];
+	// Currently all different versions are incompatible.
+	// May split into major/minor with some compatibility rules.
+	u32 version;
+	// So when loading, know which plugin's settings I'm loading.
+	// Not a big deal.  Use a static variable when saving to figure it out.
+	u8 port;
+	// active slot for port
+	u8 slot;
+	// Currently only use padData[0].  Save room for all 4 slots for simplicity.
+	PadFreezeData padData[4];
+};
+
+s32 CALLBACK PADfreeze(int mode, freezeData *data) {
+	if (mode == FREEZE_SIZE) {
+		data->size = sizeof(PadPluginFreezeData);
+	}
+	else if (mode == FREEZE_LOAD) {
+		if (data->size < sizeof(PadPluginFreezeData)) return 0;
+		PadPluginFreezeData &pdata = *(PadPluginFreezeData*)(data->data);
+		if (pdata.version != PAD_SAVE_STATE_VERSION || strcmp(pdata.format, "PadMode")) {
+			return 0;
+		}
+		StopVibrate();
+		int port = pdata.port;
+		for (int slot=0; slot<4; slot++) {
+			u8 mode = pads[port][slot].mode = pdata.padData[slot].mode;
+			if (mode != MODE_DIGITAL && mode != MODE_ANALOG && mode != MODE_DS2_NATIVE) {
+				ResetPad(port, slot);
+				continue;
+			}
+			pads[port][slot].config = pdata.padData[slot].config;
+			pads[port][slot].modeLock = pdata.padData[slot].modeLock;
+			memcpy(pads[port][slot].umask, pdata.padData[slot].umask, sizeof(pads[port][slot].umask));
+
+			slots[port] = slot;
+			// Means I only have to have one chunk of code to parse vibrate info.
+			// Other plugins don't store it exactly, but think it's technically correct
+			// to do so, though I could be wrong.
+			PADstartPoll(port+1);
+			PADpoll(0x4D);
+			for (int j=0; j<7; j++) {
+				PADpoll(pdata.padData[slot].vibrate[j]);
+			}
+		}
+		slots[port] = pdata.slot;
+	}
+	else if (mode == FREEZE_SAVE) {
+		if (data->size != sizeof(PadPluginFreezeData)) return 0;
+		PadPluginFreezeData &pdata = *(PadPluginFreezeData*)(data->data);
+		static int nextPort = 0;
+		if (!portInitialized[nextPort]) nextPort ^= 1;
+		int port = nextPort;
+		if (!portInitialized[nextPort^1]) nextPort = 0;
+		else nextPort ^= 1;
+
+
+		memset(&pdata, 0, sizeof(pdata));
+		strcpy(pdata.format, "PadMode");
+		pdata.version = PAD_SAVE_STATE_VERSION;
+		pdata.port = port;
+		pdata.slot = slots[port];
+		for (int slot=0; slot<4; slot++) {
+			pdata.padData[slot] = pads[port][slot];
+		}
+	}
+	else return -1;
+	return 0;
+ }
 
 u32 CALLBACK PADreadPort1 (PadDataS* pads) {
 	PADstartPoll(1);

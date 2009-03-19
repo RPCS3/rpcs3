@@ -112,10 +112,10 @@ struct psxRegisters {
 	u32 code;			/* The instruction */
 	u32 cycle;
 	u32 interrupt;
-	u32 sCycle[64];		// start cycle for signaled ints
-	s32 eCycle[64];		// cycle delta for signaled ints (sCycle + eCycle == branch cycle)
-	u32 _msflag[32];
-	u32 _smflag[32];
+	u32 sCycle[32];		// start cycle for signaled ints
+	s32 eCycle[32];		// cycle delta for signaled ints (sCycle + eCycle == branch cycle)
+	//u32 _msflag[32];
+	//u32 _smflag[32];
 };
 
 PCSX2_ALIGNED16_EXTERN(psxRegisters psxRegs);

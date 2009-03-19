@@ -178,7 +178,7 @@
 			InheritedPropertySheets="..\..\..\3rdparty.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
-			WholeProgramOptimization="1"
+			WholeProgramOptimization="0"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -201,7 +201,7 @@
 				Optimization="3"
 				InlineFunctionExpansion="1"
 				FavorSizeOrSpeed="2"
-				WholeProgramOptimization="true"
+				WholeProgramOptimization="false"
 				AdditionalIncludeDirectories="..\..\Include;..\..\Include\msvc;..\..\..\zlib;..\..\src\png"
 				PreprocessorDefinitions="WIN32;_LIB;__WXMSW__;wxUSE_BASE=0;_CRT_SECURE_NO_WARNINGS"
 				StringPooling="true"
@@ -16949,10 +16949,6 @@
 			Name="Setup Headers"
 			>
 			<File
-				RelativePath="..\..\include\wx\univ\setup.h"
-				>
-			</File>
-			<File
 				RelativePath="..\..\include\wx\msw\setup.h"
 				>
 				<FileConfiguration
@@ -17015,6 +17011,10 @@
 						Outputs="..\..\lib\vc_lib\msw\wx\setup.h"
 					/>
 				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\..\include\wx\univ\setup.h"
+				>
 			</File>
 		</Filter>
 		<Filter

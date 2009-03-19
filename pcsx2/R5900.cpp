@@ -522,7 +522,7 @@ __forceinline bool _cpuBranchTest_Shared()
 	cpuSetNextBranchDelta( ((g_psxNextBranchCycle-psxRegs.cycle)*8) - EEsCycle );
 
 	// Apply the hsync counter's nextCycle
-	cpuSetNextBranch( counters[4].sCycle, counters[4].CycleT );
+	cpuSetNextBranch( hsyncCounter.sCycle, hsyncCounter.CycleT );
 
 	// Apply vsync and other counter nextCycles
 	cpuSetNextBranch( nextsCounter, nextCounter );

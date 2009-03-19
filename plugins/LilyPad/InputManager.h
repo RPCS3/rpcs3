@@ -194,7 +194,7 @@ public:
 		};
 	};
 
-	PadBindings pads[2];
+	PadBindings pads[2][4];
 
 	// Virtual controls.  All basically act like pressure sensitivity buttons, with
 	// values between 0 and 2^16.  2^16 is fully down, 0 is up.  Larger values
@@ -267,7 +267,7 @@ public:
 	// Note:  Only used externally for binding, so if override the other one, can assume
 	// all other forces are currently 0.
 	inline virtual void SetEffect(ForceFeedbackBinding *binding, unsigned char force) {}
-	inline virtual void SetEffects(unsigned char pad, unsigned char motor, unsigned char force);
+	inline virtual void SetEffects(unsigned char port, unsigned int slot, unsigned char motor, unsigned char force);
 
 	// Called after reading.  Basically calls FlipState().
 	// Some device types (Those that don't incrementally update)
@@ -276,7 +276,6 @@ public:
 	virtual void PostRead();
 };
 
-// Don't need objects for devices with no bound controls.
 class InputDeviceManager {
 public:
 	Device **devices;
@@ -289,8 +288,8 @@ public:
 	// All old bindings are copied to matching devices.
 
 	// When old devices are missing, I do a slightly more careful search
-	// using id2s and create new dummy devices if no matches.
-
+	// using productIDs and then (in desperation) displayName.
+	// Finally create new dummy devices if no matches found.
 	void CopyBindings(int numDevices, Device **devices);
 
 
@@ -298,13 +297,13 @@ public:
 	~InputDeviceManager();
 
 	void AddDevice(Device *d);
-	// If axisHint is 1, prefer axes.
-	Device *GetActiveDevice(void *info, int axisHint, unsigned int *uid, int *index, int *value);
+	Device *GetActiveDevice(void *info, unsigned int *uid, int *index, int *value);
 	void Update(void *attachInfo);
+
 	// Called after reading state, after Update().
 	void PostRead();
 
-	void SetEffect(unsigned char pad, unsigned char motor, unsigned char force);
+	void SetEffect(unsigned char port, unsigned int slot, unsigned char motor, unsigned char force);
 
 	// Update does this as needed.
 	// void GetInput(void *v);

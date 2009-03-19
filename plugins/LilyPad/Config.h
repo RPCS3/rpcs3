@@ -6,37 +6,60 @@
 
 extern u8 ps2e;
 
+enum PadType {
+	DisabledPad,
+	Dualshock2Pad,
+	GuitarPad
+};
+
+struct PadConfig {
+	PadType type;
+	u8 autoAnalog;
+};
+
 struct GeneralConfig {
 public:
-	u8 disablePad[2];
+	PadConfig padConfigs[2][4];
 
-	u8 mouseUnfocus;
-	u8 disableScreenSaver;
 	u8 closeHacks;
 
-	u8 axisButtons;
 	DeviceAPI keyboardApi;
 	DeviceAPI mouseApi;
-	struct {
-		u8 directInput;
-		u8 xInput;
-	} gameApis;
-	u8 debug;
-	u8 background;
-	u8 multipleBinding;
-	u8 forceHide;
-	u8 GH2;
 
 	// Derived value, calculated by GetInput().
 	u8 ignoreKeys;
 
-	u8 GSThreadUpdates;
-	u8 escapeFullscreenHack;
+	union {
+		struct {
+			u8 forceHide;
+			u8 mouseUnfocus;
+			u8 background;
+			u8 multipleBinding;
 
-	u8 guitar[2];
-	u8 AutoAnalog[2];
+			struct {
+				u8 directInput;
+				u8 xInput;
+			} gameApis;
 
-	u8 saveStateTitle;
+			u8 multitap[2];
+
+			u8 GSThreadUpdates;
+			u8 escapeFullscreenHack;
+			u8 disableScreenSaver;
+			u8 debug;
+
+			u8 saveStateTitle;
+			u8 GH2;
+
+			u8 vistaVolume;
+		};
+		u8 bools[1];
+	};
+
+	int volume;
+
+	// Unlike the others, not a changeable value.
+	DWORD osVersion;
 
 	wchar_t lastSaveConfigPath[MAX_PATH+1];
 	wchar_t lastSaveConfigFileName[MAX_PATH+1];
@@ -47,6 +70,8 @@ extern GeneralConfig config;
 void UnloadConfigs();
 
 void AddIgnore(LPARAM k);
+
+void SetVolume(int volume);
 
 int LoadSettings(int force = 0, wchar_t *file = 0);
 

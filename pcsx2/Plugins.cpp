@@ -71,6 +71,7 @@ _PADgsDriverInfo   PAD1gsDriverInfo;
 _PADconfigure      PAD1configure;
 _PADtest           PAD1test;
 _PADabout          PAD1about;
+_PADfreeze         PAD1freeze;
 
 // PAD2
 _PADinit           PAD2init;
@@ -87,6 +88,7 @@ _PADgsDriverInfo   PAD2gsDriverInfo;
 _PADconfigure      PAD2configure;
 _PADtest           PAD2test;
 _PADabout          PAD2about;
+_PADfreeze         PAD2freeze;
 
 // SIO[2]
 _SIOinit           SIOinit[2][9];
@@ -330,6 +332,7 @@ void *PAD1plugin;
 void CALLBACK PAD1_configure() {}
 void CALLBACK PAD1_about() {}
 s32  CALLBACK PAD1_test() { return 0; }
+s32  CALLBACK PAD1_freeze(int mode, freezeData *data) { data->size = 0; return 0; }
 
 int LoadPAD1plugin(const string& filename) {
 	void *drv;
@@ -352,6 +355,7 @@ int LoadPAD1plugin(const string& filename) {
 	MapSymbolPAD_Fallback(PAD1,PAD,configure);
 	MapSymbolPAD_Fallback(PAD1,PAD,about);
 	MapSymbolPAD_Fallback(PAD1,PAD,test);
+	MapSymbolPAD_Fallback(PAD1,PAD,freeze);
 
 	return 0;
 }
@@ -361,6 +365,7 @@ void *PAD2plugin;
 void CALLBACK PAD2_configure() {}
 void CALLBACK PAD2_about() {}
 s32  CALLBACK PAD2_test() { return 0; }
+s32  CALLBACK PAD2_freeze(int mode, freezeData *data) { data->size = 0; return 0; }
 
 int LoadPAD2plugin(const string& filename) {
 	void *drv;
@@ -383,6 +388,7 @@ int LoadPAD2plugin(const string& filename) {
 	MapSymbolPAD_Fallback(PAD2,PAD,configure);
 	MapSymbolPAD_Fallback(PAD2,PAD,about);
 	MapSymbolPAD_Fallback(PAD2,PAD,test);
+	MapSymbolPAD_Fallback(PAD2,PAD,freeze);
 
 	return 0;
 }

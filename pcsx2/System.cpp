@@ -19,7 +19,6 @@
 #include "PrecompiledHeader.h"
 
 #include "Common.h"
-#include "Threading.h"
 #include "HostGui.h"
 
 #include "VUmicro.h"
@@ -92,6 +91,7 @@ static void trim( string& line )
 }
 
 
+//////////////////////////////////////////////////////////////////////////////////////////
 // This function should be called once during program execution.
 void SysDetect()
 {
@@ -160,6 +160,7 @@ void SysDetect()
 	Console::ClearColor();
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////
 // Allocates memory for all PS2 systems.
 bool SysAllocateMem()
 {
@@ -187,10 +188,12 @@ bool SysAllocateMem()
 	return true;
 }
 
-
+//////////////////////////////////////////////////////////////////////////////////////////
 // Allocates memory for all recompilers, and force-disables any recs that fail to initialize.
-// This should be done asap, since the recompilers tend to demand a lot of system resources, and prefer
-// to have those resources at specific address ranges.  The sooner memory is allocated, the better.
+// This should be done asap, since the recompilers tend to demand a lot of system resources,
+// and prefer to have those resources at specific address ranges.  The sooner memory is
+// allocated, the better.
+//
 // Returns FALSE on *critical* failure (GUI should issue a msg and exit).
 void SysAllocateDynarecs()
 {
@@ -259,6 +262,7 @@ void SysAllocateDynarecs()
 
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////
 // This should be called last thing before Pcsx2 exits.
 void SysShutdownMem()
 {
@@ -269,6 +273,7 @@ void SysShutdownMem()
 	memShutdown();
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////
 // This should generally be called right before calling SysShutdownMem(), although you can optionally
 // use it in conjunction with SysAllocDynarecs to allocate/free the dynarec resources on the fly (as
 // risky as it might be, since dynarecs could very well fail on the second attempt).
@@ -285,6 +290,7 @@ void SysShutdownDynarecs()
 bool g_ReturnToGui = false;			// set to exit the execution of the emulator and return control to the GUI
 bool g_EmulationInProgress = false;	// Set TRUE if a game is actively running (set to false on reset)
 
+//////////////////////////////////////////////////////////////////////////////////////////
 // Resets all PS2 cpu execution caches, which does not affect that actual PS2 state/condition.
 // This can be called at any time outside the context of a Cpu->Execute() block without
 // bad things happening (recompilers will slow down for a brief moment since rec code blocks

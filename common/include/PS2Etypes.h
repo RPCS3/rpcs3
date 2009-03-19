@@ -82,7 +82,7 @@ typedef unsigned int uint;
 // Note: building the 'extern' into PCSX2_ALIGNED16_DECL fixes Visual Assist X's intellisense.
 
 #define PCSX2_ALIGNED(alig,x) __declspec(align(alig)) x
-#define PCSX2_ALIGNED_EXTERN(alig,x) __declspec(align(alig)) x
+#define PCSX2_ALIGNED_EXTERN(alig,x) extern __declspec(align(alig)) x
 #define PCSX2_ALIGNED16(x) __declspec(align(16)) x
 #define PCSX2_ALIGNED16_EXTERN(x) extern __declspec(align(16)) x
 
@@ -146,8 +146,8 @@ typedef union _LARGE_INTEGER
 // fixme - is this needed for recent versions of GCC?  Or can we just use the macros
 // above instead for both definitions (implementations) and declarations (includes)? -- air
 
-#define PCSX2_ALIGNED_EXTERN(alig,x) extern x
-#define PCSX2_ALIGNED16_EXTERN(x) extern x
+#define PCSX2_ALIGNED_EXTERN(alig,x) extern x __attribute((aligned(alig)))
+#define PCSX2_ALIGNED16_EXTERN(x) extern x __attribute((aligned(16)))
 
 #endif // _MSC_VER
 

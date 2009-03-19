@@ -9,10 +9,12 @@
 #include "PS2Etypes.h"
 #include <stdio.h>
 
+// Aka htons, without the winsock dependency.
 inline static u16 flipShort(u16 s) {
 	return (s>>8) | (s<<8);
 }
 
+// Aka htonl, without the winsock dependency.
 inline static u32 flipLong(u32 l) {
 	return (((u32)flipShort((u16)l))<<16) | flipShort((u16)(l>>16));
 }
@@ -47,6 +49,9 @@ void ReleaseDirectInput() {
 			di8d.lpDI8->Release();
 			di8d.lpDI8 = 0;
 		}
+	}
+	else {
+		di8d.refCount=di8d.refCount;
 	}
 }
 
@@ -95,9 +100,17 @@ public:
 	}
 
 	void SetEffect(ForceFeedbackBinding *binding, unsigned char force) {
-		unsigned int index = binding - pads[0].ffBindings;
-		if (index >= (unsigned int)pads[0].numFFBindings) {
-			index = pads[0].numFFBindings + (binding - pads[1].ffBindings);
+		int index = 0;
+		for (int port=0; port<2; port++) {
+			for (int slot=0; slot<4; slot++) {
+				unsigned int diff = binding - pads[port][slot].ffBindings;
+				if (diff < (unsigned int)pads[port][slot].numFFBindings) {
+					index += diff;
+					port = 2;
+					break;
+				}
+				index += pads[port][slot].numFFBindings;
+			}
 		}
 		IDirectInputEffect *die = diEffects[index].die;
 		if (die) {
@@ -136,7 +149,7 @@ public:
 	}
 
 	int Activate(void *d) {
-		int i, j;
+		int i;
 		IDirectInput8 *di8 = GetDirectInput();
 		Deactivate();
 		if (!di8) return 0;
@@ -147,12 +160,10 @@ public:
 		}
 
 		{
-			DIOBJECTDATAFORMAT *formats = (DIOBJECTDATAFORMAT*)malloc(sizeof(DIOBJECTDATAFORMAT) * numPhysicalControls);
+			DIOBJECTDATAFORMAT *formats = (DIOBJECTDATAFORMAT*)calloc(numPhysicalControls, sizeof(DIOBJECTDATAFORMAT));
 			for (i=0; i<numPhysicalControls; i++) {
-				formats[i].pguid = 0;
 				formats[i].dwType = physicalControls[i].type | DIDFT_MAKEINSTANCE(physicalControls[i].id);
 				formats[i].dwOfs = 4*i;
-				formats[i].dwFlags = 0;
 			}
 			DIDATAFORMAT format;
 			format.dwSize = sizeof(format);
@@ -208,74 +219,78 @@ public:
 			return 0;
 		}
 		AllocState();
-		diEffects = (DI8Effect*) calloc(pads[0].numFFBindings + pads[1].numFFBindings, sizeof(DI8Effect));
-		for (i=0; i<pads[0].numFFBindings + pads[1].numFFBindings; i++) {
-			ForceFeedbackBinding *b = 0;
-			if (i >= pads[0].numFFBindings) {
-				b = &pads[1].ffBindings[i-pads[0].numFFBindings];
-			}
-			else
-				b = &pads[0].ffBindings[i];
-			ForceFeedbackEffectType *eff = ffEffectTypes + b->effectIndex;
-			GUID guid;
-			if (!StringToGUID(&guid, eff->effectID)) continue;
+		int count = GetFFBindingCount();
+		diEffects = (DI8Effect*) calloc(count, sizeof(DI8Effect));
+		i = 0;
+		for (int port=0; port<2; port++) {
+			for (int slot=0; slot<4; slot++) {
+				int subIndex = i;
+				for (int j=0; j<pads[port][slot].numFFBindings; j++) {
+					ForceFeedbackBinding *b = 0;
+					b = &pads[port][slot].ffBindings[i-subIndex];
+					ForceFeedbackEffectType *eff = ffEffectTypes + b->effectIndex;
+					GUID guid;
+					if (!StringToGUID(&guid, eff->effectID)) continue;
 
-			DIEFFECT dieffect;
-			memset(&dieffect, 0, sizeof(dieffect));
-			dieffect.dwSize = sizeof(dieffect);
-			dieffect.dwFlags = DIEFF_CARTESIAN | DIEFF_OBJECTIDS;
-			dieffect.dwDuration = 2000000;
-			dieffect.dwGain = 10000;
-			dieffect.dwTriggerButton = DIEB_NOTRIGGER;
-			union {
-				DIPERIODIC pediodic;
-				DIRAMPFORCE ramp;
-				DICONSTANTFORCE constant;
-			} stuff = {0,0,0,0};
+					DIEFFECT dieffect;
+					memset(&dieffect, 0, sizeof(dieffect));
+					dieffect.dwSize = sizeof(dieffect);
+					dieffect.dwFlags = DIEFF_CARTESIAN | DIEFF_OBJECTIDS;
+					dieffect.dwDuration = 2000000;
+					dieffect.dwGain = 10000;
+					dieffect.dwTriggerButton = DIEB_NOTRIGGER;
+					union {
+						DIPERIODIC pediodic;
+						DIRAMPFORCE ramp;
+						DICONSTANTFORCE constant;
+					} stuff = {0,0,0,0};
 
-			if (eff->type == EFFECT_CONSTANT) {
-				dieffect.cbTypeSpecificParams = sizeof(DICONSTANTFORCE);
-			}
-			else if (eff->type == EFFECT_PERIODIC) {
-				dieffect.cbTypeSpecificParams = sizeof(DIPERIODIC);
-			}
-			else if (eff->type == EFFECT_RAMP) {
-				dieffect.cbTypeSpecificParams = sizeof(DIRAMPFORCE);
-			}
-			dieffect.lpvTypeSpecificParams = &stuff;
-
-			int maxForce = 0;
-			int numAxes = 0;
-			int *axes = (int*) malloc(sizeof(int) * 3 * numFFAxes);
-			DWORD *axisIDs = (DWORD*)(axes + numFFAxes);
-			LONG *dirList = (LONG*)(axisIDs + numFFAxes);
-			dieffect.rgdwAxes = axisIDs;
-			dieffect.rglDirection = dirList;
-			for (j=0; j<numFFAxes; j++) {
-				if (b->axes[j].force) {
-					int force = abs(b->axes[j].force);
-					if (force > maxForce) {
-						maxForce = force;
+					if (eff->type == EFFECT_CONSTANT) {
+						dieffect.cbTypeSpecificParams = sizeof(DICONSTANTFORCE);
 					}
-					axes[numAxes] = j;
-					axisIDs[numAxes] = ffAxes[j].id;
-					dirList[numAxes] = b->axes[j].force;
-					numAxes++;
+					else if (eff->type == EFFECT_PERIODIC) {
+						dieffect.cbTypeSpecificParams = sizeof(DIPERIODIC);
+					}
+					else if (eff->type == EFFECT_RAMP) {
+						dieffect.cbTypeSpecificParams = sizeof(DIRAMPFORCE);
+					}
+					dieffect.lpvTypeSpecificParams = &stuff;
+
+					int maxForce = 0;
+					int numAxes = 0;
+					int *axes = (int*) malloc(sizeof(int) * 3 * numFFAxes);
+					DWORD *axisIDs = (DWORD*)(axes + numFFAxes);
+					LONG *dirList = (LONG*)(axisIDs + numFFAxes);
+					dieffect.rgdwAxes = axisIDs;
+					dieffect.rglDirection = dirList;
+					for (int k=0; k<numFFAxes; k++) {
+						if (b->axes[k].force) {
+							int force = abs(b->axes[k].force);
+							if (force > maxForce) {
+								maxForce = force;
+							}
+							axes[numAxes] = k;
+							axisIDs[numAxes] = ffAxes[k].id;
+							dirList[numAxes] = b->axes[k].force;
+							numAxes++;
+						}
+					}
+					if (!numAxes) {
+						free(axes);
+						continue;
+					}
+					dieffect.cAxes = numAxes;
+					diEffects[i].scale = maxForce;
+					if (!SUCCEEDED(did->CreateEffect(guid, &dieffect, &diEffects[i].die, 0))) {
+						diEffects[i].die = 0;
+						diEffects[i].scale = 0;
+					}
+
+					free(axes);
+					axes = 0;
+					i++;
 				}
 			}
-			if (!numAxes) {
-				free(axes);
-				continue;
-			}
-			dieffect.cAxes = numAxes;
-			diEffects[i].scale = maxForce;
-			if (!SUCCEEDED(did->CreateEffect(guid, &dieffect, &diEffects[i].die, 0))) {
-				diEffects[i].die = 0;
-				diEffects[i].scale = 0;
-			}
-
-			free(axes);
-			axes = 0;
 		}
 		active = 1;
 		return 1;
@@ -303,14 +318,24 @@ public:
 		return 1;
 	}
 
+	int GetFFBindingCount() {
+		int count = 0;
+		for (int port = 0; port<2; port++) {
+			for (int slot = 0; slot<4; slot++) {
+				count += pads[port][slot].numFFBindings;
+			}
+		}
+		return count;
+	}
+
 	void Deactivate() {
 		FreeState();
 		if (diEffects) {
-			for (int i=0; i<pads[0].numFFBindings + pads[1].numFFBindings; i++) {
+			int count = GetFFBindingCount();
+			for (int i=0; i<count; i++) {
 				if (diEffects[i].die) {
 					diEffects[i].die->Stop();
 					diEffects[i].die->Release();
-					diEffects[i].die = 0;
 				}
 			}
 			free(diEffects);
@@ -320,6 +345,7 @@ public:
 			did->Unacquire();
 			did->Release();
 			ReleaseDirectInput();
+			did = 0;
 			active = 0;
 		}
 	}

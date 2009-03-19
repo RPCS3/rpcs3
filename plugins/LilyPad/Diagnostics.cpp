@@ -8,12 +8,12 @@
 
 Device *dev;
 
-INT_PTR CALLBACK DiagDialog(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM lParam) {
+INT_PTR CALLBACK DiagDialog(HWND hWnd, unsigned int uMsg, WPARAM wParam, LPARAM lParam) {
 	int i;
 	HWND hWndList = GetDlgItem(hWnd, IDC_LIST);
 	static int fullRefresh;
 	if (dev) {
-		switch (msg) {
+		switch (uMsg) {
 		case WM_INITDIALOG:
 			{
 				fullRefresh = 1;
@@ -91,16 +91,15 @@ INT_PTR CALLBACK DiagDialog(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 			}
 			break;
 		case WM_NOTIFY:
-			if (1) {
-				PSHNOTIFY* n = (PSHNOTIFY*) lParam;
-				if (n->hdr.idFrom != IDC_LIST || n->hdr.code != LVN_KEYDOWN) break;
-				NMLVKEYDOWN *key = (NMLVKEYDOWN *) n;
-				if (key->wVKey != VK_ESCAPE) break;
+			{
+				NMLVKEYDOWN *n = (NMLVKEYDOWN *) lParam;
+				// Don't always get the notification when testing DirectInput non-keyboard devices.
+				// Don't get it (Or want it) when testing keyboards.
+				if (n->hdr.idFrom != IDC_LIST || n->hdr.code != LVN_KEYDOWN || n->wVKey != VK_ESCAPE) break;
 			}
-			else {
 		case WM_ACTIVATE:
-				if (wParam != WA_INACTIVE) break;
-			}
+			if (uMsg == WM_ACTIVATE && wParam != WA_INACTIVE) break;
+			break;
 		case WM_CLOSE:
 			KillTimer(hWnd, 1);
 			dm->ReleaseInput();

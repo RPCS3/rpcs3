@@ -41,7 +41,7 @@ emitterT void WriteRmOffset(x86IntRegType to, s32 offset)
 			ModRM<I>( 0, 0, 4 );
 			SibSB<I>( 0, ESP, 4 );
 		}
-		else if( offset < 128 && offset >= -128 ) {
+		else if( offset <= 127 && offset >= -128 ) {
 			ModRM<I>( 1, 0, 4 );
 			SibSB<I>( 0, ESP, 4 );
 			write8<I>(offset);
@@ -56,7 +56,7 @@ emitterT void WriteRmOffset(x86IntRegType to, s32 offset)
 		if( offset == 0 ) {
 			ModRM<I>( 0, 0, to );
 		}
-		else if( offset < 128 && offset >= -128 ) {
+		else if( offset <= 127 && offset >= -128 ) {
 			ModRM<I>( 1, 0, to );
 			write8<I>(offset);
 		}
@@ -74,7 +74,7 @@ emitterT void WriteRmOffsetFrom(x86IntRegType to, x86IntRegType from, int offset
 			ModRM<I>( 0, to, 0x4 );
 			SibSB<I>( 0, 0x4, 0x4 );
 		}
-		else if( offset < 128 && offset >= -128 ) {
+		else if( offset <= 127 && offset >= -128 ) {
 			ModRM<I>( 1, to, 0x4 );
 			SibSB<I>( 0, 0x4, 0x4 );
 			write8<I>(offset);
@@ -89,7 +89,7 @@ emitterT void WriteRmOffsetFrom(x86IntRegType to, x86IntRegType from, int offset
 		if( offset == 0 ) {
 			ModRM<I>( 0, to, from );
 		}
-		else if( offset < 128 && offset >= -128 ) {
+		else if( offset <= 127 && offset >= -128 ) {
 			ModRM<I>( 1, to, from );
 			write8<I>(offset);
 		}
@@ -401,8 +401,12 @@ emitterT void eMOV32RtoR( x86IntRegType to, x86IntRegType from )
 emitterT void eMOV32RtoM( uptr to, x86IntRegType from ) 
 {
 	RexR(0, from);
-	write8<I>( 0x89 );
-	ModRM<I>( 0, from, DISP32 );
+	if (from == EAX) {
+		write8<I>(0xA3);
+	} else {
+		write8<I>( 0x89 );
+		ModRM<I>( 0, from, DISP32 );
+	}
 	write32<I>( MEMADDR(to, 4) );
 }
 
@@ -410,8 +414,12 @@ emitterT void eMOV32RtoM( uptr to, x86IntRegType from )
 emitterT void eMOV32MtoR( x86IntRegType to, uptr from ) 
 {
 	RexR(0, to);
-	write8<I>( 0x8B );
-	ModRM<I>( 0, to, DISP32 );
+	if (to == EAX) {
+		write8<I>(0xA1);
+	} else {
+		write8<I>( 0x8B );
+		ModRM<I>( 0, to, DISP32 );
+	}
 	write32<I>( MEMADDR(from, 4) ); 
 }
 
@@ -1038,69 +1046,69 @@ emitterT void eADD64RtoR( x86IntRegType to, x86IntRegType from )
 }
 
 /* add imm32 to EAX */
-emitterT void eADD32ItoEAX( u32 from )
+emitterT void eADD32ItoEAX( s32 imm )
 {
 	write8<I>( 0x05 );
-	write32<I>( from );
+	write32<I>( imm );
 }
 
 /* add imm32 to r32 */
-emitterT void eADD32ItoR( x86IntRegType to, u32 from ) 
+emitterT void eADD32ItoR( x86IntRegType to, s32 imm ) 
 {
 	RexB(0, to);
-	if(from < 0x80)
+	if (imm <= 127 && imm >= -128)
 	{
 		write8<I>( 0x83 ); 
 		ModRM<I>( 3, 0, to );
-		write8<I>( from ); 
+		write8<I>( (s8)imm ); 
 	}
 	else
 	{
 		if ( to == EAX ) {
-			eADD32ItoEAX<I>(from);
+			eADD32ItoEAX<I>(imm);
 		}
 		else {
 			write8<I>( 0x81 ); 
 			ModRM<I>( 3, 0, to );
-			write32<I>( from );
+			write32<I>( imm );
 		}
 	}
 }
 
 /* add imm32 to m32 */
-emitterT void eADD32ItoM( uptr to, u32 from ) 
+emitterT void eADD32ItoM( uptr to, s32 imm ) 
 { 
-	/*if(from < 0x80) // crashes games in 64bit build; TODO: figure out why.
+	if(imm <= 127 && imm >= -128)
 	{
 	write8<I>( 0x83 ); 
 	ModRM<I>( 0, 0, DISP32 );
 	write32<I>( MEMADDR(to, 8) );
-	write8<I>( from );
-	} 
-	else*/
+	write8<I>( imm );
+	}
+	else
 	{
 		write8<I>( 0x81 ); 
 		ModRM<I>( 0, 0, DISP32 );
 		write32<I>( MEMADDR(to, 8) );
-		write32<I>( from );
+		write32<I>( imm );
 	}
 }
 
 // add imm32 to [r32+off]
-emitterT void eADD32ItoRmOffset( x86IntRegType to, u32 from, s32 offset)
+emitterT void eADD32ItoRmOffset( x86IntRegType to, s32 imm, s32 offset)
 {
 	RexB(0,to);
-	if(from < 0x80)
+	if(imm <= 127 && imm >= -128)
 	{
 		write8<I>( 0x83 );
 		WriteRmOffset<I>(to,offset);
-		write8<I>(from);
+		write8<I>(imm);
 	} 
 	else 
 	{
 		write8<I>( 0x81 );
 		WriteRmOffset<I>(to,offset);
-		write32<I>(from);
+		write32<I>(imm);
 	}
 }
 
@@ -1140,7 +1148,7 @@ emitterT void eADD16RtoR( x86IntRegType to , x86IntRegType from )
 }
 
 /* add imm16 to r16 */
-emitterT void eADD16ItoR( x86IntRegType to, u16 from ) 
+emitterT void eADD16ItoR( x86IntRegType to, s16 imm ) 
 {
 	write8<I>( 0x66 );
 	RexB(0,to);
@@ -1148,39 +1156,39 @@ emitterT void eADD16ItoR( x86IntRegType to, u16 from )
 	if ( to == EAX) 
 	{
 		write8<I>( 0x05 ); 
-		write16<I>( from );
+		write16<I>( imm );
 	}
-	else if(from < 0x80)
+	else if(imm <= 127 && imm >= -128)
 	{
 		write8<I>( 0x83 ); 
 		ModRM<I>( 3, 0, to );
-		write8<I>((u8)from );
+		write8<I>((u8)imm );
 	}
 	else
 	{
 		write8<I>( 0x81 ); 
 		ModRM<I>( 3, 0, to );
-		write16<I>( from );
+		write16<I>( imm );
 	}
 }
 
 /* add imm16 to m16 */
-emitterT void eADD16ItoM( uptr to, u16 from ) 
+emitterT void eADD16ItoM( uptr to, s16 imm ) 
 {
 	write8<I>( 0x66 );
-	if(from < 0x80)
+	if(imm <= 127 && imm >= -128)
 	{
 		write8<I>( 0x83 ); 
 		ModRM<I>( 0, 0, DISP32 );
 		write32<I>( MEMADDR(to, 6) );
-		write8<I>((u8)from );
+		write8<I>((u8)imm );
 	}
 	else
 	{
 		write8<I>( 0x81 ); 
 		ModRM<I>( 0, 0, DISP32 );
 		write32<I>( MEMADDR(to, 6) );
-		write16<I>( from );
+		write16<I>( imm );
 	}
 }
 
@@ -3250,7 +3258,7 @@ emitterT void eLEA16RtoR(x86IntRegType to, x86IntRegType from, u16 offset)
 	eLEA32RtoR<I>(to, from, offset);
 }
 
-emitterT void eLEA32RtoR(x86IntRegType to, x86IntRegType from, u32 offset)
+emitterT void eLEA32RtoR(x86IntRegType to, x86IntRegType from, s32 offset)
 {
 	RexRB(0,to,from);
 	write8<I>(0x8d);
@@ -3260,7 +3268,7 @@ emitterT void eLEA32RtoR(x86IntRegType to, x86IntRegType from, u32 offset)
 			ModRM<I>(1, to, from);
 			write8<I>(0x24);
 		}
-		else if( offset < 128 ) {
+		else if( offset <= 127 && offset >= -128 ) {
 			ModRM<I>(1, to, from);
 			write8<I>(0x24);
 			write8<I>(offset);
@@ -3275,7 +3283,7 @@ emitterT void eLEA32RtoR(x86IntRegType to, x86IntRegType from, u32 offset)
 		if( offset == 0 && from != EBP && from!=ESP ) {
 			ModRM<I>(0, to, from);
 		}
-		else if( offset < 128 ) {
+		else if( offset <= 127 && offset >= -128 ) {
 			ModRM<I>(1, to, from);
 			write8<I>(offset);
 		}

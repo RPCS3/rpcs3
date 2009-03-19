@@ -109,14 +109,14 @@ static __forceinline void memset_8( void *dest )
 			(
 				".intel_syntax noprefix\n"
 				"cld\n"
-//				"mov edi, %0\n"
-//				"mov eax, %1\n"
+//				"mov edi, %[dest]\n"
+//				"mov eax, %[data32]\n"
 				"stosd\n"
 				"stosd\n"
 				"stosd\n"
 				".att_syntax\n"
 				: 
-				: "D"(dest), "a"(data32)
+				: [dest]"D"(dest), [data32]"a"(data32)
 // D - edi, a -- eax, c ecx
 				:  
 			);
@@ -127,15 +127,15 @@ static __forceinline void memset_8( void *dest )
 			(			
 				".intel_syntax noprefix\n"
 				"cld\n"
-//				"mov edi, %0\n"
-//				"mov eax, %1\n"
+//				"mov edi, %[dest]\n"
+//				"mov eax, %[data32]\n"
 				"stosd\n"
 				"stosd\n"
 				"stosd\n"
 				"stosd\n"
 				".att_syntax\n"
 				: 
-				: "D"(dest), "a"(data32)
+				:  [dest]"D"(dest), [data32]"a"(data32)
 				:  
 				
 			);
@@ -146,8 +146,8 @@ static __forceinline void memset_8( void *dest )
 			(
 				".intel_syntax noprefix\n"
 				"cld\n"
-//				"mov edi, %0\n"
-//				"mov eax, %1\n"
+//				"mov edi, %[dest]\n"
+//				"mov eax, %[data32]\n"
 				"stosd\n"
 				"stosd\n"
 				"stosd\n"
@@ -155,7 +155,7 @@ static __forceinline void memset_8( void *dest )
 				"stosd\n"
 				".att_syntax\n"
 				: 
-				: "D"(dest), "a"(data32)
+				:  [dest]"D"(dest), [data32]"a"(data32)
 				:  
 				
 			);
@@ -166,13 +166,13 @@ static __forceinline void memset_8( void *dest )
 			(
 				".intel_syntax noprefix\n"
 				"cld\n"
-//				"mov ecx, %0\n"
-//				"mov edi, %1\n"
-//				"mov eax, %2\n"
+//				"mov ecx, %[remdat]\n"
+//				"mov edi, %[dest]\n"
+//				"mov eax, %\[data32]n"
 				"rep stosd\n"
 				".att_syntax\n"
 				: 
-				: "c"(remdat), "D"(dest), "a"(data32)
+				: [remdat]"c"(remdat), [dest]"D"(dest), [data32]"a"(data32)
 				:  
 			);
 		return;

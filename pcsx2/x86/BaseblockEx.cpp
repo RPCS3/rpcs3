@@ -19,7 +19,7 @@
 #include "PrecompiledHeader.h"
 #include "BaseblockEx.h"
 
-BASEBLOCKEX* BaseBlocks::New(u32 startpc)
+BASEBLOCKEX* BaseBlocks::New(u32 startpc, uptr fnptr)
 {
 	if (blocks.size() == size)
 		return 0;
@@ -28,6 +28,7 @@ BASEBLOCKEX* BaseBlocks::New(u32 startpc)
 	std::vector<BASEBLOCKEX>::iterator iter;
 	memset(&newblock, 0, sizeof newblock);
 	newblock.startpc = startpc;
+	newblock.fnptr = fnptr;
 
 	int imin = 0, imax = blocks.size(), imid;
 
@@ -42,10 +43,15 @@ BASEBLOCKEX* BaseBlocks::New(u32 startpc)
 
 	assert(imin == blocks.size() || blocks[imin].startpc > startpc);
 	iter = blocks.insert(blocks.begin() + imin, newblock);
+
+	std::pair<linkiter_t, linkiter_t> range = links.equal_range(startpc);
+	for (linkiter_t i = range.first; i != range.second; ++i)
+		*(u32*)i->second = fnptr - (i->second + 4);
+
 	return &*iter;
 }
 
-int BaseBlocks::Index(u32 startpc) const
+int BaseBlocks::LastIndex(u32 startpc) const
 {
 	if (0 == blocks.size())
 		return -1;
@@ -61,9 +67,21 @@ int BaseBlocks::Index(u32 startpc) const
 			imin = imid;
 	}
 
-	if (startpc < blocks[imin].startpc ||
-		startpc >= blocks[imin].startpc + blocks[imin].size*4)
-		return -1;
+	return imin;
+}
+
+BASEBLOCKEX* BaseBlocks::GetByX86(uptr ip) const
+{
+	// TODO
+	return 0;
+}
+
+void BaseBlocks::Link(u32 pc, uptr jumpptr)
+{
+	BASEBLOCKEX *targetblock = Get(pc);
+	if (targetblock && targetblock->startpc == pc)
+		*(u32*)jumpptr = targetblock->fnptr - (jumpptr + 4);
 	else
-		return imin;
+		*(u32*)jumpptr = recompiler - (jumpptr + 4);
+	links.insert(std::pair<u32, uptr>(pc, jumpptr));
 }

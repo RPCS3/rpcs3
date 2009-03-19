@@ -73,8 +73,9 @@ extern u64 GetCPUTicks();
 extern u64 GetTickFrequency();
 
 // Used in Misc,and Windows/Linux files.
-void ProcessFKeys(int fkey, int shift); // processes fkey related commands value 1-12
-int IsBIOS(char *filename, char *description);
+extern void ProcessFKeys(int fkey, int shift); // processes fkey related commands value 1-12
+extern int IsBIOS(const char *filename, char *description);
+
 extern const char *LabelAuthors;
 extern const char *LabelGreets;
 void CycleFrameLimit(int dir);

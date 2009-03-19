@@ -67,12 +67,14 @@ Device::~Device() {
 	// Generally called by deactivate, but just in case...
 	FreeState();
 	int i;
-	for (int pad=0; pad<2; pad++) {
-		free(pads[pad].bindings);
-		for (i=0; i<pads[pad].numFFBindings; i++) {
-			free(pads[pad].ffBindings[i].axes);
+	for (int port=0; port<2; port++) {
+		for (int slot=0; slot<4; slot++) {
+			free(pads[port][slot].bindings);
+			for (i=0; i<pads[port][slot].numFFBindings; i++) {
+				free(pads[port][slot].ffBindings[i].axes);
+			}
+			free(pads[port][slot].ffBindings);
 		}
-		free(pads[pad].ffBindings);
 	}
 	free(virtualControls);
 
@@ -112,11 +114,13 @@ void Device::AddFFAxis(const wchar_t *displayName, int id) {
 	ffAxes[numFFAxes].id = id;
 	ffAxes[numFFAxes].displayName = wcsdup(displayName);
 	numFFAxes++;
-	for (int pad=0; pad<2; pad++) {
-		for (int i=0; i<pads[pad].numFFBindings; i++) {
-			ForceFeedbackBinding *b = pads[pad].ffBindings+i;
-			b->axes = (AxisEffectInfo*) realloc(b->axes, sizeof(AxisEffectInfo) * (numFFAxes));
-			memset(b->axes + (numFFAxes-1), 0, sizeof(AxisEffectInfo));
+	for (int port=0; port<2; port++) {
+		for (int slot=0; slot<4; slot++) {
+			for (int i=0; i<pads[port][slot].numFFBindings; i++) {
+				ForceFeedbackBinding *b = pads[port][slot].ffBindings+i;
+				b->axes = (AxisEffectInfo*) realloc(b->axes, sizeof(AxisEffectInfo) * (numFFAxes));
+				memset(b->axes + (numFFAxes-1), 0, sizeof(AxisEffectInfo));
+			}
 		}
 	}
 }
@@ -161,7 +165,7 @@ void Device::CalcVirtualState() {
 			}
 		}
 		else if (c->type & ABSAXIS) {
-			virtualControlState[index] = val;
+			virtualControlState[index] = (val + FULLY_DOWN)/2;
 			// Positive.  Overkill.
 			virtualControlState[index+1] = (val & ~(val>>31));
 			// Negative
@@ -254,9 +258,9 @@ PhysicalControl *Device::AddPhysicalControl(ControlType type, unsigned short id,
 	return control;
 }
 
-void Device::SetEffects(unsigned char pad, unsigned char motor, unsigned char force) {
-	for (int i=0; i<pads[pad].numFFBindings; i++) {
-		ForceFeedbackBinding *binding = pads[pad].ffBindings+i;
+void Device::SetEffects(unsigned char port, unsigned int slot, unsigned char motor, unsigned char force) {
+	for (int i=0; i<pads[port][slot].numFFBindings; i++) {
+		ForceFeedbackBinding *binding = pads[port][slot].ffBindings+i;
 		if (binding->motor == motor) {
 			SetEffect(binding, force);
 		}
@@ -350,7 +354,7 @@ void InputDeviceManager::PostRead() {
 	}
 }
 
-Device *InputDeviceManager::GetActiveDevice(void *info, int axisHint, unsigned int *uid, int *index, int *value) {
+Device *InputDeviceManager::GetActiveDevice(void *info, unsigned int *uid, int *index, int *value) {
 	int i, j;
 	Update(info);
 	int bestDiff = FULLY_DOWN/2;
@@ -359,31 +363,30 @@ Device *InputDeviceManager::GetActiveDevice(void *info, int axisHint, unsigned i
 		if (devices[i]->active) {
 			for (j=0; j<devices[i]->numVirtualControls; j++) {
 				if (devices[i]->virtualControlState[j] == devices[i]->oldVirtualControlState[j]) continue;
+				if (devices[i]->virtualControls[j].uid & UID_POV) continue;
 				// Fix for two things:
 				// Releasing button used to click on bind button, and
 				// DirectInput not updating control state.
 				//Note:  Handling latter not great for pressure sensitive button handling, but should still work...
 				// with some effort.
-				if (!((devices[i]->virtualControls[j].uid >> 16) & (POV|RELAXIS))) {
+				if (!(devices[i]->virtualControls[j].uid & (POV|RELAXIS))) {
 					if (abs(devices[i]->oldVirtualControlState[j]) > abs(devices[i]->virtualControlState[j])) {
 						devices[i]->oldVirtualControlState[j] = 0;
 					}
 				}
 				int diff = abs(devices[i]->virtualControlState[j] - devices[i]->oldVirtualControlState[j]);
-				if ((devices[i]->virtualControls[j].uid & UID_POV) && diff) {
-					if (devices[i]->virtualControlState[j] == -1) diff = 0;
-					else diff = 2*FULLY_DOWN;
-				}
 				// Make it require a bit more work to bind relative axes.
-				else if (((devices[i]->virtualControls[j].uid>>16) & 0xFF) == RELAXIS) {
+				if (((devices[i]->virtualControls[j].uid>>16) & 0xFF) == RELAXIS) {
 					diff = diff/4+1;
 				}
 				if (diff > bestDiff) {
-					if (axisHint != 2) {
-						if (devices[i]->virtualControls[j].uid & UID_POV) continue;
-						if (devices[i]->virtualControls[j].uid & UID_AXIS) {
-							if (!axisHint || (((devices[i]->virtualControls[j].uid>>16)&0xFF) != ABSAXIS)) continue;
-						}
+					if (devices[i]->virtualControls[j].uid & UID_AXIS) {
+						if ((((devices[i]->virtualControls[j].uid>>16)&0xFF) != ABSAXIS)) continue;
+						// Very picky when binding entire axes.  Prefer binding half-axes.
+						if (!((devices[i]->oldVirtualControlState[j] < FULLY_DOWN/16 && devices[i]->virtualControlState[j] > FULLY_DOWN/8) ||
+							  (devices[i]->oldVirtualControlState[j] > 15*FULLY_DOWN/16 && devices[i]->virtualControlState[j] < 7*FULLY_DOWN/8)))
+									continue;
+						devices[i]->virtualControls[j].uid = devices[i]->virtualControls[j].uid;
 					}
 					bestDiff = diff;
 					*uid = devices[i]->virtualControls[j].uid;
@@ -428,7 +431,9 @@ void InputDeviceManager::DisableAllDevices() {
 
 void InputDeviceManager::DisableDevice(int index) {
 	devices[index]->enabled = 0;
-	if (devices[index]->active) devices[index]->Deactivate();
+	if (devices[index]->active) {
+		devices[index]->Deactivate();
+	}
 }
 
 ForceFeedbackEffectType *Device::GetForcefeedbackEffect(wchar_t *id) {
@@ -450,7 +455,7 @@ ForceFeedbackAxis *Device::GetForceFeedbackAxis(int id) {
 void InputDeviceManager::CopyBindings(int numOldDevices, Device **oldDevices) {
 	int *oldMatches = (int*) malloc(sizeof(int) * numOldDevices);
 	int *matches = (int*) malloc(sizeof(int) * numDevices);
-	int i, j, pad;
+	int i, j, port, slot;
 	Device *old, *dev;
 	for (i=0; i<numDevices; i++) {
 		matches[i] = -1;
@@ -458,10 +463,12 @@ void InputDeviceManager::CopyBindings(int numOldDevices, Device **oldDevices) {
 	for (i=0; i<numOldDevices; i++) {
 		oldMatches[i] = -2;
 		old = oldDevices[i];
-		for (pad=0; pad<2; pad++) {
-			if (old->pads[pad].numBindings + old->pads[pad].numFFBindings) {
-				// Means that there are bindings.
-				oldMatches[i] = -1;
+		for (port=0; port<2; port++) {
+			for (slot=0; slot<4; slot++) {
+				if (old->pads[port][slot].numBindings + old->pads[port][slot].numFFBindings) {
+					// Means that there are bindings.
+					oldMatches[i] = -1;
+				}
 			}
 		}
 	}
@@ -513,37 +520,39 @@ void InputDeviceManager::CopyBindings(int numOldDevices, Device **oldDevices) {
 		}
 		else {
 			dev = devices[oldMatches[i]];
-			for (pad=0; pad<2; pad++) {
-				if (old->pads[pad].numBindings) {
-					dev->pads[pad].bindings = (Binding*) malloc(old->pads[pad].numBindings * sizeof(Binding));
-					for (int j=0; j<old->pads[pad].numBindings; j++) {
-						Binding *bo = old->pads[pad].bindings + j;
-						Binding *bn = dev->pads[pad].bindings + dev->pads[pad].numBindings;
-						VirtualControl *cn = dev->GetVirtualControl(old->virtualControls[bo->controlIndex].uid);
-						if (cn) {
-							*bn = *bo;
-							bn->controlIndex = cn - dev->virtualControls;
-							dev->pads[pad].numBindings++;
+			for (port=0; port<2; port++) {
+				for (slot=0; slot<4; slot++) {
+					if (old->pads[port][slot].numBindings) {
+						dev->pads[port][slot].bindings = (Binding*) malloc(old->pads[port][slot].numBindings * sizeof(Binding));
+						for (int j=0; j<old->pads[port][slot].numBindings; j++) {
+							Binding *bo = old->pads[port][slot].bindings + j;
+							Binding *bn = dev->pads[port][slot].bindings + dev->pads[port][slot].numBindings;
+							VirtualControl *cn = dev->GetVirtualControl(old->virtualControls[bo->controlIndex].uid);
+							if (cn) {
+								*bn = *bo;
+								bn->controlIndex = cn - dev->virtualControls;
+								dev->pads[port][slot].numBindings++;
+							}
 						}
 					}
-				}
-				if (old->pads[pad].numFFBindings) {
-					dev->pads[pad].ffBindings = (ForceFeedbackBinding*) malloc(old->pads[pad].numFFBindings * sizeof(ForceFeedbackBinding));
-					for (int j=0; j<old->pads[pad].numFFBindings; j++) {
-						ForceFeedbackBinding *bo = old->pads[pad].ffBindings + j;
-						ForceFeedbackBinding *bn = dev->pads[pad].ffBindings + dev->pads[pad].numFFBindings;
-						ForceFeedbackEffectType *en = dev->GetForcefeedbackEffect(old->ffEffectTypes[bo->effectIndex].effectID);
-						if (en) {
-							*bn = *bo;
-							bn->effectIndex = en - dev->ffEffectTypes;
-							bn->axes = (AxisEffectInfo*)calloc(dev->numFFAxes, sizeof(AxisEffectInfo));
-							for (int k=0; k<old->numFFAxes; k++) {
-								ForceFeedbackAxis *newAxis = dev->GetForceFeedbackAxis(old->ffAxes[k].id);
-								if (newAxis) {
-									bn->axes[newAxis - dev->ffAxes] = bo->axes[k];
+					if (old->pads[port][slot].numFFBindings) {
+						dev->pads[port][slot].ffBindings = (ForceFeedbackBinding*) malloc(old->pads[port][slot].numFFBindings * sizeof(ForceFeedbackBinding));
+						for (int j=0; j<old->pads[port][slot].numFFBindings; j++) {
+							ForceFeedbackBinding *bo = old->pads[port][slot].ffBindings + j;
+							ForceFeedbackBinding *bn = dev->pads[port][slot].ffBindings + dev->pads[port][slot].numFFBindings;
+							ForceFeedbackEffectType *en = dev->GetForcefeedbackEffect(old->ffEffectTypes[bo->effectIndex].effectID);
+							if (en) {
+								*bn = *bo;
+								bn->effectIndex = en - dev->ffEffectTypes;
+								bn->axes = (AxisEffectInfo*)calloc(dev->numFFAxes, sizeof(AxisEffectInfo));
+								for (int k=0; k<old->numFFAxes; k++) {
+									ForceFeedbackAxis *newAxis = dev->GetForceFeedbackAxis(old->ffAxes[k].id);
+									if (newAxis) {
+										bn->axes[newAxis - dev->ffAxes] = bo->axes[k];
+									}
 								}
+								dev->pads[port][slot].numFFBindings++;
 							}
-							dev->pads[pad].numFFBindings++;
 						}
 					}
 				}
@@ -554,11 +563,11 @@ void InputDeviceManager::CopyBindings(int numOldDevices, Device **oldDevices) {
 	free(matches);
 }
 
-void InputDeviceManager::SetEffect(unsigned char pad, unsigned char motor, unsigned char force) {
+void InputDeviceManager::SetEffect(unsigned char port, unsigned int slot, unsigned char motor, unsigned char force) {
 	for (int i=0; i<numDevices; i++) {
 		Device *dev = devices[i];
 		if (dev->enabled && dev->numFFEffectTypes) {
-			dev->SetEffects(pad, motor, force);
+			dev->SetEffects(port, slot, motor, force);
 		}
 	}
 }

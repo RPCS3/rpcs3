@@ -20,6 +20,8 @@
 
 #include "PrecompiledHeader.h"
 #include <vector>
+#include <map>
+#include <utility>
 
 // used to keep block information
 #define BLOCKTYPE_DELAYSLOT	1		// if bit set, delay slot
@@ -38,9 +40,10 @@ struct BASEBLOCK
 // extra block info (only valid for start of fn)
 struct BASEBLOCKEX
 {
-	u16 size;	// size in dwords	
-	u16 dummy;
 	u32 startpc;
+	uptr fnptr;
+	u16 size;	// size in dwords
+	u16 x86size;
 
 #ifdef PCSX2_DEVBUILD
 	u32 visited; // number of times called
@@ -53,18 +56,34 @@ class BaseBlocks
 {
 private:
 	std::vector<BASEBLOCKEX> blocks;
+	// switch to a hash map later?
+	std::multimap<u32, uptr> links;
+	typedef std::multimap<u32, uptr>::iterator linkiter_t;
 	unsigned long size;
+	uptr recompiler;
 
 public:
-	BaseBlocks(unsigned long max) :
-		size(max),
+	BaseBlocks(unsigned long size_, uptr recompiler_) :
+		size(size_),
+		recompiler(recompiler_),
 		blocks(0)
 	{
 		blocks.reserve(size);
 	}
 
-	BASEBLOCKEX* New(u32 startpc);
-	int Index (u32 startpc) const;
+	BASEBLOCKEX* New(u32 startpc, uptr fnptr);
+	int LastIndex (u32 startpc) const;
+	BASEBLOCKEX* GetByX86(uptr ip) const;
+
+	inline int Index (u32 startpc) const
+	{
+		int idx = LastIndex(startpc);
+		if (idx == -1 || startpc < blocks[idx].startpc ||
+			blocks[idx].size && (startpc >= blocks[idx].startpc + blocks[idx].size * 4))
+			return -1;
+		else
+			return idx;
+	}
 
 	inline BASEBLOCKEX* operator[](int idx)
 	{
@@ -80,12 +99,20 @@ public:
 
 	inline void Remove(int idx)
 	{
+		u32 startpc = blocks[idx].startpc;
+		std::pair<linkiter_t, linkiter_t> range = links.equal_range(blocks[idx].startpc);
+		for (linkiter_t i = range.first; i != range.second; ++i)
+			*(u32*)i->second = recompiler - (i->second + 4);
+		// TODO: remove links from this block?
 		blocks.erase(blocks.begin() + idx);
 	}
+
+	void Link(u32 pc, uptr jumpptr);
 
 	inline void Reset()
 	{
 		blocks.clear();
+		links.clear();
 	}
 };
 

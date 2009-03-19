@@ -16,7 +16,6 @@
  *	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
-#include "Threading.h"
 #include "Linux.h"
 #include "../x86/ix86/ix86.h"
 

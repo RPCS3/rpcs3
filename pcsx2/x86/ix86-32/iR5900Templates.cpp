@@ -38,19 +38,6 @@
 // Code Templates //
 ////////////////////
 
-void CHECK_SAVE_REG(int reg)
-{
-	if( s_saveConstGPRreg == 0xffffffff ) {
-		if( GPR_IS_CONST1(reg) ) {
-			s_saveConstGPRreg = reg;
-			s_ConstGPRreg = g_cpuConstRegs[reg];
-		}
-	}
-	else {
-		assert( s_saveConstGPRreg == 0 || s_saveConstGPRreg == reg );
-	}
-}
-
 void _eeProcessHasLive(int reg, int signext)
 {
 	g_cpuPrevRegHasLive1 = g_cpuRegHasLive1;
@@ -68,7 +55,6 @@ void _eeProcessHasLive(int reg, int signext)
 
 void _eeOnWriteReg(int reg, int signext)
 {
-	CHECK_SAVE_REG(reg);
 	GPR_DEL_CONST(reg);
 	_eeProcessHasLive(reg, signext);
 }
@@ -109,7 +95,6 @@ void eeRecompileCode0(R5900FNPTR constcode, R5900FNPTR_INFO constscode, R5900FNP
 	if ( ! _Rd_ && (xmminfo&XMMINFO_WRITED) ) return;
 
 	if( xmminfo&XMMINFO_WRITED) {
-		CHECK_SAVE_REG(_Rd_);
 		_eeProcessHasLive(_Rd_, 0);
 		EEINST_RESETSIGNEXT(_Rd_);
 	}
@@ -421,7 +406,6 @@ void eeRecompileCode1(R5900FNPTR constcode, R5900FNPTR_INFO noconstcode)
 	int mmreg1, mmreg2;
 	if ( ! _Rt_ ) return;
 
-	CHECK_SAVE_REG(_Rt_);
 	_eeProcessHasLive(_Rt_, 0);
 	EEINST_RESETSIGNEXT(_Rt_);
 
@@ -522,7 +506,6 @@ void eeRecompileCode2(R5900FNPTR constcode, R5900FNPTR_INFO noconstcode)
 	int mmreg1, mmreg2;
 	if ( ! _Rd_ ) return;
 
-	CHECK_SAVE_REG(_Rd_);
 	_eeProcessHasLive(_Rd_, 0);
 	EEINST_RESETSIGNEXT(_Rd_);
 
@@ -651,7 +634,6 @@ void eeRecompileCodeConst0(R5900FNPTR constcode, R5900FNPTR_INFO constscode, R59
 	if ( ! _Rd_ ) return;
 
 	// for now, don't support xmm
-	CHECK_SAVE_REG(_Rd_);
 
 	_deleteGPRtoXMMreg(_Rs_, 1);
 	_deleteGPRtoXMMreg(_Rt_, 1);
@@ -689,7 +671,6 @@ void eeRecompileCodeConst1(R5900FNPTR constcode, R5900FNPTR_INFO noconstcode)
         return;
 
 	// for now, don't support xmm
-	CHECK_SAVE_REG(_Rt_);
 
 	_deleteGPRtoXMMreg(_Rs_, 1);
 	_deleteGPRtoXMMreg(_Rt_, 0);
@@ -710,7 +691,6 @@ void eeRecompileCodeConst2(R5900FNPTR constcode, R5900FNPTR_INFO noconstcode)
 	if ( ! _Rd_ ) return;
 
 	// for now, don't support xmm
-	CHECK_SAVE_REG(_Rd_);
 
 	_deleteGPRtoXMMreg(_Rt_, 1);
 	_deleteGPRtoXMMreg(_Rd_, 0);
@@ -731,7 +711,6 @@ void eeRecompileCodeConstSPECIAL(R5900FNPTR constcode, R5900FNPTR_INFO multicode
 	assert(0);
 	// for now, don't support xmm
 	if( MULT ) {
-		CHECK_SAVE_REG(_Rd_);
 		_deleteGPRtoXMMreg(_Rd_, 0);
 	}
 
@@ -767,7 +746,6 @@ int eeRecompileCodeXMM(int xmminfo)
 
 	// save state
 	if( xmminfo & XMMINFO_WRITED ) {
-		CHECK_SAVE_REG(_Rd_);
 		_eeProcessHasLive(_Rd_, 0);
 		EEINST_RESETSIGNEXT(_Rd_);
 	}

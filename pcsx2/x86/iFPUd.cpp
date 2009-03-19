@@ -391,7 +391,7 @@ void FPU_ADD_SUB(int tempd, int tempt) //tempd and tempt are overwritten, they a
  
 void FPU_MUL(int info, int regd, int sreg, int treg, bool acc)
 {
-	if (CHECK_FPU_ATTEMPT_MUL)
+	if (CHECK_FPUMULHACK)
 	{
 		SSE2_MOVD_XMM_to_R(ECX, sreg);
 		SSE2_MOVD_XMM_to_R(EDX, treg);

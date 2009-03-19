@@ -116,6 +116,8 @@ static void _mtgsFreezeGIF( SaveState& state, GIFPath (&paths)[3] )
 
 void SaveState::mtgsFreeze()
 {
+	FreezeTag( "mtgs" );
+
 	if( mtgsThread != NULL )
 	{
 		mtgsThread->Freeze( *this );

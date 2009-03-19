@@ -5,12 +5,12 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2 of the License, or
  *  (at your option) any later version.
- *  
+ *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
- *  
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
@@ -27,7 +27,7 @@
  */
 
 /*
- Notes: 
+ Notes:
  * Since this is still beta things may change.
 
  * OSflags:
@@ -41,7 +41,7 @@
  * reserved keys:
 	F1 to F10 are reserved for the emulator
 
- * plugins should NOT change the current 
+ * plugins should NOT change the current
    working directory.
    (on win32, add flag OFN_NOCHANGEDIR for
     GetOpenFileName)
@@ -548,6 +548,7 @@ typedef void (CALLBACK* _PADgsDriverInfo)(GSdriverInfo *info);
 typedef void (CALLBACK* _PADconfigure)();
 typedef s32  (CALLBACK* _PADtest)();
 typedef void (CALLBACK* _PADabout)();
+typedef int (CALLBACK* _PADfreeze)(int mode, freezeData *data);
 
 // SIO
 typedef s32  (CALLBACK* _SIOinit)(u32 port, u32 slot, SIOchangeSlotCB f);
@@ -732,6 +733,7 @@ extern _PADgsDriverInfo   PAD1gsDriverInfo;
 extern _PADconfigure      PAD1configure;
 extern _PADtest           PAD1test;
 extern _PADabout          PAD1about;
+extern _PADfreeze         PAD1freeze;
 
 // PAD2
 extern _PADinit           PAD2init;
@@ -748,6 +750,7 @@ extern _PADgsDriverInfo   PAD2gsDriverInfo;
 extern _PADconfigure      PAD2configure;
 extern _PADtest           PAD2test;
 extern _PADabout          PAD2about;
+extern _PADfreeze         PAD2freeze;
 
 // SIO[2]
 extern _SIOinit           SIOinit[2][9];

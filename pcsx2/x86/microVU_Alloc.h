@@ -28,8 +28,7 @@ union regInfo {
 	};
 };
 
-template<u32 pSize>
-struct microAllocInfo {
+struct microRegInfo {
 	regInfo VF[32];
 	regInfo Acc;
 	u8 VI[32];
@@ -37,22 +36,34 @@ struct microAllocInfo {
 	u8 q;
 	u8 p;
 	u8 r;
-	u16 info[pSize];// bit 0 = NOP?
-					// bit 1 = Used with bit 2 to make a 2-bit key for ACC write instance
-					// bit 2 = (00 = instance #0, 01 = instance #1, 10 = instance #2, 11 = instance #3)
-					// bit 3 = Used with bit 4 to make a 2-bit key for ACC read instance
-					// bit 4 = (00 = instance #0, 01 = instance #1, 10 = instance #2, 11 = instance #3)
-					// bit 5 = Write to Q1 or Q2?
-					// bit 6 = Read Q1 or Q2?
-					// bit 7 = Read/Write to P1 or P2?
-					// bit 8 = Update Mac Flags?
-					// bit 9 = Update Status Flags?
-					// bit 10 = Used with bit 11 to make a 2-bit key for mac flag instance
-					// bit 11 = (00 = instance #0, 01 = instance #1, 10 = instance #2, 11 = instance #3)
-					// bit 12 = Used with bit 13 to make a 2-bit key for status flag instance
-					// bit 13 = (00 = instance #0, 01 = instance #1, 10 = instance #2, 11 = instance #3)
-					// bit 14 = Read VI(Fs) from backup memory?
-					// bit 15 = Read VI(Ft) from backup memory?
-	u32 curPC;
 };
 
+template<u32 pSize>
+struct microAllocInfo {
+	microRegInfo regs;
+	u8  branch; // 0 = No Branch, 1 = Branch, 2 = Conditional Branch, 3 = Jump (JALR/JR)
+	u32 curPC;  // Current PC
+	u32 cycles; // Cycles for current block
+	u32 info[pSize];// bit 00 = Lower Instruction is NOP
+					// bit 01
+					// bit 02
+					// bit 03
+					// bit 04
+					// bit 05 = Write to Q1 or Q2?
+					// bit 06 = Read Q1 or Q2?
+					// bit 07 = Read/Write to P1 or P2?
+					// bit 08 = Update Mac Flags?
+					// bit 09 = Update Status Flags?
+					// bit 10 = Used with bit 11 to make a 2-bit key for mac flag instance
+					// bit 11
+					// bit 12 = Used with bit 13 to make a 2-bit key for status flag instance
+					// bit 13
+					// bit 14 = Used with bit 15 to make a 2-bit key for clip flag instance
+					// bit 15
+					// bit 16 = Used with bit 17 to make a 2-bit key for mac flag instance
+					// bit 17
+					// bit 18 = Used with bit 19 to make a 2-bit key for status flag instance
+					// bit 19
+					// bit 20 = Read VI(Fs) from backup memory?
+					// bit 21 = Read VI(Ft) from backup memory?
+};

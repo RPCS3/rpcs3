@@ -1868,10 +1868,10 @@ Known to work well with a couple games, namely Shadow of the Colossus (but break
 		  <property name="spacing">0</property>
 
 		  <child>
-		    <widget class="GtkCheckButton" id="check_FPU_Clamp">
+		    <widget class="GtkCheckButton" id="check_FPU_Compare">
 		      <property name="visible">True</property>
 		      <property name="can_focus">True</property>
-		      <property name="label" translatable="yes">FPU Clamp Hack - Special fix for Tekken 5 and maybe other games.</property>
+		      <property name="label" translatable="yes">FPU Compare Hack - Special fix for Digimon Rumble Arena 2.</property>
 		      <property name="use_underline">True</property>
 		      <property name="relief">GTK_RELIEF_NORMAL</property>
 		      <property name="focus_on_click">True</property>
@@ -1906,10 +1906,10 @@ Known to work well with a couple games, namely Shadow of the Colossus (but break
 		  </child>
 
 		  <child>
-		    <widget class="GtkCheckButton" id="check_VU_Clip">
+		    <widget class="GtkCheckButton" id="check_FPU_Mul">
 		      <property name="visible">True</property>
 		      <property name="can_focus">True</property>
-		      <property name="label" translatable="yes">VU Clip Hack - Special fix for God of War</property>
+		      <property name="label" translatable="yes">FPU Mul Hack - Special fix for Tales of Destiny (possibly other games).</property>
 		      <property name="use_underline">True</property>
 		      <property name="relief">GTK_RELIEF_NORMAL</property>
 		      <property name="focus_on_click">True</property>
@@ -5063,7 +5063,7 @@ Version x.x</property>
 		      <property name="visible">True</property>
 		      <property name="label" translatable="yes">_Graphics</property>
 		      <property name="use_underline">True</property>
-		      <signal name="activate" handler="OnConf_Menu" last_modification_time="Fri, 06 Mar 2009 06:06:06 GMT"/>
+		      <signal name="activate" handler="OnConf_Menu"/>
 		    </widget>
 		  </child>
 
@@ -5072,7 +5072,7 @@ Version x.x</property>
 		      <property name="visible">True</property>
 		      <property name="label" translatable="yes">C_ontrollers</property>
 		      <property name="use_underline">True</property>
-		      <signal name="activate" handler="OnConf_Menu" last_modification_time="Fri, 06 Mar 2009 06:06:06 GMT"/>
+		      <signal name="activate" handler="OnConf_Menu"/>
 		    </widget>
 		  </child>
 
@@ -5081,7 +5081,7 @@ Version x.x</property>
 		      <property name="visible">True</property>
 		      <property name="label" translatable="yes">_Sound</property>
 		      <property name="use_underline">True</property>
-		      <signal name="activate" handler="OnConf_Menu" last_modification_time="Fri, 06 Mar 2009 06:06:06 GMT"/>
+		      <signal name="activate" handler="OnConf_Menu"/>
 		    </widget>
 		  </child>
 
@@ -5090,7 +5090,7 @@ Version x.x</property>
 		      <property name="visible">True</property>
 		      <property name="label" translatable="yes">_Cdvdrom</property>
 		      <property name="use_underline">True</property>
-		      <signal name="activate" handler="OnConf_Menu" last_modification_time="Fri, 06 Mar 2009 06:06:06 GMT"/>
+		      <signal name="activate" handler="OnConf_Menu"/>
 		    </widget>
 		  </child>
 
@@ -5099,7 +5099,7 @@ Version x.x</property>
 		      <property name="visible">True</property>
 		      <property name="label" translatable="yes">D_ev9</property>
 		      <property name="use_underline">True</property>
-		      <signal name="activate" handler="OnConf_Menu" last_modification_time="Fri, 06 Mar 2009 06:06:06 GMT"/>
+		      <signal name="activate" handler="OnConf_Menu"/>
 		    </widget>
 		  </child>
 
@@ -5108,7 +5108,7 @@ Version x.x</property>
 		      <property name="visible">True</property>
 		      <property name="label" translatable="yes">U_SB</property>
 		      <property name="use_underline">True</property>
-		      <signal name="activate" handler="OnConf_Menu" last_modification_time="Fri, 06 Mar 2009 06:06:06 GMT"/>
+		      <signal name="activate" handler="OnConf_Menu"/>
 		    </widget>
 		  </child>
 
@@ -5117,7 +5117,7 @@ Version x.x</property>
 		      <property name="visible">True</property>
 		      <property name="label" translatable="yes">Fire_Wire</property>
 		      <property name="use_underline">True</property>
-		      <signal name="activate" handler="OnConf_Menu" last_modification_time="Fri, 06 Mar 2009 06:06:06 GMT"/>
+		      <signal name="activate" handler="OnConf_Menu"/>
 		    </widget>
 		  </child>
 
@@ -5774,7 +5774,6 @@ Version x.x</property>
 			  <property name="active">False</property>
 			  <property name="inconsistent">False</property>
 			  <property name="draw_indicator">True</property>
-			  <property name="group">radiobutton6</property>
 			</widget>
 			<packing>
 			  <property name="left_attach">0</property>
@@ -5797,7 +5796,6 @@ Version x.x</property>
 			  <property name="active">False</property>
 			  <property name="inconsistent">False</property>
 			  <property name="draw_indicator">True</property>
-			  <property name="group">radiobutton6</property>
 			</widget>
 			<packing>
 			  <property name="left_attach">1</property>
@@ -5820,7 +5818,6 @@ Version x.x</property>
 			  <property name="active">False</property>
 			  <property name="inconsistent">False</property>
 			  <property name="draw_indicator">True</property>
-			  <property name="group">radiobutton6</property>
 			</widget>
 			<packing>
 			  <property name="left_attach">0</property>

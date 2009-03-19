@@ -452,7 +452,10 @@ static __forceinline int mfifoVIF1chain() {
 	int ret;
 	
 	/* Is QWC = 0? if so there is nothing to transfer */
-	if (vif1ch->qwc == 0 && vif1.vifstalled == 0) return 0;
+	if (vif1ch->qwc == 0 && vif1.vifstalled == 0) {
+		vif1.inprogress = 0;
+		return 0;
+	}
 
 	
 	if (vif1ch->madr >= psHu32(DMAC_RBOR) &&
@@ -485,16 +488,30 @@ void mfifoVIF1transfer(int qwc) {
 	
 	g_vifCycles = 0;
      
-	mfifodmairq = 0; //Clear any previous TIE interrupt
+	
 
 	if(qwc > 0){
 		vifqwc += qwc;
-		
+		if(vif1.inprogress & 0x10) 
+		{
+			if (vif1ch->madr >= psHu32(DMAC_RBOR) && vif1ch->madr <= (psHu32(DMAC_RBOR)+psHu32(DMAC_RBSR)))
+			{
+				CPU_INT(10, min( (int)vifqwc, (int)vif1ch->qwc ) * BIAS);	
+			}
+			else
+			{
+				CPU_INT(10, vif1ch->qwc * BIAS);	
+			}
+		}
+		vif1.inprogress &= ~0x10;
 			SPR_LOG("Added %x qw to mfifo, total now %x - Vif CHCR %x Stalled %x done %x\n", qwc, vifqwc, vif1ch->chcr, vif1.vifstalled, vif1.done);
-			
-		if((vif1ch->chcr & 0x100) == 0 || vif1.vifstalled == 1 || vif1.done == 1) return;
+		
+		/*if((vif1ch->chcr & 0x100) == 0 || vif1.vifstalled == 1 || vif1.done == 1 || vif1.inprogress == 1)*/ return;
 	}
 
+	mfifodmairq = 0; //Clear any previous TIE interrupt
+
+	
 	 if(vif1ch->qwc == 0){
 			ptag = (u32*)dmaGetAddr(vif1ch->tadr);
 
@@ -505,7 +522,7 @@ void mfifoVIF1transfer(int qwc) {
 			VIF_LOG("MFIFO Stallon tag\n");
 					
 					vif1.stallontag	= 1;				
-					CPU_INT(10,cycles+g_vifCycles);
+					//CPU_INT(10,cycles+g_vifCycles);
 					return;        //IRQ set by VIFTransfer
 				} 
 			}
@@ -524,7 +541,7 @@ void mfifoVIF1transfer(int qwc) {
 			switch (id) {
 				case 0: // Refe - Transfer Packet According to ADDR field
 					vif1ch->tadr = psHu32(DMAC_RBOR) + ((vif1ch->tadr + 16) & psHu32(DMAC_RBSR));
-					vif1.done = 2;										//End Transfer
+					vif1.done = 1;										//End Transfer
 					break;
 
 				case 1: // CNT - Transfer QWC following the tag.
@@ -550,37 +567,43 @@ void mfifoVIF1transfer(int qwc) {
 				case 7: // End - Transfer QWC following the tag
 					vif1ch->madr = psHu32(DMAC_RBOR) + ((vif1ch->tadr + 16) & psHu32(DMAC_RBSR));		//Set MADR to data following the tag
 					vif1ch->tadr = psHu32(DMAC_RBOR) + ((vif1ch->madr + (vif1ch->qwc << 4)) & psHu32(DMAC_RBSR));			//Set TADR to QW following the data
-					vif1.done = 2;										//End Transfer
+					vif1.done = 1;										//End Transfer
 					break;
 				}
 			
-			if ((vif1ch->chcr & 0x80) && (ptag[0] >> 31)) {
-			VIF_LOG("dmaIrq Set\n");
-			vif1.done = 2;
-			mfifodmairq = 1; //Let the handler know we have prematurely ended MFIFO
-		}
+			if ((vif1ch->chcr & 0x80) && (ptag[0] >> 31)) 
+			{
+				VIF_LOG("dmaIrq Set\n");
+				vif1.done = 1;
+				mfifodmairq = 1; //Let the handler know we have prematurely ended MFIFO
+			}
 	 }
-		ret = mfifoVIF1chain();
-		if (ret == -1) {
+		vif1.inprogress |= 1;
+
+		/*if (ret == -1) {
 			SysPrintf("VIF dmaChain error size=%d, madr=%lx, tadr=%lx\n",
 					vif1ch->qwc, vif1ch->madr, vif1ch->tadr);
 			vif1.done = 1;
-			CPU_INT(10,g_vifCycles);
+			//CPU_INT(10,g_vifCycles);
 		}
 		if(ret == -2){
 			VIF_LOG("MFIFO Stall\n");
-			CPU_INT(10,g_vifCycles);
+			//CPU_INT(10,g_vifCycles);
 			return;
-		}
+		}*/
 		
-	if(vif1.done == 2 && vif1ch->qwc == 0) vif1.done = 1;
-	 CPU_INT(10,g_vifCycles);
+	//if(vif1.done == 2 && vif1ch->qwc == 0) vif1.done = 1;
+//CPU_INT(10,g_vifCycles);
 	SPR_LOG("mfifoVIF1transfer end %x madr %x, tadr %x vifqwc %x\n", vif1ch->chcr, vif1ch->madr, vif1ch->tadr, vifqwc);
 }
 
 void vifMFIFOInterrupt()
 {
 	g_vifCycles = 0;
+
+
+
+	if(vif1.inprogress == 1) mfifoVIF1chain();
 
 	if(vif1.irq && vif1.tag.size == 0) {
 			vif1Regs->stat|= VIF1_STAT_INT;
@@ -594,15 +617,35 @@ void vifMFIFOInterrupt()
 				}		
 		}
 
-	if(vif1.done != 1) {
+	
+
+	if(vif1.done != 1 || vif1.inprogress & 1) {
+		
 		if(vifqwc <= 0){
 			//SysPrintf("Empty\n");
+			vif1.inprogress |= 0x10;
 			hwDmacIrq(14);
 			return;
 		} 
-		mfifoVIF1transfer(0);
+		if(!(vif1.inprogress & 0x1)) mfifoVIF1transfer(0);
+
+		if (vif1ch->madr >= psHu32(DMAC_RBOR) && vif1ch->madr <= (psHu32(DMAC_RBOR)+psHu32(DMAC_RBSR)))
+		{
+			CPU_INT(10, min( (int)vifqwc, (int)vif1ch->qwc ) * BIAS);	
+		}
+		else
+		{
+			CPU_INT(10, vif1ch->qwc * BIAS);	
+		}
+
+		
 		return;
-	}
+	} else if(vifqwc <= 0){
+			//SysPrintf("Empty\n");
+			//vif1.inprogress |= 0x10;
+			hwDmacIrq(14);
+			//return;
+		} 
 
 	//On a TIE break we do not clear the MFIFO (Art of Fighting)
 	//If we dont clear it on MFIFO end, Tekken Tag breaks, understandably (Refraction)

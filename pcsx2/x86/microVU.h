@@ -17,18 +17,21 @@
  */
 
 #pragma once
+#define mVUdebug // Prints Extra Info to Console
 #define _EmitterId_ (vuIndex+1)
 #include "Common.h"
 #include "VU.h"
+#include "GS.h"
 #include "ix86/ix86.h"
 #include "microVU_Alloc.h"
 
 struct microBlock {
-	u32 pipelineState; // FMACx|y|z|w | FDiv | EFU | IALU | BRANCH // Still thinking of how I'm going to do this
-	u8* x86ptrStart;
-	u8* x86ptrEnd;
-	u8* x86ptrBranch;
-	//u32 size;
+	microRegInfo pState; // Detailed State of Pipeline
+	u32 pipelineState;	 // | FDiv x 4 | EFU x 6 | Needs pState Info? x 1 | // Simple State of Pipeline
+	u8* x86ptrStart;	 // Start of code
+	u8* x86ptrEnd;		 // End of code (first byte outside of block)
+	u8* x86ptrBranch;	 // 
+	u32 size;			 // Number of 64bit VU Instructions in Block
 };
 
 #define mMaxBlocks 32 // Max Blocks With Different Pipeline States (For n = 1, 2, 4, 8, 16, etc...)
@@ -53,17 +56,24 @@ public:
 	}
 	void reset() { init(); };
 	void close() {}; // Can be Omitted?
-	void add(u32 pipelineState, u8* x86ptrStart) {
+	/*void add(u32 pipelineState, u8* x86ptrStart) {
 		if (!search(pipelineState)) {
 			listSize++;
 			listSize &= MaxBlocks;
 			blockList[listSize].pipelineState = pipelineState;
 			blockList[listSize].x86ptrStart = x86ptrStart;
 		}
-	}
-	microBlock* search(u32 pipelineState) {
-		for (int i = 0; i < listSize; i++) {
-			if (blockList[i].pipelineState == pipelineState) return &blockList[i];
+	}*/
+	microBlock* search(u32 pipelineState, microRegInfo* pState) {
+		if (pipelineState & 1) { // Needs Detailed Search (Exact Match of Pipeline State)
+			for (int i = 0; i < listSize; i++) {
+				if (!memcmp(pState, &blockList[i].pState, sizeof(microRegInfo))) return &blockList[i];
+			}
+		}
+		else { // Can do Simple Search (Only Matches the Important Pipeline Stuff)
+			for (int i = 0; i < listSize; i++) {
+				if (blockList[i].pipelineState == pipelineState) return &blockList[i];
+			}
 		}
 		return NULL;
 	}
@@ -81,9 +91,9 @@ public:
 
 template<u32 progSize>
 struct microProgram {
-	u8 data[progSize];
+	u32 data[progSize];
 	u32 used;	// Number of times its been used
-	microBlockManager* block[progSize];
+	microBlockManager* block[progSize / 2];
 	microAllocInfo<progSize> allocInfo;
 };
 
@@ -104,15 +114,16 @@ struct microVU {
 	u32 microSize;	// VU Micro Memory Size
 	u32 progSize;	// VU Micro Program Size (microSize/8)
 	u32 cacheAddr;	// VU Cache Start Address
-	static const u32 cacheSize = 0x400000; // VU Cache Size
+	static const u32 cacheSize = 0x500000; // VU Cache Size
 
-	microProgManager<0x800> prog; // Micro Program Data
+	microProgManager<0x1000> prog; // Micro Program Data
 	
-	VURegs*	regs;	// VU Regs Struct
-	u8*		cache;	// Dynarec Cache Start (where we will start writing the recompiled code to)
-	u8*		ptr;	// Pointer to next place to write recompiled code to
-	u32		code;	// Contains the current Instruction
-	u32		iReg;	// iReg
+	VURegs*	regs;		 // VU Regs Struct
+	u8*		cache;		 // Dynarec Cache Start (where we will start writing the recompiled code to)
+	u8*		ptr;		 // Pointer to next place to write recompiled code to
+	u32		code;		 // Contains the current Instruction
+	u32		iReg;		 // iReg (only used in recompilation, not execution)
+	u32		clipFlag[4]; // 4 instances of clip flag (used in execution)
 
 /*
 	uptr x86eax; // Accumulator register. Used in arithmetic operations.
@@ -147,3 +158,4 @@ microVUt(void) mVUclose();
 #include "microVU_Misc.h"
 #include "microVU_Alloc.inl"
 #include "microVU_Tables.inl"
+#include "microVU_Compile.inl"

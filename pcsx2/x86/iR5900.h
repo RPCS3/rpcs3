@@ -58,8 +58,6 @@ extern u32 pc;			         // recompiler pc (also used by the SuperVU! .. why? (a
 extern int branch;		         // set for branch (also used by the SuperVU! .. why? (air))
 extern u32 target;		         // branch target
 extern u32 s_nBlockCycles;		// cycles of current block recompiling
-extern u32 s_saveConstGPRreg;
-extern GPR_reg64 s_ConstGPRreg;
 
 #define REC_FUNC( f ) \
    void rec##f( void ) \

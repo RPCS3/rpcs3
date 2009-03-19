@@ -62,6 +62,7 @@ EXPORT_C_(u32) PADreadPort2 (PadDataS* pads);
 EXPORT_C_(u32) PSEgetLibType();
 EXPORT_C_(u32) PSEgetLibVersion();
 EXPORT_C_(void) PADconfigure();
+EXPORT_C_(s32) PADfreeze(int mode, freezeData *data);
 
 #ifdef NO_CRT
 inline void * malloc(size_t size) {

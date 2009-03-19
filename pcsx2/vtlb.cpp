@@ -50,13 +50,7 @@ using namespace vtlb_private;
 
 namespace vtlb_private
 {
-	s32 pmap[VTLB_PMAP_ITEMS];	//512KB
-	s32 vmap[VTLB_VMAP_ITEMS];   //4MB
-
-	// first indexer -- 8/16/32/64/128 bit tables [values 0-4]
-	// second indexer -- read/write  [0 or 1]
-	// third indexer -- 128 pages of memory!
-	void* RWFT[5][2][128];
+	PCSX2_ALIGNED( 64, MapData vtlbdata );
 }
 
 vtlbHandler vtlbHandlerCount=0;
@@ -97,11 +91,11 @@ callfunction:
 // Interpreter Implementations of VTLB Memory Operations.
 // See recVTLB.cpp for the dynarec versions.
 
-// Interpreterd VTLB lookup for 8, 16, and 32 bit accesses
+// Interpreted VTLB lookup for 8, 16, and 32 bit accesses
 template<int DataSize,typename DataType>
 __forceinline DataType __fastcall MemOp_r0(u32 addr)
 {
-	u32 vmv=vmap[addr>>VTLB_PAGE_BITS];
+	u32 vmv=vtlbdata.vmap[addr>>VTLB_PAGE_BITS];
 	s32 ppf=addr+vmv;
 
 	if (!(ppf<0))
@@ -111,13 +105,13 @@ __forceinline DataType __fastcall MemOp_r0(u32 addr)
 	u32 hand=(u8)vmv;
 	u32 paddr=ppf-hand+0x80000000;
 	//SysPrintf("Translated 0x%08X to 0x%08X\n",addr,paddr);
-	//return reinterpret_cast<TemplateHelper<DataSize,false>::HandlerType*>(RWFT[TemplateHelper<DataSize,false>::sidx][0][hand])(paddr,data);
+	//return reinterpret_cast<TemplateHelper<DataSize,false>::HandlerType*>(vtlbdata.RWFT[TemplateHelper<DataSize,false>::sidx][0][hand])(paddr,data);
 
 	switch( DataSize )
 	{
-		case 8: return ((vtlbMemR8FP*)RWFT[0][0][hand])(paddr);
-		case 16: return ((vtlbMemR16FP*)RWFT[1][0][hand])(paddr);
-		case 32: return ((vtlbMemR32FP*)RWFT[2][0][hand])(paddr);
+		case 8: return ((vtlbMemR8FP*)vtlbdata.RWFT[0][0][hand])(paddr);
+		case 16: return ((vtlbMemR16FP*)vtlbdata.RWFT[1][0][hand])(paddr);
+		case 32: return ((vtlbMemR32FP*)vtlbdata.RWFT[2][0][hand])(paddr);
 
 		jNO_DEFAULT;
 	}
@@ -127,7 +121,7 @@ __forceinline DataType __fastcall MemOp_r0(u32 addr)
 template<int DataSize,typename DataType>
 __forceinline void __fastcall MemOp_r1(u32 addr, DataType* data)
 {
-	u32 vmv=vmap[addr>>VTLB_PAGE_BITS];
+	u32 vmv=vtlbdata.vmap[addr>>VTLB_PAGE_BITS];
 	s32 ppf=addr+vmv;
 
 	if (!(ppf<0))
@@ -146,8 +140,8 @@ __forceinline void __fastcall MemOp_r1(u32 addr, DataType* data)
 
 		switch( DataSize )
 		{
-			case 64: ((vtlbMemR64FP*)RWFT[3][0][hand])(paddr, data); break;
-			case 128: ((vtlbMemR128FP*)RWFT[4][0][hand])(paddr, data); break;
+			case 64: ((vtlbMemR64FP*)vtlbdata.RWFT[3][0][hand])(paddr, data); break;
+			case 128: ((vtlbMemR128FP*)vtlbdata.RWFT[4][0][hand])(paddr, data); break;
 
 			jNO_DEFAULT;
 		}
@@ -157,7 +151,7 @@ __forceinline void __fastcall MemOp_r1(u32 addr, DataType* data)
 template<int DataSize,typename DataType>
 __forceinline void __fastcall MemOp_w0(u32 addr, DataType data)
 {
-	u32 vmv=vmap[addr>>VTLB_PAGE_BITS];
+	u32 vmv=vtlbdata.vmap[addr>>VTLB_PAGE_BITS];
 	s32 ppf=addr+vmv;
 	if (!(ppf<0))
 	{
@@ -172,9 +166,9 @@ __forceinline void __fastcall MemOp_w0(u32 addr, DataType data)
 
 		switch( DataSize )
 		{
-			case 8: return ((vtlbMemW8FP*)RWFT[0][1][hand])(paddr, (u8)data);
-			case 16: return ((vtlbMemW16FP*)RWFT[1][1][hand])(paddr, (u16)data);
-			case 32: return ((vtlbMemW32FP*)RWFT[2][1][hand])(paddr, (u32)data);
+			case 8: return ((vtlbMemW8FP*)vtlbdata.RWFT[0][1][hand])(paddr, (u8)data);
+			case 16: return ((vtlbMemW16FP*)vtlbdata.RWFT[1][1][hand])(paddr, (u16)data);
+			case 32: return ((vtlbMemW32FP*)vtlbdata.RWFT[2][1][hand])(paddr, (u32)data);
 
 			jNO_DEFAULT;
 		}
@@ -184,7 +178,7 @@ template<int DataSize,typename DataType>
 __forceinline void __fastcall MemOp_w1(u32 addr,const DataType* data)
 {
 	verify(DataSize==128 || DataSize==64);
-	u32 vmv=vmap[addr>>VTLB_PAGE_BITS];
+	u32 vmv=vtlbdata.vmap[addr>>VTLB_PAGE_BITS];
 	s32 ppf=addr+vmv;
 	if (!(ppf<0))
 	{
@@ -200,8 +194,8 @@ __forceinline void __fastcall MemOp_w1(u32 addr,const DataType* data)
 		//SysPrintf("Translated 0x%08X to 0x%08X\n",addr,paddr);
 		switch( DataSize )
 		{
-			case 64: return ((vtlbMemW64FP*)RWFT[3][1][hand])(paddr, data);
-			case 128: return ((vtlbMemW128FP*)RWFT[4][1][hand])(paddr, data);
+			case 64: return ((vtlbMemW64FP*)vtlbdata.RWFT[3][1][hand])(paddr, data);
+			case 128: return ((vtlbMemW128FP*)vtlbdata.RWFT[4][1][hand])(paddr, data);
 
 			jNO_DEFAULT;
 		}
@@ -352,17 +346,17 @@ vtlbHandler vtlb_RegisterHandler(	vtlbMemR8FP* r8,vtlbMemR16FP* r16,vtlbMemR32FP
 	//write the code :p
 	vtlbHandler rv=vtlbHandlerCount++;
 	
-	RWFT[0][0][rv] = (r8!=0)   ? r8:vtlbDefaultPhyRead8;
-	RWFT[1][0][rv] = (r16!=0)  ? r16:vtlbDefaultPhyRead16;
-	RWFT[2][0][rv] = (r32!=0)  ? r32:vtlbDefaultPhyRead32;
-	RWFT[3][0][rv] = (r64!=0)  ? r64:vtlbDefaultPhyRead64;
-	RWFT[4][0][rv] = (r128!=0) ? r128:vtlbDefaultPhyRead128;
+	vtlbdata.RWFT[0][0][rv] = (r8!=0)   ? r8:vtlbDefaultPhyRead8;
+	vtlbdata.RWFT[1][0][rv] = (r16!=0)  ? r16:vtlbDefaultPhyRead16;
+	vtlbdata.RWFT[2][0][rv] = (r32!=0)  ? r32:vtlbDefaultPhyRead32;
+	vtlbdata.RWFT[3][0][rv] = (r64!=0)  ? r64:vtlbDefaultPhyRead64;
+	vtlbdata.RWFT[4][0][rv] = (r128!=0) ? r128:vtlbDefaultPhyRead128;
 
-	RWFT[0][1][rv] = (w8!=0)   ? w8:vtlbDefaultPhyWrite8;
-	RWFT[1][1][rv] = (w16!=0)  ? w16:vtlbDefaultPhyWrite16;
-	RWFT[2][1][rv] = (w32!=0)  ? w32:vtlbDefaultPhyWrite32;
-	RWFT[3][1][rv] = (w64!=0)  ? w64:vtlbDefaultPhyWrite64;
-	RWFT[4][1][rv] = (w128!=0) ? w128:vtlbDefaultPhyWrite128;
+	vtlbdata.RWFT[0][1][rv] = (w8!=0)   ? w8:vtlbDefaultPhyWrite8;
+	vtlbdata.RWFT[1][1][rv] = (w16!=0)  ? w16:vtlbDefaultPhyWrite16;
+	vtlbdata.RWFT[2][1][rv] = (w32!=0)  ? w32:vtlbDefaultPhyWrite32;
+	vtlbdata.RWFT[3][1][rv] = (w64!=0)  ? w64:vtlbDefaultPhyWrite64;
+	vtlbdata.RWFT[4][1][rv] = (w128!=0) ? w128:vtlbDefaultPhyWrite128;
 
 	return rv;
 }
@@ -382,7 +376,7 @@ void vtlb_MapHandler(vtlbHandler handler,u32 start,u32 size)
 
 	while(size>0)
 	{
-		pmap[start>>VTLB_PAGE_BITS]=value;
+		vtlbdata.pmap[start>>VTLB_PAGE_BITS]=value;
 
 		start+=VTLB_PAGE_SIZE;
 		size-=VTLB_PAGE_SIZE;
@@ -407,7 +401,7 @@ void vtlb_MapBlock(void* base,u32 start,u32 size,u32 blocksize)
 
 		while(blocksz>0)
 		{
-			pmap[start>>VTLB_PAGE_BITS]=ptr;
+			vtlbdata.pmap[start>>VTLB_PAGE_BITS]=ptr;
 
 			start+=VTLB_PAGE_SIZE;
 			ptr+=VTLB_PAGE_SIZE;
@@ -425,7 +419,7 @@ void vtlb_Mirror(u32 new_region,u32 start,u32 size)
 
 	while(size>0)
 	{
-		pmap[start>>VTLB_PAGE_BITS]=pmap[new_region>>VTLB_PAGE_BITS];
+		vtlbdata.pmap[start>>VTLB_PAGE_BITS]=vtlbdata.pmap[new_region>>VTLB_PAGE_BITS];
 
 		start+=VTLB_PAGE_SIZE;
 		new_region+=VTLB_PAGE_SIZE;
@@ -435,10 +429,10 @@ void vtlb_Mirror(u32 new_region,u32 start,u32 size)
 
 __forceinline void* vtlb_GetPhyPtr(u32 paddr)
 {
-	if (paddr>=VTLB_PMAP_SZ || pmap[paddr>>VTLB_PAGE_BITS]<0)
+	if (paddr>=VTLB_PMAP_SZ || vtlbdata.pmap[paddr>>VTLB_PAGE_BITS]<0)
 		return NULL;
 	else
-		return reinterpret_cast<void*>(pmap[paddr>>VTLB_PAGE_BITS]+(paddr&VTLB_PAGE_MASK));
+		return reinterpret_cast<void*>(vtlbdata.pmap[paddr>>VTLB_PAGE_BITS]+(paddr&VTLB_PAGE_MASK));
 }
 
 //virtual mappings
@@ -462,11 +456,11 @@ void vtlb_VMap(u32 vaddr,u32 paddr,u32 sz)
 		}
 		else
 		{
-			pme=pmap[paddr>>VTLB_PAGE_BITS];
+			pme=vtlbdata.pmap[paddr>>VTLB_PAGE_BITS];
 			if (pme<0)
 				pme|=paddr;// top bit is set anyway ...
 		}
-		vmap[vaddr>>VTLB_PAGE_BITS]=pme-vaddr;
+		vtlbdata.vmap[vaddr>>VTLB_PAGE_BITS]=pme-vaddr;
 		vaddr+=VTLB_PAGE_SIZE;
 		paddr+=VTLB_PAGE_SIZE;
 		sz-=VTLB_PAGE_SIZE;
@@ -480,7 +474,7 @@ void vtlb_VMapBuffer(u32 vaddr,void* buffer,u32 sz)
 	u32 bu8=(u32)buffer;
 	while(sz>0)
 	{
-		vmap[vaddr>>VTLB_PAGE_BITS]=bu8-vaddr;
+		vtlbdata.vmap[vaddr>>VTLB_PAGE_BITS]=bu8-vaddr;
 		vaddr+=VTLB_PAGE_SIZE;
 		bu8+=VTLB_PAGE_SIZE;
 		sz-=VTLB_PAGE_SIZE;
@@ -500,7 +494,7 @@ void vtlb_VMapUnmap(u32 vaddr,u32 sz)
 		}
 		handl|=vaddr; // top bit is set anyway ...
 		handl|=0x80000000;
-		vmap[vaddr>>VTLB_PAGE_BITS]=handl-vaddr;
+		vtlbdata.vmap[vaddr>>VTLB_PAGE_BITS]=handl-vaddr;
 		vaddr+=VTLB_PAGE_SIZE;
 		sz-=VTLB_PAGE_SIZE;
 	}
@@ -510,7 +504,7 @@ void vtlb_VMapUnmap(u32 vaddr,u32 sz)
 void vtlb_Init()
 {
 	vtlbHandlerCount=0;
-	memzero_obj(RWFT);
+	memzero_obj(vtlbdata.RWFT);
 
 	//Register default handlers
 	//Unmapped Virt handlers _MUST_ be registered first.

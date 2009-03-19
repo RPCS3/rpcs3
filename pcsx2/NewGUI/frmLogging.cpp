@@ -74,7 +74,7 @@ wxDialog( parent, id, _T("Logging"), pos, size )
 	
 	// Connect all the checkboxes to one function, and pass the checkbox id as user data.
 	for (i = EE_CPU_LOG; i >= SYMS_LOG; i++)
-		Connect(i, wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(frmLogging::LogChecked), i);
+		Connect(i, wxEVT_COMMAND_CHECKBOX_CLICKED, i, wxCommandEventHandler(frmLogging::LogChecked));
 }
 
 

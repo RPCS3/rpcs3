@@ -160,6 +160,8 @@ void vuMicroMemReset()
 
 void SaveState::vuMicroFreeze()
 {
+	FreezeTag( "vuMicro" );
+
 	jASSUME( VU0.Mem != NULL );
 	jASSUME( VU1.Mem != NULL );
 
@@ -169,15 +171,7 @@ void SaveState::vuMicroFreeze()
 	FreezeMem(VU0.Micro, 4*1024);
 
 	Freeze(VU0.VF);
-	if( GetVersion() >= 0x02 )
-		Freeze(VU0.VI);
-	else
-	{
-		// Old versions stored the VIregs as 32 bit values...
-		memzero_obj( VU0.VI );
-		for(int i=0; i<32; i++ )
-			Freeze( VU0.VI[i].UL );
-	}
+	Freeze(VU0.VI);
 
 	Freeze(VU1.ACC);
 	Freeze(VU1.code);
@@ -185,14 +179,5 @@ void SaveState::vuMicroFreeze()
 	FreezeMem(VU1.Micro, 16*1024);
 
 	Freeze(VU1.VF);
-	if( GetVersion() >= 0x02 )
-		Freeze(VU1.VI);
-	else
-	{
-		// Old versions stored the VIregs as 32 bit values...
-		memzero_obj( VU1.VI );
-		for(int i=0; i<32; i++ )
-			Freeze( VU1.VI[i].UL );
-	}
-
+	Freeze(VU1.VI);
 }

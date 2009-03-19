@@ -566,22 +566,15 @@ void SaveState::sioFreeze()
 	// CRCs for memory cards.
 	u64 m_mcdCRCs[2];
 
+	FreezeTag( "sio" );
     Freeze( sio );
 
-	// versions prior to 3 didn't have CRCs.
-	if( GetVersion() >= 0x03 )
+	if( IsSaving() )
 	{
-		if( IsSaving() )
-		{
-			for( int i=0; i<2; ++i )
-				m_mcdCRCs[i] = MemoryCard::GetCRC( i );
-		}
-		Freeze( m_mcdCRCs );
+		for( int i=0; i<2; ++i )
+			m_mcdCRCs[i] = MemoryCard::GetCRC( i );
 	}
-	else
-	{
-		m_mcdCRCs[0] = m_mcdCRCs[1] = 0;
-	}
+	Freeze( m_mcdCRCs );
 
 	if( IsLoading() && Config.McdEnableEject )
 	{

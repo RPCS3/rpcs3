@@ -27,7 +27,7 @@ __forceinline int ShortToAxis(int v) {
 class XInputDevice : public Device {
 	// Cached last vibration values by pad and motor.
 	// Need this, as only one value is changed at a time.
-	int ps2Vibration[2][2];
+	int ps2Vibration[2][4][2];
 	// Minor optimization - cache last set vibration values
 	// When there's no change, no need to do anything.
 	XINPUT_VIBRATION xInputVibration;
@@ -112,15 +112,17 @@ public:
 		return 1;
 	}
 
-	void SetEffects(unsigned char pad, unsigned char motor, unsigned char force) {
-		ps2Vibration[pad][motor] = force;
+	void SetEffects(unsigned char port, unsigned int slot, unsigned char motor, unsigned char force) {
+		ps2Vibration[port][slot][motor] = force;
 		int newVibration[2] = {0,0};
 		for (int p=0; p<2; p++) {
-			for (int i=0; i<pads[p].numFFBindings; i++) {
-				// Technically should also be a *65535/BASE_SENSITIVITY, but that's close enough to 1 for me.
-				ForceFeedbackBinding *ffb = &pads[p].ffBindings[i];
-				newVibration[0] += (int)((ffb->axes[0].force * (__int64)ps2Vibration[p][ffb->motor]) / 255);
-				newVibration[1] += (int)((ffb->axes[1].force * (__int64)ps2Vibration[p][ffb->motor]) / 255);
+			for (int s=0; s<4; s++) {
+				for (int i=0; i<pads[p][s].numFFBindings; i++) {
+					// Technically should also be a *65535/BASE_SENSITIVITY, but that's close enough to 1 for me.
+					ForceFeedbackBinding *ffb = &pads[p][s].ffBindings[i];
+					newVibration[0] += (int)((ffb->axes[0].force * (__int64)ps2Vibration[p][s][ffb->motor]) / 255);
+					newVibration[1] += (int)((ffb->axes[1].force * (__int64)ps2Vibration[p][s][ffb->motor]) / 255);
+				}
 			}
 		}
 		newVibration[0] = abs(newVibration[0]);
@@ -140,11 +142,11 @@ public:
 	}
 
 	void SetEffect(ForceFeedbackBinding *binding, unsigned char force) {
-		PadBindings pBackup = pads[0];
-		pads[0].ffBindings = binding;
-		pads[0].numFFBindings = 1;
-		SetEffects(0, binding->motor, 255);
-		pads[0] = pBackup;
+		PadBindings pBackup = pads[0][0];
+		pads[0][0].ffBindings = binding;
+		pads[0][0].numFFBindings = 1;
+		SetEffects(0, 0, binding->motor, 255);
+		pads[0][0] = pBackup;
 	}
 
 	void Deactivate() {

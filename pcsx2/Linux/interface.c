@@ -888,9 +888,9 @@ create_GameFixDlg (void)
   GtkWidget *GameSettings;
   GtkWidget *alignment5;
   GtkWidget *vbox30;
-  GtkWidget *check_FPU_Clamp;
+  GtkWidget *check_FPU_Compare;
   GtkWidget *check_VU_Add_Sub;
-  GtkWidget *check_VU_Clip;
+  GtkWidget *check_FPU_Mul;
   GtkWidget *label42;
   GtkWidget *dialog_action_area1;
   GtkWidget *cancelbutton1;
@@ -922,20 +922,20 @@ create_GameFixDlg (void)
   gtk_widget_show (vbox30);
   gtk_container_add (GTK_CONTAINER (alignment5), vbox30);
 
-  check_FPU_Clamp = gtk_check_button_new_with_mnemonic (_("FPU Clamp Hack - Special fix for Tekken 5 and maybe other games."));
-  gtk_widget_set_name (check_FPU_Clamp, "check_FPU_Clamp");
-  gtk_widget_show (check_FPU_Clamp);
-  gtk_box_pack_start (GTK_BOX (vbox30), check_FPU_Clamp, FALSE, FALSE, 0);
+  check_FPU_Compare = gtk_check_button_new_with_mnemonic (_("FPU Compare Hack - Special fix for Digimon Rumble Arena 2."));
+  gtk_widget_set_name (check_FPU_Compare, "check_FPU_Compare");
+  gtk_widget_show (check_FPU_Compare);
+  gtk_box_pack_start (GTK_BOX (vbox30), check_FPU_Compare, FALSE, FALSE, 0);
 
   check_VU_Add_Sub = gtk_check_button_new_with_mnemonic (_("VU Add / Sub Hack - Special fix for Tri-Ace games!"));
   gtk_widget_set_name (check_VU_Add_Sub, "check_VU_Add_Sub");
   gtk_widget_show (check_VU_Add_Sub);
   gtk_box_pack_start (GTK_BOX (vbox30), check_VU_Add_Sub, FALSE, FALSE, 0);
 
-  check_VU_Clip = gtk_check_button_new_with_mnemonic (_("VU Clip Hack - Special fix for God of War"));
-  gtk_widget_set_name (check_VU_Clip, "check_VU_Clip");
-  gtk_widget_show (check_VU_Clip);
-  gtk_box_pack_start (GTK_BOX (vbox30), check_VU_Clip, FALSE, TRUE, 0);
+  check_FPU_Mul = gtk_check_button_new_with_mnemonic (_("FPU Mul Hack - Special fix for Tales of Destiny (possibly other games)."));
+  gtk_widget_set_name (check_FPU_Mul, "check_FPU_Mul");
+  gtk_widget_show (check_FPU_Mul);
+  gtk_box_pack_start (GTK_BOX (vbox30), check_FPU_Mul, FALSE, TRUE, 0);
 
   label42 = gtk_label_new (_("<b>Some games need special settings.\nConfigure them here.</b>"));
   gtk_widget_set_name (label42, "label42");
@@ -973,9 +973,9 @@ create_GameFixDlg (void)
   GLADE_HOOKUP_OBJECT (GameFixDlg, GameSettings, "GameSettings");
   GLADE_HOOKUP_OBJECT (GameFixDlg, alignment5, "alignment5");
   GLADE_HOOKUP_OBJECT (GameFixDlg, vbox30, "vbox30");
-  GLADE_HOOKUP_OBJECT (GameFixDlg, check_FPU_Clamp, "check_FPU_Clamp");
+  GLADE_HOOKUP_OBJECT (GameFixDlg, check_FPU_Compare, "check_FPU_Compare");
   GLADE_HOOKUP_OBJECT (GameFixDlg, check_VU_Add_Sub, "check_VU_Add_Sub");
-  GLADE_HOOKUP_OBJECT (GameFixDlg, check_VU_Clip, "check_VU_Clip");
+  GLADE_HOOKUP_OBJECT (GameFixDlg, check_FPU_Mul, "check_FPU_Mul");
   GLADE_HOOKUP_OBJECT (GameFixDlg, label42, "label42");
   GLADE_HOOKUP_OBJECT_NO_REF (GameFixDlg, dialog_action_area1, "dialog_action_area1");
   GLADE_HOOKUP_OBJECT (GameFixDlg, cancelbutton1, "cancelbutton1");
@@ -3425,8 +3425,11 @@ create_PatchFinderWindow (void)
   GtkWidget *radiobutton6;
   GSList *radiobutton6_group = NULL;
   GtkWidget *radiobutton5;
+  GSList *radiobutton5_group = NULL;
   GtkWidget *radiobutton4;
+  GSList *radiobutton4_group = NULL;
   GtkWidget *radiobutton3;
+  GSList *radiobutton3_group = NULL;
   GtkWidget *label56;
   GtkWidget *frame21;
   GtkWidget *alignment16;
@@ -3553,8 +3556,8 @@ create_PatchFinderWindow (void)
   gtk_table_attach (GTK_TABLE (table6), radiobutton5, 0, 1, 1, 2,
                     (GtkAttachOptions) (0),
                     (GtkAttachOptions) (0), 0, 0);
-  gtk_radio_button_set_group (GTK_RADIO_BUTTON (radiobutton5), radiobutton6_group);
-  radiobutton6_group = gtk_radio_button_get_group (GTK_RADIO_BUTTON (radiobutton5));
+  gtk_radio_button_set_group (GTK_RADIO_BUTTON (radiobutton5), radiobutton5_group);
+  radiobutton5_group = gtk_radio_button_get_group (GTK_RADIO_BUTTON (radiobutton5));
 
   radiobutton4 = gtk_radio_button_new_with_mnemonic (NULL, _("16 bits"));
   gtk_widget_set_name (radiobutton4, "radiobutton4");
@@ -3562,8 +3565,8 @@ create_PatchFinderWindow (void)
   gtk_table_attach (GTK_TABLE (table6), radiobutton4, 1, 2, 0, 1,
                     (GtkAttachOptions) (0),
                     (GtkAttachOptions) (0), 0, 0);
-  gtk_radio_button_set_group (GTK_RADIO_BUTTON (radiobutton4), radiobutton6_group);
-  radiobutton6_group = gtk_radio_button_get_group (GTK_RADIO_BUTTON (radiobutton4));
+  gtk_radio_button_set_group (GTK_RADIO_BUTTON (radiobutton4), radiobutton4_group);
+  radiobutton4_group = gtk_radio_button_get_group (GTK_RADIO_BUTTON (radiobutton4));
 
   radiobutton3 = gtk_radio_button_new_with_mnemonic (NULL, _("8 bits"));
   gtk_widget_set_name (radiobutton3, "radiobutton3");
@@ -3571,8 +3574,8 @@ create_PatchFinderWindow (void)
   gtk_table_attach (GTK_TABLE (table6), radiobutton3, 0, 1, 0, 1,
                     (GtkAttachOptions) (0),
                     (GtkAttachOptions) (0), 0, 0);
-  gtk_radio_button_set_group (GTK_RADIO_BUTTON (radiobutton3), radiobutton6_group);
-  radiobutton6_group = gtk_radio_button_get_group (GTK_RADIO_BUTTON (radiobutton3));
+  gtk_radio_button_set_group (GTK_RADIO_BUTTON (radiobutton3), radiobutton3_group);
+  radiobutton3_group = gtk_radio_button_get_group (GTK_RADIO_BUTTON (radiobutton3));
 
   label56 = gtk_label_new (_("<b>Values of Size</b>"));
   gtk_widget_set_name (label56, "label56");

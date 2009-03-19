@@ -107,6 +107,8 @@ GSState::GSState(BYTE* base, bool mt, void (*irq)(), int nloophack)
 	BUSDIR = (GSRegBUSDIR*)(base + GS_BUSDIR);
 	SIGLBLID = (GSRegSIGLBLID*)(base + GS_SIGLBLID);
 
+	memset(PMODE, 0, 0x1100);
+
 	PRIM = &m_env.PRIM;
 //	CSR->rREV = 0x20;
 	m_env.PRMODECONT.AC = 1;

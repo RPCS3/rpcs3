@@ -58,8 +58,6 @@ void _psxMoveGPRtoR(x86IntRegType to, int fromgpr);
 void _psxMoveGPRtoM(u32 to, int fromgpr);
 void _psxMoveGPRtoRm(x86IntRegType to, int fromgpr);
 
-void PSX_CHECK_SAVE_REG(int reg);
-
 extern u32 psxpc;			// recompiler pc
 extern int psxbranch;		// set for branch
 extern u32 g_iopCyclePenalty;

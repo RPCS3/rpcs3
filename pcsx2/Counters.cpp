@@ -43,7 +43,9 @@ int gates = 0;
 
 // Counter 4 takes care of scanlines - hSync/hBlanks
 // Counter 5 takes care of vSync/vBlanks
-Counter counters[6];
+Counter counters[4];
+SyncCounter hsyncCounter;
+SyncCounter vsyncCounter;
 
 u32 nextsCounter;	// records the cpuRegs.cycle value of the last call to rcntUpdate()
 s32 nextCounter;	// delta from nextsCounter, in cycles, until the next rcntUpdate() 
@@ -101,7 +103,7 @@ static __forceinline void cpuRcntSet()
 	int i;
 
 	nextsCounter = cpuRegs.cycle;
-	nextCounter = (counters[5].sCycle + counters[5].CycleT) - cpuRegs.cycle;
+	nextCounter = (vsyncCounter.sCycle + vsyncCounter.CycleT) - cpuRegs.cycle;
 
 	for (i = 0; i < 4; i++)
 		_rcntSet( i );
@@ -124,10 +126,10 @@ void rcntInit() {
 	counters[2].interrupt = 11;
 	counters[3].interrupt = 12;
 
-	counters[4].modeval = MODE_HRENDER;
-	counters[4].sCycle = cpuRegs.cycle;
-	counters[5].modeval = MODE_VRENDER; 
-	counters[5].sCycle = cpuRegs.cycle;
+	hsyncCounter.Mode = MODE_HRENDER;
+	hsyncCounter.sCycle = cpuRegs.cycle;
+	vsyncCounter.Mode = MODE_VRENDER; 
+	vsyncCounter.sCycle = cpuRegs.cycle;
 
 	UpdateVSyncRate();
 
@@ -136,7 +138,7 @@ void rcntInit() {
 }
 
 // debug code, used for stats
-int g_nCounters[4];
+int g_nhsyncCounter;
 static uint iFrame = 0;	
 
 #ifndef _WIN32
@@ -235,8 +237,8 @@ u32 UpdateVSyncRate()
 			vSyncInfoCalc( &vSyncInfo, FRAMERATE_NTSC, SCANLINES_TOTAL_NTSC );
 	}
 
-	counters[4].CycleT = vSyncInfo.hRender; // Amount of cycles before the counter will be updated
-	counters[5].CycleT = vSyncInfo.Render; // Amount of cycles before the counter will be updated
+	hsyncCounter.CycleT = vSyncInfo.hRender; // Amount of cycles before the counter will be updated
+	vsyncCounter.CycleT = vSyncInfo.Render; // Amount of cycles before the counter will be updated
 
 	if (Config.CustomFps > 0)
 	{
@@ -393,28 +395,28 @@ static int vblankinc = 0;
 
 __forceinline void rcntUpdate_hScanline()
 {
-	if( !cpuTestCycle( counters[4].sCycle, counters[4].CycleT ) ) return;
+	if( !cpuTestCycle( hsyncCounter.sCycle, hsyncCounter.CycleT ) ) return;
 
 	//iopBranchAction = 1;
-	if (counters[4].modeval & MODE_HBLANK) { //HBLANK Start
-		rcntStartGate(false, counters[4].sCycle);
+	if (hsyncCounter.Mode & MODE_HBLANK) { //HBLANK Start
+		rcntStartGate(false, hsyncCounter.sCycle);
 		psxCheckStartGate16(0);
 		
 		// Setup the hRender's start and end cycle information:
-		counters[4].sCycle += vSyncInfo.hBlank;		// start  (absolute cycle value)
-		counters[4].CycleT = vSyncInfo.hRender;		// endpoint (delta from start value)
-		counters[4].modeval = MODE_HRENDER;
+		hsyncCounter.sCycle += vSyncInfo.hBlank;		// start  (absolute cycle value)
+		hsyncCounter.CycleT = vSyncInfo.hRender;		// endpoint (delta from start value)
+		hsyncCounter.Mode = MODE_HRENDER;
 	}
 	else { //HBLANK END / HRENDER Begin
 		if (CSRw & 0x4) GSCSRr |= 4; // signal
 		if (!(GSIMR&0x400)) gsIrq();
-		if (gates) rcntEndGate(false, counters[4].sCycle);
+		if (gates) rcntEndGate(false, hsyncCounter.sCycle);
 		if (psxhblankgate) psxCheckEndGate16(0);
 
 		// set up the hblank's start and end cycle information:
-		counters[4].sCycle += vSyncInfo.hRender;	// start (absolute cycle value)
-		counters[4].CycleT = vSyncInfo.hBlank;		// endpoint (delta from start value)
-		counters[4].modeval = MODE_HBLANK;
+		hsyncCounter.sCycle += vSyncInfo.hRender;	// start (absolute cycle value)
+		hsyncCounter.CycleT = vSyncInfo.hBlank;		// endpoint (delta from start value)
+		hsyncCounter.Mode = MODE_HBLANK;
 
 #		ifdef VSYNC_DEBUG
 		hsc++;
@@ -424,30 +426,30 @@ __forceinline void rcntUpdate_hScanline()
 
 __forceinline bool rcntUpdate_vSync()
 {
-	s32 diff = (cpuRegs.cycle - counters[5].sCycle);
-	if( diff < counters[5].CycleT ) return false;
+	s32 diff = (cpuRegs.cycle - vsyncCounter.sCycle);
+	if( diff < vsyncCounter.CycleT ) return false;
 
 	//iopBranchAction = 1;
-	if (counters[5].modeval == MODE_VSYNC)
+	if (vsyncCounter.Mode == MODE_VSYNC)
 	{
-		VSyncEnd(counters[5].sCycle);
+		VSyncEnd(vsyncCounter.sCycle);
 
-		counters[5].sCycle += vSyncInfo.Blank;
-		counters[5].CycleT = vSyncInfo.Render;
-		counters[5].modeval = MODE_VRENDER;
+		vsyncCounter.sCycle += vSyncInfo.Blank;
+		vsyncCounter.CycleT = vSyncInfo.Render;
+		vsyncCounter.Mode = MODE_VRENDER;
 
 		return true;
 	}
 	else	// VSYNC end / VRENDER begin
 	{
-		VSyncStart(counters[5].sCycle);
+		VSyncStart(vsyncCounter.sCycle);
 
-		counters[5].sCycle += vSyncInfo.Render;
-		counters[5].CycleT = vSyncInfo.Blank;
-		counters[5].modeval = MODE_VSYNC;
+		vsyncCounter.sCycle += vSyncInfo.Render;
+		vsyncCounter.CycleT = vSyncInfo.Blank;
+		vsyncCounter.Mode = MODE_VSYNC;
 
 		// Accumulate hsync rounding errors:
-		counters[4].sCycle += vSyncInfo.hSyncError;
+		hsyncCounter.sCycle += vSyncInfo.hSyncError;
 
 #		ifdef VSYNC_DEBUG
 		vblankinc++;
@@ -766,15 +768,12 @@ u32 __fastcall rcntCycle(int index)
 
 void SaveState::rcntFreeze()
 {
-	Freeze(counters);
-	Freeze(nextCounter);
-	Freeze(nextsCounter);
-
-	// New in version 1 -- save the PAL/NTSC info!
-	if( GetVersion() >= 0x1 )
-	{
-		Freeze( Config.PsxType );
-	}
+	Freeze( counters );
+	Freeze( hsyncCounter );
+	Freeze( vsyncCounter );
+	Freeze( nextCounter );
+	Freeze( nextsCounter );
+	Freeze( Config.PsxType );
 
 	if( IsLoading() )
 	{

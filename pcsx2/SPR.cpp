@@ -454,11 +454,9 @@ void SPRTOinterrupt()
 
 void SaveState::sprFreeze()
 {
-	// Gotta save the weird ref-style DMA timing vars!
-	if( GetVersion() >= 0x05 )
-	{
-		Freeze(spr0finished);
-		Freeze(spr1finished);
-		Freeze(mfifotransferred);
-	}
+	FreezeTag( "SPRdma" );
+
+	Freeze(spr0finished);
+	Freeze(spr1finished);
+	Freeze(mfifotransferred);
 }

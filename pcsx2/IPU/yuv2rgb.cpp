@@ -215,7 +215,7 @@ ihatemsvc:
 		jne tworows
 	}
 #elif defined(__GNUC__)
-	asm(
+	__asm__(
 		".intel_syntax noprefix\n"
 		"mov eax, 1\n"
 		"xor esi, esi\n"

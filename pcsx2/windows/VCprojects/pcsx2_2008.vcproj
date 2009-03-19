@@ -106,7 +106,7 @@
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="2"
-			WholeProgramOptimization="1"
+			WholeProgramOptimization="0"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -134,6 +134,9 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="3"
+				InlineFunctionExpansion="0"
+				FavorSizeOrSpeed="1"
+				WholeProgramOptimization="false"
 				AdditionalIncludeDirectories=""
 				PreprocessorDefinitions="NDEBUG"
 				StringPooling="true"
@@ -161,6 +164,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="zlib.lib"
 				OutputFile="$(OutDir)\$(ProjectName)-dev.exe"
+				LinkIncremental="2"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -2906,6 +2910,14 @@
 			</File>
 			<File
 				RelativePath="..\..\NewGUI\frmGameFixes.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\NewGUI\frmLogging.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\NewGUI\frmLogging.h"
 				>
 			</File>
 			<File

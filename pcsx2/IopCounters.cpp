@@ -751,6 +751,8 @@ void psxRcntSetGates()
 
 void SaveState::psxRcntFreeze()
 {
+	FreezeTag( "iopCounters" );
+
     Freeze(psxCounters);
 	Freeze(psxNextCounter);
 	Freeze(psxNextsCounter);

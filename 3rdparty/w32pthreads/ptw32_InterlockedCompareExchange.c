@@ -168,8 +168,6 @@ ptw32_InterlockedExchange (volatile PTW32_INTERLOCKED_LPLONG location,
 #pragma disable_message (200)
 #endif
 
-  LONG result;
-
   /*
    * The XCHG instruction always locks the bus with or without the
    * LOCKED prefix. This makes it significantly slower than CMPXCHG on
@@ -186,14 +184,15 @@ ptw32_InterlockedExchange (volatile PTW32_INTERLOCKED_LPLONG location,
 #if defined(_MSC_VER) || defined(__WATCOMC__) || (defined(__BORLANDC__) && defined(HAVE_TASM32))
 #define HAVE_INLINABLE_INTERLOCKED_XCHG
 
+	// pcsx2: Optimized this slightly for MSVC, which automatically knowns when to
+	// push/pop registers and how to return eax as a result without using a temp var.
+
     {
       _asm {
-	//PUSH         ecx
-	MOV          ecx,dword ptr [location]
-	MOV          eax,dword ptr [value]
-	XCHG         dword ptr [ecx],eax
-	MOV          dword ptr [result], eax
-        //POP          ecx
+		MOV          ecx,dword ptr [location]
+		MOV          eax,dword ptr [value]
+		XCHG         dword ptr [ecx],eax
+	//MOV          dword ptr [result], eax
       }
     }
   else
@@ -215,21 +214,19 @@ ptw32_InterlockedExchange (volatile PTW32_INTERLOCKED_LPLONG location,
        * Can we do without the PUSH/POP instructions?
        */
       _asm {
-	//PUSH         ecx
-	//PUSH         edx
-	MOV          ecx,dword ptr [location]
-	MOV          edx,dword ptr [value]
-L1:	MOV          eax,dword ptr [ecx]
-	CMPXCHG      dword ptr [ecx],edx
-	JNZ          L1
-	MOV          dword ptr [result], eax
-	//POP          edx
-        //POP          ecx
+		MOV          ecx,dword ptr [location]
+		MOV          edx,dword ptr [value]
+	L1:	MOV          eax,dword ptr [ecx]
+		CMPXCHG      dword ptr [ecx],edx
+		JNZ          L1
+		//MOV          dword ptr [result], eax
       }
     }
 
 #elif defined(__GNUC__)
 #define HAVE_INLINABLE_INTERLOCKED_XCHG
+
+	LONG result;
 
     {
       __asm__ __volatile__
@@ -264,6 +261,8 @@ L1:	MOV          eax,dword ptr [ecx]
 	 :"m"  (*location), "r" (value));
     }
 
+  return result;
+
 #endif
 
 #else
@@ -278,8 +277,6 @@ L1:	MOV          eax,dword ptr [ecx]
 #endif
 
 /* *INDENT-ON* */
-
-  return result;
 
 #if defined(__WATCOMC__)
 #pragma enable_message (200)
