@@ -46,7 +46,8 @@ static __forceinline T* iopVirtMemW( u32 mem )
 template<typename T>
 static __forceinline const T* iopVirtMemR( u32 mem )
 {
-	return (psxMemRLUT[(mem) >> 16] == 0) ? NULL : (const T*)(psxMemRLUT[(mem) >> 16] + ((mem) & 0xffff));
+	mem &= 0x1fffffff;
+	return (psxMemRLUT[mem >> 16] == 0) ? NULL : (const T*)(psxMemRLUT[mem >> 16] + (mem & 0xffff));
 }
 
 // Obtains a pointer to the IOP's physical mapping (bypasses the TLB)
@@ -56,11 +57,11 @@ static __forceinline u8* iopPhysMem( u32 addr )
 }
 
 #define psxSs8(mem)		psxS[(mem) & 0xffff]
-#define psxSs16(mem)	(*(s16*)&psxS[(mem) & 0xffff])
-#define psxSs32(mem)	(*(s32*)&psxS[(mem) & 0xffff])
-#define psxSu8(mem)		(*(u8*) &psxS[(mem) & 0xffff])
-#define psxSu16(mem)	(*(u16*)&psxS[(mem) & 0xffff])
-#define psxSu32(mem)	(*(u32*)&psxS[(mem) & 0xffff])
+#define psxSs16(mem)	(*(s16*)&psxS[(mem) & 0x00ff])
+#define psxSs32(mem)	(*(s32*)&psxS[(mem) & 0x00ff])
+#define psxSu8(mem)		(*(u8*) &psxS[(mem) & 0x00ff])
+#define psxSu16(mem)	(*(u16*)&psxS[(mem) & 0x00ff])
+#define psxSu32(mem)	(*(u32*)&psxS[(mem) & 0x00ff])
 
 #define psxPs8(mem)		psxP[(mem) & 0xffff]
 #define psxPs16(mem)	(*(s16*)&psxP[(mem) & 0xffff])
