@@ -173,7 +173,7 @@ static void _vtlb_DynGen_IndirectRead( u32 bits )
 	MOVZX32R8toR(EAX,EAX);
 	SUB32RtoR(ECX,EAX);
 	//eax=[funct+eax]
-	MOV32RmSOffsettoR(EAX,EAX,(int)RWFT[szidx][0],2);
+	MOV32RmSOffsettoR(EAX,EAX,(int)vtlbdata.RWFT[szidx][0],2);
 	SUB32ItoR(ECX,0x80000000);
 	CALL32R(EAX);
 }
@@ -187,7 +187,7 @@ void vtlb_DynGenRead64(u32 bits)
 
 	MOV32RtoR(EAX,ECX);
 	SHR32ItoR(EAX,VTLB_PAGE_BITS);
-	MOV32RmSOffsettoR(EAX,EAX,(int)vmap,2);
+	MOV32RmSOffsettoR(EAX,EAX,(int)vtlbdata.vmap,2);
 	ADD32RtoR(ECX,EAX);
 	u8* _fullread = JS8(0);
 
@@ -209,7 +209,7 @@ void vtlb_DynGenRead32(u32 bits, bool sign)
 
 	MOV32RtoR(EAX,ECX);
 	SHR32ItoR(EAX,VTLB_PAGE_BITS);
-	MOV32RmSOffsettoR(EAX,EAX,(int)vmap,2);
+	MOV32RmSOffsettoR(EAX,EAX,(int)vtlbdata.vmap,2);
 	ADD32RtoR(ECX,EAX);
 	u8* _fullread = JS8(0);
 
@@ -243,7 +243,7 @@ void vtlb_DynGenRead64_Const( u32 bits, u32 addr_const )
 {
 	jASSUME( bits == 64 || bits == 128 );
 
-	void* vmv_ptr = &vmap[addr_const>>VTLB_PAGE_BITS];
+	void* vmv_ptr = &vtlbdata.vmap[addr_const>>VTLB_PAGE_BITS];
 
 	MOV32MtoR(EAX,(uptr)vmv_ptr);
 	MOV32ItoR(ECX,addr_const);
@@ -266,7 +266,7 @@ void vtlb_DynGenRead32_Const( u32 bits, bool sign, u32 addr_const )
 {
 	jASSUME( bits <= 32 );
 
-	void* vmv_ptr = &vmap[addr_const>>VTLB_PAGE_BITS];
+	void* vmv_ptr = &vtlbdata.vmap[addr_const>>VTLB_PAGE_BITS];
 
 	MOV32MtoR(EAX,(uptr)vmv_ptr);
 	MOV32ItoR(ECX,addr_const);
@@ -368,7 +368,7 @@ static void _vtlb_DynGen_IndirectWrite( u32 bits )
 	MOVZX32R8toR(EAX,EAX);
 	SUB32RtoR(ECX,EAX);
 	//eax=[funct+eax]
-	MOV32RmSOffsettoR(EAX,EAX,(int)RWFT[szidx][1],2);
+	MOV32RmSOffsettoR(EAX,EAX,(int)vtlbdata.RWFT[szidx][1],2);
 	SUB32ItoR(ECX,0x80000000);
 	CALL32R(EAX);
 }
@@ -377,7 +377,7 @@ void vtlb_DynGenWrite(u32 sz)
 {
 	MOV32RtoR(EAX,ECX);
 	SHR32ItoR(EAX,VTLB_PAGE_BITS);
-	MOV32RmSOffsettoR(EAX,EAX,(int)vmap,2);
+	MOV32RmSOffsettoR(EAX,EAX,(int)vtlbdata.vmap,2);
 	ADD32RtoR(ECX,EAX);
 	u8* _full=JS8(0);
 
@@ -398,7 +398,7 @@ void vtlb_DynGenWrite_Const( u32 bits, u32 addr_const )
 	// the VTLB could feasibly be remapped by other recompiled code at any time.
 	// So we're limited in exactly how much we can pre-calcuate.
 
-	void* vmv_ptr = &vmap[addr_const>>VTLB_PAGE_BITS];
+	void* vmv_ptr = &vtlbdata.vmap[addr_const>>VTLB_PAGE_BITS];
 
 	MOV32MtoR(EAX,(uptr)vmv_ptr);
 	MOV32ItoR(ECX,addr_const);

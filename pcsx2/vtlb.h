@@ -75,9 +75,18 @@ namespace vtlb_private
 	static const uint VTLB_PMAP_SZ = 0x20000000;
 	static const uint VTLB_VMAP_ITEMS = 0x100000000ULL / VTLB_PAGE_SIZE;
 
-	extern void* RWFT[5][2][128];
-	extern s32 pmap[VTLB_PMAP_ITEMS];	//512KB
-	extern s32 vmap[VTLB_VMAP_ITEMS];   //4MB
+	struct MapData
+	{
+		s32 pmap[VTLB_PMAP_ITEMS];	//512KB
+		s32 vmap[VTLB_VMAP_ITEMS];   //4MB
+
+		// first indexer -- 8/16/32/64/128 bit tables [values 0-4]
+		// second indexer -- read/write  [0 or 1]
+		// third indexer -- 128 possible handlers!
+		void* RWFT[5][2][128];
+	};
+
+	PCSX2_ALIGNED_EXTERN( 64, MapData vtlbdata );
 }
 
 #endif

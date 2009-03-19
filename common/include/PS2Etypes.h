@@ -82,7 +82,7 @@ typedef unsigned int uint;
 // Note: building the 'extern' into PCSX2_ALIGNED16_DECL fixes Visual Assist X's intellisense.
 
 #define PCSX2_ALIGNED(alig,x) __declspec(align(alig)) x
-#define PCSX2_ALIGNED_EXTERN(alig,x) __declspec(align(alig)) x
+#define PCSX2_ALIGNED_EXTERN(alig,x) extern __declspec(align(alig)) x
 #define PCSX2_ALIGNED16(x) __declspec(align(16)) x
 #define PCSX2_ALIGNED16_EXTERN(x) extern __declspec(align(16)) x
 
