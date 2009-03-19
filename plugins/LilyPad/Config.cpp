@@ -32,6 +32,37 @@ int selected = 0;
 HWND hWnds[2][4];
 HWND hWndGeneral = 0;
 
+struct GeneralSettingsBool {
+	wchar_t *name;
+	unsigned int ControlId;
+	u8 defaultValue;
+};
+
+// Ties together config data structure, config files, and general config
+// dialog.
+const GeneralSettingsBool BoolOptionsInfo[] = {
+	{L"Force Cursor Hide", IDC_FORCE_HIDE, 0},
+	{L"Mouse Unfocus", IDC_MOUSE_UNFOCUS, 1},
+	{L"Background", IDC_BACKGROUND, 1},
+	{L"Multiple Bindings", IDC_MULTIPLE_BINDING, 0},
+
+	{L"DirectInput Game Devices", IDC_G_DI, 1},
+	{L"XInput", IDC_G_XI, 1},
+
+	{L"Multitap 1", IDC_MULTITAP1, 0},
+	{L"Multitap 2", IDC_MULTITAP2, 0},
+
+	{L"GS Thread Updates", IDC_GS_THREAD_INPUT, 1},
+	{L"Escape Fullscreen Hack", IDC_ESCAPE_FULLSCREEN_HACK, 1},
+	{L"Disable Screen Saver", IDC_DISABLE_SCREENSAVER, 1},
+	{L"Logging", IDC_DEBUG_FILE, 0},
+
+	{L"Save State in Title", IDC_SAVE_STATE_TITLE, 1},
+	{L"GH2", IDC_GH2_HACK, 0},
+
+	{L"Vista Volume", IDC_VISTA_VOLUME, 1},
+};
+
 void Populate(int port, int slot);
 
 void SetupLogSlider(HWND hWndSlider) {
@@ -675,26 +706,16 @@ int SaveSettings(wchar_t *file=0) {
 
 	// Just check first, last, and all pad bindings.  Should be more than enough.  No real need to check
 	// config path.
-	int noError = WritePrivateProfileInt(L"General Settings", L"Force Cursor Hide", config.forceHide, file);
+	int noError = 1;
+
+	for (int i=0; i<sizeof(BoolOptionsInfo)/sizeof(BoolOptionsInfo[0]); i++) {
+		 noError &= WritePrivateProfileInt(L"General Settings", BoolOptionsInfo[i].name, config.bools[i], file);
+	}
 	WritePrivateProfileInt(L"General Settings", L"Close Hacks", config.closeHacks, file);
-	WritePrivateProfileInt(L"General Settings", L"Background", config.background, file);
 
-	WritePrivateProfileInt(L"General Settings", L"GS Thread Updates", config.GSThreadUpdates, file);
-	WritePrivateProfileInt(L"General Settings", L"Escape Fullscreen Hack", config.escapeFullscreenHack, file);
-
-	WritePrivateProfileInt(L"General Settings", L"Disable Screen Saver", config.disableScreenSaver, file);
-	WritePrivateProfileInt(L"General Settings", L"GH2", config.GH2, file);
-	WritePrivateProfileInt(L"General Settings", L"Mouse Unfocus", config.mouseUnfocus, file);
-	WritePrivateProfileInt(L"General Settings", L"Logging", config.debug, file);
 	WritePrivateProfileInt(L"General Settings", L"Keyboard Mode", config.keyboardApi, file);
 	WritePrivateProfileInt(L"General Settings", L"Mouse Mode", config.mouseApi, file);
-	WritePrivateProfileInt(L"General Settings", L"DirectInput Game Devices", config.gameApis.directInput, file);
-	WritePrivateProfileInt(L"General Settings", L"XInput", config.gameApis.xInput, file);
-	WritePrivateProfileInt(L"General Settings", L"Multiple Bindings", config.multipleBinding, file);
 
-	WritePrivateProfileInt(L"General Settings", L"Save State in Title", config.saveStateTitle, file);
-
-	WritePrivateProfileInt(L"General Settings", L"Vista Volume", config.vistaVolume, file);
 	WritePrivateProfileInt(L"General Settings", L"Volume", config.volume, file);
 
 	for (int port=0; port<2; port++) {
@@ -790,33 +811,18 @@ int LoadSettings(int force, wchar_t *file) {
 		}
 	}
 
-	config.GSThreadUpdates = GetPrivateProfileBool(L"General Settings", L"GS Thread Updates", 1, file);
+	for (int i=0; i<sizeof(BoolOptionsInfo)/sizeof(BoolOptionsInfo[0]); i++) {
+		config.bools[i] = GetPrivateProfileBool(L"General Settings", BoolOptionsInfo[i].name, BoolOptionsInfo[i].defaultValue, file);
+	}
 
 	if (!ps2e) config.GSThreadUpdates = 0;
 
-	config.escapeFullscreenHack = GetPrivateProfileBool(L"General Settings", L"Escape Fullscreen Hack", 1, file);
-
-	config.disableScreenSaver = GetPrivateProfileBool(L"General Settings", L"Disable Screen Saver", 0, file);
-	config.GH2 = GetPrivateProfileBool(L"General Settings", L"GH2", 0, file);
-
-	config.mouseUnfocus = GetPrivateProfileBool(L"General Settings", L"Mouse Unfocus", 0, file);
-
-	config.background = (u8)GetPrivateProfileIntW(L"General Settings", L"Background", 0, file);
-
 	config.closeHacks = (u8)GetPrivateProfileIntW(L"General Settings", L"Close Hacks", 0, file);
 	if (config.closeHacks&1) config.closeHacks &= ~2;
-	config.debug = GetPrivateProfileBool(L"General Settings", L"Logging", 0, file);
-	config.multipleBinding = GetPrivateProfileBool(L"General Settings", L"Multiple Bindings", 0, file);
-	config.forceHide = GetPrivateProfileBool(L"General Settings", L"Force Cursor Hide", 0, file);
 
 	config.keyboardApi = (DeviceAPI)GetPrivateProfileIntW(L"General Settings", L"Keyboard Mode", WM, file);
 	config.mouseApi = (DeviceAPI) GetPrivateProfileIntW(L"General Settings", L"Mouse Mode", 0, file);
-	config.gameApis.directInput = GetPrivateProfileBool(L"General Settings", L"DirectInput Game Devices", 1, file);
-	config.gameApis.xInput = GetPrivateProfileBool(L"General Settings", L"XInput", 1, file);
 
-	config.saveStateTitle = GetPrivateProfileBool(L"General Settings", L"Save State in Title", 1, file);
-
-	config.vistaVolume = GetPrivateProfileBool(L"General Settings", L"Vista Volume", 1, file);
 	config.volume = GetPrivateProfileInt(L"General Settings", L"Volume", 100, file);
 	OSVERSIONINFO os;
 	os.dwOSVersionInfoSize = sizeof(os);
@@ -1506,24 +1512,32 @@ void UpdatePadPages() {
 	memset(hWnds, 0, sizeof(hWnds));
 	int slot = 0;
 	for (int port=0; port<2; port++) {
-		if (config.padConfigs[port][slot].type == DisabledPad) continue;
-		PROPSHEETPAGE psp;
-		ZeroMemory(&psp, sizeof(psp));
-		psp.dwSize = sizeof(psp);
-		psp.dwFlags = PSP_USETITLE | PSP_PREMATURE;
-		psp.hInstance = hInst;
-		psp.pfnDlgProc = (DLGPROC) DialogProc;
-		psp.lParam = port | (slot<<1);
-		if (port == 0)
-			psp.pszTitle = L"Pad 1";
-		else
-			psp.pszTitle = L"Pad 2";
-		if (config.padConfigs[port][slot].type != GuitarPad)
-			psp.pszTemplate = MAKEINTRESOURCE(IDD_CONFIG);
-		else
-			psp.pszTemplate = MAKEINTRESOURCE(IDD_CONFIG_GUITAR);
-		pages[count] = CreatePropertySheetPage(&psp);
-		if (pages[count]) count++;
+		for (int slot=0; slot<4; slot++) {
+			if (config.padConfigs[port][slot].type == DisabledPad) continue;
+			wchar_t title[20];
+			if (!slot) {
+				wsprintfW(title, L"Pad %i", port+1);
+			}
+			else {
+				if (!config.multitap[port]) continue;
+				wsprintfW(title, L"Pad %i-%i", port+1, slot+1);
+			}
+
+			PROPSHEETPAGE psp;
+			ZeroMemory(&psp, sizeof(psp));
+			psp.dwSize = sizeof(psp);
+			psp.dwFlags = PSP_USETITLE | PSP_PREMATURE;
+			psp.hInstance = hInst;
+			psp.pfnDlgProc = (DLGPROC) DialogProc;
+			psp.lParam = port | (slot<<1);
+			psp.pszTitle = title;
+			if (config.padConfigs[port][slot].type != GuitarPad)
+				psp.pszTemplate = MAKEINTRESOURCE(IDD_CONFIG);
+			else
+				psp.pszTemplate = MAKEINTRESOURCE(IDD_CONFIG_GUITAR);
+			pages[count] = CreatePropertySheetPage(&psp);
+			if (pages[count]) count++;
+		}
 	}
 	while (SendMessage(hWndProp, PSM_INDEXTOPAGE, 1, 0)) {
 		PropSheet_RemovePage(hWndProp, 1, 0);
@@ -1547,57 +1561,86 @@ HPROPSHEETPAGE CreateGeneralPage() {
 	return CreatePropertySheetPage(&psp);
 }
 
+int ListIndexToPortAndSlot (int index, int *port, int *slot) {
+	if (index < 0 || index >= 2 + 3*(config.multitap[0]+config.multitap[1])) {
+		*port = 0;
+		*slot = 0;
+		return 0;
+	}
+	if (index < 1 + 3*config.multitap[0]) {
+		*port = 0;
+		*slot = index;
+	}
+	else {
+		*port = 1;
+		*slot = index-1-3*config.multitap[0];
+	}
+	return 1;
+}
+
 void UpdatePadList(HWND hWnd) {
 	HWND hWndList = GetDlgItem(hWnd, IDC_PAD_LIST);
 	HWND hWndCombo = GetDlgItem(hWnd, IDC_PAD_TYPE);
 	HWND hWndAnalog = GetDlgItem(hWnd, IDC_ANALOG_START1);
-	int slot = 0;
+	int slot;
+	int port;
 	int index = 0;
-	for (int port=0; port<2; port++) {
-		wchar_t text[100];
-		wsprintf(text, L"Pad %i", port);
-		LVITEM item;
-		item.iItem = index;
-		item.iSubItem = 0;
-		item.mask = LVIF_TEXT;
-		item.pszText = text;
-		if (SendMessage(hWndList, LVM_GETITEMCOUNT, 0, 0) <= index) {
-			ListView_InsertItem(hWndList, &item);
-		}
-		else {
+	wchar_t *strings[] = {L"Disabled", L"Dualshock 2", L"Guitar"};
+	for (port=0; port<2; port++) {
+		for (slot = 0; slot<4; slot++) {
+			wchar_t text[100];
+			if (!slot)
+				wsprintf(text, L"Pad %i", port+1);
+			else {
+				if (!config.multitap[port]) continue;
+				wsprintf(text, L"Pad %i-%i", port+1, slot+1);
+			}
+			LVITEM item;
+			item.iItem = index;
+			item.iSubItem = 0;
+			item.mask = LVIF_TEXT;
+			item.pszText = text;
+			if (SendMessage(hWndList, LVM_GETITEMCOUNT, 0, 0) <= index) {
+				ListView_InsertItem(hWndList, &item);
+			}
+			else {
+				ListView_SetItem(hWndList, &item);
+			}
+
+			item.iSubItem = 1;
+			if (2 < (unsigned int)config.padConfigs[port][slot].type) config.padConfigs[port][slot].type = Dualshock2Pad;
+			item.pszText = strings[config.padConfigs[port][slot].type];
 			ListView_SetItem(hWndList, &item);
-		}
 
-		item.iSubItem = 1;
-		wchar_t *strings[] = {L"Disabled", L"Dualshock 2", L"Guitar"};
-		if (2 < (unsigned int)config.padConfigs[port][slot].type) config.padConfigs[port][slot].type = Dualshock2Pad;
-		item.pszText = strings[config.padConfigs[port][slot].type];
-		ListView_SetItem(hWndList, &item);
-
-		item.iSubItem = 2;
-		int count = 0;
-		for (int i = 0; i<dm->numDevices; i++) {
-			Device *dev = dm->devices[i];
-			if (!dev->enabled) continue;
-			count += dev->pads[port][slot].numBindings + dev->pads[port][slot].numFFBindings;
+			item.iSubItem = 2;
+			int count = 0;
+			for (int i = 0; i<dm->numDevices; i++) {
+				Device *dev = dm->devices[i];
+				if (!dev->enabled) continue;
+				count += dev->pads[port][slot].numBindings + dev->pads[port][slot].numFFBindings;
+			}
+			wsprintf(text, L"%i", count);
+			item.pszText = text;
+			ListView_SetItem(hWndList, &item);
+			index++;
 		}
-		wsprintf(text, L"%i", count);
-		item.pszText = text;
-		ListView_SetItem(hWndList, &item);
-		index++;
 	}
+	while (ListView_DeleteItem(hWndList, index));
 	int sel = ListView_GetNextItem(hWndList, -1, LVNI_SELECTED);
 
-	EnableWindow(hWndCombo, sel>=0);
-	EnableWindow(hWndAnalog, sel>=0);
-	if (sel < 0) {
+	int enable;
+	if (!ListIndexToPortAndSlot(sel, &port, &slot)) {
+		enable = 0;
 		SendMessage(hWndCombo, CB_SETCURSEL, -1, 0);
 		CheckDlgButton(hWnd, IDC_ANALOG_START1, BST_UNCHECKED);
 	}
 	else {
-		SendMessage(hWndCombo, CB_SETCURSEL, config.padConfigs[sel][0].type, 0);
-		CheckDlgButton(hWnd, IDC_ANALOG_START1, BST_CHECKED*config.padConfigs[sel][0].autoAnalog);
+		enable = 1;
+		SendMessage(hWndCombo, CB_SETCURSEL, config.padConfigs[port][slot].type, 0);
+		CheckDlgButton(hWnd, IDC_ANALOG_START1, BST_CHECKED*config.padConfigs[port][slot].autoAnalog);
 	}
+	EnableWindow(hWndCombo, enable);
+	EnableWindow(hWndAnalog, enable);
 }
 
 INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM lParam) {
@@ -1632,37 +1675,24 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 		RefreshEnabledDevicesAndDisplay(0, hWnd, 0);
 		UpdatePadList(hWnd);
 
-		CheckDlgButton(hWnd, IDC_BACKGROUND, BST_CHECKED * config.background);
-		CheckDlgButton(hWnd, IDC_FORCE_HIDE, BST_CHECKED * config.forceHide);
+		for (int j=0; j<sizeof(BoolOptionsInfo)/sizeof(BoolOptionsInfo[0]); j++) {
+			CheckDlgButton(hWnd, BoolOptionsInfo[j].ControlId, BST_CHECKED * config.bools[j]);
+		}
+
 		CheckDlgButton(hWnd, IDC_CLOSE_HACK1, BST_CHECKED * (config.closeHacks&1));
 		CheckDlgButton(hWnd, IDC_CLOSE_HACK2, BST_CHECKED * ((config.closeHacks&2)>>1));
-		CheckDlgButton(hWnd, IDC_CLOSE_HACK3, BST_CHECKED * ((config.closeHacks&4)>>2));
-		CheckDlgButton(hWnd, IDC_MOUSE_UNFOCUS, BST_CHECKED * config.mouseUnfocus);
 
-		CheckDlgButton(hWnd, IDC_GS_THREAD_INPUT, BST_CHECKED * config.GSThreadUpdates);
 		if (!ps2e) {
 			EnableWindow(GetDlgItem(hWnd, IDC_GS_THREAD_INPUT), 0);
 		}
-		CheckDlgButton(hWnd, IDC_ESCAPE_FULLSCREEN_HACK, BST_CHECKED * config.escapeFullscreenHack);
 
-		CheckDlgButton(hWnd, IDC_DISABLE_SCREENSAVER, BST_CHECKED * config.disableScreenSaver);
-		CheckDlgButton(hWnd, IDC_GH2_HACK, BST_CHECKED * config.GH2);
-		CheckDlgButton(hWnd, IDC_SAVE_STATE_TITLE, BST_CHECKED * config.saveStateTitle);
-
-		CheckDlgButton(hWnd, IDC_VISTA_VOLUME, BST_CHECKED * config.vistaVolume);
 		if (config.osVersion < 6) EnableWindow(GetDlgItem(hWnd, IDC_VISTA_VOLUME), 0);
-
-		CheckDlgButton(hWnd, IDC_DEBUG_FILE, BST_CHECKED * config.debug);
-		CheckDlgButton(hWnd, IDC_MULTIPLE_BINDING, BST_CHECKED * config.multipleBinding);
 
 
 		if (config.keyboardApi < 0 || config.keyboardApi > 3) config.keyboardApi = NO_API;
 		CheckRadioButton(hWnd, IDC_KB_DISABLE, IDC_KB_RAW, IDC_KB_DISABLE + config.keyboardApi);
 		if (config.mouseApi < 0 || config.mouseApi > 3) config.mouseApi = NO_API;
 		CheckRadioButton(hWnd, IDC_M_DISABLE, IDC_M_RAW, IDC_M_DISABLE + config.mouseApi);
-		CheckDlgButton(hWnd, IDC_G_DI, BST_CHECKED * config.gameApis.directInput);
-		CheckDlgButton(hWnd, IDC_G_XI, BST_CHECKED * config.gameApis.xInput);
-
 
 		if (!InitializeRawInput()) {
 			EnableWindow(GetDlgItem(hWnd, IDC_KB_RAW), 0);
@@ -1678,11 +1708,13 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 	case WM_COMMAND:
 		if (LOWORD(wParam) == IDC_PAD_TYPE) {
 			if (HIWORD(wParam) == CBN_SELCHANGE) {
-				int pad = ListView_GetNextItem(hWndList, -1, LVNI_SELECTED);
 				HWND hWndCombo = GetDlgItem(hWnd, IDC_PAD_TYPE);
+				int index = ListView_GetNextItem(hWndList, -1, LVNI_SELECTED);
 				int sel = SendMessage(hWndCombo, CB_GETCURSEL, 0, 0);
-				if (pad >= 0 && sel >= 0 && sel != config.padConfigs[pad][0].type) {
-					config.padConfigs[pad][0].type = (PadType)sel;
+				int port, slot;
+				if (sel < 0 || !ListIndexToPortAndSlot(index, &port, &slot)) break;
+				if (sel != config.padConfigs[port][slot].type) {
+					config.padConfigs[port][slot].type = (PadType)sel;
 					UpdatePadList(hWnd);
 					UpdatePadPages();
 					RefreshEnabledDevicesAndDisplay(0, hWnd, 1);
@@ -1732,11 +1764,11 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 			UpdatePadList(hWnd);
 		}
 		else if (HIWORD(wParam)==BN_CLICKED && LOWORD(wParam) == IDC_ANALOG_START1) {
-			int pad = ListView_GetNextItem(hWndList, -1, LVNI_SELECTED);
-			if (pad >= 0) {
-				config.padConfigs[pad][0].autoAnalog = (IsDlgButtonChecked(hWnd, IDC_ANALOG_START1) == BST_CHECKED);
-				PropSheet_Changed(hWndProp, hWnd);
-			}
+			int index = ListView_GetNextItem(hWndList, -1, LVNI_SELECTED);
+			int port, slot;
+			if (!ListIndexToPortAndSlot(index, &port, &slot)) break;
+			config.padConfigs[port][slot].autoAnalog = (IsDlgButtonChecked(hWnd, IDC_ANALOG_START1) == BST_CHECKED);
+			PropSheet_Changed(hWndProp, hWnd);
 		}
 		else {
 			int t = IDC_CLOSE_HACK1;
@@ -1748,28 +1780,18 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 				CheckDlgButton(hWnd, IDC_CLOSE_HACK1, BST_UNCHECKED);
 			}
 
-			config.forceHide = (IsDlgButtonChecked(hWnd, IDC_FORCE_HIDE) == BST_CHECKED);
-			config.closeHacks = (IsDlgButtonChecked(hWnd, IDC_CLOSE_HACK1) == BST_CHECKED) |
-				((IsDlgButtonChecked(hWnd, IDC_CLOSE_HACK2) == BST_CHECKED)<<1) |
-				((IsDlgButtonChecked(hWnd, IDC_CLOSE_HACK3) == BST_CHECKED)<<2);
-			config.background = (IsDlgButtonChecked(hWnd, IDC_BACKGROUND) == BST_CHECKED);
-			config.mouseUnfocus = (IsDlgButtonChecked(hWnd, IDC_MOUSE_UNFOCUS) == BST_CHECKED);
+			int mtap = config.multitap[0] + 2*config.multitap[1];
 
-			config.GSThreadUpdates = (IsDlgButtonChecked(hWnd, IDC_GS_THREAD_INPUT) == BST_CHECKED);
-			config.escapeFullscreenHack = (IsDlgButtonChecked(hWnd, IDC_ESCAPE_FULLSCREEN_HACK) == BST_CHECKED);
-
-			config.disableScreenSaver = (IsDlgButtonChecked(hWnd, IDC_DISABLE_SCREENSAVER) == BST_CHECKED);
-			config.GH2 = (IsDlgButtonChecked(hWnd, IDC_GH2_HACK) == BST_CHECKED);
-			config.saveStateTitle = (IsDlgButtonChecked(hWnd, IDC_SAVE_STATE_TITLE) == BST_CHECKED);
-
-			u8 newVistaVolume = (IsDlgButtonChecked(hWnd, IDC_VISTA_VOLUME) == BST_CHECKED);
-			if (config.vistaVolume != newVistaVolume) {
-				config.vistaVolume = newVistaVolume;
-				SetVolume(100);
+			for (int j=0; j<sizeof(BoolOptionsInfo)/sizeof(BoolOptionsInfo[0]); j++) {
+				config.bools[j] = (IsDlgButtonChecked(hWnd, BoolOptionsInfo[j].ControlId) == BST_CHECKED);
 			}
 
-			config.debug = (IsDlgButtonChecked(hWnd, IDC_DEBUG_FILE) == BST_CHECKED);
-			config.multipleBinding = (IsDlgButtonChecked(hWnd, IDC_MULTIPLE_BINDING) == BST_CHECKED);
+			config.closeHacks = (IsDlgButtonChecked(hWnd, IDC_CLOSE_HACK1) == BST_CHECKED) |
+				((IsDlgButtonChecked(hWnd, IDC_CLOSE_HACK2) == BST_CHECKED)<<1);
+
+			if (!config.vistaVolume) {
+				SetVolume(100);
+			}
 
 			for (i=0; i<4; i++) {
 				if (IsDlgButtonChecked(hWnd, IDC_KB_DISABLE+i) == BST_CHECKED) {
@@ -1791,11 +1813,10 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 					config.mouseApi = (DeviceAPI)i;
 				}
 			}
-			config.gameApis.directInput = (IsDlgButtonChecked(hWnd, IDC_G_DI) == BST_CHECKED);
-			config.gameApis.xInput = (IsDlgButtonChecked(hWnd, IDC_G_XI) == BST_CHECKED);
 
-			config.forceHide = (IsDlgButtonChecked(hWnd, IDC_FORCE_HIDE) == BST_CHECKED);
-
+			if (mtap != config.multitap[0] + 2*config.multitap[1]) {
+				UpdatePadPages();
+			}
 			RefreshEnabledDevicesAndDisplay(0, hWnd, 1);
 			UpdatePadList(hWnd);
 

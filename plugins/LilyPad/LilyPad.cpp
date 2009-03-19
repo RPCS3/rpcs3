@@ -526,6 +526,8 @@ u32 CALLBACK PS2EgetLibVersion2(u32 type) {
 void GetNameAndVersionString(wchar_t *out) {
 #ifdef _DEBUG
 	wsprintfW(out, L"LilyPad Debug %i.%i.%i (r%i)", (VERSION>>8)&0xFF, VERSION&0xFF, (VERSION>>24)&0xFF, SVN_REV);
+#elif (_MSC_VER != 1400)
+	wsprintfW(out, L"LilyPad svn %i.%i.%i (r%i)", (VERSION>>8)&0xFF, VERSION&0xFF, (VERSION>>24)&0xFF, SVN_REV);
 #else
 	wsprintfW(out, L"LilyPad %i.%i.%i", (VERSION>>8)&0xFF, VERSION&0xFF, (VERSION>>24)&0xFF, SVN_REV);
 #endif
@@ -537,6 +539,11 @@ char* CALLBACK PSEgetLibName() {
 	sprintf(version, "LilyPad Debug (r%i)", SVN_REV);
 	return version;
 #else
+	#if (_MSC_VER != 1400)
+		static char version[50];
+		sprintf(version, "LilyPad svn (r%i)", SVN_REV);
+		return version;
+	#endif
 	return "LilyPad";
 #endif
 }
@@ -617,6 +624,11 @@ s32 CALLBACK PADinit(u32 flags) {
 
 	query.lastByte = 1;
 	query.numBytes = 0;
+	ClearKeyQueue();
+	// Just in case, when resuming emulation.
+	QueueKeyEvent(VK_SHIFT, KEYRELEASE);
+	QueueKeyEvent(VK_MENU, KEYRELEASE);
+	QueueKeyEvent(VK_CONTROL, KEYRELEASE);
 	return 0;
 }
 
@@ -1142,21 +1154,6 @@ DWORD WINAPI RenameWindowThreadProc(void *lpParameter) {
 	return 0;
 }
 
-// For escape fullscreen hack.  This doesn't work when called from another thread, for some reason.
-// That includes a new thread, independent of GS and PCSX2 thread, so use this to make sure it's
-// called from the right spot.
-ExtraWndProcResult KillFullScreenProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, LRESULT *output) {
-	// Prevent infinite recursion.  Could also just remove this function from the list,
-	// but CONTINUE_BLISSFULLY_AND_RELEASE_PROC is a safer way to do that.
-	static int inFunction = 0;
-	if (!inFunction) {
-		inFunction = 1;
-		ShowWindow(hWnd, SW_MINIMIZE);
-		inFunction = 0;
-	}
-	return CONTINUE_BLISSFULLY_AND_RELEASE_PROC;
-}
-
 keyEvent* CALLBACK PADkeyEvent() {
 	if (!config.GSThreadUpdates) {
 		Update(2);
@@ -1172,7 +1169,6 @@ keyEvent* CALLBACK PADkeyEvent() {
 			QueueKeyEvent(-2, KEYPRESS);
 			HANDLE hThread = CreateThread(0, 0, MaximizeWindowThreadProc, 0, 0, 0);
 			if (hThread) CloseHandle(hThread);
-			//ShowWindowAsync(hWnd, SW_HIDE);
 			restoreFullScreen = 1;
 			return 0;
 		}
@@ -1190,7 +1186,7 @@ keyEvent* CALLBACK PADkeyEvent() {
 		saveStateIndex = (saveStateIndex+10)%10;
 		if (config.saveStateTitle) {
 			// GSDX only checks its window's message queue at certain points or something, so
-			// have to do this in another thread to prevent lockup.
+			// have to do this in another thread to prevent deadlock.
 			HANDLE hThread = CreateThread(0, 0, RenameWindowThreadProc, 0, 0, 0);
 			if (hThread) CloseHandle(hThread);
 		}

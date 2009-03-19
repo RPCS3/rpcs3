@@ -24,13 +24,14 @@
 #define IDC_G_XI                        1110
 #define IDC_G_DI                        1111
 #define IDC_CLOSE_HACK2                 1112
-#define IDC_CLOSE_HACK3                 1113
 #define IDC_DEBUG_FILE                  1114
 #define IDC_GUITAR1                     1115
 #define IDC_ANALOG_START1               1117
+#define IDC_MULTITAP1                   1118
 #define IDC_DISABLE_SCREENSAVER         1119
 #define IDC_MOUSE_UNFOCUS               1120
 #define IDC_AXIS_BUTTONS                1121
+#define IDC_MULTITAP2                   1121
 #define IDC_BACKGROUND                  1122
 #define IDC_MULTIPLE_BINDING            1123
 #define IDC_DISABLE_SCREENSAVER2        1124

@@ -21,31 +21,41 @@ struct GeneralConfig {
 public:
 	PadConfig padConfigs[2][4];
 
-	u8 mouseUnfocus;
-	u8 disableScreenSaver;
 	u8 closeHacks;
 
 	DeviceAPI keyboardApi;
 	DeviceAPI mouseApi;
-	struct {
-		u8 directInput;
-		u8 xInput;
-	} gameApis;
-	u8 debug;
-	u8 background;
-	u8 multipleBinding;
-	u8 forceHide;
-	u8 GH2;
 
 	// Derived value, calculated by GetInput().
 	u8 ignoreKeys;
 
-	u8 GSThreadUpdates;
-	u8 escapeFullscreenHack;
+	union {
+		struct {
+			u8 forceHide;
+			u8 mouseUnfocus;
+			u8 background;
+			u8 multipleBinding;
 
-	u8 saveStateTitle;
+			struct {
+				u8 directInput;
+				u8 xInput;
+			} gameApis;
 
-	u8 vistaVolume;
+			u8 multitap[2];
+
+			u8 GSThreadUpdates;
+			u8 escapeFullscreenHack;
+			u8 disableScreenSaver;
+			u8 debug;
+
+			u8 saveStateTitle;
+			u8 GH2;
+
+			u8 vistaVolume;
+		};
+		u8 bools[1];
+	};
+
 	int volume;
 
 	// Unlike the others, not a changeable value.
