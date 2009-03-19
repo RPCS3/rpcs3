@@ -586,22 +586,13 @@ __forceinline void dmaSIF2() {
 }
 
 
-void SaveState::sifFreeze() {
+void SaveState::sifFreeze()
+{
+	FreezeTag( "SIFdma" );
+
 	Freeze(sif0);
 	Freeze(sif1);
 
-	if( GetVersion() >= 0x0002 )
-	{
-		Freeze(eesifbusy);
-		Freeze(iopsifbusy);
-	}
-	else if( IsLoading() )
-	{
-		// Old savestate, inferior data so...
-		// Take an educated guess on what they should be.  Or well, set to 1 because
-		// it more or less forces them to "kick"
-
-		iopsifbusy[0] = eesifbusy[0] = 1;
-		iopsifbusy[1] = eesifbusy[1] = 1;
-	}
+	Freeze(eesifbusy);
+	Freeze(iopsifbusy);
 }

@@ -786,6 +786,7 @@ struct Freeze_v10Compat
 
 void SaveState::cdvdFreeze()
 {
+	FreezeTag( "cdvd" );
 	Freeze( cdvd );
 
 	if( IsLoading() )

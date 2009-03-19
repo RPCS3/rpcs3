@@ -66,7 +66,8 @@ struct EECNT_MODE
 
 // fixme: Cycle and sCycleT members are unused.
 //	      But they can't be removed without making a new savestate version.
-struct Counter {
+struct Counter
+{
 	u32 count;
 	union
 	{
@@ -75,10 +76,14 @@ struct Counter {
 	};
 	u32 target, hold;
 	u32 rate, interrupt;
-	u32 Cycle;
+	u32 sCycleT;		// delta values should be signed.
+};
+
+struct SyncCounter
+{
+	u32 Mode;
 	u32 sCycle;					// start cycle of timer
 	s32 CycleT;
-	u32 sCycleT;		// delta values should be signed.
 };
 
 //------------------------------------------------------------------
@@ -124,7 +129,10 @@ struct Counter {
 #define MODE_HBLANK		0x1		//Set for the remaining ~1/6 of 1 Scanline
 
 
-extern Counter counters[6];
+extern Counter counters[4];
+extern SyncCounter hsyncCounter;
+extern SyncCounter vsyncCounter;
+
 extern s32 nextCounter;		// delta until the next counter event (must be signed)
 extern u32 nextsCounter;
 

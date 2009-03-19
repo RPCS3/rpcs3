@@ -615,13 +615,12 @@ void gifMFIFOInterrupt()
 
 void SaveState::gifFreeze()
 {
-	if( GetVersion() >= 0x04 )
-	{
-		Freeze( gifstate );
-		Freeze( gifqwc );
-		Freeze( gspath3done );
-		Freeze( gscycles );
+	FreezeTag( "GIFdma" );
 
-		// Note: mfifocycles is not a persistent var, so no need to save it here.
-	}
+	Freeze( gifstate );
+	Freeze( gifqwc );
+	Freeze( gspath3done );
+	Freeze( gscycles );
+
+	// Note: mfifocycles is not a persistent var, so no need to save it here.
 }

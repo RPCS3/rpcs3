@@ -1344,23 +1344,17 @@ void vif0Reset() {
 
 void SaveState::vif0Freeze()
 {
+	FreezeTag( "VIFdma" );
+
 	// Dunno if this one is needed, but whatever, it's small. :)
-	if( GetVersion() >= 0x04 )
-		Freeze( g_vifCycles );
+	Freeze( g_vifCycles );
 
 	Freeze( vif0 );
-	if( GetVersion() >= 0x04 )
-	{
-		Freeze( g_vif0HasMask3 );
-		Freeze( g_vif0Masks );
-		Freeze( g_vifRow0 );
-		Freeze( g_vifCol0 );
-	}
-	else if( IsLoading() )
-	{
-		// Hack to "help" old savestates recover...
-		SetNewMask(g_vif0Masks, g_vif0HasMask3, vif0Regs->mask, ~vif0Regs->mask);
-	}
+
+	Freeze( g_vif0HasMask3 );
+	Freeze( g_vif0Masks );
+	Freeze( g_vifRow0 );
+	Freeze( g_vifCol0 );
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -2357,16 +2351,8 @@ void SaveState::vif1Freeze()
 {
 	Freeze(vif1);
 	
-	if( GetVersion() >= 0x04 )
-	{
-		Freeze( g_vif1HasMask3 );
-		Freeze( g_vif1Masks );
-		Freeze( g_vifRow1 );
-		Freeze( g_vifCol1 );
-	}
-	else if( IsLoading() )
-	{
-		SetNewMask(g_vif1Masks, g_vif1HasMask3, vif1Regs->mask, ~vif1Regs->mask);
-		//if(vif1ch->chcr & 0x100) vif1.done = 0;
-	}
+	Freeze( g_vif1HasMask3 );
+	Freeze( g_vif1Masks );
+	Freeze( g_vifRow1 );
+	Freeze( g_vifCol1 );
 }

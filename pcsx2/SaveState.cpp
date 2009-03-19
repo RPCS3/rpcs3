@@ -53,7 +53,9 @@ string SaveState::GetFilename( int slot )
 	return Path::Combine( SSTATES_DIR, fmt_string( "%8.8X.%3.3d", ElfCRC, slot ) );
 }
 
-SaveState::SaveState( const char* msg, const string& destination ) : m_version( g_SaveVersion )
+SaveState::SaveState( const char* msg, const string& destination ) :
+	m_version( g_SaveVersion )
+,	m_tagspace( 128 )
 {
 	Console::WriteLn( "%s %hs", params msg, &destination );
 }
@@ -77,44 +79,76 @@ s32 CALLBACK gsSafeFreeze( int mode, freezeData *data )
 	}
 }
 
+void SaveState::FreezeTag( const char* src )
+{
+	const int length = strlen( src );
+	m_tagspace.MakeRoomFor( length+1 );
+	
+	strcpy( m_tagspace.GetPtr(), src );
+	FreezeMem( m_tagspace.GetPtr(), length );
+
+	if( strcmp( m_tagspace.GetPtr(), src ) != 0 )
+	{
+		assert( 0 );
+		throw Exception::BadSavedState( string( "Tag: " )+src );
+	}
+}
+
 void SaveState::FreezeAll()
 {
 	if( IsLoading() )
 		PreLoadPrep();
+		
+	// Check the BIOS, and issue a warning if the bios for this state
+	// doesn't match the bios currently being used (chances are it'll still
+	// work fine, but some games are very picky).
 
-	FreezeMem(PS2MEM_BASE, Ps2MemSize::Base);	// 32 MB main memory   
-	FreezeMem(PS2MEM_ROM, Ps2MemSize::Rom);		// 4 mb rom memory
-	FreezeMem(PS2MEM_ROM1, Ps2MemSize::Rom1);	// 256kb rom1 memory
+	char descout[128], descin[128];
+	memzero_obj( descout );
+	IsBIOS( Config.Bios, descout );
+	memcpy_fast( descin, descout, 128 );
+	Freeze( descin );
+	
+	if( memcmp( descin, descout, 128 ) != 0 )
+	{
+		Console::Error(
+			"\n\tWarning: BIOS Version Mismatch, savestate may be unstable!\n"
+			"\t\tCurrent BIOS:   %s\n"
+			"\t\tSavestate BIOS: %s\n",
+			params descout, descin
+		);
+	}
+
+	// First Block - Memory Dumps
+	// ---------------------------
+	FreezeMem(PS2MEM_BASE, Ps2MemSize::Base);		// 32 MB main memory   
 	FreezeMem(PS2MEM_SCRATCH, Ps2MemSize::Scratch);	// scratch pad 
-	FreezeMem(PS2MEM_HW, Ps2MemSize::Hardware);			// hardware memory
+	FreezeMem(PS2MEM_HW, Ps2MemSize::Hardware);		// hardware memory
 
+	FreezeMem(psxM, Ps2MemSize::IopRam);		// 2 MB main memory
+	FreezeMem(psxH, Ps2MemSize::IopHardware);	// hardware memory
+	FreezeMem(psxS, 0x000100);					// iop's sif memory	
+
+	// Second Block - Various CPU Registers and States
+	// -----------------------------------------------
+	FreezeTag( "cpuRegs" );
 	Freeze(cpuRegs);   // cpu regs + COP0
 	Freeze(psxRegs);   // iop regs
-	if (GetVersion() >= 0x6)
-		Freeze(fpuRegs);
-	else 
-	{
-		// Old versiosn didn't save the ACCflags...
-		FreezeLegacy(fpuRegs, sizeof(u32));   // fpu regs
-		fpuRegs.ACCflag = 0;
-	}
+	Freeze(fpuRegs);
 	Freeze(tlb);           // tlbs
 
+	// Third Block - Cycle Timers and Events
+	// -------------------------------------
+	FreezeTag( "Cycles" );
 	Freeze(EEsCycle);
 	Freeze(EEoCycle);
-	Freeze(psxRegs.cycle);		// used to be IOPoCycle.  This retains compatibility.
 	Freeze(g_nextBranchCycle);
 	Freeze(g_psxNextBranchCycle);
-
 	Freeze(s_iLastCOP0Cycle);
 	Freeze(s_iLastPERFCycle);
 
-	u32 dummy = 1;
-	Freeze( dummy );		// was g_psxWriteOk
-	
-	
-	//hope didn't forgot any cpu....
-
+	// Fourth Block - EE-related systems
+	// ---------------------------------
 	rcntFreeze();
 	gsFreeze();
 	vuMicroFreeze();
@@ -125,17 +159,16 @@ void SaveState::FreezeAll()
 	gifFreeze();
 	sprFreeze();
 
-	// iop now
-	FreezeMem(psxM, Ps2MemSize::IopRam);        // 2 MB main memory
-	FreezeMem(psxH, Ps2MemSize::IopHardware); // hardware memory
-	//FreezeMem(psxS, 0x00010000);        // sif memory	
-
+	// Fifth Block - iop-related systems
+	// ---------------------------------
+	psxRcntFreeze();
 	sioFreeze();
+	sio2Freeze();
 	cdrFreeze();
 	cdvdFreeze();
-	psxRcntFreeze();
-	sio2Freeze();
 
+	// Sixth Block - Plugins Galore!
+	// -----------------------------
 	FreezePlugin( "GS", gsSafeFreeze );
 	FreezePlugin( "SPU2", SPU2freeze );
 	FreezePlugin( "DEV9", DEV9freeze );
@@ -145,18 +178,6 @@ void SaveState::FreezeAll()
 
 	if( IsLoading() )
 		PostLoadPrep();
-}
-
-// this function is yet incomplete.  Version numbers hare still < 0x12 so it won't be run.
-// (which is good because it won't work :P)
-void SaveState::_testCdvdCrc()
-{
-	/*if( GetVersion() < 0x0012 ) return;
-
-	u32 thiscrc = ElfCRC;
-	Freeze( thiscrc );
-	if( thiscrc != ElfCRC )
-		throw Exception::StateCrcMismatch( thiscrc, ElfCRC );*/
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -215,8 +236,6 @@ gzLoadingState::gzLoadingState( const string& filename ) :
 			"\tThe savestate was created with a newer version of Pcsx2.  I don't know how to load it!" );
 		throw Exception::UnsupportedStateVersion( m_version );
 	}
-
-	_testCdvdCrc();
 }
 
 gzLoadingState::~gzLoadingState() { }
@@ -229,34 +248,30 @@ void gzSavingState::FreezeMem( void* data, int size )
 
 void gzLoadingState::FreezeMem( void* data, int size )
 {
-	gzread( m_file, data, size );
-	if( gzeof( m_file ) )
+	if( gzread( m_file, data, size ) != size )
 		throw Exception::BadSavedState( m_filename );
 }
 
 void gzSavingState::FreezePlugin( const char* name, s32 (CALLBACK *freezer)(int mode, freezeData *data) )
 {
-	Console::WriteLn( "\tSaving %s", params name );
 	freezeData fP = { 0, NULL };
+	Console::WriteLn( "\tSaving %s", params name );
+
+	FreezeTag( name );
 
 	if (freezer(FREEZE_SIZE, &fP) == -1)
 		throw Exception::FreezePluginFailure( name, "saving" );
 
-	gzwrite(m_file, &fP.size, sizeof(fP.size));
+	Freeze( fP.size );
 	if( fP.size == 0 ) return;
 
-	fP.data = (s8*)malloc(fP.size);
-	if (fP.data == NULL)
-		throw Exception::OutOfMemory();
+	SafeArray<s8> buffer( fP.size );
+	fP.data = buffer.GetPtr();
 
 	if(freezer(FREEZE_SAVE, &fP) == -1)
 		throw Exception::FreezePluginFailure( name, "saving" );
 
-	if (fP.size)
-	{
-		gzwrite(m_file, fP.data, fP.size);
-		free(fP.data);
-	}
+	FreezeMem( fP.data, fP.size );
 }
 
 void gzLoadingState::FreezePlugin( const char* name, s32 (CALLBACK *freezer)(int mode, freezeData *data) )
@@ -264,21 +279,17 @@ void gzLoadingState::FreezePlugin( const char* name, s32 (CALLBACK *freezer)(int
 	freezeData fP = { 0, NULL };
 	Console::WriteLn( "\tLoading %s", params name );
 
-	gzread(m_file, &fP.size, sizeof(fP.size));
+	FreezeTag( name );
+	Freeze( fP.size );
 	if( fP.size == 0 ) return;
 
-	fP.data = (s8*)malloc(fP.size);
-	if (fP.data == NULL)
-		throw Exception::OutOfMemory();
-	int read = gzread(m_file, fP.data, fP.size);
+	SafeArray<s8> buffer( fP.size );
+	fP.data = buffer.GetPtr();
 
-	if( read != fP.size )
-		throw Exception::BadSavedState( m_filename );
+	FreezeMem( fP.data, fP.size );
 
 	if(freezer(FREEZE_LOAD, &fP) == -1)
 		throw Exception::FreezePluginFailure( name, "loading" );
-
-	if (fP.size) free(fP.data);
 }
 
 //////////////////////////////////////////////////////////////////////////////////

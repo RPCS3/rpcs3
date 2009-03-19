@@ -24,10 +24,14 @@
 #include "PS2Edefs.h"
 #endif
 #include "System.h"
+
 // Savestate Versioning!
 //  If you make changes to the savestate version, please increment the value below.
+//  If the change is minor and compatibility with old states is retained, increment
+//  the lower 16 bit value.  IF the change is breaking of all compatibility with old
+//  states, increment the upper 16 bit value, and clear the lower 16 bits to 0.
 
-static const u32 g_SaveVersion = 0x8b400006;
+static const u32 g_SaveVersion = 0x8b410000;
 
 // this function is meant to be used in the place of GSfreeze, and provides a safe layer
 // between the GS saving function and the MTGS's needs. :)
@@ -41,6 +45,7 @@ class SaveState
 {
 protected:
 	u32 m_version;		// version of the savestate being loaded.
+	SafeArray<char> m_tagspace;
 
 public:
 	SaveState( const char* msg, const string& destination );
@@ -76,6 +81,12 @@ public:
 		FreezeMem( &data, sizeof( T ) - sizeOfNewStuff );
 	}
 
+	// Freezes an identifier value into the savestate for troubleshooting purposes.
+	// Identifiers can be used to determine where in a savestate that data has become
+	// skewed (if the value does not match then the error occurs somewhere prior to that
+	// position).
+	void FreezeTag( const char* src );
+
 	// Loads or saves a plugin.  Plugin name is for console logging purposes.
 	virtual void FreezePlugin( const char* name, s32 (CALLBACK* freezer)(int mode, freezeData *data) )=0; 
 
@@ -94,11 +105,6 @@ public:
 	virtual void gsFreeze();
 
 protected:
-
-	// Used internally by constructors to check the cdvd's crc against the CRC of the savestate.
-	// This allows for proper exception handling of changed CDs on-the-fly.
-	void _testCdvdCrc();
-
 
 	// Load/Save functions for the various components of our glorious emulator!
 

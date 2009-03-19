@@ -944,15 +944,9 @@ void cdrReset() {
 	cdReadTime = (PSXCLK / 1757) * BIAS; 
 }
 
-void SaveState::cdrFreeze() {
+void SaveState::cdrFreeze()
+{
+	FreezeTag( "cdrom" );
 	Freeze(cdr);
-
-	// Alrighty!  This code used to, for some reason, recalculate the pTransfer value
-	// even though it's being saved as part of the cdr struct.  Probably a backwards
-	// compat fix with an earlier save version.
-
-	int tmp; // = (int)(cdr.pTransfer - cdr.Transfer);
-	Freeze(tmp);
-	//if (Mode == 0) cdr.pTransfer = cdr.Transfer + tmp;
 }
 

@@ -25,8 +25,7 @@
 struct psxCounter {
 	u64 count, target;
     u32 mode;
-	u32 rate, interrupt, otarget;
-	u32 sCycle, Cycle;
+	u32 rate, interrupt;
 	u32 sCycleT;
 	s32 CycleT;
 };

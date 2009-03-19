@@ -203,6 +203,7 @@ u8 sio2_fifoOut(){
 
 void SaveState::sio2Freeze()
 {
+	FreezeTag( "sio2" );
 	Freeze(sio2);
 }
 

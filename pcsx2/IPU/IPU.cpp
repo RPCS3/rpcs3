@@ -163,14 +163,14 @@ void ipuShutdown()
 
 // fixme - ipuFreeze looks fairly broken. Should probably take a closer look at some point.
 
-void SaveState::ipuFreeze() {
+void SaveState::ipuFreeze()
+{
 	IPUProcessInterrupt();
 
-	if( GetVersion() < 0x04 )
-	{
-		// old versions saved the IPU regs, but they're already saved as part of HW!
-		FreezeMem(ipuRegs, sizeof(IPUregisters));
-	}
+	FreezeTag( "IPU" );
+
+	// old versions saved the IPU regs, but they're already saved as part of HW!
+	//FreezeMem(ipuRegs, sizeof(IPUregisters));
 	
 	Freeze(g_nDMATransfer);
 	Freeze(FIreadpos);
