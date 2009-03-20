@@ -140,6 +140,9 @@ public:
 	// I keep track of state of non-disabled non-initialized
 	// pads, but should never be asked for their state.
 	u8 initialized;
+
+	// initialized and not disabled (and mtap state for slots > 0).
+	u8 enabled;
 } pads[2][4];
 
 // Active slots for each port.
@@ -167,10 +170,14 @@ void UpdateEnabledDevices(int updateList = 0) {
 	// Enable all devices I might want.  Can ignore the rest.
 	RefreshEnabledDevices(updateList);
 	// Figure out which pads I'm getting input for.
-	int padsEnabled[2][4];
 	for (int port = 0; port<2; port++) {
 		for (int slot = 0; slot<4; slot++) {
-			padsEnabled[port][slot] = pads[port][slot].initialized && config.padConfigs[port][slot].type != DisabledPad;
+			if (slot && !config.multitap[slot]) {
+				pads[port][slot].enabled = 0;
+			}
+			else {
+				pads[port][slot].enabled = pads[port][slot].initialized && config.padConfigs[port][slot].type != DisabledPad;
+			}
 		}
 	}
 	for (int i=0; i<dm->numDevices; i++) {
@@ -203,7 +210,7 @@ void UpdateEnabledDevices(int updateList = 0) {
 			int numActiveBindings = 0;
 			for (int port=0; port<2; port++) {
 				for (int slot=0; slot<4; slot++) {
-					if (padsEnabled[port][slot]) {
+					if (pads[port][slot].enabled) {
 						numActiveBindings += dev->pads[port][slot].numBindings + dev->pads[port][slot].numFFBindings;
 					}
 				}
@@ -560,6 +567,7 @@ char* CALLBACK PS2EgetLibName(void) {
 void CALLBACK PADshutdown() {
 	for (int i=0; i<8; i++)
 		pads[i&1][i>>1].initialized = 0;
+	portInitialized[0] = portInitialized[1] = 0;
 	UnloadConfigs();
 }
 
@@ -585,6 +593,7 @@ void ResetPad(int port, int slot) {
 	if (config.padConfigs[port][slot].autoAnalog) {
 		pads[port][slot].mode = MODE_ANALOG;
 	}
+	pads[port][slot].initialized = 1;
 }
 
 
@@ -605,8 +614,8 @@ s32 CALLBACK PADinit(u32 flags) {
 	if (LoadSettings() < 0) {
 		return -1;
 	}
-	int pad = (flags & 3);
-	if (pad == 3) {
+	int port = (flags & 3);
+	if (port == 3) {
 		if (PADinit(1)) return -1;
 		return PADinit(2);
 	}
@@ -615,12 +624,14 @@ s32 CALLBACK PADinit(u32 flags) {
 	tmpFlag |= _CRTDBG_LEAK_CHECK_DF;
 	_CrtSetDbgFlag( tmpFlag );
 	#endif
-	pad --;
 
-	ResetPad(pad, 0);
+	port --;
 
-	pads[pad][0].initialized = 1;
-	memset(slots, 0, sizeof(slots));
+	for (int i=0; i<4; i++) {
+		ResetPad(port, i);
+	}
+	slots[port] = 0;
+	portInitialized[port] = 1;
 
 	query.lastByte = 1;
 	query.numBytes = 0;
@@ -830,16 +841,16 @@ void CALLBACK PADclose() {
 	}
 }
 
-u8 CALLBACK PADstartPoll(int pad) {
+u8 CALLBACK PADstartPoll(int port) {
 	DEBUG_NEW_SET();
-	pad--;
-	if ((unsigned int)pad <= 1) {
+	port--;
+	if ((unsigned int)port <= 1) {
 		query.queryDone = 0;
-		query.port = pad;
-		query.slot = slots[query.port];
+		query.port = port;
+		query.slot = slots[port];
 		query.numBytes = 2;
 		query.lastByte = 0;
-		DEBUG_IN(pad);
+		DEBUG_IN(port);
 		DEBUG_OUT(0xFF);
 		return 0xFF;
 	}
@@ -847,7 +858,7 @@ u8 CALLBACK PADstartPoll(int pad) {
 		query.queryDone = 1;
 		query.numBytes = 0;
 		query.lastByte = 1;
-		DEBUG_IN(pad);
+		DEBUG_IN(port);
 		DEBUG_OUT(0);
 		return 0;
 	}
@@ -1232,11 +1243,10 @@ s32 CALLBACK PADfreeze(int mode, freezeData *data) {
 		data->size = sizeof(PadPluginFreezeData);
 	}
 	else if (mode == FREEZE_LOAD) {
-		if (data->size < sizeof(PadPluginFreezeData)) return 0;
 		PadPluginFreezeData &pdata = *(PadPluginFreezeData*)(data->data);
-		if (pdata.version != PAD_SAVE_STATE_VERSION || strcmp(pdata.format, "PadMode")) {
-			return 0;
-		}
+		if (data->size != sizeof(PadPluginFreezeData) ||
+			pdata.version != PAD_SAVE_STATE_VERSION ||
+			strcmp(pdata.format, "PadMode")) return 0;
 		StopVibrate();
 		int port = pdata.port;
 		for (int slot=0; slot<4; slot++) {
@@ -1249,10 +1259,10 @@ s32 CALLBACK PADfreeze(int mode, freezeData *data) {
 			pads[port][slot].modeLock = pdata.padData[slot].modeLock;
 			memcpy(pads[port][slot].umask, pdata.padData[slot].umask, sizeof(pads[port][slot].umask));
 
-			slots[port] = slot;
 			// Means I only have to have one chunk of code to parse vibrate info.
 			// Other plugins don't store it exactly, but think it's technically correct
 			// to do so, though I could be wrong.
+			slots[port] = slot;
 			PADstartPoll(port+1);
 			PADpoll(0x4D);
 			for (int j=0; j<7; j++) {
@@ -1321,3 +1331,12 @@ extern "C" long _cdecl _ftol2() {
 	return _ftol();
 }
 #endif
+
+int CALLBACK PADsetSlot(int port, int slot) {
+	port --;
+	slot --;
+	if ((unsigned int)port > 1 || (unsigned int)slot > 3) return 0;
+	// Even if no pad there, record the slot, as it is the active slot already.
+	slots[port] = slot;
+	return pads[port][slot].enabled;
+}

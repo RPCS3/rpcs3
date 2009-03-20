@@ -86,7 +86,6 @@
 				GenerateManifest="false"
 				ModuleDefinitionFile=".\LilyPad.def"
 				GenerateDebugInformation="true"
-				ProgramDatabaseFile=".\Debug/LilyPad.pdb"
 				ImportLibrary=".\Debug/LilyPad.lib"
 				TargetMachine="1"
 			/>
