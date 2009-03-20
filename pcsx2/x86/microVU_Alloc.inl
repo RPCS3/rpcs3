@@ -24,6 +24,76 @@
 //------------------------------------------------------------------
 
 //------------------------------------------------------------------
+// FMAC1 - Normal FMAC Opcodes
+//------------------------------------------------------------------
+
+#define aReg(x) mVUallocInfo.regs.VF[x]
+#define aMax(x, y) ((x > y) ? x : y)
+
+#define analyzeReg1(reg) {							\
+	if (reg) {										\
+		if (_X) { mVal = aMax(mVal, aReg(reg).x); }	\
+		if (_Y) { mVal = aMax(mVal, aReg(reg).y); }	\
+		if (_Z) { mVal = aMax(mVal, aReg(reg).z); }	\
+		if (_W) { mVal = aMax(mVal, aReg(reg).w); } \
+	}												\
+}
+
+#define analyzeReg2(reg) {				\
+	if (reg) {							\
+		if (_X) { aReg(reg).x = 4; }	\
+		if (_Y) { aReg(reg).y = 4; }	\
+		if (_Z) { aReg(reg).z = 4; }	\
+		if (_W) { aReg(reg).w = 4; }	\
+	}									\
+}
+
+microVUt(void) mVUanalyzeFMAC1(int Fd, int Fs, int Ft) {
+	microVU* mVU = mVUx;
+	int mVal = 0;
+	mVUinfo |= _doStatus;
+	analyzeReg1(Fs);
+	analyzeReg1(Ft);
+	incCycles(mVal);
+	analyzeReg2(Fd);
+}
+
+//------------------------------------------------------------------
+// FMAC2 - ABS/FTOI/ITOF Opcodes
+//------------------------------------------------------------------
+
+microVUt(void) mVUanalyzeFMAC2(int Fs, int Ft) {
+	microVU* mVU = mVUx;
+	int mVal = 0;
+	analyzeReg1(Fs);
+	incCycles(mVal);
+	analyzeReg2(Ft);
+}
+
+//------------------------------------------------------------------
+// FMAC3 - BC(xyzw) FMAC Opcodes
+//------------------------------------------------------------------
+
+#define analyzeReg3(reg) {									\
+	if (reg) {												\
+		if (_bc_x)		{ mVal = aMax(mVal, aReg(reg).x); } \
+		else if (_bc_y) { mVal = aMax(mVal, aReg(reg).y); }	\
+		else if (_bc_z) { mVal = aMax(mVal, aReg(reg).z); }	\
+		else			{ mVal = aMax(mVal, aReg(reg).w); } \
+	}														\
+}
+
+microVUt(void) mVUanalyzeFMAC3(int Fd, int Fs, int Ft) {
+	microVU* mVU = mVUx;
+	int mVal = 0;
+	mVUinfo |= _doStatus;
+	analyzeReg1(Fs);
+	analyzeReg3(Ft);
+	incCycles(mVal);
+	analyzeReg2(Fd);
+}
+
+//------------------------------------------------------------------
 // Micro VU - recPass 1 Functions
 //------------------------------------------------------------------
 
@@ -146,12 +216,7 @@ microVUt(void) mVUallocFMAC3b(int& Fd) {
 	if (_W)	{ mVUloadReg<vuIndex>(reg, (uptr)&mVU->regs->VF[0].UL[0], _xyzw_ACC); }  \
 	else	{ SSE_XORPS_XMM_to_XMM(reg, reg); }  \
 }
-/*
-#define getACC(reg) {  \
-	reg = xmmACC0 + writeACC;  \
-	if (_X_Y_Z_W != 15) { SSE_MOVAPS_XMM_to_XMM(reg, (xmmACC0 + prevACC)); }  \
-}
-*/
+
 microVUt(void) mVUallocFMAC4a(int& ACC, int& Fs, int& Ft) {
 	microVU* mVU = mVUx;
 	ACC = xmmACC;
