@@ -24,6 +24,7 @@
 
 #define ALSA_MEM_DEF
 #include "Alsa.h"
+#include "SndOut.h"
 
 class AlsaMod: public SndOutModule
 {
@@ -31,10 +32,11 @@ protected:
 	static const int PacketsPerBuffer = 1;	// increase this if ALSA can't keep up with 512-sample packets
 	static const int MAX_BUFFER_COUNT = 4;
 	static const int NumBuffers = 4;		// TODO: this should be configurable someday -- lower values reduce latency.
+	unsigned int pspeed;
 
-	snd_pcm_t *handle = NULL;
+	snd_pcm_t *handle;
 	snd_pcm_uframes_t buffer_size;
-	snd_async_handler_t *pcm_callback = NULL;
+	snd_async_handler_t *pcm_callback;
 	
 	uint period_time;
 	uint buffer_time;
@@ -64,7 +66,7 @@ protected:
 	// entry point for our C++ified object state. :)
 	static void ExternalCallback( snd_async_handler_t *pcm_callback )
 	{
-		AlsaMod *data = snd_async_handler_get_callback_private( pcm_callback );
+		AlsaMod *data = (AlsaMod*)snd_async_handler_get_callback_private( pcm_callback );
 
 		jASSUME( data != NULL );
 		jASSUME( data->handle == snd_async_handler_get_pcm(pcm_callback) );
@@ -85,6 +87,10 @@ public:
 		int pchannels = 2;
 		snd_pcm_format_t format = SND_PCM_FORMAT_S16_LE;
 
+		handle = NULL;
+		pcm_callback = NULL;
+		pspeed = SAMPLE_RATE;
+		
 		// buffer time and period time are in microseconds...
 		// (don't simplify the equation below -- it'll just cause integer rounding errors.
 		period_time = (SndOutPacketSize*1000) / (SampleRate / 1000);
@@ -191,13 +197,11 @@ public:
 		handle = NULL;
 	}
 
-	virtual void Configure(HWND parent)
+	virtual void Configure(uptr parent)
 	{
 	}
 
 	virtual bool Is51Out() const { return false; }
-	{
-	}
 	
 	s32  Test() const
 	{
