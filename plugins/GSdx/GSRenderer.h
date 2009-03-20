@@ -128,73 +128,107 @@ protected:
 
 	bool Merge()
 	{
+		bool en[2];
+
+		CRect fr[2];
+		CRect dr[2];
+
 		int baseline = INT_MAX;
 
 		for(int i = 0; i < 2; i++)
 		{
-			if(IsEnabled(i))
+			en[i] = IsEnabled(i);
+
+			if(en[i])
 			{
-				baseline = min(GetDisplayPos(i).y, baseline);
+				fr[i] = GetFrameRect(i);
+				dr[i] = GetDisplayRect(i);
+
+				baseline = min(dr[i].top, baseline);
+			}
+		}
+
+		// try to avoid fullscreen blur, could be nice on tv but on a monitor it's like double vision, hurts my eyes (persona 4, guitar hero)
+		//
+		// NOTE: probably the technique explained in graphtip.pdf (Antialiasing by Supersampling / 4. Reading Odd/Even Scan Lines Separately with the PCRTC then Blending)
+
+		if(en[0] && en[1] && PMODE->SLBG == 0 && PMODE->MMOD == 1 && PMODE->ALP == 0x80)
+		{
+			if(DISPFB[0]->FBP == DISPFB[1]->FBP
+			&& DISPFB[0]->FBW == DISPFB[1]->FBW
+			&& DISPFB[0]->PSM == DISPFB[1]->PSM)
+			{
+				CRect fr1 = fr[1] + CRect(0, 1, 0, 0);
+				CRect dr1 = dr[1] + CRect(0, 0, 0, 1);
+
+				if(fr[0] == fr1 && dr[0] == dr1)
+				{
+					// persona 4 for example:
+					//
+					// fr[0] = 0, 0, 640, 448 (y = 0, height = 448)
+					// fr[1] = 0, 1, 640, 448 (y = 1, height = 447)
+					// dr[0] = 159, 50, 779, 498 (y = 50, height = 448)
+					// dr[1] = 159, 50, 779, 497 (y = 50, height = 447)
+					//
+					// second image shifted up by 1 pixel and blended over itself
+
+					fr[1].top = fr[0].top;
+					dr[1].bottom = dr[0].bottom;
+				}
 			}
 		}
 
 		CSize fs(0, 0);
 		CSize ds(0, 0);
 
-		Texture st[2];
-		GSVector4 sr[2];
-		GSVector4 dr[2];
+		Texture tex[2];
+		GSVector4 src[2];
+		GSVector4 dst[2];
 
 		for(int i = 0; i < 2; i++)
 		{
-			if(IsEnabled(i) && GetOutput(i, st[i]))
+			if(!en[i] || !GetOutput(i, tex[i]))
 			{
-				CRect r = GetFrameRect(i);
-
-				// overscan hack
-
-				if(GetDisplaySize(i).cy > 512) // hmm
-				{
-					int y = GetDeviceSize(i).cy;
-					if(SMODE2->INT && SMODE2->FFMD) y /= 2;
-					r.bottom = r.top + y;
-				}
-
-				//
-
-				sr[i].x = st[i].m_scale.x * r.left / st[i].GetWidth();
-				sr[i].y = st[i].m_scale.y * r.top / st[i].GetHeight();
-				sr[i].z = st[i].m_scale.x * r.right / st[i].GetWidth();
-				sr[i].w = st[i].m_scale.y * r.bottom / st[i].GetHeight();
-
-				GSVector2 o;
-
-				o.x = 0;
-				o.y = 0;
-				
-				CPoint p = GetDisplayPos(i);
-
-				if(p.y - baseline >= 4) // 2?
-				{
-					o.y = st[i].m_scale.y * (p.y - baseline);
-				}
-
-				if(SMODE2->INT && SMODE2->FFMD) o.y /= 2;
-
-				dr[i].x = o.x;
-				dr[i].y = o.y;
-				dr[i].z = o.x + st[i].m_scale.x * r.Width();
-				dr[i].w = o.y + st[i].m_scale.y * r.Height();
-
-#ifdef _M_AMD64
-// schrödinger's bug, fs will be trashed unless we access these values
-CString str;
-str.Format(_T("%d %f %f %f %f "), i, o.x, o.y, dr[i].z, dr[i].w);
-//::MessageBox(NULL, str, _T(""), MB_OK);
-#endif
-				fs.cx = max(fs.cx, (int)(dr[i].z + 0.5f));
-				fs.cy = max(fs.cy, (int)(dr[i].w + 0.5f));
+				continue;
 			}
+
+			CRect r = fr[i];
+
+			// overscan hack
+
+			if(dr[i].Height() > 512) // hmm
+			{
+				int y = GetDeviceSize(i).cy;
+				if(SMODE2->INT && SMODE2->FFMD) y /= 2;
+				r.bottom = r.top + y;
+			}
+
+			//
+
+			src[i].x = tex[i].m_scale.x * r.left / tex[i].GetWidth();
+			src[i].y = tex[i].m_scale.y * r.top / tex[i].GetHeight();
+			src[i].z = tex[i].m_scale.x * r.right / tex[i].GetWidth();
+			src[i].w = tex[i].m_scale.y * r.bottom / tex[i].GetHeight();
+
+			GSVector2 o;
+
+			o.x = 0;
+			o.y = 0;
+			
+			if(dr[i].top - baseline >= 4) // 2?
+			{
+				o.y = tex[i].m_scale.y * (dr[i].top - baseline);
+			}
+
+			if(SMODE2->INT && SMODE2->FFMD) o.y /= 2;
+
+			dst[i].x = o.x;
+			dst[i].y = o.y;
+			dst[i].z = o.x + tex[i].m_scale.x * r.Width();
+			dst[i].w = o.y + tex[i].m_scale.y * r.Height();
+
+			fs.cx = max(fs.cx, (int)(dst[i].z + 0.5f));
+			fs.cy = max(fs.cy, (int)(dst[i].w + 0.5f));
 		}
 
 		ds.cx = fs.cx;
@@ -205,7 +239,7 @@ str.Format(_T("%d %f %f %f %f "), i, o.x, o.y, dr[i].z, dr[i].w);
 		bool slbg = PMODE->SLBG;
 		bool mmod = PMODE->MMOD;
 
-		if(st[0] || st[1])
+		if(tex[0] || tex[1])
 		{
 			GSVector4 c;
 
@@ -214,14 +248,14 @@ str.Format(_T("%d %f %f %f %f "), i, o.x, o.y, dr[i].z, dr[i].w);
 			c.b = (float)BGCOLOR->B / 255;
 			c.a = (float)PMODE->ALP / 255;
 
-			m_dev.Merge(st, sr, dr, fs, slbg, mmod, c);
+			m_dev.Merge(tex, src, dst, fs, slbg, mmod, c);
 
 			if(SMODE2->INT && m_interlace > 0)
 			{
 				int field = 1 - ((m_interlace - 1) & 1);
 				int mode = (m_interlace - 1) >> 1;
 
-				if(!m_dev.Interlace(ds, m_field ^ field, mode, st[1].m_scale.y)) // st[1].m_scale.y
+				if(!m_dev.Interlace(ds, m_field ^ field, mode, tex[1].m_scale.y))
 				{
 					return false;
 				}

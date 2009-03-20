@@ -316,7 +316,7 @@ CSize GSState::GetDeviceSize(int i)
 
 	CSize s = GetDisplaySize(i);
 
-	if(s.cy == 2*416 || s.cy == 2*448 || s.cy == 2*512)
+	if(s.cy == 2 * 416 || s.cy == 2 * 448 || s.cy == 2 * 512)
 	{
 		s.cy /= 2;
 	}
