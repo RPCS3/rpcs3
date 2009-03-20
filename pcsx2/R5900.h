@@ -219,9 +219,6 @@ struct tlbs
 
 #endif
 
-void JumpCheckSym(u32 addr, u32 pc);
-void JumpCheckSymRet(u32 addr);
-
 PCSX2_ALIGNED16_EXTERN(cpuRegisters cpuRegs);
 PCSX2_ALIGNED16_EXTERN(fpuRegisters fpuRegs);
 PCSX2_ALIGNED16_EXTERN(tlbs tlb[48]);

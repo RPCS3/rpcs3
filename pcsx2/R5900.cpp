@@ -91,7 +91,7 @@ void cpuReset()
 
 	hwReset();
 	vif0Reset();
-    vif1Reset();
+	vif1Reset();
 	rcntInit();
 	psxReset();
 }
@@ -109,79 +109,83 @@ void cpuShutdown()
 void cpuException(u32 code, u32 bd)
 {
 	cpuRegs.branch = 0;		// Tells the interpreter that an exception occurred during a branch.
-
+	bool errLevel2, checkStatus;
 	u32 offset;
 	cpuRegs.CP0.n.Cause = code & 0xffff;
 
-	if(cpuRegs.CP0.n.Status.b.ERL == 0){ //Error Level 0-1
-		if(((code & 0x7C) >= 0x8) && ((code & 0x7C) <= 0xC)) offset = 0x0; //TLB Refill
-		else if ((code & 0x7C) == 0x0) offset = 0x200; //Interrupt
-		else	offset = 0x180; // Everything else
+	if(cpuRegs.CP0.n.Status.b.ERL == 0)
+	{
+		//Error Level 0-1
+		errLevel2 = FALSE;
+		checkStatus = (cpuRegs.CP0.n.Status.b.BEV == 0); //  for TLB/general exceptions
 		
-
-		if (cpuRegs.CP0.n.Status.b.EXL == 0) {
-			cpuRegs.CP0.n.Status.b.EXL = 1;
-			if (bd) {
-				Console::Notice("branch delay!!");
-				cpuRegs.CP0.n.EPC = cpuRegs.pc - 4;
-				cpuRegs.CP0.n.Cause |= 0x80000000;
-			} else {
-				cpuRegs.CP0.n.EPC = cpuRegs.pc;
-				cpuRegs.CP0.n.Cause &= ~0x80000000;
-			}
-		} else {
-			offset = 0x180; //Overrride the cause		
-			//Console::Notice("cpuException: Status.EXL = 1 cause %x", params code);
-		}
-		if (cpuRegs.CP0.n.Status.b.BEV == 0) {
-			cpuRegs.pc = 0x80000000 + offset;
-		} else {
-			cpuRegs.pc = 0xBFC00200 + offset;
-		}
-	} else { //Error Level 2
+		if (((code & 0x7C) >= 0x8) && ((code & 0x7C) <= 0xC)) 
+			offset = 0x0; //TLB Refill
+		else if ((code & 0x7C) == 0x0) 
+			offset = 0x200; //Interrupt
+		else	
+			offset = 0x180; // Everything else
+	}
+	else
+	{
+		//Error Level 2
+		errLevel2 = TRUE;
+		checkStatus = (cpuRegs.CP0.n.Status.b.DEV == 0); // for perf/debug exceptions
+		
 		Console::Error("*PCSX2* FIX ME: Level 2 cpuException");
-		if((code & 0x38000) <= 0x8000 ) { //Reset / NMI
+		if ((code & 0x38000) <= 0x8000 ) 
+		{
+			//Reset / NMI
 			cpuRegs.pc = 0xBFC00000;
 			Console::Notice("Reset request");
 			UpdateCP0Status();
 			return;
-		} else if((code & 0x38000) == 0x10000) offset = 0x80; //Performance Counter
-		else if((code & 0x38000) == 0x18000)  offset = 0x100; //Debug
-		else Console::Error("Unknown Level 2 Exception!! Cause %x", params code);
-
-		if (cpuRegs.CP0.n.Status.b.EXL == 0) {
-			cpuRegs.CP0.n.Status.b.EXL = 1;
-			if (bd) {
-				Console::Notice("branch delay!!");
-				cpuRegs.CP0.n.EPC = cpuRegs.pc - 4;
-				cpuRegs.CP0.n.Cause |= 0x80000000;
-			} else {
-				cpuRegs.CP0.n.EPC = cpuRegs.pc;
-				cpuRegs.CP0.n.Cause &= ~0x80000000;
-			}
-		} else {
-			offset = 0x180; //Overrride the cause		
-			Console::Notice("cpuException: Status.EXL = 1 cause %x", params code);
-		}
-
-		if (cpuRegs.CP0.n.Status.b.DEV == 0) {
-			cpuRegs.pc = 0x80000000 + offset;
-		} else {
-			cpuRegs.pc = 0xBFC00200 + offset;
-		}
+		} 
+		else if((code & 0x38000) == 0x10000) 
+			offset = 0x80; //Performance Counter
+		else if((code & 0x38000) == 0x18000)  
+			offset = 0x100; //Debug
+		else 
+			Console::Error("Unknown Level 2 Exception!! Cause %x", params code);
 	}
+	
+	if (cpuRegs.CP0.n.Status.b.EXL == 0) 
+	{
+		cpuRegs.CP0.n.Status.b.EXL = 1;
+		if (bd) 
+		{
+			Console::Notice("branch delay!!");
+			cpuRegs.CP0.n.EPC = cpuRegs.pc - 4;
+			cpuRegs.CP0.n.Cause |= 0x80000000;
+		} 
+		else 
+		{
+			cpuRegs.CP0.n.EPC = cpuRegs.pc;
+			cpuRegs.CP0.n.Cause &= ~0x80000000;
+		}
+	} 
+	else 
+	{
+		offset = 0x180; //Override the cause		
+		if (errLevel2) Console::Notice("cpuException: Status.EXL = 1 cause %x", params code);
+	}
+	
+	if (checkStatus)
+		cpuRegs.pc = 0x80000000 + offset;
+	else 
+		cpuRegs.pc = 0xBFC00200 + offset;
+	
 	UpdateCP0Status();
 }
 
-void cpuTlbMiss(u32 addr, u32 bd, u32 excode) {
+void cpuTlbMiss(u32 addr, u32 bd, u32 excode) 
+{
 	Console::Error("cpuTlbMiss pc:%x, cycl:%x, addr: %x, status=%x, code=%x",
 		params cpuRegs.pc, cpuRegs.cycle, addr, cpuRegs.CP0.n.Status.val, excode);
 		
-	if (bd) {
-		Console::Notice("branch delay!!");
-	}
+	if (bd) Console::Notice("branch delay!!");
 
-    assert(0); // temporary
+	assert(0); // temporary
 
 	cpuRegs.CP0.n.BadVAddr = addr;
 	cpuRegs.CP0.n.Context &= 0xFF80000F;
@@ -210,50 +214,6 @@ void cpuTlbMissR(u32 addr, u32 bd) {
 
 void cpuTlbMissW(u32 addr, u32 bd) {
 	cpuTlbMiss(addr, bd, EXC_CODE_TLBS);
-}
-
-void JumpCheckSym(u32 addr, u32 pc) {
-#if 0
-//	if (addr == 0x80051770) { SysPrintf("Log!: %s\n", PSM(cpuRegs.GPR.n.a0.UL[0])); Log=1; varLog|= 0x40000000; }
-	if (addr == 0x8002f150) { SysPrintf("printk: %s\n", PSM(cpuRegs.GPR.n.a0.UL[0])); }
-	if (addr == 0x8002aba0) return;
-	if (addr == 0x8002f450) return;
-	if (addr == 0x800dd520) return;
-//	if (addr == 0x80049300) SysPrintf("register_blkdev: %x\n", cpuRegs.GPR.n.a0.UL[0]);
-	if (addr == 0x8013cb70) { SysPrintf("change_root: %x\n", cpuRegs.GPR.n.a0.UL[0]); }
-//	if (addr == 0x8013d1e8) { SysPrintf("Log!\n"); Log++; if (Log==2) exit(0); varLog|= 0x40000000; }
-//	if (addr == 0x00234e88) { SysPrintf("StoreImage\n"); Log=1; /*psMu32(0x234e88) = 0x03e00008; psMu32(0x234e8c) = 0;*/ }
-#endif
-/*	if ((pc >= 0x00131D50 &&
-		 pc <  0x00132454) ||
-		(pc >= 0x00786a90 &&
-		 pc <  0x00786ac8))*/
-	/*if (varLog & 0x40000000) {
-		char *str;
-		char *strf;
-
-		str = disR5900GetSym(addr);
-		if (str != NULL) {
-			strf = disR5900GetUpperSym(pc);
-			if (strf) {
-				SysPrintf("Func %8.8x: %s (called by %8.8x: %s)\n", addr, str, pc, strf);
-			} else {
-				SysPrintf("Func %8.8x: %s (called by %x)\n", addr, str, pc);
-			}
-			if (!strcmp(str, "printf")) { SysPrintf("%s\n", (char*)PSM(cpuRegs.GPR.n.a0.UL[0])); }
-			if (!strcmp(str, "printk")) { SysPrintf("%s\n", (char*)PSM(cpuRegs.GPR.n.a0.UL[0])); }
-		}
-	}*/
-}
-
-void JumpCheckSymRet(u32 addr) {
-	/*if (varLog & 0x40000000) {
-		char *str;
-		str = disR5900GetUpperSym(addr);
-		if (str != NULL) {
-			SysPrintf("Return       : %s, v0=%8.8x\n", str, cpuRegs.GPR.n.v0.UL[0]);
-		}
-	}*/
 }
 
 __forceinline void _cpuTestMissingINTC() {
