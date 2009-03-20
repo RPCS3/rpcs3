@@ -1486,8 +1486,8 @@ void PMULTUW() {
 __forceinline void  _PDIVUW(int dd, int ss) 
 {
 	if (cpuRegs.GPR.r[_Rt_].UL[ss] != 0) { 
-		cpuRegs.LO.UD[dd] = (u64)cpuRegs.GPR.r[_Rs_].UL[ss] / (u64)cpuRegs.GPR.r[_Rt_].UL[ss]; 
-		cpuRegs.HI.UD[dd] = (u64)cpuRegs.GPR.r[_Rs_].UL[ss] % (u64)cpuRegs.GPR.r[_Rt_].UL[ss]; 
+		cpuRegs.LO.SD[dd] = (s32)(cpuRegs.GPR.r[_Rs_].UL[ss] / cpuRegs.GPR.r[_Rt_].UL[ss]); 
+		cpuRegs.HI.SD[dd] = (s32)(cpuRegs.GPR.r[_Rs_].UL[ss] % cpuRegs.GPR.r[_Rt_].UL[ss]); 
 	}
 }
 

@@ -191,7 +191,7 @@ void ToDouble(int reg)
 // converts really large normal numbers to PS2 signed max
 // converts really small normal numbers to zero (flush)
 // doesn't handle inf/nan/denormal
-void ToPS2FPU_Full(int reg, bool flags, int absreg, bool acc)
+void ToPS2FPU_Full(int reg, bool flags, int absreg, bool acc, bool addsub)
 {
 	if (flags)
 		AND32ItoM((uptr)&fpuRegs.fprc[31], ~(FPUflagO | FPUflagU));
@@ -229,6 +229,7 @@ void ToPS2FPU_Full(int reg, bool flags, int absreg, bool acc)
 	u8 *end3 = JMP8(0);
  
 	x86SetJ8(to_underflow);
+	u8 *end4;
 	if (flags && FPU_FLAGS_UNDERFLOW) //set underflow flags if not zero
 	{
 		SSE2_XORPD_XMM_to_XMM(absreg, absreg);
@@ -236,6 +237,19 @@ void ToPS2FPU_Full(int reg, bool flags, int absreg, bool acc)
 		u8 *is_zero = JE8(0);
  
 		OR32ItoM((uptr)&fpuRegs.fprc[31], (FPUflagU | FPUflagSU));
+		if (addsub)
+		{
+			//On ADD/SUB, the PS2 simply leaves the mantissa bits as they are (after normalization)
+			//IEEE either clears them (FtZ) or returns the denormalized result.
+			//not thoroughly tested : other operations such as MUL and DIV seem to clear all mantissa bits?
+			SSE_MOVAPS_XMM_to_XMM(absreg, reg);
+			SSE2_PSLLQ_I8_to_XMM(reg, 12); //mantissa bits
+			SSE2_PSRLQ_I8_to_XMM(reg, 41);
+			SSE2_PSRLQ_I8_to_XMM(absreg, 63); //sign bit
+			SSE2_PSLLQ_I8_to_XMM(absreg, 31);
+			SSE2_POR_XMM_to_XMM(reg, absreg);
+			end4 = JMP8(0);
+		}
  
 		x86SetJ8(is_zero);
 	}
@@ -245,13 +259,15 @@ void ToPS2FPU_Full(int reg, bool flags, int absreg, bool acc)
 	x86SetJ8(end);
 	x86SetJ8(end2);
 	x86SetJ8(end3);
+	if (flags && FPU_FLAGS_UNDERFLOW && addsub)
+		x86SetJ8(end4);
 }
  
 //mustn't use EAX/ECX/EDX/x86regs (MUL)
-void ToPS2FPU(int reg, bool flags, int absreg, bool acc)
+void ToPS2FPU(int reg, bool flags, int absreg, bool acc, bool addsub = false)
 {
 	if (FPU_RESULT)
-		ToPS2FPU_Full(reg, flags, absreg, acc);
+		ToPS2FPU_Full(reg, flags, absreg, acc, addsub);
 	else
 	{
 		SSE2_CVTSD2SS_XMM_to_XMM(reg, reg); //clamp
@@ -415,24 +431,24 @@ void FPU_MUL(int info, int regd, int sreg, int treg, bool acc)
 }
 
 //------------------------------------------------------------------
-// CommutativeOp XMM (used for ADD, MUL, MAX, MIN and SUB opcodes)
+// CommutativeOp XMM (used for ADD and SUB opcodes. that's it.)
 //------------------------------------------------------------------
 static void (*recFPUOpXMM_to_XMM[] )(x86SSERegType, x86SSERegType) = {
-	SSE2_ADDSD_XMM_to_XMM, NULL, NULL, NULL, SSE2_SUBSD_XMM_to_XMM };
+	SSE2_ADDSD_XMM_to_XMM, SSE2_SUBSD_XMM_to_XMM };
  
 void recFPUOp(int info, int regd, int op, bool acc) 
 {
 	int sreg, treg;
 	ALLOC_S(sreg); ALLOC_T(treg);
  
-	if (FPU_ADD_SUB_HACK && (op == 0 || op == 4)) //ADD or SUB
+	if (FPU_ADD_SUB_HACK) //ADD or SUB
 		FPU_ADD_SUB(sreg, treg);
  
 	ToDouble(sreg); ToDouble(treg);
  
 	recFPUOpXMM_to_XMM[op](sreg, treg);
  
-	ToPS2FPU(sreg, true, treg, acc);
+	ToPS2FPU(sreg, true, treg, acc, true);
 	SSE_MOVSS_XMM_to_XMM(regd, sreg);
  
 	_freeXMMreg(sreg); _freeXMMreg(treg);
@@ -715,7 +731,7 @@ void recMaddsub(int info, int regd, int op, bool acc)
 	else
 		SSE2_ADDSD_XMM_to_XMM(treg, sreg);
 
-	ToPS2FPU(treg, true, sreg, acc);
+	ToPS2FPU(treg, true, sreg, acc, true);
 	x86SetJ32(skipall);
 
 	SSE_MOVSS_XMM_to_XMM(regd, treg);
@@ -865,7 +881,7 @@ FPURECOMPILE_CONSTCODE(NEG_S, XMMINFO_WRITED|XMMINFO_READS);
  
 void recSUB_S_xmm(int info)
 {
-	recFPUOp(info, EEREC_D, 4, false);
+	recFPUOp(info, EEREC_D, 1, false);
 }
  
 FPURECOMPILE_CONSTCODE(SUB_S, XMMINFO_WRITED|XMMINFO_READS|XMMINFO_READT);
@@ -873,7 +889,7 @@ FPURECOMPILE_CONSTCODE(SUB_S, XMMINFO_WRITED|XMMINFO_READS|XMMINFO_READT);
  
 void recSUBA_S_xmm(int info) 
 { 
-	recFPUOp(info, EEREC_ACC, 4, true);
+	recFPUOp(info, EEREC_ACC, 1, true);
 }
  
 FPURECOMPILE_CONSTCODE(SUBA_S, XMMINFO_WRITEACC|XMMINFO_READS|XMMINFO_READT);
