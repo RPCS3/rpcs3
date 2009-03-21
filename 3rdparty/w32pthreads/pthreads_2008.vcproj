@@ -19,7 +19,7 @@
 		<Configuration
 			Name="Debug|Win32"
 			ConfigurationType="4"
-			InheritedPropertySheets="..\3rdparty.vsprops"
+			InheritedPropertySheets="..\3rdparty.vsprops;..\..\common\vsprops\IncrementalLinking.vsprops"
 			CharacterSet="2"
 			>
 			<Tool
@@ -42,13 +42,10 @@
 				Optimization="0"
 				AdditionalIncludeDirectories="&quot;$(ProjectDir)&quot;;&quot;$(ProjectDir)\include&quot;"
 				PreprocessorDefinitions="PTW32_STATIC_LIB;__CLEANUP_SEH;WIN32;_DEBUG;_LIB"
-				MinimalRebuild="true"
 				ExceptionHandling="2"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
-				EnableFunctionLevelLinking="true"
 				UsePrecompiledHeader="0"
-				BrowseInformation="1"
 				WarningLevel="3"
 				DebugInformationFormat="4"
 				CompileAs="1"
@@ -155,7 +152,7 @@
 		<Configuration
 			Name="Devel|Win32"
 			ConfigurationType="4"
-			InheritedPropertySheets="..\3rdparty.vsprops"
+			InheritedPropertySheets="..\3rdparty.vsprops;..\..\common\vsprops\IncrementalLinking.vsprops"
 			CharacterSet="2"
 			WholeProgramOptimization="0"
 			>
@@ -189,9 +186,7 @@
 				RuntimeLibrary="0"
 				StructMemberAlignment="5"
 				BufferSecurityCheck="false"
-				EnableFunctionLevelLinking="false"
 				UsePrecompiledHeader="0"
-				BrowseInformation="1"
 				WarningLevel="3"
 				DebugInformationFormat="3"
 				CompileAs="1"

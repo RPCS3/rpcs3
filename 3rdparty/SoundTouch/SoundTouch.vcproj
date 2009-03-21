@@ -18,7 +18,7 @@
 		<Configuration
 			Name="Debug|Win32"
 			ConfigurationType="4"
-			InheritedPropertySheets="..\3rdparty.vsprops"
+			InheritedPropertySheets="..\3rdparty.vsprops;..\..\common\vsprops\IncrementalLinking.vsprops"
 			CharacterSet="2"
 			>
 			<Tool
@@ -39,7 +39,6 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
 				WarningLevel="3"
@@ -134,7 +133,7 @@
 		<Configuration
 			Name="Devel|Win32"
 			ConfigurationType="4"
-			InheritedPropertySheets="..\3rdparty.vsprops"
+			InheritedPropertySheets="..\3rdparty.vsprops;..\..\common\vsprops\IncrementalLinking.vsprops"
 			CharacterSet="2"
 			WholeProgramOptimization="1"
 			>
@@ -158,7 +157,7 @@
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
 				RuntimeLibrary="0"
-				EnableFunctionLevelLinking="true"
+				BufferSecurityCheck="false"
 				WarningLevel="3"
 				DebugInformationFormat="3"
 			/>
