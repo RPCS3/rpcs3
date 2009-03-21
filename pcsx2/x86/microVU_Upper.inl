@@ -447,7 +447,7 @@ microVUf(void) mVU_ABS() {
 		int Fs, Ft;
 		mVUallocFMAC2a<vuIndex>(Fs, Ft);
 		SSE_ANDPS_M128_to_XMM(Fs, (uptr)mVU_absclip);
-		mVUallocFMAC1b<vuIndex>(Ft);
+		mVUallocFMAC2b<vuIndex>(Ft);
 	}
 }
 microVUf(void) mVU_ADD()	 { mVU_FMAC1(ADD); }
@@ -582,5 +582,37 @@ microVUf(void) mVU_ITOF0()	 { mVU_ITOFx<vuIndex, recPass>(0); }
 microVUf(void) mVU_ITOF4()	 { mVU_ITOFx<vuIndex, recPass>((uptr)mVU_ITOF_4); }
 microVUf(void) mVU_ITOF12()	 { mVU_ITOFx<vuIndex, recPass>((uptr)mVU_ITOF_12); }
 microVUf(void) mVU_ITOF15()	 { mVU_ITOFx<vuIndex, recPass>((uptr)mVU_ITOF_15); }
-microVUf(void) mVU_CLIP(){}
+microVUf(void) mVU_CLIP() {
+	microVU* mVU = mVUx;
+	if (!recPass) { mVUanalyzeFMAC4<vuIndex>(_Fs_, _Ft_); }
+	else {
+		int Fs, Ft;
+		mVUallocFMAC17a<vuIndex>(Fs, Ft);
+		mVUallocCFLAGa<vuIndex>(gprT1, fpcInstance);
+		SHL32ItoR(gprT1, 6);
+
+		SSE_ANDPS_M128_to_XMM(Ft, (uptr)mVU_absclip);
+		SSE_MOVAPS_XMM_to_XMM(xmmT1, Ft);
+		SSE_ORPS_M128_to_XMM(xmmT1, (uptr)mVU_signbit);
+
+		SSE_CMPNLEPS_XMM_to_XMM(xmmT1, Fs);  //-w, -z, -y, -x
+		SSE_CMPLTPS_XMM_to_XMM(Ft, Fs); //+w, +z, +y, +x
+
+		SSE_MOVAPS_XMM_to_XMM(Fs, Ft); //Fs = +w, +z, +y, +x
+		SSE_UNPCKLPS_XMM_to_XMM(Ft, xmmT1); //Ft = -y,+y,-x,+x
+		SSE_UNPCKHPS_XMM_to_XMM(Fs, xmmT1); //Fs = -w,+w,-z,+z
+
+		SSE_MOVMSKPS_XMM_to_R32(gprT2, Fs); // -w,+w,-z,+z
+		AND32ItoR(gprT2, 0x3);
+		SHL32ItoR(gprT2, 4);
+		OR32RtoR (gprT1, gprT2);
+
+		SSE_MOVMSKPS_XMM_to_R32(gprT2, Ft); // -y,+y,-x,+x
+		AND32ItoR(gprT2, 0xf);
+		OR32RtoR (gprT1, gprT2);
+		AND32ItoR(gprT1, 0xffffff);
+
+		mVUallocCFLAGb<vuIndex>(gprT1, fcInstance);
+	}
+}
 #endif //PCSX2_MICROVU

@@ -94,6 +94,22 @@ microVUt(void) mVUanalyzeFMAC3(int Fd, int Fs, int Ft) {
 }
 
 //------------------------------------------------------------------
+// FMAC4 - Clip FMAC Opcode
+//------------------------------------------------------------------
+
+#define analyzeReg4(reg) {						 \
+	if (reg) { mVal = aMax(mVal, aReg(reg).w); } \
+}
+
+microVUt(void) mVUanalyzeFMAC4(int Fs, int Ft) {
+	microVU* mVU = mVUx;
+	int mVal = 0;
+	analyzeReg1(Fs);
+	analyzeReg4(Ft);
+	incCycles(mVal);
+}
+
+//------------------------------------------------------------------
 // Micro VU - recPass 1 Functions
 //------------------------------------------------------------------
 
@@ -146,7 +162,7 @@ microVUt(void) mVUallocFMAC2a(int& Fs, int& Ft) {
 
 microVUt(void) mVUallocFMAC2b(int& Ft) {
 	microVU* mVU = mVUx;
-	if (!_Ft_) return;
+	if (!_Ft_) { SysPrintf("microVU: If a game does this, its retarded...\n"); return; }
 	//if (CHECK_VU_OVERFLOW) mVUclamp1<vuIndex>(Ft, xmmT1, _X_Y_Z_W);
 	mVUsaveReg<vuIndex>(Ft, (uptr)&mVU->regs->VF[_Ft_].UL[0], _X_Y_Z_W);
 }
@@ -562,6 +578,28 @@ microVUt(void) mVUallocFMAC16a(int& ACCw, int& ACCr, int& Fs, int& Ft) {
 
 microVUt(void) mVUallocFMAC16b(int& ACCw, int& ACCr) {
 	mVUallocFMAC14b<vuIndex>(ACCw, ACCr);
+}
+
+//------------------------------------------------------------------
+// FMAC17 - CLIP FMAC Opcode
+//------------------------------------------------------------------
+
+#define getReg9(reg, _reg_) {  \
+	mVUloadReg<vuIndex>(reg, (uptr)&mVU->regs->VF[_reg_].UL[0], 1);  \
+	if (CHECK_VU_EXTRA_OVERFLOW) mVUclamp2<vuIndex>(reg, xmmT1, 1);  \
+	mVUunpack_xyzw<vuIndex>(reg, reg, 3);  \
+}
+
+microVUt(void) mVUallocFMAC17a(int& Fs, int& Ft) {
+	microVU* mVU = mVUx;
+	Fs = xmmFs;
+	Ft = xmmFt;
+	getReg6(Fs, _Fs_);
+	getReg9(Ft, _Ft_);
+}
+
+microVUt(void) mVUallocFMAC17b(int& ACC, int& Fs) {
+	//mVUallocFMAC4b<vuIndex>(ACC, Fs);
 }
 
 //------------------------------------------------------------------

@@ -64,6 +64,8 @@ struct microAllocInfo {
 					// bit 17
 					// bit 18 = Used with bit 19 to make a 2-bit key for status flag instance
 					// bit 19
-					// bit 20 = Read VI(Fs) from backup memory?
-					// bit 21 = Read VI(Ft) from backup memory?
+					// bit 20 = Used with bit 21 to make a 2-bit key for clip flag instance
+					// bit 21
+					// bit 22 = Read VI(Fs) from backup memory?
+					// bit 23 = Read VI(Ft) from backup memory?
 };

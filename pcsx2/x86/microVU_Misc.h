@@ -183,9 +183,10 @@ declareAllVariables
 #define fsInstance	((mVUinfo >> 12) & 3)
 #define fpsInstance	((((mVUinfo>>12) & 3) - 1) & 0x3)
 #define fcInstance	((mVUinfo >> 14) & 3)
-#define fvcInstance	((mVUinfo >> 14) & 3)
+#define fpcInstance	((((mVUinfo>>14) & 3) - 1) & 0x3)
 #define fvmInstance	((mVUinfo >> 16) & 3)
 #define fvsInstance	((mVUinfo >> 18) & 3)
+#define fvcInstance	((mVUinfo >> 20) & 3)
 
 //#define getFs		 (mVUinfo & (1<<13))
 //#define getFt		 (mVUinfo & (1<<14))
