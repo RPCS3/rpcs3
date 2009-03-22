@@ -25,7 +25,7 @@
 
 microVUf(void) mVU_DIV() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) {}
+	if (!recPass) {}
 	else { 
 		//u8 *pjmp;, *pjmp1;
 		u32 *ajmp32, *bjmp32;
@@ -72,7 +72,7 @@ microVUf(void) mVU_DIV() {
 }
 microVUf(void) mVU_SQRT() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) {}
+	if (!recPass) {}
 	else { 
 		//u8* pjmp;
 		getReg5(xmmFt, _Ft_, _Ftf_);
@@ -94,7 +94,7 @@ microVUf(void) mVU_SQRT() {
 }
 microVUf(void) mVU_RSQRT() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) {}
+	if (!recPass) {}
 	else { 
 		u8 *ajmp8, *bjmp8;
 
@@ -162,7 +162,7 @@ microVUt(void) mVU_EATAN_() {
 }
 microVUf(void) mVU_EATAN() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) {}
+	if (!recPass) {}
 	else { 
 		getReg5(xmmFs, _Fs_, _Fsf_);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
@@ -177,7 +177,7 @@ microVUf(void) mVU_EATAN() {
 }
 microVUf(void) mVU_EATANxy() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) {}
+	if (!recPass) {}
 	else { 
 		getReg6(xmmFt, _Fs_);
 		SSE2_PSHUFD_XMM_to_XMM(xmmFs, xmmFt, 0x01);
@@ -193,7 +193,7 @@ microVUf(void) mVU_EATANxy() {
 }
 microVUf(void) mVU_EATANxz() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) {}
+	if (!recPass) {}
 	else { 
 		getReg6(xmmFt, _Fs_);
 		SSE2_PSHUFD_XMM_to_XMM(xmmFs, xmmFt, 0x02);
@@ -215,7 +215,7 @@ microVUf(void) mVU_EATANxz() {
 }
 microVUf(void) mVU_EEXP() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) {}
+	if (!recPass) {}
 	else { 
 		getReg5(xmmFs, _Fs_, _Fsf_);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
@@ -261,7 +261,7 @@ microVUt(void) mVU_sumXYZ() {
 }
 microVUf(void) mVU_ELENG() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) {}
+	if (!recPass) {}
 	else { 
 		getReg6(xmmFs, _Fs_);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
@@ -272,7 +272,7 @@ microVUf(void) mVU_ELENG() {
 }
 microVUf(void) mVU_ERCPR() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) {}
+	if (!recPass) {}
 	else { 
 		getReg5(xmmFs, _Fs_, _Fsf_);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
@@ -285,7 +285,7 @@ microVUf(void) mVU_ERCPR() {
 }
 microVUf(void) mVU_ERLENG() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) {}
+	if (!recPass) {}
 	else { 
 		getReg6(xmmFs, _Fs_);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
@@ -299,7 +299,7 @@ microVUf(void) mVU_ERLENG() {
 }
 microVUf(void) mVU_ERSADD() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) {}
+	if (!recPass) {}
 	else { 
 		getReg6(xmmFs, _Fs_);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
@@ -313,7 +313,7 @@ microVUf(void) mVU_ERSADD() {
 }
 microVUf(void) mVU_ERSQRT() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) {}
+	if (!recPass) {}
 	else { 
 		getReg5(xmmFs, _Fs_, _Fsf_);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
@@ -326,7 +326,7 @@ microVUf(void) mVU_ERSQRT() {
 }
 microVUf(void) mVU_ESADD() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) {}
+	if (!recPass) {}
 	else { 
 		getReg6(xmmFs, _Fs_);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
@@ -342,7 +342,7 @@ microVUf(void) mVU_ESADD() {
 }
 microVUf(void) mVU_ESIN() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) {}
+	if (!recPass) {}
 	else { 
 		getReg5(xmmFs, _Fs_, _Fsf_);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
@@ -367,7 +367,7 @@ microVUf(void) mVU_ESIN() {
 } 
 microVUf(void) mVU_ESQRT() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) {}
+	if (!recPass) {}
 	else { 
 		getReg5(xmmFs, _Fs_, _Fsf_);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
@@ -377,7 +377,7 @@ microVUf(void) mVU_ESQRT() {
 }
 microVUf(void) mVU_ESUM() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) {}
+	if (!recPass) {}
 	else { 
 		getReg6(xmmFs, _Fs_);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
@@ -392,7 +392,7 @@ microVUf(void) mVU_ESUM() {
 
 microVUf(void) mVU_FCAND() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) {}
+	if (!recPass) {}
 	else { 
 		mVUallocCFLAGa<vuIndex>(gprT1, fvcInstance);
 		AND32ItoR(gprT1, _Imm24_);
@@ -403,7 +403,7 @@ microVUf(void) mVU_FCAND() {
 }
 microVUf(void) mVU_FCEQ() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) {}
+	if (!recPass) {}
 	else { 
 		mVUallocCFLAGa<vuIndex>(gprT1, fvcInstance);
 		XOR32ItoR(gprT1, _Imm24_);
@@ -414,7 +414,7 @@ microVUf(void) mVU_FCEQ() {
 }
 microVUf(void) mVU_FCGET() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) {}
+	if (!recPass) {}
 	else { 
 		mVUallocCFLAGa<vuIndex>(gprT1, fvcInstance);
 		AND32ItoR(gprT1, 0xfff);
@@ -423,7 +423,7 @@ microVUf(void) mVU_FCGET() {
 }
 microVUf(void) mVU_FCOR() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) {}
+	if (!recPass) {}
 	else { 
 		mVUallocCFLAGa<vuIndex>(gprT1, fvcInstance);
 		OR32ItoR(gprT1, _Imm24_);
@@ -434,7 +434,7 @@ microVUf(void) mVU_FCOR() {
 }
 microVUf(void) mVU_FCSET() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) {}
+	if (!recPass) {}
 	else { 
 		MOV32ItoR(gprT1, _Imm24_);
 		mVUallocCFLAGb<vuIndex>(gprT1, fcInstance);
@@ -443,7 +443,7 @@ microVUf(void) mVU_FCSET() {
 
 microVUf(void) mVU_FMAND() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) {}
+	if (!recPass) {}
 	else { 
 		mVUallocMFLAGa<vuIndex>(gprT1, fvmInstance);
 		mVUallocVIa<vuIndex>(gprT2, _Fs_);
@@ -453,7 +453,7 @@ microVUf(void) mVU_FMAND() {
 }
 microVUf(void) mVU_FMEQ() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) {}
+	if (!recPass) {}
 	else { 
 		mVUallocMFLAGa<vuIndex>(gprT1, fvmInstance);
 		mVUallocVIa<vuIndex>(gprT2, _Fs_);
@@ -465,7 +465,7 @@ microVUf(void) mVU_FMEQ() {
 }
 microVUf(void) mVU_FMOR() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) {}
+	if (!recPass) {}
 	else { 
 		mVUallocMFLAGa<vuIndex>(gprT1, fvmInstance);
 		mVUallocVIa<vuIndex>(gprT2, _Fs_);
@@ -476,7 +476,7 @@ microVUf(void) mVU_FMOR() {
 
 microVUf(void) mVU_FSAND() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) {}
+	if (!recPass) {}
 	else { 
 		mVUallocSFLAGa<vuIndex>(gprT1, fvsInstance);
 		AND16ItoR(gprT1, _Imm12_);
@@ -485,7 +485,7 @@ microVUf(void) mVU_FSAND() {
 }
 microVUf(void) mVU_FSEQ() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) {}
+	if (!recPass) {}
 	else { 
 		mVUallocSFLAGa<vuIndex>(gprT1, fvsInstance);
 		XOR16ItoR(gprT1, _Imm12_);
@@ -496,7 +496,7 @@ microVUf(void) mVU_FSEQ() {
 }
 microVUf(void) mVU_FSOR() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) {}
+	if (!recPass) {}
 	else { 
 		mVUallocSFLAGa<vuIndex>(gprT1, fvsInstance);
 		OR16ItoR(gprT1, _Imm12_);
@@ -505,7 +505,7 @@ microVUf(void) mVU_FSOR() {
 }
 microVUf(void) mVU_FSSET() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) {}
+	if (!recPass) {}
 	else { 
 		int flagReg;
 		getFlagReg(flagReg, fsInstance);
@@ -515,7 +515,7 @@ microVUf(void) mVU_FSSET() {
 
 microVUf(void) mVU_IADD() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) {}
+	if (!recPass) {}
 	else { 
 		mVUallocVIa<vuIndex>(gprT1, _Fs_);
 		if (_Ft_ != _Fs_) {
@@ -528,7 +528,7 @@ microVUf(void) mVU_IADD() {
 }
 microVUf(void) mVU_IADDI() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) {}
+	if (!recPass) {}
 	else { 
 		mVUallocVIa<vuIndex>(gprT1, _Fs_);
 		ADD16ItoR(gprT1, _Imm5_);
@@ -537,7 +537,7 @@ microVUf(void) mVU_IADDI() {
 }
 microVUf(void) mVU_IADDIU() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) {}
+	if (!recPass) {}
 	else { 
 		mVUallocVIa<vuIndex>(gprT1, _Fs_);
 		ADD16ItoR(gprT1, _Imm12_);
@@ -546,7 +546,7 @@ microVUf(void) mVU_IADDIU() {
 }
 microVUf(void) mVU_IAND() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) {}
+	if (!recPass) {}
 	else { 
 		mVUallocVIa<vuIndex>(gprT1, _Fs_);
 		if (_Ft_ != _Fs_) {
@@ -558,7 +558,7 @@ microVUf(void) mVU_IAND() {
 }
 microVUf(void) mVU_IOR() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) {}
+	if (!recPass) {}
 	else { 
 		mVUallocVIa<vuIndex>(gprT1, _Fs_);
 		if (_Ft_ != _Fs_) {
@@ -570,7 +570,7 @@ microVUf(void) mVU_IOR() {
 }
 microVUf(void) mVU_ISUB() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) {}
+	if (!recPass) {}
 	else { 
 		if (_Ft_ != _Fs_) {
 			mVUallocVIa<vuIndex>(gprT1, _Fs_);
@@ -586,7 +586,7 @@ microVUf(void) mVU_ISUB() {
 }
 microVUf(void) mVU_ISUBIU() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) {}
+	if (!recPass) {}
 	else { 
 		mVUallocVIa<vuIndex>(gprT1, _Fs_);
 		SUB16ItoR(gprT1, _Imm12_);
@@ -596,7 +596,7 @@ microVUf(void) mVU_ISUBIU() {
 
 microVUf(void) mVU_MOVE() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) { /*If (!_Ft_ || (_Ft_ == _Fs_)) nop();*/ }
+	if (!recPass) { /*If (!_Ft_ || (_Ft_ == _Fs_)) nop();*/ }
 	else { 
 		mVUloadReg<vuIndex>(xmmT1, (uptr)&mVU->regs->VF[_Fs_].UL[0], _X_Y_Z_W);
 		mVUsaveReg<vuIndex>(xmmT1, (uptr)&mVU->regs->VF[_Ft_].UL[0], _X_Y_Z_W);
@@ -604,7 +604,7 @@ microVUf(void) mVU_MOVE() {
 }
 microVUf(void) mVU_MFIR() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) { /*If (!_Ft_) nop();*/ }
+	if (!recPass) { /*If (!_Ft_) nop();*/ }
 	else { 
 		mVUallocVIa<vuIndex>(gprT1, _Fs_);
 		MOVSX32R16toR(gprT1, gprT1);
@@ -615,7 +615,7 @@ microVUf(void) mVU_MFIR() {
 }
 microVUf(void) mVU_MFP() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) { /*If (!_Ft_) nop();*/ }
+	if (!recPass) { /*If (!_Ft_) nop();*/ }
 	else { 
 		getPreg(xmmFt);
 		mVUsaveReg<vuIndex>(xmmFt, (uptr)&mVU->regs->VF[_Ft_].UL[0], _X_Y_Z_W);
@@ -623,7 +623,7 @@ microVUf(void) mVU_MFP() {
 }
 microVUf(void) mVU_MTIR() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) {}
+	if (!recPass) {}
 	else { 
 		MOVZX32M16toR(gprT1, (uptr)&mVU->regs->VF[_Fs_].UL[_Fsf_]);
 		mVUallocVIb<vuIndex>(gprT1, _Ft_);
@@ -631,7 +631,7 @@ microVUf(void) mVU_MTIR() {
 }
 microVUf(void) mVU_MR32() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) { /*If (!_Ft_) nop();*/ }
+	if (!recPass) { /*If (!_Ft_) nop();*/ }
 	else { 
 		mVUloadReg<vuIndex>(xmmT1, (uptr)&mVU->regs->VF[_Fs_].UL[0], (_X_Y_Z_W == 8) ? 4 : 15);
 		if (_X_Y_Z_W != 8) { SSE2_PSHUFD_XMM_to_XMM(xmmT1, xmmT1, 0x39); }
@@ -641,7 +641,7 @@ microVUf(void) mVU_MR32() {
 
 microVUf(void) mVU_ILW() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) { /*If (!_Ft_) nop();*/ }
+	if (!recPass) { /*If (!_Ft_) nop();*/ }
 	else { 
 		if (!_Fs_) {
 			MOVZX32M16toR( gprT1, (uptr)mVU->regs->Mem + getVUmem(_Imm11_) + offsetSS );
@@ -659,7 +659,7 @@ microVUf(void) mVU_ILW() {
 }
 microVUf(void) mVU_ILWR() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) { /*If (!_Ft_) nop();*/ }
+	if (!recPass) { /*If (!_Ft_) nop();*/ }
 	else { 
 		if (!_Fs_) {
 			MOVZX32M16toR( gprT1, (uptr)mVU->regs->Mem + offsetSS );
@@ -676,7 +676,7 @@ microVUf(void) mVU_ILWR() {
 }
 microVUf(void) mVU_ISW() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) {}
+	if (!recPass) {}
 	else { 
 		if (!_Fs_) {
 			int imm = getVUmem(_Imm11_);
@@ -700,7 +700,7 @@ microVUf(void) mVU_ISW() {
 }
 microVUf(void) mVU_ISWR() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) {}
+	if (!recPass) {}
 	else { 
 		if (!_Fs_) {
 			mVUallocVIa<vuIndex>(gprT1, _Ft_);
@@ -723,7 +723,7 @@ microVUf(void) mVU_ISWR() {
 
 microVUf(void) mVU_LQ() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) { /*If (!_Ft_) nop();*/ }
+	if (!recPass) { /*If (!_Ft_) nop();*/ }
 	else { 
 		if (!_Fs_) {
 			mVUloadReg<vuIndex>(xmmFt, (uptr)mVU->regs->Mem + getVUmem(_Imm11_), _X_Y_Z_W);
@@ -740,7 +740,7 @@ microVUf(void) mVU_LQ() {
 }
 microVUf(void) mVU_LQD() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) {}
+	if (!recPass) {}
 	else { 
 		if (!_Fs_ && _Ft_) {
 			mVUloadReg<vuIndex>(xmmFt, (uptr)mVU->regs->Mem, _X_Y_Z_W);
@@ -760,7 +760,7 @@ microVUf(void) mVU_LQD() {
 }
 microVUf(void) mVU_LQI() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) {}
+	if (!recPass) {}
 	else { 
 		if (!_Fs_ && _Ft_) {
 			mVUloadReg<vuIndex>(xmmFt, (uptr)mVU->regs->Mem, _X_Y_Z_W);
@@ -781,7 +781,7 @@ microVUf(void) mVU_LQI() {
 }
 microVUf(void) mVU_SQ() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) {}
+	if (!recPass) {}
 	else { 
 		if (!_Ft_) {
 			getReg7(xmmFs, _Fs_);
@@ -798,7 +798,7 @@ microVUf(void) mVU_SQ() {
 }
 microVUf(void) mVU_SQD() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) {}
+	if (!recPass) {}
 	else { 
 		if (!_Ft_) {
 			getReg7(xmmFs, _Fs_);
@@ -816,7 +816,7 @@ microVUf(void) mVU_SQD() {
 }
 microVUf(void) mVU_SQI() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) {}
+	if (!recPass) {}
 	else { 
 		if (!_Ft_) {
 			getReg7(xmmFs, _Fs_);
@@ -836,7 +836,7 @@ microVUf(void) mVU_SQI() {
 
 microVUf(void) mVU_RINIT() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) {}
+	if (!recPass) {}
 	else { 
 		if (_Fs_ || (_Fsf_ == 3)) {
 			getReg8(gprR, _Fs_, _Fsf_);
@@ -857,12 +857,12 @@ microVUt(void) mVU_RGET_() {
 }
 microVUf(void) mVU_RGET() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) { /*if (!_Ft_) nop();*/ }
+	if (!recPass) { /*if (!_Ft_) nop();*/ }
 	else { mVU_RGET_<vuIndex>(); }
 }
 microVUf(void) mVU_RNEXT() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) { /*if (!_Ft_) nop();*/ }
+	if (!recPass) { /*if (!_Ft_) nop();*/ }
 	else { 
 		// algorithm from www.project-fao.org
 		MOV32RtoR(gprT1, gprR);
@@ -883,7 +883,7 @@ microVUf(void) mVU_RNEXT() {
 }
 microVUf(void) mVU_RXOR() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) {}
+	if (!recPass) {}
 	else { 
 		if (_Fs_ || (_Fsf_ == 3)) {
 			getReg8(gprT1, _Fs_, _Fsf_);
@@ -895,18 +895,18 @@ microVUf(void) mVU_RXOR() {
 
 microVUf(void) mVU_WAITP() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) {}
+	if (!recPass) {}
 	else {}
 }
 microVUf(void) mVU_WAITQ() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) {}
+	if (!recPass) {}
 	else {}
 }
 
 microVUf(void) mVU_XTOP() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) {}
+	if (!recPass) {}
 	else { 
 		MOVZX32M16toR( gprT1, (uptr)&mVU->regs->vifRegs->top);
 		mVUallocVIb<vuIndex>(gprT1, _Ft_);
@@ -914,7 +914,7 @@ microVUf(void) mVU_XTOP() {
 }
 microVUf(void) mVU_XITOP() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) {}
+	if (!recPass) {}
 	else { 
 		MOVZX32M16toR( gprT1, (uptr)&mVU->regs->vifRegs->itop );
 		mVUallocVIb<vuIndex>(gprT1, _Ft_);
@@ -934,7 +934,7 @@ void __fastcall mVU_XGKICK1(u32 addr) { mVU_XGKICK_<1>(addr); }
 
 microVUf(void) mVU_XGKICK() {
 	microVU* mVU = mVUx;
-	if (recPass == 0) {}
+	if (!recPass) {}
 	else {
 		mVUallocVIa<vuIndex>(gprT2, _Fs_); // gprT2 = ECX for __fastcall
 		if (!vuIndex)  CALLFunc((uptr)mVU_XGKICK0);

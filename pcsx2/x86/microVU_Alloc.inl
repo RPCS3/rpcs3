@@ -20,96 +20,6 @@
 #ifdef PCSX2_MICROVU
 
 //------------------------------------------------------------------
-// Micro VU - recPass 0 Functions
-//------------------------------------------------------------------
-
-//------------------------------------------------------------------
-// FMAC1 - Normal FMAC Opcodes
-//------------------------------------------------------------------
-
-#define aReg(x) mVUallocInfo.regs.VF[x]
-#define aMax(x, y) ((x > y) ? x : y)
-
-#define analyzeReg1(reg) {							\
-	if (reg) {										\
-		if (_X) { mVal = aMax(mVal, aReg(reg).x); }	\
-		if (_Y) { mVal = aMax(mVal, aReg(reg).y); }	\
-		if (_Z) { mVal = aMax(mVal, aReg(reg).z); }	\
-		if (_W) { mVal = aMax(mVal, aReg(reg).w); } \
-	}												\
-}
-
-#define analyzeReg2(reg) {				\
-	if (reg) {							\
-		if (_X) { aReg(reg).x = 4; }	\
-		if (_Y) { aReg(reg).y = 4; }	\
-		if (_Z) { aReg(reg).z = 4; }	\
-		if (_W) { aReg(reg).w = 4; }	\
-	}									\
-}
-
-microVUt(void) mVUanalyzeFMAC1(int Fd, int Fs, int Ft) {
-	microVU* mVU = mVUx;
-	int mVal = 0;
-	mVUinfo |= _doStatus;
-	analyzeReg1(Fs);
-	analyzeReg1(Ft);
-	incCycles(mVal);
-	analyzeReg2(Fd);
-}
-
-//------------------------------------------------------------------
-// FMAC2 - ABS/FTOI/ITOF Opcodes
-//------------------------------------------------------------------
-
-microVUt(void) mVUanalyzeFMAC2(int Fs, int Ft) {
-	microVU* mVU = mVUx;
-	int mVal = 0;
-	analyzeReg1(Fs);
-	incCycles(mVal);
-	analyzeReg2(Ft);
-}
-
-//------------------------------------------------------------------
-// FMAC3 - BC(xyzw) FMAC Opcodes
-//------------------------------------------------------------------
-
-#define analyzeReg3(reg) {									\
-	if (reg) {												\
-		if (_bc_x)		{ mVal = aMax(mVal, aReg(reg).x); } \
-		else if (_bc_y) { mVal = aMax(mVal, aReg(reg).y); }	\
-		else if (_bc_z) { mVal = aMax(mVal, aReg(reg).z); }	\
-		else			{ mVal = aMax(mVal, aReg(reg).w); } \
-	}														\
-}
-
-microVUt(void) mVUanalyzeFMAC3(int Fd, int Fs, int Ft) {
-	microVU* mVU = mVUx;
-	int mVal = 0;
-	mVUinfo |= _doStatus;
-	analyzeReg1(Fs);
-	analyzeReg3(Ft);
-	incCycles(mVal);
-	analyzeReg2(Fd);
-}
-
-//------------------------------------------------------------------
-// FMAC4 - Clip FMAC Opcode
-//------------------------------------------------------------------
-
-#define analyzeReg4(reg) {						 \
-	if (reg) { mVal = aMax(mVal, aReg(reg).w); } \
-}
-
-microVUt(void) mVUanalyzeFMAC4(int Fs, int Ft) {
-	microVU* mVU = mVUx;
-	int mVal = 0;
-	analyzeReg1(Fs);
-	analyzeReg4(Ft);
-	incCycles(mVal);
-}
-
-//------------------------------------------------------------------
 // Micro VU - recPass 1 Functions
 //------------------------------------------------------------------
 
@@ -855,4 +765,5 @@ microVUt(void) mVUallocVIb(int GPRreg, int _reg_) {
 	if (!_reg_ && (_fxf_ < 3))	{ XOR32RtoR(GPRreg, GPRreg); }  \
 	else						{ MOV32MtoR(GPRreg, (uptr)&mVU->regs->VF[_reg_].UL[0]); }  \
 }
+
 #endif //PCSX2_MICROVU

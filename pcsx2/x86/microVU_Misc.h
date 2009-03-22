@@ -143,6 +143,9 @@ declareAllVariables
 #define mVUallocInfo mVU->prog.prog[mVU->prog.cur].allocInfo
 #define mVUbranch	 mVUallocInfo.branch
 #define mVUcycles	 mVUallocInfo.cycles
+#define mVUstall	 mVUallocInfo.maxStall
+#define mVUregs		 mVUallocInfo.regs
+#define mVUregsTemp	 mVUallocInfo.regsTemp
 #define mVUinfo		 mVUallocInfo.info[mVUallocInfo.curPC / 2]
 #define iPC			 mVUallocInfo.curPC
 #define xPC			 ((iPC / 2) * 8)
@@ -195,4 +198,3 @@ declareAllVariables
 #define isMMX(_VIreg_)	(_VIreg_ >= 1 && _VIreg_ <=9)
 #define mmVI(_VIreg_)	(_VIreg_ - 1)
 
-#include "microVU_Misc.inl"

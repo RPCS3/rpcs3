@@ -30,20 +30,26 @@ union regInfo {
 
 struct microRegInfo {
 	regInfo VF[32];
-	regInfo Acc;
 	u8 VI[32];
-	u8 i;
 	u8 q;
 	u8 p;
-	u8 r;
+};
+
+struct microTempRegInfo {
+	regInfo VF[2];	// Holds cycle info for Fd, VF[0] = Upper Instruction, VF[1] = Lower Instruction
+	u8 VFreg[2];	// Index of the VF reg
+	u8 VI;			// Holds cycle info for Id
+	u8 VIreg;		// Index of the VI reg
 };
 
 template<u32 pSize>
 struct microAllocInfo {
-	microRegInfo regs;
-	u8  branch; // 0 = No Branch, 1 = Branch, 2 = Conditional Branch, 3 = Jump (JALR/JR)
-	u32 curPC;  // Current PC
-	u32 cycles; // Cycles for current block
+	microRegInfo	 regs;	   // Pipeline info
+	microTempRegInfo regsTemp; // Temp Pipeline info (used so that new pipeline info isn't conflicting between upper and lower instructions in the same cycle)
+	u8  branch;		// 0 = No Branch, 1 = Branch, 2 = Conditional Branch, 3 = Jump (JALR/JR)
+	u32 curPC;		// Current PC
+	u32 cycles;		// Cycles for current block
+	u32 maxStall;	// Helps in computing stalls (stores the max amount of cycles to stall for the current opcodes)
 	u32 info[pSize];// bit 00 = Lower Instruction is NOP
 					// bit 01
 					// bit 02

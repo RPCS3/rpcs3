@@ -2503,6 +2503,10 @@
 							>
 						</File>
 						<File
+							RelativePath="..\..\x86\microVU_Analyze.inl"
+							>
+						</File>
+						<File
 							RelativePath="..\..\x86\microVU_Compile.inl"
 							>
 						</File>

@@ -24,6 +24,7 @@
 #include "GS.h"
 #include "ix86/ix86.h"
 #include "microVU_Alloc.h"
+#include "microVU_Misc.h"
 
 struct microBlock {
 	microRegInfo pState; // Detailed State of Pipeline
@@ -155,7 +156,9 @@ microVUt(void) mVUreset();
 microVUt(void) mVUclose();
 #endif
 
-#include "microVU_Misc.h"
+// Include all the *.inl files (Needed because C++ sucks with templates and *.cpp files)
+#include "microVU_Misc.inl"
+#include "microVU_Analyze.inl"
 #include "microVU_Alloc.inl"
 #include "microVU_Tables.inl"
 #include "microVU_Compile.inl"
