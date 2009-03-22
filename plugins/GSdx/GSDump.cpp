@@ -23,66 +23,140 @@
 #include "GSDump.h"
 
 GSDump::GSDump()
-	: m_fp(NULL)
+	: m_gs(NULL)
+	, m_obj(NULL)
+	, m_frames(0)
+	, m_objects(0)
+	, m_vertices(0)
 {
 }
 
 GSDump::~GSDump()
 {
-	if(m_fp)
+	Close();
+}
+
+void GSDump::Open(const CString& fn, DWORD crc, const GSFreezeData& fd, const void* regs)
+{
+	m_gs = _tfopen(fn + _T(".gs"), _T("wb"));
+	m_obj = _tfopen(fn + _T(".obj"), _T("wt"));
+
+	m_frames = 0;
+	m_objects = 0;
+	m_vertices = 0;
+
+	if(m_gs)
 	{
-		fclose(m_fp);
+		fwrite(&crc, 4, 1, m_gs);
+		fwrite(&fd.size, 4, 1, m_gs);
+		fwrite(fd.data, fd.size, 1, m_gs);
+		fwrite(regs, 0x2000, 1, m_gs);
 	}
 }
 
-void GSDump::Open(LPCTSTR fn, DWORD crc, const GSFreezeData& fd, const void* regs)
+void GSDump::Close()
 {
-	m_fp = _tfopen(fn, _T("wb"));
-	m_vsyncs = 0;
-
-	if(m_fp)
-	{
-		fwrite(&crc, 4, 1, m_fp);
-		fwrite(&fd.size, 4, 1, m_fp);
-		fwrite(fd.data, fd.size, 1, m_fp);
-		fwrite(regs, 0x2000, 1, m_fp);
-	}
+	if(m_gs) {fclose(m_gs); m_gs = NULL;}
+	if(m_obj) {fclose(m_obj); m_obj = NULL;}
 }
 
 void GSDump::Transfer(int index, BYTE* mem, size_t size)
 {
-	if(m_fp && size > 0)
+	if(m_gs && size > 0)
 	{
-		fputc(0, m_fp);
-		fputc(index, m_fp);
-		fwrite(&size, 4, 1, m_fp);
-		fwrite(mem, size, 1, m_fp);
+		fputc(0, m_gs);
+		fputc(index, m_gs);
+		fwrite(&size, 4, 1, m_gs);
+		fwrite(mem, size, 1, m_gs);
 	}
 }
 
 void GSDump::ReadFIFO(UINT32 size)
 {
-	if(m_fp && size > 0)
+	if(m_gs && size > 0)
 	{
-		fputc(2, m_fp);
-		fwrite(&size, 4, 1, m_fp);
+		fputc(2, m_gs);
+		fwrite(&size, 4, 1, m_gs);
 	}
 }
 
 void GSDump::VSync(int field, bool last, const void* regs)
 {
-	if(m_fp)
+	if(m_gs)
 	{
-		fputc(3, m_fp);
-		fwrite(regs, 0x2000, 1, m_fp);
+		fputc(3, m_gs);
+		fwrite(regs, 0x2000, 1, m_gs);
 
-		fputc(1, m_fp);
-		fputc(field, m_fp);
+		fputc(1, m_gs);
+		fputc(field, m_gs);
 
-		if((++m_vsyncs & 1) == 0 && last)
+		if((++m_frames & 1) == 0 && last)
 		{
-			fclose(m_fp);
-			m_fp = NULL;
+			Close();
+		}
+	}
+}
+
+void GSDump::Object(GSVertexSW* vertices, int count, GS_PRIM_CLASS primclass)
+{
+	if(m_obj)
+	{
+		switch(primclass)
+		{
+		case GS_POINT_CLASS:
+
+			// TODO
+
+			break;
+
+		case GS_LINE_CLASS:
+
+			// TODO
+
+			break;
+
+		case GS_TRIANGLE_CLASS:
+
+			for(int i = 0; i < count; i++)
+			{
+				float x = vertices[i].p.x;
+				float y = vertices[i].p.y;
+				float z = vertices[i].p.z;
+
+				_ftprintf(m_obj, _T("v %f %f %f\n"), x, y, z);
+			}
+
+			for(int i = 0; i < count; i++)
+			{
+				_ftprintf(m_obj, _T("vt %f %f %f\n"), vertices[i].t.x, vertices[i].t.y, vertices[i].t.z);
+			}
+
+			for(int i = 0; i < count; i++)
+			{
+				_ftprintf(m_obj, _T("vn %f %f %f\n"), 0.0f, 0.0f, 0.0f);
+			}
+
+			_ftprintf(m_obj, _T("g f%d_o%d_p%d_v%d\n"), m_frames, m_objects, primclass, count);
+
+			for(int i = 0; i < count; i += 3)
+			{
+				int a = m_vertices + i + 1;
+				int b = m_vertices + i + 2;
+				int c = m_vertices + i + 3;
+
+				_ftprintf(m_obj, _T("f %d/%d/%d %d/%d/%d %d/%d/%d \n"), a, a, a, b, b, b, c, c, c);
+			}
+
+			m_vertices += count;
+			m_objects++;
+
+			break;
+	
+		case GS_SPRITE_CLASS:
+
+			// TODO
+
+			break;
 		}
 	}
 }

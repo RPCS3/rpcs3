@@ -139,10 +139,63 @@ struct XPadButton
 	};
 };
 
+class XInput
+{
+	int m_pad;
+	bool m_connected;
+	XINPUT_STATE m_state;
+	XINPUT_VIBRATION m_vibration;
+	clock_t m_lastpoll;
+
+public:
+	XInput(int pad)
+		: m_pad(pad)
+		, m_connected(false)
+		, m_lastpoll(0)
+	{
+		memset(&m_vibration, 0, sizeof(m_vibration));
+	}
+
+	bool GetState(XINPUT_STATE& state)
+	{
+		clock_t now = clock();
+		clock_t delay = m_connected ? 16 : 1000; // poll once per frame (16 ms is about 60 fps)
+
+		if(now > m_lastpoll + delay)
+		{
+			memset(&m_state, 0, sizeof(m_state));
+			
+			m_connected = XInputGetState(m_pad, &m_state) == S_OK; // ERROR_DEVICE_NOT_CONNECTED is not an error, SUCCEEDED(...) won't work here
+
+			m_lastpoll = now;
+		}
+
+		memcpy(&state, &m_state, sizeof(state));
+
+		return m_connected;
+	}
+
+	void SetState(XINPUT_VIBRATION& vibration)
+	{
+		if(m_vibration.wLeftMotorSpeed != vibration.wLeftMotorSpeed || m_vibration.wRightMotorSpeed != vibration.wRightMotorSpeed)
+		{
+			XInputSetState(m_pad, &vibration);
+
+			m_vibration = vibration;
+		}
+	}
+
+	bool IsConnected()
+	{
+		return m_connected;
+	}
+};
+
 class XPad
 {
 public:
 	int m_pad;
+	XInput m_xinput;
 	bool m_connected;
 	bool m_ds2native;
 	bool m_analog;
@@ -175,8 +228,7 @@ public:
 
 public:
 	XPad(int pad) 
-		: m_pad(pad)
-		, m_connected(false)
+		: m_xinput(pad)
 		, m_ds2native(false)
 		, m_analog(!s_ps2) // defaults to analog off for ps2
 		, m_locked(false)
@@ -202,11 +254,7 @@ public:
 		{
 			XINPUT_STATE state;
 
-			memset(&state, 0, sizeof(state));
-
-			m_connected = SUCCEEDED(XInputGetState(m_pad, &state));
-
-			if(m_connected)
+			if(m_xinput.GetState(state))
 			{
 				SetButton(state.Gamepad.wButtons, XINPUT_GAMEPAD_BACK, XPadButton::Select);
 				SetButton(state.Gamepad.wButtons, XINPUT_GAMEPAD_LEFT_THUMB, XPadButton::L3);
@@ -242,7 +290,7 @@ public:
 
 		if(index == 1)
 		{
-			if(m_connected)
+			if(m_xinput.IsConnected())
 			{
 				XINPUT_VIBRATION vibraton;
 
@@ -254,7 +302,7 @@ public:
 					vibraton.wRightMotorSpeed = m_small << 8;
 				}
 				
-				XInputSetState(m_pad, &vibraton);
+				m_xinput.SetState(vibraton);
 			}
 		}
 

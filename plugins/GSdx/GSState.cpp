@@ -1671,6 +1671,7 @@ struct GSFrameInfo
 {
 	DWORD FBP;
 	DWORD FPSM;
+	DWORD FBMSK;
 	bool TME;
 	DWORD TBP0;
 	DWORD TPSM;
@@ -2050,6 +2051,10 @@ bool GSC_GodOfWar(const GSFrameInfo& fi, int& skip)
 		{
 			skip = 30;
 		}
+		else if(fi.TME && fi.FBP == 0x00000 && fi.FPSM == PSM_PSMCT32 && fi.TBP0 == 0x00000 && fi.TPSM == PSM_PSMCT32 && fi.FBMSK == 0xff000000)
+		{
+			skip = 1; // blur
+		}
 	}
 	else
 	{
@@ -2114,6 +2119,7 @@ bool GSState::IsBadFrame(int& skip)
 
 	fi.FBP = m_context->FRAME.Block();
 	fi.FPSM = m_context->FRAME.PSM;
+	fi.FBMSK = m_context->FRAME.FBMSK;
 	fi.TME = PRIM->TME;
 	fi.TBP0 = m_context->TEX0.TBP0;
 	fi.TPSM = m_context->TEX0.PSM;

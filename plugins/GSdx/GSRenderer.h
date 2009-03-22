@@ -41,7 +41,6 @@ class GSRendererBase : public GSState, protected GSRendererSettings
 {
 protected:
 	bool m_osd;
-	int m_field;
 
 	void ProcessWindowMessages()
 	{
@@ -103,7 +102,6 @@ public:
 	GSRendererBase(BYTE* base, bool mt, void (*irq)(), int nloophack, const GSRendererSettings& rs)
 		: GSState(base, mt, irq, nloophack)
 		, m_osd(true)
-		, m_field(0)
 	{
 		m_interlace = rs.m_interlace;
 		m_aspectratio = rs.m_aspectratio;
@@ -126,7 +124,7 @@ protected:
 	virtual void ResetDevice() {}
 	virtual bool GetOutput(int i, Texture& t) = 0;
 
-	bool Merge()
+	bool Merge(int field)
 	{
 		bool en[2];
 
@@ -145,6 +143,8 @@ protected:
 				dr[i] = GetDisplayRect(i);
 
 				baseline = min(dr[i].top, baseline);
+
+				// printf("[%d]: %d %d %d %d, %d %d %d %d\n", i, fr[i], dr[i]); 
 			}
 		}
 
@@ -158,12 +158,10 @@ protected:
 			&& DISPFB[0]->FBW == DISPFB[1]->FBW
 			&& DISPFB[0]->PSM == DISPFB[1]->PSM)
 			{
-				CRect fr1 = fr[1] + CRect(0, 1, 0, 0);
-				CRect dr1 = dr[1] + CRect(0, 0, 0, 1);
-
-				if(fr[0] == fr1 && dr[0] == dr1)
+				if(fr[0] == fr[1] + CRect(0, 1, 0, 0) && dr[0] == dr[1] + CRect(0, 0, 0, 1)
+				|| fr[1] == fr[0] + CRect(0, 1, 0, 0) && dr[1] == dr[0] + CRect(0, 0, 0, 1))
 				{
-					// persona 4 for example:
+					// persona 4:
 					//
 					// fr[0] = 0, 0, 640, 448 (y = 0, height = 448)
 					// fr[1] = 0, 1, 640, 448 (y = 1, height = 447)
@@ -171,9 +169,38 @@ protected:
 					// dr[1] = 159, 50, 779, 497 (y = 50, height = 447)
 					//
 					// second image shifted up by 1 pixel and blended over itself
+					//
+					// god of war:
+					//
+					// fr[0] = 0 1 512 448
+					// fr[1] = 0 0 512 448
+					// dr[0] = 127 50 639 497
+					// dr[1] = 127 50 639 498
+					//
+					// same just the first image shifted
 
-					fr[1].top = fr[0].top;
-					dr[1].bottom = dr[0].bottom;
+					int top = min(fr[0].top, fr[1].top);
+					int bottom = max(dr[0].bottom, dr[1].bottom);
+
+					fr[0].top = top;
+					fr[1].top = top;
+					dr[0].bottom = bottom;
+					dr[1].bottom = bottom;
+				}
+				else if(dr[0] == dr[1] && (fr[0] == fr[1] + CPoint(0, 1) || fr[1] == fr[0] + CPoint(0, 1)))
+				{
+					// dq5:
+					//
+					// fr[0] = 0 1 512 445
+					// fr[1] = 0 0 512 444
+					// dr[0] = 127 50 639 494
+					// dr[1] = 127 50 639 494
+
+					int top = min(fr[0].top, fr[1].top);
+					int bottom = min(fr[0].bottom, fr[1].bottom);
+
+					fr[0].top = fr[1].top = top;
+					fr[0].bottom = fr[1].bottom = bottom;
 				}
 			}
 		}
@@ -252,10 +279,10 @@ protected:
 
 			if(SMODE2->INT && m_interlace > 0)
 			{
-				int field = 1 - ((m_interlace - 1) & 1);
+				int field2 = 1 - ((m_interlace - 1) & 1);
 				int mode = (m_interlace - 1) >> 1;
 
-				if(!m_dev.Interlace(ds, m_field ^ field, mode, tex[1].m_scale.y))
+				if(!m_dev.Interlace(ds, field ^ field2, mode, tex[1].m_scale.y))
 				{
 					return false;
 				}
@@ -263,6 +290,37 @@ protected:
 		}
 
 		return true;
+	}
+
+	void DoSnapshot(int field)
+	{
+		if(!m_snapshot.IsEmpty())
+		{
+			if(!m_dump && (::GetAsyncKeyState(VK_SHIFT) & 0x8000))
+			{
+				GSFreezeData fd;
+				fd.size = 0;
+				fd.data = NULL;
+				Freeze(&fd, true);
+				fd.data = new BYTE[fd.size];
+				Freeze(&fd, false);
+
+				m_dump.Open(m_snapshot, m_crc, fd, PMODE);
+
+				delete [] fd.data;
+			}
+
+			m_dev.SaveCurrent(m_snapshot + _T(".bmp"));
+
+			m_snapshot.Empty();
+		}
+		else
+		{
+			if(m_dump)
+			{
+				m_dump.VSync(field, !(::GetAsyncKeyState(VK_CONTROL) & 0x8000), PMODE);
+			}
+		}
 	}
 
 	void DoCapture()
@@ -327,6 +385,7 @@ public:
 	bool s_save;
 	bool s_savez;
 
+	CString m_snapshot;
 	GSCapture m_capture;
 
 public:
@@ -359,11 +418,7 @@ public:
 
 	void VSync(int field)
 	{
-		// printf("VSYNC\n");
-
 		GSPerfMonAutoTimer pmat(m_perfmon);
-
-		m_field = !!field;
 
 		Flush();
 
@@ -371,12 +426,9 @@ public:
 
 		ProcessWindowMessages();
 
-		if(m_dump)
-		{
-			m_dump.VSync(m_field, !(::GetAsyncKeyState(VK_CONTROL) & 0x8000), PMODE);
-		}
+		field = field ? 1 : 0;
 
-		if(!Merge()) return;
+		if(!Merge(field)) return;
 
 		// osd 
 
@@ -453,30 +505,21 @@ public:
 
 		m_dev.Present(r);
 
+		//
+
+		DoSnapshot(field);
+
 		DoCapture();
 	}
 
 	bool MakeSnapshot(LPCTSTR path)
 	{
-		CString fn;
-
-		fn.Format(_T("%s_%s"), path, CTime::GetCurrentTime().Format(_T("%Y%m%d%H%M%S")));
-
-		if((::GetAsyncKeyState(VK_SHIFT) & 0x8000) && !m_dump)
+		if(m_snapshot.IsEmpty())
 		{
-			GSFreezeData fd;
-			fd.size = 0;
-			fd.data = NULL;
-			Freeze(&fd, true);
-			fd.data = new BYTE[fd.size];
-			Freeze(&fd, false);
-
-			m_dump.Open(fn + _T(".gs"), m_crc, fd, PMODE);
-
-			delete [] fd.data;
+			m_snapshot.Format(_T("%s_%s"), path, CTime::GetCurrentTime().Format(_T("%Y%m%d%H%M%S")));
 		}
 
-		return m_dev.SaveCurrent(fn + _T(".bmp"));
+		return true;
 	}
 
 	virtual void MinMaxUV(int w, int h, CRect& r) {r = CRect(0, 0, w, h);}

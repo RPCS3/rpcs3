@@ -500,6 +500,11 @@ protected:
 
 		m_vtrace.Update(m_vertices, m_count, primclass, PRIM->IIP, PRIM->TME, m_context->TEX0.TFX);
 
+		if(m_dump) 
+		{
+			m_dump.Object(m_vertices, m_count, primclass);
+		}
+
 		GSScanlineParam p;
 
 		GetScanlineParam(p, primclass);
@@ -771,6 +776,8 @@ public:
 		
 		if(GSVertexSW* v = DrawingKick<prim>(skip, count))
 		{
+if(!m_dump)
+{
 			GSVector4 pmin, pmax;
 
 			switch(prim)
@@ -822,7 +829,7 @@ public:
 			{
 				return;
 			}
-
+}
 			switch(prim)
 			{
 			case GS_POINTLIST:
