@@ -247,14 +247,29 @@ void SLTU()		{ if (!_Rd_) return; cpuRegs.GPR.r[_Rd_].UD[0] = (cpuRegs.GPR.r[_Rs
 * Format:  OP rs, rt                                     *
 *********************************************************/
 
+// Signed division "overflows" on (0x80000000 / -1), here (LO = 0x80000000, HI = 0) is returned by MIPS
+// in division by zero on MIPS, it appears that: 
+// LO gets 1 if rs is negative (and the division is signed) and -1 otherwise.
+// HI gets the value of rs.
+
 // Result is stored in HI/LO [no arithmetic exceptions]
 void DIV()
 {
-    if (cpuRegs.GPR.r[_Rt_].SL[0] != 0)
+	if (cpuRegs.GPR.r[_Rs_].UL[0] == 0x80000000 && cpuRegs.GPR.r[_Rt_].UL[0] == 0xffffffff)
+	{
+		cpuRegs.LO.SD[0] = (s32)0x80000000;
+		cpuRegs.HI.SD[0] = (s32)0x0;
+	}
+    else if (cpuRegs.GPR.r[_Rt_].SL[0] != 0)
     {
         cpuRegs.LO.SD[0] = cpuRegs.GPR.r[_Rs_].SL[0] / cpuRegs.GPR.r[_Rt_].SL[0];
         cpuRegs.HI.SD[0] = cpuRegs.GPR.r[_Rs_].SL[0] % cpuRegs.GPR.r[_Rt_].SL[0];
     }
+	else
+	{
+		cpuRegs.LO.SD[0] = (cpuRegs.GPR.r[_Rs_].SL[0] < 0) ? 1 : -1;
+		cpuRegs.HI.SD[0] = cpuRegs.GPR.r[_Rs_].SL[0];
+	}
 }
 
 // Result is stored in HI/LO [no arithmetic exceptions]
@@ -266,6 +281,11 @@ void DIVU()
 		// note 2: reference material strongly disagrees. (air)
 		cpuRegs.LO.SD[0] = (s32)(cpuRegs.GPR.r[_Rs_].UL[0] / cpuRegs.GPR.r[_Rt_].UL[0]);
 		cpuRegs.HI.SD[0] = (s32)(cpuRegs.GPR.r[_Rs_].UL[0] % cpuRegs.GPR.r[_Rt_].UL[0]);
+	}
+	else
+	{
+		cpuRegs.LO.SD[0] = -1;
+		cpuRegs.HI.SD[0] = cpuRegs.GPR.r[_Rs_].SL[0];
 	}
 }
 
@@ -858,7 +878,7 @@ void MFSA( void ) {
 }
 
 void MTSA( void ) {
-	cpuRegs.sa = (s32)cpuRegs.GPR.r[_Rs_].SD[0];
+	cpuRegs.sa = (s32)cpuRegs.GPR.r[_Rs_].SD[0] & 0xf;
 }
 
 // SNY supports three basic modes, two which synchronize memory accesses (related 
@@ -907,11 +927,11 @@ void TLTIU() { if (cpuRegs.GPR.r[_Rs_].UD[0] <  (u64)_Imm_) throw R5900Exception
 *********************************************************/
 
 void MTSAB() {
- 	cpuRegs.sa = ((cpuRegs.GPR.r[_Rs_].UL[0] & 0xF) ^ (_Imm_ & 0xF)) << 3;
+ 	cpuRegs.sa = ((cpuRegs.GPR.r[_Rs_].UL[0] & 0xF) ^ (_Imm_ & 0xF));
 }
 
 void MTSAH() {
-    cpuRegs.sa = ((cpuRegs.GPR.r[_Rs_].UL[0] & 0x7) ^ (_Imm_ & 0x7)) << 4;
+    cpuRegs.sa = ((cpuRegs.GPR.r[_Rs_].UL[0] & 0x7) ^ (_Imm_ & 0x7)) << 1;
 }
 
 } }	} // end namespace R5900::Interpreter::OpcodeImpl

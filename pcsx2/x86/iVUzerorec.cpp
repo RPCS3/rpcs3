@@ -3000,7 +3000,7 @@ void VuInstruction::Recompile(list<VuInstruction>::iterator& itinst, u32 vuxyz)
 		if( type & INST_CLIP_WRITE ) {
 			if( nParentPc < s_pCurBlock->startpc || nParentPc >= (int)pc ) {
 
-				if( pparentinst != NULL ) {
+				if( !CHECK_VUCLIPFLAGHACK && pparentinst != NULL ) {
 
 					if( nParentCheckForExecution >= 0 ) {
 						if( pparentinst->pClipWrite == 0 )

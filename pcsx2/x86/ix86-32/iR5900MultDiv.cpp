@@ -595,14 +595,31 @@ void recMULTU1_constt(int info)
 EERECOMPILE_CODE0(MULTU1, XMMINFO_READS|XMMINFO_READT|(_Rd_?XMMINFO_WRITED:0));
 
 //// DIV
+
+void recDIVconst(int upper)
+{
+	s32 quot, rem;
+	if (g_cpuConstRegs[_Rs_].UL[0] == 0x80000000 && g_cpuConstRegs[_Rt_].SL[0] == -1)
+	{
+		quot = (s32)0x80000000;
+		rem = 0;
+	}
+	else if (g_cpuConstRegs[_Rt_].SL[0] != 0) 
+	{
+        quot = g_cpuConstRegs[_Rs_].SL[0] / g_cpuConstRegs[_Rt_].SL[0];
+        rem = g_cpuConstRegs[_Rs_].SL[0] % g_cpuConstRegs[_Rt_].SL[0];
+    }
+	else
+	{
+		quot = (g_cpuConstRegs[_Rs_].SL[0] < 0) ? 1 : -1;
+		rem = g_cpuConstRegs[_Rs_].SL[0];
+	}
+	recWritebackConstHILO((u64)quot|((u64)rem<<32), 0, upper);
+}
+
 void recDIV_const()
 {
-	if (g_cpuConstRegs[_Rt_].SL[0] != 0) {
-        s32 quot = g_cpuConstRegs[_Rs_].SL[0] / g_cpuConstRegs[_Rt_].SL[0];
-        s32 rem = g_cpuConstRegs[_Rs_].SL[0] % g_cpuConstRegs[_Rt_].SL[0];
-
-		recWritebackConstHILO((u64)quot|((u64)rem<<32), 0, 0);
-    }
+	recDIVconst(0);
 }
 
 void recDIVsuper(int info, int sign, int upper, int process)
@@ -610,24 +627,46 @@ void recDIVsuper(int info, int sign, int upper, int process)
 	EEINST_SETSIGNEXT(_Rs_);
 	EEINST_SETSIGNEXT(_Rt_);
 
-	if( process & PROCESS_CONSTT ) {
-		if( !g_cpuConstRegs[_Rt_].UL[0] )
-			return;
+	if( process & PROCESS_CONSTT ) 
 		MOV32ItoR( ECX, g_cpuConstRegs[_Rt_].UL[0] );
-	}
-	else {
+	else 
 		MOV32MtoR( ECX, (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] );
-
-		OR32RtoR( ECX, ECX );
-		j8Ptr[ 0 ] = JE8( 0 );
-	}
 
 	if( process & PROCESS_CONSTS )
 		MOV32ItoR( EAX, g_cpuConstRegs[_Rs_].UL[0] );
-	else {
+	else 
 		MOV32MtoR( EAX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
+
+	u8 *end1;
+	if (sign)  //test for overflow (x86 will just throw an exception)
+	{
+		CMP32ItoR( EAX, 0x80000000 );
+		u8 *cont1 = JNE8(0);
+		CMP32ItoR( ECX, 0xffffffff );
+		u8 *cont2 = JNE8(0);
+		//overflow case:
+		XOR32RtoR( EDX, EDX ); //EAX remains 0x80000000
+		end1 = JMP8(0);
+
+		x86SetJ8(cont1);
+		x86SetJ8(cont2);
 	}
 
+	CMP32ItoR( ECX, 0 );
+	u8 *cont3 = JNE8(0);
+	//divide by zero
+	MOV32RtoR( EDX, EAX );
+	if (sign) //set EAX to (EAX < 0)?1:-1
+	{
+		SAR32ItoR( EAX, 31 ); //(EAX < 0)?-1:0
+		SHL32ItoR( EAX, 1 ); //(EAX < 0)?-2:0
+		NOT32R( EAX ); //(EAX < 0)?1:-1
+	}
+	else
+		MOV32ItoR( EAX, 0xffffffff );
+	u8 *end2 = JMP8(0);
+
+	x86SetJ8(cont3);
 	if( sign ) {
 		CDQ();
 		IDIV32R( ECX );
@@ -636,7 +675,9 @@ void recDIVsuper(int info, int sign, int upper, int process)
 		XOR32RtoR( EDX, EDX );
 		DIV32R( ECX );
 	}
-	if( !(process & PROCESS_CONSTT) ) x86SetJ8( j8Ptr[ 0 ] );
+
+	if (sign) x86SetJ8( end1 );
+	x86SetJ8( end2 );
 
 	// need to execute regardless of bad divide
 	recWritebackHILO(info, 0, upper);
@@ -660,14 +701,25 @@ void recDIV_constt(int info)
 EERECOMPILE_CODE0(DIV, XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITELO|XMMINFO_WRITEHI);
 
 //// DIVU
+void recDIVUconst(int upper)
+{
+	u32 quot, rem;
+	if (g_cpuConstRegs[_Rt_].UL[0] != 0) {
+		quot = g_cpuConstRegs[_Rs_].UL[0] / g_cpuConstRegs[_Rt_].UL[0];
+		rem = g_cpuConstRegs[_Rs_].UL[0] % g_cpuConstRegs[_Rt_].UL[0];
+	}
+	else
+	{
+		quot = 0xffffffff;
+		rem = g_cpuConstRegs[_Rs_].UL[0];
+	}
+
+	recWritebackConstHILO((u64)quot|((u64)rem<<32), 0, upper);
+}
+
 void recDIVU_const()
 {
-	if (g_cpuConstRegs[_Rt_].UL[0] != 0) {
-		u32 quot = g_cpuConstRegs[_Rs_].UL[0] / g_cpuConstRegs[_Rt_].UL[0];
-		u32 rem = g_cpuConstRegs[_Rs_].UL[0] % g_cpuConstRegs[_Rt_].UL[0];
-
-		recWritebackConstHILO((u64)quot|((u64)rem<<32), 0, 0);
-	}
+	recDIVUconst(0);
 }
 
 void recDIVU_(int info)
@@ -689,12 +741,7 @@ EERECOMPILE_CODE0(DIVU, XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITELO|XMMINFO_WRIT
 
 void recDIV1_const()
 {
-	if (g_cpuConstRegs[_Rt_].SL[0] != 0) {
-        s32 quot = g_cpuConstRegs[_Rs_].SL[0] / g_cpuConstRegs[_Rt_].SL[0];
-        s32 rem = g_cpuConstRegs[_Rs_].SL[0] % g_cpuConstRegs[_Rt_].SL[0];
-
-		recWritebackConstHILO((u64)quot|((u64)rem<<32), 0, 1);
-    }
+	recDIVconst(1);
 }
 
 void recDIV1_(int info) 
@@ -716,12 +763,7 @@ EERECOMPILE_CODE0(DIV1, XMMINFO_READS|XMMINFO_READT);
 
 void recDIVU1_const()
 {
-	if (g_cpuConstRegs[_Rt_].UL[0] != 0) {
-		u32 quot = g_cpuConstRegs[_Rs_].UL[0] / g_cpuConstRegs[_Rt_].UL[0];
-		u32 rem = g_cpuConstRegs[_Rs_].UL[0] % g_cpuConstRegs[_Rt_].UL[0];
-
-		recWritebackConstHILO((u64)quot|((u64)rem<<32), 0, 1);
-	}
+	recDIVUconst(1);
 }
 
 void recDIVU1_(int info) 
