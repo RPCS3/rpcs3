@@ -55,11 +55,11 @@ void Close()
 __forceinline bool __fastcall Newline()
 {
 	if (Config.PsxOut)
-		puts("\n");
+		printf("\n");
 
 	if (emuLog != NULL)
 	{
-		fputs("\n", emuLog);
+		fprintf(emuLog,"\n");
 		fflush(emuLog);
 	}
 
@@ -68,23 +68,25 @@ __forceinline bool __fastcall Newline()
 
 __forceinline bool __fastcall Write(const char* fmt)
 {
-	if (Config.PsxOut)
-		fputs(fmt, stdout);
+	// By using fputs, append a newline automatically.
+	if (Config.PsxOut) fputs(fmt, stdout);
 
-	if (emuLog != NULL)
-		fputs(fmt, emuLog);
+	// Color changing should not use this function, as we don't want the color codes logged, or new lines inserted.
+	if (emuLog != NULL) fputs(fmt, emuLog);
 
 	return false;
 }
 
 void __fastcall SetColor(Colors color)
 {
-	Write(tbl_color_codes[color]);
+	// Don't log the color change, and don't insert a new line afterwards.
+	printf(tbl_color_codes[color]);
 }
 
 void ClearColor()
 {
-	Write(COLOR_RESET);
+	// Don't log the color change, and don't insert a new line afterwards.
+	printf(COLOR_RESET);
 }
 }
 
