@@ -22,6 +22,9 @@
 #include "crtdbg.h"
 #endif
 
+// LilyPad version.
+#define VERSION ((0<<8) | 9 | (11<<24))
+
 // Used to prevent reading input and cleaning up input devices at the same time.
 // Only an issue when not reading input in GS thread and disabling devices due to
 // lost focus.
@@ -140,6 +143,10 @@ public:
 	// I keep track of state of non-disabled non-initialized
 	// pads, but should never be asked for their state.
 	u8 initialized;
+
+	// Set to 1 if the state of this pad has been updated since its state
+	// was last queried.
+	u8 stateUpdated;
 
 	// initialized and not disabled (and mtap state for slots > 0).
 	u8 enabled;
@@ -298,6 +305,13 @@ void ProcessButtonBinding(Binding *b, ButtonSum *sum, int value) {
 		value = (1<<16)-value;
 	}
 	if (value > 0) {
+		/* Note:  Value ranges of FULLY_DOWN, and sensitivity of
+		 *  BASE_SENSITIVITY corresponds to an axis/button being exactly fully down.
+		 *  Math in next line takes care of those two conditions, rounding as necessary.
+		 *  Done using __int64s because overflows will occur when
+		 *  sensitivity > BASE_SENSITIVITY and/or value > FULLY_DOWN.  Latter only happens
+		 *  for relative axis.
+		 */
 		AddForce(sum, b->command, (int)((((sensitivity*(255*(__int64)value)) + BASE_SENSITIVITY/2)/BASE_SENSITIVITY + FULLY_DOWN/2)/FULLY_DOWN));
 	}
 }
@@ -319,24 +333,34 @@ void CapSum(ButtonSum *sum) {
 	}
 }
 
-// Counters for when to next update pad state.
-// Read all devices at once, so don't need to read them again
-// for pad 2 immediately after pad 1.  3rd counter is for
-// when neither pad is being read, so still respond to
-// key press info requests.
-int summed[3] = {0, 0, 0};
+// Counter similar to stateUpdated for each pad, except used for PADkeyEvent instead.
+// Only matters when GS thread updates is disabled (Just like summed pad values
+// for pads beyond the first slot).  Also, it's set to 4 and decremented by 1 on each read,
+// so it's less likely I'll control state on a PADkeyEvent call.
+u8 padReadKeyUpdated = 0;
 
 #define LOCK_DIRECTION 2
 #define LOCK_BUTTONS 4
 #define LOCK_BOTH 1
 
 
-void Update(int pad) {
-	if ((unsigned int)pad > 2) return;
-	if (summed[pad] > 0) {
-		summed[pad]--;
+void Update(unsigned int port, unsigned int slot) {
+	if (port > 2) return;
+	u8 *stateUpdated;
+	if (port < 2)
+		stateUpdated = &pads[port][slot].stateUpdated;
+	else
+		stateUpdated = &padReadKeyUpdated;
+	if (*stateUpdated) {
+		stateUpdated[0] --;
 		return;
 	}
+
+	static unsigned int LastCheck = 0;
+	unsigned int t = timeGetTime();
+	if (t - LastCheck < 15) return;
+	LastCheck = t;
+
 	int i;
 	ButtonSum s[2][4];
 	u8 lockStateChanged[2][4];
@@ -405,92 +429,95 @@ void Update(int pad) {
 		LeaveCriticalSection(&readInputCriticalSection);
 	}
 
-	for (int port=0; port<2; port++) {
-		for (int slot=0; slot<4; slot++) {
-			if (config.padConfigs[port][slot].type == DisabledPad || !pads[port][slot].initialized) continue;
-			if (config.padConfigs[port][slot].type == GuitarPad) {
-				if (!config.GH2) {
-					s[port][slot].sticks[1].vert = -s[port][slot].sticks[1].vert;
-				}
-				// GH2 hack.
-				else if (config.GH2) {
-					const unsigned int oldIdList[5] = {ID_R2, ID_CIRCLE, ID_TRIANGLE, ID_CROSS, ID_SQUARE};
-					const unsigned int idList[5] = {ID_L2, ID_L1, ID_R1, ID_R2, ID_CROSS};
-					int values[5];
-					int i;
-					for (i=0; i<5; i++) {
-						int id = oldIdList[i] - 0x1104;
-						values[i] = s[port][slot].buttons[id];
-						s[port][slot].buttons[id] = 0;
+	{
+		for (int port=0; port<2; port++) {
+			for (int slot=0; slot<4; slot++) {
+				pads[port][slot].stateUpdated = 1;
+				if (config.padConfigs[port][slot].type == DisabledPad || !pads[port][slot].initialized) continue;
+				if (config.padConfigs[port][slot].type == GuitarPad) {
+					if (!config.GH2) {
+						s[port][slot].sticks[1].vert = -s[port][slot].sticks[1].vert;
 					}
-					s[port][slot].buttons[ID_TRIANGLE-0x1104] = values[1];
-					for (i=0; i<5; i++) {
-						int id = idList[i] - 0x1104;
-						s[port][slot].buttons[id] = values[i];
-					}
-					if (abs(s[port][slot].sticks[0].vert) <= 48) {
-						for (int i=0; i<5; i++) {
-							unsigned int id = idList[i] - 0x1104;
-							if (pads[port][slot].sum.buttons[id] < s[port][slot].buttons[id]) {
-								s[port][slot].buttons[id] = pads[port][slot].sum.buttons[id];
+					// GH2 hack.
+					else if (config.GH2) {
+						const unsigned int oldIdList[5] = {ID_R2, ID_CIRCLE, ID_TRIANGLE, ID_CROSS, ID_SQUARE};
+						const unsigned int idList[5] = {ID_L2, ID_L1, ID_R1, ID_R2, ID_CROSS};
+						int values[5];
+						int i;
+						for (i=0; i<5; i++) {
+							int id = oldIdList[i] - 0x1104;
+							values[i] = s[port][slot].buttons[id];
+							s[port][slot].buttons[id] = 0;
+						}
+						s[port][slot].buttons[ID_TRIANGLE-0x1104] = values[1];
+						for (i=0; i<5; i++) {
+							int id = idList[i] - 0x1104;
+							s[port][slot].buttons[id] = values[i];
+						}
+						if (abs(s[port][slot].sticks[0].vert) <= 48) {
+							for (int i=0; i<5; i++) {
+								unsigned int id = idList[i] - 0x1104;
+								if (pads[port][slot].sum.buttons[id] < s[port][slot].buttons[id]) {
+									s[port][slot].buttons[id] = pads[port][slot].sum.buttons[id];
+								}
+							}
+						}
+						else if (abs(pads[port][slot].sum.sticks[0].vert) <= 48) {
+							for (int i=0; i<5; i++) {
+								unsigned int id = idList[i] - 0x1104;
+								if (pads[port][slot].sum.buttons[id]) {
+									s[port][slot].buttons[id] = 0;
+								}
 							}
 						}
 					}
-					else if (abs(pads[port][slot].sum.sticks[0].vert) <= 48) {
-						for (int i=0; i<5; i++) {
-							unsigned int id = idList[i] - 0x1104;
-							if (pads[port][slot].sum.buttons[id]) {
-								s[port][slot].buttons[id] = 0;
-							}
+				}
+
+				if (pads[port][slot].mode == 0x41) {
+					s[port][slot].sticks[0].horiz +=
+						s[port][slot].sticks[1].horiz +
+						s[port][slot].sticks[2].horiz;
+					s[port][slot].sticks[0].vert +=
+						s[port][slot].sticks[1].vert +
+						s[port][slot].sticks[2].vert;
+				}
+
+				CapSum(&s[port][slot]);
+				if (lockStateChanged[port][slot]) {
+					if (lockStateChanged[port][slot] & LOCK_BOTH) {
+						if (pads[port][slot].lockedState != (LOCK_DIRECTION | LOCK_BUTTONS)) {
+							// Enable the one that's not enabled.
+							lockStateChanged[port][slot] ^= pads[port][slot].lockedState^(LOCK_DIRECTION | LOCK_BUTTONS);
+						}
+						else {
+							// Disable both
+							lockStateChanged[port][slot] ^= LOCK_DIRECTION | LOCK_BUTTONS;
 						}
 					}
-				}
-			}
-
-			if (pads[port][slot].mode == 0x41) {
-				s[port][slot].sticks[0].horiz +=
-					s[port][slot].sticks[1].horiz +
-					s[port][slot].sticks[2].horiz;
-				s[port][slot].sticks[0].vert +=
-					s[port][slot].sticks[1].vert +
-					s[port][slot].sticks[2].vert;
-			}
-
-			CapSum(&s[port][slot]);
-			if (lockStateChanged[port][slot]) {
-				if (lockStateChanged[port][slot] & LOCK_BOTH) {
-					if (pads[port][slot].lockedState != (LOCK_DIRECTION | LOCK_BUTTONS)) {
-						// Enable the one that's not enabled.
-						lockStateChanged[port][slot] ^= pads[port][slot].lockedState^(LOCK_DIRECTION | LOCK_BUTTONS);
+					if (lockStateChanged[port][slot] & LOCK_DIRECTION) {
+						if (pads[port][slot].lockedState & LOCK_DIRECTION) {
+							memset(pads[port][slot].lockedSum.sticks, 0, sizeof(pads[port][slot].lockedSum.sticks));
+						}
+						else {
+							memcpy(pads[port][slot].lockedSum.sticks, s[port][slot].sticks, sizeof(pads[port][slot].lockedSum.sticks));
+						}
+						pads[port][slot].lockedState ^= LOCK_DIRECTION;
 					}
-					else {
-						// Disable both
-						lockStateChanged[port][slot] ^= LOCK_DIRECTION | LOCK_BUTTONS;
+					if (lockStateChanged[port][slot] & LOCK_BUTTONS) {
+						if (pads[port][slot].lockedState & LOCK_BUTTONS) {
+							memset(pads[port][slot].lockedSum.buttons, 0, sizeof(pads[port][slot].lockedSum.buttons));
+						}
+						else {
+							memcpy(pads[port][slot].lockedSum.buttons, s[port][slot].buttons, sizeof(pads[port][slot].lockedSum.buttons));
+						}
+						pads[port][slot].lockedState ^= LOCK_BUTTONS;
 					}
-				}
-				if (lockStateChanged[port][slot] & LOCK_DIRECTION) {
-					if (pads[port][slot].lockedState & LOCK_DIRECTION) {
-						memset(pads[port][slot].lockedSum.sticks, 0, sizeof(pads[port][slot].lockedSum.sticks));
+					for (i=0; i<sizeof(pads[port][slot].lockedSum)/4; i++) {
+						if (((int*)&pads[port][slot].lockedSum)[i]) break;
 					}
-					else {
-						memcpy(pads[port][slot].lockedSum.sticks, s[port][slot].sticks, sizeof(pads[port][slot].lockedSum.sticks));
+					if (i==sizeof(pads[port][slot].lockedSum)/4) {
+						pads[port][slot].lockedState = 0;
 					}
-					pads[port][slot].lockedState ^= LOCK_DIRECTION;
-				}
-				if (lockStateChanged[port][slot] & LOCK_BUTTONS) {
-					if (pads[port][slot].lockedState & LOCK_BUTTONS) {
-						memset(pads[port][slot].lockedSum.buttons, 0, sizeof(pads[port][slot].lockedSum.buttons));
-					}
-					else {
-						memcpy(pads[port][slot].lockedSum.buttons, s[port][slot].buttons, sizeof(pads[port][slot].lockedSum.buttons));
-					}
-					pads[port][slot].lockedState ^= LOCK_BUTTONS;
-				}
-				for (i=0; i<sizeof(pads[port][slot].lockedSum)/4; i++) {
-					if (((int*)&pads[port][slot].lockedSum)[i]) break;
-				}
-				if (i==sizeof(pads[port][slot].lockedSum)/4) {
-					pads[port][slot].lockedState = 0;
 				}
 			}
 		}
@@ -498,14 +525,12 @@ void Update(int pad) {
 	for (i=0; i<8; i++) {
 		pads[i&1][i>>1].sum = s[i&1][i>>1];
 	}
-	summed[0] = 1;
-	summed[1] = 1;
-	summed[2] = 2;
-	summed[pad]--;
+	pads[port][slot].stateUpdated--;
+	padReadKeyUpdated = 4;
 }
 
-void CALLBACK PADupdate(int pad) {
-	if (config.GSThreadUpdates) Update(pad);
+void CALLBACK PADupdate(int port) {
+	if (config.GSThreadUpdates) Update(port, 0);
 }
 
 inline void SetVibrate(int port, int slot, int motor, u8 val) {
@@ -519,8 +544,6 @@ u32 CALLBACK PS2EgetLibType(void) {
 	ps2e = 1;
 	return PS2E_LT_PAD;
 }
-
-#define VERSION ((0<<8) | 9 | (11<<24))
 
 u32 CALLBACK PS2EgetLibVersion2(u32 type) {
 	ps2e = 1;
@@ -586,14 +609,27 @@ inline void ResetVibrate(int port, int slot) {
 }
 
 void ResetPad(int port, int slot) {
+	// Lines before memset currently don't do anything useful,
+	// but allow this function to be called at any time.
+
+	// Need to backup, so can be called at any point.
+	u8 enabled = pads[port][slot].enabled;
+
+	// Currently should never do anything.
+	SetVibrate(port, slot, 0, 0);
+	SetVibrate(port, slot, 1, 0);
+
 	memset(&pads[port][slot], 0, sizeof(pads[0][0]));
 	pads[port][slot].mode = MODE_DIGITAL;
 	pads[port][slot].umask[0] = pads[port][slot].umask[1] = 0xFF;
+	// Sets up vibrate variable.
 	ResetVibrate(port, slot);
 	if (config.padConfigs[port][slot].autoAnalog) {
 		pads[port][slot].mode = MODE_ANALOG;
 	}
 	pads[port][slot].initialized = 1;
+
+	pads[port][slot].enabled = enabled;
 }
 
 
@@ -827,7 +863,8 @@ s32 CALLBACK PADopen(void *pDsp) {
 	// to be what it actually does.
 	// activeWindow = GetActiveWindow() == hWnd;
 
-	activeWindow = (GetAncestor(hWnd, GA_ROOT) == GetAncestor(GetForegroundWindow(), GA_ROOT));
+	// activeWindow = (GetAncestor(hWnd, GA_ROOT) == GetAncestor(GetForegroundWindow(), GA_ROOT));
+	activeWindow = 1;
 	UpdateEnabledDevices();
 	return 0;
 }
@@ -906,7 +943,7 @@ u8 CALLBACK PADpoll(u8 value) {
 			query.response[2] = 0x5A;
 			{
 				if (!config.GSThreadUpdates) {
-					Update(query.port);
+					Update(query.port, query.slot);
 				}
 				ButtonSum *sum = &pad->sum;
 
@@ -1166,8 +1203,14 @@ DWORD WINAPI RenameWindowThreadProc(void *lpParameter) {
 }
 
 keyEvent* CALLBACK PADkeyEvent() {
+	static char eventCount = 0;
+	eventCount++;
+	if (eventCount < openCount) {
+		return 0;
+	}
+	eventCount = 0;
 	if (!config.GSThreadUpdates) {
-		Update(2);
+		Update(2, 0);
 	}
 	static char shiftDown = 0;
 	static char altDown = 0;
@@ -1244,17 +1287,19 @@ s32 CALLBACK PADfreeze(int mode, freezeData *data) {
 	}
 	else if (mode == FREEZE_LOAD) {
 		PadPluginFreezeData &pdata = *(PadPluginFreezeData*)(data->data);
+		StopVibrate();
 		if (data->size != sizeof(PadPluginFreezeData) ||
 			pdata.version != PAD_SAVE_STATE_VERSION ||
 			strcmp(pdata.format, "PadMode")) return 0;
-		StopVibrate();
-		int port = pdata.port;
+		unsigned int port = pdata.port;
+		if (port >= 2) return 0;
 		for (int slot=0; slot<4; slot++) {
-			u8 mode = pads[port][slot].mode = pdata.padData[slot].mode;
+			u8 mode = pdata.padData[slot].mode;
 			if (mode != MODE_DIGITAL && mode != MODE_ANALOG && mode != MODE_DS2_NATIVE) {
-				ResetPad(port, slot);
-				continue;
+				break;
 			}
+
+			pads[port][slot].mode = mode;
 			pads[port][slot].config = pdata.padData[slot].config;
 			pads[port][slot].modeLock = pdata.padData[slot].modeLock;
 			memcpy(pads[port][slot].umask, pdata.padData[slot].umask, sizeof(pads[port][slot].umask));
@@ -1332,11 +1377,11 @@ extern "C" long _cdecl _ftol2() {
 }
 #endif
 
-int CALLBACK PADsetSlot(int port, int slot) {
+s32 CALLBACK PADsetSlot(int port, int slot) {
 	port --;
 	slot --;
 	if ((unsigned int)port > 1 || (unsigned int)slot > 3) return 0;
-	// Even if no pad there, record the slot, as it is the active slot already.
+	// Even if no pad there, record the slot, as it is the active slot regardless.
 	slots[port] = slot;
 	return pads[port][slot].enabled;
 }

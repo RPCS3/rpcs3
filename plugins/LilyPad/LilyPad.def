@@ -20,3 +20,4 @@ EXPORTS
 	PADabout
 	PADupdate
 	PADfreeze
+	PADsetSlot

@@ -6,6 +6,12 @@ static ExtraWndProc* extraProcs = 0;
 static int numExtraProcs = 0;
 
 void ReleaseExtraProc(ExtraWndProc proc) {
+	// Probably isn't needed, but just in case...
+	// Creating and destroying the mutex adds some inefficiency,
+	// but this function is only called on emulation start and on focus/unfocus.
+	HANDLE hMutex = CreateMutexA(0, 0, "LilyPad");
+	if (hMutex) WaitForSingleObject(hMutex, 100);
+
 	for (int i=0; i<numExtraProcs; i++) {
 		if (extraProcs[i] == proc) {
 			extraProcs[i] = extraProcs[--numExtraProcs];
@@ -20,6 +26,11 @@ void ReleaseExtraProc(ExtraWndProc proc) {
 		}
 		hWndEaten = 0;
 		eatenWndProc = 0;
+	}
+
+	if (hMutex) {
+		ReleaseMutex(hMutex);
+		CloseHandle(hMutex);
 	}
 }
 
@@ -58,14 +69,28 @@ LRESULT CALLBACK OverrideWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPa
 
 
 int EatWndProc(HWND hWnd, ExtraWndProc proc) {
+	// Probably isn't needed, but just in case...
+	// Creating and destroying the mutex adds some inefficiency,
+	// but this function is only called on emulation start and on focus/unfocus.
+	HANDLE hMutex = CreateMutexA(0, 0, "LilyPad");
+	if (hMutex) WaitForSingleObject(hMutex, 100);
+
 	if (hWnd != hWndEaten) {
 		ReleaseEatenProc();
 		eatenWndProc = (WNDPROC) SetWindowLongPtr(hWnd, GWLP_WNDPROC, (LONG_PTR)OverrideWndProc);
 		// ???
-		if (!eatenWndProc) return 0;
-		hWndEaten = hWnd;
+		if (eatenWndProc)
+			hWndEaten = hWnd;
 	}
-	extraProcs = (ExtraWndProc*) realloc(extraProcs, sizeof(ExtraWndProc)*(numExtraProcs+1));
-	extraProcs[numExtraProcs++] = proc;
-	return 1;
+	if (hWndEaten == hWnd) {
+		extraProcs = (ExtraWndProc*) realloc(extraProcs, sizeof(ExtraWndProc)*(numExtraProcs+1));
+		extraProcs[numExtraProcs++] = proc;
+	}
+
+	if (hMutex) {
+		ReleaseMutex(hMutex);
+		CloseHandle(hMutex);
+	}
+
+	return hWndEaten == hWnd;
 }
