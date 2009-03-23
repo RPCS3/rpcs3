@@ -25,15 +25,14 @@
 
 microVUf(void) mVU_DIV() {
 	microVU* mVU = mVUx;
-	if (!recPass) {}
+	if (!recPass) { mVUanalyzeFDIV<vuIndex>(_Fs_, _Fsf_, _Ft_, _Ftf_); }
 	else { 
-		//u8 *pjmp;, *pjmp1;
+		u8 *pjmp, *pjmp1;
 		u32 *ajmp32, *bjmp32;
 
 		getReg5(xmmFs, _Fs_, _Fsf_);
 		getReg5(xmmFt, _Ft_, _Ftf_);
-
-		//AND32ItoM(VU_VI_ADDR(REG_STATUS_FLAG, 2), 0xFCF); // Clear D/I flags
+		mVUallocDFLAGa<vuIndex>(gprT2); // Get DS/IS flags
 
 		// FT can be zero here! so we need to check if its zero and set the correct flag.
 		SSE_XORPS_XMM_to_XMM(xmmT1, xmmT1); // Clear xmmT1
@@ -42,17 +41,17 @@ microVUf(void) mVU_DIV() {
 
 		AND32ItoR(gprT1, 1);  // Grab "Is Zero" bits from the previous calculation
 		ajmp32 = JZ32(0); // Skip if none are
-			//SSE_XORPS_XMM_to_XMM(xmmT1, xmmT1); // Clear xmmT1
-			//SSE_CMPEQPS_XMM_to_XMM(xmmT1, xmmFs); // Set all F's if each vector is zero
-			//SSE_MOVMSKPS_XMM_to_R32(gprT1, xmmT1); // Move the sign bits of the previous calculation
+			SSE_XORPS_XMM_to_XMM(xmmT1, xmmT1); // Clear xmmT1
+			SSE_CMPEQPS_XMM_to_XMM(xmmT1, xmmFs); // Set all F's if each vector is zero
+			SSE_MOVMSKPS_XMM_to_R32(gprT1, xmmT1); // Move the sign bits of the previous calculation
 
-			//AND32ItoR(gprT1, 1);  // Grab "Is Zero" bits from the previous calculation
-			//pjmp = JZ8(0);
-			//	OR32ItoM( VU_VI_ADDR(REG_STATUS_FLAG, 2), 0x410 ); // Set invalid flag (0/0)
-			//	pjmp1 = JMP8(0);
-			//x86SetJ8(pjmp);
-			//	OR32ItoM( VU_VI_ADDR(REG_STATUS_FLAG, 2), 0x820 ); // Zero divide (only when not 0/0)
-			//x86SetJ8(pjmp1);
+			AND32ItoR(gprT1, 1);  // Grab "Is Zero" bits from the previous calculation
+			pjmp = JZ8(0);
+				OR32ItoR(gprT2, 0x410); // Set invalid flag (0/0)
+				pjmp1 = JMP8(0);
+			x86SetJ8(pjmp);
+				OR32ItoR(gprT2, 0x820); // Zero divide (only when not 0/0)
+			x86SetJ8(pjmp1);
 
 			SSE_XORPS_XMM_to_XMM(xmmFs, xmmFt);
 			SSE_ANDPS_M128_to_XMM(xmmFs, (uptr)mVU_signbit);
@@ -68,11 +67,12 @@ microVUf(void) mVU_DIV() {
 
 		mVUunpack_xyzw<vuIndex>(xmmFs, xmmFs, 0);
 		mVUmergeRegs<vuIndex>(xmmPQ, xmmFs, writeQ ? 4 : 8);
+		mVUallocDFLAGb<vuIndex>(gprT2);
 	}
 }
 microVUf(void) mVU_SQRT() {
 	microVU* mVU = mVUx;
-	if (!recPass) {}
+	if (!recPass) { mVUanalyzeFDIV<vuIndex>(0, 0, _Ft_, _Ftf_); }
 	else { 
 		//u8* pjmp;
 		getReg5(xmmFt, _Ft_, _Ftf_);
@@ -94,7 +94,7 @@ microVUf(void) mVU_SQRT() {
 }
 microVUf(void) mVU_RSQRT() {
 	microVU* mVU = mVUx;
-	if (!recPass) {}
+	if (!recPass) { mVUanalyzeFDIV<vuIndex>(_Fs_, _Fsf_, _Ft_, _Ftf_); }
 	else { 
 		u8 *ajmp8, *bjmp8;
 
@@ -478,7 +478,7 @@ microVUf(void) mVU_FSAND() {
 	microVU* mVU = mVUx;
 	if (!recPass) {}
 	else { 
-		mVUallocSFLAGa<vuIndex>(gprT1, fvsInstance);
+		mVUallocSFLAGa<vuIndex>(gprT1, fvsInstance, !!(_Imm12_ & 0xc30));
 		AND16ItoR(gprT1, _Imm12_);
 		mVUallocVIb<vuIndex>(gprT1, _Ft_);
 	}
@@ -487,7 +487,7 @@ microVUf(void) mVU_FSEQ() {
 	microVU* mVU = mVUx;
 	if (!recPass) {}
 	else { 
-		mVUallocSFLAGa<vuIndex>(gprT1, fvsInstance);
+		mVUallocSFLAGa<vuIndex>(gprT1, fvsInstance, 1);
 		XOR16ItoR(gprT1, _Imm12_);
 		SUB16ItoR(gprT1, 1);
 		SHR16ItoR(gprT1, 15);
@@ -498,18 +498,21 @@ microVUf(void) mVU_FSOR() {
 	microVU* mVU = mVUx;
 	if (!recPass) {}
 	else { 
-		mVUallocSFLAGa<vuIndex>(gprT1, fvsInstance);
+		mVUallocSFLAGa<vuIndex>(gprT1, fvsInstance, !!((_Imm12_ & 0xc30) == 0xc30));
 		OR16ItoR(gprT1, _Imm12_);
 		mVUallocVIb<vuIndex>(gprT1, _Ft_);
 	}
 }
 microVUf(void) mVU_FSSET() {
 	microVU* mVU = mVUx;
-	if (!recPass) {}
+	if (!recPass) { mVUdivFlagT = 4; }
 	else { 
 		int flagReg;
 		getFlagReg(flagReg, fsInstance);
 		MOV16ItoR(gprT1, (_Imm12_ & 0xfc0));
+		if (_Imm12_ & 0xc00) { mVUdivFlag = _Imm12_ >> 9; }
+		else				 { mVUdivFlag = 1; }
+		mVUdivFlagT = 4;
 	}
 }
 

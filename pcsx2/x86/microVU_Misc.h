@@ -144,6 +144,8 @@ declareAllVariables
 #define mVUbranch	 mVUallocInfo.branch
 #define mVUcycles	 mVUallocInfo.cycles
 #define mVUstall	 mVUallocInfo.maxStall
+#define mVUdivFlag	 mVUallocInfo.divFlag
+#define mVUdivFlagT	 mVUallocInfo.divFlagTimer
 #define mVUregs		 mVUallocInfo.regs
 #define mVUregsTemp	 mVUallocInfo.regsTemp
 #define mVUinfo		 mVUallocInfo.info[mVUallocInfo.curPC / 2]

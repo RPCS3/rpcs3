@@ -38,7 +38,7 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 	else SSE2_PSHUFD_XMM_to_XMM(regT1, reg, 0x1B); // Flip wzyx to xyzw
 	if (doStatus) {
 		getFlagReg(sReg, fsInstance); // Set sReg to valid GPR by Cur Flag Instance
-		mVUallocSFLAGa<vuIndex>(sReg, fpsInstance); // Get Prev Status Flag
+		mVUallocSFLAGa<vuIndex>(sReg, fpsInstance, 0); // Get Prev Status Flag
 		AND16ItoR(sReg, 0xff0); // Keep Sticky and D/I flags
 	}
 

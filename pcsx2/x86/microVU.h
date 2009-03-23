@@ -125,6 +125,7 @@ struct microVU {
 	u32		code;		 // Contains the current Instruction
 	u32		iReg;		 // iReg (only used in recompilation, not execution)
 	u32		clipFlag[4]; // 4 instances of clip flag (used in execution)
+	u32		divFlag[2];	 // 2 Instances of I/D flags
 
 /*
 	uptr x86eax; // Accumulator register. Used in arithmetic operations.

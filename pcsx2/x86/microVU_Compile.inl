@@ -65,6 +65,7 @@ microVUx(void) mVUcompile(u32 startPC, u32 pipelineState, microRegInfo* pState, 
 
 	// First Pass
 	setCode();
+	mVUcycles = 1; // Skips "M" phase, and starts counting cycles at "T" stage
 	for (;;) {
 		startLoop();
 		mVUopU<vuIndex, 0>();
