@@ -19,13 +19,14 @@
 #include <wx/wx.h>
 #include <wx/image.h>
 
+#include "wxHelpers.h"
+
 #pragma once
 
-class frmLogging: public wxDialog
+class frmLogging: public wxDialogWithHelpers
 {
 public:
-
-	frmLogging(wxWindow* parent, int id, const wxPoint& pos=wxDefaultPosition, const wxSize& size=wxDefaultSize, long style=wxDEFAULT_FRAME_STYLE);
+	frmLogging( wxWindow* parent, int id, const wxPoint& pos=wxDefaultPosition, const wxSize& size=wxDefaultSize );
 
 protected:
 

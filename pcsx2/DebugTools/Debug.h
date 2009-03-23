@@ -76,7 +76,7 @@ namespace R3000A
 struct LogSources
 {
 	bool
-		R5900:1,		// instructions and exception vectors for the R5900 (EE)
+		R5900:1,	// instructions and exception vectors for the R5900 (EE)
 		R3000A:1,	// instructions and exception vectors for the R3000a (IOP)
 	
 		Memory:1,	// memory accesses (loads and stores)
@@ -91,7 +91,7 @@ struct LogSources
 		GIF:1,
 		SIF:1,
 		IPU:1,
-		VUM:1,		// VU memory access logs
+		VUMacro:1,	// VU macro mode logs (pipelines)
 		RPC:1,
 		Counters:1,	// EE's counters!
 		
@@ -156,7 +156,7 @@ extern bool SrcLog_GPU( const char* fmt, ... );
 #define GIF_LOG  (varLog.GIF) && SrcLog_GIF
 #define SIF_LOG  (varLog.SIF) && SrcLog_SIF
 #define IPU_LOG  (varLog.IPU) && SrcLog_IPU
-#define VUM_LOG  (varLog.VUM) && SrcLog_VUM
+#define VUM_LOG  (varLog.VUMacro) && SrcLog_VUM
 #define RPC_LOG  (varLog.RPC) && SrcLog_RPC
 #define EECNT_LOG (varLog.Counters) && SrcLog_EECNT
 

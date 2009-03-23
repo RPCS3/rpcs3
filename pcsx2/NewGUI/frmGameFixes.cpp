@@ -19,6 +19,9 @@
 #include "PrecompiledHeader.h"
 #include "Misc.h"
 #include "frmGameFixes.h"
+#include "wxHelpers.h"
+
+using namespace wxHelpers;
 
 frmGameFixes::frmGameFixes(wxWindow* parent, int id, const wxPoint& pos, const wxSize& size, long style):
 wxDialog( parent, id, _T("Game Special Fixes"), pos, size )
@@ -39,15 +42,14 @@ wxDialog( parent, id, _T("Game Special Fixes"), pos, size )
 
 	wxBoxSizer& mainSizer = *new wxBoxSizer( wxVERTICAL );
 	wxStaticBoxSizer& groupSizer = *new wxStaticBoxSizer( groupbox, wxVERTICAL );
-	wxSizerFlags stdSpacing( wxSizerFlags().Border( wxALL, 6 ) );
 
-	groupSizer.Add( chk_FPUCompareHack);
-	groupSizer.Add( chk_TriAce);
-	groupSizer.Add( chk_GodWar);
+	groupSizer.Add( chk_FPUCompareHack, CheckboxFlags );
+	groupSizer.Add( chk_TriAce, CheckboxFlags );
+	groupSizer.Add( chk_GodWar, CheckboxFlags );
 
-	mainSizer.Add( label_Title,  wxSizerFlags().Align(wxALIGN_CENTER).DoubleBorder() );
-	mainSizer.Add( &groupSizer,  wxSizerFlags().Align(wxALIGN_CENTER).DoubleHorzBorder() );
-	mainSizer.Add( CreateStdDialogButtonSizer( wxOK | wxCANCEL ), wxSizerFlags().Align(wxALIGN_RIGHT).Border() );
+	mainSizer.Add( label_Title, stdCenteredFlags );
+	mainSizer.Add( &groupSizer, stdSpacingFlags );
+	mainSizer.Add( CreateStdDialogButtonSizer( wxOK | wxCANCEL ), stdButtonSizerFlags );
 
 	SetSizerAndFit( &mainSizer );
 }

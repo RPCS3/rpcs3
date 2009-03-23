@@ -2932,6 +2932,14 @@
 				RelativePath="..\..\NewGUI\main.cpp"
 				>
 			</File>
+			<File
+				RelativePath="..\..\NewGUI\wxHelpers.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\NewGUI\wxHelpers.h"
+				>
+			</File>
 		</Filter>
 		<File
 			RelativePath="..\..\Common.h"
