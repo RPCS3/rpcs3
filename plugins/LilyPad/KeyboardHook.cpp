@@ -71,11 +71,19 @@ void EnumHookDevices() {
 
 // Makes sure hooks are started in correct thread.
 ExtraWndProcResult StartHooksWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, LRESULT *output) {
+	// Don't remove too quickly - could be other things happening in other threads.
+	// Attempted fix for keyboard input occasionally not working.
+	static int counter = 0;
 	if (ikhd && !ikhd->hHook && ikhd->active) {
+		counter = 0;
 		ikhd->hHook = SetWindowsHookEx(WH_KEYBOARD_LL, IgnoreKeyboardHook, hInst, 0);
 		if (ikhd->hHook == 0) ikhd->Deactivate();
 	}
-	return CONTINUE_BLISSFULLY_AND_RELEASE_PROC;
+	counter ++;
+	if (counter % 1000 == 0)
+		return CONTINUE_BLISSFULLY_AND_RELEASE_PROC;
+	else
+		return CONTINUE_BLISSFULLY;
 }
 
 LRESULT CALLBACK IgnoreKeyboardHook(int code, WPARAM wParam, LPARAM lParam) {

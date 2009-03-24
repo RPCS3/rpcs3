@@ -69,22 +69,26 @@ int IsWindowMaximized (HWND hWnd) {
 }
 
 void DEBUG_NEW_SET() {
-	if (config.debug) {
-		HANDLE hFile = CreateFileA("logs\\padLog.txt", GENERIC_WRITE, FILE_SHARE_READ, 0, OPEN_ALWAYS, 0, 0);
+	if (config.debug && bufSize>1) {
+		HANDLE hFile = CreateFileA("logs\\padLog.txt", FILE_APPEND_DATA, FILE_SHARE_READ, 0, OPEN_ALWAYS, 0, 0);
 		if (hFile != INVALID_HANDLE_VALUE) {
 			int i;
 			char temp[1500];
 			char *end = temp;
-			for (i=0; i<bufSize; i++) {
+			sprintf(end, "%02X (%02X) ", inBuf[0], inBuf[1]);
+			end += 8;
+			for (i=2; i<bufSize; i++) {
 				sprintf(end, "%02X ", inBuf[i]);
-				end = strchr(end, 0);
+				end += 3;
 			}
-			end++[0] = '\n';
-			for (i=0; i<bufSize; i++) {
+			end[-1] = '\n';
+			sprintf(end, "%02X (%02X) ", outBuf[0], outBuf[1]);
+			end += 8;
+			for (i=2; i<bufSize; i++) {
 				sprintf(end, "%02X ", outBuf[i]);
-				end = strchr(end, 0);
+				end+=3;
 			}
-			end++[0] = '\n';
+			end[-1] = '\n';
 			end++[0] = '\n';
 			DWORD junk;
 			WriteFile(hFile, temp, end-temp, &junk, 0);
@@ -889,12 +893,16 @@ u8 CALLBACK PADstartPoll(int port) {
 		query.lastByte = 0;
 		DEBUG_IN(port);
 		DEBUG_OUT(0xFF);
+		DEBUG_IN(slots[port]);
+		DEBUG_OUT(pads[port][slots[port]].enabled);
 		return 0xFF;
 	}
 	else {
 		query.queryDone = 1;
 		query.numBytes = 0;
 		query.lastByte = 1;
+		DEBUG_IN(0);
+		DEBUG_OUT(0);
 		DEBUG_IN(port);
 		DEBUG_OUT(0);
 		return 0;
