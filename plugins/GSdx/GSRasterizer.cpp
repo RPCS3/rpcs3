@@ -478,8 +478,6 @@ void GSRasterizer::DrawTriangleSection(int top, int bottom, GSVertexSW& l, const
 
 					GSVertexSW scan = l + dscan * (lrmax - l.p).xxxx();
 
-					ASSERT(m_dsf.ssl);
-
 					m_dsf.ssl(right, left, top, scan);
 				}
 			}
@@ -520,8 +518,6 @@ void GSRasterizer::DrawTriangleSection(int top, int bottom, GSVertexSW& l, const
 					m_stats.pixels += pixels;
 
 					GSVertexSW scan = l + dscan * (lrmax - l.p).xxxx();
-
-					ASSERT(m_dsf.ssl);
 
 					m_dsf.ssl(right, left, top, scan);
 				}

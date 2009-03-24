@@ -35,6 +35,7 @@ struct GSRendererSettings
 	bool m_vsync;
 	bool m_nativeres;
 	bool m_aa1;
+	bool m_blur;
 };
 
 class GSRendererBase : public GSState, protected GSRendererSettings
@@ -90,6 +91,12 @@ protected:
 				m_aa1 = !m_aa1;
 				return true;
 			}			
+
+			if(msg.wParam == VK_END)
+			{
+				m_blur = !m_blur;
+				return true;
+			}			
 		}
 
 		return false;
@@ -109,6 +116,7 @@ public:
 		m_vsync = rs.m_vsync;
 		m_nativeres = rs.m_nativeres;
 		m_aa1 = rs.m_aa1;
+		m_blur = rs.m_blur;
 	};
 
 	virtual bool Create(LPCTSTR title) = 0;
@@ -148,60 +156,67 @@ protected:
 			}
 		}
 
+		if(!en[0] && !en[1])
+		{
+			return false;
+		}
+
 		// try to avoid fullscreen blur, could be nice on tv but on a monitor it's like double vision, hurts my eyes (persona 4, guitar hero)
 		//
 		// NOTE: probably the technique explained in graphtip.pdf (Antialiasing by Supersampling / 4. Reading Odd/Even Scan Lines Separately with the PCRTC then Blending)
 
-		if(en[0] && en[1] && PMODE->SLBG == 0 && PMODE->MMOD == 1 && PMODE->ALP == 0x80)
+		bool samesrc = en[0] && en[1] && DISPFB[0]->FBP == DISPFB[1]->FBP && DISPFB[0]->FBW == DISPFB[1]->FBW && DISPFB[0]->PSM == DISPFB[1]->PSM;
+		bool blurdetected = false;
+
+		if(samesrc && PMODE->SLBG == 0 && PMODE->MMOD == 1 && PMODE->ALP == 0x80)
 		{
-			if(DISPFB[0]->FBP == DISPFB[1]->FBP
-			&& DISPFB[0]->FBW == DISPFB[1]->FBW
-			&& DISPFB[0]->PSM == DISPFB[1]->PSM)
+			if(fr[0] == fr[1] + CRect(0, 1, 0, 0) && dr[0] == dr[1] + CRect(0, 0, 0, 1)
+			|| fr[1] == fr[0] + CRect(0, 1, 0, 0) && dr[1] == dr[0] + CRect(0, 0, 0, 1))
 			{
-				if(fr[0] == fr[1] + CRect(0, 1, 0, 0) && dr[0] == dr[1] + CRect(0, 0, 0, 1)
-				|| fr[1] == fr[0] + CRect(0, 1, 0, 0) && dr[1] == dr[0] + CRect(0, 0, 0, 1))
-				{
-					// persona 4:
-					//
-					// fr[0] = 0, 0, 640, 448 (y = 0, height = 448)
-					// fr[1] = 0, 1, 640, 448 (y = 1, height = 447)
-					// dr[0] = 159, 50, 779, 498 (y = 50, height = 448)
-					// dr[1] = 159, 50, 779, 497 (y = 50, height = 447)
-					//
-					// second image shifted up by 1 pixel and blended over itself
-					//
-					// god of war:
-					//
-					// fr[0] = 0 1 512 448
-					// fr[1] = 0 0 512 448
-					// dr[0] = 127 50 639 497
-					// dr[1] = 127 50 639 498
-					//
-					// same just the first image shifted
+				// persona 4:
+				//
+				// fr[0] = 0 0 640 448
+				// fr[1] = 0 1 640 448
+				// dr[0] = 159 50 779 498
+				// dr[1] = 159 50 779 497
+				//
+				// second image shifted up by 1 pixel and blended over itself
+				//
+				// god of war:
+				//
+				// fr[0] = 0 1 512 448
+				// fr[1] = 0 0 512 448
+				// dr[0] = 127 50 639 497
+				// dr[1] = 127 50 639 498
+				//
+				// same just the first image shifted
 
-					int top = min(fr[0].top, fr[1].top);
-					int bottom = max(dr[0].bottom, dr[1].bottom);
+				int top = min(fr[0].top, fr[1].top);
+				int bottom = max(dr[0].bottom, dr[1].bottom);
 
-					fr[0].top = top;
-					fr[1].top = top;
-					dr[0].bottom = bottom;
-					dr[1].bottom = bottom;
-				}
-				else if(dr[0] == dr[1] && (fr[0] == fr[1] + CPoint(0, 1) || fr[1] == fr[0] + CPoint(0, 1)))
-				{
-					// dq5:
-					//
-					// fr[0] = 0 1 512 445
-					// fr[1] = 0 0 512 444
-					// dr[0] = 127 50 639 494
-					// dr[1] = 127 50 639 494
+				fr[0].top = top;
+				fr[1].top = top;
+				dr[0].bottom = bottom;
+				dr[1].bottom = bottom;
 
-					int top = min(fr[0].top, fr[1].top);
-					int bottom = min(fr[0].bottom, fr[1].bottom);
+				blurdetected = true;
+			}
+			else if(dr[0] == dr[1] && (fr[0] == fr[1] + CPoint(0, 1) || fr[1] == fr[0] + CPoint(0, 1)))
+			{
+				// dq5:
+				//
+				// fr[0] = 0 1 512 445
+				// fr[1] = 0 0 512 444
+				// dr[0] = 127 50 639 494
+				// dr[1] = 127 50 639 494
 
-					fr[0].top = fr[1].top = top;
-					fr[0].bottom = fr[1].bottom = bottom;
-				}
+				int top = min(fr[0].top, fr[1].top);
+				int bottom = min(fr[0].bottom, fr[1].bottom);
+
+				fr[0].top = fr[1].top = top;
+				fr[0].bottom = fr[1].bottom = bottom;
+
+				blurdetected = true;
 			}
 		}
 
@@ -209,15 +224,25 @@ protected:
 		CSize ds(0, 0);
 
 		Texture tex[2];
+
+		if(samesrc && fr[0].bottom == fr[1].bottom)
+		{
+			GetOutput(0, tex[0]);
+
+			tex[1] = tex[0]; // saves one texture fetch
+		}
+		else
+		{
+			if(en[0]) GetOutput(0, tex[0]);
+			if(en[1]) GetOutput(1, tex[1]);
+		}
+
 		GSVector4 src[2];
 		GSVector4 dst[2];
 
 		for(int i = 0; i < 2; i++)
 		{
-			if(!en[i] || !GetOutput(i, tex[i]))
-			{
-				continue;
-			}
+			if(!en[i] || !tex[i]) continue;
 
 			CRect r = fr[i];
 
@@ -232,10 +257,20 @@ protected:
 
 			//
 
-			src[i].x = tex[i].m_scale.x * r.left / tex[i].GetWidth();
-			src[i].y = tex[i].m_scale.y * r.top / tex[i].GetHeight();
-			src[i].z = tex[i].m_scale.x * r.right / tex[i].GetWidth();
-			src[i].w = tex[i].m_scale.y * r.bottom / tex[i].GetHeight();
+			if(m_blur && blurdetected && i == 1)
+			{
+				src[i].x = tex[i].m_scale.x * r.left / tex[i].GetWidth();
+				src[i].y = (tex[i].m_scale.y * r.top + 1) / tex[i].GetHeight();
+				src[i].z = tex[i].m_scale.x * r.right / tex[i].GetWidth();
+				src[i].w = (tex[i].m_scale.y * r.bottom + 1) / tex[i].GetHeight();
+			}
+			else
+			{
+				src[i].x = tex[i].m_scale.x * r.left / tex[i].GetWidth();
+				src[i].y = tex[i].m_scale.y * r.top / tex[i].GetHeight();
+				src[i].z = tex[i].m_scale.x * r.right / tex[i].GetWidth();
+				src[i].w = tex[i].m_scale.y * r.bottom / tex[i].GetHeight();
+			}
 
 			GSVector2 o;
 

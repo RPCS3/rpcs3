@@ -76,6 +76,7 @@ GSSettingsDlg::GSSettingsDlg(CWnd* pParent /*=NULL*/)
 	, m_logz(FALSE)
 	, m_fba(TRUE)
 	, m_aa1(FALSE)
+	, m_blur(FALSE)
 {
 }
 
@@ -117,6 +118,7 @@ void GSSettingsDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Check(pDX, IDC_CHECK5, m_logz);
 	DDX_Check(pDX, IDC_CHECK7, m_fba);
 	DDX_Check(pDX, IDC_CHECK8, m_aa1);
+	DDX_Check(pDX, IDC_CHECK9, m_blur);
 }
 
 BEGIN_MESSAGE_MAP(GSSettingsDlg, CDialog)
@@ -223,6 +225,7 @@ BOOL GSSettingsDlg::OnInitDialog()
 	m_logz = !!pApp->GetProfileInt(_T("Settings"), _T("logz"), FALSE);
 	m_fba = !!pApp->GetProfileInt(_T("Settings"), _T("fba"), TRUE);
 	m_aa1 = !!pApp->GetProfileInt(_T("Settings"), _T("aa1"), FALSE);
+	m_blur = !!pApp->GetProfileInt(_T("Settings"), _T("blur"), FALSE);
 
 	m_resx.SetRange(512, 4096);
 	m_resy.SetRange(512, 4096);
@@ -287,6 +290,7 @@ void GSSettingsDlg::OnOK()
 	pApp->WriteProfileInt(_T("Settings"), _T("logz"), m_logz);
 	pApp->WriteProfileInt(_T("Settings"), _T("fba"), m_fba);
 	pApp->WriteProfileInt(_T("Settings"), _T("aa1"), m_aa1);
+	pApp->WriteProfileInt(_T("Settings"), _T("blur"), m_blur);	
 
 	pApp->WriteProfileInt(_T("Settings"), _T("resx"), m_resx.GetPos());
 	pApp->WriteProfileInt(_T("Settings"), _T("resy"), m_resy.GetPos());
