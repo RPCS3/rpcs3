@@ -327,7 +327,7 @@ __forceinline u32 mtgsThreadObject::_gifTransferDummy( GIF_PATH pathidx, const u
 			}
 			else if(path.tag.nloop == 0)
 			{
-				if(pathidx == 0 && g_FFXHack)
+				if(pathidx == 0)
 					continue;
 
 				eop = true;

@@ -316,7 +316,6 @@ void _vuAddLowerStalls(VURegs * VU, _VURegsNum *VUregsn) {
 /*   VU Upper instructions    */
 /******************************/
 #ifndef INT_VUDOUBLEHACK
-static u32 d;
 float vuDouble(u32 f)
 {
 	switch(f & 0x7f800000){
@@ -324,10 +323,13 @@ float vuDouble(u32 f)
 			f &= 0x80000000;
 			return *(float*)&f;
 			break;
-		case 0x7f800000:
+		case 0x7f800000: 
+		{
+			u32 d;
 			d = (f & 0x80000000)|0x7f7fffff;
 			return *(float*)&d;
 			break;
+		}
 		default:
 			return *(float*)&f;
 			break;
@@ -2718,7 +2720,8 @@ void _vuRegsFSSET(VURegs * VU, _VURegsNum *VUregsn) {
     VUregsn->VFread0 = 0;
     VUregsn->VFread1 = 0;
     VUregsn->VIwrite = 1 << REG_STATUS_FLAG;
-    VUregsn->VIread  = 0;//1 << REG_STATUS_FLAG; this kills speed
+	//VUregsn->VIread  = 0; // 1 << REG_STATUS_FLAG; this kills speed. Todo: Orly? (rama)
+    VUregsn->VIread  = 1 << REG_STATUS_FLAG;
 }
 
 void _vuRegsFMAND(VURegs * VU, _VURegsNum *VUregsn) {

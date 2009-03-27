@@ -41,8 +41,6 @@ using namespace R5900;
 
 static bool m_gsOpened = false;
 
-int g_FFXHack=0;
-
 #ifdef PCSX2_DEVBUILD
 
 // GS Playback

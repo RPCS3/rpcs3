@@ -571,7 +571,6 @@ int loadElfFile(const char *filename)
 }
 
 #include "VU.h"
-extern int g_FFXHack;
 extern int path3hack;
 int g_VUGameFixes = 0;
 
@@ -580,7 +579,6 @@ void LoadGameSpecificSettings()
 {
 	// default
 	g_VUGameFixes = 0;
-	g_FFXHack = 0;
 
 	switch(ElfCRC) {
 		case 0xb99379b7: // erementar gerad (discolored chars)
@@ -589,33 +587,6 @@ void LoadGameSpecificSettings()
 		case 0xa08c4057:  //Sprint Cars (SLUS)
 		case 0x8b0725d5:  //Flinstones Bedrock Racing (SLES)
 			path3hack = 1; // We can move this to patch files right now
-			break;
-
-		case 0xb4414ea1: // ffx(rus)
-		case 0xee97db5b: // ffx(rus)
-		case 0xaec495cc: // ffx(rus)
-		case 0x6a4efe60: // ffx(j)
-		case 0xA39517AB: // ffx(e)
-		case 0xBB3D833A: // ffx(u)
-		case 0x941bb7d9: // ffx(g)
-		case 0xD9FC6310: // ffx int(j)
-		case 0xa39517ae: // ffx(f)
-		case 0xa39517a9: // ffx(i)
-		case 0x658597e2: // ffx int
-		case 0x941BB7DE: // ffx(s)
-		case 0x3866CA7E: // ffx(asia)
-		case 0x48FE0C71: // ffx2 (u)
-		case 0x9aac530d: // ffx2 (g)
-		case 0x9AAC5309: // ffx2 (e)
-		case 0x8A6D7F14: // ffx2 (j)
-		case 0x9AAC530B: // ffx2 (i)
-		case 0x9AAC530A: // ffx2 (f)
-		case 0x9aac530c: // ffx2 (f)
-		case 0xe1fd9a2d: // ffx2 last mission (?)
-		case 0x93f9b89a: // ffx2 demo (g)
-		case 0x304C115C: // harvest moon - awl
-		case 0xF0A6D880: // harvest moon - sth
-			g_FFXHack = 1;
 			break;		
 	}
 }

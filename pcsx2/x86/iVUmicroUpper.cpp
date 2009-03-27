@@ -333,11 +333,22 @@ void recUpdateFlags(VURegs * VU, int reg, int info)
 static PCSX2_ALIGNED16(u32 VU_addsuband[2][4]);
 static PCSX2_ALIGNED16(u32 VU_addsub_reg[2][4]);
 
+static u32 tempECX;
+
 void VU_ADD_SUB(u32 regd, u32 regt, int is_sub, int info)  
 {
 	u8 *localptr[4][8];
-	int temp1 = _allocX86reg(ECX, X86TYPE_TEMP, 0, 0); //receives regd
+
+	MOV32RtoM((uptr)&tempECX, ECX);
+
+	int temp1 = ECX; //receives regd
 	int temp2 = ALLOCTEMPX86(0);
+
+	if (temp2 == ECX) 
+	{
+		temp2 = ALLOCTEMPX86(0);
+		_freeX86reg(ECX);
+	}
 
 	SSE_MOVAPS_XMM_to_M128((uptr)&VU_addsub_reg[0][0], regd);
 	SSE_MOVAPS_XMM_to_M128((uptr)&VU_addsub_reg[1][0], regt);
@@ -413,98 +424,26 @@ void VU_ADD_SUB(u32 regd, u32 regt, int is_sub, int info)
 
 	SSE_MOVAPS_M128_to_XMM(regt, (uptr)&VU_addsub_reg[1][0]);
 
-	_freeX86reg(temp1);
 	_freeX86reg(temp2);
-}
 
-void VU_ADD_SUB_SSE4(u32 regd, u32 regt, int is_sub, int info)  
-{
-	u8 *localptr[4][8];
-	int temp1 = _allocX86reg(ECX, X86TYPE_TEMP, 0, 0); //receives regd
-	int temp2 = ALLOCTEMPX86(0);
-
-	SSE_MOVAPS_XMM_to_M128((uptr)&VU_addsub_reg[0][0], regd);
-	SSE_MOVAPS_XMM_to_M128((uptr)&VU_addsub_reg[1][0], regt);
-
-	SSE2_PSLLD_I8_to_XMM(regd, 1);
-	SSE2_PSLLD_I8_to_XMM(regt, 1);
-
-	SSE2_PSRLD_I8_to_XMM(regd, 24);
-	SSE2_PSRLD_I8_to_XMM(regt, 24);
-
-	SSE2_PSUBD_XMM_to_XMM(regd, regt);
-
-#define PERFORM_SSE4(i) \
-	\
-	SSE_PEXTRW_XMM_to_R32(temp1, regd, i*2); \
-	MOVSX32R16toR(temp1, temp1); \
-	CMP32ItoR(temp1, 25);\
-	localptr[i][0] = JGE8(0);\
-	CMP32ItoR(temp1, 0);\
-	localptr[i][1] = JG8(0);\
-	localptr[i][2] = JE8(0);\
-	CMP32ItoR(temp1, -25);\
-	localptr[i][3] = JLE8(0);\
-	\
-	NEG32R(temp1); \
-	DEC32R(temp1);\
-	MOV32ItoR(temp2, 0xffffffff); \
-	SHL32CLtoR(temp2); \
-	SSE4_PINSRD_R32_to_XMM(regd, temp2, i); \
-	localptr[i][4] = JMP8(0);\
-	\
-	x86SetJ8(localptr[i][0]);\
-	MOV32ItoR(temp2, 0xffffffff); \
-	SSE4_PINSRD_R32_to_XMM(regd, temp2, i); \
-	SHL32ItoR(temp2, 31); \
-	SSE4_PINSRD_R32_to_XMM(regt, temp2, i); \
-	localptr[i][5] = JMP8(0);\
-	\
-	x86SetJ8(localptr[i][1]);\
-	DEC32R(temp1);\
-	MOV32ItoR(temp2, 0xffffffff);\
-	SSE4_PINSRD_R32_to_XMM(regd, temp2, i); \
-	SHL32CLtoR(temp2); \
-	SSE4_PINSRD_R32_to_XMM(regt, temp2, i); \
-	localptr[i][6] = JMP8(0);\
-	\
-	x86SetJ8(localptr[i][3]);\
-	MOV32ItoR(temp2, 0x80000000); \
-	SSE4_PINSRD_R32_to_XMM(regd, temp2, i); \
-	localptr[i][7] = JMP8(0);\
-	\
-	x86SetJ8(localptr[i][2]);\
-	\
-	x86SetJ8(localptr[i][4]);\
-	x86SetJ8(localptr[i][5]);\
-	x86SetJ8(localptr[i][6]);\
-	x86SetJ8(localptr[i][7]);
-
-	SSE2_PCMPEQB_XMM_to_XMM(regt, regt);
-	PERFORM_SSE4(0);
-	PERFORM_SSE4(1);
-	PERFORM_SSE4(2);
-	PERFORM_SSE4(3);
-#undef PERFORM_SSE4
-
-	SSE_ANDPS_M128_to_XMM(regd, (uptr)&VU_addsub_reg[0][0]); //regd contains mask
-	SSE_ANDPS_M128_to_XMM(regt, (uptr)&VU_addsub_reg[1][0]); //regt contains mask
-
-	if (is_sub)	SSE_SUBPS_XMM_to_XMM(regd, regt);
-	else		SSE_ADDPS_XMM_to_XMM(regd, regt);
-
-	SSE_MOVAPS_M128_to_XMM(regt, (uptr)&VU_addsub_reg[1][0]);
-
-	_freeX86reg(temp1);
-	_freeX86reg(temp2);
+	MOV32MtoR(ECX, (uptr)&tempECX);
 }
 
 void VU_ADD_SUB_SS(u32 regd, u32 regt, int is_sub, int is_mem, int info)  
 {
 	u8 *localptr[8];
 	u32 addrt = regt; //for case is_mem
-	int temp1 = _allocX86reg(ECX, X86TYPE_TEMP, 0, 0); //receives regd //_allocX86reg(ECX, X86TYPE_TEMP, 0, ((info&PROCESS_VU_SUPER)?0:MODE_NOFRAME)|mode);
+
+	MOV32RtoM((uptr)&tempECX, ECX);
+
+	int temp1 = ECX; //receives regd 
 	int temp2 = ALLOCTEMPX86(0);
+
+	if (temp2 == ECX) 
+	{
+		temp2 = ALLOCTEMPX86(0);
+		_freeX86reg(ECX);
+	}
 	
 	SSE_MOVAPS_XMM_to_M128((uptr)&VU_addsub_reg[0][0], regd);
 	if (!is_mem) SSE_MOVAPS_XMM_to_M128((uptr)&VU_addsub_reg[1][0], regt);
@@ -617,167 +556,44 @@ void VU_ADD_SUB_SS(u32 regd, u32 regt, int is_sub, int is_mem, int info)
 		SSE_MOVAPS_M128_to_XMM(regt, (uptr)&VU_addsub_reg[1][0]);
 	}
 
-	_freeX86reg(temp1);
 	_freeX86reg(temp2);
-}
 
-void VU_ADD_SUB_SS_SSE4(u32 regd, u32 regt, int is_sub, int is_mem, int info)  
-{
-	u8 *localptr[8];
-	u32 addrt = regt; //for case is_mem
-	int temp1 = _allocX86reg(ECX, X86TYPE_TEMP, 0, 0); //receives regd //_allocX86reg(ECX, X86TYPE_TEMP, 0, ((info&PROCESS_VU_SUPER)?0:MODE_NOFRAME)|mode);
-	int temp2 = ALLOCTEMPX86(0);
-	
-	SSE_MOVAPS_XMM_to_M128((uptr)&VU_addsub_reg[0][0], regd);
-	if (!is_mem) SSE_MOVAPS_XMM_to_M128((uptr)&VU_addsub_reg[1][0], regt);
-
-	SSE2_MOVD_XMM_to_R(temp1, regd);
-	SHR32ItoR(temp1, 23); 
-
-	if (is_mem) {
-		MOV32MtoR(temp2, addrt);
-		MOV32RtoM((uptr)&VU_addsub_reg[1][0], temp2);
-		SHR32ItoR(temp2, 23);
-	}
-	else {
-		SSE2_MOVD_XMM_to_R(temp2, regt);
-		SHR32ItoR(temp2, 23);
-	}
-
-	AND32ItoR(temp1, 0xff);
-	AND32ItoR(temp2, 0xff); 
-
-	SUB32RtoR(temp1, temp2); //temp1 = exponent difference
-
-	CMP32ItoR(temp1, 25);
-	localptr[0] = JGE8(0);
-	CMP32ItoR(temp1, 0);
-	localptr[1] = JG8(0);
-	localptr[2] = JE8(0);
-	CMP32ItoR(temp1, -25);
-	localptr[3] = JLE8(0);
-
-	NEG32R(temp1); 
-	DEC32R(temp1);
-	MOV32ItoR(temp2, 0xffffffff);
-	SHL32CLtoR(temp2);
-	SSE2_PCMPEQB_XMM_to_XMM(regd, regd);
-	SSE4_PINSRD_R32_to_XMM(regd, temp2, 0);
-	if (!is_mem)
-		SSE2_PCMPEQB_XMM_to_XMM(regt, regt);
-	localptr[4] = JMP8(0);
-
-	x86SetJ8(localptr[0]);
-	MOV32ItoR(temp2, 0x80000000);
-	if (is_mem)
-		AND32RtoM((uptr)&VU_addsub_reg[1][0], temp2);
-	else {
-		SSE2_PCMPEQB_XMM_to_XMM(regt, regt);
-		SSE4_PINSRD_R32_to_XMM(regt, temp2, 0);
-	}
-	SSE2_PCMPEQB_XMM_to_XMM(regd, regd);
-	localptr[5] = JMP8(0);
-
-	x86SetJ8(localptr[1]);
-	DEC32R(temp1);
-	MOV32ItoR(temp2, 0xffffffff);
-	SHL32CLtoR(temp2); 
-	if (is_mem) 
-		AND32RtoM((uptr)&VU_addsub_reg[1][0], temp2);
-	else {
-		SSE2_PCMPEQB_XMM_to_XMM(regt, regt);
-		SSE4_PINSRD_R32_to_XMM(regt, temp2, 0);
-	}
-	SSE2_PCMPEQB_XMM_to_XMM(regd, regd);
-	localptr[6] = JMP8(0);
-
-	x86SetJ8(localptr[3]);
-	MOV32ItoR(temp2, 0x80000000);
-	SSE2_PCMPEQB_XMM_to_XMM(regd, regd);
-	SSE4_PINSRD_R32_to_XMM(regd, temp2, 0);
-	if (!is_mem)
-		SSE2_PCMPEQB_XMM_to_XMM(regt, regt);
-	localptr[7] = JMP8(0);
-
-	x86SetJ8(localptr[2]);
-	x86SetJ8(localptr[4]);
-	x86SetJ8(localptr[5]);
-	x86SetJ8(localptr[6]);
-	x86SetJ8(localptr[7]);
-
-	if (is_mem) 
-	{
-		SSE_ANDPS_M128_to_XMM(regd, (uptr)&VU_addsub_reg[0][0]); //regd contains mask
-
-		if (is_sub)	SSE_SUBSS_M32_to_XMM(regd, (uptr)&VU_addsub_reg[1][0]);
-		else		SSE_ADDSS_M32_to_XMM(regd, (uptr)&VU_addsub_reg[1][0]);
-	}
-	else
-	{
-		SSE_ANDPS_M128_to_XMM(regd, (uptr)&VU_addsub_reg[0][0]); //regd contains mask
-		SSE_ANDPS_M128_to_XMM(regt, (uptr)&VU_addsub_reg[1][0]); //regt contains mask
-
-		if (is_sub)	SSE_SUBSS_XMM_to_XMM(regd, regt);
-		else		SSE_ADDSS_XMM_to_XMM(regd, regt);
-
-		SSE_MOVAPS_M128_to_XMM(regt, (uptr)&VU_addsub_reg[1][0]);
-	}
-
-	_freeX86reg(temp1);
-	_freeX86reg(temp2);
+	MOV32MtoR(ECX, (uptr)&tempECX);
 }
 
 void SSE_ADDPS_XMM_to_XMM_custom(int info, int regd, int regt) {
 	if (CHECK_VUADDSUBHACK) {
-		if ( cpucaps.hasStreamingSIMD4Extensions )
-			VU_ADD_SUB_SSE4(regd, regt, 0, info);
-		else
-			VU_ADD_SUB(regd, regt, 0, info);
+		VU_ADD_SUB(regd, regt, 0, info);
 	}
 	else SSE_ADDPS_XMM_to_XMM(regd, regt);
 }
 void SSE_SUBPS_XMM_to_XMM_custom(int info, int regd, int regt) {
 	if (CHECK_VUADDSUBHACK) {
-		if ( cpucaps.hasStreamingSIMD4Extensions )
-			VU_ADD_SUB_SSE4(regd, regt, 1, info);
-		else
-			VU_ADD_SUB(regd, regt, 1, info);
+		VU_ADD_SUB(regd, regt, 1, info);
 	}
 	else SSE_SUBPS_XMM_to_XMM(regd, regt);
 }
 void SSE_ADDSS_XMM_to_XMM_custom(int info, int regd, int regt) {
 	if (CHECK_VUADDSUBHACK) {
-		if ( cpucaps.hasStreamingSIMD4Extensions )
-			VU_ADD_SUB_SS_SSE4(regd, regt, 0, 0, info);
-		else
-			VU_ADD_SUB_SS(regd, regt, 0, 0, info);
+		VU_ADD_SUB_SS(regd, regt, 0, 0, info);
 	}
 	else SSE_ADDSS_XMM_to_XMM(regd, regt);
 }
 void SSE_SUBSS_XMM_to_XMM_custom(int info, int regd, int regt) {
 	if (CHECK_VUADDSUBHACK) {
-		if ( cpucaps.hasStreamingSIMD4Extensions )
-			VU_ADD_SUB_SS_SSE4(regd, regt, 1, 0, info);
-		else
-			VU_ADD_SUB_SS(regd, regt, 1, 0, info);
+		VU_ADD_SUB_SS(regd, regt, 1, 0, info);
 	}
 	else SSE_SUBSS_XMM_to_XMM(regd, regt);
 }
 void SSE_ADDSS_M32_to_XMM_custom(int info, int regd, int regt) {
 	if (CHECK_VUADDSUBHACK) {
-		if ( cpucaps.hasStreamingSIMD4Extensions )
-			VU_ADD_SUB_SS_SSE4(regd, regt, 0, 1, info);
-		else
-			VU_ADD_SUB_SS(regd, regt, 0, 1, info);
+		VU_ADD_SUB_SS(regd, regt, 0, 1, info);
 	}
 	else SSE_ADDSS_M32_to_XMM(regd, regt);
 }
 void SSE_SUBSS_M32_to_XMM_custom(int info, int regd, int regt) {
 	if (CHECK_VUADDSUBHACK) {
-		if ( cpucaps.hasStreamingSIMD4Extensions )
-			VU_ADD_SUB_SS_SSE4(regd, regt, 1, 1, info);
-		else
-			VU_ADD_SUB_SS(regd, regt, 1, 1, info);
+		VU_ADD_SUB_SS(regd, regt, 1, 1, info);
 	}
 	else SSE_SUBSS_M32_to_XMM(regd, regt);
 }
