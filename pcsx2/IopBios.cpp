@@ -182,7 +182,7 @@ void bios_write() { // 0x35/0x03
 		}
 		pc0 = ra; return;
     }
-	PSXBIOS_LOG("bios_%s: %x,%x,%x\n", biosB0n[0x35], a0, a1, a2);
+	PSXBIOS_LOG("bios_%s: %x,%x,%x", biosB0n[0x35], a0, a1, a2);
 
 	v0 = -1;
 	pc0 = ra;

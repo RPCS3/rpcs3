@@ -144,13 +144,13 @@ void _recvuFMACflush(VURegs * VU, bool intermediate) {
 
 		if( intermediate ) {
 			if ((vucycle - VU->fmac[i].sCycle) > VU->fmac[i].Cycle) {
-//				VUM_LOG("flushing FMAC pipe[%d]\n", i);
+//				VUM_LOG("flushing FMAC pipe[%d]", i);
 				VU->fmac[i].enable = 0;
 			}
 		}
 		else {
 			if ((vucycle - VU->fmac[i].sCycle) >= VU->fmac[i].Cycle) {
-//				VUM_LOG("flushing FMAC pipe[%d]\n", i);
+//				VUM_LOG("flushing FMAC pipe[%d]", i);
 				VU->fmac[i].enable = 0;
 			}
 		}
@@ -199,13 +199,13 @@ void _recvuIALUflush(VURegs * VU, bool intermediate) {
 
 		if( intermediate ) {
 			if ((vucycle - VU->ialu[i].sCycle) > VU->ialu[i].Cycle) {
-//				VUM_LOG("flushing IALU pipe[%d]\n", i);
+//				VUM_LOG("flushing IALU pipe[%d]", i);
 				VU->ialu[i].enable = 0;
 			}
 		}
 		else {
 			if ((vucycle - VU->ialu[i].sCycle) >= VU->ialu[i].Cycle) {
-//				VUM_LOG("flushing IALU pipe[%d]\n", i);
+//				VUM_LOG("flushing IALU pipe[%d]", i);
 				VU->ialu[i].enable = 0;
 			}
 		}
@@ -292,7 +292,7 @@ void _recvuFMACAdd(VURegs * VU, int reg, int xyzw) {
 	}
 
 	if (i==8) Console::Error("*PCSX2*: error , out of fmacs");
-//	VUM_LOG("adding FMAC pipe[%d]; reg %d\n", i, reg);
+//	VUM_LOG("adding FMAC pipe[%d]; reg %d", i, reg);
 	
 	VU->fmac[i].enable = 1;
 	VU->fmac[i].sCycle = vucycle;

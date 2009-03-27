@@ -99,12 +99,12 @@ u8 sioRead8() {
 			}*/
 		}
 	}
-		//PAD_LOG("sio read8 ;ret = %x\n", ret);
+		//PAD_LOG("sio read8 ;ret = %x", ret);
 	return ret;
 }
 
 void SIO_CommandWrite(u8 value,int way) {
-	PAD_LOG("sio write8 %x\n", value);
+	PAD_LOG("sio write8 %x", value);
 
 	// PAD COMMANDS
 	switch (sio.padst) {
@@ -149,7 +149,7 @@ void SIO_CommandWrite(u8 value,int way) {
 			sio.parp = 1;
 			switch (value) {
 			case 0x11: // RESET
-				PAD_LOG("RESET MEMORY CARD\n");
+				PAD_LOG("RESET MEMORY CARD");
 			
 				sio.bufcount =  8; 
 				memset8_obj<0xff>(sio.buf);
@@ -166,7 +166,7 @@ void SIO_CommandWrite(u8 value,int way) {
 				sio.mcdst = 99; 
 
 				sio2.packet.recvVal3 = 0x8c;
-				MEMCARDS_LOG("MC(%d) command 0x%02X\n", sio.GetMemcardIndex()+1, value);
+				MEMCARDS_LOG("MC(%d) command 0x%02X", sio.GetMemcardIndex()+1, value);
 				break;
 			case 0x81: // COMMIT
 				sio.bufcount =  8; 
@@ -180,7 +180,7 @@ void SIO_CommandWrite(u8 value,int way) {
 						sio2.packet.recvVal1 = 0x1600; // Writing
 					else if(sio.mc_command==0x43) sio2.packet.recvVal1 = 0x1700; // Reading
 				}
-				MEMCARDS_LOG("MC(%d) command 0x%02X\n", sio.GetMemcardIndex()+1, value);
+				MEMCARDS_LOG("MC(%d) command 0x%02X", sio.GetMemcardIndex()+1, value);
 				break;
 			case 0x21: 
 			case 0x22: 
@@ -190,20 +190,20 @@ void SIO_CommandWrite(u8 value,int way) {
 				sio2.packet.recvVal3 = 0x8c; 
 				sio.buf[8]=sio.terminator;
 				sio.buf[7]='+';
-				MEMCARDS_LOG("MC(%d) command 0x%02X\n", sio.GetMemcardIndex()+1, value);
+				MEMCARDS_LOG("MC(%d) command 0x%02X", sio.GetMemcardIndex()+1, value);
 				break;
 			case 0x24:					
-				MEMCARDS_LOG("MC(%d) command 0x%02X\n", sio.GetMemcardIndex()+1, value);
+				MEMCARDS_LOG("MC(%d) command 0x%02X", sio.GetMemcardIndex()+1, value);
 				break;
 			case 0x25:							
-				MEMCARDS_LOG("MC(%d) command 0x%02X\n", sio.GetMemcardIndex()+1, value);
+				MEMCARDS_LOG("MC(%d) command 0x%02X", sio.GetMemcardIndex()+1, value);
 				break;
 			case 0x26: 
 				sio.bufcount = 12; sio.mcdst = 99; sio2.packet.recvVal3 = 0x83;	
 				memset8_obj<0xff>(sio.buf);
 				memcpy(&sio.buf[2], &mc_command_0x26, sizeof(mc_command_0x26));
 				sio.buf[12]=sio.terminator;
-				MEMCARDS_LOG("MC(%d) command 0x%02X\n", sio.GetMemcardIndex()+1, value);
+				MEMCARDS_LOG("MC(%d) command 0x%02X", sio.GetMemcardIndex()+1, value);
 				break;
 			case 0x27: 
 			case 0x28: 
@@ -212,7 +212,7 @@ void SIO_CommandWrite(u8 value,int way) {
 				memset8_obj<0xff>(sio.buf);
 				sio.buf[4]=sio.terminator;
 				sio.buf[3]='+';
-				MEMCARDS_LOG("MC(%d) command 0x%02X\n", sio.GetMemcardIndex()+1, value);
+				MEMCARDS_LOG("MC(%d) command 0x%02X", sio.GetMemcardIndex()+1, value);
 				break;
 			case 0x42: // WRITE
 			case 0x43: // READ
@@ -225,13 +225,13 @@ void SIO_CommandWrite(u8 value,int way) {
 				memset8_obj<0xff>(sio.buf);
 				sio.buf[133]=sio.terminator;
 				sio.buf[132]='+';
-				MEMCARDS_LOG("MC(%d) command 0x%02X\n", sio.GetMemcardIndex()+1, value);
+				MEMCARDS_LOG("MC(%d) command 0x%02X", sio.GetMemcardIndex()+1, value);
 				break;
 			case 0xf0:
 			case 0xf1:
 			case 0xf2:				  
 				sio.mcdst = 99;	
-				MEMCARDS_LOG("MC(%d) command 0x%02X\n", sio.GetMemcardIndex()+1, value);
+				MEMCARDS_LOG("MC(%d) command 0x%02X", sio.GetMemcardIndex()+1, value);
 				break;
 			case 0xf3:
 			case 0xf7: 
@@ -239,23 +239,23 @@ void SIO_CommandWrite(u8 value,int way) {
 				memset8_obj<0xff>(sio.buf);
 				sio.buf[4]=sio.terminator;
 				sio.buf[3]='+';
-				MEMCARDS_LOG("MC(%d) command 0x%02X\n", sio.GetMemcardIndex()+1, value);
+				MEMCARDS_LOG("MC(%d) command 0x%02X", sio.GetMemcardIndex()+1, value);
 				break;
 			case 0x52:
 				sio.rdwr = 1; memset8_obj<0xff>(sio.buf);
 				sio.buf[sio.bufcount]=sio.terminator; sio.buf[sio.bufcount-1]='+';
-				MEMCARDS_LOG("MC(%d) command 0x%02X\n", sio.GetMemcardIndex()+1, value);
+				MEMCARDS_LOG("MC(%d) command 0x%02X", sio.GetMemcardIndex()+1, value);
 				break;
 			case 0x57:
 				sio.rdwr = 2; memset8_obj<0xff>(sio.buf);
 				sio.buf[sio.bufcount]=sio.terminator; sio.buf[sio.bufcount-1]='+';	
-				MEMCARDS_LOG("MC(%d) command 0x%02X\n", sio.GetMemcardIndex()+1, value);
+				MEMCARDS_LOG("MC(%d) command 0x%02X", sio.GetMemcardIndex()+1, value);
 				break;
 			default:
 				sio.mcdst = 0;
 				memset8_obj<0xff>(sio.buf);
 				sio.buf[sio.bufcount]=sio.terminator; sio.buf[sio.bufcount-1]='+';	
-				MEMCARDS_LOG("Unknown MC(%d) command 0x%02X\n", sio.GetMemcardIndex()+1, value);
+				MEMCARDS_LOG("Unknown MC(%d) command 0x%02X", sio.GetMemcardIndex()+1, value);
 			}
 			sio.mc_command=value;
 			return;
@@ -278,10 +278,10 @@ void SIO_CommandWrite(u8 value,int way) {
 				if (sio.parp==6)
 				{
 					if (sio_xor((u8 *)&sio.sector, 4) == value)
-						MEMCARDS_LOG("MC(%d) SET PAGE sio.sector 0x%04X\n",
+						MEMCARDS_LOG("MC(%d) SET PAGE sio.sector 0x%04X",
 									sio.GetMemcardIndex()+1, sio.sector);
 					else
-						MEMCARDS_LOG("MC(%d) SET PAGE XOR value ERROR 0x%02X != ^0x%02X\n",
+						MEMCARDS_LOG("MC(%d) SET PAGE XOR value ERROR 0x%02X != ^0x%02X",
 							sio.GetMemcardIndex()+1, value, sio_xor((u8 *)&sio.sector, 4));
 				}
 				break;
@@ -291,7 +291,7 @@ void SIO_CommandWrite(u8 value,int way) {
 				if(sio.parp==2)	{
 					sio.terminator = value;
 					sio.buf[4] = value;
-				MEMCARDS_LOG("MC(%d) SET TERMINATOR command 0x%02X\n", sio.GetMemcardIndex()+1, value);
+				MEMCARDS_LOG("MC(%d) SET TERMINATOR command 0x%02X", sio.GetMemcardIndex()+1, value);
 
 				}
 				break;
@@ -305,7 +305,7 @@ void SIO_CommandWrite(u8 value,int way) {
 					
 					//if(value == 0) sio.buf[4] = 0xFF; 
 					sio.buf[4] = 0x55;
-				MEMCARDS_LOG("MC(%d) GET TERMINATOR command 0x%02X\n", sio.GetMemcardIndex()+1, value);
+				MEMCARDS_LOG("MC(%d) GET TERMINATOR command 0x%02X", sio.GetMemcardIndex()+1, value);
 				}	
 				break;
 			// WRITE DATA
@@ -315,12 +315,12 @@ void SIO_CommandWrite(u8 value,int way) {
 					memset8_obj<0xff>(sio.buf);
 					sio.buf[sio.bufcount-1]='+';
 					sio.buf[sio.bufcount]=sio.terminator;
-				MEMCARDS_LOG("MC(%d) WRITE command 0x%02X\n\n\n\n\n", sio.GetMemcardIndex()+1, value);
+				MEMCARDS_LOG("MC(%d) WRITE command 0x%02X\n\n\n\n", sio.GetMemcardIndex()+1, value);
 				} 
 				else
 				if ((sio.parp>2) && (sio.parp<sio.bufcount-2)) {
 					sio.buf[sio.parp]=value;
-				//MEMCARDS_LOG("MC(%d) WRITING 0x%02X\n", sio.GetMemcardIndex()+1, value);
+				//MEMCARDS_LOG("MC(%d) WRITING 0x%02X", sio.GetMemcardIndex()+1, value);
 				} else
 				if (sio.parp==sio.bufcount-2) {
 					if (sio_xor(&sio.buf[3], sio.bufcount-5)==value) {
@@ -328,7 +328,7 @@ void SIO_CommandWrite(u8 value,int way) {
 						sio.buf[sio.bufcount-1]=value;
 						sio.k+=sio.bufcount-5;
 					}else {
-						MEMCARDS_LOG("MC(%d) write XOR value error 0x%02X != ^0x%02X\n",
+						MEMCARDS_LOG("MC(%d) write XOR value error 0x%02X != ^0x%02X",
 							sio.GetMemcardIndex()+1, value, sio_xor(&sio.buf[3], sio.bufcount-5));
 					}
 				}
@@ -339,7 +339,7 @@ void SIO_CommandWrite(u8 value,int way) {
 					//int i;
 					sio.bufcount=value+5;
 					sio.buf[3]='+';
-				MEMCARDS_LOG("MC(%d) READ command 0x%02X\n", sio.GetMemcardIndex()+1, value);
+				MEMCARDS_LOG("MC(%d) READ command 0x%02X", sio.GetMemcardIndex()+1, value);
 					_ReadMcd(&sio.buf[4], (512+16)*sio.sector+sio.k, value);
 					/*if(sio.mode==2) 
 					{
@@ -370,14 +370,14 @@ void SIO_CommandWrite(u8 value,int way) {
 					sio.buf[2]='+';
 					sio.buf[3]=sio.terminator;*/
 					//sio.buf[sio.bufcount] = sio.terminator;
-				MEMCARDS_LOG("MC(%d) INTERNAL ERASE command 0x%02X\n", sio.GetMemcardIndex()+1, value);
+				MEMCARDS_LOG("MC(%d) INTERNAL ERASE command 0x%02X", sio.GetMemcardIndex()+1, value);
 				}
 				break;
 			// CARD AUTHENTICATION CHECKS
 			case 0xF0:
 				if (sio.parp==2)
 				{
-					MEMCARDS_LOG("MC(%d) CARD AUTH :0x%02X\n", sio.GetMemcardIndex()+1, value);
+					MEMCARDS_LOG("MC(%d) CARD AUTH :0x%02X", sio.GetMemcardIndex()+1, value);
 					switch(value){
 					case  1:
 					case  2:
@@ -506,12 +506,12 @@ void InitializeSIO(u8 value)
 			{
 				m_PostSavestateCards[mcidx]--;
 				sio2.packet.recvVal1 = 0x1D100;
-				PAD_LOG( "START MEMCARD[%d] - post-savestate ejection - reported as missing!\n", sio.GetMemcardIndex() );
+				PAD_LOG( "START MEMCARD[%d] - post-savestate ejection - reported as missing!", sio.GetMemcardIndex() );
 			}
 			else
 			{
 				sio2.packet.recvVal1 = MemoryCard::IsPresent( sio.GetMemcardIndex() ) ? 0x1100 : 0x1D100;
-				PAD_LOG("START MEMCARD [%d] - %s\n",
+				PAD_LOG("START MEMCARD [%d] - %s",
 					sio.GetMemcardIndex(), MemoryCard::IsPresent( sio.GetMemcardIndex() ) ? "Present" : "Missing" );
 			}
 
@@ -543,7 +543,7 @@ void sioWriteCtrl16(u16 value) {
 }
 
 void SIO_FORCEINLINE sioInterrupt() {
-	PAD_LOG("Sio Interrupt\n");
+	PAD_LOG("Sio Interrupt");
 	sio.StatReg|= IRQ;
 	psxHu32(0x1070)|=0x80;
 }

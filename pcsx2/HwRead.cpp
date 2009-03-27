@@ -106,7 +106,7 @@ __forceinline u8 hwRead8(u32 mem)
 			}
 
 			ret = psHu8(mem);
-			HW_LOG("Unknown Hardware Read 8 from 0x%x = 0x%x\n", mem, ret);
+			HW_LOG("Unknown Hardware Read 8 from 0x%x = 0x%x", mem, ret);
 			break;
 	}
 
@@ -156,7 +156,7 @@ __forceinline u16 hwRead16(u32 mem)
 				return (u16)ret;
 			}
 			ret = psHu16(mem);
-			HW_LOG("Hardware Read16 at 0x%x, value= 0x%x\n", ret, mem);
+			HW_LOG("Hardware Read16 at 0x%x, value= 0x%x", ret, mem);
 			break;
 	}
 	return ret;
@@ -217,11 +217,11 @@ static __forceinline mem32_t __hwRead32_page_0F( u32 mem, bool intchack )
 		case 0xf000:
 			if( intchack ) IntCHackCheck();
 			// This one is checked alot, so leave it commented out unless you love 600 meg logfiles.
-			//HW_LOG("INTC_STAT Read  32bit %x\n", psHu32(0xf010));
+			//HW_LOG("INTC_STAT Read  32bit %x", psHu32(0xf010));
 		break;
 
 		case 0xf010:
-			HW_LOG("INTC_MASK Read32, value=0x%x\n", psHu32(INTC_MASK));
+			HW_LOG("INTC_MASK Read32, value=0x%x", psHu32(INTC_MASK));
 		break;
 
 		case 0xf130:	// 0x1000f130
@@ -314,19 +314,19 @@ mem32_t __fastcall hwRead32_generic(u32 mem)
 				case D2_SADR: regName = "DMA2_SADDR"; break;
 			}
 
-			HW_LOG( "Hardware Read32 at 0x%x (%s), value=0x%x\n", mem, regName, psHu32(mem) );
+			HW_LOG( "Hardware Read32 at 0x%x (%s), value=0x%x", mem, regName, psHu32(mem) );
 		}
 		break;
 
 		case 0x0b:
 			if( mem == D4_CHCR )
-				HW_LOG("Hardware Read32 at 0x%x (IPU1:DMA4_CHCR), value=0x%x\n", mem, psHu32(mem));
+				HW_LOG("Hardware Read32 at 0x%x (IPU1:DMA4_CHCR), value=0x%x", mem, psHu32(mem));
 		break;
 
 		case 0x0c:
 		case 0x0e:
 			if( mem == DMAC_STAT)
-				HW_LOG("DMAC_STAT Read32, value=0x%x\n", psHu32(DMAC_STAT));
+				HW_LOG("DMAC_STAT Read32, value=0x%x", psHu32(DMAC_STAT));
 		break;
 
 		jNO_DEFAULT;
@@ -358,13 +358,13 @@ void __fastcall hwRead64_generic_INTC_HACK(u32 mem, mem64_t* result )
 	if( mem == INTC_STAT ) IntCHackCheck();
 
 	*result = psHu64(mem);
-	HW_LOG("Unknown Hardware Read 64 at %x\n",mem);
+	HW_LOG("Unknown Hardware Read 64 at %x",mem);
 }
 
 void __fastcall hwRead64_generic(u32 mem, mem64_t* result )
 {
 	*result = psHu64(mem);
-	HW_LOG("Unknown Hardware Read 64 at %x\n",mem);
+	HW_LOG("Unknown Hardware Read 64 at %x",mem);
 }
 
 /////////////////////////////////////////////////////////////////////////
@@ -385,7 +385,7 @@ void __fastcall hwRead128_page_01(u32 mem, mem128_t* result )
 void __fastcall hwRead128_page_02(u32 mem, mem128_t* result )
 {
 	// IPU is currently unhandled in 128 bit mode.
-	HW_LOG("Unknown Hardware Read 128 at %x (IPU)\n",mem);
+	HW_LOG("Unknown Hardware Read 128 at %x (IPU)",mem);
 }
 
 void __fastcall hwRead128_generic(u32 mem, mem128_t* out)
@@ -393,5 +393,5 @@ void __fastcall hwRead128_generic(u32 mem, mem128_t* out)
 	out[0] = psHu64(mem);
 	out[1] = psHu64(mem+8);
 
-	HW_LOG("Unknown Hardware Read 128 at %x\n",mem);
+	HW_LOG("Unknown Hardware Read 128 at %x",mem);
 }

@@ -60,7 +60,7 @@ static void execI()
 	// Another method of instruction dumping:
 	/*if( cpuRegs.cycle > 0x4f24d714 )
 	{
-		//CPU_LOG( "%s\n", disR5900Current.getCString());
+		//CPU_LOG( "%s", disR5900Current.getCString());
 		disOut.clear();
 		opcode.disasm( disOut );
 		disOut += '\n';

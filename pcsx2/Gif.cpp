@@ -36,7 +36,7 @@ static int gspath3done=0;
 static int gscycles = 0;
 
 __forceinline void gsInterrupt() {
-	GIF_LOG("gsInterrupt: %8.8x\n", cpuRegs.cycle);
+	GIF_LOG("gsInterrupt: %8.8x", cpuRegs.cycle);
 
 	if((gif->chcr & 0x100) == 0){
 		//Console::WriteLn("Eh? why are you still interrupting! chcr %x, qwc %x, done = %x", params gif->chcr, gif->qwc, done);
@@ -161,7 +161,7 @@ void GIFdma()
 		return;
 	}
 
-	GIF_LOG("dmaGIFstart chcr = %lx, madr = %lx, qwc  = %lx\n tadr = %lx, asr0 = %lx, asr1 = %lx\n", gif->chcr, gif->madr, gif->qwc, gif->tadr, gif->asr0, gif->asr1);
+	GIF_LOG("dmaGIFstart chcr = %lx, madr = %lx, qwc  = %lx\n tadr = %lx, asr0 = %lx, asr1 = %lx", gif->chcr, gif->madr, gif->qwc, gif->tadr, gif->asr0, gif->asr1);
 
 #ifndef GSPATH3FIX
 	if ( !(psHu32(GIF_MODE) & 0x4) ) {
@@ -207,10 +207,10 @@ void GIFdma()
 				gif->qwc  = (u16)ptag[0];			    //QWC set to lower 16bits of the tag
 				gif->madr = ptag[1];				    //MADR = ADDR field	
 				gspath3done = hwDmacSrcChainWithStack(gif, id);
-				GIF_LOG("PTH3 MASK gifdmaChain %8.8x_%8.8x size=%d, id=%d, addr=%lx\n", ptag[1], ptag[0], gif->qwc, id, gif->madr);
+				GIF_LOG("PTH3 MASK gifdmaChain %8.8x_%8.8x size=%d, id=%d, addr=%lx", ptag[1], ptag[0], gif->qwc, id, gif->madr);
 
 				if ((gif->chcr & 0x80) && ptag[0] >> 31) {			 //Check TIE bit of CHCR and IRQ bit of tag
-					GIF_LOG("PATH3 MSK dmaIrq Set\n");
+					GIF_LOG("PATH3 MSK dmaIrq Set");
 					Console::WriteLn("GIF TIE");
 					gspath3done |= 1;
 				}
@@ -285,7 +285,7 @@ void GIFdma()
 			gif->madr = ptag[1];				    //MADR = ADDR field
 			
 			gspath3done = hwDmacSrcChainWithStack(gif, id);
-			GIF_LOG("gifdmaChain %8.8x_%8.8x size=%d, id=%d, addr=%lx\n", ptag[1], ptag[0], gif->qwc, id, gif->madr);
+			GIF_LOG("gifdmaChain %8.8x_%8.8x size=%d, id=%d, addr=%lx", ptag[1], ptag[0], gif->qwc, id, gif->madr);
 
 			if ((psHu32(DMAC_CTRL) & 0xC0) == 0x80) { // STD == GIF
 				// there are still bugs, need to also check if gif->madr +16*qwc >= stadr, if not, stall
@@ -305,7 +305,7 @@ void GIFdma()
 			FreezeRegs(0); 
 
 			if ((gif->chcr & 0x80) && ptag[0] >> 31) { //Check TIE bit of CHCR and IRQ bit of tag
-				GIF_LOG("dmaIrq Set\n");
+				GIF_LOG("dmaIrq Set");
 				gspath3done = 1;
 				//gif->qwc = 0;
 			}
@@ -500,7 +500,7 @@ void mfifoGIFtransfer(int qwc) {
 				if(!(gif->chcr & 0x100))return;
 				if(gifstate == GIF_STATE_STALL) return;
 			}
-	SPR_LOG("mfifoGIFtransfer %x madr %x, tadr %x\n", gif->chcr, gif->madr, gif->tadr);
+	SPR_LOG("mfifoGIFtransfer %x madr %x, tadr %x", gif->chcr, gif->madr, gif->tadr);
 		
 	
 
@@ -523,7 +523,7 @@ void mfifoGIFtransfer(int qwc) {
 			mfifocycles += 2;
 			
 			gif->chcr = ( gif->chcr & 0xFFFF ) | ( (*ptag) & 0xFFFF0000 );
-			SPR_LOG("dmaChain %8.8x_%8.8x size=%d, id=%d, madr=%lx, tadr=%lx mfifo qwc = %x spr0 madr = %x\n",
+			SPR_LOG("dmaChain %8.8x_%8.8x size=%d, id=%d, madr=%lx, tadr=%lx mfifo qwc = %x spr0 madr = %x",
 					ptag[1], ptag[0], gif->qwc, id, gif->madr, gif->tadr, gifqwc, spr0->madr);
 
 			gifqwc--;
@@ -559,14 +559,14 @@ void mfifoGIFtransfer(int qwc) {
 					break;
 				}
 				if ((gif->chcr & 0x80) && (ptag[0] >> 31)) {
-				SPR_LOG("dmaIrq Set\n");
+				SPR_LOG("dmaIrq Set");
 				gifstate = GIF_STATE_DONE;
 				gifmfifoirq = 1;
 			}
 	 }
 	FreezeRegs(1); 
 		if (mfifoGIFchain() == -1) {
-			Console::WriteLn("GIF dmaChain error size=%d, madr=%lx, tadr=%lx\n", params
+			Console::WriteLn("GIF dmaChain error size=%d, madr=%lx, tadr=%lx", params
 					gif->qwc, gif->madr, gif->tadr);
 			gifstate = GIF_STATE_STALL;
 		}
@@ -575,7 +575,7 @@ void mfifoGIFtransfer(int qwc) {
 	if(gif->qwc == 0 && gifstate == GIF_STATE_DONE) gifstate = GIF_STATE_STALL;
 	CPU_INT(11,mfifocycles);
 		
-	SPR_LOG("mfifoGIFtransfer end %x madr %x, tadr %x\n", gif->chcr, gif->madr, gif->tadr);	
+	SPR_LOG("mfifoGIFtransfer end %x madr %x, tadr %x", gif->chcr, gif->madr, gif->tadr);	
 }
 
 void gifMFIFOInterrupt()

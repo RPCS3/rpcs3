@@ -130,12 +130,12 @@ void COP2()
 	//std::string disOut;
 	//disR5900Fasm(disOut, cpuRegs.code, cpuRegs.pc);
 
-	//VU0_LOG("%s\n", disOut.c_str());
+	//VU0_LOG("%s", disOut.c_str());
 	Int_COP2PrintTable[_Rs_]();
 }
 
 void Unknown() {
-	CPU_LOG("%8.8lx: Unknown opcode called\n", cpuRegs.pc);
+	CPU_LOG("%8.8lx: Unknown opcode called", cpuRegs.pc);
 }
 
 void MMI_Unknown() { Console::Notice("Unknown MMI opcode called"); }
@@ -758,7 +758,7 @@ int __Deci2Call(int call, u32 *addr)
 			if( addr != NULL )
 			{
 				deci2addr = (u32*)PSM(addr[1]);
-				BIOS_LOG("deci2open: %x,%x,%x,%x\n",
+				BIOS_LOG("deci2open: %x,%x,%x,%x",
 						 addr[3], addr[2], addr[1], addr[0]);
 				deci2handler = addr[2];
 			}
@@ -778,7 +778,7 @@ int __Deci2Call(int call, u32 *addr)
 			if( addr != NULL )
 				sprintf( reqaddr, "%x %x %x %x", addr[3], addr[2], addr[1], addr[0] );
 
-			BIOS_LOG("deci2reqsend: %s: deci2addr: %x,%x,%x,buf=%x %x,%x,len=%x,%x\n",
+			BIOS_LOG("deci2reqsend: %s: deci2addr: %x,%x,%x,buf=%x %x,%x,len=%x,%x",
 				(( addr == NULL ) ? "NULL" : reqaddr),
 				deci2addr[7], deci2addr[6], deci2addr[5], deci2addr[4],
 				deci2addr[3], deci2addr[2], deci2addr[1], deci2addr[0]);
@@ -830,7 +830,7 @@ void SYSCALL()
 	else
 		call = cpuRegs.GPR.n.v1.UC[0];
 
-	BIOS_LOG("Bios call: %s (%x)\n", bios[call], call);
+	BIOS_LOG("Bios call: %s (%x)", bios[call], call);
 
 	if (call == 0x7c)
 	{
@@ -856,7 +856,7 @@ void SYSCALL()
 			addr = cpuRegs.GPR.n.a0.UL[0] + n_transfer * sizeof(t_sif_dma_transfer);
 			dmat = (t_sif_dma_transfer*)PSM(addr);
 
-			BIOS_LOG("bios_%s: n_transfer=%d, size=%x, attr=%x, dest=%x, src=%x\n",
+			BIOS_LOG("bios_%s: n_transfer=%d, size=%x, attr=%x, dest=%x, src=%x",
 				bios[cpuRegs.GPR.n.v1.UC[0]], n_transfer,
 				dmat->size, dmat->attr,
 				dmat->dest, dmat->src);

@@ -111,6 +111,16 @@ static __forceinline const char *error_name(int err)
 	}
 }
 
+#define GL_ERROR_LOG() \
+{ \
+	GLenum myGLerror = glGetError(); \
+	\
+	if( myGLerror != GL_NO_ERROR ) \
+	{ \
+		ERROR_LOG("%s:%d: gl error %s\n", __FILE__, (int)__LINE__, error_name(myGLerror)); \
+	} \
+}\
+	
 #define GL_REPORT_ERROR() \
 { \
 	err = glGetError(); \

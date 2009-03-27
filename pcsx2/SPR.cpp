@@ -35,7 +35,7 @@ void sprInit() {
 
 //__forceinline static void SPR0transfer(u32 *data, int size) {
 ///*	while (size > 0) {
-//		SPR_LOG("SPR1transfer: %x\n", *data);
+//		SPR_LOG("SPR1transfer: %x", *data);
 //		data++; size--;
 //	}*/
 //	size <<= 2;
@@ -54,11 +54,11 @@ static void TestClearVUs(u32 madr, u32 size)
 {
 	if( madr >= 0x11000000 ) {
 		if( madr < 0x11004000 ) {
-			DbgCon::Notice("scratch pad clearing vu0\n");
+			DbgCon::Notice("scratch pad clearing vu0");
 			CpuVU0.Clear(madr&0xfff, size);
 		}
 		else if( madr >= 0x11008000 && madr < 0x1100c000 ) {
-			DbgCon::Notice("scratch pad clearing vu1\n");
+			DbgCon::Notice("scratch pad clearing vu1");
 			CpuVU1.Clear(madr&0x3fff, size);
 		}
 	}
@@ -106,7 +106,7 @@ void _SPR0interleave() {
 	u32 *pMem;
 	if(tqwc == 0) tqwc = qwc;
 	//Console::WriteLn("dmaSPR0 interleave");
-		SPR_LOG("SPR0 interleave size=%d, tqwc=%d, sqwc=%d, addr=%lx sadr=%lx\n",
+		SPR_LOG("SPR0 interleave size=%d, tqwc=%d, sqwc=%d, addr=%lx sadr=%lx",
 				spr0->qwc, tqwc, sqwc, spr0->madr, spr0->sadr);
 	
 	while (qwc > 0) {
@@ -173,7 +173,7 @@ static __forceinline void _dmaSPR0() {
 		spr0->qwc  = (u16)ptag[0];				//QWC set to lower 16bits of the tag
 		spr0->madr = ptag[1];					//MADR = ADDR field
 
-		SPR_LOG("spr0 dmaChain %8.8x_%8.8x size=%d, id=%d, addr=%lx spr=%lx\n",
+		SPR_LOG("spr0 dmaChain %8.8x_%8.8x size=%d, id=%d, addr=%lx spr=%lx",
 				ptag[1], ptag[0], spr0->qwc, id, spr0->madr, spr0->sadr);
 
 		if ((psHu32(DMAC_CTRL) & 0x30) == 0x20) { // STS == fromSPR
@@ -217,7 +217,7 @@ static __forceinline void _dmaSPR0() {
 			spr0->qwc = 0;
 			return;
 		}
-		SPR_LOG("spr0 dmaChain complete %8.8x_%8.8x size=%d, id=%d, addr=%lx spr=%lx\n",
+		SPR_LOG("spr0 dmaChain complete %8.8x_%8.8x size=%d, id=%d, addr=%lx spr=%lx",
 				ptag[1], ptag[0], spr0->qwc, id, spr0->madr);
 		//CPU_INT(8, cycles);
 	} else { // Interleave Mode
@@ -261,7 +261,7 @@ void SPRFROMinterrupt()
 void dmaSPR0() { // fromSPR
 	
 
-	SPR_LOG("dmaSPR0 chcr = %lx, madr = %lx, qwc  = %lx, sadr = %lx\n",
+	SPR_LOG("dmaSPR0 chcr = %lx, madr = %lx, qwc  = %lx, sadr = %lx",
 			spr0->chcr, spr0->madr, spr0->qwc, spr0->sadr);
 
 	if ((spr0->chcr & 0xc) == 0x4 && spr0->qwc == 0){
@@ -316,7 +316,7 @@ void _SPR1interleave() {
 	int cycles = 0;
 	u32 *pMem;
 	if(tqwc == 0) tqwc = qwc;
-		SPR_LOG("SPR1 interleave size=%d, tqwc=%d, sqwc=%d, addr=%lx sadr=%lx\n",
+		SPR_LOG("SPR1 interleave size=%d, tqwc=%d, sqwc=%d, addr=%lx sadr=%lx",
 				spr1->qwc, tqwc, sqwc, spr1->madr, spr1->sadr);
 
 	while (qwc > 0) {
@@ -380,14 +380,14 @@ void _dmaSPR1() { // toSPR work function
 			SPR1transfer(ptag, 4);				//Transfer Tag
 		}
 
-		SPR_LOG("spr1 dmaChain %8.8x_%8.8x size=%d, id=%d, addr=%lx\n",
+		SPR_LOG("spr1 dmaChain %8.8x_%8.8x size=%d, id=%d, addr=%lx",
 				ptag[1], ptag[0], spr1->qwc, id, spr1->madr);
 		
 		done = hwDmacSrcChain(spr1, id);
 		SPR1chain();										//Transfers the data set by the switch
 
 		if (spr1->chcr & 0x80 && ptag[0] >> 31) {			//Check TIE bit of CHCR and IRQ bit of tag
-			SPR_LOG("dmaIrq Set\n");
+			SPR_LOG("dmaIrq Set");
 			
 			//Console::WriteLn("SPR1 TIE");
 			spr1->qwc = 0;
@@ -410,7 +410,7 @@ void _dmaSPR1() { // toSPR work function
 void dmaSPR1() { // toSPR
 	
 	SPR_LOG("dmaSPR1 chcr = 0x%x, madr = 0x%x, qwc  = 0x%x\n"
-			"        tadr = 0x%x, sadr = 0x%x\n",
+			"        tadr = 0x%x, sadr = 0x%x",
 			spr1->chcr, spr1->madr, spr1->qwc,
 			spr1->tadr, spr1->sadr);
 

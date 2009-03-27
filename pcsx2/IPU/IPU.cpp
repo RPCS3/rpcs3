@@ -248,7 +248,7 @@ __forceinline u32 ipuRead32(u32 mem)
 			ipuRegs->ctrl.CBP = coded_block_pattern;
 
 			if( !ipuRegs->ctrl.BUSY )
-				IPU_LOG("Ipu read32: IPU_CTRL=0x%08X %x\n", ipuRegs->ctrl._u32, cpuRegs.pc);
+				IPU_LOG("Ipu read32: IPU_CTRL=0x%08X %x", ipuRegs->ctrl._u32, cpuRegs.pc);
 
 			return ipuRegs->ctrl._u32;
 
@@ -258,7 +258,7 @@ __forceinline u32 ipuRead32(u32 mem)
 			ipuRegs->ipubp |= g_BP.IFC<<8;
 			ipuRegs->ipubp |= (g_BP.FP+g_BP.bufferhasnew) << 16;
 
-			IPU_LOG("Ipu read32: IPU_BP=0x%08X\n", *(u32*)&g_BP);
+			IPU_LOG("Ipu read32: IPU_BP=0x%08X", *(u32*)&g_BP);
 			return ipuRegs->ipubp;
 	}
 
@@ -281,7 +281,7 @@ __forceinline u64 ipuRead64(u32 mem)
 
 			//if(!ipuRegs->cmd.BUSY){
 			if( ipuRegs->cmd.DATA&0xffffff )
-				IPU_LOG("Ipu read64: IPU_CMD=BUSY=%x, DATA=%08X\n", ipuRegs->cmd.BUSY?1:0,ipuRegs->cmd.DATA);
+				IPU_LOG("Ipu read64: IPU_CMD=BUSY=%x, DATA=%08X", ipuRegs->cmd.BUSY?1:0,ipuRegs->cmd.DATA);
 			//return *(u64*)&ipuRegs->cmd;
 			break;
 
@@ -294,13 +294,13 @@ __forceinline u64 ipuRead64(u32 mem)
 			break;
 
 		case 0x30: // IPU_TOP
-			IPU_LOG("Ipu read64: IPU_TOP=%x,  bp = %d\n",ipuRegs->top,g_BP.BP);
+			IPU_LOG("Ipu read64: IPU_TOP=%x,  bp = %d",ipuRegs->top,g_BP.BP);
 
 			//return *(u64*)&ipuRegs->top;
 			break;
 
 		default:
-			IPU_LOG("Ipu read64: Unknown=%x\n", mem);
+			IPU_LOG("Ipu read64: Unknown=%x", mem);
 			break;
 	}
 	return *(u64*)(((u8*)ipuRegs)+mem);
@@ -351,7 +351,7 @@ __forceinline void ipuWrite32(u32 mem, u32 value)
 
 	switch (mem){
 		case 0x00: // IPU_CMD
-	        IPU_LOG("Ipu write32: IPU_CMD=0x%08X\n",value);
+	        IPU_LOG("Ipu write32: IPU_CMD=0x%08X",value);
 			IPUCMD_WRITE(value);
 			break;
 
@@ -365,11 +365,11 @@ __forceinline void ipuWrite32(u32 mem, u32 value)
 				ipuSoftReset();
 			}
 
-	        IPU_LOG("Ipu write32: IPU_CTRL=0x%08X\n",value);
+	        IPU_LOG("Ipu write32: IPU_CTRL=0x%08X",value);
 			break;
 
 		default:
-			IPU_LOG("Ipu write32: Unknown=%x\n", mem);
+			IPU_LOG("Ipu write32: Unknown=%x", mem);
 			*(u32*)((u8*)ipuRegs + mem) = value;
 			break;
 	}
@@ -388,12 +388,12 @@ __forceinline void ipuWrite64(u32 mem, u64 value)
 	switch( mem )
 	{
 		case 0x10:
-	        IPU_LOG("Ipu write64: IPU_CMD=0x%08X\n",value);
+	        IPU_LOG("Ipu write64: IPU_CMD=0x%08X",value);
 			IPUCMD_WRITE((u32)value);
 			break;
 
 		default:
-			IPU_LOG("Ipu write64: Unknown=%x\n", mem);
+			IPU_LOG("Ipu write64: Unknown=%x", mem);
 			*(u64*)((u8*)ipuRegs + mem) = value;
 			break;
 	}
@@ -412,7 +412,7 @@ static void ipuBCLR(u32 val) {
 	ipuRegs->ctrl.BUSY = 0;
 	ipuRegs->cmd.BUSY = 0;
 	memzero_ptr<80>(readbits);
-	IPU_LOG("Clear IPU input FIFO. Set Bit offset=0x%X\n", g_BP.BP);
+	IPU_LOG("Clear IPU input FIFO. Set Bit offset=0x%X", g_BP.BP);
 }
 
 static __forceinline BOOL ipuIDEC(u32 val)
@@ -420,7 +420,7 @@ static __forceinline BOOL ipuIDEC(u32 val)
 	tIPU_CMD_IDEC idec( val );
 
 
-						IPU_LOG("IPU IDEC command.\n");
+						IPU_LOG("IPU IDEC command.");
 	if (idec.FB){		IPU_LOG(" Skip %d bits.",idec.FB);}
 						IPU_LOG(" Quantizer step code=0x%X.",idec.QSC);
 	if (idec.DTD==0){	IPU_LOG(" Does not decode DT.");
@@ -430,7 +430,7 @@ static __forceinline BOOL ipuIDEC(u32 val)
 	if (idec.DTE==1){	IPU_LOG(" Dither Enabled.");}
 	if (idec.OFM==0){	IPU_LOG(" Output format is RGB32.");
 	}else{				IPU_LOG(" Output format is RGB16.");}
-						IPU_LOG("\n");
+						IPU_LOG("");
 
 	g_BP.BP+= idec.FB;//skip FB bits
 	//from IPU_CTRL
@@ -469,7 +469,7 @@ static __forceinline BOOL ipuBDEC(u32 val)
 {
 	tIPU_CMD_BDEC bdec( val );
 
-							IPU_LOG("IPU BDEC(macroblock decode) command %x, num: 0x%x\n",cpuRegs.pc, s_bdec);
+							IPU_LOG("IPU BDEC(macroblock decode) command %x, num: 0x%x",cpuRegs.pc, s_bdec);
 	if (bdec.FB){			IPU_LOG(" Skip 0x%X bits.", bdec.FB);}
 	if (bdec.MBI){			IPU_LOG(" Intra MB.");}
 	else{					IPU_LOG(" Non-intra MB.");}
@@ -477,7 +477,7 @@ static __forceinline BOOL ipuBDEC(u32 val)
 	else{					IPU_LOG(" Doesn't reset DC prediction value.");}
 	if (bdec.DT){			IPU_LOG(" Use field DCT.");}
 	else{					IPU_LOG(" Use frame DCT.");}
-							IPU_LOG(" Quantizer step=0x%X\n",bdec.QSC);
+							IPU_LOG(" Quantizer step=0x%X",bdec.QSC);
 #ifdef _DEBUG
 	s_bdec++;
 #endif
@@ -555,7 +555,7 @@ static BOOL __fastcall ipuVDEC(u32 val) {
 	
 			BigEndian(ipuRegs->top, ipuRegs->top);
 
-			IPU_LOG("IPU VDEC command data 0x%x(0x%x). Skip 0x%X bits/Table=%d (%s), pct %d\n",
+			IPU_LOG("IPU VDEC command data 0x%x(0x%x). Skip 0x%X bits/Table=%d (%s), pct %d",
 				ipuRegs->cmd.DATA,ipuRegs->cmd.DATA >> 16,val & 0x3f, (val >> 26) & 3, (val >> 26) & 1 ?
 				((val >> 26) & 2 ? "DMV" : "MBT") : (((val >> 26) & 2 ? "MC" : "MBAI")),ipuRegs->ctrl.PCT);
 
@@ -575,7 +575,7 @@ static BOOL ipuFDEC(u32 val)
 	BigEndian(ipuRegs->cmd.DATA, ipuRegs->cmd.DATA);
 	ipuRegs->top = ipuRegs->cmd.DATA;
 
-    IPU_LOG("FDEC read: 0x%8.8x\n", ipuRegs->top);
+    IPU_LOG("FDEC read: 0x%8.8x", ipuRegs->top);
 
 	return TRUE;
 }
@@ -587,17 +587,17 @@ static __forceinline BOOL ipuSETIQ(u32 val)
  	if ((val >> 27) & 1){
 		g_nCmdPos[0] += getBits((u8*)niq + g_nCmdPos[0], 512-8*g_nCmdPos[0], 1); // 8*8*8
 
-		IPU_LOG("Read non-intra quantization matrix from IPU FIFO.\n");
+		IPU_LOG("Read non-intra quantization matrix from IPU FIFO.");
 		for (i=0; i<8; i++){
-			IPU_LOG("%02X %02X %02X %02X %02X %02X %02X %02X\n",
+			IPU_LOG("%02X %02X %02X %02X %02X %02X %02X %02X",
 				niq[i*8+0], niq[i*8+1], niq[i*8+2], niq[i*8+3],
 				niq[i*8+4], niq[i*8+5], niq[i*8+6], niq[i*8+7]);
 		}
 	}else{
 		g_nCmdPos[0] += getBits((u8*)iq+8*g_nCmdPos[0], 512-8*g_nCmdPos[0], 1);
-		IPU_LOG("Read intra quantization matrix from IPU FIFO.\n");
+		IPU_LOG("Read intra quantization matrix from IPU FIFO.");
 		for (i=0; i<8; i++){
-			IPU_LOG("%02X %02X %02X %02X %02X %02X %02X %02X\n",
+			IPU_LOG("%02X %02X %02X %02X %02X %02X %02X %02X",
 				iq[i*8+0], iq[i*8+1], iq[i*8+2], iq[i*8+3],
 				iq[i*8+4], iq[i*8+5], iq[i*8+6], iq[i*8+7]);
 		}
@@ -612,12 +612,12 @@ static __forceinline BOOL ipuSETVQ(u32 val)
 
 	if( g_nCmdPos[0] == 32 )
 	{
-		IPU_LOG("IPU SETVQ command.\nRead VQCLUT table from IPU FIFO.\n");
+		IPU_LOG("IPU SETVQ command.\nRead VQCLUT table from IPU FIFO.");
 		IPU_LOG(
 			"%02d:%02d:%02d %02d:%02d:%02d %02d:%02d:%02d %02d:%02d:%02d "
-			"%02d:%02d:%02d %02d:%02d:%02d %02d:%02d:%02d %02d:%02d:%02d\n"
+			"%02d:%02d:%02d %02d:%02d:%02d %02d:%02d:%02d %02d:%02d:%02d"
 			"%02d:%02d:%02d %02d:%02d:%02d %02d:%02d:%02d %02d:%02d:%02d "
-			"%02d:%02d:%02d %02d:%02d:%02d %02d:%02d:%02d %02d:%02d:%02d\n",
+			"%02d:%02d:%02d %02d:%02d:%02d %02d:%02d:%02d %02d:%02d:%02d",
 			vqclut[0] >> 10, (vqclut[0] >> 5) & 0x1F, vqclut[0] & 0x1F,
 			vqclut[1] >> 10, (vqclut[1] >> 5) & 0x1F, vqclut[1] & 0x1F,
 			vqclut[2] >> 10, (vqclut[2] >> 5) & 0x1F, vqclut[2] & 0x1F,
@@ -644,7 +644,7 @@ static BOOL __fastcall ipuCSC(u32 val)
 {
 	tIPU_CMD_CSC csc( val );
 
-	IPU_LOG("IPU CSC(Colorspace conversion from YCbCr) command (%d).\n",csc.MBC);
+	IPU_LOG("IPU CSC(Colorspace conversion from YCbCr) command (%d).",csc.MBC);
 	if (csc.OFM)
 		IPU_LOG("Output format is RGB16. ");
 	else
@@ -698,11 +698,11 @@ static BOOL ipuPACK(u32 val)
 {
 	tIPU_CMD_CSC  csc( val );
 
-	IPU_LOG("IPU PACK (Colorspace conversion from RGB32) command.\n");
+	IPU_LOG("IPU PACK (Colorspace conversion from RGB32) command.");
 	if (csc.OFM){	IPU_LOG("Output format is RGB16. ");}
 	else{			IPU_LOG("Output format is INDX4. ");}
 	if (csc.DTE){	IPU_LOG("Dithering enabled.");	}
-	IPU_LOG("Number of macroblocks to be converted: %d\n", csc.MBC);
+	IPU_LOG("Number of macroblocks to be converted: %d", csc.MBC);
 
 	for (;g_nCmdIndex<(int)csc.MBC; g_nCmdIndex++){
 
@@ -742,7 +742,7 @@ static BOOL ipuPACK(u32 val)
 static void ipuSETTH(u32 val) {
 	s_thresh[0] = (val & 0xff);
 	s_thresh[1] = ((val>>16) & 0xff);
-	IPU_LOG("IPU SETTH (Set threshold value)command %x.\n", val&0xff00ff);
+	IPU_LOG("IPU SETTH (Set threshold value)command %x.", val&0xff00ff);
 }
 
 ///////////////////////
@@ -786,7 +786,7 @@ void IPUCMD_WRITE(u32 val) {
 			break;
 
 		case SCE_IPU_FDEC:
-			IPU_LOG("IPU FDEC command. Skip 0x%X bits, FIFO 0x%X qwords, BP 0x%X, FP %d, CHCR 0x%x, %x\n",
+			IPU_LOG("IPU FDEC command. Skip 0x%X bits, FIFO 0x%X qwords, BP 0x%X, FP %d, CHCR 0x%x, %x",
 				val & 0x3f,g_BP.IFC,(int)g_BP.BP,g_BP.FP,((DMACh*)&PS2MEM_HW[0xb400])->chcr,cpuRegs.pc);
 
 			g_BP.BP+= val & 0x3F;
@@ -806,10 +806,10 @@ void IPUCMD_WRITE(u32 val) {
 			return;
 
 		case SCE_IPU_SETIQ:
-			IPU_LOG("IPU SETIQ command.\n");
+			IPU_LOG("IPU SETIQ command.");
 
 			if (val & 0x3f)
-				IPU_LOG("Skip %d bits.\n", val & 0x3f);
+				IPU_LOG("Skip %d bits.", val & 0x3f);
 
 			g_BP.BP+= val & 0x3F;
 
@@ -1466,7 +1466,7 @@ int IPU1dma()
 				}
 
 				ipu1dma->chcr = (ipu1dma->chcr & 0xFFFF) | ( (*ptag) & 0xFFFF0000 );
-				IPU_LOG("IPU dmaIrq Set\n"); 
+				IPU_LOG("IPU dmaIrq Set"); 
 				IPU_INT_TO(totalqwc*BIAS);
 				g_nDMATransfer |= IPU_DMA_TIE1;
 				return totalqwc;
@@ -1495,7 +1495,7 @@ int IPU1dma()
 	// Transfer Dn_QWC from Dn_MADR to GIF
 	
 	if ((ipu1dma->chcr & 0xc) == 0 ||  ipu1dma->qwc > 0) { // Normal Mode
-		IPU_LOG("dmaIPU1 Normal size=%d, addr=%lx, fifosize=%x\n",
+		IPU_LOG("dmaIPU1 Normal size=%d, addr=%lx, fifosize=%x",
 			ipu1dma->qwc, ipu1dma->madr, 8 - g_BP.IFC);
 		IPU1chain();
 		IPU_INT_TO((ipu1cycles+totalqwc)*BIAS);
@@ -1549,11 +1549,11 @@ int IPU1dma()
 					break;
 
 				default:
-					Console::Error("IPU ERROR: different transfer mode!, Please report to PCSX2 Team\n");
+					Console::Error("IPU ERROR: different transfer mode!, Please report to PCSX2 Team");
 					break;
 			}
 
-			IPU_LOG("dmaIPU1 dmaChain %8.8x_%8.8x size=%d, addr=%lx, fifosize=%x\n",
+			IPU_LOG("dmaIPU1 dmaChain %8.8x_%8.8x size=%d, addr=%lx, fifosize=%x",
 				ptag[1], ptag[0], ipu1dma->qwc, ipu1dma->madr, 8 - g_BP.IFC);
 
 			if( (ipu1dma->chcr & 0x80) && ptag[0] & 0x80000000 ) 
@@ -1685,7 +1685,7 @@ int IPU0dma()
 
 	assert( !(ipu0dma->chcr&0x40) );
 
-	IPU_LOG("dmaIPU0 chcr = %lx, madr = %lx, qwc  = %lx\n",
+	IPU_LOG("dmaIPU0 chcr = %lx, madr = %lx, qwc  = %lx",
 			ipu0dma->chcr, ipu0dma->madr, ipu0dma->qwc);
 
 	assert((ipu0dma->chcr & 0xC) == 0 );
@@ -1729,7 +1729,7 @@ void dmaIPU1() // toIPU
 extern void GIFdma();
 
 void ipu0Interrupt() {
-	IPU_LOG("ipu0Interrupt: %x\n", cpuRegs.cycle);
+	IPU_LOG("ipu0Interrupt: %x", cpuRegs.cycle);
 
 	if( g_nDMATransfer & IPU_DMA_FIREINT0 ) {
 		hwIntcIrq(INTC_IPU);
@@ -1758,7 +1758,7 @@ void ipu0Interrupt() {
 }
 
 IPU_FORCEINLINE void ipu1Interrupt() {
-	IPU_LOG("ipu1Interrupt %x:\n", cpuRegs.cycle);
+	IPU_LOG("ipu1Interrupt %x:", cpuRegs.cycle);
 
 	if( g_nDMATransfer & IPU_DMA_FIREINT1 ) {
 		hwIntcIrq(INTC_IPU);

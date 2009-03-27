@@ -97,7 +97,7 @@ namespace VU1micro
 	#ifdef _DEBUG
 		static u32 vuprogcount = 0;
 		vuprogcount++;
-		if( vudump & 8 ) __Log("start vu1: %x %x\n", VU1.VI[ REG_TPC ].UL, vuprogcount);
+		if( vudump & 8 ) __Log("start vu1: %x %x", VU1.VI[ REG_TPC ].UL, vuprogcount);
 	#endif
 
 		if((VU0.VI[REG_VPU_STAT].UL & 0x100) == 0){

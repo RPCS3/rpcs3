@@ -940,23 +940,23 @@ void iDumpPsxRegisters(u32 startpc, u32 temp)
 	int i;
 	const char* pstr = temp ? "t" : "";
 
-    __Log("%spsxreg: %x %x ra:%x k0: %x %x\n", pstr, startpc, psxRegs.cycle, psxRegs.GPR.n.ra, psxRegs.GPR.n.k0, *(int*)PSXM(0x13c128));
-    for(i = 0; i < 34; i+=2) __Log("%spsx%s: %x %x\n", pstr, disRNameGPR[i], psxRegs.GPR.r[i], psxRegs.GPR.r[i+1]);
-	__Log("%scycle: %x %x %x; counters %x %x\n", pstr, psxRegs.cycle, g_psxNextBranchCycle, EEsCycle, 
+    __Log("%spsxreg: %x %x ra:%x k0: %x %x", pstr, startpc, psxRegs.cycle, psxRegs.GPR.n.ra, psxRegs.GPR.n.k0, *(int*)PSXM(0x13c128));
+    for(i = 0; i < 34; i+=2) __Log("%spsx%s: %x %x", pstr, disRNameGPR[i], psxRegs.GPR.r[i], psxRegs.GPR.r[i+1]);
+	__Log("%scycle: %x %x %x; counters %x %x", pstr, psxRegs.cycle, g_psxNextBranchCycle, EEsCycle, 
 		psxNextsCounter, psxNextCounter);
 
-	__Log("psxdma%d c%x b%x m%x t%x\n", 2, HW_DMA2_CHCR, HW_DMA2_BCR, HW_DMA2_MADR, HW_DMA2_TADR);
-	__Log("psxdma%d c%x b%x m%x\n", 3, HW_DMA3_CHCR, HW_DMA3_BCR, HW_DMA3_MADR);
-	__Log("psxdma%d c%x b%x m%x t%x\n", 4, HW_DMA4_CHCR, HW_DMA4_BCR, HW_DMA4_MADR, HW_DMA4_TADR);
-	__Log("psxdma%d c%x b%x m%x\n", 6, HW_DMA6_CHCR, HW_DMA6_BCR, HW_DMA6_MADR);
-	__Log("psxdma%d c%x b%x m%x\n", 7, HW_DMA7_CHCR, HW_DMA7_BCR, HW_DMA7_MADR);
-	__Log("psxdma%d c%x b%x m%x\n", 8, HW_DMA8_CHCR, HW_DMA8_BCR, HW_DMA8_MADR);
-	__Log("psxdma%d c%x b%x m%x t%x\n", 9, HW_DMA9_CHCR, HW_DMA9_BCR, HW_DMA9_MADR, HW_DMA9_TADR);
-	__Log("psxdma%d c%x b%x m%x\n", 10, HW_DMA10_CHCR, HW_DMA10_BCR, HW_DMA10_MADR);
-    __Log("psxdma%d c%x b%x m%x\n", 11, HW_DMA11_CHCR, HW_DMA11_BCR, HW_DMA11_MADR);
-	__Log("psxdma%d c%x b%x m%x\n", 12, HW_DMA12_CHCR, HW_DMA12_BCR, HW_DMA12_MADR);
+	__Log("psxdma%d c%x b%x m%x t%x", 2, HW_DMA2_CHCR, HW_DMA2_BCR, HW_DMA2_MADR, HW_DMA2_TADR);
+	__Log("psxdma%d c%x b%x m%x", 3, HW_DMA3_CHCR, HW_DMA3_BCR, HW_DMA3_MADR);
+	__Log("psxdma%d c%x b%x m%x t%x", 4, HW_DMA4_CHCR, HW_DMA4_BCR, HW_DMA4_MADR, HW_DMA4_TADR);
+	__Log("psxdma%d c%x b%x m%x", 6, HW_DMA6_CHCR, HW_DMA6_BCR, HW_DMA6_MADR);
+	__Log("psxdma%d c%x b%x m%x", 7, HW_DMA7_CHCR, HW_DMA7_BCR, HW_DMA7_MADR);
+	__Log("psxdma%d c%x b%x m%x", 8, HW_DMA8_CHCR, HW_DMA8_BCR, HW_DMA8_MADR);
+	__Log("psxdma%d c%x b%x m%x t%x", 9, HW_DMA9_CHCR, HW_DMA9_BCR, HW_DMA9_MADR, HW_DMA9_TADR);
+	__Log("psxdma%d c%x b%x m%x", 10, HW_DMA10_CHCR, HW_DMA10_BCR, HW_DMA10_MADR);
+    __Log("psxdma%d c%x b%x m%x", 11, HW_DMA11_CHCR, HW_DMA11_BCR, HW_DMA11_MADR);
+	__Log("psxdma%d c%x b%x m%x", 12, HW_DMA12_CHCR, HW_DMA12_BCR, HW_DMA12_MADR);
 	for(i = 0; i < 7; ++i)
-		__Log("%scounter%d: mode %x count %I64x rate %x scycle %x target %I64x\n", pstr, i, psxCounters[i].mode, psxCounters[i].count, psxCounters[i].rate, psxCounters[i].sCycleT, psxCounters[i].target);
+		__Log("%scounter%d: mode %x count %I64x rate %x scycle %x target %I64x", pstr, i, psxCounters[i].mode, psxCounters[i].count, psxCounters[i].rate, psxCounters[i].sCycleT, psxCounters[i].target);
 #endif
 }
 

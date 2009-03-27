@@ -306,7 +306,7 @@ void MFC0()
 {
 	// Note on _Rd_ Condition 9: CP0.Count should be updated even if _Rt_ is 0.
 	if( (_Rd_ != 9) && !_Rt_ ) return;
-	if(_Rd_ != 9) { COP0_LOG("%s\n", disR5900Current.getCString() ); }
+	if(_Rd_ != 9) { COP0_LOG("%s", disR5900Current.getCString() ); }
 	
 	//if(bExecBIOS == FALSE && _Rd_ == 25) Console::WriteLn("MFC0 _Rd_ %x = %x", params _Rd_, cpuRegs.CP0.r[_Rd_]);
 	switch (_Rd_)
@@ -416,12 +416,12 @@ int CPCOND0() {
 
 void BC0F() {
 	BC0(== 0);
-	COP0_LOG( "COP0 > BC0F\n" );
+	COP0_LOG( "COP0 > BC0F" );
 }
 
 void BC0T() {
 	BC0(== 1);
-	COP0_LOG( "COP0 > BC0T\n" );
+	COP0_LOG( "COP0 > BC0T" );
 }
 
 #define BC0L(cond) \
@@ -431,12 +431,12 @@ void BC0T() {
 
 void BC0FL() {
 	BC0L(== 0);
-	COP0_LOG( "COP0 > BC0FL\n" );
+	COP0_LOG( "COP0 > BC0FL" );
 }
 
 void BC0TL() {
 	BC0L(== 1);
-	COP0_LOG( "COP0 > BCOTL\n" );
+	COP0_LOG( "COP0 > BCOTL" );
 }
 
 void TLBR() {
@@ -446,7 +446,7 @@ void TLBR() {
 
 	int i = cpuRegs.CP0.n.Index&0x1f;
 
-	COP0_LOG("COP0 > TLBR\n");
+	COP0_LOG("COP0 > TLBR");
 	cpuRegs.CP0.n.PageMask = tlb[i].PageMask;
 	cpuRegs.CP0.n.EntryHi = tlb[i].EntryHi&~(tlb[i].PageMask|0x1f00);
 	cpuRegs.CP0.n.EntryLo0 = (tlb[i].EntryLo0&~1)|((tlb[i].EntryHi>>12)&1);

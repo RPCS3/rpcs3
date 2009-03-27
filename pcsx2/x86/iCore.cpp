@@ -1167,39 +1167,39 @@ void iDumpRegisters(u32 startpc, u32 temp)
     psymb = disR5900GetSym(startpc);
 
     if( psymb != NULL )
-        __Log("%sreg(%s): %x %x c:%x\n", pstr, psymb, startpc, cpuRegs.interrupt, cpuRegs.cycle);
+        __Log("%sreg(%s): %x %x c:%x", pstr, psymb, startpc, cpuRegs.interrupt, cpuRegs.cycle);
     else
-        __Log("%sreg: %x %x c:%x\n", pstr, startpc, cpuRegs.interrupt, cpuRegs.cycle);
-	for(i = 1; i < 32; ++i) __Log("%s: %x_%x_%x_%x\n", disRNameGPR[i], cpuRegs.GPR.r[i].UL[3], cpuRegs.GPR.r[i].UL[2], cpuRegs.GPR.r[i].UL[1], cpuRegs.GPR.r[i].UL[0]);
-    //for(i = 0; i < 32; i+=4) __Log("cp%d: %x_%x_%x_%x\n", i, cpuRegs.CP0.r[i], cpuRegs.CP0.r[i+1], cpuRegs.CP0.r[i+2], cpuRegs.CP0.r[i+3]);
-	//for(i = 0; i < 32; ++i) __Log("%sf%d: %f %x\n", pstr, i, fpuRegs.fpr[i].f, fpuRegs.fprc[i]);
-	//for(i = 1; i < 32; ++i) __Log("%svf%d: %f %f %f %f, vi: %x\n", pstr, i, VU0.VF[i].F[3], VU0.VF[i].F[2], VU0.VF[i].F[1], VU0.VF[i].F[0], VU0.VI[i].UL);
-	for(i = 0; i < 32; ++i) __Log("%sf%d: %x %x\n", pstr, i, fpuRegs.fpr[i].UL, fpuRegs.fprc[i]);
-	for(i = 1; i < 32; ++i) __Log("%svf%d: %x %x %x %x, vi: %x\n", pstr, i, VU0.VF[i].UL[3], VU0.VF[i].UL[2], VU0.VF[i].UL[1], VU0.VF[i].UL[0], VU0.VI[i].UL);
-	__Log("%svfACC: %x %x %x %x\n", pstr, VU0.ACC.UL[3], VU0.ACC.UL[2], VU0.ACC.UL[1], VU0.ACC.UL[0]);
-	__Log("%sLO: %x_%x_%x_%x, HI: %x_%x_%x_%x\n", pstr, cpuRegs.LO.UL[3], cpuRegs.LO.UL[2], cpuRegs.LO.UL[1], cpuRegs.LO.UL[0],
+        __Log("%sreg: %x %x c:%x", pstr, startpc, cpuRegs.interrupt, cpuRegs.cycle);
+	for(i = 1; i < 32; ++i) __Log("%s: %x_%x_%x_%x", disRNameGPR[i], cpuRegs.GPR.r[i].UL[3], cpuRegs.GPR.r[i].UL[2], cpuRegs.GPR.r[i].UL[1], cpuRegs.GPR.r[i].UL[0]);
+    //for(i = 0; i < 32; i+=4) __Log("cp%d: %x_%x_%x_%x", i, cpuRegs.CP0.r[i], cpuRegs.CP0.r[i+1], cpuRegs.CP0.r[i+2], cpuRegs.CP0.r[i+3]);
+	//for(i = 0; i < 32; ++i) __Log("%sf%d: %f %x", pstr, i, fpuRegs.fpr[i].f, fpuRegs.fprc[i]);
+	//for(i = 1; i < 32; ++i) __Log("%svf%d: %f %f %f %f, vi: %x", pstr, i, VU0.VF[i].F[3], VU0.VF[i].F[2], VU0.VF[i].F[1], VU0.VF[i].F[0], VU0.VI[i].UL);
+	for(i = 0; i < 32; ++i) __Log("%sf%d: %x %x", pstr, i, fpuRegs.fpr[i].UL, fpuRegs.fprc[i]);
+	for(i = 1; i < 32; ++i) __Log("%svf%d: %x %x %x %x, vi: %x", pstr, i, VU0.VF[i].UL[3], VU0.VF[i].UL[2], VU0.VF[i].UL[1], VU0.VF[i].UL[0], VU0.VI[i].UL);
+	__Log("%svfACC: %x %x %x %x", pstr, VU0.ACC.UL[3], VU0.ACC.UL[2], VU0.ACC.UL[1], VU0.ACC.UL[0]);
+	__Log("%sLO: %x_%x_%x_%x, HI: %x_%x_%x_%x", pstr, cpuRegs.LO.UL[3], cpuRegs.LO.UL[2], cpuRegs.LO.UL[1], cpuRegs.LO.UL[0],
 	cpuRegs.HI.UL[3], cpuRegs.HI.UL[2], cpuRegs.HI.UL[1], cpuRegs.HI.UL[0]);
-	__Log("%sCycle: %x %x, Count: %x\n", pstr, cpuRegs.cycle, g_nextBranchCycle, cpuRegs.CP0.n.Count);
+	__Log("%sCycle: %x %x, Count: %x", pstr, cpuRegs.cycle, g_nextBranchCycle, cpuRegs.CP0.n.Count);
 	iDumpPsxRegisters(psxRegs.pc, temp);
 
-    __Log("f410,30,40: %x %x %x, %d %d\n", psHu32(0xf410), psHu32(0xf430), psHu32(0xf440), rdram_sdevid, rdram_devices);
-	__Log("cyc11: %x %x; vu0: %x, vu1: %x\n", cpuRegs.sCycle[1], cpuRegs.eCycle[1], VU0.cycle, VU1.cycle);
+    __Log("f410,30,40: %x %x %x, %d %d", psHu32(0xf410), psHu32(0xf430), psHu32(0xf440), rdram_sdevid, rdram_devices);
+	__Log("cyc11: %x %x; vu0: %x, vu1: %x", cpuRegs.sCycle[1], cpuRegs.eCycle[1], VU0.cycle, VU1.cycle);
 
-	__Log("%scounters: %x %x; psx: %x %x\n", pstr, nextsCounter, nextCounter, psxNextsCounter, psxNextCounter);
+	__Log("%scounters: %x %x; psx: %x %x", pstr, nextsCounter, nextCounter, psxNextsCounter, psxNextCounter);
 	for(i = 0; i < 4; ++i) {
-		__Log("eetimer%d: count: %x mode: %x target: %x %x; %x %x; %x %x %x %x\n", i,
+		__Log("eetimer%d: count: %x mode: %x target: %x %x; %x %x; %x %x %x %x", i,
 			counters[i].count, counters[i].mode, counters[i].target, counters[i].hold, counters[i].rate,
 			counters[i].interrupt, counters[i].Cycle, counters[i].sCycle, counters[i].CycleT, counters[i].sCycleT);
 	}
-	__Log("VIF0_STAT = %x, VIF1_STAT = %x\n", psHu32(0x3800), psHu32(0x3C00));
-	__Log("ipu %x %x %x %x; bp: %x %x %x %x\n", psHu32(0x2000), psHu32(0x2010), psHu32(0x2020), psHu32(0x2030), g_BP.BP, g_BP.bufferhasnew, g_BP.FP, g_BP.IFC);
-	__Log("gif: %x %x %x\n", psHu32(0x3000), psHu32(0x3010), psHu32(0x3020));
+	__Log("VIF0_STAT = %x, VIF1_STAT = %x", psHu32(0x3800), psHu32(0x3C00));
+	__Log("ipu %x %x %x %x; bp: %x %x %x %x", psHu32(0x2000), psHu32(0x2010), psHu32(0x2020), psHu32(0x2030), g_BP.BP, g_BP.bufferhasnew, g_BP.FP, g_BP.IFC);
+	__Log("gif: %x %x %x", psHu32(0x3000), psHu32(0x3010), psHu32(0x3020));
 	for(i = 0; i < ARRAYSIZE(dmacs); ++i) {
 		DMACh* p = (DMACh*)(PS2MEM_HW+dmacs[i]);
-		__Log("dma%d c%x m%x q%x t%x s%x\n", i, p->chcr, p->madr, p->qwc, p->tadr, p->sadr);
+		__Log("dma%d c%x m%x q%x t%x s%x", i, p->chcr, p->madr, p->qwc, p->tadr, p->sadr);
 	}
-	__Log("dmac %x %x %x %x\n", psHu32(DMAC_CTRL), psHu32(DMAC_STAT), psHu32(DMAC_RBSR), psHu32(DMAC_RBOR));
-	__Log("intc %x %x\n", psHu32(INTC_STAT), psHu32(INTC_MASK));
-	__Log("sif: %x %x %x %x %x\n", psHu32(0xf200), psHu32(0xf220), psHu32(0xf230), psHu32(0xf240), psHu32(0xf260));
+	__Log("dmac %x %x %x %x", psHu32(DMAC_CTRL), psHu32(DMAC_STAT), psHu32(DMAC_RBSR), psHu32(DMAC_RBOR));
+	__Log("intc %x %x", psHu32(INTC_STAT), psHu32(INTC_MASK));
+	__Log("sif: %x %x %x %x %x", psHu32(0xf200), psHu32(0xf220), psHu32(0xf230), psHu32(0xf240), psHu32(0xf260));
 #endif
 }

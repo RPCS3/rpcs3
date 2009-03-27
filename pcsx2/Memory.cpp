@@ -71,7 +71,7 @@ void memSetUserMode() {
 
 u16 ba0R16(u32 mem)
 {
-	//MEM_LOG("ba00000 Memory read16 address %x\n", mem);
+	//MEM_LOG("ba00000 Memory read16 address %x", mem);
 
 	if (mem == 0x1a000006) {
 		static int ba6;
@@ -259,7 +259,7 @@ mem8_t __fastcall _ext_memRead8 (u32 mem)
 		}
 	}
 
-	MEM_LOG("Unknown Memory Read8   from address %8.8x\n", mem);
+	MEM_LOG("Unknown Memory Read8   from address %8.8x", mem);
 	cpuTlbMissR(mem, cpuRegs.branch);
 	return 0;
 }
@@ -274,7 +274,7 @@ mem16_t __fastcall _ext_memRead16(u32 mem)
 		case 2: // psh
 			return psxHwRead16(mem);
 		case 4: // b80
-			MEM_LOG("b800000 Memory read16 address %x\n", mem);
+			MEM_LOG("b800000 Memory read16 address %x", mem);
 			return 0;
 		case 5: // ba0
 			return ba0R16(mem);
@@ -291,7 +291,7 @@ mem16_t __fastcall _ext_memRead16(u32 mem)
 		case 8: // spu2
 			return SPU2read(mem);
 	}
-	MEM_LOG("Unknown Memory read16  from address %8.8x\n", mem);
+	MEM_LOG("Unknown Memory read16  from address %8.8x", mem);
 	cpuTlbMissR(mem, cpuRegs.branch);
 	return 0;
 }
@@ -313,7 +313,7 @@ mem32_t __fastcall _ext_memRead32(u32 mem)
 		}
 	}
 
-	MEM_LOG("Unknown Memory read32  from address %8.8x (Status=%8.8x)\n", mem, cpuRegs.CP0.n.Status.val);
+	MEM_LOG("Unknown Memory read32  from address %8.8x (Status=%8.8x)", mem, cpuRegs.CP0.n.Status.val);
 	cpuTlbMissR(mem, cpuRegs.branch);
 	return 0;
 }
@@ -327,7 +327,7 @@ void __fastcall _ext_memRead64(u32 mem, mem64_t *out)
 			*out = gsRead64(mem); return;
 	}
 
-	MEM_LOG("Unknown Memory read64  from address %8.8x\n", mem);
+	MEM_LOG("Unknown Memory read64  from address %8.8x", mem);
 	cpuTlbMissR(mem, cpuRegs.branch);
 }
 
@@ -343,7 +343,7 @@ void __fastcall _ext_memRead128(u32 mem, mem128_t *out)
 			out[1] = gsRead64(mem+8); return;
 	}
 
-	MEM_LOG("Unknown Memory read128 from address %8.8x\n", mem);
+	MEM_LOG("Unknown Memory read128 from address %8.8x", mem);
 	cpuTlbMissR(mem, cpuRegs.branch);
 }
 
@@ -366,7 +366,7 @@ void __fastcall _ext_memWrite8 (u32 mem, u8  value)
 			return;
 	}
 
-	MEM_LOG("Unknown Memory write8   to  address %x with data %2.2x\n", mem, value);
+	MEM_LOG("Unknown Memory write8   to  address %x with data %2.2x", mem, value);
 	cpuTlbMissW(mem, cpuRegs.branch);
 }
 template<int p>
@@ -379,7 +379,7 @@ void __fastcall _ext_memWrite16(u32 mem, u16 value)
 		case 2: // psh
 			psxHwWrite16(mem, value); return;
 		case 5: // ba0
-			MEM_LOG("ba00000 Memory write16 to  address %x with data %x\n", mem, value);
+			MEM_LOG("ba00000 Memory write16 to  address %x with data %x", mem, value);
 			return;
 		case 6: // gsm
 			gsWrite16(mem, value); return;
@@ -390,7 +390,7 @@ void __fastcall _ext_memWrite16(u32 mem, u16 value)
 		case 8: // spu2
 			SPU2write(mem, value); return;
 	}
-	MEM_LOG("Unknown Memory write16  to  address %x with data %4.4x\n", mem, value);
+	MEM_LOG("Unknown Memory write16  to  address %x with data %4.4x", mem, value);
 	cpuTlbMissW(mem, cpuRegs.branch);
 }
 
@@ -407,7 +407,7 @@ void __fastcall _ext_memWrite32(u32 mem, u32 value)
 			Console::WriteLn("DEV9 write32 %8.8lx: %8.8lx", params mem & ~0xa4000000, value);
 			return;
 	}
-	MEM_LOG("Unknown Memory write32  to  address %x with data %8.8x\n", mem, value);
+	MEM_LOG("Unknown Memory write32  to  address %x with data %8.8x", mem, value);
 	cpuTlbMissW(mem, cpuRegs.branch);
 }
 
@@ -423,7 +423,7 @@ void __fastcall _ext_memWrite64(u32 mem, const u64* value)
 		//	gsWrite64(mem & ~0xa0000000, *value); return;
 	}*/
 
-	MEM_LOG("Unknown Memory write64  to  address %x with data %8.8x_%8.8x\n", mem, (u32)(*value>>32), (u32)*value);
+	MEM_LOG("Unknown Memory write64  to  address %x with data %8.8x_%8.8x", mem, (u32)(*value>>32), (u32)*value);
 	cpuTlbMissW(mem, cpuRegs.branch);
 }
 
@@ -440,7 +440,7 @@ void __fastcall _ext_memWrite128(u32 mem, const u64 *value)
 		//	gsWrite64(mem+8, value[1]); return;
 	}*/
 
-	MEM_LOG("Unknown Memory write128 to  address %x with data %8.8x_%8.8x_%8.8x_%8.8x\n", mem, ((u32*)value)[3], ((u32*)value)[2], ((u32*)value)[1], ((u32*)value)[0]);
+	MEM_LOG("Unknown Memory write128 to  address %x with data %8.8x_%8.8x_%8.8x_%8.8x", mem, ((u32*)value)[3], ((u32*)value)[2], ((u32*)value)[1], ((u32*)value)[0]);
 	cpuTlbMissW(mem, cpuRegs.branch);
 }
 

@@ -93,7 +93,7 @@ static __forceinline void SIF0write(u32 *from, int words)
 	}*/
 
 	sif0.fifoSize += words;
-	SIF_LOG("  SIF0 + %d = %d (pos=%d)\n", words, sif0.fifoSize, sif0.fifoWritePos);
+	SIF_LOG("  SIF0 + %d = %d (pos=%d)", words, sif0.fifoSize, sif0.fifoWritePos);
 }
 
 static __forceinline void SIF0read(u32 *to, int words)
@@ -115,7 +115,7 @@ static __forceinline void SIF0read(u32 *to, int words)
 	}*/
 
 	sif0.fifoSize -= words;
-	SIF_LOG("  SIF0 - %d = %d (pos=%d)\n", words, sif0.fifoSize, sif0.fifoReadPos);
+	SIF_LOG("  SIF0 - %d = %d (pos=%d)", words, sif0.fifoSize, sif0.fifoReadPos);
 }
 
 __forceinline void SIF1write(u32 *from, int words)
@@ -137,7 +137,7 @@ __forceinline void SIF1write(u32 *from, int words)
 	}*/
 
 	sif1.fifoSize += words;
-	SIF_LOG("  SIF1 + %d = %d (pos=%d)\n", words, sif1.fifoSize, sif1.fifoWritePos);
+	SIF_LOG("  SIF1 + %d = %d (pos=%d)", words, sif1.fifoSize, sif1.fifoWritePos);
 }
 
 static __forceinline void SIF1read(u32 *to, int words)
@@ -159,7 +159,7 @@ static __forceinline void SIF1read(u32 *to, int words)
 	}*/
 
 	sif1.fifoSize -= words;
-	SIF_LOG("  SIF1 - %d = %d (pos=%d)\n", words, sif1.fifoSize, sif1.fifoReadPos);
+	SIF_LOG("  SIF1 - %d = %d (pos=%d)", words, sif1.fifoSize, sif1.fifoReadPos);
 }
 
 __forceinline void SIF0Dma()
@@ -168,7 +168,7 @@ __forceinline void SIF0Dma()
 	int notDone = 1;
 	int cycles = 0, psxCycles = 0;
 	
-	SIF_LOG("SIF0 DMA start...\n");
+	SIF_LOG("SIF0 DMA start...");
 
 	do
 	{
@@ -185,7 +185,7 @@ __forceinline void SIF0Dma()
 				// Note.. add normal mode here
 				if (sif0.sifData.data & 0xC0000000) // If NORMAL mode or end of CHAIN, or interrupt then stop DMA
 				{
-					SIF_LOG(" IOP SIF Stopped\n");
+					SIF_LOG(" IOP SIF Stopped");
 
 					// Stop & signal interrupts on IOP
 					//HW_DMA9_CHCR &= ~0x01000000; //reset TR flag
@@ -217,18 +217,18 @@ __forceinline void SIF0Dma()
 					sif0.counter = sif0.sifData.words & 0xFFFFFF;
 					notDone = 1;
 
-					SIF_LOG(" SIF0 Tag: madr=%lx, tadr=%lx, counter=%lx (%08X_%08X)\n", HW_DMA9_MADR, HW_DMA9_TADR, sif0.counter, sif0.sifData.words, sif0.sifData.data);
+					SIF_LOG(" SIF0 Tag: madr=%lx, tadr=%lx, counter=%lx (%08X_%08X)", HW_DMA9_MADR, HW_DMA9_TADR, sif0.counter, sif0.sifData.words, sif0.sifData.data);
 					if(sif0.sifData.data & 0x40000000)
-						SIF_LOG("   END\n");
+						SIF_LOG("   END");
 					else
-						SIF_LOG("   CNT %08X, %08X\n", sif0.sifData.data, sif0.sifData.words);
+						SIF_LOG("   CNT %08X, %08X", sif0.sifData.data, sif0.sifData.words);
 				}
 			}
 			else // There's some data ready to transfer into the fifo..
 			{
 				int wTransfer = min(sif0.counter, FIFO_SIF0_W-sif0.fifoSize); // HW_DMA9_BCR >> 16;
 
-				SIF_LOG("+++++++++++ %lX of %lX\n", wTransfer, sif0.counter /*(HW_DMA9_BCR >> 16)*/ );
+				SIF_LOG("+++++++++++ %lX of %lX", wTransfer, sif0.counter /*(HW_DMA9_BCR >> 16)*/ );
 
 				SIF0write((u32*)iopPhysMem(HW_DMA9_MADR), wTransfer);
 				HW_DMA9_MADR += wTransfer << 2;
@@ -245,7 +245,7 @@ __forceinline void SIF0Dma()
 		{
 			int size = sif0dma->qwc;
 			if ((psHu32(DMAC_CTRL) & 0x30) == 0x10) { // STS == fromSIF0
-				SIF_LOG("SIF0 stall control\n");
+				SIF_LOG("SIF0 stall control");
 			}
 			if(size > 0) // If we're reading something continue to do so
 			{
@@ -253,8 +253,8 @@ __forceinline void SIF0Dma()
 				{*/
 					int readSize = min(size, (sif0.fifoSize>>2));
 
-					//SIF_LOG(" EE SIF doing transfer %04Xqw to %08X\n", readSize, sif0dma->madr);
-					SIF_LOG("----------- %lX of %lX\n", readSize << 2, size << 2 );
+					//SIF_LOG(" EE SIF doing transfer %04Xqw to %08X", readSize, sif0dma->madr);
+					SIF_LOG("----------- %lX of %lX", readSize << 2, size << 2 );
 
 					_dmaGetAddr(sif0dma, ptag, sif0dma->madr, 5);
 
@@ -262,7 +262,7 @@ __forceinline void SIF0Dma()
 //                    {
 //                        int i;
 //                        for(i = 0; i < readSize; ++i) {
-//                            SIF_LOG("EE SIF0 read madr: %x %x %x %x\n", ((u32*)ptag)[4*i+0], ((u32*)ptag)[4*i+1], ((u32*)ptag)[4*i+2], ((u32*)ptag)[4*i+3]);
+//                            SIF_LOG("EE SIF0 read madr: %x %x %x %x", ((u32*)ptag)[4*i+0], ((u32*)ptag)[4*i+1], ((u32*)ptag)[4*i+2], ((u32*)ptag)[4*i+3]);
 //                        }
 //                    }
 
@@ -282,7 +282,7 @@ __forceinline void SIF0Dma()
 				if((sif0dma->chcr & 0x80000080) == 0x80000080) // Stop on tag IRQ
 				{
 					// Tag interrupt
-					SIF_LOG(" EE SIF interrupt\n");
+					SIF_LOG(" EE SIF interrupt");
 
 					//sif0dma->chcr &= ~0x100;
 					eesifbusy[0] = 0;
@@ -293,7 +293,7 @@ __forceinline void SIF0Dma()
 				else if(sif0.end) // Stop on tag END
 				{
 					// End tag.
-					SIF_LOG(" EE SIF end\n");
+					SIF_LOG(" EE SIF end");
 
 					//sif0dma->chcr &= ~0x100;
 					//hwDmacIrq(5);
@@ -305,7 +305,7 @@ __forceinline void SIF0Dma()
 				{
 					static PCSX2_ALIGNED16(u32 tag[4]);
 					SIF0read((u32*)&tag[0], 4); // Tag
-					SIF_LOG(" EE SIF read tag: %x %x %x %x\n", tag[0], tag[1], tag[2], tag[3]);
+					SIF_LOG(" EE SIF read tag: %x %x %x %x", tag[0], tag[1], tag[2], tag[3]);
 
 					sif0dma->qwc = (u16)tag[0];
 					sif0dma->madr = tag[1];
@@ -314,7 +314,7 @@ __forceinline void SIF0Dma()
 					/*if ((sif0dma->chcr & 0x80) && (tag[0] >> 31)) {	
 						Console::WriteLn("SIF0 TIE");
 					}*/
-					SIF_LOG(" EE SIF dest chain tag madr:%08X qwc:%04X id:%X irq:%d(%08X_%08X)\n", sif0dma->madr, sif0dma->qwc, (tag[0]>>28)&3, (tag[0]>>31)&1, tag[1], tag[0]);
+					SIF_LOG(" EE SIF dest chain tag madr:%08X qwc:%04X id:%X irq:%d(%08X_%08X)", sif0dma->madr, sif0dma->qwc, (tag[0]>>28)&3, (tag[0]>>31)&1, tag[1], tag[0]);
 
 					if ((psHu32(DMAC_CTRL) & 0x30) != 0 && ((tag[0]>>28)&3) == 0)
                         psHu32(DMAC_STADR) = sif0dma->madr + (sif0dma->qwc * 16);
@@ -342,7 +342,7 @@ __forceinline void SIF1Dma()
 		{
 			
 			if ((psHu32(DMAC_CTRL) & 0xC0) == 0xC0)
-				SIF_LOG("SIF1 stall control\n"); // STS == fromSIF1
+				SIF_LOG("SIF1 stall control"); // STS == fromSIF1
 
 			if(sif1dma->qwc == 0) // If there's no more to transfer
 			{
@@ -351,7 +351,7 @@ __forceinline void SIF1Dma()
 					// Stop & signal interrupts on EE
 					//sif1dma->chcr &= ~0x100;
 					//hwDmacIrq(6);
-					SIF_LOG("EE SIF1 End %x\n", sif1.end);
+					SIF_LOG("EE SIF1 End %x", sif1.end);
 					eesifbusy[1] = 0;
 					notDone = 0;
 					CPU_INT(6, cycles*BIAS);
@@ -377,33 +377,33 @@ __forceinline void SIF1Dma()
 					switch(id)
 					{
 						case 0: // refe
-							SIF_LOG("   REFE %08X\n", ptag[1]);
+							SIF_LOG("   REFE %08X", ptag[1]);
 							sif1.end = 1;
 							sif1dma->madr = ptag[1];
 							sif1dma->tadr += 16;
 							break;
 
 						case 1: // cnt
-							SIF_LOG("   CNT\n");
+							SIF_LOG("   CNT");
 							sif1dma->madr = sif1dma->tadr + 16;
 							sif1dma->tadr = sif1dma->madr + (sif1dma->qwc << 4);
 							break;
 
 						case 2: // next
-							SIF_LOG("   NEXT %08X\n", ptag[1]);
+							SIF_LOG("   NEXT %08X", ptag[1]);
 							sif1dma->madr = sif1dma->tadr + 16;
 							sif1dma->tadr = ptag[1];
 							break;
 
 						case 3: // ref
 						case 4: // refs
-							SIF_LOG("   REF %08X\n", ptag[1]);
+							SIF_LOG("   REF %08X", ptag[1]);
 							sif1dma->madr = ptag[1];
 							sif1dma->tadr += 16;
 							break;
 
 						case 7: // end
-							SIF_LOG("   END\n");
+							SIF_LOG("   END");
 							sif1.end = 1;
 							sif1dma->madr = sif1dma->tadr + 16;
 							sif1dma->tadr = sif1dma->madr + (sif1dma->qwc << 4);
@@ -450,7 +450,7 @@ __forceinline void SIF1Dma()
 
 					if(readSize > sif1.fifoSize) readSize = sif1.fifoSize;
 
-					SIF_LOG(" IOP SIF doing transfer %04X to %08X\n", readSize, HW_DMA10_MADR);
+					SIF_LOG(" IOP SIF doing transfer %04X to %08X", readSize, HW_DMA10_MADR);
 
 					SIF1read((u32*)iopPhysMem(HW_DMA10_MADR), readSize);
 					psxCpu->Clear(HW_DMA10_MADR, readSize);
@@ -466,7 +466,7 @@ __forceinline void SIF1Dma()
 				if(sif1.tagMode & 0x80) // Stop on tag IRQ
 				{
 					// Tag interrupt
-					SIF_LOG(" IOP SIF interrupt\n");
+					SIF_LOG(" IOP SIF interrupt");
 					//HW_DMA10_CHCR &= ~0x01000000; //reset TR flag
 					//psxDmaInterrupt2(3);
 					iopsifbusy[1] = 0;
@@ -478,7 +478,7 @@ __forceinline void SIF1Dma()
 				else if(sif1.tagMode & 0x40) // Stop on tag END
 				{
 					// End tag.
-					SIF_LOG(" IOP SIF end\n");
+					SIF_LOG(" IOP SIF end");
 					//HW_DMA10_CHCR &= ~0x01000000; //reset TR flag
 					//psxDmaInterrupt2(3);
 					iopsifbusy[1] = 0;
@@ -491,7 +491,7 @@ __forceinline void SIF1Dma()
 				{
 					struct sifData d;
 					SIF1read((u32*)&d, 4);
-					SIF_LOG(" IOP SIF dest chain tag madr:%08X wc:%04X id:%X irq:%d\n", d.data & 0xffffff, d.words, (d.data>>28)&7, (d.data>>31)&1);
+					SIF_LOG(" IOP SIF dest chain tag madr:%08X wc:%04X id:%X irq:%d", d.data & 0xffffff, d.words, (d.data>>28)&7, (d.data>>31)&1);
 					HW_DMA10_MADR = d.data & 0xffffff;
 					sif1.counter = d.words;
 					sif1.tagMode = (d.data >> 24) & 0xFF;
@@ -527,11 +527,11 @@ __forceinline void  EEsif1Interrupt() {
 }
 
 __forceinline void dmaSIF0() {
-	SIF_LOG("EE: dmaSIF0 chcr = %lx, madr = %lx, qwc  = %lx, tadr = %lx\n",
+	SIF_LOG("EE: dmaSIF0 chcr = %lx, madr = %lx, qwc  = %lx, tadr = %lx",
 			sif0dma->chcr, sif0dma->madr, sif0dma->qwc, sif0dma->tadr);
 
 	if (sif0.fifoReadPos != sif0.fifoWritePos) {
-		SIF_LOG("warning, sif0.fifoReadPos != sif0.fifoWritePos\n");
+		SIF_LOG("warning, sif0.fifoReadPos != sif0.fifoWritePos");
 	}
 //    if(sif0dma->qwc > 0 & (sif0dma->chcr & 0x4) == 0x4) {
 //        sif0dma->chcr &= ~4; //Halflife sets a QWC amount in chain mode, no tadr set.
@@ -551,11 +551,11 @@ __forceinline void dmaSIF0() {
 }
 
 __forceinline void dmaSIF1() {
-	SIF_LOG("EE: dmaSIF1 chcr = %lx, madr = %lx, qwc  = %lx, tadr = %lx\n",
+	SIF_LOG("EE: dmaSIF1 chcr = %lx, madr = %lx, qwc  = %lx, tadr = %lx",
 			sif1dma->chcr, sif1dma->madr, sif1dma->qwc, sif1dma->tadr);
 
 	if (sif1.fifoReadPos != sif1.fifoWritePos) {
-		SIF_LOG("warning, sif1.fifoReadPos != sif1.fifoWritePos\n");
+		SIF_LOG("warning, sif1.fifoReadPos != sif1.fifoWritePos");
 	}
 
 //    if(sif1dma->qwc > 0 & (sif1dma->chcr & 0x4) == 0x4) {
@@ -577,7 +577,7 @@ __forceinline void dmaSIF1() {
 }
 
 __forceinline void dmaSIF2() {
-	SIF_LOG("dmaSIF2 chcr = %lx, madr = %lx, qwc  = %lx\n",
+	SIF_LOG("dmaSIF2 chcr = %lx, madr = %lx, qwc  = %lx",
 			sif2dma->chcr, sif2dma->madr, sif2dma->qwc);
 
     sif2dma->chcr&= ~0x100;

@@ -101,7 +101,7 @@ void writeCache8(u32 mem, u8 value) {
 	int i, number;
 
 	i = getFreeCache(mem,1,&number);
-//	CACHE_LOG("writeCache8 %8.8x adding to %d, way %d, value %x\n", mem, i,number,value);
+//	CACHE_LOG("writeCache8 %8.8x adding to %d, way %d, value %x", mem, i,number,value);
 
 	pCache[i].data[number][(mem>>4) & 0x3].b8._8[(mem&0xf)] = value;
 }
@@ -110,7 +110,7 @@ void writeCache16(u32 mem, u16 value) {
 	int i, number;
  
 	i = getFreeCache(mem,1,&number);
-//	CACHE_LOG("writeCache16 %8.8x adding to %d, way %d, value %x\n", mem, i,number,value);
+//	CACHE_LOG("writeCache16 %8.8x adding to %d, way %d, value %x", mem, i,number,value);
 
 	*(u16*)(&pCache[i].data[number][(mem>>4) & 0x3].b8._8[(mem&0xf)]) = value;
 }
@@ -119,7 +119,7 @@ void writeCache32(u32 mem, u32 value) {
 	int i, number;
 
 	i = getFreeCache(mem,1,&number);
-//	CACHE_LOG("writeCache32 %8.8x adding to %d, way %d, value %x\n", mem, i,number,value);
+//	CACHE_LOG("writeCache32 %8.8x adding to %d, way %d, value %x", mem, i,number,value);
 	*(u32*)(&pCache[i].data[number][(mem>>4) & 0x3].b8._8[(mem&0xf)]) = value;
 }
 
@@ -127,7 +127,7 @@ void writeCache64(u32 mem, u64 value) {
 	int i, number;
 
 	i = getFreeCache(mem,1,&number);
-//	CACHE_LOG("writeCache64 %8.8x adding to %d, way %d, value %x\n", mem, i,number,value);
+//	CACHE_LOG("writeCache64 %8.8x adding to %d, way %d, value %x", mem, i,number,value);
 	*(u64*)(&pCache[i].data[number][(mem>>4) & 0x3].b8._8[(mem&0xf)]) = value;
 }
 
@@ -135,7 +135,7 @@ void writeCache128(u32 mem, u64 *value) {
 	int i, number;
 
 	i = getFreeCache(mem,1,&number);
-//	CACHE_LOG("writeCache128 %8.8x adding to %d\n", mem, i);
+//	CACHE_LOG("writeCache128 %8.8x adding to %d", mem, i);
 	((u64*)pCache[i].data[number][(mem>>4) & 0x3].b8._8)[0] = value[0];
 	((u64*)pCache[i].data[number][(mem>>4) & 0x3].b8._8)[1] = value[1];
 }
@@ -144,7 +144,7 @@ u8 *readCache(u32 mem) {
 	int i, number;
 
 	i = getFreeCache(mem,0,&number);
-//	CACHE_LOG("readCache %8.8x from %d, way %d\n", mem, i,number);
+//	CACHE_LOG("readCache %8.8x from %d, way %d", mem, i,number);
 
 	return pCache[i].data[number][(mem>>4) & 0x3].b8._8;
 }
@@ -180,7 +180,7 @@ void CACHE() {
 				return;
 			}
 
-			CACHE_LOG("CACHE DHIN addr %x, index %d, way %d, Flags %x\n",addr,index,way,pCache[index].tag[way] & 0x78);
+			CACHE_LOG("CACHE DHIN addr %x, index %d, way %d, Flags %x",addr,index,way,pCache[index].tag[way] & 0x78);
 
 			pCache[index].tag[way] &= ~(0x6F);
 			((u64*)pCache[index].data[way][0].b8._8)[0] = 0;
@@ -216,7 +216,7 @@ void CACHE() {
 				return;
 			}
 
-			CACHE_LOG("CACHE DHWBIN addr %x, index %d, way %d, Flags %x\n",addr,index,way,pCache[index].tag[way] & 0x78);
+			CACHE_LOG("CACHE DHWBIN addr %x, index %d, way %d, Flags %x",addr,index,way,pCache[index].tag[way] & 0x78);
 	
 			if(pCache[index].tag[way] & 0x60)	// Valid Dirty
 			{
@@ -266,7 +266,7 @@ void CACHE() {
 			{
 				return;
 			}
-			CACHE_LOG("CACHE DHWOIN addr %x, index %d, way %d, Flags %x\n",addr,index,way,pCache[index].tag[way] & 0x78);
+			CACHE_LOG("CACHE DHWOIN addr %x, index %d, way %d, Flags %x",addr,index,way,pCache[index].tag[way] & 0x78);
 			
 			if(pCache[index].tag[way] & 0x60)	// Valid Dirty
 			{
@@ -311,7 +311,7 @@ void CACHE() {
 			u8 * out = pCache[index].data[way][(addr>>4) & 0x3].b8._8;
 			cpuRegs.CP0.r[28] = *(u32 *)(out+(addr&0xf));
 
-			CACHE_LOG("CACHE DXLDT addr %x, index %d, way %d, DATA %x\n",addr,index,way,cpuRegs.CP0.r[28]);
+			CACHE_LOG("CACHE DXLDT addr %x, index %d, way %d, DATA %x",addr,index,way,cpuRegs.CP0.r[28]);
 
 			break;
 		}
@@ -323,7 +323,7 @@ void CACHE() {
 			cpuRegs.CP0.r[28] = 0;
 			cpuRegs.CP0.r[28] = pCache[index].tag[way];
 
-			CACHE_LOG("CACHE DXLTG addr %x, index %d, way %d, DATA %x\n",addr,index,way,cpuRegs.CP0.r[28]);
+			CACHE_LOG("CACHE DXLTG addr %x, index %d, way %d, DATA %x",addr,index,way,cpuRegs.CP0.r[28]);
 			
 			break;
 		}
@@ -334,7 +334,7 @@ void CACHE() {
 			//u8 * out = pCache[index].data[way][(addr>>4) & 0x3].b8._8;
 			*(u32*)(&pCache[index].data[way][(addr>>4) & 0x3].b8._8[(addr&0xf)]) = cpuRegs.CP0.r[28];
 
-			CACHE_LOG("CACHE DXSDT addr %x, index %d, way %d, DATA %x\n",addr,index,way,cpuRegs.CP0.r[28]);
+			CACHE_LOG("CACHE DXSDT addr %x, index %d, way %d, DATA %x",addr,index,way,cpuRegs.CP0.r[28]);
 
 			break;
 		}
@@ -344,7 +344,7 @@ void CACHE() {
 			int way = addr & 0x1;
 			pCache[index].tag[way] = cpuRegs.CP0.r[28];
 
-			CACHE_LOG("CACHE DXSTG addr %x, index %d, way %d, DATA %x\n",addr,index,way,cpuRegs.CP0.r[28] & 0x6F);
+			CACHE_LOG("CACHE DXSTG addr %x, index %d, way %d, DATA %x",addr,index,way,cpuRegs.CP0.r[28] & 0x6F);
 
 			break;
 		}
@@ -356,7 +356,7 @@ void CACHE() {
 			int way = addr & 0x1;
 
 
-			CACHE_LOG("CACHE DXWBIN addr %x, index %d, way %d, Flags %x\n",addr,index,way,pCache[index].tag[way] & 0x78);
+			CACHE_LOG("CACHE DXWBIN addr %x, index %d, way %d, Flags %x",addr,index,way,pCache[index].tag[way] & 0x78);
 
 			if(pCache[index].tag[way] & 0x60)	// Dirty
 			{

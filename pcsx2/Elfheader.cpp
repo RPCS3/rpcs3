@@ -278,17 +278,17 @@ struct ElfObject
 		}
 		
 		ELF_LOG("\n");
-		ELF_LOG("version:   %d\n",header.e_version);
-		ELF_LOG("entry:     %08x\n",header.e_entry);
-		ELF_LOG("flags:     %08x\n",header.e_flags);
-		ELF_LOG("eh size:   %08x\n",header.e_ehsize);
-		ELF_LOG("ph off:    %08x\n",header.e_phoff);
-		ELF_LOG("ph entsiz: %08x\n",header.e_phentsize);
-		ELF_LOG("ph num:    %08x\n",header.e_phnum);
-		ELF_LOG("sh off:    %08x\n",header.e_shoff);
-		ELF_LOG("sh entsiz: %08x\n",header.e_shentsize);
-		ELF_LOG("sh num:    %08x\n",header.e_shnum);
-		ELF_LOG("sh strndx: %08x\n",header.e_shstrndx);
+		ELF_LOG("version:   %d",header.e_version);
+		ELF_LOG("entry:     %08x",header.e_entry);
+		ELF_LOG("flags:     %08x",header.e_flags);
+		ELF_LOG("eh size:   %08x",header.e_ehsize);
+		ELF_LOG("ph off:    %08x",header.e_phoff);
+		ELF_LOG("ph entsiz: %08x",header.e_phentsize);
+		ELF_LOG("ph num:    %08x",header.e_phnum);
+		ELF_LOG("sh off:    %08x",header.e_shoff);
+		ELF_LOG("sh entsiz: %08x",header.e_shentsize);
+		ELF_LOG("sh num:    %08x",header.e_shnum);
+		ELF_LOG("sh strndx: %08x",header.e_shstrndx);
 		
 		ELF_LOG("\n");
 	}
@@ -341,7 +341,7 @@ struct ElfObject
 
 		for( int i = 0 ; i < header.e_phnum ; i++ )
 		{
-			ELF_LOG( "Elf32 Program Header\n" );	
+			ELF_LOG( "Elf32 Program Header" );	
 			ELF_LOG( "type:      " );
 			
 			switch ( proghead[ i ].p_type ) {
@@ -379,13 +379,13 @@ struct ElfObject
 			}
 			
 			ELF_LOG("\n");
-			ELF_LOG("offset:    %08x\n",(int)proghead[i].p_offset);
-			ELF_LOG("vaddr:     %08x\n",(int)proghead[i].p_vaddr);
-			ELF_LOG("paddr:     %08x\n",proghead[i].p_paddr);
-			ELF_LOG("file size: %08x\n",proghead[i].p_filesz);
-			ELF_LOG("mem size:  %08x\n",proghead[i].p_memsz);
-			ELF_LOG("flags:     %08x\n",proghead[i].p_flags);
-			ELF_LOG("palign:    %08x\n",proghead[i].p_align);
+			ELF_LOG("offset:    %08x",(int)proghead[i].p_offset);
+			ELF_LOG("vaddr:     %08x",(int)proghead[i].p_vaddr);
+			ELF_LOG("paddr:     %08x",proghead[i].p_paddr);
+			ELF_LOG("file size: %08x",proghead[i].p_filesz);
+			ELF_LOG("mem size:  %08x",proghead[i].p_memsz);
+			ELF_LOG("flags:     %08x",proghead[i].p_flags);
+			ELF_LOG("palign:    %08x",proghead[i].p_align);
 			ELF_LOG("\n");
 		}
 	}
@@ -424,14 +424,14 @@ struct ElfObject
 			}
 			
 			ELF_LOG("\n");
-			ELF_LOG("flags:     %08x\n", secthead[i].sh_flags);
-			ELF_LOG("addr:      %08x\n", secthead[i].sh_addr);
-			ELF_LOG("offset:    %08x\n", secthead[i].sh_offset);
-			ELF_LOG("size:      %08x\n", secthead[i].sh_size);
-			ELF_LOG("link:      %08x\n", secthead[i].sh_link);
-			ELF_LOG("info:      %08x\n", secthead[i].sh_info);
-			ELF_LOG("addralign: %08x\n", secthead[i].sh_addralign);
-			ELF_LOG("entsize:   %08x\n", secthead[i].sh_entsize);
+			ELF_LOG("flags:     %08x", secthead[i].sh_flags);
+			ELF_LOG("addr:      %08x", secthead[i].sh_addr);
+			ELF_LOG("offset:    %08x", secthead[i].sh_offset);
+			ELF_LOG("size:      %08x", secthead[i].sh_size);
+			ELF_LOG("link:      %08x", secthead[i].sh_link);
+			ELF_LOG("info:      %08x", secthead[i].sh_info);
+			ELF_LOG("addralign: %08x", secthead[i].sh_addralign);
+			ELF_LOG("entsize:   %08x", secthead[i].sh_entsize);
 			// dump symbol table
 		
 			if( secthead[ i ].sh_type == 0x02 ) 
@@ -548,7 +548,7 @@ int loadElfFile(const char *filename)
 	elfobj.loadSectionHeaders();
 	
 	cpuRegs.pc = elfobj.header.e_entry; //set pc to proper place 
-	ELF_LOG( "PC set to: %8.8lx\n", cpuRegs.pc );
+	ELF_LOG( "PC set to: %8.8lx", cpuRegs.pc );
 	
 	cpuRegs.GPR.n.sp.UL[0] = 0x81f00000;
 	cpuRegs.GPR.n.gp.UL[0] = 0x81f80000; // might not be 100% ok
@@ -562,7 +562,7 @@ int loadElfFile(const char *filename)
 	}
 
 	ElfCRC = elfobj.GetCRC();
-	Console::Status( "loadElfFile: %s; CRC = %8.8X\n", params filename, ElfCRC);
+	Console::Status( "loadElfFile: %s; CRC = %8.8X", params filename, ElfCRC);
 
 	ElfApplyPatches();
 	LoadGameSpecificSettings();

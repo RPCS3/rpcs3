@@ -58,18 +58,18 @@ static void __fastcall psxDmaGeneric(u32 madr, u32 bcr, u32 chcr, u32 spuCore, _
 	switch (chcr)
 	{
 		case 0x01000201: //cpu to spu2 transfer
-			PSXDMA_LOG("*** DMA %c - mem2spu *** %x addr = %x size = %x\n", dmaNum, chcr, madr, bcr);
+			PSXDMA_LOG("*** DMA %c - mem2spu *** %x addr = %x size = %x", dmaNum, chcr, madr, bcr);
 			spu2WriteFunc((u16 *)iopPhysMem(madr), size*2);
 		break;
 
 		case 0x01000200: //spu2 to cpu transfer
-			PSXDMA_LOG("*** DMA %c - spu2mem *** %x addr = %x size = %x\n", dmaNum, chcr, madr, bcr);
+			PSXDMA_LOG("*** DMA %c - spu2mem *** %x addr = %x size = %x", dmaNum, chcr, madr, bcr);
 			spu2ReadFunc((u16 *)iopPhysMem(madr), size*2);
 			psxCpu->Clear(spuCore ? HW_DMA7_MADR : HW_DMA4_MADR, size);
 		break;
 
 		default:
-			Console::Error("*** DMA %c - SPU unknown *** %x addr = %x size = %x\n", params dmaNum, chcr, madr, bcr);
+			Console::Error("*** DMA %c - SPU unknown *** %x addr = %x size = %x", params dmaNum, chcr, madr, bcr);
 		break;
 	}
 }
@@ -97,7 +97,7 @@ void psxDma6(u32 madr, u32 bcr, u32 chcr)
 {
 	u32 *mem = (u32 *)iopPhysMem(madr);
 
-	PSXDMA_LOG("*** DMA 6 - OT *** %lx addr = %lx size = %lx\n", chcr, madr, bcr);
+	PSXDMA_LOG("*** DMA 6 - OT *** %lx addr = %lx size = %lx", chcr, madr, bcr);
 
 	if (chcr == 0x11000002) {
 		while (bcr--) {
@@ -107,7 +107,7 @@ void psxDma6(u32 madr, u32 bcr, u32 chcr)
 		mem++; *mem = 0xffffff;
 	} else {
 		// Unknown option
-		PSXDMA_LOG("*** DMA 6 - OT unknown *** %lx addr = %lx size = %lx\n", chcr, madr, bcr);
+		PSXDMA_LOG("*** DMA 6 - OT unknown *** %lx addr = %lx size = %lx", chcr, madr, bcr);
 	}
 	HW_DMA6_CHCR &= ~0x01000000;
 	psxDmaInterrupt(6);
@@ -129,7 +129,7 @@ int psxDma7Interrupt()
 extern int eesifbusy[2];
 void psxDma9(u32 madr, u32 bcr, u32 chcr)
 {
-	SIF_LOG("IOP: dmaSIF0 chcr = %lx, madr = %lx, bcr = %lx, tadr = %lx\n",	chcr, madr, bcr, HW_DMA9_TADR);
+	SIF_LOG("IOP: dmaSIF0 chcr = %lx, madr = %lx, bcr = %lx, tadr = %lx",	chcr, madr, bcr, HW_DMA9_TADR);
 
 	iopsifbusy[0] = 1;
 	psHu32(0x1000F240) |= 0x2000;
@@ -142,7 +142,7 @@ void psxDma9(u32 madr, u32 bcr, u32 chcr)
 }
 
 void psxDma10(u32 madr, u32 bcr, u32 chcr) {
-	SIF_LOG("IOP: dmaSIF1 chcr = %lx, madr = %lx, bcr = %lx\n",	chcr, madr, bcr);
+	SIF_LOG("IOP: dmaSIF1 chcr = %lx, madr = %lx, bcr = %lx",	chcr, madr, bcr);
 
 	iopsifbusy[1] = 1;
 	psHu32(0x1000F240) |= 0x4000;
@@ -163,17 +163,17 @@ void psxDma8(u32 madr, u32 bcr, u32 chcr) {
 
 	switch (chcr & 0x01000201) {
 		case 0x01000201: //cpu to dev9 transfer
-			PSXDMA_LOG("*** DMA 8 - DEV9 mem2dev9 *** %lx addr = %lx size = %lx\n", chcr, madr, bcr);
+			PSXDMA_LOG("*** DMA 8 - DEV9 mem2dev9 *** %lx addr = %lx size = %lx", chcr, madr, bcr);
 			DEV9writeDMA8Mem((u32*)iopPhysMem(madr), size);
 		break;
 
 		case 0x01000200: //dev9 to cpu transfer
-			PSXDMA_LOG("*** DMA 8 - DEV9 dev9mem *** %lx addr = %lx size = %lx\n", chcr, madr, bcr);
+			PSXDMA_LOG("*** DMA 8 - DEV9 dev9mem *** %lx addr = %lx size = %lx", chcr, madr, bcr);
 			DEV9readDMA8Mem((u32*)iopPhysMem(madr), size);
 		break;
 
 		default:
-			PSXDMA_LOG("*** DMA 8 - DEV9 unknown *** %lx addr = %lx size = %lx\n", chcr, madr, bcr);
+			PSXDMA_LOG("*** DMA 8 - DEV9 unknown *** %lx addr = %lx size = %lx", chcr, madr, bcr);
 		break;
 	}
 	HW_DMA8_CHCR &= ~0x01000000;
