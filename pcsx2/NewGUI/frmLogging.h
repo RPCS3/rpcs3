@@ -30,7 +30,6 @@ public:
 
 protected:
 
-	// DECLARE_EVENT_TABLE();
 	enum {
 		EE_CPU_LOG = 100,
 		EE_MEM_LOG,
@@ -39,7 +38,6 @@ protected:
 		EE_BIOS_LOG,
 		EE_ELF_LOG,
 		EE_FPU_LOG,
-		EE_MMI_LOG,
 		EE_VU0_LOG,
 		EE_COP0_LOG,
 		EE_VIF_LOG,
@@ -56,14 +54,24 @@ protected:
 		IOP_BIOS_LOG,
 		IOP_DMA_LOG,
 		IOP_PAD_LOG,
-		IOP_GTE_LOG,
 		IOP_CDR_LOG,
 		IOP_GPU_LOG,
 		
 		STDOUT_LOG,
 		SYMS_LOG
 	} LogChecks;
-	
+
+	class eeLogOptionsPanel : public CheckedStaticBox
+	{
+	public:
+		eeLogOptionsPanel( wxWindow* parent );
+	};
+
+
 public:
 	void LogChecked(wxCommandEvent &event);
+	
+protected:
+	//DECLARE_EVENT_TABLE()
+
 };

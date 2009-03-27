@@ -205,7 +205,6 @@ extern bool SrcLog_GPU( const char* fmt, ... );
 #define PSXDMA_LOG  0&&
 
 #define PAD_LOG  0&&
-#define GTE_LOG  0&&
 #define CDR_LOG  0&&
 #define GPU_LOG  0&&
 #define PSXCNT_LOG 0&&

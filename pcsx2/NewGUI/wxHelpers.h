@@ -3,9 +3,8 @@
 namespace wxHelpers
 {
 	// Creates a new checkbox and adds it to the specified sizer/parent combo.
-	// Uses the default psacer setting for adding checkboxes.
-	extern void AddCheckBox( wxBoxSizer& sizer, wxWindow* parent, const wxString& label, wxWindowID id=wxID_ANY );
-
+	// Uses the default spacer setting for adding checkboxes.
+	extern wxCheckBox& AddCheckBox( wxWindow* parent, wxBoxSizer& sizer, const wxString& label, wxWindowID id=wxID_ANY );
 
 	extern wxSizerFlags stdCenteredFlags;
 	extern wxSizerFlags stdSpacingFlags;
@@ -18,10 +17,37 @@ namespace wxHelpers
 	extern wxSizerFlags CheckboxFlags;
 }
 
-class wxDialogWithHelpers : public wxDialog
+class CheckedStaticBox : public wxPanel
 {
 public:
-	wxDialogWithHelpers(wxWindow* parent, int id,  const wxString& title, const wxPoint& pos=wxDefaultPosition, const wxSize& size=wxDefaultSize );
+	wxStaticBoxSizer& BoxSizer;	// Boxsizer which olds all child items.
+	wxCheckBox& MainToggle;		// toggle which can enable/disable all child controls
+	
+public:
+	CheckedStaticBox( wxWindow* parent, int orientation, const wxString& title );
 
-	void AddCheckBox( wxBoxSizer& sizer, const wxString& label, wxWindowID id=wxID_ANY );
+	//virtual bool Layout();
+	void SetValue( bool val );
+	bool GetValue() const;
+	
+protected:
+	DECLARE_EVENT_TABLE();
+
+public:
+	void MainToggle_Click( wxCommandEvent& evt );
 };
+
+class wxDialogWithHelpers : public wxDialog
+{
+protected:
+	bool m_hasContextHelp;
+	
+public:
+	wxDialogWithHelpers(wxWindow* parent, int id, const wxString& title, bool hasContextHelp, const wxPoint& pos=wxDefaultPosition, const wxSize& size=wxDefaultSize );
+
+protected:
+	wxCheckBox& AddCheckBox( wxBoxSizer& sizer, const wxString& label, wxWindowID id=wxID_ANY );
+	void AddOkCancel( wxBoxSizer& sizer );
+	
+};
+

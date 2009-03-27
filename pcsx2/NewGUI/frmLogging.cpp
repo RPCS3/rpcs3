@@ -22,61 +22,89 @@
 
 #include <wx/statline.h>
 
+
 using namespace wxHelpers;
 
+//wxString frmLogging::m_DisasmWarning( "\nWarning: Disasm dumps are incredibly slow, and generate extremely large logfiles." );
+
+frmLogging::eeLogOptionsPanel::eeLogOptionsPanel( wxWindow* parent ) :
+	CheckedStaticBox( parent, wxHORIZONTAL, "EE Logs" )
+{
+	wxStaticBoxSizer& eeDisasm = *new wxStaticBoxSizer( wxVERTICAL, this, _T("Disasm") );
+	wxStaticBoxSizer& eeHw = *new wxStaticBoxSizer( wxVERTICAL, this, _T("Hardware") );
+
+	wxBoxSizer& eeStack = *new wxBoxSizer( wxVERTICAL );
+	wxBoxSizer& eeMisc = *new wxBoxSizer( wxVERTICAL );
+
+	//wxToolTip
+	wxHelpers::AddCheckBox( this, eeDisasm,_T("Core"),		EE_CPU_LOG );
+	wxHelpers::AddCheckBox( this, eeDisasm,_T("Fpu"),		EE_FPU_LOG );
+	wxHelpers::AddCheckBox( this, eeDisasm,_T("VU0"),		EE_VU0_LOG );
+	wxHelpers::AddCheckBox( this, eeDisasm,_T("Cop0"),		EE_COP0_LOG );
+	wxHelpers::AddCheckBox( this, eeDisasm,_T("VU Macro"),	EE_VU_MACRO_LOG );
+
+	wxHelpers::AddCheckBox( this, eeMisc,	_T("Memory"),	EE_MEM_LOG );
+	wxHelpers::AddCheckBox( this, eeMisc,	_T("Bios"),		EE_BIOS_LOG );
+	wxHelpers::AddCheckBox( this, eeMisc,	_T("Elf"),		EE_ELF_LOG );
+
+	wxHelpers::AddCheckBox( this, eeHw,	_T("Registers"),EE_HW_LOG );
+	wxHelpers::AddCheckBox( this, eeHw,	_T("Dma"),		EE_DMA_LOG );
+	wxHelpers::AddCheckBox( this, eeHw,	_T("Vif"),		EE_VIF_LOG );
+	wxHelpers::AddCheckBox( this, eeHw,	_T("SPR"),		EE_SPR_LOG );
+	wxHelpers::AddCheckBox( this, eeHw,	_T("GIF"),		EE_GIF_LOG );
+	wxHelpers::AddCheckBox( this, eeHw,	_T("Sif"),		EE_SIF_LOG );
+	wxHelpers::AddCheckBox( this, eeHw,	_T("IPU"),		EE_IPU_LOG );
+	wxHelpers::AddCheckBox( this, eeHw,	_T("RPC"),		EE_RPC_LOG );
+
+	// Sizer hierarchy:
+
+	eeStack.Add( &eeDisasm, stdSpacingFlags );
+	eeStack.Add( &eeMisc );
+
+	BoxSizer.Add( &eeHw, stdSpacingFlags );
+	BoxSizer.Add( &eeStack );
+
+	SetSizerAndFit( &BoxSizer, true );
+}
+
+
 frmLogging::frmLogging(wxWindow* parent, int id, const wxPoint& pos, const wxSize& size):
-	wxDialogWithHelpers( parent, id, _T("Logging"), pos, size )
+	wxDialogWithHelpers( parent, id, _T("Logging"), true, pos, size )
 {
 	int i;
-	wxStaticBox* mainbox = new wxStaticBox( this, -1, wxEmptyString);
-	wxBoxSizer *mainsizer = new wxBoxSizer( wxHORIZONTAL );
-		
-	wxStaticBoxSizer& eeDisasm = *new wxStaticBoxSizer( wxVERTICAL, this, _T("EE Disasm") );
-	wxStaticBoxSizer& eeHw = *new wxStaticBoxSizer( wxVERTICAL, this, _T("EE Hardware") );
-	
-	AddCheckBox( eeDisasm, _T("Core"),		EE_CPU_LOG );
-	AddCheckBox( eeDisasm, _T("Memory"),	EE_MEM_LOG );
-	AddCheckBox( eeDisasm, _T("Bios"),		EE_BIOS_LOG );
-	AddCheckBox( eeDisasm, _T("Elf"),		EE_ELF_LOG );
-	AddCheckBox( eeDisasm, _T("Fpu"),		EE_FPU_LOG );
-	AddCheckBox( eeDisasm, _T("VU0"),		EE_VU0_LOG );
-	AddCheckBox( eeDisasm, _T("Cop0"),		EE_COP0_LOG );
-	AddCheckBox( eeDisasm, _T("VU Macro"),	EE_VU_MACRO_LOG );
 
-	AddCheckBox( eeHw, _T("Registers"),	EE_HW_LOG );
-	AddCheckBox( eeHw, _T("Dma"),		EE_DMA_LOG );
-	AddCheckBox( eeHw, _T("Vif"),		EE_VIF_LOG );
-	AddCheckBox( eeHw, _T("SPR"),		EE_SPR_LOG );
-	AddCheckBox( eeHw, _T("GIF"),		EE_GIF_LOG );
-	AddCheckBox( eeHw, _T("Sif"),		EE_SIF_LOG );
-	AddCheckBox( eeHw, _T("IPU"),		EE_IPU_LOG );
-	AddCheckBox( eeHw, _T("RPC"),		EE_RPC_LOG );
+	//wxStaticBoxSizer& eeBox = *new wxStaticBoxSizer( wxHORIZONTAL, this );
 	
-	wxStaticBox* iopbox = new wxStaticBox( this, -1, _T("IOP Logs"));
-	wxStaticBoxSizer& iopSizer = *new wxStaticBoxSizer(  iopbox, wxVERTICAL );
-	AddCheckBox( iopSizer, _T("IOP Log"),	IOP_IOP_LOG );
-	AddCheckBox( iopSizer, _T("Mem Log"),	IOP_MEM_LOG );
-	AddCheckBox( iopSizer, _T("Hw Log"),	IOP_HW_LOG);
-	AddCheckBox( iopSizer, _T("Bios Log"),	IOP_BIOS_LOG );
-	AddCheckBox( iopSizer, _T("Dma Log"),	IOP_DMA_LOG );
-	AddCheckBox( iopSizer, _T("Pad Log"),	IOP_PAD_LOG );
-	AddCheckBox( iopSizer, _T("Gte Log"),	IOP_GTE_LOG );
-	AddCheckBox( iopSizer, _T("Cdr Log"),	IOP_CDR_LOG );
-	AddCheckBox( iopSizer, _T("GPU Log"),	IOP_GPU_LOG );
+	eeLogOptionsPanel& eeBox = *new eeLogOptionsPanel( this );
 	
-	wxStaticBox* miscbox = new wxStaticBox( this, -1, _T("Misc"));
-	wxStaticBoxSizer& miscSizer = *new wxStaticBoxSizer(  miscbox, wxVERTICAL );
+	wxStaticBoxSizer& iopSizer = *new wxStaticBoxSizer( wxVERTICAL, this, _T("IOP Logs") );
+
+	AddCheckBox( iopSizer, _T("Disasm"),	IOP_IOP_LOG );
+	AddCheckBox( iopSizer, _T("Memory"),	IOP_MEM_LOG );
+	AddCheckBox( iopSizer, _T("Bios"),		IOP_BIOS_LOG );
+	AddCheckBox( iopSizer, _T("Registers"),	IOP_HW_LOG);
+	AddCheckBox( iopSizer, _T("Dma"),		IOP_DMA_LOG );
+	AddCheckBox( iopSizer, _T("Pad"),		IOP_PAD_LOG );
+	AddCheckBox( iopSizer, _T("Cdrom"),		IOP_CDR_LOG );
+	AddCheckBox( iopSizer, _T("GPU (PSX)"),	IOP_GPU_LOG );
+	
+	wxStaticBoxSizer& miscSizer = *new wxStaticBoxSizer(  wxHORIZONTAL, this, _T("Misc") );
 	AddCheckBox( miscSizer, _T("Log to STDOUT"), STDOUT_LOG );
 	AddCheckBox( miscSizer, _T("SYMs Log"), SYMS_LOG );
 
-	mainsizer->Add( &eeDisasm, stdSpacingFlags );
-	mainsizer->Add( &eeHw, stdSpacingFlags );
-	mainsizer->Add( &iopSizer, stdSpacingFlags );
-	mainsizer->Add( &miscSizer, stdSpacingFlags );
-	
-	SetSizerAndFit( mainsizer, true );
-	
-	
+	wxBoxSizer& mainsizer = *new wxBoxSizer( wxVERTICAL );
+	wxBoxSizer& topSizer = *new wxBoxSizer( wxHORIZONTAL );
+
+	topSizer.Add( &eeBox, stdSpacingFlags );
+	topSizer.Add( &iopSizer, stdSpacingFlags );
+
+	mainsizer.Add( &topSizer );		// topsizer has it's own padding.
+	mainsizer.Add( &miscSizer, stdSpacingFlags );
+
+	AddOkCancel( mainsizer );
+
+	SetSizerAndFit( &mainsizer, true );
+
 	// Connect all the checkboxes to one function, and pass the checkbox id as user data.
 	// (user data pointer isn't actually a pointer, but instead just the checkbox id)
 	for (i = EE_CPU_LOG; i >= SYMS_LOG; i++)
