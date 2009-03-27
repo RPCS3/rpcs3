@@ -127,6 +127,9 @@ struct PadFreezeData {
 
 	u8 vibrate[8];
 	u8 umask[2];
+
+	// Vibration indices.
+	u8 vibrateI[2];
 };
 
 class Pad : public PadFreezeData {
@@ -134,9 +137,6 @@ public:
 	ButtonSum sum, lockedSum;
 
 	int lockedState;
-
-	// Vibration indices.
-	u8 vibrateI[2];
 
 	// Last vibration value.  Only used so as not to call vibration
 	// functions when old and new values are both 0.
@@ -387,7 +387,7 @@ void Update(unsigned int port, unsigned int slot) {
 		Device *dev = dm->devices[i];
 		// Skip both disabled devices and inactive enabled devices.
 		// Shouldn't be any of the latter, in general, but just in case...
-		if (!dev->virtualControlState) continue;
+		if (!dev->active) continue;
 		for (int port=0; port<2; port++) {
 			for (int slot=0; slot<4; slot++) {
 				if (config.padConfigs[port][slot].type == DisabledPad || !pads[port][slot].initialized) continue;
@@ -1273,7 +1273,7 @@ keyEvent* CALLBACK PADkeyEvent() {
 	return &ev;
 }
 
-#define PAD_SAVE_STATE_VERSION	0
+#define PAD_SAVE_STATE_VERSION	1
 
 struct PadPluginFreezeData {
 	char format[8];
@@ -1287,6 +1287,7 @@ struct PadPluginFreezeData {
 	u8 slot;
 	// Currently only use padData[0].  Save room for all 4 slots for simplicity.
 	PadFreezeData padData[4];
+	QueryInfo query;
 };
 
 s32 CALLBACK PADfreeze(int mode, freezeData *data) {
@@ -1301,26 +1302,17 @@ s32 CALLBACK PADfreeze(int mode, freezeData *data) {
 			strcmp(pdata.format, "PadMode")) return 0;
 		unsigned int port = pdata.port;
 		if (port >= 2) return 0;
+		if (pdata.query.port == port) {
+			query = pdata.query;
+		}
 		for (int slot=0; slot<4; slot++) {
 			u8 mode = pdata.padData[slot].mode;
 			if (mode != MODE_DIGITAL && mode != MODE_ANALOG && mode != MODE_DS2_NATIVE) {
 				break;
 			}
 
-			pads[port][slot].mode = mode;
-			pads[port][slot].config = pdata.padData[slot].config;
-			pads[port][slot].modeLock = pdata.padData[slot].modeLock;
-			memcpy(pads[port][slot].umask, pdata.padData[slot].umask, sizeof(pads[port][slot].umask));
-
-			// Means I only have to have one chunk of code to parse vibrate info.
-			// Other plugins don't store it exactly, but think it's technically correct
-			// to do so, though I could be wrong.
-			slots[port] = slot;
-			PADstartPoll(port+1);
-			PADpoll(0x4D);
-			for (int j=0; j<7; j++) {
-				PADpoll(pdata.padData[slot].vibrate[j]);
-			}
+			// Note sure if the cast is strictly necessary, but feel safest with it there...
+			*(PadFreezeData*)&pads[port][slot] = pdata.padData[slot];
 		}
 		slots[port] = pdata.slot;
 	}
@@ -1339,6 +1331,7 @@ s32 CALLBACK PADfreeze(int mode, freezeData *data) {
 		pdata.version = PAD_SAVE_STATE_VERSION;
 		pdata.port = port;
 		pdata.slot = slots[port];
+		pdata.query = query;
 		for (int slot=0; slot<4; slot++) {
 			pdata.padData[slot] = pads[port][slot];
 		}
