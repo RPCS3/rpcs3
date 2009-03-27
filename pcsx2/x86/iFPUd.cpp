@@ -645,10 +645,10 @@ void recDIV_S_xmm(int info)
 	static u32 PCSX2_ALIGNED16(roundmode_temp[4]) = { 0x00000000, 0x00000000, 0x00000000, 0x00000000 };
 	int roundmodeFlag = 0;
     //if (t0reg == -1) {Console::Error("FPU: DIV Allocation Error!");}
-    //SysPrintf("DIV\n");
+    //Console::WriteLn("DIV");
  
 	if ((g_sseMXCSR & 0x00006000) != 0x00000000) { // Set roundmode to nearest if it isn't already
-		//SysPrintf("div to nearest\n");
+		//Console::WriteLn("div to nearest");
 		roundmode_temp[0] = (g_sseMXCSR & 0xFFFF9FFF); // Set new roundmode
 		roundmode_temp[1] = g_sseMXCSR; // Backup old Roundmode
 		SSE_LDMXCSR ((uptr)&roundmode_temp[0]); // Recompile Roundmode Change
@@ -908,10 +908,10 @@ void recSQRT_S_xmm(int info)
 	if (tempReg == -1) {Console::Error("FPU: SQRT Allocation Error!"); tempReg = EAX;}
 	int t1reg = _allocTempXMMreg(XMMT_FPS, -1);
 	if (t1reg == -1) {Console::Error("FPU: SQRT Allocation Error!");}
-	//SysPrintf("FPU: SQRT\n");
+	//Console::WriteLn("FPU: SQRT");
  
 	if ((g_sseMXCSR & 0x00006000) != 0x00000000) { // Set roundmode to nearest if it isn't already
-		//SysPrintf("sqrt to nearest\n");
+		//Console::WriteLn("sqrt to nearest");
 		roundmode_temp[0] = (g_sseMXCSR & 0xFFFF9FFF); // Set new roundmode
 		roundmode_temp[1] = g_sseMXCSR; // Backup old Roundmode
 		SSE_LDMXCSR ((uptr)&roundmode_temp[0]); // Recompile Roundmode Change
@@ -1031,7 +1031,7 @@ void recRSQRT_S_xmm(int info)
 	static u32 PCSX2_ALIGNED16(roundmode_temp[4]) = { 0x00000000, 0x00000000, 0x00000000, 0x00000000 };
 	int roundmodeFlag = 0;
 	if ((g_sseMXCSR & 0x00006000) != 0x00000000) { // Set roundmode to nearest if it isn't already
-		//SysPrintf("rsqrt to nearest\n");
+		//Console::WriteLn("rsqrt to nearest");
 		roundmode_temp[0] = (g_sseMXCSR & 0xFFFF9FFF); // Set new roundmode
 		roundmode_temp[1] = g_sseMXCSR; // Backup old Roundmode
 		SSE_LDMXCSR ((uptr)&roundmode_temp[0]); // Recompile Roundmode Change

@@ -188,7 +188,7 @@ int hwDmacSrcChainWithStack(DMACh *dma, int id) {
 				dma->chcr = (dma->chcr & 0xffffffcf) | 0x20; //2 Addresses in call stack
 				dma->asr1 = dma->madr + (dma->qwc << 4);	//If no store Succeeding tag in ASR1
 			}else {
-				SysPrintf("Call Stack Overflow (report if it fixes/breaks anything)\n");
+				Console::Notice("Call Stack Overflow (report if it fixes/breaks anything)");
 				return 1;										//Return done
 			}
 			dma->tadr = temp;								//Set TADR to temporarily stored ADDR
@@ -465,7 +465,7 @@ __forceinline void __fastcall hwWrite32(u32 mem, u32 value)
 		case 0x10001820: rcntWtarget(3, value); break;
 
 		case GIF_CTRL:
-			//SysPrintf("GIF_CTRL write %x\n", value);
+			//Console::WriteLn("GIF_CTRL write %x", params value);
 			psHu32(mem) = value & 0x8;
 			if (value & 0x1) gsGIFReset();
 			else if( value & 8 ) psHu32(GIF_STAT) |= 8;
@@ -482,7 +482,7 @@ __forceinline void __fastcall hwWrite32(u32 mem, u32 value)
 			break;
 
 		case GIF_STAT: // stat is readonly
-			SysPrintf("Gifstat write value = %x\n", value);
+			Console::WriteLn("Gifstat write value = %x", params value);
 			return;
 
 		case 0x10008000: // dma0 - vif0

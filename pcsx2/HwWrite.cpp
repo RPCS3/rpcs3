@@ -48,7 +48,7 @@ static __forceinline void DmaExec8( void (*func)(), u32 mem, u8 value )
 	psHu8(mem) = (u8)value;
 	if ((psHu8(mem) & 0x1) && (psHu32(DMAC_CTRL) & 0x1))
 	{
-		/*SysPrintf("Running DMA 8 %x\n", psHu32(mem & ~0x1));*/
+		/*Console::WriteLn("Running DMA 8 %x", params psHu32(mem & ~0x1));*/
 		func();
 	}
 }
@@ -63,7 +63,7 @@ static __forceinline void DmaExec16( void (*func)(), u32 mem, u16 value )
 	psHu16(mem) = (u16)value;
 	if ((psHu16(mem) & 0x100) && (psHu32(DMAC_CTRL) & 0x1))
 	{
-		//SysPrintf("16bit DMA Start\n");
+		//Console::WriteLn("16bit DMA Start");
 		func();
 	}
 }

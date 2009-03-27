@@ -63,7 +63,7 @@ namespace VU1micro
 		mkdir("dumps", 0755);
 		sprintf( filename, "dumps/vu%.4X.txt", VU1.VI[ REG_TPC ].UL );
 	#endif
-		SysPrintf( "dump1 %x => %x (%s)\n", VU1.VI[ REG_TPC ].UL, pc, filename );
+		Console::WriteLn( "dump1 %x => %x (%s)", params VU1.VI[ REG_TPC ].UL, pc, filename );
 
 		f = fopen( filename, "wb" );
 		for ( i = VU1.VI[REG_TPC].UL; i < pc; i += 8 ) {
@@ -101,7 +101,7 @@ namespace VU1micro
 	#endif
 
 		if((VU0.VI[REG_VPU_STAT].UL & 0x100) == 0){
-			//SysPrintf("Execute block VU1, VU1 not busy\n");
+			//Console::WriteLn("Execute block VU1, VU1 not busy");
 			return;
 		}
 		

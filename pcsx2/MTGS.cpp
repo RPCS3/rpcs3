@@ -952,7 +952,7 @@ int mtgsThreadObject::PrepDataPacket( GIF_PATH pathidx, const u8* srcdata, u32 s
     else	// always true - if( writepos + size == MTGS_RINGBUFFEREND )
 	{
 		// Yay.  Perfect fit.  What are the odds?
-		//SysPrintf( "MTGS > Perfect Fit!\n");
+		//Console::WriteLn( "MTGS > Perfect Fit!");
 
 		PrepEventWait();
 		while( true )

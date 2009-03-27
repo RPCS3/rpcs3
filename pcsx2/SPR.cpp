@@ -74,7 +74,7 @@ int  _SPR0chain() {
 	//SPR0transfer(pMem, qwc << 2);
 	
 	if ((psHu32(DMAC_CTRL) & 0xC) >= 0x8) { // 0x8 VIF1 MFIFO, 0xC GIF MFIFO
-		if((spr0->madr & ~psHu32(DMAC_RBSR)) != psHu32(DMAC_RBOR)) SysPrintf("SPR MFIFO Write outside MFIFO area\n");
+		if((spr0->madr & ~psHu32(DMAC_RBSR)) != psHu32(DMAC_RBOR)) Console::WriteLn("SPR MFIFO Write outside MFIFO area");
 		hwMFIFOWrite(spr0->madr, (u8*)&PS2MEM_SCRATCH[spr0->sadr & 0x3fff], spr0->qwc << 4);
 		spr0->madr += spr0->qwc << 4;
 		spr0->madr = psHu32(DMAC_RBOR) + (spr0->madr & psHu32(DMAC_RBSR));
@@ -105,7 +105,7 @@ void _SPR0interleave() {
 	int cycles = 0;
 	u32 *pMem;
 	if(tqwc == 0) tqwc = qwc;
-	//SysPrintf("dmaSPR0 interleave\n");
+	//Console::WriteLn("dmaSPR0 interleave");
 		SPR_LOG("SPR0 interleave size=%d, tqwc=%d, sqwc=%d, addr=%lx sadr=%lx\n",
 				spr0->qwc, tqwc, sqwc, spr0->madr, spr0->sadr);
 	
@@ -133,18 +133,12 @@ void _SPR0interleave() {
 }
 
 static __forceinline void _dmaSPR0() {
-	
 
 	if ((psHu32(DMAC_CTRL) & 0x30) == 0x20) { // STS == fromSPR
-		SysPrintf("SPR0 stall %d\n", (psHu32(DMAC_CTRL)>>6)&3);
+		Console::WriteLn("SPR0 stall %d", params (psHu32(DMAC_CTRL)>>6)&3);
 	}
-
 	
-
 	// Transfer Dn_QWC from SPR to Dn_MADR
-	
-	
-
 	if ((spr0->chcr & 0xc) == 0x0) { // Normal Mode
 		int cycles = 0;
 		SPR0chain();
@@ -183,7 +177,7 @@ static __forceinline void _dmaSPR0() {
 				ptag[1], ptag[0], spr0->qwc, id, spr0->madr, spr0->sadr);
 
 		if ((psHu32(DMAC_CTRL) & 0x30) == 0x20) { // STS == fromSPR
-			SysPrintf("SPR stall control\n");
+			Console::WriteLn("SPR stall control");
 		}
 		
 		switch (id) {
@@ -201,13 +195,12 @@ static __forceinline void _dmaSPR0() {
 		}
 		SPR0chain();
 		if (spr0->chcr & 0x80 && ptag[0] >> 31) {			 //Check TIE bit of CHCR and IRQ bit of tag
-			//SysPrintf("SPR0 TIE\n");
+			//Console::WriteLn("SPR0 TIE");
 			done = 1;
 			spr0->qwc = 0;
 			//break;
 		}
 		
-
 /*		if (spr0->chcr & 0x80 && ptag[0] >> 31) {
 			SPR_LOG("dmaIrq Set\n");
 
@@ -245,16 +238,16 @@ void SPRFROMinterrupt()
 	_dmaSPR0();
 
 	if ((psHu32(DMAC_CTRL) & 0xC) == 0xC) { // GIF MFIFO
-		if((spr0->madr & ~psHu32(DMAC_RBSR)) != psHu32(DMAC_RBOR)) SysPrintf("GIF MFIFO Write outside MFIFO area\n");
+		if((spr0->madr & ~psHu32(DMAC_RBSR)) != psHu32(DMAC_RBOR)) Console::WriteLn("GIF MFIFO Write outside MFIFO area");
 		spr0->madr = psHu32(DMAC_RBOR) + (spr0->madr & psHu32(DMAC_RBSR));
-		//SysPrintf("mfifoGIFtransfer %x madr %x, tadr %x\n", gif->chcr, gif->madr, gif->tadr);
+		//Console::WriteLn("mfifoGIFtransfer %x madr %x, tadr %x", params gif->chcr, gif->madr, gif->tadr);
 		mfifoGIFtransfer(mfifotransferred);
 		mfifotransferred = 0;
 	} else
 	if ((psHu32(DMAC_CTRL) & 0xC) == 0x8) { // VIF1 MFIFO
-		if((spr0->madr & ~psHu32(DMAC_RBSR)) != psHu32(DMAC_RBOR)) SysPrintf("VIF MFIFO Write outside MFIFO area\n");
+		if((spr0->madr & ~psHu32(DMAC_RBSR)) != psHu32(DMAC_RBOR)) Console::WriteLn("VIF MFIFO Write outside MFIFO area");
 		spr0->madr = psHu32(DMAC_RBOR) + (spr0->madr & psHu32(DMAC_RBSR));
-		//SysPrintf("mfifoVIF1transfer %x madr %x, tadr %x\n", vif1ch->chcr, vif1ch->madr, vif1ch->tadr);
+		//Console::WriteLn("mfifoVIF1transfer %x madr %x, tadr %x", params vif1ch->chcr, vif1ch->madr, vif1ch->tadr);
 		//vifqwc+= qwc;
 		mfifoVIF1transfer(mfifotransferred);
 		mfifotransferred = 0;
@@ -282,9 +275,6 @@ void dmaSPR0() { // fromSPR
 	// It merely assumes that the last one has finished then starts another one (broke with the DMA fix)
 	// This "shouldn't" cause any problems as SPR is generally faster than the other DMAS anyway. (Refraction)
 	CPU_INT(8, spr0->qwc / BIAS);
-	
-	
-	
 }
 
 __forceinline static void SPR1transfer(u32 *data, int size) {
@@ -341,7 +331,6 @@ void _SPR1interleave() {
 		spr1->qwc = 0;
 		spr1finished = 1;
 		//CPU_INT(9, cycles);
-	
 }
 
 void _dmaSPR1() { // toSPR work function
@@ -353,13 +342,12 @@ void _dmaSPR1() { // toSPR work function
 		spr1finished = 1;
 		//CPU_INT(9, cycles); 
 		return;
-	} else 
-		if ((spr1->chcr & 0xc) == 0x4){
-			int cycles = 0;
-			u32 *ptag;
-			int id, done=0;
+	} 
+	else if ((spr1->chcr & 0xc) == 0x4){
+		int cycles = 0;
+		u32 *ptag;
+		int id, done=0;
 		
-
 		if(spr1->qwc > 0){
 			//if(spr1->qwc == 0 && (spr1->chcr & 0xc) == 1) spr1->qwc = 0xffff;
 			// Transfer Dn_QWC from Dn_MADR to SPR1
@@ -373,7 +361,7 @@ void _dmaSPR1() { // toSPR work function
 //	while (done == 0) {  // Loop while Dn_CHCR.STR is 1
 		ptag = (u32*)dmaGetAddr(spr1->tadr);		//Set memory pointer to TADR
 		if (ptag == NULL) {							//Is ptag empty?
-			SysPrintf("SPR1 Tag BUSERR\n");
+			Console::WriteLn("SPR1 Tag BUSERR");
 			spr1->chcr = ( spr1->chcr & 0xFFFF ) | ( (*ptag) & 0xFFFF0000 );	//Transfer upper part of tag to CHCR bits 31-15
 			psHu32(DMAC_STAT)|= 1<<15;				//If yes, set BEIS (BUSERR) in DMAC_STAT register
 			done = 1;
@@ -382,7 +370,7 @@ void _dmaSPR1() { // toSPR work function
 		}
 		spr1->chcr = ( spr1->chcr & 0xFFFF ) | ( (*ptag) & 0xFFFF0000 );	//Transfer upper part of tag to CHCR bits 31-15
 
-		id        = (ptag[0] >> 28) & 0x7;			//ID for DmaChain copied from bit 28 of the tag
+		id = (ptag[0] >> 28) & 0x7;			//ID for DmaChain copied from bit 28 of the tag
 		spr1->qwc  = (u16)ptag[0];					//QWC set to lower 16bits of the tag
 		spr1->madr = ptag[1];						//MADR = ADDR field
 
@@ -401,7 +389,7 @@ void _dmaSPR1() { // toSPR work function
 		if (spr1->chcr & 0x80 && ptag[0] >> 31) {			//Check TIE bit of CHCR and IRQ bit of tag
 			SPR_LOG("dmaIrq Set\n");
 			
-			//SysPrintf("SPR1 TIE\n");
+			//Console::WriteLn("SPR1 TIE");
 			spr1->qwc = 0;
 			done = 1;
 		//	break;
@@ -421,13 +409,10 @@ void _dmaSPR1() { // toSPR work function
 }
 void dmaSPR1() { // toSPR
 	
-	
-#ifdef SPR_LOG
 	SPR_LOG("dmaSPR1 chcr = 0x%x, madr = 0x%x, qwc  = 0x%x\n"
 			"        tadr = 0x%x, sadr = 0x%x\n",
 			spr1->chcr, spr1->madr, spr1->qwc,
 			spr1->tadr, spr1->sadr);
-#endif
 
 	if ((spr1->chcr & 0xc) == 0x4 && spr1->qwc == 0){
 			u32 *ptag;
@@ -440,8 +425,6 @@ void dmaSPR1() { // toSPR
 	// It merely assumes that the last one has finished then starts another one (broke with the DMA fix)
 	// This "shouldn't" cause any problems as SPR is generally faster than the other DMAS anyway. (Refraction)
 	CPU_INT(9, spr1->qwc / BIAS);
-	
-	
 }
 
 void SPRTOinterrupt()

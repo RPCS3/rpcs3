@@ -492,7 +492,7 @@ EERECOMPILE_CODE0(BNEL, XMMINFO_READS|XMMINFO_READT);
 ////////////////////////////////////////////////////
 //void recBLTZAL( void ) 
 //{
-//	SysPrintf("BLTZAL\n");
+//	Console::WriteLn("BLTZAL");
 //	_eeFlushAllUnused();
 //	MOV32ItoM( (int)&cpuRegs.code, cpuRegs.code );
 //	MOV32ItoM( (int)&cpuRegs.pc, pc );

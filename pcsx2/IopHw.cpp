@@ -1356,8 +1356,7 @@ u8 psxHw4Read8(u32 add) {
 		case 0x1f402039: return cdvdRead39();
 		case 0x1f40203A: return cdvdRead3A();
 		default:
-			// note: use SysPrintF to notify console since this is a potentially serious
-			// emulation problem:
+			// note: notify the console since this is a potentially serious emulation problem:
 			PSXHW_LOG("*Unknown 8bit read at address 0x%x\n", add);
 			Console::Error( "IOP Unknown 8bit read from addr 0x%x", params add );
 			return 0;
@@ -1402,10 +1401,10 @@ void psxDmaInterrupt(int n) {
 void psxDmaInterrupt2(int n) {
 	if (HW_DMA_ICR2 & (1 << (16 + n))) {
 /*		if (HW_DMA_ICR2 & (1 << (24 + n))) {
-			SysPrintf("*PCSX2*: HW_DMA_ICR2 n=%d already set\n", n);
+			Console::WriteLn("*PCSX2*: HW_DMA_ICR2 n=%d already set", params n);
 		}
 		if (psxHu32(0x1070) & 8) {
-			SysPrintf("*PCSX2*: psxHu32(0x1070) 8 already set (n=%d)\n", n);
+			Console::WriteLn("*PCSX2*: psxHu32(0x1070) 8 already set (n=%d)", params n);
 		}*/
 		HW_DMA_ICR2|= (1 << (24 + n));
 		psxRegs.CP0.n.Cause |= 1 << (16 + n);

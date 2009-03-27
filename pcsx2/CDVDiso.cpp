@@ -362,7 +362,7 @@ int CDVD_findfile(const char* fname, TocEntry* tocEntry){
 					current_sector++;
 					if (CdRead(current_sector,1,toc,&cdReadMode) != TRUE)
 					{
-						SysPrintf("Couldn't Read from CD !\n");
+						Console::Error("Couldn't Read from CD !");
 						return -1;
 					}
 //					CdSync(0x00);

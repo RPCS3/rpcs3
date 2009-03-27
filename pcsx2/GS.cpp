@@ -32,6 +32,7 @@ using namespace std;
 
 using namespace R5900;
 
+// This should be done properly with the other logs.
 #ifdef DEBUG
 #define MTGS_LOG SysPrintf
 #else
@@ -319,7 +320,7 @@ void gsCSRwrite(u32 value)
 
 	// Our emulated GS has no FIFO...
 	/*if( value & 0x100 ) { // FLUSH
-		//SysPrintf("GS_CSR FLUSH GS fifo: %x (CSRr=%x)\n", value, GSCSRr);
+		//Console::WriteLn("GS_CSR FLUSH GS fifo: %x (CSRr=%x)", params value, GSCSRr);
 	}*/
 
 	if (value & 0x200) { // resetGS
@@ -593,7 +594,7 @@ void gsSyncLimiterLostTime( s32 deltaTime )
 
 	if( !m_StrictSkipping ) return;
 
-	//SysPrintf("LostTime on the EE!\n");
+	//Console::WriteLn("LostTime on the EE!");
 
 	if( mtgsThread != NULL )
 	{
@@ -749,7 +750,7 @@ __forceinline void gsFrameSkip( bool forceskip )
 			return;
 	}
 
-	//SysPrintf( "Consecutive Frames -- Lateness: %d\n", (int)( sSlowDeltaTime / m_iSlowTicks ) );
+	//Console::WriteLn( "Consecutive Frames -- Lateness: %d", params (int)( sSlowDeltaTime / m_iSlowTicks ) );
 
 	// -- Consecutive frames section --
 	// Force-render consecutive frames without skipping.

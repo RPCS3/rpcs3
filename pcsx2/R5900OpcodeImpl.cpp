@@ -784,7 +784,7 @@ int __Deci2Call(int call, u32 *addr)
 				deci2addr[3], deci2addr[2], deci2addr[1], deci2addr[0]);
 
 //			cpuRegs.pc = deci2handler;
-//			SysPrintf("deci2msg: %s", (char*)PSM(deci2addr[4]+0xc));
+//			Console::WriteLn("deci2msg: %s",  params (char*)PSM(deci2addr[4]+0xc));
 			if (deci2addr == NULL) return 1;
 			if (deci2addr[1]>0xc){
 				u8* pdeciaddr = (u8*)dmaGetAddr(deci2addr[4]+0xc);

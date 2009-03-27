@@ -681,7 +681,7 @@ static void (*recComOpXMM_to_XMM[] )(x86SSERegType, x86SSERegType) = {
 int recCommutativeOp(int info, int regd, int op) 
 {
 	int t0reg = _allocTempXMMreg(XMMT_FPS, -1);
-    //if (t0reg == -1) {SysPrintf("FPU: CommutativeOp Allocation Error!\n");}
+    //if (t0reg == -1) {Console::WriteLn("FPU: CommutativeOp Allocation Error!");}
 
 	switch(info & (PROCESS_EE_S|PROCESS_EE_T) ) {
 		case PROCESS_EE_S:
@@ -805,7 +805,7 @@ void recC_EQ_xmm(int info)
 	int tempReg;
 	int t0reg;
 
-	//SysPrintf("recC_EQ_xmm()\n");
+	//Console::WriteLn("recC_EQ_xmm()");
 
 	switch(info & (PROCESS_EE_S|PROCESS_EE_T) ) {
 		case PROCESS_EE_S: 
@@ -875,7 +875,7 @@ void recC_LE_xmm(int info )
 	int tempReg; //tempX86reg
 	int t0reg; //tempXMMreg
 
-	//SysPrintf("recC_LE_xmm()\n");
+	//Console::WriteLn("recC_LE_xmm()");
 
 	switch(info & (PROCESS_EE_S|PROCESS_EE_T) ) {
 		case PROCESS_EE_S: 
@@ -949,7 +949,7 @@ void recC_LT_xmm(int info)
 	int tempReg;
 	int t0reg;
 
-	//SysPrintf("recC_LT_xmm()\n");
+	//Console::WriteLn("recC_LT_xmm()");
 	
 	switch(info & (PROCESS_EE_S|PROCESS_EE_T) ) {
 		case PROCESS_EE_S:
@@ -1141,10 +1141,10 @@ void recDIV_S_xmm(int info)
 	int roundmodeFlag = 0;
 	int t0reg = _allocTempXMMreg(XMMT_FPS, -1);
     //if (t0reg == -1) {Console::Error("FPU: DIV Allocation Error!");}
-    //SysPrintf("DIV\n");
+    //Console::WriteLn("DIV");
 
 	if ((g_sseMXCSR & 0x00006000) != 0x00000000) { // Set roundmode to nearest if it isn't already
-		//SysPrintf("div to nearest\n");
+		//Console::WriteLn("div to nearest");
 		roundmode_temp[0] = (g_sseMXCSR & 0xFFFF9FFF); // Set new roundmode
 		roundmode_temp[1] = g_sseMXCSR; // Backup old Roundmode
 		SSE_LDMXCSR ((uptr)&roundmode_temp[0]); // Recompile Roundmode Change
@@ -1153,14 +1153,14 @@ void recDIV_S_xmm(int info)
 
 	switch(info & (PROCESS_EE_S|PROCESS_EE_T) ) {
 		case PROCESS_EE_S:
-			//SysPrintf("FPU: DIV case 1\n");
+			//Console::WriteLn("FPU: DIV case 1");
 			SSE_MOVSS_XMM_to_XMM(EEREC_D, EEREC_S);
 			SSE_MOVSS_M32_to_XMM(t0reg, (uptr)&fpuRegs.fpr[_Ft_]);
 			if (CHECK_FPU_EXTRA_FLAGS) recDIVhelper1(EEREC_D, t0reg);
 			else recDIVhelper2(EEREC_D, t0reg);
 			break;
 		case PROCESS_EE_T:
-			//SysPrintf("FPU: DIV case 2\n");
+			//Console::WriteLn("FPU: DIV case 2");
 			if (EEREC_D == EEREC_T) {
 				SSE_MOVSS_XMM_to_XMM(t0reg, EEREC_T);
 				SSE_MOVSS_M32_to_XMM(EEREC_D, (uptr)&fpuRegs.fpr[_Fs_]);
@@ -1174,7 +1174,7 @@ void recDIV_S_xmm(int info)
 			}
 			break;
 		case (PROCESS_EE_S|PROCESS_EE_T):
-			//SysPrintf("FPU: DIV case 3\n");
+			//Console::WriteLn("FPU: DIV case 3");
 			if (EEREC_D == EEREC_T) {
 				SSE_MOVSS_XMM_to_XMM(t0reg, EEREC_T);
 				SSE_MOVSS_XMM_to_XMM(EEREC_D, EEREC_S);
@@ -1188,7 +1188,7 @@ void recDIV_S_xmm(int info)
 			}
 			break;
 		default:
-			//SysPrintf("FPU: DIV case 4\n");
+			//Console::WriteLn("FPU: DIV case 4");
 			SSE_MOVSS_M32_to_XMM(t0reg, (uptr)&fpuRegs.fpr[_Ft_]);
 			SSE_MOVSS_M32_to_XMM(EEREC_D, (uptr)&fpuRegs.fpr[_Fs_]);
 			if (CHECK_FPU_EXTRA_FLAGS) recDIVhelper1(EEREC_D, t0reg);
@@ -1626,19 +1626,19 @@ void recSUBhelper(int regd, int regt)
 void recSUBop(int info, int regd)
 {
 	int t0reg = _allocTempXMMreg(XMMT_FPS, -1);
-    //if (t0reg == -1) {SysPrintf("FPU: SUB Allocation Error!\n");}
+    //if (t0reg == -1) {Console::Error("FPU: SUB Allocation Error!");}
 
 	//AND32ItoM((uptr)&fpuRegs.fprc[31], ~(FPUflagO|FPUflagU)); // Clear O and U flags
 
 	switch(info & (PROCESS_EE_S|PROCESS_EE_T) ) {
 		case PROCESS_EE_S:
-			//SysPrintf("FPU: SUB case 1\n");
+			//Console::WriteLn("FPU: SUB case 1");
 			if (regd != EEREC_S) SSE_MOVSS_XMM_to_XMM(regd, EEREC_S);
 			SSE_MOVSS_M32_to_XMM(t0reg, (uptr)&fpuRegs.fpr[_Ft_]);
 			recSUBhelper(regd, t0reg);
 			break;
 		case PROCESS_EE_T:
-			//SysPrintf("FPU: SUB case 2\n");
+			//Console::WriteLn("FPU: SUB case 2");
 			if (regd == EEREC_T) {
 				SSE_MOVSS_XMM_to_XMM(t0reg, EEREC_T);
 				SSE_MOVSS_M32_to_XMM(regd, (uptr)&fpuRegs.fpr[_Fs_]);
@@ -1650,7 +1650,7 @@ void recSUBop(int info, int regd)
 			}
 			break;
 		case (PROCESS_EE_S|PROCESS_EE_T):
-			//SysPrintf("FPU: SUB case 3\n");
+			//Console::WriteLn("FPU: SUB case 3");
 			if (regd == EEREC_T) {
 				SSE_MOVSS_XMM_to_XMM(t0reg, EEREC_T);
 				SSE_MOVSS_XMM_to_XMM(regd, EEREC_S);
@@ -1698,10 +1698,10 @@ void recSQRT_S_xmm(int info)
 	u8* pjmp;
 	static u32 PCSX2_ALIGNED16(roundmode_temp[4]) = { 0x00000000, 0x00000000, 0x00000000, 0x00000000 };
 	int roundmodeFlag = 0;
-	//SysPrintf("FPU: SQRT\n");
+	//Console::WriteLn("FPU: SQRT");
 	
 	if ((g_sseMXCSR & 0x00006000) != 0x00000000) { // Set roundmode to nearest if it isn't already
-		//SysPrintf("sqrt to nearest\n");
+		//Console::WriteLn("sqrt to nearest");
 		roundmode_temp[0] = (g_sseMXCSR & 0xFFFF9FFF); // Set new roundmode
 		roundmode_temp[1] = g_sseMXCSR; // Backup old Roundmode
 		SSE_LDMXCSR ((uptr)&roundmode_temp[0]); // Recompile Roundmode Change
@@ -1820,32 +1820,32 @@ void recRSQRT_S_xmm(int info)
 {
 	int t0reg = _allocTempXMMreg(XMMT_FPS, -1);
 	//if (t0reg == -1) {Console::Error("FPU: RSQRT Allocation Error!");}
-	//SysPrintf("FPU: RSQRT\n");
+	//Console::WriteLn("FPU: RSQRT");
 
 	switch(info & (PROCESS_EE_S|PROCESS_EE_T) ) {
 		case PROCESS_EE_S:
-			//SysPrintf("FPU: RSQRT case 1\n");
+			//Console::WriteLn("FPU: RSQRT case 1");
 			SSE_MOVSS_XMM_to_XMM(EEREC_D, EEREC_S);
 			SSE_MOVSS_M32_to_XMM(t0reg, (uptr)&fpuRegs.fpr[_Ft_]);
 			if (CHECK_FPU_EXTRA_FLAGS) recRSQRThelper1(EEREC_D, t0reg);
 			else recRSQRThelper2(EEREC_D, t0reg);
 			break;
 		case PROCESS_EE_T:	
-			//SysPrintf("FPU: RSQRT case 2\n");
+			//Console::WriteLn("FPU: RSQRT case 2");
 			SSE_MOVSS_XMM_to_XMM(t0reg, EEREC_T);
 			SSE_MOVSS_M32_to_XMM(EEREC_D, (uptr)&fpuRegs.fpr[_Fs_]);
 			if (CHECK_FPU_EXTRA_FLAGS) recRSQRThelper1(EEREC_D, t0reg);
 			else recRSQRThelper2(EEREC_D, t0reg);
 			break;
 		case (PROCESS_EE_S|PROCESS_EE_T):
-			//SysPrintf("FPU: RSQRT case 3\n");
+			//Console::WriteLn("FPU: RSQRT case 3");
 			SSE_MOVSS_XMM_to_XMM(t0reg, EEREC_T);		
 			SSE_MOVSS_XMM_to_XMM(EEREC_D, EEREC_S);
 			if (CHECK_FPU_EXTRA_FLAGS) recRSQRThelper1(EEREC_D, t0reg);
 			else recRSQRThelper2(EEREC_D, t0reg);
 			break;
 		default:
-			//SysPrintf("FPU: RSQRT case 4\n");
+			//Console::WriteLn("FPU: RSQRT case 4");
 			SSE_MOVSS_M32_to_XMM(t0reg, (uptr)&fpuRegs.fpr[_Ft_]);
 			SSE_MOVSS_M32_to_XMM(EEREC_D, (uptr)&fpuRegs.fpr[_Fs_]);		
 			if (CHECK_FPU_EXTRA_FLAGS) recRSQRThelper1(EEREC_D, t0reg);

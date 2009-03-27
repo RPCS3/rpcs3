@@ -76,7 +76,7 @@ void psxShutdown() {
 
 void psxException(u32 code, u32 bd) {
 //	PSXCPU_LOG("psxException %x: %x, %x\n", code, psxHu32(0x1070), psxHu32(0x1074));
-	//SysPrintf("!! psxException %x: %x, %x\n", code, psxHu32(0x1070), psxHu32(0x1074));
+	//Console::WriteLn("!! psxException %x: %x, %x", params code, psxHu32(0x1070), psxHu32(0x1074));
 	// Set the Cause
 	psxRegs.CP0.n.Cause &= ~0x7f;
 	psxRegs.CP0.n.Cause |= code;
@@ -169,7 +169,7 @@ __forceinline void PSX_INT( IopEventId n, s32 ecycle )
 
 	// Exception: IRQ16 - SIO - it drops ints like crazy when handling PAD stuff.
 	//if( /*n!=16 &&*/ psxRegs.interrupt & (1<<n) )
-	//	SysPrintf( "***** IOP > Twice-thrown int on IRQ %d\n", n );
+	//	Console::WriteLn( "***** IOP > Twice-thrown int on IRQ %d", n );
 
 	psxRegs.interrupt |= 1 << n;
 

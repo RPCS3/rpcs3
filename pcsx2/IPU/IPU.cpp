@@ -358,7 +358,7 @@ __forceinline void ipuWrite32(u32 mem, u32 value)
 		case 0x10: // IPU_CTRL
 			ipuRegs->ctrl._u32 = (value&0x47f30000)|(ipuRegs->ctrl._u32&0x8000ffff);
             if( ipuRegs->ctrl.IDP == 3 ) {
-                SysPrintf("IPU Invalid Intra DC Precision, switching to 9 bits\n");
+                Console::WriteLn("IPU Invalid Intra DC Precision, switching to 9 bits");
                 ipuRegs->ctrl.IDP = 1;
             }
             if (ipuRegs->ctrl.RST & 0x1) { // RESET
@@ -645,11 +645,14 @@ static BOOL __fastcall ipuCSC(u32 val)
 	tIPU_CMD_CSC csc( val );
 
 	IPU_LOG("IPU CSC(Colorspace conversion from YCbCr) command (%d).\n",csc.MBC);
-	if (csc.OFM){	IPU_LOG("Output format is RGB16. ");}
-	else{			IPU_LOG("Output format is RGB32. ");}
-	if (csc.DTE){	IPU_LOG("Dithering enabled.");	}
+	if (csc.OFM)
+		IPU_LOG("Output format is RGB16. ");
+	else
+		IPU_LOG("Output format is RGB32. ");
+		
+	if (csc.DTE) IPU_LOG("Dithering enabled.");
 
-	//SysPrintf("CSC\n");
+	//Console::WriteLn("CSC");
 	for (;g_nCmdIndex<(int)csc.MBC; g_nCmdIndex++){
 
 		if( g_nCmdPos[0] < 3072/8 ) {
@@ -754,7 +757,7 @@ void IPUCMD_WRITE(u32 val) {
 	// don't process anything if currently busy
 	if( ipuRegs->ctrl.BUSY ) {
 		// wait for thread
-		SysPrintf("IPU BUSY!\n");
+		Console::WriteLn("IPU BUSY!");
 	}
 
 	ipuRegs->ctrl.ECD = 0;
@@ -983,7 +986,7 @@ void IPUWorker()
 			return;
 
 		default:
-			SysPrintf("Unknown IPU command: %x\n", ipuRegs->cmd.CMD);
+			Console::WriteLn("Unknown IPU command: %x", params ipuRegs->cmd.CMD);
 			break;
 	}
 
@@ -1306,7 +1309,7 @@ void __fastcall ipu_dither2(const macroblock_rgb32* rgb32, macroblock_rgb16 *rgb
 
 void __fastcall ipu_dither(macroblock_8 *mb8, macroblock_rgb16 *rgb16, int dte)
 {
-	//SysPrintf("IPU: Dither not implemented");
+	//Console::Error("IPU: Dither not implemented");
 }
 
 void __fastcall ipu_vq(macroblock_rgb16 *rgb16, u8* indx4){
@@ -1437,7 +1440,7 @@ int IPU1dma()
 		IPU1chain();
 
 		if ((ipu1dma->chcr & 0x80) && (g_nDMATransfer&IPU_DMA_DOTIE1)) {			 //Check TIE bit of CHCR and IRQ bit of tag
-			SysPrintf("IPU1 TIE\n");
+			Console::WriteLn("IPU1 TIE");
 
 			IPU_INT_TO(totalqwc*BIAS);
 			g_nDMATransfer &= ~(IPU_DMA_ACTV1|IPU_DMA_DOTIE1);
@@ -1485,7 +1488,7 @@ int IPU1dma()
 	}
 
 	if ((ipu1dma->chcr & 0xc) == 0 && ipu1dma->qwc == 0) { // Normal Mode
-		//SysPrintf("ipu1 normal empty qwc?\n");
+		//Console::WriteLn("ipu1 normal empty qwc?");
 		return totalqwc;
 	}
 
@@ -1504,7 +1507,7 @@ int IPU1dma()
 		//while (done == 0) {						 // Loop while Dn_CHCR.STR is 1
 			ptag = (u32*)dmaGetAddr(ipu1dma->tadr);  //Set memory pointer to TADR
 			if (ptag == NULL) {					 //Is ptag empty?
-				SysPrintf("IPU1 BUSERR\n");
+				Console::Error("IPU1 BUSERR");
 				ipu1dma->chcr = ( ipu1dma->chcr & 0xFFFF ) | ( (*ptag) & 0xFFFF0000 );  //Transfer upper part of tag to CHCR bits 31-15
 				psHu32(DMAC_STAT)|= 1<<15;		 //If yes, set BEIS (BUSERR) in DMAC_STAT register
 				return totalqwc;
@@ -1564,7 +1567,7 @@ int IPU1dma()
 			IPU1chain();
 
 			if ((ipu1dma->chcr & 0x80) && (ptag[0]&0x80000000)  && ipu1dma->qwc == 0) {			 //Check TIE bit of CHCR and IRQ bit of tag
-				SysPrintf("IPU1 TIE\n");
+				Console::WriteLn("IPU1 TIE");
 
 				if( done ) {
 					ptag = (u32*)dmaGetAddr(ipu1dma->tadr);
@@ -1629,7 +1632,7 @@ int FIFOfrom_write(const u32 *value,int size)
 
 	ipuRegs->ctrl.OFC+=firsttrans;
 	IPU0dma();
-	//SysPrintf("Written %d qwords, %d\n",firsttrans,ipuRegs->ctrl.OFC);
+	//Console::WriteLn("Written %d qwords, %d", params firsttrans,ipuRegs->ctrl.OFC);
 
 	return firsttrans;
 }

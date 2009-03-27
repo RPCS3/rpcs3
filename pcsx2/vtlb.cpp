@@ -104,7 +104,7 @@ __forceinline DataType __fastcall MemOp_r0(u32 addr)
 	//has to: translate, find function, call function
 	u32 hand=(u8)vmv;
 	u32 paddr=ppf-hand+0x80000000;
-	//SysPrintf("Translated 0x%08X to 0x%08X\n",addr,paddr);
+	//Console::WriteLn("Translated 0x%08X to 0x%08X",params addr,paddr);
 	//return reinterpret_cast<TemplateHelper<DataSize,false>::HandlerType*>(vtlbdata.RWFT[TemplateHelper<DataSize,false>::sidx][0][hand])(paddr,data);
 
 	switch( DataSize )
@@ -135,7 +135,7 @@ __forceinline void __fastcall MemOp_r1(u32 addr, DataType* data)
 		//has to: translate, find function, call function
 		u32 hand=(u8)vmv;
 		u32 paddr=ppf-hand+0x80000000;
-		//SysPrintf("Translated 0x%08X to 0x%08X\n",addr,paddr);
+		//Console::WriteLn("Translated 0x%08X to 0x%08X",params addr,paddr);
 		//return reinterpret_cast<TemplateHelper<DataSize,false>::HandlerType*>(RWFT[TemplateHelper<DataSize,false>::sidx][0][hand])(paddr,data);
 
 		switch( DataSize )
@@ -162,7 +162,7 @@ __forceinline void __fastcall MemOp_w0(u32 addr, DataType data)
 		//has to: translate, find function, call function
 		u32 hand=(u8)vmv;
 		u32 paddr=ppf-hand+0x80000000;
-		//SysPrintf("Translated 0x%08X to 0x%08X\n",addr,paddr);
+		//Console::WriteLn("Translated 0x%08X to 0x%08X",params addr,paddr);
 
 		switch( DataSize )
 		{
@@ -191,7 +191,7 @@ __forceinline void __fastcall MemOp_w1(u32 addr,const DataType* data)
 		//has to: translate, find function, call function
 		u32 hand=(u8)vmv;
 		u32 paddr=ppf-hand+0x80000000;
-		//SysPrintf("Translated 0x%08X to 0x%08X\n",addr,paddr);
+		//Console::WriteLn("Translated 0x%08X to 0x%08X",params addr,paddr);
 		switch( DataSize )
 		{
 			case 64: return ((vtlbMemW64FP*)vtlbdata.RWFT[3][1][hand])(paddr, data);

@@ -179,9 +179,8 @@ void _vuFMACAdd(VURegs * VU, int reg, int xyzw) {
 		if (VU->fmac[i].enable == 1) continue;
 		break;
 	}
-	if (i==8) {
-//		SysPrintf("*PCSX2*: error , out of fmacs %d\n", VU->cycle);
-	}
+	//if (i==8) Console::Error("*PCSX2*: error , out of fmacs %d", params VU->cycle);
+	
 
 	VUM_LOG("adding FMAC pipe[%d]; xyzw=%x\n", i, xyzw);
 

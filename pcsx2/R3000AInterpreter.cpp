@@ -221,7 +221,7 @@ void zeroEx()
 
 			fname = irxlibs[i].names[code];
             //if( strcmp(fname, "setIOPrcvaddr") == 0 ) {
-//                SysPrintf("yo\n");
+//                Console::WriteLn("yo");
 //                varLog |= 0x100000;
 //                Log = 1;
 //            }

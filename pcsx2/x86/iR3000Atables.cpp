@@ -1775,7 +1775,7 @@ static void rpsxCOP0() { rpsxCP0[_Rs_](); }
 //static void rpsxBASIC() { rpsxCP2BSC[_Rs_](); }
 
 static void rpsxNULL() {
-	SysPrintf("psxUNK: %8.8x\n", psxRegs.code);
+	Console::WriteLn("psxUNK: %8.8x", params psxRegs.code);
 }
 
 void (*rpsxBSC[64])() = {

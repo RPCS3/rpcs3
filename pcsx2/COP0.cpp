@@ -87,7 +87,7 @@ void MapTLB(int i)
 
 void UnmapTLB(int i)
 {
-	//SysPrintf("Clear TLB %d: %08x-> [%08x %08x] S=%d G=%d ASID=%d Mask= %03X\n",i,tlb[i].VPN2,tlb[i].PFN0,tlb[i].PFN1,tlb[i].S,tlb[i].G,tlb[i].ASID,tlb[i].Mask);
+	//Console::WriteLn("Clear TLB %d: %08x-> [%08x %08x] S=%d G=%d ASID=%d Mask= %03X", params i,tlb[i].VPN2,tlb[i].PFN0,tlb[i].PFN1,tlb[i].S,tlb[i].G,tlb[i].ASID,tlb[i].Mask);
 	u32 mask, addr;
 	u32 saddr, eaddr;
 
@@ -102,7 +102,7 @@ void UnmapTLB(int i)
 		mask  = ((~tlb[i].Mask) << 1) & 0xfffff;
 		saddr = tlb[i].VPN2 >> 12;
 		eaddr = saddr + tlb[i].Mask + 1;
-	//	SysPrintf("Clear TLB: %08x ~ %08x\n",saddr,eaddr-1);
+	//	Console::WriteLn("Clear TLB: %08x ~ %08x",params saddr,eaddr-1);
 		for (addr=saddr; addr<eaddr; addr++) {
 			if ((addr & mask) == ((tlb[i].VPN2 >> 12) & mask)) { //match
 				memClearPageAddr(addr << 12);
@@ -115,7 +115,7 @@ void UnmapTLB(int i)
 		mask  = ((~tlb[i].Mask) << 1) & 0xfffff;
 		saddr = (tlb[i].VPN2 >> 12) + tlb[i].Mask + 1;
 		eaddr = saddr + tlb[i].Mask + 1;
-	//	SysPrintf("Clear TLB: %08x ~ %08x\n",saddr,eaddr-1);
+	//	Console::WriteLn("Clear TLB: %08x ~ %08x",params saddr,eaddr-1);
 		for (addr=saddr; addr<eaddr; addr++) {
 			if ((addr & mask) == ((tlb[i].VPN2 >> 12) & mask)) { //match
 				memClearPageAddr(addr << 12);
@@ -308,7 +308,7 @@ void MFC0()
 	if( (_Rd_ != 9) && !_Rt_ ) return;
 	if(_Rd_ != 9) { COP0_LOG("%s\n", disR5900Current.getCString() ); }
 	
-	//if(bExecBIOS == FALSE && _Rd_ == 25) SysPrintf("MFC0 _Rd_ %x = %x\n", _Rd_, cpuRegs.CP0.r[_Rd_]);
+	//if(bExecBIOS == FALSE && _Rd_ == 25) Console::WriteLn("MFC0 _Rd_ %x = %x", params _Rd_, cpuRegs.CP0.r[_Rd_]);
 	switch (_Rd_)
 	{
 		case 12:
@@ -332,7 +332,7 @@ void MFC0()
 					cpuRegs.GPR.r[_Rt_].SD[0] = (s32)cpuRegs.PERF.n.pcr1;
 				break;
 		    }
-		    /*SysPrintf("MFC0 PCCR = %x PCR0 = %x PCR1 = %x IMM= %x\n", 
+		    /*Console::WriteLn("MFC0 PCCR = %x PCR0 = %x PCR1 = %x IMM= %x",  params
 		    cpuRegs.PERF.n.pccr, cpuRegs.PERF.n.pcr0, cpuRegs.PERF.n.pcr1, _Imm_ & 0x3F);*/
 		break;
 
@@ -357,11 +357,24 @@ void MFC0()
 void MTC0()
 {
 	COP0_LOG("%s\n", disR5900Current.getCString());
-	//if(bExecBIOS == FALSE && _Rd_ == 25) SysPrintf("MTC0 _Rd_ %x = %x\n", _Rd_, cpuRegs.CP0.r[_Rd_]);
+	//if(bExecBIOS == FALSE && _Rd_ == 25) Console::WriteLn("MTC0 _Rd_ %x = %x", params _Rd_, cpuRegs.CP0.r[_Rd_]);
 	switch (_Rd_)
 	{
+		case 9:
+			s_iLastCOP0Cycle = cpuRegs.cycle;
+			cpuRegs.CP0.r[9] = cpuRegs.GPR.r[_Rt_].UL[0];
+		break;
+		
+		case 12: 
+			WriteCP0Status(cpuRegs.GPR.r[_Rt_].UL[0]); 
+		break;
+		
+		case 24: 
+			Console::WriteLn("MTC0 Breakpoint debug Registers code = %x", params cpuRegs.code & 0x3FF);
+		break;
+		
 		case 25: 
-			/*if(bExecBIOS == FALSE && _Rd_ == 25) SysPrintf("MTC0 PCCR = %x PCR0 = %x PCR1 = %x IMM= %x\n", 
+			/*if(bExecBIOS == FALSE && _Rd_ == 25) Console::WriteLn("MTC0 PCCR = %x PCR0 = %x PCR1 = %x IMM= %x", params
 				cpuRegs.PERF.n.pccr, cpuRegs.PERF.n.pcr0, cpuRegs.PERF.n.pcr1, _Imm_ & 0x3F);*/
 			switch(_Imm_ & 0x3F)
 			{
@@ -383,17 +396,7 @@ void MTC0()
 				break;
 			}
 		break;
-		
-		case 24: 
-			Console::WriteLn("MTC0 Breakpoint debug Registers code = %x", params cpuRegs.code & 0x3FF);
-		break;
-
-		case 12: WriteCP0Status(cpuRegs.GPR.r[_Rt_].UL[0]); break;
-		case 9:
-			s_iLastCOP0Cycle = cpuRegs.cycle;
-			cpuRegs.CP0.r[9] = cpuRegs.GPR.r[_Rt_].UL[0];
-		break;
-		
+			
 		default:
 			cpuRegs.CP0.r[_Rd_] = cpuRegs.GPR.r[_Rt_].UL[0]; 
 		break;

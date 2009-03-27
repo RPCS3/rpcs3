@@ -269,7 +269,7 @@ void CALLBACK GS_printf(int timeout, char *fmt, ...) {
 	vsprintf(msg, fmt, list);
 	va_end(list);
 
-	SysPrintf(msg);
+	Console::WriteLn(msg);
 }
 
 s32  CALLBACK GS_freeze(int mode, freezeData *data) { data->size = 0; return 0; }

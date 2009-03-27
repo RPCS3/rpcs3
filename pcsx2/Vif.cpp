@@ -554,7 +554,7 @@ void mfifoVIF1transfer(int qwc) {
 					temp = vif1ch->madr;								//Temporarily Store ADDR
 					vif1ch->madr = psHu32(DMAC_RBOR) + ((vif1ch->tadr + 16) & psHu32(DMAC_RBSR)); 					  //Set MADR to QW following the tag
 					vif1ch->tadr = temp;								//Copy temporarily stored ADDR to Tag
-					if((temp & psHu32(DMAC_RBSR)) != psHu32(DMAC_RBOR)) SysPrintf("Next tag = %x outside ring %x size %x\n", temp, psHu32(DMAC_RBOR), psHu32(DMAC_RBSR));
+					if((temp & psHu32(DMAC_RBSR)) != psHu32(DMAC_RBOR)) Console::WriteLn("Next tag = %x outside ring %x size %x", params temp, psHu32(DMAC_RBOR), psHu32(DMAC_RBSR));
 					vif1.done = 0;
 					break;
 
@@ -581,7 +581,7 @@ void mfifoVIF1transfer(int qwc) {
 		vif1.inprogress |= 1;
 
 		/*if (ret == -1) {
-			SysPrintf("VIF dmaChain error size=%d, madr=%lx, tadr=%lx\n",
+			Console::WriteLn("VIF dmaChain error size=%d, madr=%lx, tadr=%lx", params
 					vif1ch->qwc, vif1ch->madr, vif1ch->tadr);
 			vif1.done = 1;
 			//CPU_INT(10,g_vifCycles);
@@ -622,7 +622,7 @@ void vifMFIFOInterrupt()
 	if(vif1.done != 1 || vif1.inprogress & 1) {
 		
 		if(vifqwc <= 0){
-			//SysPrintf("Empty\n");
+			//Console::WriteLn("Empty");
 			vif1.inprogress |= 0x10;
 			hwDmacIrq(14);
 			return;
@@ -641,7 +641,7 @@ void vifMFIFOInterrupt()
 		
 		return;
 	} else if(vifqwc <= 0){
-			//SysPrintf("Empty\n");
+			//Console::WriteLn("Empty");
 			//vif1.inprogress |= 0x10;
 			hwDmacIrq(14);
 			//return;
@@ -649,8 +649,7 @@ void vifMFIFOInterrupt()
 
 	//On a TIE break we do not clear the MFIFO (Art of Fighting)
 	//If we dont clear it on MFIFO end, Tekken Tag breaks, understandably (Refraction)
-	if(mfifodmairq == 0) 
-			vifqwc = 0; 
+	if(mfifodmairq == 0)  vifqwc = 0; 
 
 	vif1.done = 1;
 	g_vifCycles = 0;

@@ -1497,7 +1497,7 @@ CPU_SSE_XMMCACHE_END
 	_deleteEEreg(_Rd_, 0);
 
 	//Done - Refraction - Crude but quicker than int
-	//SysPrintf("PEXTLB\n");
+	//Console::WriteLn("PEXTLB");
 	//Rs = cpuRegs.GPR.r[_Rs_]; Rt = cpuRegs.GPR.r[_Rt_];
 	MOV8MtoR(EAX, (uptr)&cpuRegs.GPR.r[_Rs_].UC[7]);
 	MOV8RtoM((uptr)&cpuRegs.GPR.r[_Rd_].UC[15], EAX);
@@ -1969,7 +1969,7 @@ CPU_SSE_XMMCACHE_END
 void recQFSRV()
 {
 	if ( !_Rd_ ) return;
-	//SysPrintf("recQFSRV()\n");
+	//Console::WriteLn("recQFSRV()");
 
 	CPU_SSE2_XMMCACHE_START( XMMINFO_READS | XMMINFO_READT | XMMINFO_WRITED )
 

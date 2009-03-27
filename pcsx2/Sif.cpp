@@ -174,7 +174,7 @@ __forceinline void SIF0Dma()
 	{
 		
 		/*if ((psHu32(DMAC_CTRL) & 0xC0)) { 
-			SysPrintf("DMA Stall Control %x\n",(psHu32(DMAC_CTRL) & 0xC0));
+			Console::WriteLn("DMA Stall Control %x", params (psHu32(DMAC_CTRL) & 0xC0));
 		}*/
 		if(iopsifbusy[0] == 1) // If EE SIF0 is enabled
 		{
@@ -312,7 +312,7 @@ __forceinline void SIF0Dma()
 					sif0dma->chcr = (sif0dma->chcr & 0xffff) | (tag[0] & 0xffff0000);
 
 					/*if ((sif0dma->chcr & 0x80) && (tag[0] >> 31)) {	
-						SysPrintf("SIF0 TIE\n");
+						Console::WriteLn("SIF0 TIE");
 					}*/
 					SIF_LOG(" EE SIF dest chain tag madr:%08X qwc:%04X id:%X irq:%d(%08X_%08X)\n", sif0dma->madr, sif0dma->qwc, (tag[0]>>28)&3, (tag[0]>>31)&1, tag[1], tag[0]);
 
@@ -367,7 +367,7 @@ __forceinline void SIF1Dma()
 					sif1dma->qwc = (u16)ptag[0];
 
 					if (sif1dma->chcr & 0x40) {
-						SysPrintf("SIF1 TTE\n");
+						Console::WriteLn("SIF1 TTE");
 						SIF1write(ptag+2, 2);
 					}
 				
@@ -410,10 +410,10 @@ __forceinline void SIF1Dma()
 							break;
 							
 						default:
-							SysPrintf("Bad addr1 source chain\n");
+							Console::WriteLn("Bad addr1 source chain");
 					}
 					if ((sif1dma->chcr & 0x80) && (ptag[0] >> 31)) {	
-						SysPrintf("SIF1 TIE\n");
+						Console::WriteLn("SIF1 TIE");
 						sif1.end = 1;
 					}
 				}
@@ -535,7 +535,7 @@ __forceinline void dmaSIF0() {
 	}
 //    if(sif0dma->qwc > 0 & (sif0dma->chcr & 0x4) == 0x4) {
 //        sif0dma->chcr &= ~4; //Halflife sets a QWC amount in chain mode, no tadr set.
-//        SysPrintf("yo\n");
+//        Console::WriteLn("yo");
 //    }
 
 	psHu32(0x1000F240) |= 0x2000;
@@ -560,7 +560,7 @@ __forceinline void dmaSIF1() {
 
 //    if(sif1dma->qwc > 0 & (sif1dma->chcr & 0x4) == 0x4) {
 //        sif1dma->chcr &= ~4; //Halflife sets a QWC amount in chain mode, no tadr set.
-//        SysPrintf("yo2\n");
+//        Console::WriteLn("yo2");
 //    }
 	
 	psHu32(0x1000F240) |= 0x4000;
@@ -582,7 +582,7 @@ __forceinline void dmaSIF2() {
 
     sif2dma->chcr&= ~0x100;
 	hwDmacIrq(7);
-	SysPrintf("*PCSX2*: dmaSIF2\n");
+	Console::WriteLn("*PCSX2*: dmaSIF2");
 }
 
 

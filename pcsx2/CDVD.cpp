@@ -254,7 +254,7 @@ FILE *_cdvdOpenMechaVer() {
 	// if file doesnt exist, create empty one
 	fd = fopen(file, "r+b");
 	if (fd == NULL) {
-		SysPrintf("MEC File Not Found , Creating Blank File\n");
+		Console::Notice("MEC File Not Found , Creating Blank File");
 		fd = fopen(file, "wb");
 		if (fd == NULL) {
 			Msgbox::Alert("_cdvdOpenMechaVer: Error creating %s", params file);
@@ -299,7 +299,7 @@ FILE *_cdvdOpenNVM() {
 	// if file doesnt exist, create empty one
 	fd = fopen(file, "r+b");
 	if (fd == NULL) {
-		SysPrintf("NVM File Not Found , Creating Blank File\n");
+		Console::Notice("NVM File Not Found , Creating Blank File");
 		fd = fopen(file, "wb");
 		if (fd == NULL) {
 			Msgbox::Alert("_cdvdOpenNVM: Error creating %s", params file);
@@ -565,7 +565,7 @@ s32 cdvdGetToc(void* toc)
 	//the code below handles only CdGetToc!
 	//if(cdvd.Param[0]==0x01)
 	//{
-	SysPrintf("CDGetToc Param[0]=%d, Param[1]=%d\n",cdvd.Param[0],cdvd.Param[1]);
+	Console::WriteLn("CDGetToc Param[0]=%d, Param[1]=%d", params cdvd.Param[0],cdvd.Param[1]);
 	//}
 	type = CDVDgetDiskType();
 	if (CDVDgetTN(&diskInfo) == -1)	{ diskInfo.etrack = 0;diskInfo.strack = 1; }
@@ -914,7 +914,7 @@ int cdvdReadSector() {
 	// be more correct. (air)
 	psxCpu->Clear( HW_DMA3_MADR, cdvd.BlockSize/4 );
 
-//	SysPrintf("sector %x;%x;%x\n", PSXMu8(madr+0), PSXMu8(madr+1), PSXMu8(madr+2));
+//	Console::WriteLn("sector %x;%x;%x", params PSXMu8(madr+0), PSXMu8(madr+1), PSXMu8(madr+2));
 
 	HW_DMA3_BCR_H16-= (cdvd.BlockSize / (HW_DMA3_BCR_L16*4));
 	HW_DMA3_MADR+= cdvd.BlockSize;
@@ -962,9 +962,9 @@ __forceinline void cdvdActionInterrupt()
 // inlined due to being referenced in only one place.
 __forceinline void cdvdReadInterrupt()
 {
-	//SysPrintf("cdvdReadInterrupt %x %x %x %x %x\n", cpuRegs.interrupt, cdvd.Readed, cdvd.Reading, cdvd.nSectors, (HW_DMA3_BCR_H16 * HW_DMA3_BCR_L16) *4);
+	//Console::WriteLn("cdvdReadInterrupt %x %x %x %x %x", params cpuRegs.interrupt, cdvd.Readed, cdvd.Reading, cdvd.nSectors, (HW_DMA3_BCR_H16 * HW_DMA3_BCR_L16) *4);
 
-	cdvd.Ready   = 0x00;
+	cdvd.Ready = 0x00;
 	if (cdvd.Readed == 0)
 	{
 		// Seeking finished.  Process the track we requested before, and
@@ -1278,7 +1278,7 @@ u8   cdvdRead39(void) {	// KEY-XOR
 u8   cdvdRead3A(void) {	// DEC_SET
 	CDR_LOG("cdvdRead3A(DecSet) %x\n", cdvd.decSet);
 	
-	SysPrintf("DecSet Read: %02X\n", cdvd.decSet);
+	Console::WriteLn("DecSet Read: %02X", params cdvd.decSet);
 	return cdvd.decSet;
 }
 
@@ -1642,7 +1642,7 @@ void cdvdWrite16(u8 rt)		 // SCOMMAND
 			} else {
 				SetResultSize(1);
 				cdvd.Result[0] = 0x80;
-				SysPrintf("*Unknown Mecacon Command param[0]=%02X\n", cdvd.Param[0]);
+				Console::WriteLn("*Unknown Mecacon Command param[0]=%02X", params cdvd.Param[0]);
 			}
 			break;
 		
@@ -1671,9 +1671,9 @@ void cdvdWrite16(u8 rt)		 // SCOMMAND
 			if(cdvd.Result[3] <= 7) cdvd.Result[5] += 1;
 			cdvd.Result[6] = itob(cdvd.RTC.month)+0x80; //Month
 			cdvd.Result[7] = itob(cdvd.RTC.year); //Year
-			/*SysPrintf("RTC Read Sec %x Min %x Hr %x Day %x Month %x Year %x\n", cdvd.Result[1], cdvd.Result[2],
+			/*Console::WriteLn("RTC Read Sec %x Min %x Hr %x Day %x Month %x Year %x", params cdvd.Result[1], cdvd.Result[2],
 				cdvd.Result[3], cdvd.Result[5], cdvd.Result[6], cdvd.Result[7]);
-			SysPrintf("RTC Read Real Sec %d Min %d Hr %d Day %d Month %d Year %d\n", cdvd.RTC.second, cdvd.RTC.minute,
+			Console::WriteLn("RTC Read Real Sec %d Min %d Hr %d Day %d Month %d Year %d", params cdvd.RTC.second, cdvd.RTC.minute,
 				cdvd.RTC.hour, cdvd.RTC.day, cdvd.RTC.month, cdvd.RTC.year);*/
    
 			break;
@@ -1690,9 +1690,9 @@ void cdvdWrite16(u8 rt)		 // SCOMMAND
 			if(cdvd.Param[cdvd.ParamP-5] <= 7) cdvd.RTC.day -= 1;
 			cdvd.RTC.month = btoi(cdvd.Param[cdvd.ParamP-2]-0x80);
 			cdvd.RTC.year = btoi(cdvd.Param[cdvd.ParamP-1]);
-			/*SysPrintf("RTC write incomming Sec %x Min %x Hr %x Day %x Month %x Year %x\n", cdvd.Param[cdvd.ParamP-7], cdvd.Param[cdvd.ParamP-6],
+			/*Console::WriteLn("RTC write incomming Sec %x Min %x Hr %x Day %x Month %x Year %x", params cdvd.Param[cdvd.ParamP-7], cdvd.Param[cdvd.ParamP-6],
 				cdvd.Param[cdvd.ParamP-5], cdvd.Param[cdvd.ParamP-3], cdvd.Param[cdvd.ParamP-2], cdvd.Param[cdvd.ParamP-1]);
-			SysPrintf("RTC Write Sec %d Min %d Hr %d Day %d Month %d Year %d\n", cdvd.RTC.second, cdvd.RTC.minute,
+			Console::WriteLn("RTC Write Sec %d Min %d Hr %d Day %d Month %d Year %d", params cdvd.RTC.second, cdvd.RTC.minute,
 				cdvd.RTC.hour, cdvd.RTC.day, cdvd.RTC.month, cdvd.RTC.year);*/
 			//memcpy_fast((u8*)&cdvd.RTC, cdvd.Param, 7);
 			SetResultSize(1);
@@ -1753,7 +1753,7 @@ void cdvdWrite16(u8 rt)		 // SCOMMAND
 			break;
 
 		case 0x15: // sceCdForbidDVDP (0:1) 
-			//SysPrintf("sceCdForbidDVDP\n");
+			//Console::WriteLn("sceCdForbidDVDP");
 			SetResultSize(1);
 			cdvd.Result[0] = 5;
 			break;
@@ -1778,7 +1778,7 @@ void cdvdWrite16(u8 rt)		 // SCOMMAND
 
 		case 0x1A: // sceCdBootCertify (4:1)//(4:16 in psx?)
 			SetResultSize(1);//on input there are 4 bytes: 1;?10;J;C for 18000; 1;60;E;C for 39002 from ROMVER
-			cdvd.Result[0]=1;//i guess that means okay
+			cdvd.Result[0] = 1;//i guess that means okay
 			break;
 
 		case 0x1B: // sceCdCancelPOffRdy (0:1) - Call73 from Xcdvdman (1:1)
@@ -1886,7 +1886,7 @@ void cdvdWrite16(u8 rt)		 // SCOMMAND
 			SetResultSize(15);
 			cdvdGetMechaVer(&cdvd.Result[1]);
 			cdvd.Result[0] = cdvdReadRegionParams(&cdvd.Result[3]);//size==8
-			SysPrintf("REGION PARAMS = %s %s\n", mg_zones[cdvd.Result[1]], &cdvd.Result[3]);
+			Console::WriteLn("REGION PARAMS = %s %s", params mg_zones[cdvd.Result[1]], &cdvd.Result[3]);
 			cdvd.Result[1] = 1 << cdvd.Result[1];	//encryption zone; see offset 0x1C in encrypted headers
 			//////////////////////////////////////////
 			cdvd.Result[2] = 0;						//??
@@ -2063,7 +2063,7 @@ void cdvdWrite16(u8 rt)		 // SCOMMAND
 				if (cdvd.mg_buffer[bit_ofs+5] || cdvd.mg_buffer[bit_ofs+6] || cdvd.mg_buffer[bit_ofs+7])goto fail_pol_cal;
 				if (cdvd.mg_buffer[bit_ofs+4] * 16 + bit_ofs + 8 + 16 != *(u16*)&cdvd.mg_buffer[0x14]){
 fail_pol_cal:
-					SysPrintf("[MG] ERROR - Make sure the file is already decrypted!!!\n");
+					Console::Error("[MG] ERROR - Make sure the file is already decrypted!!!");
 					cdvd.Result[0] = 0x80;
 					break;
 				}
@@ -2074,7 +2074,7 @@ fail_pol_cal:
 		case 0x90: // sceMgWriteHeaderStart
 			cdvd.mg_size = 0;
 			cdvd.mg_datatype = 1;//header data
-			SysPrintf("[MG] hcode=%d cnum=%d a2=%d length=0x%X\n",
+			Console::WriteLn("[MG] hcode=%d cnum=%d a2=%d length=0x%X", params
 				cdvd.Param[0], cdvd.Param[3], cdvd.Param[4], cdvd.mg_maxsize = cdvd.Param[1] | (((int)cdvd.Param[2])<<8));
 			SetResultSize(1);//in:5
 			cdvd.Result[0] = 0; // 0 complete ; 1 busy ; 0x80 error
@@ -2088,7 +2088,7 @@ fail_pol_cal:
 			}
 			cdvd.mg_maxsize = 0; // don't allow any write
 			cdvd.mg_size = 8+16*cdvd.mg_buffer[4];//new offset, i just moved the data
-			SysPrintf("[MG] BIT count=%d\n", cdvd.mg_buffer[4]);
+			Console::WriteLn("[MG] BIT count=%d", params cdvd.mg_buffer[4]);
 
 			cdvd.Result[0] = cdvd.mg_datatype==1 ? 0 : 0x80; // 0 complete ; 1 busy ; 0x80 error
 			cdvd.Result[1] = (cdvd.mg_size >> 0) & 0xFF;
@@ -2143,7 +2143,7 @@ fail_pol_cal:
 
 		default:
 			// fake a 'correct' command
-			SysPrintf("SCMD Unknown %x\n", rt);
+			Console::WriteLn("SCMD Unknown %x", params rt);
 			SetResultSize(1);		//in:0
 			cdvd.Result[0] = 0;		// 0 complete ; 1 busy ; 0x80 error
 			break;
@@ -2163,11 +2163,11 @@ void cdvdWrite17(u8 rt) { // SDATAIN
 
 void cdvdWrite18(u8 rt) { // SDATAOUT
 	CDR_LOG("cdvdWrite18(SDataOut) %x\n", rt);
-	SysPrintf("*PCSX2* SDATAOUT\n");
+	Console::WriteLn("*PCSX2* SDATAOUT");
 }
 
 void cdvdWrite3A(u8 rt) { // DEC-SET
 	CDR_LOG("cdvdWrite3A(DecSet) %x\n", rt);
 	cdvd.decSet = rt;
-	SysPrintf("DecSet Write: %02X\n", cdvd.decSet);
+	Console::WriteLn("DecSet Write: %02X", params cdvd.decSet);
 }

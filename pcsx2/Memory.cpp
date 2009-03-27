@@ -132,7 +132,7 @@ u8  *psS = NULL; //0.015 mb, scratch pad
 void MyMemCheck(u32 mem)
 {
     if( mem == 0x1c02f2a0 )
-        SysPrintf("yo\n");
+        Console::WriteLn("yo; (mem == 0x1c02f2a0) in MyMemCheck...");
 }
 
 /////////////////////////////
@@ -254,7 +254,7 @@ mem8_t __fastcall _ext_memRead8 (u32 mem)
 		case 7: // dev9
 		{
 			mem8_t retval = DEV9read8(mem & ~0xa4000000);
-			SysPrintf("DEV9 read8 %8.8lx: %2.2lx\n", mem & ~0xa4000000, retval);
+			Console::WriteLn("DEV9 read8 %8.8lx: %2.2lx", params mem & ~0xa4000000, retval);
 			return retval;
 		}
 	}
@@ -284,7 +284,7 @@ mem16_t __fastcall _ext_memRead16(u32 mem)
 		case 7: // dev9
 		{
 			mem16_t retval = DEV9read16(mem & ~0xa4000000);
-			SysPrintf("DEV9 read16 %8.8lx: %4.4lx\n", mem & ~0xa4000000, retval);
+			Console::WriteLn("DEV9 read16 %8.8lx: %4.4lx", params mem & ~0xa4000000, retval);
 			return retval;
 		}
 
@@ -308,7 +308,7 @@ mem32_t __fastcall _ext_memRead32(u32 mem)
 		case 7: // dev9
 		{
 			mem32_t retval = DEV9read32(mem & ~0xa4000000);
-			SysPrintf("DEV9 read32 %8.8lx: %8.8lx\n", mem & ~0xa4000000, retval);
+			Console::WriteLn("DEV9 read32 %8.8lx: %8.8lx", params mem & ~0xa4000000, retval);
 			return retval;
 		}
 	}
@@ -362,7 +362,7 @@ void __fastcall _ext_memWrite8 (u32 mem, u8  value)
 			gsWrite8(mem, value); return;
 		case 7: // dev9
 			DEV9write8(mem & ~0xa4000000, value);
-			SysPrintf("DEV9 write8 %8.8lx: %2.2lx\n", mem & ~0xa4000000, value);
+			Console::WriteLn("DEV9 write8 %8.8lx: %2.2lx", params mem & ~0xa4000000, value);
 			return;
 	}
 
@@ -385,7 +385,7 @@ void __fastcall _ext_memWrite16(u32 mem, u16 value)
 			gsWrite16(mem, value); return;
 		case 7: // dev9
 			DEV9write16(mem & ~0xa4000000, value);
-			SysPrintf("DEV9 write16 %8.8lx: %4.4lx\n", mem & ~0xa4000000, value);
+			Console::WriteLn("DEV9 write16 %8.8lx: %4.4lx", params mem & ~0xa4000000, value);
 			return;
 		case 8: // spu2
 			SPU2write(mem, value); return;
@@ -404,7 +404,7 @@ void __fastcall _ext_memWrite32(u32 mem, u32 value)
 			gsWrite32(mem, value); return;
 		case 7: // dev9
 			DEV9write32(mem & ~0xa4000000, value);
-			SysPrintf("DEV9 write32 %8.8lx: %8.8lx\n", mem & ~0xa4000000, value);
+			Console::WriteLn("DEV9 write32 %8.8lx: %8.8lx", params mem & ~0xa4000000, value);
 			return;
 	}
 	MEM_LOG("Unknown Memory write32  to  address %x with data %8.8x\n", mem, value);
@@ -588,7 +588,7 @@ void __fastcall vuMicroWrite128(u32 addr,const mem128_t* data)
 
 void memSetPageAddr(u32 vaddr, u32 paddr) 
 {
-	//SysPrintf("memSetPageAddr: %8.8x -> %8.8x\n", vaddr, paddr);
+	//Console::WriteLn("memSetPageAddr: %8.8x -> %8.8x", params vaddr, paddr);
 
 	vtlb_VMap(vaddr,paddr,0x1000);
 
@@ -596,7 +596,7 @@ void memSetPageAddr(u32 vaddr, u32 paddr)
 
 void memClearPageAddr(u32 vaddr) 
 {
-	//SysPrintf("memClearPageAddr: %8.8x\n", vaddr);
+	//Console::WriteLn("memClearPageAddr: %8.8x", params vaddr);
 
 	vtlb_VMapUnmap(vaddr,0x1000); // -> whut ?
 

@@ -174,7 +174,7 @@ static void __fastcall _rcntTestTarget( int i )
 		psxCounters[i].count -= psxCounters[i].target;
 		if(!(psxCounters[i].mode & 0x40))
 		{
-			SysPrintf("Counter %x repeat intr not set on zero ret, ignoring target\n", i);
+			Console::WriteLn("Counter %x repeat intr not set on zero ret, ignoring target", params i);
 			psxCounters[i].target |= IOPCNT_FUTURE_TARGET;
 		}
 	} else psxCounters[i].target |= IOPCNT_FUTURE_TARGET;
@@ -563,7 +563,7 @@ void psxRcnt2Wmode(u32 value)
 
 	if((psxCounters[2].mode & 0x7) == 0x7 || (psxCounters[2].mode & 0x7) == 0x1)
 	{
-		//SysPrintf("Gate set on IOP C2, disabling\n");
+		//Console::WriteLn("Gate set on IOP C2, disabling");
 		psxCounters[2].mode |= IOPCNT_STOPPED;
 	}
 	
@@ -614,7 +614,7 @@ void psxRcnt4Wmode(u32 value)
 	// Need to set a rate and target
 	if((psxCounters[4].mode & 0x7) == 0x7 || (psxCounters[4].mode & 0x7) == 0x1)
 	{
-		SysPrintf("Gate set on IOP C4, disabling\n");
+		Console::WriteLn("Gate set on IOP C4, disabling");
 		psxCounters[4].mode |= IOPCNT_STOPPED;
 	}
 	
@@ -641,7 +641,7 @@ void psxRcnt5Wmode(u32 value)
 	// Need to set a rate and target
 	if((psxCounters[5].mode & 0x7) == 0x7 || (psxCounters[5].mode & 0x7) == 0x1)
 	{
-		SysPrintf("Gate set on IOP C5, disabling\n");
+		Console::WriteLn("Gate set on IOP C5, disabling");
 		psxCounters[5].mode |= IOPCNT_STOPPED;
 	}
 	

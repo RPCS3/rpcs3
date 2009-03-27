@@ -220,7 +220,7 @@ __forceinline void _cpuTestMissingINTC() {
 	if (cpuRegs.CP0.n.Status.val & 0x400 &&
 		psHu32(INTC_STAT) & psHu32(INTC_MASK)) {
 		if ((cpuRegs.interrupt & (1 << 30)) == 0) {
-			SysPrintf("*PCSX2*: Error, missing INTC Interrupt\n");
+			Console::Error("*PCSX2*: Error, missing INTC Interrupt");
 		}
 	}
 }
@@ -230,7 +230,7 @@ __forceinline void _cpuTestMissingDMAC() {
 		(psHu16(0xe012) & psHu16(0xe010) || 
 		 psHu16(0xe010) & 0x8000)) {
 		if ((cpuRegs.interrupt & (1 << 31)) == 0) {
-			SysPrintf("*PCSX2*: Error, missing DMAC Interrupt\n");
+			Console::Error("*PCSX2*: Error, missing DMAC Interrupt");
 		}
 	}
 }

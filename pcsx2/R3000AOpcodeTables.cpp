@@ -159,7 +159,7 @@ void psxSYSCALL() {
 }
 
 void psxRFE() {
-//	SysPrintf("RFE\n");
+//	Console::WriteLn("RFE\n");
 	psxRegs.CP0.n.Status = (psxRegs.CP0.n.Status & 0xfffffff0) |
 						  ((psxRegs.CP0.n.Status & 0x3c) >> 2);
 //	Log=0;
@@ -299,11 +299,11 @@ void psxMTC0() { _rFs_ = _u32(_rRt_); }
 void psxCTC0() { _rFs_ = _u32(_rRt_); }
 
 /*********************************************************
-* Unknow instruction (would generate an exception)       *
+* Unknown instruction (would generate an exception)       *
 * Format:  ?                                             *
 *********************************************************/
 void psxNULL() { 
-SysPrintf("psx: Unimplemented op %x\n", psxRegs.code);
+Console::Notice("psx: Unimplemented op %x", params psxRegs.code);
 }
 
 void psxSPECIAL() {

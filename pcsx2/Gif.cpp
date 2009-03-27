@@ -39,7 +39,7 @@ __forceinline void gsInterrupt() {
 	GIF_LOG("gsInterrupt: %8.8x\n", cpuRegs.cycle);
 
 	if((gif->chcr & 0x100) == 0){
-		//SysPrintf("Eh? why are you still interrupting! chcr %x, qwc %x, done = %x\n", gif->chcr, gif->qwc, done);
+		//Console::WriteLn("Eh? why are you still interrupting! chcr %x, qwc %x, done = %x", params gif->chcr, gif->qwc, done);
 		return;
 	}
 	if(gif->qwc > 0 || gspath3done == 0) {
@@ -52,7 +52,7 @@ __forceinline void gsInterrupt() {
 
 		GIFdma();
 #ifdef GSPATH3FIX
-		// re-reaise the IRQ as part of the mysterious Path3fix.
+		// re-raise the IRQ as part of the mysterious Path3fix.
 		// fixme - this hack *should* have the gs_irq raised from the VIF, I think.  It would be
 		// more efficient and more correct.  (air)
 		/*if (!(vif1Regs->mskpath3 && (vif1ch->chcr & 0x100)) || (psHu32(GIF_MODE) & 0x1))
@@ -103,12 +103,11 @@ static void WRITERING_DMA(u32 *pMem, u32 qwc)
 	else 
 	{ 
 		GSGIFTRANSFER3(pMem, qwc);
-        if( GSgetLastTag != NULL )
+		if( GSgetLastTag != NULL )
 		{ 
-            GSgetLastTag(&s_gstag); 
-            if( s_gstag == 1 )
-                Path3transfer = 0; /* fixes SRS and others */ 
-        } 
+			GSgetLastTag(&s_gstag); 
+			if( s_gstag == 1 ) Path3transfer = 0; /* fixes SRS and others */ 
+		} 
 	} 
 } 
 
@@ -158,7 +157,7 @@ void GIFdma()
 	gscycles= prevcycles ? prevcycles: gscycles;
 
 	if( (psHu32(GIF_CTRL) & 8) ) { // temporarily stop
-		SysPrintf("Gif dma temp paused?\n");
+		Console::WriteLn("Gif dma temp paused?");
 		return;
 	}
 
@@ -176,7 +175,7 @@ void GIFdma()
 #endif
 
 	if ((psHu32(DMAC_CTRL) & 0xC0) == 0x80 && prevcycles != 0) { // STD == GIF
-		SysPrintf("GS Stall Control Source = %x, Drain = %x\n MADR = %x, STADR = %x", (psHu32(0xe000) >> 4) & 0x3, (psHu32(0xe000) >> 6) & 0x3, gif->madr, psHu32(DMAC_STADR));
+		Console::WriteLn("GS Stall Control Source = %x, Drain = %x\n MADR = %x, STADR = %x", params (psHu32(0xe000) >> 4) & 0x3, (psHu32(0xe000) >> 6) & 0x3, gif->madr, psHu32(DMAC_STADR));
 
 		if( gif->madr + (gif->qwc * 16) > psHu32(DMAC_STADR) ) {
 			CPU_INT(2, gscycles);
@@ -212,7 +211,7 @@ void GIFdma()
 
 				if ((gif->chcr & 0x80) && ptag[0] >> 31) {			 //Check TIE bit of CHCR and IRQ bit of tag
 					GIF_LOG("PATH3 MSK dmaIrq Set\n");
-					SysPrintf("GIF TIE\n");
+					Console::WriteLn("GIF TIE");
 					gspath3done |= 1;
 				}
 			}
@@ -225,7 +224,7 @@ void GIFdma()
 		FreezeRegs(0); // Theres a comment below that says not to unfreeze the xmm regs, so not sure about this.
 
 		if((gspath3done == 1 || (gif->chcr & 0xc) == 0) && gif->qwc == 0){ 
-			if(gif->qwc > 0) SysPrintf("Hurray\n");
+			if(gif->qwc > 0) Console::WriteLn("Hurray!");
 			gspath3done = 0;
 			gif->chcr &= ~0x100;
 			//psHu32(GIF_MODE)&= ~0x4;
@@ -244,7 +243,7 @@ void GIFdma()
 	if ((gif->chcr & 0xc) == 0 || gif->qwc > 0) { // Normal Mode
 		//gscount++;
 		if ((psHu32(DMAC_CTRL) & 0xC0) == 0x80 && (gif->chcr & 0xc) == 0) { 
-			SysPrintf("DMA Stall Control on GIF normal\n");
+			Console::WriteLn("DMA Stall Control on GIF normal");
 		}
 		FreezeRegs(1);  
 		GIFchain();	//Transfers the data set by the switch
@@ -272,7 +271,7 @@ void GIFdma()
 			// Transfer dma tag if tte is set
 			if (gif->chcr & 0x40) {
 				//u32 temptag[4] = {0};
-				//SysPrintf("GIF TTE: %x_%x\n", ptag[3], ptag[2]);
+				//Console::WriteLn("GIF TTE: %x_%x", params ptag[3], ptag[2]);
 
 				//temptag[0] = ptag[2];
 				//temptag[1] = ptag[3];
@@ -292,7 +291,7 @@ void GIFdma()
 				// there are still bugs, need to also check if gif->madr +16*qwc >= stadr, if not, stall
 				if(!gspath3done && gif->madr + (gif->qwc * 16) > psHu32(DMAC_STADR) && id == 4) {
 					// stalled
-					SysPrintf("GS Stall Control Source = %x, Drain = %x\n MADR = %x, STADR = %x", (psHu32(0xe000) >> 4) & 0x3, (psHu32(0xe000) >> 6) & 0x3,gif->madr, psHu32(DMAC_STADR));
+					Console::WriteLn("GS Stall Control Source = %x, Drain = %x\n MADR = %x, STADR = %x", params (psHu32(0xe000) >> 4) & 0x3, (psHu32(0xe000) >> 6) & 0x3,gif->madr, psHu32(DMAC_STADR));
 					prevcycles = gscycles;
 					gif->tadr -= 16;
 					hwDmacIrq(13);
@@ -346,12 +345,8 @@ void dmaGIF() {
 	//	CPU_INT(2, 48); //Wait time for the buffer to fill, fixes some timing problems in path 3 masking
 	//}				//It takes the time of 24 QW for the BUS to become ready - The Punisher, And1 Streetball
 	//else
-	
-
-	
-
 	if ((psHu32(DMAC_CTRL) & 0xC) == 0xC ) { // GIF MFIFO
-		SysPrintf("GIF MFIFO\n");
+		Console::WriteLn("GIF MFIFO");
 		gifMFIFOInterrupt();
 		return;
 	}
@@ -381,7 +376,7 @@ void dmaGIF() {
 	}
 
 	if(gif->qwc > 0 && (gif->chcr & 0x4) == 0x4) {
-		//SysPrintf("HL Hack\n");
+		//Console::WriteLn("HL Hack");
         gspath3done = 1; //Halflife sets a QWC amount in chain mode, no tadr set.
 		if((psHu32(GIF_MODE) & 0x4) && gif->qwc != 0)
 		{
@@ -393,9 +388,7 @@ void dmaGIF() {
 		}
 		return;
 	}
-
 	
-
 	//GIFdma();
 	if((psHu32(GIF_MODE) & 0x4) && gif->qwc != 0)
 	{
@@ -405,7 +398,6 @@ void dmaGIF() {
 	{
 		CPU_INT(2, gif->qwc /** BIAS*/);
 	}
-	
 }
 
 #define spr0 ((DMACh*)&PS2MEM_HW[0xD000])
@@ -429,9 +421,9 @@ static __forceinline int mfifoGIFrbTransfer() {
 	int mfifoqwc = min(gifqwc, qwc);
 	u32 *src;
 
-
 	/* Check if the transfer should wrap around the ring buffer */
-	if ((gif->madr+mfifoqwc*16) > (psHu32(DMAC_RBOR) + psHu32(DMAC_RBSR)+16)) {
+	if ((gif->madr+mfifoqwc*16) > (psHu32(DMAC_RBOR) + psHu32(DMAC_RBSR)+16)) 
+	{
 		int s1 = ((psHu32(DMAC_RBOR) + psHu32(DMAC_RBSR)+16) - gif->madr) >> 4;
 
 		// fixme - I don't think these should use WRITERING_DMA, since our source
@@ -447,7 +439,9 @@ static __forceinline int mfifoGIFrbTransfer() {
 		if (src == NULL) return -1;
 		WRITERING_DMA(src, (mfifoqwc - s1));
 		
-	} else {
+	} 
+	else 
+	{
 		/* it doesn't, so just transfer 'qwc*16' words 
 		   from 'gif->madr' to GS */
 		src = (u32*)PSM(gif->madr);
@@ -473,9 +467,12 @@ static __forceinline int mfifoGIFchain() {
 	if (gif->qwc == 0) return 0;
 	
 	if (gif->madr >= psHu32(DMAC_RBOR) &&
-		gif->madr <= (psHu32(DMAC_RBOR)+psHu32(DMAC_RBSR))) {
+		gif->madr <= (psHu32(DMAC_RBOR)+psHu32(DMAC_RBSR))) 
+	{
 		if (mfifoGIFrbTransfer() == -1) return -1;
-	} else {
+	} 
+	else 
+	{
 		int mfifoqwc = (psHu32(GIF_MODE) & 0x4 && vif1Regs->mskpath3) ? min(8, (int)gif->qwc) : gif->qwc;
 		u32 *pMem = (u32*)dmaGetAddr(gif->madr);
 		if (pMem == NULL) return -1;
@@ -511,7 +508,7 @@ void mfifoGIFtransfer(int qwc) {
 			if(gif->tadr == spr0->madr) {
 	#ifdef PCSX2_DEVBUILD
 				/*if( gifqwc > 1 )
-					SysPrintf("gif mfifo tadr==madr but qwc = %d\n", gifqwc);*/
+					Console::WriteLn("gif mfifo tadr==madr but qwc = %d", params gifqwc);*/
 	#endif
 				//hwDmacIrq(14);
 
@@ -520,7 +517,7 @@ void mfifoGIFtransfer(int qwc) {
 			gif->tadr = psHu32(DMAC_RBOR) + (gif->tadr & psHu32(DMAC_RBSR));
 			ptag = (u32*)dmaGetAddr(gif->tadr);
 			
-			id        = (ptag[0] >> 28) & 0x7;
+			id = (ptag[0] >> 28) & 0x7;
 			gif->qwc  = (ptag[0] & 0xffff);
 			gif->madr = ptag[1];
 			mfifocycles += 2;
@@ -569,7 +566,7 @@ void mfifoGIFtransfer(int qwc) {
 	 }
 	FreezeRegs(1); 
 		if (mfifoGIFchain() == -1) {
-			SysPrintf("GIF dmaChain error size=%d, madr=%lx, tadr=%lx\n",
+			Console::WriteLn("GIF dmaChain error size=%d, madr=%lx, tadr=%lx\n", params
 					gif->qwc, gif->madr, gif->tadr);
 			gifstate = GIF_STATE_STALL;
 		}
@@ -583,11 +580,11 @@ void mfifoGIFtransfer(int qwc) {
 
 void gifMFIFOInterrupt()
 {
-	if(!(gif->chcr & 0x100)) { SysPrintf("WTF GIFMFIFO\n");cpuRegs.interrupt &= ~(1 << 11); return ; }
+	if(!(gif->chcr & 0x100)) { Console::WriteLn("WTF GIFMFIFO");cpuRegs.interrupt &= ~(1 << 11); return ; }
 	
 	if(gifstate != GIF_STATE_STALL) {
 		if(gifqwc <= 0) {
-		//SysPrintf("Empty\n");
+		//Console::WriteLn("Empty");
 			psHu32(GIF_STAT)&= ~0xE00; // OPH=0 | APATH=0
 			hwDmacIrq(14);
 			return;
@@ -601,7 +598,7 @@ void gifMFIFOInterrupt()
 		return;
 	}
 #endif
-	//if(gifqwc > 0)SysPrintf("GIF MFIFO ending with stuff in it %x\n", gifqwc);
+	//if(gifqwc > 0) Console::WriteLn("GIF MFIFO ending with stuff in it %x", params gifqwc);
 	if( gifmfifoirq == 0) gifqwc = 0;
 	gifstate = GIF_STATE_EMPTY;
 	gif->chcr &= ~0x100;
