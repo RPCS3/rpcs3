@@ -2720,8 +2720,7 @@ void _vuRegsFSSET(VURegs * VU, _VURegsNum *VUregsn) {
     VUregsn->VFread0 = 0;
     VUregsn->VFread1 = 0;
     VUregsn->VIwrite = 1 << REG_STATUS_FLAG;
-	//VUregsn->VIread  = 0; // 1 << REG_STATUS_FLAG; this kills speed. Todo: Orly? (rama)
-    VUregsn->VIread  = 1 << REG_STATUS_FLAG;
+	VUregsn->VIread  = 0;
 }
 
 void _vuRegsFMAND(VURegs * VU, _VURegsNum *VUregsn) {
