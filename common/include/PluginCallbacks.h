@@ -27,6 +27,7 @@ typedef u32  (CALLBACK* _PS2EgetLibType)(void);
 typedef u32  (CALLBACK* _PS2EgetLibVersion2)(u32 type);
 typedef char*(CALLBACK* _PS2EgetLibName)(void);
 typedef void (CALLBACK* _PS2EpassConfig)(PcsxConfig *Config);
+typedef void (CALLBACK* _PS2EpassIniPath)(const char *path);
 
 // GS
 // NOTE: GSreadFIFOX/GSwriteCSR functions CANNOT use XMM/MMX regs

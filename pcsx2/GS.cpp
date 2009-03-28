@@ -32,13 +32,6 @@ using namespace std;
 
 using namespace R5900;
 
-// This should be done properly with the other logs.
-#ifdef DEBUG
-#define MTGS_LOG SysPrintf
-#else
-#define MTGS_LOG 0&&
-#endif
-
 static bool m_gsOpened = false;
 
 #ifdef PCSX2_DEVBUILD

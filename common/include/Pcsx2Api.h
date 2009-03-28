@@ -52,6 +52,10 @@ EXPORT_C(char*) PS2EgetLibName(void);
 // Intended for them to get the ini and plugin paths, but could allow for other things as well.
 EXPORT_C_(void) PS2EpassConfig(PcsxConfig Config);
 
+// Alternately, this function serves the same purpose, but would work for emulators outside
+// of pcsx2.
+EXPORT_C_(void) PS2EpassIniPath(const char *path);
+
 // PS2EgetLibType returns (may be OR'd)
 enum {
 PS2E_LT_GS =  0x01,

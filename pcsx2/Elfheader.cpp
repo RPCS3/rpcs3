@@ -584,9 +584,9 @@ void LoadGameSpecificSettings()
 		case 0xb99379b7: // erementar gerad (discolored chars)
 			g_VUGameFixes |= VUFIX_XGKICKDELAY2; // Tested - still needed - arcum42
 			break;
-		case 0xa08c4057:  //Sprint Cars (SLUS)
-		case 0x8b0725d5:  //Flinstones Bedrock Racing (SLES)
-			path3hack = 1; // We can move this to patch files right now
-			break;		
+		//case 0xa08c4057:  //Sprint Cars (SLUS)
+		//case 0x8b0725d5:  //Flinstones Bedrock Racing (SLES)
+			//path3hack = 1; // We can move this to patch files right now
+			//break;		
 	}
 }
