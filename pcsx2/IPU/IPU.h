@@ -255,6 +255,8 @@ extern void IPUProcessInterrupt();
 extern void ipu0Interrupt();
 extern void ipu1Interrupt();
 
+extern void dmaIPU0();
+extern void dmaIPU1();
 extern u16 __fastcall FillInternalBuffer(u32 * pointer, u32 advance, u32 size);
 extern u8 __fastcall getBits32(u8 *address, u32 advance);
 extern u8 __fastcall getBits16(u8 *address, u32 advance);
