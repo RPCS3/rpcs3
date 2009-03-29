@@ -83,6 +83,8 @@ typedef s32  (CALLBACK* _PADfreeze)(u8 mode, freezeData *data);
 typedef void (CALLBACK* _PADconfigure)();
 typedef s32  (CALLBACK* _PADtest)();
 typedef void (CALLBACK* _PADabout)();
+typedef s32  (CALLBACK* _PADsetSlot)(u8 port, u8 slot);
+typedef s32  (CALLBACK* _PADqueryMtap)(u8 port);
 
 // SIO
 typedef s32  (CALLBACK* _SIOinit)(int types, SIOchangeSlotCB f);

@@ -1378,10 +1378,14 @@ extern "C" long _cdecl _ftol2() {
 }
 #endif
 
-s32 CALLBACK PADsetSlot(int port, int slot) {
-	port --;
-	slot --;
-	if ((unsigned int)port > 1 || (unsigned int)slot > 3) return 0;
+s32 CALLBACK PADqueryMtap(u8 port) {
+	return config.multitap[port];
+}
+
+s32 CALLBACK PADsetSlot(u8 port, u8 slot) {
+	port--;
+	slot--;
+	if (port > 1 || slot > 3) return 0;
 	// Even if no pad there, record the slot, as it is the active slot regardless.
 	slots[port] = slot;
 	return pads[port][slot].enabled;

@@ -548,7 +548,9 @@ typedef void (CALLBACK* _PADgsDriverInfo)(GSdriverInfo *info);
 typedef void (CALLBACK* _PADconfigure)();
 typedef s32  (CALLBACK* _PADtest)();
 typedef void (CALLBACK* _PADabout)();
-typedef int (CALLBACK* _PADfreeze)(int mode, freezeData *data);
+typedef int  (CALLBACK* _PADfreeze)(int mode, freezeData *data);
+typedef s32  (CALLBACK* _PADsetSlot)(u8 port, u8 slot);
+typedef s32  (CALLBACK* _PADqueryMtap)(u8 port);
 
 // SIO
 typedef s32  (CALLBACK* _SIOinit)(u32 port, u32 slot, SIOchangeSlotCB f);
@@ -734,6 +736,8 @@ extern _PADconfigure      PAD1configure;
 extern _PADtest           PAD1test;
 extern _PADabout          PAD1about;
 extern _PADfreeze         PAD1freeze;
+extern _PADsetSlot        PAD1setSlot;
+extern _PADqueryMtap      PAD1queryMtap;
 
 // PAD2
 extern _PADinit           PAD2init;
@@ -751,6 +755,8 @@ extern _PADconfigure      PAD2configure;
 extern _PADtest           PAD2test;
 extern _PADabout          PAD2about;
 extern _PADfreeze         PAD2freeze;
+extern _PADsetSlot        PAD2setSlot;
+extern _PADqueryMtap      PAD2queryMtap;
 
 // SIO[2]
 extern _SIOinit           SIOinit[2][9];
