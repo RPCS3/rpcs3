@@ -430,11 +430,9 @@ void SIO_CommandWrite(u8 value,int way) {
 			return;
 	}
 
-	static int test;
 	switch (sio.mtapst)
 	{
 		case 0x1:
-			test = value;
 			sio.packetsize++;
 			sio.parp = 1;
 			SIO_INT();
@@ -474,6 +472,7 @@ void SIO_CommandWrite(u8 value,int way) {
 			SIO_INT();
 			return;
 		case 0x21:
+			// Set pad slot.
 			sio.packetsize++;
 			sio.parp++;
 			sio.mtapst = 2;
@@ -492,11 +491,14 @@ void SIO_CommandWrite(u8 value,int way) {
 			SIO_INT();
 			return;
 		case 0x22:
+			// Set memcard slot.
 			sio.packetsize++;
 			sio.parp++;
 			sio.mtapst = 2;
 			switch (sio.CtrlReg&0x2002) {
 				case 0x0002:
+					// Not sure if these checks are absolutely needed, but
+					// prefer to be safe.
 					if (IsMtapPresent(1))
 						sio.activeMemcardSlot[0] = value;
 					break;
@@ -626,6 +628,9 @@ void InitializeSIO(u8 value)
 
 			if( sio.activeMemcardSlot[mcidx] )
 			{
+				// Might want to more agressively declare a card's non-existence here.
+				// As non-zero slots always report a failure, and have to read
+				// the FAT before writing, think this should be fine.
 				sio2.packet.recvVal1 = 0x1D100;
 				PAD_LOG( "START MEMCARD[%d][%d] - Only one memcard supported per slot - reported as missing.", sio.GetMemcardIndex(), sio.activeMemcardSlot[mcidx]);
 			}
