@@ -571,7 +571,7 @@ int loadElfFile(const char *filename)
 }
 
 #include "VU.h"
-extern int path3hack;
+extern bool path3hack;
 int g_VUGameFixes = 0;
 
 // fixme - this should be moved to patches or eliminated
@@ -586,7 +586,7 @@ void LoadGameSpecificSettings()
 			break;
 		//case 0xa08c4057:  //Sprint Cars (SLUS)
 		//case 0x8b0725d5:  //Flinstones Bedrock Racing (SLES)
-			//path3hack = 1; // We can move this to patch files right now
+			//path3hack = TRUE; // We can move this to patch files right now
 			//break;		
 	}
 }

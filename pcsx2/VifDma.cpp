@@ -66,7 +66,7 @@ static const unsigned int VIF0dmanum = 0;
 static const unsigned int VIF1dmanum = 1;
 
 int g_vifCycles = 0;
-int path3hack = 0;
+bool path3hack = FALSE;
 
 typedef void (__fastcall *UNPACKFUNCTYPE)( u32 *dest, u32 *data, int size );
 typedef int  (*UNPACKPARTFUNCTYPESSE)( u32 *dest, u32 *data, int size );
@@ -1630,7 +1630,7 @@ static int  __fastcall Vif1TransUnpack(u32 *data){
 // Vif1 CMD Base Commands
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 int transferred = 0;
-int Path3transfer=0;
+bool Path3transfer = FALSE;
 static void Vif1CMDNop(){ // NOP
 	vif1.cmd &= ~0x7f;
 }
@@ -1669,11 +1669,11 @@ static void Vif1CMDMskPath3(){ // MSKPATH3
 	{
 		while((gif->chcr & 0x100)) //Can be done 2 different ways, depends on the game/company 
 		{
-			if ((path3hack == 0) && (Path3transfer == 0) && (gif->qwc == 0)) break;
+			if (!path3hack && !Path3transfer && (gif->qwc == 0)) break;
 			
 			gsInterrupt();
 
-			if ((path3hack == 1) && (gif->qwc == 0)) break; //add games not working with it to elfheader.c to enable this instead
+			if (path3hack && (gif->qwc == 0)) break; //add games not working with it to elfheader.c to enable this instead
 		}
 		//while(gif->chcr & 0x100) gsInterrupt();		// Finish the transfer first
 		psHu32(GIF_STAT) |= 0x2;
@@ -1709,7 +1709,7 @@ static void Vif1CMDFlush(){ // FLUSH/E/A
 
 	if((vif1.cmd & 0x7f) == 0x13) {
 		while((gif->chcr & 0x100)){
-			if(Path3transfer == 0 && gif->qwc == 0) break;
+			if (!Path3transfer && gif->qwc == 0) break;
 			gsInterrupt();
 		}
 	}

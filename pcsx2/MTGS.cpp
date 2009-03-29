@@ -290,7 +290,7 @@ __forceinline u32 mtgsThreadObject::_gifTransferDummy( GIF_PATH pathidx, const u
 			--size;
 
 			if(pathidx == 2 && path.tag.eop)
-				Path3transfer = 0;
+				Path3transfer = FALSE;
 
 			if( pathidx == 0 ) 
 			{                        

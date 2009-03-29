@@ -41,36 +41,33 @@ coroutine* g_pCurrentRoutine;
 
 coroutine_t so_create(void (*func)(void *), void *data, void *stack, int size)
 {
-    void* endstack;
-    int alloc = 0; // r = CO_STK_COROSIZE;
+	void* endstack;
+	int alloc = 0; // r = CO_STK_COROSIZE;
 	coroutine *co;
 
-    if ((size &= ~(sizeof(long) - 1)) < CO_MIN_SIZE)
-		return NULL;
+	if ((size &= ~(sizeof(long) - 1)) < CO_MIN_SIZE) return NULL;
 	if (!stack) {
 		size = (size + sizeof(coroutine) + CO_STK_ALIGN - 1) & ~(CO_STK_ALIGN - 1);
 		stack = malloc(size);
-		if (!stack)
-			return NULL;
+		if (!stack) return NULL;
 		alloc = size;
 	}
-    endstack = (char*)stack + size - 64;
+	endstack = (char*)stack + size - 64;
 	co = (coroutine*)stack;
 	stack = (char *) stack + CO_STK_COROSIZE;
 	*(void**)endstack = NULL;
 	*(void**)((char*)endstack+sizeof(void*)) = data;
 	co->alloc = alloc;
 	co->pcalladdr = (void*)func;
-    co->pcurstack = endstack;
-    return co;
+	co->pcurstack = endstack;
+	return co;
 }
 
 void so_delete(coroutine_t coro)
 {
-    coroutine *co = (coroutine *) coro;
-    assert( co != NULL );
-	if (co->alloc)
-		free(co);
+	coroutine *co = (coroutine *) coro;
+	assert( co != NULL );
+	if (co->alloc) free(co);
 }
 
 // see acoroutines.S and acoroutines.asm for other asm implementations

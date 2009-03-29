@@ -109,7 +109,7 @@ int AddPatch(int Mode, int Place, int Address, int Size, u64 data);
 
 extern void SetFastMemory(int); // iR5900LoadStore.c
 
-extern int path3hack;
+extern bool path3hack;
 //extern int g_VUGameFixes;
 extern int g_ZeroGSOptions;
 extern u32 g_sseMXCSR;

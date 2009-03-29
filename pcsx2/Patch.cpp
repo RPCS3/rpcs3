@@ -675,7 +675,7 @@ void patchFunc_vunanmode( char * cmd, char * param )
 
 void patchFunc_path3hack( char * cmd, char * param )
 {
-	path3hack = 1;
+	path3hack = TRUE;
 }
 
 void patchFunc_roundmode( char * cmd, char * param )
