@@ -1379,6 +1379,8 @@ extern "C" long _cdecl _ftol2() {
 #endif
 
 s32 CALLBACK PADqueryMtap(u8 port) {
+	port--;
+	if (port > 1) return 0;
 	return config.multitap[port];
 }
 
