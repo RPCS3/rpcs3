@@ -61,6 +61,11 @@ struct _sio {
 	u32 k;
 	u32 count;
 
+	// Active pad slot for each port.  Not sure if these automatically reset after each read or not.
+	u8 activePadSlot[2];
+	// Active memcard slot for each port.  Not sure if these automatically reset after each read or not.
+	u8 activeMemcardSlot[2];
+
 	int GetMemcardIndex() const
 	{
 		return (CtrlReg&0x2000) >> 13;

@@ -5,12 +5,12 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2 of the License, or
  *  (at your option) any later version.
- *  
+ *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
- *  
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
@@ -72,6 +72,8 @@ _PADconfigure      PAD1configure;
 _PADtest           PAD1test;
 _PADabout          PAD1about;
 _PADfreeze         PAD1freeze;
+_PADsetSlot        PAD1setSlot;
+_PADqueryMtap      PAD1queryMtap;
 
 // PAD2
 _PADinit           PAD2init;
@@ -89,6 +91,8 @@ _PADconfigure      PAD2configure;
 _PADtest           PAD2test;
 _PADabout          PAD2about;
 _PADfreeze         PAD2freeze;
+_PADsetSlot        PAD2setSlot;
+_PADqueryMtap      PAD2queryMtap;
 
 // SIO[2]
 _SIOinit           SIOinit[2][9];
@@ -223,7 +227,7 @@ USBhandler usbHandler;
 	const char* errString = SysLibError(); \
 	Msgbox::Alert("%s: Error loading %hs: %s", params &filename, #name, errString); \
 	return -1; \
-} 
+}
 
 #define MapSymbol(name) MapSymbolVar(name,name)
 #define MapSymbol_Fallback(name,fallback) MapSymbolVar_Fallback(name,name,fallback)
@@ -332,7 +336,9 @@ void *PAD1plugin;
 void CALLBACK PAD1_configure() {}
 void CALLBACK PAD1_about() {}
 s32  CALLBACK PAD1_test() { return 0; }
-s32  CALLBACK PAD1_freeze(int mode, freezeData *data) { data->size = 0; return 0; }
+s32  CALLBACK PAD1_freeze(int mode, freezeData *data) { if (mode == FREEZE_SIZE) data->size = 0; return 0; }
+s32  CALLBACK PAD1_setSlot(u8 port, u8 slot) { return slot == 1; }
+s32  CALLBACK PAD1_queryMtap(u8 port) { return 0; }
 
 int LoadPAD1plugin(const string& filename) {
 	void *drv;
@@ -356,6 +362,8 @@ int LoadPAD1plugin(const string& filename) {
 	MapSymbolPAD_Fallback(PAD1,PAD,about);
 	MapSymbolPAD_Fallback(PAD1,PAD,test);
 	MapSymbolPAD_Fallback(PAD1,PAD,freeze);
+	MapSymbolPAD_Fallback(PAD1,PAD,setSlot);
+	MapSymbolPAD_Fallback(PAD1,PAD,queryMtap);
 
 	return 0;
 }
@@ -365,7 +373,9 @@ void *PAD2plugin;
 void CALLBACK PAD2_configure() {}
 void CALLBACK PAD2_about() {}
 s32  CALLBACK PAD2_test() { return 0; }
-s32  CALLBACK PAD2_freeze(int mode, freezeData *data) { data->size = 0; return 0; }
+s32  CALLBACK PAD2_freeze(int mode, freezeData *data) { if (mode == FREEZE_SIZE) data->size = 0; return 0; }
+s32  CALLBACK PAD2_setSlot(u8 port, u8 slot) { return slot == 1; }
+s32  CALLBACK PAD2_queryMtap(u8 port) { return 0; }
 
 int LoadPAD2plugin(const string& filename) {
 	void *drv;
@@ -389,6 +399,8 @@ int LoadPAD2plugin(const string& filename) {
 	MapSymbolPAD_Fallback(PAD2,PAD,about);
 	MapSymbolPAD_Fallback(PAD2,PAD,test);
 	MapSymbolPAD_Fallback(PAD2,PAD,freeze);
+	MapSymbolPAD_Fallback(PAD2,PAD,setSlot);
+	MapSymbolPAD_Fallback(PAD2,PAD,queryMtap);
 
 	return 0;
 }
@@ -413,11 +425,11 @@ int LoadSPU2plugin(const string& filename) {
 	MapSymbol_Error(SPU2close);
 	MapSymbol_Error(SPU2write);
 	MapSymbol_Error(SPU2read);
-	MapSymbol_Error(SPU2readDMA4Mem);     
-	MapSymbol_Error(SPU2writeDMA4Mem);   
+	MapSymbol_Error(SPU2readDMA4Mem);
+	MapSymbol_Error(SPU2writeDMA4Mem);
 	MapSymbol_Error(SPU2interruptDMA4);
-	MapSymbol_Error(SPU2readDMA7Mem);     
-	MapSymbol_Error(SPU2writeDMA7Mem);  
+	MapSymbol_Error(SPU2readDMA7Mem);
+	MapSymbol_Error(SPU2writeDMA7Mem);
 	MapSymbol_Error(SPU2interruptDMA7);
 	MapSymbol(SPU2setDMABaseAddr);
 	MapSymbol_Error(SPU2ReadMemAddr);
@@ -537,7 +549,7 @@ int LoadUSBplugin(const string& filename) {
 	MapSymbol_Error(USBirqCallback);
 	MapSymbol_Error(USBirqHandler);
 	MapSymbol_Error(USBsetRAM);
-	
+
 	MapSymbol(USBasync);
 
 	MapSymbol_Fallback(USBfreeze,USB_freeze);
@@ -659,7 +671,7 @@ void ShutdownPlugins()
 
 	if( GSshutdown != NULL )
 		GSshutdown();
-	
+
 	if( PAD1shutdown != NULL )
 		PAD1shutdown();
 	if( PAD2shutdown != NULL )
@@ -704,7 +716,7 @@ int OpenPlugins(const char* pTitleFilename)
 	chdir(MAIN_DIR);
 	chdir(Config.PluginsDir);
 
-	if( pTitleFilename != NULL && pTitleFilename[0] != '/' ) 
+	if( pTitleFilename != NULL && pTitleFilename[0] != '/' )
 	{
 		// because we are changing the dir, we have to set a new title if it is a relative dir
 		sprintf(pNewTitle, "%s/%s", file, pTitleFilename);
@@ -820,7 +832,7 @@ OpenError:
 void ClosePlugins( bool closegs )
 {
 	// Close pads first since they attatch to the GS's window.
-	
+
 	CLOSE_PLUGIN( PAD1 );
 	CLOSE_PLUGIN( PAD2 );
 
@@ -844,7 +856,7 @@ void ClosePlugins( bool closegs )
 	CLOSE_PLUGIN( USB );
 	CLOSE_PLUGIN( FW );
 	CLOSE_PLUGIN( SPU2 );
-	
+
 	// More special treatment for the GS.  It needs a complete shutdown and re-init
 	// or else it will tend to error out when we try to use it again.
 	if( 0 ) //closegs )
@@ -895,7 +907,7 @@ void ReleasePlugins()
 void PluginsResetGS()
 {
 	// PADs are tied to the GS window, so shut them down together with the GS.
-	
+
 	CLOSE_PLUGIN( PAD1 );
 	CLOSE_PLUGIN( PAD2 );
 
