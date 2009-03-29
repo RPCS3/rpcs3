@@ -572,7 +572,7 @@ void InitializeSIO(u8 value)
 					}
 					sio.bufcount = 3;
 					sio.buf[0] = 0xFF;
-					sio.buf[1] = 0x80;
+					sio.buf[1] = 0x80; // Have no idea if this is correct.  From PSX mtap.
 					sio.buf[2] = 0x5A;
 					sio2.packet.recvVal1 = 0x1100; // Mtap is connected :)
 					break;
@@ -585,7 +585,7 @@ void InitializeSIO(u8 value)
 					}
 					sio.bufcount = 3;
 					sio.buf[0] = 0xFF;
-					sio.buf[1] = 0x80;
+					sio.buf[1] = 0x80; // Have no idea if this is correct.  From PSX mtap.
 					sio.buf[2] = 0x5A;
 					sio2.packet.recvVal1 = 0x1100; // Mtap is connected :)
 					break;

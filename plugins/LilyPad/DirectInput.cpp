@@ -50,9 +50,6 @@ void ReleaseDirectInput() {
 			di8d.lpDI8 = 0;
 		}
 	}
-	else {
-		di8d.refCount=di8d.refCount;
-	}
 }
 
 static int StringToGUID(GUID *pg, wchar_t *dataw) {

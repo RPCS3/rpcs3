@@ -109,7 +109,7 @@ enum DeviceType {
 	NO_DEVICE = 0,
 	KEYBOARD =	1,
 	MOUSE =		2,
-	OTHER =	3
+	OTHER =		3
 };
 
 enum EffectType {

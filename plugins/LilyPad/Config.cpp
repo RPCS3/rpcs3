@@ -1444,7 +1444,7 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 					}
 				}
 			}
-			else if ((cmd >= ID_GUITAR_HERO && cmd <= ID_ANALOG) || cmd == ID_IGNORE) {// || cmd == ID_FORCE_FEEDBACK) {
+			else if ((cmd >= ID_LOCK_BUTTONS && cmd <= ID_ANALOG) || cmd == ID_IGNORE) {// || cmd == ID_FORCE_FEEDBACK) {
 				// Messes up things, unfortunately.
 				// End binding on a bunch of notification messages, and
 				// this will send a bunch.
@@ -1474,10 +1474,6 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 				Sleep(40);
 				dm->Update(&info);
 				dm->PostRead();
-				int w2 = timeGetTime();
-				if (dm->devices[0xe]->oldVirtualControlState[6] != 0x8000) {
-					dm->devices[0xe]->oldVirtualControlState[6]=dm->devices[0xe]->oldVirtualControlState[6];
-				}
 				SetTimer(hWnd, 1, 30, 0);
 			}
 			if (cmd == IDC_TURBO) {
@@ -1528,7 +1524,7 @@ void UpdatePadPages() {
 			psp.dwSize = sizeof(psp);
 			psp.dwFlags = PSP_USETITLE | PSP_PREMATURE;
 			psp.hInstance = hInst;
-			psp.pfnDlgProc = (DLGPROC) DialogProc;
+			psp.pfnDlgProc = DialogProc;
 			psp.lParam = port | (slot<<1);
 			psp.pszTitle = title;
 			if (config.padConfigs[port][slot].type != GuitarPad)
@@ -1545,20 +1541,6 @@ void UpdatePadPages() {
 	for (int i=0; i<count; i++) {
 		PropSheet_AddPage(hWndProp, pages[i]);
 	}
-}
-
-INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM lParam);
-
-HPROPSHEETPAGE CreateGeneralPage() {
-	PROPSHEETPAGE psp;
-	ZeroMemory(&psp, sizeof(psp));
-	psp.dwSize = sizeof(psp);
-	psp.dwFlags = PSP_USETITLE | PSP_PREMATURE;
-	psp.hInstance = hInst;
-	psp.pfnDlgProc = (DLGPROC) GeneralDialogProc;
-	psp.pszTitle = L"General";
-	psp.pszTemplate = MAKEINTRESOURCE(IDD_GENERAL);
-	return CreatePropertySheetPage(&psp);
 }
 
 int ListIndexToPortAndSlot (int index, int *port, int *slot) {
@@ -1579,6 +1561,9 @@ int ListIndexToPortAndSlot (int index, int *port, int *slot) {
 }
 
 void UpdatePadList(HWND hWnd) {
+	static u8 recurse = 0;
+	if (recurse) return;
+	recurse = 1;
 	HWND hWndList = GetDlgItem(hWnd, IDC_PAD_LIST);
 	HWND hWndCombo = GetDlgItem(hWnd, IDC_PAD_TYPE);
 	HWND hWndAnalog = GetDlgItem(hWnd, IDC_ANALOG_START1);
@@ -1641,6 +1626,8 @@ void UpdatePadList(HWND hWnd) {
 	}
 	EnableWindow(hWndCombo, enable);
 	EnableWindow(hWndAnalog, enable);
+	//ListView_SetExtendedListViewStyleEx(hWndList, LVS_EX_DOUBLEBUFFER|LVS_EX_ONECLICKACTIVATE, LVS_EX_DOUBLEBUFFER|LVS_EX_ONECLICKACTIVATE);
+	recurse = 0;
 }
 
 INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM lParam) {
@@ -1651,7 +1638,6 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 		{
 			HWND hWndCombo = GetDlgItem(hWnd, IDC_PAD_TYPE);
 			if (SendMessage(hWndCombo, CB_GETCOUNT, 0, 0) == 0) {
-				ListView_SetExtendedListViewStyleEx(hWndList, LVS_EX_DOUBLEBUFFER, LVS_EX_DOUBLEBUFFER);
 				LVCOLUMN c;
 				c.mask = LVCF_TEXT | LVCF_WIDTH;
 				c.cx = 50;
@@ -1664,6 +1650,7 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 				c.pszText = L"Bindings";
 				ListView_InsertColumn(hWndList, 2, &c);
 				selected = 0;
+				ListView_SetExtendedListViewStyleEx(hWndList, LVS_EX_FULLROWSELECT|LVS_EX_DOUBLEBUFFER, LVS_EX_FULLROWSELECT|LVS_EX_DOUBLEBUFFER);
 				SendMessage(hWndList, LVM_SETEXTENDEDLISTVIEWSTYLE, 0, LVS_EX_FULLROWSELECT);
 				SendMessage(hWndCombo, CB_ADDSTRING, 0, (LPARAM) L"Disabled");
 				SendMessage(hWndCombo, CB_ADDSTRING, 0, (LPARAM) L"Dualshock 2");
@@ -1850,8 +1837,57 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 				Diagnostics(hWnd);
 			}
 			else if (n->hdr.idFrom == IDC_PAD_LIST) {
-				if (n->hdr.code == NM_CLICK) {
+				if (n->hdr.code == LVN_ITEMCHANGED) {
 					UpdatePadList(hWnd);
+				}
+				if (n->hdr.code == NM_RCLICK) {
+					UpdatePadList(hWnd);
+					int index = ListView_GetNextItem(hWndList, -1, LVNI_SELECTED);
+					int port1, slot1, port2, slot2;
+					if (!ListIndexToPortAndSlot(index, &port1, &slot1)) break;
+					//HMENU hMenu = CreateMenu();
+					HMENU hMenu = CreatePopupMenu();
+					if (!hMenu) break;
+					for (port2=1; port2>=0; port2--) {
+						for (slot2 = 3; slot2>=0; slot2--) {
+							if (port2 == port1 && slot2 == slot1) continue;
+							wchar_t text[100];
+							if (!slot2)
+								wsprintf(text, L"Swap with Pad %i", port2+1);
+							else {
+								if (!config.multitap[port2]) continue;
+								wsprintf(text, L"Swap with Pad %i-%i", port2+1, slot2+1);
+							}
+							MENUITEMINFOW info;
+							memset(&info, 0, sizeof(info));
+							info.cbSize = sizeof(info);
+							info.fMask = MIIM_STRING | MIIM_ID;
+							info.wID = 0x10000 + port2+2*slot2;
+							info.dwTypeData = text;
+							info.cch = wcslen(text);
+							InsertMenuItemW(hMenu, 0, 1, &info);
+						}
+					}
+					POINT pos;
+					GetCursorPos(&pos);
+					int res = TrackPopupMenuEx(hMenu, TPM_NONOTIFY|TPM_RETURNCMD, pos.x, pos.y, hWndProp, 0);
+					DestroyMenu(hMenu);
+					if (res > 0) {
+						slot2 = res - 0x10000;
+						port2 = slot2&1;
+						slot2 >>= 1;
+						PadConfig padCfgTemp = config.padConfigs[port1][slot1];
+						config.padConfigs[port1][slot1] = config.padConfigs[port2][slot2];
+						config.padConfigs[port2][slot2] = padCfgTemp;
+						for (int i=0; i<dm->numDevices; i++) {
+							PadBindings bindings = dm->devices[i]->pads[port1][slot1];
+							dm->devices[i]->pads[port1][slot1] = dm->devices[i]->pads[port2][slot2];
+							dm->devices[i]->pads[port2][slot2] = bindings;
+						}
+						UpdatePadPages();
+						UpdatePadList(hWnd);
+						PropSheet_Changed(hWndProp, hWnd);
+					}
 				}
 			}
 		}
@@ -1872,8 +1908,15 @@ void CALLBACK PADconfigure() {
 	LoadSettings();
 	memset(hWnds, 0, sizeof(hWnds));
 
-	HPROPSHEETPAGE page;
-	page = CreateGeneralPage();
+	PROPSHEETPAGE psp;
+	ZeroMemory(&psp, sizeof(psp));
+	psp.dwSize = sizeof(psp);
+	psp.dwFlags = PSP_USETITLE | PSP_PREMATURE;
+	psp.hInstance = hInst;
+	psp.pfnDlgProc = GeneralDialogProc;
+	psp.pszTitle = L"General";
+	psp.pszTemplate = MAKEINTRESOURCE(IDD_GENERAL);
+	HPROPSHEETPAGE page = CreatePropertySheetPage(&psp);
 	if (!page) return;
 
 	PROPSHEETHEADER psh;
