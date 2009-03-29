@@ -31,6 +31,7 @@ extern "C" {
 }
 
 #include "Linux.h"
+#include "zerogs.h"
 
 #include <map>
 
@@ -272,9 +273,9 @@ void CALLBACK GSconfigure()
 	confOpts.value = 0x00000040;
 	confOpts.desc = "No color clamping - 00000040\nSpeeds up games, but might be too bright or too dim.";
 	mapConfOpts["00000040"] = confOpts;
-	confOpts.value = 0x00000080;
-	confOpts.desc = "FFX hack - 00000080\nShows missing geometry.";
-	mapConfOpts["00000080"] = confOpts;
+//	confOpts.value = 0x00000080;
+//	confOpts.desc = "FFX hack - 00000080\nShows missing geometry.";
+//	mapConfOpts["00000080"] = confOpts;
 	confOpts.value = 0x00000200;
 	confOpts.desc = "Disable depth updates - 00000200";
 	mapConfOpts["00000200"] = confOpts;
@@ -290,9 +291,9 @@ void CALLBACK GSconfigure()
 	confOpts.value = 0x00002000;
 	confOpts.desc = "Disable stencil buffer - 00002000\nUsually safe to do for simple scenes.";
 	mapConfOpts["00002000"] = confOpts;
-	confOpts.value = 0x00004000;
-	confOpts.desc = "No vertical stripes - 00004000\nTry when there's a lot of garbage on screen.";
-	mapConfOpts["00004000"] = confOpts;
+//	confOpts.value = 0x00004000;
+//	confOpts.desc = "No vertical stripes - 00004000\nTry when there's a lot of garbage on screen.";
+//	mapConfOpts["00004000"] = confOpts;
 	confOpts.value = 0x00008000;
 	confOpts.desc = "No depth resolve - 00008000\nMight give z buffer artifacts.";
 	mapConfOpts["00008000"] = confOpts;
@@ -314,6 +315,16 @@ void CALLBACK GSconfigure()
 	confOpts.value = 0x00200000;
 	confOpts.desc = "32 bit render targets - 00200000";
 	mapConfOpts["00200000"] = confOpts;
+	
+	confOpts.value = 0x00400000;
+	confOpts.desc = "Path 3 Hack - 00400000";
+	mapConfOpts["00400000"] = confOpts;
+	confOpts.value = 0x00800000;
+	confOpts.desc = "Parallelize Contexts - 00800000 (Might speed things up, xenosaga is faster)";
+	mapConfOpts["00800000"] = confOpts;
+	confOpts.value = 0x01000000;
+	confOpts.desc = "Specular Highlights - 01000000\nMakes xenosaga graphics faster by removing highlights";
+	mapConfOpts["01000000"] = confOpts;
 
 	for(map<string, confOptsStruct>::iterator it = mapConfOpts.begin(); it != mapConfOpts.end(); ++it) 
 	{
