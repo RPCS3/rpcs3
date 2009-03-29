@@ -183,7 +183,7 @@ void UpdateEnabledDevices(int updateList = 0) {
 	// Figure out which pads I'm getting input for.
 	for (int port = 0; port<2; port++) {
 		for (int slot = 0; slot<4; slot++) {
-			if (slot && !config.multitap[slot]) {
+			if (slot && !config.multitap[port]) {
 				pads[port][slot].enabled = 0;
 			}
 			else {
