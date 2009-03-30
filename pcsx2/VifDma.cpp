@@ -2065,9 +2065,12 @@ int VIF1transfer(u32 *data, int size, int istag)
 	{
 		transferred = transferred >> 2;
 		vif1ch->madr += (transferred << 4);
-		vif1ch->qwc -= transferred;
-		if (vif1ch->qwc == 0 && vif1.irqoffset == 0) vif1.inprogress = 0;
+		vif1ch->qwc -= transferred;		
 	}
+
+	if (vif1ch->qwc == 0 && (vif1.irqoffset == 0 || istag == 1))
+		vif1.inprogress = 0;
+
 	return 0;
 }
 
@@ -2213,6 +2216,8 @@ __forceinline void vif1SetupTransfer()
 				}
 			}
 
+			vif1.inprogress = 1;
+
 			if (vif1ch->chcr & 0x40)
 			{
 
@@ -2225,7 +2230,7 @@ __forceinline void vif1SetupTransfer()
 				if (ret == -2) return;        //IRQ set by VIFTransfer
 			}
 
-			vif1.inprogress = 1;
+			
 			vif1.done |= hwDmacSrcChainWithStack(vif1ch, id);
 
 			if ((vif1ch->chcr & 0x80) && (vif1ptag[0] >> 31))  			       //Check TIE bit of CHCR and IRQ bit of tag
@@ -2310,6 +2315,8 @@ void dmaVIF1()
 	g_vifCycles = 0;
 	vif1.inprogress = 0;
 
+	vif1Regs->stat |= 0x10000000; // FQC=16
+
 	if (((psHu32(DMAC_CTRL) & 0xC) == 0x8))   // VIF MFIFO
 	{
 		//Console::WriteLn("VIFMFIFO\n");
@@ -2325,8 +2332,7 @@ void dmaVIF1()
 	}
 #endif
 
-	vif1Regs->stat |= 0x10000000; // FQC=16
-
+	
 	if (!(vif1ch->chcr & 0x4) || vif1ch->qwc > 0)   // Normal Mode
 	{
 
