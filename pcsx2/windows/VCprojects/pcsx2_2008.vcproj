@@ -131,10 +131,8 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="0"
-				InlineFunctionExpansion="0"
+				Optimization="3"
 				FavorSizeOrSpeed="1"
-				WholeProgramOptimization="false"
 				AdditionalIncludeDirectories=""
 				PreprocessorDefinitions="NDEBUG"
 				StringPooling="true"

@@ -207,6 +207,7 @@ gzSavingState::gzSavingState( const string& filename ) :
 	if( m_file == NULL )
 		throw Exception::FileNotFound();
 
+	gzsetparams( m_file, Z_BEST_SPEED, Z_DEFAULT_STRATEGY );
 	Freeze( m_version );
 }
 

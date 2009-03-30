@@ -9,8 +9,7 @@
 		WholeProgramOptimization="false"
 		StringPooling="true"
 		MinimalRebuild="true"
-		EnableFunctionLevelLinking="true"
-		DebugInformationFormat="4"
+		DebugInformationFormat="3"
 	/>
 	<Tool
 		Name="VCLinkerTool"
