@@ -2411,6 +2411,7 @@ void vif1Write32(u32 mem, u32 value)
 			//   just stoppin the VIF (linuz).
 			vif1Regs->stat |= VIF1_STAT_VSS;
 			vif1Regs->stat &= ~VIF1_STAT_VPS;
+			vif1.inprogress = 0;
 			vif1.vifstalled = 1;
 		}
 		if (value & 0x8)
