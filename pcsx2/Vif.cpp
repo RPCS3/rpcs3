@@ -640,6 +640,8 @@ void mfifoVIF1transfer(int qwc)
 				CPU_INT(10, min((int)vifqwc, (int)vif1ch->qwc) * BIAS);
 			else
 				CPU_INT(10, vif1ch->qwc * BIAS);
+
+			vif1Regs->stat |= 0x10000000; // FQC=16
 		}
 		vif1.inprogress &= ~0x10;
 		SPR_LOG("Added %x qw to mfifo, total now %x - Vif CHCR %x Stalled %x done %x", qwc, vifqwc, vif1ch->chcr, vif1.vifstalled, vif1.done);
@@ -745,8 +747,9 @@ void vifMFIFOInterrupt()
 	{
 		if (vifqwc <= 0)
 		{
-			//Console::WriteLn("Empty");
+			//Console::WriteLn("Empty 1");
 			vif1.inprogress |= 0x10;
+			vif1Regs->stat &= ~0x1F000000; // FQC=0
 			hwDmacIrq(14);
 			return;
 		}
@@ -761,7 +764,9 @@ void vifMFIFOInterrupt()
 	}
 	else if (vifqwc <= 0)
 	{
-		//Console::WriteLn("Empty");
+		//Console::WriteLn("Empty 2");
+		vif1.inprogress |= 0x10;
+		vif1Regs->stat &= ~0x1F000000; // FQC=0
 		hwDmacIrq(14);
 	}
 

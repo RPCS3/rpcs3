@@ -2039,20 +2039,23 @@ int VIF1transfer(u32 *data, int size, int istag)
 
 	vif1.irqoffset = transferred % 4; // cannot lose the offset
 
+
 	if (vif1.irq && vif1.cmd == 0)
 	{
 		vif1.vifstalled = 1;
 
 		if (((vif1Regs->code >> 24) & 0x7f) != 0x7)vif1Regs->stat |= VIF1_STAT_VIS; // Note: commenting this out fixes WALL-E
 
+		if (vif1ch->qwc == 0 && (vif1.irqoffset == 0 || istag == 1))
+			vif1.inprogress = 0;
 		// spiderman doesn't break on qw boundaries
 
 		if (istag) return -2;
 
-
 		transferred = transferred >> 2;
 		vif1ch->madr += (transferred << 4);
 		vif1ch->qwc -= transferred;
+
 		if (vif1ch->qwc == 0 && vif1.irqoffset == 0) vif1.inprogress = 0;
 		//Console::WriteLn("Stall on vif1, FromSPR = %x, Vif1MADR = %x Sif0MADR = %x STADR = %x", params psHu32(0x1000d010), vif1ch->madr, psHu32(0x1000c010), psHu32(DMAC_STADR));
 		return -2;
@@ -2067,9 +2070,10 @@ int VIF1transfer(u32 *data, int size, int istag)
 		vif1ch->madr += (transferred << 4);
 		vif1ch->qwc -= transferred;		
 	}
-
+	
 	if (vif1ch->qwc == 0 && (vif1.irqoffset == 0 || istag == 1))
 		vif1.inprogress = 0;
+
 
 	return 0;
 }
@@ -2226,8 +2230,11 @@ __forceinline void vif1SetupTransfer()
 				else
 					ret = VIF1transfer(vif1ptag + 2, 2, 1);  //Transfer Tag
 
-				if (ret == -1) return;       //There has been an error
-				if (ret == -2) return;        //IRQ set by VIFTransfer
+				if (ret < 0) 
+				{
+					vif1.inprogress = 0; //Better clear this so it has to do it again (Jak 1)
+					return;       //There has been an error or an interrupt
+				}
 			}
 
 			
@@ -2251,8 +2258,6 @@ __forceinline void vif1Interrupt()
 
 	if ((vif1ch->chcr & 0x100) == 0) Console::WriteLn("Vif1 running when CHCR == %x", params vif1ch->chcr);
 
-	if (vif1.inprogress == 1) _VIF1chain();
-
 	if (vif1.irq && vif1.tag.size == 0)
 	{
 		vif1Regs->stat |= VIF1_STAT_INT;
@@ -2275,6 +2280,8 @@ __forceinline void vif1Interrupt()
 		}
 	}
 
+	if (vif1.inprogress == 1) _VIF1chain();
+
 	if (vif1.done == 0 || vif1.inprogress == 1)
 	{
 
@@ -2290,6 +2297,11 @@ __forceinline void vif1Interrupt()
 		return;
 	}
 	
+	if(vif1.vifstalled && vif1.irq) 
+	{
+		CPU_INT(1, 0);
+		return; //Dont want to end if vif is stalled.
+	}
 #ifdef PCSX2_DEVBUILD
 	if (vif1ch->qwc > 0) Console::WriteLn("VIF1 Ending with %x QWC left");
 	if (vif1.cmd != 0) Console::WriteLn("vif1.cmd still set %x", params vif1.cmd);
@@ -2319,7 +2331,7 @@ void dmaVIF1()
 
 	if (((psHu32(DMAC_CTRL) & 0xC) == 0x8))   // VIF MFIFO
 	{
-		//Console::WriteLn("VIFMFIFO\n");
+//		Console::WriteLn("VIFMFIFO\n");
 		if (!(vif1ch->chcr & 0x4)) Console::WriteLn("MFIFO mode != Chain! %x", params vif1ch->chcr);
 		vifMFIFOInterrupt();
 		return;
