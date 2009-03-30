@@ -22,7 +22,9 @@
 // mVUupdateFlags() - Updates status/mac flags
 //------------------------------------------------------------------
 
-#define AND_XYZW ((_XYZW_SS && modXYZW) ? (1) : (doMac ? (_X_Y_Z_W) : (flipMask[_X_Y_Z_W])))
+#define AND_XYZW			((_XYZW_SS && modXYZW) ? (1) : (doMac ? (_X_Y_Z_W) : (flipMask[_X_Y_Z_W])))
+#define ADD_XYZW			((_XYZW_SS && modXYZW) ? (_X ? 3 : (_Y ? 2 : (_Z ? 1 : 0))) : 0)
+#define SHIFT_XYZW(gprReg)	{ if (_XYZW_SS && modXYZW && !_W) { SHL16ItoR(gprReg, ADD_XYZW); } }
 
 // Note: If modXYZW is true, then it adjusts XYZW for Single Scalar operations
 microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modXYZW) {
@@ -31,14 +33,12 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 	static u8 *pjmp, *pjmp2;
 	static const int flipMask[16] = {0, 8, 4, 12, 2, 10, 6, 14, 1, 9, 5, 13, 3, 11, 7, 15};
 
-	//SysPrintf ("mVUupdateFlags\n");
-	if( !(doFlags) ) return;
-
+	if (!doFlags) return;
 	if (!doMac) { regT1 = reg; }
-	else SSE2_PSHUFD_XMM_to_XMM(regT1, reg, 0x1B); // Flip wzyx to xyzw
+	else		{ SSE2_PSHUFD_XMM_to_XMM(regT1, reg, 0x1B); } // Flip wzyx to xyzw
 	if (doStatus) {
 		getFlagReg(sReg, fsInstance); // Set sReg to valid GPR by Cur Flag Instance
-		mVUallocSFLAGa<vuIndex>(sReg, fpsInstance, 0); // Get Prev Status Flag
+		mVUallocSFLAGa<vuIndex>(sReg, fpsInstance); // Get Prev Status Flag
 		AND16ItoR(sReg, 0xff0); // Keep Sticky and D/I flags
 	}
 
@@ -54,7 +54,7 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 
 	AND16ItoR(mReg, AND_XYZW );  // Grab "Is Signed" bits from the previous calculation
 	pjmp = JZ8(0); // Skip if none are
-		if (doMac)	  SHL16ItoR(mReg, 4);
+		if (doMac)	  SHL16ItoR(mReg, 4 + ADD_XYZW);
 		if (doStatus) OR16ItoR(sReg, 0x82); // SS, S flags
 		if (_XYZW_SS) pjmp2 = JMP8(0); // If negative and not Zero, we can skip the Zero Flag checking
 	x86SetJ8(pjmp);
@@ -63,11 +63,11 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 
 	AND16ItoR(gprT2, AND_XYZW );  // Grab "Is Zero" bits from the previous calculation
 	pjmp = JZ8(0); // Skip if none are
-		if (doMac)	  OR32RtoR(mReg, gprT2);	
-		if (doStatus) OR16ItoR(sReg, 0x41); // ZS, Z flags		
+		if (doMac)	  { SHIFT_XYZW(gprT2); OR32RtoR(mReg, gprT2); }	
+		if (doStatus) { OR16ItoR(sReg, 0x41); } // ZS, Z flags		
 	x86SetJ8(pjmp);
 
-	//-------------------------Finally: Send the Flags to the Mac Flag Address------------------------------
+	//-------------------------Write back flags------------------------------
 
 	if (_XYZW_SS) x86SetJ8(pjmp2); // If we skipped the Zero Flag Checking, return here
 

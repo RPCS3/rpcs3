@@ -89,7 +89,7 @@ BEGIN
                     "Button",BS_AUTOCHECKBOX | WS_TABSTOP,14,65,252,10
     CONTROL         "VU Clip Hack - Fixes missing ground geometry in Persona.",IDC_GAMEFIX4,
                     "Button",BS_AUTOCHECKBOX | WS_TABSTOP,14,79,238,10
-    CONTROL         "FPU Mul Hack - Special fix for Tales of Destiny (possibly other games).",IDC_GAMEFIX5,
+    CONTROL         "FPU Mul Hack - Special fix for Tales of Destiny.",IDC_GAMEFIX5,
                     "Button",BS_AUTOCHECKBOX | WS_TABSTOP,14,50,249,10
 END
 

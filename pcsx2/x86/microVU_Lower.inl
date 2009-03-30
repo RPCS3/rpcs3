@@ -32,7 +32,6 @@ microVUf(void) mVU_DIV() {
 
 		getReg5(xmmFs, _Fs_, _Fsf_);
 		getReg5(xmmFt, _Ft_, _Ftf_);
-		mVUallocDFLAGa<vuIndex>(gprT2); // Get DS/IS flags
 
 		// FT can be zero here! so we need to check if its zero and set the correct flag.
 		SSE_XORPS_XMM_to_XMM(xmmT1, xmmT1); // Clear xmmT1
@@ -47,10 +46,10 @@ microVUf(void) mVU_DIV() {
 
 			AND32ItoR(gprT1, 1);  // Grab "Is Zero" bits from the previous calculation
 			pjmp = JZ8(0);
-				OR32ItoR(gprT2, 0x410); // Set invalid flag (0/0)
+				MOV32ItoM((uptr)&mVU->divFlag, 0x410); // Set invalid flag (0/0)
 				pjmp1 = JMP8(0);
 			x86SetJ8(pjmp);
-				OR32ItoR(gprT2, 0x820); // Zero divide (only when not 0/0)
+				MOV32ItoM((uptr)&mVU->divFlag, 0x820); // Zero divide (only when not 0/0)
 			x86SetJ8(pjmp1);
 
 			SSE_XORPS_XMM_to_XMM(xmmFs, xmmFt);
@@ -60,6 +59,7 @@ microVUf(void) mVU_DIV() {
 			bjmp32 = JMP32(0);
 		x86SetJ32(ajmp32);
 
+		MOV32ItoM((uptr)&mVU->divFlag, 0); // Clear I/D flags
 		SSE_DIVSS_XMM_to_XMM(xmmFs, xmmFt);
 		mVUclamp1<vuIndex>(xmmFs, xmmFt, 8);
 
@@ -67,7 +67,6 @@ microVUf(void) mVU_DIV() {
 
 		mVUunpack_xyzw<vuIndex>(xmmFs, xmmFs, 0);
 		mVUmergeRegs<vuIndex>(xmmPQ, xmmFs, writeQ ? 4 : 8);
-		mVUallocDFLAGb<vuIndex>(gprT2);
 	}
 }
 microVUf(void) mVU_SQRT() {
@@ -478,7 +477,7 @@ microVUf(void) mVU_FSAND() {
 	microVU* mVU = mVUx;
 	if (!recPass) {}
 	else { 
-		mVUallocSFLAGa<vuIndex>(gprT1, fvsInstance, !!(_Imm12_ & 0xc30));
+		mVUallocSFLAGa<vuIndex>(gprT1, fvsInstance);
 		AND16ItoR(gprT1, _Imm12_);
 		mVUallocVIb<vuIndex>(gprT1, _Ft_);
 	}
@@ -487,7 +486,7 @@ microVUf(void) mVU_FSEQ() {
 	microVU* mVU = mVUx;
 	if (!recPass) {}
 	else { 
-		mVUallocSFLAGa<vuIndex>(gprT1, fvsInstance, 1);
+		mVUallocSFLAGa<vuIndex>(gprT1, fvsInstance);
 		XOR16ItoR(gprT1, _Imm12_);
 		SUB16ItoR(gprT1, 1);
 		SHR16ItoR(gprT1, 15);
@@ -498,21 +497,21 @@ microVUf(void) mVU_FSOR() {
 	microVU* mVU = mVUx;
 	if (!recPass) {}
 	else { 
-		mVUallocSFLAGa<vuIndex>(gprT1, fvsInstance, !!((_Imm12_ & 0xc30) == 0xc30));
+		mVUallocSFLAGa<vuIndex>(gprT1, fvsInstance);
 		OR16ItoR(gprT1, _Imm12_);
 		mVUallocVIb<vuIndex>(gprT1, _Ft_);
 	}
 }
 microVUf(void) mVU_FSSET() {
 	microVU* mVU = mVUx;
-	if (!recPass) { mVUdivFlagT = 4; }
+	if (!recPass) {}
 	else { 
 		int flagReg;
 		getFlagReg(flagReg, fsInstance);
 		MOV16ItoR(gprT1, (_Imm12_ & 0xfc0));
-		if (_Imm12_ & 0xc00) { mVUdivFlag = _Imm12_ >> 9; }
-		else				 { mVUdivFlag = 1; }
-		mVUdivFlagT = 4;
+		//if (_Imm12_ & 0xc00) { mVUdivFlag = _Imm12_ >> 9; }
+		//else				 { mVUdivFlag = 1; }
+		//mVUdivFlagT = 4;
 	}
 }
 

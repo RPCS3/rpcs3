@@ -266,13 +266,13 @@ __declspec(naked) void __fastcall endVU0(u32 startPC, u32 cycles) {
 	}
 }
 #else
-extern "C"
-{
-extern void __fastcall startVU0(u32 startPC, u32 cycles);
-extern void __fastcall startVU1(u32 startPC, u32 cycles);
-extern void __fastcall endVU0(u32 startPC, u32 cycles);
+extern "C" {
+	extern void __fastcall startVU0(u32 startPC, u32 cycles);
+	extern void __fastcall startVU1(u32 startPC, u32 cycles);
+	extern void __fastcall endVU0(u32 startPC, u32 cycles);
 }
 #endif
+
 //------------------------------------------------------------------
 // Wrapper Functions - Called by other parts of the Emu
 //------------------------------------------------------------------

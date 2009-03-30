@@ -508,10 +508,6 @@ microVUt(void) mVUallocFMAC17a(int& Fs, int& Ft) {
 	getReg9(Ft, _Ft_);
 }
 
-microVUt(void) mVUallocFMAC17b(int& ACC, int& Fs) {
-	//mVUallocFMAC4b<vuIndex>(ACC, Fs);
-}
-
 //------------------------------------------------------------------
 // FMAC18 - OPMULA FMAC Opcode
 //------------------------------------------------------------------
@@ -678,20 +674,10 @@ microVUt(void) mVUallocFMAC26b(int& ACCw, int& ACCr) {
 	}  \
 }
 
-microVUt(void) mVUallocSFLAGa(int reg, int fInstance, bool mergeDivFlag) {
+microVUt(void) mVUallocSFLAGa(int reg, int fInstance) {
 	microVU* mVU = mVUx;
 	getFlagReg(fInstance, fInstance);
 	MOVZX32R16toR(reg, fInstance);
-	if (mergeDivFlag) {
-		if (mVUdivFlag && !mVUdivFlagT) {
-			AND32ItoR(reg, 0xc00);
-			if (mVUdivFlag > 1) { OR32ItoR(reg, (u32)((mVUdivFlag << 9) & 0xc00)); }
-		}
-		else {
-			AND32ItoR(reg, 0x30);
-			OR32MtoR(reg, (uptr)&mVU->divFlag[readQ]);
-		}
-	}
 }
 
 microVUt(void) mVUallocSFLAGb(int reg, int fInstance) {
@@ -722,19 +708,19 @@ microVUt(void) mVUallocCFLAGb(int reg, int fInstance) {
 	microVU* mVU = mVUx;
 	MOV32RtoM(mVU->clipFlag[fInstance], reg);
 }
-
+/*
 microVUt(void) mVUallocDFLAGa(int reg) {
 	microVU* mVU = mVUx;
-	if (!mVUdivFlag)		 { MOV32MtoR(reg, (uptr)&mVU->divFlag[readQ]); AND32ItoR(reg, 0xc00); }
-	else if (mVUdivFlag & 1) { XOR32RtoR(reg, reg); }
-	else					 { MOV32ItoR(reg, (u32)((mVUdivFlag << 9) & 0xc00)); }
+	//if (!mVUdivFlag)		 { MOV32MtoR(reg, (uptr)&mVU->divFlag[readQ]); AND32ItoR(reg, 0xc00); }
+	//else if (mVUdivFlag & 1) { XOR32RtoR(reg, reg); }
+	//else					 { MOV32ItoR(reg, (u32)((mVUdivFlag << 9) & 0xc00)); }
 }
 
 microVUt(void) mVUallocDFLAGb(int reg) {
 	microVU* mVU = mVUx;
-	MOV32RtoM((uptr)&mVU->divFlag[writeQ], reg);
+	//MOV32RtoM((uptr)&mVU->divFlag[writeQ], reg);
 }
-
+*/
 //------------------------------------------------------------------
 // VI Reg Allocators
 //------------------------------------------------------------------
