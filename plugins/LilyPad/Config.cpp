@@ -1444,7 +1444,7 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 					}
 				}
 			}
-			else if ((cmd >= ID_GUITAR_HERO && cmd <= ID_ANALOG) || cmd == ID_IGNORE) {// || cmd == ID_FORCE_FEEDBACK) {
+			else if ((cmd >= ID_LOCK_BUTTONS && cmd <= ID_ANALOG) || cmd == ID_IGNORE) {// || cmd == ID_FORCE_FEEDBACK) {
 				// Messes up things, unfortunately.
 				// End binding on a bunch of notification messages, and
 				// this will send a bunch.
@@ -1474,10 +1474,6 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 				Sleep(40);
 				dm->Update(&info);
 				dm->PostRead();
-				int w2 = timeGetTime();
-				if (dm->devices[0xe]->oldVirtualControlState[6] != 0x8000) {
-					dm->devices[0xe]->oldVirtualControlState[6]=dm->devices[0xe]->oldVirtualControlState[6];
-				}
 				SetTimer(hWnd, 1, 30, 0);
 			}
 			if (cmd == IDC_TURBO) {
@@ -1506,6 +1502,18 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 	return 0;
 }
 
+// Returns 0 if pad doesn't exist due to mtap settings, as a convenience.
+int GetPadString(wchar_t *string, unsigned int port, unsigned int slot) {
+	if (!slot) {
+		wsprintfW(string, L"Pad %i", port+1);
+	}
+	else {
+		wsprintfW(string, L"Pad %i-%i", port+1, slot+1);
+		if (!config.multitap[port]) return 0;
+	}
+	return 1;
+}
+
 void UpdatePadPages() {
 	HPROPSHEETPAGE pages[10];
 	int count = 0;
@@ -1515,20 +1523,14 @@ void UpdatePadPages() {
 		for (int slot=0; slot<4; slot++) {
 			if (config.padConfigs[port][slot].type == DisabledPad) continue;
 			wchar_t title[20];
-			if (!slot) {
-				wsprintfW(title, L"Pad %i", port+1);
-			}
-			else {
-				if (!config.multitap[port]) continue;
-				wsprintfW(title, L"Pad %i-%i", port+1, slot+1);
-			}
+			if (!GetPadString(title, port, slot)) continue;
 
 			PROPSHEETPAGE psp;
 			ZeroMemory(&psp, sizeof(psp));
 			psp.dwSize = sizeof(psp);
 			psp.dwFlags = PSP_USETITLE | PSP_PREMATURE;
 			psp.hInstance = hInst;
-			psp.pfnDlgProc = (DLGPROC) DialogProc;
+			psp.pfnDlgProc = DialogProc;
 			psp.lParam = port | (slot<<1);
 			psp.pszTitle = title;
 			if (config.padConfigs[port][slot].type != GuitarPad)
@@ -1545,20 +1547,6 @@ void UpdatePadPages() {
 	for (int i=0; i<count; i++) {
 		PropSheet_AddPage(hWndProp, pages[i]);
 	}
-}
-
-INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM lParam);
-
-HPROPSHEETPAGE CreateGeneralPage() {
-	PROPSHEETPAGE psp;
-	ZeroMemory(&psp, sizeof(psp));
-	psp.dwSize = sizeof(psp);
-	psp.dwFlags = PSP_USETITLE | PSP_PREMATURE;
-	psp.hInstance = hInst;
-	psp.pfnDlgProc = (DLGPROC) GeneralDialogProc;
-	psp.pszTitle = L"General";
-	psp.pszTemplate = MAKEINTRESOURCE(IDD_GENERAL);
-	return CreatePropertySheetPage(&psp);
 }
 
 int ListIndexToPortAndSlot (int index, int *port, int *slot) {
@@ -1579,22 +1567,20 @@ int ListIndexToPortAndSlot (int index, int *port, int *slot) {
 }
 
 void UpdatePadList(HWND hWnd) {
+	static u8 recurse = 0;
+	if (recurse) return;
+	recurse = 1;
 	HWND hWndList = GetDlgItem(hWnd, IDC_PAD_LIST);
 	HWND hWndCombo = GetDlgItem(hWnd, IDC_PAD_TYPE);
 	HWND hWndAnalog = GetDlgItem(hWnd, IDC_ANALOG_START1);
 	int slot;
 	int port;
 	int index = 0;
-	wchar_t *strings[] = {L"Disabled", L"Dualshock 2", L"Guitar"};
+	wchar_t *padTypes[] = {L"Disabled", L"Dualshock 2", L"Guitar"};
 	for (port=0; port<2; port++) {
 		for (slot = 0; slot<4; slot++) {
-			wchar_t text[100];
-			if (!slot)
-				wsprintf(text, L"Pad %i", port+1);
-			else {
-				if (!config.multitap[port]) continue;
-				wsprintf(text, L"Pad %i-%i", port+1, slot+1);
-			}
+			wchar_t text[20];
+			if (!GetPadString(text, port, slot)) continue;
 			LVITEM item;
 			item.iItem = index;
 			item.iSubItem = 0;
@@ -1609,7 +1595,7 @@ void UpdatePadList(HWND hWnd) {
 
 			item.iSubItem = 1;
 			if (2 < (unsigned int)config.padConfigs[port][slot].type) config.padConfigs[port][slot].type = Dualshock2Pad;
-			item.pszText = strings[config.padConfigs[port][slot].type];
+			item.pszText = padTypes[config.padConfigs[port][slot].type];
 			ListView_SetItem(hWndList, &item);
 
 			item.iSubItem = 2;
@@ -1641,6 +1627,8 @@ void UpdatePadList(HWND hWnd) {
 	}
 	EnableWindow(hWndCombo, enable);
 	EnableWindow(hWndAnalog, enable);
+	//ListView_SetExtendedListViewStyleEx(hWndList, LVS_EX_DOUBLEBUFFER|LVS_EX_ONECLICKACTIVATE, LVS_EX_DOUBLEBUFFER|LVS_EX_ONECLICKACTIVATE);
+	recurse = 0;
 }
 
 INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM lParam) {
@@ -1651,7 +1639,6 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 		{
 			HWND hWndCombo = GetDlgItem(hWnd, IDC_PAD_TYPE);
 			if (SendMessage(hWndCombo, CB_GETCOUNT, 0, 0) == 0) {
-				ListView_SetExtendedListViewStyleEx(hWndList, LVS_EX_DOUBLEBUFFER, LVS_EX_DOUBLEBUFFER);
 				LVCOLUMN c;
 				c.mask = LVCF_TEXT | LVCF_WIDTH;
 				c.cx = 50;
@@ -1664,6 +1651,7 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 				c.pszText = L"Bindings";
 				ListView_InsertColumn(hWndList, 2, &c);
 				selected = 0;
+				ListView_SetExtendedListViewStyleEx(hWndList, LVS_EX_FULLROWSELECT|LVS_EX_DOUBLEBUFFER, LVS_EX_FULLROWSELECT|LVS_EX_DOUBLEBUFFER);
 				SendMessage(hWndList, LVM_SETEXTENDEDLISTVIEWSTYLE, 0, LVS_EX_FULLROWSELECT);
 				SendMessage(hWndCombo, CB_ADDSTRING, 0, (LPARAM) L"Disabled");
 				SendMessage(hWndCombo, CB_ADDSTRING, 0, (LPARAM) L"Dualshock 2");
@@ -1850,8 +1838,71 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 				Diagnostics(hWnd);
 			}
 			else if (n->hdr.idFrom == IDC_PAD_LIST) {
-				if (n->hdr.code == NM_CLICK) {
+				if (n->hdr.code == LVN_ITEMCHANGED) {
 					UpdatePadList(hWnd);
+				}
+				if (n->hdr.code == NM_RCLICK) {
+					UpdatePadList(hWnd);
+					int index = ListView_GetNextItem(hWndList, -1, LVNI_SELECTED);
+					int port1, slot1, port2, slot2;
+					if (!ListIndexToPortAndSlot(index, &port1, &slot1)) break;
+					HMENU hMenu = CreatePopupMenu();
+					if (!hMenu) break;
+					MENUITEMINFOW info;
+					for (port2=1; port2>=0; port2--) {
+						for (slot2 = 3; slot2>=0; slot2--) {
+							wchar_t text[40];
+							wchar_t pad[20];
+							if (!GetPadString(pad, port2, slot2)) continue;
+							info.cbSize = sizeof(info);
+							info.fMask = MIIM_STRING | MIIM_ID;
+							info.dwTypeData = text;
+							if (port2 == port1 && slot2 == slot1) {
+								int index = GetMenuItemCount(hMenu);
+								wsprintfW(text, L"Clear %s Bindings", pad);
+								info.wID = -1;
+								InsertMenuItemW(hMenu, index, 1, &info);
+								info.fMask = MIIM_TYPE;
+								info.fType = MFT_SEPARATOR;
+								InsertMenuItemW(hMenu, index, 1, &info);
+							}
+							else {
+								info.wID = port2+2*slot2;
+								wsprintfW(text, L"Swap with %s", pad);
+								InsertMenuItemW(hMenu, 0, 1, &info);
+							}
+						}
+					}
+					POINT pos;
+					GetCursorPos(&pos);
+					short res = TrackPopupMenuEx(hMenu, TPM_NONOTIFY|TPM_RETURNCMD, pos.x, pos.y, hWndProp, 0);
+					DestroyMenu(hMenu);
+					if (!res) break;
+					if (res > 0) {
+						slot2 = res / 2;
+						port2 = res&1;
+						PadConfig padCfgTemp = config.padConfigs[port1][slot1];
+						config.padConfigs[port1][slot1] = config.padConfigs[port2][slot2];
+						config.padConfigs[port2][slot2] = padCfgTemp;
+						for (int i=0; i<dm->numDevices; i++) {
+							PadBindings bindings = dm->devices[i]->pads[port1][slot1];
+							dm->devices[i]->pads[port1][slot1] = dm->devices[i]->pads[port2][slot2];
+							dm->devices[i]->pads[port2][slot2] = bindings;
+						}
+					}
+					else {
+						for (int i=0; i<dm->numDevices; i++) {
+							free(dm->devices[i]->pads[port1][slot1].bindings);
+							for (int j=0; j<dm->devices[i]->pads[port1][slot1].numFFBindings; j++) {
+								free(dm->devices[i]->pads[port1][slot1].ffBindings[j].axes);
+							}
+							free(dm->devices[i]->pads[port1][slot1].ffBindings);
+							memset(&dm->devices[i]->pads[port1][slot1], 0, sizeof(dm->devices[i]->pads[port1][slot1]));
+						}
+					}
+					UpdatePadPages();
+					UpdatePadList(hWnd);
+					PropSheet_Changed(hWndProp, hWnd);
 				}
 			}
 		}
@@ -1870,10 +1921,21 @@ int CALLBACK PropSheetProc(HWND hWnd, UINT msg, LPARAM lParam) {
 void CALLBACK PADconfigure() {
 	// Can end up here without PadConfigure() being called first.
 	LoadSettings();
+	// Can also end up here after running emulator a bit, and possibly
+	// disabling some devices due to focus changes, or releasing mouse.
+	RefreshEnabledDevices(0);
+
 	memset(hWnds, 0, sizeof(hWnds));
 
-	HPROPSHEETPAGE page;
-	page = CreateGeneralPage();
+	PROPSHEETPAGE psp;
+	ZeroMemory(&psp, sizeof(psp));
+	psp.dwSize = sizeof(psp);
+	psp.dwFlags = PSP_USETITLE | PSP_PREMATURE;
+	psp.hInstance = hInst;
+	psp.pfnDlgProc = GeneralDialogProc;
+	psp.pszTitle = L"General";
+	psp.pszTemplate = MAKEINTRESOURCE(IDD_GENERAL);
+	HPROPSHEETPAGE page = CreatePropertySheetPage(&psp);
 	if (!page) return;
 
 	PROPSHEETHEADER psh;

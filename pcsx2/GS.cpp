@@ -32,15 +32,7 @@ using namespace std;
 
 using namespace R5900;
 
-#ifdef DEBUG
-#define MTGS_LOG SysPrintf
-#else
-#define MTGS_LOG 0&&
-#endif
-
 static bool m_gsOpened = false;
-
-int g_FFXHack=0;
 
 #ifdef PCSX2_DEVBUILD
 
@@ -261,7 +253,7 @@ void gsReset()
 
 	memzero_obj(g_RealGSMem);
 
-	Path3transfer = 0;
+	Path3transfer = FALSE;
 
 	GSCSRr = 0x551B400F;   // Set the FINISH bit to 1 for now
 	GSIMR = 0x7f00;
@@ -319,7 +311,7 @@ void gsCSRwrite(u32 value)
 
 	// Our emulated GS has no FIFO...
 	/*if( value & 0x100 ) { // FLUSH
-		//SysPrintf("GS_CSR FLUSH GS fifo: %x (CSRr=%x)\n", value, GSCSRr);
+		//Console::WriteLn("GS_CSR FLUSH GS fifo: %x (CSRr=%x)", params value, GSCSRr);
 	}*/
 
 	if (value & 0x200) { // resetGS
@@ -365,7 +357,7 @@ __forceinline void gsWrite8(u32 mem, u8 value)
 			if( mtgsThread != NULL )
 				mtgsThread->SendSimplePacket(GS_RINGTYPE_MEMWRITE8, mem&0x13ff, value, 0);
 	}
-	GIF_LOG("GS write 8 at %8.8lx with data %8.8lx\n", mem, value);
+	GIF_LOG("GS write 8 at %8.8lx with data %8.8lx", mem, value);
 }
 
 __forceinline void _gsSMODEwrite( u32 mem, u32 value )
@@ -390,7 +382,7 @@ __forceinline void _gsSMODEwrite( u32 mem, u32 value )
 
 __forceinline void gsWrite16(u32 mem, u16 value)
 {
-	GIF_LOG("GS write 16 at %8.8lx with data %8.8lx\n", mem, value);
+	GIF_LOG("GS write 16 at %8.8lx with data %8.8lx", mem, value);
 
 	_gsSMODEwrite( mem, value );
 
@@ -421,7 +413,7 @@ __forceinline void gsWrite16(u32 mem, u16 value)
 __forceinline void gsWrite32(u32 mem, u32 value)
 {
 	jASSUME( (mem & 3) == 0 );
-	GIF_LOG("GS write 32 at %8.8lx with data %8.8lx\n", mem, value);
+	GIF_LOG("GS write 32 at %8.8lx with data %8.8lx", mem, value);
 
 	_gsSMODEwrite( mem, value );
 
@@ -470,7 +462,7 @@ void __fastcall gsWrite64_page_01( u32 mem, const mem64_t* value )
 void __fastcall gsWrite64_generic( u32 mem, const mem64_t* value )
 {
 	const u32* const srcval32 = (u32*)value;
-	GIF_LOG("GS Write64 at %8.8lx with data %8.8x_%8.8x\n", mem, srcval32[1], srcval32[0]);
+	GIF_LOG("GS Write64 at %8.8lx with data %8.8x_%8.8x", mem, srcval32[1], srcval32[0]);
 
 	*(u64*)PS2GS_BASE(mem) = *value;
 
@@ -507,7 +499,7 @@ void __fastcall gsWrite128_generic( u32 mem, const mem128_t* value )
 {
 	const u32* const srcval32 = (u32*)value;
 
-	GIF_LOG("GS Write128 at %8.8lx with data %8.8x_%8.8x_%8.8x_%8.8x \n", mem,
+	GIF_LOG("GS Write128 at %8.8lx with data %8.8x_%8.8x_%8.8x_%8.8x", mem,
 		srcval32[3], srcval32[2], srcval32[1], srcval32[0]);
 
 	const uint masked_mem = mem & 0x13ff;
@@ -527,7 +519,7 @@ void __fastcall gsWrite128_generic( u32 mem, const mem128_t* value )
 // This function is left in for now for debugging/reference purposes.
 __forceinline void gsWrite64(u32 mem, u64 value)
 {
-	GIF_LOG("GS write 64 at %8.8lx with data %8.8lx_%8.8lx\n", mem, ((u32*)&value)[1], (u32)value);
+	GIF_LOG("GS write 64 at %8.8lx with data %8.8lx_%8.8lx", mem, ((u32*)&value)[1], (u32)value);
 
 	switch (mem)
 	{
@@ -558,26 +550,26 @@ __forceinline void gsWrite64(u32 mem, u64 value)
 
 __forceinline u8 gsRead8(u32 mem)
 {
-	GIF_LOG("GS read 8 from %8.8lx  value: %8.8lx\n", mem, *(u8*)PS2GS_BASE(mem));
+	GIF_LOG("GS read 8 from %8.8lx  value: %8.8lx", mem, *(u8*)PS2GS_BASE(mem));
 	return *(u8*)PS2GS_BASE(mem);
 }
 
 __forceinline u16 gsRead16(u32 mem)
 {
-	GIF_LOG("GS read 16 from %8.8lx  value: %8.8lx\n", mem, *(u16*)PS2GS_BASE(mem));
+	GIF_LOG("GS read 16 from %8.8lx  value: %8.8lx", mem, *(u16*)PS2GS_BASE(mem));
 	return *(u16*)PS2GS_BASE(mem);
 }
 
 __forceinline u32 gsRead32(u32 mem) 
 {
-	GIF_LOG("GS read 32 from %8.8lx  value: %8.8lx\n", mem, *(u32*)PS2GS_BASE(mem));
+	GIF_LOG("GS read 32 from %8.8lx  value: %8.8lx", mem, *(u32*)PS2GS_BASE(mem));
 	return *(u32*)PS2GS_BASE(mem);
 }
 
 __forceinline u64 gsRead64(u32 mem)
 {
 	// fixme - PS2GS_BASE(mem+4) = (g_RealGSMem+(mem + 4 & 0x13ff))
-	GIF_LOG("GS read 64 from %8.8lx  value: %8.8lx_%8.8lx\n", mem, *(u32*)PS2GS_BASE(mem+4), *(u32*)PS2GS_BASE(mem) );
+	GIF_LOG("GS read 64 from %8.8lx  value: %8.8lx_%8.8lx", mem, *(u32*)PS2GS_BASE(mem+4), *(u32*)PS2GS_BASE(mem) );
 	return *(u64*)PS2GS_BASE(mem);
 }
 
@@ -593,7 +585,7 @@ void gsSyncLimiterLostTime( s32 deltaTime )
 
 	if( !m_StrictSkipping ) return;
 
-	//SysPrintf("LostTime on the EE!\n");
+	//Console::WriteLn("LostTime on the EE!");
 
 	if( mtgsThread != NULL )
 	{
@@ -749,7 +741,7 @@ __forceinline void gsFrameSkip( bool forceskip )
 			return;
 	}
 
-	//SysPrintf( "Consecutive Frames -- Lateness: %d\n", (int)( sSlowDeltaTime / m_iSlowTicks ) );
+	//Console::WriteLn( "Consecutive Frames -- Lateness: %d", params (int)( sSlowDeltaTime / m_iSlowTicks ) );
 
 	// -- Consecutive frames section --
 	// Force-render consecutive frames without skipping.

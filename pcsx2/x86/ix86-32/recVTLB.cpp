@@ -58,7 +58,7 @@ void MOV128_MtoM( x86IntRegType destRm, x86IntRegType srcRm )
 		//has to: translate, find function, call function
 		u32 hand=(u8)vmv;
 		u32 paddr=ppf-hand+0x80000000;
-		//SysPrintf("Translted 0x%08X to 0x%08X\n",addr,paddr);
+		//Console::WriteLn("Translated 0x%08X to 0x%08X",params addr,paddr);
 		return reinterpret_cast<TemplateHelper<DataSize,false>::HandlerType*>(RWFT[TemplateHelper<DataSize,false>::sidx][0][hand])(paddr,data);
 	}
 

@@ -1,0 +1,4 @@
+gametitle= Sprint Cars (SLUS)
+comment=Path 3 Hack
+// Moved from Elfheader.cpp
+patch=path3hack

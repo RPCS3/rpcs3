@@ -98,6 +98,7 @@ AC_SUBST(SHARED_LDFLAGS)
 AC_CHECK_LIB(stdc++,main,[LIBS="$LIBS -lstdc++"])
 AC_CHECK_LIB(dl,main,[LIBS="$LIBS -ldl"])
 AC_CHECK_LIB(asound,main,[LIBS="$LIBS -lasound"])
+AC_CHECK_LIB(iconv,main,[LIBS="$LIBS -liconv"])
 AC_CHECK_FUNCS(iconv, [ have_iconv="1" ], [ have_iconv="0" ])
 
 AC_OUTPUT([

@@ -130,12 +130,12 @@ void COP2()
 	//std::string disOut;
 	//disR5900Fasm(disOut, cpuRegs.code, cpuRegs.pc);
 
-	//VU0_LOG("%s\n", disOut.c_str());
+	//VU0_LOG("%s", disOut.c_str());
 	Int_COP2PrintTable[_Rs_]();
 }
 
 void Unknown() {
-	CPU_LOG("%8.8lx: Unknown opcode called\n", cpuRegs.pc);
+	CPU_LOG("%8.8lx: Unknown opcode called", cpuRegs.pc);
 }
 
 void MMI_Unknown() { Console::Notice("Unknown MMI opcode called"); }
@@ -247,14 +247,29 @@ void SLTU()		{ if (!_Rd_) return; cpuRegs.GPR.r[_Rd_].UD[0] = (cpuRegs.GPR.r[_Rs
 * Format:  OP rs, rt                                     *
 *********************************************************/
 
+// Signed division "overflows" on (0x80000000 / -1), here (LO = 0x80000000, HI = 0) is returned by MIPS
+// in division by zero on MIPS, it appears that: 
+// LO gets 1 if rs is negative (and the division is signed) and -1 otherwise.
+// HI gets the value of rs.
+
 // Result is stored in HI/LO [no arithmetic exceptions]
 void DIV()
 {
-    if (cpuRegs.GPR.r[_Rt_].SL[0] != 0)
+	if (cpuRegs.GPR.r[_Rs_].UL[0] == 0x80000000 && cpuRegs.GPR.r[_Rt_].UL[0] == 0xffffffff)
+	{
+		cpuRegs.LO.SD[0] = (s32)0x80000000;
+		cpuRegs.HI.SD[0] = (s32)0x0;
+	}
+    else if (cpuRegs.GPR.r[_Rt_].SL[0] != 0)
     {
         cpuRegs.LO.SD[0] = cpuRegs.GPR.r[_Rs_].SL[0] / cpuRegs.GPR.r[_Rt_].SL[0];
         cpuRegs.HI.SD[0] = cpuRegs.GPR.r[_Rs_].SL[0] % cpuRegs.GPR.r[_Rt_].SL[0];
     }
+	else
+	{
+		cpuRegs.LO.SD[0] = (cpuRegs.GPR.r[_Rs_].SL[0] < 0) ? 1 : -1;
+		cpuRegs.HI.SD[0] = cpuRegs.GPR.r[_Rs_].SL[0];
+	}
 }
 
 // Result is stored in HI/LO [no arithmetic exceptions]
@@ -266,6 +281,11 @@ void DIVU()
 		// note 2: reference material strongly disagrees. (air)
 		cpuRegs.LO.SD[0] = (s32)(cpuRegs.GPR.r[_Rs_].UL[0] / cpuRegs.GPR.r[_Rt_].UL[0]);
 		cpuRegs.HI.SD[0] = (s32)(cpuRegs.GPR.r[_Rs_].UL[0] % cpuRegs.GPR.r[_Rt_].UL[0]);
+	}
+	else
+	{
+		cpuRegs.LO.SD[0] = -1;
+		cpuRegs.HI.SD[0] = cpuRegs.GPR.r[_Rs_].SL[0];
 	}
 }
 
@@ -738,7 +758,7 @@ int __Deci2Call(int call, u32 *addr)
 			if( addr != NULL )
 			{
 				deci2addr = (u32*)PSM(addr[1]);
-				BIOS_LOG("deci2open: %x,%x,%x,%x\n",
+				BIOS_LOG("deci2open: %x,%x,%x,%x",
 						 addr[3], addr[2], addr[1], addr[0]);
 				deci2handler = addr[2];
 			}
@@ -758,13 +778,13 @@ int __Deci2Call(int call, u32 *addr)
 			if( addr != NULL )
 				sprintf( reqaddr, "%x %x %x %x", addr[3], addr[2], addr[1], addr[0] );
 
-			BIOS_LOG("deci2reqsend: %s: deci2addr: %x,%x,%x,buf=%x %x,%x,len=%x,%x\n",
+			BIOS_LOG("deci2reqsend: %s: deci2addr: %x,%x,%x,buf=%x %x,%x,len=%x,%x",
 				(( addr == NULL ) ? "NULL" : reqaddr),
 				deci2addr[7], deci2addr[6], deci2addr[5], deci2addr[4],
 				deci2addr[3], deci2addr[2], deci2addr[1], deci2addr[0]);
 
 //			cpuRegs.pc = deci2handler;
-//			SysPrintf("deci2msg: %s", (char*)PSM(deci2addr[4]+0xc));
+//			Console::WriteLn("deci2msg: %s",  params (char*)PSM(deci2addr[4]+0xc));
 			if (deci2addr == NULL) return 1;
 			if (deci2addr[1]>0xc){
 				u8* pdeciaddr = (u8*)dmaGetAddr(deci2addr[4]+0xc);
@@ -810,7 +830,7 @@ void SYSCALL()
 	else
 		call = cpuRegs.GPR.n.v1.UC[0];
 
-	BIOS_LOG("Bios call: %s (%x)\n", bios[call], call);
+	BIOS_LOG("Bios call: %s (%x)", bios[call], call);
 
 	if (call == 0x7c)
 	{
@@ -836,7 +856,7 @@ void SYSCALL()
 			addr = cpuRegs.GPR.n.a0.UL[0] + n_transfer * sizeof(t_sif_dma_transfer);
 			dmat = (t_sif_dma_transfer*)PSM(addr);
 
-			BIOS_LOG("bios_%s: n_transfer=%d, size=%x, attr=%x, dest=%x, src=%x\n",
+			BIOS_LOG("bios_%s: n_transfer=%d, size=%x, attr=%x, dest=%x, src=%x",
 				bios[cpuRegs.GPR.n.v1.UC[0]], n_transfer,
 				dmat->size, dmat->attr,
 				dmat->dest, dmat->src);
@@ -858,7 +878,7 @@ void MFSA( void ) {
 }
 
 void MTSA( void ) {
-	cpuRegs.sa = (s32)cpuRegs.GPR.r[_Rs_].SD[0];
+	cpuRegs.sa = (s32)cpuRegs.GPR.r[_Rs_].SD[0] & 0xf;
 }
 
 // SNY supports three basic modes, two which synchronize memory accesses (related 
@@ -907,11 +927,11 @@ void TLTIU() { if (cpuRegs.GPR.r[_Rs_].UD[0] <  (u64)_Imm_) throw R5900Exception
 *********************************************************/
 
 void MTSAB() {
- 	cpuRegs.sa = ((cpuRegs.GPR.r[_Rs_].UL[0] & 0xF) ^ (_Imm_ & 0xF)) << 3;
+ 	cpuRegs.sa = ((cpuRegs.GPR.r[_Rs_].UL[0] & 0xF) ^ (_Imm_ & 0xF));
 }
 
 void MTSAH() {
-    cpuRegs.sa = ((cpuRegs.GPR.r[_Rs_].UL[0] & 0x7) ^ (_Imm_ & 0x7)) << 4;
+    cpuRegs.sa = ((cpuRegs.GPR.r[_Rs_].UL[0] & 0x7) ^ (_Imm_ & 0x7)) << 1;
 }
 
 } }	} // end namespace R5900::Interpreter::OpcodeImpl

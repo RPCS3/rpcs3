@@ -61,6 +61,7 @@ public:
 	BOOL m_logz;
 	BOOL m_fba;
 	BOOL m_aa1;
+	BOOL m_blur;
 
 protected:
 	virtual LRESULT DefWindowProc(UINT message, WPARAM wParam, LPARAM lParam);

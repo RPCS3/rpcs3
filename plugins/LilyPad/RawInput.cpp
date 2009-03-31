@@ -111,8 +111,6 @@ public:
 	}
 };
 
-static POINT rawOrigCursorPos;
-
 class RawInputMouse : public WindowsMouse {
 public:
 	HANDLE hDevice;
@@ -135,8 +133,7 @@ public:
 		// EatWndProc fail.  In all other cases, no unmatched initialization/cleanup
 		// lines.
 		if (!rawMouseActivatedCount++) {
-			GetCursorPos(&rawOrigCursorPos);
-			ShowCursor(0);
+			GetMouseCapture(hWnd);
 			if (!rawKeyboardActivatedCount && !EatWndProc(hWnd, RawInputWndProc)) {
 				Deactivate();
 				return 0;
@@ -157,9 +154,8 @@ public:
 			active = 0;
 			rawMouseActivatedCount --;
 			if (!rawMouseActivatedCount) {
-				ShowCursor(1);
 				ReleaseRawMice();
-				SetCursorPos(rawOrigCursorPos.x, rawOrigCursorPos.y);
+				ReleaseMouseCapture();
 				if (!rawKeyboardActivatedCount) {
 					ReleaseExtraProc(RawInputWndProc);
 				}
@@ -225,6 +221,11 @@ ExtraWndProcResult RawInputWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM l
 			memset(dev->physicalControlState, 0, sizeof(int) * dev->numPhysicalControls);
 		}
 	}
+	else if (uMsg == WM_SIZE && rawMouseActivatedCount) {
+		// Doesn't really matter for raw mice, as I disable legacy stuff, but shouldn't hurt.
+		WindowsMouse::WindowResized(hWnd);
+	}
+
 	return CONTINUE_BLISSFULLY;
 }
 

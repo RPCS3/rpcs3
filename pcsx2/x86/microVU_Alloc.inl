@@ -20,10 +20,6 @@
 #ifdef PCSX2_MICROVU
 
 //------------------------------------------------------------------
-// Micro VU - recPass 0 Functions
-//------------------------------------------------------------------
-
-//------------------------------------------------------------------
 // Micro VU - recPass 1 Functions
 //------------------------------------------------------------------
 
@@ -76,7 +72,7 @@ microVUt(void) mVUallocFMAC2a(int& Fs, int& Ft) {
 
 microVUt(void) mVUallocFMAC2b(int& Ft) {
 	microVU* mVU = mVUx;
-	if (!_Ft_) return;
+	if (!_Ft_) { SysPrintf("microVU: If a game does this, its retarded...\n"); return; }
 	//if (CHECK_VU_OVERFLOW) mVUclamp1<vuIndex>(Ft, xmmT1, _X_Y_Z_W);
 	mVUsaveReg<vuIndex>(Ft, (uptr)&mVU->regs->VF[_Ft_].UL[0], _X_Y_Z_W);
 }
@@ -146,12 +142,7 @@ microVUt(void) mVUallocFMAC3b(int& Fd) {
 	if (_W)	{ mVUloadReg<vuIndex>(reg, (uptr)&mVU->regs->VF[0].UL[0], _xyzw_ACC); }  \
 	else	{ SSE_XORPS_XMM_to_XMM(reg, reg); }  \
 }
-/*
-#define getACC(reg) {  \
-	reg = xmmACC0 + writeACC;  \
-	if (_X_Y_Z_W != 15) { SSE_MOVAPS_XMM_to_XMM(reg, (xmmACC0 + prevACC)); }  \
-}
-*/
+
 microVUt(void) mVUallocFMAC4a(int& ACC, int& Fs, int& Ft) {
 	microVU* mVU = mVUx;
 	ACC = xmmACC;
@@ -500,6 +491,24 @@ microVUt(void) mVUallocFMAC16b(int& ACCw, int& ACCr) {
 }
 
 //------------------------------------------------------------------
+// FMAC17 - CLIP FMAC Opcode
+//------------------------------------------------------------------
+
+#define getReg9(reg, _reg_) {  \
+	mVUloadReg<vuIndex>(reg, (uptr)&mVU->regs->VF[_reg_].UL[0], 1);  \
+	if (CHECK_VU_EXTRA_OVERFLOW) mVUclamp2<vuIndex>(reg, xmmT1, 1);  \
+	mVUunpack_xyzw<vuIndex>(reg, reg, 3);  \
+}
+
+microVUt(void) mVUallocFMAC17a(int& Fs, int& Ft) {
+	microVU* mVU = mVUx;
+	Fs = xmmFs;
+	Ft = xmmFt;
+	getReg6(Fs, _Fs_);
+	getReg9(Ft, _Ft_);
+}
+
+//------------------------------------------------------------------
 // FMAC18 - OPMULA FMAC Opcode
 //------------------------------------------------------------------
 
@@ -666,6 +675,7 @@ microVUt(void) mVUallocFMAC26b(int& ACCw, int& ACCr) {
 }
 
 microVUt(void) mVUallocSFLAGa(int reg, int fInstance) {
+	microVU* mVU = mVUx;
 	getFlagReg(fInstance, fInstance);
 	MOVZX32R16toR(reg, fInstance);
 }
@@ -698,7 +708,19 @@ microVUt(void) mVUallocCFLAGb(int reg, int fInstance) {
 	microVU* mVU = mVUx;
 	MOV32RtoM(mVU->clipFlag[fInstance], reg);
 }
+/*
+microVUt(void) mVUallocDFLAGa(int reg) {
+	microVU* mVU = mVUx;
+	//if (!mVUdivFlag)		 { MOV32MtoR(reg, (uptr)&mVU->divFlag[readQ]); AND32ItoR(reg, 0xc00); }
+	//else if (mVUdivFlag & 1) { XOR32RtoR(reg, reg); }
+	//else					 { MOV32ItoR(reg, (u32)((mVUdivFlag << 9) & 0xc00)); }
+}
 
+microVUt(void) mVUallocDFLAGb(int reg) {
+	microVU* mVU = mVUx;
+	//MOV32RtoM((uptr)&mVU->divFlag[writeQ], reg);
+}
+*/
 //------------------------------------------------------------------
 // VI Reg Allocators
 //------------------------------------------------------------------
@@ -752,4 +774,5 @@ microVUt(void) mVUallocVIb(int GPRreg, int _reg_) {
 	if (!_reg_ && (_fxf_ < 3))	{ XOR32RtoR(GPRreg, GPRreg); }  \
 	else						{ MOV32MtoR(GPRreg, (uptr)&mVU->regs->VF[_reg_].UL[0]); }  \
 }
+
 #endif //PCSX2_MICROVU

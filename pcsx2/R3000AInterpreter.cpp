@@ -221,7 +221,7 @@ void zeroEx()
 
 			fname = irxlibs[i].names[code];
             //if( strcmp(fname, "setIOPrcvaddr") == 0 ) {
-//                SysPrintf("yo\n");
+//                Console::WriteLn("yo");
 //                varLog |= 0x100000;
 //                Log = 1;
 //            }
@@ -291,7 +291,7 @@ void zeroEx()
 	pc = psxRegs.GPR.n.ra;
 	while (psxRegs.pc != pc) psxCpu->ExecuteBlock();
 
-	PSXBIOS_LOG("%s: %s (%x) END\n", lib, fname == NULL ? "unknown" : fname, code);*/
+	PSXBIOS_LOG("%s: %s (%x) END", lib, fname == NULL ? "unknown" : fname, code);*/
 #endif
 
 }
@@ -305,7 +305,7 @@ char* getName(char *file, u32 addr){
 		name[0]=0;
 	else{
 		while (!feof(f)){
-			fscanf(f, "%08X %s\n", &a, name);
+			fscanf(f, "%08X %s", &a, name);
 			if (a==addr)break;
 		}
 		fclose(f);
@@ -324,13 +324,13 @@ void spyFunctions(){
 					if (strncmp("__push_params", name, 13)==0){
 						PAD_LOG(PSXM(psxRegs.GPR.n.a0), psxRegs.GPR.n.a1, psxRegs.GPR.n.a2, psxRegs.GPR.n.a3);
 					}else{
-						PAD_LOG("secrman: %s (ra=%06X cycle=%d)\n", name, psxRegs.GPR.n.ra-iii->vaddr, psxRegs.cycle);}}else
+						PAD_LOG("secrman: %s (ra=%06X cycle=%d)", name, psxRegs.GPR.n.ra-iii->vaddr, psxRegs.cycle);}}else
 				if (strcmp("mcman", PSXM(iii->name))==0){
-					PAD_LOG("mcman: %s (ra=%06X cycle=%d)\n",  getName("mcman.fun", psxRegs.pc-iii->vaddr), psxRegs.GPR.n.ra-iii->vaddr, psxRegs.cycle);}else
+					PAD_LOG("mcman: %s (ra=%06X cycle=%d)",  getName("mcman.fun", psxRegs.pc-iii->vaddr), psxRegs.GPR.n.ra-iii->vaddr, psxRegs.cycle);}else
 				if (strcmp("padman", PSXM(iii->name))==0){
-					PAD_LOG("padman: %s (ra=%06X cycle=%d)\n",  getName("padman.fun", psxRegs.pc-iii->vaddr), psxRegs.GPR.n.ra-iii->vaddr, psxRegs.cycle);}else
+					PAD_LOG("padman: %s (ra=%06X cycle=%d)",  getName("padman.fun", psxRegs.pc-iii->vaddr), psxRegs.GPR.n.ra-iii->vaddr, psxRegs.cycle);}else
 				if (strcmp("sio2man", PSXM(iii->name))==0){
-					PAD_LOG("sio2man: %s (ra=%06X cycle=%d)\n", getName("sio2man.fun", psxRegs.pc-iii->vaddr), psxRegs.GPR.n.ra-iii->vaddr, psxRegs.cycle);}
+					PAD_LOG("sio2man: %s (ra=%06X cycle=%d)", getName("sio2man.fun", psxRegs.pc-iii->vaddr), psxRegs.GPR.n.ra-iii->vaddr, psxRegs.cycle);}
 				break;
 			}
 }
@@ -381,7 +381,7 @@ static __forceinline void execI()
 	psxRegs.code = iopMemRead32(psxRegs.pc);
 	
 	//if( (psxRegs.pc >= 0x1200 && psxRegs.pc <= 0x1400) || (psxRegs.pc >= 0x0b40 && psxRegs.pc <= 0x1000))
-		PSXCPU_LOG("%s\n", disR3000AF(psxRegs.code, psxRegs.pc));
+		PSXCPU_LOG("%s", disR3000AF(psxRegs.code, psxRegs.pc));
 
 	psxRegs.pc+= 4;
 	psxRegs.cycle++;

@@ -290,7 +290,7 @@ __forceinline u32 mtgsThreadObject::_gifTransferDummy( GIF_PATH pathidx, const u
 			--size;
 
 			if(pathidx == 2 && path.tag.eop)
-				Path3transfer = 0;
+				Path3transfer = FALSE;
 
 			if( pathidx == 0 ) 
 			{                        
@@ -327,7 +327,7 @@ __forceinline u32 mtgsThreadObject::_gifTransferDummy( GIF_PATH pathidx, const u
 			}
 			else if(path.tag.nloop == 0)
 			{
-				if(pathidx == 0 && g_FFXHack)
+				if(pathidx == 0)
 					continue;
 
 				eop = true;
@@ -952,7 +952,7 @@ int mtgsThreadObject::PrepDataPacket( GIF_PATH pathidx, const u8* srcdata, u32 s
     else	// always true - if( writepos + size == MTGS_RINGBUFFEREND )
 	{
 		// Yay.  Perfect fit.  What are the odds?
-		//SysPrintf( "MTGS > Perfect Fit!\n");
+		//Console::WriteLn( "MTGS > Perfect Fit!");
 
 		PrepEventWait();
 		while( true )

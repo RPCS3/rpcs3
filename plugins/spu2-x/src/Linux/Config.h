@@ -103,11 +103,11 @@ public:
 
 	static void ReadSettings();
 	static void WriteSettings();
-	//static void OpenDialog( HWND hWnd );
+	static void OpenDialog( uptr hWnd );
 	
 protected:
 	static void ClampValues();
-	//static BOOL CALLBACK DialogProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam);
+	//static bool CALLBACK DialogProc(uptr hWnd,u32 uMsg,WPARAM wParam,LPARAM lParam);
 
 };
 

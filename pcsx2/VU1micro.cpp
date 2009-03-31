@@ -77,8 +77,8 @@ void vu1ExecMicro(u32 addr)
 		CpuVU1.ExecuteBlock();
 	}
 
-	VUM_LOG("vu1ExecMicro %x\n", addr);
-	VUM_LOG("vu1ExecMicro %x (count=%d)\n", addr, count++);
+	VUM_LOG("vu1ExecMicro %x", addr);
+	VUM_LOG("vu1ExecMicro %x (count=%d)", addr, count++);
 
 	VU0.VI[REG_VPU_STAT].UL|= 0x100;
 	VU0.VI[REG_VPU_STAT].UL&= ~0x7E000;
@@ -93,12 +93,12 @@ _vuRegsTables(VU1, VU1regs);
 
 void VU1unknown() {
 	//assert(0);
-	CPU_LOG("Unknown VU micromode opcode called\n"); 
+	CPU_LOG("Unknown VU micromode opcode called"); 
 }  
  
 void VU1regsunknown(_VURegsNum *VUregsn) {
 	//assert(0);
-	CPU_LOG("Unknown VU micromode opcode called\n"); 
+	CPU_LOG("Unknown VU micromode opcode called"); 
 }  
  
 

@@ -770,11 +770,10 @@ void CALLBACK GSvsync(int interlace)
 #ifndef ZEROGS_DEVBUILD
 		const char* g_pShaders[4] = { "full", "reduced", "accurate", "accurate-reduced" };
 
-		sprintf(strtitle, "ZeroGS KOSMOS 0.%d.%d %.1f fps | %s%s%s%s %s (%.1f)", zgsbuild, zgsminor, fFPS,
+		sprintf(strtitle, "ZeroGS KOSMOS 0.%d.%d %.1f fps | %s%s%s %s (%.1f)", zgsbuild, zgsminor, fFPS,
 			(conf.interlace < 2) ? "interlace | " : "",
 			conf.bilinear ? (conf.bilinear==2?"forced bilinear | ":"bilinear | ") : "",
 			conf.aa ? s_aa[conf.aa] : "",
-			(g_GameSettings&GAME_FFXHACK) ? "ffxhack | " : "",
 			g_pShaders[g_nPixelShaderVer], (ppf&0xfffff)/(float)UPDATE_FRAMES);
 #else
 		sprintf(strtitle, "%d | %.1f fps (sk:%d%%) | g: %.1f, t: %.1f, a: %.1f, r: %.1f | p: %.1f | tex: %d %d (%d kbpf)", g_nFrame, fFPS, 
@@ -967,12 +966,12 @@ void _GSgifTransfer(pathInfo *path, u32 *pMem, u32 size)
 				if( path == &gs.path1 ) 
 				{
 					// ffx hack
-					if( g_GameSettings & GAME_FFXHACK ) 
-					{
+					/*if( g_GameSettings & GAME_FFXHACK ) 
+					{*/
 						if( path->tag.eop )
 							return;
 						continue;
-					}
+					/*}*/
 
 					return;
 				}

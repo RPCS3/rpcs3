@@ -53,14 +53,14 @@ static void execI()
 	//runs++;
 	//if (runs > 1599999999){ //leave some time to startup the testgame
 	//	if (opcode.Name[0] == 'L') { //find all opcodes beginning with "L"
-	//		SysPrintf ("Load %s\n",opcode.Name);
+	//		Console::WriteLn ("Load %s", params opcode.Name);
 	//	}
 	//}
 
 	// Another method of instruction dumping:
 	/*if( cpuRegs.cycle > 0x4f24d714 )
 	{
-		//CPU_LOG( "%s\n", disR5900Current.getCString());
+		//CPU_LOG( "%s", disR5900Current.getCString());
 		disOut.clear();
 		opcode.disasm( disOut );
 		disOut += '\n';
@@ -101,7 +101,7 @@ static void __fastcall doBranch( u32 target )
 
 void __fastcall intDoBranch(u32 target)
 {
-	//SysPrintf("Interpreter Branch \n");
+	//Console::WriteLn("Interpreter Branch ");
 	_doBranch_shared( target );
 
 	if( Cpu == &intCpu )

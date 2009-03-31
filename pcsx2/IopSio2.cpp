@@ -60,13 +60,13 @@ void sio2Reset() {
 }
 
 u32 sio2_getRecv1() {
-	PAD_LOG("Reading Recv1 = %x\n",sio2.packet.recvVal1);
+	PAD_LOG("Reading Recv1 = %x",sio2.packet.recvVal1);
 
 	return sio2.packet.recvVal1;
 }
 
 u32 sio2_getRecv2() {
-	PAD_LOG("Reading Recv2 = %x\n",0xF);
+	PAD_LOG("Reading Recv2 = %x",0xF);
 
 	return 0xf;
 }//0, 0x10, 0x20, 0x10 | 0x20; bits 4 & 5
@@ -75,7 +75,7 @@ u32 sio2_getRecv3() {
 	if(sio2.packet.recvVal3 == 0x8C || sio2.packet.recvVal3 == 0x8b ||
 	   sio2.packet.recvVal3 == 0x83)
 	{
-		PAD_LOG("Reading Recv3 = %x\n",sio2.packet.recvVal3);
+		PAD_LOG("Reading Recv3 = %x",sio2.packet.recvVal3);
 
 		sio.packetsize = sio2.packet.recvVal3;
 		sio2.packet.recvVal3 = 0; // Reset
@@ -83,7 +83,7 @@ u32 sio2_getRecv3() {
 	}
 	else
 	{
-		PAD_LOG("Reading Recv3 = %x\n",sio.packetsize << 16);
+		PAD_LOG("Reading Recv3 = %x",sio.packetsize << 16);
 
 		return sio.packetsize << 16;
 	}
@@ -103,7 +103,7 @@ void sio2_setSend3(u32 index, u32 value)
 //		for (i=0; i<4; i++){PAD_LOG("0x%08X ", sio2.packet.sendArray2[i]);}PAD_LOG("\n");
 //		for (i=0; i<8; i++){PAD_LOG("0x%08X ", sio2.packet.sendArray3[i]);}PAD_LOG("\n");
 //		for (  ; i<16; i++){PAD_LOG("0x%08X ", sio2.packet.sendArray3[i]);}PAD_LOG("\n");
-	PAD_LOG("[%d] : 0x%08X\n", index,sio2.packet.sendArray3[index]);
+	PAD_LOG("[%d] : 0x%08X", index,sio2.packet.sendArray3[index]);
 //	}
 }	//0->15
 
@@ -148,7 +148,7 @@ void sio2_serialIn(u8 value){
 		ctrl |= (sio2.packet.sendArray3[sio2.cmdport] & 1) << 13;
 		//sioWriteCtrl16(SIO_RESET);
 		sioWriteCtrl16(ctrl);
-		PSXDMA_LOG("sio2_fifoIn: ctrl = %x, cmdlength = %x, cmdport = %d (%x)\n", ctrl, sio2.cmdlength, sio2.cmdport, sio2.packet.sendArray3[sio2.cmdport]);
+		PSXDMA_LOG("sio2_fifoIn: ctrl = %x, cmdlength = %x, cmdport = %d (%x)", ctrl, sio2.cmdlength, sio2.cmdport, sio2.packet.sendArray3[sio2.cmdport]);
 
 		sio2.cmdport++;
 	}
@@ -175,7 +175,7 @@ void sio2_fifoIn(u8 value){
 		ctrl |= (sio2.packet.sendArray3[sio2.cmdport] & 1) << 13;
 		//sioWriteCtrl16(SIO_RESET);
 		sioWriteCtrl16(ctrl);
-		PSXDMA_LOG("sio2_fifoIn: ctrl = %x, cmdlength = %x, cmdport = %d (%x)\n", ctrl, sio2.cmdlength, sio2.cmdport, sio2.packet.sendArray3[sio2.cmdport]);
+		PSXDMA_LOG("sio2_fifoIn: ctrl = %x, cmdlength = %x, cmdport = %d (%x)", ctrl, sio2.cmdlength, sio2.cmdport, sio2.packet.sendArray3[sio2.cmdport]);
 
 		sio2.cmdport++;
 	}
@@ -184,7 +184,7 @@ void sio2_fifoIn(u8 value){
 	SIODMAWrite(value);
 	
 	if (sio2.packet.sendSize > BUFSIZE) {//asadr
-		SysPrintf("*PCSX2*: sendSize >= %d\n", BUFSIZE);
+		Console::WriteLn("*PCSX2*: sendSize >= %d", params BUFSIZE);
 	} else {
 		sio2.buf[sio2.packet.sendSize] = sioRead8();
 		sio2.packet.sendSize++;
@@ -214,7 +214,7 @@ void SaveState::sio2Freeze()
 void psxDma11(u32 madr, u32 bcr, u32 chcr) {
 	unsigned int i, j;
 	int size = (bcr >> 16) * (bcr & 0xffff);
-	PSXDMA_LOG("*** DMA 11 - SIO2 in *** %lx addr = %lx size = %lx\n", chcr, madr, bcr);
+	PSXDMA_LOG("*** DMA 11 - SIO2 in *** %lx addr = %lx size = %lx", chcr, madr, bcr);
 	
 	if (chcr != 0x01000201) return;
 
@@ -243,7 +243,7 @@ void psxDMA11Interrupt()
 
 void psxDma12(u32 madr, u32 bcr, u32 chcr) {
 	int size = ((bcr >> 16) * (bcr & 0xFFFF)) * 4;
-	PSXDMA_LOG("*** DMA 12 - SIO2 out *** %lx addr = %lx size = %lx\n", chcr, madr, size);
+	PSXDMA_LOG("*** DMA 12 - SIO2 out *** %lx addr = %lx size = %lx", chcr, madr, size);
 
 	if (chcr != 0x41000200) return;
 

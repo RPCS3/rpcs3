@@ -100,8 +100,12 @@ char iop_log_names[9][32] =
 	"Cdr Log",
 	"GPU Log"
 };
+
 //Tri-Ace - IDC_GAMEFIX2
 #define FLAG_VU_ADD_SUB 0x1
+// Persona3/4  - IDC_GAMEFIX4
+#define FLAG_VU_CLIP 0x2
+
 // Digimon Rumble Arena - IDC_GAMEFIX3
 #define FLAG_FPU_Compare 0x4
 //Tales of Destiny - IDC_GAMEFIX5

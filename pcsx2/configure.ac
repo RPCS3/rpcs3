@@ -1,5 +1,5 @@
-AC_INIT(pcsx2,0.9.5,zerofrog@gmail.com)
-AM_INIT_AUTOMAKE(pcsx2,0.9.5)
+AC_INIT(pcsx2,0.9.6,zerofrog@gmail.com)
+AM_INIT_AUTOMAKE(pcsx2,0.9.6)
 
 AC_PROG_CC([gcc g++ cl KCC CC cxx cc++ xlC aCC c++])
 AC_PROG_CXX([gcc g++ cl KCC CC cxx cc++ xlC aCC c++])

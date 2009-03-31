@@ -23,11 +23,13 @@ GtkWidget *GameFixDlg, *SpeedHacksDlg;
  void on_Game_Fixes(GtkMenuItem *menuitem, gpointer user_data)
 {
 	GameFixDlg = create_GameFixDlg();
+	
+	set_checked(GameFixDlg, "check_VU_Add_Sub", (Config.GameFixes & FLAG_VU_ADD_SUB));
+	set_checked(GameFixDlg, "check_VU_Clip", (Config.GameFixes & FLAG_VU_CLIP));
 
 	set_checked(GameFixDlg, "check_FPU_Compare", (Config.GameFixes & FLAG_FPU_Compare));
-	set_checked(GameFixDlg, "check_VU_Add_Sub", (Config.GameFixes & FLAG_VU_ADD_SUB));
 	set_checked(GameFixDlg, "check_FPU_Mul", (Config.GameFixes & FLAG_FPU_MUL));
-
+	
 	gtk_widget_show_all(GameFixDlg);
 	gtk_widget_set_sensitive(MainWindow, FALSE);
 	gtk_main();
@@ -37,11 +39,15 @@ void on_Game_Fix_OK(GtkButton *button, gpointer user_data)
 {
 
 	Config.GameFixes = 0;
-	Config.GameFixes |= is_checked(GameFixDlg, "check_FPU_Compare") ? FLAG_FPU_Compare : 0;
+	
 	Config.GameFixes |= is_checked(GameFixDlg, "check_VU_Add_Sub") ? FLAG_VU_ADD_SUB : 0;
+	Config.GameFixes |= is_checked(GameFixDlg, "check_VU_Clip") ? FLAG_VU_CLIP : 0;
+	
+	Config.GameFixes |= is_checked(GameFixDlg, "check_FPU_Compare") ? FLAG_FPU_Compare : 0;
 	Config.GameFixes |= is_checked(GameFixDlg, "check_FPU_Mul") ? FLAG_FPU_MUL : 0;
 
 	SaveConfig();
+	
 	gtk_widget_destroy(GameFixDlg);
 	gtk_widget_set_sensitive(MainWindow, TRUE);
 	gtk_main_quit();

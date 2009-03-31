@@ -34,9 +34,12 @@ struct vifStruct {
 	int cl;
 	int wl;
 	u8 usn;
+	
+	// The next three should be boolean, and will be next time I break savestate compatability. --arcum42
 	u8 done;
 	u8 vifstalled;
 	u8 stallontag;
+	
 	u8 irqoffset; // 32bit offset where next vif code is
     u32 savedtag; // need this for backwards compat with save states
 	u32 vifpacketsize;
@@ -45,7 +48,7 @@ struct vifStruct {
 };
 
 extern vifStruct vif0, vif1;
-extern int Path3transfer;
+extern bool Path3transfer;
 
 #define vif0ch ((DMACh*)&PS2MEM_HW[0x8000])
 #define vif1ch ((DMACh*)&PS2MEM_HW[0x9000])

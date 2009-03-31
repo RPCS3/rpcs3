@@ -320,7 +320,7 @@ static __forceinline u8* dmaGetAddr(u32 mem)
 	mem &= ~0xf;
 
 	if( (mem&0xffff0000) == 0x50000000 ) {// reserved scratch pad mem
-		SysPrintf("dmaGetAddr: reserved scratch pad mem\n");
+		Console::WriteLn("dmaGetAddr: reserved scratch pad mem");
 		return NULL;//(u8*)&PS2MEM_SCRATCH[(mem) & 0x3ff0];
 	}
 
@@ -330,13 +330,12 @@ static __forceinline u8* dmaGetAddr(u32 mem)
 	// do manual LUT since IPU/SPR seems to use addrs 0x3000xxxx quite often
     // linux doesn't suffer from this because it has better vm support
 	if( memLUT[ (p-PS2MEM_BASE)>>12 ].aPFNs == NULL ) {
-		SysPrintf("dmaGetAddr: memLUT PFN warning\n");
+		Console::WriteLn("dmaGetAddr: memLUT PFN warning");
 		return NULL;//p;
 	}
 
 	pbase = (u8*)memLUT[ (p-PS2MEM_BASE)>>12 ].aVFNs[0];
-	if( pbase != NULL )
-		p = pbase + ((u32)p&0xfff);
+	if( pbase != NULL ) p = pbase + ((u32)p&0xfff);
 #endif
 
 	return p;
@@ -348,7 +347,7 @@ static __forceinline u8* dmaGetAddr(u32 mem)
 static __forceinline void *dmaGetAddr(u32 addr) {
 	u8 *ptr;
 
-//	if (addr & 0xf) { DMA_LOG("*PCSX2*: DMA address not 128bit aligned: %8.8x\n", addr); }
+//	if (addr & 0xf) { DMA_LOG("*PCSX2*: DMA address not 128bit aligned: %8.8x", addr); }
 
 	if (addr & 0x80000000) {	//  teh sux why the f00k 0xE0000000
 		return (void*)&psS[addr & 0x3ff0];

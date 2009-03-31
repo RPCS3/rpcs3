@@ -55,7 +55,7 @@ void __fastcall ReadFIFO_page_4(u32 mem, u64 *out)
 {
 	jASSUME( (mem >= 0x10004000) && (mem < 0x10005000) );
 	
-	VIF_LOG("ReadFIFO/VIF0 0x%08X\n", mem);
+	VIF_LOG("ReadFIFO/VIF0 0x%08X", mem);
 	//out[0] = psHu64(mem  );
 	//out[1] = psHu64(mem+8);
 
@@ -67,7 +67,7 @@ void __fastcall ReadFIFO_page_5(u32 mem, u64 *out)
 {
 	jASSUME( (mem >= 0x10005000) && (mem < 0x10006000) );
 
-	VIF_LOG("ReadFIFO/VIF1, addr=0x%08X\n", mem);
+	VIF_LOG("ReadFIFO/VIF1, addr=0x%08X", mem);
 
 	if( vif1Regs->stat & (VIF1_STAT_INT|VIF1_STAT_VSS|VIF1_STAT_VIS|VIF1_STAT_VFS) )
 		DevCon::Notice( "Reading from vif1 fifo when stalled" );
@@ -127,7 +127,7 @@ void __fastcall WriteFIFO_page_4(u32 mem, const mem128_t *value)
 {
 	jASSUME( (mem >= 0x10004000) && (mem < 0x10005000) );
 
-	VIF_LOG("WriteFIFO/VIF0, addr=0x%08X\n", mem);
+	VIF_LOG("WriteFIFO/VIF0, addr=0x%08X", mem);
 	
 	//psHu64(mem  ) = value[0];
 	//psHu64(mem+8) = value[1];
@@ -144,7 +144,7 @@ void __fastcall WriteFIFO_page_5(u32 mem, const mem128_t *value)
 {
 	jASSUME( (mem >= 0x10005000) && (mem < 0x10006000) );
 
-	VIF_LOG("WriteFIFO/VIF1, addr=0x%08X\n", mem);
+	VIF_LOG("WriteFIFO/VIF1, addr=0x%08X", mem);
 	
 	//psHu64(mem  ) = value[0];
 	//psHu64(mem+8) = value[1];
@@ -165,7 +165,7 @@ void __fastcall WriteFIFO_page_5(u32 mem, const mem128_t *value)
 void __fastcall WriteFIFO_page_6(u32 mem, const mem128_t *value)
 {
 	jASSUME( (mem >= 0x10006000) && (mem < 0x10007000) );
-	GIF_LOG("WriteFIFO/GIF, addr=0x%08X\n", mem);
+	GIF_LOG("WriteFIFO/GIF, addr=0x%08X", mem);
 
 	//psHu64(mem  ) = value[0];
 	//psHu64(mem+8) = value[1];
@@ -197,7 +197,7 @@ void __fastcall WriteFIFO_page_7(u32 mem, const mem128_t *value)
 	// All addresses in this page map to 0x7000 and 0x7010:
 	mem &= 0x10;
 
-	IPU_LOG( "WriteFIFO/IPU, addr=0x%x\n", params mem );
+	IPU_LOG( "WriteFIFO/IPU, addr=0x%x", params mem );
 
 	if( mem == 0 )
 	{
@@ -206,7 +206,7 @@ void __fastcall WriteFIFO_page_7(u32 mem, const mem128_t *value)
 	}
 	else
 	{
-		IPU_LOG("WriteFIFO IPU_in[%d] <- %8.8X_%8.8X_%8.8X_%8.8X\n",
+		IPU_LOG("WriteFIFO IPU_in[%d] <- %8.8X_%8.8X_%8.8X_%8.8X",
 			mem/16, ((u32*)value)[3], ((u32*)value)[2], ((u32*)value)[1], ((u32*)value)[0]);
 
 		//committing every 16 bytes

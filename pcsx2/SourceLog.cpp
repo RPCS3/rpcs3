@@ -76,6 +76,7 @@ void __Log( const char* fmt, ... )
 	else if( emuLog != NULL )		// manually write to the logfile.
 	{
 		fputs( tmp, emuLog );
+		fputs( "\n", emuLog );
 		//fputs( "\r\n", emuLog );
 		fflush( emuLog );
 	}
@@ -113,7 +114,7 @@ static __forceinline void _vSourceLog( u16 protocol, u8 source, u32 cpuPc, u32 c
 	} else if( emuLog != NULL )		// manually write to the logfile.
 	{
 		fputs( tmp, emuLog );
-		//fputs( "\r\n", emuLog );
+		fputs( "\n", emuLog );
 		fflush( emuLog );
 	}
 #endif

@@ -156,7 +156,7 @@ u8 iopMemRead8(u32 mem)
 		{
 			if (t == 0x1000)
 				return DEV9read8(mem);
-			PSXMEM_LOG("err lb %8.8lx\n", mem);
+			PSXMEM_LOG("err lb %8.8lx", mem);
 			return 0;
 		}
 	}
@@ -200,7 +200,7 @@ u16 iopMemRead16(u32 mem)
 					ret = psxHu16(mem);
 					break;
 				}
-				SIF_LOG("Sif reg read %x value %x\n", mem, ret);
+				SIF_LOG("Sif reg read %x value %x", mem, ret);
 				return ret;
 			}
 			return *(const u16 *)(p + (mem & 0xffff));
@@ -211,7 +211,7 @@ u16 iopMemRead16(u32 mem)
 				return SPU2read(mem);
 			if (t == 0x1000)
 				return DEV9read16(mem);
-			PSXMEM_LOG("err lh %8.8lx\n", mem);
+			PSXMEM_LOG("err lh %8.8lx", mem);
 			return 0;
 		}
 	}
@@ -261,7 +261,7 @@ u32 iopMemRead32(u32 mem)
 					ret = psxHu32(mem);
 					break;
 				}
-				SIF_LOG("Sif reg read %x value %x\n", mem, ret);
+				SIF_LOG("Sif reg read %x value %x", mem, ret);
 				return ret;
 			}
 			return *(const u32 *)(p + (mem & 0xffff));
@@ -301,14 +301,17 @@ void iopMemWrite8(u32 mem, u8 value)
 		}
 		else
 		{
-			if (t == 0x1D00) SysPrintf("sw8 [0x%08X]=0x%08X\n", mem, value);
-			if (t == 0x1d00) {
-				psxSu8(mem) = value; return;
+			if (t == 0x1d00) 
+			{
+				Console::WriteLn("sw8 [0x%08X]=0x%08X", params mem, value);
+				psxSu8(mem) = value; 
+				return;
 			}
-			if (t == 0x1000) {
+			if (t == 0x1000) 
+			{
 				DEV9write8(mem, value); return;
 			}
-			PSXMEM_LOG("err sb %8.8lx = %x\n", mem, value);
+			PSXMEM_LOG("err sb %8.8lx = %x", mem, value);
 		}
 	}
 }
@@ -329,7 +332,7 @@ void iopMemWrite16(u32 mem, u16 value)
 		u8* p = (u8 *)(psxMemWLUT[mem >> 16]);
 		if (p != NULL && !(psxRegs.CP0.n.Status & 0x10000) )
 		{
-			if( t==0x1D00 ) SysPrintf("sw16 [0x%08X]=0x%08X\n", mem, value);
+			if( t==0x1D00 ) Console::WriteLn("sw16 [0x%08X]=0x%08X", params mem, value);
 			*(u16 *)(p + (mem & 0xffff)) = value;
 			psxCpu->Clear(mem&~3, 1);
 		}
@@ -371,7 +374,7 @@ void iopMemWrite16(u32 mem, u16 value)
 			if (t == 0x1000) {
 				DEV9write16(mem, value); return;
 			}
-			PSXMEM_LOG("err sh %8.8lx = %x\n", mem, value);
+			PSXMEM_LOG("err sh %8.8lx = %x", mem, value);
 		}
 	}
 }
@@ -400,7 +403,7 @@ void iopMemWrite32(u32 mem, u32 value)
 		{
 			if (t == 0x1d00)
 			{
-				MEM_LOG("iop Sif reg write %x value %x\n", mem, value);
+				MEM_LOG("iop Sif reg write %x value %x", mem, value);
 				switch (mem & 0xf0)
 				{
 					case 0x00:		// EE write path (EE/IOP readable)

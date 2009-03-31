@@ -445,7 +445,7 @@ void __fastcall SuperVUClear(u32 startpc, u32 size, int vuindex)
 			plist->push_back(*it);
 			if( plist->size() > 30 ) {
 				// list is too big, delete
-				//SysPrintf("Performance warning: deleting cached VU programm!\n");
+				//Console::Notice("Performance warning: deleting cached VU program!");
 				delete plist->front();
 				plist->pop_front();
 			}
@@ -516,7 +516,7 @@ void SuperVUDumpBlock(list<VuBaseBlock*>& blocks, int vuindex)
 
 	Path::CreateDirectory( "dumps" );
 	string filename( Path::Combine( "dumps", fmt_string( "svu%cdump%.4X.txt", s_vu?'0':'1', s_pFnHeader->startpc ) ) );
-	//SysPrintf( "dump1 %x => %s\n", s_pFnHeader->startpc, filename );
+	//Console::WriteLn( "dump1 %x => %s", params s_pFnHeader->startpc, filename );
 
 	f = fopen( filename.c_str(), "w" );
 
@@ -611,7 +611,7 @@ void SuperVUDumpBlock(list<VuBaseBlock*>& blocks, int vuindex)
         if( (*itblock)->pcode != NULL ) {
             char command[255];
             FILE* fasm = fopen( "mydump1", "wb" );
-            //SysPrintf("writing: %x, %x\n", (*itblock)->startpc, (uptr)(*itblock)->pendcode - (uptr)(*itblock)->pcode);
+            //Console::WriteLn("writing: %x, %x", params (*itblock)->startpc, (uptr)(*itblock)->pendcode - (uptr)(*itblock)->pcode);
             fwrite( (*itblock)->pcode, 1, (uptr)(*itblock)->pendcode - (uptr)(*itblock)->pcode, fasm );
             fclose( fasm );
             sprintf( command, "objdump -D --target=binary --architecture=i386 -M intel mydump1 > tempdump");
@@ -769,11 +769,11 @@ static VuFunctionHeader* SuperVURecompileProgram(u32 startpc, int vuindex)
 {
 	assert( vuindex < 2 );
 	assert( s_recVUPtr != NULL );
-	//SysPrintf("svu%c rec: %x\n", '0'+vuindex, startpc);
+	//Console::WriteLn("svu%c rec: %x", params '0'+vuindex, startpc);
 
 	// if recPtr reached the mem limit reset whole mem
 	if ( ( (uptr)s_recVUPtr - (uptr)s_recVUMem ) >= VU_EXESIZE-0x40000 ) { 
-		//SysPrintf("SuperVU reset mem\n");
+		//Console::WriteLn("SuperVU reset mem");
 		SuperVUReset(0); 
 		SuperVUReset(1); 
 		SuperVUReset(-1); 
@@ -871,7 +871,7 @@ static int _recbranchAddr(u32 vucode) {
 	s32 bpc = pc + (_Imm11_ << 3);
 /*
 	if ( bpc < 0 ) {
-		SysPrintf("zerorec branch warning: bpc < 0 ( %x ); Using unsigned imm11\n", bpc);
+		Console::WriteLn("zerorec branch warning: bpc < 0 ( %x ); Using unsigned imm11", params bpc);
 		bpc = pc + (_UImm11_ << 3); 
 	}*/
 	bpc &= (s_MemSize[s_vu]-1);
@@ -943,7 +943,7 @@ static VuInstruction* getDelayInst(VuInstruction* pInst)
 static VuBaseBlock* SuperVUBuildBlocks(VuBaseBlock* parent, u32 startpc, const VUPIPELINES& pipes)
 {
 	// check if block already exists
-	//SysPrintf("startpc %x\n", startpc);
+	//Console::WriteLn("startpc %x", params startpc);
 	startpc &= (s_vu ? 0x3fff : 0xfff);
 	VuBlockHeader* pbh = &recVUBlocks[s_vu][startpc/8];
 
@@ -1097,7 +1097,7 @@ static VuBaseBlock* SuperVUBuildBlocks(VuBaseBlock* parent, u32 startpc, const V
 				case 0x16: // fsand
 					if( (ptr[0]&0xc0) ) {
 						// sometimes full sticky bits are needed (simple series 2000 - oane chapara)
-						//SysPrintf("needSticky: %x-%x\n", s_pFnHeader->startpc, startpc);
+						//Console::WriteLn("needSticky: %x-%x", params s_pFnHeader->startpc, startpc);
 						needFullStatusFlag = 2;
 					}
 					break;
@@ -3000,7 +3000,7 @@ void VuInstruction::Recompile(list<VuInstruction>::iterator& itinst, u32 vuxyz)
 		if( type & INST_CLIP_WRITE ) {
 			if( nParentPc < s_pCurBlock->startpc || nParentPc >= (int)pc ) {
 
-				if( pparentinst != NULL ) {
+				if( !CHECK_VUCLIPFLAGHACK && pparentinst != NULL ) {
 
 					if( nParentCheckForExecution >= 0 ) {
 						if( pparentinst->pClipWrite == 0 )
@@ -3023,7 +3023,7 @@ void VuInstruction::Recompile(list<VuInstruction>::iterator& itinst, u32 vuxyz)
 			}
 			else {
 				s_ClipRead = s_pCurBlock->GetInstIterAtPc(nParentPc)->pClipWrite;
-				if (s_ClipRead == 0) SysPrintf("super ClipRead allocation error! \n");
+				if (s_ClipRead == 0) Console::WriteLn("super ClipRead allocation error!");
 			}
 		}
 
@@ -3085,7 +3085,7 @@ void VuInstruction::Recompile(list<VuInstruction>::iterator& itinst, u32 vuxyz)
                 }
 				else {
 					s_StatusRead = s_pCurBlock->GetInstIterAtPc(nParentPc)->pStatusWrite;
-					if (s_StatusRead == 0) SysPrintf("super StatusRead allocation error! \n");
+					if (s_StatusRead == 0) Console::WriteLn("super StatusRead allocation error!");
 //                    if( pc >= (u32)s_pCurBlock->endpc-8 ) {
 //                        // towards the end, so variable might be leaded to another block (silent hill 4)
 //                        uptr tempstatus = (uptr)SuperVUStaticAlloc(4);
@@ -3389,7 +3389,7 @@ void VuInstruction::Recompile(list<VuInstruction>::iterator& itinst, u32 vuxyz)
 
 #ifdef PCSX2_DEVBUILD
 		if ( regs[1].VIread & regs[0].VIwrite & ~((1<<REG_Q)|(1<<REG_P)|(1<<REG_VF0_FLAG)|(1<<REG_ACC_FLAG))) {
-			SysPrintf("*PCSX2*: Warning, VI write to the same reg %x in both lower/upper cycle %x\n", regs[1].VIread & regs[0].VIwrite, s_pCurBlock->startpc);
+			Console::Notice("*PCSX2*: Warning, VI write to the same reg %x in both lower/upper cycle %x", params regs[1].VIread & regs[0].VIwrite, s_pCurBlock->startpc);
 		}
 #endif
 
@@ -3404,7 +3404,7 @@ void VuInstruction::Recompile(list<VuInstruction>::iterator& itinst, u32 vuxyz)
 			assert( regs[1].VFwrite > 0 );
 
 			if (vfwrite[0] == vfwrite[1]) {
-				//SysPrintf("*PCSX2*: Warning, VF write to the same reg in both lower/upper cycle %x\n", s_pCurBlock->startpc);
+				//Console::WriteLn("*PCSX2*: Warning, VF write to the same reg in both lower/upper cycle %x", params s_pCurBlock->startpc);
 			}
 
 			if (vfread0[0] == vfwrite[1] || vfread1[0] == vfwrite[1] ) {
@@ -3475,7 +3475,7 @@ void VuInstruction::Recompile(list<VuInstruction>::iterator& itinst, u32 vuxyz)
 //				
 //				CALLFunc((u32)branchfn);
 //				assert( itinst->regs[0].VIwrite & 0xffff );
-//				SysPrintf("vi write before branch\n");
+//				Console::WriteLn("vi write before branch");
 //				for(s_CacheVIReg = 0; s_CacheVIReg < 16; ++s_CacheVIReg) {
 //					if( itinst->regs[0].VIwrite & (1<<s_CacheVIReg) )
 //						break;
@@ -4159,5 +4159,5 @@ void recVULowerOP_T3_11( VURegs* VU, s32 info )
 
 void recVUunknown( VURegs* VU, s32 info )
 { 
-	SysPrintf("Unknown SVU micromode opcode called\n"); 
+	Console::Notice("Unknown SVU micromode opcode called"); 
 }

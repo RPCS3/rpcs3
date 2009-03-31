@@ -55,7 +55,6 @@
 #define IDC_DPAD                        0x1008
 #define IDC_LSTICK                      0x1009
 #define IDC_RSTICK                      0x100A
-#define ID_GUITAR_HERO                  0x10FB
 #define ID_LOCK_BUTTONS                 0x10FC
 #define ID_LOCK                         0x10FD
 #define ID_LOCK_DIRECTION               0x10FE

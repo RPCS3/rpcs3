@@ -79,11 +79,11 @@ declareAllVariables
 #define _X_Y_Z_W	(((mVU->code >> 21 ) & 0xF ))
 #define _xyzw_ACC	((_XYZW_SS && !_X) ? 15 : _X_Y_Z_W)
 
-#define _bc_	 (mVU->code & 0x03)
-#define _bc_x	((mVU->code & 0x03) == 0)
-#define _bc_y	((mVU->code & 0x03) == 1)
-#define _bc_z	((mVU->code & 0x03) == 2)
-#define _bc_w	((mVU->code & 0x03) == 3)
+#define _bc_	 (mVU->code & 0x3)
+#define _bc_x	((mVU->code & 0x3) == 0)
+#define _bc_y	((mVU->code & 0x3) == 1)
+#define _bc_z	((mVU->code & 0x3) == 2)
+#define _bc_w	((mVU->code & 0x3) == 3)
 
 #define _Fsf_	((mVU->code >> 21) & 0x03)
 #define _Ftf_	((mVU->code >> 23) & 0x03)
@@ -142,9 +142,16 @@ declareAllVariables
 #define mVUblock	 mVU->prog.prog[mVU->prog.cur].block
 #define mVUallocInfo mVU->prog.prog[mVU->prog.cur].allocInfo
 #define mVUbranch	 mVUallocInfo.branch
+#define mVUcycles	 mVUallocInfo.cycles
+#define mVUstall	 mVUallocInfo.maxStall
+#define mVUdivFlag	 mVUallocInfo.divFlag
+#define mVUdivFlagT	 mVUallocInfo.divFlagTimer
+#define mVUregs		 mVUallocInfo.regs
+#define mVUregsTemp	 mVUallocInfo.regsTemp
 #define mVUinfo		 mVUallocInfo.info[mVUallocInfo.curPC / 2]
 #define iPC			 mVUallocInfo.curPC
 #define xPC			 ((iPC / 2) * 8)
+#define incCycles(x) { mVUcycles += x; }
 
 #define _isNOP		 (1<<0) // Skip Lower Instruction
 #define _isBranch	 (1<<1) // Cur Instruction is a Branch
@@ -181,9 +188,10 @@ declareAllVariables
 #define fsInstance	((mVUinfo >> 12) & 3)
 #define fpsInstance	((((mVUinfo>>12) & 3) - 1) & 0x3)
 #define fcInstance	((mVUinfo >> 14) & 3)
-#define fvcInstance	((mVUinfo >> 14) & 3)
+#define fpcInstance	((((mVUinfo>>14) & 3) - 1) & 0x3)
 #define fvmInstance	((mVUinfo >> 16) & 3)
 #define fvsInstance	((mVUinfo >> 18) & 3)
+#define fvcInstance	((mVUinfo >> 20) & 3)
 
 //#define getFs		 (mVUinfo & (1<<13))
 //#define getFt		 (mVUinfo & (1<<14))
@@ -192,4 +200,3 @@ declareAllVariables
 #define isMMX(_VIreg_)	(_VIreg_ >= 1 && _VIreg_ <=9)
 #define mmVI(_VIreg_)	(_VIreg_ - 1)
 
-#include "microVU_Misc.inl"

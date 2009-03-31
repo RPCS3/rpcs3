@@ -3,8 +3,8 @@ AUTOMAKE_OPTIONS = foreign
 noinst_LIBRARIES = libSPU2X.a
 INCLUDES = -I@srcdir@/../../../common/include  -I@srcdir@/3rdparty -I@srcdir@/../../../3rdparty -I@srcdir@/Linux
 
-libSPU2X_a_CXXFLAGS = $(shell pkg-config --cflags gtk+-2.0)
-libSPU2X_a_CFLAGS = $(shell pkg-config --cflags gtk+-2.0)
+libSPU2X_a_CXXFLAGS = $(shell pkg-config --cflags gtk+-2.0) -liconv
+libSPU2X_a_CFLAGS = $(shell pkg-config --cflags gtk+-2.0) -liconv
 
 if X86_64
 libSPU2X_a_CXXFLAGS += -fPIC
@@ -33,6 +33,14 @@ Dma.cpp Lowpass.cpp RegLog.cpp  Reverb.cpp SndOut.cpp Spu2replay.cpp  Wavedump_w
 
 libSPU2X_a_SOURCES += BaseTypes.h  Debug.h  Dma.h  Lowpass.h  RegTable.h  SndOut.h ConvertUTF.h \
 Spu2.h  Spu2replay.h  defs.h  regs.h  spdif.h  utf8.h
-libSPU2X_a_SOURCES += Linux/Config.h Linux/Config.cpp Linux/ConfigSoundTouch.cpp Linux/Linux.h Linux/Alsa.cpp Linux/Alsa.h Linux/Dialogs.cpp Linux/Dialogs.h
+
+libSPU2X_a_SOURCES += Linux/Config.h Linux/Config.cpp Linux/Linux.h Linux/Alsa.cpp Linux/Alsa.h \
+Linux/Dialogs.cpp Linux/Dialogs.h Linux/ConfigSoundTouch.cpp
+
+libSPU2X_a_SOURCES += 3rdparty/liba52/bitstream.c    3rdparty/liba52/downmix.c  3rdparty/liba52/parse.c \
+3rdparty/liba52/bit_allocate.c 3rdparty/liba52/imdct.c  \
+3rdparty/liba52/a52.h 3rdparty/liba52/attributes.h 3rdparty/liba52/config.h 3rdparty/liba52/inttypes.h \
+3rdparty/liba52/tendra.h 3rdparty/liba52/a52_internal.h    3rdparty/liba52/bitstream.h   \
+3rdparty/liba52/mm_accel.h  3rdparty/liba52/tables.h
 
 #SUBDIRS = 3rdparty/SoundTouch

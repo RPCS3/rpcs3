@@ -54,7 +54,7 @@ void _vuFMACflush(VURegs * VU) {
 		if (VU->fmac[i].enable == 0) continue;
 
 		if ((VU->cycle - VU->fmac[i].sCycle) >= VU->fmac[i].Cycle) {
-			VUM_LOG("flushing FMAC pipe[%d] (macflag=%x)\n", i, VU->fmac[i].macflag);
+			VUM_LOG("flushing FMAC pipe[%d] (macflag=%x)", i, VU->fmac[i].macflag);
 
 			VU->fmac[i].enable = 0;
 			VU->VI[REG_MAC_FLAG].UL = VU->fmac[i].macflag;
@@ -68,7 +68,7 @@ void _vuFDIVflush(VURegs * VU) {
 	if (VU->fdiv.enable == 0) return;
 
 	if ((VU->cycle - VU->fdiv.sCycle) >= VU->fdiv.Cycle) {
-		VUM_LOG("flushing FDIV pipe\n");
+		VUM_LOG("flushing FDIV pipe");
 
 		VU->fdiv.enable = 0;
 		VU->VI[REG_Q].UL = VU->fdiv.reg.UL;
@@ -80,7 +80,7 @@ void _vuEFUflush(VURegs * VU) {
 	if (VU->efu.enable == 0) return;
 
 	if ((VU->cycle - VU->efu.sCycle) >= VU->efu.Cycle) {
-//		VUM_LOG("flushing EFU pipe\n");
+//		VUM_LOG("flushing EFU pipe");
 		
 		VU->efu.enable = 0;
 		VU->VI[REG_P].UL = VU->efu.reg.UL;
@@ -101,7 +101,7 @@ void _vuFlushAll(VURegs* VU)
 			nRepeat = 1;
 
 			if ((VU->cycle - VU->fmac[i].sCycle) >= VU->fmac[i].Cycle) {
-				VUM_LOG("flushing FMAC pipe[%d] (macflag=%x)\n", i, VU->fmac[i].macflag);
+				VUM_LOG("flushing FMAC pipe[%d] (macflag=%x)", i, VU->fmac[i].macflag);
 				
 				VU->fmac[i].enable = 0;
 				VU->VI[REG_MAC_FLAG].UL = VU->fmac[i].macflag;
@@ -115,7 +115,7 @@ void _vuFlushAll(VURegs* VU)
 			nRepeat = 1;
 			
 			if ((VU->cycle - VU->fdiv.sCycle) >= VU->fdiv.Cycle) {
-				VUM_LOG("flushing FDIV pipe\n");
+				VUM_LOG("flushing FDIV pipe");
 
 				nRepeat = 1;
 				VU->fdiv.enable = 0;
@@ -129,7 +129,7 @@ void _vuFlushAll(VURegs* VU)
 			nRepeat = 1;
 
 			if ((VU->cycle - VU->efu.sCycle) >= VU->efu.Cycle) {
-	//			VUM_LOG("flushing EFU pipe\n");
+	//			VUM_LOG("flushing EFU pipe");
 
 				nRepeat = 1;
 				VU->efu.enable = 0;
@@ -165,7 +165,7 @@ void _vuFMACTestStall(VURegs * VU, int reg, int xyzw) {
 	VU->VI[REG_MAC_FLAG].UL = VU->fmac[i].macflag;
 	VU->VI[REG_STATUS_FLAG].UL = VU->fmac[i].statusflag;
 	VU->VI[REG_CLIP_FLAG].UL = VU->fmac[i].clipflag;
-	VUM_LOG("FMAC[%d] stall %d\n", i, cycle);
+	VUM_LOG("FMAC[%d] stall %d", i, cycle);
 
 	VU->cycle+= cycle;
 	_vuTestPipes(VU);
@@ -179,11 +179,10 @@ void _vuFMACAdd(VURegs * VU, int reg, int xyzw) {
 		if (VU->fmac[i].enable == 1) continue;
 		break;
 	}
-	if (i==8) {
-//		SysPrintf("*PCSX2*: error , out of fmacs %d\n", VU->cycle);
-	}
+	//if (i==8) Console::Error("*PCSX2*: error , out of fmacs %d", params VU->cycle);
+	
 
-	VUM_LOG("adding FMAC pipe[%d]; xyzw=%x\n", i, xyzw);
+	VUM_LOG("adding FMAC pipe[%d]; xyzw=%x", i, xyzw);
 
 	VU->fmac[i].enable = 1;
 	VU->fmac[i].sCycle = VU->cycle;
@@ -196,7 +195,7 @@ void _vuFMACAdd(VURegs * VU, int reg, int xyzw) {
 }
 
 void _vuFDIVAdd(VURegs * VU, int cycles) {
-	VUM_LOG("adding FDIV pipe\n");
+	VUM_LOG("adding FDIV pipe");
 
 	VU->fdiv.enable = 1;
 	VU->fdiv.sCycle = VU->cycle;
@@ -220,7 +219,7 @@ void _vuFlushFDIV(VURegs * VU) {
 	if (VU->fdiv.enable == 0) return;
 
 	cycle = VU->fdiv.Cycle - (VU->cycle - VU->fdiv.sCycle);
-	VUM_LOG("waiting FDIV pipe %d\n", cycle);
+	VUM_LOG("waiting FDIV pipe %d", cycle);
 
 	VU->fdiv.enable = 0;
 	VU->cycle+= cycle;
@@ -234,7 +233,7 @@ void _vuFlushEFU(VURegs * VU) {
 	if (VU->efu.enable == 0) return;
 
 	cycle = VU->efu.Cycle - (VU->cycle - VU->efu.sCycle);
-//	VUM_LOG("waiting EFU pipe %d\n", cycle);
+//	VUM_LOG("waiting EFU pipe %d", cycle);
 
 	VU->efu.enable = 0;
 	VU->cycle+= cycle;
@@ -317,7 +316,6 @@ void _vuAddLowerStalls(VURegs * VU, _VURegsNum *VUregsn) {
 /*   VU Upper instructions    */
 /******************************/
 #ifndef INT_VUDOUBLEHACK
-static u32 d;
 float vuDouble(u32 f)
 {
 	switch(f & 0x7f800000){
@@ -325,10 +323,13 @@ float vuDouble(u32 f)
 			f &= 0x80000000;
 			return *(float*)&f;
 			break;
-		case 0x7f800000:
+		case 0x7f800000: 
+		{
+			u32 d;
 			d = (f & 0x80000000)|0x7f7fffff;
 			return *(float*)&d;
 			break;
+		}
 		default:
 			return *(float*)&f;
 			break;
@@ -2719,7 +2720,7 @@ void _vuRegsFSSET(VURegs * VU, _VURegsNum *VUregsn) {
     VUregsn->VFread0 = 0;
     VUregsn->VFread1 = 0;
     VUregsn->VIwrite = 1 << REG_STATUS_FLAG;
-    VUregsn->VIread  = 0;//1 << REG_STATUS_FLAG; this kills speed
+	VUregsn->VIread  = 0;
 }
 
 void _vuRegsFMAND(VURegs * VU, _VURegsNum *VUregsn) {

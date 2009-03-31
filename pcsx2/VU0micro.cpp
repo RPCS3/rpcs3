@@ -73,7 +73,7 @@ void VU0MI_XTOP() {
 }
 
 void vu0ExecMicro(u32 addr) {
-	VUM_LOG("vu0ExecMicro %x\n", addr);
+	VUM_LOG("vu0ExecMicro %x", addr);
 	
 	if(VU0.VI[REG_VPU_STAT].UL & 0x1) {
 		DevCon::Notice("vu0ExecMicro > Stalling for previous microprogram to finish");
@@ -95,13 +95,13 @@ void vu0ExecMicro(u32 addr) {
 void VU0unknown() {
 	assert(0);
 	
-	CPU_LOG("Unknown VU micromode opcode called\n"); 
+	CPU_LOG("Unknown VU micromode opcode called"); 
 }  
 
 void VU0regsunknown(_VURegsNum *VUregsn) {
 	assert(0);
 	
-	CPU_LOG("Unknown VU micromode opcode called\n"); 
+	CPU_LOG("Unknown VU micromode opcode called"); 
 }  
  
 _vuRegsTables(VU0, VU0regs);

@@ -36,30 +36,6 @@
 // sps2registers.h
 //
 
-enum GS_REG
-{
-	GS_PMODE	= 0x12000000,
-	GS_SMODE1	= 0x12000010,
-	GS_SMODE2	= 0x12000020,
-	GS_SRFSH	= 0x12000030,
-	GS_SYNCH1	= 0x12000040,
-	GS_SYNCH2	= 0x12000050,
-	GS_SYNCV	= 0x12000060,
-	GS_DISPFB1	= 0x12000070,
-	GS_DISPLAY1	= 0x12000080,
-	GS_DISPFB2	= 0x12000090,
-	GS_DISPLAY2	= 0x120000a0,
-	GS_EXTBUF	= 0x120000b0,
-	GS_EXTDATA	= 0x120000c0,
-	GS_EXTWRITE	= 0x120000d0,
-	GS_BGCOLOR	= 0x120000e0,
-	GS_UNKNOWN	= 0x12000400,
-	GS_CSR		= 0x12001000,
-	GS_IMR		= 0x12001010,
-	GS_BUSDIR	= 0x12001040,
-	GS_SIGLBLID	= 0x12001080
-};
-
 enum GS_PRIM
 {
 	GS_POINTLIST		= 0,
@@ -340,7 +316,7 @@ REG64_(GSReg, DISPFB) // (-1/2)
 	UINT32 DBY:11;
 	UINT32 _PAD2:10;
 REG_END2
-	UINT32 Block() {return FBP<<5;}
+	UINT32 Block() const {return FBP << 5;}
 REG_END2
 
 REG64_(GSReg, DISPLAY) // (-1/2)
@@ -459,6 +435,22 @@ REG64_(GSReg, SMODE2)
 	UINT32 DPMS:2;
 	UINT32 _PAD2:28;
 	UINT32 _PAD3:32;
+REG_END
+
+REG64_(GSReg, SRFSH)
+	// TODO
+REG_END
+
+REG64_(GSReg, SYNCH1)
+	// TODO
+REG_END
+
+REG64_(GSReg, SYNCH2)
+	// TODO
+REG_END
+
+REG64_(GSReg, SYNCV)
+	// TODO
 REG_END
 
 REG64_SET(GSReg)
@@ -1085,6 +1077,65 @@ __declspec(align(16)) struct GIFPath
 	{
 		return regs.u8[nreg]; // (DWORD)GET_GIF_REG(tag, nreg);
 	}
+};
+
+struct GSPrivRegSet
+{
+	union
+	{
+		struct
+		{
+			GSRegPMODE		PMODE;
+			UINT64			_pad1;
+			GSRegSMODE1		SMODE1;
+			UINT64			_pad2;
+			GSRegSMODE2		SMODE2;
+			UINT64			_pad3;
+			GSRegSRFSH		SRFSH;
+			UINT64			_pad4;
+			GSRegSYNCH1		SYNCH1;
+			UINT64			_pad5;
+			GSRegSYNCH2		SYNCH2;
+			UINT64			_pad6;
+			GSRegSYNCV		SYNCV;
+			UINT64			_pad7;
+			struct {
+			GSRegDISPFB		DISPFB;
+			UINT64			_pad1;
+			GSRegDISPLAY	DISPLAY;
+			UINT64			_pad2;
+			} DISP[2];
+			GSRegEXTBUF		EXTBUF;
+			UINT64			_pad8;
+			GSRegEXTDATA	EXTDATA;
+			UINT64			_pad9;
+			GSRegEXTWRITE	EXTWRITE;
+			UINT64			_pad10;
+			GSRegBGCOLOR	BGCOLOR;
+			UINT64			_pad11;
+		};
+
+		BYTE _pad12[0x1000];
+	};
+
+	union
+	{
+		struct
+		{
+			GSRegCSR		CSR;
+			UINT64			_pad13;
+			GSRegIMR		IMR;
+			UINT64			_pad14;
+			UINT64			_unk1[4];
+			GSRegBUSDIR		BUSDIR;
+			UINT64			_pad15;
+			UINT64			_unk2[6];
+			GSRegSIGLBLID	SIGLBLID;
+			UINT64			_pad16;
+		};
+
+		BYTE _pad17[0x1000];
+	};
 };
 
 #pragma pack(pop)

@@ -191,7 +191,7 @@ void ToDouble(int reg)
 // converts really large normal numbers to PS2 signed max
 // converts really small normal numbers to zero (flush)
 // doesn't handle inf/nan/denormal
-void ToPS2FPU_Full(int reg, bool flags, int absreg, bool acc)
+void ToPS2FPU_Full(int reg, bool flags, int absreg, bool acc, bool addsub)
 {
 	if (flags)
 		AND32ItoM((uptr)&fpuRegs.fprc[31], ~(FPUflagO | FPUflagU));
@@ -229,6 +229,7 @@ void ToPS2FPU_Full(int reg, bool flags, int absreg, bool acc)
 	u8 *end3 = JMP8(0);
  
 	x86SetJ8(to_underflow);
+	u8 *end4;
 	if (flags && FPU_FLAGS_UNDERFLOW) //set underflow flags if not zero
 	{
 		SSE2_XORPD_XMM_to_XMM(absreg, absreg);
@@ -236,6 +237,19 @@ void ToPS2FPU_Full(int reg, bool flags, int absreg, bool acc)
 		u8 *is_zero = JE8(0);
  
 		OR32ItoM((uptr)&fpuRegs.fprc[31], (FPUflagU | FPUflagSU));
+		if (addsub)
+		{
+			//On ADD/SUB, the PS2 simply leaves the mantissa bits as they are (after normalization)
+			//IEEE either clears them (FtZ) or returns the denormalized result.
+			//not thoroughly tested : other operations such as MUL and DIV seem to clear all mantissa bits?
+			SSE_MOVAPS_XMM_to_XMM(absreg, reg);
+			SSE2_PSLLQ_I8_to_XMM(reg, 12); //mantissa bits
+			SSE2_PSRLQ_I8_to_XMM(reg, 41);
+			SSE2_PSRLQ_I8_to_XMM(absreg, 63); //sign bit
+			SSE2_PSLLQ_I8_to_XMM(absreg, 31);
+			SSE2_POR_XMM_to_XMM(reg, absreg);
+			end4 = JMP8(0);
+		}
  
 		x86SetJ8(is_zero);
 	}
@@ -245,13 +259,15 @@ void ToPS2FPU_Full(int reg, bool flags, int absreg, bool acc)
 	x86SetJ8(end);
 	x86SetJ8(end2);
 	x86SetJ8(end3);
+	if (flags && FPU_FLAGS_UNDERFLOW && addsub)
+		x86SetJ8(end4);
 }
  
 //mustn't use EAX/ECX/EDX/x86regs (MUL)
-void ToPS2FPU(int reg, bool flags, int absreg, bool acc)
+void ToPS2FPU(int reg, bool flags, int absreg, bool acc, bool addsub = false)
 {
 	if (FPU_RESULT)
-		ToPS2FPU_Full(reg, flags, absreg, acc);
+		ToPS2FPU_Full(reg, flags, absreg, acc, addsub);
 	else
 	{
 		SSE2_CVTSD2SS_XMM_to_XMM(reg, reg); //clamp
@@ -415,24 +431,24 @@ void FPU_MUL(int info, int regd, int sreg, int treg, bool acc)
 }
 
 //------------------------------------------------------------------
-// CommutativeOp XMM (used for ADD, MUL, MAX, MIN and SUB opcodes)
+// CommutativeOp XMM (used for ADD and SUB opcodes. that's it.)
 //------------------------------------------------------------------
 static void (*recFPUOpXMM_to_XMM[] )(x86SSERegType, x86SSERegType) = {
-	SSE2_ADDSD_XMM_to_XMM, NULL, NULL, NULL, SSE2_SUBSD_XMM_to_XMM };
+	SSE2_ADDSD_XMM_to_XMM, SSE2_SUBSD_XMM_to_XMM };
  
 void recFPUOp(int info, int regd, int op, bool acc) 
 {
 	int sreg, treg;
 	ALLOC_S(sreg); ALLOC_T(treg);
  
-	if (FPU_ADD_SUB_HACK && (op == 0 || op == 4)) //ADD or SUB
+	if (FPU_ADD_SUB_HACK) //ADD or SUB
 		FPU_ADD_SUB(sreg, treg);
  
 	ToDouble(sreg); ToDouble(treg);
  
 	recFPUOpXMM_to_XMM[op](sreg, treg);
  
-	ToPS2FPU(sreg, true, treg, acc);
+	ToPS2FPU(sreg, true, treg, acc, true);
 	SSE_MOVSS_XMM_to_XMM(regd, sreg);
  
 	_freeXMMreg(sreg); _freeXMMreg(treg);
@@ -629,10 +645,10 @@ void recDIV_S_xmm(int info)
 	static u32 PCSX2_ALIGNED16(roundmode_temp[4]) = { 0x00000000, 0x00000000, 0x00000000, 0x00000000 };
 	int roundmodeFlag = 0;
     //if (t0reg == -1) {Console::Error("FPU: DIV Allocation Error!");}
-    //SysPrintf("DIV\n");
+    //Console::WriteLn("DIV");
  
 	if ((g_sseMXCSR & 0x00006000) != 0x00000000) { // Set roundmode to nearest if it isn't already
-		//SysPrintf("div to nearest\n");
+		//Console::WriteLn("div to nearest");
 		roundmode_temp[0] = (g_sseMXCSR & 0xFFFF9FFF); // Set new roundmode
 		roundmode_temp[1] = g_sseMXCSR; // Backup old Roundmode
 		SSE_LDMXCSR ((uptr)&roundmode_temp[0]); // Recompile Roundmode Change
@@ -715,7 +731,7 @@ void recMaddsub(int info, int regd, int op, bool acc)
 	else
 		SSE2_ADDSD_XMM_to_XMM(treg, sreg);
 
-	ToPS2FPU(treg, true, sreg, acc);
+	ToPS2FPU(treg, true, sreg, acc, true);
 	x86SetJ32(skipall);
 
 	SSE_MOVSS_XMM_to_XMM(regd, treg);
@@ -865,7 +881,7 @@ FPURECOMPILE_CONSTCODE(NEG_S, XMMINFO_WRITED|XMMINFO_READS);
  
 void recSUB_S_xmm(int info)
 {
-	recFPUOp(info, EEREC_D, 4, false);
+	recFPUOp(info, EEREC_D, 1, false);
 }
  
 FPURECOMPILE_CONSTCODE(SUB_S, XMMINFO_WRITED|XMMINFO_READS|XMMINFO_READT);
@@ -873,7 +889,7 @@ FPURECOMPILE_CONSTCODE(SUB_S, XMMINFO_WRITED|XMMINFO_READS|XMMINFO_READT);
  
 void recSUBA_S_xmm(int info) 
 { 
-	recFPUOp(info, EEREC_ACC, 4, true);
+	recFPUOp(info, EEREC_ACC, 1, true);
 }
  
 FPURECOMPILE_CONSTCODE(SUBA_S, XMMINFO_WRITEACC|XMMINFO_READS|XMMINFO_READT);
@@ -886,17 +902,16 @@ FPURECOMPILE_CONSTCODE(SUBA_S, XMMINFO_WRITEACC|XMMINFO_READS|XMMINFO_READT);
 void recSQRT_S_xmm(int info)
 {
 	u8 *pjmp;
-	u32 *pjmpx;
 	static u32 PCSX2_ALIGNED16(roundmode_temp[4]) = { 0x00000000, 0x00000000, 0x00000000, 0x00000000 };
 	int roundmodeFlag = 0;
 	int tempReg = _allocX86reg(-1, X86TYPE_TEMP, 0, 0);
 	if (tempReg == -1) {Console::Error("FPU: SQRT Allocation Error!"); tempReg = EAX;}
 	int t1reg = _allocTempXMMreg(XMMT_FPS, -1);
 	if (t1reg == -1) {Console::Error("FPU: SQRT Allocation Error!");}
-	//SysPrintf("FPU: SQRT\n");
+	//Console::WriteLn("FPU: SQRT");
  
 	if ((g_sseMXCSR & 0x00006000) != 0x00000000) { // Set roundmode to nearest if it isn't already
-		//SysPrintf("sqrt to nearest\n");
+		//Console::WriteLn("sqrt to nearest");
 		roundmode_temp[0] = (g_sseMXCSR & 0xFFFF9FFF); // Set new roundmode
 		roundmode_temp[1] = g_sseMXCSR; // Backup old Roundmode
 		SSE_LDMXCSR ((uptr)&roundmode_temp[0]); // Recompile Roundmode Change
@@ -907,15 +922,8 @@ void recSQRT_S_xmm(int info)
  
 	if (FPU_FLAGS_ID) {
 		AND32ItoM((uptr)&fpuRegs.fprc[31], ~(FPUflagI|FPUflagD)); // Clear I and D flags
- 
-		//--- Check for zero (skip sqrt if zero)
-		SSE_XORPS_XMM_to_XMM(t1reg, t1reg);
-		SSE_CMPEQSS_XMM_to_XMM(t1reg, EEREC_D);
-		SSE_MOVMSKPS_XMM_to_R32(tempReg, t1reg);
-		AND32ItoR(tempReg, 1); 
-		pjmpx = JNE32(0);
- 
-		//--- Check for negative SQRT ---
+  
+		//--- Check for negative SQRT --- (sqrt(-0) = 0, unlike what the docs say)
 		SSE_MOVMSKPS_XMM_to_R32(tempReg, EEREC_D);
 		AND32ItoR(tempReg, 1);  //Check sign
 		pjmp = JZ8(0); //Skip if none are
@@ -934,9 +942,7 @@ void recSQRT_S_xmm(int info)
 	SSE2_SQRTSD_XMM_to_XMM(EEREC_D, EEREC_D);
  
 	ToPS2FPU(EEREC_D, false, t1reg, false);
- 
-	x86SetJ32(pjmpx);
- 
+  
 	if (roundmodeFlag == 1) { // Set roundmode back if it was changed
 		SSE_LDMXCSR ((uptr)&roundmode_temp[1]);
 	}
@@ -954,6 +960,7 @@ FPURECOMPILE_CONSTCODE(SQRT_S, XMMINFO_WRITED|XMMINFO_READT);
 void recRSQRThelper1(int regd, int regt) // Preforms the RSQRT function when regd <- Fs and regt <- Ft (Sets correct flags)
 {
 	u8 *pjmp1, *pjmp2;
+	u8 *qjmp1, *qjmp2;
 	u32 *pjmp32;
 	int t1reg = _allocTempXMMreg(XMMT_FPS, -1);
 	int tempReg = _allocX86reg(-1, X86TYPE_TEMP, 0, 0);
@@ -962,25 +969,36 @@ void recRSQRThelper1(int regd, int regt) // Preforms the RSQRT function when reg
  
 	AND32ItoM((uptr)&fpuRegs.fprc[31], ~(FPUflagI|FPUflagD)); // Clear I and D flags
  
-	//--- Check for zero ---
-	SSE_XORPS_XMM_to_XMM(t1reg, t1reg);
-	SSE_CMPEQSS_XMM_to_XMM(t1reg, regt);
-	SSE_MOVMSKPS_XMM_to_R32(tempReg, t1reg);
-	AND32ItoR(tempReg, 1);  //Check sign (if regt == zero, sign will be set)
-	pjmp1 = JZ8(0); //Skip if not set
-		OR32ItoM((uptr)&fpuRegs.fprc[31], FPUflagD|FPUflagSD); // Set D and SD flags (even when 0/0)
-		SSE_XORPS_XMM_to_XMM(regd, regt); // Make regd Positive or Negative
-		SetMaxValue(regd); //clamp to max
-		pjmp32 = JMP32(0);
-	x86SetJ8(pjmp1);
- 
-	//--- Check for negative SQRT ---
+	//--- (first) Check for negative SQRT ---
 	SSE_MOVMSKPS_XMM_to_R32(tempReg, regt);
 	AND32ItoR(tempReg, 1);  //Check sign
 	pjmp2 = JZ8(0); //Skip if not set
 		OR32ItoM((uptr)&fpuRegs.fprc[31], FPUflagI|FPUflagSI); // Set I and SI flags
 		SSE_ANDPS_M128_to_XMM(regt, (uptr)&s_pos[0]); // Make regt Positive
 	x86SetJ8(pjmp2);
+ 
+	//--- Check for zero ---
+	SSE_XORPS_XMM_to_XMM(t1reg, t1reg);
+	SSE_CMPEQSS_XMM_to_XMM(t1reg, regt);
+	SSE_MOVMSKPS_XMM_to_R32(tempReg, t1reg);
+	AND32ItoR(tempReg, 1);  //Check sign (if regt == zero, sign will be set)
+	pjmp1 = JZ8(0); //Skip if not set
+	
+		//--- Check for 0/0 ---
+		SSE_XORPS_XMM_to_XMM(t1reg, t1reg);
+		SSE_CMPEQSS_XMM_to_XMM(t1reg, regd);
+		SSE_MOVMSKPS_XMM_to_R32(tempReg, t1reg);
+		AND32ItoR(tempReg, 1);  //Check sign (if regd == zero, sign will be set)
+		qjmp1 = JZ8(0); //Skip if not set
+			OR32ItoM((uptr)&fpuRegs.fprc[31], FPUflagI|FPUflagSI); // Set I and SI flags ( 0/0 )
+			qjmp2 = JMP8(0);
+		x86SetJ8(qjmp1); //x/0 but not 0/0
+			OR32ItoM((uptr)&fpuRegs.fprc[31], FPUflagD|FPUflagSD); // Set D and SD flags ( x/0 )
+		x86SetJ8(qjmp2);
+
+		SetMaxValue(regd); //clamp to max
+		pjmp32 = JMP32(0);
+	x86SetJ8(pjmp1);
  
 	ToDouble(regt); ToDouble(regd);
  
@@ -1013,7 +1031,7 @@ void recRSQRT_S_xmm(int info)
 	static u32 PCSX2_ALIGNED16(roundmode_temp[4]) = { 0x00000000, 0x00000000, 0x00000000, 0x00000000 };
 	int roundmodeFlag = 0;
 	if ((g_sseMXCSR & 0x00006000) != 0x00000000) { // Set roundmode to nearest if it isn't already
-		//SysPrintf("rsqrt to nearest\n");
+		//Console::WriteLn("rsqrt to nearest");
 		roundmode_temp[0] = (g_sseMXCSR & 0xFFFF9FFF); // Set new roundmode
 		roundmode_temp[1] = g_sseMXCSR; // Backup old Roundmode
 		SSE_LDMXCSR ((uptr)&roundmode_temp[0]); // Recompile Roundmode Change

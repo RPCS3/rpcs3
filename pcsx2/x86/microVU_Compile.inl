@@ -31,10 +31,6 @@
 #define mVUdebugStuff1() {}
 #endif
 
-#define curI		mVUcurProg.data[iPC]
-#define setCode() { mVU->code = curI; }
-#define incPC(x)  { iPC = ((iPC + x) & (mVU->progSize-1)); setCode(); }
-
 #define createBlock(blockEndPtr) {									\
 	block.pipelineState = pipelineState;							\
 	block.x86ptrStart = x86ptrStart;								\
@@ -45,9 +41,23 @@
 	}																\
 }
 
+#define curI		  mVUcurProg.data[iPC]
+#define setCode()	{ mVU->code = curI; }
+#define incPC(x)	{ iPC = ((iPC + x) & (mVU->progSize-1)); setCode(); }
+#define startLoop()	{ mVUdebugStuff1(); mVUstall = 0; memset(&mVUregsTemp, 0, sizeof(mVUregsTemp)); }
+
+microVUt(void) mVUsetCycles() {
+	microVU* mVU = mVUx;
+	incCycles(mVUstall);
+	mVUregs.VF[mVUregsTemp.VFreg[0]].reg = mVUregsTemp.VF[0].reg;
+	mVUregs.VF[mVUregsTemp.VFreg[1]].reg = mVUregsTemp.VF[1].reg;
+	mVUregs.VI[mVUregsTemp.VIreg]		 = mVUregsTemp.VI;
+}
+
 microVUx(void) mVUcompile(u32 startPC, u32 pipelineState, microRegInfo* pState, u8* x86ptrStart) {
 	microVU* mVU = mVUx;
 	microBlock block;
+	int branch;
 	iPC = startPC / 4;
 
 	// Searches for Existing Compiled Block (if found, then returns; else, compile)
@@ -56,28 +66,32 @@ microVUx(void) mVUcompile(u32 startPC, u32 pipelineState, microRegInfo* pState, 
 
 	// First Pass
 	setCode();
+	branch	  = 0;
+	mVUbranch = 0;
+	mVUcycles = 1; // Skips "M" phase, and starts counting cycles at "T" stage
 	for (;;) {
-		mVUdebugStuff1();
+		startLoop();
 		mVUopU<vuIndex, 0>();
-		if (curI & _Ebit_)		 { mVUbranch = 5; }
-		if (curI & _MDTbit_)	 { mVUbranch = 4; }
-		if (curI & _Ibit_)		 { incPC(1); mVUinfo |= _isNOP; }
-		else					 { incPC(1); mVUopL<vuIndex, 0>(); }
-		if		(mVUbranch == 4) { mVUbranch = 0; mVUinfo |= _isEOB; break; }
-		else if (mVUbranch == 5) { mVUbranch = 4; }
-		else if (mVUbranch)		 { mVUbranch = 4; mVUinfo |= _isBranch; }
+		if (curI & _Ebit_)	  { branch = 1; }
+		if (curI & _MDTbit_)  { branch = 2; }
+		if (curI & _Ibit_)	  { incPC(1); mVUinfo |= _isNOP; }
+		else				  { incPC(1); mVUopL<vuIndex, 0>(); }
+		mVUsetCycles<vuIndex>();
+		if		(branch >= 2) { mVUinfo |= _isEOB | ((branch == 3) ? _isBdelay : 0); if (mVUbranch) { Console::Error("microVU Warning: Branch in E-bit/Branch delay slot!"); mVUinfo |= _isNOP; } break; }
+		else if (branch == 1) { branch = 2; }
+		if		(mVUbranch)	  { branch = 3; mVUbranch = 0; mVUinfo |= _isBranch; }
 		incPC(1);
 	}
 
 	// Second Pass
 	iPC = startPC;
 	setCode();
-	for (bool x = 1; x==1; ) {
+	for (bool x = 1; x; ) {
 		if (isEOB)			{ x = 0; }
 		else if (isBranch)	{ mVUopU<vuIndex, 1>(); incPC(2); }
 		
 		mVUopU<vuIndex, 1>();
-		if (isNop)	   { incPC(1); }
+		if (isNop)	   { if (curI & _Ibit_) { incPC(1); mVU->iReg = curI; } else { incPC(1); } }
 		else		   { incPC(1); mVUopL<vuIndex, 1>(); }
 		if (!isBdelay) { incPC(1); }
 		else { 

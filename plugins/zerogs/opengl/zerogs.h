@@ -54,7 +54,6 @@ inline void* wglGetProcAddress(const char* x) {
 #include <vector>
 #include <map>
 #include <string>
-#include <list>
 using namespace std;
 
 #ifndef SAFE_DELETE
@@ -111,6 +110,16 @@ static __forceinline const char *error_name(int err)
 	}
 }
 
+#define GL_ERROR_LOG() \
+{ \
+	GLenum myGLerror = glGetError(); \
+	\
+	if( myGLerror != GL_NO_ERROR ) \
+	{ \
+		ERROR_LOG("%s:%d: gl error %s\n", __FILE__, (int)__LINE__, error_name(myGLerror)); \
+	} \
+}\
+	
 #define GL_REPORT_ERROR() \
 { \
 	err = glGetError(); \
@@ -200,13 +209,13 @@ struct VERTEXSHADER
 #define GAME_NOTARGETRESOLVE 0x10
 #define GAME_EXACTCOLOR		0x20
 #define GAME_NOCOLORCLAMP	0x40
-#define GAME_FFXHACK		0x80
+//#define GAME_FFXHACK		0x80
 #define GAME_NODEPTHUPDATE  0x0200
 #define GAME_QUICKRESOLVE1  0x0400
 #define GAME_NOQUICKRESOLVE 0x0800
 #define GAME_NOTARGETCLUT   0x1000 // full 16 bit resolution
 #define GAME_NOSTENCIL	  0x2000
-#define GAME_VSSHACKOFF		0x4000 // vertical stripe syndrome
+//#define GAME_VSSHACKOFF		0x4000 // vertical stripe syndrome
 #define GAME_NODEPTHRESOLVE 0x8000
 #define GAME_FULL16BITRES   0x00010000
 #define GAME_RESOLVEPROMOTED 0x00020000
@@ -218,8 +227,8 @@ struct VERTEXSHADER
 #define GAME_DOPARALLELCTX 0x00800000 // tries to parallelize both contexts so that render calls are reduced (xenosaga)
 									  // makes the game faster, but can be buggy
 #define GAME_XENOSPECHACK 0x01000000 // xenosaga specularity hack (ignore any zmask=1 draws)
-#define GAME_PARTIALPOINTERS 0x02000000 // whenver the texture or render target are small, tries to look for bigger ones to read from
-#define GAME_PARTIALDEPTH 0x04000000 // tries to save depth targets as much as possible across height changes
+//#define GAME_PARTIALPOINTERS 0x02000000 // whenver the texture or render target are small, tries to look for bigger ones to read from
+//#define GAME_PARTIALDEPTH 0x04000000 // tries to save depth targets as much as possible across height changes
 
 #define USEALPHATESTING (!(g_GameSettings&GAME_NOALPHATEST))
 

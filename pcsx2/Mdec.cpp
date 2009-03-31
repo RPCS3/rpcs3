@@ -156,7 +156,7 @@ void mdecInit(void) {
 
 
 void mdecWrite0(u32 data) {
-	CDR_LOG("mdec0 write %lx\n", data);
+	CDR_LOG("mdec0 write %lx", data);
 	
 	mdec.command = data;
 	if ((data&0xf5ff0000)==0x30000000) {
@@ -165,7 +165,7 @@ void mdecWrite0(u32 data) {
 }
 
 void mdecWrite1(u32 data) {
-	CDR_LOG("mdec1 write %lx\n", data);
+	CDR_LOG("mdec1 write %lx", data);
 
 	if (data&0x80000000) { // mdec reset
 		round_init();
@@ -174,14 +174,14 @@ void mdecWrite1(u32 data) {
 }
 
 u32 mdecRead0(void) {
-	CDR_LOG("mdec0 read %lx\n", mdec.command);
+	CDR_LOG("mdec0 read %lx", mdec.command);
 
 	return mdec.command;
 }
 
 u32 mdecRead1(void) {
 #ifdef CDR_LOG
-	CDR_LOG("mdec1 read %lx\n", mdec.status);
+	CDR_LOG("mdec1 read %lx", mdec.status);
 #endif
 	return mdec.status;
 }
@@ -190,7 +190,7 @@ void psxDma0(u32 adr, u32 bcr, u32 chcr) {
 	int cmd = mdec.command;
 	int size;
 
-	CDR_LOG("DMA0 %lx %lx %lx\n", adr, bcr, chcr);
+	CDR_LOG("DMA0 %lx %lx %lx", adr, bcr, chcr);
 
 	if (chcr!=0x01000201) return;
 
@@ -214,7 +214,7 @@ void psxDma1(u32 adr, u32 bcr, u32 chcr) {
 	unsigned short *image;
 	int size;
 
-	CDR_LOG("DMA1 %lx %lx %lx (cmd = %lx)\n", adr, bcr, chcr, mdec.command);
+	CDR_LOG("DMA1 %lx %lx %lx (cmd = %lx)", adr, bcr, chcr, mdec.command);
 
 	if (chcr!=0x01000200) return;
 

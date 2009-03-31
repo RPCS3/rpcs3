@@ -35,6 +35,7 @@
 #define IDD_CAPTURE                     2026
 #define IDC_EDIT4                       2027
 #define IDD_GPUCONFIG                   2027
+#define IDC_CHECK9                      2028
 #define IDR_CONVERT9_FX                 10000
 #define IDR_TFX9_FX                     10001
 #define IDR_MERGE9_FX                   10002
@@ -50,7 +51,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        10009
 #define _APS_NEXT_COMMAND_VALUE         32771
-#define _APS_NEXT_CONTROL_VALUE         2028
+#define _APS_NEXT_CONTROL_VALUE         2029
 #define _APS_NEXT_SYMED_VALUE           5000
 #endif
 #endif

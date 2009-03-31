@@ -101,17 +101,17 @@ __declspec(align(16)) union GSVertexSW
 
 		if(v34.allfalse()) 
 		{
-			test = (v35 ^ v45) & (v35 ^ v45.zwxy()) & (vtl == v3 + (v4 - v5)) & (vbr == v5);
+			test = (v35 ^ v45) & (v35 ^ v45.zwxy()) & (vtl + v5 == v3 + v4) & (vbr == v5);
 			i = 5; 
 		}
 		else if(v35.allfalse()) 
 		{
-			test = (v34 ^ v45) & (v34 ^ v45.zwxy()) & (vtl == v3 + (v5 - v4)) & (vbr == v4);
+			test = (v34 ^ v45) & (v34 ^ v45.zwxy()) & (vtl + v4 == v3 + v5) & (vbr == v4);
 			i = 4; 
 		}
 		else if(v45.allfalse())
 		{
-			test = (v34 ^ v35) & (v34 ^ v35.zwxy()) & (vtl == v5 + (v4 - v3)) & (vbr == v3);
+			test = (v34 ^ v35) & (v34 ^ v35.zwxy()) & (vtl + v3 == v5 + v4) & (vbr == v3);
 			i = 3; 
 		}
 		else 

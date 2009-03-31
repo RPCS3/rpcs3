@@ -219,9 +219,6 @@ struct tlbs
 
 #endif
 
-void JumpCheckSym(u32 addr, u32 pc);
-void JumpCheckSymRet(u32 addr);
-
 PCSX2_ALIGNED16_EXTERN(cpuRegisters cpuRegs);
 PCSX2_ALIGNED16_EXTERN(fpuRegisters fpuRegs);
 PCSX2_ALIGNED16_EXTERN(tlbs tlb[48]);
@@ -260,14 +257,14 @@ extern void cpuInit();
 extern void cpuReset();		// can throw Exception::FileNotFound.
 extern void cpuShutdown();
 extern void cpuExecuteBios();
-extern void cpuException(u32 code, u32 bd);
+extern void __fastcall cpuException(u32 code, u32 bd);
 extern void cpuTlbMissR(u32 addr, u32 bd);
 extern void cpuTlbMissW(u32 addr, u32 bd);
 extern void cpuTestHwInts();
 
-extern int cpuSetNextBranch( u32 startCycle, s32 delta );
-extern int cpuSetNextBranchDelta( s32 delta );
-extern int cpuTestCycle( u32 startCycle, s32 delta );
+extern int __fastcall cpuSetNextBranch( u32 startCycle, s32 delta );
+extern int __fastcall cpuSetNextBranchDelta( s32 delta );
+extern int __fastcall cpuTestCycle( u32 startCycle, s32 delta );
 extern void cpuSetBranch();
 
 extern bool _cpuBranchTest_Shared();		// for internal use by the Dynarecs and Ints inside R5900:

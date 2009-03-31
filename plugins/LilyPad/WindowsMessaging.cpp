@@ -79,19 +79,9 @@ public:
 			Deactivate();
 			return 0;
 		}
+		GetMouseCapture(hWnd);
 
-		SetCapture(hWnd);
-		ShowCursor(0);
-
-		GetCursorPos(&origCursorPos);
 		active = 1;
-
-		RECT r;
-		GetWindowRect(hWnd, &r);
-		ClipCursor(&r);
-		center.x = (r.left + r.right)/2;
-		center.y = (r.top + r.bottom)/2;
-		SetCursorPos(center.x, center.y);
 
 		wmm = this;
 		AllocState();
@@ -102,10 +92,7 @@ public:
 	void Deactivate() {
 		FreeState();
 		if (active) {
-			ClipCursor(0);
-			ReleaseCapture();
-			ShowCursor(1);
-			SetCursorPos(origCursorPos.x, origCursorPos.y);
+			ReleaseMouseCapture();
 			if (!wmk)
 				ReleaseExtraProc(WindowsMessagingWndProc);
 			active = 0;
@@ -178,6 +165,9 @@ ExtraWndProcResult WindowsMessagingWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, 
 		else if (uMsg == WM_MOUSEHWHEEL) {
 			wmm->UpdateAxis(3, ((int)wParam>>16)/WHEEL_DELTA);
 			return NO_WND_PROC;
+		}
+		else if (uMsg == WM_SIZE && wmm->active) {
+			WindowsMouse::WindowResized(hWnd);
 		}
 		// Taken care of elsewhere.  When binding, killing focus means stop reading input.
 		// When running PCSX2, I release all mouse and keyboard input elsewhere.

@@ -22,6 +22,7 @@
 #pragma once
 
 #include "GS.h"
+#include "GSVertexSW.h"
 
 /* 
 
@@ -44,16 +45,21 @@ Regs data (id == 3)
 
 class GSDump
 {
-	FILE* m_fp;
-	int m_vsyncs;
+	FILE* m_gs;
+	FILE* m_obj;
+	int m_frames;
+	int m_objects;
+	int m_vertices;
 
 public:
 	GSDump();
 	virtual ~GSDump();
 
-	void Open(LPCTSTR fn, DWORD crc, const GSFreezeData& fd, const void* regs);
+	void Open(const CString& fn, DWORD crc, const GSFreezeData& fd, const GSPrivRegSet* regs);
+	void Close();
 	void ReadFIFO(UINT32 size);
 	void Transfer(int index, BYTE* mem, size_t size);
-	void VSync(int field, bool last, const void* regs);
-	operator bool() {return m_fp != NULL;}
+	void VSync(int field, bool last, const GSPrivRegSet* regs);
+	void Object(GSVertexSW* vertices, int count, GS_PRIM_CLASS primclass);
+	operator bool() {return m_gs != NULL;}
 };

@@ -8,11 +8,8 @@
 		Name="VCCLCompilerTool"
 		AdditionalIncludeDirectories="./;../../;../../x86;&quot;../../x86/ix86-32&quot;;../libs;../../IPU"
 		PreprocessorDefinitions="__i386__;ENABLE_NLS;PACKAGE=\&quot;pcsx2\&quot;;TIXML_USE_STL"
-		StructMemberAlignment="5"
 		RuntimeTypeInfo="false"
 		PrecompiledHeaderFile="$(IntDir)/pcsx2.pch"
-		WarningLevel="3"
-		DebugInformationFormat="3"
 		CompileAs="0"
 	/>
 	<Tool

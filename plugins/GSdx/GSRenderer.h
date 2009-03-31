@@ -35,13 +35,13 @@ struct GSRendererSettings
 	bool m_vsync;
 	bool m_nativeres;
 	bool m_aa1;
+	bool m_blur;
 };
 
 class GSRendererBase : public GSState, protected GSRendererSettings
 {
 protected:
 	bool m_osd;
-	int m_field;
 
 	void ProcessWindowMessages()
 	{
@@ -91,6 +91,12 @@ protected:
 				m_aa1 = !m_aa1;
 				return true;
 			}			
+
+			if(msg.wParam == VK_END)
+			{
+				m_blur = !m_blur;
+				return true;
+			}			
 		}
 
 		return false;
@@ -103,7 +109,6 @@ public:
 	GSRendererBase(BYTE* base, bool mt, void (*irq)(), int nloophack, const GSRendererSettings& rs)
 		: GSState(base, mt, irq, nloophack)
 		, m_osd(true)
-		, m_field(0)
 	{
 		m_interlace = rs.m_interlace;
 		m_aspectratio = rs.m_aspectratio;
@@ -111,6 +116,7 @@ public:
 		m_vsync = rs.m_vsync;
 		m_nativeres = rs.m_nativeres;
 		m_aa1 = rs.m_aa1;
+		m_blur = rs.m_blur;
 	};
 
 	virtual bool Create(LPCTSTR title) = 0;
@@ -126,102 +132,197 @@ protected:
 	virtual void ResetDevice() {}
 	virtual bool GetOutput(int i, Texture& t) = 0;
 
-	bool Merge()
+	bool Merge(int field)
 	{
+		bool en[2];
+
+		CRect fr[2];
+		CRect dr[2];
+
 		int baseline = INT_MAX;
 
 		for(int i = 0; i < 2; i++)
 		{
-			if(IsEnabled(i))
+			en[i] = IsEnabled(i);
+
+			if(en[i])
 			{
-				baseline = min(GetDisplayPos(i).y, baseline);
+				fr[i] = GetFrameRect(i);
+				dr[i] = GetDisplayRect(i);
+
+				baseline = min(dr[i].top, baseline);
+
+				// printf("[%d]: %d %d %d %d, %d %d %d %d\n", i, fr[i], dr[i]); 
+			}
+		}
+
+		if(!en[0] && !en[1])
+		{
+			return false;
+		}
+
+		// try to avoid fullscreen blur, could be nice on tv but on a monitor it's like double vision, hurts my eyes (persona 4, guitar hero)
+		//
+		// NOTE: probably the technique explained in graphtip.pdf (Antialiasing by Supersampling / 4. Reading Odd/Even Scan Lines Separately with the PCRTC then Blending)
+
+		bool samesrc = 
+			en[0] && en[1] && 
+			m_regs->DISP[0].DISPFB.FBP == m_regs->DISP[1].DISPFB.FBP && 
+			m_regs->DISP[0].DISPFB.FBW == m_regs->DISP[1].DISPFB.FBW && 
+			m_regs->DISP[0].DISPFB.PSM == m_regs->DISP[1].DISPFB.PSM;
+
+		bool blurdetected = false;
+
+		if(samesrc && m_regs->PMODE.SLBG == 0 && m_regs->PMODE.MMOD == 1 && m_regs->PMODE.ALP == 0x80)
+		{
+			if(fr[0] == fr[1] + CRect(0, 1, 0, 0) && dr[0] == dr[1] + CRect(0, 0, 0, 1)
+			|| fr[1] == fr[0] + CRect(0, 1, 0, 0) && dr[1] == dr[0] + CRect(0, 0, 0, 1))
+			{
+				// persona 4:
+				//
+				// fr[0] = 0 0 640 448
+				// fr[1] = 0 1 640 448
+				// dr[0] = 159 50 779 498
+				// dr[1] = 159 50 779 497
+				//
+				// second image shifted up by 1 pixel and blended over itself
+				//
+				// god of war:
+				//
+				// fr[0] = 0 1 512 448
+				// fr[1] = 0 0 512 448
+				// dr[0] = 127 50 639 497
+				// dr[1] = 127 50 639 498
+				//
+				// same just the first image shifted
+
+				int top = min(fr[0].top, fr[1].top);
+				int bottom = max(dr[0].bottom, dr[1].bottom);
+
+				fr[0].top = top;
+				fr[1].top = top;
+				dr[0].bottom = bottom;
+				dr[1].bottom = bottom;
+
+				blurdetected = true;
+			}
+			else if(dr[0] == dr[1] && (fr[0] == fr[1] + CPoint(0, 1) || fr[1] == fr[0] + CPoint(0, 1)))
+			{
+				// dq5:
+				//
+				// fr[0] = 0 1 512 445
+				// fr[1] = 0 0 512 444
+				// dr[0] = 127 50 639 494
+				// dr[1] = 127 50 639 494
+
+				int top = min(fr[0].top, fr[1].top);
+				int bottom = min(fr[0].bottom, fr[1].bottom);
+
+				fr[0].top = fr[1].top = top;
+				fr[0].bottom = fr[1].bottom = bottom;
+
+				blurdetected = true;
 			}
 		}
 
 		CSize fs(0, 0);
 		CSize ds(0, 0);
 
-		Texture st[2];
-		GSVector4 sr[2];
-		GSVector4 dr[2];
+		Texture tex[2];
+
+		if(samesrc && fr[0].bottom == fr[1].bottom)
+		{
+			GetOutput(0, tex[0]);
+
+			tex[1] = tex[0]; // saves one texture fetch
+		}
+		else
+		{
+			if(en[0]) GetOutput(0, tex[0]);
+			if(en[1]) GetOutput(1, tex[1]);
+		}
+
+		GSVector4 src[2];
+		GSVector4 dst[2];
 
 		for(int i = 0; i < 2; i++)
 		{
-			if(IsEnabled(i) && GetOutput(i, st[i]))
+			if(!en[i] || !tex[i]) continue;
+
+			CRect r = fr[i];
+
+			// overscan hack
+
+			if(dr[i].Height() > 512) // hmm
 			{
-				CRect r = GetFrameRect(i);
-
-				// overscan hack
-
-				if(GetDisplaySize(i).cy > 512) // hmm
-				{
-					int y = GetDeviceSize(i).cy;
-					if(SMODE2->INT && SMODE2->FFMD) y /= 2;
-					r.bottom = r.top + y;
-				}
-
-				//
-
-				sr[i].x = st[i].m_scale.x * r.left / st[i].GetWidth();
-				sr[i].y = st[i].m_scale.y * r.top / st[i].GetHeight();
-				sr[i].z = st[i].m_scale.x * r.right / st[i].GetWidth();
-				sr[i].w = st[i].m_scale.y * r.bottom / st[i].GetHeight();
-
-				GSVector2 o;
-
-				o.x = 0;
-				o.y = 0;
-				
-				CPoint p = GetDisplayPos(i);
-
-				if(p.y - baseline >= 4) // 2?
-				{
-					o.y = st[i].m_scale.y * (p.y - baseline);
-				}
-
-				if(SMODE2->INT && SMODE2->FFMD) o.y /= 2;
-
-				dr[i].x = o.x;
-				dr[i].y = o.y;
-				dr[i].z = o.x + st[i].m_scale.x * r.Width();
-				dr[i].w = o.y + st[i].m_scale.y * r.Height();
-
-#ifdef _M_AMD64
-// schrödinger's bug, fs will be trashed unless we access these values
-CString str;
-str.Format(_T("%d %f %f %f %f "), i, o.x, o.y, dr[i].z, dr[i].w);
-//::MessageBox(NULL, str, _T(""), MB_OK);
-#endif
-				fs.cx = max(fs.cx, (int)(dr[i].z + 0.5f));
-				fs.cy = max(fs.cy, (int)(dr[i].w + 0.5f));
+				int y = GetDeviceSize(i).cy;
+				if(m_regs->SMODE2.INT && m_regs->SMODE2.FFMD) y /= 2;
+				r.bottom = r.top + y;
 			}
+
+			//
+
+			if(m_blur && blurdetected && i == 1)
+			{
+				src[i].x = tex[i].m_scale.x * r.left / tex[i].GetWidth();
+				src[i].y = (tex[i].m_scale.y * r.top + 1) / tex[i].GetHeight();
+				src[i].z = tex[i].m_scale.x * r.right / tex[i].GetWidth();
+				src[i].w = (tex[i].m_scale.y * r.bottom + 1) / tex[i].GetHeight();
+			}
+			else
+			{
+				src[i].x = tex[i].m_scale.x * r.left / tex[i].GetWidth();
+				src[i].y = tex[i].m_scale.y * r.top / tex[i].GetHeight();
+				src[i].z = tex[i].m_scale.x * r.right / tex[i].GetWidth();
+				src[i].w = tex[i].m_scale.y * r.bottom / tex[i].GetHeight();
+			}
+
+			GSVector2 o;
+
+			o.x = 0;
+			o.y = 0;
+			
+			if(dr[i].top - baseline >= 4) // 2?
+			{
+				o.y = tex[i].m_scale.y * (dr[i].top - baseline);
+			}
+
+			if(m_regs->SMODE2.INT && m_regs->SMODE2.FFMD) o.y /= 2;
+
+			dst[i].x = o.x;
+			dst[i].y = o.y;
+			dst[i].z = o.x + tex[i].m_scale.x * r.Width();
+			dst[i].w = o.y + tex[i].m_scale.y * r.Height();
+
+			fs.cx = max(fs.cx, (int)(dst[i].z + 0.5f));
+			fs.cy = max(fs.cy, (int)(dst[i].w + 0.5f));
 		}
 
 		ds.cx = fs.cx;
 		ds.cy = fs.cy;
 
-		if(SMODE2->INT && SMODE2->FFMD) ds.cy *= 2;
+		if(m_regs->SMODE2.INT && m_regs->SMODE2.FFMD) ds.cy *= 2;
 
-		bool slbg = PMODE->SLBG;
-		bool mmod = PMODE->MMOD;
+		bool slbg = m_regs->PMODE.SLBG;
+		bool mmod = m_regs->PMODE.MMOD;
 
-		if(st[0] || st[1])
+		if(tex[0] || tex[1])
 		{
 			GSVector4 c;
 
-			c.r = (float)BGCOLOR->R / 255;
-			c.g = (float)BGCOLOR->G / 255;
-			c.b = (float)BGCOLOR->B / 255;
-			c.a = (float)PMODE->ALP / 255;
+			c.r = (float)m_regs->BGCOLOR.R / 255;
+			c.g = (float)m_regs->BGCOLOR.G / 255;
+			c.b = (float)m_regs->BGCOLOR.B / 255;
+			c.a = (float)m_regs->PMODE.ALP / 255;
 
-			m_dev.Merge(st, sr, dr, fs, slbg, mmod, c);
+			m_dev.Merge(tex, src, dst, fs, slbg, mmod, c);
 
-			if(SMODE2->INT && m_interlace > 0)
+			if(m_regs->SMODE2.INT && m_interlace > 0)
 			{
-				int field = 1 - ((m_interlace - 1) & 1);
+				int field2 = 1 - ((m_interlace - 1) & 1);
 				int mode = (m_interlace - 1) >> 1;
 
-				if(!m_dev.Interlace(ds, m_field ^ field, mode, st[1].m_scale.y)) // st[1].m_scale.y
+				if(!m_dev.Interlace(ds, field ^ field2, mode, tex[1].m_scale.y))
 				{
 					return false;
 				}
@@ -229,6 +330,37 @@ str.Format(_T("%d %f %f %f %f "), i, o.x, o.y, dr[i].z, dr[i].w);
 		}
 
 		return true;
+	}
+
+	void DoSnapshot(int field)
+	{
+		if(!m_snapshot.IsEmpty())
+		{
+			if(!m_dump && (::GetAsyncKeyState(VK_SHIFT) & 0x8000))
+			{
+				GSFreezeData fd;
+				fd.size = 0;
+				fd.data = NULL;
+				Freeze(&fd, true);
+				fd.data = new BYTE[fd.size];
+				Freeze(&fd, false);
+
+				m_dump.Open(m_snapshot, m_crc, fd, m_regs);
+
+				delete [] fd.data;
+			}
+
+			m_dev.SaveCurrent(m_snapshot + _T(".bmp"));
+
+			m_snapshot.Empty();
+		}
+		else
+		{
+			if(m_dump)
+			{
+				m_dump.VSync(field, !(::GetAsyncKeyState(VK_CONTROL) & 0x8000), m_regs);
+			}
+		}
 	}
 
 	void DoCapture()
@@ -293,6 +425,7 @@ public:
 	bool s_save;
 	bool s_savez;
 
+	CString m_snapshot;
 	GSCapture m_capture;
 
 public:
@@ -325,11 +458,7 @@ public:
 
 	void VSync(int field)
 	{
-		// printf("VSYNC\n");
-
 		GSPerfMonAutoTimer pmat(m_perfmon);
-
-		m_field = !!field;
 
 		Flush();
 
@@ -337,12 +466,9 @@ public:
 
 		ProcessWindowMessages();
 
-		if(m_dump)
-		{
-			m_dump.VSync(m_field, !(::GetAsyncKeyState(VK_CONTROL) & 0x8000), PMODE);
-		}
+		field = field ? 1 : 0;
 
-		if(!Merge()) return;
+		if(!Merge(field)) return;
 
 		// osd 
 
@@ -360,7 +486,7 @@ public:
 			s_stats.Format(
 				_T("%I64d | %d x %d | %.2f fps (%d%%) | %s - %s | %s | %d/%d/%d | %d%% CPU | %.2f | %.2f"), 
 				m_perfmon.GetFrame(), GetDisplaySize().cx, GetDisplaySize().cy, fps, (int)(100.0 * fps / GetFPS()),
-				SMODE2->INT ? (CString(_T("Interlaced ")) + (SMODE2->FFMD ? _T("(frame)") : _T("(field)"))) : _T("Progressive"),
+				m_regs->SMODE2.INT ? (CString(_T("Interlaced ")) + (m_regs->SMODE2.FFMD ? _T("(frame)") : _T("(field)"))) : _T("Progressive"),
 				GSSettingsDlg::g_interlace[m_interlace].name,
 				GSSettingsDlg::g_aspectratio[m_aspectratio].name,
 				(int)m_perfmon.Get(GSPerfMon::Quad),
@@ -419,30 +545,21 @@ public:
 
 		m_dev.Present(r);
 
+		//
+
+		DoSnapshot(field);
+
 		DoCapture();
 	}
 
 	bool MakeSnapshot(LPCTSTR path)
 	{
-		CString fn;
-
-		fn.Format(_T("%s_%s"), path, CTime::GetCurrentTime().Format(_T("%Y%m%d%H%M%S")));
-
-		if((::GetAsyncKeyState(VK_SHIFT) & 0x8000) && !m_dump)
+		if(m_snapshot.IsEmpty())
 		{
-			GSFreezeData fd;
-			fd.size = 0;
-			fd.data = NULL;
-			Freeze(&fd, true);
-			fd.data = new BYTE[fd.size];
-			Freeze(&fd, false);
-
-			m_dump.Open(fn + _T(".gs"), m_crc, fd, PMODE);
-
-			delete [] fd.data;
+			m_snapshot.Format(_T("%s_%s"), path, CTime::GetCurrentTime().Format(_T("%Y%m%d%H%M%S")));
 		}
 
-		return m_dev.SaveCurrent(fn + _T(".bmp"));
+		return true;
 	}
 
 	virtual void MinMaxUV(int w, int h, CRect& r) {r = CRect(0, 0, w, h);}

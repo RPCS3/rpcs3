@@ -1048,12 +1048,12 @@ void iFlushCall(int flushtype)
 //	int i;
 //	for(i = 0; i < 32; ++i ) {
 //		if( fpuRegs.fpr[i].UL== 0x7f800000 || fpuRegs.fpr[i].UL == 0xffc00000) {
-//			SysPrintf("bad fpu: %x %x %x\n", i, cpuRegs.cycle, g_lastpc);
+//			Console::WriteLn("bad fpu: %x %x %x", params i, cpuRegs.cycle, g_lastpc);
 //		}
 //
 //		if( VU0.VF[i].UL[0] == 0xffc00000 || //(VU0.VF[i].UL[1]&0xffc00000) == 0xffc00000 ||
 //			VU0.VF[i].UL[0] == 0x7f800000) {
-//			SysPrintf("bad vu0: %x %x %x\n", i, cpuRegs.cycle, g_lastpc);
+//			Console::WriteLn("bad vu0: %x %x %x", params i, cpuRegs.cycle, g_lastpc);
 //		}
 //	}
 //}
@@ -1390,7 +1390,7 @@ void recRecompile( const u32 startpc )
 	s_pCurBlockEx = recBlocks.New(HWADDR(startpc), (uptr)recPtr);
 
 	if( s_pCurBlockEx == NULL ) {
-		//SysPrintf("ee reset (blocks)\n");
+		//Console::WriteLn("ee reset (blocks)");
 		recResetEE();
 		x86SetPtr( recPtr );
 		s_pCurBlockEx = recBlocks.New(HWADDR(startpc), (uptr)recPtr);

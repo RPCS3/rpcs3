@@ -127,13 +127,13 @@ extern s32 psxCycleEE;		// tracks IOP's current sych status with the EE
 #ifndef _PC_
 
 #define _i32(x) (s32)x
-#define _u32(x) x
+#define _u32(x) (u32)x
 
-#define _i16(x) (short)x
-#define _u16(x) (unsigned short)x
+#define _i16(x) (s16)x
+#define _u16(x) (u16)x
 
-#define _i8(x) (char)x
-#define _u8(x) (unsigned char)x
+#define _i8(x) (s8)x
+#define _u8(x) (u8)x
 
 /**** R3000A Instruction Macros ****/
 #define _PC_       psxRegs.pc       // The next PC to be executed
@@ -143,7 +143,7 @@ extern s32 psxCycleEE;		// tracks IOP's current sych status with the EE
 #define _Rt_     ((psxRegs.code >> 16) & 0x1F)  // The rt part of the instruction register 
 #define _Rs_     ((psxRegs.code >> 21) & 0x1F)  // The rs part of the instruction register 
 #define _Sa_     ((psxRegs.code >>  6) & 0x1F)  // The sa part of the instruction register
-#define _Im_     ((unsigned short)psxRegs.code) // The immediate part of the instruction register
+#define _Im_     ((u16)psxRegs.code) // The immediate part of the instruction register
 #define _Target_ (psxRegs.code & 0x03ffffff)    // The target part of the instruction register
 
 #define _Imm_	((short)psxRegs.code) // sign-extended immediate

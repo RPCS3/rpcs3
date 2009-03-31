@@ -94,10 +94,11 @@ void recMFSA( void )
 	}
 }
 
+// SA is 4-bit and contains the amount of bytes to shift
 void recMTSA( void )
 {
 	if( GPR_IS_CONST1(_Rs_) ) {
-		MOV32ItoM((uptr)&cpuRegs.sa, g_cpuConstRegs[_Rs_].UL[0] );
+		MOV32ItoM((uptr)&cpuRegs.sa, g_cpuConstRegs[_Rs_].UL[0] & 0xf );
 	}
 	else {
 		int mmreg;
@@ -113,19 +114,19 @@ void recMTSA( void )
 			MOV32MtoR(EAX, (uptr)&cpuRegs.GPR.r[_Rs_].UL[0]);
 			MOV32RtoM((uptr)&cpuRegs.sa, EAX);
 		}
+		AND32ItoM((uptr)&cpuRegs.sa, 0xf);
 	}
 }
 
 void recMTSAB( void ) 
 {
 	if( GPR_IS_CONST1(_Rs_) ) {
-		MOV32ItoM((uptr)&cpuRegs.sa, ((g_cpuConstRegs[_Rs_].UL[0] & 0xF) ^ (_Imm_ & 0xF)) << 3);
+		MOV32ItoM((uptr)&cpuRegs.sa, ((g_cpuConstRegs[_Rs_].UL[0] & 0xF) ^ (_Imm_ & 0xF)) );
 	}
 	else {
 		_eeMoveGPRtoR(EAX, _Rs_);
 		AND32ItoR(EAX, 0xF);
 		XOR32ItoR(EAX, _Imm_&0xf);
-		SHL32ItoR(EAX, 3);
 		MOV32RtoM((uptr)&cpuRegs.sa, EAX);
 	}
 }
@@ -133,13 +134,13 @@ void recMTSAB( void )
 void recMTSAH( void ) 
 {
 	if( GPR_IS_CONST1(_Rs_) ) {
-		MOV32ItoM((uptr)&cpuRegs.sa, ((g_cpuConstRegs[_Rs_].UL[0] & 0x7) ^ (_Imm_ & 0x7)) << 4);
+		MOV32ItoM((uptr)&cpuRegs.sa, ((g_cpuConstRegs[_Rs_].UL[0] & 0x7) ^ (_Imm_ & 0x7)) << 1);
 	}
 	else {
 		_eeMoveGPRtoR(EAX, _Rs_);
 		AND32ItoR(EAX, 0x7);
 		XOR32ItoR(EAX, _Imm_&0x7);
-		SHL32ItoR(EAX, 4);
+		SHL32ItoR(EAX, 1);
 		MOV32RtoM((uptr)&cpuRegs.sa, EAX);
 	}
 }

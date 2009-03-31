@@ -2,6 +2,9 @@
 #include "VKey.h"
 #include "WindowsMouse.h"
 
+POINT WindowsMouse::origCursorPos;
+POINT WindowsMouse::center;
+
 WindowsMouse::WindowsMouse(DeviceAPI api, int hWheel, wchar_t *displayName, wchar_t *instanceID, wchar_t *deviceID) :
 Device(api, MOUSE, displayName, instanceID, deviceID) {
 	int i;
@@ -41,4 +44,32 @@ void WindowsMouse::UpdateAxis(unsigned int axis, int delta) {
 	physicalControlState[5+axis] += (delta<<(16 - 3*(axis < 2)));
 }
 
+void WindowsMouse::WindowResized(HWND hWnd) {
+	RECT r;
+	GetWindowRect(hWnd, &r);
+	ClipCursor(&r);
+	center.x = (r.left + r.right)/2;
+	center.y = (r.top + r.bottom)/2;
+	SetCursorPos(center.x, center.y);
+}
 
+void WindowsMouse::GetMouseCapture(HWND hWnd) {
+	SetCapture(hWnd);
+	ShowCursor(0);
+
+	GetCursorPos(&origCursorPos);
+
+	RECT r;
+	GetWindowRect(hWnd, &r);
+	ClipCursor(&r);
+	center.x = (r.left + r.right)/2;
+	center.y = (r.top + r.bottom)/2;
+	SetCursorPos(center.x, center.y);
+}
+
+void WindowsMouse::ReleaseMouseCapture() {
+	ClipCursor(0);
+	ReleaseCapture();
+	ShowCursor(1);
+	SetCursorPos(origCursorPos.x, origCursorPos.y);
+}

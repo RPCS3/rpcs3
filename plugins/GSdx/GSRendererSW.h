@@ -71,7 +71,15 @@ protected:
 
 	bool GetOutput(int i, Texture& t)
 	{
-		CRect r(0, 0, DISPFB[i]->FBW * 64, GetFrameRect(i).bottom);
+		const GSRegDISPFB& DISPFB = m_regs->DISP[i].DISPFB;
+
+		GIFRegTEX0 TEX0;
+
+		TEX0.TBP0 = DISPFB.Block();
+		TEX0.TBW = DISPFB.FBW;
+		TEX0.PSM = DISPFB.PSM;
+
+		CRect r(0, 0, TEX0.TBW * 64, GetFrameRect(i).bottom);
 
 		// TODO: round up bottom
 
@@ -84,12 +92,6 @@ protected:
 		{
 			return false;
 		}
-
-		GIFRegTEX0 TEX0;
-
-		TEX0.TBP0 = DISPFB[i]->Block();
-		TEX0.TBW = DISPFB[i]->FBW;
-		TEX0.PSM = DISPFB[i]->PSM;
 
 		GIFRegCLAMP CLAMP;
 
@@ -500,6 +502,11 @@ protected:
 
 		m_vtrace.Update(m_vertices, m_count, primclass, PRIM->IIP, PRIM->TME, m_context->TEX0.TFX);
 
+		if(m_dump) 
+		{
+			m_dump.Object(m_vertices, m_count, primclass);
+		}
+
 		GSScanlineParam p;
 
 		GetScanlineParam(p, primclass);
@@ -771,6 +778,8 @@ public:
 		
 		if(GSVertexSW* v = DrawingKick<prim>(skip, count))
 		{
+if(!m_dump)
+{
 			GSVector4 pmin, pmax;
 
 			switch(prim)
@@ -822,7 +831,7 @@ public:
 			{
 				return;
 			}
-
+}
 			switch(prim)
 			{
 			case GS_POINTLIST:

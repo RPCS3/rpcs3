@@ -278,17 +278,17 @@ struct ElfObject
 		}
 		
 		ELF_LOG("\n");
-		ELF_LOG("version:   %d\n",header.e_version);
-		ELF_LOG("entry:     %08x\n",header.e_entry);
-		ELF_LOG("flags:     %08x\n",header.e_flags);
-		ELF_LOG("eh size:   %08x\n",header.e_ehsize);
-		ELF_LOG("ph off:    %08x\n",header.e_phoff);
-		ELF_LOG("ph entsiz: %08x\n",header.e_phentsize);
-		ELF_LOG("ph num:    %08x\n",header.e_phnum);
-		ELF_LOG("sh off:    %08x\n",header.e_shoff);
-		ELF_LOG("sh entsiz: %08x\n",header.e_shentsize);
-		ELF_LOG("sh num:    %08x\n",header.e_shnum);
-		ELF_LOG("sh strndx: %08x\n",header.e_shstrndx);
+		ELF_LOG("version:   %d",header.e_version);
+		ELF_LOG("entry:     %08x",header.e_entry);
+		ELF_LOG("flags:     %08x",header.e_flags);
+		ELF_LOG("eh size:   %08x",header.e_ehsize);
+		ELF_LOG("ph off:    %08x",header.e_phoff);
+		ELF_LOG("ph entsiz: %08x",header.e_phentsize);
+		ELF_LOG("ph num:    %08x",header.e_phnum);
+		ELF_LOG("sh off:    %08x",header.e_shoff);
+		ELF_LOG("sh entsiz: %08x",header.e_shentsize);
+		ELF_LOG("sh num:    %08x",header.e_shnum);
+		ELF_LOG("sh strndx: %08x",header.e_shstrndx);
 		
 		ELF_LOG("\n");
 	}
@@ -341,7 +341,7 @@ struct ElfObject
 
 		for( int i = 0 ; i < header.e_phnum ; i++ )
 		{
-			ELF_LOG( "Elf32 Program Header\n" );	
+			ELF_LOG( "Elf32 Program Header" );	
 			ELF_LOG( "type:      " );
 			
 			switch ( proghead[ i ].p_type ) {
@@ -379,13 +379,13 @@ struct ElfObject
 			}
 			
 			ELF_LOG("\n");
-			ELF_LOG("offset:    %08x\n",(int)proghead[i].p_offset);
-			ELF_LOG("vaddr:     %08x\n",(int)proghead[i].p_vaddr);
-			ELF_LOG("paddr:     %08x\n",proghead[i].p_paddr);
-			ELF_LOG("file size: %08x\n",proghead[i].p_filesz);
-			ELF_LOG("mem size:  %08x\n",proghead[i].p_memsz);
-			ELF_LOG("flags:     %08x\n",proghead[i].p_flags);
-			ELF_LOG("palign:    %08x\n",proghead[i].p_align);
+			ELF_LOG("offset:    %08x",(int)proghead[i].p_offset);
+			ELF_LOG("vaddr:     %08x",(int)proghead[i].p_vaddr);
+			ELF_LOG("paddr:     %08x",proghead[i].p_paddr);
+			ELF_LOG("file size: %08x",proghead[i].p_filesz);
+			ELF_LOG("mem size:  %08x",proghead[i].p_memsz);
+			ELF_LOG("flags:     %08x",proghead[i].p_flags);
+			ELF_LOG("palign:    %08x",proghead[i].p_align);
 			ELF_LOG("\n");
 		}
 	}
@@ -424,14 +424,14 @@ struct ElfObject
 			}
 			
 			ELF_LOG("\n");
-			ELF_LOG("flags:     %08x\n", secthead[i].sh_flags);
-			ELF_LOG("addr:      %08x\n", secthead[i].sh_addr);
-			ELF_LOG("offset:    %08x\n", secthead[i].sh_offset);
-			ELF_LOG("size:      %08x\n", secthead[i].sh_size);
-			ELF_LOG("link:      %08x\n", secthead[i].sh_link);
-			ELF_LOG("info:      %08x\n", secthead[i].sh_info);
-			ELF_LOG("addralign: %08x\n", secthead[i].sh_addralign);
-			ELF_LOG("entsize:   %08x\n", secthead[i].sh_entsize);
+			ELF_LOG("flags:     %08x", secthead[i].sh_flags);
+			ELF_LOG("addr:      %08x", secthead[i].sh_addr);
+			ELF_LOG("offset:    %08x", secthead[i].sh_offset);
+			ELF_LOG("size:      %08x", secthead[i].sh_size);
+			ELF_LOG("link:      %08x", secthead[i].sh_link);
+			ELF_LOG("info:      %08x", secthead[i].sh_info);
+			ELF_LOG("addralign: %08x", secthead[i].sh_addralign);
+			ELF_LOG("entsize:   %08x", secthead[i].sh_entsize);
 			// dump symbol table
 		
 			if( secthead[ i ].sh_type == 0x02 ) 
@@ -548,7 +548,7 @@ int loadElfFile(const char *filename)
 	elfobj.loadSectionHeaders();
 	
 	cpuRegs.pc = elfobj.header.e_entry; //set pc to proper place 
-	ELF_LOG( "PC set to: %8.8lx\n", cpuRegs.pc );
+	ELF_LOG( "PC set to: %8.8lx", cpuRegs.pc );
 	
 	cpuRegs.GPR.n.sp.UL[0] = 0x81f00000;
 	cpuRegs.GPR.n.gp.UL[0] = 0x81f80000; // might not be 100% ok
@@ -562,7 +562,7 @@ int loadElfFile(const char *filename)
 	}
 
 	ElfCRC = elfobj.GetCRC();
-	Console::Status( "loadElfFile: %s; CRC = %8.8X\n", params filename, ElfCRC);
+	Console::Status( "loadElfFile: %s; CRC = %8.8X", params filename, ElfCRC);
 
 	ElfApplyPatches();
 	LoadGameSpecificSettings();
@@ -571,8 +571,7 @@ int loadElfFile(const char *filename)
 }
 
 #include "VU.h"
-extern int g_FFXHack;
-extern int path3hack;
+extern bool path3hack;
 int g_VUGameFixes = 0;
 
 // fixme - this should be moved to patches or eliminated
@@ -580,42 +579,14 @@ void LoadGameSpecificSettings()
 {
 	// default
 	g_VUGameFixes = 0;
-	g_FFXHack = 0;
 
 	switch(ElfCRC) {
 		case 0xb99379b7: // erementar gerad (discolored chars)
 			g_VUGameFixes |= VUFIX_XGKICKDELAY2; // Tested - still needed - arcum42
 			break;
-		case 0xa08c4057:  //Sprint Cars (SLUS)
-		case 0x8b0725d5:  //Flinstones Bedrock Racing (SLES)
-			path3hack = 1; // We can move this to patch files right now
-			break;
-
-		case 0xb4414ea1: // ffx(rus)
-		case 0xee97db5b: // ffx(rus)
-		case 0xaec495cc: // ffx(rus)
-		case 0x6a4efe60: // ffx(j)
-		case 0xA39517AB: // ffx(e)
-		case 0xBB3D833A: // ffx(u)
-		case 0x941bb7d9: // ffx(g)
-		case 0xD9FC6310: // ffx int(j)
-		case 0xa39517ae: // ffx(f)
-		case 0xa39517a9: // ffx(i)
-		case 0x658597e2: // ffx int
-		case 0x941BB7DE: // ffx(s)
-		case 0x3866CA7E: // ffx(asia)
-		case 0x48FE0C71: // ffx2 (u)
-		case 0x9aac530d: // ffx2 (g)
-		case 0x9AAC5309: // ffx2 (e)
-		case 0x8A6D7F14: // ffx2 (j)
-		case 0x9AAC530B: // ffx2 (i)
-		case 0x9AAC530A: // ffx2 (f)
-		case 0x9aac530c: // ffx2 (f)
-		case 0xe1fd9a2d: // ffx2 last mission (?)
-		case 0x93f9b89a: // ffx2 demo (g)
-		case 0x304C115C: // harvest moon - awl
-		case 0xF0A6D880: // harvest moon - sth
-			g_FFXHack = 1;
-			break;		
+		//case 0xa08c4057:  //Sprint Cars (SLUS)
+		//case 0x8b0725d5:  //Flinstones Bedrock Racing (SLES)
+			//path3hack = TRUE; // We can move this to patch files right now
+			//break;		
 	}
 }

@@ -21,7 +21,7 @@ __forceinline int ShortToAxis(int v) {
 	// If positive and at least 1 << 14, increment.
 	v += (!((v>>15)&1)) & ((v>>14)&1);
 	// Just double.
-	return v << 1;
+	return v * 2;
 }
 
 class XInputDevice : public Device {

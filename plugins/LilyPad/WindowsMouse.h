@@ -3,8 +3,16 @@
 // Shared functionality for WM and RAW keyboards.
 class WindowsMouse : public Device {
 public:
-	POINT origCursorPos;
-	POINT center;
+	// Used by GetMouseCapture()/ReleaseMouseCapture()
+	// Static because can have multiple raw mice active at once,
+	// and only get/release capture once.
+	static POINT origCursorPos;
+	static POINT center;
+
+	static void GetMouseCapture(HWND hWnd);
+	static void WindowResized(HWND hWnd);
+	static void ReleaseMouseCapture();
+
 	// hWheel variable lets me display no horizontal wheel for raw input, just to make it clear
 	// that it's not supported.
 	WindowsMouse(DeviceAPI api, int hWheel, wchar_t *displayName, wchar_t *instanceID=0, wchar_t *deviceID=0);

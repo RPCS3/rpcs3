@@ -54,7 +54,7 @@ static void _vu1Exec(VURegs* VU)
 	int discard=0;
 
 	if(VU->VI[REG_TPC].UL >= VU->maxmicro){
-		CPU_LOG("VU1 memory overflow!!: %x\n", VU->VI[REG_TPC].UL);
+		CPU_LOG("VU1 memory overflow!!: %x", VU->VI[REG_TPC].UL);
 		VU->VI[REG_TPC].UL &= 0x3FFF;
 		/*VU0.VI[REG_VPU_STAT].UL&= ~0x100;
 		VU->cycle++;
@@ -79,7 +79,7 @@ static void _vu1Exec(VURegs* VU)
 		}
 	}
 
-	VUM_LOG("VU->cycle = %d (flags st=%x;mac=%x;clip=%x,q=%f)\n", VU->cycle, VU->statusflag, VU->macflag, VU->clipflag, VU->q.F);
+	VUM_LOG("VU->cycle = %d (flags st=%x;mac=%x;clip=%x,q=%f)", VU->cycle, VU->statusflag, VU->macflag, VU->clipflag, VU->q.F);
 
 	VU->code = ptr[1]; 
 	VU1regs_UPPER_OPCODE[VU->code & 0x3f](&uregs);
@@ -104,19 +104,19 @@ static void _vu1Exec(VURegs* VU)
 		vfreg = 0; vireg = 0;
 		if (uregs.VFwrite) {
 			if (lregs.VFwrite == uregs.VFwrite) {
-//				SysPrintf("*PCSX2*: Warning, VF write to the same reg in both lower/upper cycle\n");
+//				Console::Notice("*PCSX2*: Warning, VF write to the same reg in both lower/upper cycle");
 				discard = 1;
 			}
 			if (lregs.VFread0 == uregs.VFwrite ||
 				lregs.VFread1 == uregs.VFwrite) {
-//				SysPrintf("saving reg %d at pc=%x\n", i, VU->VI[REG_TPC].UL);
+//				Console::WriteLn("saving reg %d at pc=%x", params i, VU->VI[REG_TPC].UL);
 				_VF = VU->VF[uregs.VFwrite];
 				vfreg = uregs.VFwrite;
 			}
 		}
 		if (uregs.VIread & (1 << REG_CLIP_FLAG)) {
 			if (lregs.VIwrite & (1 << REG_CLIP_FLAG)) {
-				SysPrintf("*PCSX2*: Warning, VI write to the same reg in both lower/upper cycle\n");
+				Console::Notice("*PCSX2*: Warning, VI write to the same reg in both lower/upper cycle");
 				discard = 1;
 			}
 			if (lregs.VIread & (1 << REG_CLIP_FLAG)) {

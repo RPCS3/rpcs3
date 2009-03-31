@@ -6,8 +6,7 @@
 	>
 	<Tool
 		Name="VCCLCompilerTool"
-		AdditionalIncludeDirectories="&quot;$(SvnRootDir)\3rdparty&quot;"
-		PreprocessorDefinitions="PTW32_STATIC_LIB;WIN32_PTHREADS;__CLEANUP_SEH"
+		AdditionalIncludeDirectories="&quot;$(SvnRootDir)\3rdparty\&quot;"
 	/>
 	<Tool
 		Name="VCLinkerTool"

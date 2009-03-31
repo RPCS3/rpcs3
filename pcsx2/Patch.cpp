@@ -653,7 +653,8 @@ int AddPatch(int Mode, int Place, int Address, int Size, u64 data)
 	
 void patchFunc_ffxhack( char * cmd, char * param )
 {
-	 g_FFXHack = 1;
+	 //Keeping this as a dummy a while :p
+	 //g_FFXHack = 1;
 }
 
 void patchFunc_xkickdelay( char * cmd, char * param )
@@ -674,7 +675,7 @@ void patchFunc_vunanmode( char * cmd, char * param )
 
 void patchFunc_path3hack( char * cmd, char * param )
 {
-	path3hack = 1;
+	path3hack = TRUE;
 }
 
 void patchFunc_roundmode( char * cmd, char * param )
