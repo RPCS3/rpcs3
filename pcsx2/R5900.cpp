@@ -106,7 +106,7 @@ void cpuShutdown()
 	disR5900FreeSyms();
 }
 
-void cpuException(u32 code, u32 bd)
+__releaseinline void __fastcall cpuException(u32 code, u32 bd)
 {
 	cpuRegs.branch = 0;		// Tells the interpreter that an exception occurred during a branch.
 	bool errLevel2, checkStatus;
@@ -244,7 +244,7 @@ void cpuTestMissingHwInts() {
 }
 
 // sets a branch test to occur some time from an arbitrary starting point.
-__forceinline int cpuSetNextBranch( u32 startCycle, s32 delta )
+__forceinline int __fastcall cpuSetNextBranch( u32 startCycle, s32 delta )
 {
 	// typecast the conditional to signed so that things don't blow up
 	// if startCycle is greater than our next branch cycle.
@@ -258,14 +258,14 @@ __forceinline int cpuSetNextBranch( u32 startCycle, s32 delta )
 }
 
 // sets a branch to occur some time from the current cycle
-__forceinline int cpuSetNextBranchDelta( s32 delta )
+__forceinline int __fastcall cpuSetNextBranchDelta( s32 delta )
 {
 	return cpuSetNextBranch( cpuRegs.cycle, delta );
 }
 
 // tests the cpu cycle agaisnt the given start and delta values.
 // Returns true if the delta time has passed.
-__forceinline int cpuTestCycle( u32 startCycle, s32 delta )
+__forceinline int __fastcall cpuTestCycle( u32 startCycle, s32 delta )
 {
 	// typecast the conditional to signed so that things don't explode
 	// if the startCycle is ahead of our current cpu cycle.
@@ -504,7 +504,7 @@ __forceinline bool _cpuBranchTest_Shared()
 	return vsyncEvent;
 }
 
-void cpuTestINTCInts()
+__releaseinline void cpuTestINTCInts()
 {
 	if( cpuRegs.interrupt & (1 << 30) ) return;
 	//if( (cpuRegs.CP0.n.Status.val & 0x10407) != 0x10401 ) return;
@@ -556,7 +556,7 @@ __forceinline void cpuTestTIMRInts() {
 	}
 }
 
-void cpuTestHwInts() {
+__forceinline void cpuTestHwInts() {
 	cpuTestINTCInts();
 	cpuTestDMACInts();
 	cpuTestTIMRInts();

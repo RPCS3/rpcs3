@@ -25,15 +25,18 @@
 u32 s_iLastCOP0Cycle = 0;
 u32 s_iLastPERFCycle[2] = { 0, 0 };
 
-void UpdateCP0Status() {
-	u32 value = cpuRegs.CP0.n.Status.val;
+__releaseinline void UpdateCP0Status() {
+	//currently the 2 memory modes are not implemented. Given this function is called so much,
+	//it's commented out for now. Only the interrupt test is needed. (rama)
 
-	if (value & 0x06 ||
-		(value & 0x18) == 0) { // Kernel Mode (KSU = 0 | EXL = 1 | ERL = 1)*/
-		memSetKernelMode();	// Kernel memory always
-	} else { // User Mode
-		memSetUserMode();
-	}
+	//u32 value = cpuRegs.CP0.n.Status.val;
+
+	//if (value & 0x06 ||
+	//	(value & 0x18) == 0) { // Kernel Mode (KSU = 0 | EXL = 1 | ERL = 1)*/
+	//	memSetKernelMode();	// Kernel memory always
+	//} else { // User Mode
+	//	memSetUserMode();
+	//}
 	cpuTestHwInts();
 }
 
