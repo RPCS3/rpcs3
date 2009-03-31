@@ -87,27 +87,9 @@ GSState::GSState(BYTE* base, bool mt, void (*irq)(), int nloophack)
 
 	ASSERT(base);
 
-	PMODE = (GSRegPMODE*)(base + GS_PMODE);
-	SMODE1 = (GSRegSMODE1*)(base + GS_SMODE1);
-	SMODE2 = (GSRegSMODE2*)(base + GS_SMODE2);
-	// SRFSH = (GSRegPMODE*)(base + GS_SRFSH);
-	// SYNCH1 = (GSRegPMODE*)(base + GS_SYNCH1);
-	// SYNCH2 = (GSRegPMODE*)(base + GS_SYNCH2);
-	// SYNCV = (GSRegPMODE*)(base + GS_SYNCV);
-	DISPFB[0] = (GSRegDISPFB*)(base + GS_DISPFB1);
-	DISPFB[1] = (GSRegDISPFB*)(base + GS_DISPFB2);
-	DISPLAY[0] = (GSRegDISPLAY*)(base + GS_DISPLAY1);
-	DISPLAY[1] = (GSRegDISPLAY*)(base + GS_DISPLAY2);
-	EXTBUF = (GSRegEXTBUF*)(base + GS_EXTBUF);
-	EXTDATA = (GSRegEXTDATA*)(base + GS_EXTDATA);
-	EXTWRITE = (GSRegEXTWRITE*)(base + GS_EXTWRITE);
-	BGCOLOR = (GSRegBGCOLOR*)(base + GS_BGCOLOR);
-	CSR = (GSRegCSR*)(base + GS_CSR);
-	IMR = (GSRegIMR*)(base + GS_IMR);
-	BUSDIR = (GSRegBUSDIR*)(base + GS_BUSDIR);
-	SIGLBLID = (GSRegSIGLBLID*)(base + GS_SIGLBLID);
+	m_regs = (GSPrivRegSet*)(base + 0x12000000);
 
-	memset(PMODE, 0, 0x1100);
+	memset(m_regs, 0, sizeof(GSPrivRegSet));
 
 	PRIM = &m_env.PRIM;
 //	CSR->rREV = 0x20;
@@ -234,8 +216,8 @@ CPoint GSState::GetDisplayPos(int i)
 
 	CPoint p;
 
-	p.x = DISPLAY[i]->DX / (DISPLAY[i]->MAGH + 1);
-	p.y = DISPLAY[i]->DY / (DISPLAY[i]->MAGV + 1);
+	p.x = m_regs->DISP[i].DISPLAY.DX / (m_regs->DISP[i].DISPLAY.MAGH + 1);
+	p.y = m_regs->DISP[i].DISPLAY.DY / (m_regs->DISP[i].DISPLAY.MAGV + 1);
 
 	return p;
 }
@@ -246,8 +228,8 @@ CSize GSState::GetDisplaySize(int i)
 
 	CSize s;
 
-	s.cx = (DISPLAY[i]->DW + 1) / (DISPLAY[i]->MAGH + 1);
-	s.cy = (DISPLAY[i]->DH + 1) / (DISPLAY[i]->MAGV + 1);
+	s.cx = (m_regs->DISP[i].DISPLAY.DW + 1) / (m_regs->DISP[i].DISPLAY.MAGH + 1);
+	s.cy = (m_regs->DISP[i].DISPLAY.DH + 1) / (m_regs->DISP[i].DISPLAY.MAGV + 1);
 
 	return s;
 }
@@ -276,14 +258,14 @@ CPoint GSState::GetFramePos(int i)
 {
 	ASSERT(i >= 0 && i < 2);
 
-	return CPoint(DISPFB[i]->DBX, DISPFB[i]->DBY);
+	return CPoint(m_regs->DISP[i].DISPFB.DBX, m_regs->DISP[i].DISPFB.DBY);
 }
 
 CSize GSState::GetFrameSize(int i)
 {
 	CSize s = GetDisplaySize(i);
 
-	if(SMODE2->INT && SMODE2->FFMD && s.cy > 1) s.cy >>= 1;
+	if(m_regs->SMODE2.INT && m_regs->SMODE2.FFMD && s.cy > 1) s.cy >>= 1;
 
 	return s;
 }
@@ -322,7 +304,7 @@ CSize GSState::GetDeviceSize(int i)
 	}
 	else
 	{
-		s.cy = (SMODE1->CMOD & 1) ? 512 : 448;
+		s.cy = (m_regs->SMODE1.CMOD & 1) ? 512 : 448;
 	}
 
 	return s;
@@ -338,13 +320,13 @@ bool GSState::IsEnabled(int i)
 {
 	ASSERT(i >= 0 && i < 2);
 
-	if(i == 0 && PMODE->EN1) 
+	if(i == 0 && m_regs->PMODE.EN1) 
 	{
-		return DISPLAY[0]->DW || DISPLAY[0]->DH;
+		return m_regs->DISP[0].DISPLAY.DW || m_regs->DISP[0].DISPLAY.DH;
 	}
-	else if(i == 1 && PMODE->EN2) 
+	else if(i == 1 && m_regs->PMODE.EN2) 
 	{
-		return DISPLAY[1]->DW || DISPLAY[1]->DH;
+		return m_regs->DISP[1].DISPLAY.DW || m_regs->DISP[1].DISPLAY.DH;
 	}
 
 	return false;
@@ -352,7 +334,7 @@ bool GSState::IsEnabled(int i)
 
 int GSState::GetFPS()
 {
-	return ((SMODE1->CMOD & 1) ? 50 : 60) / (SMODE2->INT ? 1 : 2);
+	return ((m_regs->SMODE1.CMOD & 1) ? 50 : 60) / (m_regs->SMODE2.INT ? 1 : 2);
 }
 
 // GIFPackedRegHandler*
@@ -985,25 +967,25 @@ void GSState::GIFRegHandlerSIGNAL(GIFReg* r)
 {
 	if(m_mt) return;
 
-	SIGLBLID->SIGID = (SIGLBLID->SIGID & ~r->SIGNAL.IDMSK) | (r->SIGNAL.ID & r->SIGNAL.IDMSK);
+	m_regs->SIGLBLID.SIGID = (m_regs->SIGLBLID.SIGID & ~r->SIGNAL.IDMSK) | (r->SIGNAL.ID & r->SIGNAL.IDMSK);
 
-	if(CSR->wSIGNAL) CSR->rSIGNAL = 1;
-	if(!IMR->SIGMSK && m_irq) m_irq();
+	if(m_regs->CSR.wSIGNAL) m_regs->CSR.rSIGNAL = 1;
+	if(!m_regs->IMR.SIGMSK && m_irq) m_irq();
 }
 
 void GSState::GIFRegHandlerFINISH(GIFReg* r)
 {
 	if(m_mt) return;
 
-	if(CSR->wFINISH) CSR->rFINISH = 1;
-	if(!IMR->FINISHMSK && m_irq) m_irq();
+	if(m_regs->CSR.wFINISH) m_regs->CSR.rFINISH = 1;
+	if(!m_regs->IMR.FINISHMSK && m_irq) m_irq();
 }
 
 void GSState::GIFRegHandlerLABEL(GIFReg* r)
 {
 	if(m_mt) return;
 
-	SIGLBLID->LBLID = (SIGLBLID->LBLID & ~r->LABEL.IDMSK) | (r->LABEL.ID & r->LABEL.IDMSK);
+	m_regs->SIGLBLID.LBLID = (m_regs->SIGLBLID.LBLID & ~r->LABEL.IDMSK) | (r->LABEL.ID & r->LABEL.IDMSK);
 }
 
 //

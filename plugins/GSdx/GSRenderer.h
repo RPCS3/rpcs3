@@ -165,10 +165,15 @@ protected:
 		//
 		// NOTE: probably the technique explained in graphtip.pdf (Antialiasing by Supersampling / 4. Reading Odd/Even Scan Lines Separately with the PCRTC then Blending)
 
-		bool samesrc = en[0] && en[1] && DISPFB[0]->FBP == DISPFB[1]->FBP && DISPFB[0]->FBW == DISPFB[1]->FBW && DISPFB[0]->PSM == DISPFB[1]->PSM;
+		bool samesrc = 
+			en[0] && en[1] && 
+			m_regs->DISP[0].DISPFB.FBP == m_regs->DISP[1].DISPFB.FBP && 
+			m_regs->DISP[0].DISPFB.FBW == m_regs->DISP[1].DISPFB.FBW && 
+			m_regs->DISP[0].DISPFB.PSM == m_regs->DISP[1].DISPFB.PSM;
+
 		bool blurdetected = false;
 
-		if(samesrc && PMODE->SLBG == 0 && PMODE->MMOD == 1 && PMODE->ALP == 0x80)
+		if(samesrc && m_regs->PMODE.SLBG == 0 && m_regs->PMODE.MMOD == 1 && m_regs->PMODE.ALP == 0x80)
 		{
 			if(fr[0] == fr[1] + CRect(0, 1, 0, 0) && dr[0] == dr[1] + CRect(0, 0, 0, 1)
 			|| fr[1] == fr[0] + CRect(0, 1, 0, 0) && dr[1] == dr[0] + CRect(0, 0, 0, 1))
@@ -251,7 +256,7 @@ protected:
 			if(dr[i].Height() > 512) // hmm
 			{
 				int y = GetDeviceSize(i).cy;
-				if(SMODE2->INT && SMODE2->FFMD) y /= 2;
+				if(m_regs->SMODE2.INT && m_regs->SMODE2.FFMD) y /= 2;
 				r.bottom = r.top + y;
 			}
 
@@ -282,7 +287,7 @@ protected:
 				o.y = tex[i].m_scale.y * (dr[i].top - baseline);
 			}
 
-			if(SMODE2->INT && SMODE2->FFMD) o.y /= 2;
+			if(m_regs->SMODE2.INT && m_regs->SMODE2.FFMD) o.y /= 2;
 
 			dst[i].x = o.x;
 			dst[i].y = o.y;
@@ -296,23 +301,23 @@ protected:
 		ds.cx = fs.cx;
 		ds.cy = fs.cy;
 
-		if(SMODE2->INT && SMODE2->FFMD) ds.cy *= 2;
+		if(m_regs->SMODE2.INT && m_regs->SMODE2.FFMD) ds.cy *= 2;
 
-		bool slbg = PMODE->SLBG;
-		bool mmod = PMODE->MMOD;
+		bool slbg = m_regs->PMODE.SLBG;
+		bool mmod = m_regs->PMODE.MMOD;
 
 		if(tex[0] || tex[1])
 		{
 			GSVector4 c;
 
-			c.r = (float)BGCOLOR->R / 255;
-			c.g = (float)BGCOLOR->G / 255;
-			c.b = (float)BGCOLOR->B / 255;
-			c.a = (float)PMODE->ALP / 255;
+			c.r = (float)m_regs->BGCOLOR.R / 255;
+			c.g = (float)m_regs->BGCOLOR.G / 255;
+			c.b = (float)m_regs->BGCOLOR.B / 255;
+			c.a = (float)m_regs->PMODE.ALP / 255;
 
 			m_dev.Merge(tex, src, dst, fs, slbg, mmod, c);
 
-			if(SMODE2->INT && m_interlace > 0)
+			if(m_regs->SMODE2.INT && m_interlace > 0)
 			{
 				int field2 = 1 - ((m_interlace - 1) & 1);
 				int mode = (m_interlace - 1) >> 1;
@@ -340,7 +345,7 @@ protected:
 				fd.data = new BYTE[fd.size];
 				Freeze(&fd, false);
 
-				m_dump.Open(m_snapshot, m_crc, fd, PMODE);
+				m_dump.Open(m_snapshot, m_crc, fd, m_regs);
 
 				delete [] fd.data;
 			}
@@ -353,7 +358,7 @@ protected:
 		{
 			if(m_dump)
 			{
-				m_dump.VSync(field, !(::GetAsyncKeyState(VK_CONTROL) & 0x8000), PMODE);
+				m_dump.VSync(field, !(::GetAsyncKeyState(VK_CONTROL) & 0x8000), m_regs);
 			}
 		}
 	}
@@ -481,7 +486,7 @@ public:
 			s_stats.Format(
 				_T("%I64d | %d x %d | %.2f fps (%d%%) | %s - %s | %s | %d/%d/%d | %d%% CPU | %.2f | %.2f"), 
 				m_perfmon.GetFrame(), GetDisplaySize().cx, GetDisplaySize().cy, fps, (int)(100.0 * fps / GetFPS()),
-				SMODE2->INT ? (CString(_T("Interlaced ")) + (SMODE2->FFMD ? _T("(frame)") : _T("(field)"))) : _T("Progressive"),
+				m_regs->SMODE2.INT ? (CString(_T("Interlaced ")) + (m_regs->SMODE2.FFMD ? _T("(frame)") : _T("(field)"))) : _T("Progressive"),
 				GSSettingsDlg::g_interlace[m_interlace].name,
 				GSSettingsDlg::g_aspectratio[m_aspectratio].name,
 				(int)m_perfmon.Get(GSPerfMon::Quad),

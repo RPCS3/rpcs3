@@ -71,7 +71,15 @@ protected:
 
 	bool GetOutput(int i, Texture& t)
 	{
-		CRect r(0, 0, DISPFB[i]->FBW * 64, GetFrameRect(i).bottom);
+		const GSRegDISPFB& DISPFB = m_regs->DISP[i].DISPFB;
+
+		GIFRegTEX0 TEX0;
+
+		TEX0.TBP0 = DISPFB.Block();
+		TEX0.TBW = DISPFB.FBW;
+		TEX0.PSM = DISPFB.PSM;
+
+		CRect r(0, 0, TEX0.TBW * 64, GetFrameRect(i).bottom);
 
 		// TODO: round up bottom
 
@@ -84,12 +92,6 @@ protected:
 		{
 			return false;
 		}
-
-		GIFRegTEX0 TEX0;
-
-		TEX0.TBP0 = DISPFB[i]->Block();
-		TEX0.TBW = DISPFB[i]->FBW;
-		TEX0.PSM = DISPFB[i]->PSM;
 
 		GIFRegCLAMP CLAMP;
 

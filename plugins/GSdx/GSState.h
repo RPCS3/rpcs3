@@ -189,22 +189,9 @@ protected:
 	}
 
 public:
-	GIFRegPRIM*		PRIM;
-	GSRegPMODE*		PMODE;
-	GSRegSMODE1*	SMODE1;
-	GSRegSMODE2*	SMODE2;
-	GSRegDISPFB*	DISPFB[2];
-	GSRegDISPLAY*	DISPLAY[2];
-	GSRegEXTBUF*	EXTBUF;
-	GSRegEXTDATA*	EXTDATA;
-	GSRegEXTWRITE*	EXTWRITE;
-	GSRegBGCOLOR*	BGCOLOR;
-	GSRegCSR*		CSR;
-	GSRegIMR*		IMR;
-	GSRegBUSDIR*	BUSDIR;
-	GSRegSIGLBLID*	SIGLBLID;
-
 	GIFPath m_path[3];
+	GIFRegPRIM* PRIM;
+	GSPrivRegSet* m_regs;
 	GSLocalMemory m_mem;
 	GSDrawingEnvironment m_env;
 	GSDrawingContext* m_context;
@@ -256,7 +243,7 @@ public:
 	void Read(BYTE* mem, int len);
 
 	void SoftReset(BYTE mask);
-	void WriteCSR(UINT32 csr) {CSR->ai32[1] = csr;}
+	void WriteCSR(UINT32 csr) {m_regs->CSR.ai32[1] = csr;}
 	void ReadFIFO(BYTE* mem, int size);
 	template<int index> void Transfer(BYTE* mem, UINT32 size);
 	int Freeze(GSFreezeData* fd, bool sizeonly);

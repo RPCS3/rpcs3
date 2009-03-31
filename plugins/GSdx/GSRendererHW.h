@@ -245,11 +245,13 @@ protected:
 
 	bool GetOutput(int i, Texture& t)
 	{
+		const GSRegDISPFB& DISPFB = m_regs->DISP[i].DISPFB;
+
 		GIFRegTEX0 TEX0;
 
-		TEX0.TBP0 = DISPFB[i]->Block();
-		TEX0.TBW = DISPFB[i]->FBW;
-		TEX0.PSM = DISPFB[i]->PSM;
+		TEX0.TBP0 = DISPFB.Block();
+		TEX0.TBW = DISPFB.FBW;
+		TEX0.PSM = DISPFB.PSM;
 
 		TRACE(_T("[%d] GetOutput %d %05x (%d)\n"), (int)m_perfmon.GetFrame(), i, (int)TEX0.TBP0, (int)TEX0.PSM);
 
