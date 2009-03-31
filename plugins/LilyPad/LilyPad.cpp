@@ -909,6 +909,11 @@ u8 CALLBACK PADstartPoll(int port) {
 	}
 }
 
+inline int IsDualshock2(u8 port, u8 slot) {
+	return config.padConfigs[query.port][query.slot].type == Dualshock2Pad ||
+			(config.padConfigs[query.port][query.slot].type == GuitarPad && config.GH2);
+}
+
 u8 CALLBACK PADpoll(u8 value) {
 	DEBUG_IN(value);
 	if (query.lastByte+1 >= query.numBytes) {
@@ -1038,9 +1043,14 @@ u8 CALLBACK PADpoll(u8 value) {
 			break;
 		// QUERY_MODEL_AND_MODE
 		case 0x45:
-			if (config.padConfigs[query.port][query.slot].type != GuitarPad || config.GH2) SET_FINAL_RESULT(queryModelDS2)
-			else SET_FINAL_RESULT(queryModelDS1);
-			query.response[5] = pad->mode != MODE_DIGITAL;
+			if (IsDualshock2(query.port, query.slot)) {
+				SET_FINAL_RESULT(queryModelDS2)
+			}
+			else {
+				SET_FINAL_RESULT(queryModelDS1);
+			}
+			// Not digital mode.
+			query.response[5] = (pad->mode & 0xF) != 1;
 			break;
 		// QUERY_ACT
 		case 0x46:
@@ -1062,7 +1072,12 @@ u8 CALLBACK PADpoll(u8 value) {
 			break;
 		// SET_DS2_NATIVE_MODE
 		case 0x4F:
-			SET_RESULT(setNativeMode);
+			if (IsDualshock2(query.port, query.slot)) {
+				SET_RESULT(setNativeMode);
+			}
+			else {
+				SET_FINAL_RESULT(setNativeMode);
+			}
 			break;
 		default:
 			query.numBytes = 0;
@@ -1140,6 +1155,7 @@ u8 CALLBACK PADpoll(u8 value) {
 					pad->vibrate[query.lastByte-2] = value;
 				}
 				break;
+			// SET_DS2_NATIVE_MODE
 			case 0x4F:
 				if (query.lastByte == 3 || query.lastByte == 4) {
 					pad->umask[query.lastByte-3] = value;
