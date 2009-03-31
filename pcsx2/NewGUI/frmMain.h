@@ -21,10 +21,50 @@
 #include <wx/wx.h>
 #include <wx/image.h>
 
+#include "Misc.h"
+#include "ConsoleLogger.h"
+
+struct wxPcsx2Config
+{
+	struct  
+	{
+		bool Show;
+		wxRect DisplayArea;
+	} ConLogBox;
+	
+	wxPoint MainGuiPosition;
+};
+
+extern wxPcsx2Config newConfig;
+
+extern const wxRect wxRectUnspecified;
+
+//////////////////////////////////////////////////////////////////////////////////////////
+//
+class LogWindow : public wxLogWindow
+{
+public:
+	LogWindow(wxWindow *pParent, const wxChar *szTitle );
+
+protected:
+	// Implemented to ensure that the parent's menu option for log visibility is consistent with
+	// the current status of the log window.
+	virtual void OnFrameCreate(wxFrame *frame);
+
+	// Implemented to ensure that the parent's menu option for log visibility is consistent with
+	// the current status of the log window.
+	virtual bool OnFrameClose(wxFrame *frame);
+};
+
+//////////////////////////////////////////////////////////////////////////////////////////
+//
 class frmMain: public wxFrame
 {
 public:
     frmMain(wxWindow* parent, int id, const wxString& title, const wxPoint& pos=wxDefaultPosition, const wxSize& size=wxDefaultSize, long style=wxDEFAULT_FRAME_STYLE);
+
+	void OnLogBoxShown();
+	void OnLogBoxHidden();
 
 protected:
 
@@ -116,14 +156,12 @@ protected:
 	void PopulatePadMenu();
 	void ConnectMenus();
 
-private:
-    void set_properties();
-
 protected:
+	ConsoleLogFrame& m_logbox;
     wxMenuBar& m_menubar;
     wxStatusBar& m_statusbar;
     wxStaticBitmap& m_background;
-    
+
 	wxMenu& m_menuRun;
 	wxMenu& m_menuConfig;
 	wxMenu& m_menuMisc;
@@ -135,11 +173,13 @@ protected:
 
 	wxMenu& m_LoadStatesSubmenu;
 	wxMenu& m_SaveStatesSubmenu;
+	
+	wxMenuItem& m_MenuItem_Console;
 
 	//////////////////////////////////////////////////////////////////////////////////////////
 	// Menu Options for the Main Window! :D
 	
-public:
+protected:
 	void Menu_QuickBootCD_Click(wxCommandEvent &event);
 	void Menu_BootCD_Click(wxCommandEvent &event);
 	void Menu_BootNoCD_Click(wxCommandEvent &event);
@@ -158,6 +198,8 @@ public:
 	void Menu_Debug_Open_Click(wxCommandEvent &event);
 	void Menu_Debug_MemoryDump_Click(wxCommandEvent &event);
 	void Menu_Debug_Logging_Click(wxCommandEvent &event);
+	
+	void Menu_ShowConsole(wxCommandEvent &event);
 
 };
 

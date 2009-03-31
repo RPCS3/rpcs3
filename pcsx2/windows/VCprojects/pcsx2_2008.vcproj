@@ -2913,6 +2913,14 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\NewGUI\ConsoleLogger.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\NewGUI\ConsoleLogger.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\NewGUI\frmGameFixes.cpp"
 				>
 			</File>

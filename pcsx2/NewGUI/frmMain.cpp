@@ -17,11 +17,12 @@
  */
 
 #include "PrecompiledHeader.h"
-#include "Misc.h"
 #include "frmMain.h"
 #include "frmGameFixes.h"
 #include "frmLogging.h"
 
+//////////////////////////////////////////////////////////////////////////////////////////
+//
 wxMenu* frmMain::MakeLanguagesMenu() const
 {
 	wxMenu* menuLangs = new wxMenu();
@@ -82,33 +83,52 @@ void frmMain::PopulatePadMenu()
 	m_menuPad.Append( Menu_Pad_Advanced,	_T("Advanced..."),		wxEmptyString, wxITEM_NORMAL );
 }
 
+#define ConnectMenu( id, handler ) \
+	Connect( id, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(frmMain::handler) )
+
 void frmMain::ConnectMenus()
 {
-	// This just seems a bit more flexable & intuitive to me, if overly verbose.
+	// This just seems a bit more flexible & intuitive to me, if overly verbose.
 	
-	Connect( Menu_QuickBootCD, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(frmMain::Menu_QuickBootCD_Click));
-	Connect( Menu_FullBootCD, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(frmMain::Menu_BootCD_Click));
-	Connect( Menu_BootNoCD, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(frmMain::Menu_BootNoCD_Click));
+	ConnectMenu( Menu_QuickBootCD, Menu_QuickBootCD_Click );
+	ConnectMenu( Menu_FullBootCD, Menu_BootCD_Click );
+	ConnectMenu( Menu_BootNoCD, Menu_BootNoCD_Click );
 	
-	Connect( Menu_RunELF, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(frmMain::Menu_OpenELF_Click));
-	Connect( Menu_Run_Exit, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(frmMain::Menu_Exit_Click));
+	ConnectMenu( Menu_RunELF, Menu_OpenELF_Click );
+	ConnectMenu( Menu_Run_Exit, Menu_Exit_Click );
 	
-	Connect( Menu_SuspendExec, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(frmMain::Menu_Suspend_Click));
-	Connect( Menu_ResumeExec, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(frmMain::Menu_Resume_Click));
-	Connect( Menu_Reset, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(frmMain::Menu_Reset_Click));
+	ConnectMenu( Menu_SuspendExec, Menu_Suspend_Click );
+	ConnectMenu( Menu_ResumeExec, Menu_Resume_Click );
+	ConnectMenu( Menu_Reset, Menu_Reset_Click );
 	
-	Connect( Menu_State_LoadOther, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(frmMain::Menu_LoadStateOther_Click));
-	Connect( Menu_State_SaveOther, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(frmMain::Menu_SaveStateOther_Click));
+	ConnectMenu( Menu_State_LoadOther, Menu_LoadStateOther_Click );
+	ConnectMenu( Menu_State_SaveOther, Menu_SaveStateOther_Click );
 	
-	Connect( Menu_Config_Gamefixes, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(frmMain::Menu_Gamefixes_Click));
+	ConnectMenu( Menu_Config_Gamefixes, Menu_Gamefixes_Click );
 	
-	Connect( Menu_Debug_Open, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(frmMain::Menu_Debug_Open_Click));
-	Connect( Menu_Debug_MemoryDump, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(frmMain::Menu_Debug_MemoryDump_Click));
-	Connect( Menu_Debug_Logging, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(frmMain::Menu_Debug_Logging_Click));
+	ConnectMenu( Menu_Debug_Open, Menu_Debug_Open_Click );
+	ConnectMenu( Menu_Debug_MemoryDump, Menu_Debug_MemoryDump_Click );
+	ConnectMenu( Menu_Debug_Logging, Menu_Debug_Logging_Click );
+	
+	ConnectMenu( Menu_Console, Menu_ShowConsole );
+}
+
+void frmMain::OnLogBoxShown()
+{
+	newConfig.ConLogBox.Show = true;
+	m_MenuItem_Console.Check( true );
+}
+
+void frmMain::OnLogBoxHidden()
+{
+	newConfig.ConLogBox.Show = false;
+	m_MenuItem_Console.Check( false );
 }
 
 frmMain::frmMain(wxWindow* parent, int id, const wxString& title, const wxPoint& pos, const wxSize& size, long style):
     wxFrame(parent, id, title, pos, size, wxCAPTION|wxCLOSE_BOX|wxSYSTEM_MENU|wxBORDER_THEME),
+
+	m_logbox( *new ConsoleLogFrame( this, "Pcsx2 Log" ) ),
 
 	m_menubar( *new wxMenuBar() ),
 	m_statusbar( *CreateStatusBar(2, 0) ),
@@ -124,9 +144,55 @@ frmMain::frmMain(wxWindow* parent, int id, const wxString& title, const wxPoint&
 	m_menuDebug( *new wxMenu() ),
     
 	m_LoadStatesSubmenu( *MakeStatesSubMenu( Menu_State_Load01 ) ),
-	m_SaveStatesSubmenu( *MakeStatesSubMenu( Menu_State_Save01 ) )
+	m_SaveStatesSubmenu( *MakeStatesSubMenu( Menu_State_Save01 ) ),
+	
+	m_MenuItem_Console( *new wxMenuItem( &m_menuMisc, Menu_Console, _T("Show Console"), wxEmptyString, wxITEM_CHECK ) )
 {
-    
+
+	// ------------------------------------------------------------------------
+	// Initial menubar setup.  This needs to be done first so that the menu bar's visible size
+	// can be factored into the window size (which ends up being background+status+menus)
+
+	m_menubar.Append( &m_menuRun,		_T("Run" ));
+	m_menubar.Append( &m_menuConfig,	_T("Config" ));
+	m_menubar.Append( &m_menuVideo,		_T("Video" ));
+	m_menubar.Append( &m_menuAudio,		_T("Audio" ));
+	m_menubar.Append( &m_menuPad,		_T("Pad" ));
+	m_menubar.Append( &m_menuMisc,		_T("Misc" ));
+	m_menubar.Append( &m_menuDebug,		_T("Debug" ));
+	SetMenuBar( &m_menubar );
+
+	// ------------------------------------------------------------------------
+
+	wxSize backsize( m_background.GetSize() );
+
+	SetTitle(_t("Pcsx2"));
+	SetIcon( wxIcon( wxT("./cdrom02.png"), wxBITMAP_TYPE_PNG ) );
+	int m_statusbar_widths[] = { (int)(backsize.GetWidth()*0.73), (int)(backsize.GetWidth()*0.25) };
+	m_statusbar.SetStatusWidths(2, m_statusbar_widths);
+	m_statusbar.SetStatusText( _T("The Status is Good!"), 0);
+	m_statusbar.SetStatusText( _T("Good Status"), 1);
+
+	wxBoxSizer& joe( *new wxBoxSizer( wxVERTICAL ) );
+	joe.Add( &m_background );
+	SetSizerAndFit( &joe );
+
+	if( newConfig.MainGuiPosition == wxDefaultPosition )
+		newConfig.MainGuiPosition = GetPosition();
+	else
+		SetPosition( newConfig.MainGuiPosition );
+
+	// ------------------------------------------------------------------------
+	// Sort out the console log window position (must be done after fitting the window
+	// sizer, to ensure correct 'docked mode' positioning).
+	
+	if( newConfig.ConLogBox.DisplayArea == wxRectUnspecified )
+		newConfig.ConLogBox.DisplayArea =
+		wxRect( GetPosition() + wxSize( GetSize().x, 0 ), wxSize( 540, 540 ) );
+
+	m_logbox.SetSize( newConfig.ConLogBox.DisplayArea );
+	m_logbox.Show( newConfig.ConLogBox.Show );
+
 	// ------------------------------------------------------------------------
 	
 	m_menuRun.Append(Menu_QuickBootCD,	_T("Boot CDVD (Quick)"),	wxEmptyString, wxITEM_NORMAL);
@@ -166,7 +232,7 @@ frmMain::frmMain(wxWindow* parent, int id, const wxString& title, const wxPoint&
 
 	// ------------------------------------------------------------------------
 
-	m_menuMisc.Append(Menu_Console,	_T("Enable Console"), wxEmptyString, wxITEM_CHECK);
+	m_menuMisc.Append( &m_MenuItem_Console );
 	m_menuMisc.Append(Menu_Patches,	_T("Enable Patches"), wxEmptyString, wxITEM_CHECK);
 	m_menuMisc.Append(Menu_Profiler,_T("Enable Profiler"), wxEmptyString, wxITEM_CHECK);
 	m_menuMisc.AppendSeparator();
@@ -185,23 +251,13 @@ frmMain::frmMain(wxWindow* parent, int id, const wxString& title, const wxPoint&
 	m_menuMisc.Append(Menu_Website,		_T("Pcsx2 Website..."), _T("Opens your web-browser!"), wxITEM_NORMAL);
 
 
-	m_menuDebug.Append(Menu_Debug_Open,		_T("Open Debug Window..."), wxEmptyString, wxITEM_NORMAL);
-	m_menuDebug.Append(Menu_Debug_MemoryDump,		_T("Memory Dump..."), wxEmptyString, wxITEM_NORMAL);
+	m_menuDebug.Append(Menu_Debug_Open,			_T("Open Debug Window..."), wxEmptyString, wxITEM_NORMAL);
+	m_menuDebug.Append(Menu_Debug_MemoryDump,	_T("Memory Dump..."), wxEmptyString, wxITEM_NORMAL);
 	m_menuDebug.Append(Menu_Debug_Logging,		_T("Logging..."), wxEmptyString, wxITEM_NORMAL);
-	
-	m_menubar.Append( &m_menuRun,		_T("Run" ));
-	m_menubar.Append( &m_menuConfig,	_T("Config" ));
-	m_menubar.Append( &m_menuVideo,		_T("Video" ));
-	m_menubar.Append( &m_menuAudio,		_T("Audio" ));
-	m_menubar.Append( &m_menuPad,		_T("Pad" ));
-	m_menubar.Append( &m_menuMisc,		_T("Misc" ));
-	m_menubar.Append( &m_menuDebug,		_T("Debug" ));
 
-	SetMenuBar( &m_menubar );
 	ConnectMenus();
-	// The many other fancy portions of our main window!
-
-	set_properties();
+	
+	m_MenuItem_Console.Check( newConfig.ConLogBox.Show );
 }
 
 void frmMain::Menu_QuickBootCD_Click(wxCommandEvent &event)
@@ -266,23 +322,7 @@ void frmMain::Menu_Debug_Logging_Click(wxCommandEvent &event)
 	joe.ShowModal();
 }
 
-void frmMain::set_properties()
+void frmMain::Menu_ShowConsole(wxCommandEvent &event)
 {
-	wxSize backsize( m_background.GetSize() );
-
-	SetTitle(_("Pcsx2"));
-	wxIcon _icon( _T("./cdrom02.png"), wxBITMAP_TYPE_PNG );
-	SetIcon(_icon);
-	SetClientSize( backsize );
-	int m_statusbar_widths[] = { (int)(backsize.GetWidth()*0.73), (int)(backsize.GetWidth()*0.25) };
-	m_statusbar.SetStatusWidths(2, m_statusbar_widths);
-	m_statusbar.SetStatusText( _T("The Status is Good!"), 0);
-	m_statusbar.SetStatusText( _T("Good Status"), 1);
-
-	wxBoxSizer& joe( *new wxBoxSizer( wxVERTICAL ) );
-	
-	joe.Add( &m_background );
-	SetSizerAndFit( &joe );
-
-	//Layout();
+	m_logbox.Show( event.IsChecked() );
 }

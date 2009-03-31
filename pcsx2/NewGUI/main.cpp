@@ -31,9 +31,17 @@ public:
 
 IMPLEMENT_APP(Pcsx2GUI)
 
+const wxRect wxRectUnspecified( wxDefaultCoord, wxDefaultCoord, wxDefaultCoord, wxDefaultCoord );
+wxPcsx2Config newConfig;
+
 bool Pcsx2GUI::OnInit()
 {
     wxInitAllImageHandlers();
+    
+    newConfig.ConLogBox.Show = true;
+    newConfig.ConLogBox.DisplayArea = wxRectUnspecified;
+    newConfig.MainGuiPosition = wxDefaultPosition;
+    
     frmMain* frameMain = new frmMain( NULL, wxID_ANY, wxEmptyString );
     SetTopWindow( frameMain );
     frameMain->Show();
