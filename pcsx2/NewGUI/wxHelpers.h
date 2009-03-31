@@ -1,10 +1,12 @@
 #pragma once
 
+#include <wx/wx.h>
+
 namespace wxHelpers
 {
 	// Creates a new checkbox and adds it to the specified sizer/parent combo.
 	// Uses the default spacer setting for adding checkboxes.
-	extern wxCheckBox& AddCheckBox( wxWindow* parent, wxBoxSizer& sizer, const wxString& label, wxWindowID id=wxID_ANY );
+	extern wxCheckBox& AddCheckBoxTo( wxWindow* parent, wxBoxSizer& sizer, const wxString& label, wxWindowID id=wxID_ANY );
 
 	extern wxSizerFlags stdCenteredFlags;
 	extern wxSizerFlags stdSpacingFlags;
@@ -16,26 +18,6 @@ namespace wxHelpers
 	
 	extern wxSizerFlags CheckboxFlags;
 }
-
-class CheckedStaticBox : public wxPanel
-{
-public:
-	wxStaticBoxSizer& BoxSizer;	// Boxsizer which olds all child items.
-	wxCheckBox& MainToggle;		// toggle which can enable/disable all child controls
-	
-public:
-	CheckedStaticBox( wxWindow* parent, int orientation, const wxString& title );
-
-	//virtual bool Layout();
-	void SetValue( bool val );
-	bool GetValue() const;
-	
-protected:
-	DECLARE_EVENT_TABLE();
-
-public:
-	void MainToggle_Click( wxCommandEvent& evt );
-};
 
 class wxDialogWithHelpers : public wxDialog
 {

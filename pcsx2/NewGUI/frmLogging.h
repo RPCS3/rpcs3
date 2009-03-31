@@ -15,13 +15,14 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
+
+#pragma once
  
 #include <wx/wx.h>
 #include <wx/image.h>
 
 #include "wxHelpers.h"
-
-#pragma once
+#include "CheckedStaticBox.h"
 
 class frmLogging: public wxDialogWithHelpers
 {
@@ -29,42 +30,86 @@ public:
 	frmLogging( wxWindow* parent, int id, const wxPoint& pos=wxDefaultPosition, const wxSize& size=wxDefaultSize );
 
 protected:
+	enum LogChecks
+	{
+		LogID_StdOut = 100,
+		LogID_Symbols
+	};
 
-	enum {
-		EE_CPU_LOG = 100,
-		EE_MEM_LOG,
-		EE_HW_LOG,
-		EE_DMA_LOG,
-		EE_BIOS_LOG,
-		EE_ELF_LOG,
-		EE_FPU_LOG,
-		EE_VU0_LOG,
-		EE_COP0_LOG,
-		EE_VIF_LOG,
-		EE_SPR_LOG,
-		EE_GIF_LOG,
-		EE_SIF_LOG,
-		EE_IPU_LOG,
-		EE_VU_MACRO_LOG,
-		EE_RPC_LOG,
+	/////////////////////////////////////////////////////////////////////////////////////
+	//
+	class iopLogOptionsPanel : public CheckedStaticBox
+	{
+	protected:
+		enum LogCheckIDs
+		{
+			LogID_IopBox = 100,
+			LogID_Disasm,
+			LogID_Memory,
+			LogID_Hardware,
+			LogID_Bios,
+			LogID_DMA,
+			LogID_Pad,
+			LogID_Cdrom,
+			LogID_GPU
+		};
 		
-		IOP_IOP_LOG,
-		IOP_MEM_LOG,
-		IOP_HW_LOG,
-		IOP_BIOS_LOG,
-		IOP_DMA_LOG,
-		IOP_PAD_LOG,
-		IOP_CDR_LOG,
-		IOP_GPU_LOG,
-		
-		STDOUT_LOG,
-		SYMS_LOG
-	} LogChecks;
+	public:
+		iopLogOptionsPanel( wxWindow* parent );
+		void OnLogChecked(wxCommandEvent &event);
 
+	};
+	
+	/////////////////////////////////////////////////////////////////////////////////////
+	//
 	class eeLogOptionsPanel : public CheckedStaticBox
 	{
+	protected:
+		enum LogCheckIDs
+		{
+			// Group boxes and misc logs
+			LogID_EEBox = 100,
+			LogID_Disasm,
+			LogID_Hardware,
+			LogID_Memory,
+			LogID_Bios,
+			LogID_ELF,
+
+			// Disasm section
+			LogID_CPU = 200,
+			LogID_FPU,
+			LogID_VU0,
+			LogID_COP0,
+			LogID_VU_Macro,
+
+			LogID_Registers = 300,
+			LogID_DMA,
+			LogID_VIF,
+			LogID_SPR,
+			LogID_GIF,
+			LogID_SIF,
+			LogID_IPU,
+			LogID_RPC
+		};
+
 	public:
 		eeLogOptionsPanel( wxWindow* parent );
+		void OnLogChecked(wxCommandEvent &event);
+
+	protected:
+		class DisasmPanel : public CheckedStaticBox
+		{
+		public:
+			DisasmPanel( wxWindow* parent );
+			void OnLogChecked(wxCommandEvent &event);
+		};
+
+		class HwPanel : public CheckedStaticBox
+		{
+		public:
+			HwPanel( wxWindow* parent );
+			void OnLogChecked(wxCommandEvent &event);
+		};
 	};
 
 

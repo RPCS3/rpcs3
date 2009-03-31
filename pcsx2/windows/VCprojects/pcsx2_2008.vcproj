@@ -2905,6 +2905,14 @@
 			Name="NewGUI"
 			>
 			<File
+				RelativePath="..\..\NewGUI\CheckedStaticBox.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\NewGUI\CheckedStaticBox.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\NewGUI\frmGameFixes.cpp"
 				>
 			</File>

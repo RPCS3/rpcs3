@@ -1,7 +1,22 @@
+/*  Pcsx2 - Pc Ps2 Emulator
+ *  Copyright (C) 2002-2009  Pcsx2 Team
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
+ */
 
 #include "PrecompiledHeader.h"
-
-#include <wx/wx.h>
 #include "wxHelpers.h"
 
 #include <wx/cshelp.h>
@@ -17,7 +32,7 @@ namespace wxHelpers
 	wxSizerFlags stdButtonSizerFlags( wxSizerFlags().Align(wxALIGN_RIGHT).Border() );
 	wxSizerFlags CheckboxFlags( wxSizerFlags().Border( wxALL, 6 ).Expand() );
 	
-	wxCheckBox& AddCheckBox( wxWindow* parent, wxBoxSizer& sizer, const wxString& label, wxWindowID id )
+	wxCheckBox& AddCheckBoxTo( wxWindow* parent, wxBoxSizer& sizer, const wxString& label, wxWindowID id )
 	{
 		wxCheckBox* retval = new wxCheckBox( parent, id, label );
 		sizer.Add( retval, CheckboxFlags );
@@ -25,57 +40,19 @@ namespace wxHelpers
 	}
 }
 
-CheckedStaticBox::CheckedStaticBox( wxWindow* parent, int orientation, const wxString& title=wxEmptyString ) :
-	wxPanel( parent ),
-	BoxSizer( *new wxStaticBoxSizer( orientation, this ) ),
-	MainToggle( *new wxCheckBox( this, wxID_ANY, title, wxPoint( 8, 1 ) ) )
-{
-	MainToggle.SetSize( MainToggle.GetSize() + wxSize( 8, 0 ) );
-	
-	//Connect( 100, wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( CheckedStaticBox::OnMainToggleEvent ), (wxObject*)this );
-}
-
-BEGIN_EVENT_TABLE(CheckedStaticBox, wxPanel)
-	EVT_CHECKBOX(wxID_ANY, MainToggle_Click)
-END_EVENT_TABLE()
-
-void CheckedStaticBox::MainToggle_Click( wxCommandEvent& evt )
-{
-	SetValue( evt.IsChecked() );
-}
-
-// Sets the main checkbox status, and enables/disables all child controls
-// bound to the StaticBox accordingly.
-void CheckedStaticBox::SetValue( bool val )
-{
-	wxWindowList& list = GetChildren();
-	
-	for( wxWindowList::iterator iter = list.begin(); iter != list.end(); ++iter)
-	{
-		wxWindow *current = *iter;
-		if( current != &MainToggle )
-			current->Enable( val );
-	}
-	//MainToggle.Enable();
-	MainToggle.SetValue( val );
-}
-
-bool CheckedStaticBox::GetValue() const
-{
-	return MainToggle.GetValue();
-}
-
-wxCheckBox& wxDialogWithHelpers::AddCheckBox( wxBoxSizer& sizer, const wxString& label, wxWindowID id )
-{
-	return wxHelpers::AddCheckBox( this, sizer, label, id );
-}
-
+//////////////////////////////////////////////////////////////////////////////////////////
+//
 wxDialogWithHelpers::wxDialogWithHelpers( wxWindow* parent, int id,  const wxString& title, bool hasContextHelp, const wxPoint& pos, const wxSize& size ) :
 	wxDialog( parent, id, title, pos, size ),
 	m_hasContextHelp( hasContextHelp )
 {
 	if( hasContextHelp )
 		wxHelpProvider::Set( new wxSimpleHelpProvider() );
+}
+
+wxCheckBox& wxDialogWithHelpers::AddCheckBox( wxBoxSizer& sizer, const wxString& label, wxWindowID id )
+{
+	return wxHelpers::AddCheckBoxTo( this, sizer, label, id );
 }
 
 void wxDialogWithHelpers::AddOkCancel( wxBoxSizer &sizer )

@@ -94,7 +94,7 @@ struct LogSources
 		VUMacro:1,	// VU macro mode logs (pipelines)
 		RPC:1,
 		Counters:1,	// EE's counters!
-		
+
 		IopMemory:1,
 		IopHardware:1,
 		IopBios:1,

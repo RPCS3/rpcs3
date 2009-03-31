@@ -17,80 +17,111 @@
  */
  
 #include "PrecompiledHeader.h"
-#include "Misc.h"
+#include "DebugTools/Debug.h"
 #include "frmLogging.h"
 
 #include <wx/statline.h>
 
-
 using namespace wxHelpers;
 
-//wxString frmLogging::m_DisasmWarning( "\nWarning: Disasm dumps are incredibly slow, and generate extremely large logfiles." );
-
-frmLogging::eeLogOptionsPanel::eeLogOptionsPanel( wxWindow* parent ) :
-	CheckedStaticBox( parent, wxHORIZONTAL, "EE Logs" )
+void ConnectChildrenRecurse( wxWindow* parent, int eventType, wxObjectEventFunction handler )
 {
-	wxStaticBoxSizer& eeDisasm = *new wxStaticBoxSizer( wxVERTICAL, this, _T("Disasm") );
-	wxStaticBoxSizer& eeHw = *new wxStaticBoxSizer( wxVERTICAL, this, _T("Hardware") );
-
-	wxBoxSizer& eeStack = *new wxBoxSizer( wxVERTICAL );
-	wxBoxSizer& eeMisc = *new wxBoxSizer( wxVERTICAL );
-
-	//wxToolTip
-	wxHelpers::AddCheckBox( this, eeDisasm,_T("Core"),		EE_CPU_LOG );
-	wxHelpers::AddCheckBox( this, eeDisasm,_T("Fpu"),		EE_FPU_LOG );
-	wxHelpers::AddCheckBox( this, eeDisasm,_T("VU0"),		EE_VU0_LOG );
-	wxHelpers::AddCheckBox( this, eeDisasm,_T("Cop0"),		EE_COP0_LOG );
-	wxHelpers::AddCheckBox( this, eeDisasm,_T("VU Macro"),	EE_VU_MACRO_LOG );
-
-	wxHelpers::AddCheckBox( this, eeMisc,	_T("Memory"),	EE_MEM_LOG );
-	wxHelpers::AddCheckBox( this, eeMisc,	_T("Bios"),		EE_BIOS_LOG );
-	wxHelpers::AddCheckBox( this, eeMisc,	_T("Elf"),		EE_ELF_LOG );
-
-	wxHelpers::AddCheckBox( this, eeHw,	_T("Registers"),EE_HW_LOG );
-	wxHelpers::AddCheckBox( this, eeHw,	_T("Dma"),		EE_DMA_LOG );
-	wxHelpers::AddCheckBox( this, eeHw,	_T("Vif"),		EE_VIF_LOG );
-	wxHelpers::AddCheckBox( this, eeHw,	_T("SPR"),		EE_SPR_LOG );
-	wxHelpers::AddCheckBox( this, eeHw,	_T("GIF"),		EE_GIF_LOG );
-	wxHelpers::AddCheckBox( this, eeHw,	_T("Sif"),		EE_SIF_LOG );
-	wxHelpers::AddCheckBox( this, eeHw,	_T("IPU"),		EE_IPU_LOG );
-	wxHelpers::AddCheckBox( this, eeHw,	_T("RPC"),		EE_RPC_LOG );
-
-	// Sizer hierarchy:
-
-	eeStack.Add( &eeDisasm, stdSpacingFlags );
-	eeStack.Add( &eeMisc );
-
-	BoxSizer.Add( &eeHw, stdSpacingFlags );
-	BoxSizer.Add( &eeStack );
-
-	SetSizerAndFit( &BoxSizer, true );
+	wxWindowList& list = parent->GetChildren();
+	for( wxWindowList::iterator iter = list.begin(); iter != list.end(); ++iter)
+	{
+		wxWindow *current = *iter;
+		ConnectChildrenRecurse( current, eventType, handler );
+		parent->Connect( current->GetId(), eventType, handler );
+	}
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////
+//
+frmLogging::eeLogOptionsPanel::eeLogOptionsPanel( wxWindow* parent ) :
+	CheckedStaticBox( parent, wxHORIZONTAL, wxT( "EE Logs" ), LogID_EEBox )
+{
+	wxBoxSizer& eeMisc = *new wxBoxSizer( wxVERTICAL );
 
+	AddCheckBoxTo( this, eeMisc,	wxT("Memory"),	LogID_Memory );
+	AddCheckBoxTo( this, eeMisc,	wxT("Bios"),	LogID_Bios );
+	AddCheckBoxTo( this, eeMisc,	wxT("Elf"),		LogID_ELF );
+
+	wxBoxSizer& eeStack = *new wxBoxSizer( wxVERTICAL );
+	eeStack.Add( new DisasmPanel( this ), stdSpacingFlags );
+	eeStack.Add( &eeMisc );
+
+	ThisSizer.Add( new HwPanel( this ), stdSpacingFlags );
+	ThisSizer.Add( &eeStack );
+
+	SetValue( true );
+	Fit();
+}
+
+frmLogging::eeLogOptionsPanel::DisasmPanel::DisasmPanel( wxWindow* parent ) :
+	CheckedStaticBox( parent, wxVERTICAL, wxT( "Disasm" ), LogID_Disasm )
+{
+	AddCheckBox( _T("Core"),	LogID_CPU );
+	AddCheckBox( _T("Fpu"),		LogID_FPU );
+	AddCheckBox( _T("VU0"),		LogID_VU0 );
+	AddCheckBox( _T("Cop0"),	LogID_COP0 );
+	AddCheckBox( _T("VU Macro"),LogID_VU_Macro );
+
+	SetValue( false );
+	Fit();
+}
+
+frmLogging::eeLogOptionsPanel::HwPanel::HwPanel( wxWindow* parent ) :
+	CheckedStaticBox( parent, wxVERTICAL, wxT( "Hardware" ), LogID_Hardware )
+{
+	AddCheckBox( _T("Registers"),LogID_Registers );
+	AddCheckBox( _T("Dma"),		LogID_DMA );
+	AddCheckBox( _T("Vif"),		LogID_VIF );
+	AddCheckBox( _T("SPR"),		LogID_SPR );
+	AddCheckBox( _T("GIF"),		LogID_GIF );
+	AddCheckBox( _T("Sif"),		LogID_SIF );
+	AddCheckBox( _T("IPU"),		LogID_IPU );
+	AddCheckBox( _T("RPC"),		LogID_RPC );
+
+	SetValue( false );
+	Fit();
+}
+
+void frmLogging::eeLogOptionsPanel::OnLogChecked(wxCommandEvent &event)
+{
+	LogChecks checkId = (LogChecks)(int)event.m_callbackUserData;
+	//ToggleLogOption( checkId );
+	event.Skip();
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////
+//
+frmLogging::iopLogOptionsPanel::iopLogOptionsPanel( wxWindow* parent ) :
+	CheckedStaticBox( parent, wxVERTICAL, wxT( "IOP Logs" ), LogID_IopBox )
+{
+	AddCheckBox( _T("Disasm"),		LogID_Disasm);
+	AddCheckBox( _T("Memory"),		LogID_Memory );
+	AddCheckBox( _T("Bios"),		LogID_Bios );
+	AddCheckBox( _T("Registers"),	LogID_Hardware );
+	AddCheckBox( _T("Dma"),			LogID_DMA );
+	AddCheckBox( _T("Pad"),			LogID_Pad );
+	AddCheckBox( _T("Cdrom"),		LogID_Cdrom );
+	AddCheckBox( _T("GPU (PSX)"),	LogID_GPU );
+
+	SetValue( true );
+	Fit();
+};
+
+//////////////////////////////////////////////////////////////////////////////////////////
+//
 frmLogging::frmLogging(wxWindow* parent, int id, const wxPoint& pos, const wxSize& size):
 	wxDialogWithHelpers( parent, id, _T("Logging"), true, pos, size )
 {
-	int i;
-
-	//wxStaticBoxSizer& eeBox = *new wxStaticBoxSizer( wxHORIZONTAL, this );
-	
 	eeLogOptionsPanel& eeBox = *new eeLogOptionsPanel( this );
-	
-	wxStaticBoxSizer& iopSizer = *new wxStaticBoxSizer( wxVERTICAL, this, _T("IOP Logs") );
+	iopLogOptionsPanel& iopSizer = *new iopLogOptionsPanel( this );
 
-	AddCheckBox( iopSizer, _T("Disasm"),	IOP_IOP_LOG );
-	AddCheckBox( iopSizer, _T("Memory"),	IOP_MEM_LOG );
-	AddCheckBox( iopSizer, _T("Bios"),		IOP_BIOS_LOG );
-	AddCheckBox( iopSizer, _T("Registers"),	IOP_HW_LOG);
-	AddCheckBox( iopSizer, _T("Dma"),		IOP_DMA_LOG );
-	AddCheckBox( iopSizer, _T("Pad"),		IOP_PAD_LOG );
-	AddCheckBox( iopSizer, _T("Cdrom"),		IOP_CDR_LOG );
-	AddCheckBox( iopSizer, _T("GPU (PSX)"),	IOP_GPU_LOG );
-	
-	wxStaticBoxSizer& miscSizer = *new wxStaticBoxSizer(  wxHORIZONTAL, this, _T("Misc") );
-	AddCheckBox( miscSizer, _T("Log to STDOUT"), STDOUT_LOG );
-	AddCheckBox( miscSizer, _T("SYMs Log"), SYMS_LOG );
+	wxStaticBoxSizer& miscSizer = *new wxStaticBoxSizer( wxHORIZONTAL, this, _T("Misc") );
+	AddCheckBox( miscSizer, _T("Log to STDOUT"), LogID_StdOut );
+	AddCheckBox( miscSizer, _T("SYMs Log"), LogID_Symbols );
 
 	wxBoxSizer& mainsizer = *new wxBoxSizer( wxVERTICAL );
 	wxBoxSizer& topSizer = *new wxBoxSizer( wxHORIZONTAL );
@@ -105,17 +136,22 @@ frmLogging::frmLogging(wxWindow* parent, int id, const wxPoint& pos, const wxSiz
 
 	SetSizerAndFit( &mainsizer, true );
 
-	// Connect all the checkboxes to one function, and pass the checkbox id as user data.
-	// (user data pointer isn't actually a pointer, but instead just the checkbox id)
-	for (i = EE_CPU_LOG; i >= SYMS_LOG; i++)
-		Connect( i, wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(frmLogging::LogChecked), (wxObject*)i );
+	ConnectChildrenRecurse( this, wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(frmLogging::LogChecked) );
 }
 
 
-void frmLogging::LogChecked(wxCommandEvent &event)
+void frmLogging::LogChecked(wxCommandEvent &evt)
 {
-	int checkId = (int)event.m_callbackUserData;
-	event.Skip();
+	// Anything going here should be a checkbox, unless non-checkbox controls send CheckBox_Clicked commands
+	// (which would seem bad).
+	wxCheckBox* checker = wxStaticCast( evt.GetEventObject(), wxCheckBox );
+
+	switch( checker->GetId() )
+	{
+		// [TODO] : Implement me!
+	}
+	
+	evt.Skip();
 }
 
 
