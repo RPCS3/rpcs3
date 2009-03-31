@@ -214,12 +214,6 @@ static __forceinline mem32_t __hwRead32_page_0F( u32 mem, bool intchack )
 
 	switch( mem )
 	{
-		case 0xf000:
-			if( intchack ) IntCHackCheck();
-			// This one is checked alot, so leave it commented out unless you love 600 meg logfiles.
-			//HW_LOG("INTC_STAT Read  32bit %x", psHu32(0xf010));
-		break;
-
 		case 0xf010:
 			HW_LOG("INTC_MASK Read32, value=0x%x", psHu32(INTC_MASK));
 		break;
@@ -261,12 +255,22 @@ static __forceinline mem32_t __hwRead32_page_0F( u32 mem, bool intchack )
 				}
 			}
 			return 0;
+		
+		case 0xf000:
+			//Put this back on top in case you remove the shortcut for intc_stat register (see below function) (rama). 
+			if( intchack ) IntCHackCheck();
+			// This one is checked alot, so leave it commented out unless you love 600 meg logfiles.
+			//HW_LOG("INTC_STAT Read  32bit %x", psHu32(0xf010));
+		break;
 	}
 	return *((u32*)&PS2MEM_HW[mem]);
 }
 
 mem32_t __fastcall hwRead32_page_0F(u32 mem)
 {
+	if (mem == 0x1000f000) //shortcut for intc_stat
+		return *((u32*)&PS2MEM_HW[0xF000]);
+
 	return __hwRead32_page_0F( mem, false );
 }
 
