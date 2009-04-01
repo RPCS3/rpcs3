@@ -58,7 +58,7 @@ struct t_sif_sreg
 {
 	struct t_sif_cmd_header	hdr;		//+00
 	s32 index;		//+10
-	u32value;		//+14
+	u32 value;		//+14
 };						//=18
 
 #define SYSTEM_CMD_RESET	0x80000003
