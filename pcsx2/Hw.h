@@ -328,7 +328,7 @@ static __forceinline u8* dmaGetAddr(u32 mem)
 
 #ifdef _WIN32	
 	// do manual LUT since IPU/SPR seems to use addrs 0x3000xxxx quite often
-    // linux doesn't suffer from this because it has better vm support
+	// linux doesn't suffer from this because it has better vm support
 	if( memLUT[ (p-PS2MEM_BASE)>>12 ].aPFNs == NULL ) {
 		Console::WriteLn("dmaGetAddr: memLUT PFN warning");
 		return NULL;//p;

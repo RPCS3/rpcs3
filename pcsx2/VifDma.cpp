@@ -446,13 +446,9 @@ static void VIFunpack(u32 *data, vifCode *v, int size, const unsigned int VIFdma
 		if (vif->cl == vifRegs->cycle.wl)
 		{
 			if (vifRegs->cycle.cl != vifRegs->cycle.wl)
-			{
 				dest += ((vifRegs->cycle.cl - vifRegs->cycle.wl) << 2) + destinc;
-			}
 			else
-			{
 				dest += destinc;
-			}
 			vif->cl = 0;
 		}
 		else
@@ -539,7 +535,7 @@ static void VIFunpack(u32 *data, vifCode *v, int size, const unsigned int VIFdma
 			}
 #endif
 
-			if (vifRegs->cycle.cl == 0 || vifRegs->cycle.wl == 0 || (vifRegs->cycle.cl == vifRegs->cycle.wl && !(vifRegs->code&0x10000000)))
+			if ((vifRegs->cycle.cl == 0) || (vifRegs->cycle.wl == 0) || ((vifRegs->cycle.cl == vifRegs->cycle.wl) && !(vifRegs->code & 0x10000000)))
 			{
 				oldcycle = *(u32*) & vifRegs->cycle;
 				vifRegs->cycle.cl = vifRegs->cycle.wl = 1;

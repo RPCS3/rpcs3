@@ -98,7 +98,7 @@ void _SPR0interleave()
 	int qwc = spr0->qwc;
 	int sqwc = psHu32(DMAC_SQWC) & 0xff;
 	int tqwc = (psHu32(DMAC_SQWC) >> 16) & 0xff;
-	int cycles = 0;
+	//int cycles = 0;
 	u32 *pMem;
 	
 	if (tqwc == 0) tqwc = qwc;
@@ -111,8 +111,8 @@ void _SPR0interleave()
 		spr0->qwc = std::min(tqwc, qwc);
 		qwc -= spr0->qwc;
 		pMem = (u32*)dmaGetAddr(spr0->madr);
-		if ((psHu32(DMAC_CTRL) & 0xC) == 0xC || // GIF MFIFO
-		        (psHu32(DMAC_CTRL) & 0xC) == 0x8)   // VIF1 MFIFO
+		if ((((psHu32(DMAC_CTRL) & 0xC) == 0xC) || // GIF MFIFO
+		        (psHu32(DMAC_CTRL) & 0xC) == 0x8))   // VIF1 MFIFO
 		{
 			hwMFIFOWrite(spr0->madr, (u8*)&PS2MEM_SCRATCH[spr0->sadr & 0x3fff], spr0->qwc << 4);
 			mfifotransferred += spr0->qwc;
@@ -123,7 +123,7 @@ void _SPR0interleave()
 			TestClearVUs(spr0->madr, spr0->qwc << 2);
 			memcpy_fast((u8*)pMem, &PS2MEM_SCRATCH[spr0->sadr & 0x3fff], spr0->qwc << 4);
 		}
-		cycles += tqwc * BIAS;
+		//cycles += tqwc * BIAS;
 		spr0->sadr += spr0->qwc * 16;
 		spr0->madr += (sqwc + spr0->qwc) * 16; //qwc-= sqwc;
 	}
@@ -153,7 +153,7 @@ static __forceinline void _dmaSPR0()
 		int cycles = 0;
 		u32 *ptag;
 		int id;
-		int done = 0;
+		bool done = FALSE;
 
 		if (spr0->qwc > 0)
 		{
@@ -169,7 +169,7 @@ static __forceinline void _dmaSPR0()
 
 		spr0->chcr = (spr0->chcr & 0xFFFF) | ((*ptag) & 0xFFFF0000);	//Transfer upper part of tag to CHCR bits 31-15
 
-		id        = (ptag[0] >> 28) & 0x7;		//ID for DmaChain copied from bit 28 of the tag
+		id = (ptag[0] >> 28) & 0x7;		//ID for DmaChain copied from bit 28 of the tag
 		spr0->qwc  = (u16)ptag[0];				//QWC set to lower 16bits of the tag
 		spr0->madr = ptag[1];					//MADR = ADDR field
 
@@ -188,27 +188,28 @@ static __forceinline void _dmaSPR0()
 				break;
 
 			case 1: // CNT - Transfer QWC following the tag.
-				done = 0;
+				done = FALSE;
 				break;
 
 			case 7: // End - Transfer QWC following the tag
-				done = 1;								//End Transfer
+				done = TRUE;
 				break;
 		}
 		SPR0chain();
 		if (spr0->chcr & 0x80 && ptag[0] >> 31)  			 //Check TIE bit of CHCR and IRQ bit of tag
 		{
 			//Console::WriteLn("SPR0 TIE");
-			done = 1;
+			done = TRUE;
 			spr0->qwc = 0;
 		}
+			
+		spr0finished = (done) ? 1 : 0;
 		
-		spr0finished = done;
-		if (done == 0)
+		if (!done)
 		{
 			ptag = (u32*) & PS2MEM_SCRATCH[spr0->sadr & 0x3fff];		//Set memory pointer to SADR
-			spr0->qwc  = (u16)ptag[0];					//QWC set to lower 16bits of the tag
-			CPU_INT(8, spr0->qwc / BIAS);
+			//spr0->qwc  = (u16)ptag[0];					//QWC set to lower 16bits of the tag
+			CPU_INT(8, ((u16)ptag[0]) / BIAS); //spr0->qwc / BIAS);
 			spr0->qwc = 0;
 			return;
 		}
@@ -219,9 +220,6 @@ static __forceinline void _dmaSPR0()
 	{
 		_SPR0interleave();
 	}
-
-
-
 }
 
 void SPRFROMinterrupt()
@@ -253,8 +251,6 @@ void SPRFROMinterrupt()
 
 void dmaSPR0()   // fromSPR
 {
-
-
 	SPR_LOG("dmaSPR0 chcr = %lx, madr = %lx, qwc  = %lx, sadr = %lx",
 	        spr0->chcr, spr0->madr, spr0->qwc, spr0->sadr);
 
@@ -303,7 +299,7 @@ void _SPR1interleave()
 	int qwc = spr1->qwc;
 	int sqwc = psHu32(DMAC_SQWC) & 0xff;
 	int tqwc = (psHu32(DMAC_SQWC) >> 16) & 0xff;
-	int cycles = 0;
+	//int cycles = 0;
 	u32 *pMem;
 	
 	if (tqwc == 0) tqwc = qwc;
@@ -317,7 +313,7 @@ void _SPR1interleave()
 		pMem = (u32*)dmaGetAddr(spr1->madr);
 		memcpy_fast(&PS2MEM_SCRATCH[spr1->sadr & 0x3fff], (u8*)pMem, spr1->qwc << 4);
 		spr1->sadr += spr1->qwc * 16;
-		cycles += spr1->qwc * BIAS;
+		//cycles += spr1->qwc * BIAS;
 		spr1->madr += (sqwc + spr1->qwc) * 16; //qwc-= sqwc;
 	}
 
@@ -339,7 +335,8 @@ void _dmaSPR1()   // toSPR work function
 	{
 		int cycles = 0;
 		u32 *ptag;
-		int id, done = 0;
+		int id;
+		bool done = FALSE;
 
 		if (spr1->qwc > 0)
 		{
@@ -356,8 +353,8 @@ void _dmaSPR1()   // toSPR work function
 			Console::WriteLn("SPR1 Tag BUSERR");
 			spr1->chcr = (spr1->chcr & 0xFFFF) | ((*ptag) & 0xFFFF0000);	//Transfer upper part of tag to CHCR bits 31-15
 			psHu32(DMAC_STAT) |= 1 << 15;				//If yes, set BEIS (BUSERR) in DMAC_STAT register
-			done = 1;
-			spr1finished = done;
+			done = TRUE;
+			spr1finished = (done) ? 1: 0;
 			return;
 		}
 		spr1->chcr = (spr1->chcr & 0xFFFF) | ((*ptag) & 0xFFFF0000);	//Transfer upper part of tag to CHCR bits 31-15
@@ -376,7 +373,7 @@ void _dmaSPR1()   // toSPR work function
 		SPR_LOG("spr1 dmaChain %8.8x_%8.8x size=%d, id=%d, addr=%lx",
 		        ptag[1], ptag[0], spr1->qwc, id, spr1->madr);
 
-		done = hwDmacSrcChain(spr1, id);
+		done = (hwDmacSrcChain(spr1, id) == 1);
 		SPR1chain();										//Transfers the data set by the switch
 
 		if (spr1->chcr & 0x80 && ptag[0] >> 31)  			//Check TIE bit of CHCR and IRQ bit of tag
@@ -385,15 +382,15 @@ void _dmaSPR1()   // toSPR work function
 
 			//Console::WriteLn("SPR1 TIE");
 			spr1->qwc = 0;
-			done = 1;
+			done = TRUE;
 		}
 		
 		spr1finished = done;
-		if (done == 0)
+		if (!done)
 		{
 			ptag = (u32*)dmaGetAddr(spr1->tadr);		//Set memory pointer to TADR
-			spr1->qwc  = (u16)ptag[0];					//QWC set to lower 16bits of the tag
-			CPU_INT(9, spr1->qwc / BIAS);
+			//spr1->qwc  = (u16)ptag[0];					//QWC set to lower 16bits of the tag
+			CPU_INT(9, (((u16)ptag[0]) / BIAS));// spr1->qwc / BIAS);
 			spr1->qwc = 0;
 		}
 	}
@@ -416,7 +413,6 @@ void dmaSPR1()   // toSPR
 		u32 *ptag;
 		ptag = (u32*)dmaGetAddr(spr1->tadr);		//Set memory pointer to TADR
 		CPU_INT(9, (ptag[0] & 0xffff) / BIAS);
-		//spr1->qwc = 0;
 		return;
 	}
 	// COMPLETE HACK!!! For now at least..  FFX Videos dont rely on interrupts or reading DMA values

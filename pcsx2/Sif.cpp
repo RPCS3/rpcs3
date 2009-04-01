@@ -40,26 +40,26 @@ DMACh *sif2ch;
 struct _sif0
 {
 	u32 fifoData[FIFO_SIF0_W];
-	int fifoReadPos;
-	int fifoWritePos;
-	int fifoSize;
-	int chain;
-	int end;
-	int tagMode;
-	int counter;
+	s32 fifoReadPos;
+	s32 fifoWritePos;
+	s32 fifoSize;
+	s32 chain;
+	s32 end;
+	s32 tagMode;
+	s32 counter;
 	struct sifData sifData;
 };
 
 struct _sif1
 {
 	u32 fifoData[FIFO_SIF1_W];
-	int fifoReadPos;
-	int fifoWritePos;
-	int fifoSize;
-	int chain;
-	int end;
-	int tagMode;
-	int counter;
+	s32 fifoReadPos;
+	s32 fifoWritePos;
+	s32 fifoSize;
+	s32 chain;
+	s32 end;
+	s32 tagMode;
+	s32 counter;
 };
 
 static _sif0 sif0;
@@ -85,7 +85,6 @@ static __forceinline void SIF0write(u32 *from, int words)
 	memcpy(&sif0.fifoData[0], &from[wP0], wP1 << 2);
 
 	sif0.fifoWritePos = (sif0.fifoWritePos + words) & (FIFO_SIF0_W - 1);
-
 	sif0.fifoSize += words;
 	SIF_LOG("  SIF0 + %d = %d (pos=%d)", words, sif0.fifoSize, sif0.fifoWritePos);
 }
@@ -132,7 +131,7 @@ static __forceinline void SIF1read(u32 *to, int words)
 __forceinline void SIF0Dma()
 {
 	u32 *ptag;
-	int notDone = TRUE;
+	bool done = FALSE;
 	int cycles = 0, psxCycles = 0;
 
 	SIF_LOG("SIF0 DMA start...");
@@ -157,7 +156,7 @@ __forceinline void SIF0Dma()
 					PSX_INT(IopEvt_SIF0, psxCycles);
 
 					sif0.sifData.data = 0;
-					notDone = FALSE;
+					done = TRUE;
 				}
 				else  // Chain mode
 				{
@@ -171,13 +170,13 @@ __forceinline void SIF0Dma()
 					HW_DMA9_MADR = sif0.sifData.data & 0xFFFFFF;
 					HW_DMA9_TADR += 16; ///HW_DMA9_MADR + 16 + sif0.sifData.words << 2;
 					sif0.counter = sif0.sifData.words & 0xFFFFFF;
-					notDone = TRUE;
 
 					SIF_LOG(" SIF0 Tag: madr=%lx, tadr=%lx, counter=%lx (%08X_%08X)", HW_DMA9_MADR, HW_DMA9_TADR, sif0.counter, sif0.sifData.words, sif0.sifData.data);
 					if (sif0.sifData.data & 0x40000000)
 						SIF_LOG("   END");
 					else
 						SIF_LOG("   CNT %08X, %08X", sif0.sifData.data, sif0.sifData.words);
+					done = FALSE;
 				}
 			}
 			else // There's some data ready to transfer into the fifo..
@@ -220,23 +219,16 @@ __forceinline void SIF0Dma()
 
 			if (sif0dma->qwc == 0)
 			{
-				if ((sif0dma->chcr & 0x80000080) == 0x80000080) // Stop on tag IRQ
+				if (((sif0dma->chcr & 0x80000080) == 0x80000080) || (sif0.end)) // Stop on tag IRQ or END
 				{
-					// Tag interrupt
-					SIF_LOG(" EE SIF interrupt");
+					if (sif0.end)
+						SIF_LOG(" EE SIF end"); 
+					else
+						SIF_LOG(" EE SIF interrupt");
 
 					eesifbusy[0] = 0;
 					CPU_INT(5, cycles*BIAS);
-					notDone = FALSE;
-				}
-				else if (sif0.end) // Stop on tag END
-				{
-					// End tag.
-					SIF_LOG(" EE SIF end");
-
-					eesifbusy[0] = 0;
-					CPU_INT(5, cycles*BIAS);
-					notDone = FALSE;
+					done = TRUE;
 				}
 				else if (sif0.fifoSize >= 4) // Read a tag
 				{
@@ -252,22 +244,22 @@ __forceinline void SIF0Dma()
 
 					if ((psHu32(DMAC_CTRL) & 0x30) != 0 && ((tag[0] >> 28)&3) == 0)
 						psHu32(DMAC_STADR) = sif0dma->madr + (sif0dma->qwc * 16);
-					notDone = TRUE;
 					sif0.chain = 1;
 					if (tag[0] & 0x40000000) sif0.end = 1;
+					done = FALSE;
 
 				}
 			}
 		}
 	}
-	while (notDone);
+	while (!done);
 }
 
 __forceinline void SIF1Dma()
 {
 	int id;
 	u32 *ptag;
-	bool notDone = true;
+	bool done = FALSE;
 	int cycles = 0, psxCycles = 0;
 	do
 	{
@@ -284,7 +276,7 @@ __forceinline void SIF1Dma()
 					// Stop & signal interrupts on EE
 					SIF_LOG("EE SIF1 End %x", sif1.end);
 					eesifbusy[1] = 0;
-					notDone = FALSE;
+					done = TRUE;
 					CPU_INT(6, cycles*BIAS);
 					sif1.chain = 0;
 					sif1.end = 0;
@@ -292,7 +284,7 @@ __forceinline void SIF1Dma()
 				else // Chain mode
 				{
 					// Process DMA tag at sif1dma->tadr
-					notDone = TRUE;
+					done = FALSE;
 					_dmaGetAddr(sif1dma, ptag, sif1dma->tadr, 6);
 					sif1dma->chcr = (sif1dma->chcr & 0xFFFF) | ((*ptag) & 0xFFFF0000);     // Copy the tag
 					sif1dma->qwc = (u16)ptag[0];
@@ -390,23 +382,17 @@ __forceinline void SIF1Dma()
 
 			if (sif1.counter <= 0)
 			{
-				if (sif1.tagMode & 0x80) // Stop on tag IRQ
+				if ((sif1.tagMode & 0x80) || (sif1.tagMode & 0x40))  // Stop on tag IRQ or END
 				{
-					// Tag interrupt
-					SIF_LOG(" IOP SIF interrupt");
+					if (sif1.tagMode & 0x40)
+						SIF_LOG(" IOP SIF end");
+					else
+						SIF_LOG(" IOP SIF interrupt");
+					
 					iopsifbusy[1] = 0;
 					PSX_INT(IopEvt_SIF1, psxCycles);
 					sif1.tagMode = 0;
-					notDone = FALSE;
-				}
-				else if (sif1.tagMode & 0x40) // Stop on tag END
-				{
-					// End tag.
-					SIF_LOG(" IOP SIF end");
-					iopsifbusy[1] = 0;
-					PSX_INT(IopEvt_SIF1, psxCycles);
-					sif1.tagMode = 0;
-					notDone = FALSE;
+					done = TRUE;
 				}
 				else if (sif1.fifoSize >= 4) // Read a tag
 				{
@@ -416,12 +402,12 @@ __forceinline void SIF1Dma()
 					HW_DMA10_MADR = d.data & 0xffffff;
 					sif1.counter = d.words;
 					sif1.tagMode = (d.data >> 24) & 0xFF;
-					notDone = TRUE;
+					done = FALSE;
 				}
 			}
 		}
 	}
-	while (notDone);
+	while (!done);
 }
 
 __forceinline void  sif0Interrupt()
@@ -460,7 +446,7 @@ __forceinline void dmaSIF0()
 
 	psHu32(0x1000F240) |= 0x2000;
 	eesifbusy[0] = 1;
-	if (eesifbusy[0] == 1 && iopsifbusy[0] == 1)
+	if (iopsifbusy[0] == 1)
 	{
 		FreezeXMMRegs(1);
 		hwIntcIrq(INTC_SBUS);
@@ -483,7 +469,7 @@ __forceinline void dmaSIF1()
 
 	psHu32(0x1000F240) |= 0x4000;
 	eesifbusy[1] = 1;
-	if (eesifbusy[1] == 1 && iopsifbusy[1] == 1)
+	if (iopsifbusy[1] == 1)
 	{
 		FreezeXMMRegs(1);
 		SIF1Dma();
