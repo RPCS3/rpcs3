@@ -212,14 +212,20 @@ static __forceinline mem32_t __hwRead32_page_0F( u32 mem, bool intchack )
 
 	mem &= 0xffff;
 
+	// INTC_STAT shortcut for heavy spinning.
+	// Performance Note: Visual Studio handles this best if we just manually check for it here,
+	// outside the context of the switch statement below.  This is likely fixed by PGO also,
+	// but it's an easy enough conditional to account for anyways.
+	
+	static const uint ics = INTC_STAT & 0xffff;
+	if( mem == ics )		// INTC_STAT
+	{
+		if( intchack ) IntCHackCheck();
+		return *((u32*)&PS2MEM_HW[ics]);
+	}
+
 	switch( mem )
 	{
-		case 0xf000:
-			if( intchack ) IntCHackCheck();
-			// This one is checked alot, so leave it commented out unless you love 600 meg logfiles.
-			//HW_LOG("INTC_STAT Read  32bit %x", psHu32(0xf010));
-		break;
-
 		case 0xf010:
 			HW_LOG("INTC_MASK Read32, value=0x%x", psHu32(INTC_MASK));
 		break;
