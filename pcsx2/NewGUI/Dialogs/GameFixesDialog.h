@@ -21,20 +21,23 @@
 
 #pragma once
 
-class frmGameFixes: public wxDialog
+namespace Dialogs
 {
-public:
+	class GameFixesDialog: public wxDialog
+	{
+	public:
 
-    frmGameFixes(wxWindow* parent, int id, const wxPoint& pos=wxDefaultPosition, const wxSize& size=wxDefaultSize, long style=wxDEFAULT_FRAME_STYLE);
+		GameFixesDialog(wxWindow* parent, int id, const wxPoint& pos=wxDefaultPosition, const wxSize& size=wxDefaultSize, long style=wxDEFAULT_FRAME_STYLE);
 
-protected:
+	protected:
 
-    DECLARE_EVENT_TABLE();
+		DECLARE_EVENT_TABLE();
 
-public:
-    void FPUCompareHack_Click(wxCommandEvent &event);
-    void TriAce_Click(wxCommandEvent &event);
-    void GodWar_Click(wxCommandEvent &event);
-    void Ok_Click(wxCommandEvent &event);
-    void Cancel_Click(wxCommandEvent &event);
-};
+	public:
+		void FPUCompareHack_Click(wxCommandEvent &event);
+		void TriAce_Click(wxCommandEvent &event);
+		void GodWar_Click(wxCommandEvent &event);
+		void Ok_Click(wxCommandEvent &event);
+		void Cancel_Click(wxCommandEvent &event);
+	};
+}

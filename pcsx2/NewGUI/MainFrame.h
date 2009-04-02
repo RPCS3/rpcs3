@@ -25,10 +25,10 @@
 
 //////////////////////////////////////////////////////////////////////////////////////////
 //
-class frmMain: public wxFrame
+class MainEmuFrame: public wxFrame
 {
 public:
-    frmMain(wxWindow* parent, int id, const wxString& title, const wxPoint& pos=wxDefaultPosition, const wxSize& size=wxDefaultSize, long style=wxDEFAULT_FRAME_STYLE);
+    MainEmuFrame(wxWindow* parent, int id, const wxString& title, const wxPoint& pos=wxDefaultPosition, const wxSize& size=wxDefaultSize, long style=wxDEFAULT_FRAME_STYLE);
 
 	void OnLogBoxShown();
 	void OnLogBoxHidden();

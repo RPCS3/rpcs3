@@ -52,7 +52,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories=""
+				AdditionalIncludeDirectories="&quot;$(ProjectRootDir)/NewGUI&quot;"
 				ExceptionHandling="2"
 				SmallerTypeCheck="false"
 				UsePrecompiledHeader="2"
@@ -133,7 +133,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="3"
 				FavorSizeOrSpeed="1"
-				AdditionalIncludeDirectories=""
+				AdditionalIncludeDirectories="&quot;$(ProjectRootDir)/NewGUI&quot;"
 				PreprocessorDefinitions="NDEBUG"
 				StringPooling="true"
 				ExceptionHandling="2"
@@ -220,7 +220,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="3"
 				EnableFiberSafeOptimizations="true"
-				AdditionalIncludeDirectories=""
+				AdditionalIncludeDirectories="&quot;$(ProjectRootDir)/NewGUI&quot;"
 				PreprocessorDefinitions="NDEBUG"
 				ExceptionHandling="2"
 				SmallerTypeCheck="false"
@@ -2907,31 +2907,15 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\NewGUI\frmGameFixes.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\NewGUI\frmGameFixes.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\NewGUI\frmLogging.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\NewGUI\frmLogging.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\NewGUI\frmMain.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\NewGUI\frmMain.h"
-				>
-			</File>
-			<File
 				RelativePath="..\..\NewGUI\main.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\NewGUI\MainFrame.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\NewGUI\MainFrame.h"
 				>
 			</File>
 			<File
@@ -2942,6 +2926,26 @@
 				RelativePath="..\..\NewGUI\wxHelpers.h"
 				>
 			</File>
+			<Filter
+				Name="Dialogs"
+				>
+				<File
+					RelativePath="..\..\NewGUI\Dialogs\GameFixesDialog.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\NewGUI\Dialogs\GameFixesDialog.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\NewGUI\Dialogs\LogOptionsDialog.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\NewGUI\Dialogs\LogOptionsDialog.h"
+					>
+				</File>
+			</Filter>
 		</Filter>
 		<File
 			RelativePath="..\..\Common.h"

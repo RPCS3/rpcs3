@@ -17,13 +17,15 @@
  */
 
 #include "PrecompiledHeader.h"
-#include "frmMain.h"
-#include "frmGameFixes.h"
-#include "frmLogging.h"
+#include "MainFrame.h"
+#include "Dialogs/GameFixesDialog.h"
+#include "Dialogs/LogOptionsDialog.h"
+
+using namespace Dialogs;
 
 //////////////////////////////////////////////////////////////////////////////////////////
 //
-wxMenu* frmMain::MakeLanguagesMenu() const
+wxMenu* MainEmuFrame::MakeLanguagesMenu() const
 {
 	wxMenu* menuLangs = new wxMenu();
 	
@@ -34,7 +36,7 @@ wxMenu* frmMain::MakeLanguagesMenu() const
 	return menuLangs;
 }
 
-wxMenu* frmMain::MakeStatesMenu()
+wxMenu* MainEmuFrame::MakeStatesMenu()
 {
 	wxMenu* mnuStates = new wxMenu();
 
@@ -46,7 +48,7 @@ wxMenu* frmMain::MakeStatesMenu()
 	return mnuStates;
 }
 
-wxMenu* frmMain::MakeStatesSubMenu( int baseid ) const
+wxMenu* MainEmuFrame::MakeStatesSubMenu( int baseid ) const
 {
 	wxMenu* mnuSubstates = new wxMenu();
 	wxString slot( _T("Slot") );
@@ -59,7 +61,7 @@ wxMenu* frmMain::MakeStatesSubMenu( int baseid ) const
 	return mnuSubstates;
 }
 
-void frmMain::PopulateVideoMenu()
+void MainEmuFrame::PopulateVideoMenu()
 {
 	m_menuVideo.Append( Menu_Video_Basics,	_T("Basic Settings..."),	wxEmptyString, wxITEM_CHECK );
 	m_menuVideo.AppendSeparator();
@@ -69,14 +71,14 @@ void frmMain::PopulateVideoMenu()
 	m_menuVideo.Append( Menu_Video_Advanced,	_T("Advanced..."),		wxEmptyString, wxITEM_NORMAL );
 }
 
-void frmMain::PopulateAudioMenu()
+void MainEmuFrame::PopulateAudioMenu()
 {
 	// Populate options from the plugin here.
 
 	m_menuAudio.Append( Menu_Audio_Advanced,	_T("Advanced..."),		wxEmptyString, wxITEM_NORMAL );
 }
 
-void frmMain::PopulatePadMenu()
+void MainEmuFrame::PopulatePadMenu()
 {
 	// Populate options from the plugin here.
 
@@ -84,9 +86,9 @@ void frmMain::PopulatePadMenu()
 }
 
 #define ConnectMenu( id, handler ) \
-	Connect( id, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(frmMain::handler) )
+	Connect( id, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainEmuFrame::handler) )
 
-void frmMain::OnMoveAround( wxMoveEvent& evt )
+void MainEmuFrame::OnMoveAround( wxMoveEvent& evt )
 {
 	if( Conf().ConLogBox.AutoDock )
 		m_logbox.SetPosition( Conf().ConLogBox.DisplayPos = GetPosition() + wxSize( GetSize().x, 0 ) );
@@ -94,9 +96,9 @@ void frmMain::OnMoveAround( wxMoveEvent& evt )
 	//evt.Skip();
 }
 
-void frmMain::ConnectMenus()
+void MainEmuFrame::ConnectMenus()
 {
-	Connect( wxEVT_MOVE, wxMoveEventHandler(frmMain::OnMoveAround) );
+	Connect( wxEVT_MOVE, wxMoveEventHandler(MainEmuFrame::OnMoveAround) );
 
 	// This just seems a bit more flexible & intuitive to me, if overly verbose.
 	
@@ -123,19 +125,19 @@ void frmMain::ConnectMenus()
 	ConnectMenu( Menu_Console, Menu_ShowConsole );
 }
 
-void frmMain::OnLogBoxShown()
+void MainEmuFrame::OnLogBoxShown()
 {
 	Conf().ConLogBox.Show = true;
 	m_MenuItem_Console.Check( true );
 }
 
-void frmMain::OnLogBoxHidden()
+void MainEmuFrame::OnLogBoxHidden()
 {
 	Conf().ConLogBox.Show = false;
 	m_MenuItem_Console.Check( false );
 }
 
-frmMain::frmMain(wxWindow* parent, int id, const wxString& title, const wxPoint& pos, const wxSize& size, long style):
+MainEmuFrame::MainEmuFrame(wxWindow* parent, int id, const wxString& title, const wxPoint& pos, const wxSize& size, long style):
     wxFrame(parent, id, title, pos, size, wxCAPTION|wxCLOSE_BOX|wxSYSTEM_MENU|wxBORDER_THEME),
 
 	m_logbox( *new ConsoleLogFrame( this, "Pcsx2 Log" ) ),
@@ -290,69 +292,69 @@ frmMain::frmMain(wxWindow* parent, int id, const wxString& title, const wxPoint&
 	m_MenuItem_Console.Check( Conf().ConLogBox.Show );
 }
 
-void frmMain::Menu_QuickBootCD_Click(wxCommandEvent &event)
+void MainEmuFrame::Menu_QuickBootCD_Click(wxCommandEvent &event)
 {
 }
 
-void frmMain::Menu_BootCD_Click(wxCommandEvent &event)
+void MainEmuFrame::Menu_BootCD_Click(wxCommandEvent &event)
 {
 }
 
-void frmMain::Menu_BootNoCD_Click(wxCommandEvent &event)
+void MainEmuFrame::Menu_BootNoCD_Click(wxCommandEvent &event)
 {
 }
 
 
-void frmMain::Menu_OpenELF_Click(wxCommandEvent &event)
+void MainEmuFrame::Menu_OpenELF_Click(wxCommandEvent &event)
 {
 }
 
-void frmMain::Menu_LoadStateOther_Click(wxCommandEvent &event)
+void MainEmuFrame::Menu_LoadStateOther_Click(wxCommandEvent &event)
 {
 }
 
-void frmMain::Menu_SaveStateOther_Click(wxCommandEvent &event)
+void MainEmuFrame::Menu_SaveStateOther_Click(wxCommandEvent &event)
 {
 }
 
-void frmMain::Menu_Exit_Click(wxCommandEvent &event)
+void MainEmuFrame::Menu_Exit_Click(wxCommandEvent &event)
 {
 	Close();
 }
 
-void frmMain::Menu_Suspend_Click(wxCommandEvent &event)
+void MainEmuFrame::Menu_Suspend_Click(wxCommandEvent &event)
 {
 }
 
-void frmMain::Menu_Resume_Click(wxCommandEvent &event)
+void MainEmuFrame::Menu_Resume_Click(wxCommandEvent &event)
 {
 }
 
-void frmMain::Menu_Reset_Click(wxCommandEvent &event)
+void MainEmuFrame::Menu_Reset_Click(wxCommandEvent &event)
 {
 }
 
-void frmMain::Menu_Gamefixes_Click( wxCommandEvent& event )
+void MainEmuFrame::Menu_Gamefixes_Click( wxCommandEvent& event )
 {
-	frmGameFixes joe( NULL, wxID_ANY );
+	GameFixesDialog joe( NULL, wxID_ANY );
 	joe.ShowModal();
 }
 
-void frmMain::Menu_Debug_Open_Click(wxCommandEvent &event)
+void MainEmuFrame::Menu_Debug_Open_Click(wxCommandEvent &event)
 {
 }
 
-void frmMain::Menu_Debug_MemoryDump_Click(wxCommandEvent &event)
+void MainEmuFrame::Menu_Debug_MemoryDump_Click(wxCommandEvent &event)
 {
 }
 
-void frmMain::Menu_Debug_Logging_Click(wxCommandEvent &event)
+void MainEmuFrame::Menu_Debug_Logging_Click(wxCommandEvent &event)
 {
-	frmLogging joe( NULL, wxID_ANY );
+	LogOptionsDialog joe( NULL, wxID_ANY );
 	joe.ShowModal();
 }
 
-void frmMain::Menu_ShowConsole(wxCommandEvent &event)
+void MainEmuFrame::Menu_ShowConsole(wxCommandEvent &event)
 {
 	m_logbox.Show( event.IsChecked() );
 }

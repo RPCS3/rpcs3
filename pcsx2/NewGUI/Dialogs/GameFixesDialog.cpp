@@ -18,13 +18,15 @@
  
 #include "PrecompiledHeader.h"
 #include "Misc.h"
-#include "frmGameFixes.h"
+#include "GameFixesDialog.h"
 #include "wxHelpers.h"
 
 using namespace wxHelpers;
 
-frmGameFixes::frmGameFixes(wxWindow* parent, int id, const wxPoint& pos, const wxSize& size, long style):
-wxDialog( parent, id, _T("Game Special Fixes"), pos, size )
+namespace Dialogs {
+
+GameFixesDialog::GameFixesDialog(wxWindow* parent, int id, const wxPoint& pos, const wxSize& size, long style):
+	wxDialog( parent, id, _T("Game Special Fixes"), pos, size )
 {
 	wxStaticBox* groupbox = new wxStaticBox( this, -1, _T("PCSX2 Gamefixes"));
 	wxStaticText* label_Title = new wxStaticText(
@@ -55,26 +57,28 @@ wxDialog( parent, id, _T("Game Special Fixes"), pos, size )
 }
 
 
-BEGIN_EVENT_TABLE(frmGameFixes, wxDialog)
+BEGIN_EVENT_TABLE(GameFixesDialog, wxDialog)
     EVT_CHECKBOX(wxID_ANY, FPUCompareHack_Click)
     EVT_CHECKBOX(wxID_ANY, TriAce_Click)
     EVT_CHECKBOX(wxID_ANY, GodWar_Click)
 END_EVENT_TABLE();
 
 
-void frmGameFixes::FPUCompareHack_Click(wxCommandEvent &event)
+void GameFixesDialog::FPUCompareHack_Click(wxCommandEvent &event)
 {
     event.Skip();
 }
 
 
-void frmGameFixes::TriAce_Click(wxCommandEvent &event)
+void GameFixesDialog::TriAce_Click(wxCommandEvent &event)
 {
     event.Skip();
 }
 
 
-void frmGameFixes::GodWar_Click(wxCommandEvent &event)
+void GameFixesDialog::GodWar_Click(wxCommandEvent &event)
 {
     event.Skip();
 }
+
+}	// end namespace Dialogs

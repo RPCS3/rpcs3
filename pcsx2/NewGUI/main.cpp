@@ -17,7 +17,7 @@
  */
  
 #include "PrecompiledHeader.h"
-#include "frmMain.h"
+#include "MainFrame.h"
 
 #include <wx/image.h>
 
@@ -117,7 +117,7 @@ bool Pcsx2App::OnInit()
 
 	// Allow wx to use our config, and enforces auto-cleanup as well
 
-    frmMain* frameMain = new frmMain( NULL, wxID_ANY, wxEmptyString );
+    MainEmuFrame* frameMain = new MainEmuFrame( NULL, wxID_ANY, wxEmptyString );
     SetTopWindow( frameMain );
     frameMain->Show();
 

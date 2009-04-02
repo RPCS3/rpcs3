@@ -24,10 +24,12 @@
 #include "wxHelpers.h"
 #include "CheckedStaticBox.h"
 
-class frmLogging: public wxDialogWithHelpers
+namespace Dialogs {
+
+class LogOptionsDialog: public wxDialogWithHelpers
 {
 public:
-	frmLogging( wxWindow* parent, int id, const wxPoint& pos=wxDefaultPosition, const wxSize& size=wxDefaultSize );
+	LogOptionsDialog( wxWindow* parent, int id, const wxPoint& pos=wxDefaultPosition, const wxSize& size=wxDefaultSize );
 
 protected:
 	enum LogChecks
@@ -120,3 +122,5 @@ protected:
 	//DECLARE_EVENT_TABLE()
 
 };
+
+};	// end namespace Dialogs

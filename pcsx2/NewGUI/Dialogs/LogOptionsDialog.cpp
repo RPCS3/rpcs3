@@ -18,7 +18,7 @@
  
 #include "PrecompiledHeader.h"
 #include "DebugTools/Debug.h"
-#include "frmLogging.h"
+#include "LogOptionsDialog.h"
 
 #include <wx/statline.h>
 
@@ -35,9 +35,11 @@ void ConnectChildrenRecurse( wxWindow* parent, int eventType, wxObjectEventFunct
 	}
 }
 
+namespace Dialogs
+{
 //////////////////////////////////////////////////////////////////////////////////////////
 //
-frmLogging::eeLogOptionsPanel::eeLogOptionsPanel( wxWindow* parent ) :
+LogOptionsDialog::eeLogOptionsPanel::eeLogOptionsPanel( wxWindow* parent ) :
 	CheckedStaticBox( parent, wxHORIZONTAL, wxT( "EE Logs" ), LogID_EEBox )
 {
 	wxBoxSizer& eeMisc = *new wxBoxSizer( wxVERTICAL );
@@ -57,7 +59,7 @@ frmLogging::eeLogOptionsPanel::eeLogOptionsPanel( wxWindow* parent ) :
 	Fit();
 }
 
-frmLogging::eeLogOptionsPanel::DisasmPanel::DisasmPanel( wxWindow* parent ) :
+LogOptionsDialog::eeLogOptionsPanel::DisasmPanel::DisasmPanel( wxWindow* parent ) :
 	CheckedStaticBox( parent, wxVERTICAL, wxT( "Disasm" ), LogID_Disasm )
 {
 	AddCheckBox( _T("Core"),	LogID_CPU );
@@ -70,7 +72,7 @@ frmLogging::eeLogOptionsPanel::DisasmPanel::DisasmPanel( wxWindow* parent ) :
 	Fit();
 }
 
-frmLogging::eeLogOptionsPanel::HwPanel::HwPanel( wxWindow* parent ) :
+LogOptionsDialog::eeLogOptionsPanel::HwPanel::HwPanel( wxWindow* parent ) :
 	CheckedStaticBox( parent, wxVERTICAL, wxT( "Hardware" ), LogID_Hardware )
 {
 	AddCheckBox( _T("Registers"),LogID_Registers );
@@ -86,7 +88,7 @@ frmLogging::eeLogOptionsPanel::HwPanel::HwPanel( wxWindow* parent ) :
 	Fit();
 }
 
-void frmLogging::eeLogOptionsPanel::OnLogChecked(wxCommandEvent &event)
+void LogOptionsDialog::eeLogOptionsPanel::OnLogChecked(wxCommandEvent &event)
 {
 	LogChecks checkId = (LogChecks)(int)event.m_callbackUserData;
 	//ToggleLogOption( checkId );
@@ -95,7 +97,7 @@ void frmLogging::eeLogOptionsPanel::OnLogChecked(wxCommandEvent &event)
 
 //////////////////////////////////////////////////////////////////////////////////////////
 //
-frmLogging::iopLogOptionsPanel::iopLogOptionsPanel( wxWindow* parent ) :
+LogOptionsDialog::iopLogOptionsPanel::iopLogOptionsPanel( wxWindow* parent ) :
 	CheckedStaticBox( parent, wxVERTICAL, wxT( "IOP Logs" ), LogID_IopBox )
 {
 	AddCheckBox( _T("Disasm"),		LogID_Disasm);
@@ -113,7 +115,7 @@ frmLogging::iopLogOptionsPanel::iopLogOptionsPanel( wxWindow* parent ) :
 
 //////////////////////////////////////////////////////////////////////////////////////////
 //
-frmLogging::frmLogging(wxWindow* parent, int id, const wxPoint& pos, const wxSize& size):
+LogOptionsDialog::LogOptionsDialog(wxWindow* parent, int id, const wxPoint& pos, const wxSize& size):
 	wxDialogWithHelpers( parent, id, _T("Logging"), true, pos, size )
 {
 	eeLogOptionsPanel& eeBox = *new eeLogOptionsPanel( this );
@@ -136,11 +138,11 @@ frmLogging::frmLogging(wxWindow* parent, int id, const wxPoint& pos, const wxSiz
 
 	SetSizerAndFit( &mainsizer, true );
 
-	ConnectChildrenRecurse( this, wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(frmLogging::LogChecked) );
+	ConnectChildrenRecurse( this, wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(LogOptionsDialog::LogChecked) );
 }
 
 
-void frmLogging::LogChecked(wxCommandEvent &evt)
+void LogOptionsDialog::LogChecked(wxCommandEvent &evt)
 {
 	// Anything going here should be a checkbox, unless non-checkbox controls send CheckBox_Clicked commands
 	// (which would seem bad).
@@ -154,5 +156,4 @@ void frmLogging::LogChecked(wxCommandEvent &evt)
 	evt.Skip();
 }
 
-
-
+}		// End Namespace Dialogs
