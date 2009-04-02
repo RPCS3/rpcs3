@@ -473,10 +473,6 @@ void SuperVUAnalyzeOp(VURegs *VU, _vuopinfo *info, _VURegsNum* pCodeRegs)
 
 	if (ptr[1] & 0x40000000) { // EOP
 		branch |= 8; 
-	} 
-	
-	if (ptr[1] & 0x18000000) { // T/D flags
-		branch |= 16 | 8; //stop right after this instruction
 	}
 
 	VU->code = ptr[1];
