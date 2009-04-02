@@ -239,64 +239,93 @@ void vtlb_DynGenRead32(u32 bits, bool sign)
 	x86SetJ8(cont);
 }
 
+//
+// TLB lookup is performed in const, with the assumption that the COP0/TLB will clear the
+// recompiler if the TLB is changed.
 void vtlb_DynGenRead64_Const( u32 bits, u32 addr_const )
 {
-	jASSUME( bits == 64 || bits == 128 );
+	u32 vmv_ptr = vtlbdata.vmap[addr_const>>VTLB_PAGE_BITS];
+	s32 ppf = addr_const + vmv_ptr;
+	if( ppf >= 0 )
+	{
+		MOV32ItoR( ECX, ppf );
+		_vtlb_DynGen_DirectRead( bits, false );
+	}
+	else
+	{
+		// has to: translate, find function, call function
+		u32 handler = (u8)vmv_ptr;
+		u32 paddr = ppf - handler + 0x80000000;
 
-	void* vmv_ptr = &vtlbdata.vmap[addr_const>>VTLB_PAGE_BITS];
+		int szidx = 0;
+		switch( bits )
+		{
+			case 64:	szidx=3;	break;
+			case 128:	szidx=4;	break;
+		}
 
-	MOV32MtoR(EAX,(uptr)vmv_ptr);
-	MOV32ItoR(ECX,addr_const);
-	ADD32RtoR(ECX,EAX);		// ecx=ppf
-	u8* _fullread = JS8(0);
-
-	_vtlb_DynGen_DirectRead( bits, false );
-	u8* cont = JMP8(0);
-
-	x86SetJ8(_fullread);
-	_vtlb_DynGen_IndirectRead( bits );
-
-	x86SetJ8(cont);
+		MOV32ItoR( ECX, paddr );
+		CALLFunc( (int)vtlbdata.RWFT[szidx][0][handler] );
+	}
 }
 
 // Recompiled input registers:
 //   ecx - source address to read from
 //   Returns read value in eax.
+//
+// TLB lookup is performed in const, with the assumption that the COP0/TLB will clear the
+// recompiler if the TLB is changed.
 void vtlb_DynGenRead32_Const( u32 bits, bool sign, u32 addr_const )
 {
-	jASSUME( bits <= 32 );
-
-	void* vmv_ptr = &vtlbdata.vmap[addr_const>>VTLB_PAGE_BITS];
-
-	MOV32MtoR(EAX,(uptr)vmv_ptr);
-	MOV32ItoR(ECX,addr_const);
-	ADD32RtoR(ECX,EAX);		// ecx=ppf
-	u8* _fullread = JS8(0);
-
-	_vtlb_DynGen_DirectRead( bits, sign );
-	u8* cont = JMP8(0);
-
-	x86SetJ8(_fullread);
-	_vtlb_DynGen_IndirectRead( bits );
-
-	// perform sign extension on the result:
-
-	if( bits==8 )
+	u32 vmv_ptr = vtlbdata.vmap[addr_const>>VTLB_PAGE_BITS];
+	s32 ppf = addr_const + vmv_ptr;
+	if( ppf >= 0 )
 	{
-		if( sign )
-			MOVSX32R8toR(EAX,EAX);
-		else
-			MOVZX32R8toR(EAX,EAX);
+		MOV32ItoR( ECX, ppf );
+		_vtlb_DynGen_DirectRead( bits, sign );
 	}
-	else if( bits==16 )
+	else
 	{
-		if( sign )
-			MOVSX32R16toR(EAX,EAX);
-		else
-			MOVZX32R16toR(EAX,EAX);
-	}
+		// has to: translate, find function, call function
+		u32 handler = (u8)vmv_ptr;
+		u32 paddr = ppf - handler + 0x80000000;
+		
+		int szidx = 0;
+		switch( bits )
+		{
+			case 8:		szidx=0;	break;
+			case 16:	szidx=1;	break;
+			case 32:	szidx=2;	break;
+		}
 
-	x86SetJ8(cont);
+		// Shortcut for the INTC_STAT register, which many games like to spin on heavily.
+		if( (bits == 32) && !CHECK_INTC_STAT_HACK && (paddr == INTC_STAT) )
+		{
+			MOV32MtoR( EAX, (uptr)&psHu32( INTC_STAT ) );
+		}
+		else
+		{
+			MOV32ItoR( ECX, paddr );
+			CALLFunc( (int)vtlbdata.RWFT[szidx][0][handler] );
+
+			// perform sign extension on the result:
+
+			if( bits==8 )
+			{
+				if( sign )
+					MOVSX32R8toR(EAX,EAX);
+				else
+					MOVZX32R8toR(EAX,EAX);
+			}
+			else if( bits==16 )
+			{
+				if( sign )
+					MOVSX32R16toR(EAX,EAX);
+				else
+					MOVZX32R16toR(EAX,EAX);
+			}
+		}
+	}
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -392,24 +421,34 @@ void vtlb_DynGenWrite(u32 sz)
 
 
 // Generates code for a store instruction, where the address is a known constant.
+// TLB lookup is performed in const, with the assumption that the COP0/TLB will clear the
+// recompiler if the TLB is changed.
 void vtlb_DynGenWrite_Const( u32 bits, u32 addr_const )
 {
-	// Important: It's not technically safe to do a const lookup of the VTLB here, since
-	// the VTLB could feasibly be remapped by other recompiled code at any time.
-	// So we're limited in exactly how much we can pre-calcuate.
+	u32 vmv_ptr = vtlbdata.vmap[addr_const>>VTLB_PAGE_BITS];
+	s32 ppf = addr_const + vmv_ptr;
+	if( ppf >= 0 )
+	{
+		MOV32ItoR( ECX, ppf );
+		_vtlb_DynGen_DirectWrite( bits );
+	}
+	else
+	{	
+		// has to: translate, find function, call function
+		u32 handler = (u8)vmv_ptr;
+		u32 paddr = ppf - handler + 0x80000000;
+		
+		int szidx = 0;
+		switch( bits )
+		{
+			case 8:  szidx=0;	break;
+			case 16:   szidx=1;	break;
+			case 32:   szidx=2;	break;
+			case 64:   szidx=3;	break;
+			case 128:   szidx=4; break;
+		}
 
-	void* vmv_ptr = &vtlbdata.vmap[addr_const>>VTLB_PAGE_BITS];
-
-	MOV32MtoR(EAX,(uptr)vmv_ptr);
-	MOV32ItoR(ECX,addr_const);
-	ADD32RtoR(ECX,EAX);		// ecx=ppf
-	u8* _full = JS8(0);
-
-	_vtlb_DynGen_DirectWrite( bits );
-	u8* cont = JMP8(0);
-
-	x86SetJ8(_full);
-	_vtlb_DynGen_IndirectWrite( bits );
-
-	x86SetJ8(cont);
+		MOV32ItoR( ECX, paddr );
+		CALLFunc( (int)vtlbdata.RWFT[szidx][1][handler] );
+	}
 }
