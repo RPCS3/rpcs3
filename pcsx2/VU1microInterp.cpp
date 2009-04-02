@@ -71,12 +71,14 @@ static void _vu1Exec(VURegs* VU)
 			VU0.VI[REG_VPU_STAT].UL|= 0x200;
 			hwIntcIrq(INTC_VU1);
 		}
+		VU->ebit = 1;
 	}
 	if (ptr[1] & 0x08000000) { /* T flag */
 		if (VU0.VI[REG_FBRST].UL & 0x800) {
 			VU0.VI[REG_VPU_STAT].UL|= 0x400;
 			hwIntcIrq(INTC_VU1);
 		}
+		VU->ebit = 1;
 	}
 
 	VUM_LOG("VU->cycle = %d (flags st=%x;mac=%x;clip=%x,q=%f)", VU->cycle, VU->statusflag, VU->macflag, VU->clipflag, VU->q.F);

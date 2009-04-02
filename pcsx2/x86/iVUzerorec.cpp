@@ -1246,7 +1246,7 @@ static VuBaseBlock* SuperVUBuildBlocks(VuBaseBlock* parent, u32 startpc, const V
 		if( pinst->info.p&VUOP_WRITE )
 			pinst->pqcycles = PWaitTimes[pinst->info.pqinst]+1;
 
-		if( prevbranch ) {
+		if( prevbranch || (branch & 16)) {
 			break;
 		}
 

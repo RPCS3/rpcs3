@@ -76,12 +76,14 @@ static void _vu0Exec(VURegs* VU)
 			VU0.VI[REG_VPU_STAT].UL|= 0x2;
 			hwIntcIrq(INTC_VU0);
 		}
+		VU->ebit = 1;
 	}
 	if (ptr[1] & 0x08000000) { /* T flag */
 		if (VU0.VI[REG_FBRST].UL & 0x8) {
 			VU0.VI[REG_VPU_STAT].UL|= 0x4;
 			hwIntcIrq(INTC_VU0);
 		}
+		VU->ebit = 1;
 	}
 
 	VU->code = ptr[1]; 
