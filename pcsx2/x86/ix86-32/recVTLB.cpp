@@ -248,8 +248,46 @@ void vtlb_DynGenRead64_Const( u32 bits, u32 addr_const )
 	s32 ppf = addr_const + vmv_ptr;
 	if( ppf >= 0 )
 	{
-		MOV32ItoR( ECX, ppf );
-		_vtlb_DynGen_DirectRead( bits, false );
+		switch( bits )
+		{
+			case 64:
+				if( _hasFreeMMXreg() )
+				{
+					const int freereg = _allocMMXreg(-1, MMX_TEMP, 0);
+					MOVQMtoR(freereg,ppf);
+					MOVQRtoRmOffset(EDX,freereg,0);
+					_freeMMXreg(freereg);
+				}
+				else
+				{
+					MOV32MtoR(EAX,ppf);
+					MOV32RtoRm(EDX,EAX);
+
+					MOV32MtoR(EAX,ppf+4);
+					MOV32RtoRmOffset(EDX,EAX,4);
+				}
+			break;
+
+			case 128:
+				if( _hasFreeXMMreg() )
+				{
+					const int freereg = _allocTempXMMreg( XMMT_INT, -1 );
+					SSE2_MOVDQA_M128_to_XMM( freereg, ppf );
+					SSE2_MOVDQARtoRmOffset(EDX,freereg,0);
+					_freeXMMreg(freereg);
+				}
+				else
+				{
+					// Could put in an MMX optimization here as well, but no point really.
+					// It's almost never used since there's almost always a free XMM reg.
+
+					MOV32ItoR( ECX, ppf );
+					MOV128_MtoM( EDX, ECX );		// dest <- src!
+				}
+			break;
+
+			jNO_DEFAULT
+		}
 	}
 	else
 	{
@@ -281,8 +319,26 @@ void vtlb_DynGenRead32_Const( u32 bits, bool sign, u32 addr_const )
 	s32 ppf = addr_const + vmv_ptr;
 	if( ppf >= 0 )
 	{
-		MOV32ItoR( ECX, ppf );
-		_vtlb_DynGen_DirectRead( bits, sign );
+		switch( bits )
+		{
+			case 8:
+				if( sign )
+					MOVSX32M8toR(EAX,ppf);
+				else
+					MOVZX32M8toR(EAX,ppf);
+			break;
+
+			case 16:
+				if( sign )
+					MOVSX32M16toR(EAX,ppf);
+				else
+					MOVZX32M16toR(EAX,ppf);
+			break;
+
+			case 32:
+				MOV32MtoR(EAX,ppf);
+			break;
+		}
 	}
 	else
 	{
@@ -429,8 +485,56 @@ void vtlb_DynGenWrite_Const( u32 bits, u32 addr_const )
 	s32 ppf = addr_const + vmv_ptr;
 	if( ppf >= 0 )
 	{
-		MOV32ItoR( ECX, ppf );
-		_vtlb_DynGen_DirectWrite( bits );
+		switch(bits)
+		{
+			//8 , 16, 32 : data on EDX
+			case 8:
+				MOV8RtoM(ppf,EDX);
+			break;
+			case 16:
+				MOV16RtoM(ppf,EDX);
+			break;
+			case 32:
+				MOV32RtoM(ppf,EDX);
+			break;
+
+			case 64:
+				if( _hasFreeMMXreg() )
+				{
+					const int freereg = _allocMMXreg(-1, MMX_TEMP, 0);
+					MOVQRmtoROffset(freereg,EDX,0);
+					MOVQRtoM(ppf,freereg);
+					_freeMMXreg( freereg );
+				}
+				else
+				{
+					MOV32RmtoR(EAX,EDX);
+					MOV32RtoM(ppf,EAX);
+
+					MOV32RmtoROffset(EAX,EDX,4);
+					MOV32RtoM(ppf+4,EAX);
+				}
+			break;
+
+			case 128:
+				if( _hasFreeXMMreg() )
+				{
+					const int freereg = _allocTempXMMreg( XMMT_INT, -1 );
+					SSE2_MOVDQARmtoROffset(freereg,EDX,0);
+					SSE2_MOVDQA_XMM_to_M128(ppf,freereg);
+					_freeXMMreg( freereg );
+				}
+				else
+				{
+					// Could put in an MMX optimization here as well, but no point really.
+					// It's almost never used since there's almost always a free XMM reg.
+
+					MOV32ItoR( ECX, ppf );
+					MOV128_MtoM( ECX, EDX );	// dest <- src!
+				}
+			break;
+		}
+
 	}
 	else
 	{	

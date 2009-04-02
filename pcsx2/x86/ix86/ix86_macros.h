@@ -708,7 +708,7 @@
 #define SSE2_MOVDQA_XMM_to_XMM eSSE2_MOVDQA_XMM_to_XMM<_EmitterId_>
 #define SSE2_MOVDQU_M128_to_XMM eSSE2_MOVDQU_M128_to_XMM<_EmitterId_>
 #define SSE2_MOVDQU_XMM_to_M128 eSSE2_MOVDQU_XMM_to_M128<_EmitterId_>
-#define SSE2_MOVDQU_XMM_to_XMM eSSE2_MOVDQU_XMM_to_XMM<_EmitterId_>
+#define SSE2_MOVDQU_XMM_to_XMM eSSE2_MOVDQA_XMM_to_XMM<_EmitterId_>
 #define SSE2_PSRLW_XMM_to_XMM eSSE2_PSRLW_XMM_to_XMM<_EmitterId_>
 #define SSE2_PSRLW_M128_to_XMM eSSE2_PSRLW_M128_to_XMM<_EmitterId_> 
 #define SSE2_PSRLW_I8_to_XMM eSSE2_PSRLW_I8_to_XMM<_EmitterId_>
