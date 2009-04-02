@@ -2344,6 +2344,22 @@ emitterT void eAND32MtoR( x86IntRegType to, uptr from )
 	write32<I>( MEMADDR(from, 4) ); 
 }
 
+// Warning: Untested form of AND.
+emitterT void eAND32RmtoR( x86IntRegType to, x86IntRegType from )
+{
+	RexRB(0,to,from);
+	write8<I>( 0x23 ); 
+	ModRM<I>( 0, to, from ); 
+}
+
+// Warning: Untested form of AND.
+emitterT void eAND32RmtoROffset( x86IntRegType to, x86IntRegType from, int offset )
+{
+	RexRB(0,to,from);
+	write16<I>( 0x23 );
+	WriteRmOffsetFrom<I>(to,from,offset);
+}
+
 // and r16 to r16
 emitterT void eAND16RtoR( x86IntRegType to, x86IntRegType from )
 {

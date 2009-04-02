@@ -103,8 +103,6 @@ struct SyncCounter
 #define SCANLINES_VBLANK1_NTSC	19  // scanlines used for vblank1 (even interlace)
 #define SCANLINES_VBLANK2_NTSC	20  // scanlines used for vblank2 (odd interlace)
 
-#define HSYNC_ERROR_NTSC ((s32)VSYNC_NTSC - (s32)(((HRENDER_TIME_NTSC+HBLANK_TIME_NTSC) * SCANLINES_TOTAL_NTSC)/2) )
-
 //------------------------------------------------------------------
 // PAL Timing Information!!! (some scanline info is guessed)
 //------------------------------------------------------------------

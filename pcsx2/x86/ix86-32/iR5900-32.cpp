@@ -323,7 +323,9 @@ u32* _eeGetConstReg(int reg)
 
 void _eeMoveGPRtoR(x86IntRegType to, int fromgpr)
 {
-	if( GPR_IS_CONST1(fromgpr) )
+	if( fromgpr == 0 )
+		XOR32RtoR( to, to );	// zero register should use xor, thanks --air
+	else if( GPR_IS_CONST1(fromgpr) )
 		MOV32ItoR( to, g_cpuConstRegs[fromgpr].UL[0] );
 	else {
 		int mmreg;

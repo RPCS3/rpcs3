@@ -274,6 +274,8 @@
 #define AND32RtoR eAND32RtoR<_EmitterId_>
 #define AND32RtoM eAND32RtoM<_EmitterId_>
 #define AND32MtoR eAND32MtoR<_EmitterId_>
+#define AND32RmtoR eAND32RmtoR<_EmitterId_>
+#define AND32RmtoROffset eAND32RmtoROffset<_EmitterId_>
 #define AND16RtoR eAND16RtoR<_EmitterId_>
 #define AND16ItoR eAND16ItoR<_EmitterId_>
 #define AND16ItoM eAND16ItoM<_EmitterId_>
