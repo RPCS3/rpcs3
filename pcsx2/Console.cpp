@@ -17,10 +17,12 @@
  */
 
 #include "PrecompiledHeader.h"
-
 #include "System.h"
 #include "DebugTools/Debug.h"
+#include "NewGUI/App.h"
 
+
+using namespace Threading;
 using namespace std;
 
 const _VARG_PARAM va_arg_dummy = { 0 };
@@ -30,11 +32,125 @@ const _VARG_PARAM va_arg_dummy = { 0 };
 
 namespace Console
 {
+	ConsoleLogFrame* FrameHandle = NULL;
+	MutexLock m_writelock;
+	std::string m_format_buffer;
+
+	void __fastcall SetTitle( const wxString& title )
+	{
+		ConsoleLogFrame* FrameHandle = wxGetApp().GetConsoleFrame();
+		if( FrameHandle != NULL )
+			FrameHandle->SetTitle( title );
+	}
+
+	void __fastcall SetColor( Colors color )
+	{
+		ConsoleLogFrame* FrameHandle = wxGetApp().GetConsoleFrame();
+		if( FrameHandle != NULL )
+			FrameHandle->SetColor( color );
+	}
+
+	void ClearColor()
+	{
+		ConsoleLogFrame* FrameHandle = wxGetApp().GetConsoleFrame();
+		if( FrameHandle != NULL )
+			FrameHandle->ClearColor();		
+	}
+
+	bool Newline()
+	{
+		ConsoleLogFrame* FrameHandle = wxGetApp().GetConsoleFrame();
+		if( FrameHandle != NULL )
+			FrameHandle->Newline();
+		
+		fputs( "", emuLog );
+		return false;
+	}
+
+	bool __fastcall Write( const char* fmt )
+	{
+		ConsoleLogFrame* FrameHandle = wxGetApp().GetConsoleFrame();
+		if( FrameHandle != NULL )
+			FrameHandle->Write( fmt );
+
+		fwrite( fmt, 1, strlen( fmt ), emuLog );
+		return false;
+	}
+
+	bool __fastcall Write( Colors color, const char* fmt )
+	{
+		ConsoleLogFrame* FrameHandle = wxGetApp().GetConsoleFrame();
+		if( FrameHandle != NULL )
+		{
+			FrameHandle->SetColor( color );
+			FrameHandle->Write( fmt );
+			FrameHandle->ClearColor();
+		}
+
+		fwrite( fmt, 1, strlen( fmt ), emuLog );
+		return false;
+	}
+
+	// Writes an unformatted string of text to the console (fast!)
+	// A newline is automatically appended.
+	bool __fastcall WriteLn( const char* fmt )
+	{
+		ConsoleLogFrame* FrameHandle = wxGetApp().GetConsoleFrame();
+		if( FrameHandle != NULL )
+		{
+			FrameHandle->Write( fmt );
+			FrameHandle->Newline();
+		}
+
+		fputs( fmt, emuLog );
+		return false;
+	}
+
+	// Writes an unformatted string of text to the console (fast!)
+	// A newline is automatically appended.
+	bool __fastcall WriteLn( Colors color, const char* fmt )
+	{
+		ConsoleLogFrame* FrameHandle = wxGetApp().GetConsoleFrame();
+		if( FrameHandle != NULL )
+		{
+			FrameHandle->SetColor( color );
+			FrameHandle->Write( fmt );
+			FrameHandle->Newline();
+			FrameHandle->ClearColor();
+		}
+
+		fputs( fmt, emuLog );
+		return false;
+	}
+
 	__forceinline void __fastcall _WriteLn( Colors color, const char* fmt, va_list args )
 	{
-		SetColor( color );
-		WriteLn( vfmt_string( fmt, args ).c_str() );
-		ClearColor();
+		ConsoleLogFrame* FrameHandle = wxGetApp().GetConsoleFrame();
+
+		ScopedLock locker( m_writelock );
+		vssprintf( m_format_buffer, fmt, args );
+		const char* cstr = m_format_buffer.c_str();
+		if( FrameHandle != NULL )
+		{
+			FrameHandle->SetColor( color );
+			FrameHandle->Write( cstr );
+			FrameHandle->Newline();
+			FrameHandle->ClearColor();
+		}
+		else
+		{
+			// The logging system hasn't been initialized, so log to stderr which at least
+			// has a chance of being visible, and then assert (really there shouldn't be logs
+			// being attempted prior to log/console initialization anyway, and the programmer
+			// should replace these with MessageBoxes or something).
+
+			if( color == Color_Red || color == Color_Yellow )
+				fputs( cstr, stderr );		// log notices and errors to stderr
+
+			wxASSERT_MSG( 0, cstr );
+		}
+
+		fputs( cstr, emuLog );
 	}
 		
 	bool Write( const char* fmt, VARG_PARAM dummy, ... )
@@ -43,17 +159,13 @@ namespace Console
 
 		va_list list;
 		va_start(list,dummy);
-		WriteLn( vfmt_string( fmt, list ).c_str() );
+
+		ScopedLock locker( m_writelock );
+		vssprintf( m_format_buffer, fmt, list );
+		Write( m_format_buffer.c_str() );
+
 		va_end(list);
 
-		return false;
-	}
-
-	bool Write( Colors color, const char* fmt )
-	{
-		SetColor( color );
-		Write( fmt );
-		ClearColor();
 		return false;
 	}
 
@@ -63,39 +175,26 @@ namespace Console
 
 		va_list list;
 		va_start(list,dummy);
-		Write( vfmt_string( fmt, list ).c_str() );
-		va_end(list);
 
+		ScopedLock locker( m_writelock );
+		vssprintf( m_format_buffer, fmt, list );
+		Write( color, m_format_buffer.c_str() );
+
+		va_end(list);
 		return false;
 	}
 
 	bool WriteLn( const char* fmt, VARG_PARAM dummy, ... )
 	{
 		varg_assert();
-
 		va_list list;
 		va_start(list,dummy);
-		WriteLn( vfmt_string( fmt, list).c_str() );
+
+		ScopedLock locker( m_writelock );
+		vssprintf( m_format_buffer, fmt, list );
+		WriteLn( m_format_buffer.c_str() );
+
 		va_end(list);
-
-		return false;
-	}
-
-	// Writes an unformatted string of text to the console (fast!)
-	// A newline is automatically appended.
-	__forceinline bool __fastcall WriteLn( const char* fmt )
-	{
-		Write( fmt );
-		Newline();
-		return false;
-	}
-
-	// Writes an unformatted string of text to the console (fast!)
-	// A newline is automatically appended.
-	__forceinline bool __fastcall WriteLn( Colors color, const char* fmt )
-	{
-		Write( color, fmt );
-		Newline();
 		return false;
 	}
 
@@ -131,7 +230,6 @@ namespace Console
 		varg_assert();
 
 		va_list list;
-
 		va_start(list,dummy);
 		_WriteLn( Color_Yellow, fmt, list );
 		va_end(list);
@@ -153,7 +251,7 @@ namespace Console
 
 	// Displays a message in the console with red emphasis.
 	// Newline is automatically appended.
-	bool Error( const char* fmt )
+	bool __fastcall Error( const char* fmt )
 	{
 		WriteLn( Color_Red, fmt );
 		return false;
@@ -161,7 +259,7 @@ namespace Console
 
 	// Displays a message in the console with yellow emphasis.
 	// Newline is automatically appended.
-	bool Notice( const char* fmt )
+	bool __fastcall Notice( const char* fmt )
 	{
 		WriteLn( Color_Yellow, fmt );
 		return false;
@@ -169,7 +267,7 @@ namespace Console
 
 	// Displays a message in the console with green emphasis.
 	// Newline is automatically appended.
-	bool Status( const char* fmt )
+	bool __fastcall Status( const char* fmt )
 	{
 		WriteLn( Color_Green, fmt );
 		return false;
@@ -177,3 +275,31 @@ namespace Console
 
 }
 
+namespace Msgbox
+{
+	bool Alert(const char* text)
+	{
+		wxMessageBox( text, "Pcsx2 Message", wxOK, wxGetApp().GetTopWindow() );
+		return false;
+	}
+
+	bool Alert(const char* fmt, VARG_PARAM dummy, ...)
+	{
+		va_list list;
+		va_start(list, dummy);
+		Alert( vfmt_string( fmt, list ).c_str() );
+		va_end(list);
+		
+		return false;
+	}
+	
+	bool OkCancel( const char* fmt, VARG_PARAM dummy, ... )
+	{
+		va_list list;
+		va_start(list, dummy);
+		int result = wxMessageBox( vfmt_string( fmt, list ), "Pcsx2 Message", wxOK | wxCANCEL, wxGetApp().GetTopWindow() );
+		va_end(list);
+
+		return result == wxOK;		
+	}
+}

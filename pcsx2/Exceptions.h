@@ -68,11 +68,11 @@ namespace Exception
 	class BaseException
 	{
 	protected:
-		const std::string m_message;		// a "detailed" message of what disasterous thing has occured!
+		const wxString m_message;		// a "detailed" message of what disasterous thing has occured!
 
 	public:
 		virtual ~BaseException() throw()=0;	// the =0; syntax forces this class into "abstract" mode.
-		explicit BaseException( const std::string& msg="Unhandled exception." ) :
+		explicit BaseException( const wxString& msg="Unhandled exception." ) :
 			m_message( msg )
 		{
 			// Major hack. After a couple of tries, I'm still not managing to get Linux to catch these exceptions, so that the user actually
@@ -86,7 +86,7 @@ namespace Exception
 #endif
 		}
 		
-		const std::string& Message() const { return m_message; }
+		const wxString& Message() const { return m_message; }
 		const char* cMessage() const { return m_message.c_str(); }
 	};
 	
@@ -96,7 +96,7 @@ namespace Exception
 	public:
 		virtual ~Ps2Generic() throw() {}
 
-		explicit Ps2Generic( const std::string& msg="The Ps2/MIPS state encountered a general exception." ) : 
+		explicit Ps2Generic( const wxString& msg="The Ps2/MIPS state encountered a general exception." ) : 
 		Exception::BaseException( msg )
 		{
 		}
@@ -111,7 +111,7 @@ namespace Exception
 	{
 	public:
 		virtual ~RuntimeError() throw() {}
-		explicit RuntimeError( const std::string& msg="An unhandled runtime error has occurred, somewhere in the depths of Pcsx2's cluttered brain-matter." ) :
+		explicit RuntimeError( const wxString& msg="An unhandled runtime error has occurred, somewhere in the depths of Pcsx2's cluttered brain-matter." ) :
 			BaseException( msg )
 		{}
 	};
@@ -120,7 +120,7 @@ namespace Exception
 	{
 	public:
 		virtual ~LogicError() throw() {}
-		explicit LogicError( const std::string& msg="An unhandled logic error has occured." ) :
+		explicit LogicError( const wxString& msg="An unhandled logic error has occured." ) :
 			BaseException( msg )
 		{}
 	};
@@ -130,7 +130,7 @@ namespace Exception
 	class OutOfMemory : public RuntimeError
 	{
 	public:
-		explicit OutOfMemory( const std::string& msg="Out of memory!" ) :
+		explicit OutOfMemory( const wxString& msg="Out of memory!" ) :
 			RuntimeError( msg ) {}
 		virtual ~OutOfMemory() throw() {}
 	};
@@ -141,7 +141,7 @@ namespace Exception
 	{
 	public:
 		virtual ~InvalidOperation() throw() {}
-		explicit InvalidOperation( const std::string& msg="Attempted method call is invalid for the current object or program state." ) :
+		explicit InvalidOperation( const wxString& msg="Attempted method call is invalid for the current object or program state." ) :
 			LogicError( msg ) {}
 	};
 
@@ -151,7 +151,7 @@ namespace Exception
 	{
 	public:
 		virtual ~InvalidArgument() throw() {}
-		explicit InvalidArgument( const std::string& msg="Invalid argument passed to a function." ) :
+		explicit InvalidArgument( const wxString& msg="Invalid argument passed to a function." ) :
 			LogicError( msg ) {}
 	};
 
@@ -161,16 +161,24 @@ namespace Exception
 	{
 	public:
 		virtual ~IndexBoundsFault() throw() {}
-		explicit IndexBoundsFault( const std::string& msg="Array index is outsides the bounds of an array." ) :
+		explicit IndexBoundsFault( const wxString& msg="Array index is outsides the bounds of an array." ) :
 			LogicError( msg ) {}
 	};
+	
+	class ParseError : public RuntimeError
+	{
+	public:
+		virtual ~ParseError() throw() {}
+		explicit ParseError( const wxString& msg="Parse error" ) :
+			RuntimeError( msg ) {}
+	};	
 
 	//////////////////////////////////////////////////////////////////////////////////
 	//
 	class HardwareDeficiency : public RuntimeError
 	{
 	public:
-		explicit HardwareDeficiency( const std::string& msg="Your machine's hardware is incapable of running Pcsx2.  Sorry dood." ) :
+		explicit HardwareDeficiency( const wxString& msg="Your machine's hardware is incapable of running Pcsx2.  Sorry dood." ) :
 			RuntimeError( msg ) {}
 		virtual ~HardwareDeficiency() throw() {}
 	};
@@ -182,17 +190,17 @@ namespace Exception
 	{
 	public:
 		virtual ~CpuStateShutdown() throw() {}
-		explicit CpuStateShutdown( const std::string& msg="The PS2 emulated state was shut down unexpectedly." ) :
+		explicit CpuStateShutdown( const wxString& msg="The PS2 emulated state was shut down unexpectedly." ) :
 			RuntimeError( msg ) {}
 	};
 
 	class PluginFailure : public RuntimeError
 	{
 	public:
-		std::string plugin_name;		// name of the plugin
+		wxString plugin_name;		// name of the plugin
 
 		virtual ~PluginFailure() throw() {}
-		explicit PluginFailure( const std::string& plugin, const std::string& msg = "A plugin encountered a critical error." ) :
+		explicit PluginFailure( const wxString& plugin, const wxString& msg = "A plugin encountered a critical error." ) :
 			RuntimeError( msg )
 		,	plugin_name( plugin ) {}
 	};
@@ -201,7 +209,7 @@ namespace Exception
 	{
 	public:
 		virtual ~ThreadCreationError() throw() {}
-		explicit ThreadCreationError( const std::string& msg="Thread could not be created." ) :
+		explicit ThreadCreationError( const wxString& msg="Thread could not be created." ) :
 			RuntimeError( msg ) {}
 	};
 
@@ -212,7 +220,7 @@ namespace Exception
 	{
 	public:
 		virtual ~PathTooLong() throw() {}
-		explicit PathTooLong( const std::string& msg=
+		explicit PathTooLong( const wxString& msg=
 			"A Pcsx2 pathname was too long for the system.  Please move or reinstall Pcsx2 to\n"
 			"a location on your hard drive that has a shorter path." ) :
 			RuntimeError( msg ) {}
@@ -226,7 +234,7 @@ namespace Exception
 	class Stream : public RuntimeError
 	{
 	public:
-		std::string stream_name;		// name of the stream (if applicable)
+		wxString stream_name;		// name of the stream (if applicable)
 
 		virtual ~Stream() throw() {}
 
@@ -236,8 +244,8 @@ namespace Exception
 		,	stream_name( src.stream_name ) {}
 
 		explicit Stream(
-			const std::string& objname=std::string(),
-			const std::string& msg="Invalid stream object" ) :
+			const wxString& objname=wxString(),
+			const wxString& msg="Invalid stream object" ) :
 		  RuntimeError( msg + "\n\tFilename: " + objname )
 		, stream_name( objname ) {}
 	};
@@ -250,8 +258,8 @@ namespace Exception
 	public:
 		virtual ~BadStream() throw() {}
 		explicit BadStream(
-			const std::string& objname=std::string(),
-			const std::string& msg="Stream data is corrupted or incomplete, or the stream connection closed unexpectedly" ) :
+			const wxString& objname=wxString(),
+			const wxString& msg="Stream data is corrupted or incomplete, or the stream connection closed unexpectedly" ) :
 		Stream( objname, msg ) {}
 	};
 
@@ -261,8 +269,8 @@ namespace Exception
 	public:
 		virtual ~CreateStream() throw() {}
 		explicit CreateStream(
-			const std::string& objname=std::string(),
-			const std::string& msg="Stream could not be created or opened" ) :
+			const wxString& objname=wxString(),
+			const wxString& msg="Stream could not be created or opened" ) :
 		Stream( objname, msg ) {}	
 	};
 
@@ -273,8 +281,8 @@ namespace Exception
 	public:
 		virtual ~FileNotFound() throw() {}
 		explicit FileNotFound(
-			const std::string& objname=std::string(),
-			const std::string& msg="File not found" ) :
+			const wxString& objname=wxString(),
+			const wxString& msg="File not found" ) :
 		CreateStream( objname, msg ) {}
 	};
 
@@ -283,8 +291,8 @@ namespace Exception
 	public:
 		virtual ~AccessDenied() throw() {}
 		explicit AccessDenied(
-			const std::string& objname=std::string(),
-			const std::string& msg="Permission denied to file or stream" ) :
+			const wxString& objname=wxString(),
+			const wxString& msg="Permission denied to file or stream" ) :
 		CreateStream( objname, msg ) {}
 	};
 
@@ -294,7 +302,7 @@ namespace Exception
 	{
 	public:
 		virtual ~EndOfStream() throw() {}
-		explicit EndOfStream( const std::string& objname=std::string(), const std::string& msg="End of stream was encountered" ) :
+		explicit EndOfStream( const wxString& objname=wxString(), const wxString& msg="End of stream was encountered" ) :
 			Stream( objname, msg ) {}
 	};
 
@@ -307,8 +315,8 @@ namespace Exception
 	public:
 		virtual ~BadSavedState() throw() {}
 		explicit BadSavedState(
-			const std::string& objname=std::string(),
-			const std::string& msg="Savestate data is corrupted or incomplete" ) :
+			const wxString& objname=wxString(),
+			const wxString& msg="Savestate data is corrupted or incomplete" ) :
 		BadStream( objname, msg ) {}
 	};
 
@@ -316,11 +324,11 @@ namespace Exception
 	class FreezePluginFailure : public RuntimeError
 	{
 	public:
-		std::string plugin_name;		// name of the plugin
-		std::string freeze_action;
+		wxString plugin_name;		// name of the plugin
+		wxString freeze_action;
 
 		virtual ~FreezePluginFailure() throw() {}
-		explicit FreezePluginFailure( const std::string& plugin, const std::string& action ) :
+		explicit FreezePluginFailure( const wxString& plugin, const wxString& action ) :
 			RuntimeError( plugin + " plugin returned an error while " + action + " the state." )
 		,	plugin_name( plugin )
 		,	freeze_action( action ){}
@@ -333,7 +341,7 @@ namespace Exception
 	{
 	public:
 		virtual ~StateLoadError_Recoverable() throw() {}
-		explicit StateLoadError_Recoverable( const std::string& msg="Recoverable error while loading savestate (existing emulation state is still intact)." ) :
+		explicit StateLoadError_Recoverable( const wxString& msg="Recoverable error while loading savestate (existing emulation state is still intact)." ) :
 			RuntimeError( msg ) {}
 	};
 
@@ -349,7 +357,7 @@ namespace Exception
 			StateLoadError_Recoverable( fmt_string( "Unknown or unsupported savestate version: 0x%x", version ) )
 		{}
 
-		explicit UnsupportedStateVersion( int version, const std::string& msg ) :
+		explicit UnsupportedStateVersion( int version, const wxString& msg ) :
 			StateLoadError_Recoverable( msg ) {}
 	};
 
@@ -373,7 +381,7 @@ namespace Exception
 		,	Crc_Cdvd( crc_cdvd )
 		{}
 
-		explicit StateCrcMismatch( u32 crc_save, u32 crc_cdvd, const std::string& msg )
+		explicit StateCrcMismatch( u32 crc_save, u32 crc_cdvd, const wxString& msg )
 		:	StateLoadError_Recoverable( msg )
 		,	Crc_Savestate( crc_save )
 		,	Crc_Cdvd( crc_cdvd )

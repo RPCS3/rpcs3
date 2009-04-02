@@ -52,7 +52,7 @@ class RecoveryZipSavingState : public gzSavingState, Sealed
 {
 public:
 	virtual ~RecoveryZipSavingState() { }
-	RecoveryZipSavingState( const string& filename );
+	RecoveryZipSavingState( const wxString& filename );
 
 	void gsFreeze();
 	void FreezePlugin( const char* name, s32 (CALLBACK* freezer)(int mode, freezeData *data) );
@@ -112,7 +112,7 @@ namespace StateRecovery {
 	// (if one exists) and no recovery data was found.  This is needed because when a recovery
 	// state is made, the emulation state is usually reset so the only persisting state is
 	// the one in the memory save. :)
-	void SaveToFile( const string& file )
+	void SaveToFile( const wxString& file )
 	{
 		if( g_RecoveryState != NULL )
 		{
@@ -236,7 +236,7 @@ void RecoveryMemSavingState::FreezePlugin( const char* name, s32 (CALLBACK* free
 		memSavingState::FreezePlugin( name, freezer );
 }
 
-RecoveryZipSavingState::RecoveryZipSavingState( const string& filename ) : gzSavingState( filename )
+RecoveryZipSavingState::RecoveryZipSavingState( const wxString& filename ) : gzSavingState( filename )
 {
 }
 

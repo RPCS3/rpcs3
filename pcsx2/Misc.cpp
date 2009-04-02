@@ -53,7 +53,7 @@ bool renderswitch = 0;
 
 #define NUM_STATES 10
 int StatesC = 0;
-extern char strgametitle[256];
+extern wxString strgametitle;
 
 
 const char *LabelAuthors = { 
@@ -148,7 +148,7 @@ int IsBIOS(const char *filename, char *description)
 	unsigned int fileOffset=0, found=FALSE;
 	struct romdir rd;
 
-	string Bios( Path::Combine( Config.BiosDir, filename ) );
+	wxString Bios( Path::Combine( Config.BiosDir, filename ) );
 
 	int biosFileSize = Path::getFileSize( Bios );
 	if( biosFileSize <= 0) return FALSE;	
@@ -302,7 +302,7 @@ int GetPS2ElfName(char *name){
 
 #ifdef PCSX2_DEVBUILD
 
-void SaveGSState(const string& file)
+void SaveGSState(const wxString& file)
 {
 	if( g_SaveGSStream ) return;
 
@@ -317,7 +317,7 @@ void SaveGSState(const string& file)
 	g_fGSSave->Freeze( g_nLeftGSFrames );
 }
 
-void LoadGSState(const string& file)
+void LoadGSState(const wxString& file)
 {
 	int ret;
 	gzLoadingState* f;
@@ -333,8 +333,7 @@ void LoadGSState(const string& file)
 		// file not found? try prefixing with sstates folder:
 		if( !Path::isRooted( file ) )
 		{
-			string strfile( Path::Combine( SSTATES_DIR, file ) );
-			f = new gzLoadingState( strfile.c_str() );
+			f = new gzLoadingState( Path::Combine( SSTATES_DIR, file ).c_str() );
 
 			// If this load attempt fails, then let the exception bubble up to
 			// the caller to deal with...
@@ -375,10 +374,10 @@ char* mystrlwr( char* string )
     return string;
 }
 
-static string GetGSStateFilename()
+static wxString GetGSStateFilename()
 {
-	string gsText;
-	ssprintf( gsText, "/%8.8X.%d.gs", ElfCRC, StatesC);
+	wxString gsText;
+	gsText.Printf( "/%8.8X.%d.gs", ElfCRC, StatesC );
 	return Path::Combine( SSTATES_DIR, gsText );
 }
 
@@ -545,18 +544,21 @@ void ProcessFKeys(int fkey, int shift)
 			}
 			else
 			{
-				string Text;
-				if( strgametitle[0] != 0 ) {
+				wxString Text;
+				if( strgametitle[0] != 0 )
+				{
 					// only take the first two words
-					char name[256], *tok;
-					string gsText;
+					wxString gsText;
 
-					tok = strtok(strgametitle, " ");
-					sprintf(name, "%s_", mystrlwr(tok));
-					tok = strtok(NULL, " ");
-					if( tok != NULL ) strcat(name, tok);
+					wxStringTokenizer parts( strgametitle, " " );
 
-					ssprintf( gsText, "%s.%d.gs", name, StatesC);
+					wxString name( parts.GetNextToken() );	// first part
+					wxString part2( parts.GetNextToken() );
+					
+					if( !!part2 )
+						name += "_" + part2;
+
+					gsText.Printf( "%s.%d.gs", name.c_str(), StatesC );
 					Text = Path::Combine( SSTATES_DIR, gsText );
 				}
 				else

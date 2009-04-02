@@ -1,7 +1,6 @@
 #ifndef _PCSX2_PATHS_H_
 #define _PCSX2_PATHS_H_
 
-
 #define g_MaxPath 255			// 255 is safer with antiquated Win32 ASCII APIs.
 
 #ifdef __LINUX__
@@ -23,24 +22,27 @@ extern char MAIN_DIR[g_MaxPath];
 #define DEFAULT_MEMCARD1 "Mcd001.ps2"
 #define DEFAULT_MEMCARD2 "Mcd002.ps2"
 
+// Windows.h namespace pollution!
+#undef CreateDirectory
+
 namespace Path
 {
-	extern bool isRooted( const std::string& path );
-	extern bool isDirectory( const std::string& path );
-	extern bool isFile( const std::string& path );
-	extern bool Exists( const std::string& path );
-	extern int getFileSize( const std::string& path );
+	extern bool isRooted( const wxString& path );
+	extern bool isDirectory( const wxString& path );
+	extern bool isFile( const wxString& path );
+	extern bool Exists( const wxString& path );
+	extern int getFileSize( const wxString& path );
 
-	extern std::string Combine( const std::string& srcPath, const std::string& srcFile );
-	extern std::string ReplaceExtension( const std::string& src, const std::string& ext );
-	extern std::string ReplaceFilename( const std::string& src, const std::string& newfilename );
-	extern std::string GetFilename( const std::string& src );
-	extern std::string GetDirectory( const std::string& src );
-	extern std::string GetFilenameWithoutExt( const string& src );
-	extern std::string GetRootDirectory( const std::string& src );
-	extern void Split( const std::string& src, std::string& destpath, std::string& destfile );
+	extern wxString Combine( const wxString& srcPath, const wxString& srcFile );
+	extern wxString ReplaceExtension( const wxString& src, const wxString& ext );
+	extern wxString ReplaceFilename( const wxString& src, const wxString& newfilename );
+	extern wxString GetFilename( const wxString& src );
+	extern wxString GetDirectory( const wxString& src );
+	extern wxString GetFilenameWithoutExt( const string& src );
+	extern wxString GetRootDirectory( const wxString& src );
+	extern void Split( const wxString& src, wxString& destpath, wxString& destfile );
 
-	extern void CreateDirectory( const std::string& src );
+	extern void CreateDirectory( const wxString& src );
 
 }
 

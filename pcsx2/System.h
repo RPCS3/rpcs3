@@ -21,9 +21,7 @@
 
 #include "PS2Etypes.h"
 #include "Pcsx2Config.h"
-#include "Exceptions.h"
 #include "Paths.h"
-#include "MemcpyFast.h"
 #include "SafeArray.h"
 #include "Misc.h"
 #include "Threading.h"		// to use threading stuff, include the Threading namespace in your file.
@@ -103,10 +101,23 @@ extern u8 *SysMmapEx(uptr base, u32 size, uptr bounds, const char *caller="Unnam
 
 extern void vSyncDebugStuff( uint frame );
 
-// Writes text to the console.
-// *DEPRECIATED* Use Console namespace methods instead.
-void SysPrintf(const char *fmt, ...);	// *DEPRECIATED* 
 
+//////////////////////////////////////////////////////////////////////////////////////////
+// Pcsx2 Custom Translation System
+// Work-in-progress!
+//
+static const char* _t( const char* translate_me_please )
+{
+	return translate_me_please;
+}
+
+// Temporary placebo?
+static const char* _( const char* translate_me_please )
+{
+	return translate_me_please;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////
 // Console Namespace -- Replacements for SysPrintf.
 // SysPrintf is depreciated -- We should phase these in over time.
 namespace Console
@@ -126,9 +137,7 @@ namespace Console
 	// va_args version of WriteLn, mostly for internal use only.
 	extern void __fastcall _WriteLn( Colors color, const char* fmt, va_list args );
 
-	extern void Open();
-	extern void Close();
-	extern void SetTitle( const std::string& title );
+	extern void __fastcall SetTitle( const wxString& title );
 
 	// Changes the active console color.
 	// This color will be unset by calls to colored text methods
@@ -142,49 +151,54 @@ namespace Console
 	// them from different build types.  The return values are always zero.
 
 	// Writes a newline to the console.
-	extern bool __fastcall Newline();
+	extern bool Newline();
 
 	// Writes an unformatted string of text to the console (fast!)
 	// No newline is appended.
-	extern bool __fastcall Write( const char* fmt );
+	extern bool __fastcall Write( const char* text );
+
+	// Writes an unformatted string of text to the console (fast!)
+	// A newline is automatically appended, and the console color reset to default
+	// after the log is written.
+	extern bool __fastcall Write( Colors color, const char* text );
 
 	// Writes an unformatted string of text to the console (fast!)
 	// A newline is automatically appended.
-	extern bool __fastcall WriteLn( const char* fmt );
+	extern bool __fastcall WriteLn( const char* text );
 
 	// Writes an unformatted string of text to the console (fast!)
-	// A newline is automatically appended, and the console color reset to default.
-	extern bool __fastcall WriteLn( Colors color, const char* fmt );
+	// A newline is automatically appended, and the console color reset to default
+	// after the log is written.
+	extern bool __fastcall WriteLn( Colors color, const char* text );
 
 	// Writes a line of colored text to the console, with automatic newline appendage.
 	// The console color is reset to default when the operation is complete.
 	extern bool WriteLn( Colors color, const char* fmt, VARG_PARAM dummy, ... );
 
+	// Writes a formatted message to the console, with appended newline.
+	extern bool WriteLn( const char* fmt, VARG_PARAM dummy, ... );
+
 	// Writes a line of colored text to the console (no newline).
 	// The console color is reset to default when the operation is complete.
 	extern bool Write( Colors color, const char* fmt, VARG_PARAM dummy, ... );
-	extern bool Write( Colors color, const char* fmt );
 
 	// Writes a formatted message to the console (no newline)
 	extern bool Write( const char* fmt, VARG_PARAM dummy, ... );
 
-	// Writes a formatted message to the console, with appended newline.
-	extern bool WriteLn( const char* fmt, VARG_PARAM dummy, ... );
-
 	// Displays a message in the console with red emphasis.
 	// Newline is automatically appended.
 	extern bool Error( const char* fmt, VARG_PARAM dummy, ... );
-	extern bool Error( const char* fmt );
+	extern bool __fastcall Error( const char* text );
 
 	// Displays a message in the console with yellow emphasis.
 	// Newline is automatically appended.
 	extern bool Notice( const char* fmt, VARG_PARAM dummy, ... );
-	extern bool Notice( const char* fmt );
+	extern bool __fastcall Notice( const char* text );
 
 	// Displays a message in the console with yellow emphasis.
 	// Newline is automatically appended.
 	extern bool Status( const char* fmt, VARG_PARAM dummy, ... );
-	extern bool Status( const char* fmt );
+	extern bool __fastcall Status( const char* text );
 }
 
 // Different types of message boxes that the emulator can employ from the friendly confines
@@ -196,7 +210,7 @@ namespace Msgbox
 	// Pops up an alert Dialog Box with a singular "OK" button.
 	// Always returns false.  Replacement for SysMessage.
 	extern bool Alert( const char* fmt, VARG_PARAM dummy, ... );
-	extern bool Alert( const char* fmt );
+	extern bool Alert( const char* text );
 
 	// Pops up a dialog box with Ok/Cancel buttons.  Returns the result of the inquiry,
 	// true if OK, false if cancel.

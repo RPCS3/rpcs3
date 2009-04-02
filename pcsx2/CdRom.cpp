@@ -513,7 +513,7 @@ void  cdrReadInterrupt() {
 	cdr.StatP|= 0x22;
 	cdr.Result[0] = cdr.StatP;
 
-	SysPrintf("Reading From CDR");
+	Console::Status( "Reading From CDR" );
 	buf = CDVDgetBuffer();
 	if (buf == NULL) cdr.RErr = -1;
 

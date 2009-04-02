@@ -38,13 +38,13 @@ namespace Path
 // Path Separator used when creating new paths.
 static const char Separator( '\\' );
 // Path separators used when breaking existing paths into parts and pieces.
-static const string Delimiters( "\\/" );
+static const wxString Delimiters( "\\/" );
 #else
 static const char Separator = '/';
 static const char Delimiters( '/' );
 #endif
 
-bool Exists( const string& path )
+bool Exists( const wxString& path )
 {
 	struct stat sbuf;
 	return stat( path.c_str(), &sbuf ) == 0;
@@ -52,7 +52,7 @@ bool Exists( const string& path )
 
 // This function returns false if the path does not exist, or if the path exists and
 // is a file.
-bool isDirectory( const string& path )
+bool isDirectory( const wxString& path )
 {
 	struct stat sbuf;
 	if( stat( path.c_str(), &sbuf ) == -1 ) return false;
@@ -61,7 +61,7 @@ bool isDirectory( const string& path )
 
 // This function returns false if the path does not exist, or if the path exists and
 // is a directory.
-bool isFile( const string& path )
+bool isFile( const wxString& path )
 {
 	struct stat sbuf;
 	if( stat( path.c_str(), &sbuf ) == -1 ) return false;
@@ -70,14 +70,14 @@ bool isFile( const string& path )
 
 // Returns the length of the file.
 // returns -1 if the file is not found.
-int getFileSize( const string& path )
+int getFileSize( const wxString& path )
 {
 	struct stat sbuf;
 	if( stat( path.c_str(), &sbuf ) == -1 ) return -1;
 	return sbuf.st_size;
 }
 
-bool isRooted( const string& path )
+bool isRooted( const wxString& path )
 {
 	// if the first character is a backslash or period, or the second character
 	// a colon, it's a safe bet we're rooted.
@@ -92,7 +92,7 @@ bool isRooted( const string& path )
 
 // Concatenates two pathnames together, inserting delimiters (backslash on win32)
 // as needed! Assumes the 'dest' is allocated to at least g_MaxPath length.
-string Combine( const string& srcPath, const string& srcFile )
+wxString Combine( const wxString& srcPath, const wxString& srcFile )
 {
 	int pathlen, guesslen;
 
@@ -125,19 +125,19 @@ string Combine( const string& srcPath, const string& srcFile )
 
 	// Concatenate!
 
-	string dest( srcPath.begin(), srcPath.begin()+pathlen );
+	wxString dest( srcPath.begin(), srcPath.begin()+pathlen );
 	dest += Separator;
 	dest += srcFile;
 	return dest;
 }
 
 // Replaces the extension of the file with the one given.
-string ReplaceExtension( const string& src, const string& ext )
+wxString ReplaceExtension( const wxString& src, const wxString& ext )
 {
-	string dest;
+	wxString dest;
 
 	int pos = src.find_last_of( '.' );
-	if( pos == string::npos || pos == 0 )
+	if( pos == wxString::npos || pos == 0 )
 		dest = src;
 	else
 		dest.assign( src.begin(), src.begin()+pos );
@@ -152,20 +152,20 @@ string ReplaceExtension( const string& src, const string& ext )
 }
 
 // finds the starting character position of a filename for the given source path.
-static int _findFilenamePosition( const string& src)
+static int _findFilenamePosition( const wxString& src)
 {
 	// note: the source path could have multiple trailing slashes.  We want to ignore those.
 
 	unsigned int startpos = src.find_last_not_of( Delimiters );
 
-	if(startpos == string::npos )
+	if(startpos == wxString::npos )
 		return 0;
 
 	int pos;
 
 	if( startpos < src.length() )
 	{
-		string trimmed( src.begin(), src.begin()+startpos );
+		wxString trimmed( src.begin(), src.begin()+startpos );
 		pos = trimmed.find_last_of( Delimiters );
 	}
 	else
@@ -173,15 +173,15 @@ static int _findFilenamePosition( const string& src)
 		pos = src.find_last_of( Delimiters );
 	}
 
-	if( pos == string::npos )
+	if( pos == wxString::npos )
 		return 0;
 
 	return pos;
 }
 
-string ReplaceFilename( const string& src, const string& newfilename )
+wxString ReplaceFilename( const wxString& src, const wxString& newfilename )
 {
-	string dest;
+	wxString dest;
 	int pos = _findFilenamePosition( src );
 
 	if( pos == 0 )
@@ -197,35 +197,35 @@ string ReplaceFilename( const string& src, const string& newfilename )
 	return dest;
 }
 
-string GetFilename( const string& src )
+wxString GetFilename( const wxString& src )
 {
 	int pos = _findFilenamePosition( src );
-	return string( src.begin()+pos, src.end() );
+	return wxString( src.begin()+pos, src.end() );
 }
 
-string GetFilenameWithoutExt( const string& src )
+wxString GetFilenameWithoutExt( const wxString& src )
 {
-	string fname( GetFilename( src ) );
+	wxString fname( GetFilename( src ) );
 
 	int pos = fname.find_last_of( '.' );
-	if( pos == string::npos || pos == 0 )
+	if( pos == wxString::npos || pos == 0 )
 		return fname;
 	else
-		return string( fname.begin(), fname.begin()+pos );
+		return wxString( fname.begin(), fname.begin()+pos );
 }
 
-string GetDirectory( const string& src )
+wxString GetDirectory( const wxString& src )
 {
 	int pos = _findFilenamePosition( src );
 	if( pos == 0 )
-		return string();
+		return wxString();
 	else
-		return string( src.begin(), src.begin()+pos );
+		return wxString( src.begin(), src.begin()+pos );
 }
 
 // This function mimics the old ANSI C splitpath function.  It's more or less superceeded
 // by one of the many other Path utility functions, but someone might find it useful.
-void Split( const string& src, string& destpath, string& destfile )
+void Split( const wxString& src, wxString& destpath, wxString& destfile )
 {
 	int pos = _findFilenamePosition( src );
 
@@ -243,16 +243,16 @@ void Split( const string& src, string& destpath, string& destfile )
 
 // Assigns the base/root directory of the given path into dest.
 // Example /this/that/something.txt -> dest == "/"
-string GetRootDirectory( const string& src )
+wxString GetRootDirectory( const wxString& src )
 {
 	int pos = src.find_first_of( Delimiters );
-	if( pos == string::npos )
-		return string();
+	if( pos == wxString::npos )
+		return wxString();
 	else
-		return string( src.begin(), src.begin()+pos );
+		return wxString( src.begin(), src.begin()+pos );
 }
 
-void CreateDirectory( const string& src )
+void CreateDirectory( const wxString& src )
 {
 #ifdef _WIN32
 	_mkdir( src.c_str() );

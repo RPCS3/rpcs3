@@ -53,8 +53,8 @@ extern StartupParams g_Startup;
 //
 // Most of these are implemented in SystemGui.cpp
 
-extern void States_Load( const string& file );
-extern void States_Save( const string& file );
+extern void States_Load( const wxString& file );
+extern void States_Save( const wxString& file );
 extern void States_Load( int num );
 extern void States_Save( int num );
 extern bool States_isSlotUsed(int num);

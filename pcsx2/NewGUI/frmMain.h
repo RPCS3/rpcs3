@@ -21,40 +21,7 @@
 #include <wx/wx.h>
 #include <wx/image.h>
 
-#include "Misc.h"
-#include "ConsoleLogger.h"
-
-struct wxPcsx2Config
-{
-	struct  
-	{
-		bool Show;
-		wxRect DisplayArea;
-	} ConLogBox;
-	
-	wxPoint MainGuiPosition;
-};
-
-extern wxPcsx2Config newConfig;
-
-extern const wxRect wxRectUnspecified;
-
-//////////////////////////////////////////////////////////////////////////////////////////
-//
-class LogWindow : public wxLogWindow
-{
-public:
-	LogWindow(wxWindow *pParent, const wxChar *szTitle );
-
-protected:
-	// Implemented to ensure that the parent's menu option for log visibility is consistent with
-	// the current status of the log window.
-	virtual void OnFrameCreate(wxFrame *frame);
-
-	// Implemented to ensure that the parent's menu option for log visibility is consistent with
-	// the current status of the log window.
-	virtual bool OnFrameClose(wxFrame *frame);
-};
+#include "App.h"
 
 //////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -180,6 +147,8 @@ protected:
 	// Menu Options for the Main Window! :D
 	
 protected:
+	void OnMoveAround( wxMoveEvent& evt );
+
 	void Menu_QuickBootCD_Click(wxCommandEvent &event);
 	void Menu_BootCD_Click(wxCommandEvent &event);
 	void Menu_BootNoCD_Click(wxCommandEvent &event);

@@ -41,8 +41,8 @@ bool States_isSlotUsed(int num)
 // Save state load-from-file (or slot) helpers.
 
 // Internal use state loading function which does not trap exceptions.
-// The calling function should trap ahnd handle exceptions as needed.
-static void _loadStateOrExcept( const string& file )
+// The calling function should trap and handle exceptions as needed.
+static void _loadStateOrExcept( const wxString& file )
 {
 	gzLoadingState joe( file );		// this'll throw an StateLoadError_Recoverable.
 
@@ -57,12 +57,12 @@ static void _loadStateOrExcept( const string& file )
 }
 
 // returns true if the new state was loaded, or false if nothing happened.
-void States_Load( const string& file )
+void States_Load( const wxString& file )
 {
 	try
 	{
 		_loadStateOrExcept( file );
-		HostGui::Notice( fmt_string( "*PCSX2*: Loaded State %hs", &file) );
+		HostGui::Notice( fmt_string( "*PCSX2*: Loaded State %s", file.c_str() ) );
 	}
 	catch( Exception::StateLoadError_Recoverable& ex)
 	{
@@ -78,7 +78,7 @@ void States_Load( const string& file )
 		// The emulation state is ruined.  Might as well give them a popup and start the gui.
 
 		string message( fmt_string(
-			"Encountered an error while loading savestate from file: %hs.\n", &file ) );
+			"Encountered an error while loading savestate from file: %s.\n", file.c_str() ) );
 
 		if( g_EmulationInProgress )
 			message += "Since the savestate load was incomplete, the emulator must reset.\n";
@@ -139,17 +139,17 @@ void States_Load(int num)
 //////////////////////////////////////////////////////////////////////////////////////////
 // Save state save-to-file (or slot) helpers.
 
-void States_Save( const string& file )
+void States_Save( const wxString& file )
 {
 	try
 	{
 		StateRecovery::SaveToFile( file );
-		HostGui::Notice( fmt_string( "State saved to file: %hs", &file ) );
+		HostGui::Notice( fmt_string( "State saved to file: %s", file.c_str() ) );
 	}
 	catch( Exception::BaseException& ex )
 	{
 		Console::Error( (fmt_string(
-			"An error occurred while trying to save to file %hs\n", &file ) +
+			"An error occurred while trying to save to file %s\n", file.c_str() ) +
 			"Your emulation state has not been saved!\n\nError: " + ex.Message()).c_str()
 		);
 	}

@@ -222,7 +222,7 @@ protected:
 		return (T*)realloc( m_ptr, newsize * sizeof(T) );
 	}
 	
-	void _boundsCheck( uint i )
+	void _boundsCheck( uint i ) const
 	{
 #ifdef PCSX2_DEVBUILD
 		if( i >= (uint)m_length )
@@ -316,7 +316,7 @@ public:
 	virtual SafeList<T>* Clone() const
 	{
 		SafeList<T>* retval = new SafeList<T>( m_length );
-		memcpy_fast( retval->GetPtr(), m_ptr, sizeof(T) * m_length );
+		memcpy_fast( retval->m_ptr, m_ptr, sizeof(T) * m_length );
 		return retval;
 	}
 

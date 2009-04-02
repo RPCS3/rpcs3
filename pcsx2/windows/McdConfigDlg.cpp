@@ -34,7 +34,7 @@ HWND mcdDlg;
 #define HANDLE_CHECK(idc,hvar)		case idc: (hvar) = !(hvar); SendMessage(GetDlgItem(hWnd,idc),BM_SETCHECK,(hvar)?BST_CHECKED:BST_UNCHECKED,0); break
 #define HANDLE_CHECKNB(idc,hvar)	case idc: (hvar) = !(hvar); SendMessage(GetDlgItem(hWnd,idc),BM_SETCHECK,(hvar)?BST_CHECKED:BST_UNCHECKED,0)
 
-void DlgItem_GetText( HWND hwnd, int dlgId, string& dest )
+void DlgItem_GetText( HWND hwnd, int dlgId, wxString& dest )
 {
 	HWND dlg = GetDlgItem( hwnd, dlgId );
 	int length = GetWindowTextLength( dlg );
@@ -119,7 +119,7 @@ void MemcardConfig::Open_Mcd_Proc(HWND hW, int mcd)
 	}
 }
 
-static string m_Default_MemcardsDir[2] = 
+static wxString m_Default_MemcardsDir[2] = 
 {
 	Path::Combine( MEMCARDS_DIR, DEFAULT_MEMCARD1 ),
 	Path::Combine( MEMCARDS_DIR, DEFAULT_MEMCARD2 )
@@ -190,7 +190,7 @@ BOOL CALLBACK MemcardConfig::DialogProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPA
        				//DlgItem_GetText( hWnd, IDC_MCD_FILE1, Config.Mcd[0].Filename );
        				//DlgItem_GetText( hWnd, IDC_MCD_FILE2, Config.Mcd[1].Filename );
 
-					string oldone( Config.Mcd[0].Filename ), oldtwo( Config.Mcd[1].Filename );
+					wxString oldone( Config.Mcd[0].Filename ), oldtwo( Config.Mcd[1].Filename );
 
        				GetWindowText( GetDlgItem( hWnd, IDC_MCD_FILE1 ), Config.Mcd[0].Filename, g_MaxPath );
        				GetWindowText( GetDlgItem( hWnd, IDC_MCD_FILE2 ), Config.Mcd[1].Filename, g_MaxPath );

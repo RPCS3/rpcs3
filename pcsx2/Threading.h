@@ -23,7 +23,6 @@
 #include <semaphore.h>
 
 #include "PS2Etypes.h"
-#include "Exceptions.h"
 
 namespace Threading
 {

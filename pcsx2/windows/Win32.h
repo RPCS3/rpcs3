@@ -70,21 +70,21 @@ struct AppData
 class IniFile
 {
 protected:
-	string m_filename;
-	string m_section;
+	wxString m_filename;
+	wxString m_section;
 
 public:
 	virtual ~IniFile();
 	IniFile();
 
-	void SetCurrentSection( const string& newsection );
+	void SetCurrentSection( const wxString& newsection );
 
-	virtual void Entry( const string& var, string& value, const string& defvalue=string() )=0;
-	virtual void Entry( const string& var, char (&value)[g_MaxPath], const string& defvalue=string() )=0;
-	virtual void Entry( const string& var, int& value, const int defvalue=0 )=0;
-	virtual void Entry( const string& var, uint& value, const uint defvalue=0 )=0;
-	virtual void Entry( const string& var, bool& value, const bool defvalue=0 )=0;
-	virtual void EnumEntry( const string& var, int& value, const char* const* enumArray, const int defvalue=0 )=0;
+	virtual void Entry( const wxString& var, wxString& value, const wxString& defvalue=wxString() )=0;
+	virtual void Entry( const wxString& var, char (&value)[g_MaxPath], const wxString& defvalue=wxString() )=0;
+	virtual void Entry( const wxString& var, int& value, const int defvalue=0 )=0;
+	virtual void Entry( const wxString& var, uint& value, const uint defvalue=0 )=0;
+	virtual void Entry( const wxString& var, bool& value, const bool defvalue=0 )=0;
+	virtual void EnumEntry( const wxString& var, int& value, const char* const* enumArray, const int defvalue=0 )=0;
 
 	void DoConfig( PcsxConfig& Conf );
 	void MemcardSettings( PcsxConfig& Conf );
@@ -99,12 +99,12 @@ public:
 	virtual ~IniFileLoader();
 	IniFileLoader();
 
-	void Entry( const string& var, string& value, const string& defvalue=string() );
-	void Entry( const string& var, char (&value)[g_MaxPath], const string& defvalue=string() );
-	void Entry( const string& var, int& value, const int defvalue=0 );
-	void Entry( const string& var, uint& value, const uint defvalue=0 );
-	void Entry( const string& var, bool& value, const bool defvalue=false );
-	void EnumEntry( const string& var, int& value, const char* const* enumArray, const int defvalue=0 );
+	void Entry( const wxString& var, wxString& value, const wxString& defvalue=wxString() );
+	void Entry( const wxString& var, char (&value)[g_MaxPath], const wxString& defvalue=wxString() );
+	void Entry( const wxString& var, int& value, const int defvalue=0 );
+	void Entry( const wxString& var, uint& value, const uint defvalue=0 );
+	void Entry( const wxString& var, bool& value, const bool defvalue=false );
+	void EnumEntry( const wxString& var, int& value, const char* const* enumArray, const int defvalue=0 );
 };
 
 class IniFileSaver : public IniFile
@@ -113,13 +113,13 @@ public:
 	virtual ~IniFileSaver();
 	IniFileSaver();
 	
-	void Entry( const string& var, const string& value, const string& defvalue=string() );
-	void Entry( const string& var, string& value, const string& defvalue=string() );
-	void Entry( const string& var, char (&value)[g_MaxPath], const string& defvalue=string() );
-	void Entry( const string& var, int& value, const int defvalue=0 );
-	void Entry( const string& var, uint& value, const uint defvalue=0 );
-	void Entry( const string& var, bool& value, const bool defvalue=false );
-	void EnumEntry( const string& var, int& value, const char* const* enumArray, const int defvalue=0 );
+	void Entry( const wxString& var, const wxString& value, const wxString& defvalue=wxString() );
+	void Entry( const wxString& var, wxString& value, const wxString& defvalue=wxString() );
+	void Entry( const wxString& var, char (&value)[g_MaxPath], const wxString& defvalue=wxString() );
+	void Entry( const wxString& var, int& value, const int defvalue=0 );
+	void Entry( const wxString& var, uint& value, const uint defvalue=0 );
+	void Entry( const wxString& var, bool& value, const bool defvalue=false );
+	void EnumEntry( const wxString& var, int& value, const char* const* enumArray, const int defvalue=0 );
 };
 
 extern LRESULT WINAPI MainWndProc(HWND, UINT, WPARAM, LPARAM);

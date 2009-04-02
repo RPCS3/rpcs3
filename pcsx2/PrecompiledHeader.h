@@ -31,6 +31,15 @@
 #endif
 
 //////////////////////////////////////////////////////////////////////////////////////////
+// Welcome wxWidgets to the party!
+
+#include <wx/string.h>
+#include <wx/tokenzr.h>
+#include <wx/gdicmn.h>		// for wxPoint/wxRect stuff
+
+extern const wxRect wxDefaultRect;	// wxWidgets lacks one of its own.
+
+//////////////////////////////////////////////////////////////////////////////////////////
 // Include the STL junk that's actually handy.
 
 #include <algorithm>
@@ -65,11 +74,15 @@ typedef int BOOL;
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // Begin Pcsx2 Includes: Add items here that are local to Pcsx2 but stay relatively
-// unchanged for long periods of time.
+// unchanged for long periods of time, or happen to be used by almost everything, so they
+// need a full recompile anyway, when modified (etc)
 
 #include "zlib/zlib.h"
 #include "PS2Etypes.h"
 #include "StringUtils.h"
+#include "Exceptions.h"
+#include "MemcpyFast.h"
+
 
 ////////////////////////////////////////////////////////////////////
 // Compiler/OS specific macros and defines -- Begin Section

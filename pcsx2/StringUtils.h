@@ -26,6 +26,7 @@
 // to_string: A utility template for quick and easy inline string type conversion.
 // Use to_string(intval), or to_string(float), etc.  Anything that the STL itself
 // would support should be supported here. :)
+// Notice: Obsolete, use wxString features instead.
 template< typename T >
 std::string to_string(const T& value)
 {
@@ -34,6 +35,20 @@ std::string to_string(const T& value)
 	return oss.str();
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////
+//
+extern wxString ToString( const wxPoint& src, const wxString& separator=wxT(",") );
+extern wxString ToString( const wxRect& src, const wxString& separator=wxT(",") );
+
+extern bool TryParse( wxPoint& dest, const wxStringTokenizer& parts );
+extern bool TryParse( wxSize& dest, const wxStringTokenizer& parts );
+
+extern bool TryParse( wxPoint& dest, const wxString& src, const wxPoint& defval=wxDefaultPosition, const wxString& separators=wxT(",") );
+extern bool TryParse( wxSize& dest, const wxString& src, const wxSize& defval=wxDefaultSize, const wxString& separators=wxT(",") );
+extern bool TryParse( wxRect& dest, const wxString& src, const wxRect& defval=wxDefaultRect, const wxString& separators=wxT(",") );
+
+
+//////////////////////////////////////////////////////////////////////////////////////////
 // dummy structure used to type-guard the dummy parameter that's been inserted to
 // allow us to use the va_list feature on references.
 struct _VARG_PARAM

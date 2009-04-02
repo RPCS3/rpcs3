@@ -240,7 +240,7 @@ USBhandler usbHandler;
 
 #define TestPS2Esyms(type) if(_TestPS2Esyms(drv,PS2E_LT_##type,PS2E_##type##_VERSION,filename) < 0) return -1;
 
-int _TestPS2Esyms(void* drv, int type, int expected_version, const string& filename)
+int _TestPS2Esyms(void* drv, int type, int expected_version, const wxString& filename)
 {
 	_PS2EgetLibType PS2EgetLibType;
 	_PS2EgetLibVersion2 PS2EgetLibVersion2;
@@ -253,7 +253,7 @@ int _TestPS2Esyms(void* drv, int type, int expected_version, const string& filen
 	int actual_version = ((PS2EgetLibVersion2(type) >> 16)&0xff);
 
 	if( actual_version != expected_version) {
-		Msgbox::Alert("Can't load '%hs', wrong PS2E version (%x != %x)", params &filename, actual_version, expected_version);
+		Msgbox::Alert("Can't load '%s', wrong PS2E version (%x != %x)", params filename.c_str(), actual_version, expected_version);
 		return -1;
 	}
 
@@ -284,7 +284,7 @@ void CALLBACK GS_configure() {}
 void CALLBACK GS_about() {}
 s32  CALLBACK GS_test() { return 0; }
 
-int LoadGSplugin(const string& filename)
+int LoadGSplugin(const wxString& filename)
 {
 	void *drv;
 
@@ -340,7 +340,7 @@ s32  CALLBACK PAD1_freeze(int mode, freezeData *data) { if (mode == FREEZE_SIZE)
 s32  CALLBACK PAD1_setSlot(u8 port, u8 slot) { return slot == 1; }
 s32  CALLBACK PAD1_queryMtap(u8 port) { return 0; }
 
-int LoadPAD1plugin(const string& filename) {
+int LoadPAD1plugin(const wxString& filename) {
 	void *drv;
 
 	PAD1plugin = SysLoadLibrary(filename.c_str());
@@ -377,7 +377,7 @@ s32  CALLBACK PAD2_freeze(int mode, freezeData *data) { if (mode == FREEZE_SIZE)
 s32  CALLBACK PAD2_setSlot(u8 port, u8 slot) { return slot == 1; }
 s32  CALLBACK PAD2_queryMtap(u8 port) { return 0; }
 
-int LoadPAD2plugin(const string& filename) {
+int LoadPAD2plugin(const wxString& filename) {
 	void *drv;
 
 	PAD2plugin = SysLoadLibrary(filename.c_str());
@@ -412,7 +412,7 @@ void CALLBACK SPU2_configure() {}
 void CALLBACK SPU2_about() {}
 s32  CALLBACK SPU2_test() { return 0; }
 
-int LoadSPU2plugin(const string& filename) {
+int LoadSPU2plugin(const wxString& filename) {
 	void *drv;
 
 	SPU2plugin = SysLoadLibrary(filename.c_str());
@@ -455,7 +455,7 @@ void CALLBACK CDVD_configure() {}
 void CALLBACK CDVD_about() {}
 s32  CALLBACK CDVD_test() { return 0; }
 
-int LoadCDVDplugin(const string& filename) {
+int LoadCDVDplugin(const wxString& filename) {
 	void *drv;
 
 	CDVDplugin = SysLoadLibrary(filename.c_str());
@@ -492,7 +492,7 @@ void CALLBACK DEV9_configure() {}
 void CALLBACK DEV9_about() {}
 s32  CALLBACK DEV9_test() { return 0; }
 
-int LoadDEV9plugin(const string& filename) {
+int LoadDEV9plugin(const wxString& filename) {
 	void *drv;
 
 	DEV9plugin = SysLoadLibrary(filename.c_str());
@@ -529,7 +529,7 @@ void CALLBACK USB_configure() {}
 void CALLBACK USB_about() {}
 s32 CALLBACK USB_test() { return 0; }
 
-int LoadUSBplugin(const string& filename) {
+int LoadUSBplugin(const wxString& filename) {
 	void *drv;
 
 	USBplugin = SysLoadLibrary(filename.c_str());
@@ -566,7 +566,7 @@ void CALLBACK FW_configure() {}
 void CALLBACK FW_about() {}
 s32 CALLBACK FW_test() { return 0; }
 
-int LoadFWplugin(const string& filename) {
+int LoadFWplugin(const wxString& filename) {
 	void *drv;
 
 	FWplugin = SysLoadLibrary(filename.c_str());

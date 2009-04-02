@@ -22,21 +22,6 @@
 #include "System.h"
 #include "Pcsx2Config.h"
 
-/////////////////////////////////////////////////////////////////////////
-// Pcsx2 Custom Translation System
-// Work-in-progress!
-//
-static const char* _t( const char* translate_me_please )
-{
-	return translate_me_please;
-}
-
-// Temporary placebo?
-static const char* _( const char* translate_me_please )
-{
-	return translate_me_please;
-}
-
 // what the hell is this unused piece of crap passed to every plugin for? (air)
 // Agreed. It ought to get removed in the next version of the plugin api. (arcum42)
 extern uptr pDsp;	//Used in  GS, MTGS, Plugins, Misc
@@ -80,8 +65,8 @@ extern const char *LabelAuthors;
 extern const char *LabelGreets;
 void CycleFrameLimit(int dir);
 
-void SaveGSState(const string& file);
-void LoadGSState(const string& file);
+void SaveGSState(const wxString& file);
+void LoadGSState(const wxString& file);
 
 #endif /* __MISC_H__ */
 

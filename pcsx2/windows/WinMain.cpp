@@ -169,7 +169,7 @@ void WinClose()
 	ProfilerTerm();
 
 	ReleasePlugins();
-	Console::Close();
+	//Console::Close();
 
 	pthread_win32_process_detach_np();
 
@@ -776,12 +776,12 @@ LRESULT WINAPI MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				if(Config.PsxOut)
 				{
                    CheckMenuItem(gApp.hMenu,ID_CONSOLE,MF_CHECKED);
-				   Console::Open();
+				   //Console::Open();
 				}
 				else
 				{
                    CheckMenuItem(gApp.hMenu, ID_CONSOLE, MF_UNCHECKED);
-				   Console::Close();
+				   //Console::Close();
 				}
 				SaveConfig();
 				break;

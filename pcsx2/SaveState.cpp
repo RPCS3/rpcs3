@@ -48,12 +48,14 @@ static void PostLoadPrep()
 	for(int i=0; i<48; i++) MapTLB(i);
 }
 
-string SaveState::GetFilename( int slot )
+wxString SaveState::GetFilename( int slot )
 {
-	return Path::Combine( SSTATES_DIR, fmt_string( "%8.8X.%3.3d", ElfCRC, slot ) );
+	wxString arrgh;
+	arrgh.Printf( "%8.8X.%3.3d", ElfCRC, slot );
+	return Path::Combine( SSTATES_DIR, arrgh );
 }
 
-SaveState::SaveState( const char* msg, const string& destination ) :
+SaveState::SaveState( const char* msg, const wxString& destination ) :
 	m_version( g_SaveVersion )
 ,	m_tagspace( 128 )
 {
@@ -183,7 +185,7 @@ void SaveState::FreezeAll()
 /////////////////////////////////////////////////////////////////////////////
 // gzipped to/from disk state saves implementation
 
-gzBaseStateInfo::gzBaseStateInfo( const char* msg, const string& filename ) :
+gzBaseStateInfo::gzBaseStateInfo( const char* msg, const wxString& filename ) :
   SaveState( msg, filename )
 , m_filename( filename )
 , m_file( NULL )
@@ -200,7 +202,7 @@ gzBaseStateInfo::~gzBaseStateInfo()
 }
 
 
-gzSavingState::gzSavingState( const string& filename ) :
+gzSavingState::gzSavingState( const wxString& filename ) :
   gzBaseStateInfo( "Saving state to: ", filename )
 {
 	m_file = gzopen(filename.c_str(), "wb");
@@ -212,7 +214,7 @@ gzSavingState::gzSavingState( const string& filename ) :
 }
 
 
-gzLoadingState::gzLoadingState( const string& filename ) :
+gzLoadingState::gzLoadingState( const wxString& filename ) :
   gzBaseStateInfo( "Loading state from: ", filename )
 {
 	m_file = gzopen(filename.c_str(), "rb");

@@ -40,7 +40,7 @@ u32 PrevCheatType=0, PrevCheataddr = 0,LastType = 0;
 
 int g_ZeroGSOptions=0, patchnumber;
 
-char strgametitle[256]= {0};
+wxString strgametitle;
 
 //
 // Variables
@@ -462,7 +462,7 @@ void patchFunc_comment( char * text1, char * text2 )
 void patchFunc_gametitle( char * text1, char * text2 )
 {
 	Console::WriteLn( "gametitle: %s", params text2 );
-	sprintf(strgametitle,"%s",text2);
+	strgametitle = text2;
 	Console::SetTitle(strgametitle);
 }
 

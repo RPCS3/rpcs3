@@ -17,8 +17,7 @@
  */
 
 #include "PrecompiledHeader.h"
-#include "Misc.h"
-#include "ConsoleLogger.h"
+#include "App.h"
 
 #include <wx/file.h>
 #include <wx/textfile.h>
@@ -84,18 +83,9 @@ END_EVENT_TABLE()
 ConsoleLogFrame::ConsoleLogFrame(wxWindow *parent, const wxString& title) :
 	wxFrame(parent, wxID_ANY, title),
 	m_TextCtrl( *new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize,
-		wxTE_MULTILINE  |
-		wxHSCROLL       |
-#if !wxUSE_UNICODE
-		wxTE_RICH       |
-#endif
-		wxTE_READONLY ) )
+		wxTE_MULTILINE | wxHSCROLL | wxTE_READONLY | wxTE_RICH2 ) )
 {
-	// wxTE_RICH note:
-	// needed for Win32 to avoid 65Kb limit but it doesn't work well
-	// when using RichEdit 2.0 which we always do in the Unicode build
-
-	m_TextCtrl.SetBackgroundColour( wxColor( 48, 48, 64 ) );
+	m_TextCtrl.SetBackgroundColour( wxColor( 238, 240, 248 ) ); //wxColor( 48, 48, 64 ) );
 
     // create menu
     wxMenuBar *pMenuBar = new wxMenuBar;
@@ -110,9 +100,24 @@ ConsoleLogFrame::ConsoleLogFrame(wxWindow *parent, const wxString& title) :
 
     // status bar for menu prompts
     CreateStatusBar();
+    ClearColor();
+    
+	Connect( wxEVT_MOVE, wxMoveEventHandler(ConsoleLogFrame::OnMoveAround) );
 }
 
 ConsoleLogFrame::~ConsoleLogFrame() { }
+
+void ConsoleLogFrame::OnMoveAround( wxMoveEvent& evt )
+{
+	// Docking check!  If the window position is within some amount
+	// of the main window, enable docking.
+	
+	wxPoint topright( GetParent()->GetRect().GetTopRight() );
+	wxRect snapzone( topright - wxSize( 8,8 ), wxSize( 16,16 ) );
+	
+	if( snapzone.Contains( GetPosition() ) )
+		SetPosition( topright + wxSize( 1,0 ) );
+}
 
 void ConsoleLogFrame::DoClose()
 {
@@ -167,6 +172,8 @@ static const wxTextAttr tbl_color_codes[] =
 
 static const wxTextAttr color_default( wxColor( 192, 192, 192 ) );
 
+// Note: SetColor currently does not work on Win32, but I suspect it *should* work when
+// we enable unicode compilation.  (I really hope!)
 void ConsoleLogFrame::SetColor( Console::Colors color )
 {
 	m_TextCtrl.SetDefaultStyle( tbl_color_codes[(int)color] );
@@ -177,19 +184,18 @@ void ConsoleLogFrame::ClearColor()
 	m_TextCtrl.SetDefaultStyle( color_default );
 }
 
+void ConsoleLogFrame::Newline()
+{
+	Write( wxT("\n") );
+}
+
 void ConsoleLogFrame::Write( const wxChar* text )
 {
 	// remove selection (WriteText is in fact ReplaceSelection)
 #ifdef __WXMSW__
 	wxTextPos nLen = m_TextCtrl.GetLastPosition();
 	m_TextCtrl.SetSelection(nLen, nLen);
-#endif // Windows
+#endif
 
 	m_TextCtrl.AppendText( text );
-}
-
-void ConsoleLogFrame::WriteLn( const wxChar* text )
-{
-	Write( text );
-	Write( "\n" );
 }

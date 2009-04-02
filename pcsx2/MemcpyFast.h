@@ -16,8 +16,7 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
-#ifndef __MEMCPY_FAST_H__
-#define __MEMCPY_FAST_H__
+#pragma once
 
 #if defined(_WIN32)
 	#include "windows/memzero.h"
@@ -42,7 +41,5 @@
 	extern void memxor_mmx(void* dst, const void* src1, int cmpsize);
 #endif
 
-	#define memcpy_fast memcpy_amd_
-	#define memcpy_aligned memcpy_amd_
-		
-#endif //Header
+#define memcpy_fast memcpy_amd_
+#define memcpy_aligned memcpy_amd_

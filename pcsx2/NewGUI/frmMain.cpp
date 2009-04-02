@@ -86,8 +86,18 @@ void frmMain::PopulatePadMenu()
 #define ConnectMenu( id, handler ) \
 	Connect( id, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(frmMain::handler) )
 
+void frmMain::OnMoveAround( wxMoveEvent& evt )
+{
+	if( Conf().ConLogBox.AutoDock )
+		m_logbox.SetPosition( Conf().ConLogBox.DisplayPos = GetPosition() + wxSize( GetSize().x, 0 ) );
+
+	//evt.Skip();
+}
+
 void frmMain::ConnectMenus()
 {
+	Connect( wxEVT_MOVE, wxMoveEventHandler(frmMain::OnMoveAround) );
+
 	// This just seems a bit more flexible & intuitive to me, if overly verbose.
 	
 	ConnectMenu( Menu_QuickBootCD, Menu_QuickBootCD_Click );
@@ -115,13 +125,13 @@ void frmMain::ConnectMenus()
 
 void frmMain::OnLogBoxShown()
 {
-	newConfig.ConLogBox.Show = true;
+	Conf().ConLogBox.Show = true;
 	m_MenuItem_Console.Check( true );
 }
 
 void frmMain::OnLogBoxHidden()
 {
-	newConfig.ConLogBox.Show = false;
+	Conf().ConLogBox.Show = false;
 	m_MenuItem_Console.Check( false );
 }
 
@@ -148,6 +158,8 @@ frmMain::frmMain(wxWindow* parent, int id, const wxString& title, const wxPoint&
 	
 	m_MenuItem_Console( *new wxMenuItem( &m_menuMisc, Menu_Console, _T("Show Console"), wxEmptyString, wxITEM_CHECK ) )
 {
+
+	wxGetApp().SetConsoleFrame( m_logbox );
 
 	// ------------------------------------------------------------------------
 	// Initial menubar setup.  This needs to be done first so that the menu bar's visible size
@@ -176,22 +188,40 @@ frmMain::frmMain(wxWindow* parent, int id, const wxString& title, const wxPoint&
 	wxBoxSizer& joe( *new wxBoxSizer( wxVERTICAL ) );
 	joe.Add( &m_background );
 	SetSizerAndFit( &joe );
+	
+	// Valid zone for window positioning.
+	// Top/Left boundaries are fairly strict, since any more offscreen and the window titlebar
+	// would be obscured from being grabbable.
 
-	if( newConfig.MainGuiPosition == wxDefaultPosition )
-		newConfig.MainGuiPosition = GetPosition();
+	wxRect screenzone( wxPoint(), wxGetDisplaySize() );
+
+	// Use default window position if the configured windowpos is invalid (partially offscreen)
+	if( Conf().MainGuiPosition == wxDefaultPosition || !screenzone.Contains( wxRect( Conf().MainGuiPosition, GetSize() ) ) )
+		Conf().MainGuiPosition = GetPosition();
 	else
-		SetPosition( newConfig.MainGuiPosition );
+		SetPosition( Conf().MainGuiPosition );
 
 	// ------------------------------------------------------------------------
 	// Sort out the console log window position (must be done after fitting the window
 	// sizer, to ensure correct 'docked mode' positioning).
-	
-	if( newConfig.ConLogBox.DisplayArea == wxRectUnspecified )
-		newConfig.ConLogBox.DisplayArea =
-		wxRect( GetPosition() + wxSize( GetSize().x, 0 ), wxSize( 540, 540 ) );
 
-	m_logbox.SetSize( newConfig.ConLogBox.DisplayArea );
-	m_logbox.Show( newConfig.ConLogBox.Show );
+	Conf().ConLogBox.DisplaySize.Set(
+		std::min( std::max( Conf().ConLogBox.DisplaySize.GetWidth(), 160 ), screenzone.GetWidth() ),
+		std::min( std::max( Conf().ConLogBox.DisplaySize.GetHeight(), 160 ), screenzone.GetHeight() )
+	);
+
+	if( Conf().ConLogBox.AutoDock )
+	{
+		Conf().ConLogBox.DisplayPos = GetPosition() + wxSize( GetSize().x, 0 );
+	}
+	else if( Conf().ConLogBox.DisplayPos != wxDefaultPosition )
+	{
+		if( !screenzone.Contains( wxRect( Conf().ConLogBox.DisplayPos, wxSize( 75, 150 ) ) ) )
+			Conf().ConLogBox.DisplayPos = wxDefaultPosition;
+	}
+
+	m_logbox.SetSize( wxRect( Conf().ConLogBox.DisplayPos, Conf().ConLogBox.DisplaySize ) );
+	m_logbox.Show( Conf().ConLogBox.Show );
 
 	// ------------------------------------------------------------------------
 	
@@ -257,7 +287,7 @@ frmMain::frmMain(wxWindow* parent, int id, const wxString& title, const wxPoint&
 
 	ConnectMenus();
 	
-	m_MenuItem_Console.Check( newConfig.ConLogBox.Show );
+	m_MenuItem_Console.Check( Conf().ConLogBox.Show );
 }
 
 void frmMain::Menu_QuickBootCD_Click(wxCommandEvent &event)

@@ -495,28 +495,6 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\WinConsole.cpp"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PrecompiledHeaderThrough="Win32.h"
-						PrecompiledHeaderFile="$(IntDir)\win32.pch"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Devel|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PrecompiledHeaderThrough="Win32.h"
-						PrecompiledHeaderFile="$(IntDir)\win32.pch"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
 				RelativePath="..\WindowsPCH.cpp"
 				>
 				<FileConfiguration
@@ -829,6 +807,10 @@
 			</File>
 			<File
 				RelativePath="..\..\SourceLog.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\StringUtils.cpp"
 				>
 			</File>
 			<File
@@ -2905,6 +2887,14 @@
 			Name="NewGUI"
 			>
 			<File
+				RelativePath="..\..\NewGUI\App.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\NewGUI\AppConfig.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\NewGUI\CheckedStaticBox.cpp"
 				>
 			</File>
@@ -2914,10 +2904,6 @@
 			</File>
 			<File
 				RelativePath="..\..\NewGUI\ConsoleLogger.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\NewGUI\ConsoleLogger.h"
 				>
 			</File>
 			<File

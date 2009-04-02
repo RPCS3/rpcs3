@@ -221,14 +221,19 @@ void OnStates_SaveOther()
 		States_Save( szFileName );
 }
 
+static void CreateDirs()
+{
+	Path::CreateDirectory(MEMCARDS_DIR);
+	Path::CreateDirectory(SSTATES_DIR);
+	Path::CreateDirectory(SNAPSHOTS_DIR);
+}
+
 bool HostGuiInit()
 {
 	if( sinit ) return true;
 	sinit = true;
 
-	CreateDirectory(MEMCARDS_DIR, NULL);
-	CreateDirectory(SSTATES_DIR, NULL);
-	CreateDirectory(SNAPSHOTS_DIR, NULL);
+	CreateDirs();
 
 	// Set the compression attribute on the Memcards folder.
 	// Memcards generally compress very well via NTFS compression.

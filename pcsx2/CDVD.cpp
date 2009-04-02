@@ -1287,7 +1287,7 @@ static uint cdvdStartSeek( uint newsector, CDVD_MODE_TYPE mode )
 {
 	cdvd.SeekToSector = newsector;
 
-	uint delta = abs(cdvd.SeekToSector - cdvd.Sector);
+	uint delta = abs((int)cdvd.SeekToSector - (int)cdvd.Sector);
 	uint seektime;
 
 	cdvd.Ready = 0;
@@ -2045,13 +2045,18 @@ void cdvdWrite16(u8 rt)		 // SCOMMAND
 				if (cdvd.mg_maxsize != cdvd.mg_size)				goto fail_pol_cal;
 				if (cdvd.mg_size < 0x20)							goto fail_pol_cal;
 				if (cdvd.mg_size != *(u16*)&cdvd.mg_buffer[0x14])	goto fail_pol_cal;
-				SysPrintf("[MG] ELF_size=0x%X Hdr_size=0x%X unk=0x%X flags=0x%X count=%d zones=",
+				Console::Write("[MG] ELF_size=0x%X Hdr_size=0x%X unk=0x%X flags=0x%X count=%d zones=", params
 					*(u32*)&cdvd.mg_buffer[0x10], *(u16*)&cdvd.mg_buffer[0x14], *(u16*)&cdvd.mg_buffer[0x16],
 					*(u16*)&cdvd.mg_buffer[0x18], *(u16*)&cdvd.mg_buffer[0x1A]);
 				for (i=0; i<8; i++)
+				{
 					if (cdvd.mg_buffer[0x1C] & (1<<i))
-						SysPrintf("%s ", mg_zones[i]);
-				SysPrintf("\n");
+					{
+						Console::Write( mg_zones[i] );
+						Console::Write( " " );
+					}
+				}
+				Console::Newline();
 				bit_ofs = mg_BIToffset(cdvd.mg_buffer);
                 psrc = (u64*)&cdvd.mg_buffer[bit_ofs-0x20];
                 pdst = (u64*)cdvd.mg_kbit;

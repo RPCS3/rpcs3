@@ -43,7 +43,7 @@
 // in the version after it completely.
 //
 // Recommended setting: 0 (please update your code)
-#define WXWIN_COMPATIBILITY_2_6 1
+#define WXWIN_COMPATIBILITY_2_6 0
 
 // MSW-only: Set to 0 for accurate dialog units, else 1 for old behaviour when
 // default system font is used for wxWindow::GetCharWidth/Height() instead of
@@ -86,7 +86,7 @@
 // Default is 0
 //
 // Recommended setting: 1 if you are not using a memory debugging tool, else 0
-#define wxUSE_MEMORY_TRACING 0
+#define wxUSE_MEMORY_TRACING 1
 
 // In debug mode, cause new and delete to be redefined globally.
 // If this causes problems (e.g. link errors which is a common problem
