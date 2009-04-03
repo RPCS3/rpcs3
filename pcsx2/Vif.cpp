@@ -431,8 +431,8 @@ void __fastcall UNPACK_V2_16s(u32 *dest, u32 *data, int size)
 void __fastcall UNPACK_V2_16u(u32 *dest, u32 *data, int size)
 {
 	u16 *sdata = (u16*)data;
-	if (size > 0) if (_UNPACKpart(OFFSET_X, dest++, *sdata++));
-	if (size > 0) if (_UNPACKpart(OFFSET_Y, dest++, *sdata--));
+	if (size > 0) if (_UNPACKpart(OFFSET_X, dest++, *sdata++)) size--;
+	if (size > 0) if (_UNPACKpart(OFFSET_Y, dest++, *sdata--)) size--;
 	_UNPACKpart(OFFSET_Z, dest++, *sdata++);
 	_UNPACKpart(OFFSET_W, dest , *sdata);
 	if (_vifRegs->offset == 4) _vifRegs->offset = 0;
