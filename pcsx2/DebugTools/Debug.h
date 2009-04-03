@@ -74,6 +74,7 @@ namespace R3000A
 #ifdef PCSX2_DEVBUILD
 
 extern u32 varLog;
+extern bool enableLogging;
 
 void SourceLog( u16 protocol, u8 source, u32 cpuPc, u32 cpuCycle, const char *fmt, ...);
 void __Log( const char* fmt, ... );

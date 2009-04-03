@@ -386,14 +386,19 @@ namespace HostGui
 
 	void __fastcall KeyEvent( keyEvent* ev )
 	{
-		static int shiftkey = 0;
+		struct KeyModifiers *keymod = &keymodifiers;
 
 		if (ev == NULL) return;
 		if (ev->evt == KEYRELEASE)
 		{
 			switch (ev->key)
 			{
-				case VK_SHIFT: shiftkey = 0; break;
+				case VK_SHIFT: keymod->shift = FALSE; break;
+				case VK_CONTROL: keymod->control = FALSE; break;
+				/* They couldn't just name this something simple, like VK_ALT */
+				case VK_MENU: keymod->alt = FALSE; break; 
+				case VK_CAPITAL: keymod->capslock = FALSE; break;
+				
 			}
 			GSkeyEvent(ev); return;
 		}
@@ -402,14 +407,17 @@ namespace HostGui
 
 		switch (ev->key)
 		{
-			case VK_SHIFT: shiftkey = 1; break;
-
+			case VK_SHIFT: keymod->shift = TRUE; break;
+			case VK_CONTROL: keymod->control = TRUE; break;
+			case VK_MENU: keymod->alt = TRUE; break;
+			case VK_CAPITAL: keymod->capslock = TRUE; break;
+			
 			case VK_F1: case VK_F2:  case VK_F3:  case VK_F4:
 			case VK_F5: case VK_F6:  case VK_F7:  case VK_F8:
 			case VK_F9: case VK_F10: case VK_F11: case VK_F12: 
 				try
 				{
-					ProcessFKeys(ev->key-VK_F1 + 1, shiftkey);
+					ProcessFKeys(ev->key-VK_F1 + 1, keymod);
 				}
 				catch( Exception::CpuStateShutdown& )
 				{

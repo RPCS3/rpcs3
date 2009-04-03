@@ -19,6 +19,15 @@
 #ifndef __MISC_H__
 #define __MISC_H__
 
+struct KeyModifiers
+{
+	bool control;
+	bool alt;
+	bool shift;
+	bool capslock;
+};
+extern struct KeyModifiers keymodifiers;
+
 // Per ChickenLiver, this is being used to pass the GS plugins window handle to the Pad plugins.
 // So a rename to pDisplay is in the works, but it will not, in fact, be removed.
 extern uptr pDsp;	//Used in  GS, MTGS, Plugins, Misc
@@ -55,7 +64,7 @@ extern u64 GetCPUTicks();
 extern u64 GetTickFrequency();
 
 // Used in Misc,and Windows/Linux files.
-extern void ProcessFKeys(int fkey, int shift); // processes fkey related commands value 1-12
+extern void ProcessFKeys(int fkey,  struct KeyModifiers *keymod); // processes fkey related commands value 1-12
 extern int IsBIOS(const char *filename, char *description);
 
 char *ParseLang(char *id);

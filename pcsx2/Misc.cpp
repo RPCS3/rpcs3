@@ -51,6 +51,8 @@ char CdromId[12];
 static int g_Pcsx2Recording = 0; // true 1 if recording video and sound
 bool renderswitch = 0;
 
+struct KeyModifiers keymodifiers = {false, false, false, false};
+
 #define NUM_STATES 10
 int StatesC = 0;
 
@@ -489,11 +491,12 @@ void CycleFrameLimit(int dir)
 	//SaveConfig();
 }
 
-void ProcessFKeys(int fkey, int shift)
+void ProcessFKeys(int fkey, struct KeyModifiers *keymod)
 {
 	assert(fkey >= 1 && fkey <= 12 );
 
-	switch(fkey) {
+	switch(fkey) 
+	{
 		case 1:
 			try
 			{
@@ -511,7 +514,7 @@ void ProcessFKeys(int fkey, int shift)
 			break;
 
 		case 2:
-			if( shift )
+			if( keymod->shift )
 				StatesC = (StatesC+NUM_STATES-1) % NUM_STATES;
 			else
 				StatesC = (StatesC+1) % NUM_STATES;
@@ -558,7 +561,7 @@ void ProcessFKeys(int fkey, int shift)
 			break;
 
 		case 4:
-			CycleFrameLimit(shift ? -1 : 1);
+			CycleFrameLimit(keymod->shift ? -1 : 1);
 			break;
 
 		// note: VK_F5-VK_F7 are reserved for GS
@@ -567,7 +570,8 @@ void ProcessFKeys(int fkey, int shift)
 			break;
 		
 		case 9: //gsdx "on the fly" renderer switching 
-			if (!renderswitch) {
+			if (!renderswitch) 
+			{
 				StateRecovery::MakeGsOnly();
 				g_EmulationInProgress = false;
 				CloseGS();
@@ -575,7 +579,8 @@ void ProcessFKeys(int fkey, int shift)
 				StateRecovery::Recover();
 				HostGui::BeginExecution(); //also sets g_EmulationInProgress to true later
 			}
-			else {
+			else 
+			{
 				StateRecovery::MakeGsOnly();
 				g_EmulationInProgress = false;
 				CloseGS();
@@ -585,21 +590,35 @@ void ProcessFKeys(int fkey, int shift)
 			}
 			break;
 #ifdef PCSX2_DEVBUILD
-	
+		case 10:
+			// There's likely a better way to implement this, but this seemed useful.
+			// I might add turning EE, VU0, and VU1 recs on and off by hotkey at some point, too.
+			// --arcum42
+			enableLogging = !enableLogging;
+		
+			if (enableLogging)
+				GSprintf(10, "Logging Enabled.");
+			else
+				GSprintf(10,"Logging Disabled.");
+			
+			break;
 		case 11:
-			if( mtgsThread != NULL ) {
+			if( mtgsThread != NULL ) 
+			{
 				Console::Notice( "Cannot make gsstates in MTGS mode" );
 			}
 			else
 			{
 				string Text;
-				if( strgametitle[0] != 0 ) {
+				if( strgametitle[0] != 0 ) 
+				{
 					// only take the first two words
 					char name[256], *tok;
 					string gsText;
 
 					tok = strtok(strgametitle, " ");
 					sprintf(name, "%s_", mystrlwr(tok));
+					
 					tok = strtok(NULL, " ");
 					if( tok != NULL ) strcat(name, tok);
 
@@ -607,28 +626,32 @@ void ProcessFKeys(int fkey, int shift)
 					Text = Path::Combine( SSTATES_DIR, gsText );
 				}
 				else
+				{
 					Text = GetGSStateFilename();
-
+				}
+				
 				SaveGSState(Text);
 			}
 			break;
 #endif
 
 		case 12:
-			if( shift ) {
+			if( keymod->shift ) 
+			{
 #ifdef PCSX2_DEVBUILD
 				iDumpRegisters(cpuRegs.pc, 0);
 				Console::Notice("hardware registers dumped EE:%x, IOP:%x\n", params cpuRegs.pc, psxRegs.pc);
 #endif
 			}
-			else {
+			else 
+			{
 				g_Pcsx2Recording ^= 1;
-				if( mtgsThread != NULL ) {
+				
+				if( mtgsThread != NULL ) 
 					mtgsThread->SendSimplePacket(GS_RINGTYPE_RECORD, g_Pcsx2Recording, 0, 0);
-				}
-				else {
-					if( GSsetupRecording != NULL ) GSsetupRecording(g_Pcsx2Recording, NULL);
-				}
+				else if( GSsetupRecording != NULL ) 
+					GSsetupRecording(g_Pcsx2Recording, NULL);
+				
 				if( SPU2setupRecording != NULL ) SPU2setupRecording(g_Pcsx2Recording, NULL);  
 			}
 			break;
