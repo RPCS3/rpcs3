@@ -71,6 +71,7 @@ namespace R3000A
 	extern char* disR3000AF(u32 code, u32 pc);
 }
 
+extern bool enableLogging;
 #ifdef PCSX2_DEVBUILD
 
 extern u32 varLog;

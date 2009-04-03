@@ -28,7 +28,6 @@
 #include "Misc.h"
 #include "Threading.h"		// to use threading stuff, include the Threading namespace in your file.
 
-
 enum PageProtectionMode
 {
 	Protect_NoAccess = 0,

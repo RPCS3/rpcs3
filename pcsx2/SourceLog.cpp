@@ -38,13 +38,13 @@ FILE *emuLog;
 
 #ifdef PCSX2_DEVBUILD
 u32 varLog;
-bool enableLogging = TRUE;
 
 // these used by the depreciated _old_Log only
 u16 logProtocol;
 u8 logSource;
 #endif
 
+bool enableLogging = TRUE;
 int connected=0;
 
 #define SYNC_LOGGING
