@@ -145,6 +145,7 @@
 				PrecompiledHeaderFile="$(IntDir)\$(TargetName).pch"
 				WarningLevel="3"
 				SuppressStartupBanner="true"
+				DebugInformationFormat="0"
 				CompileAs="2"
 			/>
 			<Tool
