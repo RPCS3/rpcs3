@@ -2133,7 +2133,7 @@ int  _VIF1chain()
 	u32 *pMem;
 	u32 ret;
 
-	if (vif1ch->qwc == 0 && vif1.vifstalled == 0 && vif1.irqoffset == 0)
+	if (vif1ch->qwc == 0)
 	{
 		vif1.inprogress = 0;
 		return 0;
@@ -2233,7 +2233,7 @@ __forceinline void vif1SetupTransfer()
 				}
 			}
 
-			
+			vif1.irqoffset = 0;
 			vif1.done |= hwDmacSrcChainWithStack(vif1ch, id);
 
 			if ((vif1ch->chcr & 0x80) && (vif1ptag[0] >> 31))  			       //Check TIE bit of CHCR and IRQ bit of tag
@@ -2407,7 +2407,7 @@ void vif1Write32(u32 mem, u32 value)
 			//   just stoppin the VIF (linuz).
 			vif1Regs->stat |= VIF1_STAT_VSS;
 			vif1Regs->stat &= ~VIF1_STAT_VPS;
-			vif1.inprogress = 0;
+			cpuRegs.interrupt &= ~((1 << 1) | (1 << 10)); //Stop all vif1 DMA's
 			vif1.vifstalled = 1;
 		}
 		if (value & 0x8)
