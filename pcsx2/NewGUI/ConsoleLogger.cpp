@@ -104,6 +104,7 @@ ConsoleLogFrame::ConsoleLogFrame(MainEmuFrame *parent, const wxString& title) :
     ClearColor();
     
 	Connect( wxEVT_MOVE, wxMoveEventHandler(ConsoleLogFrame::OnMoveAround) );
+	Connect( wxEVT_SIZE, wxSizeEventHandler(ConsoleLogFrame::OnResize) );
 }
 
 ConsoleLogFrame::~ConsoleLogFrame() { }
@@ -118,6 +119,14 @@ void ConsoleLogFrame::OnMoveAround( wxMoveEvent& evt )
 	
 	if( snapzone.Contains( GetPosition() ) )
 		SetPosition( topright + wxSize( 1,0 ) );
+
+	evt.Skip();
+}
+
+void ConsoleLogFrame::OnResize( wxSizeEvent& evt )
+{
+	Conf().ConLogBox.DisplaySize = GetSize();
+	evt.Skip();
 }
 
 void ConsoleLogFrame::DoClose()

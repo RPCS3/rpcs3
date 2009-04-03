@@ -50,4 +50,5 @@ void AppConfig::LoadSettings()
 void AppConfig::SaveSettings()
 {
 	Write( wxT("ConLogDisplayPosition"), ConLogBox.AutoDock ? "docked" : ToString( ConLogBox.DisplayPos ) );
+	Write( wxT("ConLogDisplaySize"), ToString( ConLogBox.DisplaySize ) );
 }

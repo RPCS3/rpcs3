@@ -22,7 +22,8 @@
 #include "AboutBoxDialog.h"
 #include "wxHelpers.h"
 
-#include "ps2_silver.h"
+#include "Resources/EmbeddedImage.h"
+#include "Resources/ps2_silver.h"
 
 #include <wx/mstream.h>
 #include <wx/hyperlink.h>
@@ -46,8 +47,9 @@ public:
 
 AboutBoxDialog::AboutBoxDialog( wxWindow* parent, int id ):
 	wxDialog( parent, id, _("About Pcsx2") ),
-	m_bitmap_logo( this, wxID_ANY, wxGetApp().GetLogoBitmap(), wxDefaultPosition, wxDefaultSize, wxBORDER_SUNKEN ),
-	m_bitmap_ps2system( this, wxID_ANY, wxBitmap( wxImage( wxMemoryInputStream( png_ps2_silver, PNG_PS2_SILVER_LEN ), wxBITMAP_TYPE_PNG ) ),
+	m_bitmap_logo( this, wxID_ANY, wxGetApp().GetLogoBitmap(),
+		wxDefaultPosition, wxDefaultSize, wxBORDER_SUNKEN ),
+	m_bitmap_ps2system( this, wxID_ANY, wxBitmap( EmbeddedImage<png_ps2_silver>().GetImage() ),
 		wxDefaultPosition, wxDefaultSize, wxBORDER_SUNKEN )
 {
 	static const wxString LabelAuthors = _(

@@ -19,7 +19,8 @@
 #include "PrecompiledHeader.h"
 #include "MainFrame.h"
 
-#include <wx/image.h>
+#include "Resources/EmbeddedImage.h"
+#include "Resources/BackgroundLogo.h"
 
 #include <ShlObj.h>
 
@@ -115,7 +116,7 @@ bool Pcsx2App::OnInit()
 	m_GlobalConfig = new AppConfig( Path::Combine( PathDefs::GetConfigs(), GetAppName() ) + ".ini" );
 	m_GlobalConfig->LoadSettings();
 
-	m_Bitmap_Logo = new wxBitmap( _T("./pcsxAbout.png"), wxBITMAP_TYPE_PNG );
+	m_Bitmap_Logo = new wxBitmap( EmbeddedImage<png_BackgroundLogo>().GetImage() );
 
     m_MainFrame = new MainEmuFrame( NULL, wxID_ANY, wxEmptyString );
     SetTopWindow( m_MainFrame );

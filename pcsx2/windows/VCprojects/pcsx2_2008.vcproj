@@ -3253,6 +3253,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\Resources\EmbeddedImage.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\NewGUI\main.cpp"
 				>
 			</File>
@@ -3297,6 +3301,22 @@
 				</File>
 				<File
 					RelativePath="..\..\NewGUI\Dialogs\LogOptionsDialog.h"
+					>
+				</File>
+			</Filter>
+			<Filter
+				Name="Resources"
+				>
+				<File
+					RelativePath="..\..\Resources\AppIcon.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\Resources\BackgroundLogo.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\Resources\ps2_silver.h"
 					>
 				</File>
 			</Filter>

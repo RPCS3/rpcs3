@@ -22,6 +22,9 @@
 #include "Dialogs/LogOptionsDialog.h"
 #include "Dialogs/AboutBoxDialog.h"
 
+#include "Resources/EmbeddedImage.h"
+#include "Resources/AppIcon.h"
+
 using namespace Dialogs;
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -181,7 +184,11 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, int id, const wxString& title, cons
 	wxSize backsize( m_background.GetSize() );
 
 	SetTitle(_t("Pcsx2"));
-	SetIcon( wxIcon( wxT("./cdrom02.png"), wxBITMAP_TYPE_PNG ) );
+
+	wxIcon myIcon;
+	myIcon.CopyFromBitmap( wxBitmap( EmbeddedImage<png_AppIcon>().GetImage() ) );
+	SetIcon( myIcon );
+
 	int m_statusbar_widths[] = { (int)(backsize.GetWidth()*0.73), (int)(backsize.GetWidth()*0.25) };
 	m_statusbar.SetStatusWidths(2, m_statusbar_widths);
 	m_statusbar.SetStatusText( _T("The Status is Good!"), 0);

@@ -25,6 +25,8 @@
 
 class MainEmuFrame;
 
+//////////////////////////////////////////////////////////////////////////////////////////
+//
 struct ConsoleLogOptions
 {
 	bool Show;
@@ -89,6 +91,7 @@ protected:
 	DECLARE_EVENT_TABLE()
 	
 	void OnMoveAround( wxMoveEvent& evt );
+	void OnResize( wxSizeEvent& evt );
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -123,3 +126,4 @@ public:
 DECLARE_APP(Pcsx2App)
 
 static AppConfig& Conf() { return wxGetApp().GetActiveConfig(); }
+

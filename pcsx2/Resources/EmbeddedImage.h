@@ -18,19 +18,20 @@
 
 #pragma once
 
-#include <wx/wx.h>
 #include <wx/image.h>
+#include <wx/mstream.h>
 
-namespace Dialogs
+template< typename ImageType >
+class EmbeddedImage
 {
-	class AboutBoxDialog: public wxDialog
+protected:
+	wxImage m_Image;
+public:
+	EmbeddedImage() : m_Image()
 	{
-	public:
-		AboutBoxDialog( wxWindow* parent, int id );
+		wxMemoryInputStream joe( ImageType::Data, ImageType::Length );
+		m_Image.LoadFile( joe, ImageType::GetFormat() );
+	}
 
-	protected:
-		wxStaticBitmap m_bitmap_logo;
-		wxStaticBitmap m_bitmap_ps2system;
-
-	};
-}
+	const wxImage& GetImage() { return m_Image; }
+};

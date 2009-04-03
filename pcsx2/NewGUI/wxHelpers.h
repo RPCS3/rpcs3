@@ -19,6 +19,8 @@ namespace wxHelpers
 	extern wxSizerFlags CheckboxFlags;
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////
+//
 class wxDialogWithHelpers : public wxDialog
 {
 protected:
@@ -32,4 +34,3 @@ protected:
 	void AddOkCancel( wxBoxSizer& sizer );
 	
 };
-
