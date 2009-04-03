@@ -136,6 +136,7 @@
 				AdditionalIncludeDirectories=""
 				PreprocessorDefinitions="NDEBUG"
 				StringPooling="true"
+				MinimalRebuild="true"
 				ExceptionHandling="2"
 				SmallerTypeCheck="false"
 				BufferSecurityCheck="false"
@@ -145,7 +146,7 @@
 				PrecompiledHeaderFile="$(IntDir)\$(TargetName).pch"
 				WarningLevel="3"
 				SuppressStartupBanner="true"
-				DebugInformationFormat="0"
+				DebugInformationFormat="3"
 				CompileAs="2"
 			/>
 			<Tool
