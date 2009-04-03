@@ -49,12 +49,6 @@ struct _langs {
 
 _langs *langs = NULL;
 
-void strcatz(char *dst, char *src)
-{
-	int len = strlen(dst) + 1;
-	strcpy(dst + len, src);
-}
-
 
 //2002-09-20 (Florin)
 BOOL APIENTRY CmdlineProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);//forward def
@@ -1085,45 +1079,3 @@ void CreateMainWindow()
 	SetWindowPos(hWnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE|SWP_NOSIZE);
 }
 
-
-WIN32_FIND_DATA lFindData;
-HANDLE lFind;
-int lFirst;
-
-void InitLanguages() {
-	lFind = FindFirstFile("Langs\\*", &lFindData);
-	lFirst = 1;
-}
-
-char *GetLanguageNext() {
-	for (;;) {
-		if (!strcmp(lFindData.cFileName, ".")) {
-			if (FindNextFile(lFind, &lFindData) == FALSE)
-				return NULL;
-			continue;
-		}
-		if (!strcmp(lFindData.cFileName, "..")) {
-			if (FindNextFile(lFind, &lFindData) == FALSE)
-				return NULL;
-			continue;
-		}
-		break;
-	}
-	if (lFirst == 0) {
-		if (FindNextFile(lFind, &lFindData) == FALSE)
-			return NULL;
-	} else lFirst = 0;
-	if (lFind==INVALID_HANDLE_VALUE) return NULL;
-
-	return lFindData.cFileName;
-}
-
-void CloseLanguages() {
-	if (lFind!=INVALID_HANDLE_VALUE) FindClose(lFind);
-}
-
-void ChangeLanguage(char *lang) {
-	strcpy_s(Config.Lang, lang);
-	SaveConfig();
-	LoadConfig();
-}

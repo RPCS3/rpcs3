@@ -157,6 +157,13 @@ void SysPrintf(const char *fmt, ...)
 	Console::Write( msg );
 }
 
+static void strcatz(char *dst, char *src)
+{
+	int len = strlen(dst) + 1;
+	strcpy(dst + len, src);
+}
+
+
 void OnStates_LoadOther()
 {
 	OPENFILENAME ofn;

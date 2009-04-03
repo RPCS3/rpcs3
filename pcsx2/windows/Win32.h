@@ -138,7 +138,6 @@ extern void ExecuteCpu();
 extern void OnStates_LoadOther();
 extern void OnStates_SaveOther();
 extern int ParseCommandLine( int tokenCount, TCHAR *const *const tokens );
-extern void strcatz(char *dst, char *src);
 
 extern BOOL CALLBACK PatchBDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam);
 extern BOOL CALLBACK CpuDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam);

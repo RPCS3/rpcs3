@@ -15,29 +15,16 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
-
-#pragma once
  
-#include <wx/wx.h>
-#include <wx/image.h>
+#include "PrecompiledHeader.h"
+#include "Misc.h"
+#include "AboutBoxDialog.h"
 
-namespace Dialogs
+namespace Dialogs {
+
+AboutBoxDialog::AboutBoxDialog( wxWindow* parent, int id ):
+	wxDialog( parent, id, _T("Game Special Fixes") )
 {
-	class GameFixesDialog: public wxDialog
-	{
-	public:
-
-		GameFixesDialog(wxWindow* parent, int id, const wxPoint& pos=wxDefaultPosition, const wxSize& size=wxDefaultSize, long style=wxDEFAULT_FRAME_STYLE);
-
-	protected:
-
-		DECLARE_EVENT_TABLE();
-
-	public:
-		void FPUCompareHack_Click(wxCommandEvent &event);
-		void TriAce_Click(wxCommandEvent &event);
-		void GodWar_Click(wxCommandEvent &event);
-		void Ok_Click(wxCommandEvent &event);
-		void Cancel_Click(wxCommandEvent &event);
-	};
 }
+
+}	// end namespace Dialogs
