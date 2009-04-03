@@ -22,8 +22,7 @@
 #include "Resources/EmbeddedImage.h"
 #include "Resources/BackgroundLogo.h"
 
-#include <ShlObj.h>
-
+#include <wx/stdpaths.h>
 
 IMPLEMENT_APP(Pcsx2App)
 
@@ -54,9 +53,7 @@ namespace PathDefs
 	wxString GetDocuments()
 	{
 		#ifdef _WIN32
-			wxChar path[MAX_PATH];
-			SHGetFolderPath( NULL, CSIDL_MYDOCUMENTS, NULL, SHGFP_TYPE_CURRENT, path );
-			return Path::Combine( path, wxGetApp().GetAppName().c_str() );
+			return Path::Combine( wxStandardPaths::Get().GetDocumentsDir(), wxGetApp().GetAppName() );
 		#else
 			return wxGetHomeDir();
 		#endif
