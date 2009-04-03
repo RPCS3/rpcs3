@@ -21,13 +21,15 @@
 #include <wx/wx.h>
 #include <wx/image.h>
 
+#include "wxHelpers.h"
+
 namespace Dialogs
 {
-	class GameFixesDialog: public wxDialog
+	class GameFixesDialog: public wxDialogWithHelpers
 	{
 	public:
 
-		GameFixesDialog(wxWindow* parent, int id, const wxPoint& pos=wxDefaultPosition, const wxSize& size=wxDefaultSize, long style=wxDEFAULT_FRAME_STYLE);
+		GameFixesDialog(wxWindow* parent, int id);
 
 	protected:
 

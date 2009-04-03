@@ -56,34 +56,6 @@ int StatesC = 0;
 extern wxString strgametitle;
 
 
-const char *LabelAuthors = { 
-	"PCSX2, a PS2 emulator\n\n"
-	"Active Devs: Arcum42, Refraction,\n"
-	"drk||raziel, cottonvibes, gigaherz,\n"
-	"rama, Jake.Stine, saqib, Tmkk\n"
-	"\n"
-	"Inactive devs: Alexey silinov, Aumatt,\n"
-	"Florin, goldfinger, Linuzappz, loser,\n"
-	"Nachbrenner, shadow, Zerofrog\n"
-	"\n"
-	"Betatesting: Bositman, ChaosCode,\n"
-	"CKemu, crushtest, GeneralPlot,\n"
-	"Krakatos, Parotaku, Rudy_X\n"
-	"\n"
-	"Webmasters: CKemu, Falcon4ever"
-};
-
-const char *LabelGreets = { 
-	"Contributors: Hiryu and Sjeep for libcvd (the iso parsing and\n"
-	"filesystem driver code), nneeve, pseudonym\n"
-	"\n"
-	"Plugin Specialists: ChickenLiver (Lilypad), Efp (efp),\n"
-	"Gabest (Gsdx, Cdvdolio, Xpad)\n"
-	"\n"
-	"Special thanks to: black_wd, Belmont, BGome, _Demo_, Dreamtime,\n"
-	"F|RES, MrBrown, razorblade, Seta-san, Skarmeth"
-};
-
 #define DIRENTRY_SIZE 16
 
 #if defined(_MSC_VER)

@@ -19,6 +19,6 @@
 #ifndef _PCSX2_ABOUTDLG_H_
 #define _PCSX2_ABOUTDLG_H_
 
-LRESULT WINAPI AboutDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
+//LRESULT WINAPI AboutDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 #endif

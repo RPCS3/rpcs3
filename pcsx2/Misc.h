@@ -61,8 +61,8 @@ extern u64 GetTickFrequency();
 extern void ProcessFKeys(int fkey, int shift); // processes fkey related commands value 1-12
 extern int IsBIOS(const char *filename, char *description);
 
-extern const char *LabelAuthors;
-extern const char *LabelGreets;
+//extern const char *LabelAuthors;
+//extern const char *LabelGreets;
 void CycleFrameLimit(int dir);
 
 void SaveGSState(const wxString& file);

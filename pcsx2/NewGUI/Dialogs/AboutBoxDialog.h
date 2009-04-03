@@ -29,5 +29,9 @@ namespace Dialogs
 	public:
 		AboutBoxDialog( wxWindow* parent, int id );
 
+	protected:
+		wxStaticBitmap m_bitmap_logo;
+		wxStaticBitmap m_bitmap_ps2system;
+
 	};
 }

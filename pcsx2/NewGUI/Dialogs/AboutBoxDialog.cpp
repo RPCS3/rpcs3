@@ -18,13 +18,108 @@
  
 #include "PrecompiledHeader.h"
 #include "Misc.h"
+#include "App.h"
 #include "AboutBoxDialog.h"
+#include "wxHelpers.h"
+
+#include "ps2_silver.h"
+
+#include <wx/mstream.h>
+#include <wx/hyperlink.h>
+using namespace wxHelpers;
 
 namespace Dialogs {
 
-AboutBoxDialog::AboutBoxDialog( wxWindow* parent, int id ):
-	wxDialog( parent, id, _T("Game Special Fixes") )
+//////////////////////////////////////////////////////////////////////////////////////////
+// Helper class for creating wxStaticText labels which are aligned to center.
+// (automates the passing of wxDefaultSize and wxDefaultPosition)
+//
+class StaticTextCentered : public wxStaticText
 {
+public:
+	StaticTextCentered( wxWindow* parent, const wxString& text, int id=wxID_ANY ) :
+		wxStaticText( parent, id, text, wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER )
+	{
+	}
+};
+
+
+AboutBoxDialog::AboutBoxDialog( wxWindow* parent, int id ):
+	wxDialog( parent, id, _("About Pcsx2") ),
+	m_bitmap_logo( this, wxID_ANY, wxGetApp().GetLogoBitmap(), wxDefaultPosition, wxDefaultSize, wxBORDER_SUNKEN ),
+	m_bitmap_ps2system( this, wxID_ANY, wxBitmap( wxImage( wxMemoryInputStream( png_ps2_silver, PNG_PS2_SILVER_LEN ), wxBITMAP_TYPE_PNG ) ),
+		wxDefaultPosition, wxDefaultSize, wxBORDER_SUNKEN )
+{
+	static const wxString LabelAuthors = _(
+		"PCSX2, a PS2 emulator\n\n"
+		"Active Devs: Arcum42, Refraction,"
+		"drk||raziel, cottonvibes, gigaherz,"
+		"rama, Jake.Stine, saqib, Tmkk"
+		"\n\n"
+		"Inactive devs: Alexey silinov, Aumatt,"
+		"Florin, goldfinger, Linuzappz, loser,"
+		"Nachbrenner, shadow, Zerofrog"
+		"\n\n"
+		"Betatesting: Bositman, ChaosCode,"
+		"CKemu, crushtest, GeneralPlot,"
+		"Krakatos, Parotaku, Rudy_X"
+		"\n\n"
+		"Webmasters: CKemu, Falcon4ever"
+	);
+
+	static const wxString LabelGreets = _(
+		"Contributors: Hiryu and Sjeep for libcvd (the iso parsing and\n"
+		"filesystem driver code), nneeve, pseudonym\n"
+		"\n"
+		"Plugin Specialists: ChickenLiver (Lilypad), Efp (efp),\n"
+		"Gabest (Gsdx, Cdvdolio, Xpad)\n"
+		"\n"
+		"Special thanks to: black_wd, Belmont, BGome, _Demo_, Dreamtime,\n"
+		"F|RES, MrBrown, razorblade, Seta-san, Skarmeth"
+	);
+
+	wxBoxSizer& mainSizer = *new wxBoxSizer( wxVERTICAL );
+
+	// This sizer holds text of the authors and a logo!
+	wxBoxSizer& AuthLogoSizer = *new wxBoxSizer( wxHORIZONTAL );
+	
+	// this sizer holds text of the contributors/testers, and a ps2 image!
+	wxBoxSizer& ContribSizer = *new wxBoxSizer( wxHORIZONTAL );
+
+	wxStaticBoxSizer& aboutUs = *new wxStaticBoxSizer( wxVERTICAL, this );
+	wxStaticBoxSizer& contribs = *new wxStaticBoxSizer( wxVERTICAL, this );
+
+	StaticTextCentered* label_auth   = new StaticTextCentered( this, LabelAuthors );
+	StaticTextCentered* label_greets = new StaticTextCentered( this, LabelGreets );
+
+	label_auth->Wrap( m_bitmap_logo.GetSize().GetWidth() / 2 );
+	label_greets->Wrap( (m_bitmap_logo.GetSize().GetWidth() * 4) / 3 );
+
+	aboutUs.Add( label_auth, stdSpacingFlags );
+	contribs.Add( label_greets, stdSpacingFlags.Expand() );
+
+	AuthLogoSizer.Add( &aboutUs );
+	AuthLogoSizer.AddSpacer( 7 );
+	AuthLogoSizer.Add( &m_bitmap_logo, wxSizerFlags().Border( wxALL, 4 ) );
+
+	ContribSizer.AddStretchSpacer( 1 );
+	ContribSizer.Add( &m_bitmap_ps2system, stdSpacingFlags );
+	ContribSizer.AddStretchSpacer( 1 );
+	ContribSizer.Add( &contribs, wxSizerFlags(7).HorzBorder().Expand() );
+
+	mainSizer.Add( &AuthLogoSizer, stdSpacingFlags );
+
+	mainSizer.Add( new wxHyperlinkCtrl(
+		this, wxID_ANY, _( "Pcsx2 Official Website and Forums" ), wxT("http://www.pcsx2.net") ),
+		wxSizerFlags(1).Center().Border( wxALL, 3 ) );
+	mainSizer.Add( new wxHyperlinkCtrl(
+		this, wxID_ANY, _( "Pcsx2 Official Svn Repository at Googlecode" ), wxT("http://code.google.com/p/pcsx2") ),
+		wxSizerFlags(1).Center().Border( wxALL, 3 ) );
+
+	mainSizer.Add( &ContribSizer, stdSpacingFlags.Expand() );
+	
+	mainSizer.Add( new wxButton( this, wxID_OK, _("I've seen enough") ), stdCenteredFlags );
+	SetSizerAndFit( &mainSizer );
 }
 
 }	// end namespace Dialogs

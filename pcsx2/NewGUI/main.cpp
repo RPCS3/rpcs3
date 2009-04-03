@@ -115,11 +115,11 @@ bool Pcsx2App::OnInit()
 	m_GlobalConfig = new AppConfig( Path::Combine( PathDefs::GetConfigs(), GetAppName() ) + ".ini" );
 	m_GlobalConfig->LoadSettings();
 
-	// Allow wx to use our config, and enforces auto-cleanup as well
+	m_Bitmap_Logo = new wxBitmap( _T("./pcsxAbout.png"), wxBITMAP_TYPE_PNG );
 
-    MainEmuFrame* frameMain = new MainEmuFrame( NULL, wxID_ANY, wxEmptyString );
-    SetTopWindow( frameMain );
-    frameMain->Show();
+    m_MainFrame = new MainEmuFrame( NULL, wxID_ANY, wxEmptyString );
+    SetTopWindow( m_MainFrame );
+    m_MainFrame->Show();
 
     return true;
 }
@@ -128,6 +128,12 @@ int Pcsx2App::OnExit()
 {
 	m_GlobalConfig->SaveSettings();
 	return wxApp::OnExit();
+}
+
+const wxBitmap& Pcsx2App::GetLogoBitmap() const
+{
+	wxASSERT( m_Bitmap_Logo != NULL );
+	return *m_Bitmap_Logo;
 }
 
 AppConfig& Pcsx2App::GetActiveConfig() const

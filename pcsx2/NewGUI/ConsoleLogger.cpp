@@ -18,6 +18,7 @@
 
 #include "PrecompiledHeader.h"
 #include "App.h"
+#include "MainFrame.h"
 
 #include <wx/file.h>
 #include <wx/textfile.h>
@@ -80,7 +81,7 @@ BEGIN_EVENT_TABLE(ConsoleLogFrame, wxFrame)
     EVT_CLOSE(ConsoleLogFrame::OnCloseWindow)
 END_EVENT_TABLE()
 
-ConsoleLogFrame::ConsoleLogFrame(wxWindow *parent, const wxString& title) :
+ConsoleLogFrame::ConsoleLogFrame(MainEmuFrame *parent, const wxString& title) :
 	wxFrame(parent, wxID_ANY, title),
 	m_TextCtrl( *new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize,
 		wxTE_MULTILINE | wxHSCROLL | wxTE_READONLY | wxTE_RICH2 ) )
@@ -123,6 +124,8 @@ void ConsoleLogFrame::DoClose()
 {
     // instead of closing just hide the window to be able to Show() it later
     Show(false);
+    if( GetParent() != NULL )
+		wxStaticCast( GetParent(), MainEmuFrame )->OnLogBoxHidden();
 }
 
 void ConsoleLogFrame::OnClose(wxCommandEvent& WXUNUSED(event))		{ DoClose(); }

@@ -25,6 +25,8 @@ AppConfig::AppConfig( const wxString& filename ) :
 	wxFileConfig( wxEmptyString, wxEmptyString, filename, wxEmptyString, wxCONFIG_USE_RELATIVE_PATH )
 {
 	SetRecordDefaults();
+
+	// Allow wx to use our config, and enforces auto-cleanup as well
 	wxConfigBase::Set( this );
 }
 

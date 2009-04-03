@@ -30,7 +30,6 @@ class MainEmuFrame: public wxFrame
 public:
     MainEmuFrame(wxWindow* parent, int id, const wxString& title, const wxPoint& pos=wxDefaultPosition, const wxSize& size=wxDefaultSize, long style=wxDEFAULT_FRAME_STYLE);
 
-	void OnLogBoxShown();
 	void OnLogBoxHidden();
 
 protected:
@@ -124,10 +123,11 @@ protected:
 	void ConnectMenus();
 
 protected:
-	ConsoleLogFrame& m_logbox;
-    wxMenuBar& m_menubar;
+	ConsoleLogFrame m_logbox;
     wxStatusBar& m_statusbar;
-    wxStaticBitmap& m_background;
+    wxStaticBitmap m_background;
+
+	wxMenuBar& m_menubar;
 
 	wxMenu& m_menuRun;
 	wxMenu& m_menuConfig;
@@ -169,6 +169,6 @@ protected:
 	void Menu_Debug_Logging_Click(wxCommandEvent &event);
 	
 	void Menu_ShowConsole(wxCommandEvent &event);
-
+	void Menu_ShowAboutBox(wxCommandEvent &event);
 };
 

@@ -19,39 +19,28 @@
 #include "PrecompiledHeader.h"
 #include "Misc.h"
 #include "GameFixesDialog.h"
-#include "wxHelpers.h"
 
 using namespace wxHelpers;
 
 namespace Dialogs {
 
-GameFixesDialog::GameFixesDialog(wxWindow* parent, int id, const wxPoint& pos, const wxSize& size, long style):
-	wxDialog( parent, id, _T("Game Special Fixes"), pos, size )
+GameFixesDialog::GameFixesDialog( wxWindow* parent, int id ):
+	wxDialogWithHelpers( parent, id, _T("Game Special Fixes"), true )
 {
-	wxStaticBox* groupbox = new wxStaticBox( this, -1, _T("PCSX2 Gamefixes"));
 	wxStaticText* label_Title = new wxStaticText(
 		this, wxID_ANY, _T("Some games need special settings.\nConfigure them here."), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE
 	);
-	wxCheckBox* chk_FPUCompareHack = new wxCheckBox(
-		this, wxID_ANY, _T("FPU Compare Hack - Special fix for Digimon Rumble Arena 2.")
-	);
-	wxCheckBox* chk_TriAce = new wxCheckBox(
-		this, wxID_ANY, _T("VU Add / Sub Hack - Special fix for Tri-Ace games!")
-	);
-	wxCheckBox* chk_GodWar = new wxCheckBox(
-		this, wxID_ANY, _T("VU Clip Hack - Special fix for God of War")
-	);
 
 	wxBoxSizer& mainSizer = *new wxBoxSizer( wxVERTICAL );
-	wxStaticBoxSizer& groupSizer = *new wxStaticBoxSizer( groupbox, wxVERTICAL );
+	wxStaticBoxSizer& groupSizer = *new wxStaticBoxSizer( wxVERTICAL, this, _("PCSX2 Gamefixes") );
 
-	groupSizer.Add( chk_FPUCompareHack, CheckboxFlags );
-	groupSizer.Add( chk_TriAce, CheckboxFlags );
-	groupSizer.Add( chk_GodWar, CheckboxFlags );
+	AddCheckBox( groupSizer, _T("FPU Compare Hack - Special fix for Digimon Rumble Arena 2.") );
+	AddCheckBox( groupSizer, _T("VU Add / Sub Hack - Special fix for Tri-Ace games!") );
+	AddCheckBox( groupSizer, _T("VU Clip Hack - Special fix for God of War") );
 
 	mainSizer.Add( label_Title, stdCenteredFlags );
 	mainSizer.Add( &groupSizer, stdSpacingFlags );
-	mainSizer.Add( CreateStdDialogButtonSizer( wxOK | wxCANCEL ), stdButtonSizerFlags );
+	AddOkCancel( mainSizer );
 
 	SetSizerAndFit( &mainSizer );
 }

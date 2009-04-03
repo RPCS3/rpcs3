@@ -20,6 +20,7 @@
 #include "MainFrame.h"
 #include "Dialogs/GameFixesDialog.h"
 #include "Dialogs/LogOptionsDialog.h"
+#include "Dialogs/AboutBoxDialog.h"
 
 using namespace Dialogs;
 
@@ -123,12 +124,8 @@ void MainEmuFrame::ConnectMenus()
 	ConnectMenu( Menu_Debug_Logging, Menu_Debug_Logging_Click );
 	
 	ConnectMenu( Menu_Console, Menu_ShowConsole );
-}
-
-void MainEmuFrame::OnLogBoxShown()
-{
-	Conf().ConLogBox.Show = true;
-	m_MenuItem_Console.Check( true );
+	
+	ConnectMenu( Menu_About, Menu_ShowAboutBox );
 }
 
 void MainEmuFrame::OnLogBoxHidden()
@@ -140,11 +137,14 @@ void MainEmuFrame::OnLogBoxHidden()
 MainEmuFrame::MainEmuFrame(wxWindow* parent, int id, const wxString& title, const wxPoint& pos, const wxSize& size, long style):
     wxFrame(parent, id, title, pos, size, wxCAPTION|wxCLOSE_BOX|wxSYSTEM_MENU|wxBORDER_THEME),
 
-	m_logbox( *new ConsoleLogFrame( this, "Pcsx2 Log" ) ),
+	m_logbox( this, "Pcsx2 Log" ),
+
+	m_statusbar( *CreateStatusBar(2, 0) ),
+	m_background( this, wxID_ANY, wxGetApp().GetLogoBitmap() ),
+
+	// All menu components must be created on the heap!
 
 	m_menubar( *new wxMenuBar() ),
-	m_statusbar( *CreateStatusBar(2, 0) ),
-	m_background( *new wxStaticBitmap(this, wxID_ANY, wxBitmap(_T("./pcsxAbout.png"), wxBITMAP_TYPE_PNG) ) ),
 
 	m_menuRun( *new wxMenu() ),
 	m_menuConfig( *new wxMenu() ),
@@ -336,8 +336,7 @@ void MainEmuFrame::Menu_Reset_Click(wxCommandEvent &event)
 
 void MainEmuFrame::Menu_Gamefixes_Click( wxCommandEvent& event )
 {
-	GameFixesDialog joe( NULL, wxID_ANY );
-	joe.ShowModal();
+	GameFixesDialog( this, wxID_ANY ).ShowModal();
 }
 
 void MainEmuFrame::Menu_Debug_Open_Click(wxCommandEvent &event)
@@ -350,11 +349,15 @@ void MainEmuFrame::Menu_Debug_MemoryDump_Click(wxCommandEvent &event)
 
 void MainEmuFrame::Menu_Debug_Logging_Click(wxCommandEvent &event)
 {
-	LogOptionsDialog joe( NULL, wxID_ANY );
-	joe.ShowModal();
+	LogOptionsDialog( this, wxID_ANY ).ShowModal();
 }
 
 void MainEmuFrame::Menu_ShowConsole(wxCommandEvent &event)
 {
 	m_logbox.Show( event.IsChecked() );
+}
+
+void MainEmuFrame::Menu_ShowAboutBox(wxCommandEvent &event)
+{
+	AboutBoxDialog( this, wxID_ANY ).ShowModal();
 }
