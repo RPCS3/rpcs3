@@ -35,20 +35,20 @@ namespace OpcodeImpl
 *********************************************************/
 #ifndef MULTDIV_RECOMPILE
 
-REC_FUNC(MULT);
-REC_FUNC(MULTU);
-REC_FUNC( MULT1 );
-REC_FUNC( MULTU1 );
+REC_FUNC_DEL(MULT , _Rd_);
+REC_FUNC_DEL(MULTU , _Rd_);
+REC_FUNC_DEL( MULT1  , _Rd_);
+REC_FUNC_DEL( MULTU1 , _Rd_);
 
 REC_FUNC(DIV);
 REC_FUNC(DIVU);
 REC_FUNC( DIV1 );
 REC_FUNC( DIVU1 );
 
-REC_FUNC( MADD );
-REC_FUNC( MADDU );
-REC_FUNC( MADD1 );
-REC_FUNC( MADDU1 );
+REC_FUNC_DEL( MADD , _Rd_ );
+REC_FUNC_DEL( MADDU  , _Rd_);
+REC_FUNC_DEL( MADD1  , _Rd_);
+REC_FUNC_DEL( MADDU1 , _Rd_ );
 
 #elif defined(EE_CONST_PROP)
 

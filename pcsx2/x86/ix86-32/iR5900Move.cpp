@@ -42,18 +42,18 @@ namespace OpcodeImpl
 namespace Interp = R5900::Interpreter::OpcodeImpl;
 
 REC_FUNC_DEL(LUI,_Rt_);
-REC_FUNC(MFLO);
-REC_FUNC(MFHI);
+REC_FUNC_DEL(MFLO, _Rd_);
+REC_FUNC_DEL(MFHI, _Rd_);
 REC_FUNC(MTLO);
 REC_FUNC(MTHI);
 
-REC_FUNC( MFHI1 );
-REC_FUNC( MFLO1 );
+REC_FUNC_DEL(MFLO1, _Rd_);
+REC_FUNC_DEL(MFHI1, _Rd_);
 REC_FUNC( MTHI1 );
 REC_FUNC( MTLO1 );
 
-REC_FUNC(MOVZ);
-REC_FUNC(MOVN);
+REC_FUNC_DEL(MOVZ, _Rd_);
+REC_FUNC_DEL(MOVN, _Rd_);
 
 #elif defined(EE_CONST_PROP)
 

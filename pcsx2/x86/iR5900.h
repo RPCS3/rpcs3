@@ -88,6 +88,17 @@ extern u32 s_nBlockCycles;		// cycles of current block recompiling
 	   branch = 2; \
    }
 
+#define REC_SYS_DEL( f, delreg ) \
+   void rec##f( void ) \
+   { \
+	   MOV32ItoM( (uptr)&cpuRegs.code, (u32)cpuRegs.code ); \
+	   MOV32ItoM( (uptr)&cpuRegs.pc, (u32)pc ); \
+	   iFlushCall(FLUSH_EVERYTHING); \
+	   if( (delreg) > 0 ) _deleteEEreg(delreg, 0); \
+	   CALLFunc( (uptr)Interp::f ); \
+	   branch = 2; \
+   }
+
 
 // Used to clear recompiled code blocks during memory/dma write operations.
 u32 recClearMem(u32 pc);

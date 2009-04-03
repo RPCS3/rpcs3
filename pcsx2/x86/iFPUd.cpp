@@ -73,6 +73,8 @@ void LoadCW() {
 	iCWstate = 0;
 }
 */
+#ifdef FPU_RECOMPILE 
+
 //------------------------------------------------------------------
 namespace R5900 {
 namespace Dynarec {
@@ -1058,3 +1060,4 @@ FPURECOMPILE_CONSTCODE(RSQRT_S, XMMINFO_WRITED|XMMINFO_READS|XMMINFO_READT);
  
  
 } } } } }
+#endif

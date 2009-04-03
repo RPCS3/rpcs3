@@ -918,20 +918,39 @@ static VuInstruction* getDelayInst(VuInstruction* pInst)
 	//     ibeq vi05, vi03
 	//   The ibeq should read the vi05 before the first sqi
 
+	//more info:
+
+	// iaddiu vi01, 0, 1
+	// ibeq vi01, 0     <- reads vi01 before the iaddiu
+
+	// iaddiu vi01, 0, 1
+	// iaddiu vi01, vi01, 1
+	// iaddiu vi01, vi01, 1
+	// ibeq vi01, 0     <- reads vi01 before the last two iaddiu's (so the value read is 1)
+
+	// ilw vi02, addr
+	// iaddiu vi01, 0, 1
+	// ibeq vi01, vi02     <- reads current values of both vi01 and vi02 because the branch instruction stalls
+
 	int delay = 1;
 	VuInstruction* pDelayInst = NULL;
 	VuInstruction* pTargetInst = pInst->pPrevInst;
-	while( 1 ) { // fixme: is 3-cycle delay really maximum? 
+	while( 1 ) { 
 		if( pTargetInst != NULL
 			&& pTargetInst->info.cycle+delay==pInst->info.cycle
 			&& (pTargetInst->regs[0].pipe == VUPIPE_IALU||pTargetInst->regs[0].pipe == VUPIPE_FMAC)
 			&& ((pTargetInst->regs[0].VIwrite & pInst->regs[0].VIread) & 0xffff)
-			&& ((pTargetInst->regs[0].VIwrite & pInst->regs[0].VIread) & 0xffff) == ((pTargetInst->regs[0].VIwrite & pInst->pPrevInst->regs[0].VIread) & 0xffff)
+			&& (delay == 1 || ((pTargetInst->regs[0].VIwrite & pInst->regs[0].VIread) & 0xffff) == ((pTargetInst->regs[0].VIwrite & pInst->pPrevInst->regs[0].VIread) & 0xffff))
 			&& !(pTargetInst->regs[0].VIread&((1<<REG_STATUS_FLAG)|(1<<REG_MAC_FLAG)|(1<<REG_CLIP_FLAG))) )
 		{
 			pDelayInst = pTargetInst;
 			pTargetInst = pTargetInst->pPrevInst;
 			delay++;
+			if (delay == 5) //maximum delay is 4 (length of the pipeline)
+			{
+				DevCon::WriteLn("supervu: cycle branch delay maximum (4) is reached");
+				break;
+			}
 		}
 		else break;
 	}
@@ -2041,9 +2060,9 @@ void VuBaseBlock::AssignVFRegs()
 				_freeXMMreg(free1);
 				_freeXMMreg(free2);
 			}
-			else if( regs->VIwrite & (1<<REG_P) ) {
+			else if( regs->VIwrite & (1<<REG_P) || regs->VIwrite & (1<<REG_Q)) {
 				free1 = _allocTempXMMreg(XMMT_FPS, -1);
-				// protects against insts like esadd vf0
+				// protects against insts like esadd vf0 and sqrt vf0
 				if( free0 == -1 )
 					free0 = free1;
 				_freeXMMreg(free1);
