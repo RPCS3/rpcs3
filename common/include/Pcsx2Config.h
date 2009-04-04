@@ -131,8 +131,6 @@ public:
 	bool closeGSonEsc; // closes the GS (and saves its state) on escape automatically.
 
 	int PsxType;
-	int Cdda;
-	int Mdec;
 	int Patch;
 	int CustomFps;
 	int Hacks;

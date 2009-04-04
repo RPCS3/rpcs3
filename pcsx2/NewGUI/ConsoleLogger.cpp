@@ -125,7 +125,7 @@ void ConsoleLogFrame::OnMoveAround( wxMoveEvent& evt )
 
 void ConsoleLogFrame::OnResize( wxSizeEvent& evt )
 {
-	Conf().ConLogBox.DisplaySize = GetSize();
+	g_Conf.ConLogBox.DisplaySize = GetSize();
 	evt.Skip();
 }
 

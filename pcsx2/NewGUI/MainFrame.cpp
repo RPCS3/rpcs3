@@ -94,8 +94,8 @@ void MainEmuFrame::PopulatePadMenu()
 
 void MainEmuFrame::OnMoveAround( wxMoveEvent& evt )
 {
-	if( Conf().ConLogBox.AutoDock )
-		m_logbox.SetPosition( Conf().ConLogBox.DisplayPos = GetPosition() + wxSize( GetSize().x, 0 ) );
+	if( g_Conf.ConLogBox.AutoDock )
+		m_logbox.SetPosition( g_Conf.ConLogBox.DisplayPosition = GetPosition() + wxSize( GetSize().x, 0 ) );
 
 	//evt.Skip();
 }
@@ -133,7 +133,7 @@ void MainEmuFrame::ConnectMenus()
 
 void MainEmuFrame::OnLogBoxHidden()
 {
-	Conf().ConLogBox.Show = false;
+	g_Conf.ConLogBox.Visible = false;
 	m_MenuItem_Console.Check( false );
 }
 
@@ -205,32 +205,32 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, int id, const wxString& title, cons
 	wxRect screenzone( wxPoint(), wxGetDisplaySize() );
 
 	// Use default window position if the configured windowpos is invalid (partially offscreen)
-	if( Conf().MainGuiPosition == wxDefaultPosition || !screenzone.Contains( wxRect( Conf().MainGuiPosition, GetSize() ) ) )
-		Conf().MainGuiPosition = GetPosition();
+	if( g_Conf.MainGuiPosition == wxDefaultPosition || !screenzone.Contains( wxRect( g_Conf.MainGuiPosition, GetSize() ) ) )
+		g_Conf.MainGuiPosition = GetPosition();
 	else
-		SetPosition( Conf().MainGuiPosition );
+		SetPosition( g_Conf.MainGuiPosition );
 
 	// ------------------------------------------------------------------------
 	// Sort out the console log window position (must be done after fitting the window
 	// sizer, to ensure correct 'docked mode' positioning).
 
-	Conf().ConLogBox.DisplaySize.Set(
-		std::min( std::max( Conf().ConLogBox.DisplaySize.GetWidth(), 160 ), screenzone.GetWidth() ),
-		std::min( std::max( Conf().ConLogBox.DisplaySize.GetHeight(), 160 ), screenzone.GetHeight() )
+	g_Conf.ConLogBox.DisplaySize.Set(
+		std::min( std::max( g_Conf.ConLogBox.DisplaySize.GetWidth(), 160 ), screenzone.GetWidth() ),
+		std::min( std::max( g_Conf.ConLogBox.DisplaySize.GetHeight(), 160 ), screenzone.GetHeight() )
 	);
 
-	if( Conf().ConLogBox.AutoDock )
+	if( g_Conf.ConLogBox.AutoDock )
 	{
-		Conf().ConLogBox.DisplayPos = GetPosition() + wxSize( GetSize().x, 0 );
+		g_Conf.ConLogBox.DisplayPosition = GetPosition() + wxSize( GetSize().x, 0 );
 	}
-	else if( Conf().ConLogBox.DisplayPos != wxDefaultPosition )
+	else if( g_Conf.ConLogBox.DisplayPosition != wxDefaultPosition )
 	{
-		if( !screenzone.Contains( wxRect( Conf().ConLogBox.DisplayPos, wxSize( 75, 150 ) ) ) )
-			Conf().ConLogBox.DisplayPos = wxDefaultPosition;
+		if( !screenzone.Contains( wxRect( g_Conf.ConLogBox.DisplayPosition, wxSize( 75, 150 ) ) ) )
+			g_Conf.ConLogBox.DisplayPosition = wxDefaultPosition;
 	}
 
-	m_logbox.SetSize( wxRect( Conf().ConLogBox.DisplayPos, Conf().ConLogBox.DisplaySize ) );
-	m_logbox.Show( Conf().ConLogBox.Show );
+	m_logbox.SetSize( wxRect( g_Conf.ConLogBox.DisplayPosition, g_Conf.ConLogBox.DisplaySize ) );
+	m_logbox.Show( g_Conf.ConLogBox.Visible );
 
 	// ------------------------------------------------------------------------
 	
@@ -296,7 +296,7 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, int id, const wxString& title, cons
 
 	ConnectMenus();
 	
-	m_MenuItem_Console.Check( Conf().ConLogBox.Show );
+	m_MenuItem_Console.Check( g_Conf.ConLogBox.Visible );
 }
 
 void MainEmuFrame::Menu_QuickBootCD_Click(wxCommandEvent &event)
@@ -361,7 +361,7 @@ void MainEmuFrame::Menu_Debug_Logging_Click(wxCommandEvent &event)
 
 void MainEmuFrame::Menu_ShowConsole(wxCommandEvent &event)
 {
-	m_logbox.Show( event.IsChecked() );
+	m_logbox.Show( g_Conf.ConLogBox.Visible = event.IsChecked() );
 }
 
 void MainEmuFrame::Menu_ShowAboutBox(wxCommandEvent &event)

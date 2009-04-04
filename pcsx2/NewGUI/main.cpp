@@ -26,44 +26,35 @@
 
 IMPLEMENT_APP(Pcsx2App)
 
+AppConfig g_Conf;
+
 const wxRect wxDefaultRect( wxDefaultCoord, wxDefaultCoord, wxDefaultCoord, wxDefaultCoord );
 
+//////////////////////////////////////////////////////////////////////////////////////////
+// PathDefs Namespace -- contains default values for various pcsx2 path names and locations.
+//
+// Note: The members of this namespace are intended for default value initialization only.
+// Most of the time you should use the path folder assignments in Conf() instead, since those
+// are user-configurable.
+//
 namespace PathDefs
 {
-	const wxString Screenshots( "snaps" );
+	const wxString Snapshots( "snaps" );
 	const wxString Savestates( "sstates" );
 	const wxString MemoryCards( "memcards" );
 	const wxString Configs( "inis" );
 	const wxString Plugins( "plugins" );
 	
-	wxString Working;
-
-	void Initialize()
-	{
-		char temp[g_MaxPath];
-		_getcwd( temp, g_MaxPath );
-		Working = temp;
-	}
-
 	// Fetches the path location for user-consumable documents -- stuff users are likely to want to
 	// share with other programs: screenshots, memory cards, and savestates.
-	// [TODO] : Ideally this should be optional, configurable, or conditional such that the Pcsx2
-	//   executable working directory can be used.  I'm not entirely sure yet the best way to go
-	//   about implementating that toggle, though.
 	wxString GetDocuments()
 	{
-		#ifdef _WIN32
-			return Path::Combine( wxStandardPaths::Get().GetDocumentsDir(), wxGetApp().GetAppName() );
-		#else
-			return wxGetHomeDir();
-		#endif
-
-		return "";
+		return Path::Combine( wxStandardPaths::Get().GetDocumentsDir(), wxGetApp().GetAppName() );
 	}
 
-	wxString GetScreenshots()
+	wxString GetSnapshots()
 	{
-		return Path::Combine( GetDocuments(), Screenshots );
+		return Path::Combine( GetDocuments(), Snapshots );
 	}
 	
 	wxString GetBios()
@@ -90,28 +81,70 @@ namespace PathDefs
 	{
 		return Plugins;
 	}
+	
+	wxString GetWorking()
+	{
+		return wxGetCwd();
+	}
+};
+
+namespace FilenameDefs
+{
+	wxString GetConfig()
+	{
+		// TODO : ini extension on Win32 is normal.  Linux ini filename default might differ
+		// from this?  like pcsx2_conf or something ... ?
+
+		return wxGetApp().GetAppName() + ".ini";
+	}
 };
 
 Pcsx2App::Pcsx2App()  :
-	m_ConsoleFrame( NULL ),
-	m_GlobalConfig( NULL )
+	m_ConsoleFrame( NULL )
 {
 	SetAppName( "Pcsx2" );
+}
+
+wxFileConfig* OpenConfig( const wxString& filename )
+{
+	return new wxFileConfig( wxEmptyString, wxEmptyString, filename, wxEmptyString, wxCONFIG_USE_RELATIVE_PATH );
+}
+
+// returns true if a configuration file is present in the current working dir (cwd).
+// returns false if not (in which case the calling code should fall back on using OpenConfigUserLocal())
+bool Pcsx2App::TryOpenConfigCwd()
+{
+	wxString inipath_cwd( Path::Combine( wxGetCwd(), PathDefs::Configs ) );
+	if( !Path::isDirectory( inipath_cwd ) ) return false;
+
+	wxString inifile_cwd( Path::Combine( inipath_cwd, FilenameDefs::GetConfig() ) );
+	if( !Path::isFile( inifile_cwd ) ) return false;
+	if( Path::getFileSize( inifile_cwd ) <= 1 ) return false;
+
+	wxConfigBase::Set( OpenConfig( inifile_cwd ) );
+	return true;
 }
 
 bool Pcsx2App::OnInit()
 {
     wxInitAllImageHandlers();
 
-	// wxWidgets fails badly on Windows, when it comes to picking "default" locations for ini files.
-	// So for now I have to specify the ini file location manually.
+	// Ini Startup:  The ini file could be in one of two locations, depending on how Pcsx2 has
+	// been installed or configured.  The first place we look is in our program's working
+	// directory.  If the ini there exist, and is *not* empty, then we'll use it.  Otherwise
+	// we fall back on the ini file in the user's Documents folder.
+	
+	if( !TryOpenConfigCwd() )
+	{
+		Path::CreateDirectory( PathDefs::GetDocuments() );
+		Path::CreateDirectory( PathDefs::GetConfigs() );
 
-	Path::CreateDirectory( PathDefs::GetDocuments() );
-	Path::CreateDirectory( PathDefs::GetConfigs() );
+		// Allow wx to use our config, and enforces auto-cleanup as well
+		wxConfigBase::Set( OpenConfig( Path::Combine( PathDefs::GetConfigs(), FilenameDefs::GetConfig() ) ) );
+		wxConfigBase::Get()->SetRecordDefaults();
+	}
 
-	// FIXME: I think that linux might adhere to a different extension standard than .ini -- I forget which tho.
-	m_GlobalConfig = new AppConfig( Path::Combine( PathDefs::GetConfigs(), GetAppName() ) + ".ini" );
-	m_GlobalConfig->LoadSettings();
+	g_Conf.LoadSave( IniLoader() );
 
 	m_Bitmap_Logo = new wxBitmap( EmbeddedImage<png_BackgroundLogo>().GetImage() );
 
@@ -124,7 +157,7 @@ bool Pcsx2App::OnInit()
 
 int Pcsx2App::OnExit()
 {
-	m_GlobalConfig->SaveSettings();
+	g_Conf.LoadSave( IniSaver() );
 	return wxApp::OnExit();
 }
 
@@ -132,10 +165,4 @@ const wxBitmap& Pcsx2App::GetLogoBitmap() const
 {
 	wxASSERT( m_Bitmap_Logo != NULL );
 	return *m_Bitmap_Logo;
-}
-
-AppConfig& Pcsx2App::GetActiveConfig() const
-{
-	wxASSERT( m_GlobalConfig != NULL );
-	return *m_GlobalConfig;
 }
