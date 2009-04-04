@@ -369,7 +369,7 @@ __forceinline void ipuWrite64(u32 mem, u64 value)
 
 	switch (mem)
 	{
-		case 0x10:
+		case 0x00:
 			IPU_LOG("Ipu write64: IPU_CMD=0x%08X", value);
 			IPUCMD_WRITE((u32)value);
 			break;
