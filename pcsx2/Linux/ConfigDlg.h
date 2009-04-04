@@ -251,7 +251,5 @@ void OnConf_Cpu(GtkMenuItem *menuitem, gpointer user_data);
 void OnConf_Conf(GtkMenuItem *menuitem, gpointer user_data);
 void SetActiveComboItem(GtkComboBox *widget, char plist[255][255], GList *list, char *conf);
 void SetComboToGList(GtkComboBox *widget, GList *list);
-static void ConfPlugin(PluginConf confs, char* plugin, const char* name);
-static void TestPlugin(PluginConf confs, char* plugin, const char* name);
 
 #endif // __CONFIGDLG_H__

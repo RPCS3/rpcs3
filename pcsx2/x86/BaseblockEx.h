@@ -55,12 +55,12 @@ struct BASEBLOCKEX
 class BaseBlocks
 {
 private:
-	std::vector<BASEBLOCKEX> blocks;
 	// switch to a hash map later?
 	std::multimap<u32, uptr> links;
 	typedef std::multimap<u32, uptr>::iterator linkiter_t;
 	unsigned long size;
 	uptr recompiler;
+	std::vector<BASEBLOCKEX> blocks;
 
 public:
 	BaseBlocks(unsigned long size_, uptr recompiler_) :
@@ -78,8 +78,10 @@ public:
 	inline int Index (u32 startpc) const
 	{
 		int idx = LastIndex(startpc);
-		if (idx == -1 || startpc < blocks[idx].startpc ||
-			blocks[idx].size && (startpc >= blocks[idx].startpc + blocks[idx].size * 4))
+		// fixme: I changed the parenthesis to be unambiguous, but this needs to be checked to see if ((x or y or z) and w)
+		// is correct, or ((x or y) or (z and w)), or some other variation. --arcum42
+		if (((idx == -1) || (startpc < blocks[idx].startpc) ||
+			(blocks[idx].size)) && (startpc >= blocks[idx].startpc + blocks[idx].size * 4))
 			return -1;
 		else
 			return idx;
@@ -99,7 +101,7 @@ public:
 
 	inline void Remove(int idx)
 	{
-		u32 startpc = blocks[idx].startpc;
+		//u32 startpc = blocks[idx].startpc;
 		std::pair<linkiter_t, linkiter_t> range = links.equal_range(blocks[idx].startpc);
 		for (linkiter_t i = range.first; i != range.second; ++i)
 			*(u32*)i->second = recompiler - (i->second + 4);

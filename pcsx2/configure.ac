@@ -35,7 +35,7 @@ else
 DEBUG_FLAGS=" -O0 -g "
 fi
 
-WARNING_FLAGS="-Wno-format -Wno-unused-value"
+WARNING_FLAGS="-Wno-format -Wno-unused-parameter -Wno-unused-value -Wunused-variable "
 EXTRA_WARNING_FLAGS="-Wall -Wextra"
 NORMAL_FLAGS=" -pipe -msse -msse2 -O2 ${WARNING_FLAGS}"
 # These optimizations seem to cause issues with GCC 4.3.3, so we'll turn them off.
