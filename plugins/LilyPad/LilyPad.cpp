@@ -1318,7 +1318,7 @@ s32 CALLBACK PADfreeze(int mode, freezeData *data) {
 			strcmp(pdata.format, "PadMode")) return 0;
 		unsigned int port = pdata.port;
 		if (port >= 2) return 0;
-		if (pdata.query.port == port) {
+		if (pdata.query.port == port && pdata.query.slot < 4) {
 			query = pdata.query;
 		}
 		for (int slot=0; slot<4; slot++) {
@@ -1330,7 +1330,8 @@ s32 CALLBACK PADfreeze(int mode, freezeData *data) {
 			// Note sure if the cast is strictly necessary, but feel safest with it there...
 			*(PadFreezeData*)&pads[port][slot] = pdata.padData[slot];
 		}
-		slots[port] = pdata.slot;
+		if (pdata.slot < 4)
+			slots[port] = pdata.slot;
 	}
 	else if (mode == FREEZE_SAVE) {
 		if (data->size != sizeof(PadPluginFreezeData)) return 0;
@@ -1403,7 +1404,9 @@ s32 CALLBACK PADqueryMtap(u8 port) {
 s32 CALLBACK PADsetSlot(u8 port, u8 slot) {
 	port--;
 	slot--;
-	if (port > 1 || slot > 3) return 0;
+	if (port > 1 || slot > 3) {
+		return 0;
+	}
 	// Even if no pad there, record the slot, as it is the active slot regardless.
 	slots[port] = slot;
 	return pads[port][slot].enabled;

@@ -80,8 +80,9 @@ public:
 		int idx = LastIndex(startpc);
 		// fixme: I changed the parenthesis to be unambiguous, but this needs to be checked to see if ((x or y or z) and w)
 		// is correct, or ((x or y) or (z and w)), or some other variation. --arcum42
-		if (((idx == -1) || (startpc < blocks[idx].startpc) ||
-			(blocks[idx].size)) && (startpc >= blocks[idx].startpc + blocks[idx].size * 4))
+		// Mixing &&'s and ||'s is not actually ambiguous; &&'s take precedence.  Reverted to old behavior -- ChickenLiver.
+		if ((idx == -1) || (startpc < blocks[idx].startpc) ||
+			((blocks[idx].size) && (startpc >= blocks[idx].startpc + blocks[idx].size * 4)))
 			return -1;
 		else
 			return idx;
