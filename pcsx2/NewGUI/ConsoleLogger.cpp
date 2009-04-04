@@ -45,7 +45,7 @@ static bool OpenLogFile(wxFile& file, wxString& filename, wxWindow *parent)
         strMsg.Printf(wxT("Append log to file '%s' (choosing [No] will overwrite it)?"),
                       filename.c_str());
 
-        switch ( wxMessageBox(strMsg, _t("Question"), wxICON_QUESTION | wxYES_NO | wxCANCEL) )
+        switch ( wxMessageBox(strMsg, _("Question"), wxICON_QUESTION | wxYES_NO | wxCANCEL) )
 		{
 			case wxYES:
 				bAppend = true;
@@ -91,12 +91,12 @@ ConsoleLogFrame::ConsoleLogFrame(MainEmuFrame *parent, const wxString& title) :
     // create menu
     wxMenuBar *pMenuBar = new wxMenuBar;
     wxMenu *pMenu = new wxMenu;
-    pMenu->Append(Menu_Save,  _t("&Save..."), wxT("Save log contents to file"));
-    pMenu->Append(Menu_Clear, _t("C&lear"), wxT("Clear the log contents"));
+    pMenu->Append(Menu_Save,  _("&Save..."), wxT("Save log contents to file"));
+    pMenu->Append(Menu_Clear, _("C&lear"), wxT("Clear the log contents"));
     pMenu->AppendSeparator();
-    pMenu->Append(Menu_Close, _t("&Close"), wxT("Close this window"));
+    pMenu->Append(Menu_Close, _("&Close"), wxT("Close this window"));
 
-    pMenuBar->Append(pMenu, _t("&Log"));
+    pMenuBar->Append(pMenu, _("&Log"));
     SetMenuBar(pMenuBar);
 
     // status bar for menu prompts

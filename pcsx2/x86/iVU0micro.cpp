@@ -44,9 +44,8 @@ namespace VU0micro
 	{
 		SuperVUReset(0);
 
-		// these shouldn't be needed, but shouldn't hurt anything either.
+		// this shouldn't be needed, but shouldn't hurt anything either.
 		x86FpuState = FPU_STATE;
-		iCWstate = 0;
 	}
 
 	static void recStep()

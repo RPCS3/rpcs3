@@ -92,7 +92,7 @@ static u32 s_nHasDelay = 0;
 
 // save states for branches
 GPR_reg64 s_saveConstRegs[32];
-static u16 s_savex86FpuState, s_saveiCWstate;
+static u16 s_savex86FpuState;
 static u32 s_saveHasConstReg = 0, s_saveFlushedConstReg = 0, s_saveRegHasLive1 = 0, s_saveRegHasSignExt = 0;
 static EEINST* s_psaveInstInfo = NULL;
 
@@ -323,7 +323,9 @@ u32* _eeGetConstReg(int reg)
 
 void _eeMoveGPRtoR(x86IntRegType to, int fromgpr)
 {
-	if( GPR_IS_CONST1(fromgpr) )
+	if( fromgpr == 0 )
+		XOR32RtoR( to, to );	// zero register should use xor, thanks --air
+	else if( GPR_IS_CONST1(fromgpr) )
 		MOV32ItoR( to, g_cpuConstRegs[fromgpr].UL[0] );
 	else {
 		int mmreg;
@@ -585,7 +587,6 @@ void recResetEE( void )
 	recPtr = recMem;
 	recStackPtr = recStack;
 	x86FpuState = FPU_STATE;
-	iCWstate = 0;
 
 	branch = 0;
 	SetCPUState(Config.sseMXCSR, Config.sseVUMXCSR);
@@ -985,7 +986,6 @@ void SetBranchImm( u32 imm )
 void SaveBranchState()
 {
 	s_savex86FpuState = x86FpuState;
-	s_saveiCWstate = iCWstate;
 	s_savenBlockCycles = s_nBlockCycles;
 	memcpy(s_saveConstRegs, g_cpuConstRegs, sizeof(g_cpuConstRegs));
 	s_saveHasConstReg = g_cpuHasConstReg;
@@ -1002,7 +1002,6 @@ void SaveBranchState()
 void LoadBranchState()
 {
 	x86FpuState = s_savex86FpuState;
-	iCWstate = s_saveiCWstate;
 	s_nBlockCycles = s_savenBlockCycles;
 
 	memcpy(g_cpuConstRegs, s_saveConstRegs, sizeof(g_cpuConstRegs));
@@ -1034,8 +1033,6 @@ void iFlushCall(int flushtype)
 	if( flushtype & FLUSH_CACHED_REGS )
 		_flushConstRegs();
 
-	LoadCW();
-	
 	if (x86FpuState==MMX_STATE) {
 		if (cpucaps.has3DNOWInstructionExtensions) FEMMS();
 		else EMMS();
@@ -1404,7 +1401,6 @@ void recRecompile( const u32 startpc )
 	s_nBlockCycles = 0;
 	pc = startpc;
 	x86FpuState = FPU_STATE;
-	iCWstate = 0;
 	g_cpuHasConstReg = g_cpuFlushedConstReg = 1;
 	g_cpuPrevRegHasLive1 = g_cpuRegHasLive1 = 0xffffffff;
 	g_cpuPrevRegHasSignExt = g_cpuRegHasSignExt = 0;

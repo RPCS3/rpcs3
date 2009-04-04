@@ -44,6 +44,7 @@ u16 logProtocol;
 u8 logSource;
 #endif
 
+bool enableLogging = TRUE;
 int connected=0;
 
 #define SYNC_LOGGING
@@ -52,8 +53,10 @@ int connected=0;
 void __Log( const char* fmt, ... )
 {
 	char tmp[2024];
-
 	va_list list;
+
+	if (!enableLogging) return;
+	
 	va_start(list, fmt);
 
 	// concatenate the log message after the prefix:
@@ -126,6 +129,9 @@ static __forceinline void _vSourceLog( u16 protocol, u8 source, u32 cpuPc, u32 c
 void SourceLog( u16 protocol, u8 source, u32 cpuPc, u32 cpuCycle, const char *fmt, ...)
 {
 	va_list list;
+	
+	if (!enableLogging) return;
+	
 	va_start(list, fmt);
 	_vSourceLog( protocol, source, cpuPc, cpuCycle, fmt, list );
 	va_end(list);
@@ -136,6 +142,7 @@ void SourceLog( u16 protocol, u8 source, u32 cpuPc, u32 cpuCycle, const char *fm
 	bool SrcLog_##unit( const char* fmt, ... ) \
 	{ \
 		va_list list; \
+		if (!enableLogging) return false; \
 		va_start( list, fmt ); \
 		_vSourceLog( protocol, source, \
 			(source == 'E') ? cpuRegs.pc : psxRegs.pc, \

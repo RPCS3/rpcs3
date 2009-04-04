@@ -19,11 +19,12 @@
 #ifndef __SIF_H__
 #define __SIF_H__
 
-struct sifData{
-        int     data,
-                words,
-                count,
-                addr;
+struct sifData
+{
+	s32 data;
+	s32 words;
+	s32 count;
+	s32 addr;
 };
 
 extern DMACh *sif0ch;

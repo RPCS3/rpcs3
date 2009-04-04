@@ -183,7 +183,7 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, int id, const wxString& title, cons
 
 	wxSize backsize( m_background.GetSize() );
 
-	SetTitle(_t("Pcsx2"));
+	SetTitle(_("Pcsx2"));
 
 	wxIcon myIcon;
 	myIcon.CopyFromBitmap( wxBitmap( EmbeddedImage<png_AppIcon>().GetImage() ) );

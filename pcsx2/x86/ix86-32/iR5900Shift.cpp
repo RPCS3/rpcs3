@@ -36,22 +36,22 @@ namespace OpcodeImpl
 
 namespace Interp = R5900::Interpreter::OpcodeImpl;
 
-REC_FUNC(SLL);
-REC_FUNC(SRL);
-REC_FUNC(SRA);
-REC_FUNC(DSLL);
-REC_FUNC(DSRL);
-REC_FUNC(DSRA);
-REC_FUNC(DSLL32);
-REC_FUNC(DSRL32);
-REC_FUNC(DSRA32);
+REC_FUNC_DEL(SLL, _Rd_);
+REC_FUNC_DEL(SRL, _Rd_);
+REC_FUNC_DEL(SRA, _Rd_);
+REC_FUNC_DEL(DSLL, _Rd_);
+REC_FUNC_DEL(DSRL, _Rd_);
+REC_FUNC_DEL(DSRA, _Rd_);
+REC_FUNC_DEL(DSLL32, _Rd_);
+REC_FUNC_DEL(DSRL32, _Rd_);
+REC_FUNC_DEL(DSRA32, _Rd_);
 
-REC_FUNC(SLLV);
-REC_FUNC(SRLV);
-REC_FUNC(SRAV);
-REC_FUNC(DSLLV);
-REC_FUNC(DSRLV);
-REC_FUNC(DSRAV);
+REC_FUNC_DEL(SLLV, _Rd_);
+REC_FUNC_DEL(SRLV, _Rd_);
+REC_FUNC_DEL(SRAV, _Rd_);
+REC_FUNC_DEL(DSLLV, _Rd_);
+REC_FUNC_DEL(DSRLV, _Rd_);
+REC_FUNC_DEL(DSRAV, _Rd_);
 
 #elif defined(EE_CONST_PROP)
 
@@ -189,6 +189,10 @@ void recSRLs_(int info, int sa)
 //		PUNPCKLDQRtoR(rdreg, t0reg);
 //		_freeMMXreg(t0reg);
 	}
+	else {
+		if( EEINST_ISLIVE1(_Rd_) ) _signExtendGPRtoMMX(rdreg, _Rd_, 0);
+		else EEINST_RESETHASLIVE1(_Rd_);
+	}
 }
 
 void recSRL_(int info) 
@@ -263,6 +267,10 @@ void recSRAs_(int info, int sa)
 		// swap regs
 		mmxregs[t0reg] = mmxregs[rdreg];
 		mmxregs[rdreg].inuse = 0;
+	}
+	else {
+		if( EEINST_ISLIVE1(_Rd_) ) _signExtendGPRtoMMX(rdreg, _Rd_, 0);
+		else EEINST_RESETHASLIVE1(_Rd_);
 	}
 }
 

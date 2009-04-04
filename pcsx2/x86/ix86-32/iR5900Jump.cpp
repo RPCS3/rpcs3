@@ -38,9 +38,9 @@ namespace OpcodeImpl
 namespace Interp = R5900::Interpreter::OpcodeImpl;
 
 REC_SYS(J);
-REC_SYS(JAL);
+REC_SYS_DEL(JAL, 31);
 REC_SYS(JR);
-REC_SYS(JALR);
+REC_SYS_DEL(JALR, _Rd_);
 
 #else
 

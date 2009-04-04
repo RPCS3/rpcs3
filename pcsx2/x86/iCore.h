@@ -362,7 +362,7 @@ void _recMove128MtoRmOffset(u32 offset, u32 from);
 extern int _signExtendGPRtoMMX(x86MMXRegType to, u32 gprreg, int shift);
 
 extern _mmxregs mmxregs[MMXREGS], s_saveMMXregs[MMXREGS];
-extern u16 x86FpuState, iCWstate;
+extern u16 x86FpuState;
 
 extern void iDumpRegisters(u32 startpc, u32 temp);
 

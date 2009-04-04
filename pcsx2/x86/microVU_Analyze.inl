@@ -27,8 +27,8 @@
 // FMAC1 - Normal FMAC Opcodes
 //------------------------------------------------------------------
 
-#define aReg(x) mVUallocInfo.regs.VF[x]
-#define bReg(x) mVUallocInfo.regsTemp.VFreg[0] = x; mVUallocInfo.regsTemp.VF[0]
+#define aReg(x) mVUregs.VF[x]
+#define bReg(x) mVUregsTemp.VFreg[0] = x; mVUregsTemp.VF[0]
 #define aMax(x, y) ((x > y) ? x : y)
 
 #define analyzeReg1(reg) {									\
@@ -117,10 +117,30 @@ microVUt(void) mVUanalyzeFMAC4(int Fs, int Ft) {
 	}																\
 }
 
-microVUt(void) mVUanalyzeFDIV(int Fs, int Fsf, int Ft, int Ftf) {
+#define analyzeQreg(x) { mVUregsTemp.q = x; mVUstall = aMax(mVUstall, mVUregs.q); }
+#define analyzePreg(x) { mVUregsTemp.p = x; mVUstall = aMax(mVUstall, ((mVUregs.p) ? (mVUregs.p - 1) : 0)); }
+
+microVUt(void) mVUanalyzeFDIV(int Fs, int Fsf, int Ft, int Ftf, u8 xCycles) {
 	microVU* mVU = mVUx;
 	analyzeReg5(Fs, Fsf);
 	analyzeReg5(Ft, Ftf);
+	analyzeQreg(xCycles);
+}
+
+//------------------------------------------------------------------
+// EFU - EFU Opcodes
+//------------------------------------------------------------------
+
+microVUt(void) mVUanalyzeEFU1(int Fs, int Fsf, u8 xCycles) {
+	microVU* mVU = mVUx;
+	analyzeReg5(Fs, Fsf);
+	analyzePreg(xCycles);
+}
+
+microVUt(void) mVUanalyzeEFU2(int Fs, u8 xCycles) {
+	microVU* mVU = mVUx;
+	analyzeReg1(Fs);
+	analyzePreg(xCycles);
 }
 
 #endif //PCSX2_MICROVU

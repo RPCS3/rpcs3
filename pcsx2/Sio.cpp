@@ -460,10 +460,9 @@ void SIO_CommandWrite(u8 value,int way) {
 				sio.bufcount = 6; // No idea why this is 6, saved from old code.
 				break;
 			}
-			// These were taken from old code.  No idea if they're needed.
-			// Don't seem to break anything, at least.
-			sio.buf[sio.bufcount-1]='+';
-			sio.buf[sio.bufcount]='Z';
+			// Commented out values are from original code.  Break multitap in bios..
+			sio.buf[sio.bufcount-1]=0;//'+';
+			sio.buf[sio.bufcount]=0;//'Z';
 			return;
 		case 0x2:
 			sio.packetsize++;
@@ -626,7 +625,7 @@ void InitializeSIO(u8 value)
 
 			const int mcidx = sio.GetMemcardIndex();
 
-			if( sio.activeMemcardSlot[mcidx] )
+			if( sio.activeMemcardSlot[mcidx] != 0 )
 			{
 				// Might want to more agressively declare a card's non-existence here.
 				// As non-zero slots always report a failure, and have to read

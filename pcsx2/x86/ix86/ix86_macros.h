@@ -274,6 +274,8 @@
 #define AND32RtoR eAND32RtoR<_EmitterId_>
 #define AND32RtoM eAND32RtoM<_EmitterId_>
 #define AND32MtoR eAND32MtoR<_EmitterId_>
+#define AND32RmtoR eAND32RmtoR<_EmitterId_>
+#define AND32RmtoROffset eAND32RmtoROffset<_EmitterId_>
 #define AND16RtoR eAND16RtoR<_EmitterId_>
 #define AND16ItoR eAND16ItoR<_EmitterId_>
 #define AND16ItoM eAND16ItoM<_EmitterId_>
@@ -706,7 +708,7 @@
 #define SSE2_MOVDQA_XMM_to_XMM eSSE2_MOVDQA_XMM_to_XMM<_EmitterId_>
 #define SSE2_MOVDQU_M128_to_XMM eSSE2_MOVDQU_M128_to_XMM<_EmitterId_>
 #define SSE2_MOVDQU_XMM_to_M128 eSSE2_MOVDQU_XMM_to_M128<_EmitterId_>
-#define SSE2_MOVDQU_XMM_to_XMM eSSE2_MOVDQU_XMM_to_XMM<_EmitterId_>
+#define SSE2_MOVDQU_XMM_to_XMM eSSE2_MOVDQA_XMM_to_XMM<_EmitterId_>
 #define SSE2_PSRLW_XMM_to_XMM eSSE2_PSRLW_XMM_to_XMM<_EmitterId_>
 #define SSE2_PSRLW_M128_to_XMM eSSE2_PSRLW_M128_to_XMM<_EmitterId_> 
 #define SSE2_PSRLW_I8_to_XMM eSSE2_PSRLW_I8_to_XMM<_EmitterId_>

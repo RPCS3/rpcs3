@@ -136,6 +136,7 @@
 				AdditionalIncludeDirectories="&quot;$(ProjectRootDir)/NewGUI&quot;"
 				PreprocessorDefinitions="NDEBUG"
 				StringPooling="true"
+				MinimalRebuild="true"
 				ExceptionHandling="2"
 				SmallerTypeCheck="false"
 				BufferSecurityCheck="false"
@@ -145,6 +146,7 @@
 				PrecompiledHeaderFile="$(IntDir)\$(TargetName).pch"
 				WarningLevel="3"
 				SuppressStartupBanner="true"
+				DebugInformationFormat="3"
 				CompileAs="2"
 			/>
 			<Tool

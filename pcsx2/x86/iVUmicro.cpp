@@ -473,8 +473,8 @@ void SuperVUAnalyzeOp(VURegs *VU, _vuopinfo *info, _VURegsNum* pCodeRegs)
 
 	if (ptr[1] & 0x40000000) { // EOP
 		branch |= 8; 
-	} 
- 
+	}
+
 	VU->code = ptr[1];
 	if (VU == &VU1) VU1regs_UPPER_OPCODE[VU->code & 0x3f](uregs);
 	else VU0regs_UPPER_OPCODE[VU->code & 0x3f](uregs);

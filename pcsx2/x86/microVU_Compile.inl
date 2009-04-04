@@ -50,8 +50,10 @@ microVUt(void) mVUsetCycles() {
 	microVU* mVU = mVUx;
 	incCycles(mVUstall);
 	mVUregs.VF[mVUregsTemp.VFreg[0]].reg = mVUregsTemp.VF[0].reg;
-	mVUregs.VF[mVUregsTemp.VFreg[1]].reg = mVUregsTemp.VF[1].reg;
+	mVUregs.VF[mVUregsTemp.VFreg[1]].reg =(mVUregsTemp.VFreg[0] == mVUregsTemp.VFreg[1]) ? (aMax(mVUregsTemp.VF[0].reg, mVUregsTemp.VF[1].reg)) : (mVUregsTemp.VF[1].reg);
 	mVUregs.VI[mVUregsTemp.VIreg]		 = mVUregsTemp.VI;
+	mVUregs.q							 = mVUregsTemp.q;
+	mVUregs.p							 = mVUregsTemp.p;
 }
 
 microVUx(void) mVUcompile(u32 startPC, u32 pipelineState, microRegInfo* pState, u8* x86ptrStart) {

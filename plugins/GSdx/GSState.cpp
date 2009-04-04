@@ -1139,9 +1139,6 @@ void GSState::Move()
 	// ffxii uses this to move the top/bottom of the scrolling menus offscreen and then blends them back over the text to create a shading effect
 	// guitar hero copies the far end of the board to do a similar blend too
 
-	GSLocalMemory::readPixel rp = GSLocalMemory::m_psm[m_env.BITBLTBUF.SPSM].rp;
-	GSLocalMemory::writePixel wp = GSLocalMemory::m_psm[m_env.BITBLTBUF.DPSM].wp;
-
 	int sx = m_env.TRXPOS.SSAX;
 	int dx = m_env.TRXPOS.DSAX;
 	int sy = m_env.TRXPOS.SSAY;
@@ -1151,17 +1148,56 @@ void GSState::Move()
 	int xinc = 1;
 	int yinc = 1;
 
-	if(sx < dx) sx += w-1, dx += w-1, xinc = -1;
-	if(sy < dy) sy += h-1, dy += h-1, yinc = -1;
-
 	InvalidateLocalMem(m_env.BITBLTBUF, CRect(CPoint(sx, sy), CSize(w, h)));
 	InvalidateVideoMem(m_env.BITBLTBUF, CRect(CPoint(dx, dy), CSize(w, h)));
 
-	// TODO: use rowOffset
+	if(sx < dx) sx += w-1, dx += w-1, xinc = -1;
+	if(sy < dy) sy += h-1, dy += h-1, yinc = -1;
+
+/*
+	GSLocalMemory::readPixel rp = GSLocalMemory::m_psm[m_env.BITBLTBUF.SPSM].rp;
+	GSLocalMemory::writePixel wp = GSLocalMemory::m_psm[m_env.BITBLTBUF.DPSM].wp;
 
 	for(int y = 0; y < h; y++, sy += yinc, dy += yinc, sx -= xinc*w, dx -= xinc*w)
 		for(int x = 0; x < w; x++, sx += xinc, dx += xinc)
 			(m_mem.*wp)(dx, dy, (m_mem.*rp)(sx, sy, m_env.BITBLTBUF.SBP, m_env.BITBLTBUF.SBW), m_env.BITBLTBUF.DBP, m_env.BITBLTBUF.DBW);
+*/
+
+	const GSLocalMemory::psm_t& spsm = GSLocalMemory::m_psm[m_env.BITBLTBUF.SPSM];
+	const GSLocalMemory::psm_t& dpsm = GSLocalMemory::m_psm[m_env.BITBLTBUF.DPSM];
+
+	if(m_env.BITBLTBUF.SPSM == PSM_PSMCT32 && m_env.BITBLTBUF.DPSM == PSM_PSMCT32)
+	{
+		for(int y = 0; y < h; y++, sy += yinc, dy += yinc, sx -= xinc*w, dx -= xinc*w)
+		{
+			DWORD sbase = spsm.pa(0, sy, m_env.BITBLTBUF.SBP, m_env.BITBLTBUF.SBW);
+			int* soffset = spsm.rowOffset[sy & 7];
+
+			DWORD dbase = dpsm.pa(0, dy, m_env.BITBLTBUF.DBP, m_env.BITBLTBUF.DBW);
+			int* doffset = dpsm.rowOffset[dy & 7];
+			
+			for(int x = 0; x < w; x++, sx += xinc, dx += xinc)
+			{
+				m_mem.WritePixel32(dbase + doffset[dx], m_mem.ReadPixel32(sbase + soffset[sx]));
+			}
+		}
+	}
+	else
+	{
+		for(int y = 0; y < h; y++, sy += yinc, dy += yinc, sx -= xinc*w, dx -= xinc*w)
+		{
+			DWORD sbase = spsm.pa(0, sy, m_env.BITBLTBUF.SBP, m_env.BITBLTBUF.SBW);
+			int* soffset = spsm.rowOffset[sy & 7];
+
+			DWORD dbase = dpsm.pa(0, dy, m_env.BITBLTBUF.DBP, m_env.BITBLTBUF.DBW);
+			int* doffset = dpsm.rowOffset[dy & 7];
+			
+			for(int x = 0; x < w; x++, sx += xinc, dx += xinc)
+			{
+				(m_mem.*dpsm.wpa)(dbase + doffset[dx], (m_mem.*spsm.rpa)(sbase + soffset[sx]));
+			}
+		}
+	}
 }
 
 void GSState::SoftReset(BYTE mask)

@@ -23,18 +23,27 @@
 // Micro VU Micromode Lower instructions
 //------------------------------------------------------------------
 
-#define testZero(xmmReg, xmmTemp, gprTemp) {												\
-	SSE_XORPS_XMM_to_XMM(xmmTemp, xmmTemp);		/* Clear xmmTemp (make it 0) */				\
-	SSE_CMPEQPS_XMM_to_XMM(xmmTemp, xmmReg);	/* Set all F's if each vector is zero */	\
-	SSE_MOVMSKPS_XMM_to_R32(gprTemp, xmmTemp);	/* Move the sign bits */					\
-	TEST32ItoR(gprTemp, 1);						/* Test "Is Zero" bit */					\
+#define testZero(xmmReg, xmmTemp, gprTemp) {										\
+	SSE_XORPS_XMM_to_XMM(xmmTemp, xmmTemp);		/* Clear xmmTemp (make it 0) */		\
+	SSE_CMPEQPS_XMM_to_XMM(xmmTemp, xmmReg);	/* Set all F's if zero */			\
+	SSE_MOVMSKPS_XMM_to_R32(gprTemp, xmmTemp);	/* Move the sign bits */			\
+	TEST32ItoR(gprTemp, 1);						/* Test "Is Zero" bit */			\
+}
+
+#define testNeg(xmmReg, gprTemp, aJump) {											\
+	SSE_MOVMSKPS_XMM_to_R32(gprTemp, xmmReg);										\
+	TEST32ItoR(gprTemp, 1);								  /* Check sign bit */		\
+	aJump = JZ8(0);										  /* Skip if positive */	\
+		MOV32ItoM((uptr)&mVU->divFlag, 0x410);			  /* Set Invalid Flags */	\
+		SSE_ANDPS_M128_to_XMM(xmmReg, (uptr)mVU_absclip); /* Abs(xmmReg) */			\
+	x86SetJ8(aJump);																\
 }
 
 microVUf(void) mVU_DIV() {
 	microVU* mVU = mVUx;
-	if (!recPass) { mVUanalyzeFDIV<vuIndex>(_Fs_, _Fsf_, _Ft_, _Ftf_); }
+	if (!recPass) { mVUanalyzeFDIV<vuIndex>(_Fs_, _Fsf_, _Ft_, _Ftf_, 7); }
 	else { 
-		u8	*ajmp, *bjmp, *cjmp, *djmp;
+		u8 *ajmp, *bjmp, *cjmp, *djmp;
 		getReg5(xmmFs, _Fs_, _Fsf_);
 		getReg5(xmmFt, _Ft_, _Ftf_);
 
@@ -67,19 +76,13 @@ microVUf(void) mVU_DIV() {
 
 microVUf(void) mVU_SQRT() {
 	microVU* mVU = mVUx;
-	if (!recPass) { mVUanalyzeFDIV<vuIndex>(0, 0, _Ft_, _Ftf_); }
+	if (!recPass) { mVUanalyzeFDIV<vuIndex>(0, 0, _Ft_, _Ftf_, 7); }
 	else { 
-		u8* ajmp;
+		u8 *ajmp;
 		getReg5(xmmFt, _Ft_, _Ftf_);
-		MOV32ItoM((uptr)&mVU->divFlag, 0); // Clear I/D flags
 
-		/* Check for negative sqrt */
-		SSE_MOVMSKPS_XMM_to_R32(gprT1, xmmFt);
-		AND32ItoR(gprT1, 1);  //Check sign
-		ajmp = JZ8(0); //Skip if none are
-			MOV32ItoM((uptr)&mVU->divFlag, 0x410); // Invalid Flag - Negative number sqrt
-			SSE_ANDPS_M128_to_XMM(xmmFt, (uptr)mVU_absclip); // Do a cardinal sqrt
-		x86SetJ8(ajmp);
+		MOV32ItoM((uptr)&mVU->divFlag, 0); // Clear I/D flags
+		testNeg(xmmFt, gprT1, ajmp); // Check for negative sqrt
 
 		if (CHECK_VU_OVERFLOW) SSE_MINSS_XMM_to_XMM(xmmFt, xmmMax); // Clamp infinities (only need to do positive clamp since xmmFt is positive)
 		SSE_SQRTSS_XMM_to_XMM(xmmFt, xmmFt);
@@ -90,41 +93,35 @@ microVUf(void) mVU_SQRT() {
 
 microVUf(void) mVU_RSQRT() {
 	microVU* mVU = mVUx;
-	if (!recPass) { mVUanalyzeFDIV<vuIndex>(_Fs_, _Fsf_, _Ft_, _Ftf_); }
+	if (!recPass) { mVUanalyzeFDIV<vuIndex>(_Fs_, _Fsf_, _Ft_, _Ftf_, 13); }
 	else { 
-		u8 *ajmp8, *bjmp8, *cjmp8, *djmp8;
+		u8 *ajmp, *bjmp, *cjmp, *djmp;
 		getReg5(xmmFs, _Fs_, _Fsf_);
 		getReg5(xmmFt, _Ft_, _Ftf_);
-		MOV32ItoM((uptr)&mVU->divFlag, 0); // Clear I/D flags
 
-		/* Check for negative divide */
-		SSE_MOVMSKPS_XMM_to_R32(gprT1, xmmT1);
-		AND32ItoR(gprT1, 1);  //Check sign
-		ajmp8 = JZ8(0); //Skip if none are
-			MOV32ItoM((uptr)&mVU->divFlag, 0x410); // Invalid Flag - Negative number sqrt
-			SSE_ANDPS_M128_to_XMM(xmmFt, (uptr)mVU_absclip); // Do a cardinal sqrt
-		x86SetJ8(ajmp8);
+		MOV32ItoM((uptr)&mVU->divFlag, 0); // Clear I/D flags
+		testNeg(xmmFt, gprT1, ajmp); // Check for negative sqrt
 
 		SSE_SQRTSS_XMM_to_XMM(xmmFt, xmmFt);
 		testZero(xmmFt, xmmT1, gprT1); // Test if Ft is zero
-		ajmp8 = JZ8(0); // Skip if not zero
+		ajmp = JZ8(0); // Skip if not zero
 
 			testZero(xmmFs, xmmT1, gprT1); // Test if Fs is zero
-			bjmp8 = JZ8(0); // Skip if none are
+			bjmp = JZ8(0); // Skip if none are
 				MOV32ItoM((uptr)&mVU->divFlag, 0x410); // Set invalid flag (0/0)
-				cjmp8 = JMP8(0);
-			x86SetJ8(bjmp8);
+				cjmp = JMP8(0);
+			x86SetJ8(bjmp);
 				MOV32ItoM((uptr)&mVU->divFlag, 0x820); // Zero divide flag (only when not 0/0)
-			x86SetJ8(cjmp8);
+			x86SetJ8(cjmp);
 
 			SSE_ANDPS_M128_to_XMM(xmmFs, (uptr)mVU_signbit);
 			SSE_ORPS_XMM_to_XMM(xmmFs, xmmMax); // xmmFs = +/-Max
 
-			djmp8 = JMP8(0);
-		x86SetJ8(ajmp8);
+			djmp = JMP8(0);
+		x86SetJ8(ajmp);
 			SSE_DIVSS_XMM_to_XMM(xmmFs, xmmFt);
 			mVUclamp1<vuIndex>(xmmFs, xmmFt, 8);
-		x86SetJ8(djmp8);
+		x86SetJ8(djmp);
 
 		mVUunpack_xyzw<vuIndex>(xmmFs, xmmFs, 0);
 		mVUmergeRegs<vuIndex>(xmmPQ, xmmFs, writeQ ? 4 : 8);
@@ -161,7 +158,7 @@ microVUt(void) mVU_EATAN_() {
 
 microVUf(void) mVU_EATAN() {
 	microVU* mVU = mVUx;
-	if (!recPass) {}
+	if (!recPass) { mVUanalyzeEFU1<vuIndex>(_Fs_, _Fsf_, 54); }
 	else { 
 		getReg5(xmmFs, _Fs_, _Fsf_);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
@@ -177,14 +174,14 @@ microVUf(void) mVU_EATAN() {
 
 microVUf(void) mVU_EATANxy() {
 	microVU* mVU = mVUx;
-	if (!recPass) {}
+	if (!recPass) { mVUanalyzeEFU2<vuIndex>(_Fs_, 54); }
 	else { 
 		getReg6(xmmFt, _Fs_);
 		SSE2_PSHUFD_XMM_to_XMM(xmmFs, xmmFt, 0x01);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
 
 		SSE_MOVSS_XMM_to_XMM(xmmPQ, xmmFs);
-		SSE_SUBSS_M32_to_XMM(xmmFs, (uptr)mVU_one);
+		SSE_SUBSS_XMM_to_XMM(xmmFs, xmmFt); // y-x, not y-1? ><
 		SSE_ADDSS_XMM_to_XMM(xmmFt, xmmPQ);
 		SSE_DIVSS_XMM_to_XMM(xmmFs, xmmFt);
 
@@ -194,7 +191,7 @@ microVUf(void) mVU_EATANxy() {
 
 microVUf(void) mVU_EATANxz() {
 	microVU* mVU = mVUx;
-	if (!recPass) {}
+	if (!recPass) { mVUanalyzeEFU2<vuIndex>(_Fs_, 54); }
 	else { 
 		getReg6(xmmFt, _Fs_);
 		SSE2_PSHUFD_XMM_to_XMM(xmmFs, xmmFt, 0x02);
@@ -218,7 +215,7 @@ microVUf(void) mVU_EATANxz() {
 
 microVUf(void) mVU_EEXP() {
 	microVU* mVU = mVUx;
-	if (!recPass) {}
+	if (!recPass) { mVUanalyzeEFU1<vuIndex>(_Fs_, _Fsf_, 44); }
 	else { 
 		getReg5(xmmFs, _Fs_, _Fsf_);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
@@ -266,7 +263,7 @@ microVUt(void) mVU_sumXYZ() {
 
 microVUf(void) mVU_ELENG() {
 	microVU* mVU = mVUx;
-	if (!recPass) {}
+	if (!recPass) { mVUanalyzeEFU2<vuIndex>(_Fs_, 18); }
 	else { 
 		getReg6(xmmFs, _Fs_);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
@@ -278,7 +275,7 @@ microVUf(void) mVU_ELENG() {
 
 microVUf(void) mVU_ERCPR() {
 	microVU* mVU = mVUx;
-	if (!recPass) {}
+	if (!recPass) { mVUanalyzeEFU1<vuIndex>(_Fs_, _Fsf_, 12); }
 	else { 
 		getReg5(xmmFs, _Fs_, _Fsf_);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
@@ -292,7 +289,7 @@ microVUf(void) mVU_ERCPR() {
 
 microVUf(void) mVU_ERLENG() {
 	microVU* mVU = mVUx;
-	if (!recPass) {}
+	if (!recPass) { mVUanalyzeEFU2<vuIndex>(_Fs_, 24); }
 	else { 
 		getReg6(xmmFs, _Fs_);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
@@ -307,7 +304,7 @@ microVUf(void) mVU_ERLENG() {
 
 microVUf(void) mVU_ERSADD() {
 	microVU* mVU = mVUx;
-	if (!recPass) {}
+	if (!recPass) { mVUanalyzeEFU2<vuIndex>(_Fs_, 18); }
 	else { 
 		getReg6(xmmFs, _Fs_);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
@@ -322,7 +319,7 @@ microVUf(void) mVU_ERSADD() {
 
 microVUf(void) mVU_ERSQRT() {
 	microVU* mVU = mVUx;
-	if (!recPass) {}
+	if (!recPass) { mVUanalyzeEFU1<vuIndex>(_Fs_, _Fsf_, 18); }
 	else { 
 		getReg5(xmmFs, _Fs_, _Fsf_);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
@@ -336,7 +333,7 @@ microVUf(void) mVU_ERSQRT() {
 
 microVUf(void) mVU_ESADD() {
 	microVU* mVU = mVUx;
-	if (!recPass) {}
+	if (!recPass) { mVUanalyzeEFU2<vuIndex>(_Fs_, 11); }
 	else { 
 		getReg6(xmmFs, _Fs_);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
@@ -354,7 +351,7 @@ microVUf(void) mVU_ESADD() {
 
 microVUf(void) mVU_ESIN() {
 	microVU* mVU = mVUx;
-	if (!recPass) {}
+	if (!recPass) { mVUanalyzeEFU2<vuIndex>(_Fs_, 29); }
 	else { 
 		getReg5(xmmFs, _Fs_, _Fsf_);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
@@ -380,7 +377,7 @@ microVUf(void) mVU_ESIN() {
 
 microVUf(void) mVU_ESQRT() {
 	microVU* mVU = mVUx;
-	if (!recPass) {}
+	if (!recPass) { mVUanalyzeEFU1<vuIndex>(_Fs_, _Fsf_, 12); }
 	else { 
 		getReg5(xmmFs, _Fs_, _Fsf_);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
@@ -391,7 +388,7 @@ microVUf(void) mVU_ESQRT() {
 
 microVUf(void) mVU_ESUM() {
 	microVU* mVU = mVUx;
-	if (!recPass) {}
+	if (!recPass) { mVUanalyzeEFU2<vuIndex>(_Fs_, 12); }
 	else { 
 		getReg6(xmmFs, _Fs_);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance

@@ -99,7 +99,7 @@ declareAllVariables
 #define _Mbit_ (1<<29)
 #define _Dbit_ (1<<28)
 #define _Tbit_ (1<<27)
-#define _MDTbit_ ( _Mbit_ | _Dbit_ | _Tbit_ )
+#define _MDTbit_ 0 //( _Mbit_ | _Dbit_ | _Tbit_ ) // ToDo: Implement this stuff...
 
 #define getVUmem(x)	(((vuIndex == 1) ? (x & 0x3ff) : ((x >= 0x400) ? (x & 0x43f) : (x & 0xff))) * 16)
 #define offsetSS	((_X) ? (0) : ((_Y) ? (4) : ((_Z) ? 8: 12)))

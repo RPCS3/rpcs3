@@ -38,18 +38,18 @@ namespace OpcodeImpl {
 
 namespace Interp = R5900::Interpreter::OpcodeImpl;
 
-REC_FUNC(LB);
-REC_FUNC(LBU);
-REC_FUNC(LH);
-REC_FUNC(LHU);
-REC_FUNC(LW);
-REC_FUNC(LWU);
-REC_FUNC(LWL);
-REC_FUNC(LWR);
-REC_FUNC(LD);
-REC_FUNC(LDR);
-REC_FUNC(LDL);
-REC_FUNC(LQ);
+REC_FUNC_DEL(LB, _Rt_);
+REC_FUNC_DEL(LBU, _Rt_);
+REC_FUNC_DEL(LH, _Rt_);
+REC_FUNC_DEL(LHU, _Rt_);
+REC_FUNC_DEL(LW, _Rt_);
+REC_FUNC_DEL(LWU, _Rt_);
+REC_FUNC_DEL(LWL, _Rt_);
+REC_FUNC_DEL(LWR, _Rt_);
+REC_FUNC_DEL(LD, _Rt_);
+REC_FUNC_DEL(LDR, _Rt_);
+REC_FUNC_DEL(LDL, _Rt_);
+REC_FUNC_DEL(LQ, _Rt_);
 REC_FUNC(SB);
 REC_FUNC(SH);
 REC_FUNC(SW);
@@ -229,8 +229,6 @@ int recSetMemLocation(int regs, int imm, int mmreg, int msize, int j32)
 	}
 
 	if ( imm != 0 ) ADD32ItoR( ECX, imm );
-
-	LoadCW();
 
 #ifdef _DEBUG
 	//CALLFunc((uptr)testaddrs);
@@ -2070,6 +2068,8 @@ void SetFastMemory(int bSetFast)
 	// nothing
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////
+//
 void recLoad64( u32 bits, bool sign )
 {
 	jASSUME( bits == 64 || bits == 128 );
@@ -2096,23 +2096,24 @@ void recLoad64( u32 bits, bool sign )
 	}
 	else
 	{
-		_deleteEEreg(_Rs_, 1);
 		// Load ECX with the source memory address that we're reading from.
-		MOV32MtoR( ECX, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
+		_eeMoveGPRtoR(ECX, _Rs_);
+		if ( _Imm_ != 0 )
+			ADD32ItoR( ECX, _Imm_ );
+		if( bits == 128 )		// force 16 byte alignment on 128 bit reads
+			AND32I8toR(ECX,0xF0);
+
 		_eeOnLoadWrite(_Rt_);
 		EEINST_RESETSIGNEXT(_Rt_); // remove the sign extension
 		_deleteEEreg(_Rt_, 0);
-		if ( _Imm_ != 0 )
-			ADD32ItoR( ECX, _Imm_ );
-
-		if( bits == 128 )		// force 16 byte alignment on 128 bit reads
-			AND32I8toR(ECX,0xF0);
 
 		vtlb_DynGenRead64(bits);
 	}
 }
 
-void recLoad32(u32 bits,bool sign)
+//////////////////////////////////////////////////////////////////////////////////////////
+//
+void recLoad32( u32 bits, bool sign )
 {
 	jASSUME( bits <= 32 );
 
@@ -2131,14 +2132,13 @@ void recLoad32(u32 bits,bool sign)
 	}
 	else
 	{
-		_deleteEEreg(_Rs_, 1);
 		// Load ECX with the source memory address that we're reading from.
-		MOV32MtoR( ECX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
-		_eeOnLoadWrite(_Rt_);
-		_deleteEEreg(_Rt_, 0);
+		_eeMoveGPRtoR(ECX, _Rs_);
 		if ( _Imm_ != 0 )
 			ADD32ItoR( ECX, _Imm_ );
-	
+
+		_eeOnLoadWrite(_Rt_);
+		_deleteEEreg(_Rt_, 0);
 		vtlb_DynGenRead32(bits, sign);
 	}
 
@@ -2155,337 +2155,31 @@ void recLoad32(u32 bits,bool sign)
 	}
 }
 
-////////////////////////////////////////////////////
-void recLB( void ) 
+//////////////////////////////////////////////////////////////////////////////////////////
+//
+
+// edxAlreadyAssigned - set to true if edx already holds the value being written (used by SWL/SWR)
+void recStore(u32 sz, bool edxAlreadyAssigned=false)
 {
-	recLoad32(8,true);
-	/*
-	_deleteEEreg(_Rs_, 1);
-	_eeOnLoadWrite(_Rt_);
-	_deleteEEreg(_Rt_, 0);
-
-	MOV32MtoR( EAX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
-	if ( _Imm_ != 0 )
-	{
-		ADD32ItoR( EAX, _Imm_ );
-	}
-	PUSH32I( (int)&dummyValue[0] );
-	PUSH32R( EAX );
-	
-	CALLFunc( (int)memRead8 );
-	ADD32ItoR( ESP, 8 );
-	if ( _Rt_ ) 
-	{
-		u8* linkEnd;
-		TEST32RtoR( EAX, EAX );
-		linkEnd = JNZ8( 0 );
-		MOV32MtoR( EAX, (int)&dummyValue[0] );
-		MOVSX32R8toR( EAX, EAX );
-		CDQ( );
-		MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ], EAX );
-		MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 1 ], EDX );
-		x86SetJ8( linkEnd );
-	}
-	*/
-}
-
-////////////////////////////////////////////////////
-void recLBU( void ) 
-{
-	recLoad32(8,false);
-	/*
-	_deleteEEreg(_Rs_, 1);
-	_eeOnLoadWrite(_Rt_);
-	_deleteEEreg(_Rt_, 0);
-
-	MOV32MtoR( EAX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
-	if ( _Imm_ != 0 )
-	{
-		ADD32ItoR( EAX, _Imm_ );
-	}
-	PUSH32I( (int)&dummyValue[0] );
-	PUSH32R( EAX );
-
-	CALLFunc( (int)memRead8 );
-	ADD32ItoR( ESP, 8 );
-	if ( _Rt_ ) 
-	{
-		u8* linkEnd;
-		TEST32RtoR( EAX, EAX );
-		linkEnd = JNZ8( 0 );
-		MOV32MtoR( EAX, (int)&dummyValue[0] );
-		MOVZX32R8toR( EAX, EAX );
-		MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ], EAX );
-		MOV32ItoM( (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 1 ], 0 );
-		x86SetJ8( linkEnd );
-	}
-	*/
-}
-
-////////////////////////////////////////////////////
-void recLH( void ) 
-{
-	recLoad32(16,true);
-	/*
-	_deleteEEreg(_Rs_, 1);
-	_eeOnLoadWrite(_Rt_);
-	_deleteEEreg(_Rt_, 0);
-
-	MOV32MtoR( EAX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
-	if ( _Imm_ != 0 )
-	{
-		ADD32ItoR( EAX, _Imm_ );
-	}
-	PUSH32I( (int)&dummyValue[0] );
-	PUSH32R( EAX );
-
-	CALLFunc( (int)memRead16 );
-	ADD32ItoR( ESP, 8 );
-	if ( _Rt_ )
-	{
-		u8* linkEnd;
-		TEST32RtoR( EAX, EAX );
-		linkEnd = JNZ8( 0 );
-		MOV32MtoR( EAX, (int)&dummyValue[0]);
-		MOVSX32R16toR( EAX, EAX );
-		CDQ( );
-		MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ], EAX );
-		MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 1 ], EDX );
-		x86SetJ8( linkEnd );
-	}
-	*/
-}
-
-////////////////////////////////////////////////////
-void recLHU( void )
-{
-	recLoad32(16,false);
-	/*
-	_deleteEEreg(_Rs_, 1);
-	_eeOnLoadWrite(_Rt_);
-	_deleteEEreg(_Rt_, 0);
-
-	MOV32MtoR( EAX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
-	if ( _Imm_ != 0 )
-	{
-		ADD32ItoR( EAX, _Imm_ );
-	}
-	PUSH32I( (int)&dummyValue[0] );
-	PUSH32R( EAX );
-	CALLFunc( (int)memRead16 );
-	ADD32ItoR( ESP, 8 );
-	if ( _Rt_ ) 
-	{
-		u8* linkEnd;
-		TEST32RtoR( EAX, EAX );
-		linkEnd = JNZ8( 0 );
-		MOV32MtoR( EAX, (int)&dummyValue[0] );
-		MOVZX32R16toR( EAX, EAX );
-		MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ], EAX );
-		MOV32ItoM( (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 1 ], 0 );
-		x86SetJ8( linkEnd );
-	}*/
-}
-
-////////////////////////////////////////////////////
-void recLW( void ) 
-{
-	recLoad32(32,true);
-	/*
-	_deleteEEreg(_Rs_, 1);
-	_eeOnLoadWrite(_Rt_);
-	_deleteEEreg(_Rt_, 0);
-
-	MOV32MtoR( EAX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
-	if ( _Imm_ != 0 )
-	{
-		ADD32ItoR( EAX, _Imm_ );
-	}
-
-	PUSH32I( (int)&dummyValue[0]);
-	PUSH32R( EAX );
-
-	CALLFunc( (int)memRead32 );
-	ADD32ItoR( ESP, 8 );
-
-	if ( _Rt_ ) 
-	{
-		u8* linkEnd;
-		TEST32RtoR( EAX, EAX );
-		linkEnd = JNZ8( 0 );
-		MOV32MtoR( EAX, (int)&dummyValue[0]);
-		CDQ( );
-		MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ], EAX );
-		MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 1 ], EDX );
-		x86SetJ8( linkEnd );
-	}*/
-}
-
-////////////////////////////////////////////////////
-void recLWU( void ) 
-{
-	recLoad32(32,false);
-	/*
-	_deleteEEreg(_Rs_, 1);
-	_eeOnLoadWrite(_Rt_);
-	_deleteEEreg(_Rt_, 0);
-
-	MOV32MtoR( EAX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
-	if ( _Imm_ != 0 )
-	{
-		ADD32ItoR( EAX, _Imm_ );
-	}
-
-	PUSH32I( (int)&dummyValue[0]);
-	PUSH32R( EAX );
-	CALLFunc( (int)memRead32 );
-	ADD32ItoR( ESP, 8 );
-	if ( _Rt_ )
-	{
-		u8* linkEnd;
-		TEST32RtoR( EAX, EAX );
-		linkEnd = JNZ8( 0 );
-		MOV32MtoR( EAX, (int)&dummyValue[0]);
-		MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ], EAX );
-		MOV32ItoM( (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 1 ], 0 );
-		x86SetJ8( linkEnd );
-	}
-	*/
-}
-
-////////////////////////////////////////////////////
-void recLWL( void ) 
-{
-	_deleteEEreg(_Rs_, 1);
-	_eeOnLoadWrite(_Rt_);
-	_deleteEEreg(_Rt_, 0);
-	MOV32ItoM( (int)&cpuRegs.code, cpuRegs.code );
-	MOV32ItoM( (int)&cpuRegs.pc, pc );
-	CALLFunc( (int)LWL );
-}
-
-////////////////////////////////////////////////////
-void recLWR( void ) 
-{
-	iFlushCall(FLUSH_EVERYTHING);
-	MOV32ItoM( (int)&cpuRegs.code, cpuRegs.code );
-	MOV32ItoM( (int)&cpuRegs.pc, pc );
-	CALLFunc( (int)LWR );   
-}
-
-////////////////////////////////////////////////////
-extern void MOV64RmtoR( x86IntRegType to, x86IntRegType from );
-
-void recLD( void )
-{
-	recLoad64(64,false);
-	/*
-	_deleteEEreg(_Rs_, 1);
-	_eeOnLoadWrite(_Rt_);
-    EEINST_RESETSIGNEXT(_Rt_); // remove the sign extension
-	_deleteEEreg(_Rt_, 0);
-
-	MOV32MtoR( EAX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
-	if ( _Imm_ != 0 )
-	{
-		ADD32ItoR( EAX, _Imm_ );
-	}
-
-	if ( _Rt_ )
-	{
-		PUSH32I( (int)&cpuRegs.GPR.r[ _Rt_ ].UD[ 0 ] );
-	}
-	else
-	{
-		PUSH32I( (int)&dummyValue[0] );
-	}
-	PUSH32R( EAX );
-	CALLFunc( (int)memRead64 );
-	ADD32ItoR( ESP, 8 );
-	*/
-}
-
-////////////////////////////////////////////////////
-void recLDL( void ) 
-{
-	_deleteEEreg(_Rs_, 1);
-	_eeOnLoadWrite(_Rt_);
-    EEINST_RESETSIGNEXT(_Rt_); // remove the sign extension
-	_deleteEEreg(_Rt_, 0);
-	MOV32ItoM( (int)&cpuRegs.code, cpuRegs.code );
-	MOV32ItoM( (int)&cpuRegs.pc, pc );
-	CALLFunc( (int)LDL );
-}
-
-////////////////////////////////////////////////////
-void recLDR( void ) 
-{
-	_deleteEEreg(_Rs_, 1);
-	_eeOnLoadWrite(_Rt_);
-    EEINST_RESETSIGNEXT(_Rt_); // remove the sign extension
-	_deleteEEreg(_Rt_, 0);
-	MOV32ItoM( (int)&cpuRegs.code, cpuRegs.code );
-	MOV32ItoM( (int)&cpuRegs.pc, pc );
-	CALLFunc( (int)LDR );
-}
-
-////////////////////////////////////////////////////
-void recLQ( void ) 
-{
-	recLoad64(128,false);
-/*
-	_deleteEEreg(_Rs_, 1);
-	_eeOnLoadWrite(_Rt_);
-    EEINST_RESETSIGNEXT(_Rt_); // remove the sign extension
-	_deleteEEreg(_Rt_, 0);
-
-	MOV32MtoR( EAX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
-	if ( _Imm_ != 0 )
-	{
-		ADD32ItoR( EAX, _Imm_);
-	}
-	AND32ItoR( EAX, ~0xf );
-
-	if ( _Rt_ )
-	{
-		PUSH32I( (int)&cpuRegs.GPR.r[ _Rt_ ].UD[ 0 ] );
-	}
-	else
-	{
-		PUSH32I( (int)&dummyValue[0] );
-	}
-	PUSH32R( EAX );
-	CALLFunc( (int)memRead128 );
-	ADD32ItoR( ESP, 8 );
-   */
-}
-
-void recStore(u32 sz)
-{
-	//no int 3? i love to get my hands dirty ;p - Raz
-	//write8(0xCC);
-
-	_deleteEEreg(_Rt_, 1);
-
 	// Performance note: Const prop for the store address is good, always.
 	// Constprop for the value being stored is not really worthwhile (better to use register
 	// allocation -- simpler code and just as fast)
-
 
 	// Load EDX first with the value being written, or the address of the value
 	// being written (64/128 bit modes).  TODO: use register allocation, if the
 	// value is allocated to a register.
 
-	if (sz<64)
+	if( !edxAlreadyAssigned )
 	{
-		if (_Rt_)
-			MOV32MtoR(EDX,(int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ]);
-		else
-			XOR32RtoR(EDX,EDX);
-	}
-	else if (sz==128 || sz==64)
-	{
-		MOV32ItoR(EDX,(int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ]);
+		if( sz < 64 )
+		{
+			_eeMoveGPRtoR(EDX, _Rt_);
+		}
+		else if (sz==128 || sz==64)
+		{
+			_deleteEEreg(_Rt_, 1);		// flush register to mem
+			MOV32ItoR(EDX,(int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ]);
+		}
 	}
 
 	// Load ECX with the destination address, or issue a direct optimized write
@@ -2499,11 +2193,10 @@ void recStore(u32 sz)
 	}
 	else
 	{
-		_deleteEEreg(_Rs_, 1);
-		MOV32MtoR( ECX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
+		_eeMoveGPRtoR(ECX, _Rs_);
+
 		if ( _Imm_ != 0 )
 			ADD32ItoR(ECX, _Imm_);
-
 		if (sz==128)
 			AND32I8toR(ECX,0xF0);
 
@@ -2511,74 +2204,94 @@ void recStore(u32 sz)
 	}
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////
+//
+void recLB( void )  { recLoad32(8,true); }
+void recLBU( void ) { recLoad32(8,false); }
+void recLH( void )  { recLoad32(16,true); }
+void recLHU( void ) { recLoad32(16,false); }
+void recLW( void )  { recLoad32(32,true); }
+void recLWU( void ) { recLoad32(32,false); }
+void recLD( void )  { recLoad64(64,false); }
+void recLQ( void )  { recLoad64(128,false); }
+
+void recSB( void )  { recStore(8); }
+void recSH( void )  { recStore(16); }
+void recSW( void )  { recStore(32); }
+void recSQ( void )  { recStore(128); }
+void recSD( void )  { recStore(64); }
+
+//////////////////////////////////////////////////////////////////////////////////////////
+// Non-recompiled Implementations Start Here -->
+// (LWL/SWL, LWR/SWR, etc)
+
 ////////////////////////////////////////////////////
-void recSB( void )
+void recLWL( void ) 
 {
-	recStore(8);
-	/*
 	_deleteEEreg(_Rs_, 1);
+	_eeOnLoadWrite(_Rt_);
 	_deleteEEreg(_Rt_, 1);
-	MOV32MtoR( EAX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
-	if ( _Imm_ != 0 )
-	{
-		ADD32ItoR( EAX, _Imm_);
-	}
-	PUSH32M( (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] );
-	PUSH32R( EAX );
-	CALLFunc( (int)memWrite8 );
-	ADD32ItoR( ESP, 8 ); 
-	*/  
+
+	MOV32ItoM( (int)&cpuRegs.code, cpuRegs.code );
+	//MOV32ItoM( (int)&cpuRegs.pc, pc );
+	CALLFunc( (int)LWL );
 }
 
 ////////////////////////////////////////////////////
-void recSH( void ) 
+void recLWR( void ) 
 {
-	recStore(16);
-	/*
 	_deleteEEreg(_Rs_, 1);
+	_eeOnLoadWrite(_Rt_);
 	_deleteEEreg(_Rt_, 1);
 
-	MOV32MtoR( EAX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
-	if ( _Imm_ != 0 )
-	{
-		ADD32ItoR( EAX, _Imm_ );
-	}
-	PUSH32M( (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] );
-	PUSH32R( EAX );
-	CALLFunc( (int)memWrite16 );
-	ADD32ItoR( ESP, 8 );   
-	*/
+	MOV32ItoM( (int)&cpuRegs.code, cpuRegs.code );
+	//MOV32ItoM( (int)&cpuRegs.pc, pc );
+	CALLFunc( (int)LWR );   
 }
 
-////////////////////////////////////////////////////
-void recSW( void ) 
-{
-	recStore(32);
-	/*
-	_deleteEEreg(_Rs_, 1);
-	_deleteEEreg(_Rt_, 1);
+static const u32 SWL_MASK[4] = { 0xffffff00, 0xffff0000, 0xff000000, 0x00000000 };
+static const u32 SWR_MASK[4] = { 0x00000000, 0x000000ff, 0x0000ffff, 0x00ffffff };
 
-	MOV32MtoR( EAX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
-	if ( _Imm_ != 0 )
-	{
-		ADD32ItoR( EAX, _Imm_ );
-	}
-
-	PUSH32M( (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] );
-	PUSH32R( EAX );
-	CALLFunc( (int)memWrite32 );
-	ADD32ItoR( ESP, 8 );
-	*/
-}
+static const u8 SWR_SHIFT[4] = { 0, 8, 16, 24 };
+static const u8 SWL_SHIFT[4] = { 24, 16, 8, 0 };
 
 ////////////////////////////////////////////////////
 void recSWL( void ) 
 {
-	_deleteEEreg(_Rs_, 1);
-	_deleteEEreg(_Rt_, 1);
-	MOV32ItoM( (int)&cpuRegs.code, cpuRegs.code );
-	MOV32ItoM( (int)&cpuRegs.pc, pc );
-	CALLFunc( (int)SWL );   
+	// Perform a translated memory read, followed by a translated memory write
+	// of the "merged" result.
+	
+	// NOTE: Code incomplete. I'll fix/finish it soon. --air
+	if( 0 ) //GPR_IS_CONST1( _Rs_ ) )
+	{
+		_eeOnLoadWrite(_Rt_);
+		//_deleteEEreg(_Rt_, 0);
+
+		u32 addr = g_cpuConstRegs[_Rs_].UL[0] + _Imm_;
+		u32 shift = addr & 3;
+		vtlb_DynGenRead32_Const( 32, false, addr & 3 );
+
+		// Prep eax/edx for producing the writeback result:
+		// equiv to:  (cpuRegs.GPR.r[_Rt_].UL[0] >> SWL_SHIFT[shift]) | (mem & SWL_MASK[shift])
+
+		//_deleteEEreg(_Rt_, 1);
+		//MOV32MtoR( EDX, (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] );
+
+		_eeMoveGPRtoR(EDX, _Rt_);
+		AND32ItoR( EAX, SWL_MASK[shift] );
+		SHR32ItoR( EDX, SWL_SHIFT[shift] );
+		OR32RtoR( EDX, EAX );
+
+		recStore( 32, true );
+	}
+	else
+	{
+		_deleteEEreg(_Rs_, 1);
+		_deleteEEreg(_Rt_, 1);
+		MOV32ItoM( (int)&cpuRegs.code, cpuRegs.code );
+		//MOV32ItoM( (int)&cpuRegs.pc, pc );	// pc's not needed by SWL
+		CALLFunc( (int)SWL );
+	}
 }
 
 ////////////////////////////////////////////////////
@@ -2587,29 +2300,32 @@ void recSWR( void )
 	_deleteEEreg(_Rs_, 1);
 	_deleteEEreg(_Rt_, 1);
 	MOV32ItoM( (int)&cpuRegs.code, cpuRegs.code );
-	MOV32ItoM( (int)&cpuRegs.pc, pc );
+	//MOV32ItoM( (int)&cpuRegs.pc, pc );
 	CALLFunc( (int)SWR );
 }
 
 ////////////////////////////////////////////////////
-void recSD( void ) 
+void recLDL( void ) 
 {
-	recStore(64);
-	/*
 	_deleteEEreg(_Rs_, 1);
+	_eeOnLoadWrite(_Rt_);
+	EEINST_RESETSIGNEXT(_Rt_); // remove the sign extension
 	_deleteEEreg(_Rt_, 1);
-	MOV32MtoR( EAX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
-	if ( _Imm_ != 0 )
-	{
-		ADD32ItoR( EAX, _Imm_ );
-	}
+	MOV32ItoM( (int)&cpuRegs.code, cpuRegs.code );
+	//MOV32ItoM( (int)&cpuRegs.pc, pc );
+	CALLFunc( (int)LDL );
+}
 
-	PUSH32M( (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 1 ] );
-	PUSH32M( (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] );
-	PUSH32R( EAX );
-	CALLFunc( (int)memWrite64 );
-	ADD32ItoR( ESP, 12 );   
-	*/
+////////////////////////////////////////////////////
+void recLDR( void ) 
+{
+	_deleteEEreg(_Rs_, 1);
+	_eeOnLoadWrite(_Rt_);
+	EEINST_RESETSIGNEXT(_Rt_); // remove the sign extension
+	_deleteEEreg(_Rt_, 1);
+	MOV32ItoM( (int)&cpuRegs.code, cpuRegs.code );
+	//MOV32ItoM( (int)&cpuRegs.pc, pc );
+	CALLFunc( (int)LDR );
 }
 
 ////////////////////////////////////////////////////
@@ -2618,7 +2334,7 @@ void recSDL( void )
 	_deleteEEreg(_Rs_, 1);
 	_deleteEEreg(_Rt_, 1);
 	MOV32ItoM( (int)&cpuRegs.code, cpuRegs.code );
-	MOV32ItoM( (int)&cpuRegs.pc, pc );
+	//MOV32ItoM( (int)&cpuRegs.pc, pc );
 	CALLFunc( (int)SDL );
 }
 
@@ -2628,30 +2344,11 @@ void recSDR( void )
 	_deleteEEreg(_Rs_, 1);
 	_deleteEEreg(_Rt_, 1);
 	MOV32ItoM( (int)&cpuRegs.code, cpuRegs.code );
-	MOV32ItoM( (int)&cpuRegs.pc, pc );
+	//MOV32ItoM( (int)&cpuRegs.pc, pc );
 	CALLFunc( (int)SDR );
 }
 
-////////////////////////////////////////////////////
-void recSQ( void ) 
-{
-	recStore(128);
-	/*
-	_deleteEEreg(_Rs_, 1);
-	_deleteEEreg(_Rt_, 1);
-	MOV32MtoR( EAX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
-	if ( _Imm_ != 0 )
-	{
-		ADD32ItoR( EAX, _Imm_ );
-	}
-	AND32ItoR( EAX, ~0xf );
-
-	PUSH32I( (int)&cpuRegs.GPR.r[ _Rt_ ].UD[ 0 ] );
-	PUSH32R( EAX );
-	CALLFunc( (int)memWrite128 );
-	ADD32ItoR( ESP, 8 );*/
-}
-
+//////////////////////////////////////////////////////////////////////////////////////////
 /*********************************************************
 * Load and store for COP1                                *
 * Format:  OP rt, offset(base)                           *
@@ -2667,8 +2364,6 @@ void recLWC1( void )
 	if ( _Imm_ != 0 )	
 		ADD32ItoR( ECX, _Imm_ );
 
-	//MOV32ItoR(EDX, (int)&fpuRegs.fpr[ _Rt_ ].UL ); //no 0 for fpu ?
-	//CALLFunc( (int)memRead32 );
 	vtlb_DynGenRead32(32, false);
 	MOV32RtoM( (int)&fpuRegs.fpr[ _Rt_ ].UL, EAX );
 }

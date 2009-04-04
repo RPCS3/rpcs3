@@ -14,7 +14,7 @@
 	/>
 	<Tool
 		Name="VCLinkerTool"
-		AdditionalDependencies="odbc32.lib odbccp32.lib comctl32.lib ws2_32.lib winmm.lib gnu_gettext.lib"
+		AdditionalDependencies="odbc32.lib odbccp32.lib comctl32.lib ws2_32.lib winmm.lib"
 		LinkIncremental="1"
 		AdditionalLibraryDirectories="..\;..\libs"
 		GenerateDebugInformation="true"

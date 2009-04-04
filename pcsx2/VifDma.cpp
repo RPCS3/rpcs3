@@ -446,13 +446,9 @@ static void VIFunpack(u32 *data, vifCode *v, int size, const unsigned int VIFdma
 		if (vif->cl == vifRegs->cycle.wl)
 		{
 			if (vifRegs->cycle.cl != vifRegs->cycle.wl)
-			{
 				dest += ((vifRegs->cycle.cl - vifRegs->cycle.wl) << 2) + destinc;
-			}
 			else
-			{
 				dest += destinc;
-			}
 			vif->cl = 0;
 		}
 		else
@@ -539,7 +535,7 @@ static void VIFunpack(u32 *data, vifCode *v, int size, const unsigned int VIFdma
 			}
 #endif
 
-			if (vifRegs->cycle.cl == 0 || vifRegs->cycle.wl == 0 || (vifRegs->cycle.cl == vifRegs->cycle.wl && !(vifRegs->code&0x10000000)))
+			if ((vifRegs->cycle.cl == 0) || (vifRegs->cycle.wl == 0) || ((vifRegs->cycle.cl == vifRegs->cycle.wl) && !(vifRegs->code & 0x10000000)))
 			{
 				oldcycle = *(u32*) & vifRegs->cycle;
 				vifRegs->cycle.cl = vifRegs->cycle.wl = 1;
@@ -2137,7 +2133,7 @@ int  _VIF1chain()
 	u32 *pMem;
 	u32 ret;
 
-	if (vif1ch->qwc == 0 && vif1.vifstalled == 0 && vif1.irqoffset == 0)
+	if (vif1ch->qwc == 0)
 	{
 		vif1.inprogress = 0;
 		return 0;
@@ -2237,7 +2233,7 @@ __forceinline void vif1SetupTransfer()
 				}
 			}
 
-			
+			vif1.irqoffset = 0;
 			vif1.done |= hwDmacSrcChainWithStack(vif1ch, id);
 
 			if ((vif1ch->chcr & 0x80) && (vif1ptag[0] >> 31))  			       //Check TIE bit of CHCR and IRQ bit of tag
@@ -2411,7 +2407,7 @@ void vif1Write32(u32 mem, u32 value)
 			//   just stoppin the VIF (linuz).
 			vif1Regs->stat |= VIF1_STAT_VSS;
 			vif1Regs->stat &= ~VIF1_STAT_VPS;
-			vif1.inprogress = 0;
+			cpuRegs.interrupt &= ~((1 << 1) | (1 << 10)); //Stop all vif1 DMA's
 			vif1.vifstalled = 1;
 		}
 		if (value & 0x8)

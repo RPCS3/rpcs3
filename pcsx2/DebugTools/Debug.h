@@ -72,6 +72,7 @@ namespace R3000A
 }
 
 #ifdef PCSX2_DEVBUILD
+extern bool enableLogging;
 
 struct LogSources
 {

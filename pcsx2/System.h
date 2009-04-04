@@ -26,7 +26,6 @@
 #include "Misc.h"
 #include "Threading.h"		// to use threading stuff, include the Threading namespace in your file.
 
-
 enum PageProtectionMode
 {
 	Protect_NoAccess = 0,
@@ -101,21 +100,6 @@ extern u8 *SysMmapEx(uptr base, u32 size, uptr bounds, const char *caller="Unnam
 
 extern void vSyncDebugStuff( uint frame );
 
-
-//////////////////////////////////////////////////////////////////////////////////////////
-// Pcsx2 Custom Translation System
-// Work-in-progress!
-//
-static const char* _t( const char* translate_me_please )
-{
-	return translate_me_please;
-}
-
-// Temporary placebo?
-static const char* _( const char* translate_me_please )
-{
-	return translate_me_please;
-}
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // Console Namespace -- Replacements for SysPrintf.

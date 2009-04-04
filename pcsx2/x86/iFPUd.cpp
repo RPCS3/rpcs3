@@ -39,40 +39,9 @@
  
 //set I&D flags. also impacts other aspects of DIV/R/SQRT correctness
 #define FPU_FLAGS_ID 1 
- 
-//------------------------------------------------------------------
-// Misc...
-//------------------------------------------------------------------
-//static u32 _mxcsr = 0x7F80;
-//static u32 _mxcsrs;
-/*static u32 fpucw = 0x007f;
-static u32 fpucws = 0;
- 
-void SaveCW(int type) {
-	if (iCWstate & type) return;
- 
-	if (type == 2) {
-//		SSE_STMXCSR((uptr)&_mxcsrs);
-//		SSE_LDMXCSR((uptr)&_mxcsr);
-	} else {
-		FNSTCW( (uptr)&fpucws );
-		FLDCW( (uptr)&fpucw );
-	}
-	iCWstate|= type;
-}
- 
-void LoadCW() {
-	if (iCWstate == 0) return;
- 
-	if (iCWstate & 2) {
-		//SSE_LDMXCSR((uptr)&_mxcsrs);
-	}
-	if (iCWstate & 1) {
-		FLDCW( (uptr)&fpucws );
-	}
-	iCWstate = 0;
-}
-*/
+
+#ifdef FPU_RECOMPILE 
+
 //------------------------------------------------------------------
 namespace R5900 {
 namespace Dynarec {
@@ -1058,3 +1027,4 @@ FPURECOMPILE_CONSTCODE(RSQRT_S, XMMINFO_WRITED|XMMINFO_READS|XMMINFO_READT);
  
  
 } } } } }
+#endif
