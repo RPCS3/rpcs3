@@ -19,7 +19,6 @@
 #include "Win32.h"
 
 #include <math.h>
-#include "libintlmsc.h"
 
 #include "System.h"
 #include "McdsDlg.h"

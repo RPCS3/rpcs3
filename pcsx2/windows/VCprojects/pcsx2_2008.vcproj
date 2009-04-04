@@ -275,38 +275,6 @@
 			Name="OldGUI"
 			>
 			<File
-				RelativePath="..\AboutDlg.cpp"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PrecompiledHeaderThrough="Win32.h"
-						PrecompiledHeaderFile="$(IntDir)\win32.pch"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Devel|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PrecompiledHeaderThrough="Win32.h"
-						PrecompiledHeaderFile="$(IntDir)\win32.pch"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
 				RelativePath="..\AdvancedDlg.cpp"
 				>
 				<FileConfiguration
@@ -371,10 +339,6 @@
 						PrecompiledHeaderFile="$(IntDir)\win32.pch"
 					/>
 				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\gnuLanguages.cpp"
-				>
 			</File>
 			<File
 				RelativePath="..\HacksDlg.cpp"
@@ -487,38 +451,6 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\RDebugger.cpp"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PrecompiledHeaderThrough="Win32.h"
-						PrecompiledHeaderFile="$(IntDir)\win32.pch"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Devel|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PrecompiledHeaderThrough="Win32.h"
-						PrecompiledHeaderFile="$(IntDir)\win32.pch"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
 				RelativePath="..\WindowsPCH.cpp"
 				>
 				<FileConfiguration
@@ -539,38 +471,6 @@
 						UsePrecompiledHeader="1"
 						PrecompiledHeaderThrough="Win32.h"
 						PrecompiledHeaderFile="$(IntDir)\win32.pch"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\WinMain.cpp"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PrecompiledHeaderThrough="Win32.h"
-						PrecompiledHeaderFile="$(IntDir)\win32.pch"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Devel|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PrecompiledHeaderThrough="Win32.h"
-						PrecompiledHeaderFile="$(IntDir)\win32.pch"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
 					/>
 				</FileConfiguration>
 			</File>
@@ -698,10 +598,6 @@
 				Name="Include"
 				>
 				<File
-					RelativePath="..\AboutDlg.h"
-					>
-				</File>
-				<File
 					RelativePath="..\..\HostGui.h"
 					>
 				</File>
@@ -711,10 +607,6 @@
 				</File>
 				<File
 					RelativePath="..\McdsDlg.h"
-					>
-				</File>
-				<File
-					RelativePath="..\RDebugger.h"
 					>
 				</File>
 				<File
