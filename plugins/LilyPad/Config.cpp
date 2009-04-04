@@ -1504,11 +1504,11 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 
 // Returns 0 if pad doesn't exist due to mtap settings, as a convenience.
 int GetPadString(wchar_t *string, unsigned int port, unsigned int slot) {
-	if (!slot) {
+	if (!slot && !config.multitap[port]) {
 		wsprintfW(string, L"Pad %i", port+1);
 	}
 	else {
-		wsprintfW(string, L"Pad %i-%i", port+1, slot+1);
+		wsprintfW(string, L"Pad %i%c", port+1, 'A'+slot);
 		if (!config.multitap[port]) return 0;
 	}
 	return 1;

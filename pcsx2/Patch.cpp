@@ -609,9 +609,10 @@ void inifile_read( const char * name )
 		 char* pend = buffer+strlen(buffer);
 		 while(pstart != pend ) 
 		{
-			  // stop at the first . since we only want to update the hex
-			  if( *pstart == '.' ) break;
-			  *pstart++ = toupper(*pstart);
+			// stop at the first . since we only want to update the hex
+			if( *pstart == '.' ) break;
+			*pstart = toupper(*pstart);
+			*pstart++;
 		 }
 
 		 f1 = fopen(buffer, "rt");

@@ -79,15 +79,15 @@ struct macroblock_rgb16{
 };
 
 struct decoder_t {
-    /* first, state that carries information from one macroblock to the */
-    /* next inside a slice, and is never used outside of mpeg2_slice() */
+	/* first, state that carries information from one macroblock to the */
+	/* next inside a slice, and is never used outside of mpeg2_slice() */
 
-    /* DCT coefficients - should be kept aligned ! */
-    s16 DCTblock[64];
+	/* DCT coefficients - should be kept aligned ! */
+	s16 DCTblock[64];
 
-    /* bit parsing stuff */
-    u32 bitstream_buf;		/* current 32 bit working set */
-    int bitstream_bits;			/* used bits in working set */
+	/* bit parsing stuff */
+	u32 bitstream_buf;		/* current 32 bit working set */
+	int bitstream_bits;			/* used bits in working set */
 	u8 * bitstream_ptr;			/* buffer with stream data; 128 bits buffer */
 
 	struct macroblock_8		*mb8;
@@ -95,42 +95,42 @@ struct decoder_t {
 	struct macroblock_rgb32	*rgb32;
 	struct macroblock_rgb16	*rgb16;
 
-    int stride;
+	int stride;
 
-    /* predictor for DC coefficients in intra blocks */
-    s16 dc_dct_pred[3];
+	/* predictor for DC coefficients in intra blocks */
+	s16 dc_dct_pred[3];
 
-    int quantizer_scale;	/* remove */
-    int dmv_offset;		/* remove */
+	int quantizer_scale;	/* remove */
+	int dmv_offset;		/* remove */
 
-    /* now non-slice-specific information */
+	/* now non-slice-specific information */
 
-    /* sequence header stuff */
-    u8 *intra_quantizer_matrix;
-    u8 *non_intra_quantizer_matrix;
+	/* sequence header stuff */
+	u8 *intra_quantizer_matrix;
+	u8 *non_intra_quantizer_matrix;
 
-    /* picture header stuff */
+	/* picture header stuff */
 
-    /* what type of picture this is (I, P, B, D) */
-    int coding_type;
+	/* what type of picture this is (I, P, B, D) */
+	int coding_type;
 
-    /* picture coding extension stuff */
+	/* picture coding extension stuff */
 
-    /* quantization factor for intra dc coefficients */
-    int intra_dc_precision;
-    /* top/bottom/both fields */
-    int picture_structure;
-    /* bool to indicate all predictions are frame based */
-    int frame_pred_frame_dct;
-    /* bool to indicate whether intra blocks have motion vectors */
-    /* (for concealment) */
-    int concealment_motion_vectors;
-    /* bit to indicate which quantization table to use */
-    int q_scale_type;
-    /* bool to use different vlc tables */
-    int intra_vlc_format;
-    /* used for DMV MC */
-    int top_field_first;
+	/* quantization factor for intra dc coefficients */
+	int intra_dc_precision;
+	/* top/bottom/both fields */
+	int picture_structure;
+	/* bool to indicate all predictions are frame based */
+	int frame_pred_frame_dct;
+	/* bool to indicate whether intra blocks have motion vectors */
+	/* (for concealment) */
+	int concealment_motion_vectors;
+	/* bit to indicate which quantization table to use */
+	int q_scale_type;
+	/* bool to use different vlc tables */
+	int intra_vlc_format;
+	/* used for DMV MC */
+	int top_field_first;
 	// Pseudo Sign Offset
 	int sgn;
 	// Dither Enable
@@ -146,19 +146,18 @@ struct decoder_t {
 	// Coded block pattern
 	int coded_block_pattern;
 
-    /* stuff derived from bitstream */
+	/* stuff derived from bitstream */
 
-    /* pointer to the zigzag scan we're supposed to be using */
-    const u8 * scan;
+	/* pointer to the zigzag scan we're supposed to be using */
+	const u8 * scan;
+	
+	int second_field;
 
-    int second_field;
-
-    int mpeg1;
+	int mpeg1;
 };
 
 extern void (__fastcall *mpeg2_idct_copy) (s16 * block, u8* dest, int stride);
-extern void (__fastcall *mpeg2_idct_add) (int last, s16 * block,
-										   /*u8*/s16* dest, int stride);
+extern void (__fastcall *mpeg2_idct_add) (int last, s16 * block, s16* dest, int stride);
 
 #define IDEC	0
 #define BDEC	1
@@ -188,11 +187,6 @@ void mpeg2_idct_init ();
 #define BigEndian(out, in) out = _byteswap_ulong(in)
 #else
 #define BigEndian(out, in) out = __builtin_bswap32(in) // or we could use the asm function bswap...
-// No need to reimplement something already in the compiler. 
-//#define BigEndian(out, in) \
-//	out = (((((in) >> 24) & 0xFF) <<  0) + ((((in) >> 16) & 0xFF) <<  8) + \
-//		   ((((in) >>  8) & 0xFF) << 16) + ((((in) >>  0) & 0xFF) << 24));
-
 #endif
 	
 #endif//__MPEG_H__

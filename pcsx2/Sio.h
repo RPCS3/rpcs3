@@ -70,6 +70,11 @@ struct _sio {
 	{
 		return (CtrlReg&0x2000) >> 13;
 	}
+
+	int GetMultitapPort() const
+	{
+		return (CtrlReg&0x2000) >> 13;
+	}
 };
 
 extern _sio sio;

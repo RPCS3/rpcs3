@@ -357,7 +357,7 @@ namespace Exception
 			StateLoadError_Recoverable( fmt_string( "Unknown or unsupported savestate version: 0x%x", version ) )
 		{}
 
-		explicit UnsupportedStateVersion( int version, const wxString& msg ) :
+		explicit UnsupportedStateVersion( __unused int version, const wxString& msg ) :
 			StateLoadError_Recoverable( msg ) {}
 	};
 

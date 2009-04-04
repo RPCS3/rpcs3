@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<VisualStudioProject
+	ProjectType="Visual C++"
+	Version="9.00"
+	Name="wxConfig28"
+	ProjectGUID="{C34487AF-228A-4D11-8E50-27803DF76873}"
+	RootNamespace="wxConfig"
+	TargetFrameworkVersion="196613"
+	>
+	<Platforms>
+		<Platform
+			Name="Win32"
+		/>
+	</Platforms>
+	<ToolFiles>
+	</ToolFiles>
+	<Configurations>
+		<Configuration
+			Name="Debug|Win32"
+			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
+			IntermediateDirectory="$(ConfigurationName)"
+			ConfigurationType="10"
+			CharacterSet="2"
+			WholeProgramOptimization="0"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+		</Configuration>
+		<Configuration
+			Name="Release|Win32"
+			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
+			IntermediateDirectory="$(ConfigurationName)"
+			ConfigurationType="10"
+			CharacterSet="2"
+			WholeProgramOptimization="0"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+		</Configuration>
+		<Configuration
+			Name="Devel|Win32"
+			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
+			IntermediateDirectory="$(ConfigurationName)"
+			ConfigurationType="10"
+			CharacterSet="2"
+			WholeProgramOptimization="0"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+		</Configuration>
+	</Configurations>
+	<References>
+	</References>
+	<Files>
+		<Filter
+			Name="Source Files"
+			Filter="cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx"
+			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
+			>
+		</Filter>
+		<Filter
+			Name="Header Files"
+			Filter="h;hpp;hxx;hm;inl;inc;xsd"
+			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
+			>
+			<File
+				RelativePath="..\..\include\wx\msw\genrcdefs.h"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCustomBuildTool"
+						Description="Creating ..\..\lib\vc_lib\mswd\wx\msw\rcdefs.h"
+						CommandLine="cl /EP /nologo &quot;$(InputPath)&quot; &gt; &quot;..\..\lib\vc_lib\mswd\wx\msw\rcdefs.h&quot;"
+						Outputs="..\..\lib\vc_lib\mswd\wx\msw\rcdefs.h"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCustomBuildTool"
+						Description="Creating ..\..\lib\vc_lib\mswd\wx\msw\rcdefs.h"
+						CommandLine="cl /EP /nologo &quot;$(InputPath)&quot; &gt; &quot;..\..\lib\vc_lib\mswd\wx\msw\rcdefs.h&quot;"
+						Outputs="..\..\lib\vc_lib\mswd\wx\msw\rcdefs.h"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Devel|Win32"
+					>
+					<Tool
+						Name="VCCustomBuildTool"
+						Description="Creating ..\..\lib\vc_lib\mswd\wx\msw\rcdefs.h"
+						CommandLine="cl /EP /nologo &quot;$(InputPath)&quot; &gt; &quot;..\..\lib\vc_lib\mswd\wx\msw\rcdefs.h&quot;"
+						Outputs="..\..\lib\vc_lib\mswd\wx\msw\rcdefs.h"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\..\include\wx\msw\setup.h"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCustomBuildTool"
+						Description="Creating ..\..\lib\vc_lib\mswd\wx\setup.h"
+						CommandLine="copy &quot;$(InputPath)&quot; ..\..\lib\vc_lib\mswd\wx\setup.h"
+						Outputs="..\..\lib\vc_lib\mswd\wx\setup.h"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCustomBuildTool"
+						Description="Creating ..\..\lib\vc_lib\msw\wx\setup.h"
+						CommandLine="copy &quot;$(InputPath)&quot; ..\..\lib\vc_lib\msw\wx\setup.h"
+						Outputs="..\..\lib\vc_lib\msw\wx\setup.h"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Devel|Win32"
+					>
+					<Tool
+						Name="VCCustomBuildTool"
+						Description="Creating ..\..\lib\vc_lib\msw\wx\setup.h"
+						CommandLine="copy &quot;$(InputPath)&quot; ..\..\lib\vc_lib\msw\wx\setup.h"
+						Outputs="..\..\lib\vc_lib\msw\wx\setup.h"
+					/>
+				</FileConfiguration>
+			</File>
+		</Filter>
+		<Filter
+			Name="Resource Files"
+			Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav"
+			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}"
+			>
+		</Filter>
+	</Files>
+	<Globals>
+	</Globals>
+</VisualStudioProject>

@@ -50,8 +50,8 @@ __forceinline void SIO_INT()
 // wants to add support for using the extra memcard slots.
 static bool IsMtapPresent( uint port ) {
 	switch(port) {
-		case 1: return 0 != PAD1queryMtap(port);
-		case 2: return 0 != PAD2queryMtap(port);
+		case 0: return 0 != PAD1queryMtap(port+1);
+		case 1: return 0 != PAD2queryMtap(port+1);
 	}
 	return 0;
 }
@@ -460,7 +460,7 @@ void SIO_CommandWrite(u8 value,int way) {
 				sio.bufcount = 6; // No idea why this is 6, saved from old code.
 				break;
 			}
-			// Commented out values are from original code.  Break multitap in bios..
+			// Commented out values are from original code.  Break multitap in bios.
 			sio.buf[sio.bufcount-1]=0;//'+';
 			sio.buf[sio.bufcount]=0;//'Z';
 			return;
@@ -475,17 +475,11 @@ void SIO_CommandWrite(u8 value,int way) {
 			sio.packetsize++;
 			sio.parp++;
 			sio.mtapst = 2;
-			switch (sio.CtrlReg&0x2002) {
-				case 0x0002:
-					// Not sure if these checks are absolutely needed, but
-					// prefer to be safe.
-					if (IsMtapPresent(1))
-						sio.activePadSlot[0] = value;
-					break;
-				case 0x2002:
-					if (IsMtapPresent(2))
-						sio.activePadSlot[1] = value;
-					break;
+			if (sio.CtrlReg & 2)
+			{
+				int port = sio.GetMultitapPort();
+				if (IsMtapPresent(port))
+					sio.activePadSlot[port] = value;
 			}
 			SIO_INT();
 			return;
@@ -494,17 +488,11 @@ void SIO_CommandWrite(u8 value,int way) {
 			sio.packetsize++;
 			sio.parp++;
 			sio.mtapst = 2;
-			switch (sio.CtrlReg&0x2002) {
-				case 0x0002:
-					// Not sure if these checks are absolutely needed, but
-					// prefer to be safe.
-					if (IsMtapPresent(1))
-						sio.activeMemcardSlot[0] = value;
-					break;
-				case 0x2002:
-					if (IsMtapPresent(2))
-						sio.activeMemcardSlot[1] = value;
-					break;
+			if (sio.CtrlReg & 2)
+			{
+				int port = sio.GetMultitapPort();
+				if (IsMtapPresent(port))
+					sio.activeMemcardSlot[port] = value;
 			}
 			SIO_INT();
 			return;
@@ -561,33 +549,22 @@ void InitializeSIO(u8 value)
 			sio.mtapst = 1;
 			sio.count = 0;
 			sio2.packet.recvVal1 = 0x1D100; // Mtap is not connected :(
-			switch (sio.CtrlReg&0x2002) {
-				case 0x0002:
-					if (!IsMtapPresent(1)) {
-						// If "unplug" multitap, set slots to 0.
-						sio.activePadSlot[0] = 0;
-						sio.activeMemcardSlot[0] = 0;
-						break;
-					}
+			if (sio.CtrlReg & 2) // No idea if this test is needed.  Pads use it, memcards don't.
+			{
+				int port = sio.GetMultitapPort();
+				if (!IsMtapPresent(port))
+				{
+					sio.activePadSlot[port] = 0;
+					sio.activeMemcardSlot[port] = 0;
+				}
+				else
+				{
 					sio.bufcount = 3;
 					sio.buf[0] = 0xFF;
 					sio.buf[1] = 0x80; // Have no idea if this is correct.  From PSX mtap.
 					sio.buf[2] = 0x5A;
 					sio2.packet.recvVal1 = 0x1100; // Mtap is connected :)
-					break;
-				case 0x2002:
-					if (!IsMtapPresent(2)) {
-						// If "unplug" multitap, set slots to 0.
-						sio.activePadSlot[1] = 0;
-						sio.activeMemcardSlot[1] = 0;
-						break;
-					}
-					sio.bufcount = 3;
-					sio.buf[0] = 0xFF;
-					sio.buf[1] = 0x80; // Have no idea if this is correct.  From PSX mtap.
-					sio.buf[2] = 0x5A;
-					sio2.packet.recvVal1 = 0x1100; // Mtap is connected :)
-					break;
+				}
 			}
 			SIO_INT();
 			return;

@@ -58,7 +58,7 @@ extern u8  *psS; //0.015 mb, scratch pad
 extern u8 g_RealGSMem[Ps2MemSize::GSregs];
 #define PS2MEM_GS	g_RealGSMem
 
-#define PSM(mem)	(vtlb_GetPhyPtr(mem&0x1fffffff)) //pcsx2 is a competition.The one with most hacks wins :D
+#define PSM(mem)	(vtlb_GetPhyPtr((mem)&0x1fffffff)) //pcsx2 is a competition.The one with most hacks wins :D
 
 #define psMs8(mem)	(*(s8 *)&PS2MEM_BASE[(mem) & 0x1ffffff])
 #define psMs16(mem)	(*(s16*)&PS2MEM_BASE[(mem) & 0x1ffffff])

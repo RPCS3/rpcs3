@@ -607,8 +607,9 @@ static void recShutdown( void )
 	s_nInstCacheSize = 0;
 }
 
-// Ignored by Linux
+#ifdef _MSC_VER
 #pragma warning(disable:4731) // frame pointer register 'ebp' modified by inline assembly code
+#endif
 
 void recStep( void ) {
 }

@@ -87,6 +87,7 @@ typedef unsigned int uint;
 #define PCSX2_ALIGNED16_EXTERN(x) extern __declspec(align(16)) x
 
 #define __naked __declspec(naked)
+#define __unused /*unused*/
 #define CALLBACK    __stdcall
 
 #else // _MSC_VER

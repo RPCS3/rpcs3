@@ -1139,7 +1139,7 @@ int __fastcall getBits(u8 *address, u32 size, u32 advance)
 {
 	register u32 mask = 0, shift = 0, howmuch;
 	u8* oldbits, *oldaddr = address;
-	u32 pointer = 0;
+	u32 pointer = 0, temp;
 
 	// Check if the current BP has exceeded or reached the limit of 128
 	if (FillInternalBuffer(&g_BP.BP, 1, 8) < 8) return 0;
@@ -1159,7 +1159,8 @@ int __fastcall getBits(u8 *address, u32 size, u32 advance)
 				shift = 8;
 			}
 
-			howmuch = min(min(8 - (pointer & 7), 128 - pointer), min(size, shift));
+			temp = shift; // Lets not pass a register to min.
+			howmuch = min(min(8 - (pointer & 7), 128 - pointer), min(size, temp));
 
 			if (FillInternalBuffer(&pointer, advance, 8) < 8)
 			{

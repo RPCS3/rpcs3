@@ -43,3 +43,4 @@ namespace Dialogs
 		void Cancel_Click(wxCommandEvent &event);
 	};
 }
+

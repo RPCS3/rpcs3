@@ -35,3 +35,4 @@ public:
 
 	const wxImage& GetImage() { return m_Image; }
 };
+

@@ -35,7 +35,6 @@ PCSX2_ALIGNED16(u32 g_vifCol0[4]);
 PCSX2_ALIGNED16(u32 g_vifRow1[4]);
 PCSX2_ALIGNED16(u32 g_vifCol1[4]);
 
-//static int cycles;
 extern int g_vifCycles;
 u16 vifqwc = 0;
 bool mfifodmairq = FALSE;
@@ -683,8 +682,11 @@ void mfifoVIF1transfer(int qwc)
 
 		if (vif1ch->chcr & 0x40)
 		{
-			if (vif1.stallontag == 1) ret = VIF1transfer(ptag + (2 + vif1.irqoffset), 2 - vif1.irqoffset, 1);  //Transfer Tag on Stall
-			else ret = VIF1transfer(ptag + 2, 2, 1);  //Transfer Tag
+			if (vif1.stallontag == 1)
+				ret = VIF1transfer(ptag + (2 + vif1.irqoffset), 2 - vif1.irqoffset, 1);  //Transfer Tag on Stall
+			else 
+				ret = VIF1transfer(ptag + 2, 2, 1);  //Transfer Tag
+			
 			if (ret == -2)
 			{
 				VIF_LOG("MFIFO Stallon tag");
@@ -696,7 +698,6 @@ void mfifoVIF1transfer(int qwc)
 		id = (ptag[0] >> 28) & 0x7;
 		vif1ch->qwc  = (ptag[0] & 0xffff);
 		vif1ch->madr = ptag[1];
-		//cycles += 2;
 
 		vif1ch->chcr = (vif1ch->chcr & 0xFFFF) | ((*ptag) & 0xFFFF0000);
 
