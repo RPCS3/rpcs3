@@ -33,7 +33,7 @@ using namespace std;
 extern u32 g_psxConstRegs[32];
 
 
-u16 x86FpuState, iCWstate;
+u16 x86FpuState;
 u16 g_mmxAllocCounter = 0;
 
 // X86 caching

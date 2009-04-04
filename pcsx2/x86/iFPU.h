@@ -22,9 +22,6 @@
 namespace R5900 { 
 namespace Dynarec { 
 
-	void SaveCW();
-	void LoadCW();
-
 	namespace OpcodeImpl {
 	namespace COP1
 	{

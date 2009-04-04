@@ -117,10 +117,6 @@ void iFlushCall(int flushtype);
 void recBranchCall( void (*func)() );
 void recCall( void (*func)(), int delreg );
 
-// these are defined in iFPU.cpp
-void LoadCW();
-void SaveCW(int type);
-
 extern void recExecute();		// same as recCpu.Execute(), but faster (can be inline'd)
 
 namespace R5900{

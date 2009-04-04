@@ -230,8 +230,6 @@ int recSetMemLocation(int regs, int imm, int mmreg, int msize, int j32)
 
 	if ( imm != 0 ) ADD32ItoR( ECX, imm );
 
-	LoadCW();
-
 #ifdef _DEBUG
 	//CALLFunc((uptr)testaddrs);
 #endif
