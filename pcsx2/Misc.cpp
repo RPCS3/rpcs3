@@ -420,7 +420,7 @@ char *ParseLang(char *id) {
 char* mystrlwr( char* string )
 {
 	assert( string != NULL );
-	while ( 0 != ( *string++ = (char)tolower( *string ) ) ) ;
+	while ( 0 != ( *string++ = (char)tolower( *string ) ) );
     return string;
 }
 
@@ -493,99 +493,102 @@ void CycleFrameLimit(int dir)
 
 void ProcessFKeys(int fkey, struct KeyModifiers *keymod)
 {
-        assert(fkey >= 1 && fkey <= 12 );
+	assert(fkey >= 1 && fkey <= 12 );
 
-        switch(fkey) {
-                case 1:
-                        try
-                        {
-                                gzSavingState( SaveState::GetFilename( StatesC ) ).FreezeAll();
-                                HostGui::ResetMenuSlots();
-                        }
-                        catch( Exception::BaseException& ex )
-                        {
-                                // 99% of the time this is a file permission error and the
-                                // cpu state is intact so just display a passive msg to console.
+	switch(fkey) 
+	{
+		case 1:
+			try
+			{
+				gzSavingState( SaveState::GetFilename( StatesC ) ).FreezeAll();
+				HostGui::ResetMenuSlots();
+			}
+			catch( Exception::BaseException& ex )
+			{
+				// 99% of the time this is a file permission error and the
+				// cpu state is intact so just display a passive msg to console.
 
-                                Console::Error( _( "Error > Could not save state to slot %d" ), params StatesC );
-                                Console::Error( ex.cMessage() );
-                        }
-                        break;
+				Console::Error( _( "Error > Could not save state to slot %d" ), params StatesC );
+				Console::Error( ex.cMessage() );
+			}
+			break;
 
-                case 2:
-                        if( keymod->shift )
-                                StatesC = (StatesC+NUM_STATES-1) % NUM_STATES;
-                        else
-                                StatesC = (StatesC+1) % NUM_STATES;
+		case 2:
+			if( keymod->shift )
+				StatesC = (StatesC+NUM_STATES-1) % NUM_STATES;
+			else
+				StatesC = (StatesC+1) % NUM_STATES;
 
-                        Console::Notice( _( " > Selected savestate slot %d" ), params StatesC);
+			Console::Notice( _( " > Selected savestate slot %d" ), params StatesC);
 
-                        if( GSchangeSaveState != NULL )
-                                GSchangeSaveState(StatesC, SaveState::GetFilename(StatesC).c_str());
-                        break;
+			if( GSchangeSaveState != NULL )
+				GSchangeSaveState(StatesC, SaveState::GetFilename(StatesC).c_str());
+			break;
 
-                case 3:
-                        try
-                        {
-                                gzLoadingState joe( SaveState::GetFilename( StatesC ) );        // throws exception on version mismatch
-                                cpuReset();
-                                SysClearExecutionCache();
-                                joe.FreezeAll();
-                        }
-                        catch( Exception::StateLoadError_Recoverable& )
-                        {
-                                // At this point the cpu hasn't been reset, so we can return
-                                // control to the user safely... (and silently)
-                        }
-                        catch( Exception::FileNotFound& )
-                        {
-                                Console::Notice( _("Saveslot %d cannot be loaded; slot does not exist (file not found)"), params StatesC );
-                        }
-                        catch( Exception::RuntimeError& ex )
-                        {
-                                // This is the bad one.  Chances are the cpu has been reset, so emulation has
-                                // to be aborted.  Sorry user!  We'll give you some info for your trouble:
+		case 3:	
+			try
+			{
+				gzLoadingState joe( SaveState::GetFilename( StatesC ) );	// throws exception on version mismatch
+				cpuReset();
+				SysClearExecutionCache();
+				joe.FreezeAll();
+			}
+			catch( Exception::StateLoadError_Recoverable& )
+			{
+				// At this point the cpu hasn't been reset, so we can return
+				// control to the user safely... (and silently)
+			}
+			catch( Exception::FileNotFound& )
+			{
+				Console::Notice( _("Saveslot %d cannot be loaded; slot does not exist (file not found)"), params StatesC );
+			}
+			catch( Exception::RuntimeError& ex )
+			{
+				// This is the bad one.  Chances are the cpu has been reset, so emulation has
+				// to be aborted.  Sorry user!  We'll give you some info for your trouble:
 
-                                Console::Error( _("An error occured while trying to load saveslot %d"), params StatesC );
-                                Console::Error( ex.cMessage() );
-                                Msgbox::Alert(
-                                        "Pcsx2 encountered an error while trying to load the savestate\n"
-                                        "and emulation had to be aborted." );
+				Console::Error( _("An error occured while trying to load saveslot %d"), params StatesC );
+				Console::Error( ex.cMessage() );
+				Msgbox::Alert(
+					"Pcsx2 encountered an error while trying to load the savestate\n"
+					"and emulation had to be aborted." );
 
-                                ClosePlugins( true );
+				ClosePlugins( true );
 
-                                throw Exception::CpuStateShutdown(
-                                        "Saveslot load failed; PS2 emulated state had to be shut down." );      // let the GUI handle the error "gracefully"
-                        }
-                        break;
+				throw Exception::CpuStateShutdown(
+					"Saveslot load failed; PS2 emulated state had to be shut down." );	// let the GUI handle the error "gracefully"
+			}
+			break;
 
-                case 4:
-                        CycleFrameLimit(keymod->shift ? -1 : 1);
-                        break;
+		case 4:
+			CycleFrameLimit(keymod->shift ? -1 : 1);
+			break;
 
-                // note: VK_F5-VK_F7 are reserved for GS
-                case 8:
-                        GSmakeSnapshot( SNAPSHOTS_DIR "/" );
-                        break;
-               
-                case 9: //gsdx "on the fly" renderer switching
-                        if (!renderswitch) {
-                                StateRecovery::MakeGsOnly();
-                                g_EmulationInProgress = false;
-                                CloseGS();
-                                renderswitch = true;    //go to dx9 sw
-                                StateRecovery::Recover();
-                                HostGui::BeginExecution(); //also sets g_EmulationInProgress to true later
-                        }
-                        else {
-                                StateRecovery::MakeGsOnly();
-                                g_EmulationInProgress = false;
-                                CloseGS();
-                                renderswitch = false;   //return to default renderer
-                                StateRecovery::Recover();
-                                HostGui::BeginExecution(); //also sets g_EmulationInProgress to true later
-                        }
-                        break;
+		// note: VK_F5-VK_F7 are reserved for GS
+		case 8:
+			GSmakeSnapshot( SNAPSHOTS_DIR "/" );
+			break;
+		
+		case 9: //gsdx "on the fly" renderer switching 
+			if (!renderswitch) 
+			{
+				StateRecovery::MakeGsOnly();
+				g_EmulationInProgress = false;
+				CloseGS();
+				renderswitch = true;	//go to dx9 sw
+				StateRecovery::Recover();
+				HostGui::BeginExecution(); //also sets g_EmulationInProgress to true later
+			}
+			else 
+			{
+				StateRecovery::MakeGsOnly();
+				g_EmulationInProgress = false;
+				CloseGS();
+				renderswitch = false;	//return to default renderer
+				StateRecovery::Recover();
+				HostGui::BeginExecution(); //also sets g_EmulationInProgress to true later
+			}
+			break;
 #ifdef PCSX2_DEVBUILD
 		case 10:
 			// There's likely a better way to implement this, but this seemed useful.
@@ -599,55 +602,60 @@ void ProcessFKeys(int fkey, struct KeyModifiers *keymod)
 				GSprintf(10,"Logging Disabled.");
 			
 			break;
-			
-                case 11:
-                        if( mtgsThread != NULL ) {
-                                Console::Notice( "Cannot make gsstates in MTGS mode" );
-                        }
-                        else
-                        {
-                                string Text;
-                                if( strgametitle[0] != 0 ) {
-                                        // only take the first two words
-                                        char name[256], *tok;
-                                        string gsText;
+		case 11:
+			if( mtgsThread != NULL ) 
+			{
+				Console::Notice( "Cannot make gsstates in MTGS mode" );
+			}
+			else
+			{
+				string Text;
+				if( strgametitle[0] != 0 ) 
+				{
+					// only take the first two words
+					char name[256], *tok;
+					string gsText;
 
-                                        tok = strtok(strgametitle, " ");
-                                        sprintf(name, "%s_", mystrlwr(tok));
-                                        tok = strtok(NULL, " ");
-                                        if( tok != NULL ) strcat(name, tok);
+					tok = strtok(strgametitle, " ");
+					sprintf(name, "%s_", mystrlwr(tok));
+					
+					tok = strtok(NULL, " ");
+					if( tok != NULL ) strcat(name, tok);
 
-
-                                        ssprintf( gsText, "%s.%d.gs", name, StatesC);
-                                        Text = Path::Combine( SSTATES_DIR, gsText );
-                                }
-                                else
-                                        Text = GetGSStateFilename();
-
-                                SaveGSState(Text);
-                        }
-                        break;
+					ssprintf( gsText, "%s.%d.gs", name, StatesC);
+					Text = Path::Combine( SSTATES_DIR, gsText );
+				}
+				else
+				{
+					Text = GetGSStateFilename();
+				}
+				
+				SaveGSState(Text);
+			}
+			break;
 #endif
 
-                case 12:
-                        if( keymod->shift ) {
+		case 12:
+			if( keymod->shift ) 
+			{
 #ifdef PCSX2_DEVBUILD
-                                iDumpRegisters(cpuRegs.pc, 0);
-                                Console::Notice("hardware registers dumped EE:%x, IOP:%x\n", params cpuRegs.pc, psxRegs.pc);
+				iDumpRegisters(cpuRegs.pc, 0);
+				Console::Notice("hardware registers dumped EE:%x, IOP:%x\n", params cpuRegs.pc, psxRegs.pc);
 #endif
-                        }
-                        else {
-                                g_Pcsx2Recording ^= 1;
-                                if( mtgsThread != NULL ) {
-                                        mtgsThread->SendSimplePacket(GS_RINGTYPE_RECORD, g_Pcsx2Recording, 0, 0);
-                                }
-                                else {
-                                        if( GSsetupRecording != NULL ) GSsetupRecording(g_Pcsx2Recording, NULL);
-                                }
-                                if( SPU2setupRecording != NULL ) SPU2setupRecording(g_Pcsx2Recording, NULL);  
-                        }
-                        break;
-        }
+			}
+			else 
+			{
+				g_Pcsx2Recording ^= 1;
+				
+				if( mtgsThread != NULL ) 
+					mtgsThread->SendSimplePacket(GS_RINGTYPE_RECORD, g_Pcsx2Recording, 0, 0);
+				else if( GSsetupRecording != NULL ) 
+					GSsetupRecording(g_Pcsx2Recording, NULL);
+				
+				if( SPU2setupRecording != NULL ) SPU2setupRecording(g_Pcsx2Recording, NULL);  
+			}
+			break;
+	}
 }
 
 void _memset16_unaligned( void* dest, u16 data, size_t size )
