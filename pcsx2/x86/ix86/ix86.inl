@@ -2356,7 +2356,7 @@ emitterT void eAND32RmtoR( x86IntRegType to, x86IntRegType from )
 emitterT void eAND32RmtoROffset( x86IntRegType to, x86IntRegType from, int offset )
 {
 	RexRB(0,to,from);
-	write16<I>( 0x23 );
+	write8<I>( 0x23 );
 	WriteRmOffsetFrom<I>(to,from,offset);
 }
 

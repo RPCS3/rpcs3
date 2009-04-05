@@ -73,7 +73,7 @@ public:
 
 	BASEBLOCKEX* New(u32 startpc, uptr fnptr);
 	int LastIndex (u32 startpc) const;
-	BASEBLOCKEX* GetByX86(uptr ip) const;
+	BASEBLOCKEX* GetByX86(uptr ip);
 
 	inline int Index (u32 startpc) const
 	{
