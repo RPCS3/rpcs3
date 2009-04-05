@@ -1867,7 +1867,7 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 								InsertMenuItemW(hMenu, index, 1, &info);
 							}
 							else {
-								info.wID = port2+2*slot2;
+								info.wID = port2+2*slot2+1;
 								wsprintfW(text, L"Swap with %s", pad);
 								InsertMenuItemW(hMenu, 0, 1, &info);
 							}
@@ -1879,6 +1879,7 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 					DestroyMenu(hMenu);
 					if (!res) break;
 					if (res > 0) {
+						res--;
 						slot2 = res / 2;
 						port2 = res&1;
 						PadConfig padCfgTemp = config.padConfigs[port1][slot1];
