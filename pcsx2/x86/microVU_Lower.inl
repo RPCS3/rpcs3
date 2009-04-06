@@ -23,6 +23,10 @@
 // Micro VU Micromode Lower instructions
 //------------------------------------------------------------------
 
+//------------------------------------------------------------------
+// DIV/SQRT/RSQRT
+//------------------------------------------------------------------
+
 #define testZero(xmmReg, xmmTemp, gprTemp) {										\
 	SSE_XORPS_XMM_to_XMM(xmmTemp, xmmTemp);		/* Clear xmmTemp (make it 0) */		\
 	SSE_CMPEQPS_XMM_to_XMM(xmmTemp, xmmReg);	/* Set all F's if zero */			\
@@ -127,6 +131,10 @@ microVUf(void) mVU_RSQRT() {
 		mVUmergeRegs<vuIndex>(xmmPQ, xmmFs, writeQ ? 4 : 8);
 	}
 }
+
+//------------------------------------------------------------------
+// EATAN/EEXP/ELENG/ERCPR/ERLENG/ERSADD/ERSQRT/ESADD/ESIN/ESQRT/ESUM
+//------------------------------------------------------------------
 
 #define EATANhelper(addr) {						\
 	SSE_MULSS_XMM_to_XMM(xmmT1, xmmFs);			\
@@ -401,6 +409,10 @@ microVUf(void) mVU_ESUM() {
 	}
 }
 
+//------------------------------------------------------------------
+// FCAND/FCEQ/FCGET/FCOR/FCSET
+//------------------------------------------------------------------
+
 microVUf(void) mVU_FCAND() {
 	microVU* mVU = mVUx;
 	if (!recPass) {}
@@ -456,6 +468,10 @@ microVUf(void) mVU_FCSET() {
 	}
 }
 
+//------------------------------------------------------------------
+// FMAND/FMEQ/FMOR
+//------------------------------------------------------------------
+
 microVUf(void) mVU_FMAND() {
 	microVU* mVU = mVUx;
 	if (!recPass) {}
@@ -491,9 +507,13 @@ microVUf(void) mVU_FMOR() {
 	}
 }
 
+//------------------------------------------------------------------
+// FSAND/FSEQ/FSOR/FSSET
+//------------------------------------------------------------------
+
 microVUf(void) mVU_FSAND() {
 	microVU* mVU = mVUx;
-	if (!recPass) {}
+	if (!recPass) { mVUanalyzeSflag<vuIndex>(_Ft_); }
 	else { 
 		mVUallocSFLAGa<vuIndex>(gprT1, fvsInstance);
 		AND16ItoR(gprT1, _Imm12_);
@@ -503,7 +523,7 @@ microVUf(void) mVU_FSAND() {
 
 microVUf(void) mVU_FSEQ() {
 	microVU* mVU = mVUx;
-	if (!recPass) {}
+	if (!recPass) { mVUanalyzeSflag<vuIndex>(_Ft_); }
 	else { 
 		mVUallocSFLAGa<vuIndex>(gprT1, fvsInstance);
 		XOR16ItoR(gprT1, _Imm12_);
@@ -515,7 +535,7 @@ microVUf(void) mVU_FSEQ() {
 
 microVUf(void) mVU_FSOR() {
 	microVU* mVU = mVUx;
-	if (!recPass) {}
+	if (!recPass) { mVUanalyzeSflag<vuIndex>(_Ft_); }
 	else { 
 		mVUallocSFLAGa<vuIndex>(gprT1, fvsInstance);
 		OR16ItoR(gprT1, _Imm12_);
@@ -535,6 +555,10 @@ microVUf(void) mVU_FSSET() {
 		//mVUdivFlagT = 4;
 	}
 }
+
+//------------------------------------------------------------------
+// IADD/IADDI/IADDIU/IAND/IOR/ISUB/ISUBIU
+//------------------------------------------------------------------
 
 microVUf(void) mVU_IADD() {
 	microVU* mVU = mVUx;
@@ -623,6 +647,10 @@ microVUf(void) mVU_ISUBIU() {
 	}
 }
 
+//------------------------------------------------------------------
+// MOVE/MFIR/MFP/MTIR/MR32
+//------------------------------------------------------------------
+
 microVUf(void) mVU_MOVE() {
 	microVU* mVU = mVUx;
 	if (!recPass) { /*If (!_Ft_ || (_Ft_ == _Fs_)) nop();*/ }
@@ -672,6 +700,10 @@ microVUf(void) mVU_MR32() {
 	}
 }
 
+//------------------------------------------------------------------
+// ILW/ILWR
+//------------------------------------------------------------------
+
 microVUf(void) mVU_ILW() {
 	microVU* mVU = mVUx;
 	if (!recPass) { /*If (!_Ft_) nop();*/ }
@@ -708,6 +740,10 @@ microVUf(void) mVU_ILWR() {
 		}
 	}
 }
+
+//------------------------------------------------------------------
+// ISW/ISWR
+//------------------------------------------------------------------
 
 microVUf(void) mVU_ISW() {
 	microVU* mVU = mVUx;
@@ -756,6 +792,10 @@ microVUf(void) mVU_ISWR() {
 		}
 	}
 }
+
+//------------------------------------------------------------------
+// LQ/LQD/LQI
+//------------------------------------------------------------------
 
 microVUf(void) mVU_LQ() {
 	microVU* mVU = mVUx;
@@ -818,6 +858,10 @@ microVUf(void) mVU_LQI() {
 	}
 }
 
+//------------------------------------------------------------------
+// SQ/SQD/SQI
+//------------------------------------------------------------------
+
 microVUf(void) mVU_SQ() {
 	microVU* mVU = mVUx;
 	if (!recPass) {}
@@ -874,6 +918,10 @@ microVUf(void) mVU_SQI() {
 		}
 	}
 }
+
+//------------------------------------------------------------------
+// RINIT/RGET/RNEXT/RXOR
+//------------------------------------------------------------------
 
 microVUf(void) mVU_RINIT() {
 	microVU* mVU = mVUx;
@@ -938,21 +986,27 @@ microVUf(void) mVU_RXOR() {
 	}
 }
 
+//------------------------------------------------------------------
+// WaitP/WaitQ
+//------------------------------------------------------------------
+
 microVUf(void) mVU_WAITP() {
 	microVU* mVU = mVUx;
-	if (!recPass) {}
-	else {}
+	if (!recPass) { mVUstall = aMax(mVUstall, ((mVUregs.p) ? (mVUregs.p - 1) : 0)); }
 }
 
 microVUf(void) mVU_WAITQ() {
 	microVU* mVU = mVUx;
-	if (!recPass) {}
-	else {}
+	if (!recPass) { mVUstall = aMax(mVUstall, mVUregs.q); }
 }
+
+//------------------------------------------------------------------
+// XTOP/XITOP
+//------------------------------------------------------------------
 
 microVUf(void) mVU_XTOP() {
 	microVU* mVU = mVUx;
-	if (!recPass) {}
+	if (!recPass) { if (!_Ft_) { mVUinfo |= _isNOP; return; } analyzeVIreg2(_Ft_, 1); }
 	else { 
 		MOVZX32M16toR( gprT1, (uptr)&mVU->regs->vifRegs->top);
 		mVUallocVIb<vuIndex>(gprT1, _Ft_);
@@ -961,12 +1015,16 @@ microVUf(void) mVU_XTOP() {
 
 microVUf(void) mVU_XITOP() {
 	microVU* mVU = mVUx;
-	if (!recPass) {}
+	if (!recPass) { if (!_Ft_) { mVUinfo |= _isNOP; return; } analyzeVIreg2(_Ft_, 1); }
 	else { 
 		MOVZX32M16toR( gprT1, (uptr)&mVU->regs->vifRegs->itop );
 		mVUallocVIb<vuIndex>(gprT1, _Ft_);
 	}
 }
+
+//------------------------------------------------------------------
+// XGkick
+//------------------------------------------------------------------
 
 microVUt(void) __fastcall mVU_XGKICK_(u32 addr) {
 	microVU* mVU = mVUx;
@@ -990,7 +1048,7 @@ microVUf(void) mVU_XGKICK() {
 }
 
 //------------------------------------------------------------------
-// Branches
+// Branches/Jumps
 //------------------------------------------------------------------
 
 microVUf(void) mVU_B() {

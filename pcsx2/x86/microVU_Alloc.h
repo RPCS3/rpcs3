@@ -54,6 +54,7 @@ struct microAllocInfo {
 	u8  maxStall;		// Helps in computing stalls (stores the max amount of cycles to stall for the current opcodes)
 	u32 cycles;			// Cycles for current block
 	u32 curPC;			// Current PC
+	u32 startPC;		// Start PC for Cur Block
 	u32 info[pSize];	// bit 00 = Lower Instruction is NOP
 						// bit 01
 						// bit 02

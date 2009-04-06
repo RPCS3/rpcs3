@@ -19,18 +19,6 @@
 #pragma once
 #ifdef PCSX2_MICROVU
 
-#ifdef mVUdebug
-#define mVUdebugStuff1() {										\
-	if (curI & _Ibit_)	{ SysPrintf("microVU: I-bit set!\n"); }	\
-	if (curI & _Ebit_)	{ SysPrintf("microVU: E-bit set!\n"); }	\
-	if (curI & _Mbit_)	{ SysPrintf("microVU: M-bit set!\n"); }	\
-	if (curI & _Dbit_)	{ SysPrintf("microVU: D-bit set!\n"); }	\
-	if (curI & _Tbit_)	{ SysPrintf("microVU: T-bit set!\n"); }	\
-}
-#else
-#define mVUdebugStuff1() {}
-#endif
-
 #define createBlock(blockEndPtr) {									\
 	block.pipelineState = pipelineState;							\
 	block.x86ptrStart = x86ptrStart;								\
@@ -59,19 +47,18 @@ microVUt(void) mVUsetCycles() {
 microVUx(void) mVUcompile(u32 startPC, u32 pipelineState, microRegInfo* pState, u8* x86ptrStart) {
 	microVU* mVU = mVUx;
 	microBlock block;
-	int branch;
 	iPC = startPC / 4;
-
+	
 	// Searches for Existing Compiled Block (if found, then returns; else, compile)
 	microBlock* pblock = mVUblock[iPC]->search(pipelineState, pState);
 	if (block) { x86SetPtr(pblock->x86ptrEnd); return; }
 
 	// First Pass
 	setCode();
-	branch	  = 0;
-	mVUbranch = 0;
-	mVUcycles = 1; // Skips "M" phase, and starts counting cycles at "T" stage
-	for (;;) {
+	mVUbranch	= 0;
+	mVUstartPC	= iPC;
+	mVUcycles	= 1; // Skips "M" phase, and starts counting cycles at "T" stage
+	for (int branch = 0;; ) {
 		startLoop();
 		mVUopU<vuIndex, 0>();
 		if (curI & _Ebit_)	  { branch = 1; }
@@ -89,6 +76,9 @@ microVUx(void) mVUcompile(u32 startPC, u32 pipelineState, microRegInfo* pState, 
 	iPC = startPC;
 	setCode();
 	for (bool x = 1; x; ) {
+		//
+		// ToDo: status/mac flag stuff
+		//
 		if (isEOB)			{ x = 0; }
 		else if (isBranch)	{ mVUopU<vuIndex, 1>(); incPC(2); }
 		

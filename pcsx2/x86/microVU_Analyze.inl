@@ -143,4 +143,18 @@ microVUt(void) mVUanalyzeEFU2(int Fs, u8 xCycles) {
 	analyzePreg(xCycles);
 }
 
+//------------------------------------------------------------------
+// Sflag - Status Flag Opcodes
+//------------------------------------------------------------------
+
+#define analyzeVIreg1(reg)			{ if (reg) { mVUstall = aMax(mVUstall, mVUregs.VI[reg]); } }
+#define analyzeVIreg2(reg, aCycles)	{ if (reg) { mVUregsTemp.VIreg = reg; mVUregsTemp.VI = aCycles; } }
+
+microVUt(void) mVUanalyzeSflag(int It) {
+	microVU* mVU = mVUx;
+	if (!It) { mVUinfo |= _isNOP; return; }
+	mVUinfo |= _isSflag;
+	analyzeVIreg2(It, 1);
+}
+
 #endif //PCSX2_MICROVU

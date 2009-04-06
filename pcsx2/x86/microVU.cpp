@@ -42,7 +42,7 @@ microVUt(void) mVUinit(VURegs* vuRegsPtr) {
 	mVU->index		= vuIndex;
 	mVU->microSize	= (vuIndex ? 0x4000 : 0x1000);
 	mVU->progSize	= (vuIndex ? 0x4000 : 0x1000) / 8;
-	mVU->cacheAddr	= 0xC0000000 + (vuIndex ? mVU->cacheSize : 0);
+	mVU->cacheAddr	= (vuIndex ? 0x1e840000 : 0x0e840000);
 	mVU->cache		= NULL;
 
 	mVUreset<vuIndex>();
@@ -55,16 +55,16 @@ microVUt(void) mVUreset() {
 	mVUclose<vuIndex>(); // Close
 
 	// Create Block Managers
-	for (int i; i <= mVU->prog.max; i++) {
-		for (u32 j; j < (mVU->progSize / 2); j++) {
+	for (int i = 0; i <= mVU->prog.max; i++) {
+		for (u32 j = 0; j < (mVU->progSize / 2); j++) {
 			mVU->prog.prog[i].block[j] = new microBlockManager();
 		}
 	}
 
 	// Dynarec Cache
-	mVU->cache = SysMmapEx(mVU->cacheAddr, mVU->cacheSize, 0x10000000, (vuIndex ? "Micro VU1" : "Micro VU0"));
-	if ( mVU->cache == NULL ) throw Exception::OutOfMemory(fmt_string( "microVU Error: failed to allocate recompiler memory! (addr: 0x%x)", params (u32)mVU->cache));
-
+	mVU->cache = SysMmapEx(mVU->cacheAddr, mVU->cacheSize, 0, (vuIndex ? "Micro VU1" : "Micro VU0"));
+	if ( mVU->cache == NULL ) throw Exception::OutOfMemory(fmt_string( "microVU Error: Failed to allocate recompiler memory! (addr: 0x%x)", params (u32)mVU->cache));
+	
 	// Other Variables
 	memset(&mVU->prog, 0, sizeof(mVU->prog));
 	mVU->prog.finished = 1;
@@ -81,8 +81,8 @@ microVUt(void) mVUclose() {
 	if ( mVU->cache ) { HostSys::Munmap( mVU->cache, mVU->cacheSize ); mVU->cache = NULL; }
 
 	// Delete Block Managers
-	for (int i; i <= mVU->prog.max; i++) {
-		for (u32 j; j < (mVU->progSize / 2); j++) {
+	for (int i = 0; i <= mVU->prog.max; i++) {
+		for (u32 j = 0; j < (mVU->progSize / 2); j++) {
 			if (mVU->prog.prog[i].block[j]) delete mVU->prog.prog[i].block[j];
 		}
 	}
@@ -277,27 +277,27 @@ extern "C" {
 // Wrapper Functions - Called by other parts of the Emu
 //------------------------------------------------------------------
 
-__forceinline void initVUrec(VURegs* vuRegs, const int vuIndex) {
+void initVUrec(VURegs* vuRegs, const int vuIndex) {
 	if (!vuIndex)	mVUinit<0>(vuRegs);
 	else			mVUinit<1>(vuRegs);
 }
 
-__forceinline void closeVUrec(const int vuIndex) {
+void closeVUrec(const int vuIndex) {
 	if (!vuIndex)	mVUclose<0>();
 	else			mVUclose<1>();
 }
 
-__forceinline void resetVUrec(const int vuIndex) {
+void resetVUrec(const int vuIndex) {
 	if (!vuIndex)	mVUreset<0>();
 	else			mVUreset<1>();
 }
 
-__forceinline void clearVUrec(u32 addr, u32 size, const int vuIndex) {
+void clearVUrec(u32 addr, u32 size, const int vuIndex) {
 	if (!vuIndex)	mVUclear<0>(addr, size);
 	else			mVUclear<1>(addr, size);
 }
 
-__forceinline void runVUrec(u32 startPC, u32 cycles, const int vuIndex) {
+void runVUrec(u32 startPC, u32 cycles, const int vuIndex) {
 	if (!vuIndex)	startVU0(startPC, cycles);
 	else			startVU1(startPC, cycles);
 }

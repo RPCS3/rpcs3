@@ -66,9 +66,9 @@ declareAllVariables
 //------------------------------------------------------------------
 // Helper Macros
 //------------------------------------------------------------------
-#define _Ft_ ((mVU->code >> 16) & 0x1F)  // The rt part of the instruction register 
-#define _Fs_ ((mVU->code >> 11) & 0x1F)  // The rd part of the instruction register 
-#define _Fd_ ((mVU->code >>  6) & 0x1F)  // The sa part of the instruction register
+#define _Ft_ ((mVU->code >> 16) & 0x1F)  // The ft/it part of the instruction register 
+#define _Fs_ ((mVU->code >> 11) & 0x1F)  // The fs/is part of the instruction register 
+#define _Fd_ ((mVU->code >>  6) & 0x1F)  // The fd/id part of the instruction register
 
 #define _X	 ((mVU->code>>24) & 0x1)
 #define _Y	 ((mVU->code>>23) & 0x1)
@@ -144,11 +144,12 @@ declareAllVariables
 #define mVUbranch	 mVUallocInfo.branch
 #define mVUcycles	 mVUallocInfo.cycles
 #define mVUstall	 mVUallocInfo.maxStall
-#define mVUdivFlag	 mVUallocInfo.divFlag
-#define mVUdivFlagT	 mVUallocInfo.divFlagTimer
+//#define mVUdivFlag	 mVUallocInfo.divFlag
+//#define mVUdivFlagT	 mVUallocInfo.divFlagTimer
 #define mVUregs		 mVUallocInfo.regs
 #define mVUregsTemp	 mVUallocInfo.regsTemp
 #define mVUinfo		 mVUallocInfo.info[mVUallocInfo.curPC / 2]
+#define mVUstartPC	 mVUallocInfo.startPC
 #define iPC			 mVUallocInfo.curPC
 #define xPC			 ((iPC / 2) * 8)
 #define incCycles(x) { mVUcycles += x; }
@@ -157,6 +158,7 @@ declareAllVariables
 #define _isBranch	 (1<<1) // Cur Instruction is a Branch
 #define _isEOB		 (1<<2) // End of Block
 #define _isBdelay	 (1<<3) // Cur Instruction in Branch Delay slot
+#define _isSflag	 (1<<4) // Cur Instruction uses status flag
 #define _writeQ		 (1<<5)
 #define _readQ		 (1<<6)
 #define _writeP		 (1<<7)
@@ -177,6 +179,7 @@ declareAllVariables
 #define isBranch	 (mVUinfo & (1<<1))
 #define isEOB		 (mVUinfo & (1<<2))
 #define isBdelay	 (mVUinfo & (1<<3))
+#define isSflag		 (mVUinfo & (1<<4))
 #define writeQ		((mVUinfo >> 5) & 1)
 #define readQ		((mVUinfo >> 6) & 1)
 #define writeP		((mVUinfo >> 7) & 1)
@@ -200,3 +203,14 @@ declareAllVariables
 #define isMMX(_VIreg_)	(_VIreg_ >= 1 && _VIreg_ <=9)
 #define mmVI(_VIreg_)	(_VIreg_ - 1)
 
+#ifdef mVUdebug
+#define mVUdebugStuff1() {										\
+	if (curI & _Ibit_)	{ SysPrintf("microVU: I-bit set!\n"); }	\
+	if (curI & _Ebit_)	{ SysPrintf("microVU: E-bit set!\n"); }	\
+	if (curI & _Mbit_)	{ SysPrintf("microVU: M-bit set!\n"); }	\
+	if (curI & _Dbit_)	{ SysPrintf("microVU: D-bit set!\n"); }	\
+	if (curI & _Tbit_)	{ SysPrintf("microVU: T-bit set!\n"); }	\
+}
+#else
+#define mVUdebugStuff1() {}
+#endif
