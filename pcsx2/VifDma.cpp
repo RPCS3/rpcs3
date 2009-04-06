@@ -440,7 +440,7 @@ static void VIFunpack(u32 *data, vifCode *v, int size, const unsigned int VIFdma
 			Console::WriteLn("Unpack align offset = 0");
 		}
 		destinc = (4 - ft->qsize) + unpacksize;
-
+		vif->qwcalign += unpacksize * ft->dsize;
 		func(dest, (u32*)cdata, unpacksize);
 		size -= unpacksize * ft->dsize;
 		cdata += unpacksize * ft->dsize;
@@ -482,6 +482,7 @@ static void VIFunpack(u32 *data, vifCode *v, int size, const unsigned int VIFdma
 			
 			while ((size >= ft->gsize) && (vifRegs->num > 0))
 			{
+				vif->qwcalign += ft->gsize;
 				func(dest, (u32*)cdata, ft->qsize);
 				cdata += ft->gsize;
 				size -= ft->gsize;
@@ -595,6 +596,7 @@ static void VIFunpack(u32 *data, vifCode *v, int size, const unsigned int VIFdma
 
 			while ((size >= ft->gsize) && (vifRegs->num > 0))
 			{
+				vif->qwcalign += ft->gsize;  //Must do this before the transfer, else the confusing packets dont go right :P
 				func(dest, (u32*)cdata, ft->qsize);
 				cdata += ft->gsize;
 				size -= ft->gsize;
@@ -649,6 +651,7 @@ static void VIFunpack(u32 *data, vifCode *v, int size, const unsigned int VIFdma
 			//VIF_LOG("warning, end with size = %d", size);
 
 			/* unpack one qword */
+			vif->qwcalign += (size / ft->dsize) * ft->dsize;
 			func(dest, (u32*)cdata, size / ft->dsize);
 			size = 0;
 
@@ -786,7 +789,7 @@ static __forceinline void vif0UNPACK(u32 *data)
 		len = ((((32 >> vl) * (vn + 1)) * n) + 31) >> 5;
 	}
 
-	vif0.wl = 0;
+	vif0.qwcalign = 0;
 	vif0.cl = 0;
 	vif0.tag.cmd  = vif0.cmd;
 	vif0.tag.addr &= 0xfff;
@@ -1516,9 +1519,9 @@ static __forceinline void vif1UNPACK(u32 *data)
 	else
 		vif1.tag.addr = vif1Regs->code & 0x3ff;
 
+	vif1.qwcalign = 0;
 	vif1.cl = 0;
 	vif1.tag.addr <<= 4;
-
 	vif1.tag.cmd  = vif1.cmd;
 }
 

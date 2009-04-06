@@ -32,7 +32,7 @@ struct vifStruct {
 	int cmd;
 	int irq;
 	int cl;
-	int wl;
+	int qwcalign;
 	u8 usn;
 	
 	// The next three should be boolean, and will be next time I break savestate compatability. --arcum42

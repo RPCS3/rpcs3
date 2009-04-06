@@ -357,8 +357,10 @@ static void _UNPACKpart(u32 offnum,  u32 &x, T y)
 }
 
 template <class T>
-static void _UNPACKpart(u32 offnum,  u32 &x, T y, int &size)
+static void _UNPACKpart(u32 offnum,  u32 &x, T y, int size)
 {
+	if(size == 0) return;
+
 	if (_vifRegs->offset == offnum) 
 	{
 		switch (offnum)
@@ -409,7 +411,12 @@ void __fastcall UNPACK_V3(u32 *dest, T *data, int size)
 	_UNPACKpart(OFFSET_X, *dest++, *data++, size);
 	_UNPACKpart(OFFSET_Y, *dest++, *data++, size);
 	_UNPACKpart(OFFSET_Z, *dest++, *data++, size);
-	_UNPACKpart(OFFSET_W, *dest, *data);
+	 //V3-# does some bizzare thing with alignment, every 6qw of data the W becomes 0 (strange console!)
+	if((_vif->qwcalign % 24) == 0)     
+		_UNPACKpart(OFFSET_W, *dest, 0);
+	else 
+		_UNPACKpart(OFFSET_W, *dest, *data);
+
 	if (_vifRegs->offset == 4) _vifRegs->offset = 0;
 }
 
