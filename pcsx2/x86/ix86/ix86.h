@@ -46,9 +46,16 @@ extern __threadlocal u8  *x86Ptr;
 extern __threadlocal u8  *j8Ptr[32];
 extern __threadlocal u32 *j32Ptr[32];
 
+template< typename T >
+static emitterT void x86write( T val )
+{
+	*(T*)x86Ptr = val;
+	x86Ptr += sizeof(T); 
+}
+
 static emitterT void write8( u8 val )
 {
-	*x86Ptr = (u8)val;
+	*x86Ptr = val;
 	x86Ptr++; 
 }
 
@@ -271,9 +278,9 @@ extern void ADD32MtoR( x86IntRegType to, uptr from );
 // add r16 to r16 
 extern void ADD16RtoR( x86IntRegType to , x86IntRegType from );
 // add imm16 to r16 
-extern void ADD16ItoR( x86IntRegType to, s16 from );
+extern void ADD16ItoR( x86IntRegType to, u16 imm );
 // add imm16 to m16 
-extern void ADD16ItoM( uptr to, s16 from );
+extern void ADD16ItoM( uptr to, u16 imm );
 // add r16 to m16 
 extern void ADD16RtoM( uptr to, x86IntRegType from );
 // add m16 to r16 
@@ -313,7 +320,7 @@ extern void SUB32MtoR( x86IntRegType to, uptr from ) ;
 // sub r32 to m32 
 extern void SUB32RtoM( uptr to, x86IntRegType from );
 // sub r16 to r16 
-extern void SUB16RtoR( x86IntRegType to, u16 from );
+extern void SUB16RtoR( x86IntRegType to, x86IntRegType from );
 // sub imm16 to r16 
 extern void SUB16ItoR( x86IntRegType to, u16 from );
 // sub imm16 to m16
@@ -643,12 +650,6 @@ extern void CMP32ItoM( uptr to, u32 from );
 extern void CMP32RtoR( x86IntRegType to, x86IntRegType from );
 // cmp m32 to r32 
 extern void CMP32MtoR( x86IntRegType to, uptr from );
-// cmp imm32 to [r32]
-extern void CMP32I8toRm( x86IntRegType to, u8 from);
-// cmp imm32 to [r32+off]
-extern void CMP32I8toRm8( x86IntRegType to, u8 from, u8 off);
-// cmp imm8 to [r32]
-extern void CMP32I8toM( uptr to, u8 from);
 
 // cmp imm16 to r16 
 extern void CMP16ItoR( x86IntRegType to, u16 from );

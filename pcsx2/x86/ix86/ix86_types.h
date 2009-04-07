@@ -151,7 +151,9 @@ struct CPUINFO{
 extern CPUINFO cpuinfo;
 //------------------------------------------------------------------
 
-static __forceinline bool is_s8( u32 imm ) { return (s8)imm == (s32)imm; }
+// templated version of is_s8 is required, so that u16's get correct sign extension treatment.
+template< typename T >
+static __forceinline bool is_s8( T imm ) { return (s8)imm == (s32)imm; }
 
 namespace x86Emitter
 {
