@@ -164,7 +164,7 @@ struct vSyncTimingInfo
 static vSyncTimingInfo vSyncInfo;
 
 
-static __forceinline void vSyncInfoCalc( vSyncTimingInfo* info, u32 framesPerSecond, u32 scansPerFrame )
+static void vSyncInfoCalc( vSyncTimingInfo* info, u32 framesPerSecond, u32 scansPerFrame )
 {
 	// Important: Cannot use floats or doubles here.  The emulator changes rounding modes
 	// depending on user-set speedhack options, and it can break float/double code
@@ -270,8 +270,6 @@ u32 UpdateVSyncRate()
 	return (u32)m_iTicks;
 }
 
-extern u32 vu0time;
-
 void frameLimitReset()
 {
 	m_iStart = GetCPUTicks();
@@ -282,12 +280,12 @@ void frameLimitReset()
 // See the GS FrameSkip function for details on why this is here and not in the GS.
 static __forceinline void frameLimit()
 {
+	if( CHECK_FRAMELIMIT == PCSX2_FRAMELIMIT_NORMAL ) return;
+	if( Config.CustomFps >= 999 ) return;	// means the user would rather just have framelimiting turned off...
+	
 	s64 sDeltaTime;
 	u64 uExpectedEnd;
 	u64 iEnd;
-
-	if( CHECK_FRAMELIMIT == PCSX2_FRAMELIMIT_NORMAL ) return;
-	if( Config.CustomFps >= 999 ) return;	// means the user would rather just have framelimiting turned off...
 
 	uExpectedEnd = m_iStart + m_iTicks;
 	iEnd = GetCPUTicks();
@@ -465,7 +463,7 @@ __forceinline bool rcntUpdate_vSync()
 	return false;
 }
 
-static __forceinline void __fastcall _cpuTestTarget( int i )
+static __forceinline void _cpuTestTarget( int i )
 {
 	if (counters[i].count < counters[i].target) return;
 
@@ -538,7 +536,7 @@ __forceinline bool rcntUpdate()
 	return retval;
 }
 
-static void _rcntSetGate( int index )
+static __forceinline void _rcntSetGate( int index )
 {
 	if (counters[index].mode.EnableGate)
 	{
@@ -563,7 +561,7 @@ static void _rcntSetGate( int index )
 }
 
 // mode - 0 means hblank source, 8 means vblank source.
-void __fastcall rcntStartGate(bool isVblank, u32 sCycle)
+__forceinline void rcntStartGate(bool isVblank, u32 sCycle)
 {
 	int i;
 
@@ -624,7 +622,7 @@ void __fastcall rcntStartGate(bool isVblank, u32 sCycle)
 }
 
 // mode - 0 means hblank signal, 8 means vblank signal.
-void __fastcall rcntEndGate(bool isVblank , u32 sCycle)
+__forceinline void rcntEndGate(bool isVblank , u32 sCycle)
 {
 	int i;
 
@@ -665,7 +663,7 @@ void __fastcall rcntEndGate(bool isVblank , u32 sCycle)
 	// rcntUpdate, since we're being called from there anyway.
 }
 
-void __fastcall rcntWmode(int index, u32 value)  
+__forceinline void rcntWmode(int index, u32 value)  
 {
 	if(counters[index].mode.IsCounting) {
 		if(counters[index].mode.ClockSource != 0x3) {
@@ -696,7 +694,7 @@ void __fastcall rcntWmode(int index, u32 value)
 	_rcntSet( index );
 }
 
-void __fastcall rcntWcount(int index, u32 value) 
+__forceinline void rcntWcount(int index, u32 value) 
 {
 	EECNT_LOG("EE Counter[%d] writeCount = %x,   oldcount=%x, target=%x", index, value, counters[index].count, counters[index].target );
 
@@ -722,7 +720,7 @@ void __fastcall rcntWcount(int index, u32 value)
 	_rcntSet( index );
 }
 
-void __fastcall rcntWtarget(int index, u32 value)
+__forceinline void rcntWtarget(int index, u32 value)
 {
 	EECNT_LOG("EE Counter[%d] writeTarget = %x", index, value);
 
@@ -738,13 +736,13 @@ void __fastcall rcntWtarget(int index, u32 value)
 	_rcntSet( index );
 }
 
-void __fastcall rcntWhold(int index, u32 value)
+__forceinline void rcntWhold(int index, u32 value)
 {
 	EECNT_LOG("EE Counter[%d] Hold Write = %x", index, value);
 	counters[index].hold = value;
 }
 
-u32 __fastcall rcntRcount(int index)
+__forceinline u32 rcntRcount(int index)
 {
 	u32 ret;
 
@@ -759,7 +757,7 @@ u32 __fastcall rcntRcount(int index)
 	return ret;
 }
 
-u32 __fastcall rcntCycle(int index)
+__forceinline u32 rcntCycle(int index)
 {
 	if (counters[index].mode.IsCounting && (counters[index].mode.ClockSource != 0x3)) 
 		return counters[index].count + ((cpuRegs.cycle - counters[index].sCycleT) / counters[index].rate);

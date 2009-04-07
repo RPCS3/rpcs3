@@ -139,14 +139,14 @@ extern bool rcntUpdate_vSync();
 extern bool rcntUpdate();
 
 extern void rcntInit();
-extern void __fastcall rcntStartGate(bool mode, u32 sCycle);
-extern void __fastcall rcntEndGate(bool mode, u32 sCycle);
-extern void __fastcall rcntWcount(int index, u32 value);
-extern void __fastcall rcntWmode(int index, u32 value);
-extern void __fastcall rcntWtarget(int index, u32 value);
-extern void __fastcall rcntWhold(int index, u32 value);
-extern u32	 __fastcall rcntRcount(int index);
-extern u32	 __fastcall rcntCycle(int index);
+extern void rcntStartGate(bool mode, u32 sCycle);
+extern void rcntEndGate(bool mode, u32 sCycle);
+extern void rcntWcount(int index, u32 value);
+extern void rcntWmode(int index, u32 value);
+extern void rcntWtarget(int index, u32 value);
+extern void rcntWhold(int index, u32 value);
+extern u32	rcntRcount(int index);
+extern u32	rcntCycle(int index);
 
 u32 UpdateVSyncRate();
 void frameLimitReset();

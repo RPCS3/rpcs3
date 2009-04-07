@@ -2302,10 +2302,11 @@ void SuperVUCleanupProgram(u32 startpc, int vuindex)
 
 	//memset(recVUStack, 0, SUPERVU_STACKSIZE * 4);
 
-	// Clear allocation info to prevent bad data being used in other parts of pcsx2; doing this just incase (cottonvibes)
-	_initXMMregs();
-	_initMMXregs();
-	_initX86regs();
+	// Could clear allocation info to prevent possibly bad data being used in other parts of pcsx2; 
+	// not doing this because it's slow and not needed (rama)
+	// _initXMMregs();
+	// _initMMXregs();
+	// _initX86regs();
 }
 
 #if defined(_MSC_VER)

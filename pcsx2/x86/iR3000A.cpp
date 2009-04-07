@@ -647,7 +647,7 @@ static void recExecute()
 	//for (;;) R3000AExecute();
 }
 
-static s32 recExecuteBlock( s32 eeCycles )
+static __forceinline s32 recExecuteBlock( s32 eeCycles )
 {
 	psxBreak = 0;
 	psxCycleEE = eeCycles;
@@ -741,7 +741,7 @@ static __forceinline u32 psxRecClearMem(u32 pc)
 	return upperextent - pc;
 }
 
-static void recClear(u32 Addr, u32 Size)
+static __forceinline void recClearIOP(u32 Addr, u32 Size)
 {
 	u32 pc = Addr;
 	while (pc < Addr + Size*4)
@@ -1198,7 +1198,7 @@ R3000Acpu psxRec = {
 	recResetIOP,
 	recExecute,
 	recExecuteBlock,
-	recClear,
+	recClearIOP,
 	recShutdown
 };
 
