@@ -18,10 +18,8 @@
 
 #include "PrecompiledHeader.h"
 
-#define _EmitterId_ 0
-
-#include "ix86.h"
-#include "Misc.h"
+#include "ix86_internal.h"
+#include "System.h"
 #include "Threading.h"
 
 #include "RedtapeWindows.h"

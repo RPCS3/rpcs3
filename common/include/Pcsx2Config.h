@@ -20,11 +20,11 @@
 #define __PCSX2CONFIG_H__
 
 // Hack so that you can still use this file from C (not C++), or from a plugin without access to Paths.h.
-#ifdef PLUGIN_ONLY
+// .. and removed in favor of a less hackish approach (air)
+
+#ifndef g_MaxPath
 #define g_MaxPath 255
-#else
-#include "Paths.h"
- #endif
+#endif
  
 /////////////////////////////////////////////////////////////////////////
 // Session Configuration Override Flags

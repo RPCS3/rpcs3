@@ -16,7 +16,9 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
-#pragma once
+#include "PrecompiledHeader.h"
+#include "ix86_internal.h"
+#include "ix86_sse_helpers.h"
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // AlwaysUseMovaps [const]
@@ -144,7 +146,7 @@ static const bool AlwaysUseMovaps = true;
    write8( op )
 
 /* movups [r32][r32*scale] to xmm1 */
-emitterT void SSE_MOVUPSRmStoR( x86SSERegType to, x86IntRegType from, x86IntRegType from2, int scale=0 )
+emitterT void SSE_MOVUPSRmStoR( x86SSERegType to, x86IntRegType from, x86IntRegType from2, int scale )
 {
     RexRXB(0, to, from2, from);
 	write16( 0x100f );
@@ -153,7 +155,7 @@ emitterT void SSE_MOVUPSRmStoR( x86SSERegType to, x86IntRegType from, x86IntRegT
 }
 
 /* movups xmm1 to [r32][r32*scale] */
-emitterT void SSE_MOVUPSRtoRmS( x86SSERegType to, x86IntRegType from, x86IntRegType from2, int scale=0 )
+emitterT void SSE_MOVUPSRtoRmS( x86SSERegType to, x86IntRegType from, x86IntRegType from2, int scale )
 {
     RexRXB(1, to, from2, from);
 	write16( 0x110f );
@@ -185,7 +187,7 @@ emitterT void SSE_MOVLPSRmtoR( x86SSERegType to, x86IntRegType from )
 	ModRM( 0, to, from );
 }
 
-emitterT void SSE_MOVLPSRmtoR( x86SSERegType to, x86IntRegType from, int offset=0 )
+emitterT void SSE_MOVLPSRmtoR( x86SSERegType to, x86IntRegType from, int offset )
 {
     RexRB(0, to, from);
 	write16( 0x120f );
@@ -200,7 +202,7 @@ emitterT void SSE_MOVLPSRtoRm( x86IntRegType to, x86IntRegType from )
 	ModRM( 0, from, to );
 }
 
-emitterT void SSE_MOVLPSRtoRm( x86SSERegType to, x86IntRegType from, int offset=0 )
+emitterT void SSE_MOVLPSRtoRm( x86SSERegType to, x86IntRegType from, int offset )
 {
     RexRB(0, from, to);
 	write16( 0x130f );
@@ -208,7 +210,7 @@ emitterT void SSE_MOVLPSRtoRm( x86SSERegType to, x86IntRegType from, int offset=
 }
 
 /* movaps [r32][r32*scale] to xmm1 */
-emitterT void SSE_MOVAPSRmStoR( x86SSERegType to, x86IntRegType from, x86IntRegType from2, int scale=0 )
+emitterT void SSE_MOVAPSRmStoR( x86SSERegType to, x86IntRegType from, x86IntRegType from2, int scale )
 {
 	assert( from != EBP );
     RexRXB(0, to, from2, from);
@@ -218,7 +220,7 @@ emitterT void SSE_MOVAPSRmStoR( x86SSERegType to, x86IntRegType from, x86IntRegT
 }
 
 /* movaps xmm1 to [r32][r32*scale] */
-emitterT void SSE_MOVAPSRtoRmS( x86SSERegType to, x86IntRegType from, x86IntRegType from2, int scale=0 )
+emitterT void SSE_MOVAPSRtoRmS( x86SSERegType to, x86IntRegType from, x86IntRegType from2, int scale )
 {
 	assert( from != EBP );
     RexRXB(0, to, from2, from);
@@ -228,7 +230,7 @@ emitterT void SSE_MOVAPSRtoRmS( x86SSERegType to, x86IntRegType from, x86IntRegT
 }
 
 // movaps [r32+offset] to r32
-emitterT void SSE_MOVAPSRmtoR( x86SSERegType to, x86IntRegType from, int offset=0 )
+emitterT void SSE_MOVAPSRmtoR( x86SSERegType to, x86IntRegType from, int offset )
 {
 	RexRB(0, to, from);
 	write16( 0x280f );
@@ -236,7 +238,7 @@ emitterT void SSE_MOVAPSRmtoR( x86SSERegType to, x86IntRegType from, int offset=
 }
 
 // movaps r32 to [r32+offset]
-emitterT void SSE_MOVAPSRtoRm( x86IntRegType to, x86SSERegType from, int offset=0 ) 
+emitterT void SSE_MOVAPSRtoRm( x86IntRegType to, x86SSERegType from, int offset ) 
 {
 	RexRB(0, from, to);
 	write16( 0x290f );
@@ -244,7 +246,7 @@ emitterT void SSE_MOVAPSRtoRm( x86IntRegType to, x86SSERegType from, int offset=
 }
 
 // movdqa [r32+offset] to r32
-emitterT void SSE2_MOVDQARmtoR( x86SSERegType to, x86IntRegType from, int offset=0 )
+emitterT void SSE2_MOVDQARmtoR( x86SSERegType to, x86IntRegType from, int offset )
 {
 	if( AlwaysUseMovaps )
 		SSE_MOVAPSRmtoR( to, from, offset );
@@ -258,7 +260,7 @@ emitterT void SSE2_MOVDQARmtoR( x86SSERegType to, x86IntRegType from, int offset
 }
 
 // movdqa r32 to [r32+offset]
-emitterT void SSE2_MOVDQARtoRm( x86IntRegType to, x86SSERegType from, int offset=0 ) 
+emitterT void SSE2_MOVDQARtoRm( x86IntRegType to, x86SSERegType from, int offset ) 
 {
 	if( AlwaysUseMovaps )
 		SSE_MOVAPSRtoRm( to, from, offset );
@@ -272,7 +274,7 @@ emitterT void SSE2_MOVDQARtoRm( x86IntRegType to, x86SSERegType from, int offset
 }
 
 // movups [r32+offset] to r32
-emitterT void SSE_MOVUPSRmtoR( x86SSERegType to, x86IntRegType from, int offset=0 )
+emitterT void SSE_MOVUPSRmtoR( x86SSERegType to, x86IntRegType from, int offset )
 {
 	RexRB(0, to, from);
 	write16( 0x100f );
@@ -280,7 +282,7 @@ emitterT void SSE_MOVUPSRmtoR( x86SSERegType to, x86IntRegType from, int offset=
 }
 
 // movups r32 to [r32+offset]
-emitterT void SSE_MOVUPSRtoRm( x86IntRegType to, x86SSERegType from, int offset=0 )
+emitterT void SSE_MOVUPSRtoRm( x86IntRegType to, x86SSERegType from, int offset )
 {
     RexRB(0, from, to);
 	write16( 0x110f );
@@ -335,7 +337,7 @@ emitterT void SSE_MOVSS_XMM_to_M32( u32 to, x86SSERegType from )			{ SSE_SS_RtoM
 
 emitterT void SSE_MOVSS_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	{ if (to != from) { SSE_SS_RtoR( 0x100f ); } }
 
-emitterT void SSE_MOVSS_Rm_to_XMM( x86SSERegType to, x86IntRegType from, int offset=0 )
+emitterT void SSE_MOVSS_Rm_to_XMM( x86SSERegType to, x86IntRegType from, int offset )
 {
 	write8(0xf3);
     RexRB(0, to, from);
@@ -343,7 +345,7 @@ emitterT void SSE_MOVSS_Rm_to_XMM( x86SSERegType to, x86IntRegType from, int off
     WriteRmOffsetFrom(to, from, offset);
 }
 
-emitterT void SSE_MOVSS_XMM_to_Rm( x86IntRegType to, x86SSERegType from, int offset=0 )
+emitterT void SSE_MOVSS_XMM_to_Rm( x86IntRegType to, x86SSERegType from, int offset )
 {
 	write8(0xf3);
     RexRB(0, from, to);
@@ -358,14 +360,14 @@ emitterT void SSE_MASKMOVDQU_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	
 emitterT void SSE_MOVLPS_M64_to_XMM( x86SSERegType to, uptr from )	{ SSEMtoR( 0x120f, 0 ); }
 emitterT void SSE_MOVLPS_XMM_to_M64( u32 to, x86SSERegType from )	{ SSERtoM( 0x130f, 0 ); }
 
-emitterT void SSE_MOVLPS_Rm_to_XMM( x86SSERegType to, x86IntRegType from, int offset=0 )
+emitterT void SSE_MOVLPS_Rm_to_XMM( x86SSERegType to, x86IntRegType from, int offset )
 {
     RexRB(0, to, from);
 	write16( 0x120f );
     WriteRmOffsetFrom(to, from, offset);
 }
 
-emitterT void SSE_MOVLPS_XMM_to_Rm( x86IntRegType to, x86SSERegType from, int offset=0 )
+emitterT void SSE_MOVLPS_XMM_to_Rm( x86IntRegType to, x86SSERegType from, int offset )
 {
     RexRB(0, from, to);
 	write16(0x130f);
@@ -379,14 +381,14 @@ emitterT void SSE_MOVLPS_XMM_to_Rm( x86IntRegType to, x86SSERegType from, int of
 emitterT void SSE_MOVHPS_M64_to_XMM( x86SSERegType to, uptr from )	{ SSEMtoR( 0x160f, 0 ); }
 emitterT void SSE_MOVHPS_XMM_to_M64( u32 to, x86SSERegType from )	{ SSERtoM( 0x170f, 0 ); }
 
-emitterT void SSE_MOVHPS_Rm_to_XMM( x86SSERegType to, x86IntRegType from, int offset=0 )
+emitterT void SSE_MOVHPS_Rm_to_XMM( x86SSERegType to, x86IntRegType from, int offset )
 {
     RexRB(0, to, from);
 	write16( 0x160f );
     WriteRmOffsetFrom(to, from, offset);
 }
 
-emitterT void SSE_MOVHPS_XMM_to_Rm( x86IntRegType to, x86SSERegType from, int offset=0 )
+emitterT void SSE_MOVHPS_XMM_to_Rm( x86IntRegType to, x86SSERegType from, int offset )
 {
     RexRB(0, from, to);
 	write16(0x170f);
@@ -900,7 +902,7 @@ emitterT void SSE2_MOVD_Rm_to_XMM( x86SSERegType to, x86IntRegType from )
 	ModRM( 0, to, from);
 }
 
-emitterT void SSE2_MOVD_Rm_to_XMM( x86SSERegType to, x86IntRegType from, int offset=0 )
+emitterT void SSE2_MOVD_Rm_to_XMM( x86SSERegType to, x86IntRegType from, int offset )
 {
 	write8(0x66);
     RexRB(0, to, from);
@@ -911,7 +913,7 @@ emitterT void SSE2_MOVD_Rm_to_XMM( x86SSERegType to, x86IntRegType from, int off
 emitterT void SSE2_MOVD_XMM_to_M32( u32 to, x86SSERegType from )			{ SSERtoM66(0x7E0F); }
 emitterT void SSE2_MOVD_XMM_to_R( x86IntRegType to, x86SSERegType from )	{ _SSERtoR66(0x7E0F); }
 
-emitterT void SSE2_MOVD_XMM_to_Rm( x86IntRegType to, x86SSERegType from, int offset=0 )
+emitterT void SSE2_MOVD_XMM_to_Rm( x86IntRegType to, x86SSERegType from, int offset )
 {
 	write8(0x66);
     RexRB(0, from, to);
@@ -1399,4 +1401,161 @@ emitterT void SSE4_PMULDQ_XMM_to_XMM(x86SSERegType to, x86SSERegType from)
 	RexRB(0, to, from);
 	write24(0x28380F);
 	ModRM(3, to, from);
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////
+// SSE-X Helpers (generates either INT or FLOAT versions of certain SSE instructions)
+// This header should always be included *after* ix86.h.
+
+// Added AlwaysUseMovaps check to the relevant functions here, which helps reduce the
+// overhead of dynarec instructions that use these, even thought the same check would
+// have been done redundantly by the emitter function.
+
+emitterT void SSEX_MOVDQA_M128_to_XMM( x86SSERegType to, uptr from )
+{
+	if( !AlwaysUseMovaps && g_xmmtypes[to] == XMMT_INT ) SSE2_MOVDQA_M128_to_XMM(to, from);
+	else SSE_MOVAPS_M128_to_XMM(to, from);
+}
+
+emitterT void SSEX_MOVDQA_XMM_to_M128( uptr to, x86SSERegType from )
+{
+	if( !AlwaysUseMovaps && g_xmmtypes[from] == XMMT_INT ) SSE2_MOVDQA_XMM_to_M128(to, from);
+	else SSE_MOVAPS_XMM_to_M128(to, from);
+}
+
+emitterT void SSEX_MOVDQA_XMM_to_XMM( x86SSERegType to, x86SSERegType from )
+{
+	if( !AlwaysUseMovaps && g_xmmtypes[from] == XMMT_INT ) SSE2_MOVDQA_XMM_to_XMM(to, from);
+	else SSE_MOVAPS_XMM_to_XMM(to, from);
+}
+
+emitterT void SSEX_MOVDQARmtoR( x86SSERegType to, x86IntRegType from, int offset )
+{
+	if( !AlwaysUseMovaps && g_xmmtypes[to] == XMMT_INT ) SSE2_MOVDQARmtoR(to, from, offset);
+	else SSE_MOVAPSRmtoR(to, from, offset);
+}
+
+emitterT void SSEX_MOVDQARtoRm( x86IntRegType to, x86SSERegType from, int offset )
+{
+	if( !AlwaysUseMovaps && g_xmmtypes[from] == XMMT_INT ) SSE2_MOVDQARtoRm(to, from, offset);
+	else SSE_MOVAPSRtoRm(to, from, offset);
+}
+
+emitterT void SSEX_MOVDQU_M128_to_XMM( x86SSERegType to, uptr from )
+{
+	if( !AlwaysUseMovaps && g_xmmtypes[to] == XMMT_INT ) SSE2_MOVDQU_M128_to_XMM(to, from);
+	else SSE_MOVUPS_M128_to_XMM(to, from);
+}
+
+emitterT void SSEX_MOVDQU_XMM_to_M128( uptr to, x86SSERegType from )
+{
+	if( !AlwaysUseMovaps && g_xmmtypes[from] == XMMT_INT ) SSE2_MOVDQU_XMM_to_M128(to, from);
+	else SSE_MOVUPS_XMM_to_M128(to, from);
+}
+
+emitterT void SSEX_MOVD_M32_to_XMM( x86SSERegType to, uptr from )
+{
+	if( g_xmmtypes[to] == XMMT_INT ) SSE2_MOVD_M32_to_XMM(to, from);
+	else SSE_MOVSS_M32_to_XMM(to, from);
+}
+
+emitterT void SSEX_MOVD_XMM_to_M32( u32 to, x86SSERegType from )
+{
+	if( g_xmmtypes[from] == XMMT_INT ) SSE2_MOVD_XMM_to_M32(to, from);
+	else SSE_MOVSS_XMM_to_M32(to, from);
+}
+
+emitterT void SSEX_MOVD_Rm_to_XMM( x86SSERegType to, x86IntRegType from, int offset )
+{
+	if( g_xmmtypes[to] == XMMT_INT ) SSE2_MOVD_Rm_to_XMM(to, from, offset);
+	else SSE_MOVSS_Rm_to_XMM(to, from, offset);
+}
+
+emitterT void SSEX_MOVD_XMM_to_Rm( x86IntRegType to, x86SSERegType from, int offset )
+{
+	if( g_xmmtypes[from] == XMMT_INT ) SSE2_MOVD_XMM_to_Rm(to, from, offset);
+	else SSE_MOVSS_XMM_to_Rm(to, from, offset);
+}
+
+emitterT void SSEX_POR_M128_to_XMM( x86SSERegType to, uptr from )
+{
+	if( g_xmmtypes[to] == XMMT_INT ) SSE2_POR_M128_to_XMM(to, from);
+	else SSE_ORPS_M128_to_XMM(to, from);
+}
+
+emitterT void SSEX_POR_XMM_to_XMM( x86SSERegType to, x86SSERegType from )
+{
+	if( g_xmmtypes[from] == XMMT_INT ) SSE2_POR_XMM_to_XMM(to, from);
+	else SSE_ORPS_XMM_to_XMM(to, from);
+}
+
+emitterT void SSEX_PXOR_M128_to_XMM( x86SSERegType to, uptr from )
+{
+	if( g_xmmtypes[to] == XMMT_INT ) SSE2_PXOR_M128_to_XMM(to, from);
+	else SSE_XORPS_M128_to_XMM(to, from);
+}
+
+emitterT void SSEX_PXOR_XMM_to_XMM( x86SSERegType to, x86SSERegType from )
+{
+	if( g_xmmtypes[from] == XMMT_INT ) SSE2_PXOR_XMM_to_XMM(to, from);
+	else SSE_XORPS_XMM_to_XMM(to, from);
+}
+
+emitterT void SSEX_PAND_M128_to_XMM( x86SSERegType to, uptr from )
+{
+	if( g_xmmtypes[to] == XMMT_INT ) SSE2_PAND_M128_to_XMM(to, from);
+	else SSE_ANDPS_M128_to_XMM(to, from);
+}
+
+emitterT void SSEX_PAND_XMM_to_XMM( x86SSERegType to, x86SSERegType from )
+{
+	if( g_xmmtypes[from] == XMMT_INT ) SSE2_PAND_XMM_to_XMM(to, from);
+	else SSE_ANDPS_XMM_to_XMM(to, from);
+}
+
+emitterT void SSEX_PANDN_M128_to_XMM( x86SSERegType to, uptr from )
+{
+	if( g_xmmtypes[to] == XMMT_INT ) SSE2_PANDN_M128_to_XMM(to, from);
+	else SSE_ANDNPS_M128_to_XMM(to, from);
+}
+
+emitterT void SSEX_PANDN_XMM_to_XMM( x86SSERegType to, x86SSERegType from )
+{
+	if( g_xmmtypes[from] == XMMT_INT ) SSE2_PANDN_XMM_to_XMM(to, from);
+	else SSE_ANDNPS_XMM_to_XMM(to, from);
+}
+
+emitterT void SSEX_PUNPCKLDQ_M128_to_XMM(x86SSERegType to, uptr from)
+{
+	if( g_xmmtypes[to] == XMMT_INT ) SSE2_PUNPCKLDQ_M128_to_XMM(to, from);
+	else SSE_UNPCKLPS_M128_to_XMM(to, from);
+}
+
+emitterT void SSEX_PUNPCKLDQ_XMM_to_XMM(x86SSERegType to, x86SSERegType from)
+{
+	if( g_xmmtypes[from] == XMMT_INT ) SSE2_PUNPCKLDQ_XMM_to_XMM(to, from);
+	else SSE_UNPCKLPS_XMM_to_XMM(to, from);
+}
+
+emitterT void SSEX_PUNPCKHDQ_M128_to_XMM(x86SSERegType to, uptr from)
+{
+	if( g_xmmtypes[to] == XMMT_INT ) SSE2_PUNPCKHDQ_M128_to_XMM(to, from);
+	else SSE_UNPCKHPS_M128_to_XMM(to, from);
+}
+
+emitterT void SSEX_PUNPCKHDQ_XMM_to_XMM(x86SSERegType to, x86SSERegType from)
+{
+	if( g_xmmtypes[from] == XMMT_INT ) SSE2_PUNPCKHDQ_XMM_to_XMM(to, from);
+	else SSE_UNPCKHPS_XMM_to_XMM(to, from);
+}
+
+emitterT void SSEX_MOVHLPS_XMM_to_XMM( x86SSERegType to, x86SSERegType from )
+{
+	if( g_xmmtypes[from] == XMMT_INT ) {
+		SSE2_PUNPCKHQDQ_XMM_to_XMM(to, from);
+		if( to != from ) SSE2_PSHUFD_XMM_to_XMM(to, to, 0x4e);
+	}
+	else {
+		SSE_MOVHLPS_XMM_to_XMM(to, from);
+	}
 }

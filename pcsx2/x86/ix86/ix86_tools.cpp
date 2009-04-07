@@ -18,7 +18,7 @@
 
 #include "PrecompiledHeader.h"
 
-#include "Misc.h"
+#include "System.h"
 #include "ix86/ix86.h"
 
 // used to make sure regs don't get changed while in recompiler

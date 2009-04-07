@@ -16,7 +16,8 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
-#pragma once
+#include "PrecompiledHeader.h"
+#include "ix86_internal.h"
 
 //------------------------------------------------------------------
 // MMX instructions
@@ -482,32 +483,16 @@ emitterT void MOVQRtoR( x86MMXRegType to, x86MMXRegType from )
 	ModRM( 3, to, from );
 }
 
-emitterT void MOVQRmtoR( x86MMXRegType to, x86IntRegType from, int offset=0 )
+emitterT void MOVQRmtoR( x86MMXRegType to, x86IntRegType from, int offset )
 {
 	write16( 0x6F0F );
-
-	if( offset < 128 && offset >= -128) {
-		ModRM( 1, to, from );
-		write8(offset);
-	}
-	else {
-		ModRM( 2, to, from );
-		write32(offset);
-	}
+	WriteRmOffsetFrom( to, from, offset );
 }
 
-emitterT void MOVQRtoRm( x86IntRegType to, x86MMXRegType from, int offset=0 )
+emitterT void MOVQRtoRm( x86IntRegType to, x86MMXRegType from, int offset )
 {
 	write16( 0x7F0F );
-
-	if( offset < 128 && offset >= -128) {
-		ModRM( 1, from , to );
-		write8(offset);
-	}
-	else {
-		ModRM( 2, from, to );
-		write32(offset);
-	}
+	WriteRmOffsetFrom( from, to, offset );
 }
 
 /* movd m32 to r64 */
@@ -532,24 +517,10 @@ emitterT void MOVD32RtoMMX( x86MMXRegType to, x86IntRegType from )
 	ModRM( 3, to, from );
 }
 
-emitterT void MOVD32RmtoMMX( x86MMXRegType to, x86IntRegType from )
+emitterT void MOVD32RmtoMMX( x86MMXRegType to, x86IntRegType from, int offset )
 {
 	write16( 0x6E0F );
-	ModRM( 0, to, from );
-}
-
-emitterT void MOVD32RmOffsettoMMX( x86MMXRegType to, x86IntRegType from, u32 offset )
-{
-	write16( 0x6E0F );
-
-	if( offset < 128 ) {
-		ModRM( 1, to, from );
-		write8(offset);
-	}
-	else {
-		ModRM( 2, to, from );
-		write32(offset);
-	}
+	WriteRmOffsetFrom( to, from, offset );
 }
 
 emitterT void MOVD32MMXtoR( x86IntRegType to, x86MMXRegType from )
@@ -558,45 +529,11 @@ emitterT void MOVD32MMXtoR( x86IntRegType to, x86MMXRegType from )
 	ModRM( 3, from, to );
 }
 
-emitterT void MOVD32MMXtoRm( x86IntRegType to, x86MMXRegType from )
+emitterT void MOVD32MMXtoRm( x86IntRegType to, x86MMXRegType from, int offset )
 {
 	write16( 0x7E0F );
-	ModRM( 0, from, to );
-	if( to >= 4 ) {
-		// no idea why
-		assert( to == ESP );
-		write8(0x24);
-	}
-
+	WriteRmOffsetFrom( from, to, offset );
 }
-
-emitterT void MOVD32MMXtoRmOffset( x86IntRegType to, x86MMXRegType from, u32 offset )
-{
-	write16( 0x7E0F );
-
-	if( offset < 128 ) {
-		ModRM( 1, from, to );
-		write8(offset);
-	}
-	else {
-		ModRM( 2, from, to );
-		write32(offset);
-	}
-}
-
-///* movd r32 to r64 */
-//emitterT void MOVD32MMXtoMMX( x86MMXRegType to, x86MMXRegType from ) 
-//{
-//	write16( 0x6E0F );
-//	ModRM( 3, to, from );
-//}
-//
-///* movq r64 to r32 */
-//emitterT void MOVD64MMXtoMMX( x86MMXRegType to, x86MMXRegType from ) 
-//{
-//	write16( 0x7E0F );
-//	ModRM( 3, from, to );
-//}
 
 // untested
 emitterT void PACKSSWBMMXtoMMX(x86MMXRegType to, x86MMXRegType from)

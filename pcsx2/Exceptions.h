@@ -16,11 +16,7 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
-#ifndef _PCSX2_EXCEPTIONS_H_
-#define _PCSX2_EXCEPTIONS_H_
-
-#include <stdexcept>
-#include "StringUtils.h"
+#pragma once
 
 // This class provides an easy and clean method for ensuring objects are not copyable.
 class NoncopyableObject
@@ -380,5 +376,3 @@ namespace Exception
 		{}
 	};
 }
-
-#endif

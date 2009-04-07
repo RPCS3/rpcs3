@@ -16,7 +16,8 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
-#pragma once
+#include "PrecompiledHeader.h"
+#include "ix86_internal.h"
 
 //------------------------------------------------------------------
 // x86 Group 1 Instructions
@@ -31,85 +32,6 @@
 //
 
 namespace x86Emitter {
-
-static const int ModRm_UseSib = 4;		// same index value as ESP (used in RM field)
-static const int ModRm_UseDisp32 = 5;	// same index value as EBP (used in Mod field)
-
-// ------------------------------------------------------------------------
-// returns TRUE if this instruction requires SIB to be encoded, or FALSE if the
-// instruction ca be encoded as ModRm alone.
-emitterT bool NeedsSibMagic( const ModSib& info )
-{
-	// no registers? no sibs!
-	if( info.Base.IsEmpty() && info.Index.IsEmpty() ) return false;
-
-	// A scaled register needs a SIB
-	if( info.Scale != 0 && !info.Index.IsEmpty() ) return true;
-
-	// two registers needs a SIB
-	if( !info.Base.IsEmpty() && !info.Index.IsEmpty() ) return true;
-
-	// If register is ESP, then we need a SIB:
-	if( info.Base == esp || info.Index == esp ) return true;
-
-	return false;
-}
-
-// ------------------------------------------------------------------------
-// Conditionally generates Sib encoding information!
-//
-// regfield - register field to be written to the ModRm.  This is either a register specifier
-//   or an opcode extension.  In either case, the instruction determines the value for us.
-//
-emitterT void EmitSibMagic( int regfield, const ModSib& info )
-{
-	int displacement_size = (info.Displacement == 0) ? 0 : 
-		( ( info.IsByteSizeDisp() ) ? 1 : 2 );
-
-	if( !NeedsSibMagic( info ) )
-	{
-		// Use ModRm-only encoding, with the rm field holding an index/base register, if
-		// one has been specified.  If neither register is specified then use Disp32 form,
-		// which is encoded as "EBP w/o displacement" (which is why EBP must always be
-		// encoded *with* a displacement of 0, if it would otherwise not have one).
-
-		x86Register basereg = info.GetEitherReg();
-
-		if( basereg.IsEmpty() )
-			ModRM( 0, regfield, ModRm_UseDisp32 );
-		else
-		{
-			if( basereg == ebp && displacement_size == 0 )
-				displacement_size = 1;		// forces [ebp] to be encoded as [ebp+0]!
-
-			ModRM( displacement_size, regfield, basereg.Id );
-		}
-	}
-	else
-	{
-		ModRM( displacement_size, regfield, ModRm_UseSib );
-		SibSB( info.Index.Id, info.Scale, info.Base.Id );
-	}
-
-	switch( displacement_size )
-	{
-	case 0: break;
-	case 1: write8( info.Displacement );  break;
-	case 2: write32( info.Displacement ); break;
-		jNO_DEFAULT
-	}
-}
-
-// ------------------------------------------------------------------------
-// Conditionally generates Sib encoding information!
-//
-// regfield - register field to be written to the ModRm.  This is either a register specifier
-//   or an opcode extension.  In either case, the instruction determines the value for us.
-//
-emitterT void EmitSibMagic( x86Register regfield, const ModSib& info )
-{
-	EmitSibMagic( regfield.Id, info );
-}
 
 enum Group1InstructionType
 {
@@ -245,9 +167,9 @@ static __forceinline x86Emitter::x86ModRm _mrmhlp( x86IntRegType src )
 	emitterT void cod##32MtoR( x86IntRegType to, uptr from )				{ x86Emitter::lwr##32( _reghlp(to), (void*)from ); } \
 	emitterT void cod##32RtoM( uptr to, x86IntRegType from )				{ x86Emitter::lwr##32( (void*)to, _reghlp(from) ); } \
 	emitterT void cod##32ItoM( uptr to, u32 imm )						{ x86Emitter::lwr##32( (void*)to, imm ); } \
-	emitterT void cod##32ItoRm( x86IntRegType to, u32 imm, int offset=0 ){ x86Emitter::lwr##32( _mrmhlp(to) + offset, imm ); } \
-	emitterT void cod##32RmtoR( x86IntRegType to, x86IntRegType from, int offset=0 ) { x86Emitter::lwr##32( _reghlp(to), _mrmhlp(from) + offset ); } \
-	emitterT void cod##32RtoRm( x86IntRegType to, x86IntRegType from, int offset=0 ) { x86Emitter::lwr##32( _mrmhlp(to) + offset, _reghlp(from) ); }
+	emitterT void cod##32ItoRm( x86IntRegType to, u32 imm, int offset ){ x86Emitter::lwr##32( _mrmhlp(to) + offset, imm ); } \
+	emitterT void cod##32RmtoR( x86IntRegType to, x86IntRegType from, int offset ) { x86Emitter::lwr##32( _reghlp(to), _mrmhlp(from) + offset ); } \
+	emitterT void cod##32RtoRm( x86IntRegType to, x86IntRegType from, int offset ) { x86Emitter::lwr##32( _mrmhlp(to) + offset, _reghlp(from) ); }
 
 DEFINE_GROUP1_OPCODE_LEGACY( add, ADD );
 DEFINE_GROUP1_OPCODE_LEGACY( cmp, CMP );

@@ -24,6 +24,8 @@
 #include "PrecompiledHeader.h"
 
 #include "iR3000A.h"
+#include "BaseblockEx.h"
+
 #include <time.h>
 
 #ifndef _WIN32

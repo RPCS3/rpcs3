@@ -18,13 +18,8 @@
 
 #pragma once
 
-#include "PrecompiledHeader.h"
-#include <vector>
-#include <map>
+#include <map>			// used by BaseBlockEx
 #include <utility>
-
-// used to keep block information
-#define BLOCKTYPE_DELAYSLOT	1		// if bit set, delay slot
 
 // Every potential jump point in the PS2's addressable memory has a BASEBLOCK
 // associated with it. So that means a BASEBLOCK for every 4 bytes of PS2
@@ -119,7 +114,6 @@ public:
 	}
 };
 
-#define GET_BLOCKTYPE(b) ((b)->Type)
 #define PC_GETBLOCK_(x, reclut) ((BASEBLOCK*)(reclut[((u32)(x)) >> 16] + (x)*(sizeof(BASEBLOCK)/4)))
 
 static void recLUT_SetPage(uptr reclut[0x10000], uptr hwlut[0x10000],

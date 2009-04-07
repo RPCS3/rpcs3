@@ -29,8 +29,10 @@
 
 #define PCSX2_VERSION "(beta)"
 
-#include "Plugins.h"
+#include "System.h"
+
 #include "SaveState.h"
+#include "Plugins.h"
 
 #include "DebugTools/Debug.h"
 #include "Memory.h"
@@ -39,8 +41,5 @@
 #include "R5900.h"
 #include "Elfheader.h"
 #include "Patch.h"
-
-#include "System.h"
-#include "Pcsx2Config.h"
 
 #endif /* __COMMON_H__ */

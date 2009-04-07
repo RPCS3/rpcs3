@@ -33,6 +33,7 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 // Include the STL junk that's actually handy.
 
+#include <stdexcept>
 #include <algorithm>
 #include <vector>
 #include <string>
@@ -69,7 +70,9 @@ typedef int BOOL;
 
 #include "zlib/zlib.h"
 #include "PS2Etypes.h"
+#include "MemcpyFast.h"
 #include "StringUtils.h"
+#include "Exceptions.h"
 
 ////////////////////////////////////////////////////////////////////
 // Compiler/OS specific macros and defines -- Begin Section

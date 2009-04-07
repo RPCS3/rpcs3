@@ -18,12 +18,10 @@
 #ifndef _R3000A_SUPERREC_
 #define _R3000A_SUPERREC_
 
-#define _EmitterId_ EmitterId_R3000a
 #include "ix86/ix86.h"
 
 #include "R3000A.h"
 #include "iCore.h"
-#include "BaseblockEx.h"
 
 // Cycle penalties for particularly slow instructions.
 static const int psxInstCycles_Mult = 7;

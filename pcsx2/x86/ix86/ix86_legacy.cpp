@@ -27,14 +27,12 @@
 #pragma once
 
 //------------------------------------------------------------------
-// ix86 instructions
+// ix86 legacy emitter functions
 //------------------------------------------------------------------
 
 #include "PrecompiledHeader.h"
 #include "System.h"
-#include "ix86.h"
-
-#include "ix86_group1.inl"
+#include "ix86_internal.h"
 
 // Note: the 'to' field can either be a register or a special opcode extension specifier
 // depending on the opcode's encoding.
@@ -46,7 +44,7 @@ emitterT void WriteRmOffsetFrom(x86IntRegType to, x86IntRegType from, int offset
 			ModRM( 0, to, 0x4 );
 			SibSB( 0, 0x4, 0x4 );
 		}
-		else if( offset <= 127 && offset >= -128 ) {
+		else if( is_s8( offset ) ) {
 			ModRM( 1, to, 0x4 );
 			SibSB( 0, 0x4, 0x4 );
 			write8(offset);
@@ -61,7 +59,7 @@ emitterT void WriteRmOffsetFrom(x86IntRegType to, x86IntRegType from, int offset
 		if( offset == 0 ) {
 			ModRM( 0, to, from );
 		}
-		else if( offset <= 127 && offset >= -128 ) {
+		else if( is_s8( offset ) ) {
 			ModRM( 1, to, from );
 			write8(offset);
 		}
@@ -136,8 +134,13 @@ emitterT void x86SetPtr( u8* ptr )
 	x86Ptr = ptr;
 }
 
-////////////////////////////////////////////////////
-emitterT void x86SetJ8( u8* j8 )
+//////////////////////////////////////////////////////////////////////////////////////////
+// Jump Label API (as rough as it might be)
+//
+// I don't auto-inline these because of the console logging in case of error, which tends
+// to cause quite a bit of code bloat.
+//
+void x86SetJ8( u8* j8 )
 {
 	u32 jump = ( x86Ptr - j8 ) - 1;
 
@@ -148,7 +151,7 @@ emitterT void x86SetJ8( u8* j8 )
 	*j8 = (u8)jump;
 }
 
-emitterT void x86SetJ8A( u8* j8 )
+void x86SetJ8A( u8* j8 )
 {
 	u32 jump = ( x86Ptr - j8 ) - 1;
 
@@ -167,26 +170,6 @@ emitterT void x86SetJ8A( u8* j8 )
 		}
 	}
 	*j8 = (u8)jump;
-}
-
-emitterT void x86SetJ16( u16 *j16 )
-{
-	// doesn't work
-	u32 jump = ( x86Ptr - (u8*)j16 ) - 2;
-
-	if ( jump > 0x7fff ) {
-		Console::Error( "j16 greater than 0x7fff!!" );
-		assert(0);
-	}
-	*j16 = (u16)jump;
-}
-
-emitterT void x86SetJ16A( u16 *j16 )
-{
-	if( ((uptr)x86Ptr&0xf) > 4 ) {
-		while((uptr)x86Ptr&0xf) *x86Ptr++ = 0x90;
-	}
-	x86SetJ16(j16);
 }
 
 ////////////////////////////////////////////////////
@@ -211,25 +194,29 @@ emitterT void x86Align( int bytes )
 ////////////////////////////////////////////////////
 // Generates executable code to align to the given alignment (could be useful for the second leg
 // of if/else conditionals, which usually fall through a jump target label).
-emitterT void x86AlignExecutable( int align )
+//
+// Note: Left in for now just in case, but usefulness is moot.  Only K8's and older (non-Prescott)
+// P4s benefit from this, and we don't optimize for those platforms anyway.
+//
+void x86AlignExecutable( int align )
 {
 	uptr newx86 = ( (uptr)x86Ptr + align - 1) & ~( align - 1 );
 	uptr bytes = ( newx86 - (uptr)x86Ptr );
 
 	switch( bytes )
 	{
-	case 0: break;
+		case 0: break;
 
-	case 1: NOP(); break;
-	case 2: MOV32RtoR( ESI, ESI ); break;
-	case 3: write8(0x08D); write8(0x024); write8(0x024); break;
-	case 5: NOP();	// falls through to 4...
-	case 4: write8(0x08D); write8(0x064); write8(0x024); write8(0); break;
-	case 6: write8(0x08D); write8(0x0B6); write32(0); break;
-	case 8: NOP();	// falls through to 7...
-	case 7: write8(0x08D); write8(0x034); write8(0x035); write32(0); break;
+		case 1: NOP(); break;
+		case 2: MOV32RtoR( ESI, ESI ); break;
+		case 3: write8(0x08D); write8(0x024); write8(0x024); break;
+		case 5: NOP();	// falls through to 4...
+		case 4: write8(0x08D); write8(0x064); write8(0x024); write8(0); break;
+		case 6: write8(0x08D); write8(0x0B6); write32(0); break;
+		case 8: NOP();	// falls through to 7...
+		case 7: write8(0x08D); write8(0x034); write8(0x035); write32(0); break;
 
-	default:
+		default:
 		{
 			// for larger alignments, just use a JMP...
 			u8* aligned_target = JMP8(0);
@@ -242,7 +229,7 @@ emitterT void x86AlignExecutable( int align )
 }
 
 /********************/
-/* IX86 intructions */
+/* IX86 instructions */
 /********************/
 
 emitterT void STC( void )
@@ -300,7 +287,7 @@ emitterT void MOV32MtoR( x86IntRegType to, uptr from )
 	write32( MEMADDR(from, 4) ); 
 }
 
-emitterT void MOV32RmtoR( x86IntRegType to, x86IntRegType from, int offset=0 )
+emitterT void MOV32RmtoR( x86IntRegType to, x86IntRegType from, int offset )
 {
 	RexRB(0, to, from);
 	write8( 0x8B );
@@ -308,7 +295,7 @@ emitterT void MOV32RmtoR( x86IntRegType to, x86IntRegType from, int offset=0 )
 }
 
 /* mov [r32+r32*scale] to r32 */
-emitterT void MOV32RmStoR( x86IntRegType to, x86IntRegType from, x86IntRegType from2, int scale=0 )
+emitterT void MOV32RmStoR( x86IntRegType to, x86IntRegType from, x86IntRegType from2, int scale )
 {
 	RexRXB(0,to,from2,from);
 	write8( 0x8B );
@@ -317,7 +304,7 @@ emitterT void MOV32RmStoR( x86IntRegType to, x86IntRegType from, x86IntRegType f
 }
 
 // mov r32 to [r32<<scale+from2]
-emitterT void MOV32RmSOffsettoR( x86IntRegType to, x86IntRegType from1, int from2, int scale=0 )
+emitterT void MOV32RmSOffsettoR( x86IntRegType to, x86IntRegType from1, int from2, int scale )
 {
 	RexRXB(0,to,from1,0);
 	write8( 0x8B );
@@ -327,7 +314,7 @@ emitterT void MOV32RmSOffsettoR( x86IntRegType to, x86IntRegType from1, int from
 }
 
 /* mov r32 to [r32][r32*scale] */
-emitterT void MOV32RtoRmS( x86IntRegType to, x86IntRegType from, x86IntRegType from2, int scale=0 )
+emitterT void MOV32RtoRmS( x86IntRegType to, x86IntRegType from, x86IntRegType from2, int scale )
 {
 	RexRXB(0, to, from2, from);
 	write8( 0x89 );
@@ -353,7 +340,7 @@ emitterT void MOV32ItoM(uptr to, u32 from )
 }
 
 // mov imm32 to [r32+off]
-emitterT void MOV32ItoRm( x86IntRegType to, u32 from, int offset=0)
+emitterT void MOV32ItoRm( x86IntRegType to, u32 from, int offset)
 {
 	RexB(0,to);
 	write8( 0xC7 );
@@ -362,7 +349,7 @@ emitterT void MOV32ItoRm( x86IntRegType to, u32 from, int offset=0)
 }
 
 // mov r32 to [r32+off]
-emitterT void MOV32RtoRm( x86IntRegType to, x86IntRegType from, int offset=0)
+emitterT void MOV32RtoRm( x86IntRegType to, x86IntRegType from, int offset)
 {
 	RexRB(0,from,to);
 	write8( 0x89 );
@@ -389,7 +376,7 @@ emitterT void MOV16MtoR( x86IntRegType to, uptr from )
 	write32( MEMADDR(from, 4) ); 
 }
 
-emitterT void MOV16RmtoR( x86IntRegType to, x86IntRegType from, int offset=0 )
+emitterT void MOV16RmtoR( x86IntRegType to, x86IntRegType from, int offset )
 {
 	write8( 0x66 );
 	RexRB(0,to,from);
@@ -397,7 +384,7 @@ emitterT void MOV16RmtoR( x86IntRegType to, x86IntRegType from, int offset=0 )
 	WriteRmOffsetFrom(to, from, offset);
 }
 
-emitterT void MOV16RmSOffsettoR( x86IntRegType to, x86IntRegType from1, u32 from2, int scale=0 )
+emitterT void MOV16RmSOffsettoR( x86IntRegType to, x86IntRegType from1, u32 from2, int scale )
 {
 	write8(0x66);
 	RexRXB(0,to,from1,0);
@@ -418,7 +405,7 @@ emitterT void MOV16ItoM( uptr to, u16 from )
 }
 
 /* mov r16 to [r32][r32*scale] */
-emitterT void MOV16RtoRmS( x86IntRegType to, x86IntRegType from, x86IntRegType from2, int scale=0 )
+emitterT void MOV16RtoRmS( x86IntRegType to, x86IntRegType from, x86IntRegType from2, int scale )
 {
 	write8( 0x66 );
 	RexRXB(0,to,from2,from);
@@ -445,7 +432,7 @@ emitterT void MOV16ItoRm( x86IntRegType to, u16 from, u32 offset=0 )
 }
 
 // mov r16 to [r16+off]
-emitterT void MOV16RtoRm( x86IntRegType to, x86IntRegType from, int offset=0 )
+emitterT void MOV16RtoRm( x86IntRegType to, x86IntRegType from, int offset )
 {
 	write8(0x66);
 	RexRB(0,from,to);
@@ -471,14 +458,14 @@ emitterT void MOV8MtoR( x86IntRegType to, uptr from )
 	write32( MEMADDR(from, 4) ); 
 }
 
-emitterT void MOV8RmtoR(x86IntRegType to, x86IntRegType from, int offset=0)
+emitterT void MOV8RmtoR(x86IntRegType to, x86IntRegType from, int offset)
 {
 	RexRB(0,to,from);
 	write8( 0x8A );
 	WriteRmOffsetFrom(to, from, offset);
 }
 
-emitterT void MOV8RmSOffsettoR( x86IntRegType to, x86IntRegType from1, u32 from2, int scale=0 )
+emitterT void MOV8RmSOffsettoR( x86IntRegType to, x86IntRegType from1, u32 from2, int scale )
 {
 	RexRXB(0,to,from1,0);
 	write8( 0x8A );
@@ -505,7 +492,7 @@ emitterT void MOV8ItoR( x86IntRegType to, u8 from )
 }
 
 // mov imm8 to [r8+off]
-emitterT void MOV8ItoRm( x86IntRegType to, u8 from, int offset=0)
+emitterT void MOV8ItoRm( x86IntRegType to, u8 from, int offset)
 {
 	assert( to != ESP );
 	RexB(0,to);
@@ -515,7 +502,7 @@ emitterT void MOV8ItoRm( x86IntRegType to, u8 from, int offset=0)
 }
 
 // mov r8 to [r8+off]
-emitterT void MOV8RtoRm( x86IntRegType to, x86IntRegType from, int offset=0)
+emitterT void MOV8RtoRm( x86IntRegType to, x86IntRegType from, int offset)
 {
 	assert( to != ESP );
 	RexRB(0,from,to);
@@ -531,14 +518,7 @@ emitterT void MOVSX32R8toR( x86IntRegType to, x86IntRegType from )
 	ModRM( 3, to, from ); 
 }
 
-emitterT void MOVSX32Rm8toR( x86IntRegType to, x86IntRegType from )
-{
-	RexRB(0,to,from);
-	write16( 0xBE0F ); 
-	ModRM( 0, to, from ); 
-}
-
-emitterT void MOVSX32Rm8toROffset( x86IntRegType to, x86IntRegType from, int offset )
+emitterT void MOVSX32Rm8toR( x86IntRegType to, x86IntRegType from, int offset )
 {
 	RexRB(0,to,from);
 	write16( 0xBE0F ); 
@@ -562,7 +542,7 @@ emitterT void MOVSX32R16toR( x86IntRegType to, x86IntRegType from )
 	ModRM( 3, to, from ); 
 }
 
-emitterT void MOVSX32Rm16toR( x86IntRegType to, x86IntRegType from, int offset=0 )
+emitterT void MOVSX32Rm16toR( x86IntRegType to, x86IntRegType from, int offset )
 {
 	RexRB(0,to,from);
 	write16( 0xBF0F );
@@ -586,7 +566,7 @@ emitterT void MOVZX32R8toR( x86IntRegType to, x86IntRegType from )
 	ModRM( 3, to, from ); 
 }
 
-emitterT void MOVZX32Rm8toR( x86IntRegType to, x86IntRegType from, int offset=0 )
+emitterT void MOVZX32Rm8toR( x86IntRegType to, x86IntRegType from, int offset )
 {
 	RexRB(0,to,from);
 	write16( 0xB60F );
@@ -610,7 +590,7 @@ emitterT void MOVZX32R16toR( x86IntRegType to, x86IntRegType from )
 	ModRM( 3, to, from ); 
 }
 
-emitterT void MOVZX32Rm16toR( x86IntRegType to, x86IntRegType from, int offset=0 )
+emitterT void MOVZX32Rm16toR( x86IntRegType to, x86IntRegType from, int offset )
 {
 	RexRB(0,to,from);
 	write16( 0xB70F );
@@ -837,12 +817,12 @@ emitterT void ADD16ItoR( x86IntRegType to, s16 imm )
 	write8( 0x66 );
 	RexB(0,to);
 
-	if ( to == EAX) 
+	if (to == EAX) 
 	{
 		write8( 0x05 ); 
 		write16( imm );
 	}
-	else if(imm <= 127 && imm >= -128)
+	else if(is_s8(imm))
 	{
 		write8( 0x83 ); 
 		ModRM( 3, 0, to );
@@ -860,7 +840,7 @@ emitterT void ADD16ItoR( x86IntRegType to, s16 imm )
 emitterT void ADD16ItoM( uptr to, s16 imm ) 
 {
 	write8( 0x66 );
-	if(imm <= 127 && imm >= -128)
+	if(is_s8(imm))
 	{
 		write8( 0x83 ); 
 		ModRM( 0, 0, DISP32 );
@@ -1776,31 +1756,6 @@ emitterT u8* JNO8( u8 to )
 { 
 	return J8Rel( 0x71, to ); 
 }
-/* Untested and slower, use 32bit versions instead
-// ja rel16 
-emitterT u16* eJA16( u16 to )
-{
-return J16Rel( 0x87, to );
-}
-
-// jb rel16 
-emitterT u16* eJB16( u16 to )
-{
-return J16Rel( 0x82, to );
-}
-
-// je rel16 
-emitterT u16* eJE16( u16 to )
-{
-return J16Rel( 0x84, to );
-}
-
-// jz rel16 
-emitterT u16* eJZ16( u16 to )
-{
-return J16Rel( 0x84, to );
-}
-*/
 // jb rel32 
 emitterT u32* JB32( u32 to )
 {
@@ -2271,7 +2226,7 @@ emitterT void LEA32RtoR(x86IntRegType to, x86IntRegType from, s32 offset)
 			ModRM(1, to, from);
 			write8(0x24);
 		}
-		else if( offset <= 127 && offset >= -128 ) {
+		else if( is_s8(offset) ) {
 			ModRM(1, to, from);
 			write8(0x24);
 			write8(offset);
@@ -2286,7 +2241,7 @@ emitterT void LEA32RtoR(x86IntRegType to, x86IntRegType from, s32 offset)
 		if( offset == 0 && from != EBP && from!=ESP ) {
 			ModRM(0, to, from);
 		}
-		else if( offset <= 127 && offset >= -128 ) {
+		else if( is_s8(offset) ) {
 			ModRM(1, to, from);
 			write8(offset);
 		}
@@ -2298,7 +2253,7 @@ emitterT void LEA32RtoR(x86IntRegType to, x86IntRegType from, s32 offset)
 }
 
 // to = from + offset
-emitterT void LEA16RtoR(x86IntRegType to, x86IntRegType from, u16 offset)
+emitterT void LEA16RtoR(x86IntRegType to, x86IntRegType from, s16 offset)
 {
 	write8(0x66);
 	LEA32RtoR(to, from, offset);

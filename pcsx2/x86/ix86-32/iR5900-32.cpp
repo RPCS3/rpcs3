@@ -30,6 +30,9 @@
 #include "iR5900Jump.h"
 #include "iR5900LoadStore.h"
 #include "iR5900Move.h"
+
+#include "BaseblockEx.h"
+
 #include "iMMI.h"
 #include "iFPU.h"
 #include "iCOP0.h"

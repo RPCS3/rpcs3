@@ -18,7 +18,6 @@
 
 #pragma once
 #define mVUdebug // Prints Extra Info to Console
-#define _EmitterId_ (vuIndex+1)
 #include "Common.h"
 #include "VU.h"
 #include "GS.h"
