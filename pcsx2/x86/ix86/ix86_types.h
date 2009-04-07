@@ -356,5 +356,5 @@ namespace x86Emitter
 	extern const x86Register ebp;
 	extern const x86Register esp;
 
-	extern const x86IndexerType ptr;
+	extern x86IndexerType ptr;
 }

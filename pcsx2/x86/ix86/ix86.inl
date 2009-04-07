@@ -38,6 +38,41 @@
 
 // Note: the 'to' field can either be a register or a special opcode extension specifier
 // depending on the opcode's encoding.
+
+// I added this back in because it's called once from eMOV8ItoRm and eMOV16ItoRm.
+emitterT void WriteRmOffset(x86IntRegType to, s32 offset)
+{
+	if ((to&7) == ESP) {
+		if( offset == 0 ) {
+			ModRM<I>( 0, 0, 4 );
+			SibSB<I>( 0, ESP, 4 );
+		}
+		else if( offset <= 127 && offset >= -128 ) {
+			ModRM<I>( 1, 0, 4 );
+			SibSB<I>( 0, ESP, 4 );
+			write8<I>(offset);
+		}
+		else {
+			ModRM<I>( 2, 0, 4 );
+			SibSB<I>( 0, ESP, 4 );
+			write32<I>(offset);
+		}
+	}
+	else {
+		if( offset == 0 ) {
+			ModRM<I>( 0, 0, to );
+		}
+		else if( offset <= 127 && offset >= -128 ) {
+			ModRM<I>( 1, 0, to );
+			write8<I>(offset);
+		}
+		else {
+			ModRM<I>( 2, 0, to );
+			write32<I>(offset);
+		}
+	}
+}
+
 emitterT void WriteRmOffsetFrom(x86IntRegType to, x86IntRegType from, int offset)
 {
 	if ((from&7) == ESP) {

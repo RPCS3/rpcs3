@@ -42,7 +42,7 @@ XMMSSEType g_xmmtypes[XMMREGS] = { XMMT_INT };
 
 namespace x86Emitter
 {
-	const x86IndexerType ptr;
+	x86IndexerType ptr;
 
 	//////////////////////////////////////////////////////////////////////////////////////////
 	//

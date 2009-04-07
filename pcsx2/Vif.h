@@ -24,6 +24,7 @@ struct vifCycle {
 	u8 pad[2];
 };
 
+// r0-r3 and c0-c3 would be more managable as arrays.
 struct VIFregisters {
 	u32 stat;
 	u32 pad0[3];
