@@ -161,7 +161,7 @@ void _flushConstRegs()
 		zero_cnt++;
 	}
 
-	rewindPtr = x86Ptr[_EmitterId_];
+	rewindPtr = x86Ptr;
 
 	for (i = 1, j = 0; i < 32; j++ && ++i, j %= 2) {
 		if (!GPR_IS_CONST1(i) || g_cpuFlushedConstReg & (1<<i))
@@ -178,7 +178,7 @@ void _flushConstRegs()
 	}
 
 	if (minusone_cnt == 1 && !zero_cnt) { // not worth it for one byte
-		x86Ptr[_EmitterId_] = rewindPtr;
+		x86SetPtr( rewindPtr );
 	} else {
 		done[0] |= done[2];
 		done[1] |= done[3];

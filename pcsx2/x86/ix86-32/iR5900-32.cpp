@@ -132,7 +132,7 @@ static void iDumpBlock( int startpc, u8 * ptr )
 
 	fflush( stdout );
 //	f = fopen( "dump1", "wb" );
-//	fwrite( ptr, 1, (u32)x86Ptr[0] - (u32)ptr, f );
+//	fwrite( ptr, 1, (u32)x86Ptr - (u32)ptr, f );
 //	fclose( f );
 //
 //	sprintf( command, "objdump -D --target=binary --architecture=i386 dump1 > %s", filename );
@@ -579,8 +579,8 @@ void recResetEE( void )
 	// so a fix will have to wait until later. -_- (air)
 
 	//x86SetPtr(recMem+REC_CACHEMEM);
-	//dyna_block_discard_recmem=(u8*)x86Ptr[0];
-	//JMP32( (uptr)&dyna_block_discard - ( (u32)x86Ptr[0] + 5 ));
+	//dyna_block_discard_recmem=(u8*)x86Ptr;
+	//JMP32( (uptr)&dyna_block_discard - ( (u32)x86Ptr + 5 ));
 
 	x86SetPtr(recMem);
 
@@ -791,7 +791,7 @@ void recSYSCALL( void ) {
 	CMP32ItoM((uptr)&cpuRegs.pc, pc);
 	j8Ptr[0] = JE8(0);
 	ADD32ItoM((uptr)&cpuRegs.cycle, eeScaleBlockCycles());
-	JMP32((uptr)DispatcherReg - ( (uptr)x86Ptr[0] + 5 ));
+	JMP32((uptr)DispatcherReg - ( (uptr)x86Ptr + 5 ));
 	x86SetJ8(j8Ptr[0]);
 	//branch = 2;
 }
@@ -1148,7 +1148,7 @@ static void iBranchTest(u32 newpc, bool noDispatch)
 
 	if (!noDispatch) {
 		if (newpc == 0xffffffff)
-			JS32((uptr)DispatcherReg - ( (uptr)x86Ptr[0] + 6 ));
+			JS32((uptr)DispatcherReg - ( (uptr)x86Ptr + 6 ));
 		else
 			iBranch(newpc, 1);
 	}
@@ -1375,7 +1375,7 @@ void recRecompile( const u32 startpc )
 
 	x86SetPtr( recPtr );
 	x86Align(16);
-	recPtr = x86Ptr[_EmitterId_];
+	recPtr = x86Ptr;
 
 	s_pCurBlock = PC_GETBLOCK(startpc);
 
@@ -1714,7 +1714,7 @@ StartRecomp:
 				{
 					// was dyna_block_discard_recmem.  See note in recResetEE for details.
 					CMP32ItoM((uptr)PSM(lpc),*(u32*)PSM(lpc));
-					JNE32(((u32)&dyna_block_discard)- ( (u32)x86Ptr[0] + 6 ));
+					JNE32(((u32)&dyna_block_discard)- ( (u32)x86Ptr + 6 ));
 
 					stg-=4;
 					lpc+=4;
@@ -1800,14 +1800,14 @@ StartRecomp:
 		}
 	}
 
-	assert( x86Ptr[0] < recMem+REC_CACHEMEM );
+	assert( x86Ptr < recMem+REC_CACHEMEM );
 	assert( recStackPtr < recStack+RECSTACK_SIZE );
 	assert( x86FpuState == 0 );
 
-	assert(x86Ptr[_EmitterId_] - recPtr < 0x10000);
-	s_pCurBlockEx->x86size = x86Ptr[_EmitterId_] - recPtr;
+	assert(x86Ptr - recPtr < 0x10000);
+	s_pCurBlockEx->x86size = x86Ptr - recPtr;
 
-	recPtr = x86Ptr[0];
+	recPtr = x86Ptr;
 
 	assert( (g_cpuHasConstReg&g_cpuFlushedConstReg) == g_cpuHasConstReg );
 

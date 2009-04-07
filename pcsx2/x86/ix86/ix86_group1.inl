@@ -66,7 +66,7 @@ emitterT void EmitSibMagic( int regfield, const ModSib& info )
 	int displacement_size = (info.Displacement == 0) ? 0 : 
 		( ( info.IsByteSizeDisp() ) ? 1 : 2 );
 
-	if( !NeedsSibMagic<I>( info ) )
+	if( !NeedsSibMagic( info ) )
 	{
 		// Use ModRm-only encoding, with the rm field holding an index/base register, if
 		// one has been specified.  If neither register is specified then use Disp32 form,
@@ -76,26 +76,26 @@ emitterT void EmitSibMagic( int regfield, const ModSib& info )
 		x86Register basereg = info.GetEitherReg();
 
 		if( basereg.IsEmpty() )
-			ModRM<I>( 0, regfield, ModRm_UseDisp32 );
+			ModRM( 0, regfield, ModRm_UseDisp32 );
 		else
 		{
 			if( basereg == ebp && displacement_size == 0 )
 				displacement_size = 1;		// forces [ebp] to be encoded as [ebp+0]!
 
-			ModRM<I>( displacement_size, regfield, basereg.Id );
+			ModRM( displacement_size, regfield, basereg.Id );
 		}
 	}
 	else
 	{
-		ModRM<I>( displacement_size, regfield, ModRm_UseSib );
-		SibSB<I>( info.Index.Id, info.Scale, info.Base.Id );
+		ModRM( displacement_size, regfield, ModRm_UseSib );
+		SibSB( info.Index.Id, info.Scale, info.Base.Id );
 	}
 
 	switch( displacement_size )
 	{
 	case 0: break;
-	case 1: write8<I>( info.Displacement );  break;
-	case 2: write32<I>( info.Displacement ); break;
+	case 1: write8( info.Displacement );  break;
+	case 2: write32( info.Displacement ); break;
 		jNO_DEFAULT
 	}
 }
@@ -108,7 +108,7 @@ emitterT void EmitSibMagic( int regfield, const ModSib& info )
 //
 emitterT void EmitSibMagic( x86Register regfield, const ModSib& info )
 {
-	EmitSibMagic<I>( regfield.Id, info );
+	EmitSibMagic( regfield.Id, info );
 }
 
 enum Group1InstructionType
@@ -126,82 +126,93 @@ enum Group1InstructionType
 
 emitterT void Group1_32( Group1InstructionType inst, x86Register to, x86Register from ) 
 {
-	write8<I>( 0x01 | (inst<<3) ); 
-	ModRM<I>( 3, from.Id, to.Id );
+	write8( 0x01 | (inst<<3) ); 
+	ModRM( 3, from.Id, to.Id );
 }
 
 emitterT void Group1_32( Group1InstructionType inst, x86Register to, u32 imm )
 {
 	if( is_s8( imm ) )
 	{
-		write8<I>( 0x83 );
-		ModRM<I>( 3, inst, to.Id );
-		write8<I>( (s8)imm );
+		write8( 0x83 );
+		ModRM( 3, inst, to.Id );
+		write8( (s8)imm );
 	}
 	else
 	{
 		if( to == eax )
-			write8<I>( 0x05 | (inst<<3) );
+			write8( 0x05 | (inst<<3) );
 		else
 		{
-			write8<I>( 0x81 );
-			ModRM<I>( 3, inst, to.Id );
+			write8( 0x81 );
+			ModRM( 3, inst, to.Id );
 		}
-		write32<I>( imm );
+		write32( imm );
 	}
 }
 
 emitterT void Group1_32( Group1InstructionType inst, const ModSib& sibdest, u32 imm )
 {
-	write8<I>( is_s8( imm ) ? 0x83 : 0x81 );
+	write8( is_s8( imm ) ? 0x83 : 0x81 );
 
-	EmitSibMagic<I>( inst, sibdest );
+	EmitSibMagic( inst, sibdest );
 
 	if( is_s8( imm ) )
-		write8<I>( (s8)imm );
+		write8( (s8)imm );
 	else
-		write32<I>( imm );
+		write32( imm );
 }
 
 emitterT void Group1_32( Group1InstructionType inst, const ModSib& sibdest, x86Register from )
 {
-	write8<I>( 0x01 | (inst<<3) ); 
-	EmitSibMagic<I>( from, sibdest );
+	write8( 0x01 | (inst<<3) ); 
+	EmitSibMagic( from, sibdest );
 }
 
 /* add m32 to r32 */
 emitterT void Group1_32( Group1InstructionType inst, x86Register to, const ModSib& sibsrc ) 
 {
-	write8<I>( 0x03 | (inst<<3) );
-	EmitSibMagic<I>( to, sibsrc );
+	write8( 0x03 | (inst<<3) );
+	EmitSibMagic( to, sibsrc );
 }
 
 emitterT void Group1_8( Group1InstructionType inst, x86Register to, s8 imm )
 {
 	if( to == eax )
 	{
-		write8<I>( 0x04 | (inst<<3) );
-		write8<I>( imm );
+		write8( 0x04 | (inst<<3) );
+		write8( imm );
 	}
 	else
 	{
-		write8<I>( 0x80 );
-		ModRM<I>( 3, inst, to.Id );
-		write8<I>( imm );
+		write8( 0x80 );
+		ModRM( 3, inst, to.Id );
+		write8( imm );
 	}
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
 //
 #define DEFINE_GROUP1_OPCODE( lwr, cod ) \
-	emitterT void lwr##32( x86Register to, x86Register from )      { Group1_32<I>( G1Type_##cod, to,		from		); } \
-	emitterT void lwr##32( x86Register to, u32 imm )               { Group1_32<I>( G1Type_##cod, to,		imm			); } \
-	emitterT void lwr##32( x86Register to, void* from )            { Group1_32<I>( G1Type_##cod, to,		ptr[from]	); } \
-	emitterT void lwr##32( void* to, x86Register from )            { Group1_32<I>( G1Type_##cod, ptr[to],	from		); } \
-	emitterT void lwr##32( void* to, u32 imm )                     { Group1_32<I>( G1Type_##cod, ptr[to],	imm			); } \
-	emitterT void lwr##32( x86Register to, const x86ModRm& from )  { Group1_32<I>( G1Type_##cod, to,		ptr[from]	); } \
-	emitterT void lwr##32( const x86ModRm& to, x86Register from )  { Group1_32<I>( G1Type_##cod, ptr[to],	from		); } \
-	emitterT void lwr##32( const x86ModRm& to, u32 imm )           { Group1_32<I>( G1Type_##cod, ptr[to],	imm			); }
+	emitterT void lwr##32( x86Register to, x86Register from )      { Group1_32( G1Type_##cod, to,		from		); } \
+	emitterT void lwr##32( x86Register to, u32 imm )               { Group1_32( G1Type_##cod, to,		imm			); } \
+	emitterT void lwr##32( x86Register to, void* from )            { Group1_32( G1Type_##cod, to,		ptr[from]	); } \
+	emitterT void lwr##32( void* to, x86Register from )            { Group1_32( G1Type_##cod, ptr[to],	from		); } \
+	emitterT void lwr##32( void* to, u32 imm )                     { Group1_32( G1Type_##cod, ptr[to],	imm			); } \
+	emitterT void lwr##32( x86Register to, const x86ModRm& from )  { Group1_32( G1Type_##cod, to,		ptr[from]	); } \
+	emitterT void lwr##32( const x86ModRm& to, x86Register from )  { Group1_32( G1Type_##cod, ptr[to],	from		); } \
+	emitterT void lwr##32( const x86ModRm& to, u32 imm )           { Group1_32( G1Type_##cod, ptr[to],	imm			); }
+
+/*
+	emitterT void lwr##16( x86Register16 to, x86Register16 from )  { Group1_32( G1Type_##cod, to,		from		); } \
+	emitterT void lwr##16( x86Register16 to, u16 imm )             { Group1_32( G1Type_##cod, to,		imm			); } \
+	emitterT void lwr##16( x86Register16 to, void* from )          { Group1_32( G1Type_##cod, to,		ptr[from]	); } \
+	emitterT void lwr##16( void* to, x86Register16 from )          { Group1_32( G1Type_##cod, ptr[to],	from		); } \
+	emitterT void lwr##16( void* to, u16 imm )                     { Group1_32( G1Type_##cod, ptr[to],	imm			); } \
+	emitterT void lwr##16( x86Register16 to, const x86ModRm& from ){ Group1_32( G1Type_##cod, to,		ptr[from]	); } \
+	emitterT void lwr##16( const x86ModRm& to, x86Register16 from ){ Group1_32( G1Type_##cod, ptr[to],	from		); } \
+	emitterT void lwr##16( const x86ModRm& to, u32 imm )           { Group1_32( G1Type_##cod, ptr[to],	imm			); }
+*/
 
 DEFINE_GROUP1_OPCODE( add, ADD );
 DEFINE_GROUP1_OPCODE( cmp, CMP );
@@ -229,14 +240,14 @@ static __forceinline x86Emitter::x86ModRm _mrmhlp( x86IntRegType src )
 //////////////////////////////////////////////////////////////////////////////////////////
 //
 #define DEFINE_GROUP1_OPCODE_LEGACY( lwr, cod ) \
-	emitterT void e##cod##32RtoR( x86IntRegType to, x86IntRegType from )	{ x86Emitter::lwr##32<I>( _reghlp(to), _reghlp(from) ); } \
-	emitterT void e##cod##32ItoR( x86IntRegType to, u32 imm )				{ x86Emitter::lwr##32<I>( _reghlp(to), imm ); } \
-	emitterT void e##cod##32MtoR( x86IntRegType to, uptr from )				{ x86Emitter::lwr##32<I>( _reghlp(to), (void*)from ); } \
-	emitterT void e##cod##32RtoM( uptr to, x86IntRegType from )				{ x86Emitter::lwr##32<I>( (void*)to, _reghlp(from) ); } \
-	emitterT void e##cod##32ItoM( uptr to, u32 imm )						{ x86Emitter::lwr##32<I>( (void*)to, imm ); } \
-	emitterT void e##cod##32ItoRm( x86IntRegType to, u32 imm, int offset=0 ){ x86Emitter::lwr##32<I>( _mrmhlp(to) + offset, imm ); } \
-	emitterT void e##cod##32RmtoR( x86IntRegType to, x86IntRegType from, int offset=0 ) { x86Emitter::lwr##32<I>( _reghlp(to), _mrmhlp(from) + offset ); } \
-	emitterT void e##cod##32RtoRm( x86IntRegType to, x86IntRegType from, int offset=0 ) { x86Emitter::lwr##32<I>( _mrmhlp(to) + offset, _reghlp(from) ); }
+	emitterT void cod##32RtoR( x86IntRegType to, x86IntRegType from )	{ x86Emitter::lwr##32( _reghlp(to), _reghlp(from) ); } \
+	emitterT void cod##32ItoR( x86IntRegType to, u32 imm )				{ x86Emitter::lwr##32( _reghlp(to), imm ); } \
+	emitterT void cod##32MtoR( x86IntRegType to, uptr from )				{ x86Emitter::lwr##32( _reghlp(to), (void*)from ); } \
+	emitterT void cod##32RtoM( uptr to, x86IntRegType from )				{ x86Emitter::lwr##32( (void*)to, _reghlp(from) ); } \
+	emitterT void cod##32ItoM( uptr to, u32 imm )						{ x86Emitter::lwr##32( (void*)to, imm ); } \
+	emitterT void cod##32ItoRm( x86IntRegType to, u32 imm, int offset=0 ){ x86Emitter::lwr##32( _mrmhlp(to) + offset, imm ); } \
+	emitterT void cod##32RmtoR( x86IntRegType to, x86IntRegType from, int offset=0 ) { x86Emitter::lwr##32( _reghlp(to), _mrmhlp(from) + offset ); } \
+	emitterT void cod##32RtoRm( x86IntRegType to, x86IntRegType from, int offset=0 ) { x86Emitter::lwr##32( _mrmhlp(to) + offset, _reghlp(from) ); }
 
 DEFINE_GROUP1_OPCODE_LEGACY( add, ADD );
 DEFINE_GROUP1_OPCODE_LEGACY( cmp, CMP );
@@ -247,12 +258,12 @@ DEFINE_GROUP1_OPCODE_LEGACY( and, AND );
 DEFINE_GROUP1_OPCODE_LEGACY( sub, SUB );
 DEFINE_GROUP1_OPCODE_LEGACY( xor, XOR );
 
-emitterT void eAND32I8toR( x86IntRegType to, s8 from ) 
+emitterT void AND32I8toR( x86IntRegType to, s8 from ) 
 {
-	x86Emitter::and32<I>( _reghlp(to), from );
+	x86Emitter::and32( _reghlp(to), from );
 }
 
-emitterT void eAND32I8toM( uptr to, s8 from ) 
+emitterT void AND32I8toM( uptr to, s8 from ) 
 {
-	x86Emitter::and32<I>( (void*)to, from );
+	x86Emitter::and32( (void*)to, from );
 }

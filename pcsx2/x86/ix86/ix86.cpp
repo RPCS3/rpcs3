@@ -29,10 +29,9 @@
 #include "System.h"
 #include "ix86.h"
 
-u8  *x86Ptr[EmitterId_Count];
-
-u8  *j8Ptr[32];
-u32 *j32Ptr[32];
+__threadlocal u8  *x86Ptr;
+__threadlocal u8  *j8Ptr[32];
+__threadlocal u32 *j32Ptr[32];
 
 PCSX2_ALIGNED16(u32 p[4]);
 PCSX2_ALIGNED16(u32 p2[4]);

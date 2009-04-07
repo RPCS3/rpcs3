@@ -1930,7 +1930,7 @@ void recLQC2( void )
 		dohw = recSetMemLocation(_Rs_, _Imm_, mmregs, 2, 0);
 
 		if( _Ft_ ) {
-			u8* rawreadptr = x86Ptr[0];
+			u8* rawreadptr = x86Ptr;
 
 			if( mmreg >= 0 ) {
 				SSEX_MOVDQARmtoROffset(mmreg, ECX, PS2MEM_BASE_+s_nAddMemOffset);
@@ -1945,7 +1945,7 @@ void recLQC2( void )
 
 				// check if writing to VUs
 				CMP32ItoR(ECX, 0x11000000);
-				JAE8(rawreadptr - (x86Ptr[0]+2));
+				JAE8(rawreadptr - (x86Ptr+2));
 
 				PUSH32I( (int)&VU0.VF[_Ft_].UD[0] );
 				CALLFunc( (int)recMemRead128 );
@@ -1999,7 +1999,7 @@ void recSQC2( void )
 		mmregs = _eePrepareReg(_Rs_);
 		dohw = recSetMemLocation(_Rs_, _Imm_, mmregs, 2, 0);
 
-		rawreadptr = x86Ptr[0];
+		rawreadptr = x86Ptr;
 
 		if( (mmreg = _checkXMMreg(XMMTYPE_VFREG, _Ft_, MODE_READ)) >= 0) {
 			SSEX_MOVDQARtoRmOffset(ECX, mmreg, PS2MEM_BASE_+s_nAddMemOffset);
@@ -2039,7 +2039,7 @@ void recSQC2( void )
 
 			// check if writing to VUs
 			CMP32ItoR(ECX, 0x11000000);
-			JAE8(rawreadptr - (x86Ptr[0]+2));
+			JAE8(rawreadptr - (x86Ptr+2));
 
 			// some type of hardware write
 			if( (mmreg = _checkXMMreg(XMMTYPE_VFREG, _Ft_, MODE_READ)) >= 0) {

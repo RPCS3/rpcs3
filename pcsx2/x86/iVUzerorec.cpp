@@ -833,7 +833,7 @@ static VuFunctionHeader* SuperVURecompileProgram(u32 startpc, int vuindex)
 
 	SuperVURecompile();
 
-	s_recVUPtr = x86Ptr[0];
+	s_recVUPtr = x86Ptr;
 
 	// set the function's range
 	VuFunctionHeader::RANGE r;
@@ -1889,7 +1889,7 @@ void VuBaseBlock::AssignVFRegs()
 		if( i == XMMREGS ) return; // nothing changed
 	}
 
-	u8* oldX86 = x86Ptr[0];
+	u8* oldX86 = x86Ptr;
 
 	FORIT(itinst, insts) {
 
@@ -2078,7 +2078,7 @@ void VuBaseBlock::AssignVFRegs()
 		}
 	}
 
-	assert( x86Ptr[0] == oldX86 );
+	assert( x86Ptr == oldX86 );
 	u32 analyzechildren = !(type&BLOCKTYPE_ANALYZED);
 	type |= BLOCKTYPE_ANALYZED;
 
@@ -2466,7 +2466,7 @@ static void SuperVURecompile()
 					AND32ItoM( (uptr)&VU->vifRegs->stat, ~0x4 );
 
 					MOV32ItoM((uptr)&VU->VI[REG_TPC], pchild->endpc);
-					JMP32( (uptr)SuperVUEndProgram - ( (uptr)x86Ptr[0] + 5 ));
+					JMP32( (uptr)SuperVUEndProgram - ( (uptr)x86Ptr + 5 ));
 				}
 				// only other case is when there are two branches
 				else assert( (*itblock)->insts.back().regs[0].pipe == VUPIPE_BRANCH );
@@ -2606,11 +2606,11 @@ void SuperVUTestVU0Condition(u32 incstack)
 
 		ADD32ItoR(ESP, incstack);
 		//CALLFunc((u32)timeout);
-		JMP32( (uptr)SuperVUEndProgram - ( (uptr)x86Ptr[0] + 5 ));
+		JMP32( (uptr)SuperVUEndProgram - ( (uptr)x86Ptr + 5 ));
 
 		x86SetJ8(ptr);
 	}
-	else JAE32( (uptr)SuperVUEndProgram - ( (uptr)x86Ptr[0] + 6 ) );
+	else JAE32( (uptr)SuperVUEndProgram - ( (uptr)x86Ptr + 6 ) );
 }
 
 void VuBaseBlock::Recompile()
@@ -2618,7 +2618,7 @@ void VuBaseBlock::Recompile()
 	if( type & BLOCKTYPE_ANALYZED ) return;
 	
 	x86Align(16);
-	pcode = x86Ptr[0];
+	pcode = x86Ptr;
 
 #ifdef _DEBUG
 	MOV32ItoM((uptr)&s_vufnheader, s_pFnHeader->startpc);
@@ -2726,7 +2726,7 @@ void VuBaseBlock::Recompile()
 		AND32ItoM( (uptr)&VU0.VI[ REG_VPU_STAT ].UL, s_vu?~0x100:~0x001 ); // E flag 
 		AND32ItoM( (uptr)&VU->vifRegs->stat, ~0x4 );
 		if( !branch ) MOV32ItoM((uptr)&VU->VI[REG_TPC], endpc);
-		JMP32( (uptr)SuperVUEndProgram - ( (uptr)x86Ptr[0] + 5 ));
+		JMP32( (uptr)SuperVUEndProgram - ( (uptr)x86Ptr + 5 ));
 	}
 	else {
 
@@ -2868,7 +2868,7 @@ void VuBaseBlock::Recompile()
 		}
 	}
 
-    pendcode = x86Ptr[0];
+    pendcode = x86Ptr;
 	type |= BLOCKTYPE_ANALYZED;
 
 	LISTBLOCKS::iterator itchild;
@@ -3569,7 +3569,7 @@ void recVUMI_BranchHandle()
 	if( (s_pCurBlock->type & BLOCKTYPE_HASEOP) || s_vu == 0 || SUPERVU_CHECKCONDITION)
         MOV32ItoM(SuperVUGetVIAddr(REG_TPC, 0), bpc);
 	MOV32ItoR(s_JumpX86, 0);
-	s_pCurBlock->pChildJumps[curjump] = (u32*)x86Ptr[0]-1;
+	s_pCurBlock->pChildJumps[curjump] = (u32*)x86Ptr-1;
 
 	if( !(s_pCurInst->type & INST_BRANCH_DELAY) ) {
 		j8Ptr[1] = JMP8(0);
@@ -3578,7 +3578,7 @@ void recVUMI_BranchHandle()
 		if( (s_pCurBlock->type & BLOCKTYPE_HASEOP) || s_vu == 0 || SUPERVU_CHECKCONDITION )
             MOV32ItoM(SuperVUGetVIAddr(REG_TPC, 0), pc+8);
 		MOV32ItoR(s_JumpX86, 0);
-		s_pCurBlock->pChildJumps[curjump+1] = (u32*)x86Ptr[0]-1;
+		s_pCurBlock->pChildJumps[curjump+1] = (u32*)x86Ptr-1;
 
 		x86SetJ8( j8Ptr[ 1 ] );
 	}
@@ -3815,7 +3815,7 @@ void recVUMI_B( VURegs* vuu, s32 info )
 	if( s_pCurBlock->blocks.size() > 1 ) {
 		s_JumpX86 = _allocX86reg(-1, X86TYPE_VUJUMP, 0, MODE_WRITE);
 		MOV32ItoR(s_JumpX86, 0);
-        s_pCurBlock->pChildJumps[(s_pCurInst->type & INST_BRANCH_DELAY)?1:0] = (u32*)x86Ptr[0]-1;
+        s_pCurBlock->pChildJumps[(s_pCurInst->type & INST_BRANCH_DELAY)?1:0] = (u32*)x86Ptr-1;
         s_UnconditionalDelay = 1;
 	}
 
@@ -3841,7 +3841,7 @@ void recVUMI_BAL( VURegs* vuu, s32 info )
 	if( s_pCurBlock->blocks.size() > 1 ) {
 		s_JumpX86 = _allocX86reg(-1, X86TYPE_VUJUMP, 0, MODE_WRITE);
 		MOV32ItoR(s_JumpX86, 0);
-        s_pCurBlock->pChildJumps[(s_pCurInst->type & INST_BRANCH_DELAY)?1:0] = (u32*)x86Ptr[0]-1;
+        s_pCurBlock->pChildJumps[(s_pCurInst->type & INST_BRANCH_DELAY)?1:0] = (u32*)x86Ptr-1;
         s_UnconditionalDelay = 1;
 	}
 

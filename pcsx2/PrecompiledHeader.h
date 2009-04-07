@@ -155,24 +155,3 @@ static __forceinline u32 timeGetTime()
 #	define __releaseinline __forceinline
 #endif
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// Emitter Instance Identifiers.  If you add a new emitter, do it here also.
-// Note: Currently most of the instances map back to 0, since existing dynarec code all
-// shares iCore and must therefore all share the same emitter instance.
-// (note: these don't really belong here per-se, but it's an easy spot to use for now)
-enum
-{
-	EmitterId_R5900 = 0,
-	EmitterId_R3000a = EmitterId_R5900,
-	EmitterId_VU0micro = EmitterId_R5900,
-	EmitterId_VU1micro = EmitterId_R5900,
-	
-	// Cotton's new microVU, which is iCore-free
-	EmitterId_microVU0,
-	EmitterId_microVU1,
-
-	// Air's eventual IopRec, which will also be iCore-free
-	EmitterId_R3000air,
-		
-	EmitterId_Count			// must always be last!
-};

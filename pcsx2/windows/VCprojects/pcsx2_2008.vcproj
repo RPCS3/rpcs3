@@ -2987,10 +2987,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\x86\ix86\ix86_macros.h"
-				>
-			</File>
-			<File
 				RelativePath="..\..\x86\ix86\ix86_mmx.inl"
 				>
 				<FileConfiguration

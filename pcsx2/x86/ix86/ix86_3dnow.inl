@@ -23,179 +23,179 @@
 //------------------------------------------------------------------
 
 /* femms */
-emitterT void eFEMMS( void ) 
+emitterT void FEMMS( void ) 
 {
-	write16<I>( 0x0E0F );
+	write16( 0x0E0F );
 }
 
-emitterT void ePFCMPEQMtoR( x86IntRegType to, uptr from )
+emitterT void PFCMPEQMtoR( x86IntRegType to, uptr from )
 {
-	write16<I>( 0x0F0F );
-	ModRM<I>( 0, to, DISP32 ); 
-	write32<I>( from ); 
-	write8<I>( 0xB0 );
+	write16( 0x0F0F );
+	ModRM( 0, to, DISP32 ); 
+	write32( from ); 
+	write8( 0xB0 );
 }
 
-emitterT void ePFCMPGTMtoR( x86IntRegType to, uptr from )
+emitterT void PFCMPGTMtoR( x86IntRegType to, uptr from )
 {
-	write16<I>( 0x0F0F );
-	ModRM<I>( 0, to, DISP32 ); 
-	write32<I>( from ); 
-	write8<I>( 0xA0 );
+	write16( 0x0F0F );
+	ModRM( 0, to, DISP32 ); 
+	write32( from ); 
+	write8( 0xA0 );
 }
 
-emitterT void ePFCMPGEMtoR( x86IntRegType to, uptr from )
+emitterT void PFCMPGEMtoR( x86IntRegType to, uptr from )
 {
-	write16<I>( 0x0F0F );
-	ModRM<I>( 0, to, DISP32 ); 
-	write32<I>( from ); 
-	write8<I>( 0x90 );
+	write16( 0x0F0F );
+	ModRM( 0, to, DISP32 ); 
+	write32( from ); 
+	write8( 0x90 );
 }
 
-emitterT void ePFADDMtoR( x86IntRegType to, uptr from )
+emitterT void PFADDMtoR( x86IntRegType to, uptr from )
 {
-	write16<I>( 0x0F0F );
-	ModRM<I>( 0, to, DISP32 ); 
-	write32<I>( from ); 
-	write8<I>( 0x9E );
+	write16( 0x0F0F );
+	ModRM( 0, to, DISP32 ); 
+	write32( from ); 
+	write8( 0x9E );
 }
 
-emitterT void ePFADDRtoR( x86IntRegType to, x86IntRegType from )
+emitterT void PFADDRtoR( x86IntRegType to, x86IntRegType from )
 {
-	write16<I>( 0x0F0F );
-	ModRM<I>( 3, to, from );
-	write8<I>( 0x9E );
+	write16( 0x0F0F );
+	ModRM( 3, to, from );
+	write8( 0x9E );
 }
 
-emitterT void ePFSUBMtoR( x86IntRegType to, uptr from )
+emitterT void PFSUBMtoR( x86IntRegType to, uptr from )
 {
-	write16<I>( 0x0F0F );
-	ModRM<I>( 0, to, DISP32 ); 
-	write32<I>( from ); 
-	write8<I>( 0x9A );
+	write16( 0x0F0F );
+	ModRM( 0, to, DISP32 ); 
+	write32( from ); 
+	write8( 0x9A );
 }
 
-emitterT void ePFSUBRtoR( x86IntRegType to, x86IntRegType from )
+emitterT void PFSUBRtoR( x86IntRegType to, x86IntRegType from )
 {
-	write16<I>( 0x0F0F );
-	ModRM<I>( 3, to, from ); 
-	write8<I>( 0x9A );
+	write16( 0x0F0F );
+	ModRM( 3, to, from ); 
+	write8( 0x9A );
 }
 
-emitterT void ePFMULMtoR( x86IntRegType to, uptr from )
+emitterT void PFMULMtoR( x86IntRegType to, uptr from )
 {
-	write16<I>( 0x0F0F );
-	ModRM<I>( 0, to, DISP32 ); 
-	write32<I>( from ); 
-	write8<I>( 0xB4 );
+	write16( 0x0F0F );
+	ModRM( 0, to, DISP32 ); 
+	write32( from ); 
+	write8( 0xB4 );
 }
 
-emitterT void ePFMULRtoR( x86IntRegType to, x86IntRegType from )
+emitterT void PFMULRtoR( x86IntRegType to, x86IntRegType from )
 {
-	write16<I>( 0x0F0F );
-	ModRM<I>( 3, to, from ); 
-	write8<I>( 0xB4 );
+	write16( 0x0F0F );
+	ModRM( 3, to, from ); 
+	write8( 0xB4 );
 }
 
-emitterT void ePFRCPMtoR( x86IntRegType to, uptr from )
+emitterT void PFRCPMtoR( x86IntRegType to, uptr from )
 {
-	write16<I>( 0x0F0F );
-	ModRM<I>( 0, to, DISP32 ); 
-	write32<I>( from ); 
-	write8<I>( 0x96 );
+	write16( 0x0F0F );
+	ModRM( 0, to, DISP32 ); 
+	write32( from ); 
+	write8( 0x96 );
 }
 
-emitterT void ePFRCPRtoR( x86IntRegType to, x86IntRegType from )
+emitterT void PFRCPRtoR( x86IntRegType to, x86IntRegType from )
 {
-	write16<I>( 0x0F0F );
-	ModRM<I>( 3, to, from ); 
-	write8<I>( 0x96 );
+	write16( 0x0F0F );
+	ModRM( 3, to, from ); 
+	write8( 0x96 );
 }
 
-emitterT void ePFRCPIT1RtoR( x86IntRegType to, x86IntRegType from )
+emitterT void PFRCPIT1RtoR( x86IntRegType to, x86IntRegType from )
 {
-	write16<I>( 0x0F0F );
-	ModRM<I>( 3, to, from ); 
-	write8<I>( 0xA6 );
+	write16( 0x0F0F );
+	ModRM( 3, to, from ); 
+	write8( 0xA6 );
 }
 
-emitterT void ePFRCPIT2RtoR( x86IntRegType to, x86IntRegType from )
+emitterT void PFRCPIT2RtoR( x86IntRegType to, x86IntRegType from )
 {
-	write16<I>( 0x0F0F );
-	ModRM<I>( 3, to, from ); 
-	write8<I>( 0xB6 );
+	write16( 0x0F0F );
+	ModRM( 3, to, from ); 
+	write8( 0xB6 );
 }
 
-emitterT void ePFRSQRTRtoR( x86IntRegType to, x86IntRegType from )
+emitterT void PFRSQRTRtoR( x86IntRegType to, x86IntRegType from )
 {
-	write16<I>( 0x0F0F );
-	ModRM<I>( 3, to, from ); 
-	write8<I>( 0x97 );
+	write16( 0x0F0F );
+	ModRM( 3, to, from ); 
+	write8( 0x97 );
 }
 
-emitterT void ePFRSQIT1RtoR( x86IntRegType to, x86IntRegType from )
+emitterT void PFRSQIT1RtoR( x86IntRegType to, x86IntRegType from )
 {
-	write16<I>( 0x0F0F );
-	ModRM<I>( 3, to, from ); 
-	write8<I>( 0xA7 );
+	write16( 0x0F0F );
+	ModRM( 3, to, from ); 
+	write8( 0xA7 );
 }
 
-emitterT void ePF2IDMtoR( x86IntRegType to, uptr from )
+emitterT void PF2IDMtoR( x86IntRegType to, uptr from )
 {
-	write16<I>( 0x0F0F );
-	ModRM<I>( 0, to, DISP32 ); 
-	write32<I>( from ); 
-	write8<I>( 0x1D );
+	write16( 0x0F0F );
+	ModRM( 0, to, DISP32 ); 
+	write32( from ); 
+	write8( 0x1D );
 }
 
-emitterT void ePF2IDRtoR( x86IntRegType to, x86IntRegType from )
+emitterT void PF2IDRtoR( x86IntRegType to, x86IntRegType from )
 {
-	write16<I>( 0x0F0F );
-	ModRM<I>( 3, to, from ); 
-	write8<I>( 0x1D );
+	write16( 0x0F0F );
+	ModRM( 3, to, from ); 
+	write8( 0x1D );
 }
 
-emitterT void ePI2FDMtoR( x86IntRegType to, uptr from )
+emitterT void PI2FDMtoR( x86IntRegType to, uptr from )
 {
-	write16<I>( 0x0F0F );
-	ModRM<I>( 0, to, DISP32 ); 
-	write32<I>( from ); 
-	write8<I>( 0x0D );
+	write16( 0x0F0F );
+	ModRM( 0, to, DISP32 ); 
+	write32( from ); 
+	write8( 0x0D );
 }
 
-emitterT void ePI2FDRtoR( x86IntRegType to, x86IntRegType from )
+emitterT void PI2FDRtoR( x86IntRegType to, x86IntRegType from )
 {
-	write16<I>( 0x0F0F );
-	ModRM<I>( 3, to, from ); 
-	write8<I>( 0x0D );
+	write16( 0x0F0F );
+	ModRM( 3, to, from ); 
+	write8( 0x0D );
 }
 
-emitterT void ePFMAXMtoR( x86IntRegType to, uptr from )
+emitterT void PFMAXMtoR( x86IntRegType to, uptr from )
 {
-	write16<I>( 0x0F0F );
-	ModRM<I>( 0, to, DISP32 ); 
-	write32<I>( from ); 
-	write8<I>( 0xA4 );
+	write16( 0x0F0F );
+	ModRM( 0, to, DISP32 ); 
+	write32( from ); 
+	write8( 0xA4 );
 }
 
-emitterT void ePFMAXRtoR( x86IntRegType to, x86IntRegType from )
+emitterT void PFMAXRtoR( x86IntRegType to, x86IntRegType from )
 {
-	write16<I>( 0x0F0F );
-	ModRM<I>( 3, to, from ); 
-	write8<I>( 0xA4 );
+	write16( 0x0F0F );
+	ModRM( 3, to, from ); 
+	write8( 0xA4 );
 }
 
-emitterT void ePFMINMtoR( x86IntRegType to, uptr from )
+emitterT void PFMINMtoR( x86IntRegType to, uptr from )
 {
-	write16<I>( 0x0F0F );
-	ModRM<I>( 0, to, DISP32 ); 
-	write32<I>( from ); 
-	write8<I>( 0x94 );
+	write16( 0x0F0F );
+	ModRM( 0, to, DISP32 ); 
+	write32( from ); 
+	write8( 0x94 );
 }
 
-emitterT void ePFMINRtoR( x86IntRegType to, x86IntRegType from )
+emitterT void PFMINRtoR( x86IntRegType to, x86IntRegType from )
 {
-	write16<I>( 0x0F0F );
-	ModRM<I>( 3, to, from );
-	write8<I>( 0x94 );
+	write16( 0x0F0F );
+	ModRM( 3, to, from );
+	write8( 0x94 );
 }
