@@ -482,11 +482,11 @@ emitterT void eMOVQRtoR( x86MMXRegType to, x86MMXRegType from )
 	ModRM<I>( 3, to, from );
 }
 
-emitterT void eMOVQRmtoROffset( x86MMXRegType to, x86IntRegType from, u32 offset )
+emitterT void eMOVQRmtoR( x86MMXRegType to, x86IntRegType from, int offset=0 )
 {
 	write16<I>( 0x6F0F );
 
-	if( offset < 128 ) {
+	if( offset < 128 && offset >= -128) {
 		ModRM<I>( 1, to, from );
 		write8<I>(offset);
 	}
@@ -496,11 +496,11 @@ emitterT void eMOVQRmtoROffset( x86MMXRegType to, x86IntRegType from, u32 offset
 	}
 }
 
-emitterT void eMOVQRtoRmOffset( x86IntRegType to, x86MMXRegType from, u32 offset )
+emitterT void eMOVQRtoRm( x86IntRegType to, x86MMXRegType from, int offset=0 )
 {
 	write16<I>( 0x7F0F );
 
-	if( offset < 128 ) {
+	if( offset < 128 && offset >= -128) {
 		ModRM<I>( 1, from , to );
 		write8<I>(offset);
 	}

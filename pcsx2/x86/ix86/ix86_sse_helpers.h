@@ -47,16 +47,16 @@ static __forceinline void SSEX_MOVDQA_XMM_to_XMM( x86SSERegType to, x86SSERegTyp
 	else SSE_MOVAPS_XMM_to_XMM(to, from);
 }
 
-static __forceinline void SSEX_MOVDQARmtoROffset( x86SSERegType to, x86IntRegType from, int offset )
+static __forceinline void SSEX_MOVDQARmtoR( x86SSERegType to, x86IntRegType from, int offset=0 )
 {
-	if( !AlwaysUseMovaps && g_xmmtypes[to] == XMMT_INT ) SSE2_MOVDQARmtoROffset(to, from, offset);
-	else SSE_MOVAPSRmtoROffset(to, from, offset);
+	if( !AlwaysUseMovaps && g_xmmtypes[to] == XMMT_INT ) SSE2_MOVDQARmtoR(to, from, offset);
+	else SSE_MOVAPSRmtoR(to, from, offset);
 }
 
-static __forceinline void SSEX_MOVDQARtoRmOffset( x86IntRegType to, x86SSERegType from, int offset )
+static __forceinline void SSEX_MOVDQARtoRm( x86IntRegType to, x86SSERegType from, int offset=0 )
 {
-	if( !AlwaysUseMovaps && g_xmmtypes[from] == XMMT_INT ) SSE2_MOVDQARtoRmOffset(to, from, offset);
-	else SSE_MOVAPSRtoRmOffset(to, from, offset);
+	if( !AlwaysUseMovaps && g_xmmtypes[from] == XMMT_INT ) SSE2_MOVDQARtoRm(to, from, offset);
+	else SSE_MOVAPSRtoRm(to, from, offset);
 }
 
 static __forceinline void SSEX_MOVDQU_M128_to_XMM( x86SSERegType to, uptr from )
@@ -83,22 +83,16 @@ static __forceinline void SSEX_MOVD_XMM_to_M32( u32 to, x86SSERegType from )
 	else SSE_MOVSS_XMM_to_M32(to, from);
 }
 
-static __forceinline void SSEX_MOVD_XMM_to_Rm( x86IntRegType to, x86SSERegType from )
+static __forceinline void SSEX_MOVD_Rm_to_XMM( x86SSERegType to, x86IntRegType from, int offset=0 )
 {
-	if( g_xmmtypes[from] == XMMT_INT ) SSE2_MOVD_XMM_to_Rm(to, from);
-	else SSE_MOVSS_XMM_to_Rm(to, from);
+	if( g_xmmtypes[to] == XMMT_INT ) SSE2_MOVD_Rm_to_XMM(to, from, offset);
+	else SSE_MOVSS_Rm_to_XMM(to, from, offset);
 }
 
-static __forceinline void SSEX_MOVD_RmOffset_to_XMM( x86SSERegType to, x86IntRegType from, int offset )
+static __forceinline void SSEX_MOVD_XMM_to_Rm( x86IntRegType to, x86SSERegType from, int offset=0 )
 {
-	if( g_xmmtypes[to] == XMMT_INT ) SSE2_MOVD_RmOffset_to_XMM(to, from, offset);
-	else SSE_MOVSS_RmOffset_to_XMM(to, from, offset);
-}
-
-static __forceinline void SSEX_MOVD_XMM_to_RmOffset( x86IntRegType to, x86SSERegType from, int offset )
-{
-	if( g_xmmtypes[from] == XMMT_INT ) SSE2_MOVD_XMM_to_RmOffset(to, from, offset);
-	else SSE_MOVSS_XMM_to_RmOffset(to, from, offset);
+	if( g_xmmtypes[from] == XMMT_INT ) SSE2_MOVD_XMM_to_Rm(to, from, offset);
+	else SSE_MOVSS_XMM_to_Rm(to, from, offset);
 }
 
 static __forceinline void SSEX_POR_M128_to_XMM( x86SSERegType to, uptr from )

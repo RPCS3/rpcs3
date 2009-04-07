@@ -18,17 +18,21 @@
 
 #pragma once
 
-//------------------------------------------------------------------
-// SSE instructions
-//------------------------------------------------------------------
-
+//////////////////////////////////////////////////////////////////////////////////////////
+// AlwaysUseMovaps [const]
+//
 // This tells the recompiler's emitter to always use movaps instead of movdqa.  Both instructions
 // do the exact same thing, but movaps is 1 byte shorter, and thus results in a cleaner L1 cache
 // and some marginal speed gains as a result.  (it's possible someday in the future the per-
 // formance of the two instructions could change, so this constant is provided to restore MOVDQA
 // use easily at a later time, if needed).
-
+//
 static const bool AlwaysUseMovaps = true;
+
+
+//------------------------------------------------------------------
+// SSE instructions
+//------------------------------------------------------------------
 
 #define SSEMtoR( code, overb ) \
 	assert( to < XMMREGS ), \
@@ -140,7 +144,7 @@ static const bool AlwaysUseMovaps = true;
    write8<I>( op )
 
 /* movups [r32][r32*scale] to xmm1 */
-emitterT void eSSE_MOVUPSRmStoR( x86SSERegType to, x86IntRegType from, x86IntRegType from2, int scale )
+emitterT void eSSE_MOVUPSRmStoR( x86SSERegType to, x86IntRegType from, x86IntRegType from2, int scale=0 )
 {
     RexRXB(0, to, from2, from);
 	write16<I>( 0x100f );
@@ -149,7 +153,7 @@ emitterT void eSSE_MOVUPSRmStoR( x86SSERegType to, x86IntRegType from, x86IntReg
 }
 
 /* movups xmm1 to [r32][r32*scale] */
-emitterT void eSSE_MOVUPSRtoRmS( x86SSERegType to, x86IntRegType from, x86IntRegType from2, int scale )
+emitterT void eSSE_MOVUPSRtoRmS( x86SSERegType to, x86IntRegType from, x86IntRegType from2, int scale=0 )
 {
     RexRXB(1, to, from2, from);
 	write16<I>( 0x110f );
@@ -181,7 +185,7 @@ emitterT void eSSE_MOVLPSRmtoR( x86SSERegType to, x86IntRegType from )
 	ModRM<I>( 0, to, from );
 }
 
-emitterT void eSSE_MOVLPSRmtoROffset( x86SSERegType to, x86IntRegType from, int offset )
+emitterT void eSSE_MOVLPSRmtoR( x86SSERegType to, x86IntRegType from, int offset=0 )
 {
     RexRB(0, to, from);
 	write16<I>( 0x120f );
@@ -196,7 +200,7 @@ emitterT void eSSE_MOVLPSRtoRm( x86IntRegType to, x86IntRegType from )
 	ModRM<I>( 0, from, to );
 }
 
-emitterT void eSSE_MOVLPSRtoRmOffset( x86SSERegType to, x86IntRegType from, int offset )
+emitterT void eSSE_MOVLPSRtoRm( x86SSERegType to, x86IntRegType from, int offset=0 )
 {
     RexRB(0, from, to);
 	write16<I>( 0x130f );
@@ -204,7 +208,7 @@ emitterT void eSSE_MOVLPSRtoRmOffset( x86SSERegType to, x86IntRegType from, int 
 }
 
 /* movaps [r32][r32*scale] to xmm1 */
-emitterT void eSSE_MOVAPSRmStoR( x86SSERegType to, x86IntRegType from, x86IntRegType from2, int scale )
+emitterT void eSSE_MOVAPSRmStoR( x86SSERegType to, x86IntRegType from, x86IntRegType from2, int scale=0 )
 {
 	assert( from != EBP );
     RexRXB(0, to, from2, from);
@@ -214,7 +218,7 @@ emitterT void eSSE_MOVAPSRmStoR( x86SSERegType to, x86IntRegType from, x86IntReg
 }
 
 /* movaps xmm1 to [r32][r32*scale] */
-emitterT void eSSE_MOVAPSRtoRmS( x86SSERegType to, x86IntRegType from, x86IntRegType from2, int scale )
+emitterT void eSSE_MOVAPSRtoRmS( x86SSERegType to, x86IntRegType from, x86IntRegType from2, int scale=0 )
 {
 	assert( from != EBP );
     RexRXB(0, to, from2, from);
@@ -224,7 +228,7 @@ emitterT void eSSE_MOVAPSRtoRmS( x86SSERegType to, x86IntRegType from, x86IntReg
 }
 
 // movaps [r32+offset] to r32
-emitterT void eSSE_MOVAPSRmtoROffset( x86SSERegType to, x86IntRegType from, int offset )
+emitterT void eSSE_MOVAPSRmtoR( x86SSERegType to, x86IntRegType from, int offset=0 )
 {
 	RexRB(0, to, from);
 	write16<I>( 0x280f );
@@ -232,7 +236,7 @@ emitterT void eSSE_MOVAPSRmtoROffset( x86SSERegType to, x86IntRegType from, int 
 }
 
 // movaps r32 to [r32+offset]
-emitterT void eSSE_MOVAPSRtoRmOffset( x86IntRegType to, x86SSERegType from, int offset ) 
+emitterT void eSSE_MOVAPSRtoRm( x86IntRegType to, x86SSERegType from, int offset=0 ) 
 {
 	RexRB(0, from, to);
 	write16<I>( 0x290f );
@@ -240,10 +244,10 @@ emitterT void eSSE_MOVAPSRtoRmOffset( x86IntRegType to, x86SSERegType from, int 
 }
 
 // movdqa [r32+offset] to r32
-emitterT void eSSE2_MOVDQARmtoROffset( x86SSERegType to, x86IntRegType from, int offset )
+emitterT void eSSE2_MOVDQARmtoR( x86SSERegType to, x86IntRegType from, int offset=0 )
 {
 	if( AlwaysUseMovaps )
-		eSSE_MOVAPSRmtoROffset<I>( to, from, offset );
+		eSSE_MOVAPSRmtoR<I>( to, from, offset );
 	else
 	{
 		write8<I>(0x66);
@@ -254,10 +258,10 @@ emitterT void eSSE2_MOVDQARmtoROffset( x86SSERegType to, x86IntRegType from, int
 }
 
 // movdqa r32 to [r32+offset]
-emitterT void eSSE2_MOVDQARtoRmOffset( x86IntRegType to, x86SSERegType from, int offset ) 
+emitterT void eSSE2_MOVDQARtoRm( x86IntRegType to, x86SSERegType from, int offset=0 ) 
 {
 	if( AlwaysUseMovaps )
-		eSSE_MOVAPSRtoRmOffset<I>( to, from, offset );
+		eSSE_MOVAPSRtoRm<I>( to, from, offset );
 	else
 	{
 		write8<I>(0x66);
@@ -268,7 +272,7 @@ emitterT void eSSE2_MOVDQARtoRmOffset( x86IntRegType to, x86SSERegType from, int
 }
 
 // movups [r32+offset] to r32
-emitterT void eSSE_MOVUPSRmtoROffset( x86SSERegType to, x86IntRegType from, int offset )
+emitterT void eSSE_MOVUPSRmtoR( x86SSERegType to, x86IntRegType from, int offset=0 )
 {
 	RexRB(0, to, from);
 	write16<I>( 0x100f );
@@ -276,7 +280,7 @@ emitterT void eSSE_MOVUPSRmtoROffset( x86SSERegType to, x86IntRegType from, int 
 }
 
 // movups r32 to [r32+offset]
-emitterT void eSSE_MOVUPSRtoRmOffset( x86IntRegType to, x86SSERegType from, int offset )
+emitterT void eSSE_MOVUPSRtoRm( x86IntRegType to, x86SSERegType from, int offset=0 )
 {
     RexRB(0, from, to);
 	write16<I>( 0x110f );
@@ -328,17 +332,10 @@ emitterT void eSSE2_MOVQ2DQ_MM_to_XMM( x86SSERegType to, x86MMXRegType from)
 //**********************************************************************************
 emitterT void eSSE_MOVSS_M32_to_XMM( x86SSERegType to, uptr from )			{ SSE_SS_MtoR( 0x100f, 0 ); }
 emitterT void eSSE_MOVSS_XMM_to_M32( u32 to, x86SSERegType from )			{ SSE_SS_RtoM( 0x110f, 0 ); }
-emitterT void eSSE_MOVSS_XMM_to_Rm( x86IntRegType to, x86SSERegType from )
-{
-	write8<I>(0xf3);
-    RexRB(0, from, to);
-    write16<I>(0x110f);
-	ModRM<I>(0, from, to);
-}
 
 emitterT void eSSE_MOVSS_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	{ if (to != from) { SSE_SS_RtoR( 0x100f ); } }
 
-emitterT void eSSE_MOVSS_RmOffset_to_XMM( x86SSERegType to, x86IntRegType from, int offset )
+emitterT void eSSE_MOVSS_Rm_to_XMM( x86SSERegType to, x86IntRegType from, int offset=0 )
 {
 	write8<I>(0xf3);
     RexRB(0, to, from);
@@ -346,7 +343,7 @@ emitterT void eSSE_MOVSS_RmOffset_to_XMM( x86SSERegType to, x86IntRegType from, 
     WriteRmOffsetFrom<I>(to, from, offset);
 }
 
-emitterT void eSSE_MOVSS_XMM_to_RmOffset( x86IntRegType to, x86SSERegType from, int offset )
+emitterT void eSSE_MOVSS_XMM_to_Rm( x86IntRegType to, x86SSERegType from, int offset=0 )
 {
 	write8<I>(0xf3);
     RexRB(0, from, to);
@@ -361,14 +358,14 @@ emitterT void eSSE_MASKMOVDQU_XMM_to_XMM( x86SSERegType to, x86SSERegType from )
 emitterT void eSSE_MOVLPS_M64_to_XMM( x86SSERegType to, uptr from )	{ SSEMtoR( 0x120f, 0 ); }
 emitterT void eSSE_MOVLPS_XMM_to_M64( u32 to, x86SSERegType from )	{ SSERtoM( 0x130f, 0 ); }
 
-emitterT void eSSE_MOVLPS_RmOffset_to_XMM( x86SSERegType to, x86IntRegType from, int offset )
+emitterT void eSSE_MOVLPS_Rm_to_XMM( x86SSERegType to, x86IntRegType from, int offset=0 )
 {
     RexRB(0, to, from);
 	write16<I>( 0x120f );
     WriteRmOffsetFrom<I>(to, from, offset);
 }
 
-emitterT void eSSE_MOVLPS_XMM_to_RmOffset( x86IntRegType to, x86SSERegType from, int offset )
+emitterT void eSSE_MOVLPS_XMM_to_Rm( x86IntRegType to, x86SSERegType from, int offset=0 )
 {
     RexRB(0, from, to);
 	write16<I>(0x130f);
@@ -382,14 +379,14 @@ emitterT void eSSE_MOVLPS_XMM_to_RmOffset( x86IntRegType to, x86SSERegType from,
 emitterT void eSSE_MOVHPS_M64_to_XMM( x86SSERegType to, uptr from )	{ SSEMtoR( 0x160f, 0 ); }
 emitterT void eSSE_MOVHPS_XMM_to_M64( u32 to, x86SSERegType from )	{ SSERtoM( 0x170f, 0 ); }
 
-emitterT void eSSE_MOVHPS_RmOffset_to_XMM( x86SSERegType to, x86IntRegType from, int offset )
+emitterT void eSSE_MOVHPS_Rm_to_XMM( x86SSERegType to, x86IntRegType from, int offset=0 )
 {
     RexRB(0, to, from);
 	write16<I>( 0x160f );
     WriteRmOffsetFrom<I>(to, from, offset);
 }
 
-emitterT void eSSE_MOVHPS_XMM_to_RmOffset( x86IntRegType to, x86SSERegType from, int offset )
+emitterT void eSSE_MOVHPS_XMM_to_Rm( x86IntRegType to, x86SSERegType from, int offset=0 )
 {
     RexRB(0, from, to);
 	write16<I>(0x170f);
@@ -756,7 +753,7 @@ emitterT void eSSE_PMINSW_MM_to_MM( x86MMXRegType to, x86MMXRegType from ){ SSER
 emitterT void eSSE_SHUFPS_XMM_to_XMM( x86SSERegType to, x86SSERegType from, u8 imm8 )	{ SSERtoR( 0xC60F ); write8<I>( imm8 ); }
 emitterT void eSSE_SHUFPS_M128_to_XMM( x86SSERegType to, uptr from, u8 imm8 )			{ SSEMtoR( 0xC60F, 1 ); write8<I>( imm8 ); }
 
-emitterT void eSSE_SHUFPS_RmOffset_to_XMM( x86SSERegType to, x86IntRegType from, int offset, u8 imm8 )
+emitterT void eSSE_SHUFPS_Rm_to_XMM( x86SSERegType to, x86IntRegType from, int offset, u8 imm8 )
 {
     RexRB(0, to, from);
 	write16<I>(0xc60f);
@@ -903,7 +900,7 @@ emitterT void eSSE2_MOVD_Rm_to_XMM( x86SSERegType to, x86IntRegType from )
 	ModRM<I>( 0, to, from);
 }
 
-emitterT void eSSE2_MOVD_RmOffset_to_XMM( x86SSERegType to, x86IntRegType from, int offset )
+emitterT void eSSE2_MOVD_Rm_to_XMM( x86SSERegType to, x86IntRegType from, int offset=0 )
 {
 	write8<I>(0x66);
     RexRB(0, to, from);
@@ -914,15 +911,7 @@ emitterT void eSSE2_MOVD_RmOffset_to_XMM( x86SSERegType to, x86IntRegType from, 
 emitterT void eSSE2_MOVD_XMM_to_M32( u32 to, x86SSERegType from )			{ SSERtoM66(0x7E0F); }
 emitterT void eSSE2_MOVD_XMM_to_R( x86IntRegType to, x86SSERegType from )	{ _SSERtoR66(0x7E0F); }
 
-emitterT void eSSE2_MOVD_XMM_to_Rm( x86IntRegType to, x86SSERegType from )
-{
-	write8<I>(0x66);
-    RexRB(0, from, to);
-	write16<I>( 0x7e0f );
-	ModRM<I>( 0, from, to );
-}
-
-emitterT void eSSE2_MOVD_XMM_to_RmOffset( x86IntRegType to, x86SSERegType from, int offset )
+emitterT void eSSE2_MOVD_XMM_to_Rm( x86IntRegType to, x86SSERegType from, int offset=0 )
 {
 	write8<I>(0x66);
     RexRB(0, from, to);

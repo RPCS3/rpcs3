@@ -316,7 +316,7 @@ void _psxMoveGPRtoM(u32 to, int fromgpr)
 void _psxMoveGPRtoRm(x86IntRegType to, int fromgpr)
 {
 	if( PSX_IS_CONST1(fromgpr) )
-		MOV32ItoRmOffset( to, g_psxConstRegs[fromgpr], 0 );
+		MOV32ItoRm( to, g_psxConstRegs[fromgpr] );
 	else {
 		// check x86
 		MOV32MtoR(EAX, (uptr)&psxRegs.GPR.r[ fromgpr ] );

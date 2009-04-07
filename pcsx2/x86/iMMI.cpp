@@ -1982,8 +1982,8 @@ void recQFSRV()
 
 		MOV32MtoR(EAX, (uptr)&cpuRegs.sa);
 		SHL32ItoR(EAX, 4); // Multiply SA bytes by 16 bytes (the amount of bytes in QFSRVhelper() macros)
-		AND32I8toR(EAX, 0xf0); // This can possibly be removed but keeping it incase theres garbage in SA (cottonvibes)
-		ADD32ItoEAX((uptr)x86Ptr[0] + 7); // ADD32 = 5 bytes, JMPR = 2 bytes
+		AND32ItoR(EAX, 0xf0); // This can possibly be removed but keeping it incase theres garbage in SA (cottonvibes)
+		ADD32ItoR(EAX, (uptr)x86Ptr[0] + 7); // ADD32 = 5 bytes, JMPR = 2 bytes
 		JMPR(EAX); // Jumps to a QFSRVhelper() case below (a total of 16 different cases)
 	
 		// Case 0:

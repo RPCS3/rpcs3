@@ -1050,12 +1050,12 @@ void _recMove128MtoM(u32 to, u32 from)
 // fixme - see above function!
 void _recMove128RmOffsettoM(u32 to, u32 offset)
 {
-	MOV32RmtoROffset(EAX, ECX, offset);
-	MOV32RmtoROffset(EDX, ECX, offset+4);
+	MOV32RmtoR(EAX, ECX, offset);
+	MOV32RmtoR(EDX, ECX, offset+4);
 	MOV32RtoM(to, EAX);
 	MOV32RtoM(to+4, EDX);
-	MOV32RmtoROffset(EAX, ECX, offset+8);
-	MOV32RmtoROffset(EDX, ECX, offset+12);
+	MOV32RmtoR(EAX, ECX, offset+8);
+	MOV32RmtoR(EDX, ECX, offset+12);
 	MOV32RtoM(to+8, EAX);
 	MOV32RtoM(to+12, EDX);
 }
@@ -1065,12 +1065,12 @@ void _recMove128MtoRmOffset(u32 offset, u32 from)
 {
 	MOV32MtoR(EAX, from);
 	MOV32MtoR(EDX, from+4);
-	MOV32RtoRmOffset(ECX, EAX, offset);
-	MOV32RtoRmOffset(ECX, EDX, offset+4);
+	MOV32RtoRm(ECX, EAX, offset);
+	MOV32RtoRm(ECX, EDX, offset+4);
 	MOV32MtoR(EAX, from+8);
 	MOV32MtoR(EDX, from+12);
-	MOV32RtoRmOffset(ECX, EAX, offset+8);
-	MOV32RtoRmOffset(ECX, EDX, offset+12);
+	MOV32RtoRm(ECX, EAX, offset+8);
+	MOV32RtoRm(ECX, EDX, offset+12);
 }
 
 static PCSX2_ALIGNED16(u32 s_ones[2]) = {0xffffffff, 0xffffffff};

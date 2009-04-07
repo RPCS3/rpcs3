@@ -42,6 +42,11 @@
 #define RexRB(w, reg, base) assert( !(w || (reg) >= 8 || (base)>=8) )
 #define RexRXB(w, reg, index, base) assert( !(w || (reg) >= 8 || (index) >= 8 || (base) >= 8) )
 
+// We use int param for offsets and then test them for validity in the recompiler.
+// This helps catch programmer errors better than using an auto-truncated s8 parameter.
+#define assertOffset8(ofs) assert( ofs < 128 && ofs >= -128 )
+
+
 //------------------------------------------------------------------
 // write functions
 //------------------------------------------------------------------
@@ -49,23 +54,27 @@ extern u8  *x86Ptr[EmitterId_Count];
 extern u8  *j8Ptr[32];
 extern u32 *j32Ptr[32];
 
-emitterT void write8( u8 val ) {  
-	*x86Ptr[I] = (u8)val; 
+emitterT void write8( u8 val )
+{
+	*x86Ptr[I] = (u8)val;
 	x86Ptr[I]++; 
-} 
+}
 
-emitterT void write16( u16 val ) { 
-	*(u16*)x86Ptr[I] = (u16)val; 
+emitterT void write16( u16 val )
+{ 
+	*(u16*)x86Ptr[I] = val; 
 	x86Ptr[I] += 2;  
 } 
 
-emitterT void write24( u32 val ) { 
+emitterT void write24( u32 val )
+{ 
 	*x86Ptr[I]++ = (u8)(val & 0xff); 
 	*x86Ptr[I]++ = (u8)((val >> 8) & 0xff); 
 	*x86Ptr[I]++ = (u8)((val >> 16) & 0xff); 
 } 
 
-emitterT void write32( u32 val ) { 
+emitterT void write32( u32 val )
+{ 
 	*(u32*)x86Ptr[I] = val; 
 	x86Ptr[I] += 4; 
 } 
@@ -93,7 +102,6 @@ emitterT void ex86AlignExecutable( int align );
 //------------------------------------------------------------------
 // General Emitter Helper functions
 //------------------------------------------------------------------
-emitterT void WriteRmOffset(x86IntRegType to, int offset);
 emitterT void WriteRmOffsetFrom(x86IntRegType to, x86IntRegType from, int offset);
 emitterT void ModRM( int mod, int reg, int rm );
 emitterT void SibSB( int ss, int index, int base );
@@ -112,12 +120,9 @@ emitterT void eCALL32( u32 to );
 emitterT void eLEA32RtoR(x86IntRegType to, x86IntRegType from, u32 offset);
 emitterT void eLEA32RStoR(x86IntRegType to, x86IntRegType from, u32 scale);
 emitterT void eNOP( void );
-emitterT void eAND32I8toR( x86IntRegType to, u8 from );
 emitterT void eAND32ItoM( uptr to, u32 from );
 emitterT void eLEA32RRtoR(x86IntRegType to, x86IntRegType from0, x86IntRegType from1);
-emitterT void eAND32I8toM( uptr to, u8 from );
 emitterT void eLEA32RStoR(x86IntRegType to, x86IntRegType from, u32 scale);
-
 
 
 

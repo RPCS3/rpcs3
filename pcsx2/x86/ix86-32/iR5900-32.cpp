@@ -367,7 +367,7 @@ void _eeMoveGPRtoM(u32 to, int fromgpr)
 void _eeMoveGPRtoRm(x86IntRegType to, int fromgpr)
 {
 	if( GPR_IS_CONST1(fromgpr) )
-		MOV32ItoRmOffset( to, g_cpuConstRegs[fromgpr].UL[0], 0 );
+		MOV32ItoRm( to, g_cpuConstRegs[fromgpr].UL[0] );
 	else {
 		int mmreg;
 		
@@ -380,7 +380,7 @@ void _eeMoveGPRtoRm(x86IntRegType to, int fromgpr)
 		}
 		else {
 			MOV32MtoR(EAX, (int)&cpuRegs.GPR.r[ fromgpr ].UL[ 0 ] );
-			MOV32RtoRm(to, EAX );
+			MOV32RtoRm( to, EAX );
 		}
 	}
 }

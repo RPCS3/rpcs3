@@ -2983,6 +2983,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\..\x86\ix86\ix86_group1.inl"
+				>
+			</File>
+			<File
 				RelativePath="..\..\x86\ix86\ix86_macros.h"
 				>
 			</File>

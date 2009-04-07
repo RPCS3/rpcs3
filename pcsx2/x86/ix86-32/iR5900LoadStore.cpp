@@ -2101,7 +2101,7 @@ void recLoad64( u32 bits, bool sign )
 		if ( _Imm_ != 0 )
 			ADD32ItoR( ECX, _Imm_ );
 		if( bits == 128 )		// force 16 byte alignment on 128 bit reads
-			AND32I8toR(ECX,0xF0);
+			AND32ItoR(ECX,~0x0F);	// emitter automatically encodes this as an 8-bit sign-extended imm8
 
 		_eeOnLoadWrite(_Rt_);
 		EEINST_RESETSIGNEXT(_Rt_); // remove the sign extension
@@ -2198,7 +2198,7 @@ void recStore(u32 sz, bool edxAlreadyAssigned=false)
 		if ( _Imm_ != 0 )
 			ADD32ItoR(ECX, _Imm_);
 		if (sz==128)
-			AND32I8toR(ECX,0xF0);
+			AND32ItoR(ECX,~0x0F);
 
 		vtlb_DynGenWrite(sz);
 	}

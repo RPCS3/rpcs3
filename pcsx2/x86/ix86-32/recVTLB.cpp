@@ -33,12 +33,12 @@ void MOV128_MtoM( x86IntRegType destRm, x86IntRegType srcRm )
 {
 	MOV32RmtoR(EAX,srcRm);
 	MOV32RtoRm(destRm,EAX);
-	MOV32RmtoROffset(EAX,srcRm,4);
-	MOV32RtoRmOffset(destRm,EAX,4);
-	MOV32RmtoROffset(EAX,srcRm,8);
-	MOV32RtoRmOffset(destRm,EAX,8);
-	MOV32RmtoROffset(EAX,srcRm,12);
-	MOV32RtoRmOffset(destRm,EAX,12);
+	MOV32RmtoR(EAX,srcRm,4);
+	MOV32RtoRm(destRm,EAX,4);
+	MOV32RmtoR(EAX,srcRm,8);
+	MOV32RtoRm(destRm,EAX,8);
+	MOV32RmtoR(EAX,srcRm,12);
+	MOV32RtoRm(destRm,EAX,12);
 }
 
 /*
@@ -121,8 +121,8 @@ static void _vtlb_DynGen_DirectRead( u32 bits, bool sign )
 			if( _hasFreeMMXreg() )
 			{
 				const int freereg = _allocMMXreg(-1, MMX_TEMP, 0);
-				MOVQRmtoROffset(freereg,ECX,0);
-				MOVQRtoRmOffset(EDX,freereg,0);
+				MOVQRmtoR(freereg,ECX);
+				MOVQRtoRm(EDX,freereg);
 				_freeMMXreg(freereg);
 			}
 			else
@@ -130,8 +130,8 @@ static void _vtlb_DynGen_DirectRead( u32 bits, bool sign )
 				MOV32RmtoR(EAX,ECX);
 				MOV32RtoRm(EDX,EAX);
 
-				MOV32RmtoROffset(EAX,ECX,4);
-				MOV32RtoRmOffset(EDX,EAX,4);
+				MOV32RmtoR(EAX,ECX,4);
+				MOV32RtoRm(EDX,EAX,4);
 			}
 		break;
 
@@ -139,8 +139,8 @@ static void _vtlb_DynGen_DirectRead( u32 bits, bool sign )
 			if( _hasFreeXMMreg() )
 			{
 				const int freereg = _allocTempXMMreg( XMMT_INT, -1 );
-				SSE2_MOVDQARmtoROffset(freereg,ECX,0);
-				SSE2_MOVDQARtoRmOffset(EDX,freereg,0);
+				SSE2_MOVDQARmtoR(freereg,ECX);
+				SSE2_MOVDQARtoRm(EDX,freereg);
 				_freeXMMreg(freereg);
 			}
 			else
@@ -255,7 +255,7 @@ void vtlb_DynGenRead64_Const( u32 bits, u32 addr_const )
 				{
 					const int freereg = _allocMMXreg(-1, MMX_TEMP, 0);
 					MOVQMtoR(freereg,ppf);
-					MOVQRtoRmOffset(EDX,freereg,0);
+					MOVQRtoRm(EDX,freereg);
 					_freeMMXreg(freereg);
 				}
 				else
@@ -264,7 +264,7 @@ void vtlb_DynGenRead64_Const( u32 bits, u32 addr_const )
 					MOV32RtoRm(EDX,EAX);
 
 					MOV32MtoR(EAX,ppf+4);
-					MOV32RtoRmOffset(EDX,EAX,4);
+					MOV32RtoRm(EDX,EAX,4);
 				}
 			break;
 
@@ -273,7 +273,7 @@ void vtlb_DynGenRead64_Const( u32 bits, u32 addr_const )
 				{
 					const int freereg = _allocTempXMMreg( XMMT_INT, -1 );
 					SSE2_MOVDQA_M128_to_XMM( freereg, ppf );
-					SSE2_MOVDQARtoRmOffset(EDX,freereg,0);
+					SSE2_MOVDQARtoRm(EDX,freereg);
 					_freeXMMreg(freereg);
 				}
 				else
@@ -406,8 +406,8 @@ static void _vtlb_DynGen_DirectWrite( u32 bits )
 			if( _hasFreeMMXreg() )
 			{
 				const int freereg = _allocMMXreg(-1, MMX_TEMP, 0);
-				MOVQRmtoROffset(freereg,EDX,0);
-				MOVQRtoRmOffset(ECX,freereg,0);
+				MOVQRmtoR(freereg,EDX);
+				MOVQRtoRm(ECX,freereg);
 				_freeMMXreg( freereg );
 			}
 			else
@@ -415,8 +415,8 @@ static void _vtlb_DynGen_DirectWrite( u32 bits )
 				MOV32RmtoR(EAX,EDX);
 				MOV32RtoRm(ECX,EAX);
 
-				MOV32RmtoROffset(EAX,EDX,4);
-				MOV32RtoRmOffset(ECX,EAX,4);
+				MOV32RmtoR(EAX,EDX,4);
+				MOV32RtoRm(ECX,EAX,4);
 			}
 		break;
 
@@ -424,8 +424,8 @@ static void _vtlb_DynGen_DirectWrite( u32 bits )
 			if( _hasFreeXMMreg() )
 			{
 				const int freereg = _allocTempXMMreg( XMMT_INT, -1 );
-				SSE2_MOVDQARmtoROffset(freereg,EDX,0);
-				SSE2_MOVDQARtoRmOffset(ECX,freereg,0);
+				SSE2_MOVDQARmtoR(freereg,EDX);
+				SSE2_MOVDQARtoRm(ECX,freereg);
 				_freeXMMreg( freereg );
 			}
 			else
@@ -502,7 +502,7 @@ void vtlb_DynGenWrite_Const( u32 bits, u32 addr_const )
 				if( _hasFreeMMXreg() )
 				{
 					const int freereg = _allocMMXreg(-1, MMX_TEMP, 0);
-					MOVQRmtoROffset(freereg,EDX,0);
+					MOVQRmtoR(freereg,EDX);
 					MOVQRtoM(ppf,freereg);
 					_freeMMXreg( freereg );
 				}
@@ -511,7 +511,7 @@ void vtlb_DynGenWrite_Const( u32 bits, u32 addr_const )
 					MOV32RmtoR(EAX,EDX);
 					MOV32RtoM(ppf,EAX);
 
-					MOV32RmtoROffset(EAX,EDX,4);
+					MOV32RmtoR(EAX,EDX,4);
 					MOV32RtoM(ppf+4,EAX);
 				}
 			break;
@@ -520,7 +520,7 @@ void vtlb_DynGenWrite_Const( u32 bits, u32 addr_const )
 				if( _hasFreeXMMreg() )
 				{
 					const int freereg = _allocTempXMMreg( XMMT_INT, -1 );
-					SSE2_MOVDQARmtoROffset(freereg,EDX,0);
+					SSE2_MOVDQARmtoR(freereg,EDX);
 					SSE2_MOVDQA_XMM_to_M128(ppf,freereg);
 					_freeXMMreg( freereg );
 				}
