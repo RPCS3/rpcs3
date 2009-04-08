@@ -2676,9 +2676,6 @@ CPU_SSE_XMMCACHE_END
 	recCall( Interp::PHMADH, _Rd_ );
 }
 
-////////////////////////////////////////////////////
-//upper word of each doubleword in LO and HI is undocumented/undefined
-//contains the NOT of the upper multiplication result (before the substraction of the lower multiplication result)
 void recPMSUBH()
 {
 	CPU_SSE2_XMMCACHE_START((_Rd_?XMMINFO_WRITED:0)|XMMINFO_READS|XMMINFO_READT|XMMINFO_READLO|XMMINFO_READHI|XMMINFO_WRITELO|XMMINFO_WRITEHI)
@@ -2740,12 +2737,8 @@ CPU_SSE_XMMCACHE_END
 }
 
 ////////////////////////////////////////////////////
-
-//  rs = ... a1 a0
-//  rt = ... b1 b0
-//  rd = ... a1*b1 - a0*b0
-//  hi = ...
-//  lo = ... (undefined by doc)NOT(a1*b1), a1*b1 - a0*b0
+//upper word of each doubleword in LO and HI is undocumented/undefined
+//it contains the NOT of the upper multiplication result (before the substraction of the lower multiplication result)
 void recPHMSBH()
 {
 CPU_SSE2_XMMCACHE_START((_Rd_?XMMINFO_WRITED:0)|XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITELO|XMMINFO_WRITEHI)

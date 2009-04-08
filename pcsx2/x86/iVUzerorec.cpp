@@ -58,7 +58,7 @@ extern void iDumpVU1Registers();
 #define SUPERVU_PROPAGATEFLAGS  // the correct behavior of VUs, for some reason superman breaks gfx with it on...
 
 #ifndef _DEBUG
-#define SUPERVU_INTERCACHING	// registers won't be flushed at block boundaries (faster)
+//#define SUPERVU_INTERCACHING	// registers won't be flushed at block boundaries (faster) (nothing noticable speed-wise, causes SPS in Ratchet and clank (Nneeve) )
 #endif
 
 #define SUPERVU_CHECKCONDITION 0 // has to be 0!!
@@ -2060,9 +2060,9 @@ void VuBaseBlock::AssignVFRegs()
 				_freeXMMreg(free1);
 				_freeXMMreg(free2);
 			}
-			else if( regs->VIwrite & (1<<REG_P) || regs->VIwrite & (1<<REG_Q)) {
-				free1 = _allocTempXMMreg(XMMT_FPS, -1);
-				// protects against insts like esadd vf0 and sqrt vf0
+			else if( regs->VIwrite & (1<<REG_P) || regs->VIwrite & (1<<REG_Q) || regs->VIread & (1<<REG_VF0_FLAG)) {				
+				free1 = _allocTempXMMreg(XMMT_FPS, -1);				
+				// protects against insts like esadd vf0 and sqrt vf0				
 				if( free0 == -1 )
 					free0 = free1;
 				_freeXMMreg(free1);
