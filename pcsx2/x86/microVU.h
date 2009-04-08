@@ -91,9 +91,9 @@ public:
 
 template<u32 progSize>
 struct microProgram {
-	u32 data[progSize];
+	u32 data[progSize/4];
 	u32 used;	// Number of times its been used
-	microBlockManager* block[progSize / 2];
+	microBlockManager* block[progSize/8];
 	microAllocInfo<progSize> allocInfo;
 };
 
@@ -116,7 +116,7 @@ struct microVU {
 	u32 cacheAddr;	// VU Cache Start Address
 	static const u32 cacheSize = 0x500000; // VU Cache Size
 
-	microProgManager<0x1000> prog; // Micro Program Data
+	microProgManager<0x4000> prog; // Micro Program Data
 	
 	VURegs*	regs;		 // VU Regs Struct
 	u8*		cache;		 // Dynarec Cache Start (where we will start writing the recompiled code to)

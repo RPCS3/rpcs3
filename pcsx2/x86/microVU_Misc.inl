@@ -85,11 +85,11 @@ microVUx(void) mVUloadReg(int reg, uptr offset, int xyzw) {
 
 microVUx(void) mVUloadReg2(int reg, int gprReg, uptr offset, int xyzw) {
 	switch( xyzw ) {
-		case 8:		SSE_MOVSS_RmOffset_to_XMM(reg, gprReg, offset);		break; // X
-		case 4:		SSE_MOVSS_RmOffset_to_XMM(reg, gprReg, offset+4);	break; // Y
-		case 2:		SSE_MOVSS_RmOffset_to_XMM(reg, gprReg, offset+8);	break; // Z
-		case 1:		SSE_MOVSS_RmOffset_to_XMM(reg, gprReg, offset+12);	break; // W
-		default:	SSE_MOVAPSRmtoROffset(reg, gprReg, offset);			break;
+		case 8:		SSE_MOVSS_Rm_to_XMM(reg, gprReg, offset);	 break; // X
+		case 4:		SSE_MOVSS_Rm_to_XMM(reg, gprReg, offset+4);  break; // Y
+		case 2:		SSE_MOVSS_Rm_to_XMM(reg, gprReg, offset+8);  break; // Z
+		case 1:		SSE_MOVSS_Rm_to_XMM(reg, gprReg, offset+12); break; // W
+		default:	SSE_MOVAPSRmtoR(reg, gprReg, offset);		 break;
 	}
 }
 
@@ -142,44 +142,44 @@ microVUx(void) mVUsaveReg2(int reg, int gprReg, u32 offset, int xyzw) {
 	switch ( xyzw ) {
 		case 5:		SSE2_PSHUFD_XMM_to_XMM(reg, reg, 0xB1);
 					SSE_MOVHLPS_XMM_to_XMM(xmmT1, reg);
-					SSE_MOVSS_XMM_to_RmOffset(gprReg, offset+4, reg);
-					SSE_MOVSS_XMM_to_RmOffset(gprReg, offset+12, xmmT1);
+					SSE_MOVSS_XMM_to_Rm(gprReg, reg, offset+4);
+					SSE_MOVSS_XMM_to_Rm(gprReg, xmmT1, offset+12);
 					break; // YW
 		case 6:		SSE2_PSHUFD_XMM_to_XMM(xmmT1, reg, 0xc9);
-					SSE_MOVLPS_XMM_to_RmOffset(gprReg, offset+4, xmmT1);
+					SSE_MOVLPS_XMM_to_Rm(gprReg, xmmT1, offset+4);
 					break; // YZ
 		case 7:		SSE2_PSHUFD_XMM_to_XMM(xmmT1, reg, 0x93); //ZYXW
-					SSE_MOVHPS_XMM_to_RmOffset(gprReg, offset+4, xmmT1);
-					SSE_MOVSS_XMM_to_RmOffset(gprReg, offset+12, xmmT1);
+					SSE_MOVHPS_XMM_to_Rm(gprReg, xmmT1, offset+4);
+					SSE_MOVSS_XMM_to_Rm(gprReg, xmmT1, offset+12);
 					break; // YZW
 		case 9:		SSE_MOVHLPS_XMM_to_XMM(xmmT1, reg);
-					SSE_MOVSS_XMM_to_RmOffset(gprReg, offset, reg);
+					SSE_MOVSS_XMM_to_Rm(gprReg, reg, offset);
 					if ( cpucaps.hasStreamingSIMD3Extensions ) SSE3_MOVSLDUP_XMM_to_XMM(xmmT1, xmmT1);
 					else SSE2_PSHUFD_XMM_to_XMM(xmmT1, xmmT1, 0x55);
-					SSE_MOVSS_XMM_to_RmOffset(gprReg, offset+12, xmmT1);
+					SSE_MOVSS_XMM_to_Rm(gprReg, xmmT1, offset+12);
 					break; // XW
 		case 10:	SSE_MOVHLPS_XMM_to_XMM(xmmT1, reg);
-					SSE_MOVSS_XMM_to_RmOffset(gprReg, offset, reg);
-					SSE_MOVSS_XMM_to_RmOffset(gprReg, offset+8, xmmT1);
+					SSE_MOVSS_XMM_to_Rm(gprReg, reg, offset);
+					SSE_MOVSS_XMM_to_Rm(gprReg, xmmT1, offset+8);
 					break; //XZ
-		case 11:	SSE_MOVSS_XMM_to_RmOffset(gprReg, offset, reg);
-					SSE_MOVHPS_XMM_to_RmOffset(gprReg, offset+8, reg);
+		case 11:	SSE_MOVSS_XMM_to_Rm(gprReg, reg, offset);
+					SSE_MOVHPS_XMM_to_Rm(gprReg, reg, offset+8);
 					break; //XZW
 		case 13:	SSE2_PSHUFD_XMM_to_XMM(xmmT1, reg, 0x4b); //YXZW				
-					SSE_MOVHPS_XMM_to_RmOffset(gprReg, offset, xmmT1);
-					SSE_MOVSS_XMM_to_RmOffset(gprReg, offset+12, xmmT1);
+					SSE_MOVHPS_XMM_to_Rm(gprReg, xmmT1, offset);
+					SSE_MOVSS_XMM_to_Rm(gprReg, xmmT1, offset+12);
 					break; // XYW
 		case 14:	SSE_MOVHLPS_XMM_to_XMM(xmmT1, reg);
-					SSE_MOVLPS_XMM_to_RmOffset(gprReg, offset, reg);
-					SSE_MOVSS_XMM_to_RmOffset(gprReg, offset+8, xmmT1);
+					SSE_MOVLPS_XMM_to_Rm(gprReg, reg, offset);
+					SSE_MOVSS_XMM_to_Rm(gprReg,  xmmT1, offset+8);
 					break; // XYZ
-		case 8:		SSE_MOVSS_XMM_to_RmOffset(gprReg, offset, reg);		break; // X
-		case 4:		SSE_MOVSS_XMM_to_RmOffset(gprReg, offset+4, reg);	break; // Y
-		case 2:		SSE_MOVSS_XMM_to_RmOffset(gprReg, offset+8, reg);	break; // Z
-		case 1:		SSE_MOVSS_XMM_to_RmOffset(gprReg, offset+12, reg);	break; // W
-		case 12:	SSE_MOVLPS_XMM_to_RmOffset(gprReg, offset, reg);	break; // XY
-		case 3:		SSE_MOVHPS_XMM_to_RmOffset(gprReg, offset+8, reg);	break; // ZW
-		default:	SSE_MOVAPSRtoRmOffset(gprReg, offset, reg);			break; // XYZW
+		case 8:		SSE_MOVSS_XMM_to_Rm(gprReg, reg, offset);	 break; // X
+		case 4:		SSE_MOVSS_XMM_to_Rm(gprReg, reg, offset+4);	 break; // Y
+		case 2:		SSE_MOVSS_XMM_to_Rm(gprReg, reg, offset+8);	 break; // Z
+		case 1:		SSE_MOVSS_XMM_to_Rm(gprReg, reg, offset+12); break; // W
+		case 12:	SSE_MOVLPS_XMM_to_Rm(gprReg, reg, offset);	 break; // XY
+		case 3:		SSE_MOVHPS_XMM_to_Rm(gprReg, reg, offset+8); break; // ZW
+		default:	SSE_MOVAPSRtoRm(gprReg, reg, offset);		 break; // XYZW
 	}
 }
 

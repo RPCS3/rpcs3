@@ -152,7 +152,6 @@ declareAllVariables
 #define mVUstartPC	 mVUallocInfo.startPC
 #define iPC			 mVUallocInfo.curPC
 #define xPC			 ((iPC / 2) * 8)
-#define incCycles(x) { mVUcycles += x; }
 
 #define _isNOP		 (1<<0) // Skip Lower Instruction
 #define _isBranch	 (1<<1) // Cur Instruction is a Branch
@@ -168,12 +167,13 @@ declareAllVariables
 #define _doStatus	 (1<<9)
 #define _fmInstance	 (3<<10)
 #define _fsInstance	 (3<<12)
-#define _fcInstance	 (3<<14)
-#define _fpmInstance (3<<10)
 #define _fpsInstance (3<<12)
+#define _fcInstance	 (3<<14)
+#define _fpcInstance (3<<14)
 #define _fvmInstance (3<<16)
 #define _fvsInstance (3<<18)
-#define _fvcInstance (3<<14)
+#define _fvcInstance (3<<20)
+#define _noWriteVF	 (1<<21) // Don't write back the result of a lower op to VF reg if upper op writes to same reg (or if VF = 0)
 
 #define isNOP		 (mVUinfo & (1<<0))
 #define isBranch	 (mVUinfo & (1<<1))
@@ -195,6 +195,7 @@ declareAllVariables
 #define fvmInstance	((mVUinfo >> 16) & 3)
 #define fvsInstance	((mVUinfo >> 18) & 3)
 #define fvcInstance	((mVUinfo >> 20) & 3)
+#define noWriteVF	 (mVUinfo & (1<<21))
 
 //#define getFs		 (mVUinfo & (1<<13))
 //#define getFt		 (mVUinfo & (1<<14))

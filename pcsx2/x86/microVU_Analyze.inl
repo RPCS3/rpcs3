@@ -144,6 +144,25 @@ microVUt(void) mVUanalyzeEFU2(int Fs, u8 xCycles) {
 }
 
 //------------------------------------------------------------------
+// R*** - R Reg Opcodes
+//------------------------------------------------------------------
+
+#define analyzeRreg() { mVUregsTemp.r = 1; }
+
+microVUt(void) mVUanalyzeR1(int Fs, int Fsf) {
+	microVU* mVU = mVUx;
+	analyzeReg5(Fs, Fsf);
+	analyzeRreg();
+}
+
+microVUt(void) mVUanalyzeR2(int Ft, bool canBeNOP) {
+	microVU* mVU = mVUx;
+	if (!Ft) { mVUinfo |= ((canBeNOP) ? _isNOP : _noWriteVF);  return; }
+	analyzeReg2(Ft);
+	analyzeRreg();
+}
+
+//------------------------------------------------------------------
 // Sflag - Status Flag Opcodes
 //------------------------------------------------------------------
 
@@ -155,6 +174,20 @@ microVUt(void) mVUanalyzeSflag(int It) {
 	if (!It) { mVUinfo |= _isNOP; return; }
 	mVUinfo |= _isSflag;
 	analyzeVIreg2(It, 1);
+}
+
+//------------------------------------------------------------------
+// XGkick
+//------------------------------------------------------------------
+
+#define analyzeXGkick1()  { mVUstall = aMax(mVUstall, mVUregs.xgkick); }
+#define analyzeXGkick2(x) { mVUregsTemp.xgkick = x; }
+
+microVUt(void) mVUanalyzeXGkick(int Fs, int xCycles) {
+	microVU* mVU = mVUx;
+	analyzeVIreg1(Fs);
+	analyzeXGkick1();
+	analyzeXGkick2(xCycles);
 }
 
 #endif //PCSX2_MICROVU

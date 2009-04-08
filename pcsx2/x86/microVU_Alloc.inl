@@ -201,11 +201,11 @@ microVUt(void) mVUallocFMAC5b(int& ACC, int& Fs) {
 // FMAC6 - Normal FMAC Opcodes (I Reg)
 //------------------------------------------------------------------
 
-#define getIreg(reg) {  \
+#define getIreg(reg, modXYZW) {  \
 	MOV32ItoR(gprT1, mVU->iReg);  \
 	SSE2_MOVD_R_to_XMM(reg, gprT1);  \
 	if (CHECK_VU_EXTRA_OVERFLOW) mVUclamp2<vuIndex>(reg, xmmT1, 8);  \
-	if (!_XYZW_SS) { mVUunpack_xyzw<vuIndex>(reg, reg, 0); }  \
+	if (!((_XYZW_SS && modXYZW) || (_X_Y_Z_W == 8))) { mVUunpack_xyzw<vuIndex>(reg, reg, 0); }  \
 }
 
 microVUt(void) mVUallocFMAC6a(int& Fd, int& Fs, int& Ft) {
@@ -213,7 +213,7 @@ microVUt(void) mVUallocFMAC6a(int& Fd, int& Fs, int& Ft) {
 	Fs = xmmFs;
 	Ft = xmmFt;
 	Fd = xmmFs;
-	getIreg(Ft);
+	getIreg(Ft, 1);
 	getReg6(Fs, _Fs_);
 }
 
@@ -230,7 +230,7 @@ microVUt(void) mVUallocFMAC7a(int& ACC, int& Fs, int& Ft) {
 	ACC = xmmACC;
 	Fs = (_X_Y_Z_W == 15) ? xmmACC : xmmFs;
 	Ft = xmmFt;
-	getIreg(Ft);
+	getIreg(Ft, 0);
 	if (_X_Y_Z_W == 8)	{ getReg6(Fs, _Fs_); }
 	else if (!_Fs_)		{ getZero4(Fs); }
 	else				{ getReg4(Fs, _Fs_); }
@@ -374,7 +374,7 @@ microVUt(void) mVUallocFMAC12a(int& Fd, int& ACC, int& Fs, int& Ft) {
 	Ft = xmmFt;
 	Fd = xmmFs;
 	ACC = xmmACC;
-	getIreg(Ft);
+	getIreg(Ft, 0);
 	if (_X_Y_Z_W == 8)	{ getReg6(Fs, _Fs_); }
 	else if (!_Fs_)		{ getZero4(Fs); }
 	else				{ getReg4(Fs, _Fs_); }
@@ -395,7 +395,7 @@ microVUt(void) mVUallocFMAC13a(int& Fd, int& ACC, int& Fs, int& Ft) {
 	Fd = xmmT1;
 	ACC = xmmT1;
 	SSE_MOVAPS_XMM_to_XMM(ACC, xmmACC);
-	getIreg(Ft);
+	getIreg(Ft, 0);
 	if (_X_Y_Z_W == 8)	{ getReg6(Fs, _Fs_); }
 	else if (!_Fs_)		{ getZero4(Fs); }
 	else				{ getReg4(Fs, _Fs_); }
@@ -480,7 +480,7 @@ microVUt(void) mVUallocFMAC16a(int& ACCw, int& ACCr, int& Fs, int& Ft) {
 	ACCw = xmmACC;
 	ACCr = ((_X_Y_Z_W == 15) || (_X_Y_Z_W == 8)) ? xmmACC : xmmT1;
 	SSE_MOVAPS_XMM_to_XMM(ACCr, xmmACC);
-	getIreg(Ft);
+	getIreg(Ft, 0);
 	if (_X_Y_Z_W == 8)	{ getReg6(Fs, _Fs_); }
 	else if (!_Fs_)		{ getZero4(Fs); }
 	else				{ getReg4(Fs, _Fs_); }

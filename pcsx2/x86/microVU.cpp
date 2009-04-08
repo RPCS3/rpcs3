@@ -41,7 +41,7 @@ microVUt(void) mVUinit(VURegs* vuRegsPtr) {
 	mVU->regs		= vuRegsPtr;
 	mVU->index		= vuIndex;
 	mVU->microSize	= (vuIndex ? 0x4000 : 0x1000);
-	mVU->progSize	= (vuIndex ? 0x4000 : 0x1000) / 8;
+	mVU->progSize	= (vuIndex ? 0x4000 : 0x1000) / 4;
 	mVU->cacheAddr	= (vuIndex ? 0x1e840000 : 0x0e840000);
 	mVU->cache		= NULL;
 

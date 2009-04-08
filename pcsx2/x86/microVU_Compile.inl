@@ -29,19 +29,51 @@
 	}																\
 }
 
-#define curI		  mVUcurProg.data[iPC]
-#define setCode()	{ mVU->code = curI; }
-#define incPC(x)	{ iPC = ((iPC + x) & (mVU->progSize-1)); setCode(); }
-#define startLoop()	{ mVUdebugStuff1(); mVUstall = 0; memset(&mVUregsTemp, 0, sizeof(mVUregsTemp)); }
+#define curI				  mVUcurProg.data[iPC]
+#define setCode()			{ mVU->code = curI; }
+#define startLoop()			{ mVUdebugStuff1(); mVUstall = 0; memset(&mVUregsTemp, 0, sizeof(mVUregsTemp)); }
+#define incPC(x)			{ iPC = ((iPC + x) & (mVU->progSize-1)); setCode(); }
+#define incCycles(x)		{ mVUincCycles<vuIndex>(x); }
+#define calcCycles(reg, x)	{ reg = ((reg > x) ? (reg - x) : 0); }
+
+microVUt(void) mVUincCycles(int x) {
+	mVUcycles += x;
+	for (int z = 31; z > 0; z--) {
+		calcCycles(mVUregs.VF[z].x, x);
+		calcCycles(mVUregs.VF[z].y, x);
+		calcCycles(mVUregs.VF[z].z, x);
+		calcCycles(mVUregs.VF[z].w, x);
+	}
+	for (int z = 16; z > 0; z--) {
+		calcCycles(mVUregs.VI[z], x);
+	}
+	if (mVUregs.q) {
+		calcCycles(mVUregs.q, x);
+		if (!mVUregs.q) {} // Do Status Flag Merging Stuff?
+	}
+	calcCycles(mVUregs.p, x);
+	calcCycles(mVUregs.r, x);
+	calcCycles(mVUregs.xgkick, x);
+}
 
 microVUt(void) mVUsetCycles() {
 	microVU* mVU = mVUx;
 	incCycles(mVUstall);
+	if (mVUregsTemp.VFreg[0] == mVUregsTemp.VFreg[1] && !mVUregsTemp.VFreg[0]) { // If upper Op && lower Op write to same VF reg
+		mVUinfo |= (mVUregsTemp.r || mVUregsTemp.VI) ? _noWriteVF : _isNOP;		 // If lower Op doesn't modify anything else, then make it a NOP
+		//mVUregsTemp.VF[1].reg = mVUregsTemp.VF[0];							 // Just use cycles from upper Op (incorrect?)
+		mVUregsTemp.VF[1].x = aMax(mVUregsTemp.VF[0].x, mVUregsTemp.VF[1].x);	 // Use max cycles from each vector (correct?)
+		mVUregsTemp.VF[1].y = aMax(mVUregsTemp.VF[0].y, mVUregsTemp.VF[1].y);
+		mVUregsTemp.VF[1].z = aMax(mVUregsTemp.VF[0].z, mVUregsTemp.VF[1].z);
+		mVUregsTemp.VF[1].w = aMax(mVUregsTemp.VF[0].w, mVUregsTemp.VF[1].w);
+	}
 	mVUregs.VF[mVUregsTemp.VFreg[0]].reg = mVUregsTemp.VF[0].reg;
-	mVUregs.VF[mVUregsTemp.VFreg[1]].reg =(mVUregsTemp.VFreg[0] == mVUregsTemp.VFreg[1]) ? (aMax(mVUregsTemp.VF[0].reg, mVUregsTemp.VF[1].reg)) : (mVUregsTemp.VF[1].reg);
+	mVUregs.VF[mVUregsTemp.VFreg[1]].reg = mVUregsTemp.VF[1].reg;
 	mVUregs.VI[mVUregsTemp.VIreg]		 = mVUregsTemp.VI;
 	mVUregs.q							 = mVUregsTemp.q;
 	mVUregs.p							 = mVUregsTemp.p;
+	mVUregs.r							 = mVUregsTemp.r;
+	mVUregs.xgkick						 = mVUregsTemp.xgkick;
 }
 
 microVUx(void) mVUcompile(u32 startPC, u32 pipelineState, microRegInfo* pState, u8* x86ptrStart) {
@@ -70,14 +102,15 @@ microVUx(void) mVUcompile(u32 startPC, u32 pipelineState, microRegInfo* pState, 
 		else if (branch == 1) { branch = 2; }
 		if		(mVUbranch)	  { branch = 3; mVUbranch = 0; mVUinfo |= _isBranch; }
 		incPC(1);
+		incCycles(1);
 	}
 
 	// Second Pass
-	iPC = startPC;
+	iPC = mVUstartPC;
 	setCode();
 	for (bool x = 1; x; ) {
 		//
-		// ToDo: status/mac flag stuff
+		// ToDo: status/mac flag stuff?
 		//
 		if (isEOB)			{ x = 0; }
 		else if (isBranch)	{ mVUopU<vuIndex, 1>(); incPC(2); }
@@ -85,6 +118,7 @@ microVUx(void) mVUcompile(u32 startPC, u32 pipelineState, microRegInfo* pState, 
 		mVUopU<vuIndex, 1>();
 		if (isNop)	   { if (curI & _Ibit_) { incPC(1); mVU->iReg = curI; } else { incPC(1); } }
 		else		   { incPC(1); mVUopL<vuIndex, 1>(); }
+		
 		if (!isBdelay) { incPC(1); }
 		else { 
 			incPC(-2); // Go back to Branch Opcode
