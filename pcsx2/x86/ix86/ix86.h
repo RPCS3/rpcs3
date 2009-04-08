@@ -100,6 +100,54 @@ extern void x86Align( int bytes );
 extern void x86AlignExecutable( int align );
 //------------------------------------------------------------------
 
+//////////////////////////////////////////////////////////////////////////////////////////
+// New C++ Emitter!
+//
+// To use it just include the x86Emitter namespace into your file/class/function off choice.
+
+namespace x86Emitter
+{
+	extern void POP( x86Register32 from );
+	extern void POP( const ModSib& from );
+
+	extern void PUSH( u32 imm );
+	extern void PUSH( x86Register32 from );
+	extern void PUSH( const ModSib& from );
+
+	extern void LEA32( x86Register32 to, const ModSib& src );
+	extern void LEA16( x86Register16 to, const ModSib& src );
+
+
+	static __forceinline void POP( void* from )  { POP( ptr[from] ); }
+	static __forceinline void PUSH( void* from ) { PUSH( ptr[from] ); }
+
+	#define DECLARE_GROUP1_OPCODE_HELPER( lwr, bits ) \
+		emitterT void lwr##bits( x86Register##bits to, x86Register##bits from ); \
+		emitterT void lwr##bits( x86Register##bits to, void* from ); \
+		emitterT void lwr##bits( x86Register##bits to, const ModSib& from ); \
+		emitterT void lwr##bits( x86Register##bits to, u##bits imm ); \
+		emitterT void lwr##bits( const ModSib& to, x86Register##bits from ); \
+		emitterT void lwr##bits( void* to, x86Register##bits from ); \
+		emitterT void lwr##bits( void* to, u##bits imm ); \
+		emitterT void lwr##bits( const ModSib& to, u##bits imm );
+	
+	#define DECLARE_GROUP1_OPCODE( lwr ) \
+		DECLARE_GROUP1_OPCODE_HELPER( lwr, 32 )
+		DECLARE_GROUP1_OPCODE_HELPER( lwr, 16 )
+		DECLARE_GROUP1_OPCODE_HELPER( lwr, 8 )
+	
+	DECLARE_GROUP1_OPCODE( ADD )
+	DECLARE_GROUP1_OPCODE( CMP )
+	DECLARE_GROUP1_OPCODE( OR )
+	DECLARE_GROUP1_OPCODE( ADC )
+	DECLARE_GROUP1_OPCODE( SBB )
+	DECLARE_GROUP1_OPCODE( AND )
+	DECLARE_GROUP1_OPCODE( SUB )
+	DECLARE_GROUP1_OPCODE( XOR )
+
+}
+
+
 extern void CLC( void );
 extern void NOP( void );
 
@@ -130,6 +178,8 @@ extern void MOV32ItoRm( x86IntRegType to, u32 from, int offset=0);
 // mov r32 to [r32+off]
 extern void MOV32RtoRm( x86IntRegType to, x86IntRegType from, int offset=0);
 
+// mov r16 to r16 
+extern void MOV16RtoR( x86IntRegType to, x86IntRegType from ) ;
 // mov r16 to m16 
 extern void MOV16RtoM( uptr to, x86IntRegType from );
 // mov m16 to r16 

@@ -27,7 +27,7 @@ static const int ModRm_UseDisp32 = 5;	// same index value as EBP (used in Mod fi
 namespace x86Emitter
 {
 	extern void EmitSibMagic( int regfield, const ModSib& info );
-	extern void EmitSibMagic( x86Register regfield, const ModSib& info );
+	extern void EmitSibMagic( x86Register32 regfield, const ModSib& info );
 	extern bool NeedsSibMagic( const ModSib& info );
 }
 

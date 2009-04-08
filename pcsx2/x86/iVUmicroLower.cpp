@@ -354,7 +354,7 @@ void recVUMI_IADD( VURegs *VU, int info )
 
 		if( fdreg == fsreg ) ADD32RtoR(fdreg, ftreg);
 		else if( fdreg == ftreg ) ADD32RtoR(fdreg, fsreg);
-		else LEA16RRtoR(fdreg, fsreg, ftreg);
+		else LEA32RRtoR(fdreg, fsreg, ftreg);
 		MOVZX32R16toR(fdreg, fdreg); // neeed since don't know if fdreg's upper bits are 0
 	}
 }

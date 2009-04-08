@@ -24,8 +24,6 @@
 *			cottonvibes(@gmail.com)
 */
 
-#pragma once
-
 //------------------------------------------------------------------
 // ix86 legacy emitter functions
 //------------------------------------------------------------------
@@ -33,6 +31,8 @@
 #include "PrecompiledHeader.h"
 #include "System.h"
 #include "ix86_internal.h"
+
+using namespace x86Emitter;
 
 // Note: the 'to' field can either be a register or a special opcode extension specifier
 // depending on the opcode's encoding.
@@ -256,6 +256,8 @@ emitterT void NOP( void )
 /* mov r32 to r32 */
 emitterT void MOV32RtoR( x86IntRegType to, x86IntRegType from ) 
 {
+	if( to == from ) return;
+
 	RexRB(0, from, to);
 	write8( 0x89 );
 	ModRM( 3, from, to );
@@ -354,6 +356,18 @@ emitterT void MOV32RtoRm( x86IntRegType to, x86IntRegType from, int offset)
 	RexRB(0,from,to);
 	write8( 0x89 );
 	WriteRmOffsetFrom(from, to, offset);
+}
+
+
+/* mov r32 to r32 */
+emitterT void MOV16RtoR( x86IntRegType to, x86IntRegType from ) 
+{
+	if( to == from ) return;
+
+	write8( 0x66 );
+	RexRB(0, from, to);
+	write8( 0x89 );
+	ModRM( 3, from, to );
 }
 
 /* mov r16 to m16 */
@@ -802,15 +816,6 @@ emitterT void CMOVLE32MtoR( x86IntRegType to, uptr from )
 // arithmetic instructions		 /
 ////////////////////////////////////
 
-// add m8 to r8
-emitterT void ADD8MtoR( x86IntRegType to, uptr from )
-{
-	RexR(0,to);
-	write8( 0x02 ); 
-	ModRM( 0, to, DISP32 );
-	write32( MEMADDR(from, 4) );
-}
-
 /* inc r32 */
 emitterT void INC32R( x86IntRegType to ) 
 {
@@ -1214,90 +1219,6 @@ emitterT void SHRD32ItoR( x86IntRegType to, x86IntRegType from, u8 shift )
 // logical instructions			/
 ////////////////////////////////////
 
-// or r8 to r8
-emitterT void OR8RtoR( x86IntRegType to, x86IntRegType from )
-{
-	RexRB(0,from,to);
-	write8( 0x08 ); 
-	ModRM( 3, from, to );
-}
-
-// or r8 to m8
-emitterT void OR8RtoM( uptr to, x86IntRegType from )
-{
-	RexR(0,from);
-	write8( 0x08 ); 
-	ModRM( 0, from, DISP32 );
-	write32( MEMADDR(to, 4) ); 
-}
-
-// or imm8 to m8
-emitterT void OR8ItoM( uptr to, u8 from )
-{
-	write8( 0x80 ); 
-	ModRM( 0, 1, DISP32 );
-	write32( MEMADDR(to, 5) );
-	write8( from ); 
-}
-
-// or m8 to r8
-emitterT void OR8MtoR( x86IntRegType to, uptr from )
-{
-	RexR(0,to);
-	write8( 0x0A ); 
-	ModRM( 0, to, DISP32 );
-	write32( MEMADDR(from, 4) ); 
-}
-
-/* and imm8 to r8 */
-emitterT void AND8ItoR( x86IntRegType to, u8 from ) 
-{
-	RexB(0,to);
-	if ( to == EAX ) {
-		write8( 0x24 ); 
-	} 
-	else {
-		write8( 0x80 ); 
-		ModRM( 3, 0x4, to );
-	}
-	write8( from ); 
-}
-
-/* and imm8 to m8 */
-emitterT void AND8ItoM( uptr to, u8 from ) 
-{
-	write8( 0x80 ); 
-	ModRM( 0, 0x4, DISP32 );
-	write32( MEMADDR(to, 5) );
-	write8( from ); 
-}
-
-// and r8 to r8
-emitterT void AND8RtoR( x86IntRegType to, x86IntRegType from )
-{
-	RexRB(0,to,from);
-	write8( 0x22 ); 
-	ModRM( 3, to, from );
-}
-
-/* and r8 to m8 */
-emitterT void AND8RtoM( uptr to, x86IntRegType from ) 
-{
-	RexR(0,from);
-	write8( 0x20 ); 
-	ModRM( 0, from, DISP32 );
-	write32( MEMADDR(to, 4) ); 
-}
-
-/* and m8 to r8 */
-emitterT void AND8MtoR( x86IntRegType to, uptr from ) 
-{
-	RexR(0,to);
-	write8( 0x22 ); 
-	ModRM( 0, to, DISP32 );
-	write32( MEMADDR(from, 4)); 
-}
-
 /* not r32 */
 emitterT void NOT32R( x86IntRegType from ) 
 {
@@ -1664,41 +1585,6 @@ emitterT void CALL32M( u32 to )
 // misc instructions				/
 ////////////////////////////////////
 
-// cmp imm8 to r8
-emitterT void CMP8ItoR( x86IntRegType to, u8 from )
-{
-	RexB(0,to);
-	if ( to == EAX )
-	{
-		write8( 0x3C );
-	} 
-	else 
-	{
-		write8( 0x80 );
-		ModRM( 3, 7, to );
-	}
-	write8( from ); 
-}
-
-// cmp m8 to r8
-emitterT void CMP8MtoR( x86IntRegType to, uptr from )
-{
-	RexR(0,to);
-	write8( 0x3A );
-	ModRM( 0, to, DISP32 );
-	write32( MEMADDR(from, 4) ); 
-}
-
-// cmp imm8 to [r32] (byte ptr)
-emitterT void CMP8I8toRm( x86IntRegType to, s8 from, s8 off=0 )
-{
-	RexB(0,to);
-	write8( 0x80 );
-	ModRM( (off != 0), 7, to );
-	if( off != 0 ) write8(off);
-	write8(from);
-}
-
 /* test imm32 to r32 */
 emitterT void TEST32ItoR( x86IntRegType to, u32 from ) 
 {
@@ -1830,31 +1716,19 @@ emitterT void SETZ8R( x86IntRegType to ) { SET8R(0x94, to); }
 emitterT void SETE8R( x86IntRegType to ) { SET8R(0x94, to); }
 
 /* push imm32 */
-emitterT void PUSH32I( u32 from ) 
-{;
-write8( 0x68 ); 
-write32( from ); 
-}
+emitterT void PUSH32I( u32 from ) { PUSH( from ); }
 
 /* push r32 */
-emitterT void PUSH32R( x86IntRegType from )  { write8( 0x50 | from ); }
+emitterT void PUSH32R( x86IntRegType from )  { PUSH( x86Register32( from ) ); }
 
 /* push m32 */
-emitterT void PUSH32M( u32 from ) 
+emitterT void PUSH32M( u32 from )
 {
-	write8( 0xFF );
-	ModRM( 0, 6, DISP32 );
-	write32( MEMADDR(from, 4) ); 
+	PUSH( ptr[from] );
 }
 
 /* pop r32 */
-emitterT void POP32R( x86IntRegType from ) { write8( 0x58 | from ); }
-
-/* pushad */
-emitterT void PUSHA32( void ) { write8( 0x60 ); }
-
-/* popad */
-emitterT void POPA32( void ) { write8( 0x61 ); }
+emitterT void POP32R( x86IntRegType from ) { POP( x86Register32( from ) ); }
 
 /* pushfd */
 emitterT void PUSHFD( void ) { write8( 0x9C ); }
@@ -1899,95 +1773,34 @@ emitterT void BSWAP32R( x86IntRegType to )
 
 emitterT void LEA32RtoR(x86IntRegType to, x86IntRegType from, s32 offset)
 {
-	RexRB(0,to,from);
-	write8(0x8d);
-
-	if( (from&7) == ESP ) {
-		if( offset == 0 ) {
-			ModRM(1, to, from);
-			write8(0x24);
-		}
-		else if( is_s8(offset) ) {
-			ModRM(1, to, from);
-			write8(0x24);
-			write8(offset);
-		}
-		else {
-			ModRM(2, to, from);
-			write8(0x24);
-			write32(offset);
-		}
-	}
-	else {
-		if( offset == 0 && from != EBP && from!=ESP ) {
-			ModRM(0, to, from);
-		}
-		else if( is_s8(offset) ) {
-			ModRM(1, to, from);
-			write8(offset);
-		}
-		else {
-			ModRM(2, to, from);
-			write32(offset);
-		}
-	}
-}
-
-// to = from + offset
-emitterT void LEA16RtoR(x86IntRegType to, x86IntRegType from, s16 offset)
-{
-	write8(0x66);
-	LEA32RtoR(to, from, offset);
-}
-
-// to = from0 + from1
-emitterT void LEA16RRtoR(x86IntRegType to, x86IntRegType from0, x86IntRegType from1)
-{
-	write8(0x66);
-	LEA32RRtoR(to, from0, from1);
+	LEA32( x86Register32( to ), ptr[x86IndexReg(from)+offset] );
 }
 
 emitterT void LEA32RRtoR(x86IntRegType to, x86IntRegType from0, x86IntRegType from1)
 { 
-	RexRXB(0, to, from0, from1);
-	write8(0x8d);
-
-	if( (from1&7) == EBP ) {
-		ModRM(1, to, 4);
-		ModRM(0, from0, from1);
-		write8(0);
-	}
-	else {
-		ModRM(0, to, 4);
-		ModRM(0, from0, from1);
-	}
-}
-
-// to = from << scale (max is 3)
-emitterT void LEA16RStoR(x86IntRegType to, x86IntRegType from, u32 scale)
-{
-	write8(0x66);
-	LEA32RStoR(to, from, scale);
+	LEA32( x86Register32( to ), ptr[x86IndexReg(from0)+x86IndexReg(from1)] );
 }
 
 // Don't inline recursive functions
 emitterT void LEA32RStoR(x86IntRegType to, x86IntRegType from, u32 scale)
 {
-	if( to == from ) {
-		SHL32ItoR(to, scale);
-		return;
-	}
+	LEA32( x86Register32( to ), ptr[x86IndexReg(from)*(1<<scale)] );
+}
 
-	if( from != ESP ) {
-		RexRXB(0,to,from,0);
-		write8(0x8d);
-		ModRM(0, to, 4);
-		ModRM(scale, from, 5);
-		write32(0);
-	}
-	else {
-		assert( to != ESP );
-		MOV32RtoR(to, from);
-		LEA32RStoR(to, to, scale);
-	}
+// to = from + offset
+emitterT void LEA16RtoR(x86IntRegType to, x86IntRegType from, s16 offset)
+{
+	LEA16( x86Register16( to ), ptr[x86IndexReg(from)+offset] );
+}
+
+// to = from0 + from1
+emitterT void LEA16RRtoR(x86IntRegType to, x86IntRegType from0, x86IntRegType from1)
+{
+	LEA16( x86Register16( to ), ptr[x86IndexReg(from0)+x86IndexReg(from1)] );
+}
+
+// to = from << scale (max is 3)
+emitterT void LEA16RStoR(x86IntRegType to, x86IntRegType from, u32 scale)
+{
+	LEA16( x86Register16( to ), ptr[x86IndexReg(from)*(1<<scale)] );
 }

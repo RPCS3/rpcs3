@@ -161,31 +161,34 @@ namespace x86Emitter
 
 	//////////////////////////////////////////////////////////////////////////////////////////
 	//
-	struct x86Register
+	struct x86Register32
 	{
-		static const x86Register Empty;		// defined as an empty/unused value (-1)
+		static const x86Register32 Empty;		// defined as an empty/unused value (-1)
 		
 		int Id;
 
-		x86Register( const x86Register& src ) : Id( src.Id ) {}
-		x86Register() : Id( -1 ) {}
-		explicit x86Register( int regId ) : Id( regId ) { }
+		x86Register32( const x86Register32& src ) : Id( src.Id ) {}
+		x86Register32() : Id( -1 ) {}
+		explicit x86Register32( int regId ) : Id( regId ) { jASSUME( Id >= -1 && Id < 8 ); }
 
 		bool IsEmpty() const { return Id == -1; }
 
-		bool operator==( const x86Register& src ) const { return Id == src.Id; }
-		bool operator!=( const x86Register& src ) const { return Id != src.Id; }
+		bool operator==( const x86Register32& src ) const { return Id == src.Id; }
+		bool operator!=( const x86Register32& src ) const { return Id != src.Id; }
 		
-		x86ModRm operator+( const x86Register& right ) const;
+		x86ModRm operator+( const x86Register32& right ) const;
 		x86ModRm operator+( const x86ModRm& right ) const;
+		x86ModRm operator+( s32 right ) const;
+
+		x86ModRm operator*( u32 factor ) const;
 		
-		x86Register& operator=( const x86Register& src )
+		x86Register32& operator=( const x86Register32& src )
 		{
 			Id = src.Id;
 			return *this;
 		}
 	};
-
+	
 	//////////////////////////////////////////////////////////////////////////////////////////
 	// Similar to x86Register, but without the ability to add/combine them with ModSib.
 	//
@@ -198,7 +201,7 @@ namespace x86Emitter
 
 		x86Register16( const x86Register16& src ) : Id( src.Id ) {}
 		x86Register16() : Id( -1 ) {}
-		explicit x86Register16( int regId ) : Id( regId ) { }
+		explicit x86Register16( int regId ) : Id( regId ) { jASSUME( Id >= -1 && Id < 8 ); }
 
 		bool IsEmpty() const { return Id == -1; }
 
@@ -224,7 +227,7 @@ namespace x86Emitter
 
 		x86Register8( const x86Register16& src ) : Id( src.Id ) {}
 		x86Register8() : Id( -1 ) {}
-		explicit x86Register8( int regId ) : Id( regId ) { }
+		explicit x86Register8( int regId ) : Id( regId ) { jASSUME( Id >= -1 && Id < 8 ); }
 
 		bool IsEmpty() const { return Id == -1; }
 
@@ -237,19 +240,22 @@ namespace x86Emitter
 			return *this;
 		}
 	};
+	
+	// Use 32 bit registers as out index register (for ModSig memory address calculations)
+	typedef x86Register32 x86IndexReg;
 
 	//////////////////////////////////////////////////////////////////////////////////////////
 	//
 	class x86ModRm
 	{
 	public:
-		x86Register Base;		// base register (no scale)
-		x86Register Index;		// index reg gets multiplied by the scale
+		x86IndexReg Base;		// base register (no scale)
+		x86IndexReg Index;		// index reg gets multiplied by the scale
 		int Factor;				// scale applied to the index register, in factor form (not a shift!)
 		s32 Displacement;		// address displacement
 
 	public:
-		x86ModRm( x86Register base, x86Register index, int factor=1, s32 displacement=0 ) :
+		x86ModRm( x86IndexReg base, x86IndexReg index, int factor=1, s32 displacement=0 ) :
 			Base( base ),
 			Index( index ),
 			Factor( factor ),
@@ -257,7 +263,7 @@ namespace x86Emitter
 		{
 		}
 
-		explicit x86ModRm( x86Register base, int displacement=0 ) :
+		explicit x86ModRm( x86IndexReg base, int displacement=0 ) :
 			Base( base ),
 			Index(),
 			Factor(0),
@@ -273,11 +279,11 @@ namespace x86Emitter
 		{
 		}
 		
-		static x86ModRm FromIndexReg( x86Register index, int scale=0, s32 displacement=0 );
+		static x86ModRm FromIndexReg( x86IndexReg index, int scale=0, s32 displacement=0 );
 
 	public:
 		bool IsByteSizeDisp() const { return is_s8( Displacement ); }
-		x86Register GetEitherReg() const;
+		x86IndexReg GetEitherReg() const;
 
 		x86ModRm& Add( s32 imm )
 		{
@@ -285,10 +291,10 @@ namespace x86Emitter
 			return *this;
 		}
 		
-		x86ModRm& Add( const x86Register& src );
+		x86ModRm& Add( const x86IndexReg& src );
 		x86ModRm& Add( const x86ModRm& src );
 
-		x86ModRm operator+( const x86Register& right ) const { return x86ModRm( *this ).Add( right ); }
+		x86ModRm operator+( const x86IndexReg& right ) const { return x86ModRm( *this ).Add( right ); }
 		x86ModRm operator+( const x86ModRm& right ) const { return x86ModRm( *this ).Add( right ); }
 		x86ModRm operator+( const s32 imm ) const { return x86ModRm( *this ).Add( imm ); }
 		x86ModRm operator-( const s32 imm ) const { return x86ModRm( *this ).Add( -imm ); }
@@ -306,17 +312,26 @@ namespace x86Emitter
 	class ModSib
 	{
 	public:
-		x86Register Base;		// base register (no scale)
-		x86Register Index;		// index reg gets multiplied by the scale
+		x86IndexReg Base;		// base register (no scale)
+		x86IndexReg Index;		// index reg gets multiplied by the scale
 		int Scale;				// scale applied to the index register, in scale/shift form
 		s32 Displacement;		// offset applied to the Base/Index registers.
 
-		ModSib( const x86ModRm& src );
-		ModSib( x86Register base, x86Register index, int scale=0, s32 displacement=0 );
-		ModSib( s32 disp );
+		explicit ModSib( const x86ModRm& src );
+		explicit ModSib( s32 disp );
+		ModSib( x86IndexReg base, x86IndexReg index, int scale=0, s32 displacement=0 );
 		
-		x86Register GetEitherReg() const;
+		x86IndexReg GetEitherReg() const;
 		bool IsByteSizeDisp() const { return is_s8( Displacement ); }
+
+		ModSib& Add( s32 imm )
+		{
+			Displacement += imm;
+			return *this;
+		}
+
+		ModSib operator+( const s32 imm ) const { return ModSib( *this ).Add( imm ); }
+		ModSib operator-( const s32 imm ) const { return ModSib( *this ).Add( -imm ); }
 
 	protected:
 		void Reduce();
@@ -327,9 +342,13 @@ namespace x86Emitter
 	//
 	struct x86IndexerType
 	{
-		ModSib operator[]( x86Register src ) const
+		// passthrough instruction, allows ModSib to pass silently through ptr translation
+		// without doing anything and without compiler error.
+		const ModSib& operator[]( const ModSib& src ) const { return src; }
+
+		ModSib operator[]( x86IndexReg src ) const
 		{
-			return ModSib( src, x86Register::Empty );
+			return ModSib( src, x86IndexReg::Empty );
 		}
 
 		ModSib operator[]( const x86ModRm& src ) const
@@ -349,14 +368,32 @@ namespace x86Emitter
 	};
 
 	// ------------------------------------------------------------------------
-	extern const x86Register eax;
-	extern const x86Register ebx;
-	extern const x86Register ecx;
-	extern const x86Register edx;
-	extern const x86Register esi;
-	extern const x86Register edi;
-	extern const x86Register ebp;
-	extern const x86Register esp;
-
 	extern x86IndexerType ptr;
+
+	extern const x86Register32 eax;
+	extern const x86Register32 ebx;
+	extern const x86Register32 ecx;
+	extern const x86Register32 edx;
+	extern const x86Register32 esi;
+	extern const x86Register32 edi;
+	extern const x86Register32 ebp;
+	extern const x86Register32 esp;
+
+	extern const x86Register16 ax;
+	extern const x86Register16 bx;
+	extern const x86Register16 cx;
+	extern const x86Register16 dx;
+	extern const x86Register16 si;
+	extern const x86Register16 di;
+	extern const x86Register16 bp;
+	extern const x86Register16 sp;
+
+	extern const x86Register8 al;
+	extern const x86Register8 cl;
+	extern const x86Register8 dl;
+	extern const x86Register8 bl;
+	extern const x86Register8 ah;
+	extern const x86Register8 ch;
+	extern const x86Register8 dh;
+	extern const x86Register8 bh;
 }
