@@ -131,8 +131,11 @@ static void iDumpBlock( int startpc, u8 * ptr )
 
 	Console::Status( "dump1 %x:%x, %x", params startpc, pc, cpuRegs.cycle );
 	Path::CreateDirectory( "dumps" );
+#ifndef __LINUX__
 	ssprintf( filename, "dumps\\R5900dump%.8X.txt", startpc );
-
+#else
+	ssprintf( filename, "dumps/R5900dump%.8X.txt", startpc );
+#endif
 	fflush( stdout );
 //	f = fopen( "dump1", "wb" );
 //	fwrite( ptr, 1, (u32)x86Ptr - (u32)ptr, f );

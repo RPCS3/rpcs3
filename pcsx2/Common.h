@@ -31,8 +31,8 @@
 
 #include "System.h"
 
-#include "SaveState.h"
 #include "Plugins.h"
+#include "SaveState.h"
 
 #include "DebugTools/Debug.h"
 #include "Memory.h"
