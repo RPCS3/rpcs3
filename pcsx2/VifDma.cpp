@@ -29,7 +29,7 @@
 
 using namespace std;			// for min / max
 
-//#define VIFUNPACKDEBUG //enable unpack debugging output
+
 
 #define gif ((DMACh*)&PS2MEM_HW[0xA000])
 
@@ -379,6 +379,7 @@ static void VIFunpack(u32 *data, vifCode *v, int size, const unsigned int VIFdma
 	VIF_LOG("VIF%d UNPACK: Mode=%x, v->size=%d, size=%d, v->addr=%x",
 	        VIFdmanum, v->cmd & 0xf, v->size, size, v->addr);
 
+	VIFUNPACK_LOG("USN %x Masking %x Mask %x Mode %x CL %x WL %x Offset %x", vif->usn, (vifRegs->code & 0x10000000) >> 28, vifRegs->mask, vifRegs->mode, vifRegs->cycle.cl, vifRegs->cycle.wl, vifRegs->offset);
 #ifdef _DEBUG
 	if (v->size != size)
 	{
@@ -422,6 +423,8 @@ static void VIFunpack(u32 *data, vifCode *v, int size, const unsigned int VIFdma
 
 		VIFUNPACK_LOG("Aligning packet size = %d offset %d addr %x", size, vifRegs->offset, vif->tag.addr);
 
+		if(((size / ft->dsize) + vifRegs->offset) < (u32)ft->qsize)
+			VIFUNPACK_LOG("Warning! Size needed to align %x size chunks available %x offset %x", ft->qsize - ((size / ft->dsize) + vifRegs->offset), vifRegs->offset);
 		// SSE doesn't handle such small data
 		if (v->size != (size >> 2))
 			ProcessMemSkip(size, unpackType, VIFdmanum);
@@ -439,8 +442,9 @@ static void VIFunpack(u32 *data, vifCode *v, int size, const unsigned int VIFdma
 			unpacksize = 0;
 			Console::WriteLn("Unpack align offset = 0");
 		}
+		VIFUNPACK_LOG("Increasing dest by %x from offset %x", (4 - ft->qsize) + unpacksize, vifRegs->offset);
 		destinc = (4 - ft->qsize) + unpacksize;
-		vif->qwcalign += unpacksize * ft->dsize;
+		
 		func(dest, (u32*)cdata, unpacksize);
 		size -= unpacksize * ft->dsize;
 		cdata += unpacksize * ft->dsize;
@@ -482,7 +486,6 @@ static void VIFunpack(u32 *data, vifCode *v, int size, const unsigned int VIFdma
 			
 			while ((size >= ft->gsize) && (vifRegs->num > 0))
 			{
-				vif->qwcalign += ft->gsize;
 				func(dest, (u32*)cdata, ft->qsize);
 				cdata += ft->gsize;
 				size -= ft->gsize;
@@ -596,7 +599,6 @@ static void VIFunpack(u32 *data, vifCode *v, int size, const unsigned int VIFdma
 
 			while ((size >= ft->gsize) && (vifRegs->num > 0))
 			{
-				vif->qwcalign += ft->gsize;  //Must do this before the transfer, else the confusing packets dont go right :P
 				func(dest, (u32*)cdata, ft->qsize);
 				cdata += ft->gsize;
 				size -= ft->gsize;
@@ -651,7 +653,6 @@ static void VIFunpack(u32 *data, vifCode *v, int size, const unsigned int VIFdma
 			//VIF_LOG("warning, end with size = %d", size);
 
 			/* unpack one qword */
-			vif->qwcalign += (size / ft->dsize) * ft->dsize;
 			func(dest, (u32*)cdata, size / ft->dsize);
 			size = 0;
 
@@ -789,7 +790,6 @@ static __forceinline void vif0UNPACK(u32 *data)
 		len = ((((32 >> vl) * (vn + 1)) * n) + 31) >> 5;
 	}
 
-	vif0.qwcalign = 0;
 	vif0.cl = 0;
 	vif0.tag.cmd  = vif0.cmd;
 	vif0.tag.addr &= 0xfff;
@@ -1519,7 +1519,7 @@ static __forceinline void vif1UNPACK(u32 *data)
 	else
 		vif1.tag.addr = vif1Regs->code & 0x3ff;
 
-	vif1.qwcalign = 0;
+	vif1Regs->offset = 0;
 	vif1.cl = 0;
 	vif1.tag.addr <<= 4;
 	vif1.tag.cmd  = vif1.cmd;
