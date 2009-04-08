@@ -683,7 +683,7 @@ static void __naked DispatcherReg()
 	}
 }
 
-__forceinline void recExecute()
+void recExecute()
 {
 	// Optimization note : Compared pushad against manually pushing the regs one-by-one.
 	// Manually pushing is faster, especially on Core2's and such. :)

@@ -798,7 +798,7 @@ void psxSetBranchImm( u32 imm )
 //		  So for now these are new settings that work.
 //		  (rama)
 
-static u32 psxScaleBlockCycles()
+static __forceinline u32 psxScaleBlockCycles()
 {
 	return s_psxBlockCycles * (CHECK_IOP_CYCLERATE ? 2 : 1);
 }
