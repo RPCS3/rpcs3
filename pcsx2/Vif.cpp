@@ -369,10 +369,12 @@ void __fastcall UNPACK_V2(u32 *dest, T *data, int size)
 	if(_vifRegs->offset == OFFSET_X && size > 0)
 	{
 		_UNPACKpart(_vifRegs->offset, *dest++, *data++);
+		size--;
 	}
 	if(_vifRegs->offset == OFFSET_Y && size > 0) 
 	{
 		_UNPACKpart(_vifRegs->offset, *dest++, *data);
+		size--;
 	}
 	if(_vifRegs->offset == OFFSET_Z)
 	{
@@ -391,10 +393,12 @@ void __fastcall UNPACK_V3(u32 *dest, T *data, int size)
 	if(_vifRegs->offset == OFFSET_X && size > 0)
 	{
 		_UNPACKpart(_vifRegs->offset, *dest++, *data++);
+		size--;
 	}
 	if(_vifRegs->offset == OFFSET_Y && size > 0) 
 	{
 		_UNPACKpart(_vifRegs->offset, *dest++, *data++);
+		size--;
 	}
 	if(_vifRegs->offset == OFFSET_Z)
 	{
