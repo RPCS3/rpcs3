@@ -328,6 +328,16 @@ static void ProcessMemSkip(int size, unsigned int unpackType, const unsigned int
 			break;
 	}
 
+	//Append any skips in to the equasion
+	
+	if (vifRegs->cycle.cl > vifRegs->cycle.wl)
+	{
+		VIFUNPACK_LOG("Old addr %x CL %x WL %x", vif->tag.addr, vifRegs->cycle.cl, vifRegs->cycle.wl);
+		vif->tag.addr += (size / (unpack->gsize*vifRegs->cycle.wl)) * ((vifRegs->cycle.cl - vifRegs->cycle.wl)*16);
+		VIFUNPACK_LOG("New addr %x CL %x WL %x", vif->tag.addr, vifRegs->cycle.cl, vifRegs->cycle.wl);
+	}
+	
+	
 	if ((vif->tag.addr & 0xf) == unpack->gsize)
 	{
 		vif->tag.addr += 16 - unpack->gsize;
