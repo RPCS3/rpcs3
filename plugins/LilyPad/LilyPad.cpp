@@ -23,7 +23,7 @@
 #endif
 
 // LilyPad version.
-#define VERSION ((0<<8) | 9 | (11<<24))
+#define VERSION ((0<<8) | 10 | (0<<24))
 
 // Used to prevent reading input and cleaning up input devices at the same time.
 // Only an issue when not reading input in GS thread and disabling devices due to
@@ -115,7 +115,7 @@ struct ButtonSum {
 	Stick sticks[3];
 };
 
-
+// Freeze data, for a single pad.
 struct PadFreezeData {
 	// Digital / Analog / DS2 Native
 	u8 mode;
@@ -166,6 +166,12 @@ u8 Cap (int i) {
 	if (i<0) return 0;
 	if (i>255) return 255;
 	return (u8) i;
+}
+
+inline void ReleaseModifierKeys() {
+	QueueKeyEvent(VK_SHIFT, KEYRELEASE);
+	QueueKeyEvent(VK_MENU, KEYRELEASE);
+	QueueKeyEvent(VK_CONTROL, KEYRELEASE);
 }
 
 // RefreshEnabledDevices() enables everything that can potentially
@@ -677,9 +683,7 @@ s32 CALLBACK PADinit(u32 flags) {
 	query.numBytes = 0;
 	ClearKeyQueue();
 	// Just in case, when resuming emulation.
-	QueueKeyEvent(VK_SHIFT, KEYRELEASE);
-	QueueKeyEvent(VK_MENU, KEYRELEASE);
-	QueueKeyEvent(VK_CONTROL, KEYRELEASE);
+	ReleaseModifierKeys();
 	return 0;
 }
 
@@ -756,9 +760,7 @@ ExtraWndProcResult HackWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 		case WM_ACTIVATEAPP:
 			// Release any buttons PCSX2 may think are down when
 			// losing/gaining focus.
-			QueueKeyEvent(VK_SHIFT, KEYRELEASE);
-			QueueKeyEvent(VK_MENU, KEYRELEASE);
-			QueueKeyEvent(VK_CONTROL, KEYRELEASE);
+			ReleaseModifierKeys();
 
 			// Need to do this when not reading input from gs thread.
 			// Checking for that case not worth the effort.
@@ -1227,12 +1229,14 @@ DWORD WINAPI RenameWindowThreadProc(void *lpParameter) {
 }
 
 keyEvent* CALLBACK PADkeyEvent() {
+	// If running both pads, ignore every other call.  So if two keys pressed in same interval...
 	static char eventCount = 0;
 	eventCount++;
 	if (eventCount < openCount) {
 		return 0;
 	}
 	eventCount = 0;
+
 	if (!config.GSThreadUpdates) {
 		Update(2, 0);
 	}
@@ -1327,7 +1331,7 @@ s32 CALLBACK PADfreeze(int mode, freezeData *data) {
 				break;
 			}
 
-			// Note sure if the cast is strictly necessary, but feel safest with it there...
+			// Not sure if the cast is strictly necessary, but feel safest with it there...
 			*(PadFreezeData*)&pads[port][slot] = pdata.padData[slot];
 		}
 		if (pdata.slot < 4)

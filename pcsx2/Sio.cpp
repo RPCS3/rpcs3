@@ -451,16 +451,16 @@ void SIO_CommandWrite(u8 value,int way) {
 				break;
 			case 0x21:
 				// Set pad slot.
-				sio.mtapst = 0x21;
+				sio.mtapst = value;
 				sio.bufcount = 6; // No idea why this is 6, saved from old code.
 				break;
 			case 0x22:
 				// Set memcard slot.
-				sio.mtapst = 0x22;
+				sio.mtapst = value;
 				sio.bufcount = 6; // No idea why this is 6, saved from old code.
 				break;
 			}
-			// Commented out values are from original code.  Break multitap in bios.
+			// Commented out values are from original code.  They break multitap in bios.
 			sio.buf[sio.bufcount-1]=0;//'+';
 			sio.buf[sio.bufcount]=0;//'Z';
 			return;
@@ -554,6 +554,7 @@ void InitializeSIO(u8 value)
 				int port = sio.GetMultitapPort();
 				if (!IsMtapPresent(port))
 				{
+					// If "unplug" multitap mid game, set active slots to 0.
 					sio.activePadSlot[port] = 0;
 					sio.activeMemcardSlot[port] = 0;
 				}

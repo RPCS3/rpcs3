@@ -1404,18 +1404,59 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 				if (i >= 0) {
 					unsigned int index = (unsigned int)SendMessage(GetDlgItem(hWnd, IDC_FORCEFEEDBACK), CB_GETITEMDATA, i, 0);
 					if (index < (unsigned int) dm->numDevices) {
+						Device *dev = dm->devices[index];
 						ForceFeedbackBinding *b;
-						int count = CreateEffectBinding(dm->devices[index], 0, port, slot, cmd-ID_BIG_MOTOR, &b);
+						int count = CreateEffectBinding(dev, 0, port, slot, cmd-ID_BIG_MOTOR, &b);
 						if (b) {
-							for (int j=0; j<2 && j <dm->devices[index]->numFFAxes; j++) {
-								b->axes[j].force = BASE_SENSITIVITY;
+							int needSet = 1;
+							if (dev->api == XINPUT && dev->numFFAxes == 2) {
+								needSet = 0;
+								if (cmd == ID_BIG_MOTOR) {
+									b->axes[0].force = BASE_SENSITIVITY;
+								}
+								else {
+									b->axes[1].force = BASE_SENSITIVITY;
+								}
 							}
-						}
-						if (count >= 0) {
-							PropSheet_Changed(hWndProp, hWnd);
+							else if (dev->api == DI) {
+								int bigIndex=0, littleIndex=0;
+								int constantEffect = 0, squareEffect = 0;
+								int j;
+								for (j=0; j<dev->numFFAxes; j++) {
+									// DI object instance.  0 is x-axis, 1 is y-axis.
+									int instance = (dev->ffAxes[j].id>>8)&0xFFFF;
+									if (instance == 0) {
+										bigIndex = j;
+									}
+									else if (instance == 1) {
+										littleIndex = j;
+									}
+								}
+								for (j=0; j<dev->numFFEffectTypes; j++) {
+									if (!wcsicmp(L"13541C20-8E33-11D0-9AD0-00A0C9A06E35", dev->ffEffectTypes[j].effectID)) constantEffect = j;
+									if (!wcsicmp(L"13541C22-8E33-11D0-9AD0-00A0C9A06E35", dev->ffEffectTypes[j].effectID)) squareEffect = j;
+								}
+								needSet = 0;
+								if (cmd == ID_BIG_MOTOR) {
+									b->axes[bigIndex].force = BASE_SENSITIVITY;
+									b->axes[littleIndex].force = 1;
+									b->effectIndex = constantEffect;
+								}
+								else {
+									b->axes[bigIndex].force = 1;
+									b->axes[littleIndex].force = BASE_SENSITIVITY;
+									b->effectIndex = squareEffect;
+								}
+							}
+							if (needSet) {
+								for (int j=0; j<2 && j <dev->numFFAxes; j++) {
+									b->axes[j].force = BASE_SENSITIVITY;
+								}
+							}
 							UnselectAll(hWndList);
 							ListView_SetItemState(hWndList, count, LVIS_SELECTED, LVIS_SELECTED);
 						}
+						PropSheet_Changed(hWndProp, hWnd);
 					}
 				}
 			}
@@ -1886,6 +1927,7 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 						config.padConfigs[port1][slot1] = config.padConfigs[port2][slot2];
 						config.padConfigs[port2][slot2] = padCfgTemp;
 						for (int i=0; i<dm->numDevices; i++) {
+							if (dm->devices[i]->type == IGNORE) continue;
 							PadBindings bindings = dm->devices[i]->pads[port1][slot1];
 							dm->devices[i]->pads[port1][slot1] = dm->devices[i]->pads[port2][slot2];
 							dm->devices[i]->pads[port2][slot2] = bindings;
@@ -1893,6 +1935,7 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 					}
 					else {
 						for (int i=0; i<dm->numDevices; i++) {
+							if (dm->devices[i]->type == IGNORE) continue;
 							free(dm->devices[i]->pads[port1][slot1].bindings);
 							for (int j=0; j<dm->devices[i]->pads[port1][slot1].numFFBindings; j++) {
 								free(dm->devices[i]->pads[port1][slot1].ffBindings[j].axes);

@@ -150,11 +150,10 @@ public:
 	}
 
 	void Deactivate() {
-		if (xInputVibration.wLeftMotorSpeed || xInputVibration.wRightMotorSpeed) {
-			memset(&xInputVibration, 0, sizeof(xInputVibration));
-			pXInputSetState(index, &xInputVibration);
-		}
+		memset(&xInputVibration, 0, sizeof(xInputVibration));
 		memset(ps2Vibration, 0, sizeof(ps2Vibration));
+		pXInputSetState(index, &xInputVibration);
+
 		FreeState();
 		if (active) {
 			if (!--xInputActiveCount) {
@@ -195,7 +194,7 @@ void EnumXInputDevices() {
 	pXInputEnable(1);
 	for (i=0; i<4; i++) {
 		XINPUT_STATE state;
-		if (ERROR_SUCCESS == pXInputGetState(i, &state)) {
+		if (!i || ERROR_SUCCESS == pXInputGetState(i, &state)) {
 			wsprintfW(temp, L"XInput Pad %i", i);
 			dm->AddDevice(new XInputDevice(i, temp));
 		}
