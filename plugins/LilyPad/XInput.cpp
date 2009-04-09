@@ -194,7 +194,7 @@ void EnumXInputDevices() {
 	pXInputEnable(1);
 	for (i=0; i<4; i++) {
 		XINPUT_STATE state;
-		if (!i || ERROR_SUCCESS == pXInputGetState(i, &state)) {
+		if (ERROR_SUCCESS == pXInputGetState(i, &state)) {
 			wsprintfW(temp, L"XInput Pad %i", i);
 			dm->AddDevice(new XInputDevice(i, temp));
 		}
