@@ -400,7 +400,7 @@ void __fastcall UNPACK_V3(u32 *dest, T *data, int size)
 		_UNPACKpart(_vifRegs->offset, *dest++, *data++);
 		size--;
 	}
-	if(_vifRegs->offset == OFFSET_Z)
+	if(_vifRegs->offset == OFFSET_Z && size > 0)
 	{
 		_UNPACKpart(_vifRegs->offset, *dest++, *data++);
 	}
