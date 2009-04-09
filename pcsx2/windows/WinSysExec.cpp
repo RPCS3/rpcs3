@@ -62,7 +62,7 @@ int SysPageFaultExceptionFilter( EXCEPTION_POINTERS* eps )
 	
 	if (addr&0x80000000)
 	{
-		uptr _vtlb_HandleRewrite(uptr code);
+		uptr _vtlb_HandleRewrite(u32 info,u8* ra);
 		u8* pcode=(u8*)ExceptionRecord.ExceptionAddress;
 
 		u32 patch_point=1;
@@ -79,7 +79,7 @@ int SysPageFaultExceptionFilter( EXCEPTION_POINTERS* eps )
 
 		eps->ContextRecord->Eax-=*(u32*)&pcode[-patch_point+2];
 
-		uptr codeloc=_vtlb_HandleRewrite(*(u32*)&pcode[-patch_point+2]);
+		uptr codeloc=_vtlb_HandleRewrite(*(u32*)&pcode[-patch_point+2],&pcode[-patch_point+2+4]);
 
 		eps->ContextRecord->Eip=codeloc;
 		*(u32*)&pcode[-patch_point+2]=codeloc-(u32)&pcode[-patch_point+6];

@@ -24,13 +24,27 @@
 #include "iCore.h"
 #include "iR5900.h"
 
-u8* execohax_pos=0;
-u8* execohax_start=0;
-u32 execohx_sz;
-
 u8* code_pos=0;
 u8* code_start=0;
 u32 code_sz;
+
+union _vtlb_MemOpInfo
+{
+	struct
+	{
+		u32 sz:8;//0 -> 8, 1 -> 16, 2 -> 32, 3 -> 64, 4 -> 128
+		u32 skip:8;//bytes to skip
+		u32 sx:1;
+		u32 read:1;
+	};
+	u32 full;
+	bool isRead() { return read; }
+	bool isWrite(){ return !isRead(); }
+	bool isSX()	  { return sx; }
+	u32 getSize() { return sz; }
+	u32 getSkip() { return skip; }
+};
+
 
 using namespace vtlb_private;
 #include <windows.h>
@@ -49,8 +63,8 @@ void execuCode(bool set)
 		while(i<code_sz)
 		{
 			//UD2 is 0xF 0xB.Fill the stream with it so that the cpu don't try to execute past branches ..
-			code_start[i]=0xF;i++;
 			code_start[i]=0xB;i++;
+			code_start[i]=0xF;i++;
 		}
 	}
 
@@ -63,67 +77,33 @@ void execuCode(bool set)
 	else
 	{
 		code_pos=x86SetPtr(old);
-		u32 tt=execohx_sz-2*1024*1024+(execohax_pos-execohax_start);
-		u32 tc=code_sz-free;
-		SysPrintf("%d code, %d pot, %.2f%%\n",tc,tt,tc/(float)tt*100);
 	}
 }
 
-u32* execohaxme(bool set)
+u8* IndirectPlaceholderA()
 {
-	u32 used=execohax_pos-execohax_start;
-	u32 free=2*1024*1024-used;
+	write8<_EmitterId_>( 0x81 ); 
+	ModRM<_EmitterId_>( 3, 0, EAX );
 
-	if (execohax_pos == 0 || free<128)
-	{
-		SysPrintf("Leaking 2 megabytes of ram\n");
-		execohax_start=execohax_pos=(u8*)VirtualAlloc(0,2*1024*1024,MEM_COMMIT,PAGE_EXECUTE_READWRITE);
-		execohx_sz+=2*1024*1024;
-	}
-	static u8* saved;
-	static u8* mod;
-	if (set)
-	{
-		write8<_EmitterId_>( 0x81 ); 
-		ModRM<_EmitterId_>( 3, 0, EAX );
-		write32<_EmitterId_>( (uptr)execohax_pos );
+	u8* rv=x86SetPtr(0);
+	write32<_EmitterId_>(0);
 
-		saved=x86SetPtr(execohax_pos);
-		mod=execohax_pos;
-		write8<_EmitterId_>(0);	//size, in bytes
-		write32<_EmitterId_>(0); //return address
-	}
-	else
-	{
-		//x86AlignExecutable(4);
-		//x86Align(64);
-		execohax_pos=x86SetPtr(mod);
-		write8<_EmitterId_>(execohax_pos-mod-5);
-		return (u32*)x86SetPtr(saved);
-	}
-
-	return 0;
-}
-
-uptr _vtlb_HandleRewrite(uptr block)
-{
-	u8 size=*(u8*)block;
-	u32 ra=*(u32*)(block+1);
-	u8* pcode=(u8*)(block+5);
-	execuCode(true);
-	uptr rv=(uptr)code_pos;
-
-	while(size--)
-	{
-		write8<_EmitterId_>(*pcode++);
-	}
-	JMP32(ra-(uptr)x86Ptr[_EmitterId_]-5);
-	
-	execuCode(false);
-	//do magic
 	return rv;
 }
-
+void IndirectPlaceholderB(u8* pl,bool read,u32 sz,bool sx)
+{
+	_vtlb_MemOpInfo inf;
+	inf.full=0;
+	inf.read=read;
+	inf.sz=sz;
+	inf.sx=sx;
+	
+	u8* old=x86SetPtr(pl);
+	inf.skip=old-pl-4;
+	//Add32 <eax>,imm, 6 bytes form.
+	write32<_EmitterId_>( inf.full );
+	x86SetPtr(old);
+}
 PCSX2_ALIGNED16( static u64 g_globalXMMData[2*XMMREGS] );
 void MOVx_SSE( x86IntRegType destRm, x86IntRegType srcRm,u32 srcAddr=0,u32 dstAddr=0,bool half=false )
 {
@@ -196,6 +176,8 @@ void MOV64_MMX( x86IntRegType destRm, x86IntRegType srcRm,u32 srcAddr=0,u32 dstA
 		MOVx_SSE(destRm,srcRm,srcAddr,dstAddr,true);
 	}
 }
+
+
 /*
 	// Pseudo-Code For the following Dynarec Implementations -->
 
@@ -317,16 +299,12 @@ void vtlb_DynGenRead64(u32 bits)
 	SHR32ItoR(EAX,VTLB_PAGE_BITS);
 	MOV32RmSOffsettoR(EAX,EAX,(int)vtlbdata.vmap,2);
 	ADD32RtoR(ECX,EAX);
-	//u8* _direct = JMP8(0);
-	execohaxme(true);
 
-	_vtlb_DynGen_IndirectRead( bits );
-	
-	u32* patch=execohaxme(false);
+	u8* patch=IndirectPlaceholderA();
 	
 	_vtlb_DynGen_DirectRead( bits, false );
-	
-	*patch=(uptr)x86Ptr[_EmitterId_];
+
+	IndirectPlaceholderB(patch,true,bits,false);
 }
 
 // Recompiled input registers:
@@ -340,33 +318,12 @@ void vtlb_DynGenRead32(u32 bits, bool sign)
 	SHR32ItoR(EAX,VTLB_PAGE_BITS);
 	MOV32RmSOffsettoR(EAX,EAX,(int)vtlbdata.vmap,2);
 	ADD32RtoR(ECX,EAX);
-	//u8* _direct = JMP8(0);
-	execohaxme(true);
-
-	_vtlb_DynGen_IndirectRead( bits );
-
-	// perform sign extension on the result:
-
-	if( bits==8 )
-	{
-		if( sign )
-			MOVSX32R8toR(EAX,EAX);
-		else
-			MOVZX32R8toR(EAX,EAX);
-	}
-	else if( bits==16 )
-	{
-		if( sign )
-			MOVSX32R16toR(EAX,EAX);
-		else
-			MOVZX32R16toR(EAX,EAX);
-	}
-
-	u32* patch=execohaxme(false);
+	
+	u8* patch=IndirectPlaceholderA();
 
 	_vtlb_DynGen_DirectRead( bits, sign );
-	
-	*patch=(uptr)x86Ptr[_EmitterId_];
+
+	IndirectPlaceholderB(patch,true,bits,sign);
 }
 
 //
@@ -543,16 +500,11 @@ void vtlb_DynGenWrite(u32 sz)
 	MOV32RmSOffsettoR(EAX,EAX,(int)vtlbdata.vmap,2);
 	ADD32RtoR(ECX,EAX);
 
-	//u8* _direct=JMP8(0);
+	u8* patch=IndirectPlaceholderA();
 
-	execohaxme(true);
-	
-	_vtlb_DynGen_IndirectWrite( sz );
-	
-	u32* patch=execohaxme(false);
 	_vtlb_DynGen_DirectWrite( sz );
-	
-	*patch=(uptr)x86Ptr[_EmitterId_];
+
+	IndirectPlaceholderB(patch,false,sz,false);
 }
 
 
@@ -607,4 +559,53 @@ void vtlb_DynGenWrite_Const( u32 bits, u32 addr_const )
 		MOV32ItoR( ECX, paddr );
 		CALLFunc( (int)vtlbdata.RWFT[szidx][1][handler] );
 	}
+}
+
+
+u32 GenIndirectMemOp(u32 info)
+{
+	_vtlb_MemOpInfo inf;
+	inf.full=info;
+	
+	u32 bits=inf.getSize();
+	bool sign=inf.isSX();
+
+	if (inf.isWrite())
+	{
+		_vtlb_DynGen_IndirectWrite(bits);
+	}
+	else
+	{
+		_vtlb_DynGen_IndirectRead(bits);
+
+		if( bits==8 )
+		{
+			if( sign )
+				MOVSX32R8toR(EAX,EAX);
+			else
+				MOVZX32R8toR(EAX,EAX);
+		}
+		else if( bits==16 )
+		{
+			if( sign )
+				MOVSX32R16toR(EAX,EAX);
+			else
+				MOVZX32R16toR(EAX,EAX);
+		}
+	}
+
+	return inf.getSkip();
+}
+uptr _vtlb_HandleRewrite(u32 info,u8* ra)
+{	
+	execuCode(true);
+	uptr rv=(uptr)x86SetPtr(0);
+
+	u32 skip=GenIndirectMemOp(info);
+
+	JMP32(ra-x86Ptr[_EmitterId_]-5+skip);
+	
+	execuCode(false);
+
+	return rv;
 }
