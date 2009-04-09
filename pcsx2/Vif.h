@@ -87,6 +87,96 @@ extern "C"
 	extern u32* _vifCol;
 }
 
+__forceinline void setVifRowRegs(u32 reg, u32 data)
+{
+	switch (reg)
+	{
+		case 0:
+			_vifRegs->r0 = data;
+			break;
+		case 1:
+			_vifRegs->r1 = data;
+			break;
+		case 2:
+			_vifRegs->r2 = data;
+			break;
+		case 3:
+			_vifRegs->r3 = data;
+			break;
+		default:
+			assert(0);
+			break;
+	}
+}
+
+__forceinline u32 getVifRowRegs(u32 reg)
+{
+	switch (reg)
+	{
+		case 0:
+			return _vifRegs->r0;
+			break;
+		case 1:
+			return _vifRegs->r1;
+			break;
+		case 2:
+			return _vifRegs->r2;
+			break;
+		case 3:
+			return _vifRegs->r3;
+			break;
+		default:
+			assert(0);
+			return 0;
+			break;
+	}
+}
+
+__forceinline void setVifColRegs(u32 reg, u32 data)
+{
+	switch (reg)
+	{
+		case 0:
+			_vifRegs->c0 = data;
+			break;
+		case 1:
+			_vifRegs->c1 = data;
+			break;
+		case 2:
+			_vifRegs->c2 = data;
+			break;
+		case 3:
+			_vifRegs->c3 = data;
+			break;
+		default:
+			assert(0);
+			break;
+	}
+}
+
+__forceinline u32 getVifColRegs(u32 reg)
+{
+	switch (reg)
+	{
+		case 0:
+			return _vifRegs->c0;
+			break;
+		case 1:
+			return _vifRegs->c1;
+			break;
+		case 2:
+			return _vifRegs->c2;
+			break;
+		case 3:
+			return _vifRegs->c3;
+			break;
+		default:
+			assert(0);
+			return 0;
+			break;
+	}
+}
+
 #define vif0Regs ((VIFregisters*)&PS2MEM_HW[0x3800])
 #define vif1Regs ((VIFregisters*)&PS2MEM_HW[0x3c00])
 
