@@ -356,77 +356,56 @@ static void _UNPACKpart(u32 offnum,  u32 &x, T y)
 template <class T>
 void __fastcall UNPACK_S(u32 *dest, T *data, int size)
 {
-	while (size > 0)
-	{
-		switch (_vifRegs->offset)
-		{
-			case OFFSET_X: 
-			case OFFSET_Y: 
-			case OFFSET_Z: 
-				_UNPACKpart(_vifRegs->offset, *dest++, *data);
-				size--; 
-				break;
-			case OFFSET_W: 
-				_UNPACKpart(_vifRegs->offset, *dest , *data);
-				size--; 
-				break;
-			default: 
-				if ((_vifRegs->offset > OFFSET_W) || (_vifRegs->offset < OFFSET_X)) _vifRegs->offset = 0;
-				break;
-		}
-	}
+	//S-# will always be a complete packet, no matter what. So we can skip the offset bits
+	writeX(*dest++, *data);
+	writeY(*dest++, *data);
+	writeZ(*dest++, *data);
+	writeW(*dest  , *data);
 }
 
 template <class T>
 void __fastcall UNPACK_V2(u32 *dest, T *data, int size)
 {
-	while (size > 0)
+	if(_vifRegs->offset == OFFSET_X && size > 0)
 	{
-		switch (_vifRegs->offset)
-		{
-			case OFFSET_X: 
-				_UNPACKpart(_vifRegs->offset, *dest++, *data++);
-				size--; 
-				break;
-			case OFFSET_Y: 
-				_UNPACKpart(_vifRegs->offset, *dest++, *data);
-				size--; 
-				break;
-			case OFFSET_Z: 
-				_UNPACKpart(_vifRegs->offset, *dest++, *dest-2);
-				break;
-			case OFFSET_W: 
-				_UNPACKpart(_vifRegs->offset, *dest , *data);  
-				break;
-			default: 
-				if ((_vifRegs->offset > OFFSET_W) || (_vifRegs->offset < OFFSET_X)) _vifRegs->offset = 0;
-				break;
-		}
+		_UNPACKpart(_vifRegs->offset, *dest++, *data++);
+	}
+	if(_vifRegs->offset == OFFSET_Y && size > 0) 
+	{
+		_UNPACKpart(_vifRegs->offset, *dest++, *data);
+	}
+	if(_vifRegs->offset == OFFSET_Z)
+	{
+		_UNPACKpart(_vifRegs->offset, *dest++, *dest-2);
+	}
+	if(_vifRegs->offset == OFFSET_W)
+	{
+		_UNPACKpart(_vifRegs->offset, *dest, *data);
+		_vifRegs->offset = 0;
 	}
 }
 
 template <class T>
 void __fastcall UNPACK_V3(u32 *dest, T *data, int size)
 {
-	while (size > 0)
+	if(_vifRegs->offset == OFFSET_X && size > 0)
 	{
-		switch (_vifRegs->offset)
-		{
-			case OFFSET_X: 
-			case OFFSET_Y:
-			case OFFSET_Z: 
-				_UNPACKpart(_vifRegs->offset, *dest++, *data++);
-				size--; 
-				break;
-			//V3-# does some bizzare thing with alignment, every 6qw of data the W becomes 0 (strange console!)
-			//Ape Escape doesnt seem to like it tho (what the hell?) gonna have to investigate
-			case OFFSET_W: 
-				_UNPACKpart(_vifRegs->offset, *dest, *data);  
-				break;
-			default: 
-				if ((_vifRegs->offset > OFFSET_W) || (_vifRegs->offset < OFFSET_X)) _vifRegs->offset = 0;
-				break;
-		}
+		_UNPACKpart(_vifRegs->offset, *dest++, *data++);
+	}
+	if(_vifRegs->offset == OFFSET_Y && size > 0) 
+	{
+		_UNPACKpart(_vifRegs->offset, *dest++, *data++);
+	}
+	if(_vifRegs->offset == OFFSET_Z)
+	{
+		_UNPACKpart(_vifRegs->offset, *dest++, *data++);
+	}
+		if(_vifRegs->offset == OFFSET_W)
+	{
+		//V3-# does some bizzare thing with alignment, every 6qw of data the W becomes 0 (strange console!)
+		//Ape Escape doesnt seem to like it tho (what the hell?) gonna have to investigate
+		_UNPACKpart(_vifRegs->offset, *dest, *data);
+		_vifRegs->offset = 0;
 	}
 }
 
@@ -435,52 +414,20 @@ void __fastcall UNPACK_V4(u32 *dest, T *data , int size)
 {
 	while (size > 0)
 	{
-		switch (_vifRegs->offset)
-		{
-			case OFFSET_X:
-			case OFFSET_Y:
-			case OFFSET_Z: 
-				_UNPACKpart(_vifRegs->offset, *dest++, *data++);
-				size--; 
-				break;
-			case OFFSET_W:
-				_UNPACKpart(_vifRegs->offset, *dest , *data);
-				size--;  
-				break;
-			default: 
-				if ((_vifRegs->offset > OFFSET_W) || (_vifRegs->offset < OFFSET_X)) _vifRegs->offset = 0;
-				break;
-		}
+		_UNPACKpart(_vifRegs->offset, *dest++, *data++);
+		size--; 
 	}
+
+	if (_vifRegs->offset > OFFSET_W) _vifRegs->offset = 0;
 }
 
 void __fastcall UNPACK_V4_5(u32 *dest, u32 *data, int size)
 {
-	while (size > 0)
-	{
-		switch (_vifRegs->offset)
-		{
-			case OFFSET_X: 
-				_UNPACKpart(_vifRegs->offset, *dest++,  ((*data & 0x001f) << 3));
-				size--; 
-				break;
-			case OFFSET_Y: 
-				_UNPACKpart(_vifRegs->offset, *dest++, ((*data & 0x03e0) >> 2));
-				size--;
-				break;
-			case OFFSET_Z: 
-				_UNPACKpart(_vifRegs->offset, *dest++, ((*data & 0x7c00) >> 7));
-				size--;
-				break;
-			case OFFSET_W:
-				_UNPACKpart(_vifRegs->offset, *dest, ((*data & 0x8000) >> 8));
-				size--;
-				break;
-			default: 
-				if ((_vifRegs->offset > OFFSET_W) || (_vifRegs->offset < OFFSET_X)) _vifRegs->offset = 0;
-				break;
-		}
-	}
+	//As with S-#, this will always be a complete packet
+	writeX(*dest++,  ((*data & 0x001f) << 3));
+	writeY(*dest++, ((*data & 0x03e0) >> 2));
+	writeZ(*dest++, ((*data & 0x7c00) >> 7));
+	writeW(*dest, ((*data & 0x8000) >> 8));
 }
 
 void __fastcall UNPACK_S_32(u32 *dest, u32 *data, int size) 
