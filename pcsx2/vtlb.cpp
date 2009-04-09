@@ -61,6 +61,12 @@ vtlbHandler UnmappedVirtHandler1;
 vtlbHandler UnmappedPhyHandler0;
 vtlbHandler UnmappedPhyHandler1;
 
+#define VTLB_ALLOC_SIZE (0x2900000)	//this is a bit more than required
+
+u8* vtlb_alloc_base;		//base of the memory array
+u8* vtlb_alloc_current;		//current base
+u8  vtlb_alloc_bits[VTLB_ALLOC_SIZE/16/8];		//328 kb
+
 
 	/*
 	__asm
@@ -91,6 +97,13 @@ callfunction:
 // Interpreter Implementations of VTLB Memory Operations.
 // See recVTLB.cpp for the dynarec versions.
 
+void memwritebits(u8* ptr)
+{
+	u32 offs=ptr-vtlb_alloc_base;
+	offs/=16;
+	vtlb_alloc_bits[offs/8]|=1<<(offs%8);
+}
+
 // Interpreted VTLB lookup for 8, 16, and 32 bit accesses
 template<int DataSize,typename DataType>
 __forceinline DataType __fastcall MemOp_r0(u32 addr)
@@ -116,7 +129,6 @@ __forceinline DataType __fastcall MemOp_r0(u32 addr)
 		jNO_DEFAULT;
 	}
 }
-
 // Interpreterd VTLB lookup for 64 and 128 bit accesses.
 template<int DataSize,typename DataType>
 __forceinline void __fastcall MemOp_r1(u32 addr, DataType* data)
@@ -155,6 +167,7 @@ __forceinline void __fastcall MemOp_w0(u32 addr, DataType data)
 	s32 ppf=addr+vmv;
 	if (!(ppf<0))
 	{
+		//memwritebits((u8*)ppf);
 		*reinterpret_cast<DataType*>(ppf)=data;
 	}
 	else
@@ -182,6 +195,7 @@ __forceinline void __fastcall MemOp_w1(u32 addr,const DataType* data)
 	s32 ppf=addr+vmv;
 	if (!(ppf<0))
 	{
+		//memwritebits((u8*)ppf);
 		*reinterpret_cast<DataType*>(ppf)=*data;
 		if (DataSize==128)
 			*reinterpret_cast<DataType*>(ppf+8)=data[1];
@@ -552,6 +566,13 @@ void vtlb_Term()
 	//nothing to do for now
 }
 
+
+void vtlb_alloc_mem()
+{
+	u32 size=VTLB_ALLOC_SIZE;
+	vtlb_alloc_base=SysMmapEx( 0, size, 0x80000000, "Vtlb");
+	vtlb_alloc_current=vtlb_alloc_base;
+}
 // This function allocates memory block with are compatible with the Vtlb's requirements
 // for memory locations.  The Vtlb requires the topmost bit (Sign bit) of the memory
 // pointer to be cleared.  Some operating systems and/or implementations of malloc do that,
@@ -559,6 +580,17 @@ void vtlb_Term()
 // platform.
 u8* vtlb_malloc( uint size, uint align, uptr tryBaseAddress )
 {
+	if (!vtlb_alloc_base)
+		vtlb_alloc_mem();
+
+	u32 realign=((uptr)vtlb_alloc_current&(align-1));
+	if (realign)
+		vtlb_alloc_current+=align-realign;
+
+	u8* rv=vtlb_alloc_current;
+	vtlb_alloc_current+=size;
+	return rv;
+
 #ifdef __LINUX__
 	return SysMmapEx( tryBaseAddress, size, 0x80000000, "Vtlb" );
 #else
@@ -569,6 +601,7 @@ u8* vtlb_malloc( uint size, uint align, uptr tryBaseAddress )
 
 void vtlb_free( void* pmem, uint size )
 {
+	return;//whatever
 	if( pmem == NULL ) return;
 
 #ifdef __LINUX__

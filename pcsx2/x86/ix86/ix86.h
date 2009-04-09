@@ -79,7 +79,7 @@ emitterT void write64( u64 val ){
 //------------------------------------------------------------------
 // jump/align functions
 //------------------------------------------------------------------
-emitterT void ex86SetPtr( u8 *ptr );
+emitterT u8* ex86SetPtr( u8 *ptr );
 emitterT void ex86SetJ8( u8 *j8 );
 emitterT void ex86SetJ8A( u8 *j8 );
 emitterT void ex86SetJ16( u16 *j16 );

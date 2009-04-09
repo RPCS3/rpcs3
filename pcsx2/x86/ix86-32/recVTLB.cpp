@@ -24,23 +24,178 @@
 #include "iCore.h"
 #include "iR5900.h"
 
-using namespace vtlb_private;
+u8* execohax_pos=0;
+u8* execohax_start=0;
+u32 execohx_sz;
 
-// NOTICE: This function *destroys* EAX!!
-// Moves 128 bits of memory from the source register ptr to the dest register ptr.
-// (used as an equivalent to movaps, when a free XMM register is unavailable for some reason)
-void MOV128_MtoM( x86IntRegType destRm, x86IntRegType srcRm )
+u8* code_pos=0;
+u8* code_start=0;
+u32 code_sz;
+
+using namespace vtlb_private;
+#include <windows.h>
+
+void execuCode(bool set)
 {
-	MOV32RmtoR(EAX,srcRm);
-	MOV32RtoRm(destRm,EAX);
-	MOV32RmtoROffset(EAX,srcRm,4);
-	MOV32RtoRmOffset(destRm,EAX,4);
-	MOV32RmtoROffset(EAX,srcRm,8);
-	MOV32RtoRmOffset(destRm,EAX,8);
-	MOV32RmtoROffset(EAX,srcRm,12);
-	MOV32RtoRmOffset(destRm,EAX,12);
+	u32 used=code_pos-code_start;
+	u32 free=2*1024*1024-used;
+
+	if (code_pos == 0 || free<128)
+	{
+		SysPrintf("Leaking 2 megabytes of ram\n");
+		code_start=code_pos=(u8*)VirtualAlloc(0,2*1024*1024,MEM_COMMIT,PAGE_EXECUTE_READWRITE);
+		code_sz+=2*1024*1024;
+		int i=0;
+		while(i<code_sz)
+		{
+			//UD2 is 0xF 0xB.Fill the stream with it so that the cpu don't try to execute past branches ..
+			code_start[i]=0xF;i++;
+			code_start[i]=0xB;i++;
+		}
+	}
+
+	static u8* old;
+
+	if (set)
+	{
+		old=x86SetPtr(code_pos);
+	}
+	else
+	{
+		code_pos=x86SetPtr(old);
+		u32 tt=execohx_sz-2*1024*1024+(execohax_pos-execohax_start);
+		u32 tc=code_sz-free;
+		SysPrintf("%d code, %d pot, %.2f%%\n",tc,tt,tc/(float)tt*100);
+	}
 }
 
+u32* execohaxme(bool set)
+{
+	u32 used=execohax_pos-execohax_start;
+	u32 free=2*1024*1024-used;
+
+	if (execohax_pos == 0 || free<128)
+	{
+		SysPrintf("Leaking 2 megabytes of ram\n");
+		execohax_start=execohax_pos=(u8*)VirtualAlloc(0,2*1024*1024,MEM_COMMIT,PAGE_EXECUTE_READWRITE);
+		execohx_sz+=2*1024*1024;
+	}
+	static u8* saved;
+	static u8* mod;
+	if (set)
+	{
+		write8<_EmitterId_>( 0x81 ); 
+		ModRM<_EmitterId_>( 3, 0, EAX );
+		write32<_EmitterId_>( (uptr)execohax_pos );
+
+		saved=x86SetPtr(execohax_pos);
+		mod=execohax_pos;
+		write8<_EmitterId_>(0);	//size, in bytes
+		write32<_EmitterId_>(0); //return address
+	}
+	else
+	{
+		//x86AlignExecutable(4);
+		//x86Align(64);
+		execohax_pos=x86SetPtr(mod);
+		write8<_EmitterId_>(execohax_pos-mod-5);
+		return (u32*)x86SetPtr(saved);
+	}
+
+	return 0;
+}
+
+uptr _vtlb_HandleRewrite(uptr block)
+{
+	u8 size=*(u8*)block;
+	u32 ra=*(u32*)(block+1);
+	u8* pcode=(u8*)(block+5);
+	execuCode(true);
+	uptr rv=(uptr)code_pos;
+
+	while(size--)
+	{
+		write8<_EmitterId_>(*pcode++);
+	}
+	JMP32(ra-(uptr)x86Ptr[_EmitterId_]-5);
+	
+	execuCode(false);
+	//do magic
+	return rv;
+}
+
+PCSX2_ALIGNED16( static u64 g_globalXMMData[2*XMMREGS] );
+void MOVx_SSE( x86IntRegType destRm, x86IntRegType srcRm,u32 srcAddr=0,u32 dstAddr=0,bool half=false )
+{
+	int reg;
+	bool free_reg=false;
+	if( _hasFreeXMMreg() )
+	{
+		free_reg=true;
+		reg=_allocTempXMMreg( XMMT_INT, -1 );
+	}
+	else
+	{
+		SSE2_MOVDQA_XMM_to_M128((uptr)g_globalXMMData,XMM0);
+		reg=XMM0;
+	}
+
+	if (half)
+	{
+		if (srcAddr)
+			SSE_MOVLPS_M64_to_XMM(reg,srcAddr);
+		else
+			SSE_MOVLPS_RmOffset_to_XMM(reg,srcRm,0);
+
+		if (dstAddr)
+			SSE_MOVLPS_XMM_to_M64(dstAddr,reg);
+		else
+			SSE_MOVLPS_XMM_to_RmOffset(destRm,reg,0);
+	}
+	else
+	{
+		if (srcAddr)
+			SSE2_MOVDQA_M128_to_XMM(reg,srcAddr);
+		else
+			SSE2_MOVDQARmtoROffset(reg,srcRm,0);
+
+		if (dstAddr)
+			SSE2_MOVDQA_XMM_to_M128(dstAddr,reg);
+		else
+			SSE2_MOVDQARtoRmOffset(destRm,reg,0);
+	}
+
+
+	if (free_reg)
+		_freeXMMreg(reg);
+	else
+	{
+		SSE2_MOVDQA_M128_to_XMM(XMM0,(uptr)g_globalXMMData);
+	}
+}
+void MOV64_MMX( x86IntRegType destRm, x86IntRegType srcRm,u32 srcAddr=0,u32 dstAddr=0)
+{
+	//if free xmm && fpu state then we use the SSE version.
+	if( !(_hasFreeXMMreg() && (x86FpuState ==  FPU_STATE)) &&  _hasFreeMMXreg() )
+	{
+		const int freereg = _allocMMXreg(-1, MMX_TEMP, 0);
+		if (srcAddr)
+			MOVQMtoR(freereg,srcAddr);
+		else
+			MOVQRmtoROffset(freereg,srcRm,0);
+
+		if (dstAddr)
+			MOVQRtoM(dstAddr,freereg);
+		else
+			MOVQRtoRmOffset(destRm,freereg,0);
+
+		_freeMMXreg(freereg);
+	}
+	else
+	{
+		MOVx_SSE(destRm,srcRm,srcAddr,dstAddr,true);
+	}
+}
 /*
 	// Pseudo-Code For the following Dynarec Implementations -->
 
@@ -118,38 +273,11 @@ static void _vtlb_DynGen_DirectRead( u32 bits, bool sign )
 		break;
 
 		case 64:
-			if( _hasFreeMMXreg() )
-			{
-				const int freereg = _allocMMXreg(-1, MMX_TEMP, 0);
-				MOVQRmtoROffset(freereg,ECX,0);
-				MOVQRtoRmOffset(EDX,freereg,0);
-				_freeMMXreg(freereg);
-			}
-			else
-			{
-				MOV32RmtoR(EAX,ECX);
-				MOV32RtoRm(EDX,EAX);
-
-				MOV32RmtoROffset(EAX,ECX,4);
-				MOV32RtoRmOffset(EDX,EAX,4);
-			}
+			MOV64_MMX(EDX,ECX);
 		break;
 
 		case 128:
-			if( _hasFreeXMMreg() )
-			{
-				const int freereg = _allocTempXMMreg( XMMT_INT, -1 );
-				SSE2_MOVDQARmtoROffset(freereg,ECX,0);
-				SSE2_MOVDQARtoRmOffset(EDX,freereg,0);
-				_freeXMMreg(freereg);
-			}
-			else
-			{
-				// Could put in an MMX optimization here as well, but no point really.
-				// It's almost never used since there's almost always a free XMM reg.
-
-				MOV128_MtoM( EDX, ECX );		// dest <- src!
-			}
+			MOVx_SSE(EDX,ECX);
 		break;
 
 		jNO_DEFAULT
@@ -189,15 +317,16 @@ void vtlb_DynGenRead64(u32 bits)
 	SHR32ItoR(EAX,VTLB_PAGE_BITS);
 	MOV32RmSOffsettoR(EAX,EAX,(int)vtlbdata.vmap,2);
 	ADD32RtoR(ECX,EAX);
-	u8* _fullread = JS8(0);
+	//u8* _direct = JMP8(0);
+	execohaxme(true);
 
-	_vtlb_DynGen_DirectRead( bits, false );
-	u8* cont = JMP8(0);
-
-	x86SetJ8(_fullread);
 	_vtlb_DynGen_IndirectRead( bits );
-
-	x86SetJ8(cont);
+	
+	u32* patch=execohaxme(false);
+	
+	_vtlb_DynGen_DirectRead( bits, false );
+	
+	*patch=(uptr)x86Ptr[_EmitterId_];
 }
 
 // Recompiled input registers:
@@ -211,12 +340,9 @@ void vtlb_DynGenRead32(u32 bits, bool sign)
 	SHR32ItoR(EAX,VTLB_PAGE_BITS);
 	MOV32RmSOffsettoR(EAX,EAX,(int)vtlbdata.vmap,2);
 	ADD32RtoR(ECX,EAX);
-	u8* _fullread = JS8(0);
+	//u8* _direct = JMP8(0);
+	execohaxme(true);
 
-	_vtlb_DynGen_DirectRead( bits, sign );
-	u8* cont = JMP8(0);
-
-	x86SetJ8(_fullread);
 	_vtlb_DynGen_IndirectRead( bits );
 
 	// perform sign extension on the result:
@@ -236,7 +362,11 @@ void vtlb_DynGenRead32(u32 bits, bool sign)
 			MOVZX32R16toR(EAX,EAX);
 	}
 
-	x86SetJ8(cont);
+	u32* patch=execohaxme(false);
+
+	_vtlb_DynGen_DirectRead( bits, sign );
+	
+	*patch=(uptr)x86Ptr[_EmitterId_];
 }
 
 //
@@ -251,39 +381,11 @@ void vtlb_DynGenRead64_Const( u32 bits, u32 addr_const )
 		switch( bits )
 		{
 			case 64:
-				if( _hasFreeMMXreg() )
-				{
-					const int freereg = _allocMMXreg(-1, MMX_TEMP, 0);
-					MOVQMtoR(freereg,ppf);
-					MOVQRtoRmOffset(EDX,freereg,0);
-					_freeMMXreg(freereg);
-				}
-				else
-				{
-					MOV32MtoR(EAX,ppf);
-					MOV32RtoRm(EDX,EAX);
-
-					MOV32MtoR(EAX,ppf+4);
-					MOV32RtoRmOffset(EDX,EAX,4);
-				}
+				MOV64_MMX( EDX, ECX,ppf );		// dest <- src!
 			break;
 
 			case 128:
-				if( _hasFreeXMMreg() )
-				{
-					const int freereg = _allocTempXMMreg( XMMT_INT, -1 );
-					SSE2_MOVDQA_M128_to_XMM( freereg, ppf );
-					SSE2_MOVDQARtoRmOffset(EDX,freereg,0);
-					_freeXMMreg(freereg);
-				}
-				else
-				{
-					// Could put in an MMX optimization here as well, but no point really.
-					// It's almost never used since there's almost always a free XMM reg.
-
-					MOV32ItoR( ECX, ppf );
-					MOV128_MtoM( EDX, ECX );		// dest <- src!
-				}
+				MOVx_SSE( EDX, ECX,ppf );		// dest <- src!
 			break;
 
 			jNO_DEFAULT
@@ -403,40 +505,16 @@ static void _vtlb_DynGen_DirectWrite( u32 bits )
 		break;
 
 		case 64:
-			if( _hasFreeMMXreg() )
-			{
-				const int freereg = _allocMMXreg(-1, MMX_TEMP, 0);
-				MOVQRmtoROffset(freereg,EDX,0);
-				MOVQRtoRmOffset(ECX,freereg,0);
-				_freeMMXreg( freereg );
-			}
-			else
-			{
-				MOV32RmtoR(EAX,EDX);
-				MOV32RtoRm(ECX,EAX);
-
-				MOV32RmtoROffset(EAX,EDX,4);
-				MOV32RtoRmOffset(ECX,EAX,4);
-			}
+			MOV64_MMX( ECX, EDX );
 		break;
 
 		case 128:
-			if( _hasFreeXMMreg() )
-			{
-				const int freereg = _allocTempXMMreg( XMMT_INT, -1 );
-				SSE2_MOVDQARmtoROffset(freereg,EDX,0);
-				SSE2_MOVDQARtoRmOffset(ECX,freereg,0);
-				_freeXMMreg( freereg );
-			}
-			else
-			{
-				// Could put in an MMX optimization here as well, but no point really.
-				// It's almost never used since there's almost always a free XMM reg.
-
-				MOV128_MtoM( ECX, EDX );	// dest <- src!
-			}
+			MOVx_SSE( ECX, EDX );
 		break;
 	}
+
+//	SHR32ItoR(ECX,4);// do /16
+//	BTS_wtf(asdasd,ECX);
 }
 
 static void _vtlb_DynGen_IndirectWrite( u32 bits )
@@ -464,15 +542,17 @@ void vtlb_DynGenWrite(u32 sz)
 	SHR32ItoR(EAX,VTLB_PAGE_BITS);
 	MOV32RmSOffsettoR(EAX,EAX,(int)vtlbdata.vmap,2);
 	ADD32RtoR(ECX,EAX);
-	u8* _full=JS8(0);
 
-	_vtlb_DynGen_DirectWrite( sz );
-	u8* cont = JMP8(0);
+	//u8* _direct=JMP8(0);
 
-	x86SetJ8(_full);
+	execohaxme(true);
+	
 	_vtlb_DynGen_IndirectWrite( sz );
-
-	x86SetJ8(cont);
+	
+	u32* patch=execohaxme(false);
+	_vtlb_DynGen_DirectWrite( sz );
+	
+	*patch=(uptr)x86Ptr[_EmitterId_];
 }
 
 
@@ -499,39 +579,11 @@ void vtlb_DynGenWrite_Const( u32 bits, u32 addr_const )
 			break;
 
 			case 64:
-				if( _hasFreeMMXreg() )
-				{
-					const int freereg = _allocMMXreg(-1, MMX_TEMP, 0);
-					MOVQRmtoROffset(freereg,EDX,0);
-					MOVQRtoM(ppf,freereg);
-					_freeMMXreg( freereg );
-				}
-				else
-				{
-					MOV32RmtoR(EAX,EDX);
-					MOV32RtoM(ppf,EAX);
-
-					MOV32RmtoROffset(EAX,EDX,4);
-					MOV32RtoM(ppf+4,EAX);
-				}
+				MOV64_MMX( ECX, EDX,0,ppf);	// dest <- src!
 			break;
 
 			case 128:
-				if( _hasFreeXMMreg() )
-				{
-					const int freereg = _allocTempXMMreg( XMMT_INT, -1 );
-					SSE2_MOVDQARmtoROffset(freereg,EDX,0);
-					SSE2_MOVDQA_XMM_to_M128(ppf,freereg);
-					_freeXMMreg( freereg );
-				}
-				else
-				{
-					// Could put in an MMX optimization here as well, but no point really.
-					// It's almost never used since there's almost always a free XMM reg.
-
-					MOV32ItoR( ECX, ppf );
-					MOV128_MtoM( ECX, EDX );	// dest <- src!
-				}
+				MOVx_SSE( ECX, EDX,0,ppf);	// dest <- src!
 			break;
 		}
 

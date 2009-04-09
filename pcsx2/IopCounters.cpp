@@ -357,13 +357,15 @@ static void psxCheckEndGate32(int i)
 	_psxCheckEndGate( i );
 }
 
-
+#include <windows.h>
 void psxVBlankStart()
 {
 	cdvdVsync();
 	psxHu32(0x1070) |= 1;
 	if(psxvblankgate & (1 << 1)) psxCheckStartGate16(1);
 	if(psxvblankgate & (1 << 3)) psxCheckStartGate32(3);
+	if (GetAsyncKeyState('P'))
+		Cpu->Reset();
 }
 
 void psxVBlankEnd()

@@ -159,9 +159,12 @@ emitterT void CMOV32MtoR( int cc, int to, uptr from )
 }
 
 ////////////////////////////////////////////////////
-emitterT void ex86SetPtr( u8* ptr ) 
+emitterT u8* ex86SetPtr( u8* ptr ) 
 {
-	x86Ptr[I] = ptr;
+	u8* rv= x86Ptr[I];
+	if (ptr!=0)
+		x86Ptr[I] = ptr;
+	return rv;
 }
 
 ////////////////////////////////////////////////////

@@ -49,14 +49,53 @@ int SysPageFaultExceptionFilter( EXCEPTION_POINTERS* eps )
 	}
 
 	// get bad virtual address
-	u32 offset = (u8*)ExceptionRecord.ExceptionInformation[1]-psM;
+	uptr addr=ExceptionRecord.ExceptionInformation[1];
 
-	if (offset>=Ps2MemSize::Base)
-		return EXCEPTION_CONTINUE_SEARCH;
+	//this is a *hackfix* for a bug on x64 windows kernels.They do not give correct address
+	//if the error is a missaligned access (they return 0)
+	if (addr==0)
+	{
+		if (eps->ContextRecord->Ecx & 0x80000000)
+			addr=eps->ContextRecord->Ecx;
+	}
+	u32 offset = addr-(uptr)psM;
+	
+	if (addr&0x80000000)
+	{
+		uptr _vtlb_HandleRewrite(uptr code);
+		u8* pcode=(u8*)ExceptionRecord.ExceptionAddress;
 
-	mmap_ClearCpuBlock( offset );
+		u32 patch_point=1;
+		//01 C1
+		while(pcode[-patch_point]!=0x81 || pcode[-patch_point-1]!=0xC1 || pcode[-patch_point-2]!=0x01)
+		{
+			patch_point++;
+		}
+		assert(pcode[-patch_point]==0x81);
+		pcode[-patch_point]=0xF;//js32, 0x81 is add32
+		pcode[-patch_point+1]=0x88;
 
-	return EXCEPTION_CONTINUE_EXECUTION;
+		//resume execution from correct point
+
+		eps->ContextRecord->Eax-=*(u32*)&pcode[-patch_point+2];
+
+		uptr codeloc=_vtlb_HandleRewrite(*(u32*)&pcode[-patch_point+2]);
+
+		eps->ContextRecord->Eip=codeloc;
+		*(u32*)&pcode[-patch_point+2]=codeloc-(u32)&pcode[-patch_point+6];
+
+		SysPrintf("memop patch for full mapping @ %08X : pp %d\n",pcode,patch_point);
+		return EXCEPTION_CONTINUE_EXECUTION;
+	}
+	else
+		{
+		if (offset>=Ps2MemSize::Base)
+			return EXCEPTION_CONTINUE_SEARCH;
+
+		mmap_ClearCpuBlock( offset );
+
+		return EXCEPTION_CONTINUE_EXECUTION;
+	}
 }
 
 
