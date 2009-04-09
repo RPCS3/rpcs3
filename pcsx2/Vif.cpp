@@ -333,7 +333,6 @@ static __releaseinline void writeW(u32 &dest, u32 data)
 template <class T>
 static void _UNPACKpart(u32 offnum,  u32 &x, T y)
 {
-
 	switch (offnum)
 	{
 		case OFFSET_X:
@@ -352,59 +351,136 @@ static void _UNPACKpart(u32 offnum,  u32 &x, T y)
 			break;
 	}
 	_vifRegs->offset++;
-
 }
 
 template <class T>
 void __fastcall UNPACK_S(u32 *dest, T *data, int size)
 {
-	if(size > 0 && _vifRegs->offset == OFFSET_X ) { _UNPACKpart(OFFSET_X, *dest++, *data);  size--; }
-	if(size > 0 && _vifRegs->offset == OFFSET_Y ) { _UNPACKpart(OFFSET_Y, *dest++, *data);  size--; }
-	if(size > 0 && _vifRegs->offset == OFFSET_Z ) { _UNPACKpart(OFFSET_Z, *dest++, *data);  size--; }
-	if(size > 0 && _vifRegs->offset == OFFSET_W ) { _UNPACKpart(OFFSET_W, *dest , *data);  size--; }
-	if (_vifRegs->offset == 4) _vifRegs->offset = 0;
+	while (size > 0)
+	{
+		switch (_vifRegs->offset)
+		{
+			case OFFSET_X: 
+			case OFFSET_Y: 
+			case OFFSET_Z: 
+				_UNPACKpart(_vifRegs->offset, *dest++, *data);
+				size--; 
+				break;
+			case OFFSET_W: 
+				_UNPACKpart(_vifRegs->offset, *dest , *data);
+				size--; 
+				break;
+			default: 
+				if ((_vifRegs->offset > OFFSET_W) || (_vifRegs->offset < OFFSET_X)) _vifRegs->offset = 0;
+				break;
+		}
+	}
 }
 
 template <class T>
 void __fastcall UNPACK_V2(u32 *dest, T *data, int size)
 {
-	if(size > 0 && _vifRegs->offset == OFFSET_X ) { _UNPACKpart(OFFSET_X, *dest++, *data++);  size--; }
-	if(size > 0 && _vifRegs->offset == OFFSET_Y ) { _UNPACKpart(OFFSET_Y, *dest++, *data);  size--; }
-	if( _vifRegs->offset == OFFSET_Z )_UNPACKpart(OFFSET_Z, *dest++, *dest-2);
-	if( _vifRegs->offset == OFFSET_W )_UNPACKpart(OFFSET_W, *dest , *data);
-	if (_vifRegs->offset == 4) _vifRegs->offset = 0;
+	while (size > 0)
+	{
+		switch (_vifRegs->offset)
+		{
+			case OFFSET_X: 
+				_UNPACKpart(_vifRegs->offset, *dest++, *data++);
+				size--; 
+				break;
+			case OFFSET_Y: 
+				_UNPACKpart(_vifRegs->offset, *dest++, *data);
+				size--; 
+				break;
+			case OFFSET_Z: 
+				_UNPACKpart(_vifRegs->offset, *dest++, *dest-2);
+				break;
+			case OFFSET_W: 
+				_UNPACKpart(_vifRegs->offset, *dest , *data);  
+				break;
+			default: 
+				if ((_vifRegs->offset > OFFSET_W) || (_vifRegs->offset < OFFSET_X)) _vifRegs->offset = 0;
+				break;
+		}
+	}
 }
 
 template <class T>
 void __fastcall UNPACK_V3(u32 *dest, T *data, int size)
 {
-	if(size > 0 && _vifRegs->offset == OFFSET_X ) { _UNPACKpart(OFFSET_X, *dest++, *data++);  size--; }
-	if(size > 0 && _vifRegs->offset == OFFSET_Y ) { _UNPACKpart(OFFSET_Y, *dest++, *data++);  size--; }
-	if(size > 0 && _vifRegs->offset == OFFSET_Z ) { _UNPACKpart(OFFSET_Z, *dest++, *data++);  size--; }
-	 //V3-# does some bizzare thing with alignment, every 6qw of data the W becomes 0 (strange console!)
-	 //Ape Escape doesnt seem to like it tho (what the hell?) gonna have to investigate
-	if( _vifRegs->offset == OFFSET_W )_UNPACKpart(OFFSET_W, *dest, *data);
-
-	if (_vifRegs->offset == 4) _vifRegs->offset = 0;
+	while (size > 0)
+	{
+		switch (_vifRegs->offset)
+		{
+			case OFFSET_X: 
+			case OFFSET_Y:
+			case OFFSET_Z: 
+				_UNPACKpart(_vifRegs->offset, *dest++, *data++);
+				size--; 
+				break;
+			//V3-# does some bizzare thing with alignment, every 6qw of data the W becomes 0 (strange console!)
+			//Ape Escape doesnt seem to like it tho (what the hell?) gonna have to investigate
+			case OFFSET_W: 
+				_UNPACKpart(_vifRegs->offset, *dest, *data);  
+				break;
+			default: 
+				if ((_vifRegs->offset > OFFSET_W) || (_vifRegs->offset < OFFSET_X)) _vifRegs->offset = 0;
+				break;
+		}
+	}
 }
 
 template <class T>
 void __fastcall UNPACK_V4(u32 *dest, T *data , int size)
 {
-	if(size > 0 && _vifRegs->offset == OFFSET_X ) { _UNPACKpart(OFFSET_X, *dest++, *data++);  size--; }
-	if(size > 0 && _vifRegs->offset == OFFSET_Y ) { _UNPACKpart(OFFSET_Y, *dest++, *data++);  size--; }
-	if(size > 0 && _vifRegs->offset == OFFSET_Z ) { _UNPACKpart(OFFSET_Z, *dest++, *data++);  size--; }
-	if(size > 0 && _vifRegs->offset == OFFSET_W ) { _UNPACKpart(OFFSET_W, *dest , *data);  size--; }
-	if (_vifRegs->offset == 4) _vifRegs->offset = 0;
+	while (size > 0)
+	{
+		switch (_vifRegs->offset)
+		{
+			case OFFSET_X:
+			case OFFSET_Y:
+			case OFFSET_Z: 
+				_UNPACKpart(_vifRegs->offset, *dest++, *data++);
+				size--; 
+				break;
+			case OFFSET_W:
+				_UNPACKpart(_vifRegs->offset, *dest , *data);
+				size--;  
+				break;
+			default: 
+				if ((_vifRegs->offset > OFFSET_W) || (_vifRegs->offset < OFFSET_X)) _vifRegs->offset = 0;
+				break;
+		}
+	}
 }
 
 void __fastcall UNPACK_V4_5(u32 *dest, u32 *data, int size)
 {
-	if(size > 0 && _vifRegs->offset == OFFSET_X ) { _UNPACKpart(OFFSET_X, *dest++,  ((*data & 0x001f) << 3));  size--; }
-	if(size > 0 && _vifRegs->offset == OFFSET_Y ) { _UNPACKpart(OFFSET_Y, *dest++, ((*data & 0x03e0) >> 2));  size--; }
-	if(size > 0 && _vifRegs->offset == OFFSET_Z ) { _UNPACKpart(OFFSET_Z, *dest++, ((*data & 0x7c00) >> 7));  size--; }
-	if(size > 0 && _vifRegs->offset == OFFSET_W ) { _UNPACKpart(OFFSET_W, *dest, ((*data & 0x8000) >> 8));  size--; }
-	if (_vifRegs->offset == 4) _vifRegs->offset = 0;
+	while (size > 0)
+	{
+		switch (_vifRegs->offset)
+		{
+			case OFFSET_X: 
+				_UNPACKpart(_vifRegs->offset, *dest++,  ((*data & 0x001f) << 3));
+				size--; 
+				break;
+			case OFFSET_Y: 
+				_UNPACKpart(_vifRegs->offset, *dest++, ((*data & 0x03e0) >> 2));
+				size--;
+				break;
+			case OFFSET_Z: 
+				_UNPACKpart(_vifRegs->offset, *dest++, ((*data & 0x7c00) >> 7));
+				size--;
+				break;
+			case OFFSET_W:
+				_UNPACKpart(_vifRegs->offset, *dest, ((*data & 0x8000) >> 8));
+				size--;
+				break;
+			default: 
+				if ((_vifRegs->offset > OFFSET_W) || (_vifRegs->offset < OFFSET_X)) _vifRegs->offset = 0;
+				break;
+		}
+	}
 }
 
 void __fastcall UNPACK_S_32(u32 *dest, u32 *data, int size) 
