@@ -365,10 +365,12 @@ namespace x86Emitter
 		{
 			return ModSib( (uptr)src );
 		}
+		
+		x86IndexerType() {}
 	};
 
 	// ------------------------------------------------------------------------
-	extern x86IndexerType ptr;
+	extern const x86IndexerType ptr;
 
 	extern const x86Register32 eax;
 	extern const x86Register32 ebx;
