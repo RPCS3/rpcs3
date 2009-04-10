@@ -107,7 +107,9 @@ static __releaseinline void writeXYZW(u32 offnum, u32 &dest, u32 data)
 		case 2:
 			dest = getVifColRegs((_vif->cl > 2) ? 3 : _vif->cl);
 			break;
-			jNO_DEFAULT;
+		case 3:
+			//Masked so don't do anything
+			break;
 	}
 //	VIF_LOG("writeX %8.8x : Mode %d, r0 = %x, data %8.8x", *dest,_vifRegs->mode,_vifRegs->r0,data);
 }
