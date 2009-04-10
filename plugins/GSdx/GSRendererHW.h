@@ -507,6 +507,35 @@ protected:
 
 		#pragma endregion
 
+		#pragma region GoW2 z buffer clear
+
+		if(m_game.title == CRC::GodOfWar2)
+		{
+			DWORD FBP = m_context->FRAME.Block();
+			DWORD FBW = m_context->FRAME.FBW;
+			DWORD FPSM = m_context->FRAME.PSM;
+
+			if(FBP == 0x00f00 && FPSM == PSM_PSMZ24)
+			{
+				GIFRegTEX0 TEX0;
+
+				TEX0.TBP0 = FBP;
+				TEX0.TBW = FBW;
+				TEX0.PSM = FPSM;
+
+				if(GSTextureCache<Device>::GSDepthStencil* ds = m_tc->GetDepthStencil(TEX0, m_width, m_height))
+				{
+					m_dev.ClearDepth(ds->m_texture, 0);
+				}
+
+				return false;
+			}
+
+			return true;
+		}
+
+		#pragma endregion
+
 		return true;
 	}
 
