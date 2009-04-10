@@ -47,8 +47,6 @@ enum UnpackOffset
 	OFFSET_W = 3
 };
 
-#define spr0 ((DMACh*)&PS2MEM_HW[0xD000])
-
 __forceinline static int _limit(int a, int max)
 {
 	return (a > max) ? max : a;
@@ -95,8 +93,8 @@ static __releaseinline void writeXYZW(u32 offnum, u32 &dest, u32 data)
 					dest = data + vifRowReg;
 					break;
 				case 2:
-					vifRowReg += data;
-					dest = vifRowReg;
+					// vifRowReg isn't used after this, or I would make it equal to dest here.
+					dest = setVifRowRegs(offnum, vifRowReg + data);
 					break;
 				default:
 					dest = data;
@@ -107,31 +105,11 @@ static __releaseinline void writeXYZW(u32 offnum, u32 &dest, u32 data)
 			dest = vifRowReg;
 			break;
 		case 2:
-			if (_vif->cl > 2)
-				dest = getVifColRegs(3);
-			else
-				dest = getVifColRegs(_vif->cl);
+			dest = getVifColRegs((_vif->cl > 2) ? 3 : _vif->cl);
 			break;
+			jNO_DEFAULT;
 	}
-	setVifRowRegs(offnum, vifRowReg);
 //	VIF_LOG("writeX %8.8x : Mode %d, r0 = %x, data %8.8x", *dest,_vifRegs->mode,_vifRegs->r0,data);
-}
-
-template <class T>
-static __releaseinline void _UNPACKpart(u32 offnum,  u32 &x, T y, int size)
-{
-	if (size > 0)
-	{
-		writeXYZW(offnum, x, y);
-		_vifRegs->offset++;
-	}
-}
-
-template <class T>
-static __releaseinline void _UNPACKpart(u32 offnum,  u32 &x, T y)
-{
-	writeXYZW(offnum, x, y);
-	_vifRegs->offset++;
 }
 
 template <class T>
@@ -147,21 +125,35 @@ void __fastcall UNPACK_S(u32 *dest, T *data, int size)
 template <class T>
 void __fastcall UNPACK_V2(u32 *dest, T *data, int size)
 {
-	if(_vifRegs->offset == OFFSET_X)
+	if (_vifRegs->offset == OFFSET_X)
 	{
-		_UNPACKpart(_vifRegs->offset, *dest++, *data++, size--);
+		if (size > 0)
+		{
+			writeXYZW(_vifRegs->offset, *dest++, *data++);
+			_vifRegs->offset = OFFSET_Y;
+			size--;
+		}
 	}
-	if(_vifRegs->offset == OFFSET_Y) 
+	
+	if (_vifRegs->offset == OFFSET_Y) 
 	{
-		_UNPACKpart(_vifRegs->offset, *dest++, *data, size--);
+		if (size > 0)
+		{
+			writeXYZW(_vifRegs->offset, *dest++, *data);
+			_vifRegs->offset = OFFSET_Z;
+			size--;
+		}
 	}
-	if(_vifRegs->offset == OFFSET_Z)
+	
+	if (_vifRegs->offset == OFFSET_Z)
 	{
-		_UNPACKpart(_vifRegs->offset, *dest++, *dest-2);
+		writeXYZW(_vifRegs->offset, *dest++, *dest-2);
+		_vifRegs->offset = OFFSET_W;
 	}
-	if(_vifRegs->offset == OFFSET_W)
+	
+	if (_vifRegs->offset == OFFSET_W)
 	{
-		_UNPACKpart(_vifRegs->offset, *dest, *data);
+		writeXYZW(_vifRegs->offset, *dest, *data);
 		_vifRegs->offset = OFFSET_X;
 	}
 }
@@ -171,21 +163,35 @@ void __fastcall UNPACK_V3(u32 *dest, T *data, int size)
 {
 	if(_vifRegs->offset == OFFSET_X)
 	{
-		_UNPACKpart(_vifRegs->offset, *dest++, *data++, size--);
+		if (size > 0)
+		{
+			writeXYZW(_vifRegs->offset, *dest++, *data++);
+			_vifRegs->offset = OFFSET_Y;
+			size--;
+		}
 	}
+	
 	if(_vifRegs->offset == OFFSET_Y) 
 	{
-		_UNPACKpart(_vifRegs->offset, *dest++, *data++, size--);
+		if (size > 0)
+		{
+			writeXYZW(_vifRegs->offset, *dest++, *data++);
+			_vifRegs->offset = OFFSET_Z;
+			size--;
+		}
 	}
+	
 	if(_vifRegs->offset == OFFSET_Z)
 	{
-		_UNPACKpart(_vifRegs->offset, *dest++, *data++);
+		writeXYZW(_vifRegs->offset, *dest++, *data++);
+		_vifRegs->offset = OFFSET_W;
 	}
-		if(_vifRegs->offset == OFFSET_W)
+	
+	if(_vifRegs->offset == OFFSET_W)
 	{
 		//V3-# does some bizzare thing with alignment, every 6qw of data the W becomes 0 (strange console!)
 		//Ape Escape doesnt seem to like it tho (what the hell?) gonna have to investigate
-		_UNPACKpart(_vifRegs->offset, *dest, *data);
+		writeXYZW(_vifRegs->offset, *dest, *data);
 		_vifRegs->offset = OFFSET_X;
 	}
 }
@@ -195,7 +201,9 @@ void __fastcall UNPACK_V4(u32 *dest, T *data , int size)
 {
 	while (size > 0)
 	{
-		_UNPACKpart(_vifRegs->offset, *dest++, *data++, size--); 
+		writeXYZW(_vifRegs->offset, *dest++, *data++); 
+		_vifRegs->offset++;
+		size--;
 	}
 
 	if (_vifRegs->offset > OFFSET_W) _vifRegs->offset = OFFSET_X;
