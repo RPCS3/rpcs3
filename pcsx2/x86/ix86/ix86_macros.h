@@ -286,6 +286,7 @@
 #define AND8RtoM eAND8RtoM<_EmitterId_>
 #define AND8MtoR eAND8MtoR<_EmitterId_>
 #define AND8RtoR eAND8RtoR<_EmitterId_>
+#define BTS32MtoR eBTS32MtoR<_EmitterId_>
 #define NOT64R eNOT64R<_EmitterId_>
 #define NOT32R eNOT32R<_EmitterId_>
 #define NOT32M eNOT32M<_EmitterId_>

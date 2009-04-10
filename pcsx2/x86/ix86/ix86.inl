@@ -2311,6 +2311,15 @@ emitterT void eAND32ItoM( uptr to, u32 from )
 	}
 }
 
+/* bts imm32 to r32 */
+emitterT void eBTS32MtoR( uptr to, x86IntRegType from ) 
+{
+	RexR(0,from);
+	write8<I>( 0xf ); 
+	write8<I>( 0xab ); 
+	ModRM<I>( 0, from, DISP32 );
+	write32<I>( MEMADDR(to, 4) ); 
+}
 
 /* and sign ext imm8 to m32 */
 emitterT void eAND32I8toM( uptr to, u8 from ) 

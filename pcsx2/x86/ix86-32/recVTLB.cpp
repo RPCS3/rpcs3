@@ -28,6 +28,10 @@ u8* code_pos=0;
 u8* code_start=0;
 u32 code_sz;
 
+#define VTLB_ALLOC_SIZE (0x2900000)	//this is a bit more than required
+extern u8* vtlb_alloc_base;		//base of the memory array
+extern u8  vtlb_alloc_bits[VTLB_ALLOC_SIZE/16/8];		//328 kb
+
 union _vtlb_MemOpInfo
 {
 	struct
@@ -82,6 +86,7 @@ void execuCode(bool set)
 
 u8* IndirectPlaceholderA()
 {
+	//Add32 <eax>,imm, 6 bytes form.
 	write8<_EmitterId_>( 0x81 ); 
 	ModRM<_EmitterId_>( 3, 0, EAX );
 
@@ -100,7 +105,7 @@ void IndirectPlaceholderB(u8* pl,bool read,u32 sz,bool sx)
 	
 	u8* old=x86SetPtr(pl);
 	inf.skip=old-pl-4;
-	//Add32 <eax>,imm, 6 bytes form.
+	//Add32 <eax>,imm, 6 bytes form, patch the imm value
 	write32<_EmitterId_>( inf.full );
 	x86SetPtr(old);
 }
@@ -470,7 +475,13 @@ static void _vtlb_DynGen_DirectWrite( u32 bits )
 		break;
 	}
 
-//	SHR32ItoR(ECX,4);// do /16
+	SHR32ItoR(ECX,4);// do /16
+	uptr alloc_base=(uptr)vtlb_alloc_base;
+	
+	uptr bits_base=(uptr)vtlb_alloc_bits;
+	bits_base-=(alloc_base>>4)/8;//in bytes
+
+	BTS32MtoR(bits_base,ECX);
 //	BTS_wtf(asdasd,ECX);
 }
 

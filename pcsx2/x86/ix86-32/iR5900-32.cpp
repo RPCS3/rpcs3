@@ -1348,6 +1348,10 @@ void __fastcall dyna_block_discard(u32 start,u32 sz)
 	Cpu->Clear(start,sz);
 }
 
+#define VTLB_ALLOC_SIZE (0x2900000)	//this is a bit more than required
+extern u8* vtlb_alloc_base;		//base of the memory array
+extern u8  vtlb_alloc_bits[VTLB_ALLOC_SIZE/16/8];		//328 kb
+
 void recRecompile( const u32 startpc )
 {
 	u32 i = 0;
@@ -1707,7 +1711,57 @@ StartRecomp:
 			{
 				MOV32ItoR(ECX, startpc);
 				MOV32ItoR(EDX, sz);
+				
+				u32 mask=0;
+				u32 writen=0;
+				u32 writen_start=0;
 
+				u32 lpc=inpage_ptr;
+				u32 stg=pgsz;
+
+				while(stg>0)
+				{
+					u32 bit=(lpc>>4)&7;
+					if (mask==0)
+					{
+						//writen=bit;
+						writen_start=(((u8*)PSM(lpc)-vtlb_alloc_base)>>4)/8;
+					}
+					mask|=1<<bit;
+
+					if (bit==31)
+					{
+						vtlb_alloc_bits[writen_start]&=~mask;
+						TEST32ItoM((uptr)&vtlb_alloc_bits[writen_start],mask);
+						JNZ32(((u32)&dyna_block_discard)- ( (u32)x86Ptr[0] + 6 ));
+						SysPrintf("%08X %d %d\n",mask,pgsz,pgsz>>4);
+						mask=0;
+					}
+
+					//writen++;
+
+					if (stg<=16)
+					{
+						lpc+=stg;
+						stg=0;
+					}
+					else
+					{
+						lpc+=16;
+						stg-=16;
+					}
+				}
+
+				if (mask)
+				{
+					vtlb_alloc_bits[writen_start]&=~mask;
+					TEST32ItoM((uptr)&vtlb_alloc_bits[writen_start],mask);
+					JNZ32(((u32)&dyna_block_discard)- ( (u32)x86Ptr[0] + 6 ));
+					SysPrintf("%08X %d %d\n",mask,pgsz,pgsz>>4);
+					mask=0;
+				}
+
+				/*
 				u32 lpc=inpage_ptr;
 				u32 stg=pgsz;
 				while(stg>0)
@@ -1719,6 +1773,7 @@ StartRecomp:
 					stg-=4;
 					lpc+=4;
 				}
+				*/
 				DbgCon::WriteLn("Manual block @ %08X : %08X %d %d %d %d", params
 					startpc,inpage_ptr,pgsz,0x1000-inpage_offs,inpage_sz,sz*4);
 			}
