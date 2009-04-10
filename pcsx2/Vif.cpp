@@ -183,8 +183,12 @@ void __fastcall UNPACK_V3(u32 *dest, T *data, int size)
 	
 	if(_vifRegs->offset == OFFSET_Z)
 	{
-		writeXYZW(_vifRegs->offset, *dest++, *data++);
-		_vifRegs->offset = OFFSET_W;
+		if (size > 0)
+		{
+			writeXYZW(_vifRegs->offset, *dest++, *data++);
+			_vifRegs->offset = OFFSET_W;
+			size--;
+		}
 	}
 	
 	if(_vifRegs->offset == OFFSET_W)
