@@ -272,39 +272,39 @@ static void ProcessMemSkip(int size, unsigned int unpackType, const unsigned int
 	switch (unpackType)
 	{
 		case 0x0:
-			vif->tag.addr += size * 4;
+			vif->tag.addr += (size / unpack->gsize) * 16;
 			VIFUNPACK_LOG("Processing S-32 skip, size = %d", size);
 			break;
 		case 0x1:
-			vif->tag.addr += size * 8;
+			vif->tag.addr += (size / unpack->gsize) * 16;
 			VIFUNPACK_LOG("Processing S-16 skip, size = %d", size);
 			break;
 		case 0x2:
-			vif->tag.addr += size * 16;
+			vif->tag.addr += (size / unpack->gsize) * 16;
 			VIFUNPACK_LOG("Processing S-8 skip, size = %d", size);
 			break;
 		case 0x4:
-			vif->tag.addr += size + ((size / unpack->gsize) * 8);
+			vif->tag.addr += (size / unpack->gsize) * 16;
 			VIFUNPACK_LOG("Processing V2-32 skip, size = %d", size);
 			break;
 		case 0x5:
-			vif->tag.addr += (size * 2) + ((size / unpack->gsize) * 8);
+			vif->tag.addr += (size / unpack->gsize) * 16;
 			VIFUNPACK_LOG("Processing V2-16 skip, size = %d", size);
 			break;
 		case 0x6:
-			vif->tag.addr += (size * 4) + ((size / unpack->gsize) * 8);
-			VIFUNPACK_LOG("Processing V2-8 skip, size = %d", size);
+			vif->tag.addr += (size / unpack->gsize) * 16;
+			DevCon::Notice("Processing V2-8 skip, size = %d", params size);
 			break;
 		case 0x8:
-			vif->tag.addr += size + ((size / unpack->gsize) * 4);
+			vif->tag.addr += (size / unpack->gsize) * 16;
 			VIFUNPACK_LOG("Processing V3-32 skip, size = %d", size);
 			break;
 		case 0x9:
-			vif->tag.addr += (size * 2) + ((size / unpack->gsize) * 4);
-			VIFUNPACK_LOG("Processing V3-16 skip, size = %d", size);
+			vif->tag.addr += (size / unpack->gsize) * 16;
+			DevCon::Notice("Processing V3-16 skip, size = %d", params size);
 			break;
 		case 0xA:
-			vif->tag.addr += (size * 4) + ((size / unpack->gsize) * 4);
+			vif->tag.addr += (size / unpack->gsize) * 16;
 			VIFUNPACK_LOG("Processing V3-8 skip, size = %d", size);
 			break;
 		case 0xC:
@@ -312,15 +312,15 @@ static void ProcessMemSkip(int size, unsigned int unpackType, const unsigned int
 			VIFUNPACK_LOG("Processing V4-32 skip, size = %d, CL = %d, WL = %d", size, vif1Regs->cycle.cl, vif1Regs->cycle.wl);
 			break;
 		case 0xD:
-			vif->tag.addr += size * 2;
+		    vif->tag.addr += (size / unpack->gsize) * 16;
 			VIFUNPACK_LOG("Processing V4-16 skip, size = %d", size);
 			break;
 		case 0xE:
-			vif->tag.addr += size * 4;
+			vif->tag.addr += (size / unpack->gsize) * 16;
 			VIFUNPACK_LOG("Processing V4-8 skip, size = %d", size);
 			break;
 		case 0xF:
-			vif->tag.addr +=  size * 8;
+			vif->tag.addr += (size / unpack->gsize) * 16;
 			VIFUNPACK_LOG("Processing V4-5 skip, size = %d", size);
 			break;
 		default:
@@ -337,11 +337,6 @@ static void ProcessMemSkip(int size, unsigned int unpackType, const unsigned int
 		VIFUNPACK_LOG("New addr %x CL %x WL %x", vif->tag.addr, vifRegs->cycle.cl, vifRegs->cycle.wl);
 	}
 	
-	
-	if ((vif->tag.addr & 0xf) == unpack->gsize)
-	{
-		vif->tag.addr += 16 - unpack->gsize;
-	}
 }
 
 static void VIFunpack(u32 *data, vifCode *v, int size, const unsigned int VIFdmanum)
@@ -386,8 +381,8 @@ static void VIFunpack(u32 *data, vifCode *v, int size, const unsigned int VIFdma
 
 	dest = (u32*)(VU->Mem + v->addr);
 
-	VIF_LOG("VIF%d UNPACK: Mode=%x, v->size=%d, size=%d, v->addr=%x",
-	        VIFdmanum, v->cmd & 0xf, v->size, size, v->addr);
+	VIF_LOG("VIF%d UNPACK: Mode=%x, v->size=%d, size=%d, v->addr=%x v->num=%x",
+	        VIFdmanum, v->cmd & 0xf, v->size, size, v->addr, vifRegs->num);
 
 	VIFUNPACK_LOG("USN %x Masking %x Mask %x Mode %x CL %x WL %x Offset %x", vif->usn, (vifRegs->code & 0x10000000) >> 28, vifRegs->mask, vifRegs->mode, vifRegs->cycle.cl, vifRegs->cycle.wl, vifRegs->offset);
 #ifdef _DEBUG
@@ -427,18 +422,33 @@ static void VIFunpack(u32 *data, vifCode *v, int size, const unsigned int VIFdma
 	memsize = size;
 #endif
 	
+	if (v->size != (size >> 2))
+		ProcessMemSkip(size, unpackType, VIFdmanum);
+
+	
+	if(vif->tag.addr > (u32)(VIFdmanum ? 0x4000 : 0x1000)) 
+	{
+		//Sanity Check (memory overflow)
+		DevCon::Notice("VIF%x Unpack ending %x > %x", params VIFdmanum, vif->tag.addr, VIFdmanum ? 0x4000 : 0x1000);
+		
+	}
+
 	if (_vifRegs->offset > 0)
 	{
 		int destinc, unpacksize;
+
+		//This is just to make sure the alignment isnt loopy on a split packet
+		if(_vifRegs->offset != ((vif->tag.addr & 0xf) >> 2))
+		{
+			DevCon::Error("Warning: Unpack alignment error");
+		}
 
 		VIFUNPACK_LOG("Aligning packet size = %d offset %d addr %x", size, vifRegs->offset, vif->tag.addr);
 
 		if(((size / ft->dsize) + vifRegs->offset) < (u32)ft->qsize)
 			VIFUNPACK_LOG("Warning! Size needed to align %x size chunks available %x offset %x", ft->qsize - ((size / ft->dsize) + vifRegs->offset), vifRegs->offset);
 		// SSE doesn't handle such small data
-		if (v->size != (size >> 2))
-			ProcessMemSkip(size, unpackType, VIFdmanum);
-
+		
 		if (vifRegs->offset < (u32)ft->qsize)
 		{
 			if (((u32)size / (u32)ft->dsize) < ((u32)ft->qsize - vifRegs->offset))
@@ -473,11 +483,10 @@ static void VIFunpack(u32 *data, vifCode *v, int size, const unsigned int VIFdma
 		{
 			dest += destinc;
 		}
+		
 		VIFUNPACK_LOG("Aligning packet done size = %d offset %d addr %x", size, vifRegs->offset, vif->tag.addr);
 
 	}
-	else if (v->size != (size >> 2))
-		ProcessMemSkip(size, unpackType, VIFdmanum);
 
 	if (vifRegs->cycle.cl >= vifRegs->cycle.wl)   // skipping write
 	{
@@ -614,6 +623,7 @@ static void VIFunpack(u32 *data, vifCode *v, int size, const unsigned int VIFdma
 				size -= ft->gsize;
 
 				vifRegs->num--;
+				//if(vifRegs->num == loophere) dest = (u32*)(VU->Mem);
 				++vif->cl;
 				if (vif->cl == vifRegs->cycle.wl)
 				{
@@ -624,6 +634,7 @@ static void VIFunpack(u32 *data, vifCode *v, int size, const unsigned int VIFdma
 				{
 					dest += 4;
 				}
+				
 			}
 
 			// have to update
@@ -663,9 +674,10 @@ static void VIFunpack(u32 *data, vifCode *v, int size, const unsigned int VIFdma
 			//VIF_LOG("warning, end with size = %d", size);
 
 			/* unpack one qword */
+			vif->tag.addr += (size / ft->dsize) * 4;
 			func(dest, (u32*)cdata, size / ft->dsize);
 			size = 0;
-
+			
 			VIFUNPACK_LOG("leftover done, size %d, vifnum %d, addr %x", size, vifRegs->num, vif->tag.addr);
 		}
 
@@ -674,8 +686,11 @@ static void VIFunpack(u32 *data, vifCode *v, int size, const unsigned int VIFdma
 	{
 		VIF_LOG("VIFunpack - filling write");
 
+		if((u32)(size / ft->gsize) < vifRegs->num && vifRegs->cycle.cl != 0) 
+			DevCon::Notice("Filling write warning! Size < packet size and CL != 0");
+				
 		VIFUNPACK_LOG("filling write %d cl %d, wl %d mask %x mode %x unpacktype %x", vifRegs->num, vifRegs->cycle.cl, vifRegs->cycle.wl, vifRegs->mask, vifRegs->mode, unpackType);
-		while (size >= ft->gsize || vifRegs->num > 0)
+		while (vifRegs->num > 0)
 		{
 			if (vif->cl == vifRegs->cycle.wl)
 			{
@@ -692,6 +707,11 @@ static void VIFunpack(u32 *data, vifCode *v, int size, const unsigned int VIFdma
 				if (vif->cl == vifRegs->cycle.wl)
 				{
 					vif->cl = 0;
+				}
+				if(size < ft->gsize) 
+				{
+					VIF_LOG("Out of Filling write data");
+					break;
 				}
 			}
 			else
