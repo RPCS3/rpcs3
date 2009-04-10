@@ -349,8 +349,6 @@ protected:
 
 		OverrideOutput();
 
-		m_tc->InvalidateTextures(context->FRAME, context->ZBUF);
-
 		if(s_dump)
 		{
 			CString str;
@@ -360,6 +358,8 @@ protected:
 			if(s_savez) ds->m_texture.Save(str);
 			// if(s_savez) m_dev.SaveToFileD32S8X24(ds->m_texture, str); // TODO
 		}
+
+		m_tc->InvalidateTextures(context->FRAME, context->ZBUF);
 	}
 
 	virtual void Draw(int prim, Texture& rt, Texture& ds, typename GSTextureCache<Device>::GSTexture* tex) = 0;
