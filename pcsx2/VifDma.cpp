@@ -336,7 +336,9 @@ static void ProcessMemSkip(int size, unsigned int unpackType, const unsigned int
 		vif->tag.addr += (size / (unpack->gsize*vifRegs->cycle.wl)) * ((vifRegs->cycle.cl - vifRegs->cycle.wl)*16);
 		VIFUNPACK_LOG("New addr %x CL %x WL %x", vif->tag.addr, vifRegs->cycle.cl, vifRegs->cycle.wl);
 	}
-	
+
+	//This is sorted out later
+	vif->tag.addr &= ~0xf;
 }
 
 static void VIFunpack(u32 *data, vifCode *v, int size, const unsigned int VIFdmanum)
