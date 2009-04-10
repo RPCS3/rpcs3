@@ -83,8 +83,10 @@ namespace VU0micro
 		if((VU0.VI[REG_VPU_STAT].UL & 1) == 0) return;
 
 		FreezeXMMRegs(1);
+		FreezeMMXRegs(1);
 		runVUrec(VU0.VI[REG_TPC].UL & 0xfff, 0xffffffff, 0);
 		FreezeXMMRegs(0);
+		FreezeMMXRegs(0);
 	}
 
 }

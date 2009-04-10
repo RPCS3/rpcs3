@@ -708,19 +708,7 @@ microVUt(void) mVUallocCFLAGb(int reg, int fInstance) {
 	microVU* mVU = mVUx;
 	MOV32RtoM(mVU->clipFlag[fInstance], reg);
 }
-/*
-microVUt(void) mVUallocDFLAGa(int reg) {
-	microVU* mVU = mVUx;
-	//if (!mVUdivFlag)		 { MOV32MtoR(reg, (uptr)&mVU->divFlag[readQ]); AND32ItoR(reg, 0xc00); }
-	//else if (mVUdivFlag & 1) { XOR32RtoR(reg, reg); }
-	//else					 { MOV32ItoR(reg, (u32)((mVUdivFlag << 9) & 0xc00)); }
-}
 
-microVUt(void) mVUallocDFLAGb(int reg) {
-	microVU* mVU = mVUx;
-	//MOV32RtoM((uptr)&mVU->divFlag[writeQ], reg);
-}
-*/
 //------------------------------------------------------------------
 // VI Reg Allocators
 //------------------------------------------------------------------
@@ -734,6 +722,12 @@ microVUt(void) mVUallocVIa(int GPRreg, int _reg_) {
 
 microVUt(void) mVUallocVIb(int GPRreg, int _reg_) {
 	microVU* mVU = mVUx;
+	if (backupVI) { // Backs up reg to memory (used when VI is modified b4 a branch)
+		MOV32RtoM((uptr)&mVU->VIbackup[1], GPRreg);
+		mVUallocVIa<vuIndex>(GPRreg, _reg_);
+		MOV32RtoM((uptr)&mVU->VIbackup[0], GPRreg);
+		MOV32MtoR(GPRreg, (uptr)&mVU->VIbackup[1]);
+	}
 	if (_reg_ == 0)		{ return; }
 	else if (_reg_ < 9)	{ MOVD32RtoMMX(mmVI(_reg_), GPRreg); }
 	else				{ MOV16RtoM((uptr)&mVU->regs->VI[_reg_].UL, GPRreg); }

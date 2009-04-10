@@ -29,11 +29,7 @@
 	}																\
 }
 
-#define curI				  mVUcurProg.data[iPC]
-#define setCode()			{ mVU->code = curI; }
-#define startLoop()			{ mVUdebugStuff1(); mVUstall = 0; memset(&mVUregsTemp, 0, sizeof(mVUregsTemp)); }
-#define incPC(x)			{ iPC = ((iPC + x) & (mVU->progSize-1)); setCode(); }
-#define incCycles(x)		{ mVUincCycles<vuIndex>(x); }
+#define startLoop()			{ mVUdebug1(); mVUstall = 0; memset(&mVUregsTemp, 0, sizeof(mVUregsTemp)); }
 #define calcCycles(reg, x)	{ reg = ((reg > x) ? (reg - x) : 0); }
 
 microVUt(void) mVUincCycles(int x) {
@@ -115,10 +111,10 @@ microVUx(void) mVUcompile(u32 startPC, u32 pipelineState, microRegInfo* pState, 
 		if (isEOB)			{ x = 0; }
 		else if (isBranch)	{ mVUopU<vuIndex, 1>(); incPC(2); }
 		
-		mVUopU<vuIndex, 1>();
-		if (isNop)	   { if (curI & _Ibit_) { incPC(1); mVU->iReg = curI; } else { incPC(1); } }
-		else		   { incPC(1); mVUopL<vuIndex, 1>(); }
-		
+		if (isNop)			{ mVUopU<vuIndex, 1>(); if (curI & _Ibit_) { incPC(1); mVU->iReg = curI; } else { incPC(1); } }
+		else if (!swapOps)	{ mVUopU<vuIndex, 1>(); incPC(1); mVUopL<vuIndex, 1>(); }
+		else				{ incPC(1); mVUopL<vuIndex, 1>(); incPC(-1); mVUopU<vuIndex, 1>(); incPC(1); }
+
 		if (!isBdelay) { incPC(1); }
 		else { 
 			incPC(-2); // Go back to Branch Opcode

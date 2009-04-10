@@ -125,17 +125,7 @@ struct microVU {
 	u32		iReg;		 // iReg (only used in recompilation, not execution)
 	u32		clipFlag[4]; // 4 instances of clip flag (used in execution)
 	u32		divFlag;	 // 1 instance of I/D flags
-
-/*
-	uptr x86eax; // Accumulator register. Used in arithmetic operations.
-	uptr x86ecx; // Counter register. Used in shift/rotate instructions.
-	uptr x86edx; // Data register. Used in arithmetic operations and I/O operations.
-	uptr x86ebx; // Base register. Used as a pointer to data (located in DS in segmented mode).
-	uptr x86esp; // Stack Pointer register. Pointer to the top of the stack.
-	uptr x86ebp; // Stack Base Pointer register. Used to point to the base of the stack.
-	uptr x86esi; // Source register. Used as a pointer to a source in stream operations.
-	uptr x86edi; // Destination register. Used as a pointer to a destination in stream operations.
-*/
+	u32		VIbackup[2]; // Holds a backup of a VI reg if modified before a branch
 };
 
 // microVU rec structs
@@ -146,14 +136,24 @@ extern PCSX2_ALIGNED16(microVU microVU1);
 extern void (*mVU_UPPER_OPCODE[64])( VURegs* VU, s32 info );
 extern void (*mVU_LOWER_OPCODE[128])( VURegs* VU, s32 info );
 
+// Main Functions
+microVUt(void) mVUinit(VURegs*);
+microVUt(void) mVUreset();
+microVUt(void) mVUclose();
+microVUt(void) mVUclear(u32, u32);
+
+// Private Functions
 __forceinline void	mVUclearProg(microVU* mVU, int progIndex);
 __forceinline int	mVUfindLeastUsedProg(microVU* mVU);
 __forceinline int	mVUsearchProg(microVU* mVU);
 __forceinline void	mVUcacheProg(microVU* mVU, int progIndex);
+void* __fastcall	mVUexecuteVU0(u32 startPC, u32 cycles);
+void* __fastcall	mVUexecuteVU1(u32 startPC, u32 cycles);
 
-#ifdef __LINUX__
-microVUt(void) mVUreset();
-microVUt(void) mVUclose();
+#ifndef __LINUX__
+typedef void (__fastcall *mVUrecCall)(u32, u32);
+#else
+typedef void (*mVUrecCall)(u32, u32) __attribute__((__fastcall)); // Not sure if this is correct syntax (should be close xD)
 #endif
 
 // Include all the *.inl files (Needed because C++ sucks with templates and *.cpp files)
@@ -162,3 +162,4 @@ microVUt(void) mVUclose();
 #include "microVU_Alloc.inl"
 #include "microVU_Tables.inl"
 #include "microVU_Compile.inl"
+#include "microVU_Execute.inl"

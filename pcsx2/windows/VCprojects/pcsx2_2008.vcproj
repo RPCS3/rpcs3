@@ -2507,6 +2507,10 @@
 							>
 						</File>
 						<File
+							RelativePath="..\..\x86\microVU_Execute.inl"
+							>
+						</File>
+						<File
 							RelativePath="..\..\x86\microVU_Lower.inl"
 							>
 						</File>
