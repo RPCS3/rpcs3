@@ -515,7 +515,7 @@ protected:
 			DWORD FBW = m_context->FRAME.FBW;
 			DWORD FPSM = m_context->FRAME.PSM;
 
-			if(FBP == 0x00f00 && FPSM == PSM_PSMZ24)
+			if((FBP == 0x00f00 || FBP == 0x00100) && FPSM == PSM_PSMZ24) // ntsc 0xf00, pal 0x100
 			{
 				GIFRegTEX0 TEX0;
 
