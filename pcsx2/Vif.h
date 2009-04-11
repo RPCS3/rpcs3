@@ -81,9 +81,9 @@ struct VIFregisters {
 extern "C"
 {
 	// these use cdecl for Asm code references.
-	extern VIFregisters *_vifRegs;
-	extern u32* _vifMaskRegs;
-	extern u32* _vifRow;
+	extern VIFregisters *vifRegs;
+	extern u32* vifMaskRegs;
+	extern u32* vifRow;
 	extern u32* _vifCol;
 }
 
@@ -92,16 +92,16 @@ static __forceinline u32 setVifRowRegs(u32 reg, u32 data)
 	switch (reg)
 	{
 		case 0:
-			_vifRegs->r0 = data;
+			vifRegs->r0 = data;
 			break;
 		case 1:
-			_vifRegs->r1 = data;
+			vifRegs->r1 = data;
 			break;
 		case 2:
-			_vifRegs->r2 = data;
+			vifRegs->r2 = data;
 			break;
 		case 3:
-			_vifRegs->r3 = data;
+			vifRegs->r3 = data;
 			break;
 			jNO_DEFAULT;
 	}
@@ -113,16 +113,16 @@ static __forceinline u32 getVifRowRegs(u32 reg)
 	switch (reg)
 	{
 		case 0:
-			return _vifRegs->r0;
+			return vifRegs->r0;
 			break;
 		case 1:
-			return _vifRegs->r1;
+			return vifRegs->r1;
 			break;
 		case 2:
-			return _vifRegs->r2;
+			return vifRegs->r2;
 			break;
 		case 3:
-			return _vifRegs->r3;
+			return vifRegs->r3;
 			break;
 			jNO_DEFAULT;
 	}
@@ -133,16 +133,16 @@ static __forceinline u32 setVifColRegs(u32 reg, u32 data)
 	switch (reg)
 	{
 		case 0:
-			_vifRegs->c0 = data;
+			vifRegs->c0 = data;
 			break;
 		case 1:
-			_vifRegs->c1 = data;
+			vifRegs->c1 = data;
 			break;
 		case 2:
-			_vifRegs->c2 = data;
+			vifRegs->c2 = data;
 			break;
 		case 3:
-			_vifRegs->c3 = data;
+			vifRegs->c3 = data;
 			break;
 			jNO_DEFAULT;
 	}
@@ -154,16 +154,16 @@ static __forceinline u32 getVifColRegs(u32 reg)
 	switch (reg)
 	{
 		case 0:
-			return _vifRegs->c0;
+			return vifRegs->c0;
 			break;
 		case 1:
-			return _vifRegs->c1;
+			return vifRegs->c1;
 			break;
 		case 2:
-			return _vifRegs->c2;
+			return vifRegs->c2;
 			break;
 		case 3:
-			return _vifRegs->c3;
+			return vifRegs->c3;
 			break;
 			jNO_DEFAULT;
 	}
