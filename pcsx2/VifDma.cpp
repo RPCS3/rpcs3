@@ -607,7 +607,7 @@ static void VIFunpack(u32 *data, vifCode *v, int size, const unsigned int VIFdma
 			if ((unpackType == 0xC) && (vifRegs->cycle.cl == vifRegs->cycle.wl))  //No use when SSE is available
 			{
 				// v4-32
-				if ((vifRegs->mode == 0) && !(vifRegs->code & 0x10000000) && (vif->usn == 0))
+				if (v->size == (size >> 2) && (vifRegs->mode == 0) && !(vifRegs->code & 0x10000000) && (vif->usn == 0))
 				{
 					vifRegs->num -= size >> 4;
 					memcpy_fast((u8*)dest, cdata, size);
