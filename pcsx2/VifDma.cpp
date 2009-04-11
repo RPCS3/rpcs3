@@ -281,7 +281,7 @@ static void ProcessMemSkip(int size, unsigned int unpackType, const unsigned int
 			break;
 		case 0x6:
 			vif->tag.addr += (size / unpack->gsize) * 16;
-			DevCon::Notice("Processing V2-8 skip, size = %d", params size);
+			VIFUNPACK_LOG("Processing V2-8 skip, size = %d", size);
 			break;
 		case 0x8:
 			vif->tag.addr += (size / unpack->gsize) * 16;
@@ -289,7 +289,7 @@ static void ProcessMemSkip(int size, unsigned int unpackType, const unsigned int
 			break;
 		case 0x9:
 			vif->tag.addr += (size / unpack->gsize) * 16;
-			DevCon::Notice("Processing V3-16 skip, size = %d", params size);
+			VIFUNPACK_LOG("Processing V3-16 skip, size = %d", size);
 			break;
 		case 0xA:
 			vif->tag.addr += (size / unpack->gsize) * 16;
