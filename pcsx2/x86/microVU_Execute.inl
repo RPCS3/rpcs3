@@ -27,6 +27,7 @@ microVUt(void) mVUdispatcherA() {
 	static u32 PCSX2_ALIGNED16(vuMXCSR);
 	microVU* mVU = mVUx;
 	x86SetPtr(mVU->ptr);
+	mVU->startFunct = mVU->ptr;
 
 	// __fastcall = The first two DWORD or smaller arguments are passed in ECX and EDX registers; all other arguments are passed right to left.
 	if (!vuIndex) { CALLFunc((uptr)mVUexecuteVU0); }
@@ -74,6 +75,7 @@ microVUt(void) mVUdispatcherB() {
 	static u32 PCSX2_ALIGNED16(eeMXCSR);
 	microVU* mVU = mVUx;
 	x86SetPtr(mVU->ptr);
+	mVU->exitFunct = mVU->ptr;
 
 	// __fastcall = The first two DWORD or smaller arguments are passed in ECX and EDX registers; all other arguments are passed right to left.
 	if (!vuIndex) { CALLFunc((uptr)mVUcleanUpVU0); }
@@ -96,9 +98,9 @@ microVUt(void) mVUdispatcherB() {
 	}
 
 	SSE_MOVAPS_XMM_to_M128((uptr)&mVU->regs->ACC, xmmACC);
-	SSE_MOVSS_XMM_to_M32((uptr)&mVU->regs->VI[REG_Q], xmmPQ); // ToDo: Ensure Correct Q/P instances
-	SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, 0); // wzyx = PPPP
-	SSE_MOVSS_XMM_to_M32((uptr)&mVU->regs->VI[REG_P], xmmPQ);
+	//SSE_MOVSS_XMM_to_M32((uptr)&mVU->regs->VI[REG_Q], xmmPQ); // ToDo: Ensure Correct Q/P instances
+	//SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, 0); // wzyx = PPPP
+	//SSE_MOVSS_XMM_to_M32((uptr)&mVU->regs->VI[REG_P], xmmPQ);
 
 	// Restore cpu state
 	POP32R(EDI);
@@ -110,7 +112,7 @@ microVUt(void) mVUdispatcherB() {
 	RET();
 
 	mVU->ptr = x86Ptr;
-	mVUcachCheck(512);
+	mVUcachCheck(mVU->cache, 512);
 }
 
 //------------------------------------------------------------------
@@ -144,16 +146,16 @@ microVUt(void*) __fastcall mVUexecute(u32 startPC, u32 cycles) {
 
 microVUt(void) mVUcleanUp() {
 	microVU* mVU = mVUx;
-	mVU->ptr = x86Ptr;
-	mVUcachCheck(1024); // ToDo: Implement Program Cache Limits
+	mVU->ptr = mVUcurProg.x86ptr;
+	mVUcachCheck(mVUcurProg.x86start, (uptr)(mVUcurProg.x86end - mVUcurProg.x86start));
 }
 
 //------------------------------------------------------------------
 // Caller Functions
 //------------------------------------------------------------------
 
-void  __fastcall startVU0(u32 startPC, u32 cycles) { ((mVUrecCall)microVU0.cache)(startPC, cycles); }
-void  __fastcall startVU1(u32 startPC, u32 cycles) { ((mVUrecCall)microVU1.cache)(startPC, cycles); }
+void  __fastcall startVU0(u32 startPC, u32 cycles) { ((mVUrecCall)microVU0.startFunct)(startPC, cycles); }
+void  __fastcall startVU1(u32 startPC, u32 cycles) { ((mVUrecCall)microVU1.startFunct)(startPC, cycles); }
 void* __fastcall mVUexecuteVU0(u32 startPC, u32 cycles) { return mVUexecute<0>(startPC, cycles); }
 void* __fastcall mVUexecuteVU1(u32 startPC, u32 cycles) { return mVUexecute<1>(startPC, cycles); }
 void mVUcleanUpVU0() { mVUcleanUp<0>(); }

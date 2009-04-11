@@ -143,6 +143,7 @@ declareAllVariables
 #define mVUallocInfo mVU->prog.prog[mVU->prog.cur].allocInfo
 #define mVUbranch	 mVUallocInfo.branch
 #define mVUcycles	 mVUallocInfo.cycles
+#define mVUcount	 mVUallocInfo.count
 #define mVUstall	 mVUallocInfo.maxStall
 #define mVUregs		 mVUallocInfo.regs
 #define mVUregsTemp	 mVUallocInfo.regsTemp
@@ -153,6 +154,7 @@ declareAllVariables
 #define curI		 mVUcurProg.data[iPC]
 #define setCode()	 { mVU->code = curI; }
 #define incPC(x)	 { iPC = ((iPC + x) & (mVU->progSize-1)); setCode(); }
+#define incPC2(x)	 { iPC = ((iPC + x) & (mVU->progSize-1)); }
 #define incCycles(x) { mVUincCycles<vuIndex>(x); }
 
 #define _isNOP		 (1<<0) // Skip Lower Instruction
@@ -181,6 +183,7 @@ declareAllVariables
 #define _memReadIt	 (1<<24) // Read If (VI reg) from memory (used by branches)
 #define _writesVI	 (1<<25) // Current Instruction writes to VI
 #define _swapOps	 (1<<26) // Runs Lower Instruction Before Upper Instruction
+//#define _isBranch2	 (1<<27) // Cur Instruction is a Branch that writes VI regs (BAL/JALR)
 
 #define isNOP		 (mVUinfo & (1<<0))
 #define isBranch	 (mVUinfo & (1<<1))
@@ -208,6 +211,7 @@ declareAllVariables
 #define memReadIt	 (mVUinfo & (1<<24))
 #define writesVI	 (mVUinfo & (1<<25))
 #define swapOps		 (mVUinfo & (1<<26))
+//#define isBranch2	 (mVUinfo & (1<<27))
 
 #define isMMX(_VIreg_)	(_VIreg_ >= 1 && _VIreg_ <=9)
 #define mmVI(_VIreg_)	(_VIreg_ - 1)
@@ -226,7 +230,7 @@ declareAllVariables
 #define mVUdebug1() {}
 #endif
 
-#define mVUcachCheck(x) {  \
-	uptr diff = mVU->ptr - mVU->cache; \
-	if (diff > x) {	Console::Error("microVU Error: Program went over it's cache limit. Size = %x", params diff); } \
+#define mVUcachCheck(start, limit) {  \
+	uptr diff = mVU->ptr - start; \
+	if (diff >= limit) { Console::Error("microVU Error: Program went over it's cache limit. Size = %x", params diff); } \
 }

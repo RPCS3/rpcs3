@@ -251,7 +251,7 @@ microVUt(void) mVUaddrFix(int gprReg) {
 		u8 *jmpA, *jmpB; 
 		CMP32ItoR(EAX, 0x400);
 		jmpA = JL8(0); // if addr >= 0x4000, reads VU1's VF regs and VI regs
-			AND32ItoR(EAX, 0x43f);
+			AND32ItoR(EAX, 0x43f); // ToDo: theres a potential problem if VU0 overrides VU1's VF0/VI0 regs!
 			jmpB = JMP8(0);
 		x86SetJ8(jmpA);
 			AND32ItoR(EAX, 0xff); // if addr < 0x4000, wrap around

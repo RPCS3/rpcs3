@@ -545,14 +545,12 @@ microVUf(void) mVU_FSOR() {
 
 microVUf(void) mVU_FSSET() {
 	microVU* mVU = mVUx;
-	if (!recPass) {}
+	if (!recPass) { mVUanalyzeFSSET<vuIndex>(); }
 	else { 
 		int flagReg;
 		getFlagReg(flagReg, fsInstance);
-		MOV16ItoR(gprT1, (_Imm12_ & 0xfc0));
-		//if (_Imm12_ & 0xc00) { mVUdivFlag = _Imm12_ >> 9; }
-		//else				 { mVUdivFlag = 1; }
-		//mVUdivFlagT = 4;
+		AND32ItoR(flagReg, 0x03f);
+		OR32ItoR(flagReg, (_Imm12_ & 0xfc0));
 	}
 }
 
@@ -562,7 +560,7 @@ microVUf(void) mVU_FSSET() {
 
 microVUf(void) mVU_IADD() {
 	microVU* mVU = mVUx;
-	if (!recPass) {}
+	if (!recPass) { mVUanalyzeIALU1<vuIndex>(_Fd_, _Fs_, _Ft_); }
 	else { 
 		mVUallocVIa<vuIndex>(gprT1, _Fs_);
 		if (_Ft_ != _Fs_) {
@@ -576,7 +574,7 @@ microVUf(void) mVU_IADD() {
 
 microVUf(void) mVU_IADDI() {
 	microVU* mVU = mVUx;
-	if (!recPass) {}
+	if (!recPass) { mVUanalyzeIALU2<vuIndex>(_Fs_, _Ft_); }
 	else { 
 		mVUallocVIa<vuIndex>(gprT1, _Fs_);
 		ADD16ItoR(gprT1, _Imm5_);
@@ -586,7 +584,7 @@ microVUf(void) mVU_IADDI() {
 
 microVUf(void) mVU_IADDIU() {
 	microVU* mVU = mVUx;
-	if (!recPass) {}
+	if (!recPass) { mVUanalyzeIALU2<vuIndex>(_Fs_, _Ft_); }
 	else { 
 		mVUallocVIa<vuIndex>(gprT1, _Fs_);
 		ADD16ItoR(gprT1, _Imm12_);
@@ -596,7 +594,7 @@ microVUf(void) mVU_IADDIU() {
 
 microVUf(void) mVU_IAND() {
 	microVU* mVU = mVUx;
-	if (!recPass) {}
+	if (!recPass) { mVUanalyzeIALU1<vuIndex>(_Fd_, _Fs_, _Ft_); }
 	else { 
 		mVUallocVIa<vuIndex>(gprT1, _Fs_);
 		if (_Ft_ != _Fs_) {
@@ -609,7 +607,7 @@ microVUf(void) mVU_IAND() {
 
 microVUf(void) mVU_IOR() {
 	microVU* mVU = mVUx;
-	if (!recPass) {}
+	if (!recPass) { mVUanalyzeIALU1<vuIndex>(_Fd_, _Fs_, _Ft_); }
 	else { 
 		mVUallocVIa<vuIndex>(gprT1, _Fs_);
 		if (_Ft_ != _Fs_) {
@@ -622,7 +620,7 @@ microVUf(void) mVU_IOR() {
 
 microVUf(void) mVU_ISUB() {
 	microVU* mVU = mVUx;
-	if (!recPass) {}
+	if (!recPass) { mVUanalyzeIALU1<vuIndex>(_Fd_, _Fs_, _Ft_); }
 	else { 
 		if (_Ft_ != _Fs_) {
 			mVUallocVIa<vuIndex>(gprT1, _Fs_);
@@ -639,7 +637,7 @@ microVUf(void) mVU_ISUB() {
 
 microVUf(void) mVU_ISUBIU() {
 	microVU* mVU = mVUx;
-	if (!recPass) {}
+	if (!recPass) { mVUanalyzeIALU2<vuIndex>(_Fs_, _Ft_); }
 	else { 
 		mVUallocVIa<vuIndex>(gprT1, _Fs_);
 		SUB16ItoR(gprT1, _Imm12_);
@@ -653,7 +651,7 @@ microVUf(void) mVU_ISUBIU() {
 
 microVUf(void) mVU_MFIR() {
 	microVU* mVU = mVUx;
-	if (!recPass) { /*If (!_Ft_) nop();*/ }
+	if (!recPass) { if (!_Ft_) { mVUinfo |= _isNOP; } analyzeVIreg1(_Fs_); analyzeReg2(_Ft_); }
 	else { 
 		mVUallocVIa<vuIndex>(gprT1, _Fs_);
 		MOVSX32R16toR(gprT1, gprT1);
@@ -665,7 +663,7 @@ microVUf(void) mVU_MFIR() {
 
 microVUf(void) mVU_MFP() {
 	microVU* mVU = mVUx;
-	if (!recPass) { /*If (!_Ft_) nop();*/ }
+	if (!recPass) { mVUanalyzeMFP<vuIndex>(_Ft_); }
 	else { 
 		getPreg(xmmFt);
 		mVUsaveReg<vuIndex>(xmmFt, (uptr)&mVU->regs->VF[_Ft_].UL[0], _X_Y_Z_W);
@@ -674,7 +672,7 @@ microVUf(void) mVU_MFP() {
 
 microVUf(void) mVU_MOVE() {
 	microVU* mVU = mVUx;
-	if (!recPass) { /*If (!_Ft_ || (_Ft_ == _Fs_)) nop();*/ }
+	if (!recPass) { if (!_Ft_ || (_Ft_ == _Fs_)) { mVUinfo |= _isNOP; } analyzeReg1(_Fs_); analyzeReg2(_Ft_); }
 	else { 
 		mVUloadReg<vuIndex>(xmmT1, (uptr)&mVU->regs->VF[_Fs_].UL[0], _X_Y_Z_W);
 		mVUsaveReg<vuIndex>(xmmT1, (uptr)&mVU->regs->VF[_Ft_].UL[0], _X_Y_Z_W);
@@ -683,7 +681,7 @@ microVUf(void) mVU_MOVE() {
 
 microVUf(void) mVU_MR32() {
 	microVU* mVU = mVUx;
-	if (!recPass) { /*If (!_Ft_) nop();*/ }
+	if (!recPass) { mVUanalyzeMR32<vuIndex>(_Fs_, _Ft_); }
 	else { 
 		mVUloadReg<vuIndex>(xmmT1, (uptr)&mVU->regs->VF[_Fs_].UL[0], (_X_Y_Z_W == 8) ? 4 : 15);
 		if (_X_Y_Z_W != 8) { SSE2_PSHUFD_XMM_to_XMM(xmmT1, xmmT1, 0x39); }
@@ -693,7 +691,7 @@ microVUf(void) mVU_MR32() {
 
 microVUf(void) mVU_MTIR() {
 	microVU* mVU = mVUx;
-	if (!recPass) {}
+	if (!recPass) { if (!_Ft_) { mVUinfo |= _isNOP; } analyzeReg5(_Fs_, _Fsf_); analyzeVIreg2(_Ft_, 1); }
 	else { 
 		MOVZX32M16toR(gprT1, (uptr)&mVU->regs->VF[_Fs_].UL[_Fsf_]);
 		mVUallocVIb<vuIndex>(gprT1, _Ft_);
@@ -706,7 +704,7 @@ microVUf(void) mVU_MTIR() {
 
 microVUf(void) mVU_ILW() {
 	microVU* mVU = mVUx;
-	if (!recPass) { /*If (!_Ft_) nop();*/ }
+	if (!recPass) { if (!_Ft_) { mVUinfo |= _isNOP; } analyzeVIreg1(_Fs_); analyzeVIreg2(_Ft_, 4);  }
 	else { 
 		if (!_Fs_) {
 			MOVZX32M16toR( gprT1, (uptr)mVU->regs->Mem + getVUmem(_Imm11_) + offsetSS );
@@ -725,7 +723,7 @@ microVUf(void) mVU_ILW() {
 
 microVUf(void) mVU_ILWR() {
 	microVU* mVU = mVUx;
-	if (!recPass) { /*If (!_Ft_) nop();*/ }
+	if (!recPass) { if (!_Ft_) { mVUinfo |= _isNOP; } analyzeVIreg1(_Fs_); analyzeVIreg2(_Ft_, 4); }
 	else { 
 		if (!_Fs_) {
 			MOVZX32M16toR(gprT1, (uptr)mVU->regs->Mem + offsetSS);
@@ -747,7 +745,7 @@ microVUf(void) mVU_ILWR() {
 
 microVUf(void) mVU_ISW() {
 	microVU* mVU = mVUx;
-	if (!recPass) {}
+	if (!recPass) { analyzeVIreg1(_Fs_); analyzeVIreg1(_Ft_); }
 	else { 
 		if (!_Fs_) {
 			int imm = getVUmem(_Imm11_);
@@ -772,7 +770,7 @@ microVUf(void) mVU_ISW() {
 
 microVUf(void) mVU_ISWR() {
 	microVU* mVU = mVUx;
-	if (!recPass) {}
+	if (!recPass) { analyzeVIreg1(_Fs_); analyzeVIreg1(_Ft_); }
 	else { 
 		if (!_Fs_) {
 			mVUallocVIa<vuIndex>(gprT1, _Ft_);
@@ -1006,7 +1004,7 @@ microVUf(void) mVU_WAITQ() {
 
 microVUf(void) mVU_XTOP() {
 	microVU* mVU = mVUx;
-	if (!recPass) { if (!_Ft_) { mVUinfo |= _isNOP; return; } analyzeVIreg2(_Ft_, 1); }
+	if (!recPass) { if (!_Ft_) { mVUinfo |= _isNOP; } analyzeVIreg2(_Ft_, 1); }
 	else { 
 		MOVZX32M16toR( gprT1, (uptr)&mVU->regs->vifRegs->top);
 		mVUallocVIb<vuIndex>(gprT1, _Ft_);
@@ -1015,7 +1013,7 @@ microVUf(void) mVU_XTOP() {
 
 microVUf(void) mVU_XITOP() {
 	microVU* mVU = mVUx;
-	if (!recPass) { if (!_Ft_) { mVUinfo |= _isNOP; return; } analyzeVIreg2(_Ft_, 1); }
+	if (!recPass) { if (!_Ft_) { mVUinfo |= _isNOP; } analyzeVIreg2(_Ft_, 1); }
 	else { 
 		MOVZX32M16toR( gprT1, (uptr)&mVU->regs->vifRegs->itop );
 		mVUallocVIb<vuIndex>(gprT1, _Ft_);
@@ -1055,64 +1053,90 @@ microVUf(void) mVU_XGKICK() {
 
 microVUf(void) mVU_B() {
 	microVU* mVU = mVUx;
-	mVUbranch = 1; 
+	mVUbranch = 1;
+	if (!recPass) { /*mVUinfo |= _isBranch2;*/ }
 }
 microVUf(void) mVU_BAL() {
 	microVU* mVU = mVUx;
-	mVUbranch = 1; 
-	if (!recPass) { analyzeVIreg2(_Ft_, 1); }
-	else {
-		MOV32ItoR(gprT1, (xPC + (2 * 8)) & 0xffff);
-		mVUallocVIb<vuIndex>(gprT1, _Ft_);
-	}
+	mVUbranch = 2;
+	if (!recPass) { /*mVUinfo |= _isBranch2;*/ analyzeVIreg2(_Ft_, 1); }
+	else {}
 }
 microVUf(void) mVU_IBEQ() {
 	microVU* mVU = mVUx;
-	mVUbranch = 2;
+	mVUbranch = 3;
 	if (!recPass) { mVUanalyzeBranch2<vuIndex>(_Fs_, _Ft_); }
-	else {}
+	else {
+		if (memReadIs) MOV32MtoR(gprT1, (uptr)mVU->VIbackup[0]);
+		else mVUallocVIa<vuIndex>(gprT1, _Fs_);
+		if (memReadIt) XOR32MtoR(gprT1, (uptr)mVU->VIbackup[0]);
+		else { mVUallocVIa<vuIndex>(gprT2, _Ft_); XOR32RtoR(gprT1, gprT2); }
+		MOV32RtoM((uptr)mVU->branch, gprT1);
+	}
 }
 microVUf(void) mVU_IBGEZ() {
 	microVU* mVU = mVUx;
-	mVUbranch = 2;
+	mVUbranch = 4;
 	if (!recPass) { mVUanalyzeBranch1<vuIndex>(_Fs_); }
-	else {}
+	else {
+		if (memReadIs) MOV32MtoR(gprT1, (uptr)mVU->VIbackup[0]);
+		else mVUallocVIa<vuIndex>(gprT1, _Fs_);
+		//SHR32ItoR(gprT1, 15);
+		MOV32RtoM((uptr)mVU->branch, gprT1);
+	}
 }
 microVUf(void) mVU_IBGTZ() {
 	microVU* mVU = mVUx;
-	mVUbranch = 2;
+	mVUbranch = 5;
 	if (!recPass) { mVUanalyzeBranch1<vuIndex>(_Fs_); }
-	else {}
+	else {
+		if (memReadIs) MOV32MtoR(gprT1, (uptr)mVU->VIbackup[0]);
+		else mVUallocVIa<vuIndex>(gprT1, _Fs_);
+		MOV32RtoM((uptr)mVU->branch, gprT1);
+	}
 }
 microVUf(void) mVU_IBLEZ() {
 	microVU* mVU = mVUx;
-	mVUbranch = 2;
+	mVUbranch = 6;
 	if (!recPass) { mVUanalyzeBranch1<vuIndex>(_Fs_); }
-	else {}
+	else {
+		if (memReadIs) MOV32MtoR(gprT1, (uptr)mVU->VIbackup[0]);
+		else mVUallocVIa<vuIndex>(gprT1, _Fs_);
+		MOV32RtoM((uptr)mVU->branch, gprT1);
+	}
 }
 microVUf(void) mVU_IBLTZ() {
 	microVU* mVU = mVUx;
-	mVUbranch = 2;
+	mVUbranch = 7;
 	if (!recPass) { mVUanalyzeBranch1<vuIndex>(_Fs_); }
-	else {}
+	else {
+		if (memReadIs) MOV32MtoR(gprT1, (uptr)mVU->VIbackup[0]);
+		else mVUallocVIa<vuIndex>(gprT1, _Fs_);
+		//SHR32ItoR(gprT1, 15);
+		MOV32RtoM((uptr)mVU->branch, gprT1);
+	}
 }
 microVUf(void) mVU_IBNE() {
 	microVU* mVU = mVUx;
-	mVUbranch = 2;
+	mVUbranch = 8;
 	if (!recPass) { mVUanalyzeBranch2<vuIndex>(_Fs_, _Ft_); }
-	else {}
+	else {
+		if (memReadIs) MOV32MtoR(gprT1, (uptr)mVU->VIbackup[0]);
+		else mVUallocVIa<vuIndex>(gprT1, _Fs_);
+		if (memReadIt) XOR32MtoR(gprT1, (uptr)mVU->VIbackup[0]);
+		else { mVUallocVIa<vuIndex>(gprT2, _Ft_); XOR32RtoR(gprT1, gprT2); }
+		MOV32RtoM((uptr)mVU->branch, gprT1);
+	}
 }
 microVUf(void) mVU_JR() {
 	microVU* mVU = mVUx;
-	mVUbranch = 3;
+	mVUbranch = 9;
 	if (!recPass) { mVUanalyzeBranch1<vuIndex>(_Fs_); }
-	else {}
 }
 microVUf(void) mVU_JALR() {
 	microVU* mVU = mVUx;
-	mVUbranch = 3;
+	mVUbranch = 10;
 	if (!recPass) { mVUanalyzeBranch1<vuIndex>(_Fs_); analyzeVIreg2(_Ft_, 1); }
-	else {}
 }
 
 #endif //PCSX2_MICROVU

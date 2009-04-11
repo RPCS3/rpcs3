@@ -92,7 +92,10 @@ public:
 template<u32 progSize>
 struct microProgram {
 	u32 data[progSize/4];
-	u32 used;	// Number of times its been used
+	u32 used;		// Number of times its been used
+	u8* x86ptr;		// Pointer to program's recompilation code
+	u8* x86start;	// Start of program's rec-cache
+	u8* x86end;		// Limit of program's rec-cache
 	microBlockManager* block[progSize/8];
 	microAllocInfo<progSize> allocInfo;
 };
@@ -112,20 +115,24 @@ struct microProgManager {
 struct microVU {
 	u32 index;		// VU Index (VU0 or VU1)
 	u32 microSize;	// VU Micro Memory Size
-	u32 progSize;	// VU Micro Program Size (microSize/8)
-	u32 cacheAddr;	// VU Cache Start Address
+	u32 progSize;	// VU Micro Program Size (microSize/4)
 	static const u32 cacheSize = 0x500000; // VU Cache Size
 
 	microProgManager<0x4000> prog; // Micro Program Data
 	
 	VURegs*	regs;		 // VU Regs Struct
 	u8*		cache;		 // Dynarec Cache Start (where we will start writing the recompiled code to)
+	u8*		startFunct;	 // Ptr Function to the Start code for recompiled programs
+	u8*		exitFunct;	 // Ptr Function to the Exit code for recompiled programs
 	u8*		ptr;		 // Pointer to next place to write recompiled code to
 	u32		code;		 // Contains the current Instruction
 	u32		iReg;		 // iReg (only used in recompilation, not execution)
 	u32		clipFlag[4]; // 4 instances of clip flag (used in execution)
 	u32		divFlag;	 // 1 instance of I/D flags
 	u32		VIbackup[2]; // Holds a backup of a VI reg if modified before a branch
+	u32		branch;		 // Holds branch compare result (IBxx) OR Holds address to Jump to (JALR/JR)
+	u32		p;			 // Holds current P instance index
+	u32		q;			 // Holds current Q instance index
 };
 
 // microVU rec structs
