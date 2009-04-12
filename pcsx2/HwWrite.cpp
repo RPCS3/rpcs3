@@ -40,11 +40,22 @@ using namespace R5900;
 // dark cloud2 uses 8 bit DMAs register writes
 static __forceinline void DmaExec8( void (*func)(), u32 mem, u8 value )
 {
+	u32 qwcRegister = mem | 0x20;
+
 	//Its invalid for the hardware to write a DMA while it is active, not without Suspending the DMAC
 	if((value & 0x1) && (psHu8(mem) & 0x1) == 0x1 && (psHu32(DMAC_CTRL) & 0x1) == 1) {
 		DMA_LOG( "DMAExec8 Attempt to run DMA while one is already active mem = %x", mem );
-		return;
 	}
+
+	// Upper 16bits of QWC should not be written since QWC is 16bits in size.
+	if ((psHu32(qwcRegister) >> 16) != 0)
+	{
+		DMA_LOG("DMA QWC (%x) upper 16bits set to %x\n", 
+			qwcRegister,
+			psHu32(qwcRegister) >> 16); 
+		psHu32(qwcRegister) = 0; 
+	}
+
 	psHu8(mem) = (u8)value;
 	if ((psHu8(mem) & 0x1) && (psHu32(DMAC_CTRL) & 0x1))
 	{
@@ -55,11 +66,22 @@ static __forceinline void DmaExec8( void (*func)(), u32 mem, u8 value )
 
 static __forceinline void DmaExec16( void (*func)(), u32 mem, u16 value )
 {
+	u32 qwcRegister = mem | 0x20;
+
 	//Its invalid for the hardware to write a DMA while it is active, not without Suspending the DMAC
 	if((value & 0x100) && (psHu32(mem) & 0x100) == 0x100 && (psHu32(DMAC_CTRL) & 0x1) == 1) {
 		DMA_LOG( "DMAExec16 Attempt to run DMA while one is already active mem = %x", mem);
-		return;
 	}
+
+	// Upper 16bits of QWC should not be written since QWC is 16bits in size.
+	if ((psHu32(qwcRegister) >> 16) != 0)
+	{
+		DMA_LOG("DMA QWC (%x) upper 16bits set to %x\n", 
+			qwcRegister,
+			psHu32(qwcRegister) >> 16); 
+		psHu32(qwcRegister) = 0; 
+	} 
+
 	psHu16(mem) = (u16)value;
 	if ((psHu16(mem) & 0x100) && (psHu32(DMAC_CTRL) & 0x1))
 	{
@@ -70,11 +92,22 @@ static __forceinline void DmaExec16( void (*func)(), u32 mem, u16 value )
 
 static void DmaExec( void (*func)(), u32 mem, u32 value )
 {
+	u32 qwcRegister = mem | 0x20;
+
 	//Its invalid for the hardware to write a DMA while it is active, not without Suspending the DMAC
 	if((value & 0x100) && (psHu32(mem) & 0x100) == 0x100 && (psHu32(DMAC_CTRL) & 0x1) == 1) {
 		DMA_LOG( "DMAExec32 Attempt to run DMA while one is already active mem = %x", mem );
-		return;
 	}
+
+	// Upper 16bits of QWC should not be written since QWC is 16bits in size.
+	if ((psHu32(qwcRegister) >> 16) != 0)
+	{
+		DMA_LOG("DMA QWC (%x) upper 16bits set to %x\n", 
+			qwcRegister,
+			psHu32(qwcRegister) >> 16); 
+		psHu32(qwcRegister) = 0; 
+	}
+
 	/* Keep the old tag if in chain mode and hw doesnt set it*/
 	if( (value & 0xc) == 0x4 && (value & 0xffff0000) == 0)
 		psHu32(mem) = (psHu32(mem) & 0xFFFF0000) | (u16)value;
