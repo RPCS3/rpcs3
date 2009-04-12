@@ -682,8 +682,7 @@ microVUt(void) mVUallocSFLAGa(int reg, int fInstance) {
 
 microVUt(void) mVUallocSFLAGb(int reg, int fInstance) {
 	getFlagReg(fInstance, fInstance);
-	AND32ItoR(fInstance, 0xffff0000);
-	OR16RtoR(fInstance, reg);
+	MOV16RtoR(fInstance, reg);
 }
 
 microVUt(void) mVUallocMFLAGa(int reg, int fInstance) {

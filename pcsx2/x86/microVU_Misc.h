@@ -144,12 +144,13 @@ declareAllVariables
 #define mVUbranch	 mVUallocInfo.branch
 #define mVUcycles	 mVUallocInfo.cycles
 #define mVUcount	 mVUallocInfo.count
-#define mVUstall	 mVUallocInfo.maxStall
+//#define mVUstall	 mVUallocInfo.maxStall
 #define mVUregs		 mVUallocInfo.regs
 #define mVUregsTemp	 mVUallocInfo.regsTemp
-#define mVUinfo		 mVUallocInfo.info[mVUallocInfo.curPC / 2]
-#define mVUstartPC	 mVUallocInfo.startPC
 #define iPC			 mVUallocInfo.curPC
+#define mVUinfo		 mVUallocInfo.info[iPC / 2]
+#define mVUstall	 mVUallocInfo.stall[iPC / 2]
+#define mVUstartPC	 mVUallocInfo.startPC
 #define xPC			 ((iPC / 2) * 8)
 #define curI		 mVUcurProg.data[iPC]
 #define setCode()	 { mVU->code = curI; }
@@ -183,7 +184,8 @@ declareAllVariables
 #define _memReadIt	 (1<<24) // Read If (VI reg) from memory (used by branches)
 #define _writesVI	 (1<<25) // Current Instruction writes to VI
 #define _swapOps	 (1<<26) // Runs Lower Instruction Before Upper Instruction
-//#define _isBranch2	 (1<<27) // Cur Instruction is a Branch that writes VI regs (BAL/JALR)
+#define _isFSSSET	 (1<<27) // Cur Instruction is FSSET
+//#define _isBranch2	 (1<<28) // Cur Instruction is a Branch that writes VI regs (BAL/JALR)
 
 #define isNOP		 (mVUinfo & (1<<0))
 #define isBranch	 (mVUinfo & (1<<1))
@@ -211,7 +213,8 @@ declareAllVariables
 #define memReadIt	 (mVUinfo & (1<<24))
 #define writesVI	 (mVUinfo & (1<<25))
 #define swapOps		 (mVUinfo & (1<<26))
-//#define isBranch2	 (mVUinfo & (1<<27))
+#define isFSSET		 (mVUinfo & (1<<27))
+//#define isBranch2	 (mVUinfo & (1<<28))
 
 #define isMMX(_VIreg_)	(_VIreg_ >= 1 && _VIreg_ <=9)
 #define mmVI(_VIreg_)	(_VIreg_ - 1)

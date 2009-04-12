@@ -245,19 +245,42 @@ microVUt(void) mVUanalyzeR2(int Ft, bool canBeNOP) {
 microVUt(void) mVUanalyzeSflag(int It) {
 	microVU* mVU = mVUx;
 	if (!It) { mVUinfo |= _isNOP; }
-	else	 { mVUinfo |= _isSflag | _swapOps; } // ToDo: set s flag at right time
+	else {  // Sets _isSflag at instruction that FSxxx opcode reads it's status flag from
+		mVUinfo |= _swapOps;
+		if (mVUcount >= 4) { incPC2(-8); mVUinfo |= _isSflag; incPC2(8); }
+		//else { incPC2((mVUcount*-2)); mVUinfo |= _isSflag; incPC2(mVUcount*-2); }
+	}
 	analyzeVIreg2(It, 1);
 }
 
 microVUt(void) mVUanalyzeFSSET() {
 	microVU* mVU = mVUx;
-	int i, curPC = iPC;
-	for (i = mVUcount; i > 0; i--) {
-		incPC2(-2);
-		if (isSflag) break;
-		mVUinfo &= ~_doStatus;
+	mVUinfo |= _isFSSSET;
+}
+
+//------------------------------------------------------------------
+// Mflag - Mac Flag Opcodes
+//------------------------------------------------------------------
+
+microVUt(void) mVUanalyzeMflag(int Is, int It) {
+	microVU* mVU = mVUx;
+	if (!It) { mVUinfo |= _isNOP; }
+	else if (mVUcount >= 4) { 
+		incPC2(-8);
+		if (doStatus) { mVUinfo |= _doMac; }
+		else {
+			int curPC = iPC;
+			int i = mVUcount;
+			for (; i > 0; i--) {
+				incPC2(-2);
+				if (doStatus) { mVUinfo |= _doMac; break; }
+			}
+			iPC = curPC;
+		}
+		incPC2(8);
 	}
-	iPC = curPC;
+	analyzeVIreg1(Is);
+	analyzeVIreg2(It, 1);
 }
 
 //------------------------------------------------------------------

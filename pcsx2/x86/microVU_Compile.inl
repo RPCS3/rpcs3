@@ -19,6 +19,10 @@
 #pragma once
 #ifdef PCSX2_MICROVU
 
+//------------------------------------------------------------------
+// Helper Macros
+//------------------------------------------------------------------
+
 #define createBlock(blockEndPtr) {									\
 	block.pipelineState = pipelineState;							\
 	block.x86ptrStart = x86ptrStart;								\
@@ -45,6 +49,115 @@
 #define calcCycles(reg, x)	{ reg = ((reg > x) ? (reg - x) : 0); }
 #define incP()				{ mVU->p = (mVU->p+1) & 1; }
 #define incQ()				{ mVU->q = (mVU->q+1) & 1; }
+
+//------------------------------------------------------------------
+// Helper Functions
+//------------------------------------------------------------------
+
+// Optimizes out unneeded status flag updates
+microVUt(void) mVUstatusFlagOp() {
+	microVU* mVU = mVUx;
+	int curPC = iPC;
+	int i = mVUcount;
+	if (doStatus)  { mVUinfo |= _isSflag; }
+	else {
+		for (; i > 0; i--) {
+			incPC2(-2);
+			if (doStatus) { mVUinfo |= _isSflag; break; }
+		}
+	}
+	for (; i > 0; i--) {
+		incPC2(-2);
+		if (isSflag) break;
+		mVUinfo &= ~_doStatus;
+	}
+	iPC = curPC;
+}
+
+// Note: Flag handling is 'very' complex, it requires full knowledge of how microVU recs work, so don't touch!
+microVUt(void) mVUsetFlags(int* bStatus, int* bMac) {
+	microVU* mVU = mVUx;
+
+	// Ensure last ~4+ instructions update mac flags
+	int endPC  = iPC;
+	int aCount = 1; // Amount of instructions needed to get 4 valid status/mac flag instances
+	for (int i = mVUcount; i > 0; i++, aCount++;) {
+		if (doStatus) { mVUinfo |= _doMac; if (i >= 4) { break; } }
+		incPC2(-2);
+	}
+
+	// Status/Mac Flags Setup Code
+	int xStatus	= 0; // Status Instance starts at #0 on every block
+	int xMac	= 0; // Mac Instance starts at #0 on every block
+	int pStatus	= 0;
+	int pMac	= 0;
+	int xCount	= mVUcount; // Backup count
+	mVUcount	= 0;
+	iPC			= mVUstartPC;
+	for (int i = 0; i < xCount; i++) {
+		if ((xCount - i) > aCount) mVUstatusFlagOp<vuIndex>(); // Don't Optimize out on the last ~4+ instructions
+		if (doStatus||isFSSET)	{ mVUinfo |= xStatus << 12; } // _fsInstance
+		if (doMac)				{ mVUinfo |= xMac	 << 10; } // _fmInstance
+		pStatus = (xStatus + ((mVUstall > 3) ? 3 : mVUstall)) & 3;
+		pMac	= (xMac	   + ((mVUstall > 3) ? 3 : mVUstall)) & 3;
+		mVUinfo |= pStatus << 18; // _fvsInstance
+		mVUinfo |= pMac	   << 16; // _fvmInstance
+		if (doStatus||isFSSET) { xStatus = (xStatus+1) & 3; }
+		if (doMac)			   { xMac	 = (xMac+1)	   & 3; }
+		incPC2(2);
+	}
+	mVUcount = xCount; // Restore count
+
+	// Setup Last 4 instances of Status/Mac flags (needed for accurate block linking)
+	iPC = endPC;
+	for (int i = 3, int j = 3, int ii = 1, int jj = 3; aCount > 0; ii++, aCount--) {
+		if (doStatus && (i >= 0)) { 
+			for (; (ii > 0 && i >= 0); ii--) { xStatus = (xStatus-1) & 3; bStatus[i] = xStatus; i--; }
+		}
+		if (doMac && (j >= 0)) { 
+			for (; (jj > 0 && j >= 0); jj--) { xMac	   = (xMac-1)	 & 3; bMac[i]	 = xMac;	j--; }
+		}
+		incPC2(-2);
+	}
+}
+
+#define getFlagReg1(x)	((x == 3) ? gprF3 : ((x == 2) ? gprF2 : ((x == 1) ? gprF1 : gprF0)))
+#define getFlagReg2(x)	((x == bStatus[3]) ? gprESP : ((x == bStatus[2]) ? gprR : ((x == bStatus[1]) ? gprT2 : gprT1)))
+
+// Recompiles Code for Proper Flags on Block Linkings
+microVUt(void) mVUsetFlagsRec(int* bStatus, int* bMac) {
+
+	PUSHR(gprR);   // Backup gprR
+	PUSHR(gprESP); // Backup gprESP
+
+	MOV32RtoR(gprT1,  getFlagReg1(bStatus[0])); 
+	MOV32RtoR(gprT2,  getFlagReg1(bStatus[1]));
+	MOV32RtoR(gprR,   getFlagReg1(bStatus[2]));
+	MOV32RtoR(gprESP, getFlagReg1(bStatus[3]));
+
+	MOV32RtoR(gprF0, gprT1);
+	MOV32RtoR(gprF1, gprT2); 
+	MOV32RtoR(gprF2, gprR); 
+	MOV32RtoR(gprF3, gprESP);
+
+	AND32ItoR(gprT1,  0xffff0000);
+	AND32ItoR(gprT2,  0xffff0000);
+	AND32ItoR(gprR,   0xffff0000);
+	AND32ItoR(gprESP, 0xffff0000);
+
+	AND32ItoR(gprF0,  0x0000ffff);
+	AND32ItoR(gprF1,  0x0000ffff);
+	AND32ItoR(gprF2,  0x0000ffff);
+	AND32ItoR(gprF3,  0x0000ffff);
+
+	OR32RtoR(gprF0, getFlagReg2(bMac[0])); 
+	OR32RtoR(gprF1, getFlagReg2(bMac[1]));
+	OR32RtoR(gprF2, getFlagReg2(bMac[2]));
+	OR32RtoR(gprF3, getFlagReg2(bMac[3]));
+
+	POPR(gprESP); // Restore gprESP
+	POPR(gprR);   // Restore gprR
+}
 
 microVUt(void) mVUincCycles(int x) {
 	microVU* mVU = mVUx;
@@ -130,13 +243,14 @@ microVUx(void*) mVUcompile(u32 startPC, u32 pipelineState, microRegInfo* pState,
 		mVUcount++;
 	}
 
+	// Sets Up Flag instances
+	int bStatus[4]; int bMac[4];
+	mVUsetFlags<vuIndex>(bStatus, bMac);
+	
 	// Second Pass
 	iPC = mVUstartPC;
 	setCode();
 	for (bool x = 1; x; ) {
-		//
-		// ToDo: status/mac flag stuff?
-		//
 		if (isEOB)			{ x = 0; }
 		//if (isBranch2)	{ mVUopU<vuIndex, 1>(); incPC(2); }
 		
@@ -156,9 +270,10 @@ microVUx(void*) mVUcompile(u32 startPC, u32 pipelineState, microRegInfo* pState,
 				case 8: branchCase(JNZ32); // IBNEQ
 				case 2: branchCase2();	   // BAL
 				case 1: 
-					// search for block
+					// ToDo: search for block
+					// (remember about global variables and recursion!)
+					mVUsetFlagsRec<vuIndex>(bStatus, bMac);
 					ajmp = JMP32((uptr)0); 
-					
 					break; // B/BAL
 				case 9: branchCase2();	   // JALR
 				case 10: break; // JR/JALR
@@ -167,8 +282,8 @@ microVUx(void*) mVUcompile(u32 startPC, u32 pipelineState, microRegInfo* pState,
 			return thisPtr;
 		}
 	}
-	// Do E-bit end stuff here
 
+	// Do E-bit end stuff here
 	incCycles(55); // Ensures Valid P/Q instances
 	mVUcycles -= 55;
 	if (mVU->q) { SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, 0xe5); }
@@ -176,10 +291,11 @@ microVUx(void*) mVUcompile(u32 startPC, u32 pipelineState, microRegInfo* pState,
 	SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVU->p ? 3 : 2);
 	SSE_MOVSS_XMM_to_M32((uptr)&mVU->regs->VI[REG_P], xmmPQ);
 
-	MOV32ItoM((uptr)&mVU->p, mVU->p);
-	MOV32ItoM((uptr)&mVU->q, mVU->q);
+	//MOV32ItoM((uptr)&mVU->p, mVU->p);
+	//MOV32ItoM((uptr)&mVU->q, mVU->q);
+
 	AND32ItoM((uptr)&microVU0.regs.VI[REG_VPU_STAT].UL, (vuIndex ? ~0x100 : ~0x001)); // VBS0/VBS1 flag
-	AND32ItoM((uptr)&mVU->regs->vifRegs->stat, ~0x4); // Not sure what this does but zerorecs do it...
+	AND32ItoM((uptr)&mVU->regs->vifRegs->stat, ~0x4); // Clear VU 'is busy' signal for vif
 	MOV32ItoM((uptr)&mVU->regs->VI[REG_TPC], xPC);
 	JMP32((uptr)mVU->exitFunct - ((uptr)x86Ptr + 5));
 	return thisPtr;

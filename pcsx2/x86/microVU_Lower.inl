@@ -547,10 +547,12 @@ microVUf(void) mVU_FSSET() {
 	microVU* mVU = mVUx;
 	if (!recPass) { mVUanalyzeFSSET<vuIndex>(); }
 	else { 
-		int flagReg;
-		getFlagReg(flagReg, fsInstance);
-		AND32ItoR(flagReg, 0x03f);
-		OR32ItoR(flagReg, (_Imm12_ & 0xfc0));
+		int flagReg = gprT1;
+		if (doStatus) { getFlagReg(flagReg, fsInstance); }		// Get status result from upper instruction
+		else { mVUallocSFLAGa<vuIndex>(flagReg, fpsInstance); } // Get status result from last status setting instruction
+		AND16ItoR(flagReg, 0x03f); // Remember not to modify upper 16 bits because of mac flag 
+		OR16ItoR(flagReg, (_Imm12_ & 0xfc0));
+		if (!doStatus) { mVUallocSFLAGb<vuIndex>(flagReg, fsInstance); }
 	}
 }
 

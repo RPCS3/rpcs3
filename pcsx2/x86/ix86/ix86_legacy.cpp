@@ -359,7 +359,7 @@ emitterT void MOV32RtoRm( x86IntRegType to, x86IntRegType from, int offset)
 }
 
 
-/* mov r32 to r32 */
+/* mov r16 to r16 */
 emitterT void MOV16RtoR( x86IntRegType to, x86IntRegType from ) 
 {
 	if( to == from ) return;

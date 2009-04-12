@@ -53,10 +53,11 @@ struct microAllocInfo {
 	microRegInfo	 regs;	   // Pipeline info
 	microTempRegInfo regsTemp; // Temp Pipeline info (used so that new pipeline info isn't conflicting between upper and lower instructions in the same cycle)
 	u8  branch;			// 0 = No Branch, 1 = B. 2 = BAL, 3~8 = Conditional Branches, 9 = JALR, 10 = JR
-	u8  maxStall;		// Helps in computing stalls (stores the max amount of cycles to stall for the current opcodes)
+	//u8  maxStall;		// Helps in computing stalls (stores the max amount of cycles to stall for the current opcodes)
 	u32 cycles;			// Cycles for current block
 	u32 count;			// Number of VU 64bit instructions ran (starts at 0 for each block)
 	u32 curPC;			// Current PC
 	u32 startPC;		// Start PC for Cur Block
 	u32 info[pSize/8];	// Info for Instructions in current block
+	u8 stall[pSize/8];	// Info on how much each instruction stalled
 };
