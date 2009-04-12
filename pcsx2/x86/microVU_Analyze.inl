@@ -103,6 +103,49 @@ microVUt(void) mVUanalyzeFMAC4(int Fs, int Ft) {
 }
 
 //------------------------------------------------------------------
+// IALU - IALU Opcodes
+//------------------------------------------------------------------
+
+#define analyzeVIreg1(reg)			{ if (reg) { mVUstall = aMax(mVUstall, mVUregs.VI[reg]); } }
+#define analyzeVIreg2(reg, aCycles)	{ if (reg) { mVUregsTemp.VIreg = reg; mVUregsTemp.VI = aCycles; mVUinfo |= _writesVI; mVU->VIbackup[0] = reg; } }
+
+microVUt(void) mVUanalyzeIALU1(int Id, int Is, int It) {
+	microVU* mVU = mVUx;
+	if (!Id) { mVUinfo |= _isNOP; }
+	analyzeVIreg1(Is);
+	analyzeVIreg1(It);
+	analyzeVIreg2(Id, 1);
+}
+
+microVUt(void) mVUanalyzeIALU2(int Is, int It) {
+	microVU* mVU = mVUx;
+	if (!It) { mVUinfo |= _isNOP; }
+	analyzeVIreg1(Is);
+	analyzeVIreg2(It, 1);
+}
+
+//------------------------------------------------------------------
+// MR32 - MR32 Opcode
+//------------------------------------------------------------------
+
+// Flips xyzw stalls to yzwx
+#define analyzeReg6(reg) {									\
+	if (reg) {												\
+		if (_X) { mVUstall = aMax(mVUstall, aReg(reg).y); }	\
+		if (_Y) { mVUstall = aMax(mVUstall, aReg(reg).z); }	\
+		if (_Z) { mVUstall = aMax(mVUstall, aReg(reg).w); }	\
+		if (_W) { mVUstall = aMax(mVUstall, aReg(reg).x); } \
+	}														\
+}
+
+microVUt(void) mVUanalyzeMR32(int Fs, int Ft) {
+	microVU* mVU = mVUx;
+	if (!Ft) { mVUinfo |= _isNOP; }
+	analyzeReg6(Fs);
+	analyzeReg2(Ft);
+}
+
+//------------------------------------------------------------------
 // FDIV - DIV/SQRT/RSQRT Opcodes
 //------------------------------------------------------------------
 
@@ -141,6 +184,122 @@ microVUt(void) mVUanalyzeEFU2(int Fs, u8 xCycles) {
 	microVU* mVU = mVUx;
 	analyzeReg1(Fs);
 	analyzePreg(xCycles);
+}
+
+//------------------------------------------------------------------
+// MFP - MFP Opcode
+//------------------------------------------------------------------
+
+microVUt(void) mVUanalyzeMFP(int Ft) {
+	microVU* mVU = mVUx; // ToDo: Needs special info for P reg?
+	if (!Ft) { mVUinfo |= _isNOP; }
+	analyzeReg2(Ft);
+}
+
+//------------------------------------------------------------------
+// LQx - LQ/LQD/LQI Opcodes
+//------------------------------------------------------------------
+
+microVUt(void) mVUanalyzeLQ(int Ft, int Is, bool writeIs) {
+	microVU* mVU = mVUx;
+	analyzeVIreg1(Is);
+	analyzeReg2(Ft);
+	if (!Ft)	 { mVUinfo |= (writeIs && Is) ? _noWriteVF : _isNOP; }
+	if (writeIs) { analyzeVIreg2(Is, 1); }
+}
+
+//------------------------------------------------------------------
+// SQx - SQ/SQD/SQI Opcodes
+//------------------------------------------------------------------
+
+microVUt(void) mVUanalyzeSQ(int Fs, int It, bool writeIt) {
+	microVU* mVU = mVUx;
+	analyzeReg1(Fs);
+	analyzeVIreg1(It);
+	if (writeIt) { analyzeVIreg2(It, 1); }
+}
+
+//------------------------------------------------------------------
+// R*** - R Reg Opcodes
+//------------------------------------------------------------------
+
+#define analyzeRreg() { mVUregsTemp.r = 1; }
+
+microVUt(void) mVUanalyzeR1(int Fs, int Fsf) {
+	microVU* mVU = mVUx;
+	analyzeReg5(Fs, Fsf);
+	analyzeRreg();
+}
+
+microVUt(void) mVUanalyzeR2(int Ft, bool canBeNOP) {
+	microVU* mVU = mVUx;
+	if (!Ft) { mVUinfo |= ((canBeNOP) ? _isNOP : _noWriteVF); }
+	analyzeReg2(Ft);
+	analyzeRreg();
+}
+
+//------------------------------------------------------------------
+// Sflag - Status Flag Opcodes
+//------------------------------------------------------------------
+
+microVUt(void) mVUanalyzeSflag(int It) {
+	microVU* mVU = mVUx;
+	if (!It) { mVUinfo |= _isNOP; }
+	else	 { mVUinfo |= _isSflag | _swapOps; } // ToDo: set s flag at right time
+	analyzeVIreg2(It, 1);
+}
+
+microVUt(void) mVUanalyzeFSSET() {
+	microVU* mVU = mVUx;
+	int i, curPC = iPC;
+	for (i = mVUcount; i > 0; i--) {
+		incPC2(-2);
+		if (isSflag) break;
+		mVUinfo &= ~_doStatus;
+	}
+	iPC = curPC;
+}
+
+//------------------------------------------------------------------
+// XGkick
+//------------------------------------------------------------------
+
+#define analyzeXGkick1()  { mVUstall = aMax(mVUstall, mVUregs.xgkick); }
+#define analyzeXGkick2(x) { mVUregsTemp.xgkick = x; }
+
+microVUt(void) mVUanalyzeXGkick(int Fs, int xCycles) {
+	microVU* mVU = mVUx;
+	analyzeVIreg1(Fs);
+	analyzeXGkick1();
+	analyzeXGkick2(xCycles);
+}
+
+//------------------------------------------------------------------
+// Branches - Branch Opcodes
+//------------------------------------------------------------------
+
+#define analyzeBranchVI(reg, infoVal) {													\
+	if (reg && (mVUcount > 0)) { /* Ensures branch is not first opcode in block */		\
+		incPC(-2);																		\
+		if (writesVI && (reg == mVU->VIbackup[0])) { /* If prev Op modified VI reg */	\
+			mVUinfo |= _backupVI;														\
+			incPC(2);																	\
+			mVUinfo |= infoVal;															\
+		}																				\
+		else { incPC(2); }																\
+	}																					\
+}
+
+microVUt(void) mVUanalyzeBranch1(int Is) {
+	microVU* mVU = mVUx;
+	if (mVUregs.VI[Is])	{ analyzeVIreg1(Is); }
+	else				{ analyzeBranchVI(Is, _memReadIs); }
+}
+
+microVUt(void) mVUanalyzeBranch2(int Is, int It) {
+	microVU* mVU = mVUx;
+	if (mVUregs.VI[Is] || mVUregs.VI[It]) { analyzeVIreg1(Is); analyzeVIreg1(It); }
+	else								  { analyzeBranchVI(Is, _memReadIs); analyzeBranchVI(It, _memReadIt);}
 }
 
 #endif //PCSX2_MICROVU

@@ -24,6 +24,8 @@
 #include "PrecompiledHeader.h"
 
 #include "iR3000A.h"
+#include "BaseblockEx.h"
+
 #include <time.h>
 
 #ifndef _WIN32
@@ -171,7 +173,7 @@ static void iIopDumpBlock( int startpc, u8 * ptr )
 #ifdef __LINUX__
     // dump the asm
     f = fopen( "mydump1", "wb" );
-	fwrite( ptr, 1, (uptr)x86Ptr[0] - (uptr)ptr, f );
+	fwrite( ptr, 1, (uptr)x86Ptr - (uptr)ptr, f );
 	fclose( f );
 	sprintf( command, "objdump -D --target=binary --architecture=i386 -M intel mydump1 | cat %s - > tempdump", filename );
 	system( command );
@@ -316,7 +318,7 @@ void _psxMoveGPRtoM(u32 to, int fromgpr)
 void _psxMoveGPRtoRm(x86IntRegType to, int fromgpr)
 {
 	if( PSX_IS_CONST1(fromgpr) )
-		MOV32ItoRmOffset( to, g_psxConstRegs[fromgpr], 0 );
+		MOV32ItoRm( to, g_psxConstRegs[fromgpr] );
 	else {
 		// check x86
 		MOV32MtoR(EAX, (uptr)&psxRegs.GPR.r[ fromgpr ] );
@@ -647,7 +649,7 @@ static void recExecute()
 	//for (;;) R3000AExecute();
 }
 
-static s32 recExecuteBlock( s32 eeCycles )
+static __forceinline s32 recExecuteBlock( s32 eeCycles )
 {
 	psxBreak = 0;
 	psxCycleEE = eeCycles;
@@ -741,7 +743,7 @@ static __forceinline u32 psxRecClearMem(u32 pc)
 	return upperextent - pc;
 }
 
-static void recClear(u32 Addr, u32 Size)
+static __forceinline void recClearIOP(u32 Addr, u32 Size)
 {
 	u32 pc = Addr;
 	while (pc < Addr + Size*4)
@@ -772,7 +774,7 @@ void psxSetBranchReg(u32 reg)
 	_psxFlushCall(FLUSH_EVERYTHING);
 	iPsxBranchTest(0xffffffff, 1);
 
-	JMP32((uptr)iopDispatcherReg - ( (uptr)x86Ptr[0] + 5 ));
+	JMP32((uptr)iopDispatcherReg - ( (uptr)x86Ptr + 5 ));
 }
 
 void psxSetBranchImm( u32 imm )
@@ -796,7 +798,7 @@ void psxSetBranchImm( u32 imm )
 //		  So for now these are new settings that work.
 //		  (rama)
 
-static u32 psxScaleBlockCycles()
+static __forceinline u32 psxScaleBlockCycles()
 {
 	return s_psxBlockCycles * (CHECK_IOP_CYCLERATE ? 2 : 1);
 }
@@ -828,7 +830,7 @@ static void iPsxBranchTest(u32 newpc, u32 cpuBranch)
 	if( newpc != 0xffffffff )
 	{
 		CMP32ItoM((uptr)&psxRegs.pc, newpc);
-		JNE32((uptr)iopDispatcherReg - ( (uptr)x86Ptr[0] + 6 ));
+		JNE32((uptr)iopDispatcherReg - ( (uptr)x86Ptr + 6 ));
 	}
 
 	// Skip branch jump target here:
@@ -864,7 +866,7 @@ void rpsxSYSCALL()
 
 	ADD32ItoM((uptr)&psxRegs.cycle, psxScaleBlockCycles() );
 	SUB32ItoM((uptr)&psxCycleEE, psxScaleBlockCycles()*8 );
-	JMP32((uptr)iopDispatcherReg - ( (uptr)x86Ptr[0] + 5 ));
+	JMP32((uptr)iopDispatcherReg - ( (uptr)x86Ptr + 5 ));
 
 	// jump target for skipping blockCycle updates
 	x86SetJ8(j8Ptr[0]);
@@ -884,7 +886,7 @@ void rpsxBREAK()
 	j8Ptr[0] = JE8(0);
 	ADD32ItoM((uptr)&psxRegs.cycle, psxScaleBlockCycles() );
 	SUB32ItoM((uptr)&psxCycleEE, psxScaleBlockCycles()*8 );
-	JMP32((uptr)iopDispatcherReg - ( (uptr)x86Ptr[0] + 5 ));
+	JMP32((uptr)iopDispatcherReg - ( (uptr)x86Ptr + 5 ));
 	x86SetJ8(j8Ptr[0]);
 
 	//if (!psxbranch) psxbranch = 2;
@@ -1004,7 +1006,7 @@ void iopRecRecompile(u32 startpc)
 	
 	x86SetPtr( recPtr );
 	x86Align(16);
-	recPtr = x86Ptr[_EmitterId_];
+	recPtr = x86Ptr;
 
 	s_pCurBlock = PSX_GETBLOCK(startpc);
 	
@@ -1025,7 +1027,7 @@ void iopRecRecompile(u32 startpc)
 	
     psxbranch = 0;
 
-	s_pCurBlock->SetFnptr( (uptr)x86Ptr[0] );
+	s_pCurBlock->SetFnptr( (uptr)x86Ptr );
 	s_psxBlockCycles = 0;
 
 	// reset recomp state variables
@@ -1160,7 +1162,7 @@ StartRecomp:
 
 		iPsxBranchTest(0xffffffff, 1);	
 
-		JMP32((uptr)iopDispatcherReg - ( (uptr)x86Ptr[0] + 5 ));
+		JMP32((uptr)iopDispatcherReg - ( (uptr)x86Ptr + 5 ));
 	}
 	else {
 		if( psxbranch ) assert( !willbranch3 );
@@ -1180,12 +1182,12 @@ StartRecomp:
 		}
 	}
 
-	assert( x86Ptr[0] < recMem+RECMEM_SIZE );
+	assert( x86Ptr < recMem+RECMEM_SIZE );
 
-	assert(x86Ptr[_EmitterId_] - recPtr < 0x10000);
-	s_pCurBlockEx->x86size = x86Ptr[_EmitterId_] - recPtr;
+	assert(x86Ptr - recPtr < 0x10000);
+	s_pCurBlockEx->x86size = x86Ptr - recPtr;
 
-	recPtr = x86Ptr[0];
+	recPtr = x86Ptr;
 
 	assert( (g_psxHasConstReg&g_psxFlushedConstReg) == g_psxHasConstReg );
 
@@ -1198,7 +1200,7 @@ R3000Acpu psxRec = {
 	recResetIOP,
 	recExecute,
 	recExecuteBlock,
-	recClear,
+	recClearIOP,
 	recShutdown
 };
 

@@ -1956,14 +1956,14 @@ CPU_SSE_XMMCACHE_END
 // Both Macros are 16 bytes so we can use a shift instead of a Mul instruction
 #define QFSRVhelper0() {  \
 	ajmp[0] = JMP32(0);  \
-	x86Ptr[0] += 11;  \
+	x86Ptr += 11;  \
 }
 
 #define QFSRVhelper(shift1, shift2) {  \
 	SSE2_PSRLDQ_I8_to_XMM(EEREC_D, shift1);  \
 	SSE2_PSLLDQ_I8_to_XMM(t0reg, shift2);  \
 	ajmp[shift1] = JMP32(0);  \
-	x86Ptr[0] += 1;  \
+	x86Ptr += 1;  \
 }
 
 void recQFSRV()
@@ -1982,8 +1982,8 @@ void recQFSRV()
 
 		MOV32MtoR(EAX, (uptr)&cpuRegs.sa);
 		SHL32ItoR(EAX, 4); // Multiply SA bytes by 16 bytes (the amount of bytes in QFSRVhelper() macros)
-		AND32I8toR(EAX, 0xf0); // This can possibly be removed but keeping it incase theres garbage in SA (cottonvibes)
-		ADD32ItoEAX((uptr)x86Ptr[0] + 7); // ADD32 = 5 bytes, JMPR = 2 bytes
+		AND32ItoR(EAX, 0xf0); // This can possibly be removed but keeping it incase theres garbage in SA (cottonvibes)
+		ADD32ItoR(EAX, (uptr)x86Ptr + 7); // ADD32 = 5 bytes, JMPR = 2 bytes
 		JMPR(EAX); // Jumps to a QFSRVhelper() case below (a total of 16 different cases)
 	
 		// Case 0:
@@ -2676,9 +2676,6 @@ CPU_SSE_XMMCACHE_END
 	recCall( Interp::PHMADH, _Rd_ );
 }
 
-////////////////////////////////////////////////////
-//upper word of each doubleword in LO and HI is undocumented/undefined
-//contains the NOT of the upper multiplication result (before the substraction of the lower multiplication result)
 void recPMSUBH()
 {
 	CPU_SSE2_XMMCACHE_START((_Rd_?XMMINFO_WRITED:0)|XMMINFO_READS|XMMINFO_READT|XMMINFO_READLO|XMMINFO_READHI|XMMINFO_WRITELO|XMMINFO_WRITEHI)
@@ -2740,12 +2737,8 @@ CPU_SSE_XMMCACHE_END
 }
 
 ////////////////////////////////////////////////////
-
-//  rs = ... a1 a0
-//  rt = ... b1 b0
-//  rd = ... a1*b1 - a0*b0
-//  hi = ...
-//  lo = ... (undefined by doc)NOT(a1*b1), a1*b1 - a0*b0
+//upper word of each doubleword in LO and HI is undocumented/undefined
+//it contains the NOT of the upper multiplication result (before the substraction of the lower multiplication result)
 void recPHMSBH()
 {
 CPU_SSE2_XMMCACHE_START((_Rd_?XMMINFO_WRITED:0)|XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITELO|XMMINFO_WRITEHI)

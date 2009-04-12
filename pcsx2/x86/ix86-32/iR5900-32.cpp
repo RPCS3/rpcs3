@@ -30,6 +30,9 @@
 #include "iR5900Jump.h"
 #include "iR5900LoadStore.h"
 #include "iR5900Move.h"
+
+#include "BaseblockEx.h"
+
 #include "iMMI.h"
 #include "iFPU.h"
 #include "iCOP0.h"
@@ -73,7 +76,7 @@ u32 g_cpuHasConstReg = 0, g_cpuFlushedConstReg = 0;
 static const int RECSTACK_SIZE = 0x00010000;
 static const int EE_NUMBLOCKS = (1<<15);
 
-static u8 *recMem = NULL;			// the recompiled blocks will be here
+u8 *recMem = NULL;			// the recompiled blocks will be here
 static u8* recStack = NULL;			// stack mem
 static BASEBLOCK *recRAM = NULL;		// and the ptr to the blocks here
 static BASEBLOCK *recROM = NULL;		// and here
@@ -128,11 +131,14 @@ static void iDumpBlock( int startpc, u8 * ptr )
 
 	Console::Status( "dump1 %x:%x, %x", params startpc, pc, cpuRegs.cycle );
 	Path::CreateDirectory( "dumps" );
+#ifndef __LINUX__
 	ssprintf( filename, "dumps\\R5900dump%.8X.txt", startpc );
-
+#else
+	ssprintf( filename, "dumps/R5900dump%.8X.txt", startpc );
+#endif
 	fflush( stdout );
 //	f = fopen( "dump1", "wb" );
-//	fwrite( ptr, 1, (u32)x86Ptr[0] - (u32)ptr, f );
+//	fwrite( ptr, 1, (u32)x86Ptr - (u32)ptr, f );
 //	fclose( f );
 //
 //	sprintf( command, "objdump -D --target=binary --architecture=i386 dump1 > %s", filename );
@@ -367,7 +373,7 @@ void _eeMoveGPRtoM(u32 to, int fromgpr)
 void _eeMoveGPRtoRm(x86IntRegType to, int fromgpr)
 {
 	if( GPR_IS_CONST1(fromgpr) )
-		MOV32ItoRmOffset( to, g_cpuConstRegs[fromgpr].UL[0], 0 );
+		MOV32ItoRm( to, g_cpuConstRegs[fromgpr].UL[0] );
 	else {
 		int mmreg;
 		
@@ -380,7 +386,7 @@ void _eeMoveGPRtoRm(x86IntRegType to, int fromgpr)
 		}
 		else {
 			MOV32MtoR(EAX, (int)&cpuRegs.GPR.r[ fromgpr ].UL[ 0 ] );
-			MOV32RtoRm(to, EAX );
+			MOV32RtoRm( to, EAX );
 		}
 	}
 }
@@ -579,8 +585,8 @@ void recResetEE( void )
 	// so a fix will have to wait until later. -_- (air)
 
 	//x86SetPtr(recMem+REC_CACHEMEM);
-	//dyna_block_discard_recmem=(u8*)x86Ptr[0];
-	//JMP32( (uptr)&dyna_block_discard - ( (u32)x86Ptr[0] + 5 ));
+	//dyna_block_discard_recmem=(u8*)x86Ptr;
+	//JMP32( (uptr)&dyna_block_discard - ( (u32)x86Ptr + 5 ));
 
 	x86SetPtr(recMem);
 
@@ -677,7 +683,7 @@ static void __naked DispatcherReg()
 	}
 }
 
-__forceinline void recExecute()
+void recExecute()
 {
 	// Optimization note : Compared pushad against manually pushing the regs one-by-one.
 	// Manually pushing is faster, especially on Core2's and such. :)
@@ -791,7 +797,7 @@ void recSYSCALL( void ) {
 	CMP32ItoM((uptr)&cpuRegs.pc, pc);
 	j8Ptr[0] = JE8(0);
 	ADD32ItoM((uptr)&cpuRegs.cycle, eeScaleBlockCycles());
-	JMP32((uptr)DispatcherReg - ( (uptr)x86Ptr[0] + 5 ));
+	JMP32((uptr)DispatcherReg - ( (uptr)x86Ptr + 5 ));
 	x86SetJ8(j8Ptr[0]);
 	//branch = 2;
 }
@@ -1148,7 +1154,7 @@ static void iBranchTest(u32 newpc, bool noDispatch)
 
 	if (!noDispatch) {
 		if (newpc == 0xffffffff)
-			JS32((uptr)DispatcherReg - ( (uptr)x86Ptr[0] + 6 ));
+			JS32((uptr)DispatcherReg - ( (uptr)x86Ptr + 6 ));
 		else
 			iBranch(newpc, 1);
 	}
@@ -1379,7 +1385,7 @@ void recRecompile( const u32 startpc )
 
 	x86SetPtr( recPtr );
 	x86Align(16);
-	recPtr = x86Ptr[_EmitterId_];
+	recPtr = x86Ptr;
 
 	s_pCurBlock = PC_GETBLOCK(startpc);
 
@@ -1732,8 +1738,11 @@ StartRecomp:
 					if (bit==31)
 					{
 						vtlb_alloc_bits[writen_start]&=~mask;
-						TEST32ItoM((uptr)&vtlb_alloc_bits[writen_start],mask);
-						JNZ32(((u32)&dyna_block_discard)- ( (u32)x86Ptr[0] + 6 ));
+						if ((u8)mask==mask)
+							TEST8ItoM((uptr)&vtlb_alloc_bits[writen_start],mask);
+						else
+							TEST32ItoM((uptr)&vtlb_alloc_bits[writen_start],mask);
+						JNZ32(((u32)&dyna_block_discard)- ( (u32)x86Ptr + 6 ));
 						SysPrintf("%08X %d %d\n",mask,pgsz,pgsz>>4);
 						mask=0;
 					}
@@ -1755,8 +1764,11 @@ StartRecomp:
 				if (mask)
 				{
 					vtlb_alloc_bits[writen_start]&=~mask;
-					TEST32ItoM((uptr)&vtlb_alloc_bits[writen_start],mask);
-					JNZ32(((u32)&dyna_block_discard)- ( (u32)x86Ptr[0] + 6 ));
+					if ((u8)mask==mask)
+						TEST8ItoM((uptr)&vtlb_alloc_bits[writen_start],mask);
+					else
+						TEST32ItoM((uptr)&vtlb_alloc_bits[writen_start],mask);
+					JNZ32(((u32)&dyna_block_discard)- ( (u32)x86Ptr + 6 ));
 					SysPrintf("%08X %d %d\n",mask,pgsz,pgsz>>4);
 					mask=0;
 				}
@@ -1768,14 +1780,14 @@ StartRecomp:
 				{
 					// was dyna_block_discard_recmem.  See note in recResetEE for details.
 					CMP32ItoM((uptr)PSM(lpc),*(u32*)PSM(lpc));
-					JNE32(((u32)&dyna_block_discard)- ( (u32)x86Ptr[0] + 6 ));
+					JNE32(((u32)&dyna_block_discard)- ( (u32)x86Ptr + 6 ));
 
 					stg-=4;
 					lpc+=4;
 				}
 				*/
-				DbgCon::WriteLn("Manual block @ %08X : %08X %d %d %d %d", params
-					startpc,inpage_ptr,pgsz,0x1000-inpage_offs,inpage_sz,sz*4);
+				//DbgCon::WriteLn("Manual block @ %08X : %08X %d %d %d %d", params
+				//	startpc,inpage_ptr,pgsz,0x1000-inpage_offs,inpage_sz,sz*4);
 			}
 		}
 		inpage_ptr+=pgsz;
@@ -1855,14 +1867,14 @@ StartRecomp:
 		}
 	}
 
-	assert( x86Ptr[0] < recMem+REC_CACHEMEM );
+	assert( x86Ptr < recMem+REC_CACHEMEM );
 	assert( recStackPtr < recStack+RECSTACK_SIZE );
 	assert( x86FpuState == 0 );
 
-	assert(x86Ptr[_EmitterId_] - recPtr < 0x10000);
-	s_pCurBlockEx->x86size = x86Ptr[_EmitterId_] - recPtr;
+	assert(x86Ptr - recPtr < 0x10000);
+	s_pCurBlockEx->x86size = x86Ptr - recPtr;
 
-	recPtr = x86Ptr[0];
+	recPtr = x86Ptr;
 
 	assert( (g_cpuHasConstReg&g_cpuFlushedConstReg) == g_cpuHasConstReg );
 

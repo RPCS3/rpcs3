@@ -150,11 +150,10 @@ public:
 	}
 
 	void Deactivate() {
-		if (xInputVibration.wLeftMotorSpeed || xInputVibration.wRightMotorSpeed) {
-			memset(&xInputVibration, 0, sizeof(xInputVibration));
-			pXInputSetState(index, &xInputVibration);
-		}
+		memset(&xInputVibration, 0, sizeof(xInputVibration));
 		memset(ps2Vibration, 0, sizeof(ps2Vibration));
+		pXInputSetState(index, &xInputVibration);
+
 		FreeState();
 		if (active) {
 			if (!--xInputActiveCount) {

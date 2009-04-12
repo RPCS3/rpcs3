@@ -23,6 +23,7 @@
 
 #include "iCore.h"
 #include "iR5900.h"
+#include "x86\ix86\ix86_internal.h"
 
 u8* code_pos=0;
 u8* code_start=0;
@@ -63,7 +64,7 @@ void execuCode(bool set)
 		SysPrintf("Leaking 2 megabytes of ram\n");
 		code_start=code_pos=(u8*)VirtualAlloc(0,2*1024*1024,MEM_COMMIT,PAGE_EXECUTE_READWRITE);
 		code_sz+=2*1024*1024;
-		int i=0;
+		u32 i=0;
 		while(i<code_sz)
 		{
 			//UD2 is 0xF 0xB.Fill the stream with it so that the cpu don't try to execute past branches ..
@@ -87,11 +88,11 @@ void execuCode(bool set)
 u8* IndirectPlaceholderA()
 {
 	//Add32 <eax>,imm, 6 bytes form.
-	write8<_EmitterId_>( 0x81 ); 
-	ModRM<_EmitterId_>( 3, 0, EAX );
+	write8( 0x81 ); 
+	ModRM( 3, 0, EAX );
 
 	u8* rv=x86SetPtr(0);
-	write32<_EmitterId_>(0);
+	write32(0);
 
 	return rv;
 }
@@ -106,10 +107,10 @@ void IndirectPlaceholderB(u8* pl,bool read,u32 sz,bool sx)
 	u8* old=x86SetPtr(pl);
 	inf.skip=old-pl-4;
 	//Add32 <eax>,imm, 6 bytes form, patch the imm value
-	write32<_EmitterId_>( inf.full );
+	write32( inf.full );
 	x86SetPtr(old);
 }
-PCSX2_ALIGNED16( static u64 g_globalXMMData[2*XMMREGS] );
+PCSX2_ALIGNED16( extern u64 g_globalXMMData[2*XMMREGS] );
 void MOVx_SSE( x86IntRegType destRm, x86IntRegType srcRm,u32 srcAddr=0,u32 dstAddr=0,bool half=false )
 {
 	int reg;
@@ -130,24 +131,24 @@ void MOVx_SSE( x86IntRegType destRm, x86IntRegType srcRm,u32 srcAddr=0,u32 dstAd
 		if (srcAddr)
 			SSE_MOVLPS_M64_to_XMM(reg,srcAddr);
 		else
-			SSE_MOVLPS_RmOffset_to_XMM(reg,srcRm,0);
+			SSE_MOVLPS_Rm_to_XMM(reg,srcRm);
 
 		if (dstAddr)
 			SSE_MOVLPS_XMM_to_M64(dstAddr,reg);
 		else
-			SSE_MOVLPS_XMM_to_RmOffset(destRm,reg,0);
+			SSE_MOVLPS_XMM_to_Rm(destRm,reg);
 	}
 	else
 	{
 		if (srcAddr)
 			SSE2_MOVDQA_M128_to_XMM(reg,srcAddr);
 		else
-			SSE2_MOVDQARmtoROffset(reg,srcRm,0);
+			SSE2_MOVDQARmtoR(reg,srcRm);
 
 		if (dstAddr)
 			SSE2_MOVDQA_XMM_to_M128(dstAddr,reg);
 		else
-			SSE2_MOVDQARtoRmOffset(destRm,reg,0);
+			SSE2_MOVDQARtoRm(destRm,reg);
 	}
 
 
@@ -167,12 +168,12 @@ void MOV64_MMX( x86IntRegType destRm, x86IntRegType srcRm,u32 srcAddr=0,u32 dstA
 		if (srcAddr)
 			MOVQMtoR(freereg,srcAddr);
 		else
-			MOVQRmtoROffset(freereg,srcRm,0);
+			MOVQRmtoR(freereg,srcRm);
 
 		if (dstAddr)
 			MOVQRtoM(dstAddr,freereg);
 		else
-			MOVQRtoRmOffset(destRm,freereg,0);
+			MOVQRtoRm(destRm,freereg);
 
 		_freeMMXreg(freereg);
 	}
@@ -482,7 +483,6 @@ static void _vtlb_DynGen_DirectWrite( u32 bits )
 	bits_base-=(alloc_base>>4)/8;//in bytes
 
 	BTS32MtoR(bits_base,ECX);
-//	BTS_wtf(asdasd,ECX);
 }
 
 static void _vtlb_DynGen_IndirectWrite( u32 bits )
@@ -614,8 +614,7 @@ uptr _vtlb_HandleRewrite(u32 info,u8* ra)
 
 	u32 skip=GenIndirectMemOp(info);
 
-	JMP32(ra-x86Ptr[_EmitterId_]-5+skip);
-	
+	JMP32(ra-x86Ptr-5+skip);
 	execuCode(false);
 
 	return rv;

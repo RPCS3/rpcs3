@@ -20,11 +20,11 @@
 #define __PCSX2CONFIG_H__
 
 // Hack so that you can still use this file from C (not C++), or from a plugin without access to Paths.h.
-#ifdef PLUGIN_ONLY
+// .. and removed in favor of a less hackish approach (air)
+
+#ifndef g_MaxPath
 #define g_MaxPath 255
-#else
-#include "Paths.h"
- #endif
+#endif
  
 /////////////////////////////////////////////////////////////////////////
 // Session Configuration Override Flags
@@ -44,7 +44,8 @@ extern SessionOverrideFlags g_Session;
 //////////////////////////////////////////////////////////////////////////
 // Pcsx2 User Configuration Options!
 
-//#define PCSX2_MICROVU // Use Micro VU recs instead of Zero VU Recs
+//#define PCSX2_MICROVU	// Use Micro VU recs instead of Zero VU Recs
+//#define PCSX2_MICROVU_	// Fully enable Micro VU recs (temporary option for now)
 #define PCSX2_GSMULTITHREAD 1 // uses multi-threaded gs
 #define PCSX2_EEREC 0x10
 #define PCSX2_VU0REC 0x20

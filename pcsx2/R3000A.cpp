@@ -224,7 +224,7 @@ static __forceinline void _psxTestInterrupts()
 	}
 }
 
-void psxBranchTest()
+__releaseinline void psxBranchTest()
 {
 	if( psxTestCycle( psxNextsCounter, psxNextCounter ) )
 	{

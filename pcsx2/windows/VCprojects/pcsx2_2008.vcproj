@@ -947,7 +947,6 @@
 					<Tool
 						Name="VCCLCompilerTool"
 						UsePrecompiledHeader="1"
-						PrecompiledHeaderFile="$(IntDir)\$(TargetName).pch"
 					/>
 				</FileConfiguration>
 				<FileConfiguration
@@ -2508,6 +2507,10 @@
 							>
 						</File>
 						<File
+							RelativePath="..\..\x86\microVU_Execute.inl"
+							>
+						</File>
+						<File
 							RelativePath="..\..\x86\microVU_Lower.inl"
 							>
 						</File>
@@ -2912,149 +2915,36 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\x86\ix86\ix86.inl"
+				RelativePath="..\..\x86\ix86\ix86_3dnow.cpp"
 				>
-			</File>
-			<File
-				RelativePath="..\..\x86\ix86\ix86_3dnow.inl"
-				>
-				<FileConfiguration
-					Name="Devel vm|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug vm|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release vm|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\x86\ix86\ix86_cpudetect.cpp"
 				>
 			</File>
 			<File
-				RelativePath="..\..\x86\ix86\ix86_fpu.inl"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCustomBuildTool"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Devel vm|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug vm|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release vm|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\..\x86\ix86\ix86_macros.h"
+				RelativePath="..\..\x86\ix86\ix86_fpu.cpp"
 				>
 			</File>
 			<File
-				RelativePath="..\..\x86\ix86\ix86_mmx.inl"
+				RelativePath="..\..\x86\ix86\ix86_group1.cpp"
 				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCustomBuildTool"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Devel vm|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug vm|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release vm|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\..\x86\ix86\ix86_sse.inl"
+				RelativePath="..\..\x86\ix86\ix86_internal.h"
 				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCustomBuildTool"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Devel vm|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug vm|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release vm|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\..\x86\ix86\ix86_legacy.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\x86\ix86\ix86_mmx.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\x86\ix86\ix86_sse.cpp"
+				>
 			</File>
 			<File
 				RelativePath="..\..\x86\ix86\ix86_sse_helpers.h"

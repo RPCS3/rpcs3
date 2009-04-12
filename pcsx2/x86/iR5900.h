@@ -19,13 +19,11 @@
 #ifndef __IR5900_H__
 #define __IR5900_H__
 
-#define _EmitterId_ EmitterId_R5900
 #include "ix86/ix86.h"
 #include "ix86/ix86_sse_helpers.h"
 #include "R5900.h"
 #include "VU.h"
 #include "iCore.h"
-#include "BaseblockEx.h"	// needed for recClear and stuff
 
 // Yay!  These work now! (air) ... almost (air)
 #define ARITHMETICIMM_RECOMPILE

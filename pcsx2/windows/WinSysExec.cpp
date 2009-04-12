@@ -39,6 +39,8 @@ const char* g_pRunGSState = NULL;
 
 #define CmdSwitchIs( text ) ( stricmp( command, text ) == 0 )
 
+extern u8 *recMem;
+
 int SysPageFaultExceptionFilter( EXCEPTION_POINTERS* eps )
 {
 	const _EXCEPTION_RECORD& ExceptionRecord = *eps->ExceptionRecord;
@@ -50,7 +52,8 @@ int SysPageFaultExceptionFilter( EXCEPTION_POINTERS* eps )
 
 	// get bad virtual address
 	uptr addr=ExceptionRecord.ExceptionInformation[1];
-
+	u8* pcode=(u8*)ExceptionRecord.ExceptionAddress;
+	
 	//this is a *hackfix* for a bug on x64 windows kernels.They do not give correct address
 	//if the error is a missaligned access (they return 0)
 	if (addr==0)
@@ -60,16 +63,17 @@ int SysPageFaultExceptionFilter( EXCEPTION_POINTERS* eps )
 	}
 	u32 offset = addr-(uptr)psM;
 	
-	if (addr&0x80000000)
+	if (addr&0x80000000 && ((pcode-recMem)<(16*1024*1024)) )
 	{
 		uptr _vtlb_HandleRewrite(u32 info,u8* ra);
-		u8* pcode=(u8*)ExceptionRecord.ExceptionAddress;
 
-		u32 patch_point=1;
+		s32 patch_point=1;
 		//01 C1
 		while(pcode[-patch_point]!=0x81 || pcode[-patch_point-1]!=0xC1 || pcode[-patch_point-2]!=0x01)
 		{
 			patch_point++;
+			if (patch_point>0x100)
+				return EXCEPTION_CONTINUE_SEARCH;
 		}
 		assert(pcode[-patch_point]==0x81);
 		pcode[-patch_point]=0xF;//js32, 0x81 is add32
@@ -88,7 +92,7 @@ int SysPageFaultExceptionFilter( EXCEPTION_POINTERS* eps )
 		return EXCEPTION_CONTINUE_EXECUTION;
 	}
 	else
-		{
+	{
 		if (offset>=Ps2MemSize::Base)
 			return EXCEPTION_CONTINUE_SEARCH;
 

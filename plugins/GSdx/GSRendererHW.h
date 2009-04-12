@@ -349,8 +349,6 @@ protected:
 
 		OverrideOutput();
 
-		m_tc->InvalidateTextures(context->FRAME, context->ZBUF);
-
 		if(s_dump)
 		{
 			CString str;
@@ -360,6 +358,8 @@ protected:
 			if(s_savez) ds->m_texture.Save(str);
 			// if(s_savez) m_dev.SaveToFileD32S8X24(ds->m_texture, str); // TODO
 		}
+
+		m_tc->InvalidateTextures(context->FRAME, context->ZBUF);
 	}
 
 	virtual void Draw(int prim, Texture& rt, Texture& ds, typename GSTextureCache<Device>::GSTexture* tex) = 0;
@@ -500,6 +500,35 @@ protected:
 						ASSERT(0);
 					}
 				}
+			}
+
+			return true;
+		}
+
+		#pragma endregion
+
+		#pragma region GoW2 z buffer clear
+
+		if(m_game.title == CRC::GodOfWar2)
+		{
+			DWORD FBP = m_context->FRAME.Block();
+			DWORD FBW = m_context->FRAME.FBW;
+			DWORD FPSM = m_context->FRAME.PSM;
+
+			if((FBP == 0x00f00 || FBP == 0x00100) && FPSM == PSM_PSMZ24) // ntsc 0xf00, pal 0x100
+			{
+				GIFRegTEX0 TEX0;
+
+				TEX0.TBP0 = FBP;
+				TEX0.TBW = FBW;
+				TEX0.PSM = FPSM;
+
+				if(GSTextureCache<Device>::GSDepthStencil* ds = m_tc->GetDepthStencil(TEX0, m_width, m_height))
+				{
+					m_dev.ClearDepth(ds->m_texture, 0);
+				}
+
+				return false;
 			}
 
 			return true;

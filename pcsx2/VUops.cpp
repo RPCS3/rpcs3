@@ -2508,13 +2508,23 @@ void _vuRegsMTIR(VURegs * VU, _VURegsNum *VUregsn) {
 	VUregsn->pipe = VUPIPE_FMAC;
     VUregsn->VFwrite = 0;
 	VUregsn->VFread0 = _Fs_;
-    VUregsn->VFr0xyzw= _XYZW;
+    VUregsn->VFr0xyzw= 1 << (3-_Fsf_);
 	VUregsn->VFread1 = 0;
     VUregsn->VIwrite = 1 << _Ft_;
     VUregsn->VIread  = GET_VF0_FLAG(_Fs_);
 }
 
-VUREGS_FTFS(MR32);
+void _vuRegsMR32(VURegs * VU, _VURegsNum *VUregsn) { 
+	VUregsn->pipe = VUPIPE_FMAC; 
+	VUregsn->VFwrite = _Ft_; 
+	VUregsn->VFwxyzw = _XYZW; 
+	VUregsn->VFread0 = _Fs_; 
+	VUregsn->VFr0xyzw= (_XYZW >> 1) | ((_XYZW << 3) & 0xf);  //rotate
+	VUregsn->VFread1 = 0; 
+	VUregsn->VFr1xyzw = 0xff; 
+	VUregsn->VIwrite = 0; 
+	VUregsn->VIread  = (_Ft_ ? GET_VF0_FLAG(_Fs_) : 0); 
+}
 
 void _vuRegsLQ(VURegs * VU, _VURegsNum *VUregsn) {
 	VUregsn->pipe = VUPIPE_FMAC;
