@@ -67,11 +67,12 @@ int  _SPR0chain()
 	if ((psHu32(DMAC_CTRL) & 0xC) >= 0x8)   // 0x8 VIF1 MFIFO, 0xC GIF MFIFO
 	{
 		if ((spr0->madr & ~psHu32(DMAC_RBSR)) != psHu32(DMAC_RBOR)) Console::WriteLn("SPR MFIFO Write outside MFIFO area");
+		else mfifotransferred += spr0->qwc;
 		
 		hwMFIFOWrite(spr0->madr, (u8*)&PS2MEM_SCRATCH[spr0->sadr & 0x3fff], spr0->qwc << 4);
 		spr0->madr += spr0->qwc << 4;
 		spr0->madr = psHu32(DMAC_RBOR) + (spr0->madr & psHu32(DMAC_RBSR));
-		mfifotransferred += spr0->qwc;
+		
 	}
 	else
 	{
@@ -226,16 +227,17 @@ void SPRFROMinterrupt()
 {
 	_dmaSPR0();
 
-	if ((psHu32(DMAC_CTRL) & 0xC) == 0xC)   // GIF MFIFO
+	if(mfifotransferred != 0)
 	{
-		if ((spr0->madr & ~psHu32(DMAC_RBSR)) != psHu32(DMAC_RBOR)) Console::WriteLn("GIF MFIFO Write outside MFIFO area");
-		spr0->madr = psHu32(DMAC_RBOR) + (spr0->madr & psHu32(DMAC_RBSR));
-		//Console::WriteLn("mfifoGIFtransfer %x madr %x, tadr %x", params gif->chcr, gif->madr, gif->tadr);
-		mfifoGIFtransfer(mfifotransferred);
-		mfifotransferred = 0;
-	}
-	else
-		if ((psHu32(DMAC_CTRL) & 0xC) == 0x8)   // VIF1 MFIFO
+		if ((psHu32(DMAC_CTRL) & 0xC) == 0xC)   // GIF MFIFO
+		{
+			if ((spr0->madr & ~psHu32(DMAC_RBSR)) != psHu32(DMAC_RBOR)) Console::WriteLn("GIF MFIFO Write outside MFIFO area");
+			spr0->madr = psHu32(DMAC_RBOR) + (spr0->madr & psHu32(DMAC_RBSR));
+			//Console::WriteLn("mfifoGIFtransfer %x madr %x, tadr %x", params gif->chcr, gif->madr, gif->tadr);
+			mfifoGIFtransfer(mfifotransferred);
+			mfifotransferred = 0;
+		}
+		else if ((psHu32(DMAC_CTRL) & 0xC) == 0x8)   // VIF1 MFIFO
 		{
 			if ((spr0->madr & ~psHu32(DMAC_RBSR)) != psHu32(DMAC_RBOR)) Console::WriteLn("VIF MFIFO Write outside MFIFO area");
 			spr0->madr = psHu32(DMAC_RBOR) + (spr0->madr & psHu32(DMAC_RBSR));
@@ -243,6 +245,7 @@ void SPRFROMinterrupt()
 			mfifoVIF1transfer(mfifotransferred);
 			mfifotransferred = 0;
 		}
+	}
 	if (spr0finished == 0) return;
 	spr0->chcr &= ~0x100;
 	hwDmacIrq(8);
