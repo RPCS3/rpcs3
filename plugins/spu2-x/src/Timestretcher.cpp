@@ -128,7 +128,7 @@ void SndBuffer::UpdateTempoChange()
 
 	// "non-emergency" deadzone:  In this area stretching will be strongly discouraged.
 	// Note: due tot he nature of timestretch latency, it's always a wee bit harder to
-	// cope with low fps (underruns) tha it is high fps (overruns).  So to help out a
+	// cope with low fps (underruns) than it is high fps (overruns).  So to help out a
 	// little, the low-end portions of this check are less forgiving than the high-sides.
 
 	if( cTempo < 0.965f || cTempo > 1.060f ||
@@ -323,7 +323,22 @@ void SndBuffer::soundtouchInit()
 
 	// just freeze tempo changes for a while at startup.
 	// the driver buffers are bogus anyway.
-	freezeTempo = 8;
+	freezeTempo = 16;
+	m_predictData = 0;
+}
+
+// reset timestretch management vars, and delay updates a bit:
+void SndBuffer::soundtouchClearContents()
+{
+	pSoundTouch->clear();
+	pSoundTouch->setTempo(1);
+
+	cTempo = 1.0;
+	eTempo = 1.0;
+	lastPct = 0;
+	lastEmergencyAdj = 0;
+
+	freezeTempo = 16;
 	m_predictData = 0;
 }
 

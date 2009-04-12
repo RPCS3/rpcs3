@@ -36,9 +36,6 @@ void InitADSR();
 DWORD CALLBACK TimeThread(PVOID /* unused param */);
 #endif
 
-// [Air]: fixed the hacky part of UpdateTimer with this:
-bool resetClock = true;
-
 void (* _irqcallback)();
 void (* dma4callback)();
 void (* dma7callback)();

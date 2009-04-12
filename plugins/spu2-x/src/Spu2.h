@@ -174,7 +174,6 @@ extern int recording;
 extern u32 lClocks;
 extern u32* cPtr;
 extern bool hasPtr;
-extern bool resetClock;
 
 extern void SPU2writeLog( const char* action, u32 rmem, u16 value );
 

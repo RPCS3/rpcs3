@@ -303,6 +303,13 @@ int SndBuffer::m_dsp_progress = 0;
 int SndBuffer::m_dsp_writepos = 0;
 
 int SndBuffer::m_timestretch_progress = 0;
+int SndBuffer::ssFreeze = 0;
+
+void SndBuffer::ClearContents()
+{
+	SndBuffer::soundtouchClearContents();
+	SndBuffer::ssFreeze = 30; //Delays sound output for about half a second.
+}
 
 void SndBuffer::Write( const StereoOut32& Sample )
 {
@@ -320,7 +327,13 @@ void SndBuffer::Write( const StereoOut32& Sample )
 	if(sndTempProgress < SndOutPacketSize) return;
 	sndTempProgress = 0;
 
-	if( dspPluginEnabled )
+	//Don't play anything directly after loading a savestate, avoids static killing your speakers.
+	if ( ssFreeze > 0 )
+	{	
+		ssFreeze--;
+		return;
+	}
+	else if( dspPluginEnabled )
 	{
 		// Convert in, send to winamp DSP, and convert out.
 
