@@ -49,6 +49,7 @@
 #define calcCycles(reg, x)	{ reg = ((reg > x) ? (reg - x) : 0); }
 #define incP()				{ mVU->p = (mVU->p+1) & 1; }
 #define incQ()				{ mVU->q = (mVU->q+1) & 1; }
+#define doUpperOp()			{ mVUopU<vuIndex, 1>(); mVUdivSet<vuIndex>(); }
 
 //------------------------------------------------------------------
 // Helper Functions
@@ -59,7 +60,7 @@ microVUt(void) mVUstatusFlagOp() {
 	microVU* mVU = mVUx;
 	int curPC = iPC;
 	int i = mVUcount;
-	if (doStatus)  { mVUinfo |= _isSflag; }
+	if (doStatus) { mVUinfo |= _isSflag; }
 	else {
 		for (; i > 0; i--) {
 			incPC2(-2);
@@ -69,7 +70,7 @@ microVUt(void) mVUstatusFlagOp() {
 	for (; i > 0; i--) {
 		incPC2(-2);
 		if (isSflag) break;
-		mVUinfo &= ~_doStatus;
+		mVUinfo &= ~(_doStatus|_doDivFlag);
 	}
 	iPC = curPC;
 }
@@ -96,14 +97,14 @@ microVUt(void) mVUsetFlags(int* bStatus, int* bMac) {
 	iPC			= mVUstartPC;
 	for (int i = 0; i < xCount; i++) {
 		if ((xCount - i) > aCount) mVUstatusFlagOp<vuIndex>(); // Don't Optimize out on the last ~4+ instructions
-		if (doStatus||isFSSET)	{ mVUinfo |= xStatus << 12; } // _fsInstance
-		if (doMac)				{ mVUinfo |= xMac	 << 10; } // _fmInstance
+		if (doStatus||isFSSET||doDivFlag)	{ mVUinfo |= xStatus << 12; } // _fsInstance
+		if (doMac)							{ mVUinfo |= xMac	 << 10; } // _fmInstance
 		pStatus = (xStatus + ((mVUstall > 3) ? 3 : mVUstall)) & 3;
 		pMac	= (xMac	   + ((mVUstall > 3) ? 3 : mVUstall)) & 3;
 		mVUinfo |= pStatus << 18; // _fvsInstance
 		mVUinfo |= pMac	   << 16; // _fvmInstance
-		if (doStatus||isFSSET) { xStatus = (xStatus+1) & 3; }
-		if (doMac)			   { xMac	 = (xMac+1)	   & 3; }
+		if (doStatus||isFSSET||doDivFlag) { xStatus = (xStatus+1) & 3; }
+		if (doMac)						  { xMac	= (xMac+1)	  & 3; }
 		incPC2(2);
 	}
 	mVUcount = xCount; // Restore count
@@ -111,7 +112,7 @@ microVUt(void) mVUsetFlags(int* bStatus, int* bMac) {
 	// Setup Last 4 instances of Status/Mac flags (needed for accurate block linking)
 	iPC = endPC;
 	for (int i = 3, int j = 3, int ii = 1, int jj = 3; aCount > 0; ii++, aCount--) {
-		if (doStatus && (i >= 0)) { 
+		if ((doStatus||isFSSET||doDivFlag) && (i >= 0)) { 
 			for (; (ii > 0 && i >= 0); ii--) { xStatus = (xStatus-1) & 3; bStatus[i] = xStatus; i--; }
 		}
 		if (doMac && (j >= 0)) { 
@@ -172,8 +173,9 @@ microVUt(void) mVUincCycles(int x) {
 		calcCycles(mVUregs.VI[z], x);
 	}
 	if (mVUregs.q) {
-		calcCycles(mVUregs.q, x);
-		if (!mVUregs.q) { incQ(); } // Do Status Flag Merging Stuff?
+		if (mVUregs.q > 4) { calcCycles(mVUregs.q, x); if (mVUregs.q <= 4) { mVUinfo |= _doDivFlag; } }
+		else { calcCycles(mVUregs.q, x); }
+		if (!mVUregs.q) { incQ(); }
 	}
 	if (mVUregs.p) {
 		calcCycles(mVUregs.p, x);
@@ -200,6 +202,15 @@ microVUt(void) mVUsetCycles() {
 	mVUregs.p							 = mVUregsTemp.p;
 	mVUregs.r							 = mVUregsTemp.r;
 	mVUregs.xgkick						 = mVUregsTemp.xgkick;
+}
+
+microVUt(void) mVUdivSet() {
+	microVU* mVU = mVUx;
+	int flagReg1, flagReg2;
+	getFlagReg(flagReg1, fsInstance);
+	if (!doStatus) { getFlagReg(flagReg2, fpsInstance); MOV16RtoR(flagReg1, flagReg2); }
+	AND16ItoR(flagReg1, 0xfcf);
+	OR16MtoR (flagReg1, (uptr)&mVU->divFlag);
 }
 
 //------------------------------------------------------------------
@@ -254,9 +265,9 @@ microVUx(void*) mVUcompile(u32 startPC, u32 pipelineState, microRegInfo* pState,
 		if (isEOB)			{ x = 0; }
 		//if (isBranch2)	{ mVUopU<vuIndex, 1>(); incPC(2); }
 		
-		if (isNop)			{ mVUopU<vuIndex, 1>(); if (curI & _Ibit_) { incPC(1); mVU->iReg = curI; } else { incPC(1); } }
-		else if (!swapOps)	{ mVUopU<vuIndex, 1>(); incPC(1); mVUopL<vuIndex, 1>(); }
-		else				{ incPC(1); mVUopL<vuIndex, 1>(); incPC(-1); mVUopU<vuIndex, 1>(); incPC(1); }
+		if (isNop)			{ doUpperOp(); if (curI & _Ibit_) { incPC(1); mVU->iReg = curI; } else { incPC(1); } }
+		else if (!swapOps)	{ doUpperOp(); incPC(1); mVUopL<vuIndex, 1>(); }
+		else				{ incPC(1); mVUopL<vuIndex, 1>(); incPC(-1); doUpperOp(); incPC(1); }
 
 		if (!isBdelay) { incPC(1); }
 		else {

@@ -185,7 +185,9 @@ declareAllVariables
 #define _writesVI	 (1<<25) // Current Instruction writes to VI
 #define _swapOps	 (1<<26) // Runs Lower Instruction Before Upper Instruction
 #define _isFSSSET	 (1<<27) // Cur Instruction is FSSET
-//#define _isBranch2	 (1<<28) // Cur Instruction is a Branch that writes VI regs (BAL/JALR)
+#define _doDivFlag	 (1<<28) // Transfer Div flag to Status Flag
+
+//#define _isBranch2	 (1<<31) // Cur Instruction is a Branch that writes VI regs (BAL/JALR)
 
 #define isNOP		 (mVUinfo & (1<<0))
 #define isBranch	 (mVUinfo & (1<<1))
@@ -214,7 +216,8 @@ declareAllVariables
 #define writesVI	 (mVUinfo & (1<<25))
 #define swapOps		 (mVUinfo & (1<<26))
 #define isFSSET		 (mVUinfo & (1<<27))
-//#define isBranch2	 (mVUinfo & (1<<28))
+#define doDivFlag	 (mVUinfo & (1<<28))
+//#define isBranch2	 (mVUinfo & (1<<31))
 
 #define isMMX(_VIreg_)	(_VIreg_ >= 1 && _VIreg_ <=9)
 #define mmVI(_VIreg_)	(_VIreg_ - 1)

@@ -474,7 +474,7 @@ microVUf(void) mVU_FCSET() {
 
 microVUf(void) mVU_FMAND() {
 	microVU* mVU = mVUx;
-	if (!recPass) {}
+	if (!recPass) { mVUanalyzeMflag<vuIndex>(_Fs_, _Ft_); }
 	else { 
 		mVUallocMFLAGa<vuIndex>(gprT1, fvmInstance);
 		mVUallocVIa<vuIndex>(gprT2, _Fs_);
@@ -485,7 +485,7 @@ microVUf(void) mVU_FMAND() {
 
 microVUf(void) mVU_FMEQ() {
 	microVU* mVU = mVUx;
-	if (!recPass) {}
+	if (!recPass) { mVUanalyzeMflag<vuIndex>(_Fs_, _Ft_); }
 	else { 
 		mVUallocMFLAGa<vuIndex>(gprT1, fvmInstance);
 		mVUallocVIa<vuIndex>(gprT2, _Fs_);
@@ -498,7 +498,7 @@ microVUf(void) mVU_FMEQ() {
 
 microVUf(void) mVU_FMOR() {
 	microVU* mVU = mVUx;
-	if (!recPass) {}
+	if (!recPass) { mVUanalyzeMflag<vuIndex>(_Fs_, _Ft_); }
 	else { 
 		mVUallocMFLAGa<vuIndex>(gprT1, fvmInstance);
 		mVUallocVIa<vuIndex>(gprT2, _Fs_);
@@ -547,12 +547,11 @@ microVUf(void) mVU_FSSET() {
 	microVU* mVU = mVUx;
 	if (!recPass) { mVUanalyzeFSSET<vuIndex>(); }
 	else { 
-		int flagReg = gprT1;
-		if (doStatus) { getFlagReg(flagReg, fsInstance); }		// Get status result from upper instruction
-		else { mVUallocSFLAGa<vuIndex>(flagReg, fpsInstance); } // Get status result from last status setting instruction
-		AND16ItoR(flagReg, 0x03f); // Remember not to modify upper 16 bits because of mac flag 
-		OR16ItoR(flagReg, (_Imm12_ & 0xfc0));
-		if (!doStatus) { mVUallocSFLAGb<vuIndex>(flagReg, fsInstance); }
+		int flagReg1, flagReg2;
+		getFlagReg(flagReg1, fsInstance);
+		if (!(doStatus||doDivFlag)) { getFlagReg(flagReg2, fpsInstance); MOV16RtoR(flagReg1, flagReg2); } // Get status result from last status setting instruction	
+		AND16ItoR(flagReg1, 0x03f); // Remember not to modify upper 16 bits because of mac flag 
+		OR16ItoR (flagReg1, (_Imm12_ & 0xfc0));
 	}
 }
 

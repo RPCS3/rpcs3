@@ -665,13 +665,13 @@ microVUt(void) mVUallocFMAC26b(int& ACCw, int& ACCr) {
 // Flag Allocators
 //------------------------------------------------------------------
 
-#define getFlagReg(regX, fInst) {  \
-	switch (fInst) { \
+#define getFlagReg(regX, fInst) {		\
+	switch (fInst) {					\
 		case 0: regX = gprF0;	break;  \
 		case 1: regX = gprF1;	break;  \
 		case 2: regX = gprF2;	break;  \
 		case 3: regX = gprF3;	break;  \
-	}  \
+	}									\
 }
 
 microVUt(void) mVUallocSFLAGa(int reg, int fInstance) {
