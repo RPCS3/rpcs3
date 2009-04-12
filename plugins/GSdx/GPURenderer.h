@@ -56,20 +56,15 @@ protected:
 	{
 		if(message == WM_KEYUP)
 		{
-			if(wParam == VK_DELETE)
+			switch(wParam)
 			{
+			case VK_DELETE:
 				m_filter = (m_filter + 1) % 3;
 				return 0;
-			}
-
-			if(wParam == VK_END)
-			{
+			case VK_END:
 				m_dither = m_dither ? 0 : 1;
 				return 0;
-			}
-
-			if(wParam == VK_NEXT)
-			{
+			case VK_NEXT:
 				m_aspectratio = (m_aspectratio + 1) % 3;
 				return 0;
 			}

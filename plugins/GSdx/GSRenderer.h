@@ -67,36 +67,25 @@ protected:
 		{
 			int step = (::GetAsyncKeyState(VK_SHIFT) & 0x8000) ? -1 : 1;
 
-			if(msg.wParam == VK_F5)
+			switch(msg.wParam)
 			{
+			case VK_F5:
 				m_interlace = (m_interlace + 7 + step) % 7;
 				return true;
-			}
-
-			if(msg.wParam == VK_F6)
-			{
+			case VK_F6:
 				m_aspectratio = (m_aspectratio + 3 + step) % 3;
 				return true;
-			}			
-
-			if(msg.wParam == VK_F7)
-			{
+			case VK_F7:
 				m_wnd.SetWindowText(_T("PCSX2"));
 				m_osd = !m_osd;
 				return true;
-			}
-
-			if(msg.wParam == VK_DELETE)
-			{
+			case VK_DELETE:
 				m_aa1 = !m_aa1;
 				return true;
-			}			
-
-			if(msg.wParam == VK_END)
-			{
+			case VK_END:
 				m_blur = !m_blur;
 				return true;
-			}			
+			}
 		}
 
 		return false;
@@ -398,17 +387,11 @@ protected:
 	{
 		if(msg.message == WM_KEYDOWN)
 		{
-			if(msg.wParam == VK_F12)
+			switch(msg.wParam)
 			{
-				if(m_capture.IsCapturing())
-				{
-					m_capture.EndCapture();
-				}
-				else
-				{
-					m_capture.BeginCapture(GetFPS());
-				}
-
+			case VK_F12:
+				if(m_capture.IsCapturing()) m_capture.EndCapture();
+				else m_capture.BeginCapture(GetFPS());
 				return true;
 			}
 		}
