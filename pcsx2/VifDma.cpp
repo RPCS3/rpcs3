@@ -351,11 +351,13 @@ static int VIFalign(u32 *data, vifCode *v, int size, const unsigned int VIFdmanu
 	if (VIFdmanum == 0)
 	{
 		VU = &VU0;
+		vifRegs = vif0Regs;
 		assert(v->addr < memsize);
 	}
 	else
 	{
 		VU = &VU1;
+		vifRegs = vif1Regs;
 		assert(v->addr < memsize);
 	}
 
@@ -502,14 +504,14 @@ static void VIFunpack(u32 *data, vifCode *v, int size, const unsigned int VIFdma
 	if (VIFdmanum == 0)
 	{
 		VU = &VU0;
-		//vifRegs = vif0Regs;
+		vifRegs = vif0Regs;
 		assert(v->addr < memsize);
 	}
 	else
 	{
 
 		VU = &VU1;
-		//vifRegs = vif1Regs;
+		vifRegs = vif1Regs;
 		assert(v->addr < memsize);
 
 		if (vu1MicroIsSkipping())
@@ -544,7 +546,7 @@ static void VIFunpack(u32 *data, vifCode *v, int size, const unsigned int VIFdma
 
 #ifdef VIFUNPACKDEBUG
 
-	if()vif->tag.addr + (size / (VIFfuncTable[ vif->cmd & 0xf ].gsize * vifRegs->cycle.wl)) * 
+	if((vif->tag.addr + (size / (VIFfuncTable[ vif->cmd & 0xf ].gsize * vifRegs->cycle.wl)) * 
 		((vifRegs->cycle.cl - vifRegs->cycle.wl) * 16)) > (u32)(VIFdmanum ? 0x4000 : 0x1000)) 
 	{
 		//Sanity Check (memory overflow)
@@ -820,7 +822,6 @@ static __forceinline void vif0UNPACK(u32 *data)
 	vif0.tag.size = len;
 	vif0Regs->offset = 0;
 
-	vifRegs = (VIFregisters*)vif0Regs;
 	vifMaskRegs = g_vif0Masks;
 	vif = &vif0;
 	vifRow = g_vifRow0;
@@ -1569,7 +1570,6 @@ static __forceinline void vif1UNPACK(u32 *data)
 	vif1.tag.addr <<= 4;
 	vif1.tag.cmd  = vif1.cmd;
 
-	vifRegs = (VIFregisters*)vif1Regs;
 	vifMaskRegs = g_vif1Masks;
 	vif = &vif1;
 	vifRow = g_vifRow1;
