@@ -40,7 +40,7 @@ using namespace R5900;
 // dark cloud2 uses 8 bit DMAs register writes
 static __forceinline void DmaExec8( void (*func)(), u32 mem, u8 value )
 {
-	u32 qwcRegister = mem | 0x20;
+	u32 qwcRegister = (mem | 0x20) & ~0x1;  //Need to remove the lower bit else we end up clearing TADR
 
 	//Its invalid for the hardware to write a DMA while it is active, not without Suspending the DMAC
 	if((value & 0x1) && (psHu8(mem) & 0x1) == 0x1 && (psHu32(DMAC_CTRL) & 0x1) == 1) {
