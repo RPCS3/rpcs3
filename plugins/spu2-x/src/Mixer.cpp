@@ -579,7 +579,7 @@ struct VoiceMixSet
 
 const VoiceMixSet VoiceMixSet::Empty( StereoOut32::Empty, StereoOut32::Empty );
 
-static void __fastcall MixCoreVoices( VoiceMixSet& dest, const uint coreidx )
+static __forceinline void MixCoreVoices( VoiceMixSet& dest, const uint coreidx )
 {
 	V_Core& thiscore( Cores[coreidx] );
 
