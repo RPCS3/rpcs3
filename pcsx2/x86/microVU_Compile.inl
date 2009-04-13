@@ -88,35 +88,60 @@ microVUt(void) mVUsetFlags(int* bStatus, int* bMac) {
 	}
 
 	// Status/Mac Flags Setup Code
-	int xStatus	= 0; // Status Instance starts at #0 on every block
-	int xMac	= 0; // Mac Instance starts at #0 on every block
-	int pStatus	= 0;
-	int pMac	= 0;
+	int xStatus	= 8; // Status Instance starts at #0 on every block ((8&3) == 0)
+	int xMac	= 8; // Mac Instance starts at #0 on every block ((8&3) == 0)
+	int pStatus	= 3;
+	int pMac	= 3;
+	int yStatus = 0;
+	int xS = 0, yS = 1, zS = 0;
+	int xM = 0, yM = 1, zM = 0;
 	int xCount	= mVUcount; // Backup count
 	mVUcount	= 0;
 	iPC			= mVUstartPC;
 	for (int i = 0; i < xCount; i++) {
 		if ((xCount - i) > aCount) mVUstatusFlagOp<vuIndex>(); // Don't Optimize out on the last ~4+ instructions
-		if (doStatus||isFSSET||doDivFlag)	{ mVUinfo |= xStatus << 12; } // _fsInstance
-		if (doMac)							{ mVUinfo |= xMac	 << 10; } // _fmInstance
-		pStatus = (xStatus + ((mVUstall > 3) ? 3 : mVUstall)) & 3;
-		pMac	= (xMac	   + ((mVUstall > 3) ? 3 : mVUstall)) & 3;
-		mVUinfo |= pStatus << 18; // _fvsInstance
-		mVUinfo |= pMac	   << 16; // _fvmInstance
-		if (doStatus||isFSSET||doDivFlag) { xStatus = (xStatus+1) & 3; }
-		if (doMac)						  { xMac	= (xMac+1)	  & 3; }
+		if (doStatus||isFSSET||doDivFlag)	{ mVUinfo |= (xStatus&3) << 12; } // _fsInstance
+		if (doMac)							{ mVUinfo |= (xMac&3)	 << 10; } // _fmInstance
+		
+		yS += (mVUstall > 3) ? 3 : mVUstall;
+		if (yS > zS) {
+			pStatus += (yS-zS);
+			if (pStatus >= xStatus) pStatus = (xStatus-1);
+			zS++;
+			xS = (yS-zS);
+			zS = yS;
+			yS -= xS;
+		}
+		yS++;
+
+		yM += (mVUstall > 3) ? 3 : mVUstall;
+		if (yM > zM) {
+			pMac += (yM-zM);
+			if (pMac >= xMac) pMac = (xMac-1);
+			zM++;
+			xM = (yM-zM);
+			zM = yM;
+			yM -= xM;
+		}
+		yM++;
+
+		mVUinfo |= (pStatus&3) << 18; // _fvsInstance
+		mVUinfo |= (pMac&3)	   << 16; // _fvmInstance
+
+		if (doStatus||isFSSET||doDivFlag) { xStatus = (xStatus+1); }
+		if (doMac)						  { xMac	= (xMac+1); }
 		incPC2(2);
 	}
 	mVUcount = xCount; // Restore count
 
 	// Setup Last 4 instances of Status/Mac flags (needed for accurate block linking)
 	iPC = endPC;
-	for (int i = 3, int j = 3, int ii = 1, int jj = 3; aCount > 0; ii++, aCount--) {
+	for (int i = 3, int j = 3, int ii = 1, int jj = 1; aCount > 0; ii++, jj++, aCount--) {
 		if ((doStatus||isFSSET||doDivFlag) && (i >= 0)) { 
-			for (; (ii > 0 && i >= 0); ii--) { xStatus = (xStatus-1) & 3; bStatus[i] = xStatus; i--; }
+			for (; (ii > 0 && i >= 0); i--, ii--) { xStatus = (xStatus-1) & 3; bStatus[i] = xStatus; }
 		}
 		if (doMac && (j >= 0)) { 
-			for (; (jj > 0 && j >= 0); jj--) { xMac	   = (xMac-1)	 & 3; bMac[i]	 = xMac;	j--; }
+			for (; (jj > 0 && j >= 0); j--, jj--) { xMac = (xMac-1) & 3; bMac[i] = xMac; }
 		}
 		incPC2(-2);
 	}
