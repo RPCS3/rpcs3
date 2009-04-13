@@ -82,7 +82,7 @@ microVUt(void) mVUsetFlags(int* bStatus, int* bMac) {
 	// Ensure last ~4+ instructions update mac flags
 	int endPC  = iPC;
 	int aCount = 1; // Amount of instructions needed to get 4 valid status/mac flag instances
-	for (int i = mVUcount; i > 0; i++, aCount++;) {
+	for (int i = mVUcount; i > 0; i--, aCount++) {
 		if (doStatus) { mVUinfo |= _doMac; if (i >= 4) { break; } }
 		incPC2(-2);
 	}
@@ -96,10 +96,9 @@ microVUt(void) mVUsetFlags(int* bStatus, int* bMac) {
 	int xS = 0, yS = 1, zS = 0;
 	int xM = 0, yM = 1, zM = 0;
 	int xCount	= mVUcount; // Backup count
-	mVUcount	= 0;
 	iPC			= mVUstartPC;
-	for (int i = 0; i < xCount; i++) {
-		if ((xCount - i) > aCount) mVUstatusFlagOp<vuIndex>(); // Don't Optimize out on the last ~4+ instructions
+	for (mVUcount = 0; mVUcount < xCount; mVUcount++) {
+		if ((xCount - mVUcount) > aCount) mVUstatusFlagOp<vuIndex>(); // Don't Optimize out on the last ~4+ instructions
 		if (doStatus||isFSSET||doDivFlag)	{ mVUinfo |= (xStatus&3) << 12; } // _fsInstance
 		if (doMac)							{ mVUinfo |= (xMac&3)	 << 10; } // _fmInstance
 		
