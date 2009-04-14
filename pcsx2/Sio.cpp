@@ -527,7 +527,7 @@ void InitializeSIO(u8 value)
 					}
 					break;
 				case 0x2002:
-					if (!PAD2setSlot(1, 1+sio.activePadSlot[1])) {
+					if (!PAD2setSlot(2, 1+sio.activePadSlot[1])) {
 						// Pad is not present.  Don't send poll, just return a bunch of 0's.
 						sio2.packet.recvVal1 = 0x1D100;
 						sio.padst = 3;
