@@ -18,20 +18,6 @@
 
 #pragma once
 
-// x86 opcode descriptors
-#define XMMREGS 8
-#define X86REGS 8
-#define MMXREGS 8
-
-enum XMMSSEType
-{
-	XMMT_INT = 0, // integer (sse2 only)
-	XMMT_FPS = 1, // floating point
-	//XMMT_FPD = 3, // double
-};
-
-extern XMMSSEType g_xmmtypes[XMMREGS];
-
 extern void cpudetectInit( void );//this is all that needs to be called and will fill up the below structs
 
 typedef struct CAPABILITIES CAPABILITIES;
@@ -106,10 +92,23 @@ extern CPUINFO cpuinfo;
 #define __threadlocal __thread
 #endif
 
+// x86 opcode descriptors
+#define XMMREGS 8
+#define X86REGS 8
+#define MMXREGS 8
+
+enum XMMSSEType
+{
+	XMMT_INT = 0, // integer (sse2 only)
+	XMMT_FPS = 1, // floating point
+	//XMMT_FPD = 3, // double
+};
+
 extern __threadlocal u8  *x86Ptr;
 extern __threadlocal u8  *j8Ptr[32];
 extern __threadlocal u32 *j32Ptr[32];
 
+extern __threadlocal XMMSSEType g_xmmtypes[XMMREGS];
 
 //------------------------------------------------------------------
 // templated version of is_s8 is required, so that u16's get correct sign extension treatment.
@@ -218,10 +217,45 @@ namespace x86Emitter
 		}
 	};
 
+	// ------------------------------------------------------------------------
+	// Note: GCC parses templates ahead of time apparently as a 'favor' to the programmer, which
+	// means it finds undeclared variables when MSVC does not (Since MSVC compiles templates
+	// when they are actually used).  In practice this sucks since it means we have to move all'
+	// our variable and function prototypes from a nicely/neatly unified location to being strewn
+	// all about the the templated code in haphazard fashion.  Yay.. >_<
+	//
+
 	typedef x86Register<4> x86Register32;
 	typedef x86Register<2> x86Register16;
 	typedef x86Register<1> x86Register8;
-	
+
+	extern const x86Register32 eax;
+	extern const x86Register32 ebx;
+	extern const x86Register32 ecx;
+	extern const x86Register32 edx;
+	extern const x86Register32 esi;
+	extern const x86Register32 edi;
+	extern const x86Register32 ebp;
+	extern const x86Register32 esp;
+
+	extern const x86Register16 ax;
+	extern const x86Register16 bx;
+	extern const x86Register16 cx;
+	extern const x86Register16 dx;
+	extern const x86Register16 si;
+	extern const x86Register16 di;
+	extern const x86Register16 bp;
+	extern const x86Register16 sp;
+
+	extern const x86Register8 al;
+	extern const x86Register8 cl;
+	extern const x86Register8 dl;
+	extern const x86Register8 bl;
+	extern const x86Register8 ah;
+	extern const x86Register8 ch;
+	extern const x86Register8 dh;
+	extern const x86Register8 bh;
+
 	//////////////////////////////////////////////////////////////////////////////////////////
 	// Use 32 bit registers as out index register (for ModSib memory address calculations)
 	// Only x86IndexReg provides operators for constructing x86AddressInfo types.
@@ -400,7 +434,7 @@ namespace x86Emitter
 			return ModSibBase( (uptr)src );
 		}
 		
-		x86IndexerType() {}
+		x86IndexerType() {}			// applease the GCC gods
 	};
 
 	//////////////////////////////////////////////////////////////////////////////////////////
@@ -433,6 +467,8 @@ namespace x86Emitter
 		{
 			return ModSibStrict<OperandSize>( (uptr)src );
 		}
+		
+		x86IndexerTypeExplicit() {}  // GCC initialization dummy
 	};
 
 	extern const x86IndexerType ptr;
@@ -496,6 +532,8 @@ namespace x86Emitter
 		public: 
 			static const uint OperandSize = sizeof(ImmType);
 
+			Group1Impl() {}		// because GCC doesn't like static classes
+
 		protected:
 			static bool Is8BitOperand()	{ return OperandSize == 1; }
 			static void prefix16()		{ if( OperandSize == 2 ) iWrite<u8>( 0x66 ); }
@@ -524,6 +562,7 @@ namespace x86Emitter
 
 			static __emitinline void Emit( const x86Register<OperandSize>& to, ImmType imm ) 
 			{
+				prefix16();
 				if( !Is8BitOperand() && is_s8( imm ) )
 				{
 					iWrite<u8>( 0x83 );
@@ -532,7 +571,6 @@ namespace x86Emitter
 				}
 				else
 				{
-					prefix16();
 					if( to.IsAccumulator() )
 						iWrite<u8>( (Is8BitOperand() ? 4 : 5) | (InstType<<3) );
 					else
@@ -575,6 +613,8 @@ namespace x86Emitter
 		{
 		public: 
 			static const uint OperandSize = sizeof(ImmType);
+
+			Group2Impl() {}		// For the love of GCC.
 
 		protected:
 			static bool Is8BitOperand()	{ return OperandSize == 1; }
@@ -637,6 +677,13 @@ namespace x86Emitter
 				}
 			}
 		};
+
+		// if the immediate is zero, we can replace the instruction, or ignore it
+		// entirely, depending on the instruction being issued.  That's what we do here.
+		//  (returns FALSE if no optimization is performed)
+		// [TODO] : Work-in-progress!
+		//template< G1Type InstType, typename RegType >
+		//static __forceinline void _optimize_imm0( RegType to );
 		
 		// -------------------------------------------------------------------
 		//
@@ -656,7 +703,7 @@ namespace x86Emitter
 			//   I've set up the inlining to be as practical and intelligent as possible, which means
 			//   forcing inlining for (void*) forms of ModRM, which thanks to constprop reduce to
 			//   virtually no code.  In the case of (Reg, Imm) forms, the inlining is up to the dis-
-			//   cretion of the compiler.
+			//   creation of the compiler.
 			// 
 
 			// (Note: I'm not going to macro this since it would likely clobber intellisense parameter resolution)
@@ -670,7 +717,11 @@ namespace x86Emitter
 			__noinline void operator()( const x86Register32& to,	const ModSibBase& sibsrc ) const	{ m_32::Emit( to, sibsrc ); }
 			__noinline void operator()( const ModSibStrict<4>& sibdest, u32 imm ) const					{ m_32::Emit( sibdest, imm ); }
 
-			void operator()( const x86Register32& to, u32 imm ) const									{ m_32i::Emit( to, imm ); }
+			void operator()( const x86Register32& to, u32 imm, bool needs_flags=false ) const
+			{
+				//if( needs_flags || (imm != 0) || !_optimize_imm0() )
+				m_32i::Emit( to, imm );
+			}
 
 			// ---------- 16 Bit Interface -----------
 			__forceinline void operator()( const x86Register16& to,	const x86Register16& from ) const	{ m_16i::Emit( to, from ); }
@@ -680,7 +731,7 @@ namespace x86Emitter
 			__noinline void operator()( const x86Register16& to,	const ModSibBase& sibsrc ) const	{ m_16::Emit( to, sibsrc ); }
 			__noinline void operator()( const ModSibStrict<2>& sibdest, u16 imm ) const					{ m_16::Emit( sibdest, imm ); }
 
-			void operator()( const x86Register16& to, u16 imm ) const									{ m_16i::Emit( to, imm ); }
+			void operator()( const x86Register16& to, u16 imm, bool needs_flags=false ) const			{ m_16i::Emit( to, imm ); }
 
 			// ---------- 8 Bit Interface -----------
 			__forceinline void operator()( const x86Register8& to,	const x86Register8& from ) const	{ m_8i::Emit( to, from ); }
@@ -690,7 +741,9 @@ namespace x86Emitter
 			__noinline void operator()( const x86Register8& to,		const ModSibBase& sibsrc ) const	{ m_8::Emit( to, sibsrc ); }
 			__noinline void operator()( const ModSibStrict<1>& sibdest, u8 imm ) const					{ m_8::Emit( sibdest, imm ); }
 
-			void operator()( const x86Register8& to, u8 imm ) const										{ m_8i::Emit( to, imm ); }
+			void operator()( const x86Register8& to, u8 imm, bool needs_flags=false ) const				{ m_8i::Emit( to, imm ); }
+
+			Group1ImplAll() {}		// Why does GCC need these?
 		};
 
 
@@ -712,7 +765,7 @@ namespace x86Emitter
 			//   I've set up the inlining to be as practical and intelligent as possible, which means
 			//   forcing inlining for (void*) forms of ModRM, which thanks to constprop reduce to
 			//   virtually no code.  In the case of (Reg, Imm) forms, the inlining is up to the dis-
-			//   cretion of the compiler.
+			//   creation of the compiler.
 			// 
 
 			// (Note: I'm not going to macro this since it would likely clobber intellisense parameter resolution)
@@ -735,6 +788,9 @@ namespace x86Emitter
 			__noinline void operator()( const ModSibStrict<1>& sibdest,	const x86Register8& from ) const{ m_8::Emit( sibdest, from ); }
 			__noinline void operator()( const ModSibStrict<1>& sibdest, u8 imm ) const					{ m_8::Emit( sibdest, imm ); }
 			void operator()( const x86Register8& to, u8 imm ) const										{ m_8i::Emit( to, imm ); }
+
+
+			Group2ImplAll() {}		// I am a class with no members, so I need an explicit constructor!  Sense abounds.
 		};
 
 		// Define the externals for Group1/2 instructions here (inside the Internal namespace).
@@ -759,36 +815,41 @@ namespace x86Emitter
 		extern const Group2ImplAll<G2Type_SHL> SHL;
 		extern const Group2ImplAll<G2Type_SHR> SHR;
 		extern const Group2ImplAll<G2Type_SAR> SAR;
+
+		/*template< G1Type InstType, typename RegType >
+		static __forceinline void _optimize_imm0( const RegType& to )
+		{
+			switch( InstType )
+			{
+				// ADD, SUB, and OR can be ignored if the imm is zero..
+			case G1Type_ADD:
+			case G1Type_SUB:
+			case G1Type_OR:
+				return true;
+
+				// ADC and SBB can never be ignored (could have carry bits)
+				// XOR behavior is distinct as well [or is it the same as NEG or NOT?]
+			case G1Type_ADC:
+			case G1Type_SBB:
+			case G1Type_XOR:
+				return false;
+
+				// replace AND with XOR (or SUB works too.. whatever!)
+			case G1Type_AND:
+				XOR( to, to );
+				return true;
+
+				// replace CMP with OR reg,reg:
+			case G1Type_CMP:
+				OR( to, to );
+				return true;
+
+				jNO_DEFAULT
+			}
+			return false;
+		}*/
+
 	}
-	
-	// ------------------------------------------------------------------------
-
-	extern const x86Register32 eax;
-	extern const x86Register32 ebx;
-	extern const x86Register32 ecx;
-	extern const x86Register32 edx;
-	extern const x86Register32 esi;
-	extern const x86Register32 edi;
-	extern const x86Register32 ebp;
-	extern const x86Register32 esp;
-
-	extern const x86Register16 ax;
-	extern const x86Register16 bx;
-	extern const x86Register16 cx;
-	extern const x86Register16 dx;
-	extern const x86Register16 si;
-	extern const x86Register16 di;
-	extern const x86Register16 bp;
-	extern const x86Register16 sp;
-
-	extern const x86Register8 al;
-	extern const x86Register8 cl;
-	extern const x86Register8 dl;
-	extern const x86Register8 bl;
-	extern const x86Register8 ah;
-	extern const x86Register8 ch;
-	extern const x86Register8 dh;
-	extern const x86Register8 bh;
 }
 
 #include "ix86_inlines.inl"

@@ -40,8 +40,8 @@ namespace x86Emitter
 	// forms are functionally equivalent to Mov reg,imm, and thus better written as MOVs
 	// instead.
 
-	extern void LEA( x86Register32 to, const ModSibBase& src );
-	extern void LEA( x86Register16 to, const ModSibBase& src );
+	extern void LEA( x86Register32 to, const ModSibBase& src, bool preserve_flags=false );
+	extern void LEA( x86Register16 to, const ModSibBase& src, bool preserve_flags=false );
 
 	// ----- Push / Pop Instructions  -----
 
@@ -80,7 +80,9 @@ namespace x86Emitter
 	extern void MOV( const x86Register32& to, const void* src );
 	extern void MOV( const void* dest, const x86Register32& from );
 
-	extern void MOV( const x86Register32& to, u32 imm );
+	// preserve_flags  - set to true to disable optimizations which could alter the state of
+	//   the flags (namely replacing mov reg,0 with xor).
+	extern void MOV( const x86Register32& to, u32 imm, bool preserve_flags=false );
 	extern void MOV( const ModSibStrict<4>& sibdest, u32 imm );
 
 	// ---------- 16 Bit Interface -----------
@@ -90,7 +92,9 @@ namespace x86Emitter
 	extern void MOV( const x86Register16& to, const void* src );
 	extern void MOV( const void* dest, const x86Register16& from );
 
-	extern void MOV( const x86Register16& to, u16 imm );
+	// preserve_flags  - set to true to disable optimizations which could alter the state of
+	//   the flags (namely replacing mov reg,0 with xor).
+	extern void MOV( const x86Register16& to, u16 imm, bool preserve_flags=false );
 	extern void MOV( const ModSibStrict<2>& sibdest, u16 imm );
 
 	// ---------- 8 Bit Interface -----------
@@ -100,7 +104,7 @@ namespace x86Emitter
 	extern void MOV( const x86Register8& to, const void* src );
 	extern void MOV( const void* dest, const x86Register8& from );
 
-	extern void MOV( const x86Register8& to, u8 imm );
+	extern void MOV( const x86Register8& to, u8 imm, bool preserve_flags=false );
 	extern void MOV( const ModSibStrict<1>& sibdest, u8 imm );
 
 }

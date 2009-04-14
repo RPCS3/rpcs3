@@ -62,7 +62,7 @@ __threadlocal u8  *x86Ptr;
 __threadlocal u8  *j8Ptr[32];
 __threadlocal u32 *j32Ptr[32];
 
-XMMSSEType g_xmmtypes[XMMREGS] = { XMMT_INT };
+__threadlocal XMMSSEType g_xmmtypes[XMMREGS] = { XMMT_INT };
 
 namespace x86Emitter {
 
@@ -72,9 +72,8 @@ const x86IndexerTypeExplicit<2> ptr16;
 const x86IndexerTypeExplicit<1> ptr8;	
 
 // ------------------------------------------------------------------------
-const x86Register32 x86Register32::Empty;
-const x86Register16 x86Register16::Empty;
-const x86Register8	x86Register8::Empty;
+
+template< int OperandSize > const x86Register<OperandSize> x86Register<OperandSize>::Empty;
 const x86IndexReg	x86IndexReg::Empty;
 
 const x86Register32
@@ -235,164 +234,16 @@ namespace Internal
 
 using namespace Internal;
 
-/*
-emitterT void x86SetPtr( u8* ptr ) 
-{
-	x86Ptr = ptr;
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////
-// x86Ptr Label API
-//
-
-class x86Label
-{
-public:
-	class Entry
-	{
-	protected:
-		u8* (*m_emit)( u8* emitTo, u8* label_target, int cc );	// callback for the instruction to emit (cc = comparison type)
-		u8* m_base;			// base address of the instruction (passed to the instruction)
-		int m_cc;			// comparison type of the instruction
-		
-	public:
-		explicit Entry( int cc ) :
-			m_base( x86Ptr )
-		,	m_writebackpos( writebackidx )
-		{
-		}
-
-		void Commit( const u8* target ) const
-		{
-			//uptr reltarget = (uptr)m_base - (uptr)target;
-			//*((u32*)&m_base[m_writebackpos]) = reltarget;
-			jASSUME( m_emit != NULL );
-			jASSUME( m_base != NULL );
-			return m_emit( m_base, target, m_cc );
-		}
-	};
-
-protected:
-	u8* m_target;		// x86Ptr target address of this label
-	Entry m_writebacks[8];
-	int m_writeback_curpos;
-
-public:
-	// creates a label list with no valid target.
-	// Use x86LabelList::Set() to set a target prior to class destruction.
-	x86Label() : m_target()
-	{
-	}
-
-	x86Label( EmitPtrCache& src ) : m_target( src.GetPtr() )
-	{
-	}
-	
-	// Performs all address writebacks on destruction.
-	virtual ~x86Label()
-	{
-		IssueWritebacks();
-	}
-
-	void SetTarget() { m_address = x86Ptr; }
-	void SetTarget( void* addr ) { m_address = (u8*)addr; }
-
-	void Clear()
-	{
-		m_writeback_curpos = 0;
-	}
-	
-	// Adds a jump/call instruction to this label for writebacks.
-	void AddWriteback( void* emit_addr, u8* (*instruction)(), int cc )
-	{
-		jASSUME( m_writeback_curpos < MaxWritebacks );
-		m_writebacks[m_writeback_curpos] = Entry( (u8*)instruction, addrpart ) );
-		m_writeback_curpos++;
-	}
-	
-	void IssueWritebacks() const
-	{
-		const std::list<Entry>::const_iterator& start = m_list_writebacks.
-		for( ; start!=end; start++ )
-		{
-			Entry& current = *start;
-			u8* donespot = current.Commit();
-			
-			// Copy the data from the m_nextinst to the current location,
-			// and update any additional writebacks (but what about multiple labels?!?)
-
-		}
-	}
-};
-#endif
-
-void JMP( x86Label& dest )
-{
-	dest.AddWriteback( x86Ptr, emitJMP, 0 );
-}
-
-void JLE( x86Label& dest )
-{
-	dest.AddWriteback( x86Ptr, emitJCC, 0 );
-}
-
-void x86SetJ8( u8* j8 )
-{
-	u32 jump = ( x86Ptr - j8 ) - 1;
-
-	if ( jump > 0x7f ) {
-		Console::Error( "j8 greater than 0x7f!!" );
-		assert(0);
-	}
-	*j8 = (u8)jump;
-}
-
-void x86SetJ8A( u8* j8 )
-{
-	u32 jump = ( x86Ptr - j8 ) - 1;
-
-	if ( jump > 0x7f ) {
-		Console::Error( "j8 greater than 0x7f!!" );
-		assert(0);
-	}
-
-	if( ((uptr)x86Ptr&0xf) > 4 ) {
-
-		uptr newjump = jump + 16-((uptr)x86Ptr&0xf);
-
-		if( newjump <= 0x7f ) {
-			jump = newjump;
-			while((uptr)x86Ptr&0xf) *x86Ptr++ = 0x90;
-		}
-	}
-	*j8 = (u8)jump;
-}
-
-emitterT void x86SetJ32( u32* j32 ) 
-{
-	*j32 = ( x86Ptr - (u8*)j32 ) - 4;
-}
-
-emitterT void x86SetJ32A( u32* j32 )
-{
-	while((uptr)x86Ptr&0xf) *x86Ptr++ = 0x90;
-	x86SetJ32(j32);
-}
-
-emitterT void x86Align( int bytes ) 
-{
-	// forward align
-	x86Ptr = (u8*)( ( (uptr)x86Ptr + bytes - 1) & ~( bytes - 1 ) );
-}
-*/
-
 // ------------------------------------------------------------------------
 // Internal implementation of EmitSibMagic which has been custom tailored
 // to optimize special forms of the Lea instructions accordingly, such
 // as when a LEA can be replaced with a "MOV reg,imm" or "MOV reg,reg".
 //
+// preserve_flags - set to ture to disable use of SHL on [Index*Base] forms
+// of LEA, which alters flags states.
+//
 template< typename ToReg >
-static void EmitLeaMagic( ToReg to, const ModSibBase& src, bool is16bit=false )
+static void EmitLeaMagic( ToReg to, const ModSibBase& src, bool preserve_flags )
 {
 	int displacement_size = (src.Displacement == 0) ? 0 : 
 		( ( src.IsByteSizeDisp() ) ? 1 : 2 );
@@ -407,18 +258,12 @@ static void EmitLeaMagic( ToReg to, const ModSibBase& src, bool is16bit=false )
 
 		if( src.Index.IsEmpty() )
 		{
-			if( is16bit )
-				MOV( to, src.Displacement );
-			else
-				MOV( to, src.Displacement );
+			MOV( to, src.Displacement );
 			return;
 		}
 		else if( displacement_size == 0 )
 		{
-			if( is16bit )
-				MOV( to, ToReg( src.Index.Id ) );
-			else
-				MOV( to, ToReg( src.Index.Id ) );
+			MOV( to, ToReg( src.Index.Id ) );
 			return;
 		}
 		else
@@ -434,11 +279,11 @@ static void EmitLeaMagic( ToReg to, const ModSibBase& src, bool is16bit=false )
 	{
 		if( src.Base.IsEmpty() )
 		{
-			if( displacement_size == 0 )
+			if( !preserve_flags && (displacement_size == 0) )
 			{
 				// Encode [Index*Scale] as a combination of Mov and Shl.
 				// This is more efficient because of the bloated LEA format which requires
-				// a 32 bit displacement, and the compact nature of the alterntive.
+				// a 32 bit displacement, and the compact nature of the alternative.
 				//
 				// (this does not apply to older model P4s with the broken barrel shifter,
 				//  but we currently aren't optimizing for that target anyway).
@@ -479,16 +324,16 @@ static void EmitLeaMagic( ToReg to, const ModSibBase& src, bool is16bit=false )
 	}
 }
 
-__emitinline void LEA( x86Register32 to, const ModSibBase& src )
+__emitinline void LEA( x86Register32 to, const ModSibBase& src, bool preserve_flags )
 {
-	EmitLeaMagic( to, src );
+	EmitLeaMagic( to, src, preserve_flags );
 }
 
 
-__emitinline void LEA( x86Register16 to, const ModSibBase& src )
+__emitinline void LEA( x86Register16 to, const ModSibBase& src, bool preserve_flags )
 {
 	write8( 0x66 );
-	EmitLeaMagic( to, src );
+	EmitLeaMagic( to, src, preserve_flags );
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -555,15 +400,10 @@ public:
 	static __forceinline void Emit( const x86Register<OperandSize>& to, ImmType imm )
 	{
 		// Note: MOV does not have (reg16/32,imm8) forms.
-		
-		if( imm == 0 )
-			XOR( to, to );
-		else
-		{
-			prefix16();
-			iWrite<u8>( (Is8BitOperand() ? 0xb0 : 0xb8) | to.Id ); 
-			iWrite<ImmType>( imm );
-		}
+
+		prefix16();
+		iWrite<u8>( (Is8BitOperand() ? 0xb0 : 0xb8) | to.Id ); 
+		iWrite<ImmType>( imm );
 	}
 
 	static __forceinline void Emit( ModSibStrict<OperandSize> dest, ImmType imm )
@@ -603,7 +443,13 @@ __noinline void MOV( const ModSibBase& sibdest,		const x86Register32& from )	{ M
 __noinline void MOV( const x86Register32& to,		const ModSibBase& sibsrc )	{ MOV32::Emit( to, sibsrc ); }
 __noinline void MOV( const ModSibStrict<4>& sibdest,u32 imm )					{ MOV32::Emit( sibdest, imm ); }
 
-void MOV( const x86Register32& to,		u32 imm )								{ MOV32i::Emit( to, imm ); }
+void MOV( const x86Register32& to, u32 imm, bool preserve_flags )
+{
+	if( !preserve_flags && (imm == 0) )
+		XOR( to, to );
+	else
+		MOV32i::Emit( to, imm );
+}
 
 
 // ---------- 16 Bit Interface -----------
@@ -614,8 +460,13 @@ __noinline void MOV( const ModSibBase& sibdest,		const x86Register16& from )	{ M
 __noinline void MOV( const x86Register16& to,		const ModSibBase& sibsrc )	{ MOV16::Emit( to, sibsrc ); }
 __noinline void MOV( const ModSibStrict<2>& sibdest,u16 imm )					{ MOV16::Emit( sibdest, imm ); }
 
-void MOV( const x86Register16& to,		u16 imm )								{ MOV16i::Emit( to, imm ); }
-
+void MOV( const x86Register16& to, u16 imm, bool preserve_flags )
+{
+	if( !preserve_flags && (imm == 0) )
+		XOR( to, to );
+	else
+		MOV16i::Emit( to, imm );
+}
 
 // ---------- 8 Bit Interface -----------
 __forceinline void MOV( const x86Register8& to,		const x86Register8& from )	{ MOV8i::Emit( to, from ); }
@@ -625,7 +476,13 @@ __noinline void MOV( const ModSibBase& sibdest,		const x86Register8& from )	{ MO
 __noinline void MOV( const x86Register8& to,		const ModSibBase& sibsrc )	{ MOV8::Emit( to, sibsrc ); }
 __noinline void MOV( const ModSibStrict<1>& sibdest,u8 imm )					{ MOV8::Emit( sibdest, imm ); }
 
-void MOV( const x86Register8& to,		u8 imm )								{ MOV8i::Emit( to, imm ); }
+void MOV( const x86Register8& to, u8 imm, bool preserve_flags )
+{
+	if( !preserve_flags && (imm == 0) )
+		XOR( to, to );
+	else
+		MOV8i::Emit( to, imm );
+}
 
 
 //////////////////////////////////////////////////////////////////////////////////////////

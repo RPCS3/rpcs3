@@ -355,7 +355,7 @@ void recVUMI_IADD( VURegs *VU, int info )
 		if( fdreg == fsreg ) ADD32RtoR(fdreg, ftreg);
 		else if( fdreg == ftreg ) ADD32RtoR(fdreg, fsreg);
 		else LEA32RRtoR(fdreg, fsreg, ftreg);
-		MOVZX32R16toR(fdreg, fdreg); // neeed since don't know if fdreg's upper bits are 0
+		MOVZX32R16toR(fdreg, fdreg); // needed since don't know if fdreg's upper bits are 0
 	}
 }
 //------------------------------------------------------------------
@@ -802,20 +802,12 @@ void _saveEAX(VURegs *VU, int x86reg, uptr offset, int info)
 
 			// (this is one of my test cases for the new emitter --air)
 			using namespace x86Emitter;
+			x86IndexReg thisreg( x86reg );
 
-			if ( x86reg >= 0 ) {
-				x86IndexReg thisreg( x86reg );
-				if ( _X ) MOV(ptr32[thisreg+offset],    0x00000000 );
-				if ( _Y ) MOV(ptr32[thisreg+offset+4],  0x00000000 );
-				if ( _Z ) MOV(ptr32[thisreg+offset+8],  0x00000000 );
-				if ( _W ) MOV(ptr32[thisreg+offset+12], 0x3f800000);
-			}
-			else {
-				if ( _X ) MOV(ptr32[offset],	0x00000000);
-				if ( _Y ) MOV(ptr32[offset+4],	0x00000000);
-				if ( _Z ) MOV(ptr32[offset+8],	0x00000000);
-				if ( _W ) MOV(ptr32[offset+14],	0x3f800000);
-			}
+			if ( _X ) MOV(ptr32[thisreg+offset],    0x00000000);
+			if ( _Y ) MOV(ptr32[thisreg+offset+4],  0x00000000);
+			if ( _Z ) MOV(ptr32[thisreg+offset+8],  0x00000000);
+			if ( _W ) MOV(ptr32[thisreg+offset+12], 0x3f800000);
 		}
 		return;
 	}

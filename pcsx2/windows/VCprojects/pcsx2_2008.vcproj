@@ -2938,6 +2938,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\x86\ix86\ix86_jmp.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\x86\ix86\ix86_legacy.cpp"
 				>
 			</File>
