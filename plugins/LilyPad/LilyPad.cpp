@@ -25,11 +25,6 @@
 // LilyPad version.
 #define VERSION ((0<<8) | 10 | (0<<24))
 
-// Used to prevent reading input and cleaning up input devices at the same time.
-// Only an issue when not reading input in GS thread and disabling devices due to
-// lost focus.
-CRITICAL_SECTION readInputCriticalSection;
-
 HINSTANCE hInst;
 HWND hWnd;
 
@@ -241,11 +236,9 @@ void UpdateEnabledDevices(int updateList = 0) {
 BOOL WINAPI DllMain(HINSTANCE hInstance, DWORD fdwReason, void* lpvReserved) {
 	hInst = hInstance;
 	if (fdwReason == DLL_PROCESS_ATTACH) {
-		InitializeCriticalSection(&readInputCriticalSection);
 		DisableThreadLibraryCalls(hInstance);
 	}
 	else if (fdwReason == DLL_PROCESS_DETACH) {
-		DeleteCriticalSection(&readInputCriticalSection);
 		while (openCount)
 			PADclose();
 		PADshutdown();
@@ -353,8 +346,17 @@ u8 padReadKeyUpdated = 0;
 #define LOCK_BUTTONS 4
 #define LOCK_BOTH 1
 
+int deviceUpdateQueued = 0;
+void QueueDeviceUpdate(int updateList=0) {
+	deviceUpdateQueued = deviceUpdateQueued | 1 | (updateList<<1);
+};
+
 
 void Update(unsigned int port, unsigned int slot) {
+	if (deviceUpdateQueued) {
+		UpdateEnabledDevices((deviceUpdateQueued & 0x2)==0x2);
+		deviceUpdateQueued = 0;
+	}
 	if (port > 2) return;
 	u8 *stateUpdated;
 	if (port < 2)
@@ -383,9 +385,6 @@ void Update(unsigned int port, unsigned int slot) {
 		0, hWnd, hWnd, 0
 	};
 
-	if (!config.GSThreadUpdates) {
-		EnterCriticalSection(&readInputCriticalSection);
-	}
 	dm->Update(&info);
 	static int turbo = 0;
 	turbo++;
@@ -408,7 +407,7 @@ void Update(unsigned int port, unsigned int slot) {
 						else if ((state>>15) && !(dev->oldVirtualControlState[b->controlIndex]>>15)) {
 							if (cmd == 0x0F) {
 								miceEnabled = !miceEnabled;
-								UpdateEnabledDevices();
+								QueueDeviceUpdate();
 							}
 							else if (cmd == 0x0C) {
 								lockStateChanged[port][slot] |= LOCK_BUTTONS;
@@ -434,10 +433,6 @@ void Update(unsigned int port, unsigned int slot) {
 		}
 	}
 	dm->PostRead();
-
-	if (!config.GSThreadUpdates) {
-		LeaveCriticalSection(&readInputCriticalSection);
-	}
 
 	{
 		for (int port=0; port<2; port++) {
@@ -750,30 +745,15 @@ ExtraWndProcResult HackWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 			break;
 		case WM_DEVICECHANGE:
 			if (wParam == DBT_DEVNODES_CHANGED) {
-				// Need to do this when not reading input from gs thread.
-				// Checking for that case not worth the effort.
-				EnterCriticalSection(&readInputCriticalSection);
-				UpdateEnabledDevices(1);
-				LeaveCriticalSection(&readInputCriticalSection);
+				QueueDeviceUpdate(1);
 			}
 			break;
 		case WM_ACTIVATEAPP:
 			// Release any buttons PCSX2 may think are down when
 			// losing/gaining focus.
 			ReleaseModifierKeys();
-
-			// Need to do this when not reading input from gs thread.
-			// Checking for that case not worth the effort.
-			EnterCriticalSection(&readInputCriticalSection);
-			if (!wParam) {
-				activeWindow = 0;
-				UpdateEnabledDevices();
-			}
-			else {
-				activeWindow = 1;
-				UpdateEnabledDevices();
-			}
-			LeaveCriticalSection(&readInputCriticalSection);
+			activeWindow = wParam != 0;
+			QueueDeviceUpdate();
 			break;
 		case WM_CLOSE:
 			if (config.closeHacks & 1) {
@@ -871,7 +851,7 @@ s32 CALLBACK PADopen(void *pDsp) {
 
 	// activeWindow = (GetAncestor(hWnd, GA_ROOT) == GetAncestor(GetForegroundWindow(), GA_ROOT));
 	activeWindow = 1;
-	UpdateEnabledDevices();
+	QueueDeviceUpdate();
 	return 0;
 }
 
