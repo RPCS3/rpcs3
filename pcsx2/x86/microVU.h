@@ -46,7 +46,7 @@ private:
 	microBlock callersList[mMaxBlocks]; // Foreign Blocks that call Local Blocks
 
 public:
-	microBlockManager()	{ init(); }
+	microBlockManager()		{ init(); }
 	~microBlockManager()	{ close(); }
 	void init() {
 		listSize = -1;

@@ -265,19 +265,16 @@ microVUt(void) mVUanalyzeFSSET() {
 microVUt(void) mVUanalyzeMflag(int Is, int It) {
 	microVU* mVU = mVUx;
 	if (!It) { mVUinfo |= _isNOP; }
-	else if (mVUcount >= 4) { 
-		incPC2(-8);
-		if (doStatus) { mVUinfo |= _doMac; }
-		else {
+	else { // Need set _doMac for 4 previous Ops (need to do all 4 because stalls could change the result needed)
+		mVUinfo |= _swapOps;
+		if (mVUcount > 1) {
 			int curPC = iPC;
-			int i = mVUcount;
-			for (; i > 0; i--) {
-				incPC2(-2);
-				if (doStatus) { mVUinfo |= _doMac; break; }
+			for (int i = mVUcount, j = 0; i > 1; i--, j++) {
+				incPC(-2);
+				if (doStatus) { mVUinfo |= _doMac; if (j >= 3) { break; } }
 			}
 			iPC = curPC;
 		}
-		incPC2(8);
 	}
 	analyzeVIreg1(Is);
 	analyzeVIreg2(It, 1);
