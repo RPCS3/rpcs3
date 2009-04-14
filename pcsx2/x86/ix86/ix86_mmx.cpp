@@ -17,7 +17,7 @@
  */
 
 #include "PrecompiledHeader.h"
-#include "ix86_internal.h"
+#include "ix86_legacy_internal.h"
 
 //------------------------------------------------------------------
 // MMX instructions

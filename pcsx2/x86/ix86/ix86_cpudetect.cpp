@@ -18,9 +18,8 @@
 
 #include "PrecompiledHeader.h"
 
-#include "ix86_internal.h"
 #include "System.h"
-#include "Threading.h"
+#include "ix86_legacy_internal.h"
 
 #include "RedtapeWindows.h"
 

@@ -3569,7 +3569,7 @@ void recVUMI_BranchHandle()
 
 	if( (s_pCurBlock->type & BLOCKTYPE_HASEOP) || s_vu == 0 || SUPERVU_CHECKCONDITION)
         MOV32ItoM(SuperVUGetVIAddr(REG_TPC, 0), bpc);
-	MOV32ItoR(s_JumpX86, 0);
+	MOV32ItoR(s_JumpX86, 1);		// use 1 to disable optimization to XOR
 	s_pCurBlock->pChildJumps[curjump] = (u32*)x86Ptr-1;
 
 	if( !(s_pCurInst->type & INST_BRANCH_DELAY) ) {
@@ -3578,7 +3578,7 @@ void recVUMI_BranchHandle()
 
 		if( (s_pCurBlock->type & BLOCKTYPE_HASEOP) || s_vu == 0 || SUPERVU_CHECKCONDITION )
             MOV32ItoM(SuperVUGetVIAddr(REG_TPC, 0), pc+8);
-		MOV32ItoR(s_JumpX86, 0);
+		MOV32ItoR(s_JumpX86, 1);	// use 1 to disable optimization to XOR
 		s_pCurBlock->pChildJumps[curjump+1] = (u32*)x86Ptr-1;
 
 		x86SetJ8( j8Ptr[ 1 ] );
@@ -3815,7 +3815,7 @@ void recVUMI_B( VURegs* vuu, s32 info )
 
 	if( s_pCurBlock->blocks.size() > 1 ) {
 		s_JumpX86 = _allocX86reg(-1, X86TYPE_VUJUMP, 0, MODE_WRITE);
-		MOV32ItoR(s_JumpX86, 0);
+		MOV32ItoR(s_JumpX86, 1);
         s_pCurBlock->pChildJumps[(s_pCurInst->type & INST_BRANCH_DELAY)?1:0] = (u32*)x86Ptr-1;
         s_UnconditionalDelay = 1;
 	}
@@ -3841,7 +3841,7 @@ void recVUMI_BAL( VURegs* vuu, s32 info )
 
 	if( s_pCurBlock->blocks.size() > 1 ) {
 		s_JumpX86 = _allocX86reg(-1, X86TYPE_VUJUMP, 0, MODE_WRITE);
-		MOV32ItoR(s_JumpX86, 0);
+		MOV32ItoR(s_JumpX86, 1);
         s_pCurBlock->pChildJumps[(s_pCurInst->type & INST_BRANCH_DELAY)?1:0] = (u32*)x86Ptr-1;
         s_UnconditionalDelay = 1;
 	}

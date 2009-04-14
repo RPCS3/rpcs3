@@ -538,7 +538,7 @@ void recResetIOP()
 
 	DevCon::Status( "iR3000A Resetting recompiler memory and structures" );
 
-	memset_8<0xcd,RECMEM_SIZE>( recMem );
+	memset_8<0xcc,RECMEM_SIZE>( recMem );	// 0xcc is INT3
 	iopClearRecLUT((BASEBLOCK*)m_recBlockAlloc,
 		(((Ps2MemSize::IopRam + Ps2MemSize::Rom + Ps2MemSize::Rom1) / 4)));
 

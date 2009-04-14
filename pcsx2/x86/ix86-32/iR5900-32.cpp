@@ -531,7 +531,7 @@ void recResetEE( void )
 
 	maxrecmem = 0;
 
-	memset_8<0xcd, REC_CACHEMEM>(recMem);
+	memset_8<0xcc, REC_CACHEMEM>(recMem);	// 0xcc is INT3
 	memzero_ptr<m_recBlockAllocSize>( m_recBlockAlloc );
 	ClearRecLUT((BASEBLOCK*)m_recBlockAlloc,
 		(((Ps2MemSize::Base + Ps2MemSize::Rom + Ps2MemSize::Rom1) / 4)));

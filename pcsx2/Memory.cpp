@@ -517,8 +517,8 @@ void __fastcall vuMicroRead128(u32 addr,mem128_t* data)
 	data[1]=*(u64*)&vu->Micro[addr+8];
 }
 
-// [TODO] : Profile this code and see how often the VUs get written, and how
-// often it changes the values being written (invoking a cpuClear).
+// Profiled VU writes: Happen very infrequently, with exception of BIOS initialization (at most twice per
+//   frame in-game, and usually none at all after BIOS), so cpu clears aren't much of a big deal.
 
 template<int vunum, bool dynrec>
 void __fastcall vuMicroWrite8(u32 addr,mem8_t data)

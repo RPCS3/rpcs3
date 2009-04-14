@@ -31,14 +31,24 @@ using namespace vtlb_private;
 // (used as an equivalent to movaps, when a free XMM register is unavailable for some reason)
 void MOV128_MtoM( x86IntRegType destRm, x86IntRegType srcRm )
 {
-	MOV32RmtoR(EAX,srcRm);
-	MOV32RtoRm(destRm,EAX);
-	MOV32RmtoR(EAX,srcRm,4);
-	MOV32RtoRm(destRm,EAX,4);
-	MOV32RmtoR(EAX,srcRm,8);
-	MOV32RtoRm(destRm,EAX,8);
-	MOV32RmtoR(EAX,srcRm,12);
-	MOV32RtoRm(destRm,EAX,12);
+	// (this is one of my test cases for the new emitter --air)
+
+	using namespace x86Emitter;
+
+	x86IndexReg src( srcRm );
+	x86IndexReg dest( destRm );
+
+	MOV( eax, ptr[src] );
+	MOV( ptr[dest], eax );
+
+	MOV( eax, ptr[src+4] );
+	MOV( ptr[dest+4], eax );
+
+	MOV( eax, ptr[src+8] );
+	MOV( ptr[dest+8], eax );
+
+	MOV( eax, ptr[src+12] );
+	MOV( ptr[dest+12], eax );
 }
 
 /*

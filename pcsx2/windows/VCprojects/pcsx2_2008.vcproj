@@ -217,7 +217,6 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="3"
 				EnableFiberSafeOptimizations="true"
 				AdditionalIncludeDirectories=""
 				PreprocessorDefinitions="NDEBUG"
@@ -2927,7 +2926,11 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\x86\ix86\ix86_group1.cpp"
+				RelativePath="..\..\x86\ix86\ix86_inlines.inl"
+				>
+			</File>
+			<File
+				RelativePath="..\..\x86\ix86\ix86_instructions.h"
 				>
 			</File>
 			<File
@@ -2936,6 +2939,18 @@
 			</File>
 			<File
 				RelativePath="..\..\x86\ix86\ix86_legacy.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\x86\ix86\ix86_legacy_instructions.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\x86\ix86\ix86_legacy_internal.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\x86\ix86\ix86_legacy_types.h"
 				>
 			</File>
 			<File
@@ -2959,6 +2974,10 @@
 				>
 			</File>
 		</Filter>
+		<File
+			RelativePath=".\ClassDiagram1.cd"
+			>
+		</File>
 		<File
 			RelativePath="..\..\Common.h"
 			>

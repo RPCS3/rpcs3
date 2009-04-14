@@ -799,17 +799,22 @@ void _saveEAX(VURegs *VU, int x86reg, uptr offset, int info)
 			else MOV32ItoM(offset+(_W?12:(_Z?8:(_Y?4:0))), c);
 		}
 		else {
+
+			// (this is one of my test cases for the new emitter --air)
+			using namespace x86Emitter;
+
 			if ( x86reg >= 0 ) {
-				if ( _X ) MOV32ItoRm(x86reg, 0x00000000, offset);
-				if ( _Y ) MOV32ItoRm(x86reg, 0x00000000, offset+4);
-				if ( _Z ) MOV32ItoRm(x86reg, 0x00000000, offset+8);
-				if ( _W ) MOV32ItoRm(x86reg, 0x3f800000, offset+12);
+				x86IndexReg thisreg( x86reg );
+				if ( _X ) MOV(ptr32[thisreg+offset],    0x00000000 );
+				if ( _Y ) MOV(ptr32[thisreg+offset+4],  0x00000000 );
+				if ( _Z ) MOV(ptr32[thisreg+offset+8],  0x00000000 );
+				if ( _W ) MOV(ptr32[thisreg+offset+12], 0x3f800000);
 			}
 			else {
-				if ( _X ) MOV32ItoM(offset,		0x00000000);
-				if ( _Y ) MOV32ItoM(offset+4,	0x00000000);
-				if ( _Z ) MOV32ItoM(offset+8,	0x00000000);
-				if ( _W ) MOV32ItoM(offset+12,	0x3f800000);
+				if ( _X ) MOV(ptr32[offset],	0x00000000);
+				if ( _Y ) MOV(ptr32[offset+4],	0x00000000);
+				if ( _Z ) MOV(ptr32[offset+8],	0x00000000);
+				if ( _W ) MOV(ptr32[offset+14],	0x3f800000);
 			}
 		}
 		return;

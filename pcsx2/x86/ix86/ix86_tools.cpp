@@ -19,7 +19,7 @@
 #include "PrecompiledHeader.h"
 
 #include "System.h"
-#include "ix86/ix86.h"
+#include "ix86.h"
 
 // used to make sure regs don't get changed while in recompiler
 // use FreezeMMXRegs, FreezeXMMRegs
