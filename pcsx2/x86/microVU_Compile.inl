@@ -60,17 +60,21 @@ microVUt(void) mVUstatusFlagOp() {
 	microVU* mVU = mVUx;
 	int curPC = iPC;
 	int i = mVUcount;
+	bool runLoop = 1;
 	if (doStatus) { mVUinfo |= _isSflag; }
 	else {
 		for (; i > 0; i--) {
 			incPC2(-2);
+			if (isSflag)  { runLoop = 0; break; }
 			if (doStatus) { mVUinfo |= _isSflag; break; }
 		}
 	}
-	for (; i > 0; i--) {
-		incPC2(-2);
-		if (isSflag) break;
-		mVUinfo &= ~(_doStatus|_doDivFlag);
+	if (runLoop) {
+		for (; i > 0; i--) {
+			incPC2(-2);
+			if (isSflag) break;
+			mVUinfo &= ~_doStatus;
+		}
 	}
 	iPC = curPC;
 }
@@ -98,7 +102,7 @@ microVUt(void) mVUsetFlags(int* bStatus, int* bMac) {
 	int xCount	= mVUcount; // Backup count
 	iPC			= mVUstartPC;
 	for (mVUcount = 0; mVUcount < xCount; mVUcount++) {
-		if ((xCount - mVUcount) > aCount) mVUstatusFlagOp<vuIndex>(); // Don't Optimize out on the last ~4+ instructions
+		if (((xCount - mVUcount) > aCount) && isFSSET) mVUstatusFlagOp<vuIndex>(); // Don't Optimize out on the last ~4+ instructions
 	
 		yS += (mVUstall > 3) ? 3 : mVUstall;
 		if (yS > zS) {

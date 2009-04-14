@@ -184,7 +184,7 @@ declareAllVariables
 #define _memReadIt	 (1<<24) // Read If (VI reg) from memory (used by branches)
 #define _writesVI	 (1<<25) // Current Instruction writes to VI
 #define _swapOps	 (1<<26) // Runs Lower Instruction Before Upper Instruction
-#define _isFSSSET	 (1<<27) // Cur Instruction is FSSET
+#define _isFSSET	 (1<<27) // Cur Instruction is FSSET
 #define _doDivFlag	 (1<<28) // Transfer Div flag to Status Flag
 
 //#define _isBranch2	 (1<<31) // Cur Instruction is a Branch that writes VI regs (BAL/JALR)

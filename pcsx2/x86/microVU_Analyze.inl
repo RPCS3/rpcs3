@@ -255,7 +255,12 @@ microVUt(void) mVUanalyzeSflag(int It) {
 
 microVUt(void) mVUanalyzeFSSET() {
 	microVU* mVU = mVUx;
-	mVUinfo |= _isFSSSET;
+	mVUinfo |= _isFSSET;
+	// mVUinfo &= ~_doStatus;
+	// Note: I'm not entirely sure if the non-sticky flags
+	// should be taken from the current upper instruction
+	// or if they should be taken from the previous instruction
+	// Uncomment the above line if the latter-case is true
 }
 
 //------------------------------------------------------------------
