@@ -371,6 +371,9 @@ BEGIN
     LTEXT           "Moderate speedup and works well with most games.",IDC_STATIC,25,90,129,19
     CONTROL         "INTC Sync Hack (experimental)",IDC_INTCSTATHACK,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,174,43,127,10
     LTEXT           "Huge speedup in many games, and a pretty high compatibility rate (some games still work better with EE sync hacks).",IDC_STATIC,186,55,140,28
+    CONTROL         "",IDC_VUCYCLE,"msctls_trackbar32",TBS_BOTH | TBS_NOTICKS | WS_TABSTOP,174,176,36,15
+    LTEXT           "This space intentionally left blank",IDC_VUCYCLEDESC,186,194,142,30
+    LTEXT           "VU Cycle Stealing (experimental)",IDC_STATIC,210,180,105,8
 END
 
 
@@ -393,6 +396,8 @@ BEGIN
         LEFTMARGIN, 7
         RIGHTMARGIN, 328
         VERTGUIDE, 13
+        VERTGUIDE, 174
+        VERTGUIDE, 186
         TOPMARGIN, 7
         BOTTOMMARGIN, 256
     END

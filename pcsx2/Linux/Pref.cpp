@@ -101,6 +101,9 @@ int LoadConfig()
 #endif
 	GetValuel("Options", Config.Options);
 	GetValuel("Hacks",        Config.Hacks);
+	GetValuel("VUCycleHack",  Config.VUCycleHack);
+	if (Config.VUCycleHack < 0 || Config.VUCycleHack > 4)
+		Config.VUCycleHack = 0;
 	GetValuel("Fixes",        Config.GameFixes);
 
 	GetValuel("CustomFps",      Config.CustomFps);
@@ -163,6 +166,7 @@ void SaveConfig()
 	SetValuel("Options",        Config.Options);
 
 	SetValuel("Hacks",        Config.Hacks);
+	SetValuel("VUCycleHack",  Config.VUCycleHack);
 	SetValuel("Fixes",        Config.GameFixes);
 
 	SetValuel("Patch",      Config.Patch);

@@ -137,6 +137,7 @@ public:
 	int Patch;
 	int CustomFps;
 	int Hacks;
+	int VUCycleHack;
 	int GameFixes;
 	int CustomFrameSkip;
 	int CustomConsecutiveFrames;

@@ -223,6 +223,9 @@ void IniFile::DoConfig( PcsxConfig& Conf )
 	Entry( "eeOptions", Conf.eeOptions, DEFAULT_eeOptions );
 	Entry( "vuOptions", Conf.vuOptions, DEFAULT_vuOptions );
 	Entry( "SpeedHacks", Conf.Hacks );
+	Entry( "VUCycleHack", Conf.VUCycleHack, 0 );
+	if (Conf.VUCycleHack < 0 || Conf.VUCycleHack > 4)
+		Conf.VUCycleHack = 0;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////

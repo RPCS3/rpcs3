@@ -19,6 +19,23 @@
 
 #include "win32.h"
 
+static _TCHAR *VUCycleHackLevels[] = {
+	_T("Speedup for 3D games.\nCurrently off"),
+	_T("Slight speedup for 3D geometry, should work with most games."),
+	_T("Moderate speedup for 3D geometry, should work with most games with minor problems."),
+	_T("Large speedup for 3D geometry, may break many games and make others skip frames."),
+	_T("Very large speedup for 3D geometry, will break games in interesting ways."),
+};
+
+static void CheckVUCycleHack(HWND hDlg, int &vucyclehack)
+{
+	if (vucyclehack < 0 || vucyclehack > 4) {
+		vucyclehack = 0;
+		SendDlgItemMessage(hDlg, IDC_VUCYCLE, TBM_SETPOS, TRUE, vucyclehack);
+	}
+	SetDlgItemText(hDlg, IDC_VUCYCLEDESC, VUCycleHackLevels[vucyclehack]);
+}
+
 BOOL APIENTRY HacksProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message) {
@@ -31,7 +48,25 @@ BOOL APIENTRY HacksProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 			if(CHECK_INTC_STAT_HACK) CheckDlgButton(hDlg, IDC_INTCSTATHACK, TRUE);
 			if(CHECK_ESCAPE_HACK) CheckDlgButton(hDlg, IDC_ESCHACK, TRUE);
 
+			SendDlgItemMessage(hDlg, IDC_VUCYCLE, TBM_SETRANGE, TRUE, MAKELONG(0, 4));
+			CheckVUCycleHack(hDlg, Config.VUCycleHack);
+			SendDlgItemMessage(hDlg, IDC_VUCYCLE, TBM_SETPOS, TRUE, Config.VUCycleHack);
+
 		return TRUE;
+
+		case WM_HSCROLL: {
+			HWND slider = (HWND)lParam;
+			int curpos = HIWORD(wParam);
+			switch (LOWORD(wParam)) {
+				case TB_THUMBTRACK:
+				case TB_THUMBPOSITION:
+					break;
+				default:
+					curpos = SendMessage(slider, TBM_GETPOS, 0, 0);
+			}
+			CheckVUCycleHack(hDlg, curpos);
+			return FALSE;
+		}
 
         case WM_COMMAND:
 			switch (LOWORD(wParam))
@@ -53,12 +88,16 @@ BOOL APIENTRY HacksProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 					newhacks |= IsDlgButtonChecked(hDlg, IDC_INTCSTATHACK) << 5;
 					newhacks |= IsDlgButtonChecked(hDlg, IDC_ESCHACK) << 10;
 
+					int newvucyclehack = SendDlgItemMessage(hDlg, IDC_VUCYCLE, TBM_GETPOS, 0, 0);
+					CheckVUCycleHack(hDlg, newvucyclehack);
+
 					EndDialog(hDlg, TRUE);
 
-					if( newhacks != Config.Hacks )
+					if( newhacks != Config.Hacks || newvucyclehack != Config.VUCycleHack)
 					{
 						SysRestorableReset();
 						Config.Hacks = newhacks;
+						Config.VUCycleHack = newvucyclehack;
 						SaveConfig();
 					}
 				}
