@@ -247,8 +247,10 @@ microVUt(void) mVUanalyzeSflag(int It) {
 	if (!It) { mVUinfo |= _isNOP; }
 	else {  // Sets _isSflag at instruction that FSxxx opcode reads it's status flag from
 		mVUinfo |= _swapOps;
-		if (mVUcount >= 4) { incPC2(-8); mVUinfo |= _isSflag; incPC2(8); }
-		//else { incPC2((mVUcount*-2)); mVUinfo |= _isSflag; incPC2(mVUcount*-2); }
+		if (mVUcount >= 1) { incPC2(-2); mVUinfo |= _isSflag; incPC2(2); }
+		// Note: _isSflag is used for status flag optimizations.
+		// Do to stalls, it can only be set one instruction prior to the status flag read instruction
+		// if we were guaranteed no-stalls were to happen, it could be set 4 instruction prior.
 	}
 	analyzeVIreg2(It, 1);
 }

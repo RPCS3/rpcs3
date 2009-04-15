@@ -59,8 +59,8 @@ microVUt(void) mVUdispatcherA() {
 	}
 
 	SSE_MOVAPS_M128_to_XMM(xmmACC, (uptr)&mVU->regs->ACC);
-	SSE_MOVAPS_M128_to_XMM(xmmMax, (uptr)mVU_maxvals);
-	SSE_MOVAPS_M128_to_XMM(xmmMin, (uptr)mVU_minvals);
+	SSE_MOVAPS_M128_to_XMM(xmmMax, (uptr)&mVU_maxvals[0]);
+	SSE_MOVAPS_M128_to_XMM(xmmMin, (uptr)&mVU_minvals[0]);
 	SSE_MOVAPS_M128_to_XMM(xmmT1, (uptr)&mVU->regs->VI[REG_P]);
 	SSE_MOVAPS_M128_to_XMM(xmmPQ, (uptr)&mVU->regs->VI[REG_Q]);
 	SSE_SHUFPS_XMM_to_XMM(xmmPQ, xmmT1, 0); // wzyx = PPQQ

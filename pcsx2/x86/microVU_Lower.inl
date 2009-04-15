@@ -1055,24 +1055,29 @@ microVUf(void) mVU_XGKICK() {
 microVUf(void) mVU_B() {
 	microVU* mVU = mVUx;
 	mVUbranch = 1;
-	if (!recPass) { /*mVUinfo |= _isBranch2;*/ }
 }
 microVUf(void) mVU_BAL() {
 	microVU* mVU = mVUx;
 	mVUbranch = 2;
-	if (!recPass) { /*mVUinfo |= _isBranch2;*/ analyzeVIreg2(_Ft_, 1); }
-	else {}
+	if (!recPass) { analyzeVIreg2(_Ft_, 1); }
+	else {
+		MOV32ItoR(gprT1, bSaveAddr);
+		mVUallocVIb<vuIndex>(gprT1, _Ft_);
+		// Note: Not sure if the lower instruction in the branch-delay slot
+		// should read the previous VI-value or the VI-value resulting from this branch.
+		// This code does the latter...
+	}
 }
 microVUf(void) mVU_IBEQ() {
 	microVU* mVU = mVUx;
 	mVUbranch = 3;
 	if (!recPass) { mVUanalyzeBranch2<vuIndex>(_Fs_, _Ft_); }
 	else {
-		if (memReadIs) MOV32MtoR(gprT1, (uptr)mVU->VIbackup[0]);
+		if (memReadIs) MOV32MtoR(gprT1, (uptr)&mVU->VIbackup[0]);
 		else mVUallocVIa<vuIndex>(gprT1, _Fs_);
-		if (memReadIt) XOR32MtoR(gprT1, (uptr)mVU->VIbackup[0]);
+		if (memReadIt) XOR32MtoR(gprT1, (uptr)&mVU->VIbackup[0]);
 		else { mVUallocVIa<vuIndex>(gprT2, _Ft_); XOR32RtoR(gprT1, gprT2); }
-		MOV32RtoM((uptr)mVU->branch, gprT1);
+		MOV32RtoM((uptr)&mVU->branch, gprT1);
 	}
 }
 microVUf(void) mVU_IBGEZ() {
@@ -1080,10 +1085,9 @@ microVUf(void) mVU_IBGEZ() {
 	mVUbranch = 4;
 	if (!recPass) { mVUanalyzeBranch1<vuIndex>(_Fs_); }
 	else {
-		if (memReadIs) MOV32MtoR(gprT1, (uptr)mVU->VIbackup[0]);
+		if (memReadIs) MOV32MtoR(gprT1, (uptr)&mVU->VIbackup[0]);
 		else mVUallocVIa<vuIndex>(gprT1, _Fs_);
-		//SHR32ItoR(gprT1, 15);
-		MOV32RtoM((uptr)mVU->branch, gprT1);
+		MOV32RtoM((uptr)&mVU->branch, gprT1);
 	}
 }
 microVUf(void) mVU_IBGTZ() {
@@ -1091,9 +1095,9 @@ microVUf(void) mVU_IBGTZ() {
 	mVUbranch = 5;
 	if (!recPass) { mVUanalyzeBranch1<vuIndex>(_Fs_); }
 	else {
-		if (memReadIs) MOV32MtoR(gprT1, (uptr)mVU->VIbackup[0]);
+		if (memReadIs) MOV32MtoR(gprT1, (uptr)&mVU->VIbackup[0]);
 		else mVUallocVIa<vuIndex>(gprT1, _Fs_);
-		MOV32RtoM((uptr)mVU->branch, gprT1);
+		MOV32RtoM((uptr)&mVU->branch, gprT1);
 	}
 }
 microVUf(void) mVU_IBLEZ() {
@@ -1101,9 +1105,9 @@ microVUf(void) mVU_IBLEZ() {
 	mVUbranch = 6;
 	if (!recPass) { mVUanalyzeBranch1<vuIndex>(_Fs_); }
 	else {
-		if (memReadIs) MOV32MtoR(gprT1, (uptr)mVU->VIbackup[0]);
+		if (memReadIs) MOV32MtoR(gprT1, (uptr)&mVU->VIbackup[0]);
 		else mVUallocVIa<vuIndex>(gprT1, _Fs_);
-		MOV32RtoM((uptr)mVU->branch, gprT1);
+		MOV32RtoM((uptr)&mVU->branch, gprT1);
 	}
 }
 microVUf(void) mVU_IBLTZ() {
@@ -1111,10 +1115,9 @@ microVUf(void) mVU_IBLTZ() {
 	mVUbranch = 7;
 	if (!recPass) { mVUanalyzeBranch1<vuIndex>(_Fs_); }
 	else {
-		if (memReadIs) MOV32MtoR(gprT1, (uptr)mVU->VIbackup[0]);
+		if (memReadIs) MOV32MtoR(gprT1, (uptr)&mVU->VIbackup[0]);
 		else mVUallocVIa<vuIndex>(gprT1, _Fs_);
-		//SHR32ItoR(gprT1, 15);
-		MOV32RtoM((uptr)mVU->branch, gprT1);
+		MOV32RtoM((uptr)&mVU->branch, gprT1);
 	}
 }
 microVUf(void) mVU_IBNE() {
@@ -1122,22 +1125,37 @@ microVUf(void) mVU_IBNE() {
 	mVUbranch = 8;
 	if (!recPass) { mVUanalyzeBranch2<vuIndex>(_Fs_, _Ft_); }
 	else {
-		if (memReadIs) MOV32MtoR(gprT1, (uptr)mVU->VIbackup[0]);
+		if (memReadIs) MOV32MtoR(gprT1, (uptr)&mVU->VIbackup[0]);
 		else mVUallocVIa<vuIndex>(gprT1, _Fs_);
-		if (memReadIt) XOR32MtoR(gprT1, (uptr)mVU->VIbackup[0]);
+		if (memReadIt) XOR32MtoR(gprT1, (uptr)&mVU->VIbackup[0]);
 		else { mVUallocVIa<vuIndex>(gprT2, _Ft_); XOR32RtoR(gprT1, gprT2); }
-		MOV32RtoM((uptr)mVU->branch, gprT1);
+		MOV32RtoM((uptr)&mVU->branch, gprT1);
 	}
 }
 microVUf(void) mVU_JR() {
 	microVU* mVU = mVUx;
 	mVUbranch = 9;
 	if (!recPass) { mVUanalyzeBranch1<vuIndex>(_Fs_); }
+	else {
+		if (memReadIs) MOV32MtoR(gprT1, (uptr)&mVU->VIbackup[0]);
+		else mVUallocVIa<vuIndex>(gprT1, _Fs_);
+		MOV32RtoM((uptr)&mVU->branch, gprT1);
+	}
 }
 microVUf(void) mVU_JALR() {
 	microVU* mVU = mVUx;
 	mVUbranch = 10;
 	if (!recPass) { mVUanalyzeBranch1<vuIndex>(_Fs_); analyzeVIreg2(_Ft_, 1); }
+	else {
+		if (memReadIs) MOV32MtoR(gprT1, (uptr)&mVU->VIbackup[0]);
+		else mVUallocVIa<vuIndex>(gprT1, _Fs_);
+		MOV32RtoM((uptr)&mVU->branch, gprT1);
+		MOV32ItoR(gprT1, bSaveAddr);
+		mVUallocVIb<vuIndex>(gprT1, _Ft_);
+		// Note: Not sure if the lower instruction in the branch-delay slot
+		// should read the previous VI-value or the VI-value resulting from this branch.
+		// This code does the latter...
+	}
 }
 
 #endif //PCSX2_MICROVU

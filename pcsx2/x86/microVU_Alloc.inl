@@ -700,12 +700,12 @@ microVUt(void) mVUallocMFLAGb(int reg, int fInstance) {
 
 microVUt(void) mVUallocCFLAGa(int reg, int fInstance) {
 	microVU* mVU = mVUx;
-	MOV32MtoR(reg, mVU->clipFlag[fInstance]);
+	MOV32MtoR(reg, (uptr)&mVU->clipFlag[fInstance]);
 }
 
 microVUt(void) mVUallocCFLAGb(int reg, int fInstance) {
 	microVU* mVU = mVUx;
-	MOV32RtoM(mVU->clipFlag[fInstance], reg);
+	MOV32RtoM((uptr)&mVU->clipFlag[fInstance], reg);
 }
 
 //------------------------------------------------------------------

@@ -64,8 +64,8 @@ public:
 			blockList[listSize].x86ptrStart = x86ptrStart;
 		}
 	}*/
-	microBlock* search(u32 pipelineState, microRegInfo* pState) {
-		if (pipelineState & 1) { // Needs Detailed Search (Exact Match of Pipeline State)
+	microBlock* search(/*u32 pipelineState,*/ microRegInfo* pState) {
+		/*if (pipelineState & 1) { // Needs Detailed Search (Exact Match of Pipeline State)
 			for (int i = 0; i < listSize; i++) {
 				if (!memcmp(pState, &blockList[i].pState, sizeof(microRegInfo))) return &blockList[i];
 			}
@@ -74,7 +74,7 @@ public:
 			for (int i = 0; i < listSize; i++) {
 				if (blockList[i].pipelineState == pipelineState) return &blockList[i];
 			}
-		}
+		}*/
 		return NULL;
 	}
 	void clearFast() {

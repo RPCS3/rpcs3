@@ -144,7 +144,6 @@ declareAllVariables
 #define mVUbranch	 mVUallocInfo.branch
 #define mVUcycles	 mVUallocInfo.cycles
 #define mVUcount	 mVUallocInfo.count
-//#define mVUstall	 mVUallocInfo.maxStall
 #define mVUregs		 mVUallocInfo.regs
 #define mVUregsTemp	 mVUallocInfo.regsTemp
 #define iPC			 mVUallocInfo.curPC
@@ -157,6 +156,7 @@ declareAllVariables
 #define incPC(x)	 { iPC = ((iPC + x) & (mVU->progSize-1)); setCode(); }
 #define incPC2(x)	 { iPC = ((iPC + x) & (mVU->progSize-1)); }
 #define incCycles(x) { mVUincCycles<vuIndex>(x); }
+#define bSaveAddr	 ((xPC + (2 * 8)) & ((vuIndex) ? 0x3ff8:0xff8))
 
 #define _isNOP		 (1<<0) // Skip Lower Instruction
 #define _isBranch	 (1<<1) // Cur Instruction is a Branch
@@ -170,14 +170,14 @@ declareAllVariables
 #define _doFlags	 (3<<8)
 #define _doMac		 (1<<8)
 #define _doStatus	 (1<<9)
-#define _fmInstance	 (3<<10)
-#define _fsInstance	 (3<<12)
-#define _fpsInstance (3<<12)
-#define _fcInstance	 (3<<14)
-#define _fpcInstance (3<<14)
-#define _fvmInstance (3<<16)
-#define _fvsInstance (3<<18)
-#define _fvcInstance (3<<20)
+#define _fmInstance	 (3<<10) // Mac		Write Instance
+#define _fsInstance	 (3<<12) // Status	Write Instance
+#define _fcInstance	 (3<<14) // Clip	Write Instance
+#define _fpsInstance (3<<12) // Prev.S.	Write Instance
+#define _fpcInstance (3<<14) // Prev.C.	Write Instance
+#define _fvmInstance (3<<16) // Mac		Read Instance (at T-stage for lower instruction)
+#define _fvsInstance (3<<18) // Status	Read Instance (at T-stage for lower instruction)
+#define _fvcInstance (3<<20) // Clip	Read Instance (at T-stage for lower instruction)
 #define _noWriteVF	 (1<<21) // Don't write back the result of a lower op to VF reg if upper op writes to same reg (or if VF = 0)
 #define _backupVI	 (1<<22) // Backup VI reg to memory if modified before branch (branch uses old VI value unless opcode is ILW or ILWR)
 #define _memReadIs	 (1<<23) // Read Is (VI reg) from memory (used by branches)
@@ -186,8 +186,7 @@ declareAllVariables
 #define _swapOps	 (1<<26) // Runs Lower Instruction Before Upper Instruction
 #define _isFSSET	 (1<<27) // Cur Instruction is FSSET
 #define _doDivFlag	 (1<<28) // Transfer Div flag to Status Flag
-
-//#define _isBranch2	 (1<<31) // Cur Instruction is a Branch that writes VI regs (BAL/JALR)
+#define _doClip		 (1<<29)
 
 #define isNOP		 (mVUinfo & (1<<0))
 #define isBranch	 (mVUinfo & (1<<1))
@@ -217,7 +216,7 @@ declareAllVariables
 #define swapOps		 (mVUinfo & (1<<26))
 #define isFSSET		 (mVUinfo & (1<<27))
 #define doDivFlag	 (mVUinfo & (1<<28))
-//#define isBranch2	 (mVUinfo & (1<<31))
+#define doClip		 (mVUinfo & (1<<29))
 
 #define isMMX(_VIreg_)	(_VIreg_ >= 1 && _VIreg_ <=9)
 #define mmVI(_VIreg_)	(_VIreg_ - 1)

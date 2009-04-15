@@ -866,12 +866,10 @@ void _saveEAX(VURegs *VU, int x86reg, uptr offset, int info)
 			else SSE_MOVSS_XMM_to_M32(offset, EEREC_S);
 			break;
 		case 9: // XW
-			SSE_MOVHLPS_XMM_to_XMM(EEREC_TEMP, EEREC_S);
 			if ( x86reg >= 0 ) SSE_MOVSS_XMM_to_Rm(x86reg, EEREC_S, offset);
 			else SSE_MOVSS_XMM_to_M32(offset, EEREC_S);
 			
-			if ( cpucaps.hasStreamingSIMD3Extensions ) SSE3_MOVSLDUP_XMM_to_XMM(EEREC_TEMP, EEREC_TEMP);
-			else SSE_SHUFPS_XMM_to_XMM(EEREC_TEMP, EEREC_TEMP, 0x55);
+			SSE2_PSHUFD_XMM_to_XMM(EEREC_TEMP, EEREC_S, 0xff); //WWWW
 
 			if ( x86reg >= 0 ) SSE_MOVSS_XMM_to_Rm(x86reg, EEREC_TEMP, offset+12);
 			else SSE_MOVSS_XMM_to_M32(offset+12, EEREC_TEMP);

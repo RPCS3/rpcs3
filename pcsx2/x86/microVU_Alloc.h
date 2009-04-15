@@ -35,6 +35,7 @@ struct microRegInfo {
 	u8 p;
 	u8 r;
 	u8 xgkick;
+	u8 needExactMatch; // This block needs an exact match of pipeline state
 };
 
 struct microTempRegInfo {

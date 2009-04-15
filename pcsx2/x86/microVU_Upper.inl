@@ -31,7 +31,7 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 	microVU* mVU = mVUx;
 	int sReg, mReg = gprT1;
 	static u8 *pjmp, *pjmp2;
-	static const int flipMask[16] = {0, 8, 4, 12, 2, 10, 6, 14, 1, 9, 5, 13, 3, 11, 7, 15};
+	static const u16 flipMask[16] = {0, 8, 4, 12, 2, 10, 6, 14, 1, 9, 5, 13, 3, 11, 7, 15};
 
 	if (!doFlags) return;
 	if (!doMac) { regT1 = reg; }
