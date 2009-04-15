@@ -146,15 +146,6 @@ extern u8 g_RealGSMem[Ps2MemSize::GSregs];
 #define psSu32(mem)	(*(u32*)&PS2MEM_SCRATCH[(mem) & 0x3fff])
 #define psSu64(mem)	(*(u64*)&PS2MEM_SCRATCH[(mem) & 0x3fff])
 
-//#define PSMs8(mem)	(*(s8 *)PSM(mem))
-//#define PSMs16(mem)	(*(s16*)PSM(mem))
-//#define PSMs32(mem)	(*(s32*)PSM(mem))
-//#define PSMs64(mem)	(*(s64*)PSM(mem))
-//#define PSMu8(mem)	(*(u8 *)PSM(mem))
-//#define PSMu16(mem)	(*(u16*)PSM(mem))
-//#define PSMu32(mem)	(*(u32*)PSM(mem))
-//#define PSMu64(mem)	(*(u64*)PSM(mem))
-
 extern void memAlloc();
 extern void memReset();		// clears PS2 ram and loads the bios.  Throws Exception::FileNotFound on error.
 extern void memShutdown();

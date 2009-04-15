@@ -37,7 +37,7 @@ PCSX2_ALIGNED16(u32 g_vifCol1[4]);
 
 extern int g_vifCycles;
 u16 vifqwc = 0;
-bool mfifodmairq = FALSE;
+bool mfifodmairq = false;
 
 enum UnpackOffset
 {
@@ -357,7 +357,7 @@ static __forceinline int mfifoVIF1rbTransfer()
 		src = (u32*)PSM(vif1ch->madr);
 		if (src == NULL) return -1;
 		
-		if (vif1.vifstalled == 1)
+		if (vif1.vifstalled)
 			ret = VIF1transfer(src + vif1.irqoffset, s1 - vif1.irqoffset, 0);
 		else
 			ret = VIF1transfer(src, s1, 0);
@@ -379,7 +379,7 @@ static __forceinline int mfifoVIF1rbTransfer()
 		src = (u32*)PSM(vif1ch->madr);
 		if (src == NULL) return -1;
 		
-		if (vif1.vifstalled == 1)
+		if (vif1.vifstalled)
 			ret = VIF1transfer(src + vif1.irqoffset, mfifoqwc * 4 - vif1.irqoffset, 0);
 		else
 			ret = VIF1transfer(src, mfifoqwc << 2, 0);
@@ -395,7 +395,7 @@ static __forceinline int mfifo_VIF1chain()
 	int ret;
 
 	/* Is QWC = 0? if so there is nothing to transfer */
-	if (vif1ch->qwc == 0 && vif1.vifstalled == 0)
+	if ((vif1ch->qwc == 0) && (!vif1.vifstalled))
 	{
 		vif1.inprogress = 0;
 		return 0;
@@ -414,7 +414,7 @@ static __forceinline int mfifo_VIF1chain()
 		SPR_LOG("Non-MFIFO Location");
 
 		if (pMem == NULL) return -1;
-		if (vif1.vifstalled == 1)
+		if (vif1.vifstalled)
 			ret = VIF1transfer(pMem + vif1.irqoffset, vif1ch->qwc * 4 - vif1.irqoffset, 0);
 		else
 			ret = VIF1transfer(pMem, vif1ch->qwc << 2, 0);
@@ -448,7 +448,7 @@ void mfifoVIF1transfer(int qwc)
 		return;
 	}
 
-	mfifodmairq = FALSE; //Clear any previous TIE interrupt
+	mfifodmairq = false; //Clear any previous TIE interrupt
 
 	if (vif1ch->qwc == 0)
 	{
@@ -456,7 +456,7 @@ void mfifoVIF1transfer(int qwc)
 
 		if (vif1ch->chcr & 0x40)
 		{
-			if (vif1.stallontag == 1)
+			if (vif1.stallontag)
 				ret = VIF1transfer(ptag + (2 + vif1.irqoffset), 2 - vif1.irqoffset, 1);  //Transfer Tag on Stall
 			else 
 				ret = VIF1transfer(ptag + 2, 2, 1);  //Transfer Tag
@@ -464,7 +464,7 @@ void mfifoVIF1transfer(int qwc)
 			if (ret == -2)
 			{
 				VIF_LOG("MFIFO Stallon tag");
-				vif1.stallontag	= 1;
+				vif1.stallontag	= true;
 				return;        //IRQ set by VIFTransfer
 			}
 		}
@@ -483,13 +483,13 @@ void mfifoVIF1transfer(int qwc)
 		{
 			case 0: // Refe - Transfer Packet According to ADDR field
 				vif1ch->tadr = psHu32(DMAC_RBOR) + ((vif1ch->tadr + 16) & psHu32(DMAC_RBSR));
-				vif1.done = 1;										//End Transfer
+				vif1.done = true;										//End Transfer
 				break;
 
 			case 1: // CNT - Transfer QWC following the tag.
 				vif1ch->madr = psHu32(DMAC_RBOR) + ((vif1ch->tadr + 16) & psHu32(DMAC_RBSR));						//Set MADR to QW after Tag
 				vif1ch->tadr = psHu32(DMAC_RBOR) + ((vif1ch->madr + (vif1ch->qwc << 4)) & psHu32(DMAC_RBSR));			//Set TADR to QW following the data
-				vif1.done = 0;
+				vif1.done = false;
 				break;
 
 			case 2: // Next - Transfer QWC following tag. TADR = ADDR
@@ -498,28 +498,28 @@ void mfifoVIF1transfer(int qwc)
 				vif1ch->madr = psHu32(DMAC_RBOR) + ((vif1ch->tadr + 16) & psHu32(DMAC_RBSR)); 					  //Set MADR to QW following the tag
 				vif1ch->tadr = temp;								//Copy temporarily stored ADDR to Tag
 				if ((temp & psHu32(DMAC_RBSR)) != psHu32(DMAC_RBOR)) Console::WriteLn("Next tag = %x outside ring %x size %x", params temp, psHu32(DMAC_RBOR), psHu32(DMAC_RBSR));
-				vif1.done = 0;
+				vif1.done = false;
 				break;
 			}
 
 			case 3: // Ref - Transfer QWC from ADDR field
 			case 4: // Refs - Transfer QWC from ADDR field (Stall Control)
 				vif1ch->tadr = psHu32(DMAC_RBOR) + ((vif1ch->tadr + 16) & psHu32(DMAC_RBSR));							//Set TADR to next tag
-				vif1.done = 0;
+				vif1.done = false;
 				break;
 
 			case 7: // End - Transfer QWC following the tag
 				vif1ch->madr = psHu32(DMAC_RBOR) + ((vif1ch->tadr + 16) & psHu32(DMAC_RBSR));		//Set MADR to data following the tag
 				vif1ch->tadr = psHu32(DMAC_RBOR) + ((vif1ch->madr + (vif1ch->qwc << 4)) & psHu32(DMAC_RBSR));			//Set TADR to QW following the data
-				vif1.done = 1;										//End Transfer
+				vif1.done = true;										//End Transfer
 				break;
 		}
 
 		if ((vif1ch->chcr & 0x80) && (ptag[0] >> 31))
 		{
 			VIF_LOG("dmaIrq Set");
-			vif1.done = 1;
-			mfifodmairq = TRUE; //Let the handler know we have prematurely ended MFIFO
+			vif1.done = true;
+			mfifodmairq = true; //Let the handler know we have prematurely ended MFIFO
 		}
 	}
 	
@@ -547,7 +547,7 @@ void vifMFIFOInterrupt()
 		}
 	}
 	
-	if (vif1.done != 1 || vif1.inprogress & 1)
+	if (!vif1.done || vif1.inprogress & 1)
 	{
 		if (vifqwc <= 0)
 		{

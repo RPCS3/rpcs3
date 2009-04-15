@@ -199,7 +199,7 @@ void hwWrite8(u32 mem, u8 value) {
 				DevCon::Notice("8 bit VIF1 DMA Start while DMAC Disabled\n");
 				QueuedDMA |= 0x2;
 			}
-			if(value & 0x1) vif1.done = 0;  //This must be done here! some games (ala Crash of the Titans) pause the dma to start MFIFO
+			if(value & 0x1) vif1.done = false;  //This must be done here! some games (ala Crash of the Titans) pause the dma to start MFIFO
 			DmaExec8(dmaVIF1, mem, value);
 			break;
 
@@ -356,7 +356,7 @@ __forceinline void hwWrite16(u32 mem, u16 value)
 				DevCon::Notice("16 bit VIF1 DMA Start while DMAC Disabled\n");
 				QueuedDMA |= 0x2;
 			}
-			if(value & 0x100) vif1.done = 0;  //This must be done here! some games (ala Crash of the Titans) pause the dma to start MFIFO
+			if(value & 0x100) vif1.done = false;  //This must be done here! some games (ala Crash of the Titans) pause the dma to start MFIFO
 			DmaExec16(dmaVIF1, mem, value);
 			break;
 
@@ -859,7 +859,7 @@ void __fastcall hwWrite32_generic( u32 mem, u32 value )
 			}
 			if(value & 0x100) 
 			{
-				vif1.done = 0;  //This must be done here! some games (ala Crash of the Titans) pause the dma to start MFIFO
+				vif1.done = false;  //This must be done here! some games (ala Crash of the Titans) pause the dma to start MFIFO
 				}
 			DmaExec(dmaVIF1, mem, value);
 			return;

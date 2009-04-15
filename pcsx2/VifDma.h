@@ -35,13 +35,12 @@ struct vifStruct {
 	int qwcalign;
 	u8 usn;
 	
-	// The next three should be boolean, and will be next time I break savestate compatability. --arcum42
-	u8 done;
-	u8 vifstalled;
-	u8 stallontag;
+	bool done;
+	bool vifstalled;
+	bool stallontag;
 	
 	u8 irqoffset; // 32bit offset where next vif code is
-    u32 savedtag; // need this for backwards compat with save states
+	u32 savedtag; // need this for backwards compat with save states
 	u32 vifpacketsize;
 	u8 inprogress;
 	u8 dmamode;

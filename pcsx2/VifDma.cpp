@@ -59,8 +59,8 @@ static const unsigned int VIF0dmanum = 0;
 static const unsigned int VIF1dmanum = 1;
 
 int g_vifCycles = 0;
-bool path3hack = FALSE;
-bool Path3transfer = FALSE;
+bool path3hack = false;
+bool Path3transfer = false;
 
 u32 splittransfer[4];
 u32 splitptr = 0;
@@ -1081,8 +1081,8 @@ int VIF0transfer(u32 *data, int size, int istag)
 	int transferred = vif0.vifstalled ? vif0.irqoffset : 0; // irqoffset necessary to add up the right qws, or else will spin (spiderman)
 	VIF_LOG("VIF0transfer: size %x (vif0.cmd %x)", size, vif0.cmd);
 
-	vif0.stallontag = 0;
-	vif0.vifstalled = 0;
+	vif0.stallontag = false;
+	vif0.vifstalled = false;
 	vif0.vifpacketsize = size;
 
 	while (vif0.vifpacketsize > 0)
@@ -1144,7 +1144,7 @@ int VIF0transfer(u32 *data, int size, int istag)
 
 				++vif0.irq;
 
-				if (istag && vif0.tag.size <= vif0.vifpacketsize) vif0.stallontag = 1;
+				if (istag && vif0.tag.size <= vif0.vifpacketsize) vif0.stallontag = true;
 
 				if (vif0.tag.size == 0) break;
 			}
@@ -1158,7 +1158,7 @@ int VIF0transfer(u32 *data, int size, int istag)
 
 	if (vif0.irq && (vif0.tag.size == 0))
 	{
-		vif0.vifstalled = 1;
+		vif0.vifstalled = true;
 
 		if (((vif0Regs->code >> 24) & 0x7f) != 0x7)vif0Regs->stat |= VIF0_STAT_VIS;
 		//else Console::WriteLn("VIF0 IRQ on MARK");
@@ -1194,7 +1194,7 @@ int  _VIF0chain()
 	u32 *pMem;
 	u32 ret;
 
-	if (vif0ch->qwc == 0 && vif0.vifstalled == 0) return 0;
+	if ((vif0ch->qwc == 0) && !vif0.vifstalled) return 0;
 
 	pMem = (u32*)dmaGetAddr(vif0ch->madr);
 	if (pMem == NULL) return -1;
@@ -1207,7 +1207,7 @@ int  _VIF0chain()
 	return ret;
 }
 
-int _chainVIF0()
+bool _chainVIF0()
 {
 	int id, ret;
 
@@ -1232,8 +1232,10 @@ int _chainVIF0()
 
 	if (vif0ch->chcr & 0x40)
 	{
-		if (vif0.vifstalled == 1) ret = VIF0transfer(vif0ptag + (2 + vif0.irqoffset), 2 - vif0.irqoffset, 1);  //Transfer Tag on stall
-		else ret = VIF0transfer(vif0ptag + 2, 2, 1);  //Transfer Tag
+		if (vif0.vifstalled) 
+			ret = VIF0transfer(vif0ptag + (2 + vif0.irqoffset), 2 - vif0.irqoffset, 1);  //Transfer Tag on stall
+		else 
+			ret = VIF0transfer(vif0ptag + 2, 2, 1);  //Transfer Tag
 		if (ret == -1) return -1;       //There has been an error
 		if (ret == -2) return -2;        //IRQ set by VIFTransfer
 	}
@@ -1249,7 +1251,7 @@ int _chainVIF0()
 	{
 		VIF_LOG("dmaIrq Set\n");
 
-		vif0.done = 1;
+		vif0.done = true;
 		return vif0.done;												   //End Transfer
 	}
 	return vif0.done;												   //Return Done
@@ -1274,7 +1276,7 @@ void  vif0Interrupt()
 		}
 		if (vif0ch->qwc > 0 || vif0.irqoffset > 0)
 		{
-			if (vif0.stallontag == 1)
+			if (vif0.stallontag)
 				_chainVIF0();
 			else 
 				_VIF0chain();
@@ -1286,7 +1288,7 @@ void  vif0Interrupt()
 
 	if ((vif0ch->chcr & 0x100) == 0) Console::WriteLn("Vif0 running when CHCR = %x", params vif0ch->chcr);
 
-	if ((vif0ch->chcr & 0x4) && (vif0.done == 0) && (vif0.vifstalled == 0))
+	if ((vif0ch->chcr & 0x4) && (!vif0.done) && (!vif0.vifstalled))
 	{
 
 		if (!(psHu32(DMAC_CTRL) & 0x1))
@@ -1363,16 +1365,16 @@ void dmaVIF0()
 		if (_VIF0chain() == -2)
 		{
 			Console::WriteLn("Stall on normal %x", params vif0Regs->stat);
-			vif0.vifstalled = 1;
+			vif0.vifstalled = true;
 			return;
 		}
-		vif0.done = 1;
+		vif0.done = true;
 		CPU_INT(0, g_vifCycles);
 		return;
 	}
 
 	// Chain Mode
-	vif0.done = 0;
+	vif0.done = false;
 	CPU_INT(0, 0);
 }
 
@@ -1400,7 +1402,7 @@ void vif0Write32(u32 mem, u32 value)
 				cpuRegs.interrupt &= ~1; //Stop all vif0 DMA's
 				psHu64(0x10004000) = 0;
 				psHu64(0x10004008) = 0;
-				vif0.done = 1;
+				vif0.done = true;
 				vif0Regs->err = 0;
 				vif0Regs->stat &= ~(0xF000000 | VIF0_STAT_INT | VIF0_STAT_VSS | VIF0_STAT_VIS | VIF0_STAT_VFS | VIF0_STAT_VPS); // FQC=0
 			}
@@ -1411,7 +1413,7 @@ void vif0Write32(u32 mem, u32 value)
 				cpuRegs.interrupt &= ~1; //Stop all vif0 DMA's
 				vif0Regs->stat |= VIF0_STAT_VFS;
 				vif0Regs->stat &= ~VIF0_STAT_VPS;
-				vif0.vifstalled = 1;
+				vif0.vifstalled = true;
 				Console::WriteLn("vif0 force break");
 				}
 			if (value & 0x4)
@@ -1421,15 +1423,15 @@ void vif0Write32(u32 mem, u32 value)
 				//  just stoppin the VIF (linuz).
 				vif0Regs->stat |= VIF0_STAT_VSS;
 				vif0Regs->stat &= ~VIF0_STAT_VPS;
-				vif0.vifstalled = 1;
+				vif0.vifstalled = true;
 			}
 			if (value & 0x8)
 			{
-				bool cancel = FALSE;
+				bool cancel = false;
 
 				/* Cancel stall, first check if there is a stall to cancel, and then clear VIF0_STAT VSS|VFS|VIS|INT|ER0|ER1 bits */
 				if (vif0Regs->stat & (VIF0_STAT_VSS | VIF0_STAT_VIS | VIF0_STAT_VFS))
-					cancel = TRUE;
+					cancel = true;
 
 				vif0Regs->stat &= ~(VIF0_STAT_VSS | VIF0_STAT_VFS | VIF0_STAT_VIS |
 						    VIF0_STAT_INT | VIF0_STAT_ER0 | VIF0_STAT_ER1);
@@ -1440,7 +1442,7 @@ void vif0Write32(u32 mem, u32 value)
 						g_vifCycles = 0;
 
 						// loop necessary for spiderman
-						if (vif0.stallontag == 1)
+						if (vif0.stallontag)
 							_chainVIF0();
 						else
 							_VIF0chain();
@@ -1490,7 +1492,7 @@ void vif0Reset()
 	psHu64(0x10004000) = 0;
 	psHu64(0x10004008) = 0;
 	vif0Regs->stat &= ~VIF0_STAT_VPS;
-	vif0.done = 1;
+	vif0.done = true;
 	vif0Regs->stat &= ~0xF000000; // FQC=0
 }
 
@@ -2027,8 +2029,8 @@ int VIF1transfer(u32 *data, int size, int istag)
 	VIF_LOG("VIF1transfer: size %x (vif1.cmd %x)", size, vif1.cmd);
 
 	vif1.irqoffset = 0;
-	vif1.vifstalled = 0;
-	vif1.stallontag = 0;
+	vif1.vifstalled = false;
+	vif1.stallontag = false;
 	vif1.vifpacketsize = size;
 
 	while (vif1.vifpacketsize > 0)
@@ -2086,7 +2088,7 @@ int VIF1transfer(u32 *data, int size, int istag)
 
 				++vif1.irq;
 
-				if (istag && vif1.tag.size <= vif1.vifpacketsize) vif1.stallontag = 1;
+				if (istag && vif1.tag.size <= vif1.vifpacketsize) vif1.stallontag = true;
 
 				if (vif1.tag.size == 0) break;
 			}
@@ -2100,7 +2102,7 @@ int VIF1transfer(u32 *data, int size, int istag)
 
 	if (vif1.irq && vif1.cmd == 0)
 	{
-		vif1.vifstalled = 1;
+		vif1.vifstalled = true;
 
 		if (((vif1Regs->code >> 24) & 0x7f) != 0x7)vif1Regs->stat |= VIF1_STAT_VIS; // Note: commenting this out fixes WALL-E
 
@@ -2145,7 +2147,7 @@ void vif1TransferFromMemory()
 	{
 		Console::WriteLn("Vif1 Tag BUSERR");
 		psHu32(DMAC_STAT) |= 1 << 15;       //If yes, set BEIS (BUSERR) in DMAC_STAT register
-		vif1.done = 1;
+		vif1.done = true;
 		vif1Regs->stat &= ~0x1f000000;
 		vif1ch->qwc = 0;
 		CPU_INT(1, 0);
@@ -2221,7 +2223,7 @@ int  _VIF1chain()
 	return ret;
 }
 
-int _chainVIF1()
+bool _chainVIF1()
 {
 	return vif1.done;//Return Done
 }
@@ -2233,7 +2235,7 @@ __forceinline void vif1SetupTransfer()
 		case 0: //Normal
 		case 1: //Normal (From memory)
 			vif1.inprogress = 1;
-			vif1.done = 1;
+			vif1.done = true;
 			break;
 
 		case 2: //Chain
@@ -2278,7 +2280,7 @@ __forceinline void vif1SetupTransfer()
 			if (vif1ch->chcr & 0x40)
 			{
 
-				if (vif1.vifstalled == 1)
+				if (vif1.vifstalled)
 					ret = VIF1transfer(vif1ptag + (2 + vif1.irqoffset), 2 - vif1.irqoffset, 1);  //Transfer Tag on stall
 				else
 					ret = VIF1transfer(vif1ptag + 2, 2, 1);  //Transfer Tag
@@ -2297,7 +2299,7 @@ __forceinline void vif1SetupTransfer()
 			{
 				VIF_LOG("dmaIrq Set");
 
-				vif1.done = 1;
+				vif1.done = true;
 				return;												   //End Transfer
 			}
 			break;
@@ -2327,16 +2329,16 @@ __forceinline void vif1Interrupt()
 		}
 		else if ((vif1ch->qwc > 0) || (vif1.irqoffset > 0))
 		{
-			if (vif1.stallontag == 1)
+			if (vif1.stallontag)
 				vif1SetupTransfer();
 			else
 				_VIF1chain();//CPU_INT(13, vif1ch->qwc * BIAS);
 		}
 	}
 
-	if (vif1.inprogress == 1) _VIF1chain();
+	if (vif1.inprogress) _VIF1chain();
 
-	if ((vif1.done == 0) || (vif1.inprogress == 1))
+	if ((!vif1.done) || (vif1.inprogress))
 	{
 
 		if (!(psHu32(DMAC_CTRL) & 0x1))
@@ -2351,7 +2353,7 @@ __forceinline void vif1Interrupt()
 		return;
 	}
 	
-	if(vif1.vifstalled && vif1.irq) 
+	if (vif1.vifstalled && vif1.irq) 
 	{
 		CPU_INT(1, 0);
 		return; //Dont want to end if vif is stalled.
@@ -2413,7 +2415,7 @@ void dmaVIF1()
 	}
 
 	// Chain Mode
-	vif1.done = 0;
+	vif1.done = false;
 	CPU_INT(1, 0);
 }
 
@@ -2441,7 +2443,7 @@ void vif1Write32(u32 mem, u32 value)
 				vif1ch->qwc = 0; //?
 				psHu64(0x10005000) = 0;
 				psHu64(0x10005008) = 0;
-				vif1.done = 1;
+				vif1.done = true;
 				vif1Regs->err = 0;
 				vif1.inprogress = 0;
 				vif1Regs->stat &= ~(0x1F800000 | VIF1_STAT_INT | VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS | VIF1_STAT_VPS); // FQC=0
@@ -2453,7 +2455,7 @@ void vif1Write32(u32 mem, u32 value)
 				vif1Regs->stat |= VIF1_STAT_VFS;
 				vif1Regs->stat &= ~VIF1_STAT_VPS;
 				cpuRegs.interrupt &= ~((1 << 1) | (1 << 10)); //Stop all vif1 DMA's
-				vif1.vifstalled = 1;
+				vif1.vifstalled = true;
 				Console::WriteLn("vif1 force break");
 			}
 			if (value & 0x4)
@@ -2464,16 +2466,16 @@ void vif1Write32(u32 mem, u32 value)
 				vif1Regs->stat |= VIF1_STAT_VSS;
 				vif1Regs->stat &= ~VIF1_STAT_VPS;
 				cpuRegs.interrupt &= ~((1 << 1) | (1 << 10)); //Stop all vif1 DMA's
-				vif1.vifstalled = 1;
+				vif1.vifstalled = true;
 			}
 			if (value & 0x8)
 			{
-				bool cancel = FALSE;
+				bool cancel = false;
 
 				/* Cancel stall, first check if there is a stall to cancel, and then clear VIF1_STAT VSS|VFS|VIS|INT|ER0|ER1 bits */
 				if (vif1Regs->stat & (VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS))
 				{
-					cancel = TRUE;
+					cancel = true;
 				}
 
 				vif1Regs->stat &= ~(VIF1_STAT_VSS | VIF1_STAT_VFS | VIF1_STAT_VIS |
@@ -2531,8 +2533,8 @@ void vif1Write32(u32 mem, u32 value)
 			else
 			{
 				vif1ch->qwc = 0;
-				vif1.vifstalled = 0;
-				vif1.done = 1;
+				vif1.vifstalled = false;
+				vif1.done = true;
 				vif1Regs->stat &= ~0x1F000000; // FQC=0
 			}
 			break;
@@ -2570,7 +2572,7 @@ void vif1Reset()
 	psHu64(0x10005000) = 0;
 	psHu64(0x10005008) = 0;
 	vif1Regs->stat &= ~VIF1_STAT_VPS;
-	vif1.done = 1;
+	vif1.done = true;
 	cpuRegs.interrupt &= ~((1 << 1) | (1 << 10)); //Stop all vif1 DMA's
 	vif1Regs->stat &= ~0x1F000000; // FQC=0
 }
