@@ -29,10 +29,6 @@
 
 using namespace std;			// for min / max
 
-
-
-#define gif ((DMACh*)&PS2MEM_HW[0xA000])
-
 // Extern variables
 extern "C"
 {
@@ -65,6 +61,9 @@ static const unsigned int VIF1dmanum = 1;
 int g_vifCycles = 0;
 bool path3hack = FALSE;
 bool Path3transfer = FALSE;
+
+u32 splittransfer[4];
+u32 splitptr = 0;
 
 typedef void (__fastcall *UNPACKFUNCTYPE)(u32 *dest, u32 *data, int size);
 typedef int (*UNPACKPARTFUNCTYPESSE)(u32 *dest, u32 *data, int size);
@@ -952,6 +951,8 @@ static int __fastcall Vif0TransMPG(u32 *data)  // MPG
 
 static int __fastcall Vif0TransUnpack(u32 *data)	// UNPACK
 {
+	int ret;
+	
 	FreezeXMMRegs(1);
 	if (vif0.vifpacketsize < vif0.tag.size)
 	{
@@ -960,35 +961,32 @@ static int __fastcall Vif0TransUnpack(u32 *data)	// UNPACK
 		
 		ProcessMemSkip(vif0.vifpacketsize << 2, (vif0.cmd & 0xf), VIF0dmanum);
 
-		vif0.tag.size -= vif0.vifpacketsize;
-		FreezeXMMRegs(0);
-		return vif0.vifpacketsize;
+		ret = vif0.vifpacketsize;
+		vif0.tag.size -= ret;
 	}
 	else
 	{
 		/* we got all the data, transfer it fully */
-		int ret = vif0.tag.size;
+		ret = vif0.tag.size;
 		
 		//Align data after a split transfer first
-		if(vif0Regs->offset != 0 || vif0.cl != 0) 
+		if ((vif0Regs->offset != 0) || (vif0.cl != 0)) 
 		{
 			vif0.tag.size = VIFalign(data, &vif0.tag, vif0.tag.size, VIF0dmanum);
 			data += ret - vif0.tag.size;
 			if(vif0.tag.size > 0) VIFunpack(data, &vif0.tag, vif0.tag.size, VIF0dmanum);
-			vif0.tag.size = 0;
-			vif0.cmd = 0;
-			FreezeXMMRegs(0);
-			return ret;
 		}
 		else
 		{
 			VIFunpack(data, &vif0.tag, vif0.tag.size, VIF0dmanum);
-			vif0.tag.size = 0;
-			vif0.cmd = 0;
-			FreezeXMMRegs(0);
-			return ret;
 		}
+		
+		vif0.tag.size = 0;
+		vif0.cmd = 0;
 	}
+	
+	FreezeXMMRegs(0);
+	return ret;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1694,8 +1692,6 @@ static int __fastcall Vif1TransMPG(u32 *data)
 		return ret;
 	}
 }
-u32 splittransfer[4];
-u32 splitptr = 0;
 
 static int __fastcall Vif1TransDirectHL(u32 *data)
 {
@@ -2371,7 +2367,6 @@ __forceinline void vif1Interrupt()
 	if (vif1Regs->mskpath3 == 0 || (vif1ch->chcr & 0x1) == 0x1)vif1Regs->stat &= ~0x1F000000; // FQC=0
 }
 
-#define spr0 ((DMACh*)&PS2MEM_HW[0xD000])
 void dmaVIF1()
 {
 

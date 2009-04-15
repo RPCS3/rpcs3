@@ -24,15 +24,26 @@
 #include "GS.h"
 #include "iR5900.h"
 #include "Counters.h"
-
 #include "VifDma.h"
 
 using namespace Threading;
 using namespace std;
-
 using namespace R5900;
 
 static bool m_gsOpened = false;
+
+u32 CSRw;
+
+PCSX2_ALIGNED16( u8 g_RealGSMem[0x2000] );
+extern int m_nCounters[];
+
+// FrameSkipping Stuff
+// Yuck, iSlowStart is needed by the MTGS, so can't make it static yet.
+
+u64 m_iSlowStart=0;
+static s64 m_iSlowTicks=0;
+static bool m_justSkipped = false;
+static bool m_StrictSkipping = false;
 
 #ifdef PCSX2_DEVBUILD
 
@@ -97,21 +108,6 @@ __forceinline void GSGIFTRANSFER3(u32 *pMem, u32 size) {
 __forceinline void GSVSYNC(void) { 
 } 
 #endif
-
-u32 CSRw;
-
-PCSX2_ALIGNED16( u8 g_RealGSMem[0x2000] );
-#define PS2GS_BASE(mem) (g_RealGSMem+(mem&0x13ff))
-
-extern int m_nCounters[];
-
-// FrameSkipping Stuff
-// Yuck, iSlowStart is needed by the MTGS, so can't make it static yet.
-
-u64 m_iSlowStart=0;
-static s64 m_iSlowTicks=0;
-static bool m_justSkipped = false;
-static bool m_StrictSkipping = false;
 
 void _gs_ChangeTimings( u32 framerate, u32 iTicks )
 {
@@ -839,8 +835,6 @@ void RunGSState( gzLoadingState& f )
 	list<GSStatePacket>::iterator it = packets.begin();
 	g_SaveGSStream = 3;
 
-	//int skipfirst = 1;
-
 	// first extract the data
 	while(1) {
 
@@ -877,4 +871,4 @@ void RunGSState( gzLoadingState& f )
 
 #endif
 
-#undef GIFchain
+//#undef GIFchain

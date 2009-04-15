@@ -427,7 +427,7 @@ void mfifoVIF1transfer(int qwc)
 {
 	u32 *ptag;
 	int id;
-	int ret, temp;
+	int ret;
 
 	g_vifCycles = 0;
 
@@ -493,12 +493,14 @@ void mfifoVIF1transfer(int qwc)
 				break;
 
 			case 2: // Next - Transfer QWC following tag. TADR = ADDR
-				temp = vif1ch->madr;								//Temporarily Store ADDR
+			{
+				int temp = vif1ch->madr;								//Temporarily Store ADDR
 				vif1ch->madr = psHu32(DMAC_RBOR) + ((vif1ch->tadr + 16) & psHu32(DMAC_RBSR)); 					  //Set MADR to QW following the tag
 				vif1ch->tadr = temp;								//Copy temporarily stored ADDR to Tag
 				if ((temp & psHu32(DMAC_RBSR)) != psHu32(DMAC_RBOR)) Console::WriteLn("Next tag = %x outside ring %x size %x", params temp, psHu32(DMAC_RBOR), psHu32(DMAC_RBSR));
 				vif1.done = 0;
 				break;
+			}
 
 			case 3: // Ref - Transfer QWC from ADDR field
 			case 4: // Refs - Transfer QWC from ADDR field (Stall Control)

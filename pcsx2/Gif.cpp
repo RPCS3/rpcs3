@@ -28,9 +28,6 @@
 
 using std::min;
 
-#define gif ((DMACh*)&psH[0xA000])
-#define spr0 ((DMACh*)&PS2MEM_HW[0xD000])
-
 enum gifstate_t
 {
 	GIF_STATE_EMPTY = 0,
@@ -49,6 +46,7 @@ static int gspath3done = 0;
 
 static u32 gscycles = 0, prevcycles = 0, mfifocycles = 0;
 static u32 gifqwc = 0;
+bool gifmfifoirq = FALSE;
 
 __forceinline void gsInterrupt() {
 	GIF_LOG("gsInterrupt: %8.8x", cpuRegs.cycle);
@@ -151,7 +149,7 @@ int  _GIFchain() {
 	return (qwc)*2;
 }
 
-__forceinline void GIFchain() 
+static __forceinline void GIFchain() 
 {
 	FreezeRegs(1);  
 	if (gif->qwc) gscycles+= _GIFchain(); /* guessing */
@@ -243,14 +241,10 @@ void GIFdma()
 				}
 			}
 		}
-		// When MTGS is enabled, Gifchain calls WRITERING_DMA, which calls GSRINGBUF_DONECOPY, which freezes 
-		// the registers inside of the FreezeXMMRegs calls here and in the other two below..
-		// I'm not really sure that is intentional. --arcum42
+		
 		GIFchain(); 
-		// Theres a comment below that says not to unfreeze the xmm regs, so not sure about freezing and unfreezing in GIFchain.
 
 		if((gif->qwc == 0) && ((gspath3done == 1) || (gif->chcr & 0xc) == 0)){ 
-			//if(gif->qwc > 0) Console::WriteLn("Hurray!"); // We *know* it is 0!
 			gspath3done = 0;
 			gif->chcr &= ~0x100;
 			GSCSRr &= ~0xC000;
@@ -445,7 +439,6 @@ static __forceinline int mfifoGIFchain() {
 
 	return 0;
 }
-bool gifmfifoirq = FALSE;
 
 void mfifoGIFtransfer(int qwc) {
 	u32 *ptag;
@@ -521,12 +514,15 @@ void mfifoGIFtransfer(int qwc) {
 			gifmfifoirq = TRUE;
 		}
 	 }
+	 
 	FreezeRegs(1); 
+	 
 		if (mfifoGIFchain() == -1) {
 			Console::WriteLn("GIF dmaChain error size=%d, madr=%lx, tadr=%lx", params
 					gif->qwc, gif->madr, gif->tadr);
 			gifstate = GIF_STATE_STALL;
 		}
+		
 	FreezeRegs(0); 
 		
 	if(gif->qwc == 0 && gifstate == GIF_STATE_DONE) gifstate = GIF_STATE_STALL;

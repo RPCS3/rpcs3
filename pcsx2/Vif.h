@@ -171,7 +171,6 @@ static __forceinline u32 getVifColRegs(u32 reg)
 
 #define vif0Regs ((VIFregisters*)&PS2MEM_HW[0x3800])
 #define vif1Regs ((VIFregisters*)&PS2MEM_HW[0x3c00])
-#define spr0 ((DMACh*)&PS2MEM_HW[0xD000])
 
 void dmaVIF0();
 void dmaVIF1();

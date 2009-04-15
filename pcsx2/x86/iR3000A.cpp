@@ -837,7 +837,7 @@ static void iPsxBranchTest(u32 newpc, u32 cpuBranch)
 	x86SetJ8( j8Ptr[0] );
 }
 
-static const int *s_pCode;
+//static const int *s_pCode;
 
 #if !defined(_MSC_VER)
 static void checkcodefn()

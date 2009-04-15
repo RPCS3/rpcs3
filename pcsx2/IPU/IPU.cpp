@@ -48,11 +48,6 @@ using namespace std;			// for min / max
 #	define IPU_FORCEINLINE __forceinline
 #endif
 
-//IPUregisters g_ipuRegsReal;
-
-#define ipu0dma ((DMACh *)&PS2MEM_HW[0xb000])
-#define ipu1dma ((DMACh *)&PS2MEM_HW[0xb400])
-
 #define IPU_DMA_GIFSTALL 1
 #define IPU_DMA_TIE0 2
 #define IPU_DMA_TIE1 4

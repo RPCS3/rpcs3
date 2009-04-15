@@ -2963,8 +2963,8 @@ int VuInstruction::SetCachedRegs(int upper, u32 vuxyz)
 
 void VuInstruction::Recompile(list<VuInstruction>::iterator& itinst, u32 vuxyz)
 {
-	static PCSX2_ALIGNED16(VECTOR _VF);
-	static PCSX2_ALIGNED16(VECTOR _VFc);
+	//static PCSX2_ALIGNED16(VECTOR _VF);
+	//static PCSX2_ALIGNED16(VECTOR _VFc);
 	u32 *ptr;
 	u8* pjmp;
 	int vfregstore=0;

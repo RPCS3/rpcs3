@@ -21,25 +21,16 @@
 
 extern u8  *psH; // hw mem
 
-#define psHs8(mem)	(*(s8 *)&PS2MEM_HW[(mem) & 0xffff])
-#define psHs16(mem)	(*(s16*)&PS2MEM_HW[(mem) & 0xffff])
-#define psHs32(mem)	(*(s32*)&PS2MEM_HW[(mem) & 0xffff])
-#define psHs64(mem)	(*(s64*)&PS2MEM_HW[(mem) & 0xffff])
-#define psHu8(mem)	(*(u8 *)&PS2MEM_HW[(mem) & 0xffff])
-#define psHu16(mem)	(*(u16*)&PS2MEM_HW[(mem) & 0xffff])
-#define psHu32(mem)	(*(u32*)&PS2MEM_HW[(mem) & 0xffff])
-#define psHu64(mem)	(*(u64*)&PS2MEM_HW[(mem) & 0xffff])
-
 extern void CPU_INT( u32 n, s32 ecycle );
 
 //////////////////////////////////////////////////////////////////////////
 // Hardware FIFOs (128 bit access only!)
 //
-// VIF0   -- 0x10004000 -- psH[0x4000]
-// VIF1   -- 0x10005000 -- psH[0x5000]
-// GIF    -- 0x10006000 -- psH[0x6000]
-// IPUout -- 0x10007000 -- psH[0x7000]
-// IPUin  -- 0x10007010 -- psH[0x7010]
+// VIF0   -- 0x10004000 -- PS2MEM_HW[0x4000]
+// VIF1   -- 0x10005000 -- PS2MEM_HW[0x5000]
+// GIF    -- 0x10006000 -- PS2MEM_HW[0x6000]
+// IPUout -- 0x10007000 -- PS2MEM_HW[0x7000]
+// IPUin  -- 0x10007010 -- PS2MEM_HW[0x7010]
 
 void __fastcall ReadFIFO_page_4(u32 mem, mem128_t *out);
 void __fastcall ReadFIFO_page_5(u32 mem, mem128_t *out);
@@ -215,8 +206,8 @@ struct DMACh {
 
 #define INTC_GS  		0
 #define INTC_SBUS  		1
-#define	INTC_VBLANK_S	2
-#define	INTC_VBLANK_E	3
+#define INTC_VBLANK_S	2
+#define INTC_VBLANK_E	3
 #define INTC_VIF0  		4
 #define INTC_VIF1  		5
 #define INTC_VU0  		6
@@ -290,21 +281,6 @@ struct DMACh {
 #define SISintr  (0x20002000)
 #define MEISintr (0x40004000)
 
-#define DMAend(dma, num) { \
-	dma->chcr &= ~0x100; \
-	psHu32(DMAC_STAT)|= 1<<num; \
-	return; \
-}
-
-#define DMAerror(dma, num) { \
-	psHu32(DMAC_STAT)|= 1<<15; /* BUS error */ \
-	DMAend(dma, num); \
-}
-
-#define _dmaGetAddr(dma, ptr, addr, num) \
-	ptr = (u32*)dmaGetAddr(addr); \
-	if (ptr == NULL) DMAerror(dma, num);
-
 #ifdef PCSX2_VIRTUAL_MEM
 
 #define dmaGetAddrBase(addr) (((addr) & 0x80000000) ? (void*)&PS2MEM_SCRATCH[(addr) & 0x3ff0] : (void*)(PS2MEM_BASE+TRANSFORM_ADDR(addr)))
@@ -348,10 +324,9 @@ static __forceinline void *dmaGetAddr(u32 addr) {
 	u8 *ptr;
 
 //	if (addr & 0xf) { DMA_LOG("*PCSX2*: DMA address not 128bit aligned: %8.8x", addr); }
-
-	if (addr & 0x80000000) {	//  teh sux why the f00k 0xE0000000
-		return (void*)&psS[addr & 0x3ff0];
-	}
+	
+	//  teh sux why the f00k 0xE0000000
+	if (addr & 0x80000000) return (void*)&psS[addr & 0x3ff0];
 
 	ptr = (u8*)vtlb_GetPhyPtr(addr&0x1FFFFFF0);
 	if (ptr == NULL) {
@@ -361,7 +336,23 @@ static __forceinline void *dmaGetAddr(u32 addr) {
 	return ptr;
 }
 
-#endif
+#endif 
+
+static __forceinline u32 *_dmaGetAddr(DMACh *dma, u32 addr, u32 num) 
+{
+	u32 *ptr = (u32*)dmaGetAddr(addr); 
+	if (ptr == NULL)  
+	{
+		// DMA Error
+		psHu32(DMAC_STAT)|= 1<<15; /* BUS error */
+	
+		// DMA End
+		psHu32(DMAC_STAT)|= 1<<num;  
+		dma->chcr &= ~0x100; 
+	}
+	
+	return ptr;
+}
 
 void hwInit();
 void hwReset();

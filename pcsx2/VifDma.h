@@ -50,9 +50,6 @@ struct vifStruct {
 extern vifStruct vif0, vif1;
 extern bool Path3transfer;
 
-#define vif0ch ((DMACh*)&PS2MEM_HW[0x8000])
-#define vif1ch ((DMACh*)&PS2MEM_HW[0x9000])
-
 void __fastcall UNPACK_S_32( u32 *dest, u32 *data, int size );
 
 void __fastcall UNPACK_S_16u( u32 *dest, u32 *data, int size );
