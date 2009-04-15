@@ -46,6 +46,8 @@
 // global optimization fails to resolve the externals and junk.
 //   (score one for MSVC!)
 
+#include "System.h"
+
 namespace x86Emitter
 {
 	//////////////////////////////////////////////////////////////////////////////////////////
