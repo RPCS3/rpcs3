@@ -36,157 +36,83 @@
 #include "System.h"
 #include "ix86_internal.h"
 
+namespace x86Emitter {
 
-// Another Work-in-Progress!!
-
-
-/*
-emitterT void x86SetPtr( u8* ptr ) 
+// ------------------------------------------------------------------------
+void iSmartJump::SetTarget()
 {
-	x86Ptr = ptr;
+	jASSUME( !m_written );
+	if( m_written )
+		throw Exception::InvalidOperation( "Attempted to set SmartJump label multiple times." );
+
+	m_target = iGetPtr();
+	if( m_baseptr == NULL ) return;
+
+	iSetPtr( m_baseptr );
+	u8* const saveme = m_baseptr + GetMaxInstructionSize();
+	iJccKnownTarget( m_cc, m_target, true );
+
+	// Copy recompiled data inward if the jump instruction didn't fill the
+	// alloted buffer (means that we optimized things to a j8!)
+
+	const int spacer = (sptr)saveme - (sptr)iGetPtr();
+	if( spacer != 0 )
+	{
+		u8* destpos = iGetPtr();
+		const int copylen = (sptr)m_target - (sptr)saveme;
+
+		memcpy_fast( destpos, saveme, copylen );
+		iSetPtr( m_target - spacer );
+	}
+
+	m_written = true;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
-// x86Ptr Label API
 //
 
-class x86Label
+// ------------------------------------------------------------------------
+// Writes a jump at the current x86Ptr, which targets a pre-established target address.
+// (usually a backwards jump)
+//
+// slideForward - used internally by iSmartJump to indicate that the jump target is going
+// to slide forward in the event of an 8 bit displacement.
+//
+__emitinline void iJccKnownTarget( JccComparisonType comparison, void* target, bool slideForward )
 {
-public:
-	class Entry
-	{
-	protected:
-		u8* (*m_emit)( u8* emitTo, u8* label_target, int cc );	// callback for the instruction to emit (cc = comparison type)
-		u8* m_base;			// base address of the instruction (passed to the instruction)
-		int m_cc;			// comparison type of the instruction
-		
-	public:
-		explicit Entry( int cc ) :
-			m_base( x86Ptr )
-		,	m_writebackpos( writebackidx )
-		{
-		}
+	// Calculate the potential j8 displacement first, assuming an instruction length of 2:
+	sptr displacement8 = (sptr)target - ((sptr)iGetPtr() + 2);
 
-		void Commit( const u8* target ) const
-		{
-			//uptr reltarget = (uptr)m_base - (uptr)target;
-			//*((u32*)&m_base[m_writebackpos]) = reltarget;
-			jASSUME( m_emit != NULL );
-			jASSUME( m_base != NULL );
-			return m_emit( m_base, target, m_cc );
-		}
-	};
+	const int slideVal = slideForward ? ((comparison == Jcc_Unconditional) ? 3 : 4) : 0;
+	displacement8 -= slideVal;
 
-protected:
-	u8* m_target;		// x86Ptr target address of this label
-	Entry m_writebacks[8];
-	int m_writeback_curpos;
-
-public:
-	// creates a label list with no valid target.
-	// Use x86LabelList::Set() to set a target prior to class destruction.
-	x86Label() : m_target()
-	{
-	}
-
-	x86Label( EmitPtrCache& src ) : m_target( src.GetPtr() )
-	{
-	}
+	// if the following assert fails it means we accidentally used slideForard on a backward
+	// jump (which is an invalid operation since there's nothing to slide forward).
+	if( slideForward ) jASSUME( displacement8 >= 0 );
 	
-	// Performs all address writebacks on destruction.
-	virtual ~x86Label()
+	if( is_s8( displacement8 ) )
 	{
-		IssueWritebacks();
+		iWrite<u8>( (comparison == Jcc_Unconditional) ? 0xeb : (0x70 | comparison) );
+		iWrite<s8>( displacement8 );
 	}
+	else
+	{
+		// Perform a 32 bit jump instead. :(
 
-	void SetTarget() { m_address = x86Ptr; }
-	void SetTarget( void* addr ) { m_address = (u8*)addr; }
-
-	void Clear()
-	{
-		m_writeback_curpos = 0;
-	}
-	
-	// Adds a jump/call instruction to this label for writebacks.
-	void AddWriteback( void* emit_addr, u8* (*instruction)(), int cc )
-	{
-		jASSUME( m_writeback_curpos < MaxWritebacks );
-		m_writebacks[m_writeback_curpos] = Entry( (u8*)instruction, addrpart ) );
-		m_writeback_curpos++;
-	}
-	
-	void IssueWritebacks() const
-	{
-		const std::list<Entry>::const_iterator& start = m_list_writebacks.
-		for( ; start!=end; start++ )
+		if( comparison == Jcc_Unconditional )
+			iWrite<u8>( 0xe9 );
+		else
 		{
-			Entry& current = *start;
-			u8* donespot = current.Commit();
-			
-			// Copy the data from the m_nextinst to the current location,
-			// and update any additional writebacks (but what about multiple labels?!?)
-
+			iWrite<u8>( 0x0f );
+			iWrite<u8>( 0x80 | comparison );
 		}
+		iWrite<s32>( (sptr)target - ((sptr)iGetPtr() + 4) );
 	}
-};
-#endif
-
-void JMP( x86Label& dest )
-{
-	dest.AddWriteback( x86Ptr, emitJMP, 0 );
 }
 
-void JLE( x86Label& dest )
+__emitinline void iJcc( JccComparisonType comparison, void* target )
 {
-	dest.AddWriteback( x86Ptr, emitJCC, 0 );
+	iJccKnownTarget( comparison, target );
 }
 
-void x86SetJ8( u8* j8 )
-{
-	u32 jump = ( x86Ptr - j8 ) - 1;
-
-	if ( jump > 0x7f ) {
-		Console::Error( "j8 greater than 0x7f!!" );
-		assert(0);
-	}
-	*j8 = (u8)jump;
 }
-
-void x86SetJ8A( u8* j8 )
-{
-	u32 jump = ( x86Ptr - j8 ) - 1;
-
-	if ( jump > 0x7f ) {
-		Console::Error( "j8 greater than 0x7f!!" );
-		assert(0);
-	}
-
-	if( ((uptr)x86Ptr&0xf) > 4 ) {
-
-		uptr newjump = jump + 16-((uptr)x86Ptr&0xf);
-
-		if( newjump <= 0x7f ) {
-			jump = newjump;
-			while((uptr)x86Ptr&0xf) *x86Ptr++ = 0x90;
-		}
-	}
-	*j8 = (u8)jump;
-}
-
-emitterT void x86SetJ32( u32* j32 ) 
-{
-	*j32 = ( x86Ptr - (u8*)j32 ) - 4;
-}
-
-emitterT void x86SetJ32A( u32* j32 )
-{
-	while((uptr)x86Ptr&0xf) *x86Ptr++ = 0x90;
-	x86SetJ32(j32);
-}
-
-emitterT void x86Align( int bytes ) 
-{
-	// forward align
-	x86Ptr = (u8*)( ( (uptr)x86Ptr + bytes - 1) & ~( bytes - 1 ) );
-}
-*/

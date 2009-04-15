@@ -96,22 +96,25 @@ const x86Register8
 
 namespace Internal
 {
-	const Group1ImplAll<G1Type_ADD> ADD;
-	const Group1ImplAll<G1Type_OR>  OR;
-	const Group1ImplAll<G1Type_ADC> ADC;
-	const Group1ImplAll<G1Type_SBB> SBB;
-	const Group1ImplAll<G1Type_AND> AND;
-	const Group1ImplAll<G1Type_SUB> SUB;
-	const Group1ImplAll<G1Type_XOR> XOR;
-	const Group1ImplAll<G1Type_CMP> CMP;
+	const Group1ImplAll<G1Type_ADD> iADD;
+	const Group1ImplAll<G1Type_OR>  iOR;
+	const Group1ImplAll<G1Type_ADC> iADC;
+	const Group1ImplAll<G1Type_SBB> iSBB;
+	const Group1ImplAll<G1Type_AND> iAND;
+	const Group1ImplAll<G1Type_SUB> iSUB;
+	const Group1ImplAll<G1Type_XOR> iXOR;
+	const Group1ImplAll<G1Type_CMP> iCMP;
 
-	const Group2ImplAll<G2Type_ROL> ROL;
-	const Group2ImplAll<G2Type_ROR> ROR;
-	const Group2ImplAll<G2Type_RCL> RCL;
-	const Group2ImplAll<G2Type_RCR> RCR;
-	const Group2ImplAll<G2Type_SHL> SHL;
-	const Group2ImplAll<G2Type_SHR> SHR;
-	const Group2ImplAll<G2Type_SAR> SAR;
+	const Group2ImplAll<G2Type_ROL> iROL;
+	const Group2ImplAll<G2Type_ROR> iROR;
+	const Group2ImplAll<G2Type_RCL> iRCL;
+	const Group2ImplAll<G2Type_RCR> iRCR;
+	const Group2ImplAll<G2Type_SHL> iSHL;
+	const Group2ImplAll<G2Type_SHR> iSHR;
+	const Group2ImplAll<G2Type_SAR> iSAR;
+
+	const MovExtendImplAll<true>  iMOVSX;
+	const MovExtendImplAll<false> iMOVZX;
 
 	// Performance note: VC++ wants to use byte/word register form for the following
 	// ModRM/SibSB constructors if we use iWrite<u8>, and furthermore unrolls the
@@ -149,11 +152,9 @@ namespace Internal
 	// instruction ca be encoded as ModRm alone.
 	static __forceinline bool NeedsSibMagic( const ModSibBase& info )
 	{
-		// If base register is ESP, then we need a SIB:
-		if( info.Base.IsStackPointer() ) return true;
-
 		// no registers? no sibs!
-		// (ModSibBase::Reduce
+		// (ModSibBase::Reduce always places a register in Index, and optionally leaves
+		// Base empty if only register is specified)
 		if( info.Index.IsEmpty() ) return false;
 
 		// A scaled register needs a SIB
@@ -188,7 +189,7 @@ namespace Internal
 			if( info.Index.IsEmpty() )
 			{
 				ModRM( 0, regfield, ModRm_UseDisp32 );
-				iWrite<u32>( info.Displacement );
+				iWrite<s32>( info.Displacement );
 				return;
 			}
 			else
@@ -211,7 +212,7 @@ namespace Internal
 			{
 				ModRM( 0, regfield, ModRm_UseSib );
 				SibSB( info.Scale, info.Index.Id, ModRm_UseDisp32 );
-				iWrite<u32>( info.Displacement );
+				iWrite<s32>( info.Displacement );
 				return;
 			}
 			else
@@ -226,13 +227,51 @@ namespace Internal
 
 		if( displacement_size != 0 )
 		{
-			*(u32*)x86Ptr = info.Displacement;
+			*(s32*)x86Ptr = info.Displacement;
 			x86Ptr += (displacement_size == 1) ? 1 : 4;
 		}
 	}
 }
 
 using namespace Internal;
+
+// ------------------------------------------------------------------------
+// Assigns the current emitter buffer target address.
+// This is provided instead of using x86Ptr directly, since we may in the future find
+// a need to change the storage class system for the x86Ptr 'under the hood.'
+__emitinline void iSetPtr( void* ptr ) 
+{
+	x86Ptr = (u8*)ptr;
+}
+
+// ------------------------------------------------------------------------
+// Retrieves the current emitter buffer target address.
+// This is provided instead of using x86Ptr directly, since we may in the future find
+// a need to change the storage class system for the x86Ptr 'under the hood.'
+__emitinline u8* iGetPtr()
+{
+	return x86Ptr;
+}
+
+// ------------------------------------------------------------------------
+__emitinline void iAlignPtr( uint bytes ) 
+{
+	// forward align
+	x86Ptr = (u8*)( ( (uptr)x86Ptr + bytes - 1) & ~(bytes - 1) );
+}
+
+// ------------------------------------------------------------------------
+__emitinline void iAdvancePtr( uint bytes )
+{
+	if( IsDevBuild )
+	{
+		// common debugger courtesy: advance with INT3 as filler.
+		for( uint i=0; i<bytes; i++ )
+			iWrite<u8>( 0xcc );
+	}
+	else
+		x86Ptr += bytes;
+}
 
 // ------------------------------------------------------------------------
 // Internal implementation of EmitSibMagic which has been custom tailored
@@ -258,21 +297,33 @@ static void EmitLeaMagic( ToReg to, const ModSibBase& src, bool preserve_flags )
 
 		if( src.Index.IsEmpty() )
 		{
-			MOV( to, src.Displacement );
+			iMOV( to, src.Displacement );
 			return;
 		}
 		else if( displacement_size == 0 )
 		{
-			MOV( to, ToReg( src.Index.Id ) );
+			iMOV( to, ToReg( src.Index.Id ) );
 			return;
 		}
 		else
 		{
-			// note: no need to do ebp+0 check since we encode all 0 displacements as
-			// register assignments above (via MOV)
+			if( !preserve_flags )
+			{
+				// encode as MOV and ADD combo.  Make sure to use the immediate on the
+				// ADD since it can encode as an 8-bit sign-extended value.
+				
+				iMOV( to, ToReg( src.Index.Id ) );
+				iADD( to, src.Displacement );
+				return;
+			}
+			else
+			{
+				// note: no need to do ebp+0 check since we encode all 0 displacements as
+				// register assignments above (via MOV)
 
-			iWrite<u8>( 0x8d );
-			ModRM( displacement_size, to.Id, src.Index.Id );
+				iWrite<u8>( 0x8d );
+				ModRM( displacement_size, to.Id, src.Index.Id );
+			}
 		}
 	}
 	else
@@ -288,8 +339,8 @@ static void EmitLeaMagic( ToReg to, const ModSibBase& src, bool preserve_flags )
 				// (this does not apply to older model P4s with the broken barrel shifter,
 				//  but we currently aren't optimizing for that target anyway).
 
-				MOV( to, ToReg( src.Index.Id ) );
-				SHL( to, src.Scale );
+				iMOV( to, ToReg( src.Index.Id ) );
+				iSHL( to, src.Scale );
 				return;
 			}
 			iWrite<u8>( 0x8d );
@@ -300,26 +351,46 @@ static void EmitLeaMagic( ToReg to, const ModSibBase& src, bool preserve_flags )
 		}
 		else
 		{
+			if( src.Scale == 0 )
+			{
+				if( !preserve_flags )
+				{
+					if( src.Index == esp )
+					{
+						// ESP is not encodable as an index (ix86 ignores it), thus:
+						iMOV( to, ToReg( src.Base.Id ) );	// will do the trick!
+						iADD( to, src.Displacement );
+						return;
+					}
+					else if( src.Displacement == 0 )
+					{
+						iMOV( to, ToReg( src.Base.Id ) );
+						iADD( to, ToReg( src.Index.Id ) );
+						return;
+					}
+				}
+				else if( (src.Index == esp) && (src.Displacement == 0) )
+				{
+					// special case handling of ESP as Index, which is replaceable with
+					// a single MOV even when preserve_flags is set! :D
+					
+					iMOV( to, ToReg( src.Base.Id ) );
+					return;
+				}
+			}
+
 			if( src.Base == ebp && displacement_size == 0 )
 				displacement_size = 1;		// forces [ebp] to be encoded as [ebp+0]!
 
 			iWrite<u8>( 0x8d );
 			ModRM( displacement_size, to.Id, ModRm_UseSib );
 			SibSB( src.Scale, src.Index.Id, src.Base.Id );
-			
-			/*switch( displacement_size )
-			{
-				case 0: break;
-				case 1: emit.write<u8>( src.Displacement );  break;
-				case 2: emit.write<u32>( src.Displacement ); break;
-				jNO_DEFAULT
-			}*/
 		}
 	}
 
 	if( displacement_size != 0 )
 	{
-		*(u32*)x86Ptr = src.Displacement;
+		*(s32*)x86Ptr = src.Displacement;
 		x86Ptr += (displacement_size == 1) ? 1 : 4;
 	}
 }
@@ -350,6 +421,7 @@ protected:
 	static void prefix16() { if( OperandSize == 2 ) iWrite<u8>( 0x66 ); }
 
 public:
+	// ------------------------------------------------------------------------
 	static __forceinline void Emit( const x86Register<OperandSize>& to, const x86Register<OperandSize>& from )
 	{
 		if( to == from ) return;	// ignore redundant MOVs.
@@ -359,6 +431,7 @@ public:
 		ModRM( 3, from.Id, to.Id );
 	}
 
+	// ------------------------------------------------------------------------
 	static __forceinline void Emit( const ModSibBase& dest, const x86Register<OperandSize>& from )
 	{
 		prefix16();
@@ -378,6 +451,7 @@ public:
 		}
 	}
 
+	// ------------------------------------------------------------------------
 	static __forceinline void Emit( const x86Register<OperandSize>& to, const ModSibBase& src )
 	{
 		prefix16();
@@ -397,6 +471,7 @@ public:
 		}
 	}
 
+	// ------------------------------------------------------------------------
 	static __forceinline void Emit( const x86Register<OperandSize>& to, ImmType imm )
 	{
 		// Note: MOV does not have (reg16/32,imm8) forms.
@@ -406,6 +481,7 @@ public:
 		iWrite<ImmType>( imm );
 	}
 
+	// ------------------------------------------------------------------------
 	static __forceinline void Emit( ModSibStrict<OperandSize> dest, ImmType imm )
 	{
 		prefix16();
@@ -436,50 +512,50 @@ namespace Internal
 // TODO : Turn this into a macro after it's been debugged and accuracy-approved! :D
 
 // ---------- 32 Bit Interface -----------
-__forceinline void MOV( const x86Register32& to,	const x86Register32& from )	{ MOV32i::Emit( to, from ); }
-__forceinline void MOV( const x86Register32& to,	const void* src )			{ MOV32i::Emit( to, ptr32[src] ); }
-__forceinline void MOV( const void* dest,			const x86Register32& from )	{ MOV32i::Emit( ptr32[dest], from ); }
-__noinline void MOV( const ModSibBase& sibdest,		const x86Register32& from )	{ MOV32::Emit( sibdest, from ); }
-__noinline void MOV( const x86Register32& to,		const ModSibBase& sibsrc )	{ MOV32::Emit( to, sibsrc ); }
-__noinline void MOV( const ModSibStrict<4>& sibdest,u32 imm )					{ MOV32::Emit( sibdest, imm ); }
+__forceinline void iMOV( const x86Register32& to,	const x86Register32& from )	{ MOV32i::Emit( to, from ); }
+__forceinline void iMOV( const x86Register32& to,	const void* src )			{ MOV32i::Emit( to, ptr32[src] ); }
+__forceinline void iMOV( const void* dest,			const x86Register32& from )	{ MOV32i::Emit( ptr32[dest], from ); }
+__noinline void iMOV( const ModSibBase& sibdest,	const x86Register32& from )	{ MOV32::Emit( sibdest, from ); }
+__noinline void iMOV( const x86Register32& to,		const ModSibBase& sibsrc )	{ MOV32::Emit( to, sibsrc ); }
+__noinline void iMOV( const ModSibStrict<4>& sibdest,u32 imm )					{ MOV32::Emit( sibdest, imm ); }
 
-void MOV( const x86Register32& to, u32 imm, bool preserve_flags )
+void iMOV( const x86Register32& to, u32 imm, bool preserve_flags )
 {
 	if( !preserve_flags && (imm == 0) )
-		XOR( to, to );
+		iXOR( to, to );
 	else
 		MOV32i::Emit( to, imm );
 }
 
 
 // ---------- 16 Bit Interface -----------
-__forceinline void MOV( const x86Register16& to,	const x86Register16& from )	{ MOV16i::Emit( to, from ); }
-__forceinline void MOV( const x86Register16& to,	const void* src )			{ MOV16i::Emit( to, ptr16[src] ); }
-__forceinline void MOV( const void* dest,			const x86Register16& from )	{ MOV16i::Emit( ptr16[dest], from ); }
-__noinline void MOV( const ModSibBase& sibdest,		const x86Register16& from )	{ MOV16::Emit( sibdest, from ); }
-__noinline void MOV( const x86Register16& to,		const ModSibBase& sibsrc )	{ MOV16::Emit( to, sibsrc ); }
-__noinline void MOV( const ModSibStrict<2>& sibdest,u16 imm )					{ MOV16::Emit( sibdest, imm ); }
+__forceinline void iMOV( const x86Register16& to,	const x86Register16& from )	{ MOV16i::Emit( to, from ); }
+__forceinline void iMOV( const x86Register16& to,	const void* src )			{ MOV16i::Emit( to, ptr16[src] ); }
+__forceinline void iMOV( const void* dest,			const x86Register16& from )	{ MOV16i::Emit( ptr16[dest], from ); }
+__noinline void iMOV( const ModSibBase& sibdest,	const x86Register16& from )	{ MOV16::Emit( sibdest, from ); }
+__noinline void iMOV( const x86Register16& to,		const ModSibBase& sibsrc )	{ MOV16::Emit( to, sibsrc ); }
+__noinline void iMOV( const ModSibStrict<2>& sibdest,u16 imm )					{ MOV16::Emit( sibdest, imm ); }
 
-void MOV( const x86Register16& to, u16 imm, bool preserve_flags )
+void iMOV( const x86Register16& to, u16 imm, bool preserve_flags )
 {
 	if( !preserve_flags && (imm == 0) )
-		XOR( to, to );
+		iXOR( to, to );
 	else
 		MOV16i::Emit( to, imm );
 }
 
 // ---------- 8 Bit Interface -----------
-__forceinline void MOV( const x86Register8& to,		const x86Register8& from )	{ MOV8i::Emit( to, from ); }
-__forceinline void MOV( const x86Register8& to,		const void* src )			{ MOV8i::Emit( to, ptr8[src] ); }
-__forceinline void MOV( const void* dest,			const x86Register8& from )	{ MOV8i::Emit( ptr8[dest], from ); }
-__noinline void MOV( const ModSibBase& sibdest,		const x86Register8& from )	{ MOV8::Emit( sibdest, from ); }
-__noinline void MOV( const x86Register8& to,		const ModSibBase& sibsrc )	{ MOV8::Emit( to, sibsrc ); }
-__noinline void MOV( const ModSibStrict<1>& sibdest,u8 imm )					{ MOV8::Emit( sibdest, imm ); }
+__forceinline void iMOV( const x86Register8& to,	const x86Register8& from )	{ MOV8i::Emit( to, from ); }
+__forceinline void iMOV( const x86Register8& to,	const void* src )			{ MOV8i::Emit( to, ptr8[src] ); }
+__forceinline void iMOV( const void* dest,			const x86Register8& from )	{ MOV8i::Emit( ptr8[dest], from ); }
+__noinline void iMOV( const ModSibBase& sibdest,	const x86Register8& from )	{ MOV8::Emit( sibdest, from ); }
+__noinline void iMOV( const x86Register8& to,		const ModSibBase& sibsrc )	{ MOV8::Emit( to, sibsrc ); }
+__noinline void iMOV( const ModSibStrict<1>& sibdest,u8 imm )					{ MOV8::Emit( sibdest, imm ); }
 
-void MOV( const x86Register8& to, u8 imm, bool preserve_flags )
+void iMOV( const x86Register8& to, u8 imm, bool preserve_flags )
 {
 	if( !preserve_flags && (imm == 0) )
-		XOR( to, to );
+		iXOR( to, to );
 	else
 		MOV8i::Emit( to, imm );
 }
@@ -510,7 +586,8 @@ __forceinline void POP( x86Register32 from )	{ write8( 0x58 | from.Id ); }
 
 __emitinline void POP( const ModSibBase& from )
 {
-	iWrite<u8>( 0x8f ); Internal::EmitSibMagic( 0, from );
+	iWrite<u8>( 0x8f );
+	Internal::EmitSibMagic( 0, from );
 }
 
 __forceinline void PUSH( u32 imm )				{ write8( 0x68 ); write32( imm ); }
@@ -518,7 +595,8 @@ __forceinline void PUSH( x86Register32 from )	{ write8( 0x50 | from.Id ); }
 
 __emitinline void PUSH( const ModSibBase& from )
 {
-	iWrite<u8>( 0xff ); Internal::EmitSibMagic( 6, from );
+	iWrite<u8>( 0xff );
+	Internal::EmitSibMagic( 6, from );
 }
 
 // pushes the EFLAGS register onto the stack

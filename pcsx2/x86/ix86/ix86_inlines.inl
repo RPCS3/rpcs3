@@ -234,4 +234,58 @@ namespace x86Emitter
 
 		return *this;
 	}
+	
+	//////////////////////////////////////////////////////////////////////////////////////////
+	//
+	
+	// ------------------------------------------------------------------------
+	template< typename OperandType >
+	iForwardJump<OperandType>::iForwardJump( JccComparisonType cctype ) :
+		BasePtr( (s8*)iGetPtr() +
+			((OperandSize == 1) ? 2 :		// j8's are always 2 bytes.
+			((cctype==Jcc_Unconditional) ? 5 : 6 ))	// j32's are either 5 or 6 bytes
+		)
+	{
+		jASSUME( cctype != Jcc_Unknown );
+		jASSUME( OperandSize == 1 || OperandSize == 4 );
+		
+		if( OperandSize == 1 )
+			iWrite<u8>( (cctype == Jcc_Unconditional) ? 0xeb : (0x70 | cctype) );
+		else
+		{
+			if( cctype == Jcc_Unconditional )
+				iWrite<u8>( 0xe9 );
+			else
+			{
+				iWrite<u8>( 0x0f );
+				iWrite<u8>( 0x80 | cctype );
+			}
+		}
+
+		iAdvancePtr( OperandSize );
+	}
+
+	// ------------------------------------------------------------------------
+	template< typename OperandType >
+	void iForwardJump<OperandType>::SetTarget() const
+	{
+		jASSUME( BasePtr != NULL );
+
+		sptr displacement = (sptr)iGetPtr() - (sptr)BasePtr;
+		if( OperandSize == 1 )
+		{
+			if( !is_s8( displacement ) )
+			{
+				assert( false );
+				Console::Error( "Emitter Error: Invalid short jump displacement = 0x%x", params (int)displacement );
+			}
+			BasePtr[-1] = (s8)displacement;
+		}
+		else
+		{
+			// full displacement, no sanity checks needed :D
+			((s32*)BasePtr)[-1] = displacement;
+		}
+	}
+
 }

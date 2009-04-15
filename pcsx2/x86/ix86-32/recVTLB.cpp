@@ -25,6 +25,7 @@
 #include "iR5900.h"
 
 using namespace vtlb_private;
+using namespace x86Emitter;
 
 // NOTICE: This function *destroys* EAX!!
 // Moves 128 bits of memory from the source register ptr to the dest register ptr.
@@ -33,22 +34,20 @@ void MOV128_MtoM( x86IntRegType destRm, x86IntRegType srcRm )
 {
 	// (this is one of my test cases for the new emitter --air)
 
-	using namespace x86Emitter;
-
 	x86IndexReg src( srcRm );
 	x86IndexReg dest( destRm );
 
-	MOV( eax, ptr[src] );
-	MOV( ptr[dest], eax );
+	iMOV( eax, ptr[src] );
+	iMOV( ptr[dest], eax );
 
-	MOV( eax, ptr[src+4] );
-	MOV( ptr[dest+4], eax );
+	iMOV( eax, ptr[src+4] );
+	iMOV( ptr[dest+4], eax );
 
-	MOV( eax, ptr[src+8] );
-	MOV( ptr[dest+8], eax );
+	iMOV( eax, ptr[src+8] );
+	iMOV( ptr[dest+8], eax );
 
-	MOV( eax, ptr[src+12] );
-	MOV( ptr[dest+12], eax );
+	iMOV( eax, ptr[src+12] );
+	iMOV( ptr[dest+12], eax );
 }
 
 /*
@@ -166,6 +165,7 @@ static void _vtlb_DynGen_DirectRead( u32 bits, bool sign )
 	}
 }
 
+// ------------------------------------------------------------------------
 static void _vtlb_DynGen_IndirectRead( u32 bits )
 {
 	int szidx;
@@ -188,6 +188,7 @@ static void _vtlb_DynGen_IndirectRead( u32 bits )
 	CALL32R(EAX);
 }
 
+// ------------------------------------------------------------------------
 // Recompiled input registers:
 //   ecx = source addr to read from
 //   edx = ptr to dest to write to
@@ -199,17 +200,18 @@ void vtlb_DynGenRead64(u32 bits)
 	SHR32ItoR(EAX,VTLB_PAGE_BITS);
 	MOV32RmSOffsettoR(EAX,EAX,(int)vtlbdata.vmap,2);
 	ADD32RtoR(ECX,EAX);
-	u8* _fullread = JS8(0);
+	iForwardJS8 _fullread;
 
 	_vtlb_DynGen_DirectRead( bits, false );
-	u8* cont = JMP8(0);
+	iForwardJump8 cont;
 
-	x86SetJ8(_fullread);
+	_fullread.SetTarget();
+	
 	_vtlb_DynGen_IndirectRead( bits );
-
-	x86SetJ8(cont);
+	cont.SetTarget();
 }
 
+// ------------------------------------------------------------------------
 // Recompiled input registers:
 //   ecx - source address to read from
 //   Returns read value in eax.
@@ -221,12 +223,12 @@ void vtlb_DynGenRead32(u32 bits, bool sign)
 	SHR32ItoR(EAX,VTLB_PAGE_BITS);
 	MOV32RmSOffsettoR(EAX,EAX,(int)vtlbdata.vmap,2);
 	ADD32RtoR(ECX,EAX);
-	u8* _fullread = JS8(0);
+	iForwardJS8 _fullread;
 
 	_vtlb_DynGen_DirectRead( bits, sign );
-	u8* cont = JMP8(0);
+	iForwardJump8 cont;
 
-	x86SetJ8(_fullread);
+	_fullread.SetTarget();
 	_vtlb_DynGen_IndirectRead( bits );
 
 	// perform sign extension on the result:
@@ -245,11 +247,10 @@ void vtlb_DynGenRead32(u32 bits, bool sign)
 		else
 			MOVZX32R16toR(EAX,EAX);
 	}
-
-	x86SetJ8(cont);
+	cont.SetTarget();
 }
 
-//
+// ------------------------------------------------------------------------
 // TLB lookup is performed in const, with the assumption that the COP0/TLB will clear the
 // recompiler if the TLB is changed.
 void vtlb_DynGenRead64_Const( u32 bits, u32 addr_const )
@@ -317,6 +318,7 @@ void vtlb_DynGenRead64_Const( u32 bits, u32 addr_const )
 	}
 }
 
+// ------------------------------------------------------------------------
 // Recompiled input registers:
 //   ecx - source address to read from
 //   Returns read value in eax.
@@ -449,6 +451,7 @@ static void _vtlb_DynGen_DirectWrite( u32 bits )
 	}
 }
 
+// ------------------------------------------------------------------------
 static void _vtlb_DynGen_IndirectWrite( u32 bits )
 {
 	int szidx=0;
@@ -468,24 +471,26 @@ static void _vtlb_DynGen_IndirectWrite( u32 bits )
 	CALL32R(EAX);
 }
 
+// ------------------------------------------------------------------------
 void vtlb_DynGenWrite(u32 sz)
 {
 	MOV32RtoR(EAX,ECX);
 	SHR32ItoR(EAX,VTLB_PAGE_BITS);
 	MOV32RmSOffsettoR(EAX,EAX,(int)vtlbdata.vmap,2);
 	ADD32RtoR(ECX,EAX);
-	u8* _full=JS8(0);
+	iForwardJS8 _full;
 
 	_vtlb_DynGen_DirectWrite( sz );
-	u8* cont = JMP8(0);
+	iForwardJump8 cont;
 
-	x86SetJ8(_full);
+	_full.SetTarget();
 	_vtlb_DynGen_IndirectWrite( sz );
 
-	x86SetJ8(cont);
+	cont.SetTarget();
 }
 
 
+// ------------------------------------------------------------------------
 // Generates code for a store instruction, where the address is a known constant.
 // TLB lookup is performed in const, with the assumption that the COP0/TLB will clear the
 // recompiler if the TLB is changed.

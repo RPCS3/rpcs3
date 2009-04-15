@@ -804,10 +804,10 @@ void _saveEAX(VURegs *VU, int x86reg, uptr offset, int info)
 			using namespace x86Emitter;
 			x86IndexReg thisreg( x86reg );
 
-			if ( _X ) MOV(ptr32[thisreg+offset],    0x00000000);
-			if ( _Y ) MOV(ptr32[thisreg+offset+4],  0x00000000);
-			if ( _Z ) MOV(ptr32[thisreg+offset+8],  0x00000000);
-			if ( _W ) MOV(ptr32[thisreg+offset+12], 0x3f800000);
+			if ( _X ) iMOV(ptr32[thisreg+offset],    0x00000000);
+			if ( _Y ) iMOV(ptr32[thisreg+offset+4],  0x00000000);
+			if ( _Z ) iMOV(ptr32[thisreg+offset+8],  0x00000000);
+			if ( _W ) iMOV(ptr32[thisreg+offset+12], 0x3f800000);
 		}
 		return;
 	}

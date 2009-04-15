@@ -18,9 +18,8 @@
 
 #pragma once
 
-extern void cpudetectInit( void );//this is all that needs to be called and will fill up the below structs
+extern void cpudetectInit();//this is all that needs to be called and will fill up the below structs
 
-typedef struct CAPABILITIES CAPABILITIES;
 //cpu capabilities structure
 struct CAPABILITIES {
    u32 hasFloatingPointUnit;
@@ -137,9 +136,9 @@ namespace x86Emitter
 // single-line functions anyway.
 //
 #ifdef PCSX2_DEVBUILD
-#define __emitinline
+#	define __emitinline
 #else
-#define __emitinline __forceinline
+#	define __emitinline __forceinline
 #endif
 
 #ifdef _MSC_VER
@@ -148,12 +147,17 @@ namespace x86Emitter
 #	define __noinline
 #endif
 
-
 	static const int ModRm_UseSib = 4;		// same index value as ESP (used in RM field)
 	static const int ModRm_UseDisp32 = 5;	// same index value as EBP (used in Mod field)
 
 	class x86AddressInfo;
 	class ModSibBase;
+
+	extern void iSetPtr( void* ptr );
+	extern u8* iGetPtr();
+	extern void iAlignPtr( uint bytes );
+	extern void iAdvancePtr( uint bytes );
+
 
 	static __forceinline void write8( u8 val )
 	{
@@ -195,7 +199,7 @@ namespace x86Emitter
 		x86Register(): Id( -1 ) {}
 		explicit x86Register( int regId ) : Id( regId ) { jASSUME( Id >= -1 && Id < 8 ); }
 
-		bool IsEmpty() const { return Id == -1; }
+		bool IsEmpty() const { return Id < 0; }
 
 		// Returns true if the register is a valid accumulator: Eax, Ax, Al.
 		bool IsAccumulator() const { return Id == 0; }
@@ -220,7 +224,7 @@ namespace x86Emitter
 	// ------------------------------------------------------------------------
 	// Note: GCC parses templates ahead of time apparently as a 'favor' to the programmer, which
 	// means it finds undeclared variables when MSVC does not (Since MSVC compiles templates
-	// when they are actually used).  In practice this sucks since it means we have to move all'
+	// when they are actually used).  In practice this sucks since it means we have to move all
 	// our variable and function prototypes from a nicely/neatly unified location to being strewn
 	// all about the the templated code in haphazard fashion.  Yay.. >_<
 	//
@@ -477,6 +481,118 @@ namespace x86Emitter
 	extern const x86IndexerTypeExplicit<1> ptr8;	
 
 	//////////////////////////////////////////////////////////////////////////////////////////
+	// JccComparisonType - enumerated possibilities for inspired code branching!
+	//
+	enum JccComparisonType
+	{
+		Jcc_Unknown			= -2,
+		Jcc_Unconditional	= -1,
+		Jcc_Overflow		= 0x0,
+		Jcc_NotOverflow		= 0x1,
+		Jcc_Below			= 0x2,
+		Jcc_Carry			= 0x2,
+		Jcc_AboveOrEqual	= 0x3,
+		Jcc_NotCarry		= 0x3,
+		Jcc_Zero			= 0x4,
+		Jcc_Equal			= 0x4,
+		Jcc_NotZero			= 0x5,
+		Jcc_NotEqual		= 0x5,
+		Jcc_BelowOrEqual	= 0x6,
+		Jcc_Above			= 0x7,
+		Jcc_Signed			= 0x8,
+		Jcc_Unsigned		= 0x9,
+		Jcc_ParityEven		= 0xa,
+		Jcc_ParityOdd		= 0xb,
+		Jcc_Less			= 0xc,
+		Jcc_GreaterOrEqual	= 0xd,
+		Jcc_LessOrEqual		= 0xe,
+		Jcc_Greater			= 0xf,
+	};
+	
+	// Not supported yet:
+	//E3 cb 	JECXZ rel8 	Jump short if ECX register is 0.
+
+
+	//////////////////////////////////////////////////////////////////////////////////////////
+	// iSmartJump
+	// This class provides an interface for generating forward-based j8's or j32's "smartly"
+	// as per the measured displacement distance.  If the displacement is a valid s8, then
+	// a j8 is inserted, else a j32.
+	// 
+	// Performance Analysis:  j8's use 4 less byes per opcode, and thus can provide
+	// minor speed benefits in the form of L1/L2 cache clutter.  They're also notably faster
+	// on P4's, and mildly faster on AMDs.  (Core2's and i7's don't care)
+	//
+	class iSmartJump
+	{
+	protected:
+		u8* m_target;				// x86Ptr target address of this label
+		u8* m_baseptr;				// base address of the instruction (passed to the instruction emitter)
+		JccComparisonType m_cc;		// comparison type of the instruction
+		bool m_written;				// set true when the jump is written (at which point the object becomes invalid)
+
+	public:
+
+		const int GetMaxInstructionSize() const
+		{
+			jASSUME( m_cc != Jcc_Unknown );
+			return ( m_cc == Jcc_Unconditional ) ? 5 : 6;
+		}
+
+		// Creates a backward jump label which will be passed into a Jxx instruction (or few!)
+		// later on, and the current x86Ptr is recorded as the target [thus making the class
+		// creation point the jump target].
+		iSmartJump()
+		{
+			m_target = iGetPtr();
+			m_baseptr = NULL;
+			m_cc = Jcc_Unknown;
+			m_written = false;
+		}
+
+		// ccType - Comparison type to be written back to the jump instruction position.
+		//
+		iSmartJump( JccComparisonType ccType )
+		{
+			jASSUME( ccType != Jcc_Unknown );
+			m_target = NULL;
+			m_baseptr = iGetPtr();
+			m_cc = ccType;
+			m_written = false;
+			iAdvancePtr( GetMaxInstructionSize() );
+		}
+
+		JccComparisonType GetCondition() const
+		{
+			return m_cc;
+		}
+
+		u8* GetTarget() const
+		{
+			return m_target;
+		}
+
+		void SetTarget();
+	};
+
+	//////////////////////////////////////////////////////////////////////////////////////////
+	// 
+	template< typename OperandType >
+	class iForwardJump
+	{
+	public:
+		static const uint OperandSize = sizeof( OperandType );
+
+		// pointer to base of the instruction *Following* the jump.  The jump address will be
+		// relative to this address.
+		s8* const BasePtr;
+
+	public:	
+		iForwardJump( JccComparisonType cctype = Jcc_Unconditional );
+		void SetTarget() const;
+	};
+	
+	//////////////////////////////////////////////////////////////////////////////////////////
 	//	
 	namespace Internal
 	{
@@ -678,13 +794,6 @@ namespace x86Emitter
 			}
 		};
 
-		// if the immediate is zero, we can replace the instruction, or ignore it
-		// entirely, depending on the instruction being issued.  That's what we do here.
-		//  (returns FALSE if no optimization is performed)
-		// [TODO] : Work-in-progress!
-		//template< G1Type InstType, typename RegType >
-		//static __forceinline void _optimize_imm0( RegType to );
-		
 		// -------------------------------------------------------------------
 		//
 		template< G1Type InstType >
@@ -789,7 +898,6 @@ namespace x86Emitter
 			__noinline void operator()( const ModSibStrict<1>& sibdest, u8 imm ) const					{ m_8::Emit( sibdest, imm ); }
 			void operator()( const x86Register8& to, u8 imm ) const										{ m_8i::Emit( to, imm ); }
 
-
 			Group2ImplAll() {}		// I am a class with no members, so I need an explicit constructor!  Sense abounds.
 		};
 
@@ -799,22 +907,85 @@ namespace x86Emitter
 		// importing Internal into x86Emitter, which done at the header file level would defeat
 		// the purpose!)
 
-		extern const Group1ImplAll<G1Type_ADD> ADD;
-		extern const Group1ImplAll<G1Type_OR>  OR;
-		extern const Group1ImplAll<G1Type_ADC> ADC;
-		extern const Group1ImplAll<G1Type_SBB> SBB;
-		extern const Group1ImplAll<G1Type_AND> AND;
-		extern const Group1ImplAll<G1Type_SUB> SUB;
-		extern const Group1ImplAll<G1Type_XOR> XOR;
-		extern const Group1ImplAll<G1Type_CMP> CMP;
+		extern const Group1ImplAll<G1Type_ADD> iADD;
+		extern const Group1ImplAll<G1Type_OR>  iOR;
+		extern const Group1ImplAll<G1Type_ADC> iADC;
+		extern const Group1ImplAll<G1Type_SBB> iSBB;
+		extern const Group1ImplAll<G1Type_AND> iAND;
+		extern const Group1ImplAll<G1Type_SUB> iSUB;
+		extern const Group1ImplAll<G1Type_XOR> iXOR;
+		extern const Group1ImplAll<G1Type_CMP> iCMP;
 
-		extern const Group2ImplAll<G2Type_ROL> ROL;
-		extern const Group2ImplAll<G2Type_ROR> ROR;
-		extern const Group2ImplAll<G2Type_RCL> RCL;
-		extern const Group2ImplAll<G2Type_RCR> RCR;
-		extern const Group2ImplAll<G2Type_SHL> SHL;
-		extern const Group2ImplAll<G2Type_SHR> SHR;
-		extern const Group2ImplAll<G2Type_SAR> SAR;
+		extern const Group2ImplAll<G2Type_ROL> iROL;
+		extern const Group2ImplAll<G2Type_ROR> iROR;
+		extern const Group2ImplAll<G2Type_RCL> iRCL;
+		extern const Group2ImplAll<G2Type_RCR> iRCR;
+		extern const Group2ImplAll<G2Type_SHL> iSHL;
+		extern const Group2ImplAll<G2Type_SHR> iSHR;
+		extern const Group2ImplAll<G2Type_SAR> iSAR;
+
+		//////////////////////////////////////////////////////////////////////////////////////////
+		// Mov with sign/zero extension implementations:
+		//
+		template< int DestOperandSize, int SrcOperandSize >
+		class MovExtendImpl
+		{
+		protected:
+			static bool Is8BitOperand()	{ return SrcOperandSize == 1; }
+			static void prefix16()		{ if( DestOperandSize == 2 ) iWrite<u8>( 0x66 ); }
+			static __forceinline void emit_base( bool SignExtend )
+			{
+				prefix16();
+				iWrite<u8>( 0x0f );
+				iWrite<u8>( 0xb6 | (Is8BitOperand() ? 0 : 1) | (SignExtend ? 8 : 0 ) );
+			}
+
+		public: 
+			MovExtendImpl() {}		// For the love of GCC.
+
+			static __emitinline void Emit( const x86Register<DestOperandSize>& to, const x86Register<SrcOperandSize>& from, bool SignExtend )
+			{
+				emit_base( SignExtend );
+				ModRM( 3, from.Id, to.Id );
+			}
+
+			static __emitinline void Emit( const x86Register<DestOperandSize>& to, const ModSibStrict<SrcOperandSize>& sibsrc, bool SignExtend )
+			{
+				emit_base( SignExtend );
+				EmitSibMagic( to.Id, sibsrc );
+			}
+		};
+
+		// ------------------------------------------------------------------------
+		template< bool SignExtend >
+		class MovExtendImplAll
+		{
+		protected:
+			typedef MovExtendImpl<4, 2> m_16to32;
+			typedef MovExtendImpl<4, 1> m_8to32;
+
+		public:
+			__forceinline void operator()( const x86Register32& to, const x86Register16& from )	const	{ m_16to32::Emit( to, from, SignExtend ); }
+			__noinline void operator()( const x86Register32& to, const ModSibStrict<2>& sibsrc ) const	{ m_16to32::Emit( to, sibsrc, SignExtend ); }
+
+			__forceinline void operator()( const x86Register32& to, const x86Register8& from ) const	{ m_8to32::Emit( to, from, SignExtend ); }
+			__noinline void operator()( const x86Register32& to, const ModSibStrict<1>& sibsrc ) const	{ m_8to32::Emit( to, sibsrc, SignExtend ); }
+
+			MovExtendImplAll() {}		// don't ask.
+		};
+
+		// ------------------------------------------------------------------------
+		
+		extern const MovExtendImplAll<true>  iMOVSX;
+		extern const MovExtendImplAll<false> iMOVZX;
+
+
+		// if the immediate is zero, we can replace the instruction, or ignore it
+		// entirely, depending on the instruction being issued.  That's what we do here.
+		//  (returns FALSE if no optimization is performed)
+		// [TODO] : Work-in-progress!
+		//template< G1Type InstType, typename RegType >
+		//static __forceinline void _optimize_imm0( RegType to );
 
 		/*template< G1Type InstType, typename RegType >
 		static __forceinline void _optimize_imm0( const RegType& to )
@@ -822,26 +993,26 @@ namespace x86Emitter
 			switch( InstType )
 			{
 				// ADD, SUB, and OR can be ignored if the imm is zero..
-			case G1Type_ADD:
-			case G1Type_SUB:
-			case G1Type_OR:
-				return true;
+				case G1Type_ADD:
+				case G1Type_SUB:
+				case G1Type_OR:
+					return true;
 
 				// ADC and SBB can never be ignored (could have carry bits)
 				// XOR behavior is distinct as well [or is it the same as NEG or NOT?]
-			case G1Type_ADC:
-			case G1Type_SBB:
-			case G1Type_XOR:
-				return false;
+				case G1Type_ADC:
+				case G1Type_SBB:
+				case G1Type_XOR:
+					return false;
 
 				// replace AND with XOR (or SUB works too.. whatever!)
-			case G1Type_AND:
-				XOR( to, to );
+				case G1Type_AND:
+					iXOR( to, to );
 				return true;
 
 				// replace CMP with OR reg,reg:
-			case G1Type_CMP:
-				OR( to, to );
+				case G1Type_CMP:
+					iOR( to, to );
 				return true;
 
 				jNO_DEFAULT
