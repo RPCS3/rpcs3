@@ -2926,6 +2926,18 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\x86\ix86\ix86_impl_group1.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\x86\ix86\ix86_impl_group2.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\x86\ix86\ix86_impl_movs.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\x86\ix86\ix86_inlines.inl"
 				>
 			</File>

@@ -42,15 +42,6 @@
 // ix86_inlines.inl file when it is known that inlining of ModSib functions are
 // wanted).
 //
-//
-// Important when Using the New Emitter:
-//   Make sure there is *no* data in use or of importance past the end of the
-//   current x86Ptr.  Ie, don't do fancy x86Ptr rewind tricks of your own.  The
-//   emitter uses optimized writes which will clobber data past the end of the
-//   instruction it's emitting, so even if you know for sure the instruction you
-//   are writing is 5 bytes, the emitter will likely emit 9 bytes and the re-
-//   wind the x86Ptr to the end of the instruction.
-//
 
 #pragma once
 

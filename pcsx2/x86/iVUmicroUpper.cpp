@@ -1640,7 +1640,7 @@ void recVUMI_MADD_iq_toD(VURegs *VU, uptr addr, int regd, int info)
 		}
 
 		if( regd == EEREC_ACC ) {
-			assert( EEREC_TEMP < XMMREGS );
+			assert( EEREC_TEMP < iREGCNT_XMM );
 			SSE_MOVSS_M32_to_XMM(EEREC_TEMP, addr);
 			SSE_MULSS_XMM_to_XMM(EEREC_TEMP, EEREC_S);
 			if (CHECK_VU_EXTRA_OVERFLOW) { vuFloat_useEAX( info, EEREC_TEMP, 8); }

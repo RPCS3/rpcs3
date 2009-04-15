@@ -37,21 +37,21 @@ static const bool AlwaysUseMovaps = true;
 //------------------------------------------------------------------
 
 #define SSEMtoR( code, overb ) \
-	assert( to < XMMREGS ), \
+	assert( to < iREGCNT_XMM ), \
 	RexR(0, to),             \
 	write16( code ), \
 	ModRM( 0, to, DISP32 ), \
 	write32( MEMADDR(from, 4 + overb) )
 
 #define SSERtoM( code, overb ) \
-	assert( from < XMMREGS), \
+	assert( from < iREGCNT_XMM), \
     RexR(0, from),  \
 	write16( code ), \
 	ModRM( 0, from, DISP32 ), \
 	write32( MEMADDR(to, 4 + overb) )
 
 #define SSE_SS_MtoR( code, overb ) \
-	assert( to < XMMREGS ), \
+	assert( to < iREGCNT_XMM ), \
 	write8( 0xf3 ), \
     RexR(0, to),                      \
 	write16( code ), \
@@ -59,7 +59,7 @@ static const bool AlwaysUseMovaps = true;
 	write32( MEMADDR(from, 4 + overb) )
 
 #define SSE_SS_RtoM( code, overb ) \
-	assert( from < XMMREGS), \
+	assert( from < iREGCNT_XMM), \
 	write8( 0xf3 ), \
 	RexR(0, from), \
 	write16( code ), \
@@ -67,7 +67,7 @@ static const bool AlwaysUseMovaps = true;
 	write32( MEMADDR(to, 4 + overb) )
 
 #define SSERtoR( code ) \
-	assert( to < XMMREGS && from < XMMREGS), \
+	assert( to < iREGCNT_XMM && from < iREGCNT_XMM), \
     RexRB(0, to, from),            \
 	write16( code ), \
 	ModRM( 3, to, from )
@@ -85,21 +85,21 @@ static const bool AlwaysUseMovaps = true;
 	SSERtoR( code )
 
 #define _SSERtoR66( code ) \
-	assert( to < XMMREGS && from < XMMREGS), \
+	assert( to < iREGCNT_XMM && from < iREGCNT_XMM), \
 	write8( 0x66 ), \
 	RexRB(0, from, to), \
 	write16( code ), \
 	ModRM( 3, from, to )
 
 #define SSE_SS_RtoR( code ) \
-	assert( to < XMMREGS && from < XMMREGS), \
+	assert( to < iREGCNT_XMM && from < iREGCNT_XMM), \
 	write8( 0xf3 ), \
     RexRB(0, to, from),              \
 	write16( code ), \
 	ModRM( 3, to, from )
 
 #define SSE_SD_MtoR( code, overb ) \
-	assert( to < XMMREGS ) , \
+	assert( to < iREGCNT_XMM ) , \
 	write8( 0xf2 ), \
     RexR(0, to),                      \
 	write16( code ), \
@@ -107,7 +107,7 @@ static const bool AlwaysUseMovaps = true;
 	write32( MEMADDR(from, 4 + overb) ) \
 
 #define SSE_SD_RtoM( code, overb ) \
-	assert( from < XMMREGS) , \
+	assert( from < iREGCNT_XMM) , \
 	write8( 0xf2 ), \
 	RexR(0, from), \
 	write16( code ), \
@@ -115,7 +115,7 @@ static const bool AlwaysUseMovaps = true;
 	write32( MEMADDR(to, 4 + overb) ) \
 
 #define SSE_SD_RtoR( code ) \
-	assert( to < XMMREGS && from < XMMREGS) , \
+	assert( to < iREGCNT_XMM && from < iREGCNT_XMM) , \
 	write8( 0xf2 ), \
     RexRB(0, to, from),   \
 	write16( code ), \

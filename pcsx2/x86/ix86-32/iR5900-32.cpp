@@ -301,7 +301,7 @@ void _eeFlushAllUnused()
 	}
 
 	//TODO when used info is done for FPU and VU0
-	for(i = 0; i < XMMREGS; ++i) {
+	for(i = 0; i < iREGCNT_XMM; ++i) {
 		if( xmmregs[i].inuse && xmmregs[i].type != XMMTYPE_GPRREG )
 			_freeXMMreg(i);
 	}
@@ -394,7 +394,7 @@ void _eeMoveGPRtoRm(x86IntRegType to, int fromgpr)
 int _flushXMMunused()
 {
 	int i;
-	for (i=0; i<XMMREGS; i++) {
+	for (i=0; i<iREGCNT_XMM; i++) {
 		if (!xmmregs[i].inuse || xmmregs[i].needed || !(xmmregs[i].mode&MODE_WRITE) ) continue;
 		
 		if (xmmregs[i].type == XMMTYPE_GPRREG ) {
@@ -413,7 +413,7 @@ int _flushXMMunused()
 int _flushMMXunused()
 {
 	int i;
-	for (i=0; i<MMXREGS; i++) {
+	for (i=0; i<iREGCNT_MMX; i++) {
 		if (!mmxregs[i].inuse || mmxregs[i].needed || !(mmxregs[i].mode&MODE_WRITE) ) continue;
 		
 		if( MMX_ISGPR(mmxregs[i].reg) ) {
@@ -1217,7 +1217,7 @@ void recompileNextInstruction(int delayslot)
 
 	g_pCurInstInfo++;
 
-	for(i = 0; i < MMXREGS; ++i) {
+	for(i = 0; i < iREGCNT_MMX; ++i) {
 		if( mmxregs[i].inuse ) {
 			assert( MMX_ISGPR(mmxregs[i].reg) );
 			count = _recIsRegWritten(g_pCurInstInfo, (s_nEndBlock-pc)/4 + 1, XMMTYPE_GPRREG, mmxregs[i].reg-MMX_GPR);
@@ -1226,7 +1226,7 @@ void recompileNextInstruction(int delayslot)
 		}
 	}
 
-	for(i = 0; i < XMMREGS; ++i) {
+	for(i = 0; i < iREGCNT_XMM; ++i) {
 		if( xmmregs[i].inuse ) {
 			count = _recIsRegWritten(g_pCurInstInfo, (s_nEndBlock-pc)/4 + 1, xmmregs[i].type, xmmregs[i].reg);
 			if( count > 0 ) xmmregs[i].counter = 1000-count;
@@ -1587,7 +1587,7 @@ StartRecomp:
 							// see how many stores there are
 							u32 j;
 							// use xmmregs since only supporting lwc1,lq,swc1,sq
-							for(j = i+8; j < s_nEndBlock && j < i+4*XMMREGS; j += 4 ) {
+							for(j = i+8; j < s_nEndBlock && j < i+4*iREGCNT_XMM; j += 4 ) {
 								u32 nncode = *(u32*)PSM(j);
 								if( (nncode>>26) != (curcode>>26) || ((curcode>>21)&0x1f) != ((nncode>>21)&0x1f) ||
 									_eeLoadWritesRs(nncode))
@@ -1596,7 +1596,7 @@ StartRecomp:
 
 							if( j > i+8 ) {
 								u32 num = (j-i)>>2; // number of stores that can coissue
-								assert( num <= XMMREGS );
+								assert( num <= iREGCNT_XMM );
 
 								g_pCurInstInfo[0].numpeeps = num-1;
 								g_pCurInstInfo[0].info |= EEINSTINFO_COREC;

@@ -223,7 +223,7 @@ public:
 	u32 vuxyz; // corresponding bit is set if reg's xyz channels are used only
 	u32 vuxy; // corresponding bit is set if reg's xyz channels are used only
 
-	_xmmregs startregs[XMMREGS], endregs[XMMREGS];
+	_xmmregs startregs[iREGCNT_XMM], endregs[iREGCNT_XMM];
 	int nStartx86, nEndx86; // indices into s_vecRegArray
 
 	int allocX86Regs;
@@ -571,7 +571,7 @@ void SuperVUDumpBlock(list<VuBaseBlock*>& blocks, int vuindex)
 		if( (*itblock)->nStartx86 >= 0 ) {
 			pregs = &s_vecRegArray[(*itblock)->nStartx86];
 			fprintf(f, "STR: ");
-			for(i = 0; i < X86REGS; ++i) {
+			for(i = 0; i < iREGCNT_GPR; ++i) {
 				if( pregs[i].inuse ) fprintf(f, "%.2d ", pregs[i].reg);
 				else fprintf(f, "-1 ");
 			}
@@ -581,7 +581,7 @@ void SuperVUDumpBlock(list<VuBaseBlock*>& blocks, int vuindex)
 		if( (*itblock)->nEndx86 >= 0 ) {
 			fprintf(f, "END: ");
 			pregs = &s_vecRegArray[(*itblock)->nEndx86];
-			for(i = 0; i < X86REGS; ++i) {
+			for(i = 0; i < iREGCNT_GPR; ++i) {
 				if( pregs[i].inuse ) fprintf(f, "%.2d ", pregs[i].reg);
 				else fprintf(f, "-1 ");
 			}
@@ -1879,14 +1879,14 @@ void VuBaseBlock::AssignVFRegs()
 
 	if( type & BLOCKTYPE_ANALYZED ) {
 		// check if changed
-		for(i = 0; i < XMMREGS; ++i) {
+		for(i = 0; i < iREGCNT_XMM; ++i) {
 			if( xmmregs[i].inuse != startregs[i].inuse )
 				break;
 			if( xmmregs[i].inuse && (xmmregs[i].reg != startregs[i].reg || xmmregs[i].type != startregs[i].type) )
 				break;
 		}
 
-		if( i == XMMREGS ) return; // nothing changed
+		if( i == iREGCNT_XMM ) return; // nothing changed
 	}
 
 	u8* oldX86 = x86Ptr;
@@ -1904,7 +1904,7 @@ void VuBaseBlock::AssignVFRegs()
 
 
 			// redo the counters so that the proper regs are released
-			for(int j = 0; j < XMMREGS; ++j) {
+			for(int j = 0; j < iREGCNT_XMM; ++j) {
 				if( xmmregs[j].inuse ) {
 					if( xmmregs[j].type == XMMTYPE_VFREG ) {
 						int count = 0;
@@ -2119,10 +2119,10 @@ void VuBaseBlock::AssignVIRegs(int parent)
 	// child
 	assert( allocX86Regs == -1 );
 	allocX86Regs = s_vecRegArray.size();
-	s_vecRegArray.resize(allocX86Regs+X86REGS);
+	s_vecRegArray.resize(allocX86Regs+iREGCNT_GPR);
 
 	_x86regs* pregs = &s_vecRegArray[allocX86Regs];
-	memset(pregs, 0, sizeof(_x86regs)*X86REGS);
+	memset(pregs, 0, sizeof(_x86regs)*iREGCNT_GPR);
 
 	assert( parents.size() > 0 );
 
@@ -2210,10 +2210,10 @@ static void SuperVUAssignRegs()
 
 			// assign the regs
 			int regid = s_vecRegArray.size();
-			s_vecRegArray.resize(regid+X86REGS);
+			s_vecRegArray.resize(regid+iREGCNT_GPR);
 
 			_x86regs* mergedx86 = &s_vecRegArray[regid];
-			memset(mergedx86, 0, sizeof(_x86regs)*X86REGS);
+			memset(mergedx86, 0, sizeof(_x86regs)*iREGCNT_GPR);
 
 			if( !bfirst ) {
 				*(u32*)usedregs = *((u32*)usedregs+1) = *((u32*)usedregs+2) = *((u32*)usedregs+3) = 0;
@@ -2221,7 +2221,7 @@ static void SuperVUAssignRegs()
 				FORIT(itblock2, s_markov.children) {
 					assert( (*itblock2)->allocX86Regs >= 0 );
 					_x86regs* pregs = &s_vecRegArray[(*itblock2)->allocX86Regs];
-					for(int i = 0; i < X86REGS; ++i) {
+					for(int i = 0; i < iREGCNT_GPR; ++i) {
 						if( pregs[i].inuse && pregs[i].reg < 16) {
 							//assert( pregs[i].reg < 16);
 							usedregs[pregs[i].reg]++;
@@ -2237,7 +2237,7 @@ static void SuperVUAssignRegs()
 						mergedx86[num].reg = i;
 						mergedx86[num].type = (s_vu?X86TYPE_VU1:0)|X86TYPE_VI;
 						mergedx86[num].mode = MODE_READ;
-						if( ++num >= X86REGS )
+						if( ++num >= iREGCNT_GPR )
 							break;
 						if( num == ESP )
 							++num;
@@ -2559,7 +2559,7 @@ void svudispfntemp()
 // frees all regs taking into account the livevars
 void SuperVUFreeXMMregs(u32* livevars)
 {
-	for(int i = 0; i < XMMREGS; ++i) {
+	for(int i = 0; i < iREGCNT_XMM; ++i) {
 		if( xmmregs[i].inuse ) {
 			// same reg
 			if( (xmmregs[i].mode & MODE_WRITE) ) {
@@ -2772,7 +2772,7 @@ void VuBaseBlock::Recompile()
 #ifdef SUPERVU_X86CACHING
 		if( nEndx86 >= 0 ) {
 			_x86regs* endx86 = &s_vecRegArray[nEndx86];
-			for(int i = 0; i < X86REGS; ++i) {
+			for(int i = 0; i < iREGCNT_GPR; ++i) {
 				if( endx86[i].inuse ) {
 
 					if( s_JumpX86 == i && x86regs[s_JumpX86].inuse ) {
@@ -3239,7 +3239,7 @@ void VuInstruction::Recompile(list<VuInstruction>::iterator& itinst, u32 vuxyz)
 
 #ifdef SUPERVU_X86CACHING
 	// redo the counters so that the proper regs are released
-	for(int j = 0; j < X86REGS; ++j) {
+	for(int j = 0; j < iREGCNT_GPR; ++j) {
 		if( x86regs[j].inuse && X86_ISVI(x86regs[j].type) ) {
 			int count = 0;
 			itinst2 = itinst;

@@ -28,7 +28,7 @@ u8 g_globalMMXSaved = 0;
 u8 g_globalXMMSaved = 0;
 
 PCSX2_ALIGNED16( static u64 g_globalMMXData[8] );
-PCSX2_ALIGNED16( static u64 g_globalXMMData[2*XMMREGS] );
+PCSX2_ALIGNED16( static u64 g_globalXMMData[2*iREGCNT_XMM] );
 
 
 /////////////////////////////////////////////////////////////////////

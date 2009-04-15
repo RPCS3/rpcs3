@@ -40,10 +40,10 @@ u32 g_recWriteback = 0;
 char g_globalXMMLocked = 0;
 #endif
 
-_xmmregs xmmregs[XMMREGS], s_saveXMMregs[XMMREGS];
+_xmmregs xmmregs[iREGCNT_XMM], s_saveXMMregs[iREGCNT_XMM];
 
 // X86 caching
-_x86regs x86regs[X86REGS], s_saveX86regs[X86REGS];
+_x86regs x86regs[iREGCNT_GPR], s_saveX86regs[iREGCNT_GPR];
 
 #include <vector>
 using namespace std;
@@ -119,16 +119,16 @@ int  _getFreeXMMreg()
 	int i, tempi;
 	u32 bestcount = 0x10000;
 
-	for (i=0; i<XMMREGS; i++) {
-		if (xmmregs[(i+s_xmmchecknext)%XMMREGS].inuse == 0) {
-			int ret = (s_xmmchecknext+i)%XMMREGS;
-			s_xmmchecknext = (s_xmmchecknext+i+1)%XMMREGS;
+	for (i=0; i<iREGCNT_XMM; i++) {
+		if (xmmregs[(i+s_xmmchecknext)%iREGCNT_XMM].inuse == 0) {
+			int ret = (s_xmmchecknext+i)%iREGCNT_XMM;
+			s_xmmchecknext = (s_xmmchecknext+i+1)%iREGCNT_XMM;
 			return ret;
 		}
 	}
 
 	// check for dead regs
-	for (i=0; i<XMMREGS; i++) {
+	for (i=0; i<iREGCNT_XMM; i++) {
 		if (xmmregs[i].needed) continue;
 		if (xmmregs[i].type == XMMTYPE_GPRREG ) {
 			if( !(g_pCurInstInfo->regs[xmmregs[i].reg] & (EEINST_LIVE0|EEINST_LIVE1|EEINST_LIVE2)) ) {
@@ -139,7 +139,7 @@ int  _getFreeXMMreg()
 	}
 
 	// check for future xmm usage
-	for (i=0; i<XMMREGS; i++) {
+	for (i=0; i<iREGCNT_XMM; i++) {
 		if (xmmregs[i].needed) continue;
 		if (xmmregs[i].type == XMMTYPE_GPRREG ) {
 			if( !(g_pCurInstInfo->regs[xmmregs[i].reg] & EEINST_XMM) ) {
@@ -151,7 +151,7 @@ int  _getFreeXMMreg()
 
 	tempi = -1;
 	bestcount = 0xffff;
-	for (i=0; i<XMMREGS; i++) {
+	for (i=0; i<iREGCNT_XMM; i++) {
 		if (xmmregs[i].needed) continue;
 		if (xmmregs[i].type != XMMTYPE_TEMP) {
 
@@ -196,7 +196,7 @@ int _allocVFtoXMMreg(VURegs *VU, int xmmreg, int vfreg, int mode) {
 	int i;
 	int readfromreg = -1;
 
-	for (i=0; i<XMMREGS; i++) {
+	for (i=0; i<iREGCNT_XMM; i++) {
 		if ((xmmregs[i].inuse == 0)  || (xmmregs[i].type != XMMTYPE_VFREG) || 
 		     (xmmregs[i].reg != vfreg) || (xmmregs[i].VU != XMM_CONV_VU(VU))) 
 			continue;
@@ -250,7 +250,7 @@ int _checkXMMreg(int type, int reg, int mode)
 {
 	int i;
 
-	for (i=0; i<XMMREGS; i++) {
+	for (i=0; i<iREGCNT_XMM; i++) {
 		if (xmmregs[i].inuse && (xmmregs[i].type == (type&0xff)) && (xmmregs[i].reg == reg)) {
 
 			if ( !(xmmregs[i].mode & MODE_READ) ) {
@@ -279,7 +279,7 @@ int _allocACCtoXMMreg(VURegs *VU, int xmmreg, int mode) {
 	int i;
 	int readfromreg = -1;
 
-	for (i=0; i<XMMREGS; i++) {
+	for (i=0; i<iREGCNT_XMM; i++) {
 		if (xmmregs[i].inuse == 0) continue;
 		if (xmmregs[i].type != XMMTYPE_ACC) continue;
 		if (xmmregs[i].VU != XMM_CONV_VU(VU) ) continue;
@@ -335,7 +335,7 @@ int _allocACCtoXMMreg(VURegs *VU, int xmmreg, int mode) {
 int _allocFPtoXMMreg(int xmmreg, int fpreg, int mode) {
 	int i;
 
-	for (i=0; i<XMMREGS; i++) {
+	for (i=0; i<iREGCNT_XMM; i++) {
 		if (xmmregs[i].inuse == 0) continue;
 		if (xmmregs[i].type != XMMTYPE_FPREG) continue;
 		if (xmmregs[i].reg != fpreg) continue;
@@ -372,7 +372,7 @@ int _allocGPRtoXMMreg(int xmmreg, int gprreg, int mode)
 {
 	int i;
 
-	for (i=0; i<XMMREGS; i++) 
+	for (i=0; i<iREGCNT_XMM; i++) 
 	{
 		if (xmmregs[i].inuse == 0) continue;
 		if (xmmregs[i].type != XMMTYPE_GPRREG) continue;
@@ -478,7 +478,7 @@ int _allocFPACCtoXMMreg(int xmmreg, int mode)
 {
 	int i;
 
-	for (i=0; i<XMMREGS; i++) {
+	for (i=0; i<iREGCNT_XMM; i++) {
 		if (xmmregs[i].inuse == 0) continue;
 		if (xmmregs[i].type != XMMTYPE_FPACC) continue;
 
@@ -516,7 +516,7 @@ int _allocFPACCtoXMMreg(int xmmreg, int mode)
 void _addNeededVFtoXMMreg(int vfreg) {
 	int i;
 
-	for (i=0; i<XMMREGS; i++) {
+	for (i=0; i<iREGCNT_XMM; i++) {
 		if (xmmregs[i].inuse == 0) continue;
 		if (xmmregs[i].type != XMMTYPE_VFREG) continue;
 		if (xmmregs[i].reg != vfreg) continue;
@@ -530,7 +530,7 @@ void _addNeededGPRtoXMMreg(int gprreg)
 {
 	int i;
 
-	for (i=0; i<XMMREGS; i++) {
+	for (i=0; i<iREGCNT_XMM; i++) {
 		if (xmmregs[i].inuse == 0) continue;
 		if (xmmregs[i].type != XMMTYPE_GPRREG) continue;
 		if (xmmregs[i].reg != gprreg) continue;
@@ -544,7 +544,7 @@ void _addNeededGPRtoXMMreg(int gprreg)
 void _addNeededACCtoXMMreg() {
 	int i;
 
-	for (i=0; i<XMMREGS; i++) {
+	for (i=0; i<iREGCNT_XMM; i++) {
 		if (xmmregs[i].inuse == 0) continue;
 		if (xmmregs[i].type != XMMTYPE_ACC) continue;
 
@@ -557,7 +557,7 @@ void _addNeededACCtoXMMreg() {
 void _addNeededFPtoXMMreg(int fpreg) {
 	int i;
 
-	for (i=0; i<XMMREGS; i++) {
+	for (i=0; i<iREGCNT_XMM; i++) {
 		if (xmmregs[i].inuse == 0) continue;
 		if (xmmregs[i].type != XMMTYPE_FPREG) continue;
 		if (xmmregs[i].reg != fpreg) continue;
@@ -571,7 +571,7 @@ void _addNeededFPtoXMMreg(int fpreg) {
 void _addNeededFPACCtoXMMreg() {
 	int i;
 
-	for (i=0; i<XMMREGS; i++) {
+	for (i=0; i<iREGCNT_XMM; i++) {
 		if (xmmregs[i].inuse == 0) continue;
 		if (xmmregs[i].type != XMMTYPE_FPACC) continue;
 
@@ -584,7 +584,7 @@ void _addNeededFPACCtoXMMreg() {
 void _clearNeededXMMregs() {
 	int i;
 
-	for (i=0; i<XMMREGS; i++) {
+	for (i=0; i<iREGCNT_XMM; i++) {
 
 		if( xmmregs[i].needed ) {
 
@@ -605,7 +605,7 @@ void _deleteVFtoXMMreg(int reg, int vu, int flush)
 	int i;
 	VURegs *VU = vu ? &VU1 : &VU0;
 	
-	for (i=0; i<XMMREGS; i++) 
+	for (i=0; i<iREGCNT_XMM; i++) 
 	{
 		if (xmmregs[i].inuse && (xmmregs[i].type == XMMTYPE_VFREG) && 
 		   (xmmregs[i].reg == reg) && (xmmregs[i].VU == vu))  
@@ -627,13 +627,13 @@ void _deleteVFtoXMMreg(int reg, int vu, int flush)
 								// xyz, don't destroy w
 								int t0reg;
 								
-								for (t0reg = 0; t0reg < XMMREGS; ++t0reg) 
+								for (t0reg = 0; t0reg < iREGCNT_XMM; ++t0reg) 
 								{
 									if (!xmmregs[t0reg].inuse ) 
 										break;
 								}
 
-								if (t0reg < XMMREGS ) 
+								if (t0reg < iREGCNT_XMM ) 
 								{
 									SSE_MOVHLPS_XMM_to_XMM(t0reg, i);
 									SSE_MOVLPS_XMM_to_M64(VU_VFx_ADDR(xmmregs[i].reg), i);
@@ -675,7 +675,7 @@ void _deleteACCtoXMMreg(int vu, int flush)
 	int i;
 	VURegs *VU = vu ? &VU1 : &VU0;
 	
-	for (i=0; i<XMMREGS; i++) {
+	for (i=0; i<iREGCNT_XMM; i++) {
 		if (xmmregs[i].inuse && (xmmregs[i].type == XMMTYPE_ACC) && (xmmregs[i].VU == vu)) {
 
 			switch(flush) {
@@ -691,11 +691,11 @@ void _deleteACCtoXMMreg(int vu, int flush)
 							if( xmmregs[i].mode & MODE_VUZ ) {
 								// xyz, don't destroy w
 								int t0reg;
-								for(t0reg = 0; t0reg < XMMREGS; ++t0reg ) {
+								for(t0reg = 0; t0reg < iREGCNT_XMM; ++t0reg ) {
 									if( !xmmregs[t0reg].inuse ) break;
 								}
 
-								if( t0reg < XMMREGS ) {
+								if( t0reg < iREGCNT_XMM ) {
 									SSE_MOVHLPS_XMM_to_XMM(t0reg, i);
 									SSE_MOVLPS_XMM_to_M64(VU_ACCx_ADDR, i);
 									SSE_MOVSS_XMM_to_M32(VU_ACCx_ADDR+8, t0reg);
@@ -735,7 +735,7 @@ void _deleteACCtoXMMreg(int vu, int flush)
 void _deleteGPRtoXMMreg(int reg, int flush)
 {
 	int i;
-	for (i=0; i<XMMREGS; i++) {
+	for (i=0; i<iREGCNT_XMM; i++) {
 
 		if (xmmregs[i].inuse && xmmregs[i].type == XMMTYPE_GPRREG && xmmregs[i].reg == reg ) {
 
@@ -769,7 +769,7 @@ void _deleteGPRtoXMMreg(int reg, int flush)
 void _deleteFPtoXMMreg(int reg, int flush)
 {
 	int i;
-	for (i=0; i<XMMREGS; i++) {
+	for (i=0; i<iREGCNT_XMM; i++) {
 		if (xmmregs[i].inuse && xmmregs[i].type == XMMTYPE_FPREG && xmmregs[i].reg == reg ) {
 			switch(flush) {
 				case 0:
@@ -795,7 +795,7 @@ void _deleteFPtoXMMreg(int reg, int flush)
 
 void _freeXMMreg(int xmmreg) 
 {
-	assert( xmmreg < XMMREGS );
+	assert( xmmreg < iREGCNT_XMM );
 
 	if (!xmmregs[xmmreg].inuse) return;
 	
@@ -810,11 +810,11 @@ void _freeXMMreg(int xmmreg)
 				{
 					// don't destroy w
 					int t0reg;
-					for(t0reg = 0; t0reg < XMMREGS; ++t0reg ) {
+					for(t0reg = 0; t0reg < iREGCNT_XMM; ++t0reg ) {
 						if( !xmmregs[t0reg].inuse ) break;
 					}
 
-					if( t0reg < XMMREGS ) 
+					if( t0reg < iREGCNT_XMM ) 
 					{
 						SSE_MOVHLPS_XMM_to_XMM(t0reg, xmmreg);
 						SSE_MOVLPS_XMM_to_M64(VU_VFx_ADDR(xmmregs[xmmreg].reg), xmmreg);
@@ -852,11 +852,11 @@ void _freeXMMreg(int xmmreg)
 					// don't destroy w
 					int t0reg;
 					
-					for(t0reg = 0; t0reg < XMMREGS; ++t0reg ) {
+					for(t0reg = 0; t0reg < iREGCNT_XMM; ++t0reg ) {
 						if( !xmmregs[t0reg].inuse ) break;
 					}
 
-					if( t0reg < XMMREGS ) 
+					if( t0reg < iREGCNT_XMM ) 
 					{
 						SSE_MOVHLPS_XMM_to_XMM(t0reg, xmmreg);
 						SSE_MOVLPS_XMM_to_M64(VU_ACCx_ADDR, xmmreg);
@@ -909,7 +909,7 @@ void _freeXMMreg(int xmmreg)
 int _getNumXMMwrite()
 {
 	int num = 0, i;
-	for (i=0; i<XMMREGS; i++) {
+	for (i=0; i<iREGCNT_XMM; i++) {
 		if( xmmregs[i].inuse && (xmmregs[i].mode&MODE_WRITE) ) ++num;
 	}
 
@@ -920,12 +920,12 @@ u8 _hasFreeXMMreg()
 {
 	int i;
 
-	for (i=0; i<XMMREGS; i++) {
+	for (i=0; i<iREGCNT_XMM; i++) {
 		if (!xmmregs[i].inuse) return 1;
 	}
 
 	// check for dead regs
-	for (i=0; i<XMMREGS; i++) {
+	for (i=0; i<iREGCNT_XMM; i++) {
 		if (xmmregs[i].needed) continue;
 		if (xmmregs[i].type == XMMTYPE_GPRREG ) {
 			if( !EEINST_ISLIVEXMM(xmmregs[i].reg) ) {
@@ -935,7 +935,7 @@ u8 _hasFreeXMMreg()
 	}
 
 	// check for dead regs
-	for (i=0; i<XMMREGS; i++) {
+	for (i=0; i<iREGCNT_XMM; i++) {
 		if (xmmregs[i].needed) continue;
 		if (xmmregs[i].type == XMMTYPE_GPRREG  ) {
 			if( !(g_pCurInstInfo->regs[xmmregs[i].reg]&EEINST_USED) ) {
@@ -951,12 +951,12 @@ void _moveXMMreg(int xmmreg)
 	int i;
 	if( !xmmregs[xmmreg].inuse ) return;
 
-	for (i=0; i<XMMREGS; i++) {
+	for (i=0; i<iREGCNT_XMM; i++) {
 		if (xmmregs[i].inuse) continue;
 		break;
 	}
 
-	if( i == XMMREGS ) {
+	if( i == iREGCNT_XMM ) {
 		_freeXMMreg(xmmreg);
 		return;
 	}
@@ -971,7 +971,7 @@ void _flushXMMregs()
 {
 	int i;
 
-	for (i=0; i<XMMREGS; i++) {
+	for (i=0; i<iREGCNT_XMM; i++) {
 		if (xmmregs[i].inuse == 0) continue;
 
 		assert( xmmregs[i].type != XMMTYPE_TEMP );
@@ -988,7 +988,7 @@ void _freeXMMregs()
 {
 	int i;
 
-	for (i=0; i<XMMREGS; i++) {
+	for (i=0; i<iREGCNT_XMM; i++) {
 		if (xmmregs[i].inuse == 0) continue;
 
 		assert( xmmregs[i].type != XMMTYPE_TEMP );

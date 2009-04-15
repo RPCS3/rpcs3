@@ -35,9 +35,9 @@
 using namespace x86Emitter;
 
 template< int OperandSize >
-static __forceinline x86Register<OperandSize> _reghlp( x86IntRegType src )
+static __forceinline iRegister<OperandSize> _reghlp( x86IntRegType src )
 {
-	return x86Register<OperandSize>( src );
+	return iRegister<OperandSize>( src );
 }
 
 static __forceinline ModSibBase _mrmhlp( x86IntRegType src )
@@ -116,31 +116,34 @@ DEFINE_OPCODE_SHIFT_LEGACY( SAR )
 DEFINE_OPCODE_LEGACY( MOV )
 
 // ------------------------------------------------------------------------
-#define DEFINE_LEGACY_MOVEXTEND( form, srcbits ) \
-	emitterT void MOV##form##X32R##srcbits##toR( x86IntRegType to, x86IntRegType from )					{ iMOV##form##X( x86Register32( to ), x86Register##srcbits( from ) ); } \
-	emitterT void MOV##form##X32Rm##srcbits##toR( x86IntRegType to, x86IntRegType from, int offset )	{ iMOV##form##X( x86Register32( to ), ptr##srcbits[x86IndexReg( from ) + offset] ); } \
-	emitterT void MOV##form##X32M##srcbits##toR( x86IntRegType to, u32 from )							{ iMOV##form##X( x86Register32( to ), ptr##srcbits[from] ); }
+#define DEFINE_LEGACY_MOVEXTEND( form, destbits, srcbits ) \
+	emitterT void MOV##form##destbits##R##srcbits##toR( x86IntRegType to, x86IntRegType from )				{ iMOV##form##( iRegister##destbits( to ), iRegister##srcbits( from ) ); } \
+	emitterT void MOV##form##destbits##Rm##srcbits##toR( x86IntRegType to, x86IntRegType from, int offset )	{ iMOV##form##( iRegister##destbits( to ), ptr##srcbits[x86IndexReg( from ) + offset] ); } \
+	emitterT void MOV##form##destbits##M##srcbits##toR( x86IntRegType to, u32 from )						{ iMOV##form##( iRegister##destbits( to ), ptr##srcbits[from] ); }
 
-DEFINE_LEGACY_MOVEXTEND( S, 16 )
-DEFINE_LEGACY_MOVEXTEND( Z, 16 )
-DEFINE_LEGACY_MOVEXTEND( S, 8 )
-DEFINE_LEGACY_MOVEXTEND( Z, 8 )
+DEFINE_LEGACY_MOVEXTEND( SX, 32, 16 )
+DEFINE_LEGACY_MOVEXTEND( ZX, 32, 16 )
+DEFINE_LEGACY_MOVEXTEND( SX, 32, 8 )
+DEFINE_LEGACY_MOVEXTEND( ZX, 32, 8 )
+
+DEFINE_LEGACY_MOVEXTEND( SX, 16, 8 )
+DEFINE_LEGACY_MOVEXTEND( ZX, 16, 8 )
 
 
 // mov r32 to [r32<<scale+from2]
 emitterT void MOV32RmSOffsettoR( x86IntRegType to, x86IntRegType from1, s32 from2, int scale )
 {
-	iMOV( x86Register32(to), ptr[(x86IndexReg(from1)<<scale) + from2] );
+	iMOV( iRegister32(to), ptr[(x86IndexReg(from1)<<scale) + from2] );
 }
 
 emitterT void MOV16RmSOffsettoR( x86IntRegType to, x86IntRegType from1, s32 from2, int scale )
 {
-	iMOV( x86Register16(to), ptr[(x86IndexReg(from1)<<scale) + from2] );
+	iMOV( iRegister16(to), ptr[(x86IndexReg(from1)<<scale) + from2] );
 }
 
 emitterT void MOV8RmSOffsettoR( x86IntRegType to, x86IntRegType from1, s32 from2, int scale )
 {
-	iMOV( x86Register8(to), ptr[(x86IndexReg(from1)<<scale) + from2] );
+	iMOV( iRegister8(to), ptr[(x86IndexReg(from1)<<scale) + from2] );
 }
 
 // Special forms needed by the legacy emitter syntax:
@@ -155,6 +158,11 @@ emitterT void AND32I8toM( uptr to, s8 from )
 	iAND( ptr8[to], from );
 }
 
+/* cmove r32 to r32*/
+emitterT void CMOVE32RtoR( x86IntRegType to, x86IntRegType from ) 
+{
+	iCMOVE( iRegister32(to), iRegister32(from) );
+}
 
 
 // Note: the 'to' field can either be a register or a special opcode extension specifier
@@ -224,23 +232,6 @@ emitterT u32* J32Rel( int cc, u32 to )
 	return (u32*)( x86Ptr - 4 );
 }
 
-emitterT void CMOV32RtoR( int cc, int to, int from )
-{
-	RexRB(0, to, from);
-	write8( 0x0F );
-	write8( cc );
-	ModRM( 3, to, from );
-}
-
-emitterT void CMOV32MtoR( int cc, int to, uptr from )
-{
-	RexR(0, to);
-	write8( 0x0F );
-	write8( cc );
-	ModRM( 0, to, DISP32 );
-	write32( MEMADDR(from, 4) );
-}
-
 ////////////////////////////////////////////////////
 emitterT void x86SetPtr( u8* ptr ) 
 {
@@ -308,213 +299,9 @@ emitterT void x86Align( int bytes )
 /* IX86 instructions */
 /********************/
 
-emitterT void STC( void )
-{
-	write8( 0xF9 );
-}
-
-emitterT void CLC( void )
-{
-	write8( 0xF8 );
-}
-
-// NOP 1-byte
-emitterT void NOP( void )
-{
-	write8(0x90);
-}
-
-/* cmovbe r32 to r32 */
-emitterT void CMOVBE32RtoR( x86IntRegType to, x86IntRegType from )
-{
-	CMOV32RtoR( 0x46, to, from );
-}
-
-/* cmovbe m32 to r32*/
-emitterT void CMOVBE32MtoR( x86IntRegType to, uptr from )
-{
-	CMOV32MtoR( 0x46, to, from );
-}
-
-/* cmovb r32 to r32 */
-emitterT void CMOVB32RtoR( x86IntRegType to, x86IntRegType from )
-{
-	CMOV32RtoR( 0x42, to, from );
-}
-
-/* cmovb m32 to r32*/
-emitterT void CMOVB32MtoR( x86IntRegType to, uptr from )
-{
-	CMOV32MtoR( 0x42, to, from );
-}
-
-/* cmovae r32 to r32 */
-emitterT void CMOVAE32RtoR( x86IntRegType to, x86IntRegType from )
-{
-	CMOV32RtoR( 0x43, to, from );
-}
-
-/* cmovae m32 to r32*/
-emitterT void CMOVAE32MtoR( x86IntRegType to, uptr from )
-{
-	CMOV32MtoR( 0x43, to, from );
-}
-
-/* cmova r32 to r32 */
-emitterT void CMOVA32RtoR( x86IntRegType to, x86IntRegType from )
-{
-	CMOV32RtoR( 0x47, to, from );
-}
-
-/* cmova m32 to r32*/
-emitterT void CMOVA32MtoR( x86IntRegType to, uptr from )
-{
-	CMOV32MtoR( 0x47, to, from );
-}
-
-/* cmovo r32 to r32 */
-emitterT void CMOVO32RtoR( x86IntRegType to, x86IntRegType from )
-{
-	CMOV32RtoR( 0x40, to, from );
-}
-
-/* cmovo m32 to r32 */
-emitterT void CMOVO32MtoR( x86IntRegType to, uptr from )
-{
-	CMOV32MtoR( 0x40, to, from );
-}
-
-/* cmovp r32 to r32 */
-emitterT void CMOVP32RtoR( x86IntRegType to, x86IntRegType from )
-{
-	CMOV32RtoR( 0x4A, to, from );
-}
-
-/* cmovp m32 to r32 */
-emitterT void CMOVP32MtoR( x86IntRegType to, uptr from )
-{
-	CMOV32MtoR( 0x4A, to, from );
-}
-
-/* cmovs r32 to r32 */
-emitterT void CMOVS32RtoR( x86IntRegType to, x86IntRegType from )
-{
-	CMOV32RtoR( 0x48, to, from );
-}
-
-/* cmovs m32 to r32 */
-emitterT void CMOVS32MtoR( x86IntRegType to, uptr from )
-{
-	CMOV32MtoR( 0x48, to, from );
-}
-
-/* cmovno r32 to r32 */
-emitterT void CMOVNO32RtoR( x86IntRegType to, x86IntRegType from )
-{
-	CMOV32RtoR( 0x41, to, from );
-}
-
-/* cmovno m32 to r32 */
-emitterT void CMOVNO32MtoR( x86IntRegType to, uptr from )
-{
-	CMOV32MtoR( 0x41, to, from );
-}
-
-/* cmovnp r32 to r32 */
-emitterT void CMOVNP32RtoR( x86IntRegType to, x86IntRegType from )
-{
-	CMOV32RtoR( 0x4B, to, from );
-}
-
-/* cmovnp m32 to r32 */
-emitterT void CMOVNP32MtoR( x86IntRegType to, uptr from )
-{
-	CMOV32MtoR( 0x4B, to, from );
-}
-
-/* cmovns r32 to r32 */
-emitterT void CMOVNS32RtoR( x86IntRegType to, x86IntRegType from )
-{
-	CMOV32RtoR( 0x49, to, from );
-}
-
-/* cmovns m32 to r32 */
-emitterT void CMOVNS32MtoR( x86IntRegType to, uptr from )
-{
-	CMOV32MtoR( 0x49, to, from );
-}
-
-/* cmovne r32 to r32 */
-emitterT void CMOVNE32RtoR( x86IntRegType to, x86IntRegType from )
-{
-	CMOV32RtoR( 0x45, to, from );
-}
-
-/* cmovne m32 to r32*/
-emitterT void CMOVNE32MtoR( x86IntRegType to, uptr from ) 
-{
-	CMOV32MtoR( 0x45, to, from );
-}
-
-/* cmove r32 to r32*/
-emitterT void CMOVE32RtoR( x86IntRegType to, x86IntRegType from ) 
-{
-	CMOV32RtoR( 0x44, to, from );
-}
-
-/* cmove m32 to r32*/
-emitterT void CMOVE32MtoR( x86IntRegType to, uptr from ) 
-{
-	CMOV32MtoR( 0x44, to, from );
-}
-
-/* cmovg r32 to r32*/
-emitterT void CMOVG32RtoR( x86IntRegType to, x86IntRegType from ) 
-{
-	CMOV32RtoR( 0x4F, to, from );
-}
-
-/* cmovg m32 to r32*/
-emitterT void CMOVG32MtoR( x86IntRegType to, uptr from ) 
-{
-	CMOV32MtoR( 0x4F, to, from );
-}
-
-/* cmovge r32 to r32*/
-emitterT void CMOVGE32RtoR( x86IntRegType to, x86IntRegType from ) 
-{
-	CMOV32RtoR( 0x4D, to, from );
-}
-
-/* cmovge m32 to r32*/
-emitterT void CMOVGE32MtoR( x86IntRegType to, uptr from ) 
-{
-	CMOV32MtoR( 0x4D, to, from );
-}
-
-/* cmovl r32 to r32*/
-emitterT void CMOVL32RtoR( x86IntRegType to, x86IntRegType from ) 
-{
-	CMOV32RtoR( 0x4C, to, from );
-}
-
-/* cmovl m32 to r32*/
-emitterT void CMOVL32MtoR( x86IntRegType to, uptr from ) 
-{
-	CMOV32MtoR( 0x4C, to, from );
-}
-
-/* cmovle r32 to r32*/
-emitterT void CMOVLE32RtoR( x86IntRegType to, x86IntRegType from ) 
-{
-	CMOV32RtoR( 0x4E, to, from );
-}
-
-/* cmovle m32 to r32*/
-emitterT void CMOVLE32MtoR( x86IntRegType to, uptr from ) 
-{
-	CMOV32MtoR( 0x4E, to, from );
-}
+emitterT void STC( void ) { iSTC(); }
+emitterT void CLC( void ) { iCLC(); }
+emitterT void NOP( void ) { iNOP(); }
 
 ////////////////////////////////////
 // arithmetic instructions		 /
@@ -1173,34 +960,31 @@ emitterT void SETZ8R( x86IntRegType to ) { SET8R(0x94, to); }
 emitterT void SETE8R( x86IntRegType to ) { SET8R(0x94, to); }
 
 /* push imm32 */
-emitterT void PUSH32I( u32 from ) { PUSH( from ); }
+emitterT void PUSH32I( u32 from ) { iPUSH( from ); }
 
 /* push r32 */
-emitterT void PUSH32R( x86IntRegType from )  { PUSH( x86Register32( from ) ); }
+emitterT void PUSH32R( x86IntRegType from )  { iPUSH( iRegister32( from ) ); }
 
 /* push m32 */
 emitterT void PUSH32M( u32 from )
 {
-	PUSH( ptr[from] );
+	iPUSH( ptr[from] );
 }
 
 /* pop r32 */
-emitterT void POP32R( x86IntRegType from ) { POP( x86Register32( from ) ); }
-
-/* pushfd */
+emitterT void POP32R( x86IntRegType from ) { iPOP( iRegister32( from ) ); }
 emitterT void PUSHFD( void ) { write8( 0x9C ); }
-/* popfd */
 emitterT void POPFD( void ) { write8( 0x9D ); }
 
-emitterT void RET( void ) { /*write8( 0xf3 );  <-- K8 opt?*/ write8( 0xC3 ); }
+emitterT void RET( void ) { iRET(); }
 
-emitterT void CBW( void ) { write16( 0x9866 );  }
-emitterT void CWD( void )  { write8( 0x98 ); }
-emitterT void CDQ( void ) { write8( 0x99 ); }
-emitterT void CWDE() { write8(0x98); }
+emitterT void CBW( void ) { iCBW();  }
+emitterT void CWD( void )  { iCWD(); }
+emitterT void CDQ( void ) { iCDQ(); }
+emitterT void CWDE() { iCWDE(); }
 
-emitterT void LAHF() { write8(0x9f); }
-emitterT void SAHF() { write8(0x9e); }
+emitterT void LAHF() { iLAHF(); }
+emitterT void SAHF() { iSAHF(); }
 
 emitterT void BT32ItoR( x86IntRegType to, u8 from ) 
 {
@@ -1230,34 +1014,34 @@ emitterT void BSWAP32R( x86IntRegType to )
 
 emitterT void LEA32RtoR(x86IntRegType to, x86IntRegType from, s32 offset)
 {
-	LEA( x86Register32( to ), ptr[x86IndexReg(from)+offset] );
+	iLEA( iRegister32( to ), ptr[x86IndexReg(from)+offset] );
 }
 
 emitterT void LEA32RRtoR(x86IntRegType to, x86IntRegType from0, x86IntRegType from1)
 { 
-	LEA( x86Register32( to ), ptr[x86IndexReg(from0)+x86IndexReg(from1)] );
+	iLEA( iRegister32( to ), ptr[x86IndexReg(from0)+x86IndexReg(from1)] );
 }
 
 // Don't inline recursive functions
 emitterT void LEA32RStoR(x86IntRegType to, x86IntRegType from, u32 scale)
 {
-	LEA( x86Register32( to ), ptr[x86IndexReg(from)*(1<<scale)] );
+	iLEA( iRegister32( to ), ptr[x86IndexReg(from)*(1<<scale)] );
 }
 
 // to = from + offset
 emitterT void LEA16RtoR(x86IntRegType to, x86IntRegType from, s16 offset)
 {
-	LEA( x86Register16( to ), ptr[x86IndexReg(from)+offset] );
+	iLEA( iRegister16( to ), ptr[x86IndexReg(from)+offset] );
 }
 
 // to = from0 + from1
 emitterT void LEA16RRtoR(x86IntRegType to, x86IntRegType from0, x86IntRegType from1)
 {
-	LEA( x86Register16( to ), ptr[x86IndexReg(from0)+x86IndexReg(from1)] );
+	iLEA( iRegister16( to ), ptr[x86IndexReg(from0)+x86IndexReg(from1)] );
 }
 
 // to = from << scale (max is 3)
 emitterT void LEA16RStoR(x86IntRegType to, x86IntRegType from, u32 scale)
 {
-	LEA( x86Register16( to ), ptr[x86IndexReg(from)*(1<<scale)] );
+	iLEA( iRegister16( to ), ptr[x86IndexReg(from)*(1<<scale)] );
 }

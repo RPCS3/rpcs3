@@ -53,29 +53,29 @@ namespace x86Emitter
 	//////////////////////////////////////////////////////////////////////////////////////////
 	// x86Register Method Implementations
 	//
-	__forceinline x86AddressInfo x86IndexReg::operator+( const x86IndexReg& right ) const
+	__forceinline iAddressInfo x86IndexReg::operator+( const x86IndexReg& right ) const
 	{
-		return x86AddressInfo( *this, right );
+		return iAddressInfo( *this, right );
 	}
 
-	__forceinline x86AddressInfo x86IndexReg::operator+( const x86AddressInfo& right ) const
+	__forceinline iAddressInfo x86IndexReg::operator+( const iAddressInfo& right ) const
 	{
 		return right + *this;
 	}
 
-	__forceinline x86AddressInfo x86IndexReg::operator+( s32 right ) const
+	__forceinline iAddressInfo x86IndexReg::operator+( s32 right ) const
 	{
-		return x86AddressInfo( *this, right );
+		return iAddressInfo( *this, right );
 	}
 
-	__forceinline x86AddressInfo x86IndexReg::operator*( u32 right ) const
+	__forceinline iAddressInfo x86IndexReg::operator*( u32 right ) const
 	{
-		return x86AddressInfo( Empty, *this, right );
+		return iAddressInfo( Empty, *this, right );
 	}
 
-	__forceinline x86AddressInfo x86IndexReg::operator<<( u32 shift ) const
+	__forceinline iAddressInfo x86IndexReg::operator<<( u32 shift ) const
 	{
-		return x86AddressInfo( Empty, *this, 1<<shift );
+		return iAddressInfo( Empty, *this, 1<<shift );
 	}
 
 	//////////////////////////////////////////////////////////////////////////////////////////
@@ -83,7 +83,7 @@ namespace x86Emitter
 	//
 
 	// ------------------------------------------------------------------------
-	__forceinline ModSibBase::ModSibBase( const x86AddressInfo& src ) :
+	__forceinline ModSibBase::ModSibBase( const iAddressInfo& src ) :
 		Base( src.Base ),
 		Index( src.Index ),
 		Scale( src.Factor ),
@@ -181,9 +181,9 @@ namespace x86Emitter
 	}
 
 	//////////////////////////////////////////////////////////////////////////////////////////
-	// x86AddressInfo Method Implementations
+	// iAddressInfo Method Implementations
 	//
-	__forceinline x86AddressInfo& x86AddressInfo::Add( const x86IndexReg& src )
+	__forceinline iAddressInfo& iAddressInfo::Add( const x86IndexReg& src )
 	{
 		if( src == Index )
 		{
@@ -214,7 +214,7 @@ namespace x86Emitter
 	}
 
 	// ------------------------------------------------------------------------
-	__forceinline x86AddressInfo& x86AddressInfo::Add( const x86AddressInfo& src )
+	__forceinline iAddressInfo& iAddressInfo::Add( const iAddressInfo& src )
 	{
 		Add( src.Base );
 		Add( src.Displacement );

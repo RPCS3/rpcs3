@@ -78,16 +78,16 @@ int _getFreeX86reg(int mode)
 	int i, tempi;
 	u32 bestcount = 0x10000;
 
-	int maxreg = (mode&MODE_8BITREG)?4:X86REGS;
+	int maxreg = (mode&MODE_8BITREG)?4:iREGCNT_GPR;
 
-	for (i=0; i<X86REGS; i++) {
-		int reg = (g_x86checknext+i)%X86REGS;
+	for (i=0; i<iREGCNT_GPR; i++) {
+		int reg = (g_x86checknext+i)%iREGCNT_GPR;
 		if( reg == 0 || reg == ESP ) continue;
 		if( reg >= maxreg ) continue;
 		if( (mode&MODE_NOFRAME) && reg==EBP ) continue;
 
 		if (x86regs[reg].inuse == 0) {
-			g_x86checknext = (reg+1)%X86REGS;
+			g_x86checknext = (reg+1)%iREGCNT_GPR;
 			return reg;
 		}
 	}
@@ -207,16 +207,16 @@ int _allocX86reg(int x86reg, int type, int reg, int mode)
 	// don't alloc EAX and ESP,EBP if MODE_NOFRAME
 	int oldmode = mode;
 	int noframe = mode&MODE_NOFRAME;
-	int maxreg = (mode&MODE_8BITREG)?4:X86REGS;
+	int maxreg = (mode&MODE_8BITREG)?4:iREGCNT_GPR;
 	mode &= ~(MODE_NOFRAME|MODE_8BITREG);
 	int readfromreg = -1;
 
 	if( type != X86TYPE_TEMP ) {
 
-		if( maxreg < X86REGS ) {
+		if( maxreg < iREGCNT_GPR ) {
 			// make sure reg isn't in the higher regs
 			
-			for(i = maxreg; i < X86REGS; ++i) {
+			for(i = maxreg; i < iREGCNT_GPR; ++i) {
 				if (!x86regs[i].inuse || x86regs[i].type != type || x86regs[i].reg != reg) continue;
 
 				if( mode & MODE_READ ) {
@@ -324,7 +324,7 @@ int _checkX86reg(int type, int reg, int mode)
 {
 	int i;
 
-	for (i=0; i<X86REGS; i++) {
+	for (i=0; i<iREGCNT_GPR; i++) {
 		if (x86regs[i].inuse && x86regs[i].reg == reg && x86regs[i].type == type) {
 
 			if( !(x86regs[i].mode & MODE_READ) && (mode&MODE_READ) ) {
@@ -348,7 +348,7 @@ void _addNeededX86reg(int type, int reg)
 {
 	int i;
 
-	for (i=0; i<X86REGS; i++) {
+	for (i=0; i<iREGCNT_GPR; i++) {
 		if (!x86regs[i].inuse || x86regs[i].reg != reg || x86regs[i].type != type ) continue;
 
 		x86regs[i].counter = g_x86AllocCounter++;
@@ -359,7 +359,7 @@ void _addNeededX86reg(int type, int reg)
 void _clearNeededX86regs() {
 	int i;
 
-	for (i=0; i<X86REGS; i++) {
+	for (i=0; i<iREGCNT_GPR; i++) {
 		if (x86regs[i].needed ) {
 			if( x86regs[i].inuse && (x86regs[i].mode&MODE_WRITE) )
 				x86regs[i].mode |= MODE_READ;
@@ -372,7 +372,7 @@ void _deleteX86reg(int type, int reg, int flush)
 {
 	int i;
 
-	for (i=0; i<X86REGS; i++) {
+	for (i=0; i<iREGCNT_GPR; i++) {
 		if (x86regs[i].inuse && x86regs[i].reg == reg && x86regs[i].type == type) {
 			switch(flush) {
 				case 0:
@@ -401,7 +401,7 @@ void _deleteX86reg(int type, int reg, int flush)
 
 void _freeX86reg(int x86reg)
 {
-	assert( x86reg >= 0 && x86reg < X86REGS );
+	assert( x86reg >= 0 && x86reg < iREGCNT_GPR );
 
 	if( x86regs[x86reg].inuse && (x86regs[x86reg].mode&MODE_WRITE) ) {
 		x86regs[x86reg].mode &= ~MODE_WRITE;
@@ -419,7 +419,7 @@ void _freeX86reg(int x86reg)
 void _freeX86regs() {
 	int i;
 
-	for (i=0; i<X86REGS; i++) {
+	for (i=0; i<iREGCNT_GPR; i++) {
 		if (!x86regs[i].inuse) continue;
 
 		_freeX86reg(i);
@@ -459,16 +459,16 @@ int  _getFreeMMXreg()
 	int tempi = -1;
 	u32 bestcount = 0x10000;
 
-	for (i=0; i<MMXREGS; i++) {
-		if (mmxregs[(s_mmxchecknext+i)%MMXREGS].inuse == 0) {
-			int ret = (s_mmxchecknext+i)%MMXREGS;
-			s_mmxchecknext = (s_mmxchecknext+i+1)%MMXREGS;
+	for (i=0; i<iREGCNT_MMX; i++) {
+		if (mmxregs[(s_mmxchecknext+i)%iREGCNT_MMX].inuse == 0) {
+			int ret = (s_mmxchecknext+i)%iREGCNT_MMX;
+			s_mmxchecknext = (s_mmxchecknext+i+1)%iREGCNT_MMX;
 			return ret;
 		}
 	}
 
 	// check for dead regs
-	for (i=0; i<MMXREGS; i++) {
+	for (i=0; i<iREGCNT_MMX; i++) {
 		if (mmxregs[i].needed) continue;
 		if (mmxregs[i].reg >= MMX_GPR && mmxregs[i].reg < MMX_GPR+34 ) { // mmxregs[i] is unsigned, and MMX_GPR == 0, so the first part is always true. 
 			if( !(g_pCurInstInfo->regs[mmxregs[i].reg-MMX_GPR] & (EEINST_LIVE0|EEINST_LIVE1)) ) {
@@ -483,7 +483,7 @@ int  _getFreeMMXreg()
 	}
 
 	// check for future xmm usage
-	for (i=0; i<MMXREGS; i++) {
+	for (i=0; i<iREGCNT_MMX; i++) {
 		if (mmxregs[i].needed) continue;
 		if (mmxregs[i].reg >= MMX_GPR && mmxregs[i].reg < MMX_GPR+34 ) {
 			if( !(g_pCurInstInfo->regs[mmxregs[i].reg] & EEINST_MMX) ) {
@@ -493,7 +493,7 @@ int  _getFreeMMXreg()
 		}
 	}
 
-	for (i=0; i<MMXREGS; i++) {
+	for (i=0; i<iREGCNT_MMX; i++) {
 		if (mmxregs[i].needed) continue;
 		if (mmxregs[i].reg != MMX_TEMP) {
 
@@ -523,7 +523,7 @@ int _allocMMXreg(int mmxreg, int reg, int mode)
 	int i;
 
 	if( reg != MMX_TEMP ) {
-		for (i=0; i<MMXREGS; i++) {
+		for (i=0; i<iREGCNT_MMX; i++) {
 			if (mmxregs[i].inuse == 0 || mmxregs[i].reg != reg ) continue;
 
 			if( MMX_ISGPR(reg)) {
@@ -602,7 +602,7 @@ int _allocMMXreg(int mmxreg, int reg, int mode)
 int _checkMMXreg(int reg, int mode)
 {
 	int i;
-	for (i=0; i<MMXREGS; i++) {
+	for (i=0; i<iREGCNT_MMX; i++) {
 		if (mmxregs[i].inuse && mmxregs[i].reg == reg ) {
 
 			if( !(mmxregs[i].mode & MODE_READ) && (mode&MODE_READ) ) {
@@ -635,7 +635,7 @@ void _addNeededMMXreg(int reg)
 {
 	int i;
 
-	for (i=0; i<MMXREGS; i++) {
+	for (i=0; i<iREGCNT_MMX; i++) {
 		if (mmxregs[i].inuse == 0) continue;
 		if (mmxregs[i].reg != reg) continue;
 
@@ -648,7 +648,7 @@ void _clearNeededMMXregs()
 {
 	int i;
 
-	for (i=0; i<MMXREGS; i++) {
+	for (i=0; i<iREGCNT_MMX; i++) {
 		if( mmxregs[i].needed ) {
 			// setup read to any just written regs
 			if( mmxregs[i].inuse && (mmxregs[i].mode&MODE_WRITE) )
@@ -661,7 +661,7 @@ void _clearNeededMMXregs()
 void _deleteMMXreg(int reg, int flush)
 {
 	int i;
-	for (i=0; i<MMXREGS; i++) {
+	for (i=0; i<iREGCNT_MMX; i++) {
 
 		if (mmxregs[i].inuse && mmxregs[i].reg == reg ) {
 
@@ -696,7 +696,7 @@ void _deleteMMXreg(int reg, int flush)
 int _getNumMMXwrite()
 {
 	int num = 0, i;
-	for (i=0; i<MMXREGS; i++) {
+	for (i=0; i<iREGCNT_MMX; i++) {
 		if( mmxregs[i].inuse && (mmxregs[i].mode&MODE_WRITE) ) ++num;
 	}
 
@@ -706,12 +706,12 @@ int _getNumMMXwrite()
 u8 _hasFreeMMXreg()
 {
 	int i;
-	for (i=0; i<MMXREGS; i++) {
+	for (i=0; i<iREGCNT_MMX; i++) {
 		if (!mmxregs[i].inuse) return 1;
 	}
 
 	// check for dead regs
-	for (i=0; i<MMXREGS; i++) {
+	for (i=0; i<iREGCNT_MMX; i++) {
 		if (mmxregs[i].needed) continue;
 		if (mmxregs[i].reg >= MMX_GPR && mmxregs[i].reg < MMX_GPR+34 ) {
 			if( !EEINST_ISLIVE64(mmxregs[i].reg-MMX_GPR) ) {
@@ -721,7 +721,7 @@ u8 _hasFreeMMXreg()
 	}
 
 	// check for dead regs
-	for (i=0; i<MMXREGS; i++) {
+	for (i=0; i<iREGCNT_MMX; i++) {
 		if (mmxregs[i].needed) continue;
 		if (mmxregs[i].reg >= MMX_GPR && mmxregs[i].reg < MMX_GPR+34 ) {
 			if( !(g_pCurInstInfo->regs[mmxregs[i].reg-MMX_GPR]&EEINST_USED) ) {
@@ -735,7 +735,7 @@ u8 _hasFreeMMXreg()
 
 void _freeMMXreg(int mmxreg)
 {
-	assert( mmxreg < MMXREGS );
+	assert( mmxreg < iREGCNT_MMX );
 	if (!mmxregs[mmxreg].inuse) return;
 	
 	if (mmxregs[mmxreg].mode & MODE_WRITE ) {
@@ -762,12 +762,12 @@ void _moveMMXreg(int mmxreg)
 	int i;
 	if( !mmxregs[mmxreg].inuse ) return;
 
-	for (i=0; i<MMXREGS; i++) {
+	for (i=0; i<iREGCNT_MMX; i++) {
 		if (mmxregs[i].inuse) continue;
 		break;
 	}
 
-	if( i == MMXREGS ) {
+	if( i == iREGCNT_MMX ) {
 		_freeMMXreg(mmxreg);
 		return;
 	}
@@ -783,7 +783,7 @@ void _flushMMXregs()
 {
 	int i;
 
-	for (i=0; i<MMXREGS; i++) {
+	for (i=0; i<iREGCNT_MMX; i++) {
 		if (mmxregs[i].inuse == 0) continue;
 
 		if( mmxregs[i].mode & MODE_WRITE ) {
@@ -807,7 +807,7 @@ void _flushMMXregs()
 void _freeMMXregs()
 {
 	int i;
-	for (i=0; i<MMXREGS; i++) {
+	for (i=0; i<iREGCNT_MMX; i++) {
 		if (mmxregs[i].inuse == 0) continue;
 
 		assert( mmxregs[i].reg != MMX_TEMP );

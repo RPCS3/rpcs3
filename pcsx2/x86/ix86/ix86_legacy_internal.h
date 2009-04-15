@@ -56,11 +56,7 @@ emitterT void ModRM( uint mod, uint reg, uint rm )
 	jASSUME( mod < 4 );
 	jASSUME( reg < 8 );
 	jASSUME( rm < 8 );
-	//write8( (mod << 6) | (reg << 3) | rm );
-
-	*(u32*)x86Ptr = (mod << 6) | (reg << 3) | rm;
-	x86Ptr++;
-	
+	write8( (mod << 6) | (reg << 3) | rm );
 }
 
 emitterT void SibSB( uint ss, uint index, uint base )
@@ -71,8 +67,5 @@ emitterT void SibSB( uint ss, uint index, uint base )
 	jASSUME( ss < 4 );
 	jASSUME( index < 8 );
 	jASSUME( base < 8 );
-	//write8( (ss << 6) | (index << 3) | base );
-
-	*(u32*)x86Ptr = (ss << 6) | (index << 3) | base;
-	x86Ptr++;
+	write8( (ss << 6) | (index << 3) | base );
 }

@@ -91,10 +91,10 @@ extern CPUINFO cpuinfo;
 #define __threadlocal __thread
 #endif
 
-// x86 opcode descriptors
-#define XMMREGS 8
-#define X86REGS 8
-#define MMXREGS 8
+// Register counts for x86/32 mode:
+static const uint iREGCNT_XMM = 8;
+static const uint iREGCNT_GPR = 8;
+static const uint iREGCNT_MMX = 8;
 
 enum XMMSSEType
 {
@@ -104,10 +104,10 @@ enum XMMSSEType
 };
 
 extern __threadlocal u8  *x86Ptr;
-extern __threadlocal u8  *j8Ptr[32];
-extern __threadlocal u32 *j32Ptr[32];
+extern __threadlocal u8  *j8Ptr[32];		// depreciated item.  use local u8* vars instead.
+extern __threadlocal u32 *j32Ptr[32];		// depreciated item.  use local u32* vars instead.
 
-extern __threadlocal XMMSSEType g_xmmtypes[XMMREGS];
+extern __threadlocal XMMSSEType g_xmmtypes[iREGCNT_XMM];
 
 //------------------------------------------------------------------
 // templated version of is_s8 is required, so that u16's get correct sign extension treatment.
@@ -150,7 +150,7 @@ namespace x86Emitter
 	static const int ModRm_UseSib = 4;		// same index value as ESP (used in RM field)
 	static const int ModRm_UseDisp32 = 5;	// same index value as EBP (used in Mod field)
 
-	class x86AddressInfo;
+	class iAddressInfo;
 	class ModSibBase;
 
 	extern void iSetPtr( void* ptr );
@@ -188,33 +188,33 @@ namespace x86Emitter
 	//////////////////////////////////////////////////////////////////////////////////////////
 	//
 	template< int OperandSize >
-	class x86Register
+	class iRegister
 	{
 	public:
-		static const x86Register Empty;		// defined as an empty/unused value (-1)
+		static const iRegister Empty;		// defined as an empty/unused value (-1)
 
 		int Id;
 
-		x86Register( const x86Register<OperandSize>& src ) : Id( src.Id ) {}
-		x86Register(): Id( -1 ) {}
-		explicit x86Register( int regId ) : Id( regId ) { jASSUME( Id >= -1 && Id < 8 ); }
+		iRegister( const iRegister<OperandSize>& src ) : Id( src.Id ) {}
+		iRegister(): Id( -1 ) {}
+		explicit iRegister( int regId ) : Id( regId ) { jASSUME( Id >= -1 && Id < 8 ); }
 
 		bool IsEmpty() const { return Id < 0; }
 
 		// Returns true if the register is a valid accumulator: Eax, Ax, Al.
 		bool IsAccumulator() const { return Id == 0; }
 
-		bool operator==( const x86Register<OperandSize>& src ) const
+		bool operator==( const iRegister<OperandSize>& src ) const
 		{
 			return (Id == src.Id);
 		}
 
-		bool operator!=( const x86Register<OperandSize>& src ) const
+		bool operator!=( const iRegister<OperandSize>& src ) const
 		{
 			return (Id != src.Id);
 		}
 
-		x86Register<OperandSize>& operator=( const x86Register<OperandSize>& src )
+		iRegister<OperandSize>& operator=( const iRegister<OperandSize>& src )
 		{
 			Id = src.Id;
 			return *this;
@@ -229,62 +229,62 @@ namespace x86Emitter
 	// all about the the templated code in haphazard fashion.  Yay.. >_<
 	//
 
-	typedef x86Register<4> x86Register32;
-	typedef x86Register<2> x86Register16;
-	typedef x86Register<1> x86Register8;
+	typedef iRegister<4> iRegister32;
+	typedef iRegister<2> iRegister16;
+	typedef iRegister<1> iRegister8;
 
-	extern const x86Register32 eax;
-	extern const x86Register32 ebx;
-	extern const x86Register32 ecx;
-	extern const x86Register32 edx;
-	extern const x86Register32 esi;
-	extern const x86Register32 edi;
-	extern const x86Register32 ebp;
-	extern const x86Register32 esp;
+	extern const iRegister32 eax;
+	extern const iRegister32 ebx;
+	extern const iRegister32 ecx;
+	extern const iRegister32 edx;
+	extern const iRegister32 esi;
+	extern const iRegister32 edi;
+	extern const iRegister32 ebp;
+	extern const iRegister32 esp;
 
-	extern const x86Register16 ax;
-	extern const x86Register16 bx;
-	extern const x86Register16 cx;
-	extern const x86Register16 dx;
-	extern const x86Register16 si;
-	extern const x86Register16 di;
-	extern const x86Register16 bp;
-	extern const x86Register16 sp;
+	extern const iRegister16 ax;
+	extern const iRegister16 bx;
+	extern const iRegister16 cx;
+	extern const iRegister16 dx;
+	extern const iRegister16 si;
+	extern const iRegister16 di;
+	extern const iRegister16 bp;
+	extern const iRegister16 sp;
 
-	extern const x86Register8 al;
-	extern const x86Register8 cl;
-	extern const x86Register8 dl;
-	extern const x86Register8 bl;
-	extern const x86Register8 ah;
-	extern const x86Register8 ch;
-	extern const x86Register8 dh;
-	extern const x86Register8 bh;
+	extern const iRegister8 al;
+	extern const iRegister8 cl;
+	extern const iRegister8 dl;
+	extern const iRegister8 bl;
+	extern const iRegister8 ah;
+	extern const iRegister8 ch;
+	extern const iRegister8 dh;
+	extern const iRegister8 bh;
 
 	//////////////////////////////////////////////////////////////////////////////////////////
 	// Use 32 bit registers as out index register (for ModSib memory address calculations)
-	// Only x86IndexReg provides operators for constructing x86AddressInfo types.
-	class x86IndexReg : public x86Register32
+	// Only x86IndexReg provides operators for constructing iAddressInfo types.
+	class x86IndexReg : public iRegister32
 	{
 	public:
 		static const x86IndexReg Empty;		// defined as an empty/unused value (-1)
 	
 	public:
-		x86IndexReg(): x86Register32() {}
-		x86IndexReg( const x86IndexReg& src ) : x86Register32( src.Id ) {}
-		x86IndexReg( const x86Register32& src ) : x86Register32( src ) {}
-		explicit x86IndexReg( int regId ) : x86Register32( regId ) {}
+		x86IndexReg(): iRegister32() {}
+		x86IndexReg( const x86IndexReg& src ) : iRegister32( src.Id ) {}
+		x86IndexReg( const iRegister32& src ) : iRegister32( src ) {}
+		explicit x86IndexReg( int regId ) : iRegister32( regId ) {}
 
 		// Returns true if the register is the stack pointer: ESP.
 		bool IsStackPointer() const { return Id == 4; }
 
-		x86AddressInfo operator+( const x86IndexReg& right ) const;
-		x86AddressInfo operator+( const x86AddressInfo& right ) const;
-		x86AddressInfo operator+( s32 right ) const;
+		iAddressInfo operator+( const x86IndexReg& right ) const;
+		iAddressInfo operator+( const iAddressInfo& right ) const;
+		iAddressInfo operator+( s32 right ) const;
 
-		x86AddressInfo operator*( u32 factor ) const;
-		x86AddressInfo operator<<( u32 shift ) const;
+		iAddressInfo operator*( u32 factor ) const;
+		iAddressInfo operator<<( u32 shift ) const;
 		
-		x86IndexReg& operator=( const x86Register32& src )
+		x86IndexReg& operator=( const iRegister32& src )
 		{
 			Id = src.Id;
 			return *this;
@@ -293,7 +293,7 @@ namespace x86Emitter
 
 	//////////////////////////////////////////////////////////////////////////////////////////
 	//
-	class x86AddressInfo
+	class iAddressInfo
 	{
 	public:
 		x86IndexReg Base;		// base register (no scale)
@@ -302,7 +302,7 @@ namespace x86Emitter
 		s32 Displacement;		// address displacement
 
 	public:
-		__forceinline x86AddressInfo( const x86IndexReg& base, const x86IndexReg& index, int factor=1, s32 displacement=0 ) :
+		__forceinline iAddressInfo( const x86IndexReg& base, const x86IndexReg& index, int factor=1, s32 displacement=0 ) :
 			Base( base ),
 			Index( index ),
 			Factor( factor ),
@@ -310,7 +310,7 @@ namespace x86Emitter
 		{
 		}
 
-		__forceinline explicit x86AddressInfo( const x86IndexReg& base, int displacement=0 ) :
+		__forceinline explicit iAddressInfo( const x86IndexReg& base, int displacement=0 ) :
 			Base( base ),
 			Index(),
 			Factor(0),
@@ -318,7 +318,7 @@ namespace x86Emitter
 		{
 		}
 		
-		__forceinline explicit x86AddressInfo( s32 displacement ) :
+		__forceinline explicit iAddressInfo( s32 displacement ) :
 			Base(),
 			Index(),
 			Factor(0),
@@ -326,24 +326,24 @@ namespace x86Emitter
 		{
 		}
 		
-		static x86AddressInfo FromIndexReg( const x86IndexReg& index, int scale=0, s32 displacement=0 );
+		static iAddressInfo FromIndexReg( const x86IndexReg& index, int scale=0, s32 displacement=0 );
 
 	public:
 		bool IsByteSizeDisp() const { return is_s8( Displacement ); }
 
-		__forceinline x86AddressInfo& Add( s32 imm )
+		__forceinline iAddressInfo& Add( s32 imm )
 		{
 			Displacement += imm;
 			return *this;
 		}
 		
-		__forceinline x86AddressInfo& Add( const x86IndexReg& src );
-		__forceinline x86AddressInfo& Add( const x86AddressInfo& src );
+		__forceinline iAddressInfo& Add( const x86IndexReg& src );
+		__forceinline iAddressInfo& Add( const iAddressInfo& src );
 
-		__forceinline x86AddressInfo operator+( const x86IndexReg& right ) const { return x86AddressInfo( *this ).Add( right ); }
-		__forceinline x86AddressInfo operator+( const x86AddressInfo& right ) const { return x86AddressInfo( *this ).Add( right ); }
-		__forceinline x86AddressInfo operator+( s32 imm ) const { return x86AddressInfo( *this ).Add( imm ); }
-		__forceinline x86AddressInfo operator-( s32 imm ) const { return x86AddressInfo( *this ).Add( -imm ); }
+		__forceinline iAddressInfo operator+( const x86IndexReg& right ) const { return iAddressInfo( *this ).Add( right ); }
+		__forceinline iAddressInfo operator+( const iAddressInfo& right ) const { return iAddressInfo( *this ).Add( right ); }
+		__forceinline iAddressInfo operator+( s32 imm ) const { return iAddressInfo( *this ).Add( imm ); }
+		__forceinline iAddressInfo operator-( s32 imm ) const { return iAddressInfo( *this ).Add( -imm ); }
 	};
 
 	//////////////////////////////////////////////////////////////////////////////////////////
@@ -351,12 +351,12 @@ namespace x86Emitter
 	//
 	// This class serves two purposes:  It houses 'reduced' ModRM/SIB info only, which means
 	// that the Base, Index, Scale, and Displacement values are all in the correct arrange-
-	// ments, and it serves as a type-safe layer between the x86Register's operators (which
-	// generate x86AddressInfo types) and the emitter's ModSib instruction forms.  Without this,
-	// the x86Register would pass as a ModSib type implicitly, and that would cause ambiguity
+	// ments, and it serves as a type-safe layer between the iRegister's operators (which
+	// generate iAddressInfo types) and the emitter's ModSib instruction forms.  Without this,
+	// the iRegister would pass as a ModSib type implicitly, and that would cause ambiguity
 	// on a number of instructions.
 	//
-	// End users should always use x86AddressInfo instead.
+	// End users should always use iAddressInfo instead.
 	//
 	class ModSibBase
 	{
@@ -367,7 +367,7 @@ namespace x86Emitter
 		s32 Displacement;		// offset applied to the Base/Index registers.
 
 	public:
-		explicit ModSibBase( const x86AddressInfo& src );
+		explicit ModSibBase( const iAddressInfo& src );
 		explicit ModSibBase( s32 disp );
 		ModSibBase( x86IndexReg base, x86IndexReg index, int scale=0, s32 displacement=0 );
 		
@@ -394,7 +394,7 @@ namespace x86Emitter
 	class ModSibStrict : public ModSibBase
 	{
 	public:
-		__forceinline explicit ModSibStrict( const x86AddressInfo& src ) : ModSibBase( src ) {}
+		__forceinline explicit ModSibStrict( const iAddressInfo& src ) : ModSibBase( src ) {}
 		__forceinline explicit ModSibStrict( s32 disp ) : ModSibBase( disp ) {}
 		__forceinline ModSibStrict( x86IndexReg base, x86IndexReg index, int scale=0, s32 displacement=0 ) :
 			ModSibBase( base, index, scale, displacement ) {}
@@ -423,7 +423,7 @@ namespace x86Emitter
 			return ModSibBase( src, x86IndexReg::Empty );
 		}
 
-		__forceinline ModSibBase operator[]( const x86AddressInfo& src ) const
+		__forceinline ModSibBase operator[]( const iAddressInfo& src ) const
 		{
 			return ModSibBase( src );
 		}
@@ -457,7 +457,7 @@ namespace x86Emitter
 			return ModSibStrict<OperandSize>( src, x86IndexReg::Empty );
 		}
 
-		__forceinline ModSibStrict<OperandSize> operator[]( const x86AddressInfo& src ) const
+		__forceinline ModSibStrict<OperandSize> operator[]( const iAddressInfo& src ) const
 		{
 			return ModSibStrict<OperandSize>( src );
 		}
@@ -598,387 +598,14 @@ namespace x86Emitter
 	{
 		extern void ModRM( uint mod, uint reg, uint rm );
 		extern void SibSB( u32 ss, u32 index, u32 base );
+		extern void iWriteDisp( int regfield, s32 displacement );
+		extern void iWriteDisp( int regfield, const void* address );
+
 		extern void EmitSibMagic( uint regfield, const ModSibBase& info );
 
-		struct SibMagic
-		{
-			static void Emit( uint regfield, const ModSibBase& info )
-			{
-				EmitSibMagic( regfield, info );
-			}
-		};
-
-		struct SibMagicInline
-		{
-			static __forceinline void Emit( uint regfield, const ModSibBase& info )
-			{
-				EmitSibMagic( regfield, info );
-			}
-		};	
-
-	
-		enum G1Type
-		{
-			G1Type_ADD=0,
-			G1Type_OR,
-			G1Type_ADC,
-			G1Type_SBB,
-			G1Type_AND,
-			G1Type_SUB,
-			G1Type_XOR,
-			G1Type_CMP
-		};
-
-		enum G2Type
-		{
-			G2Type_ROL=0,
-			G2Type_ROR,
-			G2Type_RCL,
-			G2Type_RCR,
-			G2Type_SHL,
-			G2Type_SHR,
-			G2Type_Unused,
-			G2Type_SAR
-		};
-
-		// -------------------------------------------------------------------
-		template< typename ImmType, G1Type InstType, typename SibMagicType >
-		class Group1Impl
-		{
-		public: 
-			static const uint OperandSize = sizeof(ImmType);
-
-			Group1Impl() {}		// because GCC doesn't like static classes
-
-		protected:
-			static bool Is8BitOperand()	{ return OperandSize == 1; }
-			static void prefix16()		{ if( OperandSize == 2 ) iWrite<u8>( 0x66 ); }
-
-		public:
-			static __emitinline void Emit( const x86Register<OperandSize>& to, const x86Register<OperandSize>& from ) 
-			{
-				prefix16();
-				iWrite<u8>( (Is8BitOperand() ? 0 : 1) | (InstType<<3) ); 
-				ModRM( 3, from.Id, to.Id );
-			}
-			
-			static __emitinline void Emit( const ModSibBase& sibdest, const x86Register<OperandSize>& from ) 
-			{
-				prefix16();
-				iWrite<u8>( (Is8BitOperand() ? 0 : 1) | (InstType<<3) ); 
-				SibMagicType::Emit( from.Id, sibdest );
-			}
-
-			static __emitinline void Emit( const x86Register<OperandSize>& to, const ModSibBase& sibsrc ) 
-			{
-				prefix16();
-				iWrite<u8>( (Is8BitOperand() ? 2 : 3) | (InstType<<3) );
-				SibMagicType::Emit( to.Id, sibsrc );
-			}
-
-			static __emitinline void Emit( const x86Register<OperandSize>& to, ImmType imm ) 
-			{
-				prefix16();
-				if( !Is8BitOperand() && is_s8( imm ) )
-				{
-					iWrite<u8>( 0x83 );
-					ModRM( 3, InstType, to.Id );
-					iWrite<s8>( imm );
-				}
-				else
-				{
-					if( to.IsAccumulator() )
-						iWrite<u8>( (Is8BitOperand() ? 4 : 5) | (InstType<<3) );
-					else
-					{
-						iWrite<u8>( Is8BitOperand() ? 0x80 : 0x81 );
-						ModRM( 3, InstType, to.Id );
-					}
-					iWrite<ImmType>( imm );
-				}
-			}
-
-			static __emitinline void Emit( const ModSibStrict<OperandSize>& sibdest, ImmType imm ) 
-			{
-				if( Is8BitOperand() )
-				{
-					iWrite<u8>( 0x80 );
-					SibMagicType::Emit( InstType, sibdest );
-					iWrite<ImmType>( imm );
-				}
-				else
-				{		
-					prefix16();
-					iWrite<u8>( is_s8( imm ) ? 0x83 : 0x81 );
-					SibMagicType::Emit( InstType, sibdest );
-					if( is_s8( imm ) )
-						iWrite<s8>( imm );
-					else
-						iWrite<ImmType>( imm );
-				}
-			}
-		};
-
-		// -------------------------------------------------------------------
-		// Group 2 (shift) instructions have no Sib/ModRM forms.
-		// Note: For Imm forms, we ignore the instruction if the shift count is zero.  This
-		// is a safe optimization since any zero-value shift does not affect any flags.
-		//
-		template< typename ImmType, G2Type InstType, typename SibMagicType >
-		class Group2Impl
-		{
-		public: 
-			static const uint OperandSize = sizeof(ImmType);
-
-			Group2Impl() {}		// For the love of GCC.
-
-		protected:
-			static bool Is8BitOperand()	{ return OperandSize == 1; }
-			static void prefix16()		{ if( OperandSize == 2 ) iWrite<u8>( 0x66 ); }
-
-		public:
-			static __emitinline void Emit( const x86Register<OperandSize>& to, const x86Register8& from ) 
-			{
-				jASSUME( from == cl );	// cl is the only valid shift register.  (turn this into a compile time check?)
-
-				prefix16();
-				iWrite<u8>( Is8BitOperand() ? 0xd2 : 0xd3 );
-				ModRM( 3, InstType, to.Id );
-			}
-
-			static __emitinline void Emit( const x86Register<OperandSize>& to, u8 imm ) 
-			{
-				if( imm == 0 ) return;
-
-				prefix16();
-				if( imm == 1 )
-				{
-					// special encoding of 1's
-					iWrite<u8>( Is8BitOperand() ? 0xd0 : 0xd1 );
-					ModRM( 3, InstType, to.Id );
-				}
-				else
-				{
-					iWrite<u8>( Is8BitOperand() ? 0xc0 : 0xc1 );
-					ModRM( 3, InstType, to.Id );
-					iWrite<u8>( imm );
-				}
-			}
-
-			static __emitinline void Emit( const ModSibStrict<OperandSize>& sibdest, const x86Register8& from ) 
-			{
-				jASSUME( from == cl );	// cl is the only valid shift register.  (turn this into a compile time check?)
-
-				prefix16();
-				iWrite<u8>( Is8BitOperand() ? 0xd2 : 0xd3 );
-				SibMagicType::Emit( from.Id, sibdest );
-			}
-
-			static __emitinline void Emit( const ModSibStrict<OperandSize>& sibdest, u8 imm ) 
-			{
-				if( imm == 0 ) return;
-
-				prefix16();
-				if( imm == 1 )
-				{
-					// special encoding of 1's
-					iWrite<u8>( Is8BitOperand() ? 0xd0 : 0xd1 );
-					SibMagicType::Emit( InstType, sibdest );
-				}
-				else
-				{
-					iWrite<u8>( Is8BitOperand() ? 0xc0 : 0xc1 );
-					SibMagicType::Emit( InstType, sibdest );
-					iWrite<u8>( imm );
-				}
-			}
-		};
-
-		// -------------------------------------------------------------------
-		//
-		template< G1Type InstType >
-		class Group1ImplAll
-		{
-		protected:
-			typedef Group1Impl<u32, InstType, SibMagic> m_32;
-			typedef Group1Impl<u16, InstType, SibMagic> m_16;
-			typedef Group1Impl<u8, InstType, SibMagic>  m_8;
-
-			typedef Group1Impl<u32, InstType, SibMagicInline> m_32i;
-			typedef Group1Impl<u16, InstType, SibMagicInline> m_16i;
-			typedef Group1Impl<u8, InstType, SibMagicInline>  m_8i;
-
-			// Inlining Notes:
-			//   I've set up the inlining to be as practical and intelligent as possible, which means
-			//   forcing inlining for (void*) forms of ModRM, which thanks to constprop reduce to
-			//   virtually no code.  In the case of (Reg, Imm) forms, the inlining is up to the dis-
-			//   creation of the compiler.
-			// 
-
-			// (Note: I'm not going to macro this since it would likely clobber intellisense parameter resolution)
-
-		public:
-			// ---------- 32 Bit Interface -----------
-			__forceinline void operator()( const x86Register32& to,	const x86Register32& from ) const	{ m_32i::Emit( to, from ); }
-			__forceinline void operator()( const x86Register32& to,	const void* src ) const				{ m_32i::Emit( to, ptr32[src] ); }
-			__forceinline void operator()( const void* dest,		const x86Register32& from ) const	{ m_32i::Emit( ptr32[dest], from ); }
-			__noinline void operator()( const ModSibBase& sibdest,	const x86Register32& from ) const	{ m_32::Emit( sibdest, from ); }
-			__noinline void operator()( const x86Register32& to,	const ModSibBase& sibsrc ) const	{ m_32::Emit( to, sibsrc ); }
-			__noinline void operator()( const ModSibStrict<4>& sibdest, u32 imm ) const					{ m_32::Emit( sibdest, imm ); }
-
-			void operator()( const x86Register32& to, u32 imm, bool needs_flags=false ) const
-			{
-				//if( needs_flags || (imm != 0) || !_optimize_imm0() )
-				m_32i::Emit( to, imm );
-			}
-
-			// ---------- 16 Bit Interface -----------
-			__forceinline void operator()( const x86Register16& to,	const x86Register16& from ) const	{ m_16i::Emit( to, from ); }
-			__forceinline void operator()( const x86Register16& to,	const void* src ) const				{ m_16i::Emit( to, ptr16[src] ); }
-			__forceinline void operator()( const void* dest,		const x86Register16& from ) const	{ m_16i::Emit( ptr16[dest], from ); }
-			__noinline void operator()( const ModSibBase& sibdest,	const x86Register16& from ) const	{ m_16::Emit( sibdest, from ); }
-			__noinline void operator()( const x86Register16& to,	const ModSibBase& sibsrc ) const	{ m_16::Emit( to, sibsrc ); }
-			__noinline void operator()( const ModSibStrict<2>& sibdest, u16 imm ) const					{ m_16::Emit( sibdest, imm ); }
-
-			void operator()( const x86Register16& to, u16 imm, bool needs_flags=false ) const			{ m_16i::Emit( to, imm ); }
-
-			// ---------- 8 Bit Interface -----------
-			__forceinline void operator()( const x86Register8& to,	const x86Register8& from ) const	{ m_8i::Emit( to, from ); }
-			__forceinline void operator()( const x86Register8& to,	const void* src ) const				{ m_8i::Emit( to, ptr8[src] ); }
-			__forceinline void operator()( const void* dest,		const x86Register8& from ) const	{ m_8i::Emit( ptr8[dest], from ); }
-			__noinline void operator()( const ModSibBase& sibdest,	const x86Register8& from ) const	{ m_8::Emit( sibdest, from ); }
-			__noinline void operator()( const x86Register8& to,		const ModSibBase& sibsrc ) const	{ m_8::Emit( to, sibsrc ); }
-			__noinline void operator()( const ModSibStrict<1>& sibdest, u8 imm ) const					{ m_8::Emit( sibdest, imm ); }
-
-			void operator()( const x86Register8& to, u8 imm, bool needs_flags=false ) const				{ m_8i::Emit( to, imm ); }
-
-			Group1ImplAll() {}		// Why does GCC need these?
-		};
-
-
-		// -------------------------------------------------------------------
-		//
-		template< G2Type InstType >
-		class Group2ImplAll
-		{
-		protected:
-			typedef Group2Impl<u32, InstType, SibMagic> m_32;
-			typedef Group2Impl<u16, InstType, SibMagic> m_16;
-			typedef Group2Impl<u8, InstType, SibMagic>  m_8;
-
-			typedef Group2Impl<u32, InstType, SibMagicInline> m_32i;
-			typedef Group2Impl<u16, InstType, SibMagicInline> m_16i;
-			typedef Group2Impl<u8, InstType, SibMagicInline>  m_8i;
-
-			// Inlining Notes:
-			//   I've set up the inlining to be as practical and intelligent as possible, which means
-			//   forcing inlining for (void*) forms of ModRM, which thanks to constprop reduce to
-			//   virtually no code.  In the case of (Reg, Imm) forms, the inlining is up to the dis-
-			//   creation of the compiler.
-			// 
-
-			// (Note: I'm not going to macro this since it would likely clobber intellisense parameter resolution)
-
-		public:
-			// ---------- 32 Bit Interface -----------
-			__forceinline void operator()( const x86Register32& to,		const x86Register8& from ) const{ m_32i::Emit( to, from ); }
-			__noinline void operator()( const ModSibStrict<4>& sibdest,	const x86Register8& from ) const{ m_32::Emit( sibdest, from ); }
-			__noinline void operator()( const ModSibStrict<4>& sibdest, u8 imm ) const					{ m_32::Emit( sibdest, imm ); }
-			void operator()( const x86Register32& to, u8 imm ) const									{ m_32i::Emit( to, imm ); }
-
-			// ---------- 16 Bit Interface -----------
-			__forceinline void operator()( const x86Register16& to,		const x86Register8& from ) const{ m_16i::Emit( to, from ); }
-			__noinline void operator()( const ModSibStrict<2>& sibdest,	const x86Register8& from ) const{ m_16::Emit( sibdest, from ); }
-			__noinline void operator()( const ModSibStrict<2>& sibdest, u8 imm ) const					{ m_16::Emit( sibdest, imm ); }
-			void operator()( const x86Register16& to, u8 imm ) const									{ m_16i::Emit( to, imm ); }
-
-			// ---------- 8 Bit Interface -----------
-			__forceinline void operator()( const x86Register8& to,		const x86Register8& from ) const{ m_8i::Emit( to, from ); }
-			__noinline void operator()( const ModSibStrict<1>& sibdest,	const x86Register8& from ) const{ m_8::Emit( sibdest, from ); }
-			__noinline void operator()( const ModSibStrict<1>& sibdest, u8 imm ) const					{ m_8::Emit( sibdest, imm ); }
-			void operator()( const x86Register8& to, u8 imm ) const										{ m_8i::Emit( to, imm ); }
-
-			Group2ImplAll() {}		// I am a class with no members, so I need an explicit constructor!  Sense abounds.
-		};
-
-		// Define the externals for Group1/2 instructions here (inside the Internal namespace).
-		// and then import then into the x86Emitter namespace later.  Done because it saves a
-		// lot of Internal:: namespace resolution mess, and is better than the alternative of
-		// importing Internal into x86Emitter, which done at the header file level would defeat
-		// the purpose!)
-
-		extern const Group1ImplAll<G1Type_ADD> iADD;
-		extern const Group1ImplAll<G1Type_OR>  iOR;
-		extern const Group1ImplAll<G1Type_ADC> iADC;
-		extern const Group1ImplAll<G1Type_SBB> iSBB;
-		extern const Group1ImplAll<G1Type_AND> iAND;
-		extern const Group1ImplAll<G1Type_SUB> iSUB;
-		extern const Group1ImplAll<G1Type_XOR> iXOR;
-		extern const Group1ImplAll<G1Type_CMP> iCMP;
-
-		extern const Group2ImplAll<G2Type_ROL> iROL;
-		extern const Group2ImplAll<G2Type_ROR> iROR;
-		extern const Group2ImplAll<G2Type_RCL> iRCL;
-		extern const Group2ImplAll<G2Type_RCR> iRCR;
-		extern const Group2ImplAll<G2Type_SHL> iSHL;
-		extern const Group2ImplAll<G2Type_SHR> iSHR;
-		extern const Group2ImplAll<G2Type_SAR> iSAR;
-
-		//////////////////////////////////////////////////////////////////////////////////////////
-		// Mov with sign/zero extension implementations:
-		//
-		template< int DestOperandSize, int SrcOperandSize >
-		class MovExtendImpl
-		{
-		protected:
-			static bool Is8BitOperand()	{ return SrcOperandSize == 1; }
-			static void prefix16()		{ if( DestOperandSize == 2 ) iWrite<u8>( 0x66 ); }
-			static __forceinline void emit_base( bool SignExtend )
-			{
-				prefix16();
-				iWrite<u8>( 0x0f );
-				iWrite<u8>( 0xb6 | (Is8BitOperand() ? 0 : 1) | (SignExtend ? 8 : 0 ) );
-			}
-
-		public: 
-			MovExtendImpl() {}		// For the love of GCC.
-
-			static __emitinline void Emit( const x86Register<DestOperandSize>& to, const x86Register<SrcOperandSize>& from, bool SignExtend )
-			{
-				emit_base( SignExtend );
-				ModRM( 3, from.Id, to.Id );
-			}
-
-			static __emitinline void Emit( const x86Register<DestOperandSize>& to, const ModSibStrict<SrcOperandSize>& sibsrc, bool SignExtend )
-			{
-				emit_base( SignExtend );
-				EmitSibMagic( to.Id, sibsrc );
-			}
-		};
-
-		// ------------------------------------------------------------------------
-		template< bool SignExtend >
-		class MovExtendImplAll
-		{
-		protected:
-			typedef MovExtendImpl<4, 2> m_16to32;
-			typedef MovExtendImpl<4, 1> m_8to32;
-
-		public:
-			__forceinline void operator()( const x86Register32& to, const x86Register16& from )	const	{ m_16to32::Emit( to, from, SignExtend ); }
-			__noinline void operator()( const x86Register32& to, const ModSibStrict<2>& sibsrc ) const	{ m_16to32::Emit( to, sibsrc, SignExtend ); }
-
-			__forceinline void operator()( const x86Register32& to, const x86Register8& from ) const	{ m_8to32::Emit( to, from, SignExtend ); }
-			__noinline void operator()( const x86Register32& to, const ModSibStrict<1>& sibsrc ) const	{ m_8to32::Emit( to, sibsrc, SignExtend ); }
-
-			MovExtendImplAll() {}		// don't ask.
-		};
-
-		// ------------------------------------------------------------------------
-		
-		extern const MovExtendImplAll<true>  iMOVSX;
-		extern const MovExtendImplAll<false> iMOVZX;
-
+		#include "ix86_impl_group1.h"
+		#include "ix86_impl_group2.h"
+		#include "ix86_impl_movs.h"
 
 		// if the immediate is zero, we can replace the instruction, or ignore it
 		// entirely, depending on the instruction being issued.  That's what we do here.
@@ -1021,6 +648,63 @@ namespace x86Emitter
 		}*/
 
 	}
+
+	// ------------------------------------------------------------------------
+
+	// ----- Group 1 Instruction Class -----
+
+	extern const Internal::Group1ImplAll<Internal::G1Type_ADD> iADD;
+	extern const Internal::Group1ImplAll<Internal::G1Type_OR>  iOR;
+	extern const Internal::Group1ImplAll<Internal::G1Type_ADC> iADC;
+	extern const Internal::Group1ImplAll<Internal::G1Type_SBB> iSBB;
+	extern const Internal::Group1ImplAll<Internal::G1Type_AND> iAND;
+	extern const Internal::Group1ImplAll<Internal::G1Type_SUB> iSUB;
+	extern const Internal::Group1ImplAll<Internal::G1Type_XOR> iXOR;
+	extern const Internal::Group1ImplAll<Internal::G1Type_CMP> iCMP;
+
+	// ----- Group 2 Instruction Class -----
+	// Optimization Note: For Imm forms, we ignore the instruction if the shift count is
+	// zero.  This is a safe optimization since any zero-value shift does not affect any
+	// flags.
+
+	extern const Internal::Group2ImplAll<Internal::G2Type_ROL> iROL;
+	extern const Internal::Group2ImplAll<Internal::G2Type_ROR> iROR;
+	extern const Internal::Group2ImplAll<Internal::G2Type_RCL> iRCL;
+	extern const Internal::Group2ImplAll<Internal::G2Type_RCR> iRCR;
+	extern const Internal::Group2ImplAll<Internal::G2Type_SHL> iSHL;
+	extern const Internal::Group2ImplAll<Internal::G2Type_SHR> iSHR;
+	extern const Internal::Group2ImplAll<Internal::G2Type_SAR> iSAR;
+
+	extern const Internal::MovExtendImplAll<true>  iMOVSX;
+	extern const Internal::MovExtendImplAll<false> iMOVZX;	
+
+	extern const Internal::CMovImplGeneric iCMOV;
+
+	extern const Internal::CMovImplAll<Jcc_Above>			iCMOVA;
+	extern const Internal::CMovImplAll<Jcc_AboveOrEqual>	iCMOVAE;
+	extern const Internal::CMovImplAll<Jcc_Below>			iCMOVB;
+	extern const Internal::CMovImplAll<Jcc_BelowOrEqual>	iCMOVBE;
+
+	extern const Internal::CMovImplAll<Jcc_Greater>			iCMOVG;
+	extern const Internal::CMovImplAll<Jcc_GreaterOrEqual>	iCMOVGE;
+	extern const Internal::CMovImplAll<Jcc_Less>			iCMOVL;
+	extern const Internal::CMovImplAll<Jcc_LessOrEqual>		iCMOVLE;
+
+	extern const Internal::CMovImplAll<Jcc_Zero>			iCMOVZ;
+	extern const Internal::CMovImplAll<Jcc_Equal>			iCMOVE;
+	extern const Internal::CMovImplAll<Jcc_NotZero>			iCMOVNZ;
+	extern const Internal::CMovImplAll<Jcc_NotEqual>		iCMOVNE;
+
+	extern const Internal::CMovImplAll<Jcc_Overflow>		iCMOVO;
+	extern const Internal::CMovImplAll<Jcc_NotOverflow>		iCMOVNO;
+	extern const Internal::CMovImplAll<Jcc_Carry>			iCMOVC;
+	extern const Internal::CMovImplAll<Jcc_NotCarry>		iCMOVNC;
+
+	extern const Internal::CMovImplAll<Jcc_Signed>			iCMOVS;
+	extern const Internal::CMovImplAll<Jcc_Unsigned>		iCMOVNS;
+	extern const Internal::CMovImplAll<Jcc_ParityEven>		iCMOVPE;
+	extern const Internal::CMovImplAll<Jcc_ParityOdd>		iCMOVPO;
+
 }
 
 #include "ix86_inlines.inl"

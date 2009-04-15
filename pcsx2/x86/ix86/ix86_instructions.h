@@ -43,76 +43,80 @@ namespace x86Emitter
 	// forms are functionally equivalent to Mov reg,imm, and thus better written as MOVs
 	// instead.
 
-	extern void LEA( x86Register32 to, const ModSibBase& src, bool preserve_flags=false );
-	extern void LEA( x86Register16 to, const ModSibBase& src, bool preserve_flags=false );
+	extern void iLEA( iRegister32 to, const ModSibBase& src, bool preserve_flags=false );
+	extern void iLEA( iRegister16 to, const ModSibBase& src, bool preserve_flags=false );
 
 	// ----- Push / Pop Instructions  -----
+	// Note: pushad/popad implementations are intentionally left out.  The instructions are
+	// invalid in x64, and are super slow on x32.  Use multiple Push/Pop instructions instead.
 
-	extern void POP( x86Register32 from );
-	extern void POP( const ModSibBase& from );
+	extern void iPOP( const ModSibBase& from );
+	extern void iPUSH( const ModSibBase& from );
 
-	extern void PUSH( u32 imm );
-	extern void PUSH( x86Register32 from );
-	extern void PUSH( const ModSibBase& from );
+	static __forceinline void iPOP( iRegister32 from )	{ write8( 0x58 | from.Id ); }
+	static __forceinline void iPOP( void* from )		{ iPOP( ptr[from] ); }
 
-	static __forceinline void POP( void* from )  { POP( ptr[from] ); }
-	static __forceinline void PUSH( void* from ) { PUSH( ptr[from] ); }
+	static __forceinline void iPUSH( u32 imm )			{ write8( 0x68 ); write32( imm ); }
+	static __forceinline void iPUSH( iRegister32 from )	{ write8( 0x50 | from.Id ); }
+	static __forceinline void iPUSH( void* from )		{ iPUSH( ptr[from] ); }
 
-	// ------------------------------------------------------------------------
-	using Internal::iADD;
-	using Internal::iOR;
-	using Internal::iADC;
-	using Internal::iSBB;
-	using Internal::iAND;
-	using Internal::iSUB;
-	using Internal::iXOR;
-	using Internal::iCMP;
+	// pushes the EFLAGS register onto the stack
+	static __forceinline void iPUSHFD()	{ write8( 0x9C ); }
+	// pops the EFLAGS register from the stack
+	static __forceinline void iPOPFD()	{ write8( 0x9D ); }
 
-	using Internal::iROL;
-	using Internal::iROR;
-	using Internal::iRCL;
-	using Internal::iRCR;
-	using Internal::iSHL;
-	using Internal::iSHR;
-	using Internal::iSAR;
+	// ----- Miscellaneous Instructions  -----
+	// Various Instructions with no parameter and no special encoding logic.
 
-	using Internal::iMOVSX;
-	using Internal::iMOVZX;
+	__forceinline void iRET()	{ write8( 0xC3 ); }
+	__forceinline void iCBW()	{ write16( 0x9866 );  }
+	__forceinline void iCWD()	{ write8( 0x98 ); }
+	__forceinline void iCDQ()	{ write8( 0x99 ); }
+	__forceinline void iCWDE()	{ write8( 0x98 ); }
+
+	__forceinline void iLAHF()	{ write8( 0x9f ); }
+	__forceinline void iSAHF()	{ write8( 0x9e ); }
+
+	__forceinline void iSTC()	{ write8( 0xF9 ); }
+	__forceinline void iCLC()	{ write8( 0xF8 ); }
+
+	// NOP 1-byte
+	__forceinline void iNOP()	{ write8(0x90); }
 
 	//////////////////////////////////////////////////////////////////////////////////////////
 	// MOV instructions!
 	// ---------- 32 Bit Interface -----------
-	extern void iMOV( const x86Register32& to, const x86Register32& from );
-	extern void iMOV( const ModSibBase& sibdest, const x86Register32& from );
-	extern void iMOV( const x86Register32& to, const ModSibBase& sibsrc );
-	extern void iMOV( const x86Register32& to, const void* src );
-	extern void iMOV( const void* dest, const x86Register32& from );
+	extern void iMOV( const iRegister32& to, const iRegister32& from );
+	extern void iMOV( const ModSibBase& sibdest, const iRegister32& from );
+	extern void iMOV( const iRegister32& to, const ModSibBase& sibsrc );
+	extern void iMOV( const iRegister32& to, const void* src );
+	extern void iMOV( void* dest, const iRegister32& from );
 
 	// preserve_flags  - set to true to disable optimizations which could alter the state of
 	//   the flags (namely replacing mov reg,0 with xor).
-	extern void iMOV( const x86Register32& to, u32 imm, bool preserve_flags=false );
+	extern void iMOV( const iRegister32& to, u32 imm, bool preserve_flags=false );
 	extern void iMOV( const ModSibStrict<4>& sibdest, u32 imm );
 
 	// ---------- 16 Bit Interface -----------
-	extern void iMOV( const x86Register16& to, const x86Register16& from );
-	extern void iMOV( const ModSibBase& sibdest, const x86Register16& from );
-	extern void iMOV( const x86Register16& to, const ModSibBase& sibsrc );
-	extern void iMOV( const x86Register16& to, const void* src );
-	extern void iMOV( const void* dest, const x86Register16& from );
+	extern void iMOV( const iRegister16& to, const iRegister16& from );
+	extern void iMOV( const ModSibBase& sibdest, const iRegister16& from );
+	extern void iMOV( const iRegister16& to, const ModSibBase& sibsrc );
+	extern void iMOV( const iRegister16& to, const void* src );
+	extern void iMOV( void* dest, const iRegister16& from );
 
 	// preserve_flags  - set to true to disable optimizations which could alter the state of
 	//   the flags (namely replacing mov reg,0 with xor).
-	extern void iMOV( const x86Register16& to, u16 imm, bool preserve_flags=false );
+	extern void iMOV( const iRegister16& to, u16 imm, bool preserve_flags=false );
 	extern void iMOV( const ModSibStrict<2>& sibdest, u16 imm );
 
 	// ---------- 8 Bit Interface -----------
-	extern void iMOV( const x86Register8& to, const x86Register8& from );
-	extern void iMOV( const ModSibBase& sibdest, const x86Register8& from );
-	extern void iMOV( const x86Register8& to, const ModSibBase& sibsrc );
-	extern void iMOV( const x86Register8& to, const void* src );
-	extern void iMOV( const void* dest, const x86Register8& from );
+	extern void iMOV( const iRegister8& to, const iRegister8& from );
+	extern void iMOV( const ModSibBase& sibdest, const iRegister8& from );
+	extern void iMOV( const iRegister8& to, const ModSibBase& sibsrc );
+	extern void iMOV( const iRegister8& to, const void* src );
+	extern void iMOV( void* dest, const iRegister8& from );
 
-	extern void iMOV( const x86Register8& to, u8 imm, bool preserve_flags=false );
+	extern void iMOV( const iRegister8& to, u8 imm, bool preserve_flags=false );
 	extern void iMOV( const ModSibStrict<1>& sibdest, u8 imm );
 
 	//////////////////////////////////////////////////////////////////////////////////////////
