@@ -1207,7 +1207,7 @@ int  _VIF0chain()
 	return ret;
 }
 
-bool _chainVIF0()
+int _chainVIF0()
 {
 	int id, ret;
 
@@ -1252,9 +1252,9 @@ bool _chainVIF0()
 		VIF_LOG("dmaIrq Set\n");
 
 		vif0.done = true;
-		return vif0.done;												   //End Transfer
+		return (vif0.done)?1:0;												   //End Transfer
 	}
-	return vif0.done;												   //Return Done
+	return (vif0.done)?1:0;												   //Return Done
 }
 
 void  vif0Interrupt()
