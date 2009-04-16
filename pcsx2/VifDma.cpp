@@ -557,7 +557,7 @@ static void VIFunpack(u32 *data, vifCode *v, unsigned int size, const unsigned i
 		if(tempsize > (u32)(VIFdmanum ? 0x4000 : 0x1000)) 
 		{
 			
-			DevCon::Notice("VIF%x Unpack ending %x > %x", params VIFdmanum, tempsize, VIFdmanum ? 0x4000 : 0x1000);
+			//DevCon::Notice("VIF%x Unpack ending %x > %x", params VIFdmanum, tempsize, VIFdmanum ? 0x4000 : 0x1000);
 			tempsize = size;
 			size = 0;
 		} else tempsize = 0;
