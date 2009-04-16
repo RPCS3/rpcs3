@@ -543,36 +543,24 @@ static void VIFunpack(u32 *data, vifCode *v, unsigned int size, const unsigned i
 	memsize = size;
 #endif
 	
-
-#ifdef VIFUNPACKDEBUG
-
-	if((vif->tag.addr + (size / (VIFfuncTable[ vif->cmd & 0xf ].gsize * vifRegs->cycle.wl)) * 
-		((vifRegs->cycle.cl - vifRegs->cycle.wl) * 16)) > (u32)(VIFdmanum ? 0x4000 : 0x1000)) 
-	{
-		//Sanity Check (memory overflow)
-		DevCon::Notice("VIF%x Unpack ending %x > %x", params VIFdmanum, vif->tag.addr, VIFdmanum ? 0x4000 : 0x1000);
-		
-	}
-#endif
-
-	tempsize = (vif->tag.addr + (size / (ft->gsize * vifRegs->cycle.wl)) * 
-		((vifRegs->cycle.cl - vifRegs->cycle.wl) * 16)) + ((size / ft->gsize) * 16);
-
-	//Sanity Check (memory overflow)
-	if(tempsize > (u32)(VIFdmanum ? 0x4000 : 0x1000)) 
-	{
-		
-	//	DevCon::Notice("VIF%x Unpack ending %x > %x", params VIFdmanum, tempsize, VIFdmanum ? 0x4000 : 0x1000);
-		tempsize = size;
-		size = 0;
-	} else tempsize = 0;
-
 	if (vifRegs->cycle.cl >= vifRegs->cycle.wl)   // skipping write
 	{
 
 #ifdef _DEBUG
 		static int s_count = 0;
 #endif
+
+		tempsize = (vif->tag.addr + (size / (ft->gsize * vifRegs->cycle.wl)) * 
+			((vifRegs->cycle.cl - vifRegs->cycle.wl) * 16)) + ((size / ft->gsize) * 16);
+
+		//Sanity Check (memory overflow)
+		if(tempsize > (u32)(VIFdmanum ? 0x4000 : 0x1000)) 
+		{
+			
+			DevCon::Notice("VIF%x Unpack ending %x > %x", params VIFdmanum, tempsize, VIFdmanum ? 0x4000 : 0x1000);
+			tempsize = size;
+			size = 0;
+		} else tempsize = 0;
 
 
 		if (size >= ft->gsize)
@@ -735,8 +723,8 @@ static void VIFunpack(u32 *data, vifCode *v, unsigned int size, const unsigned i
 	else   /* filling write */
 	{
 
-		if((u32)(size / ft->gsize) < vifRegs->num && vifRegs->cycle.cl != 0) 
-			DevCon::Notice("Filling write warning! Size < packet size and CL != 0");
+		if((u32)(((size / ft->gsize) / vifRegs->cycle.cl) * vifRegs->cycle.wl) < vifRegs->num && vifRegs->cycle.cl != 0) 
+			DevCon::Notice("Filling write warning! %x < %x and CL = %x WL = %x", params (size / ft->gsize), vifRegs->num, vifRegs->cycle.cl, vifRegs->cycle.wl);
 				
 		VIFUNPACK_LOG("filling write %d cl %d, wl %d mask %x mode %x unpacktype %x", vifRegs->num, vifRegs->cycle.cl, vifRegs->cycle.wl, vifRegs->mask, vifRegs->mode, unpackType);
 		while (vifRegs->num > 0)
@@ -748,6 +736,11 @@ static void VIFunpack(u32 *data, vifCode *v, unsigned int size, const unsigned i
 			
 			if (vif->cl < vifRegs->cycle.cl)   /* unpack one qword */
 			{
+				if(size < ft->gsize) 
+				{
+					VIF_LOG("Out of Filling write data");
+					break;
+				}
 				func(dest, (u32*)cdata, ft->qsize);
 				cdata += ft->gsize;
 				size -= ft->gsize;
@@ -756,12 +749,7 @@ static void VIFunpack(u32 *data, vifCode *v, unsigned int size, const unsigned i
 				if (vif->cl == vifRegs->cycle.wl)
 				{
 					vif->cl = 0;
-				}
-				if(size < ft->gsize) 
-				{
-					VIF_LOG("Out of Filling write data");
-					break;
-				}
+				}				
 			}
 			else
 			{

@@ -1370,7 +1370,6 @@ int FIFOto_write(u32* pMem, int size)
 	}	\
 }
 
-#define gif ((DMACh*)&PS2MEM_HW[0xA000])
 extern void gsInterrupt();
 
 int IPU1dma()
