@@ -147,6 +147,15 @@ namespace x86Emitter
 #	define __noinline
 #endif
 
+	// ModRM 'mod' field enumeration.   Provided mostly for reference:
+	enum ModRm_ModField
+	{
+		Mod_NoDisp = 0,		// effective address operation with no displacement, in the form of [reg] (or uses special Disp32-only encoding in the case of [ebp] form)
+		Mod_Disp8,			// effective address operation with 8 bit displacement, in the form of [reg+disp8]
+		Mod_Disp32,			// effective address operation with 32 bit displacement, in the form of [reg+disp32],
+		Mod_Direct,			// direct reg/reg operation
+	};
+
 	static const int ModRm_Direct = 3;		// when used as the first parameter, specifies direct register operation (no mem)
 	static const int ModRm_UseSib = 4;		// same index value as ESP (used in RM field)
 	static const int ModRm_UseDisp32 = 5;	// same index value as EBP (used in Mod field)
@@ -636,57 +645,17 @@ namespace x86Emitter
 	namespace Internal
 	{
 		extern void ModRM( uint mod, uint reg, uint rm );
+		extern void ModRM_Direct( uint reg, uint rm );
 		extern void SibSB( u32 ss, u32 index, u32 base );
 		extern void iWriteDisp( int regfield, s32 displacement );
 		extern void iWriteDisp( int regfield, const void* address );
 
 		extern void EmitSibMagic( uint regfield, const ModSibBase& info );
 
-		#include "ix86_impl_group1.h"
-		#include "ix86_impl_group2.h"
-		#include "ix86_impl_movs.h"		// cmov and movsx/zx
-		#include "ix86_impl_dwshift.h"	// dowubleword shifts!
-
-		// if the immediate is zero, we can replace the instruction, or ignore it
-		// entirely, depending on the instruction being issued.  That's what we do here.
-		//  (returns FALSE if no optimization is performed)
-		// [TODO] : Work-in-progress!
-		//template< G1Type InstType, typename RegType >
-		//static __forceinline void _optimize_imm0( RegType to );
-
-		/*template< G1Type InstType, typename RegType >
-		static __forceinline void _optimize_imm0( const RegType& to )
-		{
-			switch( InstType )
-			{
-				// ADD, SUB, and OR can be ignored if the imm is zero..
-				case G1Type_ADD:
-				case G1Type_SUB:
-				case G1Type_OR:
-					return true;
-
-				// ADC and SBB can never be ignored (could have carry bits)
-				// XOR behavior is distinct as well [or is it the same as NEG or NOT?]
-				case G1Type_ADC:
-				case G1Type_SBB:
-				case G1Type_XOR:
-					return false;
-
-				// replace AND with XOR (or SUB works too.. whatever!)
-				case G1Type_AND:
-					iXOR( to, to );
-				return true;
-
-				// replace CMP with OR reg,reg:
-				case G1Type_CMP:
-					iOR( to, to );
-				return true;
-
-				jNO_DEFAULT
-			}
-			return false;
-		}*/
-
+		#include "implement/group1.h"
+		#include "implement/group2.h"
+		#include "implement/movs.h"		// cmov and movsx/zx
+		#include "implement/dwshift.h"	// dowubleword shifts!
 	}
 
 	// ------------------------------------------------------------------------

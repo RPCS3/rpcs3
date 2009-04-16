@@ -19,7 +19,6 @@
 #pragma once
 
 // Note: This header is meant to be included from within the x86Emitter::Internal namespace.
-
 // Instructions implemented in this header are as follows -->>
 
 enum G1Type
@@ -52,7 +51,7 @@ public:
 	{
 		prefix16();
 		iWrite<u8>( (Is8BitOperand() ? 0 : 1) | (InstType<<3) ); 
-		ModRM( 3, from.Id, to.Id );
+		ModRM_Direct( from.Id, to.Id );
 	}
 
 	static __emitinline void Emit( const ModSibBase& sibdest, const iRegister<OperandSize>& from ) 
@@ -89,7 +88,7 @@ public:
 		if( !Is8BitOperand() && is_s8( imm ) )
 		{
 			iWrite<u8>( 0x83 );
-			ModRM( 3, InstType, to.Id );
+			ModRM_Direct( InstType, to.Id );
 			iWrite<s8>( imm );
 		}
 		else
@@ -99,7 +98,7 @@ public:
 			else
 			{
 				iWrite<u8>( Is8BitOperand() ? 0x80 : 0x81 );
-				ModRM( 3, InstType, to.Id );
+				ModRM_Direct( InstType, to.Id );
 			}
 			iWrite<ImmType>( imm );
 		}
@@ -148,11 +147,7 @@ public:
 	__noinline void operator()( const iRegister32& to,		const ModSibBase& sibsrc ) const{ m_32::Emit( to, sibsrc ); }
 	__noinline void operator()( const ModSibStrict<4>& sibdest, u32 imm ) const				{ m_32::Emit( sibdest, imm ); }
 
-	void operator()( const iRegister32& to, u32 imm, bool needs_flags=false ) const
-	{
-		//if( needs_flags || (imm != 0) || !_optimize_imm0() )
-		m_32::Emit( to, imm );
-	}
+	void operator()( const iRegister32& to, u32 imm ) const									{ m_32::Emit( to, imm ); }
 
 	// ---------- 16 Bit Interface -----------
 	__forceinline void operator()( const iRegister16& to,	const iRegister16& from ) const	{ m_16::Emit( to, from ); }
@@ -162,7 +157,7 @@ public:
 	__noinline void operator()( const iRegister16& to,		const ModSibBase& sibsrc ) const{ m_16::Emit( to, sibsrc ); }
 	__noinline void operator()( const ModSibStrict<2>& sibdest, u16 imm ) const				{ m_16::Emit( sibdest, imm ); }
 
-	void operator()( const iRegister16& to, u16 imm, bool needs_flags=false ) const			{ m_16::Emit( to, imm ); }
+	void operator()( const iRegister16& to, u16 imm ) const									{ m_16::Emit( to, imm ); }
 
 	// ---------- 8 Bit Interface -----------
 	__forceinline void operator()( const iRegister8& to,	const iRegister8& from ) const	{ m_8::Emit( to, from ); }
@@ -172,7 +167,7 @@ public:
 	__noinline void operator()( const iRegister8& to,		const ModSibBase& sibsrc ) const{ m_8::Emit( to, sibsrc ); }
 	__noinline void operator()( const ModSibStrict<1>& sibdest, u8 imm ) const				{ m_8::Emit( sibdest, imm ); }
 
-	void operator()( const iRegister8& to, u8 imm, bool needs_flags=false ) const			{ m_8::Emit( to, imm ); }
+	void operator()( const iRegister8& to, u8 imm ) const									{ m_8::Emit( to, imm ); }
 
 	Group1ImplAll() {}		// Why does GCC need these?
 };

@@ -19,7 +19,6 @@
 #pragma once
 
 // Note: This header is meant to be included from within the x86Emitter::Internal namespace.
-
 // Instructions implemented in this header are as follows -->>
 
 enum G2Type
@@ -56,7 +55,7 @@ public:
 	{
 		prefix16();
 		iWrite<u8>( Is8BitOperand() ? 0xd2 : 0xd3 );
-		ModRM( 3, InstType, to.Id );
+		ModRM_Direct( InstType, to.Id );
 	}
 
 	static __emitinline void Emit( const iRegister<OperandSize>& to, u8 imm ) 
@@ -68,12 +67,12 @@ public:
 		{
 			// special encoding of 1's
 			iWrite<u8>( Is8BitOperand() ? 0xd0 : 0xd1 );
-			ModRM( 3, InstType, to.Id );
+			ModRM_Direct( InstType, to.Id );
 		}
 		else
 		{
 			iWrite<u8>( Is8BitOperand() ? 0xc0 : 0xc1 );
-			ModRM( 3, InstType, to.Id );
+			ModRM_Direct( InstType, to.Id );
 			iWrite<u8>( imm );
 		}
 	}

@@ -176,6 +176,31 @@ emitterT void SHRD32ItoR( x86IntRegType to, x86IntRegType from, u8 shift )
 	iSHRD( iRegister32(to), iRegister32(from), shift );
 }
 
+/* mul eax by r32 to edx:eax */
+emitterT void MUL32R( x86IntRegType from )		{ iUMUL( iRegister32(from) ); }
+/* imul eax by r32 to edx:eax */
+emitterT void IMUL32R( x86IntRegType from )		{ iSMUL( iRegister32(from) ); }
+/* mul eax by m32 to edx:eax */
+emitterT void MUL32M( u32 from )				{ iUMUL( ptr32[from] ); }
+/* imul eax by m32 to edx:eax */
+emitterT void IMUL32M( u32 from )				{ iSMUL( ptr32[from] ); }
+
+/* imul r32 by r32 to r32 */
+emitterT void IMUL32RtoR( x86IntRegType to, x86IntRegType from ) 
+{
+	iSMUL( iRegister32(to), iRegister32(from) );
+}
+
+/* div eax by r32 to edx:eax */
+emitterT void DIV32R( x86IntRegType from )		{ iUDIV( iRegister32(from) ); }
+/* idiv eax by r32 to edx:eax */
+emitterT void IDIV32R( x86IntRegType from )		{ iSDIV( iRegister32(from) ); }
+/* div eax by m32 to edx:eax */
+emitterT void DIV32M( u32 from )				{ iUDIV( ptr32[from] ); }
+/* idiv eax by m32 to edx:eax */
+emitterT void IDIV32M( u32 from )				{ iSDIV( ptr32[from] ); }
+
+
 emitterT void LEA32RtoR(x86IntRegType to, x86IntRegType from, s32 offset)
 {
 	iLEA( iRegister32( to ), ptr[x86IndexReg(from)+offset] );
@@ -412,30 +437,6 @@ emitterT void DEC16M( u32 to )
 	ModRM( 0, 1, DISP32 );
 	write32( MEMADDR(to, 4) );
 }
-
-/* mul eax by r32 to edx:eax */
-emitterT void MUL32R( x86IntRegType from )		{ iUMUL( iRegister32(from) ); }
-/* imul eax by r32 to edx:eax */
-emitterT void IMUL32R( x86IntRegType from )		{ iSMUL( iRegister32(from) ); }
-/* mul eax by m32 to edx:eax */
-emitterT void MUL32M( u32 from )				{ iUMUL( ptr32[from] ); }
-/* imul eax by m32 to edx:eax */
-emitterT void IMUL32M( u32 from )				{ iSMUL( ptr32[from] ); }
-
-/* imul r32 by r32 to r32 */
-emitterT void IMUL32RtoR( x86IntRegType to, x86IntRegType from ) 
-{
-	iSMUL( iRegister32(to), iRegister32(from) );
-}
-
-/* div eax by r32 to edx:eax */
-emitterT void DIV32R( x86IntRegType from )		{ iUDIV( iRegister32(from) ); }
-/* idiv eax by r32 to edx:eax */
-emitterT void IDIV32R( x86IntRegType from )		{ iSDIV( iRegister32(from) ); }
-/* div eax by m32 to edx:eax */
-emitterT void DIV32M( u32 from )				{ iUDIV( ptr32[from] ); }
-/* idiv eax by m32 to edx:eax */
-emitterT void IDIV32M( u32 from )				{ iSDIV( ptr32[from] ); }
 
 ////////////////////////////////////
 // logical instructions			/

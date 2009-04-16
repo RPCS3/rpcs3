@@ -44,8 +44,9 @@ public:
 
 	static __emitinline void Emit( JccComparisonType cc, const iRegister<OperandSize>& to, const iRegister<OperandSize>& from )
 	{
+		if( to == from ) return;
 		emit_base( cc );
-		ModRM( 3, to.Id, from.Id );
+		ModRM( ModRm_Direct, to.Id, from.Id );
 	}
 
 	static __emitinline void Emit( JccComparisonType cc, const iRegister<OperandSize>& to, const void* src )
@@ -123,7 +124,7 @@ public:
 	static __emitinline void Emit( const iRegister<DestOperandSize>& to, const iRegister<SrcOperandSize>& from, bool SignExtend )
 	{
 		emit_base( SignExtend );
-		ModRM( 3, from.Id, to.Id );
+		ModRM_Direct( to.Id, from.Id );
 	}
 
 	static __emitinline void Emit( const iRegister<DestOperandSize>& to, const ModSibStrict<SrcOperandSize>& sibsrc, bool SignExtend )

@@ -18,7 +18,7 @@
 
 #pragma once
 
-// Header: ix86_impl_dwshift.h -- covers SHLD and SHRD.
+// Implementations here cover SHLD and SHRD.
 // Note: This header is meant to be included from within the x86Emitter::Internal namespace.
 
 
@@ -49,7 +49,7 @@ public:
 	{
 		prefix16();
 		write16( 0xa50f | (isShiftRight ? 0x800 : 0) );
-		ModRM( 3, from.Id, to.Id );
+		ModRM_Direct( from.Id, to.Id );
 	}
 
 	static __emitinline void Emit( const iRegister<OperandSize>& to, const iRegister<OperandSize>& from, u8 imm ) 
@@ -57,7 +57,7 @@ public:
 		if( imm == 0 ) return;
 		prefix16();
 		write16( 0xa40f | (isShiftRight ? 0x800 : 0) );
-		ModRM( 3, from.Id, to.Id );
+		ModRM_Direct( from.Id, to.Id );
 		write8( imm );
 	}
 

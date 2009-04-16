@@ -128,6 +128,11 @@ namespace Internal
 		//x86Ptr++;
 	}
 
+	__forceinline void ModRM_Direct( uint reg, uint rm )
+	{
+		ModRM( Mod_Direct, reg, rm );
+	}
+
 	__forceinline void SibSB( u32 ss, u32 index, u32 base )
 	{
 		iWrite<u8>( (ss << 6) | (index << 3) | base );
@@ -679,7 +684,7 @@ static __forceinline void EmitMulDiv_OneRegForm( MulDivType InstType, const ModS
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
-// 	All ioMul forms are valid for 16 and 32 bit register operands only!
+// 	All iMul forms are valid for 16 and 32 bit register operands only!
 
 template< typename ImmType >
 class iMulImpl
@@ -752,12 +757,6 @@ public:
 	}
 };
 
-namespace Internal
-{
-	typedef iMulImpl<u32> iMUL32;
-	typedef iMulImpl<u16> iMUL16;
-}
-
 __forceinline void iUMUL( const iRegister32& from )		{ EmitMulDiv_OneRegForm( MDT_Mul, from ); }
 __forceinline void iUMUL( const iRegister16& from )		{ EmitMulDiv_OneRegForm( MDT_Mul, from ); }
 __forceinline void iUMUL( const iRegister8& from )		{ EmitMulDiv_OneRegForm( MDT_Mul, from ); }
@@ -773,22 +772,32 @@ __forceinline void iSDIV( const iRegister16& from )		{ EmitMulDiv_OneRegForm( MD
 __forceinline void iSDIV( const iRegister8& from )		{ EmitMulDiv_OneRegForm( MDT_iDiv, from ); }
 __noinline void iSDIV( const ModSibSized& from )		{ EmitMulDiv_OneRegForm( MDT_iDiv, from ); }
 
-__forceinline void iSMUL( const iRegister32& from )										{ EmitMulDiv_OneRegForm( MDT_iMul, from ); }
+__forceinline void iSMUL( const iRegister32& from )		{ EmitMulDiv_OneRegForm( MDT_iMul, from ); }
+__forceinline void iSMUL( const iRegister16& from )		{ EmitMulDiv_OneRegForm( MDT_iMul, from ); }
+__forceinline void iSMUL( const iRegister8& from )		{ EmitMulDiv_OneRegForm( MDT_iMul, from ); }
+__noinline void iSMUL( const ModSibSized& from )		{ EmitMulDiv_OneRegForm( MDT_iMul, from ); }
+
+// ------------------------------------------------------------------------
+// iMUL's special forms (unique to iMUL alone)
+
+namespace Internal
+{
+	typedef iMulImpl<u32> iMUL32;
+	typedef iMulImpl<u16> iMUL16;
+}
+
 __forceinline void iSMUL( const iRegister32& to,	const iRegister32& from )			{ iMUL32::Emit( to, from ); }
 __forceinline void iSMUL( const iRegister32& to,	const void* src )					{ iMUL32::Emit( to, src ); }
 __forceinline void iSMUL( const iRegister32& to,	const iRegister32& from, s32 imm )	{ iMUL32::Emit( to, from, imm ); }
 __noinline void iSMUL( const iRegister32& to,	const ModSibBase& src )					{ iMUL32::Emit( to, src ); }
 __noinline void iSMUL( const iRegister32& to,	const ModSibBase& from, s32 imm )		{ iMUL32::Emit( to, from, imm ); }
 
-__forceinline void iSMUL( const iRegister16& from )										{ EmitMulDiv_OneRegForm( MDT_iMul, from ); }
 __forceinline void iSMUL( const iRegister16& to,	const iRegister16& from )			{ iMUL16::Emit( to, from ); }
 __forceinline void iSMUL( const iRegister16& to,	const void* src )					{ iMUL16::Emit( to, src ); }
 __forceinline void iSMUL( const iRegister16& to,	const iRegister16& from, s16 imm )	{ iMUL16::Emit( to, from, imm ); }
 __noinline void iSMUL( const iRegister16& to,	const ModSibBase& src )					{ iMUL16::Emit( to, src ); }
 __noinline void iSMUL( const iRegister16& to,	const ModSibBase& from, s16 imm )		{ iMUL16::Emit( to, from, imm ); }
 
-__forceinline void iSMUL( const iRegister8& from )		{ EmitMulDiv_OneRegForm( MDT_iMul, from ); }
-__noinline void iSMUL( const ModSibSized& from )		{ EmitMulDiv_OneRegForm( MDT_iMul, from ); }
 
 
 //////////////////////////////////////////////////////////////////////////////////////////
