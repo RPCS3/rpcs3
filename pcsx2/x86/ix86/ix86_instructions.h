@@ -82,6 +82,42 @@ namespace x86Emitter
 
 	// NOP 1-byte
 	__forceinline void iNOP()	{ write8(0x90); }
+	
+	//////////////////////////////////////////////////////////////////////////////////////////
+	// MUL / DIV instructions
+	
+	extern void iUMUL( const iRegister32& from );
+	extern void iUMUL( const iRegister16& from );
+	extern void iUMUL( const iRegister8& from );
+	extern void iUMUL( const ModSibSized& from );
+
+	extern void iUDIV( const iRegister32& from );
+	extern void iUDIV( const iRegister16& from );
+	extern void iUDIV( const iRegister8& from );
+	extern void iUDIV( const ModSibSized& from );
+
+	extern void iSDIV( const iRegister32& from );
+	extern void iSDIV( const iRegister16& from );
+	extern void iSDIV( const iRegister8& from );
+	extern void iSDIV( const ModSibSized& from );
+
+	extern void iSMUL( const iRegister32& from );
+	extern void iSMUL( const iRegister32& to,	const iRegister32& from );
+	extern void iSMUL( const iRegister32& to,	const void* src );
+	extern void iSMUL( const iRegister32& to,	const iRegister32& from, s32 imm );
+	extern void iSMUL( const iRegister32& to,	const ModSibBase& src );
+	extern void iSMUL( const iRegister32& to,	const ModSibBase& src, s32 imm );
+
+	extern void iSMUL( const iRegister16& from );
+	extern void iSMUL( const iRegister16& to,	const iRegister16& from );
+	extern void iSMUL( const iRegister16& to,	const void* src );
+	extern void iSMUL( const iRegister16& to,	const iRegister16& from, s16 imm );
+	extern void iSMUL( const iRegister16& to,	const ModSibBase& src );
+	extern void iSMUL( const iRegister16& to,	const ModSibBase& src, s16 imm );
+
+	extern void iSMUL( const iRegister8& from );
+	extern void iSMUL( const ModSibSized& from );
+
 
 	//////////////////////////////////////////////////////////////////////////////////////////
 	// MOV instructions!

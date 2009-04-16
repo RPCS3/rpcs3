@@ -52,10 +52,8 @@ protected:
 	static void prefix16()		{ if( OperandSize == 2 ) iWrite<u8>( 0x66 ); }
 
 public:
-	static __emitinline void Emit( const iRegister<OperandSize>& to, const iRegister8& from ) 
+	static __emitinline void Emit( const iRegister<OperandSize>& to ) 
 	{
-		jASSUME( from == cl );	// cl is the only valid shift register.  (turn this into a compile time check?)
-
 		prefix16();
 		iWrite<u8>( Is8BitOperand() ? 0xd2 : 0xd3 );
 		ModRM( 3, InstType, to.Id );
@@ -80,13 +78,11 @@ public:
 		}
 	}
 
-	static __emitinline void Emit( const ModSibStrict<OperandSize>& sibdest, const iRegister8& from ) 
+	static __emitinline void Emit( const ModSibStrict<OperandSize>& sibdest ) 
 	{
-		jASSUME( from == cl );	// cl is the only valid shift register.  (turn this into a compile time check?)
-
 		prefix16();
 		iWrite<u8>( Is8BitOperand() ? 0xd2 : 0xd3 );
-		EmitSibMagic( from.Id, sibdest );
+		EmitSibMagic( InstType, sibdest );
 	}
 
 	static __emitinline void Emit( const ModSibStrict<OperandSize>& sibdest, u8 imm ) 
@@ -130,20 +126,20 @@ protected:
 
 public:
 	// ---------- 32 Bit Interface -----------
-	__forceinline void operator()( const iRegister32& to,		const iRegister8& from ) const	{ m_32::Emit( to, from ); }
-	__noinline void operator()( const ModSibStrict<4>& sibdest,	const iRegister8& from ) const	{ m_32::Emit( sibdest, from ); }
+	__forceinline void operator()( const iRegister32& to,		__unused const iRegisterCL& from ) const{ m_32::Emit( to ); }
+	__noinline void operator()( const ModSibStrict<4>& sibdest,	__unused const iRegisterCL& from ) const{ m_32::Emit( sibdest ); }
 	__noinline void operator()( const ModSibStrict<4>& sibdest, u8 imm ) const					{ m_32::Emit( sibdest, imm ); }
 	void operator()( const iRegister32& to, u8 imm ) const										{ m_32::Emit( to, imm ); }
 
 	// ---------- 16 Bit Interface -----------
-	__forceinline void operator()( const iRegister16& to,		const iRegister8& from ) const	{ m_16::Emit( to, from ); }
-	__noinline void operator()( const ModSibStrict<2>& sibdest,	const iRegister8& from ) const	{ m_16::Emit( sibdest, from ); }
+	__forceinline void operator()( const iRegister16& to,		__unused const iRegisterCL& from ) const{ m_16::Emit( to ); }
+	__noinline void operator()( const ModSibStrict<2>& sibdest,	__unused const iRegisterCL& from ) const{ m_16::Emit( sibdest ); }
 	__noinline void operator()( const ModSibStrict<2>& sibdest, u8 imm ) const					{ m_16::Emit( sibdest, imm ); }
 	void operator()( const iRegister16& to, u8 imm ) const										{ m_16::Emit( to, imm ); }
 
 	// ---------- 8 Bit Interface -----------
-	__forceinline void operator()( const iRegister8& to,		const iRegister8& from ) const	{ m_8::Emit( to, from ); }
-	__noinline void operator()( const ModSibStrict<1>& sibdest,	const iRegister8& from ) const	{ m_8::Emit( sibdest, from ); }
+	__forceinline void operator()( const iRegister8& to,		__unused const iRegisterCL& from ) const{ m_8::Emit( to ); }
+	__noinline void operator()( const ModSibStrict<1>& sibdest,	__unused const iRegisterCL& from ) const{ m_8::Emit( sibdest ); }
 	__noinline void operator()( const ModSibStrict<1>& sibdest, u8 imm ) const					{ m_8::Emit( sibdest, imm ); }
 	void operator()( const iRegister8& to, u8 imm ) const										{ m_8::Emit( to, imm ); }
 

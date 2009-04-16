@@ -2926,6 +2926,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\x86\ix86\ix86_impl_dwshift.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\x86\ix86\ix86_impl_group1.h"
 				>
 			</File>

@@ -147,6 +147,7 @@ namespace x86Emitter
 #	define __noinline
 #endif
 
+	static const int ModRm_Direct = 3;		// when used as the first parameter, specifies direct register operation (no mem)
 	static const int ModRm_UseSib = 4;		// same index value as ESP (used in RM field)
 	static const int ModRm_UseDisp32 = 5;	// same index value as EBP (used in Mod field)
 
@@ -220,7 +221,7 @@ namespace x86Emitter
 			return *this;
 		}
 	};
-
+	
 	// ------------------------------------------------------------------------
 	// Note: GCC parses templates ahead of time apparently as a 'favor' to the programmer, which
 	// means it finds undeclared variables when MSVC does not (Since MSVC compiles templates
@@ -233,32 +234,25 @@ namespace x86Emitter
 	typedef iRegister<2> iRegister16;
 	typedef iRegister<1> iRegister8;
 
-	extern const iRegister32 eax;
-	extern const iRegister32 ebx;
-	extern const iRegister32 ecx;
-	extern const iRegister32 edx;
-	extern const iRegister32 esi;
-	extern const iRegister32 edi;
-	extern const iRegister32 ebp;
-	extern const iRegister32 esp;
+	class iRegisterCL : public iRegister8
+	{
+	public:
+		iRegisterCL(): iRegister8( 1 ) {}
+	};
 
-	extern const iRegister16 ax;
-	extern const iRegister16 bx;
-	extern const iRegister16 cx;
-	extern const iRegister16 dx;
-	extern const iRegister16 si;
-	extern const iRegister16 di;
-	extern const iRegister16 bp;
-	extern const iRegister16 sp;
+	extern const iRegister32
+		eax, ebx, ecx, edx,
+		esi, edi, ebp, esp;
 
-	extern const iRegister8 al;
-	extern const iRegister8 cl;
-	extern const iRegister8 dl;
-	extern const iRegister8 bl;
-	extern const iRegister8 ah;
-	extern const iRegister8 ch;
-	extern const iRegister8 dh;
-	extern const iRegister8 bh;
+	extern const iRegister16
+		ax, bx, cx, dx,
+		si, di, bp, sp;
+
+	extern const iRegister8
+		al, dl, bl,
+		ah, ch, dh, bh;
+
+	extern const iRegisterCL cl;		// I'm special!
 
 	//////////////////////////////////////////////////////////////////////////////////////////
 	// Use 32 bit registers as out index register (for ModSib memory address calculations)
@@ -346,6 +340,13 @@ namespace x86Emitter
 		__forceinline iAddressInfo operator-( s32 imm ) const { return iAddressInfo( *this ).Add( -imm ); }
 	};
 
+	enum OperandSizeType
+	{
+		OpSize_8 = 1,
+		OpSize_16 = 2,
+		OpSize_32 = 4,
+	};
+	
 	//////////////////////////////////////////////////////////////////////////////////////////
 	// ModSib - Internal low-level representation of the ModRM/SIB information.
 	//
@@ -387,26 +388,64 @@ namespace x86Emitter
 	};
 	
 	//////////////////////////////////////////////////////////////////////////////////////////
-	// Strictly-typed version of ModSibBase, which is used to apply operand size information
-	// to ImmToMem operations.
 	//
-	template< int OperandSize >
-	class ModSibStrict : public ModSibBase
+	class ModSibSized : public ModSibBase
 	{
 	public:
-		__forceinline explicit ModSibStrict( const iAddressInfo& src ) : ModSibBase( src ) {}
-		__forceinline explicit ModSibStrict( s32 disp ) : ModSibBase( disp ) {}
-		__forceinline ModSibStrict( x86IndexReg base, x86IndexReg index, int scale=0, s32 displacement=0 ) :
-			ModSibBase( base, index, scale, displacement ) {}
+		int OperandSize;
 		
-		__forceinline ModSibStrict<OperandSize>& Add( s32 imm )
+		ModSibSized( int opsize, const iAddressInfo& src ) :
+			ModSibBase( src ),
+			OperandSize( opsize )
+		{
+			jASSUME( OperandSize == 1 || OperandSize == 2 || OperandSize == 4 );
+		}
+
+		ModSibSized( int opsize, s32 disp ) :
+			ModSibBase( disp ),
+			OperandSize( opsize )
+		{
+			jASSUME( OperandSize == 1 || OperandSize == 2 || OperandSize == 4 );
+		}
+		
+		ModSibSized( int opsize, x86IndexReg base, x86IndexReg index, int scale=0, s32 displacement=0 ) :
+			ModSibBase( base, index, scale, displacement ),
+			OperandSize( opsize )
+		{
+			jASSUME( OperandSize == 1 || OperandSize == 2 || OperandSize == 4 );
+		}
+		
+		__forceinline ModSibSized& Add( s32 imm )
 		{
 			Displacement += imm;
 			return *this;
 		}
 
-		__forceinline ModSibStrict<OperandSize> operator+( const s32 imm ) const { return ModSibStrict<OperandSize>( *this ).Add( imm ); }
-		__forceinline ModSibStrict<OperandSize> operator-( const s32 imm ) const { return ModSibStrict<OperandSize>( *this ).Add( -imm ); }
+		__forceinline ModSibSized operator+( const s32 imm ) const { return ModSibSized( *this ).Add( imm ); }
+		__forceinline ModSibSized operator-( const s32 imm ) const { return ModSibSized( *this ).Add( -imm ); }
+	};
+
+	//////////////////////////////////////////////////////////////////////////////////////////
+	// Strictly-typed version of ModSibBase, which is used to apply operand size information
+	// to ImmToMem operations.
+	//
+	template< int OpSize >
+	class ModSibStrict : public ModSibSized
+	{
+	public:
+		__forceinline explicit ModSibStrict( const iAddressInfo& src ) : ModSibSized( OpSize, src ) {}
+		__forceinline explicit ModSibStrict( s32 disp ) : ModSibSized( OpSize, disp ) {}
+		__forceinline ModSibStrict( x86IndexReg base, x86IndexReg index, int scale=0, s32 displacement=0 ) :
+			ModSibSized( OpSize, base, index, scale, displacement ) {}
+		
+		__forceinline ModSibStrict<OpSize>& Add( s32 imm )
+		{
+			Displacement += imm;
+			return *this;
+		}
+
+		__forceinline ModSibStrict<OpSize> operator+( const s32 imm ) const { return ModSibStrict<OpSize>( *this ).Add( imm ); }
+		__forceinline ModSibStrict<OpSize> operator-( const s32 imm ) const { return ModSibStrict<OpSize>( *this ).Add( -imm ); }
 	};
 
 	//////////////////////////////////////////////////////////////////////////////////////////
@@ -605,7 +644,8 @@ namespace x86Emitter
 
 		#include "ix86_impl_group1.h"
 		#include "ix86_impl_group2.h"
-		#include "ix86_impl_movs.h"
+		#include "ix86_impl_movs.h"		// cmov and movsx/zx
+		#include "ix86_impl_dwshift.h"	// dowubleword shifts!
 
 		// if the immediate is zero, we can replace the instruction, or ignore it
 		// entirely, depending on the instruction being issued.  That's what we do here.
@@ -675,8 +715,11 @@ namespace x86Emitter
 	extern const Internal::Group2ImplAll<Internal::G2Type_SHR> iSHR;
 	extern const Internal::Group2ImplAll<Internal::G2Type_SAR> iSAR;
 
+	extern const Internal::MovExtendImplAll<false> iMOVZX;
 	extern const Internal::MovExtendImplAll<true>  iMOVSX;
-	extern const Internal::MovExtendImplAll<false> iMOVZX;	
+
+	extern const Internal::DwordShiftImplAll<false> iSHLD;
+	extern const Internal::DwordShiftImplAll<true>  iSHRD;
 
 	extern const Internal::CMovImplGeneric iCMOV;
 

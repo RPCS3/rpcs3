@@ -117,9 +117,9 @@ DEFINE_OPCODE_LEGACY( MOV )
 
 // ------------------------------------------------------------------------
 #define DEFINE_LEGACY_MOVEXTEND( form, destbits, srcbits ) \
-	emitterT void MOV##form##destbits##R##srcbits##toR( x86IntRegType to, x86IntRegType from )				{ iMOV##form##( iRegister##destbits( to ), iRegister##srcbits( from ) ); } \
-	emitterT void MOV##form##destbits##Rm##srcbits##toR( x86IntRegType to, x86IntRegType from, int offset )	{ iMOV##form##( iRegister##destbits( to ), ptr##srcbits[x86IndexReg( from ) + offset] ); } \
-	emitterT void MOV##form##destbits##M##srcbits##toR( x86IntRegType to, u32 from )						{ iMOV##form##( iRegister##destbits( to ), ptr##srcbits[from] ); }
+	emitterT void MOV##form##destbits##R##srcbits##toR( x86IntRegType to, x86IntRegType from )				{ iMOV##form( iRegister##destbits( to ), iRegister##srcbits( from ) ); } \
+	emitterT void MOV##form##destbits##Rm##srcbits##toR( x86IntRegType to, x86IntRegType from, int offset )	{ iMOV##form( iRegister##destbits( to ), ptr##srcbits[x86IndexReg( from ) + offset] ); } \
+	emitterT void MOV##form##destbits##M##srcbits##toR( x86IntRegType to, u32 from )						{ iMOV##form( iRegister##destbits( to ), ptr##srcbits[from] ); }
 
 DEFINE_LEGACY_MOVEXTEND( SX, 32, 16 )
 DEFINE_LEGACY_MOVEXTEND( ZX, 32, 16 )
@@ -164,7 +164,53 @@ emitterT void CMOVE32RtoR( x86IntRegType to, x86IntRegType from )
 	iCMOVE( iRegister32(to), iRegister32(from) );
 }
 
+// shld imm8 to r32
+emitterT void SHLD32ItoR( x86IntRegType to, x86IntRegType from, u8 shift )
+{
+	iSHLD( iRegister32(to), iRegister32(from), shift );
+}
 
+// shrd imm8 to r32
+emitterT void SHRD32ItoR( x86IntRegType to, x86IntRegType from, u8 shift )
+{
+	iSHRD( iRegister32(to), iRegister32(from), shift );
+}
+
+emitterT void LEA32RtoR(x86IntRegType to, x86IntRegType from, s32 offset)
+{
+	iLEA( iRegister32( to ), ptr[x86IndexReg(from)+offset] );
+}
+
+emitterT void LEA32RRtoR(x86IntRegType to, x86IntRegType from0, x86IntRegType from1)
+{ 
+	iLEA( iRegister32( to ), ptr[x86IndexReg(from0)+x86IndexReg(from1)] );
+}
+
+// Don't inline recursive functions
+emitterT void LEA32RStoR(x86IntRegType to, x86IntRegType from, u32 scale)
+{
+	iLEA( iRegister32( to ), ptr[x86IndexReg(from)*(1<<scale)] );
+}
+
+// to = from + offset
+emitterT void LEA16RtoR(x86IntRegType to, x86IntRegType from, s16 offset)
+{
+	iLEA( iRegister16( to ), ptr[x86IndexReg(from)+offset] );
+}
+
+// to = from0 + from1
+emitterT void LEA16RRtoR(x86IntRegType to, x86IntRegType from0, x86IntRegType from1)
+{
+	iLEA( iRegister16( to ), ptr[x86IndexReg(from0)+x86IndexReg(from1)] );
+}
+
+// to = from << scale (max is 3)
+emitterT void LEA16RStoR(x86IntRegType to, x86IntRegType from, u32 scale)
+{
+	iLEA( iRegister16( to ), ptr[x86IndexReg(from)*(1<<scale)] );
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////
 // Note: the 'to' field can either be a register or a special opcode extension specifier
 // depending on the opcode's encoding.
 
@@ -368,96 +414,28 @@ emitterT void DEC16M( u32 to )
 }
 
 /* mul eax by r32 to edx:eax */
-emitterT void MUL32R( x86IntRegType from ) 
-{
-	RexB(0,from);
-	write8( 0xF7 ); 
-	ModRM( 3, 4, from );
-}
-
+emitterT void MUL32R( x86IntRegType from )		{ iUMUL( iRegister32(from) ); }
 /* imul eax by r32 to edx:eax */
-emitterT void IMUL32R( x86IntRegType from ) 
-{
-	RexB(0,from);
-	write8( 0xF7 ); 
-	ModRM( 3, 5, from );
-}
-
+emitterT void IMUL32R( x86IntRegType from )		{ iSMUL( iRegister32(from) ); }
 /* mul eax by m32 to edx:eax */
-emitterT void MUL32M( u32 from ) 
-{
-	write8( 0xF7 ); 
-	ModRM( 0, 4, DISP32 );
-	write32( MEMADDR(from, 4) ); 
-}
-
+emitterT void MUL32M( u32 from )				{ iUMUL( ptr32[from] ); }
 /* imul eax by m32 to edx:eax */
-emitterT void IMUL32M( u32 from ) 
-{
-	write8( 0xF7 ); 
-	ModRM( 0, 5, DISP32 );
-	write32( MEMADDR(from, 4) ); 
-}
+emitterT void IMUL32M( u32 from )				{ iSMUL( ptr32[from] ); }
 
 /* imul r32 by r32 to r32 */
 emitterT void IMUL32RtoR( x86IntRegType to, x86IntRegType from ) 
 {
-	RexRB(0,to,from);
-	write16( 0xAF0F ); 
-	ModRM( 3, to, from );
+	iSMUL( iRegister32(to), iRegister32(from) );
 }
 
 /* div eax by r32 to edx:eax */
-emitterT void DIV32R( x86IntRegType from ) 
-{
-	RexB(0,from);
-	write8( 0xF7 ); 
-	ModRM( 3, 6, from );
-}
-
+emitterT void DIV32R( x86IntRegType from )		{ iUDIV( iRegister32(from) ); }
 /* idiv eax by r32 to edx:eax */
-emitterT void IDIV32R( x86IntRegType from ) 
-{
-	RexB(0,from);
-	write8( 0xF7 ); 
-	ModRM( 3, 7, from );
-}
-
+emitterT void IDIV32R( x86IntRegType from )		{ iSDIV( iRegister32(from) ); }
 /* div eax by m32 to edx:eax */
-emitterT void DIV32M( u32 from ) 
-{
-	write8( 0xF7 ); 
-	ModRM( 0, 6, DISP32 );
-	write32( MEMADDR(from, 4) ); 
-}
-
+emitterT void DIV32M( u32 from )				{ iUDIV( ptr32[from] ); }
 /* idiv eax by m32 to edx:eax */
-emitterT void IDIV32M( u32 from ) 
-{
-	write8( 0xF7 ); 
-	ModRM( 0, 7, DISP32 );
-	write32( MEMADDR(from, 4) ); 
-}
-
-// shld imm8 to r32
-emitterT void SHLD32ItoR( x86IntRegType to, x86IntRegType from, u8 shift )
-{
-	RexRB(0,from,to);
-	write8( 0x0F );
-	write8( 0xA4 );
-	ModRM( 3, from, to );
-	write8( shift );
-}
-
-// shrd imm8 to r32
-emitterT void SHRD32ItoR( x86IntRegType to, x86IntRegType from, u8 shift )
-{
-	RexRB(0,from,to);
-	write8( 0x0F );
-	write8( 0xAC );
-	ModRM( 3, from, to );
-	write8( shift );
-}
+emitterT void IDIV32M( u32 from )				{ iSDIV( ptr32[from] ); }
 
 ////////////////////////////////////
 // logical instructions			/
@@ -1010,38 +988,4 @@ emitterT void BSWAP32R( x86IntRegType to )
 {
 	write8( 0x0F );
 	write8( 0xC8 + to );
-}
-
-emitterT void LEA32RtoR(x86IntRegType to, x86IntRegType from, s32 offset)
-{
-	iLEA( iRegister32( to ), ptr[x86IndexReg(from)+offset] );
-}
-
-emitterT void LEA32RRtoR(x86IntRegType to, x86IntRegType from0, x86IntRegType from1)
-{ 
-	iLEA( iRegister32( to ), ptr[x86IndexReg(from0)+x86IndexReg(from1)] );
-}
-
-// Don't inline recursive functions
-emitterT void LEA32RStoR(x86IntRegType to, x86IntRegType from, u32 scale)
-{
-	iLEA( iRegister32( to ), ptr[x86IndexReg(from)*(1<<scale)] );
-}
-
-// to = from + offset
-emitterT void LEA16RtoR(x86IntRegType to, x86IntRegType from, s16 offset)
-{
-	iLEA( iRegister16( to ), ptr[x86IndexReg(from)+offset] );
-}
-
-// to = from0 + from1
-emitterT void LEA16RRtoR(x86IntRegType to, x86IntRegType from0, x86IntRegType from1)
-{
-	iLEA( iRegister16( to ), ptr[x86IndexReg(from0)+x86IndexReg(from1)] );
-}
-
-// to = from << scale (max is 3)
-emitterT void LEA16RStoR(x86IntRegType to, x86IntRegType from, u32 scale)
-{
-	iLEA( iRegister16( to ), ptr[x86IndexReg(from)*(1<<scale)] );
 }
