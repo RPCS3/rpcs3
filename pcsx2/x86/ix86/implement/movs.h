@@ -139,7 +139,7 @@ public:
 // Inlining Notes:
 //   I've set up the inlining to be as practical and intelligent as possible, which means
 //   forcing inlining for (void*) forms of ModRM, which thanks to constprop reduce to
-//   virtually no code.  In the case of (Reg, Imm) forms, the inlinign is up to the dis-
+//   virtually no code.  In the case of (Reg, Imm) forms, the inlining is up to the dis-
 //   cretion of the compiler.
 // 
 
@@ -171,6 +171,8 @@ public:
 		else
 			MovImpl<T>::Emit( to, imm );
 	}
+	
+	MovImplAll() {} // Satisfy GCC's whims.
 };
 
 
@@ -181,7 +183,7 @@ template< typename ImmType >
 class CMovImpl : public ImplementationHelper< ImmType >
 {
 protected:
-	static bool Is8BitOperand()	{ return OperandSize == 1; }
+	static bool Is8BitOperand()	{return OperandSize == 1; }
 	static void prefix16()		{ if( OperandSize == 2 ) iWrite<u8>( 0x66 ); }
 	
 	static __forceinline void emit_base( JccComparisonType cc )
@@ -193,8 +195,8 @@ protected:
 	}
 
 public:
-	CMovImpl() {}
-
+	static const uint OperandSize = sizeof(ImmType);
+	
 	static __emitinline void Emit( JccComparisonType cc, const iRegister<ImmType>& to, const iRegister<ImmType>& from )
 	{
 		if( to == from ) return;
@@ -213,6 +215,7 @@ public:
 		emit_base( cc );
 		EmitSibMagic( to.Id, sibsrc );
 	}
+	CMovImpl() {}
 
 };
 

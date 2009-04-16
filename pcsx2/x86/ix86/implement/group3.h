@@ -63,4 +63,6 @@ public:
 
 	template< typename T >
 	__noinline void operator()( const ModSibStrict<T>& from ) const { Group3Impl<T>::Emit( InstType, from ); }
+	
+	Group3ImplAll() {}
 };

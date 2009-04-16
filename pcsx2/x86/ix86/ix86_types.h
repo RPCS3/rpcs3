@@ -144,7 +144,7 @@ namespace x86Emitter
 #ifdef _MSC_VER
 #	define __noinline __declspec(noinline) 
 #else
-#	define __noinline
+#	define __noinline __attribute__((noinline))
 #endif
 
 	// ModRM 'mod' field enumeration.   Provided mostly for reference:
@@ -658,7 +658,7 @@ namespace x86Emitter
 	// flags.
 
 	extern const Internal::MovImplAll iMOV;
-
+	
 	extern const Internal::Group2ImplAll<Internal::G2Type_ROL> iROL;
 	extern const Internal::Group2ImplAll<Internal::G2Type_ROR> iROR;
 	extern const Internal::Group2ImplAll<Internal::G2Type_RCL> iRCL;
