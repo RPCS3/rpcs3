@@ -92,16 +92,16 @@ static __forceinline u32 setVifRowRegs(u32 reg, u32 data)
 	switch (reg)
 	{
 		case 0:
-			vifRegs->r0 = data;
+			vifRegs->r0 += data;
 			break;
 		case 1:
-			vifRegs->r1 = data;
+			vifRegs->r1 += data;
 			break;
 		case 2:
-			vifRegs->r2 = data;
+			vifRegs->r2 += data;
 			break;
 		case 3:
-			vifRegs->r3 = data;
+			vifRegs->r3 += data;
 			break;
 			jNO_DEFAULT;
 	}

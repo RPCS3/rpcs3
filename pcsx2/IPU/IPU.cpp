@@ -1370,6 +1370,9 @@ int FIFOto_write(u32* pMem, int size)
 	}	\
 }
 
+#define gif ((DMACh*)&PS2MEM_HW[0xA000])
+extern void gsInterrupt();
+
 int IPU1dma()
 {
 	u32 *ptag, *pMem;
@@ -1382,6 +1385,13 @@ int IPU1dma()
 	if (!(ipu1dma->chcr & 0x100) || (cpuRegs.interrupt & (1 << DMAC_TO_IPU))) return 0;
 
 	assert(!(g_nDMATransfer & IPU_DMA_TIE1));
+
+	//We need to make sure GIF has flushed before sending IPU data, it seems to REALLY screw FFX videos
+	while(gif->chcr & 0x100) 
+	{
+		GIF_LOG("Flushing gif chcr %x tadr %x madr %x qwc %x", gif->chcr, gif->tadr, gif->madr, gif->qwc);
+		gsInterrupt();
+	}
 
 	// in kh, qwc == 0 when dma_actv1 is set
 	if ((g_nDMATransfer & IPU_DMA_ACTV1) && ipu1dma->qwc > 0)

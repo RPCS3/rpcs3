@@ -80,10 +80,10 @@ struct VIFUnpackFuncTable
 	UNPACKFUNCTYPE       funcU;
 	UNPACKFUNCTYPE       funcS;
 
-	int bsize; // currently unused
-	int dsize; // byte size of one channel
-	int gsize; // size of data in bytes used for each write cycle
-	int qsize; // used for unpack parts, num of vectors that
+	u32 bsize; // currently unused
+	u32 dsize; // byte size of one channel
+	u32 gsize; // size of data in bytes used for each write cycle
+	u32 qsize; // used for unpack parts, num of vectors that
 	// will be decompressed from data for 1 cycle
 };
 
@@ -333,7 +333,7 @@ static void ProcessMemSkip(int size, unsigned int unpackType, const unsigned int
 	
 }
 
-static int VIFalign(u32 *data, vifCode *v, int size, const unsigned int VIFdmanum)
+static int VIFalign(u32 *data, vifCode *v, unsigned int size, const unsigned int VIFdmanum)
 {
 	u32 *dest;
 	u32 unpackType;
@@ -485,7 +485,7 @@ static int VIFalign(u32 *data, vifCode *v, int size, const unsigned int VIFdmanu
 }
 
 
-static void VIFunpack(u32 *data, vifCode *v, int size, const unsigned int VIFdmanum)
+static void VIFunpack(u32 *data, vifCode *v, unsigned int size, const unsigned int VIFdmanum)
 {
 	u32 *dest;
 	u32 unpackType;
@@ -493,6 +493,7 @@ static void VIFunpack(u32 *data, vifCode *v, int size, const unsigned int VIFdma
 	const VIFUnpackFuncTable *ft;
 	VURegs * VU;
 	u8 *cdata = (u8*)data;
+	u32 tempsize = 0;
 	
 #ifdef _DEBUG
 	u32 memsize = VIFdmanum ? 0x4000 : 0x1000;
@@ -553,6 +554,18 @@ static void VIFunpack(u32 *data, vifCode *v, int size, const unsigned int VIFdma
 		
 	}
 #endif
+
+	tempsize = (vif->tag.addr + (size / (ft->gsize * vifRegs->cycle.wl)) * 
+		((vifRegs->cycle.cl - vifRegs->cycle.wl) * 16)) + ((size / ft->gsize) * 16);
+
+	//Sanity Check (memory overflow)
+	if(tempsize > (u32)(VIFdmanum ? 0x4000 : 0x1000)) 
+	{
+		
+	//	DevCon::Notice("VIF%x Unpack ending %x > %x", params VIFdmanum, tempsize, VIFdmanum ? 0x4000 : 0x1000);
+		tempsize = size;
+		size = 0;
+	} else tempsize = 0;
 
 	if (vifRegs->cycle.cl >= vifRegs->cycle.wl)   // skipping write
 	{
@@ -658,7 +671,48 @@ static void VIFunpack(u32 *data, vifCode *v, int size, const unsigned int VIFdma
 			}
 
 		} 
-		else if (size >= ft->dsize && vifRegs->num > 0) //Else write what we do have
+		else if(tempsize)
+		{
+			int incdest = ((vifRegs->cycle.cl - vifRegs->cycle.wl) << 2) + 4;
+			size = 0;
+			
+			
+			while ((tempsize >= ft->gsize) && (vifRegs->num > 0))
+			{
+				//VIFUNPACK_LOG("sorting tempsize :p, size %d, vifnum %d, addr %x", tempsize, vifRegs->num, vif->tag.addr);
+				func(dest, (u32*)cdata, ft->qsize);
+				cdata += ft->gsize;
+				tempsize -= ft->gsize;
+
+				vifRegs->num--;
+				++vif->cl;
+				if (vif->cl == vifRegs->cycle.wl)
+				{
+					dest += incdest;
+					v->addr = (v->addr + (incdest * 4)) & (VIFdmanum ? 0x3fff : 0xfff);
+					if(v->addr <= (u32)(VIFdmanum ? 0x3000 : 0x500)) dest = (u32*)(VU->Mem + v->addr);
+					vif->cl = 0;
+				}
+				else
+				{
+					dest += 4;
+					v->addr = (v->addr + 16) & (VIFdmanum ? 0x3fff : 0xfff);
+					if(v->addr <= (u32)(VIFdmanum ? 0x3000 : 0x500)) dest = (u32*)(VU->Mem + v->addr);
+				}
+			}
+
+			if(vifRegs->mode == 2)
+			{
+				//Update the reg rows for SSE
+				vifRow[0] = vifRegs->r0;
+				vifRow[1] = vifRegs->r1;
+				vifRow[2] = vifRegs->r2;
+				vifRow[3] = vifRegs->r3;
+			}
+			if(tempsize > 0) size = tempsize;
+
+		}
+		if (size >= ft->dsize && vifRegs->num > 0) //Else write what we do have
 		{
 			//VIF_LOG("warning, end with size = %d", size);
 

@@ -28,6 +28,7 @@
 
 using std::min;
 
+#define gifsplit 128
 enum gifstate_t
 {
 	GIF_STATE_EMPTY = 0,
@@ -71,7 +72,7 @@ __forceinline void gsInterrupt() {
 		/*if (!(vif1Regs->mskpath3 && (vif1ch->chcr & 0x100)) || (psHu32(GIF_MODE) & 0x1))
 			CPU_INT( 2, 64 );*/
 #endif
-		if (gspath3done == 0) return;
+		if(gspath3done == 0 || gif->qwc > 0) return;
 	}
 
 	gspath3done = 0;
@@ -83,6 +84,7 @@ __forceinline void gsInterrupt() {
 	psHu32(GIF_STAT)&= ~0xE00; // OPH=0 | APATH=0
 	psHu32(GIF_STAT)&= ~0x1F000000; // QFC=0
 	hwDmacIrq(DMAC_GIF);
+	GIF_LOG("GIF DMA end");
 
 }
 
@@ -125,7 +127,7 @@ static void WRITERING_DMA(u32 *pMem, u32 qwc)
 
 int  _GIFchain() {
 #ifdef GSPATH3FIX
-	u32 qwc = ((psHu32(GIF_MODE) & 0x4) && (vif1Regs->mskpath3)) ? min(8, (int)gif->qwc) : gif->qwc;
+	u32 qwc = ((psHu32(GIF_MODE) & 0x4) && (vif1Regs->mskpath3)) ? min(8, (int)gif->qwc) : min( gifsplit, (int)gif->qwc );
 #else
 	u32 qwc = gif->qwc;
 #endif
@@ -161,7 +163,7 @@ static __forceinline void dmaGIFend()
 	if ((psHu32(GIF_MODE) & 0x4) && gif->qwc != 0)
 		CPU_INT(2, min( 8, (int)gif->qwc ) /** BIAS*/);
 	else
-		CPU_INT(2, gif->qwc /** BIAS*/);
+		CPU_INT(2, min( gifsplit, (int)gif->qwc )  /** BIAS*/);
 }
 
 // These could probably be consolidated into one function,
@@ -172,7 +174,7 @@ static __forceinline void GIFdmaEnd()
 	if (psHu32(GIF_MODE) & 0x4)
 		CPU_INT(2, min( 8, (int)gif->qwc ) /** BIAS*/);
 	else
-		CPU_INT(2, gif->qwc /** BIAS*/);
+		CPU_INT(2, min( gifsplit, (int)gif->qwc ) /** BIAS*/);
 }
 
 void GIFdma() 
@@ -187,7 +189,7 @@ void GIFdma()
 		return;
 	}
 
-	GIF_LOG("dmaGIFstart chcr = %lx, madr = %lx, qwc  = %lx\n tadr = %lx, asr0 = %lx, asr1 = %lx", gif->chcr, gif->madr, gif->qwc, gif->tadr, gif->asr0, gif->asr1);
+	
 
 #ifndef GSPATH3FIX
 	if ( !(psHu32(GIF_MODE) & 0x4) ) {
@@ -266,14 +268,17 @@ void GIFdma()
 		
 		if (((gif->qwc == 0) && (gif->chcr & 0xc) == 0)) 
 			gspath3done = 1;
-		else
+		else if(gif->qwc > 0)
+		{
 			GIFdmaEnd();
 		return;
 		
 	}
-	else {
+	}
+	if ((gif->chcr & 0xc) == 0x4 && gspath3done == 0)
+	{
 		// Chain Mode
-		while ((gspath3done == 0) && (gif->qwc == 0)) {		//Loop if the transfers aren't intermittent
+		//while ((gspath3done == 0) && (gif->qwc == 0)) {		//Loop if the transfers aren't intermittent
 			ptag = (u32*)dmaGetAddr(gif->tadr);  //Set memory pointer to TADR
 			if (ptag == NULL) {					 //Is ptag empty?
 				psHu32(DMAC_STAT)|= DMAC_STAT_BEIS;		 //If yes, set BEIS (BUSERR) in DMAC_STAT register
@@ -311,16 +316,16 @@ void GIFdma()
 				GIF_LOG("dmaIrq Set");
 				gspath3done = 1;
 			}
-		}
+		//}
 	}
 
 	prevcycles = 0;
 	if (!(vif1Regs->mskpath3 || (psHu32(GIF_MODE) & 0x1)))	{
-		if (gspath3done == 0)
+		if (gspath3done == 0 || gif->qwc > 0)
 		{
-			if ((psHu32(GIF_MODE) & 0x4) && gif->qwc != 0)
+			if (gif->qwc != 0)
 			{
-				CPU_INT(2, min( 8, (int)gif->qwc )/** BIAS*/);
+				GIFdmaEnd();
 			} 
 			else
 			{
@@ -340,7 +345,7 @@ void GIFdma()
 void dmaGIF() {
 	 //We used to addd wait time for the buffer to fill here, fixing some timing problems in path 3 masking
 	//It takes the time of 24 QW for the BUS to become ready - The Punisher, And1 Streetball
-	
+	GIF_LOG("dmaGIFstart chcr = %lx, madr = %lx, qwc  = %lx\n tadr = %lx, asr0 = %lx, asr1 = %lx", gif->chcr, gif->madr, gif->qwc, gif->tadr, gif->asr0, gif->asr1);
 	if ((psHu32(DMAC_CTRL) & 0xC) == 0xC ) { // GIF MFIFO
 		Console::WriteLn("GIF MFIFO");
 		gifMFIFOInterrupt();
@@ -359,7 +364,8 @@ void dmaGIF() {
 		gif->qwc  = (u16)ptag[0];			    //QWC set to lower 16bits of the tag
 		gif->chcr = ( gif->chcr & 0xFFFF ) | ( (*ptag) & 0xFFFF0000 );  //Transfer upper part of tag to CHCR bits 31-15
 		
-		dmaGIFend();
+		//gspath3done = hwDmacSrcChainWithStack(gif, (ptag[0] >> 28) & 0x7);
+		GIFdmaEnd();
 		gif->qwc = 0;
 		return;
 	}
