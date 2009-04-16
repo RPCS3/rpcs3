@@ -27,16 +27,9 @@
 // because shifts by 0 do *not* affect flags status.
 
 template< typename ImmType, bool isShiftRight >
-class DwordShiftImpl
+class DwordShiftImpl : public ImplementationHelper< ImmType >
 {
-public: 
-	static const uint OperandSize = sizeof(ImmType);
-
-	DwordShiftImpl() {}		// because GCC doesn't like static classes
-
 protected:
-	static bool Is8BitOperand()	{ return OperandSize == 1; }
-	static void prefix16()		{ if( OperandSize == 2 ) iWrite<u8>( 0x66 ); }
 	static void basesibform( bool isCL )
 	{
 		prefix16();
@@ -44,15 +37,17 @@ protected:
 		write8( (isCL ? 0xa5 : 0xa4) | (isShiftRight ? 0x8 : 0) );
 	}
 	
-public:
-	static __emitinline void Emit( const iRegister<OperandSize>& to, const iRegister<OperandSize>& from ) 
+public: 
+	DwordShiftImpl() {}		// because GCC doesn't like static classes
+
+	static __emitinline void Emit( const iRegister<ImmType>& to, const iRegister<ImmType>& from ) 
 	{
 		prefix16();
 		write16( 0xa50f | (isShiftRight ? 0x800 : 0) );
 		ModRM_Direct( from.Id, to.Id );
 	}
 
-	static __emitinline void Emit( const iRegister<OperandSize>& to, const iRegister<OperandSize>& from, u8 imm ) 
+	static __emitinline void Emit( const iRegister<ImmType>& to, const iRegister<ImmType>& from, u8 imm ) 
 	{
 		if( imm == 0 ) return;
 		prefix16();
@@ -61,13 +56,13 @@ public:
 		write8( imm );
 	}
 
-	static __emitinline void Emit( const ModSibBase& sibdest, const iRegister<OperandSize>& from, __unused const iRegisterCL& clreg ) 
+	static __emitinline void Emit( const ModSibBase& sibdest, const iRegister<ImmType>& from, __unused const iRegisterCL& clreg ) 
 	{
 		basesibform();
 		EmitSibMagic( from.Id, sibdest );
 	}
 
-	static __emitinline void Emit( const ModSibBase& sibdest, const iRegister<OperandSize>& from, u8 imm ) 
+	static __emitinline void Emit( const ModSibBase& sibdest, const iRegister<ImmType>& from, u8 imm ) 
 	{
 		basesibform();
 		EmitSibMagic( from.Id, sibdest );
@@ -75,14 +70,14 @@ public:
 	}
 
 	// dest data type is inferred from the 'from' register, so we can do void* resolution :)
-	static __emitinline void Emit( void* dest, const iRegister<OperandSize>& from, __unused const iRegisterCL& clreg ) 
+	static __emitinline void Emit( void* dest, const iRegister<ImmType>& from, __unused const iRegisterCL& clreg ) 
 	{
 		basesibform();
 		iWriteDisp( from.Id, dest );
 	}
 
 	// dest data type is inferred from the 'from' register, so we can do void* resolution :)
-	static __emitinline void Emit( void* dest, const iRegister<OperandSize>& from, u8 imm ) 
+	static __emitinline void Emit( void* dest, const iRegister<ImmType>& from, u8 imm ) 
 	{
 		basesibform();
 		iWriteDisp( from.Id, dest );
@@ -92,6 +87,8 @@ public:
 
 
 // -------------------------------------------------------------------
+// I use explicit method declarations here instead of templates, in order to provide
+// *only* 32 and 16 bit register operand forms (8 bit registers are not valid in SHLD/SHRD).
 //
 template< bool isShiftRight >
 class DwordShiftImplAll
@@ -99,8 +96,6 @@ class DwordShiftImplAll
 protected:
 	typedef DwordShiftImpl<u32, isShiftRight> m_32;
 	typedef DwordShiftImpl<u16, isShiftRight> m_16;
-
-	// (Note: I'm not going to macro this since it would likely clobber intellisense parameter resolution)
 
 public:
 	// ---------- 32 Bit Interface -----------

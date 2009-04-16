@@ -34,55 +34,48 @@ enum G1Type
 };
 
 // -------------------------------------------------------------------
-template< typename ImmType, G1Type InstType >
-class Group1Impl
+template< G1Type InstType, typename ImmType >
+class Group1Impl : public ImplementationHelper< ImmType >
 {
 public: 
-	static const uint OperandSize = sizeof(ImmType);
-
 	Group1Impl() {}		// because GCC doesn't like static classes
 
-protected:
-	static bool Is8BitOperand()	{ return OperandSize == 1; }
-	static void prefix16()		{ if( OperandSize == 2 ) iWrite<u8>( 0x66 ); }
-
-public:
-	static __emitinline void Emit( const iRegister<OperandSize>& to, const iRegister<OperandSize>& from ) 
+	static __emitinline void Emit( const iRegister<ImmType>& to, const iRegister<ImmType>& from ) 
 	{
 		prefix16();
 		iWrite<u8>( (Is8BitOperand() ? 0 : 1) | (InstType<<3) ); 
 		ModRM_Direct( from.Id, to.Id );
 	}
 
-	static __emitinline void Emit( const ModSibBase& sibdest, const iRegister<OperandSize>& from ) 
+	static __emitinline void Emit( const ModSibBase& sibdest, const iRegister<ImmType>& from ) 
 	{
 		prefix16();
 		iWrite<u8>( (Is8BitOperand() ? 0 : 1) | (InstType<<3) ); 
 		EmitSibMagic( from.Id, sibdest );
 	}
 
-	static __emitinline void Emit( const iRegister<OperandSize>& to, const ModSibBase& sibsrc ) 
+	static __emitinline void Emit( const iRegister<ImmType>& to, const ModSibBase& sibsrc ) 
 	{
 		prefix16();
 		iWrite<u8>( (Is8BitOperand() ? 2 : 3) | (InstType<<3) );
 		EmitSibMagic( to.Id, sibsrc );
 	}
 
-	static __emitinline void Emit( void* dest, const iRegister<OperandSize>& from ) 
+	static __emitinline void Emit( void* dest, const iRegister<ImmType>& from ) 
 	{
 		prefix16();
 		iWrite<u8>( (Is8BitOperand() ? 0 : 1) | (InstType<<3) ); 
 		iWriteDisp( from.Id, dest );
 	}
 
-	static __emitinline void Emit( const iRegister<OperandSize>& to, const void* src ) 
+	static __emitinline void Emit( const iRegister<ImmType>& to, const void* src ) 
 	{
 		prefix16();
 		iWrite<u8>( (Is8BitOperand() ? 2 : 3) | (InstType<<3) );
 		iWriteDisp( to.Id, src );
 	}
 
-	static __emitinline void Emit( const iRegister<OperandSize>& to, ImmType imm ) 
+	static __emitinline void Emit( const iRegister<ImmType>& to, int imm ) 
 	{
 		prefix16();
 		if( !Is8BitOperand() && is_s8( imm ) )
@@ -104,7 +97,7 @@ public:
 		}
 	}
 
-	static __emitinline void Emit( const ModSibStrict<OperandSize>& sibdest, ImmType imm ) 
+	static __emitinline void Emit( const ModSibStrict<ImmType>& sibdest, int imm ) 
 	{
 		if( Is8BitOperand() )
 		{
@@ -131,43 +124,27 @@ public:
 template< G1Type InstType >
 class Group1ImplAll
 {
-protected:
-	typedef Group1Impl<u32, InstType> m_32;
-	typedef Group1Impl<u16, InstType> m_16;
-	typedef Group1Impl<u8, InstType>  m_8;
-
-	// (Note: I'm not going to macro this since it would likely clobber intellisense parameter resolution)
-
 public:
-	// ---------- 32 Bit Interface -----------
-	__forceinline void operator()( const iRegister32& to,	const iRegister32& from ) const	{ m_32::Emit( to, from ); }
-	__forceinline void operator()( const iRegister32& to,	const void* src ) const			{ m_32::Emit( to, src ); }
-	__forceinline void operator()( void* dest,				const iRegister32& from ) const	{ m_32::Emit( dest, from ); }
-	__noinline void operator()( const ModSibBase& sibdest,	const iRegister32& from ) const	{ m_32::Emit( sibdest, from ); }
-	__noinline void operator()( const iRegister32& to,		const ModSibBase& sibsrc ) const{ m_32::Emit( to, sibsrc ); }
-	__noinline void operator()( const ModSibStrict<4>& sibdest, u32 imm ) const				{ m_32::Emit( sibdest, imm ); }
+	template< typename T >
+	__forceinline void operator()( const iRegister<T>& to,	const iRegister<T>& from ) const	{ Group1Impl<InstType,T>::Emit( to, from ); }
+	template< typename T >
+	__forceinline void operator()( const iRegister<T>& to,	const void* src ) const				{ Group1Impl<InstType,T>::Emit( to, src ); }
+	template< typename T >
+	__forceinline void operator()( void* dest,				const iRegister<T>& from ) const	{ Group1Impl<InstType,T>::Emit( dest, from ); }
+	template< typename T >
+	__noinline void operator()( const ModSibBase& sibdest,	const iRegister<T>& from ) const	{ Group1Impl<InstType,T>::Emit( sibdest, from ); }
+	template< typename T >
+	__noinline void operator()( const iRegister<T>& to,		const ModSibBase& sibsrc ) const	{ Group1Impl<InstType,T>::Emit( to, sibsrc ); }
 
-	void operator()( const iRegister32& to, u32 imm ) const									{ m_32::Emit( to, imm ); }
+	// Note on Imm forms : use int as the source operand since it's "reasonably inert" from a compiler
+	// perspective.  (using uint tends to make the compiler try and fail to match signed immediates with
+	// one of the other overloads).
+	
+	template< typename T >
+	__noinline void operator()( const ModSibStrict<T>& sibdest, int imm ) const	{ Group1Impl<InstType,T>::Emit( sibdest, imm ); }
+	template< typename T >
+	void operator()( const iRegister<T>& to, int imm ) const					{ Group1Impl<InstType,T>::Emit( to, imm ); }
 
-	// ---------- 16 Bit Interface -----------
-	__forceinline void operator()( const iRegister16& to,	const iRegister16& from ) const	{ m_16::Emit( to, from ); }
-	__forceinline void operator()( const iRegister16& to,	const void* src ) const			{ m_16::Emit( to, src ); }
-	__forceinline void operator()( void* dest,				const iRegister16& from ) const	{ m_16::Emit( dest, from ); }
-	__noinline void operator()( const ModSibBase& sibdest,	const iRegister16& from ) const	{ m_16::Emit( sibdest, from ); }
-	__noinline void operator()( const iRegister16& to,		const ModSibBase& sibsrc ) const{ m_16::Emit( to, sibsrc ); }
-	__noinline void operator()( const ModSibStrict<2>& sibdest, u16 imm ) const				{ m_16::Emit( sibdest, imm ); }
-
-	void operator()( const iRegister16& to, u16 imm ) const									{ m_16::Emit( to, imm ); }
-
-	// ---------- 8 Bit Interface -----------
-	__forceinline void operator()( const iRegister8& to,	const iRegister8& from ) const	{ m_8::Emit( to, from ); }
-	__forceinline void operator()( const iRegister8& to,	const void* src ) const			{ m_8::Emit( to, src ); }
-	__forceinline void operator()( void* dest,				const iRegister8& from ) const	{ m_8::Emit( dest, from ); }
-	__noinline void operator()( const ModSibBase& sibdest,	const iRegister8& from ) const	{ m_8::Emit( sibdest, from ); }
-	__noinline void operator()( const iRegister8& to,		const ModSibBase& sibsrc ) const{ m_8::Emit( to, sibsrc ); }
-	__noinline void operator()( const ModSibStrict<1>& sibdest, u8 imm ) const				{ m_8::Emit( sibdest, imm ); }
-
-	void operator()( const iRegister8& to, u8 imm ) const									{ m_8::Emit( to, imm ); }
 
 	Group1ImplAll() {}		// Why does GCC need these?
 };

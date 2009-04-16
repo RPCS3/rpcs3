@@ -2977,10 +2977,6 @@
 				RelativePath="..\..\x86\ix86\ix86_types.h"
 				>
 			</File>
-			<File
-				RelativePath="..\..\x86\ix86\implement\movs.h"
-				>
-			</File>
 			<Filter
 				Name="Implement"
 				>
@@ -2997,7 +2993,15 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\x86\ix86\implement\group3.h"
+					>
+				</File>
+				<File
 					RelativePath="..\..\x86\ix86\implement\incdec.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\x86\ix86\implement\movs.h"
 					>
 				</File>
 			</Filter>

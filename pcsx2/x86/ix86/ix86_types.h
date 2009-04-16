@@ -156,7 +156,6 @@ namespace x86Emitter
 		Mod_Direct,			// direct reg/reg operation
 	};
 
-	static const int ModRm_Direct = 3;		// when used as the first parameter, specifies direct register operation (no mem)
 	static const int ModRm_UseSib = 4;		// same index value as ESP (used in RM field)
 	static const int ModRm_UseDisp32 = 5;	// same index value as EBP (used in Mod field)
 
@@ -197,15 +196,16 @@ namespace x86Emitter
 
 	//////////////////////////////////////////////////////////////////////////////////////////
 	//
-	template< int OperandSize >
+	template< typename OperandType >
 	class iRegister
 	{
 	public:
+		static const uint OperandSize = sizeof( OperandType );
 		static const iRegister Empty;		// defined as an empty/unused value (-1)
 
 		int Id;
 
-		iRegister( const iRegister<OperandSize>& src ) : Id( src.Id ) {}
+		iRegister( const iRegister<OperandType>& src ) : Id( src.Id ) {}
 		iRegister(): Id( -1 ) {}
 		explicit iRegister( int regId ) : Id( regId ) { jASSUME( Id >= -1 && Id < 8 ); }
 
@@ -214,17 +214,17 @@ namespace x86Emitter
 		// Returns true if the register is a valid accumulator: Eax, Ax, Al.
 		bool IsAccumulator() const { return Id == 0; }
 
-		bool operator==( const iRegister<OperandSize>& src ) const
+		bool operator==( const iRegister<OperandType>& src ) const
 		{
 			return (Id == src.Id);
 		}
 
-		bool operator!=( const iRegister<OperandSize>& src ) const
+		bool operator!=( const iRegister<OperandType>& src ) const
 		{
 			return (Id != src.Id);
 		}
 
-		iRegister<OperandSize>& operator=( const iRegister<OperandSize>& src )
+		iRegister<OperandType>& operator=( const iRegister<OperandType>& src )
 		{
 			Id = src.Id;
 			return *this;
@@ -239,9 +239,9 @@ namespace x86Emitter
 	// all about the the templated code in haphazard fashion.  Yay.. >_<
 	//
 
-	typedef iRegister<4> iRegister32;
-	typedef iRegister<2> iRegister16;
-	typedef iRegister<1> iRegister8;
+	typedef iRegister<u32> iRegister32;
+	typedef iRegister<u16> iRegister16;
+	typedef iRegister<u8> iRegister8;
 
 	class iRegisterCL : public iRegister8
 	{
@@ -397,64 +397,28 @@ namespace x86Emitter
 	};
 	
 	//////////////////////////////////////////////////////////////////////////////////////////
-	//
-	class ModSibSized : public ModSibBase
-	{
-	public:
-		int OperandSize;
-		
-		ModSibSized( int opsize, const iAddressInfo& src ) :
-			ModSibBase( src ),
-			OperandSize( opsize )
-		{
-			jASSUME( OperandSize == 1 || OperandSize == 2 || OperandSize == 4 );
-		}
-
-		ModSibSized( int opsize, s32 disp ) :
-			ModSibBase( disp ),
-			OperandSize( opsize )
-		{
-			jASSUME( OperandSize == 1 || OperandSize == 2 || OperandSize == 4 );
-		}
-		
-		ModSibSized( int opsize, x86IndexReg base, x86IndexReg index, int scale=0, s32 displacement=0 ) :
-			ModSibBase( base, index, scale, displacement ),
-			OperandSize( opsize )
-		{
-			jASSUME( OperandSize == 1 || OperandSize == 2 || OperandSize == 4 );
-		}
-		
-		__forceinline ModSibSized& Add( s32 imm )
-		{
-			Displacement += imm;
-			return *this;
-		}
-
-		__forceinline ModSibSized operator+( const s32 imm ) const { return ModSibSized( *this ).Add( imm ); }
-		__forceinline ModSibSized operator-( const s32 imm ) const { return ModSibSized( *this ).Add( -imm ); }
-	};
-
-	//////////////////////////////////////////////////////////////////////////////////////////
 	// Strictly-typed version of ModSibBase, which is used to apply operand size information
 	// to ImmToMem operations.
 	//
-	template< int OpSize >
-	class ModSibStrict : public ModSibSized
+	template< typename OperandType >
+	class ModSibStrict : public ModSibBase
 	{
 	public:
-		__forceinline explicit ModSibStrict( const iAddressInfo& src ) : ModSibSized( OpSize, src ) {}
-		__forceinline explicit ModSibStrict( s32 disp ) : ModSibSized( OpSize, disp ) {}
+		static const uint OperandSize = sizeof( OperandType );
+
+		__forceinline explicit ModSibStrict( const iAddressInfo& src ) : ModSibBase( src ) {}
+		__forceinline explicit ModSibStrict( s32 disp ) : ModSibBase( disp ) {}
 		__forceinline ModSibStrict( x86IndexReg base, x86IndexReg index, int scale=0, s32 displacement=0 ) :
-			ModSibSized( OpSize, base, index, scale, displacement ) {}
+			ModSibBase( base, index, scale, displacement ) {}
 		
-		__forceinline ModSibStrict<OpSize>& Add( s32 imm )
+		__forceinline ModSibStrict<OperandType>& Add( s32 imm )
 		{
 			Displacement += imm;
 			return *this;
 		}
 
-		__forceinline ModSibStrict<OpSize> operator+( const s32 imm ) const { return ModSibStrict<OpSize>( *this ).Add( imm ); }
-		__forceinline ModSibStrict<OpSize> operator-( const s32 imm ) const { return ModSibStrict<OpSize>( *this ).Add( -imm ); }
+		__forceinline ModSibStrict<OperandType> operator+( const s32 imm ) const { return ModSibStrict<OperandType>( *this ).Add( imm ); }
+		__forceinline ModSibStrict<OperandType> operator-( const s32 imm ) const { return ModSibStrict<OperandType>( *this ).Add( -imm ); }
 	};
 
 	//////////////////////////////////////////////////////////////////////////////////////////
@@ -493,40 +457,42 @@ namespace x86Emitter
 	// Explicit version of ptr[], in the form of ptr32[], ptr16[], etc. which allows
 	// specification of the operand size for ImmToMem operations.
 	//
-	template< int OperandSize >
+	template< typename OperandType >
 	struct x86IndexerTypeExplicit
 	{
+		static const uint OperandSize = sizeof( OperandType );
+
 		// passthrough instruction, allows ModSib to pass silently through ptr translation
 		// without doing anything and without compiler error.
-		const ModSibStrict<OperandSize>& operator[]( const ModSibStrict<OperandSize>& src ) const { return src; }
+		const ModSibStrict<OperandType>& operator[]( const ModSibStrict<OperandType>& src ) const { return src; }
 
-		__forceinline ModSibStrict<OperandSize> operator[]( x86IndexReg src ) const
+		__forceinline ModSibStrict<OperandType> operator[]( x86IndexReg src ) const
 		{
-			return ModSibStrict<OperandSize>( src, x86IndexReg::Empty );
+			return ModSibStrict<OperandType>( src, x86IndexReg::Empty );
 		}
 
-		__forceinline ModSibStrict<OperandSize> operator[]( const iAddressInfo& src ) const
+		__forceinline ModSibStrict<OperandType> operator[]( const iAddressInfo& src ) const
 		{
-			return ModSibStrict<OperandSize>( src );
+			return ModSibStrict<OperandType>( src );
 		}
 
-		__forceinline ModSibStrict<OperandSize> operator[]( uptr src ) const
+		__forceinline ModSibStrict<OperandType> operator[]( uptr src ) const
 		{
-			return ModSibStrict<OperandSize>( src );
+			return ModSibStrict<OperandType>( src );
 		}
 
-		__forceinline ModSibStrict<OperandSize> operator[]( const void* src ) const
+		__forceinline ModSibStrict<OperandType> operator[]( const void* src ) const
 		{
-			return ModSibStrict<OperandSize>( (uptr)src );
+			return ModSibStrict<OperandType>( (uptr)src );
 		}
 		
 		x86IndexerTypeExplicit() {}  // GCC initialization dummy
 	};
 
 	extern const x86IndexerType ptr;
-	extern const x86IndexerTypeExplicit<4> ptr32;
-	extern const x86IndexerTypeExplicit<2> ptr16;
-	extern const x86IndexerTypeExplicit<1> ptr8;	
+	extern const x86IndexerTypeExplicit<u32> ptr32;
+	extern const x86IndexerTypeExplicit<u16> ptr16;
+	extern const x86IndexerTypeExplicit<u8> ptr8;	
 
 	//////////////////////////////////////////////////////////////////////////////////////////
 	// JccComparisonType - enumerated possibilities for inspired code branching!
@@ -652,14 +618,29 @@ namespace x86Emitter
 
 		extern void EmitSibMagic( uint regfield, const ModSibBase& info );
 
+		// ------------------------------------------------------------------------
+		template< typename ImmType >
+		class ImplementationHelper
+		{
+		public:
+			static const uint OperandSize = sizeof(ImmType);
+
+		protected:
+			static bool Is8BitOperand()	{ return OperandSize == 1; }
+			static void prefix16()		{ if( OperandSize == 2 ) iWrite<u8>( 0x66 ); }
+		};
+
+		// ------------------------------------------------------------------------
 		#include "implement/group1.h"
 		#include "implement/group2.h"
+		#include "implement/group3.h"
 		#include "implement/movs.h"		// cmov and movsx/zx
-		#include "implement/dwshift.h"	// dowubleword shifts!
+		#include "implement/dwshift.h"	// doubleword shifts!
+		#include "implement/incdec.h"
 	}
 
-	// ------------------------------------------------------------------------
-
+	//////////////////////////////////////////////////////////////////////////////////////////
+	//
 	// ----- Group 1 Instruction Class -----
 
 	extern const Internal::Group1ImplAll<Internal::G1Type_ADD> iADD;
@@ -676,6 +657,8 @@ namespace x86Emitter
 	// zero.  This is a safe optimization since any zero-value shift does not affect any
 	// flags.
 
+	extern const Internal::MovImplAll iMOV;
+
 	extern const Internal::Group2ImplAll<Internal::G2Type_ROL> iROL;
 	extern const Internal::Group2ImplAll<Internal::G2Type_ROR> iROR;
 	extern const Internal::Group2ImplAll<Internal::G2Type_RCL> iRCL;
@@ -683,6 +666,17 @@ namespace x86Emitter
 	extern const Internal::Group2ImplAll<Internal::G2Type_SHL> iSHL;
 	extern const Internal::Group2ImplAll<Internal::G2Type_SHR> iSHR;
 	extern const Internal::Group2ImplAll<Internal::G2Type_SAR> iSAR;
+
+	// ----- Group 3 Instruction Class -----
+	
+	extern const Internal::Group3ImplAll<Internal::G3Type_NOT> iNOT;
+	extern const Internal::Group3ImplAll<Internal::G3Type_NEG> iNEG;
+	extern const Internal::Group3ImplAll<Internal::G3Type_MUL> iUMUL;
+	extern const Internal::Group3ImplAll<Internal::G3Type_DIV> iUDIV;
+	extern const Internal::Group3ImplAll<Internal::G3Type_iDIV> iSDIV;
+
+	extern const Internal::IncDecImplAll<false> iINC;
+	extern const Internal::IncDecImplAll<true>  iDEC;
 
 	extern const Internal::MovExtendImplAll<false> iMOVZX;
 	extern const Internal::MovExtendImplAll<true>  iMOVSX;

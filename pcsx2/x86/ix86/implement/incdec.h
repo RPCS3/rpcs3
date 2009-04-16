@@ -20,3 +20,54 @@
 
 // Implementations found here: Increment and Decrement Instructions!
 // Note: This header is meant to be included from within the x86Emitter::Internal namespace.
+
+template< typename ImmType >
+class IncDecImpl : public ImplementationHelper<ImmType>
+{
+public: 
+	IncDecImpl() {}		// For the love of GCC.
+
+	static __emitinline void Emit( bool isDec, const iRegister<ImmType>& to )
+	{
+		// There is no valid 8-bit form of direct register inc/dec, so fall
+		// back on Mod/RM format instead:
+		if( Is8BitOperand() )
+		{
+			write8( 0xfe );
+			ModRM_Direct( isDec ? 1 : 0, to.Id );
+		}
+		else
+		{
+			prefix16();
+			write8( (isDec ? 0x48 : 0x40) | to.Id );
+		}
+	}
+
+	static __emitinline void Emit( bool isDec, const ModSibStrict<ImmType>& dest )
+	{
+		write8( Is8BitOperand() ? 0xfe : 0xff );
+		EmitSibMagic( isDec ? 1: 0, dest );
+	}
+};
+
+// ------------------------------------------------------------------------
+template< bool isDec >
+class IncDecImplAll
+{
+protected:
+	typedef IncDecImpl<u32> m_32;
+	typedef IncDecImpl<u16> m_16;
+	typedef IncDecImpl<u8> m_8;
+
+public:
+	__forceinline void operator()( const iRegister32& to )	const		{ m_32::Emit( isDec, to ); }
+	__noinline void operator()( const ModSibStrict<u32>& sibdest ) const	{ m_32::Emit( isDec, sibdest ); }
+
+	__forceinline void operator()( const iRegister16& to )	const		{ m_16::Emit( isDec, to ); }
+	__noinline void operator()( const ModSibStrict<u16>& sibdest ) const	{ m_16::Emit( isDec, sibdest ); }
+
+	__forceinline void operator()( const iRegister8& to )	const		{ m_8::Emit( isDec, to ); }
+	__noinline void operator()( const ModSibStrict<u8>& sibdest ) const	{ m_8::Emit( isDec, sibdest ); }
+
+	IncDecImplAll() {}		// don't ask.
+};

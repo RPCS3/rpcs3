@@ -67,13 +67,13 @@ __threadlocal XMMSSEType g_xmmtypes[iREGCNT_XMM] = { XMMT_INT };
 namespace x86Emitter {
 
 const x86IndexerType ptr;
-const x86IndexerTypeExplicit<4> ptr32;
-const x86IndexerTypeExplicit<2> ptr16;
-const x86IndexerTypeExplicit<1> ptr8;	
+const x86IndexerTypeExplicit<u32> ptr32;
+const x86IndexerTypeExplicit<u16> ptr16;
+const x86IndexerTypeExplicit<u8> ptr8;	
 
 // ------------------------------------------------------------------------
 
-template< int OperandSize > const iRegister<OperandSize> iRegister<OperandSize>::Empty;
+template< typename OperandType > const iRegister<OperandType> iRegister<OperandType>::Empty;
 const x86IndexReg x86IndexReg::Empty;
 
 const iRegister32
@@ -240,6 +240,8 @@ namespace Internal
 
 using namespace Internal;
 
+const MovImplAll iMOV;
+
 const Group1ImplAll<G1Type_ADD> iADD;
 const Group1ImplAll<G1Type_OR>  iOR;
 const Group1ImplAll<G1Type_ADC> iADC;
@@ -256,6 +258,15 @@ const Group2ImplAll<G2Type_RCR> iRCR;
 const Group2ImplAll<G2Type_SHL> iSHL;
 const Group2ImplAll<G2Type_SHR> iSHR;
 const Group2ImplAll<G2Type_SAR> iSAR;
+
+const Group3ImplAll<G3Type_NOT> iNOT;
+const Group3ImplAll<G3Type_NEG> iNEG;
+const Group3ImplAll<G3Type_MUL> iUMUL;
+const Group3ImplAll<G3Type_DIV> iUDIV;
+const Group3ImplAll<G3Type_iDIV> iSDIV;
+
+const IncDecImplAll<false> iINC;
+const IncDecImplAll<true>  iDEC;
 
 const MovExtendImplAll<false> iMOVZX;
 const MovExtendImplAll<true>  iMOVSX;
@@ -336,9 +347,11 @@ __emitinline void iAdvancePtr( uint bytes )
 // preserve_flags - set to ture to disable use of SHL on [Index*Base] forms
 // of LEA, which alters flags states.
 //
-template< typename ToReg >
-static void EmitLeaMagic( ToReg to, const ModSibBase& src, bool preserve_flags )
+template< typename OperandType >
+static void EmitLeaMagic( iRegister<OperandType> to, const ModSibBase& src, bool preserve_flags )
 {
+	typedef iRegister<OperandType> ToReg;
+	
 	int displacement_size = (src.Displacement == 0) ? 0 : 
 		( ( src.IsByteSizeDisp() ) ? 1 : 2 );
 
@@ -465,226 +478,7 @@ __emitinline void iLEA( iRegister16 to, const ModSibBase& src, bool preserve_fla
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
-// MOV instruction Implementation
-
-template< typename ImmType >
-class MovImpl
-{
-public: 
-	static const uint OperandSize = sizeof(ImmType);
-
-protected:
-	static bool Is8BitOperand() { return OperandSize == 1; }
-	static void prefix16() { if( OperandSize == 2 ) iWrite<u8>( 0x66 ); }
-
-public:
-	// ------------------------------------------------------------------------
-	static __forceinline void Emit( const iRegister<OperandSize>& to, const iRegister<OperandSize>& from )
-	{
-		if( to == from ) return;	// ignore redundant MOVs.
-
-		prefix16();
-		iWrite<u8>( Is8BitOperand() ? 0x88 : 0x89 );
-		ModRM( 3, from.Id, to.Id );
-	}
-
-	// ------------------------------------------------------------------------
-	static __forceinline void Emit( const ModSibBase& dest, const iRegister<OperandSize>& from )
-	{
-		prefix16();
-
-		// mov eax has a special from when writing directly to a DISP32 address
-		// (sans any register index/base registers).
-
-		if( from.IsAccumulator() && dest.Index.IsEmpty() && dest.Base.IsEmpty() )
-		{
-			iWrite<u8>( Is8BitOperand() ? 0xa2 : 0xa3 );
-			iWrite<u32>( dest.Displacement );
-		}
-		else
-		{
-			iWrite<u8>( Is8BitOperand() ? 0x88 : 0x89 );
-			EmitSibMagic( from.Id, dest );
-		}
-	}
-
-	// ------------------------------------------------------------------------
-	static __forceinline void Emit( const iRegister<OperandSize>& to, const ModSibBase& src )
-	{
-		prefix16();
-
-		// mov eax has a special from when reading directly from a DISP32 address
-		// (sans any register index/base registers).
-
-		if( to.IsAccumulator() && src.Index.IsEmpty() && src.Base.IsEmpty() )
-		{
-			iWrite<u8>( Is8BitOperand() ? 0xa0 : 0xa1 );
-			iWrite<u32>( src.Displacement );
-		}
-		else
-		{
-			iWrite<u8>( Is8BitOperand() ? 0x8a : 0x8b );
-			EmitSibMagic( to.Id, src );
-		}
-	}
-
-	// ------------------------------------------------------------------------
-	static __forceinline void Emit( void* dest, const iRegister<OperandSize>& from )
-	{
-		prefix16();
-
-		// mov eax has a special from when writing directly to a DISP32 address
-
-		if( from.IsAccumulator() )
-		{
-			iWrite<u8>( Is8BitOperand() ? 0xa2 : 0xa3 );
-			iWrite<s32>( (s32)dest );
-		}
-		else
-		{
-			iWrite<u8>( Is8BitOperand() ? 0x88 : 0x89 );
-			iWriteDisp( from.Id, dest );
-		}
-	}
-
-	// ------------------------------------------------------------------------
-	static __forceinline void Emit( const iRegister<OperandSize>& to, const void* src )
-	{
-		prefix16();
-
-		// mov eax has a special from when reading directly from a DISP32 address
-
-		if( to.IsAccumulator() )
-		{
-			iWrite<u8>( Is8BitOperand() ? 0xa0 : 0xa1 );
-			iWrite<s32>( (s32)src );
-		}
-		else
-		{
-			iWrite<u8>( Is8BitOperand() ? 0x8a : 0x8b );
-			iWriteDisp( to.Id, src );
-		}
-	}
-
-	// ------------------------------------------------------------------------
-	static __forceinline void Emit( const iRegister<OperandSize>& to, ImmType imm )
-	{
-		// Note: MOV does not have (reg16/32,imm8) forms.
-
-		prefix16();
-		iWrite<u8>( (Is8BitOperand() ? 0xb0 : 0xb8) | to.Id ); 
-		iWrite<ImmType>( imm );
-	}
-
-	// ------------------------------------------------------------------------
-	static __forceinline void Emit( ModSibStrict<OperandSize> dest, ImmType imm )
-	{
-		prefix16();
-		iWrite<u8>( Is8BitOperand() ? 0xc6 : 0xc7 );
-		EmitSibMagic( 0, dest );
-		iWrite<ImmType>( imm );
-	}
-};
-
-namespace Internal
-{
-	typedef MovImpl<u32> MOV32;
-	typedef MovImpl<u16> MOV16;
-	typedef MovImpl<u8>  MOV8;
-}
-
-// Inlining Notes:
-//   I've set up the inlining to be as practical and intelligent as possible, which means
-//   forcing inlining for (void*) forms of ModRM, which thanks to constprop reduce to
-//   virtually no code.  In the case of (Reg, Imm) forms, the inlinign is up to the dis-
-//   cretion of the compiler.
-// 
-
-// TODO : Turn this into a macro after it's been debugged and accuracy-approved! :D
-
-// ---------- 32 Bit Interface -----------
-__forceinline void iMOV( const iRegister32& to,	const iRegister32& from )		{ MOV32::Emit( to, from ); }
-__forceinline void iMOV( const iRegister32& to,	const void* src )				{ MOV32::Emit( to, ptr32[src] ); }
-__forceinline void iMOV( void* dest,			const iRegister32& from )		{ MOV32::Emit( ptr32[dest], from ); }
-__noinline void iMOV( const ModSibBase& sibdest,	const iRegister32& from )	{ MOV32::Emit( sibdest, from ); }
-__noinline void iMOV( const iRegister32& to,		const ModSibBase& sibsrc )	{ MOV32::Emit( to, sibsrc ); }
-__noinline void iMOV( const ModSibStrict<4>& sibdest,u32 imm )					{ MOV32::Emit( sibdest, imm ); }
-
-void iMOV( const iRegister32& to, u32 imm, bool preserve_flags )
-{
-	if( !preserve_flags && (imm == 0) )
-		iXOR( to, to );
-	else
-		MOV32::Emit( to, imm );
-}
-
-
-// ---------- 16 Bit Interface -----------
-__forceinline void iMOV( const iRegister16& to,	const iRegister16& from )		{ MOV16::Emit( to, from ); }
-__forceinline void iMOV( const iRegister16& to,	const void* src )				{ MOV16::Emit( to, ptr16[src] ); }
-__forceinline void iMOV( void* dest,			const iRegister16& from )		{ MOV16::Emit( ptr16[dest], from ); }
-__noinline void iMOV( const ModSibBase& sibdest,	const iRegister16& from )	{ MOV16::Emit( sibdest, from ); }
-__noinline void iMOV( const iRegister16& to,		const ModSibBase& sibsrc )	{ MOV16::Emit( to, sibsrc ); }
-__noinline void iMOV( const ModSibStrict<2>& sibdest,u16 imm )					{ MOV16::Emit( sibdest, imm ); }
-
-void iMOV( const iRegister16& to, u16 imm, bool preserve_flags )
-{
-	if( !preserve_flags && (imm == 0) )
-		iXOR( to, to );
-	else
-		MOV16::Emit( to, imm );
-}
-
-// ---------- 8 Bit Interface -----------
-__forceinline void iMOV( const iRegister8& to,	const iRegister8& from )		{ MOV8::Emit( to, from ); }
-__forceinline void iMOV( const iRegister8& to,	const void* src )				{ MOV8::Emit( to, ptr8[src] ); }
-__forceinline void iMOV( void* dest,			const iRegister8& from )		{ MOV8::Emit( ptr8[dest], from ); }
-__noinline void iMOV( const ModSibBase& sibdest,	const iRegister8& from )	{ MOV8::Emit( sibdest, from ); }
-__noinline void iMOV( const iRegister8& to,		const ModSibBase& sibsrc )		{ MOV8::Emit( to, sibsrc ); }
-__noinline void iMOV( const ModSibStrict<1>& sibdest,u8 imm )					{ MOV8::Emit( sibdest, imm ); }
-
-void iMOV( const iRegister8& to, u8 imm, bool preserve_flags )
-{
-	if( !preserve_flags && (imm == 0) )
-		iXOR( to, to );
-	else
-		MOV8::Emit( to, imm );
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////
-// DIV/MUL/IDIV/IMUL instructions  (Implemented!)
-
-// F6 is r8, F7 is r32.
-// MUL is 4, DIV is 6.
-
-enum MulDivType
-{
-	MDT_Mul		= 4,
-	MDT_iMul	= 5,
-	MDT_Div		= 6,
-	MDT_iDiv	= 7
-};
-
-// ------------------------------------------------------------------------
-// EAX form emitter for Mul/Div/iMUL/iDIV
-//
-template< int OperandSize >
-static __forceinline void EmitMulDiv_OneRegForm( MulDivType InstType, const iRegister<OperandSize>& from )
-{
-	if( OperandSize == 2 ) iWrite<u8>( 0x66 );
-	iWrite<u8>( (OperandSize == 1) ? 0xf6 : 0xf7 );
-	ModRM( ModRm_Direct, InstType, from.Id );
-}
-
-static __forceinline void EmitMulDiv_OneRegForm( MulDivType InstType, const ModSibSized& sibsrc )
-{
-	if( sibsrc.OperandSize == 2 ) iWrite<u8>( 0x66 );
-	iWrite<u8>( (sibsrc.OperandSize == 1) ? 0xf6 : 0xf7 );
-	EmitSibMagic( InstType, sibsrc );
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////
-// 	All iMul forms are valid for 16 and 32 bit register operands only!
+// 	The following iMul-specific forms are valid for 16 and 32 bit register operands only!
 
 template< typename ImmType >
 class iMulImpl
@@ -697,15 +491,15 @@ protected:
 
 public:
 	// ------------------------------------------------------------------------
-	static __forceinline void Emit( const iRegister<OperandSize>& to, const iRegister<OperandSize>& from )
+	static __emitinline void Emit( const iRegister<ImmType>& to, const iRegister<ImmType>& from )
 	{
 		prefix16();
 		write16( 0xaf0f );
-		ModRM( ModRm_Direct, to.Id, from.Id );
+		ModRM_Direct( to.Id, from.Id );
 	}
 	
 	// ------------------------------------------------------------------------
-	static __forceinline void Emit( const iRegister<OperandSize>& to, const void* src )
+	static __emitinline void Emit( const iRegister<ImmType>& to, const void* src )
 	{
 		prefix16();
 		write16( 0xaf0f );
@@ -713,7 +507,7 @@ public:
 	}
 
 	// ------------------------------------------------------------------------
-	static __forceinline void Emit( const iRegister<OperandSize>& to, const ModSibBase& src )
+	static __emitinline void Emit( const iRegister<ImmType>& to, const ModSibBase& src )
 	{
 		prefix16();
 		write16( 0xaf0f );
@@ -721,11 +515,11 @@ public:
 	}
 
 	// ------------------------------------------------------------------------
-	static __forceinline void Emit( const iRegister<OperandSize>& to, const iRegister<OperandSize>& from, ImmType imm )
+	static __emitinline void Emit( const iRegister<ImmType>& to, const iRegister<ImmType>& from, ImmType imm )
 	{
 		prefix16();
 		write16( is_s8( imm ) ? 0x6b : 0x69 );
-		ModRM( ModRm_Direct, to.Id, from.Id );
+		ModRM_Direct( to.Id, from.Id );
 		if( is_s8( imm ) )
 			write8( imm );
 		else
@@ -733,7 +527,7 @@ public:
 	}
 
 	// ------------------------------------------------------------------------
-	static __forceinline void Emit( const iRegister<OperandSize>& to, const void* src, ImmType imm )
+	static __emitinline void Emit( const iRegister<ImmType>& to, const void* src, ImmType imm )
 	{
 		prefix16();
 		write16( is_s8( imm ) ? 0x6b : 0x69 );
@@ -745,7 +539,7 @@ public:
 	}
 
 	// ------------------------------------------------------------------------
-	static __forceinline void Emit( const iRegister<OperandSize>& to, const ModSibBase& src, ImmType imm )
+	static __emitinline void Emit( const iRegister<ImmType>& to, const ModSibBase& src, ImmType imm )
 	{
 		prefix16();
 		write16( is_s8( imm ) ? 0x6b : 0x69 );
@@ -757,28 +551,9 @@ public:
 	}
 };
 
-__forceinline void iUMUL( const iRegister32& from )		{ EmitMulDiv_OneRegForm( MDT_Mul, from ); }
-__forceinline void iUMUL( const iRegister16& from )		{ EmitMulDiv_OneRegForm( MDT_Mul, from ); }
-__forceinline void iUMUL( const iRegister8& from )		{ EmitMulDiv_OneRegForm( MDT_Mul, from ); }
-__noinline void iUMUL( const ModSibSized& from )		{ EmitMulDiv_OneRegForm( MDT_Mul, from ); }
-
-__forceinline void iUDIV( const iRegister32& from )		{ EmitMulDiv_OneRegForm( MDT_Div, from ); }
-__forceinline void iUDIV( const iRegister16& from )		{ EmitMulDiv_OneRegForm( MDT_Div, from ); }
-__forceinline void iUDIV( const iRegister8& from )		{ EmitMulDiv_OneRegForm( MDT_Div, from ); }
-__noinline void iUDIV( const ModSibSized& from )		{ EmitMulDiv_OneRegForm( MDT_Div, from ); }
-
-__forceinline void iSDIV( const iRegister32& from )		{ EmitMulDiv_OneRegForm( MDT_iDiv, from ); }
-__forceinline void iSDIV( const iRegister16& from )		{ EmitMulDiv_OneRegForm( MDT_iDiv, from ); }
-__forceinline void iSDIV( const iRegister8& from )		{ EmitMulDiv_OneRegForm( MDT_iDiv, from ); }
-__noinline void iSDIV( const ModSibSized& from )		{ EmitMulDiv_OneRegForm( MDT_iDiv, from ); }
-
-__forceinline void iSMUL( const iRegister32& from )		{ EmitMulDiv_OneRegForm( MDT_iMul, from ); }
-__forceinline void iSMUL( const iRegister16& from )		{ EmitMulDiv_OneRegForm( MDT_iMul, from ); }
-__forceinline void iSMUL( const iRegister8& from )		{ EmitMulDiv_OneRegForm( MDT_iMul, from ); }
-__noinline void iSMUL( const ModSibSized& from )		{ EmitMulDiv_OneRegForm( MDT_iMul, from ); }
-
 // ------------------------------------------------------------------------
-// iMUL's special forms (unique to iMUL alone)
+// iMUL's special forms (unique to iMUL alone), and valid for 32/16 bit operands only,
+// thus noi templates are used.
 
 namespace Internal
 {

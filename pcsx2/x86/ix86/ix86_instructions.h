@@ -37,7 +37,6 @@ namespace x86Emitter
 {
 	extern void iJccKnownTarget( JccComparisonType comparison, void* target, bool slideForward=false );
 
-
 	// ----- Lea Instructions (Load Effective Address) -----
 	// Note: alternate (void*) forms of these instructions are not provided since those
 	// forms are functionally equivalent to Mov reg,imm, and thus better written as MOVs
@@ -86,74 +85,22 @@ namespace x86Emitter
 	//////////////////////////////////////////////////////////////////////////////////////////
 	// MUL / DIV instructions
 	
-	extern void iUMUL( const iRegister32& from );
-	extern void iUMUL( const iRegister16& from );
-	extern void iUMUL( const iRegister8& from );
-	extern void iUMUL( const ModSibSized& from );
-
-	extern void iUDIV( const iRegister32& from );
-	extern void iUDIV( const iRegister16& from );
-	extern void iUDIV( const iRegister8& from );
-	extern void iUDIV( const ModSibSized& from );
-
-	extern void iSDIV( const iRegister32& from );
-	extern void iSDIV( const iRegister16& from );
-	extern void iSDIV( const iRegister8& from );
-	extern void iSDIV( const ModSibSized& from );
-
-	extern void iSMUL( const iRegister32& from );
 	extern void iSMUL( const iRegister32& to,	const iRegister32& from );
 	extern void iSMUL( const iRegister32& to,	const void* src );
 	extern void iSMUL( const iRegister32& to,	const iRegister32& from, s32 imm );
 	extern void iSMUL( const iRegister32& to,	const ModSibBase& src );
 	extern void iSMUL( const iRegister32& to,	const ModSibBase& src, s32 imm );
 
-	extern void iSMUL( const iRegister16& from );
 	extern void iSMUL( const iRegister16& to,	const iRegister16& from );
 	extern void iSMUL( const iRegister16& to,	const void* src );
 	extern void iSMUL( const iRegister16& to,	const iRegister16& from, s16 imm );
 	extern void iSMUL( const iRegister16& to,	const ModSibBase& src );
 	extern void iSMUL( const iRegister16& to,	const ModSibBase& src, s16 imm );
 
-	extern void iSMUL( const iRegister8& from );
-	extern void iSMUL( const ModSibSized& from );
-
-
-	//////////////////////////////////////////////////////////////////////////////////////////
-	// MOV instructions!
-	// ---------- 32 Bit Interface -----------
-	extern void iMOV( const iRegister32& to, const iRegister32& from );
-	extern void iMOV( const ModSibBase& sibdest, const iRegister32& from );
-	extern void iMOV( const iRegister32& to, const ModSibBase& sibsrc );
-	extern void iMOV( const iRegister32& to, const void* src );
-	extern void iMOV( void* dest, const iRegister32& from );
-
-	// preserve_flags  - set to true to disable optimizations which could alter the state of
-	//   the flags (namely replacing mov reg,0 with xor).
-	extern void iMOV( const iRegister32& to, u32 imm, bool preserve_flags=false );
-	extern void iMOV( const ModSibStrict<4>& sibdest, u32 imm );
-
-	// ---------- 16 Bit Interface -----------
-	extern void iMOV( const iRegister16& to, const iRegister16& from );
-	extern void iMOV( const ModSibBase& sibdest, const iRegister16& from );
-	extern void iMOV( const iRegister16& to, const ModSibBase& sibsrc );
-	extern void iMOV( const iRegister16& to, const void* src );
-	extern void iMOV( void* dest, const iRegister16& from );
-
-	// preserve_flags  - set to true to disable optimizations which could alter the state of
-	//   the flags (namely replacing mov reg,0 with xor).
-	extern void iMOV( const iRegister16& to, u16 imm, bool preserve_flags=false );
-	extern void iMOV( const ModSibStrict<2>& sibdest, u16 imm );
-
-	// ---------- 8 Bit Interface -----------
-	extern void iMOV( const iRegister8& to, const iRegister8& from );
-	extern void iMOV( const ModSibBase& sibdest, const iRegister8& from );
-	extern void iMOV( const iRegister8& to, const ModSibBase& sibsrc );
-	extern void iMOV( const iRegister8& to, const void* src );
-	extern void iMOV( void* dest, const iRegister8& from );
-
-	extern void iMOV( const iRegister8& to, u8 imm, bool preserve_flags=false );
-	extern void iMOV( const ModSibStrict<1>& sibdest, u8 imm );
+	template< typename T >
+	__forceinline void iSMUL( const iRegister<T>& from )	{ Internal::Group3Impl<T>::Emit( Internal::G3Type_iMUL, from ); }
+	template< typename T >
+	__noinline void iSMUL( const ModSibStrict<T>& from )	{ Internal::Group3Impl<T>::Emit( Internal::G3Type_iMUL, from ); }
 
 	//////////////////////////////////////////////////////////////////////////////////////////
 	// JMP / Jcc Instructions!

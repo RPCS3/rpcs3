@@ -38,27 +38,20 @@ enum G2Type
 // Optimization Note: For Imm forms, we ignore the instruction if the shift count is zero.
 // This is a safe optimization since any zero-value shift does not affect any flags.
 //
-template< typename ImmType, G2Type InstType >
-class Group2Impl
+template< G2Type InstType, typename ImmType >
+class Group2Impl : public ImplementationHelper< ImmType >
 {
 public: 
-	static const uint OperandSize = sizeof(ImmType);
-
 	Group2Impl() {}		// For the love of GCC.
 
-protected:
-	static bool Is8BitOperand()	{ return OperandSize == 1; }
-	static void prefix16()		{ if( OperandSize == 2 ) iWrite<u8>( 0x66 ); }
-
-public:
-	static __emitinline void Emit( const iRegister<OperandSize>& to ) 
+	static __emitinline void Emit( const iRegister<ImmType>& to ) 
 	{
 		prefix16();
 		iWrite<u8>( Is8BitOperand() ? 0xd2 : 0xd3 );
 		ModRM_Direct( InstType, to.Id );
 	}
 
-	static __emitinline void Emit( const iRegister<OperandSize>& to, u8 imm ) 
+	static __emitinline void Emit( const iRegister<ImmType>& to, u8 imm ) 
 	{
 		if( imm == 0 ) return;
 
@@ -77,14 +70,14 @@ public:
 		}
 	}
 
-	static __emitinline void Emit( const ModSibStrict<OperandSize>& sibdest ) 
+	static __emitinline void Emit( const ModSibStrict<ImmType>& sibdest ) 
 	{
 		prefix16();
 		iWrite<u8>( Is8BitOperand() ? 0xd2 : 0xd3 );
 		EmitSibMagic( InstType, sibdest );
 	}
 
-	static __emitinline void Emit( const ModSibStrict<OperandSize>& sibdest, u8 imm ) 
+	static __emitinline void Emit( const ModSibStrict<ImmType>& sibdest, u8 imm ) 
 	{
 		if( imm == 0 ) return;
 
@@ -109,11 +102,6 @@ public:
 template< G2Type InstType >
 class Group2ImplAll
 {
-protected:
-	typedef Group2Impl<u32, InstType> m_32;
-	typedef Group2Impl<u16, InstType> m_16;
-	typedef Group2Impl<u8, InstType>  m_8;
-
 	// Inlining Notes:
 	//   I've set up the inlining to be as practical and intelligent as possible, which means
 	//   forcing inlining for (void*) forms of ModRM, which thanks to constprop reduce to
@@ -125,22 +113,17 @@ protected:
 
 public:
 	// ---------- 32 Bit Interface -----------
-	__forceinline void operator()( const iRegister32& to,		__unused const iRegisterCL& from ) const{ m_32::Emit( to ); }
-	__noinline void operator()( const ModSibStrict<4>& sibdest,	__unused const iRegisterCL& from ) const{ m_32::Emit( sibdest ); }
-	__noinline void operator()( const ModSibStrict<4>& sibdest, u8 imm ) const					{ m_32::Emit( sibdest, imm ); }
-	void operator()( const iRegister32& to, u8 imm ) const										{ m_32::Emit( to, imm ); }
+	template< typename T > __forceinline void operator()( const iRegister<T>& to,		__unused const iRegisterCL& from ) const
+	{ Group2Impl<InstType,T>::Emit( to ); }
 
-	// ---------- 16 Bit Interface -----------
-	__forceinline void operator()( const iRegister16& to,		__unused const iRegisterCL& from ) const{ m_16::Emit( to ); }
-	__noinline void operator()( const ModSibStrict<2>& sibdest,	__unused const iRegisterCL& from ) const{ m_16::Emit( sibdest ); }
-	__noinline void operator()( const ModSibStrict<2>& sibdest, u8 imm ) const					{ m_16::Emit( sibdest, imm ); }
-	void operator()( const iRegister16& to, u8 imm ) const										{ m_16::Emit( to, imm ); }
+	template< typename T > __noinline void operator()( const ModSibStrict<T>& sibdest,	__unused const iRegisterCL& from ) const
+	{ Group2Impl<InstType,T>::Emit( sibdest ); }
 
-	// ---------- 8 Bit Interface -----------
-	__forceinline void operator()( const iRegister8& to,		__unused const iRegisterCL& from ) const{ m_8::Emit( to ); }
-	__noinline void operator()( const ModSibStrict<1>& sibdest,	__unused const iRegisterCL& from ) const{ m_8::Emit( sibdest ); }
-	__noinline void operator()( const ModSibStrict<1>& sibdest, u8 imm ) const					{ m_8::Emit( sibdest, imm ); }
-	void operator()( const iRegister8& to, u8 imm ) const										{ m_8::Emit( to, imm ); }
+	template< typename T > __noinline void operator()( const ModSibStrict<T>& sibdest, u8 imm ) const
+	{ Group2Impl<InstType,T>::Emit( sibdest, imm ); }
+
+	template< typename T > void operator()( const iRegister<T>& to, u8 imm ) const
+	{ Group2Impl<InstType,T>::Emit( to, imm ); }
 
 	Group2ImplAll() {}		// I am a class with no members, so I need an explicit constructor!  Sense abounds.
 };
