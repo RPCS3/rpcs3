@@ -637,6 +637,9 @@ create_SpeedHacksDlg (void)
   GtkWidget *label97;
   GtkWidget *check_intc_sync_hack;
   GtkWidget *label101;
+  GtkWidget *vbox71;
+  GtkWidget *VUCycleHackScale;
+  GtkWidget *label108;
   GtkWidget *frame36;
   GtkWidget *alignment31;
   GtkWidget *check_ESC_hack;
@@ -796,6 +799,22 @@ create_SpeedHacksDlg (void)
   gtk_box_pack_start (GTK_BOX (vbox60), label101, FALSE, FALSE, 0);
   gtk_label_set_line_wrap (GTK_LABEL (label101), TRUE);
 
+  vbox71 = gtk_vbox_new (FALSE, 0);
+  gtk_widget_set_name (vbox71, "vbox71");
+  gtk_widget_show (vbox71);
+  gtk_box_pack_start (GTK_BOX (vbox60), vbox71, TRUE, TRUE, 0);
+
+  VUCycleHackScale = gtk_hscale_new (GTK_ADJUSTMENT (gtk_adjustment_new (0, 0, 4, 1, 0, 0)));
+  gtk_widget_set_name (VUCycleHackScale, "VUCycleHackScale");
+  gtk_widget_show (VUCycleHackScale);
+  gtk_box_pack_start (GTK_BOX (vbox71), VUCycleHackScale, TRUE, TRUE, 0);
+  gtk_scale_set_digits (GTK_SCALE (VUCycleHackScale), 0);
+
+  label108 = gtk_label_new (_("Speedup for 3D games.\n0: No speedup.\n1: Slight speedup for 3D geometry, should work with most games.\n2: Moderate speedup for 3D geometry, should work with most games with minor problems.\n3: Large speedup for 3D geometry, may break many games and make others skip frames.\n4: Very large speedup for 3D geometry, will break games in interesting ways."));
+  gtk_widget_set_name (label108, "label108");
+  gtk_widget_show (label108);
+  gtk_box_pack_start (GTK_BOX (vbox71), label108, FALSE, FALSE, 0);
+
   frame36 = gtk_frame_new (NULL);
   gtk_widget_set_name (frame36, "frame36");
   gtk_widget_show (frame36);
@@ -869,6 +888,9 @@ create_SpeedHacksDlg (void)
   GLADE_HOOKUP_OBJECT (SpeedHacksDlg, label97, "label97");
   GLADE_HOOKUP_OBJECT (SpeedHacksDlg, check_intc_sync_hack, "check_intc_sync_hack");
   GLADE_HOOKUP_OBJECT (SpeedHacksDlg, label101, "label101");
+  GLADE_HOOKUP_OBJECT (SpeedHacksDlg, vbox71, "vbox71");
+  GLADE_HOOKUP_OBJECT (SpeedHacksDlg, VUCycleHackScale, "VUCycleHackScale");
+  GLADE_HOOKUP_OBJECT (SpeedHacksDlg, label108, "label108");
   GLADE_HOOKUP_OBJECT (SpeedHacksDlg, frame36, "frame36");
   GLADE_HOOKUP_OBJECT (SpeedHacksDlg, alignment31, "alignment31");
   GLADE_HOOKUP_OBJECT (SpeedHacksDlg, check_ESC_hack, "check_ESC_hack");

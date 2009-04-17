@@ -81,6 +81,7 @@ void on_Speed_Hacks(GtkMenuItem *menuitem, gpointer user_data)
 	set_checked(SpeedHacksDlg, "check_intc_sync_hack", CHECK_INTC_STAT_HACK);
 	set_checked(SpeedHacksDlg, "check_ESC_hack", CHECK_ESCAPE_HACK);
 
+	gtk_range_set_value(GTK_RANGE(lookup_widget(SpeedHacksDlg, "VUCycleHackScale")), Config.VUCycleHack);	
 	gtk_widget_show_all(SpeedHacksDlg);
 	gtk_widget_set_sensitive(MainWindow, FALSE);
 	gtk_main();
@@ -104,6 +105,7 @@ void on_Speed_Hack_OK(GtkButton *button, gpointer user_data)
 	Config.Hacks |= is_checked(SpeedHacksDlg, "check_intc_sync_hack") << 5;
 	Config.Hacks |= is_checked(SpeedHacksDlg, "check_ESC_hack") << 10;
 
+	Config.VUCycleHack = gtk_range_get_value(GTK_RANGE(lookup_widget(SpeedHacksDlg, "VUCycleHackScale")));	
 	SaveConfig();
 
 	gtk_widget_destroy(SpeedHacksDlg);
