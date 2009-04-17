@@ -2046,19 +2046,19 @@ void _vuXITOP(VURegs * VU) {
 void _vuXGKICK(VURegs * VU)
 {
 	u32* ptr = (u32*)GET_VU_MEM(VU, (VU->VI[_Fs_].US[0]*16) & (VU == &VU1 ? 0x3fff : 0xfff));
-	int temp = 0x4000 - ((VU->VI[_Fs_].US[0]*16) & 0x3fff);
-	u32 tempmem[0x8000];
+//	int temp = 0x4000 - ((VU->VI[_Fs_].US[0]*16) & 0x3fff);
+//	u32 tempmem[0x8000];
 	
 	// flush all pipelines first (in the right order)
 	_vuFlushAll(VU);
 
 	//Gonna be slow but reshuffles the memory so overflows wont occur
-		memset(tempmem, 0, sizeof(tempmem));
+	/*	memset(tempmem, 0, sizeof(tempmem));
 		memcpy(tempmem, ptr, temp);
 		ptr = (u32*)GET_VU_MEM(VU, 0);
 		memcpy(&tempmem[temp], ptr, ((VU->VI[_Fs_].US[0]*16) & 0x3fff));
 		GSGIFTRANSFER1((u32*)&tempmem[0], 0);
-	//} else GSGIFTRANSFER1((u32*)VU->Mem, (VU->VI[_Fs_].US[0]*16) & 0x3fff);
+	} else*/ GSGIFTRANSFER1((u32*)VU->Mem, (VU->VI[_Fs_].US[0]*16) & 0x3fff);
 }
 
 void _vuXTOP(VURegs * VU) {
