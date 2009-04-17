@@ -717,8 +717,8 @@ protected:
 	}
 
 public:
-	GSRendererSW(BYTE* base, bool mt, void (*irq)(), int nloophack, const GSRendererSettings& rs, int threads)
-		: GSRendererT(base, mt, irq, nloophack, rs)
+	GSRendererSW(BYTE* base, bool mt, void (*irq)(), const GSRendererSettings& rs, int threads)
+		: GSRendererT(base, mt, irq, rs)
 	{
 		m_rl.Create<GSDrawScanline>(this, threads);
 

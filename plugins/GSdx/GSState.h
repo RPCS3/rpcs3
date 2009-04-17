@@ -112,7 +112,6 @@ class GSState : public GSAlignedClass<16>
 	bool m_mt;
 	void (*m_irq)();
 	bool m_path3hack;
-	int m_nloophack_org;
 
 	int m_x, m_y;
 	int m_bytes;
@@ -200,7 +199,6 @@ public:
 	DWORD m_vprim;
 
 	GSPerfMon m_perfmon;
-	bool m_nloophack;
 	DWORD m_crc;
 	int m_options;
 	int m_frameskip;
@@ -208,7 +206,7 @@ public:
 	GSDump m_dump;
 
 public:
-	GSState(BYTE* base, bool mt, void (*irq)(), int nloophack);
+	GSState(BYTE* base, bool mt, void (*irq)());
 	virtual ~GSState();
 
 	void ResetHandlers();

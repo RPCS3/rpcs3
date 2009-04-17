@@ -22,11 +22,9 @@
 #include "stdafx.h"
 #include "GSState.h"
 
-GSState::GSState(BYTE* base, bool mt, void (*irq)(), int nloophack)
+GSState::GSState(BYTE* base, bool mt, void (*irq)())
 	: m_mt(mt)
 	, m_irq(irq)
-	, m_nloophack_org(nloophack)
-	, m_nloophack(nloophack == 1)
 	, m_crc(0)
 	, m_options(0)
 	, m_path3hack(0)
@@ -1241,8 +1239,6 @@ template<int index> void GSState::Transfer(BYTE* mem, UINT32 size)
 
 	while(size > 0)
 	{
-		bool eop = false;
-
 		if(path.tag.NLOOP == 0)
 		{
 			path.SetTag(mem);
@@ -1250,41 +1246,29 @@ template<int index> void GSState::Transfer(BYTE* mem, UINT32 size)
 			mem += sizeof(GIFTag);
 			size--;
 
-			m_q = 1.0f;
-
 			if(index == 2 && path.tag.EOP)
 			{
 				m_path3hack = 1;
 			}
 
-			if(path.tag.PRE)
+			if(path.tag.NLOOP > 0) // eeuser 7.2.2. GIFtag: "... when NLOOP is 0, the GIF does not output anything, and values other than the EOP field are disregarded."
 			{
-				ASSERT(path.tag.FLG != GIF_FLG_IMAGE); // kingdom hearts, ffxii, tales of abyss, berserk
+				m_q = 1.0f;
 
-				if((path.tag.FLG & 2) == 0)
+				if(path.tag.PRE)
 				{
-					GIFReg r;
-					r.i64 = path.tag.PRIM;
-					(this->*m_fpGIFRegHandlers[GIF_A_D_REG_PRIM])(&r);
-				}
-			}
+					ASSERT(path.tag.FLG != GIF_FLG_IMAGE); // kingdom hearts, ffxii, tales of abyss, berserk
 
-			if(path.tag.EOP)
-			{
-				eop = true;
-			}
-			else if(path.tag.NLOOP == 0)
-			{
-				if(index == 0 && m_nloophack)
-				{
-					continue;
+					if((path.tag.FLG & 2) == 0)
+					{
+						GIFReg r;
+						r.i64 = path.tag.PRIM;
+						(this->*m_fpGIFRegHandlers[GIF_A_D_REG_PRIM])(&r);
+					}
 				}
-
-				eop = true;
 			}
 		}
-
-		if(path.tag.NLOOP > 0)
+		else
 		{
 			switch(path.tag.FLG)
 			{
@@ -1400,27 +1384,35 @@ template<int index> void GSState::Transfer(BYTE* mem, UINT32 size)
 			}
 		}
 
-		if(eop && ((int)size <= 0 || index == 0))
+		if(index == 0)
 		{
-			break;
-		}
-	}
-
-	// FIXME: dq8, pcsx2 error probably
-
-	if(index == 0)
-	{
-		if(!path.tag.EOP && path.tag.NLOOP > 0)
-		{
-			path.tag.NLOOP = 0;
-
-			TRACE(_T("path1 hack\n"));
+			if(path.tag.EOP && path.tag.NLOOP == 0)
+			{
+				break;
+			}
 		}
 	}
 
 	if(m_dump && mem > start)
 	{
 		m_dump.Transfer(index, start, mem - start);
+	}
+
+	if(index == 0)
+	{
+		if(size == 0 && path.tag.NLOOP > 0)
+		{
+			if(m_mt)
+			{
+				// TODO
+
+				path.tag.NLOOP = 0;
+			}
+			else
+			{
+				Transfer<0>(mem - 0x4000, 0x4000 / 16);
+			}
+		}
 	}
 }
 
@@ -1617,11 +1609,6 @@ void GSState::SetGameCRC(DWORD crc, int options)
 	m_crc = crc;
 	m_options = options;
 	m_game = CRC::Lookup(crc);
-
-	if(m_nloophack_org == 2)
-	{
-		m_nloophack = m_game.nloophack;
-	}
 }
 
 void GSState::SetFrameSkip(int frameskip)

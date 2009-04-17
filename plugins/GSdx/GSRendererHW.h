@@ -631,8 +631,8 @@ protected:
 	}
 
 public:
-	GSRendererHW(BYTE* base, bool mt, void (*irq)(), int nloophack, const GSRendererSettings& rs, bool psrr)
-		: GSRendererT<Device, Vertex>(base, mt, irq, nloophack, rs, psrr)
+	GSRendererHW(BYTE* base, bool mt, void (*irq)(), const GSRendererSettings& rs, bool psrr)
+		: GSRendererT<Device, Vertex>(base, mt, irq, rs, psrr)
 		, m_width(1024)
 		, m_height(1024)
 		, m_skip(0)

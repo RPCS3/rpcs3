@@ -106,10 +106,6 @@ static INT32 GSopen(void* dsp, char* title, int mt, int renderer)
 
 	GSclose();
 
-	// TODO 
-
-	int nloophack = AfxGetApp()->GetProfileInt(_T("Settings"), _T("nloophack"), 2);
-
 	GSRendererSettings rs;
 
 	rs.m_interlace = AfxGetApp()->GetProfileInt(_T("Settings"), _T("interlace"), 0);
@@ -125,14 +121,14 @@ static INT32 GSopen(void* dsp, char* title, int mt, int renderer)
 	switch(renderer)
 	{
 	default: 
-	case 0: s_gs = new GSRendererHW9(s_basemem, !!mt, s_irq, nloophack, rs); break;
-	case 1: s_gs = new GSRendererSW<GSDevice9>(s_basemem, !!mt, s_irq, nloophack, rs, threads); break;
-	case 2: s_gs = new GSRendererNull<GSDevice9>(s_basemem, !!mt, s_irq, nloophack, rs); break;
-	case 3: s_gs = new GSRendererHW10(s_basemem, !!mt, s_irq, nloophack, rs); break;
-	case 4: s_gs = new GSRendererSW<GSDevice10>(s_basemem, !!mt, s_irq, nloophack, rs, threads); break;
-	case 5: s_gs = new GSRendererNull<GSDevice10>(s_basemem, !!mt, s_irq, nloophack, rs); break;
-	case 6: s_gs = new GSRendererSW<GSDeviceNull>(s_basemem, !!mt, s_irq, nloophack, rs, threads); break;
-	case 7: s_gs = new GSRendererNull<GSDeviceNull>(s_basemem, !!mt, s_irq, nloophack, rs); break;
+	case 0: s_gs = new GSRendererHW9(s_basemem, !!mt, s_irq, rs); break;
+	case 1: s_gs = new GSRendererSW<GSDevice9>(s_basemem, !!mt, s_irq, rs, threads); break;
+	case 2: s_gs = new GSRendererNull<GSDevice9>(s_basemem, !!mt, s_irq, rs); break;
+	case 3: s_gs = new GSRendererHW10(s_basemem, !!mt, s_irq, rs); break;
+	case 4: s_gs = new GSRendererSW<GSDevice10>(s_basemem, !!mt, s_irq, rs, threads); break;
+	case 5: s_gs = new GSRendererNull<GSDevice10>(s_basemem, !!mt, s_irq, rs); break;
+	case 6: s_gs = new GSRendererSW<GSDeviceNull>(s_basemem, !!mt, s_irq, rs, threads); break;
+	case 7: s_gs = new GSRendererNull<GSDeviceNull>(s_basemem, !!mt, s_irq, rs); break;
 	}
 
 	s_hr = ::CoInitializeEx(NULL, COINIT_MULTITHREADED);

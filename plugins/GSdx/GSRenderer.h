@@ -95,8 +95,8 @@ public:
 	GSWnd m_wnd;
 
 public:
-	GSRendererBase(BYTE* base, bool mt, void (*irq)(), int nloophack, const GSRendererSettings& rs)
-		: GSState(base, mt, irq, nloophack)
+	GSRendererBase(BYTE* base, bool mt, void (*irq)(), const GSRendererSettings& rs)
+		: GSState(base, mt, irq)
 		, m_osd(true)
 	{
 		m_interlace = rs.m_interlace;
@@ -412,8 +412,8 @@ public:
 	GSCapture m_capture;
 
 public:
-	GSRenderer(BYTE* base, bool mt, void (*irq)(), int nloophack, const GSRendererSettings& rs, bool psrr)
-		: GSRendererBase(base, mt, irq, nloophack, rs)
+	GSRenderer(BYTE* base, bool mt, void (*irq)(), const GSRendererSettings& rs, bool psrr)
+		: GSRendererBase(base, mt, irq, rs)
 		, m_psrr(psrr)
 	{
 		s_n = 0;
@@ -687,8 +687,8 @@ protected:
 	virtual void Draw() = 0;
 
 public:
-	GSRendererT(BYTE* base, bool mt, void (*irq)(), int nloophack, const GSRendererSettings& rs, bool psrr = true)
-		: GSRenderer<Device>(base, mt, irq, nloophack, rs, psrr)
+	GSRendererT(BYTE* base, bool mt, void (*irq)(), const GSRendererSettings& rs, bool psrr = true)
+		: GSRenderer<Device>(base, mt, irq, rs, psrr)
 		, m_count(0)
 		, m_maxcount(0)
 		, m_vertices(NULL)

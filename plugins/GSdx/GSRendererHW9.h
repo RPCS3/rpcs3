@@ -57,7 +57,7 @@ protected:
 	void UpdateFBA(Texture& rt);
 
 public:
-	GSRendererHW9(BYTE* base, bool mt, void (*irq)(), int nloophack, const GSRendererSettings& rs);
+	GSRendererHW9(BYTE* base, bool mt, void (*irq)(), const GSRendererSettings& rs);
 
 	bool Create(LPCTSTR title);
 

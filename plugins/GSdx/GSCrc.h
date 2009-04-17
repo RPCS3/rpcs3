@@ -86,7 +86,6 @@ public:
 		DWORD crc; 
 		Title title; 
 		Region region;
-		bool nloophack;
 	};
 
 private:
