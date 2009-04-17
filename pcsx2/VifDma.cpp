@@ -558,8 +558,17 @@ static void VIFunpack(u32 *data, vifCode *v, unsigned int size, const unsigned i
 		{
 			
 			//DevCon::Notice("VIF%x Unpack ending %x > %x", params VIFdmanum, tempsize, VIFdmanum ? 0x4000 : 0x1000);
-			tempsize = size;
-			size = 0;
+			if(vifRegs->cycle.cl == 1 && ((u32)(VIFdmanum ? 0x4000 : 0x1000) + ((vifRegs->cycle.cl - vifRegs->cycle.wl) * 16)) == tempsize
+				|| tempsize == (u32)(VIFdmanum ? 0x4000 : 0x1000))
+			{
+				//Its a red herring! so ignore it! SSE unpacks will be much quicker
+				tempsize = 0;
+			}
+			else
+			{
+				tempsize = size;
+				size = 0;
+			}
 		} else tempsize = 0;
 
 
