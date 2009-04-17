@@ -2044,7 +2044,8 @@ void VuBaseBlock::AssignVFRegs()
 			else if( itinst->vfacc[i] >= 0 ) lastwrite = itinst->vfacc[i];
 
 			// always alloc at least 1 temp reg
-			int free0 = (i||regs->VFwrite||regs->VFread0||regs->VFread1||(regs->VIwrite&(1<<REG_ACC_FLAG)))?_allocTempXMMreg(XMMT_FPS, -1):-1;
+			int free0 = (i||regs->VFwrite||regs->VFread0||regs->VFread1||(regs->VIwrite&(1<<REG_ACC_FLAG)) || (regs->VIread&(1<<REG_VF0_FLAG)))
+				?_allocTempXMMreg(XMMT_FPS, -1):-1;
 			int free1=0, free2=0;
 
 			if( i==0 && itinst->vfwrite[1] >= 0 && (itinst->vfread0[0]==itinst->vfwrite[1]||itinst->vfread1[0]==itinst->vfwrite[1]) ) {
@@ -2060,9 +2061,9 @@ void VuBaseBlock::AssignVFRegs()
 				_freeXMMreg(free1);
 				_freeXMMreg(free2);
 			}
-			else if( regs->VIwrite & (1<<REG_P) || regs->VIwrite & (1<<REG_Q) || regs->VIread & (1<<REG_VF0_FLAG)) {				
+			else if( regs->VIwrite & (1<<REG_P)) {				
+				// EFU inst, need extra reg
 				free1 = _allocTempXMMreg(XMMT_FPS, -1);				
-				// protects against insts like esadd vf0 and sqrt vf0				
 				if( free0 == -1 )
 					free0 = free1;
 				_freeXMMreg(free1);
