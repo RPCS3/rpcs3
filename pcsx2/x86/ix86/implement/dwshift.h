@@ -27,12 +27,17 @@
 // because shifts by 0 do *not* affect flags status.
 
 template< typename ImmType, bool isShiftRight >
-class DwordShiftImpl : public ImplementationHelper< ImmType >
+class DwordShiftImpl
 {
 protected:
+	static const uint OperandSize = sizeof(ImmType);
+
+	static bool Is8BitOperand()	{ return OperandSize == 1; }
+	static void prefix16()		{ if( OperandSize == 2 ) iWrite<u8>( 0x66 ); }
+
 	static void basesibform( bool isCL )
 	{
-		ImplementationHelper<ImmType>::prefix16();
+		prefix16();
 		write8( 0x0f );
 		write8( (isCL ? 0xa5 : 0xa4) | (isShiftRight ? 0x8 : 0) );
 	}
@@ -42,7 +47,7 @@ public:
 
 	static __emitinline void Emit( const iRegister<ImmType>& to, const iRegister<ImmType>& from ) 
 	{
-		ImplementationHelper<ImmType>::prefix16();
+		prefix16();
 		write16( 0xa50f | (isShiftRight ? 0x800 : 0) );
 		ModRM_Direct( from.Id, to.Id );
 	}
@@ -50,7 +55,7 @@ public:
 	static __emitinline void Emit( const iRegister<ImmType>& to, const iRegister<ImmType>& from, u8 imm ) 
 	{
 		if( imm == 0 ) return;
-		ImplementationHelper<ImmType>::prefix16();
+		prefix16();
 		write16( 0xa40f | (isShiftRight ? 0x800 : 0) );
 		ModRM_Direct( from.Id, to.Id );
 		write8( imm );

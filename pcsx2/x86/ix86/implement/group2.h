@@ -39,15 +39,21 @@ enum G2Type
 // This is a safe optimization since any zero-value shift does not affect any flags.
 //
 template< G2Type InstType, typename ImmType >
-class Group2Impl : public ImplementationHelper< ImmType >
+class Group2Impl
 {
+protected:
+	static const uint OperandSize = sizeof(ImmType);
+
+	static bool Is8BitOperand()	{ return OperandSize == 1; }
+	static void prefix16()		{ if( OperandSize == 2 ) iWrite<u8>( 0x66 ); }
+
 public: 
 	Group2Impl() {}		// For the love of GCC.
 
 	static __emitinline void Emit( const iRegister<ImmType>& to ) 
 	{
-		ImplementationHelper<ImmType>::prefix16();
-		iWrite<u8>( ImplementationHelper<ImmType>::Is8BitOperand() ? 0xd2 : 0xd3 );
+		prefix16();
+		iWrite<u8>( Is8BitOperand() ? 0xd2 : 0xd3 );
 		ModRM_Direct( InstType, to.Id );
 	}
 
@@ -55,16 +61,16 @@ public:
 	{
 		if( imm == 0 ) return;
 
-		ImplementationHelper<ImmType>::prefix16();
+		prefix16();
 		if( imm == 1 )
 		{
 			// special encoding of 1's
-			iWrite<u8>( ImplementationHelper<ImmType>::Is8BitOperand() ? 0xd0 : 0xd1 );
+			iWrite<u8>( Is8BitOperand() ? 0xd0 : 0xd1 );
 			ModRM_Direct( InstType, to.Id );
 		}
 		else
 		{
-			iWrite<u8>( ImplementationHelper<ImmType>::Is8BitOperand() ? 0xc0 : 0xc1 );
+			iWrite<u8>( Is8BitOperand() ? 0xc0 : 0xc1 );
 			ModRM_Direct( InstType, to.Id );
 			iWrite<u8>( imm );
 		}
@@ -72,8 +78,8 @@ public:
 
 	static __emitinline void Emit( const ModSibStrict<ImmType>& sibdest ) 
 	{
-		ImplementationHelper<ImmType>::prefix16();
-		iWrite<u8>( ImplementationHelper<ImmType>::Is8BitOperand() ? 0xd2 : 0xd3 );
+		prefix16();
+		iWrite<u8>( Is8BitOperand() ? 0xd2 : 0xd3 );
 		EmitSibMagic( InstType, sibdest );
 	}
 
@@ -81,16 +87,16 @@ public:
 	{
 		if( imm == 0 ) return;
 
-		ImplementationHelper<ImmType>::prefix16();
+		prefix16();
 		if( imm == 1 )
 		{
 			// special encoding of 1's
-			iWrite<u8>( ImplementationHelper<ImmType>::Is8BitOperand() ? 0xd0 : 0xd1 );
+			iWrite<u8>( Is8BitOperand() ? 0xd0 : 0xd1 );
 			EmitSibMagic( InstType, sibdest );
 		}
 		else
 		{
-			iWrite<u8>( ImplementationHelper<ImmType>::Is8BitOperand() ? 0xc0 : 0xc1 );
+			iWrite<u8>( Is8BitOperand() ? 0xc0 : 0xc1 );
 			EmitSibMagic( InstType, sibdest );
 			iWrite<u8>( imm );
 		}

@@ -116,9 +116,18 @@ void recADD_constv(int info, int creg, int vreg)
 		}
 		else {
 			if( _Rd_ == vreg ) {
-				ADD32ItoM((int)&cpuRegs.GPR.r[_Rd_].UL[ 0 ], g_cpuConstRegs[creg].UL[0]);
-				if( EEINST_ISLIVE1(_Rd_) ) _signExtendSFtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ]);
-				else EEINST_RESETHASLIVE1(_Rd_);
+				if( EEINST_ISLIVE1(_Rd_) )
+				{
+					// must perform the ADD unconditionally, to maintain flags status:
+					ADD32ItoM((int)&cpuRegs.GPR.r[_Rd_].UL[ 0 ], g_cpuConstRegs[creg].UL[0]);
+					_signExtendSFtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ]);
+				}
+				else
+				{
+					if( g_cpuConstRegs[creg].UL[0] )
+						ADD32ItoM((int)&cpuRegs.GPR.r[_Rd_].UL[ 0 ], g_cpuConstRegs[creg].UL[0]);
+					EEINST_RESETHASLIVE1(_Rd_);
+				}
 			}
 			else {
 				MOV32MtoR( EAX, (int)&cpuRegs.GPR.r[ vreg ].UL[ 0 ] );

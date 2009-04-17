@@ -22,8 +22,14 @@
 // Note: This header is meant to be included from within the x86Emitter::Internal namespace.
 
 template< typename ImmType >
-class IncDecImpl : public ImplementationHelper<ImmType>
+class IncDecImpl
 {
+protected:
+	static const uint OperandSize = sizeof(ImmType);
+
+	static bool Is8BitOperand()	{ return OperandSize == 1; }
+	static void prefix16()		{ if( OperandSize == 2 ) iWrite<u8>( 0x66 ); }
+
 public: 
 	IncDecImpl() {}		// For the love of GCC.
 
@@ -31,21 +37,21 @@ public:
 	{
 		// There is no valid 8-bit form of direct register inc/dec, so fall
 		// back on Mod/RM format instead:
-		if (ImplementationHelper<ImmType>::Is8BitOperand() )
+		if (Is8BitOperand() )
 		{
 			write8( 0xfe );
 			ModRM_Direct( isDec ? 1 : 0, to.Id );
 		}
 		else
 		{
-			ImplementationHelper<ImmType>::prefix16();
+			prefix16();
 			write8( (isDec ? 0x48 : 0x40) | to.Id );
 		}
 	}
 
 	static __emitinline void Emit( bool isDec, const ModSibStrict<ImmType>& dest )
 	{
-		write8( ImplementationHelper<ImmType>::Is8BitOperand() ? 0xfe : 0xff );
+		write8( Is8BitOperand() ? 0xfe : 0xff );
 		EmitSibMagic( isDec ? 1: 0, dest );
 	}
 };

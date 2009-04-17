@@ -35,50 +35,56 @@ enum G1Type
 
 // -------------------------------------------------------------------
 template< G1Type InstType, typename ImmType >
-class Group1Impl : public ImplementationHelper< ImmType >
+class Group1Impl
 {
+protected:
+	static const uint OperandSize = sizeof(ImmType);
+
+	static bool Is8BitOperand()	{ return OperandSize == 1; }
+	static void prefix16()		{ if( OperandSize == 2 ) iWrite<u8>( 0x66 ); }
+
 public: 
 	Group1Impl() {}		// because GCC doesn't like static classes
 
 	static __emitinline void Emit( const iRegister<ImmType>& to, const iRegister<ImmType>& from ) 
 	{
-		ImplementationHelper<ImmType>::prefix16();
-		iWrite<u8>( (ImplementationHelper<ImmType>::Is8BitOperand() ? 0 : 1) | (InstType<<3) ); 
+		prefix16();
+		iWrite<u8>( (Is8BitOperand() ? 0 : 1) | (InstType<<3) ); 
 		ModRM_Direct( from.Id, to.Id );
 	}
 
 	static __emitinline void Emit( const ModSibBase& sibdest, const iRegister<ImmType>& from ) 
 	{
-		ImplementationHelper<ImmType>::prefix16();
-		iWrite<u8>( (ImplementationHelper<ImmType>::Is8BitOperand() ? 0 : 1) | (InstType<<3) ); 
+		prefix16();
+		iWrite<u8>( (Is8BitOperand() ? 0 : 1) | (InstType<<3) ); 
 		EmitSibMagic( from.Id, sibdest );
 	}
 
 	static __emitinline void Emit( const iRegister<ImmType>& to, const ModSibBase& sibsrc ) 
 	{
-		ImplementationHelper<ImmType>::prefix16();
-		iWrite<u8>( (ImplementationHelper<ImmType>::Is8BitOperand() ? 2 : 3) | (InstType<<3) );
+		prefix16();
+		iWrite<u8>( (Is8BitOperand() ? 2 : 3) | (InstType<<3) );
 		EmitSibMagic( to.Id, sibsrc );
 	}
 
 	static __emitinline void Emit( void* dest, const iRegister<ImmType>& from ) 
 	{
-		ImplementationHelper<ImmType>::prefix16();
-		iWrite<u8>( (ImplementationHelper<ImmType>::Is8BitOperand() ? 0 : 1) | (InstType<<3) ); 
+		prefix16();
+		iWrite<u8>( (Is8BitOperand() ? 0 : 1) | (InstType<<3) ); 
 		iWriteDisp( from.Id, dest );
 	}
 
 	static __emitinline void Emit( const iRegister<ImmType>& to, const void* src ) 
 	{
-		ImplementationHelper<ImmType>::prefix16();
-		iWrite<u8>( (ImplementationHelper<ImmType>::Is8BitOperand() ? 2 : 3) | (InstType<<3) );
+		prefix16();
+		iWrite<u8>( (Is8BitOperand() ? 2 : 3) | (InstType<<3) );
 		iWriteDisp( to.Id, src );
 	}
 
 	static __emitinline void Emit( const iRegister<ImmType>& to, int imm ) 
 	{
-		ImplementationHelper<ImmType>::prefix16();
-		if( !ImplementationHelper<ImmType>::Is8BitOperand() && is_s8( imm ) )
+		prefix16();
+		if( !Is8BitOperand() && is_s8( imm ) )
 		{
 			iWrite<u8>( 0x83 );
 			ModRM_Direct( InstType, to.Id );
@@ -87,10 +93,10 @@ public:
 		else
 		{
 			if( to.IsAccumulator() )
-				iWrite<u8>( (ImplementationHelper<ImmType>::Is8BitOperand() ? 4 : 5) | (InstType<<3) );
+				iWrite<u8>( (Is8BitOperand() ? 4 : 5) | (InstType<<3) );
 			else
 			{
-				iWrite<u8>( ImplementationHelper<ImmType>::Is8BitOperand() ? 0x80 : 0x81 );
+				iWrite<u8>( Is8BitOperand() ? 0x80 : 0x81 );
 				ModRM_Direct( InstType, to.Id );
 			}
 			iWrite<ImmType>( imm );
@@ -99,7 +105,7 @@ public:
 
 	static __emitinline void Emit( const ModSibStrict<ImmType>& sibdest, int imm ) 
 	{
-		if( ImplementationHelper<ImmType>::Is8BitOperand() )
+		if( Is8BitOperand() )
 		{
 			iWrite<u8>( 0x80 );
 			EmitSibMagic( InstType, sibdest );
@@ -107,7 +113,7 @@ public:
 		}
 		else
 		{		
-			ImplementationHelper<ImmType>::prefix16();
+			prefix16();
 			iWrite<u8>( is_s8( imm ) ? 0x83 : 0x81 );
 			EmitSibMagic( InstType, sibdest );
 			if( is_s8( imm ) )

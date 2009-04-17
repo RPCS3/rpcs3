@@ -619,18 +619,6 @@ namespace x86Emitter
 		extern void EmitSibMagic( uint regfield, const ModSibBase& info );
 
 		// ------------------------------------------------------------------------
-		template< typename ImmType >
-		class ImplementationHelper
-		{
-		public:
-			static const uint OperandSize = sizeof(ImmType);
-
-		protected:
-			static bool Is8BitOperand()	{ return OperandSize == 1; }
-			static void prefix16()		{ if( OperandSize == 2 ) iWrite<u8>( 0x66 ); }
-		};
-
-		// ------------------------------------------------------------------------
 		#include "implement/group1.h"
 		#include "implement/group2.h"
 		#include "implement/group3.h"

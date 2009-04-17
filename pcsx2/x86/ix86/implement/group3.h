@@ -32,22 +32,28 @@ enum G3Type
 };
 
 template< typename ImmType >
-class Group3Impl : public ImplementationHelper<ImmType>
+class Group3Impl
 {
+protected:
+	static const uint OperandSize = sizeof(ImmType);
+
+	static bool Is8BitOperand()	{ return OperandSize == 1; }
+	static void prefix16()		{ if( OperandSize == 2 ) iWrite<u8>( 0x66 ); }
+
 public: 
 	Group3Impl() {}		// For the love of GCC.
 
 	static __emitinline void Emit( G3Type InstType, const iRegister<ImmType>& from )
 	{
-		ImplementationHelper<ImmType>::prefix16();
-		iWrite<u8>(ImplementationHelper<ImmType>::Is8BitOperand() ? 0xf6 : 0xf7 );
+		prefix16();
+		iWrite<u8>(Is8BitOperand() ? 0xf6 : 0xf7 );
 		ModRM_Direct( InstType, from.Id );
 	}
 
 	static __emitinline void Emit( G3Type InstType, const ModSibStrict<ImmType>& sibsrc )
 	{
-		ImplementationHelper<ImmType>::prefix16();
-		iWrite<u8>( ImplementationHelper<ImmType>::Is8BitOperand() ? 0xf6 : 0xf7 );
+		prefix16();
+		iWrite<u8>( Is8BitOperand() ? 0xf6 : 0xf7 );
 		EmitSibMagic( InstType, sibsrc );
 	}
 };

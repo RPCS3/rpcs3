@@ -427,7 +427,7 @@ static void EmitLeaMagic( iRegister<OperandType> to, const ModSibBase& src, bool
 					{
 						// ESP is not encodable as an index (ix86 ignores it), thus:
 						iMOV( to, ToReg( src.Base.Id ) );	// will do the trick!
-						iADD( to, src.Displacement );
+						if( src.Displacement ) iADD( to, src.Displacement );
 						return;
 					}
 					else if( src.Displacement == 0 )
@@ -483,10 +483,8 @@ __emitinline void iLEA( iRegister16 to, const ModSibBase& src, bool preserve_fla
 template< typename ImmType >
 class iMulImpl
 {
-public: 
-	static const uint OperandSize = sizeof(ImmType);
-
 protected:
+	static const uint OperandSize = sizeof(ImmType);
 	static void prefix16() { if( OperandSize == 2 ) iWrite<u8>( 0x66 ); }
 
 public:
