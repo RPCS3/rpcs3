@@ -108,11 +108,8 @@ namespace R5900
 
 			static const int FPU_Mult = 12;
 
-			static const int Store = 28;
-			static const int Load = 22;
-
-			static const int StoreFast = 14;
-			static const int LoadFast = 12; 
+			static const int Store = 8;
+			static const int Load = 8;
 		}
 
 		using namespace Cycles;
@@ -263,28 +260,28 @@ namespace R5900
 		MakeOpcode( LB, Load );
 		MakeOpcode( LH, Load );
 		MakeOpcode( LWL, Load );
-		MakeOpcode( LW, LoadFast );
+		MakeOpcode( LW, Load );
 		MakeOpcode( LBU, Load );
 		MakeOpcode( LHU, Load );
 		MakeOpcode( LWR, Load );
 		MakeOpcode( LWU, Load );
 		MakeOpcode( LWC1, Load );
 		MakeOpcode( LQC2, Load );
-		MakeOpcode( LD, LoadFast );
+		MakeOpcode( LD, Load );
 
 		// Stores!
 
 		MakeOpcode( SQ, Store );
-		MakeOpcode( SB, Store );//slow
-		MakeOpcode( SH, Store );//slow
+		MakeOpcode( SB, Store );
+		MakeOpcode( SH, Store );
 		MakeOpcode( SWL, Store );
-		MakeOpcode( SW, StoreFast );
+		MakeOpcode( SW, Store );
 		MakeOpcode( SDL, Store );
 		MakeOpcode( SDR, Store );
 		MakeOpcode( SWR, Store );
 		MakeOpcode( SWC1, Store );
 		MakeOpcode( SQC2, Store );
-		MakeOpcode( SD, StoreFast );
+		MakeOpcode( SD, Store );
 
 
 		// Multimedia Instructions!
