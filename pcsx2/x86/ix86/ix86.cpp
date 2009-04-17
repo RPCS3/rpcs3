@@ -241,6 +241,7 @@ namespace Internal
 using namespace Internal;
 
 const MovImplAll iMOV;
+const TestImplAll iTEST;
 
 const Group1ImplAll<G1Type_ADD> iADD;
 const Group1ImplAll<G1Type_OR>  iOR;
@@ -271,9 +272,15 @@ const IncDecImplAll<true>  iDEC;
 const MovExtendImplAll<false> iMOVZX;
 const MovExtendImplAll<true>  iMOVSX;
 
-const Internal::DwordShiftImplAll<false> iSHLD;
-const Internal::DwordShiftImplAll<true>  iSHRD;
+const DwordShiftImplAll<false> iSHLD;
+const DwordShiftImplAll<true>  iSHRD;
 
+const Group8ImplAll<G8Type_BT> iBT;
+const Group8ImplAll<G8Type_BTR> iBTR;
+const Group8ImplAll<G8Type_BTS> iBTS;
+const Group8ImplAll<G8Type_BTC> iBTC;
+
+// ------------------------------------------------------------------------
 const CMovImplGeneric iCMOV;
 
 const CMovImplAll<Jcc_Above>			iCMOVA;
@@ -300,6 +307,35 @@ const CMovImplAll<Jcc_Signed>			iCMOVS;
 const CMovImplAll<Jcc_Unsigned>			iCMOVNS;
 const CMovImplAll<Jcc_ParityEven>		iCMOVPE;
 const CMovImplAll<Jcc_ParityOdd>		iCMOVPO;
+
+// ------------------------------------------------------------------------
+const SetImplGeneric iSET;
+
+const SetImplAll<Jcc_Above>				iSETA;
+const SetImplAll<Jcc_AboveOrEqual>		iSETAE;
+const SetImplAll<Jcc_Below>				iSETB;
+const SetImplAll<Jcc_BelowOrEqual>		iSETBE;
+
+const SetImplAll<Jcc_Greater>			iSETG;
+const SetImplAll<Jcc_GreaterOrEqual>	iSETGE;
+const SetImplAll<Jcc_Less>				iSETL;
+const SetImplAll<Jcc_LessOrEqual>		iSETLE;
+
+const SetImplAll<Jcc_Zero>				iSETZ;
+const SetImplAll<Jcc_Equal>				iSETE;
+const SetImplAll<Jcc_NotZero>			iSETNZ;
+const SetImplAll<Jcc_NotEqual>			iSETNE;
+
+const SetImplAll<Jcc_Overflow>			iSETO;
+const SetImplAll<Jcc_NotOverflow>		iSETNO;
+const SetImplAll<Jcc_Carry>				iSETC;
+const SetImplAll<Jcc_NotCarry>			iSETNC;
+
+const SetImplAll<Jcc_Signed>			iSETS;
+const SetImplAll<Jcc_Unsigned>			iSETNS;
+const SetImplAll<Jcc_ParityEven>		iSETPE;
+const SetImplAll<Jcc_ParityOdd>			iSETPO;
+
 
 // ------------------------------------------------------------------------
 // Assigns the current emitter buffer target address.
@@ -582,13 +618,13 @@ __noinline void iSMUL( const iRegister16& to,	const ModSibBase& from, s16 imm )	
 __emitinline void iPOP( const ModSibBase& from )
 {
 	iWrite<u8>( 0x8f );
-	Internal::EmitSibMagic( 0, from );
+	EmitSibMagic( 0, from );
 }
 
 __emitinline void iPUSH( const ModSibBase& from )
 {
 	iWrite<u8>( 0xff );
-	Internal::EmitSibMagic( 6, from );
+	EmitSibMagic( 6, from );
 }
 
 

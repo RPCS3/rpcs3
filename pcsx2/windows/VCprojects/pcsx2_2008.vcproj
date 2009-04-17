@@ -2981,6 +2981,10 @@
 				Name="Implement"
 				>
 				<File
+					RelativePath="..\..\x86\ix86\implement\bittest.h"
+					>
+				</File>
+				<File
 					RelativePath="..\..\x86\ix86\implement\dwshift.h"
 					>
 				</File>
@@ -3002,6 +3006,10 @@
 				</File>
 				<File
 					RelativePath="..\..\x86\ix86\implement\movs.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\x86\ix86\implement\test.h"
 					>
 				</File>
 			</Filter>

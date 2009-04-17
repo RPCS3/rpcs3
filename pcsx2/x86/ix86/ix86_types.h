@@ -625,6 +625,8 @@ namespace x86Emitter
 		#include "implement/movs.h"		// cmov and movsx/zx
 		#include "implement/dwshift.h"	// doubleword shifts!
 		#include "implement/incdec.h"
+		#include "implement/bittest.h"
+		#include "implement/test.h"
 	}
 
 	//////////////////////////////////////////////////////////////////////////////////////////
@@ -646,6 +648,7 @@ namespace x86Emitter
 	// flags.
 
 	extern const Internal::MovImplAll iMOV;
+	extern const Internal::TestImplAll iTEST;
 	
 	extern const Internal::Group2ImplAll<Internal::G2Type_ROL> iROL;
 	extern const Internal::Group2ImplAll<Internal::G2Type_ROR> iROR;
@@ -672,6 +675,12 @@ namespace x86Emitter
 	extern const Internal::DwordShiftImplAll<false> iSHLD;
 	extern const Internal::DwordShiftImplAll<true>  iSHRD;
 
+	extern const Internal::Group8ImplAll<Internal::G8Type_BT> iBT;
+	extern const Internal::Group8ImplAll<Internal::G8Type_BTR> iBTR;
+	extern const Internal::Group8ImplAll<Internal::G8Type_BTS> iBTS;
+	extern const Internal::Group8ImplAll<Internal::G8Type_BTC> iBTC;
+
+	// ------------------------------------------------------------------------
 	extern const Internal::CMovImplGeneric iCMOV;
 
 	extern const Internal::CMovImplAll<Jcc_Above>			iCMOVA;
@@ -698,6 +707,35 @@ namespace x86Emitter
 	extern const Internal::CMovImplAll<Jcc_Unsigned>		iCMOVNS;
 	extern const Internal::CMovImplAll<Jcc_ParityEven>		iCMOVPE;
 	extern const Internal::CMovImplAll<Jcc_ParityOdd>		iCMOVPO;
+	
+	// ------------------------------------------------------------------------
+	extern const Internal::SetImplGeneric iSET;
+
+	extern const Internal::SetImplAll<Jcc_Above>			iSETA;
+	extern const Internal::SetImplAll<Jcc_AboveOrEqual>		iSETAE;
+	extern const Internal::SetImplAll<Jcc_Below>			iSETB;
+	extern const Internal::SetImplAll<Jcc_BelowOrEqual>		iSETBE;
+
+	extern const Internal::SetImplAll<Jcc_Greater>			iSETG;
+	extern const Internal::SetImplAll<Jcc_GreaterOrEqual>	iSETGE;
+	extern const Internal::SetImplAll<Jcc_Less>				iSETL;
+	extern const Internal::SetImplAll<Jcc_LessOrEqual>		iSETLE;
+
+	extern const Internal::SetImplAll<Jcc_Zero>				iSETZ;
+	extern const Internal::SetImplAll<Jcc_Equal>			iSETE;
+	extern const Internal::SetImplAll<Jcc_NotZero>			iSETNZ;
+	extern const Internal::SetImplAll<Jcc_NotEqual>			iSETNE;
+
+	extern const Internal::SetImplAll<Jcc_Overflow>			iSETO;
+	extern const Internal::SetImplAll<Jcc_NotOverflow>		iSETNO;
+	extern const Internal::SetImplAll<Jcc_Carry>			iSETC;
+	extern const Internal::SetImplAll<Jcc_NotCarry>			iSETNC;
+
+	extern const Internal::SetImplAll<Jcc_Signed>			iSETS;
+	extern const Internal::SetImplAll<Jcc_Unsigned>			iSETNS;
+	extern const Internal::SetImplAll<Jcc_ParityEven>		iSETPE;
+	extern const Internal::SetImplAll<Jcc_ParityOdd>		iSETPO;
+
 
 }
 

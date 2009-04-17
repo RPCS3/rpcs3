@@ -145,6 +145,20 @@ DEFINE_LEGACY_MOVEXTEND( ZX, 32, 8 )
 DEFINE_LEGACY_MOVEXTEND( SX, 16, 8 )
 DEFINE_LEGACY_MOVEXTEND( ZX, 16, 8 )
 
+emitterT void TEST32ItoR( x86IntRegType to, u32 from )				{ iTEST( iRegister32(to), from ); }
+emitterT void TEST32ItoM( uptr to, u32 from )						{ iTEST( ptr32[to], from ); }
+emitterT void TEST32RtoR( x86IntRegType to, x86IntRegType from )	{ iTEST( iRegister32(to), iRegister32(from) ); }
+emitterT void TEST32ItoRm( x86IntRegType to, u32 from )				{ iTEST( ptr32[x86IndexReg(to)], from ); }
+
+emitterT void TEST16ItoR( x86IntRegType to, u16 from )				{ iTEST( iRegister16(to), from ); }
+emitterT void TEST16ItoM( uptr to, u16 from )						{ iTEST( ptr16[to], from ); }
+emitterT void TEST16RtoR( x86IntRegType to, x86IntRegType from )	{ iTEST( iRegister16(to), iRegister16(from) ); }
+emitterT void TEST16ItoRm( x86IntRegType to, u16 from )				{ iTEST( ptr16[x86IndexReg(to)], from ); }
+
+emitterT void TEST8ItoR( x86IntRegType to, u8 from )				{ iTEST( iRegister8(to), from ); }
+emitterT void TEST8ItoM( uptr to, u8 from )							{ iTEST( ptr8[to], from ); }
+emitterT void TEST8RtoR( x86IntRegType to, x86IntRegType from )		{ iTEST( iRegister8(to), iRegister8(from) ); }
+emitterT void TEST8ItoRm( x86IntRegType to, u8 from )				{ iTEST( ptr8[x86IndexReg(to)], from ); }
 
 // mov r32 to [r32<<scale+from2]
 emitterT void MOV32RmSOffsettoR( x86IntRegType to, x86IntRegType from1, s32 from2, int scale )
@@ -161,8 +175,6 @@ emitterT void MOV8RmSOffsettoR( x86IntRegType to, x86IntRegType from1, s32 from2
 {
 	iMOV( iRegister8(to), ptr[(x86IndexReg(from1)<<scale) + from2] );
 }
-
-// Special forms needed by the legacy emitter syntax:
 
 emitterT void AND32I8toR( x86IntRegType to, s8 from ) 
 {
@@ -251,6 +263,53 @@ emitterT void LEA16RStoR(x86IntRegType to, x86IntRegType from, u32 scale)
 	iLEA( iRegister16( to ), ptr[x86IndexReg(from)*(1<<scale)] );
 }
 
+emitterT void BT32ItoR( x86IntRegType to, u8 from )		{ iBT( iRegister32(to), from ); }
+emitterT void BTR32ItoR( x86IntRegType to, u8 from )	{ iBTR( iRegister32(to), from ); }
+
+emitterT void SETS8R( x86IntRegType to )	{ iSETS( iRegister8(to) ); }
+emitterT void SETL8R( x86IntRegType to )	{ iSETL( iRegister8(to) ); }
+emitterT void SETGE8R( x86IntRegType to )	{ iSETGE( iRegister8(to) ); }
+emitterT void SETG8R( x86IntRegType to )	{ iSETG( iRegister8(to) ); }
+emitterT void SETA8R( x86IntRegType to )	{ iSETA( iRegister8(to) ); }
+emitterT void SETAE8R( x86IntRegType to )	{ iSETAE( iRegister8(to) ); }
+emitterT void SETB8R( x86IntRegType to )	{ iSETB( iRegister8(to) ); }
+emitterT void SETNZ8R( x86IntRegType to )	{ iSETNZ( iRegister8(to) ); }
+emitterT void SETZ8R( x86IntRegType to )	{ iSETZ( iRegister8(to) ); }
+emitterT void SETE8R( x86IntRegType to )	{ iSETE( iRegister8(to) ); }
+
+/* push imm32 */
+emitterT void PUSH32I( u32 from ) { iPUSH( from ); }
+
+/* push r32 */
+emitterT void PUSH32R( x86IntRegType from )  { iPUSH( iRegister32( from ) ); }
+
+/* push m32 */
+emitterT void PUSH32M( u32 from )
+{
+	iPUSH( ptr[from] );
+}
+
+/* pop r32 */
+emitterT void POP32R( x86IntRegType from ) { iPOP( iRegister32( from ) ); }
+emitterT void PUSHFD( void ) { iPUSHFD(); }
+emitterT void POPFD( void ) { iPOPFD(); }
+
+emitterT void RET( void ) { iRET(); }
+
+emitterT void CBW( void ) { iCBW();  }
+emitterT void CWD( void )  { iCWD(); }
+emitterT void CDQ( void ) { iCDQ(); }
+emitterT void CWDE() { iCWDE(); }
+
+emitterT void LAHF() { iLAHF(); }
+emitterT void SAHF() { iSAHF(); }
+
+//////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////
+// From here on are instructions that have NOT been implemented in the new emitter.
+//////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////
+
 //////////////////////////////////////////////////////////////////////////////////////////
 // Note: the 'to' field can either be a register or a special opcode extension specifier
 // depending on the opcode's encoding.
@@ -286,14 +345,6 @@ emitterT void WriteRmOffsetFrom(x86IntRegType to, x86IntRegType from, int offset
 			write32(offset);
 		}
 	}
-}
-
-emitterT void SET8R( int cc, int to )
-{
-	RexB(0, to);
-	write8( 0x0F );
-	write8( cc );
-	write8( 0xC0 | ( to ) );
 }
 
 emitterT u8* J8Rel( int cc, int to )
@@ -710,181 +761,6 @@ emitterT void CALL32M( u32 to )
 	write8( 0xFF );
 	ModRM( 0, 2, DISP32 );
 	write32( MEMADDR(to, 4) );
-}
-
-////////////////////////////////////
-// misc instructions				/
-////////////////////////////////////
-
-/* test imm32 to r32 */
-emitterT void TEST32ItoR( x86IntRegType to, u32 from ) 
-{
-	RexB(0,to);
-	if ( to == EAX )
-	{
-		write8( 0xA9 );
-	} 
-	else 
-	{
-		write8( 0xF7 );
-		ModRM( 3, 0, to );
-	}
-	write32( from ); 
-}
-
-emitterT void TEST32ItoM( uptr to, u32 from )
-{
-	write8( 0xF7 );
-	ModRM( 0, 0, DISP32 );
-	write32( MEMADDR(to, 8) );
-	write32( from );
-}
-
-/* test r32 to r32 */
-emitterT void TEST32RtoR( x86IntRegType to, x86IntRegType from ) 
-{
-	RexRB(0,from,to);
-	write8( 0x85 );
-	ModRM( 3, from, to );
-}
-
-// test imm32 to [r32]
-emitterT void TEST32ItoRm( x86IntRegType to, u32 from )
-{
-	RexB(0,to);
-	write8( 0xF7 );
-	ModRM( 0, 0, to );
-	write32(from);
-}
-
-// test imm16 to r16
-emitterT void TEST16ItoR( x86IntRegType to, u16 from )
-{
-	write8(0x66);
-	RexB(0,to);
-	if ( to == EAX )
-	{
-		write8( 0xA9 );
-	} 
-	else 
-	{
-		write8( 0xF7 );
-		ModRM( 3, 0, to );
-	}
-	write16( from ); 
-}
-
-// test r16 to r16
-emitterT void TEST16RtoR( x86IntRegType to, x86IntRegType from )
-{
-	write8(0x66);
-	RexRB(0,from,to);
-	write8( 0x85 );
-	ModRM( 3, from, to );
-}
-
-// test r8 to r8
-emitterT void TEST8RtoR( x86IntRegType to, x86IntRegType from )
-{
-	RexRB(0, from, to);
-	write8( 0x84 );
-	ModRM( 3, from, to );
-}
-
-
-// test imm8 to r8
-emitterT void TEST8ItoR( x86IntRegType to, u8 from )
-{
-	RexB(0,to);
-	if ( to == EAX )
-	{
-		write8( 0xA8 );
-	} 
-	else 
-	{
-		write8( 0xF6 );
-		ModRM( 3, 0, to );
-	}
-	write8( from ); 
-}
-
-// test imm8 to r8
-emitterT void TEST8ItoM( uptr to, u8 from )
-{
-	write8( 0xF6 );
-	ModRM( 0, 0, DISP32 );
-	write32( MEMADDR(to, 5) );
-	write8( from );
-}
-
-/* sets r8 */
-emitterT void SETS8R( x86IntRegType to ) 
-{ 
-	SET8R( 0x98, to ); 
-}
-
-/* setl r8 */
-emitterT void SETL8R( x86IntRegType to ) 
-{ 
-	SET8R( 0x9C, to ); 
-}
-
-// setge r8 
-emitterT void SETGE8R( x86IntRegType to ) { SET8R(0x9d, to); }
-// setg r8 
-emitterT void SETG8R( x86IntRegType to ) { SET8R(0x9f, to); }
-// seta r8 
-emitterT void SETA8R( x86IntRegType to ) { SET8R(0x97, to); }
-// setae r8 
-emitterT void SETAE8R( x86IntRegType to ) { SET8R(0x99, to); }
-/* setb r8 */
-emitterT void SETB8R( x86IntRegType to ) { SET8R( 0x92, to ); }
-/* setb r8 */
-emitterT void SETNZ8R( x86IntRegType to )  { SET8R( 0x95, to ); }
-// setz r8 
-emitterT void SETZ8R( x86IntRegType to ) { SET8R(0x94, to); }
-// sete r8 
-emitterT void SETE8R( x86IntRegType to ) { SET8R(0x94, to); }
-
-/* push imm32 */
-emitterT void PUSH32I( u32 from ) { iPUSH( from ); }
-
-/* push r32 */
-emitterT void PUSH32R( x86IntRegType from )  { iPUSH( iRegister32( from ) ); }
-
-/* push m32 */
-emitterT void PUSH32M( u32 from )
-{
-	iPUSH( ptr[from] );
-}
-
-/* pop r32 */
-emitterT void POP32R( x86IntRegType from ) { iPOP( iRegister32( from ) ); }
-emitterT void PUSHFD( void ) { write8( 0x9C ); }
-emitterT void POPFD( void ) { write8( 0x9D ); }
-
-emitterT void RET( void ) { iRET(); }
-
-emitterT void CBW( void ) { iCBW();  }
-emitterT void CWD( void )  { iCWD(); }
-emitterT void CDQ( void ) { iCDQ(); }
-emitterT void CWDE() { iCWDE(); }
-
-emitterT void LAHF() { iLAHF(); }
-emitterT void SAHF() { iSAHF(); }
-
-emitterT void BT32ItoR( x86IntRegType to, u8 from ) 
-{
-	write16( 0xBA0F );
-	ModRM(3, 4, to);
-	write8( from );
-}
-
-emitterT void BTR32ItoR( x86IntRegType to, u8 from ) 
-{
-	write16( 0xBA0F );
-	ModRM(3, 6, to);
-	write8( from );
 }
 
 emitterT void BSRRtoR(x86IntRegType to, x86IntRegType from)

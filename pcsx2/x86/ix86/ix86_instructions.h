@@ -119,7 +119,6 @@ namespace x86Emitter
 
 	typedef iForwardJump<s8>  iForwardJump8;
 	typedef iForwardJump<s32> iForwardJump32;
-	
 
 	DEFINE_FORWARD_JUMP( JA,	Jcc_Above );
 	DEFINE_FORWARD_JUMP( JB,	Jcc_Below );

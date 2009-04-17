@@ -27,10 +27,8 @@
 template< typename ImmType >
 class MovImpl
 {
-public:
-	static const uint OperandSize = sizeof(ImmType);
-
 protected:
+	static const uint OperandSize = sizeof(ImmType);
 	static bool Is8BitOperand()	{ return OperandSize == 1; }
 	static void prefix16()		{ if( OperandSize == 2 ) iWrite<u8>( 0x66 ); }
 
@@ -44,7 +42,7 @@ public:
 
 		prefix16();
 		iWrite<u8>( Is8BitOperand() ? 0x88 : 0x89 );
-		ModRM( 3, from.Id, to.Id );
+		ModRM_Direct( from.Id, to.Id );
 	}
 
 	// ------------------------------------------------------------------------
@@ -187,14 +185,16 @@ public:
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // CMOV !!  [in all of it's disappointing lack-of glory]
+// Caution!  This instruction can look exciting and cool, until you realize that it cannot
+// load immediate values into registers. -_-
 //
-template< typename ImmType >
-class CMovImpl
+template< typename ImmType, int InstBaseVal >
+class CMovSetImpl
 {
 protected:
 	static const uint OperandSize = sizeof(ImmType);
 
-	static bool Is8BitOperand()	{return OperandSize == 1; }
+	static bool Is8BitOperand()	{ return OperandSize == 1; }
 	static void prefix16()		{ if( OperandSize == 2 ) iWrite<u8>( 0x66 ); }
 	
 	static __forceinline void emit_base( JccComparisonType cc )
@@ -202,11 +202,11 @@ protected:
 		jASSUME( cc >= 0 && cc <= 0x0f );
 		prefix16();
 		write8( 0x0f );
-		write8( 0x40 | cc );	
+		write8( InstBaseVal | cc );	
 	}
 
 public:
-	CMovImpl() {}
+	CMovSetImpl() {}
 
 	static __emitinline void Emit( JccComparisonType cc, const iRegister<ImmType>& to, const iRegister<ImmType>& from )
 	{
@@ -226,6 +226,27 @@ public:
 		emit_base( cc );
 		EmitSibMagic( to.Id, sibsrc );
 	}
+
+	// This form is provided for SETcc only (not available in CMOV)
+	static __emitinline void EmitSet( JccComparisonType cc, const iRegister<ImmType>& to )
+	{
+		emit_base( cc );
+		ModRM_Direct( 0, to.Id );
+	}
+
+	// This form is provided for SETcc only (not available in CMOV)
+	static __emitinline void EmitSet( JccComparisonType cc, const void* src )
+	{
+		emit_base( cc );
+		iWriteDisp( 0, src );
+	}
+
+	// This form is provided for SETcc only (not available in CMOV)
+	static __emitinline void EmitSet( JccComparisonType cc, const ModSibStrict<ImmType>& sibsrc )
+	{
+		emit_base( cc );
+		EmitSibMagic( 0, sibsrc );
+	}
 };
 
 // ------------------------------------------------------------------------
@@ -235,8 +256,8 @@ public:
 class CMovImplGeneric
 {
 protected:
-	typedef CMovImpl<u32> m_32;
-	typedef CMovImpl<u16> m_16;
+	typedef CMovSetImpl<u32, 0x40> m_32;	// 0x40 is the cmov base instruction id
+	typedef CMovSetImpl<u16, 0x40> m_16;	// 0x40 is the cmov base instruction id
 
 public:
 	__forceinline void operator()( JccComparisonType ccType, const iRegister32& to, const iRegister32& from ) const		{ m_32::Emit( ccType, to, from ); }
@@ -255,8 +276,8 @@ template< JccComparisonType ccType >
 class CMovImplAll
 {
 protected:
-	typedef CMovImpl<u32> m_32;
-	typedef CMovImpl<u16> m_16;
+	typedef CMovSetImpl<u32, 0x40> m_32;
+	typedef CMovSetImpl<u16, 0x40> m_16;
 
 public:
 	__forceinline void operator()( const iRegister32& to, const iRegister32& from ) const	{ m_32::Emit( ccType, to, from ); }
@@ -269,6 +290,36 @@ public:
 
 	CMovImplAll() {}		// don't ask.
 };
+
+// ------------------------------------------------------------------------
+class SetImplGeneric
+{
+protected:
+	typedef CMovSetImpl<u8, 0x90> Impl;	// 0x90 is the SETcc base instruction id
+
+public:
+	__forceinline void operator()( JccComparisonType cc, const iRegister8& to ) const		{ Impl::EmitSet( cc, to ); }
+	__forceinline void operator()( JccComparisonType cc, void* dest ) const					{ Impl::EmitSet( cc, dest ); }
+	__noinline void operator()( JccComparisonType cc, const ModSibStrict<u8>& dest ) const	{ Impl::EmitSet( cc, dest ); }
+
+	SetImplGeneric() {}		// if you do, ask GCC.
+};
+
+// ------------------------------------------------------------------------
+template< JccComparisonType ccType >
+class SetImplAll
+{
+protected:
+	typedef CMovSetImpl<u8, 0x90> Impl;	// 0x90 is the SETcc base instruction id
+
+public:
+	__forceinline void operator()( const iRegister8& to ) const			{ Impl::EmitSet( ccType, to ); }
+	__forceinline void operator()( void* dest ) const					{ Impl::EmitSet( ccType, dest ); }
+	__noinline void operator()( const ModSibStrict<u8>& dest ) const	{ Impl::EmitSet( ccType, dest ); }
+
+	SetImplAll() {}		// if you do, ask GCC.
+};
+
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // Mov with sign/zero extension implementations (movsx / movzx)
