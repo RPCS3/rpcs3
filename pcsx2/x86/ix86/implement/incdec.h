@@ -31,21 +31,21 @@ public:
 	{
 		// There is no valid 8-bit form of direct register inc/dec, so fall
 		// back on Mod/RM format instead:
-		if( Is8BitOperand() )
+		if (ImplementationHelper<ImmType>::Is8BitOperand() )
 		{
 			write8( 0xfe );
 			ModRM_Direct( isDec ? 1 : 0, to.Id );
 		}
 		else
 		{
-			prefix16();
+			ImplementationHelper<ImmType>::prefix16();
 			write8( (isDec ? 0x48 : 0x40) | to.Id );
 		}
 	}
 
 	static __emitinline void Emit( bool isDec, const ModSibStrict<ImmType>& dest )
 	{
-		write8( Is8BitOperand() ? 0xfe : 0xff );
+		write8( ImplementationHelper<ImmType>::Is8BitOperand() ? 0xfe : 0xff );
 		EmitSibMagic( isDec ? 1: 0, dest );
 	}
 };

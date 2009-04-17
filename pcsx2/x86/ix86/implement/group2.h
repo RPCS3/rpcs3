@@ -46,8 +46,8 @@ public:
 
 	static __emitinline void Emit( const iRegister<ImmType>& to ) 
 	{
-		prefix16();
-		iWrite<u8>( Is8BitOperand() ? 0xd2 : 0xd3 );
+		ImplementationHelper<ImmType>::prefix16();
+		iWrite<u8>( ImplementationHelper<ImmType>::Is8BitOperand() ? 0xd2 : 0xd3 );
 		ModRM_Direct( InstType, to.Id );
 	}
 
@@ -55,16 +55,16 @@ public:
 	{
 		if( imm == 0 ) return;
 
-		prefix16();
+		ImplementationHelper<ImmType>::prefix16();
 		if( imm == 1 )
 		{
 			// special encoding of 1's
-			iWrite<u8>( Is8BitOperand() ? 0xd0 : 0xd1 );
+			iWrite<u8>( ImplementationHelper<ImmType>::Is8BitOperand() ? 0xd0 : 0xd1 );
 			ModRM_Direct( InstType, to.Id );
 		}
 		else
 		{
-			iWrite<u8>( Is8BitOperand() ? 0xc0 : 0xc1 );
+			iWrite<u8>( ImplementationHelper<ImmType>::Is8BitOperand() ? 0xc0 : 0xc1 );
 			ModRM_Direct( InstType, to.Id );
 			iWrite<u8>( imm );
 		}
@@ -72,8 +72,8 @@ public:
 
 	static __emitinline void Emit( const ModSibStrict<ImmType>& sibdest ) 
 	{
-		prefix16();
-		iWrite<u8>( Is8BitOperand() ? 0xd2 : 0xd3 );
+		ImplementationHelper<ImmType>::prefix16();
+		iWrite<u8>( ImplementationHelper<ImmType>::Is8BitOperand() ? 0xd2 : 0xd3 );
 		EmitSibMagic( InstType, sibdest );
 	}
 
@@ -81,16 +81,16 @@ public:
 	{
 		if( imm == 0 ) return;
 
-		prefix16();
+		ImplementationHelper<ImmType>::prefix16();
 		if( imm == 1 )
 		{
 			// special encoding of 1's
-			iWrite<u8>( Is8BitOperand() ? 0xd0 : 0xd1 );
+			iWrite<u8>( ImplementationHelper<ImmType>::Is8BitOperand() ? 0xd0 : 0xd1 );
 			EmitSibMagic( InstType, sibdest );
 		}
 		else
 		{
-			iWrite<u8>( Is8BitOperand() ? 0xc0 : 0xc1 );
+			iWrite<u8>( ImplementationHelper<ImmType>::Is8BitOperand() ? 0xc0 : 0xc1 );
 			EmitSibMagic( InstType, sibdest );
 			iWrite<u8>( imm );
 		}

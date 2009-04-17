@@ -39,15 +39,15 @@ public:
 
 	static __emitinline void Emit( G3Type InstType, const iRegister<ImmType>& from )
 	{
-		prefix16();
-		iWrite<u8>( Is8BitOperand() ? 0xf6 : 0xf7 );
+		ImplementationHelper<ImmType>::prefix16();
+		iWrite<u8>(ImplementationHelper<ImmType>::Is8BitOperand() ? 0xf6 : 0xf7 );
 		ModRM_Direct( InstType, from.Id );
 	}
 
 	static __emitinline void Emit( G3Type InstType, const ModSibStrict<ImmType>& sibsrc )
 	{
-		prefix16();
-		iWrite<u8>( Is8BitOperand() ? 0xf6 : 0xf7 );
+		ImplementationHelper<ImmType>::prefix16();
+		iWrite<u8>( ImplementationHelper<ImmType>::Is8BitOperand() ? 0xf6 : 0xf7 );
 		EmitSibMagic( InstType, sibsrc );
 	}
 };

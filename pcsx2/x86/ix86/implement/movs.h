@@ -33,27 +33,27 @@ public:
 	{
 		if( to == from ) return;	// ignore redundant MOVs.
 
-		prefix16();
-		iWrite<u8>( Is8BitOperand() ? 0x88 : 0x89 );
+		ImplementationHelper<ImmType>::prefix16();
+		iWrite<u8>( ImplementationHelper<ImmType>::Is8BitOperand() ? 0x88 : 0x89 );
 		ModRM( 3, from.Id, to.Id );
 	}
 
 	// ------------------------------------------------------------------------
 	static __forceinline void Emit( const ModSibBase& dest, const iRegister<ImmType>& from )
 	{
-		prefix16();
+		ImplementationHelper<ImmType>::prefix16();
 
 		// mov eax has a special from when writing directly to a DISP32 address
 		// (sans any register index/base registers).
 
 		if( from.IsAccumulator() && dest.Index.IsEmpty() && dest.Base.IsEmpty() )
 		{
-			iWrite<u8>( Is8BitOperand() ? 0xa2 : 0xa3 );
+			iWrite<u8>( ImplementationHelper<ImmType>::Is8BitOperand() ? 0xa2 : 0xa3 );
 			iWrite<u32>( dest.Displacement );
 		}
 		else
 		{
-			iWrite<u8>( Is8BitOperand() ? 0x88 : 0x89 );
+			iWrite<u8>( ImplementationHelper<ImmType>::Is8BitOperand() ? 0x88 : 0x89 );
 			EmitSibMagic( from.Id, dest );
 		}
 	}
@@ -61,19 +61,19 @@ public:
 	// ------------------------------------------------------------------------
 	static __forceinline void Emit( const iRegister<ImmType>& to, const ModSibBase& src )
 	{
-		prefix16();
+		ImplementationHelper<ImmType>::prefix16();
 
 		// mov eax has a special from when reading directly from a DISP32 address
 		// (sans any register index/base registers).
 
 		if( to.IsAccumulator() && src.Index.IsEmpty() && src.Base.IsEmpty() )
 		{
-			iWrite<u8>( Is8BitOperand() ? 0xa0 : 0xa1 );
+			iWrite<u8>( ImplementationHelper<ImmType>::Is8BitOperand() ? 0xa0 : 0xa1 );
 			iWrite<u32>( src.Displacement );
 		}
 		else
 		{
-			iWrite<u8>( Is8BitOperand() ? 0x8a : 0x8b );
+			iWrite<u8>( ImplementationHelper<ImmType>::Is8BitOperand() ? 0x8a : 0x8b );
 			EmitSibMagic( to.Id, src );
 		}
 	}
@@ -81,18 +81,18 @@ public:
 	// ------------------------------------------------------------------------
 	static __forceinline void Emit( void* dest, const iRegister<ImmType>& from )
 	{
-		prefix16();
+		ImplementationHelper<ImmType>::prefix16();
 
 		// mov eax has a special from when writing directly to a DISP32 address
 
 		if( from.IsAccumulator() )
 		{
-			iWrite<u8>( Is8BitOperand() ? 0xa2 : 0xa3 );
+			iWrite<u8>( ImplementationHelper<ImmType>::Is8BitOperand() ? 0xa2 : 0xa3 );
 			iWrite<s32>( (s32)dest );
 		}
 		else
 		{
-			iWrite<u8>( Is8BitOperand() ? 0x88 : 0x89 );
+			iWrite<u8>( ImplementationHelper<ImmType>::Is8BitOperand() ? 0x88 : 0x89 );
 			iWriteDisp( from.Id, dest );
 		}
 	}
@@ -100,18 +100,18 @@ public:
 	// ------------------------------------------------------------------------
 	static __forceinline void Emit( const iRegister<ImmType>& to, const void* src )
 	{
-		prefix16();
+		ImplementationHelper<ImmType>::prefix16();
 
 		// mov eax has a special from when reading directly from a DISP32 address
 
 		if( to.IsAccumulator() )
 		{
-			iWrite<u8>( Is8BitOperand() ? 0xa0 : 0xa1 );
+			iWrite<u8>( ImplementationHelper<ImmType>::Is8BitOperand() ? 0xa0 : 0xa1 );
 			iWrite<s32>( (s32)src );
 		}
 		else
 		{
-			iWrite<u8>( Is8BitOperand() ? 0x8a : 0x8b );
+			iWrite<u8>( ImplementationHelper<ImmType>::Is8BitOperand() ? 0x8a : 0x8b );
 			iWriteDisp( to.Id, src );
 		}
 	}
@@ -121,16 +121,16 @@ public:
 	{
 		// Note: MOV does not have (reg16/32,imm8) forms.
 
-		prefix16();
-		iWrite<u8>( (Is8BitOperand() ? 0xb0 : 0xb8) | to.Id ); 
+		ImplementationHelper<ImmType>::prefix16();
+		iWrite<u8>( (ImplementationHelper<ImmType>::Is8BitOperand() ? 0xb0 : 0xb8) | to.Id ); 
 		iWrite<ImmType>( imm );
 	}
 
 	// ------------------------------------------------------------------------
 	static __forceinline void Emit( ModSibStrict<ImmType> dest, ImmType imm )
 	{
-		prefix16();
-		iWrite<u8>( Is8BitOperand() ? 0xc6 : 0xc7 );
+		ImplementationHelper<ImmType>::prefix16();
+		iWrite<u8>( ImplementationHelper<ImmType>::Is8BitOperand() ? 0xc6 : 0xc7 );
 		EmitSibMagic( 0, dest );
 		iWrite<ImmType>( imm );
 	}

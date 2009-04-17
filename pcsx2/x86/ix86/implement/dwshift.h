@@ -32,7 +32,7 @@ class DwordShiftImpl : public ImplementationHelper< ImmType >
 protected:
 	static void basesibform( bool isCL )
 	{
-		prefix16();
+		ImplementationHelper<ImmType>::prefix16();
 		write8( 0x0f );
 		write8( (isCL ? 0xa5 : 0xa4) | (isShiftRight ? 0x8 : 0) );
 	}
@@ -42,7 +42,7 @@ public:
 
 	static __emitinline void Emit( const iRegister<ImmType>& to, const iRegister<ImmType>& from ) 
 	{
-		prefix16();
+		ImplementationHelper<ImmType>::prefix16();
 		write16( 0xa50f | (isShiftRight ? 0x800 : 0) );
 		ModRM_Direct( from.Id, to.Id );
 	}
@@ -50,7 +50,7 @@ public:
 	static __emitinline void Emit( const iRegister<ImmType>& to, const iRegister<ImmType>& from, u8 imm ) 
 	{
 		if( imm == 0 ) return;
-		prefix16();
+		ImplementationHelper<ImmType>::prefix16();
 		write16( 0xa40f | (isShiftRight ? 0x800 : 0) );
 		ModRM_Direct( from.Id, to.Id );
 		write8( imm );
