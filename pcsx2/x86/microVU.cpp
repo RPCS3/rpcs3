@@ -63,9 +63,9 @@ microVUt(void) mVUreset() {
 	// Dynarec Cache
 	mVU->cache = SysMmapEx((vuIndex ? 0x1e840000 : 0x0e840000), mVU->cacheSize, 0, (vuIndex ? "Micro VU1" : "Micro VU0"));
 	if ( mVU->cache == NULL ) throw Exception::OutOfMemory(fmt_string( "microVU Error: Failed to allocate recompiler memory! (addr: 0x%x)", params (u32)mVU->cache));
-	mVU->ptr = mVU->cache;
-
+	
 	// Setup Entrance/Exit Points
+	x86SetPtr(mVU->cache);
 	mVUdispatcherA<vuIndex>();
 	mVUdispatcherB<vuIndex>();
 
@@ -105,6 +105,7 @@ microVUt(void) mVUclose() {
 microVUt(void) mVUclear(u32 addr, u32 size) {
 
 	microVU* mVU = mVUx;
+	memset(&mVU->prog.lpState, 0, sizeof(mVU->prog.lpState));
 	mVU->prog.cleared = 1; // Next execution searches/creates a new microprogram
 	// Note: It might be better to copy old recompiled blocks to the new microprogram rec data
 	// however, if games primarily do big writes, its probably not worth it.
@@ -157,6 +158,7 @@ __forceinline int mVUsearchProg(microVU* mVU) {
 	if (mVU->prog.cleared) { // If cleared, we need to search for new program
 		for (int i = 0; i <= mVU->prog.total; i++) {
 			//if (i == mVU->prog.cur) continue; // We can skip the current program. (ToDo: Verify that games don't clear, and send the same microprogram :/)
+			//if (mVU->prog.prog[i]) // ToDo: Implement Cycles
 			if (!memcmp_mmx(mVU->prog.prog[i].data, mVU->regs->Micro, mVU->microSize)) {
 				if (i == mVU->prog.cur) { mVUlog("microVU: Same micro program sent!"); }
 				mVU->prog.cur = i;
@@ -172,7 +174,7 @@ __forceinline int mVUsearchProg(microVU* mVU) {
 	mVU->prog.prog[mVU->prog.cur].used++;
 	return 1; // If !cleared, then we're still on the same program as last-time ;)
 }
-
+/*
 // Block Invalidation
 __forceinline void mVUinvalidateBlock(microVU* mVU, u32 addr, u32 size) {
 
@@ -192,7 +194,7 @@ __forceinline void mVUinvalidateBlock(microVU* mVU, u32 addr, u32 size) {
 		mVU->prog.prog[mVU->prog.cur].block[i]->clearFast();
 	}
 }
-
+*/
 //------------------------------------------------------------------
 // Wrapper Functions - Called by other parts of the Emu
 //------------------------------------------------------------------

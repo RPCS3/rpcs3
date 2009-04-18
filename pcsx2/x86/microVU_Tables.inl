@@ -17,8 +17,6 @@
 */
 
 #pragma once
-#include "microVU_Upper.inl"
-#include "microVU_Lower.inl"
 #ifdef PCSX2_MICROVU
 
 //------------------------------------------------------------------

@@ -18,6 +18,7 @@
 
 #pragma once
 
+
 union regInfo {
 	u32 reg;
 	struct {
@@ -49,9 +50,16 @@ struct microTempRegInfo {
 	u8 xgkick;		// Holds the cycle info for XGkick
 };
 
+struct microBlock {
+	microRegInfo pState; // Detailed State of Pipeline
+	u8* x86ptrStart;	 // Start of code
+	//u8* x86ptrEnd;	 // End of code (first byte outside of block)
+	//u32 size;			 // Number of 64bit VU Instructions in Block
+};
+
 template<u32 pSize>
 struct microAllocInfo {
-	microRegInfo	 regs;	   // Pipeline info
+	microBlock		 block;	   // Block/Pipeline info
 	microTempRegInfo regsTemp; // Temp Pipeline info (used so that new pipeline info isn't conflicting between upper and lower instructions in the same cycle)
 	u8  branch;			// 0 = No Branch, 1 = B. 2 = BAL, 3~8 = Conditional Branches, 9 = JALR, 10 = JR
 	u32 cycles;			// Cycles for current block

@@ -26,8 +26,7 @@
 microVUt(void) mVUdispatcherA() {
 	static u32 PCSX2_ALIGNED16(vuMXCSR);
 	microVU* mVU = mVUx;
-	x86SetPtr(mVU->ptr);
-	mVU->startFunct = mVU->ptr;
+	mVU->startFunct = x86Ptr;
 
 	// __fastcall = The first two DWORD or smaller arguments are passed in ECX and EDX registers; all other arguments are passed right to left.
 	if (!vuIndex) { CALLFunc((uptr)mVUexecuteVU0); }
@@ -67,15 +66,13 @@ microVUt(void) mVUdispatcherA() {
 
 	// Jump to Recompiled Code Block
 	JMPR(EAX);
-	mVU->ptr = x86Ptr;
 }
 
 // Generates the code to exit from recompiled blocks
 microVUt(void) mVUdispatcherB() {
 	static u32 PCSX2_ALIGNED16(eeMXCSR);
 	microVU* mVU = mVUx;
-	x86SetPtr(mVU->ptr);
-	mVU->exitFunct = mVU->ptr;
+	mVU->exitFunct = x86Ptr;
 
 	// __fastcall = The first two DWORD or smaller arguments are passed in ECX and EDX registers; all other arguments are passed right to left.
 	if (!vuIndex) { CALLFunc((uptr)mVUcleanUpVU0); }
@@ -111,8 +108,7 @@ microVUt(void) mVUdispatcherB() {
 	EMMS();
 	RET();
 
-	mVU->ptr = x86Ptr;
-	mVUcachCheck(mVU->cache, 512);
+	mVUcacheCheck(x86Ptr, mVU->cache, 512);
 }
 
 //------------------------------------------------------------------
@@ -121,23 +117,16 @@ microVUt(void) mVUdispatcherB() {
 
 // Executes for number of cycles
 microVUt(void*) __fastcall mVUexecute(u32 startPC, u32 cycles) {
-/*
-	Pseudocode: (ToDo: implement # of cycles)
-	1) Search for existing program
-	2) If program not found, goto 5
-	3) Search for recompiled block
-	4) If recompiled block found, goto 6
-	5) Recompile as much blocks as possible
-	6) Return start execution address of block
-*/
+
 	microVU* mVU = mVUx;
 	mVUlog("microVU%x: startPC = 0x%x, cycles = 0x%x", params vuIndex, startPC, cycles);
-	if ( mVUsearchProg(mVU) ) { // Found Program
-		//microBlock* block = mVU->prog.prog[mVU->prog.cur].block[startPC]->search(mVU->prog.lastPipelineState);
-		//if (block) return block->x86ptrStart; // Found Block
-	}
-	// Recompile code
-	return NULL;
+	
+	// ToDo: Implement Cycles
+	mVUsearchProg(mVU); // Find and set correct program
+
+	x86SetPtr(mVUcurProg.x86ptr); // Set x86ptr to where program left off
+	if (!vuIndex)	return mVUcompileVU0(startPC, (uptr)&mVU->prog.lpState);
+	else			return mVUcompileVU1(startPC, (uptr)&mVU->prog.lpState);
 }
 
 //------------------------------------------------------------------
@@ -146,8 +135,8 @@ microVUt(void*) __fastcall mVUexecute(u32 startPC, u32 cycles) {
 
 microVUt(void) mVUcleanUp() {
 	microVU* mVU = mVUx;
-	mVU->ptr = mVUcurProg.x86ptr;
-	mVUcachCheck(mVUcurProg.x86start, (uptr)(mVUcurProg.x86end - mVUcurProg.x86start));
+	mVUcurProg.x86ptr = x86Ptr;
+	mVUcacheCheck(x86Ptr, mVUcurProg.x86start, (uptr)(mVUcurProg.x86end - mVUcurProg.x86start));
 }
 
 //------------------------------------------------------------------

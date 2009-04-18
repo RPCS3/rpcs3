@@ -143,8 +143,9 @@ microVUt(void) mVUsetFlags(int* bStatus, int* bMac) {
 #define getFlagReg1(x)	((x == 3) ? gprF3 : ((x == 2) ? gprF2 : ((x == 1) ? gprF1 : gprF0)))
 #define getFlagReg2(x)	((x == bStatus[3]) ? gprESP : ((x == bStatus[2]) ? gprR : ((x == bStatus[1]) ? gprT2 : gprT1)))
 
-// Recompiles Code for Proper Flags on Block Linkings
-microVUt(void) mVUsetFlagsRec(int* bStatus, int* bMac) {
+// Recompiles Code for Proper Flags and Q/P regs on Block Linkings
+microVUt(void) mVUsetupBranch(int* bStatus, int* bMac) {
+	microVU* mVU = mVUx;
 
 	PUSH32R(gprR);   // Backup gprR
 	PUSH32R(gprESP); // Backup gprESP
@@ -176,6 +177,9 @@ microVUt(void) mVUsetFlagsRec(int* bStatus, int* bMac) {
 
 	POP32R(gprESP); // Restore gprESP
 	POP32R(gprR);   // Restore gprR
+
+	// Shuffle P/Q regs since every block starts at instance #0
+	if (mVU->p || mVU->q) { SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, shufflePQ); }
 }
 
 microVUt(void) mVUincCycles(int x) {
@@ -237,14 +241,14 @@ microVUt(void) mVUdivSet() {
 
 microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 	microVU* mVU = mVUx;
-	u8* thisPtr = mVUcurProg.x86ptr;
-	iPC = startPC / 4;
+	u8* thisPtr = x86Ptr;
 	
 	// Searches for Existing Compiled Block (if found, then returns; else, compile)
-	microBlock* pblock = mVUblock[iPC/2]->search((microRegInfo*)pState);
-	if (pblock) { return pblock->x86ptrStart; }
+	microBlock* pBlock = mVUblocks[startPC/8]->search((microRegInfo*)pState);
+	if (pBlock) { return pBlock->x86ptrStart; }
 
 	// First Pass
+	iPC = startPC / 4;
 	setCode();
 	mVUbranch	= 0;
 	mVUstartPC	= iPC;
@@ -252,6 +256,7 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 	mVUcycles	= 1; // Skips "M" phase, and starts counting cycles at "T" stage
 	mVU->p		= 0; // All blocks start at p index #0
 	mVU->q		= 0; // All blocks start at q index #0
+	memcpy_fast(&mVUregs, (microRegInfo*)pState, sizeof(microRegInfo)); // Loads up Pipeline State Info
 	for (int branch = 0;; ) {
 		startLoop();
 		mVUopU<vuIndex, 0>();
@@ -286,7 +291,7 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 
 		if (!isBdelay) { incPC(1); }
 		else {
-			u32* ajmp;
+			u32* ajmp = 0;
 			switch (mVUbranch) {
 				case 3: branchCase(JZ32);  // IBEQ
 				case 4: branchCase(JGE32); // IBGEZ
@@ -295,29 +300,43 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 				case 7: branchCase(JL32);  // IBLTZ
 				case 8: branchCase(JNZ32); // IBNEQ
 				case 1: case 2: // B/BAL
-					// ToDo: search for block
-					// (remember about global variables and recursion!)
-					mVUsetFlagsRec<vuIndex>(bStatus, bMac);
-					ajmp = JMP32((uptr)0); 
-					break;
+					incPC(-2); // Go back to branch opcode (to get branch imm addr)
+					mVUsetupBranch<vuIndex>(bStatus, bMac);
+
+					// Check if branch-block has already been compiled
+					pBlock = mVUblocks[branchAddr/8]->search((microRegInfo*)&mVUregs);
+					if (pBlock) {
+						ajmp = JMP32((uptr)pBlock->x86ptrStart - ((uptr)x86Ptr + 5)); 
+						mVUblocks[startPC/8]->add(&mVUblock); // Add this block to block manager
+					}
+					else {
+						pBlock = mVUblocks[startPC/8]->add(&mVUblock); // Add block
+						if (!vuIndex) mVUcompileVU0(branchAddr, (uptr)&pBlock->pState);
+						else		  mVUcompileVU1(branchAddr, (uptr)&pBlock->pState);
+					}
+					//incPC(+2);
+					return thisPtr;
 				case 9: case 10: // JR/JALR
 					
-					mVUsetFlagsRec<vuIndex>(bStatus, bMac);
+					mVUsetupBranch<vuIndex>(bStatus, bMac);
 
 					PUSH32R(gprR); // Backup EDX
-					MOV32MtoR(gprT2, (uptr)&mVU->branch);	// Get startPC (ECX first argument for __fastcall)
-					AND32ItoR(gprT2, (vuIndex) ? 0x3ff8 : 0xff8);
-					MOV32ItoR(gprR, (u32)&pblock->pState);	// Get pState (EDX second argument for __fastcall)
+					//MOV32MtoR(gprT1, (uptr)&mVUcurProg.x86ptr);	// Get last x86ptr for this program
+					//MOV32RtoM((uptr)&x86Ptr, gprT1);				// Setup x86Ptr to write to correct address
+					MOV32MtoR(gprT2, (uptr)&mVU->branch);			// Get startPC (ECX first argument for __fastcall)
+					AND32ItoR(gprT2, (vuIndex)?0x3ff8:0xff8);		// Ensure valid jump address
+					pBlock = mVUblocks[startPC/8]->add(&mVUblock);	// Add this block to block manager
+					MOV32ItoR(gprR, (u32)&pBlock->pState);			// Get pState (EDX second argument for __fastcall)
 
-					//ToDo: Add block to block manager and use its address instead of pblock!
-
-					if (!vuIndex) CALLFunc((uptr)mVUcompileVU0); //(u32 startPC, uptr pState)
+					if (!vuIndex) CALLFunc((uptr)mVUcompileVU0);	//(u32 startPC, uptr pState)
 					else		  CALLFunc((uptr)mVUcompileVU1);
-					POP32R(gprR); // Restore
+					POP32R(gprR); // Restore EDX
 					JMPR(gprT1);  // Jump to rec-code address
-					break;
+					return thisPtr;
 			}
-			//mVUcurProg.x86Ptr
+			
+
+
 			return thisPtr;
 		}
 	}

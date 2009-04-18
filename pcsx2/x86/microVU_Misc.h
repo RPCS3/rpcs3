@@ -139,12 +139,13 @@ declareAllVariables
 #define microVUq(aType) template<int vuIndex, int recPass>  __forceinline aType
 
 #define mVUcurProg	 mVU->prog.prog[mVU->prog.cur]
-#define mVUblock	 mVU->prog.prog[mVU->prog.cur].block
+#define mVUblocks	 mVU->prog.prog[mVU->prog.cur].block
 #define mVUallocInfo mVU->prog.prog[mVU->prog.cur].allocInfo
 #define mVUbranch	 mVUallocInfo.branch
 #define mVUcycles	 mVUallocInfo.cycles
 #define mVUcount	 mVUallocInfo.count
-#define mVUregs		 mVUallocInfo.regs
+#define mVUblock	 mVUallocInfo.block
+#define mVUregs		 mVUallocInfo.block.pState
 #define mVUregsTemp	 mVUallocInfo.regsTemp
 #define iPC			 mVUallocInfo.curPC
 #define mVUinfo		 mVUallocInfo.info[iPC / 2]
@@ -157,6 +158,9 @@ declareAllVariables
 #define incPC2(x)	 { iPC = ((iPC + x) & (mVU->progSize-1)); }
 #define incCycles(x) { mVUincCycles<vuIndex>(x); }
 #define bSaveAddr	 ((xPC + (2 * 8)) & ((vuIndex) ? 0x3ff8:0xff8))
+#define branchAddr	 ((xPC + (_Imm11_ * 8)) & ((vuIndex) ? 0x3ff8:0xff8))
+#define shufflePQ	 (((mVU->q) ? 0xb0 : 0xe0) | ((mVU->q) ? 0x01 : 0x04))
+
 
 #define _isNOP		 (1<<0) // Skip Lower Instruction
 #define _isBranch	 (1<<1) // Cur Instruction is a Branch
@@ -235,7 +239,7 @@ declareAllVariables
 #define mVUdebug1() {}
 #endif
 
-#define mVUcachCheck(start, limit) {  \
-	uptr diff = mVU->ptr - start; \
+#define mVUcacheCheck(ptr, start, limit) {  \
+	uptr diff = ptr - start; \
 	if (diff >= limit) { Console::Error("microVU Error: Program went over it's cache limit. Size = %x", params diff); } \
 }

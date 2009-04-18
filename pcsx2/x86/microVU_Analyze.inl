@@ -247,7 +247,8 @@ microVUt(void) mVUanalyzeSflag(int It) {
 	if (!It) { mVUinfo |= _isNOP; }
 	else {  // Sets _isSflag at instruction that FSxxx opcode reads it's status flag from
 		mVUinfo |= _swapOps;
-		if (mVUcount >= 1) { incPC2(-2); mVUinfo |= _isSflag; incPC2(2); }
+		if (mVUcount < 4)	{ mVUregs.needExactMatch = 1; }
+		if (mVUcount >= 1)	{ incPC2(-2); mVUinfo |= _isSflag; incPC2(2); }
 		// Note: _isSflag is used for status flag optimizations.
 		// Do to stalls, it can only be set one instruction prior to the status flag read instruction
 		// if we were guaranteed no-stalls were to happen, it could be set 4 instruction prior.
@@ -274,14 +275,13 @@ microVUt(void) mVUanalyzeMflag(int Is, int It) {
 	if (!It) { mVUinfo |= _isNOP; }
 	else { // Need set _doMac for 4 previous Ops (need to do all 4 because stalls could change the result needed)
 		mVUinfo |= _swapOps;
-		if (mVUcount > 1) {
-			int curPC = iPC;
-			for (int i = mVUcount, j = 0; i > 1; i--, j++) {
-				incPC(-2);
-				if (doStatus) { mVUinfo |= _doMac; if (j >= 3) { break; } }
-			}
-			iPC = curPC;
+		if (mVUcount < 4) { mVUregs.needExactMatch = 1; }
+		int curPC = iPC;
+		for (int i = mVUcount, j = 0; i > 1; i--, j++) {
+			incPC(-2);
+			if (doStatus) { mVUinfo |= _doMac; if (j >= 3) { break; } }
 		}
+		iPC = curPC;
 	}
 	analyzeVIreg1(Is);
 	analyzeVIreg2(It, 1);
