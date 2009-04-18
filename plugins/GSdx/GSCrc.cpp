@@ -115,6 +115,7 @@ CRC::Game CRC::m_games[] =
 	{0x2F123FD8, GodOfWar2, RU},
 	{0x2F123FD8, GodOfWar2, US},
 	{0x44A8A22A, GodOfWar2, EU},
+	{0X4340C7C6, GodOfWar2, Unknown},	
 	{0x5D482F18, JackieChanAdv, Unknown},
 	{0xf0a6d880, HarvestMoon, US},
 	{0x75c01a04, NamcoXCapcom, US},

@@ -266,7 +266,7 @@ bool GSDevice9::Reset(int w, int h, bool fs)
 		m_pp.PresentationInterval = D3DPRESENT_INTERVAL_DEFAULT;
 	}
 
-	m_pp.Flags |= D3DPRESENTFLAG_VIDEO; // enables tv-out (but I don't think anyone would still use a regular tv...)
+	// m_pp.Flags |= D3DPRESENTFLAG_VIDEO; // enables tv-out (but I don't think anyone would still use a regular tv...)
 
 	int mw = AfxGetApp()->GetProfileInt(_T("Settings"), _T("ModeWidth"), 0);
 	int mh = AfxGetApp()->GetProfileInt(_T("Settings"), _T("ModeHeight"), 0);
