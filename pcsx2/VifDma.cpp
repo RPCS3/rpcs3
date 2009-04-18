@@ -732,7 +732,8 @@ static void VIFunpack(u32 *data, vifCode *v, unsigned int size, const unsigned i
 	else   /* filling write */
 	{
 
-		if((u32)(((size / ft->gsize) / vifRegs->cycle.cl) * vifRegs->cycle.wl) < vifRegs->num && vifRegs->cycle.cl != 0) 
+		if(vifRegs->cycle.cl > 0) // Quicker and avoids zero division :P
+			if((u32)(((size / ft->gsize) / vifRegs->cycle.cl) * vifRegs->cycle.wl) < vifRegs->num) 
 			DevCon::Notice("Filling write warning! %x < %x and CL = %x WL = %x", params (size / ft->gsize), vifRegs->num, vifRegs->cycle.cl, vifRegs->cycle.wl);
 				
 		VIFUNPACK_LOG("filling write %d cl %d, wl %d mask %x mode %x unpacktype %x", vifRegs->num, vifRegs->cycle.cl, vifRegs->cycle.wl, vifRegs->mask, vifRegs->mode, unpackType);
