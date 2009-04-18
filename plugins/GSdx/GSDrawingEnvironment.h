@@ -43,7 +43,6 @@ public:
 	GIFRegTRXDIR		TRXDIR;
 	GIFRegTRXPOS		TRXPOS;
 	GIFRegTRXREG		TRXREG;
-	GIFRegTRXREG		TRXREG2;
 	GSDrawingContext	CTXT[2];
 
 	GSDrawingEnvironment() 
@@ -67,7 +66,6 @@ public:
 		memset(&TRXDIR, 0, sizeof(TRXDIR));
 		memset(&TRXPOS, 0, sizeof(TRXPOS));
 		memset(&TRXREG, 0, sizeof(TRXREG));
-		memset(&TRXREG2, 0, sizeof(TRXREG2));
 
 		CTXT[0].Reset();
 		CTXT[1].Reset();
