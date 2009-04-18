@@ -262,7 +262,7 @@ void EnumRawInputDevices() {
 			if (list && pGetRawInputDeviceList(list, &count, sizeof(RAWINPUTDEVICELIST))) {
 				for (UINT i=0; i<count; i++) {
 					UINT nameLen = 10000;
-					if (pGetRawInputDeviceInfo(list[i].hDevice, RIDI_DEVICENAME, instanceID, &nameLen) &&
+					if ((int)pGetRawInputDeviceInfo(list[i].hDevice, RIDI_DEVICENAME, instanceID, &nameLen) > 0 &&
 						nameLen >= 3) {
 							wcscpy(productID, instanceID);
 							wchar_t *temp = 0;
