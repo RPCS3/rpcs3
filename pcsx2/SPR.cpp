@@ -227,6 +227,7 @@ void SPRFROMinterrupt()
 			//Console::WriteLn("mfifoGIFtransfer %x madr %x, tadr %x", params gif->chcr, gif->madr, gif->tadr);
 			mfifoGIFtransfer(mfifotransferred);
 			mfifotransferred = 0;
+			return;
 		}
 		else if ((psHu32(DMAC_CTRL) & 0xC) == 0x8)   // VIF1 MFIFO
 		{
@@ -235,6 +236,7 @@ void SPRFROMinterrupt()
 			//Console::WriteLn("mfifoVIF1transfer %x madr %x, tadr %x", params vif1ch->chcr, vif1ch->madr, vif1ch->tadr);
 			mfifoVIF1transfer(mfifotransferred);
 			mfifotransferred = 0;
+			return;
 		}
 	}
 	if (spr0finished == 0) return;

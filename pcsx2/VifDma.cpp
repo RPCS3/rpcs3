@@ -645,7 +645,7 @@ static void VIFunpack(u32 *data, vifCode *v, unsigned int size, const unsigned i
 					//VIF_LOG("warning, end with size = %d", size);
 
 					/* unpack one qword */
-					vif->tag.addr += (size / ft->dsize) * 4;
+					//vif->tag.addr += (size / ft->dsize) * 4;
 					func(dest, (u32*)cdata, size / ft->dsize);
 					size = 0;
 
@@ -714,7 +714,7 @@ static void VIFunpack(u32 *data, vifCode *v, unsigned int size, const unsigned i
 			//VIF_LOG("warning, end with size = %d", size);
 
 			/* unpack one qword */
-			vif->tag.addr += (size / ft->dsize) * 4;
+			//vif->tag.addr += (size / ft->dsize) * 4;
 			func(dest, (u32*)cdata, size / ft->dsize);
 			size = 0;
 
@@ -1008,6 +1008,18 @@ static int __fastcall Vif0TransUnpack(u32 *data)	// UNPACK
 	FreezeXMMRegs(1);
 	if (vif0.vifpacketsize < vif0.tag.size)
 	{
+		if(vif0Regs->offset != 0 || vif0.cl != 0) 
+		{
+			ret = vif0.tag.size;
+			vif0.tag.size = VIFalign(data, &vif0.tag, vif0.vifpacketsize, VIF0dmanum);
+			ret = ret - vif0.tag.size;
+			data += ret;
+			if(vif0.vifpacketsize > 0) VIFunpack(data, &vif0.tag, vif0.vifpacketsize - ret, VIF0dmanum);
+			ProcessMemSkip((vif0.vifpacketsize - ret) << 2, (vif0.cmd & 0xf), VIF0dmanum);
+			vif0.tag.size -= (vif0.vifpacketsize - ret);
+			FreezeXMMRegs(0);
+			return vif0.vifpacketsize;
+		} 
 		/* size is less that the total size, transfer is 'in pieces' */
 		VIFunpack(data, &vif0.tag, vif0.vifpacketsize, VIF0dmanum);
 		
@@ -1835,8 +1847,20 @@ static int  __fastcall Vif1TransUnpack(u32 *data)
 
 	if (vif1.vifpacketsize < vif1.tag.size)
 	{
+		int ret = vif1.tag.size;
 		/* size is less that the total size, transfer is
 		   'in pieces' */
+		if(vif1Regs->offset != 0 || vif1.cl != 0) 
+		{
+			vif1.tag.size = VIFalign(data, &vif1.tag, vif1.vifpacketsize, VIF1dmanum);
+			ret = ret - vif1.tag.size;
+			data += ret;
+			if((vif1.vifpacketsize - ret) > 0) VIFunpack(data, &vif1.tag, vif1.vifpacketsize - ret, VIF1dmanum);
+			ProcessMemSkip((vif1.vifpacketsize - ret) << 2, (vif1.cmd & 0xf), VIF1dmanum);
+			vif1.tag.size -= (vif1.vifpacketsize - ret);
+			FreezeXMMRegs(0);
+			return vif1.vifpacketsize;
+		} 
 		VIFunpack(data, &vif1.tag, vif1.vifpacketsize, VIF1dmanum);
 
 		ProcessMemSkip(vif1.vifpacketsize << 2, (vif1.cmd & 0xf), VIF1dmanum);
@@ -2390,7 +2414,7 @@ __forceinline void vif1Interrupt()
 
 	if (vif1.inprogress) _VIF1chain();
 
-	if ((!vif1.done) || (vif1.inprogress))
+	if ((!vif1.done) || (vif1.inprogress & 0x1))
 	{
 
 		if (!(psHu32(DMAC_CTRL) & 0x1))
@@ -2399,7 +2423,7 @@ __forceinline void vif1Interrupt()
 			return;
 		}
 
-		if (vif1.inprogress == 0) vif1SetupTransfer();
+		if ((vif1.inprogress & 0x1) == 0) vif1SetupTransfer();
 
 		CPU_INT(1, vif1ch->qwc * BIAS);
 		return;
@@ -2436,7 +2460,7 @@ void dmaVIF1()
 
 	if (((psHu32(DMAC_CTRL) & 0xC) == 0x8))   // VIF MFIFO
 	{
-//		Console::WriteLn("VIFMFIFO\n");
+		//Console::WriteLn("VIFMFIFO\n");
 		if (!(vif1ch->chcr & 0x4)) Console::WriteLn("MFIFO mode != Chain! %x", params vif1ch->chcr);
 		vifMFIFOInterrupt();
 		return;

@@ -434,17 +434,18 @@ void mfifoVIF1transfer(int qwc)
 	if (qwc > 0)
 	{
 		vifqwc += qwc;
+		SPR_LOG("Added %x qw to mfifo, total now %x - Vif CHCR %x Stalled %x done %x", qwc, vifqwc, vif1ch->chcr, vif1.vifstalled, vif1.done);
 		if (vif1.inprogress & 0x10)
 		{
 			if (vif1ch->madr >= psHu32(DMAC_RBOR) && vif1ch->madr <= (psHu32(DMAC_RBOR) + psHu32(DMAC_RBSR)))
-				CPU_INT(10, min((int)vifqwc, (int)vif1ch->qwc) * BIAS);
+				CPU_INT(10, 0);
 			else
 				CPU_INT(10, vif1ch->qwc * BIAS);
 
 			vif1Regs->stat |= 0x10000000; // FQC=16
 		}
 		vif1.inprogress &= ~0x10;
-		SPR_LOG("Added %x qw to mfifo, total now %x - Vif CHCR %x Stalled %x done %x", qwc, vifqwc, vif1ch->chcr, vif1.vifstalled, vif1.done);
+		
 		return;
 	}
 
@@ -531,7 +532,11 @@ void mfifoVIF1transfer(int qwc)
 void vifMFIFOInterrupt()
 {
 	g_vifCycles = 0;
-	
+	if(spr0->chcr & 0x100)
+	{
+		spr0->chcr &= ~0x100;
+		hwDmacIrq(8);
+	}
 	if (vif1.inprogress == 1) mfifo_VIF1chain();
 
 	if (vif1.irq && vif1.tag.size == 0)
@@ -560,7 +565,7 @@ void vifMFIFOInterrupt()
 		if (!(vif1.inprogress & 0x1)) mfifoVIF1transfer(0);
 
 		if (vif1ch->madr >= psHu32(DMAC_RBOR) && vif1ch->madr <= (psHu32(DMAC_RBOR) + psHu32(DMAC_RBSR)))
-			CPU_INT(10, min((int)vifqwc, (int)vif1ch->qwc) * BIAS);
+			CPU_INT(10, 0);
 		else
 			CPU_INT(10, vif1ch->qwc * BIAS);
 
