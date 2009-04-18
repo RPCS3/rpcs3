@@ -584,7 +584,7 @@ microVUf(void) mVU_ITOF12()	 { mVU_ITOFx<vuIndex, recPass>((uptr)mVU_ITOF_12); }
 microVUf(void) mVU_ITOF15()	 { mVU_ITOFx<vuIndex, recPass>((uptr)mVU_ITOF_15); }
 microVUf(void) mVU_CLIP() {
 	microVU* mVU = mVUx;
-	if (!recPass) { mVUanalyzeFMAC4<vuIndex>(_Fs_, _Ft_); }
+	if (!recPass) { mVUanalyzeFMAC4<vuIndex>(_Fs_, _Ft_); mVUlog("clip broken"); }
 	else {
 		int Fs, Ft;
 		mVUallocFMAC17a<vuIndex>(Fs, Ft);

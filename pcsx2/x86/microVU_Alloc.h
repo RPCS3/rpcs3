@@ -36,7 +36,7 @@ struct microRegInfo {
 	u8 p;
 	u8 r;
 	u8 xgkick;
-	u8 needExactMatch; // This block needs an exact match of pipeline state
+	u8 needExactMatch; // If set, block needs an exact match of pipeline state
 };
 
 struct microTempRegInfo {
@@ -51,10 +51,9 @@ struct microTempRegInfo {
 };
 
 struct microBlock {
-	microRegInfo pState; // Detailed State of Pipeline
-	u8* x86ptrStart;	 // Start of code
-	//u8* x86ptrEnd;	 // End of code (first byte outside of block)
-	//u32 size;			 // Number of 64bit VU Instructions in Block
+	microRegInfo pState;	// Detailed State of Pipeline
+	microRegInfo pStateEnd;	// Detailed State of Pipeline at End of Block (needed by JR/JALR opcodes)
+	u8* x86ptrStart;		// Start of code
 };
 
 template<u32 pSize>

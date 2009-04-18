@@ -415,7 +415,7 @@ microVUf(void) mVU_ESUM() {
 
 microVUf(void) mVU_FCAND() {
 	microVU* mVU = mVUx;
-	if (!recPass) {}
+	if (!recPass) {mVUlog("clip broken");}
 	else { 
 		mVUallocCFLAGa<vuIndex>(gprT1, fvcInstance);
 		AND32ItoR(gprT1, _Imm24_);
@@ -427,7 +427,7 @@ microVUf(void) mVU_FCAND() {
 
 microVUf(void) mVU_FCEQ() {
 	microVU* mVU = mVUx;
-	if (!recPass) {}
+	if (!recPass) {mVUlog("clip broken");}
 	else { 
 		mVUallocCFLAGa<vuIndex>(gprT1, fvcInstance);
 		XOR32ItoR(gprT1, _Imm24_);
@@ -439,7 +439,7 @@ microVUf(void) mVU_FCEQ() {
 
 microVUf(void) mVU_FCGET() {
 	microVU* mVU = mVUx;
-	if (!recPass) {}
+	if (!recPass) {mVUlog("clip broken");}
 	else { 
 		mVUallocCFLAGa<vuIndex>(gprT1, fvcInstance);
 		AND32ItoR(gprT1, 0xfff);
@@ -449,7 +449,7 @@ microVUf(void) mVU_FCGET() {
 
 microVUf(void) mVU_FCOR() {
 	microVU* mVU = mVUx;
-	if (!recPass) {}
+	if (!recPass) {mVUlog("clip broken");}
 	else { 
 		mVUallocCFLAGa<vuIndex>(gprT1, fvcInstance);
 		OR32ItoR(gprT1, _Imm24_);
@@ -461,7 +461,7 @@ microVUf(void) mVU_FCOR() {
 
 microVUf(void) mVU_FCSET() {
 	microVU* mVU = mVUx;
-	if (!recPass) {}
+	if (!recPass) {mVUlog("clip broken");}
 	else { 
 		MOV32ItoR(gprT1, _Imm24_);
 		mVUallocCFLAGb<vuIndex>(gprT1, fcInstance);
@@ -1007,7 +1007,7 @@ microVUf(void) mVU_XTOP() {
 	microVU* mVU = mVUx;
 	if (!recPass) { if (!_Ft_) { mVUinfo |= _isNOP; } analyzeVIreg2(_Ft_, 1); }
 	else { 
-		MOVZX32M16toR( gprT1, (uptr)&mVU->regs->vifRegs->top);
+		MOVZX32M16toR(gprT1, (uptr)&mVU->regs->vifRegs->top);
 		mVUallocVIb<vuIndex>(gprT1, _Ft_);
 	}
 }
@@ -1016,7 +1016,7 @@ microVUf(void) mVU_XITOP() {
 	microVU* mVU = mVUx;
 	if (!recPass) { if (!_Ft_) { mVUinfo |= _isNOP; } analyzeVIreg2(_Ft_, 1); }
 	else { 
-		MOVZX32M16toR( gprT1, (uptr)&mVU->regs->vifRegs->itop );
+		MOVZX32M16toR(gprT1, (uptr)&mVU->regs->vifRegs->itop);
 		mVUallocVIb<vuIndex>(gprT1, _Ft_);
 	}
 }
@@ -1025,16 +1025,13 @@ microVUf(void) mVU_XITOP() {
 // XGkick
 //------------------------------------------------------------------
 
-microVUt(void) __fastcall mVU_XGKICK_(u32 addr) {
-	microVU* mVU = mVUx;
-	u32 *data = (u32*)(mVU->regs->Mem + (addr&0x3fff));
+void __fastcall mVU_XGKICK_(u32 addr) {
+	u32 *data = (u32*)(microVU1.regs->Mem + (addr&0x3fff));
 	u32  size = mtgsThread->PrepDataPacket( GIF_PATH_1, data, (0x4000-(addr&0x3fff)) >> 4);
 	u8 *pDest = mtgsThread->GetDataPacketPtr();
-	memcpy_aligned(pDest, mVU->regs->Mem + addr, size<<4);
+	memcpy_aligned(pDest, microVU1.regs->Mem + addr, size<<4);
 	mtgsThread->SendDataPacket();
 }
-void __fastcall mVU_XGKICK0(u32 addr) { mVU_XGKICK_<0>(addr); }
-void __fastcall mVU_XGKICK1(u32 addr) { mVU_XGKICK_<1>(addr); }
 
 microVUf(void) mVU_XGKICK() {
 	microVU* mVU = mVUx;
@@ -1042,8 +1039,7 @@ microVUf(void) mVU_XGKICK() {
 	else {
 		mVUallocVIa<vuIndex>(gprT2, _Fs_); // gprT2 = ECX for __fastcall
 		PUSH32R(gprR); // gprR = EDX is volatile so backup
-		if (!vuIndex)  CALLFunc((uptr)mVU_XGKICK0);
-		else		   CALLFunc((uptr)mVU_XGKICK1);
+		CALLFunc((uptr)mVU_XGKICK_);
 		POP32R(gprR); // Restore
 	}
 }

@@ -43,6 +43,8 @@ microVUt(void) mVUinit(VURegs* vuRegsPtr) {
 	mVU->microSize	= (vuIndex ? 0x4000 : 0x1000);
 	mVU->progSize	= (vuIndex ? 0x4000 : 0x1000) / 4;
 	mVU->cache		= NULL;
+	memset(&mVU->prog, 0, sizeof(mVU->prog));
+	mVUlog((vuIndex) ? "microVU1: init" : "microVU0: init");
 
 	mVUreset<vuIndex>();
 }
@@ -53,17 +55,13 @@ microVUt(void) mVUreset() {
 	microVU* mVU = mVUx;
 	mVUclose<vuIndex>(); // Close
 
-	// Create Block Managers
-	for (int i = 0; i <= mVU->prog.max; i++) {
-		for (u32 j = 0; j < (mVU->progSize / 2); j++) {
-			mVU->prog.prog[i].block[j] = new microBlockManager();
-		}
-	}
+	mVUlog((vuIndex) ? "microVU1: reset" : "microVU0: reset");
 
 	// Dynarec Cache
 	mVU->cache = SysMmapEx((vuIndex ? 0x1e840000 : 0x0e840000), mVU->cacheSize, 0, (vuIndex ? "Micro VU1" : "Micro VU0"));
 	if ( mVU->cache == NULL ) throw Exception::OutOfMemory(fmt_string( "microVU Error: Failed to allocate recompiler memory! (addr: 0x%x)", params (u32)mVU->cache));
-	
+	memset(mVU->cache, 0xcc, mVU->cacheSize);
+
 	// Setup Entrance/Exit Points
 	x86SetPtr(mVU->cache);
 	mVUdispatcherA<vuIndex>();
@@ -75,6 +73,13 @@ microVUt(void) mVUreset() {
 	mVU->prog.cleared = 1;
 	mVU->prog.cur = -1;
 	mVU->prog.total = -1;
+
+	// Create Block Managers
+	for (int i = 0; i <= mVU->prog.max; i++) {
+		for (u32 j = 0; j < (mVU->progSize / 2); j++) {
+			mVU->prog.prog[i].block[j] = new microBlockManager();
+		}
+	}
 
 	// Setup Dynarec Cache Limits for Each Program
 	u8* z = (mVU->cache + 512); // Dispatcher Code is in first 512 bytes
@@ -90,6 +95,7 @@ microVUt(void) mVUreset() {
 microVUt(void) mVUclose() {
 
 	microVU* mVU = mVUx;
+	mVUlog((vuIndex) ? "microVU1: close" : "microVU0: close");
 
 	if ( mVU->cache ) { HostSys::Munmap( mVU->cache, mVU->cacheSize ); mVU->cache = NULL; }
 
@@ -149,6 +155,7 @@ __forceinline int mVUfindLeastUsedProg(microVU* mVU) {
 		}
 		mVUclearProg(mVU, j); // Clear old data if overwriting old program
 		mVUcacheProg(mVU, j); // Cache Micro Program
+		mVUlog("microVU: Program Cache got Full!");
 		return j;
 	}
 }
@@ -160,7 +167,7 @@ __forceinline int mVUsearchProg(microVU* mVU) {
 			//if (i == mVU->prog.cur) continue; // We can skip the current program. (ToDo: Verify that games don't clear, and send the same microprogram :/)
 			//if (mVU->prog.prog[i]) // ToDo: Implement Cycles
 			if (!memcmp_mmx(mVU->prog.prog[i].data, mVU->regs->Micro, mVU->microSize)) {
-				if (i == mVU->prog.cur) { mVUlog("microVU: Same micro program sent!"); }
+				//if (i == mVU->prog.cur) { mVUlog("microVU: Same micro program sent!"); }
 				mVU->prog.cur = i;
 				mVU->prog.cleared = 0;
 				mVU->prog.prog[i].used++;

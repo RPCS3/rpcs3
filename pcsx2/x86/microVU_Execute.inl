@@ -22,6 +22,8 @@
 // Dispatcher Functions
 //------------------------------------------------------------------
 
+void testFunction() { mVUlog("microVU: Entered Execution Mode"); }
+
 // Generates the code for entering recompiled blocks
 microVUt(void) mVUdispatcherA() {
 	static u32 PCSX2_ALIGNED16(vuMXCSR);
@@ -43,9 +45,9 @@ microVUt(void) mVUdispatcherA() {
 	SSE_LDMXCSR((uptr)&vuMXCSR);
 
 	// Load Regs
-	MOV32MtoR(gprR,  (uptr)&mVU->regs->VI[REG_R]);
-	MOV32MtoR(gprF0, (uptr)&mVU->regs->VI[REG_STATUS_FLAG]);
-	MOV32MtoR(gprF1, (uptr)&mVU->regs->VI[REG_MAC_FLAG]);
+	MOV32MtoR(gprR,  (uptr)&mVU->regs->VI[REG_R].UL);
+	MOV32MtoR(gprF0, (uptr)&mVU->regs->VI[REG_STATUS_FLAG].UL);
+	MOV32MtoR(gprF1, (uptr)&mVU->regs->VI[REG_MAC_FLAG].UL);
 	SHL32ItoR(gprF0, 16);
 	AND32ItoR(gprF1, 0xffff);
 	OR32RtoR (gprF0, gprF1);
@@ -54,15 +56,20 @@ microVUt(void) mVUdispatcherA() {
 	MOV32RtoR(gprF3, gprF0);
 
 	for (int i = 0; i < 8; i++) {
-		MOVQMtoR(i, (uptr)&mVU->regs->VI[i+1]);
+		MOVQMtoR(i, (uptr)&mVU->regs->VI[i+1].UL);
 	}
 
-	SSE_MOVAPS_M128_to_XMM(xmmACC, (uptr)&mVU->regs->ACC);
-	SSE_MOVAPS_M128_to_XMM(xmmMax, (uptr)&mVU_maxvals[0]);
-	SSE_MOVAPS_M128_to_XMM(xmmMin, (uptr)&mVU_minvals[0]);
-	SSE_MOVAPS_M128_to_XMM(xmmT1, (uptr)&mVU->regs->VI[REG_P]);
-	SSE_MOVAPS_M128_to_XMM(xmmPQ, (uptr)&mVU->regs->VI[REG_Q]);
+	SSE_MOVAPS_M128_to_XMM(xmmACC, (uptr)&mVU->regs->ACC.UL[0]);
+	SSE_MOVAPS_M128_to_XMM(xmmMax, (uptr)mVU_maxvals);
+	SSE_MOVAPS_M128_to_XMM(xmmMin, (uptr)mVU_minvals);
+	SSE_MOVAPS_M128_to_XMM(xmmT1, (uptr)&mVU->regs->VI[REG_P].UL);
+	SSE_MOVAPS_M128_to_XMM(xmmPQ, (uptr)&mVU->regs->VI[REG_Q].UL);
 	SSE_SHUFPS_XMM_to_XMM(xmmPQ, xmmT1, 0); // wzyx = PPQQ
+
+	//PUSH32R(EAX);
+	//CALLFunc((uptr)testFunction);
+	//POP32R(EAX);
+	//write8(0xcc);
 
 	// Jump to Recompiled Code Block
 	JMPR(EAX);
@@ -86,24 +93,26 @@ microVUt(void) mVUdispatcherB() {
 	MOV32RtoR(gprT1, gprF0); // ToDo: Ensure Correct Flag instances
 	AND32ItoR(gprT1, 0xffff);
 	SHR32ItoR(gprF0, 16);
-	MOV32RtoM((uptr)&mVU->regs->VI[REG_R],			 gprR);
-	MOV32RtoM((uptr)&mVU->regs->VI[REG_STATUS_FLAG], gprT1);
-	MOV32RtoM((uptr)&mVU->regs->VI[REG_MAC_FLAG],	 gprF0);
+	MOV32RtoM((uptr)&mVU->regs->VI[REG_R].UL,			gprR);
+	MOV32RtoM((uptr)&mVU->regs->VI[REG_STATUS_FLAG].UL,	gprT1);
+	MOV32RtoM((uptr)&mVU->regs->VI[REG_MAC_FLAG].UL,	gprF0);
 	
 	for (int i = 0; i < 8; i++) {
-		MOVDMMXtoM((uptr)&mVU->regs->VI[i+1], i);
+		MOVDMMXtoM((uptr)&mVU->regs->VI[i+1].UL, i);
 	}
 
-	SSE_MOVAPS_XMM_to_M128((uptr)&mVU->regs->ACC, xmmACC);
-	//SSE_MOVSS_XMM_to_M32((uptr)&mVU->regs->VI[REG_Q], xmmPQ); // ToDo: Ensure Correct Q/P instances
+	SSE_MOVAPS_XMM_to_M128((uptr)&mVU->regs->ACC.UL[0], xmmACC);
+	//SSE_MOVSS_XMM_to_M32((uptr)&mVU->regs->VI[REG_Q].UL, xmmPQ); // ToDo: Ensure Correct Q/P instances
 	//SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, 0); // wzyx = PPPP
-	//SSE_MOVSS_XMM_to_M32((uptr)&mVU->regs->VI[REG_P], xmmPQ);
+	//SSE_MOVSS_XMM_to_M32((uptr)&mVU->regs->VI[REG_P].UL, xmmPQ);
 
 	// Restore cpu state
 	POP32R(EDI);
 	POP32R(ESI);
 	POP32R(EBP);
 	POP32R(EBX);
+
+	//write8(0xcc);
 
 	EMMS();
 	RET();
@@ -119,7 +128,7 @@ microVUt(void) mVUdispatcherB() {
 microVUt(void*) __fastcall mVUexecute(u32 startPC, u32 cycles) {
 
 	microVU* mVU = mVUx;
-	mVUlog("microVU%x: startPC = 0x%x, cycles = 0x%x", params vuIndex, startPC, cycles);
+	//mVUlog("microVU%x: startPC = 0x%x, cycles = 0x%x", params vuIndex, startPC, cycles);
 	
 	// ToDo: Implement Cycles
 	mVUsearchProg(mVU); // Find and set correct program
@@ -135,6 +144,7 @@ microVUt(void*) __fastcall mVUexecute(u32 startPC, u32 cycles) {
 
 microVUt(void) mVUcleanUp() {
 	microVU* mVU = mVUx;
+	//mVUlog("microVU: Program exited successfully!");
 	mVUcurProg.x86ptr = x86Ptr;
 	mVUcacheCheck(x86Ptr, mVUcurProg.x86start, (uptr)(mVUcurProg.x86end - mVUcurProg.x86start));
 }
@@ -147,7 +157,7 @@ void  __fastcall startVU0(u32 startPC, u32 cycles) { ((mVUrecCall)microVU0.start
 void  __fastcall startVU1(u32 startPC, u32 cycles) { ((mVUrecCall)microVU1.startFunct)(startPC, cycles); }
 void* __fastcall mVUexecuteVU0(u32 startPC, u32 cycles) { return mVUexecute<0>(startPC, cycles); }
 void* __fastcall mVUexecuteVU1(u32 startPC, u32 cycles) { return mVUexecute<1>(startPC, cycles); }
-void mVUcleanUpVU0() { mVUcleanUp<0>(); }
-void mVUcleanUpVU1() { mVUcleanUp<1>(); }
+void __fastcall mVUcleanUpVU0() { mVUcleanUp<0>(); }
+void __fastcall mVUcleanUpVU1() { mVUcleanUp<1>(); }
 
 #endif //PCSX2_MICROVU

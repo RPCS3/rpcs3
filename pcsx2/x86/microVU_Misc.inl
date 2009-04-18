@@ -169,7 +169,7 @@ microVUx(void) mVUsaveReg2(int reg, int gprReg, u32 offset, int xyzw) {
 					break; // XYW
 		case 14:	SSE_MOVLPS_XMM_to_Rm(gprReg, reg, offset);
 					SSE_MOVHLPS_XMM_to_XMM(reg, reg);
-					SSE_MOVSS_XMM_to_Rm(gprReg,  xmmT1, offset+8);
+					SSE_MOVSS_XMM_to_Rm(gprReg,  reg, offset+8);
 					break; // XYZ
 		case 8:		SSE_MOVSS_XMM_to_Rm(gprReg, reg, offset);	 break; // X
 		case 4:		SSE_MOVSS_XMM_to_Rm(gprReg, reg, offset+4);	 break; // Y
@@ -242,19 +242,19 @@ microVUx(void) mVUmergeRegs(int dest, int src, int xyzw) {
 // Transforms the Address in gprReg to valid VU0/VU1 Address
 microVUt(void) mVUaddrFix(int gprReg) {
 	if ( vuIndex == 1 ) {
-		AND32ItoR(EAX, 0x3ff); // wrap around
-		SHL32ItoR(EAX, 4);
+		AND32ItoR(gprReg, 0x3ff); // wrap around
+		SHL32ItoR(gprReg, 4);
 	}
 	else {
 		u8 *jmpA, *jmpB; 
-		CMP32ItoR(EAX, 0x400);
+		CMP32ItoR(gprReg, 0x400);
 		jmpA = JL8(0); // if addr >= 0x4000, reads VU1's VF regs and VI regs
-			AND32ItoR(EAX, 0x43f); // ToDo: theres a potential problem if VU0 overrides VU1's VF0/VI0 regs!
+			AND32ItoR(gprReg, 0x43f); // ToDo: theres a potential problem if VU0 overrides VU1's VF0/VI0 regs!
 			jmpB = JMP8(0);
 		x86SetJ8(jmpA);
-			AND32ItoR(EAX, 0xff); // if addr < 0x4000, wrap around
+			AND32ItoR(gprReg, 0xff); // if addr < 0x4000, wrap around
 		x86SetJ8(jmpB);
-		SHL32ItoR(EAX, 4); // multiply by 16 (shift left by 4)
+		SHL32ItoR(gprReg, 4); // multiply by 16 (shift left by 4)
 	}
 }
 

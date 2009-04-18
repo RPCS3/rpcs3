@@ -89,7 +89,7 @@ struct microVU {
 	u32 index;		// VU Index (VU0 or VU1)
 	u32 microSize;	// VU Micro Memory Size
 	u32 progSize;	// VU Micro Program Size (microSize/4)
-	static const u32 cacheSize = 0x500000; // VU Cache Size
+	static const u32 cacheSize = 0x800000; // VU Cache Size
 
 	microProgManager<0x4000> prog; // Micro Program Data
 	
@@ -105,6 +105,7 @@ struct microVU {
 	u32		branch;		 // Holds branch compare result (IBxx) OR Holds address to Jump to (JALR/JR)
 	u32		p;			 // Holds current P instance index
 	u32		q;			 // Holds current Q instance index
+	u32		tempBackup;
 };
 
 // microVU rec structs
