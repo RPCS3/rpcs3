@@ -3859,7 +3859,13 @@ void recVUMI_JR( VURegs* vuu, s32 info )
 {
 	int fsreg = _allocX86reg(-1, X86TYPE_VI|(s_vu?X86TYPE_VU1:0), _Fs_, MODE_READ);
 	LEA32RStoR(EAX, fsreg, 3);
-	
+
+	//Mask the address to something valid
+	if(vuu == &VU0)
+		AND32ItoR(EAX, 0xfff);
+	else
+		AND32ItoR(EAX, 0x3fff);
+
 	if( (s_pCurBlock->type & BLOCKTYPE_HASEOP) || s_vu == 0 ) MOV32RtoM(SuperVUGetVIAddr(REG_TPC, 0), EAX);
 	
 	if( !(s_pCurBlock->type & BLOCKTYPE_HASEOP) ) {
@@ -3875,6 +3881,12 @@ void recVUMI_JALR( VURegs* vuu, s32 info )
 
 	int fsreg = _allocX86reg(-1, X86TYPE_VI|(s_vu?X86TYPE_VU1:0), _Fs_, MODE_READ);
 	LEA32RStoR(EAX, fsreg, 3);
+
+	//Mask the address to something valid
+	if(vuu == &VU0)
+		AND32ItoR(EAX, 0xfff);
+	else
+		AND32ItoR(EAX, 0x3fff);
 
 	if ( _Ft_ ) {
 		_deleteX86reg(X86TYPE_VI|(s_vu?X86TYPE_VU1:0), _Ft_, 2);
