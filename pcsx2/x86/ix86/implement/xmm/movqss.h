@@ -134,7 +134,7 @@ public:
 	writeXMMop( 0x66, Opcode, to, from );
 	}
 	template< typename T >
-	__noinline void operator()( const iRegisterSIMD<T>&, const ModSibBase& from ) const		{ writeXMMop( 0x66, Opcode, to, from ); }
+	__noinline void operator()( const iRegisterSIMD<T>& to, const ModSibBase& from ) const		{ writeXMMop( 0x66, Opcode, to, from ); }
 
 	PLogicImplAll() {} //GCWho?
 };
@@ -153,7 +153,7 @@ public:
 	{
 	writeXMMop( Prefix, Opcode, to, from );
 	}
-	__noinline void operator()( const iRegisterSSE&, const ModSibBase& from ) const			{ writeXMMop( Prefix, Opcode, to, from ); }
+	__noinline void operator()( const iRegisterSSE& to, const ModSibBase& from ) const			{ writeXMMop( Prefix, Opcode, to, from ); }
 
 	PLogicImplSSE() {} //GCWho?
 };
