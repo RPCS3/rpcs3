@@ -165,7 +165,6 @@ __forceinline int mVUsearchProg(microVU* mVU) {
 	if (mVU->prog.cleared) { // If cleared, we need to search for new program
 		for (int i = 0; i <= mVU->prog.total; i++) {
 			//if (i == mVU->prog.cur) continue; // We can skip the current program. (ToDo: Verify that games don't clear, and send the same microprogram :/)
-			//if (mVU->prog.prog[i]) // ToDo: Implement Cycles
 			if (!memcmp_mmx(mVU->prog.prog[i].data, mVU->regs->Micro, mVU->microSize)) {
 				//if (i == mVU->prog.cur) { mVUlog("microVU: Same micro program sent!"); }
 				mVU->prog.cur = i;

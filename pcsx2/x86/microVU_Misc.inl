@@ -94,7 +94,16 @@ microVUx(void) mVUloadReg2(int reg, int gprReg, uptr offset, int xyzw) {
 }
 
 // Modifies the Source Reg!
-microVUx(void) mVUsaveReg(int reg, uptr offset, int xyzw) {
+microVUx(void) mVUsaveReg(int reg, uptr offset, int xyzw, bool modXYZW) {
+	/*SSE_MOVAPS_M128_to_XMM(xmmT2, offset);
+	if (modXYZW && (xyzw == 8 || xyzw == 4 || xyzw == 2 || xyzw == 1)) {
+		mVUunpack_xyzw<vuIndex>(reg, reg, 0);
+	}
+	mVUmergeRegs<vuIndex>(xmmT2, reg, xyzw);
+
+	SSE_MOVAPS_XMM_to_M128(offset, xmmT2);
+	return;*/
+
 	switch ( xyzw ) {
 		case 5:		SSE2_PSHUFD_XMM_to_XMM(reg, reg, 0xe1); //WZXY
 					SSE_MOVSS_XMM_to_M32(offset+4, reg);
@@ -127,10 +136,16 @@ microVUx(void) mVUsaveReg(int reg, uptr offset, int xyzw) {
 					SSE_MOVHLPS_XMM_to_XMM(reg, reg);
 					SSE_MOVSS_XMM_to_M32(offset+8, reg);
 					break; // XYZ
+		case 4:		if (!modXYZW) mVUunpack_xyzw<vuIndex>(reg, reg, 1);
+					SSE_MOVSS_XMM_to_M32(offset+4, reg);		 
+					break; // Y
+		case 2:		if (!modXYZW) mVUunpack_xyzw<vuIndex>(reg, reg, 2);
+					SSE_MOVSS_XMM_to_M32(offset+8, reg);	
+					break; // Z
+		case 1:		if (!modXYZW) mVUunpack_xyzw<vuIndex>(reg, reg, 3);
+					SSE_MOVSS_XMM_to_M32(offset+12, reg);	
+					break; // W
 		case 8:		SSE_MOVSS_XMM_to_M32(offset, reg);		break; // X
-		case 4:		SSE_MOVSS_XMM_to_M32(offset+4, reg);	break; // Y
-		case 2:		SSE_MOVSS_XMM_to_M32(offset+8, reg);	break; // Z
-		case 1:		SSE_MOVSS_XMM_to_M32(offset+12, reg);	break; // W
 		case 12:	SSE_MOVLPS_XMM_to_M64(offset, reg);		break; // XY
 		case 3:		SSE_MOVHPS_XMM_to_M64(offset+8, reg);	break; // ZW
 		default:	SSE_MOVAPS_XMM_to_M128(offset, reg);	break; // XYZW
@@ -139,6 +154,14 @@ microVUx(void) mVUsaveReg(int reg, uptr offset, int xyzw) {
 
 // Modifies the Source Reg!
 microVUx(void) mVUsaveReg2(int reg, int gprReg, u32 offset, int xyzw) {
+	/*SSE_MOVAPSRmtoR(xmmT2, gprReg, offset);
+	if (xyzw == 8 || xyzw == 4 || xyzw == 2 || xyzw == 1) {
+		mVUunpack_xyzw<vuIndex>(reg, reg, 0);
+	}
+	mVUmergeRegs<vuIndex>(xmmT2, reg, xyzw);
+	SSE_MOVAPSRtoRm(gprReg, xmmT2, offset);
+	return;*/
+
 	switch ( xyzw ) {
 		case 5:		SSE2_PSHUFD_XMM_to_XMM(reg, reg, 0xe1); //WZXY
 					SSE_MOVSS_XMM_to_Rm(gprReg, reg, offset+4);

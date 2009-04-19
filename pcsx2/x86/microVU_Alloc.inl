@@ -56,7 +56,7 @@ microVUt(void) mVUallocFMAC1b(int& Fd) {
 	microVU* mVU = mVUx;
 	if (!_Fd_) return;
 	if (CHECK_VU_OVERFLOW) mVUclamp1<vuIndex>(Fd, xmmT1, _X_Y_Z_W);
-	mVUsaveReg<vuIndex>(Fd, (uptr)&mVU->regs->VF[_Fd_].UL[0], _X_Y_Z_W);
+	mVUsaveReg<vuIndex>(Fd, (uptr)&mVU->regs->VF[_Fd_].UL[0], _X_Y_Z_W, 1);
 }
 
 //------------------------------------------------------------------
@@ -74,7 +74,7 @@ microVUt(void) mVUallocFMAC2b(int& Ft) {
 	microVU* mVU = mVUx;
 	if (!_Ft_) { SysPrintf("microVU: If a game does this, its retarded...\n"); return; }
 	//if (CHECK_VU_OVERFLOW) mVUclamp1<vuIndex>(Ft, xmmT1, _X_Y_Z_W);
-	mVUsaveReg<vuIndex>(Ft, (uptr)&mVU->regs->VF[_Ft_].UL[0], _X_Y_Z_W);
+	mVUsaveReg<vuIndex>(Ft, (uptr)&mVU->regs->VF[_Ft_].UL[0], _X_Y_Z_W, 1);
 }
 
 //------------------------------------------------------------------
@@ -201,10 +201,10 @@ microVUt(void) mVUallocFMAC5b(int& ACC, int& Fs) {
 // FMAC6 - Normal FMAC Opcodes (I Reg)
 //------------------------------------------------------------------
 
-#define getIreg(reg, modXYZW) {  \
-	MOV32ItoR(gprT1, mVU->iReg);  \
-	SSE2_MOVD_R_to_XMM(reg, gprT1);  \
-	if (CHECK_VU_EXTRA_OVERFLOW) mVUclamp2<vuIndex>(reg, xmmT1, 8);  \
+#define getIreg(reg, modXYZW) {																	\
+	MOV32MtoR(gprT1, (uptr)&mVU->regs->VI[REG_I].UL);											\
+	SSE2_MOVD_R_to_XMM(reg, gprT1);																\
+	if (CHECK_VU_EXTRA_OVERFLOW) mVUclamp2<vuIndex>(reg, xmmT1, 8);								\
 	if (!((_XYZW_SS && modXYZW) || (_X_Y_Z_W == 8))) { mVUunpack_xyzw<vuIndex>(reg, reg, 0); }  \
 }
 
@@ -269,7 +269,7 @@ microVUt(void) mVUallocFMAC8b(int& Fd) {
 	microVU* mVU = mVUx;
 	if (!_Fd_) return;
 	if (CHECK_VU_OVERFLOW) mVUclamp1<vuIndex>(Fd, xmmT1, _xyzw_ACC);
-	mVUsaveReg<vuIndex>(Fd, (uptr)&mVU->regs->VF[_Fd_].UL[0], _X_Y_Z_W);
+	mVUsaveReg<vuIndex>(Fd, (uptr)&mVU->regs->VF[_Fd_].UL[0], _X_Y_Z_W, 0);
 }
 
 //------------------------------------------------------------------
@@ -302,7 +302,7 @@ microVUt(void) mVUallocFMAC9b(int& Fd) {
 	microVU* mVU = mVUx;
 	if (!_Fd_) return;
 	if (CHECK_VU_OVERFLOW) mVUclamp1<vuIndex>(Fd, xmmFt, _xyzw_ACC);
-	mVUsaveReg<vuIndex>(Fd, (uptr)&mVU->regs->VF[_Fd_].UL[0], _X_Y_Z_W);
+	mVUsaveReg<vuIndex>(Fd, (uptr)&mVU->regs->VF[_Fd_].UL[0], _X_Y_Z_W, 0);
 }
 
 //------------------------------------------------------------------

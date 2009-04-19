@@ -84,7 +84,7 @@ namespace VU0micro
 
 		FreezeXMMRegs(1);
 		FreezeMMXRegs(1);
-		runVUrec(VU0.VI[REG_TPC].UL & 0xfff, 0xffffffff, 0);
+		runVUrec(VU0.VI[REG_TPC].UL, 0x20000, 0);
 		FreezeXMMRegs(0);
 		FreezeMMXRegs(0);
 	}

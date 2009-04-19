@@ -142,8 +142,8 @@ namespace VU1micro
 		assert( (VU1.VI[REG_TPC].UL&7) == 0 );
 
 		FreezeXMMRegs(1);
-		FreezeMMXRegs(0);
-		runVUrec(VU1.VI[REG_TPC].UL & 0x3fff, 0xffffffff, 1);
+		FreezeMMXRegs(1);
+		runVUrec(VU1.VI[REG_TPC].UL, 20000, 1);
 		FreezeXMMRegs(0);
 		FreezeMMXRegs(0);
 	}

@@ -130,8 +130,9 @@ microVUt(void*) __fastcall mVUexecute(u32 startPC, u32 cycles) {
 	microVU* mVU = mVUx;
 	//mVUlog("microVU%x: startPC = 0x%x, cycles = 0x%x", params vuIndex, startPC, cycles);
 	
-	// ToDo: Implement Cycles
 	mVUsearchProg(mVU); // Find and set correct program
+	mVU->cycles		 = cycles;
+	mVU->totalCycles = cycles;
 
 	x86SetPtr(mVUcurProg.x86ptr); // Set x86ptr to where program left off
 	if (!vuIndex)	return mVUcompileVU0(startPC, (uptr)&mVU->prog.lpState);
@@ -144,7 +145,7 @@ microVUt(void*) __fastcall mVUexecute(u32 startPC, u32 cycles) {
 
 microVUt(void) mVUcleanUp() {
 	microVU* mVU = mVUx;
-	//mVUlog("microVU: Program exited successfully!");
+	mVUlog("microVU: Program exited successfully!");
 	mVUcurProg.x86ptr = x86Ptr;
 	mVUcacheCheck(x86Ptr, mVUcurProg.x86start, (uptr)(mVUcurProg.x86end - mVUcurProg.x86start));
 }

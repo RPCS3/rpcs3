@@ -17,7 +17,7 @@
  */
 
 #pragma once
-#define mVUdebug // Prints Extra Info to Console
+//#define mVUdebug // Prints Extra Info to Console
 #include "Common.h"
 #include "VU.h"
 #include "GS.h"
@@ -105,7 +105,9 @@ struct microVU {
 	u32		branch;		 // Holds branch compare result (IBxx) OR Holds address to Jump to (JALR/JR)
 	u32		p;			 // Holds current P instance index
 	u32		q;			 // Holds current Q instance index
-	u32		tempBackup;
+	u32		espBackup;	 // Temp Backup for ESP
+	u32		totalCycles;
+	u32		cycles;
 };
 
 // microVU rec structs

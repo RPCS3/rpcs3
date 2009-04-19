@@ -145,7 +145,7 @@ microVUt(void) mVUsetupBranch(int* bStatus, int* bMac) {
 	mVUlog("mVUsetupBranch");
 
 	PUSH32R(gprR);   // Backup gprR
-	MOV32RtoM((uptr)&mVU->tempBackup, gprESP);
+	MOV32RtoM((uptr)&mVU->espBackup, gprESP);
 
 	MOV32RtoR(gprT1,  getFlagReg1(bStatus[0])); 
 	MOV32RtoR(gprT2,  getFlagReg1(bStatus[1]));
@@ -172,7 +172,7 @@ microVUt(void) mVUsetupBranch(int* bStatus, int* bMac) {
 	OR32RtoR(gprF2, getFlagReg2(bMac[2]));
 	OR32RtoR(gprF3, getFlagReg2(bMac[3]));
 
-	MOV32MtoR(gprESP, (uptr)&mVU->tempBackup);
+	MOV32MtoR(gprESP, (uptr)&mVU->espBackup);
 	POP32R(gprR);   // Restore gprR
 
 	// Shuffle P/Q regs since every block starts at instance #0
@@ -236,6 +236,30 @@ microVUt(void) mVUdivSet() {
 	}
 }
 
+microVUt(void) mVUendProgram() {
+	microVU* mVU = mVUx;
+	incCycles(55); // Ensures Valid P/Q instances
+	mVUcycles -= 55;
+	if (mVU->q) { SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, 0xe5); }
+	SSE_MOVSS_XMM_to_M32((uptr)&mVU->regs->VI[REG_Q].UL, xmmPQ);
+	SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVU->p ? 3 : 2);
+	SSE_MOVSS_XMM_to_M32((uptr)&mVU->regs->VI[REG_P].UL, xmmPQ);
+
+	AND32ItoM((uptr)&microVU0.regs->VI[REG_VPU_STAT].UL, (vuIndex ? ~0x100 : ~0x001)); // VBS0/VBS1 flag
+	AND32ItoM((uptr)&mVU->regs->vifRegs->stat, ~0x4); // Clear VU 'is busy' signal for vif
+	MOV32ItoM((uptr)&mVU->regs->VI[REG_TPC].UL, xPC);
+	JMP32((uptr)mVU->exitFunct - ((uptr)x86Ptr + 5));
+}
+
+microVUt(void) mVUtestCycles() {
+	microVU* mVU = mVUx;
+	iPC = mVUstartPC;
+	CMP32ItoM((uptr)&mVU->cycles, 0);
+	u8* jmp8 = JG8(0);
+	mVUendProgram<vuIndex>();
+	x86SetJ8(jmp8);
+	SUB32ItoM((uptr)&mVU->cycles, mVUcycles);
+}
 //------------------------------------------------------------------
 // Recompiler
 //------------------------------------------------------------------
@@ -245,17 +269,15 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 	u8* thisPtr = x86Ptr;
 	
 	if (startPC > ((vuIndex) ? 0x3fff : 0xfff)) { mVUlog("microVU: invalid startPC"); }
-	//startPC &= (vuIndex ? 0x3ff8 : 0xff8);
-	//mVUlog("mVUcompile Search");
+	startPC &= (vuIndex ? 0x3ff8 : 0xff8);
 
 	// Searches for Existing Compiled Block (if found, then returns; else, compile)
 	microBlock* pBlock = mVUblocks[startPC/8]->search((microRegInfo*)pState);
 	if (pBlock) { return pBlock->x86ptrStart; }
 	
-	//mVUlog("mVUcompile First Pass");
-
 	// First Pass
 	iPC = startPC / 4;
+	setCode();
 	mVUbranch	= 0;
 	mVUstartPC	= iPC;
 	mVUcount	= 0;
@@ -286,23 +308,19 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 		mVUcount++;
 	}
 
-	//mVUlog("mVUcompile mVUsetFlags");
-
 	// Sets Up Flag instances
 	int bStatus[4]; int bMac[4];
 	mVUsetFlags<vuIndex>(bStatus, bMac);
-	
-	//mVUlog("mVUcompile Second Pass");
-
-	//write8(0xcc);
+	mVUtestCycles<vuIndex>();
 
 	// Second Pass
 	iPC = mVUstartPC;
+	setCode();
 	mVUbranch = 0;
 	int x;
 	for (x = 0; x < (vuIndex ? (0x3fff/8) : (0xfff/8)); x++) {
 		if (isEOB)			{ x = 0xffff; }
-		if (isNOP)			{ incPC(1); doUpperOp(); if (curI & _Ibit_) { incPC(-1); mVU->iReg = curI; incPC(1); } }
+		if (isNOP)			{ incPC(1); doUpperOp(); if (curI & _Ibit_) { incPC(-1); MOV32ItoM((uptr)&mVU->regs->VI[REG_I].UL, curI); incPC(1); } }
 		else if (!swapOps)	{ incPC(1); doUpperOp(); incPC(-1); mVUopL<vuIndex, 1>(); incPC(1); }
 		else				{ mVUopL<vuIndex, 1>(); incPC(1); doUpperOp(); }
 		
@@ -336,7 +354,7 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 
 					PUSH32R(gprR); // Backup EDX
 					MOV32MtoR(gprT2, (uptr)&mVU->branch);		 // Get startPC (ECX first argument for __fastcall)
-					AND32ItoR(gprT2, (vuIndex)?0x3ff8:0xff8);	 // Ensure valid jump address
+					//AND32ItoR(gprT2, (vuIndex)?0x3ff8:0xff8);	 // Ensure valid jump address
 					MOV32ItoR(gprR, (u32)&pBlock->pStateEnd);	 // Get pState (EDX second argument for __fastcall)
 
 					if (!vuIndex) CALLFunc((uptr)mVUcompileVU0); //(u32 startPC, uptr pState)
@@ -372,18 +390,7 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 	if (x == (vuIndex?(0x3fff/8):(0xfff/8))) { mVUlog("microVU: Possible infinite compiling loop!"); }
 
 	// Do E-bit end stuff here
-	incCycles(55); // Ensures Valid P/Q instances
-	mVUcycles -= 55;
-	if (mVU->q) { SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, 0xe5); }
-	SSE_MOVSS_XMM_to_M32((uptr)&mVU->regs->VI[REG_Q].UL, xmmPQ);
-	SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVU->p ? 3 : 2);
-	SSE_MOVSS_XMM_to_M32((uptr)&mVU->regs->VI[REG_P].UL, xmmPQ);
-
-	AND32ItoM((uptr)&microVU0.regs->VI[REG_VPU_STAT].UL, (vuIndex ? ~0x100 : ~0x001)); // VBS0/VBS1 flag
-	AND32ItoM((uptr)&mVU->regs->vifRegs->stat, ~0x4); // Clear VU 'is busy' signal for vif
-	MOV32ItoM((uptr)&mVU->regs->VI[REG_TPC].UL, xPC);
-	JMP32((uptr)mVU->exitFunct - ((uptr)x86Ptr + 5));
-
+	mVUendProgram<vuIndex>();
 	//ToDo: Save pipeline state?
 	return thisPtr;
 }

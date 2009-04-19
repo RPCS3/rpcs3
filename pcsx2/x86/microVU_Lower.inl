@@ -666,7 +666,7 @@ microVUf(void) mVU_MFIR() {
 		MOVSX32R16toR(gprT1, gprT1);
 		SSE2_MOVD_R_to_XMM(xmmT1, gprT1);
 		if (!_XYZW_SS) { mVUunpack_xyzw<vuIndex>(xmmT1, xmmT1, 0); }
-		mVUsaveReg<vuIndex>(xmmT1, (uptr)&mVU->regs->VF[_Ft_].UL[0], _X_Y_Z_W);
+		mVUsaveReg<vuIndex>(xmmT1, (uptr)&mVU->regs->VF[_Ft_].UL[0], _X_Y_Z_W, 1);
 	}
 }
 
@@ -676,7 +676,7 @@ microVUf(void) mVU_MFP() {
 	else { 
 		mVUlog("MFP");
 		getPreg(xmmFt);
-		mVUsaveReg<vuIndex>(xmmFt, (uptr)&mVU->regs->VF[_Ft_].UL[0], _X_Y_Z_W);
+		mVUsaveReg<vuIndex>(xmmFt, (uptr)&mVU->regs->VF[_Ft_].UL[0], _X_Y_Z_W, 1);
 	}
 }
 
@@ -686,7 +686,7 @@ microVUf(void) mVU_MOVE() {
 	else { 
 		mVUlog("MOVE");
 		mVUloadReg<vuIndex>(xmmT1, (uptr)&mVU->regs->VF[_Fs_].UL[0], _X_Y_Z_W);
-		mVUsaveReg<vuIndex>(xmmT1, (uptr)&mVU->regs->VF[_Ft_].UL[0], _X_Y_Z_W);
+		mVUsaveReg<vuIndex>(xmmT1, (uptr)&mVU->regs->VF[_Ft_].UL[0], _X_Y_Z_W, 1);
 	}
 }
 
@@ -697,7 +697,7 @@ microVUf(void) mVU_MR32() {
 		mVUlog("MR32");
 		mVUloadReg<vuIndex>(xmmT1, (uptr)&mVU->regs->VF[_Fs_].UL[0], (_X_Y_Z_W == 8) ? 4 : 15);
 		if (_X_Y_Z_W != 8) { SSE2_PSHUFD_XMM_to_XMM(xmmT1, xmmT1, 0x39); }
-		mVUsaveReg<vuIndex>(xmmT1, (uptr)&mVU->regs->VF[_Ft_].UL[0], _X_Y_Z_W);
+		mVUsaveReg<vuIndex>(xmmT1, (uptr)&mVU->regs->VF[_Ft_].UL[0], _X_Y_Z_W, 0);
 	}
 }
 
@@ -819,7 +819,7 @@ microVUf(void) mVU_LQ() {
 		if (!_Fs_) {
 			mVUlog("LQ1");
 			mVUloadReg<vuIndex>(xmmFt, (uptr)mVU->regs->Mem + getVUmem(_Imm11_), _X_Y_Z_W);
-			mVUsaveReg<vuIndex>(xmmFt, (uptr)&mVU->regs->VF[_Ft_].UL[0], _X_Y_Z_W);
+			mVUsaveReg<vuIndex>(xmmFt, (uptr)&mVU->regs->VF[_Ft_].UL[0], _X_Y_Z_W, 1);
 		}
 		else {
 			mVUlog("LQ2");
@@ -827,7 +827,7 @@ microVUf(void) mVU_LQ() {
 			ADD32ItoR(gprT1, _Imm11_);
 			mVUaddrFix<vuIndex>(gprT1);
 			mVUloadReg2<vuIndex>(xmmFt, gprT1, (uptr)mVU->regs->Mem, _X_Y_Z_W);
-			mVUsaveReg<vuIndex>(xmmFt, (uptr)&mVU->regs->VF[_Ft_].UL[0], _X_Y_Z_W);
+			mVUsaveReg<vuIndex>(xmmFt, (uptr)&mVU->regs->VF[_Ft_].UL[0], _X_Y_Z_W, 1);
 		}
 	}
 }
@@ -839,7 +839,7 @@ microVUf(void) mVU_LQD() {
 		if (!_Fs_ && !noWriteVF) {
 			mVUlog("LQD1");
 			mVUloadReg<vuIndex>(xmmFt, (uptr)mVU->regs->Mem, _X_Y_Z_W);
-			mVUsaveReg<vuIndex>(xmmFt, (uptr)&mVU->regs->VF[_Ft_].UL[0], _X_Y_Z_W);
+			mVUsaveReg<vuIndex>(xmmFt, (uptr)&mVU->regs->VF[_Ft_].UL[0], _X_Y_Z_W, 1);
 		}
 		else {
 			mVUlog("LQD2");
@@ -849,7 +849,7 @@ microVUf(void) mVU_LQD() {
 			if (!noWriteVF) {
 				mVUaddrFix<vuIndex>(gprT1);
 				mVUloadReg2<vuIndex>(xmmFt, gprT1, (uptr)mVU->regs->Mem, _X_Y_Z_W);
-				mVUsaveReg<vuIndex>(xmmFt, (uptr)&mVU->regs->VF[_Ft_].UL[0], _X_Y_Z_W);
+				mVUsaveReg<vuIndex>(xmmFt, (uptr)&mVU->regs->VF[_Ft_].UL[0], _X_Y_Z_W, 1);
 			}
 		}
 	}
@@ -862,7 +862,7 @@ microVUf(void) mVU_LQI() {
 		if (!_Fs_ && !noWriteVF) {
 			mVUlog("LQI1");
 			mVUloadReg<vuIndex>(xmmFt, (uptr)mVU->regs->Mem, _X_Y_Z_W);
-			mVUsaveReg<vuIndex>(xmmFt, (uptr)&mVU->regs->VF[_Ft_].UL[0], _X_Y_Z_W);
+			mVUsaveReg<vuIndex>(xmmFt, (uptr)&mVU->regs->VF[_Ft_].UL[0], _X_Y_Z_W, 1);
 		}
 		else {
 			mVUlog("LQI2");
@@ -871,7 +871,7 @@ microVUf(void) mVU_LQI() {
 				MOV32RtoR(gprT2, gprT1);
 				mVUaddrFix<vuIndex>(gprT1);
 				mVUloadReg2<vuIndex>(xmmFt, gprT1, (uptr)mVU->regs->Mem, _X_Y_Z_W);
-				mVUsaveReg<vuIndex>(xmmFt, (uptr)&mVU->regs->VF[_Ft_].UL[0], _X_Y_Z_W);
+				mVUsaveReg<vuIndex>(xmmFt, (uptr)&mVU->regs->VF[_Ft_].UL[0], _X_Y_Z_W, 1);
 			}
 			ADD16ItoR(gprT2, 1);
 			mVUallocVIb<vuIndex>(gprT2, _Fs_);
@@ -890,7 +890,7 @@ microVUf(void) mVU_SQ() {
 		mVUlog("SQ");
 		if (!_Ft_) {
 			getReg7(xmmFs, _Fs_);
-			mVUsaveReg<vuIndex>(xmmFs, (uptr)mVU->regs->Mem + getVUmem(_Imm11_), _X_Y_Z_W);
+			mVUsaveReg<vuIndex>(xmmFs, (uptr)mVU->regs->Mem + getVUmem(_Imm11_), _X_Y_Z_W, 1);
 		}
 		else {
 			mVUallocVIa<vuIndex>(gprT1, _Ft_);
@@ -909,7 +909,7 @@ microVUf(void) mVU_SQD() {
 		mVUlog("SQD");
 		if (!_Ft_) {
 			getReg7(xmmFs, _Fs_);
-			mVUsaveReg<vuIndex>(xmmFs, (uptr)mVU->regs->Mem, _X_Y_Z_W);
+			mVUsaveReg<vuIndex>(xmmFs, (uptr)mVU->regs->Mem, _X_Y_Z_W, 1);
 		}
 		else {
 			mVUallocVIa<vuIndex>(gprT1, _Ft_);
@@ -929,7 +929,7 @@ microVUf(void) mVU_SQI() {
 		mVUlog("SQI");
 		if (!_Ft_) {
 			getReg7(xmmFs, _Fs_);
-			mVUsaveReg<vuIndex>(xmmFs, (uptr)mVU->regs->Mem, _X_Y_Z_W);
+			mVUsaveReg<vuIndex>(xmmFs, (uptr)mVU->regs->Mem, _X_Y_Z_W, 1);
 		}
 		else {
 			mVUallocVIa<vuIndex>(gprT1, _Ft_);
