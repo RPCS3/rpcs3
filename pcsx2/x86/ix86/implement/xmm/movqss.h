@@ -22,7 +22,7 @@
 // MMX / SSE Helper Functions!
 
 template< typename T >
-__emitinline void SimdPrefix( u8 opcode, u8 prefix )
+__emitinline void SimdPrefix( u8 opcode, u8 prefix=0 )
 {
 	if( sizeof( T ) == 16 && prefix != 0 )
 	{
@@ -33,84 +33,84 @@ __emitinline void SimdPrefix( u8 opcode, u8 prefix )
 		iWrite<u16>( (opcode<<8) | 0x0f );
 }
 
-template< u8 prefix, typename T, typename T2 >
-__emitinline void writeXMMop( u8 opcode, const iRegister<T>& to, const iRegister<T2>& from )
+// ------------------------------------------------------------------------
+// xmm emitter helpers for xmm instruction with prefixes.
+// These functions also support deducing the use of the prefix from the template parameters,
+// since most xmm instructions use a prefix and most mmx instructions do not.  (some mov
+// instructions violate this "guideline.")
+//
+template< typename T, typename T2 >
+__emitinline void writeXMMop( u8 prefix, u8 opcode, const iRegister<T>& to, const iRegister<T2>& from )
 {
 	SimdPrefix<T>( opcode, prefix );
 	ModRM_Direct( to.Id, from.Id );
 }
 
-template< u8 prefix, typename T >
-void writeXMMop( u8 opcode, const iRegister<T>& reg, const ModSibBase& sib )
+template< typename T >
+void writeXMMop( u8 prefix, u8 opcode, const iRegister<T>& reg, const ModSibBase& sib )
 {
 	SimdPrefix<T>( opcode, prefix );
 	EmitSibMagic( reg.Id, sib );
 }
 
-template< u8 prefix, typename T >
-__emitinline void writeXMMop( u8 opcode, const iRegister<T>& reg, const void* data )
+template< typename T >
+__emitinline void writeXMMop( u8 prefix, u8 opcode, const iRegister<T>& reg, const void* data )
 {
 	SimdPrefix<T>( opcode, prefix );
 	iWriteDisp( reg.Id, data );
 }
 
+// ------------------------------------------------------------------------
+// xmm emitter helpers for xmm instructions *without* prefixes.
+// These are normally used for special instructions that have MMX forms only (non-SSE), however
+// some special forms of sse/xmm mov instructions also use them due to prefixing inconsistencies.
+//
+template< typename T, typename T2 >
+__emitinline void writeXMMop( u8 opcode, const iRegister<T>& to, const iRegister<T2>& from )
+{
+	SimdPrefix<T>( opcode );
+	ModRM_Direct( to.Id, from.Id );
+}
+
+template< typename T >
+void writeXMMop( u8 opcode, const iRegister<T>& reg, const ModSibBase& sib )
+{
+	SimdPrefix<T>( opcode );
+	EmitSibMagic( reg.Id, sib );
+}
+
+template< typename T >
+__emitinline void writeXMMop( u8 opcode, const iRegister<T>& reg, const void* data )
+{
+	SimdPrefix<T>( opcode );
+	iWriteDisp( reg.Id, data );
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////
 //
-template< u8 Prefix, typename OperandType >
-class MovapsImpl
+// Moves to/from high/low portions of an xmm register.
+// These instructions cannot be used in reg/reg form.
+template< u8 Prefix, u8 Opcode >
+class MovhlImplAll
 {
 public:
-	// ------------------------------------------------------------------------
-	static __emitinline void Emit( u8 opcode, const iRegisterSIMD<OperandType>& to, const iRegisterSIMD<OperandType> from )
-	{
-		if( to != from )
-			writeXMMop<Prefix,OperandType>( opcode, to, from );
-	}
+	__forceinline void operator()( const iRegisterSSE& to, const void* from ) const			{ writeXMMop( Prefix, Opcode, to, from ); }
+	__forceinline void operator()( const void* to, const iRegisterSSE& from ) const			{ writeXMMop( Prefix, Opcode+1, from, to ); }
+	__noinline void operator()( const iRegisterSSE& to, const ModSibBase& from ) const		{ writeXMMop( Prefix, Opcode, to, from ); }
+	__noinline void operator()( const ModSibBase& to, const iRegisterSSE& from ) const		{ writeXMMop( Prefix, Opcode+1, from, to ); }
 
-	// ------------------------------------------------------------------------
-	static __emitinline void Emit( u8 opcode, const iRegisterSIMD<OperandType>& to, const void* from )
-	{
-		writeXMMop<Prefix,OperandType>( opcode, to, from );
-	}
-
-	// ------------------------------------------------------------------------
-	static __emitinline void Emit( u8 opcode, const iRegisterSIMD<OperandType>& to, const ModSibBase& from )
-	{
-		writeXMMop<Prefix,OperandType>( opcode, to, from );
-	}
-
-	// ------------------------------------------------------------------------
-	// Generally a Movaps/dqa instruction form only.
-	// Most SSE/MMX instructions don't have this form.
-	static __emitinline void Emit( u8 opcode, const void* to, const iRegisterSIMD<OperandType>& from )
-	{
-		writeXMMop<Prefix,OperandType>( opcode, from, to );
-	}
-
-	// ------------------------------------------------------------------------
-	// Generally a Movaps/dqa instruction form only.
-	// Most SSE/MMX instructions don't have this form.
-	static __emitinline void Emit( u8 opcode, const ModSibBase& to, const iRegisterSIMD<OperandType>& from )
-	{
-		writeXMMop<Prefix,OperandType>( opcode, from, to );
-	}
-
+	MovhlImplAll() {} //GCC.
 };
 
-// ------------------------------------------------------------------------
 template< u8 Prefix, u8 Opcode, u8 OpcodeAlt >
 class MovapsImplAll
 {
-protected:
-	typedef MovapsImpl<Prefix, u128> m_128;
-
 public:
-	__forceinline void operator()( const iRegisterSSE& to, const iRegisterSSE& from ) const { m_128::Emit( Opcode, to, from ); }
-	__forceinline void operator()( const iRegisterSSE& to, const void* from ) const { m_128::Emit( Opcode, to, from ); }
-	__forceinline void operator()( const void* to, const iRegisterSSE& from ) const { m_128::Emit( OpcodeAlt, to, from ); }
-	__noinline void operator()( const iRegisterSSE& to, const ModSibBase& from ) const { m_128::Emit( Opcode, to, from ); }
-	__noinline void operator()( const ModSibBase& to, const iRegisterSSE& from ) const { m_128::Emit( OpcodeAlt, to, from ); }
+	__forceinline void operator()( const iRegisterSSE& to, const iRegisterSSE& from ) const	{ if( to != from ) writeXMMop( Prefix, Opcode, to, from ); }
+	__forceinline void operator()( const iRegisterSSE& to, const void* from ) const			{ writeXMMop( Prefix, Opcode, to, from ); }
+	__forceinline void operator()( const void* to, const iRegisterSSE& from ) const			{ writeXMMop( Prefix, OpcodeAlt, from, to ); }
+	__noinline void operator()( const iRegisterSSE& to, const ModSibBase& from ) const		{ writeXMMop( Prefix, Opcode, to, from ); }
+	__noinline void operator()( const ModSibBase& to, const iRegisterSSE& from ) const		{ writeXMMop( Prefix, OpcodeAlt, from, to ); }
 	
 	MovapsImplAll() {} //GCC.
 };
-

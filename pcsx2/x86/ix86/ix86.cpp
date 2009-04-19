@@ -740,29 +740,40 @@ const MovapsImplAll< 0, 0x10, 0x11 > iMOVUPS;
 const MovapsImplAll< 0x66, 0x28, 0x29 > iMOVAPD;
 const MovapsImplAll< 0x66, 0x10, 0x11 > iMOVUPD;
 
+#ifdef ALWAYS_USE_MOVAPS
 const MovapsImplAll< 0x66, 0x6f, 0x7f > iMOVDQA;
 const MovapsImplAll< 0xf3, 0x6f, 0x7f > iMOVDQU;
+#else
+const MovapsImplAll< 0, 0x28, 0x29 > iMOVDQA;
+const MovapsImplAll< 0, 0x10, 0x11 > iMOVDQU;
+#endif
+
+const MovhlImplAll< 0, 0x16 > iMOVHPS;
+const MovhlImplAll< 0, 0x12 > iMOVLPS;
+const MovhlImplAll< 0x66, 0x16 > iMOVHPD;
+const MovhlImplAll< 0x66, 0x12 > iMOVLPD;
+
 
 // Moves from XMM to XMM, with the *upper 64 bits* of the destination register
 // being cleared to zero.
-__emitinline void iMOVQZX( const iRegisterSSE& to, const iRegisterSSE& from )	{ writeXMMop<0xf3>( 0x7e, to, from ); }
+__forceinline void iMOVQZX( const iRegisterSSE& to, const iRegisterSSE& from )	{ writeXMMop( 0xf3, 0x7e, to, from ); }
 
 // Moves from XMM to XMM, with the *upper 64 bits* of the destination register
 // being cleared to zero.
-__noinline void iMOVQZX( const iRegisterSSE& to, const ModSibBase& src )		{ writeXMMop<0xf3>( 0x7e, to, src ); }
+__noinline void iMOVQZX( const iRegisterSSE& to, const ModSibBase& src )		{ writeXMMop( 0xf3, 0x7e, to, src ); }
 
 // Moves from XMM to XMM, with the *upper 64 bits* of the destination register
 // being cleared to zero.
-__emitinline void iMOVQZX( const iRegisterSSE& to, const void* src )			{ writeXMMop<0xf3>( 0x7e, to, src ); }
+__forceinline void iMOVQZX( const iRegisterSSE& to, const void* src )			{ writeXMMop( 0xf3, 0x7e, to, src ); }
 
-__emitinline void iMOVQ( const iRegisterMMX& to, const iRegisterMMX& from )		{ if( to != from ) writeXMMop<0>( 0x6f, to, from ); }
-__noinline void iMOVQ( const iRegisterMMX& to, const ModSibBase& src )			{ writeXMMop<0>( 0x6f, to, src ); }
-__emitinline void iMOVQ( const iRegisterMMX& to, const void* src )				{ writeXMMop<0>( 0x6f, to, src ); }
-__forceinline void iMOVQ( const ModSibBase& dest, const iRegisterMMX& from )	{ writeXMMop<0>( 0x7f, from, dest ); }
-__forceinline void iMOVQ( void* dest, const iRegisterMMX& from )				{ writeXMMop<0>( 0x7f, from, dest ); }
-__forceinline void iMOVQ( const ModSibBase& dest, const iRegisterSSE& from )	{ writeXMMop<0xf3>( 0x7e, from, dest ); }
-__forceinline void iMOVQ( void* dest, const iRegisterSSE& from )				{ writeXMMop<0xf3>( 0x7e, from, dest ); }
-__forceinline void iMOVQ( const iRegisterSSE& to, const iRegisterMMX& from )	{ writeXMMop<0xf3>( 0xd6, to, from ); }
+__forceinline void iMOVQ( const iRegisterMMX& to, const iRegisterMMX& from )		{ if( to != from ) writeXMMop( 0x6f, to, from ); }
+__noinline void iMOVQ( const iRegisterMMX& to, const ModSibBase& src )			{ writeXMMop( 0x6f, to, src ); }
+__forceinline void iMOVQ( const iRegisterMMX& to, const void* src )				{ writeXMMop( 0x6f, to, src ); }
+__forceinline void iMOVQ( const ModSibBase& dest, const iRegisterMMX& from )	{ writeXMMop( 0x7f, from, dest ); }
+__forceinline void iMOVQ( void* dest, const iRegisterMMX& from )				{ writeXMMop( 0x7f, from, dest ); }
+__forceinline void iMOVQ( const ModSibBase& dest, const iRegisterSSE& from )	{ writeXMMop( 0xf3, 0x7e, from, dest ); }
+__forceinline void iMOVQ( void* dest, const iRegisterSSE& from )				{ writeXMMop( 0xf3, 0x7e, from, dest ); }
+__forceinline void iMOVQ( const iRegisterSSE& to, const iRegisterMMX& from )	{ writeXMMop( 0xf3, 0xd6, to, from ); }
 __forceinline void iMOVQ( const iRegisterMMX& to, const iRegisterSSE& from )
 {
 	// Manual implementation of this form of MOVQ, since its parameters are unique in a way
@@ -776,16 +787,52 @@ __forceinline void iMOVQ( const iRegisterMMX& to, const iRegisterSSE& from )
 //
 
 #define IMPLEMENT_iMOVS( ssd, prefix ) \
-	__forceinline void iMOV##ssd( const iRegisterSSE& to, const iRegisterSSE& from )	{ if( to != from ) writeXMMop<prefix>( 0x10, to, from ); } \
-	__forceinline void iMOV##ssd##ZX( const iRegisterSSE& to, const void* from )		{ writeXMMop<prefix>( 0x10, to, from ); } \
-	__forceinline void iMOV##ssd##ZX( const iRegisterSSE& to, const ModSibBase& from )	{ writeXMMop<prefix>( 0x10, to, from ); } \
-	__forceinline void iMOV##ssd( const void* to, const iRegisterSSE& from )			{ writeXMMop<prefix>( 0x11, from, to ); } \
-	__forceinline void iMOV##ssd( const ModSibBase& to, const iRegisterSSE& from )		{ writeXMMop<prefix>( 0x11, from, to ); }
+	__forceinline void iMOV##ssd( const iRegisterSSE& to, const iRegisterSSE& from )	{ if( to != from ) writeXMMop( prefix, 0x10, to, from ); } \
+	__forceinline void iMOV##ssd##ZX( const iRegisterSSE& to, const void* from )		{ writeXMMop( prefix, 0x10, to, from ); } \
+	__forceinline void iMOV##ssd##ZX( const iRegisterSSE& to, const ModSibBase& from )	{ writeXMMop( prefix, 0x10, to, from ); } \
+	__forceinline void iMOV##ssd( const void* to, const iRegisterSSE& from )			{ writeXMMop( prefix, 0x11, from, to ); } \
+	__forceinline void iMOV##ssd( const ModSibBase& to, const iRegisterSSE& from )		{ writeXMMop( prefix, 0x11, from, to ); }
 
 IMPLEMENT_iMOVS( SS, 0xf3 )
 IMPLEMENT_iMOVS( SD, 0xf2 )
 
 //////////////////////////////////////////////////////////////////////////////////////////
+// Non-temporal movs only support a register as a target (ie, load form only, no stores)
 //
+
+__forceinline void iMOVNTDQA( const iRegisterSSE& to, const void* from )
+{
+	iWrite<u32>( 0x2A380f66 );
+	iWriteDisp( to.Id, from );
+}
+
+__noinline void iMOVNTDQA( const iRegisterSSE& to, const ModSibBase& from )
+{
+	iWrite<u32>( 0x2A380f66 );
+	EmitSibMagic( to.Id, from );
+}
+
+__forceinline void iMOVNTDQ( void* to, const iRegisterSSE& from )			{ writeXMMop( 0x66, 0xe7, from, to ); }
+__noinline void iMOVNTDQA( const ModSibBase& to, const iRegisterSSE& from )	{ writeXMMop( 0x66, 0xe7, from, to ); }
+
+__forceinline void iMOVNTPD( void* to, const iRegisterSSE& from )			{ writeXMMop( 0x66, 0x2b, from, to ); }
+__noinline void iMOVNTPD( const ModSibBase& to, const iRegisterSSE& from )	{ writeXMMop( 0x66, 0x2b, from, to ); }
+__forceinline void iMOVNTPS( void* to, const iRegisterSSE& from )			{ writeXMMop( 0x2b, from, to ); }
+__noinline void iMOVNTPS( const ModSibBase& to, const iRegisterSSE& from )	{ writeXMMop( 0x2b, from, to ); }
+
+__forceinline void iMOVNTQ( void* to, const iRegisterMMX& from )			{ writeXMMop( 0xe7, from, to ); }
+__noinline void iMOVNTQ( const ModSibBase& to, const iRegisterMMX& from )	{ writeXMMop( 0xe7, from, to ); }
+
+//////////////////////////////////////////////////////////////////////////////////////////
+// Mov Low to High / High to Low
+//
+// These instructions come in xmmreg,xmmreg forms only!
+//
+
+__forceinline void iMOVLHPS( const iRegisterSSE& to, const iRegisterSSE& from )	{ writeXMMop( 0x16, to, from ); }
+__forceinline void iMOVHLPS( const iRegisterSSE& to, const iRegisterSSE& from )	{ writeXMMop( 0x12, to, from ); }
+__forceinline void iMOVLHPD( const iRegisterSSE& to, const iRegisterSSE& from )	{ writeXMMop( 0x66, 0x16, to, from ); }
+__forceinline void iMOVHLPD( const iRegisterSSE& to, const iRegisterSSE& from )	{ writeXMMop( 0x66, 0x12, to, from ); }
+
 
 }

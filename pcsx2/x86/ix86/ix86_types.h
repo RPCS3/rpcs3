@@ -675,16 +675,39 @@ namespace x86Emitter
 	}
 
 	//////////////////////////////////////////////////////////////////////////////////////////
+	// ALWAYS_USE_MOVAPS [define] / AlwaysUseMovaps [const]
 	//
+	// This tells the recompiler's emitter to always use movaps instead of movdqa.  Both instructions
+	// do the exact same thing, but movaps is 1 byte shorter, and thus results in a cleaner L1 cache
+	// and some marginal speed gains as a result.  (it's possible someday in the future the per-
+	// formance of the two instructions could change, so this constant is provided to restore MOVDQA
+	// use easily at a later time, if needed).
+	#define ALWAYS_USE_MOVAPS
 	
-	extern const Internal::MovapsImplAll< 0, 0x28, 0x29 > iMOVAPS; 
+	#ifdef ALWAYS_USE_MOVAPS
+	static const bool AlwaysUseMovaps = true;
+	#else
+	static const bool AlwaysUseMovaps = false;
+	#endif
+
+	extern const Internal::MovapsImplAll< 0, 0x28, 0x29 > iMOVAPS;
 	extern const Internal::MovapsImplAll< 0, 0x10, 0x11 > iMOVUPS;
 
 	extern const Internal::MovapsImplAll< 0x66, 0x28, 0x29 > iMOVAPD;
 	extern const Internal::MovapsImplAll< 0x66, 0x10, 0x11 > iMOVUPD;
 
+	#ifdef ALWAYS_USE_MOVAPS
 	extern const Internal::MovapsImplAll< 0x66, 0x6f, 0x7f > iMOVDQA;
 	extern const Internal::MovapsImplAll< 0xf3, 0x6f, 0x7f > iMOVDQU;
+	#else
+	extern const Internal::MovapsImplAll< 0, 0x28, 0x29 > iMOVDQA;
+	extern const Internal::MovapsImplAll< 0, 0x10, 0x11 > iMOVDQU;
+	#endif
+		
+	extern const Internal::MovhlImplAll< 0, 0x16 > iMOVHPS;
+	extern const Internal::MovhlImplAll< 0, 0x12 > iMOVLPS;
+	extern const Internal::MovhlImplAll< 0x66, 0x16 > iMOVHPD;
+	extern const Internal::MovhlImplAll< 0x66, 0x12 > iMOVLPD;
 
 }
 

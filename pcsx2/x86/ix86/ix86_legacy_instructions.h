@@ -977,19 +977,13 @@ extern void SSE_MOVHPS_XMM_to_Rm( x86IntRegType to, x86SSERegType from, int offs
 
 extern void SSE_MOVLHPS_XMM_to_XMM( x86SSERegType to, x86SSERegType from );
 extern void SSE_MOVHLPS_XMM_to_XMM( x86SSERegType to, x86SSERegType from );
-extern void SSE_MOVLPSRmtoR( x86SSERegType to, x86IntRegType from );
 extern void SSE_MOVLPSRmtoR( x86SSERegType to, x86IntRegType from, int offset=0 );
-extern void SSE_MOVLPSRtoRm( x86SSERegType to, x86IntRegType from );
 extern void SSE_MOVLPSRtoRm( x86SSERegType to, x86IntRegType from, int offset=0 );
 
-extern void SSE_MOVAPSRmStoR( x86SSERegType to, x86IntRegType from, x86IntRegType from2, int scale=0 );
-extern void SSE_MOVAPSRtoRmS( x86SSERegType to, x86IntRegType from, x86IntRegType from2, int scale=0 );
 extern void SSE_MOVAPSRtoRm( x86IntRegType to, x86SSERegType from, int offset=0 );
 extern void SSE_MOVAPSRmtoR( x86SSERegType to, x86IntRegType from, int offset=0 );
-extern void SSE_MOVUPSRmStoR( x86SSERegType to, x86IntRegType from, x86IntRegType from2, int scale=0 );
-extern void SSE_MOVUPSRtoRmS( x86SSERegType to, x86IntRegType from, x86IntRegType from2, int scale=0 );
-extern void SSE_MOVUPSRtoRm( x86IntRegType to, x86IntRegType from );
-extern void SSE_MOVUPSRmtoR( x86IntRegType to, x86IntRegType from );
+extern void SSE_MOVUPSRtoRm( x86IntRegType to, x86SSERegType from );
+extern void SSE_MOVUPSRmtoR( x86SSERegType to, x86IntRegType from );
 
 extern void SSE_MOVUPSRmtoR( x86SSERegType to, x86IntRegType from, int offset=0 );
 extern void SSE_MOVUPSRtoRm( x86SSERegType to, x86IntRegType from, int offset=0 );

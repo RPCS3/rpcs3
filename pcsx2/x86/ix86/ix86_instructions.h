@@ -331,42 +331,60 @@ namespace x86Emitter
 	template< typename T >
 	__emitinline void iMOVDZX( const iRegisterSIMD<T>& to, const iRegister32& from )
 	{
-		Internal::writeXMMop<0x66>( 0x6e, to, from );
+		Internal::writeXMMop( 0x66, 0x6e, to, from );
 	}
 
 	template< typename T >
 	__emitinline void iMOVDZX( const iRegisterSIMD<T>& to, const void* src )
 	{
-		Internal::writeXMMop<0x66>( 0x6e, to, src );
+		Internal::writeXMMop( 0x66, 0x6e, to, src );
 	}
 
 	template< typename T >
 	void iMOVDZX( const iRegisterSIMD<T>& to, const ModSibBase& src )
 	{
-		Internal::writeXMMop<0x66>( 0x6e, to, src );
+		Internal::writeXMMop( 0x66, 0x6e, to, src );
 	}
 
 	template< typename T >
 	__emitinline void iMOVD( const iRegister32& to, const iRegisterSIMD<T>& from )
 	{
-		Internal::writeXMMop<0x66>( 0x7e, from, to );
+		Internal::writeXMMop( 0x66, 0x7e, from, to );
 	}
 
 	template< typename T >
 	__emitinline void iMOVD( void* dest, const iRegisterSIMD<T>& from )
 	{
-		Internal::writeXMMop<0x66>( 0x7e, from, dest );
+		Internal::writeXMMop( 0x66, 0x7e, from, dest );
 	}
 
 	template< typename T >
 	void iMOVD( const ModSibBase& dest, const iRegisterSIMD<T>& from )
 	{
-		Internal::writeXMMop<0x66>( 0x7e, from, dest );
+		Internal::writeXMMop( 0x66, 0x7e, from, dest );
 	}
 
 	// ------------------------------------------------------------------------
 	
+	// iMASKMOV:
+	// Selectively write bytes from mm1/xmm1 to memory location using the byte mask in mm2/xmm2.
+	// The default memory location is specified by DS:EDI.  The most significant bit in each byte
+	// of the mask operand determines whether the corresponding byte in the source operand is
+	// written to the corresponding byte location in memory.
 	
+	template< typename T >
+	static __forceinline void iMASKMOV( const iRegisterSIMD<T>& to, const iRegisterSIMD<T>& from )	{ Internal::writeXMMop( 0x66, 0xf7, to, from ); }
+
+	// iPMOVMSKB:
+	// Creates a mask made up of the most significant bit of each byte of the source 
+	// operand and stores the result in the low byte or word of the destination operand.
+	// Upper bits of the destination are cleared to zero.
+	//
+	// When operating on a 64-bit (MMX) source, the byte mask is 8 bits; when operating on
+	// 128-bit (SSE) source, the byte mask is 16-bits.
+	//
+	template< typename T >
+	static __forceinline void iPMOVMSKB( const iRegister32& to, const iRegisterSIMD<T>& from )	{ Internal::writeXMMop( 0x66, 0xd7, to, from ); }
 
 	// ------------------------------------------------------------------------
 	
@@ -396,6 +414,23 @@ namespace x86Emitter
 	extern void iMOVSSZX( const iRegisterSSE& to, const ModSibBase& from );
 	extern void iMOVSDZX( const iRegisterSSE& to, const void* from );
 	extern void iMOVSDZX( const iRegisterSSE& to, const ModSibBase& from );
+
+	extern void iMOVNTDQA( const iRegisterSSE& to, const void* from );
+	extern void iMOVNTDQA( const iRegisterSSE& to, const ModSibBase& from );
+	extern void iMOVNTDQ( void* to, const iRegisterSSE& from );
+	extern void iMOVNTDQA( const ModSibBase& to, const iRegisterSSE& from );
+
+	extern void iMOVNTPD( void* to, const iRegisterSSE& from );
+	extern void iMOVNTPD( const ModSibBase& to, const iRegisterSSE& from );
+	extern void iMOVNTPS( void* to, const iRegisterSSE& from );
+	extern void iMOVNTPS( const ModSibBase& to, const iRegisterSSE& from );
+	extern void iMOVNTQ( void* to, const iRegisterMMX& from );
+	extern void iMOVNTQ( const ModSibBase& to, const iRegisterMMX& from );
+
+	extern void iMOVLHPS( const iRegisterSSE& to, const iRegisterSSE& from );
+	extern void iMOVHLPS( const iRegisterSSE& to, const iRegisterSSE& from );
+	extern void iMOVLHPD( const iRegisterSSE& to, const iRegisterSSE& from );
+	extern void iMOVHLPD( const iRegisterSSE& to, const iRegisterSSE& from );
 
 }
 
