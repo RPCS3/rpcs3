@@ -182,7 +182,7 @@ void recPMFHL()
 {
 	if ( ! _Rd_ ) return;
 
-CPU_SSE2_XMMCACHE_START(XMMINFO_WRITED|XMMINFO_READLO|XMMINFO_READHI)
+	int info = eeRecompileCodeXMM( XMMINFO_WRITED|XMMINFO_READLO|XMMINFO_READHI );
 
 	int t0reg;
 
@@ -248,16 +248,14 @@ CPU_SSE2_XMMCACHE_START(XMMINFO_WRITED|XMMINFO_READLO|XMMINFO_READHI)
 			assert(0);
 	}
 
-CPU_SSE_XMMCACHE_END
-
-	recCall( Interp::PMFHL, _Rd_ );
+	_clearNeededXMMregs();
 }
 
 void recPMTHL()
 {
 	if ( _Sa_ != 0 ) return;
 
-CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READLO|XMMINFO_READHI|XMMINFO_WRITELO|XMMINFO_WRITEHI)
+	int info = eeRecompileCodeXMM( XMMINFO_READS|XMMINFO_READLO|XMMINFO_READHI|XMMINFO_WRITELO|XMMINFO_WRITEHI );
 
 	if ( cpucaps.hasStreamingSIMD4Extensions ) {
 		SSE4_BLENDPS_XMM_to_XMM(EEREC_LO, EEREC_S, 0x5);
@@ -271,9 +269,7 @@ CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READLO|XMMINFO_READHI|XMMINFO_WRIT
 		SSE_SHUFPS_XMM_to_XMM(EEREC_HI, EEREC_HI, 0x72);
 	}
 
-CPU_SSE_XMMCACHE_END
-
-	recCall( Interp::PMTHL, 0 );
+	_clearNeededXMMregs();
 }
 
 // MMX helper routines
@@ -322,28 +318,15 @@ void recPSRLH( void )
 {
 	if ( !_Rd_ ) return;
 	
-	CPU_SSE2_XMMCACHE_START(XMMINFO_READT|XMMINFO_WRITED)
-		if( (_Sa_&0xf) == 0 ) {
-			SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_T);
-		}
-		else {
-			SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_T);
-			SSE2_PSRLW_I8_to_XMM(EEREC_D,_Sa_&0xf );
-		}
-	CPU_SSE_XMMCACHE_END
-
-	_flushCachedRegs();
-	_deleteEEreg(_Rd_, 0);
-
-	MMX_ALLOC_TEMP2(
-		MOVQMtoR( t0reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 0 ] );
-		MOVQMtoR( t1reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 1 ] );
-		PSRLWItoR( t0reg, _Sa_&0xf );
-		PSRLWItoR( t1reg, _Sa_&0xf );
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 0 ], t0reg );
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 1 ], t1reg );
-		SetMMXstate();
-		)
+	int info = eeRecompileCodeXMM( XMMINFO_READT|XMMINFO_WRITED );
+	if( (_Sa_&0xf) == 0 ) {
+		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_T);
+	}
+	else {
+		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_T);
+		SSE2_PSRLW_I8_to_XMM(EEREC_D,_Sa_&0xf );
+	}
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -351,28 +334,15 @@ void recPSRLW( void )
 {
 	if( !_Rd_ ) return;
 
-	CPU_SSE2_XMMCACHE_START(XMMINFO_READT|XMMINFO_WRITED)
-		if( _Sa_ == 0 ) {
-			SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_T);
-		}
-		else {
-			SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_T);
-			SSE2_PSRLD_I8_to_XMM(EEREC_D,_Sa_ );
-		}
-	CPU_SSE_XMMCACHE_END
-
-	_flushCachedRegs();
-	_deleteEEreg(_Rd_, 0);
-
-	MMX_ALLOC_TEMP2(
-		MOVQMtoR( t0reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 0 ] );
-		MOVQMtoR( t1reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 1 ] );
-		PSRLDItoR( t0reg, _Sa_ );
-		PSRLDItoR( t1reg, _Sa_ );
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 0 ], t0reg );
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 1 ], t1reg );
-		SetMMXstate();
-		)
+	int info = eeRecompileCodeXMM( XMMINFO_READT|XMMINFO_WRITED );
+	if( _Sa_ == 0 ) {
+		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_T);
+	}
+	else {
+		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_T);
+		SSE2_PSRLD_I8_to_XMM(EEREC_D,_Sa_ );
+	}
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -380,28 +350,15 @@ void recPSRAH( void )
 {
 	if ( !_Rd_ ) return;
 
-	CPU_SSE2_XMMCACHE_START(XMMINFO_READT|XMMINFO_WRITED)
-		if( (_Sa_&0xf) == 0 ) {
-			SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_T);
-		}
-		else {
-			SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_T);
-			SSE2_PSRAW_I8_to_XMM(EEREC_D,_Sa_&0xf );
-		}
-	CPU_SSE_XMMCACHE_END
-
-	_flushCachedRegs();
-	_deleteEEreg(_Rd_, 0);
-
-	MMX_ALLOC_TEMP2(
-		MOVQMtoR( t0reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 0 ] );
-		MOVQMtoR( t1reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 1 ] );
-		PSRAWItoR( t0reg, _Sa_&0xf );
-		PSRAWItoR( t1reg, _Sa_&0xf );
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 0 ], t0reg );
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 1 ], t1reg );
-		SetMMXstate();
-		)
+	int info = eeRecompileCodeXMM( XMMINFO_READT|XMMINFO_WRITED );
+	if( (_Sa_&0xf) == 0 ) {
+		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_T);
+	}
+	else {
+		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_T);
+		SSE2_PSRAW_I8_to_XMM(EEREC_D,_Sa_&0xf );
+	}
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -409,28 +366,15 @@ void recPSRAW( void )
 {
 	if ( !_Rd_ ) return;
 
-	CPU_SSE2_XMMCACHE_START(XMMINFO_READT|XMMINFO_WRITED)
-		if( _Sa_ == 0 ) {
-			SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_T);
-		}
-		else {
-			SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_T);
-			SSE2_PSRAD_I8_to_XMM(EEREC_D,_Sa_ );
-		}
-	CPU_SSE_XMMCACHE_END
-
-	_flushCachedRegs();
-	_deleteEEreg(_Rd_, 0);
-
-	MMX_ALLOC_TEMP2(
-		MOVQMtoR( t0reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 0 ] );
-		MOVQMtoR( t1reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 1 ] );
-		PSRADItoR( t0reg, _Sa_ );
-		PSRADItoR( t1reg, _Sa_ );
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 0 ], t0reg );
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 1 ], t1reg );
-		SetMMXstate();
-		)
+	int info = eeRecompileCodeXMM( XMMINFO_READT|XMMINFO_WRITED );
+	if( _Sa_ == 0 ) {
+		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_T);
+	}
+	else {
+		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_T);
+		SSE2_PSRAD_I8_to_XMM(EEREC_D,_Sa_ );
+	}
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -438,28 +382,15 @@ void recPSLLH( void )
 {
 	if ( !_Rd_ ) return;
 	
-	CPU_SSE2_XMMCACHE_START(XMMINFO_READT|XMMINFO_WRITED)
-		if( (_Sa_&0xf) == 0 ) {
-			SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_T);
-		}
-		else {
-			SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_T);
-			SSE2_PSLLW_I8_to_XMM(EEREC_D,_Sa_&0xf );
-		}
-	CPU_SSE_XMMCACHE_END
-
-	_flushCachedRegs();
-	_deleteEEreg(_Rd_, 0);
-
-	MMX_ALLOC_TEMP2(
-		MOVQMtoR( t0reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 0 ] );
-		MOVQMtoR( t1reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 1 ] );
-		PSLLWItoR( t0reg, _Sa_&0xf );
-		PSLLWItoR( t1reg, _Sa_&0xf );
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 0 ], t0reg );
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 1 ], t1reg );
-		SetMMXstate();
-		)
+	int info = eeRecompileCodeXMM( XMMINFO_READT|XMMINFO_WRITED );
+	if( (_Sa_&0xf) == 0 ) {
+		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_T);
+	}
+	else {
+		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_T);
+		SSE2_PSLLW_I8_to_XMM(EEREC_D,_Sa_&0xf );
+	}
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -467,28 +398,15 @@ void recPSLLW( void )
 {
 	if ( !_Rd_ ) return;
 
-	CPU_SSE2_XMMCACHE_START(XMMINFO_READT|XMMINFO_WRITED)
-		if( _Sa_ == 0 ) {
-			SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_T);
-		}
-		else {
-			SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_T);
-			SSE2_PSLLD_I8_to_XMM(EEREC_D,_Sa_ );
-		}
-	CPU_SSE_XMMCACHE_END
-
-	_flushCachedRegs();
-	_deleteEEreg(_Rd_, 0);
-
-	MMX_ALLOC_TEMP2(
-		MOVQMtoR( t0reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 0 ] );
-		MOVQMtoR( t1reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 1 ] );
-		PSLLDItoR( t0reg, _Sa_ );
-		PSLLDItoR( t1reg, _Sa_ );
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 0 ], t0reg );
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 1 ], t1reg );
-		SetMMXstate();
-		)
+	int info = eeRecompileCodeXMM( XMMINFO_READT|XMMINFO_WRITED );
+	if( _Sa_ == 0 ) {
+		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_T);
+	}
+	else {
+		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_T);
+		SSE2_PSLLD_I8_to_XMM(EEREC_D,_Sa_ );
+	}
+	_clearNeededXMMregs();
 }
 
 /*
@@ -550,7 +468,7 @@ void recPMAXW()
 {
 	if ( ! _Rd_ ) return;
 
-CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
+	int info = eeRecompileCodeXMM( XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED );
 	if ( cpucaps.hasStreamingSIMD4Extensions ) {
 		if( EEREC_S == EEREC_T ) SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
 		else if( EEREC_D == EEREC_S ) SSE4_PMAXSD_XMM_to_XMM(EEREC_D, EEREC_T);
@@ -593,9 +511,7 @@ CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
 			_freeXMMreg(t0reg);
 		}
 	}
-CPU_SSE_XMMCACHE_END
-
-	recCall( Interp::PMAXW, _Rd_ );
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -603,51 +519,39 @@ void recPPACW()
 {
 	if ( ! _Rd_ ) return;
 
-CPU_SSE_XMMCACHE_START(((_Rs_!=0)?XMMINFO_READS:0)|XMMINFO_READT|XMMINFO_WRITED)
-		if( _Rs_ == 0 ) {
+	int info = eeRecompileCodeXMM( ((_Rs_!=0)?XMMINFO_READS:0)|XMMINFO_READT|XMMINFO_WRITED );
+
+	if( _Rs_ == 0 ) {
+		SSE2_PSHUFD_XMM_to_XMM(EEREC_D, EEREC_T, 0x88);
+		SSE2_PSRLDQ_I8_to_XMM(EEREC_D, 8);
+	}
+	else {
+		int t0reg = _allocTempXMMreg(XMMT_INT, -1);
+		if( EEREC_D == EEREC_T ) {
+			SSE2_PSHUFD_XMM_to_XMM(t0reg, EEREC_S, 0x88);
 			SSE2_PSHUFD_XMM_to_XMM(EEREC_D, EEREC_T, 0x88);
-			SSE2_PSRLDQ_I8_to_XMM(EEREC_D, 8);
+			SSE2_PUNPCKLQDQ_XMM_to_XMM(EEREC_D, t0reg);
+			_freeXMMreg(t0reg);
 		}
 		else {
-			int t0reg = _allocTempXMMreg(XMMT_INT, -1);
-			if( EEREC_D == EEREC_T ) {
-				SSE2_PSHUFD_XMM_to_XMM(t0reg, EEREC_S, 0x88);
-				SSE2_PSHUFD_XMM_to_XMM(EEREC_D, EEREC_T, 0x88);
-				SSE2_PUNPCKLQDQ_XMM_to_XMM(EEREC_D, t0reg);
-				_freeXMMreg(t0reg);
-			}
-			else {
-				SSE2_PSHUFD_XMM_to_XMM(t0reg, EEREC_T, 0x88);
-				SSE2_PSHUFD_XMM_to_XMM(EEREC_D, EEREC_S, 0x88);
-				SSE2_PUNPCKLQDQ_XMM_to_XMM(t0reg, EEREC_D);
+			SSE2_PSHUFD_XMM_to_XMM(t0reg, EEREC_T, 0x88);
+			SSE2_PSHUFD_XMM_to_XMM(EEREC_D, EEREC_S, 0x88);
+			SSE2_PUNPCKLQDQ_XMM_to_XMM(t0reg, EEREC_D);
 
-				// swap mmx regs.. don't ask
-				xmmregs[t0reg] = xmmregs[EEREC_D];
-				xmmregs[EEREC_D].inuse = 0;
-			}
+			// swap mmx regs.. don't ask
+			xmmregs[t0reg] = xmmregs[EEREC_D];
+			xmmregs[EEREC_D].inuse = 0;
 		}
-CPU_SSE_XMMCACHE_END
+	}
 
-	_flushCachedRegs();
-	_deleteEEreg(_Rd_, 0);
-
-	//Done - Refraction - Crude but quicker than int
-	MOV32MtoR( ECX, (uptr)&cpuRegs.GPR.r[_Rt_].UL[2]); //Copy this one cos it could get overwritten
-
-	MOV32MtoR( EAX, (uptr)&cpuRegs.GPR.r[_Rs_].UL[2]);
-	MOV32RtoM( (uptr)&cpuRegs.GPR.r[_Rd_].UL[3], EAX);
-	MOV32MtoR( EAX, (uptr)&cpuRegs.GPR.r[_Rs_].UL[0]);
-	MOV32RtoM( (uptr)&cpuRegs.GPR.r[_Rd_].UL[2], EAX);
-	MOV32RtoM( (uptr)&cpuRegs.GPR.r[_Rd_].UL[1], ECX); //This is where we bring it back
-	MOV32MtoR( EAX, (uptr)&cpuRegs.GPR.r[_Rt_].UL[0]);
-	MOV32RtoM( (uptr)&cpuRegs.GPR.r[_Rd_].UL[0], EAX);
+	_clearNeededXMMregs();
 }
 
 void recPPACH( void )
 {
 	if (!_Rd_) return;
 
-CPU_SSE2_XMMCACHE_START((_Rs_!=0?XMMINFO_READS:0)|XMMINFO_READT|XMMINFO_WRITED)
+	int info = eeRecompileCodeXMM( (_Rs_!=0?XMMINFO_READS:0)|XMMINFO_READT|XMMINFO_WRITED );
 	if( _Rs_ == 0 ) {
 		SSE2_PSHUFLW_XMM_to_XMM(EEREC_D, EEREC_T, 0x88);
 		SSE2_PSHUFHW_XMM_to_XMM(EEREC_D, EEREC_D, 0x88);
@@ -667,28 +571,7 @@ CPU_SSE2_XMMCACHE_START((_Rs_!=0?XMMINFO_READS:0)|XMMINFO_READT|XMMINFO_WRITED)
 
 		_freeXMMreg(t0reg);
 	}
-CPU_SSE_XMMCACHE_END
-
-	_flushCachedRegs();
-	_deleteEEreg(_Rd_, 0);
-
-	//Done - Refraction - Crude but quicker than int
-	MOV16MtoR(EAX, (uptr)&cpuRegs.GPR.r[_Rs_].US[6]);
-	MOV16RtoM((uptr)&cpuRegs.GPR.r[_Rd_].US[7], EAX);
-	MOV16MtoR(EAX, (uptr)&cpuRegs.GPR.r[_Rt_].US[6]);
-	MOV16RtoM((uptr)&cpuRegs.GPR.r[_Rd_].US[3], EAX);
-	MOV16MtoR(EAX, (uptr)&cpuRegs.GPR.r[_Rs_].US[2]);
-	MOV16RtoM((uptr)&cpuRegs.GPR.r[_Rd_].US[5], EAX);
-	MOV16MtoR(EAX, (uptr)&cpuRegs.GPR.r[_Rt_].US[2]);
-	MOV16RtoM((uptr)&cpuRegs.GPR.r[_Rd_].US[1], EAX);
-	MOV16MtoR(EAX, (uptr)&cpuRegs.GPR.r[_Rs_].US[4]);
-	MOV16RtoM((uptr)&cpuRegs.GPR.r[_Rd_].US[6], EAX);
-	MOV16MtoR(EAX, (uptr)&cpuRegs.GPR.r[_Rt_].US[4]);
-	MOV16RtoM((uptr)&cpuRegs.GPR.r[_Rd_].US[2], EAX);
-	MOV16MtoR(EAX, (uptr)&cpuRegs.GPR.r[_Rs_].US[0]);
-	MOV16RtoM((uptr)&cpuRegs.GPR.r[_Rd_].US[4], EAX);
-	MOV16MtoR(EAX, (uptr)&cpuRegs.GPR.r[_Rt_].US[0]);
-	MOV16RtoM((uptr)&cpuRegs.GPR.r[_Rd_].US[0], EAX);	
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -696,7 +579,7 @@ void recPPACB()
 {
 	if ( ! _Rd_ ) return;
 
-CPU_SSE2_XMMCACHE_START((_Rs_!=0?XMMINFO_READS:0)|XMMINFO_READT|XMMINFO_WRITED)
+	int info = eeRecompileCodeXMM( (_Rs_!=0?XMMINFO_READS:0)|XMMINFO_READT|XMMINFO_WRITED );
 	if( _Rs_ == 0 ) {
 		if( _hasFreeXMMreg() ) {
 			int t0reg = _allocTempXMMreg(XMMT_INT, -1);
@@ -728,9 +611,7 @@ CPU_SSE2_XMMCACHE_START((_Rs_!=0?XMMINFO_READS:0)|XMMINFO_READT|XMMINFO_WRITED)
 		SSE2_PACKUSWB_XMM_to_XMM(EEREC_D, t0reg);
 		_freeXMMreg(t0reg);
 	}
-CPU_SSE_XMMCACHE_END
-
-	recCall( Interp::PPACB, _Rd_ );
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -738,7 +619,7 @@ void recPEXT5()
 {
 	if ( ! _Rd_ ) return;
 
-CPU_SSE2_XMMCACHE_START(XMMINFO_READT|XMMINFO_WRITED)
+	int info = eeRecompileCodeXMM( XMMINFO_READT|XMMINFO_WRITED );
 	int t0reg = _allocTempXMMreg(XMMT_INT, -1);
 	int t1reg = _allocTempXMMreg(XMMT_INT, -1);
 
@@ -766,9 +647,7 @@ CPU_SSE2_XMMCACHE_START(XMMINFO_READT|XMMINFO_WRITED)
 
 	_freeXMMreg(t0reg);
 	_freeXMMreg(t1reg);
-CPU_SSE_XMMCACHE_END
-
-	recCall( Interp::PEXT5, _Rd_ );
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -776,7 +655,7 @@ void recPPAC5()
 {
 	if ( ! _Rd_ ) return;
 
-CPU_SSE2_XMMCACHE_START(XMMINFO_READT|XMMINFO_WRITED)
+	int info = eeRecompileCodeXMM( XMMINFO_READT|XMMINFO_WRITED );
 	int t0reg = _allocTempXMMreg(XMMT_INT, -1);
 	int t1reg = _allocTempXMMreg(XMMT_INT, -1);
 
@@ -806,9 +685,7 @@ CPU_SSE2_XMMCACHE_START(XMMINFO_READT|XMMINFO_WRITED)
 
 	_freeXMMreg(t0reg);
 	_freeXMMreg(t1reg);
-CPU_SSE_XMMCACHE_END
-
-	recCall( Interp::PPAC5, _Rd_ );
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -816,29 +693,14 @@ void recPMAXH( void )
 {
 	if ( ! _Rd_ ) return;
 
-CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
+	int info = eeRecompileCodeXMM( XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED );
 	if( EEREC_D == EEREC_S ) SSE2_PMAXSW_XMM_to_XMM(EEREC_D, EEREC_T);
 	else if( EEREC_D == EEREC_T ) SSE2_PMAXSW_XMM_to_XMM(EEREC_D, EEREC_S);
 	else {
 		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
 		SSE2_PMAXSW_XMM_to_XMM(EEREC_D, EEREC_T);
 	}
-CPU_SSE_XMMCACHE_END
-
-	_flushCachedRegs();
-	_deleteEEreg(_Rd_, 0);
-
-	MMX_ALLOC_TEMP4(
-		MOVQMtoR( t0reg, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UD[ 0 ] );
-		MOVQMtoR( t1reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 0 ] );
-		SSE_PMAXSW_MM_to_MM( t0reg, t1reg );
-		MOVQMtoR( t2reg, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UD[ 1 ] );
-		MOVQMtoR( t3reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 1 ] );
-		SSE_PMAXSW_MM_to_MM( t2reg, t3reg);
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 0 ], t0reg );
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 1 ], t2reg);
-		SetMMXstate();
-		)
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -846,7 +708,7 @@ void recPCGTB( void )
 {
 	if ( ! _Rd_ ) return;
 
-CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
+	int info = eeRecompileCodeXMM( XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED );
 	if( EEREC_D != EEREC_T ) {
 		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
 		SSE2_PCMPGTB_XMM_to_XMM(EEREC_D, EEREC_T);
@@ -858,24 +720,7 @@ CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
 		SSE2_PCMPGTB_XMM_to_XMM(EEREC_D, t0reg);
 		_freeXMMreg(t0reg);
 	}
-CPU_SSE_XMMCACHE_END
-
-	_flushCachedRegs();
-	_deleteEEreg(_Rd_, 0);
-
-	MMX_ALLOC_TEMP4(
-		MOVQMtoR( t0reg, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UD[ 0 ] );
-		MOVQMtoR( t1reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 0 ] );
-		PCMPGTBRtoR( t0reg, t1reg );
-
-		MOVQMtoR( t2reg, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UD[ 1 ] );
-		MOVQMtoR( t3reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 1 ] );
-		PCMPGTBRtoR( t2reg, t3reg);
-
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 0 ], t0reg );
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 1 ], t2reg);
-		SetMMXstate();
-		)
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -883,7 +728,7 @@ void recPCGTH( void )
 {
 	if ( ! _Rd_ ) return;
 
-CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
+	int info = eeRecompileCodeXMM( XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED );
 	if( EEREC_D != EEREC_T ) {
 		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
 		SSE2_PCMPGTW_XMM_to_XMM(EEREC_D, EEREC_T);
@@ -895,24 +740,7 @@ CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
 		SSE2_PCMPGTW_XMM_to_XMM(EEREC_D, t0reg);
 		_freeXMMreg(t0reg);
 	}
-CPU_SSE_XMMCACHE_END
-
-	_flushCachedRegs();
-	_deleteEEreg(_Rd_, 0);
-
-	MMX_ALLOC_TEMP4(
-		MOVQMtoR( t0reg, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UD[ 0 ] );
-		MOVQMtoR( t2reg, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UD[ 1 ] );
-		MOVQMtoR( t1reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 0 ] );
-		MOVQMtoR( t3reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 1 ] );
-
-		PCMPGTWRtoR( t0reg, t1reg );
-		PCMPGTWRtoR( t2reg, t3reg);
-
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 0 ], t0reg );
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 1 ], t2reg);
-		SetMMXstate();
-		)
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -921,7 +749,7 @@ void recPCGTW( void )
 	//TODO:optimize RS | RT== 0
 	if ( ! _Rd_ ) return;
 
-CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
+	int info = eeRecompileCodeXMM( XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED );
 	if( EEREC_D != EEREC_T ) {
 		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
 		SSE2_PCMPGTD_XMM_to_XMM(EEREC_D, EEREC_T);
@@ -933,24 +761,7 @@ CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
 		SSE2_PCMPGTD_XMM_to_XMM(EEREC_D, t0reg);
 		_freeXMMreg(t0reg);
 	}
-CPU_SSE_XMMCACHE_END
-
-	_flushCachedRegs();
-	_deleteEEreg(_Rd_, 0);
-
-	MMX_ALLOC_TEMP4(
-		MOVQMtoR( t0reg, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UD[ 0 ] );
-		MOVQMtoR( t2reg, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UD[ 1 ] );
-		MOVQMtoR( t1reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 0 ] );
-		MOVQMtoR( t3reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 1 ] );
-
-		PCMPGTDRtoR( t0reg, t1reg );
-		PCMPGTDRtoR( t2reg, t3reg);
-
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 0 ], t0reg );
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 1 ], t2reg);
-		SetMMXstate();
-		)
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -958,29 +769,14 @@ void recPADDSB( void )
 {
 	if ( ! _Rd_ ) return;
 	
-CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
+	int info = eeRecompileCodeXMM( XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED );
 	if( EEREC_D == EEREC_S ) SSE2_PADDSB_XMM_to_XMM(EEREC_D, EEREC_T);
 	else if( EEREC_D == EEREC_T ) SSE2_PADDSB_XMM_to_XMM(EEREC_D, EEREC_S);
 	else {
 		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
 		SSE2_PADDSB_XMM_to_XMM(EEREC_D, EEREC_T);
 	}
-CPU_SSE_XMMCACHE_END
-
-	_flushCachedRegs();
-	_deleteEEreg(_Rd_, 0);
-
-	MMX_ALLOC_TEMP4(
-		MOVQMtoR( t0reg, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UD[ 0 ] );
-		MOVQMtoR( t1reg, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UD[ 1 ] );
-		MOVQMtoR( t2reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 0 ] );
-		MOVQMtoR( t3reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 1 ] );
-		PADDSBRtoR( t0reg, t2reg);
-		PADDSBRtoR( t1reg, t3reg);
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 0 ], t0reg );
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 1 ], t1reg );
-		SetMMXstate();
-		)
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -988,29 +784,14 @@ void recPADDSH( void )
 {
 	if ( ! _Rd_ ) return;
 
-CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
+	int info = eeRecompileCodeXMM( XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED );
 	if( EEREC_D == EEREC_S ) SSE2_PADDSW_XMM_to_XMM(EEREC_D, EEREC_T);
 	else if( EEREC_D == EEREC_T ) SSE2_PADDSW_XMM_to_XMM(EEREC_D, EEREC_S);
 	else {
 		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
 		SSE2_PADDSW_XMM_to_XMM(EEREC_D, EEREC_T);
 	}
-CPU_SSE_XMMCACHE_END
-
-	_flushCachedRegs();
-	_deleteEEreg(_Rd_, 0);
-
-	MMX_ALLOC_TEMP4(
-		MOVQMtoR( t0reg, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UD[ 0 ] );
-		MOVQMtoR( t1reg, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UD[ 1 ] );
-		MOVQMtoR( t2reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 0 ] );
-		MOVQMtoR( t3reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 1 ] );
-		PADDSWRtoR( t0reg, t2reg);
-		PADDSWRtoR( t1reg, t3reg);
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 0 ], t0reg );
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 1 ], t1reg );
-		SetMMXstate();
-		)
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -1019,7 +800,7 @@ void recPADDSW( void )
 {
 	if ( ! _Rd_ ) return;
 
-CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
+	int info = eeRecompileCodeXMM( XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED );
 	int t0reg = _allocTempXMMreg(XMMT_INT, -1);
 	int t1reg = _allocTempXMMreg(XMMT_INT, -1);
 	int t2reg = _allocTempXMMreg(XMMT_INT, -1);
@@ -1063,16 +844,7 @@ CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
 	_freeXMMreg(t0reg);
 	_freeXMMreg(t1reg);
 	_freeXMMreg(t2reg);
-CPU_SSE_XMMCACHE_END
-
-	if( _Rd_ ) _deleteEEreg(_Rd_, 0);
-	_deleteEEreg(_Rs_, 1);
-	_deleteEEreg(_Rt_, 1);
-	_flushConstRegs();
-
-	MOV32ItoM( (uptr)&cpuRegs.code, cpuRegs.code );
-	MOV32ItoM( (uptr)&cpuRegs.pc, pc );
-	CALLFunc( (uptr)R5900::Interpreter::OpcodeImpl::MMI::PADDSW ); 
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -1080,7 +852,7 @@ void recPSUBSB( void )
 {
    if ( ! _Rd_ ) return;
 
-CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
+	int info = eeRecompileCodeXMM( XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED );
 	if( EEREC_D == EEREC_S ) SSE2_PSUBSB_XMM_to_XMM(EEREC_D, EEREC_T);
 	else if( EEREC_D == EEREC_T ) {
 		int t0reg = _allocTempXMMreg(XMMT_INT, -1);
@@ -1093,22 +865,7 @@ CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
 		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
 		SSE2_PSUBSB_XMM_to_XMM(EEREC_D, EEREC_T);
 	}
-CPU_SSE_XMMCACHE_END
-
-	_flushCachedRegs();
-	_deleteEEreg(_Rd_, 0);
-
-	MMX_ALLOC_TEMP4(
-		MOVQMtoR( t0reg, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UD[ 0 ] );
-		MOVQMtoR( t1reg, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UD[ 1 ] );
-		MOVQMtoR( t2reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 0 ] );
-		MOVQMtoR( t3reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 1 ] );
-		PSUBSBRtoR( t0reg, t2reg);
-		PSUBSBRtoR( t1reg, t3reg);
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 0 ], t0reg );
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 1 ], t1reg );
-		SetMMXstate();
-		)
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -1116,7 +873,7 @@ void recPSUBSH( void )
 {
 	if ( ! _Rd_ ) return;
    
-CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
+	int info = eeRecompileCodeXMM( XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED );
 	if( EEREC_D == EEREC_S ) SSE2_PSUBSW_XMM_to_XMM(EEREC_D, EEREC_T);
 	else if( EEREC_D == EEREC_T ) {
 		int t0reg = _allocTempXMMreg(XMMT_INT, -1);
@@ -1129,22 +886,7 @@ CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
 		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
 		SSE2_PSUBSW_XMM_to_XMM(EEREC_D, EEREC_T);
 	}
-CPU_SSE_XMMCACHE_END
-
-	_flushCachedRegs();
-	_deleteEEreg(_Rd_, 0);
-
-	MMX_ALLOC_TEMP4(
-		MOVQMtoR( t0reg, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UD[ 0 ] );
-		MOVQMtoR( t1reg, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UD[ 1 ] );
-		MOVQMtoR( t2reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 0 ] );
-		MOVQMtoR( t3reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 1 ] );
-		PSUBSWRtoR( t0reg, t2reg);
-		PSUBSWRtoR( t1reg, t3reg);
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 0 ], t0reg );
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 1 ], t1reg );
-		SetMMXstate();
-		)
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -1153,7 +895,7 @@ void recPSUBSW( void )
 {
 	if ( ! _Rd_ ) return;
 
-CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
+	int info = eeRecompileCodeXMM( XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED );
 	int t0reg = _allocTempXMMreg(XMMT_INT, -1);
 	int t1reg = _allocTempXMMreg(XMMT_INT, -1);
 	int t2reg = _allocTempXMMreg(XMMT_INT, -1);
@@ -1200,16 +942,7 @@ CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
 	_freeXMMreg(t0reg);
 	_freeXMMreg(t1reg);
 	_freeXMMreg(t2reg);
-CPU_SSE_XMMCACHE_END
-
-	if( _Rd_ ) _deleteEEreg(_Rd_, 0);
-	_deleteEEreg(_Rs_, 1);
-	_deleteEEreg(_Rt_, 1);
-	_flushConstRegs();
-
-	MOV32ItoM( (uptr)&cpuRegs.code, cpuRegs.code );
-	MOV32ItoM( (uptr)&cpuRegs.pc, pc );
-	CALLFunc( (uptr)R5900::Interpreter::OpcodeImpl::MMI::PSUBSW ); 
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -1217,29 +950,14 @@ void recPADDB( void )
 {
 	if ( ! _Rd_ ) return;
 
-CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
+	int info = eeRecompileCodeXMM( XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED );
 	if( EEREC_D == EEREC_S ) SSE2_PADDB_XMM_to_XMM(EEREC_D, EEREC_T);
 	else if( EEREC_D == EEREC_T ) SSE2_PADDB_XMM_to_XMM(EEREC_D, EEREC_S);
 	else {
 		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
 		SSE2_PADDB_XMM_to_XMM(EEREC_D, EEREC_T);
 	}
-CPU_SSE_XMMCACHE_END
-
-	_flushCachedRegs();
-	_deleteEEreg(_Rd_, 0);
-
-	MMX_ALLOC_TEMP4(
-		MOVQMtoR( t0reg, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UD[ 0 ] );
-		MOVQMtoR( t1reg, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UD[ 1 ] );
-		MOVQMtoR( t2reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 0 ] );
-		MOVQMtoR( t3reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 1 ] );
-		PADDBRtoR( t0reg, t2reg );
-		PADDBRtoR( t1reg, t3reg );
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 0 ], t0reg );
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 1 ], t1reg );
-		SetMMXstate();
-		)
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -1247,7 +965,7 @@ void recPADDH( void )
 {
 	if ( ! _Rd_ ) return;
 
-CPU_SSE2_XMMCACHE_START((_Rs_!=0?XMMINFO_READS:0)|(_Rt_!=0?XMMINFO_READT:0)|XMMINFO_WRITED)
+	int info = eeRecompileCodeXMM( (_Rs_!=0?XMMINFO_READS:0)|(_Rt_!=0?XMMINFO_READT:0)|XMMINFO_WRITED );
 	if( _Rs_ == 0 ) {
 		if( _Rt_ == 0 ) SSEX_PXOR_XMM_to_XMM(EEREC_D, EEREC_D);
 		else SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_T);
@@ -1263,22 +981,7 @@ CPU_SSE2_XMMCACHE_START((_Rs_!=0?XMMINFO_READS:0)|(_Rt_!=0?XMMINFO_READT:0)|XMMI
 			SSE2_PADDW_XMM_to_XMM(EEREC_D, EEREC_T);
 		}
 	}
-CPU_SSE_XMMCACHE_END
-
-	_flushCachedRegs();
-	_deleteEEreg(_Rd_, 0);
-
-	MMX_ALLOC_TEMP4(
-		MOVQMtoR( t0reg, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UD[ 0 ] );
-		MOVQMtoR( t1reg, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UD[ 1 ] );
-		MOVQMtoR( t2reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 0 ] );
-		MOVQMtoR( t3reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 1 ] );
-		PADDWRtoR( t0reg, t2reg );
-		PADDWRtoR( t1reg, t3reg );
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 0 ], t0reg );
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 1 ], t1reg );
-		SetMMXstate();
-		)
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -1286,7 +989,7 @@ void recPADDW( void )
 {
 	if ( ! _Rd_ ) return;
 
-CPU_SSE2_XMMCACHE_START((_Rs_!=0?XMMINFO_READS:0)|(_Rt_!=0?XMMINFO_READT:0)|XMMINFO_WRITED)
+	int info = eeRecompileCodeXMM( (_Rs_!=0?XMMINFO_READS:0)|(_Rt_!=0?XMMINFO_READT:0)|XMMINFO_WRITED );
 	if( _Rs_ == 0 ) {
 		if( _Rt_ == 0 ) SSEX_PXOR_XMM_to_XMM(EEREC_D, EEREC_D);
 		else SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_T);
@@ -1302,22 +1005,7 @@ CPU_SSE2_XMMCACHE_START((_Rs_!=0?XMMINFO_READS:0)|(_Rt_!=0?XMMINFO_READT:0)|XMMI
 			SSE2_PADDD_XMM_to_XMM(EEREC_D, EEREC_T);
 		}
 	}
-CPU_SSE_XMMCACHE_END
-
-	_flushCachedRegs();
-	_deleteEEreg(_Rd_, 0);
-
-	MMX_ALLOC_TEMP4(
-		MOVQMtoR( t0reg, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UD[ 0 ] );
-		MOVQMtoR( t1reg, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UD[ 1 ] );
-		MOVQMtoR( t2reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 0 ] );
-		MOVQMtoR( t3reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 1 ] );
-		PADDDRtoR( t0reg, t2reg );
-		PADDDRtoR( t1reg, t3reg );
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 0 ], t0reg );
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 1 ], t1reg );
-		SetMMXstate();
-		)
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -1325,7 +1013,7 @@ void recPSUBB( void )
 {
 	if ( ! _Rd_ ) return;
 
-CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
+	int info = eeRecompileCodeXMM( XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED );
 	if( EEREC_D == EEREC_S ) SSE2_PSUBB_XMM_to_XMM(EEREC_D, EEREC_T);
 	else if( EEREC_D == EEREC_T ) {
 		int t0reg = _allocTempXMMreg(XMMT_INT, -1);
@@ -1338,22 +1026,7 @@ CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
 		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
 		SSE2_PSUBB_XMM_to_XMM(EEREC_D, EEREC_T);
 	}
-CPU_SSE_XMMCACHE_END
-
-	_flushCachedRegs();
-	_deleteEEreg(_Rd_, 0);
-
-	MMX_ALLOC_TEMP4(
-		MOVQMtoR( t0reg, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UD[ 0 ] );
-		MOVQMtoR( t1reg, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UD[ 1 ] );
-		MOVQMtoR( t2reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 0 ] );
-		MOVQMtoR( t3reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 1 ] );
-		PSUBBRtoR( t0reg, t2reg );
-		PSUBBRtoR( t1reg, t3reg );
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 0 ], t0reg );
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 1 ], t1reg );
-		SetMMXstate();
-		)
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -1361,7 +1034,7 @@ void recPSUBH( void )
 {
 	if ( ! _Rd_ ) return;
 
-CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
+	int info = eeRecompileCodeXMM( XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED );
 	if( EEREC_D == EEREC_S ) SSE2_PSUBW_XMM_to_XMM(EEREC_D, EEREC_T);
 	else if( EEREC_D == EEREC_T ) {
 		int t0reg = _allocTempXMMreg(XMMT_INT, -1);
@@ -1374,22 +1047,7 @@ CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
 		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
 		SSE2_PSUBW_XMM_to_XMM(EEREC_D, EEREC_T);
 	}
-CPU_SSE_XMMCACHE_END
-
-	_flushCachedRegs();
-	_deleteEEreg(_Rd_, 0);
-
-	MMX_ALLOC_TEMP4(
-		MOVQMtoR( t0reg, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UD[ 0 ] );
-		MOVQMtoR( t1reg, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UD[ 1 ] );
-		MOVQMtoR( t2reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 0 ] );
-		MOVQMtoR( t3reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 1 ] );
-		PSUBWRtoR( t0reg, t2reg );
-		PSUBWRtoR( t1reg, t3reg );
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 0 ], t0reg );
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 1 ], t1reg );
-		SetMMXstate();
-		)
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -1397,7 +1055,7 @@ void recPSUBW( void )
 {
 	if ( ! _Rd_ ) return;
 
-CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
+	int info = eeRecompileCodeXMM( XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED );
 	if( EEREC_D == EEREC_S ) SSE2_PSUBD_XMM_to_XMM(EEREC_D, EEREC_T);
 	else if( EEREC_D == EEREC_T ) {
 		int t0reg = _allocTempXMMreg(XMMT_INT, -1);
@@ -1410,22 +1068,7 @@ CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
 		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
 		SSE2_PSUBD_XMM_to_XMM(EEREC_D, EEREC_T);
 	}
-CPU_SSE_XMMCACHE_END
-
-	_flushCachedRegs();
-	_deleteEEreg(_Rd_, 0);
-
-	MMX_ALLOC_TEMP4(
-		MOVQMtoR( t0reg, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UD[ 0 ] );
-		MOVQMtoR( t1reg, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UD[ 1 ] );
-		MOVQMtoR( t2reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 0 ] );
-		MOVQMtoR( t3reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 1 ] );
-		PSUBDRtoR( t0reg, t2reg);
-		PSUBDRtoR( t1reg, t3reg);
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 0 ], t0reg );
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 1 ], t1reg );
-		SetMMXstate();
-		)
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -1433,7 +1076,7 @@ void recPEXTLW( void )
 {
 	if ( ! _Rd_ ) return;
 
-CPU_SSE2_XMMCACHE_START((_Rs_!=0?XMMINFO_READS:0)|XMMINFO_READT|XMMINFO_WRITED)
+	int info = eeRecompileCodeXMM( (_Rs_!=0?XMMINFO_READS:0)|XMMINFO_READT|XMMINFO_WRITED );
 	if( _Rs_ == 0 ) {
 		SSE2_PUNPCKLDQ_XMM_to_XMM(EEREC_D, EEREC_T);
 		SSE2_PSRLQ_I8_to_XMM(EEREC_D, 32);
@@ -1452,27 +1095,14 @@ CPU_SSE2_XMMCACHE_START((_Rs_!=0?XMMINFO_READS:0)|XMMINFO_READT|XMMINFO_WRITED)
 			SSE2_PUNPCKLDQ_XMM_to_XMM(EEREC_D, EEREC_S);
 		}
 	}
-CPU_SSE_XMMCACHE_END
-
-	_flushCachedRegs();
-	_deleteEEreg(_Rd_, 0);
-
-	MOV32MtoR( EAX, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UL[ 1 ] );
-	MOV32MtoR( ECX, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UL[ 1 ] );
-	MOV32RtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UL[ 3 ], EAX );
-	MOV32RtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UL[ 2 ], ECX );
-
-	MOV32MtoR( EAX, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
-	MOV32MtoR( ECX, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] );
-	MOV32RtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], EAX );
-	MOV32RtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], ECX );
+	_clearNeededXMMregs();
 }
 
 void recPEXTLB( void ) 
 {
 	if (!_Rd_) return;
 
-CPU_SSE2_XMMCACHE_START((_Rs_!=0?XMMINFO_READS:0)|XMMINFO_READT|XMMINFO_WRITED)
+	int info = eeRecompileCodeXMM( (_Rs_!=0?XMMINFO_READS:0)|XMMINFO_READT|XMMINFO_WRITED );
 	if( _Rs_ == 0 ) {
 		SSE2_PUNPCKLBW_XMM_to_XMM(EEREC_D, EEREC_T);
 		SSE2_PSRLW_I8_to_XMM(EEREC_D, 8);
@@ -1491,53 +1121,14 @@ CPU_SSE2_XMMCACHE_START((_Rs_!=0?XMMINFO_READS:0)|XMMINFO_READT|XMMINFO_WRITED)
 			SSE2_PUNPCKLBW_XMM_to_XMM(EEREC_D, EEREC_S);
 		}
 	}
-CPU_SSE_XMMCACHE_END
-
-	_flushCachedRegs();
-	_deleteEEreg(_Rd_, 0);
-
-	//Done - Refraction - Crude but quicker than int
-	//Console::WriteLn("PEXTLB");
-	//Rs = cpuRegs.GPR.r[_Rs_]; Rt = cpuRegs.GPR.r[_Rt_];
-	MOV8MtoR(EAX, (uptr)&cpuRegs.GPR.r[_Rs_].UC[7]);
-	MOV8RtoM((uptr)&cpuRegs.GPR.r[_Rd_].UC[15], EAX);
-	MOV8MtoR(EAX, (uptr)&cpuRegs.GPR.r[_Rt_].UC[7]);
-	MOV8RtoM((uptr)&cpuRegs.GPR.r[_Rd_].UC[14], EAX);
-	MOV8MtoR(EAX, (uptr)&cpuRegs.GPR.r[_Rs_].UC[6]);
-	MOV8RtoM((uptr)&cpuRegs.GPR.r[_Rd_].UC[13], EAX);
-	MOV8MtoR(EAX, (uptr)&cpuRegs.GPR.r[_Rt_].UC[6]);
-	MOV8RtoM((uptr)&cpuRegs.GPR.r[_Rd_].UC[12], EAX);
-	MOV8MtoR(EAX, (uptr)&cpuRegs.GPR.r[_Rs_].UC[5]);
-	MOV8RtoM((uptr)&cpuRegs.GPR.r[_Rd_].UC[11], EAX);
-	MOV8MtoR(EAX, (uptr)&cpuRegs.GPR.r[_Rt_].UC[5]);
-	MOV8RtoM((uptr)&cpuRegs.GPR.r[_Rd_].UC[10], EAX);
-	MOV8MtoR(EAX, (uptr)&cpuRegs.GPR.r[_Rs_].UC[4]);
-	MOV8RtoM((uptr)&cpuRegs.GPR.r[_Rd_].UC[9], EAX);
-	MOV8MtoR(EAX, (uptr)&cpuRegs.GPR.r[_Rt_].UC[4]);
-	MOV8RtoM((uptr)&cpuRegs.GPR.r[_Rd_].UC[8], EAX);
-	MOV8MtoR(EAX, (uptr)&cpuRegs.GPR.r[_Rs_].UC[3]);
-	MOV8RtoM((uptr)&cpuRegs.GPR.r[_Rd_].UC[7], EAX);
-	MOV8MtoR(EAX, (uptr)&cpuRegs.GPR.r[_Rt_].UC[3]);
-	MOV8RtoM((uptr)&cpuRegs.GPR.r[_Rd_].UC[6], EAX);
-	MOV8MtoR(EAX, (uptr)&cpuRegs.GPR.r[_Rs_].UC[2]);
-	MOV8RtoM((uptr)&cpuRegs.GPR.r[_Rd_].UC[5], EAX);
-	MOV8MtoR(EAX, (uptr)&cpuRegs.GPR.r[_Rt_].UC[2]);
-	MOV8RtoM((uptr)&cpuRegs.GPR.r[_Rd_].UC[4], EAX);
-	MOV8MtoR(EAX, (uptr)&cpuRegs.GPR.r[_Rs_].UC[1]);
-	MOV8RtoM((uptr)&cpuRegs.GPR.r[_Rd_].UC[3], EAX);
-	MOV8MtoR(EAX, (uptr)&cpuRegs.GPR.r[_Rt_].UC[1]);
-	MOV8RtoM((uptr)&cpuRegs.GPR.r[_Rd_].UC[2], EAX);
-	MOV8MtoR(EAX, (uptr)&cpuRegs.GPR.r[_Rs_].UC[0]);
-	MOV8RtoM((uptr)&cpuRegs.GPR.r[_Rd_].UC[1], EAX);
-	MOV8MtoR(EAX, (uptr)&cpuRegs.GPR.r[_Rt_].UC[0]);
-	MOV8RtoM((uptr)&cpuRegs.GPR.r[_Rd_].UC[0], EAX);	
+	_clearNeededXMMregs();
 }
 
 void recPEXTLH( void )
 {
 	if (!_Rd_) return;
 
-CPU_SSE2_XMMCACHE_START((_Rs_!=0?XMMINFO_READS:0)|XMMINFO_READT|XMMINFO_WRITED)
+	int info = eeRecompileCodeXMM( (_Rs_!=0?XMMINFO_READS:0)|XMMINFO_READT|XMMINFO_WRITED );
 	if( _Rs_ == 0 ) {
 		SSE2_PUNPCKLWD_XMM_to_XMM(EEREC_D, EEREC_T);
 		SSE2_PSRLD_I8_to_XMM(EEREC_D, 16);
@@ -1556,28 +1147,7 @@ CPU_SSE2_XMMCACHE_START((_Rs_!=0?XMMINFO_READS:0)|XMMINFO_READT|XMMINFO_WRITED)
 			SSE2_PUNPCKLWD_XMM_to_XMM(EEREC_D, EEREC_S);
 		}
 	}
-CPU_SSE_XMMCACHE_END
-
-	_flushCachedRegs();
-	_deleteEEreg(_Rd_, 0);
-
-	//Done - Refraction - Crude but quicker than int
-	MOV16MtoR(EAX, (uptr)&cpuRegs.GPR.r[_Rs_].US[3]);
-	MOV16RtoM((uptr)&cpuRegs.GPR.r[_Rd_].US[7], EAX);
-	MOV16MtoR(EAX, (uptr)&cpuRegs.GPR.r[_Rt_].US[3]);
-	MOV16RtoM((uptr)&cpuRegs.GPR.r[_Rd_].US[6], EAX);
-	MOV16MtoR(EAX, (uptr)&cpuRegs.GPR.r[_Rs_].US[2]);
-	MOV16RtoM((uptr)&cpuRegs.GPR.r[_Rd_].US[5], EAX);
-	MOV16MtoR(EAX, (uptr)&cpuRegs.GPR.r[_Rt_].US[2]);
-	MOV16RtoM((uptr)&cpuRegs.GPR.r[_Rd_].US[4], EAX);
-	MOV16MtoR(EAX, (uptr)&cpuRegs.GPR.r[_Rs_].US[1]);
-	MOV16RtoM((uptr)&cpuRegs.GPR.r[_Rd_].US[3], EAX);
-	MOV16MtoR(EAX, (uptr)&cpuRegs.GPR.r[_Rt_].US[1]);
-	MOV16RtoM((uptr)&cpuRegs.GPR.r[_Rd_].US[2], EAX);
-	MOV16MtoR(EAX, (uptr)&cpuRegs.GPR.r[_Rs_].US[0]);
-	MOV16RtoM((uptr)&cpuRegs.GPR.r[_Rd_].US[1], EAX);
-	MOV16MtoR(EAX, (uptr)&cpuRegs.GPR.r[_Rt_].US[0]);
-	MOV16RtoM((uptr)&cpuRegs.GPR.r[_Rd_].US[0], EAX);
+	_clearNeededXMMregs();
 }
 
 #endif
@@ -1621,7 +1191,7 @@ void recPABSW() //needs clamping
 {
 	if( !_Rd_ ) return;
 
-CPU_SSE2_XMMCACHE_START(XMMINFO_READT|XMMINFO_WRITED)
+	int info = eeRecompileCodeXMM( XMMINFO_READT|XMMINFO_WRITED );
 	int t0reg = _allocTempXMMreg(XMMT_INT, -1);
 	SSE2_PCMPEQD_XMM_to_XMM(t0reg, t0reg);
 	SSE2_PSLLD_I8_to_XMM(t0reg, 31);
@@ -1640,15 +1210,7 @@ CPU_SSE2_XMMCACHE_START(XMMINFO_READT|XMMINFO_WRITED)
 	}
 	SSE2_PXOR_XMM_to_XMM(EEREC_D, t0reg); //0x80000000 -> 0x7fffffff
 	_freeXMMreg(t0reg);
-CPU_SSE_XMMCACHE_END
-
-	_deleteEEreg(_Rt_, 1);
-	_deleteEEreg(_Rd_, 0);
-	_flushConstRegs();
-
-	MOV32ItoM( (uptr)&cpuRegs.code, cpuRegs.code );
-	MOV32ItoM( (uptr)&cpuRegs.pc, pc );
-	CALLFunc( (uptr)R5900::Interpreter::OpcodeImpl::MMI::PABSW ); 
+	_clearNeededXMMregs();
 }
 
 
@@ -1657,7 +1219,7 @@ void recPABSH()
 {
 	if( !_Rd_ ) return;
 
-CPU_SSE2_XMMCACHE_START(XMMINFO_READT|XMMINFO_WRITED)
+	int info = eeRecompileCodeXMM( XMMINFO_READT|XMMINFO_WRITED );
 	int t0reg = _allocTempXMMreg(XMMT_INT, -1);
 	SSE2_PCMPEQW_XMM_to_XMM(t0reg, t0reg);
 	SSE2_PSLLW_I8_to_XMM(t0reg, 15);
@@ -1676,15 +1238,7 @@ CPU_SSE2_XMMCACHE_START(XMMINFO_READT|XMMINFO_WRITED)
 	}
 	SSE2_PXOR_XMM_to_XMM(EEREC_D, t0reg); //0x8000 -> 0x7fff
 	_freeXMMreg(t0reg);
-CPU_SSE_XMMCACHE_END
-
-	_deleteEEreg(_Rt_, 1);
-	_deleteEEreg(_Rd_, 0);
-	_flushConstRegs();
-
-	MOV32ItoM( (uptr)&cpuRegs.code, cpuRegs.code );
-	MOV32ItoM( (uptr)&cpuRegs.pc, pc );
-	CALLFunc( (uptr)R5900::Interpreter::OpcodeImpl::MMI::PABSW );
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -1692,7 +1246,7 @@ void recPMINW()
 {
 	if ( ! _Rd_ ) return;
 
-CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
+	int info = eeRecompileCodeXMM( XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED );
 	if ( cpucaps.hasStreamingSIMD4Extensions ) {
 		if( EEREC_S == EEREC_T ) SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
 		else if( EEREC_D == EEREC_S ) SSE4_PMINSD_XMM_to_XMM(EEREC_D, EEREC_T);
@@ -1735,9 +1289,7 @@ CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
 			_freeXMMreg(t0reg);
 		}
 	}
-CPU_SSE_XMMCACHE_END
-
-	recCall( Interp::PMINW, _Rd_ );
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -1745,7 +1297,7 @@ void recPADSBH()
 {
 	if ( ! _Rd_ ) return;
 
-CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
+	int info = eeRecompileCodeXMM( XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED );
 	int t0reg;
 
 	if( EEREC_S == EEREC_T ) {
@@ -1776,9 +1328,7 @@ CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
 		_freeXMMreg(t0reg);
 	}
 
-CPU_SSE_XMMCACHE_END
-
-	recCall( Interp::PADSBH, _Rd_ );
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -1786,7 +1336,7 @@ void recPADDUW()
 {
 	if ( ! _Rd_ ) return;
 
-CPU_SSE2_XMMCACHE_START((_Rs_?XMMINFO_READS:0)|(_Rt_?XMMINFO_READT:0)|XMMINFO_WRITED)
+	int info = eeRecompileCodeXMM( (_Rs_?XMMINFO_READS:0)|(_Rt_?XMMINFO_READT:0)|XMMINFO_WRITED );
 
 	if( _Rt_ == 0 ) {
 		if( _Rs_ == 0 ) {
@@ -1824,9 +1374,7 @@ CPU_SSE2_XMMCACHE_START((_Rs_?XMMINFO_READS:0)|(_Rt_?XMMINFO_READT:0)|XMMINFO_WR
 		_freeXMMreg(t0reg);
 		_freeXMMreg(t1reg);
 	}
-
-CPU_SSE_XMMCACHE_END
-	recCall( Interp::PADDUW, _Rd_ );
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -1834,7 +1382,7 @@ void recPSUBUB()
 {
 	if ( ! _Rd_ ) return;
 
-CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
+	int info = eeRecompileCodeXMM( XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED );
 	if( EEREC_D == EEREC_S ) SSE2_PSUBUSB_XMM_to_XMM(EEREC_D, EEREC_T);
 	else if( EEREC_D == EEREC_T ) {
 		int t0reg = _allocTempXMMreg(XMMT_INT, -1);
@@ -1847,9 +1395,7 @@ CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
 		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
 		SSE2_PSUBUSB_XMM_to_XMM(EEREC_D, EEREC_T);
 	}
-CPU_SSE_XMMCACHE_END
-
-	recCall( Interp::PSUBUB, _Rd_ );
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -1857,7 +1403,7 @@ void recPSUBUH()
 {
 	if ( ! _Rd_ ) return;
 
-CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
+	int info = eeRecompileCodeXMM( XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED );
 	if( EEREC_D == EEREC_S ) SSE2_PSUBUSW_XMM_to_XMM(EEREC_D, EEREC_T);
 	else if( EEREC_D == EEREC_T ) {
 		int t0reg = _allocTempXMMreg(XMMT_INT, -1);
@@ -1870,9 +1416,7 @@ CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
 		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
 		SSE2_PSUBUSW_XMM_to_XMM(EEREC_D, EEREC_T);
 	}
-CPU_SSE_XMMCACHE_END
-
-	recCall( Interp::PSUBUH, _Rd_ );
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -1880,7 +1424,7 @@ void recPSUBUW()
 {
 	if ( ! _Rd_ ) return;
 
-CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
+	int info = eeRecompileCodeXMM( XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED );
 	int t0reg = _allocTempXMMreg(XMMT_INT, -1);
 	int t1reg = _allocTempXMMreg(XMMT_INT, -1);
 
@@ -1918,9 +1462,7 @@ CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
 	
 	_freeXMMreg(t0reg);
 	_freeXMMreg(t1reg);
-CPU_SSE_XMMCACHE_END
-
-	recCall( Interp::PSUBUW, _Rd_ );
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -1928,7 +1470,7 @@ void recPEXTUH()
 {
 	if ( ! _Rd_ ) return;
 
-CPU_SSE2_XMMCACHE_START((_Rs_!=0?XMMINFO_READS:0)|XMMINFO_READT|XMMINFO_WRITED)
+	int info = eeRecompileCodeXMM( (_Rs_!=0?XMMINFO_READS:0)|XMMINFO_READT|XMMINFO_WRITED );
 	if( _Rs_ == 0 ) {
 		SSE2_PUNPCKHWD_XMM_to_XMM(EEREC_D, EEREC_T);
 		SSE2_PSRLD_I8_to_XMM(EEREC_D, 16);
@@ -1947,9 +1489,7 @@ CPU_SSE2_XMMCACHE_START((_Rs_!=0?XMMINFO_READS:0)|XMMINFO_READT|XMMINFO_WRITED)
 			SSE2_PUNPCKHWD_XMM_to_XMM(EEREC_D, EEREC_S);
 		}
 	}
-CPU_SSE_XMMCACHE_END
-
-	recCall( Interp::PEXTUH, _Rd_ );
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -1971,42 +1511,41 @@ void recQFSRV()
 	if ( !_Rd_ ) return;
 	//Console::WriteLn("recQFSRV()");
 
-	CPU_SSE2_XMMCACHE_START( XMMINFO_READS | XMMINFO_READT | XMMINFO_WRITED )
+	int info = eeRecompileCodeXMM( XMMINFO_READS | XMMINFO_READT | XMMINFO_WRITED );
 
-		u32 *ajmp[16];
-		int i, j;
-		int t0reg = _allocTempXMMreg(XMMT_INT, -1);
+	u32 *ajmp[16];
+	int i, j;
+	int t0reg = _allocTempXMMreg(XMMT_INT, -1);
 
-		SSE2_MOVDQA_XMM_to_XMM(t0reg, EEREC_S);
-		SSE2_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_T);
+	SSE2_MOVDQA_XMM_to_XMM(t0reg, EEREC_S);
+	SSE2_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_T);
 
-		MOV32MtoR(EAX, (uptr)&cpuRegs.sa);
-		SHL32ItoR(EAX, 4); // Multiply SA bytes by 16 bytes (the amount of bytes in QFSRVhelper() macros)
-		AND32ItoR(EAX, 0xf0); // This can possibly be removed but keeping it incase theres garbage in SA (cottonvibes)
-		ADD32ItoR(EAX, (uptr)x86Ptr + 7); // ADD32 = 5 bytes, JMPR = 2 bytes
-		JMPR(EAX); // Jumps to a QFSRVhelper() case below (a total of 16 different cases)
+	MOV32MtoR(EAX, (uptr)&cpuRegs.sa);
+	SHL32ItoR(EAX, 4); // Multiply SA bytes by 16 bytes (the amount of bytes in QFSRVhelper() macros)
+	AND32ItoR(EAX, 0xf0); // This can possibly be removed but keeping it incase theres garbage in SA (cottonvibes)
+	ADD32ItoR(EAX, (uptr)x86Ptr + 7); // ADD32 = 5 bytes, JMPR = 2 bytes
+	JMPR(EAX); // Jumps to a QFSRVhelper() case below (a total of 16 different cases)
+
+	// Case 0:
+	QFSRVhelper0();
+
+	// Cases 1 to 15:
+	for (i = 1, j = 15; i < 16; i++, j--) {
+		QFSRVhelper(i, j);
+	}
+
+	// Set jump addresses for the JMP32's in QFSRVhelper()
+	for (i = 1; i < 16; i++) {
+		x86SetJ32(ajmp[i]);
+	}
+
+	// Concatenate the regs after appropriate shifts have been made
+	SSE2_POR_XMM_to_XMM(EEREC_D, t0reg);
 	
-		// Case 0:
-		QFSRVhelper0();
+	x86SetJ32(ajmp[0]); // Case 0 jumps to here (to skip the POR)
+	_freeXMMreg(t0reg);
 
-		// Cases 1 to 15:
-		for (i = 1, j = 15; i < 16; i++, j--) {
-			QFSRVhelper(i, j);
-		}
-
-		// Set jump addresses for the JMP32's in QFSRVhelper()
-		for (i = 1; i < 16; i++) {
-			x86SetJ32(ajmp[i]);
-		}
-
-		// Concatenate the regs after appropriate shifts have been made
-		SSE2_POR_XMM_to_XMM(EEREC_D, t0reg);
-		
-		x86SetJ32(ajmp[0]); // Case 0 jumps to here (to skip the POR)
-		_freeXMMreg(t0reg);
-
-	CPU_SSE_XMMCACHE_END
-	//recCall( Interp::QFSRV, _Rd_ );
+	_clearNeededXMMregs();
 }
 
 
@@ -2014,7 +1553,8 @@ void recPEXTUB( void )
 {
 	if (!_Rd_) return;
 
-CPU_SSE2_XMMCACHE_START((_Rs_!=0?XMMINFO_READS:0)|XMMINFO_READT|XMMINFO_WRITED)
+	int info = eeRecompileCodeXMM( (_Rs_!=0?XMMINFO_READS:0)|XMMINFO_READT|XMMINFO_WRITED );
+
 	if( _Rs_ == 0 ) {
 		SSE2_PUNPCKHBW_XMM_to_XMM(EEREC_D, EEREC_T);
 		SSE2_PSRLW_I8_to_XMM(EEREC_D, 8);
@@ -2033,44 +1573,7 @@ CPU_SSE2_XMMCACHE_START((_Rs_!=0?XMMINFO_READS:0)|XMMINFO_READT|XMMINFO_WRITED)
 			SSE2_PUNPCKHBW_XMM_to_XMM(EEREC_D, EEREC_S);
 		}
 	}
-CPU_SSE_XMMCACHE_END
-
-	_flushCachedRegs();
-	_deleteEEreg(_Rd_, 0);
-
-	//Done - Refraction - Crude but faster than int
-	MOV8MtoR(EAX, (uptr)&cpuRegs.GPR.r[_Rt_].UC[8]);
-	MOV8RtoM((uptr)&cpuRegs.GPR.r[_Rd_].UC[0], EAX);
-	MOV8MtoR(EAX, (uptr)&cpuRegs.GPR.r[_Rs_].UC[8]);
-	MOV8RtoM((uptr)&cpuRegs.GPR.r[_Rd_].UC[1], EAX);
-	MOV8MtoR(EAX, (uptr)&cpuRegs.GPR.r[_Rt_].UC[9]);
-	MOV8RtoM((uptr)&cpuRegs.GPR.r[_Rd_].UC[2], EAX);
-	MOV8MtoR(EAX, (uptr)&cpuRegs.GPR.r[_Rs_].UC[9]);
-	MOV8RtoM((uptr)&cpuRegs.GPR.r[_Rd_].UC[3], EAX);
-	MOV8MtoR(EAX, (uptr)&cpuRegs.GPR.r[_Rt_].UC[10]);
-	MOV8RtoM((uptr)&cpuRegs.GPR.r[_Rd_].UC[4], EAX);
-	MOV8MtoR(EAX, (uptr)&cpuRegs.GPR.r[_Rs_].UC[10]);
-	MOV8RtoM((uptr)&cpuRegs.GPR.r[_Rd_].UC[5], EAX);
-	MOV8MtoR(EAX, (uptr)&cpuRegs.GPR.r[_Rt_].UC[11]);
-	MOV8RtoM((uptr)&cpuRegs.GPR.r[_Rd_].UC[6], EAX);
-	MOV8MtoR(EAX, (uptr)&cpuRegs.GPR.r[_Rs_].UC[11]);
-	MOV8RtoM((uptr)&cpuRegs.GPR.r[_Rd_].UC[7], EAX);
-	MOV8MtoR(EAX, (uptr)&cpuRegs.GPR.r[_Rt_].UC[12]);
-	MOV8RtoM((uptr)&cpuRegs.GPR.r[_Rd_].UC[8], EAX);
-	MOV8MtoR(EAX, (uptr)&cpuRegs.GPR.r[_Rs_].UC[12]);
-	MOV8RtoM((uptr)&cpuRegs.GPR.r[_Rd_].UC[9], EAX);
-	MOV8MtoR(EAX, (uptr)&cpuRegs.GPR.r[_Rt_].UC[13]);
-	MOV8RtoM((uptr)&cpuRegs.GPR.r[_Rd_].UC[10], EAX);
-	MOV8MtoR(EAX, (uptr)&cpuRegs.GPR.r[_Rs_].UC[13]);
-	MOV8RtoM((uptr)&cpuRegs.GPR.r[_Rd_].UC[11], EAX);
-	MOV8MtoR(EAX, (uptr)&cpuRegs.GPR.r[_Rt_].UC[14]);
-	MOV8RtoM((uptr)&cpuRegs.GPR.r[_Rd_].UC[12], EAX);
-	MOV8MtoR(EAX, (uptr)&cpuRegs.GPR.r[_Rs_].UC[14]);
-	MOV8RtoM((uptr)&cpuRegs.GPR.r[_Rd_].UC[13], EAX);
-	MOV8MtoR(EAX, (uptr)&cpuRegs.GPR.r[_Rt_].UC[15]);
-	MOV8RtoM((uptr)&cpuRegs.GPR.r[_Rd_].UC[14], EAX);
-	MOV8MtoR(EAX, (uptr)&cpuRegs.GPR.r[_Rs_].UC[15]);
-	MOV8RtoM((uptr)&cpuRegs.GPR.r[_Rd_].UC[15], EAX);
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -2078,7 +1581,7 @@ void recPEXTUW( void )
 {
 	if ( ! _Rd_ ) return;
 
-CPU_SSE2_XMMCACHE_START((_Rs_!=0?XMMINFO_READS:0)|XMMINFO_READT|XMMINFO_WRITED)
+	int info = eeRecompileCodeXMM( (_Rs_!=0?XMMINFO_READS:0)|XMMINFO_READT|XMMINFO_WRITED );
 	if( _Rs_ == 0 ) {
 		SSE2_PUNPCKHDQ_XMM_to_XMM(EEREC_D, EEREC_T);
 		SSE2_PSRLQ_I8_to_XMM(EEREC_D, 32);
@@ -2097,20 +1600,7 @@ CPU_SSE2_XMMCACHE_START((_Rs_!=0?XMMINFO_READS:0)|XMMINFO_READT|XMMINFO_WRITED)
 			SSE2_PUNPCKHDQ_XMM_to_XMM(EEREC_D, EEREC_S);
 		}
 	}
-CPU_SSE_XMMCACHE_END
-
-	_flushCachedRegs();
-	_deleteEEreg(_Rd_, 0);
-
-	MOV32MtoR( EAX, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UL[ 2 ] );
-	MOV32MtoR( ECX, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UL[ 2 ] );
-	MOV32RtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], EAX );
-	MOV32RtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], ECX );
-	
-	MOV32MtoR( EAX, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UL[ 3 ] );
-	MOV32MtoR( ECX, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UL[ 3 ] );
-	MOV32RtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UL[ 3 ], EAX );
-	MOV32RtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UL[ 2 ], ECX );
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -2118,29 +1608,14 @@ void recPMINH( void )
 {
 	if ( ! _Rd_ ) return;
 
-CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
+	int info = eeRecompileCodeXMM( XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED );
 	if( EEREC_D == EEREC_S ) SSE2_PMINSW_XMM_to_XMM(EEREC_D, EEREC_T);
 	else if( EEREC_D == EEREC_T ) SSE2_PMINSW_XMM_to_XMM(EEREC_D, EEREC_S);
 	else {
 		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
 		SSE2_PMINSW_XMM_to_XMM(EEREC_D, EEREC_T);
 	}
-CPU_SSE_XMMCACHE_END
-
-	_flushCachedRegs();
-	_deleteEEreg(_Rd_, 0);
-
-	MMX_ALLOC_TEMP4(
-		MOVQMtoR( t0reg, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UD[ 0 ] );
-		MOVQMtoR( t1reg, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UD[ 1 ] );
-		MOVQMtoR( t2reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 0 ] );
-		MOVQMtoR( t3reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 1 ] );
-		SSE_PMINSW_MM_to_MM( t0reg, t2reg );
-		SSE_PMINSW_MM_to_MM( t1reg, t3reg );
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 0 ], t0reg );
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 1 ], t1reg );
-		SetMMXstate();
-		)
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -2148,30 +1623,14 @@ void recPCEQB( void )
 {
 	if ( ! _Rd_ ) return;
 
-CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
+	int info = eeRecompileCodeXMM( XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED ); 
 	if( EEREC_D == EEREC_S ) SSE2_PCMPEQB_XMM_to_XMM(EEREC_D, EEREC_T);
 	else if( EEREC_D == EEREC_T ) SSE2_PCMPEQB_XMM_to_XMM(EEREC_D, EEREC_S);
 	else {
 		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
 		SSE2_PCMPEQB_XMM_to_XMM(EEREC_D, EEREC_T);
 	}
-CPU_SSE_XMMCACHE_END
-
-	_flushCachedRegs();
-	_deleteEEreg(_Rd_, 0);
-
-	MMX_ALLOC_TEMP4(
-		MOVQMtoR( t0reg, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UD[ 0 ] );
-		MOVQMtoR( t1reg, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UD[ 1 ] );
-		MOVQMtoR( t2reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 0 ] );
-		MOVQMtoR( t3reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 1 ] );
-		PCMPEQBRtoR( t0reg, t2reg );
-		PCMPEQBRtoR( t1reg, t3reg );
-
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 0 ], t0reg );
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 1 ], t1reg );
-		SetMMXstate();
-		)
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -2179,30 +1638,14 @@ void recPCEQH( void )
 {
 	if ( ! _Rd_ ) return;
 
-CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
+	int info = eeRecompileCodeXMM( XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED );
 	if( EEREC_D == EEREC_S ) SSE2_PCMPEQW_XMM_to_XMM(EEREC_D, EEREC_T);
 	else if( EEREC_D == EEREC_T ) SSE2_PCMPEQW_XMM_to_XMM(EEREC_D, EEREC_S);
 	else {
 		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
 		SSE2_PCMPEQW_XMM_to_XMM(EEREC_D, EEREC_T);
 	}
-CPU_SSE_XMMCACHE_END
-
-	_flushCachedRegs();
-	_deleteEEreg(_Rd_, 0);
-
-	MMX_ALLOC_TEMP4(
-		MOVQMtoR( t0reg, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UD[ 0 ] );
-		MOVQMtoR( t1reg, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UD[ 1 ] );
-		MOVQMtoR( t2reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 0 ] );
-		MOVQMtoR( t3reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 1 ] );
-		PCMPEQWRtoR( t0reg, t2reg );
-		PCMPEQWRtoR( t1reg, t3reg );
-		
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 0 ], t0reg );
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 1 ], t1reg );
-		SetMMXstate();
-		)
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -2210,30 +1653,14 @@ void recPCEQW( void )
 {
 	if ( ! _Rd_ ) return;
 
-CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
+	int info = eeRecompileCodeXMM( XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED );
 	if( EEREC_D == EEREC_S ) SSE2_PCMPEQD_XMM_to_XMM(EEREC_D, EEREC_T);
 	else if( EEREC_D == EEREC_T ) SSE2_PCMPEQD_XMM_to_XMM(EEREC_D, EEREC_S);
 	else {
 		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
 		SSE2_PCMPEQD_XMM_to_XMM(EEREC_D, EEREC_T);
 	}
-CPU_SSE_XMMCACHE_END
-
-	_flushCachedRegs();
-	_deleteEEreg(_Rd_, 0);
-
-	MMX_ALLOC_TEMP4(
-		MOVQMtoR( t0reg, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UD[ 0 ] );
-		MOVQMtoR( t1reg, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UD[ 1 ] );
-		MOVQMtoR( t2reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 0 ] );
-		MOVQMtoR( t3reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 1 ] );
-		PCMPEQDRtoR( t0reg, t2reg );
-		PCMPEQDRtoR( t1reg, t3reg );
-		
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 0 ], t0reg );
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 1 ], t1reg );
-		SetMMXstate();
-		)
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -2241,7 +1668,7 @@ void recPADDUB( void )
 {
 	if ( ! _Rd_ ) return;
 
-CPU_SSE2_XMMCACHE_START(XMMINFO_READS|(_Rt_?XMMINFO_READT:0)|XMMINFO_WRITED)
+	int info = eeRecompileCodeXMM( XMMINFO_READS|(_Rt_?XMMINFO_READT:0)|XMMINFO_WRITED );
 	if( _Rt_ ) {
 		if( EEREC_D == EEREC_S ) SSE2_PADDUSB_XMM_to_XMM(EEREC_D, EEREC_T);
 		else if( EEREC_D == EEREC_T ) SSE2_PADDUSB_XMM_to_XMM(EEREC_D, EEREC_S);
@@ -2251,22 +1678,7 @@ CPU_SSE2_XMMCACHE_START(XMMINFO_READS|(_Rt_?XMMINFO_READT:0)|XMMINFO_WRITED)
 		}
 	}
 	else SSE2_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
-CPU_SSE_XMMCACHE_END
-
-	_flushCachedRegs();
-	_deleteEEreg(_Rd_, 0);
-
-	MMX_ALLOC_TEMP4(
-		MOVQMtoR( t0reg, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UD[ 0 ] );
-		MOVQMtoR( t1reg, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UD[ 1 ] );
-		MOVQMtoR( t2reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 0 ] );
-		MOVQMtoR( t3reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 1 ] );
-		PADDUSBRtoR( t0reg, t2reg );
-		PADDUSBRtoR( t1reg, t3reg );
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 0 ], t0reg );
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 1 ], t1reg );
-		SetMMXstate();
-		)
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -2274,29 +1686,14 @@ void recPADDUH( void )
 {
 	if ( ! _Rd_ ) return;
 
-CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
+	int info = eeRecompileCodeXMM( XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED );
 	if( EEREC_D == EEREC_S ) SSE2_PADDUSW_XMM_to_XMM(EEREC_D, EEREC_T);
 	else if( EEREC_D == EEREC_T ) SSE2_PADDUSW_XMM_to_XMM(EEREC_D, EEREC_S);
 	else {
 		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
 		SSE2_PADDUSW_XMM_to_XMM(EEREC_D, EEREC_T);
 	}
-CPU_SSE_XMMCACHE_END
-
-	_flushCachedRegs();
-	_deleteEEreg(_Rd_, 0);
-
-	MMX_ALLOC_TEMP4(
-		MOVQMtoR( t0reg, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UD[ 0 ] );
-		MOVQMtoR( t1reg, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UD[ 1 ] );
-		MOVQMtoR( t2reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 0 ] );
-		MOVQMtoR( t3reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 1 ] );
-		PADDUSWRtoR( t0reg, t2reg );
-		PADDUSWRtoR( t1reg, t3reg );
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 0 ], t0reg );
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 1 ], t1reg );
-		SetMMXstate();
-		)
+	_clearNeededXMMregs();
 }
 
 #endif
@@ -2342,7 +1739,8 @@ void recPMADDW()
 		recCall( Interp::PMADDW, _Rd_ );
 		return;
 	}
-CPU_SSE2_XMMCACHE_START((((_Rs_)&&(_Rt_))?XMMINFO_READS:0)|(((_Rs_)&&(_Rt_))?XMMINFO_READT:0)|(_Rd_?XMMINFO_WRITED:0)|XMMINFO_WRITELO|XMMINFO_WRITEHI|XMMINFO_READLO|XMMINFO_READHI)
+
+	int info = eeRecompileCodeXMM( (((_Rs_)&&(_Rt_))?XMMINFO_READS:0)|(((_Rs_)&&(_Rt_))?XMMINFO_READT:0)|(_Rd_?XMMINFO_WRITED:0)|XMMINFO_WRITELO|XMMINFO_WRITEHI|XMMINFO_READLO|XMMINFO_READHI );
 	SSE_SHUFPS_XMM_to_XMM(EEREC_LO, EEREC_HI, 0x88);
 	SSE2_PSHUFD_XMM_to_XMM(EEREC_LO, EEREC_LO, 0xd8); // LO = {LO[0], HI[0], LO[2], HI[2]}
 	if( _Rd_ ) {
@@ -2377,7 +1775,7 @@ CPU_SSE2_XMMCACHE_START((((_Rs_)&&(_Rt_))?XMMINFO_READS:0)|(((_Rs_)&&(_Rt_))?XMM
 	}
 	SSE4_PMOVSXDQ_XMM_to_XMM(EEREC_LO, EEREC_LO);
 	SSE4_PMOVSXDQ_XMM_to_XMM(EEREC_HI, EEREC_HI);
-CPU_SSE_XMMCACHE_END
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -2386,7 +1784,7 @@ void recPSLLVW()
 	if ( ! _Rd_ ) return;
 
 	EEINST_SETSIGNEXT(_Rd_);
-CPU_SSE2_XMMCACHE_START((_Rs_?XMMINFO_READS:0)|(_Rt_?XMMINFO_READT:0)|XMMINFO_WRITED)
+	int info = eeRecompileCodeXMM( (_Rs_?XMMINFO_READS:0)|(_Rt_?XMMINFO_READT:0)|XMMINFO_WRITED );
 	if( _Rs_ == 0 ) {
 		if( _Rt_ == 0 ) {
 			SSEX_PXOR_XMM_to_XMM(EEREC_D, EEREC_D);
@@ -2444,8 +1842,7 @@ CPU_SSE2_XMMCACHE_START((_Rs_?XMMINFO_READS:0)|(_Rt_?XMMINFO_READT:0)|XMMINFO_WR
 		_freeXMMreg(t0reg);
 		_freeXMMreg(t1reg);
 	}
-CPU_SSE_XMMCACHE_END
-	recCall( Interp::PSLLVW, _Rd_ );
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -2454,7 +1851,7 @@ void recPSRLVW()
 	if ( ! _Rd_ ) return;
 
 	EEINST_SETSIGNEXT(_Rd_);
-CPU_SSE2_XMMCACHE_START((_Rs_?XMMINFO_READS:0)|(_Rt_?XMMINFO_READT:0)|XMMINFO_WRITED)
+	int info = eeRecompileCodeXMM( (_Rs_?XMMINFO_READS:0)|(_Rt_?XMMINFO_READT:0)|XMMINFO_WRITED );
 	if( _Rs_ == 0 ) {
 		if( _Rt_ == 0 ) {
 			SSEX_PXOR_XMM_to_XMM(EEREC_D, EEREC_D);
@@ -2512,9 +1909,7 @@ CPU_SSE2_XMMCACHE_START((_Rs_?XMMINFO_READS:0)|(_Rt_?XMMINFO_READT:0)|XMMINFO_WR
 		_freeXMMreg(t0reg);
 		_freeXMMreg(t1reg);
 	}
-
-CPU_SSE_XMMCACHE_END
-	recCall( Interp::PSRLVW, _Rd_ ); 
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -2527,7 +1922,7 @@ void recPMSUBW()
 		recCall( Interp::PMSUBW, _Rd_ );
 		return;
 	}
-CPU_SSE2_XMMCACHE_START((((_Rs_)&&(_Rt_))?XMMINFO_READS:0)|(((_Rs_)&&(_Rt_))?XMMINFO_READT:0)|(_Rd_?XMMINFO_WRITED:0)|XMMINFO_WRITELO|XMMINFO_WRITEHI|XMMINFO_READLO|XMMINFO_READHI)
+	int info = eeRecompileCodeXMM( (((_Rs_)&&(_Rt_))?XMMINFO_READS:0)|(((_Rs_)&&(_Rt_))?XMMINFO_READT:0)|(_Rd_?XMMINFO_WRITED:0)|XMMINFO_WRITELO|XMMINFO_WRITEHI|XMMINFO_READLO|XMMINFO_READHI );
 	SSE_SHUFPS_XMM_to_XMM(EEREC_LO, EEREC_HI, 0x88);
 	SSE2_PSHUFD_XMM_to_XMM(EEREC_LO, EEREC_LO, 0xd8); // LO = {LO[0], HI[0], LO[2], HI[2]}
 	if( _Rd_ ) {
@@ -2568,7 +1963,7 @@ CPU_SSE2_XMMCACHE_START((((_Rs_)&&(_Rt_))?XMMINFO_READS:0)|(((_Rs_)&&(_Rt_))?XMM
 	}
 	SSE4_PMOVSXDQ_XMM_to_XMM(EEREC_LO, EEREC_LO);
 	SSE4_PMOVSXDQ_XMM_to_XMM(EEREC_HI, EEREC_HI);
-CPU_SSE_XMMCACHE_END
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -2581,7 +1976,7 @@ void recPMULTW()
 		recCall( Interp::PMULTW, _Rd_ );
 		return;
 	}
-CPU_SSE2_XMMCACHE_START((((_Rs_)&&(_Rt_))?XMMINFO_READS:0)|(((_Rs_)&&(_Rt_))?XMMINFO_READT:0)|(_Rd_?XMMINFO_WRITED:0)|XMMINFO_WRITELO|XMMINFO_WRITEHI)
+	int info = eeRecompileCodeXMM( (((_Rs_)&&(_Rt_))?XMMINFO_READS:0)|(((_Rs_)&&(_Rt_))?XMMINFO_READT:0)|(_Rd_?XMMINFO_WRITED:0)|XMMINFO_WRITELO|XMMINFO_WRITEHI );
 	if( !_Rs_ || !_Rt_ ) {
 		if( _Rd_ ) SSE2_PXOR_XMM_to_XMM(EEREC_D, EEREC_D);
 		SSE2_PXOR_XMM_to_XMM(EEREC_LO, EEREC_LO);
@@ -2613,7 +2008,7 @@ CPU_SSE2_XMMCACHE_START((((_Rs_)&&(_Rt_))?XMMINFO_READS:0)|(((_Rs_)&&(_Rt_))?XMM
 		SSE4_PMOVSXDQ_XMM_to_XMM(EEREC_LO, EEREC_LO);
 		SSE4_PMOVSXDQ_XMM_to_XMM(EEREC_HI, EEREC_HI);
 	}
-CPU_SSE_XMMCACHE_END
+	_clearNeededXMMregs();
 }
 ////////////////////////////////////////////////////
 void recPDIVW()
@@ -2636,7 +2031,7 @@ PCSX2_ALIGNED16(int s_mask1[4]) = {~0, 0, ~0, 0};
 //contains the upper multiplication result (before the addition with the lower multiplication result)
 void recPHMADH()
 {
-CPU_SSE2_XMMCACHE_START((_Rd_?XMMINFO_WRITED:0)|XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITELO|XMMINFO_WRITEHI)
+	int info = eeRecompileCodeXMM( (_Rd_?XMMINFO_WRITED:0)|XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITELO|XMMINFO_WRITEHI );
 	int t0reg = _allocTempXMMreg(XMMT_INT, -1);
 
 	SSEX_MOVDQA_XMM_to_XMM(t0reg, EEREC_S);
@@ -2671,14 +2066,12 @@ CPU_SSE2_XMMCACHE_START((_Rd_?XMMINFO_WRITED:0)|XMMINFO_READS|XMMINFO_READT|XMMI
 	SSE_SHUFPS_XMM_to_XMM(EEREC_HI, EEREC_HI, 0xd8);
 
 	_freeXMMreg(t0reg);
-CPU_SSE_XMMCACHE_END
-
-	recCall( Interp::PHMADH, _Rd_ );
+	_clearNeededXMMregs();
 }
 
 void recPMSUBH()
 {
-	CPU_SSE2_XMMCACHE_START((_Rd_?XMMINFO_WRITED:0)|XMMINFO_READS|XMMINFO_READT|XMMINFO_READLO|XMMINFO_READHI|XMMINFO_WRITELO|XMMINFO_WRITEHI)
+	int info = eeRecompileCodeXMM( (_Rd_?XMMINFO_WRITED:0)|XMMINFO_READS|XMMINFO_READT|XMMINFO_READLO|XMMINFO_READHI|XMMINFO_WRITELO|XMMINFO_WRITEHI );
 	int t0reg = _allocTempXMMreg(XMMT_INT, -1);
 	int t1reg = _allocTempXMMreg(XMMT_INT, -1);
  
@@ -2732,8 +2125,7 @@ void recPMSUBH()
 	_freeXMMreg(t0reg);
 	_freeXMMreg(t1reg);
  
-CPU_SSE_XMMCACHE_END
-	recCall( Interp::PMSUBH, _Rd_ );
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -2741,7 +2133,7 @@ CPU_SSE_XMMCACHE_END
 //it contains the NOT of the upper multiplication result (before the substraction of the lower multiplication result)
 void recPHMSBH()
 {
-CPU_SSE2_XMMCACHE_START((_Rd_?XMMINFO_WRITED:0)|XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITELO|XMMINFO_WRITEHI)
+	int info = eeRecompileCodeXMM( (_Rd_?XMMINFO_WRITED:0)|XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITELO|XMMINFO_WRITEHI );
 	int t0reg = _allocTempXMMreg(XMMT_INT, -1);
 
 	SSE2_PCMPEQD_XMM_to_XMM(EEREC_LO, EEREC_LO);
@@ -2768,9 +2160,7 @@ CPU_SSE2_XMMCACHE_START((_Rd_?XMMINFO_WRITED:0)|XMMINFO_READS|XMMINFO_READT|XMMI
 	SSE_SHUFPS_XMM_to_XMM(EEREC_HI, EEREC_HI, 0xd8);
 
 	_freeXMMreg(t0reg);
-CPU_SSE_XMMCACHE_END
-
-	recCall( Interp::PHMSBH, _Rd_ );
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -2778,12 +2168,10 @@ void recPEXEH( void )
 {
 	if (!_Rd_) return;
 
-CPU_SSE2_XMMCACHE_START(XMMINFO_READT|XMMINFO_WRITED)
+	int info = eeRecompileCodeXMM( XMMINFO_READT|XMMINFO_WRITED );
 	SSE2_PSHUFLW_XMM_to_XMM(EEREC_D, EEREC_T, 0xc6);
 	SSE2_PSHUFHW_XMM_to_XMM(EEREC_D, EEREC_D, 0xc6);
-CPU_SSE_XMMCACHE_END
-
-	recCall( Interp::PEXEH, _Rd_ );
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -2792,12 +2180,10 @@ void recPREVH( void )
 	if (!_Rd_) return;
 
 	
-CPU_SSE2_XMMCACHE_START(XMMINFO_READT|XMMINFO_WRITED)
+	int info = eeRecompileCodeXMM( XMMINFO_READT|XMMINFO_WRITED );
 	SSE2_PSHUFLW_XMM_to_XMM(EEREC_D, EEREC_T, 0x1B);
 	SSE2_PSHUFHW_XMM_to_XMM(EEREC_D, EEREC_D, 0x1B);
-CPU_SSE_XMMCACHE_END
-
-	recCall( Interp::PREVH, _Rd_ );
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -2805,7 +2191,7 @@ void recPINTH( void )
 {
 	if (!_Rd_) return;
 
-CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
+	int info = eeRecompileCodeXMM( XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED );
 	if( EEREC_D == EEREC_S ) {
 		int t0reg = _allocTempXMMreg(XMMT_INT, -1);
 		SSE_MOVHLPS_XMM_to_XMM(t0reg, EEREC_S);
@@ -2817,80 +2203,30 @@ CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED)
 		SSE_MOVLHPS_XMM_to_XMM(EEREC_D, EEREC_T);
 		SSE2_PUNPCKHWD_XMM_to_XMM(EEREC_D, EEREC_S);
 	}
-CPU_SSE_XMMCACHE_END
-
-	_flushCachedRegs();
-	_deleteEEreg(_Rd_, 0);
-
-	//Done - Refraction
-	MOV16MtoR( EAX, (uptr)&cpuRegs.GPR.r[_Rs_].US[4]);
-	MOV16MtoR( EBX, (uptr)&cpuRegs.GPR.r[_Rt_].US[1]);
-	MOV16MtoR( ECX, (uptr)&cpuRegs.GPR.r[_Rt_].US[2]);
-	MOV16MtoR( EDX, (uptr)&cpuRegs.GPR.r[_Rt_].US[0]);
-
-	MOV16RtoM( (uptr)&cpuRegs.GPR.r[_Rd_].US[1], EAX);
-	MOV16RtoM( (uptr)&cpuRegs.GPR.r[_Rd_].US[2], EBX);
-	MOV16RtoM( (uptr)&cpuRegs.GPR.r[_Rd_].US[4], ECX);
-	MOV16RtoM( (uptr)&cpuRegs.GPR.r[_Rd_].US[0], EDX);
-
-	MOV16MtoR( EAX, (uptr)&cpuRegs.GPR.r[_Rs_].US[5]);
-	MOV16MtoR( EBX, (uptr)&cpuRegs.GPR.r[_Rs_].US[6]);
-	MOV16MtoR( ECX, (uptr)&cpuRegs.GPR.r[_Rs_].US[7]);
-	MOV16MtoR( EDX, (uptr)&cpuRegs.GPR.r[_Rt_].US[3]);
-
-	MOV16RtoM( (uptr)&cpuRegs.GPR.r[_Rd_].US[3], EAX);
-	MOV16RtoM( (uptr)&cpuRegs.GPR.r[_Rd_].US[5], EBX);
-	MOV16RtoM( (uptr)&cpuRegs.GPR.r[_Rd_].US[7], ECX);
-	MOV16RtoM( (uptr)&cpuRegs.GPR.r[_Rd_].US[6], EDX);
+	_clearNeededXMMregs();
 }
 
 void recPEXEW( void )
 {
 	if (!_Rd_) return;
 
-CPU_SSE_XMMCACHE_START(XMMINFO_READT|XMMINFO_WRITED)
+	int info = eeRecompileCodeXMM( XMMINFO_READT|XMMINFO_WRITED );
 	SSE2_PSHUFD_XMM_to_XMM(EEREC_D, EEREC_T, 0xc6);
-CPU_SSE_XMMCACHE_END
-
-	_flushCachedRegs();
-	_deleteEEreg(_Rd_, 0);
-
-	MOV32MtoR( EAX, (uptr)&cpuRegs.GPR.r[_Rt_].UL[2]);
-	MOV32MtoR( EBX, (uptr)&cpuRegs.GPR.r[_Rt_].UL[1]);
-	MOV32MtoR( ECX, (uptr)&cpuRegs.GPR.r[_Rt_].UL[0]);
-	MOV32MtoR( EDX, (uptr)&cpuRegs.GPR.r[_Rt_].UL[3]);
-
-	MOV32RtoM( (uptr)&cpuRegs.GPR.r[_Rd_].UL[0], EAX);
-	MOV32RtoM( (uptr)&cpuRegs.GPR.r[_Rd_].UL[1], EBX);
-	MOV32RtoM( (uptr)&cpuRegs.GPR.r[_Rd_].UL[2], ECX);
-	MOV32RtoM( (uptr)&cpuRegs.GPR.r[_Rd_].UL[3], EDX);
+	_clearNeededXMMregs();
 }
 
 void recPROT3W( void )
 {
 	if (!_Rd_) return;
 
-CPU_SSE_XMMCACHE_START(XMMINFO_READT|XMMINFO_WRITED)
+	int info = eeRecompileCodeXMM( XMMINFO_READT|XMMINFO_WRITED );
 	SSE2_PSHUFD_XMM_to_XMM(EEREC_D, EEREC_T, 0xc9);
-CPU_SSE_XMMCACHE_END
-
-	_flushCachedRegs();
-	_deleteEEreg(_Rd_, 0);
-
-	MOV32MtoR( EAX, (uptr)&cpuRegs.GPR.r[_Rt_].UL[1]);
-	MOV32MtoR( EBX, (uptr)&cpuRegs.GPR.r[_Rt_].UL[2]);
-	MOV32MtoR( ECX, (uptr)&cpuRegs.GPR.r[_Rt_].UL[0]);
-	MOV32MtoR( EDX, (uptr)&cpuRegs.GPR.r[_Rt_].UL[3]);
-
-	MOV32RtoM( (uptr)&cpuRegs.GPR.r[_Rd_].UL[0], EAX);
-	MOV32RtoM( (uptr)&cpuRegs.GPR.r[_Rd_].UL[1], EBX);
-	MOV32RtoM( (uptr)&cpuRegs.GPR.r[_Rd_].UL[2], ECX);
-	MOV32RtoM( (uptr)&cpuRegs.GPR.r[_Rd_].UL[3], EDX);
+	_clearNeededXMMregs();
 }
 
 void recPMULTH( void )
 {
-CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|(_Rd_?XMMINFO_WRITED:0)|XMMINFO_WRITELO|XMMINFO_WRITEHI)
+	int info = eeRecompileCodeXMM( XMMINFO_READS|XMMINFO_READT|(_Rd_?XMMINFO_WRITED:0)|XMMINFO_WRITELO|XMMINFO_WRITEHI );
 	int t0reg = _allocTempXMMreg(XMMT_INT, -1);
 
 	SSEX_MOVDQA_XMM_to_XMM(EEREC_LO, EEREC_S);
@@ -2920,102 +2256,16 @@ CPU_SSE2_XMMCACHE_START(XMMINFO_READS|XMMINFO_READT|(_Rd_?XMMINFO_WRITED:0)|XMMI
 	SSE2_PUNPCKHQDQ_XMM_to_XMM(EEREC_HI, t0reg);
 
 	_freeXMMreg(t0reg);
-CPU_SSE_XMMCACHE_END
-
-	_flushCachedRegs();
-	_deleteEEreg(_Rd_, 0);
-	_deleteEEreg(XMMGPR_LO, 0);
-	_deleteEEreg(XMMGPR_HI, 0);
-	_deleteGPRtoXMMreg(_Rs_, 1);
-	_deleteGPRtoXMMreg(_Rt_, 1);
-
-	if(!_Rt_ || !_Rs_) {
-		MOV32ItoM( (uptr)&cpuRegs.LO.UL[0], 0);
-		MOV32ItoM( (uptr)&cpuRegs.LO.UL[1], 0);
-		MOV32ItoM( (uptr)&cpuRegs.LO.UL[2], 0);
-		MOV32ItoM( (uptr)&cpuRegs.LO.UL[3], 0);
-		MOV32ItoM( (uptr)&cpuRegs.HI.UL[0], 0);
-		MOV32ItoM( (uptr)&cpuRegs.HI.UL[1], 0);
-		MOV32ItoM( (uptr)&cpuRegs.HI.UL[2], 0);
-		MOV32ItoM( (uptr)&cpuRegs.HI.UL[3], 0);
-
-		if( _Rd_ ) {
-			MOV32ItoM( (uptr)&cpuRegs.GPR.r[_Rd_].UL[0], 0);
-			MOV32ItoM( (uptr)&cpuRegs.GPR.r[_Rd_].UL[1], 0);
-			MOV32ItoM( (uptr)&cpuRegs.GPR.r[_Rd_].UL[2], 0);
-			MOV32ItoM( (uptr)&cpuRegs.GPR.r[_Rd_].UL[3], 0);
-		}
-		return;
-	}
-
-	//Done - Refraction
-	MOVSX32M16toR( EAX, (uptr)&cpuRegs.GPR.r[_Rs_].SS[0]);
-	MOVSX32M16toR( ECX, (uptr)&cpuRegs.GPR.r[_Rt_].SS[0]);
-	IMUL32RtoR( EAX, ECX);
-	MOV32RtoM( (uptr)&cpuRegs.LO.UL[0], EAX);
-
-    MOVSX32M16toR( EAX, (uptr)&cpuRegs.GPR.r[_Rs_].SS[1]);
-	MOVSX32M16toR( ECX, (uptr)&cpuRegs.GPR.r[_Rt_].SS[1]);
-	IMUL32RtoR( EAX, ECX);
-	MOV32RtoM( (uptr)&cpuRegs.LO.UL[1], EAX);
-
-    MOVSX32M16toR( EAX, (uptr)&cpuRegs.GPR.r[_Rs_].SS[2]);
-	MOVSX32M16toR( ECX, (uptr)&cpuRegs.GPR.r[_Rt_].SS[2]);
-	IMUL32RtoR( EAX, ECX);
-	MOV32RtoM( (uptr)&cpuRegs.HI.UL[0], EAX);
-
-    MOVSX32M16toR( EAX, (uptr)&cpuRegs.GPR.r[_Rs_].SS[3]);
-	MOVSX32M16toR( ECX, (uptr)&cpuRegs.GPR.r[_Rt_].SS[3]);
-	IMUL32RtoR( EAX, ECX);
-	MOV32RtoM( (uptr)&cpuRegs.HI.UL[1], EAX);
-
-    MOVSX32M16toR( EAX, (uptr)&cpuRegs.GPR.r[_Rs_].SS[4]);
-	MOVSX32M16toR( ECX, (uptr)&cpuRegs.GPR.r[_Rt_].SS[4]);
-	IMUL32RtoR( EAX, ECX);
-	MOV32RtoM( (uptr)&cpuRegs.LO.UL[2], EAX);
-
-    MOVSX32M16toR( EAX, (uptr)&cpuRegs.GPR.r[_Rs_].SS[5]);
-	MOVSX32M16toR( ECX, (uptr)&cpuRegs.GPR.r[_Rt_].SS[5]);
-	IMUL32RtoR( EAX, ECX);
-	MOV32RtoM( (uptr)&cpuRegs.LO.UL[3], EAX);
-
-    MOVSX32M16toR( EAX, (uptr)&cpuRegs.GPR.r[_Rs_].SS[6]);
-	MOVSX32M16toR( ECX, (uptr)&cpuRegs.GPR.r[_Rt_].SS[6]);
-	IMUL32RtoR( EAX, ECX);
-	MOV32RtoM( (uptr)&cpuRegs.HI.UL[2], EAX);
-
-    MOVSX32M16toR( EAX, (uptr)&cpuRegs.GPR.r[_Rs_].SS[7]);
-	MOVSX32M16toR( ECX, (uptr)&cpuRegs.GPR.r[_Rt_].SS[7]);
-	IMUL32RtoR( EAX, ECX);
-	MOV32RtoM( (uptr)&cpuRegs.HI.UL[3], EAX);
-
-	if (_Rd_) {
-		MOV32MtoR( EAX, (uptr)&cpuRegs.LO.UL[0]);
-		MOV32RtoM( (uptr)&cpuRegs.GPR.r[_Rd_].UL[0], EAX);
-		MOV32MtoR( EAX, (uptr)&cpuRegs.HI.UL[0]);
-		MOV32RtoM( (uptr)&cpuRegs.GPR.r[_Rd_].UL[1], EAX);
-		MOV32MtoR( EAX, (uptr)&cpuRegs.LO.UL[2]);
-		MOV32RtoM( (uptr)&cpuRegs.GPR.r[_Rd_].UL[2], EAX);
-		MOV32MtoR( EAX, (uptr)&cpuRegs.HI.UL[2]);
-		MOV32RtoM( (uptr)&cpuRegs.GPR.r[_Rd_].UL[3], EAX);
-	}
+	_clearNeededXMMregs();
 }
 
 void recPMFHI( void )
 {
 	if ( ! _Rd_ ) return;
 
-CPU_SSE_XMMCACHE_START(XMMINFO_WRITED|XMMINFO_READHI)
+	int info = eeRecompileCodeXMM( XMMINFO_WRITED|XMMINFO_READHI );
 	SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_HI);
-CPU_SSE_XMMCACHE_END
-
-	MMX_ALLOC_TEMP2(
-		MOVQMtoR( t0reg, (uptr)&cpuRegs.HI.UD[ 0 ] );
-		MOVQMtoR( t1reg, (uptr)&cpuRegs.HI.UD[ 1 ] );
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 0 ], t0reg );
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 1 ], t1reg );
-		SetMMXstate();
-		)
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -3023,20 +2273,9 @@ void recPMFLO( void )
 {
 	if ( ! _Rd_ ) return;
 
-CPU_SSE_XMMCACHE_START(XMMINFO_WRITED|XMMINFO_READLO)
+	int info = eeRecompileCodeXMM( XMMINFO_WRITED|XMMINFO_READLO );
 	SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_LO);
-CPU_SSE_XMMCACHE_END
-
-	_flushCachedRegs();
-	_deleteEEreg(_Rd_, 0);
-
-	MMX_ALLOC_TEMP2(
-		MOVQMtoR( t0reg, (uptr)&cpuRegs.LO.UD[ 0 ] );
-		MOVQMtoR( t1reg, (uptr)&cpuRegs.LO.UD[ 1 ] );
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 0 ], t0reg );
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 1 ], t1reg );
-		SetMMXstate();
-		)
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -3044,7 +2283,7 @@ void recPAND( void )
 {
 	if ( ! _Rd_ ) return;
 
-CPU_SSE_XMMCACHE_START(XMMINFO_WRITED|XMMINFO_READS|XMMINFO_READT)
+	int info = eeRecompileCodeXMM( XMMINFO_WRITED|XMMINFO_READS|XMMINFO_READT );
 	if( EEREC_D == EEREC_T ) {
 		SSEX_PAND_XMM_to_XMM(EEREC_D, EEREC_S);
 	}
@@ -3055,20 +2294,7 @@ CPU_SSE_XMMCACHE_START(XMMINFO_WRITED|XMMINFO_READS|XMMINFO_READT)
 		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
 		SSEX_PAND_XMM_to_XMM(EEREC_D, EEREC_T);
 	}
-CPU_SSE_XMMCACHE_END
-
-	_flushCachedRegs();
-	_deleteEEreg(_Rd_, 0);
-
-	MMX_ALLOC_TEMP2(
-		MOVQMtoR( t0reg, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UD[ 0 ] );
-		MOVQMtoR( t1reg, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UD[ 1 ] );
-		PANDMtoR( t0reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 0 ] );
-		PANDMtoR( t1reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 1 ] );
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 0 ], t0reg );
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 1 ], t1reg );
-		SetMMXstate();
-		)
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -3076,7 +2302,7 @@ void recPXOR( void )
 {
 	if ( ! _Rd_ ) return;
 
-CPU_SSE_XMMCACHE_START(XMMINFO_WRITED|XMMINFO_READS|XMMINFO_READT)
+	int info = eeRecompileCodeXMM( XMMINFO_WRITED|XMMINFO_READS|XMMINFO_READT );
 	if( EEREC_D == EEREC_T ) {
 		SSEX_PXOR_XMM_to_XMM(EEREC_D, EEREC_S);
 	}
@@ -3087,21 +2313,7 @@ CPU_SSE_XMMCACHE_START(XMMINFO_WRITED|XMMINFO_READS|XMMINFO_READT)
 		SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
 		SSEX_PXOR_XMM_to_XMM(EEREC_D, EEREC_T);
 	}
-CPU_SSE_XMMCACHE_END
-
-	_flushCachedRegs();
-	_deleteEEreg(_Rd_, 0);
-
-	MMX_ALLOC_TEMP2(
-		MOVQMtoR( t0reg, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UD[ 0 ] );
-		MOVQMtoR( t1reg, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UD[ 1 ] );
-		PXORMtoR( t0reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 0 ] );
-		PXORMtoR( t1reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 1 ] );
-
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 0 ], t0reg );
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 1 ], t1reg );
-		SetMMXstate();
-		)
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -3109,39 +2321,28 @@ void recPCPYLD( void )
 {
 	if ( ! _Rd_ ) return;
 
-CPU_SSE_XMMCACHE_START(XMMINFO_WRITED|(( _Rs_== 0) ? 0:XMMINFO_READS)|XMMINFO_READT)
-		if( _Rs_ == 0 ) {
-			SSE2_MOVQ_XMM_to_XMM(EEREC_D, EEREC_T);
+	int info = eeRecompileCodeXMM( XMMINFO_WRITED|(( _Rs_== 0) ? 0:XMMINFO_READS)|XMMINFO_READT );
+	if( _Rs_ == 0 ) {
+		SSE2_MOVQ_XMM_to_XMM(EEREC_D, EEREC_T);
+	}
+	else {
+		if( EEREC_D == EEREC_T ) SSE2_PUNPCKLQDQ_XMM_to_XMM(EEREC_D, EEREC_S);
+		else if( EEREC_S == EEREC_T ) SSE2_PSHUFD_XMM_to_XMM(EEREC_D, EEREC_S, 0x44);
+		else if( EEREC_D == EEREC_S ) {
+			SSE2_PUNPCKLQDQ_XMM_to_XMM(EEREC_D, EEREC_T);
+			SSE2_PSHUFD_XMM_to_XMM(EEREC_D, EEREC_D, 0x4e);
 		}
 		else {
-			if( EEREC_D == EEREC_T ) SSE2_PUNPCKLQDQ_XMM_to_XMM(EEREC_D, EEREC_S);
-			else if( EEREC_S == EEREC_T ) SSE2_PSHUFD_XMM_to_XMM(EEREC_D, EEREC_S, 0x44);
-			else if( EEREC_D == EEREC_S ) {
-				SSE2_PUNPCKLQDQ_XMM_to_XMM(EEREC_D, EEREC_T);
-				SSE2_PSHUFD_XMM_to_XMM(EEREC_D, EEREC_D, 0x4e);
-			}
-			else {
-				SSE2_MOVQ_XMM_to_XMM(EEREC_D, EEREC_T);
-				SSE2_PUNPCKLQDQ_XMM_to_XMM(EEREC_D, EEREC_S);
-			}
+			SSE2_MOVQ_XMM_to_XMM(EEREC_D, EEREC_T);
+			SSE2_PUNPCKLQDQ_XMM_to_XMM(EEREC_D, EEREC_S);
 		}
-CPU_SSE_XMMCACHE_END
-
-	_flushCachedRegs();
-	_deleteEEreg(_Rd_, 0);
-
-	MMX_ALLOC_TEMP2(
-		MOVQMtoR( t0reg, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UD[ 0 ] );
-		MOVQMtoR( t1reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 0 ] );
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 1 ], t0reg );
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 0 ], t1reg );
-		SetMMXstate();
-		)
+	}
+	_clearNeededXMMregs();
 }
 
 void recPMADDH( void ) 
 {
-	CPU_SSE2_XMMCACHE_START((_Rd_?XMMINFO_WRITED:0)|XMMINFO_READS|XMMINFO_READT|XMMINFO_READLO|XMMINFO_READHI|XMMINFO_WRITELO|XMMINFO_WRITEHI)
+	int info = eeRecompileCodeXMM( (_Rd_?XMMINFO_WRITED:0)|XMMINFO_READS|XMMINFO_READT|XMMINFO_READLO|XMMINFO_READHI|XMMINFO_WRITELO|XMMINFO_WRITEHI );
 	int t0reg = _allocTempXMMreg(XMMT_INT, -1);
 	int t1reg = _allocTempXMMreg(XMMT_INT, -1);
  
@@ -3195,69 +2396,7 @@ void recPMADDH( void )
 	_freeXMMreg(t0reg);
 	_freeXMMreg(t1reg);
  
-CPU_SSE_XMMCACHE_END
-
-	_flushCachedRegs();
-	_deleteEEreg(_Rd_, 0);
-	_deleteEEreg(XMMGPR_LO, 1);
-	_deleteEEreg(XMMGPR_HI, 1);
-	_deleteGPRtoXMMreg(_Rs_, 1);
-	_deleteGPRtoXMMreg(_Rt_, 1);
-
-	if(_Rt_ && _Rs_){
-
-	MOVSX32M16toR( EAX, (uptr)&cpuRegs.GPR.r[_Rs_].SS[0]);
-	MOVSX32M16toR( ECX, (uptr)&cpuRegs.GPR.r[_Rt_].SS[0]);
-	IMUL32RtoR( EAX, ECX);
-	ADD32RtoM( (uptr)&cpuRegs.LO.UL[0], EAX);
-
-    MOVSX32M16toR( EAX, (uptr)&cpuRegs.GPR.r[_Rs_].SS[1]);
-	MOVSX32M16toR( ECX, (uptr)&cpuRegs.GPR.r[_Rt_].SS[1]);
-	IMUL32RtoR( EAX, ECX);
-	ADD32RtoM( (uptr)&cpuRegs.LO.UL[1], EAX);
-
-    MOVSX32M16toR( EAX, (uptr)&cpuRegs.GPR.r[_Rs_].SS[2]);
-	MOVSX32M16toR( ECX, (uptr)&cpuRegs.GPR.r[_Rt_].SS[2]);
-	IMUL32RtoR( EAX, ECX);
-	ADD32RtoM( (uptr)&cpuRegs.HI.UL[0], EAX);
-
-    MOVSX32M16toR( EAX, (uptr)&cpuRegs.GPR.r[_Rs_].SS[3]);
-	MOVSX32M16toR( ECX, (uptr)&cpuRegs.GPR.r[_Rt_].SS[3]);
-	IMUL32RtoR( EAX, ECX);
-	ADD32RtoM( (uptr)&cpuRegs.HI.UL[1], EAX);
-
-    MOVSX32M16toR( EAX, (uptr)&cpuRegs.GPR.r[_Rs_].SS[4]);
-	MOVSX32M16toR( ECX, (uptr)&cpuRegs.GPR.r[_Rt_].SS[4]);
-	IMUL32RtoR( EAX, ECX);
-	ADD32RtoM( (uptr)&cpuRegs.LO.UL[2], EAX);
-
-    MOVSX32M16toR( EAX, (uptr)&cpuRegs.GPR.r[_Rs_].SS[5]);
-	MOVSX32M16toR( ECX, (uptr)&cpuRegs.GPR.r[_Rt_].SS[5]);
-	IMUL32RtoR( EAX, ECX);
-	ADD32RtoM( (uptr)&cpuRegs.LO.UL[3], EAX);
-
-    MOVSX32M16toR( EAX, (uptr)&cpuRegs.GPR.r[_Rs_].SS[6]);
-	MOVSX32M16toR( ECX, (uptr)&cpuRegs.GPR.r[_Rt_].SS[6]);
-	IMUL32RtoR( EAX, ECX);
-	ADD32RtoM( (uptr)&cpuRegs.HI.UL[2], EAX);
-
-    MOVSX32M16toR( EAX, (uptr)&cpuRegs.GPR.r[_Rs_].SS[7]);
-	MOVSX32M16toR( ECX, (uptr)&cpuRegs.GPR.r[_Rt_].SS[7]);
-	IMUL32RtoR( EAX, ECX);
-	ADD32RtoM( (uptr)&cpuRegs.HI.UL[3], EAX);
-
-	}
-
-	if (_Rd_) {
-		MOV32MtoR( EAX, (uptr)&cpuRegs.LO.UL[0]);
-		MOV32RtoM( (uptr)&cpuRegs.GPR.r[_Rd_].UL[0], EAX);
-		MOV32MtoR( EAX, (uptr)&cpuRegs.HI.UL[0]);
-		MOV32RtoM( (uptr)&cpuRegs.GPR.r[_Rd_].UL[1], EAX);
-		MOV32MtoR( EAX, (uptr)&cpuRegs.LO.UL[2]);
-		MOV32RtoM( (uptr)&cpuRegs.GPR.r[_Rd_].UL[2], EAX);
-		MOV32MtoR( EAX, (uptr)&cpuRegs.HI.UL[2]);
-		MOV32RtoM( (uptr)&cpuRegs.GPR.r[_Rd_].UL[3], EAX);
-	}
+	_clearNeededXMMregs();
 }
 
 #endif
@@ -3291,7 +2430,7 @@ void recPSRAVW()
 	if ( ! _Rd_ ) return;
 
 	EEINST_SETSIGNEXT(_Rd_);
-CPU_SSE2_XMMCACHE_START((_Rs_?XMMINFO_READS:0)|(_Rt_?XMMINFO_READT:0)|XMMINFO_WRITED)
+	int info = eeRecompileCodeXMM( (_Rs_?XMMINFO_READS:0)|(_Rt_?XMMINFO_READT:0)|XMMINFO_WRITED );
 	if( _Rs_ == 0 ) {
 		if( _Rt_ == 0 ) {
 			SSEX_PXOR_XMM_to_XMM(EEREC_D, EEREC_D);
@@ -3350,13 +2489,7 @@ CPU_SSE2_XMMCACHE_START((_Rs_?XMMINFO_READS:0)|(_Rt_?XMMINFO_READT:0)|XMMINFO_WR
 		_freeXMMreg(t1reg);
 	}
 
-CPU_SSE_XMMCACHE_END
-
-	MOV32ItoM( (uptr)&cpuRegs.code, (u32)cpuRegs.code );
-	MOV32ItoM( (uptr)&cpuRegs.pc, (u32)pc );
-	iFlushCall(FLUSH_EVERYTHING);
-	if( _Rd_ > 0 ) _deleteEEreg(_Rd_, 0);
-	CALLFunc( (uptr)R5900::Interpreter::OpcodeImpl::MMI::PSRAVW );
+	_clearNeededXMMregs();
 }
 
 
@@ -3367,7 +2500,7 @@ void recPINTEH()
 {
 	if ( ! _Rd_ ) return;
 
-CPU_SSE2_XMMCACHE_START((_Rs_?XMMINFO_READS:0)|(_Rt_?XMMINFO_READT:0)|XMMINFO_WRITED)
+	int info = eeRecompileCodeXMM( (_Rs_?XMMINFO_READS:0)|(_Rt_?XMMINFO_READT:0)|XMMINFO_WRITED );
 
 	int t0reg = -1;
 
@@ -3410,9 +2543,7 @@ CPU_SSE2_XMMCACHE_START((_Rs_?XMMINFO_READS:0)|(_Rt_?XMMINFO_READT:0)|XMMINFO_WR
 	}
 
 	if( t0reg >= 0 ) _freeXMMreg(t0reg);
-CPU_SSE_XMMCACHE_END
-
-	recCall( Interp::PINTEH, _Rd_ );
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -3421,7 +2552,7 @@ void recPMULTUW()
 	if( _Rd_ ) EEINST_SETSIGNEXT(_Rd_);
 	EEINST_SETSIGNEXT(_Rs_);
 	EEINST_SETSIGNEXT(_Rt_);
-CPU_SSE2_XMMCACHE_START((((_Rs_)&&(_Rt_))?XMMINFO_READS:0)|(((_Rs_)&&(_Rt_))?XMMINFO_READT:0)|(_Rd_?XMMINFO_WRITED:0)|XMMINFO_WRITELO|XMMINFO_WRITEHI)
+	int info = eeRecompileCodeXMM( (((_Rs_)&&(_Rt_))?XMMINFO_READS:0)|(((_Rs_)&&(_Rt_))?XMMINFO_READT:0)|(_Rd_?XMMINFO_WRITED:0)|XMMINFO_WRITELO|XMMINFO_WRITEHI );
 	if( !_Rs_ || !_Rt_ ) {
 		if( _Rd_ ) SSE2_PXOR_XMM_to_XMM(EEREC_D, EEREC_D);
 		SSE2_PXOR_XMM_to_XMM(EEREC_LO, EEREC_LO);
@@ -3461,8 +2592,7 @@ CPU_SSE2_XMMCACHE_START((((_Rs_)&&(_Rt_))?XMMINFO_READS:0)|(((_Rs_)&&(_Rt_))?XMM
 			_freeXMMreg(t0reg);
 		}
 	}
-CPU_SSE_XMMCACHE_END
-	recCall( Interp::PMULTUW, _Rd_ );
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -3471,7 +2601,7 @@ void recPMADDUW()
 	if( _Rd_ ) EEINST_SETSIGNEXT(_Rd_);
 	EEINST_SETSIGNEXT(_Rs_);
 	EEINST_SETSIGNEXT(_Rt_);
-CPU_SSE2_XMMCACHE_START((((_Rs_)&&(_Rt_))?XMMINFO_READS:0)|(((_Rs_)&&(_Rt_))?XMMINFO_READT:0)|(_Rd_?XMMINFO_WRITED:0)|XMMINFO_WRITELO|XMMINFO_WRITEHI|XMMINFO_READLO|XMMINFO_READHI)
+	int info = eeRecompileCodeXMM( (((_Rs_)&&(_Rt_))?XMMINFO_READS:0)|(((_Rs_)&&(_Rt_))?XMMINFO_READT:0)|(_Rd_?XMMINFO_WRITED:0)|XMMINFO_WRITELO|XMMINFO_WRITEHI|XMMINFO_READLO|XMMINFO_READHI );
 	SSE_SHUFPS_XMM_to_XMM(EEREC_LO, EEREC_HI, 0x88);
 	SSE2_PSHUFD_XMM_to_XMM(EEREC_LO, EEREC_LO, 0xd8); // LO = {LO[0], HI[0], LO[2], HI[2]}
 	if( _Rd_ ) {
@@ -3516,9 +2646,7 @@ CPU_SSE2_XMMCACHE_START((((_Rs_)&&(_Rt_))?XMMINFO_READS:0)|(((_Rs_)&&(_Rt_))?XMM
 		SSE2_PUNPCKHDQ_XMM_to_XMM(EEREC_HI, t0reg);
 		_freeXMMreg(t0reg);
 	}
-CPU_SSE_XMMCACHE_END
-
-	recCall( Interp::PMADDUW, _Rd_ );
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -3535,11 +2663,9 @@ void recPEXCW()
 {
 	if (!_Rd_) return;
 
-CPU_SSE_XMMCACHE_START(XMMINFO_READT|XMMINFO_WRITED)
+	int info = eeRecompileCodeXMM( XMMINFO_READT|XMMINFO_WRITED );
 	SSE2_PSHUFD_XMM_to_XMM(EEREC_D, EEREC_T, 0xd8);
-CPU_SSE_XMMCACHE_END
-
-recCall( Interp::PEXCW, _Rd_ );
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -3547,12 +2673,10 @@ void recPEXCH( void )
 {
 	if (!_Rd_) return;
 
-CPU_SSE2_XMMCACHE_START(XMMINFO_READT|XMMINFO_WRITED)
+	int info = eeRecompileCodeXMM( XMMINFO_READT|XMMINFO_WRITED );
 	SSE2_PSHUFLW_XMM_to_XMM(EEREC_D, EEREC_T, 0xd8);
 	SSE2_PSHUFHW_XMM_to_XMM(EEREC_D, EEREC_D, 0xd8);
-CPU_SSE_XMMCACHE_END
-
-	recCall( Interp::PEXCH, _Rd_ );
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -3560,7 +2684,7 @@ void recPNOR( void )
 {
 	if ( ! _Rd_ ) return;
 
-CPU_SSE2_XMMCACHE_START((_Rs_!=0?XMMINFO_READS:0)|(_Rt_!=0?XMMINFO_READT:0)|XMMINFO_WRITED)
+	int info = eeRecompileCodeXMM( (_Rs_!=0?XMMINFO_READS:0)|(_Rt_!=0?XMMINFO_READT:0)|XMMINFO_WRITED );
 
 	if( _Rs_ == 0 ) {
 		if( _Rt_ == 0 ) {
@@ -3605,110 +2729,60 @@ CPU_SSE2_XMMCACHE_START((_Rs_!=0?XMMINFO_READS:0)|(_Rt_!=0?XMMINFO_READT:0)|XMMI
 		SSEX_PXOR_XMM_to_XMM( EEREC_D, t0reg );
 		_freeXMMreg(t0reg);
 	}
-CPU_SSE_XMMCACHE_END
-
-	_flushCachedRegs();
-	_deleteEEreg(_Rd_, 0);
-
-	MMX_ALLOC_TEMP3(
-		MOVQMtoR( t0reg, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UD[ 0 ] );
-		MOVQMtoR( t1reg, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UD[ 1 ] );
-		PORMtoR( t0reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 0 ] );
-		PORMtoR( t1reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 1 ] );
-		PCMPEQDRtoR( t2reg, t2reg );
-		PXORRtoR( t0reg, t2reg );
-		PXORRtoR( t1reg, t2reg );
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 0 ], t0reg );
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 1 ], t1reg );
-		SetMMXstate();
-		)
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
 void recPMTHI( void ) 
 {
-CPU_SSE_XMMCACHE_START(XMMINFO_READS|XMMINFO_WRITEHI)
+	int info = eeRecompileCodeXMM( XMMINFO_READS|XMMINFO_WRITEHI );
 	SSEX_MOVDQA_XMM_to_XMM(EEREC_HI, EEREC_S);
-CPU_SSE_XMMCACHE_END
-
-	_flushCachedRegs();
-	_deleteEEreg(XMMGPR_HI, 0);
-
-	MMX_ALLOC_TEMP2(
-		MOVQMtoR( t0reg, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UD[ 0 ] );
-		MOVQMtoR( t1reg, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UD[ 1 ] );
-		MOVQRtoM( (uptr)&cpuRegs.HI.UD[ 0 ], t0reg );
-		MOVQRtoM( (uptr)&cpuRegs.HI.UD[ 1 ], t1reg );
-		SetMMXstate();
-		)
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
 void recPMTLO( void ) 
 {
-CPU_SSE_XMMCACHE_START(XMMINFO_READS|XMMINFO_WRITELO)
+	int info = eeRecompileCodeXMM( XMMINFO_READS|XMMINFO_WRITELO );
 	SSEX_MOVDQA_XMM_to_XMM(EEREC_LO, EEREC_S);
-CPU_SSE_XMMCACHE_END
-
-	_flushCachedRegs();
-	_deleteEEreg(XMMGPR_LO, 0);
-	_deleteGPRtoXMMreg(_Rs_, 1);
-
-	MMX_ALLOC_TEMP2(
-		MOVQMtoR( t0reg, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UD[ 0 ] );
-		MOVQMtoR( t1reg, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UD[ 1 ] );
-		MOVQRtoM( (uptr)&cpuRegs.LO.UD[ 0 ], t0reg );
-		MOVQRtoM( (uptr)&cpuRegs.LO.UD[ 1 ], t1reg );
-		SetMMXstate();
-		)
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
 void recPCPYUD( void ) 
 {
-   if ( ! _Rd_ ) return;
+	if ( ! _Rd_ ) return;
 
-CPU_SSE_XMMCACHE_START(XMMINFO_READS|(( _Rt_ == 0) ? 0:XMMINFO_READT)|XMMINFO_WRITED)
+	int info = eeRecompileCodeXMM( XMMINFO_READS|(( _Rt_ == 0) ? 0:XMMINFO_READT)|XMMINFO_WRITED );
 
-		if( _Rt_ == 0 ) {
-			if( EEREC_D == EEREC_S ) {
-				SSE2_PUNPCKHQDQ_XMM_to_XMM(EEREC_D, EEREC_S);
-				SSE2_MOVQ_XMM_to_XMM(EEREC_D, EEREC_D);
-			}
-			else {
-				SSE_MOVHLPS_XMM_to_XMM(EEREC_D, EEREC_S);
-				SSE2_MOVQ_XMM_to_XMM(EEREC_D, EEREC_D);
-			}
+	if( _Rt_ == 0 ) {
+		if( EEREC_D == EEREC_S ) {
+			SSE2_PUNPCKHQDQ_XMM_to_XMM(EEREC_D, EEREC_S);
+			SSE2_MOVQ_XMM_to_XMM(EEREC_D, EEREC_D);
 		}
 		else {
-			if( EEREC_D == EEREC_S ) SSE2_PUNPCKHQDQ_XMM_to_XMM(EEREC_D, EEREC_T);
-			else if( EEREC_D == EEREC_T ) {
-				//TODO
-				SSE2_PUNPCKHQDQ_XMM_to_XMM(EEREC_D, EEREC_S);
-				SSE2_PSHUFD_XMM_to_XMM(EEREC_D, EEREC_D, 0x4e);
+			SSE_MOVHLPS_XMM_to_XMM(EEREC_D, EEREC_S);
+			SSE2_MOVQ_XMM_to_XMM(EEREC_D, EEREC_D);
+		}
+	}
+	else {
+		if( EEREC_D == EEREC_S ) SSE2_PUNPCKHQDQ_XMM_to_XMM(EEREC_D, EEREC_T);
+		else if( EEREC_D == EEREC_T ) {
+			//TODO
+			SSE2_PUNPCKHQDQ_XMM_to_XMM(EEREC_D, EEREC_S);
+			SSE2_PSHUFD_XMM_to_XMM(EEREC_D, EEREC_D, 0x4e);
+		}
+		else {
+			if( EEREC_S == EEREC_T ) {
+				SSE2_PSHUFD_XMM_to_XMM(EEREC_D, EEREC_S, 0xee);
 			}
 			else {
-				if( EEREC_S == EEREC_T ) {
-					SSE2_PSHUFD_XMM_to_XMM(EEREC_D, EEREC_S, 0xee);
-				}
-				else {
-					SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
-					SSE2_PUNPCKHQDQ_XMM_to_XMM(EEREC_D, EEREC_T);
-				}
+				SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
+				SSE2_PUNPCKHQDQ_XMM_to_XMM(EEREC_D, EEREC_T);
 			}
 		}
-CPU_SSE_XMMCACHE_END
-
-	_flushCachedRegs();
-	_deleteEEreg(_Rd_, 0);
-
-	MMX_ALLOC_TEMP2(
-		MOVQMtoR( t0reg, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UD[ 1 ] );
-		MOVQMtoR( t1reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 1 ] );
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 0 ], t0reg );
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 1 ], t1reg );
-		SetMMXstate();
-		)
+	}
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -3716,7 +2790,7 @@ void recPOR( void )
 {
 	if ( ! _Rd_ ) return;
 
-CPU_SSE_XMMCACHE_START((_Rs_!=0?XMMINFO_READS:0)|(_Rt_!=0?XMMINFO_READT:0)|XMMINFO_WRITED)
+	int info = eeRecompileCodeXMM( (_Rs_!=0?XMMINFO_READS:0)|(_Rt_!=0?XMMINFO_READT:0)|XMMINFO_WRITED );
 
 	if( _Rs_ == 0 ) {
 		if( _Rt_ == 0 ) {
@@ -3745,23 +2819,7 @@ CPU_SSE_XMMCACHE_START((_Rs_!=0?XMMINFO_READS:0)|(_Rt_!=0?XMMINFO_READT:0)|XMMIN
 			}
 		}
 	}
-CPU_SSE_XMMCACHE_END
-
-	_flushCachedRegs();
-	_deleteEEreg(_Rd_, 0);
-
-	MMX_ALLOC_TEMP2(
-		MOVQMtoR( t0reg, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UD[ 0 ] );
-		MOVQMtoR( t1reg, (uptr)&cpuRegs.GPR.r[ _Rs_ ].UD[ 1 ] );
-		if ( _Rt_ != 0 )
-		{
-			PORMtoR ( t0reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 0 ] );
-			PORMtoR ( t1reg, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 1 ] );
-		}
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 0 ], t0reg );
-		MOVQRtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UD[ 1 ], t1reg );
-		SetMMXstate();
-		)
+	_clearNeededXMMregs();
 }
 
 ////////////////////////////////////////////////////
@@ -3769,28 +2827,10 @@ void recPCPYH( void )
 {
 	if ( ! _Rd_ ) return;
 
-CPU_SSE2_XMMCACHE_START(XMMINFO_READT|XMMINFO_WRITED)
+	int info = eeRecompileCodeXMM( XMMINFO_READT|XMMINFO_WRITED );
 	SSE2_PSHUFLW_XMM_to_XMM(EEREC_D, EEREC_T, 0);
 	SSE2_PSHUFHW_XMM_to_XMM(EEREC_D, EEREC_D, 0);
-CPU_SSE_XMMCACHE_END
-
-	_flushCachedRegs();
-	_deleteEEreg(_Rd_, 0);
-
-	//PUSH32R( EBX );
-	MOVZX32M16toR( EAX, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 0 ] );
-	MOV32RtoR( ECX, EAX );
-	SHL32ItoR( ECX, 16 );
-	OR32RtoR( EAX, ECX );
-	MOVZX32M16toR( EDX, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UD[ 1 ] );
-	MOV32RtoR( ECX, EDX );
-	SHL32ItoR( ECX, 16 );
-	OR32RtoR( EDX, ECX );
-	MOV32RtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], EAX );
-	MOV32RtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], EAX );
-	MOV32RtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UL[ 2 ], EDX );
-	MOV32RtoM( (uptr)&cpuRegs.GPR.r[ _Rd_ ].UL[ 3 ], EDX );
-	//POP32R( EBX );
+	_clearNeededXMMregs();
 }
 
 #endif	// else MMI3_RECOMPILE

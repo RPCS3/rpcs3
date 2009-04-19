@@ -35,7 +35,127 @@
 
 namespace x86Emitter
 {
-	extern void iJccKnownTarget( JccComparisonType comparison, void* target, bool slideForward=false );
+	// ------------------------------------------------------------------------
+	// Group 1 Instruction Class
+
+	extern const Internal::Group1ImplAll<Internal::G1Type_ADD> iADD;
+	extern const Internal::Group1ImplAll<Internal::G1Type_OR>  iOR;
+	extern const Internal::Group1ImplAll<Internal::G1Type_ADC> iADC;
+	extern const Internal::Group1ImplAll<Internal::G1Type_SBB> iSBB;
+	extern const Internal::Group1ImplAll<Internal::G1Type_AND> iAND;
+	extern const Internal::Group1ImplAll<Internal::G1Type_SUB> iSUB;
+	extern const Internal::Group1ImplAll<Internal::G1Type_XOR> iXOR;
+	extern const Internal::Group1ImplAll<Internal::G1Type_CMP> iCMP;
+
+	// ------------------------------------------------------------------------
+	// Group 2 Instruction Class
+	//
+	// Optimization Note: For Imm forms, we ignore the instruction if the shift count is
+	// zero.  This is a safe optimization since any zero-value shift does not affect any
+	// flags.
+
+	extern const Internal::MovImplAll iMOV;
+	extern const Internal::TestImplAll iTEST;
+
+	extern const Internal::Group2ImplAll<Internal::G2Type_ROL> iROL;
+	extern const Internal::Group2ImplAll<Internal::G2Type_ROR> iROR;
+	extern const Internal::Group2ImplAll<Internal::G2Type_RCL> iRCL;
+	extern const Internal::Group2ImplAll<Internal::G2Type_RCR> iRCR;
+	extern const Internal::Group2ImplAll<Internal::G2Type_SHL> iSHL;
+	extern const Internal::Group2ImplAll<Internal::G2Type_SHR> iSHR;
+	extern const Internal::Group2ImplAll<Internal::G2Type_SAR> iSAR;
+
+	// ------------------------------------------------------------------------
+	// Group 3 Instruction Class
+
+	extern const Internal::Group3ImplAll<Internal::G3Type_NOT> iNOT;
+	extern const Internal::Group3ImplAll<Internal::G3Type_NEG> iNEG;
+	extern const Internal::Group3ImplAll<Internal::G3Type_MUL> iUMUL;
+	extern const Internal::Group3ImplAll<Internal::G3Type_DIV> iUDIV;
+	extern const Internal::Group3ImplAll<Internal::G3Type_iDIV> iSDIV;
+
+	extern const Internal::IncDecImplAll<false> iINC;
+	extern const Internal::IncDecImplAll<true>  iDEC;
+
+	extern const Internal::MovExtendImplAll<false> iMOVZX;
+	extern const Internal::MovExtendImplAll<true>  iMOVSX;
+
+	extern const Internal::DwordShiftImplAll<false> iSHLD;
+	extern const Internal::DwordShiftImplAll<true>  iSHRD;
+
+	extern const Internal::Group8ImplAll<Internal::G8Type_BT> iBT;
+	extern const Internal::Group8ImplAll<Internal::G8Type_BTR> iBTR;
+	extern const Internal::Group8ImplAll<Internal::G8Type_BTS> iBTS;
+	extern const Internal::Group8ImplAll<Internal::G8Type_BTC> iBTC;
+
+	extern const Internal::JmpCallImplAll<true> iJMP;
+	extern const Internal::JmpCallImplAll<false> iCALL;
+
+	extern const Internal::BitScanImplAll<false> iBSF;
+	extern const Internal::BitScanImplAll<true> iBSR;
+
+	// ------------------------------------------------------------------------
+	extern const Internal::CMovImplGeneric iCMOV;
+
+	extern const Internal::CMovImplAll<Jcc_Above>			iCMOVA;
+	extern const Internal::CMovImplAll<Jcc_AboveOrEqual>	iCMOVAE;
+	extern const Internal::CMovImplAll<Jcc_Below>			iCMOVB;
+	extern const Internal::CMovImplAll<Jcc_BelowOrEqual>	iCMOVBE;
+
+	extern const Internal::CMovImplAll<Jcc_Greater>			iCMOVG;
+	extern const Internal::CMovImplAll<Jcc_GreaterOrEqual>	iCMOVGE;
+	extern const Internal::CMovImplAll<Jcc_Less>			iCMOVL;
+	extern const Internal::CMovImplAll<Jcc_LessOrEqual>		iCMOVLE;
+
+	extern const Internal::CMovImplAll<Jcc_Zero>			iCMOVZ;
+	extern const Internal::CMovImplAll<Jcc_Equal>			iCMOVE;
+	extern const Internal::CMovImplAll<Jcc_NotZero>			iCMOVNZ;
+	extern const Internal::CMovImplAll<Jcc_NotEqual>		iCMOVNE;
+
+	extern const Internal::CMovImplAll<Jcc_Overflow>		iCMOVO;
+	extern const Internal::CMovImplAll<Jcc_NotOverflow>		iCMOVNO;
+	extern const Internal::CMovImplAll<Jcc_Carry>			iCMOVC;
+	extern const Internal::CMovImplAll<Jcc_NotCarry>		iCMOVNC;
+
+	extern const Internal::CMovImplAll<Jcc_Signed>			iCMOVS;
+	extern const Internal::CMovImplAll<Jcc_Unsigned>		iCMOVNS;
+	extern const Internal::CMovImplAll<Jcc_ParityEven>		iCMOVPE;
+	extern const Internal::CMovImplAll<Jcc_ParityOdd>		iCMOVPO;
+
+	// ------------------------------------------------------------------------
+	extern const Internal::SetImplGeneric iSET;
+
+	extern const Internal::SetImplAll<Jcc_Above>			iSETA;
+	extern const Internal::SetImplAll<Jcc_AboveOrEqual>		iSETAE;
+	extern const Internal::SetImplAll<Jcc_Below>			iSETB;
+	extern const Internal::SetImplAll<Jcc_BelowOrEqual>		iSETBE;
+
+	extern const Internal::SetImplAll<Jcc_Greater>			iSETG;
+	extern const Internal::SetImplAll<Jcc_GreaterOrEqual>	iSETGE;
+	extern const Internal::SetImplAll<Jcc_Less>				iSETL;
+	extern const Internal::SetImplAll<Jcc_LessOrEqual>		iSETLE;
+
+	extern const Internal::SetImplAll<Jcc_Zero>				iSETZ;
+	extern const Internal::SetImplAll<Jcc_Equal>			iSETE;
+	extern const Internal::SetImplAll<Jcc_NotZero>			iSETNZ;
+	extern const Internal::SetImplAll<Jcc_NotEqual>			iSETNE;
+
+	extern const Internal::SetImplAll<Jcc_Overflow>			iSETO;
+	extern const Internal::SetImplAll<Jcc_NotOverflow>		iSETNO;
+	extern const Internal::SetImplAll<Jcc_Carry>			iSETC;
+	extern const Internal::SetImplAll<Jcc_NotCarry>			iSETNC;
+
+	extern const Internal::SetImplAll<Jcc_Signed>			iSETS;
+	extern const Internal::SetImplAll<Jcc_Unsigned>			iSETNS;
+	extern const Internal::SetImplAll<Jcc_ParityEven>		iSETPE;
+	extern const Internal::SetImplAll<Jcc_ParityOdd>		iSETPO;
+
+	//////////////////////////////////////////////////////////////////////////////////////////
+	// Miscellaneous Instructions
+	// These are all defined inline or in ix86.cpp.
+	//
+
+	extern void iBSWAP( const iRegister32& to );
 
 	// ----- Lea Instructions (Load Effective Address) -----
 	// Note: alternate (void*) forms of these instructions are not provided since those
@@ -81,7 +201,7 @@ namespace x86Emitter
 
 	// NOP 1-byte
 	__forceinline void iNOP()	{ write8(0x90); }
-	
+		
 	//////////////////////////////////////////////////////////////////////////////////////////
 	// MUL / DIV instructions
 	
@@ -104,6 +224,8 @@ namespace x86Emitter
 
 	//////////////////////////////////////////////////////////////////////////////////////////
 	// JMP / Jcc Instructions!
+
+	extern void iJccKnownTarget( JccComparisonType comparison, void* target, bool slideForward=false );
 
 #define DEFINE_FORWARD_JUMP( label, cond ) \
 	template< typename OperandType > \
@@ -193,5 +315,40 @@ namespace x86Emitter
 	typedef iForwardJPE<s32>	iForwardJPE32;
 	typedef iForwardJPO<s8>		iForwardJPO8;
 	typedef iForwardJPO<s32>	iForwardJPO32;
+
+	//////////////////////////////////////////////////////////////////////////////////////////
+	// MMX Mov Instructions (MOVD, MOVQ, MOVSS).
+	//
+	// Notes:
+	//  * Some of the functions have been renamed to more clearly reflect what they actually
+	//    do.  Namely we've affixed "ZX" to several MOVs that take a register as a destination
+	//    since that's what they do (MOVD clears upper 32/96 bits, etc).
+	//
+	
+	using Internal::iMOVD;
+	using Internal::iMOVDZX;
+
+	extern void iMOVQ( const iRegisterMMX& to, const iRegisterMMX& from );
+	extern void iMOVQ( const iRegisterMMX& to, const iRegisterXMM& from );
+	extern void iMOVQ( const iRegisterXMM& to, const iRegisterMMX& from );
+
+	extern void iMOVQ( void* dest, const iRegisterXMM& from );
+	extern void iMOVQ( const ModSibBase& dest, const iRegisterXMM& from );
+	extern void iMOVQ( void* dest, const iRegisterMMX& from );
+	extern void iMOVQ( const ModSibBase& dest, const iRegisterMMX& from );
+	extern void iMOVQ( const iRegisterMMX& to, const void* src );
+	extern void iMOVQ( const iRegisterMMX& to, const ModSibBase& src );
+
+	extern void iMOVQZX( const iRegisterXMM& to, const void* src );
+	extern void iMOVQZX( const iRegisterXMM& to, const ModSibBase& src );
+	extern void iMOVQZX( const iRegisterXMM& to, const iRegisterXMM& from );
+	
+	extern void iMOVSS( const iRegisterXMM& to, const iRegisterXMM& from );
+	extern void iMOVSS( const void* to, const iRegisterXMM& from );
+	extern void iMOVSS( const ModSibBase& to, const iRegisterXMM& from );
+
+	extern void iMOVSSZX( const iRegisterXMM& to, const void* from );
+	extern void iMOVSSZX( const iRegisterXMM& to, const ModSibBase& from );
+
 }
 

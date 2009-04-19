@@ -38,19 +38,20 @@
 
 namespace x86Emitter {
 
+using namespace Internal;
+
+const JmpCallImplAll<true> iJMP;
+const JmpCallImplAll<false> iCALL;
+
 // ------------------------------------------------------------------------
 void iSmartJump::SetTarget()
 {
-	jASSUME( !m_written );
-	if( m_written )
-		throw Exception::InvalidOperation( "Attempted to set SmartJump label multiple times." );
-
-	m_target = iGetPtr();
+	u8* target = iGetPtr();
 	if( m_baseptr == NULL ) return;
 
 	iSetPtr( m_baseptr );
 	u8* const saveme = m_baseptr + GetMaxInstructionSize();
-	iJccKnownTarget( m_cc, m_target, true );
+	iJccKnownTarget( m_cc, target, true );
 
 	// Copy recompiled data inward if the jump instruction didn't fill the
 	// alloted buffer (means that we optimized things to a j8!)
@@ -59,17 +60,19 @@ void iSmartJump::SetTarget()
 	if( spacer != 0 )
 	{
 		u8* destpos = iGetPtr();
-		const int copylen = (sptr)m_target - (sptr)saveme;
+		const int copylen = (sptr)target - (sptr)saveme;
 
 		memcpy_fast( destpos, saveme, copylen );
-		iSetPtr( m_target - spacer );
+		iSetPtr( target - spacer );
 	}
-
-	m_written = true;
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////
-//
+iSmartJump::~iSmartJump()
+{
+	SetTarget();
+	m_baseptr = NULL;	// just in case (sometimes helps in debugging too)
+}
+
 
 // ------------------------------------------------------------------------
 // Writes a jump at the current x86Ptr, which targets a pre-established target address.
@@ -78,6 +81,7 @@ void iSmartJump::SetTarget()
 // slideForward - used internally by iSmartJump to indicate that the jump target is going
 // to slide forward in the event of an 8 bit displacement.
 //
+// Using this 
 __emitinline void iJccKnownTarget( JccComparisonType comparison, void* target, bool slideForward )
 {
 	// Calculate the potential j8 displacement first, assuming an instruction length of 2:
@@ -108,11 +112,6 @@ __emitinline void iJccKnownTarget( JccComparisonType comparison, void* target, b
 		}
 		iWrite<s32>( (sptr)target - ((sptr)iGetPtr() + 4) );
 	}
-}
-
-__emitinline void iJcc( JccComparisonType comparison, void* target )
-{
-	iJccKnownTarget( comparison, target );
 }
 
 }

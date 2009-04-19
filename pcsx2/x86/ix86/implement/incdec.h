@@ -51,8 +51,9 @@ public:
 
 	static __emitinline void Emit( bool isDec, const ModSibStrict<ImmType>& dest )
 	{
+		prefix16();
 		write8( Is8BitOperand() ? 0xfe : 0xff );
-		EmitSibMagic( isDec ? 1: 0, dest );
+		EmitSibMagic( isDec ? 1 : 0, dest );
 	}
 };
 
@@ -67,10 +68,10 @@ protected:
 
 public:
 	__forceinline void operator()( const iRegister32& to )	const		{ m_32::Emit( isDec, to ); }
-	__noinline void operator()( const ModSibStrict<u32>& sibdest ) const	{ m_32::Emit( isDec, sibdest ); }
+	__noinline void operator()( const ModSibStrict<u32>& sibdest ) const{ m_32::Emit( isDec, sibdest ); }
 
 	__forceinline void operator()( const iRegister16& to )	const		{ m_16::Emit( isDec, to ); }
-	__noinline void operator()( const ModSibStrict<u16>& sibdest ) const	{ m_16::Emit( isDec, sibdest ); }
+	__noinline void operator()( const ModSibStrict<u16>& sibdest ) const{ m_16::Emit( isDec, sibdest ); }
 
 	__forceinline void operator()( const iRegister8& to )	const		{ m_8::Emit( isDec, to ); }
 	__noinline void operator()( const ModSibStrict<u8>& sibdest ) const	{ m_8::Emit( isDec, sibdest ); }

@@ -19,7 +19,7 @@
 #pragma once
 
 //////////////////////////////////////////////////////////////////////////////////////////
-// MOV instruction Implementation
+// TEST instruction Implementation
 
 template< typename ImmType >
 class TestImpl

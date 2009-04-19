@@ -249,19 +249,6 @@ void eeRecompileCodeConstSPECIAL(R5900FNPTR constcode, R5900FNPTR_INFO multicode
 #define XMMINFO_READACC		0x200
 #define XMMINFO_WRITEACC	0x400
 
-#define CPU_SSE_XMMCACHE_START(xmminfo) \
-    { \
-		int info = eeRecompileCodeXMM(xmminfo); \
-
-#define CPU_SSE2_XMMCACHE_START(xmminfo) \
-    { \
-		int info = eeRecompileCodeXMM(xmminfo); \
-
-#define CPU_SSE_XMMCACHE_END \
-		_clearNeededXMMregs(); \
-		return; \
-	}  \
-
 #define FPURECOMPILE_CONSTCODE(fn, xmminfo) \
 void rec##fn(void) \
 { \

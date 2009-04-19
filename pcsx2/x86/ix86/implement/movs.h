@@ -18,7 +18,9 @@
 
 #pragma once
 
-// Header: ix86_impl_movs.h -- covers cmov and movsx/movzx.
+// Header: ix86_impl_movs.h -- covers mov, cmov, movsx/movzx, and SETcc (which shares
+// with cmov many similarities).
+
 // Note: This header is meant to be included from within the x86Emitter::Internal namespace.
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -143,28 +145,22 @@ public:
 	}
 };
 
-// Inlining Notes:
-//   I've set up the inlining to be as practical and intelligent as possible, which means
-//   forcing inlining for (void*) forms of ModRM, which thanks to constprop reduce to
-//   virtually no code.  In the case of (Reg, Imm) forms, the inlining is up to the dis-
-//   cretion of the compiler.
-// 
-
+// ------------------------------------------------------------------------
 class MovImplAll
 {
 public:
-	template< typename T>
+	template< typename T >
 	__forceinline void operator()( const iRegister<T>& to,	const iRegister<T>& from ) const	{ MovImpl<T>::Emit( to, from ); }
-	template< typename T>
+	template< typename T >
 	__forceinline void operator()( const iRegister<T>& to,	const void* src ) const				{ MovImpl<T>::Emit( to, src ); }
-	template< typename T>
+	template< typename T >
 	__forceinline void operator()( void* dest,				const iRegister<T>& from ) const	{ MovImpl<T>::Emit( dest, from ); }
-	template< typename T>
+	template< typename T >
 	__noinline void operator()( const ModSibBase& sibdest,	const iRegister<T>& from ) const	{ MovImpl<T>::Emit( sibdest, from ); }
-	template< typename T>
+	template< typename T >
 	__noinline void operator()( const iRegister<T>& to,		const ModSibBase& sibsrc ) const	{ MovImpl<T>::Emit( to, sibsrc ); }
 
-	template< typename T>
+	template< typename T >
 	__noinline void operator()( const ModSibStrict<T>& sibdest, int imm ) const					{ MovImpl<T>::Emit( sibdest, imm ); }
 
 	// preserve_flags  - set to true to disable optimizations which could alter the state of
@@ -184,9 +180,11 @@ public:
 
 
 //////////////////////////////////////////////////////////////////////////////////////////
-// CMOV !!  [in all of it's disappointing lack-of glory]
-// Caution!  This instruction can look exciting and cool, until you realize that it cannot
-// load immediate values into registers. -_-
+// CMOV !!  [in all of it's disappointing lack-of glory]  .. and ..
+// SETcc!!  [more glory, less lack!]
+//
+// CMOV Disclaimer: Caution!  This instruction can look exciting and cool, until you
+// realize that it cannot load immediate values into registers. -_-
 //
 template< typename ImmType, int InstBaseVal >
 class CMovSetImpl

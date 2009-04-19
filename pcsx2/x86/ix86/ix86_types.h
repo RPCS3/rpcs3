@@ -129,22 +129,22 @@ namespace x86Emitter
 // 
 // This is configured to inline emitter functions appropriately for release builds, and 
 // disables some of the more aggressive inlines for dev builds (which can be helpful when
-// debugging).
+// debugging).  Additionally,  I've set up the inlining to be as practical and intelligent
+// as possible with regard to constant propagation.  Namely this involves forcing inlining
+// for (void*) forms of ModRM, which (thanks to constprop) reduce to virtually no code, and
+// force-disabling inlining on complicated SibSB forms [since MSVC would sometimes inline
+// despite being a generally bad idea].
 //
-// Note: I use __forceinline directly for most single-line class members, when needed.
-// There's no point in using __emitline in these cases since the debugger can't trace into
-// single-line functions anyway.
+// In the case of (Reg, Imm) forms, the inlining is up to the discreation of the compiler.
+//
+// Note: I *intentionally* use __forceinline directly for most single-line class members,
+// when needed.  There's no point in using __emitline in these cases since the debugger
+// can't trace into single-line functions anyway.
 //
 #ifdef PCSX2_DEVBUILD
 #	define __emitinline
 #else
 #	define __emitinline __forceinline
-#endif
-
-#ifdef _MSC_VER
-#	define __noinline __declspec(noinline) 
-#else
-#	define __noinline __attribute__((noinline))
 #endif
 
 	// ModRM 'mod' field enumeration.   Provided mostly for reference:
@@ -195,6 +195,8 @@ namespace x86Emitter
 	}
 
 	//////////////////////////////////////////////////////////////////////////////////////////
+	// iRegister
+	// Unless templating some fancy stuff, use the friendly iRegister32/16/8 typedefs instead.
 	//
 	template< typename OperandType >
 	class iRegister
@@ -213,6 +215,9 @@ namespace x86Emitter
 
 		// Returns true if the register is a valid accumulator: Eax, Ax, Al.
 		bool IsAccumulator() const { return Id == 0; }
+		
+		// returns true if the register is a valid MMX or XMM register.
+		bool IsSIMD() const { return OperandSize == 8 || OperandSize == 16; }
 
 		bool operator==( const iRegister<OperandType>& src ) const
 		{
@@ -230,6 +235,28 @@ namespace x86Emitter
 			return *this;
 		}
 	};
+
+	//////////////////////////////////////////////////////////////////////////////////////////
+	//
+	template< typename OperandType >
+	class iRegisterSIMD : public iRegister<OperandType>
+	{
+	public:
+		static const iRegisterSIMD Empty;		// defined as an empty/unused value (-1)
+
+	public:
+		iRegisterSIMD(): iRegister<OperandType>() {}
+		iRegisterSIMD( const iRegisterSIMD& src ) : iRegister<OperandType>( src.Id ) {}
+		iRegisterSIMD( const iRegister<OperandType>& src ) : iRegister<OperandType>( src ) {}
+		explicit iRegisterSIMD( int regId ) : iRegister<OperandType>( regId ) {}
+
+		iRegisterSIMD<OperandType>& operator=( const iRegisterSIMD<OperandType>& src )
+		{
+			Id = src.Id;
+			return *this;
+		}
+	};
+
 	
 	// ------------------------------------------------------------------------
 	// Note: GCC parses templates ahead of time apparently as a 'favor' to the programmer, which
@@ -239,15 +266,25 @@ namespace x86Emitter
 	// all about the the templated code in haphazard fashion.  Yay.. >_<
 	//
 
-	typedef iRegister<u32> iRegister32;
-	typedef iRegister<u16> iRegister16;
-	typedef iRegister<u8> iRegister8;
+	typedef iRegisterSIMD<u128> iRegisterXMM;
+	typedef iRegisterSIMD<u64>  iRegisterMMX;
+	typedef iRegister<u32>  iRegister32;
+	typedef iRegister<u16>  iRegister16;
+	typedef iRegister<u8>   iRegister8;
 
 	class iRegisterCL : public iRegister8
 	{
 	public:
 		iRegisterCL(): iRegister8( 1 ) {}
 	};
+
+	extern const iRegisterXMM
+		xmm0, xmm1, xmm2, xmm3,
+		xmm4, xmm5, xmm6, xmm7;
+
+	extern const iRegisterMMX
+		mm0, mm1, mm2, mm3,
+		mm4, mm5, mm6, mm7;
 
 	extern const iRegister32
 		eax, ebx, ecx, edx,
@@ -266,6 +303,7 @@ namespace x86Emitter
 	//////////////////////////////////////////////////////////////////////////////////////////
 	// Use 32 bit registers as out index register (for ModSib memory address calculations)
 	// Only x86IndexReg provides operators for constructing iAddressInfo types.
+	//
 	class x86IndexReg : public iRegister32
 	{
 	public:
@@ -313,9 +351,9 @@ namespace x86Emitter
 		{
 		}
 
-		__forceinline explicit iAddressInfo( const x86IndexReg& base, int displacement=0 ) :
-			Base( base ),
-			Index(),
+		__forceinline explicit iAddressInfo( const x86IndexReg& index, int displacement=0 ) :
+			Base(),
+			Index( index ),
 			Factor(0),
 			Displacement( displacement )
 		{
@@ -349,13 +387,6 @@ namespace x86Emitter
 		__forceinline iAddressInfo operator-( s32 imm ) const { return iAddressInfo( *this ).Add( -imm ); }
 	};
 
-	enum OperandSizeType
-	{
-		OpSize_8 = 1,
-		OpSize_16 = 2,
-		OpSize_32 = 4,
-	};
-	
 	//////////////////////////////////////////////////////////////////////////////////////////
 	// ModSib - Internal low-level representation of the ModRM/SIB information.
 	//
@@ -422,9 +453,9 @@ namespace x86Emitter
 	};
 
 	//////////////////////////////////////////////////////////////////////////////////////////
-	// x86IndexerType - This is a static class which provisions our ptr[] syntax.
+	// iAddressIndexerBase - This is a static class which provisions our ptr[] syntax.
 	//
-	struct x86IndexerType
+	struct iAddressIndexerBase
 	{
 		// passthrough instruction, allows ModSib to pass silently through ptr translation
 		// without doing anything and without compiler error.
@@ -450,7 +481,7 @@ namespace x86Emitter
 			return ModSibBase( (uptr)src );
 		}
 		
-		x86IndexerType() {}			// applease the GCC gods
+		iAddressIndexerBase() {}			// appease the GCC gods
 	};
 
 	//////////////////////////////////////////////////////////////////////////////////////////
@@ -458,7 +489,7 @@ namespace x86Emitter
 	// specification of the operand size for ImmToMem operations.
 	//
 	template< typename OperandType >
-	struct x86IndexerTypeExplicit
+	struct iAddressIndexer
 	{
 		static const uint OperandSize = sizeof( OperandType );
 
@@ -486,13 +517,15 @@ namespace x86Emitter
 			return ModSibStrict<OperandType>( (uptr)src );
 		}
 		
-		x86IndexerTypeExplicit() {}  // GCC initialization dummy
+		iAddressIndexer() {}  // GCC initialization dummy
 	};
 
-	extern const x86IndexerType ptr;
-	extern const x86IndexerTypeExplicit<u32> ptr32;
-	extern const x86IndexerTypeExplicit<u16> ptr16;
-	extern const x86IndexerTypeExplicit<u8> ptr8;	
+	// ptr[] - use this form for instructions which can resolve the address operand size from
+	// the other register operand sizes.
+	extern const iAddressIndexerBase ptr;
+	extern const iAddressIndexer<u32> ptr32;	// explicitly typed addressing, usually needed for '[dest],imm' instruction forms
+	extern const iAddressIndexer<u16> ptr16;	// explicitly typed addressing, usually needed for '[dest],imm' instruction forms
+	extern const iAddressIndexer<u8> ptr8;		// explicitly typed addressing, usually needed for '[dest],imm' instruction forms
 
 	//////////////////////////////////////////////////////////////////////////////////////////
 	// JccComparisonType - enumerated possibilities for inspired code branching!
@@ -533,64 +566,67 @@ namespace x86Emitter
 	// as per the measured displacement distance.  If the displacement is a valid s8, then
 	// a j8 is inserted, else a j32.
 	// 
-	// Performance Analysis:  j8's use 4 less byes per opcode, and thus can provide
-	// minor speed benefits in the form of L1/L2 cache clutter.  They're also notably faster
-	// on P4's, and mildly faster on AMDs.  (Core2's and i7's don't care)
+	// Note: This class is inherently unsafe, and so it's recommended to use iForwardJump8/32
+	// whenever it is known that the jump destination is (or is not) short.  Only use
+	// iSmartJump in cases where it's unknown what jump encoding will be ideal.
 	//
-	class iSmartJump
+	// Important: Use this tool with caution!  iSmartJump cannot be used in cases where jump
+	// targets overlap, since the writeback of the second target will alter the position of
+	// the first target (which breaks the relative addressing).  To assist in avoiding such
+	// errors, iSmartJump works based on C++ block scope, where the destruction of the
+	// iSmartJump object (invoked by a '}') signals the target of the jump.  Example:
+	//
+	// {
+	//     iCMP( EAX, ECX );
+	//     iSmartJump jumpTo( Jcc_Above );
+	//     [... conditional code ...]
+	// }  // smartjump targets this spot.
+	//
+	// No code inside the scope can attempt to jump outside the scoped block (unless the jump
+	// uses an immediate addressing method, such as Register or Mod/RM forms of JMP/CALL).
+	// Multiple SmartJumps can be safely nested inside scopes, as long as they are properly
+	// scoped themselves.
+	//
+	// Performance Analysis:  j8's use 4 less byes per opcode, and thus can provide minor
+	// speed benefits in the form of L1/L2 cache clutter, on any CPU.  They're also notably
+	// faster on P4's, and mildly faster on AMDs.  (Core2's and i7's don't care)
+	//
+	class iSmartJump : public NoncopyableObject
 	{
 	protected:
-		u8* m_target;				// x86Ptr target address of this label
 		u8* m_baseptr;				// base address of the instruction (passed to the instruction emitter)
 		JccComparisonType m_cc;		// comparison type of the instruction
-		bool m_written;				// set true when the jump is written (at which point the object becomes invalid)
 
 	public:
-
 		const int GetMaxInstructionSize() const
 		{
 			jASSUME( m_cc != Jcc_Unknown );
 			return ( m_cc == Jcc_Unconditional ) ? 5 : 6;
 		}
 
-		// Creates a backward jump label which will be passed into a Jxx instruction (or few!)
-		// later on, and the current x86Ptr is recorded as the target [thus making the class
-		// creation point the jump target].
-		iSmartJump()
-		{
-			m_target = iGetPtr();
-			m_baseptr = NULL;
-			m_cc = Jcc_Unknown;
-			m_written = false;
-		}
+		JccComparisonType GetCondition() const	{ return m_cc; }
+		virtual ~iSmartJump();
 
+		// ------------------------------------------------------------------------
 		// ccType - Comparison type to be written back to the jump instruction position.
 		//
 		iSmartJump( JccComparisonType ccType )
 		{
 			jASSUME( ccType != Jcc_Unknown );
-			m_target = NULL;
 			m_baseptr = iGetPtr();
 			m_cc = ccType;
-			m_written = false;
 			iAdvancePtr( GetMaxInstructionSize() );
 		}
-
-		JccComparisonType GetCondition() const
-		{
-			return m_cc;
-		}
-
-		u8* GetTarget() const
-		{
-			return m_target;
-		}
-
+		
+	protected:
 		void SetTarget();
 	};
 
 	//////////////////////////////////////////////////////////////////////////////////////////
-	// 
+	// iForwardJump
+	// Primary use of this class is through the various iForwardJA8/iForwardJLE32/etc. helpers
+	// defined later in this header. :)
+	//
 	template< typename OperandType >
 	class iForwardJump
 	{
@@ -601,8 +637,13 @@ namespace x86Emitter
 		// relative to this address.
 		s8* const BasePtr;
 
-	public:	
+		// The jump instruction is emitted at the point of object construction.  The conditional
+		// type must be valid (Jcc_Unknown generates an assertion).
 		iForwardJump( JccComparisonType cctype = Jcc_Unconditional );
+		
+		// Sets the jump target by writing back the current x86Ptr to the jump instruction.
+		// This method can be called multiple times, re-writing the jump instruction's target
+		// in each case. (the the last call is the one that takes effect).
 		void SetTarget() const;
 	};
 	
@@ -627,116 +668,12 @@ namespace x86Emitter
 		#include "implement/incdec.h"
 		#include "implement/bittest.h"
 		#include "implement/test.h"
+		#include "implement/jmpcall.h"
+		#include "implement/xmm/movqss.h"
 	}
 
 	//////////////////////////////////////////////////////////////////////////////////////////
 	//
-	// ----- Group 1 Instruction Class -----
-
-	extern const Internal::Group1ImplAll<Internal::G1Type_ADD> iADD;
-	extern const Internal::Group1ImplAll<Internal::G1Type_OR>  iOR;
-	extern const Internal::Group1ImplAll<Internal::G1Type_ADC> iADC;
-	extern const Internal::Group1ImplAll<Internal::G1Type_SBB> iSBB;
-	extern const Internal::Group1ImplAll<Internal::G1Type_AND> iAND;
-	extern const Internal::Group1ImplAll<Internal::G1Type_SUB> iSUB;
-	extern const Internal::Group1ImplAll<Internal::G1Type_XOR> iXOR;
-	extern const Internal::Group1ImplAll<Internal::G1Type_CMP> iCMP;
-
-	// ----- Group 2 Instruction Class -----
-	// Optimization Note: For Imm forms, we ignore the instruction if the shift count is
-	// zero.  This is a safe optimization since any zero-value shift does not affect any
-	// flags.
-
-	extern const Internal::MovImplAll iMOV;
-	extern const Internal::TestImplAll iTEST;
-	
-	extern const Internal::Group2ImplAll<Internal::G2Type_ROL> iROL;
-	extern const Internal::Group2ImplAll<Internal::G2Type_ROR> iROR;
-	extern const Internal::Group2ImplAll<Internal::G2Type_RCL> iRCL;
-	extern const Internal::Group2ImplAll<Internal::G2Type_RCR> iRCR;
-	extern const Internal::Group2ImplAll<Internal::G2Type_SHL> iSHL;
-	extern const Internal::Group2ImplAll<Internal::G2Type_SHR> iSHR;
-	extern const Internal::Group2ImplAll<Internal::G2Type_SAR> iSAR;
-
-	// ----- Group 3 Instruction Class -----
-	
-	extern const Internal::Group3ImplAll<Internal::G3Type_NOT> iNOT;
-	extern const Internal::Group3ImplAll<Internal::G3Type_NEG> iNEG;
-	extern const Internal::Group3ImplAll<Internal::G3Type_MUL> iUMUL;
-	extern const Internal::Group3ImplAll<Internal::G3Type_DIV> iUDIV;
-	extern const Internal::Group3ImplAll<Internal::G3Type_iDIV> iSDIV;
-
-	extern const Internal::IncDecImplAll<false> iINC;
-	extern const Internal::IncDecImplAll<true>  iDEC;
-
-	extern const Internal::MovExtendImplAll<false> iMOVZX;
-	extern const Internal::MovExtendImplAll<true>  iMOVSX;
-
-	extern const Internal::DwordShiftImplAll<false> iSHLD;
-	extern const Internal::DwordShiftImplAll<true>  iSHRD;
-
-	extern const Internal::Group8ImplAll<Internal::G8Type_BT> iBT;
-	extern const Internal::Group8ImplAll<Internal::G8Type_BTR> iBTR;
-	extern const Internal::Group8ImplAll<Internal::G8Type_BTS> iBTS;
-	extern const Internal::Group8ImplAll<Internal::G8Type_BTC> iBTC;
-
-	// ------------------------------------------------------------------------
-	extern const Internal::CMovImplGeneric iCMOV;
-
-	extern const Internal::CMovImplAll<Jcc_Above>			iCMOVA;
-	extern const Internal::CMovImplAll<Jcc_AboveOrEqual>	iCMOVAE;
-	extern const Internal::CMovImplAll<Jcc_Below>			iCMOVB;
-	extern const Internal::CMovImplAll<Jcc_BelowOrEqual>	iCMOVBE;
-
-	extern const Internal::CMovImplAll<Jcc_Greater>			iCMOVG;
-	extern const Internal::CMovImplAll<Jcc_GreaterOrEqual>	iCMOVGE;
-	extern const Internal::CMovImplAll<Jcc_Less>			iCMOVL;
-	extern const Internal::CMovImplAll<Jcc_LessOrEqual>		iCMOVLE;
-
-	extern const Internal::CMovImplAll<Jcc_Zero>			iCMOVZ;
-	extern const Internal::CMovImplAll<Jcc_Equal>			iCMOVE;
-	extern const Internal::CMovImplAll<Jcc_NotZero>			iCMOVNZ;
-	extern const Internal::CMovImplAll<Jcc_NotEqual>		iCMOVNE;
-
-	extern const Internal::CMovImplAll<Jcc_Overflow>		iCMOVO;
-	extern const Internal::CMovImplAll<Jcc_NotOverflow>		iCMOVNO;
-	extern const Internal::CMovImplAll<Jcc_Carry>			iCMOVC;
-	extern const Internal::CMovImplAll<Jcc_NotCarry>		iCMOVNC;
-
-	extern const Internal::CMovImplAll<Jcc_Signed>			iCMOVS;
-	extern const Internal::CMovImplAll<Jcc_Unsigned>		iCMOVNS;
-	extern const Internal::CMovImplAll<Jcc_ParityEven>		iCMOVPE;
-	extern const Internal::CMovImplAll<Jcc_ParityOdd>		iCMOVPO;
-	
-	// ------------------------------------------------------------------------
-	extern const Internal::SetImplGeneric iSET;
-
-	extern const Internal::SetImplAll<Jcc_Above>			iSETA;
-	extern const Internal::SetImplAll<Jcc_AboveOrEqual>		iSETAE;
-	extern const Internal::SetImplAll<Jcc_Below>			iSETB;
-	extern const Internal::SetImplAll<Jcc_BelowOrEqual>		iSETBE;
-
-	extern const Internal::SetImplAll<Jcc_Greater>			iSETG;
-	extern const Internal::SetImplAll<Jcc_GreaterOrEqual>	iSETGE;
-	extern const Internal::SetImplAll<Jcc_Less>				iSETL;
-	extern const Internal::SetImplAll<Jcc_LessOrEqual>		iSETLE;
-
-	extern const Internal::SetImplAll<Jcc_Zero>				iSETZ;
-	extern const Internal::SetImplAll<Jcc_Equal>			iSETE;
-	extern const Internal::SetImplAll<Jcc_NotZero>			iSETNZ;
-	extern const Internal::SetImplAll<Jcc_NotEqual>			iSETNE;
-
-	extern const Internal::SetImplAll<Jcc_Overflow>			iSETO;
-	extern const Internal::SetImplAll<Jcc_NotOverflow>		iSETNO;
-	extern const Internal::SetImplAll<Jcc_Carry>			iSETC;
-	extern const Internal::SetImplAll<Jcc_NotCarry>			iSETNC;
-
-	extern const Internal::SetImplAll<Jcc_Signed>			iSETS;
-	extern const Internal::SetImplAll<Jcc_Unsigned>			iSETNS;
-	extern const Internal::SetImplAll<Jcc_ParityEven>		iSETPE;
-	extern const Internal::SetImplAll<Jcc_ParityOdd>		iSETPO;
-
-
 }
 
 #include "ix86_inlines.inl"

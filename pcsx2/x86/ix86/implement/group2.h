@@ -50,6 +50,7 @@ protected:
 public: 
 	Group2Impl() {}		// For the love of GCC.
 
+	// ------------------------------------------------------------------------
 	static __emitinline void Emit( const iRegister<ImmType>& to ) 
 	{
 		prefix16();
@@ -57,6 +58,7 @@ public:
 		ModRM_Direct( InstType, to.Id );
 	}
 
+	// ------------------------------------------------------------------------
 	static __emitinline void Emit( const iRegister<ImmType>& to, u8 imm ) 
 	{
 		if( imm == 0 ) return;
@@ -76,6 +78,7 @@ public:
 		}
 	}
 
+	// ------------------------------------------------------------------------
 	static __emitinline void Emit( const ModSibStrict<ImmType>& sibdest ) 
 	{
 		prefix16();
@@ -83,6 +86,7 @@ public:
 		EmitSibMagic( InstType, sibdest );
 	}
 
+	// ------------------------------------------------------------------------
 	static __emitinline void Emit( const ModSibStrict<ImmType>& sibdest, u8 imm ) 
 	{
 		if( imm == 0 ) return;
@@ -108,17 +112,7 @@ public:
 template< G2Type InstType >
 class Group2ImplAll
 {
-	// Inlining Notes:
-	//   I've set up the inlining to be as practical and intelligent as possible, which means
-	//   forcing inlining for (void*) forms of ModRM, which thanks to constprop reduce to
-	//   virtually no code.  In the case of (Reg, Imm) forms, the inlining is up to the dis-
-	//   creation of the compiler.
-	// 
-
-	// (Note: I'm not going to macro this since it would likely clobber intellisense parameter resolution)
-
 public:
-	// ---------- 32 Bit Interface -----------
 	template< typename T > __forceinline void operator()( const iRegister<T>& to,		__unused const iRegisterCL& from ) const
 	{ Group2Impl<InstType,T>::Emit( to ); }
 

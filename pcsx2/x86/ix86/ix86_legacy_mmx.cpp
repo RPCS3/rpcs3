@@ -25,20 +25,24 @@
 // note: r64 = mm
 //------------------------------------------------------------------
 
+using namespace x86Emitter;
+
 /* movq m64 to r64 */
 emitterT void MOVQMtoR( x86MMXRegType to, uptr from )
 {
-	write16( 0x6F0F );
-	ModRM( 0, to, DISP32 );
-	write32( MEMADDR(from, 4) ); 
+	iMOVQ( iRegisterMMX(to), (void*)from );
+	//write16( 0x6F0F );
+	//ModRM( 0, to, DISP32 );
+	//write32( MEMADDR(from, 4) ); 
 }
 
 /* movq r64 to m64 */
 emitterT void MOVQRtoM( uptr to, x86MMXRegType from ) 
 {
-	write16( 0x7F0F );
-	ModRM( 0, from, DISP32 );
-	write32(MEMADDR(to, 4)); 
+	iMOVQ( (void*)to, iRegisterMMX(from) );
+	//write16( 0x7F0F );
+	//ModRM( 0, from, DISP32 );
+	//write32(MEMADDR(to, 4)); 
 }
 
 /* pand r64 to r64 */
@@ -470,69 +474,71 @@ emitterT void PUNPCKLDQMtoR( x86MMXRegType to, uptr from )
 	write32( MEMADDR(from, 4) );
 }
 
-emitterT void MOVQ64ItoR( x86MMXRegType reg, u64 i ) 
-{
-	MOVQMtoR( reg, ( uptr )(x86Ptr) + 2 + 7 );
-	JMP8( 8 );
-	write64( i );
-}
-
 emitterT void MOVQRtoR( x86MMXRegType to, x86MMXRegType from )
 {
-	write16( 0x6F0F );
-	ModRM( 3, to, from );
+	iMOVQ( iRegisterMMX(to), iRegisterMMX(from) );
+	//write16( 0x6F0F );
+	//ModRM( 3, to, from );
 }
 
 emitterT void MOVQRmtoR( x86MMXRegType to, x86IntRegType from, int offset )
 {
-	write16( 0x6F0F );
-	WriteRmOffsetFrom( to, from, offset );
+	iMOVQ( iRegisterMMX(to), ptr[x86IndexReg(from)+offset] );
+	//write16( 0x6F0F );
+	//WriteRmOffsetFrom( to, from, offset );
 }
 
 emitterT void MOVQRtoRm( x86IntRegType to, x86MMXRegType from, int offset )
 {
-	write16( 0x7F0F );
-	WriteRmOffsetFrom( from, to, offset );
+	iMOVQ( ptr[x86IndexReg(to)+offset], iRegisterMMX(from) );
+	//write16( 0x7F0F );
+	//WriteRmOffsetFrom( from, to, offset );
 }
 
 /* movd m32 to r64 */
 emitterT void MOVDMtoMMX( x86MMXRegType to, uptr from ) 
 {
-	write16( 0x6E0F );
-	ModRM( 0, to, DISP32 );
-	write32( MEMADDR(from, 4) ); 
+	iMOVDZX( iRegisterMMX(to), (void*)from );
+	//write16( 0x6E0F );
+	//ModRM( 0, to, DISP32 );
+	//write32( MEMADDR(from, 4) ); 
 }
 
 /* movd r64 to m32 */
 emitterT void MOVDMMXtoM( uptr to, x86MMXRegType from ) 
 {
-	write16( 0x7E0F );
-	ModRM( 0, from, DISP32 );
-	write32( MEMADDR(to, 4) ); 
+	iMOVD( (void*)to, iRegisterMMX(from) );
+	//write16( 0x7E0F );
+	//ModRM( 0, from, DISP32 );
+	//write32( MEMADDR(to, 4) ); 
 }
 
 emitterT void MOVD32RtoMMX( x86MMXRegType to, x86IntRegType from )
 {
-	write16( 0x6E0F );
-	ModRM( 3, to, from );
+	iMOVDZX( iRegisterMMX(to), iRegister32(from) );
+	//write16( 0x6E0F );
+	//ModRM( 3, to, from );
 }
 
 emitterT void MOVD32RmtoMMX( x86MMXRegType to, x86IntRegType from, int offset )
 {
-	write16( 0x6E0F );
-	WriteRmOffsetFrom( to, from, offset );
+	iMOVDZX( iRegisterMMX(to), ptr[x86IndexReg(from)+offset] );
+	//write16( 0x6E0F );
+	//WriteRmOffsetFrom( to, from, offset );
 }
 
 emitterT void MOVD32MMXtoR( x86IntRegType to, x86MMXRegType from )
 {
-	write16( 0x7E0F );
-	ModRM( 3, from, to );
+	iMOVD( iRegister32(to), iRegisterMMX(from) );
+	//write16( 0x7E0F );
+	//ModRM( 3, from, to );
 }
 
 emitterT void MOVD32MMXtoRm( x86IntRegType to, x86MMXRegType from, int offset )
 {
-	write16( 0x7E0F );
-	WriteRmOffsetFrom( from, to, offset );
+	iMOVD( ptr[x86IndexReg(to)+offset], iRegisterMMX(from) );
+	//write16( 0x7E0F );
+	//WriteRmOffsetFrom( from, to, offset );
 }
 
 // untested

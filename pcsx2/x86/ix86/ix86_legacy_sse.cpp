@@ -20,6 +20,8 @@
 #include "ix86_legacy_internal.h"
 #include "ix86_sse_helpers.h"
 
+using namespace x86Emitter;
+
 //////////////////////////////////////////////////////////////////////////////////////////
 // AlwaysUseMovaps [const]
 //
@@ -303,55 +305,39 @@ emitterT void SSE2_MOVSD_XMM_to_XMM( x86SSERegType to, x86SSERegType from )  {	S
 emitterT void SSE2_MOVSD_M64_to_XMM( x86SSERegType to, uptr from )  {	SSE_SD_MtoR( 0x100f, 0); }
 emitterT void SSE2_MOVSD_XMM_to_M64( uptr to, x86SSERegType from )  {	SSE_SD_RtoM( 0x110f, 0); }
 
-emitterT void SSE2_MOVQ_M64_to_XMM( x86SSERegType to, uptr from )
-{
-	write8(0xf3); SSEMtoR( 0x7e0f, 0);
-}
-
-emitterT void SSE2_MOVQ_XMM_to_XMM( x86SSERegType to, x86SSERegType from )
-{
-	write8(0xf3); SSERtoR( 0x7e0f);
-}
-
-emitterT void SSE2_MOVQ_XMM_to_M64( u32 to, x86SSERegType from )
-{
-	SSERtoM66(0xd60f);
-}
-
-emitterT void SSE2_MOVDQ2Q_XMM_to_MM( x86MMXRegType to, x86SSERegType from)
-{
-	write8(0xf2);
-	SSERtoR( 0xd60f);
-}
-emitterT void SSE2_MOVQ2DQ_MM_to_XMM( x86SSERegType to, x86MMXRegType from)
-{
-	write8(0xf3);
-	SSERtoR( 0xd60f);
-}
+emitterT void SSE2_MOVQ_M64_to_XMM( x86SSERegType to, uptr from )			{ iMOVQZX( iRegisterXMM(to), (void*)from ); }
+emitterT void SSE2_MOVQ_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	{ iMOVQZX( iRegisterXMM(to), iRegisterXMM(from) ); }
+emitterT void SSE2_MOVQ_XMM_to_M64( u32 to, x86SSERegType from )			{ iMOVQ( (void*)to, iRegisterXMM(from) ); }
+emitterT void SSE2_MOVDQ2Q_XMM_to_MM( x86MMXRegType to, x86SSERegType from)	{ iMOVQ( iRegisterMMX(to), iRegisterXMM(from) ); }
+emitterT void SSE2_MOVQ2DQ_MM_to_XMM( x86SSERegType to, x86MMXRegType from)	{ iMOVQ( iRegisterXMM(to), iRegisterMMX(from) ); }
 
 //**********************************************************************************/
 //MOVSS: Move Scalar Single-Precision FP  value                                    *
 //**********************************************************************************
-emitterT void SSE_MOVSS_M32_to_XMM( x86SSERegType to, uptr from )			{ SSE_SS_MtoR( 0x100f, 0 ); }
+emitterT void SSE_MOVSS_M32_to_XMM( x86SSERegType to, uptr from )						{ iMOVSSZX( iRegisterXMM(to), (void*)from ); }
+emitterT void SSE_MOVSS_XMM_to_M32( u32 to, x86SSERegType from )						{ iMOVSS( (void*)to, iRegisterXMM(from) ); }
+emitterT void SSE_MOVSS_XMM_to_XMM( x86SSERegType to, x86SSERegType from )				{ iMOVSS( iRegisterXMM(to), iRegisterXMM(from) ); }
+emitterT void SSE_MOVSS_Rm_to_XMM( x86SSERegType to, x86IntRegType from, int offset )	{ iMOVSSZX( iRegisterXMM(to), ptr[x86IndexReg(from)+offset] ); }
+emitterT void SSE_MOVSS_XMM_to_Rm( x86IntRegType to, x86SSERegType from, int offset )	{ iMOVSS( ptr[x86IndexReg(to)+offset], iRegisterXMM(from) ); }
+
+/*emitterT void SSE_MOVSS_M32_to_XMM( x86SSERegType to, uptr from )			{ SSE_SS_MtoR( 0x100f, 0 ); }
 emitterT void SSE_MOVSS_XMM_to_M32( u32 to, x86SSERegType from )			{ SSE_SS_RtoM( 0x110f, 0 ); }
-
 emitterT void SSE_MOVSS_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	{ if (to != from) { SSE_SS_RtoR( 0x100f ); } }
-
 emitterT void SSE_MOVSS_Rm_to_XMM( x86SSERegType to, x86IntRegType from, int offset )
 {
 	write8(0xf3);
-    RexRB(0, to, from);
-    write16( 0x100f );
-    WriteRmOffsetFrom(to, from, offset);
+	RexRB(0, to, from);
+	write16( 0x100f );
+	WriteRmOffsetFrom(to, from, offset);
 }
 
 emitterT void SSE_MOVSS_XMM_to_Rm( x86IntRegType to, x86SSERegType from, int offset )
 {
 	write8(0xf3);
-    RexRB(0, from, to);
-    write16(0x110f);
-    WriteRmOffsetFrom(from, to, offset);
-}
+	RexRB(0, from, to);
+	write16(0x110f);
+	WriteRmOffsetFrom(from, to, offset);
+}*/
 
 emitterT void SSE_MASKMOVDQU_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	{ SSERtoR66( 0xf70f ); }
 //**********************************************************************************/
@@ -1405,8 +1391,7 @@ emitterT void SSE4_PMULDQ_XMM_to_XMM(x86SSERegType to, x86SSERegType from)
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // SSE-X Helpers (generates either INT or FLOAT versions of certain SSE instructions)
-// This header should always be included *after* ix86.h.
-
+//
 // Added AlwaysUseMovaps check to the relevant functions here, which helps reduce the
 // overhead of dynarec instructions that use these, even thought the same check would
 // have been done redundantly by the emitter function.

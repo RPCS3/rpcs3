@@ -2954,15 +2954,15 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\x86\ix86\ix86_legacy_mmx.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\x86\ix86\ix86_legacy_sse.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\x86\ix86\ix86_legacy_types.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\x86\ix86\ix86_mmx.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\x86\ix86\ix86_sse.cpp"
 				>
 			</File>
 			<File
@@ -3005,6 +3005,10 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\x86\ix86\implement\jmpcall.h"
+					>
+				</File>
+				<File
 					RelativePath="..\..\x86\ix86\implement\movs.h"
 					>
 				</File>
@@ -3012,12 +3016,16 @@
 					RelativePath="..\..\x86\ix86\implement\test.h"
 					>
 				</File>
+				<Filter
+					Name="xmm"
+					>
+					<File
+						RelativePath="..\..\x86\ix86\implement\xmm\movqss.h"
+						>
+					</File>
+				</Filter>
 			</Filter>
 		</Filter>
-		<File
-			RelativePath=".\ClassDiagram1.cd"
-			>
-		</File>
 		<File
 			RelativePath="..\..\Common.h"
 			>

@@ -445,18 +445,6 @@ emitterT void NOP( void ) { iNOP(); }
 // jump instructions				/
 ////////////////////////////////////
 
-emitterT u8* JMP( uptr to ) {
-	uptr jump = ( x86Ptr - (u8*)to ) - 1;
-
-	if ( jump > 0x7f ) {
-		assert( to <= 0xffffffff );
-		return (u8*)JMP32( to );
-	} 
-	else {
-		return (u8*)JMP8( to );
-	}
-}
-
 /* jmp rel8 */
 emitterT u8* JMP8( u8 to ) 
 {
@@ -477,17 +465,13 @@ emitterT u32* JMP32( uptr to )
 /* jmp r32/r64 */
 emitterT void JMPR( x86IntRegType to ) 
 {
-	RexB(0, to);
-	write8( 0xFF ); 
-	ModRM( 3, 4, to );
+	iJMP( iRegister32(to) );
 }
 
 // jmp m32 
 emitterT void JMP32M( uptr to )
 {
-	write8( 0xFF ); 
-	ModRM( 0, 4, DISP32 );
-	write32( MEMADDR(to, 4)); 
+	iJMP( ptr32[to] );
 }
 
 /* jp rel8 */
@@ -736,41 +720,27 @@ emitterT u32* JNO32( u32 to )
 /* call func */
 emitterT void CALLFunc( uptr func ) 
 {
-	func -= ( (uptr)x86Ptr + 5 );
-	assert( (sptr)func <= 0x7fffffff && (sptr)func >= -0x7fffffff );
-	CALL32(func);
-}
-
-/* call rel32 */
-emitterT void CALL32( u32 to )
-{
-	write8( 0xE8 ); 
-	write32( to ); 
+	iCALL( (void*)func );
 }
 
 /* call r32 */
 emitterT void CALL32R( x86IntRegType to ) 
 {
-	write8( 0xFF );
-	ModRM( 3, 2, to );
+	iCALL( iRegister32( to ) );
 }
 
 /* call m32 */
 emitterT void CALL32M( u32 to ) 
 {
-	write8( 0xFF );
-	ModRM( 0, 2, DISP32 );
-	write32( MEMADDR(to, 4) );
+	iCALL( ptr32[to] );
 }
 
 emitterT void BSRRtoR(x86IntRegType to, x86IntRegType from)
 {
-	write16( 0xBD0F );
-	ModRM( 3, from, to );
+	iBSR( iRegister32(to), iRegister32(from) );
 }
 
 emitterT void BSWAP32R( x86IntRegType to ) 
 {
-	write8( 0x0F );
-	write8( 0xC8 + to );
+	iBSWAP( iRegister32(to) );
 }

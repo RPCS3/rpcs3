@@ -576,8 +576,6 @@ extern u32*  JS32( u32 to );
 
 // call func 
 extern void CALLFunc( uptr func); // based on CALL32
-// call rel32 
-extern void CALL32( u32 to );
 // call r32 
 extern void CALL32R( x86IntRegType to );
 // call m32 
@@ -923,7 +921,6 @@ extern void PUNPCKLDQRtoR( x86MMXRegType to, x86MMXRegType from );
 extern void PUNPCKLDQMtoR( x86MMXRegType to, uptr from );
 extern void PUNPCKHDQRtoR( x86MMXRegType to, x86MMXRegType from );
 extern void PUNPCKHDQMtoR( x86MMXRegType to, uptr from );
-extern void MOVQ64ItoR( x86MMXRegType reg, u64 i ); //Prototype.Todo add all consts to end of block.not after jr $+8
 extern void MOVQRtoR( x86MMXRegType to, x86MMXRegType from );
 extern void MOVQRmtoR( x86MMXRegType to, x86IntRegType from, int offset=0 );
 extern void MOVQRtoRm( x86IntRegType  to, x86MMXRegType from, int offset=0 );

@@ -66,10 +66,10 @@ __threadlocal XMMSSEType g_xmmtypes[iREGCNT_XMM] = { XMMT_INT };
 
 namespace x86Emitter {
 
-const x86IndexerType ptr;
-const x86IndexerTypeExplicit<u32> ptr32;
-const x86IndexerTypeExplicit<u16> ptr16;
-const x86IndexerTypeExplicit<u8> ptr8;	
+const iAddressIndexerBase ptr;
+const iAddressIndexer<u32> ptr32;
+const iAddressIndexer<u16> ptr16;
+const iAddressIndexer<u8> ptr8;	
 
 // ------------------------------------------------------------------------
 
@@ -279,6 +279,9 @@ const Group8ImplAll<G8Type_BT> iBT;
 const Group8ImplAll<G8Type_BTR> iBTR;
 const Group8ImplAll<G8Type_BTS> iBTS;
 const Group8ImplAll<G8Type_BTC> iBTC;
+
+const BitScanImplAll<false> iBSF;
+const BitScanImplAll<true> iBSR;
 
 // ------------------------------------------------------------------------
 const CMovImplGeneric iCMOV;
@@ -607,8 +610,6 @@ __forceinline void iSMUL( const iRegister16& to,	const iRegister16& from, s16 im
 __noinline void iSMUL( const iRegister16& to,	const ModSibBase& src )					{ iMUL16::Emit( to, src ); }
 __noinline void iSMUL( const iRegister16& to,	const ModSibBase& from, s16 imm )		{ iMUL16::Emit( to, from, imm ); }
 
-
-
 //////////////////////////////////////////////////////////////////////////////////////////
 // Push / Pop Emitters
 //
@@ -627,5 +628,112 @@ __emitinline void iPUSH( const ModSibBase& from )
 	EmitSibMagic( 6, from );
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////
+//
+__emitinline void iBSWAP( const iRegister32& to )
+{
+	write8( 0x0F );
+	write8( 0xC8 | to.Id );
+}
+
+
+//////////////////////////////////////////////////////////////////////////////////////////
+// MMX / XMM Instructions
+// (these will get put in their own file later)
+
+__emitinline void iMOVQ( const iRegisterMMX& to, const iRegisterMMX& from )
+{
+	writeXMMop<0>( to, from, 0x6f );
+}
+
+__noinline void iMOVQ( const iRegisterMMX& to, const ModSibBase& src )
+{
+	writeXMMop<0>( to, src, 0x6f );
+}
+
+__emitinline void iMOVQ( const iRegisterMMX& to, const void* src )
+{
+	writeXMMop<0>( to, src, 0x6f );
+}
+
+// Moves from XMM to XMM, with the *upper 64 bits* of the destination register
+// being cleared to zero.
+__emitinline void iMOVQZX( const iRegisterXMM& to, const iRegisterXMM& from )
+{
+	writeXMMop<0xf3>( to, from, 0x7e );
+}
+
+// Moves from XMM to XMM, with the *upper 64 bits* of the destination register
+// being cleared to zero.
+__noinline void iMOVQZX( const iRegisterXMM& to, const ModSibBase& src )
+{
+	writeXMMop<0xf3>( to, src, 0x7e );
+}
+
+// Moves from XMM to XMM, with the *upper 64 bits* of the destination register
+// being cleared to zero.
+__emitinline void iMOVQZX( const iRegisterXMM& to, const void* src )
+{
+	writeXMMop<0xf3>( to, src, 0x7e );
+}
+
+__forceinline void iMOVQ( const ModSibBase& dest, const iRegisterMMX& from )
+{
+	writeXMMop<0>( from, dest, 0x7f );
+}
+
+__forceinline void iMOVQ( void* dest, const iRegisterMMX& from )
+{
+	writeXMMop<0>( from, dest, 0x7f );
+}
+
+__forceinline void iMOVQ( const ModSibBase& dest, const iRegisterXMM& from )
+{
+	writeXMMop<0xf3>( from, dest, 0x7e );
+}
+
+__forceinline void iMOVQ( void* dest, const iRegisterXMM& from )
+{
+	writeXMMop<0xf3>( from, dest, 0x7e );
+}
+
+__forceinline void iMOVQ( const iRegisterXMM& to, const iRegisterMMX& from )
+{
+	writeXMMop<0xf3>( to, from, 0xd6 );
+}
+
+__forceinline void iMOVQ( const iRegisterMMX& to, const iRegisterXMM& from )
+{
+	writeXMMop<0xf2>( to, from, 0xd6 );
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////
+//
+
+__forceinline void iMOVSS( const iRegisterXMM& to, const iRegisterXMM& from )
+{
+	if( to != from )
+		writeXMMop<0xf3>( to, from, 0x10 );
+}
+
+__forceinline void iMOVSSZX( const iRegisterXMM& to, const void* from )
+{
+	writeXMMop<0xf3>( to, from, 0x10 );
+}
+
+__forceinline void iMOVSSZX( const iRegisterXMM& to, const ModSibBase& from )
+{
+	writeXMMop<0xf3>( to, from, 0x10 );
+}
+
+__forceinline void iMOVSS( const void* to, const iRegisterXMM& from )
+{
+	writeXMMop<0xf3>( from, to, 0x11 );
+}
+
+__forceinline void iMOVSS( const ModSibBase& to, const iRegisterXMM& from )
+{
+	writeXMMop<0xf3>( from, to, 0x11 );
+}
 
 }

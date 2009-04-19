@@ -45,6 +45,7 @@ protected:
 public: 
 	DwordShiftImpl() {}		// because GCC doesn't like static classes
 
+	// ------------------------------------------------------------------------
 	static __emitinline void Emit( const iRegister<ImmType>& to, const iRegister<ImmType>& from ) 
 	{
 		prefix16();
@@ -52,6 +53,7 @@ public:
 		ModRM_Direct( from.Id, to.Id );
 	}
 
+	// ------------------------------------------------------------------------
 	static __emitinline void Emit( const iRegister<ImmType>& to, const iRegister<ImmType>& from, u8 imm ) 
 	{
 		if( imm == 0 ) return;
@@ -61,12 +63,14 @@ public:
 		write8( imm );
 	}
 
+	// ------------------------------------------------------------------------
 	static __emitinline void Emit( const ModSibBase& sibdest, const iRegister<ImmType>& from, __unused const iRegisterCL& clreg ) 
 	{
 		basesibform();
 		EmitSibMagic( from.Id, sibdest );
 	}
 
+	// ------------------------------------------------------------------------
 	static __emitinline void Emit( const ModSibBase& sibdest, const iRegister<ImmType>& from, u8 imm ) 
 	{
 		basesibform();
@@ -74,6 +78,7 @@ public:
 		write8( imm );
 	}
 
+	// ------------------------------------------------------------------------
 	// dest data type is inferred from the 'from' register, so we can do void* resolution :)
 	static __emitinline void Emit( void* dest, const iRegister<ImmType>& from, __unused const iRegisterCL& clreg ) 
 	{
@@ -81,6 +86,7 @@ public:
 		iWriteDisp( from.Id, dest );
 	}
 
+	// ------------------------------------------------------------------------
 	// dest data type is inferred from the 'from' register, so we can do void* resolution :)
 	static __emitinline void Emit( void* dest, const iRegister<ImmType>& from, u8 imm ) 
 	{

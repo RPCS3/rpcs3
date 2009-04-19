@@ -121,15 +121,30 @@ namespace x86Emitter
 	// fashion.
 	__forceinline void ModSibBase::Reduce()
 	{
+		if( Index.IsStackPointer() )
+		{
+			// esp cannot be encoded as the index, so move it to the Base, if possible.
+			// note: intentionally leave index assigned to esp also (generates correct
+			// encoding later, since ESP cannot be encoded 'alone')
+
+			jASSUME( Scale == 0 );		// esp can't have an index modifier!
+			jASSUME( Base.IsEmpty() );	// base must be empty or else!
+
+			Base = Index;
+			return;
+		}
+
 		// If no index reg, then load the base register into the index slot.
 		if( Index.IsEmpty() )
 		{
 			Index = Base;
 			Scale = 0;
-			Base = x86IndexReg::Empty;
+			if( !Base.IsStackPointer() )	// prevent ESP from being encoded 'alone'
+				Base = x86IndexReg::Empty;
 			return;
 		}
-		
+
+	
 		// The Scale has a series of valid forms, all shown here:
 		
 		switch( Scale )
@@ -166,17 +181,6 @@ namespace x86Emitter
 				Base = Index;
 				Scale = 3;
 			break;
-		}
-		
-		if( Index.IsStackPointer() )
-		{
-			// esp cannot be encoded as the index, so move it to the Base, if possible.
-			jASSUME( Scale == 0 );
-			jASSUME( Base.IsEmpty() );
-			
-			Base = Index;
-			// noe: leave index assigned to esp also (generates correct encoding later)
-			//Index = x86IndexReg::Empty;
 		}
 	}
 

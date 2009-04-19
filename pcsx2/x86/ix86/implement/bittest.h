@@ -18,7 +18,7 @@
 
 #pragma once
 
-// Implementations found here: BTS/BT/BTC/BTR!
+// Implementations found here: BTS/BT/BTC/BTR plus BSF/BSR!
 // Note: This header is meant to be included from within the x86Emitter::Internal namespace.
 
 // These instructions are in the 'Group8' as per Intel's manual, but since they all have
@@ -46,6 +46,7 @@ protected:
 public: 
 	Group8Impl() {}		// For the love of GCC.
 
+	// ------------------------------------------------------------------------
 	static __emitinline void Emit( const iRegister<ImmType>& bitbase, const iRegister<ImmType>& bitoffset )
 	{
 		prefix16();
@@ -54,6 +55,7 @@ public:
 		ModRM_Direct( bitoffset.Id, bitbase.Id );
 	}
 
+	// ------------------------------------------------------------------------
 	static __emitinline void Emit( void* bitbase, const iRegister<ImmType>& bitoffset )
 	{
 		prefix16();
@@ -62,6 +64,7 @@ public:
 		iWriteDisp( bitoffset.Id, bitbase.Id );
 	}
 
+	// ------------------------------------------------------------------------
 	static __emitinline void Emit( const ModSibBase& bitbase, const iRegister<ImmType>& bitoffset )
 	{
 		prefix16();
@@ -70,6 +73,7 @@ public:
 		EmitSibMagic( bitoffset.Id, bitbase );
 	}
 
+	// ------------------------------------------------------------------------
 	static __emitinline void Emit( const iRegister<ImmType>& bitbase, u8 immoffset )
 	{
 		prefix16();
@@ -78,6 +82,7 @@ public:
 		iWrite<u8>( immoffset );
 	}
 
+	// ------------------------------------------------------------------------
 	static __emitinline void Emit( const ModSibStrict<ImmType>& bitbase, u8 immoffset )
 	{
 		prefix16();
@@ -115,3 +120,68 @@ public:
 
 	Group8ImplAll() {}
 };
+
+
+//////////////////////////////////////////////////////////////////////////////////////////
+// BSF / BSR -- 16/32 operands supported only.
+//
+template< bool isReverse, typename ImmType >
+class BitScanImpl
+{
+protected:
+	static const uint OperandSize = sizeof(ImmType);
+	static void prefix16()		{ if( OperandSize == 2 ) iWrite<u8>( 0x66 ); }
+	static void emitbase()
+	{
+		prefix16();
+		iWrite<u8>( 0x0f );
+		iWrite<u8>( isReverse ? 0xbd : 0xbc );
+	}
+
+public: 
+	BitScanImpl() {}		// For the love of GCC.
+
+	// ------------------------------------------------------------------------
+	static __emitinline void Emit( const iRegister<ImmType>& to, const iRegister<ImmType>& from )
+	{
+		emitbase();
+		ModRM_Direct( to.Id, from.Id );
+	}
+
+	// ------------------------------------------------------------------------
+	static __emitinline void Emit( const iRegister<ImmType>& to, const void* src )
+	{
+		emitbase();
+		iWriteDisp( to.Id, src );
+	}
+
+	// ------------------------------------------------------------------------
+	static __emitinline void Emit( const iRegister<ImmType>& to, const ModSibBase& sibsrc )
+	{
+		emitbase();
+		EmitSibMagic( to.Id, sibsrc );
+	}
+};
+
+
+// -------------------------------------------------------------------
+// BSF/BSR  -- 16 and 32 bit operand forms only!
+//
+template< bool isReverse >
+class BitScanImplAll
+{
+protected:
+	typedef BitScanImpl<isReverse,u32> m_32;
+	typedef BitScanImpl<isReverse,u32> m_16;
+
+public:
+	__forceinline void operator()( const iRegister32& to, const iRegister32& from ) const	{ m_32::Emit( to, from ); }
+	__forceinline void operator()( const iRegister16& to, const iRegister16& from ) const	{ m_16::Emit( to, from ); }
+	__forceinline void operator()( const iRegister32& to, const void* src ) const			{ m_32::Emit( to, src ); }
+	__forceinline void operator()( const iRegister16& to, const void* src ) const			{ m_16::Emit( to, src ); }
+	__noinline void operator()( const iRegister32& to, const ModSibBase& sibsrc ) const		{ m_32::Emit( to, sibsrc ); }
+	__noinline void operator()( const iRegister16& to, const ModSibBase& sibsrc ) const		{ m_16::Emit( to, sibsrc ); }
+
+	BitScanImplAll() {}
+};
+
