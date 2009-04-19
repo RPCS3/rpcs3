@@ -75,6 +75,14 @@ static void __fastcall psxDmaGeneric(u32 madr, u32 bcr, u32 chcr, u32 spuCore, _
 	}
 }
 
+void psxDma2(u32 madr, u32 bcr, u32 chcr)		// GPU
+{
+	HW_DMA2_CHCR &= ~0x01000000;
+	psxDmaInterrupt(2);
+}
+
+/*  psxDma3 is in CdRom.cpp */
+
 void psxDma4(u32 madr, u32 bcr, u32 chcr)		// SPU2's Core 0
 {
 	psxDmaGeneric(madr, bcr, chcr, 0, SPU2writeDMA4Mem, SPU2readDMA4Mem);
@@ -86,12 +94,6 @@ int psxDma4Interrupt()
 	psxDmaInterrupt(4);
 	iopIntcIrq(9);
 	return 1;
-}
-
-void psxDma2(u32 madr, u32 bcr, u32 chcr)		// GPU
-{
-	HW_DMA2_CHCR &= ~0x01000000;
-	psxDmaInterrupt(2);
 }
 
 void psxDma6(u32 madr, u32 bcr, u32 chcr)
@@ -132,6 +134,31 @@ int psxDma7Interrupt()
 
 }
 
+void psxDma8(u32 madr, u32 bcr, u32 chcr)
+{
+
+	const int size = (bcr >> 16) * (bcr & 0xFFFF) * 8;
+
+	switch (chcr & 0x01000201)
+	{
+		case 0x01000201: //cpu to dev9 transfer
+			PSXDMA_LOG("*** DMA 8 - DEV9 mem2dev9 *** %lx addr = %lx size = %lx", chcr, madr, bcr);
+			DEV9writeDMA8Mem((u32*)iopPhysMem(madr), size);
+			break;
+
+		case 0x01000200: //dev9 to cpu transfer
+			PSXDMA_LOG("*** DMA 8 - DEV9 dev9mem *** %lx addr = %lx size = %lx", chcr, madr, bcr);
+			DEV9readDMA8Mem((u32*)iopPhysMem(madr), size);
+			break;
+
+		default:
+			PSXDMA_LOG("*** DMA 8 - DEV9 unknown *** %lx addr = %lx size = %lx", chcr, madr, bcr);
+			break;
+	}
+	HW_DMA8_CHCR &= ~0x01000000;
+	psxDmaInterrupt2(1);
+}
+
 void psxDma9(u32 madr, u32 bcr, u32 chcr)
 {
 	SIF_LOG("IOP: dmaSIF0 chcr = %lx, madr = %lx, bcr = %lx, tadr = %lx",	chcr, madr, bcr, HW_DMA9_TADR);
@@ -165,32 +192,9 @@ void psxDma10(u32 madr, u32 bcr, u32 chcr)
 	}
 }
 
-void psxDma8(u32 madr, u32 bcr, u32 chcr)
-{
+/* psxDma11 & psxDma 12 are in IopSio2,cpp, along with the appropriate interrupt functions. */
 
-	const int size = (bcr >> 16) * (bcr & 0xFFFF) * 8;
-
-	switch (chcr & 0x01000201)
-	{
-		case 0x01000201: //cpu to dev9 transfer
-			PSXDMA_LOG("*** DMA 8 - DEV9 mem2dev9 *** %lx addr = %lx size = %lx", chcr, madr, bcr);
-			DEV9writeDMA8Mem((u32*)iopPhysMem(madr), size);
-			break;
-
-		case 0x01000200: //dev9 to cpu transfer
-			PSXDMA_LOG("*** DMA 8 - DEV9 dev9mem *** %lx addr = %lx size = %lx", chcr, madr, bcr);
-			DEV9readDMA8Mem((u32*)iopPhysMem(madr), size);
-			break;
-
-		default:
-			PSXDMA_LOG("*** DMA 8 - DEV9 unknown *** %lx addr = %lx size = %lx", chcr, madr, bcr);
-			break;
-	}
-	HW_DMA8_CHCR &= ~0x01000000;
-	psxDmaInterrupt2(1);
-}
-
-void  dev9Interrupt()
+void dev9Interrupt()
 {
 	if ((dev9Handler != NULL) && (dev9Handler() != 1)) return;
 
@@ -203,7 +207,7 @@ void dev9Irq(int cycles)
 	PSX_INT(IopEvt_DEV9, cycles);
 }
 
-void  usbInterrupt()
+void usbInterrupt()
 {
 	if (usbHandler != NULL && (usbHandler() != 1)) return;
 
