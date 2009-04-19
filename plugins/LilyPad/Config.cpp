@@ -840,9 +840,7 @@ int LoadSettings(int force, wchar_t *file) {
 	}
 
 	if (config.debug) {
-		HANDLE hFile = CreateFileA("logs\\padLog.txt", GENERIC_WRITE, FILE_SHARE_READ, 0, CREATE_ALWAYS, 0, 0);
-		if (hFile != INVALID_HANDLE_VALUE) CloseHandle(hFile);
-		else CreateDirectory(L"logs", 0);
+		CreateDirectory(L"logs", 0);
 	}
 
 
@@ -1472,7 +1470,7 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 					if (GetBinding(port, slot, selIndex, dev, b, ffb)) {
 						selected = 0xFF;
 						InitInfo info = {0, hWndProp, hWnd, GetDlgItem(hWnd, cmd)};
-						EatWndProc(info.hWndButton, DoNothingWndProc);
+						EatWndProc(info.hWndButton, DoNothingWndProc, 0);
 						for (int i=0; i<dm->numDevices; i++) {
 							if (dm->devices[i] != dev) {
 								dm->DisableDevice(i);
@@ -1507,7 +1505,7 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 				}
 
 				InitInfo info = {selected==0x7F, hWndProp, hWnd, GetDlgItem(hWnd, cmd)};
-				EatWndProc(info.hWndButton, DoNothingWndProc);
+				EatWndProc(info.hWndButton, DoNothingWndProc, 0);
 				int w = timeGetTime();
 				dm->Update(&info);
 				dm->PostRead();

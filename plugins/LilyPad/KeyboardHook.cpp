@@ -43,9 +43,9 @@ public:
 		InitInfo *info = (InitInfo*) d;
 		binding = info->bindingIgnore;
 		if (info->hWndButton)
-			EatWndProc(info->hWndButton, StartHooksWndProc);
+			EatWndProc(info->hWndButton, StartHooksWndProc, EATPROC_NO_UPDATE_WHILE_UPDATING_DEVICES);
 		else
-			EatWndProc(info->hWnd, StartHooksWndProc);
+			EatWndProc(info->hWnd, StartHooksWndProc, EATPROC_NO_UPDATE_WHILE_UPDATING_DEVICES);
 		InitState();
 		ikhd = this;
 		active = 1;

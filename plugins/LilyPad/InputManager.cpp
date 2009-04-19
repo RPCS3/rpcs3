@@ -56,9 +56,7 @@ Device::Device(DeviceAPI api, DeviceType d, const wchar_t *displayName, const wc
 void Device::FreeState() {
 	if (virtualControlState) free(virtualControlState);
 	virtualControlState = 0;
-	if (oldVirtualControlState) free(oldVirtualControlState);
 	oldVirtualControlState = 0;
-	if (physicalControlState) free(physicalControlState);
 	physicalControlState = 0;
 }
 
@@ -127,9 +125,9 @@ void Device::AddFFAxis(const wchar_t *displayName, int id) {
 
 void Device::AllocState() {
 	FreeState();
-	virtualControlState = (int*) calloc(numVirtualControls, sizeof(int));
-	oldVirtualControlState = (int*) calloc(numVirtualControls, sizeof(int));
-	physicalControlState = (int*) calloc(numPhysicalControls, sizeof(int));
+	virtualControlState = (int*) calloc(numVirtualControls + numVirtualControls + numPhysicalControls, sizeof(int));
+	oldVirtualControlState = virtualControlState + numVirtualControls;
+	physicalControlState = oldVirtualControlState + numVirtualControls;
 }
 
 void Device::FlipState() {
@@ -213,6 +211,9 @@ VirtualControl *Device::GetVirtualControl(unsigned int uid) {
 }
 
 VirtualControl *Device::AddVirtualControl(unsigned int uid, int physicalControlIndex) {
+	// Not really necessary, as always call AllocState when activated, but doesn't hurt.
+	FreeState();
+
 	if (numVirtualControls % 16 == 0) {
 		virtualControls = (VirtualControl*) realloc(virtualControls, sizeof(VirtualControl)*(numVirtualControls+16));
 	}
@@ -226,7 +227,9 @@ VirtualControl *Device::AddVirtualControl(unsigned int uid, int physicalControlI
 }
 
 PhysicalControl *Device::AddPhysicalControl(ControlType type, unsigned short id, unsigned short vkey, const wchar_t *name) {
+	// Not really necessary, as always call AllocState when activated, but doesn't hurt.
 	FreeState();
+
 	if (numPhysicalControls % 16 == 0) {
 		physicalControls = (PhysicalControl*) realloc(physicalControls, sizeof(PhysicalControl)*(numPhysicalControls+16));
 	}

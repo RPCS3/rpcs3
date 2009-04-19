@@ -63,6 +63,17 @@ int IsWindowMaximized (HWND hWnd) {
 	return 0;
 }
 
+void DEBUG_TEXT_OUT(const char *text) {
+	if (config.debug) {
+		HANDLE hFile = CreateFileA("logs\\padLog.txt", FILE_APPEND_DATA, FILE_SHARE_READ, 0, OPEN_ALWAYS, 0, 0);
+		if (hFile != INVALID_HANDLE_VALUE) {
+			DWORD junk;
+			WriteFile(hFile, text, strlen(text), &junk, 0);
+			CloseHandle(hFile);;
+		}
+	}
+}
+
 void DEBUG_NEW_SET() {
 	if (config.debug && bufSize>1) {
 		HANDLE hFile = CreateFileA("logs\\padLog.txt", FILE_APPEND_DATA, FILE_SHARE_READ, 0, OPEN_ALWAYS, 0, 0);
@@ -600,6 +611,7 @@ char* CALLBACK PS2EgetLibName(void) {
 //}
 
 void CALLBACK PADshutdown() {
+	DEBUG_TEXT_OUT("LilyPad shutdown.\n\n");
 	for (int i=0; i<8; i++)
 		pads[i&1][i>>1].initialized = 0;
 	portInitialized[0] = portInitialized[1] = 0;
@@ -664,9 +676,10 @@ s32 CALLBACK PADinit(u32 flags) {
 	}
 	int port = (flags & 3);
 	if (port == 3) {
-		if (PADinit(1)) return -1;
+		if (PADinit(1) == -1) return -1;
 		return PADinit(2);
 	}
+
 	#ifdef _DEBUG
 	int tmpFlag = _CrtSetDbgFlag( _CRTDBG_REPORT_FLAG );
 	tmpFlag |= _CRTDBG_LEAK_CHECK_DF;
@@ -686,6 +699,8 @@ s32 CALLBACK PADinit(u32 flags) {
 	ClearKeyQueue();
 	// Just in case, when resuming emulation.
 	ReleaseModifierKeys();
+
+	DEBUG_TEXT_OUT("LilyPad initialized\n\n");
 	return 0;
 }
 
@@ -806,6 +821,7 @@ DWORD WINAPI MaximizeWindowThreadProc(void *lpParameter) {
 
 s32 CALLBACK PADopen(void *pDsp) {
 	if (openCount++) return 0;
+	DEBUG_TEXT_OUT("LilyPad opened\n\n");
 
 	// Not really needed, shouldn't do anything.
 	if (LoadSettings()) return -1;
@@ -825,12 +841,12 @@ s32 CALLBACK PADopen(void *pDsp) {
 			hWnd = GetParent (hWnd);
 		// Implements most hacks, as well as enabling/disabling mouse
 		// capture when focus changes.
-		if (!EatWndProc(hWnd, HackWndProc)) {
+		if (!EatWndProc(hWnd, HackWndProc, 0)) {
 			openCount = 0;
 			return -1;
 		}
 		if (config.forceHide) {
-			EatWndProc(hWnd, HideCursorProc);
+			EatWndProc(hWnd, HideCursorProc, 0);
 		}
 	}
 
@@ -864,6 +880,8 @@ s32 CALLBACK PADopen(void *pDsp) {
 
 void CALLBACK PADclose() {
 	if (openCount && !--openCount) {
+		DEBUG_TEXT_OUT("LilyPad closed\n\n");
+		deviceUpdateQueued = 0;
 		dm->ReleaseInput();
 		ReleaseEatenProc();
 		hWnd = 0;
@@ -1011,6 +1029,7 @@ u8 CALLBACK PADpoll(u8 value) {
 			break;
 		// QUERY_DS2_ANALOG_MODE
 		case 0x41:
+			// Right?  Wrong?  No clue.
 			if (pad->mode == MODE_DIGITAL) {
 				queryMaskMode[1] = queryMaskMode[2] = queryMaskMode[3] = 0;
 				queryMaskMode[6] = 0x00;

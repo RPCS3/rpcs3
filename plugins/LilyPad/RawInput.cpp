@@ -83,7 +83,7 @@ public:
 		}
 		active = 1;
 		if (!rawKeyboardActivatedCount++) {
-			if (!rawMouseActivatedCount && !EatWndProc(hWnd, RawInputWndProc)) {
+			if (!rawMouseActivatedCount && !EatWndProc(hWnd, RawInputWndProc, EATPROC_NO_UPDATE_WHILE_UPDATING_DEVICES)) {
 				Deactivate();
 				return 0;
 			}
@@ -134,7 +134,7 @@ public:
 		// lines.
 		if (!rawMouseActivatedCount++) {
 			GetMouseCapture(hWnd);
-			if (!rawKeyboardActivatedCount && !EatWndProc(hWnd, RawInputWndProc)) {
+			if (!rawKeyboardActivatedCount && !EatWndProc(hWnd, RawInputWndProc, EATPROC_NO_UPDATE_WHILE_UPDATING_DEVICES)) {
 				Deactivate();
 				return 0;
 			}
@@ -234,15 +234,14 @@ int InitializeRawInput() {
 	if (RawInputFailed) return 0;
 	if (!pGetRawInputDeviceList) {
 		HMODULE user32 = LoadLibrary(L"user32.dll");
-		if (user32) {
-			if (!(pRegisterRawInputDevices = (_RegisterRawInputDevices) GetProcAddress(user32, "RegisterRawInputDevices")) ||
-				!(pGetRawInputDeviceInfo = (_GetRawInputDeviceInfo) GetProcAddress(user32, "GetRawInputDeviceInfoW")) ||
-				!(pGetRawInputData = (_GetRawInputData) GetProcAddress(user32, "GetRawInputData")) ||
-				!(pGetRawInputDeviceList = (_GetRawInputDeviceList) GetProcAddress(user32, "GetRawInputDeviceList"))) {
-					FreeLibrary(user32);
-					RawInputFailed = 1;
-					return 0;
-			}
+		if (!user32 ||
+			!(pRegisterRawInputDevices = (_RegisterRawInputDevices) GetProcAddress(user32, "RegisterRawInputDevices")) ||
+			!(pGetRawInputDeviceInfo = (_GetRawInputDeviceInfo) GetProcAddress(user32, "GetRawInputDeviceInfoW")) ||
+			!(pGetRawInputData = (_GetRawInputData) GetProcAddress(user32, "GetRawInputData")) ||
+			!(pGetRawInputDeviceList = (_GetRawInputDeviceList) GetProcAddress(user32, "GetRawInputDeviceList"))) {
+				FreeLibrary(user32);
+				RawInputFailed = 1;
+				return 0;
 		}
 	}
 	return 1;
@@ -288,7 +287,7 @@ void EnumRawInputDevices() {
 
 					wsprintfW(keyName, L"SYSTEM\\CurrentControlSet\\Enum%s", productID+3);
 					if (temp) *temp = 0;
-					displayName[0] = 0;
+					int haveDescription = 0;
 					HKEY hKey;
 					if (ERROR_SUCCESS == RegOpenKeyExW(HKEY_LOCAL_MACHINE, keyName, 0, KEY_QUERY_VALUE, &hKey)) {
 						DWORD type;
@@ -300,16 +299,17 @@ void EnumRawInputDevices() {
 								else temp2++;
 								// Could do without this, but more effort than it's worth.
 								wcscpy(keyName, temp2);
+								haveDescription = 1;
 						}
 						RegCloseKey(hKey);
 					}
 					if (list[i].dwType == RIM_TYPEKEYBOARD) {
-						if (!displayName[0]) wsprintfW(displayName, L"Raw Keyboard %i", keyboardCount++);
+						if (!haveDescription) wsprintfW(displayName, L"Raw Keyboard %i", keyboardCount++);
 						else wsprintfW(displayName, L"Raw KB: %s", keyName);
 						dm->AddDevice(new RawInputKeyboard(list[i].hDevice, displayName, instanceID));
 					}
 					else if (list[i].dwType == RIM_TYPEMOUSE) {
-						if (!displayName[0]) wsprintfW(displayName, L"Raw Mouse %i", mouseCount++);
+						if (!haveDescription) wsprintfW(displayName, L"Raw Mouse %i", mouseCount++);
 						else wsprintfW(displayName, L"Raw MS: %s", keyName);
 						dm->AddDevice(new RawInputMouse(list[i].hDevice, displayName, instanceID, productID));
 					}

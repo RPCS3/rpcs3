@@ -2,7 +2,13 @@
 
 static HWND hWndEaten = 0;
 static WNDPROC eatenWndProc = 0;
-static ExtraWndProc* extraProcs = 0;
+
+struct ExtraWndProcInfo {
+	ExtraWndProc proc;
+	DWORD flags;
+};
+
+static ExtraWndProcInfo* extraProcs = 0;
 static int numExtraProcs = 0;
 
 void ReleaseExtraProc(ExtraWndProc proc) {
@@ -13,7 +19,7 @@ void ReleaseExtraProc(ExtraWndProc proc) {
 	if (hMutex) WaitForSingleObject(hMutex, 100);
 
 	for (int i=0; i<numExtraProcs; i++) {
-		if (extraProcs[i] == proc) {
+		if (extraProcs[i].proc == proc) {
 			extraProcs[i] = extraProcs[--numExtraProcs];
 			break;
 		}
@@ -35,9 +41,10 @@ void ReleaseExtraProc(ExtraWndProc proc) {
 }
 
 void ReleaseEatenProc() {
-	while (numExtraProcs) ReleaseExtraProc(extraProcs[0]);
+	while (numExtraProcs) ReleaseExtraProc(extraProcs[0].proc);
 }
 
+extern int deviceUpdateQueued;
 LRESULT CALLBACK OverrideWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 	ExtraWndProcResult res = CONTINUE_BLISSFULLY;
 	LRESULT out = 0;
@@ -45,16 +52,23 @@ LRESULT CALLBACK OverrideWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPa
 	if (uMsg == WM_GETDLGCODE) {
 		return DLGC_WANTALLKEYS | CallWindowProc(eatenWndProc, hWnd, uMsg, wParam, lParam);
 	}
+
 	for (int i=0; i<numExtraProcs; i++) {
-		ExtraWndProcResult res2 = extraProcs[i](hWnd, uMsg, wParam, lParam, &out);
+		// Note:  Second bit of deviceUpdateQueued is only set when I receive a device change
+		// notification, which is handled in the GS thread in one of the extraProcs, so this
+		// is all I need to prevent bad things from happening while updating devices.  No mutex needed.
+		if ((deviceUpdateQueued&2) && (extraProcs[i].flags & EATPROC_NO_UPDATE_WHILE_UPDATING_DEVICES)) continue;
+
+		ExtraWndProcResult res2 = extraProcs[i].proc(hWnd, uMsg, wParam, lParam, &out);
 		if (res2 != res) {
 			if (res2 == CONTINUE_BLISSFULLY_AND_RELEASE_PROC) {
-				ReleaseExtraProc(extraProcs[i]);
+				ReleaseExtraProc(extraProcs[i].proc);
 				i--;
 			}
 			else if (res2 > res) res = res2;
 		}
 	}
+
 	if (res != NO_WND_PROC) {
 		if (out == WM_DESTROY) {
 			ReleaseEatenProc();
@@ -68,7 +82,7 @@ LRESULT CALLBACK OverrideWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPa
 }
 
 
-int EatWndProc(HWND hWnd, ExtraWndProc proc) {
+int EatWndProc(HWND hWnd, ExtraWndProc proc, DWORD flags) {
 	// Probably isn't needed, but just in case...
 	// Creating and destroying the mutex adds some inefficiency,
 	// but this function is only called on emulation start and on focus/unfocus.
@@ -83,8 +97,10 @@ int EatWndProc(HWND hWnd, ExtraWndProc proc) {
 			hWndEaten = hWnd;
 	}
 	if (hWndEaten == hWnd) {
-		extraProcs = (ExtraWndProc*) realloc(extraProcs, sizeof(ExtraWndProc)*(numExtraProcs+1));
-		extraProcs[numExtraProcs++] = proc;
+		extraProcs = (ExtraWndProcInfo*) realloc(extraProcs, sizeof(ExtraWndProcInfo)*(numExtraProcs+1));
+		extraProcs[numExtraProcs].proc = proc;
+		extraProcs[numExtraProcs].flags = flags;
+		numExtraProcs++;
 	}
 
 	if (hMutex) {
