@@ -226,7 +226,7 @@ declareAllVariables
 #define mmVI(_VIreg_)	(_VIreg_ - 1)
 
 #ifdef mVUdebug
-#define mVUlog Console::Notice
+#define mVUlog Console::Status
 #define mVUdebug1() {											\
 	if (curI & _Ibit_)	{ SysPrintf("microVU: I-bit set!\n"); }	\
 	if (curI & _Ebit_)	{ SysPrintf("microVU: E-bit set!\n"); }	\

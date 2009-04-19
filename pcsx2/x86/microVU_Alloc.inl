@@ -89,7 +89,7 @@ microVUt(void) mVUallocFMAC2b(int& Ft) {
 #define getReg3(reg, _reg_) {  \
 	mVUloadReg<vuIndex>(reg, (uptr)&mVU->regs->VF[_reg_].UL[0], (1 << (3 - _bc_)));  \
 	if (CHECK_VU_EXTRA_OVERFLOW) mVUclamp2<vuIndex>(reg, xmmT1, (1 << (3 - _bc_)));  \
-	mVUunpack_xyzw<vuIndex>(reg, reg, _bc_);  \
+	mVUunpack_xyzw<vuIndex>(reg, reg, 0);  \
 }
 
 #define getZero3SS(reg) {  \
@@ -100,7 +100,7 @@ microVUt(void) mVUallocFMAC2b(int& Ft) {
 #define getZero3(reg) {  \
 	if (_bc_w)	{  \
 		mVUloadReg<vuIndex>(reg, (uptr)&mVU->regs->VF[0].UL[0], 1);  \
-		mVUunpack_xyzw<vuIndex>(reg, reg, _bc_);  \
+		mVUunpack_xyzw<vuIndex>(reg, reg, 0);  \
 	}  \
 	else { SSE_XORPS_XMM_to_XMM(reg, reg); }  \
 }
@@ -112,7 +112,7 @@ microVUt(void) mVUallocFMAC3a(int& Fd, int& Fs, int& Ft) {
 	Fd = xmmFs;
 	if (_XYZW_SS) {
 		getReg6(Fs, _Fs_);
-		if ( (_Ft_ == _Fs_) && ((_X && _bc_x) || (_Y && _bc_y) || (_Z && _bc_w) || (_W && _bc_w)) ) {
+		if ( (_Ft_ == _Fs_) && ((_X && _bc_x) || (_Y && _bc_y) || (_Z && _bc_z) || (_W && _bc_w)) ) {
 			Ft = Fs; 
 		}
 		else if (!_Ft_)	{ getZero3SS(Ft); }
@@ -497,7 +497,7 @@ microVUt(void) mVUallocFMAC16b(int& ACCw, int& ACCr) {
 #define getReg9(reg, _reg_) {  \
 	mVUloadReg<vuIndex>(reg, (uptr)&mVU->regs->VF[_reg_].UL[0], 1);  \
 	if (CHECK_VU_EXTRA_OVERFLOW) mVUclamp2<vuIndex>(reg, xmmT1, 1);  \
-	mVUunpack_xyzw<vuIndex>(reg, reg, 3);  \
+	mVUunpack_xyzw<vuIndex>(reg, reg, 0);  \
 }
 
 microVUt(void) mVUallocFMAC17a(int& Fs, int& Ft) {

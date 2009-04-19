@@ -51,7 +51,7 @@
 
 microVUt(void) mVUanalyzeFMAC1(int Fd, int Fs, int Ft) {
 	microVU* mVU = mVUx;
-	mVUlog("microVU: FMAC1 Opcode");
+	//mVUlog("microVU: FMAC1 Opcode");
 	mVUinfo |= _doStatus;
 	analyzeReg1(Fs);
 	analyzeReg1(Ft);
@@ -64,7 +64,7 @@ microVUt(void) mVUanalyzeFMAC1(int Fd, int Fs, int Ft) {
 
 microVUt(void) mVUanalyzeFMAC2(int Fs, int Ft) {
 	microVU* mVU = mVUx;
-	mVUlog("microVU: FMAC2 Opcode");
+	//mVUlog("microVU: FMAC2 Opcode");
 	analyzeReg1(Fs);
 	analyzeReg2(Ft);
 }
@@ -84,7 +84,7 @@ microVUt(void) mVUanalyzeFMAC2(int Fs, int Ft) {
 
 microVUt(void) mVUanalyzeFMAC3(int Fd, int Fs, int Ft) {
 	microVU* mVU = mVUx;
-	mVUlog("microVU: FMAC3 Opcode");
+	//mVUlog("microVU: FMAC3 Opcode");
 	mVUinfo |= _doStatus;
 	analyzeReg1(Fs);
 	analyzeReg3(Ft);
@@ -101,7 +101,6 @@ microVUt(void) mVUanalyzeFMAC3(int Fd, int Fs, int Ft) {
 
 microVUt(void) mVUanalyzeFMAC4(int Fs, int Ft) {
 	microVU* mVU = mVUx;
-	mVUlog("microVU: FMAC4 Opcode");
 	analyzeReg1(Fs);
 	analyzeReg4(Ft);
 }
@@ -226,7 +225,6 @@ microVUt(void) mVUanalyzeLQ(int Ft, int Is, bool writeIs) {
 
 microVUt(void) mVUanalyzeSQ(int Fs, int It, bool writeIt) {
 	microVU* mVU = mVUx;
-	mVUlog("microVU: SQ Opcode");
 	analyzeReg1(Fs);
 	analyzeVIreg1(It);
 	if (writeIt) { analyzeVIreg2(It, 1); }
@@ -296,7 +294,7 @@ microVUt(void) mVUanalyzeMflag(int Is, int It) {
 		if (mVUcount < 4) { mVUregs.needExactMatch = 1; }
 		int curPC = iPC;
 		for (int i = mVUcount, j = 0; i > 1; i--, j++) {
-			incPC(-2);
+			incPC2(-2);
 			if (doStatus) { mVUinfo |= _doMac; if (j >= 3) { break; } }
 		}
 		iPC = curPC;
@@ -314,7 +312,6 @@ microVUt(void) mVUanalyzeMflag(int Is, int It) {
 
 microVUt(void) mVUanalyzeXGkick(int Fs, int xCycles) {
 	microVU* mVU = mVUx;
-	mVUlog("microVU: XGkick Opcode");
 	analyzeVIreg1(Fs);
 	analyzeXGkick1();
 	analyzeXGkick2(xCycles);

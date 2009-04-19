@@ -721,7 +721,7 @@ microVUf(void) mVU_ILW() {
 	else { 
 		mVUlog("ILW");
 		if (!_Fs_) {
-			MOVZX32M16toR( gprT1, (uptr)mVU->regs->Mem + getVUmem(_Imm11_) + offsetSS );
+			MOVZX32M16toR(gprT1, (uptr)mVU->regs->Mem + getVUmem(_Imm11_) + offsetSS);
 			mVUallocVIb<vuIndex>(gprT1, _Ft_);
 		}
 		else {
@@ -887,6 +887,7 @@ microVUf(void) mVU_SQ() {
 	microVU* mVU = mVUx;
 	if (!recPass) { mVUanalyzeSQ<vuIndex>(_Fs_, _Ft_, 0); }
 	else { 
+		mVUlog("SQ");
 		if (!_Ft_) {
 			getReg7(xmmFs, _Fs_);
 			mVUsaveReg<vuIndex>(xmmFs, (uptr)mVU->regs->Mem + getVUmem(_Imm11_), _X_Y_Z_W);
@@ -905,6 +906,7 @@ microVUf(void) mVU_SQD() {
 	microVU* mVU = mVUx;
 	if (!recPass) { mVUanalyzeSQ<vuIndex>(_Fs_, _Ft_, 1); }
 	else { 
+		mVUlog("SQD");
 		if (!_Ft_) {
 			getReg7(xmmFs, _Fs_);
 			mVUsaveReg<vuIndex>(xmmFs, (uptr)mVU->regs->Mem, _X_Y_Z_W);
@@ -924,6 +926,7 @@ microVUf(void) mVU_SQI() {
 	microVU* mVU = mVUx;
 	if (!recPass) { mVUanalyzeSQ<vuIndex>(_Fs_, _Ft_, 1); }
 	else { 
+		mVUlog("SQI");
 		if (!_Ft_) {
 			getReg7(xmmFs, _Fs_);
 			mVUsaveReg<vuIndex>(xmmFs, (uptr)mVU->regs->Mem, _X_Y_Z_W);
@@ -948,6 +951,7 @@ microVUf(void) mVU_RINIT() {
 	microVU* mVU = mVUx;
 	if (!recPass) { mVUanalyzeR1<vuIndex>(_Fs_, _Fsf_); }
 	else { 
+		mVUlog("RINIT");
 		if (_Fs_ || (_Fsf_ == 3)) {
 			getReg8(gprR, _Fs_, _Fsf_);
 			AND32ItoR(gprR, 0x007fffff);
@@ -970,13 +974,14 @@ microVUt(void) mVU_RGET_() {
 microVUf(void) mVU_RGET() {
 	microVU* mVU = mVUx;
 	if (!recPass) { mVUanalyzeR2<vuIndex>(_Ft_, 1); }
-	else { mVU_RGET_<vuIndex>(); }
+	else { mVUlog("RGET"); mVU_RGET_<vuIndex>(); }
 }
 
 microVUf(void) mVU_RNEXT() {
 	microVU* mVU = mVUx;
 	if (!recPass) { mVUanalyzeR2<vuIndex>(_Ft_, 0); }
 	else { 
+		mVUlog("RNEXT");
 		// algorithm from www.project-fao.org
 		MOV32RtoR(gprT1, gprR);
 		SHR32ItoR(gprT1, 4);
@@ -999,6 +1004,7 @@ microVUf(void) mVU_RXOR() {
 	microVU* mVU = mVUx;
 	if (!recPass) { mVUanalyzeR1<vuIndex>(_Fs_, _Fsf_); }
 	else { 
+		mVUlog("RXOR");
 		if (_Fs_ || (_Fsf_ == 3)) {
 			getReg8(gprT1, _Fs_, _Fsf_);
 			AND32ItoR(gprT1, 0x7fffff);
@@ -1059,6 +1065,7 @@ microVUf(void) mVU_XGKICK() {
 	microVU* mVU = mVUx;
 	if (!recPass) { mVUanalyzeXGkick<vuIndex>(_Fs_, 4); }
 	else {
+		mVUlog("XGkick");
 		mVUallocVIa<vuIndex>(gprT2, _Fs_); // gprT2 = ECX for __fastcall
 		PUSH32R(gprR); // gprR = EDX is volatile so backup
 		CALLFunc((uptr)mVU_XGKICK_);

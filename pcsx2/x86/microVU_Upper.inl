@@ -52,7 +52,7 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 
 	SSE_MOVMSKPS_XMM_to_R32(mReg, regT2); // Move the sign bits of the t1reg
 
-	AND16ItoR(mReg, AND_XYZW );  // Grab "Is Signed" bits from the previous calculation
+	AND16ItoR(mReg, AND_XYZW);  // Grab "Is Signed" bits from the previous calculation
 	pjmp = JZ8(0); // Skip if none are
 		if (doMac)	  SHL16ItoR(mReg, 4 + ADD_XYZW);
 		if (doStatus) OR16ItoR(sReg, 0x82); // SS, S flags
@@ -61,7 +61,7 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 
 	//-------------------------Check for Zero flags------------------------------
 
-	AND16ItoR(gprT2, AND_XYZW );  // Grab "Is Zero" bits from the previous calculation
+	AND16ItoR(gprT2, AND_XYZW);  // Grab "Is Zero" bits from the previous calculation
 	pjmp = JZ8(0); // Skip if none are
 		if (doMac)	  { SHIFT_XYZW(gprT2); OR32RtoR(mReg, gprT2); }	
 		if (doStatus) { OR16ItoR(sReg, 0x41); } // ZS, Z flags		
@@ -450,100 +450,97 @@ microVUf(void) mVU_ABS() {
 		mVUallocFMAC2b<vuIndex>(Ft);
 	}
 }
-microVUf(void) mVU_ADD()	 { mVU_FMAC1(ADD); }
-microVUf(void) mVU_ADDi()	 { mVU_FMAC6(ADD); }
-microVUf(void) mVU_ADDq()	 { mVU_FMAC22(ADD); }
-microVUf(void) mVU_ADDx()	 { mVU_FMAC3(ADD); }
-microVUf(void) mVU_ADDy()	 { mVU_FMAC3(ADD); }
-microVUf(void) mVU_ADDz()	 { mVU_FMAC3(ADD); }
-microVUf(void) mVU_ADDw()	 { mVU_FMAC3(ADD); }
-microVUf(void) mVU_ADDA()	 { mVU_FMAC4(ADD); }
-microVUf(void) mVU_ADDAi()	 { mVU_FMAC7(ADD); }
-microVUf(void) mVU_ADDAq()	 { mVU_FMAC23(ADD); }
-microVUf(void) mVU_ADDAx()	 { mVU_FMAC5(ADD); }
-microVUf(void) mVU_ADDAy()	 { mVU_FMAC5(ADD); }
-microVUf(void) mVU_ADDAz()	 { mVU_FMAC5(ADD); }
-microVUf(void) mVU_ADDAw()	 { mVU_FMAC5(ADD); }
-microVUf(void) mVU_SUB()	 { mVU_FMAC1(SUB); }
-microVUf(void) mVU_SUBi()	 { mVU_FMAC6(SUB); }
-microVUf(void) mVU_SUBq()	 { mVU_FMAC22(SUB); }
-microVUf(void) mVU_SUBx()	 { mVU_FMAC3(SUB); }
-microVUf(void) mVU_SUBy()	 { mVU_FMAC3(SUB); }
-microVUf(void) mVU_SUBz()	 { mVU_FMAC3(SUB); }
-microVUf(void) mVU_SUBw()	 { mVU_FMAC3(SUB); }
-microVUf(void) mVU_SUBA()	 { mVU_FMAC4(SUB); }
-microVUf(void) mVU_SUBAi()	 { mVU_FMAC7(SUB); }
-microVUf(void) mVU_SUBAq()	 { mVU_FMAC23(SUB); }
-microVUf(void) mVU_SUBAx()	 { mVU_FMAC5(SUB); }
-microVUf(void) mVU_SUBAy()	 { mVU_FMAC5(SUB); }
-microVUf(void) mVU_SUBAz()	 { mVU_FMAC5(SUB); }
-microVUf(void) mVU_SUBAw()	 { mVU_FMAC5(SUB); }
-microVUf(void) mVU_MUL()	 { mVU_FMAC1(MUL); }
-microVUf(void) mVU_MULi()	 { mVU_FMAC6(MUL); }
-microVUf(void) mVU_MULq()	 { mVU_FMAC22(MUL); }
-microVUf(void) mVU_MULx()	 { mVU_FMAC3(MUL); }
-microVUf(void) mVU_MULy()	 { mVU_FMAC3(MUL); }
-microVUf(void) mVU_MULz()	 { mVU_FMAC3(MUL); }
-microVUf(void) mVU_MULw()	 { mVU_FMAC3(MUL); }
-microVUf(void) mVU_MULA()	 { mVU_FMAC4(MUL); }
-microVUf(void) mVU_MULAi()	 { mVU_FMAC7(MUL); }
-microVUf(void) mVU_MULAq()	 { mVU_FMAC23(MUL); }
-microVUf(void) mVU_MULAx()	 { mVU_FMAC5(MUL); }
-microVUf(void) mVU_MULAy()	 { mVU_FMAC5(MUL); }
-microVUf(void) mVU_MULAz()	 { mVU_FMAC5(MUL); }
-microVUf(void) mVU_MULAw()	 { mVU_FMAC5(MUL); }
-microVUf(void) mVU_MADD()	 { mVU_FMAC8(ADD); }
-microVUf(void) mVU_MADDi()	 { mVU_FMAC12(ADD); }
-microVUf(void) mVU_MADDq()	 { mVU_FMAC24(ADD); }
-microVUf(void) mVU_MADDx()	 { mVU_FMAC10(ADD); }
-microVUf(void) mVU_MADDy()	 { mVU_FMAC10(ADD); }
-microVUf(void) mVU_MADDz()	 { mVU_FMAC10(ADD); }
-microVUf(void) mVU_MADDw()	 { mVU_FMAC10(ADD); }
-microVUf(void) mVU_MADDA()	 { mVU_FMAC14(ADD); }
-microVUf(void) mVU_MADDAi()	 { mVU_FMAC16(ADD); }
-microVUf(void) mVU_MADDAq()	 { mVU_FMAC26(ADD); }
-microVUf(void) mVU_MADDAx()	 { mVU_FMAC15(ADD); }
-microVUf(void) mVU_MADDAy()	 { mVU_FMAC15(ADD); }
-microVUf(void) mVU_MADDAz()	 { mVU_FMAC15(ADD); }
-microVUf(void) mVU_MADDAw()	 { mVU_FMAC15(ADD); }
-microVUf(void) mVU_MSUB()	 { mVU_FMAC9(SUB); }
-microVUf(void) mVU_MSUBi()	 { mVU_FMAC13(SUB); }
-microVUf(void) mVU_MSUBq()	 { mVU_FMAC25(SUB); }
-microVUf(void) mVU_MSUBx()	 { mVU_FMAC11(SUB); }
-microVUf(void) mVU_MSUBy()	 { mVU_FMAC11(SUB); }
-microVUf(void) mVU_MSUBz()	 { mVU_FMAC11(SUB); }
-microVUf(void) mVU_MSUBw()	 { mVU_FMAC11(SUB); }
-microVUf(void) mVU_MSUBA()	 { mVU_FMAC14(SUB); }
-microVUf(void) mVU_MSUBAi()	 { mVU_FMAC16(SUB); }
-microVUf(void) mVU_MSUBAq()	 { mVU_FMAC26(SUB); }
-microVUf(void) mVU_MSUBAx()	 { mVU_FMAC15(SUB); }
-microVUf(void) mVU_MSUBAy()	 { mVU_FMAC15(SUB); }
-microVUf(void) mVU_MSUBAz()	 { mVU_FMAC15(SUB); }
-microVUf(void) mVU_MSUBAw()	 { mVU_FMAC15(SUB); }
-microVUf(void) mVU_MAX()	 { mVU_FMAC1(MAX); }
-microVUf(void) mVU_MAXi()	 { mVU_FMAC6(MAX); }
-microVUf(void) mVU_MAXx()	 { mVU_FMAC3(MAX); }
-microVUf(void) mVU_MAXy()	 { mVU_FMAC3(MAX); }
-microVUf(void) mVU_MAXz()	 { mVU_FMAC3(MAX); }
-microVUf(void) mVU_MAXw()	 { mVU_FMAC3(MAX); }
-microVUf(void) mVU_MINI()	 { mVU_FMAC1(MIN); }
-microVUf(void) mVU_MINIi()	 { mVU_FMAC6(MIN); }
-microVUf(void) mVU_MINIx()	 { mVU_FMAC3(MIN); }
-microVUf(void) mVU_MINIy()	 { mVU_FMAC3(MIN); }
-microVUf(void) mVU_MINIz()	 { mVU_FMAC3(MIN); }
-microVUf(void) mVU_MINIw()	 { mVU_FMAC3(MIN); }
-microVUf(void) mVU_OPMULA()	 { mVU_FMAC18(MUL); }
-microVUf(void) mVU_OPMSUB()	 { mVU_FMAC19(SUB); }
-microVUf(void) mVU_NOP() {
-	microVU* mVU = mVUx;
-	if (!recPass) {}
-	else {}
-}
+microVUf(void) mVU_ADD()	 { mVU_FMAC1(ADD);  mVUlog("ADD");    }
+microVUf(void) mVU_ADDi()	 { mVU_FMAC6(ADD);  mVUlog("ADDi");   }
+microVUf(void) mVU_ADDq()	 { mVU_FMAC22(ADD); mVUlog("ADDq");   }
+microVUf(void) mVU_ADDx()	 { mVU_FMAC3(ADD);  mVUlog("ADDx");   }
+microVUf(void) mVU_ADDy()	 { mVU_FMAC3(ADD);  mVUlog("ADDy");   }
+microVUf(void) mVU_ADDz()	 { mVU_FMAC3(ADD);  mVUlog("ADDz");   }
+microVUf(void) mVU_ADDw()	 { mVU_FMAC3(ADD);  mVUlog("ADDw");   }
+microVUf(void) mVU_ADDA()	 { mVU_FMAC4(ADD);  mVUlog("ADDA");   }
+microVUf(void) mVU_ADDAi()	 { mVU_FMAC7(ADD);  mVUlog("ADDAi");  }
+microVUf(void) mVU_ADDAq()	 { mVU_FMAC23(ADD); mVUlog("ADDAq");  }
+microVUf(void) mVU_ADDAx()	 { mVU_FMAC5(ADD);  mVUlog("ADDAx");  }
+microVUf(void) mVU_ADDAy()	 { mVU_FMAC5(ADD);  mVUlog("ADDAy");  }
+microVUf(void) mVU_ADDAz()	 { mVU_FMAC5(ADD);  mVUlog("ADDAz");  }
+microVUf(void) mVU_ADDAw()	 { mVU_FMAC5(ADD);  mVUlog("ADDAw");  }
+microVUf(void) mVU_SUB()	 { mVU_FMAC1(SUB);  mVUlog("SUB");    }
+microVUf(void) mVU_SUBi()	 { mVU_FMAC6(SUB);  mVUlog("SUBi");   }
+microVUf(void) mVU_SUBq()	 { mVU_FMAC22(SUB); mVUlog("SUBq");   }
+microVUf(void) mVU_SUBx()	 { mVU_FMAC3(SUB);  mVUlog("SUBx");   }
+microVUf(void) mVU_SUBy()	 { mVU_FMAC3(SUB);  mVUlog("SUBy");   }
+microVUf(void) mVU_SUBz()	 { mVU_FMAC3(SUB);  mVUlog("SUBz");   }
+microVUf(void) mVU_SUBw()	 { mVU_FMAC3(SUB);  mVUlog("SUBw");   }
+microVUf(void) mVU_SUBA()	 { mVU_FMAC4(SUB);  mVUlog("SUBA");   }
+microVUf(void) mVU_SUBAi()	 { mVU_FMAC7(SUB);  mVUlog("SUBAi");  }
+microVUf(void) mVU_SUBAq()	 { mVU_FMAC23(SUB); mVUlog("SUBAq");  }
+microVUf(void) mVU_SUBAx()	 { mVU_FMAC5(SUB);  mVUlog("SUBAx");  }
+microVUf(void) mVU_SUBAy()	 { mVU_FMAC5(SUB);  mVUlog("SUBAy");  }
+microVUf(void) mVU_SUBAz()	 { mVU_FMAC5(SUB);  mVUlog("SUBAz");  }
+microVUf(void) mVU_SUBAw()	 { mVU_FMAC5(SUB);  mVUlog("SUBAw");  }
+microVUf(void) mVU_MUL()	 { mVU_FMAC1(MUL);  mVUlog("MUL");    }
+microVUf(void) mVU_MULi()	 { mVU_FMAC6(MUL);  mVUlog("MULi");   }
+microVUf(void) mVU_MULq()	 { mVU_FMAC22(MUL); mVUlog("MULq");   }
+microVUf(void) mVU_MULx()	 { mVU_FMAC3(MUL);  mVUlog("MULx");   }
+microVUf(void) mVU_MULy()	 { mVU_FMAC3(MUL);  mVUlog("MULy");   }
+microVUf(void) mVU_MULz()	 { mVU_FMAC3(MUL);  mVUlog("MULz");   }
+microVUf(void) mVU_MULw()	 { mVU_FMAC3(MUL);  mVUlog("MULw");   }
+microVUf(void) mVU_MULA()	 { mVU_FMAC4(MUL);  mVUlog("MULA");   }
+microVUf(void) mVU_MULAi()	 { mVU_FMAC7(MUL);  mVUlog("MULAi");  }
+microVUf(void) mVU_MULAq()	 { mVU_FMAC23(MUL); mVUlog("MULAq");  }
+microVUf(void) mVU_MULAx()	 { mVU_FMAC5(MUL);  mVUlog("MULAx");  }
+microVUf(void) mVU_MULAy()	 { mVU_FMAC5(MUL);  mVUlog("MULAy");  }
+microVUf(void) mVU_MULAz()	 { mVU_FMAC5(MUL);  mVUlog("MULAz");  }
+microVUf(void) mVU_MULAw()	 { mVU_FMAC5(MUL);  mVUlog("MULAw");  }
+microVUf(void) mVU_MADD()	 { mVU_FMAC8(ADD);  mVUlog("MADD");   }
+microVUf(void) mVU_MADDi()	 { mVU_FMAC12(ADD); mVUlog("MADDi");  }
+microVUf(void) mVU_MADDq()	 { mVU_FMAC24(ADD); mVUlog("MADDq");  }
+microVUf(void) mVU_MADDx()	 { mVU_FMAC10(ADD); mVUlog("MADDx");  }
+microVUf(void) mVU_MADDy()	 { mVU_FMAC10(ADD); mVUlog("MADDy");  }
+microVUf(void) mVU_MADDz()	 { mVU_FMAC10(ADD); mVUlog("MADDz");  }
+microVUf(void) mVU_MADDw()	 { mVU_FMAC10(ADD); mVUlog("MADDw");  }
+microVUf(void) mVU_MADDA()	 { mVU_FMAC14(ADD); mVUlog("MADDA");  }
+microVUf(void) mVU_MADDAi()	 { mVU_FMAC16(ADD); mVUlog("MADDAi"); }
+microVUf(void) mVU_MADDAq()	 { mVU_FMAC26(ADD); mVUlog("MADDAq"); }
+microVUf(void) mVU_MADDAx()	 { mVU_FMAC15(ADD); mVUlog("MADDAx"); }
+microVUf(void) mVU_MADDAy()	 { mVU_FMAC15(ADD); mVUlog("MADDAy"); }
+microVUf(void) mVU_MADDAz()	 { mVU_FMAC15(ADD); mVUlog("MADDAz"); }
+microVUf(void) mVU_MADDAw()	 { mVU_FMAC15(ADD); mVUlog("MADDAw"); }
+microVUf(void) mVU_MSUB()	 { mVU_FMAC9(SUB);  mVUlog("MSUB");   }
+microVUf(void) mVU_MSUBi()	 { mVU_FMAC13(SUB); mVUlog("MSUBi");  }
+microVUf(void) mVU_MSUBq()	 { mVU_FMAC25(SUB); mVUlog("MSUBq");  }
+microVUf(void) mVU_MSUBx()	 { mVU_FMAC11(SUB); mVUlog("MSUBx");  }
+microVUf(void) mVU_MSUBy()	 { mVU_FMAC11(SUB); mVUlog("MSUBy");  }
+microVUf(void) mVU_MSUBz()	 { mVU_FMAC11(SUB); mVUlog("MSUBz");  }
+microVUf(void) mVU_MSUBw()	 { mVU_FMAC11(SUB); mVUlog("MSUBw");  }
+microVUf(void) mVU_MSUBA()	 { mVU_FMAC14(SUB); mVUlog("MSUBA");  }
+microVUf(void) mVU_MSUBAi()	 { mVU_FMAC16(SUB); mVUlog("MSUBAi"); }
+microVUf(void) mVU_MSUBAq()	 { mVU_FMAC26(SUB); mVUlog("MSUBAq"); }
+microVUf(void) mVU_MSUBAx()	 { mVU_FMAC15(SUB); mVUlog("MSUBAx"); }
+microVUf(void) mVU_MSUBAy()	 { mVU_FMAC15(SUB); mVUlog("MSUBAy"); }
+microVUf(void) mVU_MSUBAz()	 { mVU_FMAC15(SUB); mVUlog("MSUBAz"); }
+microVUf(void) mVU_MSUBAw()	 { mVU_FMAC15(SUB); mVUlog("MSUBAw"); }
+microVUf(void) mVU_MAX()	 { mVU_FMAC1(MAX);  mVUlog("MAX");    }
+microVUf(void) mVU_MAXi()	 { mVU_FMAC6(MAX);  mVUlog("MAXi");   }
+microVUf(void) mVU_MAXx()	 { mVU_FMAC3(MAX);  mVUlog("MAXq");   }
+microVUf(void) mVU_MAXy()	 { mVU_FMAC3(MAX);  mVUlog("MAXy");   }
+microVUf(void) mVU_MAXz()	 { mVU_FMAC3(MAX);  mVUlog("MAXz");   }
+microVUf(void) mVU_MAXw()	 { mVU_FMAC3(MAX);  mVUlog("MAXw");   }
+microVUf(void) mVU_MINI()	 { mVU_FMAC1(MIN);  mVUlog("MINI");   }
+microVUf(void) mVU_MINIi()	 { mVU_FMAC6(MIN);  mVUlog("MINIi");  }
+microVUf(void) mVU_MINIx()	 { mVU_FMAC3(MIN);  mVUlog("MINIx");  }
+microVUf(void) mVU_MINIy()	 { mVU_FMAC3(MIN);  mVUlog("MINIy");  }
+microVUf(void) mVU_MINIz()	 { mVU_FMAC3(MIN);  mVUlog("MINIz");  }
+microVUf(void) mVU_MINIw()	 { mVU_FMAC3(MIN);  mVUlog("MINIw");  }
+microVUf(void) mVU_OPMULA()	 { mVU_FMAC18(MUL); mVUlog("OPMULA"); }
+microVUf(void) mVU_OPMSUB()	 { mVU_FMAC19(SUB); mVUlog("OPMSUB"); }
+microVUf(void) mVU_NOP()	 { /*mVUlog("NOP");*/ }
 microVUq(void) mVU_FTOIx(uptr addr) {
 	microVU* mVU = mVUx;
 	if (!recPass) { mVUanalyzeFMAC2<vuIndex>(_Fs_, _Ft_); }
 	else { 
 		int Fs, Ft;
+		mVUlog("FTOIx");
 		mVUallocFMAC2a<vuIndex>(Fs, Ft);
 
 		// Note: For help understanding this algorithm see recVUMI_FTOI_Saturate()
@@ -569,6 +566,7 @@ microVUq(void) mVU_ITOFx(uptr addr) {
 	if (!recPass) { mVUanalyzeFMAC2<vuIndex>(_Fs_, _Ft_); }
 	else { 
 		int Fs, Ft;
+		mVUlog("ITOFx");
 		mVUallocFMAC2a<vuIndex>(Fs, Ft);
 
 		SSE2_CVTDQ2PS_XMM_to_XMM(Ft, Fs);
@@ -587,6 +585,7 @@ microVUf(void) mVU_CLIP() {
 	if (!recPass) { mVUanalyzeFMAC4<vuIndex>(_Fs_, _Ft_); mVUlog("clip broken"); }
 	else {
 		int Fs, Ft;
+		mVUlog("CLIP");
 		mVUallocFMAC17a<vuIndex>(Fs, Ft);
 		mVUallocCFLAGa<vuIndex>(gprT1, fpcInstance);
 		SHL32ItoR(gprT1, 6);

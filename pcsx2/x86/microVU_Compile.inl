@@ -245,6 +245,7 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 	u8* thisPtr = x86Ptr;
 	
 	if (startPC > ((vuIndex) ? 0x3fff : 0xfff)) { mVUlog("microVU: invalid startPC"); }
+	//startPC &= (vuIndex ? 0x3ff8 : 0xff8);
 	//mVUlog("mVUcompile Search");
 
 	// Searches for Existing Compiled Block (if found, then returns; else, compile)
@@ -301,7 +302,7 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 	int x;
 	for (x = 0; x < (vuIndex ? (0x3fff/8) : (0xfff/8)); x++) {
 		if (isEOB)			{ x = 0xffff; }
-		if (isNOP)			{ incPC(1); doUpperOp(); if (curI & _Ibit_) { incPC(-1); mVU->iReg = curI; incPC(-1); } }
+		if (isNOP)			{ incPC(1); doUpperOp(); if (curI & _Ibit_) { incPC(-1); mVU->iReg = curI; incPC(1); } }
 		else if (!swapOps)	{ incPC(1); doUpperOp(); incPC(-1); mVUopL<vuIndex, 1>(); incPC(1); }
 		else				{ mVUopL<vuIndex, 1>(); incPC(1); doUpperOp(); }
 		
