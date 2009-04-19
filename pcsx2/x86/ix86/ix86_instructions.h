@@ -325,30 +325,77 @@ namespace x86Emitter
 	//    since that's what they do (MOVD clears upper 32/96 bits, etc).
 	//
 	
-	using Internal::iMOVD;
-	using Internal::iMOVDZX;
+	// ------------------------------------------------------------------------
+	// MOVD has valid forms for MMX and XMM registers.
+	//
+	template< typename T >
+	__emitinline void iMOVDZX( const iRegisterSIMD<T>& to, const iRegister32& from )
+	{
+		Internal::writeXMMop<0x66>( 0x6e, to, from );
+	}
 
+	template< typename T >
+	__emitinline void iMOVDZX( const iRegisterSIMD<T>& to, const void* src )
+	{
+		Internal::writeXMMop<0x66>( 0x6e, to, src );
+	}
+
+	template< typename T >
+	void iMOVDZX( const iRegisterSIMD<T>& to, const ModSibBase& src )
+	{
+		Internal::writeXMMop<0x66>( 0x6e, to, src );
+	}
+
+	template< typename T >
+	__emitinline void iMOVD( const iRegister32& to, const iRegisterSIMD<T>& from )
+	{
+		Internal::writeXMMop<0x66>( 0x7e, from, to );
+	}
+
+	template< typename T >
+	__emitinline void iMOVD( void* dest, const iRegisterSIMD<T>& from )
+	{
+		Internal::writeXMMop<0x66>( 0x7e, from, dest );
+	}
+
+	template< typename T >
+	void iMOVD( const ModSibBase& dest, const iRegisterSIMD<T>& from )
+	{
+		Internal::writeXMMop<0x66>( 0x7e, from, dest );
+	}
+
+	// ------------------------------------------------------------------------
+	
+	
+
+	// ------------------------------------------------------------------------
+	
 	extern void iMOVQ( const iRegisterMMX& to, const iRegisterMMX& from );
-	extern void iMOVQ( const iRegisterMMX& to, const iRegisterXMM& from );
-	extern void iMOVQ( const iRegisterXMM& to, const iRegisterMMX& from );
+	extern void iMOVQ( const iRegisterMMX& to, const iRegisterSSE& from );
+	extern void iMOVQ( const iRegisterSSE& to, const iRegisterMMX& from );
 
-	extern void iMOVQ( void* dest, const iRegisterXMM& from );
-	extern void iMOVQ( const ModSibBase& dest, const iRegisterXMM& from );
+	extern void iMOVQ( void* dest, const iRegisterSSE& from );
+	extern void iMOVQ( const ModSibBase& dest, const iRegisterSSE& from );
 	extern void iMOVQ( void* dest, const iRegisterMMX& from );
 	extern void iMOVQ( const ModSibBase& dest, const iRegisterMMX& from );
 	extern void iMOVQ( const iRegisterMMX& to, const void* src );
 	extern void iMOVQ( const iRegisterMMX& to, const ModSibBase& src );
 
-	extern void iMOVQZX( const iRegisterXMM& to, const void* src );
-	extern void iMOVQZX( const iRegisterXMM& to, const ModSibBase& src );
-	extern void iMOVQZX( const iRegisterXMM& to, const iRegisterXMM& from );
+	extern void iMOVQZX( const iRegisterSSE& to, const void* src );
+	extern void iMOVQZX( const iRegisterSSE& to, const ModSibBase& src );
+	extern void iMOVQZX( const iRegisterSSE& to, const iRegisterSSE& from );
 	
-	extern void iMOVSS( const iRegisterXMM& to, const iRegisterXMM& from );
-	extern void iMOVSS( const void* to, const iRegisterXMM& from );
-	extern void iMOVSS( const ModSibBase& to, const iRegisterXMM& from );
+	extern void iMOVSS( const iRegisterSSE& to, const iRegisterSSE& from );
+	extern void iMOVSS( const void* to, const iRegisterSSE& from );
+	extern void iMOVSS( const ModSibBase& to, const iRegisterSSE& from );
+	extern void iMOVSD( const iRegisterSSE& to, const iRegisterSSE& from );
+	extern void iMOVSD( const void* to, const iRegisterSSE& from );
+	extern void iMOVSD( const ModSibBase& to, const iRegisterSSE& from );
 
-	extern void iMOVSSZX( const iRegisterXMM& to, const void* from );
-	extern void iMOVSSZX( const iRegisterXMM& to, const ModSibBase& from );
+	extern void iMOVSSZX( const iRegisterSSE& to, const void* from );
+	extern void iMOVSSZX( const iRegisterSSE& to, const ModSibBase& from );
+	extern void iMOVSDZX( const iRegisterSSE& to, const void* from );
+	extern void iMOVSDZX( const iRegisterSSE& to, const ModSibBase& from );
 
 }
 

@@ -48,13 +48,13 @@ static __forceinline ModSibBase _mrmhlp( x86IntRegType src )
 template< typename ImmType >
 static __forceinline ModSibStrict<ImmType> _mhlp( x86IntRegType src )
 {
-	return ModSibStrict<ImmType>( x86IndexReg::Empty, x86IndexReg(src) );
+	return ModSibStrict<ImmType>( iAddressReg::Empty, iAddressReg(src) );
 }
 
 template< typename ImmType >
 static __forceinline ModSibStrict<ImmType> _mhlp2( x86IntRegType src1, x86IntRegType src2 )
 {
-	return ModSibStrict<ImmType>( x86IndexReg(src2), x86IndexReg(src1) );
+	return ModSibStrict<ImmType>( iAddressReg(src2), iAddressReg(src1) );
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -134,7 +134,7 @@ DEFINE_OPCODE_ONEREG_LEGACY( NEG )
 // ------------------------------------------------------------------------
 #define DEFINE_LEGACY_MOVEXTEND( form, destbits, srcbits ) \
 	emitterT void MOV##form##destbits##R##srcbits##toR( x86IntRegType to, x86IntRegType from )				{ iMOV##form( iRegister##destbits( to ), iRegister##srcbits( from ) ); } \
-	emitterT void MOV##form##destbits##Rm##srcbits##toR( x86IntRegType to, x86IntRegType from, int offset )	{ iMOV##form( iRegister##destbits( to ), ptr##srcbits[x86IndexReg( from ) + offset] ); } \
+	emitterT void MOV##form##destbits##Rm##srcbits##toR( x86IntRegType to, x86IntRegType from, int offset )	{ iMOV##form( iRegister##destbits( to ), ptr##srcbits[iAddressReg( from ) + offset] ); } \
 	emitterT void MOV##form##destbits##M##srcbits##toR( x86IntRegType to, u32 from )						{ iMOV##form( iRegister##destbits( to ), ptr##srcbits[from] ); }
 
 DEFINE_LEGACY_MOVEXTEND( SX, 32, 16 )
@@ -148,32 +148,32 @@ DEFINE_LEGACY_MOVEXTEND( ZX, 16, 8 )
 emitterT void TEST32ItoR( x86IntRegType to, u32 from )				{ iTEST( iRegister32(to), from ); }
 emitterT void TEST32ItoM( uptr to, u32 from )						{ iTEST( ptr32[to], from ); }
 emitterT void TEST32RtoR( x86IntRegType to, x86IntRegType from )	{ iTEST( iRegister32(to), iRegister32(from) ); }
-emitterT void TEST32ItoRm( x86IntRegType to, u32 from )				{ iTEST( ptr32[x86IndexReg(to)], from ); }
+emitterT void TEST32ItoRm( x86IntRegType to, u32 from )				{ iTEST( ptr32[iAddressReg(to)], from ); }
 
 emitterT void TEST16ItoR( x86IntRegType to, u16 from )				{ iTEST( iRegister16(to), from ); }
 emitterT void TEST16ItoM( uptr to, u16 from )						{ iTEST( ptr16[to], from ); }
 emitterT void TEST16RtoR( x86IntRegType to, x86IntRegType from )	{ iTEST( iRegister16(to), iRegister16(from) ); }
-emitterT void TEST16ItoRm( x86IntRegType to, u16 from )				{ iTEST( ptr16[x86IndexReg(to)], from ); }
+emitterT void TEST16ItoRm( x86IntRegType to, u16 from )				{ iTEST( ptr16[iAddressReg(to)], from ); }
 
 emitterT void TEST8ItoR( x86IntRegType to, u8 from )				{ iTEST( iRegister8(to), from ); }
 emitterT void TEST8ItoM( uptr to, u8 from )							{ iTEST( ptr8[to], from ); }
 emitterT void TEST8RtoR( x86IntRegType to, x86IntRegType from )		{ iTEST( iRegister8(to), iRegister8(from) ); }
-emitterT void TEST8ItoRm( x86IntRegType to, u8 from )				{ iTEST( ptr8[x86IndexReg(to)], from ); }
+emitterT void TEST8ItoRm( x86IntRegType to, u8 from )				{ iTEST( ptr8[iAddressReg(to)], from ); }
 
 // mov r32 to [r32<<scale+from2]
 emitterT void MOV32RmSOffsettoR( x86IntRegType to, x86IntRegType from1, s32 from2, int scale )
 {
-	iMOV( iRegister32(to), ptr[(x86IndexReg(from1)<<scale) + from2] );
+	iMOV( iRegister32(to), ptr[(iAddressReg(from1)<<scale) + from2] );
 }
 
 emitterT void MOV16RmSOffsettoR( x86IntRegType to, x86IntRegType from1, s32 from2, int scale )
 {
-	iMOV( iRegister16(to), ptr[(x86IndexReg(from1)<<scale) + from2] );
+	iMOV( iRegister16(to), ptr[(iAddressReg(from1)<<scale) + from2] );
 }
 
 emitterT void MOV8RmSOffsettoR( x86IntRegType to, x86IntRegType from1, s32 from2, int scale )
 {
-	iMOV( iRegister8(to), ptr[(x86IndexReg(from1)<<scale) + from2] );
+	iMOV( iRegister8(to), ptr[(iAddressReg(from1)<<scale) + from2] );
 }
 
 emitterT void AND32I8toR( x86IntRegType to, s8 from ) 
@@ -231,36 +231,36 @@ emitterT void IDIV32M( u32 from )				{ iSDIV( ptr32[from] ); }
 
 emitterT void LEA32RtoR(x86IntRegType to, x86IntRegType from, s32 offset)
 {
-	iLEA( iRegister32( to ), ptr[x86IndexReg(from)+offset] );
+	iLEA( iRegister32( to ), ptr[iAddressReg(from)+offset] );
 }
 
 emitterT void LEA32RRtoR(x86IntRegType to, x86IntRegType from0, x86IntRegType from1)
 { 
-	iLEA( iRegister32( to ), ptr[x86IndexReg(from0)+x86IndexReg(from1)] );
+	iLEA( iRegister32( to ), ptr[iAddressReg(from0)+iAddressReg(from1)] );
 }
 
 // Don't inline recursive functions
 emitterT void LEA32RStoR(x86IntRegType to, x86IntRegType from, u32 scale)
 {
-	iLEA( iRegister32( to ), ptr[x86IndexReg(from)*(1<<scale)] );
+	iLEA( iRegister32( to ), ptr[iAddressReg(from)*(1<<scale)] );
 }
 
 // to = from + offset
 emitterT void LEA16RtoR(x86IntRegType to, x86IntRegType from, s16 offset)
 {
-	iLEA( iRegister16( to ), ptr[x86IndexReg(from)+offset] );
+	iLEA( iRegister16( to ), ptr[iAddressReg(from)+offset] );
 }
 
 // to = from0 + from1
 emitterT void LEA16RRtoR(x86IntRegType to, x86IntRegType from0, x86IntRegType from1)
 {
-	iLEA( iRegister16( to ), ptr[x86IndexReg(from0)+x86IndexReg(from1)] );
+	iLEA( iRegister16( to ), ptr[iAddressReg(from0)+iAddressReg(from1)] );
 }
 
 // to = from << scale (max is 3)
 emitterT void LEA16RStoR(x86IntRegType to, x86IntRegType from, u32 scale)
 {
-	iLEA( iRegister16( to ), ptr[x86IndexReg(from)*(1<<scale)] );
+	iLEA( iRegister16( to ), ptr[iAddressReg(from)*(1<<scale)] );
 }
 
 emitterT void BT32ItoR( x86IntRegType to, u8 from )		{ iBT( iRegister32(to), from ); }

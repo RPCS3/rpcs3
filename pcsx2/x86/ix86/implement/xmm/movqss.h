@@ -18,22 +18,13 @@
 
 #pragma once
 
-// This helper function is used for instructions which enter XMM form when the 0x66 prefix
-// is specified (indicating alternate operand type selection).
-template< typename OperandType >
-static __forceinline void preXMM( u8 opcode )
-{
-	if( sizeof( OperandType ) == 16 )
-		iWrite<u16>( 0x0f66 );
-	else
-		iWrite<u8>( 0x0f );
-	iWrite<u8>( opcode );
-}
+//////////////////////////////////////////////////////////////////////////////////////////
+// MMX / SSE Helper Functions!
 
-// prefix - 0 indicates MMX, anything assumes XMM.
-static __forceinline void SimdPrefix( u8 opcode, u8 prefix=0 )
+template< typename T >
+__emitinline void SimdPrefix( u8 opcode, u8 prefix )
 {
-	if( prefix != 0 )
+	if( sizeof( T ) == 16 && prefix != 0 )
 	{
 		iWrite<u16>( 0x0f00 | prefix );
 		iWrite<u8>( opcode );
@@ -43,67 +34,81 @@ static __forceinline void SimdPrefix( u8 opcode, u8 prefix=0 )
 }
 
 template< u8 prefix, typename T, typename T2 >
-static __forceinline void writeXMMop( const iRegister<T>& to, const iRegister<T2>& from, u8 opcode )
+__emitinline void writeXMMop( u8 opcode, const iRegister<T>& to, const iRegister<T2>& from )
 {
-	SimdPrefix( opcode, prefix );
+	SimdPrefix<T>( opcode, prefix );
 	ModRM_Direct( to.Id, from.Id );
 }
 
 template< u8 prefix, typename T >
-static __noinline void writeXMMop( const iRegister<T>& reg, const ModSibBase& sib, u8 opcode )
+void writeXMMop( u8 opcode, const iRegister<T>& reg, const ModSibBase& sib )
 {
-	SimdPrefix( opcode, prefix );
+	SimdPrefix<T>( opcode, prefix );
 	EmitSibMagic( reg.Id, sib );
 }
 
 template< u8 prefix, typename T >
-static __forceinline void writeXMMop( const iRegister<T>& reg, const void* data, u8 opcode )
+__emitinline void writeXMMop( u8 opcode, const iRegister<T>& reg, const void* data )
 {
-	SimdPrefix( opcode, prefix );
+	SimdPrefix<T>( opcode, prefix );
 	iWriteDisp( reg.Id, data );
 }
 
-// ------------------------------------------------------------------------
-// MOVD has valid forms for MMX and XMM registers.
+//////////////////////////////////////////////////////////////////////////////////////////
 //
-template< typename T >
-static __forceinline void iMOVDZX( const iRegisterSIMD<T>& to, const iRegister32& from )
+template< u8 Prefix, typename OperandType >
+class MovapsImpl
 {
-	preXMM<T>( 0x6e );
-	ModRM_Direct( to.Id, from.Id );
-}
+public:
+	// ------------------------------------------------------------------------
+	static __emitinline void Emit( u8 opcode, const iRegisterSIMD<OperandType>& to, const iRegisterSIMD<OperandType> from )
+	{
+		if( to != from )
+			writeXMMop<Prefix,OperandType>( opcode, to, from );
+	}
 
-template< typename T>
-static __forceinline void iMOVDZX( const iRegisterSIMD<T>& to,	const void* src )
-{
-	preXMM<T>( 0x6e );
-	iWriteDisp( to.Id, src );
-}
+	// ------------------------------------------------------------------------
+	static __emitinline void Emit( u8 opcode, const iRegisterSIMD<OperandType>& to, const void* from )
+	{
+		writeXMMop<Prefix,OperandType>( opcode, to, from );
+	}
 
-template< typename T>
-static __forceinline void iMOVDZX( const iRegisterSIMD<T>& to,	const ModSibBase& src )
-{
-	preXMM<T>( 0x6e );
-	EmitSibMagic( to.Id, src );
-}
+	// ------------------------------------------------------------------------
+	static __emitinline void Emit( u8 opcode, const iRegisterSIMD<OperandType>& to, const ModSibBase& from )
+	{
+		writeXMMop<Prefix,OperandType>( opcode, to, from );
+	}
 
-template< typename T>
-static __emitinline void iMOVD( const iRegister32& to, const iRegisterSIMD<T>& from )
-{
-	preXMM<T>( 0x7e );
-	ModRM_Direct( from.Id, to.Id );
-}
+	// ------------------------------------------------------------------------
+	// Generally a Movaps/dqa instruction form only.
+	// Most SSE/MMX instructions don't have this form.
+	static __emitinline void Emit( u8 opcode, const void* to, const iRegisterSIMD<OperandType>& from )
+	{
+		writeXMMop<Prefix,OperandType>( opcode, from, to );
+	}
 
-template< typename T>
-static __forceinline void iMOVD( void* dest, const iRegisterSIMD<T>& from )
-{
-	preXMM<T>( 0x7e );
-	iWriteDisp( from.Id, dest );
-}
+	// ------------------------------------------------------------------------
+	// Generally a Movaps/dqa instruction form only.
+	// Most SSE/MMX instructions don't have this form.
+	static __emitinline void Emit( u8 opcode, const ModSibBase& to, const iRegisterSIMD<OperandType>& from )
+	{
+		writeXMMop<Prefix,OperandType>( opcode, from, to );
+	}
 
-template< typename T>
-static __noinline void iMOVD( const ModSibBase& dest, const iRegisterSIMD<T>& from )
+};
+
+// ------------------------------------------------------------------------
+template< u8 Prefix, u8 Opcode, u8 OpcodeAlt >
+class MovapsImplAll
 {
-	preXMM<T>( 0x7e );
-	EmitSibMagic( from.Id, dest );
-}
+protected:
+	typedef MovapsImpl<Prefix, u128> m_128;
+
+public:
+	__forceinline void operator()( const iRegisterSSE& to, const iRegisterSSE& from ) const { m_128::Emit( Opcode, to, from ); }
+	__forceinline void operator()( const iRegisterSSE& to, const void* from ) const { m_128::Emit( Opcode, to, from ); }
+	__forceinline void operator()( const void* to, const iRegisterSSE& from ) const { m_128::Emit( OpcodeAlt, to, from ); }
+	__noinline void operator()( const iRegisterSSE& to, const ModSibBase& from ) const { m_128::Emit( Opcode, to, from ); }
+	__noinline void operator()( const ModSibBase& to, const iRegisterSSE& from ) const { m_128::Emit( OpcodeAlt, to, from ); }
+};
+

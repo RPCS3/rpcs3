@@ -266,7 +266,7 @@ namespace x86Emitter
 	// all about the the templated code in haphazard fashion.  Yay.. >_<
 	//
 
-	typedef iRegisterSIMD<u128> iRegisterXMM;
+	typedef iRegisterSIMD<u128> iRegisterSSE;
 	typedef iRegisterSIMD<u64>  iRegisterMMX;
 	typedef iRegister<u32>  iRegister32;
 	typedef iRegister<u16>  iRegister16;
@@ -278,7 +278,7 @@ namespace x86Emitter
 		iRegisterCL(): iRegister8( 1 ) {}
 	};
 
-	extern const iRegisterXMM
+	extern const iRegisterSSE
 		xmm0, xmm1, xmm2, xmm3,
 		xmm4, xmm5, xmm6, xmm7;
 
@@ -302,30 +302,30 @@ namespace x86Emitter
 
 	//////////////////////////////////////////////////////////////////////////////////////////
 	// Use 32 bit registers as out index register (for ModSib memory address calculations)
-	// Only x86IndexReg provides operators for constructing iAddressInfo types.
+	// Only iAddressReg provides operators for constructing iAddressInfo types.
 	//
-	class x86IndexReg : public iRegister32
+	class iAddressReg : public iRegister32
 	{
 	public:
-		static const x86IndexReg Empty;		// defined as an empty/unused value (-1)
+		static const iAddressReg Empty;		// defined as an empty/unused value (-1)
 	
 	public:
-		x86IndexReg(): iRegister32() {}
-		x86IndexReg( const x86IndexReg& src ) : iRegister32( src.Id ) {}
-		x86IndexReg( const iRegister32& src ) : iRegister32( src ) {}
-		explicit x86IndexReg( int regId ) : iRegister32( regId ) {}
+		iAddressReg(): iRegister32() {}
+		iAddressReg( const iAddressReg& src ) : iRegister32( src.Id ) {}
+		iAddressReg( const iRegister32& src ) : iRegister32( src ) {}
+		explicit iAddressReg( int regId ) : iRegister32( regId ) {}
 
 		// Returns true if the register is the stack pointer: ESP.
 		bool IsStackPointer() const { return Id == 4; }
 
-		iAddressInfo operator+( const x86IndexReg& right ) const;
+		iAddressInfo operator+( const iAddressReg& right ) const;
 		iAddressInfo operator+( const iAddressInfo& right ) const;
 		iAddressInfo operator+( s32 right ) const;
 
 		iAddressInfo operator*( u32 factor ) const;
 		iAddressInfo operator<<( u32 shift ) const;
 		
-		x86IndexReg& operator=( const iRegister32& src )
+		iAddressReg& operator=( const iRegister32& src )
 		{
 			Id = src.Id;
 			return *this;
@@ -337,13 +337,13 @@ namespace x86Emitter
 	class iAddressInfo
 	{
 	public:
-		x86IndexReg Base;		// base register (no scale)
-		x86IndexReg Index;		// index reg gets multiplied by the scale
+		iAddressReg Base;		// base register (no scale)
+		iAddressReg Index;		// index reg gets multiplied by the scale
 		int Factor;				// scale applied to the index register, in factor form (not a shift!)
 		s32 Displacement;		// address displacement
 
 	public:
-		__forceinline iAddressInfo( const x86IndexReg& base, const x86IndexReg& index, int factor=1, s32 displacement=0 ) :
+		__forceinline iAddressInfo( const iAddressReg& base, const iAddressReg& index, int factor=1, s32 displacement=0 ) :
 			Base( base ),
 			Index( index ),
 			Factor( factor ),
@@ -351,7 +351,7 @@ namespace x86Emitter
 		{
 		}
 
-		__forceinline explicit iAddressInfo( const x86IndexReg& index, int displacement=0 ) :
+		__forceinline explicit iAddressInfo( const iAddressReg& index, int displacement=0 ) :
 			Base(),
 			Index( index ),
 			Factor(0),
@@ -367,7 +367,7 @@ namespace x86Emitter
 		{
 		}
 		
-		static iAddressInfo FromIndexReg( const x86IndexReg& index, int scale=0, s32 displacement=0 );
+		static iAddressInfo FromIndexReg( const iAddressReg& index, int scale=0, s32 displacement=0 );
 
 	public:
 		bool IsByteSizeDisp() const { return is_s8( Displacement ); }
@@ -378,10 +378,10 @@ namespace x86Emitter
 			return *this;
 		}
 		
-		__forceinline iAddressInfo& Add( const x86IndexReg& src );
+		__forceinline iAddressInfo& Add( const iAddressReg& src );
 		__forceinline iAddressInfo& Add( const iAddressInfo& src );
 
-		__forceinline iAddressInfo operator+( const x86IndexReg& right ) const { return iAddressInfo( *this ).Add( right ); }
+		__forceinline iAddressInfo operator+( const iAddressReg& right ) const { return iAddressInfo( *this ).Add( right ); }
 		__forceinline iAddressInfo operator+( const iAddressInfo& right ) const { return iAddressInfo( *this ).Add( right ); }
 		__forceinline iAddressInfo operator+( s32 imm ) const { return iAddressInfo( *this ).Add( imm ); }
 		__forceinline iAddressInfo operator-( s32 imm ) const { return iAddressInfo( *this ).Add( -imm ); }
@@ -402,15 +402,15 @@ namespace x86Emitter
 	class ModSibBase
 	{
 	public:
-		x86IndexReg Base;		// base register (no scale)
-		x86IndexReg Index;		// index reg gets multiplied by the scale
+		iAddressReg Base;		// base register (no scale)
+		iAddressReg Index;		// index reg gets multiplied by the scale
 		uint Scale;				// scale applied to the index register, in scale/shift form
 		s32 Displacement;		// offset applied to the Base/Index registers.
 
 	public:
 		explicit ModSibBase( const iAddressInfo& src );
 		explicit ModSibBase( s32 disp );
-		ModSibBase( x86IndexReg base, x86IndexReg index, int scale=0, s32 displacement=0 );
+		ModSibBase( iAddressReg base, iAddressReg index, int scale=0, s32 displacement=0 );
 		
 		bool IsByteSizeDisp() const { return is_s8( Displacement ); }
 
@@ -424,7 +424,7 @@ namespace x86Emitter
 		__forceinline ModSibBase operator-( const s32 imm ) const { return ModSibBase( *this ).Add( -imm ); }
 
 	protected:
-		__forceinline void Reduce();
+		void Reduce();
 	};
 	
 	//////////////////////////////////////////////////////////////////////////////////////////
@@ -439,7 +439,7 @@ namespace x86Emitter
 
 		__forceinline explicit ModSibStrict( const iAddressInfo& src ) : ModSibBase( src ) {}
 		__forceinline explicit ModSibStrict( s32 disp ) : ModSibBase( disp ) {}
-		__forceinline ModSibStrict( x86IndexReg base, x86IndexReg index, int scale=0, s32 displacement=0 ) :
+		__forceinline ModSibStrict( iAddressReg base, iAddressReg index, int scale=0, s32 displacement=0 ) :
 			ModSibBase( base, index, scale, displacement ) {}
 		
 		__forceinline ModSibStrict<OperandType>& Add( s32 imm )
@@ -461,9 +461,9 @@ namespace x86Emitter
 		// without doing anything and without compiler error.
 		const ModSibBase& operator[]( const ModSibBase& src ) const { return src; }
 
-		__forceinline ModSibBase operator[]( x86IndexReg src ) const
+		__forceinline ModSibBase operator[]( iAddressReg src ) const
 		{
-			return ModSibBase( src, x86IndexReg::Empty );
+			return ModSibBase( src, iAddressReg::Empty );
 		}
 
 		__forceinline ModSibBase operator[]( const iAddressInfo& src ) const
@@ -497,9 +497,9 @@ namespace x86Emitter
 		// without doing anything and without compiler error.
 		const ModSibStrict<OperandType>& operator[]( const ModSibStrict<OperandType>& src ) const { return src; }
 
-		__forceinline ModSibStrict<OperandType> operator[]( x86IndexReg src ) const
+		__forceinline ModSibStrict<OperandType> operator[]( iAddressReg src ) const
 		{
-			return ModSibStrict<OperandType>( src, x86IndexReg::Empty );
+			return ModSibStrict<OperandType>( src, iAddressReg::Empty );
 		}
 
 		__forceinline ModSibStrict<OperandType> operator[]( const iAddressInfo& src ) const
@@ -523,6 +523,8 @@ namespace x86Emitter
 	// ptr[] - use this form for instructions which can resolve the address operand size from
 	// the other register operand sizes.
 	extern const iAddressIndexerBase ptr;
+	extern const iAddressIndexer<u128> ptr128;
+	extern const iAddressIndexer<u64> ptr64;
 	extern const iAddressIndexer<u32> ptr32;	// explicitly typed addressing, usually needed for '[dest],imm' instruction forms
 	extern const iAddressIndexer<u16> ptr16;	// explicitly typed addressing, usually needed for '[dest],imm' instruction forms
 	extern const iAddressIndexer<u8> ptr8;		// explicitly typed addressing, usually needed for '[dest],imm' instruction forms
@@ -674,6 +676,16 @@ namespace x86Emitter
 
 	//////////////////////////////////////////////////////////////////////////////////////////
 	//
+	
+	extern const Internal::MovapsImplAll< 0, 0x28, 0x29 > iMOVAPS; 
+	extern const Internal::MovapsImplAll< 0, 0x10, 0x11 > iMOVUPS;
+
+	extern const Internal::MovapsImplAll< 0x66, 0x28, 0x29 > iMOVAPD;
+	extern const Internal::MovapsImplAll< 0x66, 0x10, 0x11 > iMOVUPD;
+
+	extern const Internal::MovapsImplAll< 0x66, 0x6f, 0x7f > iMOVDQA;
+	extern const Internal::MovapsImplAll< 0xf3, 0x6f, 0x7f > iMOVDQU;
+
 }
 
 #include "ix86_inlines.inl"

@@ -34,8 +34,8 @@ void MOV128_MtoM( x86IntRegType destRm, x86IntRegType srcRm )
 {
 	// (this is one of my test cases for the new emitter --air)
 
-	x86IndexReg src( srcRm );
-	x86IndexReg dest( destRm );
+	iAddressReg src( srcRm );
+	iAddressReg dest( destRm );
 
 	iMOV( eax, ptr[src] );
 	iMOV( ptr[dest], eax );

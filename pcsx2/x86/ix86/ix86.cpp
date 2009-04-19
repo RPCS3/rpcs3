@@ -67,6 +67,8 @@ __threadlocal XMMSSEType g_xmmtypes[iREGCNT_XMM] = { XMMT_INT };
 namespace x86Emitter {
 
 const iAddressIndexerBase ptr;
+const iAddressIndexer<u128> ptr128;
+const iAddressIndexer<u64> ptr64;
 const iAddressIndexer<u32> ptr32;
 const iAddressIndexer<u16> ptr16;
 const iAddressIndexer<u8> ptr8;	
@@ -74,7 +76,19 @@ const iAddressIndexer<u8> ptr8;
 // ------------------------------------------------------------------------
 
 template< typename OperandType > const iRegister<OperandType> iRegister<OperandType>::Empty;
-const x86IndexReg x86IndexReg::Empty;
+const iAddressReg iAddressReg::Empty;
+
+const iRegisterSSE
+	xmm0( 0 ), xmm1( 1 ),
+	xmm2( 2 ), xmm3( 3 ),
+	xmm4( 4 ), xmm5( 5 ),
+	xmm6( 6 ), xmm7( 7 );
+
+const iRegisterMMX
+	mm0( 0 ), mm1( 1 ),
+	mm2( 2 ), mm3( 3 ),
+	mm4( 4 ), mm5( 5 ),
+	mm6( 6 ), mm7( 7 );
 
 const iRegister32
 	eax( 0 ), ebx( 3 ),
@@ -379,6 +393,86 @@ __emitinline void iAdvancePtr( uint bytes )
 }
 
 // ------------------------------------------------------------------------
+// Generates a 'reduced' ModSib form, which has valid Base, Index, and Scale values.
+// Necessary because by default ModSib compounds registers into Index when possible.
+//
+// If the ModSib is in illegal form ([Base + Index*5] for example) then an assertion
+// followed by an InvalidParameter Exception will be tossed around in haphazard 
+// fashion.
+//
+// Optimization Note: Currently VC does a piss poor job of inlining this, even though
+// constant propagation *should* resove it to little or no code (VC's constprop fails
+// on C++ class initializers).  There is a work around [using array initializers instead]
+// but it's too much trouble for code that isn't performance critical anyway. 
+// And, with luck, maybe VC10 will optimize it better and make it a non-issue. :D
+//
+void ModSibBase::Reduce()
+{
+	if( Index.IsStackPointer() )
+	{
+		// esp cannot be encoded as the index, so move it to the Base, if possible.
+		// note: intentionally leave index assigned to esp also (generates correct
+		// encoding later, since ESP cannot be encoded 'alone')
+
+		jASSUME( Scale == 0 );		// esp can't have an index modifier!
+		jASSUME( Base.IsEmpty() );	// base must be empty or else!
+
+		Base = Index;
+		return;
+	}
+
+	// If no index reg, then load the base register into the index slot.
+	if( Index.IsEmpty() )
+	{
+		Index = Base;
+		Scale = 0;
+		if( !Base.IsStackPointer() )	// prevent ESP from being encoded 'alone'
+			Base = iAddressReg::Empty;
+		return;
+	}
+
+
+	// The Scale has a series of valid forms, all shown here:
+	
+	switch( Scale )
+	{
+		case 0: break;
+		case 1: Scale = 0; break;
+		case 2: Scale = 1; break;
+
+		case 3:				// becomes [reg*2+reg]
+			jASSUME( Base.IsEmpty() );
+			Base = Index;
+			Scale = 1;
+		break;
+		
+		case 4: Scale = 2; break;
+
+		case 5:				// becomes [reg*4+reg]
+			jASSUME( Base.IsEmpty() );
+			Base = Index;
+			Scale = 2;
+		break;
+		
+		case 6:				// invalid!
+			assert( false );
+		break;
+		
+		case 7:				// so invalid!
+			assert( false );
+		break;
+		
+		case 8: Scale = 3; break;
+		case 9:				// becomes [reg*8+reg]
+			jASSUME( Base.IsEmpty() );
+			Base = Index;
+			Scale = 3;
+		break;
+	}
+}
+
+
+// ------------------------------------------------------------------------
 // Internal implementation of EmitSibMagic which has been custom tailored
 // to optimize special forms of the Lea instructions accordingly, such
 // as when a LEA can be replaced with a "MOV reg,imm" or "MOV reg,reg".
@@ -641,99 +735,57 @@ __emitinline void iBSWAP( const iRegister32& to )
 // MMX / XMM Instructions
 // (these will get put in their own file later)
 
-__emitinline void iMOVQ( const iRegisterMMX& to, const iRegisterMMX& from )
-{
-	writeXMMop<0>( to, from, 0x6f );
-}
+const MovapsImplAll< 0, 0x28, 0x29 > iMOVAPS; 
+const MovapsImplAll< 0, 0x10, 0x11 > iMOVUPS;
+const MovapsImplAll< 0x66, 0x28, 0x29 > iMOVAPD;
+const MovapsImplAll< 0x66, 0x10, 0x11 > iMOVUPD;
 
-__noinline void iMOVQ( const iRegisterMMX& to, const ModSibBase& src )
-{
-	writeXMMop<0>( to, src, 0x6f );
-}
-
-__emitinline void iMOVQ( const iRegisterMMX& to, const void* src )
-{
-	writeXMMop<0>( to, src, 0x6f );
-}
+const MovapsImplAll< 0x66, 0x6f, 0x7f > iMOVDQA;
+const MovapsImplAll< 0xf3, 0x6f, 0x7f > iMOVDQU;
 
 // Moves from XMM to XMM, with the *upper 64 bits* of the destination register
 // being cleared to zero.
-__emitinline void iMOVQZX( const iRegisterXMM& to, const iRegisterXMM& from )
-{
-	writeXMMop<0xf3>( to, from, 0x7e );
-}
+__emitinline void iMOVQZX( const iRegisterSSE& to, const iRegisterSSE& from )	{ writeXMMop<0xf3>( 0x7e, to, from ); }
 
 // Moves from XMM to XMM, with the *upper 64 bits* of the destination register
 // being cleared to zero.
-__noinline void iMOVQZX( const iRegisterXMM& to, const ModSibBase& src )
-{
-	writeXMMop<0xf3>( to, src, 0x7e );
-}
+__noinline void iMOVQZX( const iRegisterSSE& to, const ModSibBase& src )		{ writeXMMop<0xf3>( 0x7e, to, src ); }
 
 // Moves from XMM to XMM, with the *upper 64 bits* of the destination register
 // being cleared to zero.
-__emitinline void iMOVQZX( const iRegisterXMM& to, const void* src )
-{
-	writeXMMop<0xf3>( to, src, 0x7e );
-}
+__emitinline void iMOVQZX( const iRegisterSSE& to, const void* src )			{ writeXMMop<0xf3>( 0x7e, to, src ); }
 
-__forceinline void iMOVQ( const ModSibBase& dest, const iRegisterMMX& from )
+__emitinline void iMOVQ( const iRegisterMMX& to, const iRegisterMMX& from )		{ if( to != from ) writeXMMop<0>( 0x6f, to, from ); }
+__noinline void iMOVQ( const iRegisterMMX& to, const ModSibBase& src )			{ writeXMMop<0>( 0x6f, to, src ); }
+__emitinline void iMOVQ( const iRegisterMMX& to, const void* src )				{ writeXMMop<0>( 0x6f, to, src ); }
+__forceinline void iMOVQ( const ModSibBase& dest, const iRegisterMMX& from )	{ writeXMMop<0>( 0x7f, from, dest ); }
+__forceinline void iMOVQ( void* dest, const iRegisterMMX& from )				{ writeXMMop<0>( 0x7f, from, dest ); }
+__forceinline void iMOVQ( const ModSibBase& dest, const iRegisterSSE& from )	{ writeXMMop<0xf3>( 0x7e, from, dest ); }
+__forceinline void iMOVQ( void* dest, const iRegisterSSE& from )				{ writeXMMop<0xf3>( 0x7e, from, dest ); }
+__forceinline void iMOVQ( const iRegisterSSE& to, const iRegisterMMX& from )	{ writeXMMop<0xf3>( 0xd6, to, from ); }
+__forceinline void iMOVQ( const iRegisterMMX& to, const iRegisterSSE& from )
 {
-	writeXMMop<0>( from, dest, 0x7f );
-}
+	// Manual implementation of this form of MOVQ, since its parameters are unique in a way
+	// that breaks the template inference of writeXMMop();
 
-__forceinline void iMOVQ( void* dest, const iRegisterMMX& from )
-{
-	writeXMMop<0>( from, dest, 0x7f );
-}
-
-__forceinline void iMOVQ( const ModSibBase& dest, const iRegisterXMM& from )
-{
-	writeXMMop<0xf3>( from, dest, 0x7e );
-}
-
-__forceinline void iMOVQ( void* dest, const iRegisterXMM& from )
-{
-	writeXMMop<0xf3>( from, dest, 0x7e );
-}
-
-__forceinline void iMOVQ( const iRegisterXMM& to, const iRegisterMMX& from )
-{
-	writeXMMop<0xf3>( to, from, 0xd6 );
-}
-
-__forceinline void iMOVQ( const iRegisterMMX& to, const iRegisterXMM& from )
-{
-	writeXMMop<0xf2>( to, from, 0xd6 );
+	SimdPrefix<u128>( 0xd6, 0xf2 );
+	ModRM_Direct( to.Id, from.Id );
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
 //
 
-__forceinline void iMOVSS( const iRegisterXMM& to, const iRegisterXMM& from )
-{
-	if( to != from )
-		writeXMMop<0xf3>( to, from, 0x10 );
-}
+#define IMPLEMENT_iMOVS( ssd, prefix ) \
+	__forceinline void iMOV##ssd( const iRegisterSSE& to, const iRegisterSSE& from )	{ if( to != from ) writeXMMop<prefix>( 0x10, to, from ); } \
+	__forceinline void iMOV##ssd##ZX( const iRegisterSSE& to, const void* from )		{ writeXMMop<prefix>( 0x10, to, from ); } \
+	__forceinline void iMOV##ssd##ZX( const iRegisterSSE& to, const ModSibBase& from )	{ writeXMMop<prefix>( 0x10, to, from ); } \
+	__forceinline void iMOV##ssd( const void* to, const iRegisterSSE& from )			{ writeXMMop<prefix>( 0x11, from, to ); } \
+	__forceinline void iMOV##ssd( const ModSibBase& to, const iRegisterSSE& from )		{ writeXMMop<prefix>( 0x11, from, to ); }
 
-__forceinline void iMOVSSZX( const iRegisterXMM& to, const void* from )
-{
-	writeXMMop<0xf3>( to, from, 0x10 );
-}
+IMPLEMENT_iMOVS( SS, 0xf3 )
+IMPLEMENT_iMOVS( SD, 0xf2 )
 
-__forceinline void iMOVSSZX( const iRegisterXMM& to, const ModSibBase& from )
-{
-	writeXMMop<0xf3>( to, from, 0x10 );
-}
-
-__forceinline void iMOVSS( const void* to, const iRegisterXMM& from )
-{
-	writeXMMop<0xf3>( from, to, 0x11 );
-}
-
-__forceinline void iMOVSS( const ModSibBase& to, const iRegisterXMM& from )
-{
-	writeXMMop<0xf3>( from, to, 0x11 );
-}
+//////////////////////////////////////////////////////////////////////////////////////////
+//
 
 }

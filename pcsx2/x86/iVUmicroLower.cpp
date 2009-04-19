@@ -802,7 +802,7 @@ void _saveEAX(VURegs *VU, int x86reg, uptr offset, int info)
 
 			// (this is one of my test cases for the new emitter --air)
 			using namespace x86Emitter;
-			x86IndexReg thisreg( x86reg );
+			iAddressReg thisreg( x86reg );
 
 			if ( _X ) iMOV(ptr32[thisreg+offset],    0x00000000);
 			if ( _Y ) iMOV(ptr32[thisreg+offset+4],  0x00000000);

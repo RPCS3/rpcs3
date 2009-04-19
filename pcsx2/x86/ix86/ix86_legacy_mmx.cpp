@@ -483,14 +483,14 @@ emitterT void MOVQRtoR( x86MMXRegType to, x86MMXRegType from )
 
 emitterT void MOVQRmtoR( x86MMXRegType to, x86IntRegType from, int offset )
 {
-	iMOVQ( iRegisterMMX(to), ptr[x86IndexReg(from)+offset] );
+	iMOVQ( iRegisterMMX(to), ptr[iAddressReg(from)+offset] );
 	//write16( 0x6F0F );
 	//WriteRmOffsetFrom( to, from, offset );
 }
 
 emitterT void MOVQRtoRm( x86IntRegType to, x86MMXRegType from, int offset )
 {
-	iMOVQ( ptr[x86IndexReg(to)+offset], iRegisterMMX(from) );
+	iMOVQ( ptr[iAddressReg(to)+offset], iRegisterMMX(from) );
 	//write16( 0x7F0F );
 	//WriteRmOffsetFrom( from, to, offset );
 }
@@ -522,7 +522,7 @@ emitterT void MOVD32RtoMMX( x86MMXRegType to, x86IntRegType from )
 
 emitterT void MOVD32RmtoMMX( x86MMXRegType to, x86IntRegType from, int offset )
 {
-	iMOVDZX( iRegisterMMX(to), ptr[x86IndexReg(from)+offset] );
+	iMOVDZX( iRegisterMMX(to), ptr[iAddressReg(from)+offset] );
 	//write16( 0x6E0F );
 	//WriteRmOffsetFrom( to, from, offset );
 }
@@ -536,7 +536,7 @@ emitterT void MOVD32MMXtoR( x86IntRegType to, x86MMXRegType from )
 
 emitterT void MOVD32MMXtoRm( x86IntRegType to, x86MMXRegType from, int offset )
 {
-	iMOVD( ptr[x86IndexReg(to)+offset], iRegisterMMX(from) );
+	iMOVD( ptr[iAddressReg(to)+offset], iRegisterMMX(from) );
 	//write16( 0x7E0F );
 	//WriteRmOffsetFrom( from, to, offset );
 }

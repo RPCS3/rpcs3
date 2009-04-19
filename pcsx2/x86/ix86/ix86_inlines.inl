@@ -53,27 +53,27 @@ namespace x86Emitter
 	//////////////////////////////////////////////////////////////////////////////////////////
 	// x86Register Method Implementations
 	//
-	__forceinline iAddressInfo x86IndexReg::operator+( const x86IndexReg& right ) const
+	__forceinline iAddressInfo iAddressReg::operator+( const iAddressReg& right ) const
 	{
 		return iAddressInfo( *this, right );
 	}
 
-	__forceinline iAddressInfo x86IndexReg::operator+( const iAddressInfo& right ) const
+	__forceinline iAddressInfo iAddressReg::operator+( const iAddressInfo& right ) const
 	{
 		return right + *this;
 	}
 
-	__forceinline iAddressInfo x86IndexReg::operator+( s32 right ) const
+	__forceinline iAddressInfo iAddressReg::operator+( s32 right ) const
 	{
 		return iAddressInfo( *this, right );
 	}
 
-	__forceinline iAddressInfo x86IndexReg::operator*( u32 right ) const
+	__forceinline iAddressInfo iAddressReg::operator*( u32 right ) const
 	{
 		return iAddressInfo( Empty, *this, right );
 	}
 
-	__forceinline iAddressInfo x86IndexReg::operator<<( u32 shift ) const
+	__forceinline iAddressInfo iAddressReg::operator<<( u32 shift ) const
 	{
 		return iAddressInfo( Empty, *this, 1<<shift );
 	}
@@ -93,7 +93,7 @@ namespace x86Emitter
 	}
 
 	// ------------------------------------------------------------------------
-	__forceinline ModSibBase::ModSibBase( x86IndexReg base, x86IndexReg index, int scale, s32 displacement ) :
+	__forceinline ModSibBase::ModSibBase( iAddressReg base, iAddressReg index, int scale, s32 displacement ) :
 		Base( base ),
 		Index( index ),
 		Scale( scale ),
@@ -112,82 +112,10 @@ namespace x86Emitter
 		// no reduction necessary :D
 	}
 
-	// ------------------------------------------------------------------------
-	// Generates a 'reduced' ModSib form, which has valid Base, Index, and Scale values.
-	// Necessary because by default ModSib compounds registers into Index when possible.
-	//
-	// If the ModSib is in illegal form ([Base + Index*5] for example) then an assertion
-	// followed by an InvalidParameter Exception will be tossed around in haphazard 
-	// fashion.
-	__forceinline void ModSibBase::Reduce()
-	{
-		if( Index.IsStackPointer() )
-		{
-			// esp cannot be encoded as the index, so move it to the Base, if possible.
-			// note: intentionally leave index assigned to esp also (generates correct
-			// encoding later, since ESP cannot be encoded 'alone')
-
-			jASSUME( Scale == 0 );		// esp can't have an index modifier!
-			jASSUME( Base.IsEmpty() );	// base must be empty or else!
-
-			Base = Index;
-			return;
-		}
-
-		// If no index reg, then load the base register into the index slot.
-		if( Index.IsEmpty() )
-		{
-			Index = Base;
-			Scale = 0;
-			if( !Base.IsStackPointer() )	// prevent ESP from being encoded 'alone'
-				Base = x86IndexReg::Empty;
-			return;
-		}
-
-	
-		// The Scale has a series of valid forms, all shown here:
-		
-		switch( Scale )
-		{
-			case 0: break;
-			case 1: Scale = 0; break;
-			case 2: Scale = 1; break;
-
-			case 3:				// becomes [reg*2+reg]
-				jASSUME( Base.IsEmpty() );
-				Base = Index;
-				Scale = 1;
-			break;
-			
-			case 4: Scale = 2; break;
-
-			case 5:				// becomes [reg*4+reg]
-				jASSUME( Base.IsEmpty() );
-				Base = Index;
-				Scale = 2;
-			break;
-			
-			case 6:				// invalid!
-				assert( false );
-			break;
-			
-			case 7:				// so invalid!
-				assert( false );
-			break;
-			
-			case 8: Scale = 3; break;
-			case 9:				// becomes [reg*8+reg]
-				jASSUME( Base.IsEmpty() );
-				Base = Index;
-				Scale = 3;
-			break;
-		}
-	}
-
 	//////////////////////////////////////////////////////////////////////////////////////////
 	// iAddressInfo Method Implementations
 	//
-	__forceinline iAddressInfo& iAddressInfo::Add( const x86IndexReg& src )
+	__forceinline iAddressInfo& iAddressInfo::Add( const iAddressReg& src )
 	{
 		if( src == Index )
 		{
@@ -196,7 +124,7 @@ namespace x86Emitter
 		else if( src == Base )
 		{
 			// Compound the existing register reference into the Index/Scale pair.
-			Base = x86IndexReg::Empty;
+			Base = iAddressReg::Empty;
 
 			if( src == Index )
 				Factor++;
