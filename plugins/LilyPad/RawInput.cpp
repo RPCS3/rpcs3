@@ -250,7 +250,7 @@ int InitializeRawInput() {
 
 void EnumRawInputDevices() {
 	int count = 0;
-	if (InitializeRawInput() && pGetRawInputDeviceList(0, (unsigned int*)&count, sizeof(RAWINPUTDEVICELIST)) && count > 0) {
+	if (InitializeRawInput() && pGetRawInputDeviceList(0, (unsigned int*)&count, sizeof(RAWINPUTDEVICELIST)) != (UINT)-1 && count > 0) {
 		wchar_t *instanceID = (wchar_t *) malloc(41000*sizeof(wchar_t));
 		wchar_t *keyName = instanceID + 11000;
 		wchar_t *displayName = keyName + 10000;
