@@ -1289,8 +1289,8 @@ void recompileNextInstruction(int delayslot)
 					return;
 			}
 		}
-		opcode.recompile();
 		s_nBlockCycles += opcode.cycles;
+		opcode.recompile();
 	}
 
 	if( !delayslot ) {
