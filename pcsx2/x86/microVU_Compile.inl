@@ -207,9 +207,9 @@ microVUt(void) mVUincCycles(int x) {
 microVUt(void) mVUsetCycles() {
 	microVU* mVU = mVUx;
 	incCycles(mVUstall);
-	if (mVUregsTemp.VFreg[0] == mVUregsTemp.VFreg[1] && mVUregsTemp.VFreg[0]) { // If upper Op && lower Op write to same VF reg
-		mVUinfo |= (mVUregsTemp.r || mVUregsTemp.VI) ? _noWriteVF : _isNOP;		 // If lower Op doesn't modify anything else, then make it a NOP
-		mVUregsTemp.VF[1].x = aMax(mVUregsTemp.VF[0].x, mVUregsTemp.VF[1].x);	 // Use max cycles from each vector
+	if (mVUregsTemp.VFreg[0] == mVUregsTemp.VFreg[1] && mVUregsTemp.VFreg[0]) {	// If upper Op && lower Op write to same VF reg
+		mVUinfo |= (mVUregsTemp.r || mVUregsTemp.VI) ? _noWriteVF : _isNOP;		// If lower Op doesn't modify anything else, then make it a NOP
+		mVUregsTemp.VF[1].x = aMax(mVUregsTemp.VF[0].x, mVUregsTemp.VF[1].x);	// Use max cycles from each vector
 		mVUregsTemp.VF[1].y = aMax(mVUregsTemp.VF[0].y, mVUregsTemp.VF[1].y);
 		mVUregsTemp.VF[1].z = aMax(mVUregsTemp.VF[0].z, mVUregsTemp.VF[1].z);
 		mVUregsTemp.VF[1].w = aMax(mVUregsTemp.VF[0].w, mVUregsTemp.VF[1].w);
@@ -251,14 +251,14 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 	microBlock* pBlock = mVUblocks[startPC/8]->search((microRegInfo*)pState);
 	if (pBlock) { return pBlock->x86ptrStart; }
 	
-	mVUlog("mVUcompile First Pass");
+	//mVUlog("mVUcompile First Pass");
 
 	// First Pass
 	iPC = startPC / 4;
 	mVUbranch	= 0;
 	mVUstartPC	= iPC;
 	mVUcount	= 0;
-	mVUcycles	= 1; // Skips "M" phase, and starts counting cycles at "T" stage
+	mVUcycles	= 0; // Skips "M" phase, and starts counting cycles at "T" stage
 	mVU->p		= 0; // All blocks start at p index #0
 	mVU->q		= 0; // All blocks start at q index #0
 	memcpy_fast(&mVUregs, (microRegInfo*)pState, sizeof(microRegInfo)); // Loads up Pipeline State Info
@@ -267,6 +267,7 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 
 	for (int branch = 0;; ) {
 		incPC(1);
+		incCycles(1);
 		startLoop();
 		mVUopU<vuIndex, 0>();
 		if (curI & _Ebit_)	  { branch = 1; }
@@ -281,32 +282,28 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 		else if (branch == 1) { branch = 2; }
 		if		(mVUbranch)	  { branch = 3; mVUbranch = 0; mVUinfo |= _isBranch; }
 		incPC(1);
-		incCycles(1);
 		mVUcount++;
 	}
 
-	mVUlog("mVUcompile mVUsetFlags");
+	//mVUlog("mVUcompile mVUsetFlags");
 
 	// Sets Up Flag instances
 	int bStatus[4]; int bMac[4];
 	mVUsetFlags<vuIndex>(bStatus, bMac);
 	
-	mVUlog("mVUcompile Second Pass");
+	//mVUlog("mVUcompile Second Pass");
 
 	//write8(0xcc);
 
 	// Second Pass
 	iPC = mVUstartPC;
 	mVUbranch = 0;
-	int test = 0;
-	for (bool x = 1; x; ) {
-		if (isEOB)			{ x = 0; }
+	int x;
+	for (x = 0; x < (vuIndex ? (0x3fff/8) : (0xfff/8)); x++) {
+		if (isEOB)			{ x = 0xffff; }
 		if (isNOP)			{ incPC(1); doUpperOp(); if (curI & _Ibit_) { incPC(-1); mVU->iReg = curI; incPC(-1); } }
 		else if (!swapOps)	{ incPC(1); doUpperOp(); incPC(-1); mVUopL<vuIndex, 1>(); incPC(1); }
 		else				{ mVUopL<vuIndex, 1>(); incPC(1); doUpperOp(); }
-
-		test++;
-		if (test > 0x3ff) { mVUlog("microVU: Possible infinite compiling loop!"); x = 0; test = 0; }
 		
 		if (!isBdelay) { incPC(1); }
 		else {
@@ -371,6 +368,7 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 		}
 	}
 	mVUlog("mVUcompile ebit");
+	if (x == (vuIndex?(0x3fff/8):(0xfff/8))) { mVUlog("microVU: Possible infinite compiling loop!"); }
 
 	// Do E-bit end stuff here
 	incCycles(55); // Ensures Valid P/Q instances
