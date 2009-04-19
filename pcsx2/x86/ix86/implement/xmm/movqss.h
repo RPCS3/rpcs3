@@ -110,5 +110,7 @@ public:
 	__forceinline void operator()( const void* to, const iRegisterSSE& from ) const { m_128::Emit( OpcodeAlt, to, from ); }
 	__noinline void operator()( const iRegisterSSE& to, const ModSibBase& from ) const { m_128::Emit( Opcode, to, from ); }
 	__noinline void operator()( const ModSibBase& to, const iRegisterSSE& from ) const { m_128::Emit( OpcodeAlt, to, from ); }
+	
+	MovapsImplAll() {} //GCC.
 };
 

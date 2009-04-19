@@ -56,6 +56,7 @@ public:
 	}
 
 	// ------------------------------------------------------------------------
+#ifndef __LINUX__
 	static __emitinline void Emit( void* bitbase, const iRegister<ImmType>& bitoffset )
 	{
 		prefix16();
@@ -63,7 +64,7 @@ public:
 		iWrite<u8>( 0xa3 | (InstType << 2) );
 		iWriteDisp( bitoffset.Id, bitbase.Id );
 	}
-
+#endif
 	// ------------------------------------------------------------------------
 	static __emitinline void Emit( const ModSibBase& bitbase, const iRegister<ImmType>& bitoffset )
 	{

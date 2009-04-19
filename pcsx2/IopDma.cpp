@@ -28,6 +28,7 @@ using namespace R3000A;
 
 // Should be a bool, and will be next time I break savestate. --arcum42
 int iopsifbusy[2] = { 0, 0 };
+extern int eesifbusy[2];
 
 static void __fastcall psxDmaGeneric(u32 madr, u32 bcr, u32 chcr, u32 spuCore, _SPU2writeDMA4Mem spu2WriteFunc, _SPU2readDMA4Mem spu2ReadFunc)
 {
@@ -130,7 +131,7 @@ int psxDma7Interrupt()
 	return 1;
 
 }
-extern int eesifbusy[2];
+
 void psxDma9(u32 madr, u32 bcr, u32 chcr)
 {
 	SIF_LOG("IOP: dmaSIF0 chcr = %lx, madr = %lx, bcr = %lx, tadr = %lx",	chcr, madr, bcr, HW_DMA9_TADR);

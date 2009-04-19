@@ -36,7 +36,6 @@ extern "C"
 	extern VIFregisters *vifRegs;
 	extern u32* vifMaskRegs;
 	extern u32* vifRow;
-	extern u32* vifCol;
 }
 
 PCSX2_ALIGNED16_EXTERN(u32 g_vifRow0[4]);

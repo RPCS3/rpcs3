@@ -252,7 +252,7 @@ namespace x86Emitter
 
 		iRegisterSIMD<OperandType>& operator=( const iRegisterSIMD<OperandType>& src )
 		{
-			Id = src.Id;
+			iRegister<OperandType>::Id = src.Id;
 			return *this;
 		}
 	};

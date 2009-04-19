@@ -26,9 +26,10 @@
 #include "VifDma.h"
 
 VIFregisters *vifRegs;
-u32* vifRow = NULL, *vifCol = NULL;
+u32* vifRow = NULL;
 u32* vifMaskRegs = NULL;
 vifStruct *vif;
+u16 vifqwc = 0;
 
 PCSX2_ALIGNED16(u32 g_vifRow0[4]);
 PCSX2_ALIGNED16(u32 g_vifCol0[4]);
@@ -36,7 +37,6 @@ PCSX2_ALIGNED16(u32 g_vifRow1[4]);
 PCSX2_ALIGNED16(u32 g_vifCol1[4]);
 
 extern int g_vifCycles;
-u16 vifqwc = 0;
 bool mfifodmairq = false;
 
 enum UnpackOffset
