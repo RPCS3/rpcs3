@@ -753,6 +753,46 @@ const MovhlImplAll< 0, 0x12 > iMOVLPS;
 const MovhlImplAll< 0x66, 0x16 > iMOVHPD;
 const MovhlImplAll< 0x66, 0x12 > iMOVLPD;
 
+const PLogicImplAll<0xdb> iPAND;
+const PLogicImplAll<0xdf> iPANDN;
+const PLogicImplAll<0xeb> iPOR;
+const PLogicImplAll<0xef> iPXOR;
+
+const PLogicImplSSE<0x00,0x54> iANDPS;
+const PLogicImplSSE<0x66,0x54> iANDPD;
+const PLogicImplSSE<0x00,0x55> iANDNPS;
+const PLogicImplSSE<0x66,0x55> iANDNPD;
+const PLogicImplSSE<0x00,0x56> iORPS;
+const PLogicImplSSE<0x66,0x56> iORPD;
+const PLogicImplSSE<0x00,0x57> iXORPS;
+const PLogicImplSSE<0x66,0x57> iXORPD;
+
+const PLogicImplSSE<0x00,0x5c> iSUBPS;
+const PLogicImplSSE<0x66,0x5c> iSUBPD;
+const PLogicImplSSE<0xf3,0x5c> iSUBSS;
+const PLogicImplSSE<0xf2,0x5c> iSUBSD;
+
+const PLogicImplSSE<0x00,0x58> iADDPS;
+const PLogicImplSSE<0x66,0x58> iADDPD;
+const PLogicImplSSE<0xf3,0x58> iADDSS;
+const PLogicImplSSE<0xf2,0x58> iADDSD;
+
+const PLogicImplSSE<0x00,0x59> iMULPS;
+const PLogicImplSSE<0x66,0x59> iMULPD;
+const PLogicImplSSE<0xf3,0x59> iMULSS;
+const PLogicImplSSE<0xf2,0x59> iMULSD;
+
+const PLogicImplSSE<0x00,0x5e> iDIVPS;
+const PLogicImplSSE<0x66,0x5e> iDIVPD;
+const PLogicImplSSE<0xf3,0x5e> iDIVSS;
+const PLogicImplSSE<0xf2,0x5e> iDIVSD;
+
+// Compute Reciprocal Packed Single-Precision Floating-Point Values
+const PLogicImplSSE<0,0x53> iRCPPS;
+
+// Compute Reciprocal of Scalar Single-Precision Floating-Point Value
+const PLogicImplSSE<0xf3,0x53> iRCPSS;
+
 
 // Moves from XMM to XMM, with the *upper 64 bits* of the destination register
 // being cleared to zero.

@@ -87,9 +87,9 @@ __emitinline void writeXMMop( u8 opcode, const iRegister<T>& reg, const void* da
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
-//
 // Moves to/from high/low portions of an xmm register.
 // These instructions cannot be used in reg/reg form.
+//
 template< u8 Prefix, u8 Opcode >
 class MovhlImplAll
 {
@@ -113,4 +113,47 @@ public:
 	__noinline void operator()( const ModSibBase& to, const iRegisterSSE& from ) const		{ writeXMMop( Prefix, OpcodeAlt, from, to ); }
 	
 	MovapsImplAll() {} //GCC.
+};
+
+//////////////////////////////////////////////////////////////////////////////////////////
+// PLogicImplAll - Implements logic forms for MMX/SSE instructions, and can be used for
+// a few other various instruction too (anything which comes in simdreg,simdreg/ModRM forms).
+//
+template< u8 Opcode >
+class PLogicImplAll
+{
+public:
+	template< typename T >
+	__forceinline void operator()( const iRegisterSIMD<T>& to, const iRegisterSIMD<T>& from ) const
+	{
+		writeXMMop( 0x66, Opcode, to, from );
+	}
+	template< typename T >
+	__forceinline void operator()( const iRegisterSIMD<T>& to, const void* from ) const
+	{
+	writeXMMop( 0x66, Opcode, to, from );
+	}
+	template< typename T >
+	__noinline void operator()( const iRegisterSIMD<T>&, const ModSibBase& from ) const		{ writeXMMop( 0x66, Opcode, to, from ); }
+
+	PLogicImplAll() {} //GCWho?
+};
+
+// ------------------------------------------------------------------------
+// For implementing SSE-only logic operations, like ANDPS/ANDPD
+template< u8 Prefix, u8 Opcode >
+class PLogicImplSSE
+{
+public:
+	__forceinline void operator()( const iRegisterSSE& to, const iRegisterSSE& from ) const
+	{
+	writeXMMop( Prefix, Opcode, to, from );
+	}
+	__forceinline void operator()( const iRegisterSSE& to, const void* from ) const
+	{
+	writeXMMop( Prefix, Opcode, to, from );
+	}
+	__noinline void operator()( const iRegisterSSE&, const ModSibBase& from ) const			{ writeXMMop( Prefix, Opcode, to, from ); }
+
+	PLogicImplSSE() {} //GCWho?
 };

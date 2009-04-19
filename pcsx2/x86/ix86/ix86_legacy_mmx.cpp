@@ -40,41 +40,19 @@ emitterT void MOVD32RmtoMMX( x86MMXRegType to, x86IntRegType from, int offset )	
 emitterT void MOVD32MMXtoR( x86IntRegType to, x86MMXRegType from )				{ iMOVD( iRegister32(to), iRegisterMMX(from) ); }
 emitterT void MOVD32MMXtoRm( x86IntRegType to, x86MMXRegType from, int offset )	{ iMOVD( ptr[iAddressReg(to)+offset], iRegisterMMX(from) ); }
 
-emitterT void PMOVMSKBMMXtoR(x86IntRegType to, x86MMXRegType from)
-{
-	iPMOVMSKB( iRegister32(to), iRegisterMMX(from) );
-}
+emitterT void PMOVMSKBMMXtoR(x86IntRegType to, x86MMXRegType from)			{ iPMOVMSKB( iRegister32(to), iRegisterMMX(from) ); }
 
+#define DEFINE_LEGACY_LOGIC_OPCODE( mod ) \
+	emitterT void P##mod##RtoR( x86MMXRegType to, x86MMXRegType from )				{ iP##mod( iRegisterMMX(to), iRegisterMMX(from) ); } \
+	emitterT void P##mod##MtoR( x86MMXRegType to, uptr from )						{ iP##mod( iRegisterMMX(to), (void*)from ); } \
+	emitterT void SSE2_P##mod##_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	{ iP##mod( iRegisterSSE(to), iRegisterSSE(from) ); } \
+	emitterT void SSE2_P##mod##_M128_to_XMM( x86SSERegType to, uptr from )			{ iP##mod( iRegisterSSE(to), (void*)from ); }
 
+DEFINE_LEGACY_LOGIC_OPCODE( AND )
+DEFINE_LEGACY_LOGIC_OPCODE( ANDN )
+DEFINE_LEGACY_LOGIC_OPCODE( OR )
+DEFINE_LEGACY_LOGIC_OPCODE( XOR )
 
-
-
-/* pand r64 to r64 */
-emitterT void PANDRtoR( x86MMXRegType to, x86MMXRegType from ) 
-{
-	write16( 0xDB0F );
-	ModRM( 3, to, from ); 
-}
-
-emitterT void PANDNRtoR( x86MMXRegType to, x86MMXRegType from )
-{
-	write16( 0xDF0F );
-	ModRM( 3, to, from ); 
-}
-
-/* por r64 to r64 */
-emitterT void PORRtoR( x86MMXRegType to, x86MMXRegType from ) 
-{
-	write16( 0xEB0F );
-	ModRM( 3, to, from ); 
-}
-
-/* pxor r64 to r64 */
-emitterT void PXORRtoR( x86MMXRegType to, x86MMXRegType from ) 
-{
-	write16( 0xEF0F );
-	ModRM( 3, to, from ); 
-}
 
 /* psllq r64 to r64 */
 emitterT void PSLLQRtoR( x86MMXRegType to, x86MMXRegType from ) 
@@ -418,38 +396,6 @@ emitterT void PSRADRtoR( x86MMXRegType to, x86MMXRegType from )
 {
 	write16( 0xE20F );
 	ModRM( 3, to, from ); 
-}
-
-/* por m64 to r64 */
-emitterT void PORMtoR( x86MMXRegType to, uptr from ) 
-{
-	write16( 0xEB0F );
-	ModRM( 0, to, DISP32 ); 
-	write32( MEMADDR(from, 4) );
-}
-
-/* pxor m64 to r64 */
-emitterT void PXORMtoR( x86MMXRegType to, uptr from ) 
-{
-	write16( 0xEF0F );
-	ModRM( 0, to, DISP32 ); 
-	write32( MEMADDR(from, 4) );
-}
-
-/* pand m64 to r64 */
-emitterT void PANDMtoR( x86MMXRegType to, uptr from ) 
-{
-	//u64 rip = (u64)x86Ptr + 7;
-	write16( 0xDB0F );
-	ModRM( 0, to, DISP32 ); 
-	write32( MEMADDR(from, 4) );
-}
-
-emitterT void PANDNMtoR( x86MMXRegType to, uptr from )
-{
-	write16( 0xDF0F );
-	ModRM( 0, to, DISP32 ); 
-	write32( MEMADDR(from, 4) );
 }
 
 emitterT void PUNPCKHDQRtoR( x86MMXRegType to, x86MMXRegType from )
