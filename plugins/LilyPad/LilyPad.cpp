@@ -105,12 +105,14 @@ struct Stick {
 	int vert;
 };
 
+// Sum of states of all controls for a pad (Not including toggles).
 struct ButtonSum {
 	int buttons[12];
 	Stick sticks[3];
 };
 
-// Freeze data, for a single pad.
+// Freeze data, for a single pad.  Basically has all pad state that
+// a PS2 can set.
 struct PadFreezeData {
 	// Digital / Analog / DS2 Native
 	u8 mode;
@@ -129,9 +131,14 @@ struct PadFreezeData {
 
 class Pad : public PadFreezeData {
 public:
-	ButtonSum sum, lockedSum;
+	// Current pad state.
+	ButtonSum sum;
+	// State of locked buttons.  Already included by sum, used
+	// as initial value of sum.
+	ButtonSum lockedSum;
 
-	int lockedState;
+	// Flags for which controls (buttons or axes) are locked, if any.
+	DWORD lockedState;
 
 	// Last vibration value.  Only used so as not to call vibration
 	// functions when old and new values are both 0.

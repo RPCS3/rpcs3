@@ -249,64 +249,74 @@ int InitializeRawInput() {
 }
 
 void EnumRawInputDevices() {
-	UINT count = 0;
-	if (InitializeRawInput() && pGetRawInputDeviceList(0, &count, sizeof(RAWINPUTDEVICELIST)) != (UINT)-1) {
+	int count = 0;
+	if (InitializeRawInput() && pGetRawInputDeviceList(0, (unsigned int*)&count, sizeof(RAWINPUTDEVICELIST)) && count > 0) {
 		wchar_t *instanceID = (wchar_t *) malloc(41000*sizeof(wchar_t));
 		wchar_t *keyName = instanceID + 11000;
 		wchar_t *displayName = keyName + 10000;
 		wchar_t *productID = displayName + 10000;
+
+		RAWINPUTDEVICELIST *list = (RAWINPUTDEVICELIST*) malloc(sizeof(RAWINPUTDEVICELIST) * count);
 		int keyboardCount = 1;
 		int mouseCount = 1;
-		if (count) {
-			RAWINPUTDEVICELIST *list = (RAWINPUTDEVICELIST*) malloc(sizeof(RAWINPUTDEVICELIST) * count);
-			if (list && pGetRawInputDeviceList(list, &count, sizeof(RAWINPUTDEVICELIST))) {
-				for (UINT i=0; i<count; i++) {
-					UINT nameLen = 10000;
-					if ((int)pGetRawInputDeviceInfo(list[i].hDevice, RIDI_DEVICENAME, instanceID, &nameLen) > 0 &&
-						nameLen >= 3) {
-							wcscpy(productID, instanceID);
-							wchar_t *temp = 0;
-							for (int j=0; j<3; j++) {
-								wchar_t *s = wcschr(productID, '#');
-								if (!s) break;
-								*s = '\\';
-								if (j==2) {
-									*s = 0;
-								}
-								if (j==1) temp = s;
-							}
-							wsprintfW(keyName, L"SYSTEM\\CurrentControlSet\\Enum%s", productID+3);
-							if (temp) *temp = 0;
-							displayName[0] = 0;
-							HKEY hKey;
-							if (ERROR_SUCCESS == RegOpenKeyExW(HKEY_LOCAL_MACHINE, keyName, 0, KEY_QUERY_VALUE, &hKey)) {
-								DWORD type;
-								DWORD len = 10000 * sizeof(wchar_t);
-								if (ERROR_SUCCESS == RegQueryValueExW(hKey, L"DeviceDesc", 0, &type, (BYTE*)displayName, &len) &&
-									len && type == REG_SZ) {
-										wchar_t *temp2 = wcsrchr(displayName, ';');
-										if (!temp2) temp2 = displayName;
-										else temp2++;
-										// Could do without this, but more effort than it's worth.
-										wcscpy(keyName, temp2);
-								}
-								RegCloseKey(hKey);
-							}
-							if (list[i].dwType == RIM_TYPEKEYBOARD) {
-								if (!displayName[0]) wsprintfW(displayName, L"Raw Keyboard %i", keyboardCount++);
-								else wsprintfW(displayName, L"Raw KB: %s", keyName);
-								dm->AddDevice(new RawInputKeyboard(list[i].hDevice, displayName, instanceID));
-							}
-							else if (list[i].dwType == RIM_TYPEMOUSE) {
-								if (!displayName[0]) wsprintfW(displayName, L"Raw Mouse %i", mouseCount++);
-								else wsprintfW(displayName, L"Raw MS: %s", keyName);
-								dm->AddDevice(new RawInputMouse(list[i].hDevice, displayName, instanceID, productID));
-							}
+		count = pGetRawInputDeviceList(list, (unsigned int*)&count, sizeof(RAWINPUTDEVICELIST));
+
+		// Not necessary, but reminder that count is -1 on failure.
+		if (count > 0) {
+			for (int i=0; i<count; i++) {
+				if (list[i].dwType != RIM_TYPEKEYBOARD && list[i].dwType != RIM_TYPEMOUSE) continue;
+
+				UINT bufferLen = 10000;
+				int nameLen = pGetRawInputDeviceInfo(list[i].hDevice, RIDI_DEVICENAME, instanceID, &bufferLen);
+				if (nameLen >= 4) {
+					// nameLen includes terminating null.
+					nameLen--;
+
+					// Strip out GUID parts of instanceID to make it a generic product id,
+					// and reformat it to point to registry entry containing device description.
+					wcscpy(productID, instanceID);
+					wchar_t *temp = 0;
+					for (int j=0; j<3; j++) {
+						wchar_t *s = wcschr(productID, '#');
+						if (!s) break;
+						*s = '\\';
+						if (j==2) {
+							*s = 0;
+						}
+						if (j==1) temp = s;
+					}
+
+					wsprintfW(keyName, L"SYSTEM\\CurrentControlSet\\Enum%s", productID+3);
+					if (temp) *temp = 0;
+					displayName[0] = 0;
+					HKEY hKey;
+					if (ERROR_SUCCESS == RegOpenKeyExW(HKEY_LOCAL_MACHINE, keyName, 0, KEY_QUERY_VALUE, &hKey)) {
+						DWORD type;
+						DWORD len = 10000 * sizeof(wchar_t);
+						if (ERROR_SUCCESS == RegQueryValueExW(hKey, L"DeviceDesc", 0, &type, (BYTE*)displayName, &len) &&
+							len && type == REG_SZ) {
+								wchar_t *temp2 = wcsrchr(displayName, ';');
+								if (!temp2) temp2 = displayName;
+								else temp2++;
+								// Could do without this, but more effort than it's worth.
+								wcscpy(keyName, temp2);
+						}
+						RegCloseKey(hKey);
+					}
+					if (list[i].dwType == RIM_TYPEKEYBOARD) {
+						if (!displayName[0]) wsprintfW(displayName, L"Raw Keyboard %i", keyboardCount++);
+						else wsprintfW(displayName, L"Raw KB: %s", keyName);
+						dm->AddDevice(new RawInputKeyboard(list[i].hDevice, displayName, instanceID));
+					}
+					else if (list[i].dwType == RIM_TYPEMOUSE) {
+						if (!displayName[0]) wsprintfW(displayName, L"Raw Mouse %i", mouseCount++);
+						else wsprintfW(displayName, L"Raw MS: %s", keyName);
+						dm->AddDevice(new RawInputMouse(list[i].hDevice, displayName, instanceID, productID));
 					}
 				}
-				free(list);
 			}
 		}
+		free(list);
 		free(instanceID);
 		dm->AddDevice(new RawInputKeyboard(0, L"Simulated Keyboard"));
 		dm->AddDevice(new RawInputMouse(0, L"Simulated Mouse"));
