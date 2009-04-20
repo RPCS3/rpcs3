@@ -1289,7 +1289,8 @@ void recompileNextInstruction(int delayslot)
 					return;
 			}
 		}
-		s_nBlockCycles += opcode.cycles;
+		//If thh COP0 DIE bit is disabled, double the cycles. Happens rarely.
+		s_nBlockCycles += opcode.cycles * (2 - ((cpuRegs.CP0.n.Config >> 18) & 0x1));
 		opcode.recompile();
 	}
 

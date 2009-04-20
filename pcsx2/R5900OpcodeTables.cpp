@@ -106,7 +106,7 @@ namespace R5900
 			static const int MMI_Div = 22*8;
 			static const int MMI_Default = 14;
 
-			static const int FPU_Mult = 12;
+			static const int FPU_Mult = 4*8;
 
 			static const int Store = 8;
 			static const int Load = 8;
@@ -432,9 +432,9 @@ namespace R5900
 		MakeOpcode1( MIN_S, CopDefault );
 
 		MakeOpcode1( MUL_S, FPU_Mult );
-		MakeOpcode1( DIV_S, 3*8 );
-		MakeOpcode1( SQRT_S, 3*8 );
-		MakeOpcode1( RSQRT_S, 4*8 );
+		MakeOpcode1( DIV_S, 6*8 );
+		MakeOpcode1( SQRT_S, 6*8 );
+		MakeOpcode1( RSQRT_S, 8*8 );
 		MakeOpcode1( MULA_S, FPU_Mult );
 		MakeOpcode1( MADD_S, FPU_Mult );
 		MakeOpcode1( MSUB_S, FPU_Mult );
