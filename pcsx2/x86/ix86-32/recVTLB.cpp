@@ -34,20 +34,20 @@ void MOV128_MtoM( x86IntRegType destRm, x86IntRegType srcRm )
 {
 	// (this is one of my test cases for the new emitter --air)
 
-	iAddressReg src( srcRm );
-	iAddressReg dest( destRm );
+	xAddressReg src( srcRm );
+	xAddressReg dest( destRm );
 
-	iMOV( eax, ptr[src] );
-	iMOV( ptr[dest], eax );
+	xMOV( eax, ptr[src] );
+	xMOV( ptr[dest], eax );
 
-	iMOV( eax, ptr[src+4] );
-	iMOV( ptr[dest+4], eax );
+	xMOV( eax, ptr[src+4] );
+	xMOV( ptr[dest+4], eax );
 
-	iMOV( eax, ptr[src+8] );
-	iMOV( ptr[dest+8], eax );
+	xMOV( eax, ptr[src+8] );
+	xMOV( ptr[dest+8], eax );
 
-	iMOV( eax, ptr[src+12] );
-	iMOV( ptr[dest+12], eax );
+	xMOV( eax, ptr[src+12] );
+	xMOV( ptr[dest+12], eax );
 }
 
 /*
@@ -200,10 +200,10 @@ void vtlb_DynGenRead64(u32 bits)
 	SHR32ItoR(EAX,VTLB_PAGE_BITS);
 	MOV32RmSOffsettoR(EAX,EAX,(int)vtlbdata.vmap,2);
 	ADD32RtoR(ECX,EAX);
-	iForwardJS8 _fullread;
+	xForwardJS8 _fullread;
 
 	_vtlb_DynGen_DirectRead( bits, false );
-	iForwardJump8 cont;
+	xForwardJump8 cont;
 
 	_fullread.SetTarget();
 	
@@ -223,10 +223,10 @@ void vtlb_DynGenRead32(u32 bits, bool sign)
 	SHR32ItoR(EAX,VTLB_PAGE_BITS);
 	MOV32RmSOffsettoR(EAX,EAX,(int)vtlbdata.vmap,2);
 	ADD32RtoR(ECX,EAX);
-	iForwardJS8 _fullread;
+	xForwardJS8 _fullread;
 
 	_vtlb_DynGen_DirectRead( bits, sign );
-	iForwardJump8 cont;
+	xForwardJump8 cont;
 
 	_fullread.SetTarget();
 	_vtlb_DynGen_IndirectRead( bits );
@@ -478,10 +478,10 @@ void vtlb_DynGenWrite(u32 sz)
 	SHR32ItoR(EAX,VTLB_PAGE_BITS);
 	MOV32RmSOffsettoR(EAX,EAX,(int)vtlbdata.vmap,2);
 	ADD32RtoR(ECX,EAX);
-	iForwardJS8 _full;
+	xForwardJS8 _full;
 
 	_vtlb_DynGen_DirectWrite( sz );
-	iForwardJump8 cont;
+	xForwardJump8 cont;
 
 	_full.SetTarget();
 	_vtlb_DynGen_IndirectWrite( sz );

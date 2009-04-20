@@ -27,41 +27,41 @@ class TestImpl
 protected:
 	static const uint OperandSize = sizeof(ImmType);
 	static bool Is8BitOperand()	{ return OperandSize == 1; }
-	static void prefix16()		{ if( OperandSize == 2 ) iWrite<u8>( 0x66 ); }
+	static void prefix16()		{ if( OperandSize == 2 ) xWrite<u8>( 0x66 ); }
 
 public:
 	TestImpl() {}
 
 	// ------------------------------------------------------------------------
-	static __emitinline void Emit( const iRegister<ImmType>& to, const iRegister<ImmType>& from )
+	static __emitinline void Emit( const xRegister<ImmType>& to, const xRegister<ImmType>& from )
 	{
 		prefix16();
-		iWrite<u8>( Is8BitOperand() ? 0x84 : 0x85 );
+		xWrite<u8>( Is8BitOperand() ? 0x84 : 0x85 );
 		ModRM_Direct( from.Id, to.Id );
 	}
 
 	// ------------------------------------------------------------------------
-	static __emitinline void Emit( const iRegister<ImmType>& to, ImmType imm )
+	static __emitinline void Emit( const xRegister<ImmType>& to, ImmType imm )
 	{
 		prefix16();
 		
 		if( to.IsAccumulator() )
-			iWrite<u8>( Is8BitOperand() ? 0xa8 : 0xa9 );
+			xWrite<u8>( Is8BitOperand() ? 0xa8 : 0xa9 );
 		else
 		{
-			iWrite<u8>( Is8BitOperand() ? 0xf6 : 0xf7 );
+			xWrite<u8>( Is8BitOperand() ? 0xf6 : 0xf7 );
 			ModRM_Direct( 0, to.Id );
 		}
-		iWrite<ImmType>( imm );
+		xWrite<ImmType>( imm );
 	}
 
 	// ------------------------------------------------------------------------
 	static __emitinline void Emit( ModSibStrict<ImmType> dest, ImmType imm )
 	{
 		prefix16();
-		iWrite<u8>( Is8BitOperand() ? 0xf6 : 0xf7 );
+		xWrite<u8>( Is8BitOperand() ? 0xf6 : 0xf7 );
 		EmitSibMagic( 0, dest );
-		iWrite<ImmType>( imm );
+		xWrite<ImmType>( imm );
 	}
 };
 
@@ -71,12 +71,12 @@ class TestImplAll
 {
 public:
 	template< typename T >
-	__forceinline void operator()( const iRegister<T>& to,	const iRegister<T>& from ) const	{ TestImpl<T>::Emit( to, from ); }
+	__forceinline void operator()( const xRegister<T>& to,	const xRegister<T>& from ) const	{ TestImpl<T>::Emit( to, from ); }
 
 	template< typename T >
 	__noinline void operator()( const ModSibStrict<T>& sibdest, T imm ) const	{ TestImpl<T>::Emit( sibdest, imm ); }
 	template< typename T >
-	void operator()( const iRegister<T>& to, T imm ) const						{ TestImpl<T>::Emit( to, imm ); }
+	void operator()( const xRegister<T>& to, T imm ) const						{ TestImpl<T>::Emit( to, imm ); }
 
 	TestImplAll() {}		// Why does GCC need these?
 };

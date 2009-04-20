@@ -26,11 +26,11 @@ __emitinline void SimdPrefix( u8 opcode, u8 prefix=0 )
 {
 	if( sizeof( T ) == 16 && prefix != 0 )
 	{
-		iWrite<u16>( 0x0f00 | prefix );
-		iWrite<u8>( opcode );
+		xWrite<u16>( 0x0f00 | prefix );
+		xWrite<u8>( opcode );
 	}
 	else
-		iWrite<u16>( (opcode<<8) | 0x0f );
+		xWrite<u16>( (opcode<<8) | 0x0f );
 }
 
 // ------------------------------------------------------------------------
@@ -40,24 +40,24 @@ __emitinline void SimdPrefix( u8 opcode, u8 prefix=0 )
 // instructions violate this "guideline.")
 //
 template< typename T, typename T2 >
-__emitinline void writeXMMop( u8 prefix, u8 opcode, const iRegister<T>& to, const iRegister<T2>& from )
+__emitinline void writeXMMop( u8 prefix, u8 opcode, const xRegister<T>& to, const xRegister<T2>& from )
 {
 	SimdPrefix<T>( opcode, prefix );
 	ModRM_Direct( to.Id, from.Id );
 }
 
 template< typename T >
-void writeXMMop( u8 prefix, u8 opcode, const iRegister<T>& reg, const ModSibBase& sib )
+void writeXMMop( u8 prefix, u8 opcode, const xRegister<T>& reg, const ModSibBase& sib )
 {
 	SimdPrefix<T>( opcode, prefix );
 	EmitSibMagic( reg.Id, sib );
 }
 
 template< typename T >
-__emitinline void writeXMMop( u8 prefix, u8 opcode, const iRegister<T>& reg, const void* data )
+__emitinline void writeXMMop( u8 prefix, u8 opcode, const xRegister<T>& reg, const void* data )
 {
 	SimdPrefix<T>( opcode, prefix );
-	iWriteDisp( reg.Id, data );
+	xWriteDisp( reg.Id, data );
 }
 
 // ------------------------------------------------------------------------
@@ -66,51 +66,74 @@ __emitinline void writeXMMop( u8 prefix, u8 opcode, const iRegister<T>& reg, con
 // some special forms of sse/xmm mov instructions also use them due to prefixing inconsistencies.
 //
 template< typename T, typename T2 >
-__emitinline void writeXMMop( u8 opcode, const iRegister<T>& to, const iRegister<T2>& from )
+__emitinline void writeXMMop( u8 opcode, const xRegister<T>& to, const xRegister<T2>& from )
 {
 	SimdPrefix<T>( opcode );
 	ModRM_Direct( to.Id, from.Id );
 }
 
 template< typename T >
-void writeXMMop( u8 opcode, const iRegister<T>& reg, const ModSibBase& sib )
+void writeXMMop( u8 opcode, const xRegister<T>& reg, const ModSibBase& sib )
 {
 	SimdPrefix<T>( opcode );
 	EmitSibMagic( reg.Id, sib );
 }
 
 template< typename T >
-__emitinline void writeXMMop( u8 opcode, const iRegister<T>& reg, const void* data )
+__emitinline void writeXMMop( u8 opcode, const xRegister<T>& reg, const void* data )
 {
 	SimdPrefix<T>( opcode );
-	iWriteDisp( reg.Id, data );
+	xWriteDisp( reg.Id, data );
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // Moves to/from high/low portions of an xmm register.
 // These instructions cannot be used in reg/reg form.
 //
-template< u8 Prefix, u8 Opcode >
+template< u8 Opcode >
 class MovhlImplAll
 {
+protected:
+	template< u8 Prefix >
+	struct Woot
+	{
+		__forceinline void operator()( const xRegisterSSE& to, const void* from ) const			{ writeXMMop( Prefix, Opcode, to, from ); }
+		__forceinline void operator()( const void* to, const xRegisterSSE& from ) const			{ writeXMMop( Prefix, Opcode+1, from, to ); }
+		__noinline void operator()( const xRegisterSSE& to, const ModSibBase& from ) const		{ writeXMMop( Prefix, Opcode, to, from ); }
+		__noinline void operator()( const ModSibBase& to, const xRegisterSSE& from ) const		{ writeXMMop( Prefix, Opcode+1, from, to ); }
+	};
+
 public:
-	__forceinline void operator()( const iRegisterSSE& to, const void* from ) const			{ writeXMMop( Prefix, Opcode, to, from ); }
-	__forceinline void operator()( const void* to, const iRegisterSSE& from ) const			{ writeXMMop( Prefix, Opcode+1, from, to ); }
-	__noinline void operator()( const iRegisterSSE& to, const ModSibBase& from ) const		{ writeXMMop( Prefix, Opcode, to, from ); }
-	__noinline void operator()( const ModSibBase& to, const iRegisterSSE& from ) const		{ writeXMMop( Prefix, Opcode+1, from, to ); }
+	Woot<0x00> PS;
+	Woot<0x66> PD;
 
 	MovhlImplAll() {} //GCC.
 };
 
+// ------------------------------------------------------------------------
+// RegtoReg forms of MOVHL/MOVLH -- these are the same opcodes as MOVH/MOVL but
+// do something kinda different! Fun!
+//
+template< u8 Opcode >
+class MovhlImpl_RtoR
+{
+public:
+	__forceinline void PS( const xRegisterSSE& to, const xRegisterSSE& from ) const			{ writeXMMop( Opcode, to, from ); }
+	__forceinline void PD( const xRegisterSSE& to, const xRegisterSSE& from ) const			{ writeXMMop( 0x66, Opcode, to, from ); }
+
+	MovhlImpl_RtoR() {} //GCC.
+};
+
+// ------------------------------------------------------------------------
 template< u8 Prefix, u8 Opcode, u8 OpcodeAlt >
 class MovapsImplAll
 {
 public:
-	__forceinline void operator()( const iRegisterSSE& to, const iRegisterSSE& from ) const	{ if( to != from ) writeXMMop( Prefix, Opcode, to, from ); }
-	__forceinline void operator()( const iRegisterSSE& to, const void* from ) const			{ writeXMMop( Prefix, Opcode, to, from ); }
-	__forceinline void operator()( const void* to, const iRegisterSSE& from ) const			{ writeXMMop( Prefix, OpcodeAlt, from, to ); }
-	__noinline void operator()( const iRegisterSSE& to, const ModSibBase& from ) const		{ writeXMMop( Prefix, Opcode, to, from ); }
-	__noinline void operator()( const ModSibBase& to, const iRegisterSSE& from ) const		{ writeXMMop( Prefix, OpcodeAlt, from, to ); }
+	__forceinline void operator()( const xRegisterSSE& to, const xRegisterSSE& from ) const	{ if( to != from ) writeXMMop( Prefix, Opcode, to, from ); }
+	__forceinline void operator()( const xRegisterSSE& to, const void* from ) const			{ writeXMMop( Prefix, Opcode, to, from ); }
+	__forceinline void operator()( const void* to, const xRegisterSSE& from ) const			{ writeXMMop( Prefix, OpcodeAlt, from, to ); }
+	__noinline void operator()( const xRegisterSSE& to, const ModSibBase& from ) const		{ writeXMMop( Prefix, Opcode, to, from ); }
+	__noinline void operator()( const ModSibBase& to, const xRegisterSSE& from ) const		{ writeXMMop( Prefix, OpcodeAlt, from, to ); }
 	
 	MovapsImplAll() {} //GCC.
 };
@@ -124,11 +147,11 @@ class PLogicImplAll
 {
 public:
 	template< typename T >
-	__forceinline void operator()( const iRegisterSIMD<T>& to, const iRegisterSIMD<T>& from ) const	{ writeXMMop( 0x66, Opcode, to, from ); }
+	__forceinline void operator()( const xRegisterSIMD<T>& to, const xRegisterSIMD<T>& from ) const	{ writeXMMop( 0x66, Opcode, to, from ); }
 	template< typename T >
-	__forceinline void operator()( const iRegisterSIMD<T>& to, const void* from ) const		{ writeXMMop( 0x66, Opcode, to, from ); }
+	__forceinline void operator()( const xRegisterSIMD<T>& to, const void* from ) const				{ writeXMMop( 0x66, Opcode, to, from ); }
 	template< typename T >
-	__noinline void operator()( const iRegisterSIMD<T>& to, const ModSibBase& from ) const		{ writeXMMop( 0x66, Opcode, to, from ); }
+	__noinline void operator()( const xRegisterSIMD<T>& to, const ModSibBase& from ) const			{ writeXMMop( 0x66, Opcode, to, from ); }
 
 	PLogicImplAll() {} //GCWho?
 };
@@ -140,47 +163,42 @@ template< u8 Prefix, u8 Opcode >
 class SSELogicImpl
 {
 public:
-	__forceinline void operator()( const iRegisterSSE& to, const iRegisterSSE& from ) const	{ writeXMMop( Prefix, Opcode, to, from ); }
-	__forceinline void operator()( const iRegisterSSE& to, const void* from ) const			{ writeXMMop( Prefix, Opcode, to, from ); }
-	__noinline void operator()( const iRegisterSSE& to, const ModSibBase& from ) const			{ writeXMMop( Prefix, Opcode, to, from ); }
+	__forceinline void operator()( const xRegisterSSE& to, const xRegisterSSE& from ) const	{ writeXMMop( Prefix, Opcode, to, from ); }
+	__forceinline void operator()( const xRegisterSSE& to, const void* from ) const			{ writeXMMop( Prefix, Opcode, to, from ); }
+	__noinline void operator()( const xRegisterSSE& to, const ModSibBase& from ) const		{ writeXMMop( Prefix, Opcode, to, from ); }
 
 	SSELogicImpl() {} //GCWho?
 };
 
+// ------------------------------------------------------------------------
+//
+template< u8 OpcodeSSE >
+class SSEAndNotImpl
+{
+public:
+	const SSELogicImpl<0x00,OpcodeSSE> PS;
+	const SSELogicImpl<0x66,OpcodeSSE> PD;
+
+	SSEAndNotImpl() {}
+};
 
 // ------------------------------------------------------------------------
-// For implementing SSE-only comparison operations, like CMPEQPS.
-//
-enum SSE2_ComparisonType
-{
-	SSE2_Equal = 0,
-	SSE2_Less,
-	SSE2_LessOrEqual,
-	SSE2_Unordered,
-	SSE2_NotEqual,
-	SSE2_NotLess,
-	SSE2_NotLessOrEqual,
-	SSE2_Ordered
-};
-
-template< u8 Prefix >
-class SSECompareImplGeneric
-{
-public:
-	__forceinline void operator()( const iRegisterSSE& to, const iRegisterSSE& from, u8 cmptype ) const	{ writeXMMop( Prefix, 0xc2, to, from ); iWrite( cmptype ); }
-	__forceinline void operator()( const iRegisterSSE& to, const void* from, u8 cmptype ) const			{ writeXMMop( Prefix, 0xc2, to, from ); iWrite( cmptype ); }
-	__noinline void operator()( const iRegisterSSE& to, const ModSibBase& from, u8 cmptype ) const		{ writeXMMop( Prefix, 0xc2, to, from ); iWrite( cmptype ); }
-
-	SSECompareImplGeneric() {} //GCWhat?
-};
-
-template< u8 Prefix, u8 Opcode, SSE2_ComparisonType CType >
+template< SSE2_ComparisonType CType >
 class SSECompareImpl
 {
+protected:
+	template< u8 Prefix > struct Woot
+	{
+		__forceinline void operator()( const xRegisterSSE& to, const xRegisterSSE& from ) const	{ writeXMMop( Prefix, 0xc2, to, from ); xWrite<u8>( CType ); }
+		__forceinline void operator()( const xRegisterSSE& to, const void* from ) const			{ writeXMMop( Prefix, 0xc2, to, from ); xWrite<u8>( CType ); }
+		__noinline void operator()( const xRegisterSSE& to, const ModSibBase& from ) const		{ writeXMMop( Prefix, 0xc2, to, from ); xWrite<u8>( CType ); }
+	};
+
 public:
-	__forceinline void operator()( const iRegisterSSE& to, const iRegisterSSE& from ) const	{ writeXMMop( Prefix, 0xc2, to, from ); iWrite( CType ); }
-	__forceinline void operator()( const iRegisterSSE& to, const void* from ) const			{ writeXMMop( Prefix, 0xc2, to, from ); iWrite( CType ); }
-	__noinline void operator()( const iRegisterSSE& to, const ModSibBase& from ) const		{ writeXMMop( Prefix, 0xc2, to, from ); iWrite( CType ); }
+	Woot<0x00> PS;
+	Woot<0x66> PD;
+	Woot<0xf3> SS;
+	Woot<0xf2> SD;
 
 	SSECompareImpl() {} //GCWhat?
 };

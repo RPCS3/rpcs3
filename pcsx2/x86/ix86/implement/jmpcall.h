@@ -27,22 +27,22 @@ class JmpCallImpl
 protected:
 	static const uint OperandSize = sizeof(ImmType);
 
-	static void prefix16()		{ if( OperandSize == 2 ) iWrite<u8>( 0x66 ); }
+	static void prefix16()		{ if( OperandSize == 2 ) xWrite<u8>( 0x66 ); }
 
 public: 
 	JmpCallImpl() {}		// For the love of GCC.
 
-	static __emitinline void Emit( bool isJmp, const iRegister<ImmType>& absreg )
+	static __emitinline void Emit( bool isJmp, const xRegister<ImmType>& absreg )
 	{
 		prefix16();
-		iWrite<u8>( 0xff );
+		xWrite<u8>( 0xff );
 		ModRM_Direct( isJmp ? 4 : 2, absreg.Id );
 	}
 
 	static __emitinline void Emit( bool isJmp, const ModSibStrict<ImmType>& src )
 	{
 		prefix16();
-		iWrite<u8>( 0xff );
+		xWrite<u8>( 0xff );
 		EmitSibMagic( isJmp ? 4 : 2, src );
 	}
 };
@@ -58,10 +58,10 @@ protected:
 public:
 	JmpCallImplAll() {}
 
-	__forceinline void operator()( const iRegister32& absreg ) const	{ m_32::Emit( isJmp, absreg ); }
+	__forceinline void operator()( const xRegister32& absreg ) const	{ m_32::Emit( isJmp, absreg ); }
 	__forceinline void operator()( const ModSibStrict<u32>& src ) const	{ m_32::Emit( isJmp, src ); }
 
-	__forceinline void operator()( const iRegister16& absreg ) const	{ m_16::Emit( isJmp, absreg ); }
+	__forceinline void operator()( const xRegister16& absreg ) const	{ m_16::Emit( isJmp, absreg ); }
 	__forceinline void operator()( const ModSibStrict<u16>& src ) const	{ m_16::Emit( isJmp, src ); }
 	
 	// Special form for calling functions.  This form automatically resolves the
@@ -77,8 +77,8 @@ public:
 			// always 5 bytes (16 bit calls are bad mojo, so no bother to do special logic).
 			
 			sptr dest = (sptr)func - ((sptr)iGetPtr() + 5);
-			iWrite<u8>( 0xe8 );
-			iWrite<u32>( dest );
+			xWrite<u8>( 0xe8 );
+			xWrite<u32>( dest );
 		}
 	}
 

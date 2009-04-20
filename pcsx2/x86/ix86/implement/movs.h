@@ -32,23 +32,23 @@ class MovImpl
 protected:
 	static const uint OperandSize = sizeof(ImmType);
 	static bool Is8BitOperand()	{ return OperandSize == 1; }
-	static void prefix16()		{ if( OperandSize == 2 ) iWrite<u8>( 0x66 ); }
+	static void prefix16()		{ if( OperandSize == 2 ) xWrite<u8>( 0x66 ); }
 
 public:
 	MovImpl() {}
 	
 	// ------------------------------------------------------------------------
-	static __emitinline void Emit( const iRegister<ImmType>& to, const iRegister<ImmType>& from )
+	static __emitinline void Emit( const xRegister<ImmType>& to, const xRegister<ImmType>& from )
 	{
 		if( to == from ) return;	// ignore redundant MOVs.
 
 		prefix16();
-		iWrite<u8>( Is8BitOperand() ? 0x88 : 0x89 );
+		xWrite<u8>( Is8BitOperand() ? 0x88 : 0x89 );
 		ModRM_Direct( from.Id, to.Id );
 	}
 
 	// ------------------------------------------------------------------------
-	static __emitinline void Emit( const ModSibBase& dest, const iRegister<ImmType>& from )
+	static __emitinline void Emit( const ModSibBase& dest, const xRegister<ImmType>& from )
 	{
 		prefix16();
 
@@ -57,18 +57,18 @@ public:
 
 		if( from.IsAccumulator() && dest.Index.IsEmpty() && dest.Base.IsEmpty() )
 		{
-			iWrite<u8>( Is8BitOperand() ? 0xa2 : 0xa3 );
-			iWrite<u32>( dest.Displacement );
+			xWrite<u8>( Is8BitOperand() ? 0xa2 : 0xa3 );
+			xWrite<u32>( dest.Displacement );
 		}
 		else
 		{
-			iWrite<u8>( Is8BitOperand() ? 0x88 : 0x89 );
+			xWrite<u8>( Is8BitOperand() ? 0x88 : 0x89 );
 			EmitSibMagic( from.Id, dest );
 		}
 	}
 
 	// ------------------------------------------------------------------------
-	static __emitinline void Emit( const iRegister<ImmType>& to, const ModSibBase& src )
+	static __emitinline void Emit( const xRegister<ImmType>& to, const ModSibBase& src )
 	{
 		prefix16();
 
@@ -77,18 +77,18 @@ public:
 
 		if( to.IsAccumulator() && src.Index.IsEmpty() && src.Base.IsEmpty() )
 		{
-			iWrite<u8>( Is8BitOperand() ? 0xa0 : 0xa1 );
-			iWrite<u32>( src.Displacement );
+			xWrite<u8>( Is8BitOperand() ? 0xa0 : 0xa1 );
+			xWrite<u32>( src.Displacement );
 		}
 		else
 		{
-			iWrite<u8>( Is8BitOperand() ? 0x8a : 0x8b );
+			xWrite<u8>( Is8BitOperand() ? 0x8a : 0x8b );
 			EmitSibMagic( to.Id, src );
 		}
 	}
 
 	// ------------------------------------------------------------------------
-	static __emitinline void Emit( void* dest, const iRegister<ImmType>& from )
+	static __emitinline void Emit( void* dest, const xRegister<ImmType>& from )
 	{
 		prefix16();
 
@@ -96,18 +96,18 @@ public:
 
 		if( from.IsAccumulator() )
 		{
-			iWrite<u8>( Is8BitOperand() ? 0xa2 : 0xa3 );
-			iWrite<s32>( (s32)dest );
+			xWrite<u8>( Is8BitOperand() ? 0xa2 : 0xa3 );
+			xWrite<s32>( (s32)dest );
 		}
 		else
 		{
-			iWrite<u8>( Is8BitOperand() ? 0x88 : 0x89 );
-			iWriteDisp( from.Id, dest );
+			xWrite<u8>( Is8BitOperand() ? 0x88 : 0x89 );
+			xWriteDisp( from.Id, dest );
 		}
 	}
 
 	// ------------------------------------------------------------------------
-	static __emitinline void Emit( const iRegister<ImmType>& to, const void* src )
+	static __emitinline void Emit( const xRegister<ImmType>& to, const void* src )
 	{
 		prefix16();
 
@@ -115,33 +115,33 @@ public:
 
 		if( to.IsAccumulator() )
 		{
-			iWrite<u8>( Is8BitOperand() ? 0xa0 : 0xa1 );
-			iWrite<s32>( (s32)src );
+			xWrite<u8>( Is8BitOperand() ? 0xa0 : 0xa1 );
+			xWrite<s32>( (s32)src );
 		}
 		else
 		{
-			iWrite<u8>( Is8BitOperand() ? 0x8a : 0x8b );
-			iWriteDisp( to.Id, src );
+			xWrite<u8>( Is8BitOperand() ? 0x8a : 0x8b );
+			xWriteDisp( to.Id, src );
 		}
 	}
 
 	// ------------------------------------------------------------------------
-	static __emitinline void Emit( const iRegister<ImmType>& to, ImmType imm )
+	static __emitinline void Emit( const xRegister<ImmType>& to, ImmType imm )
 	{
 		// Note: MOV does not have (reg16/32,imm8) forms.
 
 		prefix16();
-		iWrite<u8>( (Is8BitOperand() ? 0xb0 : 0xb8) | to.Id ); 
-		iWrite<ImmType>( imm );
+		xWrite<u8>( (Is8BitOperand() ? 0xb0 : 0xb8) | to.Id ); 
+		xWrite<ImmType>( imm );
 	}
 
 	// ------------------------------------------------------------------------
 	static __emitinline void Emit( ModSibStrict<ImmType> dest, ImmType imm )
 	{
 		prefix16();
-		iWrite<u8>( Is8BitOperand() ? 0xc6 : 0xc7 );
+		xWrite<u8>( Is8BitOperand() ? 0xc6 : 0xc7 );
 		EmitSibMagic( 0, dest );
-		iWrite<ImmType>( imm );
+		xWrite<ImmType>( imm );
 	}
 };
 
@@ -150,15 +150,15 @@ class MovImplAll
 {
 public:
 	template< typename T >
-	__forceinline void operator()( const iRegister<T>& to,	const iRegister<T>& from ) const	{ MovImpl<T>::Emit( to, from ); }
+	__forceinline void operator()( const xRegister<T>& to,	const xRegister<T>& from ) const	{ MovImpl<T>::Emit( to, from ); }
 	template< typename T >
-	__forceinline void operator()( const iRegister<T>& to,	const void* src ) const				{ MovImpl<T>::Emit( to, src ); }
+	__forceinline void operator()( const xRegister<T>& to,	const void* src ) const				{ MovImpl<T>::Emit( to, src ); }
 	template< typename T >
-	__forceinline void operator()( void* dest,				const iRegister<T>& from ) const	{ MovImpl<T>::Emit( dest, from ); }
+	__forceinline void operator()( void* dest,				const xRegister<T>& from ) const	{ MovImpl<T>::Emit( dest, from ); }
 	template< typename T >
-	__noinline void operator()( const ModSibBase& sibdest,	const iRegister<T>& from ) const	{ MovImpl<T>::Emit( sibdest, from ); }
+	__noinline void operator()( const ModSibBase& sibdest,	const xRegister<T>& from ) const	{ MovImpl<T>::Emit( sibdest, from ); }
 	template< typename T >
-	__noinline void operator()( const iRegister<T>& to,		const ModSibBase& sibsrc ) const	{ MovImpl<T>::Emit( to, sibsrc ); }
+	__noinline void operator()( const xRegister<T>& to,		const ModSibBase& sibsrc ) const	{ MovImpl<T>::Emit( to, sibsrc ); }
 
 	template< typename T >
 	__noinline void operator()( const ModSibStrict<T>& sibdest, int imm ) const					{ MovImpl<T>::Emit( sibdest, imm ); }
@@ -167,10 +167,10 @@ public:
 	//   the flags (namely replacing mov reg,0 with xor).
 
 	template< typename T >
-	__emitinline void operator()( const iRegister<T>& to, int imm, bool preserve_flags=false ) const
+	__emitinline void operator()( const xRegister<T>& to, int imm, bool preserve_flags=false ) const
 	{
 		if( !preserve_flags && (imm == 0) )
-			iXOR( to, to );
+			xXOR( to, to );
 		else
 			MovImpl<T>::Emit( to, imm );
 	}
@@ -193,7 +193,7 @@ protected:
 	static const uint OperandSize = sizeof(ImmType);
 
 	static bool Is8BitOperand()	{ return OperandSize == 1; }
-	static void prefix16()		{ if( OperandSize == 2 ) iWrite<u8>( 0x66 ); }
+	static void prefix16()		{ if( OperandSize == 2 ) xWrite<u8>( 0x66 ); }
 	
 	static __forceinline void emit_base( JccComparisonType cc )
 	{
@@ -206,27 +206,27 @@ protected:
 public:
 	CMovSetImpl() {}
 
-	static __emitinline void Emit( JccComparisonType cc, const iRegister<ImmType>& to, const iRegister<ImmType>& from )
+	static __emitinline void Emit( JccComparisonType cc, const xRegister<ImmType>& to, const xRegister<ImmType>& from )
 	{
 		if( to == from ) return;
 		emit_base( cc );
 		ModRM_Direct( to.Id, from.Id );
 	}
 
-	static __emitinline void Emit( JccComparisonType cc, const iRegister<ImmType>& to, const void* src )
+	static __emitinline void Emit( JccComparisonType cc, const xRegister<ImmType>& to, const void* src )
 	{
 		emit_base( cc );
-		iWriteDisp( to.Id, src );
+		xWriteDisp( to.Id, src );
 	}
 
-	static __emitinline void Emit( JccComparisonType cc, const iRegister<ImmType>& to, const ModSibBase& sibsrc )
+	static __emitinline void Emit( JccComparisonType cc, const xRegister<ImmType>& to, const ModSibBase& sibsrc )
 	{
 		emit_base( cc );
 		EmitSibMagic( to.Id, sibsrc );
 	}
 
 	// This form is provided for SETcc only (not available in CMOV)
-	static __emitinline void EmitSet( JccComparisonType cc, const iRegister<ImmType>& to )
+	static __emitinline void EmitSet( JccComparisonType cc, const xRegister<ImmType>& to )
 	{
 		emit_base( cc );
 		ModRM_Direct( 0, to.Id );
@@ -236,7 +236,7 @@ public:
 	static __emitinline void EmitSet( JccComparisonType cc, const void* src )
 	{
 		emit_base( cc );
-		iWriteDisp( 0, src );
+		xWriteDisp( 0, src );
 	}
 
 	// This form is provided for SETcc only (not available in CMOV)
@@ -258,13 +258,13 @@ protected:
 	typedef CMovSetImpl<u16, 0x40> m_16;	// 0x40 is the cmov base instruction id
 
 public:
-	__forceinline void operator()( JccComparisonType ccType, const iRegister32& to, const iRegister32& from ) const		{ m_32::Emit( ccType, to, from ); }
-	__forceinline void operator()( JccComparisonType ccType, const iRegister32& to, const void* src ) const				{ m_32::Emit( ccType, to, src ); }
-	__noinline void operator()( JccComparisonType ccType, const iRegister32& to, const ModSibBase& sibsrc ) const		{ m_32::Emit( ccType, to, sibsrc ); }
+	__forceinline void operator()( JccComparisonType ccType, const xRegister32& to, const xRegister32& from ) const		{ m_32::Emit( ccType, to, from ); }
+	__forceinline void operator()( JccComparisonType ccType, const xRegister32& to, const void* src ) const				{ m_32::Emit( ccType, to, src ); }
+	__noinline void operator()( JccComparisonType ccType, const xRegister32& to, const ModSibBase& sibsrc ) const		{ m_32::Emit( ccType, to, sibsrc ); }
 
-	__forceinline void operator()( JccComparisonType ccType, const iRegister16& to, const iRegister16& from ) const		{ m_16::Emit( ccType, to, from ); }
-	__forceinline void operator()( JccComparisonType ccType, const iRegister16& to, const void* src ) const				{ m_16::Emit( ccType, to, src ); }
-	__noinline void operator()( JccComparisonType ccType, const iRegister16& to, const ModSibBase& sibsrc ) const		{ m_16::Emit( ccType, to, sibsrc ); }
+	__forceinline void operator()( JccComparisonType ccType, const xRegister16& to, const xRegister16& from ) const		{ m_16::Emit( ccType, to, from ); }
+	__forceinline void operator()( JccComparisonType ccType, const xRegister16& to, const void* src ) const				{ m_16::Emit( ccType, to, src ); }
+	__noinline void operator()( JccComparisonType ccType, const xRegister16& to, const ModSibBase& sibsrc ) const		{ m_16::Emit( ccType, to, sibsrc ); }
 
 	CMovImplGeneric() {}		// don't ask.
 };
@@ -278,13 +278,13 @@ protected:
 	typedef CMovSetImpl<u16, 0x40> m_16;
 
 public:
-	__forceinline void operator()( const iRegister32& to, const iRegister32& from ) const	{ m_32::Emit( ccType, to, from ); }
-	__forceinline void operator()( const iRegister32& to, const void* src ) const			{ m_32::Emit( ccType, to, src ); }
-	__noinline void operator()( const iRegister32& to, const ModSibBase& sibsrc ) const		{ m_32::Emit( ccType, to, sibsrc ); }
+	__forceinline void operator()( const xRegister32& to, const xRegister32& from ) const	{ m_32::Emit( ccType, to, from ); }
+	__forceinline void operator()( const xRegister32& to, const void* src ) const			{ m_32::Emit( ccType, to, src ); }
+	__noinline void operator()( const xRegister32& to, const ModSibBase& sibsrc ) const		{ m_32::Emit( ccType, to, sibsrc ); }
 
-	__forceinline void operator()( const iRegister16& to, const iRegister16& from ) const	{ m_16::Emit( ccType, to, from ); }
-	__forceinline void operator()( const iRegister16& to, const void* src ) const			{ m_16::Emit( ccType, to, src ); }
-	__noinline void operator()( const iRegister16& to, const ModSibBase& sibsrc ) const		{ m_16::Emit( ccType, to, sibsrc ); }
+	__forceinline void operator()( const xRegister16& to, const xRegister16& from ) const	{ m_16::Emit( ccType, to, from ); }
+	__forceinline void operator()( const xRegister16& to, const void* src ) const			{ m_16::Emit( ccType, to, src ); }
+	__noinline void operator()( const xRegister16& to, const ModSibBase& sibsrc ) const		{ m_16::Emit( ccType, to, sibsrc ); }
 
 	CMovImplAll() {}		// don't ask.
 };
@@ -296,7 +296,7 @@ protected:
 	typedef CMovSetImpl<u8, 0x90> Impl;	// 0x90 is the SETcc base instruction id
 
 public:
-	__forceinline void operator()( JccComparisonType cc, const iRegister8& to ) const		{ Impl::EmitSet( cc, to ); }
+	__forceinline void operator()( JccComparisonType cc, const xRegister8& to ) const		{ Impl::EmitSet( cc, to ); }
 	__forceinline void operator()( JccComparisonType cc, void* dest ) const					{ Impl::EmitSet( cc, dest ); }
 	__noinline void operator()( JccComparisonType cc, const ModSibStrict<u8>& dest ) const	{ Impl::EmitSet( cc, dest ); }
 
@@ -311,7 +311,7 @@ protected:
 	typedef CMovSetImpl<u8, 0x90> Impl;	// 0x90 is the SETcc base instruction id
 
 public:
-	__forceinline void operator()( const iRegister8& to ) const			{ Impl::EmitSet( ccType, to ); }
+	__forceinline void operator()( const xRegister8& to ) const			{ Impl::EmitSet( ccType, to ); }
 	__forceinline void operator()( void* dest ) const					{ Impl::EmitSet( ccType, dest ); }
 	__noinline void operator()( const ModSibStrict<u8>& dest ) const	{ Impl::EmitSet( ccType, dest ); }
 
@@ -330,24 +330,24 @@ protected:
 	static const uint SrcOperandSize = sizeof( SrcImmType );
 
 	static bool Is8BitOperand()	{ return SrcOperandSize == 1; }
-	static void prefix16()		{ if( DestOperandSize == 2 ) iWrite<u8>( 0x66 ); }
+	static void prefix16()		{ if( DestOperandSize == 2 ) xWrite<u8>( 0x66 ); }
 	static __forceinline void emit_base( bool SignExtend )
 	{
 		prefix16();
-		iWrite<u8>( 0x0f );
-		iWrite<u8>( 0xb6 | (Is8BitOperand() ? 0 : 1) | (SignExtend ? 8 : 0 ) );
+		xWrite<u8>( 0x0f );
+		xWrite<u8>( 0xb6 | (Is8BitOperand() ? 0 : 1) | (SignExtend ? 8 : 0 ) );
 	}
 
 public: 
 	MovExtendImpl() {}		// For the love of GCC.
 
-	static __emitinline void Emit( const iRegister<DestImmType>& to, const iRegister<SrcImmType>& from, bool SignExtend )
+	static __emitinline void Emit( const xRegister<DestImmType>& to, const xRegister<SrcImmType>& from, bool SignExtend )
 	{
 		emit_base( SignExtend );
 		ModRM_Direct( to.Id, from.Id );
 	}
 
-	static __emitinline void Emit( const iRegister<DestImmType>& to, const ModSibStrict<SrcImmType>& sibsrc, bool SignExtend )
+	static __emitinline void Emit( const xRegister<DestImmType>& to, const ModSibStrict<SrcImmType>& sibsrc, bool SignExtend )
 	{
 		emit_base( SignExtend );
 		EmitSibMagic( to.Id, sibsrc );
@@ -364,14 +364,14 @@ protected:
 	typedef MovExtendImpl<u16, u8> m_8to16;
 
 public:
-	__forceinline void operator()( const iRegister32& to, const iRegister16& from )	const		{ m_16to32::Emit( to, from, SignExtend ); }
-	__noinline void operator()( const iRegister32& to, const ModSibStrict<u16>& sibsrc ) const	{ m_16to32::Emit( to, sibsrc, SignExtend ); }
+	__forceinline void operator()( const xRegister32& to, const xRegister16& from )	const		{ m_16to32::Emit( to, from, SignExtend ); }
+	__noinline void operator()( const xRegister32& to, const ModSibStrict<u16>& sibsrc ) const	{ m_16to32::Emit( to, sibsrc, SignExtend ); }
 
-	__forceinline void operator()( const iRegister32& to, const iRegister8& from ) const		{ m_8to32::Emit( to, from, SignExtend ); }
-	__noinline void operator()( const iRegister32& to, const ModSibStrict<u8>& sibsrc ) const	{ m_8to32::Emit( to, sibsrc, SignExtend ); }
+	__forceinline void operator()( const xRegister32& to, const xRegister8& from ) const		{ m_8to32::Emit( to, from, SignExtend ); }
+	__noinline void operator()( const xRegister32& to, const ModSibStrict<u8>& sibsrc ) const	{ m_8to32::Emit( to, sibsrc, SignExtend ); }
 
-	__forceinline void operator()( const iRegister16& to, const iRegister8& from ) const		{ m_8to16::Emit( to, from, SignExtend ); }
-	__noinline void operator()( const iRegister16& to, const ModSibStrict<u8>& sibsrc ) const	{ m_8to16::Emit( to, sibsrc, SignExtend ); }
+	__forceinline void operator()( const xRegister16& to, const xRegister8& from ) const		{ m_8to16::Emit( to, from, SignExtend ); }
+	__noinline void operator()( const xRegister16& to, const ModSibStrict<u8>& sibsrc ) const	{ m_8to16::Emit( to, sibsrc, SignExtend ); }
 
 	MovExtendImplAll() {}		// don't ask.
 };

@@ -41,65 +41,65 @@ protected:
 	static const uint OperandSize = sizeof(ImmType);
 
 	static bool Is8BitOperand()	{ return OperandSize == 1; }
-	static void prefix16()		{ if( OperandSize == 2 ) iWrite<u8>( 0x66 ); }
+	static void prefix16()		{ if( OperandSize == 2 ) xWrite<u8>( 0x66 ); }
 
 public: 
 	Group1Impl() {}		// because GCC doesn't like static classes
 
-	static __emitinline void Emit( G1Type InstType, const iRegister<ImmType>& to, const iRegister<ImmType>& from ) 
+	static __emitinline void Emit( G1Type InstType, const xRegister<ImmType>& to, const xRegister<ImmType>& from ) 
 	{
 		prefix16();
-		iWrite<u8>( (Is8BitOperand() ? 0 : 1) | (InstType<<3) ); 
+		xWrite<u8>( (Is8BitOperand() ? 0 : 1) | (InstType<<3) ); 
 		ModRM_Direct( from.Id, to.Id );
 	}
 
-	static __emitinline void Emit( G1Type InstType, const ModSibBase& sibdest, const iRegister<ImmType>& from ) 
+	static __emitinline void Emit( G1Type InstType, const ModSibBase& sibdest, const xRegister<ImmType>& from ) 
 	{
 		prefix16();
-		iWrite<u8>( (Is8BitOperand() ? 0 : 1) | (InstType<<3) ); 
+		xWrite<u8>( (Is8BitOperand() ? 0 : 1) | (InstType<<3) ); 
 		EmitSibMagic( from.Id, sibdest );
 	}
 
-	static __emitinline void Emit( G1Type InstType, const iRegister<ImmType>& to, const ModSibBase& sibsrc ) 
+	static __emitinline void Emit( G1Type InstType, const xRegister<ImmType>& to, const ModSibBase& sibsrc ) 
 	{
 		prefix16();
-		iWrite<u8>( (Is8BitOperand() ? 2 : 3) | (InstType<<3) );
+		xWrite<u8>( (Is8BitOperand() ? 2 : 3) | (InstType<<3) );
 		EmitSibMagic( to.Id, sibsrc );
 	}
 
-	static __emitinline void Emit( G1Type InstType, void* dest, const iRegister<ImmType>& from ) 
+	static __emitinline void Emit( G1Type InstType, void* dest, const xRegister<ImmType>& from ) 
 	{
 		prefix16();
-		iWrite<u8>( (Is8BitOperand() ? 0 : 1) | (InstType<<3) ); 
-		iWriteDisp( from.Id, dest );
+		xWrite<u8>( (Is8BitOperand() ? 0 : 1) | (InstType<<3) ); 
+		xWriteDisp( from.Id, dest );
 	}
 
-	static __emitinline void Emit( G1Type InstType, const iRegister<ImmType>& to, const void* src ) 
+	static __emitinline void Emit( G1Type InstType, const xRegister<ImmType>& to, const void* src ) 
 	{
 		prefix16();
-		iWrite<u8>( (Is8BitOperand() ? 2 : 3) | (InstType<<3) );
-		iWriteDisp( to.Id, src );
+		xWrite<u8>( (Is8BitOperand() ? 2 : 3) | (InstType<<3) );
+		xWriteDisp( to.Id, src );
 	}
 
-	static __emitinline void Emit( G1Type InstType, const iRegister<ImmType>& to, int imm ) 
+	static __emitinline void Emit( G1Type InstType, const xRegister<ImmType>& to, int imm ) 
 	{
 		prefix16();
 		if( !Is8BitOperand() && is_s8( imm ) )
 		{
-			iWrite<u8>( 0x83 );
+			xWrite<u8>( 0x83 );
 			ModRM_Direct( InstType, to.Id );
-			iWrite<s8>( imm );
+			xWrite<s8>( imm );
 		}
 		else
 		{
 			if( to.IsAccumulator() )
-				iWrite<u8>( (Is8BitOperand() ? 4 : 5) | (InstType<<3) );
+				xWrite<u8>( (Is8BitOperand() ? 4 : 5) | (InstType<<3) );
 			else
 			{
-				iWrite<u8>( Is8BitOperand() ? 0x80 : 0x81 );
+				xWrite<u8>( Is8BitOperand() ? 0x80 : 0x81 );
 				ModRM_Direct( InstType, to.Id );
 			}
-			iWrite<ImmType>( imm );
+			xWrite<ImmType>( imm );
 		}
 	}
 
@@ -107,19 +107,19 @@ public:
 	{
 		if( Is8BitOperand() )
 		{
-			iWrite<u8>( 0x80 );
+			xWrite<u8>( 0x80 );
 			EmitSibMagic( InstType, sibdest );
-			iWrite<ImmType>( imm );
+			xWrite<ImmType>( imm );
 		}
 		else
 		{		
 			prefix16();
-			iWrite<u8>( is_s8( imm ) ? 0x83 : 0x81 );
+			xWrite<u8>( is_s8( imm ) ? 0x83 : 0x81 );
 			EmitSibMagic( InstType, sibdest );
 			if( is_s8( imm ) )
-				iWrite<s8>( imm );
+				xWrite<s8>( imm );
 			else
-				iWrite<ImmType>( imm );
+				xWrite<ImmType>( imm );
 		}
 	}
 };
@@ -132,15 +132,15 @@ class Group1ImplAll
 {
 public:
 	template< typename T >
-	__forceinline void operator()( const iRegister<T>& to,	const iRegister<T>& from ) const	{ Group1Impl<T>::Emit( InstType, to, from ); }
+	__forceinline void operator()( const xRegister<T>& to,	const xRegister<T>& from ) const	{ Group1Impl<T>::Emit( InstType, to, from ); }
 	template< typename T >
-	__forceinline void operator()( const iRegister<T>& to,	const void* src ) const				{ Group1Impl<T>::Emit( InstType, to, src ); }
+	__forceinline void operator()( const xRegister<T>& to,	const void* src ) const				{ Group1Impl<T>::Emit( InstType, to, src ); }
 	template< typename T >
-	__forceinline void operator()( void* dest,				const iRegister<T>& from ) const	{ Group1Impl<T>::Emit( InstType, dest, from ); }
+	__forceinline void operator()( void* dest,				const xRegister<T>& from ) const	{ Group1Impl<T>::Emit( InstType, dest, from ); }
 	template< typename T >
-	__noinline void operator()( const ModSibBase& sibdest,	const iRegister<T>& from ) const	{ Group1Impl<T>::Emit( InstType, sibdest, from ); }
+	__noinline void operator()( const ModSibBase& sibdest,	const xRegister<T>& from ) const	{ Group1Impl<T>::Emit( InstType, sibdest, from ); }
 	template< typename T >
-	__noinline void operator()( const iRegister<T>& to,		const ModSibBase& sibsrc ) const	{ Group1Impl<T>::Emit( InstType, to, sibsrc ); }
+	__noinline void operator()( const xRegister<T>& to,		const ModSibBase& sibsrc ) const	{ Group1Impl<T>::Emit( InstType, to, sibsrc ); }
 
 	// Note on Imm forms : use int as the source operand since it's "reasonably inert" from a compiler
 	// perspective.  (using uint tends to make the compiler try and fail to match signed immediates with
@@ -149,38 +149,60 @@ public:
 	template< typename T >
 	__noinline void operator()( const ModSibStrict<T>& sibdest, int imm ) const	{ Group1Impl<T>::Emit( InstType, sibdest, imm ); }
 	template< typename T >
-	__forceinline void operator()( const iRegister<T>& to, int imm ) const		{ Group1Impl<T>::Emit( InstType, to, imm ); }
+	__forceinline void operator()( const xRegister<T>& to, int imm ) const		{ Group1Impl<T>::Emit( InstType, to, imm ); }
 
 	Group1ImplAll() {}		// Why does GCC need these?
 };
 
+// ------------------------------------------------------------------------
+// This class combines x86 with SSE/SSE2 logic operations (ADD, OR, and NOT).
+// Note: ANDN [AndNot] is handled below separately.
+//
 template< G1Type InstType, u8 OpcodeSSE >
-class G1LogicImpl : public Group1ImplAll<InstType>
+class G1LogicImpl_PlusSSE : public Group1ImplAll<InstType>
 {
 public:
+	using Group1ImplAll<InstType>::operator();
+
 	const SSELogicImpl<0x00,OpcodeSSE> PS;
 	const SSELogicImpl<0x66,OpcodeSSE> PD;
 
-	G1LogicImpl() {}
+	G1LogicImpl_PlusSSE() {}
 };
 
+// ------------------------------------------------------------------------
+// This calss combines x86 with SSE/SSE2 arithmetic operations (ADD/SUB).
+//
 template< G1Type InstType, u8 OpcodeSSE >
-class G1ArithmeticImpl : public G1LogicImpl<InstType, OpcodeSSE >
+class G1ArithmeticImpl_PlusSSE : public G1LogicImpl_PlusSSE<InstType, OpcodeSSE >
 {
 public:
+	using Group1ImplAll<InstType>::operator();
+
 	const SSELogicImpl<0xf3,OpcodeSSE> SS;
 	const SSELogicImpl<0xf2,OpcodeSSE> SD;
 
-	G1ArithmeticImpl() {}
+	G1ArithmeticImpl_PlusSSE() {}
 };
 
-
-template< u8 OpcodeSSE >
-class SSEAndNotImpl
+// ------------------------------------------------------------------------
+class G1CompareImpl_PlusSSE : Group1ImplAll< G1Type_CMP >
 {
-public:
-	const SSELogicImpl<0x00,OpcodeSSE> PS;
-	const SSELogicImpl<0x66,OpcodeSSE> PD;
+protected:
+	template< u8 Prefix > struct Woot
+	{
+		__forceinline void operator()( const xRegisterSSE& to, const xRegisterSSE& from, SSE2_ComparisonType cmptype ) const	{ writeXMMop( Prefix, 0xc2, to, from ); xWrite<u8>( cmptype ); }
+		__forceinline void operator()( const xRegisterSSE& to, const void* from, SSE2_ComparisonType cmptype ) const			{ writeXMMop( Prefix, 0xc2, to, from ); xWrite<u8>( cmptype ); }
+		__noinline void operator()( const xRegisterSSE& to, const ModSibBase& from, SSE2_ComparisonType cmptype ) const		{ writeXMMop( Prefix, 0xc2, to, from ); xWrite<u8>( cmptype ); }
+	};
 
-	SSEAndNotImpl() {}
+public:
+	using Group1ImplAll< G1Type_CMP >::operator();
+
+	Woot<0x00> PS;
+	Woot<0x66> PD;
+	Woot<0xf3> SS;
+	Woot<0xf2> SD;
+
+	G1CompareImpl_PlusSSE() {} //GCWhat?
 };

@@ -31,6 +31,7 @@ enum G3Type
 	G3Type_iDIV	= 7
 };
 
+// ------------------------------------------------------------------------
 template< typename ImmType >
 class Group3Impl
 {
@@ -38,22 +39,22 @@ protected:
 	static const uint OperandSize = sizeof(ImmType);
 
 	static bool Is8BitOperand()	{ return OperandSize == 1; }
-	static void prefix16()		{ if( OperandSize == 2 ) iWrite<u8>( 0x66 ); }
+	static void prefix16()		{ if( OperandSize == 2 ) xWrite<u8>( 0x66 ); }
 
 public: 
 	Group3Impl() {}		// For the love of GCC.
 
-	static __emitinline void Emit( G3Type InstType, const iRegister<ImmType>& from )
+	static __emitinline void Emit( G3Type InstType, const xRegister<ImmType>& from )
 	{
 		prefix16();
-		iWrite<u8>(Is8BitOperand() ? 0xf6 : 0xf7 );
+		xWrite<u8>(Is8BitOperand() ? 0xf6 : 0xf7 );
 		ModRM_Direct( InstType, from.Id );
 	}
 
 	static __emitinline void Emit( G3Type InstType, const ModSibStrict<ImmType>& sibsrc )
 	{
 		prefix16();
-		iWrite<u8>( Is8BitOperand() ? 0xf6 : 0xf7 );
+		xWrite<u8>( Is8BitOperand() ? 0xf6 : 0xf7 );
 		EmitSibMagic( InstType, sibsrc );
 	}
 };
@@ -65,7 +66,7 @@ class Group3ImplAll
 {
 public:
 	template< typename T >
-	__forceinline void operator()( const iRegister<T>& from ) const	{ Group3Impl<T>::Emit( InstType, from ); }
+	__forceinline void operator()( const xRegister<T>& from ) const	{ Group3Impl<T>::Emit( InstType, from ); }
 
 	template< typename T >
 	__noinline void operator()( const ModSibStrict<T>& from ) const { Group3Impl<T>::Emit( InstType, from ); }
@@ -73,7 +74,9 @@ public:
 	Group3ImplAll() {}
 };
 
-
+// ------------------------------------------------------------------------
+// This class combines x86 and SSE/SSE2 instructions for iMUL and iDIV.
+//
 template< G3Type InstType, u8 OpcodeSSE >
 class G3Impl_PlusSSE : public Group3ImplAll<InstType>
 {
@@ -94,11 +97,11 @@ class iMulImpl
 {
 protected:
 	static const uint OperandSize = sizeof(ImmType);
-	static void prefix16() { if( OperandSize == 2 ) iWrite<u8>( 0x66 ); }
+	static void prefix16() { if( OperandSize == 2 ) xWrite<u8>( 0x66 ); }
 
 public:
 	// ------------------------------------------------------------------------
-	static __emitinline void Emit( const iRegister<ImmType>& to, const iRegister<ImmType>& from )
+	static __emitinline void Emit( const xRegister<ImmType>& to, const xRegister<ImmType>& from )
 	{
 		prefix16();
 		write16( 0xaf0f );
@@ -106,15 +109,15 @@ public:
 	}
 	
 	// ------------------------------------------------------------------------
-	static __emitinline void Emit( const iRegister<ImmType>& to, const void* src )
+	static __emitinline void Emit( const xRegister<ImmType>& to, const void* src )
 	{
 		prefix16();
 		write16( 0xaf0f );
-		iWriteDisp( to.Id, src );
+		xWriteDisp( to.Id, src );
 	}
 
 	// ------------------------------------------------------------------------
-	static __emitinline void Emit( const iRegister<ImmType>& to, const ModSibBase& src )
+	static __emitinline void Emit( const xRegister<ImmType>& to, const ModSibBase& src )
 	{
 		prefix16();
 		write16( 0xaf0f );
@@ -122,7 +125,7 @@ public:
 	}
 
 	// ------------------------------------------------------------------------
-	static __emitinline void Emit( const iRegister<ImmType>& to, const iRegister<ImmType>& from, ImmType imm )
+	static __emitinline void Emit( const xRegister<ImmType>& to, const xRegister<ImmType>& from, ImmType imm )
 	{
 		prefix16();
 		write16( is_s8( imm ) ? 0x6b : 0x69 );
@@ -130,23 +133,23 @@ public:
 		if( is_s8( imm ) )
 			write8( imm );
 		else
-			iWrite<ImmType>( imm );
+			xWrite<ImmType>( imm );
 	}
 
 	// ------------------------------------------------------------------------
-	static __emitinline void Emit( const iRegister<ImmType>& to, const void* src, ImmType imm )
+	static __emitinline void Emit( const xRegister<ImmType>& to, const void* src, ImmType imm )
 	{
 		prefix16();
 		write16( is_s8( imm ) ? 0x6b : 0x69 );
-		iWriteDisp( to.Id, src );
+		xWriteDisp( to.Id, src );
 		if( is_s8( imm ) )
 			write8( imm );
 		else
-			iWrite<ImmType>( imm );
+			xWrite<ImmType>( imm );
 	}
 
 	// ------------------------------------------------------------------------
-	static __emitinline void Emit( const iRegister<ImmType>& to, const ModSibBase& src, ImmType imm )
+	static __emitinline void Emit( const xRegister<ImmType>& to, const ModSibBase& src, ImmType imm )
 	{
 		prefix16();
 		write16( is_s8( imm ) ? 0x6b : 0x69 );
@@ -154,11 +157,11 @@ public:
 		if( is_s8( imm ) )
 			write8( imm );
 		else
-			iWrite<ImmType>( imm );
+			xWrite<ImmType>( imm );
 	}
 };
 
-
+// ------------------------------------------------------------------------
 class iMul_PlusSSE : public G3Impl_PlusSSE<G3Type_iMUL,0x59>
 {
 protected:
@@ -166,24 +169,19 @@ protected:
 	typedef iMulImpl<u16> iMUL16;
 
 public:
+	using G3Impl_PlusSSE<G3Type_iMUL,0x59>::operator();
+	
+	__forceinline void operator()( const xRegister32& to,	const xRegister32& from ) const			{ iMUL32::Emit( to, from ); }
+	__forceinline void operator()( const xRegister32& to,	const void* src ) const					{ iMUL32::Emit( to, src ); }
+	__forceinline void operator()( const xRegister32& to,	const xRegister32& from, s32 imm ) const{ iMUL32::Emit( to, from, imm ); }
+	__noinline void operator()( const xRegister32& to,	const ModSibBase& src ) const				{ iMUL32::Emit( to, src ); }
+	__noinline void operator()( const xRegister32& to,	const ModSibBase& from, s32 imm ) const		{ iMUL32::Emit( to, from, imm ); }
 
-	template< typename T >
-	__forceinline void operator()( const iRegister<T>& from ) const	{ Group3Impl<T>::Emit( G3Type_iMUL, from ); }
-
-	template< typename T >
-	__noinline void operator()( const ModSibStrict<T>& from ) const { Group3Impl<T>::Emit( G3Type_iMUL, from ); }
-
-	__forceinline void operator()( const iRegister32& to,	const iRegister32& from ) const			{ iMUL32::Emit( to, from ); }
-	__forceinline void operator()( const iRegister32& to,	const void* src ) const					{ iMUL32::Emit( to, src ); }
-	__forceinline void operator()( const iRegister32& to,	const iRegister32& from, s32 imm ) const{ iMUL32::Emit( to, from, imm ); }
-	__noinline void operator()( const iRegister32& to,	const ModSibBase& src ) const				{ iMUL32::Emit( to, src ); }
-	__noinline void operator()( const iRegister32& to,	const ModSibBase& from, s32 imm ) const		{ iMUL32::Emit( to, from, imm ); }
-
-	__forceinline void operator()( const iRegister16& to,	const iRegister16& from ) const			{ iMUL16::Emit( to, from ); }
-	__forceinline void operator()( const iRegister16& to,	const void* src ) const					{ iMUL16::Emit( to, src ); }
-	__forceinline void operator()( const iRegister16& to,	const iRegister16& from, s16 imm ) const{ iMUL16::Emit( to, from, imm ); }
-	__noinline void operator()( const iRegister16& to,	const ModSibBase& src ) const				{ iMUL16::Emit( to, src ); }
-	__noinline void operator()( const iRegister16& to,	const ModSibBase& from, s16 imm ) const		{ iMUL16::Emit( to, from, imm ); }
+	__forceinline void operator()( const xRegister16& to,	const xRegister16& from ) const			{ iMUL16::Emit( to, from ); }
+	__forceinline void operator()( const xRegister16& to,	const void* src ) const					{ iMUL16::Emit( to, src ); }
+	__forceinline void operator()( const xRegister16& to,	const xRegister16& from, s16 imm ) const{ iMUL16::Emit( to, from, imm ); }
+	__noinline void operator()( const xRegister16& to,	const ModSibBase& src ) const				{ iMUL16::Emit( to, src ); }
+	__noinline void operator()( const xRegister16& to,	const ModSibBase& from, s16 imm ) const		{ iMUL16::Emit( to, from, imm ); }
 
 	iMul_PlusSSE() {}
 };

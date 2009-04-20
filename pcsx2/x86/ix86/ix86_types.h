@@ -115,7 +115,7 @@ template< typename T >
 static __forceinline bool is_s8( T imm ) { return (s8)imm == (s32)imm; }
 
 template< typename T >
-static __forceinline void iWrite( T val )
+static __forceinline void xWrite( T val )
 {
 	*(T*)x86Ptr = val;
 	x86Ptr += sizeof(T); 
@@ -159,7 +159,7 @@ namespace x86Emitter
 	static const int ModRm_UseSib = 4;		// same index value as ESP (used in RM field)
 	static const int ModRm_UseDisp32 = 5;	// same index value as EBP (used in Mod field)
 
-	class iAddressInfo;
+	class xAddressInfo;
 	class ModSibBase;
 
 	extern void iSetPtr( void* ptr );
@@ -170,12 +170,12 @@ namespace x86Emitter
 
 	static __forceinline void write8( u8 val )
 	{
-		iWrite( val );
+		xWrite( val );
 	}
 
 	static __forceinline void write16( u16 val )
 	{ 
-		iWrite( val );
+		xWrite( val );
 	} 
 
 	static __forceinline void write24( u32 val )
@@ -186,30 +186,30 @@ namespace x86Emitter
 
 	static __forceinline void write32( u32 val )
 	{ 
-		iWrite( val );
+		xWrite( val );
 	} 
 
 	static __forceinline void write64( u64 val )
 	{ 
-		iWrite( val );
+		xWrite( val );
 	}
 
 	//////////////////////////////////////////////////////////////////////////////////////////
-	// iRegister
-	// Unless templating some fancy stuff, use the friendly iRegister32/16/8 typedefs instead.
+	// xRegister
+	// Unless templating some fancy stuff, use the friendly xRegister32/16/8 typedefs instead.
 	//
 	template< typename OperandType >
-	class iRegister
+	class xRegister
 	{
 	public:
 		static const uint OperandSize = sizeof( OperandType );
-		static const iRegister Empty;		// defined as an empty/unused value (-1)
+		static const xRegister Empty;		// defined as an empty/unused value (-1)
 
 		int Id;
 
-		iRegister( const iRegister<OperandType>& src ) : Id( src.Id ) {}
-		iRegister(): Id( -1 ) {}
-		explicit iRegister( int regId ) : Id( regId ) { jASSUME( Id >= -1 && Id < 8 ); }
+		xRegister( const xRegister<OperandType>& src ) : Id( src.Id ) {}
+		xRegister(): Id( -1 ) {}
+		explicit xRegister( int regId ) : Id( regId ) { jASSUME( Id >= -1 && Id < 8 ); }
 
 		bool IsEmpty() const { return Id < 0; }
 
@@ -219,17 +219,17 @@ namespace x86Emitter
 		// returns true if the register is a valid MMX or XMM register.
 		bool IsSIMD() const { return OperandSize == 8 || OperandSize == 16; }
 
-		bool operator==( const iRegister<OperandType>& src ) const
+		bool operator==( const xRegister<OperandType>& src ) const
 		{
 			return (Id == src.Id);
 		}
 
-		bool operator!=( const iRegister<OperandType>& src ) const
+		bool operator!=( const xRegister<OperandType>& src ) const
 		{
 			return (Id != src.Id);
 		}
 
-		iRegister<OperandType>& operator=( const iRegister<OperandType>& src )
+		xRegister<OperandType>& operator=( const xRegister<OperandType>& src )
 		{
 			Id = src.Id;
 			return *this;
@@ -239,20 +239,20 @@ namespace x86Emitter
 	//////////////////////////////////////////////////////////////////////////////////////////
 	//
 	template< typename OperandType >
-	class iRegisterSIMD : public iRegister<OperandType>
+	class xRegisterSIMD : public xRegister<OperandType>
 	{
 	public:
-		static const iRegisterSIMD Empty;		// defined as an empty/unused value (-1)
+		static const xRegisterSIMD Empty;		// defined as an empty/unused value (-1)
 
 	public:
-		iRegisterSIMD(): iRegister<OperandType>() {}
-		iRegisterSIMD( const iRegisterSIMD& src ) : iRegister<OperandType>( src.Id ) {}
-		iRegisterSIMD( const iRegister<OperandType>& src ) : iRegister<OperandType>( src ) {}
-		explicit iRegisterSIMD( int regId ) : iRegister<OperandType>( regId ) {}
+		xRegisterSIMD(): xRegister<OperandType>() {}
+		xRegisterSIMD( const xRegisterSIMD& src ) : xRegister<OperandType>( src.Id ) {}
+		xRegisterSIMD( const xRegister<OperandType>& src ) : xRegister<OperandType>( src ) {}
+		explicit xRegisterSIMD( int regId ) : xRegister<OperandType>( regId ) {}
 
-		iRegisterSIMD<OperandType>& operator=( const iRegisterSIMD<OperandType>& src )
+		xRegisterSIMD<OperandType>& operator=( const xRegisterSIMD<OperandType>& src )
 		{
-			iRegister<OperandType>::Id = src.Id;
+			xRegister<OperandType>::Id = src.Id;
 			return *this;
 		}
 	};
@@ -266,66 +266,66 @@ namespace x86Emitter
 	// all about the the templated code in haphazard fashion.  Yay.. >_<
 	//
 
-	typedef iRegisterSIMD<u128> iRegisterSSE;
-	typedef iRegisterSIMD<u64>  iRegisterMMX;
-	typedef iRegister<u32>  iRegister32;
-	typedef iRegister<u16>  iRegister16;
-	typedef iRegister<u8>   iRegister8;
+	typedef xRegisterSIMD<u128> xRegisterSSE;
+	typedef xRegisterSIMD<u64>  xRegisterMMX;
+	typedef xRegister<u32>  xRegister32;
+	typedef xRegister<u16>  xRegister16;
+	typedef xRegister<u8>   xRegister8;
 
-	class iRegisterCL : public iRegister8
+	class xRegisterCL : public xRegister8
 	{
 	public:
-		iRegisterCL(): iRegister8( 1 ) {}
+		xRegisterCL(): xRegister8( 1 ) {}
 	};
 
-	extern const iRegisterSSE
+	extern const xRegisterSSE
 		xmm0, xmm1, xmm2, xmm3,
 		xmm4, xmm5, xmm6, xmm7;
 
-	extern const iRegisterMMX
+	extern const xRegisterMMX
 		mm0, mm1, mm2, mm3,
 		mm4, mm5, mm6, mm7;
 
-	extern const iRegister32
+	extern const xRegister32
 		eax, ebx, ecx, edx,
 		esi, edi, ebp, esp;
 
-	extern const iRegister16
+	extern const xRegister16
 		ax, bx, cx, dx,
 		si, di, bp, sp;
 
-	extern const iRegister8
+	extern const xRegister8
 		al, dl, bl,
 		ah, ch, dh, bh;
 
-	extern const iRegisterCL cl;		// I'm special!
+	extern const xRegisterCL cl;		// I'm special!
 
 	//////////////////////////////////////////////////////////////////////////////////////////
 	// Use 32 bit registers as out index register (for ModSib memory address calculations)
-	// Only iAddressReg provides operators for constructing iAddressInfo types.
+	// Only xAddressReg provides operators for constructing xAddressInfo types.
 	//
-	class iAddressReg : public iRegister32
+	class xAddressReg : public xRegister32
 	{
 	public:
-		static const iAddressReg Empty;		// defined as an empty/unused value (-1)
+		static const xAddressReg Empty;		// defined as an empty/unused value (-1)
 	
 	public:
-		iAddressReg(): iRegister32() {}
-		iAddressReg( const iAddressReg& src ) : iRegister32( src.Id ) {}
-		iAddressReg( const iRegister32& src ) : iRegister32( src ) {}
-		explicit iAddressReg( int regId ) : iRegister32( regId ) {}
+		xAddressReg(): xRegister32() {}
+		xAddressReg( const xAddressReg& src ) : xRegister32( src.Id ) {}
+		xAddressReg( const xRegister32& src ) : xRegister32( src ) {}
+		explicit xAddressReg( int regId ) : xRegister32( regId ) {}
 
 		// Returns true if the register is the stack pointer: ESP.
 		bool IsStackPointer() const { return Id == 4; }
 
-		iAddressInfo operator+( const iAddressReg& right ) const;
-		iAddressInfo operator+( const iAddressInfo& right ) const;
-		iAddressInfo operator+( s32 right ) const;
+		xAddressInfo operator+( const xAddressReg& right ) const;
+		xAddressInfo operator+( const xAddressInfo& right ) const;
+		xAddressInfo operator+( s32 right ) const;
 
-		iAddressInfo operator*( u32 factor ) const;
-		iAddressInfo operator<<( u32 shift ) const;
+		xAddressInfo operator*( u32 factor ) const;
+		xAddressInfo operator<<( u32 shift ) const;
 		
-		iAddressReg& operator=( const iRegister32& src )
+		xAddressReg& operator=( const xRegister32& src )
 		{
 			Id = src.Id;
 			return *this;
@@ -334,16 +334,16 @@ namespace x86Emitter
 
 	//////////////////////////////////////////////////////////////////////////////////////////
 	//
-	class iAddressInfo
+	class xAddressInfo
 	{
 	public:
-		iAddressReg Base;		// base register (no scale)
-		iAddressReg Index;		// index reg gets multiplied by the scale
+		xAddressReg Base;		// base register (no scale)
+		xAddressReg Index;		// index reg gets multiplied by the scale
 		int Factor;				// scale applied to the index register, in factor form (not a shift!)
 		s32 Displacement;		// address displacement
 
 	public:
-		__forceinline iAddressInfo( const iAddressReg& base, const iAddressReg& index, int factor=1, s32 displacement=0 ) :
+		__forceinline xAddressInfo( const xAddressReg& base, const xAddressReg& index, int factor=1, s32 displacement=0 ) :
 			Base( base ),
 			Index( index ),
 			Factor( factor ),
@@ -351,7 +351,7 @@ namespace x86Emitter
 		{
 		}
 
-		__forceinline explicit iAddressInfo( const iAddressReg& index, int displacement=0 ) :
+		__forceinline explicit xAddressInfo( const xAddressReg& index, int displacement=0 ) :
 			Base(),
 			Index( index ),
 			Factor(0),
@@ -359,7 +359,7 @@ namespace x86Emitter
 		{
 		}
 		
-		__forceinline explicit iAddressInfo( s32 displacement ) :
+		__forceinline explicit xAddressInfo( s32 displacement ) :
 			Base(),
 			Index(),
 			Factor(0),
@@ -367,24 +367,24 @@ namespace x86Emitter
 		{
 		}
 		
-		static iAddressInfo FromIndexReg( const iAddressReg& index, int scale=0, s32 displacement=0 );
+		static xAddressInfo FromIndexReg( const xAddressReg& index, int scale=0, s32 displacement=0 );
 
 	public:
 		bool IsByteSizeDisp() const { return is_s8( Displacement ); }
 
-		__forceinline iAddressInfo& Add( s32 imm )
+		__forceinline xAddressInfo& Add( s32 imm )
 		{
 			Displacement += imm;
 			return *this;
 		}
 		
-		__forceinline iAddressInfo& Add( const iAddressReg& src );
-		__forceinline iAddressInfo& Add( const iAddressInfo& src );
+		__forceinline xAddressInfo& Add( const xAddressReg& src );
+		__forceinline xAddressInfo& Add( const xAddressInfo& src );
 
-		__forceinline iAddressInfo operator+( const iAddressReg& right ) const { return iAddressInfo( *this ).Add( right ); }
-		__forceinline iAddressInfo operator+( const iAddressInfo& right ) const { return iAddressInfo( *this ).Add( right ); }
-		__forceinline iAddressInfo operator+( s32 imm ) const { return iAddressInfo( *this ).Add( imm ); }
-		__forceinline iAddressInfo operator-( s32 imm ) const { return iAddressInfo( *this ).Add( -imm ); }
+		__forceinline xAddressInfo operator+( const xAddressReg& right ) const { return xAddressInfo( *this ).Add( right ); }
+		__forceinline xAddressInfo operator+( const xAddressInfo& right ) const { return xAddressInfo( *this ).Add( right ); }
+		__forceinline xAddressInfo operator+( s32 imm ) const { return xAddressInfo( *this ).Add( imm ); }
+		__forceinline xAddressInfo operator-( s32 imm ) const { return xAddressInfo( *this ).Add( -imm ); }
 	};
 
 	//////////////////////////////////////////////////////////////////////////////////////////
@@ -392,25 +392,25 @@ namespace x86Emitter
 	//
 	// This class serves two purposes:  It houses 'reduced' ModRM/SIB info only, which means
 	// that the Base, Index, Scale, and Displacement values are all in the correct arrange-
-	// ments, and it serves as a type-safe layer between the iRegister's operators (which
-	// generate iAddressInfo types) and the emitter's ModSib instruction forms.  Without this,
-	// the iRegister would pass as a ModSib type implicitly, and that would cause ambiguity
+	// ments, and it serves as a type-safe layer between the xRegister's operators (which
+	// generate xAddressInfo types) and the emitter's ModSib instruction forms.  Without this,
+	// the xRegister would pass as a ModSib type implicitly, and that would cause ambiguity
 	// on a number of instructions.
 	//
-	// End users should always use iAddressInfo instead.
+	// End users should always use xAddressInfo instead.
 	//
 	class ModSibBase
 	{
 	public:
-		iAddressReg Base;		// base register (no scale)
-		iAddressReg Index;		// index reg gets multiplied by the scale
+		xAddressReg Base;		// base register (no scale)
+		xAddressReg Index;		// index reg gets multiplied by the scale
 		uint Scale;				// scale applied to the index register, in scale/shift form
 		s32 Displacement;		// offset applied to the Base/Index registers.
 
 	public:
-		explicit ModSibBase( const iAddressInfo& src );
+		explicit ModSibBase( const xAddressInfo& src );
 		explicit ModSibBase( s32 disp );
-		ModSibBase( iAddressReg base, iAddressReg index, int scale=0, s32 displacement=0 );
+		ModSibBase( xAddressReg base, xAddressReg index, int scale=0, s32 displacement=0 );
 		
 		bool IsByteSizeDisp() const { return is_s8( Displacement ); }
 
@@ -437,9 +437,9 @@ namespace x86Emitter
 	public:
 		static const uint OperandSize = sizeof( OperandType );
 
-		__forceinline explicit ModSibStrict( const iAddressInfo& src ) : ModSibBase( src ) {}
+		__forceinline explicit ModSibStrict( const xAddressInfo& src ) : ModSibBase( src ) {}
 		__forceinline explicit ModSibStrict( s32 disp ) : ModSibBase( disp ) {}
-		__forceinline ModSibStrict( iAddressReg base, iAddressReg index, int scale=0, s32 displacement=0 ) :
+		__forceinline ModSibStrict( xAddressReg base, xAddressReg index, int scale=0, s32 displacement=0 ) :
 			ModSibBase( base, index, scale, displacement ) {}
 		
 		__forceinline ModSibStrict<OperandType>& Add( s32 imm )
@@ -453,20 +453,20 @@ namespace x86Emitter
 	};
 
 	//////////////////////////////////////////////////////////////////////////////////////////
-	// iAddressIndexerBase - This is a static class which provisions our ptr[] syntax.
+	// xAddressIndexerBase - This is a static class which provisions our ptr[] syntax.
 	//
-	struct iAddressIndexerBase
+	struct xAddressIndexerBase
 	{
 		// passthrough instruction, allows ModSib to pass silently through ptr translation
 		// without doing anything and without compiler error.
 		const ModSibBase& operator[]( const ModSibBase& src ) const { return src; }
 
-		__forceinline ModSibBase operator[]( iAddressReg src ) const
+		__forceinline ModSibBase operator[]( xAddressReg src ) const
 		{
-			return ModSibBase( src, iAddressReg::Empty );
+			return ModSibBase( src, xAddressReg::Empty );
 		}
 
-		__forceinline ModSibBase operator[]( const iAddressInfo& src ) const
+		__forceinline ModSibBase operator[]( const xAddressInfo& src ) const
 		{
 			return ModSibBase( src );
 		}
@@ -481,7 +481,7 @@ namespace x86Emitter
 			return ModSibBase( (uptr)src );
 		}
 		
-		iAddressIndexerBase() {}			// appease the GCC gods
+		xAddressIndexerBase() {}			// appease the GCC gods
 	};
 
 	//////////////////////////////////////////////////////////////////////////////////////////
@@ -489,7 +489,7 @@ namespace x86Emitter
 	// specification of the operand size for ImmToMem operations.
 	//
 	template< typename OperandType >
-	struct iAddressIndexer
+	struct xAddressIndexer
 	{
 		static const uint OperandSize = sizeof( OperandType );
 
@@ -497,12 +497,12 @@ namespace x86Emitter
 		// without doing anything and without compiler error.
 		const ModSibStrict<OperandType>& operator[]( const ModSibStrict<OperandType>& src ) const { return src; }
 
-		__forceinline ModSibStrict<OperandType> operator[]( iAddressReg src ) const
+		__forceinline ModSibStrict<OperandType> operator[]( xAddressReg src ) const
 		{
-			return ModSibStrict<OperandType>( src, iAddressReg::Empty );
+			return ModSibStrict<OperandType>( src, xAddressReg::Empty );
 		}
 
-		__forceinline ModSibStrict<OperandType> operator[]( const iAddressInfo& src ) const
+		__forceinline ModSibStrict<OperandType> operator[]( const xAddressInfo& src ) const
 		{
 			return ModSibStrict<OperandType>( src );
 		}
@@ -517,17 +517,17 @@ namespace x86Emitter
 			return ModSibStrict<OperandType>( (uptr)src );
 		}
 		
-		iAddressIndexer() {}  // GCC initialization dummy
+		xAddressIndexer() {}  // GCC initialization dummy
 	};
 
 	// ptr[] - use this form for instructions which can resolve the address operand size from
 	// the other register operand sizes.
-	extern const iAddressIndexerBase ptr;
-	extern const iAddressIndexer<u128> ptr128;
-	extern const iAddressIndexer<u64> ptr64;
-	extern const iAddressIndexer<u32> ptr32;	// explicitly typed addressing, usually needed for '[dest],imm' instruction forms
-	extern const iAddressIndexer<u16> ptr16;	// explicitly typed addressing, usually needed for '[dest],imm' instruction forms
-	extern const iAddressIndexer<u8> ptr8;		// explicitly typed addressing, usually needed for '[dest],imm' instruction forms
+	extern const xAddressIndexerBase ptr;
+	extern const xAddressIndexer<u128> ptr128;
+	extern const xAddressIndexer<u64> ptr64;
+	extern const xAddressIndexer<u32> ptr32;	// explicitly typed addressing, usually needed for '[dest],imm' instruction forms
+	extern const xAddressIndexer<u16> ptr16;	// explicitly typed addressing, usually needed for '[dest],imm' instruction forms
+	extern const xAddressIndexer<u8> ptr8;		// explicitly typed addressing, usually needed for '[dest],imm' instruction forms
 
 	//////////////////////////////////////////////////////////////////////////////////////////
 	// JccComparisonType - enumerated possibilities for inspired code branching!
@@ -561,26 +561,41 @@ namespace x86Emitter
 	// Not supported yet:
 	//E3 cb 	JECXZ rel8 	Jump short if ECX register is 0.
 
+	//////////////////////////////////////////////////////////////////////////////////////////
+	// SSE2_ComparisonType - enumerated possibilities for SIMD data comparison!
+	//
+	enum SSE2_ComparisonType
+	{
+		SSE2_Equal = 0,
+		SSE2_Less,
+		SSE2_LessOrEqual,
+		SSE2_Unordered,
+		SSE2_NotEqual,
+		SSE2_NotLess,
+		SSE2_NotLessOrEqual,
+		SSE2_Ordered
+	};
+
 
 	//////////////////////////////////////////////////////////////////////////////////////////
-	// iSmartJump
+	// xSmartJump
 	// This class provides an interface for generating forward-based j8's or j32's "smartly"
 	// as per the measured displacement distance.  If the displacement is a valid s8, then
 	// a j8 is inserted, else a j32.
 	// 
-	// Note: This class is inherently unsafe, and so it's recommended to use iForwardJump8/32
+	// Note: This class is inherently unsafe, and so it's recommended to use xForwardJump8/32
 	// whenever it is known that the jump destination is (or is not) short.  Only use
-	// iSmartJump in cases where it's unknown what jump encoding will be ideal.
+	// xSmartJump in cases where it's unknown what jump encoding will be ideal.
 	//
-	// Important: Use this tool with caution!  iSmartJump cannot be used in cases where jump
+	// Important: Use this tool with caution!  xSmartJump cannot be used in cases where jump
 	// targets overlap, since the writeback of the second target will alter the position of
 	// the first target (which breaks the relative addressing).  To assist in avoiding such
-	// errors, iSmartJump works based on C++ block scope, where the destruction of the
-	// iSmartJump object (invoked by a '}') signals the target of the jump.  Example:
+	// errors, xSmartJump works based on C++ block scope, where the destruction of the
+	// xSmartJump object (invoked by a '}') signals the target of the jump.  Example:
 	//
 	// {
 	//     iCMP( EAX, ECX );
-	//     iSmartJump jumpTo( Jcc_Above );
+	//     xSmartJump jumpTo( Jcc_Above );
 	//     [... conditional code ...]
 	// }  // smartjump targets this spot.
 	//
@@ -593,7 +608,7 @@ namespace x86Emitter
 	// speed benefits in the form of L1/L2 cache clutter, on any CPU.  They're also notably
 	// faster on P4's, and mildly faster on AMDs.  (Core2's and i7's don't care)
 	//
-	class iSmartJump : public NoncopyableObject
+	class xSmartJump : public NoncopyableObject
 	{
 	protected:
 		u8* m_baseptr;				// base address of the instruction (passed to the instruction emitter)
@@ -607,12 +622,12 @@ namespace x86Emitter
 		}
 
 		JccComparisonType GetCondition() const	{ return m_cc; }
-		virtual ~iSmartJump();
+		virtual ~xSmartJump();
 
 		// ------------------------------------------------------------------------
 		// ccType - Comparison type to be written back to the jump instruction position.
 		//
-		iSmartJump( JccComparisonType ccType )
+		xSmartJump( JccComparisonType ccType )
 		{
 			jASSUME( ccType != Jcc_Unknown );
 			m_baseptr = iGetPtr();
@@ -625,12 +640,12 @@ namespace x86Emitter
 	};
 
 	//////////////////////////////////////////////////////////////////////////////////////////
-	// iForwardJump
-	// Primary use of this class is through the various iForwardJA8/iForwardJLE32/etc. helpers
+	// xForwardJump
+	// Primary use of this class is through the various xForwardJA8/xForwardJLE32/etc. helpers
 	// defined later in this header. :)
 	//
 	template< typename OperandType >
-	class iForwardJump
+	class xForwardJump
 	{
 	public:
 		static const uint OperandSize = sizeof( OperandType );
@@ -641,7 +656,7 @@ namespace x86Emitter
 
 		// The jump instruction is emitted at the point of object construction.  The conditional
 		// type must be valid (Jcc_Unknown generates an assertion).
-		iForwardJump( JccComparisonType cctype = Jcc_Unconditional );
+		xForwardJump( JccComparisonType cctype = Jcc_Unconditional );
 		
 		// Sets the jump target by writing back the current x86Ptr to the jump instruction.
 		// This method can be called multiple times, re-writing the jump instruction's target
@@ -656,8 +671,8 @@ namespace x86Emitter
 		extern void ModRM( uint mod, uint reg, uint rm );
 		extern void ModRM_Direct( uint reg, uint rm );
 		extern void SibSB( u32 ss, u32 index, u32 base );
-		extern void iWriteDisp( int regfield, s32 displacement );
-		extern void iWriteDisp( int regfield, const void* address );
+		extern void xWriteDisp( int regfield, s32 displacement );
+		extern void xWriteDisp( int regfield, const void* address );
 
 		extern void EmitSibMagic( uint regfield, const ModSibBase& info );
 

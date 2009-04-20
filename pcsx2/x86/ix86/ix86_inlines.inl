@@ -53,29 +53,29 @@ namespace x86Emitter
 	//////////////////////////////////////////////////////////////////////////////////////////
 	// x86Register Method Implementations
 	//
-	__forceinline iAddressInfo iAddressReg::operator+( const iAddressReg& right ) const
+	__forceinline xAddressInfo xAddressReg::operator+( const xAddressReg& right ) const
 	{
-		return iAddressInfo( *this, right );
+		return xAddressInfo( *this, right );
 	}
 
-	__forceinline iAddressInfo iAddressReg::operator+( const iAddressInfo& right ) const
+	__forceinline xAddressInfo xAddressReg::operator+( const xAddressInfo& right ) const
 	{
 		return right + *this;
 	}
 
-	__forceinline iAddressInfo iAddressReg::operator+( s32 right ) const
+	__forceinline xAddressInfo xAddressReg::operator+( s32 right ) const
 	{
-		return iAddressInfo( *this, right );
+		return xAddressInfo( *this, right );
 	}
 
-	__forceinline iAddressInfo iAddressReg::operator*( u32 right ) const
+	__forceinline xAddressInfo xAddressReg::operator*( u32 right ) const
 	{
-		return iAddressInfo( Empty, *this, right );
+		return xAddressInfo( Empty, *this, right );
 	}
 
-	__forceinline iAddressInfo iAddressReg::operator<<( u32 shift ) const
+	__forceinline xAddressInfo xAddressReg::operator<<( u32 shift ) const
 	{
-		return iAddressInfo( Empty, *this, 1<<shift );
+		return xAddressInfo( Empty, *this, 1<<shift );
 	}
 
 	//////////////////////////////////////////////////////////////////////////////////////////
@@ -83,7 +83,7 @@ namespace x86Emitter
 	//
 
 	// ------------------------------------------------------------------------
-	__forceinline ModSibBase::ModSibBase( const iAddressInfo& src ) :
+	__forceinline ModSibBase::ModSibBase( const xAddressInfo& src ) :
 		Base( src.Base ),
 		Index( src.Index ),
 		Scale( src.Factor ),
@@ -93,7 +93,7 @@ namespace x86Emitter
 	}
 
 	// ------------------------------------------------------------------------
-	__forceinline ModSibBase::ModSibBase( iAddressReg base, iAddressReg index, int scale, s32 displacement ) :
+	__forceinline ModSibBase::ModSibBase( xAddressReg base, xAddressReg index, int scale, s32 displacement ) :
 		Base( base ),
 		Index( index ),
 		Scale( scale ),
@@ -113,9 +113,9 @@ namespace x86Emitter
 	}
 
 	//////////////////////////////////////////////////////////////////////////////////////////
-	// iAddressInfo Method Implementations
+	// xAddressInfo Method Implementations
 	//
-	__forceinline iAddressInfo& iAddressInfo::Add( const iAddressReg& src )
+	__forceinline xAddressInfo& xAddressInfo::Add( const xAddressReg& src )
 	{
 		if( src == Index )
 		{
@@ -124,7 +124,7 @@ namespace x86Emitter
 		else if( src == Base )
 		{
 			// Compound the existing register reference into the Index/Scale pair.
-			Base = iAddressReg::Empty;
+			Base = xAddressReg::Empty;
 
 			if( src == Index )
 				Factor++;
@@ -146,7 +146,7 @@ namespace x86Emitter
 	}
 
 	// ------------------------------------------------------------------------
-	__forceinline iAddressInfo& iAddressInfo::Add( const iAddressInfo& src )
+	__forceinline xAddressInfo& xAddressInfo::Add( const xAddressInfo& src )
 	{
 		Add( src.Base );
 		Add( src.Displacement );
@@ -174,7 +174,7 @@ namespace x86Emitter
 	
 	// ------------------------------------------------------------------------
 	template< typename OperandType >
-	iForwardJump<OperandType>::iForwardJump( JccComparisonType cctype ) :
+	xForwardJump<OperandType>::xForwardJump( JccComparisonType cctype ) :
 		BasePtr( (s8*)iGetPtr() +
 			((OperandSize == 1) ? 2 :		// j8's are always 2 bytes.
 			((cctype==Jcc_Unconditional) ? 5 : 6 ))	// j32's are either 5 or 6 bytes
@@ -184,15 +184,15 @@ namespace x86Emitter
 		jASSUME( OperandSize == 1 || OperandSize == 4 );
 		
 		if( OperandSize == 1 )
-			iWrite<u8>( (cctype == Jcc_Unconditional) ? 0xeb : (0x70 | cctype) );
+			xWrite<u8>( (cctype == Jcc_Unconditional) ? 0xeb : (0x70 | cctype) );
 		else
 		{
 			if( cctype == Jcc_Unconditional )
-				iWrite<u8>( 0xe9 );
+				xWrite<u8>( 0xe9 );
 			else
 			{
-				iWrite<u8>( 0x0f );
-				iWrite<u8>( 0x80 | cctype );
+				xWrite<u8>( 0x0f );
+				xWrite<u8>( 0x80 | cctype );
 			}
 		}
 
@@ -201,7 +201,7 @@ namespace x86Emitter
 
 	// ------------------------------------------------------------------------
 	template< typename OperandType >
-	void iForwardJump<OperandType>::SetTarget() const
+	void xForwardJump<OperandType>::SetTarget() const
 	{
 		jASSUME( BasePtr != NULL );
 

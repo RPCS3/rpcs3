@@ -40,11 +40,11 @@ namespace x86Emitter {
 
 using namespace Internal;
 
-const JmpCallImplAll<true> iJMP;
-const JmpCallImplAll<false> iCALL;
+const JmpCallImplAll<true> xJMP;
+const JmpCallImplAll<false> xCALL;
 
 // ------------------------------------------------------------------------
-void iSmartJump::SetTarget()
+void xSmartJump::SetTarget()
 {
 	u8* target = iGetPtr();
 	if( m_baseptr == NULL ) return;
@@ -67,7 +67,7 @@ void iSmartJump::SetTarget()
 	}
 }
 
-iSmartJump::~iSmartJump()
+xSmartJump::~xSmartJump()
 {
 	SetTarget();
 	m_baseptr = NULL;	// just in case (sometimes helps in debugging too)
@@ -78,7 +78,7 @@ iSmartJump::~iSmartJump()
 // Writes a jump at the current x86Ptr, which targets a pre-established target address.
 // (usually a backwards jump)
 //
-// slideForward - used internally by iSmartJump to indicate that the jump target is going
+// slideForward - used internally by xSmartJump to indicate that the jump target is going
 // to slide forward in the event of an 8 bit displacement.
 //
 // Using this 
@@ -96,21 +96,21 @@ __emitinline void iJccKnownTarget( JccComparisonType comparison, void* target, b
 	
 	if( is_s8( displacement8 ) )
 	{
-		iWrite<u8>( (comparison == Jcc_Unconditional) ? 0xeb : (0x70 | comparison) );
-		iWrite<s8>( displacement8 );
+		xWrite<u8>( (comparison == Jcc_Unconditional) ? 0xeb : (0x70 | comparison) );
+		xWrite<s8>( displacement8 );
 	}
 	else
 	{
 		// Perform a 32 bit jump instead. :(
 
 		if( comparison == Jcc_Unconditional )
-			iWrite<u8>( 0xe9 );
+			xWrite<u8>( 0xe9 );
 		else
 		{
-			iWrite<u8>( 0x0f );
-			iWrite<u8>( 0x80 | comparison );
+			xWrite<u8>( 0x0f );
+			xWrite<u8>( 0x80 | comparison );
 		}
-		iWrite<s32>( (sptr)target - ((sptr)iGetPtr() + 4) );
+		xWrite<s32>( (sptr)target - ((sptr)iGetPtr() + 4) );
 	}
 }
 

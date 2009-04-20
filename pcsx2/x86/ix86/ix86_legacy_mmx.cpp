@@ -27,26 +27,26 @@
 
 using namespace x86Emitter;
 
-emitterT void MOVQMtoR( x86MMXRegType to, uptr from )						{ iMOVQ( iRegisterMMX(to), (void*)from ); }
-emitterT void MOVQRtoM( uptr to, x86MMXRegType from )						{ iMOVQ( (void*)to, iRegisterMMX(from) ); }
-emitterT void MOVQRtoR( x86MMXRegType to, x86MMXRegType from )				{ iMOVQ( iRegisterMMX(to), iRegisterMMX(from) ); }
-emitterT void MOVQRmtoR( x86MMXRegType to, x86IntRegType from, int offset ) { iMOVQ( iRegisterMMX(to), ptr[iAddressReg(from)+offset] ); }
-emitterT void MOVQRtoRm( x86IntRegType to, x86MMXRegType from, int offset ) { iMOVQ( ptr[iAddressReg(to)+offset], iRegisterMMX(from) ); }
+emitterT void MOVQMtoR( x86MMXRegType to, uptr from )						{ xMOVQ( xRegisterMMX(to), (void*)from ); }
+emitterT void MOVQRtoM( uptr to, x86MMXRegType from )						{ xMOVQ( (void*)to, xRegisterMMX(from) ); }
+emitterT void MOVQRtoR( x86MMXRegType to, x86MMXRegType from )				{ xMOVQ( xRegisterMMX(to), xRegisterMMX(from) ); }
+emitterT void MOVQRmtoR( x86MMXRegType to, x86IntRegType from, int offset ) { xMOVQ( xRegisterMMX(to), ptr[xAddressReg(from)+offset] ); }
+emitterT void MOVQRtoRm( x86IntRegType to, x86MMXRegType from, int offset ) { xMOVQ( ptr[xAddressReg(to)+offset], xRegisterMMX(from) ); }
 
-emitterT void MOVDMtoMMX( x86MMXRegType to, uptr from )							{ iMOVDZX( iRegisterMMX(to), (void*)from ); }
-emitterT void MOVDMMXtoM( uptr to, x86MMXRegType from )							{ iMOVD( (void*)to, iRegisterMMX(from) ); }
-emitterT void MOVD32RtoMMX( x86MMXRegType to, x86IntRegType from )				{ iMOVDZX( iRegisterMMX(to), iRegister32(from) ); }
-emitterT void MOVD32RmtoMMX( x86MMXRegType to, x86IntRegType from, int offset )	{ iMOVDZX( iRegisterMMX(to), ptr[iAddressReg(from)+offset] ); }
-emitterT void MOVD32MMXtoR( x86IntRegType to, x86MMXRegType from )				{ iMOVD( iRegister32(to), iRegisterMMX(from) ); }
-emitterT void MOVD32MMXtoRm( x86IntRegType to, x86MMXRegType from, int offset )	{ iMOVD( ptr[iAddressReg(to)+offset], iRegisterMMX(from) ); }
+emitterT void MOVDMtoMMX( x86MMXRegType to, uptr from )							{ xMOVDZX( xRegisterMMX(to), (void*)from ); }
+emitterT void MOVDMMXtoM( uptr to, x86MMXRegType from )							{ xMOVD( (void*)to, xRegisterMMX(from) ); }
+emitterT void MOVD32RtoMMX( x86MMXRegType to, x86IntRegType from )				{ xMOVDZX( xRegisterMMX(to), xRegister32(from) ); }
+emitterT void MOVD32RmtoMMX( x86MMXRegType to, x86IntRegType from, int offset )	{ xMOVDZX( xRegisterMMX(to), ptr[xAddressReg(from)+offset] ); }
+emitterT void MOVD32MMXtoR( x86IntRegType to, x86MMXRegType from )				{ xMOVD( xRegister32(to), xRegisterMMX(from) ); }
+emitterT void MOVD32MMXtoRm( x86IntRegType to, x86MMXRegType from, int offset )	{ xMOVD( ptr[xAddressReg(to)+offset], xRegisterMMX(from) ); }
 
-emitterT void PMOVMSKBMMXtoR(x86IntRegType to, x86MMXRegType from)			{ iPMOVMSKB( iRegister32(to), iRegisterMMX(from) ); }
+emitterT void PMOVMSKBMMXtoR(x86IntRegType to, x86MMXRegType from)			{ xPMOVMSKB( xRegister32(to), xRegisterMMX(from) ); }
 
 #define DEFINE_LEGACY_LOGIC_OPCODE( mod ) \
-	emitterT void P##mod##RtoR( x86MMXRegType to, x86MMXRegType from )				{ iP##mod( iRegisterMMX(to), iRegisterMMX(from) ); } \
-	emitterT void P##mod##MtoR( x86MMXRegType to, uptr from )						{ iP##mod( iRegisterMMX(to), (void*)from ); } \
-	emitterT void SSE2_P##mod##_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	{ iP##mod( iRegisterSSE(to), iRegisterSSE(from) ); } \
-	emitterT void SSE2_P##mod##_M128_to_XMM( x86SSERegType to, uptr from )			{ iP##mod( iRegisterSSE(to), (void*)from ); }
+	emitterT void P##mod##RtoR( x86MMXRegType to, x86MMXRegType from )				{ xP##mod( xRegisterMMX(to), xRegisterMMX(from) ); } \
+	emitterT void P##mod##MtoR( x86MMXRegType to, uptr from )						{ xP##mod( xRegisterMMX(to), (void*)from ); } \
+	emitterT void SSE2_P##mod##_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	{ xP##mod( xRegisterSSE(to), xRegisterSSE(from) ); } \
+	emitterT void SSE2_P##mod##_M128_to_XMM( x86SSERegType to, uptr from )			{ xP##mod( xRegisterSSE(to), (void*)from ); }
 
 DEFINE_LEGACY_LOGIC_OPCODE( AND )
 DEFINE_LEGACY_LOGIC_OPCODE( ANDN )
@@ -460,4 +460,4 @@ emitterT void PSHUFWMtoR(x86MMXRegType to, uptr from, u8 imm8)
 	write8(imm8);
 }
 
-emitterT void MASKMOVQRtoR(x86MMXRegType to, x86MMXRegType from)	{ iMASKMOV( iRegisterMMX(to), iRegisterMMX(from) ); }
+emitterT void MASKMOVQRtoR(x86MMXRegType to, x86MMXRegType from)	{ xMASKMOV( xRegisterMMX(to), xRegisterMMX(from) ); }
