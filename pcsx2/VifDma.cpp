@@ -1010,7 +1010,7 @@ static int __fastcall Vif0TransUnpack(u32 *data)	// UNPACK
 		if(vif0Regs->offset != 0 || vif0.cl != 0) 
 		{
 			ret = vif0.tag.size;
-			vif0.tag.size = VIFalign(data, &vif0.tag, vif0.vifpacketsize, VIF0dmanum);
+			vif0.tag.size -= vif0.vifpacketsize - VIFalign(data, &vif0.tag, vif0.vifpacketsize, VIF0dmanum);
 			ret = ret - vif0.tag.size;
 			data += ret;
 			if(vif0.vifpacketsize > 0) VIFunpack(data, &vif0.tag, vif0.vifpacketsize - ret, VIF0dmanum);
@@ -1851,7 +1851,7 @@ static int  __fastcall Vif1TransUnpack(u32 *data)
 		   'in pieces' */
 		if(vif1Regs->offset != 0 || vif1.cl != 0) 
 		{
-			vif1.tag.size = VIFalign(data, &vif1.tag, vif1.vifpacketsize, VIF1dmanum);
+			vif1.tag.size -= vif1.vifpacketsize - VIFalign(data, &vif1.tag, vif1.vifpacketsize, VIF1dmanum);
 			ret = ret - vif1.tag.size;
 			data += ret;
 			if((vif1.vifpacketsize - ret) > 0) VIFunpack(data, &vif1.tag, vif1.vifpacketsize - ret, VIF1dmanum);
