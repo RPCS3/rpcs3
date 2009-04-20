@@ -70,7 +70,7 @@ public:
 	__forceinline void operator()( const T* func ) const
 	{
 		if( isJmp )
-			iJccKnownTarget( Jcc_Unconditional, (void*)func );
+			iJccKnownTarget( Jcc_Unconditional, (void*)(uptr)func );
 		else
 		{
 			// calls are relative to the instruction after this one, and length is

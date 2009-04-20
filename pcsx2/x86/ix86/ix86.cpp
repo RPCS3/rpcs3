@@ -138,8 +138,6 @@ namespace Internal
 	__forceinline void ModRM( uint mod, uint reg, uint rm )
 	{
 		xWrite<u8>( (mod << 6) | (reg << 3) | rm );
-		//*(u32*)x86Ptr = (mod << 6) | (reg << 3) | rm;
-		//x86Ptr++;
 	}
 
 	__forceinline void ModRM_Direct( uint reg, uint rm )
@@ -150,8 +148,6 @@ namespace Internal
 	__forceinline void SibSB( u32 ss, u32 index, u32 base )
 	{
 		xWrite<u8>( (ss << 6) | (index << 3) | base );
-		//*(u32*)x86Ptr = (ss << 6) | (index << 3) | base;
-		//x86Ptr++;
 	}
 
 	__forceinline void xWriteDisp( int regfield, s32 displacement )
@@ -645,6 +641,17 @@ __emitinline void xBSWAP( const xRegister32& to )
 // MMX / XMM Instructions
 // (these will get put in their own file later)
 
+__emitinline void Internal::SimdPrefix( u8 prefix, u8 opcode )
+{
+	if( prefix != 0 )
+	{
+		xWrite<u16>( 0x0f00 | prefix );
+		xWrite<u8>( opcode );
+	}
+	else
+		xWrite<u16>( (opcode<<8) | 0x0f );
+}
+
 const MovapsImplAll< 0, 0x28, 0x29 > xMOVAPS; 
 const MovapsImplAll< 0, 0x10, 0x11 > xMOVUPS;
 const MovapsImplAll< 0x66, 0x28, 0x29 > xMOVAPD;
@@ -670,11 +677,50 @@ const PLogicImplAll<0xef> xPXOR;
 
 const SSEAndNotImpl<0x55> xANDN;
 
-// Compute Reciprocal Packed Single-Precision Floating-Point Values
-const SSELogicImpl<0,0x53> xRCPPS;
+const SSEImpl_SS_SD<0x66,0x2e> xUCOMI;
+const SSE_rSqrtImpl<0x53> xRCP;
+const SSE_rSqrtImpl<0x52> xRSQRT;
+const SSE_SqrtImpl<0x51> xSQRT;
 
-// Compute Reciprocal of Scalar Single-Precision Floating-Point Value
-const SSELogicImpl<0xf3,0x53> xRCPSS;
+const SSEImpl_PSPD_SSSD<0x5f> xMAX;
+const SSEImpl_PSPD_SSSD<0x5d> xMIN;
+const SSEImpl_Shuffle<0xc6> xSHUF;
+
+// ------------------------------------------------------------------------
+// SSE Conversion Operations, as looney as they are.
+// 
+// These enforce pointer strictness for Indirect forms, due to the otherwise completely confusing
+// nature of the functions.  (so if a function expects an m32, you must use (u32*) or ptr32[]).
+//
+const SSEImpl_DestRegForm<0xf3,0xe6,xRegisterSSE,xRegisterSSE,u64>		xCVTDQ2PD;
+const SSEImpl_DestRegForm<0x00,0x5b,xRegisterSSE,xRegisterSSE,u128>		xCVTDQ2PS;
+
+const SSEImpl_DestRegForm<0xf2,0xe6,xRegisterSSE,xRegisterSSE,u128>		xCVTPD2DQ;
+const SSEImpl_DestRegForm<0x66,0x2d,xRegisterMMX,xRegisterSSE,u128>		xCVTPD2PI;
+const SSEImpl_DestRegForm<0x66,0x5a,xRegisterSSE,xRegisterSSE,u128>		xCVTPD2PS;
+
+const SSEImpl_DestRegForm<0x66,0x2a,xRegisterSSE,xRegisterMMX,u64>		xCVTPI2PD;
+const SSEImpl_DestRegForm<0x00,0x2a,xRegisterSSE,xRegisterMMX,u64>		xCVTPI2PS;
+
+const SSEImpl_DestRegForm<0x66,0x5b,xRegisterSSE,xRegisterSSE,u128>		xCVTPS2DQ;
+const SSEImpl_DestRegForm<0x00,0x5a,xRegisterSSE,xRegisterSSE,u64>		xCVTPS2PD;
+const SSEImpl_DestRegForm<0x00,0x2d,xRegisterMMX,xRegisterSSE,u64>		xCVTPS2PI;
+
+const SSEImpl_DestRegForm<0xf2,0x2d,xRegister32, xRegisterSSE,u64>		xCVTSD2SI;
+const SSEImpl_DestRegForm<0xf2,0x5a,xRegisterSSE,xRegisterSSE,u64>		xCVTSD2SS;
+const SSEImpl_DestRegForm<0xf2,0x2a,xRegisterMMX,xRegister32, u32>		xCVTSI2SD;
+const SSEImpl_DestRegForm<0xf3,0x2a,xRegisterSSE,xRegister32, u32>		xCVTSI2SS;
+
+const SSEImpl_DestRegForm<0xf3,0x5a,xRegisterSSE,xRegisterSSE,u32>		xCVTSS2SD;
+const SSEImpl_DestRegForm<0xf3,0x2d,xRegister32, xRegisterSSE,u32>		xCVTSS2SI;
+
+const SSEImpl_DestRegForm<0x66,0xe6,xRegisterSSE,xRegisterSSE,u128>		xCVTTPD2DQ;
+const SSEImpl_DestRegForm<0x66,0x2c,xRegisterMMX,xRegisterSSE,u128>		xCVTTPD2PI;
+const SSEImpl_DestRegForm<0xf3,0x5b,xRegisterSSE,xRegisterSSE,u128>		xCVTTPS2DQ;
+const SSEImpl_DestRegForm<0x00,0x2c,xRegisterMMX,xRegisterSSE,u64>		xCVTTPS2PI;
+
+const SSEImpl_DestRegForm<0xf2,0x2c,xRegister32, xRegisterSSE,u64>		xCVTTSD2SI;
+const SSEImpl_DestRegForm<0xf3,0x2c,xRegister32, xRegisterSSE,u32>		xCVTTSS2SI;
 
 // ------------------------------------------------------------------------
 
@@ -724,7 +770,7 @@ __forceinline void xMOVQ( const xRegisterMMX& to, const xRegisterSSE& from )
 	// Manual implementation of this form of MOVQ, since its parameters are unique in a way
 	// that breaks the template inference of writeXMMop();
 
-	SimdPrefix<u128>( 0xd6, 0xf2 );
+	SimdPrefix( 0xf2, 0xd6 );
 	ModRM_Direct( to.Id, from.Id );
 }
 

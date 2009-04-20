@@ -347,14 +347,15 @@ namespace x86Emitter
 		Internal::writeXMMop( 0x66, 0x7e, from, dest );
 	}
 
+
 	// ------------------------------------------------------------------------
-	
+
 	// xMASKMOV:
 	// Selectively write bytes from mm1/xmm1 to memory location using the byte mask in mm2/xmm2.
 	// The default memory location is specified by DS:EDI.  The most significant bit in each byte
 	// of the mask operand determines whether the corresponding byte in the source operand is
 	// written to the corresponding byte location in memory.
-	
+
 	template< typename T >
 	static __forceinline void xMASKMOV( const xRegisterSIMD<T>& to, const xRegisterSIMD<T>& from )	{ Internal::writeXMMop( 0x66, 0xf7, to, from ); }
 
@@ -368,7 +369,7 @@ namespace x86Emitter
 	//
 	template< typename T >
 	static __forceinline void xPMOVMSKB( const xRegister32& to, const xRegisterSIMD<T>& from )	{ Internal::writeXMMop( 0x66, 0xd7, to, from ); }
-
+	
 	// ------------------------------------------------------------------------
 	
 	extern void xMOVQ( const xRegisterMMX& to, const xRegisterMMX& from );
@@ -409,10 +410,9 @@ namespace x86Emitter
 	extern void xMOVNTPS( const ModSibBase& to, const xRegisterSSE& from );
 	extern void xMOVNTQ( void* to, const xRegisterMMX& from );
 	extern void xMOVNTQ( const ModSibBase& to, const xRegisterMMX& from );
-	
-	//////////////////////////////////////////////////////////////////////////////////////////
-	//
-	
+
+	// ------------------------------------------------------------------------
+
 	extern const Internal::MovapsImplAll<0, 0x28, 0x29> xMOVAPS;
 	extern const Internal::MovapsImplAll<0, 0x10, 0x11> xMOVUPS;
 
@@ -433,6 +433,8 @@ namespace x86Emitter
 	extern const Internal::MovhlImplAll<0x16> xMOVH;
 	extern const Internal::MovhlImplAll<0x12> xMOVL;
 
+	// ------------------------------------------------------------------------
+	
 	extern const Internal::PLogicImplAll<0xdb> xPAND;
 	extern const Internal::PLogicImplAll<0xdf> xPANDN;
 	extern const Internal::PLogicImplAll<0xeb> xPOR;
@@ -440,9 +442,15 @@ namespace x86Emitter
 
 	extern const Internal::SSEAndNotImpl<0x55> xANDN;
 
-	extern const Internal::SSELogicImpl<0,0x53> xRCPPS;
-	extern const Internal::SSELogicImpl<0xf3,0x53> xRCPSS;
+	extern const Internal::SSEImpl_SS_SD<0x66,0x2e> xUCOMI;
+	extern const Internal::SSE_rSqrtImpl<0x53> xRCP;
+	extern const Internal::SSE_rSqrtImpl<0x52> xRSQRT;
+	extern const Internal::SSE_SqrtImpl<0x51> xSQRT;
 	
+	extern const Internal::SSEImpl_PSPD_SSSD<0x5f> xMAX;
+	extern const Internal::SSEImpl_PSPD_SSSD<0x5d> xMIN;
+	extern const Internal::SSEImpl_Shuffle<0xc6> xSHUF;
+
 	// ------------------------------------------------------------------------
 	
 	extern const Internal::SSECompareImpl<SSE2_Equal>		xCMPEQ;
@@ -453,5 +461,39 @@ namespace x86Emitter
 	extern const Internal::SSECompareImpl<SSE2_NotLess>		xCMPNLT;
 	extern const Internal::SSECompareImpl<SSE2_NotLessOrEqual> xCMPNLE;
 	extern const Internal::SSECompareImpl<SSE2_Ordered>		xCMPORD;
+
+	// ------------------------------------------------------------------------
+	// OMG Evil.  I went cross-eyed an hour ago doing this.
+	//
+	extern const Internal::SSEImpl_DestRegForm<0xf3,0xe6,xRegisterSSE,xRegisterSSE,u64>		xCVTDQ2PD;
+	extern const Internal::SSEImpl_DestRegForm<0x00,0x5b,xRegisterSSE,xRegisterSSE,u128>	xCVTDQ2PS;
+
+	extern const Internal::SSEImpl_DestRegForm<0xf2,0xe6,xRegisterSSE,xRegisterSSE,u128>	xCVTPD2DQ;
+	extern const Internal::SSEImpl_DestRegForm<0x66,0x2d,xRegisterMMX,xRegisterSSE,u128>	xCVTPD2PI;
+	extern const Internal::SSEImpl_DestRegForm<0x66,0x5a,xRegisterSSE,xRegisterSSE,u128>	xCVTPD2PS;
+
+	extern const Internal::SSEImpl_DestRegForm<0x66,0x2a,xRegisterSSE,xRegisterMMX,u64>		xCVTPI2PD;
+	extern const Internal::SSEImpl_DestRegForm<0x00,0x2a,xRegisterSSE,xRegisterMMX,u64>		xCVTPI2PS;
+
+	extern const Internal::SSEImpl_DestRegForm<0x66,0x5b,xRegisterSSE,xRegisterSSE,u128>	xCVTPS2DQ;
+	extern const Internal::SSEImpl_DestRegForm<0x00,0x5a,xRegisterSSE,xRegisterSSE,u64>		xCVTPS2PD;
+	extern const Internal::SSEImpl_DestRegForm<0x00,0x2d,xRegisterMMX,xRegisterSSE,u64>		xCVTPS2PI;
+
+	extern const Internal::SSEImpl_DestRegForm<0xf2,0x2d,xRegister32, xRegisterSSE,u64>		xCVTSD2SI;
+	extern const Internal::SSEImpl_DestRegForm<0xf2,0x5a,xRegisterSSE,xRegisterSSE,u64>		xCVTSD2SS;
+	extern const Internal::SSEImpl_DestRegForm<0xf2,0x2a,xRegisterMMX,xRegister32, u32>		xCVTSI2SD;
+	extern const Internal::SSEImpl_DestRegForm<0xf3,0x2a,xRegisterSSE,xRegister32, u32>		xCVTSI2SS;
+
+	extern const Internal::SSEImpl_DestRegForm<0xf3,0x5a,xRegisterSSE,xRegisterSSE,u32>		xCVTSS2SD;
+	extern const Internal::SSEImpl_DestRegForm<0xf3,0x2d,xRegister32, xRegisterSSE,u32>		xCVTSS2SI;
+
+	extern const Internal::SSEImpl_DestRegForm<0x66,0xe6,xRegisterSSE,xRegisterSSE,u128>	xCVTTPD2DQ;
+	extern const Internal::SSEImpl_DestRegForm<0x66,0x2c,xRegisterMMX,xRegisterSSE,u128>	xCVTTPD2PI;
+	extern const Internal::SSEImpl_DestRegForm<0xf3,0x5b,xRegisterSSE,xRegisterSSE,u128>	xCVTTPS2DQ;
+	extern const Internal::SSEImpl_DestRegForm<0x00,0x2c,xRegisterMMX,xRegisterSSE,u64>		xCVTTPS2PI;
+
+	extern const Internal::SSEImpl_DestRegForm<0xf2,0x2c,xRegister32, xRegisterSSE,u64>		xCVTTSD2SI;
+	extern const Internal::SSEImpl_DestRegForm<0xf3,0x2c,xRegister32, xRegisterSSE,u32>		xCVTTSS2SI;
+	
 }
 

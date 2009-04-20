@@ -21,17 +21,7 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 // MMX / SSE Helper Functions!
 
-template< typename T >
-__emitinline void SimdPrefix( u8 opcode, u8 prefix=0 )
-{
-	if( sizeof( T ) == 16 && prefix != 0 )
-	{
-		xWrite<u16>( 0x0f00 | prefix );
-		xWrite<u8>( opcode );
-	}
-	else
-		xWrite<u16>( (opcode<<8) | 0x0f );
-}
+extern void SimdPrefix( u8 prefix, u8 opcode );
 
 // ------------------------------------------------------------------------
 // xmm emitter helpers for xmm instruction with prefixes.
@@ -40,23 +30,23 @@ __emitinline void SimdPrefix( u8 opcode, u8 prefix=0 )
 // instructions violate this "guideline.")
 //
 template< typename T, typename T2 >
-__emitinline void writeXMMop( u8 prefix, u8 opcode, const xRegister<T>& to, const xRegister<T2>& from )
+__emitinline void writeXMMop( u8 prefix, u8 opcode, const xRegister<T>& to, const xRegister<T2>& from, bool forcePrefix=false )
 {
-	SimdPrefix<T>( opcode, prefix );
+	SimdPrefix( (forcePrefix || (sizeof( T ) == 16)) ? prefix : 0, opcode );
 	ModRM_Direct( to.Id, from.Id );
 }
 
 template< typename T >
-void writeXMMop( u8 prefix, u8 opcode, const xRegister<T>& reg, const ModSibBase& sib )
+void writeXMMop( u8 prefix, u8 opcode, const xRegister<T>& reg, const ModSibBase& sib, bool forcePrefix=false )
 {
-	SimdPrefix<T>( opcode, prefix );
+	SimdPrefix( (forcePrefix || (sizeof( T ) == 16)) ? prefix : 0, opcode );
 	EmitSibMagic( reg.Id, sib );
 }
 
 template< typename T >
-__emitinline void writeXMMop( u8 prefix, u8 opcode, const xRegister<T>& reg, const void* data )
+__emitinline void writeXMMop( u8 prefix, u8 opcode, const xRegister<T>& reg, const void* data, bool forcePrefix=false )
 {
-	SimdPrefix<T>( opcode, prefix );
+	SimdPrefix( (forcePrefix || (sizeof( T ) == 16)) ? prefix : 0, opcode );
 	xWriteDisp( reg.Id, data );
 }
 
@@ -68,21 +58,21 @@ __emitinline void writeXMMop( u8 prefix, u8 opcode, const xRegister<T>& reg, con
 template< typename T, typename T2 >
 __emitinline void writeXMMop( u8 opcode, const xRegister<T>& to, const xRegister<T2>& from )
 {
-	SimdPrefix<T>( opcode );
+	SimdPrefix( 0, opcode );
 	ModRM_Direct( to.Id, from.Id );
 }
 
 template< typename T >
 void writeXMMop( u8 opcode, const xRegister<T>& reg, const ModSibBase& sib )
 {
-	SimdPrefix<T>( opcode );
+	SimdPrefix( 0, opcode );
 	EmitSibMagic( reg.Id, sib );
 }
 
 template< typename T >
 __emitinline void writeXMMop( u8 opcode, const xRegister<T>& reg, const void* data )
 {
-	SimdPrefix<T>( opcode );
+	SimdPrefix( 0, opcode );
 	xWriteDisp( reg.Id, data );
 }
 
@@ -171,6 +161,34 @@ public:
 };
 
 // ------------------------------------------------------------------------
+// For implementing MMX/SSE operations which the destination *must* be a register, but the source
+// can be regDirect or ModRM (indirect).
+//
+template< u8 Prefix, u8 Opcode, typename DestRegType, typename SrcRegType, typename SrcOperandType >
+class SSEImpl_DestRegForm
+{
+public:
+	__forceinline void operator()( const DestRegType& to, const SrcRegType& from ) const				{ writeXMMop( Prefix, Opcode, to, from, true ); }
+	__forceinline void operator()( const DestRegType& to, const SrcOperandType* from ) const			{ writeXMMop( Prefix, Opcode, to, from, true ); }
+	__noinline void operator()( const DestRegType& to, const ModSibStrict<SrcOperandType>& from ) const	{ writeXMMop( Prefix, Opcode, to, from, true ); }
+
+	SSEImpl_DestRegForm() {} //GCWho?
+};
+
+// ------------------------------------------------------------------------
+template< u8 OpcodeSSE >
+class SSEImpl_PSPD_SSSD
+{
+public:
+	const SSELogicImpl<0x00,OpcodeSSE> PS;		// packed single precision
+	const SSELogicImpl<0x66,OpcodeSSE> PD;		// packed double precision
+	const SSELogicImpl<0xf3,OpcodeSSE> SS;		// scalar single precision
+	const SSELogicImpl<0xf2,OpcodeSSE> SD;		// scalar double precision
+	
+	SSEImpl_PSPD_SSSD() {}  //GChow?
+};
+
+// ------------------------------------------------------------------------
 //
 template< u8 OpcodeSSE >
 class SSEAndNotImpl
@@ -178,8 +196,60 @@ class SSEAndNotImpl
 public:
 	const SSELogicImpl<0x00,OpcodeSSE> PS;
 	const SSELogicImpl<0x66,OpcodeSSE> PD;
-
 	SSEAndNotImpl() {}
+};
+
+// ------------------------------------------------------------------------
+// For instructions that have SS/SD form only (UCOMI, etc)
+// AltPrefix - prefixed used for doubles (SD form).
+template< u8 AltPrefix, u8 OpcodeSSE >
+class SSEImpl_SS_SD
+{
+public:
+	const SSELogicImpl<0x00,OpcodeSSE> SS;
+	const SSELogicImpl<AltPrefix,OpcodeSSE> SD;
+	SSEImpl_SS_SD() {}
+};
+
+// ------------------------------------------------------------------------
+// For instructions that have PS/SS form only (most commonly reciprocal Sqrt functions)
+template< u8 OpcodeSSE >
+class SSE_rSqrtImpl
+{
+public:
+	const SSELogicImpl<0x00,OpcodeSSE> PS;
+	const SSELogicImpl<0xf3,OpcodeSSE> SS;
+	SSE_rSqrtImpl() {}
+};
+
+// ------------------------------------------------------------------------
+// For instructions that have PS/SS/SD form only (most commonly Sqrt functions)
+template< u8 OpcodeSSE >
+class SSE_SqrtImpl : public SSE_rSqrtImpl<OpcodeSSE>
+{
+public:
+	const SSELogicImpl<0xf2,OpcodeSSE> SD;
+	SSE_SqrtImpl() {}
+};
+
+// ------------------------------------------------------------------------
+template< u8 OpcodeSSE >
+class SSEImpl_Shuffle
+{
+protected:
+	template< u8 Prefix > struct Woot
+	{
+		__forceinline void operator()( const xRegisterSSE& to, const xRegisterSSE& from, u8 cmptype ) const	{ writeXMMop( Prefix, OpcodeSSE, to, from ); xWrite<u8>( cmptype ); }
+		__forceinline void operator()( const xRegisterSSE& to, const void* from, u8 cmptype ) const			{ writeXMMop( Prefix, OpcodeSSE, to, from ); xWrite<u8>( cmptype ); }
+		__noinline void operator()( const xRegisterSSE& to, const ModSibBase& from, u8 cmptype ) const		{ writeXMMop( Prefix, OpcodeSSE, to, from ); xWrite<u8>( cmptype ); }
+		Woot() {}
+	};
+
+public:
+	const Woot<0x00> PS;
+	const Woot<0x66> PD;
+
+	SSEImpl_Shuffle() {} //GCWhat?
 };
 
 // ------------------------------------------------------------------------
@@ -192,13 +262,13 @@ protected:
 		__forceinline void operator()( const xRegisterSSE& to, const xRegisterSSE& from ) const	{ writeXMMop( Prefix, 0xc2, to, from ); xWrite<u8>( CType ); }
 		__forceinline void operator()( const xRegisterSSE& to, const void* from ) const			{ writeXMMop( Prefix, 0xc2, to, from ); xWrite<u8>( CType ); }
 		__noinline void operator()( const xRegisterSSE& to, const ModSibBase& from ) const		{ writeXMMop( Prefix, 0xc2, to, from ); xWrite<u8>( CType ); }
+		Woot() {}
 	};
 
 public:
-	Woot<0x00> PS;
-	Woot<0x66> PD;
-	Woot<0xf3> SS;
-	Woot<0xf2> SD;
-
+	const Woot<0x00> PS;
+	const Woot<0x66> PD;
+	const Woot<0xf3> SS;
+	const Woot<0xf2> SD;
 	SSECompareImpl() {} //GCWhat?
 };

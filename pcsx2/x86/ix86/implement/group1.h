@@ -164,8 +164,8 @@ class G1LogicImpl_PlusSSE : public Group1ImplAll<InstType>
 public:
 	using Group1ImplAll<InstType>::operator();
 
-	const SSELogicImpl<0x00,OpcodeSSE> PS;
-	const SSELogicImpl<0x66,OpcodeSSE> PD;
+	const SSELogicImpl<0x00,OpcodeSSE> PS;		// packed single precision
+	const SSELogicImpl<0x66,OpcodeSSE> PD;		// packed double precision
 
 	G1LogicImpl_PlusSSE() {}
 };
@@ -179,8 +179,8 @@ class G1ArithmeticImpl_PlusSSE : public G1LogicImpl_PlusSSE<InstType, OpcodeSSE 
 public:
 	using Group1ImplAll<InstType>::operator();
 
-	const SSELogicImpl<0xf3,OpcodeSSE> SS;
-	const SSELogicImpl<0xf2,OpcodeSSE> SD;
+	const SSELogicImpl<0xf3,OpcodeSSE> SS;		// scalar single precision
+	const SSELogicImpl<0xf2,OpcodeSSE> SD;		// scalar double precision
 
 	G1ArithmeticImpl_PlusSSE() {}
 };
@@ -191,18 +191,19 @@ class G1CompareImpl_PlusSSE : Group1ImplAll< G1Type_CMP >
 protected:
 	template< u8 Prefix > struct Woot
 	{
-		__forceinline void operator()( const xRegisterSSE& to, const xRegisterSSE& from, SSE2_ComparisonType cmptype ) const	{ writeXMMop( Prefix, 0xc2, to, from ); xWrite<u8>( cmptype ); }
-		__forceinline void operator()( const xRegisterSSE& to, const void* from, SSE2_ComparisonType cmptype ) const			{ writeXMMop( Prefix, 0xc2, to, from ); xWrite<u8>( cmptype ); }
+		__forceinline void operator()( const xRegisterSSE& to, const xRegisterSSE& from, SSE2_ComparisonType cmptype ) const{ writeXMMop( Prefix, 0xc2, to, from ); xWrite<u8>( cmptype ); }
+		__forceinline void operator()( const xRegisterSSE& to, const void* from, SSE2_ComparisonType cmptype ) const		{ writeXMMop( Prefix, 0xc2, to, from ); xWrite<u8>( cmptype ); }
 		__noinline void operator()( const xRegisterSSE& to, const ModSibBase& from, SSE2_ComparisonType cmptype ) const		{ writeXMMop( Prefix, 0xc2, to, from ); xWrite<u8>( cmptype ); }
+		Woot() {}
 	};
 
 public:
 	using Group1ImplAll< G1Type_CMP >::operator();
 
-	Woot<0x00> PS;
-	Woot<0x66> PD;
-	Woot<0xf3> SS;
-	Woot<0xf2> SD;
+	const Woot<0x00> PS;
+	const Woot<0x66> PD;
+	const Woot<0xf3> SS;
+	const Woot<0xf2> SD;
 
 	G1CompareImpl_PlusSSE() {} //GCWhat?
 };

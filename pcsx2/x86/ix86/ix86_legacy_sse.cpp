@@ -97,44 +97,12 @@ using namespace x86Emitter;
 	ModRM( 0, to, DISP32 ), \
 	write32( MEMADDR(from, 4 + overb) ) \
 
-#define SSE_SD_RtoM( code, overb ) \
-	assert( from < iREGCNT_XMM) , \
-	write8( 0xf2 ), \
-	RexR(0, from), \
-	write16( code ), \
-	ModRM( 0, from, DISP32 ), \
-	write32( MEMADDR(to, 4 + overb) ) \
-
 #define SSE_SD_RtoR( code ) \
 	assert( to < iREGCNT_XMM && from < iREGCNT_XMM) , \
 	write8( 0xf2 ), \
     RexRB(0, to, from),   \
 	write16( code ), \
 	ModRM( 3, to, from )
-
-#define CMPPSMtoR( op ) \
-   SSEMtoR( 0xc20f, 1 ), \
-   write8( op )
-
-#define CMPPSRtoR( op ) \
-   SSERtoR( 0xc20f ), \
-   write8( op )
-
-#define CMPSSMtoR( op ) \
-   SSE_SS_MtoR( 0xc20f, 1 ), \
-   write8( op )
-
-#define CMPSSRtoR( op ) \
-   SSE_SS_RtoR( 0xc20f ), \
-   write8( op )
-
-#define CMPSDMtoR( op ) \
-   SSE_SD_MtoR( 0xc20f, 1 ), \
-   write8( op )
-
-#define CMPSDRtoR( op ) \
-   SSE_SD_RtoR( 0xc20f ), \
-   write8( op )
 
 #define DEFINE_LEGACY_MOV_OPCODE( mod, sse ) \
 	emitterT void sse##_MOV##mod##_M128_to_XMM( x86SSERegType to, uptr from )	{ xMOV##mod( xRegisterSSE(to), (void*)from ); } \
@@ -146,17 +114,92 @@ using namespace x86Emitter;
 	emitterT void sse##_MOV##mod##RtoRmS( x86IntRegType to, x86SSERegType from, x86IntRegType from2, int scale ) \
 	{ xMOV##mod( ptr[xAddressReg(to)+xAddressReg(from2)], xRegisterSSE(from) ); }
 
+#define DEFINE_LEGACY_PSD_OPCODE( mod ) \
+	emitterT void SSE_##mod##PS_M128_to_XMM( x86SSERegType to, uptr from )			{ x##mod.PS( xRegisterSSE(to), (void*)from ); } \
+	emitterT void SSE_##mod##PS_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	{ x##mod.PS( xRegisterSSE(to), xRegisterSSE(from) ); } \
+	emitterT void SSE2_##mod##PD_M128_to_XMM( x86SSERegType to, uptr from )			{ x##mod.PD( xRegisterSSE(to), (void*)from ); } \
+	emitterT void SSE2_##mod##PD_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	{ x##mod.PD( xRegisterSSE(to), xRegisterSSE(from) ); }
+
+#define DEFINE_LEGACY_SSSD_OPCODE( mod ) \
+	emitterT void SSE_##mod##SS_M32_to_XMM( x86SSERegType to, uptr from )			{ x##mod.SS( xRegisterSSE(to), (void*)from ); } \
+	emitterT void SSE_##mod##SS_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	{ x##mod.SS( xRegisterSSE(to), xRegisterSSE(from) ); } \
+	emitterT void SSE2_##mod##SD_M64_to_XMM( x86SSERegType to, uptr from )			{ x##mod.SD( xRegisterSSE(to), (void*)from ); } \
+	emitterT void SSE2_##mod##SD_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	{ x##mod.SD( xRegisterSSE(to), xRegisterSSE(from) ); }
+
+#define DEFINE_LEGACY_CMP_OPCODE( comp ) \
+	emitterT void SSE_CMP##comp##PS_M128_to_XMM( x86SSERegType to, uptr from )         { xCMP##comp.PS( xRegisterSSE(to), (void*)from ); } \
+	emitterT void SSE_CMP##comp##PS_XMM_to_XMM( x86SSERegType to, x86SSERegType from ) { xCMP##comp.PS( xRegisterSSE(to), xRegisterSSE(from) ); } \
+	emitterT void SSE2_CMP##comp##PD_M128_to_XMM( x86SSERegType to, uptr from )         { xCMP##comp.PD( xRegisterSSE(to), (void*)from ); } \
+	emitterT void SSE2_CMP##comp##PD_XMM_to_XMM( x86SSERegType to, x86SSERegType from ) { xCMP##comp.PD( xRegisterSSE(to), xRegisterSSE(from) ); } \
+	emitterT void SSE_CMP##comp##SS_M32_to_XMM( x86SSERegType to, uptr from )         { xCMP##comp.SS( xRegisterSSE(to), (void*)from ); } \
+	emitterT void SSE_CMP##comp##SS_XMM_to_XMM( x86SSERegType to, x86SSERegType from ) { xCMP##comp.SS( xRegisterSSE(to), xRegisterSSE(from) ); } \
+	emitterT void SSE2_CMP##comp##SD_M64_to_XMM( x86SSERegType to, uptr from )         { xCMP##comp.SD( xRegisterSSE(to), (void*)from ); } \
+	emitterT void SSE2_CMP##comp##SD_XMM_to_XMM( x86SSERegType to, x86SSERegType from ) { xCMP##comp.SD( xRegisterSSE(to), xRegisterSSE(from) ); }
+
+#define DEFINE_LEGACY_RSQRT_OPCODE(mod) \
+	emitterT void SSE_##mod##PS_M128_to_XMM( x86SSERegType to, uptr from )			{ x##mod.PS( xRegisterSSE(to), (void*)from ); } \
+	emitterT void SSE_##mod##PS_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	{ x##mod.PS( xRegisterSSE(to), xRegisterSSE(from) ); } \
+	emitterT void SSE_##mod##SS_M32_to_XMM( x86SSERegType to, uptr from )			{ x##mod.SS( xRegisterSSE(to), (void*)from ); } \
+	emitterT void SSE_##mod##SS_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	{ x##mod.SS( xRegisterSSE(to), xRegisterSSE(from) ); }
+
+#define DEFINE_LEGACY_SQRT_OPCODE(mod) \
+	DEFINE_LEGACY_RSQRT_OPCODE(mod) \
+	emitterT void SSE2_##mod##SD_M64_to_XMM( x86SSERegType to, uptr from )			{ x##mod.SD( xRegisterSSE(to), (void*)from ); } \
+	emitterT void SSE2_##mod##SD_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	{ x##mod.SD( xRegisterSSE(to), xRegisterSSE(from) ); }
+
+#define DEFINE_LEGACY_PSSD_OPCODE( mod ) \
+	DEFINE_LEGACY_PSD_OPCODE( mod ) \
+	DEFINE_LEGACY_SSSD_OPCODE( mod )
+
 DEFINE_LEGACY_MOV_OPCODE( UPS, SSE )
 DEFINE_LEGACY_MOV_OPCODE( APS, SSE )
 DEFINE_LEGACY_MOV_OPCODE( DQA, SSE2 )
 DEFINE_LEGACY_MOV_OPCODE( DQU, SSE2 )
 
+DEFINE_LEGACY_PSD_OPCODE( AND )
+DEFINE_LEGACY_PSD_OPCODE( ANDN )
+DEFINE_LEGACY_PSD_OPCODE( OR )
+DEFINE_LEGACY_PSD_OPCODE( XOR )
 
-//**********************************************************************************/
-//MOVAPS: Move aligned Packed Single Precision FP values                           *
-//**********************************************************************************
+DEFINE_LEGACY_PSSD_OPCODE( SUB )
+DEFINE_LEGACY_PSSD_OPCODE( ADD )
+DEFINE_LEGACY_PSSD_OPCODE( MUL )
+DEFINE_LEGACY_PSSD_OPCODE( DIV )
 
-emitterT void SSE_MOVAPS_XMM_to_XMM( x86SSERegType to, x86SSERegType from )  { xMOVAPS( xRegisterSSE(to), xRegisterSSE(from) ); }
+DEFINE_LEGACY_PSSD_OPCODE( MIN )
+DEFINE_LEGACY_PSSD_OPCODE( MAX )
+
+DEFINE_LEGACY_CMP_OPCODE( EQ )
+DEFINE_LEGACY_CMP_OPCODE( LT )
+DEFINE_LEGACY_CMP_OPCODE( LE )
+DEFINE_LEGACY_CMP_OPCODE( UNORD )
+DEFINE_LEGACY_CMP_OPCODE( NE )
+DEFINE_LEGACY_CMP_OPCODE( NLT )
+DEFINE_LEGACY_CMP_OPCODE( NLE )
+DEFINE_LEGACY_CMP_OPCODE( ORD )
+
+DEFINE_LEGACY_SSSD_OPCODE( UCOMI )
+DEFINE_LEGACY_RSQRT_OPCODE( RCP )
+DEFINE_LEGACY_RSQRT_OPCODE( RSQRT )
+DEFINE_LEGACY_SQRT_OPCODE( SQRT )
+
+
+emitterT void SSE_MOVAPS_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	{ xMOVAPS( xRegisterSSE(to), xRegisterSSE(from) ); }
+emitterT void SSE2_MOVDQA_XMM_to_XMM( x86SSERegType to, x86SSERegType from)	{ xMOVDQA( xRegisterSSE(to), xRegisterSSE(from) ); }
+
+emitterT void SSE2_MOVD_M32_to_XMM( x86SSERegType to, uptr from )			{ xMOVDZX( xRegisterSSE(to), (void*)from ); }
+emitterT void SSE2_MOVD_R_to_XMM( x86SSERegType to, x86IntRegType from )	{ xMOVDZX( xRegisterSSE(to), xRegister32(from) ); }
+emitterT void SSE2_MOVD_Rm_to_XMM( x86SSERegType to, x86IntRegType from, int offset )
+{
+	xMOVDZX( xRegisterSSE(to), ptr[xAddressReg(from)+offset] );
+}
+
+emitterT void SSE2_MOVD_XMM_to_M32( u32 to, x86SSERegType from )			{ xMOVD( (void*)to, xRegisterSSE(from) ); }
+emitterT void SSE2_MOVD_XMM_to_R( x86IntRegType to, x86SSERegType from )	{ xMOVD( xRegister32(to), xRegisterSSE(from) ); }
+emitterT void SSE2_MOVD_XMM_to_Rm( x86IntRegType to, x86SSERegType from, int offset )
+{
+	xMOVD( ptr[xAddressReg(from)+offset], xRegisterSSE(from) );
+}
 
 emitterT void SSE2_MOVQ_M64_to_XMM( x86SSERegType to, uptr from )			{ xMOVQZX( xRegisterSSE(to), (void*)from ); }
 emitterT void SSE2_MOVQ_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	{ xMOVQZX( xRegisterSSE(to), xRegisterSSE(from) ); }
@@ -165,9 +208,6 @@ emitterT void SSE2_MOVDQ2Q_XMM_to_MM( x86MMXRegType to, x86SSERegType from)	{ xM
 emitterT void SSE2_MOVQ2DQ_MM_to_XMM( x86SSERegType to, x86MMXRegType from)	{ xMOVQ( xRegisterSSE(to), xRegisterMMX(from) ); }
 
 
-//**********************************************************************************/
-//MOVSS: Move Scalar Single-Precision FP  value                                    *
-//**********************************************************************************
 emitterT void SSE_MOVSS_M32_to_XMM( x86SSERegType to, uptr from )						{ xMOVSSZX( xRegisterSSE(to), (void*)from ); }
 emitterT void SSE_MOVSS_XMM_to_M32( u32 to, x86SSERegType from )						{ xMOVSS( (void*)to, xRegisterSSE(from) ); }
 emitterT void SSE_MOVSS_XMM_to_XMM( x86SSERegType to, x86SSERegType from )				{ xMOVSS( xRegisterSSE(to), xRegisterSSE(from) ); }
@@ -181,189 +221,69 @@ emitterT void SSE2_MOVSD_Rm_to_XMM( x86SSERegType to, x86IntRegType from, int of
 emitterT void SSE2_MOVSD_XMM_to_Rm( x86IntRegType to, x86SSERegType from, int offset )	{ xMOVSD( ptr[xAddressReg(to)+offset], xRegisterSSE(from) ); }
 
 emitterT void SSE_MASKMOVDQU_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	{ xMASKMOV( xRegisterSSE(to), xRegisterSSE(from) ); }
-//**********************************************************************************/
-//MOVLPS: Move low Packed Single-Precision FP                                     *
-//**********************************************************************************
+
 emitterT void SSE_MOVLPS_M64_to_XMM( x86SSERegType to, uptr from )	{ xMOVL.PS( xRegisterSSE(to), (void*)from ); }
 emitterT void SSE_MOVLPS_XMM_to_M64( u32 to, x86SSERegType from )	{ xMOVL.PS( (void*)to, xRegisterSSE(from) ); }
 emitterT void SSE_MOVLPS_Rm_to_XMM( x86SSERegType to, x86IntRegType from, int offset ) { xMOVL.PS( xRegisterSSE(to), ptr[xAddressReg(from)+offset] ); }
 emitterT void SSE_MOVLPS_XMM_to_Rm( x86IntRegType to, x86SSERegType from, int offset ) { xMOVL.PS( ptr[xAddressReg(to)+offset], xRegisterSSE(from) ); }
 
-/////////////////////////////////////////////////////////////////////////////////////
-//**********************************************************************************/
-//MOVHPS: Move High Packed Single-Precision FP                                     *
-//**********************************************************************************
 emitterT void SSE_MOVHPS_M64_to_XMM( x86SSERegType to, uptr from )	{ xMOVH.PS( xRegisterSSE(to), (void*)from ); }
 emitterT void SSE_MOVHPS_XMM_to_M64( u32 to, x86SSERegType from )	{ xMOVH.PS( (void*)to, xRegisterSSE(from) ); }
 emitterT void SSE_MOVHPS_Rm_to_XMM( x86SSERegType to, x86IntRegType from, int offset ) { xMOVH.PS( xRegisterSSE(to), ptr[xAddressReg(from)+offset] ); }
 emitterT void SSE_MOVHPS_XMM_to_Rm( x86IntRegType to, x86SSERegType from, int offset ) { xMOVH.PS( ptr[xAddressReg(to)+offset], xRegisterSSE(from) ); }
 
-/////////////////////////////////////////////////////////////////////////////////////
-//**********************************************************************************/
-//MOVLHPS: Moved packed Single-Precision FP low to high                            *
-//**********************************************************************************
 emitterT void SSE_MOVLHPS_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	{ xMOVLH.PS( xRegisterSSE(to), xRegisterSSE(from) ); }
-
-//////////////////////////////////////////////////////////////////////////////////////
-//**********************************************************************************/
-//MOVHLPS: Moved packed Single-Precision FP High to Low                            *
-//**********************************************************************************
 emitterT void SSE_MOVHLPS_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	{ xMOVHL.PS( xRegisterSSE(to), xRegisterSSE(from) ); }
-
 
 emitterT void SSE2_PMOVMSKB_XMM_to_R32(x86IntRegType to, x86SSERegType from)	{ xPMOVMSKB( xRegister32(to), xRegisterSSE(from) ); }
 
-
-#define DEFINE_LEGACY_PSD_OPCODE( mod ) \
-	emitterT void SSE_##mod##PS_M128_to_XMM( x86SSERegType to, uptr from )			{ x##mod.PS( xRegisterSSE(to), (void*)from ); } \
-	emitterT void SSE_##mod##PS_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	{ x##mod.PS( xRegisterSSE(to), xRegisterSSE(from) ); } \
-	emitterT void SSE2_##mod##PD_M128_to_XMM( x86SSERegType to, uptr from )			{ x##mod.PD( xRegisterSSE(to), (void*)from ); } \
-	emitterT void SSE2_##mod##PD_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	{ x##mod.PD( xRegisterSSE(to), xRegisterSSE(from) ); }
-
-#define DEFINE_LEGACY_PSSD_OPCODE( mod ) \
-	DEFINE_LEGACY_PSD_OPCODE( mod ) \
-	emitterT void SSE_##mod##SS_M32_to_XMM( x86SSERegType to, uptr from )			{ x##mod.SS( xRegisterSSE(to), (void*)from ); } \
-	emitterT void SSE_##mod##SS_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	{ x##mod.SS( xRegisterSSE(to), xRegisterSSE(from) ); } \
-	emitterT void SSE2_##mod##SD_M32_to_XMM( x86SSERegType to, uptr from )			{ x##mod.SD( xRegisterSSE(to), (void*)from ); } \
-	emitterT void SSE2_##mod##SD_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	{ x##mod.SD( xRegisterSSE(to), xRegisterSSE(from) ); }
-
-DEFINE_LEGACY_PSD_OPCODE( AND )
-DEFINE_LEGACY_PSD_OPCODE( ANDN )
-DEFINE_LEGACY_PSD_OPCODE( OR )
-DEFINE_LEGACY_PSD_OPCODE( XOR )
-
-DEFINE_LEGACY_PSSD_OPCODE( SUB )
-DEFINE_LEGACY_PSSD_OPCODE( ADD )
-DEFINE_LEGACY_PSSD_OPCODE( MUL )
-DEFINE_LEGACY_PSSD_OPCODE( DIV )
-
-emitterT void SSE_RCPPS_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	{ xRCPPS( xRegisterSSE(to), xRegisterSSE(from) ); }
-emitterT void SSE_RCPPS_M128_to_XMM( x86SSERegType to, uptr from )			{ xRCPPS( xRegisterSSE(to), (void*)from ); }
-
-emitterT void SSE_RCPSS_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	{ xRCPSS( xRegisterSSE(to), xRegisterSSE(from) ); }
-emitterT void SSE_RCPSS_M32_to_XMM( x86SSERegType to, uptr from )			{ xRCPSS( xRegisterSSE(to), (void*)from ); }
-
-////////////////////////////////////////////////////////////////////////////////////////////
-//**********************************************************************************/
-//Packed Single-Precision FP compare (CMPccPS)                                    *
-//**********************************************************************************
-
-#define DEFINE_LEGACY_CMP_OPCODE( comp ) \
-	emitterT void SSE_CMP##comp##PS_M128_to_XMM( x86SSERegType to, uptr from )         { xCMP##comp.PS( xRegisterSSE(to), (void*)from ); } \
-	emitterT void SSE_CMP##comp##PS_XMM_to_XMM( x86SSERegType to, x86SSERegType from ) { xCMP##comp.PS( xRegisterSSE(to), xRegisterSSE(from) ); } \
-	emitterT void SSE2_CMP##comp##PD_M128_to_XMM( x86SSERegType to, uptr from )         { xCMP##comp.PD( xRegisterSSE(to), (void*)from ); } \
-	emitterT void SSE2_CMP##comp##PD_XMM_to_XMM( x86SSERegType to, x86SSERegType from ) { xCMP##comp.PD( xRegisterSSE(to), xRegisterSSE(from) ); } \
-	emitterT void SSE_CMP##comp##SS_M128_to_XMM( x86SSERegType to, uptr from )         { xCMP##comp.SS( xRegisterSSE(to), (void*)from ); } \
-	emitterT void SSE_CMP##comp##SS_XMM_to_XMM( x86SSERegType to, x86SSERegType from ) { xCMP##comp.SS( xRegisterSSE(to), xRegisterSSE(from) ); } \
-	emitterT void SSE2_CMP##comp##SD_M128_to_XMM( x86SSERegType to, uptr from )         { xCMP##comp.SD( xRegisterSSE(to), (void*)from ); } \
-	emitterT void SSE2_CMP##comp##SD_XMM_to_XMM( x86SSERegType to, x86SSERegType from ) { xCMP##comp.SD( xRegisterSSE(to), xRegisterSSE(from) ); }
-
-DEFINE_LEGACY_CMP_OPCODE( EQ )
-DEFINE_LEGACY_CMP_OPCODE( LT )
-DEFINE_LEGACY_CMP_OPCODE( LE )
-DEFINE_LEGACY_CMP_OPCODE( UNORD )
-DEFINE_LEGACY_CMP_OPCODE( NE )
-DEFINE_LEGACY_CMP_OPCODE( NLT )
-DEFINE_LEGACY_CMP_OPCODE( NLE )
-DEFINE_LEGACY_CMP_OPCODE( ORD )
-
-emitterT void SSE_UCOMISS_M32_to_XMM( x86SSERegType to, uptr from )
+emitterT void SSE_SHUFPS_XMM_to_XMM( x86SSERegType to, x86SSERegType from, u8 imm8 )	{ xSHUF.PS( xRegisterSSE(to), xRegisterSSE(from), imm8 ); }
+emitterT void SSE_SHUFPS_M128_to_XMM( x86SSERegType to, uptr from, u8 imm8 )			{ xSHUF.PS( xRegisterSSE(to), (void*)from, imm8 ); }
+emitterT void SSE_SHUFPS_Rm_to_XMM( x86SSERegType to, x86IntRegType from, int offset, u8 imm8 )
 {
-    RexR(0, to);
-	write16( 0x2e0f );
-	ModRM( 0, to, DISP32 );
-	write32( MEMADDR(from, 4) );
+	xSHUF.PS( xRegisterSSE(to), ptr[xAddressReg(from)+offset], imm8 );
 }
 
-emitterT void SSE_UCOMISS_XMM_to_XMM( x86SSERegType to, x86SSERegType from )
-{
-    RexRB(0, to, from);
-	write16( 0x2e0f );
-	ModRM( 3, to, from );
-}
+emitterT void SSE_SHUFPD_XMM_to_XMM( x86SSERegType to, x86SSERegType from, u8 imm8 )	{ xSHUF.PD( xRegisterSSE(to), xRegisterSSE(from), imm8 ); }
+emitterT void SSE_SHUFPD_M128_to_XMM( x86SSERegType to, uptr from, u8 imm8 )			{ xSHUF.PD( xRegisterSSE(to), (void*)from, imm8 ); }
 
-emitterT void SSE2_UCOMISD_M64_to_XMM( x86SSERegType to, uptr from )
-{
-	write8(0x66);
-    RexR(0, to);
-	write16( 0x2e0f );
-	ModRM( 0, to, DISP32 );
-	write32( MEMADDR(from, 4) );
-}
 
-emitterT void SSE2_UCOMISD_XMM_to_XMM( x86SSERegType to, x86SSERegType from )
-{
-	write8(0x66);
-    RexRB(0, to, from);
-	write16( 0x2e0f );
-	ModRM( 3, to, from );
-}
+emitterT void SSE_CVTPI2PS_M64_to_XMM( x86SSERegType to, uptr from )			{ xCVTPI2PS( xRegisterSSE(to), (u64*)from ); }
+emitterT void SSE_CVTPI2PS_MM_to_XMM( x86SSERegType to, x86MMXRegType from )	{ xCVTPI2PS( xRegisterSSE(to), xRegisterMMX(from) ); }
+
+emitterT void SSE_CVTPS2PI_M64_to_MM( x86MMXRegType to, uptr from )				{ xCVTPS2PI( xRegisterMMX(to), (u64*)from ); }
+emitterT void SSE_CVTPS2PI_XMM_to_MM( x86MMXRegType to, x86SSERegType from )	{ xCVTPS2PI( xRegisterMMX(to), xRegisterSSE(from) ); }
+
+emitterT void SSE_CVTTSS2SI_M32_to_R32(x86IntRegType to, uptr from)				{ xCVTTSS2SI( xRegister32(to), (u32*)from ); }
+emitterT void SSE_CVTTSS2SI_XMM_to_R32(x86IntRegType to, x86SSERegType from)	{ xCVTTSS2SI( xRegister32(to), xRegisterSSE(from) ); }
+
+emitterT void SSE_CVTSI2SS_M32_to_XMM(x86SSERegType to, uptr from)				{ xCVTSI2SS( xRegisterSSE(to), (u32*)from ); }
+emitterT void SSE_CVTSI2SS_R_to_XMM(x86SSERegType to, x86IntRegType from)		{ xCVTSI2SS( xRegisterSSE(to), xRegister32(from) ); }
+
+emitterT void SSE2_CVTSS2SD_M32_to_XMM( x86SSERegType to, uptr from)			{ xCVTSS2SD( xRegisterSSE(to), (u32*)from ); }
+emitterT void SSE2_CVTSS2SD_XMM_to_XMM( x86SSERegType to, x86SSERegType from)	{ xCVTSS2SD( xRegisterSSE(to), xRegisterSSE(from) ); }
+
+emitterT void SSE2_CVTSD2SS_M64_to_XMM( x86SSERegType to, uptr from)			{ xCVTSD2SS( xRegisterSSE(to), (u64*)from ); }
+emitterT void SSE2_CVTSD2SS_XMM_to_XMM( x86SSERegType to, x86SSERegType from)	{ xCVTSD2SS( xRegisterSSE(to), xRegisterSSE(from) ); }
+
+emitterT void SSE2_CVTDQ2PS_M128_to_XMM( x86SSERegType to, uptr from )			{ xCVTDQ2PS( xRegisterSSE(to), (u128*)from ); }
+emitterT void SSE2_CVTDQ2PS_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	{ xCVTDQ2PS( xRegisterSSE(to), xRegisterSSE(from) ); }
+
+emitterT void SSE2_CVTPS2DQ_M128_to_XMM( x86SSERegType to, uptr from )			{ xCVTPS2DQ( xRegisterSSE(to), (u128*)from ); }
+emitterT void SSE2_CVTPS2DQ_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	{ xCVTPS2DQ( xRegisterSSE(to), xRegisterSSE(from) ); }
+
+emitterT void SSE2_CVTTPS2DQ_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	{ xCVTTPS2DQ( xRegisterSSE(to), xRegisterSSE(from) ); }
 
 //////////////////////////////////////////////////////////////////////////////////////////
-//**********************************************************************************/
-//RSQRTPS : Packed Single-Precision FP Square Root Reciprocal                      *
-//**********************************************************************************
-emitterT void SSE_RSQRTPS_M128_to_XMM( x86SSERegType to, uptr from )			{ SSEMtoR( 0x520f, 0 ); }
-emitterT void SSE_RSQRTPS_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	{ SSERtoR( 0x520f ); }
+//////////////////////////////////////////////////////////////////////////////////////////
 
-/////////////////////////////////////////////////////////////////////////////////////
-//**********************************************************************************/
-//RSQRTSS : Scalar Single-Precision FP Square Root Reciprocal                      *
-//**********************************************************************************
-emitterT void SSE_RSQRTSS_M32_to_XMM( x86SSERegType to, uptr from )			{ SSE_SS_MtoR( 0x520f, 0 ); }
-emitterT void SSE_RSQRTSS_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	{ SSE_SS_RtoR( 0x520f ); }
+//emitterT void SSE_CVTPI2PS_M64_to_XMM( x86SSERegType to, uptr from )			{ SSEMtoR( 0x2a0f, 0 ); }
+// emitterT void SSE_CVTPI2PS_MM_to_XMM( x86SSERegType to, x86MMXRegType from )   { SSERtoR( 0x2a0f ); }
+// 
+// emitterT void SSE_CVTPS2PI_M64_to_MM( x86MMXRegType to, uptr from )			{ SSEMtoR( 0x2d0f, 0 ); }
+// emitterT void SSE_CVTPS2PI_XMM_to_MM( x86MMXRegType to, x86SSERegType from )   { SSERtoR( 0x2d0f ); }
 
-////////////////////////////////////////////////////////////////////////////////////
-//**********************************************************************************/
-//SQRTPS : Packed Single-Precision FP Square Root                                  *
-//**********************************************************************************
-emitterT void SSE_SQRTPS_M128_to_XMM( x86SSERegType to, uptr from )			{ SSEMtoR( 0x510f, 0 ); }
-emitterT void SSE_SQRTPS_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	{ SSERtoR( 0x510f ); }
-
-//////////////////////////////////////////////////////////////////////////////////////
-//**********************************************************************************/
-//SQRTSS : Scalar Single-Precision FP Square Root                                  *
-//**********************************************************************************
-emitterT void SSE_SQRTSS_M32_to_XMM( x86SSERegType to, uptr from )				{ SSE_SS_MtoR( 0x510f, 0 ); }
-emitterT void SSE_SQRTSS_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	{ SSE_SS_RtoR( 0x510f ); }
-
-emitterT void SSE2_SQRTSD_M64_to_XMM( x86SSERegType to, uptr from )          { SSE_SD_MtoR( 0x510f, 0 ); }
-emitterT void SSE2_SQRTSD_XMM_to_XMM( x86SSERegType to, x86SSERegType from ){ SSE_SD_RtoR( 0x510f ); }
-
-////////////////////////////////////////////////////////////////////////////////////////
-//**********************************************************************************/
-//MAXPS: Return Packed Single-Precision FP Maximum                                 *
-//**********************************************************************************
-emitterT void SSE_MAXPS_M128_to_XMM( x86SSERegType to, uptr from )				{ SSEMtoR( 0x5f0f, 0 ); }
-emitterT void SSE_MAXPS_XMM_to_XMM( x86SSERegType to, x86SSERegType from )		{ SSERtoR( 0x5f0f ); }
-
-emitterT void SSE2_MAXPD_M128_to_XMM( x86SSERegType to, uptr from )			{ SSEMtoR66( 0x5f0f ); }
-emitterT void SSE2_MAXPD_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	{ SSERtoR66( 0x5f0f ); }
-
-/////////////////////////////////////////////////////////////////////////////////////////
-//**********************************************************************************/
-//MAXSS: Return Scalar Single-Precision FP Maximum                                 *
-//**********************************************************************************
-emitterT void SSE_MAXSS_M32_to_XMM( x86SSERegType to, uptr from )				{ SSE_SS_MtoR( 0x5f0f, 0 ); }
-emitterT void SSE_MAXSS_XMM_to_XMM( x86SSERegType to, x86SSERegType from )		{ SSE_SS_RtoR( 0x5f0f ); }
-
-emitterT void SSE2_MAXSD_M64_to_XMM( x86SSERegType to, uptr from )           { SSE_SD_MtoR( 0x5f0f, 0 ); }
-emitterT void SSE2_MAXSD_XMM_to_XMM( x86SSERegType to, x86SSERegType from ) { SSE_SD_RtoR( 0x5f0f ); }
-
-/////////////////////////////////////////////////////////////////////////////////////////
-//**********************************************************************************/
-//CVTPI2PS: Packed Signed INT32 to Packed Single  FP Conversion                    *
-//**********************************************************************************
-emitterT void SSE_CVTPI2PS_M64_to_XMM( x86SSERegType to, uptr from )			{ SSEMtoR( 0x2a0f, 0 ); }
-emitterT void SSE_CVTPI2PS_MM_to_XMM( x86SSERegType to, x86MMXRegType from )   { SSERtoR( 0x2a0f ); }
-
-///////////////////////////////////////////////////////////////////////////////////////////
-//**********************************************************************************/
-//CVTPS2PI: Packed Single FP to Packed Signed INT32 Conversion                      *
-//**********************************************************************************
-emitterT void SSE_CVTPS2PI_M64_to_MM( x86MMXRegType to, uptr from )			{ SSEMtoR( 0x2d0f, 0 ); }
-emitterT void SSE_CVTPS2PI_XMM_to_MM( x86MMXRegType to, x86SSERegType from )   { SSERtoR( 0x2d0f ); }
-
+/*
 emitterT void SSE_CVTTSS2SI_M32_to_R32(x86IntRegType to, uptr from) { write8(0xf3); SSEMtoR(0x2c0f, 0); }
 emitterT void SSE_CVTTSS2SI_XMM_to_R32(x86IntRegType to, x86SSERegType from)
 {
@@ -372,8 +292,9 @@ emitterT void SSE_CVTTSS2SI_XMM_to_R32(x86IntRegType to, x86SSERegType from)
 	write16(0x2c0f);
 	ModRM(3, to, from);
 }
+*/
 
-emitterT void SSE_CVTSI2SS_M32_to_XMM(x86SSERegType to, uptr from) { write8(0xf3); SSEMtoR(0x2a0f, 0); }
+/*emitterT void SSE_CVTSI2SS_M32_to_XMM(x86SSERegType to, uptr from) { write8(0xf3); SSEMtoR(0x2a0f, 0); }
 emitterT void SSE_CVTSI2SS_R_to_XMM(x86SSERegType to, x86IntRegType from)
 {
 	write8(0xf3);
@@ -384,50 +305,26 @@ emitterT void SSE_CVTSI2SS_R_to_XMM(x86SSERegType to, x86IntRegType from)
 
 emitterT void SSE2_CVTSS2SD_M32_to_XMM( x86SSERegType to, uptr from) { SSE_SS_MtoR(0x5a0f, 0); }
 emitterT void SSE2_CVTSS2SD_XMM_to_XMM( x86SSERegType to, x86SSERegType from) { SSE_SS_RtoR(0x5a0f); }
+*/
 
-emitterT void SSE2_CVTSD2SS_M64_to_XMM( x86SSERegType to, uptr from) { SSE_SD_MtoR(0x5a0f, 0); }
+/*emitterT void SSE2_CVTSD2SS_M64_to_XMM( x86SSERegType to, uptr from) { SSE_SD_MtoR(0x5a0f, 0); }
 emitterT void SSE2_CVTSD2SS_XMM_to_XMM( x86SSERegType to, x86SSERegType from) { SSE_SD_RtoR(0x5a0f); }
 
-///////////////////////////////////////////////////////////////////////////////////////////
-//**********************************************************************************/
-//CVTDQ2PS: Packed Signed INT32  to Packed Single Precision FP  Conversion         *
-//**********************************************************************************
 emitterT void SSE2_CVTDQ2PS_M128_to_XMM( x86SSERegType to, uptr from )			{ SSEMtoR( 0x5b0f, 0 ); }
 emitterT void SSE2_CVTDQ2PS_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	{ SSERtoR( 0x5b0f ); }
 
-//**********************************************************************************/
-//CVTPS2DQ: Packed Single Precision FP to Packed Signed INT32 Conversion           *
-//**********************************************************************************
 emitterT void SSE2_CVTPS2DQ_M128_to_XMM( x86SSERegType to, uptr from )			{ SSEMtoR66( 0x5b0f ); }
 emitterT void SSE2_CVTPS2DQ_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	{ SSERtoR66( 0x5b0f ); }
 
-emitterT void SSE2_CVTTPS2DQ_XMM_to_XMM( x86SSERegType to, x86SSERegType from ){ write8(0xf3); SSERtoR(0x5b0f); }
-/////////////////////////////////////////////////////////////////////////////////////
-//**********************************************************************************/
-//MINPS: Return Packed Single-Precision FP Minimum                                 *
-//**********************************************************************************
-emitterT void SSE_MINPS_M128_to_XMM( x86SSERegType to, uptr from )				{ SSEMtoR( 0x5d0f, 0 ); }
-emitterT void SSE_MINPS_XMM_to_XMM( x86SSERegType to, x86SSERegType from )		{ SSERtoR( 0x5d0f ); }
+emitterT void SSE2_CVTTPS2DQ_XMM_to_XMM( x86SSERegType to, x86SSERegType from ){ write8(0xf3); SSERtoR(0x5b0f); }*/
 
-emitterT void SSE2_MINPD_M128_to_XMM( x86SSERegType to, uptr from )			{ SSEMtoR66( 0x5d0f ); }
-emitterT void SSE2_MINPD_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	{ SSERtoR66( 0x5d0f ); }
-
-//////////////////////////////////////////////////////////////////////////////////////////
-//**********************************************************************************/
-//MINSS: Return Scalar Single-Precision FP Minimum                                 *
-//**********************************************************************************
-emitterT void SSE_MINSS_M32_to_XMM( x86SSERegType to, uptr from )				{ SSE_SS_MtoR( 0x5d0f, 0 ); }
-emitterT void SSE_MINSS_XMM_to_XMM( x86SSERegType to, x86SSERegType from )		{ SSE_SS_RtoR( 0x5d0f ); }
-
-emitterT void SSE2_MINSD_M64_to_XMM( x86SSERegType to, uptr from )           { SSE_SD_MtoR( 0x5d0f, 0 ); }
-emitterT void SSE2_MINSD_XMM_to_XMM( x86SSERegType to, x86SSERegType from ) { SSE_SD_RtoR( 0x5d0f ); }
 
 ///////////////////////////////////////////////////////////////////////////////////////////
 //**********************************************************************************/
 //PMAXSW: Packed Signed Integer Word Maximum                                        *
 //**********************************************************************************
 //missing
- //     SSE_PMAXSW_M64_to_MM
+//     SSE_PMAXSW_M64_to_MM
 //		SSE2_PMAXSW_M128_to_XMM
 //		SSE2_PMAXSW_XMM_to_XMM
 emitterT void SSE_PMAXSW_MM_to_MM( x86MMXRegType to, x86MMXRegType from ){ SSERtoR( 0xEE0F ); }
@@ -437,32 +334,10 @@ emitterT void SSE_PMAXSW_MM_to_MM( x86MMXRegType to, x86MMXRegType from ){ SSERt
 //PMINSW: Packed Signed Integer Word Minimum                                        *
 //**********************************************************************************
 //missing
- //     SSE_PMINSW_M64_to_MM
+//     SSE_PMINSW_M64_to_MM
 //		SSE2_PMINSW_M128_to_XMM
 //		SSE2_PMINSW_XMM_to_XMM
 emitterT void SSE_PMINSW_MM_to_MM( x86MMXRegType to, x86MMXRegType from ){ SSERtoR( 0xEA0F ); }
-
-//////////////////////////////////////////////////////////////////////////////////////
-//**********************************************************************************/
-//SHUFPS: Shuffle Packed Single-Precision FP Values                                *
-//**********************************************************************************
-emitterT void SSE_SHUFPS_XMM_to_XMM( x86SSERegType to, x86SSERegType from, u8 imm8 )	{ SSERtoR( 0xC60F ); write8( imm8 ); }
-emitterT void SSE_SHUFPS_M128_to_XMM( x86SSERegType to, uptr from, u8 imm8 )			{ SSEMtoR( 0xC60F, 1 ); write8( imm8 ); }
-
-emitterT void SSE_SHUFPS_Rm_to_XMM( x86SSERegType to, x86IntRegType from, int offset, u8 imm8 )
-{
-    RexRB(0, to, from);
-	write16(0xc60f);
-    WriteRmOffsetFrom(to, from, offset);
-	write8(imm8);
-}
-
-//////////////////////////////////////////////////////////////////////////////////////
-//**********************************************************************************/
-//SHUFPD: Shuffle Packed Double-Precision FP Values                                *
-//**********************************************************************************
-emitterT void SSE2_SHUFPD_XMM_to_XMM( x86SSERegType to, x86SSERegType from, u8 imm8 )	{ SSERtoR66( 0xC60F ); write8( imm8 ); }
-emitterT void SSE2_SHUFPD_M128_to_XMM( x86SSERegType to, uptr from, u8 imm8 )			{ SSEMtoR66( 0xC60F ); write8( imm8 ); }
 
 ////////////////////////////////////////////////////////////////////////////////////
 //**********************************************************************************/
@@ -565,43 +440,6 @@ emitterT void SSE2_PSUBQ_XMM_to_XMM(x86SSERegType to, x86SSERegType from ){ SSER
 emitterT void SSE2_PSUBQ_M128_to_XMM(x86SSERegType to, uptr from ){ SSEMtoR66( 0xFB0F ); }
 
 ///////////////////////////////////////////////////////////////////////////////////////
-//**********************************************************************************/
-//MOVD: Move Dword(32bit) to /from XMM reg                                         *
-//**********************************************************************************
-emitterT void SSE2_MOVD_M32_to_XMM( x86SSERegType to, uptr from )			{ SSEMtoR66(0x6E0F); }
-emitterT void SSE2_MOVD_R_to_XMM( x86SSERegType to, x86IntRegType from )	{ SSERtoR66(0x6E0F); }
-
-emitterT void SSE2_MOVD_Rm_to_XMM( x86SSERegType to, x86IntRegType from )
-{
-	write8(0x66);
-	RexRB(0, to, from);
-	write16( 0x6e0f );
-	ModRM( 0, to, from);
-}
-
-emitterT void SSE2_MOVD_Rm_to_XMM( x86SSERegType to, x86IntRegType from, int offset )
-{
-	write8(0x66);
-    RexRB(0, to, from);
-	write16( 0x6e0f );
-    WriteRmOffsetFrom(to, from, offset);
-}
-
-emitterT void SSE2_MOVD_XMM_to_M32( u32 to, x86SSERegType from )			{ SSERtoM66(0x7E0F); }
-emitterT void SSE2_MOVD_XMM_to_R( x86IntRegType to, x86SSERegType from )	{ _SSERtoR66(0x7E0F); }
-
-emitterT void SSE2_MOVD_XMM_to_Rm( x86IntRegType to, x86SSERegType from, int offset )
-{
-	write8(0x66);
-    RexRB(0, from, to);
-	write16( 0x7e0f );
-    WriteRmOffsetFrom(from, to, offset);
-}
-
-///////////////////////////////////////////////////////////////////////////////////////
-
-emitterT void SSE2_MOVDQA_XMM_to_XMM( x86SSERegType to, x86SSERegType from)	{ xMOVDQA( xRegisterSSE(to), xRegisterSSE(from) ); }
-
 
 // shift right logical
 
