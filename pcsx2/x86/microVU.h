@@ -17,7 +17,8 @@
  */
 
 #pragma once
-//#define mVUdebug // Prints Extra Info to Console
+#define mVUdebug	// Prints Extra Info to Console
+//#define mVUlogProg	// Dumps MicroPrograms into microVU0.txt/microVU1.txt
 #include "Common.h"
 #include "VU.h"
 #include "GS.h"
@@ -48,16 +49,16 @@ public:
 	}
 	microBlock* search(microRegInfo* pState) {
 		if (listSize < 0) return NULL;
-		if (blockList[0].pState.needExactMatch) { // Needs Detailed Search (Exact Match of Pipeline State)
+		//if (blockList[0].pState.needExactMatch) { // Needs Detailed Search (Exact Match of Pipeline State)
 			for (int i = 0; i <= listSize; i++) {
 				if (!memcmp(pState, &blockList[i].pState, sizeof(microRegInfo))) return &blockList[i];
 			}
-		}
+		/*}
 		else { // Can do Simple Search (Only Matches the Important Pipeline Stuff)
 			for (int i = 0; i <= listSize; i++) {
 				if ((blockList[i].pState.q == pState->q) && (blockList[i].pState.p == pState->p)) { return &blockList[i]; }
 			}
-		}
+		}*/
 		return NULL;
 	}
 };
@@ -118,6 +119,9 @@ extern PCSX2_ALIGNED16(microVU microVU1);
 extern void (*mVU_UPPER_OPCODE[64])( VURegs* VU, s32 info );
 extern void (*mVU_LOWER_OPCODE[128])( VURegs* VU, s32 info );
 
+// Used for logging microPrograms
+extern FILE *mVUlogFile[2];
+
 // Main Functions
 microVUt(void) mVUinit(VURegs*);
 microVUt(void) mVUreset();
@@ -125,10 +129,10 @@ microVUt(void) mVUclose();
 microVUt(void) mVUclear(u32, u32);
 
 // Private Functions
-__forceinline void	mVUclearProg(microVU* mVU, int progIndex);
-__forceinline int	mVUfindLeastUsedProg(microVU* mVU);
-__forceinline int	mVUsearchProg(microVU* mVU);
-__forceinline void	mVUcacheProg(microVU* mVU, int progIndex);
+microVUt(void)		mVUclearProg(microVU* mVU, int progIndex);
+microVUt(int)		mVUfindLeastUsedProg(microVU* mVU);
+microVUt(int)		mVUsearchProg(microVU* mVU);
+microVUt(void)		mVUcacheProg(microVU* mVU, int progIndex);
 void* __fastcall	mVUexecuteVU0(u32 startPC, u32 cycles);
 void* __fastcall	mVUexecuteVU1(u32 startPC, u32 cycles);
 
@@ -140,6 +144,7 @@ typedef void (*mVUrecCall)(u32, u32) __attribute__((__fastcall)); // Not sure if
 
 // Include all the *.inl files (Needed because C++ sucks with templates and *.cpp files)
 #include "microVU_Misc.inl"
+#include "microVU_Log.inl"
 #include "microVU_Analyze.inl"
 #include "microVU_Alloc.inl"
 #include "microVU_Upper.inl"

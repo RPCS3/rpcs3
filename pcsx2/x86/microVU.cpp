@@ -28,6 +28,7 @@
 
 PCSX2_ALIGNED16(microVU microVU0);
 PCSX2_ALIGNED16(microVU microVU1);
+FILE *mVUlogFile[2] = {NULL, NULL};
 
 declareAllVariables // Declares All Global Variables :D
 //------------------------------------------------------------------
@@ -44,7 +45,8 @@ microVUt(void) mVUinit(VURegs* vuRegsPtr) {
 	mVU->progSize	= (vuIndex ? 0x4000 : 0x1000) / 4;
 	mVU->cache		= NULL;
 	memset(&mVU->prog, 0, sizeof(mVU->prog));
-	mVUlog((vuIndex) ? "microVU1: init" : "microVU0: init");
+	mVUprint((vuIndex) ? "microVU1: init" : "microVU0: init");
+	mVUsetupLog();
 
 	mVUreset<vuIndex>();
 }
@@ -55,7 +57,7 @@ microVUt(void) mVUreset() {
 	microVU* mVU = mVUx;
 	mVUclose<vuIndex>(); // Close
 
-	mVUlog((vuIndex) ? "microVU1: reset" : "microVU0: reset");
+	mVUprint((vuIndex) ? "microVU1: reset" : "microVU0: reset");
 
 	// Dynarec Cache
 	mVU->cache = SysMmapEx((vuIndex ? 0x1e840000 : 0x0e840000), mVU->cacheSize, 0, (vuIndex ? "Micro VU1" : "Micro VU0"));
@@ -95,7 +97,7 @@ microVUt(void) mVUreset() {
 microVUt(void) mVUclose() {
 
 	microVU* mVU = mVUx;
-	mVUlog((vuIndex) ? "microVU1: close" : "microVU0: close");
+	mVUprint((vuIndex) ? "microVU1: close" : "microVU0: close");
 
 	if ( mVU->cache ) { HostSys::Munmap( mVU->cache, mVU->cacheSize ); mVU->cache = NULL; }
 
@@ -124,7 +126,8 @@ microVUt(void) mVUclear(u32 addr, u32 size) {
 //------------------------------------------------------------------
 
 // Clears program data (Sets used to 1 because calling this function implies the program will be used at least once)
-__forceinline void mVUclearProg(microVU* mVU, int progIndex) {
+microVUt(void) mVUclearProg(int progIndex) {
+	microVU* mVU = mVUx;
 	mVU->prog.prog[progIndex].used = 1;
 	mVU->prog.prog[progIndex].x86ptr = mVU->prog.prog[progIndex].x86start;
 	for (u32 i = 0; i < (mVU->progSize / 2); i++) {
@@ -133,15 +136,19 @@ __forceinline void mVUclearProg(microVU* mVU, int progIndex) {
 }
 
 // Caches Micro Program
-__forceinline void mVUcacheProg(microVU* mVU, int progIndex) {
+microVUt(void) mVUcacheProg(int progIndex) {
+	microVU* mVU = mVUx;
 	memcpy_fast(mVU->prog.prog[progIndex].data, mVU->regs->Micro, mVU->microSize);
+	mVUdumpProg(progIndex);
 }
 
 // Finds the least used program, (if program list full clears and returns an old program; if not-full, returns free program)
-__forceinline int mVUfindLeastUsedProg(microVU* mVU) {
+microVUt(int) mVUfindLeastUsedProg() {
+	microVU* mVU = mVUx;
 	if (mVU->prog.total < mVU->prog.max) {
 		mVU->prog.total++;
-		mVUcacheProg(mVU, mVU->prog.total); // Cache Micro Program
+		mVUcacheProg<vuIndex>(mVU->prog.total); // Cache Micro Program
+		Console::Notice("microVU: Program Total = %d", params mVU->prog.total);
 		return mVU->prog.total;
 	}
 	else {
@@ -153,27 +160,28 @@ __forceinline int mVUfindLeastUsedProg(microVU* mVU) {
 				j = i;
 			}
 		}
-		mVUclearProg(mVU, j); // Clear old data if overwriting old program
-		mVUcacheProg(mVU, j); // Cache Micro Program
-		mVUlog("microVU: Program Cache got Full!");
+		mVUclearProg<vuIndex>(j); // Clear old data if overwriting old program
+		mVUcacheProg<vuIndex>(j); // Cache Micro Program
+		Console::Notice("microVU: Program Cache got Full!");
 		return j;
 	}
 }
 
 // Searches for Cached Micro Program and sets prog.cur to it (returns 1 if program found, else returns 0)
-__forceinline int mVUsearchProg(microVU* mVU) {
+microVUt(int) mVUsearchProg() {
+	microVU* mVU = mVUx;
 	if (mVU->prog.cleared) { // If cleared, we need to search for new program
 		for (int i = 0; i <= mVU->prog.total; i++) {
 			//if (i == mVU->prog.cur) continue; // We can skip the current program. (ToDo: Verify that games don't clear, and send the same microprogram :/)
 			if (!memcmp_mmx(mVU->prog.prog[i].data, mVU->regs->Micro, mVU->microSize)) {
-				//if (i == mVU->prog.cur) { mVUlog("microVU: Same micro program sent!"); }
+				//if (i == mVU->prog.cur) { mVUprint("microVU: Same micro program sent!"); }
 				mVU->prog.cur = i;
 				mVU->prog.cleared = 0;
 				mVU->prog.prog[i].used++;
 				return 1;
 			}
 		}
-		mVU->prog.cur = mVUfindLeastUsedProg(mVU); // If cleared and program not found, make a new program instance
+		mVU->prog.cur = mVUfindLeastUsedProg<vuIndex>(); // If cleared and program not found, make a new program instance
 		mVU->prog.cleared = 0;
 		return 0;
 	}

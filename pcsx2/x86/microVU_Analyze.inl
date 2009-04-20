@@ -51,7 +51,7 @@
 
 microVUt(void) mVUanalyzeFMAC1(int Fd, int Fs, int Ft) {
 	microVU* mVU = mVUx;
-	//mVUlog("microVU: FMAC1 Opcode");
+	//mVUprint("microVU: FMAC1 Opcode");
 	mVUinfo |= _doStatus;
 	analyzeReg1(Fs);
 	analyzeReg1(Ft);
@@ -64,7 +64,7 @@ microVUt(void) mVUanalyzeFMAC1(int Fd, int Fs, int Ft) {
 
 microVUt(void) mVUanalyzeFMAC2(int Fs, int Ft) {
 	microVU* mVU = mVUx;
-	//mVUlog("microVU: FMAC2 Opcode");
+	//mVUprint("microVU: FMAC2 Opcode");
 	analyzeReg1(Fs);
 	analyzeReg2(Ft);
 }
@@ -84,7 +84,7 @@ microVUt(void) mVUanalyzeFMAC2(int Fs, int Ft) {
 
 microVUt(void) mVUanalyzeFMAC3(int Fd, int Fs, int Ft) {
 	microVU* mVU = mVUx;
-	//mVUlog("microVU: FMAC3 Opcode");
+	//mVUprint("microVU: FMAC3 Opcode");
 	mVUinfo |= _doStatus;
 	analyzeReg1(Fs);
 	analyzeReg3(Ft);
@@ -114,7 +114,7 @@ microVUt(void) mVUanalyzeFMAC4(int Fs, int Ft) {
 
 microVUt(void) mVUanalyzeIALU1(int Id, int Is, int It) {
 	microVU* mVU = mVUx;
-	//mVUlog("microVU: IALU1 Opcode");
+	//mVUprint("microVU: IALU1 Opcode");
 	if (!Id) { mVUinfo |= _isNOP; }
 	analyzeVIreg1(Is);
 	analyzeVIreg1(It);
@@ -123,7 +123,7 @@ microVUt(void) mVUanalyzeIALU1(int Id, int Is, int It) {
 
 microVUt(void) mVUanalyzeIALU2(int Is, int It) {
 	microVU* mVU = mVUx;
-	//mVUlog("microVU: IALU2 Opcode");
+	//mVUprint("microVU: IALU2 Opcode");
 	if (!It) { mVUinfo |= _isNOP; }
 	analyzeVIreg1(Is);
 	analyzeVIreg2(It, 1);
@@ -145,7 +145,7 @@ microVUt(void) mVUanalyzeIALU2(int Is, int It) {
 
 microVUt(void) mVUanalyzeMR32(int Fs, int Ft) {
 	microVU* mVU = mVUx;
-	mVUlog("microVU: MR32 Opcode");
+	mVUprint("microVU: MR32 Opcode");
 	if (!Ft) { mVUinfo |= _isNOP; }
 	analyzeReg6(Fs);
 	analyzeReg2(Ft);
@@ -171,7 +171,7 @@ microVUt(void) mVUanalyzeMR32(int Fs, int Ft) {
 
 microVUt(void) mVUanalyzeFDIV(int Fs, int Fsf, int Ft, int Ftf, u8 xCycles) {
 	microVU* mVU = mVUx;
-	mVUlog("microVU: DIV Opcode");
+	mVUprint("microVU: DIV Opcode");
 	analyzeReg5(Fs, Fsf);
 	analyzeReg5(Ft, Ftf);
 	analyzeQreg(xCycles);
@@ -183,14 +183,14 @@ microVUt(void) mVUanalyzeFDIV(int Fs, int Fsf, int Ft, int Ftf, u8 xCycles) {
 
 microVUt(void) mVUanalyzeEFU1(int Fs, int Fsf, u8 xCycles) {
 	microVU* mVU = mVUx;
-	mVUlog("microVU: EFU Opcode");
+	mVUprint("microVU: EFU Opcode");
 	analyzeReg5(Fs, Fsf);
 	analyzePreg(xCycles);
 }
 
 microVUt(void) mVUanalyzeEFU2(int Fs, u8 xCycles) {
 	microVU* mVU = mVUx;
-	mVUlog("microVU: EFU Opcode");
+	mVUprint("microVU: EFU Opcode");
 	analyzeReg1(Fs);
 	analyzePreg(xCycles);
 }
@@ -201,7 +201,7 @@ microVUt(void) mVUanalyzeEFU2(int Fs, u8 xCycles) {
 
 microVUt(void) mVUanalyzeMFP(int Ft) {
 	microVU* mVU = mVUx;
-	mVUlog("microVU: MFP Opcode");
+	mVUprint("microVU: MFP Opcode");
 	if (!Ft) { mVUinfo |= _isNOP; }
 	analyzeReg2(Ft);
 }
@@ -212,7 +212,7 @@ microVUt(void) mVUanalyzeMFP(int Ft) {
 
 microVUt(void) mVUanalyzeLQ(int Ft, int Is, bool writeIs) {
 	microVU* mVU = mVUx;
-	//mVUlog("microVU: LQ Opcode");
+	//mVUprint("microVU: LQ Opcode");
 	analyzeVIreg1(Is);
 	analyzeReg2(Ft);
 	if (!Ft)	 { mVUinfo |= (writeIs && Is) ? _noWriteVF : _isNOP; }
@@ -238,14 +238,14 @@ microVUt(void) mVUanalyzeSQ(int Fs, int It, bool writeIt) {
 
 microVUt(void) mVUanalyzeR1(int Fs, int Fsf) {
 	microVU* mVU = mVUx;
-	mVUlog("microVU: R-reg Opcode");
+	mVUprint("microVU: R-reg Opcode");
 	analyzeReg5(Fs, Fsf);
 	analyzeRreg();
 }
 
 microVUt(void) mVUanalyzeR2(int Ft, bool canBeNOP) {
 	microVU* mVU = mVUx;
-	mVUlog("microVU: R-reg Opcode");
+	mVUprint("microVU: R-reg Opcode");
 	if (!Ft) { mVUinfo |= ((canBeNOP) ? _isNOP : _noWriteVF); }
 	analyzeReg2(Ft);
 	analyzeRreg();
@@ -257,7 +257,7 @@ microVUt(void) mVUanalyzeR2(int Ft, bool canBeNOP) {
 
 microVUt(void) mVUanalyzeSflag(int It) {
 	microVU* mVU = mVUx;
-	mVUlog("microVU: Sflag Opcode");
+	mVUprint("microVU: Sflag Opcode");
 	if (!It) { mVUinfo |= _isNOP; }
 	else {  // Sets _isSflag at instruction that FSxxx opcode reads it's status flag from
 		mVUinfo |= _swapOps;
@@ -273,7 +273,7 @@ microVUt(void) mVUanalyzeSflag(int It) {
 microVUt(void) mVUanalyzeFSSET() {
 	microVU* mVU = mVUx;
 	mVUinfo |= _isFSSET;
-	mVUlog("microVU: FSSET Opcode");
+	mVUprint("microVU: FSSET Opcode");
 	// mVUinfo &= ~_doStatus;
 	// Note: I'm not entirely sure if the non-sticky flags
 	// should be taken from the current upper instruction
@@ -287,7 +287,7 @@ microVUt(void) mVUanalyzeFSSET() {
 
 microVUt(void) mVUanalyzeMflag(int Is, int It) {
 	microVU* mVU = mVUx;
-	mVUlog("microVU: Mflag Opcode");
+	mVUprint("microVU: Mflag Opcode");
 	if (!It) { mVUinfo |= _isNOP; }
 	else { // Need set _doMac for 4 previous Ops (need to do all 4 because stalls could change the result needed)
 		mVUinfo |= _swapOps;

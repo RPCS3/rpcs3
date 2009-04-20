@@ -15,6 +15,7 @@
 *  along with this program; if not, write to the Free Software
 *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
+
 #pragma once
 #ifdef PCSX2_MICROVU
 
@@ -22,7 +23,7 @@
 // Dispatcher Functions
 //------------------------------------------------------------------
 
-void testFunction() { mVUlog("microVU: Entered Execution Mode"); }
+void testFunction() { mVUprint("microVU: Entered Execution Mode"); }
 
 // Generates the code for entering recompiled blocks
 microVUt(void) mVUdispatcherA() {
@@ -128,9 +129,9 @@ microVUt(void) mVUdispatcherB() {
 microVUt(void*) __fastcall mVUexecute(u32 startPC, u32 cycles) {
 
 	microVU* mVU = mVUx;
-	//mVUlog("microVU%x: startPC = 0x%x, cycles = 0x%x", params vuIndex, startPC, cycles);
+	//mVUprint("microVU%x: startPC = 0x%x, cycles = 0x%x", params vuIndex, startPC, cycles);
 	
-	mVUsearchProg(mVU); // Find and set correct program
+	mVUsearchProg<vuIndex>(); // Find and set correct program
 	mVU->cycles		 = cycles;
 	mVU->totalCycles = cycles;
 
@@ -145,7 +146,7 @@ microVUt(void*) __fastcall mVUexecute(u32 startPC, u32 cycles) {
 
 microVUt(void) mVUcleanUp() {
 	microVU* mVU = mVUx;
-	mVUlog("microVU: Program exited successfully!");
+	//mVUprint("microVU: Program exited successfully!");
 	mVUcurProg.x86ptr = x86Ptr;
 	mVUcacheCheck(x86Ptr, mVUcurProg.x86start, (uptr)(mVUcurProg.x86end - mVUcurProg.x86start));
 }

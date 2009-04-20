@@ -25,7 +25,7 @@
 
 #define branchCase(JMPcc, nJMPcc)											\
 	mVUsetupBranch<vuIndex>(bStatus, bMac);									\
-	mVUlog("mVUcompile branchCase");										\
+	mVUprint("mVUcompile branchCase");										\
 	CMP16ItoM((uptr)&mVU->branch, 0);										\
 	incPC2(1);																\
 	pBlock = mVUblocks[iPC/2]->search((microRegInfo*)&mVUregs);				\
@@ -142,7 +142,7 @@ microVUt(void) mVUsetFlags(int* bStatus, int* bMac) {
 // Recompiles Code for Proper Flags and Q/P regs on Block Linkings
 microVUt(void) mVUsetupBranch(int* bStatus, int* bMac) {
 	microVU* mVU = mVUx;
-	mVUlog("mVUsetupBranch");
+	mVUprint("mVUsetupBranch");
 
 	PUSH32R(gprR);   // Backup gprR
 	MOV32RtoM((uptr)&mVU->espBackup, gprESP);
@@ -268,7 +268,7 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 	microVU* mVU = mVUx;
 	u8* thisPtr = x86Ptr;
 	
-	if (startPC > ((vuIndex) ? 0x3fff : 0xfff)) { mVUlog("microVU: invalid startPC"); }
+	if (startPC > ((vuIndex) ? 0x3fff : 0xfff)) { mVUprint("microVU: invalid startPC"); }
 	startPC &= (vuIndex ? 0x3ff8 : 0xff8);
 
 	// Searches for Existing Compiled Block (if found, then returns; else, compile)
@@ -336,7 +336,7 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 				case 8: branchCase(JNZ32, JZ32);	// IBNEQ
 				case 1: case 2: // B/BAL
 
-					mVUlog("mVUcompile B/BAL");
+					mVUprint("mVUcompile B/BAL");
 					incPC(-3); // Go back to branch opcode (to get branch imm addr)
 					mVUsetupBranch<vuIndex>(bStatus, bMac);
 
@@ -348,7 +348,7 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 					return thisPtr;
 				case 9: case 10: // JR/JALR
 
-					mVUlog("mVUcompile JR/JALR");
+					mVUprint("mVUcompile JR/JALR");
 					memcpy_fast(&pBlock->pStateEnd, &mVUregs, sizeof(microRegInfo));
 					mVUsetupBranch<vuIndex>(bStatus, bMac);
 
@@ -364,7 +364,7 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 					return thisPtr;
 			}
 			// Conditional Branches
-			mVUlog("mVUcompile conditional branch");
+			mVUprint("mVUcompile conditional branch");
 			if (pBlock) { // Branch non-taken has already been compiled
 				incPC(-3); // Go back to branch opcode (to get branch imm addr)
 				// Check if branch-block has already been compiled
@@ -386,8 +386,8 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 			return thisPtr;
 		}
 	}
-	mVUlog("mVUcompile ebit");
-	if (x == (vuIndex?(0x3fff/8):(0xfff/8))) { mVUlog("microVU: Possible infinite compiling loop!"); }
+	mVUprint("mVUcompile ebit");
+	if (x == (vuIndex?(0x3fff/8):(0xfff/8))) { mVUprint("microVU: Possible infinite compiling loop!"); }
 
 	// Do E-bit end stuff here
 	mVUendProgram<vuIndex>();

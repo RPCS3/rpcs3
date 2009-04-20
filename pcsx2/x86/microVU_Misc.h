@@ -138,6 +138,10 @@ declareAllVariables
 #define microVUf(aType) template<int vuIndex, int recPass> aType
 #define microVUq(aType) template<int vuIndex, int recPass>  __forceinline aType
 
+#define pass1 if (recPass == 0)
+#define pass2 if (recPass == 1)
+#define pass3 if (recPass == 2)
+
 #define mVUcurProg	 mVU->prog.prog[mVU->prog.cur]
 #define mVUblocks	 mVU->prog.prog[mVU->prog.cur].block
 #define mVUallocInfo mVU->prog.prog[mVU->prog.cur].allocInfo
@@ -226,7 +230,7 @@ declareAllVariables
 #define mmVI(_VIreg_)	(_VIreg_ - 1)
 
 #ifdef mVUdebug
-#define mVUlog Console::Status
+#define mVUprint Console::Status
 #define mVUdebug1() {											\
 	if (curI & _Ibit_)	{ SysPrintf("microVU: I-bit set!\n"); }	\
 	if (curI & _Ebit_)	{ SysPrintf("microVU: E-bit set!\n"); }	\
@@ -235,8 +239,18 @@ declareAllVariables
 	if (curI & _Tbit_)	{ SysPrintf("microVU: T-bit set!\n"); }	\
 }
 #else
-#define mVUlog 0&&
+#define mVUprint 0&&
 #define mVUdebug1() {}
+#endif
+
+#ifdef mVUlogProg
+#define mVUlog __mVULog<vuIndex>
+#define mVUsetupLog __mVUsetupLog<vuIndex>
+#define mVUdumpProg __mVUdumpProgram<vuIndex>
+#else
+#define mVUlog 0&&
+#define mVUsetupLog()
+#define mVUdumpProg 0&&
 #endif
 
 #define mVUcacheCheck(ptr, start, limit) {  \
