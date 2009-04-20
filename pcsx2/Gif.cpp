@@ -545,7 +545,7 @@ void gifMFIFOInterrupt()
 		cpuRegs.interrupt &= ~(1 << 11); 
 		return ; 
 	}
-	if(spr0->chcr & 0x100)
+	if((spr0->chcr & 0x100) && spr0->qwc == 0)
 	{
 		spr0->chcr &= ~0x100;
 		hwDmacIrq(8);

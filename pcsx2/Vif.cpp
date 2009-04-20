@@ -532,11 +532,13 @@ void mfifoVIF1transfer(int qwc)
 void vifMFIFOInterrupt()
 {
 	g_vifCycles = 0;
-	if(spr0->chcr & 0x100)
+	
+	if((spr0->chcr & 0x100) && spr0->qwc == 0)
 	{
 		spr0->chcr &= ~0x100;
 		hwDmacIrq(8);
 	}
+
 	if (vif1.inprogress == 1) mfifo_VIF1chain();
 
 	if (vif1.irq && vif1.tag.size == 0)
@@ -569,6 +571,7 @@ void vifMFIFOInterrupt()
 		else
 			CPU_INT(10, vif1ch->qwc * BIAS);
 
+		
 		return;
 	}
 	else if (vifqwc <= 0)
