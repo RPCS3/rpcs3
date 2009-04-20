@@ -31,45 +31,27 @@ enum G3Type
 	G3Type_iDIV	= 7
 };
 
-// ------------------------------------------------------------------------
-template< typename ImmType >
-class Group3Impl
-{
-protected:
-	static const uint OperandSize = sizeof(ImmType);
-
-	static bool Is8BitOperand()	{ return OperandSize == 1; }
-	static void prefix16()		{ if( OperandSize == 2 ) xWrite<u8>( 0x66 ); }
-
-public: 
-	Group3Impl() {}		// For the love of GCC.
-
-	static __emitinline void Emit( G3Type InstType, const xRegister<ImmType>& from )
-	{
-		prefix16();
-		xWrite<u8>(Is8BitOperand() ? 0xf6 : 0xf7 );
-		ModRM_Direct( InstType, from.Id );
-	}
-
-	static __emitinline void Emit( G3Type InstType, const ModSibStrict<ImmType>& sibsrc )
-	{
-		prefix16();
-		xWrite<u8>( Is8BitOperand() ? 0xf6 : 0xf7 );
-		EmitSibMagic( InstType, sibsrc );
-	}
-};
-
-// -------------------------------------------------------------------
+//////////////////////////////////////////////////////////////////////////////////////////
 //
 template< G3Type InstType >
 class Group3ImplAll
 {
 public:
-	template< typename T >
-	__forceinline void operator()( const xRegister<T>& from ) const	{ Group3Impl<T>::Emit( InstType, from ); }
+	// ------------------------------------------------------------------------
+	template< typename T > __forceinline void operator()( const xRegister<T>& from ) const
+	{
+		prefix16<T>();
+		xWrite<u8>(Is8BitOp<T>() ? 0xf6 : 0xf7 );
+		ModRM_Direct( InstType, from.Id );
+	}
 
-	template< typename T >
-	__noinline void operator()( const ModSibStrict<T>& from ) const { Group3Impl<T>::Emit( InstType, from ); }
+	// ------------------------------------------------------------------------
+	template< typename T > __noinline void operator()( const ModSibStrict<T>& from ) const
+	{
+		prefix16<T>();
+		xWrite<u8>( Is8BitOp<T>() ? 0xf6 : 0xf7 );
+		EmitSibMagic( InstType, from );
+	}
 	
 	Group3ImplAll() {}
 };
@@ -78,15 +60,15 @@ public:
 // This class combines x86 and SSE/SSE2 instructions for iMUL and iDIV.
 //
 template< G3Type InstType, u8 OpcodeSSE >
-class G3Impl_PlusSSE : public Group3ImplAll<InstType>
+class xImpl_Group3 : public Group3ImplAll<InstType>
 {
 public:
-	const SSELogicImpl<0x00,OpcodeSSE> PS;
-	const SSELogicImpl<0x66,OpcodeSSE> PD;
-	const SSELogicImpl<0xf3,OpcodeSSE> SS;
-	const SSELogicImpl<0xf2,OpcodeSSE> SD;
+	const SimdImpl_DestRegSSE<0x00,OpcodeSSE> PS;
+	const SimdImpl_DestRegSSE<0x66,OpcodeSSE> PD;
+	const SimdImpl_DestRegSSE<0xf3,OpcodeSSE> SS;
+	const SimdImpl_DestRegSSE<0xf2,OpcodeSSE> SD;
 
-	G3Impl_PlusSSE() {}
+	xImpl_Group3() {}
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -162,14 +144,14 @@ public:
 };
 
 // ------------------------------------------------------------------------
-class iMul_PlusSSE : public G3Impl_PlusSSE<G3Type_iMUL,0x59>
+class xImpl_iMul : public xImpl_Group3<G3Type_iMUL,0x59>
 {
 protected:
 	typedef iMulImpl<u32> iMUL32;
 	typedef iMulImpl<u16> iMUL16;
 
 public:
-	using G3Impl_PlusSSE<G3Type_iMUL,0x59>::operator();
+	using xImpl_Group3<G3Type_iMUL,0x59>::operator();
 	
 	__forceinline void operator()( const xRegister32& to,	const xRegister32& from ) const			{ iMUL32::Emit( to, from ); }
 	__forceinline void operator()( const xRegister32& to,	const void* src ) const					{ iMUL32::Emit( to, src ); }
@@ -183,5 +165,5 @@ public:
 	__noinline void operator()( const xRegister16& to,	const ModSibBase& src ) const				{ iMUL16::Emit( to, src ); }
 	__noinline void operator()( const xRegister16& to,	const ModSibBase& from, s16 imm ) const		{ iMUL16::Emit( to, from, imm ); }
 
-	iMul_PlusSSE() {}
+	xImpl_iMul() {}
 };

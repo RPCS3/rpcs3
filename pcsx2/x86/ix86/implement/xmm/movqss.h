@@ -129,11 +129,11 @@ public:
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////
-// PLogicImplAll - Implements logic forms for MMX/SSE instructions, and can be used for
+// SimdImpl_PackedLogic - Implements logic forms for MMX/SSE instructions, and can be used for
 // a few other various instruction too (anything which comes in simdreg,simdreg/ModRM forms).
 //
 template< u8 Opcode >
-class PLogicImplAll
+class SimdImpl_PackedLogic
 {
 public:
 	template< typename T >
@@ -143,21 +143,40 @@ public:
 	template< typename T >
 	__noinline void operator()( const xRegisterSIMD<T>& to, const ModSibBase& from ) const			{ writeXMMop( 0x66, Opcode, to, from ); }
 
-	PLogicImplAll() {} //GCWho?
+	SimdImpl_PackedLogic() {} //GCWho?
 };
 
 // ------------------------------------------------------------------------
-// For implementing SSE-only logic operations, like ANDPS/ANDPD
+// For implementing SSE-only logic operations that have reg,reg/rm forms only,
+// like ANDPS/ANDPD
 //
 template< u8 Prefix, u8 Opcode >
-class SSELogicImpl
+class SimdImpl_DestRegSSE
 {
 public:
 	__forceinline void operator()( const xRegisterSSE& to, const xRegisterSSE& from ) const	{ writeXMMop( Prefix, Opcode, to, from ); }
 	__forceinline void operator()( const xRegisterSSE& to, const void* from ) const			{ writeXMMop( Prefix, Opcode, to, from ); }
 	__noinline void operator()( const xRegisterSSE& to, const ModSibBase& from ) const		{ writeXMMop( Prefix, Opcode, to, from ); }
 
-	SSELogicImpl() {} //GCWho?
+	SimdImpl_DestRegSSE() {} //GCWho?
+};
+
+// ------------------------------------------------------------------------
+// For implementing MMX/SSE operations that have reg,reg/rm forms only,
+// but accept either MM or XMM destinations (most PADD/PSUB and other P srithmetic ops).
+//
+template< u8 Prefix, u8 Opcode >
+class SimdImpl_DestRegEither
+{
+public:
+	template< typename DestOperandType >
+	__forceinline void operator()( const xRegisterSIMD<DestOperandType>& to, const xRegisterSIMD<DestOperandType>& from ) const	{ writeXMMop( Prefix, Opcode, to, from ); }
+	template< typename DestOperandType >
+	__forceinline void operator()( const xRegisterSIMD<DestOperandType>& to, const void* from ) const			{ writeXMMop( Prefix, Opcode, to, from ); }
+	template< typename DestOperandType >
+	__noinline void operator()( const xRegisterSIMD<DestOperandType>& to, const ModSibBase& from ) const		{ writeXMMop( Prefix, Opcode, to, from ); }
+
+	SimdImpl_DestRegEither() {} //GCWho?
 };
 
 // ------------------------------------------------------------------------
@@ -165,76 +184,76 @@ public:
 // can be regDirect or ModRM (indirect).
 //
 template< u8 Prefix, u8 Opcode, typename DestRegType, typename SrcRegType, typename SrcOperandType >
-class SSEImpl_DestRegForm
+class SimdImpl_DestRegStrict
 {
 public:
 	__forceinline void operator()( const DestRegType& to, const SrcRegType& from ) const				{ writeXMMop( Prefix, Opcode, to, from, true ); }
 	__forceinline void operator()( const DestRegType& to, const SrcOperandType* from ) const			{ writeXMMop( Prefix, Opcode, to, from, true ); }
 	__noinline void operator()( const DestRegType& to, const ModSibStrict<SrcOperandType>& from ) const	{ writeXMMop( Prefix, Opcode, to, from, true ); }
 
-	SSEImpl_DestRegForm() {} //GCWho?
+	SimdImpl_DestRegStrict() {} //GCWho?
 };
 
 // ------------------------------------------------------------------------
 template< u8 OpcodeSSE >
-class SSEImpl_PSPD_SSSD
+class SimdImpl_PSPD_SSSD
 {
 public:
-	const SSELogicImpl<0x00,OpcodeSSE> PS;		// packed single precision
-	const SSELogicImpl<0x66,OpcodeSSE> PD;		// packed double precision
-	const SSELogicImpl<0xf3,OpcodeSSE> SS;		// scalar single precision
-	const SSELogicImpl<0xf2,OpcodeSSE> SD;		// scalar double precision
+	const SimdImpl_DestRegSSE<0x00,OpcodeSSE> PS;		// packed single precision
+	const SimdImpl_DestRegSSE<0x66,OpcodeSSE> PD;		// packed double precision
+	const SimdImpl_DestRegSSE<0xf3,OpcodeSSE> SS;		// scalar single precision
+	const SimdImpl_DestRegSSE<0xf2,OpcodeSSE> SD;		// scalar double precision
 	
-	SSEImpl_PSPD_SSSD() {}  //GChow?
+	SimdImpl_PSPD_SSSD() {}  //GChow?
 };
 
 // ------------------------------------------------------------------------
 //
 template< u8 OpcodeSSE >
-class SSEAndNotImpl
+class SimdImpl_AndNot
 {
 public:
-	const SSELogicImpl<0x00,OpcodeSSE> PS;
-	const SSELogicImpl<0x66,OpcodeSSE> PD;
-	SSEAndNotImpl() {}
+	const SimdImpl_DestRegSSE<0x00,OpcodeSSE> PS;
+	const SimdImpl_DestRegSSE<0x66,OpcodeSSE> PD;
+	SimdImpl_AndNot() {}
 };
 
 // ------------------------------------------------------------------------
 // For instructions that have SS/SD form only (UCOMI, etc)
 // AltPrefix - prefixed used for doubles (SD form).
 template< u8 AltPrefix, u8 OpcodeSSE >
-class SSEImpl_SS_SD
+class SimdImpl_SS_SD
 {
 public:
-	const SSELogicImpl<0x00,OpcodeSSE> SS;
-	const SSELogicImpl<AltPrefix,OpcodeSSE> SD;
-	SSEImpl_SS_SD() {}
+	const SimdImpl_DestRegSSE<0x00,OpcodeSSE> SS;
+	const SimdImpl_DestRegSSE<AltPrefix,OpcodeSSE> SD;
+	SimdImpl_SS_SD() {}
 };
 
 // ------------------------------------------------------------------------
 // For instructions that have PS/SS form only (most commonly reciprocal Sqrt functions)
 template< u8 OpcodeSSE >
-class SSE_rSqrtImpl
+class SimdImpl_rSqrt
 {
 public:
-	const SSELogicImpl<0x00,OpcodeSSE> PS;
-	const SSELogicImpl<0xf3,OpcodeSSE> SS;
-	SSE_rSqrtImpl() {}
+	const SimdImpl_DestRegSSE<0x00,OpcodeSSE> PS;
+	const SimdImpl_DestRegSSE<0xf3,OpcodeSSE> SS;
+	SimdImpl_rSqrt() {}
 };
 
 // ------------------------------------------------------------------------
 // For instructions that have PS/SS/SD form only (most commonly Sqrt functions)
 template< u8 OpcodeSSE >
-class SSE_SqrtImpl : public SSE_rSqrtImpl<OpcodeSSE>
+class SimdImpl_Sqrt : public SimdImpl_rSqrt<OpcodeSSE>
 {
 public:
-	const SSELogicImpl<0xf2,OpcodeSSE> SD;
-	SSE_SqrtImpl() {}
+	const SimdImpl_DestRegSSE<0xf2,OpcodeSSE> SD;
+	SimdImpl_Sqrt() {}
 };
 
 // ------------------------------------------------------------------------
 template< u8 OpcodeSSE >
-class SSEImpl_Shuffle
+class SimdImpl_Shuffle
 {
 protected:
 	template< u8 Prefix > struct Woot
@@ -249,12 +268,12 @@ public:
 	const Woot<0x00> PS;
 	const Woot<0x66> PD;
 
-	SSEImpl_Shuffle() {} //GCWhat?
+	SimdImpl_Shuffle() {} //GCWhat?
 };
 
 // ------------------------------------------------------------------------
 template< SSE2_ComparisonType CType >
-class SSECompareImpl
+class SimdImpl_Compare
 {
 protected:
 	template< u8 Prefix > struct Woot
@@ -270,5 +289,87 @@ public:
 	const Woot<0x66> PD;
 	const Woot<0xf3> SS;
 	const Woot<0xf2> SD;
-	SSECompareImpl() {} //GCWhat?
+	SimdImpl_Compare() {} //GCWhat?
+};
+
+
+//////////////////////////////////////////////////////////////////////////////////////////
+//
+//
+template< u8 Opcode1, u8 OpcodeImm, u8 Modcode >
+class SimdImpl_Shift
+{
+public:
+	SimdImpl_Shift() {}
+
+	template< typename OperandType >
+	__forceinline void operator()( const xRegisterSIMD<OperandType>& to, const xRegisterSIMD<OperandType>& from ) const
+	{
+		writeXMMop( 0x66, Opcode1, to, from );
+	}
+
+	template< typename OperandType >
+	__forceinline void operator()( const xRegisterSIMD<OperandType>& to, const void* from ) const
+	{
+		writeXMMop( 0x66, Opcode1, to, from );
+	}
+
+	template< typename OperandType >
+	__noinline void operator()( const xRegisterSIMD<OperandType>& to, const ModSibBase& from ) const
+	{
+		writeXMMop( 0x66, Opcode1, to, from );
+	}
+
+	template< typename OperandType >
+	__emitinline void operator()( const xRegisterSIMD<OperandType>& to, u8 imm ) const
+	{
+		SimdPrefix( (sizeof( OperandType ) == 16) ? 0x66 : 0, OpcodeImm );
+		ModRM( 3, (int)Modcode, to.Id );
+		xWrite<u8>( imm );
+	}
+};
+
+// ------------------------------------------------------------------------
+template< u8 OpcodeBase1, u8 OpcodeBaseImm, u8 Modcode >
+class SimdImpl_ShiftAll
+{
+public:
+	const SimdImpl_Shift<OpcodeBase1+1,OpcodeBaseImm+1,Modcode> W;
+	const SimdImpl_Shift<OpcodeBase1+2,OpcodeBaseImm+2,Modcode> D;
+	const SimdImpl_Shift<OpcodeBase1+3,OpcodeBaseImm+3,Modcode> Q;
+	
+	void DQ( const xRegisterSSE& to, u8 imm ) const
+	{
+		SimdPrefix( 0x66, OpcodeBaseImm+3 );
+		ModRM( 3, (int)Modcode+1, to.Id );
+		xWrite<u8>( imm );
+	}
+	
+	SimdImpl_ShiftAll() {}
+};
+
+//////////////////////////////////////////////////////////////////////////////////////////
+//
+template< u8 OpcodeB, u8 OpcodeS, u8 OpcodeUS, u8 OpcodeQ >
+class SimdImpl_AddSub
+{
+public:
+	const SimdImpl_DestRegEither<0x66,OpcodeB> B;
+	const SimdImpl_DestRegEither<0x66,OpcodeB+1> W;
+	const SimdImpl_DestRegEither<0x66,OpcodeB+2> D;
+	const SimdImpl_DestRegEither<0x66,OpcodeQ> Q;
+
+	// Add/Sub packed signed byte [8bit] integers from src into dest, and saturate the results.
+	const SimdImpl_DestRegEither<0x66,OpcodeS> SB;
+
+	// Add/Sub packed signed word [16bit] integers from src into dest, and saturate the results.
+	const SimdImpl_DestRegEither<0x66,OpcodeS+1> SW;
+
+	// Add/Sub packed unsigned byte [8bit] integers from src into dest, and saturate the results.
+	const SimdImpl_DestRegEither<0x66,OpcodeUS> USB;
+
+	// Add/Sub packed unsigned word [16bit] integers from src into dest, and saturate the results.
+	const SimdImpl_DestRegEither<0x66,OpcodeUS+1> USW;
+
+	SimdImpl_AddSub() {}
 };

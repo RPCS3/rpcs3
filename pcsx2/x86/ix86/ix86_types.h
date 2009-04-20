@@ -693,6 +693,10 @@ namespace x86Emitter
 		extern void EmitSibMagic( uint regfield, const ModSibBase& info );
 
 		// ------------------------------------------------------------------------
+		
+		template< typename T > bool Is8BitOp() { return sizeof(T) == 1; }
+		template< typename T > void prefix16() { if( sizeof(T) == 2 ) xWrite<u8>( 0x66 ); }
+
 		#include "implement/xmm/movqss.h"
 		#include "implement/group1.h"
 		#include "implement/group2.h"

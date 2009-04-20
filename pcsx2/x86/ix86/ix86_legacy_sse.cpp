@@ -34,29 +34,6 @@ using namespace x86Emitter;
 	ModRM( 0, to, DISP32 ), \
 	write32( MEMADDR(from, 4 + overb) )
 
-#define SSERtoM( code, overb ) \
-	assert( from < iREGCNT_XMM), \
-    RexR(0, from),  \
-	write16( code ), \
-	ModRM( 0, from, DISP32 ), \
-	write32( MEMADDR(to, 4 + overb) )
-
-#define SSE_SS_MtoR( code, overb ) \
-	assert( to < iREGCNT_XMM ), \
-	write8( 0xf3 ), \
-    RexR(0, to),                      \
-	write16( code ), \
-	ModRM( 0, to, DISP32 ), \
-	write32( MEMADDR(from, 4 + overb) )
-
-#define SSE_SS_RtoM( code, overb ) \
-	assert( from < iREGCNT_XMM), \
-	write8( 0xf3 ), \
-	RexR(0, from), \
-	write16( code ), \
-	ModRM( 0, from, DISP32 ), \
-	write32( MEMADDR(to, 4 + overb) )
-
 #define SSERtoR( code ) \
 	assert( to < iREGCNT_XMM && from < iREGCNT_XMM), \
     RexRB(0, to, from),            \
@@ -95,14 +72,7 @@ using namespace x86Emitter;
     RexR(0, to),                      \
 	write16( code ), \
 	ModRM( 0, to, DISP32 ), \
-	write32( MEMADDR(from, 4 + overb) ) \
-
-#define SSE_SD_RtoR( code ) \
-	assert( to < iREGCNT_XMM && from < iREGCNT_XMM) , \
-	write8( 0xf2 ), \
-    RexRB(0, to, from),   \
-	write16( code ), \
-	ModRM( 3, to, from )
+	write32( MEMADDR(from, 4 + overb) )
 
 #define DEFINE_LEGACY_MOV_OPCODE( mod, sse ) \
 	emitterT void sse##_MOV##mod##_M128_to_XMM( x86SSERegType to, uptr from )	{ xMOV##mod( xRegisterSSE(to), (void*)from ); } \
@@ -220,21 +190,20 @@ emitterT void SSE2_MOVSD_XMM_to_XMM( x86SSERegType to, x86SSERegType from )				{
 emitterT void SSE2_MOVSD_Rm_to_XMM( x86SSERegType to, x86IntRegType from, int offset )	{ xMOVSDZX( xRegisterSSE(to), ptr[xAddressReg(from)+offset] ); }
 emitterT void SSE2_MOVSD_XMM_to_Rm( x86IntRegType to, x86SSERegType from, int offset )	{ xMOVSD( ptr[xAddressReg(to)+offset], xRegisterSSE(from) ); }
 
-emitterT void SSE_MASKMOVDQU_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	{ xMASKMOV( xRegisterSSE(to), xRegisterSSE(from) ); }
+emitterT void SSE_MOVLPS_M64_to_XMM( x86SSERegType to, uptr from )						{ xMOVL.PS( xRegisterSSE(to), (void*)from ); }
+emitterT void SSE_MOVLPS_XMM_to_M64( u32 to, x86SSERegType from )						{ xMOVL.PS( (void*)to, xRegisterSSE(from) ); }
+emitterT void SSE_MOVLPS_Rm_to_XMM( x86SSERegType to, x86IntRegType from, int offset )	{ xMOVL.PS( xRegisterSSE(to), ptr[xAddressReg(from)+offset] ); }
+emitterT void SSE_MOVLPS_XMM_to_Rm( x86IntRegType to, x86SSERegType from, int offset )	{ xMOVL.PS( ptr[xAddressReg(to)+offset], xRegisterSSE(from) ); }
 
-emitterT void SSE_MOVLPS_M64_to_XMM( x86SSERegType to, uptr from )	{ xMOVL.PS( xRegisterSSE(to), (void*)from ); }
-emitterT void SSE_MOVLPS_XMM_to_M64( u32 to, x86SSERegType from )	{ xMOVL.PS( (void*)to, xRegisterSSE(from) ); }
-emitterT void SSE_MOVLPS_Rm_to_XMM( x86SSERegType to, x86IntRegType from, int offset ) { xMOVL.PS( xRegisterSSE(to), ptr[xAddressReg(from)+offset] ); }
-emitterT void SSE_MOVLPS_XMM_to_Rm( x86IntRegType to, x86SSERegType from, int offset ) { xMOVL.PS( ptr[xAddressReg(to)+offset], xRegisterSSE(from) ); }
-
-emitterT void SSE_MOVHPS_M64_to_XMM( x86SSERegType to, uptr from )	{ xMOVH.PS( xRegisterSSE(to), (void*)from ); }
-emitterT void SSE_MOVHPS_XMM_to_M64( u32 to, x86SSERegType from )	{ xMOVH.PS( (void*)to, xRegisterSSE(from) ); }
-emitterT void SSE_MOVHPS_Rm_to_XMM( x86SSERegType to, x86IntRegType from, int offset ) { xMOVH.PS( xRegisterSSE(to), ptr[xAddressReg(from)+offset] ); }
-emitterT void SSE_MOVHPS_XMM_to_Rm( x86IntRegType to, x86SSERegType from, int offset ) { xMOVH.PS( ptr[xAddressReg(to)+offset], xRegisterSSE(from) ); }
+emitterT void SSE_MOVHPS_M64_to_XMM( x86SSERegType to, uptr from )						{ xMOVH.PS( xRegisterSSE(to), (void*)from ); }
+emitterT void SSE_MOVHPS_XMM_to_M64( u32 to, x86SSERegType from )						{ xMOVH.PS( (void*)to, xRegisterSSE(from) ); }
+emitterT void SSE_MOVHPS_Rm_to_XMM( x86SSERegType to, x86IntRegType from, int offset )	{ xMOVH.PS( xRegisterSSE(to), ptr[xAddressReg(from)+offset] ); }
+emitterT void SSE_MOVHPS_XMM_to_Rm( x86IntRegType to, x86SSERegType from, int offset )	{ xMOVH.PS( ptr[xAddressReg(to)+offset], xRegisterSSE(from) ); }
 
 emitterT void SSE_MOVLHPS_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	{ xMOVLH.PS( xRegisterSSE(to), xRegisterSSE(from) ); }
 emitterT void SSE_MOVHLPS_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	{ xMOVHL.PS( xRegisterSSE(to), xRegisterSSE(from) ); }
 
+emitterT void SSE_MASKMOVDQU_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	{ xMASKMOV( xRegisterSSE(to), xRegisterSSE(from) ); }
 emitterT void SSE2_PMOVMSKB_XMM_to_R32(x86IntRegType to, x86SSERegType from)	{ xPMOVMSKB( xRegister32(to), xRegisterSSE(from) ); }
 
 emitterT void SSE_SHUFPS_XMM_to_XMM( x86SSERegType to, x86SSERegType from, u8 imm8 )	{ xSHUF.PS( xRegisterSSE(to), xRegisterSSE(from), imm8 ); }
@@ -276,47 +245,6 @@ emitterT void SSE2_CVTTPS2DQ_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	
 
 //////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////
-
-//emitterT void SSE_CVTPI2PS_M64_to_XMM( x86SSERegType to, uptr from )			{ SSEMtoR( 0x2a0f, 0 ); }
-// emitterT void SSE_CVTPI2PS_MM_to_XMM( x86SSERegType to, x86MMXRegType from )   { SSERtoR( 0x2a0f ); }
-// 
-// emitterT void SSE_CVTPS2PI_M64_to_MM( x86MMXRegType to, uptr from )			{ SSEMtoR( 0x2d0f, 0 ); }
-// emitterT void SSE_CVTPS2PI_XMM_to_MM( x86MMXRegType to, x86SSERegType from )   { SSERtoR( 0x2d0f ); }
-
-/*
-emitterT void SSE_CVTTSS2SI_M32_to_R32(x86IntRegType to, uptr from) { write8(0xf3); SSEMtoR(0x2c0f, 0); }
-emitterT void SSE_CVTTSS2SI_XMM_to_R32(x86IntRegType to, x86SSERegType from)
-{
-	write8(0xf3);
-    RexRB(0, to, from);
-	write16(0x2c0f);
-	ModRM(3, to, from);
-}
-*/
-
-/*emitterT void SSE_CVTSI2SS_M32_to_XMM(x86SSERegType to, uptr from) { write8(0xf3); SSEMtoR(0x2a0f, 0); }
-emitterT void SSE_CVTSI2SS_R_to_XMM(x86SSERegType to, x86IntRegType from)
-{
-	write8(0xf3);
-    RexRB(0, to, from);
-	write16(0x2a0f);
-	ModRM(3, to, from);
-}
-
-emitterT void SSE2_CVTSS2SD_M32_to_XMM( x86SSERegType to, uptr from) { SSE_SS_MtoR(0x5a0f, 0); }
-emitterT void SSE2_CVTSS2SD_XMM_to_XMM( x86SSERegType to, x86SSERegType from) { SSE_SS_RtoR(0x5a0f); }
-*/
-
-/*emitterT void SSE2_CVTSD2SS_M64_to_XMM( x86SSERegType to, uptr from) { SSE_SD_MtoR(0x5a0f, 0); }
-emitterT void SSE2_CVTSD2SS_XMM_to_XMM( x86SSERegType to, x86SSERegType from) { SSE_SD_RtoR(0x5a0f); }
-
-emitterT void SSE2_CVTDQ2PS_M128_to_XMM( x86SSERegType to, uptr from )			{ SSEMtoR( 0x5b0f, 0 ); }
-emitterT void SSE2_CVTDQ2PS_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	{ SSERtoR( 0x5b0f ); }
-
-emitterT void SSE2_CVTPS2DQ_M128_to_XMM( x86SSERegType to, uptr from )			{ SSEMtoR66( 0x5b0f ); }
-emitterT void SSE2_CVTPS2DQ_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	{ SSERtoR66( 0x5b0f ); }
-
-emitterT void SSE2_CVTTPS2DQ_XMM_to_XMM( x86SSERegType to, x86SSERegType from ){ write8(0xf3); SSERtoR(0x5b0f); }*/
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////
@@ -389,19 +317,6 @@ emitterT void SSE_LDMXCSR( uptr from ) {
 	write32( MEMADDR(from, 4) );
 }
 
-/////////////////////////////////////////////////////////////////////////////////////
-//**********************************************************************************/
-//PADDB,PADDW,PADDD : Add Packed Integers                                          *
-//**********************************************************************************
-emitterT void SSE2_PADDB_XMM_to_XMM(x86SSERegType to, x86SSERegType from ){ SSERtoR66( 0xFC0F ); }
-emitterT void SSE2_PADDB_M128_to_XMM(x86SSERegType to, uptr from ){ SSEMtoR66( 0xFC0F ); }
-emitterT void SSE2_PADDW_XMM_to_XMM(x86SSERegType to, x86SSERegType from ){ SSERtoR66( 0xFD0F ); }
-emitterT void SSE2_PADDW_M128_to_XMM(x86SSERegType to, uptr from ){ SSEMtoR66( 0xFD0F ); }
-emitterT void SSE2_PADDD_XMM_to_XMM(x86SSERegType to, x86SSERegType from ){ SSERtoR66( 0xFE0F ); }
-emitterT void SSE2_PADDD_M128_to_XMM(x86SSERegType to, uptr from ){ SSEMtoR66( 0xFE0F ); }
-emitterT void SSE2_PADDQ_XMM_to_XMM(x86SSERegType to, x86SSERegType from ) { SSERtoR66( 0xD40F ); }
-emitterT void SSE2_PADDQ_M128_to_XMM(x86SSERegType to, uptr from ) { SSEMtoR66( 0xD40F ); }
-
 ///////////////////////////////////////////////////////////////////////////////////
 //**********************************************************************************/
 //PCMPxx: Compare Packed Integers                                                  *
@@ -426,64 +341,7 @@ emitterT void SSE2_PCMPEQD_M128_to_XMM(x86SSERegType to, uptr from ){ SSEMtoR66(
 emitterT void SSE_PEXTRW_XMM_to_R32(x86IntRegType to, x86SSERegType from, u8 imm8 ){ SSERtoR66(0xC50F); write8( imm8 ); }
 emitterT void SSE_PINSRW_R32_to_XMM(x86SSERegType to, x86IntRegType from, u8 imm8 ){ SSERtoR66(0xC40F); write8( imm8 ); }
 
-////////////////////////////////////////////////////////////////////////////////////////////
-//**********************************************************************************/
-//PSUBx: Subtract Packed Integers                                                  *
-//**********************************************************************************
-emitterT void SSE2_PSUBB_XMM_to_XMM(x86SSERegType to, x86SSERegType from ){ SSERtoR66( 0xF80F ); }
-emitterT void SSE2_PSUBB_M128_to_XMM(x86SSERegType to, uptr from ){ SSEMtoR66( 0xF80F ); }
-emitterT void SSE2_PSUBW_XMM_to_XMM(x86SSERegType to, x86SSERegType from ){ SSERtoR66( 0xF90F ); }
-emitterT void SSE2_PSUBW_M128_to_XMM(x86SSERegType to, uptr from ){ SSEMtoR66( 0xF90F ); }
-emitterT void SSE2_PSUBD_XMM_to_XMM(x86SSERegType to, x86SSERegType from ){ SSERtoR66( 0xFA0F ); }
-emitterT void SSE2_PSUBD_M128_to_XMM(x86SSERegType to, uptr from ){ SSEMtoR66( 0xFA0F ); }
-emitterT void SSE2_PSUBQ_XMM_to_XMM(x86SSERegType to, x86SSERegType from ){ SSERtoR66( 0xFB0F ); }
-emitterT void SSE2_PSUBQ_M128_to_XMM(x86SSERegType to, uptr from ){ SSEMtoR66( 0xFB0F ); }
-
 ///////////////////////////////////////////////////////////////////////////////////////
-
-// shift right logical
-
-emitterT void SSE2_PSRLW_XMM_to_XMM(x86SSERegType to, x86SSERegType from)	{ SSERtoR66(0xD10F); }
-emitterT void SSE2_PSRLW_M128_to_XMM(x86SSERegType to, uptr from)			{ SSEMtoR66(0xD10F); }
-emitterT void SSE2_PSRLW_I8_to_XMM(x86SSERegType to, u8 imm8)
-{
-	write8( 0x66 );
-    RexB(0, to);
-	write16( 0x710F );
-	ModRM( 3, 2 , to );
-	write8( imm8 );
-}
-
-emitterT void SSE2_PSRLD_XMM_to_XMM(x86SSERegType to, x86SSERegType from)	{ SSERtoR66(0xD20F); }
-emitterT void SSE2_PSRLD_M128_to_XMM(x86SSERegType to, uptr from)			{ SSEMtoR66(0xD20F); }
-emitterT void SSE2_PSRLD_I8_to_XMM(x86SSERegType to, u8 imm8)
-{
-	write8( 0x66 );
-    RexB(0, to);
-	write16( 0x720F );
-	ModRM( 3, 2 , to ); 
-	write8( imm8 );
-}
-
-emitterT void SSE2_PSRLQ_XMM_to_XMM(x86SSERegType to, x86SSERegType from)	{ SSERtoR66(0xD30F); }
-emitterT void SSE2_PSRLQ_M128_to_XMM(x86SSERegType to, uptr from)			{ SSEMtoR66(0xD30F); }
-emitterT void SSE2_PSRLQ_I8_to_XMM(x86SSERegType to, u8 imm8)
-{
-	write8( 0x66 );
-    RexB(0, to);
-	write16( 0x730F );
-	ModRM( 3, 2 , to ); 
-	write8( imm8 );
-}
-
-emitterT void SSE2_PSRLDQ_I8_to_XMM(x86SSERegType to, u8 imm8)
-{
-	write8( 0x66 );
-    RexB(0, to);
-	write16( 0x730F );
-	ModRM( 3, 3 , to ); 
-	write8( imm8 );
-}
 
 // shift right arithmetic
 
@@ -509,50 +367,6 @@ emitterT void SSE2_PSRAD_I8_to_XMM(x86SSERegType to, u8 imm8)
 	write8( imm8 );
 }
 
-// shift left logical
-
-emitterT void SSE2_PSLLW_XMM_to_XMM(x86SSERegType to, x86SSERegType from)	{ SSERtoR66(0xF10F); }
-emitterT void SSE2_PSLLW_M128_to_XMM(x86SSERegType to, uptr from)			{ SSEMtoR66(0xF10F); }
-emitterT void SSE2_PSLLW_I8_to_XMM(x86SSERegType to, u8 imm8)
-{
-	write8( 0x66 );
-    RexB(0, to);
-	write16( 0x710F );
-	ModRM( 3, 6 , to );
-	write8( imm8 );
-}
-
-emitterT void SSE2_PSLLD_XMM_to_XMM(x86SSERegType to, x86SSERegType from)	{ SSERtoR66(0xF20F); }
-emitterT void SSE2_PSLLD_M128_to_XMM(x86SSERegType to, uptr from)			{ SSEMtoR66(0xF20F); }
-emitterT void SSE2_PSLLD_I8_to_XMM(x86SSERegType to, u8 imm8)
-{
-	write8( 0x66 );
-    RexB(0, to);
-	write16( 0x720F );
-	ModRM( 3, 6 , to );
-	write8( imm8 );
-}
-
-emitterT void SSE2_PSLLQ_XMM_to_XMM(x86SSERegType to, x86SSERegType from)	{ SSERtoR66(0xF30F); }
-emitterT void SSE2_PSLLQ_M128_to_XMM(x86SSERegType to, uptr from)			{ SSEMtoR66(0xF30F); }
-emitterT void SSE2_PSLLQ_I8_to_XMM(x86SSERegType to, u8 imm8)
-{
-	write8( 0x66 );
-    RexB(0, to);
-	write16( 0x730F );
-	ModRM( 3, 6 , to );
-	write8( imm8 );
-}
-
-emitterT void SSE2_PSLLDQ_I8_to_XMM(x86SSERegType to, u8 imm8)
-{
-	write8( 0x66 );
-    RexB(0, to);
-	write16( 0x730F );
-	ModRM( 3, 7 , to ); 
-	write8( imm8 );
-}
-
 emitterT void SSE2_PMAXSW_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	{ SSERtoR66( 0xEE0F ); }
 emitterT void SSE2_PMAXSW_M128_to_XMM( x86SSERegType to, uptr from )			{ SSEMtoR66( 0xEE0F ); }
 
@@ -564,28 +378,6 @@ emitterT void SSE2_PMINSW_M128_to_XMM( x86SSERegType to, uptr from )			{ SSEMtoR
 
 emitterT void SSE2_PMINUB_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	{ SSERtoR66( 0xDA0F ); }
 emitterT void SSE2_PMINUB_M128_to_XMM( x86SSERegType to, uptr from )			{ SSEMtoR66( 0xDA0F ); }
-
-emitterT void SSE2_PADDSB_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	{ SSERtoR66( 0xEC0F ); }
-emitterT void SSE2_PADDSB_M128_to_XMM( x86SSERegType to, uptr from )			{ SSEMtoR66( 0xEC0F ); }
-
-emitterT void SSE2_PADDSW_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	{ SSERtoR66( 0xED0F ); }
-emitterT void SSE2_PADDSW_M128_to_XMM( x86SSERegType to, uptr from )			{ SSEMtoR66( 0xED0F ); }
-
-emitterT void SSE2_PSUBSB_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	{ SSERtoR66( 0xE80F ); }
-emitterT void SSE2_PSUBSB_M128_to_XMM( x86SSERegType to, uptr from )			{ SSEMtoR66( 0xE80F ); }
-
-emitterT void SSE2_PSUBSW_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	{ SSERtoR66( 0xE90F ); }
-emitterT void SSE2_PSUBSW_M128_to_XMM( x86SSERegType to, uptr from )			{ SSEMtoR66( 0xE90F ); }
-
-emitterT void SSE2_PSUBUSB_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	{ SSERtoR66( 0xD80F ); }
-emitterT void SSE2_PSUBUSB_M128_to_XMM( x86SSERegType to, uptr from )			{ SSEMtoR66( 0xD80F ); }
-emitterT void SSE2_PSUBUSW_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	{ SSERtoR66( 0xD90F ); }
-emitterT void SSE2_PSUBUSW_M128_to_XMM( x86SSERegType to, uptr from )			{ SSEMtoR66( 0xD90F ); }
-
-emitterT void SSE2_PADDUSB_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	{ SSERtoR66( 0xDC0F ); }
-emitterT void SSE2_PADDUSB_M128_to_XMM( x86SSERegType to, uptr from )			{ SSEMtoR66( 0xDC0F ); }
-emitterT void SSE2_PADDUSW_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	{ SSERtoR66( 0xDD0F ); }
-emitterT void SSE2_PADDUSW_M128_to_XMM( x86SSERegType to, uptr from )			{ SSEMtoR66( 0xDD0F ); }
 
 //**********************************************************************************/
 //PACKSSWB,PACKSSDW: Pack Saturate Signed Word

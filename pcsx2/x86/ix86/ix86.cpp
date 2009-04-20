@@ -253,16 +253,16 @@ using namespace Internal;
 const MovImplAll xMOV;
 const TestImplAll xTEST;
 
-const G1LogicImpl_PlusSSE<G1Type_AND,0x54> xAND;
-const G1LogicImpl_PlusSSE<G1Type_OR,0x56>  xOR;
-const G1LogicImpl_PlusSSE<G1Type_XOR,0x57> xXOR;
+const xImpl_G1Logic<G1Type_AND,0x54> xAND;
+const xImpl_G1Logic<G1Type_OR,0x56>  xOR;
+const xImpl_G1Logic<G1Type_XOR,0x57> xXOR;
 
-const G1ArithmeticImpl_PlusSSE<G1Type_ADD,0x58> xADD;
-const G1ArithmeticImpl_PlusSSE<G1Type_SUB,0x5c> xSUB;
+const xImpl_G1Arith<G1Type_ADD,0x58> xADD;
+const xImpl_G1Arith<G1Type_SUB,0x5c> xSUB;
 
-const Group1ImplAll<G1Type_ADC> xADC;
-const Group1ImplAll<G1Type_SBB> xSBB;
-const G1CompareImpl_PlusSSE xCMP;
+const xImpl_Group1<G1Type_ADC> xADC;
+const xImpl_Group1<G1Type_SBB> xSBB;
+const xImpl_G1Compare xCMP;
 
 const Group2ImplAll<G2Type_ROL> xROL;
 const Group2ImplAll<G2Type_ROR> xROR;
@@ -276,8 +276,8 @@ const Group3ImplAll<G3Type_NOT> xNOT;
 const Group3ImplAll<G3Type_NEG> xNEG;
 const Group3ImplAll<G3Type_MUL> xUMUL;
 const Group3ImplAll<G3Type_DIV> xUDIV;
-const G3Impl_PlusSSE<G3Type_iDIV,0x5e> xDIV;
-const iMul_PlusSSE xMUL;
+const xImpl_Group3<G3Type_iDIV,0x5e> xDIV;
+const xImpl_iMul xMUL;
 
 const IncDecImplAll<false> xINC;
 const IncDecImplAll<true>  xDEC;
@@ -670,21 +670,32 @@ const MovhlImplAll<0x12> xMOVL;
 const MovhlImpl_RtoR<0x16> xMOVLH;
 const MovhlImpl_RtoR<0x12> xMOVHL;
 
-const PLogicImplAll<0xdb> xPAND;
-const PLogicImplAll<0xdf> xPANDN;
-const PLogicImplAll<0xeb> xPOR;
-const PLogicImplAll<0xef> xPXOR;
+const SimdImpl_PackedLogic<0xdb> xPAND;
+const SimdImpl_PackedLogic<0xdf> xPANDN;
+const SimdImpl_PackedLogic<0xeb> xPOR;
+const SimdImpl_PackedLogic<0xef> xPXOR;
 
-const SSEAndNotImpl<0x55> xANDN;
+const SimdImpl_AndNot<0x55> xANDN;
 
-const SSEImpl_SS_SD<0x66,0x2e> xUCOMI;
-const SSE_rSqrtImpl<0x53> xRCP;
-const SSE_rSqrtImpl<0x52> xRSQRT;
-const SSE_SqrtImpl<0x51> xSQRT;
+const SimdImpl_SS_SD<0x66,0x2e> xUCOMI;
+const SimdImpl_rSqrt<0x53> xRCP;
+const SimdImpl_rSqrt<0x52> xRSQRT;
+const SimdImpl_Sqrt<0x51> xSQRT;
 
-const SSEImpl_PSPD_SSSD<0x5f> xMAX;
-const SSEImpl_PSPD_SSSD<0x5d> xMIN;
-const SSEImpl_Shuffle<0xc6> xSHUF;
+const SimdImpl_PSPD_SSSD<0x5f> xMAX;
+const SimdImpl_PSPD_SSSD<0x5d> xMIN;
+const SimdImpl_Shuffle<0xc6> xSHUF;
+
+// ------------------------------------------------------------------------
+
+const SimdImpl_Compare<SSE2_Equal>		xCMPEQ;
+const SimdImpl_Compare<SSE2_Less>			xCMPLT;
+const SimdImpl_Compare<SSE2_LessOrEqual>	xCMPLE;
+const SimdImpl_Compare<SSE2_Unordered>	xCMPUNORD;
+const SimdImpl_Compare<SSE2_NotEqual>		xCMPNE;
+const SimdImpl_Compare<SSE2_NotLess>		xCMPNLT;
+const SimdImpl_Compare<SSE2_NotLessOrEqual> xCMPNLE;
+const SimdImpl_Compare<SSE2_Ordered>		xCMPORD;
 
 // ------------------------------------------------------------------------
 // SSE Conversion Operations, as looney as they are.
@@ -692,46 +703,43 @@ const SSEImpl_Shuffle<0xc6> xSHUF;
 // These enforce pointer strictness for Indirect forms, due to the otherwise completely confusing
 // nature of the functions.  (so if a function expects an m32, you must use (u32*) or ptr32[]).
 //
-const SSEImpl_DestRegForm<0xf3,0xe6,xRegisterSSE,xRegisterSSE,u64>		xCVTDQ2PD;
-const SSEImpl_DestRegForm<0x00,0x5b,xRegisterSSE,xRegisterSSE,u128>		xCVTDQ2PS;
+const SimdImpl_DestRegStrict<0xf3,0xe6,xRegisterSSE,xRegisterSSE,u64>		xCVTDQ2PD;
+const SimdImpl_DestRegStrict<0x00,0x5b,xRegisterSSE,xRegisterSSE,u128>		xCVTDQ2PS;
 
-const SSEImpl_DestRegForm<0xf2,0xe6,xRegisterSSE,xRegisterSSE,u128>		xCVTPD2DQ;
-const SSEImpl_DestRegForm<0x66,0x2d,xRegisterMMX,xRegisterSSE,u128>		xCVTPD2PI;
-const SSEImpl_DestRegForm<0x66,0x5a,xRegisterSSE,xRegisterSSE,u128>		xCVTPD2PS;
+const SimdImpl_DestRegStrict<0xf2,0xe6,xRegisterSSE,xRegisterSSE,u128>		xCVTPD2DQ;
+const SimdImpl_DestRegStrict<0x66,0x2d,xRegisterMMX,xRegisterSSE,u128>		xCVTPD2PI;
+const SimdImpl_DestRegStrict<0x66,0x5a,xRegisterSSE,xRegisterSSE,u128>		xCVTPD2PS;
 
-const SSEImpl_DestRegForm<0x66,0x2a,xRegisterSSE,xRegisterMMX,u64>		xCVTPI2PD;
-const SSEImpl_DestRegForm<0x00,0x2a,xRegisterSSE,xRegisterMMX,u64>		xCVTPI2PS;
+const SimdImpl_DestRegStrict<0x66,0x2a,xRegisterSSE,xRegisterMMX,u64>		xCVTPI2PD;
+const SimdImpl_DestRegStrict<0x00,0x2a,xRegisterSSE,xRegisterMMX,u64>		xCVTPI2PS;
 
-const SSEImpl_DestRegForm<0x66,0x5b,xRegisterSSE,xRegisterSSE,u128>		xCVTPS2DQ;
-const SSEImpl_DestRegForm<0x00,0x5a,xRegisterSSE,xRegisterSSE,u64>		xCVTPS2PD;
-const SSEImpl_DestRegForm<0x00,0x2d,xRegisterMMX,xRegisterSSE,u64>		xCVTPS2PI;
+const SimdImpl_DestRegStrict<0x66,0x5b,xRegisterSSE,xRegisterSSE,u128>		xCVTPS2DQ;
+const SimdImpl_DestRegStrict<0x00,0x5a,xRegisterSSE,xRegisterSSE,u64>		xCVTPS2PD;
+const SimdImpl_DestRegStrict<0x00,0x2d,xRegisterMMX,xRegisterSSE,u64>		xCVTPS2PI;
 
-const SSEImpl_DestRegForm<0xf2,0x2d,xRegister32, xRegisterSSE,u64>		xCVTSD2SI;
-const SSEImpl_DestRegForm<0xf2,0x5a,xRegisterSSE,xRegisterSSE,u64>		xCVTSD2SS;
-const SSEImpl_DestRegForm<0xf2,0x2a,xRegisterMMX,xRegister32, u32>		xCVTSI2SD;
-const SSEImpl_DestRegForm<0xf3,0x2a,xRegisterSSE,xRegister32, u32>		xCVTSI2SS;
+const SimdImpl_DestRegStrict<0xf2,0x2d,xRegister32, xRegisterSSE,u64>		xCVTSD2SI;
+const SimdImpl_DestRegStrict<0xf2,0x5a,xRegisterSSE,xRegisterSSE,u64>		xCVTSD2SS;
+const SimdImpl_DestRegStrict<0xf2,0x2a,xRegisterMMX,xRegister32, u32>		xCVTSI2SD;
+const SimdImpl_DestRegStrict<0xf3,0x2a,xRegisterSSE,xRegister32, u32>		xCVTSI2SS;
 
-const SSEImpl_DestRegForm<0xf3,0x5a,xRegisterSSE,xRegisterSSE,u32>		xCVTSS2SD;
-const SSEImpl_DestRegForm<0xf3,0x2d,xRegister32, xRegisterSSE,u32>		xCVTSS2SI;
+const SimdImpl_DestRegStrict<0xf3,0x5a,xRegisterSSE,xRegisterSSE,u32>		xCVTSS2SD;
+const SimdImpl_DestRegStrict<0xf3,0x2d,xRegister32, xRegisterSSE,u32>		xCVTSS2SI;
 
-const SSEImpl_DestRegForm<0x66,0xe6,xRegisterSSE,xRegisterSSE,u128>		xCVTTPD2DQ;
-const SSEImpl_DestRegForm<0x66,0x2c,xRegisterMMX,xRegisterSSE,u128>		xCVTTPD2PI;
-const SSEImpl_DestRegForm<0xf3,0x5b,xRegisterSSE,xRegisterSSE,u128>		xCVTTPS2DQ;
-const SSEImpl_DestRegForm<0x00,0x2c,xRegisterMMX,xRegisterSSE,u64>		xCVTTPS2PI;
+const SimdImpl_DestRegStrict<0x66,0xe6,xRegisterSSE,xRegisterSSE,u128>		xCVTTPD2DQ;
+const SimdImpl_DestRegStrict<0x66,0x2c,xRegisterMMX,xRegisterSSE,u128>		xCVTTPD2PI;
+const SimdImpl_DestRegStrict<0xf3,0x5b,xRegisterSSE,xRegisterSSE,u128>		xCVTTPS2DQ;
+const SimdImpl_DestRegStrict<0x00,0x2c,xRegisterMMX,xRegisterSSE,u64>		xCVTTPS2PI;
 
-const SSEImpl_DestRegForm<0xf2,0x2c,xRegister32, xRegisterSSE,u64>		xCVTTSD2SI;
-const SSEImpl_DestRegForm<0xf3,0x2c,xRegister32, xRegisterSSE,u32>		xCVTTSS2SI;
+const SimdImpl_DestRegStrict<0xf2,0x2c,xRegister32, xRegisterSSE,u64>		xCVTTSD2SI;
+const SimdImpl_DestRegStrict<0xf3,0x2c,xRegister32, xRegisterSSE,u32>		xCVTTSS2SI;
 
 // ------------------------------------------------------------------------
 
-const SSECompareImpl<SSE2_Equal>		xCMPEQ;
-const SSECompareImpl<SSE2_Less>			xCMPLT;
-const SSECompareImpl<SSE2_LessOrEqual>	xCMPLE;
-const SSECompareImpl<SSE2_Unordered>	xCMPUNORD;
-const SSECompareImpl<SSE2_NotEqual>		xCMPNE;
-const SSECompareImpl<SSE2_NotLess>		xCMPNLT;
-const SSECompareImpl<SSE2_NotLessOrEqual> xCMPNLE;
-const SSECompareImpl<SSE2_Ordered>		xCMPORD;
+const SimdImpl_ShiftAll<0xd0, 0x70, 2> xPSRL;
+const SimdImpl_ShiftAll<0xf0, 0x70, 6> xPSLL;
+
+const SimdImpl_AddSub<0xfc, 0xec, 0xdc, 0xd4> xPADD;
+const SimdImpl_AddSub<0xf8, 0xe8, 0xd8, 0xfb> xPSUB;
 
 
 //////////////////////////////////////////////////////////////////////////////////////////

@@ -48,229 +48,56 @@ emitterT void PMOVMSKBMMXtoR(x86IntRegType to, x86MMXRegType from)			{ xPMOVMSKB
 	emitterT void SSE2_P##mod##_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	{ xP##mod( xRegisterSSE(to), xRegisterSSE(from) ); } \
 	emitterT void SSE2_P##mod##_M128_to_XMM( x86SSERegType to, uptr from )			{ xP##mod( xRegisterSSE(to), (void*)from ); }
 
+#define DEFINE_LEGACY_ARITHMETIC( mod, sub ) \
+	emitterT void P##mod##sub##RtoR( x86MMXRegType to, x86MMXRegType from )			{ xP##mod.sub( xRegisterMMX(to), xRegisterMMX(from) ); } \
+	emitterT void P##mod##sub##MtoR( x86MMXRegType to, uptr from )					{ xP##mod.sub( xRegisterMMX(to), (void*)from ); } \
+	emitterT void SSE2_P##mod##sub##_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	{ xP##mod.sub( xRegisterSSE(to), xRegisterSSE(from) ); } \
+	emitterT void SSE2_P##mod##sub##_M128_to_XMM( x86SSERegType to, uptr from )			{ xP##mod.sub( xRegisterSSE(to), (void*)from ); }
+
+#define DEFINE_LEGACY_SHIFT_STUFF( mod, sub ) \
+	emitterT void P##mod##sub##RtoR( x86MMXRegType to, x86MMXRegType from )			{ xP##mod.sub( xRegisterMMX(to), xRegisterMMX(from) ); } \
+	emitterT void P##mod##sub##MtoR( x86MMXRegType to, uptr from )					{ xP##mod.sub( xRegisterMMX(to), (void*)from ); } \
+	emitterT void P##mod##sub##ItoR( x86MMXRegType to, u8 imm )						{ xP##mod.sub( xRegisterMMX(to), imm ); } \
+	emitterT void SSE2_P##mod##sub##_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	{ xP##mod.sub( xRegisterSSE(to), xRegisterSSE(from) ); } \
+	emitterT void SSE2_P##mod##sub##_M128_to_XMM( x86SSERegType to, uptr from )			{ xP##mod.sub( xRegisterSSE(to), (void*)from ); } \
+	emitterT void SSE2_P##mod##sub##_I8_to_XMM( x86SSERegType to, u8 imm )				{ xP##mod.sub( xRegisterSSE(to), imm ); }
+
+#define DEFINE_LEGACY_SHIFT_OPCODE( mod ) \
+	DEFINE_LEGACY_SHIFT_STUFF( mod, Q ) \
+	DEFINE_LEGACY_SHIFT_STUFF( mod, D ) \
+	DEFINE_LEGACY_SHIFT_STUFF( mod, W ) \
+	emitterT void SSE2_P##mod##DQ_I8_to_XMM( x86MMXRegType to, u8 imm )						{ xP##mod.DQ( xRegisterSSE(to), imm ); }
+
 DEFINE_LEGACY_LOGIC_OPCODE( AND )
 DEFINE_LEGACY_LOGIC_OPCODE( ANDN )
 DEFINE_LEGACY_LOGIC_OPCODE( OR )
 DEFINE_LEGACY_LOGIC_OPCODE( XOR )
 
+DEFINE_LEGACY_SHIFT_OPCODE( SLL )
+DEFINE_LEGACY_SHIFT_OPCODE( SRL )
 
-/* psllq r64 to r64 */
-emitterT void PSLLQRtoR( x86MMXRegType to, x86MMXRegType from ) 
-{
-	write16( 0xF30F );
-	ModRM( 3, to, from ); 
-}
+DEFINE_LEGACY_ARITHMETIC( ADD, B )
+DEFINE_LEGACY_ARITHMETIC( ADD, W )
+DEFINE_LEGACY_ARITHMETIC( ADD, D )
+DEFINE_LEGACY_ARITHMETIC( ADD, Q )
+DEFINE_LEGACY_ARITHMETIC( ADD, SB )
+DEFINE_LEGACY_ARITHMETIC( ADD, SW )
+DEFINE_LEGACY_ARITHMETIC( ADD, USB )
+DEFINE_LEGACY_ARITHMETIC( ADD, USW )
 
-/* psllq m64 to r64 */
-emitterT void PSLLQMtoR( x86MMXRegType to, uptr from ) 
-{
-	write16( 0xF30F ); 
-	ModRM( 0, to, DISP32 ); 
-	write32( MEMADDR(from, 4) );
-}
-
-/* psllq imm8 to r64 */
-emitterT void PSLLQItoR( x86MMXRegType to, u8 from ) 
-{
-	write16( 0x730F ); 
-	ModRM( 3, 6, to); 
-	write8( from ); 
-}
-
-/* psrlq r64 to r64 */
-emitterT void PSRLQRtoR( x86MMXRegType to, x86MMXRegType from ) 
-{
-	write16( 0xD30F ); 
-	ModRM( 3, to, from ); 
-}
-
-/* psrlq m64 to r64 */
-emitterT void PSRLQMtoR( x86MMXRegType to, uptr from ) 
-{
-	write16( 0xD30F ); 
-	ModRM( 0, to, DISP32 ); 
-	write32( MEMADDR(from, 4) ); 
-}
-
-/* psrlq imm8 to r64 */
-emitterT void PSRLQItoR( x86MMXRegType to, u8 from ) 
-{
-	write16( 0x730F );
-	ModRM( 3, 2, to); 
-	write8( from ); 
-}
-
-/* paddusb r64 to r64 */
-emitterT void PADDUSBRtoR( x86MMXRegType to, x86MMXRegType from ) 
-{
-	write16( 0xDC0F ); 
-	ModRM( 3, to, from ); 
-}
-
-/* paddusb m64 to r64 */
-emitterT void PADDUSBMtoR( x86MMXRegType to, uptr from ) 
-{
-	write16( 0xDC0F ); 
-	ModRM( 0, to, DISP32 ); 
-	write32( MEMADDR(from, 4) ); 
-}
-
-/* paddusw r64 to r64 */
-emitterT void PADDUSWRtoR( x86MMXRegType to, x86MMXRegType from ) 
-{
-	write16( 0xDD0F ); 
-	ModRM( 3, to, from ); 
-}
-
-/* paddusw m64 to r64 */
-emitterT void PADDUSWMtoR( x86MMXRegType to, uptr from ) 
-{
-	write16( 0xDD0F ); 
-	ModRM( 0, to, DISP32 ); 
-	write32( MEMADDR(from, 4) ); 
-}
-
-/* paddb r64 to r64 */
-emitterT void PADDBRtoR( x86MMXRegType to, x86MMXRegType from ) 
-{
-	write16( 0xFC0F ); 
-	ModRM( 3, to, from ); 
-}
-
-/* paddb m64 to r64 */
-emitterT void PADDBMtoR( x86MMXRegType to, uptr from ) 
-{
-	write16( 0xFC0F ); 
-	ModRM( 0, to, DISP32 ); 
-	write32( MEMADDR(from, 4) ); 
-}
-
-/* paddw r64 to r64 */
-emitterT void PADDWRtoR( x86MMXRegType to, x86MMXRegType from ) 
-{
-	write16( 0xFD0F ); 
-	ModRM( 3, to, from ); 
-}
-
-/* paddw m64 to r64 */
-emitterT void PADDWMtoR( x86MMXRegType to, uptr from ) 
-{
-	write16( 0xFD0F ); 
-	ModRM( 0, to, DISP32 ); 
-	write32( MEMADDR(from, 4) ); 
-}
-
-/* paddd r64 to r64 */
-emitterT void PADDDRtoR( x86MMXRegType to, x86MMXRegType from ) 
-{
-	write16( 0xFE0F ); 
-	ModRM( 3, to, from ); 
-}
-
-/* paddd m64 to r64 */
-emitterT void PADDDMtoR( x86MMXRegType to, uptr from ) 
-{
-	write16( 0xFE0F ); 
-	ModRM( 0, to, DISP32 ); 
-	write32( MEMADDR(from, 4) ); 
-}
+DEFINE_LEGACY_ARITHMETIC( SUB, B )
+DEFINE_LEGACY_ARITHMETIC( SUB, W )
+DEFINE_LEGACY_ARITHMETIC( SUB, D )
+DEFINE_LEGACY_ARITHMETIC( SUB, Q )
+DEFINE_LEGACY_ARITHMETIC( SUB, SB )
+DEFINE_LEGACY_ARITHMETIC( SUB, SW )
+DEFINE_LEGACY_ARITHMETIC( SUB, USB )
+DEFINE_LEGACY_ARITHMETIC( SUB, USW )
 
 /* emms */
 emitterT void EMMS() 
 {
 	write16( 0x770F );
-}
-
-emitterT void PADDSBRtoR( x86MMXRegType to, x86MMXRegType from ) 
-{
-	write16( 0xEC0F ); 
-	ModRM( 3, to, from ); 
-}
-
-emitterT void PADDSWRtoR( x86MMXRegType to, x86MMXRegType from ) 
-{
-	write16( 0xED0F );
-	ModRM( 3, to, from ); 
-}
-
-// paddq m64 to r64 (sse2 only?)
-emitterT void PADDQMtoR( x86MMXRegType to, uptr from )
-{
-	write16( 0xD40F ); 
-	ModRM( 0, to, DISP32 ); 
-	write32( MEMADDR(from, 4) ); 
-}
-
-// paddq r64 to r64 (sse2 only?)
-emitterT void PADDQRtoR( x86MMXRegType to, x86MMXRegType from )
-{
-	write16( 0xD40F ); 
-	ModRM( 3, to, from ); 
-}
-
-emitterT void PSUBSBRtoR( x86MMXRegType to, x86MMXRegType from ) 
-{
-	write16( 0xE80F ); 
-	ModRM( 3, to, from ); 
-}
-
-emitterT void PSUBSWRtoR( x86MMXRegType to, x86MMXRegType from ) 
-{
-	write16( 0xE90F );
-	ModRM( 3, to, from ); 
-}
-
-
-emitterT void PSUBBRtoR( x86MMXRegType to, x86MMXRegType from ) 
-{
-	write16( 0xF80F ); 
-	ModRM( 3, to, from ); 
-}
-
-emitterT void PSUBWRtoR( x86MMXRegType to, x86MMXRegType from ) 
-{
-	write16( 0xF90F ); 
-	ModRM( 3, to, from ); 
-}
-
-emitterT void PSUBDRtoR( x86MMXRegType to, x86MMXRegType from ) 
-{
-	write16( 0xFA0F ); 
-	ModRM( 3, to, from ); 
-}
-
-emitterT void PSUBDMtoR( x86MMXRegType to, uptr from )
-{
-	write16( 0xFA0F ); 
-	ModRM( 0, to, DISP32 ); 
-	write32( MEMADDR(from, 4) ); 
-}
-
-emitterT void PSUBUSBRtoR( x86MMXRegType to, x86MMXRegType from ) 
-{
-	write16( 0xD80F ); 
-	ModRM( 3, to, from ); 
-}
-
-emitterT void PSUBUSWRtoR( x86MMXRegType to, x86MMXRegType from ) 
-{
-	write16( 0xD90F ); 
-	ModRM( 3, to, from ); 
-}
-
-// psubq m64 to r64 (sse2 only?)
-emitterT void PSUBQMtoR( x86MMXRegType to, uptr from )
-{
-	write16( 0xFB0F ); 
-	ModRM( 0, to, DISP32 ); 
-	write32( MEMADDR(from, 4) ); 
-}
-
-// psubq r64 to r64 (sse2 only?)
-emitterT void PSUBQRtoR( x86MMXRegType to, x86MMXRegType from )
-{
-	write16( 0xFB0F ); 
-	ModRM( 3, to, from ); 
 }
 
 // pmuludq m64 to r64 (sse2 only?)
@@ -336,46 +163,6 @@ emitterT void PCMPGTDMtoR( x86MMXRegType to, uptr from )
 	write16( 0x660F );
 	ModRM( 0, to, DISP32 ); 
 	write32( MEMADDR(from, 4) );
-}
-
-emitterT void PSRLWItoR( x86MMXRegType to, u8 from )
-{
-	write16( 0x710F );
-	ModRM( 3, 2 , to ); 
-	write8( from );
-}
-
-emitterT void PSRLDItoR( x86MMXRegType to, u8 from )
-{
-	write16( 0x720F );
-	ModRM( 3, 2 , to ); 
-	write8( from );
-}
-
-emitterT void PSRLDRtoR( x86MMXRegType to, x86MMXRegType from )
-{
-	write16( 0xD20F );
-	ModRM( 3, to, from ); 
-}
-
-emitterT void PSLLWItoR( x86MMXRegType to, u8 from )
-{
-	write16( 0x710F );
-	ModRM( 3, 6 , to ); 
-	write8( from );
-}
-
-emitterT void PSLLDItoR( x86MMXRegType to, u8 from )
-{
-	write16( 0x720F );
-	ModRM( 3, 6 , to ); 
-	write8( from );
-}
-
-emitterT void PSLLDRtoR( x86MMXRegType to, x86MMXRegType from )
-{
-	write16( 0xF20F );
-	ModRM( 3, to, from ); 
 }
 
 emitterT void PSRAWItoR( x86MMXRegType to, u8 from )

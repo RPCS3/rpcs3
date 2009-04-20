@@ -38,92 +38,61 @@ enum G2Type
 // Optimization Note: For Imm forms, we ignore the instruction if the shift count is zero.
 // This is a safe optimization since any zero-value shift does not affect any flags.
 //
-template< G2Type InstType, typename ImmType >
-class Group2Impl
-{
-protected:
-	static const uint OperandSize = sizeof(ImmType);
-
-	static bool Is8BitOperand()	{ return OperandSize == 1; }
-	static void prefix16()		{ if( OperandSize == 2 ) xWrite<u8>( 0x66 ); }
-
-public: 
-	Group2Impl() {}		// For the love of GCC.
-
-	// ------------------------------------------------------------------------
-	static __emitinline void Emit( const xRegister<ImmType>& to ) 
-	{
-		prefix16();
-		xWrite<u8>( Is8BitOperand() ? 0xd2 : 0xd3 );
-		ModRM_Direct( InstType, to.Id );
-	}
-
-	// ------------------------------------------------------------------------
-	static __emitinline void Emit( const xRegister<ImmType>& to, u8 imm ) 
-	{
-		if( imm == 0 ) return;
-
-		prefix16();
-		if( imm == 1 )
-		{
-			// special encoding of 1's
-			xWrite<u8>( Is8BitOperand() ? 0xd0 : 0xd1 );
-			ModRM_Direct( InstType, to.Id );
-		}
-		else
-		{
-			xWrite<u8>( Is8BitOperand() ? 0xc0 : 0xc1 );
-			ModRM_Direct( InstType, to.Id );
-			xWrite<u8>( imm );
-		}
-	}
-
-	// ------------------------------------------------------------------------
-	static __emitinline void Emit( const ModSibStrict<ImmType>& sibdest ) 
-	{
-		prefix16();
-		xWrite<u8>( Is8BitOperand() ? 0xd2 : 0xd3 );
-		EmitSibMagic( InstType, sibdest );
-	}
-
-	// ------------------------------------------------------------------------
-	static __emitinline void Emit( const ModSibStrict<ImmType>& sibdest, u8 imm ) 
-	{
-		if( imm == 0 ) return;
-
-		prefix16();
-		if( imm == 1 )
-		{
-			// special encoding of 1's
-			xWrite<u8>( Is8BitOperand() ? 0xd0 : 0xd1 );
-			EmitSibMagic( InstType, sibdest );
-		}
-		else
-		{
-			xWrite<u8>( Is8BitOperand() ? 0xc0 : 0xc1 );
-			EmitSibMagic( InstType, sibdest );
-			xWrite<u8>( imm );
-		}
-	}
-};
-
-// -------------------------------------------------------------------
-//
 template< G2Type InstType >
 class Group2ImplAll
 {
 public:
 	template< typename T > __forceinline void operator()( const xRegister<T>& to,		__unused const xRegisterCL& from ) const
-	{ Group2Impl<InstType,T>::Emit( to ); }
+	{
+		prefix16<T>();
+		xWrite<u8>( Is8BitOp<T>() ? 0xd2 : 0xd3 );
+		ModRM_Direct( InstType, to.Id );
+	}
 
 	template< typename T > __noinline void operator()( const ModSibStrict<T>& sibdest,	__unused const xRegisterCL& from ) const
-	{ Group2Impl<InstType,T>::Emit( sibdest ); }
+	{
+		prefix16<T>();
+		xWrite<u8>( Is8BitOp<T>() ? 0xd2 : 0xd3 );
+		EmitSibMagic( InstType, sibdest );
+	}
 
 	template< typename T > __noinline void operator()( const ModSibStrict<T>& sibdest, u8 imm ) const
-	{ Group2Impl<InstType,T>::Emit( sibdest, imm ); }
+	{
+		if( imm == 0 ) return;
 
+		prefix16<T>();
+		if( imm == 1 )
+		{
+			// special encoding of 1's
+			xWrite<u8>( Is8BitOp<T>() ? 0xd0 : 0xd1 );
+			EmitSibMagic( InstType, sibdest );
+		}
+		else
+		{
+			xWrite<u8>( Is8BitOp<T>() ? 0xc0 : 0xc1 );
+			EmitSibMagic( InstType, sibdest );
+			xWrite<u8>( imm );
+		}
+	}
+	
 	template< typename T > __forceinline void operator()( const xRegister<T>& to, u8 imm ) const
-	{ Group2Impl<InstType,T>::Emit( to, imm ); }
+	{
+		if( imm == 0 ) return;
+
+		prefix16<T>();
+		if( imm == 1 )
+		{
+			// special encoding of 1's
+			xWrite<u8>( Is8BitOp<T>() ? 0xd0 : 0xd1 );
+			ModRM_Direct( InstType, to.Id );
+		}
+		else
+		{
+			xWrite<u8>( Is8BitOp<T>() ? 0xc0 : 0xc1 );
+			ModRM_Direct( InstType, to.Id );
+			xWrite<u8>( imm );
+		}
+	}
 
 	Group2ImplAll() {}		// I am a class with no members, so I need an explicit constructor!  Sense abounds.
 };

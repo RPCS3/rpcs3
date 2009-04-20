@@ -38,16 +38,16 @@ namespace x86Emitter
 	// ------------------------------------------------------------------------
 	// Group 1 Instruction Class
 
-	extern const Internal::G1LogicImpl_PlusSSE<Internal::G1Type_AND,0x54> xAND;
-	extern const Internal::G1LogicImpl_PlusSSE<Internal::G1Type_OR,0x56>  xOR;
-	extern const Internal::G1LogicImpl_PlusSSE<Internal::G1Type_XOR,0x57> xXOR;
+	extern const Internal::xImpl_G1Logic<Internal::G1Type_AND,0x54> xAND;
+	extern const Internal::xImpl_G1Logic<Internal::G1Type_OR,0x56>  xOR;
+	extern const Internal::xImpl_G1Logic<Internal::G1Type_XOR,0x57> xXOR;
 
-	extern const Internal::G1ArithmeticImpl_PlusSSE<Internal::G1Type_ADD,0x58> xADD;
-	extern const Internal::G1ArithmeticImpl_PlusSSE<Internal::G1Type_SUB,0x5c> xSUB;
-	extern const Internal::G1CompareImpl_PlusSSE xCMP;
+	extern const Internal::xImpl_G1Arith<Internal::G1Type_ADD,0x58> xADD;
+	extern const Internal::xImpl_G1Arith<Internal::G1Type_SUB,0x5c> xSUB;
+	extern const Internal::xImpl_G1Compare xCMP;
 
-	extern const Internal::Group1ImplAll<Internal::G1Type_ADC> xADC;
-	extern const Internal::Group1ImplAll<Internal::G1Type_SBB> xSBB;
+	extern const Internal::xImpl_Group1<Internal::G1Type_ADC> xADC;
+	extern const Internal::xImpl_Group1<Internal::G1Type_SBB> xSBB;
 
 	// ------------------------------------------------------------------------
 	// Group 2 Instruction Class
@@ -74,8 +74,8 @@ namespace x86Emitter
 	extern const Internal::Group3ImplAll<Internal::G3Type_NEG> xNEG;
 	extern const Internal::Group3ImplAll<Internal::G3Type_MUL> xUMUL;
 	extern const Internal::Group3ImplAll<Internal::G3Type_DIV> xUDIV;
-	extern const Internal::G3Impl_PlusSSE<Internal::G3Type_iDIV,0x5e> xDIV;
-	extern const Internal::iMul_PlusSSE xMUL;
+	extern const Internal::xImpl_Group3<Internal::G3Type_iDIV,0x5e> xDIV;
+	extern const Internal::xImpl_iMul xMUL;
 
 	extern const Internal::IncDecImplAll<false> xINC;
 	extern const Internal::IncDecImplAll<true>  xDEC;
@@ -435,65 +435,73 @@ namespace x86Emitter
 
 	// ------------------------------------------------------------------------
 	
-	extern const Internal::PLogicImplAll<0xdb> xPAND;
-	extern const Internal::PLogicImplAll<0xdf> xPANDN;
-	extern const Internal::PLogicImplAll<0xeb> xPOR;
-	extern const Internal::PLogicImplAll<0xef> xPXOR;
+	extern const Internal::SimdImpl_PackedLogic<0xdb> xPAND;
+	extern const Internal::SimdImpl_PackedLogic<0xdf> xPANDN;
+	extern const Internal::SimdImpl_PackedLogic<0xeb> xPOR;
+	extern const Internal::SimdImpl_PackedLogic<0xef> xPXOR;
 
-	extern const Internal::SSEAndNotImpl<0x55> xANDN;
+	extern const Internal::SimdImpl_AndNot<0x55> xANDN;
 
-	extern const Internal::SSEImpl_SS_SD<0x66,0x2e> xUCOMI;
-	extern const Internal::SSE_rSqrtImpl<0x53> xRCP;
-	extern const Internal::SSE_rSqrtImpl<0x52> xRSQRT;
-	extern const Internal::SSE_SqrtImpl<0x51> xSQRT;
+	extern const Internal::SimdImpl_SS_SD<0x66,0x2e> xUCOMI;
+	extern const Internal::SimdImpl_rSqrt<0x53> xRCP;
+	extern const Internal::SimdImpl_rSqrt<0x52> xRSQRT;
+	extern const Internal::SimdImpl_Sqrt<0x51> xSQRT;
 	
-	extern const Internal::SSEImpl_PSPD_SSSD<0x5f> xMAX;
-	extern const Internal::SSEImpl_PSPD_SSSD<0x5d> xMIN;
-	extern const Internal::SSEImpl_Shuffle<0xc6> xSHUF;
+	extern const Internal::SimdImpl_PSPD_SSSD<0x5f> xMAX;
+	extern const Internal::SimdImpl_PSPD_SSSD<0x5d> xMIN;
+	extern const Internal::SimdImpl_Shuffle<0xc6> xSHUF;
 
 	// ------------------------------------------------------------------------
 	
-	extern const Internal::SSECompareImpl<SSE2_Equal>		xCMPEQ;
-	extern const Internal::SSECompareImpl<SSE2_Less>		xCMPLT;
-	extern const Internal::SSECompareImpl<SSE2_LessOrEqual>	xCMPLE;
-	extern const Internal::SSECompareImpl<SSE2_Unordered>	xCMPUNORD;
-	extern const Internal::SSECompareImpl<SSE2_NotEqual>	xCMPNE;
-	extern const Internal::SSECompareImpl<SSE2_NotLess>		xCMPNLT;
-	extern const Internal::SSECompareImpl<SSE2_NotLessOrEqual> xCMPNLE;
-	extern const Internal::SSECompareImpl<SSE2_Ordered>		xCMPORD;
+	extern const Internal::SimdImpl_Compare<SSE2_Equal>		xCMPEQ;
+	extern const Internal::SimdImpl_Compare<SSE2_Less>		xCMPLT;
+	extern const Internal::SimdImpl_Compare<SSE2_LessOrEqual>	xCMPLE;
+	extern const Internal::SimdImpl_Compare<SSE2_Unordered>	xCMPUNORD;
+	extern const Internal::SimdImpl_Compare<SSE2_NotEqual>	xCMPNE;
+	extern const Internal::SimdImpl_Compare<SSE2_NotLess>		xCMPNLT;
+	extern const Internal::SimdImpl_Compare<SSE2_NotLessOrEqual> xCMPNLE;
+	extern const Internal::SimdImpl_Compare<SSE2_Ordered>		xCMPORD;
 
 	// ------------------------------------------------------------------------
 	// OMG Evil.  I went cross-eyed an hour ago doing this.
 	//
-	extern const Internal::SSEImpl_DestRegForm<0xf3,0xe6,xRegisterSSE,xRegisterSSE,u64>		xCVTDQ2PD;
-	extern const Internal::SSEImpl_DestRegForm<0x00,0x5b,xRegisterSSE,xRegisterSSE,u128>	xCVTDQ2PS;
+	extern const Internal::SimdImpl_DestRegStrict<0xf3,0xe6,xRegisterSSE,xRegisterSSE,u64>		xCVTDQ2PD;
+	extern const Internal::SimdImpl_DestRegStrict<0x00,0x5b,xRegisterSSE,xRegisterSSE,u128>	xCVTDQ2PS;
 
-	extern const Internal::SSEImpl_DestRegForm<0xf2,0xe6,xRegisterSSE,xRegisterSSE,u128>	xCVTPD2DQ;
-	extern const Internal::SSEImpl_DestRegForm<0x66,0x2d,xRegisterMMX,xRegisterSSE,u128>	xCVTPD2PI;
-	extern const Internal::SSEImpl_DestRegForm<0x66,0x5a,xRegisterSSE,xRegisterSSE,u128>	xCVTPD2PS;
+	extern const Internal::SimdImpl_DestRegStrict<0xf2,0xe6,xRegisterSSE,xRegisterSSE,u128>	xCVTPD2DQ;
+	extern const Internal::SimdImpl_DestRegStrict<0x66,0x2d,xRegisterMMX,xRegisterSSE,u128>	xCVTPD2PI;
+	extern const Internal::SimdImpl_DestRegStrict<0x66,0x5a,xRegisterSSE,xRegisterSSE,u128>	xCVTPD2PS;
 
-	extern const Internal::SSEImpl_DestRegForm<0x66,0x2a,xRegisterSSE,xRegisterMMX,u64>		xCVTPI2PD;
-	extern const Internal::SSEImpl_DestRegForm<0x00,0x2a,xRegisterSSE,xRegisterMMX,u64>		xCVTPI2PS;
+	extern const Internal::SimdImpl_DestRegStrict<0x66,0x2a,xRegisterSSE,xRegisterMMX,u64>		xCVTPI2PD;
+	extern const Internal::SimdImpl_DestRegStrict<0x00,0x2a,xRegisterSSE,xRegisterMMX,u64>		xCVTPI2PS;
 
-	extern const Internal::SSEImpl_DestRegForm<0x66,0x5b,xRegisterSSE,xRegisterSSE,u128>	xCVTPS2DQ;
-	extern const Internal::SSEImpl_DestRegForm<0x00,0x5a,xRegisterSSE,xRegisterSSE,u64>		xCVTPS2PD;
-	extern const Internal::SSEImpl_DestRegForm<0x00,0x2d,xRegisterMMX,xRegisterSSE,u64>		xCVTPS2PI;
+	extern const Internal::SimdImpl_DestRegStrict<0x66,0x5b,xRegisterSSE,xRegisterSSE,u128>	xCVTPS2DQ;
+	extern const Internal::SimdImpl_DestRegStrict<0x00,0x5a,xRegisterSSE,xRegisterSSE,u64>		xCVTPS2PD;
+	extern const Internal::SimdImpl_DestRegStrict<0x00,0x2d,xRegisterMMX,xRegisterSSE,u64>		xCVTPS2PI;
 
-	extern const Internal::SSEImpl_DestRegForm<0xf2,0x2d,xRegister32, xRegisterSSE,u64>		xCVTSD2SI;
-	extern const Internal::SSEImpl_DestRegForm<0xf2,0x5a,xRegisterSSE,xRegisterSSE,u64>		xCVTSD2SS;
-	extern const Internal::SSEImpl_DestRegForm<0xf2,0x2a,xRegisterMMX,xRegister32, u32>		xCVTSI2SD;
-	extern const Internal::SSEImpl_DestRegForm<0xf3,0x2a,xRegisterSSE,xRegister32, u32>		xCVTSI2SS;
+	extern const Internal::SimdImpl_DestRegStrict<0xf2,0x2d,xRegister32, xRegisterSSE,u64>		xCVTSD2SI;
+	extern const Internal::SimdImpl_DestRegStrict<0xf2,0x5a,xRegisterSSE,xRegisterSSE,u64>		xCVTSD2SS;
+	extern const Internal::SimdImpl_DestRegStrict<0xf2,0x2a,xRegisterMMX,xRegister32, u32>		xCVTSI2SD;
+	extern const Internal::SimdImpl_DestRegStrict<0xf3,0x2a,xRegisterSSE,xRegister32, u32>		xCVTSI2SS;
 
-	extern const Internal::SSEImpl_DestRegForm<0xf3,0x5a,xRegisterSSE,xRegisterSSE,u32>		xCVTSS2SD;
-	extern const Internal::SSEImpl_DestRegForm<0xf3,0x2d,xRegister32, xRegisterSSE,u32>		xCVTSS2SI;
+	extern const Internal::SimdImpl_DestRegStrict<0xf3,0x5a,xRegisterSSE,xRegisterSSE,u32>		xCVTSS2SD;
+	extern const Internal::SimdImpl_DestRegStrict<0xf3,0x2d,xRegister32, xRegisterSSE,u32>		xCVTSS2SI;
 
-	extern const Internal::SSEImpl_DestRegForm<0x66,0xe6,xRegisterSSE,xRegisterSSE,u128>	xCVTTPD2DQ;
-	extern const Internal::SSEImpl_DestRegForm<0x66,0x2c,xRegisterMMX,xRegisterSSE,u128>	xCVTTPD2PI;
-	extern const Internal::SSEImpl_DestRegForm<0xf3,0x5b,xRegisterSSE,xRegisterSSE,u128>	xCVTTPS2DQ;
-	extern const Internal::SSEImpl_DestRegForm<0x00,0x2c,xRegisterMMX,xRegisterSSE,u64>		xCVTTPS2PI;
+	extern const Internal::SimdImpl_DestRegStrict<0x66,0xe6,xRegisterSSE,xRegisterSSE,u128>	xCVTTPD2DQ;
+	extern const Internal::SimdImpl_DestRegStrict<0x66,0x2c,xRegisterMMX,xRegisterSSE,u128>	xCVTTPD2PI;
+	extern const Internal::SimdImpl_DestRegStrict<0xf3,0x5b,xRegisterSSE,xRegisterSSE,u128>	xCVTTPS2DQ;
+	extern const Internal::SimdImpl_DestRegStrict<0x00,0x2c,xRegisterMMX,xRegisterSSE,u64>		xCVTTPS2PI;
 
-	extern const Internal::SSEImpl_DestRegForm<0xf2,0x2c,xRegister32, xRegisterSSE,u64>		xCVTTSD2SI;
-	extern const Internal::SSEImpl_DestRegForm<0xf3,0x2c,xRegister32, xRegisterSSE,u32>		xCVTTSS2SI;
+	extern const Internal::SimdImpl_DestRegStrict<0xf2,0x2c,xRegister32, xRegisterSSE,u64>		xCVTTSD2SI;
+	extern const Internal::SimdImpl_DestRegStrict<0xf3,0x2c,xRegister32, xRegisterSSE,u32>		xCVTTSS2SI;
+	
+	// ------------------------------------------------------------------------
+	
+	extern const Internal::SimdImpl_ShiftAll<0xd0, 0x70, 2> xPSRL;
+	extern const Internal::SimdImpl_ShiftAll<0xf0, 0x70, 6> xPSLL;
+	
+	extern const Internal::SimdImpl_AddSub<0xfc, 0xec, 0xdc, 0xd4> xPADD;
+	extern const Internal::SimdImpl_AddSub<0xf8, 0xe8, 0xd8, 0xfb> xPSUB;
 	
 }
 
