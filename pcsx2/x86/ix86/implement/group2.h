@@ -122,7 +122,7 @@ public:
 	template< typename T > __noinline void operator()( const ModSibStrict<T>& sibdest, u8 imm ) const
 	{ Group2Impl<InstType,T>::Emit( sibdest, imm ); }
 
-	template< typename T > void operator()( const iRegister<T>& to, u8 imm ) const
+	template< typename T > __forceinline void operator()( const iRegister<T>& to, u8 imm ) const
 	{ Group2Impl<InstType,T>::Emit( to, imm ); }
 
 	Group2ImplAll() {}		// I am a class with no members, so I need an explicit constructor!  Sense abounds.

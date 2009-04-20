@@ -38,13 +38,15 @@ namespace x86Emitter
 	// ------------------------------------------------------------------------
 	// Group 1 Instruction Class
 
-	extern const Internal::Group1ImplAll<Internal::G1Type_ADD> iADD;
-	extern const Internal::Group1ImplAll<Internal::G1Type_OR>  iOR;
+	extern const Internal::G1LogicImpl<Internal::G1Type_AND,0x54> iAND;
+	extern const Internal::G1LogicImpl<Internal::G1Type_OR,0x56>  iOR;
+	extern const Internal::G1LogicImpl<Internal::G1Type_XOR,0x57> iXOR;
+	extern const Internal::SSEAndNotImpl<0x55> iANDN;
+
+	extern const Internal::G1ArithmeticImpl<Internal::G1Type_ADD,0x58> iADD;
+	extern const Internal::G1ArithmeticImpl<Internal::G1Type_SUB,0x5c> iSUB;
 	extern const Internal::Group1ImplAll<Internal::G1Type_ADC> iADC;
 	extern const Internal::Group1ImplAll<Internal::G1Type_SBB> iSBB;
-	extern const Internal::Group1ImplAll<Internal::G1Type_AND> iAND;
-	extern const Internal::Group1ImplAll<Internal::G1Type_SUB> iSUB;
-	extern const Internal::Group1ImplAll<Internal::G1Type_XOR> iXOR;
 	extern const Internal::Group1ImplAll<Internal::G1Type_CMP> iCMP;
 
 	// ------------------------------------------------------------------------
@@ -72,7 +74,8 @@ namespace x86Emitter
 	extern const Internal::Group3ImplAll<Internal::G3Type_NEG> iNEG;
 	extern const Internal::Group3ImplAll<Internal::G3Type_MUL> iUMUL;
 	extern const Internal::Group3ImplAll<Internal::G3Type_DIV> iUDIV;
-	extern const Internal::Group3ImplAll<Internal::G3Type_iDIV> iSDIV;
+	extern const Internal::G3Impl_PlusSSE<Internal::G3Type_iDIV,0x5e> iDIV;
+	extern const Internal::iMul_PlusSSE iMUL;
 
 	extern const Internal::IncDecImplAll<false> iINC;
 	extern const Internal::IncDecImplAll<true>  iDEC;
@@ -205,22 +208,22 @@ namespace x86Emitter
 	//////////////////////////////////////////////////////////////////////////////////////////
 	// MUL / DIV instructions
 	
-	extern void iSMUL( const iRegister32& to,	const iRegister32& from );
-	extern void iSMUL( const iRegister32& to,	const void* src );
-	extern void iSMUL( const iRegister32& to,	const iRegister32& from, s32 imm );
-	extern void iSMUL( const iRegister32& to,	const ModSibBase& src );
-	extern void iSMUL( const iRegister32& to,	const ModSibBase& src, s32 imm );
+	/*extern void iMUL( const iRegister32& to,	const iRegister32& from );
+	extern void iMUL( const iRegister32& to,	const void* src );
+	extern void iMUL( const iRegister32& to,	const iRegister32& from, s32 imm );
+	extern void iMUL( const iRegister32& to,	const ModSibBase& src );
+	extern void iMUL( const iRegister32& to,	const ModSibBase& src, s32 imm );
 
-	extern void iSMUL( const iRegister16& to,	const iRegister16& from );
-	extern void iSMUL( const iRegister16& to,	const void* src );
-	extern void iSMUL( const iRegister16& to,	const iRegister16& from, s16 imm );
-	extern void iSMUL( const iRegister16& to,	const ModSibBase& src );
-	extern void iSMUL( const iRegister16& to,	const ModSibBase& src, s16 imm );
+	extern void iMUL( const iRegister16& to,	const iRegister16& from );
+	extern void iMUL( const iRegister16& to,	const void* src );
+	extern void iMUL( const iRegister16& to,	const iRegister16& from, s16 imm );
+	extern void iMUL( const iRegister16& to,	const ModSibBase& src );
+	extern void iMUL( const iRegister16& to,	const ModSibBase& src, s16 imm );
 
 	template< typename T >
-	__forceinline void iSMUL( const iRegister<T>& from )	{ Internal::Group3Impl<T>::Emit( Internal::G3Type_iMUL, from ); }
+	__forceinline void iMUL( const iRegister<T>& from )	{ Internal::Group3Impl<T>::Emit( Internal::G3Type_iMUL, from ); }
 	template< typename T >
-	__noinline void iSMUL( const ModSibStrict<T>& from )	{ Internal::Group3Impl<T>::Emit( Internal::G3Type_iMUL, from ); }
+	__noinline void iMUL( const ModSibStrict<T>& from )	{ Internal::Group3Impl<T>::Emit( Internal::G3Type_iMUL, from ); }*/
 
 	//////////////////////////////////////////////////////////////////////////////////////////
 	// JMP / Jcc Instructions!
@@ -431,6 +434,46 @@ namespace x86Emitter
 	extern void iMOVHLPS( const iRegisterSSE& to, const iRegisterSSE& from );
 	extern void iMOVLHPD( const iRegisterSSE& to, const iRegisterSSE& from );
 	extern void iMOVHLPD( const iRegisterSSE& to, const iRegisterSSE& from );
+	
+	//////////////////////////////////////////////////////////////////////////////////////////
+	//
+	
+	extern const Internal::MovapsImplAll<0, 0x28, 0x29> iMOVAPS;
+	extern const Internal::MovapsImplAll<0, 0x10, 0x11> iMOVUPS;
+
+	extern const Internal::MovapsImplAll<0x66, 0x28, 0x29> iMOVAPD;
+	extern const Internal::MovapsImplAll<0x66, 0x10, 0x11> iMOVUPD;
+
+#ifdef ALWAYS_USE_MOVAPS
+	extern const Internal::MovapsImplAll<0x66, 0x6f, 0x7f> iMOVDQA;
+	extern const Internal::MovapsImplAll<0xf3, 0x6f, 0x7f> iMOVDQU;
+#else
+	extern const Internal::MovapsImplAll<0, 0x28, 0x29> iMOVDQA;
+	extern const Internal::MovapsImplAll<0, 0x10, 0x11> iMOVDQU;
+#endif
+
+	extern const Internal::MovhlImplAll<0, 0x16> iMOVHPS;
+	extern const Internal::MovhlImplAll<0, 0x12> iMOVLPS;
+	extern const Internal::MovhlImplAll<0x66, 0x16> iMOVHPD;
+	extern const Internal::MovhlImplAll<0x66, 0x12> iMOVLPD;
+
+	extern const Internal::PLogicImplAll<0xdb> iPAND;
+	extern const Internal::PLogicImplAll<0xdf> iPANDN;
+	extern const Internal::PLogicImplAll<0xeb> iPOR;
+	extern const Internal::PLogicImplAll<0xef> iPXOR;
+
+	extern const Internal::SSELogicImpl<0,0x53> iRCPPS;
+	extern const Internal::SSELogicImpl<0xf3,0x53> iRCPSS;
+
+	extern const Internal::SSECompareImplGeneric<0x00> iCMPPS;
+	extern const Internal::SSECompareImplGeneric<0x66> iCMPPD;
+	extern const Internal::SSECompareImplGeneric<0xf3> iCMPSS;
+	extern const Internal::SSECompareImplGeneric<0xf2> iCMPSD;
+
+	extern const Internal::SSECompareImplGeneric<0x00> iCMPPS;
+	extern const Internal::SSECompareImplGeneric<0x66> iCMPPD;
+	extern const Internal::SSECompareImplGeneric<0xf3> iCMPSS;
+	extern const Internal::SSECompareImplGeneric<0xf2> iCMPSD;
 
 }
 

@@ -257,13 +257,15 @@ using namespace Internal;
 const MovImplAll iMOV;
 const TestImplAll iTEST;
 
-const Group1ImplAll<G1Type_ADD> iADD;
-const Group1ImplAll<G1Type_OR>  iOR;
+const G1LogicImpl<G1Type_AND,0x54> iAND;
+const G1LogicImpl<G1Type_OR,0x56>  iOR;
+const G1LogicImpl<G1Type_XOR,0x57> iXOR;
+
+const G1ArithmeticImpl<G1Type_ADD,0x58> iADD;
+const G1ArithmeticImpl<G1Type_SUB,0x5c> iSUB;
+
 const Group1ImplAll<G1Type_ADC> iADC;
 const Group1ImplAll<G1Type_SBB> iSBB;
-const Group1ImplAll<G1Type_AND> iAND;
-const Group1ImplAll<G1Type_SUB> iSUB;
-const Group1ImplAll<G1Type_XOR> iXOR;
 const Group1ImplAll<G1Type_CMP> iCMP;
 
 const Group2ImplAll<G2Type_ROL> iROL;
@@ -278,7 +280,8 @@ const Group3ImplAll<G3Type_NOT> iNOT;
 const Group3ImplAll<G3Type_NEG> iNEG;
 const Group3ImplAll<G3Type_MUL> iUMUL;
 const Group3ImplAll<G3Type_DIV> iUDIV;
-const Group3ImplAll<G3Type_iDIV> iSDIV;
+const G3Impl_PlusSSE<G3Type_iDIV,0x5e> iDIV;
+const iMul_PlusSSE iMUL;
 
 const IncDecImplAll<false> iINC;
 const IncDecImplAll<true>  iDEC;
@@ -610,99 +613,6 @@ __emitinline void iLEA( iRegister16 to, const ModSibBase& src, bool preserve_fla
 	EmitLeaMagic( to, src, preserve_flags );
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// 	The following iMul-specific forms are valid for 16 and 32 bit register operands only!
-
-template< typename ImmType >
-class iMulImpl
-{
-protected:
-	static const uint OperandSize = sizeof(ImmType);
-	static void prefix16() { if( OperandSize == 2 ) iWrite<u8>( 0x66 ); }
-
-public:
-	// ------------------------------------------------------------------------
-	static __emitinline void Emit( const iRegister<ImmType>& to, const iRegister<ImmType>& from )
-	{
-		prefix16();
-		write16( 0xaf0f );
-		ModRM_Direct( to.Id, from.Id );
-	}
-	
-	// ------------------------------------------------------------------------
-	static __emitinline void Emit( const iRegister<ImmType>& to, const void* src )
-	{
-		prefix16();
-		write16( 0xaf0f );
-		iWriteDisp( to.Id, src );
-	}
-
-	// ------------------------------------------------------------------------
-	static __emitinline void Emit( const iRegister<ImmType>& to, const ModSibBase& src )
-	{
-		prefix16();
-		write16( 0xaf0f );
-		EmitSibMagic( to.Id, src );
-	}
-
-	// ------------------------------------------------------------------------
-	static __emitinline void Emit( const iRegister<ImmType>& to, const iRegister<ImmType>& from, ImmType imm )
-	{
-		prefix16();
-		write16( is_s8( imm ) ? 0x6b : 0x69 );
-		ModRM_Direct( to.Id, from.Id );
-		if( is_s8( imm ) )
-			write8( imm );
-		else
-			iWrite<ImmType>( imm );
-	}
-
-	// ------------------------------------------------------------------------
-	static __emitinline void Emit( const iRegister<ImmType>& to, const void* src, ImmType imm )
-	{
-		prefix16();
-		write16( is_s8( imm ) ? 0x6b : 0x69 );
-		iWriteDisp( to.Id, src );
-		if( is_s8( imm ) )
-			write8( imm );
-		else
-			iWrite<ImmType>( imm );
-	}
-
-	// ------------------------------------------------------------------------
-	static __emitinline void Emit( const iRegister<ImmType>& to, const ModSibBase& src, ImmType imm )
-	{
-		prefix16();
-		write16( is_s8( imm ) ? 0x6b : 0x69 );
-		EmitSibMagic( to.Id, src );
-		if( is_s8( imm ) )
-			write8( imm );
-		else
-			iWrite<ImmType>( imm );
-	}
-};
-
-// ------------------------------------------------------------------------
-// iMUL's special forms (unique to iMUL alone), and valid for 32/16 bit operands only,
-// thus noi templates are used.
-
-namespace Internal
-{
-	typedef iMulImpl<u32> iMUL32;
-	typedef iMulImpl<u16> iMUL16;
-}
-
-__forceinline void iSMUL( const iRegister32& to,	const iRegister32& from )			{ iMUL32::Emit( to, from ); }
-__forceinline void iSMUL( const iRegister32& to,	const void* src )					{ iMUL32::Emit( to, src ); }
-__forceinline void iSMUL( const iRegister32& to,	const iRegister32& from, s32 imm )	{ iMUL32::Emit( to, from, imm ); }
-__noinline void iSMUL( const iRegister32& to,	const ModSibBase& src )					{ iMUL32::Emit( to, src ); }
-__noinline void iSMUL( const iRegister32& to,	const ModSibBase& from, s32 imm )		{ iMUL32::Emit( to, from, imm ); }
-
-__forceinline void iSMUL( const iRegister16& to,	const iRegister16& from )			{ iMUL16::Emit( to, from ); }
-__forceinline void iSMUL( const iRegister16& to,	const void* src )					{ iMUL16::Emit( to, src ); }
-__forceinline void iSMUL( const iRegister16& to,	const iRegister16& from, s16 imm )	{ iMUL16::Emit( to, from, imm ); }
-__noinline void iSMUL( const iRegister16& to,	const ModSibBase& src )					{ iMUL16::Emit( to, src ); }
-__noinline void iSMUL( const iRegister16& to,	const ModSibBase& from, s16 imm )		{ iMUL16::Emit( to, from, imm ); }
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // Push / Pop Emitters
@@ -758,40 +668,13 @@ const PLogicImplAll<0xdf> iPANDN;
 const PLogicImplAll<0xeb> iPOR;
 const PLogicImplAll<0xef> iPXOR;
 
-const PLogicImplSSE<0x00,0x54> iANDPS;
-const PLogicImplSSE<0x66,0x54> iANDPD;
-const PLogicImplSSE<0x00,0x55> iANDNPS;
-const PLogicImplSSE<0x66,0x55> iANDNPD;
-const PLogicImplSSE<0x00,0x56> iORPS;
-const PLogicImplSSE<0x66,0x56> iORPD;
-const PLogicImplSSE<0x00,0x57> iXORPS;
-const PLogicImplSSE<0x66,0x57> iXORPD;
-
-const PLogicImplSSE<0x00,0x5c> iSUBPS;
-const PLogicImplSSE<0x66,0x5c> iSUBPD;
-const PLogicImplSSE<0xf3,0x5c> iSUBSS;
-const PLogicImplSSE<0xf2,0x5c> iSUBSD;
-
-const PLogicImplSSE<0x00,0x58> iADDPS;
-const PLogicImplSSE<0x66,0x58> iADDPD;
-const PLogicImplSSE<0xf3,0x58> iADDSS;
-const PLogicImplSSE<0xf2,0x58> iADDSD;
-
-const PLogicImplSSE<0x00,0x59> iMULPS;
-const PLogicImplSSE<0x66,0x59> iMULPD;
-const PLogicImplSSE<0xf3,0x59> iMULSS;
-const PLogicImplSSE<0xf2,0x59> iMULSD;
-
-const PLogicImplSSE<0x00,0x5e> iDIVPS;
-const PLogicImplSSE<0x66,0x5e> iDIVPD;
-const PLogicImplSSE<0xf3,0x5e> iDIVSS;
-const PLogicImplSSE<0xf2,0x5e> iDIVSD;
+const SSEAndNotImpl<0x55> iANDN;
 
 // Compute Reciprocal Packed Single-Precision Floating-Point Values
-const PLogicImplSSE<0,0x53> iRCPPS;
+const SSELogicImpl<0,0x53> iRCPPS;
 
 // Compute Reciprocal of Scalar Single-Precision Floating-Point Value
-const PLogicImplSSE<0xf3,0x53> iRCPSS;
+const SSELogicImpl<0xf3,0x53> iRCPSS;
 
 
 // Moves from XMM to XMM, with the *upper 64 bits* of the destination register
@@ -800,20 +683,27 @@ __forceinline void iMOVQZX( const iRegisterSSE& to, const iRegisterSSE& from )	{
 
 // Moves from XMM to XMM, with the *upper 64 bits* of the destination register
 // being cleared to zero.
-__noinline void iMOVQZX( const iRegisterSSE& to, const ModSibBase& src )		{ writeXMMop( 0xf3, 0x7e, to, src ); }
+__forceinline void iMOVQZX( const iRegisterSSE& to, const ModSibBase& src )		{ writeXMMop( 0xf3, 0x7e, to, src ); }
 
 // Moves from XMM to XMM, with the *upper 64 bits* of the destination register
 // being cleared to zero.
 __forceinline void iMOVQZX( const iRegisterSSE& to, const void* src )			{ writeXMMop( 0xf3, 0x7e, to, src ); }
 
-__forceinline void iMOVQ( const iRegisterMMX& to, const iRegisterMMX& from )		{ if( to != from ) writeXMMop( 0x6f, to, from ); }
-__noinline void iMOVQ( const iRegisterMMX& to, const ModSibBase& src )			{ writeXMMop( 0x6f, to, src ); }
+// Moves lower quad of XMM to ptr64 (no bits are cleared)
+__forceinline void iMOVQ( const ModSibBase& dest, const iRegisterSSE& from )	{ writeXMMop( 0x66, 0xd6, from, dest ); }
+// Moves lower quad of XMM to ptr64 (no bits are cleared)
+__forceinline void iMOVQ( void* dest, const iRegisterSSE& from )				{ writeXMMop( 0x66, 0xd6, from, dest ); }
+
+__forceinline void iMOVQ( const iRegisterMMX& to, const iRegisterMMX& from )	{ if( to != from ) writeXMMop( 0x6f, to, from ); }
+__forceinline void iMOVQ( const iRegisterMMX& to, const ModSibBase& src )		{ writeXMMop( 0x6f, to, src ); }
 __forceinline void iMOVQ( const iRegisterMMX& to, const void* src )				{ writeXMMop( 0x6f, to, src ); }
 __forceinline void iMOVQ( const ModSibBase& dest, const iRegisterMMX& from )	{ writeXMMop( 0x7f, from, dest ); }
 __forceinline void iMOVQ( void* dest, const iRegisterMMX& from )				{ writeXMMop( 0x7f, from, dest ); }
-__forceinline void iMOVQ( const ModSibBase& dest, const iRegisterSSE& from )	{ writeXMMop( 0xf3, 0x7e, from, dest ); }
-__forceinline void iMOVQ( void* dest, const iRegisterSSE& from )				{ writeXMMop( 0xf3, 0x7e, from, dest ); }
+
+// This form of iMOVQ is Intel's adeptly named 'MOVQ2DQ'
 __forceinline void iMOVQ( const iRegisterSSE& to, const iRegisterMMX& from )	{ writeXMMop( 0xf3, 0xd6, to, from ); }
+
+// This form of iMOVQ is Intel's adeptly named 'MOVDQ2Q'
 __forceinline void iMOVQ( const iRegisterMMX& to, const iRegisterSSE& from )
 {
 	// Manual implementation of this form of MOVQ, since its parameters are unique in a way

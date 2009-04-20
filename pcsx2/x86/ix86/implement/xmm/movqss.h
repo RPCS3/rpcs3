@@ -124,15 +124,9 @@ class PLogicImplAll
 {
 public:
 	template< typename T >
-	__forceinline void operator()( const iRegisterSIMD<T>& to, const iRegisterSIMD<T>& from ) const
-	{
-		writeXMMop( 0x66, Opcode, to, from );
-	}
+	__forceinline void operator()( const iRegisterSIMD<T>& to, const iRegisterSIMD<T>& from ) const	{ writeXMMop( 0x66, Opcode, to, from ); }
 	template< typename T >
-	__forceinline void operator()( const iRegisterSIMD<T>& to, const void* from ) const
-	{
-	writeXMMop( 0x66, Opcode, to, from );
-	}
+	__forceinline void operator()( const iRegisterSIMD<T>& to, const void* from ) const		{ writeXMMop( 0x66, Opcode, to, from ); }
 	template< typename T >
 	__noinline void operator()( const iRegisterSIMD<T>& to, const ModSibBase& from ) const		{ writeXMMop( 0x66, Opcode, to, from ); }
 
@@ -141,19 +135,52 @@ public:
 
 // ------------------------------------------------------------------------
 // For implementing SSE-only logic operations, like ANDPS/ANDPD
+//
 template< u8 Prefix, u8 Opcode >
-class PLogicImplSSE
+class SSELogicImpl
 {
 public:
-	__forceinline void operator()( const iRegisterSSE& to, const iRegisterSSE& from ) const
-	{
-	writeXMMop( Prefix, Opcode, to, from );
-	}
-	__forceinline void operator()( const iRegisterSSE& to, const void* from ) const
-	{
-	writeXMMop( Prefix, Opcode, to, from );
-	}
+	__forceinline void operator()( const iRegisterSSE& to, const iRegisterSSE& from ) const	{ writeXMMop( Prefix, Opcode, to, from ); }
+	__forceinline void operator()( const iRegisterSSE& to, const void* from ) const			{ writeXMMop( Prefix, Opcode, to, from ); }
 	__noinline void operator()( const iRegisterSSE& to, const ModSibBase& from ) const			{ writeXMMop( Prefix, Opcode, to, from ); }
 
-	PLogicImplSSE() {} //GCWho?
+	SSELogicImpl() {} //GCWho?
+};
+
+
+// ------------------------------------------------------------------------
+// For implementing SSE-only comparison operations, like CMPEQPS.
+//
+enum SSE2_ComparisonType
+{
+	SSE2_Equal = 0,
+	SSE2_Less,
+	SSE2_LessOrEqual,
+	SSE2_Unordered,
+	SSE2_NotEqual,
+	SSE2_NotLess,
+	SSE2_NotLessOrEqual,
+	SSE2_Ordered
+};
+
+template< u8 Prefix >
+class SSECompareImplGeneric
+{
+public:
+	__forceinline void operator()( const iRegisterSSE& to, const iRegisterSSE& from, u8 cmptype ) const	{ writeXMMop( Prefix, 0xc2, to, from ); iWrite( cmptype ); }
+	__forceinline void operator()( const iRegisterSSE& to, const void* from, u8 cmptype ) const			{ writeXMMop( Prefix, 0xc2, to, from ); iWrite( cmptype ); }
+	__noinline void operator()( const iRegisterSSE& to, const ModSibBase& from, u8 cmptype ) const		{ writeXMMop( Prefix, 0xc2, to, from ); iWrite( cmptype ); }
+
+	SSECompareImplGeneric() {} //GCWhat?
+};
+
+template< u8 Prefix, u8 Opcode, SSE2_ComparisonType CType >
+class SSECompareImpl
+{
+public:
+	__forceinline void operator()( const iRegisterSSE& to, const iRegisterSSE& from ) const	{ writeXMMop( Prefix, 0xc2, to, from ); iWrite( CType ); }
+	__forceinline void operator()( const iRegisterSSE& to, const void* from ) const			{ writeXMMop( Prefix, 0xc2, to, from ); iWrite( CType ); }
+	__noinline void operator()( const iRegisterSSE& to, const ModSibBase& from ) const		{ writeXMMop( Prefix, 0xc2, to, from ); iWrite( CType ); }
+
+	SSECompareImpl() {} //GCWhat?
 };

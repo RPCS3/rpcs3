@@ -662,6 +662,7 @@ namespace x86Emitter
 		extern void EmitSibMagic( uint regfield, const ModSibBase& info );
 
 		// ------------------------------------------------------------------------
+		#include "implement/xmm/movqss.h"
 		#include "implement/group1.h"
 		#include "implement/group2.h"
 		#include "implement/group3.h"
@@ -671,7 +672,6 @@ namespace x86Emitter
 		#include "implement/bittest.h"
 		#include "implement/test.h"
 		#include "implement/jmpcall.h"
-		#include "implement/xmm/movqss.h"
 	}
 
 	//////////////////////////////////////////////////////////////////////////////////////////
@@ -689,65 +689,6 @@ namespace x86Emitter
 	#else
 	static const bool AlwaysUseMovaps = false;
 	#endif
-
-	extern const Internal::MovapsImplAll<0, 0x28, 0x29> iMOVAPS;
-	extern const Internal::MovapsImplAll<0, 0x10, 0x11> iMOVUPS;
-
-	extern const Internal::MovapsImplAll<0x66, 0x28, 0x29> iMOVAPD;
-	extern const Internal::MovapsImplAll<0x66, 0x10, 0x11> iMOVUPD;
-
-	#ifdef ALWAYS_USE_MOVAPS
-	extern const Internal::MovapsImplAll<0x66, 0x6f, 0x7f> iMOVDQA;
-	extern const Internal::MovapsImplAll<0xf3, 0x6f, 0x7f> iMOVDQU;
-	#else
-	extern const Internal::MovapsImplAll<0, 0x28, 0x29> iMOVDQA;
-	extern const Internal::MovapsImplAll<0, 0x10, 0x11> iMOVDQU;
-	#endif
-		
-	extern const Internal::MovhlImplAll<0, 0x16> iMOVHPS;
-	extern const Internal::MovhlImplAll<0, 0x12> iMOVLPS;
-	extern const Internal::MovhlImplAll<0x66, 0x16> iMOVHPD;
-	extern const Internal::MovhlImplAll<0x66, 0x12> iMOVLPD;
-
-	extern const Internal::PLogicImplAll<0xdb> iPAND;
-	extern const Internal::PLogicImplAll<0xdf> iPANDN;
-	extern const Internal::PLogicImplAll<0xeb> iPOR;
-	extern const Internal::PLogicImplAll<0xef> iPXOR;
-	
-	extern const Internal::PLogicImplSSE<0x00,0x54> iANDPS;
-	extern const Internal::PLogicImplSSE<0x66,0x54> iANDPD;
-	extern const Internal::PLogicImplSSE<0x00,0x55> iANDNPS;
-	extern const Internal::PLogicImplSSE<0x66,0x55> iANDNPD;
-	extern const Internal::PLogicImplSSE<0x00,0x56> iORPS;
-	extern const Internal::PLogicImplSSE<0x66,0x56> iORPD;
-	extern const Internal::PLogicImplSSE<0x00,0x57> iXORPS;
-	extern const Internal::PLogicImplSSE<0x66,0x57> iXORPD;
-
-	extern const Internal::PLogicImplSSE<0x00,0x5c> iSUBPS;
-	extern const Internal::PLogicImplSSE<0x66,0x5c> iSUBPD;
-	extern const Internal::PLogicImplSSE<0xf3,0x5c> iSUBSS;
-	extern const Internal::PLogicImplSSE<0xf2,0x5c> iSUBSD;
-
-	extern const Internal::PLogicImplSSE<0x00,0x58> iADDPS;
-	extern const Internal::PLogicImplSSE<0x66,0x58> iADDPD;
-	extern const Internal::PLogicImplSSE<0xf3,0x58> iADDSS;
-	extern const Internal::PLogicImplSSE<0xf2,0x58> iADDSD;
-
-	extern const Internal::PLogicImplSSE<0x00,0x59> iMULPS;
-	extern const Internal::PLogicImplSSE<0x66,0x59> iMULPD;
-	extern const Internal::PLogicImplSSE<0xf3,0x59> iMULSS;
-	extern const Internal::PLogicImplSSE<0xf2,0x59> iMULSD;
-
-	extern const Internal::PLogicImplSSE<0x00,0x5e> iDIVPS;
-	extern const Internal::PLogicImplSSE<0x66,0x5e> iDIVPD;
-	extern const Internal::PLogicImplSSE<0xf3,0x5e> iDIVSS;
-	extern const Internal::PLogicImplSSE<0xf2,0x5e> iDIVSD;
-
-
-
-	extern const Internal::PLogicImplSSE<0,0x53> iRCPPS;
-	extern const Internal::PLogicImplSSE<0xf3,0x53> iRCPSS;
-	
 }
 
 #include "ix86_inlines.inl"
