@@ -1615,7 +1615,7 @@ void UpdatePadList(HWND hWnd) {
 	int slot;
 	int port;
 	int index = 0;
-	wchar_t *padTypes[] = {L"Disabled", L"Dualshock 2", L"Guitar"};
+	wchar_t *padTypes[] = {L"Unplugged", L"Dualshock 2", L"Guitar"};
 	for (port=0; port<2; port++) {
 		for (slot = 0; slot<4; slot++) {
 			wchar_t text[20];
@@ -1635,6 +1635,9 @@ void UpdatePadList(HWND hWnd) {
 			item.iSubItem = 1;
 			if (2 < (unsigned int)config.padConfigs[port][slot].type) config.padConfigs[port][slot].type = Dualshock2Pad;
 			item.pszText = padTypes[config.padConfigs[port][slot].type];
+			if (!slot && !config.padConfigs[port][slot].type)
+				item.pszText = L"Unplugged (Kinda)";
+
 			ListView_SetItem(hWndList, &item);
 
 			item.iSubItem = 2;
@@ -1683,7 +1686,7 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 				c.cx = 50;
 				c.pszText = L"Pad";
 				ListView_InsertColumn(hWndList, 0, &c);
-				c.cx = 90;
+				c.cx = 120;
 				c.pszText = L"Type";
 				ListView_InsertColumn(hWndList, 1, &c);
 				c.cx = 70;

@@ -1419,5 +1419,6 @@ s32 CALLBACK PADsetSlot(u8 port, u8 slot) {
 	}
 	// Even if no pad there, record the slot, as it is the active slot regardless.
 	slots[port] = slot;
-	return pads[port][slot].enabled;
+	// First slot always allowed.
+	return pads[port][slot].enabled | !slot;
 }
