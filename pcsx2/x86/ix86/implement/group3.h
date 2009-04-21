@@ -59,7 +59,7 @@ public:
 // ------------------------------------------------------------------------
 // This class combines x86 and SSE/SSE2 instructions for iMUL and iDIV.
 //
-template< G3Type InstType, u8 OpcodeSSE >
+template< G3Type InstType, u16 OpcodeSSE >
 class xImpl_Group3 : public Group3ImplAll<InstType>
 {
 public:

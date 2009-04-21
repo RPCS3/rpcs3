@@ -641,15 +641,34 @@ __emitinline void xBSWAP( const xRegister32& to )
 // MMX / XMM Instructions
 // (these will get put in their own file later)
 
-__emitinline void Internal::SimdPrefix( u8 prefix, u8 opcode )
+// If the upper 8 bits of opcode are zero, the opcode is treated as a u8.
+// The upper bits are non-zero, the opcode is assumed 16 bit (and the upper bits are checked aginst
+// 0x38, which is the only valid high word for 16 bit opcodes as such)
+__emitinline void Internal::SimdPrefix( u8 prefix, u16 opcode )
 {
 	if( prefix != 0 )
 	{
-		xWrite<u16>( 0x0f00 | prefix );
-		xWrite<u8>( opcode );
+		if( (opcode & 0xff00) != 0 )
+		{
+			jASSUME( (opcode & 0xff00) == 0x3800 );
+			xWrite<u32>( (opcode<<16) | (0x0f00 | prefix) );
+		}
+		else
+		{
+			xWrite<u16>( 0x0f00 | prefix );
+			xWrite<u8>( opcode );
+		}
 	}
 	else
-		xWrite<u16>( (opcode<<8) | 0x0f );
+	{
+		if( (opcode & 0xff00) != 0 )
+		{
+			jASSUME( (opcode & 0xff00) == 0x3800 );
+			xWrite<u16>( opcode );
+		}
+		else
+			xWrite<u16>( (opcode<<8) | 0x0f );
+	}
 }
 
 const MovapsImplAll< 0, 0x28, 0x29 > xMOVAPS; 
@@ -735,11 +754,21 @@ const SimdImpl_DestRegStrict<0xf3,0x2c,xRegister32, xRegisterSSE,u32>		xCVTTSS2S
 
 // ------------------------------------------------------------------------
 
-const SimdImpl_ShiftAll<0xd0, 0x70, 2> xPSRL;
-const SimdImpl_ShiftAll<0xf0, 0x70, 6> xPSLL;
+const SimdImpl_ShiftAll<0xd0, 2> xPSRL;
+const SimdImpl_ShiftAll<0xf0, 6> xPSLL;
+const SimdImpl_ShiftWithoutQ<0xe0, 4> xPSRA;
 
-const SimdImpl_AddSub<0xfc, 0xec, 0xdc, 0xd4> xPADD;
-const SimdImpl_AddSub<0xf8, 0xe8, 0xd8, 0xfb> xPSUB;
+const SimdImpl_AddSub<0xdc, 0xd4> xPADD;
+const SimdImpl_AddSub<0xd8, 0xfb> xPSUB;
+const SimdImpl_PMinMax<0xde,0x3c> xPMAX;
+const SimdImpl_PMinMax<0xda,0x38> xPMIN;
+
+const SimdImpl_PMul xPMUL;
+const SimdImpl_PCompare xPCMP;
+const SimdImpl_PShuffle xPSHUF;
+const SimdImpl_PUnpack xPUNPCK;
+const SimdImpl_Unpack xUNPCK;
+const SimdImpl_Pack xPACK;
 
 
 //////////////////////////////////////////////////////////////////////////////////////////

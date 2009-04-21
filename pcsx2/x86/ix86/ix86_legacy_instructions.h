@@ -938,12 +938,6 @@ extern void MASKMOVQRtoR(x86MMXRegType to, x86MMXRegType from);
 // emms 
 extern void EMMS( void );
 
-//**********************************************************************************/
-//PACKSSWB,PACKSSDW: Pack Saturate Signed Word 64bits
-//**********************************************************************************
-extern void PACKSSWBMMXtoMMX(x86MMXRegType to, x86MMXRegType from);
-extern void PACKSSDWMMXtoMMX(x86MMXRegType to, x86MMXRegType from);
-
 extern void PMOVMSKBMMXtoR(x86IntRegType to, x86MMXRegType from);
 
 //*********************

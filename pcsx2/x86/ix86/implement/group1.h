@@ -134,7 +134,7 @@ public:
 // This class combines x86 with SSE/SSE2 logic operations (ADD, OR, and NOT).
 // Note: ANDN [AndNot] is handled below separately.
 //
-template< G1Type InstType, u8 OpcodeSSE >
+template< G1Type InstType, u16 OpcodeSSE >
 class xImpl_G1Logic : public xImpl_Group1<InstType>
 {
 public:
@@ -149,7 +149,7 @@ public:
 // ------------------------------------------------------------------------
 // This class combines x86 with SSE/SSE2 arithmetic operations (ADD/SUB).
 //
-template< G1Type InstType, u8 OpcodeSSE >
+template< G1Type InstType, u16 OpcodeSSE >
 class xImpl_G1Arith : public xImpl_G1Logic<InstType, OpcodeSSE >
 {
 public:
