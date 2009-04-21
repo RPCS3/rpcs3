@@ -889,8 +889,8 @@ __noinline void xMOVNTPS( const ModSibBase& to, const xRegisterSSE& from )	{ wri
 __forceinline void xMOVNTQ( void* to, const xRegisterMMX& from )			{ writeXMMop( 0xe7, from, to ); }
 __noinline void xMOVNTQ( const ModSibBase& to, const xRegisterMMX& from )	{ writeXMMop( 0xe7, from, to ); }
 
-__forceinline void xMOVMSKPS( const xRegister32& to, xRegisterSSE& from)	{ writeXMMop( 0x50, to, from ); }
-__forceinline void xMOVMSKPD( const xRegister32& to, xRegisterSSE& from)	{ writeXMMop( 0x66, 0x50, to, from, true ); }
+__forceinline void xMOVMSKPS( const xRegister32& to, const xRegisterSSE& from)	{ writeXMMop( 0x50, to, from ); }
+__forceinline void xMOVMSKPD( const xRegister32& to, const xRegisterSSE& from)	{ writeXMMop( 0x66, 0x50, to, from, true ); }
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // INSERTPS / EXTRACTPS   [SSE4.1 only!]

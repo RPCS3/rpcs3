@@ -427,8 +427,8 @@ namespace x86Emitter
 	extern void xMOVNTQ( void* to, const xRegisterMMX& from );
 	extern void xMOVNTQ( const ModSibBase& to, const xRegisterMMX& from );
 
-	extern void xMOVMSKPS( const xRegister32& to, xRegisterSSE& from );
-	extern void xMOVMSKPD( const xRegister32& to, xRegisterSSE& from );
+	extern void xMOVMSKPS( const xRegister32& to, const xRegisterSSE& from );
+	extern void xMOVMSKPD( const xRegister32& to, const xRegisterSSE& from );
 
 	extern void xINSERTPS( const xRegisterSSE& to, const xRegisterSSE& from, u8 imm8 );
 	extern void xINSERTPS( const xRegisterSSE& to, const u32* from, u8 imm8 );
