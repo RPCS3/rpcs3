@@ -3024,7 +3024,23 @@
 					Name="xmm"
 					>
 					<File
-						RelativePath="..\..\x86\ix86\implement\xmm\movqss.h"
+						RelativePath="..\..\x86\ix86\implement\xmm\arithmetic.h"
+						>
+					</File>
+					<File
+						RelativePath="..\..\x86\ix86\implement\xmm\basehelpers.h"
+						>
+					</File>
+					<File
+						RelativePath="..\..\x86\ix86\implement\xmm\comparisons.h"
+						>
+					</File>
+					<File
+						RelativePath="..\..\x86\ix86\implement\xmm\moremovs.h"
+						>
+					</File>
+					<File
+						RelativePath="..\..\x86\ix86\implement\xmm\shufflepack.h"
 						>
 					</File>
 				</Filter>

@@ -251,19 +251,19 @@ protected:
 		__forceinline void operator()( const xRegister32& to, const xRegisterSSE& from, u8 imm8 ) const
 		{
 			writeXMMop( 0x66, (Opcode<<8) | 0x3a, to, from );
-			xWrite<u8>( imm );
+			xWrite<u8>( imm8 );
 		}
 
 		__forceinline void operator()( void* dest, const xRegisterSSE& from, u8 imm8 ) const
 		{
 			writeXMMop( 0x66, (Opcode<<8) | 0x3a, to, from );
-			xWrite<u8>( imm );
+			xWrite<u8>( imm8 );
 		}
 
 		__noinline void operator()( const ModSibBase& dest, const xRegisterSSE& from, u8 imm8 ) const
 		{
 			writeXMMop( 0x66, (Opcode<<8) | 0x3a, to, from );
-			xWrite<u8>( imm );
+			xWrite<u8>( imm8 );
 		}
 	};
 

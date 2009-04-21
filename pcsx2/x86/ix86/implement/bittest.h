@@ -109,14 +109,10 @@ public:
 	__noinline void operator()( const ModSibBase& bitbase,		const xRegister32& bitoffset ) const	{ m_32::Emit( bitbase, bitoffset ); }
 	__noinline void operator()( const ModSibBase& bitbase,		const xRegister16& bitoffset ) const	{ m_16::Emit( bitbase, bitoffset ); }
 
-	// Note on Imm forms : use int as the source operand since it's "reasonably inert" from a compiler
-	// perspective.  (using uint tends to make the compiler try and fail to match signed immediates with
-	// one of the other overloads).
-
-	__noinline void operator()( const ModSibStrict<u32>& bitbase, u8 immoffset ) const	{ m_32::Emit( bitbase, immoffset ); }
-	__noinline void operator()( const ModSibStrict<u16>& bitbase, u8 immoffset ) const	{ m_16::Emit( bitbase, immoffset ); }
-	void operator()( const xRegister<u32>& bitbase, u8 immoffset ) const				{ m_32::Emit( bitbase, immoffset ); }
-	void operator()( const xRegister<u16>& bitbase, u8 immoffset ) const				{ m_16::Emit( bitbase, immoffset ); }
+	__noinline void operator()( const ModSibStrict<u32>& bitbase, u8 bitoffset ) const	{ m_32::Emit( bitbase, bitoffset ); }
+	__noinline void operator()( const ModSibStrict<u16>& bitbase, u8 bitoffset ) const	{ m_16::Emit( bitbase, bitoffset ); }
+	void operator()( const xRegister<u32>& bitbase, u8 bitoffset ) const				{ m_32::Emit( bitbase, bitoffset ); }
+	void operator()( const xRegister<u16>& bitbase, u8 bitoffset ) const				{ m_16::Emit( bitbase, bitoffset ); }
 
 	Group8ImplAll() {}
 };

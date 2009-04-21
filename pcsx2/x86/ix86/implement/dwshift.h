@@ -54,13 +54,13 @@ public:
 	}
 
 	// ------------------------------------------------------------------------
-	static __emitinline void Emit( const xRegister<ImmType>& to, const xRegister<ImmType>& from, u8 imm ) 
+	static __emitinline void Emit( const xRegister<ImmType>& to, const xRegister<ImmType>& from, u8 shiftcnt ) 
 	{
-		if( imm == 0 ) return;
+		if( shiftcnt == 0 ) return;
 		prefix16();
 		write16( 0xa40f | (isShiftRight ? 0x800 : 0) );
 		ModRM_Direct( from.Id, to.Id );
-		write8( imm );
+		write8( shiftcnt );
 	}
 
 	// ------------------------------------------------------------------------
@@ -71,11 +71,11 @@ public:
 	}
 
 	// ------------------------------------------------------------------------
-	static __emitinline void Emit( const ModSibBase& sibdest, const xRegister<ImmType>& from, u8 imm ) 
+	static __emitinline void Emit( const ModSibBase& sibdest, const xRegister<ImmType>& from, u8 shiftcnt ) 
 	{
 		basesibform();
 		EmitSibMagic( from.Id, sibdest );
-		write8( imm );
+		write8( shiftcnt );
 	}
 
 	// ------------------------------------------------------------------------
@@ -88,11 +88,11 @@ public:
 
 	// ------------------------------------------------------------------------
 	// dest data type is inferred from the 'from' register, so we can do void* resolution :)
-	static __emitinline void Emit( void* dest, const xRegister<ImmType>& from, u8 imm ) 
+	static __emitinline void Emit( void* dest, const xRegister<ImmType>& from, u8 shiftcnt ) 
 	{
 		basesibform();
 		xWriteDisp( from.Id, dest );
-		write8( imm );
+		write8( shiftcnt );
 	}
 };
 
@@ -113,17 +113,17 @@ public:
 	__forceinline void operator()( const xRegister32& to,	const xRegister32& from, __unused const xRegisterCL& clreg ) const { m_32::Emit( to, from ); }
 	__forceinline void operator()( void* dest,				const xRegister32& from, __unused const xRegisterCL& clreg ) const { m_32::Emit( dest, from ); }
 	__noinline void operator()( const ModSibBase& sibdest,	const xRegister32& from, __unused const xRegisterCL& clreg ) const { m_32::Emit( sibdest, from ); }
-	__forceinline void operator()( const xRegister32& to,	const xRegister32& from, u8 imm ) const	{ m_32::Emit( to, from, imm ); }
-	__forceinline void operator()( void* dest,				const xRegister32& from, u8 imm ) const	{ m_32::Emit( dest, from, imm ); }
-	__noinline void operator()( const ModSibBase& sibdest,	const xRegister32& from, u8 imm ) const	{ m_32::Emit( sibdest, from ); }
+	__forceinline void operator()( const xRegister32& to,	const xRegister32& from, u8 shiftcnt ) const	{ m_32::Emit( to, from, shiftcnt ); }
+	__forceinline void operator()( void* dest,				const xRegister32& from, u8 shiftcnt ) const	{ m_32::Emit( dest, from, shiftcnt ); }
+	__noinline void operator()( const ModSibBase& sibdest,	const xRegister32& from, u8 shiftcnt ) const	{ m_32::Emit( sibdest, shiftcnt ); }
 
 	// ---------- 16 Bit Interface -----------
 	__forceinline void operator()( const xRegister16& to,	const xRegister16& from, __unused const xRegisterCL& clreg ) const { m_16::Emit( to, from ); }
 	__forceinline void operator()( void* dest,				const xRegister16& from, __unused const xRegisterCL& clreg ) const { m_16::Emit( dest, from ); }
 	__noinline void operator()( const ModSibBase& sibdest,	const xRegister16& from, __unused const xRegisterCL& clreg ) const { m_16::Emit( sibdest, from ); }
-	__forceinline void operator()( const xRegister16& to,	const xRegister16& from, u8 imm ) const	{ m_16::Emit( to, from, imm ); }
-	__forceinline void operator()( void* dest,				const xRegister16& from, u8 imm ) const	{ m_16::Emit( dest, from, imm ); }
-	__noinline void operator()( const ModSibBase& sibdest,	const xRegister16& from, u8 imm ) const	{ m_16::Emit( sibdest, from ); }
+	__forceinline void operator()( const xRegister16& to,	const xRegister16& from, u8 shiftcnt ) const	{ m_16::Emit( to, from, shiftcnt ); }
+	__forceinline void operator()( void* dest,				const xRegister16& from, u8 shiftcnt ) const	{ m_16::Emit( dest, from, shiftcnt ); }
+	__noinline void operator()( const ModSibBase& sibdest,	const xRegister16& from, u8 shiftcnt ) const	{ m_16::Emit( sibdest, shiftcnt ); }
 
 	DwordShiftImplAll() {}		// Why does GCC need these?
 };

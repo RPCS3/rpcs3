@@ -25,7 +25,7 @@ template< u16 OpcodeBase1, u8 Modcode >
 class SimdImpl_ShiftWithoutQ
 {
 protected:
-	template< u16 Opcode1, u16 OpcodeImm, u8 Modcode >
+	template< u16 Opcode1, u16 OpcodeImm >
 	class ShiftHelper
 	{
 	public:
@@ -50,17 +50,17 @@ protected:
 		}
 
 		template< typename OperandType >
-		__emitinline void operator()( const xRegisterSIMD<OperandType>& to, u8 imm ) const
+		__emitinline void operator()( const xRegisterSIMD<OperandType>& to, u8 imm8 ) const
 		{
 			SimdPrefix( (sizeof( OperandType ) == 16) ? 0x66 : 0, OpcodeImm );
 			ModRM( 3, (int)Modcode, to.Id );
-			xWrite<u8>( imm );
+			xWrite<u8>( imm8 );
 		}
 	};
 
 public:
-	const ShiftHelper<OpcodeBase1+1,0x71,Modcode> W;
-	const ShiftHelper<OpcodeBase1+2,0x72,Modcode> D;
+	const ShiftHelper<OpcodeBase1+1,0x71> W;
+	const ShiftHelper<OpcodeBase1+2,0x72> D;
 
 	SimdImpl_ShiftWithoutQ() {}
 };
@@ -72,7 +72,7 @@ template< u16 OpcodeBase1, u8 Modcode >
 class SimdImpl_Shift : public SimdImpl_ShiftWithoutQ<OpcodeBase1, Modcode>
 {
 public:
-	const ShiftHelper<OpcodeBase1+3,0x73,Modcode> Q;
+	const ShiftHelper<OpcodeBase1+3,0x73> Q;
 	
 	void DQ( const xRegisterSSE& to, u8 imm ) const
 	{
