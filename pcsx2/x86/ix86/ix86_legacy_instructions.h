@@ -1351,7 +1351,6 @@ extern void SSE3_MOVSHDUP_M128_to_XMM(x86SSERegType to, uptr from);
 extern void SSSE3_PABSB_XMM_to_XMM(x86SSERegType to, x86SSERegType from);
 extern void SSSE3_PABSW_XMM_to_XMM(x86SSERegType to, x86SSERegType from);
 extern void SSSE3_PABSD_XMM_to_XMM(x86SSERegType to, x86SSERegType from);
-extern void SSSE3_PALIGNR_XMM_to_XMM(x86SSERegType to, x86SSERegType from, u8 imm8);
 
 // SSE4.1
 

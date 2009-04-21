@@ -697,7 +697,11 @@ namespace x86Emitter
 		template< typename T > bool Is8BitOp() { return sizeof(T) == 1; }
 		template< typename T > void prefix16() { if( sizeof(T) == 2 ) xWrite<u8>( 0x66 ); }
 
-		#include "implement/xmm/movqss.h"
+		#include "implement/xmm/basehelpers.h"
+		#include "implement/xmm/moremovs.h"
+		#include "implement/xmm/arithmetic.h"
+		#include "implement/xmm/comparisons.h"
+		#include "implement/xmm/shufflepack.h"
 		#include "implement/group1.h"
 		#include "implement/group2.h"
 		#include "implement/group3.h"

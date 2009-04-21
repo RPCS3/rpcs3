@@ -641,18 +641,25 @@ __emitinline void xBSWAP( const xRegister32& to )
 // MMX / XMM Instructions
 // (these will get put in their own file later)
 
-// If the upper 8 bits of opcode are zero, the opcode is treated as a u8.
-// The upper bits are non-zero, the opcode is assumed 16 bit (and the upper bits are checked aginst
-// 0x38, which is the only valid high word for 16 bit opcodes as such)
+// ------------------------------------------------------------------------
+// SimdPrefix - If the lower byte of the opcode is 0x38 or 0x3a, then the opcode is
+// treated as a 16 bit value (in SSE 0x38 and 0x3a denote prefixes for extended SSE3/4
+// instructions).  Any other lower value assumes the upper value is 0 and ignored.
+// Non-zero upper bytes, when the lower byte is not the 0x38 or 0x3a prefix, will
+// generate an assertion.
+//
 __emitinline void Internal::SimdPrefix( u8 prefix, u16 opcode )
 {
+	const bool is16BitOpcode = ((opcode & 0xff) == 0x38) || ((opcode & 0xff) == 0x3a);
+
+	// If the lower byte is not a valid previx and the upper byte is non-zero it
+	// means we made a mistake!
+	if( !is16BitOpcode ) jASSUME( (opcode >> 8) == 0 );
+
 	if( prefix != 0 )
 	{
-		if( (opcode & 0xff00) != 0 )
-		{
-			jASSUME( (opcode & 0xff00) == 0x3800 );
-			xWrite<u32>( (opcode<<16) | (0x0f00 | prefix) );
-		}
+		if( is16BitOpcode )
+			xWrite<u32>( (opcode<<16) | 0x0f00 | prefix );
 		else
 		{
 			xWrite<u16>( 0x0f00 | prefix );
@@ -661,15 +668,20 @@ __emitinline void Internal::SimdPrefix( u8 prefix, u16 opcode )
 	}
 	else
 	{
-		if( (opcode & 0xff00) != 0 )
+		if( is16BitOpcode )
 		{
-			jASSUME( (opcode & 0xff00) == 0x3800 );
+			xWrite<u8>( 0x0f );
 			xWrite<u16>( opcode );
 		}
 		else
 			xWrite<u16>( (opcode<<8) | 0x0f );
 	}
 }
+
+// [SSE-3]
+const SimdImpl_DestRegSSE<0xf3,0x12> xMOVSLDUP;
+// [SSE-3]
+const SimdImpl_DestRegSSE<0xf3,0x16> xMOVSHDUP;
 
 const MovapsImplAll< 0, 0x28, 0x29 > xMOVAPS; 
 const MovapsImplAll< 0, 0x10, 0x11 > xMOVUPS;
@@ -689,20 +701,20 @@ const MovhlImplAll<0x12> xMOVL;
 const MovhlImpl_RtoR<0x16> xMOVLH;
 const MovhlImpl_RtoR<0x12> xMOVHL;
 
-const SimdImpl_PackedLogic<0xdb> xPAND;
-const SimdImpl_PackedLogic<0xdf> xPANDN;
-const SimdImpl_PackedLogic<0xeb> xPOR;
-const SimdImpl_PackedLogic<0xef> xPXOR;
+const SimdImpl_DestRegEither<0x66,0xdb> xPAND;
+const SimdImpl_DestRegEither<0x66,0xdf> xPANDN;
+const SimdImpl_DestRegEither<0x66,0xeb> xPOR;
+const SimdImpl_DestRegEither<0x66,0xef> xPXOR;
 
-const SimdImpl_AndNot<0x55> xANDN;
+const SimdImpl_AndNot xANDN;
 
-const SimdImpl_SS_SD<0x66,0x2e> xUCOMI;
+const SimdImpl_UcomI<0x66,0x2e> xUCOMI;
 const SimdImpl_rSqrt<0x53> xRCP;
 const SimdImpl_rSqrt<0x52> xRSQRT;
 const SimdImpl_Sqrt<0x51> xSQRT;
 
-const SimdImpl_PSPD_SSSD<0x5f> xMAX;
-const SimdImpl_PSPD_SSSD<0x5d> xMIN;
+const SimdImpl_MinMax<0x5f> xMAX;
+const SimdImpl_MinMax<0x5d> xMIN;
 const SimdImpl_Shuffle<0xc6> xSHUF;
 
 // ------------------------------------------------------------------------
@@ -754,8 +766,8 @@ const SimdImpl_DestRegStrict<0xf3,0x2c,xRegister32, xRegisterSSE,u32>		xCVTTSS2S
 
 // ------------------------------------------------------------------------
 
-const SimdImpl_ShiftAll<0xd0, 2> xPSRL;
-const SimdImpl_ShiftAll<0xf0, 6> xPSLL;
+const SimdImpl_Shift<0xd0, 2> xPSRL;
+const SimdImpl_Shift<0xf0, 6> xPSLL;
 const SimdImpl_ShiftWithoutQ<0xe0, 4> xPSRA;
 
 const SimdImpl_AddSub<0xdc, 0xd4> xPADD;
@@ -770,9 +782,28 @@ const SimdImpl_PUnpack xPUNPCK;
 const SimdImpl_Unpack xUNPCK;
 const SimdImpl_Pack xPACK;
 
+const SimdImpl_PAbsolute xPABS;
+const SimdImpl_PSign xPSIGN;
+const SimdImpl_PInsert xPINS;
+const SimdImpl_PExtract xPEXTR;
+
 
 //////////////////////////////////////////////////////////////////////////////////////////
 //
+
+// Store Streaming SIMD Extension Control/Status to Mem32.
+__emitinline void xSTMXCSR( u32* dest )
+{
+	SimdPrefix( 0, 0xae );
+	xWriteDisp( 3, dest );
+}
+
+// Load Streaming SIMD Extension Control/Status from Mem32.
+__emitinline void xLDMXCSR( const u32* src )
+{
+	SimdPrefix( 0, 0xae );
+	xWriteDisp( 2, src );
+}
 
 
 // Moves from XMM to XMM, with the *upper 64 bits* of the destination register
@@ -850,6 +881,9 @@ __noinline void xMOVNTPS( const ModSibBase& to, const xRegisterSSE& from )	{ wri
 
 __forceinline void xMOVNTQ( void* to, const xRegisterMMX& from )			{ writeXMMop( 0xe7, from, to ); }
 __noinline void xMOVNTQ( const ModSibBase& to, const xRegisterMMX& from )	{ writeXMMop( 0xe7, from, to ); }
+
+__forceinline void xMOVMSKPS( const xRegister32& to, xRegisterSSE& from)	{ writeXMMop( 0x50, to, from ); }
+__forceinline void xMOVMSKPD( const xRegister32& to, xRegisterSSE& from)	{ writeXMMop( 0x66, 0x50, to, from, true ); }
 
 
 }

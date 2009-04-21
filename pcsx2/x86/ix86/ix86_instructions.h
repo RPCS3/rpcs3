@@ -370,8 +370,23 @@ namespace x86Emitter
 	template< typename T >
 	static __forceinline void xPMOVMSKB( const xRegister32& to, const xRegisterSIMD<T>& from )	{ Internal::writeXMMop( 0x66, 0xd7, to, from ); }
 	
+	// [sSSE-3] Concatenates dest and source operands into an intermediate composite,
+	// shifts the composite at byte granularity to the right by a constant immediate,
+	// and extracts the right-aligned result into the destination.
+	//
+	template< typename T >
+	static __forceinline void xPALIGNR( const xRegisterSIMD<T>& to, const xRegisterSIMD<T>& from, u8 imm8 )
+	{
+		Internal::writeXMMop( 0x66, 0x0f3a, to, from );
+		xWrite<u8>( imm8 );
+	}
+
+
 	// ------------------------------------------------------------------------
-	
+
+	extern void xSTMXCSR( u32* dest );
+	extern void xLDMXCSR( const u32* src );
+
 	extern void xMOVQ( const xRegisterMMX& to, const xRegisterMMX& from );
 	extern void xMOVQ( const xRegisterMMX& to, const xRegisterSSE& from );
 	extern void xMOVQ( const xRegisterSSE& to, const xRegisterMMX& from );
@@ -411,7 +426,13 @@ namespace x86Emitter
 	extern void xMOVNTQ( void* to, const xRegisterMMX& from );
 	extern void xMOVNTQ( const ModSibBase& to, const xRegisterMMX& from );
 
+	extern void xMOVMSKPS( const xRegister32& to, xRegisterSSE& from );
+	extern void xMOVMSKPD( const xRegister32& to, xRegisterSSE& from );
+
 	// ------------------------------------------------------------------------
+
+	extern const Internal::SimdImpl_DestRegSSE<0xf3,0x12> xMOVSLDUP;
+	extern const Internal::SimdImpl_DestRegSSE<0xf3,0x16> xMOVSHDUP;
 
 	extern const Internal::MovapsImplAll<0, 0x28, 0x29> xMOVAPS;
 	extern const Internal::MovapsImplAll<0, 0x10, 0x11> xMOVUPS;
@@ -435,29 +456,29 @@ namespace x86Emitter
 
 	// ------------------------------------------------------------------------
 	
-	extern const Internal::SimdImpl_PackedLogic<0xdb> xPAND;
-	extern const Internal::SimdImpl_PackedLogic<0xdf> xPANDN;
-	extern const Internal::SimdImpl_PackedLogic<0xeb> xPOR;
-	extern const Internal::SimdImpl_PackedLogic<0xef> xPXOR;
+	extern const Internal::SimdImpl_DestRegEither<0x66,0xdb> xPAND;
+	extern const Internal::SimdImpl_DestRegEither<0x66,0xdf> xPANDN;
+	extern const Internal::SimdImpl_DestRegEither<0x66,0xeb> xPOR;
+	extern const Internal::SimdImpl_DestRegEither<0x66,0xef> xPXOR;
 
-	extern const Internal::SimdImpl_AndNot<0x55> xANDN;
+	extern const Internal::SimdImpl_AndNot xANDN;
 
-	extern const Internal::SimdImpl_SS_SD<0x66,0x2e> xUCOMI;
+	extern const Internal::SimdImpl_UcomI<0x66,0x2e> xUCOMI;
 	extern const Internal::SimdImpl_rSqrt<0x53> xRCP;
 	extern const Internal::SimdImpl_rSqrt<0x52> xRSQRT;
 	extern const Internal::SimdImpl_Sqrt<0x51> xSQRT;
 	
-	extern const Internal::SimdImpl_PSPD_SSSD<0x5f> xMAX;
-	extern const Internal::SimdImpl_PSPD_SSSD<0x5d> xMIN;
+	extern const Internal::SimdImpl_MinMax<0x5f> xMAX;
+	extern const Internal::SimdImpl_MinMax<0x5d> xMIN;
 	extern const Internal::SimdImpl_Shuffle<0xc6> xSHUF;
 
 	// ------------------------------------------------------------------------
 	
-	extern const Internal::SimdImpl_Compare<SSE2_Equal>		xCMPEQ;
-	extern const Internal::SimdImpl_Compare<SSE2_Less>		xCMPLT;
+	extern const Internal::SimdImpl_Compare<SSE2_Equal>			xCMPEQ;
+	extern const Internal::SimdImpl_Compare<SSE2_Less>			xCMPLT;
 	extern const Internal::SimdImpl_Compare<SSE2_LessOrEqual>	xCMPLE;
-	extern const Internal::SimdImpl_Compare<SSE2_Unordered>	xCMPUNORD;
-	extern const Internal::SimdImpl_Compare<SSE2_NotEqual>	xCMPNE;
+	extern const Internal::SimdImpl_Compare<SSE2_Unordered>		xCMPUNORD;
+	extern const Internal::SimdImpl_Compare<SSE2_NotEqual>		xCMPNE;
 	extern const Internal::SimdImpl_Compare<SSE2_NotLess>		xCMPNLT;
 	extern const Internal::SimdImpl_Compare<SSE2_NotLessOrEqual> xCMPNLE;
 	extern const Internal::SimdImpl_Compare<SSE2_Ordered>		xCMPORD;
@@ -497,8 +518,8 @@ namespace x86Emitter
 	
 	// ------------------------------------------------------------------------
 	
-	extern const Internal::SimdImpl_ShiftAll<0xd0, 2> xPSRL;
-	extern const Internal::SimdImpl_ShiftAll<0xf0, 6> xPSLL;
+	extern const Internal::SimdImpl_Shift<0xd0, 2> xPSRL;
+	extern const Internal::SimdImpl_Shift<0xf0, 6> xPSLL;
 	extern const Internal::SimdImpl_ShiftWithoutQ<0xe0, 4> xPSRA;
 
 	extern const Internal::SimdImpl_AddSub<0xdc, 0xd4> xPADD;
@@ -512,5 +533,11 @@ namespace x86Emitter
 	extern const Internal::SimdImpl_PUnpack xPUNPCK;
 	extern const Internal::SimdImpl_Unpack xUNPCK;
 	extern const Internal::SimdImpl_Pack xPACK;
+	
+	extern const Internal::SimdImpl_PAbsolute xPABS;
+	extern const Internal::SimdImpl_PSign xPSIGN;
+	extern const Internal::SimdImpl_PInsert xPINS;
+	extern const Internal::SimdImpl_PExtract xPEXTR;
+
 }
 
