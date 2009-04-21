@@ -80,3 +80,14 @@ public:
 	const SimdImpl_DestRegSSE<AltPrefix,OpcodeSSE> SD;
 	SimdImpl_UcomI() {}
 };
+
+//////////////////////////////////////////////////////////////////////////////////////////
+//
+class SimdImpl_Blend
+{
+	SimdImpl_DestRegImmSSE<0x66,0x0c3a> PS;
+	SimdImpl_DestRegImmSSE<0x66,0x0d3a> PD;
+	
+	SimdImpl_DestRegImmSSE<0x66,0x1438> VPS;
+	SimdImpl_DestRegImmSSE<0x66,0x1538> VPD;
+};

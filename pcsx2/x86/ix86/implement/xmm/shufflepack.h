@@ -169,7 +169,7 @@ public:
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////
-// PINSW/B/D [all but Word form are SSE4.1 only!]
+// PINSRW/B/D [all but Word form are SSE4.1 only!]
 //
 class SimdImpl_PInsert
 {
@@ -183,19 +183,19 @@ protected:
 		__forceinline void operator()( const xRegisterSSE& to, const xRegister32& from, u8 imm8 ) const
 		{
 			writeXMMop( 0x66, (Opcode<<8) | 0x3a, to, from );
-			xWrite<u8>( imm );
+			xWrite<u8>( imm8 );
 		}
 
 		__forceinline void operator()( const xRegisterSSE& to, const void* from, u8 imm8 ) const
 		{
 			writeXMMop( 0x66, (Opcode<<8) | 0x3a, to, from );
-			xWrite<u8>( imm );
+			xWrite<u8>( imm8 );
 		}
 
 		__noinline void operator()( const xRegisterSSE& to, const ModSibBase& from, u8 imm8 ) const
 		{
 			writeXMMop( 0x66, (Opcode<<8) | 0x3a, to, from );
-			xWrite<u8>( imm );
+			xWrite<u8>( imm8 );
 		}
 	};
 	
@@ -256,13 +256,13 @@ protected:
 
 		__forceinline void operator()( void* dest, const xRegisterSSE& from, u8 imm8 ) const
 		{
-			writeXMMop( 0x66, (Opcode<<8) | 0x3a, to, from );
+			writeXMMop( 0x66, (Opcode<<8) | 0x3a, from, dest );
 			xWrite<u8>( imm8 );
 		}
 
 		__noinline void operator()( const ModSibBase& dest, const xRegisterSSE& from, u8 imm8 ) const
 		{
-			writeXMMop( 0x66, (Opcode<<8) | 0x3a, to, from );
+			writeXMMop( 0x66, (Opcode<<8) | 0x3a, from, dest );
 			xWrite<u8>( imm8 );
 		}
 	};
@@ -304,3 +304,4 @@ public:
 	// used to extract any single packed dword value from src into an x86 32 bit register.
 	const ByteDwordForms<0x16> D;
 };
+

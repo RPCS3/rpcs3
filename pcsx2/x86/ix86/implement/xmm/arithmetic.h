@@ -19,48 +19,51 @@
 #pragma once
 
 //////////////////////////////////////////////////////////////////////////////////////////
+// ShiftHelper -- It's out here because C++ child class template semantics are generally
+// not cross-compiler friendly.
+//
+template< u16 Opcode1, u16 OpcodeImm, u8 Modcode >
+class _SimdShiftHelper
+{
+public:
+	_SimdShiftHelper() {}
+
+	template< typename OperandType >
+	__forceinline void operator()( const xRegisterSIMD<OperandType>& to, const xRegisterSIMD<OperandType>& from ) const
+	{
+		writeXMMop( 0x66, Opcode1, to, from );
+	}
+
+	template< typename OperandType >
+	__forceinline void operator()( const xRegisterSIMD<OperandType>& to, const void* from ) const
+	{
+		writeXMMop( 0x66, Opcode1, to, from );
+	}
+
+	template< typename OperandType >
+	__noinline void operator()( const xRegisterSIMD<OperandType>& to, const ModSibBase& from ) const
+	{
+		writeXMMop( 0x66, Opcode1, to, from );
+	}
+
+	template< typename OperandType >
+	__emitinline void operator()( const xRegisterSIMD<OperandType>& to, u8 imm8 ) const
+	{
+		SimdPrefix( (sizeof( OperandType ) == 16) ? 0x66 : 0, OpcodeImm );
+		ModRM( 3, (int)Modcode, to.Id );
+		xWrite<u8>( imm8 );
+	}
+};
+
+//////////////////////////////////////////////////////////////////////////////////////////
 // Used for PSRA, which lacks the Q form.
 //
 template< u16 OpcodeBase1, u8 Modcode >
 class SimdImpl_ShiftWithoutQ
 {
-protected:
-	template< u16 Opcode1, u16 OpcodeImm >
-	class ShiftHelper
-	{
-	public:
-		ShiftHelper() {}
-
-		template< typename OperandType >
-		__forceinline void operator()( const xRegisterSIMD<OperandType>& to, const xRegisterSIMD<OperandType>& from ) const
-		{
-			writeXMMop( 0x66, Opcode1, to, from );
-		}
-
-		template< typename OperandType >
-		__forceinline void operator()( const xRegisterSIMD<OperandType>& to, const void* from ) const
-		{
-			writeXMMop( 0x66, Opcode1, to, from );
-		}
-
-		template< typename OperandType >
-		__noinline void operator()( const xRegisterSIMD<OperandType>& to, const ModSibBase& from ) const
-		{
-			writeXMMop( 0x66, Opcode1, to, from );
-		}
-
-		template< typename OperandType >
-		__emitinline void operator()( const xRegisterSIMD<OperandType>& to, u8 imm8 ) const
-		{
-			SimdPrefix( (sizeof( OperandType ) == 16) ? 0x66 : 0, OpcodeImm );
-			ModRM( 3, (int)Modcode, to.Id );
-			xWrite<u8>( imm8 );
-		}
-	};
-
 public:
-	const ShiftHelper<OpcodeBase1+1,0x71> W;
-	const ShiftHelper<OpcodeBase1+2,0x72> D;
+	const _SimdShiftHelper<OpcodeBase1+1,0x71,Modcode> W;
+	const _SimdShiftHelper<OpcodeBase1+2,0x72,Modcode> D;
 
 	SimdImpl_ShiftWithoutQ() {}
 };
@@ -72,7 +75,7 @@ template< u16 OpcodeBase1, u8 Modcode >
 class SimdImpl_Shift : public SimdImpl_ShiftWithoutQ<OpcodeBase1, Modcode>
 {
 public:
-	const ShiftHelper<OpcodeBase1+3,0x73> Q;
+	const _SimdShiftHelper<OpcodeBase1+3,0x73,Modcode> Q;
 	
 	void DQ( const xRegisterSSE& to, u8 imm ) const
 	{
@@ -227,4 +230,64 @@ public:
 	// dest is set to zero.
 	const SimdImpl_DestRegEither<0x66, 0x0a38> D;
 
+};
+
+//////////////////////////////////////////////////////////////////////////////////////////
+// Packed Multiply and Add!!
+//
+class SimdImpl_PMultAdd
+{
+public:
+	SimdImpl_PMultAdd() {}
+
+	// Multiplies the individual signed words of dest by the corresponding signed words
+	// of src, producing temporary signed, doubleword results. The adjacent doubleword
+	// results are then summed and stored in the destination operand.
+	//
+	//   DEST[31:0]  = ( DEST[15:0]  * SRC[15:0])  + (DEST[31:16] * SRC[31:16] );
+	//   DEST[63:32] = ( DEST[47:32] * SRC[47:32]) + (DEST[63:48] * SRC[63:48] );
+	//   [.. repeat in the case of XMM src/dest operands ..]
+	//
+	const SimdImpl_DestRegEither<0x66, 0xf5> WD;
+
+	// [sSSE-3] multiplies vertically each unsigned byte of dest with the corresponding
+	// signed byte of src, producing intermediate signed 16-bit integers. Each adjacent
+	// pair of signed words is added and the saturated result is packed to dest.
+	// For example, the lowest-order bytes (bits 7-0) in src and dest are multiplied
+	// and the intermediate signed word result is added with the corresponding
+	// intermediate result from the 2nd lowest-order bytes (bits 15-8) of the operands;
+	// the sign-saturated result is stored in the lowest word of dest (bits 15-0).
+	// The same operation is performed on the other pairs of adjacent bytes.
+	//
+	// In Coder Speak:
+	//   DEST[15-0]  = SaturateToSignedWord( SRC[15-8]  * DEST[15-8]  + SRC[7-0]   * DEST[7-0]   );
+	//   DEST[31-16] = SaturateToSignedWord( SRC[31-24] * DEST[31-24] + SRC[23-16] * DEST[23-16] );
+	//   [.. repeat for each 16 bits up to 64 (mmx) or 128 (xmm) ..]
+	//
+	const SimdImpl_DestRegEither<0x66, 0xf438> UBSW;
+};
+
+//////////////////////////////////////////////////////////////////////////////////////////
+// Packed Horizontal Add [SSE3 only]
+//
+class SimdImpl_HorizAdd
+{
+public:
+	SimdImpl_HorizAdd() {}
+	
+	// [SSE-3] Horizontal Add of Packed Data.  A three step process:
+	// * Adds the single-precision floating-point values in the first and second dwords of
+	//   dest and stores the result in the first dword of dest.
+	// * Adds single-precision floating-point values in the third and fourth dword of dest
+	//   stores the result in the second dword of dest.
+	// * Adds single-precision floating-point values in the first and second dword of *src*
+	//   and stores the result in the third dword of dest.
+	const SimdImpl_DestRegSSE<0xf2, 0x7c> PS;
+	
+	// [SSE-3] Horizontal Add of Packed Data.  A two step process:
+	// * Adds the double-precision floating-point values in the high and low quadwords of
+	//   dest and stores the result in the low quadword of dest.
+	// * Adds the double-precision floating-point values in the high and low quadwords of
+	//   *src* stores the result in the high quadword of dest.
+	const SimdImpl_DestRegSSE<0x66, 0x7c> PD;
 };

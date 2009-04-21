@@ -119,19 +119,6 @@ emitterT void PMULUDQRtoR( x86MMXRegType to, x86MMXRegType from )			{ xPMUL.UDQ(
 emitterT void PSHUFWRtoR(x86MMXRegType to, x86MMXRegType from, u8 imm8)		{ xPSHUF.W( xRegisterMMX(to), xRegisterMMX(from), imm8 ); }
 emitterT void PSHUFWMtoR(x86MMXRegType to, uptr from, u8 imm8)				{ xPSHUF.W( xRegisterMMX(to), (void*)from, imm8 ); }
 
-//////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////
+emitterT void PINSRWRtoMMX( x86MMXRegType to, x86SSERegType from, u8 imm8 ) { xPINSR.W( xRegisterMMX(to), xRegister32(from), imm8 ); }
 
-/* emms */
-emitterT void EMMS() 
-{
-	write16( 0x770F );
-}
-
-emitterT void PINSRWRtoMMX( x86MMXRegType to, x86SSERegType from, u8 imm8 )
-{
-	if (to > 7 || from > 7) Rex(1, to >> 3, 0, from >> 3);
-	write16( 0xc40f );
-	ModRM( 3, to, from );
-	write8( imm8 );
-}
+emitterT void EMMS() { xEMMS(); }

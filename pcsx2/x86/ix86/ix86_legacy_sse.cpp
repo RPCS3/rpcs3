@@ -278,7 +278,10 @@ emitterT void SSSE3_PSIGNW_XMM_to_XMM(x86SSERegType to, x86SSERegType from)		{ x
 emitterT void SSSE3_PSIGND_XMM_to_XMM(x86SSERegType to, x86SSERegType from)		{ xPSIGN.D( xRegisterSSE(to), xRegisterSSE(from) ); }
 
 emitterT void SSE_PEXTRW_XMM_to_R32(x86IntRegType to, x86SSERegType from, u8 imm8 )	{ xPEXTR.W( xRegister32(to), xRegisterSSE(from), imm8 ); }
-emitterT void SSE_PINSRW_R32_to_XMM(x86SSERegType to, x86IntRegType from, u8 imm8 )	{ xPINS.W( xRegisterSSE(to), xRegister32(from), imm8 ); }
+emitterT void SSE_PINSRW_R32_to_XMM(x86SSERegType to, x86IntRegType from, u8 imm8 )	{ xPINSR.W( xRegisterSSE(to), xRegister32(from), imm8 ); }
+
+emitterT void SSE4_INSERTPS_XMM_to_XMM(x86SSERegType to, x86SSERegType from, u8 imm8)		{ xINSERTPS( xRegisterSSE(to), xRegisterSSE(from), imm8 ); }
+emitterT void SSE4_EXTRACTPS_XMM_to_R32(x86IntRegType to, x86SSERegType from, u8 imm8)		{ xEXTRACTPS( xRegister32(to), xRegisterSSE(from), imm8 ); }
 
 emitterT void SSE_LDMXCSR( uptr from ) { xLDMXCSR( (u32*)from ); }
 
@@ -290,10 +293,10 @@ emitterT void SSE_LDMXCSR( uptr from ) { xLDMXCSR( (u32*)from ); }
 //PEXTRW,PINSRW: Packed Extract/Insert Word                                        *
 //**********************************************************************************}
 
-emitterT void SSE2_PMADDWD_XMM_to_XMM(x86SSERegType to, x86SSERegType from)	{ SSERtoR66(0xF50F); }
+emitterT void SSE2_PMADDWD_XMM_to_XMM(x86SSERegType to, x86SSERegType from)			{ xPMADD.WD( xRegisterSSE(from), xRegisterSSE(to) ); }
 
-emitterT void SSE3_HADDPS_XMM_to_XMM(x86SSERegType to, x86SSERegType from)		{ write8(0xf2); SSERtoR( 0x7c0f ); }
-emitterT void SSE3_HADDPS_M128_to_XMM(x86SSERegType to, uptr from)				{ write8(0xf2); SSEMtoR( 0x7c0f, 0 ); }
+emitterT void SSE3_HADDPS_XMM_to_XMM(x86SSERegType to, x86SSERegType from)			{ xHADD.PS( xRegisterSSE(from), xRegisterSSE(to) ); }
+emitterT void SSE3_HADDPS_M128_to_XMM(x86SSERegType to, uptr from)					{ xHADD.PS( xRegisterSSE(from), (void*)to ); }
 
 
 // SSE4.1
@@ -312,24 +315,6 @@ emitterT void SSE4_DPPS_M128_to_XMM(x86SSERegType to, uptr from, u8 imm8)
 	write24(0x403A0F);
 	ModRM(0, to, DISP32);
 	write32(MEMADDR(from, 4));
-	write8(imm8);
-}
-
-emitterT void SSE4_INSERTPS_XMM_to_XMM(x86SSERegType to, x86SSERegType from, u8 imm8)
-{
-	write8(0x66);
-    RexRB(0, to, from);
-	write24(0x213A0F);
-	ModRM(3, to, from);
-	write8(imm8);
-}
-
-emitterT void SSE4_EXTRACTPS_XMM_to_R32(x86IntRegType to, x86SSERegType from, u8 imm8)
-{
-	write8(0x66);
-    RexRB(0, to, from);
-	write24(0x173A0F);
-	ModRM(3, to, from);
 	write8(imm8);
 }
 

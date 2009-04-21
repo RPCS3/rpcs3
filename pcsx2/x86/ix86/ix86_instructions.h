@@ -384,6 +384,7 @@ namespace x86Emitter
 
 	// ------------------------------------------------------------------------
 
+	extern void xEMMS();
 	extern void xSTMXCSR( u32* dest );
 	extern void xLDMXCSR( const u32* src );
 
@@ -428,6 +429,14 @@ namespace x86Emitter
 
 	extern void xMOVMSKPS( const xRegister32& to, xRegisterSSE& from );
 	extern void xMOVMSKPD( const xRegister32& to, xRegisterSSE& from );
+
+	extern void xINSERTPS( const xRegisterSSE& to, const xRegisterSSE& from, u8 imm8 );
+	extern void xINSERTPS( const xRegisterSSE& to, const u32* from, u8 imm8 );
+	extern void xINSERTPS( const xRegisterSSE& to, const ModSibStrict<u32>& from, u8 imm8 );
+
+	extern void xEXTRACTPS( const xRegister32& to, const xRegisterSSE& from, u8 imm8 );
+	extern void xEXTRACTPS( u32* dest, const xRegisterSSE& from, u8 imm8 );
+	extern void xEXTRACTPS( const ModSibStrict<u32>& dest, const xRegisterSSE& from, u8 imm8 );
 
 	// ------------------------------------------------------------------------
 
@@ -536,8 +545,10 @@ namespace x86Emitter
 	
 	extern const Internal::SimdImpl_PAbsolute xPABS;
 	extern const Internal::SimdImpl_PSign xPSIGN;
-	extern const Internal::SimdImpl_PInsert xPINS;
+	extern const Internal::SimdImpl_PInsert xPINSR;
 	extern const Internal::SimdImpl_PExtract xPEXTR;
+	extern const Internal::SimdImpl_PMultAdd xPMADD;
+	extern const Internal::SimdImpl_HorizAdd xHADD;
 
 }
 

@@ -784,12 +784,19 @@ const SimdImpl_Pack xPACK;
 
 const SimdImpl_PAbsolute xPABS;
 const SimdImpl_PSign xPSIGN;
-const SimdImpl_PInsert xPINS;
+const SimdImpl_PInsert xPINSR;
 const SimdImpl_PExtract xPEXTR;
+const SimdImpl_PMultAdd xPMADD;
+const SimdImpl_HorizAdd xHADD;
 
 
 //////////////////////////////////////////////////////////////////////////////////////////
 //
+
+__emitinline void xEMMS()
+{
+	xWrite<u16>( 0x770F );
+}
 
 // Store Streaming SIMD Extension Control/Status to Mem32.
 __emitinline void xSTMXCSR( u32* dest )
@@ -884,6 +891,65 @@ __noinline void xMOVNTQ( const ModSibBase& to, const xRegisterMMX& from )	{ writ
 
 __forceinline void xMOVMSKPS( const xRegister32& to, xRegisterSSE& from)	{ writeXMMop( 0x50, to, from ); }
 __forceinline void xMOVMSKPD( const xRegister32& to, xRegisterSSE& from)	{ writeXMMop( 0x66, 0x50, to, from, true ); }
+
+//////////////////////////////////////////////////////////////////////////////////////////
+// INSERTPS / EXTRACTPS   [SSE4.1 only!]
+//
+// [TODO] these might be served better as classes, especially if other instructions use
+// the M32,sse,imm form (I forget offhand if any do).
+
+
+// [SSE-4.1] Insert a single-precision floating-point value from src into a specified
+// location in dest, and selectively zero out the data elements in dest according to
+// the mask  field in the immediate byte. The source operand can be a memory location
+// (32 bits) or an XMM register (lower 32 bits used).
+//
+// Imm8 provides three fields:
+//  * COUNT_S: The value of Imm8[7:6] selects the dword element from src.  It is 0 if
+//    the source is a memory operand.
+//  * COUNT_D: The value of Imm8[5:4] selects the target dword element in dest.
+//  * ZMASK: Each bit of Imm8[3:0] selects a dword element in dest to  be written
+//    with 0.0 if set to 1.
+//
+__emitinline void xINSERTPS( const xRegisterSSE& to, const xRegisterSSE& from, u8 imm8 )
+{
+	writeXMMop( 0x66, 0x213a, to, from );
+	xWrite<u8>( imm8 );
+}
+
+__emitinline void xINSERTPS( const xRegisterSSE& to, const u32* from, u8 imm8 )
+{
+	writeXMMop( 0x66, 0x213a, to, from );
+	xWrite<u8>( imm8 );
+}
+
+__emitinline void xINSERTPS( const xRegisterSSE& to, const ModSibStrict<u32>& from, u8 imm8 )
+{
+	writeXMMop( 0x66, 0x213a, to, from );
+	xWrite<u8>( imm8 );
+}
+
+// [SSE-4.1] Extract a single-precision floating-point value from src at an offset
+// determined by imm8[1-0]*32. The extracted single precision floating-point value
+// is stored into the low 32-bits of dest (or at a 32-bit memory pointer).
+//
+__emitinline void xEXTRACTPS( const xRegister32& to, const xRegisterSSE& from, u8 imm8 )
+{
+	writeXMMop( 0x66, 0x173a, to, from, true );
+	xWrite<u8>( imm8 );
+}
+
+__emitinline void xEXTRACTPS( u32* dest, const xRegisterSSE& from, u8 imm8 )
+{
+	writeXMMop( 0x66, 0x173a, from, dest, true );
+	xWrite<u8>( imm8 );
+}
+
+__emitinline void xEXTRACTPS( const ModSibStrict<u32>& dest, const xRegisterSSE& from, u8 imm8 )
+{
+	writeXMMop( 0x66, 0x173a, from, dest, true );
+	xWrite<u8>( imm8 );
+}
 
 
 }
