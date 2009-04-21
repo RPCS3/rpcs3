@@ -82,11 +82,11 @@ void cpuReset()
 	g_nextBranchCycle = cpuRegs.cycle + 4;
 	EEsCycle = 0;
 	EEoCycle = cpuRegs.cycle;
-	eeWaitCycles = CHECK_WAITCYCLE_HACK ? 3072 : 768;
+	eeWaitCycles = Config.Hacks.WaitCycleExt ? 3072 : 768;
 
 	// Cyclerate hacks effectively speed up the rate of event tests, so we can safely boost
 	// the WaitCycles value here for x2 and x3 modes:
-	if( CHECK_EE_CYCLERATE > 1 )
+	if( Config.Hacks.EECycleRate > 1 )
 		eeWaitCycles += 1024;
 
 	hwReset();

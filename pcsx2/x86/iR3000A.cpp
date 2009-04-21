@@ -800,7 +800,7 @@ void psxSetBranchImm( u32 imm )
 
 static __forceinline u32 psxScaleBlockCycles()
 {
-	return s_psxBlockCycles * (CHECK_IOP_CYCLERATE ? 2 : 1);
+	return s_psxBlockCycles * (Config.Hacks.IOPCycleDouble ? 2 : 1);
 }
 
 static void iPsxBranchTest(u32 newpc, u32 cpuBranch)

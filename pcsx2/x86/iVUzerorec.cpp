@@ -2297,8 +2297,10 @@ void SuperVUCleanupProgram(u32 startpc, int vuindex)
 	VU->cycle += s_TotalVUCycles;
 	
 	//VU cycle stealing hack, 3000 cycle maximum so it doesn't get out of hand
-	if (s_TotalVUCycles < 3000) cpuRegs.cycle += s_TotalVUCycles * Config.VUCycleHack;
-	else						cpuRegs.cycle += 3000 * Config.VUCycleHack;
+	if (s_TotalVUCycles < 3000)
+		cpuRegs.cycle += s_TotalVUCycles * Config.Hacks.VUCycleSteal;
+	else
+		cpuRegs.cycle += 3000 * Config.Hacks.VUCycleSteal;
 
 	if( (int)s_writeQ > 0 ) VU->VI[REG_Q] = VU->q;
 	if( (int)s_writeP > 0 ) {

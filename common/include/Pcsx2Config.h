@@ -58,12 +58,6 @@ extern SessionOverrideFlags g_Session;
 
 #define CHECK_MULTIGS (Config.Options&PCSX2_GSMULTITHREAD)
 #define CHECK_EEREC (!g_Session.ForceDisableEErec && Config.Options&PCSX2_EEREC)
-//------------ SPEED/MISC HACKS!!! ---------------
-#define CHECK_EE_CYCLERATE	 (Config.Hacks & 0x03)
-#define CHECK_IOP_CYCLERATE	 (Config.Hacks & 0x08)
-#define CHECK_WAITCYCLE_HACK (Config.Hacks & 0x10)
-#define CHECK_INTC_STAT_HACK (Config.Hacks & 0x20)
-#define CHECK_ESCAPE_HACK	 (Config.Hacks & 0x400)
 //------------ SPECIAL GAME FIXES!!! ---------------
 #define CHECK_VUADDSUBHACK	 (Config.GameFixes & 0x1) // Special Fix for Tri-ace games, they use an encryption algorithm that requires VU addi opcode to be bit-accurate.
 #define CHECK_FPUCOMPAREHACK (Config.GameFixes & 0x4) // Special Fix for Digimon Rumble Arena 2, fixes spinning/hanging on intro-menu.
@@ -136,8 +130,15 @@ public:
 	int Mdec;
 	int Patch;
 	int CustomFps;
-	int Hacks;
-	int VUCycleHack;
+	struct Hacks_t {
+		int EECycleRate;
+		bool IOPCycleDouble;
+		bool WaitCycleExt;
+		bool INTCSTATSlow;
+		int VUCycleSteal;
+		bool IdleLoopFF;
+		bool ESCExits; // this is a hack!?
+	} Hacks;
 	int GameFixes;
 	int CustomFrameSkip;
 	int CustomConsecutiveFrames;

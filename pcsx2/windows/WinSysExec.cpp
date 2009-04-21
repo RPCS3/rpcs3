@@ -442,7 +442,7 @@ namespace HostGui
 				}
 #endif
 
-				if( CHECK_ESCAPE_HACK )
+				if( Config.Hacks.ESCExits )
 				{
 					g_EmulationInProgress = false;
 					DestroyWindow( gApp.hWnd );

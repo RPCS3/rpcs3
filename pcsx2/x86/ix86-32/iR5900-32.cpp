@@ -48,6 +48,8 @@
 
 #include "NakedAsm.h"
 
+using namespace x86Emitter;
+
 using namespace R5900;
 
 // used to disable register freezing during cpuBranchTests (registers
@@ -92,6 +94,7 @@ static BASEBLOCK* s_pCurBlock = NULL;
 static BASEBLOCKEX* s_pCurBlockEx = NULL;
 static u32 s_nEndBlock = 0; // what pc the current block ends	
 static u32 s_nHasDelay = 0;
+static bool s_nBlockFF;
 
 // save states for branches
 GPR_reg64 s_saveConstRegs[32];
@@ -1071,7 +1074,7 @@ u32 eeScaleBlockCycles()
 	// caused by sync hacks and such, since games seem to care a lot more about
 	// these small blocks having accurate cycle counts.
 
-	if( s_nBlockCycles <= (5<<3) || (CHECK_EE_CYCLERATE == 0) )
+	if( s_nBlockCycles <= (5<<3) || (Config.Hacks.EECycleRate == 0) )
 		return s_nBlockCycles >> 3;
 
 	uint scalarLow, scalarMid, scalarHigh;
@@ -1079,7 +1082,7 @@ u32 eeScaleBlockCycles()
 	// Note: larger blocks get a smaller scalar, to help keep
 	// them from becoming "too fat" and delaying branch tests.
 
-	switch( CHECK_EE_CYCLERATE )
+	switch( Config.Hacks.EECycleRate )
 	{
 		case 0:	return s_nBlockCycles >> 3;
 
@@ -1147,19 +1150,27 @@ static void iBranchTest(u32 newpc, bool noDispatch)
 	// Equiv code to:
 	//    cpuRegs.cycle += blockcycles;
 	//    if( cpuRegs.cycle > g_nextBranchCycle ) { DoEvents(); }
-	MOV32MtoR(EAX, (uptr)&cpuRegs.cycle);
-	ADD32ItoR(EAX, eeScaleBlockCycles());
-	MOV32RtoM((uptr)&cpuRegs.cycle, EAX); // update cycles
-	SUB32MtoR(EAX, (uptr)&g_nextBranchCycle);
 
-	if (!noDispatch) {
-		if (newpc == 0xffffffff)
-			JS32((uptr)DispatcherReg - ( (uptr)x86Ptr + 6 ));
-		else
-			iBranch(newpc, 1);
+	if (Config.Hacks.IdleLoopFF && s_nBlockFF) {
+		xMOV(eax, ptr32[&g_nextBranchCycle]);
+		xADD(ptr32[&cpuRegs.cycle], eeScaleBlockCycles());
+		xCMP(eax, ptr32[&cpuRegs.cycle]);
+		xCMOVL(eax, ptr32[&cpuRegs.cycle]);
+		xMOV(ptr32[&cpuRegs.cycle], eax);
+		RET();
+	} else {
+		MOV32MtoR(EAX, (uptr)&cpuRegs.cycle);
+		ADD32ItoR(EAX, eeScaleBlockCycles());
+		MOV32RtoM((uptr)&cpuRegs.cycle, EAX); // update cycles
+		SUB32MtoR(EAX, (uptr)&g_nextBranchCycle);
+		if (!noDispatch) {
+			if (newpc == 0xffffffff)
+				JS32((uptr)DispatcherReg - ( (uptr)x86Ptr + 6 ));
+			else
+				iBranch(newpc, 1);
+		}
+		RET();
 	}
-
-	RET();
 }
 
 static void checkcodefn()
@@ -1355,6 +1366,13 @@ void __fastcall dyna_block_discard(u32 start,u32 sz)
 	Cpu->Clear(start,sz);
 }
 
+void __fastcall dyna_block_reset(u32 start,u32 sz)
+{
+	DevCon::WriteLn("dyna_block_reset %08X , count %d", params start,sz);
+	Cpu->Clear(start & ~0xfffUL, 0x400);
+	mmap_MarkCountedRamPage(PSM(start), start & ~0xfffUL);
+}
+
 void recRecompile( const u32 startpc )
 {
 	u32 i = 0;
@@ -1383,6 +1401,10 @@ void recRecompile( const u32 startpc )
 	x86SetPtr( recPtr );
 	x86Align(16);
 	recPtr = x86Ptr;
+
+	s_nBlockFF = false;
+	if (HWADDR(startpc) == 0x81fc0)
+		s_nBlockFF = true;
 
 	s_pCurBlock = PC_GETBLOCK(startpc);
 
@@ -1695,9 +1717,10 @@ StartRecomp:
 		iDumpBlock(startpc, recPtr);
 #endif
 
+	static u16 manual_page[Ps2MemSize::Base >> 12];
 	u32 sz=(s_nEndBlock-startpc)>>2;
 
-	u32 inpage_ptr=startpc;
+	u32 inpage_ptr=HWADDR(startpc);
 	u32 inpage_sz=sz*4;
 
 	while(inpage_sz)
@@ -1708,12 +1731,14 @@ StartRecomp:
 
 		if(PageType!=-1)
 		{
-			if (PageType==0)
+			if (PageType==0) {
 				mmap_MarkCountedRamPage(PSM(inpage_ptr),inpage_ptr&~0xFFF);
+				manual_page[inpage_ptr >> 12] = 0;
+			}
 			else
 			{
-				MOV32ItoR(ECX, startpc);
-				MOV32ItoR(EDX, sz);
+				MOV32ItoR(ECX, inpage_ptr);
+				MOV32ItoR(EDX, pgsz);
 
 				u32 lpc=inpage_ptr;
 				u32 stg=pgsz;
@@ -1726,6 +1751,11 @@ StartRecomp:
 					stg-=4;
 					lpc+=4;
 				}
+				if (startpc != 0x81fc0) {
+					xADD(ptr16[&manual_page[inpage_ptr >> 12]], 1);
+					iJccKnownTarget(Jcc_Carry, dyna_block_reset);
+				}
+
 				DbgCon::WriteLn("Manual block @ %08X : %08X %d %d %d %d", params
 					startpc,inpage_ptr,pgsz,0x1000-inpage_offs,inpage_sz,sz*4);
 			}
