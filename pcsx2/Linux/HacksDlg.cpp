@@ -53,22 +53,6 @@ void on_Game_Fix_OK(GtkButton *button, gpointer user_data)
 	gtk_main_quit();
 }
 
-void on_Speed_Hacks(GtkMenuItem *menuitem, gpointer user_data)
-{
-	SpeedHacksDlg = create_SpeedHacksDlg();
-	
-	set_checked(SpeedHacksDlg, "check_iop_cycle_rate", Config.Hacks.IOPCycleDouble);
-	set_checked(SpeedHacksDlg, "check_wait_cycles_sync_hack", Config.Hacks.WaitCycleExt);
-	set_checked(SpeedHacksDlg, "check_intc_sync_hack", Config.Hacks.INTCSTATSlow);
-	set_checked(SpeedHacksDlg, "check_idle_loop_fastforward", Config.Hacks.IdleLoopFF);
-
-	gtk_range_set_value(GTK_RANGE(lookup_widget(SpeedHacksDlg, "VUCycleHackScale")), Config.Hacks.VUCycleSteal);	
-	gtk_range_set_value(GTK_RANGE(lookup_widget(SpeedHacksDlg, "EECycleHackScale")), Config.Hacks.EECycleRate);
-	gtk_widget_show_all(SpeedHacksDlg);
-	gtk_widget_set_sensitive(MainWindow, FALSE);
-	gtk_main();
-}
-
 void on_vu_slider_changed(GtkRange *range,  gpointer user_data)
 {
 	int i;
@@ -84,6 +68,29 @@ void on_ee_slider_changed(GtkRange *range,  gpointer user_data)
 	i = gtk_range_get_value(range);
 	 gtk_label_set_text(GTK_LABEL(lookup_widget(SpeedHacksDlg,"ee_cycle_label")),ee_cycle_labels[i]);
 }
+
+void on_Speed_Hacks(GtkMenuItem *menuitem, gpointer user_data)
+{
+	SpeedHacksDlg = create_SpeedHacksDlg();
+	GtkRange *vuScale = GTK_RANGE(lookup_widget(SpeedHacksDlg, "VUCycleHackScale"));
+	GtkRange *eeScale = GTK_RANGE(lookup_widget(SpeedHacksDlg, "EECycleHackScale"));
+	
+	set_checked(SpeedHacksDlg, "check_iop_cycle_rate", Config.Hacks.IOPCycleDouble);
+	set_checked(SpeedHacksDlg, "check_wait_cycles_sync_hack", Config.Hacks.WaitCycleExt);
+	set_checked(SpeedHacksDlg, "check_intc_sync_hack", Config.Hacks.INTCSTATSlow);
+	set_checked(SpeedHacksDlg, "check_idle_loop_fastforward", Config.Hacks.IdleLoopFF);
+
+	gtk_range_set_value(vuScale, Config.Hacks.VUCycleSteal);	
+	on_vu_slider_changed(vuScale,  NULL);
+	gtk_range_set_value(eeScale, Config.Hacks.EECycleRate);
+	on_ee_slider_changed(eeScale,  NULL);
+	
+	gtk_widget_show_all(SpeedHacksDlg);
+	gtk_widget_set_sensitive(MainWindow, FALSE);
+	gtk_main();
+}
+
+
 
 void on_Speed_Hack_OK(GtkButton *button, gpointer user_data)
 {
