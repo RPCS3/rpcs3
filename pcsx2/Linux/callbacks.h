@@ -14,6 +14,14 @@ On_Dialog_Cancelled                    (GtkButton       *button,
                                         gpointer         user_data);
 
 void
+on_ee_slider_changed                   (GtkRange        *range,
+                                        gpointer         user_data);
+
+void
+on_vu_slider_changed                   (GtkRange        *range,
+                                        gpointer         user_data);
+
+void
 on_Speed_Hack_OK                       (GtkButton       *button,
                                         gpointer         user_data);
 

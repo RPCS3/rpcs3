@@ -56,22 +56,6 @@ void on_Game_Fix_OK(GtkButton *button, gpointer user_data)
 void on_Speed_Hacks(GtkMenuItem *menuitem, gpointer user_data)
 {
 	SpeedHacksDlg = create_SpeedHacksDlg();
-
-	switch (Config.Hacks.EECycleRate)
-	{
-		case 0:
-			set_checked(SpeedHacksDlg, "check_default_cycle_rate", true);
-			break;
-		case 1:
-			set_checked(SpeedHacksDlg, "check_1_5_cycle_rate", true);
-			break;
-		case 2:
-			set_checked(SpeedHacksDlg, "check_2_cycle_rate", true);
-			break;
-		default:
-			set_checked(SpeedHacksDlg, "check_default_cycle_rate", true);
-			break;
-	}
 	
 	set_checked(SpeedHacksDlg, "check_iop_cycle_rate", Config.Hacks.IOPCycleDouble);
 	set_checked(SpeedHacksDlg, "check_wait_cycles_sync_hack", Config.Hacks.WaitCycleExt);
@@ -79,22 +63,32 @@ void on_Speed_Hacks(GtkMenuItem *menuitem, gpointer user_data)
 	set_checked(SpeedHacksDlg, "check_idle_loop_fastforward", Config.Hacks.IdleLoopFF);
 
 	gtk_range_set_value(GTK_RANGE(lookup_widget(SpeedHacksDlg, "VUCycleHackScale")), Config.Hacks.VUCycleSteal);	
+	gtk_range_set_value(GTK_RANGE(lookup_widget(SpeedHacksDlg, "EECycleHackScale")), Config.Hacks.EECycleRate);
 	gtk_widget_show_all(SpeedHacksDlg);
 	gtk_widget_set_sensitive(MainWindow, FALSE);
 	gtk_main();
+}
+
+void on_vu_slider_changed(GtkRange *range,  gpointer user_data)
+{
+	int i;
+	
+	i = gtk_range_get_value(range);
+	 gtk_label_set_text(GTK_LABEL(lookup_widget(SpeedHacksDlg,"vu_cycle_stealing_label")),vu_stealing_labels[i]);
+}
+
+void on_ee_slider_changed(GtkRange *range,  gpointer user_data)
+{
+	int i;
+	
+	i = gtk_range_get_value(range);
+	 gtk_label_set_text(GTK_LABEL(lookup_widget(SpeedHacksDlg,"ee_cycle_label")),ee_cycle_labels[i]);
 }
 
 void on_Speed_Hack_OK(GtkButton *button, gpointer user_data)
 {
 	PcsxConfig::Hacks_t newhacks;
 	newhacks.EECycleRate = 0;
-
-	if is_checked(SpeedHacksDlg, "check_default_cycle_rate")
-		newhacks.EECycleRate = 0;
-	else if is_checked(SpeedHacksDlg, "check_1_5_cycle_rate")
-		newhacks.EECycleRate = 1;
-	else if is_checked(SpeedHacksDlg, "check_2_cycle_rate")
-		newhacks.EECycleRate = 2;
 	
 	newhacks.IOPCycleDouble = is_checked(SpeedHacksDlg, "check_iop_cycle_rate");
 	newhacks.WaitCycleExt = is_checked(SpeedHacksDlg, "check_wait_cycles_sync_hack");
@@ -102,6 +96,7 @@ void on_Speed_Hack_OK(GtkButton *button, gpointer user_data)
 	newhacks.IdleLoopFF = is_checked(SpeedHacksDlg, "check_idle_loop_fastforward");
 	
 	newhacks.VUCycleSteal = gtk_range_get_value(GTK_RANGE(lookup_widget(SpeedHacksDlg, "VUCycleHackScale")));	
+	newhacks.EECycleRate = gtk_range_get_value(GTK_RANGE(lookup_widget(SpeedHacksDlg, "EECycleHackScale")));	
 	
 	if (memcmp(&newhacks, &Config.Hacks, sizeof(newhacks)))
 	{

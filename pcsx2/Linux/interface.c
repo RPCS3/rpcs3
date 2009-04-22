@@ -615,18 +615,21 @@ create_SpeedHacksDlg (void)
   GtkWidget *vbox59;
   GtkWidget *label88;
   GtkWidget *hbox39;
+  GtkWidget *vbox72;
   GtkWidget *frame37;
   GtkWidget *alignment32;
   GtkWidget *vbox61;
-  GtkWidget *check_default_cycle_rate;
-  GSList *check_default_cycle_rate_group = NULL;
-  GtkWidget *label98;
-  GtkWidget *check_1_5_cycle_rate;
-  GtkWidget *label93;
-  GtkWidget *check_2_cycle_rate;
-  GtkWidget *label94;
+  GtkWidget *EECycleHackScale;
+  GtkWidget *ee_cycle_label;
+  GtkWidget *hseparator2;
   GtkWidget *label91;
   GtkWidget *label105;
+  GtkWidget *frame39;
+  GtkWidget *alignment34;
+  GtkWidget *vbox73;
+  GtkWidget *VUCycleHackScale;
+  GtkWidget *vu_cycle_stealing_label;
+  GtkWidget *label111;
   GtkWidget *vbox60;
   GtkWidget *check_iop_cycle_rate;
   GtkWidget *label96;
@@ -638,9 +641,6 @@ create_SpeedHacksDlg (void)
   GtkWidget *check_idle_loop_fastforward;
   GtkWidget *label110;
   GtkWidget *hseparator1;
-  GtkWidget *label109;
-  GtkWidget *VUCycleHackScale;
-  GtkWidget *label108;
   GtkWidget *dialog_action_area3;
   GtkWidget *button99;
   GtkWidget *button98;
@@ -669,10 +669,15 @@ create_SpeedHacksDlg (void)
   gtk_widget_show (hbox39);
   gtk_box_pack_start (GTK_BOX (vbox59), hbox39, TRUE, TRUE, 0);
 
+  vbox72 = gtk_vbox_new (FALSE, 0);
+  gtk_widget_set_name (vbox72, "vbox72");
+  gtk_widget_show (vbox72);
+  gtk_box_pack_start (GTK_BOX (hbox39), vbox72, TRUE, TRUE, 0);
+
   frame37 = gtk_frame_new (NULL);
   gtk_widget_set_name (frame37, "frame37");
   gtk_widget_show (frame37);
-  gtk_box_pack_start (GTK_BOX (hbox39), frame37, TRUE, TRUE, 0);
+  gtk_box_pack_start (GTK_BOX (vbox72), frame37, TRUE, TRUE, 0);
 
   alignment32 = gtk_alignment_new (0.5, 0.5, 1, 1);
   gtk_widget_set_name (alignment32, "alignment32");
@@ -685,47 +690,23 @@ create_SpeedHacksDlg (void)
   gtk_widget_show (vbox61);
   gtk_container_add (GTK_CONTAINER (alignment32), vbox61);
 
-  check_default_cycle_rate = gtk_radio_button_new_with_mnemonic (NULL, _("Default Cycle Rate"));
-  gtk_widget_set_name (check_default_cycle_rate, "check_default_cycle_rate");
-  gtk_widget_show (check_default_cycle_rate);
-  gtk_box_pack_start (GTK_BOX (vbox61), check_default_cycle_rate, FALSE, FALSE, 0);
-  gtk_radio_button_set_group (GTK_RADIO_BUTTON (check_default_cycle_rate), check_default_cycle_rate_group);
-  check_default_cycle_rate_group = gtk_radio_button_get_group (GTK_RADIO_BUTTON (check_default_cycle_rate));
+  EECycleHackScale = gtk_hscale_new (GTK_ADJUSTMENT (gtk_adjustment_new (0, 0, 2, 1, 0, 0)));
+  gtk_widget_set_name (EECycleHackScale, "EECycleHackScale");
+  gtk_widget_show (EECycleHackScale);
+  gtk_box_pack_start (GTK_BOX (vbox61), EECycleHackScale, FALSE, FALSE, 0);
+  gtk_scale_set_draw_value (GTK_SCALE (EECycleHackScale), FALSE);
+  gtk_scale_set_digits (GTK_SCALE (EECycleHackScale), 0);
 
-  label98 = gtk_label_new (_("Most compatible option - recommended for everyone with high-end machines."));
-  gtk_widget_set_name (label98, "label98");
-  gtk_widget_show (label98);
-  gtk_box_pack_start (GTK_BOX (vbox61), label98, FALSE, FALSE, 0);
-  gtk_label_set_line_wrap (GTK_LABEL (label98), TRUE);
-  gtk_misc_set_alignment (GTK_MISC (label98), 0.29, 0.5);
+  ee_cycle_label = gtk_label_new (_("Most compatible option - recommended for everyone with high-end machines."));
+  gtk_widget_set_name (ee_cycle_label, "ee_cycle_label");
+  gtk_widget_show (ee_cycle_label);
+  gtk_box_pack_start (GTK_BOX (vbox61), ee_cycle_label, FALSE, FALSE, 0);
+  gtk_label_set_line_wrap (GTK_LABEL (ee_cycle_label), TRUE);
 
-  check_1_5_cycle_rate = gtk_radio_button_new_with_mnemonic (NULL, _("Use x1.5 Cycle Rate"));
-  gtk_widget_set_name (check_1_5_cycle_rate, "check_1_5_cycle_rate");
-  gtk_widget_show (check_1_5_cycle_rate);
-  gtk_box_pack_start (GTK_BOX (vbox61), check_1_5_cycle_rate, FALSE, FALSE, 0);
-  gtk_radio_button_set_group (GTK_RADIO_BUTTON (check_1_5_cycle_rate), check_default_cycle_rate_group);
-  check_default_cycle_rate_group = gtk_radio_button_get_group (GTK_RADIO_BUTTON (check_1_5_cycle_rate));
-
-  label93 = gtk_label_new (_("Moderate speedup, and works well with most games."));
-  gtk_widget_set_name (label93, "label93");
-  gtk_widget_show (label93);
-  gtk_box_pack_start (GTK_BOX (vbox61), label93, FALSE, FALSE, 0);
-  gtk_label_set_line_wrap (GTK_LABEL (label93), TRUE);
-  gtk_misc_set_alignment (GTK_MISC (label93), 0.29, 0.5);
-
-  check_2_cycle_rate = gtk_radio_button_new_with_mnemonic (NULL, _("Use x2 Cycle Rate"));
-  gtk_widget_set_name (check_2_cycle_rate, "check_2_cycle_rate");
-  gtk_widget_show (check_2_cycle_rate);
-  gtk_box_pack_start (GTK_BOX (vbox61), check_2_cycle_rate, FALSE, FALSE, 0);
-  gtk_radio_button_set_group (GTK_RADIO_BUTTON (check_2_cycle_rate), check_default_cycle_rate_group);
-  check_default_cycle_rate_group = gtk_radio_button_get_group (GTK_RADIO_BUTTON (check_2_cycle_rate));
-
-  label94 = gtk_label_new (_("Big speedup! Works well with many games."));
-  gtk_widget_set_name (label94, "label94");
-  gtk_widget_show (label94);
-  gtk_box_pack_start (GTK_BOX (vbox61), label94, FALSE, FALSE, 0);
-  gtk_label_set_line_wrap (GTK_LABEL (label94), TRUE);
-  gtk_misc_set_alignment (GTK_MISC (label94), 0.36, 0.5);
+  hseparator2 = gtk_hseparator_new ();
+  gtk_widget_set_name (hseparator2, "hseparator2");
+  gtk_widget_show (hseparator2);
+  gtk_box_pack_start (GTK_BOX (vbox61), hseparator2, FALSE, FALSE, 0);
 
   label91 = gtk_label_new (_("Important: the X2 sync hack *will* cause choppy/skippy audio on many FMV movies."));
   gtk_widget_set_name (label91, "label91");
@@ -738,6 +719,41 @@ create_SpeedHacksDlg (void)
   gtk_widget_show (label105);
   gtk_frame_set_label_widget (GTK_FRAME (frame37), label105);
   gtk_label_set_use_markup (GTK_LABEL (label105), TRUE);
+
+  frame39 = gtk_frame_new (NULL);
+  gtk_widget_set_name (frame39, "frame39");
+  gtk_widget_show (frame39);
+  gtk_box_pack_start (GTK_BOX (vbox72), frame39, TRUE, TRUE, 0);
+
+  alignment34 = gtk_alignment_new (0.5, 0.5, 1, 1);
+  gtk_widget_set_name (alignment34, "alignment34");
+  gtk_widget_show (alignment34);
+  gtk_container_add (GTK_CONTAINER (frame39), alignment34);
+  gtk_alignment_set_padding (GTK_ALIGNMENT (alignment34), 0, 0, 12, 0);
+
+  vbox73 = gtk_vbox_new (FALSE, 0);
+  gtk_widget_set_name (vbox73, "vbox73");
+  gtk_widget_show (vbox73);
+  gtk_container_add (GTK_CONTAINER (alignment34), vbox73);
+
+  VUCycleHackScale = gtk_hscale_new (GTK_ADJUSTMENT (gtk_adjustment_new (0, 0, 4, 1, 0, 0)));
+  gtk_widget_set_name (VUCycleHackScale, "VUCycleHackScale");
+  gtk_widget_show (VUCycleHackScale);
+  gtk_box_pack_start (GTK_BOX (vbox73), VUCycleHackScale, TRUE, TRUE, 0);
+  gtk_scale_set_draw_value (GTK_SCALE (VUCycleHackScale), FALSE);
+  gtk_scale_set_digits (GTK_SCALE (VUCycleHackScale), 0);
+
+  vu_cycle_stealing_label = gtk_label_new (_("2: Moderate speedup, should work with most games with minor problems."));
+  gtk_widget_set_name (vu_cycle_stealing_label, "vu_cycle_stealing_label");
+  gtk_widget_show (vu_cycle_stealing_label);
+  gtk_box_pack_start (GTK_BOX (vbox73), vu_cycle_stealing_label, FALSE, FALSE, 0);
+  gtk_label_set_line_wrap (GTK_LABEL (vu_cycle_stealing_label), TRUE);
+
+  label111 = gtk_label_new (_("<b>VU Cycle Stealing (Speedup for 3d geometry)</b>"));
+  gtk_widget_set_name (label111, "label111");
+  gtk_widget_show (label111);
+  gtk_frame_set_label_widget (GTK_FRAME (frame39), label111);
+  gtk_label_set_use_markup (GTK_LABEL (label111), TRUE);
 
   vbox60 = gtk_vbox_new (FALSE, 0);
   gtk_widget_set_name (vbox60, "vbox60");
@@ -791,28 +807,12 @@ create_SpeedHacksDlg (void)
   gtk_widget_set_name (label110, "label110");
   gtk_widget_show (label110);
   gtk_box_pack_start (GTK_BOX (vbox71), label110, FALSE, FALSE, 0);
+  gtk_label_set_line_wrap (GTK_LABEL (label110), TRUE);
 
   hseparator1 = gtk_hseparator_new ();
   gtk_widget_set_name (hseparator1, "hseparator1");
   gtk_widget_show (hseparator1);
   gtk_box_pack_start (GTK_BOX (vbox60), hseparator1, FALSE, FALSE, 0);
-
-  label109 = gtk_label_new (_("VU Cycle Stealing (Speedup for 3d geometry)"));
-  gtk_widget_set_name (label109, "label109");
-  gtk_widget_show (label109);
-  gtk_box_pack_start (GTK_BOX (vbox60), label109, FALSE, FALSE, 0);
-
-  VUCycleHackScale = gtk_hscale_new (GTK_ADJUSTMENT (gtk_adjustment_new (0, 0, 4, 1, 0, 0)));
-  gtk_widget_set_name (VUCycleHackScale, "VUCycleHackScale");
-  gtk_widget_show (VUCycleHackScale);
-  gtk_box_pack_start (GTK_BOX (vbox60), VUCycleHackScale, TRUE, TRUE, 0);
-  gtk_scale_set_digits (GTK_SCALE (VUCycleHackScale), 0);
-
-  label108 = gtk_label_new (_("0: No speedup.\n1: Slight speedup, should work with most games.\n2: Moderate speedup, should work with most games with minor problems.\n3: Large speedup, may break many games and make others skip frames.\n4: Very large speedup, will break games in interesting ways."));
-  gtk_widget_set_name (label108, "label108");
-  gtk_widget_show (label108);
-  gtk_box_pack_start (GTK_BOX (vbox60), label108, FALSE, FALSE, 0);
-  gtk_label_set_line_wrap (GTK_LABEL (label108), TRUE);
 
   dialog_action_area3 = GTK_DIALOG (SpeedHacksDlg)->action_area;
   gtk_widget_set_name (dialog_action_area3, "dialog_action_area3");
@@ -831,6 +831,12 @@ create_SpeedHacksDlg (void)
   gtk_dialog_add_action_widget (GTK_DIALOG (SpeedHacksDlg), button98, GTK_RESPONSE_CANCEL);
   GTK_WIDGET_SET_FLAGS (button98, GTK_CAN_DEFAULT);
 
+  g_signal_connect ((gpointer) EECycleHackScale, "value_changed",
+                    G_CALLBACK (on_ee_slider_changed),
+                    NULL);
+  g_signal_connect ((gpointer) VUCycleHackScale, "value_changed",
+                    G_CALLBACK (on_vu_slider_changed),
+                    NULL);
   g_signal_connect ((gpointer) button99, "clicked",
                     G_CALLBACK (on_Speed_Hack_OK),
                     NULL);
@@ -844,17 +850,21 @@ create_SpeedHacksDlg (void)
   GLADE_HOOKUP_OBJECT (SpeedHacksDlg, vbox59, "vbox59");
   GLADE_HOOKUP_OBJECT (SpeedHacksDlg, label88, "label88");
   GLADE_HOOKUP_OBJECT (SpeedHacksDlg, hbox39, "hbox39");
+  GLADE_HOOKUP_OBJECT (SpeedHacksDlg, vbox72, "vbox72");
   GLADE_HOOKUP_OBJECT (SpeedHacksDlg, frame37, "frame37");
   GLADE_HOOKUP_OBJECT (SpeedHacksDlg, alignment32, "alignment32");
   GLADE_HOOKUP_OBJECT (SpeedHacksDlg, vbox61, "vbox61");
-  GLADE_HOOKUP_OBJECT (SpeedHacksDlg, check_default_cycle_rate, "check_default_cycle_rate");
-  GLADE_HOOKUP_OBJECT (SpeedHacksDlg, label98, "label98");
-  GLADE_HOOKUP_OBJECT (SpeedHacksDlg, check_1_5_cycle_rate, "check_1_5_cycle_rate");
-  GLADE_HOOKUP_OBJECT (SpeedHacksDlg, label93, "label93");
-  GLADE_HOOKUP_OBJECT (SpeedHacksDlg, check_2_cycle_rate, "check_2_cycle_rate");
-  GLADE_HOOKUP_OBJECT (SpeedHacksDlg, label94, "label94");
+  GLADE_HOOKUP_OBJECT (SpeedHacksDlg, EECycleHackScale, "EECycleHackScale");
+  GLADE_HOOKUP_OBJECT (SpeedHacksDlg, ee_cycle_label, "ee_cycle_label");
+  GLADE_HOOKUP_OBJECT (SpeedHacksDlg, hseparator2, "hseparator2");
   GLADE_HOOKUP_OBJECT (SpeedHacksDlg, label91, "label91");
   GLADE_HOOKUP_OBJECT (SpeedHacksDlg, label105, "label105");
+  GLADE_HOOKUP_OBJECT (SpeedHacksDlg, frame39, "frame39");
+  GLADE_HOOKUP_OBJECT (SpeedHacksDlg, alignment34, "alignment34");
+  GLADE_HOOKUP_OBJECT (SpeedHacksDlg, vbox73, "vbox73");
+  GLADE_HOOKUP_OBJECT (SpeedHacksDlg, VUCycleHackScale, "VUCycleHackScale");
+  GLADE_HOOKUP_OBJECT (SpeedHacksDlg, vu_cycle_stealing_label, "vu_cycle_stealing_label");
+  GLADE_HOOKUP_OBJECT (SpeedHacksDlg, label111, "label111");
   GLADE_HOOKUP_OBJECT (SpeedHacksDlg, vbox60, "vbox60");
   GLADE_HOOKUP_OBJECT (SpeedHacksDlg, check_iop_cycle_rate, "check_iop_cycle_rate");
   GLADE_HOOKUP_OBJECT (SpeedHacksDlg, label96, "label96");
@@ -866,9 +876,6 @@ create_SpeedHacksDlg (void)
   GLADE_HOOKUP_OBJECT (SpeedHacksDlg, check_idle_loop_fastforward, "check_idle_loop_fastforward");
   GLADE_HOOKUP_OBJECT (SpeedHacksDlg, label110, "label110");
   GLADE_HOOKUP_OBJECT (SpeedHacksDlg, hseparator1, "hseparator1");
-  GLADE_HOOKUP_OBJECT (SpeedHacksDlg, label109, "label109");
-  GLADE_HOOKUP_OBJECT (SpeedHacksDlg, VUCycleHackScale, "VUCycleHackScale");
-  GLADE_HOOKUP_OBJECT (SpeedHacksDlg, label108, "label108");
   GLADE_HOOKUP_OBJECT_NO_REF (SpeedHacksDlg, dialog_action_area3, "dialog_action_area3");
   GLADE_HOOKUP_OBJECT (SpeedHacksDlg, button99, "button99");
   GLADE_HOOKUP_OBJECT (SpeedHacksDlg, button98, "button98");
