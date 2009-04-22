@@ -57,7 +57,7 @@ void on_Speed_Hacks(GtkMenuItem *menuitem, gpointer user_data)
 {
 	SpeedHacksDlg = create_SpeedHacksDlg();
 
-	switch (CHECK_EE_CYCLERATE)
+	switch (Config.Hacks.EECycleRate)
 	{
 		case 0:
 			set_checked(SpeedHacksDlg, "check_default_cycle_rate", true);
@@ -68,20 +68,17 @@ void on_Speed_Hacks(GtkMenuItem *menuitem, gpointer user_data)
 		case 2:
 			set_checked(SpeedHacksDlg, "check_2_cycle_rate", true);
 			break;
-		case 3:
-			set_checked(SpeedHacksDlg, "check_3_cycle_rate", true);
-			break;
 		default:
 			set_checked(SpeedHacksDlg, "check_default_cycle_rate", true);
 			break;
 	}
+	
+	set_checked(SpeedHacksDlg, "check_iop_cycle_rate", Config.Hacks.IOPCycleDouble);
+	set_checked(SpeedHacksDlg, "check_wait_cycles_sync_hack", Config.Hacks.WaitCycleExt);
+	set_checked(SpeedHacksDlg, "check_intc_sync_hack", Config.Hacks.INTCSTATSlow);
+	set_checked(SpeedHacksDlg, "check_idle_loop_fastforward", Config.Hacks.IdleLoopFF);
 
-	set_checked(SpeedHacksDlg, "check_iop_cycle_rate", CHECK_IOP_CYCLERATE);
-	set_checked(SpeedHacksDlg, "check_wait_cycles_sync_hack", CHECK_WAITCYCLE_HACK);
-	set_checked(SpeedHacksDlg, "check_intc_sync_hack", CHECK_INTC_STAT_HACK);
-	set_checked(SpeedHacksDlg, "check_ESC_hack", CHECK_ESCAPE_HACK);
-
-	gtk_range_set_value(GTK_RANGE(lookup_widget(SpeedHacksDlg, "VUCycleHackScale")), Config.VUCycleHack);	
+	gtk_range_set_value(GTK_RANGE(lookup_widget(SpeedHacksDlg, "VUCycleHackScale")), Config.Hacks.VUCycleSteal);	
 	gtk_widget_show_all(SpeedHacksDlg);
 	gtk_widget_set_sensitive(MainWindow, FALSE);
 	gtk_main();
@@ -89,25 +86,30 @@ void on_Speed_Hacks(GtkMenuItem *menuitem, gpointer user_data)
 
 void on_Speed_Hack_OK(GtkButton *button, gpointer user_data)
 {
-	Config.Hacks = 0;
+	PcsxConfig::Hacks_t newhacks;
+	newhacks.EECycleRate = 0;
 
 	if is_checked(SpeedHacksDlg, "check_default_cycle_rate")
-		Config.Hacks = 0;
+		newhacks.EECycleRate = 0;
 	else if is_checked(SpeedHacksDlg, "check_1_5_cycle_rate")
-		Config.Hacks = 1;
+		newhacks.EECycleRate = 1;
 	else if is_checked(SpeedHacksDlg, "check_2_cycle_rate")
-		Config.Hacks = 2;
-	else if is_checked(SpeedHacksDlg, "check_3_cycle_rate")
-		Config.Hacks = 3;
-
-	Config.Hacks |= is_checked(SpeedHacksDlg, "check_iop_cycle_rate") << 3;
-	Config.Hacks |= is_checked(SpeedHacksDlg, "check_wait_cycles_sync_hack") << 4;
-	Config.Hacks |= is_checked(SpeedHacksDlg, "check_intc_sync_hack") << 5;
-	Config.Hacks |= is_checked(SpeedHacksDlg, "check_ESC_hack") << 10;
-
-	Config.VUCycleHack = gtk_range_get_value(GTK_RANGE(lookup_widget(SpeedHacksDlg, "VUCycleHackScale")));	
-	SaveConfig();
-
+		newhacks.EECycleRate = 2;
+	
+	newhacks.IOPCycleDouble = is_checked(SpeedHacksDlg, "check_iop_cycle_rate");
+	newhacks.WaitCycleExt = is_checked(SpeedHacksDlg, "check_wait_cycles_sync_hack");
+	newhacks.INTCSTATSlow = is_checked(SpeedHacksDlg, "check_intc_sync_hack");
+	newhacks.IdleLoopFF = is_checked(SpeedHacksDlg, "check_idle_loop_fastforward");
+	
+	newhacks.VUCycleSteal = gtk_range_get_value(GTK_RANGE(lookup_widget(SpeedHacksDlg, "VUCycleHackScale")));	
+	
+	if (memcmp(&newhacks, &Config.Hacks, sizeof(newhacks)))
+	{
+		SysRestorableReset();
+		Config.Hacks = newhacks;
+		SaveConfig();
+	}
+	
 	gtk_widget_destroy(SpeedHacksDlg);
 	gtk_widget_set_sensitive(MainWindow, TRUE);
 	gtk_main_quit();

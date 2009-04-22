@@ -111,8 +111,8 @@ int LoadConfig()
 	GetValuel("IdleLoopFF", Config.Hacks.IdleLoopFF);
 	GetValuel("ESCExits", Config.Hacks.ESCExits);
 
-	if (Config.VUCycleHack < 0 || Config.VUCycleHack > 4)
-		Config.VUCycleHack = 0;
+	if (Config.Hacks.VUCycleSteal < 0 || Config.Hacks.VUCycleSteal > 4)
+		Config.Hacks.VUCycleSteal = 0;
 	GetValuel("Fixes",        Config.GameFixes);
 
 	GetValuel("CustomFps",      Config.CustomFps);
