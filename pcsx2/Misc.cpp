@@ -41,6 +41,7 @@
 #include "Cache.h"
 
 #include "Paths.h"
+#include "Dump.h"
 
 using namespace std;
 using namespace R5900;

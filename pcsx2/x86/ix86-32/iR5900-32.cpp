@@ -47,9 +47,9 @@
 #include "Paths.h"
 
 #include "NakedAsm.h"
+#include "Dump.h"
 
 using namespace x86Emitter;
-
 using namespace R5900;
 
 // used to disable register freezing during cpuBranchTests (registers
@@ -87,12 +87,12 @@ static u32 *recRAMCopy = NULL;
 void JITCompile();
 static BaseBlocks recBlocks(EE_NUMBLOCKS, (uptr)JITCompile);
 static u8* recPtr = NULL, *recStackPtr = NULL;
-static EEINST* s_pInstCache = NULL;
+EEINST* s_pInstCache = NULL;
 static u32 s_nInstCacheSize = 0;
 
 static BASEBLOCK* s_pCurBlock = NULL;
 static BASEBLOCKEX* s_pCurBlockEx = NULL;
-static u32 s_nEndBlock = 0; // what pc the current block ends	
+u32 s_nEndBlock = 0; // what pc the current block ends	
 static u32 s_nHasDelay = 0;
 static bool s_nBlockFF;
 
@@ -110,117 +110,8 @@ static u32 dumplog = 0;
 #define dumplog 0
 #endif
 
-#ifdef PCSX2_DEVBUILD
-// and not sure what these might have once been used for... (air)
-//static const char *txt0 = "EAX = %x : ECX = %x : EDX = %x\n";
-//static const char *txt0RC = "EAX = %x : EBX = %x : ECX = %x : EDX = %x : ESI = %x : EDI = %x\n";
-//static const char *txt1 = "REG[%d] = %x_%x\n";
-//static const char *txt2 = "M32 = %x\n";
-#endif
-
 static void iBranchTest(u32 newpc = 0xffffffff, bool noDispatch=false);
 static void ClearRecLUT(BASEBLOCK* base, int count);
-
-////////////////////////////////////////////////////
-static void iDumpBlock( int startpc, u8 * ptr )
-{
-	FILE *f;
-	string filename;
-	u32 i, j;
-	EEINST* pcur;
-	u8 used[34];
-	u8 fpuused[33];
-	int numused, count, fpunumused;
-
-	Console::Status( "dump1 %x:%x, %x", params startpc, pc, cpuRegs.cycle );
-	Path::CreateDirectory( "dumps" );
-#ifndef __LINUX__
-	ssprintf( filename, "dumps\\R5900dump%.8X.txt", startpc );
-#else
-	ssprintf( filename, "dumps/R5900dump%.8X.txt", startpc );
-#endif
-	fflush( stdout );
-//	f = fopen( "dump1", "wb" );
-//	fwrite( ptr, 1, (u32)x86Ptr - (u32)ptr, f );
-//	fclose( f );
-//
-//	sprintf( command, "objdump -D --target=binary --architecture=i386 dump1 > %s", filename );
-//	system( command );
-
-	f = fopen( filename.c_str(), "w" );
-
-	std::string output;
-
-    if( disR5900GetSym(startpc) != NULL )
-        fprintf(f, "%s\n", disR5900GetSym(startpc));
-	for ( i = startpc; i < s_nEndBlock; i += 4 ) {
-		disR5900Fasm( output, memRead32( i ), i );
-		fprintf( f, output.c_str() );
-	}
-
-	// write the instruction info
-
-	fprintf(f, "\n\nlive0 - %x, live1 - %x, live2 - %x, lastuse - %x\nmmx - %x, xmm - %x, used - %x\n",
-		EEINST_LIVE0, EEINST_LIVE1, EEINST_LIVE2, EEINST_LASTUSE, EEINST_MMX, EEINST_XMM, EEINST_USED);
-
-	memzero_obj(used);
-	numused = 0;
-	for(i = 0; i < ArraySize(s_pInstCache->regs); ++i) {
-		if( s_pInstCache->regs[i] & EEINST_USED ) {
-			used[i] = 1;
-			numused++;
-		}
-	}
-
-	memzero_obj(fpuused);
-	fpunumused = 0;
-	for(i = 0; i < ArraySize(s_pInstCache->fpuregs); ++i) {
-		if( s_pInstCache->fpuregs[i] & EEINST_USED ) {
-			fpuused[i] = 1;
-			fpunumused++;
-		}
-	}
-
-	fprintf(f, "       ");
-	for(i = 0; i < ArraySize(s_pInstCache->regs); ++i) {
-		if( used[i] ) fprintf(f, "%2d ", i);
-	}
-	for(i = 0; i < ArraySize(s_pInstCache->fpuregs); ++i) {
-		if( fpuused[i] ) fprintf(f, "%2d ", i);
-	}
-	fprintf(f, "\n");
-
-	fprintf(f, "       ");
-	for(i = 0; i < ArraySize(s_pInstCache->regs); ++i) {
-		if( used[i] ) fprintf(f, "%s ", disRNameGPR[i]);
-	}
-	for(i = 0; i < ArraySize(s_pInstCache->fpuregs); ++i) {
-		if( fpuused[i] ) fprintf(f, "%s ", i<32?"FR":"FA");
-	}
-	fprintf(f, "\n");
-
-	pcur = s_pInstCache+1;
-	for( i = 0; i < (s_nEndBlock-startpc)/4; ++i, ++pcur) {
-		fprintf(f, "%2d: %2.2x ", i+1, pcur->info);
-		
-		count = 1;
-		for(j = 0; j < ArraySize(s_pInstCache->regs); j++) {
-			if( used[j] ) {
-				fprintf(f, "%2.2x%s", pcur->regs[j], ((count%8)&&count<numused)?"_":" ");
-				++count;
-			}
-		}
-		count = 1;
-		for(j = 0; j < ArraySize(s_pInstCache->fpuregs); j++) {
-			if( fpuused[j] ) {
-				fprintf(f, "%2.2x%s", pcur->fpuregs[j], ((count%8)&&count<fpunumused)?"_":" ");
-				++count;
-			}
-		}
-		fprintf(f, "\n");
-	}
-	fclose( f );
-}
 
 #ifdef PCSX2_VM_COISSUE
 static u8 _eeLoadWritesRs(u32 tempcode)

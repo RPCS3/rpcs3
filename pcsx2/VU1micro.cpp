@@ -38,27 +38,6 @@ u32 vudump = 0;
 
 #define VF_VAL(x) ((x==0x80000000)?0:(x))
 
-void iDumpVU1Registers()
-{
-	// fixme: This code is outdated, broken, and lacks printed labels.
-	// Needs heavy mods to be useful.
-#if 0
-	int i;
-//	static int icount = 0;
-//	__Log("%x\n", icount);
-	for(i = 1; i < 32; ++i) {
-//		__Log("v%d: w%f(%x) z%f(%x) y%f(%x) x%f(%x), vi: ", i, VU1.VF[i].F[3], VU1.VF[i].UL[3], VU1.VF[i].F[2], VU1.VF[i].UL[2],
-//			VU1.VF[i].F[1], VU1.VF[i].UL[1], VU1.VF[i].F[0], VU1.VF[i].UL[0]);
-		//__Log("v%d: %f %f %f %f, vi: ", i, VU1.VF[i].F[3], VU1.VF[i].F[2], VU1.VF[i].F[1], VU1.VF[i].F[0]);
-		__Log("v%d: %x %x %x %x, vi: ", i, VF_VAL(VU1.VF[i].UL[3]), VF_VAL(VU1.VF[i].UL[2]), VF_VAL(VU1.VF[i].UL[1]), VF_VAL(VU1.VF[i].UL[0]));
-		if( i == REG_Q || i == REG_P ) __Log("%f\n", VU1.VI[i].F);
-		//else __Log("%x\n", VU1.VI[i].UL);
-		else __Log("%x\n", (i==REG_STATUS_FLAG||i==REG_MAC_FLAG||i==REG_CLIP_FLAG)?0:VU1.VI[i].UL);
-	}
-	__Log("vfACC: %f %f %f %f\n", VU1.ACC.F[3], VU1.ACC.F[2], VU1.ACC.F[1], VU1.ACC.F[0]);
-#endif
-}
-
 // This is called by the COP2 as per the CTC instruction
 void vu1ResetRegs()
 {

@@ -364,7 +364,7 @@ extern int _signExtendGPRtoMMX(x86MMXRegType to, u32 gprreg, int shift);
 extern _mmxregs mmxregs[iREGCNT_MMX], s_saveMMXregs[iREGCNT_MMX];
 extern u16 x86FpuState;
 
-extern void iDumpRegisters(u32 startpc, u32 temp);
+// extern void iDumpRegisters(u32 startpc, u32 temp);
 
 //////////////////////////////////////////////////////////////////////////
 // iFlushCall / _psxFlushCall Parameters

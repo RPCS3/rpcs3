@@ -48,33 +48,6 @@ _x86regs x86regs[iREGCNT_GPR], s_saveX86regs[iREGCNT_GPR];
 #include <vector>
 using namespace std;
 
-//void _eeSetLoadStoreReg(int gprreg, u32 offset, int x86reg)
-//{
-//	int regs[2] = {ESI, EDI};
-//
-//	int i = _checkX86reg(X86TYPE_MEMOFFSET, gprreg, MODE_WRITE);
-//	if( i < 0 ) {
-//		for(i = 0; i < 2; ++i) {
-//			if( !x86regs[regs[i]].inuse ) break;
-//		}
-//
-//		assert( i < 2 );
-//		i = regs[i];
-//	}
-//
-//	if( i != x86reg ) MOV32RtoR(x86reg, i);
-//	x86regs[i].extra = offset;
-//}
-
-//int _eeGeLoadStoreReg(int gprreg, int* poffset)
-//{
-//	int i = _checkX86reg(X86TYPE_MEMOFFSET, gprreg, MODE_READ);
-//	if( i >= 0 ) return -1;
-//
-//	if( poffset ) *poffset = x86regs[i].extra;
-//	return i;
-//}
-
 // XMM Caching
 #define VU_VFx_ADDR(x)  (uptr)&VU->VF[x].UL[0]
 #define VU_ACCx_ADDR    (uptr)&VU->ACC.UL[0]
@@ -107,8 +80,7 @@ __forceinline void* _XMMGetAddr(int type, int reg, VURegs *VU)
 		case XMMTYPE_FPACC:
 			return &fpuRegs.ACC.f;
 		
-		default: 
-			assert(0);
+		jNO_DEFAULT
 	}
 	
 	return NULL;
@@ -1132,74 +1104,4 @@ void _recFillRegister(EEINST& pinst, int type, int reg, int write)
 
 void SetMMXstate() {
 	x86FpuState = MMX_STATE;
-}
-
-////////////////////////////////////////////////////
-//#include "R3000A.h"
-//#include "PsxCounters.h"
-//#include "PsxMem.h"
-//extern tIPU_BP g_BP;
-
-#if 0
-extern u32 psxdump;
-extern void iDumpPsxRegisters(u32 startpc, u32 temp); 
-extern Counter counters[6];
-extern int rdram_devices;	// put 8 for TOOL and 2 for PS2 and PSX
-extern int rdram_sdevid;
-#endif
-
-void iDumpRegisters(u32 startpc, u32 temp)
-{
-// [TODO] fixme : this code is broken and has no labels.  Needs a rewrite to be useful.
-
-#if 0
-
-	int i;
-	const char* pstr;// = temp ? "t" : "";
-	const u32 dmacs[] = {0x8000, 0x9000, 0xa000, 0xb000, 0xb400, 0xc000, 0xc400, 0xc800, 0xd000, 0xd400 };
-    const char* psymb;
-	
-	if (temp)
-		pstr = "t";
-	else
-		pstr = "";
-	
-    psymb = disR5900GetSym(startpc);
-
-    if( psymb != NULL )
-        __Log("%sreg(%s): %x %x c:%x", pstr, psymb, startpc, cpuRegs.interrupt, cpuRegs.cycle);
-    else
-        __Log("%sreg: %x %x c:%x", pstr, startpc, cpuRegs.interrupt, cpuRegs.cycle);
-	for(i = 1; i < 32; ++i) __Log("%s: %x_%x_%x_%x", disRNameGPR[i], cpuRegs.GPR.r[i].UL[3], cpuRegs.GPR.r[i].UL[2], cpuRegs.GPR.r[i].UL[1], cpuRegs.GPR.r[i].UL[0]);
-    //for(i = 0; i < 32; i+=4) __Log("cp%d: %x_%x_%x_%x", i, cpuRegs.CP0.r[i], cpuRegs.CP0.r[i+1], cpuRegs.CP0.r[i+2], cpuRegs.CP0.r[i+3]);
-	//for(i = 0; i < 32; ++i) __Log("%sf%d: %f %x", pstr, i, fpuRegs.fpr[i].f, fpuRegs.fprc[i]);
-	//for(i = 1; i < 32; ++i) __Log("%svf%d: %f %f %f %f, vi: %x", pstr, i, VU0.VF[i].F[3], VU0.VF[i].F[2], VU0.VF[i].F[1], VU0.VF[i].F[0], VU0.VI[i].UL);
-	for(i = 0; i < 32; ++i) __Log("%sf%d: %x %x", pstr, i, fpuRegs.fpr[i].UL, fpuRegs.fprc[i]);
-	for(i = 1; i < 32; ++i) __Log("%svf%d: %x %x %x %x, vi: %x", pstr, i, VU0.VF[i].UL[3], VU0.VF[i].UL[2], VU0.VF[i].UL[1], VU0.VF[i].UL[0], VU0.VI[i].UL);
-	__Log("%svfACC: %x %x %x %x", pstr, VU0.ACC.UL[3], VU0.ACC.UL[2], VU0.ACC.UL[1], VU0.ACC.UL[0]);
-	__Log("%sLO: %x_%x_%x_%x, HI: %x_%x_%x_%x", pstr, cpuRegs.LO.UL[3], cpuRegs.LO.UL[2], cpuRegs.LO.UL[1], cpuRegs.LO.UL[0],
-	cpuRegs.HI.UL[3], cpuRegs.HI.UL[2], cpuRegs.HI.UL[1], cpuRegs.HI.UL[0]);
-	__Log("%sCycle: %x %x, Count: %x", pstr, cpuRegs.cycle, g_nextBranchCycle, cpuRegs.CP0.n.Count);
-	iDumpPsxRegisters(psxRegs.pc, temp);
-
-    __Log("f410,30,40: %x %x %x, %d %d", psHu32(0xf410), psHu32(0xf430), psHu32(0xf440), rdram_sdevid, rdram_devices);
-	__Log("cyc11: %x %x; vu0: %x, vu1: %x", cpuRegs.sCycle[1], cpuRegs.eCycle[1], VU0.cycle, VU1.cycle);
-
-	__Log("%scounters: %x %x; psx: %x %x", pstr, nextsCounter, nextCounter, psxNextsCounter, psxNextCounter);
-	for(i = 0; i < 4; ++i) {
-		__Log("eetimer%d: count: %x mode: %x target: %x %x; %x %x; %x %x %x %x", i,
-			counters[i].count, counters[i].mode, counters[i].target, counters[i].hold, counters[i].rate,
-			counters[i].interrupt, counters[i].Cycle, counters[i].sCycle, counters[i].CycleT, counters[i].sCycleT);
-	}
-	__Log("VIF0_STAT = %x, VIF1_STAT = %x", psHu32(0x3800), psHu32(0x3C00));
-	__Log("ipu %x %x %x %x; bp: %x %x %x %x", psHu32(0x2000), psHu32(0x2010), psHu32(0x2020), psHu32(0x2030), g_BP.BP, g_BP.bufferhasnew, g_BP.FP, g_BP.IFC);
-	__Log("gif: %x %x %x", psHu32(0x3000), psHu32(0x3010), psHu32(0x3020));
-	for(i = 0; i < ARRAYSIZE(dmacs); ++i) {
-		DMACh* p = (DMACh*)(PS2MEM_HW+dmacs[i]);
-		__Log("dma%d c%x m%x q%x t%x s%x", i, p->chcr, p->madr, p->qwc, p->tadr, p->sadr);
-	}
-	__Log("dmac %x %x %x %x", psHu32(DMAC_CTRL), psHu32(DMAC_STAT), psHu32(DMAC_RBSR), psHu32(DMAC_RBOR));
-	__Log("intc %x %x", psHu32(INTC_STAT), psHu32(INTC_MASK));
-	__Log("sif: %x %x %x %x %x", psHu32(0xf200), psHu32(0xf220), psHu32(0xf230), psHu32(0xf240), psHu32(0xf260));
-#endif
 }

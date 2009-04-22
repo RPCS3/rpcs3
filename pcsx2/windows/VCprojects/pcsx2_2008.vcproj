@@ -914,6 +914,14 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\Dump.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\Dump.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\Misc.cpp"
 				>
 			</File>
