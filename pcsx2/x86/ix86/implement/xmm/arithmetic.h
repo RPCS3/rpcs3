@@ -28,23 +28,14 @@ class _SimdShiftHelper
 public:
 	_SimdShiftHelper() {}
 
-	template< typename OperandType >
-	__forceinline void operator()( const xRegisterSIMD<OperandType>& to, const xRegisterSIMD<OperandType>& from ) const
-	{
-		writeXMMop( 0x66, Opcode1, to, from );
-	}
+	__forceinline void operator()( const xRegisterSSE& to, const xRegisterSSE& from ) const { writeXMMop( 0x66, Opcode1, to, from ); }
+	__forceinline void operator()( const xRegisterSSE& to, const void* from ) const			{ writeXMMop( 0x66, Opcode1, to, from ); }
+	__forceinline void operator()( const xRegisterSSE& to, const ModSibBase& from ) const	{ writeXMMop( 0x66, Opcode1, to, from ); }
 
-	template< typename OperandType >
-	__forceinline void operator()( const xRegisterSIMD<OperandType>& to, const void* from ) const
-	{
-		writeXMMop( 0x66, Opcode1, to, from );
-	}
+	__forceinline void operator()( const xRegisterMMX& to, const xRegisterMMX& from ) const { writeXMMop( Opcode1, to, from ); }
+	__forceinline void operator()( const xRegisterMMX& to, const void* from ) const			{ writeXMMop( Opcode1, to, from ); }
+	__forceinline void operator()( const xRegisterMMX& to, const ModSibBase& from ) const	{ writeXMMop( Opcode1, to, from ); }
 
-	template< typename OperandType >
-	__noinline void operator()( const xRegisterSIMD<OperandType>& to, const ModSibBase& from ) const
-	{
-		writeXMMop( 0x66, Opcode1, to, from );
-	}
 
 	template< typename OperandType >
 	__emitinline void operator()( const xRegisterSIMD<OperandType>& to, u8 imm8 ) const

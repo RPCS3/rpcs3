@@ -29,15 +29,16 @@ protected:
 	template< u8 Prefix >
 	struct Woot
 	{
+		Woot() {}
 		__forceinline void operator()( const xRegisterSSE& to, const void* from ) const			{ writeXMMop( Prefix, Opcode, to, from ); }
 		__forceinline void operator()( const void* to, const xRegisterSSE& from ) const			{ writeXMMop( Prefix, Opcode+1, from, to ); }
-		__noinline void operator()( const xRegisterSSE& to, const ModSibBase& from ) const		{ writeXMMop( Prefix, Opcode, to, from ); }
-		__noinline void operator()( const ModSibBase& to, const xRegisterSSE& from ) const		{ writeXMMop( Prefix, Opcode+1, from, to ); }
+		__forceinline void operator()( const xRegisterSSE& to, const ModSibBase& from ) const	{ writeXMMop( Prefix, Opcode, to, from ); }
+		__forceinline void operator()( const ModSibBase& to, const xRegisterSSE& from ) const	{ writeXMMop( Prefix, Opcode+1, from, to ); }
 	};
 
 public:
-	Woot<0x00> PS;
-	Woot<0x66> PD;
+	const Woot<0x00> PS;
+	const Woot<0x66> PD;
 
 	MovhlImplAll() {} //GCC.
 };
@@ -64,8 +65,8 @@ public:
 	__forceinline void operator()( const xRegisterSSE& to, const xRegisterSSE& from ) const	{ if( to != from ) writeXMMop( Prefix, Opcode, to, from ); }
 	__forceinline void operator()( const xRegisterSSE& to, const void* from ) const			{ writeXMMop( Prefix, Opcode, to, from ); }
 	__forceinline void operator()( const void* to, const xRegisterSSE& from ) const			{ writeXMMop( Prefix, OpcodeAlt, from, to ); }
-	__noinline void operator()( const xRegisterSSE& to, const ModSibBase& from ) const		{ writeXMMop( Prefix, Opcode, to, from ); }
-	__noinline void operator()( const ModSibBase& to, const xRegisterSSE& from ) const		{ writeXMMop( Prefix, OpcodeAlt, from, to ); }
+	__forceinline void operator()( const xRegisterSSE& to, const ModSibBase& from ) const	{ writeXMMop( Prefix, Opcode, to, from ); }
+	__forceinline void operator()( const ModSibBase& to, const xRegisterSSE& from ) const		{ writeXMMop( Prefix, OpcodeAlt, from, to ); }
 	
 	MovapsImplAll() {} //GCC.
 };

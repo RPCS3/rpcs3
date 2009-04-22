@@ -28,7 +28,7 @@ protected:
 	{
 		__forceinline void operator()( const xRegisterSSE& to, const xRegisterSSE& from, u8 cmptype ) const	{ writeXMMop( Prefix, OpcodeSSE, to, from ); xWrite<u8>( cmptype ); }
 		__forceinline void operator()( const xRegisterSSE& to, const void* from, u8 cmptype ) const			{ writeXMMop( Prefix, OpcodeSSE, to, from ); xWrite<u8>( cmptype ); }
-		__noinline void operator()( const xRegisterSSE& to, const ModSibBase& from, u8 cmptype ) const		{ writeXMMop( Prefix, OpcodeSSE, to, from ); xWrite<u8>( cmptype ); }
+		__forceinline void operator()( const xRegisterSSE& to, const ModSibBase& from, u8 cmptype ) const		{ writeXMMop( Prefix, OpcodeSSE, to, from ); xWrite<u8>( cmptype ); }
 		Woot() {}
 	};
 
@@ -192,7 +192,7 @@ protected:
 			xWrite<u8>( imm8 );
 		}
 
-		__noinline void operator()( const xRegisterSSE& to, const ModSibBase& from, u8 imm8 ) const
+		__forceinline void operator()( const xRegisterSSE& to, const ModSibBase& from, u8 imm8 ) const
 		{
 			writeXMMop( 0x66, (Opcode<<8) | 0x3a, to, from );
 			xWrite<u8>( imm8 );
@@ -220,7 +220,7 @@ public:
 
 	// Operation can be performed on either MMX or SSE src operands.
 	template< typename T >
-	__noinline void W( const xRegisterSIMD<T>& to, const ModSibBase& from, u8 imm8 ) const
+	__forceinline void W( const xRegisterSIMD<T>& to, const ModSibBase& from, u8 imm8 ) const
 	{
 		writeXMMop( 0x66, 0xc4, to, from );
 		xWrite<u8>( imm8 );
@@ -260,7 +260,7 @@ protected:
 			xWrite<u8>( imm8 );
 		}
 
-		__noinline void operator()( const ModSibBase& dest, const xRegisterSSE& from, u8 imm8 ) const
+		__forceinline void operator()( const ModSibBase& dest, const xRegisterSSE& from, u8 imm8 ) const
 		{
 			writeXMMop( 0x66, (Opcode<<8) | 0x3a, from, dest );
 			xWrite<u8>( imm8 );
@@ -289,7 +289,7 @@ public:
 		xWrite<u8>( imm8 );
 	}
 
-	__noinline void W( const ModSibBase& dest, const xRegisterSSE& from, u8 imm8 ) const
+	__forceinline void W( const ModSibBase& dest, const xRegisterSSE& from, u8 imm8 ) const
 	{
 		writeXMMop( 0x66, 0x153a, from, dest );
 		xWrite<u8>( imm8 );

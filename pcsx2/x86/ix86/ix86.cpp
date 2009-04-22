@@ -90,7 +90,7 @@ const xRegisterMMX
 	mm4( 4 ), mm5( 5 ),
 	mm6( 6 ), mm7( 7 );
 
-const xRegister32
+const xAddressReg
 	eax( 0 ), ebx( 3 ),
 	ecx( 1 ), edx( 2 ),
 	esi( 6 ), edi( 7 ),
@@ -429,7 +429,6 @@ void ModSibBase::Reduce()
 			Base = xAddressReg::Empty;
 		return;
 	}
-
 
 	// The Scale has a series of valid forms, all shown here:
 	
@@ -872,22 +871,22 @@ __forceinline void xMOVNTDQA( const xRegisterSSE& to, const void* from )
 	xWriteDisp( to.Id, from );
 }
 
-__noinline void xMOVNTDQA( const xRegisterSSE& to, const ModSibBase& from )
+__forceinline void xMOVNTDQA( const xRegisterSSE& to, const ModSibBase& from )
 {
 	xWrite<u32>( 0x2A380f66 );
 	EmitSibMagic( to.Id, from );
 }
 
 __forceinline void xMOVNTDQ( void* to, const xRegisterSSE& from )			{ writeXMMop( 0x66, 0xe7, from, to ); }
-__noinline void xMOVNTDQA( const ModSibBase& to, const xRegisterSSE& from )	{ writeXMMop( 0x66, 0xe7, from, to ); }
+__forceinline void xMOVNTDQA( const ModSibBase& to, const xRegisterSSE& from )	{ writeXMMop( 0x66, 0xe7, from, to ); }
 
 __forceinline void xMOVNTPD( void* to, const xRegisterSSE& from )			{ writeXMMop( 0x66, 0x2b, from, to ); }
-__noinline void xMOVNTPD( const ModSibBase& to, const xRegisterSSE& from )	{ writeXMMop( 0x66, 0x2b, from, to ); }
+__forceinline void xMOVNTPD( const ModSibBase& to, const xRegisterSSE& from )	{ writeXMMop( 0x66, 0x2b, from, to ); }
 __forceinline void xMOVNTPS( void* to, const xRegisterSSE& from )			{ writeXMMop( 0x2b, from, to ); }
-__noinline void xMOVNTPS( const ModSibBase& to, const xRegisterSSE& from )	{ writeXMMop( 0x2b, from, to ); }
+__forceinline void xMOVNTPS( const ModSibBase& to, const xRegisterSSE& from )	{ writeXMMop( 0x2b, from, to ); }
 
 __forceinline void xMOVNTQ( void* to, const xRegisterMMX& from )			{ writeXMMop( 0xe7, from, to ); }
-__noinline void xMOVNTQ( const ModSibBase& to, const xRegisterMMX& from )	{ writeXMMop( 0xe7, from, to ); }
+__forceinline void xMOVNTQ( const ModSibBase& to, const xRegisterMMX& from )	{ writeXMMop( 0xe7, from, to ); }
 
 __forceinline void xMOVMSKPS( const xRegister32& to, const xRegisterSSE& from)	{ writeXMMop( 0x50, to, from ); }
 __forceinline void xMOVMSKPD( const xRegister32& to, const xRegisterSSE& from)	{ writeXMMop( 0x66, 0x50, to, from, true ); }

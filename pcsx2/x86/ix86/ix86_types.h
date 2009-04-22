@@ -294,28 +294,6 @@ namespace x86Emitter
 		xRegisterCL(): xRegister8( 1 ) {}
 	};
 
-	extern const xRegisterSSE
-		xmm0, xmm1, xmm2, xmm3,
-		xmm4, xmm5, xmm6, xmm7;
-
-	extern const xRegisterMMX
-		mm0, mm1, mm2, mm3,
-		mm4, mm5, mm6, mm7;
-
-	extern const xRegister32
-		eax, ebx, ecx, edx,
-		esi, edi, ebp, esp;
-
-	extern const xRegister16
-		ax, bx, cx, dx,
-		si, di, bp, sp;
-
-	extern const xRegister8
-		al, dl, bl,
-		ah, ch, dh, bh;
-
-	extern const xRegisterCL cl;		// I'm special!
-
 	//////////////////////////////////////////////////////////////////////////////////////////
 	// Use 32 bit registers as out index register (for ModSib memory address calculations)
 	// Only xAddressReg provides operators for constructing xAddressInfo types.
@@ -402,6 +380,28 @@ namespace x86Emitter
 		__forceinline xAddressInfo operator+( s32 imm ) const { return xAddressInfo( *this ).Add( imm ); }
 		__forceinline xAddressInfo operator-( s32 imm ) const { return xAddressInfo( *this ).Add( -imm ); }
 	};
+
+	extern const xRegisterSSE
+		xmm0, xmm1, xmm2, xmm3,
+		xmm4, xmm5, xmm6, xmm7;
+
+	extern const xRegisterMMX
+		mm0, mm1, mm2, mm3,
+		mm4, mm5, mm6, mm7;
+
+	extern const xAddressReg
+		eax, ebx, ecx, edx,
+		esi, edi, ebp, esp;
+
+	extern const xRegister16
+		ax, bx, cx, dx,
+		si, di, bp, sp;
+
+	extern const xRegister8
+		al, dl, bl,
+		ah, ch, dh, bh;
+
+	extern const xRegisterCL cl;		// I'm special!
 
 	//////////////////////////////////////////////////////////////////////////////////////////
 	// ModSib - Internal low-level representation of the ModRM/SIB information.
