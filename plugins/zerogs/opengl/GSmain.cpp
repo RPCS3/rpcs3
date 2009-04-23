@@ -982,7 +982,7 @@ void _GSgifTransfer(pathInfo *path, u32 *pMem, u32 size)
 					continue;
 				}
 
-				break;
+				continue;
 			}
 		}
 
