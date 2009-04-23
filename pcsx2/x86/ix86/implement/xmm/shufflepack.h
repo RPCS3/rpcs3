@@ -26,9 +26,9 @@ class SimdImpl_Shuffle
 protected:
 	template< u8 Prefix > struct Woot
 	{
-		__forceinline void operator()( const xRegisterSSE& to, const xRegisterSSE& from, u8 cmptype ) const	{ writeXMMop( Prefix, OpcodeSSE, to, from ); xWrite<u8>( cmptype ); }
-		__forceinline void operator()( const xRegisterSSE& to, const void* from, u8 cmptype ) const			{ writeXMMop( Prefix, OpcodeSSE, to, from ); xWrite<u8>( cmptype ); }
-		__forceinline void operator()( const xRegisterSSE& to, const ModSibBase& from, u8 cmptype ) const		{ writeXMMop( Prefix, OpcodeSSE, to, from ); xWrite<u8>( cmptype ); }
+		__forceinline void operator()( const xRegisterSSE& to, const xRegisterSSE& from, u8 cmptype ) const	{ xOpWrite0F( Prefix, OpcodeSSE, to, from ); xWrite<u8>( cmptype ); }
+		__forceinline void operator()( const xRegisterSSE& to, const void* from, u8 cmptype ) const			{ xOpWrite0F( Prefix, OpcodeSSE, to, from ); xWrite<u8>( cmptype ); }
+		__forceinline void operator()( const xRegisterSSE& to, const ModSibBase& from, u8 cmptype ) const	{ xOpWrite0F( Prefix, OpcodeSSE, to, from ); xWrite<u8>( cmptype ); }
 		Woot() {}
 	};
 
@@ -182,20 +182,17 @@ protected:
 		
 		__forceinline void operator()( const xRegisterSSE& to, const xRegister32& from, u8 imm8 ) const
 		{
-			writeXMMop( 0x66, (Opcode<<8) | 0x3a, to, from );
-			xWrite<u8>( imm8 );
+			xOpWrite0F( 0x66, (Opcode<<8) | 0x3a, to, from, imm8 );
 		}
 
 		__forceinline void operator()( const xRegisterSSE& to, const void* from, u8 imm8 ) const
 		{
-			writeXMMop( 0x66, (Opcode<<8) | 0x3a, to, from );
-			xWrite<u8>( imm8 );
+			xOpWrite0F( 0x66, (Opcode<<8) | 0x3a, to, from, imm8 );
 		}
 
 		__forceinline void operator()( const xRegisterSSE& to, const ModSibBase& from, u8 imm8 ) const
 		{
-			writeXMMop( 0x66, (Opcode<<8) | 0x3a, to, from );
-			xWrite<u8>( imm8 );
+			xOpWrite0F( 0x66, (Opcode<<8) | 0x3a, to, from, imm8 );
 		}
 	};
 	
@@ -203,28 +200,13 @@ public:
 	SimdImpl_PInsert() {}
 
 	// Operation can be performed on either MMX or SSE src operands.
-	template< typename T >
-	__forceinline void W( const xRegisterSIMD<T>& to, const xRegister32& from, u8 imm8 ) const
-	{
-		writeXMMop( 0x66, 0xc4, to, from );
-		xWrite<u8>( imm8 );
-	}
+	__forceinline void W( const xRegisterSSE& to, const xRegister32& from, u8 imm8 ) const	{ xOpWrite0F( 0x66, 0xc4, to, from, imm8 ); }
+	__forceinline void W( const xRegisterSSE& to, const void* from, u8 imm8 ) const			{ xOpWrite0F( 0x66, 0xc4, to, from, imm8 ); }
+	__forceinline void W( const xRegisterSSE& to, const ModSibBase& from, u8 imm8 ) const	{ xOpWrite0F( 0x66, 0xc4, to, from, imm8 ); }
 
-	// Operation can be performed on either MMX or SSE src operands.
-	template< typename T >
-	__forceinline void W( const xRegisterSIMD<T>& to, const void* from, u8 imm8 ) const
-	{
-		writeXMMop( 0x66, 0xc4, to, from );
-		xWrite<u8>( imm8 );
-	}
-
-	// Operation can be performed on either MMX or SSE src operands.
-	template< typename T >
-	__forceinline void W( const xRegisterSIMD<T>& to, const ModSibBase& from, u8 imm8 ) const
-	{
-		writeXMMop( 0x66, 0xc4, to, from );
-		xWrite<u8>( imm8 );
-	}
+	__forceinline void W( const xRegisterMMX& to, const xRegister32& from, u8 imm8 ) const	{ xOpWrite0F( 0xc4, to, from, imm8 ); }
+	__forceinline void W( const xRegisterMMX& to, const void* from, u8 imm8 ) const			{ xOpWrite0F( 0xc4, to, from, imm8 ); }
+	__forceinline void W( const xRegisterMMX& to, const ModSibBase& from, u8 imm8 ) const	{ xOpWrite0F( 0xc4, to, from, imm8 ); }
 
 	// [SSE-4.1] 
 	const ByteDwordForms<0x20> B;
@@ -250,20 +232,17 @@ protected:
 
 		__forceinline void operator()( const xRegister32& to, const xRegisterSSE& from, u8 imm8 ) const
 		{
-			writeXMMop( 0x66, (Opcode<<8) | 0x3a, to, from );
-			xWrite<u8>( imm8 );
+			xOpWrite0F( 0x66, (Opcode<<8) | 0x3a, to, from, imm8 );
 		}
 
 		__forceinline void operator()( void* dest, const xRegisterSSE& from, u8 imm8 ) const
 		{
-			writeXMMop( 0x66, (Opcode<<8) | 0x3a, from, dest );
-			xWrite<u8>( imm8 );
+			xOpWrite0F( 0x66, (Opcode<<8) | 0x3a, from, dest, imm8 );
 		}
 
 		__forceinline void operator()( const ModSibBase& dest, const xRegisterSSE& from, u8 imm8 ) const
 		{
-			writeXMMop( 0x66, (Opcode<<8) | 0x3a, from, dest );
-			xWrite<u8>( imm8 );
+			xOpWrite0F( 0x66, (Opcode<<8) | 0x3a, from, dest, imm8 );
 		}
 	};
 
@@ -276,24 +255,11 @@ public:
 	//
 	// [SSE-4.1] Note: Indirect memory forms of this instruction are an SSE-4.1 extension!
 	//
-	template< typename T >
-	__forceinline void W( const xRegister32& to, const xRegisterSIMD<T>& from, u8 imm8 ) const
-	{
-		writeXMMop( 0x66, 0xc5, to, from, true );
-		xWrite<u8>( imm8 );
-	}
+	__forceinline void W( const xRegister32& to, const xRegisterSSE& from, u8 imm8 ) const		{ xOpWrite0F( 0x66, 0xc5, to, from, imm8 ); }
+	__forceinline void W( const xRegister32& to, const xRegisterMMX& from, u8 imm8 ) const		{ xOpWrite0F( 0xc5, to, from, imm8 ); }
 
-	__forceinline void W( void* dest, const xRegisterSSE& from, u8 imm8 ) const
-	{
-		writeXMMop( 0x66, 0x153a, from, dest );
-		xWrite<u8>( imm8 );
-	}
-
-	__forceinline void W( const ModSibBase& dest, const xRegisterSSE& from, u8 imm8 ) const
-	{
-		writeXMMop( 0x66, 0x153a, from, dest );
-		xWrite<u8>( imm8 );
-	}
+	__forceinline void W( void* dest, const xRegisterSSE& from, u8 imm8 ) const					{ xOpWrite0F( 0x66, 0x153a, from, dest, imm8 ); }
+	__forceinline void W( const ModSibBase& dest, const xRegisterSSE& from, u8 imm8 ) const		{ xOpWrite0F( 0x66, 0x153a, from, dest, imm8 ); }
 
 	// [SSE-4.1] Copies the byte element specified by imm8 from src to dest.  The upper bits
 	// of dest are zero-extended (cleared).  This can be used to extract any single packed

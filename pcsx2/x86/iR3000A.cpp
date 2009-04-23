@@ -935,6 +935,8 @@ void psxRecompileNextInstruction(int delayslot)
 #ifdef _DEBUG
 static void printfn()
 {
+	extern void iDumpPsxRegisters(u32 startpc, u32 temp);
+
 	static int lastrec = 0;
 	static int curcount = 0;
 	const int skip = 0;
@@ -962,6 +964,8 @@ void iopRecRecompile(u32 startpc)
 	u32 willbranch3 = 0;
 
 #ifdef _DEBUG
+	extern void iDumpPsxRegisters(u32 startpc, u32 temp);
+
 	if( psxdump & 4 )
 		iDumpPsxRegisters(startpc, 0);
 #endif

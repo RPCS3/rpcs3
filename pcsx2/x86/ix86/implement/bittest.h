@@ -33,151 +33,38 @@ enum G8Type
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////
-// Notes: Bit Test instructions are valid on 16/32 bit operands only.
-//
-template< G8Type InstType, typename ImmType >
-class Group8Impl
-{
-protected:
-	static const uint OperandSize = sizeof(ImmType);
-
-	static void prefix16()		{ if( OperandSize == 2 ) xWrite<u8>( 0x66 ); }
-
-public: 
-	Group8Impl() {}		// For the love of GCC.
-
-	// ------------------------------------------------------------------------
-	static __emitinline void Emit( const xRegister<ImmType>& bitbase, const xRegister<ImmType>& bitoffset )
-	{
-		prefix16();
-		xWrite<u8>( 0x0f );
-		xWrite<u8>( 0xa3 | (InstType << 2) );
-		ModRM_Direct( bitoffset.Id, bitbase.Id );
-	}
-
-	// ------------------------------------------------------------------------
-	static __emitinline void Emit( void* bitbase, const xRegister<ImmType>& bitoffset )
-	{
-		prefix16();
-		xWrite<u8>( 0x0f );
-		xWrite<u8>( 0xa3 | (InstType << 2) );
-		xWriteDisp( bitoffset.Id, bitbase );
-	}
-
-	// ------------------------------------------------------------------------
-	static __emitinline void Emit( const ModSibBase& bitbase, const xRegister<ImmType>& bitoffset )
-	{
-		prefix16();
-		xWrite<u8>( 0x0f );
-		xWrite<u8>( 0xa3 | (InstType << 2) );
-		EmitSibMagic( bitoffset.Id, bitbase );
-	}
-
-	// ------------------------------------------------------------------------
-	static __emitinline void Emit( const xRegister<ImmType>& bitbase, u8 immoffset )
-	{
-		prefix16();
-		xWrite<u16>( 0xba0f );
-		ModRM_Direct( InstType, bitbase.Id );
-		xWrite<u8>( immoffset );
-	}
-
-	// ------------------------------------------------------------------------
-	static __emitinline void Emit( const ModSibStrict<ImmType>& bitbase, u8 immoffset )
-	{
-		prefix16();
-		xWrite<u16>( 0xba0f );
-		EmitSibMagic( InstType, bitbase );
-		xWrite<u8>( immoffset );
-	}
-};
-
-// -------------------------------------------------------------------
-//
-template< G8Type InstType >
-class Group8ImplAll
-{
-protected:
-	typedef Group8Impl<InstType,u32> m_32;
-	typedef Group8Impl<InstType,u32> m_16;
-
-public:
-	__forceinline void operator()( const xRegister32& bitbase,	const xRegister32& bitoffset ) const	{ m_32::Emit( bitbase, bitoffset ); }
-	__forceinline void operator()( const xRegister16& bitbase,	const xRegister16& bitoffset ) const	{ m_16::Emit( bitbase, bitoffset ); }
-	__forceinline void operator()( void* bitbase,				const xRegister32& bitoffset ) const	{ m_32::Emit( bitbase, bitoffset ); }
-	__forceinline void operator()( void* bitbase,				const xRegister16& bitoffset ) const	{ m_16::Emit( bitbase, bitoffset ); }
-	__noinline void operator()( const ModSibBase& bitbase,		const xRegister32& bitoffset ) const	{ m_32::Emit( bitbase, bitoffset ); }
-	__noinline void operator()( const ModSibBase& bitbase,		const xRegister16& bitoffset ) const	{ m_16::Emit( bitbase, bitoffset ); }
-
-	__noinline void operator()( const ModSibStrict<u32>& bitbase, u8 bitoffset ) const	{ m_32::Emit( bitbase, bitoffset ); }
-	__noinline void operator()( const ModSibStrict<u16>& bitbase, u8 bitoffset ) const	{ m_16::Emit( bitbase, bitoffset ); }
-	void operator()( const xRegister<u32>& bitbase, u8 bitoffset ) const				{ m_32::Emit( bitbase, bitoffset ); }
-	void operator()( const xRegister<u16>& bitbase, u8 bitoffset ) const				{ m_16::Emit( bitbase, bitoffset ); }
-
-	Group8ImplAll() {}
-};
-
-
-//////////////////////////////////////////////////////////////////////////////////////////
 // BSF / BSR -- 16/32 operands supported only.
 //
-template< bool isReverse, typename ImmType >
+// 0xbc [fwd] / 0xbd [rev]
+//
+template< u16 Opcode >
 class BitScanImpl
 {
-protected:
-	static const uint OperandSize = sizeof(ImmType);
-	static void prefix16()		{ if( OperandSize == 2 ) xWrite<u8>( 0x66 ); }
-	static void emitbase()
-	{
-		prefix16();
-		xWrite<u8>( 0x0f );
-		xWrite<u8>( isReverse ? 0xbd : 0xbc );
-	}
+public:
+	BitScanImpl() {}
 
-public: 
-	BitScanImpl() {}		// For the love of GCC.
-
-	// ------------------------------------------------------------------------
-	static __emitinline void Emit( const xRegister<ImmType>& to, const xRegister<ImmType>& from )
-	{
-		emitbase();
-		ModRM_Direct( to.Id, from.Id );
-	}
-
-	// ------------------------------------------------------------------------
-	static __emitinline void Emit( const xRegister<ImmType>& to, const void* src )
-	{
-		emitbase();
-		xWriteDisp( to.Id, src );
-	}
-
-	// ------------------------------------------------------------------------
-	static __emitinline void Emit( const xRegister<ImmType>& to, const ModSibBase& sibsrc )
-	{
-		emitbase();
-		EmitSibMagic( to.Id, sibsrc );
-	}
+	__forceinline void operator()( const xRegister32& to, const xRegister32& from ) const	{ xOpWrite0F( Opcode, to, from ); }
+	__forceinline void operator()( const xRegister16& to, const xRegister16& from ) const	{ xOpWrite0F( 0x66, Opcode, to, from ); }
+	__forceinline void operator()( const xRegister32& to, const void* src ) const			{ xOpWrite0F( Opcode, to, src ); }
+	__forceinline void operator()( const xRegister16& to, const void* src ) const			{ xOpWrite0F( 0x66, Opcode, to, src ); }
+	__forceinline void operator()( const xRegister32& to, const ModSibBase& sibsrc ) const	{ xOpWrite0F( Opcode, to, sibsrc ); }
+	__forceinline void operator()( const xRegister16& to, const ModSibBase& sibsrc ) const	{ xOpWrite0F( 0x66, Opcode, to, sibsrc ); }
 };
 
-
-// -------------------------------------------------------------------
-// BSF/BSR  -- 16 and 32 bit operand forms only!
+//////////////////////////////////////////////////////////////////////////////////////////
+// Bit Test Instructions - Valid on 16/32 bit instructions only.
 //
-template< bool isReverse >
-class BitScanImplAll
+template< G8Type InstType >
+class Group8Impl : public BitScanImpl<0xa3 | (InstType << 2)>
 {
-protected:
-	typedef BitScanImpl<isReverse,u32> m_32;
-	typedef BitScanImpl<isReverse,u32> m_16;
-
 public:
-	__forceinline void operator()( const xRegister32& to, const xRegister32& from ) const	{ m_32::Emit( to, from ); }
-	__forceinline void operator()( const xRegister16& to, const xRegister16& from ) const	{ m_16::Emit( to, from ); }
-	__forceinline void operator()( const xRegister32& to, const void* src ) const			{ m_32::Emit( to, src ); }
-	__forceinline void operator()( const xRegister16& to, const void* src ) const			{ m_16::Emit( to, src ); }
-	__noinline void operator()( const xRegister32& to, const ModSibBase& sibsrc ) const		{ m_32::Emit( to, sibsrc ); }
-	__noinline void operator()( const xRegister16& to, const ModSibBase& sibsrc ) const		{ m_16::Emit( to, sibsrc ); }
+	using BitScanImpl<0xa3 | (InstType << 2)>::operator();
 
-	BitScanImplAll() {}
+	__forceinline void operator()( const ModSibStrict<u32>& bitbase, u8 bitoffset ) const	{ xOpWrite0F( 0xba, InstType, bitbase );		xWrite<u8>( bitoffset ); }
+	__forceinline void operator()( const ModSibStrict<u16>& bitbase, u8 bitoffset ) const	{ xOpWrite0F( 0x66, 0xba, InstType, bitbase );	xWrite<u8>( bitoffset ); }
+	void operator()( const xRegister<u32>& bitbase, u8 bitoffset ) const					{ xOpWrite0F( 0xba, InstType, bitbase );		xWrite<u8>( bitoffset ); }
+	void operator()( const xRegister<u16>& bitbase, u8 bitoffset ) const					{ xOpWrite0F( 0x66, 0xba, InstType, bitbase );	xWrite<u8>( bitoffset ); }
+
+	Group8Impl() {}
 };
 

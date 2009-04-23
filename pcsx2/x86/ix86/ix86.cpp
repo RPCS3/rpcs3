@@ -160,8 +160,41 @@ namespace Internal
 	{
 		xWriteDisp( regfield, (s32)address );
 	}
+	
+	//////////////////////////////////////////////////////////////////////////////////////////
+	// emitter helpers for xmm instruction with prefixes, most of which are using
+	// the basic opcode format (items inside braces denote optional or conditional
+	// emission):
+	//
+	//   [Prefix] / 0x0f / [OpcodePrefix] / Opcode / ModRM+[SibSB]
+	//
+	// Prefixes are typically 0x66, 0xf2, or 0xf3.  OpcodePrefixes are either 0x38 or
+	// 0x3a [and other value will result in assertion failue].
+	//
+	__emitinline void xOpWrite0F( u8 prefix, u16 opcode, int instId, const ModSibBase& sib )
+	{
+		SimdPrefix( prefix, opcode );
+		EmitSibMagic( instId, sib );
+	}
 
-	// ------------------------------------------------------------------------
+	__emitinline void xOpWrite0F( u8 prefix, u16 opcode, int instId, const void* data )
+	{
+		SimdPrefix( prefix, opcode );
+		xWriteDisp( instId, data );
+	}
+
+	__emitinline void xOpWrite0F( u16 opcode, int instId, const ModSibBase& sib )
+	{
+		xOpWrite0F( 0, opcode, instId, sib );
+	}
+
+	__emitinline void xOpWrite0F( u16 opcode, int instId, const void* data )
+	{
+		xOpWrite0F( 0, opcode, instId, data );
+	}
+
+
+	//////////////////////////////////////////////////////////////////////////////////////////
 	// returns TRUE if this instruction requires SIB to be encoded, or FALSE if the
 	// instruction ca be encoded as ModRm alone.
 	static __forceinline bool NeedsSibMagic( const ModSibBase& info )
@@ -288,13 +321,13 @@ const MovExtendImplAll<true>  xMOVSX;
 const DwordShiftImplAll<false> xSHLD;
 const DwordShiftImplAll<true>  xSHRD;
 
-const Group8ImplAll<G8Type_BT> xBT;
-const Group8ImplAll<G8Type_BTR> xBTR;
-const Group8ImplAll<G8Type_BTS> xBTS;
-const Group8ImplAll<G8Type_BTC> xBTC;
+const Group8Impl<G8Type_BT> xBT;
+const Group8Impl<G8Type_BTR> xBTR;
+const Group8Impl<G8Type_BTS> xBTS;
+const Group8Impl<G8Type_BTC> xBTC;
 
-const BitScanImplAll<false> xBSF;
-const BitScanImplAll<true> xBSR;
+const BitScanImpl<0xbc> xBSF;
+const BitScanImpl<0xbd> xBSR;
 
 // ------------------------------------------------------------------------
 const CMovImplGeneric xCMOV;
@@ -634,321 +667,5 @@ __emitinline void xBSWAP( const xRegister32& to )
 	write8( 0x0F );
 	write8( 0xC8 | to.Id );
 }
-
-
-//////////////////////////////////////////////////////////////////////////////////////////
-// MMX / XMM Instructions
-// (these will get put in their own file later)
-
-// ------------------------------------------------------------------------
-// SimdPrefix - If the lower byte of the opcode is 0x38 or 0x3a, then the opcode is
-// treated as a 16 bit value (in SSE 0x38 and 0x3a denote prefixes for extended SSE3/4
-// instructions).  Any other lower value assumes the upper value is 0 and ignored.
-// Non-zero upper bytes, when the lower byte is not the 0x38 or 0x3a prefix, will
-// generate an assertion.
-//
-__emitinline void Internal::SimdPrefix( u8 prefix, u16 opcode )
-{
-	const bool is16BitOpcode = ((opcode & 0xff) == 0x38) || ((opcode & 0xff) == 0x3a);
-
-	// If the lower byte is not a valid previx and the upper byte is non-zero it
-	// means we made a mistake!
-	if( !is16BitOpcode ) jASSUME( (opcode >> 8) == 0 );
-
-	if( prefix != 0 )
-	{
-		if( is16BitOpcode )
-			xWrite<u32>( (opcode<<16) | 0x0f00 | prefix );
-		else
-		{
-			xWrite<u16>( 0x0f00 | prefix );
-			xWrite<u8>( opcode );
-		}
-	}
-	else
-	{
-		if( is16BitOpcode )
-		{
-			xWrite<u8>( 0x0f );
-			xWrite<u16>( opcode );
-		}
-		else
-			xWrite<u16>( (opcode<<8) | 0x0f );
-	}
-}
-
-// [SSE-3]
-const SimdImpl_DestRegSSE<0xf3,0x12> xMOVSLDUP;
-// [SSE-3]
-const SimdImpl_DestRegSSE<0xf3,0x16> xMOVSHDUP;
-
-const MovapsImplAll< 0, 0x28, 0x29 > xMOVAPS; 
-const MovapsImplAll< 0, 0x10, 0x11 > xMOVUPS;
-const MovapsImplAll< 0x66, 0x28, 0x29 > xMOVAPD;
-const MovapsImplAll< 0x66, 0x10, 0x11 > xMOVUPD;
-
-#ifdef ALWAYS_USE_MOVAPS
-const MovapsImplAll< 0x66, 0x6f, 0x7f > xMOVDQA;
-const MovapsImplAll< 0xf3, 0x6f, 0x7f > xMOVDQU;
-#else
-const MovapsImplAll< 0, 0x28, 0x29 > xMOVDQA;
-const MovapsImplAll< 0, 0x10, 0x11 > xMOVDQU;
-#endif
-
-const MovhlImplAll<0x16> xMOVH;
-const MovhlImplAll<0x12> xMOVL;
-const MovhlImpl_RtoR<0x16> xMOVLH;
-const MovhlImpl_RtoR<0x12> xMOVHL;
-
-const SimdImpl_DestRegEither<0x66,0xdb> xPAND;
-const SimdImpl_DestRegEither<0x66,0xdf> xPANDN;
-const SimdImpl_DestRegEither<0x66,0xeb> xPOR;
-const SimdImpl_DestRegEither<0x66,0xef> xPXOR;
-
-const SimdImpl_AndNot xANDN;
-
-const SimdImpl_UcomI<0x66,0x2e> xUCOMI;
-const SimdImpl_rSqrt<0x53> xRCP;
-const SimdImpl_rSqrt<0x52> xRSQRT;
-const SimdImpl_Sqrt<0x51> xSQRT;
-
-const SimdImpl_MinMax<0x5f> xMAX;
-const SimdImpl_MinMax<0x5d> xMIN;
-const SimdImpl_Shuffle<0xc6> xSHUF;
-
-// ------------------------------------------------------------------------
-
-const SimdImpl_Compare<SSE2_Equal>		xCMPEQ;
-const SimdImpl_Compare<SSE2_Less>			xCMPLT;
-const SimdImpl_Compare<SSE2_LessOrEqual>	xCMPLE;
-const SimdImpl_Compare<SSE2_Unordered>	xCMPUNORD;
-const SimdImpl_Compare<SSE2_NotEqual>		xCMPNE;
-const SimdImpl_Compare<SSE2_NotLess>		xCMPNLT;
-const SimdImpl_Compare<SSE2_NotLessOrEqual> xCMPNLE;
-const SimdImpl_Compare<SSE2_Ordered>		xCMPORD;
-
-// ------------------------------------------------------------------------
-// SSE Conversion Operations, as looney as they are.
-// 
-// These enforce pointer strictness for Indirect forms, due to the otherwise completely confusing
-// nature of the functions.  (so if a function expects an m32, you must use (u32*) or ptr32[]).
-//
-const SimdImpl_DestRegStrict<0xf3,0xe6,xRegisterSSE,xRegisterSSE,u64>		xCVTDQ2PD;
-const SimdImpl_DestRegStrict<0x00,0x5b,xRegisterSSE,xRegisterSSE,u128>		xCVTDQ2PS;
-
-const SimdImpl_DestRegStrict<0xf2,0xe6,xRegisterSSE,xRegisterSSE,u128>		xCVTPD2DQ;
-const SimdImpl_DestRegStrict<0x66,0x2d,xRegisterMMX,xRegisterSSE,u128>		xCVTPD2PI;
-const SimdImpl_DestRegStrict<0x66,0x5a,xRegisterSSE,xRegisterSSE,u128>		xCVTPD2PS;
-
-const SimdImpl_DestRegStrict<0x66,0x2a,xRegisterSSE,xRegisterMMX,u64>		xCVTPI2PD;
-const SimdImpl_DestRegStrict<0x00,0x2a,xRegisterSSE,xRegisterMMX,u64>		xCVTPI2PS;
-
-const SimdImpl_DestRegStrict<0x66,0x5b,xRegisterSSE,xRegisterSSE,u128>		xCVTPS2DQ;
-const SimdImpl_DestRegStrict<0x00,0x5a,xRegisterSSE,xRegisterSSE,u64>		xCVTPS2PD;
-const SimdImpl_DestRegStrict<0x00,0x2d,xRegisterMMX,xRegisterSSE,u64>		xCVTPS2PI;
-
-const SimdImpl_DestRegStrict<0xf2,0x2d,xRegister32, xRegisterSSE,u64>		xCVTSD2SI;
-const SimdImpl_DestRegStrict<0xf2,0x5a,xRegisterSSE,xRegisterSSE,u64>		xCVTSD2SS;
-const SimdImpl_DestRegStrict<0xf2,0x2a,xRegisterMMX,xRegister32, u32>		xCVTSI2SD;
-const SimdImpl_DestRegStrict<0xf3,0x2a,xRegisterSSE,xRegister32, u32>		xCVTSI2SS;
-
-const SimdImpl_DestRegStrict<0xf3,0x5a,xRegisterSSE,xRegisterSSE,u32>		xCVTSS2SD;
-const SimdImpl_DestRegStrict<0xf3,0x2d,xRegister32, xRegisterSSE,u32>		xCVTSS2SI;
-
-const SimdImpl_DestRegStrict<0x66,0xe6,xRegisterSSE,xRegisterSSE,u128>		xCVTTPD2DQ;
-const SimdImpl_DestRegStrict<0x66,0x2c,xRegisterMMX,xRegisterSSE,u128>		xCVTTPD2PI;
-const SimdImpl_DestRegStrict<0xf3,0x5b,xRegisterSSE,xRegisterSSE,u128>		xCVTTPS2DQ;
-const SimdImpl_DestRegStrict<0x00,0x2c,xRegisterMMX,xRegisterSSE,u64>		xCVTTPS2PI;
-
-const SimdImpl_DestRegStrict<0xf2,0x2c,xRegister32, xRegisterSSE,u64>		xCVTTSD2SI;
-const SimdImpl_DestRegStrict<0xf3,0x2c,xRegister32, xRegisterSSE,u32>		xCVTTSS2SI;
-
-// ------------------------------------------------------------------------
-
-const SimdImpl_Shift<0xd0, 2> xPSRL;
-const SimdImpl_Shift<0xf0, 6> xPSLL;
-const SimdImpl_ShiftWithoutQ<0xe0, 4> xPSRA;
-
-const SimdImpl_AddSub<0xdc, 0xd4> xPADD;
-const SimdImpl_AddSub<0xd8, 0xfb> xPSUB;
-const SimdImpl_PMinMax<0xde,0x3c> xPMAX;
-const SimdImpl_PMinMax<0xda,0x38> xPMIN;
-
-const SimdImpl_PMul xPMUL;
-const SimdImpl_PCompare xPCMP;
-const SimdImpl_PShuffle xPSHUF;
-const SimdImpl_PUnpack xPUNPCK;
-const SimdImpl_Unpack xUNPCK;
-const SimdImpl_Pack xPACK;
-
-const SimdImpl_PAbsolute xPABS;
-const SimdImpl_PSign xPSIGN;
-const SimdImpl_PInsert xPINSR;
-const SimdImpl_PExtract xPEXTR;
-const SimdImpl_PMultAdd xPMADD;
-const SimdImpl_HorizAdd xHADD;
-
-
-//////////////////////////////////////////////////////////////////////////////////////////
-//
-
-__emitinline void xEMMS()
-{
-	xWrite<u16>( 0x770F );
-}
-
-// Store Streaming SIMD Extension Control/Status to Mem32.
-__emitinline void xSTMXCSR( u32* dest )
-{
-	SimdPrefix( 0, 0xae );
-	xWriteDisp( 3, dest );
-}
-
-// Load Streaming SIMD Extension Control/Status from Mem32.
-__emitinline void xLDMXCSR( const u32* src )
-{
-	SimdPrefix( 0, 0xae );
-	xWriteDisp( 2, src );
-}
-
-
-// Moves from XMM to XMM, with the *upper 64 bits* of the destination register
-// being cleared to zero.
-__forceinline void xMOVQZX( const xRegisterSSE& to, const xRegisterSSE& from )	{ writeXMMop( 0xf3, 0x7e, to, from ); }
-
-// Moves from XMM to XMM, with the *upper 64 bits* of the destination register
-// being cleared to zero.
-__forceinline void xMOVQZX( const xRegisterSSE& to, const ModSibBase& src )		{ writeXMMop( 0xf3, 0x7e, to, src ); }
-
-// Moves from XMM to XMM, with the *upper 64 bits* of the destination register
-// being cleared to zero.
-__forceinline void xMOVQZX( const xRegisterSSE& to, const void* src )			{ writeXMMop( 0xf3, 0x7e, to, src ); }
-
-// Moves lower quad of XMM to ptr64 (no bits are cleared)
-__forceinline void xMOVQ( const ModSibBase& dest, const xRegisterSSE& from )	{ writeXMMop( 0x66, 0xd6, from, dest ); }
-// Moves lower quad of XMM to ptr64 (no bits are cleared)
-__forceinline void xMOVQ( void* dest, const xRegisterSSE& from )				{ writeXMMop( 0x66, 0xd6, from, dest ); }
-
-__forceinline void xMOVQ( const xRegisterMMX& to, const xRegisterMMX& from )	{ if( to != from ) writeXMMop( 0x6f, to, from ); }
-__forceinline void xMOVQ( const xRegisterMMX& to, const ModSibBase& src )		{ writeXMMop( 0x6f, to, src ); }
-__forceinline void xMOVQ( const xRegisterMMX& to, const void* src )				{ writeXMMop( 0x6f, to, src ); }
-__forceinline void xMOVQ( const ModSibBase& dest, const xRegisterMMX& from )	{ writeXMMop( 0x7f, from, dest ); }
-__forceinline void xMOVQ( void* dest, const xRegisterMMX& from )				{ writeXMMop( 0x7f, from, dest ); }
-
-// This form of xMOVQ is Intel's adeptly named 'MOVQ2DQ'
-__forceinline void xMOVQ( const xRegisterSSE& to, const xRegisterMMX& from )	{ writeXMMop( 0xf3, 0xd6, to, from ); }
-
-// This form of xMOVQ is Intel's adeptly named 'MOVDQ2Q'
-__forceinline void xMOVQ( const xRegisterMMX& to, const xRegisterSSE& from )
-{
-	// Manual implementation of this form of MOVQ, since its parameters are unique in a way
-	// that breaks the template inference of writeXMMop();
-
-	SimdPrefix( 0xf2, 0xd6 );
-	ModRM_Direct( to.Id, from.Id );
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////
-//
-
-#define IMPLEMENT_xMOVS( ssd, prefix ) \
-	__forceinline void xMOV##ssd( const xRegisterSSE& to, const xRegisterSSE& from )	{ if( to != from ) writeXMMop( prefix, 0x10, to, from ); } \
-	__forceinline void xMOV##ssd##ZX( const xRegisterSSE& to, const void* from )		{ writeXMMop( prefix, 0x10, to, from ); } \
-	__forceinline void xMOV##ssd##ZX( const xRegisterSSE& to, const ModSibBase& from )	{ writeXMMop( prefix, 0x10, to, from ); } \
-	__forceinline void xMOV##ssd( const void* to, const xRegisterSSE& from )			{ writeXMMop( prefix, 0x11, from, to ); } \
-	__forceinline void xMOV##ssd( const ModSibBase& to, const xRegisterSSE& from )		{ writeXMMop( prefix, 0x11, from, to ); }
-
-IMPLEMENT_xMOVS( SS, 0xf3 )
-IMPLEMENT_xMOVS( SD, 0xf2 )
-
-//////////////////////////////////////////////////////////////////////////////////////////
-// Non-temporal movs only support a register as a target (ie, load form only, no stores)
-//
-
-__forceinline void xMOVNTDQA( const xRegisterSSE& to, const void* from )
-{
-	xWrite<u32>( 0x2A380f66 );
-	xWriteDisp( to.Id, from );
-}
-
-__forceinline void xMOVNTDQA( const xRegisterSSE& to, const ModSibBase& from )
-{
-	xWrite<u32>( 0x2A380f66 );
-	EmitSibMagic( to.Id, from );
-}
-
-__forceinline void xMOVNTDQ( void* to, const xRegisterSSE& from )			{ writeXMMop( 0x66, 0xe7, from, to ); }
-__forceinline void xMOVNTDQA( const ModSibBase& to, const xRegisterSSE& from )	{ writeXMMop( 0x66, 0xe7, from, to ); }
-
-__forceinline void xMOVNTPD( void* to, const xRegisterSSE& from )			{ writeXMMop( 0x66, 0x2b, from, to ); }
-__forceinline void xMOVNTPD( const ModSibBase& to, const xRegisterSSE& from )	{ writeXMMop( 0x66, 0x2b, from, to ); }
-__forceinline void xMOVNTPS( void* to, const xRegisterSSE& from )			{ writeXMMop( 0x2b, from, to ); }
-__forceinline void xMOVNTPS( const ModSibBase& to, const xRegisterSSE& from )	{ writeXMMop( 0x2b, from, to ); }
-
-__forceinline void xMOVNTQ( void* to, const xRegisterMMX& from )			{ writeXMMop( 0xe7, from, to ); }
-__forceinline void xMOVNTQ( const ModSibBase& to, const xRegisterMMX& from )	{ writeXMMop( 0xe7, from, to ); }
-
-__forceinline void xMOVMSKPS( const xRegister32& to, const xRegisterSSE& from)	{ writeXMMop( 0x50, to, from ); }
-__forceinline void xMOVMSKPD( const xRegister32& to, const xRegisterSSE& from)	{ writeXMMop( 0x66, 0x50, to, from, true ); }
-
-//////////////////////////////////////////////////////////////////////////////////////////
-// INSERTPS / EXTRACTPS   [SSE4.1 only!]
-//
-// [TODO] these might be served better as classes, especially if other instructions use
-// the M32,sse,imm form (I forget offhand if any do).
-
-
-// [SSE-4.1] Insert a single-precision floating-point value from src into a specified
-// location in dest, and selectively zero out the data elements in dest according to
-// the mask  field in the immediate byte. The source operand can be a memory location
-// (32 bits) or an XMM register (lower 32 bits used).
-//
-// Imm8 provides three fields:
-//  * COUNT_S: The value of Imm8[7:6] selects the dword element from src.  It is 0 if
-//    the source is a memory operand.
-//  * COUNT_D: The value of Imm8[5:4] selects the target dword element in dest.
-//  * ZMASK: Each bit of Imm8[3:0] selects a dword element in dest to  be written
-//    with 0.0 if set to 1.
-//
-__emitinline void xINSERTPS( const xRegisterSSE& to, const xRegisterSSE& from, u8 imm8 )
-{
-	writeXMMop( 0x66, 0x213a, to, from );
-	xWrite<u8>( imm8 );
-}
-
-__emitinline void xINSERTPS( const xRegisterSSE& to, const u32* from, u8 imm8 )
-{
-	writeXMMop( 0x66, 0x213a, to, from );
-	xWrite<u8>( imm8 );
-}
-
-__emitinline void xINSERTPS( const xRegisterSSE& to, const ModSibStrict<u32>& from, u8 imm8 )
-{
-	writeXMMop( 0x66, 0x213a, to, from );
-	xWrite<u8>( imm8 );
-}
-
-// [SSE-4.1] Extract a single-precision floating-point value from src at an offset
-// determined by imm8[1-0]*32. The extracted single precision floating-point value
-// is stored into the low 32-bits of dest (or at a 32-bit memory pointer).
-//
-__emitinline void xEXTRACTPS( const xRegister32& to, const xRegisterSSE& from, u8 imm8 )
-{
-	writeXMMop( 0x66, 0x173a, to, from, true );
-	xWrite<u8>( imm8 );
-}
-
-__emitinline void xEXTRACTPS( u32* dest, const xRegisterSSE& from, u8 imm8 )
-{
-	writeXMMop( 0x66, 0x173a, from, dest, true );
-	xWrite<u8>( imm8 );
-}
-
-__emitinline void xEXTRACTPS( const ModSibStrict<u32>& dest, const xRegisterSSE& from, u8 imm8 )
-{
-	writeXMMop( 0x66, 0x173a, from, dest, true );
-	xWrite<u8>( imm8 );
-}
-
 
 }

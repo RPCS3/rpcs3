@@ -28,19 +28,25 @@ class _SimdShiftHelper
 public:
 	_SimdShiftHelper() {}
 
-	__forceinline void operator()( const xRegisterSSE& to, const xRegisterSSE& from ) const { writeXMMop( 0x66, Opcode1, to, from ); }
-	__forceinline void operator()( const xRegisterSSE& to, const void* from ) const			{ writeXMMop( 0x66, Opcode1, to, from ); }
-	__forceinline void operator()( const xRegisterSSE& to, const ModSibBase& from ) const	{ writeXMMop( 0x66, Opcode1, to, from ); }
+	__forceinline void operator()( const xRegisterSSE& to, const xRegisterSSE& from ) const { xOpWrite0F( 0x66, Opcode1, to, from ); }
+	__forceinline void operator()( const xRegisterSSE& to, const void* from ) const			{ xOpWrite0F( 0x66, Opcode1, to, from ); }
+	__forceinline void operator()( const xRegisterSSE& to, const ModSibBase& from ) const	{ xOpWrite0F( 0x66, Opcode1, to, from ); }
 
-	__forceinline void operator()( const xRegisterMMX& to, const xRegisterMMX& from ) const { writeXMMop( Opcode1, to, from ); }
-	__forceinline void operator()( const xRegisterMMX& to, const void* from ) const			{ writeXMMop( Opcode1, to, from ); }
-	__forceinline void operator()( const xRegisterMMX& to, const ModSibBase& from ) const	{ writeXMMop( Opcode1, to, from ); }
+	__forceinline void operator()( const xRegisterMMX& to, const xRegisterMMX& from ) const { xOpWrite0F( Opcode1, to, from ); }
+	__forceinline void operator()( const xRegisterMMX& to, const void* from ) const			{ xOpWrite0F( Opcode1, to, from ); }
+	__forceinline void operator()( const xRegisterMMX& to, const ModSibBase& from ) const	{ xOpWrite0F( Opcode1, to, from ); }
 
 
-	template< typename OperandType >
-	__emitinline void operator()( const xRegisterSIMD<OperandType>& to, u8 imm8 ) const
+	__emitinline void operator()( const xRegisterSSE& to, u8 imm8 ) const
 	{
-		SimdPrefix( (sizeof( OperandType ) == 16) ? 0x66 : 0, OpcodeImm );
+		SimdPrefix( 0x66, OpcodeImm );
+		ModRM( 3, (int)Modcode, to.Id );
+		xWrite<u8>( imm8 );
+	}
+
+	__emitinline void operator()( const xRegisterMMX& to, u8 imm8 ) const
+	{
+		SimdPrefix( 0x00, OpcodeImm );
 		ModRM( 3, (int)Modcode, to.Id );
 		xWrite<u8>( imm8 );
 	}
@@ -68,11 +74,11 @@ class SimdImpl_Shift : public SimdImpl_ShiftWithoutQ<OpcodeBase1, Modcode>
 public:
 	const _SimdShiftHelper<OpcodeBase1+3,0x73,Modcode> Q;
 	
-	void DQ( const xRegisterSSE& to, u8 imm ) const
+	void DQ( const xRegisterSSE& to, u8 imm8 ) const
 	{
 		SimdPrefix( 0x66, 0x73 );
 		ModRM( 3, (int)Modcode+1, to.Id );
-		xWrite<u8>( imm );
+		xWrite<u8>( imm8 );
 	}
 	
 	SimdImpl_Shift() {}
@@ -156,8 +162,8 @@ template< u16 OpcodeSSE >
 class SimdImpl_Sqrt : public SimdImpl_rSqrt<OpcodeSSE>
 {
 public:
-	const SimdImpl_DestRegSSE<0xf2,OpcodeSSE> SD;
 	SimdImpl_Sqrt() {}
+	const SimdImpl_DestRegSSE<0xf2,OpcodeSSE> SD;
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -165,9 +171,9 @@ public:
 class SimdImpl_AndNot
 {
 public:
+	SimdImpl_AndNot() {}
 	const SimdImpl_DestRegSSE<0x00,0x55> PS;
 	const SimdImpl_DestRegSSE<0x66,0x55> PD;
-	SimdImpl_AndNot() {}
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -281,4 +287,88 @@ public:
 	// * Adds the double-precision floating-point values in the high and low quadwords of
 	//   *src* stores the result in the high quadword of dest.
 	const SimdImpl_DestRegSSE<0x66, 0x7c> PD;
+};
+
+//////////////////////////////////////////////////////////////////////////////////////////
+// DotProduct calculation (SSE4.1 only!)
+//
+class SimdImpl_DotProduct
+{
+public:
+	SimdImpl_DotProduct() {}
+
+	// [SSE-4.1] Conditionally multiplies the packed single precision floating-point
+	// values in dest with the packed single-precision floats in src depending on a
+	// mask extracted from the high 4 bits of the immediate byte. If a condition mask
+	// bit in Imm8[7:4] is zero, the corresponding multiplication is replaced by a value
+	// of 0.0.	The four resulting single-precision values are summed into an inter-
+	// mediate result. 
+	//
+	// The intermediate result is conditionally broadcasted to the destination using a
+	// broadcast mask specified by bits [3:0] of the immediate byte. If a broadcast
+	// mask bit is 1, the intermediate result is copied to the corresponding dword
+	// element in dest.  If a broadcast mask bit is zero, the corresponding element in
+	// the destination is set to zero.
+	//
+	SimdImpl_DestRegImmSSE<0x66,0x403a> PS;
+
+	// [SSE-4.1]
+	SimdImpl_DestRegImmSSE<0x66,0x413a> PD;
+};
+
+//////////////////////////////////////////////////////////////////////////////////////////
+// Rounds floating point values (packed or single scalar) by an arbitrary rounding mode.
+// (SSE4.1 only!)
+class SimdImpl_Round
+{
+public:
+	SimdImpl_Round() {}
+
+	// [SSE-4.1] Rounds the 4 packed single-precision src values and stores them in dest.
+	//
+	// Imm8 specifies control fields for the rounding operation:
+	//   Bit  3 - processor behavior for a precision exception (0: normal, 1: inexact)
+	//   Bit  2 - If enabled, use MXCSR.RC, else use RC specified in bits 1:0 of this Imm8.
+	//   Bits 1:0 - Specifies a rounding mode for this instruction only.
+	//
+	// Rounding Mode Reference:
+	//   0 - Nearest, 1 - Negative Infinity, 2 - Positive infinity, 3 - Truncate.
+	//
+	const SimdImpl_DestRegImmSSE<0x66,0x083a> PS;
+
+	// [SSE-4.1] Rounds the 2 packed double-precision src values and stores them in dest.
+	//
+	// Imm8 specifies control fields for the rounding operation:
+	//   Bit  3 - processor behavior for a precision exception (0: normal, 1: inexact)
+	//   Bit  2 - If enabled, use MXCSR.RC, else use RC specified in bits 1:0 of this Imm8.
+	//   Bits 1:0 - Specifies a rounding mode for this instruction only.
+	//
+	// Rounding Mode Reference:
+	//   0 - Nearest, 1 - Negative Infinity, 2 - Positive infinity, 3 - Truncate.
+	//
+	const SimdImpl_DestRegImmSSE<0x66,0x093a> PD;
+
+	// [SSE-4.1] Rounds the single-precision src value and stores in dest.
+	//
+	// Imm8 specifies control fields for the rounding operation:
+	//   Bit  3 - processor behavior for a precision exception (0: normal, 1: inexact)
+	//   Bit  2 - If enabled, use MXCSR.RC, else use RC specified in bits 1:0 of this Imm8.
+	//   Bits 1:0 - Specifies a rounding mode for this instruction only.
+	//
+	// Rounding Mode Reference:
+	//   0 - Nearest, 1 - Negative Infinity, 2 - Positive infinity, 3 - Truncate.
+	//
+	const SimdImpl_DestRegImmSSE<0x66,0x0a3a> SS;
+
+	// [SSE-4.1] Rounds the double-precision src value and stores in dest.
+	//
+	// Imm8 specifies control fields for the rounding operation:
+	//   Bit  3 - processor behavior for a precision exception (0: normal, 1: inexact)
+	//   Bit  2 - If enabled, use MXCSR.RC, else use RC specified in bits 1:0 of this Imm8.
+	//   Bits 1:0 - Specifies a rounding mode for this instruction only.
+	//
+	// Rounding Mode Reference:
+	//   0 - Nearest, 1 - Negative Infinity, 2 - Positive infinity, 3 - Truncate.
+	//
+	const SimdImpl_DestRegImmSSE<0x66,0x0b3a> SD;
 };

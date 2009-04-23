@@ -906,19 +906,19 @@
 			Name="Misc"
 			>
 			<File
-				RelativePath="..\..\HashMap.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\HashTools.cpp"
-				>
-			</File>
-			<File
 				RelativePath="..\..\Dump.cpp"
 				>
 			</File>
 			<File
 				RelativePath="..\..\Dump.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\HashMap.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\HashTools.cpp"
 				>
 			</File>
 			<File
@@ -2966,15 +2966,15 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\x86\ix86\ix86_legacy_mmx.cpp"
-				>
-			</File>
-			<File
 				RelativePath="..\..\x86\ix86\ix86_legacy_sse.cpp"
 				>
 			</File>
 			<File
 				RelativePath="..\..\x86\ix86\ix86_legacy_types.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\x86\ix86\ix86_simd.cpp"
 				>
 			</File>
 			<File
@@ -3026,6 +3026,10 @@
 				</File>
 				<File
 					RelativePath="..\..\x86\ix86\implement\test.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\x86\ix86\implement\xchg.h"
 					>
 				</File>
 				<Filter

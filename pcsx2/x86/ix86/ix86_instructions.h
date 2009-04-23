@@ -86,16 +86,16 @@ namespace x86Emitter
 	extern const Internal::DwordShiftImplAll<false> xSHLD;
 	extern const Internal::DwordShiftImplAll<true>  xSHRD;
 
-	extern const Internal::Group8ImplAll<Internal::G8Type_BT> xBT;
-	extern const Internal::Group8ImplAll<Internal::G8Type_BTR> xBTR;
-	extern const Internal::Group8ImplAll<Internal::G8Type_BTS> xBTS;
-	extern const Internal::Group8ImplAll<Internal::G8Type_BTC> xBTC;
+	extern const Internal::Group8Impl<Internal::G8Type_BT> xBT;
+	extern const Internal::Group8Impl<Internal::G8Type_BTR> xBTR;
+	extern const Internal::Group8Impl<Internal::G8Type_BTS> xBTS;
+	extern const Internal::Group8Impl<Internal::G8Type_BTC> xBTC;
 
 	extern const Internal::JmpCallImplAll<true> xJMP;
 	extern const Internal::JmpCallImplAll<false> xCALL;
 
-	extern const Internal::BitScanImplAll<false> xBSF;
-	extern const Internal::BitScanImplAll<true> xBSR;
+	extern const Internal::BitScanImpl<0xbc> xBSF;
+	extern const Internal::BitScanImpl<0xbd> xBSR;
 
 	// ------------------------------------------------------------------------
 	extern const Internal::CMovImplGeneric xCMOV;
@@ -299,94 +299,27 @@ namespace x86Emitter
 	typedef xForwardJPO<s8>		xForwardJPO8;
 	typedef xForwardJPO<s32>	xForwardJPO32;
 
-	//////////////////////////////////////////////////////////////////////////////////////////
-	// MMX Mov Instructions (MOVD, MOVQ, MOVSS).
-	//
-	// Notes:
-	//  * Some of the functions have been renamed to more clearly reflect what they actually
-	//    do.  Namely we've affixed "ZX" to several MOVs that take a register as a destination
-	//    since that's what they do (MOVD clears upper 32/96 bits, etc).
-	//
-	
-	// ------------------------------------------------------------------------
-	// MOVD has valid forms for MMX and XMM registers.
-	//
-	template< typename T >
-	__emitinline void xMOVDZX( const xRegisterSIMD<T>& to, const xRegister32& from )
-	{
-		Internal::writeXMMop( 0x66, 0x6e, to, from );
-	}
-
-	template< typename T >
-	__emitinline void xMOVDZX( const xRegisterSIMD<T>& to, const void* src )
-	{
-		Internal::writeXMMop( 0x66, 0x6e, to, src );
-	}
-
-	template< typename T >
-	void xMOVDZX( const xRegisterSIMD<T>& to, const ModSibBase& src )
-	{
-		Internal::writeXMMop( 0x66, 0x6e, to, src );
-	}
-
-	template< typename T >
-	__emitinline void xMOVD( const xRegister32& to, const xRegisterSIMD<T>& from )
-	{
-		Internal::writeXMMop( 0x66, 0x7e, from, to );
-	}
-
-	template< typename T >
-	__emitinline void xMOVD( void* dest, const xRegisterSIMD<T>& from )
-	{
-		Internal::writeXMMop( 0x66, 0x7e, from, dest );
-	}
-
-	template< typename T >
-	void xMOVD( const ModSibBase& dest, const xRegisterSIMD<T>& from )
-	{
-		Internal::writeXMMop( 0x66, 0x7e, from, dest );
-	}
-
-
-	// ------------------------------------------------------------------------
-
-	// xMASKMOV:
-	// Selectively write bytes from mm1/xmm1 to memory location using the byte mask in mm2/xmm2.
-	// The default memory location is specified by DS:EDI.  The most significant bit in each byte
-	// of the mask operand determines whether the corresponding byte in the source operand is
-	// written to the corresponding byte location in memory.
-
-	template< typename T >
-	static __forceinline void xMASKMOV( const xRegisterSIMD<T>& to, const xRegisterSIMD<T>& from )	{ Internal::writeXMMop( 0x66, 0xf7, to, from ); }
-
-	// xPMOVMSKB:
-	// Creates a mask made up of the most significant bit of each byte of the source 
-	// operand and stores the result in the low byte or word of the destination operand.
-	// Upper bits of the destination are cleared to zero.
-	//
-	// When operating on a 64-bit (MMX) source, the byte mask is 8 bits; when operating on
-	// 128-bit (SSE) source, the byte mask is 16-bits.
-	//
-	template< typename T >
-	static __forceinline void xPMOVMSKB( const xRegister32& to, const xRegisterSIMD<T>& from )	{ Internal::writeXMMop( 0x66, 0xd7, to, from ); }
-	
-	// [sSSE-3] Concatenates dest and source operands into an intermediate composite,
-	// shifts the composite at byte granularity to the right by a constant immediate,
-	// and extracts the right-aligned result into the destination.
-	//
-	template< typename T >
-	static __forceinline void xPALIGNR( const xRegisterSIMD<T>& to, const xRegisterSIMD<T>& from, u8 imm8 )
-	{
-		Internal::writeXMMop( 0x66, 0x0f3a, to, from );
-		xWrite<u8>( imm8 );
-	}
-
-
 	// ------------------------------------------------------------------------
 
 	extern void xEMMS();
 	extern void xSTMXCSR( u32* dest );
 	extern void xLDMXCSR( const u32* src );
+
+	extern void xMOVDZX( const xRegisterSSE& to, const xRegister32& from );
+	extern void xMOVDZX( const xRegisterSSE& to, const void* src );
+	extern void xMOVDZX( const xRegisterSSE& to, const ModSibBase& src );
+
+	extern void xMOVDZX( const xRegisterMMX& to, const xRegister32& from );
+	extern void xMOVDZX( const xRegisterMMX& to, const void* src );
+	extern void xMOVDZX( const xRegisterMMX& to, const ModSibBase& src );
+
+	extern void xMOVD( const xRegister32& to, const xRegisterSSE& from );
+	extern void xMOVD( void* dest, const xRegisterSSE& from );
+	extern void xMOVD( const ModSibBase& dest, const xRegisterSSE& from );
+
+	extern void xMOVD( const xRegister32& to, const xRegisterMMX& from );
+	extern void xMOVD( void* dest, const xRegisterMMX& from );
+	extern void xMOVD( const ModSibBase& dest, const xRegisterMMX& from );
 
 	extern void xMOVQ( const xRegisterMMX& to, const xRegisterMMX& from );
 	extern void xMOVQ( const xRegisterMMX& to, const xRegisterSSE& from );
@@ -430,6 +363,39 @@ namespace x86Emitter
 	extern void xMOVMSKPS( const xRegister32& to, const xRegisterSSE& from );
 	extern void xMOVMSKPD( const xRegister32& to, const xRegisterSSE& from );
 
+	extern void xMASKMOV( const xRegisterSSE& to, const xRegisterSSE& from );
+	extern void xMASKMOV( const xRegisterMMX& to, const xRegisterMMX& from );
+	extern void xPMOVMSKB( const xRegister32& to, const xRegisterSSE& from );
+	extern void xPMOVMSKB( const xRegister32& to, const xRegisterMMX& from );
+	extern void xPALIGNR( const xRegisterSSE& to, const xRegisterSSE& from, u8 imm8 );
+	extern void xPALIGNR( const xRegisterMMX& to, const xRegisterMMX& from, u8 imm8 );
+
+	// ------------------------------------------------------------------------
+
+	extern const Internal::SimdImpl_MoveSSE<0x00,true> xMOVAPS;
+	extern const Internal::SimdImpl_MoveSSE<0x00,false> xMOVUPS;
+
+#ifdef ALWAYS_USE_MOVAPS
+	extern const Internal::SimdImpl_MoveSSE<0,true> xMOVDQA;
+	extern const Internal::SimdImpl_MoveSSE<0,false> xMOVDQU;
+	extern const Internal::SimdImpl_MoveSSE<0,true> xMOVAPD;
+	extern const Internal::SimdImpl_MoveSSE<0,false> xMOVUPD;
+#else
+	extern const Internal::SimdImpl_MoveDQ<0x66, 0x6f, 0x7f> xMOVDQA;
+	extern const Internal::SimdImpl_MoveDQ<0xf3, 0x6f, 0x7f> xMOVDQU;
+	extern const Internal::SimdImpl_MoveSSE<0x66,true> xMOVAPD;
+	extern const Internal::SimdImpl_MoveSSE<0x66,false> xMOVUPD;
+#endif
+
+	extern const Internal::MovhlImpl_RtoR<0x16> xMOVLH;
+	extern const Internal::MovhlImpl_RtoR<0x12> xMOVHL;
+
+	extern const Internal::MovhlImplAll<0x16> xMOVH;
+	extern const Internal::MovhlImplAll<0x12> xMOVL;
+
+	extern const Internal::SimdImpl_DestRegSSE<0xf3,0x12> xMOVSLDUP;
+	extern const Internal::SimdImpl_DestRegSSE<0xf3,0x16> xMOVSHDUP;
+
 	extern void xINSERTPS( const xRegisterSSE& to, const xRegisterSSE& from, u8 imm8 );
 	extern void xINSERTPS( const xRegisterSSE& to, const u32* from, u8 imm8 );
 	extern void xINSERTPS( const xRegisterSSE& to, const ModSibStrict<u32>& from, u8 imm8 );
@@ -439,37 +405,12 @@ namespace x86Emitter
 	extern void xEXTRACTPS( const ModSibStrict<u32>& dest, const xRegisterSSE& from, u8 imm8 );
 
 	// ------------------------------------------------------------------------
-
-	extern const Internal::SimdImpl_DestRegSSE<0xf3,0x12> xMOVSLDUP;
-	extern const Internal::SimdImpl_DestRegSSE<0xf3,0x16> xMOVSHDUP;
-
-	extern const Internal::MovapsImplAll<0, 0x28, 0x29> xMOVAPS;
-	extern const Internal::MovapsImplAll<0, 0x10, 0x11> xMOVUPS;
-
-	extern const Internal::MovapsImplAll<0x66, 0x28, 0x29> xMOVAPD;
-	extern const Internal::MovapsImplAll<0x66, 0x10, 0x11> xMOVUPD;
-
-#ifdef ALWAYS_USE_MOVAPS
-	extern const Internal::MovapsImplAll<0x66, 0x6f, 0x7f> xMOVDQA;
-	extern const Internal::MovapsImplAll<0xf3, 0x6f, 0x7f> xMOVDQU;
-#else
-	extern const Internal::MovapsImplAll<0, 0x28, 0x29> xMOVDQA;
-	extern const Internal::MovapsImplAll<0, 0x10, 0x11> xMOVDQU;
-#endif
-
-	extern const Internal::MovhlImpl_RtoR<0x16> xMOVLH;
-	extern const Internal::MovhlImpl_RtoR<0x12> xMOVHL;
-
-	extern const Internal::MovhlImplAll<0x16> xMOVH;
-	extern const Internal::MovhlImplAll<0x12> xMOVL;
-
-	// ------------------------------------------------------------------------
 	
 	extern const Internal::SimdImpl_DestRegEither<0x66,0xdb> xPAND;
 	extern const Internal::SimdImpl_DestRegEither<0x66,0xdf> xPANDN;
 	extern const Internal::SimdImpl_DestRegEither<0x66,0xeb> xPOR;
 	extern const Internal::SimdImpl_DestRegEither<0x66,0xef> xPXOR;
-
+	
 	extern const Internal::SimdImpl_AndNot xANDN;
 
 	extern const Internal::SimdImpl_UcomI<0x66,0x2e> xUCOMI;
@@ -482,6 +423,8 @@ namespace x86Emitter
 	extern const Internal::SimdImpl_Shuffle<0xc6> xSHUF;
 
 	// ------------------------------------------------------------------------
+
+	extern const Internal::SimdImpl_DestRegSSE<0x66,0x1738> xPTEST;
 	
 	extern const Internal::SimdImpl_Compare<SSE2_Equal>			xCMPEQ;
 	extern const Internal::SimdImpl_Compare<SSE2_Less>			xCMPLT;
@@ -527,8 +470,8 @@ namespace x86Emitter
 	
 	// ------------------------------------------------------------------------
 	
-	extern const Internal::SimdImpl_Shift<0xd0, 2> xPSRL;
 	extern const Internal::SimdImpl_Shift<0xf0, 6> xPSLL;
+	extern const Internal::SimdImpl_Shift<0xd0, 2> xPSRL;
 	extern const Internal::SimdImpl_ShiftWithoutQ<0xe0, 4> xPSRA;
 
 	extern const Internal::SimdImpl_AddSub<0xdc, 0xd4> xPADD;
@@ -549,6 +492,13 @@ namespace x86Emitter
 	extern const Internal::SimdImpl_PExtract xPEXTR;
 	extern const Internal::SimdImpl_PMultAdd xPMADD;
 	extern const Internal::SimdImpl_HorizAdd xHADD;
+
+	extern const Internal::SimdImpl_Blend xBLEND;
+	extern const Internal::SimdImpl_DotProduct xDP;
+	extern const Internal::SimdImpl_Round xROUND;
+	
+	extern const Internal::SimdImpl_PMove<true> xPMOVSX;
+	extern const Internal::SimdImpl_PMove<false> xPMOVZX;
 
 }
 

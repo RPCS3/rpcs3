@@ -167,9 +167,9 @@ class xImpl_G1Compare : xImpl_Group1< G1Type_CMP >
 protected:
 	template< u8 Prefix > struct Woot
 	{
-		__forceinline void operator()( const xRegisterSSE& to, const xRegisterSSE& from, SSE2_ComparisonType cmptype ) const{ writeXMMop( Prefix, 0xc2, to, from ); xWrite<u8>( cmptype ); }
-		__forceinline void operator()( const xRegisterSSE& to, const void* from, SSE2_ComparisonType cmptype ) const		{ writeXMMop( Prefix, 0xc2, to, from ); xWrite<u8>( cmptype ); }
-		__noinline void operator()( const xRegisterSSE& to, const ModSibBase& from, SSE2_ComparisonType cmptype ) const		{ writeXMMop( Prefix, 0xc2, to, from ); xWrite<u8>( cmptype ); }
+		__forceinline void operator()( const xRegisterSSE& to, const xRegisterSSE& from, SSE2_ComparisonType cmptype ) const{ xOpWrite0F( Prefix, 0xc2, to, from ); xWrite<u8>( cmptype ); }
+		__forceinline void operator()( const xRegisterSSE& to, const void* from, SSE2_ComparisonType cmptype ) const		{ xOpWrite0F( Prefix, 0xc2, to, from ); xWrite<u8>( cmptype ); }
+		__forceinline void operator()( const xRegisterSSE& to, const ModSibBase& from, SSE2_ComparisonType cmptype ) const	{ xOpWrite0F( Prefix, 0xc2, to, from ); xWrite<u8>( cmptype ); }
 		Woot() {}
 	};
 

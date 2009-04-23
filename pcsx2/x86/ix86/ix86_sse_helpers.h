@@ -48,4 +48,3 @@ extern void SSEX_PUNPCKLDQ_M128_to_XMM(x86SSERegType to, uptr from );
 extern void SSEX_PUNPCKLDQ_XMM_to_XMM(x86SSERegType to, x86SSERegType from );
 extern void SSEX_PUNPCKHDQ_M128_to_XMM(x86SSERegType to, uptr from );
 extern void SSEX_PUNPCKHDQ_XMM_to_XMM(x86SSERegType to, x86SSERegType from );
-extern void SSEX_MOVHLPS_XMM_to_XMM( x86SSERegType to, x86SSERegType from );

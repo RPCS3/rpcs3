@@ -252,28 +252,6 @@ namespace x86Emitter
 		}
 	};
 
-	//////////////////////////////////////////////////////////////////////////////////////////
-	//
-	template< typename OperandType >
-	class xRegisterSIMD : public xRegister<OperandType>
-	{
-	public:
-		static const xRegisterSIMD Empty;		// defined as an empty/unused value (-1)
-
-	public:
-		xRegisterSIMD(): xRegister<OperandType>() {}
-		xRegisterSIMD( const xRegisterSIMD& src ) : xRegister<OperandType>( src.Id ) {}
-		xRegisterSIMD( const xRegister<OperandType>& src ) : xRegister<OperandType>( src ) {}
-		explicit xRegisterSIMD( int regId ) : xRegister<OperandType>( regId ) {}
-
-		xRegisterSIMD<OperandType>& operator=( const xRegisterSIMD<OperandType>& src )
-		{
-			xRegister<OperandType>::Id = src.Id;
-			return *this;
-		}
-	};
-
-	
 	// ------------------------------------------------------------------------
 	// Note: GCC parses templates ahead of time apparently as a 'favor' to the programmer, which
 	// means it finds undeclared variables when MSVC does not (Since MSVC compiles templates
@@ -282,8 +260,8 @@ namespace x86Emitter
 	// all about the the templated code in haphazard fashion.  Yay.. >_<
 	//
 
-	typedef xRegisterSIMD<u128> xRegisterSSE;
-	typedef xRegisterSIMD<u64>  xRegisterMMX;
+	typedef xRegister<u128> xRegisterSSE;
+	typedef xRegister<u64>  xRegisterMMX;
 	typedef xRegister<u32>  xRegister32;
 	typedef xRegister<u16>  xRegister16;
 	typedef xRegister<u8>   xRegister8;

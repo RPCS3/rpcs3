@@ -41,9 +41,9 @@ class SimdImpl_Compare
 protected:
 	template< u8 Prefix > struct Woot
 	{
-		__forceinline void operator()( const xRegisterSSE& to, const xRegisterSSE& from ) const	{ writeXMMop( Prefix, 0xc2, to, from ); xWrite<u8>( CType ); }
-		__forceinline void operator()( const xRegisterSSE& to, const void* from ) const			{ writeXMMop( Prefix, 0xc2, to, from ); xWrite<u8>( CType ); }
-		__forceinline void operator()( const xRegisterSSE& to, const ModSibBase& from ) const	{ writeXMMop( Prefix, 0xc2, to, from ); xWrite<u8>( CType ); }
+		__forceinline void operator()( const xRegisterSSE& to, const xRegisterSSE& from ) const	{ xOpWrite0F( Prefix, 0xc2, to, from ); xWrite<u8>( CType ); }
+		__forceinline void operator()( const xRegisterSSE& to, const void* from ) const			{ xOpWrite0F( Prefix, 0xc2, to, from ); xWrite<u8>( CType ); }
+		__forceinline void operator()( const xRegisterSSE& to, const ModSibBase& from ) const	{ xOpWrite0F( Prefix, 0xc2, to, from ); xWrite<u8>( CType ); }
 		Woot() {}
 	};
 
@@ -128,4 +128,3 @@ public:
 	// packed min/max values in dest. (SSE operands only)
 	const SimdImpl_DestRegSSE<0x66,((Opcode2+3)<<8)|0x38> UD;
 };
-

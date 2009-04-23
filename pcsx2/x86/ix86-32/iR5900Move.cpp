@@ -316,7 +316,7 @@ void recMFHILO1(int hi)
 
 	if( reghi >= 0 ) {
 		if( regd >= 0 ) {
-			SSEX_MOVHLPS_XMM_to_XMM(regd, reghi);
+			SSE_MOVHLPS_XMM_to_XMM(regd, reghi);
 			xmmregs[regd].mode |= MODE_WRITE;
 		}
 		else {
