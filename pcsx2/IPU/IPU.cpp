@@ -1367,7 +1367,7 @@ int FIFOto_write(u32* pMem, int size)
 			g_nDMATransfer |= IPU_DMA_ACTV1; \
 			return totalqwc; \
 		} \
-	}	\
+	}	g_nDMATransfer &= ~(IPU_DMA_ACTV1 | IPU_DMA_DOTIE1);\
 }
 
 extern void gsInterrupt();
@@ -1452,7 +1452,7 @@ int IPU1dma()
 			}
 		}
 
-		g_nDMATransfer &= ~(IPU_DMA_ACTV1 | IPU_DMA_DOTIE1);
+		
 	}
 
 	if ((ipu1dma->chcr & 0xc) == 0 && ipu1dma->qwc == 0)   // Normal Mode
