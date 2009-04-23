@@ -308,8 +308,8 @@ namespace COP0 {
 void MFC0()
 {
 	// Note on _Rd_ Condition 9: CP0.Count should be updated even if _Rt_ is 0.
-	if( (_Rd_ != 9) && !_Rt_ ) return;
-	if(_Rd_ != 9) { COP0_LOG("%s", disR5900Current.getCString() ); }
+	if ((_Rd_ != 9) && !_Rt_ ) return;
+	if (_Rd_ != 9) { COP0_LOG("%s", disR5900Current.getCString() ); }
 	
 	//if(bExecBIOS == FALSE && _Rd_ == 25) Console::WriteLn("MFC0 _Rd_ %x = %x", params _Rd_, cpuRegs.CP0.r[_Rd_]);
 	switch (_Rd_)
@@ -412,33 +412,40 @@ int CPCOND0() {
 
 //#define CPCOND0	1
 
-#define BC0(cond) \
+/*#define BC0(cond) \
 	if (CPCOND0() cond) { \
 		intDoBranch(_BranchTarget_); \
-	}
+	}*/
 
 void BC0F() {
-	BC0(== 0);
+	if (CPCOND0() == 0) intDoBranch(_BranchTarget_); 
 	COP0_LOG( "COP0 > BC0F" );
 }
 
 void BC0T() {
-	BC0(== 1);
+	if (CPCOND0() == 1) intDoBranch(_BranchTarget_); 
 	COP0_LOG( "COP0 > BC0T" );
 }
 
-#define BC0L(cond) \
+/*#define BC0L(cond) \
 	if (CPCOND0() cond) { \
 		intDoBranch(_BranchTarget_); \
-	} else cpuRegs.pc+= 4;
-
+	} else cpuRegs.pc+= 4;*/
+	
 void BC0FL() {
-	BC0L(== 0);
+	if (CPCOND0() == 0) 
+		intDoBranch(_BranchTarget_); 
+	else 
+		cpuRegs.pc+= 4;
+	
 	COP0_LOG( "COP0 > BC0FL" );
 }
 
 void BC0TL() {
-	BC0L(== 1);
+	if (CPCOND0() == 1) 
+		intDoBranch(_BranchTarget_); 
+	else 
+		cpuRegs.pc+= 4;
 	COP0_LOG( "COP0 > BCOTL" );
 }
 
@@ -487,8 +494,7 @@ void TLBWR() {
 
 void TLBP() {
 	int i;
-
-
+	
 	union {
 		struct {
 			u32 VPN2:19;
@@ -499,13 +505,13 @@ void TLBP() {
 		u32 u;
 	} EntryHi32;
 
-	EntryHi32.u=cpuRegs.CP0.n.EntryHi;
+	EntryHi32.u = cpuRegs.CP0.n.EntryHi;
 
 	cpuRegs.CP0.n.Index=0xFFFFFFFF;
 	for(i=0;i<48;i++){
-		if(tlb[i].VPN2==((~tlb[i].Mask)&(EntryHi32.s.VPN2))
-		&&((tlb[i].G&1)||((tlb[i].ASID & 0xff) == EntryHi32.s.ASID))) {
-			cpuRegs.CP0.n.Index=i;
+		if (tlb[i].VPN2 == ((~tlb[i].Mask) & (EntryHi32.s.VPN2))
+		&& ((tlb[i].G&1) || ((tlb[i].ASID & 0xff) == EntryHi32.s.ASID))) {
+			cpuRegs.CP0.n.Index = i;
 			break;
 		}
 	}
