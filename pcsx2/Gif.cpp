@@ -28,7 +28,7 @@
 
 using std::min;
 
-#define gifsplit 64
+#define gifsplit 128
 enum gifstate_t
 {
 	GIF_STATE_READY = 0,
