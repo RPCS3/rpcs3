@@ -37,7 +37,7 @@ public:
 	// Special form for calling functions.  This form automatically resolves the
 	// correct displacement based on the size of the instruction being generated.
 	template< typename T > 
-	__forceinline void operator()( const T* func ) const
+	__forceinline void operator()( T* func ) const
 	{
 		if( isJmp )
 			xJccKnownTarget( Jcc_Unconditional, (void*)(uptr)func, false );	// double cast to/from (uptr) needed to appease GCC

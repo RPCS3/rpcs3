@@ -686,7 +686,7 @@ __forceinline void xWrite( T val )
 		extern void SimdPrefix( u8 prefix, u16 opcode );
 		extern void EmitSibMagic( uint regfield, const void* address );
 		extern void EmitSibMagic( uint regfield, const ModSibBase& info );
-		extern void xJccKnownTarget( JccComparisonType comparison, void* target, bool slideForward );
+		extern void xJccKnownTarget( JccComparisonType comparison, const void* target, bool slideForward );
 
 
 		// Writes a ModRM byte for "Direct" register access forms, which is used for all

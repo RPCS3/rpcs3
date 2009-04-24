@@ -81,7 +81,7 @@ xSmartJump::~xSmartJump()
 // slideForward - used internally by xSmartJump to indicate that the jump target is going
 // to slide forward in the event of an 8 bit displacement.
 //
-__emitinline void Internal::xJccKnownTarget( JccComparisonType comparison, void* target, bool slideForward )
+__emitinline void Internal::xJccKnownTarget( JccComparisonType comparison, const void* target, bool slideForward )
 {
 	// Calculate the potential j8 displacement first, assuming an instruction length of 2:
 	sptr displacement8 = (sptr)target - ((sptr)xGetPtr() + 2);
@@ -115,9 +115,10 @@ __emitinline void Internal::xJccKnownTarget( JccComparisonType comparison, void*
 
 // Low-level jump instruction!  Specify a comparison type and a target in void* form, and
 // a jump (either 8 or 32 bit) is generated.
-__emitinline void xJcc( JccComparisonType comparison, void* target )
+__emitinline void xJcc( JccComparisonType comparison, const void* target )
 {
 	xJccKnownTarget( comparison, target, false );
 }
 
 }
+
