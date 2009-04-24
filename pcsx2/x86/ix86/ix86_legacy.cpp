@@ -32,6 +32,30 @@
 #include "System.h"
 #include "ix86_legacy_internal.h"
 
+//////////////////////////////////////////////////////////////////////////////////////////
+//
+emitterT void ModRM( uint mod, uint reg, uint rm )
+{
+	// Note: Following ASSUMEs are for legacy support only.
+	// The new emitter performs these sanity checks during operand construction, so these
+	// assertions can probably be removed once all legacy emitter code has been removed.
+	jASSUME( mod < 4 );
+	jASSUME( reg < 8 );
+	jASSUME( rm < 8 );
+	xWrite8( (mod << 6) | (reg << 3) | rm );
+}
+
+emitterT void SibSB( uint ss, uint index, uint base )
+{
+	// Note: Following ASSUMEs are for legacy support only.
+	// The new emitter performs these sanity checks during operand construction, so these
+	// assertions can probably be removed once all legacy emitter code has been removed.
+	jASSUME( ss < 4 );
+	jASSUME( index < 8 );
+	jASSUME( base < 8 );
+	xWrite8( (ss << 6) | (index << 3) | base );
+}
+
 using namespace x86Emitter;
 
 template< typename ImmType >
@@ -310,63 +334,26 @@ emitterT void SAHF() { xSAHF(); }
 //////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// Note: the 'to' field can either be a register or a special opcode extension specifier
-// depending on the opcode's encoding.
-
-emitterT void WriteRmOffsetFrom(x86IntRegType to, x86IntRegType from, int offset)
-{
-	if ((from&7) == ESP) {
-		if( offset == 0 ) {
-			ModRM( 0, to, 0x4 );
-			SibSB( 0, 0x4, 0x4 );
-		}
-		else if( is_s8( offset ) ) {
-			ModRM( 1, to, 0x4 );
-			SibSB( 0, 0x4, 0x4 );
-			write8(offset);
-		}
-		else {
-			ModRM( 2, to, 0x4 );
-			SibSB( 0, 0x4, 0x4 );
-			write32(offset);
-		}
-	}
-	else {
-		if( offset == 0 ) {
-			ModRM( 0, to, from );
-		}
-		else if( is_s8( offset ) ) {
-			ModRM( 1, to, from );
-			write8(offset);
-		}
-		else {
-			ModRM( 2, to, from );
-			write32(offset);
-		}
-	}
-}
-
 emitterT u8* J8Rel( int cc, int to )
 {
-	write8( cc );
-	write8( to );
+	xWrite8( cc );
+	xWrite8( to );
 	return (u8*)(x86Ptr - 1);
 }
 
 emitterT u16* J16Rel( int cc, u32 to )
 {
-	write16( 0x0F66 );
-	write8( cc );
-	write16( to );
+	xWrite16( 0x0F66 );
+	xWrite8( cc );
+	xWrite16( to );
 	return (u16*)( x86Ptr - 2 );
 }
 
 emitterT u32* J32Rel( int cc, u32 to )
 {
-	write8( 0x0F );
-	write8( cc );
-	write32( to );
+	xWrite8( 0x0F );
+	xWrite8( cc );
+	xWrite32( to );
 	return (u32*)( x86Ptr - 4 );
 }
 
@@ -448,8 +435,8 @@ emitterT void NOP( void ) { xNOP(); }
 /* jmp rel8 */
 emitterT u8* JMP8( u8 to ) 
 {
-	write8( 0xEB ); 
-	write8( to );
+	xWrite8( 0xEB ); 
+	xWrite8( to );
 	return x86Ptr - 1;
 }
 
@@ -457,8 +444,8 @@ emitterT u8* JMP8( u8 to )
 emitterT u32* JMP32( uptr to ) 
 {
 	assert( (sptr)to <= 0x7fffffff && (sptr)to >= -0x7fffffff );
-	write8( 0xE9 ); 
-	write32( to ); 
+	xWrite8( 0xE9 ); 
+	xWrite32( to ); 
 	return (u32*)(x86Ptr - 4 );
 }
 

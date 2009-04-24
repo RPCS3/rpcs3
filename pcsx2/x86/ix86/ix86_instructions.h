@@ -57,7 +57,7 @@ namespace x86Emitter
 	// flags.
 
 	extern const Internal::MovImplAll xMOV;
-	extern const Internal::TestImplAll xTEST;
+	extern const Internal::xImpl_Test xTEST;
 
 	extern const Internal::Group2ImplAll<Internal::G2Type_ROL> xROL;
 	extern const Internal::Group2ImplAll<Internal::G2Type_ROR> xROR;
@@ -70,15 +70,15 @@ namespace x86Emitter
 	// ------------------------------------------------------------------------
 	// Group 3 Instruction Class
 
-	extern const Internal::Group3ImplAll<Internal::G3Type_NOT> xNOT;
-	extern const Internal::Group3ImplAll<Internal::G3Type_NEG> xNEG;
-	extern const Internal::Group3ImplAll<Internal::G3Type_MUL> xUMUL;
-	extern const Internal::Group3ImplAll<Internal::G3Type_DIV> xUDIV;
-	extern const Internal::xImpl_Group3<Internal::G3Type_iDIV,0x5e> xDIV;
+	extern const Internal::xImpl_Group3<Internal::G3Type_NOT> xNOT;
+	extern const Internal::xImpl_Group3<Internal::G3Type_NEG> xNEG;
+	extern const Internal::xImpl_Group3<Internal::G3Type_MUL> xUMUL;
+	extern const Internal::xImpl_Group3<Internal::G3Type_DIV> xUDIV;
+	extern const Internal::xImpl_iDiv xDIV;
 	extern const Internal::xImpl_iMul xMUL;
 
-	extern const Internal::IncDecImplAll<false> xINC;
-	extern const Internal::IncDecImplAll<true>  xDEC;
+	extern const Internal::xImpl_IncDec<false> xINC;
+	extern const Internal::xImpl_IncDec<true>  xDEC;
 
 	extern const Internal::MovExtendImplAll<false> xMOVZX;
 	extern const Internal::MovExtendImplAll<true>  xMOVSX;
@@ -86,16 +86,16 @@ namespace x86Emitter
 	extern const Internal::DwordShiftImplAll<false> xSHLD;
 	extern const Internal::DwordShiftImplAll<true>  xSHRD;
 
-	extern const Internal::Group8Impl<Internal::G8Type_BT> xBT;
-	extern const Internal::Group8Impl<Internal::G8Type_BTR> xBTR;
-	extern const Internal::Group8Impl<Internal::G8Type_BTS> xBTS;
-	extern const Internal::Group8Impl<Internal::G8Type_BTC> xBTC;
+	extern const Internal::xImpl_Group8<Internal::G8Type_BT> xBT;
+	extern const Internal::xImpl_Group8<Internal::G8Type_BTR> xBTR;
+	extern const Internal::xImpl_Group8<Internal::G8Type_BTS> xBTS;
+	extern const Internal::xImpl_Group8<Internal::G8Type_BTC> xBTC;
 
-	extern const Internal::JmpCallImplAll<true> xJMP;
-	extern const Internal::JmpCallImplAll<false> xCALL;
+	extern const Internal::xImpl_JmpCall<true> xJMP;
+	extern const Internal::xImpl_JmpCall<false> xCALL;
 
-	extern const Internal::BitScanImpl<0xbc> xBSF;
-	extern const Internal::BitScanImpl<0xbd> xBSR;
+	extern const Internal::xImpl_BitScan<0xbc> xBSF;
+	extern const Internal::xImpl_BitScan<0xbd> xBSR;
 
 	// ------------------------------------------------------------------------
 	extern const Internal::CMovImplGeneric xCMOV;
@@ -175,41 +175,76 @@ namespace x86Emitter
 	extern void xPOP( const ModSibBase& from );
 	extern void xPUSH( const ModSibBase& from );
 
-	static __forceinline void xPOP( xRegister32 from )	{ write8( 0x58 | from.Id ); }
-	static __forceinline void xPOP( void* from )		{ xPOP( ptr[from] ); }
+	extern void xPOP( xRegister32 from );
+	extern void xPOP( void* from );
 
-	static __forceinline void xPUSH( u32 imm )			{ write8( 0x68 ); write32( imm ); }
-	static __forceinline void xPUSH( xRegister32 from )	{ write8( 0x50 | from.Id ); }
-	static __forceinline void xPUSH( void* from )		{ xPUSH( ptr[from] ); }
+	extern void xPUSH( u32 imm );
+	extern void xPUSH( xRegister32 from );
+	extern void xPUSH( void* from );
 
 	// pushes the EFLAGS register onto the stack
-	static __forceinline void xPUSHFD()	{ write8( 0x9C ); }
+	extern void xPUSHFD();
 	// pops the EFLAGS register from the stack
-	static __forceinline void xPOPFD()	{ write8( 0x9D ); }
+	extern void xPOPFD();
 
 	// ----- Miscellaneous Instructions  -----
 	// Various Instructions with no parameter and no special encoding logic.
 
-	__forceinline void xRET()	{ write8( 0xC3 ); }
-	__forceinline void xCBW()	{ write16( 0x9866 );  }
-	__forceinline void xCWD()	{ write8( 0x98 ); }
-	__forceinline void xCDQ()	{ write8( 0x99 ); }
-	__forceinline void xCWDE()	{ write8( 0x98 ); }
+	extern void xRET();
+	extern void xCBW();
+	extern void xCWD();
+	extern void xCDQ();
+	extern void xCWDE();
 
-	__forceinline void xLAHF()	{ write8( 0x9f ); }
-	__forceinline void xSAHF()	{ write8( 0x9e ); }
+	extern void xLAHF();
+	extern void xSAHF();
 
-	__forceinline void xSTC()	{ write8( 0xF9 ); }
-	__forceinline void xCLC()	{ write8( 0xF8 ); }
+	extern void xSTC();
+	extern void xCLC();
 
 	// NOP 1-byte
-	__forceinline void xNOP()	{ write8(0x90); }
+	extern void xNOP();
 
 	//////////////////////////////////////////////////////////////////////////////////////////
 	// JMP / Jcc Instructions!
 
-	extern void iJccKnownTarget( JccComparisonType comparison, void* target, bool slideForward=false );
+	extern void iJcc( JccComparisonType comparison, void* target );
 
+	// ------------------------------------------------------------------------
+	// Conditional jumps to fixed targets.
+	// Jumps accept any pointer as a valid target (function or data), and will generate either
+	// 8 or 32 bit displacement versions of the jump, depending on relative displacement of
+	// the target (efficient!)
+	//
+
+	template< typename T > __forceinline void xJE( const T* func )		{ iJcc( Jcc_Equal, (void*)(uptr)func ); }
+	template< typename T > __forceinline void xJZ( const T* func )		{ iJcc( Jcc_Zero, (void*)(uptr)func ); }
+	template< typename T > __forceinline void xJNE( const T* func )		{ iJcc( Jcc_NotEqual, (void*)(uptr)func ); }
+	template< typename T > __forceinline void xJNZ( const T* func )		{ iJcc( Jcc_NotZero, (void*)(uptr)func ); }
+
+	template< typename T > __forceinline void xJO( const T* func )		{ iJcc( Jcc_Overflow, (void*)(uptr)func ); }
+	template< typename T > __forceinline void xJNO( const T* func )		{ iJcc( Jcc_NotOverflow, (void*)(uptr)func ); }
+	template< typename T > __forceinline void xJC( const T* func )		{ iJcc( Jcc_Carry, (void*)(uptr)func ); }
+	template< typename T > __forceinline void xJNC( const T* func )		{ iJcc( Jcc_NotCarry, (void*)(uptr)func ); }
+	template< typename T > __forceinline void xJS( const T* func )		{ iJcc( Jcc_Signed, (void*)(uptr)func ); }
+	template< typename T > __forceinline void xJNS( const T* func )		{ iJcc( Jcc_Unsigned, (void*)(uptr)func ); }
+
+	template< typename T > __forceinline void xJPE( const T* func )		{ iJcc( Jcc_ParityEven, (void*)(uptr)func ); }
+	template< typename T > __forceinline void xJPO( const T* func )		{ iJcc( Jcc_ParityOdd, (void*)(uptr)func ); }
+
+	template< typename T > __forceinline void xJL( const T* func )		{ iJcc( Jcc_Less, (void*)(uptr)func ); }
+	template< typename T > __forceinline void xJLE( const T* func )		{ iJcc( Jcc_LessOrEqual, (void*)(uptr)func ); }
+	template< typename T > __forceinline void xJG( const T* func )		{ iJcc( Jcc_Greater, (void*)(uptr)func ); }
+	template< typename T > __forceinline void xJGE( const T* func )		{ iJcc( Jcc_GreaterOrEqual, (void*)(uptr)func ); }
+
+	template< typename T > __forceinline void xJB( const T* func )		{ iJcc( Jcc_Below, (void*)(uptr)func ); }
+	template< typename T > __forceinline void xJBE( const T* func )		{ iJcc( Jcc_BelowOrEqual, (void*)(uptr)func ); }
+	template< typename T > __forceinline void xJA( const T* func )		{ iJcc( Jcc_Above, (void*)(uptr)func ); }
+	template< typename T > __forceinline void xJAE( const T* func )		{ iJcc( Jcc_AboveOrEqual, (void*)(uptr)func ); }
+
+	// ------------------------------------------------------------------------
+	// Forward Jump Helpers (act as labels!)
+	
 #define DEFINE_FORWARD_JUMP( label, cond ) \
 	template< typename OperandType > \
 	class xForward##label : public xForwardJump<OperandType> \

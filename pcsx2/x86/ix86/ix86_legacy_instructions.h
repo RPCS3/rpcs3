@@ -19,17 +19,6 @@
 #pragma once
 
 //------------------------------------------------------------------
-// legacy write functions (depreciated, use x86Emitter::EmitPtrCache instead)
-//------------------------------------------------------------------
-#define emitterT __forceinline
-
-using x86Emitter::write8;
-using x86Emitter::write16;
-using x86Emitter::write24;
-using x86Emitter::write32;
-using x86Emitter::write64;
-
-//------------------------------------------------------------------
 // legacy jump/align functions
 //------------------------------------------------------------------
 extern void x86SetPtr( u8 *ptr );

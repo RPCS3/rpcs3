@@ -26,9 +26,9 @@ class SimdImpl_Shuffle
 protected:
 	template< u8 Prefix > struct Woot
 	{
-		__forceinline void operator()( const xRegisterSSE& to, const xRegisterSSE& from, u8 cmptype ) const	{ xOpWrite0F( Prefix, OpcodeSSE, to, from ); xWrite<u8>( cmptype ); }
-		__forceinline void operator()( const xRegisterSSE& to, const void* from, u8 cmptype ) const			{ xOpWrite0F( Prefix, OpcodeSSE, to, from ); xWrite<u8>( cmptype ); }
-		__forceinline void operator()( const xRegisterSSE& to, const ModSibBase& from, u8 cmptype ) const	{ xOpWrite0F( Prefix, OpcodeSSE, to, from ); xWrite<u8>( cmptype ); }
+		__forceinline void operator()( const xRegisterSSE& to, const xRegisterSSE& from, u8 cmptype ) const	{ xOpWrite0F( Prefix, OpcodeSSE, to, from ); xWrite8( cmptype ); }
+		__forceinline void operator()( const xRegisterSSE& to, const void* from, u8 cmptype ) const			{ xOpWrite0F( Prefix, OpcodeSSE, to, from ); xWrite8( cmptype ); }
+		__forceinline void operator()( const xRegisterSSE& to, const ModSibBase& from, u8 cmptype ) const	{ xOpWrite0F( Prefix, OpcodeSSE, to, from ); xWrite8( cmptype ); }
 		Woot() {}
 	};
 

@@ -40,30 +40,30 @@ namespace x86Emitter {
 
 using namespace Internal;
 
-const JmpCallImplAll<true> xJMP;
-const JmpCallImplAll<false> xCALL;
+const xImpl_JmpCall<true> xJMP;
+const xImpl_JmpCall<false> xCALL;
 
 // ------------------------------------------------------------------------
 void xSmartJump::SetTarget()
 {
-	u8* target = iGetPtr();
+	u8* target = xGetPtr();
 	if( m_baseptr == NULL ) return;
 
-	iSetPtr( m_baseptr );
+	xSetPtr( m_baseptr );
 	u8* const saveme = m_baseptr + GetMaxInstructionSize();
 	iJccKnownTarget( m_cc, target, true );
 
 	// Copy recompiled data inward if the jump instruction didn't fill the
 	// alloted buffer (means that we optimized things to a j8!)
 
-	const int spacer = (sptr)saveme - (sptr)iGetPtr();
+	const int spacer = (sptr)saveme - (sptr)xGetPtr();
 	if( spacer != 0 )
 	{
-		u8* destpos = iGetPtr();
+		u8* destpos = xGetPtr();
 		const int copylen = (sptr)target - (sptr)saveme;
 
 		memcpy_fast( destpos, saveme, copylen );
-		iSetPtr( target - spacer );
+		xSetPtr( target - spacer );
 	}
 }
 
@@ -81,11 +81,10 @@ xSmartJump::~xSmartJump()
 // slideForward - used internally by xSmartJump to indicate that the jump target is going
 // to slide forward in the event of an 8 bit displacement.
 //
-// Using this 
-__emitinline void iJccKnownTarget( JccComparisonType comparison, void* target, bool slideForward )
+__emitinline void Internal::iJccKnownTarget( JccComparisonType comparison, void* target, bool slideForward )
 {
 	// Calculate the potential j8 displacement first, assuming an instruction length of 2:
-	sptr displacement8 = (sptr)target - ((sptr)iGetPtr() + 2);
+	sptr displacement8 = (sptr)target - ((sptr)xGetPtr() + 2);
 
 	const int slideVal = slideForward ? ((comparison == Jcc_Unconditional) ? 3 : 4) : 0;
 	displacement8 -= slideVal;
@@ -96,7 +95,7 @@ __emitinline void iJccKnownTarget( JccComparisonType comparison, void* target, b
 	
 	if( is_s8( displacement8 ) )
 	{
-		xWrite<u8>( (comparison == Jcc_Unconditional) ? 0xeb : (0x70 | comparison) );
+		xWrite8( (comparison == Jcc_Unconditional) ? 0xeb : (0x70 | comparison) );
 		xWrite<s8>( displacement8 );
 	}
 	else
@@ -104,14 +103,21 @@ __emitinline void iJccKnownTarget( JccComparisonType comparison, void* target, b
 		// Perform a 32 bit jump instead. :(
 
 		if( comparison == Jcc_Unconditional )
-			xWrite<u8>( 0xe9 );
+			xWrite8( 0xe9 );
 		else
 		{
-			xWrite<u8>( 0x0f );
-			xWrite<u8>( 0x80 | comparison );
+			xWrite8( 0x0f );
+			xWrite8( 0x80 | comparison );
 		}
-		xWrite<s32>( (sptr)target - ((sptr)iGetPtr() + 4) );
+		xWrite<s32>( (sptr)target - ((sptr)xGetPtr() + 4) );
 	}
+}
+
+// Low-level jump instruction!  Specify a comparison type and a target in void* form, and
+// a jump (either 8 or 32 bit) is generated.
+__emitinline void iJcc( JccComparisonType comparison, void* target )
+{
+	iJccKnownTarget( comparison, target, false );
 }
 
 }

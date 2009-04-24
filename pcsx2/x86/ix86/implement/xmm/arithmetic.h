@@ -40,15 +40,15 @@ public:
 	__emitinline void operator()( const xRegisterSSE& to, u8 imm8 ) const
 	{
 		SimdPrefix( 0x66, OpcodeImm );
-		ModRM( 3, (int)Modcode, to.Id );
-		xWrite<u8>( imm8 );
+		EmitSibMagic( (int)Modcode, to );
+		xWrite8( imm8 );
 	}
 
 	__emitinline void operator()( const xRegisterMMX& to, u8 imm8 ) const
 	{
 		SimdPrefix( 0x00, OpcodeImm );
-		ModRM( 3, (int)Modcode, to.Id );
-		xWrite<u8>( imm8 );
+		EmitSibMagic( (int)Modcode, to );
+		xWrite8( imm8 );
 	}
 };
 
@@ -78,7 +78,7 @@ public:
 	{
 		SimdPrefix( 0x66, 0x73 );
 		ModRM( 3, (int)Modcode+1, to.Id );
-		xWrite<u8>( imm8 );
+		xWrite8( imm8 );
 	}
 	
 	SimdImpl_Shift() {}

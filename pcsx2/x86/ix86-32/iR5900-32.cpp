@@ -1644,7 +1644,7 @@ StartRecomp:
 				}
 				if (startpc != 0x81fc0) {
 					xADD(ptr16[&manual_page[inpage_ptr >> 12]], 1);
-					iJccKnownTarget(Jcc_Carry, dyna_block_reset);
+					xJC( dyna_block_reset );
 				}
 
 				DbgCon::WriteLn("Manual block @ %08X : %08X %d %d %d %d", params

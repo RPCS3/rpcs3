@@ -24,6 +24,13 @@
 // Legacy Helper Macros and Functions (depreciated)
 //------------------------------------------------------------------
 
+#define emitterT __forceinline
+
+using x86Emitter::xWrite8;
+using x86Emitter::xWrite16;
+using x86Emitter::xWrite32;
+using x86Emitter::xWrite64;
+
 #include "ix86_legacy_types.h"
 #include "ix86_legacy_instructions.h"
 
@@ -37,7 +44,6 @@
 
 #define _MM_MK_INSERTPS_NDX(srcField, dstField, zeroMask) (((srcField)<<6) | ((dstField)<<4) | (zeroMask))
 
-extern void WriteRmOffsetFrom(x86IntRegType to, x86IntRegType from, int offset);
 extern void ModRM( uint mod, uint reg, uint rm );
 extern void SibSB( uint ss, uint index, uint base );
 extern void SET8R( int cc, int to );
@@ -45,27 +51,3 @@ extern u8*  J8Rel( int cc, int to );
 extern u32* J32Rel( int cc, u32 to );
 extern u64  GetCPUTick( void );
 
-
-//////////////////////////////////////////////////////////////////////////////////////////
-//
-emitterT void ModRM( uint mod, uint reg, uint rm )
-{
-	// Note: Following ASSUMEs are for legacy support only.
-	// The new emitter performs these sanity checks during operand construction, so these
-	// assertions can probably be removed once all legacy emitter code has been removed.
-	jASSUME( mod < 4 );
-	jASSUME( reg < 8 );
-	jASSUME( rm < 8 );
-	write8( (mod << 6) | (reg << 3) | rm );
-}
-
-emitterT void SibSB( uint ss, uint index, uint base )
-{
-	// Note: Following ASSUMEs are for legacy support only.
-	// The new emitter performs these sanity checks during operand construction, so these
-	// assertions can probably be removed once all legacy emitter code has been removed.
-	jASSUME( ss < 4 );
-	jASSUME( index < 8 );
-	jASSUME( base < 8 );
-	write8( (ss << 6) | (index << 3) | base );
-}

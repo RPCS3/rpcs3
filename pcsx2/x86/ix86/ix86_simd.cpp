@@ -36,29 +36,29 @@ __emitinline void Internal::SimdPrefix( u8 prefix, u16 opcode )
 {
 	const bool is16BitOpcode = ((opcode & 0xff) == 0x38) || ((opcode & 0xff) == 0x3a);
 
-	// If the lower byte is not a valid previx and the upper byte is non-zero it
+	// If the lower byte is not a valid prefix and the upper byte is non-zero it
 	// means we made a mistake!
 	if( !is16BitOpcode ) jASSUME( (opcode >> 8) == 0 );
 
 	if( prefix != 0 )
 	{
 		if( is16BitOpcode )
-			xWrite<u32>( (opcode<<16) | 0x0f00 | prefix );
+			xWrite32( (opcode<<16) | 0x0f00 | prefix );
 		else
 		{
-			xWrite<u16>( 0x0f00 | prefix );
-			xWrite<u8>( opcode );
+			xWrite16( 0x0f00 | prefix );
+			xWrite8( opcode );
 		}
 	}
 	else
 	{
 		if( is16BitOpcode )
 		{
-			xWrite<u8>( 0x0f );
-			xWrite<u16>( opcode );
+			xWrite8( 0x0f );
+			xWrite16( opcode );
 		}
 		else
-			xWrite<u16>( (opcode<<8) | 0x0f );
+			xWrite16( (opcode<<8) | 0x0f );
 	}
 }
 
@@ -199,23 +199,31 @@ const SimdImpl_PMove<false> xPMOVZX;
 //////////////////////////////////////////////////////////////////////////////////////////
 //
 
-__emitinline void xEMMS()
-{
-	xWrite<u16>( 0x770F );
-}
+// Converts from MMX register mode to FPU register mode.  The cpu enters MMX register mode
+// when ever MMX instructions are run, and if FPU instructions are run without using EMMS,
+// the FPU results will be invalid.
+__forceinline void xEMMS()	{ xWrite16( 0x770F ); }
+
+// [3DNow] Same as EMMS, but an AMD special version which may (or may not) leave MMX regs
+// in an undefined state (which is fine, since presumably you're done using them anyway).
+// This instruction is thus faster than EMMS on K8s, but all newer AMD cpus use the same
+// logic for either EMMS or FEMMS.
+// Conclusion: Obsolete.  Just use EMMS instead.
+__forceinline void xFEMMS()	{ xWrite16( 0x0E0F ); }
+
 
 // Store Streaming SIMD Extension Control/Status to Mem32.
 __emitinline void xSTMXCSR( u32* dest )
 {
 	SimdPrefix( 0, 0xae );
-	xWriteDisp( 3, dest );
+	EmitSibMagic( 3, dest );
 }
 
 // Load Streaming SIMD Extension Control/Status from Mem32.
 __emitinline void xLDMXCSR( const u32* src )
 {
 	SimdPrefix( 0, 0xae );
-	xWriteDisp( 2, src );
+	EmitSibMagic( 2, src );
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -279,7 +287,7 @@ __forceinline void xMOVQ( const xRegisterMMX& to, const xRegisterSSE& from )
 	// that breaks the template inference of writeXMMop();
 
 	SimdPrefix( 0xf2, 0xd6 );
-	ModRM_Direct( to.Id, from.Id );
+	EmitSibMagic( to, from );
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -301,13 +309,13 @@ IMPLEMENT_xMOVS( SD, 0xf2 )
 
 __forceinline void xMOVNTDQA( const xRegisterSSE& to, const void* from )
 {
-	xWrite<u32>( 0x2A380f66 );
-	xWriteDisp( to.Id, from );
+	xWrite32( 0x2A380f66 );
+	EmitSibMagic( to.Id, from );
 }
 
 __forceinline void xMOVNTDQA( const xRegisterSSE& to, const ModSibBase& from )
 {
-	xWrite<u32>( 0x2A380f66 );
+	xWrite32( 0x2A380f66 );
 	EmitSibMagic( to.Id, from );
 }
 

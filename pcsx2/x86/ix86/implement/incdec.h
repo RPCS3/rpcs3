@@ -21,62 +21,33 @@
 // Implementations found here: Increment and Decrement Instructions!
 // Note: This header is meant to be included from within the x86Emitter::Internal namespace.
 
-// ------------------------------------------------------------------------
-//
-template< typename ImmType >
-class IncDecImpl
+
+template< bool isDec >
+class xImpl_IncDec
 {
-protected:
-	static const uint OperandSize = sizeof(ImmType);
-
-	static bool Is8BitOperand()	{ return OperandSize == 1; }
-	static void prefix16()		{ if( OperandSize == 2 ) xWrite<u8>( 0x66 ); }
-
-public: 
-	IncDecImpl() {}		// For the love of GCC.
-
-	static __emitinline void Emit( bool isDec, const xRegister<ImmType>& to )
+public:
+	template< typename T >
+	__forceinline void operator()( const xRegister<T>& to )	const
 	{
-		// There is no valid 8-bit form of direct register inc/dec, so fall
-		// back on Mod/RM format instead:
-		if (Is8BitOperand() )
+		if( Is8BitOp<T>() )
 		{
-			write8( 0xfe );
-			ModRM_Direct( isDec ? 1 : 0, to.Id );
+			xWrite8( 0xfe );
+			EmitSibMagic( isDec ? 1 : 0, to );
 		}
 		else
 		{
-			prefix16();
-			write8( (isDec ? 0x48 : 0x40) | to.Id );
+			prefix16<T>();
+			xWrite8( (isDec ? 0x48 : 0x40) | to.Id );
 		}
 	}
 
-	static __emitinline void Emit( bool isDec, const ModSibStrict<ImmType>& dest )
+	template< typename T >
+	__forceinline void operator()( const ModSibStrict<T>& sibdest ) const
 	{
-		prefix16();
-		write8( Is8BitOperand() ? 0xfe : 0xff );
-		EmitSibMagic( isDec ? 1 : 0, dest );
+		prefix16<T>();
+		xWrite8( Is8BitOp<T>() ? 0xfe : 0xff );
+		EmitSibMagic( isDec ? 1 : 0, sibdest );
 	}
-};
 
-// ------------------------------------------------------------------------
-template< bool isDec >
-class IncDecImplAll
-{
-protected:
-	typedef IncDecImpl<u32> m_32;
-	typedef IncDecImpl<u16> m_16;
-	typedef IncDecImpl<u8> m_8;
-
-public:
-	__forceinline void operator()( const xRegister32& to )	const		{ m_32::Emit( isDec, to ); }
-	__noinline void operator()( const ModSibStrict<u32>& sibdest ) const{ m_32::Emit( isDec, sibdest ); }
-
-	__forceinline void operator()( const xRegister16& to )	const		{ m_16::Emit( isDec, to ); }
-	__noinline void operator()( const ModSibStrict<u16>& sibdest ) const{ m_16::Emit( isDec, sibdest ); }
-
-	__forceinline void operator()( const xRegister8& to )	const		{ m_8::Emit( isDec, to ); }
-	__noinline void operator()( const ModSibStrict<u8>& sibdest ) const	{ m_8::Emit( isDec, sibdest ); }
-
-	IncDecImplAll() {}		// don't ask.
+	xImpl_IncDec() {}		// don't ask.
 };

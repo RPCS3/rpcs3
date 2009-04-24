@@ -21,7 +21,8 @@
 extern void cpudetectInit();//this is all that needs to be called and will fill up the below structs
 
 //cpu capabilities structure
-struct CAPABILITIES {
+struct CAPABILITIES
+{
    u32 hasFloatingPointUnit;
    u32 hasVirtual8086ModeEnhancements;
    u32 hasDebuggingExtensions;
@@ -63,8 +64,8 @@ struct CAPABILITIES {
 
 extern CAPABILITIES cpucaps;
 
-struct CPUINFO{
-   
+struct CPUINFO
+{
    u32 x86Family;	   // Processor Family
    u32 x86Model;	   // Processor Model
    u32 x86PType;	   // Processor Type
@@ -109,20 +110,26 @@ extern __threadlocal u32 *j32Ptr[32];		// depreciated item.  use local u32* vars
 
 extern __threadlocal XMMSSEType g_xmmtypes[iREGCNT_XMM];
 
+namespace x86Emitter
+{
+
+extern void xWrite8( u8 val );
+extern void xWrite16( u16 val );
+extern void xWrite32( u32 val );
+extern void xWrite64( u64 val );
+
 //------------------------------------------------------------------
 // templated version of is_s8 is required, so that u16's get correct sign extension treatment.
 template< typename T >
 static __forceinline bool is_s8( T imm ) { return (s8)imm == (s32)imm; }
 
 template< typename T >
-static __forceinline void xWrite( T val )
+__forceinline void xWrite( T val )
 {
 	*(T*)x86Ptr = val;
 	x86Ptr += sizeof(T); 
 }
 
-namespace x86Emitter
-{
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // ALWAYS_USE_MOVAPS [define] / AlwaysUseMovaps [const]
@@ -178,54 +185,27 @@ namespace x86Emitter
 	class xAddressInfo;
 	class ModSibBase;
 
-	extern void iSetPtr( void* ptr );
-	extern u8* iGetPtr();
-	extern void iAlignPtr( uint bytes );
-	extern void iAdvancePtr( uint bytes );
-
-
-	static __forceinline void write8( u8 val )
-	{
-		xWrite( val );
-	}
-
-	static __forceinline void write16( u16 val )
-	{ 
-		xWrite( val );
-	} 
-
-	static __forceinline void write24( u32 val )
-	{ 
-		*(u32*)x86Ptr = val;
-		x86Ptr += 3;
-	} 
-
-	static __forceinline void write32( u32 val )
-	{ 
-		xWrite( val );
-	} 
-
-	static __forceinline void write64( u64 val )
-	{ 
-		xWrite( val );
-	}
+	extern void xSetPtr( void* ptr );
+	extern u8* xGetPtr();
+	extern void xAlignPtr( uint bytes );
+	extern void xAdvancePtr( uint bytes );
 
 	//////////////////////////////////////////////////////////////////////////////////////////
-	// xRegister
+	// xRegisterBase
 	// Unless templating some fancy stuff, use the friendly xRegister32/16/8 typedefs instead.
 	//
 	template< typename OperandType >
-	class xRegister
+	class xRegisterBase
 	{
 	public:
 		static const uint OperandSize = sizeof( OperandType );
-		static const xRegister Empty;		// defined as an empty/unused value (-1)
+		static const xRegisterBase Empty;		// defined as an empty/unused value (-1)
 
 		int Id;
 
-		xRegister( const xRegister<OperandType>& src ) : Id( src.Id ) {}
-		xRegister(): Id( -1 ) {}
-		explicit xRegister( int regId ) : Id( regId ) { jASSUME( Id >= -1 && Id < 8 ); }
+		xRegisterBase( const xRegisterBase<OperandType>& src ) : Id( src.Id ) {}
+		xRegisterBase(): Id( -1 ) {}
+		explicit xRegisterBase( int regId ) : Id( regId ) { jASSUME( Id >= -1 && Id < 8 ); }
 
 		bool IsEmpty() const { return Id < 0; }
 
@@ -235,19 +215,60 @@ namespace x86Emitter
 		// returns true if the register is a valid MMX or XMM register.
 		bool IsSIMD() const { return OperandSize == 8 || OperandSize == 16; }
 
-		bool operator==( const xRegister<OperandType>& src ) const
-		{
-			return (Id == src.Id);
-		}
+		bool operator==( const xRegisterBase<OperandType>& src ) const	{ return (Id == src.Id); }
+		bool operator!=( const xRegisterBase<OperandType>& src ) const	{ return (Id != src.Id); }
 
-		bool operator!=( const xRegister<OperandType>& src ) const
+		xRegisterBase<OperandType>& operator=( const xRegisterBase<OperandType>& src )
 		{
-			return (Id != src.Id);
+			Id = src.Id;
+			return *this;
 		}
+	};
+
+	//////////////////////////////////////////////////////////////////////////////////////////
+	//
+	template< typename OperandType >
+	class xRegister : public xRegisterBase<OperandType>
+	{
+	public:
+		static const xRegister Empty;		// defined as an empty/unused value (-1)
+
+	public:
+		xRegister(): xRegisterBase<OperandType>() {}
+		xRegister( const xRegister& src ) : xRegisterBase<OperandType>( src.Id ) {}
+		explicit xRegister( const xRegisterBase<OperandType>& src ) : xRegisterBase<OperandType>( src ) {}
+		explicit xRegister( int regId ) : xRegisterBase<OperandType>( regId ) {}
+		
+		bool operator==( const xRegister<OperandType>& src ) const	{ return Id == src.Id; }
+		bool operator!=( const xRegister<OperandType>& src ) const	{ return Id != src.Id; }
 
 		xRegister<OperandType>& operator=( const xRegister<OperandType>& src )
 		{
-			Id = src.Id;
+			xRegisterBase<OperandType>::Id = src.Id;
+			return *this;
+		}
+	};
+
+	//////////////////////////////////////////////////////////////////////////////////////////
+	//
+	template< typename OperandType >
+	class xRegisterSIMD : public xRegisterBase<OperandType>
+	{
+	public:
+		static const xRegisterSIMD Empty;		// defined as an empty/unused value (-1)
+
+	public:
+		xRegisterSIMD(): xRegisterBase<OperandType>() {}
+		xRegisterSIMD( const xRegisterSIMD& src ) : xRegisterBase<OperandType>( src.Id ) {}
+		explicit xRegisterSIMD( const xRegisterBase<OperandType>& src ) : xRegisterBase<OperandType>( src ) {}
+		explicit xRegisterSIMD( int regId ) : xRegisterBase<OperandType>( regId ) {}
+		
+		bool operator==( const xRegisterSIMD<OperandType>& src ) const	{ return Id == src.Id; }
+		bool operator!=( const xRegisterSIMD<OperandType>& src ) const	{ return Id != src.Id; }
+
+		xRegisterSIMD<OperandType>& operator=( const xRegisterSIMD<OperandType>& src )
+		{
+			xRegisterBase<OperandType>::Id = src.Id;
 			return *this;
 		}
 	};
@@ -260,8 +281,8 @@ namespace x86Emitter
 	// all about the the templated code in haphazard fashion.  Yay.. >_<
 	//
 
-	typedef xRegister<u128> xRegisterSSE;
-	typedef xRegister<u64>  xRegisterMMX;
+	typedef xRegisterSIMD<u128> xRegisterSSE;
+	typedef xRegisterSIMD<u64>  xRegisterMMX;
 	typedef xRegister<u32>  xRegister32;
 	typedef xRegister<u16>  xRegister16;
 	typedef xRegister<u8>   xRegister8;
@@ -624,9 +645,9 @@ namespace x86Emitter
 		xSmartJump( JccComparisonType ccType )
 		{
 			jASSUME( ccType != Jcc_Unknown );
-			m_baseptr = iGetPtr();
+			m_baseptr = xGetPtr();
 			m_cc = ccType;
-			iAdvancePtr( GetMaxInstructionSize() );
+			xAdvancePtr( GetMaxInstructionSize() );
 		}
 		
 	protected:
@@ -662,18 +683,69 @@ namespace x86Emitter
 	//	
 	namespace Internal
 	{
-		extern void ModRM( uint mod, uint reg, uint rm );
-		extern void ModRM_Direct( uint reg, uint rm );
-		extern void SibSB( u32 ss, u32 index, u32 base );
-		extern void xWriteDisp( int regfield, s32 displacement );
-		extern void xWriteDisp( int regfield, const void* address );
-
+		extern void SimdPrefix( u8 prefix, u16 opcode );
+		extern void EmitSibMagic( uint regfield, const void* address );
 		extern void EmitSibMagic( uint regfield, const ModSibBase& info );
+		extern void iJccKnownTarget( JccComparisonType comparison, void* target, bool slideForward );
+
+
+		// Writes a ModRM byte for "Direct" register access forms, which is used for all
+		// instructions taking a form of [reg,reg].
+		template< typename T > __emitinline
+		void EmitSibMagic( uint reg1, const xRegisterBase<T>& reg2 )
+		{
+			xWrite8( (Mod_Direct << 6) | (reg1 << 3) | reg2.Id );
+		}
+
+		template< typename T1, typename T2 > __emitinline
+		void EmitSibMagic( const xRegisterBase<T1> reg1, const xRegisterBase<T2>& reg2 )
+		{
+			xWrite8( (Mod_Direct << 6) | (reg1.Id << 3) | reg2.Id );
+		}
+
+		template< typename T1 > __emitinline
+		void EmitSibMagic( const xRegisterBase<T1> reg1, const void* src )			{ EmitSibMagic( reg1.Id, src ); }
+
+		template< typename T1 > __emitinline
+		void EmitSibMagic( const xRegisterBase<T1> reg1, const ModSibBase& sib )	{ EmitSibMagic( reg1.Id, sib ); }
 
 		// ------------------------------------------------------------------------
-		
+		template< typename T1, typename T2 > __emitinline
+		void xOpWrite( u8 prefix, u8 opcode, const T1& param1, const T2& param2 )
+		{
+			if( prefix != 0 )
+				xWrite16( (opcode<<8) | prefix );
+			else
+				xWrite8( opcode );
+
+			EmitSibMagic( param1, param2 );
+		}
+
+		// ------------------------------------------------------------------------
+		template< typename T1, typename T2 > __emitinline
+		void xOpWrite0F( u8 prefix, u16 opcode, const T1& param1, const T2& param2 )
+		{
+			SimdPrefix( prefix, opcode );
+			EmitSibMagic( param1, param2 );
+		}
+
+		template< typename T1, typename T2 > __emitinline
+		void xOpWrite0F( u8 prefix, u16 opcode, const T1& param1, const T2& param2, u8 imm8 )
+		{
+			xOpWrite0F( prefix, opcode, param1, param2 );
+			xWrite8( imm8 );
+		}
+
+		template< typename T1, typename T2 > __emitinline
+		void xOpWrite0F( u16 opcode, const T1& param1, const T2& param2 )			{ xOpWrite0F( 0, opcode, param1, param2 ); }
+
+		template< typename T1, typename T2 > __emitinline
+		void xOpWrite0F( u16 opcode, const T1& param1, const T2& param2, u8 imm8 )	{ xOpWrite0F( 0, opcode, param1, param2, imm8 ); }
+
+		// ------------------------------------------------------------------------
+
 		template< typename T > bool Is8BitOp() { return sizeof(T) == 1; }
-		template< typename T > void prefix16() { if( sizeof(T) == 2 ) xWrite<u8>( 0x66 ); }
+		template< typename T > void prefix16() { if( sizeof(T) == 2 ) xWrite8( 0x66 ); }
 
 		#include "implement/xmm/basehelpers.h"
 		#include "implement/xmm/moremovs.h"
@@ -686,7 +758,6 @@ namespace x86Emitter
 		#include "implement/movs.h"		// cmov and movsx/zx
 		#include "implement/dwshift.h"	// doubleword shifts!
 		#include "implement/incdec.h"
-		#include "implement/bittest.h"
 		#include "implement/test.h"
 		#include "implement/jmpcall.h"
 	}

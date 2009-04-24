@@ -45,14 +45,14 @@ public:
 	template< typename T > __forceinline void operator()( const xRegister<T>& to,		__unused const xRegisterCL& from ) const
 	{
 		prefix16<T>();
-		xWrite<u8>( Is8BitOp<T>() ? 0xd2 : 0xd3 );
-		ModRM_Direct( InstType, to.Id );
+		xWrite8( Is8BitOp<T>() ? 0xd2 : 0xd3 );
+		EmitSibMagic( InstType, to );
 	}
 
 	template< typename T > __noinline void operator()( const ModSibStrict<T>& sibdest,	__unused const xRegisterCL& from ) const
 	{
 		prefix16<T>();
-		xWrite<u8>( Is8BitOp<T>() ? 0xd2 : 0xd3 );
+		xWrite8( Is8BitOp<T>() ? 0xd2 : 0xd3 );
 		EmitSibMagic( InstType, sibdest );
 	}
 
@@ -64,14 +64,14 @@ public:
 		if( imm == 1 )
 		{
 			// special encoding of 1's
-			xWrite<u8>( Is8BitOp<T>() ? 0xd0 : 0xd1 );
+			xWrite8( Is8BitOp<T>() ? 0xd0 : 0xd1 );
 			EmitSibMagic( InstType, sibdest );
 		}
 		else
 		{
-			xWrite<u8>( Is8BitOp<T>() ? 0xc0 : 0xc1 );
+			xWrite8( Is8BitOp<T>() ? 0xc0 : 0xc1 );
 			EmitSibMagic( InstType, sibdest );
-			xWrite<u8>( imm );
+			xWrite8( imm );
 		}
 	}
 	
@@ -83,14 +83,14 @@ public:
 		if( imm == 1 )
 		{
 			// special encoding of 1's
-			xWrite<u8>( Is8BitOp<T>() ? 0xd0 : 0xd1 );
-			ModRM_Direct( InstType, to.Id );
+			xWrite8( Is8BitOp<T>() ? 0xd0 : 0xd1 );
+			EmitSibMagic( InstType, to );
 		}
 		else
 		{
-			xWrite<u8>( Is8BitOp<T>() ? 0xc0 : 0xc1 );
-			ModRM_Direct( InstType, to.Id );
-			xWrite<u8>( imm );
+			xWrite8( Is8BitOp<T>() ? 0xc0 : 0xc1 );
+			EmitSibMagic( InstType, to );
+			xWrite8( imm );
 		}
 	}
 

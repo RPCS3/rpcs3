@@ -66,6 +66,26 @@ __threadlocal XMMSSEType g_xmmtypes[iREGCNT_XMM] = { XMMT_INT };
 
 namespace x86Emitter {
 
+__forceinline void xWrite8( u8 val )
+{
+	xWrite( val );
+}
+
+__forceinline void xWrite16( u16 val )
+{ 
+	xWrite( val );
+} 
+
+__forceinline void xWrite32( u32 val )
+{ 
+	xWrite( val );
+} 
+
+__forceinline void xWrite64( u64 val )
+{ 
+	xWrite( val );
+}
+
 const xAddressIndexerBase ptr;
 const xAddressIndexer<u128> ptr128;
 const xAddressIndexer<u64> ptr64;
@@ -75,7 +95,7 @@ const xAddressIndexer<u8> ptr8;
 
 // ------------------------------------------------------------------------
 
-template< typename OperandType > const xRegister<OperandType> xRegister<OperandType>::Empty;
+template< typename OperandType > const xRegisterBase<OperandType> xRegisterBase<OperandType>::Empty;
 const xAddressReg xAddressReg::Empty;
 
 const xRegisterSSE
@@ -110,8 +130,11 @@ const xRegister8
 	
 const xRegisterCL cl;
 
+//////////////////////////////////////////////////////////////////////////////////////////
+
 namespace Internal
 {
+	//////////////////////////////////////////////////////////////////////////////////////////
 	// Performance note: VC++ wants to use byte/word register form for the following
 	// ModRM/SibSB constructors when we use xWrite<u8>, and furthermore unrolls the
 	// the shift using a series of ADDs for the following results:
@@ -135,32 +158,22 @@ namespace Internal
 	// (btw, I know this isn't a critical performance item by any means, but it's
 	//  annoying simply because it *should* be an easy thing to optimize)
 
-	__forceinline void ModRM( uint mod, uint reg, uint rm )
+	static __forceinline void ModRM( uint mod, uint reg, uint rm )
 	{
-		xWrite<u8>( (mod << 6) | (reg << 3) | rm );
+		xWrite8( (mod << 6) | (reg << 3) | rm );
 	}
 
-	__forceinline void ModRM_Direct( uint reg, uint rm )
+	static __forceinline void SibSB( u32 ss, u32 index, u32 base )
 	{
-		ModRM( Mod_Direct, reg, rm );
+		xWrite8( (ss << 6) | (index << 3) | base );
 	}
 
-	__forceinline void SibSB( u32 ss, u32 index, u32 base )
-	{
-		xWrite<u8>( (ss << 6) | (index << 3) | base );
-	}
-
-	__forceinline void xWriteDisp( int regfield, s32 displacement )
+	__forceinline void EmitSibMagic( uint regfield, const void* address )
 	{
 		ModRM( 0, regfield, ModRm_UseDisp32 );
-		xWrite<s32>( displacement );
+		xWrite<s32>( (s32)address );
 	}
 
-	__forceinline void xWriteDisp( int regfield, const void* address )
-	{
-		xWriteDisp( regfield, (s32)address );
-	}
-	
 	//////////////////////////////////////////////////////////////////////////////////////////
 	// emitter helpers for xmm instruction with prefixes, most of which are using
 	// the basic opcode format (items inside braces denote optional or conditional
@@ -180,7 +193,7 @@ namespace Internal
 	__emitinline void xOpWrite0F( u8 prefix, u16 opcode, int instId, const void* data )
 	{
 		SimdPrefix( prefix, opcode );
-		xWriteDisp( instId, data );
+		EmitSibMagic( instId, data );
 	}
 
 	__emitinline void xOpWrite0F( u16 opcode, int instId, const ModSibBase& sib )
@@ -219,7 +232,7 @@ namespace Internal
 	// regfield - register field to be written to the ModRm.  This is either a register specifier
 	//   or an opcode extension.  In either case, the instruction determines the value for us.
 	//
-	void EmitSibMagic( uint regfield, const ModSibBase& info )
+	__noinline void EmitSibMagic( uint regfield, const ModSibBase& info )
 	{
 		jASSUME( regfield < 8 );
 
@@ -235,7 +248,7 @@ namespace Internal
 
 			if( info.Index.IsEmpty() )
 			{
-				xWriteDisp( regfield, info.Displacement );
+				EmitSibMagic( regfield, (void*)info.Displacement );
 				return;
 			}
 			else
@@ -284,7 +297,7 @@ namespace Internal
 using namespace Internal;
 
 const MovImplAll xMOV;
-const TestImplAll xTEST;
+const xImpl_Test xTEST;
 
 const xImpl_G1Logic<G1Type_AND,0x54> xAND;
 const xImpl_G1Logic<G1Type_OR,0x56>  xOR;
@@ -305,15 +318,15 @@ const Group2ImplAll<G2Type_SHL> xSHL;
 const Group2ImplAll<G2Type_SHR> xSHR;
 const Group2ImplAll<G2Type_SAR> xSAR;
 
-const Group3ImplAll<G3Type_NOT> xNOT;
-const Group3ImplAll<G3Type_NEG> xNEG;
-const Group3ImplAll<G3Type_MUL> xUMUL;
-const Group3ImplAll<G3Type_DIV> xUDIV;
-const xImpl_Group3<G3Type_iDIV,0x5e> xDIV;
+const xImpl_Group3<G3Type_NOT> xNOT;
+const xImpl_Group3<G3Type_NEG> xNEG;
+const xImpl_Group3<G3Type_MUL> xUMUL;
+const xImpl_Group3<G3Type_DIV> xUDIV;
+const xImpl_iDiv xDIV;
 const xImpl_iMul xMUL;
 
-const IncDecImplAll<false> xINC;
-const IncDecImplAll<true>  xDEC;
+const xImpl_IncDec<false> xINC;
+const xImpl_IncDec<true>  xDEC;
 
 const MovExtendImplAll<false> xMOVZX;
 const MovExtendImplAll<true>  xMOVSX;
@@ -321,13 +334,13 @@ const MovExtendImplAll<true>  xMOVSX;
 const DwordShiftImplAll<false> xSHLD;
 const DwordShiftImplAll<true>  xSHRD;
 
-const Group8Impl<G8Type_BT> xBT;
-const Group8Impl<G8Type_BTR> xBTR;
-const Group8Impl<G8Type_BTS> xBTS;
-const Group8Impl<G8Type_BTC> xBTC;
+const xImpl_Group8<G8Type_BT> xBT;
+const xImpl_Group8<G8Type_BTR> xBTR;
+const xImpl_Group8<G8Type_BTS> xBTS;
+const xImpl_Group8<G8Type_BTC> xBTC;
 
-const BitScanImpl<0xbc> xBSF;
-const BitScanImpl<0xbd> xBSR;
+const xImpl_BitScan<0xbc> xBSF;
+const xImpl_BitScan<0xbd> xBSR;
 
 // ------------------------------------------------------------------------
 const CMovImplGeneric xCMOV;
@@ -390,7 +403,7 @@ const SetImplAll<Jcc_ParityOdd>			xSETPO;
 // Assigns the current emitter buffer target address.
 // This is provided instead of using x86Ptr directly, since we may in the future find
 // a need to change the storage class system for the x86Ptr 'under the hood.'
-__emitinline void iSetPtr( void* ptr ) 
+__emitinline void xSetPtr( void* ptr ) 
 {
 	x86Ptr = (u8*)ptr;
 }
@@ -399,26 +412,26 @@ __emitinline void iSetPtr( void* ptr )
 // Retrieves the current emitter buffer target address.
 // This is provided instead of using x86Ptr directly, since we may in the future find
 // a need to change the storage class system for the x86Ptr 'under the hood.'
-__emitinline u8* iGetPtr()
+__emitinline u8* xGetPtr()
 {
 	return x86Ptr;
 }
 
 // ------------------------------------------------------------------------
-__emitinline void iAlignPtr( uint bytes ) 
+__emitinline void xAlignPtr( uint bytes ) 
 {
 	// forward align
 	x86Ptr = (u8*)( ( (uptr)x86Ptr + bytes - 1) & ~(bytes - 1) );
 }
 
 // ------------------------------------------------------------------------
-__emitinline void iAdvancePtr( uint bytes )
+__emitinline void xAdvancePtr( uint bytes )
 {
 	if( IsDevBuild )
 	{
 		// common debugger courtesy: advance with INT3 as filler.
 		for( uint i=0; i<bytes; i++ )
-			xWrite<u8>( 0xcc );
+			xWrite8( 0xcc );
 	}
 	else
 		x86Ptr += bytes;
@@ -553,7 +566,7 @@ static void EmitLeaMagic( xRegister<OperandType> to, const ModSibBase& src, bool
 				// note: no need to do ebp+0 check since we encode all 0 displacements as
 				// register assignments above (via MOV)
 
-				xWrite<u8>( 0x8d );
+				xWrite8( 0x8d );
 				ModRM( displacement_size, to.Id, src.Index.Id );
 			}
 		}
@@ -575,10 +588,10 @@ static void EmitLeaMagic( xRegister<OperandType> to, const ModSibBase& src, bool
 				xSHL( to, src.Scale );
 				return;
 			}
-			xWrite<u8>( 0x8d );
+			xWrite8( 0x8d );
 			ModRM( 0, to.Id, ModRm_UseSib );
 			SibSB( src.Scale, src.Index.Id, ModRm_UseDisp32 );
-			xWrite<u32>( src.Displacement );
+			xWrite32( src.Displacement );
 			return;
 		}
 		else
@@ -614,7 +627,7 @@ static void EmitLeaMagic( xRegister<OperandType> to, const ModSibBase& src, bool
 			if( src.Base == ebp && displacement_size == 0 )
 				displacement_size = 1;		// forces [ebp] to be encoded as [ebp+0]!
 
-			xWrite<u8>( 0x8d );
+			xWrite8( 0x8d );
 			ModRM( displacement_size, to.Id, ModRm_UseSib );
 			SibSB( src.Scale, src.Index.Id, src.Base.Id );
 		}
@@ -637,7 +650,7 @@ __emitinline void xLEA( xRegister32 to, const ModSibBase& src, bool preserve_fla
 
 __emitinline void xLEA( xRegister16 to, const ModSibBase& src, bool preserve_flags )
 {
-	write8( 0x66 );
+	xWrite8( 0x66 );
 	EmitLeaMagic( to, src, preserve_flags );
 }
 
@@ -650,22 +663,51 @@ __emitinline void xLEA( xRegister16 to, const ModSibBase& src, bool preserve_fla
 
 __emitinline void xPOP( const ModSibBase& from )
 {
-	xWrite<u8>( 0x8f );
+	xWrite8( 0x8f );
 	EmitSibMagic( 0, from );
 }
 
 __emitinline void xPUSH( const ModSibBase& from )
 {
-	xWrite<u8>( 0xff );
+	xWrite8( 0xff );
 	EmitSibMagic( 6, from );
 }
 
+__forceinline void xPOP( xRegister32 from )		{ xWrite8( 0x58 | from.Id ); }
+__forceinline void xPOP( void* from )			{ xPOP( ptr[from] ); }
+
+__forceinline void xPUSH( u32 imm )				{ xWrite8( 0x68 ); xWrite32( imm ); }
+__forceinline void xPUSH( xRegister32 from )	{ xWrite8( 0x50 | from.Id ); }
+__forceinline void xPUSH( void* from )			{ xPUSH( ptr[from] ); }
+
+// pushes the EFLAGS register onto the stack
+__forceinline void xPUSHFD()					{ xWrite8( 0x9C ); }
+// pops the EFLAGS register from the stack
+__forceinline void xPOPFD()						{ xWrite8( 0x9D ); }
+
+
 //////////////////////////////////////////////////////////////////////////////////////////
 //
+
+__forceinline void xRET()	{ xWrite8( 0xC3 ); }
+__forceinline void xCBW()	{ xWrite16( 0x9866 );  }
+__forceinline void xCWD()	{ xWrite8( 0x98 ); }
+__forceinline void xCDQ()	{ xWrite8( 0x99 ); }
+__forceinline void xCWDE()	{ xWrite8( 0x98 ); }
+
+__forceinline void xLAHF()	{ xWrite8( 0x9f ); }
+__forceinline void xSAHF()	{ xWrite8( 0x9e ); }
+
+__forceinline void xSTC()	{ xWrite8( 0xF9 ); }
+__forceinline void xCLC()	{ xWrite8( 0xF8 ); }
+
+// NOP 1-byte
+__forceinline void xNOP()	{ xWrite8(0x90); }
+
 __emitinline void xBSWAP( const xRegister32& to )
 {
-	write8( 0x0F );
-	write8( 0xC8 | to.Id );
+	xWrite8( 0x0F );
+	xWrite8( 0xC8 | to.Id );
 }
 
 }

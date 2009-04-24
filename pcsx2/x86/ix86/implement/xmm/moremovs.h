@@ -122,17 +122,17 @@ public:
 	{
 		if( to != from ) xOpWrite0F( PrefixA, Opcode, to, from );
 	}
-#ifndef __LINUX__ // Ifdef till Jake fixes; you can't use & on a const void*!
+
 	__forceinline void operator()( const xRegisterSSE& to, const void* from ) const	
 	{
-		xOpWrite0F( (isAligned || (from & 0x0f) == 0) ? PrefixA : PrefixU, Opcode, to, from );
+		xOpWrite0F( (isAligned || ((uptr)from & 0x0f) == 0) ? PrefixA : PrefixU, Opcode, to, from );
 	}
 
 	__forceinline void operator()( const void* to, const xRegisterSSE& from ) const
 	{
-		xOpWrite0F( (isAligned || (from & 0x0f) == 0) ? PrefixA : PrefixU, Opcode_Alt, to, from );
+		xOpWrite0F( (isAligned || ((uptr)from & 0x0f) == 0) ? PrefixA : PrefixU, Opcode_Alt, to, from );
 	}
-#endif
+
 	__forceinline void operator()( const xRegisterSSE& to, const ModSibBase& from ) const
 	{
 		// ModSib form is aligned if it's displacement-only and the displacement is aligned:
@@ -140,14 +140,12 @@ public:
 		xOpWrite0F( isReallyAligned ? PrefixA : PrefixU, Opcode, to, from );
 	}
 
-#ifndef __LINUX__ // II'll ifdef this one, too. xOpWrite0F doesn't take ModSibBase & xRegisterSSE in that order.
 	__forceinline void operator()( const ModSibBase& to, const xRegisterSSE& from ) const
 	{
 		// ModSib form is aligned if it's displacement-only and the displacement is aligned:
 		bool isReallyAligned = isAligned || ( (to.Displacement & 0x0f) == 0 && to.Index.IsEmpty() && to.Base.IsEmpty() );
-		xOpWrite0F( isReallyAligned ? PrefixA : PrefixU, Opcode_Alt, to, from );
+		xOpWrite0F( isReallyAligned ? PrefixA : PrefixU, Opcode_Alt, from, to );
 	}
-#endif
 };
 
 

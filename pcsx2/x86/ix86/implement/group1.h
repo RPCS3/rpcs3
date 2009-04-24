@@ -43,40 +43,40 @@ public:
 	template< typename T > __forceinline void operator()( const xRegister<T>& to, const xRegister<T>& from ) const
 	{
 		prefix16<T>();
-		xWrite<u8>( (Is8BitOp<T>() ? 0 : 1) | (InstType<<3) );
-		ModRM_Direct( from.Id, to.Id );
+		xWrite8( (Is8BitOp<T>() ? 0 : 1) | (InstType<<3) );
+		EmitSibMagic( from, to );
 	}
 
 	// ------------------------------------------------------------------------
 	template< typename T > __forceinline void operator()( const xRegister<T>& to, const void* src ) const
 	{
 		prefix16<T>();
-		xWrite<u8>( (Is8BitOp<T>() ? 2 : 3) | (InstType<<3) );
-		xWriteDisp( to.Id, src );
+		xWrite8( (Is8BitOp<T>() ? 2 : 3) | (InstType<<3) );
+		EmitSibMagic( to, src );
 	}
 	
 	// ------------------------------------------------------------------------
 	template< typename T > __forceinline void operator()( void* dest, const xRegister<T>& from ) const
 	{
 		prefix16<T>();
-		xWrite<u8>( (Is8BitOp<T>() ? 0 : 1) | (InstType<<3) ); 
-		xWriteDisp( from.Id, dest );
+		xWrite8( (Is8BitOp<T>() ? 0 : 1) | (InstType<<3) ); 
+		EmitSibMagic( from, dest );
 	}
 
 	// ------------------------------------------------------------------------
 	template< typename T > __noinline void operator()( const ModSibBase& sibdest, const xRegister<T>& from ) const
 	{
 		prefix16<T>();
-		xWrite<u8>( (Is8BitOp<T>() ? 0 : 1) | (InstType<<3) ); 
-		EmitSibMagic( from.Id, sibdest );
+		xWrite8( (Is8BitOp<T>() ? 0 : 1) | (InstType<<3) ); 
+		EmitSibMagic( from, sibdest );
 	}
 
 	// ------------------------------------------------------------------------
 	template< typename T > __noinline void operator()( const xRegister<T>& to, const ModSibBase& sibsrc ) const
 	{
 		prefix16<T>();
-		xWrite<u8>( (Is8BitOp<T>() ? 2 : 3) | (InstType<<3) );
-		EmitSibMagic( to.Id, sibsrc );
+		xWrite8( (Is8BitOp<T>() ? 2 : 3) | (InstType<<3) );
+		EmitSibMagic( to, sibsrc );
 	}
 
 	// ------------------------------------------------------------------------
@@ -88,14 +88,14 @@ public:
 	{
 		if( Is8BitOp<T>() )
 		{
-			xWrite<u8>( 0x80 );
+			xWrite8( 0x80 );
 			EmitSibMagic( InstType, sibdest );
 			xWrite<s8>( imm );
 		}
 		else
 		{		
 			prefix16<T>();
-			xWrite<u8>( is_s8( imm ) ? 0x83 : 0x81 );
+			xWrite8( is_s8( imm ) ? 0x83 : 0x81 );
 			EmitSibMagic( InstType, sibdest );
 			if( is_s8( imm ) )
 				xWrite<s8>( imm );
@@ -110,18 +110,18 @@ public:
 		prefix16<T>();
 		if( !Is8BitOp<T>() && is_s8( imm ) )
 		{
-			xWrite<u8>( 0x83 );
-			ModRM_Direct( InstType, to.Id );
+			xWrite8( 0x83 );
+			EmitSibMagic( InstType, to );
 			xWrite<s8>( imm );
 		}
 		else
 		{
 			if( to.IsAccumulator() )
-				xWrite<u8>( (Is8BitOp<T>() ? 4 : 5) | (InstType<<3) );
+				xWrite8( (Is8BitOp<T>() ? 4 : 5) | (InstType<<3) );
 			else
 			{
-				xWrite<u8>( Is8BitOp<T>() ? 0x80 : 0x81 );
-				ModRM_Direct( InstType, to.Id );
+				xWrite8( Is8BitOp<T>() ? 0x80 : 0x81 );
+				EmitSibMagic( InstType, to );
 			}
 			xWrite<T>( imm );
 		}
@@ -167,14 +167,14 @@ class xImpl_G1Compare : xImpl_Group1< G1Type_CMP >
 protected:
 	template< u8 Prefix > struct Woot
 	{
-		__forceinline void operator()( const xRegisterSSE& to, const xRegisterSSE& from, SSE2_ComparisonType cmptype ) const{ xOpWrite0F( Prefix, 0xc2, to, from ); xWrite<u8>( cmptype ); }
-		__forceinline void operator()( const xRegisterSSE& to, const void* from, SSE2_ComparisonType cmptype ) const		{ xOpWrite0F( Prefix, 0xc2, to, from ); xWrite<u8>( cmptype ); }
-		__forceinline void operator()( const xRegisterSSE& to, const ModSibBase& from, SSE2_ComparisonType cmptype ) const	{ xOpWrite0F( Prefix, 0xc2, to, from ); xWrite<u8>( cmptype ); }
+		__forceinline void operator()( const xRegisterSSE& to, const xRegisterSSE& from, SSE2_ComparisonType cmptype ) const{ xOpWrite0F( Prefix, 0xc2, to, from, (u8)cmptype ); }
+		__forceinline void operator()( const xRegisterSSE& to, const void* from, SSE2_ComparisonType cmptype ) const		{ xOpWrite0F( Prefix, 0xc2, to, from, (u8)cmptype ); }
+		__forceinline void operator()( const xRegisterSSE& to, const ModSibBase& from, SSE2_ComparisonType cmptype ) const	{ xOpWrite0F( Prefix, 0xc2, to, from, (u8)cmptype ); }
 		Woot() {}
 	};
 
 public:
-	using xImpl_Group1< G1Type_CMP >::operator();
+	using xImpl_Group1<G1Type_CMP>::operator();
 
 	const Woot<0x00> PS;
 	const Woot<0x66> PD;

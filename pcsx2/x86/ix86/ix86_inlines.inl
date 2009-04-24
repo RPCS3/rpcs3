@@ -175,7 +175,7 @@ namespace x86Emitter
 	// ------------------------------------------------------------------------
 	template< typename OperandType >
 	xForwardJump<OperandType>::xForwardJump( JccComparisonType cctype ) :
-		BasePtr( (s8*)iGetPtr() +
+		BasePtr( (s8*)xGetPtr() +
 			((OperandSize == 1) ? 2 :		// j8's are always 2 bytes.
 			((cctype==Jcc_Unconditional) ? 5 : 6 ))	// j32's are either 5 or 6 bytes
 		)
@@ -184,19 +184,19 @@ namespace x86Emitter
 		jASSUME( OperandSize == 1 || OperandSize == 4 );
 		
 		if( OperandSize == 1 )
-			xWrite<u8>( (cctype == Jcc_Unconditional) ? 0xeb : (0x70 | cctype) );
+			xWrite8( (cctype == Jcc_Unconditional) ? 0xeb : (0x70 | cctype) );
 		else
 		{
 			if( cctype == Jcc_Unconditional )
-				xWrite<u8>( 0xe9 );
+				xWrite8( 0xe9 );
 			else
 			{
-				xWrite<u8>( 0x0f );
-				xWrite<u8>( 0x80 | cctype );
+				xWrite8( 0x0f );
+				xWrite8( 0x80 | cctype );
 			}
 		}
 
-		iAdvancePtr( OperandSize );
+		xAdvancePtr( OperandSize );
 	}
 
 	// ------------------------------------------------------------------------
@@ -205,7 +205,7 @@ namespace x86Emitter
 	{
 		jASSUME( BasePtr != NULL );
 
-		sptr displacement = (sptr)iGetPtr() - (sptr)BasePtr;
+		sptr displacement = (sptr)xGetPtr() - (sptr)BasePtr;
 		if( OperandSize == 1 )
 		{
 			if( !is_s8( displacement ) )

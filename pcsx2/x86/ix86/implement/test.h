@@ -18,66 +18,93 @@
 
 #pragma once
 
+// Implementations found here: TEST + BTS/BT/BTC/BTR + BSF/BSR! (for lack of better location)
+// Note: This header is meant to be included from within the x86Emitter::Internal namespace.
+
 //////////////////////////////////////////////////////////////////////////////////////////
 // TEST instruction Implementation
-
-template< typename ImmType >
-class TestImpl
+//
+class xImpl_Test
 {
-protected:
-	static const uint OperandSize = sizeof(ImmType);
-	static bool Is8BitOperand()	{ return OperandSize == 1; }
-	static void prefix16()		{ if( OperandSize == 2 ) xWrite<u8>( 0x66 ); }
-
 public:
-	TestImpl() {}
-
 	// ------------------------------------------------------------------------
-	static __emitinline void Emit( const xRegister<ImmType>& to, const xRegister<ImmType>& from )
+	template< typename T > __forceinline
+	void operator()( const xRegister<T>& to, const xRegister<T>& from ) const
 	{
-		prefix16();
-		xWrite<u8>( Is8BitOperand() ? 0x84 : 0x85 );
-		ModRM_Direct( from.Id, to.Id );
+		prefix16<T>();
+		xWrite8( Is8BitOp<T>() ? 0x84 : 0x85 );
+		EmitSibMagic( from, to );
 	}
-
+	
 	// ------------------------------------------------------------------------
-	static __emitinline void Emit( const xRegister<ImmType>& to, ImmType imm )
+	template< typename T > __forceinline
+	void operator()( const ModSibStrict<T>& dest, int imm ) const
 	{
-		prefix16();
-		
+		prefix16<T>();
+		xWrite8( Is8BitOp<T>() ? 0xf6 : 0xf7 );
+		EmitSibMagic( 0, dest );
+		xWrite<T>( imm );
+	}
+	
+	// ------------------------------------------------------------------------
+	template< typename T > __forceinline
+	void operator()( const xRegister<T>& to, int imm ) const
+	{
+		prefix16<T>();
+
 		if( to.IsAccumulator() )
-			xWrite<u8>( Is8BitOperand() ? 0xa8 : 0xa9 );
+			xWrite8( Is8BitOp<T>() ? 0xa8 : 0xa9 );
 		else
 		{
-			xWrite<u8>( Is8BitOperand() ? 0xf6 : 0xf7 );
-			ModRM_Direct( 0, to.Id );
+			xWrite8( Is8BitOp<T>() ? 0xf6 : 0xf7 );
+			EmitSibMagic( 0, to );
 		}
-		xWrite<ImmType>( imm );
+		xWrite<T>( imm );
 	}
 
-	// ------------------------------------------------------------------------
-	static __emitinline void Emit( ModSibStrict<ImmType> dest, ImmType imm )
-	{
-		prefix16();
-		xWrite<u8>( Is8BitOperand() ? 0xf6 : 0xf7 );
-		EmitSibMagic( 0, dest );
-		xWrite<ImmType>( imm );
-	}
+	xImpl_Test() {}		// Why does GCC need these?
 };
 
-// -------------------------------------------------------------------
+enum G8Type
+{
+	G8Type_BT = 4,
+	G8Type_BTS,
+	G8Type_BTR,
+	G8Type_BTC,
+};
+
+//////////////////////////////////////////////////////////////////////////////////////////
+// BSF / BSR -- 16/32 operands supported only.
 //
-class TestImplAll
+// 0xbc [fwd] / 0xbd [rev]
+//
+template< u16 Opcode >
+class xImpl_BitScan
 {
 public:
-	template< typename T >
-	__forceinline void operator()( const xRegister<T>& to,	const xRegister<T>& from ) const	{ TestImpl<T>::Emit( to, from ); }
+	xImpl_BitScan() {}
 
-	template< typename T >
-	__noinline void operator()( const ModSibStrict<T>& sibdest, T imm ) const	{ TestImpl<T>::Emit( sibdest, imm ); }
-	template< typename T >
-	void operator()( const xRegister<T>& to, T imm ) const						{ TestImpl<T>::Emit( to, imm ); }
-
-	TestImplAll() {}		// Why does GCC need these?
+	__forceinline void operator()( const xRegister32& to, const xRegister32& from ) const	{ xOpWrite0F( Opcode, to, from ); }
+	__forceinline void operator()( const xRegister16& to, const xRegister16& from ) const	{ xOpWrite0F( 0x66, Opcode, to, from ); }
+	__forceinline void operator()( const xRegister32& to, const void* src ) const			{ xOpWrite0F( Opcode, to, src ); }
+	__forceinline void operator()( const xRegister16& to, const void* src ) const			{ xOpWrite0F( 0x66, Opcode, to, src ); }
+	__forceinline void operator()( const xRegister32& to, const ModSibBase& sibsrc ) const	{ xOpWrite0F( Opcode, to, sibsrc ); }
+	__forceinline void operator()( const xRegister16& to, const ModSibBase& sibsrc ) const	{ xOpWrite0F( 0x66, Opcode, to, sibsrc ); }
 };
 
+//////////////////////////////////////////////////////////////////////////////////////////
+// Bit Test Instructions - Valid on 16/32 bit instructions only.
+//
+template< G8Type InstType >
+class xImpl_Group8 : public xImpl_BitScan<0xa3 | (InstType << 2)>
+{
+public:
+	using xImpl_BitScan<0xa3 | (InstType << 2)>::operator();
+
+	__forceinline void operator()( const ModSibStrict<u32>& bitbase, u8 bitoffset ) const	{ xOpWrite0F( 0xba, InstType, bitbase, bitoffset ); }
+	__forceinline void operator()( const ModSibStrict<u16>& bitbase, u8 bitoffset ) const	{ xOpWrite0F( 0x66, 0xba, InstType, bitbase, bitoffset ); }
+	void operator()( const xRegister<u32>& bitbase, u8 bitoffset ) const					{ xOpWrite0F( 0xba, InstType, bitbase, bitoffset ); }
+	void operator()( const xRegister<u16>& bitbase, u8 bitoffset ) const					{ xOpWrite0F( 0x66, 0xba, InstType, bitbase, bitoffset ); }
+
+	xImpl_Group8() {}
+};
