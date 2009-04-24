@@ -1020,7 +1020,7 @@ void psxHwWrite32(u32 add, u32 value) {
 		case 0x1f8010c8:
 			PSXHW_LOG("DMA4 CHCR 32bit write %lx", value);
 			HW_DMA4_CHCR = value;        // DMA4 chcr (SPU DMA)
-			DmaExec(4);
+			DmaExecNew(4);
 			return;
 
 //------------------------------------------------------------------
@@ -1053,7 +1053,7 @@ void psxHwWrite32(u32 add, u32 value) {
 		case 0x1f801508:
 			PSXHW_LOG("DMA7 CHCR 32bit write %lx", value);
 			HW_DMA7_CHCR = value;         // DMA7 chcr (SPU2)
-			DmaExec2(7);
+			DmaExecNew2(7);
 			return;
 
 //------------------------------------------------------------------

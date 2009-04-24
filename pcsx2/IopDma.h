@@ -21,6 +21,46 @@
 
 #include "PS2Edefs.h"
 
+//#define ENABLE_NEW_IOPDMA
+
+#ifdef ENABLE_NEW_IOPDMA
+
+typedef s32(* DmaHandler)(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed);
+typedef void (* DmaIHandler)(s32 channel);
+
+struct DmaHandlerInfo
+{
+	DmaHandler  Read;
+	DmaHandler  Write;
+	DmaIHandler Interrupt;
+};
+
+struct DmaStatusInfo
+{
+	u32 Control;
+	u32 Width;		// bytes/word, for timing purposes
+	u32 MemAddr;
+	u32 ByteCount;
+	s32 Target;
+};
+
+// FIXME: Dummy constants, to be "filled in" with proper values later
+#define DMA_CTRL_ACTIVE		0x01000000
+#define DMA_CTRL_DIRECTION	0x00000001
+
+#define DMA_CHANNEL_MAX		16 /* ? */
+
+// WARNING: CALLER ****[MUST]**** CALL IopDmaUpdate RIGHT AFTER THIS!
+void IopDmaStart(int channel, u32 chcr, u32 madr, u32 bcr);
+void IopDmaUpdate(u32 elapsed);
+
+// external dma handlers
+extern s32 cdvdDmaRead(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed);
+extern void cdvdDmaInterrupt(s32 channel);
+
+//#else
+#endif
+
 void psxDma2(u32 madr, u32 bcr, u32 chcr);
 void psxDma3(u32 madr, u32 bcr, u32 chcr);
 void psxDma4(u32 madr, u32 bcr, u32 chcr);

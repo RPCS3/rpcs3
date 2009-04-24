@@ -27,7 +27,13 @@ struct psxCounter {
 	s32 CycleT;
 };
 
-extern psxCounter psxCounters[8];
+#ifdef ENABLE_NEW_IOPDMA
+#	define NUM_COUNTERS 9
+#else
+#	define NUM_COUNTERS 8
+#endif
+
+extern psxCounter psxCounters[NUM_COUNTERS];
 extern s32 psxNextCounter;
 extern u32 psxNextsCounter;
 

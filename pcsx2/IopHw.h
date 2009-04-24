@@ -69,6 +69,25 @@ enum IOPCountRegs
 	} \
 }
 
+#ifdef ENABLE_NEW_IOPDMA
+#define DmaExecNew(n) { \
+	if (HW_DMA##n##_CHCR & 0x01000000 && \
+		HW_DMA_PCR & (8 << (n * 4))) { \
+		IopDmaStart(n, HW_DMA##n##_CHCR, HW_DMA##n##_MADR, HW_DMA##n##_BCR); \
+	} \
+}
+
+#define DmaExecNew2(n) { \
+	if (HW_DMA##n##_CHCR & 0x01000000 && \
+		HW_DMA_PCR2 & (8 << ((n-7) * 4))) { \
+		IopDmaStart(n, HW_DMA##n##_CHCR, HW_DMA##n##_MADR, HW_DMA##n##_BCR); \
+	} \
+}
+#else
+#define DmaExecNew(n) DmaExec(n)
+#define DmaExecNew2(n) DmaExec2(n)
+#endif
+
 #define HW_DMA0_MADR (psxHu32(0x1080)) // MDEC in DMA
 #define HW_DMA0_BCR  (psxHu32(0x1084))
 #define HW_DMA0_CHCR (psxHu32(0x1088))

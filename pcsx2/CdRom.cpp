@@ -937,6 +937,34 @@ void psxDma3(u32 madr, u32 bcr, u32 chcr) {
 	psxDmaInterrupt(3);
 }
 
+#ifdef ENABLE_NEW_IOPDMA
+s32 cdvdDmaRead(s32 channel, u32* data, u32 wordsLeft, u32* wordsProcessed)
+{
+	// hacked up from the code above
+
+	if (cdr.Readed == 0) 
+	{
+		//CDR_LOG("*** DMA 3 *** NOT READY");
+		wordsProcessed = 0;
+		return 10000;
+	}
+
+	memcpy_fast(data, cdr.pTransfer, wordsLeft);
+	//psxCpu->Clear(madr, cdsize/4);
+	cdr.pTransfer+=wordsLeft;
+	*wordsProcessed = wordsLeft;
+
+	Console::Status("New IOP DMA handled CDVD DMA: channel %d, data %p, remaining %08x, processed %08x.", params channel,data,wordsLeft, *wordsProcessed);
+	return 0;
+}
+
+void cdvdDmaInterrupt(s32 channel)
+{
+	cdrInterrupt();
+}
+
+#endif
+
 void cdrReset() {
 	memzero_obj(cdr);
 	cdr.CurTrack=1;

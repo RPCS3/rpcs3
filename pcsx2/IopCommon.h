@@ -29,10 +29,10 @@
 #include "Sio.h"
 #include "Sif.h"
 
+#include "IopDma.h"
 #include "IopMem.h"
 #include "IopHw.h"
 #include "IopBios.h"
-#include "IopDma.h"
 #include "IopCounters.h"
 #include "IopSio2.h"
 
