@@ -74,12 +74,7 @@ class SimdImpl_Shift : public SimdImpl_ShiftWithoutQ<OpcodeBase1, Modcode>
 public:
 	const _SimdShiftHelper<OpcodeBase1+3,0x73,Modcode> Q;
 	
-	void DQ( const xRegisterSSE& to, u8 imm8 ) const
-	{
-		SimdPrefix( 0x66, 0x73 );
-		ModRM( 3, (int)Modcode+1, to.Id );
-		xWrite8( imm8 );
-	}
+	__forceinline void DQ( const xRegisterSSE& to, u8 imm8 ) const		{ xOpWrite0F( 0x66, 0x73, (int)Modcode+1, to, imm8 ); }
 	
 	SimdImpl_Shift() {}
 };

@@ -40,7 +40,7 @@ public:
 	__forceinline void operator()( const T* func ) const
 	{
 		if( isJmp )
-			iJcc( Jcc_Unconditional, (void*)(uptr)func );	// double cast to/from (uptr) needed to appease GCC
+			xJccKnownTarget( Jcc_Unconditional, (void*)(uptr)func, false );	// double cast to/from (uptr) needed to appease GCC
 		else
 		{
 			// calls are relative to the instruction after this one, and length is

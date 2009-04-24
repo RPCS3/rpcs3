@@ -239,12 +239,12 @@ __forceinline void xWrite( T val )
 		explicit xRegister( const xRegisterBase<OperandType>& src ) : xRegisterBase<OperandType>( src ) {}
 		explicit xRegister( int regId ) : xRegisterBase<OperandType>( regId ) {}
 		
-		bool operator==( const xRegister<OperandType>& src ) const	{ return Id == src.Id; }
-		bool operator!=( const xRegister<OperandType>& src ) const	{ return Id != src.Id; }
+		bool operator==( const xRegister<OperandType>& src ) const	{ return this->Id == src.Id; }
+		bool operator!=( const xRegister<OperandType>& src ) const	{ return this->Id != src.Id; }
 
 		xRegister<OperandType>& operator=( const xRegister<OperandType>& src )
 		{
-			xRegisterBase<OperandType>::Id = src.Id;
+			this->Id = src.Id;
 			return *this;
 		}
 	};
@@ -263,12 +263,12 @@ __forceinline void xWrite( T val )
 		explicit xRegisterSIMD( const xRegisterBase<OperandType>& src ) : xRegisterBase<OperandType>( src ) {}
 		explicit xRegisterSIMD( int regId ) : xRegisterBase<OperandType>( regId ) {}
 		
-		bool operator==( const xRegisterSIMD<OperandType>& src ) const	{ return Id == src.Id; }
-		bool operator!=( const xRegisterSIMD<OperandType>& src ) const	{ return Id != src.Id; }
+		bool operator==( const xRegisterSIMD<OperandType>& src ) const	{ return this->Id == src.Id; }
+		bool operator!=( const xRegisterSIMD<OperandType>& src ) const	{ return this->Id != src.Id; }
 
 		xRegisterSIMD<OperandType>& operator=( const xRegisterSIMD<OperandType>& src )
 		{
-			xRegisterBase<OperandType>::Id = src.Id;
+			this->Id = src.Id;
 			return *this;
 		}
 	};
@@ -686,7 +686,7 @@ __forceinline void xWrite( T val )
 		extern void SimdPrefix( u8 prefix, u16 opcode );
 		extern void EmitSibMagic( uint regfield, const void* address );
 		extern void EmitSibMagic( uint regfield, const ModSibBase& info );
-		extern void iJccKnownTarget( JccComparisonType comparison, void* target, bool slideForward );
+		extern void xJccKnownTarget( JccComparisonType comparison, void* target, bool slideForward );
 
 
 		// Writes a ModRM byte for "Direct" register access forms, which is used for all

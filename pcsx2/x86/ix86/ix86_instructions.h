@@ -208,7 +208,7 @@ namespace x86Emitter
 	//////////////////////////////////////////////////////////////////////////////////////////
 	// JMP / Jcc Instructions!
 
-	extern void iJcc( JccComparisonType comparison, void* target );
+	extern void xJcc( JccComparisonType comparison, void* target );
 
 	// ------------------------------------------------------------------------
 	// Conditional jumps to fixed targets.
@@ -217,30 +217,30 @@ namespace x86Emitter
 	// the target (efficient!)
 	//
 
-	template< typename T > __forceinline void xJE( const T* func )		{ iJcc( Jcc_Equal, (void*)(uptr)func ); }
-	template< typename T > __forceinline void xJZ( const T* func )		{ iJcc( Jcc_Zero, (void*)(uptr)func ); }
-	template< typename T > __forceinline void xJNE( const T* func )		{ iJcc( Jcc_NotEqual, (void*)(uptr)func ); }
-	template< typename T > __forceinline void xJNZ( const T* func )		{ iJcc( Jcc_NotZero, (void*)(uptr)func ); }
+	template< typename T > __forceinline void xJE( const T* func )		{ xJcc( Jcc_Equal, (void*)(uptr)func ); }
+	template< typename T > __forceinline void xJZ( const T* func )		{ xJcc( Jcc_Zero, (void*)(uptr)func ); }
+	template< typename T > __forceinline void xJNE( const T* func )		{ xJcc( Jcc_NotEqual, (void*)(uptr)func ); }
+	template< typename T > __forceinline void xJNZ( const T* func )		{ xJcc( Jcc_NotZero, (void*)(uptr)func ); }
 
-	template< typename T > __forceinline void xJO( const T* func )		{ iJcc( Jcc_Overflow, (void*)(uptr)func ); }
-	template< typename T > __forceinline void xJNO( const T* func )		{ iJcc( Jcc_NotOverflow, (void*)(uptr)func ); }
-	template< typename T > __forceinline void xJC( const T* func )		{ iJcc( Jcc_Carry, (void*)(uptr)func ); }
-	template< typename T > __forceinline void xJNC( const T* func )		{ iJcc( Jcc_NotCarry, (void*)(uptr)func ); }
-	template< typename T > __forceinline void xJS( const T* func )		{ iJcc( Jcc_Signed, (void*)(uptr)func ); }
-	template< typename T > __forceinline void xJNS( const T* func )		{ iJcc( Jcc_Unsigned, (void*)(uptr)func ); }
+	template< typename T > __forceinline void xJO( const T* func )		{ xJcc( Jcc_Overflow, (void*)(uptr)func ); }
+	template< typename T > __forceinline void xJNO( const T* func )		{ xJcc( Jcc_NotOverflow, (void*)(uptr)func ); }
+	template< typename T > __forceinline void xJC( const T* func )		{ xJcc( Jcc_Carry, (void*)(uptr)func ); }
+	template< typename T > __forceinline void xJNC( const T* func )		{ xJcc( Jcc_NotCarry, (void*)(uptr)func ); }
+	template< typename T > __forceinline void xJS( const T* func )		{ xJcc( Jcc_Signed, (void*)(uptr)func ); }
+	template< typename T > __forceinline void xJNS( const T* func )		{ xJcc( Jcc_Unsigned, (void*)(uptr)func ); }
 
-	template< typename T > __forceinline void xJPE( const T* func )		{ iJcc( Jcc_ParityEven, (void*)(uptr)func ); }
-	template< typename T > __forceinline void xJPO( const T* func )		{ iJcc( Jcc_ParityOdd, (void*)(uptr)func ); }
+	template< typename T > __forceinline void xJPE( const T* func )		{ xJcc( Jcc_ParityEven, (void*)(uptr)func ); }
+	template< typename T > __forceinline void xJPO( const T* func )		{ xJcc( Jcc_ParityOdd, (void*)(uptr)func ); }
 
-	template< typename T > __forceinline void xJL( const T* func )		{ iJcc( Jcc_Less, (void*)(uptr)func ); }
-	template< typename T > __forceinline void xJLE( const T* func )		{ iJcc( Jcc_LessOrEqual, (void*)(uptr)func ); }
-	template< typename T > __forceinline void xJG( const T* func )		{ iJcc( Jcc_Greater, (void*)(uptr)func ); }
-	template< typename T > __forceinline void xJGE( const T* func )		{ iJcc( Jcc_GreaterOrEqual, (void*)(uptr)func ); }
+	template< typename T > __forceinline void xJL( const T* func )		{ xJcc( Jcc_Less, (void*)(uptr)func ); }
+	template< typename T > __forceinline void xJLE( const T* func )		{ xJcc( Jcc_LessOrEqual, (void*)(uptr)func ); }
+	template< typename T > __forceinline void xJG( const T* func )		{ xJcc( Jcc_Greater, (void*)(uptr)func ); }
+	template< typename T > __forceinline void xJGE( const T* func )		{ xJcc( Jcc_GreaterOrEqual, (void*)(uptr)func ); }
 
-	template< typename T > __forceinline void xJB( const T* func )		{ iJcc( Jcc_Below, (void*)(uptr)func ); }
-	template< typename T > __forceinline void xJBE( const T* func )		{ iJcc( Jcc_BelowOrEqual, (void*)(uptr)func ); }
-	template< typename T > __forceinline void xJA( const T* func )		{ iJcc( Jcc_Above, (void*)(uptr)func ); }
-	template< typename T > __forceinline void xJAE( const T* func )		{ iJcc( Jcc_AboveOrEqual, (void*)(uptr)func ); }
+	template< typename T > __forceinline void xJB( const T* func )		{ xJcc( Jcc_Below, (void*)(uptr)func ); }
+	template< typename T > __forceinline void xJBE( const T* func )		{ xJcc( Jcc_BelowOrEqual, (void*)(uptr)func ); }
+	template< typename T > __forceinline void xJA( const T* func )		{ xJcc( Jcc_Above, (void*)(uptr)func ); }
+	template< typename T > __forceinline void xJAE( const T* func )		{ xJcc( Jcc_AboveOrEqual, (void*)(uptr)func ); }
 
 	// ------------------------------------------------------------------------
 	// Forward Jump Helpers (act as labels!)
