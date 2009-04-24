@@ -149,8 +149,6 @@ int hwMFIFOWrite(u32 addr, u8 *data, u32 size) {
 
 
 bool hwDmacSrcChainWithStack(DMACh *dma, int id) {
-	u32 temp;
-
 	switch (id) {
 		case 0: // Refe - Transfer Packet According to ADDR field
 			return true;										//End Transfer
@@ -161,18 +159,20 @@ bool hwDmacSrcChainWithStack(DMACh *dma, int id) {
 			return false;
 
 		case 2: // Next - Transfer QWC following tag. TADR = ADDR
-			temp = dma->madr;								//Temporarily Store ADDR
+		{
+			u32 temp = dma->madr;								//Temporarily Store ADDR
 			dma->madr = dma->tadr + 16; 					  //Set MADR to QW following the tag
 			dma->tadr = temp;								//Copy temporarily stored ADDR to Tag
 			return false;
-
+		}
 		case 3: // Ref - Transfer QWC from ADDR field
 		case 4: // Refs - Transfer QWC from ADDR field (Stall Control) 
 			dma->tadr += 16;									//Set TADR to next tag
 			return false;
 
 		case 5: // Call - Transfer QWC following the tag, save succeeding tag
-			temp = dma->madr;								//Temporarily Store ADDR
+		{
+			u32 temp = dma->madr;								//Temporarily Store ADDR
 															
 			dma->madr = dma->tadr + 16;						//Set MADR to data following the tag
 			
@@ -190,7 +190,7 @@ bool hwDmacSrcChainWithStack(DMACh *dma, int id) {
 			dma->tadr = temp;								//Set TADR to temporarily stored ADDR
 											
 			return false;
-
+		}
 		case 6: // Ret - Transfer QWC following the tag, load next tag
 			dma->madr = dma->tadr + 16;						//Set MADR to data following the tag
 

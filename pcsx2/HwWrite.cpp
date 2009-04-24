@@ -145,27 +145,27 @@ void hwWrite8(u32 mem, u8 value) {
 		DevCon::Notice( "hwWrite8 to 0x%x = 0x%x", params mem, value );
 
 	switch (mem) {
-		case 0x10000000: rcntWcount(0, value); break;
-		case 0x10000010: rcntWmode(0, (counters[0].modeval & 0xff00) | value); break;
+		case RCNT0_COUNT: rcntWcount(0, value); break;
+		case RCNT0_MODE: rcntWmode(0, (counters[0].modeval & 0xff00) | value); break;
 		case 0x10000011: rcntWmode(0, (counters[0].modeval & 0xff) | value << 8); break;
-		case 0x10000020: rcntWtarget(0, value); break;
-		case 0x10000030: rcntWhold(0, value); break;
+		case RCNT0_TARGET: rcntWtarget(0, value); break;
+		case RCNT0_HOLD: rcntWhold(0, value); break;
 
-		case 0x10000800: rcntWcount(1, value); break;
-		case 0x10000810: rcntWmode(1, (counters[1].modeval & 0xff00) | value); break;
+		case RCNT1_COUNT: rcntWcount(1, value); break;
+		case RCNT1_MODE: rcntWmode(1, (counters[1].modeval & 0xff00) | value); break;
 		case 0x10000811: rcntWmode(1, (counters[1].modeval & 0xff) | value << 8); break;
-		case 0x10000820: rcntWtarget(1, value); break;
-		case 0x10000830: rcntWhold(1, value); break;
+		case RCNT1_TARGET: rcntWtarget(1, value); break;
+		case RCNT1_HOLD: rcntWhold(1, value); break;
 
-		case 0x10001000: rcntWcount(2, value); break;
-		case 0x10001010: rcntWmode(2, (counters[2].modeval & 0xff00) | value); break;
+		case RCNT2_COUNT: rcntWcount(2, value); break;
+		case RCNT2_MODE: rcntWmode(2, (counters[2].modeval & 0xff00) | value); break;
 		case 0x10001011: rcntWmode(2, (counters[2].modeval & 0xff) | value << 8); break;
-		case 0x10001020: rcntWtarget(2, value); break;
+		case RCNT2_TARGET: rcntWtarget(2, value); break;
 
-		case 0x10001800: rcntWcount(3, value); break;
-		case 0x10001810: rcntWmode(3, (counters[3].modeval & 0xff00) | value); break;
+		case RCNT3_COUNT: rcntWcount(3, value); break;
+		case RCNT3_MODE: rcntWmode(3, (counters[3].modeval & 0xff00) | value); break;
 		case 0x10001811: rcntWmode(3, (counters[3].modeval & 0xff) | value << 8); break;
-		case 0x10001820: rcntWtarget(3, value); break;
+		case RCNT3_TARGET: rcntWtarget(3, value); break;
 
 		case 0x1000f180:
 			if (value == '\n') {
@@ -321,25 +321,25 @@ __forceinline void hwWrite16(u32 mem, u16 value)
 
 	switch(mem)
 	{
-		case 0x10000000: rcntWcount(0, value); break;
-		case 0x10000010: rcntWmode(0, value); break;
-		case 0x10000020: rcntWtarget(0, value); break;
-		case 0x10000030: rcntWhold(0, value); break;
+		case RCNT0_COUNT: rcntWcount(0, value); break;
+		case RCNT0_MODE: rcntWmode(0, value); break;
+		case RCNT0_TARGET: rcntWtarget(0, value); break;
+		case RCNT0_HOLD: rcntWhold(0, value); break;
 
-		case 0x10000800: rcntWcount(1, value); break;
-		case 0x10000810: rcntWmode(1, value); break;
-		case 0x10000820: rcntWtarget(1, value); break;
-		case 0x10000830: rcntWhold(1, value); break;
+		case RCNT1_COUNT: rcntWcount(1, value); break;
+		case RCNT1_MODE: rcntWmode(1, value); break;
+		case RCNT1_TARGET: rcntWtarget(1, value); break;
+		case RCNT1_HOLD: rcntWhold(1, value); break;
 
-		case 0x10001000: rcntWcount(2, value); break;
-		case 0x10001010: rcntWmode(2, value); break;
-		case 0x10001020: rcntWtarget(2, value); break;
+		case RCNT2_COUNT: rcntWcount(2, value); break;
+		case RCNT2_MODE: rcntWmode(2, value); break;
+		case RCNT2_TARGET: rcntWtarget(2, value); break;
 
-		case 0x10001800: rcntWcount(3, value); break;
-		case 0x10001810: rcntWmode(3, value); break;
-		case 0x10001820: rcntWtarget(3, value); break;
+		case RCNT3_COUNT: rcntWcount(3, value); break;
+		case RCNT3_MODE: rcntWmode(3, value); break;
+		case RCNT3_TARGET: rcntWtarget(3, value); break;
 
-		case 0x10008000: // dma0 - vif0
+		case D0_CHCR: // dma0 - vif0
 			DMA_LOG("VIF0dma %lx", value);
 			if ((value & 0x100) && !(psHu32(DMAC_CTRL) & 0x1)) 
 			{
@@ -349,7 +349,7 @@ __forceinline void hwWrite16(u32 mem, u16 value)
 			DmaExec16(dmaVIF0, mem, value);
 			break;
 
-		case 0x10009000: // dma1 - vif1 - chcr
+		case D1_CHCR: // dma1 - vif1 - chcr
 			DMA_LOG("VIF1dma CHCR %lx", value);
 			if ((value & 0x100) && !(psHu32(DMAC_CTRL) & 0x1)) 
 			{
@@ -361,34 +361,34 @@ __forceinline void hwWrite16(u32 mem, u16 value)
 			break;
 
 #ifdef PCSX2_DEVBUILD
-		case 0x10009010: // dma1 - vif1 - madr
+		case D1_MADR: // dma1 - vif1 - madr
 			HW_LOG("VIF1dma Madr %lx", value);
 			psHu16(mem) = value;//dma1 madr
 			break;
-		case 0x10009020: // dma1 - vif1 - qwc
+		case D1_QWC: // dma1 - vif1 - qwc
 			HW_LOG("VIF1dma QWC %lx", value);
 			psHu16(mem) = value;//dma1 qwc
 			break;
-		case 0x10009030: // dma1 - vif1 - tadr
+		case D1_TADR: // dma1 - vif1 - tadr
 			HW_LOG("VIF1dma TADR %lx", value);
 			psHu16(mem) = value;//dma1 tadr
 			break;
-		case 0x10009040: // dma1 - vif1 - asr0
+		case D1_ASR0: // dma1 - vif1 - asr0
 			HW_LOG("VIF1dma ASR0 %lx", value);
 			psHu16(mem) = value;//dma1 asr0
 			break;
-		case 0x10009050: // dma1 - vif1 - asr1
+		case D1_ASR1: // dma1 - vif1 - asr1
 			HW_LOG("VIF1dma ASR1 %lx", value);
 			psHu16(mem) = value;//dma1 asr1
 			break;
-		case 0x10009080: // dma1 - vif1 - sadr
+		case D1_SADR: // dma1 - vif1 - sadr
 			HW_LOG("VIF1dma SADR %lx", value);
 			psHu16(mem) = value;//dma1 sadr
 			break;
 #endif
 // ---------------------------------------------------
 
-		case 0x1000a000: // dma2 - gif
+		case D2_CHCR: // dma2 - gif
 			DMA_LOG("0x%8.8x hwWrite32: GSdma %lx", cpuRegs.cycle, value);
 			if ((value & 0x100) && !(psHu32(DMAC_CTRL) & 0x1)) 
 			{
@@ -399,33 +399,33 @@ __forceinline void hwWrite16(u32 mem, u16 value)
 			break;
 
 #ifdef PCSX2_DEVBUILD
-		case 0x1000a010:
+		case D2_MADR:
 		    psHu16(mem) = value;//dma2 madr
 			HW_LOG("Hardware write DMA2_MADR 32bit at %x with value %x",mem,value);
 		    break;
-		case 0x1000a020:
+		case D2_QWC:
 			psHu16(mem) = value;//dma2 qwc
 			HW_LOG("Hardware write DMA2_QWC 32bit at %x with value %x",mem,value);
 			break;
-		case 0x1000a030:
+		case D2_TADR:
 			psHu16(mem) = value;//dma2 taddr
 			HW_LOG("Hardware write DMA2_TADDR 32bit at %x with value %x",mem,value);
 			break;
-		case 0x1000a040:
+		case D2_ASR0:
 			psHu16(mem) = value;//dma2 asr0
 			HW_LOG("Hardware write DMA2_ASR0 32bit at %x with value %x",mem,value);
 			break;
-		case 0x1000a050:
+		case D2_ASR1:
 			psHu16(mem) = value;//dma2 asr1
 			HW_LOG("Hardware write DMA2_ASR1 32bit at %x with value %x",mem,value);
 			break;
-		case 0x1000a080:
+		case D2_SADR:
 			psHu16(mem) = value;//dma2 saddr
 			HW_LOG("Hardware write DMA2_SADDR 32bit at %x with value %x",mem,value);
 			break;
 #endif
 
-		case 0x1000b000: // dma3 - fromIPU
+		case D3_CHCR: // dma3 - fromIPU
 			DMA_LOG("IPU0dma %lx", value);
 			if ((value & 0x100) && !(psHu32(DMAC_CTRL) & 0x1)) 
 			{
@@ -436,25 +436,25 @@ __forceinline void hwWrite16(u32 mem, u16 value)
 			break;
 
 #ifdef PCSX2_DEVBUILD
-		case 0x1000b010:
+		case D3_MADR:
 	   		psHu16(mem) = value;//dma2 madr
 			HW_LOG("Hardware write IPU0DMA_MADR 32bit at %x with value %x",mem,value);
 			break;
-		case 0x1000b020:
+		case D3_QWC:
 			psHu16(mem) = value;//dma2 madr
 			HW_LOG("Hardware write IPU0DMA_QWC 32bit at %x with value %x",mem,value);
        		break;
-		case 0x1000b030:
+		case D3_TADR:
 			psHu16(mem) = value;//dma2 tadr
 			HW_LOG("Hardware write IPU0DMA_TADR 32bit at %x with value %x",mem,value);
 			break;
-		case 0x1000b080:
+		case D3_SADR:
 			psHu16(mem) = value;//dma2 saddr
 			HW_LOG("Hardware write IPU0DMA_SADDR 32bit at %x with value %x",mem,value);
 			break;
 #endif
 
-		case 0x1000b400: // dma4 - toIPU
+		case D4_CHCR: // dma4 - toIPU
 			DMA_LOG("IPU1dma %lx", value);
 			if ((value & 0x100) && !(psHu32(DMAC_CTRL) & 0x1)) 
 			{
@@ -465,24 +465,24 @@ __forceinline void hwWrite16(u32 mem, u16 value)
 			break;
 
 #ifdef PCSX2_DEVBUILD
-		case 0x1000b410:
+		case D4_MADR:
 			psHu16(mem) = value;//dma2 madr
 			HW_LOG("Hardware write IPU1DMA_MADR 32bit at %x with value %x",mem,value);
        		break;
-		case 0x1000b420:
+		case D4_QWC:
 			psHu16(mem) = value;//dma2 madr
 			HW_LOG("Hardware write IPU1DMA_QWC 32bit at %x with value %x",mem,value);
        		break;
-		case 0x1000b430:
+		case D4_TADR:
 			psHu16(mem) = value;//dma2 tadr
 			HW_LOG("Hardware write IPU1DMA_TADR 32bit at %x with value %x",mem,value);
 			break;
-		case 0x1000b480:
+		case D4_SADR:
 			psHu16(mem) = value;//dma2 saddr
 			HW_LOG("Hardware write IPU1DMA_SADDR 32bit at %x with value %x",mem,value);
 			break;
 #endif
-		case 0x1000c000: // dma5 - sif0
+		case D5_CHCR: // dma5 - sif0
 			DMA_LOG("SIF0dma %lx", value);
 //			if (value == 0) psxSu32(0x30) = 0x40000;
 			if ((value & 0x100) && !(psHu32(DMAC_CTRL) & 0x1)) 
@@ -496,7 +496,7 @@ __forceinline void hwWrite16(u32 mem, u16 value)
 		case 0x1000c002:
 			//?
 			break;
-		case 0x1000c400: // dma6 - sif1
+		case D6_CHCR: // dma6 - sif1
 			DMA_LOG("SIF1dma %lx", value);
 			if ((value & 0x100) && !(psHu32(DMAC_CTRL) & 0x1)) 
 			{
@@ -507,7 +507,8 @@ __forceinline void hwWrite16(u32 mem, u16 value)
 			break;
 
 #ifdef PCSX2_DEVBUILD
-		case 0x1000c420: // dma6 - sif1 - qwc
+		// No D6_MADR, and a TADR address that's not in the defines?
+		case D6_QWC: // dma6 - sif1 - qwc
 			HW_LOG("SIF1dma QWC = %lx", value);
 			psHu16(mem) = value;
 			break;
@@ -518,7 +519,7 @@ __forceinline void hwWrite16(u32 mem, u16 value)
 			break;
 #endif
 
-		case 0x1000c800: // dma7 - sif2
+		case D7_CHCR: // dma7 - sif2
 			DMA_LOG("SIF2dma %lx", value);
 			if ((value & 0x100) && !(psHu32(DMAC_CTRL) & 0x1)) 
 			{
@@ -530,7 +531,7 @@ __forceinline void hwWrite16(u32 mem, u16 value)
 		case 0x1000c802:
 			//?
 			break;
-		case 0x1000d000: // dma8 - fromSPR
+		case D8_CHCR: // dma8 - fromSPR
 			DMA_LOG("fromSPRdma %lx", value);
 			if ((value & 0x100) && !(psHu32(DMAC_CTRL) & 0x1)) 
 			{
@@ -565,13 +566,13 @@ __forceinline void hwWrite16(u32 mem, u16 value)
 			psHu16(mem) = value;
 			break;
 
-		case 0x1000f220:
+		case SBUS_F220:
 			psHu16(mem) |= value;
 			break;
-		case 0x1000f230:
+		case SBUS_SMFLG:
 			psHu16(mem) &= ~value;
 			break;
-		case 0x1000f240:
+		case SBUS_F240:
 			if(!(value & 0x100))
 				psHu16(mem) &= ~0x100;
 			else
@@ -795,13 +796,13 @@ void __fastcall hwWrite32_page_0F( u32 mem, u32 value )
 		case HELPSWITCH(0x1000f200):
 			psHu32(mem) = value;
 			break;
-		case HELPSWITCH(0x1000f220):
+		case HELPSWITCH(SBUS_F220):
 			psHu32(mem) |= value;
 			break;
-		case HELPSWITCH(0x1000f230):
+		case HELPSWITCH(SBUS_SMFLG):
 			psHu32(mem) &= ~value;
 			break;
-		case HELPSWITCH(0x1000f240):
+		case HELPSWITCH(SBUS_F240):
 			if(!(value & 0x100))
 				psHu32(mem) &= ~0x100;
 			else
@@ -815,7 +816,7 @@ void __fastcall hwWrite32_page_0F( u32 mem, u32 value )
 			psHu32(mem) = value;
 			break;
 
-		case HELPSWITCH(0x1000f590): // DMAC_ENABLEW
+		case HELPSWITCH(DMAC_ENABLEW): // DMAC_ENABLEW
 			HW_LOG("DMAC_ENABLEW Write 32bit %lx", value);
 			psHu32(0xf590) = value;
 			psHu32(0xf520) = value;
@@ -890,7 +891,7 @@ void __fastcall hwWrite32_generic( u32 mem, u32 value )
 		case D2_SADR: regName = "GIFdma SADDR"; break;
 
 //------------------------------------------------------------------
-		case 0x1000c000: // dma5 - sif0
+		case D5_CHCR: // dma5 - sif0
 			DMA_LOG("SIF0dma EXECUTE, value=0x%x", value);
 			//if (value == 0) psxSu32(0x30) = 0x40000;
 			if ((value & 0x100) && !(psHu32(DMAC_CTRL) & 0x1)) 
@@ -901,7 +902,7 @@ void __fastcall hwWrite32_generic( u32 mem, u32 value )
 			DmaExec(dmaSIF0, mem, value);
 			return;
 //------------------------------------------------------------------
-		case 0x1000c400: // dma6 - sif1
+		case D6_CHCR: // dma6 - sif1
 			DMA_LOG("SIF1dma EXECUTE, value=0x%x", value);
 			if ((value & 0x100) && !(psHu32(DMAC_CTRL) & 0x1)) 
 			{
@@ -911,11 +912,12 @@ void __fastcall hwWrite32_generic( u32 mem, u32 value )
 			DmaExec(dmaSIF1, mem, value);
 			return;
 
-		case 0x1000c420: regName = "SIF1dma QWC"; break;
+		// Again, no MADR, and an undefined TADR.
+		case D6_QWC: regName = "SIF1dma QWC"; break;
 		case 0x1000c430: regName = "SIF1dma TADR"; break;
 
 //------------------------------------------------------------------
-		case 0x1000c800: // dma7 - sif2
+		case D7_CHCR: // dma7 - sif2
 			DMA_LOG("SIF2dma EXECUTE, value=0x%x", value);
 			if ((value & 0x100) && !(psHu32(DMAC_CTRL) & 0x1)) 
 			{
@@ -925,7 +927,7 @@ void __fastcall hwWrite32_generic( u32 mem, u32 value )
 			DmaExec(dmaSIF2, mem, value);
 			return;
 //------------------------------------------------------------------
-		case 0x1000d000: // dma8 - fromSPR
+		case D8_CHCR: // dma8 - fromSPR
 			DMA_LOG("SPR0dma EXECUTE (fromSPR), value=0x%x", value);
 			if ((value & 0x100) && !(psHu32(DMAC_CTRL) & 0x1)) 
 			{
@@ -1048,7 +1050,7 @@ void __fastcall hwWrite64_generic( u32 mem, const mem64_t* srcval )
 
 	switch (mem)
 	{
-		case 0x1000a000: // dma2 - gif
+		case D2_CHCR: // dma2 - gif
 			DMA_LOG("0x%8.8x hwWrite64: GSdma %x", cpuRegs.cycle, value);
 			DmaExec(dmaGIF, mem, value);
 		break;
@@ -1070,7 +1072,7 @@ void __fastcall hwWrite64_generic( u32 mem, const mem64_t* srcval )
 		case 0x1000f430:
 			break;
 
-		case 0x1000f590: // DMAC_ENABLEW
+		case DMAC_ENABLEW: // DMAC_ENABLEW
 			psHu32(0xf590) = value;
 			psHu32(0xf520) = value;
 		break;
@@ -1103,7 +1105,7 @@ void __fastcall hwWrite128_generic(u32 mem, const mem128_t *srcval)
 			cpuTestINTCInts();
 		break;
 
-		case 0x1000f590: // DMAC_ENABLEW
+		case DMAC_ENABLEW: // DMAC_ENABLEW
 			psHu32(0xf590) = srcval[0];
 			psHu32(0xf520) = srcval[0];
 		break;

@@ -56,13 +56,20 @@ extern SessionOverrideFlags g_Session;
 #define PCSX2_FRAMELIMIT_SKIP 0x800
 #define PCSX2_FRAMELIMIT_VUSKIP 0xc00
 
+#define CHECK_FRAMELIMIT (Config.Options&PCSX2_FRAMELIMIT_MASK)
+
+//------------ CPU Options!!! ---------------
 #define CHECK_MULTIGS (Config.Options&PCSX2_GSMULTITHREAD)
 #define CHECK_EEREC (!g_Session.ForceDisableEErec && Config.Options&PCSX2_EEREC)
+#define CHECK_VU0REC (!g_Session.ForceDisableVU0rec && Config.Options&PCSX2_VU0REC)
+#define CHECK_VU1REC (!g_Session.ForceDisableVU1rec && (Config.Options&PCSX2_VU1REC))
+
 //------------ SPECIAL GAME FIXES!!! ---------------
 #define CHECK_VUADDSUBHACK	 (Config.GameFixes & 0x1) // Special Fix for Tri-ace games, they use an encryption algorithm that requires VU addi opcode to be bit-accurate.
 #define CHECK_FPUCOMPAREHACK (Config.GameFixes & 0x4) // Special Fix for Digimon Rumble Arena 2, fixes spinning/hanging on intro-menu.
 #define CHECK_VUCLIPFLAGHACK (Config.GameFixes & 0x2) // Special Fix for Persona games, maybe others. It's to do with the VU clip flag (again).
 #define CHECK_FPUMULHACK	 (Config.GameFixes & 0x8) // Special Fix for Tales of Destiny hangs.
+
 //------------ Advanced Options!!! ---------------
 #define CHECK_VU_OVERFLOW		 (Config.vuOptions & 0x1)
 #define CHECK_VU_EXTRA_OVERFLOW	 (Config.vuOptions & 0x2) // If enabled, Operands are clamped before being used in the VU recs
@@ -75,14 +82,40 @@ extern SessionOverrideFlags g_Session;
 #define CHECK_FPU_FULL			 (Config.eeOptions & 0x4)
 #define DEFAULT_eeOptions	0x01
 #define DEFAULT_vuOptions	0x01
+
 //------------ DEFAULT sseMXCSR VALUES!!! ---------------
 #define DEFAULT_sseMXCSR	0xffc0 //FPU rounding > DaZ, FtZ, "chop"
 #define DEFAULT_sseVUMXCSR	0xffc0 //VU  rounding > DaZ, FtZ, "chop"
 
-#define CHECK_FRAMELIMIT (Config.Options&PCSX2_FRAMELIMIT_MASK)
+//------------ Recompiler defines - Comment to disable a recompiler ---------------
+// Yay!  These work now! (air) ... almost (air)
 
-#define CHECK_VU0REC (!g_Session.ForceDisableVU0rec && Config.Options&PCSX2_VU0REC)
-#define CHECK_VU1REC (!g_Session.ForceDisableVU1rec && (Config.Options&PCSX2_VU1REC))
+#define SHIFT_RECOMPILE // Speed majorly reduced if disabled
+#define BRANCH_RECOMPILE // Speed extremely reduced if disabled - more then shift
+
+// Disabling all the recompilers in this block is interesting, as it still runs at a reasonable rate.
+// It also adds a few glitches. Really reminds me of the old Linux 64-bit version. --arcum42
+#define ARITHMETICIMM_RECOMPILE
+#define ARITHMETIC_RECOMPILE
+#define MULTDIV_RECOMPILE
+#define JUMP_RECOMPILE
+#define LOADSTORE_RECOMPILE
+#define MOVE_RECOMPILE
+#define MMI_RECOMPILE
+#define MMI0_RECOMPILE
+#define MMI1_RECOMPILE
+#define MMI2_RECOMPILE
+#define MMI3_RECOMPILE
+#define FPU_RECOMPILE
+#define CP0_RECOMPILE
+#define CP2_RECOMPILE
+
+// You can't recompile ARITHMETICIMM without ARITHMETIC.
+#ifndef ARITHMETIC_RECOMPILE
+#undef ARITHMETICIMM_RECOMPILE
+#endif
+
+#define EE_CONST_PROP // rec2 - enables constant propagation (faster)
 
 // Memory Card configuration, per slot.
 struct McdConfig

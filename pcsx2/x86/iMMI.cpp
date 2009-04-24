@@ -273,7 +273,7 @@ void recPMTHL()
 }
 
 // MMX helper routines
-#define MMX_ALLOC_TEMP1(code) { \
+/*#define MMX_ALLOC_TEMP1(code) { \
 		int t0reg; \
 		t0reg = _allocMMXreg(-1, MMX_TEMP, 0); \
 		code; \
@@ -311,7 +311,7 @@ void recPMTHL()
 		_freeMMXreg(t1reg); \
 		_freeMMXreg(t2reg); \
 		_freeMMXreg(t3reg); \
-} \
+} \*/
 
 ////////////////////////////////////////////////////
 void recPSRLH( void )
