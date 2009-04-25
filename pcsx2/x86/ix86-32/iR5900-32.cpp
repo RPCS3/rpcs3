@@ -1219,6 +1219,9 @@ void recompileNextInstruction(int delayslot)
 //	_freeMMXregs();
 //	_flushCachedRegs();
 //	g_cpuHasConstReg = 1;
+
+	if (!delayslot && x86Ptr - recPtr > 0x1000)
+		s_nEndBlock = pc;
 }
 
 extern u32 psxdump;
@@ -1724,7 +1727,7 @@ StartRecomp:
 
 		if( willbranch3 || !branch) {
 			iFlushCall(FLUSH_EVERYTHING);
-			iBranch(pc, 0);
+			iBranchTest(pc);
 		}
 	}
 
