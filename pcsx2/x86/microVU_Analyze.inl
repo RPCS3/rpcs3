@@ -101,6 +101,7 @@ microVUt(void) mVUanalyzeFMAC3(int Fd, int Fs, int Ft) {
 
 microVUt(void) mVUanalyzeFMAC4(int Fs, int Ft) {
 	microVU* mVU = mVUx;
+	mVUinfo |= doClip;
 	analyzeReg1(Fs);
 	analyzeReg4(Ft);
 }

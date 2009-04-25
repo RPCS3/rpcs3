@@ -431,7 +431,6 @@ microVUf(void) mVU_ESUM() {
 
 microVUf(void) mVU_FCAND() {
 	microVU* mVU = mVUx;
-	pass1 { mVUprint("clip broken"); }
 	pass2 { 
 		mVUallocCFLAGa<vuIndex>(gprT1, fvcInstance);
 		AND32ItoR(gprT1, _Imm24_);
@@ -444,7 +443,6 @@ microVUf(void) mVU_FCAND() {
 
 microVUf(void) mVU_FCEQ() {
 	microVU* mVU = mVUx;
-	pass1 { mVUprint("clip broken"); }
 	pass2 { 
 		mVUallocCFLAGa<vuIndex>(gprT1, fvcInstance);
 		XOR32ItoR(gprT1, _Imm24_);
@@ -457,7 +455,6 @@ microVUf(void) mVU_FCEQ() {
 
 microVUf(void) mVU_FCGET() {
 	microVU* mVU = mVUx;
-	pass1 { mVUprint("clip broken"); }
 	pass2 { 
 		mVUallocCFLAGa<vuIndex>(gprT1, fvcInstance);
 		AND32ItoR(gprT1, 0xfff);
@@ -468,7 +465,6 @@ microVUf(void) mVU_FCGET() {
 
 microVUf(void) mVU_FCOR() {
 	microVU* mVU = mVUx;
-	pass1 { mVUprint("clip broken"); }
 	pass2 { 
 		mVUallocCFLAGa<vuIndex>(gprT1, fvcInstance);
 		OR32ItoR(gprT1, _Imm24_);
@@ -481,7 +477,7 @@ microVUf(void) mVU_FCOR() {
 
 microVUf(void) mVU_FCSET() {
 	microVU* mVU = mVUx;
-	pass1 { mVUprint("clip broken"); }
+	pass1 { mVUinfo |= doClip; }
 	pass2 { 
 		MOV32ItoR(gprT1, _Imm24_);
 		mVUallocCFLAGb<vuIndex>(gprT1, fcInstance);
@@ -660,6 +656,7 @@ microVUf(void) mVU_ISUB() {
 			mVUallocVIa<vuIndex>(gprT1, _Fs_);
 			mVUallocVIa<vuIndex>(gprT2, _Ft_);
 			SUB16RtoR(gprT1, gprT2);
+			mVUallocVIb<vuIndex>(gprT1, _Fd_);
 		}
 		else if (!isMMX(_Fd_)) { 
 			XOR32RtoR(gprT1, gprT1);
@@ -856,7 +853,7 @@ microVUf(void) mVU_LQ() {
 			mVUsaveReg<vuIndex>(xmmFt, (uptr)&mVU->regs->VF[_Ft_].UL[0], _X_Y_Z_W, 1);
 		}
 	}
-	pass3 { mVUlog("LQ"); }
+	pass3 { mVUlog("LQ.%s vf%02d, vi%02d + %d", _XYZW_String, _Ft_, _Fs_, _Imm11_); }
 }
 
 microVUf(void) mVU_LQD() {
@@ -878,7 +875,7 @@ microVUf(void) mVU_LQD() {
 			}
 		}
 	}
-	pass3 { mVUlog("LQD"); }
+	pass3 { mVUlog("LQD.%s vf%02d, --vi%02d", _XYZW_String, _Ft_, _Fs_); }
 }
 
 microVUf(void) mVU_LQI() {
@@ -901,7 +898,7 @@ microVUf(void) mVU_LQI() {
 			mVUallocVIb<vuIndex>(gprT2, _Fs_);
 		}
 	}
-	pass3 { mVUlog("LQI"); }
+	pass3 { mVUlog("LQI.%s vf%02d, vi%02d++", _XYZW_String, _Ft_, _Fs_); }
 }
 
 //------------------------------------------------------------------
@@ -924,7 +921,7 @@ microVUf(void) mVU_SQ() {
 			mVUsaveReg2<vuIndex>(xmmFs, gprT1, (uptr)mVU->regs->Mem, _X_Y_Z_W);
 		}
 	}
-	pass3 { mVUlog("SQ"); }
+	pass3 { mVUlog("SQ.%s vf%02d, vi%02d + %d", _XYZW_String, _Fs_, _Ft_, _Imm11_); }
 }
 
 microVUf(void) mVU_SQD() {
@@ -944,7 +941,7 @@ microVUf(void) mVU_SQD() {
 			mVUsaveReg2<vuIndex>(xmmFs, gprT1, (uptr)mVU->regs->Mem, _X_Y_Z_W);
 		}
 	}
-	pass3 { mVUlog("SQD"); }
+	pass3 { mVUlog("SQD.%s vf%02d, --vi%02d", _XYZW_String, _Fs_, _Ft_); }
 }
 
 microVUf(void) mVU_SQI() {
@@ -962,10 +959,10 @@ microVUf(void) mVU_SQI() {
 			getReg7(xmmFs, _Fs_);
 			mVUsaveReg2<vuIndex>(xmmFs, gprT1, (uptr)mVU->regs->Mem, _X_Y_Z_W);
 			ADD16ItoR(gprT2, 1);
-			mVUallocVIb<vuIndex>(gprT2, _Ft_); // ToDo: Backup to memory check.
+			mVUallocVIb<vuIndex>(gprT2, _Ft_);
 		}
 	}
-	pass3 { mVUlog("SQI"); }
+	pass3 { mVUlog("SQI.%s vf%02d, vi%02d++", _XYZW_String, _Fs_, _Ft_); }
 }
 
 //------------------------------------------------------------------
@@ -983,7 +980,7 @@ microVUf(void) mVU_RINIT() {
 		}
 		else MOV32ItoR(gprR, 0x3f800000);
 	}
-	pass3 { mVUlog("RINIT"); }
+	pass3 { mVUlog("RINIT R, vf%02d%s", _Fs_, _Fsf_String); }
 }
 
 microVUt(void) mVU_RGET_() {
@@ -1000,7 +997,7 @@ microVUf(void) mVU_RGET() {
 	microVU* mVU = mVUx;
 	pass1 { mVUanalyzeR2<vuIndex>(_Ft_, 1); }
 	pass2 { mVU_RGET_<vuIndex>(); }
-	pass3 { mVUlog("RGET"); }
+	pass3 { mVUlog("RGET.%s vf%02d, R", _XYZW_String, _Ft_); }
 }
 
 microVUf(void) mVU_RNEXT() {
@@ -1023,7 +1020,7 @@ microVUf(void) mVU_RNEXT() {
 		OR32ItoR (gprR, 0x3f800000);
 		mVU_RGET_<vuIndex>(); 
 	}
-	pass3 { mVUlog("RNEXT"); }
+	pass3 { mVUlog("RNEXT.%s vf%02d, R", _XYZW_String, _Ft_); }
 }
 
 microVUf(void) mVU_RXOR() {
@@ -1036,7 +1033,7 @@ microVUf(void) mVU_RXOR() {
 			XOR32RtoR(gprR,  gprT1);
 		}
 	}
-	pass3 { mVUlog("RXOR"); }
+	pass3 { mVUlog("RXOR R, vf%02d%s", _Fs_, _Fsf_String); }
 }
 
 //------------------------------------------------------------------
@@ -1066,7 +1063,7 @@ microVUf(void) mVU_XTOP() {
 		MOVZX32M16toR(gprT1, (uptr)&mVU->regs->vifRegs->top);
 		mVUallocVIb<vuIndex>(gprT1, _Ft_);
 	}
-	pass3 { mVUlog("XTOP"); }
+	pass3 { mVUlog("XTOP vi%02d", _Ft_); }
 }
 
 microVUf(void) mVU_XITOP() {
@@ -1076,7 +1073,7 @@ microVUf(void) mVU_XITOP() {
 		MOVZX32M16toR(gprT1, (uptr)&mVU->regs->vifRegs->itop);
 		mVUallocVIb<vuIndex>(gprT1, _Ft_);
 	}
-	pass3 { mVUlog("XITOP"); }
+	pass3 { mVUlog("XITOP vi%02d", _Ft_); }
 }
 
 //------------------------------------------------------------------
@@ -1101,7 +1098,7 @@ microVUf(void) mVU_XGKICK() {
 		CALLFunc((uptr)mVU_XGKICK_);
 		POP32R(gprR); // Restore
 	}
-	pass3 { mVUlog("XGKICK"); }
+	pass3 { mVUlog("XGKICK vi%02d", _Fs_); }
 }
 
 //------------------------------------------------------------------
@@ -1111,7 +1108,7 @@ microVUf(void) mVU_XGKICK() {
 microVUf(void) mVU_B() {
 	microVU* mVU = mVUx;
 	mVUbranch = 1;
-	pass3 { mVUlog("B"); }
+	pass3 { mVUlog("B [%04x]", branchAddr); }
 }
 microVUf(void) mVU_BAL() {
 	microVU* mVU = mVUx;
@@ -1120,11 +1117,8 @@ microVUf(void) mVU_BAL() {
 	pass2 {
 		MOV32ItoR(gprT1, bSaveAddr);
 		mVUallocVIb<vuIndex>(gprT1, _Ft_);
-		// Note: Not sure if the lower instruction in the branch-delay slot
-		// should read the previous VI-value or the VI-value resulting from this branch.
-		// This code does the latter...
 	}
-	pass3 { mVUlog("BAL"); }
+	pass3 { mVUlog("BAL vi%02d [%04x]", _Ft_, branchAddr); }
 }
 microVUf(void) mVU_IBEQ() {
 	microVU* mVU = mVUx;
@@ -1137,7 +1131,7 @@ microVUf(void) mVU_IBEQ() {
 		else { mVUallocVIa<vuIndex>(gprT2, _Ft_); XOR32RtoR(gprT1, gprT2); }
 		MOV32RtoM((uptr)&mVU->branch, gprT1);
 	}
-	pass3 { mVUlog("IBEQ"); }
+	pass3 { mVUlog("IBEQ vi%02d, vi%02d [%04x]", _Ft_, _Fs_, branchAddr); }
 }
 microVUf(void) mVU_IBGEZ() {
 	microVU* mVU = mVUx;
@@ -1148,7 +1142,7 @@ microVUf(void) mVU_IBGEZ() {
 		else mVUallocVIa<vuIndex>(gprT1, _Fs_);
 		MOV32RtoM((uptr)&mVU->branch, gprT1);
 	}
-	pass3 { mVUlog("IBGEZ"); }
+	pass3 { mVUlog("IBGEZ vi%02d [%04x]", _Fs_, branchAddr); }
 }
 microVUf(void) mVU_IBGTZ() {
 	microVU* mVU = mVUx;
@@ -1159,7 +1153,7 @@ microVUf(void) mVU_IBGTZ() {
 		else mVUallocVIa<vuIndex>(gprT1, _Fs_);
 		MOV32RtoM((uptr)&mVU->branch, gprT1);
 	}
-	pass3 { mVUlog("IBGTZ"); }
+	pass3 { mVUlog("IBGTZ vi%02d [%04x]", _Fs_, branchAddr); }
 }
 microVUf(void) mVU_IBLEZ() {
 	microVU* mVU = mVUx;
@@ -1170,7 +1164,7 @@ microVUf(void) mVU_IBLEZ() {
 		else mVUallocVIa<vuIndex>(gprT1, _Fs_);
 		MOV32RtoM((uptr)&mVU->branch, gprT1);
 	}
-	pass3 { mVUlog("IBLEZ"); }
+	pass3 { mVUlog("IBLEZ vi%02d [%04x]", _Fs_, branchAddr); }
 }
 microVUf(void) mVU_IBLTZ() {
 	microVU* mVU = mVUx;
@@ -1181,7 +1175,7 @@ microVUf(void) mVU_IBLTZ() {
 		else mVUallocVIa<vuIndex>(gprT1, _Fs_);
 		MOV32RtoM((uptr)&mVU->branch, gprT1);
 	}
-	pass3 { mVUlog("IBLTZ"); }
+	pass3 { mVUlog("IBLTZ vi%02d [%04x]", _Fs_, branchAddr); }
 }
 microVUf(void) mVU_IBNE() {
 	microVU* mVU = mVUx;
@@ -1194,7 +1188,7 @@ microVUf(void) mVU_IBNE() {
 		else { mVUallocVIa<vuIndex>(gprT2, _Ft_); XOR32RtoR(gprT1, gprT2); }
 		MOV32RtoM((uptr)&mVU->branch, gprT1);
 	}
-	pass3 { mVUlog("IBNE"); }
+	pass3 { mVUlog("IBNE vi%02d, vi%02d [%04x]", _Ft_, _Fs_, branchAddr); }
 }
 microVUf(void) mVU_JR() {
 	microVU* mVU = mVUx;
@@ -1205,7 +1199,7 @@ microVUf(void) mVU_JR() {
 		else mVUallocVIa<vuIndex>(gprT1, _Fs_);
 		MOV32RtoM((uptr)&mVU->branch, gprT1);
 	}
-	pass3 { mVUlog("JR"); }
+	pass3 { mVUlog("JR [vi%02d]", _Fs_); }
 }
 microVUf(void) mVU_JALR() {
 	microVU* mVU = mVUx;
@@ -1217,11 +1211,8 @@ microVUf(void) mVU_JALR() {
 		MOV32RtoM((uptr)&mVU->branch, gprT1);
 		MOV32ItoR(gprT1, bSaveAddr);
 		mVUallocVIb<vuIndex>(gprT1, _Ft_);
-		// Note: Not sure if the lower instruction in the branch-delay slot
-		// should read the previous VI-value or the VI-value resulting from this branch.
-		// This code does the latter...
 	}
-	pass3 { mVUlog("JALR"); }
+	pass3 { mVUlog("JALR vi%02d, [vi%02d]", _Ft_, _Fs_); }
 }
 
 #endif //PCSX2_MICROVU

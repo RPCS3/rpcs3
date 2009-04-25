@@ -28,9 +28,9 @@
 	mVUprint("mVUcompile branchCase");										\
 	CMP16ItoM((uptr)&mVU->branch, 0);										\
 	incPC2(1);																\
-	pBlock = mVUblocks[iPC/2]->search((microRegInfo*)&mVUregs);				\
+	bBlock = mVUblocks[iPC/2]->search((microRegInfo*)&mVUregs);				\
 	incPC2(-1);																\
-	if (pBlock)	{ nJMPcc((uptr)pBlock->x86ptrStart - ((uptr)x86Ptr + 6)); }	\
+	if (bBlock)	{ nJMPcc((uptr)pBlock->x86ptrStart - ((uptr)x86Ptr + 6)); }	\
 	else		{ ajmp = JMPcc((uptr)0); }									\
 	break
 
@@ -94,8 +94,9 @@ microVUt(void) mVUsetFlags(int* bStatus, int* bMac) {
 	}
 
 	// Status/Mac Flags Setup Code
-	int xStatus	= 8, xMac = 8, xClip = 8; // Flag Instances start at #0 on every block ((8&3) == 0)
-	int pStatus	= 3, pMac = 3, pClip = 3;
+	int xStatus	= 8, xMac = 8; // Flag Instances start at #0 on every block ((8&3) == 0)
+	int pStatus	= 3, pMac = 3;
+	int xClip = mVUregs.clip + 8, pClip = mVUregs.clip + 7; // Clip Instance starts from where it left off
 	int xS = 0, yS = 1, zS = 0;
 	int xM = 0, yM = 1, zM = 0;
 	int xC = 0, yC = 1, zC = 0;
@@ -122,6 +123,7 @@ microVUt(void) mVUsetFlags(int* bStatus, int* bMac) {
 		incPC2(2);
 	}
 	mVUcount = xCount; // Restore count
+	mVUregs.clip = xClip&3; // Note: Clip timing isn't cycle-accurate between block linking; but hopefully doesn't matter
 
 	// Setup Last 4 instances of Status/Mac flags (needed for accurate block linking)
 	iPC = endPC;
@@ -238,13 +240,15 @@ microVUt(void) mVUdivSet() {
 
 microVUt(void) mVUendProgram() {
 	microVU* mVU = mVUx;
-	incCycles(55); // Ensures Valid P/Q instances
-	mVUcycles -= 55;
+	incCycles(100); // Ensures Valid P/Q instances (And sets all cycle data to 0)
+	mVUcycles -= 100;
 	if (mVU->q) { SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, 0xe5); }
 	SSE_MOVSS_XMM_to_M32((uptr)&mVU->regs->VI[REG_Q].UL, xmmPQ);
 	SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVU->p ? 3 : 2);
 	SSE_MOVSS_XMM_to_M32((uptr)&mVU->regs->VI[REG_P].UL, xmmPQ);
 
+	//memcpy_fast(&pBlock->pStateEnd, &mVUregs, sizeof(microRegInfo));
+	//MOV32ItoM((uptr)&mVU->prog.lpState, (int)&mVUblock.pState); // Save pipeline state (clipflag instance)
 	AND32ItoM((uptr)&microVU0.regs->VI[REG_VPU_STAT].UL, (vuIndex ? ~0x100 : ~0x001)); // VBS0/VBS1 flag
 	AND32ItoM((uptr)&mVU->regs->vifRegs->stat, ~0x4); // Clear VU 'is busy' signal for vif
 	MOV32ItoM((uptr)&mVU->regs->VI[REG_TPC].UL, xPC);
@@ -290,6 +294,7 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 
 	for (int branch = 0;; ) {
 		incPC(1);
+		mVUinfo = 0;
 		incCycles(1);
 		startLoop();
 		mVUopU<vuIndex, 0>();
@@ -326,6 +331,7 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 		
 		if (!isBdelay) { incPC(1); }
 		else {
+			microBlock* bBlock = NULL;
 			u32* ajmp = 0;
 			switch (mVUbranch) {
 				case 3: branchCase(JZ32,  JNZ32);	// IBEQ
@@ -365,7 +371,7 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 			}
 			// Conditional Branches
 			mVUprint("mVUcompile conditional branch");
-			if (pBlock) { // Branch non-taken has already been compiled
+			if (bBlock) { // Branch non-taken has already been compiled
 				incPC(-3); // Go back to branch opcode (to get branch imm addr)
 				// Check if branch-block has already been compiled
 				pBlock = mVUblocks[branchAddr/8]->search((microRegInfo*)&mVUregs);
@@ -375,12 +381,17 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 			}
 			else {
 				uptr jumpAddr;
-				incPC(1);  // Get PC for branch not-taken
+				u32 bPC = iPC; // mVUcompile can modify iPC and mVUregs, so back them up
+				memcpy_fast(&pBlock->pStateEnd, &mVUregs, sizeof(microRegInfo));
+	
+				incPC2(1);  // Get PC for branch not-taken
 				if (!vuIndex) mVUcompileVU0(xPC, (uptr)&mVUregs);
 				else		  mVUcompileVU1(xPC, (uptr)&mVUregs);
-				incPC(-4); // Go back to branch opcode (to get branch imm addr)
-				if (!vuIndex) jumpAddr = (uptr)mVUcompileVU0(branchAddr, (uptr)&mVUregs);
-				else		  jumpAddr = (uptr)mVUcompileVU1(branchAddr, (uptr)&mVUregs);
+
+				iPC = bPC;
+				incPC(-3); // Go back to branch opcode (to get branch imm addr)
+				if (!vuIndex) jumpAddr = (uptr)mVUcompileVU0(branchAddr, (uptr)&pBlock->pStateEnd);
+				else		  jumpAddr = (uptr)mVUcompileVU1(branchAddr, (uptr)&pBlock->pStateEnd);
 				*ajmp = (jumpAddr - ((uptr)ajmp + 4));
 			}
 			return thisPtr;
@@ -391,8 +402,8 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 
 	// Do E-bit end stuff here
 	mVUendProgram<vuIndex>();
-	//ToDo: Save pipeline state?
-	return thisPtr;
+
+	return thisPtr; //ToDo: Save pipeline state?
 }
 
 void* __fastcall mVUcompileVU0(u32 startPC, uptr pState) { return mVUcompile<0>(startPC, pState); }

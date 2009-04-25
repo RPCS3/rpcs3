@@ -103,9 +103,6 @@ microVUt(void) mVUdispatcherB() {
 	}
 
 	SSE_MOVAPS_XMM_to_M128((uptr)&mVU->regs->ACC.UL[0], xmmACC);
-	//SSE_MOVSS_XMM_to_M32((uptr)&mVU->regs->VI[REG_Q].UL, xmmPQ); // ToDo: Ensure Correct Q/P instances
-	//SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, 0); // wzyx = PPPP
-	//SSE_MOVSS_XMM_to_M32((uptr)&mVU->regs->VI[REG_P].UL, xmmPQ);
 
 	// Restore cpu state
 	POP32R(EDI);

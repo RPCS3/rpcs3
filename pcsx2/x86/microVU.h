@@ -18,7 +18,7 @@
 
 #pragma once
 #define mVUdebug	// Prints Extra Info to Console
-//#define mVUlogProg	// Dumps MicroPrograms into microVU0.txt/microVU1.txt
+#define mVUlogProg	// Dumps MicroPrograms into microVU0.txt/microVU1.txt
 #include "Common.h"
 #include "VU.h"
 #include "GS.h"
@@ -51,7 +51,7 @@ public:
 		if (listSize < 0) return NULL;
 		//if (blockList[0].pState.needExactMatch) { // Needs Detailed Search (Exact Match of Pipeline State)
 			for (int i = 0; i <= listSize; i++) {
-				if (!memcmp(pState, &blockList[i].pState, sizeof(microRegInfo))) return &blockList[i];
+				if (!memcmp(pState, &blockList[i].pState, sizeof(microRegInfo) - 1)) return &blockList[i];
 			}
 		/*}
 		else { // Can do Simple Search (Only Matches the Important Pipeline Stuff)

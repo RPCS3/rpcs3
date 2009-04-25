@@ -1077,8 +1077,7 @@ microVUf(void) mVULowerOP_T3_11()	{ doTableStuff(mVULowerOP_T3_11_OPCODE,	((mVUg
 microVUf(void) mVUopU() { doTableStuff(mVU_UPPER_OPCODE, (mVUgetCode & 0x3f)); } // Gets Upper Opcode
 microVUf(void) mVUopL() { doTableStuff(mVULOWER_OPCODE,  (mVUgetCode >>  25)); } // Gets Lower Opcode
 microVUf(void) mVUunknown() { 
-	SysPrintf("mVUunknown<%d,%d> : Unknown Micro VU opcode called (%x)\n", vuIndex, recPass, mVUgetCode);
-	//pass2 { write8(0xcc); }
+	pass2 { SysPrintf("microVU%d: Unknown Micro VU opcode called (%x)\n", vuIndex, mVUgetCode); }
 	pass3 { mVUlog("Unknown", mVUgetCode); }
 }
 

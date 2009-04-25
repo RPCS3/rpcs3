@@ -143,7 +143,7 @@ namespace VU1micro
 
 		FreezeXMMRegs(1);
 		FreezeMMXRegs(1);
-		runVUrec(VU1.VI[REG_TPC].UL, 20000, 1);
+		runVUrec(VU1.VI[REG_TPC].UL, 5000, 1);
 		FreezeXMMRegs(0);
 		FreezeMMXRegs(0);
 	}

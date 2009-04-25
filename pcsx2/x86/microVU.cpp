@@ -69,12 +69,8 @@ microVUt(void) mVUreset() {
 	mVUdispatcherA<vuIndex>();
 	mVUdispatcherB<vuIndex>();
 
-	// Program Variables
+	// Clear All Program Data
 	memset(&mVU->prog, 0, sizeof(mVU->prog));
-	mVU->prog.finished = 1;
-	mVU->prog.cleared = 1;
-	mVU->prog.cur = -1;
-	mVU->prog.total = -1;
 
 	// Create Block Managers
 	for (int i = 0; i <= mVU->prog.max; i++) {
@@ -82,6 +78,13 @@ microVUt(void) mVUreset() {
 			mVU->prog.prog[i].block[j] = new microBlockManager();
 		}
 	}
+
+	// Program Variables
+	mVU->prog.finished = 1;
+	mVU->prog.cleared = 1;
+	mVU->prog.cur = -1;
+	mVU->prog.total = -1;
+	//mVU->prog.lpState = &mVU->prog.prog[15].allocInfo.block.pState; // Blank Pipeline State (ToDo: finish implementation)
 
 	// Setup Dynarec Cache Limits for Each Program
 	u8* z = (mVU->cache + 512); // Dispatcher Code is in first 512 bytes

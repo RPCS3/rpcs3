@@ -603,7 +603,7 @@ microVUf(void) mVU_ITOF12()	 { mVU_ITOFx<vuIndex, recPass>((uptr)mVU_ITOF_12);	p
 microVUf(void) mVU_ITOF15()	 { mVU_ITOFx<vuIndex, recPass>((uptr)mVU_ITOF_15);	pass3 { mVUlog("ITOF15"); } }
 microVUf(void) mVU_CLIP() {
 	microVU* mVU = mVUx;
-	pass1 { mVUanalyzeFMAC4<vuIndex>(_Fs_, _Ft_); mVUprint("clip broken"); }
+	pass1 { mVUanalyzeFMAC4<vuIndex>(_Fs_, _Ft_); }
 	pass2 {
 		int Fs, Ft;
 		mVUallocFMAC17a<vuIndex>(Fs, Ft);

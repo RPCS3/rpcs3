@@ -47,6 +47,7 @@ microVUx(void) __mVULog(const char* fmt, ...) {
 microVUt(void) __mVUdumpProgram(int progIndex) {
 	microVU* mVU = mVUx;
 	bool bitX[7];
+	//mVU->prog.cur = progIndex; // Needed in order to set iPC
 	mVUlog("*********************\n",   progIndex);
 	mVUlog("* Micro-Program #%02d *\n", progIndex);
 	mVUlog("*********************\n\n", progIndex);
@@ -68,7 +69,8 @@ microVUt(void) __mVUdumpProgram(int progIndex) {
 		if (mVU->code & _Mbit_) {bitX[2] = 1; bitX[5] = 1;}
 		if (mVU->code & _Dbit_) {bitX[3] = 1; bitX[5] = 1;}
 		if (mVU->code & _Tbit_) {bitX[4] = 1; bitX[5] = 1;}
-		
+
+		iPC = (i+1)/4;
 		mVUopU<vuIndex, 2>();
 
 		if (bitX[5]) { 
@@ -81,6 +83,7 @@ microVUt(void) __mVUdumpProgram(int progIndex) {
 			mVUlog(")");
 		}
 
+		iPC = i/4;
 		mVU->code = mVU->prog.prog[progIndex].data[i];
 		mVUlog("\n[%04x] (%08x) ", i*4, mVU->code);
 		mVUopL<vuIndex, 2>();

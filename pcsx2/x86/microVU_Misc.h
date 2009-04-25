@@ -89,8 +89,8 @@ declareAllVariables
 #define _Ftf_	((mVU->code >> 23) & 0x03)
 
 #define _Imm5_	(((mVU->code & 0x400) ? 0xfff0 : 0) | ((mVU->code >> 6) & 0xf))
-#define _Imm11_	(s32)(mVU->code & 0x400 ? 0xfffffc00 | (mVU->code & 0x3ff) : mVU->code & 0x3ff)
-#define _Imm12_	(((mVU->code >> 21 ) & 0x1) << 11) | (mVU->code & 0x7ff)
+#define _Imm11_	(s32)((mVU->code & 0x400) ? (0xfffffc00 | (mVU->code & 0x3ff)) : mVU->code & 0x3ff)
+#define _Imm12_	(((mVU->code >> 21) & 0x1) << 11) | (mVU->code & 0x7ff)
 #define _Imm15_	(((mVU->code >> 10) & 0x7800) | (mVU->code & 0x7ff))
 #define _Imm24_	(u32)(mVU->code & 0xffffff)
 
@@ -162,8 +162,12 @@ declareAllVariables
 #define incPC2(x)	 { iPC = ((iPC + x) & (mVU->progSize-1)); }
 #define incCycles(x) { mVUincCycles<vuIndex>(x); }
 #define bSaveAddr	 ((xPC + (2 * 8)) & ((vuIndex) ? 0x3ff8:0xff8))
-#define branchAddr	 ((xPC + (_Imm11_ * 8)) & ((vuIndex) ? 0x3ff8:0xff8))
+#define branchAddr	 ((xPC + 8 + (_Imm11_ * 8)) & ((vuIndex) ? 0x3ff8:0xff8))
 #define shufflePQ	 (((mVU->q) ? 0xb0 : 0xe0) | ((mVU->q) ? 0x01 : 0x04))
+#define _Fsf_String	 ((_Fsf_ == 3) ? "w" : ((_Fsf_ == 2) ? "z" : ((_Fsf_ == 1) ? "y" : "x")))
+#define _Ftf_String	 ((_Ftf_ == 3) ? "w" : ((_Ftf_ == 2) ? "z" : ((_Ftf_ == 1) ? "y" : "x")))
+#define xyzwStr(x,s) (_X_Y_Z_W == x) ? s :
+#define _XYZW_String (xyzwStr(1, "w") (xyzwStr(2, "z") (xyzwStr(3, "zw") (xyzwStr(4, "y") (xyzwStr(5, "yw") (xyzwStr(6, "yz") (xyzwStr(7, "yzw") (xyzwStr(8, "x") (xyzwStr(9, "xw") (xyzwStr(10, "xz") (xyzwStr(11, "xzw") (xyzwStr(12, "xy") (xyzwStr(13, "xyw") (xyzwStr(14, "xyz") "xyzw"))))))))))))))
 
 
 #define _isNOP		 (1<<0) // Skip Lower Instruction
