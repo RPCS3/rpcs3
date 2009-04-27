@@ -85,7 +85,7 @@ microVUt(void) __mVUdumpProgram(int progIndex) {
 		if (delay == 2) { mVUlog("<font color=\"#FFFF00\">"); }
 		if (delay == 1) { mVUlog("<font color=\"#999999\">"); }
 
-		iPC = (i+1)/4;
+		iPC = (i+1);
 		mVUlog("<a name=\"addr%04x\">", i*4);
 		mVUlog("[%04x] (%08x)</a> ", i*4, mVU->code);
 		mVUopU<vuIndex, 2>();
@@ -100,7 +100,7 @@ microVUt(void) __mVUdumpProgram(int progIndex) {
 			mVUlog(")");
 		}
 
-		iPC = i/4;
+		iPC = i;
 		if (bitX[7]) { mVUlog("<font color=\"#0070ff\">"); }
 		mVU->code = mVU->prog.prog[progIndex].data[i];
 		mVUlog("<br>\n[%04x] (%08x) ", i*4, mVU->code);
