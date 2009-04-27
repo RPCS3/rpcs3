@@ -90,7 +90,7 @@ LogOptionsDialog::eeLogOptionsPanel::HwPanel::HwPanel( wxWindow* parent ) :
 
 void LogOptionsDialog::eeLogOptionsPanel::OnLogChecked(wxCommandEvent &event)
 {
-	LogChecks checkId = (LogChecks)(int)event.m_callbackUserData;
+	//LogChecks checkId = (LogChecks)(int)event.m_callbackUserData;
 	//ToggleLogOption( checkId );
 	event.Skip();
 }

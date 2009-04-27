@@ -15,7 +15,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
- 
+
 #include "PrecompiledHeader.h"
 #include "Misc.h"
 #include "GameFixesDialog.h"
@@ -43,15 +43,19 @@ GameFixesDialog::GameFixesDialog( wxWindow* parent, int id ):
 	AddOkCancel( mainSizer );
 
 	SetSizerAndFit( &mainSizer );
+
+	Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( GameFixesDialog::FPUCompareHack_Click ) );
+	Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( GameFixesDialog::TriAce_Click ) );
+	Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( GameFixesDialog::GodWar_Click ) );
 }
 
-
+/*
 BEGIN_EVENT_TABLE(GameFixesDialog, wxDialog)
     EVT_CHECKBOX(wxID_ANY, FPUCompareHack_Click)
     EVT_CHECKBOX(wxID_ANY, TriAce_Click)
     EVT_CHECKBOX(wxID_ANY, GodWar_Click)
 END_EVENT_TABLE();
-
+*/
 
 void GameFixesDialog::FPUCompareHack_Click(wxCommandEvent &event)
 {

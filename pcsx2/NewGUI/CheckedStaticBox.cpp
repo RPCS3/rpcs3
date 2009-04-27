@@ -40,6 +40,8 @@ CheckedStaticBox::CheckedStaticBox( wxWindow* parent, int orientation, const wxS
 
 	// Ensure that the right-side of the static group box isn't too cozy:
 	m_StaticBoxSizer.SetMinSize( ThisToggle.GetSize() + wxSize( 22, 1 ) );
+
+	Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( CheckedStaticBox::MainToggle_Click ) );
 }
 
 // Adds a checkbox to this group panel's base sizer.
@@ -52,9 +54,9 @@ wxCheckBox& CheckedStaticBox::AddCheckBox( const wxString& label, wxWindowID id 
 
 //////////////////////////////////////////////////////////////////////////////////////////
 //
-BEGIN_EVENT_TABLE(CheckedStaticBox, wxPanel)
+/*BEGIN_EVENT_TABLE(CheckedStaticBox, wxPanel)
 	EVT_CHECKBOX(wxID_ANY, MainToggle_Click)
-END_EVENT_TABLE()
+END_EVENT_TABLE()*/
 
 void CheckedStaticBox::MainToggle_Click( wxCommandEvent& evt )
 {

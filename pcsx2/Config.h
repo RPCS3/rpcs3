@@ -184,6 +184,10 @@ public:
 	McdSysOptions MemoryCards;
 	
 public:
+	void Load();
+	void Save();
+	
+protected:
 	void LoadSave( IniInterface& ini );
 };
 

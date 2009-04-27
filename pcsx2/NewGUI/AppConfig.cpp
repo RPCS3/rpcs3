@@ -85,10 +85,10 @@ namespace FilenameDefs
 		return wxGetApp().GetAppName() + wxT(".ini");
 	}
 	
-	wxFileName Memcard[2] = 
+	const wxFileName Memcard[2] = 
 	{
-		wxT("Mcd001.ps2"),
-		wxT("Mcd002.ps2")
+		wxFileName( wxT("Mcd001.ps2") ),
+		wxFileName( wxT("Mcd002.ps2") )
 	};
 };
 
@@ -158,6 +158,19 @@ void AppConfig::LoadSave( IniInterface& ini )
 	Speedhacks.LoadSave( ini );
 
 	ini.Flush();
+}
+
+void AppConfig::Load()
+{
+	// Note: Extra parenthisis resolves "I think this is a function" issues with C++.
+	IniLoader loader( (IniLoader()) );
+	LoadSave( loader );
+}
+
+void AppConfig::Save()
+{
+	IniSaver saver( (IniSaver()) );
+	LoadSave( saver );
 }
 
 void AppConfig::ConsoleLogOptions::LoadSave( IniInterface& ini )

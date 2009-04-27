@@ -193,7 +193,7 @@ namespace PathDefs
 namespace FilenameDefs
 {
 	extern wxFileName GetConfig();
-	extern wxFileName Memcard[2];
+	extern const wxFileName Memcard[2];
 };
 
 #endif

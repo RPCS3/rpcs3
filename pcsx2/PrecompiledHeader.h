@@ -92,6 +92,7 @@ typedef int BOOL;
 // need a full recompile anyway, when modified (etc)
 
 #include "zlib/zlib.h"
+
 #include "PS2Etypes.h"
 #include "Paths.h"
 #include "Config.h"

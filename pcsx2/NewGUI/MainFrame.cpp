@@ -18,9 +18,9 @@
 
 #include "PrecompiledHeader.h"
 #include "MainFrame.h"
-#include "Dialogs/GameFixesDialog.h"
-#include "Dialogs/LogOptionsDialog.h"
-#include "Dialogs/AboutBoxDialog.h"
+#include "GameFixesDialog.h"
+#include "LogOptionsDialog.h"
+#include "AboutBoxDialog.h"
 
 #include "Resources/EmbeddedImage.h"
 #include "Resources/AppIcon.h"

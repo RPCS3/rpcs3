@@ -2907,27 +2907,6 @@
 			<File
 				RelativePath="..\..\PathUtils.cpp"
 				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Devel|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\Plugins.cpp"
@@ -3330,27 +3309,27 @@
 				Name="Dialogs"
 				>
 				<File
-					RelativePath="..\..\NewGUI\Dialogs\AboutBoxDialog.cpp"
+					RelativePath="..\..\NewGUI\AboutBoxDialog.cpp"
 					>
 				</File>
 				<File
-					RelativePath="..\..\NewGUI\Dialogs\AboutBoxDialog.h"
+					RelativePath="..\..\NewGUI\AboutBoxDialog.h"
 					>
 				</File>
 				<File
-					RelativePath="..\..\NewGUI\Dialogs\GameFixesDialog.cpp"
+					RelativePath="..\..\NewGUI\GameFixesDialog.cpp"
 					>
 				</File>
 				<File
-					RelativePath="..\..\NewGUI\Dialogs\GameFixesDialog.h"
+					RelativePath="..\..\NewGUI\GameFixesDialog.h"
 					>
 				</File>
 				<File
-					RelativePath="..\..\NewGUI\Dialogs\LogOptionsDialog.cpp"
+					RelativePath="..\..\NewGUI\LogOptionsDialog.cpp"
 					>
 				</File>
 				<File
-					RelativePath="..\..\NewGUI\Dialogs\LogOptionsDialog.h"
+					RelativePath="..\..\NewGUI\LogOptionsDialog.h"
 					>
 				</File>
 			</Filter>

@@ -17,7 +17,7 @@
  */
 
 #pragma once
- 
+
 #include <wx/wx.h>
 #include <wx/image.h>
 
@@ -28,12 +28,10 @@ namespace Dialogs
 	class GameFixesDialog: public wxDialogWithHelpers
 	{
 	public:
-
 		GameFixesDialog(wxWindow* parent, int id);
 
 	protected:
-
-		DECLARE_EVENT_TABLE();
+		//DECLARE_EVENT_TABLE();
 
 	public:
 		void FPUCompareHack_Click(wxCommandEvent &event);

@@ -1,5 +1,5 @@
 AUTOMAKE_OPTIONS = foreign
-INCLUDES = $(shell pkg-config --cflags gtk+-2.0) -I@srcdir@/../   -I@srcdir@/../../common/include -I@srcdir@/../../3rdparty $(shell wx-config --cppflags)
+INCLUDES = $(shell pkg-config --cflags gtk+-2.0) -I@srcdir@/../ -I@srcdir@/../Linux/   -I@srcdir@/../../common/include -I@srcdir@/../../3rdparty $(shell wx-config --cppflags)
 
 bin_PROGRAMS = pcsx2
 
@@ -7,8 +7,8 @@ bin_PROGRAMS = pcsx2
 pcsx2_SOURCES =  \
 CheckedStaticBox.cpp ConsoleLogger.cpp   MainFrame.cpp   wxHelpers.cpp AppConfig.cpp main.cpp \
 App.h CheckedStaticBox.h MainFrame.h   wxHelpers.h \
-Dialogs/AboutBoxDialog.cpp Dialogs/GameFixesDialog.cpp Dialogs/LogOptionsDialog.cpp \
-Dialogs/AboutBoxDialog.h Dialogs/GameFixesDialog.h Dialogs/LogOptionsDialog.h ../Linux/memzero.h
+AboutBoxDialog.cpp GameFixesDialog.cpp LogOptionsDialog.cpp \
+AboutBoxDialog.h GameFixesDialog.h LogOptionsDialog.h
 
 pcsx2_LDFLAGS =
 

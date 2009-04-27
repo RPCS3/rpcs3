@@ -122,7 +122,7 @@ bool Pcsx2App::OnInit()
 		wxConfigBase::Get()->SetRecordDefaults();
 	}
 
-	g_Conf.LoadSave( IniLoader() );
+	g_Conf.Load();
 
 	m_Bitmap_Logo = new wxBitmap( EmbeddedImage<png_BackgroundLogo>().GetImage() );
 
@@ -135,7 +135,7 @@ bool Pcsx2App::OnInit()
 
 int Pcsx2App::OnExit()
 {
-	g_Conf.LoadSave( IniSaver() );
+	g_Conf.Save();
 	return wxApp::OnExit();
 }
 

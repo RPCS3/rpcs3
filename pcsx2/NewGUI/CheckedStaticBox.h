@@ -38,7 +38,7 @@ public:
 	wxCheckBox& AddCheckBox( const wxString& label, wxWindowID id=wxID_ANY );
 
 protected:
-	DECLARE_EVENT_TABLE();
+	//DECLARE_EVENT_TABLE();
 
 public:
 	// Event handler for click events for the main checkbox (default behavior: enables/disables all child controls)

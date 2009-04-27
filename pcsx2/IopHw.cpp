@@ -618,7 +618,7 @@ u32 psxHwRead32(u32 add) {
 }
 
 // A buffer that stores messages until it gets a /n or the number of chars (g_pbufi) is more then 1023.
-s8 g_pbuf[1024];
+char g_pbuf[1024];
 int g_pbufi;
 void psxHwWrite8(u32 add, u8 value) {
 	if (add >= HW_USB_START && add < HW_USB_END) {
