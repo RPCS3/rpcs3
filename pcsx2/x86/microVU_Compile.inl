@@ -359,14 +359,14 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 					memcpy_fast(&pBlock->pStateEnd, &mVUregs, sizeof(microRegInfo));
 					mVUsetupBranch<vuIndex>(bStatus, bMac);
 
-					PUSH32R(gprR); // Backup EDX
+					mVUbackupRegs<vuIndex>();
 					MOV32MtoR(gprT2, (uptr)&mVU->branch);		 // Get startPC (ECX first argument for __fastcall)
 					//AND32ItoR(gprT2, (vuIndex)?0x3ff8:0xff8);	 // Ensure valid jump address
 					MOV32ItoR(gprR, (u32)&pBlock->pStateEnd);	 // Get pState (EDX second argument for __fastcall)
 
 					if (!vuIndex) CALLFunc((uptr)mVUcompileVU0); //(u32 startPC, uptr pState)
 					else		  CALLFunc((uptr)mVUcompileVU1);
-					POP32R(gprR); // Restore EDX
+					mVUrestoreRegs<vuIndex>();
 					JMPR(gprT1);  // Jump to rec-code address
 					return thisPtr;
 			}

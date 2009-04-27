@@ -56,8 +56,8 @@ microVUt(void) mVUdispatcherA() {
 	MOV32RtoR(gprF2, gprF0);
 	MOV32RtoR(gprF3, gprF0);
 
-	for (int i = 0; i < 8; i++) {
-		MOVQMtoR(i, (uptr)&mVU->regs->VI[i+1].UL);
+	for (int i = 1; i < 16; i++) {
+		if (isMMX(i)) { MOVQMtoR(mmVI(i), (uptr)&mVU->regs->VI[i].UL); }
 	}
 
 	SSE_MOVAPS_M128_to_XMM(xmmACC, (uptr)&mVU->regs->ACC.UL[0]);
@@ -99,7 +99,10 @@ microVUt(void) mVUdispatcherB() {
 	MOV32RtoM((uptr)&mVU->regs->VI[REG_MAC_FLAG].UL,	gprF0);
 	
 	for (int i = 0; i < 8; i++) {
-		MOVDMMXtoM((uptr)&mVU->regs->VI[i+1].UL, i);
+		
+	}
+	for (int i = 1; i < 16; i++) {
+		if (isMMX(i)) { MOVDMMXtoM((uptr)&mVU->regs->VI[i].UL, mmVI(i)); }
 	}
 
 	SSE_MOVAPS_XMM_to_M128((uptr)&mVU->regs->ACC.UL[0], xmmACC);
@@ -112,7 +115,7 @@ microVUt(void) mVUdispatcherB() {
 
 	//write8(0xcc);
 
-	EMMS();
+	if (isMMX(1)) EMMS();
 	RET();
 
 	mVUcacheCheck(x86Ptr, mVU->cache, 512);

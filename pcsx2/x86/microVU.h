@@ -93,7 +93,8 @@ struct microVU {
 	static const u32 cacheSize = 0x800000; // VU Cache Size
 
 	microProgManager<0x4000> prog; // Micro Program Data
-	
+
+	FILE*	logFile;	 // Log File Pointer
 	VURegs*	regs;		 // VU Regs Struct
 	u8*		cache;		 // Dynarec Cache Start (where we will start writing the recompiled code to)
 	u8*		startFunct;	 // Ptr Function to the Start code for recompiled programs
@@ -109,6 +110,8 @@ struct microVU {
 	u32		espBackup;	 // Temp Backup for ESP
 	u32		totalCycles;
 	u32		cycles;
+
+	PCSX2_ALIGNED16(u32 xmmPQb[4]); // Backup for xmmPQ
 };
 
 // microVU rec structs
@@ -118,9 +121,6 @@ extern PCSX2_ALIGNED16(microVU microVU1);
 // Opcode Tables
 extern void (*mVU_UPPER_OPCODE[64])( VURegs* VU, s32 info );
 extern void (*mVU_LOWER_OPCODE[128])( VURegs* VU, s32 info );
-
-// Used for logging microPrograms
-extern FILE *mVUlogFile[2];
 
 // Main Functions
 microVUt(void) mVUinit(VURegs*);

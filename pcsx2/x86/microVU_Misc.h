@@ -231,7 +231,7 @@ declareAllVariables
 #define doDivFlag	 (mVUinfo & (1<<28))
 #define doClip		 (mVUinfo & (1<<29))
 
-#define isMMX(_VIreg_)	(_VIreg_ >= 1 && _VIreg_ <=9)
+#define isMMX(_VIreg_)	0//(_VIreg_ >= 1 && _VIreg_ <=8)
 #define mmVI(_VIreg_)	(_VIreg_ - 1)
 
 #ifdef mVUdebug
@@ -250,11 +250,9 @@ declareAllVariables
 
 #ifdef mVUlogProg
 #define mVUlog __mVULog<vuIndex>
-#define mVUsetupLog __mVUsetupLog<vuIndex>
 #define mVUdumpProg __mVUdumpProgram<vuIndex>
 #else
 #define mVUlog 0&&
-#define mVUsetupLog()
 #define mVUdumpProg 0&&
 #endif
 

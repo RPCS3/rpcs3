@@ -86,11 +86,11 @@ BOOL APIENTRY HacksProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 						}
 					}
 
-					newhacks.IOPCycleDouble = IsDlgButtonChecked(hDlg, IDC_IOPSYNC);
-					newhacks.WaitCycleExt = IsDlgButtonChecked(hDlg, IDC_WAITCYCLES);
-					newhacks.INTCSTATSlow = IsDlgButtonChecked(hDlg, IDC_INTCSTATHACK);
-					newhacks.ESCExits = IsDlgButtonChecked(hDlg, IDC_ESCHACK);
-					newhacks.IdleLoopFF = IsDlgButtonChecked(hDlg, IDC_IDLELOOPFF);
+					newhacks.IOPCycleDouble = !!IsDlgButtonChecked(hDlg, IDC_IOPSYNC);
+					newhacks.WaitCycleExt = !!IsDlgButtonChecked(hDlg, IDC_WAITCYCLES);
+					newhacks.INTCSTATSlow = !!IsDlgButtonChecked(hDlg, IDC_INTCSTATHACK);
+					newhacks.ESCExits = !!IsDlgButtonChecked(hDlg, IDC_ESCHACK);
+					newhacks.IdleLoopFF = !!IsDlgButtonChecked(hDlg, IDC_IDLELOOPFF);
 					newhacks.VUCycleSteal = SendDlgItemMessage(hDlg, IDC_VUCYCLE, TBM_GETPOS, 0, 0);
 					CheckVUCycleHack(hDlg, newhacks.VUCycleSteal);
 

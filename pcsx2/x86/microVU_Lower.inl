@@ -752,8 +752,7 @@ microVUf(void) mVU_ILW() {
 			mVUallocVIa<vuIndex>(gprT1, _Fs_);
 			ADD32ItoR(gprT1, _Imm11_);
 			mVUaddrFix<vuIndex>(gprT1);
-			MOV32RmtoR(gprT1, gprT1, (uptr)mVU->regs->Mem + offsetSS);
-			if (isMMX(_Ft_)) AND32ItoR(gprT1, 0xffff);
+			MOVZX32Rm16toR(gprT1, gprT1, (uptr)mVU->regs->Mem + offsetSS);
 			mVUallocVIb<vuIndex>(gprT1, _Ft_);
 		}
 	}
@@ -1098,10 +1097,10 @@ microVUf(void) mVU_XGKICK() {
 	pass2 {
 		mVUprint("XGkick");
 		mVUallocVIa<vuIndex>(gprT2, _Fs_); // gprT2 = ECX for __fastcall
-		PUSH32R(gprR); // gprR = EDX is volatile so backup
+		mVUbackupRegs<vuIndex>();
 		if (mtgsThread != NULL)	CALLFunc((uptr)mVU_XGKICK_);
 		else					CALLFunc((uptr)mVU_XGKICK__);
-		POP32R(gprR); // Restore
+		mVUrestoreRegs<vuIndex>();
 	}
 	pass3 { mVUlog("XGKICK vi%02d", _Fs_); }
 }
@@ -1113,7 +1112,7 @@ microVUf(void) mVU_XGKICK() {
 microVUf(void) mVU_B() {
 	microVU* mVU = mVUx;
 	mVUbranch = 1;
-	pass3 { mVUlog("B [%04x]", branchAddr); }
+	pass3 { mVUlog("B [<a href=\"#addr%04x\">%04x</a>]", branchAddr, branchAddr); }
 }
 microVUf(void) mVU_BAL() {
 	microVU* mVU = mVUx;
@@ -1123,7 +1122,7 @@ microVUf(void) mVU_BAL() {
 		MOV32ItoR(gprT1, bSaveAddr);
 		mVUallocVIb<vuIndex>(gprT1, _Ft_);
 	}
-	pass3 { mVUlog("BAL vi%02d [%04x]", _Ft_, branchAddr); }
+	pass3 { mVUlog("BAL vi%02d [<a href=\"#addr%04x\">%04x</a>]", _Ft_, branchAddr, branchAddr); }
 }
 microVUf(void) mVU_IBEQ() {
 	microVU* mVU = mVUx;
@@ -1136,7 +1135,7 @@ microVUf(void) mVU_IBEQ() {
 		else { mVUallocVIa<vuIndex>(gprT2, _Ft_); XOR32RtoR(gprT1, gprT2); }
 		MOV32RtoM((uptr)&mVU->branch, gprT1);
 	}
-	pass3 { mVUlog("IBEQ vi%02d, vi%02d [%04x]", _Ft_, _Fs_, branchAddr); }
+	pass3 { mVUlog("IBEQ vi%02d, vi%02d [<a href=\"#addr%04x\">%04x</a>]", _Ft_, _Fs_, branchAddr, branchAddr); }
 }
 microVUf(void) mVU_IBGEZ() {
 	microVU* mVU = mVUx;
@@ -1147,7 +1146,7 @@ microVUf(void) mVU_IBGEZ() {
 		else mVUallocVIa<vuIndex>(gprT1, _Fs_);
 		MOV32RtoM((uptr)&mVU->branch, gprT1);
 	}
-	pass3 { mVUlog("IBGEZ vi%02d [%04x]", _Fs_, branchAddr); }
+	pass3 { mVUlog("IBGEZ vi%02d [<a href=\"#addr%04x\">%04x</a>]", _Fs_, branchAddr, branchAddr); }
 }
 microVUf(void) mVU_IBGTZ() {
 	microVU* mVU = mVUx;
@@ -1158,7 +1157,7 @@ microVUf(void) mVU_IBGTZ() {
 		else mVUallocVIa<vuIndex>(gprT1, _Fs_);
 		MOV32RtoM((uptr)&mVU->branch, gprT1);
 	}
-	pass3 { mVUlog("IBGTZ vi%02d [%04x]", _Fs_, branchAddr); }
+	pass3 { mVUlog("IBGTZ vi%02d [<a href=\"#addr%04x\">%04x</a>]", _Fs_, branchAddr, branchAddr); }
 }
 microVUf(void) mVU_IBLEZ() {
 	microVU* mVU = mVUx;
@@ -1169,7 +1168,7 @@ microVUf(void) mVU_IBLEZ() {
 		else mVUallocVIa<vuIndex>(gprT1, _Fs_);
 		MOV32RtoM((uptr)&mVU->branch, gprT1);
 	}
-	pass3 { mVUlog("IBLEZ vi%02d [%04x]", _Fs_, branchAddr); }
+	pass3 { mVUlog("IBLEZ vi%02d [<a href=\"#addr%04x\">%04x</a>]", _Fs_, branchAddr, branchAddr); }
 }
 microVUf(void) mVU_IBLTZ() {
 	microVU* mVU = mVUx;
@@ -1180,7 +1179,7 @@ microVUf(void) mVU_IBLTZ() {
 		else mVUallocVIa<vuIndex>(gprT1, _Fs_);
 		MOV32RtoM((uptr)&mVU->branch, gprT1);
 	}
-	pass3 { mVUlog("IBLTZ vi%02d [%04x]", _Fs_, branchAddr); }
+	pass3 { mVUlog("IBLTZ vi%02d [<a href=\"#addr%04x\">%04x</a>]", _Fs_, branchAddr, branchAddr); }
 }
 microVUf(void) mVU_IBNE() {
 	microVU* mVU = mVUx;
@@ -1193,7 +1192,7 @@ microVUf(void) mVU_IBNE() {
 		else { mVUallocVIa<vuIndex>(gprT2, _Ft_); XOR32RtoR(gprT1, gprT2); }
 		MOV32RtoM((uptr)&mVU->branch, gprT1);
 	}
-	pass3 { mVUlog("IBNE vi%02d, vi%02d [%04x]", _Ft_, _Fs_, branchAddr); }
+	pass3 { mVUlog("IBNE vi%02d, vi%02d [<a href=\"#addr%04x\">%04x</a>]", _Ft_, _Fs_, branchAddr, branchAddr); }
 }
 microVUf(void) mVU_JR() {
 	microVU* mVU = mVUx;
