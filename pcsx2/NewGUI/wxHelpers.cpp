@@ -67,7 +67,7 @@ void wxDialogWithHelpers::AddOkCancel( wxBoxSizer &sizer )
 #ifndef __WXMSW__
 		// create a sizer to hold the help and ok/cancel buttons.
 		buttonSizer = new wxBoxSizer( wxHORIZONTAL );
-		buttonSizer->Add( new wxContextHelpButton(this), stdButtonSizerFlags.Align( wxALIGN_LEFT ) );
+		buttonSizer->Add( new wxContextHelpButton(this), wxHelpers::stdButtonSizerFlags.Align( wxALIGN_LEFT ) );
 #endif
 	}
 	buttonSizer->Add( CreateStdDialogButtonSizer( wxOK | wxCANCEL ), wxHelpers::stdButtonSizerFlags );

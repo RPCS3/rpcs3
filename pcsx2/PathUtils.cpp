@@ -43,8 +43,9 @@ static const wxString Delimiters( wxT("\\/") );
 static const wxChar SeparatorExt( wxT('.') );
 
 #else
-static const char Separator = '/';
-static const char Delimiters( '/' );
+static const wxChar Separator( '/');
+static const wxChar Delimiters( '/' );
+static const wxChar SeparatorExt( wxT('.') );
 #endif
 
 static bool IsPathSeparator( wxChar src )

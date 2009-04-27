@@ -5,8 +5,10 @@ bin_PROGRAMS = pcsx2
 
 # the application source, library search path, and link libraries
 pcsx2_SOURCES =  \
-frmGameFixes.cpp  frmGameFixes.h  frmMain.cpp  frmMain.h frmLogging.cpp frmLogging.h  main.cpp \
-memzero.h
+CheckedStaticBox.cpp ConsoleLogger.cpp   MainFrame.cpp   wxHelpers.cpp AppConfig.cpp main.cpp \
+App.h CheckedStaticBox.h MainFrame.h   wxHelpers.h \
+Dialogs/AboutBoxDialog.cpp Dialogs/GameFixesDialog.cpp Dialogs/LogOptionsDialog.cpp \
+Dialogs/AboutBoxDialog.h Dialogs/GameFixesDialog.h Dialogs/LogOptionsDialog.h ../Linux/memzero.h
 
 pcsx2_LDFLAGS =
 

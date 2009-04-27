@@ -608,7 +608,7 @@ void SuperVUDumpBlock(list<VuBaseBlock*>& blocks, int vuindex)
 
 #ifdef __LINUX__
         // dump the asm
-        if( (*itblock)->pcode != NULL ) {
+       /* if( (*itblock)->pcode != NULL ) {
             char command[255];
             FILE* fasm = fopen( "mydump1", "wb" );
             //Console::WriteLn("writing: %x, %x", params (*itblock)->startpc, (uptr)(*itblock)->pendcode - (uptr)(*itblock)->pcode);
@@ -626,7 +626,7 @@ void SuperVUDumpBlock(list<VuBaseBlock*>& blocks, int vuindex)
             fprintf(f, "\n\n");
             fwrite(&vbuffer[0], vbuffer.size(), 1, f);
             fclose(fasm);
-        }
+        }*/
 #endif
 
 		eff.Printf("\n---------------\n");

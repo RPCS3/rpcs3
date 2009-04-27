@@ -1,4 +1,4 @@
-INCLUDES = -I@srcdir@/.. -I@srcdir@/../../   -I@srcdir@/../../../common/include -I@srcdir@/../../../3rdparty -I/implement  -I/implement/xmm
+INCLUDES = -I@srcdir@/.. -I@srcdir@/../../   -I@srcdir@/../../../common/include -I@srcdir@/../../../3rdparty -I/implement  -I/implement/xmm $(shell wx-config --cppflags)
 noinst_LIBRARIES = libix86.a
 
 libix86_a_SOURCES = \

@@ -670,7 +670,7 @@ void psxHwWrite8(u32 add, u8 value) {
 			if (value == '\n' || g_pbufi >= 1023) { // A line break, or the buffer is about to overflow.
 				g_pbuf[g_pbufi++] = 0; 
 				g_pbufi = 0;
-				DevCon::WriteLn( Color_Cyan, g_pbuf );
+				DevCon::WriteLn( Color_Cyan, "%s", params g_pbuf );
 			}
 			else g_pbuf[g_pbufi++] = value;
 			psxHu8(add) = value;

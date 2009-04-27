@@ -1,4 +1,4 @@
-INCLUDES = -I@srcdir@/../   -I@srcdir@/../../common/include -I@srcdir@/../IPU/ -I@srcdir@/../../3rdparty
+INCLUDES = -I@srcdir@/../   -I@srcdir@/../../common/include -I@srcdir@/../IPU/ -I@srcdir@/../../3rdparty  $(shell wx-config --cppflags)
 noinst_LIBRARIES = libx86recomp.a
 
 # have to add the sources instead of making a library since the linking is complicated
@@ -8,13 +8,13 @@ ix86-32/iR5900Shift.cpp ix86-32/iR5900Arit.cpp  ix86-32/iR5900Branch.cpp ix86-32
 ix86-32/iR5900MultDiv.cpp ix86-32/iCore-32.cpp ix86-32/aR5900-32.S ix86-32/iR5900Templates.cpp ix86-32/recVTLB.cpp
 
 libx86recomp_a_SOURCES = \
-BaseblockEx.cpp iCOP0.cpp iCOP2.cpp iCore.cpp iFPU.cpp iFPUd.cpp iMMI.cpp iPsxMem.cpp iR3000A.cpp iR3000Atables.cpp \
-iR5900Misc.cpp iVU0micro.cpp iVU1micro.cpp iVUmicro.cpp iVUmicroLower.cpp iVUmicroUpper.cpp iVUzerorec.cpp iVif.cpp \
-ir5900tables.cpp  fast_routines.S aR3000A.S aVUzerorec.S aVif.S $(archfiles)
-
-libx86recomp_a_SOURCES += \
-BaseblockEx.h iCOP0.h iCore.h iFPU.h iMMI.h iR3000A.h iR5900.h iR5900Arit.h iR5900AritImm.h iR5900Branch.h iR5900Jump.h \
-iR5900LoadStore.h iR5900Move.h iR5900MultDiv.h iR5900Shift.h iVUmicro.h iVUops.h iVUzerorec.h 
+BaseblockEx.cpp    iCore.cpp  iMMI.h             iR5900AritImm.h    iR5900MultDiv.h  ir5900tables.cpp \
+BaseblockEx.h      iCore.h    iPsxMem.cpp        iR5900Branch.h     iR5900Shift.h \
+iFPU.cpp   iR3000A.h          iR5900Jump.h        iVUops.h           iR3000A.cpp \
+iCOP0.cpp          iFPU.h     iR3000Atables.cpp  iR5900LoadStore.h  iVU1micro.cpp    iVUzerorec.cpp   \
+iCOP0.h            iFPUd.cpp  iR5900.h           iR5900Misc.cpp       iVUzerorec.h       \
+iCOP2.cpp          iMMI.cpp   iR5900Arit.h       iR5900Move.h        iVif.cpp \
+ fast_routines.S aR3000A.S aVUzerorec.S aVif.S $(archfiles)
 
 #ifdef PCSX2_MICROVU
 #libx86recomp_a_SOURCES += \

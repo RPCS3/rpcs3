@@ -19,9 +19,10 @@
 
 #define NOMINMAX		// Disables other libs inclusion of their own min/max macros (we use std instead)
 
-#if defined (__linux__)  // some distributions are lower case
-#	define __LINUX__
-#endif
+// __LINUX__ defined in wxWidgets.
+//#if defined (__linux__)  // some distributions are lower case
+//#	define __LINUX__
+//#endif
 
 #ifdef _WIN32
 // disable warning C4244: '=' : conversion from 'big' to 'small', possible loss of data

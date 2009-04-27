@@ -1,5 +1,5 @@
 AUTOMAKE_OPTIONS = foreign
-INCLUDES = $(shell pkg-config --cflags gtk+-2.0) -I@srcdir@/../   -I@srcdir@/../../common/include -I@srcdir@/../../3rdparty
+INCLUDES = $(shell pkg-config --cflags gtk+-2.0) -I@srcdir@/../   -I@srcdir@/../../common/include -I@srcdir@/../../3rdparty  $(shell wx-config --cppflags)
 
 bin_PROGRAMS = pcsx2
 

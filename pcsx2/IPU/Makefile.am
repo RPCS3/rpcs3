@@ -1,4 +1,4 @@
-INCLUDES = -I@srcdir@/../ -I@srcdir@/../x86 -I@srcdir@/../../common/include -I@srcdir@/../../3rdparty
+INCLUDES = -I@srcdir@/../ -I@srcdir@/../x86 -I@srcdir@/../../common/include -I@srcdir@/../../3rdparty  $(shell wx-config --cppflags)
 noinst_LIBRARIES = libIPU.a
 
 libIPU_a_SOURCES = IPU.cpp yuv2rgb.cpp coroutine.cpp \

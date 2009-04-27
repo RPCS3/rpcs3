@@ -250,7 +250,7 @@ namespace Exception
 			RuntimeError( msg ) {}
 
 		explicit CpuStateShutdown( const wxString& msg_eng, const wxString& msg_xlt=wxString() ) :
-			RuntimeError( msg_eng, msg_xlt.IsEmpty() ? _("Unexpected emulation shutdown") : msg_xlt ) { }
+			RuntimeError( msg_eng, msg_xlt.IsEmpty() ? wxT("Unexpected emulation shutdown") : msg_xlt ) { }
 	};
 
 	// ------------------------------------------------------------------------

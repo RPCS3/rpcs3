@@ -1,4 +1,4 @@
-INCLUDES = -I@srcdir@/../   -I@srcdir@/../../common/include -I@srcdir@/../../3rdparty
+INCLUDES = -I@srcdir@/../   -I@srcdir@/../../common/include -I@srcdir@/../../3rdparty  $(shell wx-config --cppflags)
 noinst_LIBRARIES = libRDebug.a
 
 libRDebug_a_SOURCES = \

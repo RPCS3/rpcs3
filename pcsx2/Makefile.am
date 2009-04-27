@@ -1,5 +1,5 @@
 AUTOMAKE_OPTIONS = foreign
-INCLUDES = -I@srcdir@/x86/  -I@srcdir@/../common/include -I@srcdir@/../3rdparty
+INCLUDES = -I@srcdir@/x86/  -I@srcdir@/../common/include -I@srcdir@/../3rdparty  $(shell wx-config --cppflags)
 noinst_LIBRARIES = libpcsx2.a
 
 libpcsx2_a_SOURCES = \
@@ -12,8 +12,6 @@ SPR.cpp SaveState.cpp Sif.cpp Sio.cpp SourceLog.cpp Stats.cpp System.cpp ThreadT
 VU0.cpp VU0micro.cpp VU0microInterp.cpp VU1micro.cpp VU1microInterp.cpp VUflags.cpp VUmicroMem.cpp VUops.cpp \
 Vif.cpp VifDma.cpp vssprintf.cpp vtlb.cpp xmlpatchloader.cpp  AlignedMalloc.cpp \
 RecoverySystem.cpp Saveslots.cpp Dump.cpp
-
-
 
 libpcsx2_a_SOURCES += \
 CDVD.h CDVDiso.h CDVDisodrv.h CDVDlib.h COP0.h Cache.h CdRom.h Common.h Counters.h Decode_XA.h EEregs.h \
