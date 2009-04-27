@@ -493,34 +493,48 @@ void GSRendererHW10::SetupDATE(Texture& rt, Texture& ds)
 {
 	if(!m_context->TEST.DATE) return; // || (::GetAsyncKeyState(VK_CONTROL) & 0x8000)
 
-	// sfex3 (after the capcom logo), vf4 (first menu fading in), ffxii shadows, rumble roses shadows
+	// sfex3 (after the capcom logo), vf4 (first menu fading in), ffxii shadows, rumble roses shadows, persona4 shadows
 
 	GSVector4 mm;
 
 	// TODO
 
 	mm = GSVector4(-1, -1, 1, 1);
-/*
-	MinMaxXY(mm);
 
-	int w = rt.GetWidth();
-	int h = rt.GetHeight();
+	// if(m_count < 100)
+	{
+		GSVector4 pmin(65535, 65535, 0, 0);
+		GSVector4 pmax = GSVector4::zero();
 
-	float sx = 2.0f * rt.m_scale.x / (w * 16);
-	float sy = 2.0f * rt.m_scale.y / (h * 16);	
-	float ox = (float)(int)m_context->XYOFFSET.OFX;
-	float oy = (float)(int)m_context->XYOFFSET.OFY;
+		for(int i = 0, j = m_count; i < j; i++)
+		{
+			GSVector4 p(GSVector4i(m_vertices[i].m128i[0]).uph16());
 
-	mm.x = (mm.x - ox) * sx - 1;
-	mm.y = (mm.y - oy) * sy - 1;
-	mm.z = (mm.z - ox) * sx - 1;
-	mm.w = (mm.w - oy) * sy - 1;
+			pmin = p.minv(pmin);
+			pmax = p.maxv(pmax);
+		}
 
-	if(mm.x < -1) mm.x = -1;
-	if(mm.y < -1) mm.y = -1;
-	if(mm.z > +1) mm.z = +1;
-	if(mm.w > +1) mm.w = +1;
-*/
+		mm += pmin.xyxy(pmax);
+
+		int w = rt.GetWidth();
+		int h = rt.GetHeight();
+
+		float sx = 2.0f * rt.m_scale.x / (w * 16);
+		float sy = 2.0f * rt.m_scale.y / (h * 16);	
+		float ox = (float)(int)m_context->XYOFFSET.OFX;
+		float oy = (float)(int)m_context->XYOFFSET.OFY;
+
+		mm.x = (mm.x - ox) * sx - 1;
+		mm.y = (mm.y - oy) * sy - 1;
+		mm.z = (mm.z - ox) * sx - 1;
+		mm.w = (mm.w - oy) * sy - 1;
+
+		if(mm.x < -1) mm.x = -1;
+		if(mm.y < -1) mm.y = -1;
+		if(mm.z > +1) mm.z = +1;
+		if(mm.w > +1) mm.w = +1;
+	}
+
 	GSVector4 uv = (mm + 1.0f) / 2.0f;
 
 	//

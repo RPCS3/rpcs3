@@ -458,7 +458,7 @@ PS_OUTPUT ps_main(PS_INPUT input)
 		}
 		else if(ATST == 4) // e
 		{
-			clip(0.9f/256 - abs(c.a - AREF));
+			clip(0.5f / 256 - abs(c.a - AREF));
 		}
 		else if(ATST == 5 || ATST == 6) // ge, g
 		{
@@ -466,7 +466,7 @@ PS_OUTPUT ps_main(PS_INPUT input)
 		}
 		else if(ATST == 7) // ne
 		{
-			clip(abs(c.a - AREF) - 0.9f/256);
+			clip(abs(c.a - AREF) - 0.4f / 255); // FIXME: 0.5f is too much
 		}
 	}
 
