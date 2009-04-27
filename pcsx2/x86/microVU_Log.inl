@@ -47,7 +47,7 @@ microVUx(void) __mVULog(const char* fmt, ...) {
 microVUt(void) __mVUdumpProgram(int progIndex) {
 	microVU* mVU = mVUx;
 	bool bitX[7];
-	//mVU->prog.cur = progIndex; // Needed in order to set iPC
+
 	mVUlog("*********************\n",   progIndex);
 	mVUlog("* Micro-Program #%02d *\n", progIndex);
 	mVUlog("*********************\n\n", progIndex);

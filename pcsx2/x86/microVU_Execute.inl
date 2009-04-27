@@ -144,6 +144,8 @@ microVUt(void*) __fastcall mVUexecute(u32 startPC, u32 cycles) {
 microVUt(void) mVUcleanUp() {
 	microVU* mVU = mVUx;
 	//mVUprint("microVU: Program exited successfully!");
+	//mVUprint("microVU: VF0 = {%x,%x,%x,%x}", params mVU->regs->VF[0].UL[0], mVU->regs->VF[0].UL[1], mVU->regs->VF[0].UL[2], mVU->regs->VF[0].UL[3]);
+	//mVUprint("microVU: VI0 = %x", params mVU->regs->VI[0].UL);
 	mVUcurProg.x86ptr = x86Ptr;
 	mVUcacheCheck(x86Ptr, mVUcurProg.x86start, (uptr)(mVUcurProg.x86end - mVUcurProg.x86start));
 }

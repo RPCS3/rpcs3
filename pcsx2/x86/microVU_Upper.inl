@@ -78,6 +78,15 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 // Helper Macros
 //------------------------------------------------------------------
 
+#define mVUlogFtFs() { mVUlog(".%s vf%02d, vf%02d", _XYZW_String, _Ft_, _Fs_); }
+#define mVUlogFd()	 { mVUlog(".%s vf%02d, vf%02d", _XYZW_String, _Fd_, _Fs_); }
+#define mVUlogACC()	 { mVUlog(".%s ACC, vf%02d", _XYZW_String, _Fs_); }
+#define mVUlogFt()	 { mVUlog(", vf%02d", _Ft_); }
+#define mVUlogBC()	 { mVUlog(", vf%02d%s", _Ft_, _BC_String); }
+#define mVUlogI()	 { mVUlog(", I"); }
+#define mVUlogQ()	 { mVUlog(", Q"); }
+#define mVUlogCLIP() { mVUlog("w.xyz vf%02d, vf%02dw", _Fs_, _Ft_); }
+
 // FMAC1 - Normal FMAC Opcodes
 #define mVU_FMAC1(operation, OPname) {								\
 	microVU* mVU = mVUx;											\
@@ -90,7 +99,7 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 		mVUupdateFlags<vuIndex>(Fd, xmmT1, xmmT2, _X_Y_Z_W, 1);		\
 		mVUallocFMAC1b<vuIndex>(Fd);								\
 	}																\
-	pass3 { mVUlog(OPname); }										\
+	pass3 {	mVUlog(OPname);	mVUlogFd(); mVUlogFt();	}				\
 }
 // FMAC3 - BC(xyzw) FMAC Opcodes
 #define mVU_FMAC3(operation, OPname) {								\
@@ -104,7 +113,7 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 		mVUupdateFlags<vuIndex>(Fd, xmmT1, xmmT2, _X_Y_Z_W, 1);		\
 		mVUallocFMAC3b<vuIndex>(Fd);								\
 	}																\
-	pass3 { mVUlog(OPname); }										\
+	pass3 { mVUlog(OPname); mVUlogFd(); mVUlogBC(); }				\
 }
 // FMAC4 - FMAC Opcodes Storing Result to ACC
 #define mVU_FMAC4(operation, OPname) {								\
@@ -118,7 +127,7 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 		mVUupdateFlags<vuIndex>(Fs, xmmT1, xmmT2, _X_Y_Z_W, 0);		\
 		mVUallocFMAC4b<vuIndex>(ACC, Fs);							\
 	}																\
-	pass3 { mVUlog(OPname); }										\
+	pass3 { mVUlog(OPname); mVUlogACC(); mVUlogFt(); }				\
 }
 // FMAC5 - FMAC BC(xyzw) Opcodes Storing Result to ACC
 #define mVU_FMAC5(operation, OPname) {								\
@@ -132,7 +141,7 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 		mVUupdateFlags<vuIndex>(Fs, xmmT1, xmmT2, _X_Y_Z_W, 0);		\
 		mVUallocFMAC5b<vuIndex>(ACC, Fs);							\
 	}																\
-	pass3 { mVUlog(OPname); }										\
+	pass3 { mVUlog(OPname); mVUlogACC(); mVUlogBC(); }				\
 }
 // FMAC6 - Normal FMAC Opcodes (I Reg)
 #define mVU_FMAC6(operation, OPname) {								\
@@ -146,7 +155,7 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 		mVUupdateFlags<vuIndex>(Fd, xmmT1, xmmT2, _X_Y_Z_W, 1);		\
 		mVUallocFMAC6b<vuIndex>(Fd);								\
 	}																\
-	pass3 { mVUlog(OPname); }										\
+	pass3 { mVUlog(OPname); mVUlogFd(); mVUlogI(); }				\
 }
 // FMAC7 - FMAC Opcodes Storing Result to ACC (I Reg)
 #define mVU_FMAC7(operation, OPname) {								\
@@ -160,7 +169,7 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 		mVUupdateFlags<vuIndex>(Fs, xmmT1, xmmT2, _X_Y_Z_W, 0);		\
 		mVUallocFMAC7b<vuIndex>(ACC, Fs);							\
 	}																\
-	pass3 { mVUlog(OPname); }										\
+	pass3 { mVUlog(OPname); mVUlogACC(); mVUlogI(); }				\
 }
 // FMAC8 - MADD FMAC Opcode Storing Result to Fd
 #define mVU_FMAC8(operation, OPname) {								\
@@ -180,7 +189,7 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 		mVUupdateFlags<vuIndex>(Fd, xmmT1, xmmT2, _X_Y_Z_W, 0);		\
 		mVUallocFMAC8b<vuIndex>(Fd);								\
 	}																\
-	pass3 { mVUlog(OPname); }										\
+	pass3 { mVUlog(OPname); mVUlogFd(); mVUlogFt(); }				\
 }
 // FMAC9 - MSUB FMAC Opcode Storing Result to Fd
 #define mVU_FMAC9(operation, OPname) {								\
@@ -200,7 +209,7 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 		mVUupdateFlags<vuIndex>(Fd, Fs, xmmT2, _X_Y_Z_W, 0);		\
 		mVUallocFMAC9b<vuIndex>(Fd);								\
 	}																\
-	pass3 { mVUlog(OPname); }										\
+	pass3 { mVUlog(OPname); mVUlogFd(); mVUlogFt(); }				\
 }
 // FMAC10 - MADD FMAC BC(xyzw) Opcode Storing Result to Fd
 #define mVU_FMAC10(operation, OPname) {								\
@@ -220,7 +229,7 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 		mVUupdateFlags<vuIndex>(Fd, xmmT1, xmmT2, _X_Y_Z_W, 0);		\
 		mVUallocFMAC10b<vuIndex>(Fd);								\
 	}																\
-	pass3 { mVUlog(OPname); }										\
+	pass3 { mVUlog(OPname); mVUlogFd(); mVUlogBC(); }				\
 }
 // FMAC11 - MSUB FMAC BC(xyzw) Opcode Storing Result to Fd
 #define mVU_FMAC11(operation, OPname) {								\
@@ -240,7 +249,7 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 		mVUupdateFlags<vuIndex>(Fd, Fs, xmmT2, _X_Y_Z_W, 0);		\
 		mVUallocFMAC11b<vuIndex>(Fd);								\
 	}																\
-	pass3 { mVUlog(OPname); }										\
+	pass3 { mVUlog(OPname); mVUlogFd(); mVUlogBC(); }				\
 }
 // FMAC12 - MADD FMAC Opcode Storing Result to Fd (I Reg)
 #define mVU_FMAC12(operation, OPname) {								\
@@ -260,7 +269,7 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 		mVUupdateFlags<vuIndex>(Fd, xmmT1, xmmT2, _X_Y_Z_W, 0);		\
 		mVUallocFMAC12b<vuIndex>(Fd);								\
 	}																\
-	pass3 { mVUlog(OPname); }										\
+	pass3 { mVUlog(OPname); mVUlogFd(); mVUlogI(); }				\
 }
 // FMAC13 - MSUB FMAC Opcode Storing Result to Fd (I Reg)
 #define mVU_FMAC13(operation, OPname) {								\
@@ -280,7 +289,7 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 		mVUupdateFlags<vuIndex>(Fd, Fs, xmmT2, _X_Y_Z_W, 0);		\
 		mVUallocFMAC13b<vuIndex>(Fd);								\
 	}																\
-	pass3 { mVUlog(OPname); }										\
+	pass3 { mVUlog(OPname); mVUlogFd(); mVUlogI(); }				\
 }
 // FMAC14 - MADDA/MSUBA FMAC Opcode
 #define mVU_FMAC14(operation, OPname) {								\
@@ -300,7 +309,7 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 		mVUupdateFlags<vuIndex>(ACCr, Fs, xmmT2, _X_Y_Z_W, 0);		\
 		mVUallocFMAC14b<vuIndex>(ACCw, ACCr);						\
 	}																\
-	pass3 { mVUlog(OPname); }										\
+	pass3 { mVUlog(OPname); mVUlogACC(); mVUlogFt(); }				\
 }
 // FMAC15 - MADDA/MSUBA BC(xyzw) FMAC Opcode
 #define mVU_FMAC15(operation, OPname) {								\
@@ -320,7 +329,7 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 		mVUupdateFlags<vuIndex>(ACCr, Fs, xmmT2, _X_Y_Z_W, 0);		\
 		mVUallocFMAC15b<vuIndex>(ACCw, ACCr);						\
 	}																\
-	pass3 { mVUlog(OPname); }										\
+	pass3 { mVUlog(OPname); mVUlogACC(); mVUlogBC(); }				\
 }
 // FMAC16 - MADDA/MSUBA FMAC Opcode (I Reg)
 #define mVU_FMAC16(operation, OPname) {								\
@@ -340,7 +349,7 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 		mVUupdateFlags<vuIndex>(ACCr, Fs, xmmT2, _X_Y_Z_W, 0);		\
 		mVUallocFMAC16b<vuIndex>(ACCw, ACCr);						\
 	}																\
-	pass3 { mVUlog(OPname); }										\
+	pass3 { mVUlog(OPname); mVUlogACC(); mVUlogI(); }				\
 }
 // FMAC18 - OPMULA FMAC Opcode
 #define mVU_FMAC18(operation, OPname) {								\
@@ -353,9 +362,9 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 		mVUupdateFlags<vuIndex>(Fs, xmmT1, xmmT2, _X_Y_Z_W, 0);		\
 		mVUallocFMAC18b<vuIndex>(ACC, Fs);							\
 	}																\
-	pass3 { mVUlog(OPname); }										\
+	pass3 { mVUlog(OPname); mVUlogACC(); mVUlogFt(); }				\
 }
-// FMAC19 - OPMULA FMAC Opcode
+// FMAC19 - OPMSUB FMAC Opcode
 #define mVU_FMAC19(operation, OPname) {								\
 	microVU* mVU = mVUx;											\
 	pass1 { mVUanalyzeFMAC1<vuIndex>(_Fd_, _Fs_, _Ft_); }			\
@@ -367,7 +376,7 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 		mVUupdateFlags<vuIndex>(Fd, Fs, xmmT2, _X_Y_Z_W, 0);		\
 		mVUallocFMAC19b<vuIndex>(Fd);								\
 	}																\
-	pass3 { mVUlog(OPname); }										\
+	pass3 { mVUlog(OPname); mVUlogFd(); mVUlogFt(); }				\
 }
 // FMAC22 - Normal FMAC Opcodes (Q Reg)
 #define mVU_FMAC22(operation, OPname) {								\
@@ -381,7 +390,7 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 		mVUupdateFlags<vuIndex>(Fd, xmmT1, xmmT2, _X_Y_Z_W, 1);		\
 		mVUallocFMAC22b<vuIndex>(Fd);								\
 	}																\
-	pass3 { mVUlog(OPname); }										\
+	pass3 { mVUlog(OPname); mVUlogFd(); mVUlogQ(); }				\
 }
 // FMAC23 - FMAC Opcodes Storing Result to ACC (Q Reg)
 #define mVU_FMAC23(operation, OPname) {								\
@@ -395,7 +404,7 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 		mVUupdateFlags<vuIndex>(Fs, xmmT1, xmmT2, _X_Y_Z_W, 0);		\
 		mVUallocFMAC23b<vuIndex>(ACC, Fs);							\
 	}																\
-	pass3 { mVUlog(OPname); }										\
+	pass3 { mVUlog(OPname); mVUlogACC(); mVUlogQ();}				\
 }
 // FMAC24 - MADD FMAC Opcode Storing Result to Fd (Q Reg)
 #define mVU_FMAC24(operation, OPname) {								\
@@ -415,7 +424,7 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 		mVUupdateFlags<vuIndex>(Fd, xmmT1, xmmT2, _X_Y_Z_W, 0);		\
 		mVUallocFMAC24b<vuIndex>(Fd);								\
 	}																\
-	pass3 { mVUlog(OPname); }										\
+	pass3 { mVUlog(OPname); mVUlogFd(); mVUlogQ(); }				\
 }
 // FMAC25 - MSUB FMAC Opcode Storing Result to Fd (Q Reg)
 #define mVU_FMAC25(operation, OPname) {								\
@@ -435,7 +444,7 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 		mVUupdateFlags<vuIndex>(Fd, Fs, xmmT2, _X_Y_Z_W, 0);		\
 		mVUallocFMAC25b<vuIndex>(Fd);								\
 	}																\
-	pass3 { mVUlog(OPname); }										\
+	pass3 { mVUlog(OPname); mVUlogFd(); mVUlogQ(); }				\
 }
 // FMAC26 - MADDA/MSUBA FMAC Opcode (Q Reg)
 #define mVU_FMAC26(operation, OPname) {								\
@@ -455,7 +464,7 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 		mVUupdateFlags<vuIndex>(ACCr, Fs, xmmT2, _X_Y_Z_W, 0);		\
 		mVUallocFMAC26b<vuIndex>(ACCw, ACCr);						\
 	}																\
-	pass3 { mVUlog(OPname); }										\
+	pass3 { mVUlog(OPname); mVUlogACC(); mVUlogQ(); }				\
 }
 
 //------------------------------------------------------------------
@@ -471,7 +480,7 @@ microVUf(void) mVU_ABS() {
 		SSE_ANDPS_M128_to_XMM(Fs, (uptr)mVU_absclip);
 		mVUallocFMAC2b<vuIndex>(Ft);
 	}
-	pass3 { mVUlog("ABS"); }
+	pass3 { mVUlog("ABS"); mVUlogFtFs(); }
 }
 microVUf(void) mVU_ADD()	 { mVU_FMAC1 (ADD, "ADD");    }
 microVUf(void) mVU_ADDi()	 { mVU_FMAC6 (ADD, "ADDi");   }
@@ -545,7 +554,7 @@ microVUf(void) mVU_MSUBAz()	 { mVU_FMAC15(SUB, "MSUBAz"); }
 microVUf(void) mVU_MSUBAw()	 { mVU_FMAC15(SUB, "MSUBAw"); }
 microVUf(void) mVU_MAX()	 { mVU_FMAC1 (MAX, "MAX");    }
 microVUf(void) mVU_MAXi()	 { mVU_FMAC6 (MAX, "MAXi");   }
-microVUf(void) mVU_MAXx()	 { mVU_FMAC3 (MAX, "MAXq");   }
+microVUf(void) mVU_MAXx()	 { mVU_FMAC3 (MAX, "MAXx");   }
 microVUf(void) mVU_MAXy()	 { mVU_FMAC3 (MAX, "MAXy");   }
 microVUf(void) mVU_MAXz()	 { mVU_FMAC3 (MAX, "MAXz");   }
 microVUf(void) mVU_MAXw()	 { mVU_FMAC3 (MAX, "MAXw");   }
@@ -579,10 +588,10 @@ microVUq(void) mVU_FTOIx(uptr addr) {
 		mVUallocFMAC2b<vuIndex>(Ft);
 	}
 }
-microVUf(void) mVU_FTOI0()	 { mVU_FTOIx<vuIndex, recPass>((uptr)0);		   pass3 { mVUlog("FTOI0");  } }
-microVUf(void) mVU_FTOI4()	 { mVU_FTOIx<vuIndex, recPass>((uptr)mVU_FTOI_4);  pass3 { mVUlog("FTOI4");  } }
-microVUf(void) mVU_FTOI12()	 { mVU_FTOIx<vuIndex, recPass>((uptr)mVU_FTOI_12); pass3 { mVUlog("FTOI12"); } }
-microVUf(void) mVU_FTOI15()	 { mVU_FTOIx<vuIndex, recPass>((uptr)mVU_FTOI_15); pass3 { mVUlog("FTOI15"); } }
+microVUf(void) mVU_FTOI0()	 { mVU_FTOIx<vuIndex, recPass>((uptr)0);		   pass3 { microVU* mVU = mVUx; mVUlog("FTOI0");  mVUlogFtFs(); } }
+microVUf(void) mVU_FTOI4()	 { mVU_FTOIx<vuIndex, recPass>((uptr)mVU_FTOI_4);  pass3 { microVU* mVU = mVUx; mVUlog("FTOI4");  mVUlogFtFs(); } }
+microVUf(void) mVU_FTOI12()	 { mVU_FTOIx<vuIndex, recPass>((uptr)mVU_FTOI_12); pass3 { microVU* mVU = mVUx; mVUlog("FTOI12"); mVUlogFtFs(); } }
+microVUf(void) mVU_FTOI15()	 { mVU_FTOIx<vuIndex, recPass>((uptr)mVU_FTOI_15); pass3 { microVU* mVU = mVUx; mVUlog("FTOI15"); mVUlogFtFs(); } }
 microVUq(void) mVU_ITOFx(uptr addr) {
 	microVU* mVU = mVUx;
 	pass1 { mVUanalyzeFMAC2<vuIndex>(_Fs_, _Ft_); }
@@ -597,10 +606,10 @@ microVUq(void) mVU_ITOFx(uptr addr) {
 		mVUallocFMAC2b<vuIndex>(Ft);
 	}
 }
-microVUf(void) mVU_ITOF0()	 { mVU_ITOFx<vuIndex, recPass>((uptr)0);			pass3 { mVUlog("ITOF0");  } }
-microVUf(void) mVU_ITOF4()	 { mVU_ITOFx<vuIndex, recPass>((uptr)mVU_ITOF_4);	pass3 { mVUlog("ITOF4");  } }
-microVUf(void) mVU_ITOF12()	 { mVU_ITOFx<vuIndex, recPass>((uptr)mVU_ITOF_12);	pass3 { mVUlog("ITOF12"); } }
-microVUf(void) mVU_ITOF15()	 { mVU_ITOFx<vuIndex, recPass>((uptr)mVU_ITOF_15);	pass3 { mVUlog("ITOF15"); } }
+microVUf(void) mVU_ITOF0()	 { mVU_ITOFx<vuIndex, recPass>((uptr)0);			pass3 { microVU* mVU = mVUx; mVUlog("ITOF0");  mVUlogFtFs(); } }
+microVUf(void) mVU_ITOF4()	 { mVU_ITOFx<vuIndex, recPass>((uptr)mVU_ITOF_4);	pass3 { microVU* mVU = mVUx; mVUlog("ITOF4");  mVUlogFtFs(); } }
+microVUf(void) mVU_ITOF12()	 { mVU_ITOFx<vuIndex, recPass>((uptr)mVU_ITOF_12);	pass3 { microVU* mVU = mVUx; mVUlog("ITOF12"); mVUlogFtFs(); } }
+microVUf(void) mVU_ITOF15()	 { mVU_ITOFx<vuIndex, recPass>((uptr)mVU_ITOF_15);	pass3 { microVU* mVU = mVUx; mVUlog("ITOF15"); mVUlogFtFs(); } }
 microVUf(void) mVU_CLIP() {
 	microVU* mVU = mVUx;
 	pass1 { mVUanalyzeFMAC4<vuIndex>(_Fs_, _Ft_); }
@@ -633,6 +642,6 @@ microVUf(void) mVU_CLIP() {
 
 		mVUallocCFLAGb<vuIndex>(gprT1, fcInstance);
 	}
-	pass3 { mVUlog("CLIP"); }
+	pass3 { mVUlog("CLIP"); mVUlogCLIP(); }
 }
 #endif //PCSX2_MICROVU

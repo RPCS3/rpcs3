@@ -264,7 +264,7 @@ microVUx(void) mVUmergeRegs(int dest, int src, int xyzw) {
 
 // Transforms the Address in gprReg to valid VU0/VU1 Address
 microVUt(void) mVUaddrFix(int gprReg) {
-	if ( vuIndex == 1 ) {
+	if (vuIndex) {
 		AND32ItoR(gprReg, 0x3ff); // wrap around
 		SHL32ItoR(gprReg, 4);
 	}

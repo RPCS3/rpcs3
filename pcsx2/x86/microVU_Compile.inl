@@ -34,6 +34,7 @@
 	else		{ ajmp = JMPcc((uptr)0); }									\
 	break
 
+// ToDo: Fix this properly.
 #define flagSetMacro(xFlag, pFlag, xF, yF, zF) {	\
 	yF += (mVUstall > 3) ? 3 : mVUstall;			\
 	if (yF > zF) {									\
