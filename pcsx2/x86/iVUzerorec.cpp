@@ -118,7 +118,7 @@ union VURecRegs
 	u32 id;
 };
 
-#define SUPERVU_XGKICKDELAY 0 // yes this is needed as default (wipeout)
+#define SUPERVU_XGKICKDELAY 1 // yes this is needed as default (wipeout)
 
 class VuBaseBlock;
 
