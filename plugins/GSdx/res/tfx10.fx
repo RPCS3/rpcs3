@@ -458,7 +458,7 @@ PS_OUTPUT ps_main(PS_INPUT input)
 		}
 		else if(ATST == 4) // e
 		{
-			clip(0.5f / 256 - abs(c.a - AREF));
+			clip(0.6f / 255 - abs(c.a - AREF)); // FIXME: 0.5f is too small
 		}
 		else if(ATST == 5 || ATST == 6) // ge, g
 		{
