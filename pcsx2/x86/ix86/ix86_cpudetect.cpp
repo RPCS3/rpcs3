@@ -18,11 +18,8 @@
 
 #include "PrecompiledHeader.h"
 
-#define _EmitterId_ 0
-
-#include "ix86.h"
-#include "Misc.h"
-#include "Threading.h"
+#include "System.h"
+#include "ix86_legacy_internal.h"
 
 #include "RedtapeWindows.h"
 
@@ -400,6 +397,7 @@ void cpudetectInit()
 		cpudetectSSE3(recSSE);
 		HostSys::Munmap( recSSE, 0x1000 );
 	}
+	else { Console::Error("Error: Failed to allocate memory for SSE3 State detection."); }
 
 	//////////////////////////////////////
 	//  Core Counting!

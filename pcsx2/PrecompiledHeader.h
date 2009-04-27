@@ -36,12 +36,16 @@
 #include <wx/string.h>
 #include <wx/tokenzr.h>
 #include <wx/gdicmn.h>		// for wxPoint/wxRect stuff
+#include <wx/intl.h>
+#include <wx/log.h>
+#include <wx/filename.h>
 
 extern const wxRect wxDefaultRect;	// wxWidgets lacks one of its own.
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // Include the STL junk that's actually handy.
 
+#include <stdexcept>
 #include <algorithm>
 #include <vector>
 #include <string>
@@ -67,10 +71,19 @@ using std::max;
 
 typedef int BOOL;
 
-#	undef TRUE
-#	undef FALSE
-#	define TRUE  1
-#	define FALSE 0
+#undef TRUE
+#undef FALSE
+#define TRUE  1
+#define FALSE 0
+
+// This should prove useful....
+#define wxsFormat wxString::Format
+
+// macro provided for tagging translation strings, without actually running them through the
+// translator (which the _() does automatically, and sometimes we don't want that)
+#define wxLt(a)  a
+
+#define wxASSERT_MSG_A( cond, msg ) wxASSERT_MSG( cond, wxString::FromAscii(msg).c_str() );
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // Begin Pcsx2 Includes: Add items here that are local to Pcsx2 but stay relatively
@@ -79,6 +92,8 @@ typedef int BOOL;
 
 #include "zlib/zlib.h"
 #include "PS2Etypes.h"
+#include "Paths.h"
+#include "Config.h"
 #include "StringUtils.h"
 #include "Exceptions.h"
 #include "MemcpyFast.h"
@@ -141,24 +156,33 @@ static __forceinline u32 timeGetTime()
 #	define __releaseinline __forceinline
 #endif
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// Emitter Instance Identifiers.  If you add a new emitter, do it here also.
-// Note: Currently most of the instances map back to 0, since existing dynarec code all
-// shares iCore and must therefore all share the same emitter instance.
-// (note: these don't really belong here per-se, but it's an easy spot to use for now)
-enum
-{
-	EmitterId_R5900 = 0,
-	EmitterId_R3000a = EmitterId_R5900,
-	EmitterId_VU0micro = EmitterId_R5900,
-	EmitterId_VU1micro = EmitterId_R5900,
-	
-	// Cotton's new microVU, which is iCore-free
-	EmitterId_microVU0,
-	EmitterId_microVU1,
+//////////////////////////////////////////////////////////////
+// Dev / Debug conditionals --
+//   Consts for using if() statements instead of uglier #ifdef macros.
+//   Abbreviated macros for dev/debug only consoles and msgboxes.
 
-	// Air's eventual IopRec, which will also be iCore-free
-	EmitterId_R3000air,
-		
-	EmitterId_Count			// must always be last!
-};
+#ifdef PCSX2_DEVBUILD
+
+#	define DevCon Console
+#	define DevMsg MsgBox
+	static const bool IsDevBuild = true;
+
+#else
+
+#	define DevCon 0&&Console
+#	define DevMsg 
+	static const bool IsDevBuild = false;
+
+#endif
+
+#ifdef _DEBUG
+
+#	define DbgCon Console
+	static const bool IsDebugBuild = true;
+
+#else
+
+#	define DbgCon 0&&Console
+	static const bool IsDebugBuild = false;
+
+#endif

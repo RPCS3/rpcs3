@@ -25,6 +25,7 @@
 #endif
 
 #include <ctype.h>
+#include <wx/file.h>
 
 #include "IopCommon.h"
 #include "HostGui.h"
@@ -40,14 +41,13 @@
 #include "COP0.h"
 #include "Cache.h"
 
-#include "Paths.h"
+#include "Dump.h"
 
 using namespace std;
 using namespace R5900;
 
 PcsxConfig Config;
 u32 BiosVersion;
-char CdromId[12];
 static int g_Pcsx2Recording = 0; // true 1 if recording video and sound
 bool renderswitch = 0;
 
@@ -64,7 +64,8 @@ extern wxString strgametitle;
 #pragma pack(1)
 #endif
 
-struct romdir{
+struct romdir
+{
 	char fileName[10];
 	u16 extInfoSize;
 	u32 fileSize;
@@ -115,43 +116,46 @@ u32 GetBiosVersion() {
 }
 
 //2002-09-22 (Florin)
-int IsBIOS(const char *filename, char *description)
+bool IsBIOS(const wxString& filename, wxString& description)
 {
-	char ROMVER[14+1];
-	FILE *fp;
-	unsigned int fileOffset=0, found=FALSE;
-	struct romdir rd;
+	uint fileOffset=0;
+	romdir rd;
 
-	wxString Bios( Path::Combine( Config.BiosDir, filename ) );
+	wxFileName Bios( g_Conf.Folders.Bios + filename );
+	wxFile fp( Bios.GetFullPath().c_str() );
 
-	int biosFileSize = Path::getFileSize( Bios );
-	if( biosFileSize <= 0) return FALSE;	
+	if( !fp.IsOpened() ) return FALSE;
 
-	fp = fopen(Bios.c_str(), "rb");
-	if (fp == NULL) return FALSE;
+	int biosFileSize = fp.Length();
+	if( biosFileSize <= 0) return FALSE;
 
-	while ((ftell(fp)<512*1024) && (fread(&rd, DIRENTRY_SIZE, 1, fp)==1))
+	while( (fp.Tell() < 512*1024) && (fp.Read( &rd, DIRENTRY_SIZE ) == DIRENTRY_SIZE) )
+	{
 		if (strcmp(rd.fileName, "RESET") == 0)
-			break; /* found romdir */
+			break;	// found romdir
+	}
 
 	if ((strcmp(rd.fileName, "RESET") != 0) || (rd.fileSize == 0)) {
-		fclose(fp);
 		return FALSE;	//Unable to locate ROMDIR structure in file or a ioprpXXX.img
 	}
+
+	bool found = false;
 
 	while(strlen(rd.fileName) > 0)
 	{
 		if (strcmp(rd.fileName, "ROMVER") == 0)	// found romver
 		{
-			uint filepos = ftell(fp);
-			fseek(fp, fileOffset, SEEK_SET);
-			if (fread(&ROMVER, 14, 1, fp) == 0) break;
-			fseek(fp, filepos, SEEK_SET);//go back
+			char aROMVER[14+1];		// ascii version loaded from disk.
 			
-			const char zonefail[2] = { ROMVER[4], '\0' };	// the default "zone" (unknown code)
+			uint filepos = fp.Tell();
+			fp.Seek( fileOffset );
+			if( fp.Read( &aROMVER, 14 ) == 0 ) break;
+			fp.Seek( filepos );	//go back
+			
+			const char zonefail[2] = { aROMVER[4], '\0' };	// the default "zone" (unknown code)
 			const char* zone = zonefail;
 
-			switch(ROMVER[4])
+			switch(aROMVER[4])
 			{
 				case 'T': zone = "T10K  "; break;
 				case 'X': zone = "Test  "; break;
@@ -163,15 +167,17 @@ int IsBIOS(const char *filename, char *description)
 				case 'C': zone = "China "; break;
 			}
 
-			sprintf(description, "%s v%c%c.%c%c(%c%c/%c%c/%c%c%c%c) %s", zone,
-				ROMVER[0], ROMVER[1],	// ver major
-				ROMVER[2], ROMVER[3],	// ver minor
-				ROMVER[12], ROMVER[13],	// day
-				ROMVER[10], ROMVER[11],	// month
-				ROMVER[6], ROMVER[7], ROMVER[8], ROMVER[9],	// year!
-				(ROMVER[5]=='C') ? "Console" : (ROMVER[5]=='D') ? "Devel" : ""
+			const wxString romver( wxString::FromAscii(aROMVER) );
+
+			description.Printf( wxT("%s v%c%c.%c%c(%c%c/%c%c/%c%c%c%c) %s"), wxString::FromAscii(zone).ToAscii().data(),
+				romver[0], romver[1],	// ver major
+				romver[2], romver[3],	// ver minor
+				romver[12], romver[13],	// day
+				romver[10], romver[11],	// month
+				romver[6], romver[7], romver[8], romver[9],	// year!
+				(aROMVER[5]=='C') ? wxT("Console") : (aROMVER[5]=='D') ? wxT("Devel") : wxT("")
 			);
-			found = TRUE;
+			found = true;
 		}
 
 		if ((rd.fileSize % 0x10)==0)
@@ -179,29 +185,26 @@ int IsBIOS(const char *filename, char *description)
 		else
 			fileOffset += (rd.fileSize + 0x10) & 0xfffffff0;
 
-		if (fread(&rd, DIRENTRY_SIZE, 1, fp)==0) break;
+		if (fp.Read( &rd, DIRENTRY_SIZE ) != DIRENTRY_SIZE) break;
 	}
 	fileOffset-=((rd.fileSize + 0x10) & 0xfffffff0) - rd.fileSize;
 
-	fclose(fp);
-	
 	if (found)
 	{
-		char percent[6];
-
 		if ( biosFileSize < (int)fileOffset)
 		{
-			sprintf(percent, " %d%%", biosFileSize*100/(int)fileOffset);
-			strcat(description, percent);//we force users to have correct bioses,
-											//not that lame scph10000 of 513KB ;-)
+			description << ((biosFileSize*100)/(int)fileOffset) << wxT("%");
+			// we force users to have correct bioses,
+			// not that lame scph10000 of 513KB ;-)
 		}
-		return TRUE;
+		return true;
 	}
 
-	return FALSE;	//fail quietly
+	return false;	//fail quietly
 }
 
-int GetPS2ElfName(char *name){
+int GetPS2ElfName( wxString& name )
+{
 	int f;
 	char buffer[g_MaxPath];//if a file is longer...it should be shorter :D
 	char *pos;
@@ -231,18 +234,17 @@ int GetPS2ElfName(char *name){
 		return 1;
 	}
 	pos+=strlen("BOOT2");
-	while (pos && *pos && pos<=&buffer[255] 
+	while (pos && *pos && pos<&buffer[g_MaxPath] 
 		&& (*pos<'A' || (*pos>'Z' && *pos<'a') || *pos>'z'))
 		pos++;
 	if (!pos || *pos==0)
 		return 0;
 
-	sscanf(pos, "%s", name);
+	// the filename is everything up to the first CR/LF/tab.. ?
+	// Or up to any whitespace?  (I'm opting for first CRLF/tab, although the old code
+	// apparently stopped on spaces too) --air
+	name = wxStringTokenizer( wxString::FromAscii( pos ) ).GetNextToken();
 
-	if (strncmp("cdrom0:\\", name, 8) == 0) {
-		strncpy(CdromId, name+8, 11); CdromId[11] = 0;
-	}
-	
 #ifdef PCSX2_DEVBUILD
 	FILE *fp;
 	int i;
@@ -281,7 +283,7 @@ void SaveGSState(const wxString& file)
 	if( g_SaveGSStream ) return;
 
 	Console::WriteLn( "Saving GS State..." );
-	Console::WriteLn( "\t%hs", params file.c_str() );
+	Console::WriteLn( "\t%s", params file.mb_str() );
 
 	g_fGSSave = new gzSavingState( file );
 	
@@ -305,9 +307,9 @@ void LoadGSState(const wxString& file)
 	catch( Exception::FileNotFound& )
 	{
 		// file not found? try prefixing with sstates folder:
-		if( !Path::isRooted( file ) )
+		if( !Path::IsRooted( file ) )
 		{
-			f = new gzLoadingState( Path::Combine( SSTATES_DIR, file ).c_str() );
+			f = new gzLoadingState( Path::Combine( g_Conf.Folders.Savestates, file ) );
 
 			// If this load attempt fails, then let the exception bubble up to
 			// the caller to deal with...
@@ -350,9 +352,7 @@ char* mystrlwr( char* string )
 
 static wxString GetGSStateFilename()
 {
-	wxString gsText;
-	gsText.Printf( "/%8.8X.%d.gs", ElfCRC, StatesC );
-	return Path::Combine( SSTATES_DIR, gsText );
+	return Path::Combine( g_Conf.Folders.Savestates, wxsFormat( wxT("/%8.8X.%d.gs"), ElfCRC, StatesC ) );
 }
 
 void CycleFrameLimit(int dir)
@@ -430,10 +430,11 @@ void ProcessFKeys(int fkey, struct KeyModifiers *keymod)
 			catch( Exception::BaseException& ex )
 			{
 				// 99% of the time this is a file permission error and the
-				// cpu state is intact so just display a passive msg to console.
+				// cpu state is intact so just display a passive msg to console without
+				// raising an exception.
 
-				Console::Error( "Error > Could not save state to slot %d", params StatesC );
-				Console::Error( ex.cMessage() );
+				Console::Error( "Error!  Could not save state to slot %d", params StatesC );
+				Console::Error( ex.LogMessage() );
 			}
 			break;
 
@@ -446,7 +447,7 @@ void ProcessFKeys(int fkey, struct KeyModifiers *keymod)
 			Console::Notice( " > Selected savestate slot %d", params StatesC);
 
 			if( GSchangeSaveState != NULL )
-				GSchangeSaveState(StatesC, SaveState::GetFilename(StatesC).c_str());
+				GSchangeSaveState(StatesC, SaveState::GetFilename(StatesC).mb_str());
 			break;
 
 		case 3:	
@@ -471,16 +472,15 @@ void ProcessFKeys(int fkey, struct KeyModifiers *keymod)
 				// This is the bad one.  Chances are the cpu has been reset, so emulation has
 				// to be aborted.  Sorry user!  We'll give you some info for your trouble:
 
-				Console::Error( "An error occured while trying to load saveslot %d", params StatesC );
-				Console::Error( ex.cMessage() );
-				Msgbox::Alert(
-					"Pcsx2 encountered an error while trying to load the savestate\n"
-					"and emulation had to be aborted." );
-
 				ClosePlugins( true );
 
 				throw Exception::CpuStateShutdown(
-					"Saveslot load failed; PS2 emulated state had to be shut down." );	// let the GUI handle the error "gracefully"
+					// english log message:
+					wxsFormat( wxT("Error!  Could not load from saveslot %d\n"), StatesC ) + ex.LogMessage(),
+					
+					// translated message:
+					wxsFormat( _("Error loading saveslot %d.  Emulator reset."), StatesC )
+				);
 			}
 			break;
 
@@ -490,7 +490,7 @@ void ProcessFKeys(int fkey, struct KeyModifiers *keymod)
 
 		// note: VK_F5-VK_F7 are reserved for GS
 		case 8:
-			GSmakeSnapshot( SNAPSHOTS_DIR "/" );
+			GSmakeSnapshot( g_Conf.Folders.Snapshots.ToAscii().data() );
 			break;
 		
 		case 9: //gsdx "on the fly" renderer switching 
@@ -539,16 +539,16 @@ void ProcessFKeys(int fkey, struct KeyModifiers *keymod)
 					// only take the first two words
 					wxString gsText;
 
-					wxStringTokenizer parts( strgametitle, " " );
+					wxStringTokenizer parts( strgametitle, L" " );
 
 					wxString name( parts.GetNextToken() );	// first part
 					wxString part2( parts.GetNextToken() );
-					
-					if( !!part2 )
-						name += "_" + part2;
 
-					gsText.Printf( "%s.%d.gs", name.c_str(), StatesC );
-					Text = Path::Combine( SSTATES_DIR, gsText );
+					if( !!part2 )
+						name += wxT("_") + part2;
+
+					gsText.Printf( wxT("%s.%d.gs"), name.c_str(), StatesC );
+					Text = Path::Combine( g_Conf.Folders.Savestates, gsText );
 				}
 				else
 				{

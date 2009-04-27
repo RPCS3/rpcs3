@@ -18,8 +18,6 @@
 #ifndef _R5900_OPCODETABLES_H
 #define _R5900_OPCODETABLES_H
 
-#include <string>
-
 #include "PS2Etypes.h"
 
 // TODO : Move these into the OpcodeTables namespace

@@ -42,6 +42,7 @@ BIOS
 #pragma warning(disable:4799) // No EMMS at end of function
 
 #include <vector>
+#include <wx/file.h>
 
 #include "IopCommon.h"
 #include "iR5900.h"
@@ -85,26 +86,26 @@ u16 ba0R16(u32 mem)
 
 // Attempts to load a BIOS rom file, by trying multiple combinations of base filename
 // and extension.  The bios specified in Config.Bios is used as the base.
-void loadBiosRom( const char *ext, u8 *dest, long maxSize )
+void loadBiosRom( const wxChar *ext, u8 *dest, long maxSize )
 {
-	string Bios1;
+	wxString Bios1;
 	long filesize;
 
-	string Bios( Path::Combine( Config.BiosDir, Config.Bios ) );
-
 	// Try first a basic extension concatenation (normally results in something like name.bin.rom1)
-	ssprintf(Bios1, "%hs.%s", &Bios, ext);
-	if( (filesize=Path::getFileSize( Bios1 ) ) <= 0 )
+	const wxString Bios( g_Conf.Files.Bios() );
+	Bios1.Printf( wxS("%s.%s"), Bios.c_str(), ext);
+	
+	if( (filesize=Path::GetFileSize( Bios1 ) ) <= 0 )
 	{
 		// Try the name properly extensioned next (name.rom1)
 		Bios1 = Path::ReplaceExtension( Bios, ext );
-		if( (filesize=Path::getFileSize( Bios1 ) ) <= 0 )
+		if( (filesize=Path::GetFileSize( Bios1 ) ) <= 0 )
 		{
 			// Try for the old-style method (rom1.bin)
-			Bios1 = Path::Combine( Config.BiosDir, ext ) + ".bin";
-			if( (filesize=Path::getFileSize( Bios1 ) ) <= 0 )
+			Bios1 = Path::Combine( g_Conf.Folders.Bios, (wxString)ext ) + wxT(".bin");
+			if( (filesize=Path::GetFileSize( Bios1 ) ) <= 0 )
 			{
-				Console::Notice( "Bios Warning > %s not found.", params ext );
+				Console::Notice( "Load Bios Warning: %s not found (this is not an error!)", params wxString(ext).ToAscii().data() );
 				return;
 			}
 		}
@@ -112,9 +113,8 @@ void loadBiosRom( const char *ext, u8 *dest, long maxSize )
 
 	// if we made it this far, we have a successful file found:
 
-	FILE *fp = fopen(Bios1.c_str(), "rb");
-	fread(dest, 1, min( maxSize, filesize ), fp);
-	fclose(fp);
+	wxFile fp( Bios1 );
+	fp.Read( dest, min( maxSize, filesize ) );
 }
 
 static u32 psMPWC[(Ps2MemSize::Base/32)>>12];
@@ -517,8 +517,8 @@ void __fastcall vuMicroRead128(u32 addr,mem128_t* data)
 	data[1]=*(u64*)&vu->Micro[addr+8];
 }
 
-// [TODO] : Profile this code and see how often the VUs get written, and how
-// often it changes the values being written (invoking a cpuClear).
+// Profiled VU writes: Happen very infrequently, with exception of BIOS initialization (at most twice per
+//   frame in-game, and usually none at all after BIOS), so cpu clears aren't much of a big deal.
 
 template<int vunum, bool dynrec>
 void __fastcall vuMicroWrite8(u32 addr,mem8_t data)
@@ -738,8 +738,8 @@ void memReset()
 		_ext_memWrite8<1>, _ext_memWrite16<1>, hwWrite32_page_0E, hwWrite64_page_0E, hwWrite128_generic
 	);
 
-	vtlbMemR32FP* page0F32( CHECK_INTC_STAT_HACK ? hwRead32_page_0F_INTC_HACK : hwRead32_page_0F );
-	vtlbMemR64FP* page0F64( CHECK_INTC_STAT_HACK ? hwRead64_generic_INTC_HACK : hwRead64_generic );
+	vtlbMemR32FP* page0F32( Config.Hacks.INTCSTATSlow ? hwRead32_page_0F_INTC_HACK : hwRead32_page_0F );
+	vtlbMemR64FP* page0F64( Config.Hacks.INTCSTATSlow ? hwRead64_generic_INTC_HACK : hwRead64_generic );
 
 	hw_by_page[0xf] = vtlb_RegisterHandler(
 		_ext_memRead8<1>, _ext_memRead16<1>, page0F32, page0F64, hwRead128_generic,
@@ -780,29 +780,28 @@ void memReset()
 	vtlb_VMap(0x00000000,0x00000000,0x20000000);
 	vtlb_VMapUnmap(0x20000000,0x60000000);
 
-	FILE *fp;
-	string Bios( Path::Combine( Config.BiosDir, Config.Bios ) );
+	wxString Bios( g_Conf.Files.Bios() );
 
-	long filesize;
-	if( ( filesize = Path::getFileSize( Bios ) ) <= 0 )
+	long filesize = Path::GetFileSize( Bios );
+	if( filesize <= 0 )
 	{
-		//Console::Error("Unable to load bios: '%s', PCSX2 can't run without that", params Bios);
-		throw Exception::FileNotFound( Bios,
-			"The specified Bios file was not found.  A bios is required for Pcsx2 to run.\n\nFile not found" );
+		wxFile fp( Bios.c_str() );
+		fp.Read( PS2MEM_ROM, min( (long)Ps2MemSize::Rom, filesize ) );
 	}
-
-	fp = fopen(Bios.c_str(), "rb");
-	fread(PS2MEM_ROM, 1, min( (long)Ps2MemSize::Rom, filesize ), fp);
-	fclose(fp);
+	else
+	{
+		// Translated: Bios file not found or not specified ... A bios is required for Pcsx2 to run!
+		throw Exception::FileNotFound( Bios, wxLt("Bios not found") );
+	}
 
 	BiosVersion = GetBiosVersion();
 	Console::Status("Bios Version %d.%d", params BiosVersion >> 8, BiosVersion & 0xff);
 
 	//injectIRX("host.irx");	//not fully tested; still buggy
 
-	loadBiosRom("rom1", PS2MEM_ROM1, Ps2MemSize::Rom1);
-	loadBiosRom("rom2", PS2MEM_ROM2, Ps2MemSize::Rom2);
-	loadBiosRom("erom", PS2MEM_EROM, Ps2MemSize::ERom);
+	loadBiosRom( wxT("rom1"), PS2MEM_ROM1, Ps2MemSize::Rom1 );
+	loadBiosRom( wxT("rom2"), PS2MEM_ROM2, Ps2MemSize::Rom2 );
+	loadBiosRom( wxT("erom"), PS2MEM_EROM, Ps2MemSize::ERom );
 }
 
 int mmap_GetRamPageInfo(void* ptr)
@@ -820,6 +819,7 @@ void mmap_MarkCountedRamPage(void* ptr,u32 vaddr)
 
 	u32 offset=((u8*)ptr-psM);
 	offset>>=12;
+	psMPWC[(offset/32)] &= ~(1<<(offset&31));
 
 	for (u32 i=0;i<psMPWVA[offset].size();i++)
 	{

@@ -251,13 +251,14 @@ private:
 	static float cTempo;
 	static float eTempo;
 	static int freezeTempo;
-
+	static int ssFreeze;
 
 	static void _InitFail();
 	static void _WriteSamples(StereoOut32* bData, int nSamples);
 	static bool CheckUnderrunStatus( int& nSamples, int& quietSampleCount );
 
 	static void soundtouchInit();
+	static void soundtouchClearContents();
 	static void soundtouchCleanup();
 	static void timeStretchWrite();
 	static void timeStretchUnderrun();
@@ -266,13 +267,14 @@ private:
 	static void PredictDataWrite( int samples );
 	static float GetStatusPct();
 	static void UpdateTempoChange();
-	
+
 public:
 	static void Init();
 	static void Cleanup();
 	static void Write( const StereoOut32& Sample );
 	static s32 Test();
-
+	static void ClearContents();
+	
 #ifdef _MSC_VER
 	static void Configure(HWND parent, u32 module );
 #else

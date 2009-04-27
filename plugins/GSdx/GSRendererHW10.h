@@ -48,7 +48,7 @@ protected:
 	void SetupDATE(Texture& rt, Texture& ds);
 
 public:
-	GSRendererHW10(BYTE* base, bool mt, void (*irq)(), int nloophack, const GSRendererSettings& rs);
+	GSRendererHW10(BYTE* base, bool mt, void (*irq)(), const GSRendererSettings& rs);
 
 	bool Create(LPCTSTR title);
 

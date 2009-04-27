@@ -140,8 +140,8 @@ void GSTexture9::Unmap()
 
 bool GSTexture9::Save(CString fn, bool dds)
 {
-	CComPtr<IDirect3DResource9> res;
-
+	CComPtr<IDirect3DSurface9> surface;
+	
 	if(m_desc.Usage & D3DUSAGE_DEPTHSTENCIL)
 	{
 		HRESULT hr;
@@ -153,8 +153,6 @@ bool GSTexture9::Save(CString fn, bool dds)
 		if(desc.Format != D3DFMT_D32F_LOCKABLE)
 			return false;
 
-		CComPtr<IDirect3DSurface9> surface;
-		
 		hr = m_dev->CreateOffscreenPlainSurface(desc.Width, desc.Height, D3DFMT_A8R8G8B8, D3DPOOL_SYSTEMMEM, &surface, NULL);
 
 		D3DLOCKED_RECT slr, dlr;
@@ -175,24 +173,22 @@ bool GSTexture9::Save(CString fn, bool dds)
 
 		m_surface->UnlockRect();
 		surface->UnlockRect();
-
-		res = surface;
 	}
 	else
 	{
-		res = m_surface;
+		surface = m_surface;
 	}
 
-	if(CComQIPtr<IDirect3DSurface9> surface = res)
+	if(surface != NULL)
 	{
 		return SUCCEEDED(D3DXSaveSurfaceToFile(fn, dds ? D3DXIFF_DDS : D3DXIFF_BMP, surface, NULL, NULL));
 	}
-
-	if(CComQIPtr<IDirect3DTexture9> texture = res)
+/*
+	if(CComQIPtr<IDirect3DTexture9> texture = surface)
 	{
 		return SUCCEEDED(D3DXSaveTextureToFile(fn, dds ? D3DXIFF_DDS : D3DXIFF_BMP, texture, NULL));
 	}
-
+*/
 	return false;
 }
 

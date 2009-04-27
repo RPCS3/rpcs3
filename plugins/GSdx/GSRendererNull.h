@@ -37,8 +37,8 @@ protected:
 	}
 
 public:
-	GSRendererNull(BYTE* base, bool mt, void (*irq)(), int nloophack, const GSRendererSettings& rs)
-		: GSRendererT<Device, GSVertexNull>(base, mt, irq, nloophack, rs)
+	GSRendererNull(BYTE* base, bool mt, void (*irq)(), const GSRendererSettings& rs)
+		: GSRendererT<Device, GSVertexNull>(base, mt, irq, rs)
 	{
 		InitVertexKick<GSRendererNull<Device> >();
 	}

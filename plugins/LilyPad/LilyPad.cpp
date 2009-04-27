@@ -23,12 +23,7 @@
 #endif
 
 // LilyPad version.
-#define VERSION ((0<<8) | 9 | (11<<24))
-
-// Used to prevent reading input and cleaning up input devices at the same time.
-// Only an issue when not reading input in GS thread and disabling devices due to
-// lost focus.
-CRITICAL_SECTION readInputCriticalSection;
+#define VERSION ((0<<8) | 10 | (0<<24))
 
 HINSTANCE hInst;
 HWND hWnd;
@@ -66,6 +61,17 @@ int IsWindowMaximized (HWND hWnd) {
 		}
 	}
 	return 0;
+}
+
+void DEBUG_TEXT_OUT(const char *text) {
+	if (config.debug) {
+		HANDLE hFile = CreateFileA("logs\\padLog.txt", FILE_APPEND_DATA, FILE_SHARE_READ, 0, OPEN_ALWAYS, 0, 0);
+		if (hFile != INVALID_HANDLE_VALUE) {
+			DWORD junk;
+			WriteFile(hFile, text, strlen(text), &junk, 0);
+			CloseHandle(hFile);;
+		}
+	}
 }
 
 void DEBUG_NEW_SET() {
@@ -110,12 +116,14 @@ struct Stick {
 	int vert;
 };
 
+// Sum of states of all controls for a pad (Not including toggles).
 struct ButtonSum {
 	int buttons[12];
 	Stick sticks[3];
 };
 
-
+// Freeze data, for a single pad.  Basically has all pad state that
+// a PS2 can set.
 struct PadFreezeData {
 	// Digital / Analog / DS2 Native
 	u8 mode;
@@ -134,9 +142,14 @@ struct PadFreezeData {
 
 class Pad : public PadFreezeData {
 public:
-	ButtonSum sum, lockedSum;
+	// Current pad state.
+	ButtonSum sum;
+	// State of locked buttons.  Already included by sum, used
+	// as initial value of sum.
+	ButtonSum lockedSum;
 
-	int lockedState;
+	// Flags for which controls (buttons or axes) are locked, if any.
+	DWORD lockedState;
 
 	// Last vibration value.  Only used so as not to call vibration
 	// functions when old and new values are both 0.
@@ -166,6 +179,12 @@ u8 Cap (int i) {
 	if (i<0) return 0;
 	if (i>255) return 255;
 	return (u8) i;
+}
+
+inline void ReleaseModifierKeys() {
+	QueueKeyEvent(VK_SHIFT, KEYRELEASE);
+	QueueKeyEvent(VK_MENU, KEYRELEASE);
+	QueueKeyEvent(VK_CONTROL, KEYRELEASE);
 }
 
 // RefreshEnabledDevices() enables everything that can potentially
@@ -235,11 +254,9 @@ void UpdateEnabledDevices(int updateList = 0) {
 BOOL WINAPI DllMain(HINSTANCE hInstance, DWORD fdwReason, void* lpvReserved) {
 	hInst = hInstance;
 	if (fdwReason == DLL_PROCESS_ATTACH) {
-		InitializeCriticalSection(&readInputCriticalSection);
 		DisableThreadLibraryCalls(hInstance);
 	}
 	else if (fdwReason == DLL_PROCESS_DETACH) {
-		DeleteCriticalSection(&readInputCriticalSection);
 		while (openCount)
 			PADclose();
 		PADshutdown();
@@ -347,8 +364,17 @@ u8 padReadKeyUpdated = 0;
 #define LOCK_BUTTONS 4
 #define LOCK_BOTH 1
 
+int deviceUpdateQueued = 0;
+void QueueDeviceUpdate(int updateList=0) {
+	deviceUpdateQueued = deviceUpdateQueued | 1 | (updateList<<1);
+};
+
 
 void Update(unsigned int port, unsigned int slot) {
+	if (deviceUpdateQueued) {
+		UpdateEnabledDevices((deviceUpdateQueued & 0x2)==0x2);
+		deviceUpdateQueued = 0;
+	}
 	if (port > 2) return;
 	u8 *stateUpdated;
 	if (port < 2)
@@ -377,9 +403,6 @@ void Update(unsigned int port, unsigned int slot) {
 		0, hWnd, hWnd, 0
 	};
 
-	if (!config.GSThreadUpdates) {
-		EnterCriticalSection(&readInputCriticalSection);
-	}
 	dm->Update(&info);
 	static int turbo = 0;
 	turbo++;
@@ -402,7 +425,7 @@ void Update(unsigned int port, unsigned int slot) {
 						else if ((state>>15) && !(dev->oldVirtualControlState[b->controlIndex]>>15)) {
 							if (cmd == 0x0F) {
 								miceEnabled = !miceEnabled;
-								UpdateEnabledDevices();
+								QueueDeviceUpdate();
 							}
 							else if (cmd == 0x0C) {
 								lockStateChanged[port][slot] |= LOCK_BUTTONS;
@@ -428,10 +451,6 @@ void Update(unsigned int port, unsigned int slot) {
 		}
 	}
 	dm->PostRead();
-
-	if (!config.GSThreadUpdates) {
-		LeaveCriticalSection(&readInputCriticalSection);
-	}
 
 	{
 		for (int port=0; port<2; port++) {
@@ -592,6 +611,7 @@ char* CALLBACK PS2EgetLibName(void) {
 //}
 
 void CALLBACK PADshutdown() {
+	DEBUG_TEXT_OUT("LilyPad shutdown.\n\n");
 	for (int i=0; i<8; i++)
 		pads[i&1][i>>1].initialized = 0;
 	portInitialized[0] = portInitialized[1] = 0;
@@ -656,9 +676,10 @@ s32 CALLBACK PADinit(u32 flags) {
 	}
 	int port = (flags & 3);
 	if (port == 3) {
-		if (PADinit(1)) return -1;
+		if (PADinit(1) == -1) return -1;
 		return PADinit(2);
 	}
+
 	#ifdef _DEBUG
 	int tmpFlag = _CrtSetDbgFlag( _CRTDBG_REPORT_FLAG );
 	tmpFlag |= _CRTDBG_LEAK_CHECK_DF;
@@ -677,9 +698,9 @@ s32 CALLBACK PADinit(u32 flags) {
 	query.numBytes = 0;
 	ClearKeyQueue();
 	// Just in case, when resuming emulation.
-	QueueKeyEvent(VK_SHIFT, KEYRELEASE);
-	QueueKeyEvent(VK_MENU, KEYRELEASE);
-	QueueKeyEvent(VK_CONTROL, KEYRELEASE);
+	ReleaseModifierKeys();
+
+	DEBUG_TEXT_OUT("LilyPad initialized\n\n");
 	return 0;
 }
 
@@ -746,32 +767,15 @@ ExtraWndProcResult HackWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 			break;
 		case WM_DEVICECHANGE:
 			if (wParam == DBT_DEVNODES_CHANGED) {
-				// Need to do this when not reading input from gs thread.
-				// Checking for that case not worth the effort.
-				EnterCriticalSection(&readInputCriticalSection);
-				UpdateEnabledDevices(1);
-				LeaveCriticalSection(&readInputCriticalSection);
+				QueueDeviceUpdate(1);
 			}
 			break;
 		case WM_ACTIVATEAPP:
 			// Release any buttons PCSX2 may think are down when
 			// losing/gaining focus.
-			QueueKeyEvent(VK_SHIFT, KEYRELEASE);
-			QueueKeyEvent(VK_MENU, KEYRELEASE);
-			QueueKeyEvent(VK_CONTROL, KEYRELEASE);
-
-			// Need to do this when not reading input from gs thread.
-			// Checking for that case not worth the effort.
-			EnterCriticalSection(&readInputCriticalSection);
-			if (!wParam) {
-				activeWindow = 0;
-				UpdateEnabledDevices();
-			}
-			else {
-				activeWindow = 1;
-				UpdateEnabledDevices();
-			}
-			LeaveCriticalSection(&readInputCriticalSection);
+			ReleaseModifierKeys();
+			activeWindow = wParam != 0;
+			QueueDeviceUpdate();
 			break;
 		case WM_CLOSE:
 			if (config.closeHacks & 1) {
@@ -817,6 +821,7 @@ DWORD WINAPI MaximizeWindowThreadProc(void *lpParameter) {
 
 s32 CALLBACK PADopen(void *pDsp) {
 	if (openCount++) return 0;
+	DEBUG_TEXT_OUT("LilyPad opened\n\n");
 
 	// Not really needed, shouldn't do anything.
 	if (LoadSettings()) return -1;
@@ -836,12 +841,12 @@ s32 CALLBACK PADopen(void *pDsp) {
 			hWnd = GetParent (hWnd);
 		// Implements most hacks, as well as enabling/disabling mouse
 		// capture when focus changes.
-		if (!EatWndProc(hWnd, HackWndProc)) {
+		if (!EatWndProc(hWnd, HackWndProc, 0)) {
 			openCount = 0;
 			return -1;
 		}
 		if (config.forceHide) {
-			EatWndProc(hWnd, HideCursorProc);
+			EatWndProc(hWnd, HideCursorProc, 0);
 		}
 	}
 
@@ -869,12 +874,14 @@ s32 CALLBACK PADopen(void *pDsp) {
 
 	// activeWindow = (GetAncestor(hWnd, GA_ROOT) == GetAncestor(GetForegroundWindow(), GA_ROOT));
 	activeWindow = 1;
-	UpdateEnabledDevices();
+	QueueDeviceUpdate();
 	return 0;
 }
 
 void CALLBACK PADclose() {
 	if (openCount && !--openCount) {
+		DEBUG_TEXT_OUT("LilyPad closed\n\n");
+		deviceUpdateQueued = 0;
 		dm->ReleaseInput();
 		ReleaseEatenProc();
 		hWnd = 0;
@@ -1022,6 +1029,7 @@ u8 CALLBACK PADpoll(u8 value) {
 			break;
 		// QUERY_DS2_ANALOG_MODE
 		case 0x41:
+			// Right?  Wrong?  No clue.
 			if (pad->mode == MODE_DIGITAL) {
 				queryMaskMode[1] = queryMaskMode[2] = queryMaskMode[3] = 0;
 				queryMaskMode[6] = 0x00;
@@ -1227,12 +1235,14 @@ DWORD WINAPI RenameWindowThreadProc(void *lpParameter) {
 }
 
 keyEvent* CALLBACK PADkeyEvent() {
+	// If running both pads, ignore every other call.  So if two keys pressed in same interval...
 	static char eventCount = 0;
 	eventCount++;
 	if (eventCount < openCount) {
 		return 0;
 	}
 	eventCount = 0;
+
 	if (!config.GSThreadUpdates) {
 		Update(2, 0);
 	}
@@ -1327,7 +1337,7 @@ s32 CALLBACK PADfreeze(int mode, freezeData *data) {
 				break;
 			}
 
-			// Note sure if the cast is strictly necessary, but feel safest with it there...
+			// Not sure if the cast is strictly necessary, but feel safest with it there...
 			*(PadFreezeData*)&pads[port][slot] = pdata.padData[slot];
 		}
 		if (pdata.slot < 4)
@@ -1409,5 +1419,6 @@ s32 CALLBACK PADsetSlot(u8 port, u8 slot) {
 	}
 	// Even if no pad there, record the slot, as it is the active slot regardless.
 	slots[port] = slot;
-	return pads[port][slot].enabled;
+	// First slot always allowed.
+	return pads[port][slot].enabled | !slot;
 }

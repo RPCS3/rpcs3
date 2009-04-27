@@ -216,6 +216,9 @@ _FWabout           FWabout;
 
 DEV9handler dev9Handler;
 USBhandler usbHandler;
+uptr pDsp;
+
+#ifdef _not_wxWidgets_Land_
 
 #define Sfy(x) #x
 #define Strfy(x) Sfy(x)
@@ -695,7 +698,6 @@ void ShutdownPlugins()
 	initp = false;
 }
 
-uptr pDsp;
 extern void spu2DMA4Irq();
 extern void spu2DMA7Irq();
 extern void spu2Irq();
@@ -922,3 +924,25 @@ void PluginsResetGS()
 	int ret = GSinit();
 	if (ret != 0) { Msgbox::Alert("GSinit error: %d", params ret);  }
 }
+
+#else
+
+int OpenPlugins(const char* pTitleFilename)
+{
+	return 0;
+}
+
+
+void ClosePlugins( bool closegs )
+{
+}
+
+void ShutdownPlugins()
+{
+}
+
+void CloseGS()
+{
+}
+
+#endif

@@ -24,8 +24,8 @@
 #include "GSCrc.h"
 #include "resource.h"
 
-GSRendererHW9::GSRendererHW9(BYTE* base, bool mt, void (*irq)(), int nloophack, const GSRendererSettings& rs)
-	: GSRendererHW<Device, Vertex, TextureCache>(base, mt, irq, nloophack, rs, false)
+GSRendererHW9::GSRendererHW9(BYTE* base, bool mt, void (*irq)(), const GSRendererSettings& rs)
+	: GSRendererHW<Device, Vertex, TextureCache>(base, mt, irq, rs, false)
 {
 	m_fba.enabled = !!AfxGetApp()->GetProfileInt(_T("Settings"), _T("fba"), TRUE);
 	m_logz = !!AfxGetApp()->GetProfileInt(_T("Settings"), _T("logz"), FALSE);

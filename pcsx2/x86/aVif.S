@@ -18,9 +18,9 @@
 */
 .intel_syntax noprefix
         
-.extern _vifRegs
-.extern _vifMaskRegs
-.extern _vifRow
+.extern vifRegs
+.extern vifMaskRegs
+.extern vifRow
         
 #define VIF_ESP esp
 #define VIF_SRC	esi
@@ -108,7 +108,7 @@
 
 // setting up masks
 #define UNPACK_Setup_Mask_SSE(CL) \
-	mov VIF_TMPADDR, _vifMaskRegs; \
+	mov VIF_TMPADDR, vifMaskRegs; \
 	movdqa XMM_ROWMASK, xmmword ptr [VIF_TMPADDR + 64*(CL) + 16]; \
 	movdqa XMM_ROWCOLMASK, xmmword ptr [VIF_TMPADDR + 64*(CL) + 32]; \
 	movdqa XMM_WRITEMASK, xmmword ptr [VIF_TMPADDR + 64*(CL)]; \
@@ -118,7 +118,7 @@
 
 #define UNPACK_Start_Setup_Mask_SSE_0(CL) UNPACK_Setup_Mask_SSE(CL)
 #define UNPACK_Start_Setup_Mask_SSE_1(CL) \
-	mov VIF_TMPADDR, _vifMaskRegs; \
+	mov VIF_TMPADDR, vifMaskRegs; \
 	movdqa XMM_ROWMASK, xmmword ptr [VIF_TMPADDR + 64*(CL) + 16]; \
 	movdqa XMM_ROWCOLMASK, xmmword ptr [VIF_TMPADDR + 64*(CL) + 32]; \
 	pand XMM_ROWMASK, XMM_ROW; \
@@ -129,12 +129,12 @@
 
 #define UNPACK_Setup_Mask_SSE_0_1(CL) 
 #define UNPACK_Setup_Mask_SSE_1_1(CL) \
-	mov VIF_TMPADDR, _vifMaskRegs; \
+	mov VIF_TMPADDR, vifMaskRegs; \
 	movdqa XMM_WRITEMASK, xmmword ptr [VIF_TMPADDR + 64*(0)]; \
 
 // ignore CL, since vif.cycle.wl == 1
 #define UNPACK_Setup_Mask_SSE_2_1(CL) \
-	mov VIF_TMPADDR, _vifMaskRegs; \
+	mov VIF_TMPADDR, vifMaskRegs; \
 	movdqa XMM_ROWMASK, xmmword ptr [VIF_TMPADDR + 64*(0) + 16]; \
 	movdqa XMM_ROWCOLMASK, xmmword ptr [VIF_TMPADDR + 64*(0) + 32]; \
 	movdqa XMM_WRITEMASK, xmmword ptr [VIF_TMPADDR + 64*(0)]; \
@@ -1312,9 +1312,9 @@
 #pragma warning(disable:4731)
 
 #define SAVE_ROW_REG_BASE \
-	mov VIF_TMPADDR, _vifRow; \
+	mov VIF_TMPADDR, vifRow; \
 	movdqa xmmword ptr [VIF_TMPADDR], XMM_ROW; \
-	mov VIF_TMPADDR, _vifRegs; \
+	mov VIF_TMPADDR, vifRegs; \
 	movss dword ptr [VIF_TMPADDR+0x100], XMM_ROW; \
 	psrldq XMM_ROW, 4; \
 	movss dword ptr [VIF_TMPADDR+0x110], XMM_ROW; \
@@ -1349,7 +1349,7 @@
 .globl UNPACK_SkippingWrite_##name##_##sign##_##MaskType##_##ModeType; \
 UNPACK_SkippingWrite_##name##_##sign##_##MaskType##_##ModeType: \
     INIT_ARGS(); \
-    mov VIF_TMPADDR, _vifRegs; \
+    mov VIF_TMPADDR, vifRegs; \
     movzx VIF_INC, byte ptr [VIF_TMPADDR + 0x40]; \
     movzx VIF_SAVEEBX, byte ptr [VIF_TMPADDR + 0x41]; \
     sub VIF_INC, VIF_SAVEEBX; \

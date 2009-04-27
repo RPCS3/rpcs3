@@ -36,16 +36,12 @@ void InitADSR();
 DWORD CALLBACK TimeThread(PVOID /* unused param */);
 #endif
 
-// [Air]: fixed the hacky part of UpdateTimer with this:
-bool resetClock = true;
-
 void (* _irqcallback)();
 void (* dma4callback)();
 void (* dma7callback)();
 
 short *spu2regs;
 short *_spu2mem;
-s32 uTicks;
 
 u8 callirq;
 
@@ -63,8 +59,6 @@ u32  lClocks=0;
 bool hasPtr=false;
 
 int PlayMode;
-
-s16 attrhack[2]={0,0};
 
 #ifdef _MSC_VER
 HINSTANCE hInstance;
@@ -379,7 +373,7 @@ static __forceinline void RestoreMMXRegs()
 #endif
 }
 
-void __fastcall TimeUpdate(u32 cClocks)
+__forceinline void TimeUpdate(u32 cClocks)
 {
 	u32 dClocks = cClocks-lClocks;
 

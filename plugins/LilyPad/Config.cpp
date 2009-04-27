@@ -840,9 +840,7 @@ int LoadSettings(int force, wchar_t *file) {
 	}
 
 	if (config.debug) {
-		HANDLE hFile = CreateFileA("logs\\padLog.txt", GENERIC_WRITE, FILE_SHARE_READ, 0, CREATE_ALWAYS, 0, 0);
-		if (hFile != INVALID_HANDLE_VALUE) CloseHandle(hFile);
-		else CreateDirectory(L"logs", 0);
+		CreateDirectory(L"logs", 0);
 	}
 
 
@@ -1404,18 +1402,59 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 				if (i >= 0) {
 					unsigned int index = (unsigned int)SendMessage(GetDlgItem(hWnd, IDC_FORCEFEEDBACK), CB_GETITEMDATA, i, 0);
 					if (index < (unsigned int) dm->numDevices) {
+						Device *dev = dm->devices[index];
 						ForceFeedbackBinding *b;
-						int count = CreateEffectBinding(dm->devices[index], 0, port, slot, cmd-ID_BIG_MOTOR, &b);
+						int count = CreateEffectBinding(dev, 0, port, slot, cmd-ID_BIG_MOTOR, &b);
 						if (b) {
-							for (int j=0; j<2 && j <dm->devices[index]->numFFAxes; j++) {
-								b->axes[j].force = BASE_SENSITIVITY;
+							int needSet = 1;
+							if (dev->api == XINPUT && dev->numFFAxes == 2) {
+								needSet = 0;
+								if (cmd == ID_BIG_MOTOR) {
+									b->axes[0].force = BASE_SENSITIVITY;
+								}
+								else {
+									b->axes[1].force = BASE_SENSITIVITY;
+								}
 							}
-						}
-						if (count >= 0) {
-							PropSheet_Changed(hWndProp, hWnd);
+							else if (dev->api == DI) {
+								int bigIndex=0, littleIndex=0;
+								int constantEffect = 0, squareEffect = 0;
+								int j;
+								for (j=0; j<dev->numFFAxes; j++) {
+									// DI object instance.  0 is x-axis, 1 is y-axis.
+									int instance = (dev->ffAxes[j].id>>8)&0xFFFF;
+									if (instance == 0) {
+										bigIndex = j;
+									}
+									else if (instance == 1) {
+										littleIndex = j;
+									}
+								}
+								for (j=0; j<dev->numFFEffectTypes; j++) {
+									if (!wcsicmp(L"13541C20-8E33-11D0-9AD0-00A0C9A06E35", dev->ffEffectTypes[j].effectID)) constantEffect = j;
+									if (!wcsicmp(L"13541C22-8E33-11D0-9AD0-00A0C9A06E35", dev->ffEffectTypes[j].effectID)) squareEffect = j;
+								}
+								needSet = 0;
+								if (cmd == ID_BIG_MOTOR) {
+									b->axes[bigIndex].force = BASE_SENSITIVITY;
+									b->axes[littleIndex].force = 1;
+									b->effectIndex = constantEffect;
+								}
+								else {
+									b->axes[bigIndex].force = 1;
+									b->axes[littleIndex].force = BASE_SENSITIVITY;
+									b->effectIndex = squareEffect;
+								}
+							}
+							if (needSet) {
+								for (int j=0; j<2 && j <dev->numFFAxes; j++) {
+									b->axes[j].force = BASE_SENSITIVITY;
+								}
+							}
 							UnselectAll(hWndList);
 							ListView_SetItemState(hWndList, count, LVIS_SELECTED, LVIS_SELECTED);
 						}
+						PropSheet_Changed(hWndProp, hWnd);
 					}
 				}
 			}
@@ -1431,7 +1470,7 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 					if (GetBinding(port, slot, selIndex, dev, b, ffb)) {
 						selected = 0xFF;
 						InitInfo info = {0, hWndProp, hWnd, GetDlgItem(hWnd, cmd)};
-						EatWndProc(info.hWndButton, DoNothingWndProc);
+						EatWndProc(info.hWndButton, DoNothingWndProc, 0);
 						for (int i=0; i<dm->numDevices; i++) {
 							if (dm->devices[i] != dev) {
 								dm->DisableDevice(i);
@@ -1466,7 +1505,7 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 				}
 
 				InitInfo info = {selected==0x7F, hWndProp, hWnd, GetDlgItem(hWnd, cmd)};
-				EatWndProc(info.hWndButton, DoNothingWndProc);
+				EatWndProc(info.hWndButton, DoNothingWndProc, 0);
 				int w = timeGetTime();
 				dm->Update(&info);
 				dm->PostRead();
@@ -1576,7 +1615,7 @@ void UpdatePadList(HWND hWnd) {
 	int slot;
 	int port;
 	int index = 0;
-	wchar_t *padTypes[] = {L"Disabled", L"Dualshock 2", L"Guitar"};
+	wchar_t *padTypes[] = {L"Unplugged", L"Dualshock 2", L"Guitar"};
 	for (port=0; port<2; port++) {
 		for (slot = 0; slot<4; slot++) {
 			wchar_t text[20];
@@ -1596,6 +1635,9 @@ void UpdatePadList(HWND hWnd) {
 			item.iSubItem = 1;
 			if (2 < (unsigned int)config.padConfigs[port][slot].type) config.padConfigs[port][slot].type = Dualshock2Pad;
 			item.pszText = padTypes[config.padConfigs[port][slot].type];
+			if (!slot && !config.padConfigs[port][slot].type)
+				item.pszText = L"Unplugged (Kinda)";
+
 			ListView_SetItem(hWndList, &item);
 
 			item.iSubItem = 2;
@@ -1644,7 +1686,7 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 				c.cx = 50;
 				c.pszText = L"Pad";
 				ListView_InsertColumn(hWndList, 0, &c);
-				c.cx = 90;
+				c.cx = 120;
 				c.pszText = L"Type";
 				ListView_InsertColumn(hWndList, 1, &c);
 				c.cx = 70;
@@ -1867,7 +1909,7 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 								InsertMenuItemW(hMenu, index, 1, &info);
 							}
 							else {
-								info.wID = port2+2*slot2;
+								info.wID = port2+2*slot2+1;
 								wsprintfW(text, L"Swap with %s", pad);
 								InsertMenuItemW(hMenu, 0, 1, &info);
 							}
@@ -1879,12 +1921,14 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 					DestroyMenu(hMenu);
 					if (!res) break;
 					if (res > 0) {
+						res--;
 						slot2 = res / 2;
 						port2 = res&1;
 						PadConfig padCfgTemp = config.padConfigs[port1][slot1];
 						config.padConfigs[port1][slot1] = config.padConfigs[port2][slot2];
 						config.padConfigs[port2][slot2] = padCfgTemp;
 						for (int i=0; i<dm->numDevices; i++) {
+							if (dm->devices[i]->type == IGNORE) continue;
 							PadBindings bindings = dm->devices[i]->pads[port1][slot1];
 							dm->devices[i]->pads[port1][slot1] = dm->devices[i]->pads[port2][slot2];
 							dm->devices[i]->pads[port2][slot2] = bindings;
@@ -1892,6 +1936,7 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 					}
 					else {
 						for (int i=0; i<dm->numDevices; i++) {
+							if (dm->devices[i]->type == IGNORE) continue;
 							free(dm->devices[i]->pads[port1][slot1].bindings);
 							for (int j=0; j<dm->devices[i]->pads[port1][slot1].numFFBindings; j++) {
 								free(dm->devices[i]->pads[port1][slot1].ffBindings[j].axes);

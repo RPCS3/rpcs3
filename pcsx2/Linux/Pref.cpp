@@ -100,7 +100,19 @@ int LoadConfig()
 	GetValuel("varLog", varLog);
 #endif
 	GetValuel("Options", Config.Options);
-	GetValuel("Hacks",        Config.Hacks);
+
+	GetValuel("EECycleRate", Config.Hacks.EECycleRate);
+	if (Config.Hacks.EECycleRate > 2)
+		Config.Hacks.EECycleRate = 2;
+	GetValuel("IOPCycleDouble", Config.Hacks.IOPCycleDouble);
+	GetValuel("WaitCycleExt", Config.Hacks.WaitCycleExt);
+	GetValuel("INTCSTATSlow", Config.Hacks.INTCSTATSlow);
+	GetValuel("VUCycleSteal",  Config.Hacks.VUCycleSteal);
+	GetValuel("IdleLoopFF", Config.Hacks.IdleLoopFF);
+	GetValuel("ESCExits", Config.Hacks.ESCExits);
+
+	if (Config.Hacks.VUCycleSteal < 0 || Config.Hacks.VUCycleSteal > 4)
+		Config.Hacks.VUCycleSteal = 0;
 	GetValuel("Fixes",        Config.GameFixes);
 
 	GetValuel("CustomFps",      Config.CustomFps);
@@ -162,7 +174,14 @@ void SaveConfig()
 
 	SetValuel("Options",        Config.Options);
 
-	SetValuel("Hacks",        Config.Hacks);
+	SetValuel("EECycleRate", Config.Hacks.EECycleRate);
+	SetValuel("IOPCycleDouble", Config.Hacks.IOPCycleDouble);
+	SetValuel("WaitCycleExt", Config.Hacks.WaitCycleExt);
+	SetValuel("INTCSTATSlow", Config.Hacks.INTCSTATSlow);
+	SetValuel("VUCycleSteal",  Config.Hacks.VUCycleSteal);
+	SetValuel("IdleLoopFF", Config.Hacks.IdleLoopFF);
+	SetValuel("ESCExits", Config.Hacks.ESCExits);
+
 	SetValuel("Fixes",        Config.GameFixes);
 
 	SetValuel("Patch",      Config.Patch);

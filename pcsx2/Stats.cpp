@@ -23,8 +23,6 @@
 #include "IopCommon.h"
 #include "Stats.h"
 
-#include "Paths.h"
-
 void statsOpen() {
 	stats.vsyncCount = 0;
 	stats.vsyncTime = time(NULL);

@@ -24,6 +24,7 @@ struct vifCycle {
 	u8 pad[2];
 };
 
+// r0-r3 and c0-c3 would be more managable as arrays.
 struct VIFregisters {
 	u32 stat;
 	u32 pad0[3];
@@ -80,10 +81,92 @@ struct VIFregisters {
 extern "C"
 {
 	// these use cdecl for Asm code references.
-	extern VIFregisters *_vifRegs;
-	extern u32* _vifMaskRegs;
-	extern u32* _vifRow;
+	extern VIFregisters *vifRegs;
+	extern u32* vifMaskRegs;
+	extern u32* vifRow;
 	extern u32* _vifCol;
+}
+
+static __forceinline u32 setVifRowRegs(u32 reg, u32 data)
+{
+	switch (reg)
+	{
+		case 0:
+			vifRegs->r0 += data;
+			break;
+		case 1:
+			vifRegs->r1 += data;
+			break;
+		case 2:
+			vifRegs->r2 += data;
+			break;
+		case 3:
+			vifRegs->r3 += data;
+			break;
+			jNO_DEFAULT;
+	}
+	return data;
+}
+
+static __forceinline u32 getVifRowRegs(u32 reg)
+{
+	switch (reg)
+	{
+		case 0:
+			return vifRegs->r0;
+			break;
+		case 1:
+			return vifRegs->r1;
+			break;
+		case 2:
+			return vifRegs->r2;
+			break;
+		case 3:
+			return vifRegs->r3;
+			break;
+			jNO_DEFAULT;
+	}
+}
+
+static __forceinline u32 setVifColRegs(u32 reg, u32 data)
+{
+	switch (reg)
+	{
+		case 0:
+			vifRegs->c0 = data;
+			break;
+		case 1:
+			vifRegs->c1 = data;
+			break;
+		case 2:
+			vifRegs->c2 = data;
+			break;
+		case 3:
+			vifRegs->c3 = data;
+			break;
+			jNO_DEFAULT;
+	}
+	return data;
+}
+
+static __forceinline u32 getVifColRegs(u32 reg)
+{
+	switch (reg)
+	{
+		case 0:
+			return vifRegs->c0;
+			break;
+		case 1:
+			return vifRegs->c1;
+			break;
+		case 2:
+			return vifRegs->c2;
+			break;
+		case 3:
+			return vifRegs->c3;
+			break;
+			jNO_DEFAULT;
+	}
 }
 
 #define vif0Regs ((VIFregisters*)&PS2MEM_HW[0x3800])

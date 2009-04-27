@@ -25,11 +25,12 @@ static const int MC2_SIZE = 1024 * 528 * 16;
 class MemoryCard
 {
 protected:
-	static FILE* cardfile[2];
-
-	static FILE* Load( uint mcdId );
-	static void Seek( FILE* mcdfp, u32 adr );
-	static void Create( const char *mcd );
+	static wxFile cardfile[2];
+	
+public:
+	static void Load( uint mcdId );
+	static void Seek( wxFile& mcdfp, u32 adr );
+	static void Create( const wxString& mcd );
 
 public:
 	static void Init();

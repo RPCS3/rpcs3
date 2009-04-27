@@ -21,7 +21,7 @@
 #include "Common.h"
 #include "Paths.h"
 
-static const u32 IniVersion = 101;
+static const u32 IniVersion = 102;
 
 const char* g_CustomConfigFile;
 char g_WorkingFolder[g_MaxPath];		// Working folder at application startup
@@ -223,7 +223,19 @@ void IniFile::DoConfig( PcsxConfig& Conf )
 	Entry( "sseVUMXCSR", Conf.sseVUMXCSR, DEFAULT_sseVUMXCSR );
 	Entry( "eeOptions", Conf.eeOptions, DEFAULT_eeOptions );
 	Entry( "vuOptions", Conf.vuOptions, DEFAULT_vuOptions );
-	Entry( "SpeedHacks", Conf.Hacks );
+
+	SetCurrentSection("Hacks");
+	Entry("EECycleRate", Config.Hacks.EECycleRate);
+	if (Config.Hacks.EECycleRate > 2)
+		Config.Hacks.EECycleRate = 2;
+	Entry("IOPCycleDouble", Config.Hacks.IOPCycleDouble);
+	Entry("WaitCycleExt", Config.Hacks.WaitCycleExt);
+	Entry("INTCSTATSlow", Config.Hacks.INTCSTATSlow);
+	Entry("VUCycleSteal", Config.Hacks.VUCycleSteal);
+	Entry("IdleLoopFF", Config.Hacks.IdleLoopFF);
+	if (Conf.Hacks.VUCycleSteal < 0 || Conf.Hacks.VUCycleSteal > 4)
+		Conf.Hacks.VUCycleSteal = 0;
+	Entry("ESCExits", Config.Hacks.ESCExits);
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -254,7 +266,7 @@ bool LoadConfig()
 		// sanity check to make sure the user doesn't have some kind of
 		// crazy ass setup... why not!
 
-		if( Path::isDirectory( szIniFile ) )
+		if( Path::IsDirectory( szIniFile ) )
 			throw Exception::Stream( 
 				"Cannot open or create the Pcsx2 ini file because a directory of\n"
 				"the same name already exists!  Please delete it or reinstall Pcsx2\n"

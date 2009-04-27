@@ -19,6 +19,7 @@
 #include "PrecompiledHeader.h"
 
 #include <ctype.h>
+#include <wx/datetime.h>
 
 #include "IopCommon.h"
 #include "CDVDiso.h"
@@ -240,12 +241,12 @@ FILE *_cdvdOpenMechaVer() {
 	FILE* fd;
 
 	// get the name of the bios file
-	string Bios( Path::Combine( Config.BiosDir, Config.Bios ) );
 	
 	// use the bios filename to get the name of the mecha ver file
-	// [TODO] : Upgrade this to use std::string!
+	// [TODO] : Upgrade this to use wxString!
 
-	strcpy(file, Bios.c_str());
+	strcpy(file, g_Conf.Files.Bios().ToAscii().data() );
+	
 	ptr = file; i = (int)strlen(file);
 	while (i > 0) { if (ptr[i] == '.') break; i--; }
 	ptr[i+1] = '\0';
@@ -254,11 +255,14 @@ FILE *_cdvdOpenMechaVer() {
 	// if file doesnt exist, create empty one
 	fd = fopen(file, "r+b");
 	if (fd == NULL) {
-		Console::Notice("MEC File Not Found , Creating Blank File");
+		Console::Notice( "MEC File Not Found, Creating Blank File..." );
 		fd = fopen(file, "wb");
-		if (fd == NULL) {
-			Msgbox::Alert("_cdvdOpenMechaVer: Error creating %s", params file);
-			exit(1);
+		if (fd == NULL)
+		{
+			Console::Error( "\tMEC File Creation failed!" );
+			throw Exception::CreateStream( file );
+			//Msgbox::Alert( "_cdvdOpenMechaVer: Error creating %s", params file);
+			//exit(1);
 		}
 		fputc(0x03, fd);
 		fputc(0x06, fd);
@@ -285,12 +289,11 @@ FILE *_cdvdOpenNVM() {
 	FILE* fd;
 
 	// get the name of the bios file
-	string Bios( Path::Combine( Config.BiosDir, Config.Bios ) );
 	
 	// use the bios filename to get the name of the nvm file
 	// [TODO] : Upgrade this to use std::string!
 
-	strcpy( file, Bios.c_str() );
+	strcpy( file, g_Conf.Files.Bios().ToAscii().data() );
 	ptr = file; i = (int)strlen(file);
 	while (i > 0) { if (ptr[i] == '.') break; i--; }
 	ptr[i+1] = '\0';
@@ -301,9 +304,11 @@ FILE *_cdvdOpenNVM() {
 	if (fd == NULL) {
 		Console::Notice("NVM File Not Found , Creating Blank File");
 		fd = fopen(file, "wb");
-		if (fd == NULL) {
-			Msgbox::Alert("_cdvdOpenNVM: Error creating %s", params file);
-			exit(1);
+		if (fd == NULL)
+		{
+			throw Exception::CreateStream( file );
+			//Msgbox::Alert("_cdvdOpenNVM: Error creating %s", params file);
+			//exit(1);
 		}
 		for (i=0; i<1024; i++) fputc(0, fd);
 	}
@@ -470,7 +475,7 @@ s32 cdvdWriteConfig(const u8* config)
 
 
 void cdvdReadKey(u8 arg0, u16 arg1, u32 arg2, u8* key) {
-	char str[g_MaxPath];
+	wxString fname;
 	int numbers;
 	int letters;
 	unsigned int  key_0_3;
@@ -479,7 +484,9 @@ void cdvdReadKey(u8 arg0, u16 arg1, u32 arg2, u8* key) {
     char exeName[12];
 	
 	// get main elf name
-	GetPS2ElfName(str);
+	GetPS2ElfName(fname);
+	const wxCharBuffer crap( fname.ToAscii() );
+	const char* str = crap.data();
 	sprintf(exeName, "%c%c%c%c%c%c%c%c%c%c%c",str[8],str[9],str[10],str[11],str[12],str[13],str[14],str[15],str[16],str[17],str[18]);
 	DevCon::Notice("exeName = %s", params &str[8]);
 	
@@ -693,7 +700,7 @@ __forceinline void cdvdGetDiskType()
 	cdvd.Type = CDVDgetDiskType();
 	if (cdvd.Type == CDVD_TYPE_PS2CD) // && needReset == 1)
 	{
-		char str[g_MaxPath];
+		wxString str;
 		if (GetPS2ElfName(str) == 1)
 		{
 			cdvd.Type = CDVD_TYPE_PSCD;
@@ -768,12 +775,18 @@ void cdvdReset()
 	cdvd.ReadTime = cdvdBlockReadTime( MODE_DVDROM );
 
     // any random valid date will do
-    cdvd.RTC.hour = 1;
-    cdvd.RTC.day = 25;
-    cdvd.RTC.month = 5;
-    cdvd.RTC.year = 7; //2007
-    
-    cdvdSetSystemTime( cdvd );
+    //cdvd.RTC.hour = 1;
+    //cdvd.RTC.day = 25;
+    //cdvd.RTC.month = 5;
+    //cdvd.RTC.year = 7; //2007
+
+	wxDateTime curtime( wxDateTime::GetTimeNow() );
+	cdvd.RTC.second = (u8)curtime.GetSecond();
+	cdvd.RTC.minute = (u8)curtime.GetMinute();
+	cdvd.RTC.hour = (u8)(curtime.GetHour()+1) % 24;
+	cdvd.RTC.day = (u8)curtime.GetDay();
+	cdvd.RTC.month = (u8)curtime.GetMonth();
+	cdvd.RTC.year = (u8)(curtime.GetYear() - 2000);
 }
 
 struct Freeze_v10Compat
@@ -805,7 +818,7 @@ void cdvdNewDiskCB()
 {
 	cdvd.Type = CDVDgetDiskType();
 	if(cdvd.Type == CDVD_TYPE_PS2CD) {
-		char str[g_MaxPath];
+		wxString str;
 		if(GetPS2ElfName(str) == 1) {
 			cdvd.Type = CDVD_TYPE_PSCD;
 		} // ENDIF- Does the SYSTEM.CNF file only say "BOOT="? PS1 CD then.

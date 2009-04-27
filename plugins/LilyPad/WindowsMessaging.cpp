@@ -28,9 +28,8 @@ public:
 		HWND hWnd = info->hWnd;
 		if (info->hWndButton) {
 			hWnd = info->hWndButton;
-			// hWndDlg = info->hWnd;
 		}
-		if (!wmm && !EatWndProc(hWnd, WindowsMessagingWndProc)) {
+		if (!wmm && !EatWndProc(hWnd, WindowsMessagingWndProc, EATPROC_NO_UPDATE_WHILE_UPDATING_DEVICES)) {
 			Deactivate();
 			return 0;
 		}
@@ -43,14 +42,13 @@ public:
 	}
 
 	void Deactivate() {
-		FreeState();
 		if (active) {
 			if (!wmm)
 				ReleaseExtraProc(WindowsMessagingWndProc);
-			active = 0;
 			wmk = 0;
+			active = 0;
+			FreeState();
 		}
-		// hWndDlg = 0;
 	}
 
 
@@ -75,7 +73,7 @@ public:
 			hWnd = info->hWndButton;
 		}
 
-		if (!wmk && !EatWndProc(hWnd, WindowsMessagingWndProc)) {
+		if (!wmk && !EatWndProc(hWnd, WindowsMessagingWndProc, EATPROC_NO_UPDATE_WHILE_UPDATING_DEVICES)) {
 			Deactivate();
 			return 0;
 		}
@@ -90,13 +88,13 @@ public:
 	}
 
 	void Deactivate() {
-		FreeState();
 		if (active) {
-			ReleaseMouseCapture();
 			if (!wmk)
 				ReleaseExtraProc(WindowsMessagingWndProc);
-			active = 0;
+			ReleaseMouseCapture();
 			wmm = 0;
+			active = 0;
+			FreeState();
 		}
 	}
 };

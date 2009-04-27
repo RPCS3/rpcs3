@@ -272,6 +272,10 @@
 #define IDC_MCD_LABEL2                  1325
 #define IDC_INTCSTATHACK                1326
 #define IDC_EE_CHECK3                   1327
+#define IDC_SLIDER1                     1327
+#define IDC_VUCYCLE                     1327
+#define IDC_VUCYCLEDESC                 1328
+#define IDC_IDLELOOPFF                  1330
 #define IDC_CPULOG                      1500
 #define IDC_MEMLOG                      1501
 #define IDC_HWLOG                       1502
@@ -405,7 +409,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        141
 #define _APS_NEXT_COMMAND_VALUE         40018
-#define _APS_NEXT_CONTROL_VALUE         1326
+#define _APS_NEXT_CONTROL_VALUE         1331
 #define _APS_NEXT_SYMED_VALUE           104
 #endif
 #endif

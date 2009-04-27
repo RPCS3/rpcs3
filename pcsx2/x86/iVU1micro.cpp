@@ -29,7 +29,7 @@
 #ifdef _DEBUG
 extern u32 vudump;
 #endif
-
+#ifndef PCSX2_MICROVU_
 namespace VU1micro
 {
 	void recAlloc()
@@ -121,6 +121,34 @@ namespace VU1micro
 		FreezeXMMRegs(0);
 	}
 }
+#else
+
+extern void initVUrec(VURegs* vuRegs, const int vuIndex);
+extern void closeVUrec(const int vuIndex);
+extern void resetVUrec(const int vuIndex);
+extern void clearVUrec(u32 addr, u32 size, const int vuIndex);
+extern void runVUrec(u32 startPC, u32 cycles, const int vuIndex);
+
+namespace VU1micro
+{
+	void recAlloc()								 { initVUrec(&VU1, 1); }
+	void __fastcall recClear(u32 Addr, u32 Size) { clearVUrec(Addr, Size, 1); }
+	void recShutdown()							 { closeVUrec(1); }
+	static void recReset()						 { resetVUrec(1); x86FpuState = FPU_STATE; }
+	static void recStep()						 {}
+	static void recExecuteBlock() {
+
+		if((VU0.VI[REG_VPU_STAT].UL & 0x100) == 0) return;
+		assert( (VU1.VI[REG_TPC].UL&7) == 0 );
+
+		FreezeXMMRegs(1);
+		FreezeMMXRegs(1);
+		runVUrec(VU1.VI[REG_TPC].UL, 5000, 1);
+		FreezeXMMRegs(0);
+		FreezeMMXRegs(0);
+	}
+}
+#endif
 
 using namespace VU1micro;
 

@@ -48,11 +48,6 @@ using namespace std;			// for min / max
 #	define IPU_FORCEINLINE __forceinline
 #endif
 
-//IPUregisters g_ipuRegsReal;
-
-#define ipu0dma ((DMACh *)&PS2MEM_HW[0xb000])
-#define ipu1dma ((DMACh *)&PS2MEM_HW[0xb400])
-
 #define IPU_DMA_GIFSTALL 1
 #define IPU_DMA_TIE0 2
 #define IPU_DMA_TIE1 4
@@ -369,7 +364,7 @@ __forceinline void ipuWrite64(u32 mem, u64 value)
 
 	switch (mem)
 	{
-		case 0x10:
+		case 0x00:
 			IPU_LOG("Ipu write64: IPU_CMD=0x%08X", value);
 			IPUCMD_WRITE((u32)value);
 			break;
@@ -1372,8 +1367,10 @@ int FIFOto_write(u32* pMem, int size)
 			g_nDMATransfer |= IPU_DMA_ACTV1; \
 			return totalqwc; \
 		} \
-	}	\
+	} \
 }
+
+extern void gsInterrupt();
 
 int IPU1dma()
 {
@@ -1387,6 +1384,13 @@ int IPU1dma()
 	if (!(ipu1dma->chcr & 0x100) || (cpuRegs.interrupt & (1 << DMAC_TO_IPU))) return 0;
 
 	assert(!(g_nDMATransfer & IPU_DMA_TIE1));
+
+	//We need to make sure GIF has flushed before sending IPU data, it seems to REALLY screw FFX videos
+	while(gif->chcr & 0x100) 
+	{
+		GIF_LOG("Flushing gif chcr %x tadr %x madr %x qwc %x", gif->chcr, gif->tadr, gif->madr, gif->qwc);
+		gsInterrupt();
+	}
 
 	// in kh, qwc == 0 when dma_actv1 is set
 	if ((g_nDMATransfer & IPU_DMA_ACTV1) && ipu1dma->qwc > 0)
@@ -1403,8 +1407,6 @@ int IPU1dma()
 			g_nDMATransfer |= IPU_DMA_TIE1;
 			return totalqwc;
 		}
-
-		g_nDMATransfer &= ~(IPU_DMA_ACTV1 | IPU_DMA_DOTIE1);
 
 		if ((ipu1dma->chcr&0xc) == 0)
 		{
@@ -1449,6 +1451,8 @@ int IPU1dma()
 					return totalqwc;
 			}
 		}
+
+		g_nDMATransfer &= ~(IPU_DMA_ACTV1 | IPU_DMA_DOTIE1);
 	}
 
 	if ((ipu1dma->chcr & 0xc) == 0 && ipu1dma->qwc == 0)   // Normal Mode

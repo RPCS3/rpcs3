@@ -606,7 +606,7 @@ void (*COP2SPECIAL2PrintTable[128])( string& output ) =
 //**************************TABLES CALLS***********************
 
 
-void disR5900Fasm(string& output, u32 code, u32 pc)
+void disR5900Fasm( string& output, u32 code, u32 pc )
 {
 	string dbuf;
 	char obuf[48];

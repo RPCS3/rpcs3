@@ -140,7 +140,7 @@ void MainEmuFrame::OnLogBoxHidden()
 MainEmuFrame::MainEmuFrame(wxWindow* parent, int id, const wxString& title, const wxPoint& pos, const wxSize& size, long style):
     wxFrame(parent, id, title, pos, size, wxCAPTION|wxCLOSE_BOX|wxSYSTEM_MENU|wxBORDER_THEME),
 
-	m_logbox( this, "Pcsx2 Log" ),
+	m_logbox( this, L"Pcsx2 Log" ),
 
 	m_statusbar( *CreateStatusBar(2, 0) ),
 	m_background( this, wxID_ANY, wxGetApp().GetLogoBitmap() ),
@@ -161,7 +161,7 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, int id, const wxString& title, cons
 	m_LoadStatesSubmenu( *MakeStatesSubMenu( Menu_State_Load01 ) ),
 	m_SaveStatesSubmenu( *MakeStatesSubMenu( Menu_State_Save01 ) ),
 	
-	m_MenuItem_Console( *new wxMenuItem( &m_menuMisc, Menu_Console, _T("Show Console"), wxEmptyString, wxITEM_CHECK ) )
+	m_MenuItem_Console( *new wxMenuItem( &m_menuMisc, Menu_Console, L"Show Console", wxEmptyString, wxITEM_CHECK ) )
 {
 
 	wxGetApp().SetConsoleFrame( m_logbox );

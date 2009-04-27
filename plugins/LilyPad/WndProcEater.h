@@ -1,5 +1,7 @@
 #include "Global.h"
 
+#define EATPROC_NO_UPDATE_WHILE_UPDATING_DEVICES	1
+
 /* Need this to let window be subclassed multiple times but still clean up nicely.
  */
 enum ExtraWndProcResult {
@@ -11,7 +13,7 @@ enum ExtraWndProcResult {
 };
 
 typedef ExtraWndProcResult (*ExtraWndProc)(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, LRESULT *out);
-int EatWndProc(HWND hWnd, ExtraWndProc proc);
+int EatWndProc(HWND hWnd, ExtraWndProc proc, DWORD flags);
 
 void ReleaseExtraProc(ExtraWndProc proc);
 void ReleaseEatenProc();

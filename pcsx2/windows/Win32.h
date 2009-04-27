@@ -142,7 +142,7 @@ extern int ParseCommandLine( int tokenCount, TCHAR *const *const tokens );
 extern BOOL CALLBACK PatchBDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam);
 extern BOOL CALLBACK CpuDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam);
 extern BOOL CALLBACK AdvancedOptionsProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam);
-extern BOOL CALLBACK HacksProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);
+//extern BOOL CALLBACK HacksProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);
 
 extern AppData gApp;
 extern HWND hStatusWnd;
@@ -158,18 +158,18 @@ extern int g_SaveGSStream;
 
 // Throws an exception based on the value returned from GetLastError.
 // Performs an option return value success/fail check on hresult.
-extern void StreamException_ThrowLastError( const string& streamname, HANDLE result=INVALID_HANDLE_VALUE );
+extern void StreamException_ThrowLastError( const wxString& streamname, HANDLE result=INVALID_HANDLE_VALUE );
 
 // Throws an exception based on the given error code (usually taken from ANSI C's errno)
-extern void StreamException_ThrowFromErrno( const string& streamname, errno_t errcode );
+extern void StreamException_ThrowFromErrno( const wxString& streamname, errno_t errcode );
 
-extern bool StreamException_LogFromErrno( const string& streamname, const char* action, errno_t result );
-extern bool StreamException_LogLastError( const string& streamname, const char* action, HANDLE result=INVALID_HANDLE_VALUE );
+extern bool StreamException_LogFromErrno( const wxString& streamname, const wxChar* action, errno_t result );
+extern bool StreamException_LogLastError( const wxString& streamname, const wxChar* action, HANDLE result=INVALID_HANDLE_VALUE );
 
 // Sets the NTFS compression flag for a directory or file. This function does not operate
 // recursively.  Set compressStatus to false to decompress compressed files (and do nothing
 // to already decompressed files).
-extern void NTFS_CompressFile( const char* file, bool compressStatus=true );
+extern void NTFS_CompressFile( const wxString& file, bool compressStatus=true );
 
 #endif
 

@@ -24,7 +24,6 @@
 #define _PC_	// disables MIPS opcode macros.
 
 #include "IopCommon.h"
-#include "Paths.h"
 #include "Patch.h"
 #include "VU.h"
 
@@ -462,19 +461,24 @@ void patchFunc_comment( char * text1, char * text2 )
 void patchFunc_gametitle( char * text1, char * text2 )
 {
 	Console::WriteLn( "gametitle: %s", params text2 );
-	strgametitle = text2;
-	Console::SetTitle(strgametitle);
+	strgametitle.FromAscii( text2 );
+	Console::SetTitle( strgametitle );
 }
 
 void patchFunc_patch( char * cmd, char * param )
 {
-	char * pText;
+	char* pText;
 
 	if ( patchnumber >= MAX_PATCH )
 	{
+		// TODO : Use wxLogError for this, once we have full unicode compliance on cmd/params vars.
+		//wxLogError( wxT("Patch ERROR: Maximum number of patches reached: %s=%s"), cmd, param );
 		Console::Error( "Patch ERROR: Maximum number of patches reached: %s=%s", params cmd, param );
 		return;
 	}
+
+	//SafeList<wxString> pieces;
+	//SplitString( pieces, param, "," );
 
 	pText = strtok( param, "," );
 	pText = param;
@@ -536,7 +540,10 @@ void inifile_command( char * cmd )
 	code = PatchTableExecute( command, parameter, commands );
 }
 
-void inifile_trim( char * buffer )
+#define  USE_CRAZY_BASHIT_INSANE_TRIM
+#ifdef USE_CRAZY_BASHIT_INSANE_TRIM
+
+void inifile_trim( char* buffer )
 {
 	char * pInit = buffer;
 	char * pEnd = NULL;
@@ -573,6 +580,33 @@ void inifile_trim( char * buffer )
 	memmove( buffer, pInit, pEnd - pInit + 1 );
 	buffer[ pEnd - pInit + 1 ] = '\0';
 }
+
+#else
+
+// New version of trim (untested), which I coded but can't use yet because the
+// rest of Patch needs to be more wxString-involved first.
+
+void inifile_trim( wxString& buffer )
+{
+	buffer.Trim( false );		// trims left side.
+	
+	if( buffer.Length() <= 1 )	// this I'm not sure about... - air
+	{
+		buffer.Clear();
+		return;
+	}
+
+	if( buffer.Left( 2 ) == "//" )
+	{
+		buffer.Clear();
+		return;
+	}
+
+	buffer.Trim(true);			// trims right side.
+}
+
+#endif
+
 
 void inisection_process( FILE * f1 )
 {
@@ -621,7 +655,7 @@ void inifile_read( const char * name )
 
 	if( !f1 )
 	{
-		Console::WriteLn("No patch found.Resuming execution without a patch (this is NOT an error)." );
+		Console::WriteLn("No patch found. Resuming execution without a patch (this is NOT an error)." );
 		return;
 	}
 

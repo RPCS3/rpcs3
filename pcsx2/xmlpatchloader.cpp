@@ -71,14 +71,12 @@ Patch Patch::operator =(const Patch&p)
 vector<Group> groups;
 vector<Patch> patches;
 
-int LoadPatch( const string& crc)
+int LoadPatch( const wxString& crc )
 {
-	char pfile[256];
-	sprintf(pfile,"patches\\%hs.xml",&crc);
-
+	wxString pfile( Path::Combine( L"patches", crc ) + L".xml" );
 	patchnumber=0;
 
-	TiXmlDocument doc( pfile );
+	TiXmlDocument doc( pfile.ToAscii().data() );
 	bool loadOkay = doc.LoadFile();
 	if ( !loadOkay )
 	{
@@ -109,8 +107,9 @@ int LoadPatch( const string& crc)
 		return result;
 	}
 
-	Console::SetTitle(
-		((title==NULL) || (strlen(title)==0)) ? "<No Title>" : title );
+	wxString uTitle( wxString::FromAscii( title ) );
+	if( uTitle.IsEmpty() ) uTitle = L"<No Title>";
+	Console::SetTitle( uTitle );
 
 	return 0;
 }

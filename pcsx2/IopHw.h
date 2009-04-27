@@ -22,6 +22,72 @@
 #include "R3000A.h"
 #include "IopMem.h"
 
+#define HW_USB_START 0x1f801600
+#define HW_USB_END 0x1f801700
+#define HW_FW_START 0x1f808400
+#define HW_FW_END 0x1f808550
+#define HW_SPU2_START 0x1f801c00
+#define HW_SPU2_END 0x1f801e00
+
+/* Registers for the IOP Counters */
+enum IOPCountRegs
+{
+	IOP_T0_COUNT = 0x1f801100,
+	IOP_T1_COUNT = 0x1f801110,
+	IOP_T2_COUNT = 0x1f801120,
+	IOP_T3_COUNT = 0x1f801480,
+	IOP_T4_COUNT = 0x1f801490,
+	IOP_T5_COUNT =  0x1f8014a0,
+			
+	IOP_T0_MODE = 0x1f801104,
+	IOP_T1_MODE = 0x1f801114,
+	IOP_T2_MODE = 0x1f801124,
+	IOP_T3_MODE = 0x1f801484,
+	IOP_T4_MODE = 0x1f801494,
+	IOP_T5_MODE = 0x1f8014a4,
+			
+	IOP_T0_TARGET= 0x1f801108,
+	IOP_T1_TARGET = 0x1f801118,
+	IOP_T2_TARGET = 0x1f801128,
+	IOP_T3_TARGET = 0x1f801488,
+	IOP_T4_TARGET = 0x1f801498,
+	IOP_T5_TARGET = 0x1f8014a8
+};
+
+// fixme: I'm sure there's a better way to do this. --arcum42
+#define DmaExec(n) { \
+	if (HW_DMA##n##_CHCR & 0x01000000 && \
+		HW_DMA_PCR & (8 << (n * 4))) { \
+		psxDma##n(HW_DMA##n##_MADR, HW_DMA##n##_BCR, HW_DMA##n##_CHCR); \
+	} \
+}
+
+#define DmaExec2(n) { \
+	if (HW_DMA##n##_CHCR & 0x01000000 && \
+		HW_DMA_PCR2 & (8 << ((n-7) * 4))) { \
+		psxDma##n(HW_DMA##n##_MADR, HW_DMA##n##_BCR, HW_DMA##n##_CHCR); \
+	} \
+}
+
+#ifdef ENABLE_NEW_IOPDMA
+#define DmaExecNew(n) { \
+	if (HW_DMA##n##_CHCR & 0x01000000 && \
+		HW_DMA_PCR & (8 << (n * 4))) { \
+		IopDmaStart(n, HW_DMA##n##_CHCR, HW_DMA##n##_MADR, HW_DMA##n##_BCR); \
+	} \
+}
+
+#define DmaExecNew2(n) { \
+	if (HW_DMA##n##_CHCR & 0x01000000 && \
+		HW_DMA_PCR2 & (8 << ((n-7) * 4))) { \
+		IopDmaStart(n, HW_DMA##n##_CHCR, HW_DMA##n##_MADR, HW_DMA##n##_BCR); \
+	} \
+}
+#else
+#define DmaExecNew(n) DmaExec(n)
+#define DmaExecNew2(n) DmaExec2(n)
+#endif
+
 #define HW_DMA0_MADR (psxHu32(0x1080)) // MDEC in DMA
 #define HW_DMA0_BCR  (psxHu32(0x1084))
 #define HW_DMA0_CHCR (psxHu32(0x1088))

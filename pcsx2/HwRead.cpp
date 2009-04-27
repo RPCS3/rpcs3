@@ -61,34 +61,35 @@ __forceinline u8 hwRead8(u32 mem)
 
 	switch (mem)
 	{
-		case 0x10000000: ret = (u8)rcntRcount(0); break;
-		case 0x10000010: ret = (u8)counters[0].modeval; break;
-		case 0x10000020: ret = (u8)counters[0].target; break;
-		case 0x10000030: ret = (u8)counters[0].hold; break;
+		// Note: the values without defines = the defines + 1.
+		case RCNT0_COUNT: ret = (u8)rcntRcount(0); break;
+		case RCNT0_MODE: ret = (u8)counters[0].modeval; break;
+		case RCNT0_TARGET: ret = (u8)counters[0].target; break;
+		case RCNT0_HOLD: ret = (u8)counters[0].hold; break;
 		case 0x10000001: ret = (u8)(rcntRcount(0)>>8); break;
 		case 0x10000011: ret = (u8)(counters[0].modeval>>8); break;
 		case 0x10000021: ret = (u8)(counters[0].target>>8); break;
 		case 0x10000031: ret = (u8)(counters[0].hold>>8); break;
 
-		case 0x10000800: ret = (u8)rcntRcount(1); break;
-		case 0x10000810: ret = (u8)counters[1].modeval; break;
-		case 0x10000820: ret = (u8)counters[1].target; break;
-		case 0x10000830: ret = (u8)counters[1].hold; break;
+		case RCNT1_COUNT: ret = (u8)rcntRcount(1); break;
+		case RCNT1_MODE: ret = (u8)counters[1].modeval; break;
+		case RCNT1_TARGET: ret = (u8)counters[1].target; break;
+		case RCNT1_HOLD: ret = (u8)counters[1].hold; break;
 		case 0x10000801: ret = (u8)(rcntRcount(1)>>8); break;
 		case 0x10000811: ret = (u8)(counters[1].modeval>>8); break;
 		case 0x10000821: ret = (u8)(counters[1].target>>8); break;
 		case 0x10000831: ret = (u8)(counters[1].hold>>8); break;
 
-		case 0x10001000: ret = (u8)rcntRcount(2); break;
-		case 0x10001010: ret = (u8)counters[2].modeval; break;
-		case 0x10001020: ret = (u8)counters[2].target; break;
+		case RCNT2_COUNT: ret = (u8)rcntRcount(2); break;
+		case RCNT2_MODE: ret = (u8)counters[2].modeval; break;
+		case RCNT2_TARGET: ret = (u8)counters[2].target; break;
 		case 0x10001001: ret = (u8)(rcntRcount(2)>>8); break;
 		case 0x10001011: ret = (u8)(counters[2].modeval>>8); break;
 		case 0x10001021: ret = (u8)(counters[2].target>>8); break;
 
-		case 0x10001800: ret = (u8)rcntRcount(3); break;
-		case 0x10001810: ret = (u8)counters[3].modeval; break;
-		case 0x10001820: ret = (u8)counters[3].target; break;
+		case RCNT3_COUNT: ret = (u8)rcntRcount(3); break;
+		case RCNT3_MODE: ret = (u8)counters[3].modeval; break;
+		case RCNT3_TARGET: ret = (u8)counters[3].target; break;
 		case 0x10001801: ret = (u8)(rcntRcount(3)>>8); break;
 		case 0x10001811: ret = (u8)(counters[3].modeval>>8); break;
 		case 0x10001821: ret = (u8)(counters[3].target>>8); break;
@@ -97,7 +98,7 @@ __forceinline u8 hwRead8(u32 mem)
 			if ((mem & 0xffffff0f) == 0x1000f200)
 			{
 				if(mem == 0x1000f260) ret = 0;
-				else if(mem == 0x1000F240) {
+				else if(mem == SBUS_F240) {
 					ret = psHu32(mem);
 					//psHu32(mem) &= ~0x4000;
 				}
@@ -120,34 +121,34 @@ __forceinline u16 hwRead16(u32 mem)
 {
 	u16 ret;
 
-	if( mem >= 0x10002000 && mem < 0x10008000 )
+	if( mem >= IPU_CMD && mem < D0_CHCR )
 		Console::Notice("Unexpected hwRead16 from 0x%x", params mem);
 
 	switch (mem)
 	{
-		case 0x10000000: ret = (u16)rcntRcount(0); break;
-		case 0x10000010: ret = (u16)counters[0].modeval; break;
-		case 0x10000020: ret = (u16)counters[0].target; break;
-		case 0x10000030: ret = (u16)counters[0].hold; break;
+		case RCNT0_COUNT: ret = (u16)rcntRcount(0); break;
+		case RCNT0_MODE: ret = (u16)counters[0].modeval; break;
+		case RCNT0_TARGET: ret = (u16)counters[0].target; break;
+		case RCNT0_HOLD: ret = (u16)counters[0].hold; break;
 
-		case 0x10000800: ret = (u16)rcntRcount(1); break;
-		case 0x10000810: ret = (u16)counters[1].modeval; break;
-		case 0x10000820: ret = (u16)counters[1].target; break;
-		case 0x10000830: ret = (u16)counters[1].hold; break;
+		case RCNT1_COUNT: ret = (u16)rcntRcount(1); break;
+		case RCNT1_MODE: ret = (u16)counters[1].modeval; break;
+		case RCNT1_TARGET: ret = (u16)counters[1].target; break;
+		case RCNT1_HOLD: ret = (u16)counters[1].hold; break;
 
-		case 0x10001000: ret = (u16)rcntRcount(2); break;
-		case 0x10001010: ret = (u16)counters[2].modeval; break;
-		case 0x10001020: ret = (u16)counters[2].target; break;
+		case RCNT2_COUNT: ret = (u16)rcntRcount(2); break;
+		case RCNT2_MODE: ret = (u16)counters[2].modeval; break;
+		case RCNT2_TARGET: ret = (u16)counters[2].target; break;
 
-		case 0x10001800: ret = (u16)rcntRcount(3); break;
-		case 0x10001810: ret = (u16)counters[3].modeval; break;
-		case 0x10001820: ret = (u16)counters[3].target; break;
+		case RCNT3_COUNT: ret = (u16)rcntRcount(3); break;
+		case RCNT3_MODE: ret = (u16)counters[3].modeval; break;
+		case RCNT3_TARGET: ret = (u16)counters[3].target; break;
 
 		default:
 			if ((mem & 0xffffff0f) == 0x1000f200)
 			{
 				if(mem == 0x1000f260) ret = 0;
-				else if(mem == 0x1000F240) {
+				else if(mem == SBUS_F240) {
 					ret = psHu16(mem) | 0x0102;
 					psHu32(mem) &= ~0x4000;
 				}

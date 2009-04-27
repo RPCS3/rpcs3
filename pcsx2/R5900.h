@@ -121,16 +121,16 @@ union CP0regs {
 };
 
 struct cpuRegisters {
-    GPRregs GPR;		// GPR regs
+	GPRregs GPR;		// GPR regs
 	// NOTE: don't change order since recompiler uses it
 	GPR_reg HI;
 	GPR_reg LO;			// hi & log 128bit wide
 	CP0regs CP0;		// is COP0 32bit?
 	u32 sa;				// shift amount (32bit), needs to be 16 byte aligned
 	u32 IsDelaySlot;	// set true when the current instruction is a delay slot.
-    u32 pc;				// Program counter, when changing offset in struct, check iR5900-X.S to make sure offset is correct
-    u32 code;			// current instruction
-    PERFregs PERF;
+	u32 pc;				// Program counter, when changing offset in struct, check iR5900-X.S to make sure offset is correct
+	u32 code;			// current instruction
+	PERFregs PERF;
 	u32 eCycle[32];
 	u32 sCycle[32];		// for internal counters
 	u32 cycle;			// calculate cpucycles..
@@ -180,7 +180,7 @@ struct tlbs
 
 #ifndef _PC_
 
-#define _i64(x) (s64)x
+/*#define _i64(x) (s64)x
 #define _u64(x) (u64)x
 
 #define _i32(x) (s32)x
@@ -190,12 +190,12 @@ struct tlbs
 #define _u16(x) (u16)x
 
 #define _i8(x) (s8)x
-#define _u8(x) (u8)x
+#define _u8(x) (u8)x*/
 
 ////////////////////////////////////////////////////////////////////
 // R5900 Instruction Macros
 
-#define _PC_       cpuRegs.pc       // The next PC to be executed
+#define _PC_       cpuRegs.pc       // The next PC to be executed - only used in this header and R3000A.h
 
 #define _Funct_  ((cpuRegs.code      ) & 0x3F)  // The funct part of the instruction register 
 #define _Rd_     ((cpuRegs.code >> 11) & 0x1F)  // The rd part of the instruction register 
@@ -257,14 +257,14 @@ extern void cpuInit();
 extern void cpuReset();		// can throw Exception::FileNotFound.
 extern void cpuShutdown();
 extern void cpuExecuteBios();
-extern void __fastcall cpuException(u32 code, u32 bd);
+extern void cpuException(u32 code, u32 bd);
 extern void cpuTlbMissR(u32 addr, u32 bd);
 extern void cpuTlbMissW(u32 addr, u32 bd);
 extern void cpuTestHwInts();
 
-extern int __fastcall cpuSetNextBranch( u32 startCycle, s32 delta );
-extern int __fastcall cpuSetNextBranchDelta( s32 delta );
-extern int __fastcall cpuTestCycle( u32 startCycle, s32 delta );
+extern void cpuSetNextBranch( u32 startCycle, s32 delta );
+extern void cpuSetNextBranchDelta( s32 delta );
+extern int  cpuTestCycle( u32 startCycle, s32 delta );
 extern void cpuSetBranch();
 
 extern bool _cpuBranchTest_Shared();		// for internal use by the Dynarecs and Ints inside R5900:

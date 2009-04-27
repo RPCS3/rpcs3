@@ -37,12 +37,6 @@ SessionOverrideFlags g_Session = {false};
 
 bool sysInitialized = false;
 
-namespace Exception
-{
-	BaseException::~BaseException() throw() {}
-}
-
-
 // I can't believe I had to make my own version of trim.  C++'s STL is totally whack.
 // And I still had to fix it too.  I found three samples of trim online and *all* three
 // were buggy.  People really need to learn to code before they start posting trim
@@ -172,16 +166,16 @@ bool SysAllocateMem()
 		psxMemAlloc();
 		vuMicroMemAlloc();
 	}
-	catch( Exception::OutOfMemory& ex )
+	catch( Exception::OutOfMemory& )
 	{
+		// TODO : Should this error be handled here or allowed to be handled by the main
+		// exception handler?
+
 		// Failures on the core initialization of memory is bad, since it means the emulator is
-		// completely non-functional.  If the failure is in the VM build then we can try running
-		// the VTLB build instead.  If it's the VTLB build then ... ouch.
-
-		// VTLB build must fail outright...
-		Msgbox::Alert( "Failed to allocate memory needed to run pcsx2.\n\nError: %s", params ex.cMessage() );
+		// completely non-functional.
+		
+		//Msgbox::Alert( "Failed to allocate memory needed to run pcsx2.\n\nError: %s", params ex.cMessage() );
 		SysShutdownMem();
-
 		return false;
 	}
 
@@ -207,14 +201,17 @@ void SysAllocateDynarecs()
 		recCpu.Allocate();
 		psxRec.Allocate();
 	}
-	catch( Exception::BaseException& ex )
+	catch( Exception::BaseException& )
 	{
-		Msgbox::Alert(
+		// TODO : Fix this message.  It should respond according to the user's
+		// currently configured recompiler.interpreter options, for example.
+		
+		/*Msgbox::Alert(
 			"The EE/IOP recompiler failed to initialize with the following error:\n\n"
 			"%s"
 			"\n\nThe EE/IOP interpreter will be used instead (slow!).", params
 			ex.cMessage()
-		);
+		);*/
 
 		g_Session.ForceDisableEErec = true;
 
@@ -226,14 +223,19 @@ void SysAllocateDynarecs()
 	{
 		VU0micro::recAlloc();
 	}
-	catch( Exception::BaseException& ex )
+	catch( Exception::BaseException& )
 	{
+
+		// TODO : Fix this message.  It should respond according to the user's
+		// currently configured recompiler.interpreter options, for example.
+/*
 		Msgbox::Alert(
 			"The VU0 recompiler failed to initialize with the following error:\n\n"
 			"%s"
 			"\n\nThe VU0 interpreter will be used for this session (may slow down some games).", params
 			ex.cMessage()
 		);
+*/
 
 		g_Session.ForceDisableVU0rec = true;
 		VU0micro::recShutdown();
@@ -243,14 +245,19 @@ void SysAllocateDynarecs()
 	{
 		VU1micro::recAlloc();
 	}
-	catch( Exception::BaseException& ex )
+	catch( Exception::BaseException& )
 	{
+
+		// TODO : Fix this message.  It should respond according to the user's
+		// currently configured recompiler.interpreter options, for example.
+/*
 		Msgbox::Alert(
 			"The VU1 recompiler failed to initialize with the following error:\n\n"
 			"%s"
 			"\n\nThe VU1 interpreter will be used for this session (will slow down most games).", params 
 			ex.cMessage()
 		);
+*/
 
 		g_Session.ForceDisableVU1rec = true;
 		VU1micro::recShutdown();
@@ -362,7 +369,7 @@ void SysExecute()
 	}
 	catch( R5900Exception::BaseExcept& ex )
 	{
-		Console::Error( ex.cMessage() );
+		Console::Error( ex.LogMessage() );
 		Console::Error( fmt_string( "(EE) PC: 0x%8.8x  \tCycle: 0x%8.8x", ex.cpuState.pc, ex.cpuState.cycle ).c_str() );
 	}
 }
@@ -383,7 +390,7 @@ void SysEndExecution()
 // Used by Run::FromCD, and Run->Execute when no active emulation state is present.
 // elf_file - if NULL, the CDVD plugin is queried for the ELF file.
 // use_bios - forces the game to boot through the PS2 bios, instead of bypassing it.
-void SysPrepareExecution( const char* elf_file, bool use_bios )
+void SysPrepareExecution( const wxString& elf_file, bool use_bios )
 {
 	if( !g_EmulationInProgress )
 	{
@@ -393,22 +400,21 @@ void SysPrepareExecution( const char* elf_file, bool use_bios )
 		}
 		catch( Exception::BaseException& ex )
 		{
-			Msgbox::Alert( ex.cMessage() );
+			Msgbox::Alert( ex.DisplayMessage() );
 			return;
 		}
 
 		if (OpenPlugins(NULL) == -1)
 			return;
 
-		if( elf_file == NULL )
+		if( elf_file.IsEmpty() )
 		{
 			if( !StateRecovery::HasState() )
 			{
 				// Not recovering a state, so need to execute the bios and load the ELF information.
 				// (note: gsRecoveries are done from ExecuteCpu)
 
-				char ename[g_MaxPath];
-				ename[0] = 0;
+				wxString ename;
 				if( !use_bios )
 					GetPS2ElfName( ename );
 
@@ -440,8 +446,8 @@ void SysReset()
 	// so the status bar won't receive the WM_PAINT messages needed to update itself anyway.
 	// Oops! (air)
 
-	HostGui::Notice("Resetting...");
-	Console::SetTitle("Resetting...");
+	HostGui::Notice( _("Resetting...") );
+	Console::SetTitle( _("Resetting...") );
 
 	g_EmulationInProgress = false;
 	StateRecovery::Clear();
@@ -454,8 +460,8 @@ void SysReset()
 	// Note : No need to call cpuReset() here.  It gets called automatically before the
 	// emulator resumes execution.
 
-	HostGui::Notice("Ready");
-	Console::SetTitle("*PCSX2* Emulation state is reset.");
+	HostGui::Notice( _("Ready") );
+	Console::SetTitle( _("Emulation state is reset.") );
 }
 
 u8 *SysMmapEx(uptr base, u32 size, uptr bounds, const char *caller)
@@ -482,8 +488,3 @@ u8 *SysMmapEx(uptr base, u32 size, uptr bounds, const char *caller)
 	}
 	return Mem;
 }
-
-void *SysLoadLibrary(const char *lib) { return HostSys::LoadLibrary( lib ); }
-void *SysLoadSym(void *lib, const char *sym) { return HostSys::LoadSym( lib, sym ); }
-const char *SysLibError() { return HostSys::LibError(); }
-void SysCloseLibrary(void *lib) { HostSys::CloseLibrary( lib ); }

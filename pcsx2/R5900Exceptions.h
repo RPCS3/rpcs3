@@ -23,9 +23,12 @@ namespace R5900Exception
 {
 	using Exception::Ps2Generic;
 
-	//////////////////////////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////////////////////////////////
 	// Abstract base class for R5900 exceptions; contains the cpuRegs instance at the
 	// time the exception is raised.
+	//
+	// Translation note: EE Emulation exceptions are untranslated only.  There's really no
+	// point in providing translations for this hardcore mess. :)
 	//
 	class BaseExcept : public Ps2Generic
 	{
@@ -35,8 +38,8 @@ namespace R5900Exception
 	public:
 		virtual ~BaseExcept() throw()=0;
 
-		explicit BaseExcept( const std::string& msg ) :
-			Exception::Ps2Generic( "(EE) " + msg ),
+		explicit BaseExcept( const wxString& msg ) :
+			Exception::Ps2Generic( wxT("(EE) ") + msg ),
 			cpuState( cpuRegs )
 		{
 		}
@@ -57,7 +60,7 @@ namespace R5900Exception
 		virtual ~AddressError() throw() {}
 
 		explicit AddressError( u32 ps2addr, bool onWrite ) :
-			BaseExcept( fmt_string( "Address error, addr=0x%x [%s]", ps2addr, onWrite ? "store" : "load" ) ),
+			BaseExcept( wxsFormat( wxT("Address error, addr=0x%x [%s]"), ps2addr, onWrite ? wxT("store") : wxT("load") ) ),
 			OnWrite( onWrite ),
 			Address( ps2addr )
 		{}
@@ -75,7 +78,7 @@ namespace R5900Exception
 		virtual ~TLBMiss() throw() {}
 
 		explicit TLBMiss( u32 ps2addr, bool onWrite ) :
-			BaseExcept( fmt_string( "Tlb Miss, addr=0x%x [%s]", ps2addr, onWrite ? "store" : "load" ) ),
+			BaseExcept( wxsFormat( wxT("Tlb Miss, addr=0x%x [%s]"), ps2addr, onWrite ? wxT("store") : wxT("load") ) ),
 			OnWrite( onWrite ),
 			Address( ps2addr )
 		{}
@@ -94,7 +97,7 @@ namespace R5900Exception
 
 		//
 		explicit BusError( u32 ps2addr, bool onWrite ) :
-			BaseExcept( fmt_string( "Bus Error, addr=0x%x [%s]", ps2addr, onWrite ? "store" : "load" ) ),
+			BaseExcept( wxsFormat( wxT("Bus Error, addr=0x%x [%s]"), ps2addr, onWrite ? wxT("store") : wxT("load") ) ),
 			OnWrite( onWrite ),
 			Address( ps2addr )
 		{}
@@ -108,7 +111,7 @@ namespace R5900Exception
 		virtual ~SystemCall() throw() {}
 
 		explicit SystemCall() :
-			BaseExcept( "SystemCall [SYSCALL]" )
+			BaseExcept( wxT("SystemCall [SYSCALL]") )
 		{}
 	};
 
@@ -124,14 +127,14 @@ namespace R5900Exception
 
 		// Generates a trap for immediate-style Trap opcodes
 		explicit Trap() :
-			BaseExcept( "Trap" ),
+			BaseExcept( wxT("Trap") ),
 			TrapCode( 0 )
 		{}
 
 		// Generates a trap for register-style Trap instructions, which contain an
 		// error code in the opcode
 		explicit Trap( u16 trapcode ) :
-			BaseExcept( "Trap" ),
+			BaseExcept( wxT("Trap") ),
 			TrapCode( trapcode )
 		{}
 	};
@@ -144,7 +147,7 @@ namespace R5900Exception
 		virtual ~Break() throw() {}
 
 		explicit Break() :
-			BaseExcept( "Break Instruction" )
+			BaseExcept( wxT("Break Instruction") )
 		{}
 	};
 	
@@ -156,7 +159,7 @@ namespace R5900Exception
 		virtual ~Overflow() throw() {}
 
 		explicit Overflow() :
-			BaseExcept( "Overflow" )
+			BaseExcept( wxT("Overflow") )
 		{}
 	};
 
@@ -168,7 +171,7 @@ namespace R5900Exception
 		virtual ~DebugBreakpoint() throw() {}
 
 		explicit DebugBreakpoint() :
-			BaseExcept( "Debug Breakpoint" )
+			BaseExcept( wxT("Debug Breakpoint") )
 		{}
 	};
 }

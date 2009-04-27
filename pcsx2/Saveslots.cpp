@@ -34,7 +34,7 @@ bool States_isSlotUsed(int num)
 	if (ElfCRC == 0) 
 		return false;
 	else
-		return Path::isFile(SaveState::GetFilename( num ));
+		return wxFileExists( SaveState::GetFilename( num ) );
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -62,11 +62,11 @@ void States_Load( const wxString& file )
 	try
 	{
 		_loadStateOrExcept( file );
-		HostGui::Notice( fmt_string( "*PCSX2*: Loaded State %s", file.c_str() ) );
+		HostGui::Notice( wxsFormat( _("Loaded State %s"), file.c_str() ) );
 	}
 	catch( Exception::StateLoadError_Recoverable& ex)
 	{
-		Console::Notice( "Could not load savestate file: %hs.\n\n%s", params &file, ex.cMessage() );
+		Console::Notice( ex.LogMessage() );
 
 		// At this point the cpu hasn't been reset, so we can return
 		// control to the user safely... (that's why we use a console notice instead of a popup)
@@ -76,16 +76,12 @@ void States_Load( const wxString& file )
 	catch( Exception::BaseException& ex )
 	{
 		// The emulation state is ruined.  Might as well give them a popup and start the gui.
+		// Translation Tip: Since the savestate load was incomplete, the emulator has been reset.
 
-		string message( fmt_string(
-			"Encountered an error while loading savestate from file: %s.\n", file.c_str() ) );
-
-		if( g_EmulationInProgress )
-			message += "Since the savestate load was incomplete, the emulator must reset.\n";
-
-		message += "\nError: " + ex.Message();
-
-		Msgbox::Alert( message.c_str() );
+		Msgbox::Alert(
+			wxsFormat( _("Error loading savestate from file: %s"), file.c_str() ) +
+			L"\n\n" + _("Error details:") + ex.DisplayMessage()
+		);
 		SysReset();
 		return;
 	}
@@ -94,9 +90,9 @@ void States_Load( const wxString& file )
 
 void States_Load(int num)
 {
-	string file( SaveState::GetFilename( num ) );
+	wxString file( SaveState::GetFilename( num ) );
 
-	if( !Path::isFile( file ) )
+	if( !Path::IsFile( file ) )
 	{
 		Console::Notice( "Saveslot %d is empty.", params num );
 		return;
@@ -105,11 +101,11 @@ void States_Load(int num)
 	try
 	{
 		_loadStateOrExcept( file );
-		HostGui::Notice( fmt_string( "*PCSX2*: Loaded State %d", num ) );
+		HostGui::Notice( wxsFormat( _("Loaded State %d"), num ) );
 	}
 	catch( Exception::StateLoadError_Recoverable& ex)
 	{
-		Console::Notice( "Could not load savestate slot %d.\n\n%s", params num, ex.cMessage() );
+		Console::Notice( wxsFormat( L"Could not load savestate slot %d.\n\n%s", num, ex.LogMessage() ) );
 
 		// At this point the cpu hasn't been reset, so we can return
 		// control to the user safely... (that's why we use a console notice instead of a popup)
@@ -119,16 +115,13 @@ void States_Load(int num)
 	catch( Exception::BaseException& ex )
 	{
 		// The emulation state is ruined.  Might as well give them a popup and start the gui.
+		// Translation Tip: Since the savestate load was incomplete, the emulator has been reset.
 
-		string message( fmt_string(
-			"Encountered an error while loading savestate from slot %d.\n", num ) );
+		Msgbox::Alert(
+			wxsFormat( _("Error loading savestate from slot %d"), file.c_str() ) +
+			L"\n\n" + _("Error details:") + ex.DisplayMessage()
+		);
 
-		if( g_EmulationInProgress )
-			message += "Since the savestate load was incomplete, the emulator has been reset.\n";
-
-		message += "\nError: " + ex.Message();
-
-		Msgbox::Alert( message.c_str() );
 		SysEndExecution();
 		return;
 	}
@@ -144,13 +137,23 @@ void States_Save( const wxString& file )
 	try
 	{
 		StateRecovery::SaveToFile( file );
-		HostGui::Notice( fmt_string( "State saved to file: %s", file.c_str() ) );
+		HostGui::Notice( wxsFormat( _("State saved to file: %s"), file.c_str() ) );
 	}
 	catch( Exception::BaseException& ex )
 	{
-		Console::Error( (fmt_string(
-			"An error occurred while trying to save to file %s\n", file.c_str() ) +
-			"Your emulation state has not been saved!\n\nError: " + ex.Message()).c_str()
+		// TODO: Implement a "pause the action and issue a popup" thing here.
+		// *OR* some kind of GS overlay... [for now we use the console]
+
+		// Translation Tip: "Your emulation state has not been saved!"
+
+		/*Msgbox::Alert(
+			wxsFormat( _("Error saving state to file: %s"), file.c_str() ) +
+			L"\n\n" + _("Error details:") + ex.DisplayMessage()
+		);*/
+
+		Console::Error( wxsFormat(
+			L"An error occurred while trying to save to file %s\n", file.c_str() ) +
+			L"Your emulation state has not been saved!\n\nError: " + ex.LogMessage()
 		);
 	}
 
@@ -163,14 +166,17 @@ void States_Save(int num)
 	try
 	{
 		StateRecovery::SaveToSlot( num );
-		HostGui::Notice( fmt_string( "State saved to slot %d", num ) );
+		HostGui::Notice( wxsFormat( _("State saved to slot %d"), num ) );
 	}
 	catch( Exception::BaseException& ex )
 	{
-		Console::Error( (fmt_string(
-			"An error occurred while trying to save to slot %d\n", num ) +
-			"Your emulation state has not been saved!\n\nError: " + ex.Message()).c_str()
-		 );
+		// TODO: Implement a "pause the action and issue a popup" thing here.
+		// *OR* some kind of GS overlay... [for now we use the console]
+
+		Console::Error( wxsFormat(
+			L"An error occurred while trying to save to slot %d\n", num ) +
+			L"Your emulation state has not been saved!\n\nError: " + ex.LogMessage()
+		);
 	}
 	HostGui::ResetMenuSlots();
 }

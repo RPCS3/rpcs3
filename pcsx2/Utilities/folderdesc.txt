@@ -1,0 +1,7 @@
+Folder: pcsx2/Utilities
+Purpose: To hold general non-pcsx2-specific utility classes which may (or may not) be shared out into a
+   common folder at a later date.  This includes unicode utils, file manipulators, threading, etc. 
+
+Details: I plan to move files into this folder here ont he wxGui branch over time, and then move the
+   whole lot over to common as a whole library of sorts.  I thinkit'll be easier that way than trying
+   to piecemeal individual files over (especially since some of them have inter-dependencies)

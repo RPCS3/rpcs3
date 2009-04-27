@@ -152,7 +152,6 @@ void SIO_CommandWrite(u8 value,int way) {
 		case 3:
 			// No pad connected.
 			sio.parp++;
-			sio.bufcount = 6;
 			if (sio.parp == sio.bufcount) { sio.padst = 0; return; }
 			SIO_INT();
 			return;
@@ -451,16 +450,16 @@ void SIO_CommandWrite(u8 value,int way) {
 				break;
 			case 0x21:
 				// Set pad slot.
-				sio.mtapst = 0x21;
+				sio.mtapst = value;
 				sio.bufcount = 6; // No idea why this is 6, saved from old code.
 				break;
 			case 0x22:
 				// Set memcard slot.
-				sio.mtapst = 0x22;
+				sio.mtapst = value;
 				sio.bufcount = 6; // No idea why this is 6, saved from old code.
 				break;
 			}
-			// Commented out values are from original code.  Break multitap in bios.
+			// Commented out values are from original code.  They break multitap in bios.
 			sio.buf[sio.bufcount-1]=0;//'+';
 			sio.buf[sio.bufcount]=0;//'Z';
 			return;
@@ -508,7 +507,7 @@ void InitializeSIO(u8 value)
 			sio.StatReg &= ~TX_EMPTY;	// Now the Buffer is not empty
 			sio.StatReg |= RX_RDY;		// Transfer is Ready
 
-			sio.bufcount = 2;
+			sio.bufcount = 4; // Default size, when no pad connected.
 			sio.parp = 0;
 			sio.padst = 1;
 			sio.packetsize = 1;
@@ -517,7 +516,7 @@ void InitializeSIO(u8 value)
 
 			switch (sio.CtrlReg&0x2002) {
 				case 0x0002:
-					if (!PAD1setSlot(1, 1+sio.activePadSlot[0])) {
+					if (!PAD1setSlot(1, 1+sio.activePadSlot[0]) && sio.activePadSlot[0]) {
 						// Pad is not present.  Don't send poll, just return a bunch of 0's.
 						sio2.packet.recvVal1 = 0x1D100;
 						sio.padst = 3;
@@ -527,7 +526,7 @@ void InitializeSIO(u8 value)
 					}
 					break;
 				case 0x2002:
-					if (!PAD2setSlot(1, 1+sio.activePadSlot[1])) {
+					if (!PAD2setSlot(2, 1+sio.activePadSlot[1]) && sio.activePadSlot[1]) {
 						// Pad is not present.  Don't send poll, just return a bunch of 0's.
 						sio2.packet.recvVal1 = 0x1D100;
 						sio.padst = 3;
@@ -554,6 +553,7 @@ void InitializeSIO(u8 value)
 				int port = sio.GetMultitapPort();
 				if (!IsMtapPresent(port))
 				{
+					// If "unplug" multitap mid game, set active slots to 0.
 					sio.activePadSlot[port] = 0;
 					sio.activeMemcardSlot[port] = 0;
 				}

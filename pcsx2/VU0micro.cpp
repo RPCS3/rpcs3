@@ -38,26 +38,6 @@ using namespace R5900;
 
 #define VF_VAL(x) ((x==0x80000000)?0:(x))
 
-void iDumpVU0Registers()
-{
-	// fixme: This code is outdated, broken, and lacks printed labels.
-	// Needs heavy mods to be useful.
-#if 0
-	int i;
-	
-	for(i = 1; i < 32; ++i) {
-		__Log("v%d: %x %x %x %x, vi: ", i, VF_VAL(VU0.VF[i].UL[3]), VF_VAL(VU0.VF[i].UL[2]),
-			VF_VAL(VU0.VF[i].UL[1]), VF_VAL(VU0.VF[i].UL[0]));
-		if( i == REG_Q || i == REG_P ) __Log("%f\n", VU0.VI[i].F);
-		else if( i == REG_MAC_FLAG ) __Log("%x\n", 0);//VU0.VI[i].UL&0xff);
-		else if( i == REG_STATUS_FLAG ) __Log("%x\n", 0);//VU0.VI[i].UL&0x03);
-		else if( i == REG_CLIP_FLAG ) __Log("0\n");
-		else __Log("%x\n", VU0.VI[i].UL);
-	}
-	__Log("vfACC: %f %f %f %f\n", VU0.ACC.F[3], VU0.ACC.F[2], VU0.ACC.F[1], VU0.ACC.F[0]);
-#endif
-}
-
 // This is called by the COP2 as per the CTC instruction
 void vu0ResetRegs()
 {

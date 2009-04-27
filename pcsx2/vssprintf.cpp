@@ -460,7 +460,7 @@ static void cropzeros(char *buffer)
     stop = buffer--;
     while (*buffer == '0') buffer--;
     if (*buffer == '.') buffer--;
-    while (*++buffer = *stop++) ;
+    while (*++buffer = *stop++);
   }
 }
 

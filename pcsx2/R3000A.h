@@ -126,14 +126,14 @@ extern s32 psxCycleEE;		// tracks IOP's current sych status with the EE
 
 #ifndef _PC_
 
-#define _i32(x) (s32)x
-#define _u32(x) (u32)x
+#define _i32(x) (s32)x //R3000A
+#define _u32(x) (u32)x //R3000A
 
-#define _i16(x) (s16)x
-#define _u16(x) (u16)x
+#define _i16(x) (s16)x // Not used
+#define _u16(x) (u16)x // Not used
 
-#define _i8(x) (s8)x
-#define _u8(x) (u8)x
+#define _i8(x) (s8)x // Not used
+#define _u8(x) (u8)x //R3000A - once
 
 /**** R3000A Instruction Macros ****/
 #define _PC_       psxRegs.pc       // The next PC to be executed
@@ -200,7 +200,7 @@ extern R3000Acpu psxRec;
 void psxReset();
 void psxShutdown();
 void psxException(u32 code, u32 step);
-void psxBranchTest();
+extern void psxBranchTest();
 void psxExecuteBios();
 void psxMemReset();
 

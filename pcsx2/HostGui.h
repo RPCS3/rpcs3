@@ -93,8 +93,8 @@ namespace HostGui
 	// For issuing notices to both the status bar and the console at the same time.
 	// Single-line text only please!  Multi-line msgs should be directed to the
 	// console directly, thanks.
-	extern void Notice( const std::string& text );
+	extern void Notice( const wxString& text );
 
 	// sets the contents of the pcsx2 window status bar.
-	extern void SetStatusMsg( const std::string& text );
+	extern void SetStatusMsg( const wxString& text );
 };

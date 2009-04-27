@@ -120,10 +120,10 @@ namespace StateRecovery {
 			// have likely been cleared out.  So save from the Recovery buffer instead of
 			// doing a "standard" save:
 
-			gzFile fileptr = gzopen( file.c_str(), "wb" );
+			gzFile fileptr = gzopen( file.ToAscii().data(), "wb" );
 			if( fileptr == NULL )
 			{
-				Msgbox::Alert( "File permissions error while trying to save to file:\n\t%ts", params &file );
+				Msgbox::Alert( wxsFormat( _("Error while trying to save to file: %s"), file.c_str() ) );
 				return;
 			}
 			gzwrite( fileptr, &g_SaveVersion, sizeof( u32 ) );
@@ -138,7 +138,7 @@ namespace StateRecovery {
 		{
 			if( !g_EmulationInProgress )
 			{
-				Msgbox::Alert( "You need to start a game first before you can save it's state." );
+				Msgbox::Alert( _("No emulation state to save") ); // translate: You need to start a game first before you can save it's state
 				return;
 			}
 
@@ -187,9 +187,10 @@ namespace StateRecovery {
 		}
 		catch( Exception::RuntimeError& ex )
 		{
-			Msgbox::Alert(
-				"Pcsx2 gamestate recovery failed. Some options may have been reverted to protect your game's state.\n"
-				"Error: %s", params ex.cMessage() );
+			Msgbox::Alert( wxsFormat(	// fixme: this error needs proper translation stuffs.
+				wxT("Pcsx2 gamestate recovery failed. Some options may have been reverted to protect your game's state.\n")
+				wxT("Error: %s"), ex.DisplayMessage().c_str() )
+			);
 			safe_delete( g_RecoveryState );
 		}
 	}

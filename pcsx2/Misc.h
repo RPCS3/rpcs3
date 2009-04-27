@@ -34,7 +34,7 @@ extern uptr pDsp;	//Used in  GS, MTGS, Plugins, Misc
 
 u32 GetBiosVersion(); // Used in Misc, Memory
 extern u32 BiosVersion;  //  Used in Memory, Misc, CDVD
-int GetPS2ElfName(char*); // Used in Misc, System, Linux, CDVD
+int GetPS2ElfName( wxString& dest ); // Used in Misc, System, Linux, CDVD
 
 // Not sure what header these should go in. Probably not this one.
 void SetCPUState(u32 sseMXCSR, u32 sseVUMXCSR);
@@ -65,7 +65,7 @@ extern u64 GetTickFrequency();
 
 // Used in Misc,and Windows/Linux files.
 extern void ProcessFKeys(int fkey,  struct KeyModifiers *keymod); // processes fkey related commands value 1-12
-extern int IsBIOS(const char *filename, char *description);
+extern bool IsBIOS(const wxString& filename, wxString& description);
 
 //extern const char *LabelAuthors;
 //extern const char *LabelGreets;

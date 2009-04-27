@@ -50,16 +50,15 @@ static void PostLoadPrep()
 
 wxString SaveState::GetFilename( int slot )
 {
-	wxString arrgh;
-	arrgh.Printf( "%8.8X.%3.3d", ElfCRC, slot );
-	return Path::Combine( SSTATES_DIR, arrgh );
+	return (g_Conf.Folders.Savestates +
+		wxsFormat( wxT("%8.8X.%3.3d"), ElfCRC, slot )).GetFullPath();
 }
 
 SaveState::SaveState( const char* msg, const wxString& destination ) :
 	m_version( g_SaveVersion )
 ,	m_tagspace( 128 )
 {
-	Console::WriteLn( "%s %hs", params msg, &destination );
+	Console::WriteLn( "%s %s", params msg, destination.ToAscii().data() );
 }
 
 s32 CALLBACK gsSafeFreeze( int mode, freezeData *data )
@@ -92,7 +91,10 @@ void SaveState::FreezeTag( const char* src )
 	if( strcmp( m_tagspace.GetPtr(), src ) != 0 )
 	{
 		assert( 0 );
-		throw Exception::BadSavedState( string( "Tag: " )+src );
+		throw Exception::BadSavedState(
+			// Untranslated diagnostic msg (use default msg for translation)
+			wxT("Savestate data corruption detected while reading tag: ") + wxString::FromAscii(src)
+		);
 	}
 }
 
@@ -105,10 +107,10 @@ void SaveState::FreezeAll()
 	// doesn't match the bios currently being used (chances are it'll still
 	// work fine, but some games are very picky).
 
-	char descout[128], descin[128];
-	memzero_obj( descout );
-	IsBIOS( Config.Bios, descout );
-	memcpy_fast( descin, descout, 128 );
+	char descin[128];
+	wxString descout;
+	IsBIOS( g_Conf.Files.Bios(), descout );
+	memcpy_fast( descin, descout.ToAscii().data(), 128 );
 	Freeze( descin );
 	
 	if( memcmp( descin, descout, 128 ) != 0 )
@@ -117,7 +119,7 @@ void SaveState::FreezeAll()
 			"\n\tWarning: BIOS Version Mismatch, savestate may be unstable!\n"
 			"\t\tCurrent BIOS:   %s\n"
 			"\t\tSavestate BIOS: %s\n",
-			params descout, descin
+			params descout.ToAscii().data(), descin
 		);
 	}
 
@@ -205,7 +207,7 @@ gzBaseStateInfo::~gzBaseStateInfo()
 gzSavingState::gzSavingState( const wxString& filename ) :
   gzBaseStateInfo( "Saving state to: ", filename )
 {
-	m_file = gzopen(filename.c_str(), "wb");
+	m_file = gzopen(filename.ToAscii().data(), "wb");
 	if( m_file == NULL )
 		throw Exception::FileNotFound();
 
@@ -217,7 +219,7 @@ gzSavingState::gzSavingState( const wxString& filename ) :
 gzLoadingState::gzLoadingState( const wxString& filename ) :
   gzBaseStateInfo( "Loading state from: ", filename )
 {
-	m_file = gzopen(filename.c_str(), "rb");
+	m_file = gzopen(filename.ToAscii().data(), "rb");
 	if( m_file == NULL )
 		throw Exception::FileNotFound();
 
@@ -299,9 +301,9 @@ void gzLoadingState::FreezePlugin( const char* name, s32 (CALLBACK *freezer)(int
 // uncompressed to/from memory state saves implementation
 
 memBaseStateInfo::memBaseStateInfo( SafeArray<u8>& memblock, const char* msg ) :
-  SaveState( msg, "Memory" )
-, m_memory( memblock )
-, m_idx( 0 )
+	SaveState( msg, wxT("Memory") )
+,	m_memory( memblock )
+,	m_idx( 0 )
 {
 	// Always clear the MTGS thread state.
 	mtgsWaitGS();
@@ -376,7 +378,7 @@ void memLoadingState::FreezePlugin( const char* name, s32 (CALLBACK *freezer)(in
 	if( ( fP.size + m_idx ) > m_memory.GetSizeInBytes() )
 	{
 		assert(0);
-		throw Exception::BadSavedState( "memory" );
+		throw Exception::BadSavedState( wxT("memory") );
 	}
 
 	fP.data = ((s8*)m_memory.GetPtr()) + m_idx;

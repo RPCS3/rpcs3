@@ -116,7 +116,7 @@ static u64 PCSX2_ALIGNED16(dbl_ps2_overflow) = DOUBLE(0,1152,0); //overflow & cl
 static u64 PCSX2_ALIGNED16(dbl_underflow) = DOUBLE(0,897,0); //underflow if below
  
 static u64 PCSX2_ALIGNED16(dbl_s_pos[2]) = {0x7fffffffffffffffULL, 0}; 
-static u64 PCSX2_ALIGNED16(dbl_s_neg[2]) = {0x8000000000000000ULL, 0}; 
+//static u64 PCSX2_ALIGNED16(dbl_s_neg[2]) = {0x8000000000000000ULL, 0}; 
  
 // converts small normal numbers to double equivalent
 // converts large normal numbers (which represent NaN/inf in IEEE) to double equivalent

@@ -216,6 +216,8 @@ extern bool SrcLog_GPU( const char* fmt, ... );
 #define MEMCARDS_LOG 0&&
 #endif
 
+//#define VIFUNPACKDEBUG //enable unpack debugging output
+
 #ifdef VIFUNPACKDEBUG
 #define VIFUNPACK_LOG VIF_LOG
 #else

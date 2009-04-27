@@ -25,10 +25,11 @@
 #include "Vif.h"
 #include "VifDma.h"
 
-VIFregisters *_vifRegs;
-u32* _vifRow = NULL, *_vifCol = NULL;
-u32* _vifMaskRegs = NULL;
-vifStruct *_vif;
+VIFregisters *vifRegs;
+u32* vifRow = NULL;
+u32* vifMaskRegs = NULL;
+vifStruct *vif;
+u16 vifqwc = 0;
 
 PCSX2_ALIGNED16(u32 g_vifRow0[4]);
 PCSX2_ALIGNED16(u32 g_vifCol0[4]);
@@ -36,43 +37,44 @@ PCSX2_ALIGNED16(u32 g_vifRow1[4]);
 PCSX2_ALIGNED16(u32 g_vifCol1[4]);
 
 extern int g_vifCycles;
-u16 vifqwc = 0;
-bool mfifodmairq = FALSE;
+bool mfifodmairq = false;
 
 enum UnpackOffset
 {
 	OFFSET_X = 0,
-	OFFSET_Y,
-	OFFSET_Z,
-	OFFSET_W
+	OFFSET_Y = 1,
+	OFFSET_Z = 2,
+	OFFSET_W = 3
 };
-
-#define spr0 ((DMACh*)&PS2MEM_HW[0xD000])
 
 __forceinline static int _limit(int a, int max)
 {
 	return (a > max) ? max : a;
 }
 	
-static __releaseinline void writeX(u32 *dest, u32 data)
+static __releaseinline void writeXYZW(u32 offnum, u32 &dest, u32 data)
 {
 	int n;
+	u32 vifRowReg = getVifRowRegs(offnum);
 	
-	if (_vifRegs->code & 0x10000000)
+	if (vifRegs->code & 0x10000000)
 	{
-		switch (_vif->cl)
+		switch (vif->cl)
 		{
 			case 0:
-				n = (_vifRegs->mask) & 0x3;
+				if (offnum == OFFSET_X)
+					n = (vifRegs->mask) & 0x3;
+				else 
+					n = (vifRegs->mask >> (offnum * 2)) & 0x3;
 				break;
 			case 1:
-				n = (_vifRegs->mask >> 8) & 0x3;
+				n = (vifRegs->mask >> ( 8 + (offnum * 2))) & 0x3;
 				break;
 			case 2:
-				n = (_vifRegs->mask >> 16) & 0x3;
+				n = (vifRegs->mask >> (16 + (offnum * 2))) & 0x3;
 				break;
 			default:
-				n = (_vifRegs->mask >> 24) & 0x3;
+				n = (vifRegs->mask >> (24 + (offnum * 2))) & 0x3;
 				break;
 		}
 	}
@@ -81,488 +83,260 @@ static __releaseinline void writeX(u32 *dest, u32 data)
 	switch (n)
 	{
 		case 0:
-			if ((_vif->cmd & 0x6F) == 0x6f)
+			if ((vif->cmd & 0x6F) == 0x6f)
 			{
-				*dest = data;
+				dest = data;
 			}
-			else if (_vifRegs->mode == 1)
+			else switch (vifRegs->mode)
 			{
-				*dest = data + _vifRegs->r0;
-			}
-			else if (_vifRegs->mode == 2)
-			{
-				_vifRegs->r0 += data;
-				*dest = _vifRegs->r0;
-			}
-			else
-			{
-				*dest = data;
+				case 1:
+					dest = data + vifRowReg;
+					break;
+				case 2:
+					// vifRowReg isn't used after this, or I would make it equal to dest here.
+					dest = setVifRowRegs(offnum, vifRowReg + data);
+					break;
+				default:
+					dest = data;
+					break;
 			}
 			break;
 		case 1:
-			*dest = _vifRegs->r0;
+			dest = vifRowReg;
 			break;
 		case 2:
-			switch (_vif->cl)
-			{
-				case 0:
-					*dest = _vifRegs->c0;
-					break;
-				case 1:
-					*dest = _vifRegs->c1;
-					break;
-				case 2:
-					*dest = _vifRegs->c2;
-					break;
-				default:
-					*dest = _vifRegs->c3;
-					break;
-			}
+			dest = getVifColRegs((vif->cl > 2) ? 3 : vif->cl);
+			break;
+		case 3:
 			break;
 	}
-//	VIF_LOG("writeX %8.8x : Mode %d, r0 = %x, data %8.8x", *dest,_vifRegs->mode,_vifRegs->r0,data);
+//	VIF_LOG("writeX %8.8x : Mode %d, r0 = %x, data %8.8x", *dest,vifRegs->mode,vifRegs->r0,data);
 }
 
-static __releaseinline void writeY(u32 *dest, u32 data)
+template <class T>
+void __fastcall UNPACK_S(u32 *dest, T *data, int size)
 {
-	int n;
+	//S-# will always be a complete packet, no matter what. So we can skip the offset bits
+	writeXYZW(OFFSET_X, *dest++, *data);
+	writeXYZW(OFFSET_Y, *dest++, *data);
+	writeXYZW(OFFSET_Z, *dest++, *data);
+	writeXYZW(OFFSET_W, *dest  , *data);
+}
+
+template <class T>
+void __fastcall UNPACK_V2(u32 *dest, T *data, int size)
+{
+	if (vifRegs->offset == OFFSET_X)
+	{
+		if (size > 0)
+		{
+			writeXYZW(vifRegs->offset, *dest++, *data++);
+			vifRegs->offset = OFFSET_Y;
+			size--;
+		}
+	}
 	
-	if (_vifRegs->code & 0x10000000)
+	if (vifRegs->offset == OFFSET_Y) 
 	{
-		switch (_vif->cl)
+		if (size > 0)
 		{
-			case 0:
-				n = (_vifRegs->mask >> 2) & 0x3;
-				break;
-			case 1:
-				n = (_vifRegs->mask >> 10) & 0x3;
-				break;
-			case 2:
-				n = (_vifRegs->mask >> 18) & 0x3;
-				break;
-			default:
-				n = (_vifRegs->mask >> 26) & 0x3;
-				break;
+			writeXYZW(vifRegs->offset, *dest++, *data);
+			vifRegs->offset = OFFSET_Z;
+			size--;
 		}
 	}
-	else n = 0;
-
-	switch (n)
-	{
-		case 0:
-			if ((_vif->cmd & 0x6F) == 0x6f)
-			{
-				*dest = data;
-			}
-			else if (_vifRegs->mode == 1)
-			{
-				*dest = data + _vifRegs->r1;
-			}
-			else if (_vifRegs->mode == 2)
-			{
-				_vifRegs->r1 += data;
-				*dest = _vifRegs->r1;
-			}
-			else
-			{
-				*dest = data;
-			}
-			break;
-		case 1:
-			*dest = _vifRegs->r1;
-			break;
-		case 2:
-			switch (_vif->cl)
-			{
-				case 0:
-					*dest = _vifRegs->c0;
-					break;
-				case 1:
-					*dest = _vifRegs->c1;
-					break;
-				case 2:
-					*dest = _vifRegs->c2;
-					break;
-				default:
-					*dest = _vifRegs->c3;
-					break;
-			}
-			break;
-	}
-//	VIF_LOG("writeY %8.8x : Mode %d, r1 = %x, data %8.8x", *dest,_vifRegs->mode,_vifRegs->r1,data);
-}
-
-static __releaseinline void writeZ(u32 *dest, u32 data)
-{
-	int n;
 	
-	if (_vifRegs->code & 0x10000000)
+	if (vifRegs->offset == OFFSET_Z)
 	{
-		switch (_vif->cl)
-		{
-			case 0:
-				n = (_vifRegs->mask >> 4) & 0x3;
-				break;
-			case 1:
-				n = (_vifRegs->mask >> 12) & 0x3;
-				break;
-			case 2:
-				n = (_vifRegs->mask >> 20) & 0x3;
-				break;
-			default:
-				n = (_vifRegs->mask >> 28) & 0x3;
-				break;
-		}
+		writeXYZW(vifRegs->offset, *dest++, *dest-2);
+		vifRegs->offset = OFFSET_W;
 	}
-	else n = 0;
-
-	switch (n)
-	{
-		case 0:
-			if ((_vif->cmd & 0x6F) == 0x6f)
-			{
-				*dest = data;
-			}
-			else if (_vifRegs->mode == 1)
-			{
-				*dest = data + _vifRegs->r2;
-			}
-			else if (_vifRegs->mode == 2)
-			{
-				_vifRegs->r2 += data;
-				*dest = _vifRegs->r2;
-			}
-			else
-			{
-				*dest = data;
-			}
-			break;
-		case 1:
-			*dest = _vifRegs->r2;
-			break;
-		case 2:
-			switch (_vif->cl)
-			{
-				case 0:
-					*dest = _vifRegs->c0;
-					break;
-				case 1:
-					*dest = _vifRegs->c1;
-					break;
-				case 2:
-					*dest = _vifRegs->c2;
-					break;
-				default:
-					*dest = _vifRegs->c3;
-					break;
-			}
-			break;
-	}
-//	VIF_LOG("writeZ %8.8x : Mode %d, r2 = %x, data %8.8x", *dest,_vifRegs->mode,_vifRegs->r2,data);
-}
-
-static __releaseinline void writeW(u32 *dest, u32 data)
-{
-	int n;
 	
-	if (_vifRegs->code & 0x10000000)
+	if (vifRegs->offset == OFFSET_W)
 	{
-		switch (_vif->cl)
+		writeXYZW(vifRegs->offset, *dest, *data);
+		vifRegs->offset = OFFSET_X;
+	}
+}
+
+template <class T>
+void __fastcall UNPACK_V3(u32 *dest, T *data, int size)
+{
+	if(vifRegs->offset == OFFSET_X)
+	{
+		if (size > 0)
 		{
-			case 0:
-				n = (_vifRegs->mask >> 6) & 0x3;
-				break;
-			case 1:
-				n = (_vifRegs->mask >> 14) & 0x3;
-				break;
-			case 2:
-				n = (_vifRegs->mask >> 22) & 0x3;
-				break;
-			default:
-				n = (_vifRegs->mask >> 30) & 0x3;
-				break;
+			writeXYZW(vifRegs->offset, *dest++, *data++);
+			vifRegs->offset = OFFSET_Y;
+			size--;
 		}
 	}
-	else n = 0;
-
-	switch (n)
+	
+	if(vifRegs->offset == OFFSET_Y) 
 	{
-		case 0:
-			if ((_vif->cmd & 0x6F) == 0x6f)
-			{
-				*dest = data;
-			}
-			else if (_vifRegs->mode == 1)
-			{
-				*dest = data + _vifRegs->r3;
-			}
-			else if (_vifRegs->mode == 2)
-			{
-				_vifRegs->r3 += data;
-				*dest = _vifRegs->r3;
-			}
-			else
-			{
-				*dest = data;
-			}
-			break;
-		case 1:
-			*dest = _vifRegs->r3;
-			break;
-		case 2:
-			switch (_vif->cl)
-			{
-				case 0:
-					*dest = _vifRegs->c0;
-					break;
-				case 1:
-					*dest = _vifRegs->c1;
-					break;
-				case 2:
-					*dest = _vifRegs->c2;
-					break;
-				default:
-					*dest = _vifRegs->c3;
-					break;
-			}
-			break;
-	}
-//	VIF_LOG("writeW %8.8x : Mode %d, r3 = %x, data %8.8x", *dest,_vifRegs->mode,_vifRegs->r3,data);
-}
-
-static __forceinline bool __fastcall _UNPACKpart(u32 offnum,  u32 *x, u32 y)
-{
-	if (_vifRegs->offset == offnum) 
-	{
-		switch (offnum)
+		if (size > 0)
 		{
-			case OFFSET_X:
-				writeX(x,y);
-				break;
-			case OFFSET_Y: 
-				writeY(x,y);
-				break;
-			case OFFSET_Z:
-				writeZ(x,y);
-				break;
-			case OFFSET_W:
-				writeW(x,y);
-				break;
-			default:
-				break;
+			writeXYZW(vifRegs->offset, *dest++, *data++);
+			vifRegs->offset = OFFSET_Z;
+			size--;
 		}
-		_vifRegs->offset++;
-		
-		return TRUE;
 	}
-	return FALSE;
+	
+	if(vifRegs->offset == OFFSET_Z)
+	{
+		if (size > 0)
+		{
+			writeXYZW(vifRegs->offset, *dest++, *data++);
+			vifRegs->offset = OFFSET_W;
+			size--;
+		}
+	}
+	
+	if(vifRegs->offset == OFFSET_W)
+	{
+		//V3-# does some bizzare thing with alignment, every 6qw of data the W becomes 0 (strange console!)
+		//Ape Escape doesnt seem to like it tho (what the hell?) gonna have to investigate
+		writeXYZW(vifRegs->offset, *dest, *data);
+		vifRegs->offset = OFFSET_X;
+	}
 }
 
-void __fastcall UNPACK_S_32(u32 *dest, u32 *data, int size)
+template <class T>
+void __fastcall UNPACK_V4(u32 *dest, T *data , int size)
 {
-	if (size > 0) if (_UNPACKpart(OFFSET_X, dest++, *data)) size--;
-	if (size > 0) if (_UNPACKpart(OFFSET_Y, dest++, *data)) size--;
-	if (size > 0) if (_UNPACKpart(OFFSET_Z, dest++, *data)) size--;
-	if (size > 0) if (_UNPACKpart(OFFSET_W, dest , *data)) size--;
-	if (_vifRegs->offset == 4) _vifRegs->offset = 0;
+	while (size > 0)
+	{
+		writeXYZW(vifRegs->offset, *dest++, *data++); 
+		vifRegs->offset++;
+		size--;
+	}
+
+	if (vifRegs->offset > OFFSET_W) vifRegs->offset = OFFSET_X;
 }
 
-void __fastcall UNPACK_S_16s(u32 *dest, u32 *data, int size)
+void __fastcall UNPACK_V4_5(u32 *dest, u32 *data, int size)
 {
-	s16 *sdata = (s16*)data;
-	if (size > 0) if (_UNPACKpart(OFFSET_X, dest++, *sdata)) size--;
-	if (size > 0) if (_UNPACKpart(OFFSET_Y, dest++, *sdata)) size--;
-	if (size > 0) if (_UNPACKpart(OFFSET_Z, dest++, *sdata)) size--;
-	if (size > 0) if (_UNPACKpart(OFFSET_W, dest, *sdata)) size--;
-	if (_vifRegs->offset == 4) _vifRegs->offset = 0;
+	//As with S-#, this will always be a complete packet
+	writeXYZW(OFFSET_X, *dest++,  ((*data & 0x001f) << 3));
+	writeXYZW(OFFSET_Y, *dest++, ((*data & 0x03e0) >> 2));
+	writeXYZW(OFFSET_Z, *dest++, ((*data & 0x7c00) >> 7));
+	writeXYZW(OFFSET_W, *dest, ((*data & 0x8000) >> 8));
 }
 
-void __fastcall UNPACK_S_16u(u32 *dest, u32 *data, int size)
+void __fastcall UNPACK_S_32(u32 *dest, u32 *data, int size) 
 {
-	const u16 *sdata = (u16*)data;
-	if (size > 0) if (_UNPACKpart(OFFSET_X, dest++, *sdata)) size--;
-	if (size > 0) if (_UNPACKpart(OFFSET_Y, dest++, *sdata)) size--;
-	if (size > 0) if (_UNPACKpart(OFFSET_Z, dest++, *sdata)) size--;
-	if (size > 0) if (_UNPACKpart(OFFSET_W, dest , *sdata)) size--;
-	if (_vifRegs->offset == 4) _vifRegs->offset = 0;
+	UNPACK_S(dest, data, size); 
+}
+
+void __fastcall UNPACK_S_16s(u32 *dest, u32 *data, int size) 
+{ 
+	s16 *sdata = (s16*)data;  
+	UNPACK_S(dest, sdata, size); 
+}
+
+void __fastcall UNPACK_S_16u(u32 *dest, u32 *data, int size) 
+{
+	u16 *sdata = (u16*)data; 
+	UNPACK_S(dest, sdata, size);
 }
 
 void __fastcall UNPACK_S_8s(u32 *dest, u32 *data, int size)
 {
 	s8 *cdata = (s8*)data;
-	if (size > 0) if (_UNPACKpart(OFFSET_X, dest++, *cdata)) size--;
-	if (size > 0) if (_UNPACKpart(OFFSET_Y, dest++, *cdata)) size--;
-	if (size > 0) if (_UNPACKpart(OFFSET_Z, dest++, *cdata)) size--;
-	if (size > 0) if (_UNPACKpart(OFFSET_W, dest , *cdata)) size--;
-	if (_vifRegs->offset == 4) _vifRegs->offset = 0;
+	UNPACK_S(dest, cdata, size);
 }
 
 void __fastcall UNPACK_S_8u(u32 *dest, u32 *data, int size)
 {
 	u8 *cdata = (u8*)data;
-	if (size > 0) if (_UNPACKpart(OFFSET_X, dest++, *cdata)) size--;
-	if (size > 0) if (_UNPACKpart(OFFSET_Y, dest++, *cdata))size--;
-	if (size > 0) if (_UNPACKpart(OFFSET_Z, dest++, *cdata)) size--;
-	if (size > 0) if (_UNPACKpart(OFFSET_W, dest , *cdata)) size--;
-	if (_vifRegs->offset == 4) _vifRegs->offset = 0;
+	UNPACK_S(dest, cdata, size);
 }
 
 void __fastcall UNPACK_V2_32(u32 *dest, u32 *data, int size)
 {
-	if (size > 0) if (_UNPACKpart(OFFSET_X, dest++, *data++))  size--;
-	if (size > 0) if (_UNPACKpart(OFFSET_Y, dest++, *data--))  size--;
-	_UNPACKpart(OFFSET_Z, dest++, *data);
-	_UNPACKpart(OFFSET_W, dest, 0);
-	if (_vifRegs->offset == 4) _vifRegs->offset = 0;
-
+	UNPACK_V2(dest, data, size);
 }
 
 void __fastcall UNPACK_V2_16s(u32 *dest, u32 *data, int size)
 {
 	s16 *sdata = (s16*)data;
-	if (size > 0) if (_UNPACKpart(OFFSET_X, dest++, *sdata++)) size--;
-	if (size > 0) if (_UNPACKpart(OFFSET_Y, dest++, *sdata--)) size--;
-	_UNPACKpart(OFFSET_Z, dest++, *sdata++);
-	_UNPACKpart(OFFSET_W, dest , *sdata);
-	if (_vifRegs->offset == 4) _vifRegs->offset = 0;
+	UNPACK_V2(dest, sdata, size);
 }
 
 void __fastcall UNPACK_V2_16u(u32 *dest, u32 *data, int size)
 {
 	u16 *sdata = (u16*)data;
-	if (size > 0) if (_UNPACKpart(OFFSET_X, dest++, *sdata++)) size--;
-	if (size > 0) if (_UNPACKpart(OFFSET_Y, dest++, *sdata--)) size--;
-	_UNPACKpart(OFFSET_Z, dest++, *sdata++);
-	_UNPACKpart(OFFSET_W, dest , *sdata);
-	if (_vifRegs->offset == 4) _vifRegs->offset = 0;
+	UNPACK_V2(dest, sdata, size);
 }
 
 void __fastcall UNPACK_V2_8s(u32 *dest, u32 *data, int size)
 {
 	s8 *cdata = (s8*)data;
-	if (size > 0) if (_UNPACKpart(OFFSET_X, dest++, *cdata++)) size--;
-	if (size > 0) if (_UNPACKpart(OFFSET_Y, dest++, *cdata--)) size--;
-	_UNPACKpart(OFFSET_Z, dest++, *cdata++);
-	_UNPACKpart(OFFSET_W, dest , *cdata);
-	if (_vifRegs->offset == 4) _vifRegs->offset = 0;
+	UNPACK_V2(dest, cdata, size);
 }
 
 void __fastcall UNPACK_V2_8u(u32 *dest, u32 *data, int size)
 {
 	u8 *cdata = (u8*)data;
-	if (size > 0) if (_UNPACKpart(OFFSET_X, dest++, *cdata++)) size--;
-	if (size > 0) if (_UNPACKpart(OFFSET_Y, dest++, *cdata--)) size--;
-	_UNPACKpart(OFFSET_Z, dest++, *cdata++);
-	_UNPACKpart(OFFSET_W, dest , *cdata);
-	if (_vifRegs->offset == 4) _vifRegs->offset = 0;
+	UNPACK_V2(dest, cdata, size);
 }
 
 void __fastcall UNPACK_V3_32(u32 *dest, u32 *data, int size)
 {
-	if (size > 0) if (_UNPACKpart(OFFSET_X, dest++, *data++)) size--;
-	if (size > 0) if (_UNPACKpart(OFFSET_Y, dest++, *data++)) size--;
-	if (size > 0) if (_UNPACKpart(OFFSET_Z, dest++, *data++)) size--;
-	_UNPACKpart(OFFSET_W, dest, *data);
-	if (_vifRegs->offset == 4) _vifRegs->offset = 0;
+	UNPACK_V3(dest, data, size);
 }
 
 void __fastcall UNPACK_V3_16s(u32 *dest, u32 *data, int size)
 {
 	s16 *sdata = (s16*)data;
-	if (size > 0) if (_UNPACKpart(OFFSET_X, dest++, *sdata++)) size--;
-	if (size > 0) if (_UNPACKpart(OFFSET_Y, dest++, *sdata++)) size--;
-	if (size > 0) if (_UNPACKpart(OFFSET_Z, dest++, *sdata++)) size--;
-	_UNPACKpart(OFFSET_W, dest, *sdata);
-	if (_vifRegs->offset == 4) _vifRegs->offset = 0;
+	UNPACK_V3(dest, sdata, size);
 }
 
 void __fastcall UNPACK_V3_16u(u32 *dest, u32 *data, int size)
 {
 	u16 *sdata = (u16*)data;
-	if (size > 0) if (_UNPACKpart(OFFSET_X, dest++, *sdata++)) size--;
-	if (size > 0) if (_UNPACKpart(OFFSET_Y, dest++, *sdata++)) size--;
-	if (size > 0) if (_UNPACKpart(OFFSET_Z, dest++, *sdata++)) size--;
-	_UNPACKpart(OFFSET_W, dest, *sdata);
-	if (_vifRegs->offset == 4) _vifRegs->offset = 0;
+	UNPACK_V3(dest, sdata, size);
 }
 
 void __fastcall UNPACK_V3_8s(u32 *dest, u32 *data, int size)
 {
 	s8 *cdata = (s8*)data;
-	if (size > 0) if (_UNPACKpart(OFFSET_X, dest++, *cdata++)) size--;
-	if (size > 0) if (_UNPACKpart(OFFSET_Y, dest++, *cdata++)) size--;
-	if (size > 0) if (_UNPACKpart(OFFSET_Z, dest++, *cdata++)) size--;
-	_UNPACKpart(OFFSET_W, dest, *cdata);
-	if (_vifRegs->offset == 4) _vifRegs->offset = 0;
+	UNPACK_V3(dest, cdata, size);
 }
 
 void __fastcall UNPACK_V3_8u(u32 *dest, u32 *data, int size)
 {
 	u8 *cdata = (u8*)data;
-	if (size > 0) if (_UNPACKpart(OFFSET_X, dest++, *cdata++)) size--;
-	if (size > 0) if (_UNPACKpart(OFFSET_Y, dest++, *cdata++)) size--;
-	if (size > 0) if (_UNPACKpart(OFFSET_Z, dest++, *cdata++)) size--;
-	_UNPACKpart(OFFSET_W, dest, *cdata);
-	if (_vifRegs->offset == 4) _vifRegs->offset = 0;
+	UNPACK_V3(dest, cdata, size);
 }
 
 void __fastcall UNPACK_V4_32(u32 *dest, u32 *data , int size)
 {
-	if (size > 0) if (_UNPACKpart(OFFSET_X, dest++, *data++)) size--;
-	if (size > 0) if (_UNPACKpart(OFFSET_Y, dest++, *data++)) size--;
-	if (size > 0) if (_UNPACKpart(OFFSET_Z, dest++, *data++)) size--;
-	if (size > 0) if (_UNPACKpart(OFFSET_W, dest , *data)) size--;
-	if (_vifRegs->offset == 4) _vifRegs->offset = 0;
+	UNPACK_V4(dest, data, size);
 }
 
 void __fastcall UNPACK_V4_16s(u32 *dest, u32 *data, int size)
 {
 	s16 *sdata = (s16*)data;
-	if (size > 0) if (_UNPACKpart(OFFSET_X, dest++, *sdata++)) size--;
-	if (size > 0) if (_UNPACKpart(OFFSET_Y, dest++, *sdata++)) size--;
-	if (size > 0) if (_UNPACKpart(OFFSET_Z, dest++, *sdata++)) size--;
-	if (size > 0) if (_UNPACKpart(OFFSET_W, dest , *sdata)) size--;
-	if (_vifRegs->offset == 4) _vifRegs->offset = 0;
+	UNPACK_V4(dest, sdata, size);
 }
 
 void __fastcall UNPACK_V4_16u(u32 *dest, u32 *data, int size)
 {
 	u16 *sdata = (u16*)data;
-	if (size > 0) if (_UNPACKpart(OFFSET_X, dest++, *sdata++)) size--;
-	if (size > 0) if (_UNPACKpart(OFFSET_Y, dest++, *sdata++)) size--;
-	if (size > 0) if (_UNPACKpart(OFFSET_Z, dest++, *sdata++)) size--;
-	if (size > 0) if (_UNPACKpart(OFFSET_W, dest, *sdata)) size--;
-	if (_vifRegs->offset == 4) _vifRegs->offset = 0;
+	UNPACK_V4(dest, sdata, size);
 }
 
 void __fastcall UNPACK_V4_8s(u32 *dest, u32 *data, int size)
 {
 	s8 *cdata = (s8*)data;
-	if (size > 0) if (_UNPACKpart(OFFSET_X, dest++, *cdata++)) size--;
-	if (size > 0) if (_UNPACKpart(OFFSET_Y, dest++, *cdata++)) size--;
-	if (size > 0) if (_UNPACKpart(OFFSET_Z, dest++, *cdata++)) size--;
-	if (size > 0) if (_UNPACKpart(OFFSET_W, dest, *cdata)) size--;
-	if (_vifRegs->offset == 4) _vifRegs->offset = 0;
+	UNPACK_V4(dest, cdata, size);
 }
 
 void __fastcall UNPACK_V4_8u(u32 *dest, u32 *data, int size)
 {
 	u8 *cdata = (u8*)data;
-	if (size > 0) if (_UNPACKpart(OFFSET_X, dest++, *cdata++)) size--;
-	if (size > 0) if (_UNPACKpart(OFFSET_Y, dest++, *cdata++)) size--;
-	if (size > 0) if (_UNPACKpart(OFFSET_Z, dest++, *cdata++)) size--;
-	if (size > 0) if (_UNPACKpart(OFFSET_W, dest, *cdata)) size--;
-	if (_vifRegs->offset == 4) _vifRegs->offset = 0;
-}
-
-void __fastcall UNPACK_V4_5(u32 *dest, u32 *data, int size)
-{
-
-	if (size > 0) if (_UNPACKpart(OFFSET_X, dest++, ((*data & 0x001f) << 3))) size--;
-	if (size > 0) if (_UNPACKpart(OFFSET_Y, dest++, ((*data & 0x03e0) >> 2))) size--;
-	if (size > 0) if (_UNPACKpart(OFFSET_Z, dest++, ((*data & 0x7c00) >> 7))) size--;
-	if (size > 0) if (_UNPACKpart(OFFSET_W, dest  , ((*data & 0x8000) >> 8))) size--;
-	if (_vifRegs->offset == 4) _vifRegs->offset = 0;
+	UNPACK_V4(dest, cdata, size);
 }
 
 static __forceinline int mfifoVIF1rbTransfer()
@@ -583,7 +357,7 @@ static __forceinline int mfifoVIF1rbTransfer()
 		src = (u32*)PSM(vif1ch->madr);
 		if (src == NULL) return -1;
 		
-		if (vif1.vifstalled == 1)
+		if (vif1.vifstalled)
 			ret = VIF1transfer(src + vif1.irqoffset, s1 - vif1.irqoffset, 0);
 		else
 			ret = VIF1transfer(src, s1, 0);
@@ -605,7 +379,7 @@ static __forceinline int mfifoVIF1rbTransfer()
 		src = (u32*)PSM(vif1ch->madr);
 		if (src == NULL) return -1;
 		
-		if (vif1.vifstalled == 1)
+		if (vif1.vifstalled)
 			ret = VIF1transfer(src + vif1.irqoffset, mfifoqwc * 4 - vif1.irqoffset, 0);
 		else
 			ret = VIF1transfer(src, mfifoqwc << 2, 0);
@@ -616,12 +390,12 @@ static __forceinline int mfifoVIF1rbTransfer()
 	return ret;
 }
 
-static __forceinline int mfifoVIF1chain()
+static __forceinline int mfifo_VIF1chain()
 {
 	int ret;
 
 	/* Is QWC = 0? if so there is nothing to transfer */
-	if (vif1ch->qwc == 0 && vif1.vifstalled == 0)
+	if ((vif1ch->qwc == 0) && (!vif1.vifstalled))
 	{
 		vif1.inprogress = 0;
 		return 0;
@@ -640,7 +414,7 @@ static __forceinline int mfifoVIF1chain()
 		SPR_LOG("Non-MFIFO Location");
 
 		if (pMem == NULL) return -1;
-		if (vif1.vifstalled == 1)
+		if (vif1.vifstalled)
 			ret = VIF1transfer(pMem + vif1.irqoffset, vif1ch->qwc * 4 - vif1.irqoffset, 0);
 		else
 			ret = VIF1transfer(pMem, vif1ch->qwc << 2, 0);
@@ -653,28 +427,29 @@ void mfifoVIF1transfer(int qwc)
 {
 	u32 *ptag;
 	int id;
-	int ret, temp;
+	int ret;
 
 	g_vifCycles = 0;
 
 	if (qwc > 0)
 	{
 		vifqwc += qwc;
+		SPR_LOG("Added %x qw to mfifo, total now %x - Vif CHCR %x Stalled %x done %x", qwc, vifqwc, vif1ch->chcr, vif1.vifstalled, vif1.done);
 		if (vif1.inprogress & 0x10)
 		{
 			if (vif1ch->madr >= psHu32(DMAC_RBOR) && vif1ch->madr <= (psHu32(DMAC_RBOR) + psHu32(DMAC_RBSR)))
-				CPU_INT(10, min((int)vifqwc, (int)vif1ch->qwc) * BIAS);
+				CPU_INT(10, 0);
 			else
 				CPU_INT(10, vif1ch->qwc * BIAS);
 
 			vif1Regs->stat |= 0x10000000; // FQC=16
 		}
 		vif1.inprogress &= ~0x10;
-		SPR_LOG("Added %x qw to mfifo, total now %x - Vif CHCR %x Stalled %x done %x", qwc, vifqwc, vif1ch->chcr, vif1.vifstalled, vif1.done);
+		
 		return;
 	}
 
-	mfifodmairq = FALSE; //Clear any previous TIE interrupt
+	mfifodmairq = false; //Clear any previous TIE interrupt
 
 	if (vif1ch->qwc == 0)
 	{
@@ -682,7 +457,7 @@ void mfifoVIF1transfer(int qwc)
 
 		if (vif1ch->chcr & 0x40)
 		{
-			if (vif1.stallontag == 1)
+			if (vif1.stallontag)
 				ret = VIF1transfer(ptag + (2 + vif1.irqoffset), 2 - vif1.irqoffset, 1);  //Transfer Tag on Stall
 			else 
 				ret = VIF1transfer(ptag + 2, 2, 1);  //Transfer Tag
@@ -690,7 +465,7 @@ void mfifoVIF1transfer(int qwc)
 			if (ret == -2)
 			{
 				VIF_LOG("MFIFO Stallon tag");
-				vif1.stallontag	= 1;
+				vif1.stallontag	= true;
 				return;        //IRQ set by VIFTransfer
 			}
 		}
@@ -709,41 +484,43 @@ void mfifoVIF1transfer(int qwc)
 		{
 			case 0: // Refe - Transfer Packet According to ADDR field
 				vif1ch->tadr = psHu32(DMAC_RBOR) + ((vif1ch->tadr + 16) & psHu32(DMAC_RBSR));
-				vif1.done = 1;										//End Transfer
+				vif1.done = true;										//End Transfer
 				break;
 
 			case 1: // CNT - Transfer QWC following the tag.
 				vif1ch->madr = psHu32(DMAC_RBOR) + ((vif1ch->tadr + 16) & psHu32(DMAC_RBSR));						//Set MADR to QW after Tag
 				vif1ch->tadr = psHu32(DMAC_RBOR) + ((vif1ch->madr + (vif1ch->qwc << 4)) & psHu32(DMAC_RBSR));			//Set TADR to QW following the data
-				vif1.done = 0;
+				vif1.done = false;
 				break;
 
 			case 2: // Next - Transfer QWC following tag. TADR = ADDR
-				temp = vif1ch->madr;								//Temporarily Store ADDR
+			{
+				int temp = vif1ch->madr;								//Temporarily Store ADDR
 				vif1ch->madr = psHu32(DMAC_RBOR) + ((vif1ch->tadr + 16) & psHu32(DMAC_RBSR)); 					  //Set MADR to QW following the tag
 				vif1ch->tadr = temp;								//Copy temporarily stored ADDR to Tag
 				if ((temp & psHu32(DMAC_RBSR)) != psHu32(DMAC_RBOR)) Console::WriteLn("Next tag = %x outside ring %x size %x", params temp, psHu32(DMAC_RBOR), psHu32(DMAC_RBSR));
-				vif1.done = 0;
+				vif1.done = false;
 				break;
+			}
 
 			case 3: // Ref - Transfer QWC from ADDR field
 			case 4: // Refs - Transfer QWC from ADDR field (Stall Control)
 				vif1ch->tadr = psHu32(DMAC_RBOR) + ((vif1ch->tadr + 16) & psHu32(DMAC_RBSR));							//Set TADR to next tag
-				vif1.done = 0;
+				vif1.done = false;
 				break;
 
 			case 7: // End - Transfer QWC following the tag
 				vif1ch->madr = psHu32(DMAC_RBOR) + ((vif1ch->tadr + 16) & psHu32(DMAC_RBSR));		//Set MADR to data following the tag
 				vif1ch->tadr = psHu32(DMAC_RBOR) + ((vif1ch->madr + (vif1ch->qwc << 4)) & psHu32(DMAC_RBSR));			//Set TADR to QW following the data
-				vif1.done = 1;										//End Transfer
+				vif1.done = true;										//End Transfer
 				break;
 		}
 
 		if ((vif1ch->chcr & 0x80) && (ptag[0] >> 31))
 		{
 			VIF_LOG("dmaIrq Set");
-			vif1.done = 1;
-			mfifodmairq = TRUE; //Let the handler know we have prematurely ended MFIFO
+			vif1.done = true;
+			mfifodmairq = true; //Let the handler know we have prematurely ended MFIFO
 		}
 	}
 	
@@ -756,7 +533,13 @@ void vifMFIFOInterrupt()
 {
 	g_vifCycles = 0;
 	
-	if (vif1.inprogress == 1) mfifoVIF1chain();
+	if((spr0->chcr & 0x100) && spr0->qwc == 0)
+	{
+		spr0->chcr &= ~0x100;
+		hwDmacIrq(8);
+	}
+
+	if (vif1.inprogress == 1) mfifo_VIF1chain();
 
 	if (vif1.irq && vif1.tag.size == 0)
 	{
@@ -771,7 +554,7 @@ void vifMFIFOInterrupt()
 		}
 	}
 	
-	if (vif1.done != 1 || vif1.inprogress & 1)
+	if (!vif1.done || vif1.inprogress & 1)
 	{
 		if (vifqwc <= 0)
 		{
@@ -784,10 +567,11 @@ void vifMFIFOInterrupt()
 		if (!(vif1.inprogress & 0x1)) mfifoVIF1transfer(0);
 
 		if (vif1ch->madr >= psHu32(DMAC_RBOR) && vif1ch->madr <= (psHu32(DMAC_RBOR) + psHu32(DMAC_RBSR)))
-			CPU_INT(10, min((int)vifqwc, (int)vif1ch->qwc) * BIAS);
+			CPU_INT(10, 0);
 		else
 			CPU_INT(10, vif1ch->qwc * BIAS);
 
+		
 		return;
 	}
 	else if (vifqwc <= 0)

@@ -21,7 +21,6 @@
 
 #include "PS2Etypes.h"
 #include "Pcsx2Config.h"
-#include "Paths.h"
 #include "SafeArray.h"
 #include "Misc.h"
 #include "Threading.h"		// to use threading stuff, include the Threading namespace in your file.
@@ -39,14 +38,6 @@ enum PageProtectionMode
 // versions defined in System.h/cpp.
 namespace HostSys
 {
-	// Damn windows.h namespace pollution!!
-	#undef LoadLibrary
-
-	extern void *LoadLibrary(const char *lib);	// Loads Library
-	extern void *LoadSym(void *lib, const char *sym);	// Loads Symbol from Library
-	extern const char *LibError();				// Gets previous error loading symbols
-	extern void CloseLibrary(void *lib);		// Closes Library
-
 	// Maps a block of memory for use as a recompiled code buffer.
 	// The allocated block has code execution privileges.
 	// Returns NULL on allocation failure.
@@ -76,7 +67,7 @@ extern void SysShutdownMem();
 extern void SysRestorableReset();		// Saves the current emulation state prior to spu reset.
 extern void SysClearExecutionCache();	// clears recompiled execution caches!
 extern void SysEndExecution();		// terminates plugins, saves GS state (if enabled), and signals emulation loop to end.
-extern void SysPrepareExecution( const char* elf_file, bool use_bios=false );
+extern void SysPrepareExecution( const wxString& elf_file, bool use_bios=false );
 
 // initiates high-speed execution of the emulation state.  This function is currently
 // designed to be run from an event loop, but will eventually be re-tooled with threading
@@ -84,13 +75,6 @@ extern void SysPrepareExecution( const char* elf_file, bool use_bios=false );
 // improve overall performance too!
 extern void SysExecute();
 
-
-// Library Helpers for HostSys functions, left in for now for convenience.
-
-extern void *SysLoadLibrary(const char *lib);	// Loads Library
-extern void *SysLoadSym(void *lib, const char *sym);	// Loads Symbol from Library
-extern const char *SysLibError();				// Gets previous error loading symbols
-extern void SysCloseLibrary(void *lib);		// Closes Library
 
 // Maps a block of memory for use as a recompiled code buffer, and ensures that the 
 // allocation is below a certain memory address (specified in "bounds" parameter).
@@ -183,6 +167,16 @@ namespace Console
 	// Newline is automatically appended.
 	extern bool Status( const char* fmt, VARG_PARAM dummy, ... );
 	extern bool __fastcall Status( const char* text );
+
+
+	extern bool __fastcall Write( const wxString& text );
+	extern bool __fastcall Write( Colors color, const wxString& text );
+	extern bool __fastcall WriteLn( const wxString& text );
+	extern bool __fastcall WriteLn( Colors color, const wxString& text );
+
+	extern bool __fastcall Error( const wxString& text );
+	extern bool __fastcall Notice( const wxString& text );
+	extern bool __fastcall Status( const wxString& text );
 }
 
 // Different types of message boxes that the emulator can employ from the friendly confines
@@ -193,12 +187,11 @@ namespace Msgbox
 {
 	// Pops up an alert Dialog Box with a singular "OK" button.
 	// Always returns false.  Replacement for SysMessage.
-	extern bool Alert( const char* fmt, VARG_PARAM dummy, ... );
-	extern bool Alert( const char* text );
+	extern bool Alert( const wxString& text );
 
 	// Pops up a dialog box with Ok/Cancel buttons.  Returns the result of the inquiry,
 	// true if OK, false if cancel.
-	extern bool OkCancel( const char* fmt, VARG_PARAM dummy, ... );
+	extern bool OkCancel( const wxString& text );
 }
 
 using Console::Color_Red;
@@ -208,36 +201,5 @@ using Console::Color_Magenta;
 using Console::Color_Cyan;
 using Console::Color_Yellow;
 using Console::Color_White;
-
-//////////////////////////////////////////////////////////////
-// Dev / Debug conditionals --
-//   Consts for using if() statements instead of uglier #ifdef macros.
-//   Abbreviated macros for dev/debug only consoles and msgboxes.
-
-#ifdef PCSX2_DEVBUILD
-
-#	define DevCon Console
-#	define DevMsg MsgBox
-	static const bool IsDevBuild = true;
-
-#else
-
-#	define DevCon 0&&Console
-#	define DevMsg 
-	static const bool IsDevBuild = false;
-
-#endif
-
-#ifdef _DEBUG
-
-#	define DbgCon Console
-	static const bool IsDebugBuild = true;
-
-#else
-
-#	define DbgCon 0&&Console
-	static const bool IsDebugBuild = false;
-
-#endif
 
 #endif /* __SYSTEM_H__ */

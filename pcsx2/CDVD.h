@@ -141,7 +141,4 @@ void cdvdWrite17(u8 rt);
 void cdvdWrite18(u8 rt);
 void cdvdWrite3A(u8 rt);
 
-// Platform dependent system time assignment (see WinMisc / LnxMisc)
-extern void cdvdSetSystemTime( cdvdStruct& setme );
-
 #endif /* __CDVD_H__ */

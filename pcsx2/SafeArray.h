@@ -76,25 +76,25 @@ public:
 	static const int DefaultChunkSize = 0x1000 * sizeof(T);
 
 public: 
-	const std::string Name;		// user-assigned block name
+	const wxString Name;		// user-assigned block name
 	int ChunkSize;
 
 protected:
 	T* m_ptr;
 	int m_size;	// size of the allocation of memory
 
-	const static std::string m_str_Unnamed;
+	const static wxString m_str_Unnamed;
 
 protected:
 	// Internal constructor for use by derived classes.  This allows a derived class to
 	// use its own memory allocation (with an aligned memory, for example).
 	// Throws:
 	//   Exception::OutOfMemory if the allocated_mem pointer is NULL.
-	explicit SafeArray( const std::string& name, T* allocated_mem, int initSize ) : 
-	  Name( name )
-	, ChunkSize( DefaultChunkSize )
-	, m_ptr( allocated_mem )
-	, m_size( initSize )
+	explicit SafeArray( const wxString& name, T* allocated_mem, int initSize ) : 
+		Name( name )
+	,	ChunkSize( DefaultChunkSize )
+	,	m_ptr( allocated_mem )
+	,	m_size( initSize )
 	{
 		if( m_ptr == NULL )
 			throw Exception::OutOfMemory();
@@ -111,19 +111,37 @@ public:
 		safe_free( m_ptr );
 	}
 
-	explicit SafeArray( const std::string& name="Unnamed" ) : 
-	  Name( name )
-	, ChunkSize( DefaultChunkSize )
-	, m_ptr( NULL )
-	, m_size( 0 )
+	explicit SafeArray( const wxString& name=wxT("Unnamed") ) : 
+		Name( name )
+	,	ChunkSize( DefaultChunkSize )
+	,	m_ptr( NULL )
+	,	m_size( 0 )
 	{
 	}
 
-	explicit SafeArray( int initialSize, const std::string& name="Unnamed" ) : 
-	  Name( name )
-	, ChunkSize( DefaultChunkSize )
-	, m_ptr( (T*)malloc( initialSize * sizeof(T) ) )
-	, m_size( initialSize )
+	explicit SafeArray( const char* name ) : 
+		Name( wxString::FromAscii(name) )
+	,	ChunkSize( DefaultChunkSize )
+	,	m_ptr( NULL )
+	,	m_size( 0 )
+	{
+	}
+
+	explicit SafeArray( int initialSize, const wxString& name=wxT("Unnamed") ) : 
+		Name( name )
+	,	ChunkSize( DefaultChunkSize )
+	,	m_ptr( (T*)malloc( initialSize * sizeof(T) ) )
+	,	m_size( initialSize )
+	{
+		if( m_ptr == NULL )
+			throw Exception::OutOfMemory();
+	}
+
+	explicit SafeArray( int initialSize, const char* name ) : 
+		Name( wxString::FromAscii(name) )
+	,	ChunkSize( DefaultChunkSize )
+	,	m_ptr( (T*)malloc( initialSize * sizeof(T) ) )
+	,	m_size( initialSize )
 	{
 		if( m_ptr == NULL )
 			throw Exception::OutOfMemory();
@@ -145,9 +163,11 @@ public:
 			if( m_ptr == NULL )
 			{
 				throw Exception::OutOfMemory(
-					"Out-of-memory on block re-allocation. "
-					"Old size: " + to_string( m_size ) + " bytes, "
-					"New size: " + to_string( newalloc ) + " bytes"
+					wxsFormat(	// english (for diagnostic)
+						wxT("Out-of-memory on SafeArray block re-allocation.\n")
+						wxT("Old size: %d bytes, New size: %d bytes."),
+						m_size, newalloc
+					)
 				);
 			}
 			m_size = newalloc;
@@ -181,15 +201,8 @@ protected:
 	T* _getPtr( uint i ) const
 	{
 #ifdef PCSX2_DEVBUILD
-		if( i >= (uint)m_size )
-		{
-			assert( 0 );	// makes debugging easier sometimes. :)
-			throw Exception::IndexBoundsFault(
-				"Index out of bounds on SafeArray: " + Name + 
-				" (index=" + to_string(i) + 
-				", size=" + to_string(m_size) + ")"
-			);
-		}
+		if( IsDevBuild && i >= (uint)m_size )
+			throw Exception::IndexBoundsFault( Name, i, m_size );
 #endif
 		return &m_ptr[i];
 	}
@@ -206,7 +219,7 @@ public:
 	static const int DefaultChunkSize = 0x80 * sizeof(T);
 
 public: 
-	const std::string Name;		// user-assigned block name
+	const wxString Name;		// user-assigned block name
 	int ChunkSize;				// assigned DefaultChunkSize on init, reconfigurable at any time.
 
 protected:
@@ -214,7 +227,7 @@ protected:
 	int m_allocsize;	// size of the allocation of memory
 	uint m_length;		// length of the array (active items, not buffer allocation)
 
-	const static std::string m_str_Unnamed;
+	const static wxString m_str_Unnamed;
 
 protected:
 	virtual T* _virtual_realloc( int newsize )
@@ -224,17 +237,8 @@ protected:
 	
 	void _boundsCheck( uint i ) const
 	{
-#ifdef PCSX2_DEVBUILD
-		if( i >= (uint)m_length )
-		{
-			assert( 0 );	// makes debugging easier sometimes. :)
-			throw Exception::IndexBoundsFault(
-				"Index out of bounds on SafeArray: " + Name + 
-				" (index=" + to_string(i) + 
-				", length=" + to_string(m_length) + ")"
-			);
-		}
-#endif
+		if( IsDevBuild && i >= (uint)m_length )
+			throw Exception::IndexBoundsFault( Name, i, m_length );
 	}
 
 public:	
@@ -242,7 +246,7 @@ public:
 	{
 	}
 
-	explicit SafeList( const std::string& name="Unnamed" ) : 
+	explicit SafeList( const wxString& name=wxT("Unnamed") ) : 
 		Name( name )
 	,	ChunkSize( DefaultChunkSize )
 	,	m_ptr( NULL )
@@ -251,8 +255,28 @@ public:
 	{
 	}
 
-	explicit SafeList( int initialSize, const std::string& name="Unnamed" ) : 
+	explicit SafeList( const char* name ) : 
+		Name( wxString::FromAscii(name) )
+	,	ChunkSize( DefaultChunkSize )
+	,	m_ptr( NULL )
+	,	m_allocsize( 0 )
+	,	m_length( 0 )
+	{
+	}
+
+	explicit SafeList( int initialSize, const wxString& name=wxT("Unnamed") ) : 
 		Name( name )
+	,	ChunkSize( DefaultChunkSize )
+	,	m_ptr( (T*)malloc( initialSize * sizeof(T) ) )
+	,	m_allocsize( initialSize )
+	,	m_length( 0 )
+	{
+		if( m_ptr == NULL )
+			throw Exception::OutOfMemory();
+	}
+
+	explicit SafeList( int initialSize, const char* name ) : 
+		Name( wxString::FromAscii(name) )
 	,	ChunkSize( DefaultChunkSize )
 	,	m_ptr( (T*)malloc( initialSize * sizeof(T) ) )
 	,	m_allocsize( initialSize )
@@ -281,9 +305,12 @@ public:
 			if( m_ptr == NULL )
 			{
 				throw Exception::OutOfMemory(
-					"Out-of-memory on list re-allocation. "
-					"Old size: " + to_string( m_allocsize ) + " bytes, "
-					"New size: " + to_string( newalloc ) + " bytes"
+					// English Diagonstic message:
+					wxsFormat(
+						wxT("Out-of-memory on SafeList block re-allocation.\n")
+						wxT("Old size: %d bytes, New size: %d bytes"),
+						m_allocsize, newalloc 
+					)
 				);
 			}
 			m_allocsize = newalloc;
@@ -350,12 +377,12 @@ protected:
 
 	// Appends "(align: xx)" to the name of the allocation in devel builds.
 	// Maybe useful,maybe not... no harm in attaching it. :D
-	string _getName( const string& src )
+	wxString _getName( const wxString& src )
 	{
-#ifdef PCSX2_DEVBUILD
-		return src + "(align:" + to_string(Alignment) + ")";
-#endif
-		return src;
+		if( IsDevBuild )
+			return src + wxsFormat( wxT("(align: %d)"), Alignment );
+		else
+			return src;
 	}
 
 public:
@@ -365,14 +392,28 @@ public:
 		// mptr is set to null, so the parent class's destructor won't re-free it.
 	}
 
-	explicit SafeAlignedArray( const std::string& name="Unnamed" ) : 
+	explicit SafeAlignedArray( const wxString& name=wxT("Unnamed") ) : 
 		SafeArray<T>::SafeArray( name )
 	{
 	}
 
-	explicit SafeAlignedArray( int initialSize, const std::string& name="Unnamed" ) : 
+	explicit SafeAlignedArray( const char* name ) : 
+		SafeArray<T>::SafeArray( name )
+	{
+	}
+
+	explicit SafeAlignedArray( int initialSize, const wxString& name=wxT("Unnamed") ) : 
 		SafeArray<T>::SafeArray(
 			_getName(name),
+			(T*)_aligned_malloc( initialSize * sizeof(T), Alignment ),
+			initialSize 
+		)
+	{
+	}
+
+	explicit SafeAlignedArray( int initialSize, const char* name ) : 
+		SafeArray<T>::SafeArray(
+			_getName(wxString::FromAscii(name)),
 			(T*)_aligned_malloc( initialSize * sizeof(T), Alignment ),
 			initialSize 
 		)
@@ -386,5 +427,10 @@ public:
 		return retval;
 	}
 };
+
+
+// For lack of a better place for now (they depend on SafeList so they can't go in StringUtil)
+extern void SplitString( SafeList<wxString>& dest, const wxString& src, const wxString& delims );
+extern void JoinString( wxString& dest, const SafeList<wxString>& src, const wxString& separator );
 
 #endif

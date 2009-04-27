@@ -35,8 +35,6 @@
 #include "SPR.h"
 #include "Sif.h"
 
-#include "Paths.h"
-
 #include "R5900Exceptions.h"
 
 using namespace R5900;	// for R5900 disasm tools
@@ -82,11 +80,11 @@ void cpuReset()
 	g_nextBranchCycle = cpuRegs.cycle + 4;
 	EEsCycle = 0;
 	EEoCycle = cpuRegs.cycle;
-	eeWaitCycles = CHECK_WAITCYCLE_HACK ? 3072 : 768;
+	eeWaitCycles = Config.Hacks.WaitCycleExt ? 3072 : 768;
 
 	// Cyclerate hacks effectively speed up the rate of event tests, so we can safely boost
 	// the WaitCycles value here for x2 and x3 modes:
-	if( CHECK_EE_CYCLERATE > 1 )
+	if( Config.Hacks.EECycleRate > 1 )
 		eeWaitCycles += 1024;
 
 	hwReset();
@@ -106,7 +104,7 @@ void cpuShutdown()
 	disR5900FreeSyms();
 }
 
-__releaseinline void __fastcall cpuException(u32 code, u32 bd)
+__releaseinline void cpuException(u32 code, u32 bd)
 {
 	cpuRegs.branch = 0;		// Tells the interpreter that an exception occurred during a branch.
 	bool errLevel2, checkStatus;
@@ -244,7 +242,7 @@ void cpuTestMissingHwInts() {
 }
 
 // sets a branch test to occur some time from an arbitrary starting point.
-__forceinline int __fastcall cpuSetNextBranch( u32 startCycle, s32 delta )
+__forceinline void cpuSetNextBranch( u32 startCycle, s32 delta )
 {
 	// typecast the conditional to signed so that things don't blow up
 	// if startCycle is greater than our next branch cycle.
@@ -252,20 +250,18 @@ __forceinline int __fastcall cpuSetNextBranch( u32 startCycle, s32 delta )
 	if( (int)(g_nextBranchCycle - startCycle) > delta )
 	{
 		g_nextBranchCycle = startCycle + delta;
-		return 1;
 	}
-	return 0;
 }
 
 // sets a branch to occur some time from the current cycle
-__forceinline int __fastcall cpuSetNextBranchDelta( s32 delta )
+__forceinline void cpuSetNextBranchDelta( s32 delta )
 {
-	return cpuSetNextBranch( cpuRegs.cycle, delta );
+	cpuSetNextBranch( cpuRegs.cycle, delta );
 }
 
 // tests the cpu cycle agaisnt the given start and delta values.
 // Returns true if the delta time has passed.
-__forceinline int __fastcall cpuTestCycle( u32 startCycle, s32 delta )
+__forceinline int cpuTestCycle( u32 startCycle, s32 delta )
 {
 	// typecast the conditional to signed so that things don't explode
 	// if the startCycle is ahead of our current cpu cycle.
@@ -279,7 +275,7 @@ __forceinline void cpuSetBranch()
 	g_nextBranchCycle = cpuRegs.cycle;
 }
 
-void cpuClearInt( uint i )
+__forceinline void cpuClearInt( uint i )
 {
 	jASSUME( i < 32 );
 	cpuRegs.interrupt &= ~(1 << i);

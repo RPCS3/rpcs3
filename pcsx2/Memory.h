@@ -23,6 +23,7 @@
 #endif
 
 //#define ENABLECACHE
+#include "vtlb.h"
 
 namespace Ps2MemSize
 {
@@ -57,8 +58,39 @@ extern u8  *psS; //0.015 mb, scratch pad
 
 extern u8 g_RealGSMem[Ps2MemSize::GSregs];
 #define PS2MEM_GS	g_RealGSMem
+#define PS2GS_BASE(mem) (g_RealGSMem+(mem&0x13ff))
+
+// Various useful locations
+#define spr0 ((DMACh*)&PS2MEM_HW[0xD000])
+#define spr1 ((DMACh*)&PS2MEM_HW[0xD400])
+
+#define gif ((DMACh*)&PS2MEM_HW[0xA000])
+
+#define vif0ch ((DMACh*)&PS2MEM_HW[0x8000])
+#define vif1ch ((DMACh*)&PS2MEM_HW[0x9000])
+
+#define sif0dma ((DMACh*)&PS2MEM_HW[0xc000])
+#define sif1dma ((DMACh*)&PS2MEM_HW[0xc400])
+#define sif2dma ((DMACh*)&PS2MEM_HW[0xc800])
+
+#define ipu0dma ((DMACh *)&PS2MEM_HW[0xb000])
+#define ipu1dma ((DMACh *)&PS2MEM_HW[0xb400])
+
+// From Gif.h
+#define GSCSRr *((u64*)(g_RealGSMem+0x1000))
+#define GSIMR *((u32*)(g_RealGSMem+0x1010))
+#define GSSIGLBLID ((GSRegSIGBLID*)(g_RealGSMem+0x1080))
 
 #define PSM(mem)	(vtlb_GetPhyPtr((mem)&0x1fffffff)) //pcsx2 is a competition.The one with most hacks wins :D
+
+#define psHs8(mem)	(*(s8 *)&PS2MEM_HW[(mem) & 0xffff])
+#define psHs16(mem)	(*(s16*)&PS2MEM_HW[(mem) & 0xffff])
+#define psHs32(mem)	(*(s32*)&PS2MEM_HW[(mem) & 0xffff])
+#define psHs64(mem)	(*(s64*)&PS2MEM_HW[(mem) & 0xffff])
+#define psHu8(mem)	(*(u8 *)&PS2MEM_HW[(mem) & 0xffff])
+#define psHu16(mem)	(*(u16*)&PS2MEM_HW[(mem) & 0xffff])
+#define psHu32(mem)	(*(u32*)&PS2MEM_HW[(mem) & 0xffff])
+#define psHu64(mem)	(*(u64*)&PS2MEM_HW[(mem) & 0xffff])
 
 #define psMs8(mem)	(*(s8 *)&PS2MEM_BASE[(mem) & 0x1ffffff])
 #define psMs16(mem)	(*(s16*)&PS2MEM_BASE[(mem) & 0x1ffffff])
@@ -114,15 +146,6 @@ extern u8 g_RealGSMem[Ps2MemSize::GSregs];
 #define psSu32(mem)	(*(u32*)&PS2MEM_SCRATCH[(mem) & 0x3fff])
 #define psSu64(mem)	(*(u64*)&PS2MEM_SCRATCH[(mem) & 0x3fff])
 
-//#define PSMs8(mem)	(*(s8 *)PSM(mem))
-//#define PSMs16(mem)	(*(s16*)PSM(mem))
-//#define PSMs32(mem)	(*(s32*)PSM(mem))
-//#define PSMs64(mem)	(*(s64*)PSM(mem))
-//#define PSMu8(mem)	(*(u8 *)PSM(mem))
-//#define PSMu16(mem)	(*(u16*)PSM(mem))
-//#define PSMu32(mem)	(*(u32*)PSM(mem))
-//#define PSMu64(mem)	(*(u64*)PSM(mem))
-
 extern void memAlloc();
 extern void memReset();		// clears PS2 ram and loads the bios.  Throws Exception::FileNotFound on error.
 extern void memShutdown();
@@ -133,8 +156,6 @@ extern void memSetPageAddr(u32 vaddr, u32 paddr);
 extern void memClearPageAddr(u32 vaddr);
 
 extern void memMapVUmicro();
-
-#include "vtlb.h"
 
 extern int mmap_GetRamPageInfo(void* ptr);
 extern void mmap_MarkCountedRamPage(void* ptr,u32 vaddr);

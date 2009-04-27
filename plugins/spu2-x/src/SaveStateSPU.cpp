@@ -35,6 +35,7 @@ struct SPU2freezeData
 	s16 OutPos;
 	s16 InputPos;
 	u32 Cycles;
+	u32 lClocks;
 	int PlayMode;
 
 	// Used as a base pointer to a series PcmCache blocks.
@@ -47,7 +48,7 @@ static const u32 SAVE_ID = 0x1227521;
 // versioning for saves.
 // Increment this when changes to the savestate system are made.
 
-static const u32 SAVE_VERSION = 0x0004;
+static const u32 SAVE_VERSION = 0x0005;
 
 static void wipe_the_cache()
 {
@@ -71,6 +72,7 @@ s32 __fastcall FreezeIt( SPU2freezeData& spud )
 	spud.OutPos		= OutPos;
 	spud.InputPos	= InputPos;
 	spud.Cycles		= Cycles;
+	spud.lClocks    = lClocks;
 	spud.PlayMode	= PlayMode;
 	
 	// Save our cache:
@@ -115,8 +117,6 @@ s32 __fastcall ThawIt( SPU2freezeData& spud )
 		printf("\tAudio may not recover correctly.  Save your game to memorycard, reset,\n\n");
 		printf("  and then continue from there.\n\n");
 
-		resetClock = true;
-
 		// Do *not* reset the cores.
 		// We'll need some "hints" as to how the cores should be initialized,
 		// and the only way to get that is to use the game's existing core settings
@@ -141,6 +141,7 @@ s32 __fastcall ThawIt( SPU2freezeData& spud )
 		OutPos		= spud.OutPos;
 		InputPos	= spud.InputPos;
 		Cycles		= spud.Cycles;
+		lClocks     = spud.lClocks;
 		PlayMode	= spud.PlayMode;
 
 		// Load the ADPCM cache:
@@ -172,6 +173,9 @@ s32 __fastcall ThawIt( SPU2freezeData& spud )
 				Cores[c].Voices[v].SBuffer = pcm_cache_data[cacheIdx].Sampledata;
 			}
 		}
+		
+		SndBuffer::ClearContents();
+
 	}
 	return 0;
 }

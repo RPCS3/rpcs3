@@ -52,7 +52,7 @@ AboutBoxDialog::AboutBoxDialog( wxWindow* parent, int id ):
 	m_bitmap_ps2system( this, wxID_ANY, wxBitmap( EmbeddedImage<png_ps2_silver>().GetImage() ),
 		wxDefaultPosition, wxDefaultSize, wxBORDER_SUNKEN )
 {
-	static const wxString LabelAuthors = _(
+	static const wxString LabelAuthors = wxString::FromAscii(
 		"PCSX2, a PS2 emulator\n\n"
 		"Active Devs: Arcum42, Refraction,"
 		"drk||raziel, cottonvibes, gigaherz,"
@@ -69,7 +69,7 @@ AboutBoxDialog::AboutBoxDialog( wxWindow* parent, int id ):
 		"Webmasters: CKemu, Falcon4ever"
 	);
 
-	static const wxString LabelGreets = _(
+	static const wxString LabelGreets = wxString::FromAscii(
 		"Contributors: Hiryu and Sjeep for libcvd (the iso parsing and\n"
 		"filesystem driver code), nneeve, pseudonym\n"
 		"\n"

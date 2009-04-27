@@ -896,7 +896,7 @@ void GSLocalMemory::WriteImage(int& tx, int& ty, BYTE* src, int len, GIFRegBITBL
 	if(TRXREG.RRW == 0) return;
 
 	int l = (int)TRXPOS.DSAX;
-	int r = (int)TRXREG.RRW;
+	int r = l + (int)TRXREG.RRW;
 
 	// finish the incomplete row first
 
@@ -913,9 +913,7 @@ void GSLocalMemory::WriteImage(int& tx, int& ty, BYTE* src, int len, GIFRegBITBL
 	int srcpitch = (r - l) * trbpp >> 3;
 	int h = len / srcpitch;
 
-	// transfer width >= block width, and there is at least one full row
-
-	if(ra - la >= bsx && h > 0)
+	if(ra - la >= bsx && h > 0) // "transfer width" >= "block width" && there is at least one full row
 	{
 		BYTE* s = &src[-l * trbpp >> 3];
 
@@ -1009,7 +1007,7 @@ void GSLocalMemory::WriteImage24(int& tx, int& ty, BYTE* src, int len, GIFRegBIT
 	DWORD bp = BITBLTBUF.DBP;
 	DWORD bw = BITBLTBUF.DBW;
 
-	int tw = TRXREG.RRW, srcpitch = (TRXREG.RRW - TRXPOS.DSAX) * 3;
+	int tw = TRXPOS.DSAX + TRXREG.RRW, srcpitch = TRXREG.RRW * 3;
 	int th = len / srcpitch;
 
 	bool aligned = IsTopLeftAligned(TRXPOS.DSAX, tx, ty, 8, 8);
@@ -1035,6 +1033,7 @@ void GSLocalMemory::WriteImage24(int& tx, int& ty, BYTE* src, int len, GIFRegBIT
 		ty = th;
 	}
 }
+
 void GSLocalMemory::WriteImage8H(int& tx, int& ty, BYTE* src, int len, GIFRegBITBLTBUF& BITBLTBUF, GIFRegTRXPOS& TRXPOS, GIFRegTRXREG& TRXREG)
 {
 	if(TRXREG.RRW == 0) return;
@@ -1042,7 +1041,7 @@ void GSLocalMemory::WriteImage8H(int& tx, int& ty, BYTE* src, int len, GIFRegBIT
 	DWORD bp = BITBLTBUF.DBP;
 	DWORD bw = BITBLTBUF.DBW;
 
-	int tw = TRXREG.RRW, srcpitch = TRXREG.RRW - TRXPOS.DSAX;
+	int tw = TRXPOS.DSAX + TRXREG.RRW, srcpitch = TRXREG.RRW;
 	int th = len / srcpitch;
 
 	bool aligned = IsTopLeftAligned(TRXPOS.DSAX, tx, ty, 8, 8);
@@ -1076,7 +1075,7 @@ void GSLocalMemory::WriteImage4HL(int& tx, int& ty, BYTE* src, int len, GIFRegBI
 	DWORD bp = BITBLTBUF.DBP;
 	DWORD bw = BITBLTBUF.DBW;
 
-	int tw = TRXREG.RRW, srcpitch = (TRXREG.RRW - TRXPOS.DSAX) / 2;
+	int tw = TRXPOS.DSAX + TRXREG.RRW, srcpitch = TRXREG.RRW / 2;
 	int th = len / srcpitch;
 
 	bool aligned = IsTopLeftAligned(TRXPOS.DSAX, tx, ty, 8, 8);
@@ -1110,7 +1109,7 @@ void GSLocalMemory::WriteImage4HH(int& tx, int& ty, BYTE* src, int len, GIFRegBI
 	DWORD bp = BITBLTBUF.DBP;
 	DWORD bw = BITBLTBUF.DBW;
 
-	int tw = TRXREG.RRW, srcpitch = (TRXREG.RRW - TRXPOS.DSAX) / 2;
+	int tw = TRXPOS.DSAX + TRXREG.RRW, srcpitch = TRXREG.RRW / 2;
 	int th = len / srcpitch;
 
 	bool aligned = IsTopLeftAligned(TRXPOS.DSAX, tx, ty, 8, 8);
@@ -1143,7 +1142,7 @@ void GSLocalMemory::WriteImage24Z(int& tx, int& ty, BYTE* src, int len, GIFRegBI
 	DWORD bp = BITBLTBUF.DBP;
 	DWORD bw = BITBLTBUF.DBW;
 
-	int tw = TRXREG.RRW, srcpitch = (TRXREG.RRW - TRXPOS.DSAX) * 3;
+	int tw = TRXPOS.DSAX + TRXREG.RRW, srcpitch = TRXREG.RRW * 3;
 	int th = len / srcpitch;
 
 	bool aligned = IsTopLeftAligned(TRXPOS.DSAX, tx, ty, 8, 8);
@@ -1173,8 +1172,6 @@ void GSLocalMemory::WriteImageX(int& tx, int& ty, BYTE* src, int len, GIFRegBITB
 {
 	if(len <= 0) return;
 
-	// if(ty >= (int)TRXREG.RRH) {ASSERT(0); return;}
-
 	BYTE* pb = (BYTE*)src;
 	WORD* pw = (WORD*)src;
 	DWORD* pd = (DWORD*)src;
@@ -1186,7 +1183,7 @@ void GSLocalMemory::WriteImageX(int& tx, int& ty, BYTE* src, int len, GIFRegBITB
 	int x = tx;
 	int y = ty;
 	int sx = (int)TRXPOS.DSAX;
-	int ex = (int)TRXREG.RRW;
+	int ex = sx + (int)TRXREG.RRW;
 
 	switch(BITBLTBUF.DPSM)
 	{
@@ -1351,8 +1348,6 @@ void GSLocalMemory::ReadImageX(int& tx, int& ty, BYTE* dst, int len, GIFRegBITBL
 {
 	if(len <= 0) return;
 
-	// if(ty >= (int)TRXREG.RRH) {ASSERT(0); return;}
-
 	BYTE* pb = (BYTE*)dst;
 	WORD* pw = (WORD*)dst;
 	DWORD* pd = (DWORD*)dst;
@@ -1364,7 +1359,7 @@ void GSLocalMemory::ReadImageX(int& tx, int& ty, BYTE* dst, int len, GIFRegBITBL
 	int x = tx;
 	int y = ty;
 	int sx = (int)TRXPOS.SSAX;
-	int ex = (int)TRXREG.RRW;
+	int ex = sx + (int)TRXREG.RRW;
 
 	switch(BITBLTBUF.SPSM)
 	{

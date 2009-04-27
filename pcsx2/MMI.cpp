@@ -177,11 +177,15 @@ void PLZCW() {
 	_PLZCW (1);
 }
 
-#define PMFHL_CLAMP(dst, src) \
-    if ((int)src > (int)0x00007fff) dst = 0x7fff; \
-    else \
-    if ((int)src < (int)0xffff8000) dst = 0x8000; \
-    else dst = (u16)src;
+__forceinline void PMFHL_CLAMP(u16 dst, u16 src) 
+{
+    if ((int)src > (int)0x00007fff)
+	    dst = 0x7fff; 
+    else if ((int)src < (int)0xffff8000)
+	    dst = 0x8000; 
+    else 
+	    dst = (u16)src;
+}
 
 void PMFHL() {
 	if (!_Rd_) return;

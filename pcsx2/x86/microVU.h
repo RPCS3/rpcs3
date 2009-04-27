@@ -17,8 +17,8 @@
  */
 
 #pragma once
-#define mVUdebug // Prints Extra Info to Console
-#define _EmitterId_ (vuIndex+1)
+#define mVUdebug	// Prints Extra Info to Console
+#define mVUlogProg	// Dumps MicroPrograms into microVU0.txt/microVU1.txt
 #include "Common.h"
 #include "VU.h"
 #include "GS.h"
@@ -26,75 +26,51 @@
 #include "microVU_Alloc.h"
 #include "microVU_Misc.h"
 
-struct microBlock {
-	microRegInfo pState; // Detailed State of Pipeline
-	u32 pipelineState;	 // | FDiv x 4 | EFU x 6 | Needs pState Info? x 1 | // Simple State of Pipeline
-	u8* x86ptrStart;	 // Start of code
-	u8* x86ptrEnd;		 // End of code (first byte outside of block)
-	u8* x86ptrBranch;	 // 
-	u32 size;			 // Number of 64bit VU Instructions in Block
-};
-
 #define mMaxBlocks 32 // Max Blocks With Different Pipeline States (For n = 1, 2, 4, 8, 16, etc...)
 class microBlockManager {
 private:
 	static const int MaxBlocks = mMaxBlocks - 1;
-	u32 startPC;
-	u32 endPC;
 	int listSize; // Total Items - 1
-	int callerSize; // Total Callers - 1
 	microBlock blockList[mMaxBlocks];
-	microBlock callersList[mMaxBlocks]; // Foreign Blocks that call Local Blocks
 
 public:
-	microBlockManager()	{ init(); }
-	~microBlockManager()	{ close(); }
-	void init() {
-		listSize = -1;
-		callerSize = -1;
-		//ZeroMemory(&blockList, sizeof(blockList)); // Can be Omitted?
-		//ZeroMemory(&blockList, sizeof(callersList)); // Can be Omitted?
-	}
-	void reset() { init(); };
-	void close() {}; // Can be Omitted?
-	/*void add(u32 pipelineState, u8* x86ptrStart) {
-		if (!search(pipelineState)) {
+	microBlockManager()	 { reset(); }
+	~microBlockManager() {}
+	void reset()  { listSize = -1; };
+	microBlock* add(microBlock* pBlock) {
+		microBlock* thisBlock = search(&pBlock->pState);
+		if (!thisBlock) {
 			listSize++;
 			listSize &= MaxBlocks;
-			blockList[listSize].pipelineState = pipelineState;
-			blockList[listSize].x86ptrStart = x86ptrStart;
+			memcpy_fast(&blockList[listSize], pBlock, sizeof(microBlock));
+			thisBlock = &blockList[listSize];
 		}
-	}*/
-	microBlock* search(u32 pipelineState, microRegInfo* pState) {
-		if (pipelineState & 1) { // Needs Detailed Search (Exact Match of Pipeline State)
-			for (int i = 0; i < listSize; i++) {
-				if (!memcmp(pState, &blockList[i].pState, sizeof(microRegInfo))) return &blockList[i];
+		return thisBlock;
+	}
+	microBlock* search(microRegInfo* pState) {
+		if (listSize < 0) return NULL;
+		//if (blockList[0].pState.needExactMatch) { // Needs Detailed Search (Exact Match of Pipeline State)
+			for (int i = 0; i <= listSize; i++) {
+				if (!memcmp(pState, &blockList[i].pState, sizeof(microRegInfo) - 1)) return &blockList[i];
 			}
-		}
+		/*}
 		else { // Can do Simple Search (Only Matches the Important Pipeline Stuff)
-			for (int i = 0; i < listSize; i++) {
-				if (blockList[i].pipelineState == pipelineState) return &blockList[i];
+			for (int i = 0; i <= listSize; i++) {
+				if ((blockList[i].pState.q == pState->q) && (blockList[i].pState.p == pState->p)) { return &blockList[i]; }
 			}
-		}
+		}*/
 		return NULL;
-	}
-	void clearFast() {
-		listSize = -1;
-		for ( ; callerSize >= 0; callerSize--) {
-			//callerList[callerSize]. // ToDo: Implement Branch Link Removal Code
-		}
-	}
-	int clear() {
-		if (listSize >= 0) { clearFast(); return 1; }
-		else return 0;
 	}
 };
 
 template<u32 progSize>
 struct microProgram {
-	u32 data[progSize];
-	u32 used;	// Number of times its been used
-	microBlockManager* block[progSize / 2];
+	u32 data[progSize/4];
+	u32 used;		// Number of times its been used
+	u8* x86ptr;		// Pointer to program's recompilation code
+	u8* x86start;	// Start of program's rec-cache
+	u8* x86end;		// Limit of program's rec-cache
+	microBlockManager* block[progSize/8];
 	microAllocInfo<progSize> allocInfo;
 };
 
@@ -107,36 +83,32 @@ struct microProgManager {
 	int					total;			// Total Number of valid MicroPrograms minus 1
 	int					cleared;		// Micro Program is Indeterminate so must be searched for (and if no matches are found then recompile a new one)
 	int					finished;		// Completed MicroProgram by E-bit Termination
-	u32					lastPipelineState; // Pipeline state from where it left off (useful for continuing execution)
+	microRegInfo		lpState;		// Pipeline state from where program left off (useful for continuing execution)
 };
 
 struct microVU {
 	u32 index;		// VU Index (VU0 or VU1)
 	u32 microSize;	// VU Micro Memory Size
-	u32 progSize;	// VU Micro Program Size (microSize/8)
-	u32 cacheAddr;	// VU Cache Start Address
-	static const u32 cacheSize = 0x500000; // VU Cache Size
+	u32 progSize;	// VU Micro Program Size (microSize/4)
+	static const u32 cacheSize = 0x800000; // VU Cache Size
 
-	microProgManager<0x1000> prog; // Micro Program Data
+	microProgManager<0x4000> prog; // Micro Program Data
 	
 	VURegs*	regs;		 // VU Regs Struct
 	u8*		cache;		 // Dynarec Cache Start (where we will start writing the recompiled code to)
-	u8*		ptr;		 // Pointer to next place to write recompiled code to
+	u8*		startFunct;	 // Ptr Function to the Start code for recompiled programs
+	u8*		exitFunct;	 // Ptr Function to the Exit code for recompiled programs
 	u32		code;		 // Contains the current Instruction
 	u32		iReg;		 // iReg (only used in recompilation, not execution)
 	u32		clipFlag[4]; // 4 instances of clip flag (used in execution)
 	u32		divFlag;	 // 1 instance of I/D flags
-
-/*
-	uptr x86eax; // Accumulator register. Used in arithmetic operations.
-	uptr x86ecx; // Counter register. Used in shift/rotate instructions.
-	uptr x86edx; // Data register. Used in arithmetic operations and I/O operations.
-	uptr x86ebx; // Base register. Used as a pointer to data (located in DS in segmented mode).
-	uptr x86esp; // Stack Pointer register. Pointer to the top of the stack.
-	uptr x86ebp; // Stack Base Pointer register. Used to point to the base of the stack.
-	uptr x86esi; // Source register. Used as a pointer to a source in stream operations.
-	uptr x86edi; // Destination register. Used as a pointer to a destination in stream operations.
-*/
+	u32		VIbackup[2]; // Holds a backup of a VI reg if modified before a branch
+	u32		branch;		 // Holds branch compare result (IBxx) OR Holds address to Jump to (JALR/JR)
+	u32		p;			 // Holds current P instance index
+	u32		q;			 // Holds current Q instance index
+	u32		espBackup;	 // Temp Backup for ESP
+	u32		totalCycles;
+	u32		cycles;
 };
 
 // microVU rec structs
@@ -147,19 +119,36 @@ extern PCSX2_ALIGNED16(microVU microVU1);
 extern void (*mVU_UPPER_OPCODE[64])( VURegs* VU, s32 info );
 extern void (*mVU_LOWER_OPCODE[128])( VURegs* VU, s32 info );
 
-__forceinline void	mVUclearProg(microVU* mVU, int progIndex);
-__forceinline int	mVUfindLeastUsedProg(microVU* mVU);
-__forceinline int	mVUsearchProg(microVU* mVU);
-__forceinline void	mVUcacheProg(microVU* mVU, int progIndex);
+// Used for logging microPrograms
+extern FILE *mVUlogFile[2];
 
-#ifdef __LINUX__
+// Main Functions
+microVUt(void) mVUinit(VURegs*);
 microVUt(void) mVUreset();
 microVUt(void) mVUclose();
+microVUt(void) mVUclear(u32, u32);
+
+// Private Functions
+microVUt(void)		mVUclearProg(microVU* mVU, int progIndex);
+microVUt(int)		mVUfindLeastUsedProg(microVU* mVU);
+microVUt(int)		mVUsearchProg(microVU* mVU);
+microVUt(void)		mVUcacheProg(microVU* mVU, int progIndex);
+void* __fastcall	mVUexecuteVU0(u32 startPC, u32 cycles);
+void* __fastcall	mVUexecuteVU1(u32 startPC, u32 cycles);
+
+#ifndef __LINUX__
+typedef void (__fastcall *mVUrecCall)(u32, u32);
+#else
+typedef void (*mVUrecCall)(u32, u32) __attribute__((__fastcall)); // Not sure if this is correct syntax (should be close xD)
 #endif
 
 // Include all the *.inl files (Needed because C++ sucks with templates and *.cpp files)
 #include "microVU_Misc.inl"
+#include "microVU_Log.inl"
 #include "microVU_Analyze.inl"
 #include "microVU_Alloc.inl"
+#include "microVU_Upper.inl"
+#include "microVU_Lower.inl"
 #include "microVU_Tables.inl"
 #include "microVU_Compile.inl"
+#include "microVU_Execute.inl"

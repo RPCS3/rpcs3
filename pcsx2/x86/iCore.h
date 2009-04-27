@@ -114,7 +114,7 @@ struct _x86regs {
 	u32 extra; // extra info assoc with the reg
 };
 
-extern _x86regs x86regs[X86REGS], s_saveX86regs[X86REGS];
+extern _x86regs x86regs[iREGCNT_GPR], s_saveX86regs[iREGCNT_GPR];
 
 uptr _x86GetAddr(int type, int reg);
 void _initX86regs();
@@ -287,7 +287,7 @@ extern u32 g_recWriteback; // used for jumps (VUrec mess!)
 extern u32 g_cpuRegHasLive1, g_cpuPrevRegHasLive1;
 extern u32 g_cpuRegHasSignExt, g_cpuPrevRegHasSignExt;
 
-extern _xmmregs xmmregs[XMMREGS], s_saveXMMregs[XMMREGS];
+extern _xmmregs xmmregs[iREGCNT_XMM], s_saveXMMregs[iREGCNT_XMM];
 
 extern u16 g_x86AllocCounter;
 extern u16 g_xmmAllocCounter;
@@ -361,10 +361,10 @@ void _recMove128MtoRmOffset(u32 offset, u32 from);
 // a negative shift is for sign extension
 extern int _signExtendGPRtoMMX(x86MMXRegType to, u32 gprreg, int shift);
 
-extern _mmxregs mmxregs[MMXREGS], s_saveMMXregs[MMXREGS];
+extern _mmxregs mmxregs[iREGCNT_MMX], s_saveMMXregs[iREGCNT_MMX];
 extern u16 x86FpuState;
 
-extern void iDumpRegisters(u32 startpc, u32 temp);
+// extern void iDumpRegisters(u32 startpc, u32 temp);
 
 //////////////////////////////////////////////////////////////////////////
 // iFlushCall / _psxFlushCall Parameters

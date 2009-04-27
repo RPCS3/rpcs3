@@ -24,8 +24,8 @@
 #include "GSCrc.h"
 #include "resource.h"
 
-GSRendererHW10::GSRendererHW10(BYTE* base, bool mt, void (*irq)(), int nloophack, const GSRendererSettings& rs)
-	: GSRendererHW<Device, Vertex, TextureCache>(base, mt, irq, nloophack, rs, true)
+GSRendererHW10::GSRendererHW10(BYTE* base, bool mt, void (*irq)(), const GSRendererSettings& rs)
+	: GSRendererHW<Device, Vertex, TextureCache>(base, mt, irq, rs, true)
 {
 	InitVertexKick<GSRendererHW10>();
 }

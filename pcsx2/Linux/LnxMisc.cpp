@@ -39,18 +39,3 @@ u64 GetCPUTicks()
 	gettimeofday(&t, NULL);
 	return ((u64)t.tv_sec*GetTickFrequency())+t.tv_usec;
 }
-
-void cdvdSetSystemTime( cdvdStruct& cdvd )
-{
-	time_t traw;
-	struct tm* ptlocal;
-	time(&traw);
-	ptlocal = localtime(&traw);
-
-	cdvd.RTC.second = ptlocal->tm_sec;
-	cdvd.RTC.minute = ptlocal->tm_min;
-	cdvd.RTC.hour = ptlocal->tm_hour;
-	cdvd.RTC.day = ptlocal->tm_mday;
-	cdvd.RTC.month = ptlocal->tm_mon;
-	cdvd.RTC.year = ptlocal->tm_year;
-}

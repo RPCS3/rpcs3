@@ -22,11 +22,9 @@
 #include "stdafx.h"
 #include "GSState.h"
 
-GSState::GSState(BYTE* base, bool mt, void (*irq)(), int nloophack)
+GSState::GSState(BYTE* base, bool mt, void (*irq)())
 	: m_mt(mt)
 	, m_irq(irq)
-	, m_nloophack_org(nloophack)
-	, m_nloophack(nloophack == 1)
 	, m_crc(0)
 	, m_options(0)
 	, m_path3hack(0)
@@ -54,7 +52,7 @@ GSState::GSState(BYTE* base, bool mt, void (*irq)(), int nloophack)
 	m_sssize += sizeof(m_env.TRXDIR);
 	m_sssize += sizeof(m_env.TRXPOS);
 	m_sssize += sizeof(m_env.TRXREG);
-	m_sssize += sizeof(m_env.TRXREG2);
+	m_sssize += sizeof(m_env.TRXREG); // obsolete
 	
 	for(int i = 0; i < 2; i++)
 	{
@@ -79,8 +77,8 @@ GSState::GSState(BYTE* base, bool mt, void (*irq)(), int nloophack)
 	m_sssize += sizeof(m_v.XYZ);
 	m_sssize += sizeof(m_v.FOG);
 
-	m_sssize += sizeof(m_x);
-	m_sssize += sizeof(m_y);
+	m_sssize += sizeof(m_tr.x);
+	m_sssize += sizeof(m_tr.y);
 	m_sssize += m_mem.m_vmsize;
 	m_sssize += (sizeof(m_path[0].tag) + sizeof(m_path[0].nreg)) * 3;
 	m_sssize += sizeof(m_q);
@@ -95,11 +93,6 @@ GSState::GSState(BYTE* base, bool mt, void (*irq)(), int nloophack)
 //	CSR->rREV = 0x20;
 	m_env.PRMODECONT.AC = 1;
 
-	m_x = m_y = 0;
-	m_bytes = 0;
-	m_maxbytes = 1024 * 1024 * 4;
-	m_buff = (BYTE*)_aligned_malloc(m_maxbytes, 16);
-
 	Reset();
 
 	ResetHandlers();
@@ -107,7 +100,6 @@ GSState::GSState(BYTE* base, bool mt, void (*irq)(), int nloophack)
 
 GSState::~GSState()
 {
-	_aligned_free(m_buff);
 }
 
 void GSState::Reset()
@@ -918,13 +910,12 @@ void GSState::GIFRegHandlerTRXPOS(GIFReg* r)
 
 void GSState::GIFRegHandlerTRXREG(GIFReg* r)
 {
-	if(!(m_env.TRXREG == (GSVector4i)r->TRXREG).alltrue() || !(m_env.TRXREG2 == (GSVector4i)r->TRXREG).alltrue())
+	if(!(m_env.TRXREG == (GSVector4i)r->TRXREG).alltrue())
 	{
 		FlushWrite();
 	}
 
 	m_env.TRXREG = (GSVector4i)r->TRXREG;
-	m_env.TRXREG2 = (GSVector4i)r->TRXREG;
 }
 
 void GSState::GIFRegHandlerTRXDIR(GIFReg* r)
@@ -936,16 +927,10 @@ void GSState::GIFRegHandlerTRXDIR(GIFReg* r)
 	switch(m_env.TRXDIR.XDIR)
 	{
 	case 0: // host -> local
-		m_x = m_env.TRXPOS.DSAX;
-		m_y = m_env.TRXPOS.DSAY;
-		m_env.TRXREG.RRW = m_x + m_env.TRXREG2.RRW;
-		m_env.TRXREG.RRH = m_y + m_env.TRXREG2.RRH;
+		m_tr.Init(m_env.TRXPOS.DSAX, m_env.TRXPOS.DSAY);
 		break;
 	case 1: // local -> host
-		m_x = m_env.TRXPOS.SSAX;
-		m_y = m_env.TRXPOS.SSAY;
-		m_env.TRXREG.RRW = m_x + m_env.TRXREG2.RRW;
-		m_env.TRXREG.RRH = m_y + m_env.TRXREG2.RRH;
+		m_tr.Init(m_env.TRXPOS.SSAX, m_env.TRXPOS.SSAY);
 		break;
 	case 2: // local -> local
 		Move();
@@ -999,113 +984,66 @@ void GSState::Flush()
 
 void GSState::FlushWrite()
 {
-	FlushWrite(m_buff, m_bytes);
+	int len = m_tr.end - m_tr.start;
 
-	m_bytes = 0;
-}
+	if(len <= 0) return;
 
-void GSState::FlushWrite(BYTE* mem, int len)
-{
-	if(len > 0)
-	{
+	int y = m_tr.y;
+
+	GSLocalMemory::writeImage wi = GSLocalMemory::m_psm[m_env.BITBLTBUF.DPSM].wi;
+
+	(m_mem.*wi)(m_tr.x, m_tr.y, &m_tr.buff[m_tr.start], len, m_env.BITBLTBUF, m_env.TRXPOS, m_env.TRXREG);
+
+	m_tr.start += len;
+
+	m_perfmon.Put(GSPerfMon::Swizzle, len);
+
+	CRect r;
+	
+	r.left = m_env.TRXPOS.DSAX;
+	r.top = y;
+	r.right = r.left + m_env.TRXREG.RRW;
+	r.bottom = min(r.top + m_env.TRXREG.RRH, m_tr.x == r.left ? m_tr.y : m_tr.y + 1);
+
+	InvalidateVideoMem(m_env.BITBLTBUF, r);
 /*
-CSize bs = GSLocalMemory::m_psm[m_env.BITBLTBUF.DPSM].bs;
-
-if((m_x & (bs.cx - 1)) || (m_env.TRXREG.RRW & (bs.cx - 1))
-|| (m_y & (bs.cy - 1)) || (m_env.TRXREG.RRH & (bs.cy - 1))
-|| m_x != m_env.TRXPOS.DSAX)
-{
-	printf("*** [%d]: %d %d, %d %d %d %d\n", m_env.BITBLTBUF.DPSM, m_env.TRXPOS.DSAX, m_env.TRXPOS.DSAY, m_x, m_y, m_env.TRXREG.RRW, m_env.TRXREG.RRH);
-}
-
-if((len % ((m_env.TRXREG.RRW - m_x) * GSLocalMemory::m_psm[m_env.BITBLTBUF.DPSM].trbpp / 8)) != 0)
-{
-	printf("*** [%d]: %d %d\n", m_env.BITBLTBUF.DPSM, len, ((m_env.TRXREG.RRW - m_x) * GSLocalMemory::m_psm[m_env.BITBLTBUF.DPSM].trbpp / 8));
-}
+	static int n = 0;
+	CString str;
+	str.Format(_T("c:\\temp1\\[%04d]_%05x_%d_%d_%d_%d_%d_%d.bmp"), 
+		n++, (int)m_env.BITBLTBUF.DBP, (int)m_env.BITBLTBUF.DBW, (int)m_env.BITBLTBUF.DPSM, 
+		r.left, r.top, r.right, r.bottom);
+	m_mem.SaveBMP(str, m_env.BITBLTBUF.DBP, m_env.BITBLTBUF.DBW, m_env.BITBLTBUF.DPSM, r.right, r.bottom);
 */
-		int y = m_y;
-
-		GSLocalMemory::writeImage wi = GSLocalMemory::m_psm[m_env.BITBLTBUF.DPSM].wi;
-
-		(m_mem.*wi)(m_x, m_y, mem, len, m_env.BITBLTBUF, m_env.TRXPOS, m_env.TRXREG);
-
-		m_perfmon.Put(GSPerfMon::Swizzle, len);
-
-		//ASSERT(m_env.TRXREG.RRH >= m_y - y);
-
-		CRect r;
-		
-		r.left = m_env.TRXPOS.DSAX;
-		r.top = y;
-		r.right = m_env.TRXREG.RRW;
-		r.bottom = min(m_x == m_env.TRXPOS.DSAX ? m_y : m_y + 1, m_env.TRXREG.RRH);
-
-		InvalidateVideoMem(m_env.BITBLTBUF, r);
-/*
-		static int n = 0;
-		CString str;
-		str.Format(_T("c:\\temp1\\[%04d]_%05x_%d_%d_%d_%d_%d_%d.bmp"), 
-			n++, (int)m_env.BITBLTBUF.DBP, (int)m_env.BITBLTBUF.DBW, (int)m_env.BITBLTBUF.DPSM, 
-			r.left, r.top, r.right, r.bottom);
-		m_mem.SaveBMP(str, m_env.BITBLTBUF.DBP, m_env.BITBLTBUF.DBW, m_env.BITBLTBUF.DPSM, r.right, r.bottom);
-*/
-	}
 }
 
 //
 
 void GSState::Write(BYTE* mem, int len)
 {
-/*
-	TRACE(_T("Write len=%d DBP=%05x DBW=%d DPSM=%d DSAX=%d DSAY=%d RRW=%d RRH=%d\n"), 
-		  len, (int)m_env.BITBLTBUF.DBP, (int)m_env.BITBLTBUF.DBW, (int)m_env.BITBLTBUF.DPSM, 
-		  (int)m_env.TRXPOS.DSAX, (int)m_env.TRXPOS.DSAY,
-		  (int)m_env.TRXREG.RRW, (int)m_env.TRXREG.RRH);
-*/
-	if(len == 0) return;
+	int dx = m_env.TRXPOS.DSAX;
+	int dy = m_env.TRXPOS.DSAY;
+	int w = m_env.TRXREG.RRW;
+	int h = m_env.TRXREG.RRH;
 
-	if(m_y >= m_env.TRXREG.RRH) return; // TODO: handle overflow during writing data too (just chop len below somewhere)
+	// TRACE(_T("Write len=%d DBP=%05x DBW=%d DPSM=%d DSAX=%d DSAY=%d RRW=%d RRH=%d\n"), len, (int)m_env.BITBLTBUF.DBP, (int)m_env.BITBLTBUF.DBW, (int)m_env.BITBLTBUF.DPSM, dx, dy, w, h);
 
-	// TODO: hmmmm
+	if(!m_tr.Update(w, h, GSLocalMemory::m_psm[m_env.BITBLTBUF.DPSM].trbpp, len))
+	{
+		return;
+	}
 
-	if(PRIM->TME && (m_env.BITBLTBUF.DBP == m_context->TEX0.TBP0 || m_env.BITBLTBUF.DBP == m_context->TEX0.CBP))
+	memcpy(&m_tr.buff[m_tr.end], mem, len);
+
+	m_tr.end += len;
+
+	if(PRIM->TME && (m_env.BITBLTBUF.DBP == m_context->TEX0.TBP0 || m_env.BITBLTBUF.DBP == m_context->TEX0.CBP)) // TODO: hmmmm
 	{
 		FlushPrim();
 	}
 
-	int bpp = GSLocalMemory::m_psm[m_env.BITBLTBUF.DPSM].trbpp;
-
-	int pitch = (m_env.TRXREG.RRW - m_env.TRXPOS.DSAX) * bpp >> 3;
-
-	if(pitch <= 0) {ASSERT(0); return;}
-
-	int height = len / pitch;
-
-	if(height > m_env.TRXREG.RRH - m_env.TRXPOS.DSAY)
+	if(m_tr.end >= m_tr.total)
 	{
-		height = m_env.TRXREG.RRH - m_env.TRXPOS.DSAY;
-
-		len = height * pitch;
-	}
-
-	if(m_bytes > 0 || height < m_env.TRXREG.RRH - m_env.TRXPOS.DSAY)
-	{
-		ASSERT(len <= m_maxbytes); // more than 4mb into a 4mb local mem doesn't make sense
-
-		len = min(m_maxbytes, len);
-
-		if(m_bytes + len > m_maxbytes)
-		{
-			FlushWrite();
-		}
-
-		memcpy(&m_buff[m_bytes], mem, len);
-
-		m_bytes += len;
-	}
-	else
-	{
-		FlushWrite(mem, len);
+		FlushWrite();
 	}
 
 	m_mem.m_clut.Invalidate();
@@ -1113,25 +1051,26 @@ void GSState::Write(BYTE* mem, int len)
 
 void GSState::Read(BYTE* mem, int len)
 {
-	/*
-	TRACE(_T("Read len=%d SBP=%05x SBW=%d SPSM=%d SSAX=%d SSAY=%d RRW=%d RRH=%d\n"), 
-		  len, (int)m_env.BITBLTBUF.SBP, (int)m_env.BITBLTBUF.SBW, (int)m_env.BITBLTBUF.SPSM, 
-		  (int)m_env.TRXPOS.SSAX, (int)m_env.TRXPOS.SSAY,
-		  (int)m_env.TRXREG.RRW, (int)m_env.TRXREG.RRH);
-	*/
+	if(len <= 0) return;
 
-	if(m_y >= (int)m_env.TRXREG.RRH) {ASSERT(0); return;}
+	int sx = m_env.TRXPOS.SSAX;
+	int sy = m_env.TRXPOS.SSAY;
+	int w = m_env.TRXREG.RRW;
+	int h = m_env.TRXREG.RRH;
 
-	if(m_x == m_env.TRXPOS.SSAX && m_y == m_env.TRXPOS.SSAY)
+	// TRACE(_T("Read len=%d SBP=%05x SBW=%d SPSM=%d SSAX=%d SSAY=%d RRW=%d RRH=%d\n"), len, (int)m_env.BITBLTBUF.SBP, (int)m_env.BITBLTBUF.SBW, (int)m_env.BITBLTBUF.SPSM, sx, sy, w, h);
+
+	if(!m_tr.Update(w, h, GSLocalMemory::m_psm[m_env.BITBLTBUF.SPSM].trbpp, len))
 	{
-		CRect r(m_env.TRXPOS.SSAX, m_env.TRXPOS.SSAY, m_env.TRXREG.RRW, m_env.TRXREG.RRH);
-
-		InvalidateLocalMem(m_env.BITBLTBUF, r);
+		return;
 	}
 
-	// TODO
+	if(m_tr.x == sx && m_tr.y == sy)
+	{
+		InvalidateLocalMem(m_env.BITBLTBUF, CRect(CPoint(sx, sy), CSize(w, h)));
+	}
 
-	m_mem.ReadImageX(m_x, m_y, mem, len, m_env.BITBLTBUF, m_env.TRXPOS, m_env.TRXREG);
+	m_mem.ReadImageX(m_tr.x, m_tr.y, mem, len, m_env.BITBLTBUF, m_env.TRXPOS, m_env.TRXREG);
 }
 
 void GSState::Move()
@@ -1140,19 +1079,20 @@ void GSState::Move()
 	// guitar hero copies the far end of the board to do a similar blend too
 
 	int sx = m_env.TRXPOS.SSAX;
-	int dx = m_env.TRXPOS.DSAX;
 	int sy = m_env.TRXPOS.SSAY;
+	int dx = m_env.TRXPOS.DSAX;
 	int dy = m_env.TRXPOS.DSAY;
 	int w = m_env.TRXREG.RRW;
 	int h = m_env.TRXREG.RRH;
-	int xinc = 1;
-	int yinc = 1;
 
 	InvalidateLocalMem(m_env.BITBLTBUF, CRect(CPoint(sx, sy), CSize(w, h)));
 	InvalidateVideoMem(m_env.BITBLTBUF, CRect(CPoint(dx, dy), CSize(w, h)));
 
-	if(sx < dx) sx += w-1, dx += w-1, xinc = -1;
-	if(sy < dy) sy += h-1, dy += h-1, yinc = -1;
+	int xinc = 1;
+	int yinc = 1;
+
+	if(sx < dx) {sx += w - 1; dx += w - 1; xinc = -1;}
+	if(sy < dy) {sy += h - 1; dy += h - 1; yinc = -1;}
 
 /*
 	GSLocalMemory::readPixel rp = GSLocalMemory::m_psm[m_env.BITBLTBUF.SPSM].rp;
@@ -1168,7 +1108,7 @@ void GSState::Move()
 
 	if(m_env.BITBLTBUF.SPSM == PSM_PSMCT32 && m_env.BITBLTBUF.DPSM == PSM_PSMCT32)
 	{
-		for(int y = 0; y < h; y++, sy += yinc, dy += yinc, sx -= xinc*w, dx -= xinc*w)
+		for(int y = 0; y < h; y++, sy += yinc, dy += yinc, sx -= xinc * w, dx -= xinc * w)
 		{
 			DWORD sbase = spsm.pa(0, sy, m_env.BITBLTBUF.SBP, m_env.BITBLTBUF.SBW);
 			int* soffset = spsm.rowOffset[sy & 7];
@@ -1184,7 +1124,7 @@ void GSState::Move()
 	}
 	else
 	{
-		for(int y = 0; y < h; y++, sy += yinc, dy += yinc, sx -= xinc*w, dx -= xinc*w)
+		for(int y = 0; y < h; y++, sy += yinc, dy += yinc, sx -= xinc * w, dx -= xinc * w)
 		{
 			DWORD sbase = spsm.pa(0, sy, m_env.BITBLTBUF.SBP, m_env.BITBLTBUF.SBW);
 			int* soffset = spsm.rowOffset[sy & 7];
@@ -1241,8 +1181,6 @@ template<int index> void GSState::Transfer(BYTE* mem, UINT32 size)
 
 	while(size > 0)
 	{
-		bool eop = false;
-
 		if(path.tag.NLOOP == 0)
 		{
 			path.SetTag(mem);
@@ -1250,41 +1188,29 @@ template<int index> void GSState::Transfer(BYTE* mem, UINT32 size)
 			mem += sizeof(GIFTag);
 			size--;
 
-			m_q = 1.0f;
-
 			if(index == 2 && path.tag.EOP)
 			{
 				m_path3hack = 1;
 			}
 
-			if(path.tag.PRE)
+			if(path.tag.NLOOP > 0) // eeuser 7.2.2. GIFtag: "... when NLOOP is 0, the GIF does not output anything, and values other than the EOP field are disregarded."
 			{
-				ASSERT(path.tag.FLG != GIF_FLG_IMAGE); // kingdom hearts, ffxii, tales of abyss, berserk
+				m_q = 1.0f;
 
-				if((path.tag.FLG & 2) == 0)
+				if(path.tag.PRE)
 				{
-					GIFReg r;
-					r.i64 = path.tag.PRIM;
-					(this->*m_fpGIFRegHandlers[GIF_A_D_REG_PRIM])(&r);
-				}
-			}
+					ASSERT(path.tag.FLG != GIF_FLG_IMAGE); // kingdom hearts, ffxii, tales of abyss, berserk
 
-			if(path.tag.EOP)
-			{
-				eop = true;
-			}
-			else if(path.tag.NLOOP == 0)
-			{
-				if(index == 0 && m_nloophack)
-				{
-					continue;
+					if((path.tag.FLG & 2) == 0)
+					{
+						GIFReg r;
+						r.i64 = path.tag.PRIM;
+						(this->*m_fpGIFRegHandlers[GIF_A_D_REG_PRIM])(&r);
+					}
 				}
-
-				eop = true;
 			}
 		}
-
-		if(path.tag.NLOOP > 0)
+		else
 		{
 			switch(path.tag.FLG)
 			{
@@ -1400,27 +1326,35 @@ template<int index> void GSState::Transfer(BYTE* mem, UINT32 size)
 			}
 		}
 
-		if(eop && ((int)size <= 0 || index == 0))
+		if(index == 0)
 		{
-			break;
-		}
-	}
-
-	// FIXME: dq8, pcsx2 error probably
-
-	if(index == 0)
-	{
-		if(!path.tag.EOP && path.tag.NLOOP > 0)
-		{
-			path.tag.NLOOP = 0;
-
-			TRACE(_T("path1 hack\n"));
+			if(path.tag.EOP && path.tag.NLOOP == 0)
+			{
+				break;
+			}
 		}
 	}
 
 	if(m_dump && mem > start)
 	{
 		m_dump.Transfer(index, start, mem - start);
+	}
+
+	if(index == 0)
+	{
+		if(size == 0 && path.tag.NLOOP > 0)
+		{
+			if(m_mt)
+			{
+				// TODO
+
+				path.tag.NLOOP = 0;
+			}
+			else
+			{
+				Transfer<0>(mem - 0x4000, 0x4000 / 16);
+			}
+		}
 	}
 }
 
@@ -1469,7 +1403,7 @@ int GSState::Freeze(GSFreezeData* fd, bool sizeonly)
 	WriteState(data, &m_env.TRXDIR);
 	WriteState(data, &m_env.TRXPOS);
 	WriteState(data, &m_env.TRXREG);
-	WriteState(data, &m_env.TRXREG2);
+	WriteState(data, &m_env.TRXREG); // obsolete
 
 	for(int i = 0; i < 2; i++)
 	{
@@ -1493,8 +1427,8 @@ int GSState::Freeze(GSFreezeData* fd, bool sizeonly)
 	WriteState(data, &m_v.UV);
 	WriteState(data, &m_v.XYZ);
 	WriteState(data, &m_v.FOG);
-	WriteState(data, &m_x);
-	WriteState(data, &m_y);
+	WriteState(data, &m_tr.x);
+	WriteState(data, &m_tr.y);
 	WriteState(data, m_mem.m_vm8, m_mem.m_vmsize);
 
 	for(int i = 0; i < 3; i++)
@@ -1550,7 +1484,7 @@ int GSState::Defrost(const GSFreezeData* fd)
 	ReadState(&m_env.TRXDIR, data);
 	ReadState(&m_env.TRXPOS, data);
 	ReadState(&m_env.TRXREG, data);
-	ReadState(&m_env.TRXREG2, data);
+	ReadState(&m_env.TRXREG, data); // obsolete
 
 	for(int i = 0; i < 2; i++)
 	{
@@ -1582,9 +1516,11 @@ int GSState::Defrost(const GSFreezeData* fd)
 	ReadState(&m_v.UV, data);
 	ReadState(&m_v.XYZ, data);
 	ReadState(&m_v.FOG, data);
-	ReadState(&m_x, data);
-	ReadState(&m_y, data);
+	ReadState(&m_tr.x, data);
+	ReadState(&m_tr.y, data);
 	ReadState(m_mem.m_vm8, data, m_mem.m_vmsize);
+
+	m_tr.total = 0; // TODO: restore transfer state
 
 	for(int i = 0; i < 3; i++)
 	{
@@ -1617,11 +1553,6 @@ void GSState::SetGameCRC(DWORD crc, int options)
 	m_crc = crc;
 	m_options = options;
 	m_game = CRC::Lookup(crc);
-
-	if(m_nloophack_org == 2)
-	{
-		m_nloophack = m_game.nloophack;
-	}
 }
 
 void GSState::SetFrameSkip(int frameskip)
@@ -1681,6 +1612,53 @@ void GSState::SetFrameSkip(int frameskip)
 			m_fpGIFRegHandlers[GIF_A_D_REG_PRMODE] = &GSState::GIFRegHandlerPRMODE;
  		}
 	}
+}
+
+// GSTransferBuffer
+
+GSState::GSTransferBuffer::GSTransferBuffer()
+{
+	x = y = 0;
+	start = end = total = 0;
+	buff = (BYTE*)_aligned_malloc(1024 * 1024 * 4, 16);
+}
+
+GSState::GSTransferBuffer::~GSTransferBuffer()
+{
+	_aligned_free(buff);
+}
+
+void GSState::GSTransferBuffer::Init(int tx, int ty)
+{
+	x = tx;
+	y = ty;
+	total = 0;
+}
+
+bool GSState::GSTransferBuffer::Update(int tw, int th, int bpp, int& len)
+{
+	if(total == 0)
+	{
+		start = end = 0;
+		total = min((tw * bpp >> 3) * th, 1024 * 1024 * 4);
+		overflow = false;
+	}
+
+	int remaining = total - end;
+
+	if(len > remaining)
+	{
+		if(!overflow)
+		{
+			overflow = true;
+
+			// printf("GS transfer overflow\n");
+		}
+
+		len = remaining;
+	}
+
+	return len > 0;
 }
 
 // hacks
@@ -2081,6 +2059,27 @@ bool GSC_GodOfWar(const GSFrameInfo& fi, int& skip)
 	return true;
 }
 
+bool GSC_GodOfWar2(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME && fi.FBP == 0x00100 && fi.FPSM == PSM_PSMCT16 && fi.TBP0 == 0x00100 && fi.TPSM == PSM_PSMCT16 // ntsc
+		|| fi.TME && fi.FBP == 0x02100 && fi.FPSM == PSM_PSMCT16 && fi.TBP0 == 0x02100 && fi.TPSM == PSM_PSMCT16) // pal
+		{
+			skip = 29; // shadows
+		}
+		else if(fi.TME && fi.FBP == 0x00500 && fi.FPSM == PSM_PSMCT24 && fi.TBP0 == 0x02100 && fi.TPSM == PSM_PSMCT32) // pal
+		{
+			// skip = 17; // only looks correct at native resolution
+		}
+	}
+	else
+	{
+	}
+
+	return true;
+}
+
 bool GSC_GiTS(const GSFrameInfo& fi, int& skip)
 {
 	if(skip == 0)
@@ -2172,7 +2171,7 @@ bool GSState::IsBadFrame(int& skip)
 		map[CRC::Tekken5] = GSC_Tekken5;
 		map[CRC::IkkiTousen] = GSC_IkkiTousen;
 		map[CRC::GodOfWar] = GSC_GodOfWar;
-		map[CRC::GodOfWar2] = GSC_GodOfWar;
+		map[CRC::GodOfWar2] = GSC_GodOfWar2;
 		map[CRC::GiTS] = GSC_GiTS;
 		map[CRC::Onimusha3] = GSC_Onimusha3;
 		map[CRC::TalesOfAbyss] = GSC_TalesOfAbyss;

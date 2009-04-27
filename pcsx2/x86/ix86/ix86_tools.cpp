@@ -18,8 +18,8 @@
 
 #include "PrecompiledHeader.h"
 
-#include "Misc.h"
-#include "ix86/ix86.h"
+#include "System.h"
+#include "ix86.h"
 
 // used to make sure regs don't get changed while in recompiler
 // use FreezeMMXRegs, FreezeXMMRegs
@@ -28,7 +28,7 @@ u8 g_globalMMXSaved = 0;
 u8 g_globalXMMSaved = 0;
 
 PCSX2_ALIGNED16( static u64 g_globalMMXData[8] );
-PCSX2_ALIGNED16( static u64 g_globalXMMData[2*XMMREGS] );
+PCSX2_ALIGNED16( static u64 g_globalXMMData[2*iREGCNT_XMM] );
 
 
 /////////////////////////////////////////////////////////////////////
@@ -254,3 +254,4 @@ __forceinline void FreezeXMMRegs_(int save)
 #ifndef __INTEL_COMPILER
 }
 #endif
+

@@ -59,7 +59,7 @@ static bool OpenLogFile(wxFile& file, wxString& filename, wxWindow *parent)
 				return false;
 
 			default:
-				wxFAIL_MSG( "invalid message box return value" );
+				wxFAIL_MSG( L"invalid message box return value" );
         }
 
 		return ( bAppend ) ? 
@@ -210,4 +210,15 @@ void ConsoleLogFrame::Write( const wxChar* text )
 #endif
 
 	m_TextCtrl.AppendText( text );
+}
+
+void ConsoleLogFrame::Write( const char* text )
+{
+	// remove selection (WriteText is in fact ReplaceSelection)
+#ifdef __WXMSW__
+	wxTextPos nLen = m_TextCtrl.GetLastPosition();
+	m_TextCtrl.SetSelection(nLen, nLen);
+#endif
+
+	m_TextCtrl.AppendText( wxString::FromAscii(text) );
 }

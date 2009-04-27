@@ -30,6 +30,9 @@
 #include "iR5900Jump.h"
 #include "iR5900LoadStore.h"
 #include "iR5900Move.h"
+
+#include "BaseblockEx.h"
+
 #include "iMMI.h"
 #include "iFPU.h"
 #include "iCOP0.h"
@@ -41,10 +44,11 @@
 #include "vtlb.h"
 
 #include "SamplProf.h"
-#include "Paths.h"
 
 #include "NakedAsm.h"
+#include "Dump.h"
 
+using namespace x86Emitter;
 using namespace R5900;
 
 // used to disable register freezing during cpuBranchTests (registers
@@ -82,13 +86,14 @@ static u32 *recRAMCopy = NULL;
 void JITCompile();
 static BaseBlocks recBlocks(EE_NUMBLOCKS, (uptr)JITCompile);
 static u8* recPtr = NULL, *recStackPtr = NULL;
-static EEINST* s_pInstCache = NULL;
+EEINST* s_pInstCache = NULL;
 static u32 s_nInstCacheSize = 0;
 
 static BASEBLOCK* s_pCurBlock = NULL;
 static BASEBLOCKEX* s_pCurBlockEx = NULL;
-static u32 s_nEndBlock = 0; // what pc the current block ends	
+u32 s_nEndBlock = 0; // what pc the current block ends	
 static u32 s_nHasDelay = 0;
+static bool s_nBlockFF;
 
 // save states for branches
 GPR_reg64 s_saveConstRegs[32];
@@ -104,114 +109,8 @@ static u32 dumplog = 0;
 #define dumplog 0
 #endif
 
-#ifdef PCSX2_DEVBUILD
-// and not sure what these might have once been used for... (air)
-//static const char *txt0 = "EAX = %x : ECX = %x : EDX = %x\n";
-//static const char *txt0RC = "EAX = %x : EBX = %x : ECX = %x : EDX = %x : ESI = %x : EDI = %x\n";
-//static const char *txt1 = "REG[%d] = %x_%x\n";
-//static const char *txt2 = "M32 = %x\n";
-#endif
-
 static void iBranchTest(u32 newpc = 0xffffffff, bool noDispatch=false);
 static void ClearRecLUT(BASEBLOCK* base, int count);
-
-////////////////////////////////////////////////////
-static void iDumpBlock( int startpc, u8 * ptr )
-{
-	FILE *f;
-	string filename;
-	u32 i, j;
-	EEINST* pcur;
-	u8 used[34];
-	u8 fpuused[33];
-	int numused, count, fpunumused;
-
-	Console::Status( "dump1 %x:%x, %x", params startpc, pc, cpuRegs.cycle );
-	Path::CreateDirectory( "dumps" );
-	ssprintf( filename, "dumps\\R5900dump%.8X.txt", startpc );
-
-	fflush( stdout );
-//	f = fopen( "dump1", "wb" );
-//	fwrite( ptr, 1, (u32)x86Ptr[0] - (u32)ptr, f );
-//	fclose( f );
-//
-//	sprintf( command, "objdump -D --target=binary --architecture=i386 dump1 > %s", filename );
-//	system( command );
-
-	f = fopen( filename.c_str(), "w" );
-
-	std::string output;
-
-    if( disR5900GetSym(startpc) != NULL )
-        fprintf(f, "%s\n", disR5900GetSym(startpc));
-	for ( i = startpc; i < s_nEndBlock; i += 4 ) {
-		disR5900Fasm( output, memRead32( i ), i );
-		fprintf( f, output.c_str() );
-	}
-
-	// write the instruction info
-
-	fprintf(f, "\n\nlive0 - %x, live1 - %x, live2 - %x, lastuse - %x\nmmx - %x, xmm - %x, used - %x\n",
-		EEINST_LIVE0, EEINST_LIVE1, EEINST_LIVE2, EEINST_LASTUSE, EEINST_MMX, EEINST_XMM, EEINST_USED);
-
-	memzero_obj(used);
-	numused = 0;
-	for(i = 0; i < ArraySize(s_pInstCache->regs); ++i) {
-		if( s_pInstCache->regs[i] & EEINST_USED ) {
-			used[i] = 1;
-			numused++;
-		}
-	}
-
-	memzero_obj(fpuused);
-	fpunumused = 0;
-	for(i = 0; i < ArraySize(s_pInstCache->fpuregs); ++i) {
-		if( s_pInstCache->fpuregs[i] & EEINST_USED ) {
-			fpuused[i] = 1;
-			fpunumused++;
-		}
-	}
-
-	fprintf(f, "       ");
-	for(i = 0; i < ArraySize(s_pInstCache->regs); ++i) {
-		if( used[i] ) fprintf(f, "%2d ", i);
-	}
-	for(i = 0; i < ArraySize(s_pInstCache->fpuregs); ++i) {
-		if( fpuused[i] ) fprintf(f, "%2d ", i);
-	}
-	fprintf(f, "\n");
-
-	fprintf(f, "       ");
-	for(i = 0; i < ArraySize(s_pInstCache->regs); ++i) {
-		if( used[i] ) fprintf(f, "%s ", disRNameGPR[i]);
-	}
-	for(i = 0; i < ArraySize(s_pInstCache->fpuregs); ++i) {
-		if( fpuused[i] ) fprintf(f, "%s ", i<32?"FR":"FA");
-	}
-	fprintf(f, "\n");
-
-	pcur = s_pInstCache+1;
-	for( i = 0; i < (s_nEndBlock-startpc)/4; ++i, ++pcur) {
-		fprintf(f, "%2d: %2.2x ", i+1, pcur->info);
-		
-		count = 1;
-		for(j = 0; j < ArraySize(s_pInstCache->regs); j++) {
-			if( used[j] ) {
-				fprintf(f, "%2.2x%s", pcur->regs[j], ((count%8)&&count<numused)?"_":" ");
-				++count;
-			}
-		}
-		count = 1;
-		for(j = 0; j < ArraySize(s_pInstCache->fpuregs); j++) {
-			if( fpuused[j] ) {
-				fprintf(f, "%2.2x%s", pcur->fpuregs[j], ((count%8)&&count<fpunumused)?"_":" ");
-				++count;
-			}
-		}
-		fprintf(f, "\n");
-	}
-	fclose( f );
-}
 
 #ifdef PCSX2_VM_COISSUE
 static u8 _eeLoadWritesRs(u32 tempcode)
@@ -295,7 +194,7 @@ void _eeFlushAllUnused()
 	}
 
 	//TODO when used info is done for FPU and VU0
-	for(i = 0; i < XMMREGS; ++i) {
+	for(i = 0; i < iREGCNT_XMM; ++i) {
 		if( xmmregs[i].inuse && xmmregs[i].type != XMMTYPE_GPRREG )
 			_freeXMMreg(i);
 	}
@@ -367,7 +266,7 @@ void _eeMoveGPRtoM(u32 to, int fromgpr)
 void _eeMoveGPRtoRm(x86IntRegType to, int fromgpr)
 {
 	if( GPR_IS_CONST1(fromgpr) )
-		MOV32ItoRmOffset( to, g_cpuConstRegs[fromgpr].UL[0], 0 );
+		MOV32ItoRm( to, g_cpuConstRegs[fromgpr].UL[0] );
 	else {
 		int mmreg;
 		
@@ -380,7 +279,7 @@ void _eeMoveGPRtoRm(x86IntRegType to, int fromgpr)
 		}
 		else {
 			MOV32MtoR(EAX, (int)&cpuRegs.GPR.r[ fromgpr ].UL[ 0 ] );
-			MOV32RtoRm(to, EAX );
+			MOV32RtoRm( to, EAX );
 		}
 	}
 }
@@ -388,7 +287,7 @@ void _eeMoveGPRtoRm(x86IntRegType to, int fromgpr)
 int _flushXMMunused()
 {
 	int i;
-	for (i=0; i<XMMREGS; i++) {
+	for (i=0; i<iREGCNT_XMM; i++) {
 		if (!xmmregs[i].inuse || xmmregs[i].needed || !(xmmregs[i].mode&MODE_WRITE) ) continue;
 		
 		if (xmmregs[i].type == XMMTYPE_GPRREG ) {
@@ -407,7 +306,7 @@ int _flushXMMunused()
 int _flushMMXunused()
 {
 	int i;
-	for (i=0; i<MMXREGS; i++) {
+	for (i=0; i<iREGCNT_MMX; i++) {
 		if (!mmxregs[i].inuse || mmxregs[i].needed || !(mmxregs[i].mode&MODE_WRITE) ) continue;
 		
 		if( MMX_ISGPR(mmxregs[i].reg) ) {
@@ -525,7 +424,7 @@ void recResetEE( void )
 
 	maxrecmem = 0;
 
-	memset_8<0xcd, REC_CACHEMEM>(recMem);
+	memset_8<0xcc, REC_CACHEMEM>(recMem);	// 0xcc is INT3
 	memzero_ptr<m_recBlockAllocSize>( m_recBlockAlloc );
 	ClearRecLUT((BASEBLOCK*)m_recBlockAlloc,
 		(((Ps2MemSize::Base + Ps2MemSize::Rom + Ps2MemSize::Rom1) / 4)));
@@ -579,8 +478,8 @@ void recResetEE( void )
 	// so a fix will have to wait until later. -_- (air)
 
 	//x86SetPtr(recMem+REC_CACHEMEM);
-	//dyna_block_discard_recmem=(u8*)x86Ptr[0];
-	//JMP32( (uptr)&dyna_block_discard - ( (u32)x86Ptr[0] + 5 ));
+	//dyna_block_discard_recmem=(u8*)x86Ptr;
+	//JMP32( (uptr)&dyna_block_discard - ( (u32)x86Ptr + 5 ));
 
 	x86SetPtr(recMem);
 
@@ -677,7 +576,7 @@ static void __naked DispatcherReg()
 	}
 }
 
-__forceinline void recExecute()
+void recExecute()
 {
 	// Optimization note : Compared pushad against manually pushing the regs one-by-one.
 	// Manually pushing is faster, especially on Core2's and such. :)
@@ -791,7 +690,7 @@ void recSYSCALL( void ) {
 	CMP32ItoM((uptr)&cpuRegs.pc, pc);
 	j8Ptr[0] = JE8(0);
 	ADD32ItoM((uptr)&cpuRegs.cycle, eeScaleBlockCycles());
-	JMP32((uptr)DispatcherReg - ( (uptr)x86Ptr[0] + 5 ));
+	JMP32((uptr)DispatcherReg - ( (uptr)x86Ptr + 5 ));
 	x86SetJ8(j8Ptr[0]);
 	//branch = 2;
 }
@@ -1065,7 +964,7 @@ u32 eeScaleBlockCycles()
 	// caused by sync hacks and such, since games seem to care a lot more about
 	// these small blocks having accurate cycle counts.
 
-	if( s_nBlockCycles <= (5<<3) || (CHECK_EE_CYCLERATE == 0) )
+	if( s_nBlockCycles <= (5<<3) || (Config.Hacks.EECycleRate == 0) )
 		return s_nBlockCycles >> 3;
 
 	uint scalarLow, scalarMid, scalarHigh;
@@ -1073,7 +972,7 @@ u32 eeScaleBlockCycles()
 	// Note: larger blocks get a smaller scalar, to help keep
 	// them from becoming "too fat" and delaying branch tests.
 
-	switch( CHECK_EE_CYCLERATE )
+	switch( Config.Hacks.EECycleRate )
 	{
 		case 0:	return s_nBlockCycles >> 3;
 
@@ -1141,19 +1040,27 @@ static void iBranchTest(u32 newpc, bool noDispatch)
 	// Equiv code to:
 	//    cpuRegs.cycle += blockcycles;
 	//    if( cpuRegs.cycle > g_nextBranchCycle ) { DoEvents(); }
-	MOV32MtoR(EAX, (uptr)&cpuRegs.cycle);
-	ADD32ItoR(EAX, eeScaleBlockCycles());
-	MOV32RtoM((uptr)&cpuRegs.cycle, EAX); // update cycles
-	SUB32MtoR(EAX, (uptr)&g_nextBranchCycle);
 
-	if (!noDispatch) {
-		if (newpc == 0xffffffff)
-			JS32((uptr)DispatcherReg - ( (uptr)x86Ptr[0] + 6 ));
-		else
-			iBranch(newpc, 1);
+	if (Config.Hacks.IdleLoopFF && s_nBlockFF) {
+		xMOV(eax, ptr32[&g_nextBranchCycle]);
+		xADD(ptr32[&cpuRegs.cycle], eeScaleBlockCycles());
+		xCMP(eax, ptr32[&cpuRegs.cycle]);
+		xCMOVL(eax, ptr32[&cpuRegs.cycle]);
+		xMOV(ptr32[&cpuRegs.cycle], eax);
+		RET();
+	} else {
+		MOV32MtoR(EAX, (uptr)&cpuRegs.cycle);
+		ADD32ItoR(EAX, eeScaleBlockCycles());
+		MOV32RtoM((uptr)&cpuRegs.cycle, EAX); // update cycles
+		SUB32MtoR(EAX, (uptr)&g_nextBranchCycle);
+		if (!noDispatch) {
+			if (newpc == 0xffffffff)
+				JS32((uptr)DispatcherReg - ( (uptr)x86Ptr + 6 ));
+			else
+				iBranch(newpc, 1);
+		}
+		RET();
 	}
-
-	RET();
 }
 
 static void checkcodefn()
@@ -1211,7 +1118,7 @@ void recompileNextInstruction(int delayslot)
 
 	g_pCurInstInfo++;
 
-	for(i = 0; i < MMXREGS; ++i) {
+	for(i = 0; i < iREGCNT_MMX; ++i) {
 		if( mmxregs[i].inuse ) {
 			assert( MMX_ISGPR(mmxregs[i].reg) );
 			count = _recIsRegWritten(g_pCurInstInfo, (s_nEndBlock-pc)/4 + 1, XMMTYPE_GPRREG, mmxregs[i].reg-MMX_GPR);
@@ -1220,7 +1127,7 @@ void recompileNextInstruction(int delayslot)
 		}
 	}
 
-	for(i = 0; i < XMMREGS; ++i) {
+	for(i = 0; i < iREGCNT_XMM; ++i) {
 		if( xmmregs[i].inuse ) {
 			count = _recIsRegWritten(g_pCurInstInfo, (s_nEndBlock-pc)/4 + 1, xmmregs[i].type, xmmregs[i].reg);
 			if( count > 0 ) xmmregs[i].counter = 1000-count;
@@ -1283,8 +1190,9 @@ void recompileNextInstruction(int delayslot)
 					return;
 			}
 		}
+		//If thh COP0 DIE bit is disabled, double the cycles. Happens rarely.
+		s_nBlockCycles += opcode.cycles * (2 - ((cpuRegs.CP0.n.Config >> 18) & 0x1));
 		opcode.recompile();
-		s_nBlockCycles += opcode.cycles;
 	}
 
 	if( !delayslot ) {
@@ -1310,6 +1218,9 @@ void recompileNextInstruction(int delayslot)
 //	_freeMMXregs();
 //	_flushCachedRegs();
 //	g_cpuHasConstReg = 1;
+
+	if (!delayslot && x86Ptr - recPtr > 0x1000)
+		s_nEndBlock = pc;
 }
 
 extern u32 psxdump;
@@ -1348,6 +1259,13 @@ void __fastcall dyna_block_discard(u32 start,u32 sz)
 	Cpu->Clear(start,sz);
 }
 
+void __fastcall dyna_block_reset(u32 start,u32 sz)
+{
+	DevCon::WriteLn("dyna_block_reset %08X , count %d", params start,sz);
+	Cpu->Clear(start & ~0xfffUL, 0x400);
+	mmap_MarkCountedRamPage(PSM(start), start & ~0xfffUL);
+}
+
 void recRecompile( const u32 startpc )
 {
 	u32 i = 0;
@@ -1375,7 +1293,11 @@ void recRecompile( const u32 startpc )
 
 	x86SetPtr( recPtr );
 	x86Align(16);
-	recPtr = x86Ptr[_EmitterId_];
+	recPtr = x86Ptr;
+
+	s_nBlockFF = false;
+	if (HWADDR(startpc) == 0x81fc0)
+		s_nBlockFF = true;
 
 	s_pCurBlock = PC_GETBLOCK(startpc);
 
@@ -1581,7 +1503,7 @@ StartRecomp:
 							// see how many stores there are
 							u32 j;
 							// use xmmregs since only supporting lwc1,lq,swc1,sq
-							for(j = i+8; j < s_nEndBlock && j < i+4*XMMREGS; j += 4 ) {
+							for(j = i+8; j < s_nEndBlock && j < i+4*iREGCNT_XMM; j += 4 ) {
 								u32 nncode = *(u32*)PSM(j);
 								if( (nncode>>26) != (curcode>>26) || ((curcode>>21)&0x1f) != ((nncode>>21)&0x1f) ||
 									_eeLoadWritesRs(nncode))
@@ -1590,7 +1512,7 @@ StartRecomp:
 
 							if( j > i+8 ) {
 								u32 num = (j-i)>>2; // number of stores that can coissue
-								assert( num <= XMMREGS );
+								assert( num <= iREGCNT_XMM );
 
 								g_pCurInstInfo[0].numpeeps = num-1;
 								g_pCurInstInfo[0].info |= EEINSTINFO_COREC;
@@ -1688,9 +1610,10 @@ StartRecomp:
 		iDumpBlock(startpc, recPtr);
 #endif
 
+	static u16 manual_page[Ps2MemSize::Base >> 12];
 	u32 sz=(s_nEndBlock-startpc)>>2;
 
-	u32 inpage_ptr=startpc;
+	u32 inpage_ptr=HWADDR(startpc);
 	u32 inpage_sz=sz*4;
 
 	while(inpage_sz)
@@ -1701,12 +1624,14 @@ StartRecomp:
 
 		if(PageType!=-1)
 		{
-			if (PageType==0)
+			if (PageType==0) {
 				mmap_MarkCountedRamPage(PSM(inpage_ptr),inpage_ptr&~0xFFF);
+				manual_page[inpage_ptr >> 12] = 0;
+			}
 			else
 			{
-				MOV32ItoR(ECX, startpc);
-				MOV32ItoR(EDX, sz);
+				MOV32ItoR(ECX, inpage_ptr);
+				MOV32ItoR(EDX, pgsz);
 
 				u32 lpc=inpage_ptr;
 				u32 stg=pgsz;
@@ -1714,11 +1639,16 @@ StartRecomp:
 				{
 					// was dyna_block_discard_recmem.  See note in recResetEE for details.
 					CMP32ItoM((uptr)PSM(lpc),*(u32*)PSM(lpc));
-					JNE32(((u32)&dyna_block_discard)- ( (u32)x86Ptr[0] + 6 ));
+					JNE32(((u32)&dyna_block_discard)- ( (u32)x86Ptr + 6 ));
 
 					stg-=4;
 					lpc+=4;
 				}
+				if (startpc != 0x81fc0) {
+					xADD(ptr16[&manual_page[inpage_ptr >> 12]], 1);
+					xJC( dyna_block_reset );
+				}
+
 				DbgCon::WriteLn("Manual block @ %08X : %08X %d %d %d %d", params
 					startpc,inpage_ptr,pgsz,0x1000-inpage_offs,inpage_sz,sz*4);
 			}
@@ -1796,18 +1726,18 @@ StartRecomp:
 
 		if( willbranch3 || !branch) {
 			iFlushCall(FLUSH_EVERYTHING);
-			iBranch(pc, 0);
+			iBranchTest(pc);
 		}
 	}
 
-	assert( x86Ptr[0] < recMem+REC_CACHEMEM );
+	assert( x86Ptr < recMem+REC_CACHEMEM );
 	assert( recStackPtr < recStack+RECSTACK_SIZE );
 	assert( x86FpuState == 0 );
 
-	assert(x86Ptr[_EmitterId_] - recPtr < 0x10000);
-	s_pCurBlockEx->x86size = x86Ptr[_EmitterId_] - recPtr;
+	assert(x86Ptr - recPtr < 0x10000);
+	s_pCurBlockEx->x86size = x86Ptr - recPtr;
 
-	recPtr = x86Ptr[0];
+	recPtr = x86Ptr;
 
 	assert( (g_cpuHasConstReg&g_cpuFlushedConstReg) == g_cpuHasConstReg );
 

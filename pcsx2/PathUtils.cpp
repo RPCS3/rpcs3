@@ -36,65 +36,79 @@ namespace Path
 
 #ifdef WIN32
 // Path Separator used when creating new paths.
-static const char Separator( '\\' );
+static const wxChar Separator( wxT('\\') );
 // Path separators used when breaking existing paths into parts and pieces.
-static const wxString Delimiters( "\\/" );
+static const wxString Delimiters( wxT("\\/") );
+
+static const wxChar SeparatorExt( wxT('.') );
+
 #else
 static const char Separator = '/';
 static const char Delimiters( '/' );
 #endif
 
+static bool IsPathSeparator( wxChar src )
+{
+#ifdef WIN32
+	return (src == Separator) || (src == wxT('/'));
+#else
+	return src == Separator;
+#endif
+}
+
 bool Exists( const wxString& path )
 {
-	struct stat sbuf;
-	return stat( path.c_str(), &sbuf ) == 0;
+	wxStructStat sbuf;
+	return wxStat( path.c_str(), &sbuf ) == 0;
 }
 
 // This function returns false if the path does not exist, or if the path exists and
 // is a file.
-bool isDirectory( const wxString& path )
+bool IsDirectory( const wxString& path )
 {
-	struct stat sbuf;
-	if( stat( path.c_str(), &sbuf ) == -1 ) return false;
+	wxStructStat sbuf;
+	if( wxStat( path.c_str(), &sbuf ) == -1 ) return false;
 	return !!(sbuf.st_mode & _S_IFDIR);
 }
 
 // This function returns false if the path does not exist, or if the path exists and
 // is a directory.
-bool isFile( const wxString& path )
+bool IsFile( const wxString& path )
 {
-	struct stat sbuf;
-	if( stat( path.c_str(), &sbuf ) == -1 ) return false;
+	wxStructStat sbuf;
+	if( wxStat( path.c_str(), &sbuf ) == -1 ) return false;
 	return !!(sbuf.st_mode & _S_IFREG);
 }
 
 // Returns the length of the file.
 // returns -1 if the file is not found.
-int getFileSize( const wxString& path )
+int GetFileSize( const wxString& path )
 {
-	struct stat sbuf;
-	if( stat( path.c_str(), &sbuf ) == -1 ) return -1;
+	wxStructStat sbuf;
+	if( wxStat( path.c_str(), &sbuf ) == -1 ) return -1;
 	return sbuf.st_size;
 }
 
-bool isRooted( const wxString& path )
+bool IsRooted( const wxString& path )
 {
 	// if the first character is a backslash or period, or the second character
 	// a colon, it's a safe bet we're rooted.
 
-	if( path[0] == 0 ) return FALSE;
+	if( path[0] == 0 ) return false;
 #ifdef WIN32
-	return (path[0] == '/') || (path[0] == '\\') || (path[1] == ':');
+	return IsPathSeparator(path[0]) || ( (path[1] == ':') && IsPathSeparator(path[2]) );
 #else
-	return (path[0] == Separator);
+	return IsPathSeparator(path[0]);
 #endif
 }
 
+// ------------------------------------------------------------------------
 // Concatenates two pathnames together, inserting delimiters (backslash on win32)
 // as needed! Assumes the 'dest' is allocated to at least g_MaxPath length.
 wxString Combine( const wxString& srcPath, const wxString& srcFile )
 {
-	int pathlen, guesslen;
+#if 0
+	int pathlen;
 
 	if( srcFile.empty() )
 	{
@@ -102,7 +116,7 @@ wxString Combine( const wxString& srcPath, const wxString& srcFile )
 		return srcPath;
 	}
 
-	if( isRooted( srcFile ) || srcPath.empty() )
+	if( IsRooted( srcFile ) || srcPath.empty() )
 	{
 		// No source path?  Or source filename is rooted?
 		// Return the filename unmodified.
@@ -114,7 +128,7 @@ wxString Combine( const wxString& srcPath, const wxString& srcFile )
 	// This might be a problem on Linux builds or maybe it doesn't matter?
 
 	pathlen = srcPath.length();
-	while( pathlen > 0 && ((srcPath[pathlen-1] == '\\') || (srcPath[pathlen-1] == '/')) )
+	while( pathlen > 0 && IsPathSeparator(srcPath[pathlen-1]) )
 		--pathlen;
 
 	// Concatenate strings:
@@ -129,14 +143,31 @@ wxString Combine( const wxString& srcPath, const wxString& srcFile )
 	dest += Separator;
 	dest += srcFile;
 	return dest;
+	
+#else
+	// Use wx's Path system for concatenation because it's pretty smart.
+	
+	return (wxDirName( srcPath ) + srcFile).GetFullPath();
+#endif
+}
+
+wxString Combine( const wxDirName& srcPath, const wxFileName& srcFile )
+{
+	return (srcPath + srcFile).GetFullPath();
+}
+
+wxString Combine( const wxString& srcPath, const wxDirName& srcFile )
+{
+	return ((wxDirName)srcPath + srcFile).ToString();
 }
 
 // Replaces the extension of the file with the one given.
+// This function works for path names as well as file names.
 wxString ReplaceExtension( const wxString& src, const wxString& ext )
 {
 	wxString dest;
 
-	int pos = src.find_last_of( '.' );
+	int pos = src.find_last_of( SeparatorExt );
 	if( pos == wxString::npos || pos == 0 )
 		dest = src;
 	else
@@ -151,97 +182,32 @@ wxString ReplaceExtension( const wxString& src, const wxString& ext )
 	return dest;
 }
 
-// finds the starting character position of a filename for the given source path.
-static int _findFilenamePosition( const wxString& src)
-{
-	// note: the source path could have multiple trailing slashes.  We want to ignore those.
-
-	unsigned int startpos = src.find_last_not_of( Delimiters );
-
-	if(startpos == wxString::npos )
-		return 0;
-
-	int pos;
-
-	if( startpos < src.length() )
-	{
-		wxString trimmed( src.begin(), src.begin()+startpos );
-		pos = trimmed.find_last_of( Delimiters );
-	}
-	else
-	{
-		pos = src.find_last_of( Delimiters );
-	}
-
-	if( pos == wxString::npos )
-		return 0;
-
-	return pos;
-}
-
 wxString ReplaceFilename( const wxString& src, const wxString& newfilename )
 {
-	wxString dest;
-	int pos = _findFilenamePosition( src );
+	// Implementation note: use wxWidgets to do this job.
 
-	if( pos == 0 )
-		dest = src;
-	else
-		dest.assign( src.begin(), src.begin()+pos );
-
-	if( !newfilename.empty() )
-	{
-		dest += Separator;
-		dest += newfilename;
-	}
-	return dest;
+	wxFileName jojo( src );
+	jojo.SetFullName( newfilename );
+	return jojo.GetFullPath();
 }
 
 wxString GetFilename( const wxString& src )
 {
-	int pos = _findFilenamePosition( src );
-	return wxString( src.begin()+pos, src.end() );
+	return wxFileName(src).GetFullName();
 }
 
 wxString GetFilenameWithoutExt( const wxString& src )
 {
-	wxString fname( GetFilename( src ) );
-
-	int pos = fname.find_last_of( '.' );
-	if( pos == wxString::npos || pos == 0 )
-		return fname;
-	else
-		return wxString( fname.begin(), fname.begin()+pos );
+	return wxFileName(src).GetName();
 }
 
 wxString GetDirectory( const wxString& src )
 {
-	int pos = _findFilenamePosition( src );
-	if( pos == 0 )
-		return wxString();
-	else
-		return wxString( src.begin(), src.begin()+pos );
+	return wxFileName(src).GetPath();
 }
 
-// This function mimics the old ANSI C splitpath function.  It's more or less superceeded
-// by one of the many other Path utility functions, but someone might find it useful.
-void Split( const wxString& src, wxString& destpath, wxString& destfile )
-{
-	int pos = _findFilenamePosition( src );
 
-	if( pos == 0 )
-	{
-		destpath.clear();
-		destfile = src;
-	}
-	else
-	{
-		destpath.assign( src.begin(), src.begin()+pos );
-		destfile.assign( src.begin()+pos, src.end() );
-	}
-}
-
-// Assigns the base/root directory of the given path into dest.
+// returns the base/root directory of the given path.
 // Example /this/that/something.txt -> dest == "/"
 wxString GetRootDirectory( const wxString& src )
 {
@@ -254,11 +220,12 @@ wxString GetRootDirectory( const wxString& src )
 
 void CreateDirectory( const wxString& src )
 {
-#ifdef _WIN32
-	_mkdir( src.c_str() );
-#else
-	mkdir( src.c_str(), 0755);
-#endif
+	wxFileName::Mkdir( src );
+}
+
+void RemoveDirectory( const wxString& src )
+{
+	wxFileName::Rmdir( src );
 }
 
 }

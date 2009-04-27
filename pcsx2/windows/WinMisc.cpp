@@ -37,16 +37,3 @@ u64 GetCPUTicks()
 	QueryPerformanceCounter( &count );
 	return count.QuadPart;
 }
-
-void cdvdSetSystemTime( cdvdStruct& cdvd )
-{
-	SYSTEMTIME st;
-	GetSystemTime(&st);
-
-	cdvd.RTC.second = (u8)(st.wSecond);
-	cdvd.RTC.minute = (u8)(st.wMinute);
-	cdvd.RTC.hour = (u8)(st.wHour+1)%24;
-	cdvd.RTC.day = (u8)(st.wDay);
-	cdvd.RTC.month = (u8)(st.wMonth);
-	cdvd.RTC.year = (u8)(st.wYear - 2000);
-}

@@ -112,7 +112,8 @@ void __fastcall intDoBranch(u32 target)
 	}
 }
 
-void intSetBranch() {
+void intSetBranch() 
+{
 	branch2 = /*cpuRegs.branch =*/ 1;
 }
 
@@ -133,90 +134,223 @@ namespace OpcodeImpl {
 * Format:  OP target                                     *
 *********************************************************/
 
-void J()   {
+void J()   
+{
 	doBranch(_JumpTarget_);
 }
 
-void JAL() {
-	_SetLink(31); doBranch(_JumpTarget_);
+void JAL() 
+{
+	_SetLink(31); 
+	doBranch(_JumpTarget_);
 }
 
 /*********************************************************
 * Register branch logic                                  *
 * Format:  OP rs, rt, offset                             *
 *********************************************************/
-#define RepBranchi32(op) \
-	if (cpuRegs.GPR.r[_Rs_].SD[0] op cpuRegs.GPR.r[_Rt_].SD[0]) doBranch(_BranchTarget_); \
-	else intEventTest();
 
+void BEQ()  // Branch if Rs == Rt
+{	
+	if (cpuRegs.GPR.r[_Rs_].SD[0] == cpuRegs.GPR.r[_Rt_].SD[0]) 
+		doBranch(_BranchTarget_); 
+	else 
+		intEventTest();
+} 
 
-void BEQ() {	RepBranchi32(==) }  // Branch if Rs == Rt
-void BNE() {	RepBranchi32(!=) }  // Branch if Rs != Rt
+void BNE()  // Branch if Rs != Rt
+{	
+	if (cpuRegs.GPR.r[_Rs_].SD[0] != cpuRegs.GPR.r[_Rt_].SD[0]) 
+		doBranch(_BranchTarget_); 
+	else 
+		intEventTest();
+} 
 
 /*********************************************************
 * Register branch logic                                  *
 * Format:  OP rs, offset                                 *
 *********************************************************/
-#define RepZBranchi32(op) \
-	if(cpuRegs.GPR.r[_Rs_].SD[0] op 0) { \
-		doBranch(_BranchTarget_); \
-	}
 
-#define RepZBranchLinki32(op) \
+void BGEZ()    // Branch if Rs >= 0
+{ 
+	if(cpuRegs.GPR.r[_Rs_].SD[0] >= 0) 
+	{ 
+		doBranch(_BranchTarget_); 
+	}
+}     
+
+void BGEZAL() // Branch if Rs >= 0 and link
+{ 
+	_SetLink(31); 
+	
+	if (cpuRegs.GPR.r[_Rs_].SD[0] >= 0)
+	{ 
+		doBranch(_BranchTarget_); 
+	}
+}  
+
+void BGTZ()    // Branch if Rs >  0
+{ 
+	if (cpuRegs.GPR.r[_Rs_].SD[0] > 0) 
+	{ 
+		doBranch(_BranchTarget_); 
+	}
+}      
+
+void BLEZ()   // Branch if Rs <= 0
+{ 
+	if (cpuRegs.GPR.r[_Rs_].SD[0] <= 0) 
+	{ 
+		doBranch(_BranchTarget_); 
+	}
+}   
+
+void BLTZ()    // Branch if Rs <  0
+{ 
+	if (cpuRegs.GPR.r[_Rs_].SD[0] < 0) 
+	{ 
+		doBranch(_BranchTarget_); 
+	}
+}    
+
+void BLTZAL()  // Branch if Rs <  0 and link
+{ 
 	_SetLink(31); \
-	if(cpuRegs.GPR.r[_Rs_].SD[0] op 0) { \
-		doBranch(_BranchTarget_); \
+	if (cpuRegs.GPR.r[_Rs_].SD[0] < 0) 
+	{ 
+		doBranch(_BranchTarget_); 
 	}
-
-void BGEZ()   { RepZBranchi32(>=) }      // Branch if Rs >= 0
-void BGEZAL() { RepZBranchLinki32(>=) }  // Branch if Rs >= 0 and link
-void BGTZ()   { RepZBranchi32(>) }       // Branch if Rs >  0
-void BLEZ()   { RepZBranchi32(<=) }      // Branch if Rs <= 0
-void BLTZ()   { RepZBranchi32(<) }       // Branch if Rs <  0
-void BLTZAL() { RepZBranchLinki32(<) }   // Branch if Rs <  0 and link
-
+}  
 
 /*********************************************************
 * Register branch logic  Likely                          *
 * Format:  OP rs, offset                                 *
 *********************************************************/
-#define RepZBranchi32Likely(op) \
-	if(cpuRegs.GPR.r[_Rs_].SD[0] op 0) { \
-		doBranch(_BranchTarget_); \
-	} else { cpuRegs.pc +=4; intEventTest(); }
-
-#define RepZBranchLinki32Likely(op) \
-	_SetLink(31); \
-	if(cpuRegs.GPR.r[_Rs_].SD[0] op 0) { \
-		doBranch(_BranchTarget_); \
-	} else { cpuRegs.pc +=4; intEventTest(); }
-
-#define RepBranchi32Likely(op) \
-	if(cpuRegs.GPR.r[_Rs_].SD[0] op cpuRegs.GPR.r[_Rt_].SD[0]) { \
-		doBranch(_BranchTarget_); \
-	} else { cpuRegs.pc +=4; intEventTest(); }
 
 
-void BEQL()    {  RepBranchi32Likely(==)      }  // Branch if Rs == Rt
-void BNEL()    {  RepBranchi32Likely(!=)      }  // Branch if Rs != Rt
-void BLEZL()   {  RepZBranchi32Likely(<=)     }  // Branch if Rs <= 0
-void BGTZL()   {  RepZBranchi32Likely(>)      }  // Branch if Rs >  0
-void BLTZL()   {  RepZBranchi32Likely(<)      }  // Branch if Rs <  0
-void BGEZL()   {  RepZBranchi32Likely(>=)     }  // Branch if Rs >= 0
-void BLTZALL() {  RepZBranchLinki32Likely(<)  }  // Branch if Rs <  0 and link
-void BGEZALL() {  RepZBranchLinki32Likely(>=) }  // Branch if Rs >= 0 and link
+void BEQL()    // Branch if Rs == Rt
+{ 
+	if(cpuRegs.GPR.r[_Rs_].SD[0] == cpuRegs.GPR.r[_Rt_].SD[0]) 
+	{ 
+		doBranch(_BranchTarget_); 
+	} 
+	else 
+	{ 
+		cpuRegs.pc +=4; 
+		intEventTest(); 
+	}   
+}
+
+void BNEL()     // Branch if Rs != Rt
+{  
+	if(cpuRegs.GPR.r[_Rs_].SD[0] != cpuRegs.GPR.r[_Rt_].SD[0]) 
+	{ 
+		doBranch(_BranchTarget_); 
+	} 
+	else 
+	{ 
+		cpuRegs.pc +=4; 
+		intEventTest(); 
+	}   
+}
+
+void BLEZL()    // Branch if Rs <= 0
+{ 
+	if(cpuRegs.GPR.r[_Rs_].SD[0] <= 0) 
+	{ 
+		doBranch(_BranchTarget_); 
+	} 
+	else 
+	{ 
+		cpuRegs.pc +=4; 
+		intEventTest();
+	}
+}
+
+void BGTZL()     // Branch if Rs >  0
+{ 
+	if(cpuRegs.GPR.r[_Rs_].SD[0] > 0) 
+	{ 
+		doBranch(_BranchTarget_); 
+	} 
+	else 
+	{ 
+		cpuRegs.pc +=4; 
+		intEventTest();
+	}
+}
+
+void BLTZL()     // Branch if Rs <  0
+{  
+	if(cpuRegs.GPR.r[_Rs_].SD[0] < 0) 
+	{ 
+		doBranch(_BranchTarget_); 
+	} 
+	else 
+	{ 
+		cpuRegs.pc +=4; 
+		intEventTest();
+	}
+}
+
+void BGEZL()     // Branch if Rs >= 0
+{ 
+	if(cpuRegs.GPR.r[_Rs_].SD[0] >= 0) 
+	{ 
+		doBranch(_BranchTarget_); 
+	} 
+	else 
+	{ 
+		cpuRegs.pc +=4; 
+		intEventTest();
+	}
+}
+
+void BLTZALL()   // Branch if Rs <  0 and link
+{ 
+	_SetLink(31); 
+	
+	if(cpuRegs.GPR.r[_Rs_].SD[0] < 0) 
+	{ 
+		doBranch(_BranchTarget_); 
+	} 
+	else 
+	{ 
+		cpuRegs.pc +=4; 
+		intEventTest(); 
+	}
+}
+
+void BGEZALL()   // Branch if Rs >= 0 and link
+{  
+	_SetLink(31); 
+	
+	if(cpuRegs.GPR.r[_Rs_].SD[0] >= 0) 
+	{ 
+		doBranch(_BranchTarget_); 
+	} 
+	else 
+	{ 
+		cpuRegs.pc +=4; 
+		intEventTest(); 
+	}
+}
 
 /*********************************************************
 * Register jump                                          *
 * Format:  OP rs, rd                                     *
 *********************************************************/
-void JR()   { 
+void JR()  
+{ 
 	doBranch(cpuRegs.GPR.r[_Rs_].UL[0]); 
 }
 
-void JALR() { 
+void JALR()
+{ 
 	u32 temp = cpuRegs.GPR.r[_Rs_].UL[0];
-	if (_Rd_) { _SetLink(_Rd_); }
+	
+	if (_Rd_)  _SetLink(_Rd_); 
+	
 	doBranch(temp);
 }
 
@@ -235,7 +369,7 @@ void intReset()
 	branch2 = 0;
 }
 
-bool intEventTest()
+ bool intEventTest()
 {
 	// Perform counters, ints, and IOP updates:
 	return _cpuBranchTest_Shared();

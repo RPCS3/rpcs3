@@ -25,20 +25,29 @@
 #include "iR5900.h"
 
 using namespace vtlb_private;
+using namespace x86Emitter;
 
 // NOTICE: This function *destroys* EAX!!
 // Moves 128 bits of memory from the source register ptr to the dest register ptr.
 // (used as an equivalent to movaps, when a free XMM register is unavailable for some reason)
 void MOV128_MtoM( x86IntRegType destRm, x86IntRegType srcRm )
 {
-	MOV32RmtoR(EAX,srcRm);
-	MOV32RtoRm(destRm,EAX);
-	MOV32RmtoROffset(EAX,srcRm,4);
-	MOV32RtoRmOffset(destRm,EAX,4);
-	MOV32RmtoROffset(EAX,srcRm,8);
-	MOV32RtoRmOffset(destRm,EAX,8);
-	MOV32RmtoROffset(EAX,srcRm,12);
-	MOV32RtoRmOffset(destRm,EAX,12);
+	// (this is one of my test cases for the new emitter --air)
+
+	xAddressReg src( srcRm );
+	xAddressReg dest( destRm );
+
+	xMOV( eax, ptr[src] );
+	xMOV( ptr[dest], eax );
+
+	xMOV( eax, ptr[src+4] );
+	xMOV( ptr[dest+4], eax );
+
+	xMOV( eax, ptr[src+8] );
+	xMOV( ptr[dest+8], eax );
+
+	xMOV( eax, ptr[src+12] );
+	xMOV( ptr[dest+12], eax );
 }
 
 /*
@@ -121,8 +130,8 @@ static void _vtlb_DynGen_DirectRead( u32 bits, bool sign )
 			if( _hasFreeMMXreg() )
 			{
 				const int freereg = _allocMMXreg(-1, MMX_TEMP, 0);
-				MOVQRmtoROffset(freereg,ECX,0);
-				MOVQRtoRmOffset(EDX,freereg,0);
+				MOVQRmtoR(freereg,ECX);
+				MOVQRtoRm(EDX,freereg);
 				_freeMMXreg(freereg);
 			}
 			else
@@ -130,8 +139,8 @@ static void _vtlb_DynGen_DirectRead( u32 bits, bool sign )
 				MOV32RmtoR(EAX,ECX);
 				MOV32RtoRm(EDX,EAX);
 
-				MOV32RmtoROffset(EAX,ECX,4);
-				MOV32RtoRmOffset(EDX,EAX,4);
+				MOV32RmtoR(EAX,ECX,4);
+				MOV32RtoRm(EDX,EAX,4);
 			}
 		break;
 
@@ -139,8 +148,8 @@ static void _vtlb_DynGen_DirectRead( u32 bits, bool sign )
 			if( _hasFreeXMMreg() )
 			{
 				const int freereg = _allocTempXMMreg( XMMT_INT, -1 );
-				SSE2_MOVDQARmtoROffset(freereg,ECX,0);
-				SSE2_MOVDQARtoRmOffset(EDX,freereg,0);
+				SSE2_MOVDQARmtoR(freereg,ECX);
+				SSE2_MOVDQARtoRm(EDX,freereg);
 				_freeXMMreg(freereg);
 			}
 			else
@@ -156,6 +165,7 @@ static void _vtlb_DynGen_DirectRead( u32 bits, bool sign )
 	}
 }
 
+// ------------------------------------------------------------------------
 static void _vtlb_DynGen_IndirectRead( u32 bits )
 {
 	int szidx;
@@ -178,6 +188,7 @@ static void _vtlb_DynGen_IndirectRead( u32 bits )
 	CALL32R(EAX);
 }
 
+// ------------------------------------------------------------------------
 // Recompiled input registers:
 //   ecx = source addr to read from
 //   edx = ptr to dest to write to
@@ -189,17 +200,18 @@ void vtlb_DynGenRead64(u32 bits)
 	SHR32ItoR(EAX,VTLB_PAGE_BITS);
 	MOV32RmSOffsettoR(EAX,EAX,(int)vtlbdata.vmap,2);
 	ADD32RtoR(ECX,EAX);
-	u8* _fullread = JS8(0);
+	xForwardJS8 _fullread;
 
 	_vtlb_DynGen_DirectRead( bits, false );
-	u8* cont = JMP8(0);
+	xForwardJump8 cont;
 
-	x86SetJ8(_fullread);
+	_fullread.SetTarget();
+	
 	_vtlb_DynGen_IndirectRead( bits );
-
-	x86SetJ8(cont);
+	cont.SetTarget();
 }
 
+// ------------------------------------------------------------------------
 // Recompiled input registers:
 //   ecx - source address to read from
 //   Returns read value in eax.
@@ -211,12 +223,12 @@ void vtlb_DynGenRead32(u32 bits, bool sign)
 	SHR32ItoR(EAX,VTLB_PAGE_BITS);
 	MOV32RmSOffsettoR(EAX,EAX,(int)vtlbdata.vmap,2);
 	ADD32RtoR(ECX,EAX);
-	u8* _fullread = JS8(0);
+	xForwardJS8 _fullread;
 
 	_vtlb_DynGen_DirectRead( bits, sign );
-	u8* cont = JMP8(0);
+	xForwardJump8 cont;
 
-	x86SetJ8(_fullread);
+	_fullread.SetTarget();
 	_vtlb_DynGen_IndirectRead( bits );
 
 	// perform sign extension on the result:
@@ -235,11 +247,10 @@ void vtlb_DynGenRead32(u32 bits, bool sign)
 		else
 			MOVZX32R16toR(EAX,EAX);
 	}
-
-	x86SetJ8(cont);
+	cont.SetTarget();
 }
 
-//
+// ------------------------------------------------------------------------
 // TLB lookup is performed in const, with the assumption that the COP0/TLB will clear the
 // recompiler if the TLB is changed.
 void vtlb_DynGenRead64_Const( u32 bits, u32 addr_const )
@@ -255,7 +266,7 @@ void vtlb_DynGenRead64_Const( u32 bits, u32 addr_const )
 				{
 					const int freereg = _allocMMXreg(-1, MMX_TEMP, 0);
 					MOVQMtoR(freereg,ppf);
-					MOVQRtoRmOffset(EDX,freereg,0);
+					MOVQRtoRm(EDX,freereg);
 					_freeMMXreg(freereg);
 				}
 				else
@@ -264,7 +275,7 @@ void vtlb_DynGenRead64_Const( u32 bits, u32 addr_const )
 					MOV32RtoRm(EDX,EAX);
 
 					MOV32MtoR(EAX,ppf+4);
-					MOV32RtoRmOffset(EDX,EAX,4);
+					MOV32RtoRm(EDX,EAX,4);
 				}
 			break;
 
@@ -273,7 +284,7 @@ void vtlb_DynGenRead64_Const( u32 bits, u32 addr_const )
 				{
 					const int freereg = _allocTempXMMreg( XMMT_INT, -1 );
 					SSE2_MOVDQA_M128_to_XMM( freereg, ppf );
-					SSE2_MOVDQARtoRmOffset(EDX,freereg,0);
+					SSE2_MOVDQARtoRm(EDX,freereg);
 					_freeXMMreg(freereg);
 				}
 				else
@@ -307,6 +318,7 @@ void vtlb_DynGenRead64_Const( u32 bits, u32 addr_const )
 	}
 }
 
+// ------------------------------------------------------------------------
 // Recompiled input registers:
 //   ecx - source address to read from
 //   Returns read value in eax.
@@ -355,7 +367,7 @@ void vtlb_DynGenRead32_Const( u32 bits, bool sign, u32 addr_const )
 		}
 
 		// Shortcut for the INTC_STAT register, which many games like to spin on heavily.
-		if( (bits == 32) && !CHECK_INTC_STAT_HACK && (paddr == INTC_STAT) )
+		if( (bits == 32) && !Config.Hacks.INTCSTATSlow && (paddr == INTC_STAT) )
 		{
 			MOV32MtoR( EAX, (uptr)&psHu32( INTC_STAT ) );
 		}
@@ -406,8 +418,8 @@ static void _vtlb_DynGen_DirectWrite( u32 bits )
 			if( _hasFreeMMXreg() )
 			{
 				const int freereg = _allocMMXreg(-1, MMX_TEMP, 0);
-				MOVQRmtoROffset(freereg,EDX,0);
-				MOVQRtoRmOffset(ECX,freereg,0);
+				MOVQRmtoR(freereg,EDX);
+				MOVQRtoRm(ECX,freereg);
 				_freeMMXreg( freereg );
 			}
 			else
@@ -415,8 +427,8 @@ static void _vtlb_DynGen_DirectWrite( u32 bits )
 				MOV32RmtoR(EAX,EDX);
 				MOV32RtoRm(ECX,EAX);
 
-				MOV32RmtoROffset(EAX,EDX,4);
-				MOV32RtoRmOffset(ECX,EAX,4);
+				MOV32RmtoR(EAX,EDX,4);
+				MOV32RtoRm(ECX,EAX,4);
 			}
 		break;
 
@@ -424,8 +436,8 @@ static void _vtlb_DynGen_DirectWrite( u32 bits )
 			if( _hasFreeXMMreg() )
 			{
 				const int freereg = _allocTempXMMreg( XMMT_INT, -1 );
-				SSE2_MOVDQARmtoROffset(freereg,EDX,0);
-				SSE2_MOVDQARtoRmOffset(ECX,freereg,0);
+				SSE2_MOVDQARmtoR(freereg,EDX);
+				SSE2_MOVDQARtoRm(ECX,freereg);
 				_freeXMMreg( freereg );
 			}
 			else
@@ -439,6 +451,7 @@ static void _vtlb_DynGen_DirectWrite( u32 bits )
 	}
 }
 
+// ------------------------------------------------------------------------
 static void _vtlb_DynGen_IndirectWrite( u32 bits )
 {
 	int szidx=0;
@@ -458,24 +471,26 @@ static void _vtlb_DynGen_IndirectWrite( u32 bits )
 	CALL32R(EAX);
 }
 
+// ------------------------------------------------------------------------
 void vtlb_DynGenWrite(u32 sz)
 {
 	MOV32RtoR(EAX,ECX);
 	SHR32ItoR(EAX,VTLB_PAGE_BITS);
 	MOV32RmSOffsettoR(EAX,EAX,(int)vtlbdata.vmap,2);
 	ADD32RtoR(ECX,EAX);
-	u8* _full=JS8(0);
+	xForwardJS8 _full;
 
 	_vtlb_DynGen_DirectWrite( sz );
-	u8* cont = JMP8(0);
+	xForwardJump8 cont;
 
-	x86SetJ8(_full);
+	_full.SetTarget();
 	_vtlb_DynGen_IndirectWrite( sz );
 
-	x86SetJ8(cont);
+	cont.SetTarget();
 }
 
 
+// ------------------------------------------------------------------------
 // Generates code for a store instruction, where the address is a known constant.
 // TLB lookup is performed in const, with the assumption that the COP0/TLB will clear the
 // recompiler if the TLB is changed.
@@ -502,7 +517,7 @@ void vtlb_DynGenWrite_Const( u32 bits, u32 addr_const )
 				if( _hasFreeMMXreg() )
 				{
 					const int freereg = _allocMMXreg(-1, MMX_TEMP, 0);
-					MOVQRmtoROffset(freereg,EDX,0);
+					MOVQRmtoR(freereg,EDX);
 					MOVQRtoM(ppf,freereg);
 					_freeMMXreg( freereg );
 				}
@@ -511,7 +526,7 @@ void vtlb_DynGenWrite_Const( u32 bits, u32 addr_const )
 					MOV32RmtoR(EAX,EDX);
 					MOV32RtoM(ppf,EAX);
 
-					MOV32RmtoROffset(EAX,EDX,4);
+					MOV32RmtoR(EAX,EDX,4);
 					MOV32RtoM(ppf+4,EAX);
 				}
 			break;
@@ -520,7 +535,7 @@ void vtlb_DynGenWrite_Const( u32 bits, u32 addr_const )
 				if( _hasFreeXMMreg() )
 				{
 					const int freereg = _allocTempXMMreg( XMMT_INT, -1 );
-					SSE2_MOVDQARmtoROffset(freereg,EDX,0);
+					SSE2_MOVDQARmtoR(freereg,EDX);
 					SSE2_MOVDQA_XMM_to_M128(ppf,freereg);
 					_freeXMMreg( freereg );
 				}

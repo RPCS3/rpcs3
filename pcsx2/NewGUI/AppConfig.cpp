@@ -18,147 +18,130 @@
  
 #include "PrecompiledHeader.h"
 #include "App.h"
+#include "IniInterface.h"
 
-IniInterface::IniInterface( wxConfigBase& config ) :
-	m_Config( config )
-{
-}
-
-IniInterface::IniInterface() :
-	m_Config( *wxConfigBase::Get() )
-{
-}
-
-IniInterface::~IniInterface()
-{
-	Flush();
-}
-
-void IniInterface::SetPath( const wxString& path )
-{
-	m_Config.SetPath( path );
-}
-
-void IniInterface::Flush()
-{
-	m_Config.Flush();
-}
+#include <wx/stdpaths.h>
 
 //////////////////////////////////////////////////////////////////////////////////////////
+// PathDefs Namespace -- contains default values for various pcsx2 path names and locations.
 //
-
-IniLoader::IniLoader( wxConfigBase& config ) : IniInterface( config )
+// Note: The members of this namespace are intended for default value initialization only.
+// Most of the time you should use the path folder assignments in Conf() instead, since those
+// are user-configurable.
+//
+namespace PathDefs
 {
-}
-
-IniLoader::IniLoader() : IniInterface() {}
-IniLoader::~IniLoader() {}
-
-
-void IniLoader::Entry( const wxString& var, wxString& value, const wxString& defvalue )
-{
-	m_Config.Read( var, &value, defvalue );
-}
-
-void IniLoader::Entry( const wxString& var, int& value, const int defvalue )
-{
-	m_Config.Read( var, &value, defvalue );
-}
-
-void IniLoader::Entry( const wxString& var, uint& value, const uint defvalue )
-{
-	m_Config.Read( var, (int*)&value, (int)defvalue );
-}
-
-void IniLoader::Entry( const wxString& var, bool& value, const bool defvalue )
-{
-	wxString dest;
-	m_Config.Read( var, &dest, defvalue ? "enabled" : "disabled" );
-	value = (dest == "enabled") || (dest == "1");
-}
-
-void IniLoader::Entry( const wxString& var, wxPoint& value, const wxPoint& defvalue )
-{
-	TryParse( value, m_Config.Read( var, ToString( defvalue ) ), defvalue );
-}
-
-void IniLoader::Entry( const wxString& var, wxSize& value, const wxSize& defvalue )
-{
-	TryParse( value, m_Config.Read( var, ToString( defvalue ) ), defvalue );
-}
-
-void IniLoader::Entry( const wxString& var, wxRect& value, const wxRect& defvalue )
-{
-	TryParse( value, m_Config.Read( var, ToString( defvalue ) ), defvalue );
-}
-
-void IniLoader::EnumEntry( const wxString& var, int& value, const char* const* enumArray, const int defvalue )
-{
-	wxString retval;
-	m_Config.Read( var, &retval, enumArray[defvalue] );
-
-	int i=0;
-	while( enumArray[i] != NULL && ( retval != enumArray[i] ) ) i++;
-
-	if( enumArray[i] == NULL )
+	const wxDirName Snapshots( wxT("snaps") );
+	const wxDirName Savestates( wxT("sstates") );
+	const wxDirName MemoryCards( wxT("memcards") );
+	const wxDirName Configs( wxT("inis") );
+	const wxDirName Plugins( wxT("plugins") );
+	
+	// Fetches the path location for user-consumable documents -- stuff users are likely to want to
+	// share with other programs: screenshots, memory cards, and savestates.
+	wxDirName GetDocuments()
 	{
-		Console::Notice( "Loadini Warning > Unrecognized value '%s' on key '%s'\n\tUsing the default setting of '%s'.",
-			params retval.c_str(), var.c_str(), enumArray[defvalue] );
-		value = defvalue;
+		return (wxDirName)wxStandardPaths::Get().GetDocumentsDir() + (wxDirName)wxGetApp().GetAppName();
 	}
-	else
-		value = i;
-}
 
-//////////////////////////////////////////////////////////////////////////////////////////
-//
+	wxDirName GetSnapshots()
+	{
+		return (wxDirName)GetDocuments() + Snapshots;
+	}
+	
+	wxDirName GetBios()
+	{
+		return (wxDirName)wxT("bios");
+	}
+	
+	wxDirName GetSavestates()
+	{
+		return (wxDirName)GetDocuments() + Savestates;
+	}
+	
+	wxDirName GetMemoryCards()
+	{
+		return (wxDirName)GetDocuments() + MemoryCards;
+	}
+	
+	wxDirName GetConfigs()
+	{
+		return (wxDirName)GetDocuments()+ Configs;
+	}
 
-IniSaver::IniSaver( wxConfigBase& config ) : IniInterface( config )
+	wxDirName GetPlugins()
+	{
+		return (wxDirName)Plugins;
+	}
+};
+
+namespace FilenameDefs
 {
-}
+	wxFileName GetConfig()
+	{
+		// TODO : ini extension on Win32 is normal.  Linux ini filename default might differ
+		// from this?  like pcsx2_conf or something ... ?
 
-IniSaver::IniSaver() : IniInterface() {}
-IniSaver::~IniSaver() {}
+		return wxGetApp().GetAppName() + wxT(".ini");
+	}
+	
+	wxFileName Memcard[2] = 
+	{
+		wxT("Mcd001.ps2"),
+		wxT("Mcd002.ps2")
+	};
+};
 
-void IniSaver::Entry( const wxString& var, wxString& value, const wxString& defvalue )
+// ------------------------------------------------------------------------
+wxFileName wxDirName::Combine( const wxFileName& right ) const
 {
-	m_Config.Write( var, value );
+	wxASSERT_MSG( IsDir(), L"Warning: Malformed directory name detected during wxDirName concatenation." );
+	if( right.IsAbsolute() )
+		return right;
+	
+	// Append any directory parts from right, and then set the filename.
+	// Except we can't do that because our m_members are private (argh!) and there is no API
+	// for getting each component of the path.  So instead let's use Normalize:
+
+	wxFileName result( right );
+	result.Normalize( wxPATH_NORM_ENV_VARS | wxPATH_NORM_DOTS, GetPath() );
+	return result;
 }
 
-void IniSaver::Entry( const wxString& var, int& value, const int defvalue )
+wxDirName wxDirName::Combine( const wxDirName& right ) const
 {
-	m_Config.Write( var, value );
+	wxASSERT_MSG( IsDir() && right.IsDir(), L"Warning: Malformed directory name detected during wDirName concatenation." );
+
+	wxDirName result( right );
+	result.Normalize( wxPATH_NORM_ENV_VARS | wxPATH_NORM_DOTS, GetPath() );
+	return result;
 }
 
-void IniSaver::Entry( const wxString& var, uint& value, const uint defvalue )
+void wxDirName::Rmdir()
 {
-	m_Config.Write( var, (int)value );
+	if( !Exists() ) return;
+	wxFileName::Rmdir();
+	// TODO : Throw exception if operation failed?  Do we care?
 }
 
-void IniSaver::Entry( const wxString& var, bool& value, const bool defvalue )
+bool wxDirName::Mkdir()
 {
-	m_Config.Write( var, value ? "enabled" : "disabled" );
+	if( Exists() ) return true;
+	return wxFileName::Mkdir();
 }
 
-void IniSaver::Entry( const wxString& var, wxPoint& value, const wxPoint& defvalue )
-{
-	m_Config.Write( var, ToString( value ) );
-}
+// ------------------------------------------------------------------------
+wxString AppConfig::FullpathHelpers::Bios() const	{ return Path::Combine( m_conf.Folders.Bios, m_conf.BaseFilenames.Bios ); }
+wxString AppConfig::FullpathHelpers::CDVD() const	{ return Path::Combine( m_conf.Folders.Plugins, m_conf.BaseFilenames.CDVD ); }
+wxString AppConfig::FullpathHelpers::GS() const		{ return Path::Combine( m_conf.Folders.Plugins, m_conf.BaseFilenames.GS ); }
+wxString AppConfig::FullpathHelpers::PAD1() const	{ return Path::Combine( m_conf.Folders.Plugins, m_conf.BaseFilenames.PAD1 ); }
+wxString AppConfig::FullpathHelpers::PAD2() const	{ return Path::Combine( m_conf.Folders.Plugins, m_conf.BaseFilenames.PAD2 ); }
+wxString AppConfig::FullpathHelpers::SPU2() const	{ return Path::Combine( m_conf.Folders.Plugins, m_conf.BaseFilenames.SPU2 ); }
+wxString AppConfig::FullpathHelpers::DEV9() const	{ return Path::Combine( m_conf.Folders.Plugins, m_conf.BaseFilenames.DEV9 ); }
+wxString AppConfig::FullpathHelpers::USB() const	{ return Path::Combine( m_conf.Folders.Plugins, m_conf.BaseFilenames.USB ); }
+wxString AppConfig::FullpathHelpers::FW() const		{ return Path::Combine( m_conf.Folders.Plugins, m_conf.BaseFilenames.FW ); }
 
-void IniSaver::Entry( const wxString& var, wxSize& value, const wxSize& defvalue )
-{
-	m_Config.Write( var, ToString( value ) );
-}
-
-void IniSaver::Entry( const wxString& var, wxRect& value, const wxRect& defvalue )
-{
-	m_Config.Write( var, ToString( value ) );
-}
-
-void IniSaver::EnumEntry( const wxString& var, int& value, const char* const* enumArray, const int defvalue )
-{
-	m_Config.Write( var, enumArray[value] );
-}
+wxString AppConfig::FullpathHelpers::Mcd( uint mcdidx ) const { return Path::Combine( m_conf.Folders.MemoryCards, m_conf.MemoryCards.Mcd[mcdidx].Filename ); }
 
 //////////////////////////////////////////////////////////////////////////////////////////
 //

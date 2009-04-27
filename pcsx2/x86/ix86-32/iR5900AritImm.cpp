@@ -111,9 +111,17 @@ void recADDI_(int info)
 	}
 	else {
 		if ( _Rt_ == _Rs_ ) {
-			ADD32ItoM((int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ], _Imm_);
-			if ( EEINST_ISLIVE1(_Rt_) ) _signExtendSFtoM( (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 1 ]);
-			else EEINST_RESETHASLIVE1(_Rt_);
+			if ( EEINST_ISLIVE1(_Rt_) )
+			{
+				// must perform the ADD unconditionally, to maintain flags status:
+				ADD32ItoM((int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ], _Imm_);
+				_signExtendSFtoM( (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 1 ]);
+			}
+			else
+			{
+				if( _Imm_ ) ADD32ItoM((int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ], _Imm_);
+				EEINST_RESETHASLIVE1(_Rt_);
+			}
 		}
 		else {
 			MOV32MtoR( EAX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );

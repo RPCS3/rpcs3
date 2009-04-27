@@ -5,9 +5,9 @@
 .xmm
 
 
-extern _vifRegs:ptr
-extern _vifMaskRegs:ptr
-extern _vifRow:ptr
+extern vifRegs:ptr
+extern vifMaskRegs:ptr
+extern vifRow:ptr
 extern s_TempDecompress:ptr
 
 
@@ -104,7 +104,7 @@ UNPACK_Regular_SSE_2 macro r0
 
 
 UNPACK_Setup_Mask_SSE macro CL
-	mov eax, [_vifMaskRegs]
+	mov eax, [vifMaskRegs]
 	movdqa xmm4, [eax + 64*(CL) + 16]
 	movdqa xmm5, [eax + 64*(CL) + 32]
 	movdqa xmm3, [eax + 64*(CL)]
@@ -118,7 +118,7 @@ UNPACK_Start_Setup_Mask_SSE_0 macro CL
 	endm
 
 UNPACK_Start_Setup_Mask_SSE_1 macro CL
-	mov eax, [_vifMaskRegs]
+	mov eax, [vifMaskRegs]
 	movdqa xmm4, [eax + 64*(CL) + 16]
 	movdqa xmm5, [eax + 64*(CL) + 32]
 	pand xmm4, xmm6
@@ -132,14 +132,14 @@ UNPACK_Start_Setup_Mask_SSE_2 macro CL
 UNPACK_Setup_Mask_SSE_0_1 macro CL
 	endm
 UNPACK_Setup_Mask_SSE_1_1 macro CL
-	mov eax, [_vifMaskRegs]
+	mov eax, [vifMaskRegs]
 	movdqa xmm3, [eax + 64*(0)]
 	endm
 
 
 UNPACK_Setup_Mask_SSE_2_1 macro CL
 
-	mov eax, [_vifMaskRegs]
+	mov eax, [vifMaskRegs]
 	movdqa xmm4, [eax + 64*(0) + 16]
 	movdqa xmm5, [eax + 64*(0) + 32]
 	movdqa xmm3, [eax + 64*(0)]
@@ -1521,9 +1521,9 @@ UNPACK_V4_5SSE_1A macro CL, TOTALCL, MaskType, ModeType
 
 
 SAVE_ROW_REG_BASE macro
-	mov eax, [_vifRow]
+	mov eax, [vifRow]
 	movdqa [eax], xmm6
-	mov eax, [_vifRegs]
+	mov eax, [vifRegs]
 	movss dword ptr [eax+0100h], xmm6
 	psrldq xmm6, 4
 	movss dword ptr [eax+0110h], xmm6
@@ -1557,7 +1557,7 @@ defUNPACK_SkippingWrite macro name, MaskType, ModeType, qsize, sign, SAVE_ROW_RE
 	push ebx
 
 	INIT_ARGS
-    mov eax, [_vifRegs]
+    mov eax, [vifRegs]
     movzx ecx, byte ptr [eax + 040h]
     movzx ebx, byte ptr [eax + 041h]
     sub ecx, ebx

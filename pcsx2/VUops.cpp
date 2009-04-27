@@ -1585,7 +1585,7 @@ void _vuLQ(VURegs * VU) {
 	if (_Ft_ == 0) return; 
  
 	imm = (VU->code & 0x400) ? (VU->code & 0x3ff) | 0xfc00 : (VU->code & 0x3ff); 
-	addr = (imm + VU->VI[_Fs_].SS[0]) * 16;
+	addr = ((imm + VU->VI[_Fs_].SS[0]) * 16)& (VU == &VU1 ? 0x3fff : 0xfff);
 
  	ptr = (u32*)GET_VU_MEM(VU, addr);
 	if (_X) VU->VF[_Ft_].UL[0] = ptr[0]; 
@@ -1601,7 +1601,7 @@ void _vuLQD( VURegs * VU ) {
 	if (_Fs_ != 0) VU->VI[_Fs_].US[0]--; 
 	if (_Ft_ == 0) return;
 
-	addr = VU->VI[_Fs_].US[0] * 16;
+	addr = (VU->VI[_Fs_].US[0] * 16) & (VU == &VU1 ? 0x3fff : 0xfff);
 	ptr = (u32*)GET_VU_MEM(VU, addr);
 	if (_X) VU->VF[_Ft_].UL[0] = ptr[0]; 
 	if (_Y) VU->VF[_Ft_].UL[1] = ptr[1]; 
@@ -1614,7 +1614,7 @@ void _vuLQI(VURegs * VU) {
 		u32 addr;
 		u32 *ptr;
 
-		addr = VU->VI[_Fs_].US[0] * 16;
+		addr = (VU->VI[_Fs_].US[0] * 16)& (VU == &VU1 ? 0x3fff : 0xfff);
 		ptr = (u32*)GET_VU_MEM(VU, addr);
 		if (_X) VU->VF[_Ft_].UL[0] = ptr[0]; 
 		if (_Y) VU->VF[_Ft_].UL[1] = ptr[1]; 
@@ -1631,7 +1631,7 @@ void _vuSQ(VURegs * VU) {
 	u32 *ptr; 
  
 	imm = (VU->code & 0x400) ? (VU->code & 0x3ff) | 0xfc00 : (VU->code & 0x3ff); 
-	addr = (imm + VU->VI[_Ft_].SS[0]) * 16;
+	addr = ((imm + VU->VI[_Ft_].SS[0]) * 16)& (VU == &VU1 ? 0x3fff : 0xfff);
 	ptr = (u32*)GET_VU_MEM(VU, addr);
 	if (_X) ptr[0] = VU->VF[_Fs_].UL[0]; 
 	if (_Y) ptr[1] = VU->VF[_Fs_].UL[1]; 
@@ -1644,7 +1644,7 @@ void _vuSQD(VURegs * VU) {
 	u32 *ptr; 
  
 	if(_Ft_ != 0) VU->VI[_Ft_].US[0]--; 
-	addr = VU->VI[_Ft_].US[0] * 16;
+	addr = (VU->VI[_Ft_].US[0] * 16)& (VU == &VU1 ? 0x3fff : 0xfff);
 	ptr = (u32*)GET_VU_MEM(VU, addr);
 	if (_X) ptr[0] = VU->VF[_Fs_].UL[0]; 
 	if (_Y) ptr[1] = VU->VF[_Fs_].UL[1]; 
@@ -1656,7 +1656,7 @@ void _vuSQI(VURegs * VU) {
 	u32 addr;
 	u32 *ptr; 
  
-	addr = VU->VI[_Ft_].US[0] * 16;
+	addr = (VU->VI[_Ft_].US[0] * 16)& (VU == &VU1 ? 0x3fff : 0xfff);
 	ptr = (u32*)GET_VU_MEM(VU, addr);
 	if (_X) ptr[0] = VU->VF[_Fs_].UL[0];
 	if (_Y) ptr[1] = VU->VF[_Fs_].UL[1];
@@ -1673,7 +1673,7 @@ void _vuILW(VURegs * VU) {
 	if (_Ft_ == 0) return; 
  
  	imm = (VU->code & 0x400) ? (VU->code & 0x3ff) | 0xfc00 : (VU->code & 0x3ff); 
-	addr = (imm + VU->VI[_Fs_].SS[0]) * 16;
+	addr = ((imm + VU->VI[_Fs_].SS[0]) * 16)& (VU == &VU1 ? 0x3fff : 0xfff);
 	ptr = (u16*)GET_VU_MEM(VU, addr);
 	if (_X) VU->VI[_Ft_].US[0] = ptr[0]; 
 	if (_Y) VU->VI[_Ft_].US[0] = ptr[2]; 
@@ -1687,7 +1687,7 @@ void _vuISW(VURegs * VU) {
 	u16 *ptr; 
  
  	imm = (VU->code & 0x400) ? (VU->code & 0x3ff) | 0xfc00 : (VU->code & 0x3ff); 
-	addr = (imm + VU->VI[_Fs_].SS[0]) * 16;
+	addr = ((imm + VU->VI[_Fs_].SS[0]) * 16)& (VU == &VU1 ? 0x3fff : 0xfff);
 	ptr = (u16*)GET_VU_MEM(VU, addr);
 	if (_X) { ptr[0] = VU->VI[_Ft_].US[0]; ptr[1] = 0; }
 	if (_Y) { ptr[2] = VU->VI[_Ft_].US[0]; ptr[3] = 0; }
@@ -1700,7 +1700,7 @@ void _vuILWR(VURegs * VU) {
 	u16 *ptr; 
 	if (_Ft_ == 0) return; 
  
-	addr = VU->VI[_Fs_].US[0] * 16;
+	addr = (VU->VI[_Fs_].US[0] * 16)& (VU == &VU1 ? 0x3fff : 0xfff);
 	ptr = (u16*)GET_VU_MEM(VU, addr);
 	if (_X) VU->VI[_Ft_].US[0] = ptr[0]; 
 	if (_Y) VU->VI[_Ft_].US[0] = ptr[2]; 
@@ -1712,7 +1712,7 @@ void _vuISWR(VURegs * VU) {
 	u32 addr;
 	u16 *ptr; 
  
-	addr = VU->VI[_Fs_].US[0] * 16;
+	addr = (VU->VI[_Fs_].US[0] * 16) & (VU == &VU1 ? 0x3fff : 0xfff);
 	ptr = (u16*)GET_VU_MEM(VU, addr);
 	if (_X) { ptr[0] = VU->VI[_Ft_].US[0]; ptr[1] = 0; }
 	if (_Y) { ptr[2] = VU->VI[_Ft_].US[0]; ptr[3] = 0; }
@@ -2045,9 +2045,20 @@ void _vuXITOP(VURegs * VU) {
 
 void _vuXGKICK(VURegs * VU)
 {
+	u32* ptr = (u32*)GET_VU_MEM(VU, (VU->VI[_Fs_].US[0]*16) & (VU == &VU1 ? 0x3fff : 0xfff));
+//	int temp = 0x4000 - ((VU->VI[_Fs_].US[0]*16) & 0x3fff);
+//	u32 tempmem[0x8000];
+	
 	// flush all pipelines first (in the right order)
 	_vuFlushAll(VU);
-	GSGIFTRANSFER1((u32*)VU->Mem, (VU->VI[_Fs_].US[0]*16) & 0x3fff);
+
+	//Gonna be slow but reshuffles the memory so overflows wont occur
+	/*	memset(tempmem, 0, sizeof(tempmem));
+		memcpy(tempmem, ptr, temp);
+		ptr = (u32*)GET_VU_MEM(VU, 0);
+		memcpy(&tempmem[temp], ptr, ((VU->VI[_Fs_].US[0]*16) & 0x3fff));
+		GSGIFTRANSFER1((u32*)&tempmem[0], 0);
+	} else*/ GSGIFTRANSFER1((u32*)VU->Mem, (VU->VI[_Fs_].US[0]*16) & 0x3fff);
 }
 
 void _vuXTOP(VURegs * VU) {
@@ -2508,13 +2519,23 @@ void _vuRegsMTIR(VURegs * VU, _VURegsNum *VUregsn) {
 	VUregsn->pipe = VUPIPE_FMAC;
     VUregsn->VFwrite = 0;
 	VUregsn->VFread0 = _Fs_;
-    VUregsn->VFr0xyzw= _XYZW;
+    VUregsn->VFr0xyzw= 1 << (3-_Fsf_);
 	VUregsn->VFread1 = 0;
     VUregsn->VIwrite = 1 << _Ft_;
     VUregsn->VIread  = GET_VF0_FLAG(_Fs_);
 }
 
-VUREGS_FTFS(MR32);
+void _vuRegsMR32(VURegs * VU, _VURegsNum *VUregsn) { 
+	VUregsn->pipe = VUPIPE_FMAC; 
+	VUregsn->VFwrite = _Ft_; 
+	VUregsn->VFwxyzw = _XYZW; 
+	VUregsn->VFread0 = _Fs_; 
+	VUregsn->VFr0xyzw= (_XYZW >> 1) | ((_XYZW << 3) & 0xf);  //rotate
+	VUregsn->VFread1 = 0; 
+	VUregsn->VFr1xyzw = 0xff; 
+	VUregsn->VIwrite = 0; 
+	VUregsn->VIread  = (_Ft_ ? GET_VF0_FLAG(_Fs_) : 0); 
+}
 
 void _vuRegsLQ(VURegs * VU, _VURegsNum *VUregsn) {
 	VUregsn->pipe = VUPIPE_FMAC;
