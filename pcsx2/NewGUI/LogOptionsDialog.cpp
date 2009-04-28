@@ -15,7 +15,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
- 
+
 #include "PrecompiledHeader.h"
 #include "DebugTools/Debug.h"
 #include "LogOptionsDialog.h"
@@ -128,11 +128,15 @@ LogOptionsDialog::LogOptionsDialog(wxWindow* parent, int id, const wxPoint& pos,
 	wxBoxSizer& mainsizer = *new wxBoxSizer( wxVERTICAL );
 	wxBoxSizer& topSizer = *new wxBoxSizer( wxHORIZONTAL );
 
-	topSizer.Add( &eeBox, stdSpacingFlags );
-	topSizer.Add( &iopSizer, stdSpacingFlags );
+	// Expand comments below are form an attempt of mine to make the dialog box resiable, but it
+	// only wanted to work right for the miscSizer and I couldn't figure out why the CheckStaticBox
+	// panel wouldn't also resize to fit the window.. :(  -- air
 
-	mainsizer.Add( &topSizer );		// topsizer has it's own padding.
-	mainsizer.Add( &miscSizer, stdSpacingFlags );
+	topSizer.Add( &eeBox, stdSpacingFlags ); //.Expand() );
+	topSizer.Add( &iopSizer, stdSpacingFlags ); //.Expand() );
+
+	mainsizer.Add( &topSizer ); //, wxSizerFlags().Expand() );		// topsizer has it's own padding.
+	mainsizer.Add( &miscSizer, stdSpacingFlags ); //.Expand() );
 
 	AddOkCancel( mainsizer );
 
@@ -152,7 +156,7 @@ void LogOptionsDialog::LogChecked(wxCommandEvent &evt)
 	{
 		// [TODO] : Implement me!
 	}
-	
+
 	evt.Skip();
 }
 

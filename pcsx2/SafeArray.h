@@ -16,8 +16,7 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
-#ifndef __SAFEARRAY_H__
-#define __SAFEARRAY_H__
+#pragma once
 
 extern void* __fastcall pcsx2_aligned_malloc(size_t size, size_t align);
 extern void* __fastcall pcsx2_aligned_realloc(void* handle, size_t size, size_t align);
@@ -75,7 +74,7 @@ class SafeArray : public NoncopyableObject
 public:
 	static const int DefaultChunkSize = 0x1000 * sizeof(T);
 
-public: 
+public:
 	const wxString Name;		// user-assigned block name
 	int ChunkSize;
 
@@ -90,7 +89,7 @@ protected:
 	// use its own memory allocation (with an aligned memory, for example).
 	// Throws:
 	//   Exception::OutOfMemory if the allocated_mem pointer is NULL.
-	explicit SafeArray( const wxString& name, T* allocated_mem, int initSize ) : 
+	explicit SafeArray( const wxString& name, T* allocated_mem, int initSize ) :
 		Name( name )
 	,	ChunkSize( DefaultChunkSize )
 	,	m_ptr( allocated_mem )
@@ -111,7 +110,7 @@ public:
 		safe_free( m_ptr );
 	}
 
-	explicit SafeArray( const wxString& name=wxT("Unnamed") ) : 
+	explicit SafeArray( const wxString& name=wxT("Unnamed") ) :
 		Name( name )
 	,	ChunkSize( DefaultChunkSize )
 	,	m_ptr( NULL )
@@ -119,7 +118,7 @@ public:
 	{
 	}
 
-	explicit SafeArray( const char* name ) : 
+	explicit SafeArray( const char* name ) :
 		Name( wxString::FromAscii(name) )
 	,	ChunkSize( DefaultChunkSize )
 	,	m_ptr( NULL )
@@ -127,7 +126,7 @@ public:
 	{
 	}
 
-	explicit SafeArray( int initialSize, const wxString& name=wxT("Unnamed") ) : 
+	explicit SafeArray( int initialSize, const wxString& name=wxT("Unnamed") ) :
 		Name( name )
 	,	ChunkSize( DefaultChunkSize )
 	,	m_ptr( (T*)malloc( initialSize * sizeof(T) ) )
@@ -137,7 +136,7 @@ public:
 			throw Exception::OutOfMemory();
 	}
 
-	explicit SafeArray( int initialSize, const char* name ) : 
+	explicit SafeArray( int initialSize, const char* name ) :
 		Name( wxString::FromAscii(name) )
 	,	ChunkSize( DefaultChunkSize )
 	,	m_ptr( (T*)malloc( initialSize * sizeof(T) ) )
@@ -218,7 +217,7 @@ class SafeList
 public:
 	static const int DefaultChunkSize = 0x80 * sizeof(T);
 
-public: 
+public:
 	const wxString Name;		// user-assigned block name
 	int ChunkSize;				// assigned DefaultChunkSize on init, reconfigurable at any time.
 
@@ -234,19 +233,19 @@ protected:
 	{
 		return (T*)realloc( m_ptr, newsize * sizeof(T) );
 	}
-	
+
 	void _boundsCheck( uint i ) const
 	{
 		if( IsDevBuild && i >= (uint)m_length )
 			throw Exception::IndexBoundsFault( Name, i, m_length );
 	}
 
-public:	
+public:
 	virtual ~SafeList()
 	{
 	}
 
-	explicit SafeList( const wxString& name=wxT("Unnamed") ) : 
+	explicit SafeList( const wxString& name=wxT("Unnamed") ) :
 		Name( name )
 	,	ChunkSize( DefaultChunkSize )
 	,	m_ptr( NULL )
@@ -255,7 +254,7 @@ public:
 	{
 	}
 
-	explicit SafeList( const char* name ) : 
+	explicit SafeList( const char* name ) :
 		Name( wxString::FromAscii(name) )
 	,	ChunkSize( DefaultChunkSize )
 	,	m_ptr( NULL )
@@ -264,7 +263,7 @@ public:
 	{
 	}
 
-	explicit SafeList( int initialSize, const wxString& name=wxT("Unnamed") ) : 
+	explicit SafeList( int initialSize, const wxString& name=wxT("Unnamed") ) :
 		Name( name )
 	,	ChunkSize( DefaultChunkSize )
 	,	m_ptr( (T*)malloc( initialSize * sizeof(T) ) )
@@ -275,7 +274,7 @@ public:
 			throw Exception::OutOfMemory();
 	}
 
-	explicit SafeList( int initialSize, const char* name ) : 
+	explicit SafeList( int initialSize, const char* name ) :
 		Name( wxString::FromAscii(name) )
 	,	ChunkSize( DefaultChunkSize )
 	,	m_ptr( (T*)malloc( initialSize * sizeof(T) ) )
@@ -309,7 +308,7 @@ public:
 					wxsFormat(
 						wxT("Out-of-memory on SafeList block re-allocation.\n")
 						wxT("Old size: %d bytes, New size: %d bytes"),
-						m_allocsize, newalloc 
+						m_allocsize, newalloc
 					)
 				);
 			}
@@ -321,14 +320,14 @@ public:
 	// DevBuilds : Throws Exception::IndexBoundsFault() if the index is invalid.
 	T& operator[]( int idx ) { return *_getPtr( (uint)idx ); }
 	const T& operator[]( int idx ) const { return *_getPtr( (uint)idx ); }
-	
+
 	int Add( const T& src )
 	{
 		MakeRoomFor( m_length + 1 );
 		m_ptr[m_length] = src;
 		return m_length++;
 	}
-	
+
 	// Performs a standard array-copy removal of the given item.  All items past the
 	// given item are copied over.  Throws Exception::IndexBoundsFault() if the index
 	// is invalid (devbuilds only)
@@ -392,30 +391,30 @@ public:
 		// mptr is set to null, so the parent class's destructor won't re-free it.
 	}
 
-	explicit SafeAlignedArray( const wxString& name=wxT("Unnamed") ) : 
+	explicit SafeAlignedArray( const wxString& name=wxT("Unnamed") ) :
 		SafeArray<T>::SafeArray( name )
 	{
 	}
 
-	explicit SafeAlignedArray( const char* name ) : 
+	explicit SafeAlignedArray( const char* name ) :
 		SafeArray<T>::SafeArray( name )
 	{
 	}
 
-	explicit SafeAlignedArray( int initialSize, const wxString& name=wxT("Unnamed") ) : 
+	explicit SafeAlignedArray( int initialSize, const wxString& name=wxT("Unnamed") ) :
 		SafeArray<T>::SafeArray(
 			_getName(name),
 			(T*)_aligned_malloc( initialSize * sizeof(T), Alignment ),
-			initialSize 
+			initialSize
 		)
 	{
 	}
 
-	explicit SafeAlignedArray( int initialSize, const char* name ) : 
+	explicit SafeAlignedArray( int initialSize, const char* name ) :
 		SafeArray<T>::SafeArray(
 			_getName(wxString::FromAscii(name)),
 			(T*)_aligned_malloc( initialSize * sizeof(T), Alignment ),
-			initialSize 
+			initialSize
 		)
 	{
 	}
@@ -432,5 +431,3 @@ public:
 // For lack of a better place for now (they depend on SafeList so they can't go in StringUtil)
 extern void SplitString( SafeList<wxString>& dest, const wxString& src, const wxString& delims );
 extern void JoinString( wxString& dest, const SafeList<wxString>& src, const wxString& separator );
-
-#endif

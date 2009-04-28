@@ -17,7 +17,8 @@
  */
 
 
-#include "Win32.h"
+#include "PrecompiledHeader.h"
+#include "RedtapeWindows.h"
 
 #include "System.h"
 #include "ix86/ix86_types.h"

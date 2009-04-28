@@ -1,4 +1,7 @@
-#pragma once
+#ifndef PCSX2_PRECOMPILED_HEADER
+#define PCSX2_PRECOMPILED_HEADER
+
+//#pragma once
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // Microsoft specific STL extensions for bounds checking and stuff: Enabled in devbuilds,
@@ -14,11 +17,6 @@
 #endif
 
 #define NOMINMAX		// Disables other libs inclusion of their own min/max macros (we use std instead)
-
-// __LINUX__ defined in wxWidgets.
-//#if defined (__linux__)  // some distributions are lower case
-//#	define __LINUX__
-//#endif
 
 #ifdef _WIN32
 // disable warning C4244: '=' : conversion from 'big' to 'small', possible loss of data
@@ -182,5 +180,7 @@ static __forceinline u32 timeGetTime()
 
 #	define DbgCon 0&&Console
 	static const bool IsDebugBuild = false;
+
+#endif
 
 #endif

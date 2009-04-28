@@ -31,7 +31,7 @@ namespace wxHelpers
 	wxSizerFlags stdSpacingFlags( wxSizerFlags().Border( wxALL, 6 ) );
 	wxSizerFlags stdButtonSizerFlags( wxSizerFlags().Align(wxALIGN_RIGHT).Border() );
 	wxSizerFlags CheckboxFlags( wxSizerFlags().Border( wxALL, 6 ).Expand() );
-	
+
 	wxCheckBox& AddCheckBoxTo( wxWindow* parent, wxBoxSizer& sizer, const wxString& label, wxWindowID id )
 	{
 		wxCheckBox* retval = new wxCheckBox( parent, id, label );
@@ -43,11 +43,16 @@ namespace wxHelpers
 //////////////////////////////////////////////////////////////////////////////////////////
 //
 wxDialogWithHelpers::wxDialogWithHelpers( wxWindow* parent, int id,  const wxString& title, bool hasContextHelp, const wxPoint& pos, const wxSize& size ) :
-	wxDialog( parent, id, title, pos, size ),
+	wxDialog( parent, id, title, pos, size ), //, (wxCAPTION | wxMAXIMIZE | wxCLOSE_BOX | wxRESIZE_BORDER) ),	// flags for resizable dialogs, currently unused.
 	m_hasContextHelp( hasContextHelp )
 {
 	if( hasContextHelp )
 		wxHelpProvider::Set( new wxSimpleHelpProvider() );
+
+	// Note: currently the Close (X) button doesn't appear to work in dialogs.  Docs indicate
+	// that is should so I presume the problem is in wxWidgets and that (hopefully!) an updated
+	// version will fix it later.  I treid to fix it using a manual Connect but it didn't do
+	// any good.
 }
 
 wxCheckBox& wxDialogWithHelpers::AddCheckBox( wxBoxSizer& sizer, const wxString& label, wxWindowID id )
@@ -65,9 +70,11 @@ void wxDialogWithHelpers::AddOkCancel( wxBoxSizer &sizer )
 		SetExtraStyle( wxDIALOG_EX_CONTEXTHELP );
 
 #ifndef __WXMSW__
-		// create a sizer to hold the help and ok/cancel buttons.
+		// create a sizer to hold the help and ok/cancel buttons, for platforms
+		// that need a custom help icon.  [fixme: help icon prolly better off somewhere else]
 		buttonSizer = new wxBoxSizer( wxHORIZONTAL );
 		buttonSizer->Add( new wxContextHelpButton(this), wxHelpers::stdButtonSizerFlags.Align( wxALIGN_LEFT ) );
+		sizer.Add( buttonSizer, wxSizerFlags().Center() );
 #endif
 	}
 	buttonSizer->Add( CreateStdDialogButtonSizer( wxOK | wxCANCEL ), wxHelpers::stdButtonSizerFlags );

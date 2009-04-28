@@ -16,10 +16,8 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
-#ifndef __SYSTEM_H__
-#define __SYSTEM_H__
+#pragma once
 
-#include "PS2Etypes.h"
 #include "Pcsx2Config.h"
 #include "SafeArray.h"
 #include "Misc.h"
@@ -47,7 +45,7 @@ namespace HostSys
 	extern void Munmap(uptr base, u32 size);
 
 	extern void MemProtect( void* baseaddr, size_t size, PageProtectionMode mode, bool allowExecution=false );
-	
+
 	static __forceinline void Munmap( void* base, u32 size )
 	{
 		Munmap( (uptr)base, size );
@@ -76,7 +74,7 @@ extern void SysPrepareExecution( const wxString& elf_file, bool use_bios=false )
 extern void SysExecute();
 
 
-// Maps a block of memory for use as a recompiled code buffer, and ensures that the 
+// Maps a block of memory for use as a recompiled code buffer, and ensures that the
 // allocation is below a certain memory address (specified in "bounds" parameter).
 // The allocated block has code execution privileges.
 // Returns NULL on allocation failure.
@@ -201,5 +199,3 @@ using Console::Color_Magenta;
 using Console::Color_Cyan;
 using Console::Color_Yellow;
 using Console::Color_White;
-
-#endif /* __SYSTEM_H__ */

@@ -1,5 +1,6 @@
 
-#include "Win32.h"
+#include "PrecompiledHeader.h"
+#include "RedtapeWindows.h"
 
 #include "SamplProf.h"
 #include <map>

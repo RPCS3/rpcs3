@@ -23,7 +23,7 @@
 class CheckedStaticBox : public wxPanel
 {
 protected:
-	wxStaticBoxSizer& m_StaticBoxSizer;
+	wxBoxSizer& m_MasterSizer;
 
 public:
 	wxBoxSizer& ThisSizer;		// Boxsizer which holds all child items.
@@ -36,9 +36,6 @@ public:
 	bool GetValue() const;
 
 	wxCheckBox& AddCheckBox( const wxString& label, wxWindowID id=wxID_ANY );
-
-protected:
-	//DECLARE_EVENT_TABLE();
 
 public:
 	// Event handler for click events for the main checkbox (default behavior: enables/disables all child controls)

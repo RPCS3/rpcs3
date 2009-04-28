@@ -9,7 +9,7 @@
 			<Target title="Debug">
 				<Option output="../../deps/debug/libbzip2-dbg" prefix_auto="1" extension_auto="1" />
 				<Option working_dir="" />
-				<Option object_output="/home/pubuntu/Documents/pcsx2-newgui/3rdparty/bzip2/.objs/debug" />
+				<Option object_output="./.objs/debug" />
 				<Option type="2" />
 				<Option compiler="gcc" />
 				<Option createDefFile="1" />
@@ -21,7 +21,7 @@
 			<Target title="Release">
 				<Option output="../../deps/libbzip2" prefix_auto="1" extension_auto="1" />
 				<Option working_dir="" />
-				<Option object_output="/home/pubuntu/Documents/pcsx2-newgui/3rdparty/bzip2/.objs/release" />
+				<Option object_output="./.objs/release" />
 				<Option type="2" />
 				<Option compiler="gcc" />
 				<Option createDefFile="1" />
@@ -37,7 +37,7 @@
 			<Target title="Devel">
 				<Option output="../../deps/devel/libbzip2-dev" prefix_auto="1" extension_auto="1" />
 				<Option working_dir="" />
-				<Option object_output="/home/pubuntu/Documents/pcsx2-newgui/3rdparty/bzip2/.objs/devel" />
+				<Option object_output="./.objs/devel" />
 				<Option type="2" />
 				<Option compiler="gcc" />
 				<Option createDefFile="1" />

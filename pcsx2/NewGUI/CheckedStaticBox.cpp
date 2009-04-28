@@ -21,27 +21,19 @@
 
 CheckedStaticBox::CheckedStaticBox( wxWindow* parent, int orientation, const wxString& title, int id ) :
 	wxPanel( parent ),
-	m_StaticBoxSizer( *new wxStaticBoxSizer( wxVERTICAL, this ) ),
-	ThisToggle( *new wxCheckBox( this, id, title, wxPoint( 8, 1 ) ) ),
-	ThisSizer( ( orientation != wxVERTICAL ) ? *new wxBoxSizer( orientation ) : m_StaticBoxSizer )
+	m_MasterSizer( *new wxBoxSizer( wxVERTICAL ) ),
+	ThisToggle( *new wxCheckBox( this, id, title, wxPoint( 8, 0 ) ) ),
+	ThisSizer( *new wxStaticBoxSizer( orientation, this ) )
 {
-	// Note on initializers above: Spacer required!
-	// The checkbox uses more room than a standard group box label, so we need to insert some space
-	// between the top of the groupbox and the first item.  If the user is wanting a horizontal sizer
-	// then we'll need to create a vertical sizer to act as a container for the spacer:
-
-	ThisToggle.SetSize( ThisToggle.GetSize() + wxSize( 8, 0 ) );
-
-	m_StaticBoxSizer.AddSpacer( 7 );
-	SetSizer( &m_StaticBoxSizer );
-
-	if( &ThisSizer != &m_StaticBoxSizer )
-		m_StaticBoxSizer.Add( &ThisSizer );
+	m_MasterSizer.Add( &ThisToggle );
+	m_MasterSizer.Add( &ThisSizer, wxSizerFlags().Expand() );
 
 	// Ensure that the right-side of the static group box isn't too cozy:
-	m_StaticBoxSizer.SetMinSize( ThisToggle.GetSize() + wxSize( 22, 1 ) );
+	m_MasterSizer.SetMinSize( ThisToggle.GetSize() + wxSize( 32, 0 ) );
 
-	Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( CheckedStaticBox::MainToggle_Click ) );
+	SetSizer( &m_MasterSizer );
+
+	Connect( id, wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( CheckedStaticBox::MainToggle_Click ) );
 }
 
 // Adds a checkbox to this group panel's base sizer.
@@ -54,10 +46,6 @@ wxCheckBox& CheckedStaticBox::AddCheckBox( const wxString& label, wxWindowID id 
 
 //////////////////////////////////////////////////////////////////////////////////////////
 //
-/*BEGIN_EVENT_TABLE(CheckedStaticBox, wxPanel)
-	EVT_CHECKBOX(wxID_ANY, MainToggle_Click)
-END_EVENT_TABLE()*/
-
 void CheckedStaticBox::MainToggle_Click( wxCommandEvent& evt )
 {
 	SetValue( evt.IsChecked() );

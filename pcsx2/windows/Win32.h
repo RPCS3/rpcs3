@@ -16,8 +16,7 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
-#ifndef _PCSX2_WIN32_H__
-#define _PCSX2_WIN32_H__
+#pragma once
 
 #include "RedtapeWindows.h"		// our "safe" include of windows (sets version and undefs uselessness)
 #include <commctrl.h>
@@ -170,6 +169,4 @@ extern bool StreamException_LogLastError( const wxString& streamname, const wxCh
 // recursively.  Set compressStatus to false to decompress compressed files (and do nothing
 // to already decompressed files).
 extern void NTFS_CompressFile( const wxString& file, bool compressStatus=true );
-
-#endif
 
