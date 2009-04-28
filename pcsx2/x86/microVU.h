@@ -5,12 +5,12 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2 of the License, or
  *  (at your option) any later version.
- *  
+ *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
- *  
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
@@ -78,7 +78,7 @@ struct microProgram {
 template<u32 pSize>
 struct microProgManager {
 	microProgram<pSize>	prog[mMaxProg];	// Store MicroPrograms in memory
-	static const int	max = mMaxProg - 1; 
+	static const int	max = mMaxProg - 1;
 	int					cur;			// Index to Current MicroProgram thats running (-1 = uncached)
 	int					total;			// Total Number of valid MicroPrograms minus 1
 	int					cleared;		// Micro Program is Indeterminate so must be searched for (and if no matches are found then recompile a new one)
@@ -93,7 +93,7 @@ struct microVU {
 	static const u32 cacheSize = 0x800000; // VU Cache Size
 
 	microProgManager<0x4000> prog; // Micro Program Data
-	
+
 	VURegs*	regs;		 // VU Regs Struct
 	u8*		cache;		 // Dynarec Cache Start (where we will start writing the recompiled code to)
 	u8*		startFunct;	 // Ptr Function to the Start code for recompiled programs
@@ -136,11 +136,7 @@ microVUt(void)		mVUcacheProg(microVU* mVU, int progIndex);
 void* __fastcall	mVUexecuteVU0(u32 startPC, u32 cycles);
 void* __fastcall	mVUexecuteVU1(u32 startPC, u32 cycles);
 
-#ifndef __LINUX__
 typedef void (__fastcall *mVUrecCall)(u32, u32);
-#else
-typedef void (*mVUrecCall)(u32, u32) __attribute__((__fastcall)); // Not sure if this is correct syntax (should be close xD)
-#endif
 
 // Include all the *.inl files (Needed because C++ sucks with templates and *.cpp files)
 #include "microVU_Misc.inl"

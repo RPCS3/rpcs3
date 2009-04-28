@@ -5,12 +5,12 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2 of the License, or
  *  (at your option) any later version.
- *  
+ *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
- *  
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
@@ -52,61 +52,61 @@ int g_SaveGSStream = 0; // save GS stream; 1 - prepare, 2 - save
 int g_nLeftGSFrames = 0; // when saving, number of frames left
 gzSavingState* g_fGSSave;
 
-void GSGIFTRANSFER1(u32 *pMem, u32 addr) { 
-	if( g_SaveGSStream == 2) { 
-		u32 type = GSRUN_TRANS1; 
+void GSGIFTRANSFER1(u32 *pMem, u32 addr) {
+	if( g_SaveGSStream == 2) {
+		u32 type = GSRUN_TRANS1;
 		u32 size = (0x4000-(addr))/16;
 		g_fGSSave->Freeze( type );
 		g_fGSSave->Freeze( size );
 		g_fGSSave->FreezeMem( ((u8*)pMem)+(addr), size*16 );
-	} 
-	GSgifTransfer1(pMem, addr); 
+	}
+	GSgifTransfer1(pMem, addr);
 }
 
-void GSGIFTRANSFER2(u32 *pMem, u32 size) { 
-	if( g_SaveGSStream == 2) { 
-		u32 type = GSRUN_TRANS2; 
-		u32 _size = size; 
+void GSGIFTRANSFER2(u32 *pMem, u32 size) {
+	if( g_SaveGSStream == 2) {
+		u32 type = GSRUN_TRANS2;
+		u32 _size = size;
 		g_fGSSave->Freeze( type );
 		g_fGSSave->Freeze( size );
 		g_fGSSave->FreezeMem( pMem, _size*16 );
-	} 
-	GSgifTransfer2(pMem, size); 
+	}
+	GSgifTransfer2(pMem, size);
 }
 
-void GSGIFTRANSFER3(u32 *pMem, u32 size) { 
-	if( g_SaveGSStream == 2 ) { 
-		u32 type = GSRUN_TRANS3; 
-		u32 _size = size; 
+void GSGIFTRANSFER3(u32 *pMem, u32 size) {
+	if( g_SaveGSStream == 2 ) {
+		u32 type = GSRUN_TRANS3;
+		u32 _size = size;
 		g_fGSSave->Freeze( type );
 		g_fGSSave->Freeze( size );
 		g_fGSSave->FreezeMem( pMem, _size*16 );
-	} 
-	GSgifTransfer3(pMem, size); 
+	}
+	GSgifTransfer3(pMem, size);
 }
 
-__forceinline void GSVSYNC(void) { 
-	if( g_SaveGSStream == 2 ) { 
-		u32 type = GSRUN_VSYNC; 
-		g_fGSSave->Freeze( type ); 
-	} 
+__forceinline void GSVSYNC(void) {
+	if( g_SaveGSStream == 2 ) {
+		u32 type = GSRUN_VSYNC;
+		g_fGSSave->Freeze( type );
+	}
 }
 #else
 
-__forceinline void GSGIFTRANSFER1(u32 *pMem, u32 addr) { 
-	GSgifTransfer1(pMem, addr); 
+__forceinline void GSGIFTRANSFER1(u32 *pMem, u32 addr) {
+	GSgifTransfer1(pMem, addr);
 }
 
-__forceinline void GSGIFTRANSFER2(u32 *pMem, u32 size) { 
-	GSgifTransfer2(pMem, size); 
+__forceinline void GSGIFTRANSFER2(u32 *pMem, u32 size) {
+	GSgifTransfer2(pMem, size);
 }
 
-__forceinline void GSGIFTRANSFER3(u32 *pMem, u32 size) { 
-	GSgifTransfer3(pMem, size); 
+__forceinline void GSGIFTRANSFER3(u32 *pMem, u32 size) {
+	GSgifTransfer3(pMem, size);
 }
 
-__forceinline void GSVSYNC(void) { 
-} 
+__forceinline void GSVSYNC(void) {
+}
 #endif
 
 void _gs_ChangeTimings( u32 framerate, u32 iTicks )
@@ -196,7 +196,7 @@ s32 gsOpen()
 		GSsetBaseMem( PS2MEM_GS );
 		GSirqCallback( gsIrq );
 
-		m_gsOpened = !GSopen((void *)&pDsp, "PCSX2", 0);
+		m_gsOpened = !GSopen( &pDsp, "PCSX2", 0 );
 	}
 
 	/*if( m_gsOpened )
@@ -244,7 +244,7 @@ void gsReset()
 
 	gsOnModeChanged(
 		(Config.PsxType & 1) ? FRAMERATE_PAL : FRAMERATE_NTSC,
-		UpdateVSyncRate() 
+		UpdateVSyncRate()
 	);
 
 	memzero_obj(g_RealGSMem);
@@ -391,7 +391,7 @@ __forceinline void gsWrite16(u32 mem, u16 value)
 		case GS_CSR+2:
 			gsCSRwrite( (CSRw&0xffff) | ((u32)value<<16));
 		return; // do not write to MTGS memory
-		
+
 		case GS_IMR:
 			IMRwrite(value);
 		return; // do not write to MTGS memory
@@ -451,7 +451,7 @@ void __fastcall gsWrite64_page_01( u32 mem, const mem64_t* value )
 			IMRwrite((u32)value[0]);
 		return;
 	}
-	
+
 	gsWrite64_generic( mem, value );
 }
 
@@ -487,7 +487,7 @@ void __fastcall gsWrite128_page_01( u32 mem, const mem128_t* value )
 			IMRwrite((u32)value[0]);
 		return;
 	}
-	
+
 	gsWrite128_generic( mem, value );
 }
 
@@ -556,7 +556,7 @@ __forceinline u16 gsRead16(u32 mem)
 	return *(u16*)PS2GS_BASE(mem);
 }
 
-__forceinline u32 gsRead32(u32 mem) 
+__forceinline u32 gsRead32(u32 mem)
 {
 	GIF_LOG("GS read 32 from %8.8lx  value: %8.8lx", mem, *(u32*)PS2GS_BASE(mem));
 	return *(u32*)PS2GS_BASE(mem);
@@ -604,7 +604,7 @@ void gsSyncLimiterLostTime( s32 deltaTime )
 
 // This function does not regulate frame limiting, meaning it does no stalling.
 // Stalling functions are performed by the EE: If the MTGS were throtted and not
-// the EE, the EE would fill the ringbuffer while the MTGS regulated frames -- 
+// the EE, the EE would fill the ringbuffer while the MTGS regulated frames --
 // fine for most situations but could result in literally dozens of frames queued
 // up in the ringbuffer durimg some game menu screens; which in turn would result
 // in a half-second lag of keystroke actions becoming visible to the user (bad!).
@@ -619,7 +619,7 @@ __forceinline void gsFrameSkip( bool forceskip )
 	static u8 FramesToRender = 0;
 	static u8 FramesToSkip = 0;
 
-	if( CHECK_FRAMELIMIT != PCSX2_FRAMELIMIT_SKIP && 
+	if( CHECK_FRAMELIMIT != PCSX2_FRAMELIMIT_SKIP &&
 		CHECK_FRAMELIMIT != PCSX2_FRAMELIMIT_VUSKIP ) return;
 
 	// FrameSkip and VU-Skip Magic!
@@ -627,7 +627,7 @@ __forceinline void gsFrameSkip( bool forceskip )
 
 	// This is the least number of consecutive frames we will render w/o skipping
 	const int noSkipFrames = ((Config.CustomConsecutiveFrames>0) ? Config.CustomConsecutiveFrames : 1);
-	// This is the number of consecutive frames we will skip				
+	// This is the number of consecutive frames we will skip
 	const int yesSkipFrames = ((Config.CustomConsecutiveSkip>0) ? Config.CustomConsecutiveSkip : 1);
 
 	const u64 iEnd = GetCPUTicks();
@@ -651,7 +651,7 @@ __forceinline void gsFrameSkip( bool forceskip )
 		}
 		return;
 	}
-	
+
 	// if we've already given the EE a skipcount assignment then don't do anything more.
 	// Otherwise we could start compounding the issue and skips would be too long.
 	if( g_vu1SkipCount > 0 )
@@ -665,23 +665,23 @@ __forceinline void gsFrameSkip( bool forceskip )
 		// -- Standard operation section --
 		// Means neither skipping frames nor force-rendering consecutive frames.
 
-		if( sSlowDeltaTime > 0 ) 
+		if( sSlowDeltaTime > 0 )
 		{
 			// The game is running below the minimum framerate.
 			// But don't start skipping yet!  That would be too sensitive.
 			// So the skipping code is only engaged if the SlowDeltaTime falls behind by
 			// a full frame, or if we're already skipping (in which case we don't care
 			// to avoid errant skips).
-			
+
 			// Note: The MTGS can go out of phase from the EE, which means that the
 			// variance for a "nominal" framerate can range from 0 to m_iSlowTicks.
 			// We also check for that here.
 
-			if( (m_justSkipped && (sSlowDeltaTime > m_iSlowTicks)) || 
+			if( (m_justSkipped && (sSlowDeltaTime > m_iSlowTicks)) ||
 				(sSlowDeltaTime > m_iSlowTicks*2) )
 			{
 				//Console::Status( "Frameskip Initiated! Lateness: %d", params (int)( (sSlowDeltaTime*100) / m_iSlowTicks ) );
-				
+
 				if( CHECK_FRAMELIMIT == PCSX2_FRAMELIMIT_VUSKIP )
 				{
 					// For best results we have to wait for the EE to
@@ -755,7 +755,7 @@ void gsPostVsyncEnd( bool updategs )
 {
 	*(u32*)(PS2MEM_GS+0x1000) ^= 0x2000; // swap the vsync field
 
-	if( mtgsThread != NULL ) 
+	if( mtgsThread != NULL )
 		mtgsThread->PostVsyncEnd( updategs );
 	else
 	{
@@ -789,7 +789,7 @@ void gsDynamicSkipEnable()
 	if( !m_StrictSkipping ) return;
 
 	mtgsWaitGS();
-	m_iSlowStart = GetCPUTicks();	
+	m_iSlowStart = GetCPUTicks();
 	frameLimitReset();
 }
 

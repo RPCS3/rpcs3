@@ -5,12 +5,12 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2 of the License, or
  *  (at your option) any later version.
- *  
+ *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
- *  
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
@@ -46,22 +46,23 @@ namespace Exception
 	{
 		// Major hack. After a couple of tries, I'm still not managing to get Linux to catch these exceptions, so that the user actually
 		// gets the messages. Since Console is unavailable at this level, I'm using a simple printf, which of course, means it doesn't get
-		// logged. But at least the user sees it. 
-		// 
+		// logged. But at least the user sees it.
+		//
 		// I'll rip this out once I get Linux to actually catch these exceptions. Say, in BeginExecution or StartGui, like I would expect.
 		// -- arcum42
 #ifdef __LINUX__
-		printf(msg.c_str());
+        wxLogError( msg_eng.c_str() );
 #endif
 	}
-	
+
 	// given message is assumed to be a translation key, and will be stored in translated
 	// and untranslated forms.
-	BaseException::BaseException( const char* msg_eng ) : 
+	BaseException::BaseException( const char* msg_eng ) :
 		m_message_eng( GetEnglish( msg_eng ) ),
 		m_message( GetTranslation( msg_eng ) ),
 		m_stacktrace( wxEmptyString )		// unsupported yet
 	{
+        wxLogError( m_message_eng.c_str() );
 	}
 
 	wxString BaseException::LogMessage() const
@@ -74,7 +75,7 @@ namespace Exception
 	{
 		return wxsFormat(
 			wxT("Stream exception: %s\n\tObject name: %s"),
-			m_message_eng, StreamName.c_str()
+			m_message_eng.c_str(), StreamName.c_str()
 		) + m_stacktrace;
 	}
 
@@ -94,7 +95,7 @@ namespace Exception
 
 	wxString PluginFailure::DisplayMessage() const
 	{
-		return wxsFormat( m_message, plugin_name );
+		return wxsFormat( m_message, plugin_name.c_str() );
 	}
 
 	// ------------------------------------------------------------------------
@@ -138,7 +139,7 @@ namespace Exception
 			Crc_Savestate, Crc_Cdvd
 		);
 	}
-	
+
 	wxString StateCrcMismatch::DisplayMessage() const
 	{
 		return wxsFormat(
@@ -149,11 +150,11 @@ namespace Exception
 			)
 		);
 	}
-	
+
 	// ------------------------------------------------------------------------
 	wxString IndexBoundsFault::LogMessage() const
 	{
-		return wxT("Index out of bounds on SafeArray: ") + ArrayName + 
+		return wxT("Index out of bounds on SafeArray: ") + ArrayName +
 			wxsFormat( wxT("(index=%d, size=%d)"), BadIndex, ArrayLength );
 	}
 

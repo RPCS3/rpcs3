@@ -8,16 +8,16 @@
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions
 // are met:
-// 
-// 1. Redistributions of source code must retain the above copyright 
-//    notice, this list of conditions and the following disclaimer.  
+//
+// 1. Redistributions of source code must retain the above copyright
+//    notice, this list of conditions and the following disclaimer.
 // 2. Redistributions in binary form must reproduce the above copyright
 //    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.  
+//    documentation and/or other materials provided with the distribution.
 // 3. Neither the name of the project nor the names of its contributors
 //    may be used to endorse or promote products derived from this software
-//    without specific prior written permission. 
-// 
+//    without specific prior written permission.
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 // ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 // IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -27,9 +27,9 @@
 // OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
 // HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
 // LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
-// OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF 
+// OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 // SUCH DAMAGE.
-// 
+//
 
 // modified by gigahers and air to write formatted output directly into a std::string container.
 
@@ -84,19 +84,19 @@ static void cvt(char (&buf)[_CVTBUFSIZE], double arg, int preci, int& decpt, int
   arg = modf(arg, &fi);
   p1 = &buf[_CVTBUFSIZE];
 
-  if (fi != 0) 
+  if (fi != 0)
   {
-    while (fi != 0) 
+    while (fi != 0)
     {
       fj = modf(fi / 10, &fi);
       *--p1 = (int)((fj + .03) * 10) + '0';
       r2++;
     }
     while (p1 < &buf[_CVTBUFSIZE]) *p++ = *p1++;
-  } 
+  }
   else if (arg > 0)
   {
-    while ((fj = arg * 10) < 1) 
+    while ((fj = arg * 10) < 1)
     {
       arg = fj;
       r2--;
@@ -107,7 +107,7 @@ static void cvt(char (&buf)[_CVTBUFSIZE], double arg, int preci, int& decpt, int
 
   if (eflag == 0) p1 += r2;
   decpt = r2;
-  if (p1 < &buf[0]) 
+  if (p1 < &buf[0])
   {
     buf[0] = '\0';
     return;
@@ -118,23 +118,23 @@ static void cvt(char (&buf)[_CVTBUFSIZE], double arg, int preci, int& decpt, int
     arg = modf(arg, &fj);
     *p++ = (int) fj + '0';
   }
-  if (p1 >= &buf[_CVTBUFSIZE]) 
+  if (p1 >= &buf[_CVTBUFSIZE])
   {
     buf[_CVTBUFSIZE - 1] = '\0';
     return;
   }
   p = p1;
   *p1 += 5;
-  while (*p1 > '9') 
+  while (*p1 > '9')
   {
     *p1 = '0';
     if (p1 > buf)
       ++*--p1;
-    else 
+    else
     {
       *p1 = '1';
       decpt++;
-      if (eflag == 0) 
+      if (eflag == 0)
       {
         if (p > buf) *p = '0';
         p++;
@@ -285,19 +285,19 @@ static void iaddr( std::string& dest, unsigned char *addr, int size, int precisi
   {
     if (i != 0) tmp[len++] = '.';
     n = addr[i];
-    
+
     if (n == 0)
       tmp[len++] = digits[0];
     else
     {
-      if (n >= 100) 
+      if (n >= 100)
       {
         tmp[len++] = digits[n / 100];
         n = n % 100;
         tmp[len++] = digits[n / 10];
         n = n % 10;
       }
-      else if (n >= 10) 
+      else if (n >= 10)
       {
         tmp[len++] = digits[n / 10];
         n = n % 10;
@@ -434,7 +434,7 @@ static void forcdecpt(char *buffer)
   if (*buffer)
   {
     int n = strlen(buffer);
-    while (n > 0) 
+    while (n > 0)
     {
       buffer[n + 1] = buffer[n];
       n--;
@@ -578,7 +578,7 @@ repeat:
 		precision = -1;
 		if (*fmt == '.')
 		{
-			++fmt;    
+			++fmt;
 			if (is_digit(*fmt))
 				precision = skip_atoi(&fmt);
 			else if (*fmt == '*')
@@ -748,9 +748,11 @@ repeat:
 		else
 		{
 			s32 num;
-			if (qualifier == 'h')
-				num = va_arg(args, s16);
-			else	// 'l' qualifier or no qualifier means 32 bits on all our std target platforms.
+			// Modern 32 bit compilers pass parameters into va_arg by 32 bit scale always,
+			// so no point in using or checking for the 'h' parameter.
+			/*if (qualifier == 'h')
+				num = va_arg(args, int);
+			else*/	// 'l' qualifier or no qualifier means 32 bits on all our std target platforms.
 				num = va_arg(args, s32);
 
 			number(dest, num, base, field_width, precision, flags);

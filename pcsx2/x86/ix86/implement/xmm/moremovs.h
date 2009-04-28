@@ -5,12 +5,12 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2 of the License, or
  *  (at your option) any later version.
- *  
+ *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
- *  
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
@@ -63,12 +63,12 @@ public:
 // All implementations of Unaligned Movs will, when possible, use aligned movs instead.
 // This happens when using Mem,Reg or Reg,Mem forms where the address is simple displacement
 // which can be checked for alignment at runtime.
-// 
+//
 template< u8 Prefix, bool isAligned >
 class SimdImpl_MoveSSE
 {
-	static const u16 OpcodeA = 0x28;		// Aligned [aps] form
-	static const u16 OpcodeU = 0x10;		// unaligned [ups] form
+	static const uint OpcodeA = 0x28;		// Aligned [aps] form
+	static const uint OpcodeU = 0x10;		// unaligned [ups] form
 
 public:
 	SimdImpl_MoveSSE() {} //GCC.
@@ -78,7 +78,7 @@ public:
 		if( to != from ) xOpWrite0F( Prefix, OpcodeA, to, from );
 	}
 
-	__forceinline void operator()( const xRegisterSSE& to, const void* from ) const	
+	__forceinline void operator()( const xRegisterSSE& to, const void* from ) const
 	{
 		xOpWrite0F( Prefix, (isAligned || ((uptr)from & 0x0f) == 0) ? OpcodeA : OpcodeU, to, from );
 	}
@@ -123,7 +123,7 @@ public:
 		if( to != from ) xOpWrite0F( PrefixA, Opcode, to, from );
 	}
 
-	__forceinline void operator()( const xRegisterSSE& to, const void* from ) const	
+	__forceinline void operator()( const xRegisterSSE& to, const void* from ) const
 	{
 		xOpWrite0F( (isAligned || ((uptr)from & 0x0f) == 0) ? PrefixA : PrefixU, Opcode, to, from );
 	}
@@ -168,7 +168,7 @@ class SimdImpl_Blend
 public:
 	// [SSE-4.1] Conditionally copies dword values from src to dest, depending on the
 	// mask bits in the immediate operand (bits [3:0]).  Each mask bit corresponds to a
-	// dword element in a 128-bit operand. 
+	// dword element in a 128-bit operand.
 	//
 	// If a mask bit is 1, then the corresponding dword in the source operand is copied
 	// to dest, else the dword element in dest is left unchanged.
@@ -177,25 +177,25 @@ public:
 
 	// [SSE-4.1] Conditionally copies quadword values from src to dest, depending on the
 	// mask bits in the immediate operand (bits [1:0]).  Each mask bit corresponds to a
-	// quadword element in a 128-bit operand. 
+	// quadword element in a 128-bit operand.
 	//
 	// If a mask bit is 1, then the corresponding dword in the source operand is copied
 	// to dest, else the dword element in dest is left unchanged.
 	//
 	SimdImpl_DestRegImmSSE<0x66,0x0d3a> PD;
-	
+
 	// [SSE-4.1] Conditionally copies dword values from src to dest, depending on the
 	// mask (bits [3:0]) in XMM0 (yes, the fixed register).  Each mask bit corresponds
-	// to a dword element in the 128-bit operand. 
+	// to a dword element in the 128-bit operand.
 	//
 	// If a mask bit is 1, then the corresponding dword in the source operand is copied
 	// to dest, else the dword element in dest is left unchanged.
 	//
 	SimdImpl_DestRegSSE<0x66,0x1438> VPS;
-	
+
 	// [SSE-4.1] Conditionally copies quadword values from src to dest, depending on the
 	// mask (bits [1:0]) in XMM0 (yes, the fixed register).  Each mask bit corresponds
-	// to a quadword element in the 128-bit operand. 
+	// to a quadword element in the 128-bit operand.
 	//
 	// If a mask bit is 1, then the corresponding dword in the source operand is copied
 	// to dest, else the dword element in dest is left unchanged.
@@ -223,7 +223,7 @@ public:
 	// [SSE-4.1] Zero/Sign-extend the low byte values in src into qword integers
 	// and store them in dest.
 	SimdImpl_DestRegStrict<0x66,OpcodeBase+0x200,xRegisterSSE,xRegisterSSE,u16> BQ;
-	
+
 	// [SSE-4.1] Zero/Sign-extend the low word values in src into dword integers
 	// and store them in dest.
 	SimdImpl_DestRegStrict<0x66,OpcodeBase+0x300,xRegisterSSE,xRegisterSSE,u64> WD;

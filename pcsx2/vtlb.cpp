@@ -5,12 +5,12 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2 of the License, or
  *  (at your option) any later version.
- *  
+ *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
- *  
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
@@ -69,7 +69,7 @@ vtlbHandler UnmappedPhyHandler1;
 		shr ecx,12;
 		mov ecx,[ecx*4+vmap];	//translate
 		add ecx,eax;			//transform
-		
+
 		js callfunction;		//if <0 its invalid ptr :)
 
 		mov eax,[ecx];
@@ -131,7 +131,7 @@ __forceinline void __fastcall MemOp_r1(u32 addr, DataType* data)
 			data[1]=*reinterpret_cast<DataType*>(ppf+8);
 	}
 	else
-	{	
+	{
 		//has to: translate, find function, call function
 		u32 hand=(u8)vmv;
 		u32 paddr=ppf-hand+0x80000000;
@@ -158,7 +158,7 @@ __forceinline void __fastcall MemOp_w0(u32 addr, DataType data)
 		*reinterpret_cast<DataType*>(ppf)=data;
 	}
 	else
-	{	
+	{
 		//has to: translate, find function, call function
 		u32 hand=(u8)vmv;
 		u32 paddr=ppf-hand+0x80000000;
@@ -187,7 +187,7 @@ __forceinline void __fastcall MemOp_w1(u32 addr,const DataType* data)
 			*reinterpret_cast<DataType*>(ppf+8)=data[1];
 	}
 	else
-	{	
+	{
 		//has to: translate, find function, call function
 		u32 hand=(u8)vmv;
 		u32 paddr=ppf-hand+0x80000000;
@@ -246,7 +246,7 @@ void __fastcall vtlb_memWrite128(u32 mem, const mem128_t *value)
 
 /////////////////////////////////////////////////////////////////////////
 // Error / TLB Miss Handlers
-// 
+//
 
 static const char* _getModeStr( u32 mode )
 {
@@ -330,7 +330,7 @@ void __fastcall vtlbDefaultPhyWrite128(u32 addr,const mem128_t* data) { Console:
 
 /////////////////////////////////////////////////////////////////////////
 // VTLB Public API -- Init/Term/RegisterHandler stuff
-// 
+//
 
 // Registers a handler into the VTLB's internal handler array.  The handler defines specific behavior
 // for how memory pages bound to the handler are read from / written to.  If any of the handler pointers
@@ -345,18 +345,18 @@ vtlbHandler vtlb_RegisterHandler(	vtlbMemR8FP* r8,vtlbMemR16FP* r16,vtlbMemR32FP
 {
 	//write the code :p
 	vtlbHandler rv=vtlbHandlerCount++;
-	
-	vtlbdata.RWFT[0][0][rv] = (r8!=0)   ? r8:vtlbDefaultPhyRead8;
-	vtlbdata.RWFT[1][0][rv] = (r16!=0)  ? r16:vtlbDefaultPhyRead16;
-	vtlbdata.RWFT[2][0][rv] = (r32!=0)  ? r32:vtlbDefaultPhyRead32;
-	vtlbdata.RWFT[3][0][rv] = (r64!=0)  ? r64:vtlbDefaultPhyRead64;
-	vtlbdata.RWFT[4][0][rv] = (r128!=0) ? r128:vtlbDefaultPhyRead128;
 
-	vtlbdata.RWFT[0][1][rv] = (w8!=0)   ? w8:vtlbDefaultPhyWrite8;
-	vtlbdata.RWFT[1][1][rv] = (w16!=0)  ? w16:vtlbDefaultPhyWrite16;
-	vtlbdata.RWFT[2][1][rv] = (w32!=0)  ? w32:vtlbDefaultPhyWrite32;
-	vtlbdata.RWFT[3][1][rv] = (w64!=0)  ? w64:vtlbDefaultPhyWrite64;
-	vtlbdata.RWFT[4][1][rv] = (w128!=0) ? w128:vtlbDefaultPhyWrite128;
+	vtlbdata.RWFT[0][0][rv] = (r8!=0)   ? (void*)r8:(void*)vtlbDefaultPhyRead8;
+	vtlbdata.RWFT[1][0][rv] = (r16!=0)  ? (void*)r16:(void*)vtlbDefaultPhyRead16;
+	vtlbdata.RWFT[2][0][rv] = (r32!=0)  ? (void*)r32:(void*)vtlbDefaultPhyRead32;
+	vtlbdata.RWFT[3][0][rv] = (r64!=0)  ? (void*)r64:(void*)vtlbDefaultPhyRead64;
+	vtlbdata.RWFT[4][0][rv] = (r128!=0) ? (void*)r128:(void*)vtlbDefaultPhyRead128;
+
+	vtlbdata.RWFT[0][1][rv] = (void*)((w8!=0)   ? w8:vtlbDefaultPhyWrite8);
+	vtlbdata.RWFT[1][1][rv] = (void*)((w16!=0)  ? w16:vtlbDefaultPhyWrite16);
+	vtlbdata.RWFT[2][1][rv] = (void*)((w32!=0)  ? w32:vtlbDefaultPhyWrite32);
+	vtlbdata.RWFT[3][1][rv] = (void*)((w64!=0)  ? w64:vtlbDefaultPhyWrite64);
+	vtlbdata.RWFT[4][1][rv] = (void*)((w128!=0) ? w128:vtlbDefaultPhyWrite128);
 
 	return rv;
 }
@@ -380,7 +380,7 @@ void vtlb_MapHandler(vtlbHandler handler,u32 start,u32 size)
 
 		start+=VTLB_PAGE_SIZE;
 		size-=VTLB_PAGE_SIZE;
-	}	
+	}
 }
 
 void vtlb_MapBlock(void* base,u32 start,u32 size,u32 blocksize)
@@ -389,7 +389,7 @@ void vtlb_MapBlock(void* base,u32 start,u32 size,u32 blocksize)
 
 	verify(0==(start&VTLB_PAGE_MASK));
 	verify(0==(size&VTLB_PAGE_MASK) && size>0);
-	if (blocksize==0) 
+	if (blocksize==0)
 		blocksize=size;
 	verify(0==(blocksize&VTLB_PAGE_MASK) && blocksize>0);
 	verify(0==(size%blocksize));
@@ -424,7 +424,7 @@ void vtlb_Mirror(u32 new_region,u32 start,u32 size)
 		start+=VTLB_PAGE_SIZE;
 		new_region+=VTLB_PAGE_SIZE;
 		size-=VTLB_PAGE_SIZE;
-	}	
+	}
 }
 
 __forceinline void* vtlb_GetPhyPtr(u32 paddr)
@@ -484,7 +484,7 @@ void vtlb_VMapUnmap(u32 vaddr,u32 sz)
 {
 	verify(0==(vaddr&VTLB_PAGE_MASK));
 	verify(0==(sz&VTLB_PAGE_MASK) && sz>0);
-	
+
 	while(sz>0)
 	{
 		u32 handl=UnmappedVirtHandler0;
@@ -532,8 +532,8 @@ void vtlb_Init()
 	//done !
 
 	//Setup the initial mappings
-	vtlb_MapHandler(DefaultPhyHandler,0,VTLB_PMAP_SZ);	
-	
+	vtlb_MapHandler(DefaultPhyHandler,0,VTLB_PMAP_SZ);
+
 	//Set the V space as unmapped
 	vtlb_VMapUnmap(0,(VTLB_VMAP_ITEMS-1)*VTLB_PAGE_SIZE);
 	//yeah i know, its stupid .. but this code has to be here for now ;p

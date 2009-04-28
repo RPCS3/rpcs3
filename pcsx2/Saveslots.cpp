@@ -31,7 +31,7 @@ static int Slots[5] = { -1, -1, -1, -1, -1 };
 
 bool States_isSlotUsed(int num)
 {
-	if (ElfCRC == 0) 
+	if (ElfCRC == 0)
 		return false;
 	else
 		return wxFileExists( SaveState::GetFilename( num ) );
@@ -105,7 +105,7 @@ void States_Load(int num)
 	}
 	catch( Exception::StateLoadError_Recoverable& ex)
 	{
-		Console::Notice( wxsFormat( L"Could not load savestate slot %d.\n\n%s", num, ex.LogMessage() ) );
+		Console::Notice( wxsFormat( L"Could not load savestate slot %d.\n\n%s", num, ex.LogMessage().c_str() ) );
 
 		// At this point the cpu hasn't been reset, so we can return
 		// control to the user safely... (that's why we use a console notice instead of a popup)

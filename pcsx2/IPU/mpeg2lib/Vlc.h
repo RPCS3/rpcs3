@@ -25,7 +25,7 @@
 #ifndef __VLC_H__
 #define __VLC_H__
 
-#include "coroutine.h"
+#include "IPU/coroutine.h"
 
 static u8 data[2];
 static u8 dword[4];
@@ -48,7 +48,7 @@ static __forceinline void bitstream_init (decoder_t * decoder){
 	while( !getBits32(dword, 1) )
 		so_resume();
 
-	decoder->bitstream_buf = (dword[0] << 24) | (dword[1] << 16) | 
+	decoder->bitstream_buf = (dword[0] << 24) | (dword[1] << 16) |
 							 (dword[2] <<  8) |dword[3];
 }
 

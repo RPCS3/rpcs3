@@ -1,9 +1,5 @@
 #pragma once
 
-#ifndef _PCSX2_PRECOMPILED_HEADER_
-#define _PCSX2_PRECOMPILED_HEADER_
-#endif // pragma once
-
 //////////////////////////////////////////////////////////////////////////////////////////
 // Microsoft specific STL extensions for bounds checking and stuff: Enabled in devbuilds,
 // disabled in release builds. :)
@@ -172,7 +168,7 @@ static __forceinline u32 timeGetTime()
 #else
 
 #	define DevCon 0&&Console
-#	define DevMsg 
+#	define DevMsg
 	static const bool IsDevBuild = false;
 
 #endif

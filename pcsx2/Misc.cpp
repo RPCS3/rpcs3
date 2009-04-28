@@ -5,12 +5,12 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2 of the License, or
  *  (at your option) any later version.
- *  
+ *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
- *  
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
@@ -70,7 +70,7 @@ struct romdir
 	u16 extInfoSize;
 	u32 fileSize;
 #if defined(_MSC_VER)
-};		
+};
 #pragma pack()				//+22
 #else
 } __attribute__((packed));
@@ -146,12 +146,12 @@ bool IsBIOS(const wxString& filename, wxString& description)
 		if (strcmp(rd.fileName, "ROMVER") == 0)	// found romver
 		{
 			char aROMVER[14+1];		// ascii version loaded from disk.
-			
+
 			uint filepos = fp.Tell();
 			fp.Seek( fileOffset );
 			if( fp.Read( &aROMVER, 14 ) == 0 ) break;
 			fp.Seek( filepos );	//go back
-			
+
 			const char zonefail[2] = { aROMVER[4], '\0' };	// the default "zone" (unknown code)
 			const char* zone = zonefail;
 
@@ -217,13 +217,13 @@ int GetPS2ElfName( wxString& name )
 		Console::Error("Boot Error > SYSTEM.CNF not found");
 		return 0;//could not find; not a PS/PS2 cdvd
 	}
-	
+
 	f=CDVDFS_open("SYSTEM.CNF;1", 1);
 	CDVDFS_read(f, buffer, g_MaxPath);
 	CDVDFS_close(f);
-	
+
 	buffer[tocEntry.fileSize]='\0';
-	
+
 	pos=strstr(buffer, "BOOT2");
 	if (pos==NULL){
 		pos=strstr(buffer, "BOOT");
@@ -234,7 +234,7 @@ int GetPS2ElfName( wxString& name )
 		return 1;
 	}
 	pos+=strlen("BOOT2");
-	while (pos && *pos && pos<&buffer[g_MaxPath] 
+	while (pos && *pos && pos<&buffer[g_MaxPath]
 		&& (*pos<'A' || (*pos>'Z' && *pos<'a') || *pos>'z'))
 		pos++;
 	if (!pos || *pos==0)
@@ -283,10 +283,10 @@ void SaveGSState(const wxString& file)
 	if( g_SaveGSStream ) return;
 
 	Console::WriteLn( "Saving GS State..." );
-	Console::WriteLn( "\t%s", params file.mb_str() );
+	Console::WriteLn( wxsFormat( L"\t%s", file.c_str() ) );
 
 	g_fGSSave = new gzSavingState( file );
-	
+
 	g_SaveGSStream = 1;
 	g_nLeftGSFrames = 2;
 
@@ -419,7 +419,7 @@ void ProcessFKeys(int fkey, struct KeyModifiers *keymod)
 {
 	assert(fkey >= 1 && fkey <= 12 );
 
-	switch(fkey) 
+	switch(fkey)
 	{
 		case 1:
 			try
@@ -450,7 +450,7 @@ void ProcessFKeys(int fkey, struct KeyModifiers *keymod)
 				GSchangeSaveState(StatesC, SaveState::GetFilename(StatesC).mb_str());
 			break;
 
-		case 3:	
+		case 3:
 			try
 			{
 				gzLoadingState joe( SaveState::GetFilename( StatesC ) );	// throws exception on version mismatch
@@ -477,7 +477,7 @@ void ProcessFKeys(int fkey, struct KeyModifiers *keymod)
 				throw Exception::CpuStateShutdown(
 					// english log message:
 					wxsFormat( wxT("Error!  Could not load from saveslot %d\n"), StatesC ) + ex.LogMessage(),
-					
+
 					// translated message:
 					wxsFormat( _("Error loading saveslot %d.  Emulator reset."), StatesC )
 				);
@@ -492,9 +492,9 @@ void ProcessFKeys(int fkey, struct KeyModifiers *keymod)
 		case 8:
 			GSmakeSnapshot( g_Conf.Folders.Snapshots.ToAscii().data() );
 			break;
-		
-		case 9: //gsdx "on the fly" renderer switching 
-			if (!renderswitch) 
+
+		case 9: //gsdx "on the fly" renderer switching
+			if (!renderswitch)
 			{
 				StateRecovery::MakeGsOnly();
 				g_EmulationInProgress = false;
@@ -503,7 +503,7 @@ void ProcessFKeys(int fkey, struct KeyModifiers *keymod)
 				StateRecovery::Recover();
 				HostGui::BeginExecution(); //also sets g_EmulationInProgress to true later
 			}
-			else 
+			else
 			{
 				StateRecovery::MakeGsOnly();
 				g_EmulationInProgress = false;
@@ -519,15 +519,15 @@ void ProcessFKeys(int fkey, struct KeyModifiers *keymod)
 			// I might add turning EE, VU0, and VU1 recs on and off by hotkey at some point, too.
 			// --arcum42
 			enableLogging = !enableLogging;
-		
+
 			if (enableLogging)
 				GSprintf(10, "Logging Enabled.");
 			else
 				GSprintf(10,"Logging Disabled.");
-			
+
 			break;
 		case 11:
-			if( mtgsThread != NULL ) 
+			if( mtgsThread != NULL )
 			{
 				Console::Notice( "Cannot make gsstates in MTGS mode" );
 			}
@@ -554,30 +554,30 @@ void ProcessFKeys(int fkey, struct KeyModifiers *keymod)
 				{
 					Text = GetGSStateFilename();
 				}
-				
+
 				SaveGSState(Text);
 			}
 			break;
 #endif
 
 		case 12:
-			if( keymod->shift ) 
+			if( keymod->shift )
 			{
 #ifdef PCSX2_DEVBUILD
 				iDumpRegisters(cpuRegs.pc, 0);
 				Console::Notice("hardware registers dumped EE:%x, IOP:%x\n", params cpuRegs.pc, psxRegs.pc);
 #endif
 			}
-			else 
+			else
 			{
 				g_Pcsx2Recording ^= 1;
-				
-				if( mtgsThread != NULL ) 
+
+				if( mtgsThread != NULL )
 					mtgsThread->SendSimplePacket(GS_RINGTYPE_RECORD, g_Pcsx2Recording, 0, 0);
-				else if( GSsetupRecording != NULL ) 
+				else if( GSsetupRecording != NULL )
 					GSsetupRecording(g_Pcsx2Recording, NULL);
-				
-				if( SPU2setupRecording != NULL ) SPU2setupRecording(g_Pcsx2Recording, NULL);  
+
+				if( SPU2setupRecording != NULL ) SPU2setupRecording(g_Pcsx2Recording, NULL);
 			}
 			break;
 	}

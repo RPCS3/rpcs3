@@ -5,12 +5,12 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2 of the License, or
  *  (at your option) any later version.
- *  
+ *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
- *  
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
@@ -39,11 +39,11 @@ struct ELF_HEADER {
 	u32	e_shoff;        //Start of section headers (offset from file start)
 	u32	e_flags;        //Processor specific flags = 0x20924001 noreorder, mips
 	u16	e_ehsize;       //ELF header size (0x34 = 52 bytes)
-	u16	e_phentsize;    //Program headers entry size 
+	u16	e_phentsize;    //Program headers entry size
 	u16	e_phnum;        //Number of program headers
 	u16	e_shentsize;    //Section headers entry size
 	u16	e_shnum;        //Number of section headers
-	u16	e_shstrndx;     //Section header stringtable index	
+	u16	e_shstrndx;     //Section header stringtable index
 };
 
 struct ELF_PHR {
@@ -94,7 +94,7 @@ Type:
 5=HASH hash table
 6=DYNAMIC dynamic linking information
 7=NOTE
-8=NOBITS 
+8=NOBITS
 9=REL relocation entries
 10=SHLIB
 0x70000000=LOPROC processor specifc
@@ -171,25 +171,25 @@ static uint parseCommandLine( const wxString& filename )
 			p++;
 		else
 			p = filename;
-		
+
 		args_ptr -= strlen( p ) + 1;
-		
+
 		strcpy( (char*)&PS2MEM_BASE[ args_ptr ], p );						//fill param 0; i.e. name of the program
 
 		for ( i = strlen( p ) + 1 + 256, argc = 0; i > 0; i-- )
 		{
-			while (i && ((PS2MEM_BASE[ args_ptr + i ] == 0) || (PS2MEM_BASE[ args_ptr + i ] == 32))) 
+			while (i && ((PS2MEM_BASE[ args_ptr + i ] == 0) || (PS2MEM_BASE[ args_ptr + i ] == 32)))
 			{ i--; }
-			
+
 			if ( PS2MEM_BASE[ args_ptr + i + 1 ] == ' ') PS2MEM_BASE[ args_ptr + i + 1 ] = 0;
-			
+
 			while (i && (PS2MEM_BASE[ args_ptr + i ] != 0) && (PS2MEM_BASE[ args_ptr + i] != 32))
 			{ i--; }
-			
+
 			if ((PS2MEM_BASE[ args_ptr + i ] != 0) && (PS2MEM_BASE[ args_ptr + i ] != 32))
 			{	//i==0
 				argc++;
-				
+
 				if ( args_ptr - 4 - 4 - argc * 4 < 0 ) // fixme - Should this be cast to a signed int?
 					return 0;
 
@@ -241,7 +241,7 @@ struct ElfObject
 
 		if( header.e_phnum > 0 )
 			proghead = (ELF_PHR*)&data[header.e_phoff];
-			
+
 		if( header.e_shnum > 0 )
 			secthead = (ELF_SHR*)&data[header.e_shoff];
 
@@ -252,9 +252,9 @@ struct ElfObject
 			Console::Error( "ElfLoader Warning > Size of program headers is not standard" );
 
 		ELF_LOG( "type:      " );
-		switch( header.e_type ) 
+		switch( header.e_type )
 		{
-			default: 
+			default:
 				ELF_LOG( "unknown %x", header.e_type );
 				break;
 
@@ -266,14 +266,14 @@ struct ElfObject
 				ELF_LOG( "relocatable" );
 				break;
 
-			case 0x2: 
+			case 0x2:
 				ELF_LOG( "executable" );
 				break;
-		}  
+		}
 		ELF_LOG( "\n" );
 		ELF_LOG( "machine:   " );
-		
-		switch ( header.e_machine ) 
+
+		switch ( header.e_machine )
 		{
 			default:
 				ELF_LOG( "unknown" );
@@ -283,7 +283,7 @@ struct ElfObject
 				ELF_LOG( "mips_rs3000" );
 				break;
 		}
-		
+
 		ELF_LOG("\n");
 		ELF_LOG("version:   %d",header.e_version);
 		ELF_LOG("entry:     %08x",header.e_entry);
@@ -296,7 +296,7 @@ struct ElfObject
 		ELF_LOG("sh entsiz: %08x",header.e_shentsize);
 		ELF_LOG("sh num:    %08x",header.e_shnum);
 		ELF_LOG("sh strndx: %08x",header.e_shstrndx);
-		
+
 		ELF_LOG("\n");
 	}
 
@@ -308,9 +308,9 @@ struct ElfObject
 			(strnicmp( work.data(), "cdrom1:", strlen("cdromN:")) == 0))
 		{
 			int fi = CDVDFS_open(work.data() + strlen("cdromN:"), 1);//RDONLY
-			
+
 			if (fi < 0) throw Exception::FileNotFound( filename );
-			
+
 			CDVDFS_lseek( fi, 0, SEEK_SET );
 			rsize = CDVDFS_read( fi, (char*)data.GetPtr(), data.GetSizeInBytes() );
 			CDVDFS_close( fi );
@@ -321,7 +321,7 @@ struct ElfObject
 
 			f = fopen( work.data(), "rb" );
 			if( f == NULL ) Exception::FileNotFound( filename );
-			
+
 			fseek( f, 0, SEEK_SET );
 			rsize = fread( data.GetPtr(), 1, data.GetSizeInBytes(), f );
 			fclose( f );
@@ -349,9 +349,9 @@ struct ElfObject
 
 		for( int i = 0 ; i < header.e_phnum ; i++ )
 		{
-			ELF_LOG( "Elf32 Program Header" );	
+			ELF_LOG( "Elf32 Program Header" );
 			ELF_LOG( "type:      " );
-			
+
 			switch ( proghead[ i ].p_type ) {
 				default:
 					ELF_LOG( "unknown %x", (int)proghead[ i ].p_type );
@@ -385,7 +385,7 @@ struct ElfObject
 				}
 				break;
 			}
-			
+
 			ELF_LOG("\n");
 			ELF_LOG("offset:    %08x",(int)proghead[i].p_offset);
 			ELF_LOG("vaddr:     %08x",(int)proghead[i].p_vaddr);
@@ -398,13 +398,13 @@ struct ElfObject
 		}
 	}
 
-	void loadSectionHeaders() 
+	void loadSectionHeaders()
 	{
 		if( secthead == NULL || header.e_shoff > (u32)data.GetLength() )
 			return;
 
 		const u8* sections_names = data.GetPtr( secthead[ (header.e_shstrndx == 0xffff ? 0 : header.e_shstrndx) ].sh_offset );
-			
+
 		int i_st = -1;
 		int i_dt = -1;
 
@@ -415,11 +415,11 @@ struct ElfObject
 			// used by parseCommandLine
 			//if ( secthead[i].sh_flags & 0x2 )
 			//	args_ptr = min( args_ptr, secthead[ i ].sh_addr & 0x1ffffff );
-			
+
 #ifdef PCSX2_DEVBULD
 			ELF_LOG("\n");
 			ELF_LOG("type:      ");
-			
+
 			switch ( secthead[ i ].sh_type )
 			{
 				case 0x0: ELF_LOG("null"); break;
@@ -431,7 +431,7 @@ struct ElfObject
 				case 0x9: ELF_LOG("rel"); break;
 				default: ELF_LOG("unknown %08x",secthead[i].sh_type); break;
 			}
-			
+
 			ELF_LOG("\n");
 			ELF_LOG("flags:     %08x", secthead[i].sh_flags);
 			ELF_LOG("addr:      %08x", secthead[i].sh_addr);
@@ -442,11 +442,11 @@ struct ElfObject
 			ELF_LOG("addralign: %08x", secthead[i].sh_addralign);
 			ELF_LOG("entsize:   %08x", secthead[i].sh_entsize);
 			// dump symbol table
-		
-			if( secthead[ i ].sh_type == 0x02 ) 
+
+			if( secthead[ i ].sh_type == 0x02 )
 			{
-				i_st = i; 
-				i_dt = secthead[i].sh_link; 
+				i_st = i;
+				i_dt = secthead[i].sh_link;
 			}
 #endif
 		}
@@ -483,7 +483,7 @@ void ElfApplyPatches()
 		Console::WriteLn( "XML Loader returned an error. Trying to load a pnach..." );
 		inifile_read( filename.ToAscii().data() );
 	}
-	else 
+	else
 		Console::WriteLn( "XML Loading success. Will not load from pnach..." );
 
 	applypatch( 0 );
@@ -530,7 +530,7 @@ int loadElfFile(const wxString& filename)
 	if( !filename.StartsWith( L"cdrom0:" ) && !filename.StartsWith( L"cdrom1:" ) )
 	{
 		// Loading from a file (or non-cd image)
-		
+
 		elfsize = Path::GetFileSize( filename );
 	}
 	else
@@ -551,8 +551,8 @@ int loadElfFile(const wxString& filename)
 	if( elfobj.proghead == NULL )
 	{
 		throw Exception::CpuStateShutdown(
-			wxsFormat( wxT("Invalid ELF header encountered in file:\n\t%s"), elfobj.filename ),
-			wxsFormat(_("Invalid ELF header, file: %s"), elfobj.filename )
+			wxsFormat( wxT("Invalid ELF header encountered in file:\n\t%s"), elfobj.filename.c_str() ),
+			wxsFormat(_("Invalid ELF header, file: %s"), elfobj.filename.c_str() )
 		);
 	}
 
@@ -561,10 +561,10 @@ int loadElfFile(const wxString& filename)
 
 	elfobj.loadProgramHeaders();
 	elfobj.loadSectionHeaders();
-	
-	cpuRegs.pc = elfobj.header.e_entry; //set pc to proper place 
+
+	cpuRegs.pc = elfobj.header.e_entry; //set pc to proper place
 	ELF_LOG( "PC set to: %8.8lx", cpuRegs.pc );
-	
+
 	cpuRegs.GPR.n.sp.UL[0] = 0x81f00000;
 	cpuRegs.GPR.n.gp.UL[0] = 0x81f80000; // might not be 100% ok
 	//cpuRegs.GPR.n.a0.UL[0] = parseCommandLine( filename );		// see #ifdef'd out parseCommendLine for details.
@@ -592,7 +592,7 @@ extern bool path3hack;
 int g_VUGameFixes = 0;
 
 // fixme - this should be moved to patches or eliminated
-void LoadGameSpecificSettings() 
+void LoadGameSpecificSettings()
 {
 	// default
 	g_VUGameFixes = 0;
@@ -604,6 +604,6 @@ void LoadGameSpecificSettings()
 		//case 0xa08c4057:  //Sprint Cars (SLUS)
 		//case 0x8b0725d5:  //Flinstones Bedrock Racing (SLES)
 			//path3hack = TRUE; // We can move this to patch files right now
-			//break;		
+			//break;
 	}
 }

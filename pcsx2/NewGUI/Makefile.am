@@ -7,7 +7,7 @@ bin_PROGRAMS = pcsx2
 pcsx2_SOURCES =  \
 CheckedStaticBox.cpp ConsoleLogger.cpp   MainFrame.cpp   wxHelpers.cpp AppConfig.cpp main.cpp \
 App.h CheckedStaticBox.h MainFrame.h   wxHelpers.h \
-AboutBoxDialog.cpp GameFixesDialog.cpp LogOptionsDialog.cpp \
+IniInterface.cpp AboutBoxDialog.cpp GameFixesDialog.cpp LogOptionsDialog.cpp \
 AboutBoxDialog.h GameFixesDialog.h LogOptionsDialog.h
 
 pcsx2_LDFLAGS =

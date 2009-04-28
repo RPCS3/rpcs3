@@ -1,0 +1,435 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6" />
+	<Project>
+		<Option title="pcsx2" />
+		<Option platforms="Windows;Unix;" />
+		<Option pch_mode="2" />
+		<Option compiler="gcc" />
+		<Build>
+			<Target title="Debug">
+				<Option platforms="Windows;Unix;" />
+				<Option output="$(SvnRootDir)/bin/pcsx2-dbg" prefix_auto="1" extension_auto="1" />
+				<Option working_dir="$(SvnRootDir)/bin/" />
+				<Option object_output="./.objs/Debug" />
+				<Option type="0" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-g" />
+					<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --debug=yes --cflags`" />
+					<Add option="-DPCSX2_DEVBUILD" />
+				</Compiler>
+				<ResourceCompiler>
+					<Add directory="$(ProjectRootDir)/NewGUI" />
+				</ResourceCompiler>
+				<Linker>
+					<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --debug=yes --libs`" />
+					<Add library="$(SvnRootDir)/deps/zlib-dbg.a" />
+				</Linker>
+			</Target>
+			<Target title="Devel">
+				<Option platforms="Windows;Unix;" />
+				<Option output="$(SvnRootDir)/bin/pcsx2-dev" prefix_auto="1" extension_auto="1" />
+				<Option working_dir="$(SvnRootDir)/bin/" />
+				<Option object_output="./.objs/Devel" />
+				<Option type="0" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-O2" />
+					<Add option="-W" />
+					<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --debug=yes --cflags`" />
+					<Add option="-DNDEBUG" />
+					<Add option="-DPCSX2_DEVBUILD" />
+				</Compiler>
+				<ResourceCompiler>
+					<Add directory="$(ProjectRootDir)/NewGUI" />
+				</ResourceCompiler>
+				<Linker>
+					<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --debug=yes --libs`" />
+					<Add library="$(SvnRootDir)/deps/zlib-dev.a" />
+				</Linker>
+			</Target>
+			<Target title="Release">
+				<Option platforms="Windows;Unix;" />
+				<Option output="$(SvnRootDir)/bin/pcsx2" prefix_auto="1" extension_auto="1" />
+				<Option working_dir="$(SvnRootDir)/bin/" />
+				<Option object_output="./.objs/Release" />
+				<Option type="0" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-O2" />
+					<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --debug=no --cflags`" />
+					<Add option="-DNDEBUG" />
+				</Compiler>
+				<ResourceCompiler>
+					<Add directory="$(ProjectRootDir)/NewGUI" />
+				</ResourceCompiler>
+				<Linker>
+					<Add option="-s" />
+					<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --debug=no --libs`" />
+					<Add library="$(SvnRootDir)/deps/zlib.a" />
+				</Linker>
+			</Target>
+			<Environment>
+				<Variable name="SvnRootDir" value="../../" />
+				<Variable name="ProjectRootDir" value='&quot;$(SvnRootDir)/pcsx2/&quot;' />
+				<Variable name="CommonDir" value='&quot;$(SvnRootDir)/common/&quot;' />
+			</Environment>
+		</Build>
+		<Compiler>
+			<Add option="-march=athlon" />
+			<Add option="-march=pentium4" />
+			<Add option="-fno-guess-branch-probability" />
+			<Add option="-fno-dse -fno-tree-dse" />
+			<Add option="-DWX_PRECOMP" />
+			<Add option="-D_DEBUG" />
+			<Add directory="$(SvnRootDir)/common/include/" />
+			<Add directory="$(SvnRootDir)/3rdparty/" />
+			<Add directory="$(ProjectRootDir)" />
+			<Add directory="$(ProjectRootDir)/NewGUI" />
+			<Add directory="$(ProjectRootDir)/x86" />
+		</Compiler>
+		<Linker>
+			<Add option="-Xlinker -zmuldefs" />
+		</Linker>
+		<Unit filename="../../common/include/Pcsx2Config.h" />
+		<Unit filename="../../common/include/Pcsx2Defs.h" />
+		<Unit filename="../../common/include/Pcsx2Types.h" />
+		<Unit filename="../AlignedMalloc.cpp" />
+		<Unit filename="../CDVD.cpp" />
+		<Unit filename="../CDVD.h" />
+		<Unit filename="../CDVDiso.cpp" />
+		<Unit filename="../CDVDiso.h" />
+		<Unit filename="../CDVDisodrv.cpp" />
+		<Unit filename="../CDVDisodrv.h" />
+		<Unit filename="../COP0.cpp" />
+		<Unit filename="../COP2.cpp" />
+		<Unit filename="../Cache.cpp" />
+		<Unit filename="../Cache.h" />
+		<Unit filename="../CdRom.cpp" />
+		<Unit filename="../CdRom.h" />
+		<Unit filename="../Common.h" />
+		<Unit filename="../Config.h" />
+		<Unit filename="../Console.cpp" />
+		<Unit filename="../Counters.cpp" />
+		<Unit filename="../Counters.h" />
+		<Unit filename="../DebugTools/Debug.h" />
+		<Unit filename="../DebugTools/DisASM.h" />
+		<Unit filename="../DebugTools/DisR3000A.cpp" />
+		<Unit filename="../DebugTools/DisR3000asm.cpp" />
+		<Unit filename="../DebugTools/DisR5900.cpp" />
+		<Unit filename="../DebugTools/DisR5900asm.cpp" />
+		<Unit filename="../DebugTools/DisVU0Micro.cpp" />
+		<Unit filename="../DebugTools/DisVU1Micro.cpp" />
+		<Unit filename="../DebugTools/DisVUmicro.h" />
+		<Unit filename="../DebugTools/DisVUops.h" />
+		<Unit filename="../Docs/ChangeLog.txt" />
+		<Unit filename="../Docs/License.txt" />
+		<Unit filename="../Docs/PS2Edefs.txt" />
+		<Unit filename="../Docs/RemoteDebugging.txt" />
+		<Unit filename="../Docs/devblog.txt" />
+		<Unit filename="../Docs/readme 0.9.4.txt" />
+		<Unit filename="../Docs/readme Playground.txt" />
+		<Unit filename="../Dump.cpp" />
+		<Unit filename="../Dump.h" />
+		<Unit filename="../EEregs.h" />
+		<Unit filename="../Elfheader.cpp" />
+		<Unit filename="../Elfheader.h" />
+		<Unit filename="../Exceptions.cpp" />
+		<Unit filename="../Exceptions.h" />
+		<Unit filename="../FPU.cpp" />
+		<Unit filename="../FiFo.cpp" />
+		<Unit filename="../GS.cpp" />
+		<Unit filename="../GS.h" />
+		<Unit filename="../Gif.cpp" />
+		<Unit filename="../HashMap.h" />
+		<Unit filename="../HostGui.h" />
+		<Unit filename="../Hw.cpp" />
+		<Unit filename="../Hw.h" />
+		<Unit filename="../HwRead.cpp" />
+		<Unit filename="../HwWrite.cpp" />
+		<Unit filename="../IPU/IPU.cpp" />
+		<Unit filename="../IPU/IPU.h" />
+		<Unit filename="../IPU/acoroutine.S" />
+		<Unit filename="../IPU/coroutine.cpp" />
+		<Unit filename="../IPU/coroutine.h" />
+		<Unit filename="../IPU/mpeg2lib/Idct.cpp" />
+		<Unit filename="../IPU/mpeg2lib/Mpeg.cpp" />
+		<Unit filename="../IPU/mpeg2lib/Mpeg.h" />
+		<Unit filename="../IPU/mpeg2lib/Vlc.h" />
+		<Unit filename="../IPU/yuv2rgb.cpp" />
+		<Unit filename="../IPU/yuv2rgb.h" />
+		<Unit filename="../Interpreter.cpp" />
+		<Unit filename="../IopBios.cpp" />
+		<Unit filename="../IopBios.h" />
+		<Unit filename="../IopBios2.h" />
+		<Unit filename="../IopCommon.h" />
+		<Unit filename="../IopCounters.cpp" />
+		<Unit filename="../IopCounters.h" />
+		<Unit filename="../IopDma.cpp" />
+		<Unit filename="../IopDma.h" />
+		<Unit filename="../IopHw.cpp" />
+		<Unit filename="../IopHw.h" />
+		<Unit filename="../IopMem.cpp" />
+		<Unit filename="../IopMem.h" />
+		<Unit filename="../IopSio2.cpp" />
+		<Unit filename="../IopSio2.h" />
+		<Unit filename="../Linux/HostGui.cpp" />
+		<Unit filename="../Linux/LnxMisc.cpp" />
+		<Unit filename="../Linux/LnxThreads.cpp" />
+		<Unit filename="../Linux/memzero.h" />
+		<Unit filename="../MMI.cpp" />
+		<Unit filename="../MTGS.cpp" />
+		<Unit filename="../MemcpyFast.h" />
+		<Unit filename="../Memory.cpp" />
+		<Unit filename="../Memory.h" />
+		<Unit filename="../MemoryCard.cpp" />
+		<Unit filename="../MemoryCard.h" />
+		<Unit filename="../Misc.cpp" />
+		<Unit filename="../Misc.h" />
+		<Unit filename="../NakedAsm.h" />
+		<Unit filename="../NewGUI/AboutBoxDialog.cpp" />
+		<Unit filename="../NewGUI/AboutBoxDialog.h" />
+		<Unit filename="../NewGUI/App.h" />
+		<Unit filename="../NewGUI/AppConfig.cpp" />
+		<Unit filename="../NewGUI/CheckedStaticBox.cpp" />
+		<Unit filename="../NewGUI/CheckedStaticBox.h" />
+		<Unit filename="../NewGUI/ConsoleLogger.cpp" />
+		<Unit filename="../NewGUI/GameFixesDialog.cpp" />
+		<Unit filename="../NewGUI/GameFixesDialog.h" />
+		<Unit filename="../NewGUI/HostGui.cpp" />
+		<Unit filename="../NewGUI/IniInterface.cpp" />
+		<Unit filename="../NewGUI/IniInterface.h" />
+		<Unit filename="../NewGUI/LogOptionsDialog.cpp" />
+		<Unit filename="../NewGUI/LogOptionsDialog.h" />
+		<Unit filename="../NewGUI/MainFrame.cpp" />
+		<Unit filename="../NewGUI/MainFrame.h" />
+		<Unit filename="../NewGUI/main.cpp" />
+		<Unit filename="../NewGUI/wxHelpers.cpp" />
+		<Unit filename="../NewGUI/wxHelpers.h" />
+		<Unit filename="../Patch.cpp" />
+		<Unit filename="../Patch.h" />
+		<Unit filename="../PathUtils.cpp" />
+		<Unit filename="../Paths.h" />
+		<Unit filename="../Plugins.cpp" />
+		<Unit filename="../Plugins.h" />
+		<Unit filename="../PrecompiledHeader.cpp" />
+		<Unit filename="../PrecompiledHeader.h" />
+		<Unit filename="../R3000A.cpp" />
+		<Unit filename="../R3000A.h" />
+		<Unit filename="../R3000AInterpreter.cpp" />
+		<Unit filename="../R3000AOpcodeTables.cpp" />
+		<Unit filename="../R5900.cpp" />
+		<Unit filename="../R5900.h" />
+		<Unit filename="../R5900Exceptions.h" />
+		<Unit filename="../R5900OpcodeImpl.cpp" />
+		<Unit filename="../R5900OpcodeTables.cpp" />
+		<Unit filename="../R5900OpcodeTables.h" />
+		<Unit filename="../RecoverySystem.cpp" />
+		<Unit filename="../RedtapeWindows.h" />
+		<Unit filename="../Resources/AppIcon.h" />
+		<Unit filename="../Resources/BackgroundLogo.h" />
+		<Unit filename="../Resources/EmbeddedImage.h" />
+		<Unit filename="../Resources/ps2_silver.h" />
+		<Unit filename="../SPR.cpp" />
+		<Unit filename="../SPR.h" />
+		<Unit filename="../SafeArray.h" />
+		<Unit filename="../SamplProf.h" />
+		<Unit filename="../SaveState.cpp" />
+		<Unit filename="../SaveState.h" />
+		<Unit filename="../Saveslots.cpp" />
+		<Unit filename="../Sif.cpp" />
+		<Unit filename="../Sif.h" />
+		<Unit filename="../Sifcmd.h" />
+		<Unit filename="../Sio.cpp" />
+		<Unit filename="../Sio.h" />
+		<Unit filename="../SourceLog.cpp" />
+		<Unit filename="../Stats.cpp" />
+		<Unit filename="../Stats.h" />
+		<Unit filename="../StringUtils.cpp" />
+		<Unit filename="../StringUtils.h" />
+		<Unit filename="../System.cpp" />
+		<Unit filename="../System.h" />
+		<Unit filename="../ThreadTools.cpp" />
+		<Unit filename="../Threading.h" />
+		<Unit filename="../Utilities/AsciiFile.h" />
+		<Unit filename="../Utilities/FileUtils.cpp" />
+		<Unit filename="../Utilities/folderdesc.txt" />
+		<Unit filename="../VU.h" />
+		<Unit filename="../VU0.cpp" />
+		<Unit filename="../VU0micro.cpp" />
+		<Unit filename="../VU0microInterp.cpp" />
+		<Unit filename="../VU1micro.cpp" />
+		<Unit filename="../VU1microInterp.cpp" />
+		<Unit filename="../VUflags.cpp" />
+		<Unit filename="../VUflags.h" />
+		<Unit filename="../VUmicro.h" />
+		<Unit filename="../VUmicroMem.cpp" />
+		<Unit filename="../VUops.cpp" />
+		<Unit filename="../VUops.h" />
+		<Unit filename="../Vif.cpp" />
+		<Unit filename="../Vif.h" />
+		<Unit filename="../VifDma.cpp" />
+		<Unit filename="../VifDma.h" />
+		<Unit filename="../pcsxAbout.bmp" />
+		<Unit filename="../rdebug/deci2.cpp">
+			<Option target="&lt;{~None~}&gt;" />
+		</Unit>
+		<Unit filename="../rdebug/deci2.h">
+			<Option target="&lt;{~None~}&gt;" />
+		</Unit>
+		<Unit filename="../rdebug/deci2_dbgp.cpp">
+			<Option target="&lt;{~None~}&gt;" />
+		</Unit>
+		<Unit filename="../rdebug/deci2_dbgp.h">
+			<Option target="&lt;{~None~}&gt;" />
+		</Unit>
+		<Unit filename="../rdebug/deci2_dcmp.cpp">
+			<Option target="&lt;{~None~}&gt;" />
+		</Unit>
+		<Unit filename="../rdebug/deci2_dcmp.h">
+			<Option target="&lt;{~None~}&gt;" />
+		</Unit>
+		<Unit filename="../rdebug/deci2_drfp.h">
+			<Option target="&lt;{~None~}&gt;" />
+		</Unit>
+		<Unit filename="../rdebug/deci2_iloadp.cpp">
+			<Option target="&lt;{~None~}&gt;" />
+		</Unit>
+		<Unit filename="../rdebug/deci2_iloadp.h">
+			<Option target="&lt;{~None~}&gt;" />
+		</Unit>
+		<Unit filename="../rdebug/deci2_netmp.cpp">
+			<Option target="&lt;{~None~}&gt;" />
+		</Unit>
+		<Unit filename="../rdebug/deci2_netmp.h">
+			<Option target="&lt;{~None~}&gt;" />
+		</Unit>
+		<Unit filename="../rdebug/deci2_ttyp.cpp">
+			<Option target="&lt;{~None~}&gt;" />
+		</Unit>
+		<Unit filename="../rdebug/deci2_ttyp.h">
+			<Option target="&lt;{~None~}&gt;" />
+		</Unit>
+		<Unit filename="../tinyxml/tinystr.cpp" />
+		<Unit filename="../tinyxml/tinystr.h" />
+		<Unit filename="../tinyxml/tinyxml.cpp" />
+		<Unit filename="../tinyxml/tinyxml.h" />
+		<Unit filename="../tinyxml/tinyxmlerror.cpp" />
+		<Unit filename="../tinyxml/tinyxmlparser.cpp" />
+		<Unit filename="../vssprintf.cpp" />
+		<Unit filename="../vtlb.cpp" />
+		<Unit filename="../vtlb.h" />
+		<Unit filename="../x86/BaseblockEx.cpp" />
+		<Unit filename="../x86/BaseblockEx.h" />
+		<Unit filename="../x86/aMicroVU.S">
+			<Option target="&lt;{~None~}&gt;" />
+		</Unit>
+		<Unit filename="../x86/aR3000A.S" />
+		<Unit filename="../x86/aVUzerorec.S" />
+		<Unit filename="../x86/aVif.S" />
+		<Unit filename="../x86/fast_routines.S" />
+		<Unit filename="../x86/iCOP0.cpp" />
+		<Unit filename="../x86/iCOP0.h" />
+		<Unit filename="../x86/iCOP2.cpp" />
+		<Unit filename="../x86/iCore.cpp" />
+		<Unit filename="../x86/iCore.h" />
+		<Unit filename="../x86/iFPU.cpp" />
+		<Unit filename="../x86/iFPU.h" />
+		<Unit filename="../x86/iFPUd.cpp" />
+		<Unit filename="../x86/iMMI.cpp" />
+		<Unit filename="../x86/iMMI.h" />
+		<Unit filename="../x86/iR3000A.cpp" />
+		<Unit filename="../x86/iR3000A.h" />
+		<Unit filename="../x86/iR3000Atables.cpp" />
+		<Unit filename="../x86/iR5900.h" />
+		<Unit filename="../x86/iR5900Arit.h" />
+		<Unit filename="../x86/iR5900AritImm.h" />
+		<Unit filename="../x86/iR5900Branch.h" />
+		<Unit filename="../x86/iR5900Jump.h" />
+		<Unit filename="../x86/iR5900LoadStore.h" />
+		<Unit filename="../x86/iR5900Misc.cpp" />
+		<Unit filename="../x86/iR5900Move.h" />
+		<Unit filename="../x86/iR5900MultDiv.h" />
+		<Unit filename="../x86/iR5900Shift.h" />
+		<Unit filename="../x86/iVU0micro.cpp" />
+		<Unit filename="../x86/iVU1micro.cpp" />
+		<Unit filename="../x86/iVUmicro.cpp" />
+		<Unit filename="../x86/iVUmicro.h" />
+		<Unit filename="../x86/iVUmicroLower.cpp" />
+		<Unit filename="../x86/iVUmicroUpper.cpp" />
+		<Unit filename="../x86/iVUops.h" />
+		<Unit filename="../x86/iVUzerorec.cpp" />
+		<Unit filename="../x86/iVUzerorec.h" />
+		<Unit filename="../x86/iVif.cpp" />
+		<Unit filename="../x86/ir5900tables.cpp" />
+		<Unit filename="../x86/ix86-32/aR5900-32.S" />
+		<Unit filename="../x86/ix86-32/iCore-32.cpp" />
+		<Unit filename="../x86/ix86-32/iR5900-32.cpp" />
+		<Unit filename="../x86/ix86-32/iR5900Arit.cpp" />
+		<Unit filename="../x86/ix86-32/iR5900AritImm.cpp" />
+		<Unit filename="../x86/ix86-32/iR5900Branch.cpp" />
+		<Unit filename="../x86/ix86-32/iR5900Jump.cpp" />
+		<Unit filename="../x86/ix86-32/iR5900LoadStore.cpp" />
+		<Unit filename="../x86/ix86-32/iR5900Move.cpp" />
+		<Unit filename="../x86/ix86-32/iR5900MultDiv.cpp" />
+		<Unit filename="../x86/ix86-32/iR5900Shift.cpp" />
+		<Unit filename="../x86/ix86-32/iR5900Templates.cpp" />
+		<Unit filename="../x86/ix86-32/recVTLB.cpp" />
+		<Unit filename="../x86/ix86/implement/dwshift.h" />
+		<Unit filename="../x86/ix86/implement/group1.h" />
+		<Unit filename="../x86/ix86/implement/group2.h" />
+		<Unit filename="../x86/ix86/implement/group3.h" />
+		<Unit filename="../x86/ix86/implement/incdec.h" />
+		<Unit filename="../x86/ix86/implement/jmpcall.h" />
+		<Unit filename="../x86/ix86/implement/movs.h" />
+		<Unit filename="../x86/ix86/implement/test.h" />
+		<Unit filename="../x86/ix86/implement/xchg.h" />
+		<Unit filename="../x86/ix86/implement/xmm/arithmetic.h" />
+		<Unit filename="../x86/ix86/implement/xmm/basehelpers.h" />
+		<Unit filename="../x86/ix86/implement/xmm/comparisons.h" />
+		<Unit filename="../x86/ix86/implement/xmm/moremovs.h" />
+		<Unit filename="../x86/ix86/implement/xmm/shufflepack.h" />
+		<Unit filename="../x86/ix86/ix86.cpp" />
+		<Unit filename="../x86/ix86/ix86.h" />
+		<Unit filename="../x86/ix86/ix86_3dnow.cpp" />
+		<Unit filename="../x86/ix86/ix86_cpudetect.cpp" />
+		<Unit filename="../x86/ix86/ix86_fpu.cpp" />
+		<Unit filename="../x86/ix86/ix86_inlines.inl" />
+		<Unit filename="../x86/ix86/ix86_instructions.h" />
+		<Unit filename="../x86/ix86/ix86_internal.h" />
+		<Unit filename="../x86/ix86/ix86_jmp.cpp" />
+		<Unit filename="../x86/ix86/ix86_legacy.cpp" />
+		<Unit filename="../x86/ix86/ix86_legacy_instructions.h" />
+		<Unit filename="../x86/ix86/ix86_legacy_internal.h" />
+		<Unit filename="../x86/ix86/ix86_legacy_sse.cpp" />
+		<Unit filename="../x86/ix86/ix86_legacy_types.h" />
+		<Unit filename="../x86/ix86/ix86_simd.cpp" />
+		<Unit filename="../x86/ix86/ix86_sse_helpers.h" />
+		<Unit filename="../x86/ix86/ix86_tools.cpp" />
+		<Unit filename="../x86/ix86/ix86_types.h" />
+		<Unit filename="../x86/ix86/ix86_writers.inl" />
+		<Unit filename="../x86/microVU.cpp" />
+		<Unit filename="../x86/microVU.h" />
+		<Unit filename="../x86/microVU_Alloc.h" />
+		<Unit filename="../x86/microVU_Alloc.inl" />
+		<Unit filename="../x86/microVU_Analyze.inl" />
+		<Unit filename="../x86/microVU_Compile.inl" />
+		<Unit filename="../x86/microVU_Execute.inl" />
+		<Unit filename="../x86/microVU_Log.inl" />
+		<Unit filename="../x86/microVU_Lower.inl" />
+		<Unit filename="../x86/microVU_Misc.h" />
+		<Unit filename="../x86/microVU_Misc.inl" />
+		<Unit filename="../x86/microVU_Tables.inl" />
+		<Unit filename="../x86/microVU_Upper.inl" />
+		<Unit filename="../xmlpatchloader.cpp" />
+		<Extensions>
+			<envvars />
+			<code_completion>
+				<search_path add="/usr/include/wx-2.8" />
+			</code_completion>
+			<lib_finder disable_auto="1" />
+			<debugger />
+		</Extensions>
+	</Project>
+</CodeBlocks_project_file>

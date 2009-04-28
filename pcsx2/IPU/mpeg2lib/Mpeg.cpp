@@ -29,10 +29,10 @@
 #include "PrecompiledHeader.h"
 
 #include "Common.h"
-#include "IPU.h"
+#include "IPU/IPU.h"
+#include "IPU/coroutine.h"
 #include "Mpeg.h"
 #include "Vlc.h"
-#include "coroutine.h"
 
 int non_linear_quantizer_scale [] = {
      0,  1,  2,  3,  4,  5,   6,   7,
@@ -211,8 +211,8 @@ static __forceinline int get_luma_dc_dct_diff (decoder_t * const decoder)
 			DUMPBITS (bit_buf, bits, 3);
 			return 0;
 		}
-    } 
-	
+    }
+
 	tab = DC_long + (UBITS (bit_buf, 9) - 0x1e0);//0x1e0);
 	size = tab->size;
 	DUMPBITS (bit_buf, bits, tab->len);
@@ -250,7 +250,7 @@ static __forceinline int get_chroma_dc_dct_diff (decoder_t * const decoder)
 			return 0;
 		}
     }
-	
+
 	tab = DC_long + (UBITS (bit_buf, 10) - 0x3e0);
 	size = tab->size;
 	DUMPBITS (bit_buf, bits, tab->len + 1);
@@ -631,7 +631,7 @@ static __forceinline void get_mpeg1_intra_block (decoder_t * const decoder)
     bit_buf = decoder->bitstream_buf;
     bits = decoder->bitstream_bits;
 	bit_ptr = decoder->bitstream_ptr;
-    
+
 	NEEDBITS (bit_buf, bits, bit_ptr);
 
     while (1) {
@@ -918,7 +918,7 @@ struct TGA_HEADER
     s16 height;             // image height in pixels
     u8  bits;               // image bits per pixel 8,16,24,32
     u8  descriptor;         // image descriptor bits (vh flip bits)
-    
+
     // pixel data follows header
 #if defined(_MSC_VER)
 };
@@ -935,7 +935,7 @@ void SaveTGA(const char* filename, int width, int height, void* pdata)
         return;
 
     assert( sizeof(TGA_HEADER) == 18 && sizeof(hdr) == 18 );
-    
+
     memzero_obj(hdr);
     hdr.imagetype = 2;
     hdr.bits = 32;
@@ -963,7 +963,7 @@ void waitForSCD()
 	while(!getBits8((u8*)&bit8, 0))
 		so_resume();
 
-	if (bit8==0) 
+	if (bit8==0)
 	{
 		if (g_BP.BP & 7)
 			g_BP.BP += 8 - (g_BP.BP&7);
@@ -1018,8 +1018,8 @@ void mpeg2sliceIDEC(void* pdone)
 	*(int*)pdone = 0;
 	bitstream_init(decoder);
 
-	decoder->dc_dct_pred[0] = 
-	decoder->dc_dct_pred[1] =	
+	decoder->dc_dct_pred[0] =
+	decoder->dc_dct_pred[1] =
 	decoder->dc_dct_pred[2] = 128 << decoder->intra_dc_precision;
 
 	decoder->mbc=0;
@@ -1033,11 +1033,11 @@ void mpeg2sliceIDEC(void* pdone)
 			int DCT_offset, DCT_stride;
 			int mba_inc;
 			const MBAtab * mba;
-			
+
 			NEEDBITS (decoder->bitstream_buf, decoder->bitstream_bits, decoder->bitstream_ptr);
-			
+
 			decoder->macroblock_modes = get_macroblock_modes (decoder);
-			
+
 			/* maybe integrate MACROBLOCK_QUANT test into get_macroblock_modes ? */
 			if (decoder->macroblock_modes & MACROBLOCK_QUANT)//only IDEC
 				decoder->quantizer_scale = get_quantizer_scale (decoder);
@@ -1063,7 +1063,7 @@ void mpeg2sliceIDEC(void* pdone)
 				slice_intra_DCT (decoder, 0, (u8*)decoder->mb8->Y + DCT_offset + 8, DCT_stride);
 				slice_intra_DCT (decoder, 1, (u8*)decoder->mb8->Cb, decoder->stride>>1);
 				slice_intra_DCT (decoder, 2, (u8*)decoder->mb8->Cr, decoder->stride>>1);
-			
+
 				// Send The MacroBlock via DmaIpuFrom
 				if (decoder->ofm==0){
 					ipu_csc(decoder->mb8, decoder->rgb32, decoder->sgn);
@@ -1127,9 +1127,9 @@ void mpeg2sliceIDEC(void* pdone)
 						{
 							ipuRegs->ctrl.SCD = 0;
                             coded_block_pattern=decoder->coded_block_pattern;
-                            
+
 							g_BP.BP+=decoder->bitstream_bits-16;
-                        
+
                             if((int)g_BP.BP < 0) {
 								g_BP.BP = 128 + (int)g_BP.BP;
 
@@ -1137,11 +1137,11 @@ void mpeg2sliceIDEC(void* pdone)
 								// so that reading may continue properly
 								ReorderBitstream();
 							}
-							
+
 							FillInternalBuffer(&g_BP.BP,1,0);
-							
+
 							waitForSCD();
-                        			
+
 							*(int*)pdone = 1;
 							so_exit();
 						}
@@ -1149,7 +1149,7 @@ void mpeg2sliceIDEC(void* pdone)
 			}
 			DUMPBITS (decoder->bitstream_buf, decoder->bitstream_bits, mba->len);
 			mba_inc += mba->mba;
-		
+
 			if (mba_inc) {
 				decoder->dc_dct_pred[0] = decoder->dc_dct_pred[1] =
 				decoder->dc_dct_pred[2] = 128 << decoder->intra_dc_precision;
@@ -1173,9 +1173,9 @@ void mpeg2sliceIDEC(void* pdone)
 		// so that reading may continue properly
 		ReorderBitstream();
 	}
-	
+
 	FillInternalBuffer(&g_BP.BP,1,0);
-    
+
 	waitForSCD();
 
 	*(int*)pdone = 1;
@@ -1198,7 +1198,7 @@ void mpeg2_slice(void* pdone)
 	memzero_obj(*decoder->mb16);
 
 	bitstream_init (decoder);
-	
+
 	if (decoder->dcr)
 		decoder->dc_dct_pred[0] = decoder->dc_dct_pred[1] =
 		decoder->dc_dct_pred[2] = 128 << decoder->intra_dc_precision;
@@ -1229,7 +1229,7 @@ void mpeg2_slice(void* pdone)
 			if (decoder->coded_block_pattern & 0x04) slice_non_intra_DCT (decoder, (s16*)decoder->mb16->Y + DCT_offset + 8, DCT_stride);
 			if (decoder->coded_block_pattern & 0x2)  slice_non_intra_DCT (decoder, (s16*)decoder->mb16->Cb, decoder->stride>>1);
 			if (decoder->coded_block_pattern & 0x1)  slice_non_intra_DCT (decoder, (s16*)decoder->mb16->Cr, decoder->stride>>1);
-	
+
 		}
 	}
 

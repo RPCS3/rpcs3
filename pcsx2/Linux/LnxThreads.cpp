@@ -16,8 +16,8 @@
  *	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
-#include "Linux.h"
-#include "../x86/ix86/ix86.h"
+#include "PrecompiledHeader.h"
+#include "ix86/ix86.h"
 
 // Note: assuming multicore is safer because it forces the interlocked routines to use
 // the LOCK prefix.  The prefix works on single core CPUs fine (but is slow), but not
@@ -64,7 +64,7 @@ namespace Threading
 		// performance hint and isn't required).
 		__asm__ ( "pause" );
 	}
-	
+
 	void* Thread::_internal_callback( void* itsme )
 	{
 		jASSUME( itsme != NULL );
@@ -119,7 +119,7 @@ namespace Threading
 				:"=&a" (result)
 				:"m"  (*Target), "r" (Value));
 		}
-		
+
 		return result;
 	}
 
@@ -166,7 +166,7 @@ namespace Threading
 				:"=a" (result)
 				:"m"  (*dest), "r" (value), "a" (comp));
 		}
-		
+
 		return result;
 	}
 
@@ -184,7 +184,7 @@ namespace Threading
 	__forceinline s64 pcsx2_InterlockedCompareExchange64(volatile s64* dest, s64 exch, s64 comp)
 	{
 		s64 old;
-		__asm__ __volatile__( 
+		__asm__ __volatile__(
 			"lock; cmpxchgq %q2, %q1"
 			: "=a" (old)
 			: "r" (exch), "m" (*dest), "a" (comp)
@@ -192,5 +192,5 @@ namespace Threading
 		return old;
 	}
 #endif
-	
+
 }

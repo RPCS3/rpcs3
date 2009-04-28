@@ -5,12 +5,12 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2 of the License, or
  *  (at your option) any later version.
- *  
+ *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
- *  
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
@@ -82,12 +82,12 @@ int LoadPatch( const wxString& crc )
 	{
 		//Console::Error("XML Patch Loader: Could not load file '%s'. Error='%s'.", pfile, doc.ErrorDesc() );
 		return -1;
-	} 
-	else 
-	{
-		Console::WriteLn("XML Patch Loader: '%s' Found", params pfile);
 	}
-	
+	else
+	{
+		Console::WriteLn("XML Patch Loader: '%s' Found", params pfile.c_str() );
+	}
+
 	TiXmlNode *root = doc.FirstChild("GAME");
 	if(!root)
 	{
@@ -144,12 +144,12 @@ int LoadGroup(TiXmlNode *group,int gParent)
 	}
 
 	string t;
-	
+
 	if(gtitle)
 		t.assign(gtitle);
 	else
 		t.clear();
-	
+
 	Group gp=Group(gParent,gEnabled,t);
 	groups.push_back(gp);
 
@@ -165,10 +165,10 @@ int LoadGroup(TiXmlNode *group,int gParent)
 	{
         TiXmlElement *rm=zerogs->ToElement();
         const char* pid = rm->FirstAttribute()->Value();
-		
-        if( pid != NULL ) 
+
+        if( pid != NULL )
 		sscanf(pid, "%x", &g_ZeroGSOptions);
-        else 
+        else
 		Console::WriteLn("zerogs attribute wrong");
     }
 
@@ -307,7 +307,7 @@ int LoadGroup(TiXmlNode *group,int gParent)
 			patchnumber=0;
 			return -1;
 		}
-		
+
 		if(strcmp(place,"EE")==0)
 		{
 			patch[patchnumber].cpu= CPU_EE;
@@ -355,7 +355,7 @@ int LoadGroup(TiXmlNode *group,int gParent)
 			pt.assign(ptitle);
 		else
 			pt.clear();
-		
+
 		Patch p=Patch(patchnumber,gIndex,penabled,pt);
 		patches.push_back(p);
 

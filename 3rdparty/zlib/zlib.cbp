@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6" />
+	<Project>
+		<Option title="zlib" />
+		<Option pch_mode="2" />
+		<Option compiler="gcc" />
+		<Build>
+			<Target title="Debug">
+				<Option output="../../deps/zlib-dbg" prefix_auto="0" extension_auto="1" />
+				<Option working_dir="" />
+				<Option object_output="/home/pubuntu/Documents/pcsx2-newgui/3rdparty/zlib/.objs" />
+				<Option type="2" />
+				<Option compiler="gcc" />
+				<Option createDefFile="1" />
+				<Compiler>
+					<Add option="-W" />
+					<Add option="-g" />
+					<Add option="-O0" />
+				</Compiler>
+			</Target>
+			<Target title="Release">
+				<Option output="../../deps/zlib" prefix_auto="0" extension_auto="1" />
+				<Option working_dir="" />
+				<Option object_output="/home/pubuntu/Documents/pcsx2-newgui/3rdparty/zlib/.objs" />
+				<Option type="2" />
+				<Option compiler="gcc" />
+				<Option createDefFile="1" />
+				<Compiler>
+					<Add option="-W" />
+					<Add option="-O2" />
+				</Compiler>
+			</Target>
+			<Target title="Devel">
+				<Option output="../../deps/libzlib-dev" prefix_auto="1" extension_auto="1" />
+				<Option working_dir="" />
+				<Option object_output="/home/pubuntu/Documents/pcsx2-newgui/3rdparty/zlib/.objs" />
+				<Option type="2" />
+				<Option compiler="gcc" />
+				<Option createDefFile="1" />
+				<Compiler>
+					<Add option="-W" />
+					<Add option="-O2" />
+				</Compiler>
+			</Target>
+		</Build>
+		<Unit filename="adler32.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="compress.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="crc32.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="crc32.h" />
+		<Unit filename="deflate.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="deflate.h" />
+		<Unit filename="gzio.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="infback.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="inffast.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="inffast.h" />
+		<Unit filename="inffixed.h" />
+		<Unit filename="inflate.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="inflate.h" />
+		<Unit filename="inftrees.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="inftrees.h" />
+		<Unit filename="trees.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="trees.h" />
+		<Unit filename="uncompr.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="zconf.h" />
+		<Unit filename="zlib.h" />
+		<Unit filename="zutil.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="zutil.h" />
+		<Extensions>
+			<envvars />
+			<code_completion />
+			<lib_finder disable_auto="1" />
+			<debugger />
+		</Extensions>
+	</Project>
+</CodeBlocks_project_file>

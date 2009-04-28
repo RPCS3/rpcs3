@@ -5,12 +5,12 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2 of the License, or
  *  (at your option) any later version.
- *  
+ *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
- *  
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
@@ -21,10 +21,10 @@
 RAM
 ---
 0x00100000-0x01ffffff this is the physical address for the ram.its cached there
-0x20100000-0x21ffffff uncached 
-0x30100000-0x31ffffff uncached & acceleretade 
+0x20100000-0x21ffffff uncached
+0x30100000-0x31ffffff uncached & acceleretade
 0xa0000000-0xa1ffffff MIRROR might...???
-0x80000000-0x81ffffff MIRROR might... ????  
+0x80000000-0x81ffffff MIRROR might... ????
 
 scratch pad
 ----------
@@ -93,8 +93,8 @@ void loadBiosRom( const wxChar *ext, u8 *dest, long maxSize )
 
 	// Try first a basic extension concatenation (normally results in something like name.bin.rom1)
 	const wxString Bios( g_Conf.Files.Bios() );
-	Bios1.Printf( wxS("%s.%s"), Bios.c_str(), ext);
-	
+	Bios1.Printf( wxT("%s.%s"), Bios.c_str(), ext);
+
 	if( (filesize=Path::GetFileSize( Bios1 ) ) <= 0 )
 	{
 		// Try the name properly extensioned next (name.rom1)
@@ -136,7 +136,7 @@ void MyMemCheck(u32 mem)
 }
 
 /////////////////////////////
-// REGULAR MEM START 
+// REGULAR MEM START
 /////////////////////////////
 vtlbHandler tlb_fallback_0;
 vtlbHandler tlb_fallback_1;
@@ -171,7 +171,7 @@ void memMapPhy()
 {
 	//Main mem
 	vtlb_MapBlock(psM,0x00000000,Ps2MemSize::Base);//mirrored on first 256 mb ?
-	
+
 	//Rom
 	vtlb_MapBlock(psR,0x1fc00000,Ps2MemSize::Rom);//Writable ?
 	//Rom 1
@@ -230,18 +230,18 @@ void memMapKernelMem()
 }
 
 //what do do with these ?
-void memMapSupervisorMem() 
+void memMapSupervisorMem()
 {
 }
 
-void memMapUserMem() 
+void memMapUserMem()
 {
 }
 
 template<int p>
-mem8_t __fastcall _ext_memRead8 (u32 mem) 
+mem8_t __fastcall _ext_memRead8 (u32 mem)
 {
-	switch (p) 
+	switch (p)
 	{
 		case 1: // hwm
 			return hwRead8(mem);
@@ -297,7 +297,7 @@ mem16_t __fastcall _ext_memRead16(u32 mem)
 }
 
 template<int p>
-mem32_t __fastcall _ext_memRead32(u32 mem) 
+mem32_t __fastcall _ext_memRead32(u32 mem)
 {
 	switch (p)
 	{
@@ -586,7 +586,7 @@ void __fastcall vuMicroWrite128(u32 addr,const mem128_t* data)
 	}
 }
 
-void memSetPageAddr(u32 vaddr, u32 paddr) 
+void memSetPageAddr(u32 vaddr, u32 paddr)
 {
 	//Console::WriteLn("memSetPageAddr: %8.8x -> %8.8x", params vaddr, paddr);
 
@@ -594,7 +594,7 @@ void memSetPageAddr(u32 vaddr, u32 paddr)
 
 }
 
-void memClearPageAddr(u32 vaddr) 
+void memClearPageAddr(u32 vaddr)
 {
 	//Console::WriteLn("memClearPageAddr: %8.8x", params vaddr);
 
@@ -609,13 +609,13 @@ void memClearPageAddr(u32 vaddr)
 ///////////////////////////////////////////////////////////////////////////
 // PS2 Memory Init / Reset / Shutdown
 
-static const uint m_allMemSize = 
+static const uint m_allMemSize =
 		Ps2MemSize::Rom + Ps2MemSize::Rom1 + Ps2MemSize::Rom2 + Ps2MemSize::ERom +
 		Ps2MemSize::Base + Ps2MemSize::Hardware + Ps2MemSize::Scratch;
 
 static u8* m_psAllMem = NULL;
 
-void memAlloc() 
+void memAlloc()
 {
 	if( m_psAllMem == NULL )
 		m_psAllMem = vtlb_malloc( m_allMemSize, 4096, 0x2400000 );
@@ -625,7 +625,7 @@ void memAlloc()
 
 	u8* curpos = m_psAllMem;
 	psM = curpos; curpos += Ps2MemSize::Base;
-	psR = curpos; curpos += Ps2MemSize::Rom; 
+	psR = curpos; curpos += Ps2MemSize::Rom;
 	psR1 = curpos; curpos += Ps2MemSize::Rom1;
 	psR2 = curpos; curpos += Ps2MemSize::Rom2;
 	psER = curpos; curpos += Ps2MemSize::ERom;
@@ -633,7 +633,7 @@ void memAlloc()
 	psS = curpos; //curpos += Ps2MemSize::Scratch;
 }
 
-void memShutdown() 
+void memShutdown()
 {
 	vtlb_free( m_psAllMem, m_allMemSize );
 	m_psAllMem = NULL;
@@ -843,7 +843,7 @@ void mmap_ResetBlockTracking()
 void mmap_ClearCpuBlock( uint offset )
 {
 	HostSys::MemProtect( &psM[offset], 1, Protect_ReadWrite );
-	
+
 	offset>>=12;
 	psMPWC[(offset/32)]|=(1<<(offset&31));
 

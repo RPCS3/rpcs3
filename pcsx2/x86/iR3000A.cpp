@@ -119,10 +119,8 @@ static void iIopDumpBlock( int startpc, u8 * ptr )
 	Console::WriteLn( "dump1 %x:%x, %x", params startpc, psxpc, psxRegs.cycle );
 	Path::CreateDirectory( L"dumps" );
 
-	AsciiFile f(
-		Path::Combine( g_Conf.Folders.Dumps, wxsFormat( L"psxdump%.8X.txt", startpc ) ),
-		wxFile::write
-	);
+	wxString filename( Path::Combine( g_Conf.Folders.Dumps, wxsFormat( L"psxdump%.8X.txt", startpc ) ) );
+	AsciiFile f( filename, wxFile::write );
 
 	for ( i = startpc; i < s_nEndBlock; i += 4 ) {
 		f.Printf("%s\n", disR3000Fasm( iopMemRead32( i ), i ) );
@@ -155,7 +153,7 @@ static void iIopDumpBlock( int startpc, u8 * ptr )
 	pcur = s_pInstCache+1;
 	for( i = 0; i < (s_nEndBlock-startpc)/4; ++i, ++pcur) {
 		f.Printf("%2d: %2.2x ", i+1, pcur->info);
-		
+
 		count = 1;
 		for(j = 0; j < ArraySize(s_pInstCache->regs); j++) {
 			if( used[j] ) {
@@ -168,15 +166,18 @@ static void iIopDumpBlock( int startpc, u8 * ptr )
 
 #ifdef __LINUX__
 	char command[256];
-    // dump the asm
-    f = fopen( "mydump1", "wb" );
-	fwrite( ptr, 1, (uptr)x86Ptr - (uptr)ptr, f );
-	fclose( f );
-	sprintf( command, "objdump -D --target=binary --architecture=i386 -M intel mydump1 | cat %s - > tempdump", filename );
+	// dump the asm
+	{
+		AsciiFile f2( L"mydump1", wxFile::write );
+		f2.Write( ptr, (uptr)x86Ptr - (uptr)ptr );
+	}
+	wxCharBuffer buf( filename.ToAscii() );
+	const char* filenamea = buf.data();
+	sprintf( command, "objdump -D --target=binary --architecture=i386 -M intel mydump1 | cat %s - > tempdump", filenamea );
 	system( command );
-    sprintf(command, "mv tempdump %s", filename);
-    system(command);
-    f = fopen( filename.c_str(), "a+" );
+    sprintf( command, "mv tempdump %s", filenamea );
+    system( command );
+    //f = fopen( filename.c_str(), "a+" );
 #endif
 }
 #endif
@@ -213,7 +214,7 @@ void _psxFlushAllUnused()
 			continue;
 
 		if( i < 32 && PSX_IS_CONST1(i) ) _psxFlushConstReg(i);
-		else {	
+		else {
 			_deleteX86reg(X86TYPE_PSX, i, 1);
 		}
 	}
@@ -258,7 +259,7 @@ void _psxFlushConstRegs()
 	// ignore r0
 	for(i = 1; i < 32; ++i) {
 		if( g_psxHasConstReg & (1<<i) ) {
-			
+
 			if( !(g_psxFlushedConstReg&(1<<i)) ) {
 				MOV32ItoM((uptr)&psxRegs.GPR.r[i], g_psxConstRegs[i]);
 				g_psxFlushedConstReg |= 1<<i;
@@ -485,7 +486,7 @@ void psxRecompileCodeConst3(R3000AFNPTR constcode, R3000AFNPTR_INFO constscode, 
 
 static u8* m_recBlockAlloc = NULL;
 
-static const uint m_recBlockAllocSize = 
+static const uint m_recBlockAllocSize =
 	(((Ps2MemSize::IopRam + Ps2MemSize::Rom + Ps2MemSize::Rom1) / 4) * sizeof(BASEBLOCK));
 
 static void recAlloc()
@@ -496,7 +497,7 @@ static void recAlloc()
 
 	if( recMem == NULL )
 		recMem = (u8*)SysMmapEx( 0x28000000, RECMEM_SIZE, 0, "recAlloc(R3000a)" );
-	
+
 	if( recMem == NULL )
 		throw Exception::OutOfMemory( "R3000a Init > failed to allocate memory for the recompiler." );
 
@@ -542,10 +543,10 @@ void recResetIOP()
 	for (int i = 0; i < 0x10000; i++)
 		recLUT_SetPage(psxRecLUT, 0, 0, 0, i, 0);
 	// IOP knows 64k pages, hence for the 0x10000's
-	
+
 	// The bottom 2 bits of PC are always zero, so we <<14 to "compress"
 	// the pc indexer into it's lower common denominator.
-	
+
 	// We're only mapping 20 pages here in 4 places.
 	// 0x80 comes from : (Ps2MemSize::IopRam / 0x10000) * 4
 	for (int i=0; i<0x80; i++)
@@ -680,7 +681,7 @@ static __forceinline s32 recExecuteBlock( s32 eeCycles )
 		"push ebp\n"
 
 		"call iopDispatcherReg\n"
-		
+
 		"pop ebp\n"
 		"pop edi\n"
 		"pop esi\n"
@@ -717,7 +718,7 @@ static __forceinline u32 psxRecClearMem(u32 pc)
 		lowerextent = min(lowerextent, pexblock->startpc);
 		blockidx--;
 	}
-	
+
 	while (pexblock = recBlocks[blockidx]) {
 		if (pexblock->startpc >= upperextent)
 			break;
@@ -756,7 +757,7 @@ void psxSetBranchReg(u32 reg)
 		_psxMoveGPRtoR(ESI, reg);
 
 		psxRecompileNextInstruction(1);
-		
+
 		if( x86regs[ESI].inuse ) {
 			assert( x86regs[ESI].type == X86TYPE_PCWRITEBACK );
 			MOV32RtoM((uptr)&psxRegs.pc, ESI);
@@ -767,7 +768,7 @@ void psxSetBranchReg(u32 reg)
 			MOV32RtoM((uptr)&psxRegs.pc, EAX);
 		}
 	}
-	
+
 	_psxFlushCall(FLUSH_EVERYTHING);
 	iPsxBranchTest(0xffffffff, 1);
 
@@ -972,13 +973,13 @@ void iopRecRecompile(u32 startpc)
 	// if recPtr reached the mem limit reset whole mem
 	if (((uptr)recPtr - (uptr)recMem) >= (RECMEM_SIZE - 0x10000))
 		recResetIOP();
-	
+
 	x86SetPtr( recPtr );
 	x86Align(16);
 	recPtr = x86Ptr;
 
 	s_pCurBlock = PSX_GETBLOCK(startpc);
-	
+
 	assert(s_pCurBlock->GetFnptr() == (uptr)iopJITCompile
 		|| s_pCurBlock->GetFnptr() == (uptr)iopJITCompileInBlock);
 
@@ -993,7 +994,7 @@ void iopRecRecompile(u32 startpc)
 			s_pCurBlockEx = recBlocks.New(HWADDR(startpc), (uptr)recPtr);
 		}
 	}
-	
+
     psxbranch = 0;
 
 	s_pCurBlock->SetFnptr( (uptr)x86Ptr );
@@ -1014,7 +1015,7 @@ void iopRecRecompile(u32 startpc)
 	// go until the next branch
 	i = startpc;
 	s_nEndBlock = 0xffffffff;
-	
+
 	while(1) {
 		BASEBLOCK* pblock = PSX_GETBLOCK(i);
 		if (i != startpc
@@ -1038,9 +1039,9 @@ void iopRecRecompile(u32 startpc)
 
 				break;
 			case 1: // regimm
-				
+
 				if( _Rt_ == 0 || _Rt_ == 1 || _Rt_ == 16 || _Rt_ == 17 ) {
-					
+
 					branchTo = _Imm_ * 4 + i + 4;
 					if( branchTo > startpc && branchTo < i ) s_nEndBlock = branchTo;
 					else  s_nEndBlock = i+8;
@@ -1056,12 +1057,12 @@ void iopRecRecompile(u32 startpc)
 				goto StartRecomp;
 
 			// branches
-			case 4: case 5: case 6: case 7: 
+			case 4: case 5: case 6: case 7:
 
 				branchTo = _Imm_ * 4 + i + 4;
 				if( branchTo > startpc && branchTo < i ) s_nEndBlock = branchTo;
 				else  s_nEndBlock = i+8;
-				
+
 				goto StartRecomp;
 		}
 
@@ -1104,7 +1105,7 @@ StartRecomp:
 	if( (psxdump & 1) )
 		iIopDumpBlock(startpc, recPtr);
 #endif
-	
+
 	g_pCurInstInfo = s_pInstCache;
 	while (!psxbranch && psxpc < s_nEndBlock) {
 		psxRecompileNextInstruction(0);
@@ -1129,7 +1130,7 @@ StartRecomp:
 	if( psxbranch == 2 ) {
 		_psxFlushCall(FLUSH_EVERYTHING);
 
-		iPsxBranchTest(0xffffffff, 1);	
+		iPsxBranchTest(0xffffffff, 1);
 
 		JMP32((uptr)iopDispatcherReg - ( (uptr)x86Ptr + 5 ));
 	}
