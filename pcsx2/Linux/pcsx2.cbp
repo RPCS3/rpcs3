@@ -11,27 +11,28 @@
 				<Option platforms="Windows;Unix;" />
 				<Option output="$(SvnRootDir)/bin/pcsx2-dbg" prefix_auto="1" extension_auto="1" />
 				<Option working_dir="$(SvnRootDir)/bin/" />
-				<Option object_output="./.objs/Debug" />
+				<Option object_output="./.objs/debug" />
 				<Option type="0" />
 				<Option compiler="gcc" />
 				<Compiler>
 					<Add option="-g" />
 					<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --debug=yes --cflags`" />
 					<Add option="-DPCSX2_DEVBUILD" />
+					<Add option="-D_DEBUG" />
 				</Compiler>
 				<ResourceCompiler>
 					<Add directory="$(ProjectRootDir)/NewGUI" />
 				</ResourceCompiler>
 				<Linker>
 					<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --debug=yes --libs`" />
-					<Add library="$(SvnRootDir)/deps/zlib-dbg.a" />
+					<Add library="$(SvnRootDir)/deps/debug/zlib-dbg.a" />
 				</Linker>
 			</Target>
 			<Target title="Devel">
 				<Option platforms="Windows;Unix;" />
 				<Option output="$(SvnRootDir)/bin/pcsx2-dev" prefix_auto="1" extension_auto="1" />
 				<Option working_dir="$(SvnRootDir)/bin/" />
-				<Option object_output="./.objs/Devel" />
+				<Option object_output="./.objs/devel" />
 				<Option type="0" />
 				<Option compiler="gcc" />
 				<Compiler>
@@ -46,14 +47,14 @@
 				</ResourceCompiler>
 				<Linker>
 					<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --debug=yes --libs`" />
-					<Add library="$(SvnRootDir)/deps/zlib-dev.a" />
+					<Add library="$(SvnRootDir)/deps/devel/zlib-dev.a" />
 				</Linker>
 			</Target>
 			<Target title="Release">
 				<Option platforms="Windows;Unix;" />
 				<Option output="$(SvnRootDir)/bin/pcsx2" prefix_auto="1" extension_auto="1" />
 				<Option working_dir="$(SvnRootDir)/bin/" />
-				<Option object_output="./.objs/Release" />
+				<Option object_output="./.objs/release" />
 				<Option type="0" />
 				<Option compiler="gcc" />
 				<Compiler>
@@ -82,7 +83,6 @@
 			<Add option="-fno-guess-branch-probability" />
 			<Add option="-fno-dse -fno-tree-dse" />
 			<Add option="-DWX_PRECOMP" />
-			<Add option="-D_DEBUG" />
 			<Add directory="$(SvnRootDir)/common/include/" />
 			<Add directory="$(SvnRootDir)/3rdparty/" />
 			<Add directory="$(ProjectRootDir)" />

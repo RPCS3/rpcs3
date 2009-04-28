@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6" />
+	<Project>
+		<Option title="SoundTouch" />
+		<Option pch_mode="2" />
+		<Option compiler="gcc" />
+		<Build>
+			<Target title="Debug">
+				<Option output="../../deps/debug/libsoundtouch-dbg" prefix_auto="1" extension_auto="1" />
+				<Option working_dir="" />
+				<Option object_output="/home/pubuntu/Documents/pcsx2-newgui/3rdparty/SoundTouch/.objs/debug" />
+				<Option type="2" />
+				<Option compiler="gcc" />
+				<Option createDefFile="1" />
+				<Compiler>
+					<Add option="-g" />
+					<Add option="-O0" />
+				</Compiler>
+			</Target>
+			<Target title="Release">
+				<Option output="../../deps/libsoundtouch" prefix_auto="1" extension_auto="1" />
+				<Option working_dir="" />
+				<Option object_output="/home/pubuntu/Documents/pcsx2-newgui/3rdparty/SoundTouch/.objs/release" />
+				<Option type="2" />
+				<Option compiler="gcc" />
+				<Option createDefFile="1" />
+				<Compiler>
+					<Add option="-fexpensive-optimizations" />
+					<Add option="-O3" />
+					<Add option="-W" />
+				</Compiler>
+				<Linker>
+					<Add option="-s" />
+				</Linker>
+			</Target>
+			<Target title="Devel">
+				<Option output="../../deps/devel/libsoundtouch-dev" prefix_auto="1" extension_auto="1" />
+				<Option working_dir="" />
+				<Option object_output="/home/pubuntu/Documents/pcsx2-newgui/3rdparty/SoundTouch/.objs/devel" />
+				<Option type="2" />
+				<Option compiler="gcc" />
+				<Option createDefFile="1" />
+				<Compiler>
+					<Add option="-O1" />
+					<Add option="-W" />
+					<Add option="-g" />
+				</Compiler>
+			</Target>
+		</Build>
+		<Compiler>
+			<Add option="-march=athlon-xp" />
+			<Add option="-march=prescott" />
+		</Compiler>
+		<Unit filename="AAFilter.cpp" />
+		<Unit filename="AAFilter.h" />
+		<Unit filename="BPMDetect.h" />
+		<Unit filename="FIFOSampleBuffer.cpp" />
+		<Unit filename="FIFOSampleBuffer.h" />
+		<Unit filename="FIFOSamplePipe.h" />
+		<Unit filename="FIRFilter.cpp" />
+		<Unit filename="FIRFilter.h" />
+		<Unit filename="RateTransposer.cpp" />
+		<Unit filename="RateTransposer.h" />
+		<Unit filename="STTypes.h" />
+		<Unit filename="SoundTouch.cpp" />
+		<Unit filename="SoundTouch.h" />
+		<Unit filename="TDStretch.cpp" />
+		<Unit filename="TDStretch.h" />
+		<Unit filename="WavFile.cpp" />
+		<Unit filename="WavFile.h" />
+		<Unit filename="cpu_detect.h" />
+		<Unit filename="cpu_detect_x86_gcc.cpp" />
+		<Unit filename="mmx_optimized.cpp" />
+		<Unit filename="sse_optimized.cpp" />
+		<Extensions>
+			<envvars />
+			<code_completion />
+			<lib_finder disable_auto="1" />
+			<debugger />
+		</Extensions>
+	</Project>
+</CodeBlocks_project_file>
