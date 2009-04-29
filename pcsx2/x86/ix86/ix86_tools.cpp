@@ -34,12 +34,12 @@ namespace x86Emitter
 {
 	void xStoreReg( const xRegisterSSE& src )
 	{
-		xMOVDQA( &g_globalXMMData[src.Id], src );
+		xMOVDQA( &g_globalXMMData[src.Id*2], src );
 	}
 
 	void xRestoreReg( const xRegisterSSE& dest )
 	{
-		xMOVDQA( dest, &g_globalXMMData[dest.Id] );
+		xMOVDQA( dest, &g_globalXMMData[dest.Id*2] );
 	}
 }
 

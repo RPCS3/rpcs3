@@ -751,6 +751,13 @@ void recClear(u32 addr, u32 size)
 		return;
 	addr = HWADDR(addr);
 
+	addr -= addr % 16;		// round down.
+	size += 3;				// round up!
+	size -= size % 4;
+
+	for (u32 a = addr / 16; a < addr / 16 + size / 4; a++)
+		vtlb_private::vtlbdata.alloc_bits[a / 8] &= ~(1 << (a & 7));
+
 	int blockidx = recBlocks.LastIndex(addr + size * 4 - 4);
 
 	if (blockidx == -1)
@@ -1544,66 +1551,32 @@ StartRecomp:
 			}
 			else
 			{
-				// import the vtlbdata (alloc_bits and alloc_base and stuff):
 				using namespace vtlb_private;
-				
+
 				MOV32ItoR(ECX, inpage_ptr);
-				MOV32ItoR(EDX, pgsz);
-				
-				u32 mask=0;
-				u32 writen=0;
-				u32 writen_start=0;
+				MOV32ItoR(EDX, pgsz / 4);
 
-				u32 lpc=inpage_ptr;
-				u32 stg=pgsz;
+				u32 index = (psM - vtlbdata.alloc_base + inpage_ptr) / 16 / 32;		// 16 bytes per bit, 32 bits per dword.
+				u32 mask = 0;
 
-				while(stg>0)
-				{
-					u32 bit = (lpc>>4) & 7;
-					if (mask==0)
+				u32 start = inpage_ptr & ~15;
+				u32 end = inpage_ptr + pgsz;
+				for (u32 pos = start, bit = (start / 16) % 32; pos < end; pos += 16, bit++) {
+					if( bit == 32 )
 					{
-						//writen=bit;
-						writen_start=(((u8*)PSM(lpc)-vtlbdata.alloc_base)>>4)/8;
+						xTEST(ptr32[&vtlbdata.alloc_bits[index]], mask);
+						xJNZ(dyna_block_discard);
+						bit = 0;
+						mask = 0;
+						index++;
 					}
 					mask |= 1 << bit;
-
-					if (bit==31)
-					{
-						vtlbdata.alloc_bits[writen_start]&=~mask;
-						xTEST( ptr32[&vtlbdata.alloc_bits[writen_start]], mask );	// auto-optimizes to imm8 when applicable.
-						xJNZ( dyna_block_discard );
-						//SysPrintf("%08X %d %d\n",mask,pgsz,pgsz>>4);
-						mask = 0;
-					}
-
-					//writen++;
-
-					if (stg<=16)
-					{
-						lpc += stg;
-						stg  = 0;
-					}
-					else
-					{
-						lpc += 16;
-						stg -= 16;
-					}
 				}
+				xTEST(ptr32[&vtlbdata.alloc_bits[index]], mask);
+				xJNZ(dyna_block_discard);
 
-				if (mask)
+				if (manual_counter[inpage_ptr >> 12] <= 4)
 				{
-					vtlbdata.alloc_bits[writen_start] &= ~mask;
-					xTEST( ptr32[&vtlbdata.alloc_bits[writen_start]], mask );	// auto-optimizes to imm8 when applicable.
-					xJNZ( dyna_block_discard );
-					//SysPrintf("%08X %d %d\n",mask,pgsz,pgsz>>4);
-					mask = 0;
-				}
-
-				if( startpc != 0x81fc0 && manual_counter[inpage_ptr >> 12] <= 4 )
-				{
-					// Commented out until we replace it with a smarter algo that only
-					// recompiles blocks a limited number of times.
-
 					xADD(ptr16[&manual_page[inpage_ptr >> 12]], 1);
 					xJC( dyna_page_reset );
 				}

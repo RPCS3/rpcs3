@@ -96,15 +96,23 @@ public:
 // Bit Test Instructions - Valid on 16/32 bit instructions only.
 //
 template< G8Type InstType >
-class xImpl_Group8 : public xImpl_BitScan<0xa3 | (InstType << 2)>
+class xImpl_Group8
 {
+	static const uint RegFormOp = 0xa3 | (InstType << 3);
 public:
-	using xImpl_BitScan<0xa3 | (InstType << 2)>::operator();
+	__forceinline void operator()( const xRegister32& bitbase, const xRegister32& bitoffset ) const	{ xOpWrite0F( RegFormOp, bitbase, bitoffset ); }
+	__forceinline void operator()( const xRegister16& bitbase, const xRegister16& bitoffset ) const	{ xOpWrite0F( 0x66, RegFormOp, bitbase, bitoffset ); }
+	__forceinline void operator()( const ModSibBase& bitbase, const xRegister32& bitoffset ) const	{ xOpWrite0F( RegFormOp, bitoffset, bitbase ); }
+	__forceinline void operator()( const ModSibBase& bitbase, const xRegister16& bitoffset ) const	{ xOpWrite0F( 0x66, RegFormOp, bitoffset, bitbase ); }
+	__forceinline void operator()( const void* bitbase, const xRegister32& bitoffset ) const		{ xOpWrite0F( 0xab, bitoffset, bitbase ); }
+	__forceinline void operator()( const void* bitbase, const xRegister16& bitoffset ) const		{ xOpWrite0F( 0x66, RegFormOp, bitoffset, bitbase ); }
 
-	__forceinline void operator()( const ModSibStrict<u32>& bitbase, u8 bitoffset ) const	{ xOpWrite0F( 0xba, InstType, bitbase, bitoffset ); }
-	__forceinline void operator()( const ModSibStrict<u16>& bitbase, u8 bitoffset ) const	{ xOpWrite0F( 0x66, 0xba, InstType, bitbase, bitoffset ); }
-	void operator()( const xRegister<u32>& bitbase, u8 bitoffset ) const					{ xOpWrite0F( 0xba, InstType, bitbase, bitoffset ); }
-	void operator()( const xRegister<u16>& bitbase, u8 bitoffset ) const					{ xOpWrite0F( 0x66, 0xba, InstType, bitbase, bitoffset ); }
+	__forceinline void operator()( const ModSibStrict<u32>& bitbase, u8 bitoffset ) const			{ xOpWrite0F( 0xba, InstType, bitbase, bitoffset ); }
+	__forceinline void operator()( const ModSibStrict<u16>& bitbase, u8 bitoffset ) const			{ xOpWrite0F( 0x66, 0xba, InstType, bitbase, bitoffset ); }
+	__forceinline void operator()( const u32* bitbase, u8 bitoffset ) const							{ xOpWrite0F( 0xba, InstType, bitbase, bitoffset ); }
+	__forceinline void operator()( const u16* bitbase, u8 bitoffset ) const							{ xOpWrite0F( 0x66, 0xba, InstType, bitbase, bitoffset ); }
+	__forceinline void operator()( const xRegister<u32>& bitbase, u8 bitoffset ) const				{ xOpWrite0F( 0xba, InstType, bitbase, bitoffset ); }
+	__forceinline void operator()( const xRegister<u16>& bitbase, u8 bitoffset ) const				{ xOpWrite0F( 0x66, 0xba, InstType, bitbase, bitoffset ); }
 
 	xImpl_Group8() {}
 };

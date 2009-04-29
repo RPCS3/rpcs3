@@ -430,7 +430,7 @@ static void _vtlb_DynGen_DirectWrite( u32 bits )
 	u8* bits_base = vtlbdata.alloc_bits;
 	bits_base -= (alloc_base>>4)/8;		//in bytes
 
-	xBTS( ecx, bits_base );
+	xBTS( ptr32[bits_base], ecx );
 }
 
 // ------------------------------------------------------------------------
