@@ -295,7 +295,7 @@ static void ProcessMemSkip(int size, unsigned int unpackType, const unsigned int
 			break;
 		case 0xC:
 			vif->tag.addr += size;
-			VIFUNPACK_LOG("Processing V4-32 skip, size = %d, CL = %d, WL = %d", size, vif1Regs->cycle.cl, vif1Regs->cycle.wl);
+			VIFUNPACK_LOG("Processing V4-32 skip, size = %d, CL = %d, WL = %d", size, vifRegs->cycle.cl, vifRegs->cycle.wl);
 			break;
 		case 0xD:
 		    vif->tag.addr += (size / unpack->gsize) * 16;
@@ -350,12 +350,18 @@ static int VIFalign(u32 *data, vifCode *v, unsigned int size, const unsigned int
 	{
 		VU = &VU0;
 		vifRegs = vif0Regs;
+		vifMaskRegs = g_vif0Masks;
+		vif = &vif0;
+		vifRow = g_vifRow0;
 		assert(v->addr < memsize);
 	}
 	else
 	{
 		VU = &VU1;
 		vifRegs = vif1Regs;
+		vifMaskRegs = g_vif1Masks;
+		vif = &vif1;
+		vifRow = g_vifRow1;
 		assert(v->addr < memsize);
 	}
 
@@ -376,7 +382,7 @@ static int VIFalign(u32 *data, vifCode *v, unsigned int size, const unsigned int
 	memsize = size;
 #endif
 	
-	if(vif1Regs->offset != 0)
+	if(vifRegs->offset != 0)
 	{		
 		int unpacksize;
 
@@ -411,29 +417,46 @@ static int VIFalign(u32 *data, vifCode *v, unsigned int size, const unsigned int
 			if (vifRegs->cycle.cl != vifRegs->cycle.wl)
 			{
 				vif->tag.addr += (((vifRegs->cycle.cl - vifRegs->cycle.wl) << 2) + ((4 - ft->qsize) + unpacksize)) * 4;
-				//dest += ((vifRegs->cycle.cl - vifRegs->cycle.wl) << 2) + destinc;
+				dest += ((vifRegs->cycle.cl - vifRegs->cycle.wl) << 2) + (4 - ft->qsize) + unpacksize;
+				if(vif->tag.addr >= (u32)(VIFdmanum ? 0x4000 : 0x1000)) 
+				{
+					vif->tag.addr &= (u32)(VIFdmanum ? 0x3fff : 0xfff);
+					dest = (u32*)(VU->Mem + v->addr);
+				}
 			}
 			else
 			{
 				vif->tag.addr += ((4 - ft->qsize) + unpacksize) * 4;
-				//dest += destinc;
+				dest += (4 - ft->qsize) + unpacksize;
+				if(vif->tag.addr >= (u32)(VIFdmanum ? 0x4000 : 0x1000)) 
+				{
+					vif->tag.addr &= (u32)(VIFdmanum ? 0x3fff : 0xfff);
+					dest = (u32*)(VU->Mem + v->addr);
+				}
+				
 			}
+			cdata += unpacksize * ft->dsize;
 			vif->cl = 0;
 			VIFUNPACK_LOG("Aligning packet done size = %d offset %d addr %x", size, vifRegs->offset, vif->tag.addr);
-			return size >> 2;
+			if((size & 0xf) == 0)return size >> 2;
 
 		}
 		else
 		{
 			vif->tag.addr += ((4 - ft->qsize) + unpacksize) * 4;
 			dest += (4 - ft->qsize) + unpacksize;		
+			if(vif->tag.addr >= (u32)(VIFdmanum ? 0x4000 : 0x1000)) 
+			{
+				vif->tag.addr &= (u32)(VIFdmanum ? 0x3fff : 0xfff);
+				dest = (u32*)(VU->Mem + v->addr);
+			}
 			cdata += unpacksize * ft->dsize;
 			VIFUNPACK_LOG("Aligning packet done size = %d offset %d addr %x", size, vifRegs->offset, vif->tag.addr);
 		}
 	}
 	
 
-	if (vif->cl != 0)  //Check alignment for SSE unpacks
+	if (vif->cl != 0 || (size & 0xf))  //Check alignment for SSE unpacks
 	{
 
 #ifdef _DEBUG
@@ -444,8 +467,13 @@ static int VIFalign(u32 *data, vifCode *v, unsigned int size, const unsigned int
 
 		if (vifRegs->cycle.cl >= vifRegs->cycle.wl)  // skipping write
 		{
+			if(vif->tag.addr >= (u32)(VIFdmanum ? 0x4000 : 0x1000)) 
+			{
+				vif->tag.addr &= (u32)(VIFdmanum ? 0x3fff : 0xfff);
+				dest = (u32*)(VU->Mem + v->addr);
+			}
 			// continuation from last stream
-
+			VIFUNPACK_LOG("Continuing last stream size = %d offset %d addr %x", size, vifRegs->offset, vif->tag.addr);
 			incdest = ((vifRegs->cycle.cl - vifRegs->cycle.wl) << 2) + 4;
 			
 			while ((size >= ft->gsize) && (vifRegs->num > 0))
@@ -460,12 +488,20 @@ static int VIFalign(u32 *data, vifCode *v, unsigned int size, const unsigned int
 				{
 					dest += incdest;
 					vif->tag.addr += incdest * 4;
+					
 					vif->cl = 0;
-					break;
+					if((size & 0xf) == 0)break;
 				}
-
-				dest += 4;
-				vif->tag.addr += 16;
+				else
+				{
+					dest += 4;
+					vif->tag.addr += 16;
+				}
+				if(vif->tag.addr >= (u32)(VIFdmanum ? 0x4000 : 0x1000)) 
+				{
+					vif->tag.addr &= (u32)(VIFdmanum ? 0x3fff : 0xfff);
+					dest = (u32*)(VU->Mem + v->addr);
+				}
 			}
 
 			if(vifRegs->mode == 2)
@@ -478,6 +514,32 @@ static int VIFalign(u32 *data, vifCode *v, unsigned int size, const unsigned int
 				vifRow[3] = vifRegs->r3;
 			}	
 
+		}
+		if (size >= ft->dsize && vifRegs->num > 0 && ((size & 0xf) != 0 || vif->cl != 0))
+		{
+			//VIF_LOG("warning, end with size = %d", size);
+			/* unpack one qword */
+			if(vif->tag.addr + ((size / ft->dsize) * 4)  >= (u32)(VIFdmanum ? 0x4000 : 0x1000)) 
+			{
+				//DevCon::Notice("Overflow");
+				vif->tag.addr &= (u32)(VIFdmanum ? 0x3fff : 0xfff);
+				dest = (u32*)(VU->Mem + v->addr);
+			}
+
+			vif->tag.addr += (size / ft->dsize) * 4;
+			
+			func(dest, (u32*)cdata, size / ft->dsize);
+			size = 0;
+
+			if(vifRegs->mode == 2)
+			{
+				//Update the reg rows for SSE
+				vifRow[0] = vifRegs->r0;
+				vifRow[1] = vifRegs->r1;
+				vifRow[2] = vifRegs->r2;
+				vifRow[3] = vifRegs->r3;
+			}	
+			VIFUNPACK_LOG("leftover done, size %d, vifnum %d, addr %x", size, vifRegs->num, vif->tag.addr);
 		}
 	}
 	return size>>2;
@@ -504,6 +566,9 @@ static void VIFunpack(u32 *data, vifCode *v, unsigned int size, const unsigned i
 	{
 		VU = &VU0;
 		vifRegs = vif0Regs;
+		vifMaskRegs = g_vif0Masks;
+		vif = &vif0;
+		vifRow = g_vifRow0;
 		assert(v->addr < memsize);
 	}
 	else
@@ -511,6 +576,9 @@ static void VIFunpack(u32 *data, vifCode *v, unsigned int size, const unsigned i
 
 		VU = &VU1;
 		vifRegs = vif1Regs;
+		vifMaskRegs = g_vif1Masks;
+		vif = &vif1;
+		vifRow = g_vifRow1;
 		assert(v->addr < memsize);
 
 		if (vu1MicroIsSkipping())
@@ -548,9 +616,16 @@ static void VIFunpack(u32 *data, vifCode *v, unsigned int size, const unsigned i
 #ifdef _DEBUG
 		static int s_count = 0;
 #endif
+		if(v->addr >= (u32)(VIFdmanum ? 0x4000 : 0x1000)) 
+		{
+			//DevCon::Notice("Overflown at the start");
+			v->addr &= (u32)(VIFdmanum ? 0x3fff : 0xfff);
+			dest = (u32*)(VU->Mem + v->addr);
+		}
 
+		tempsize = min(vifRegs->num, (size / ft->gsize));
 		tempsize = (vif->tag.addr + (size / (ft->gsize * vifRegs->cycle.wl)) * 
-			((vifRegs->cycle.cl - vifRegs->cycle.wl) * 16)) + ((size / ft->gsize) * 16);
+			((vifRegs->cycle.cl - vifRegs->cycle.wl) * 16)) + (tempsize * 16);
 
 		//Sanity Check (memory overflow)
 		if(tempsize > (u32)(VIFdmanum ? 0x4000 : 0x1000)) 
@@ -671,11 +746,18 @@ static void VIFunpack(u32 *data, vifCode *v, unsigned int size, const unsigned i
 		{
 			int incdest = ((vifRegs->cycle.cl - vifRegs->cycle.wl) << 2) + 4;
 			size = 0;
+			if((tempsize >> 2) != vif->tag.size) DevCon::Notice("split when size != tagsize");
 			
-			
+			VIFUNPACK_LOG("sorting tempsize :p, size %d, vifnum %d, addr %x", tempsize, vifRegs->num, vif->tag.addr);
+
 			while ((tempsize >= ft->gsize) && (vifRegs->num > 0))
 			{
-				//VIFUNPACK_LOG("sorting tempsize :p, size %d, vifnum %d, addr %x", tempsize, vifRegs->num, vif->tag.addr);
+				if(v->addr >= (u32)(VIFdmanum ? 0x4000 : 0x1000)) 
+				{
+					v->addr &= (u32)(VIFdmanum ? 0x3fff : 0xfff);
+					dest = (u32*)(VU->Mem + v->addr);
+				}
+				
 				func(dest, (u32*)cdata, ft->qsize);
 				cdata += ft->gsize;
 				tempsize -= ft->gsize;
@@ -685,15 +767,13 @@ static void VIFunpack(u32 *data, vifCode *v, unsigned int size, const unsigned i
 				if (vif->cl == vifRegs->cycle.wl)
 				{
 					dest += incdest;
-					v->addr = (v->addr + (incdest * 4)) & (VIFdmanum ? 0x3fff : 0xfff);
-					if(v->addr <= (u32)(VIFdmanum ? 0x3000 : 0x500)) dest = (u32*)(VU->Mem + v->addr);
+					v->addr += (incdest * 4);
 					vif->cl = 0;
 				}
 				else
 				{
 					dest += 4;
-					v->addr = (v->addr + 16) & (VIFdmanum ? 0x3fff : 0xfff);
-					if(v->addr <= (u32)(VIFdmanum ? 0x3000 : 0x500)) dest = (u32*)(VU->Mem + v->addr);
+					v->addr += 16;					
 				}
 			}
 
@@ -705,6 +785,11 @@ static void VIFunpack(u32 *data, vifCode *v, unsigned int size, const unsigned i
 				vifRow[2] = vifRegs->r2;
 				vifRow[3] = vifRegs->r3;
 			}
+			if(v->addr >= (u32)(VIFdmanum ? 0x4000 : 0x1000)) 
+				{
+					v->addr &= (u32)(VIFdmanum ? 0x3fff : 0xfff);
+					dest = (u32*)(VU->Mem + v->addr);
+				}
 			if(tempsize > 0) size = tempsize;
 
 		}
@@ -735,7 +820,7 @@ static void VIFunpack(u32 *data, vifCode *v, unsigned int size, const unsigned i
 			if((u32)(((size / ft->gsize) / vifRegs->cycle.cl) * vifRegs->cycle.wl) < vifRegs->num) 
 			DevCon::Notice("Filling write warning! %x < %x and CL = %x WL = %x", params (size / ft->gsize), vifRegs->num, vifRegs->cycle.cl, vifRegs->cycle.wl);
 				
-		VIFUNPACK_LOG("filling write %d cl %d, wl %d mask %x mode %x unpacktype %x", vifRegs->num, vifRegs->cycle.cl, vifRegs->cycle.wl, vifRegs->mask, vifRegs->mode, unpackType);
+		DevCon::Notice("filling write %d cl %d, wl %d mask %x mode %x unpacktype %x addr %x", params vifRegs->num, vifRegs->cycle.cl, vifRegs->cycle.wl, vifRegs->mask, vifRegs->mode, unpackType, vif->tag.addr);
 		while (vifRegs->num > 0)
 		{
 			if (vif->cl == vifRegs->cycle.wl)
@@ -872,9 +957,7 @@ static __forceinline void vif0UNPACK(u32 *data)
 	vif0.tag.size = len;
 	vif0Regs->offset = 0;
 
-	vifMaskRegs = g_vif0Masks;
-	vif = &vif0;
-	vifRow = g_vifRow0;
+	
 }
 
 static __forceinline void vif0mpgTransfer(u32 addr, u32 *data, int size)
@@ -983,6 +1066,7 @@ static int __fastcall Vif0TransMPG(u32 *data)  // MPG
 {
 	if (vif0.vifpacketsize < vif0.tag.size)
 	{
+		if((vif0.tag.addr + vif0.vifpacketsize) > 0x1000) DevCon::Notice("Vif0 MPG Split Overflow");
 		vif0mpgTransfer(vif0.tag.addr, data, vif0.vifpacketsize);
 		vif0.tag.addr += vif0.vifpacketsize << 2;
 		vif0.tag.size -= vif0.vifpacketsize;
@@ -991,7 +1075,7 @@ static int __fastcall Vif0TransMPG(u32 *data)  // MPG
 	else
 	{
 		int ret;
-		
+		if((vif0.tag.addr + vif0.tag.size) > 0x1000) DevCon::Notice("Vif0 MPG Overflow");
 		vif0mpgTransfer(vif0.tag.addr, data, vif0.tag.size);
 		ret = vif0.tag.size;
 		vif0.tag.size = 0;
@@ -1633,9 +1717,6 @@ static __forceinline void vif1UNPACK(u32 *data)
 	vif1.tag.addr <<= 4;
 	vif1.tag.cmd  = vif1.cmd;
 
-	vifMaskRegs = g_vif1Masks;
-	vif = &vif1;
-	vifRow = g_vifRow1;
 }
 
 static __forceinline void vif1mpgTransfer(u32 addr, u32 *data, int size)
@@ -1742,6 +1823,7 @@ static int __fastcall Vif1TransMPG(u32 *data)
 {
 	if (vif1.vifpacketsize < vif1.tag.size)
 	{
+		if((vif1.tag.addr + vif1.vifpacketsize) > 0x4000) DevCon::Notice("Vif1 MPG Split Overflow");
 		vif1mpgTransfer(vif1.tag.addr, data, vif1.vifpacketsize);
 		vif1.tag.addr += vif1.vifpacketsize << 2;
 		vif1.tag.size -= vif1.vifpacketsize;
@@ -1750,6 +1832,7 @@ static int __fastcall Vif1TransMPG(u32 *data)
 	else
 	{
 		int ret;
+		if((vif1.tag.addr + vif1.tag.size) > 0x4000) DevCon::Notice("Vif1 MPG Overflow");
 		vif1mpgTransfer(vif1.tag.addr, data, vif1.tag.size);
 		ret = vif1.tag.size;
 		vif1.tag.size = 0;
