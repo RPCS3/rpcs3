@@ -69,7 +69,7 @@ typedef int BOOL;
 // unchanged for long periods of time.
 
 #include "zlib/zlib.h"
-#include "PS2Etypes.h"
+#include "Pcsx2Defs.h"
 #include "MemcpyFast.h"
 #include "StringUtils.h"
 #include "Exceptions.h"

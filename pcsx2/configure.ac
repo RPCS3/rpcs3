@@ -38,7 +38,7 @@ fi
 WARNING_FLAGS="-Wno-format -Wno-unused-parameter -Wno-unused-value -Wunused-variable "
 EXTRA_WARNING_FLAGS="-Wall -Wextra"
 NORMAL_FLAGS=" -pipe -msse -msse2 -O2 ${WARNING_FLAGS}"
-# These optimizations seem to cause issues with GCC 4.3.3, so we'll turn them off.
+# These optimizations seem to cause issues with GCC 4.3.3, so we'll turn them off. Comment if not on 4.3+
 NORMAL_FLAGS+=" -fno-guess-branch-probability -fno-dse -fno-tree-dse "
 
 DEBUG_FLAGS+=" -g -msse -msse2 ${EXTRA_WARNING_FLAGS} ${WARNING_FLAGS} "

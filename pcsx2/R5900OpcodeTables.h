@@ -18,7 +18,7 @@
 #ifndef _R5900_OPCODETABLES_H
 #define _R5900_OPCODETABLES_H
 
-#include "PS2Etypes.h"
+#include "Pcsx2Defs.h"
 
 // TODO : Move these into the OpcodeTables namespace
 extern  void (*Int_COP2PrintTable[32])();

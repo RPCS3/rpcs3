@@ -19,7 +19,7 @@
 #ifndef __SYSTEM_H__
 #define __SYSTEM_H__
 
-#include "PS2Etypes.h"
+#include "Pcsx2Defs.h"
 #include "Paths.h"
 #include "Pcsx2Config.h"
 #include "Exceptions.h"
