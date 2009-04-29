@@ -23,7 +23,6 @@
 
 #include "iCore.h"
 #include "iR5900.h"
-#include "ix86\ix86_internal.h"
 
 using namespace vtlb_private;
 using namespace x86Emitter;
