@@ -618,7 +618,7 @@ static u8* m_psAllMem = NULL;
 void memAlloc() 
 {
 	if( m_psAllMem == NULL )
-		m_psAllMem = vtlb_malloc( m_allMemSize, 4096, 0x2400000 );
+		m_psAllMem = vtlb_malloc( m_allMemSize, 4096 );
 
 	if( m_psAllMem == NULL)
 		throw Exception::OutOfMemory( "memAlloc > failed to allocate PS2's base ram/rom/scratchpad." );

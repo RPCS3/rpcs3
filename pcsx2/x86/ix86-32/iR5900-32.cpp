@@ -418,6 +418,9 @@ static void recAlloc()
 	x86FpuState = FPU_STATE;
 }
 
+PCSX2_ALIGNED16( static u16 manual_page[Ps2MemSize::Base >> 12] );
+PCSX2_ALIGNED16( static u8 manual_counter[Ps2MemSize::Base >> 12] );
+
 ////////////////////////////////////////////////////
 void recResetEE( void )
 {
@@ -427,6 +430,8 @@ void recResetEE( void )
 
 	memset_8<0xcc, REC_CACHEMEM>(recMem);	// 0xcc is INT3
 	memzero_ptr<m_recBlockAllocSize>( m_recBlockAlloc );
+	memzero_obj( manual_page );
+	memzero_obj( manual_counter );
 	ClearRecLUT((BASEBLOCK*)m_recBlockAlloc,
 		(((Ps2MemSize::Base + Ps2MemSize::Rom + Ps2MemSize::Rom1) / 4)));
 
@@ -720,7 +725,6 @@ static void ClearRecLUT(BASEBLOCK* base, int count)
 		base[i].SetFnptr((uptr)JITCompile);
 }
 
-// Returns the offset to the next instruction after any cleared memory
 void recClear(u32 addr, u32 size)
 {
 	BASEBLOCKEX* pexblock;
@@ -1256,14 +1260,16 @@ void badespfn() {
 
 void __fastcall dyna_block_discard(u32 start,u32 sz)
 {
-	DevCon::WriteLn("dyna_block_discard %08X , count %d", params start,sz);
-	Cpu->Clear(start,sz);
+	DevCon::WriteLn("dyna_block_discard .. start: %08X  count=%d", params start,sz);
+	Cpu->Clear(start, sz);
 }
 
-void __fastcall dyna_block_reset(u32 start,u32 sz)
+
+void __fastcall dyna_page_reset(u32 start,u32 sz)
 {
-	DevCon::WriteLn("dyna_block_reset %08X , count %d", params start,sz);
+	DevCon::WriteLn("dyna_page_reset .. start=%08X  count=%d", params start,sz);
 	Cpu->Clear(start & ~0xfffUL, 0x400);
+	manual_counter[start >> 10]++;
 	mmap_MarkCountedRamPage(PSM(start), start & ~0xfffUL);
 }
 
@@ -1490,98 +1496,6 @@ StartRecomp:
 			// instruction being analyzed.
 			if( usecop2 ) vucycle++;
 
-			// peephole optimizations //
-#ifdef PCSX2_VM_COISSUE
-			if( i < s_nEndBlock-4 && recompileCodeSafe(i) ) {
-				u32 curcode = cpuRegs.code;
-				u32 nextcode = *(u32*)PSM(i+4);
-				if( _eeIsLoadStoreCoIssue(curcode, nextcode) && recBSC_co[curcode>>26] != NULL ) {
-
-					// rs has to be the same, and cannot be just written
-					if( ((curcode >> 21) & 0x1F) == ((nextcode >> 21) & 0x1F) && !_eeLoadWritesRs(curcode) ) {
-
-						if( _eeIsLoadStoreCoX(curcode) && ((nextcode>>16)&0x1f) != ((curcode>>21)&0x1f) ) {
-							// see how many stores there are
-							u32 j;
-							// use xmmregs since only supporting lwc1,lq,swc1,sq
-							for(j = i+8; j < s_nEndBlock && j < i+4*iREGCNT_XMM; j += 4 ) {
-								u32 nncode = *(u32*)PSM(j);
-								if( (nncode>>26) != (curcode>>26) || ((curcode>>21)&0x1f) != ((nncode>>21)&0x1f) ||
-									_eeLoadWritesRs(nncode))
-									break;
-							}
-
-							if( j > i+8 ) {
-								u32 num = (j-i)>>2; // number of stores that can coissue
-								assert( num <= iREGCNT_XMM );
-
-								g_pCurInstInfo[0].numpeeps = num-1;
-								g_pCurInstInfo[0].info |= EEINSTINFO_COREC;
-
-								while(i < j-4) {
-									g_pCurInstInfo++;
-									g_pCurInstInfo[0].info |= EEINSTINFO_NOREC;
-									i += 4;	
-								}
-
-								continue;
-							}
-
-							// fall through
-						}
-
-						// unaligned loadstores
-
-						// if LWL, check if LWR and that offsets are +3 away
-						switch(curcode >> 26) {
-							case 0x22: // LWL
-								if( (nextcode>>26) != 0x26 || ((s16)nextcode)+3 != (s16)curcode )
-									continue;
-								break;
-							case 0x26: // LWR
-								if( (nextcode>>26) != 0x22 || ((s16)nextcode) != (s16)curcode+3 )
-									continue;
-								break;
-
-							case 0x2a: // SWL
-								if( (nextcode>>26) != 0x2e || ((s16)nextcode)+3 != (s16)curcode )
-									continue;
-								break;
-							case 0x2e: // SWR
-								if( (nextcode>>26) != 0x2a || ((s16)nextcode) != (s16)curcode+3 )
-									continue;
-								break;
-
-							case 0x1a: // LDL
-								if( (nextcode>>26) != 0x1b || ((s16)nextcode)+7 != (s16)curcode )
-									continue;
-								break;
-							case 0x1b: // LWR
-								if( (nextcode>>26) != 0x1aa || ((s16)nextcode) != (s16)curcode+7 )
-									continue;
-								break;
-
-							case 0x2c: // SWL
-								if( (nextcode>>26) != 0x2d || ((s16)nextcode)+7 != (s16)curcode )
-									continue;
-								break;
-							case 0x2d: // SWR
-								if( (nextcode>>26) != 0x2c || ((s16)nextcode) != (s16)curcode+7 )
-									continue;
-								break;
-						}
-						
-						// good enough
-						g_pCurInstInfo[0].info |= EEINSTINFO_COREC;
-						g_pCurInstInfo[0].numpeeps = 1;
-						g_pCurInstInfo[1].info |= EEINSTINFO_NOREC;
-						g_pCurInstInfo++;
-						i += 4;
-						continue;
-					}
-				}
-			}
-#endif // end peephole
 		}
 		// This *is* important because g_pCurInstInfo is checked a bit later on and
 		// if it's not equal to s_pInstCache it handles recompilation differently.
@@ -1611,7 +1525,6 @@ StartRecomp:
 		iDumpBlock(startpc, recPtr);
 #endif
 
-	static u16 manual_page[Ps2MemSize::Base >> 12];
 	u32 sz=(s_nEndBlock-startpc)>>2;
 
 	u32 inpage_ptr=HWADDR(startpc);
@@ -1631,31 +1544,76 @@ StartRecomp:
 			}
 			else
 			{
+				// import the vtlbdata (alloc_bits and alloc_base and stuff):
+				using namespace vtlb_private;
+				
 				MOV32ItoR(ECX, inpage_ptr);
 				MOV32ItoR(EDX, pgsz);
+				
+				u32 mask=0;
+				u32 writen=0;
+				u32 writen_start=0;
 
 				u32 lpc=inpage_ptr;
 				u32 stg=pgsz;
+
 				while(stg>0)
 				{
-					// was dyna_block_discard_recmem.  See note in recResetEE for details.
-					CMP32ItoM((uptr)PSM(lpc),*(u32*)PSM(lpc));
-					JNE32(((u32)&dyna_block_discard)- ( (u32)x86Ptr + 6 ));
+					u32 bit = (lpc>>4) & 7;
+					if (mask==0)
+					{
+						//writen=bit;
+						writen_start=(((u8*)PSM(lpc)-vtlbdata.alloc_base)>>4)/8;
+					}
+					mask |= 1 << bit;
 
-					stg-=4;
-					lpc+=4;
+					if (bit==31)
+					{
+						vtlbdata.alloc_bits[writen_start]&=~mask;
+						xTEST( ptr32[&vtlbdata.alloc_bits[writen_start]], mask );	// auto-optimizes to imm8 when applicable.
+						xJNZ( dyna_block_discard );
+						//SysPrintf("%08X %d %d\n",mask,pgsz,pgsz>>4);
+						mask = 0;
+					}
+
+					//writen++;
+
+					if (stg<=16)
+					{
+						lpc += stg;
+						stg  = 0;
+					}
+					else
+					{
+						lpc += 16;
+						stg -= 16;
+					}
 				}
-				if (startpc != 0x81fc0) {
+
+				if (mask)
+				{
+					vtlbdata.alloc_bits[writen_start] &= ~mask;
+					xTEST( ptr32[&vtlbdata.alloc_bits[writen_start]], mask );	// auto-optimizes to imm8 when applicable.
+					xJNZ( dyna_block_discard );
+					//SysPrintf("%08X %d %d\n",mask,pgsz,pgsz>>4);
+					mask = 0;
+				}
+
+				if( startpc != 0x81fc0 && manual_counter[inpage_ptr >> 12] <= 4 )
+				{
+					// Commented out until we replace it with a smarter algo that only
+					// recompiles blocks a limited number of times.
+
 					xADD(ptr16[&manual_page[inpage_ptr >> 12]], 1);
-					xJC( dyna_block_reset );
+					xJC( dyna_page_reset );
 				}
 
 				DbgCon::WriteLn("Manual block @ %08X : %08X %d %d %d %d", params
 					startpc,inpage_ptr,pgsz,0x1000-inpage_offs,inpage_sz,sz*4);
 			}
 		}
-		inpage_ptr+=pgsz;
-		inpage_sz-=pgsz;
+		inpage_ptr += pgsz;
+		inpage_sz  -= pgsz;
 	}
 
 	// finally recompile //

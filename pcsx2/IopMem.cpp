@@ -37,7 +37,7 @@ static const uint m_psxMemSize =
 void psxMemAlloc()
 {
 	if( m_psxAllMem == NULL )
-		m_psxAllMem = vtlb_malloc( m_psxMemSize, 4096, 0x21000000 );
+		m_psxAllMem = vtlb_malloc( m_psxMemSize, 4096 );
 
 	if( m_psxAllMem == NULL)
 		throw Exception::OutOfMemory( "psxMemAlloc > failed allocating memory for the IOP processor." );

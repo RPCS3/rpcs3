@@ -168,6 +168,7 @@ bool SysAllocateMem()
 
 	try
 	{
+		vtlb_Core_Alloc();
 		memAlloc();
 		psxMemAlloc();
 		vuMicroMemAlloc();
@@ -271,6 +272,7 @@ void SysShutdownMem()
 	vuMicroMemShutdown();
 	psxMemShutdown();
 	memShutdown();
+	vtlb_Core_Shutdown();
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////

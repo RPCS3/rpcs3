@@ -2883,7 +2883,7 @@
 			</Filter>
 		</Filter>
 		<Filter
-			Name="Dynarec Emitter"
+			Name="x86Emitter"
 			>
 			<File
 				RelativePath="..\..\x86\ix86\ix86.cpp"

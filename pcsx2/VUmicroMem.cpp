@@ -83,7 +83,7 @@ static const uint m_vuMemSize =
 void vuMicroMemAlloc()
 {
 	if( m_vuAllMem == NULL )
-		m_vuAllMem = vtlb_malloc( m_vuMemSize, 16, 0x28000000 );
+		m_vuAllMem = vtlb_malloc( m_vuMemSize, 16 );
 
 	if( m_vuAllMem == NULL )
 		throw Exception::OutOfMemory( "vuMicroMemInit > Failed to allocate VUmicro memory." );
