@@ -182,49 +182,39 @@ static char* bool_to_char( bool testcond )
 
 //////////////////////////////////////////////////////////////////////////////////////////
 //
-s64 CPUSpeedHz( unsigned int time )
+s64 CPUSpeedHz( int time )
 {
-   s64 timeStart, 
+   int timeStart, 
             timeStop;
    s64 startTick, 
             endTick;
-   s64 overhead;
 
    if( ! cpucaps.hasTimeStampCounter )
    {
       return 0; //check if function is supported
    }
-
-	overhead = GetCPUTick() - GetCPUTick();
 	
-	timeStart = timeGetTime( );
-	while( timeGetTime( ) == timeStart ) 
-	{
-		timeStart = timeGetTime( );
-	}
+	// Align the cpu execution to a timeGetTime boundary.
+	// Without this the result could be skewed by up to several milliseconds.
+	
+	do { timeStart = timeGetTime( );
+	} while( timeGetTime( ) == timeStart );
 
-	for(;;)
+	do
 	{
 		timeStop = timeGetTime( );
-		if ( ( timeStop - timeStart ) > 1 )	
-		{
-			startTick = GetCPUTick( );
-			break;
-		}
-	}
+		startTick = GetCPUTick( );
+	} while( ( timeStop - timeStart ) < 1 );
 
 	timeStart = timeStop;
-	for(;;)
+	do
 	{
-		timeStop = timeGetTime( );
-		if ( ( timeStop - timeStart ) > time )	
-		{
-			endTick = GetCPUTick( );
-			break;
-		}
+		timeStop = timeGetTime();
+		endTick = GetCPUTick();
 	}
+	while( ( timeStop - timeStart ) < time );
 
-	return (s64)( ( endTick - startTick ) + ( overhead ) );
+	return (s64)( endTick - startTick );
 }
 
 ////////////////////////////////////////////////////
@@ -377,7 +367,7 @@ void cpudetectInit()
 	cpucaps.hasStreamingSIMD4ExtensionsA               = ( cpuinfo.x86EFlags2 >> 6 ) & 1; //INSERTQ / EXTRQ / MOVNT
 
 
-	cpuinfo.cpuspeed = (u32)(CPUSpeedHz( 600 ) / 1000000);
+	cpuinfo.cpuspeed = (u32)(CPUSpeedHz( 400 ) / 400000 );
 
 	// --> SSE3 / SSSE3 / SSE4.1 / SSE 4.2 detection <--
 
@@ -416,26 +406,26 @@ void cpudetectInit()
 		// We take the instruction test result over cpuid since (in theory) it should be a
 		// more reliable gauge of the cpu's actual ability.
 
-		if( sse3_result != cpucaps.hasStreamingSIMD3Extensions )
+		if( sse3_result != !!cpucaps.hasStreamingSIMD3Extensions )
 		{
 			Console::Notice( "SSE3 Detection Inconsistency: cpuid=%s, test_result=%s",
-				params bool_to_char( cpucaps.hasStreamingSIMD3Extensions ), bool_to_char( sse3_result ) );
+				params bool_to_char( !!cpucaps.hasStreamingSIMD3Extensions ), bool_to_char( sse3_result ) );
 				
 			cpucaps.hasStreamingSIMD3Extensions = sse3_result;
 		}
 
-		if( ssse3_result != cpucaps.hasSupplementalStreamingSIMD3Extensions )
+		if( ssse3_result != !!cpucaps.hasSupplementalStreamingSIMD3Extensions )
 		{
 			Console::Notice( "SSSE3 Detection Inconsistency: cpuid=%s, test_result=%s",
-				params bool_to_char( cpucaps.hasSupplementalStreamingSIMD3Extensions ), bool_to_char( ssse3_result ) );
+				params bool_to_char( !!cpucaps.hasSupplementalStreamingSIMD3Extensions ), bool_to_char( ssse3_result ) );
 
 			cpucaps.hasSupplementalStreamingSIMD3Extensions = ssse3_result;
 		}
 
-		if( sse41_result != cpucaps.hasStreamingSIMD4Extensions )
+		if( sse41_result != !!cpucaps.hasStreamingSIMD4Extensions )
 		{
 			Console::Notice( "SSE4 Detection Inconsistency: cpuid=%s, test_result=%s",
-				params bool_to_char( cpucaps.hasStreamingSIMD4Extensions ), bool_to_char( sse41_result ) );
+				params bool_to_char( !!cpucaps.hasStreamingSIMD4Extensions ), bool_to_char( sse41_result ) );
 
 			cpucaps.hasStreamingSIMD4Extensions = sse41_result;
 		}
