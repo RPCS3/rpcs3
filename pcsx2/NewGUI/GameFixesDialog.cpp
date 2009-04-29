@@ -19,6 +19,7 @@
 #include "PrecompiledHeader.h"
 #include "Misc.h"
 #include "GameFixesDialog.h"
+#include "System.h"
 
 using namespace wxHelpers;
 
@@ -35,6 +36,7 @@ GameFixesDialog::GameFixesDialog( wxWindow* parent, int id ):
 	wxStaticBoxSizer& groupSizer = *new wxStaticBoxSizer( wxVERTICAL, this, _("PCSX2 Gamefixes") );
 
 	AddCheckBox( groupSizer, _T("FPU Compare Hack - Special fix for Digimon Rumble Arena 2.") );
+	AddCheckBox( groupSizer, _T("FPU Multiply Hack - Special fix for Tales of Destiny.") );
 	AddCheckBox( groupSizer, _T("VU Add / Sub Hack - Special fix for Tri-Ace games!") );
 	AddCheckBox( groupSizer, _T("VU Clip Hack - Special fix for God of War") );
 
@@ -45,32 +47,34 @@ GameFixesDialog::GameFixesDialog( wxWindow* parent, int id ):
 	SetSizerAndFit( &mainSizer );
 
 	Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( GameFixesDialog::FPUCompareHack_Click ) );
+	Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( GameFixesDialog::FPUMultHack_Click ) );
 	Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( GameFixesDialog::TriAce_Click ) );
 	Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( GameFixesDialog::GodWar_Click ) );
-}
 
-/*
-BEGIN_EVENT_TABLE(GameFixesDialog, wxDialog)
-    EVT_CHECKBOX(wxID_ANY, FPUCompareHack_Click)
-    EVT_CHECKBOX(wxID_ANY, TriAce_Click)
-    EVT_CHECKBOX(wxID_ANY, GodWar_Click)
-END_EVENT_TABLE();
-*/
+}
 
 void GameFixesDialog::FPUCompareHack_Click(wxCommandEvent &event)
 {
+    //Config.GameFixes |= is_checked ? FLAG_FPU_Compare : 0;
     event.Skip();
 }
 
+void GameFixesDialog::FPUMultHack_Click(wxCommandEvent &event)
+{
+    //Config.GameFixes |= is_checked ? FLAG_FPU_MUL : 0;
+    event.Skip();
+}
 
 void GameFixesDialog::TriAce_Click(wxCommandEvent &event)
 {
+	//Config.GameFixes |= is_checked ? FLAG_VU_ADD_SUB : 0;
     event.Skip();
 }
 
 
 void GameFixesDialog::GodWar_Click(wxCommandEvent &event)
 {
+    //Config.GameFixes |= is_checked ? FLAG_VU_CLIP : 0;
     event.Skip();
 }
 

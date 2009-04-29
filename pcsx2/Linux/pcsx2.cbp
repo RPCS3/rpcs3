@@ -17,6 +17,9 @@
 				<Compiler>
 					<Add option="-g" />
 					<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --debug=yes --cflags`" />
+					<Add option="-Wno-format -Wno-unused-parameter -Wno-unused-value -Wunused-variable" />
+					<Add option="-pipe -msse -msse2" />
+					<Add option="-fno-guess-branch-probability -fno-dse -fno-tree-dse" />
 					<Add option="-DPCSX2_DEVBUILD" />
 					<Add option="-D_DEBUG" />
 				</Compiler>
@@ -39,6 +42,9 @@
 					<Add option="-O2" />
 					<Add option="-W" />
 					<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --debug=yes --cflags`" />
+					<Add option="-Wno-format -Wno-unused-parameter -Wno-unused-value -Wunused-variable" />
+					<Add option="-pipe -msse -msse2" />
+					<Add option="-fno-guess-branch-probability -fno-dse -fno-tree-dse" />
 					<Add option="-DNDEBUG" />
 					<Add option="-DPCSX2_DEVBUILD" />
 				</Compiler>
@@ -60,6 +66,9 @@
 				<Compiler>
 					<Add option="-O2" />
 					<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --debug=no --cflags`" />
+					<Add option="-Wno-format -Wno-unused-parameter -Wno-unused-value -Wunused-variable" />
+					<Add option="-pipe -msse -msse2" />
+					<Add option="-fno-guess-branch-probability -fno-dse -fno-tree-dse" />
 					<Add option="-DNDEBUG" />
 				</Compiler>
 				<ResourceCompiler>
@@ -78,8 +87,6 @@
 			</Environment>
 		</Build>
 		<Compiler>
-			<Add option="-march=athlon" />
-			<Add option="-march=pentium4" />
 			<Add option="-fno-guess-branch-probability" />
 			<Add option="-fno-dse -fno-tree-dse" />
 			<Add option="-DWX_PRECOMP" />
@@ -204,6 +211,8 @@
 		<Unit filename="../NewGUI/LogOptionsDialog.h" />
 		<Unit filename="../NewGUI/MainFrame.cpp" />
 		<Unit filename="../NewGUI/MainFrame.h" />
+		<Unit filename="../NewGUI/SpeedHacksDialog.cpp" />
+		<Unit filename="../NewGUI/SpeedHacksDialog.h" />
 		<Unit filename="../NewGUI/main.cpp" />
 		<Unit filename="../NewGUI/wxHelpers.cpp" />
 		<Unit filename="../NewGUI/wxHelpers.h" />

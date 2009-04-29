@@ -15,7 +15,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
- 
+
  #pragma once
 
 #include <wx/wx.h>
@@ -36,7 +36,7 @@ protected:
 
 	enum Identifiers
 	{
-		// Main Menu Section	
+		// Main Menu Section
 		Menu_Run = 1,
 		Menu_Config,			// General config, plus non audio/video plugins.
 		Menu_Video,				// Video options filled in by GS plugin
@@ -101,13 +101,13 @@ protected:
 		Menu_Profiler,				// Enable profiler
 		Menu_Console,				// Enable console
 		Menu_Patches,
-		
+
 		// Debug Subsection
 		Menu_Debug_Open = 600,		// opens the debugger window / starts a debug session
 		Menu_Debug_MemoryDump,
 		Menu_Debug_Logging,			// dialog for selection additional log options
 		Menu_Languages,
-		
+
 		// Language Menu
 		// (Updated entirely dynamically, all values from range 1000 onward are reserved for languages)
 		Menu_Language_Start = 1000
@@ -116,7 +116,7 @@ protected:
 	wxMenu* MakeStatesSubMenu( int baseid ) const;
 	wxMenu* MakeStatesMenu();
 	wxMenu* MakeLanguagesMenu() const;
-	
+
 	void PopulateVideoMenu();
 	void PopulateAudioMenu();
 	void PopulatePadMenu();
@@ -140,12 +140,12 @@ protected:
 
 	wxMenu& m_LoadStatesSubmenu;
 	wxMenu& m_SaveStatesSubmenu;
-	
+
 	wxMenuItem& m_MenuItem_Console;
 
 	//////////////////////////////////////////////////////////////////////////////////////////
 	// Menu Options for the Main Window! :D
-	
+
 protected:
 	void OnMoveAround( wxMoveEvent& evt );
 
@@ -163,11 +163,12 @@ protected:
 	void Menu_Reset_Click(wxCommandEvent &event);
 
 	void Menu_Gamefixes_Click( wxCommandEvent& event );
+	void Menu_Speedhacks_Click( wxCommandEvent& event );
 
 	void Menu_Debug_Open_Click(wxCommandEvent &event);
 	void Menu_Debug_MemoryDump_Click(wxCommandEvent &event);
 	void Menu_Debug_Logging_Click(wxCommandEvent &event);
-	
+
 	void Menu_ShowConsole(wxCommandEvent &event);
 	void Menu_ShowAboutBox(wxCommandEvent &event);
 };

@@ -19,6 +19,7 @@
 #include "PrecompiledHeader.h"
 #include "MainFrame.h"
 #include "GameFixesDialog.h"
+#include "SpeedHacksDialog.h"
 #include "LogOptionsDialog.h"
 #include "AboutBoxDialog.h"
 
@@ -32,7 +33,7 @@ using namespace Dialogs;
 wxMenu* MainEmuFrame::MakeLanguagesMenu() const
 {
 	wxMenu* menuLangs = new wxMenu();
-	
+
 	// TODO : Index languages out of the resources and Langs folder.
 
 	menuLangs->Append(Menu_Language_Start, _T("English"), wxEmptyString, wxITEM_RADIO);
@@ -71,7 +72,7 @@ void MainEmuFrame::PopulateVideoMenu()
 	m_menuVideo.AppendSeparator();
 
 	// Populate options from the plugin here.
-	
+
 	m_menuVideo.Append( Menu_Video_Advanced,	_T("Advanced..."),		wxEmptyString, wxITEM_NORMAL );
 }
 
@@ -105,29 +106,31 @@ void MainEmuFrame::ConnectMenus()
 	Connect( wxEVT_MOVE, wxMoveEventHandler(MainEmuFrame::OnMoveAround) );
 
 	// This just seems a bit more flexible & intuitive to me, if overly verbose.
-	
+
 	ConnectMenu( Menu_QuickBootCD, Menu_QuickBootCD_Click );
 	ConnectMenu( Menu_FullBootCD, Menu_BootCD_Click );
 	ConnectMenu( Menu_BootNoCD, Menu_BootNoCD_Click );
-	
+
 	ConnectMenu( Menu_RunELF, Menu_OpenELF_Click );
 	ConnectMenu( Menu_Run_Exit, Menu_Exit_Click );
-	
+
 	ConnectMenu( Menu_SuspendExec, Menu_Suspend_Click );
 	ConnectMenu( Menu_ResumeExec, Menu_Resume_Click );
 	ConnectMenu( Menu_Reset, Menu_Reset_Click );
-	
+
 	ConnectMenu( Menu_State_LoadOther, Menu_LoadStateOther_Click );
 	ConnectMenu( Menu_State_SaveOther, Menu_SaveStateOther_Click );
-	
+
 	ConnectMenu( Menu_Config_Gamefixes, Menu_Gamefixes_Click );
-	
+	ConnectMenu( Menu_Config_SpeedHacks, Menu_Speedhacks_Click );
+
+
 	ConnectMenu( Menu_Debug_Open, Menu_Debug_Open_Click );
 	ConnectMenu( Menu_Debug_MemoryDump, Menu_Debug_MemoryDump_Click );
 	ConnectMenu( Menu_Debug_Logging, Menu_Debug_Logging_Click );
-	
+
 	ConnectMenu( Menu_Console, Menu_ShowConsole );
-	
+
 	ConnectMenu( Menu_About, Menu_ShowAboutBox );
 }
 
@@ -157,10 +160,10 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, int id, const wxString& title, cons
 	m_menuAudio( *new wxMenu() ),
 	m_menuPad( *new wxMenu() ),
 	m_menuDebug( *new wxMenu() ),
-    
+
 	m_LoadStatesSubmenu( *MakeStatesSubMenu( Menu_State_Load01 ) ),
 	m_SaveStatesSubmenu( *MakeStatesSubMenu( Menu_State_Save01 ) ),
-	
+
 	m_MenuItem_Console( *new wxMenuItem( &m_menuMisc, Menu_Console, L"Show Console", wxEmptyString, wxITEM_CHECK ) )
 {
 
@@ -197,7 +200,7 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, int id, const wxString& title, cons
 	wxBoxSizer& joe( *new wxBoxSizer( wxVERTICAL ) );
 	joe.Add( &m_background );
 	SetSizerAndFit( &joe );
-	
+
 	// Valid zone for window positioning.
 	// Top/Left boundaries are fairly strict, since any more offscreen and the window titlebar
 	// would be obscured from being grabbable.
@@ -233,7 +236,7 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, int id, const wxString& title, cons
 	m_logbox.Show( g_Conf.ConLogBox.Visible );
 
 	// ------------------------------------------------------------------------
-	
+
 	m_menuRun.Append(Menu_QuickBootCD,	_T("Boot CDVD (Quick)"),	wxEmptyString, wxITEM_NORMAL);
 	m_menuRun.Append(Menu_FullBootCD,	_T("Boot CDVD (Full)"),		wxEmptyString, wxITEM_NORMAL);
 	m_menuRun.Append(Menu_BootNoCD,		_T("Boot without CDVD"),	wxEmptyString, wxITEM_NORMAL);
@@ -295,7 +298,7 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, int id, const wxString& title, cons
 	m_menuDebug.Append(Menu_Debug_Logging,		_T("Logging..."), wxEmptyString, wxITEM_NORMAL);
 
 	ConnectMenus();
-	
+
 	m_MenuItem_Console.Check( g_Conf.ConLogBox.Visible );
 }
 
@@ -344,6 +347,11 @@ void MainEmuFrame::Menu_Reset_Click(wxCommandEvent &event)
 void MainEmuFrame::Menu_Gamefixes_Click( wxCommandEvent& event )
 {
 	GameFixesDialog( this, wxID_ANY ).ShowModal();
+}
+
+void MainEmuFrame::Menu_Speedhacks_Click( wxCommandEvent& event )
+{
+	SpeedHacksDialog( this, wxID_ANY ).ShowModal();
 }
 
 void MainEmuFrame::Menu_Debug_Open_Click(wxCommandEvent &event)

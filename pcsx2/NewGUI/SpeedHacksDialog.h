@@ -16,6 +16,10 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
+
+#ifndef SPEEDHACKSDIALOG_H_INCLUDED
+#define SPEEDHACKSDIALOG_H_INCLUDED
+
 #pragma once
 
 #include <wx/wx.h>
@@ -23,27 +27,21 @@
 
 #include "wxHelpers.h"
 
-#define FLAG_VU_ADD_SUB 0x1 //Tri-Ace - IDC_GAMEFIX2
-#define FLAG_VU_CLIP 0x2 // Persona3/4  - IDC_GAMEFIX4
-#define FLAG_FPU_Compare 0x4 // Digimon Rumble Arena - IDC_GAMEFIX3
-#define FLAG_FPU_MUL 0x8 //Tales of Destiny - IDC_GAMEFIX5
-
 namespace Dialogs
 {
-	class GameFixesDialog: public wxDialogWithHelpers
+	class SpeedHacksDialog: public wxDialogWithHelpers
 	{
 	public:
-		GameFixesDialog(wxWindow* parent, int id);
+		SpeedHacksDialog(wxWindow* parent, int id);
 
 	protected:
 
 	public:
-		void FPUCompareHack_Click(wxCommandEvent &event);
-		void FPUMultHack_Click(wxCommandEvent &event);
-		void TriAce_Click(wxCommandEvent &event);
-		void GodWar_Click(wxCommandEvent &event);
-		void Ok_Click(wxCommandEvent &event);
-		void Cancel_Click(wxCommandEvent &event);
+		void IOPCycleDouble_Click(wxCommandEvent &event);
+        void WaitCycleExt_Click(wxCommandEvent &event);
+        void INTCSTATSlow_Click(wxCommandEvent &event);
+        void IdleLoopFF_Click(wxCommandEvent &event);
 	};
 }
 
+#endif // SPEEDHACKSDIALOG_H_INCLUDED

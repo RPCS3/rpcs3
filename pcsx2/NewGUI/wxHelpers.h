@@ -7,6 +7,7 @@ namespace wxHelpers
 	// Creates a new checkbox and adds it to the specified sizer/parent combo.
 	// Uses the default spacer setting for adding checkboxes.
 	extern wxCheckBox& AddCheckBoxTo( wxWindow* parent, wxBoxSizer& sizer, const wxString& label, wxWindowID id=wxID_ANY );
+	extern wxStaticText& AddWrappedStaticTextTo(wxWindow* parent, wxBoxSizer& sizer, const wxString& label, int size );
 
 	extern wxSizerFlags stdCenteredFlags;
 	extern wxSizerFlags stdSpacingFlags;
@@ -31,6 +32,7 @@ public:
 
 protected:
 	wxCheckBox& AddCheckBox( wxBoxSizer& sizer, const wxString& label, wxWindowID id=wxID_ANY );
-	void AddOkCancel( wxBoxSizer& sizer );
+	wxStaticText& AddStaticText(wxBoxSizer& sizer, const wxString& label, int size=0 );
+    void AddOkCancel( wxBoxSizer& sizer );
 
 };

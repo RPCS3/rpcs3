@@ -38,12 +38,20 @@ namespace wxHelpers
 		sizer.Add( retval, CheckboxFlags );
 		return *retval;
 	}
+
+	wxStaticText& AddStaticTextTo(wxWindow* parent, wxBoxSizer& sizer, const wxString& label, int size )
+	{
+        wxStaticText *temp = new wxStaticText(parent, wxID_ANY, label);
+        if (size > 0) temp->Wrap(size);
+        sizer.Add(temp);
+        return *temp;
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
 //
 wxDialogWithHelpers::wxDialogWithHelpers( wxWindow* parent, int id,  const wxString& title, bool hasContextHelp, const wxPoint& pos, const wxSize& size ) :
-	wxDialog( parent, id, title, pos, size ), //, (wxCAPTION | wxMAXIMIZE | wxCLOSE_BOX | wxRESIZE_BORDER) ),	// flags for resizable dialogs, currently unused.
+	wxDialog( parent, id, title, pos, size , wxDEFAULT_DIALOG_STYLE), //, (wxCAPTION | wxMAXIMIZE | wxCLOSE_BOX | wxRESIZE_BORDER) ),	// flags for resizable dialogs, currently unused.
 	m_hasContextHelp( hasContextHelp )
 {
 	if( hasContextHelp )
@@ -58,6 +66,11 @@ wxDialogWithHelpers::wxDialogWithHelpers( wxWindow* parent, int id,  const wxStr
 wxCheckBox& wxDialogWithHelpers::AddCheckBox( wxBoxSizer& sizer, const wxString& label, wxWindowID id )
 {
 	return wxHelpers::AddCheckBoxTo( this, sizer, label, id );
+}
+
+wxStaticText& wxDialogWithHelpers::AddStaticText(wxBoxSizer& sizer, const wxString& label, int size )
+{
+	return wxHelpers::AddStaticTextTo( this, sizer, label, size );
 }
 
 void wxDialogWithHelpers::AddOkCancel( wxBoxSizer &sizer )
