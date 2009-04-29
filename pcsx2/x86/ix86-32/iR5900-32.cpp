@@ -1269,7 +1269,7 @@ void __fastcall dyna_page_reset(u32 start,u32 sz)
 {
 	DevCon::WriteLn("dyna_page_reset .. start=%08X  count=%d", params start,sz);
 	Cpu->Clear(start & ~0xfffUL, 0x400);
-	manual_counter[start >> 10]++;
+	manual_counter[start >> 12]++;
 	mmap_MarkCountedRamPage(PSM(start), start & ~0xfffUL);
 }
 
