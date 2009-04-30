@@ -158,3 +158,18 @@ static __forceinline u32 timeGetTime()
 #	define __releaseinline __forceinline
 #endif
 
+//////////////////////////////////////////////////////////////////////////////////////////
+// Dev / Debug conditionals --
+//   Consts for using if() statements instead of uglier #ifdef macros.
+
+#ifdef PCSX2_DEVBUILD
+static const bool IsDevBuild = true;
+#else
+static const bool IsDevBuild = false;
+#endif
+
+#ifdef _DEBUG
+static const bool IsDebugBuild = true;
+#else
+static const bool IsDebugBuild = false;
+#endif

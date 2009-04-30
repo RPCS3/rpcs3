@@ -210,35 +210,24 @@ using Console::Color_Cyan;
 using Console::Color_Yellow;
 using Console::Color_White;
 
-//////////////////////////////////////////////////////////////
+
+//////////////////////////////////////////////////////////////////////////////////////////
 // Dev / Debug conditionals --
 //   Consts for using if() statements instead of uglier #ifdef macros.
 //   Abbreviated macros for dev/debug only consoles and msgboxes.
 
 #ifdef PCSX2_DEVBUILD
-
 #	define DevCon Console
 #	define DevMsg MsgBox
-	static const bool IsDevBuild = true;
-
 #else
-
 #	define DevCon 0&&Console
 #	define DevMsg 
-	static const bool IsDevBuild = false;
-
 #endif
 
 #ifdef _DEBUG
-
 #	define DbgCon Console
-	static const bool IsDebugBuild = true;
-
 #else
-
 #	define DbgCon 0&&Console
-	static const bool IsDebugBuild = false;
-
 #endif
 
 #endif /* __SYSTEM_H__ */
