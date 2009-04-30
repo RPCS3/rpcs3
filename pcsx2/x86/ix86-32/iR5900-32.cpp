@@ -1090,10 +1090,8 @@ void recompileNextInstruction(int delayslot)
 	s_pCode = (int *)PSM( pc );
 	assert(s_pCode);
 
-	// why?
-#ifdef _DEBUG
-	MOV32ItoR(EAX, pc);
-#endif
+	if( IsDebugBuild )
+		MOV32ItoR(EAX, pc);		// acts as a tag for delimiting recompiled instructions when viewing x86 disasm.
 
 	cpuRegs.code = *(int *)s_pCode;
 	pc += 4;
@@ -1142,63 +1140,33 @@ void recompileNextInstruction(int delayslot)
 
 	const OPCODE& opcode = GetCurrentInstruction();
 
-	// peephole optimizations
-#ifdef PCSX2_VM_COISSUE
-	if( g_pCurInstInfo->info & EEINSTINFO_COREC ) {
+ 	//assert( !(g_pCurInstInfo->info & EEINSTINFO_NOREC) );
 
-		if( g_pCurInstInfo->numpeeps > 1 ) {
-			switch(_Opcode_) {
-				case 30: recLQ_coX(g_pCurInstInfo->numpeeps); break;
-				case 31: recSQ_coX(g_pCurInstInfo->numpeeps); break;
-				case 49: recLWC1_coX(g_pCurInstInfo->numpeeps); break;
-				case 57: recSWC1_coX(g_pCurInstInfo->numpeeps); break;
-				case 55: recLD_coX(g_pCurInstInfo->numpeeps); break;
-				case 63: recSD_coX(g_pCurInstInfo->numpeeps, 1); break; //not sure if should be set to 1 or 0; looks like "1" handles alignment, so i'm going with that for now
+	// if this instruction is a jump or a branch, exit right away
+	if( delayslot ) {
+		switch(_Opcode_) {
+			case 1:
+				switch(_Rt_) {
+					case 0: case 1: case 2: case 3: case 0x10: case 0x11: case 0x12: case 0x13:
+						Console::Notice("branch %x in delay slot!", params cpuRegs.code);
+						_clearNeededX86regs();
+						_clearNeededMMXregs();
+						_clearNeededXMMregs();
+						return;
+				}
+				break;
 
-				jNO_DEFAULT
-			}
-			pc += g_pCurInstInfo->numpeeps*4;
-			s_nBlockCycles += (g_pCurInstInfo->numpeeps+1) * opcode.cycles;
-			g_pCurInstInfo += g_pCurInstInfo->numpeeps;
-		}
-		else {
-			recBSC_co[_Opcode_]();
-			pc += 4;
-			g_pCurInstInfo++;
-			s_nBlockCycles += opcode.cycles*2;
+			case 2: case 3: case 4: case 5: case 6: case 7: case 0x14: case 0x15: case 0x16: case 0x17:
+				Console::Notice("branch %x in delay slot!", params cpuRegs.code);
+				_clearNeededX86regs();
+				_clearNeededMMXregs();
+				_clearNeededXMMregs();
+				return;
 		}
 	}
-	else
-#endif
-	{
-	 	//assert( !(g_pCurInstInfo->info & EEINSTINFO_NOREC) );
-
-		// if this instruction is a jump or a branch, exit right away
-		if( delayslot ) {
-			switch(_Opcode_) {
-				case 1:
-					switch(_Rt_) {
-						case 0: case 1: case 2: case 3: case 0x10: case 0x11: case 0x12: case 0x13:
-							Console::Notice("branch %x in delay slot!", params cpuRegs.code);
-							_clearNeededX86regs();
-							_clearNeededMMXregs();
-							_clearNeededXMMregs();
-							return;
-					}
-					break;
-
-				case 2: case 3: case 4: case 5: case 6: case 7: case 0x14: case 0x15: case 0x16: case 0x17:
-					Console::Notice("branch %x in delay slot!", params cpuRegs.code);
-					_clearNeededX86regs();
-					_clearNeededMMXregs();
-					_clearNeededXMMregs();
-					return;
-			}
-		}
-		//If thh COP0 DIE bit is disabled, double the cycles. Happens rarely.
-		s_nBlockCycles += opcode.cycles * (2 - ((cpuRegs.CP0.n.Config >> 18) & 0x1));
-		opcode.recompile();
-	}
+	//If thh COP0 DIE bit is disabled, double the cycles. Happens rarely.
+	s_nBlockCycles += opcode.cycles * (2 - ((cpuRegs.CP0.n.Config >> 18) & 0x1));
+	opcode.recompile();
 
 	if( !delayslot ) {
 		if( s_bFlushReg ) {
@@ -1358,25 +1326,41 @@ void recRecompile( const u32 startpc )
 	
 	while(1) {
 		BASEBLOCK* pblock = PC_GETBLOCK(i);
-		if (i != startpc && pblock->GetFnptr() != (uptr)JITCompile && pblock->GetFnptr() != (uptr)JITCompileInBlock) {
-			// branch = 3
-			willbranch3 = 1;
-			s_nEndBlock = i;
-			break;
+
+		if(i != startpc)	// Block size truncation checks.
+		{
+			if( (i & 0xffc) == 0x0 )	// breaks blocks at 4k page boundaries
+			{
+				willbranch3 = 1;
+				s_nEndBlock = i;
+
+				// Log the pagesplits verbosely for now, until we see if any games are affected 
+				// adversely by excessive splits.
+				DevCon::Notice( "Pagesplit @ %08X : size=%d insts", params startpc, (i-startpc) / 4 );
+
+				break;
+			}
+
+			if (pblock->GetFnptr() != (uptr)JITCompile && pblock->GetFnptr() != (uptr)JITCompileInBlock)
+			{
+				willbranch3 = 1;
+				s_nEndBlock = i;
+				break;
+			}
 		}
+
 		//HUH ? PSM ? whut ? THIS IS VIRTUAL ACCESS GOD DAMMIT
 		cpuRegs.code = *(int *)PSM(i);
 
 		switch(cpuRegs.code >> 26) {
 			case 0: // special
-
 				if( _Funct_ == 8 || _Funct_ == 9 ) { // JR, JALR
 					s_nEndBlock = i + 8;
 					s_nHasDelay = 1;
 					goto StartRecomp;
 				}
-
 				break;
+				
 			case 1: // regimm
 				
 				if( _Rt_ < 4 || (_Rt_ >= 16 && _Rt_ < 20) ) {
@@ -1390,7 +1374,6 @@ void recRecompile( const u32 startpc )
 
 					goto StartRecomp;
 				}
-
 				break;
 
 			case 2: // J
@@ -1525,8 +1508,11 @@ StartRecomp:
 		iDumpBlock(startpc, recPtr);
 #endif
 
-	u32 sz = (s_nEndBlock-startpc)>>2;
+	// fixme!  The following manual/protected block code can be greatly simplified now.
+	// It originally had to account for cross-page blocks, but we have since guaranteed
+	// that no block will cross a page boundary.
 
+	u32 sz = (s_nEndBlock-startpc) >> 2;
 	u32 inpage_ptr = HWADDR(startpc);
 	u32 inpage_sz  = sz*4;
 
@@ -1559,15 +1545,34 @@ StartRecomp:
 					lpc += 4;
 				}
 				
-				if (startpc != 0x81fc0 && manual_counter[inpage_ptr >> 12] <= 4) {
-					xADD(ptr16[&manual_page[inpage_ptr >> 12]], 1);
-					xJC( dyna_page_reset );
+				// Tweakpoint!  3 is a 'magic' number representing the number of times a counted block
+				// is re-protected before the recompiler gives up and sets it up as an uncounted (permanent)
+				// manual block.  4 definitely seemed too high, but 2 might be better?  Side effects of a
+				// lower threshold: over extended gameplay with several map changes, a game's overall
+				// performance could degrade.
 
-					// KH2 manual_counter failure -- during the intro vid a block which overlaps
-					// two pages causes constant recompilation.  The block is very large and has two entry
-					// points, one around 0x01f1de1c and one around 0x01f1dfac (varies on locale).  The
-					// former is the one that's not being cleared correctly  [or at least behaves as though
-					// it's not being cleared correctly].
+				// (ideally, perhaps, manual_counter should be reset to 0 every few minutes?)
+
+				if (startpc != 0x81fc0 && manual_counter[inpage_ptr >> 12] <= 3) {
+				
+					// Counted blocks add a weighted (by block size) value into manual_page each time they're
+					// run.  If the block gets run a lot, it resets and re-protects itself in the hope
+					// that whatever forced it to be manually-checked before was a 1-time deal.
+
+					// Counted blocks have a secondary threshold check in manual_counter, which forces a block
+					// to 'uncounted' mode if it's recompiled several time.  This protects against excessive
+					// recompilation of blocks that reside on the same codepage as data.
+
+					// fixme? Currently this algo is kinda dumb and results in the forced recompilation of a
+					// lot of blocks before it decides to mark a 'busy' page as uncounted.  There might be
+					// be a more clever approach that could streamline this process, by doing a first-pass
+					// test using the vtlb memory protection (without recompilation!) to reprotect a counted
+					// block.  But unless a new also is relatively simple in implementation, it's probably
+					// not worth the effort (tests show that we have lots of recompiler memory to spare, and
+					// that the current amount of recompilation is fairly cheap).
+
+					xADD(ptr16[&manual_page[inpage_ptr >> 12]], sz);
+					xJC( dyna_page_reset );
 
 					// note: clearcnt is measured per-page, not per-block!
 					DbgCon::WriteLn( "Manual block @ %08X : size=%3d  page/offs=%05X/%03X  inpgsz=%d  clearcnt=%d",
@@ -1575,7 +1580,7 @@ StartRecomp:
 				}
 				else
 				{
-					DbgCon::WriteLn( "Uncounted Manual block @ %08X : size=%3d page/offs=%05X/%03X  inpgsz=%d",
+					DbgCon::Notice( "Uncounted Manual block @ %08X : size=%3d page/offs=%05X/%03X  inpgsz=%d",
 						params startpc, sz, inpage_ptr>>12, inpage_offs, pgsz, inpage_sz );
 				}
 
@@ -1584,11 +1589,11 @@ StartRecomp:
 		inpage_ptr += pgsz;
 		inpage_sz  -= pgsz;
 	}
-
-	// finally recompile //
+	
+	// Finally: Generate x86 recompiled code!
 	g_pCurInstInfo = s_pInstCache;
 	while (!branch && pc < s_nEndBlock) {
-		recompileNextInstruction(0);
+		recompileNextInstruction(0);		// For the love of recursion, batman!
 	}
 
 #ifdef _DEBUG
@@ -1653,8 +1658,20 @@ StartRecomp:
 			ADD32ItoM((int)&cpuRegs.cycle, eeScaleBlockCycles() );
 
 		if( willbranch3 || !branch) {
+
 			iFlushCall(FLUSH_EVERYTHING);
-			iBranchTest(pc);
+
+			// Split Block concatenation mode.
+			// This code is run when blocks are split either to keep block sizes manageable
+			// or because we're crossing a 4k page protection boundary in ps2 mem.  The latter
+			// case can result in very short blocks which should not issue branch tests for
+			// performance reasons.
+
+			int numinsts = (pc - startpc) / 4;
+			if( numinsts > 12 )
+				iBranchTest(pc);
+			else
+				iBranch(pc,0);		// unconditional static link
 		}
 	}
 
