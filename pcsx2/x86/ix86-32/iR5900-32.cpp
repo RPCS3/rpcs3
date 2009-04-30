@@ -751,13 +751,6 @@ void recClear(u32 addr, u32 size)
 		return;
 	addr = HWADDR(addr);
 
-	addr -= addr % 16;		// round down.
-	size += 3;				// round up!
-	size -= size % 4;
-
-	for (u32 a = addr / 16; a < addr / 16 + size / 4; a++)
-		vtlb_private::vtlbdata.alloc_bits[a / 8] &= ~(1 << (a & 7));
-
 	int blockidx = recBlocks.LastIndex(addr + size * 4 - 4);
 
 	if (blockidx == -1)
@@ -1274,7 +1267,7 @@ void __fastcall dyna_block_discard(u32 start,u32 sz)
 
 void __fastcall dyna_page_reset(u32 start,u32 sz)
 {
-	DevCon::WriteLn("dyna_page_reset .. start=%08X  count=%d", params start,sz);
+	DevCon::WriteLn("dyna_page_reset .. start=%08X  size=%d", params start,sz*4);
 	Cpu->Clear(start & ~0xfffUL, 0x400);
 	manual_counter[start >> 12]++;
 	mmap_MarkCountedRamPage(PSM(start), start & ~0xfffUL);
@@ -1532,10 +1525,10 @@ StartRecomp:
 		iDumpBlock(startpc, recPtr);
 #endif
 
-	u32 sz=(s_nEndBlock-startpc)>>2;
+	u32 sz = (s_nEndBlock-startpc)>>2;
 
-	u32 inpage_ptr=HWADDR(startpc);
-	u32 inpage_sz=sz*4;
+	u32 inpage_ptr = HWADDR(startpc);
+	u32 inpage_sz  = sz*4;
 
 	while(inpage_sz)
 	{
@@ -1551,38 +1544,41 @@ StartRecomp:
 			}
 			else
 			{
-				using namespace vtlb_private;
-
-				MOV32ItoR(ECX, inpage_ptr);
-				MOV32ItoR(EDX, pgsz / 4);
-
-				u32 index = (psM - vtlbdata.alloc_base + inpage_ptr) / 16 / 32;		// 16 bytes per bit, 32 bits per dword.
-				u32 mask = 0;
-
-				u32 start = inpage_ptr & ~15;
-				u32 end = inpage_ptr + pgsz;
-				for (u32 pos = start, bit = (start / 16) % 32; pos < end; pos += 16, bit++) {
-					if( bit == 32 )
-					{
-						xTEST(ptr32[&vtlbdata.alloc_bits[index]], mask);
-						xJNZ(dyna_block_discard);
-						bit = 0;
-						mask = 0;
-						index++;
-					}
-					mask |= 1 << bit;
-				}
-				xTEST(ptr32[&vtlbdata.alloc_bits[index]], mask);
-				xJNZ(dyna_block_discard);
-
-				if (manual_counter[inpage_ptr >> 12] <= 4)
+				xMOV( ecx, inpage_ptr );
+				xMOV( edx, pgsz / 4 );
+				//xMOV( eax, startpc );		// uncomment this to access startpc (as eax) in dyna_block_discard
+				
+				u32 lpc = inpage_ptr;
+				u32 stg = pgsz;
+				while(stg>0)
 				{
+					xCMP( ptr32[PSM(lpc)], *(u32*)PSM(lpc) );
+					xJNE( dyna_block_discard );
+
+					stg -= 4;
+					lpc += 4;
+				}
+				
+				if (startpc != 0x81fc0 && manual_counter[inpage_ptr >> 12] <= 4) {
 					xADD(ptr16[&manual_page[inpage_ptr >> 12]], 1);
 					xJC( dyna_page_reset );
+
+					// KH2 manual_counter failure -- during the intro vid a block which overlaps
+					// two pages causes constant recompilation.  The block is very large and has two entry
+					// points, one around 0x01f1de1c and one around 0x01f1dfac (varies on locale).  The
+					// former is the one that's not being cleared correctly  [or at least behaves as though
+					// it's not being cleared correctly].
+
+					// note: clearcnt is measured per-page, not per-block!
+					DbgCon::WriteLn( "Manual block @ %08X : size=%3d  page/offs=%05X/%03X  inpgsz=%d  clearcnt=%d",
+						params startpc, sz, inpage_ptr>>12, inpage_offs, inpage_sz, manual_counter[inpage_ptr >> 12] );
+				}
+				else
+				{
+					DbgCon::WriteLn( "Uncounted Manual block @ %08X : size=%3d page/offs=%05X/%03X  inpgsz=%d",
+						params startpc, sz, inpage_ptr>>12, inpage_offs, pgsz, inpage_sz );
 				}
 
-				DbgCon::WriteLn("Manual block @ %08X : %08X %d %d %d %d", params
-					startpc,inpage_ptr,pgsz,0x1000-inpage_offs,inpage_sz,sz*4);
 			}
 		}
 		inpage_ptr += pgsz;

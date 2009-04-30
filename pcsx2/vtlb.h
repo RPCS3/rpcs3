@@ -81,8 +81,6 @@ namespace vtlb_private
 
 	struct MapData
 	{
-		u8 alloc_bits[VTLB_ALLOC_SIZE/16/8];
-
 		u8* alloc_base;			//base of the memory array
 		int alloc_current;		//current base
 

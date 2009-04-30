@@ -423,14 +423,6 @@ static void _vtlb_DynGen_DirectWrite( u32 bits )
 			iMOV128_SSE(ptr[ecx],ptr[edx]);
 		break;
 	}
-
-	xSHR( ecx, 4 );
-
-	uptr alloc_base = (uptr)vtlbdata.alloc_base;
-	u8* bits_base = vtlbdata.alloc_bits;
-	bits_base -= (alloc_base>>4)/8;		//in bytes
-
-	xBTS( ptr32[bits_base], ecx );
 }
 
 // ------------------------------------------------------------------------

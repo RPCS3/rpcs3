@@ -76,9 +76,6 @@ int  _SPR0chain()
 	{
 		memcpy_fast((u8*)pMem, &PS2MEM_SCRATCH[spr0->sadr & 0x3fff], spr0->qwc << 4);
 		
-		// Clear dependent EE recompiler blocks, if necessary [needed for BTS protection system]
-		Cpu->Clear( spr0->madr, spr0->qwc << 2 );
-
 		// clear VU mem also!
 		TestClearVUs(spr0->madr, spr0->qwc << 2); // Wtf is going on here? AFAIK, only VIF should affect VU micromem (cottonvibes)
 
@@ -124,7 +121,6 @@ void _SPR0interleave()
 		{
 			// clear VU mem also!
 			TestClearVUs(spr0->madr, spr0->qwc << 2);
-			Cpu->Clear( spr0->madr, spr0->qwc << 2 );
 			memcpy_fast((u8*)pMem, &PS2MEM_SCRATCH[spr0->sadr & 0x3fff], spr0->qwc << 4);
 		}
 		spr0->sadr += spr0->qwc * 16;

@@ -90,18 +90,6 @@ callfunction:
 // Interpreter Implementations of VTLB Memory Operations.
 // See recVTLB.cpp for the dynarec versions.
 
-// ------------------------------------------------------------------------
-// Helper for the BTS manual protection system.  Sets a bit based on the given address,
-// marking that piece of PS2 memory as 'dirty.'
-//
-static void memwritebits(u8* ptr)
-{
-	u32 offs=ptr-vtlbdata.alloc_base;
-	offs/=16;
-	vtlbdata.alloc_bits[offs/8] |= 1 << (offs%8);
-}
-
-// ------------------------------------------------------------------------
 // Interpreted VTLB lookup for 8, 16, and 32 bit accesses
 template<int DataSize,typename DataType>
 __forceinline DataType __fastcall MemOp_r0(u32 addr)
@@ -168,7 +156,6 @@ __forceinline void __fastcall MemOp_w0(u32 addr, DataType data)
 	s32 ppf=addr+vmv;
 	if (!(ppf<0))
 	{
-		memwritebits((u8*)ppf);
 		*reinterpret_cast<DataType*>(ppf)=data;
 	}
 	else
@@ -198,7 +185,6 @@ __forceinline void __fastcall MemOp_w1(u32 addr,const DataType* data)
 	s32 ppf=addr+vmv;
 	if (!(ppf<0))
 	{
-		memwritebits((u8*)ppf);
 		*reinterpret_cast<DataType*>(ppf)=*data;
 		if (DataSize==128)
 			*reinterpret_cast<DataType*>(ppf+8)=data[1];
