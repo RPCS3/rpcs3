@@ -560,7 +560,7 @@ u32 psxHwRead32(u32 add) {
 		case 0x1F808240:
 		case 0x1F808248:
 		case 0x1F808250:
-		case 0x1F80825C:
+		case 0x1F808258:
 			hard=sio2_getSend1((add-0x1F808240)/8);
 			PSXHW_LOG("SIO2 read send1[%d] (%lx)", (add-0x1F808240)/8, hard);
 			return hard;
@@ -568,7 +568,7 @@ u32 psxHwRead32(u32 add) {
 		case 0x1F808244:
 		case 0x1F80824C:
 		case 0x1F808254:
-		case 0x1F808258:
+		case 0x1F80825C:
 			hard=sio2_getSend2((add-0x1F808244)/8);
 			PSXHW_LOG("SIO2 read send2[%d] (%lx)", (add-0x1F808244)/8, hard);
 			return hard;
