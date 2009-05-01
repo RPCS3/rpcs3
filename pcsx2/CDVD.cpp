@@ -26,7 +26,7 @@
 
 static cdvdStruct cdvd;
 
-__forceinline void SetResultSize(u8 size)
+static __forceinline void SetResultSize(u8 size)
 {
 	cdvd.ResultC = size;
 	cdvd.ResultP = 0; 
@@ -442,7 +442,7 @@ s32 cdvdGetTrayStatus()
 //   cdvdNewDiskCB() can update it's status as well...
 
 // Modified by (efp) - 16/01/2006
-__forceinline void cdvdGetDiskType()
+static __forceinline void cdvdGetDiskType()
 {
 	// defs 0.9.0
 	if (CDVDnewDiskCB || (cdvd.Type != CDVD_TYPE_NODISC))  return;
