@@ -1313,76 +1313,25 @@ void psxHwWrite32(u32 add, u32 value) {
 	PSXHW_LOG("*Known 32bit write at address %lx value %lx", add, value);
 }
 
-u8 psxHw4Read8(u32 add) {
-	u8 hard;
-
-	switch (add) {
-		case 0x1f402004: return cdvdRead04();
-		case 0x1f402005: return cdvdRead05();
-		case 0x1f402006: return cdvdRead06();
-		case 0x1f402007: return cdvdRead07();
-		case 0x1f402008: return cdvdRead08();
-		case 0x1f40200A: return cdvdRead0A();
-		case 0x1f40200B: return cdvdRead0B();
-		case 0x1f40200C: return cdvdRead0C();
-		case 0x1f40200D: return cdvdRead0D();
-		case 0x1f40200E: return cdvdRead0E();
-		case 0x1f40200F: return cdvdRead0F();
-		case 0x1f402013: return cdvdRead13();
-		case 0x1f402015: return cdvdRead15();
-		case 0x1f402016: return cdvdRead16();
-		case 0x1f402017: return cdvdRead17();
-		case 0x1f402018: return cdvdRead18();
-		case 0x1f402020: return cdvdRead20();
-		case 0x1f402021: return cdvdRead21();
-		case 0x1f402022: return cdvdRead22();
-		case 0x1f402023: return cdvdRead23();
-		case 0x1f402024: return cdvdRead24();
-		case 0x1f402028: return cdvdRead28();
-		case 0x1f402029: return cdvdRead29();
-		case 0x1f40202A: return cdvdRead2A();
-		case 0x1f40202B: return cdvdRead2B();
-		case 0x1f40202C: return cdvdRead2C();
-		case 0x1f402030: return cdvdRead30();
-		case 0x1f402031: return cdvdRead31();
-		case 0x1f402032: return cdvdRead32();
-		case 0x1f402033: return cdvdRead33();
-		case 0x1f402034: return cdvdRead34();
-		case 0x1f402038: return cdvdRead38();
-		case 0x1f402039: return cdvdRead39();
-		case 0x1f40203A: return cdvdRead3A();
-		default:
-			// note: notify the console since this is a potentially serious emulation problem:
-			PSXHW_LOG("*Unknown 8bit read at address 0x%x", add);
-			Console::Error( "IOP Unknown 8bit read from addr 0x%x", params add );
-			return 0;
-	}
+u8 psxHw4Read8(u32 add) 
+{
+	//u8 hard;
+	u16 mem = add & 0xFF;
 	
-	PSXHW_LOG( "Known 8bit read from addr 0x%x = 0x%x", add, hard );
+	//Console::WriteLn("psxHw4Read8 0x%x, %x", params add, mem);
+	return cdvdRead(mem);
+	
+	//PSXHW_LOG( "Known 8bit read from addr 0x%x = 0x%x", add, hard );
 
-	return hard;
+	//return hard;
 }
 
-void psxHw4Write8(u32 add, u8 value) {
+void psxHw4Write8(u32 add, u8 value) 
+{
 	
-	switch (add) {
-		case 0x1f402004: cdvdWrite04(value); return;
-		case 0x1f402005: cdvdWrite05(value); return;
-		case 0x1f402006: cdvdWrite06(value); return;
-		case 0x1f402007: cdvdWrite07(value); return;
-		case 0x1f402008: cdvdWrite08(value); return;
-		case 0x1f40200A: cdvdWrite0A(value); return;
-		case 0x1f40200F: cdvdWrite0F(value); return;
-		case 0x1f402014: cdvdWrite14(value); return;
-		case 0x1f402016: cdvdWrite16(value); return;
-		case 0x1f402017: cdvdWrite17(value); return;
-		case 0x1f402018: cdvdWrite18(value); return;
-		case 0x1f40203A: cdvdWrite3A(value); return;
-		default:
-			//PSXHW_LOG("*Unknown 8bit write at address %lx value %x", add, value);
-			Console::Notice("IOP Unknown 8bit write to addr 0x%x = 0x%x", params add, value);
-			return;
-	}
+	u16 mem =  add & 0xFF;
+	//Console::WriteLn("psxHw4Write8 0x%x, %x", params add, mem);
+	cdvdWrite(mem, value); 
 	PSXHW_LOG("Known 8bit write to addr 0x%x = 0x%x", add, value);
 }
 

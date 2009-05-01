@@ -58,8 +58,6 @@
 // disable the default case in a switch
 #define jNO_DEFAULT \
 { \
-	break; \
-	\
 default: \
 	jASSUME(0); \
 	break; \
