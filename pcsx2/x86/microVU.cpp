@@ -153,14 +153,14 @@ microVUt(int) mVUfindLeastUsedProg() {
 		return mVU->prog.total;
 	}
 	else {
-		int j = 0;
-		u32 smallest = mVU->prog.prog[0].used;
-		for (int i = 1; i <= mVU->prog.total; i++) {
+		int j = (mVU->prog.cur + 1) & mVU->prog.max;
+		/*u32 smallest = mVU->prog.prog[j].used;
+		for (int i = ((j+1)&mVU->prog.max), z = 0; z < mVU->prog.max; i = (i+1)&mVU->prog.max, z++) {
 			if (smallest > mVU->prog.prog[i].used) {
 				smallest = mVU->prog.prog[i].used;
 				j = i;
 			}
-		}
+		}*/
 		mVUclearProg<vuIndex>(j); // Clear old data if overwriting old program
 		mVUcacheProg<vuIndex>(j); // Cache Micro Program
 		Console::Notice("microVU%d: MicroProgram Cache Full!", params vuIndex);

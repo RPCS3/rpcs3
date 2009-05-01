@@ -329,14 +329,14 @@ microVUt(void) mVUanalyzeXGkick(int Fs, int xCycles) {
 
 microVUt(void) mVUanalyzeBranch1(int Is) {
 	microVU* mVU = mVUx;
-	if (mVUregs.VI[Is])	{ analyzeVIreg1(Is); }
-	else				{ analyzeBranchVI(Is, _memReadIs); }
+	if (mVUregs.VI[Is] || mVUstall)	{ analyzeVIreg1(Is); }
+	else							{ analyzeBranchVI(Is, _memReadIs); }
 }
 
 microVUt(void) mVUanalyzeBranch2(int Is, int It) {
 	microVU* mVU = mVUx;
-	if (mVUregs.VI[Is] || mVUregs.VI[It]) { analyzeVIreg1(Is); analyzeVIreg1(It); }
-	else								  { analyzeBranchVI(Is, _memReadIs); analyzeBranchVI(It, _memReadIt);}
+	if (mVUregs.VI[Is] || mVUregs.VI[It] || mVUstall) { analyzeVIreg1(Is); analyzeVIreg1(It); }
+	else											  { analyzeBranchVI(Is, _memReadIs); analyzeBranchVI(It, _memReadIt);}
 }
 
 #endif //PCSX2_MICROVU
