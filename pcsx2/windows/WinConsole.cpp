@@ -95,7 +95,7 @@ namespace Console
 
 		if (emuLog != NULL)
 		{
-			fputs("\n", emuLog);
+			fputs("", emuLog);
 			fflush( emuLog );
 		}
 
@@ -114,7 +114,7 @@ namespace Console
 
 		// No flushing here -- only flush after newlines.
 		if (emuLog != NULL)
-			fputs(fmt, emuLog);
+			fprintf( emuLog, fmt );
 
 		return false;
 	}

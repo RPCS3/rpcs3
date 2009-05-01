@@ -43,7 +43,7 @@ namespace Console
 
 		va_list list;
 		va_start(list,dummy);
-		WriteLn( vfmt_string( fmt, list ).c_str() );
+		Write( vfmt_string( fmt, list ).c_str() );
 		va_end(list);
 
 		return false;
