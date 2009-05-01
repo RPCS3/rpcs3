@@ -110,7 +110,7 @@ public:
 		safe_free( m_ptr );
 	}
 
-	explicit SafeArray( const wxString& name=wxT("Unnamed") ) :
+	explicit SafeArray( const wxString& name = L"Unnamed" ) :
 		Name( name )
 	,	ChunkSize( DefaultChunkSize )
 	,	m_ptr( NULL )
@@ -126,7 +126,7 @@ public:
 	{
 	}
 
-	explicit SafeArray( int initialSize, const wxString& name=wxT("Unnamed") ) :
+	explicit SafeArray( int initialSize, const wxString& name = L"Unnamed" ) :
 		Name( name )
 	,	ChunkSize( DefaultChunkSize )
 	,	m_ptr( (T*)malloc( initialSize * sizeof(T) ) )
@@ -163,8 +163,8 @@ public:
 			{
 				throw Exception::OutOfMemory(
 					wxsFormat(	// english (for diagnostic)
-						wxT("Out-of-memory on SafeArray block re-allocation.\n")
-						wxT("Old size: %d bytes, New size: %d bytes."),
+						L"Out-of-memory on SafeArray block re-allocation.\n"
+						L"Old size: %d bytes, New size: %d bytes.",
 						m_size, newalloc
 					)
 				);
@@ -245,7 +245,7 @@ public:
 	{
 	}
 
-	explicit SafeList( const wxString& name=wxT("Unnamed") ) :
+	explicit SafeList( const wxString& name = L"Unnamed" ) :
 		Name( name )
 	,	ChunkSize( DefaultChunkSize )
 	,	m_ptr( NULL )
@@ -263,7 +263,7 @@ public:
 	{
 	}
 
-	explicit SafeList( int initialSize, const wxString& name=wxT("Unnamed") ) :
+	explicit SafeList( int initialSize, const wxString& name = L"Unnamed" ) :
 		Name( name )
 	,	ChunkSize( DefaultChunkSize )
 	,	m_ptr( (T*)malloc( initialSize * sizeof(T) ) )
@@ -306,8 +306,8 @@ public:
 				throw Exception::OutOfMemory(
 					// English Diagonstic message:
 					wxsFormat(
-						wxT("Out-of-memory on SafeList block re-allocation.\n")
-						wxT("Old size: %d bytes, New size: %d bytes"),
+						L"Out-of-memory on SafeList block re-allocation.\n"
+						L"Old size: %d bytes, New size: %d bytes",
 						m_allocsize, newalloc
 					)
 				);
@@ -379,7 +379,7 @@ protected:
 	wxString _getName( const wxString& src )
 	{
 		if( IsDevBuild )
-			return src + wxsFormat( wxT("(align: %d)"), Alignment );
+			return src + wxsFormat( L"(align: %d)", Alignment );
 		else
 			return src;
 	}
@@ -391,7 +391,7 @@ public:
 		// mptr is set to null, so the parent class's destructor won't re-free it.
 	}
 
-	explicit SafeAlignedArray( const wxString& name=wxT("Unnamed") ) :
+	explicit SafeAlignedArray( const wxString& name = L"Unnamed") :
 		SafeArray<T>::SafeArray( name )
 	{
 	}
@@ -401,7 +401,7 @@ public:
 	{
 	}
 
-	explicit SafeAlignedArray( int initialSize, const wxString& name=wxT("Unnamed") ) :
+	explicit SafeAlignedArray( int initialSize, const wxString& name = L"Unnamed") :
 		SafeArray<T>::SafeArray(
 			_getName(name),
 			(T*)_aligned_malloc( initialSize * sizeof(T), Alignment ),

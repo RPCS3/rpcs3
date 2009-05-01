@@ -39,7 +39,7 @@ namespace R5900Exception
 		virtual ~BaseExcept() throw()=0;
 
 		explicit BaseExcept( const wxString& msg ) :
-			Exception::Ps2Generic( wxT("(EE) ") + msg ),
+			Exception::Ps2Generic( L"(EE) " + msg ),
 			cpuState( cpuRegs )
 		{
 		}
@@ -60,7 +60,7 @@ namespace R5900Exception
 		virtual ~AddressError() throw() {}
 
 		explicit AddressError( u32 ps2addr, bool onWrite ) :
-			BaseExcept( wxsFormat( wxT("Address error, addr=0x%x [%s]"), ps2addr, onWrite ? wxT("store") : wxT("load") ) ),
+			BaseExcept( wxsFormat( L"Address error, addr=0x%x [%s]", ps2addr, onWrite ? L"store" : L"load" ) ),
 			OnWrite( onWrite ),
 			Address( ps2addr )
 		{}
@@ -78,7 +78,7 @@ namespace R5900Exception
 		virtual ~TLBMiss() throw() {}
 
 		explicit TLBMiss( u32 ps2addr, bool onWrite ) :
-			BaseExcept( wxsFormat( wxT("Tlb Miss, addr=0x%x [%s]"), ps2addr, onWrite ? wxT("store") : wxT("load") ) ),
+			BaseExcept( wxsFormat( L"Tlb Miss, addr=0x%x [%s]", ps2addr, onWrite ? L"store" : L"load" ) ),
 			OnWrite( onWrite ),
 			Address( ps2addr )
 		{}
@@ -97,7 +97,7 @@ namespace R5900Exception
 
 		//
 		explicit BusError( u32 ps2addr, bool onWrite ) :
-			BaseExcept( wxsFormat( wxT("Bus Error, addr=0x%x [%s]"), ps2addr, onWrite ? wxT("store") : wxT("load") ) ),
+			BaseExcept( wxsFormat( L"Bus Error, addr=0x%x [%s]", ps2addr, onWrite ? L"store" : L"load" ) ),
 			OnWrite( onWrite ),
 			Address( ps2addr )
 		{}
@@ -111,7 +111,7 @@ namespace R5900Exception
 		virtual ~SystemCall() throw() {}
 
 		explicit SystemCall() :
-			BaseExcept( wxT("SystemCall [SYSCALL]") )
+			BaseExcept( L"SystemCall [SYSCALL]" )
 		{}
 	};
 
@@ -127,14 +127,14 @@ namespace R5900Exception
 
 		// Generates a trap for immediate-style Trap opcodes
 		explicit Trap() :
-			BaseExcept( wxT("Trap") ),
+			BaseExcept( L"Trap" ),
 			TrapCode( 0 )
 		{}
 
 		// Generates a trap for register-style Trap instructions, which contain an
 		// error code in the opcode
 		explicit Trap( u16 trapcode ) :
-			BaseExcept( wxT("Trap") ),
+			BaseExcept( L"Trap" ),
 			TrapCode( trapcode )
 		{}
 	};
@@ -147,7 +147,7 @@ namespace R5900Exception
 		virtual ~Break() throw() {}
 
 		explicit Break() :
-			BaseExcept( wxT("Break Instruction") )
+			BaseExcept( L"Break Instruction" )
 		{}
 	};
 	
@@ -159,7 +159,7 @@ namespace R5900Exception
 		virtual ~Overflow() throw() {}
 
 		explicit Overflow() :
-			BaseExcept( wxT("Overflow") )
+			BaseExcept( L"Overflow" )
 		{}
 	};
 
@@ -171,7 +171,7 @@ namespace R5900Exception
 		virtual ~DebugBreakpoint() throw() {}
 
 		explicit DebugBreakpoint() :
-			BaseExcept( wxT("Debug Breakpoint") )
+			BaseExcept( L"Debug Breakpoint" )
 		{}
 	};
 }

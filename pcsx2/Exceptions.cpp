@@ -67,28 +67,28 @@ namespace Exception
 
 	wxString BaseException::LogMessage() const
 	{
-		return m_message_eng + wxT("\n\n") + m_stacktrace;
+		return m_message_eng + L"\n\n" + m_stacktrace;
 	}
 
 	// ------------------------------------------------------------------------
 	wxString Stream::LogMessage() const
 	{
 		return wxsFormat(
-			wxT("Stream exception: %s\n\tObject name: %s"),
+			L"Stream exception: %s\n\tObject name: %s",
 			m_message_eng.c_str(), StreamName.c_str()
 		) + m_stacktrace;
 	}
 
 	wxString Stream::DisplayMessage() const
 	{
-		return m_message + wxT("\n") + StreamName.c_str();
+		return m_message + L"\n" + StreamName.c_str();
 	}
 
 	// ------------------------------------------------------------------------
 	wxString PluginFailure::LogMessage() const
 	{
 		return wxsFormat(
-			wxT("%s plugin has encountered an error.\n\n"),
+			L"%s plugin has encountered an error.\n\n",
 			plugin_name.c_str()
 		) + m_stacktrace;
 	}
@@ -102,7 +102,7 @@ namespace Exception
 	wxString FreezePluginFailure::LogMessage() const
 	{
 		return wxsFormat(
-			wxT("%s plugin returned an error while %s the state.\n\n"),
+			L"%s plugin returned an error while %s the state.\n\n",
 			plugin_name.c_str(),
 			freeze_action.c_str()
 		) + m_stacktrace;
@@ -117,15 +117,15 @@ namespace Exception
 	wxString UnsupportedStateVersion::LogMessage() const
 	{
 		// Note: no stacktrace needed for this one...
-		return wxsFormat( wxT("Unknown or unsupported savestate version: 0x%x"), Version );
+		return wxsFormat( L"Unknown or unsupported savestate version: 0x%x", Version );
 	}
 
 	wxString UnsupportedStateVersion::DisplayMessage() const
 	{
 		// m_message contains a recoverable savestate error which is helpful to the user.
 		return wxsFormat(
-			m_message + wxT("\n\n") +
-			wxsFormat( _("Unknown savestate version: 0x%x"), Version )
+			m_message + L"\n\n" +
+			wxsFormat( L"Unknown savestate version: 0x%x", Version )
 		);
 	}
 
@@ -134,8 +134,8 @@ namespace Exception
 	{
 		// Note: no stacktrace needed for this one...
 		return wxsFormat(
-			wxT("Game/CDVD does not match the savestate CRC.\n")
-			wxT("\tCdvd CRC: 0x%X\n\tGame CRC: 0x%X\n"),
+			L"Game/CDVD does not match the savestate CRC.\n"
+			L"\tCdvd CRC: 0x%X\n\tGame CRC: 0x%X\n",
 			Crc_Savestate, Crc_Cdvd
 		);
 	}
@@ -143,9 +143,9 @@ namespace Exception
 	wxString StateCrcMismatch::DisplayMessage() const
 	{
 		return wxsFormat(
-			m_message + wxT("\n\n") +
-			wxsFormat( _(
-				"Savestate game/crc mismatch. Cdvd CRC: 0x%X Game CRC: 0x%X\n"),
+			m_message + L"\n\n" +
+			wxsFormat( 
+				L"Savestate game/crc mismatch. Cdvd CRC: 0x%X Game CRC: 0x%X\n",
 				Crc_Savestate, Crc_Cdvd
 			)
 		);
@@ -154,8 +154,8 @@ namespace Exception
 	// ------------------------------------------------------------------------
 	wxString IndexBoundsFault::LogMessage() const
 	{
-		return wxT("Index out of bounds on SafeArray: ") + ArrayName +
-			wxsFormat( wxT("(index=%d, size=%d)"), BadIndex, ArrayLength );
+		return L"Index out of bounds on SafeArray: " + ArrayName +
+			wxsFormat( L"(index=%d, size=%d)", BadIndex, ArrayLength );
 	}
 
 	wxString IndexBoundsFault::DisplayMessage() const

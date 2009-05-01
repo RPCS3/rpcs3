@@ -329,7 +329,7 @@ void SuperVUAlloc(int vuindex)
 		{
 			throw Exception::OutOfMemory(
 				// untranslated diagnostic msg, use exception's default for translation
-				wxsFormat( wxT("Error > SuperVU failed to allocate recompiler memory (addr: 0x%x)"), (u32)s_recVUMem )
+				wxsFormat( L"Error > SuperVU failed to allocate recompiler memory (addr: 0x%x)", (u32)s_recVUMem )
 			);
 		}
 
@@ -515,7 +515,7 @@ void SuperVUDumpBlock(list<VuBaseBlock*>& blocks, int vuindex)
 
 	g_Conf.Folders.Dumps.Mkdir();
 	AsciiFile eff(
-		Path::Combine( g_Conf.Folders.Dumps, wxsFormat(wxT("svu%cdump%.4X.txt"), s_vu?wxT('0'):wxT('1'), s_pFnHeader->startpc) ),
+		Path::Combine( g_Conf.Folders.Dumps, wxsFormat(L"svu%cdump%.4X.txt", s_vu?L'0':L'1', s_pFnHeader->startpc) ),
 		wxFile::write
 	);
 

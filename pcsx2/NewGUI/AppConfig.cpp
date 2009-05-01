@@ -15,7 +15,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
- 
+
 #include "PrecompiledHeader.h"
 #include "App.h"
 #include "IniInterface.h"
@@ -31,12 +31,12 @@
 //
 namespace PathDefs
 {
-	const wxDirName Snapshots( wxT("snaps") );
-	const wxDirName Savestates( wxT("sstates") );
-	const wxDirName MemoryCards( wxT("memcards") );
-	const wxDirName Configs( wxT("inis") );
-	const wxDirName Plugins( wxT("plugins") );
-	
+	const wxDirName Snapshots( L"snaps" );
+	const wxDirName Savestates( L"sstates" );
+	const wxDirName MemoryCards( L"memcards" );
+	const wxDirName Configs( L"inis" );
+	const wxDirName Plugins( L"plugins" );
+
 	// Fetches the path location for user-consumable documents -- stuff users are likely to want to
 	// share with other programs: screenshots, memory cards, and savestates.
 	wxDirName GetDocuments()
@@ -48,22 +48,22 @@ namespace PathDefs
 	{
 		return (wxDirName)GetDocuments() + Snapshots;
 	}
-	
+
 	wxDirName GetBios()
 	{
-		return (wxDirName)wxT("bios");
+		return (wxDirName)L"bios";
 	}
-	
+
 	wxDirName GetSavestates()
 	{
 		return (wxDirName)GetDocuments() + Savestates;
 	}
-	
+
 	wxDirName GetMemoryCards()
 	{
 		return (wxDirName)GetDocuments() + MemoryCards;
 	}
-	
+
 	wxDirName GetConfigs()
 	{
 		return (wxDirName)GetDocuments()+ Configs;
@@ -82,13 +82,13 @@ namespace FilenameDefs
 		// TODO : ini extension on Win32 is normal.  Linux ini filename default might differ
 		// from this?  like pcsx2_conf or something ... ?
 
-		return wxGetApp().GetAppName() + wxT(".ini");
+		return wxGetApp().GetAppName() + L".ini";
 	}
-	
-	const wxFileName Memcard[2] = 
+
+	const wxFileName Memcard[2] =
 	{
-		wxFileName( wxT("Mcd001.ps2") ),
-		wxFileName( wxT("Mcd002.ps2") )
+		wxFileName( L"Mcd001.ps2" ),
+		wxFileName( L"Mcd002.ps2" )
 	};
 };
 
@@ -98,7 +98,7 @@ wxFileName wxDirName::Combine( const wxFileName& right ) const
 	wxASSERT_MSG( IsDir(), L"Warning: Malformed directory name detected during wxDirName concatenation." );
 	if( right.IsAbsolute() )
 		return right;
-	
+
 	// Append any directory parts from right, and then set the filename.
 	// Except we can't do that because our m_members are private (argh!) and there is no API
 	// for getting each component of the path.  So instead let's use Normalize:
@@ -146,13 +146,13 @@ wxString AppConfig::FullpathHelpers::Mcd( uint mcdidx ) const { return Path::Com
 //////////////////////////////////////////////////////////////////////////////////////////
 //
 
-#define IniEntry( varname, defval ) ini.Entry( wxT( #varname ), varname, defval )
+#define IniEntry( varname, defval ) ini.Entry( wxT(#varname), varname, defval )
 
 void AppConfig::LoadSave( IniInterface& ini )
 {
 	IniEntry( MainGuiPosition,		wxDefaultPosition );
 	IniEntry( CdvdVerboseReads,		false );
-	
+
 	// Process various sub-components:
 	ConLogBox.LoadSave( ini );
 	Speedhacks.LoadSave( ini );
@@ -175,14 +175,14 @@ void AppConfig::Save()
 
 void AppConfig::ConsoleLogOptions::LoadSave( IniInterface& ini )
 {
-	ini.SetPath( wxT("ConsoleLog") );
+	ini.SetPath( L"ConsoleLog" );
 
 	IniEntry( Visible,			false );
 	IniEntry( AutoDock,			true );
 	IniEntry( DisplayPosition,	wxDefaultPosition );
 	IniEntry( DisplaySize,		wxSize( 540, 540 ) );
 
-	ini.SetPath( wxT("..") );
+	ini.SetPath( L".." );
 }
 
 void AppConfig::SpeedhackOptions::LoadSave( IniInterface& ini )

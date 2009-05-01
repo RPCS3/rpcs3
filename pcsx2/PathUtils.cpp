@@ -36,22 +36,22 @@ namespace Path
 
 #ifdef WIN32
 // Path Separator used when creating new paths.
-static const wxChar Separator( wxT('\\') );
+static const wxChar Separator( L'\\' );
 // Path separators used when breaking existing paths into parts and pieces.
-static const wxString Delimiters( wxT("\\/") );
+static const wxString Delimiters( L"\\/" );
 
-static const wxChar SeparatorExt( wxT('.') );
+static const wxChar SeparatorExt( L'.' );
 
 #else
 static const wxChar Separator( '/');
 static const wxChar Delimiters( '/' );
-static const wxChar SeparatorExt( wxT('.') );
+static const wxChar SeparatorExt( L'.' );
 #endif
 
 static bool IsPathSeparator( wxChar src )
 {
 #ifdef WIN32
-	return (src == Separator) || (src == wxT('/'));
+	return (src == Separator) || (src == L'/');
 #else
 	return src == Separator;
 #endif

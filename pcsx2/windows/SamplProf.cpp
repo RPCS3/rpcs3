@@ -42,7 +42,7 @@ struct Module
 	}
 	wxString ToString(u32 total_ticks)
 	{
-		return wxsFormat( wxT("%s: %d "), name, (ticks*100) / (double)total_ticks );
+		return wxsFormat( L"%s: %d ", name, (ticks*100) / (double)total_ticks );
 	}
 	bool Inside(uptr val) { return val>=base && val<=end; }
 	void FromAddress(const void* ptr,bool getname)
@@ -183,7 +183,7 @@ static void MapUnknownSource( uint Eip )
 {
 	wxChar modulename[512];
 	DWORD sz=GetModuleFromPtr((void*)Eip,modulename,512);
-	wxString modulenam( (sz==0) ? wxT("[Unknown]") : modulename );
+	wxString modulenam( (sz==0) ? L"[Unknown]" : modulename );
 
 	map<wxString,Module>::iterator iter = ProfUnknownHash.find(modulenam);
 	if (iter!=ProfUnknownHash.end())
@@ -209,7 +209,7 @@ int __stdcall ProfilerThread(void* nada)
 
 		if (tick_count>500)
 		{
-			wxString rv = wxT("|");
+			wxString rv = L"|";
 			u32 subtotal=0;
 			for (size_t i=0;i<ProfModules.size();i++)
 			{
@@ -218,7 +218,7 @@ int __stdcall ProfilerThread(void* nada)
 				ProfModules[i].ticks=0;
 			}
 
-			rv += wxsFormat( wxT(" Total %d\n|"), (subtotal*100) / (double)tick_count );
+			rv += wxsFormat( L" Total %d\n|", (subtotal*100) / (double)tick_count );
 			vector<MapType::mapped_type> lst;
 			for (MapType::iterator i=ProfUnknownHash.begin();i!=ProfUnknownHash.end();i++)
 			{

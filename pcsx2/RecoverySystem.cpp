@@ -188,8 +188,8 @@ namespace StateRecovery {
 		catch( Exception::RuntimeError& ex )
 		{
 			Msgbox::Alert( wxsFormat(	// fixme: this error needs proper translation stuffs.
-				wxT("Pcsx2 gamestate recovery failed. Some options may have been reverted to protect your game's state.\n")
-				wxT("Error: %s"), ex.DisplayMessage().c_str() )
+				L"Pcsx2 gamestate recovery failed. Some options may have been reverted to protect your game's state.\n"
+				L"Error: %s", ex.DisplayMessage().c_str() )
 			);
 			safe_delete( g_RecoveryState );
 		}

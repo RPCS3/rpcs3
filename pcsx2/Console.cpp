@@ -352,13 +352,13 @@ namespace Msgbox
 {
 	bool Alert( const wxString& text )
 	{
-		wxMessageBox( text, wxT("Pcsx2 Message"), wxOK, wxGetApp().GetTopWindow() );
+		wxMessageBox( text, L"Pcsx2 Message", wxOK, wxGetApp().GetTopWindow() );
 		return false;
 	}
 
 	bool OkCancel( const wxString& text )
 	{
-		int result = wxMessageBox( text, wxT("Pcsx2 Message"), wxOK | wxCANCEL, wxGetApp().GetTopWindow() );
+		int result = wxMessageBox( text, L"Pcsx2 Message", wxOK | wxCANCEL, wxGetApp().GetTopWindow() );
 		return result == wxOK;
 	}
 }

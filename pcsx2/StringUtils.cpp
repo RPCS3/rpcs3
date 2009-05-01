@@ -58,7 +58,7 @@ void JoinString( wxString& dest, const SafeList<wxString>& src, const wxString& 
 // This, so far, include types such as wxPoint, wxRect, and wxSize.
 //
 template< typename T >
-T Parse( const wxString& src, const wxString& separators=wxT(",") )
+T Parse( const wxString& src, const wxString& separators=L",")
 {
 	T retval;
 	if( !TryParse( retval, src, separators ) )

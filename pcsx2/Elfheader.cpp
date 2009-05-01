@@ -471,7 +471,7 @@ struct ElfObject
 
 void ElfApplyPatches()
 {
-	wxString filename( wxsFormat( wxT("%8.8x"), ElfCRC ) );
+	wxString filename( wxsFormat( L"%8.8x", ElfCRC ) );
 
 	// if patches found the following status msg will be overwritten
 	Console::SetTitle( wxsFormat( _("Game running [CRC=%s]"), filename.c_str() ) );
@@ -551,8 +551,8 @@ int loadElfFile(const wxString& filename)
 	if( elfobj.proghead == NULL )
 	{
 		throw Exception::CpuStateShutdown(
-			wxsFormat( wxT("Invalid ELF header encountered in file:\n\t%s"), elfobj.filename.c_str() ),
-			wxsFormat(_("Invalid ELF header, file: %s"), elfobj.filename.c_str() )
+			wxsFormat( L"Invalid ELF header encountered in file:\n\t%s", elfobj.filename.c_str() ),
+			wxsFormat( L"Invalid ELF header, file: %s", elfobj.filename.c_str() )
 		);
 	}
 

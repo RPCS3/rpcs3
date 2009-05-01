@@ -213,7 +213,7 @@ void iDumpBlock( int startpc, u8 * ptr )
 
 	g_Conf.Folders.Dumps.Mkdir();
 	AsciiFile eff(
-		Path::Combine( g_Conf.Folders.Dumps, wxsFormat(wxT("R5900dump%.8X.txt"), startpc) ),
+		Path::Combine( g_Conf.Folders.Dumps, wxsFormat(L"R5900dump%.8X.txt", startpc) ),
 		wxFile::write
 	);
 

@@ -472,7 +472,7 @@ void patchFunc_patch( char * cmd, char * param )
 	if ( patchnumber >= MAX_PATCH )
 	{
 		// TODO : Use wxLogError for this, once we have full unicode compliance on cmd/params vars.
-		//wxLogError( wxT("Patch ERROR: Maximum number of patches reached: %s=%s"), cmd, param );
+		//wxLogError( L"Patch ERROR: Maximum number of patches reached: %s=%s", cmd, param );
 		Console::Error( "Patch ERROR: Maximum number of patches reached: %s=%s", params cmd, param );
 		return;
 	}

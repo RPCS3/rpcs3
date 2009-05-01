@@ -212,7 +212,7 @@ namespace Exception
 			BadIndex( index )
 		{
 			// assertions make debugging easier sometimes. :)
-			wxASSERT( wxT("Index is outside the bounds of an array") );
+			wxASSERT( L"Index is outside the bounds of an array" );
 		}
 		
 		virtual wxString LogMessage() const;
@@ -250,7 +250,7 @@ namespace Exception
 			RuntimeError( msg ) {}
 
 		explicit CpuStateShutdown( const wxString& msg_eng, const wxString& msg_xlt=wxString() ) :
-			RuntimeError( msg_eng, msg_xlt.IsEmpty() ? wxT("Unexpected emulation shutdown") : msg_xlt ) { }
+			RuntimeError( msg_eng, msg_xlt.IsEmpty() ? L"Unexpected emulation shutdown" : msg_xlt ) { }
 	};
 
 	// ------------------------------------------------------------------------

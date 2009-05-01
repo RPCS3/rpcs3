@@ -35,17 +35,17 @@
 // dialog was canceled
 static bool OpenLogFile(wxFile& file, wxString& filename, wxWindow *parent)
 {
-    filename = wxSaveFileSelector(wxT("log"), wxT("txt"), wxT("log.txt"), parent);
+    filename = wxSaveFileSelector(L"log", L"txt", L"log.txt", parent);
     if ( !filename ) return false; // canceled
 
     if( wxFile::Exists(filename) )
     {
         bool bAppend = false;
         wxString strMsg;
-        strMsg.Printf(wxT("Append log to file '%s' (choosing [No] will overwrite it)?"),
+        strMsg.Printf(L"Append log to file '%s' (choosing [No] will overwrite it)?",
                       filename.c_str());
 
-        switch ( wxMessageBox(strMsg, _("Question"), wxICON_QUESTION | wxYES_NO | wxCANCEL) )
+        switch ( wxMessageBox(strMsg, L"Question", wxICON_QUESTION | wxYES_NO | wxCANCEL) )
 		{
 			case wxYES:
 				bAppend = true;
@@ -91,12 +91,12 @@ ConsoleLogFrame::ConsoleLogFrame(MainEmuFrame *parent, const wxString& title) :
     // create menu
     wxMenuBar *pMenuBar = new wxMenuBar;
     wxMenu *pMenu = new wxMenu;
-    pMenu->Append(Menu_Save,  _("&Save..."), wxT("Save log contents to file"));
-    pMenu->Append(Menu_Clear, _("C&lear"), wxT("Clear the log contents"));
+    pMenu->Append(Menu_Save,  L"&Save...", L"Save log contents to file");
+    pMenu->Append(Menu_Clear, L"C&lear", L"Clear the log contents");
     pMenu->AppendSeparator();
-    pMenu->Append(Menu_Close, _("&Close"), wxT("Close this window"));
+    pMenu->Append(Menu_Close, L"&Close",L"Close this window");
 
-    pMenuBar->Append(pMenu, _("&Log"));
+    pMenuBar->Append(pMenu, L"&Log");
     SetMenuBar(pMenuBar);
 
     // status bar for menu prompts
@@ -158,12 +158,12 @@ void ConsoleLogFrame::OnSave(wxCommandEvent& WXUNUSED(event))
     {
 		if( !file.Write(m_TextCtrl.GetLineText(nLine) + wxTextFile::GetEOL()) )
 		{
-			wxLogError( wxT("Can't save log contents to file.") );
+			wxLogError( L"Can't save log contents to file." );
 			return;
 		}
 	}
 
-	wxLogStatus(this, wxT("Log saved to the file '%s'."), filename.c_str());
+	wxLogStatus(this, L"Log saved to the file '%s'.", filename.c_str());
 }
 
 void ConsoleLogFrame::OnClear(wxCommandEvent& WXUNUSED(event))
@@ -198,7 +198,7 @@ void ConsoleLogFrame::ClearColor()
 
 void ConsoleLogFrame::Newline()
 {
-	Write( wxT("\n") );
+	Write( L"\n");
 }
 
 void ConsoleLogFrame::Write( const wxChar* text )

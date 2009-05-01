@@ -40,13 +40,13 @@ namespace Dialogs
 //////////////////////////////////////////////////////////////////////////////////////////
 //
 LogOptionsDialog::eeLogOptionsPanel::eeLogOptionsPanel( wxWindow* parent ) :
-	CheckedStaticBox( parent, wxHORIZONTAL, wxT( "EE Logs" ), LogID_EEBox )
+	CheckedStaticBox( parent, wxHORIZONTAL, L"EE Logs", LogID_EEBox )
 {
 	wxBoxSizer& eeMisc = *new wxBoxSizer( wxVERTICAL );
 
-	AddCheckBoxTo( this, eeMisc,	wxT("Memory"),	LogID_Memory );
-	AddCheckBoxTo( this, eeMisc,	wxT("Bios"),	LogID_Bios );
-	AddCheckBoxTo( this, eeMisc,	wxT("Elf"),		LogID_ELF );
+	AddCheckBoxTo( this, eeMisc, L"Memory",	LogID_Memory );
+	AddCheckBoxTo( this, eeMisc, L"Bios",	LogID_Bios );
+	AddCheckBoxTo( this, eeMisc, L"Elf",		LogID_ELF );
 
 	wxBoxSizer& eeStack = *new wxBoxSizer( wxVERTICAL );
 	eeStack.Add( new DisasmPanel( this ), stdSpacingFlags );
@@ -60,29 +60,29 @@ LogOptionsDialog::eeLogOptionsPanel::eeLogOptionsPanel( wxWindow* parent ) :
 }
 
 LogOptionsDialog::eeLogOptionsPanel::DisasmPanel::DisasmPanel( wxWindow* parent ) :
-	CheckedStaticBox( parent, wxVERTICAL, wxT( "Disasm" ), LogID_Disasm )
+	CheckedStaticBox( parent, wxVERTICAL, L"Disasm" , LogID_Disasm )
 {
-	AddCheckBox( _T("Core"),	LogID_CPU );
-	AddCheckBox( _T("Fpu"),		LogID_FPU );
-	AddCheckBox( _T("VU0"),		LogID_VU0 );
-	AddCheckBox( _T("Cop0"),	LogID_COP0 );
-	AddCheckBox( _T("VU Macro"),LogID_VU_Macro );
+	AddCheckBox( L"Core",	LogID_CPU );
+	AddCheckBox( L"Fpu",		LogID_FPU );
+	AddCheckBox( L"VU0",		LogID_VU0 );
+	AddCheckBox( L"Cop0",	LogID_COP0 );
+	AddCheckBox( L"VU Macro",LogID_VU_Macro );
 
 	SetValue( false );
 	Fit();
 }
 
 LogOptionsDialog::eeLogOptionsPanel::HwPanel::HwPanel( wxWindow* parent ) :
-	CheckedStaticBox( parent, wxVERTICAL, wxT( "Hardware" ), LogID_Hardware )
+	CheckedStaticBox( parent, wxVERTICAL, L"Hardware", LogID_Hardware )
 {
-	AddCheckBox( _T("Registers"),LogID_Registers );
-	AddCheckBox( _T("Dma"),		LogID_DMA );
-	AddCheckBox( _T("Vif"),		LogID_VIF );
-	AddCheckBox( _T("SPR"),		LogID_SPR );
-	AddCheckBox( _T("GIF"),		LogID_GIF );
-	AddCheckBox( _T("Sif"),		LogID_SIF );
-	AddCheckBox( _T("IPU"),		LogID_IPU );
-	AddCheckBox( _T("RPC"),		LogID_RPC );
+	AddCheckBox( L"Registers", LogID_Registers );
+	AddCheckBox( L"Dma",		LogID_DMA );
+	AddCheckBox( L"Vif",		LogID_VIF );
+	AddCheckBox( L"SPR",		LogID_SPR );
+	AddCheckBox( L"GIF",		LogID_GIF );
+	AddCheckBox( L"Sif",		LogID_SIF );
+	AddCheckBox( L"IPU",		LogID_IPU );
+	AddCheckBox( L"RPC",		LogID_RPC );
 
 	SetValue( false );
 	Fit();
@@ -98,16 +98,16 @@ void LogOptionsDialog::eeLogOptionsPanel::OnLogChecked(wxCommandEvent &event)
 //////////////////////////////////////////////////////////////////////////////////////////
 //
 LogOptionsDialog::iopLogOptionsPanel::iopLogOptionsPanel( wxWindow* parent ) :
-	CheckedStaticBox( parent, wxVERTICAL, wxT( "IOP Logs" ), LogID_IopBox )
+	CheckedStaticBox( parent, wxVERTICAL, L"IOP Logs", LogID_IopBox )
 {
-	AddCheckBox( _T("Disasm"),		LogID_Disasm);
-	AddCheckBox( _T("Memory"),		LogID_Memory );
-	AddCheckBox( _T("Bios"),		LogID_Bios );
-	AddCheckBox( _T("Registers"),	LogID_Hardware );
-	AddCheckBox( _T("Dma"),			LogID_DMA );
-	AddCheckBox( _T("Pad"),			LogID_Pad );
-	AddCheckBox( _T("Cdrom"),		LogID_Cdrom );
-	AddCheckBox( _T("GPU (PSX)"),	LogID_GPU );
+	AddCheckBox( L"Disasm",		LogID_Disasm);
+	AddCheckBox( L"Memory",		LogID_Memory );
+	AddCheckBox( L"Bios",		LogID_Bios );
+	AddCheckBox( L"Registers",	LogID_Hardware );
+	AddCheckBox( L"Dma",			LogID_DMA );
+	AddCheckBox( L"Pad",			LogID_Pad );
+	AddCheckBox( L"Cdrom",		LogID_Cdrom );
+	AddCheckBox( L"GPU (PSX)",	LogID_GPU );
 
 	SetValue( true );
 	Fit();
@@ -116,14 +116,14 @@ LogOptionsDialog::iopLogOptionsPanel::iopLogOptionsPanel( wxWindow* parent ) :
 //////////////////////////////////////////////////////////////////////////////////////////
 //
 LogOptionsDialog::LogOptionsDialog(wxWindow* parent, int id, const wxPoint& pos, const wxSize& size):
-	wxDialogWithHelpers( parent, id, _T("Logging"), true, pos, size )
+	wxDialogWithHelpers( parent, id, L"Logging", true, pos, size )
 {
 	eeLogOptionsPanel& eeBox = *new eeLogOptionsPanel( this );
 	iopLogOptionsPanel& iopSizer = *new iopLogOptionsPanel( this );
 
 	wxStaticBoxSizer& miscSizer = *new wxStaticBoxSizer( wxHORIZONTAL, this, _T("Misc") );
-	AddCheckBox( miscSizer, _T("Log to STDOUT"), LogID_StdOut );
-	AddCheckBox( miscSizer, _T("SYMs Log"), LogID_Symbols );
+	AddCheckBox( miscSizer, L"Log to STDOUT", LogID_StdOut );
+	AddCheckBox( miscSizer, L"SYMs Log", LogID_Symbols );
 
 	wxBoxSizer& mainsizer = *new wxBoxSizer( wxVERTICAL );
 	wxBoxSizer& topSizer = *new wxBoxSizer( wxHORIZONTAL );

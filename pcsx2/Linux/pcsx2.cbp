@@ -197,6 +197,8 @@
 		<Unit filename="../NakedAsm.h" />
 		<Unit filename="../NewGUI/AboutBoxDialog.cpp" />
 		<Unit filename="../NewGUI/AboutBoxDialog.h" />
+		<Unit filename="../NewGUI/AdvancedDialog.cpp" />
+		<Unit filename="../NewGUI/AdvancedDialog.h" />
 		<Unit filename="../NewGUI/App.h" />
 		<Unit filename="../NewGUI/AppConfig.cpp" />
 		<Unit filename="../NewGUI/CheckedStaticBox.cpp" />

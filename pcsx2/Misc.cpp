@@ -169,13 +169,13 @@ bool IsBIOS(const wxString& filename, wxString& description)
 
 			const wxString romver( wxString::FromAscii(aROMVER) );
 
-			description.Printf( wxT("%s v%c%c.%c%c(%c%c/%c%c/%c%c%c%c) %s"), wxString::FromAscii(zone).ToAscii().data(),
+			description.Printf( L"%s v%c%c.%c%c(%c%c/%c%c/%c%c%c%c) %s", wxString::FromAscii(zone).ToAscii().data(),
 				romver[0], romver[1],	// ver major
 				romver[2], romver[3],	// ver minor
 				romver[12], romver[13],	// day
 				romver[10], romver[11],	// month
 				romver[6], romver[7], romver[8], romver[9],	// year!
-				(aROMVER[5]=='C') ? wxT("Console") : (aROMVER[5]=='D') ? wxT("Devel") : wxT("")
+				(aROMVER[5]=='C') ? L"Console" : (aROMVER[5]=='D') ? L"Devel" : L""
 			);
 			found = true;
 		}
@@ -193,7 +193,7 @@ bool IsBIOS(const wxString& filename, wxString& description)
 	{
 		if ( biosFileSize < (int)fileOffset)
 		{
-			description << ((biosFileSize*100)/(int)fileOffset) << wxT("%");
+			description << ((biosFileSize*100)/(int)fileOffset) << L"%";
 			// we force users to have correct bioses,
 			// not that lame scph10000 of 513KB ;-)
 		}
@@ -352,7 +352,7 @@ char* mystrlwr( char* string )
 
 static wxString GetGSStateFilename()
 {
-	return Path::Combine( g_Conf.Folders.Savestates, wxsFormat( wxT("/%8.8X.%d.gs"), ElfCRC, StatesC ) );
+	return Path::Combine( g_Conf.Folders.Savestates, wxsFormat( L"/%8.8X.%d.gs", ElfCRC, StatesC ) );
 }
 
 void CycleFrameLimit(int dir)
@@ -476,10 +476,10 @@ void ProcessFKeys(int fkey, struct KeyModifiers *keymod)
 
 				throw Exception::CpuStateShutdown(
 					// english log message:
-					wxsFormat( wxT("Error!  Could not load from saveslot %d\n"), StatesC ) + ex.LogMessage(),
+					wxsFormat( L"Error!  Could not load from saveslot %d\n", StatesC ) + ex.LogMessage(),
 
 					// translated message:
-					wxsFormat( _("Error loading saveslot %d.  Emulator reset."), StatesC )
+					wxsFormat( L"Error loading saveslot %d.  Emulator reset.", StatesC )
 				);
 			}
 			break;
@@ -545,9 +545,9 @@ void ProcessFKeys(int fkey, struct KeyModifiers *keymod)
 					wxString part2( parts.GetNextToken() );
 
 					if( !!part2 )
-						name += wxT("_") + part2;
+						name += L"_" + part2;
 
-					gsText.Printf( wxT("%s.%d.gs"), name.c_str(), StatesC );
+					gsText.Printf( L"%s.%d.gs", name.c_str(), StatesC );
 					Text = Path::Combine( g_Conf.Folders.Savestates, gsText );
 				}
 				else

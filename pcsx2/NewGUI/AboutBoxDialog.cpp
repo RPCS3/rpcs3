@@ -15,7 +15,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
- 
+
 #include "PrecompiledHeader.h"
 #include "Misc.h"
 #include "App.h"
@@ -84,7 +84,7 @@ AboutBoxDialog::AboutBoxDialog( wxWindow* parent, int id ):
 
 	// This sizer holds text of the authors and a logo!
 	wxBoxSizer& AuthLogoSizer = *new wxBoxSizer( wxHORIZONTAL );
-	
+
 	// this sizer holds text of the contributors/testers, and a ps2 image!
 	wxBoxSizer& ContribSizer = *new wxBoxSizer( wxHORIZONTAL );
 
@@ -112,15 +112,15 @@ AboutBoxDialog::AboutBoxDialog( wxWindow* parent, int id ):
 	mainSizer.Add( &AuthLogoSizer, stdSpacingFlags );
 
 	mainSizer.Add( new wxHyperlinkCtrl(
-		this, wxID_ANY, _( "Pcsx2 Official Website and Forums" ), wxT("http://www.pcsx2.net") ),
+		this, wxID_ANY, L"Pcsx2 Official Website and Forums" , L"http://www.pcsx2.net" ),
 		wxSizerFlags(1).Center().Border( wxALL, 3 ) );
 	mainSizer.Add( new wxHyperlinkCtrl(
-		this, wxID_ANY, _( "Pcsx2 Official Svn Repository at Googlecode" ), wxT("http://code.google.com/p/pcsx2") ),
+		this, wxID_ANY, L"Pcsx2 Official Svn Repository at Googlecode" , L"http://code.google.com/p/pcsx2" ),
 		wxSizerFlags(1).Center().Border( wxALL, 3 ) );
 
 	mainSizer.Add( &ContribSizer, stdSpacingFlags.Expand() );
-	
-	mainSizer.Add( new wxButton( this, wxID_OK, _("I've seen enough") ), stdCenteredFlags );
+
+	mainSizer.Add( new wxButton( this, wxID_OK, L"I've seen enough"), stdCenteredFlags );
 	SetSizerAndFit( &mainSizer );
 }
 

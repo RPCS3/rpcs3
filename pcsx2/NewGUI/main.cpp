@@ -61,28 +61,26 @@ bool Pcsx2App::TryOpenConfigCwd()
 
 void Pcsx2App::OnInitCmdLine( wxCmdLineParser& parser )
 {
-	parser.SetLogo( _(
-		" >> Pcsx2  --  A Playstation2 Emulator for the PC\n"
-	) );
+	parser.SetLogo( L" >> Pcsx2  --  A Playstation2 Emulator for the PC\n");
 
-	parser.AddParam( _( "CDVD/ELF" ), wxCMD_LINE_VAL_STRING, wxCMD_LINE_PARAM_OPTIONAL );
+	parser.AddParam( L"CDVD/ELF", wxCMD_LINE_VAL_STRING, wxCMD_LINE_PARAM_OPTIONAL );
 
-	parser.AddSwitch( wxT("h"),		wxT("help"),	_("displays this list of command line options"), wxCMD_LINE_OPTION_HELP );
-	parser.AddSwitch( wxT("nogui"),	wxT("nogui"),	_("disables display of the gui and enables the Escape Hack.") );
+	parser.AddSwitch( L"h",		L"help",	L"displays this list of command line options", wxCMD_LINE_OPTION_HELP );
+	parser.AddSwitch( L"nogui",	L"nogui",	L"disables display of the gui and enables the Escape Hack." );
 
-	parser.AddOption( wxT("bootmode"),	wxEmptyString,	_("0 - quick (default), 1 - bios, 2 - load elf"), wxCMD_LINE_VAL_NUMBER );
-	parser.AddOption( wxEmptyString,	wxT("cfg"),		_("configuration file override"), wxCMD_LINE_VAL_STRING );
+	parser.AddOption( L"bootmode",	wxEmptyString,	L"0 - quick (default), 1 - bios, 2 - load elf", wxCMD_LINE_VAL_NUMBER );
+	parser.AddOption( wxEmptyString,	L"cfg",		L"configuration file override", wxCMD_LINE_VAL_STRING );
 
-	parser.AddOption( wxEmptyString,wxT("cdvd"),	_("uses filename as the CDVD plugin for this session only.") );
-	parser.AddOption( wxEmptyString,wxT("gs"),		_("uses filename as the GS plugin for this session only.") );
-	parser.AddOption( wxEmptyString,wxT("spu"),		_("uses filename as the SPU2 plugin for this session only.") );
-	parser.AddOption( wxEmptyString,wxT("pad"),		_("uses filename as *both* PAD plugins for this session only.") );
-	parser.AddOption( wxEmptyString,wxT("pad1"),	_("uses filename as the PAD1 plugin for this session only.") );
-	parser.AddOption( wxEmptyString,wxT("pad2"),	_("uses filename as the PAD2 plugin for this session only.") );
-	parser.AddOption( wxEmptyString,wxT("dev9"),	_("uses filename as the DEV9 plugin for this session only.") );
-	parser.AddOption( wxEmptyString,wxT("usb"),		_("uses filename as the USB plugin for this session only.") );
+	parser.AddOption( wxEmptyString, L"cdvd",	L"uses filename as the CDVD plugin for this session only." );
+	parser.AddOption( wxEmptyString, L"gs",		L"uses filename as the GS plugin for this session only." );
+	parser.AddOption( wxEmptyString, L"spu",		L"uses filename as the SPU2 plugin for this session only." );
+	parser.AddOption( wxEmptyString, L"pad",		L"uses filename as *both* PAD plugins for this session only." );
+	parser.AddOption( wxEmptyString, L"pad1",	L"uses filename as the PAD1 plugin for this session only." );
+	parser.AddOption( wxEmptyString, L"pad2",		L"uses filename as the PAD2 plugin for this session only." );
+	parser.AddOption( wxEmptyString, L"dev9",		L"uses filename as the DEV9 plugin for this session only." );
+	parser.AddOption( wxEmptyString, L"usb",		L"uses filename as the USB plugin for this session only." );
 
-	parser.SetSwitchChars( wxT("-") );
+	parser.SetSwitchChars( L"-" );
 }
 
 bool Pcsx2App::OnCmdLineParsed(wxCmdLineParser& parser)
@@ -96,7 +94,7 @@ bool Pcsx2App::OnCmdLineParsed(wxCmdLineParser& parser)
 	// Suppress wxWidgets automatic options parsing since none of them pertain to Pcsx2 needs.
 	//wxApp::OnCmdLineParsed( parser );
 
-	bool yay = parser.Found( wxT("nogui") );
+	bool yay = parser.Found(L"nogui");
 
 	return true;
 }

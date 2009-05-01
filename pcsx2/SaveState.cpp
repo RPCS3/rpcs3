@@ -51,7 +51,7 @@ static void PostLoadPrep()
 wxString SaveState::GetFilename( int slot )
 {
 	return (g_Conf.Folders.Savestates +
-		wxsFormat( wxT("%8.8X.%3.3d"), ElfCRC, slot )).GetFullPath();
+		wxsFormat( L"%8.8X.%3.3d", ElfCRC, slot )).GetFullPath();
 }
 
 SaveState::SaveState( const char* msg, const wxString& destination ) :
@@ -93,7 +93,7 @@ void SaveState::FreezeTag( const char* src )
 		assert( 0 );
 		throw Exception::BadSavedState(
 			// Untranslated diagnostic msg (use default msg for translation)
-			wxT("Savestate data corruption detected while reading tag: ") + wxString::FromAscii(src)
+			L"Savestate data corruption detected while reading tag: " + wxString::FromAscii(src)
 		);
 	}
 }
@@ -301,7 +301,7 @@ void gzLoadingState::FreezePlugin( const char* name, s32 (CALLBACK *freezer)(int
 // uncompressed to/from memory state saves implementation
 
 memBaseStateInfo::memBaseStateInfo( SafeArray<u8>& memblock, const char* msg ) :
-	SaveState( msg, wxT("Memory") )
+	SaveState( msg, L"Memory")
 ,	m_memory( memblock )
 ,	m_idx( 0 )
 {
@@ -378,7 +378,7 @@ void memLoadingState::FreezePlugin( const char* name, s32 (CALLBACK *freezer)(in
 	if( ( fP.size + m_idx ) > m_memory.GetSizeInBytes() )
 	{
 		assert(0);
-		throw Exception::BadSavedState( wxT("memory") );
+		throw Exception::BadSavedState( L"memory");
 	}
 
 	fP.data = ((s8*)m_memory.GetPtr()) + m_idx;

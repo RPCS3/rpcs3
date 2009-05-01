@@ -48,7 +48,7 @@ void StreamException_ThrowFromErrno( const wxString& streamname, errno_t errcode
 
 		default:
 			throw Exception::Stream( streamname,
-				wxsFormat( wxT("General file/stream error [errno: %d]"), errcode )
+				wxsFormat( L"General file/stream error [errno: %d]", errcode )
 			);
 	}
 }
@@ -82,7 +82,7 @@ void StreamException_ThrowLastError( const wxString& streamname, HANDLE result )
 		default:
 		{
 			throw Exception::Stream( streamname,
-				wxsFormat( wxT("General Win32 File/stream error [GetLastError: %d]"), error )
+				wxsFormat( L"General Win32 File/stream error [GetLastError: %d]", error )
 			);
 		}
 	}
@@ -97,7 +97,7 @@ bool StreamException_LogFromErrno( const wxString& streamname, const wxChar* act
 	}
 	catch( Exception::Stream& ex )
 	{
-		Console::Notice( wxsFormat( wxT("%s: %s"), action, ex.LogMessage().c_str() ) );
+		Console::Notice( wxsFormat( L"%s: %s", action, ex.LogMessage().c_str() ) );
 		return true;
 	}
 	return false;
@@ -112,7 +112,7 @@ bool StreamException_LogLastError( const wxString& streamname, const wxChar* act
 	}
 	catch( Exception::Stream& ex )
 	{
-		Console::Notice( wxsFormat( wxT("%s: %s"), action, ex.LogMessage().c_str() ) );
+		Console::Notice( wxsFormat( L"%s: %s", action, ex.LogMessage().c_str() ) );
 		return true;
 	}
 	return false;
@@ -139,7 +139,7 @@ void NTFS_CompressFile( const wxString& file, bool compressStatus )
 
 	// Fail silently -- non-compression of files and folders is not an errorable offense.
 
-	if( !StreamException_LogLastError( file, wxT("NTFS Compress Notice"), bloated_crap ) )
+	if( !StreamException_LogLastError( file, L"NTFS Compress Notice", bloated_crap ) )
 	{
 		DWORD bytesReturned = 0;
 		DWORD compressMode = compressStatus ? COMPRESSION_FORMAT_DEFAULT : COMPRESSION_FORMAT_NONE;
@@ -151,7 +151,7 @@ void NTFS_CompressFile( const wxString& file, bool compressStatus )
 		);
 		
 		if( !result )
-			StreamException_LogLastError( file, wxT("NTFS Compress Notice") );
+			StreamException_LogLastError( file, L"NTFS Compress Notice" );
 
 		CloseHandle( bloated_crap );
 	}

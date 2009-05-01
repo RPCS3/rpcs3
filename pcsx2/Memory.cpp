@@ -93,7 +93,7 @@ void loadBiosRom( const wxChar *ext, u8 *dest, long maxSize )
 
 	// Try first a basic extension concatenation (normally results in something like name.bin.rom1)
 	const wxString Bios( g_Conf.Files.Bios() );
-	Bios1.Printf( wxT("%s.%s"), Bios.c_str(), ext);
+	Bios1.Printf( L"%s.%s", Bios.c_str(), ext);
 
 	if( (filesize=Path::GetFileSize( Bios1 ) ) <= 0 )
 	{
@@ -102,7 +102,7 @@ void loadBiosRom( const wxChar *ext, u8 *dest, long maxSize )
 		if( (filesize=Path::GetFileSize( Bios1 ) ) <= 0 )
 		{
 			// Try for the old-style method (rom1.bin)
-			Bios1 = Path::Combine( g_Conf.Folders.Bios, (wxString)ext ) + wxT(".bin");
+			Bios1 = Path::Combine( g_Conf.Folders.Bios, (wxString)ext ) + L".bin";
 			if( (filesize=Path::GetFileSize( Bios1 ) ) <= 0 )
 			{
 				Console::Notice( "Load Bios Warning: %s not found (this is not an error!)", params wxString(ext).ToAscii().data() );
@@ -799,9 +799,9 @@ void memReset()
 
 	//injectIRX("host.irx");	//not fully tested; still buggy
 
-	loadBiosRom( wxT("rom1"), PS2MEM_ROM1, Ps2MemSize::Rom1 );
-	loadBiosRom( wxT("rom2"), PS2MEM_ROM2, Ps2MemSize::Rom2 );
-	loadBiosRom( wxT("erom"), PS2MEM_EROM, Ps2MemSize::ERom );
+	loadBiosRom( L"rom1", PS2MEM_ROM1, Ps2MemSize::Rom1 );
+	loadBiosRom( L"rom2", PS2MEM_ROM2, Ps2MemSize::Rom2 );
+	loadBiosRom( L"erom", PS2MEM_EROM, Ps2MemSize::ERom );
 }
 
 int mmap_GetRamPageInfo(void* ptr)
