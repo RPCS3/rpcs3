@@ -133,7 +133,9 @@ namespace OpcodeImpl {
 * Jump to target                                         *
 * Format:  OP target                                     *
 *********************************************************/
-
+// fixme: looking at the other branching code, shouldn't those _SetLinks in BGEZAL and such only be set
+// if the condition is true? --arcum42
+	
 void J()   
 {
 	doBranch(_JumpTarget_);
@@ -215,7 +217,7 @@ void BLTZ()    // Branch if Rs <  0
 
 void BLTZAL()  // Branch if Rs <  0 and link
 { 
-	_SetLink(31); \
+	_SetLink(31); 
 	if (cpuRegs.GPR.r[_Rs_].SD[0] < 0) 
 	{ 
 		doBranch(_BranchTarget_); 
