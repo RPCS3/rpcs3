@@ -666,14 +666,24 @@ void psxHwWrite8(u32 add, u8 value) {
 		case 0x1f801803: cdrWrite3(value); break;
 
 		case 0x1f80380c:
-			if (value == '\r') break;
-			if (value == '\n' || g_pbufi >= 1023) { // A line break, or the buffer is about to overflow.
-				g_pbuf[g_pbufi++] = 0; 
-				g_pbufi = 0;
+		{
+			bool flush = false;
+
+			// Terminate lines on CR or full buffers, and ignore \n's if the string contents
+			// are empty (otherwise terminate on \n too!)
+			if(	( value == '\r' ) || ( g_pbufi == 1023 ) ||
+				( value == '\n' && g_pbufi != 0 ) )
+			{
+				g_pbuf[g_pbufi] = 0;
 				DevCon::WriteLn( Color_Cyan, g_pbuf );
+				g_pbufi = 0;
 			}
-			else g_pbuf[g_pbufi++] = value;
+			else if( value != '\n' )
+			{
+				g_pbuf[g_pbufi++] = value;
+			}
 			psxHu8(add) = value;
+		}
 		return;
 
 		case 0x1F808260:
