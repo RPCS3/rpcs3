@@ -72,11 +72,9 @@ struct cdrStruct
 	char Unused[4087];
 };
 
-extern cdrStruct cdr;
-
-s32  MSFtoLSN(u8 *Time);
-void LSNtoMSF(u8 *Time, s32 lsn);
 void AddIrqQueue(u8 irq, unsigned long ecycle);
+
+extern cdrStruct cdr;
 
 void cdrReset();
 void  cdrInterrupt();

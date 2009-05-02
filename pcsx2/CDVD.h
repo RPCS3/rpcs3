@@ -310,20 +310,7 @@ extern void  cdvdActionInterrupt();
 extern void  cdvdReadInterrupt();
 void cdvdNewDiskCB();
 u8   cdvdRead(u8 key);
-u8   cdvdRead18(void);
 void cdvdWrite(u8 key, u8 rt);
-void cdvdWrite04(u8 rt);
-void cdvdWrite05(u8 rt);
-void cdvdWrite06(u8 rt);
-void cdvdWrite07(u8 rt);
-void cdvdWrite08(u8 rt);
-void cdvdWrite0A(u8 rt);
-void cdvdWrite0F(u8 rt);
-void cdvdWrite14(u8 rt);
-void cdvdWrite16(u8 rt);
-void cdvdWrite17(u8 rt);
-void cdvdWrite18(u8 rt);
-void cdvdWrite3A(u8 rt);
 
 // Platform dependent system time assignment (see WinMisc / LnxMisc)
 extern void cdvdSetSystemTime( cdvdStruct& setme );
