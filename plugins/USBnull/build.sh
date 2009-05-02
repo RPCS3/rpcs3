@@ -1,20 +1,37 @@
 #!/bin/sh
 
-echo ----------------
+echo ---------------
 echo Building USBnull
-echo ----------------
+echo ---------------
 
 curdir=`pwd`
 
-cd ${curdir}/Linux
+
+if test "${USBnullOPTIONS+set}" != set ; then
+export USBnullOPTIONS=""
+fi
+
+if [ $# -gt 0 ] && [ $1 = "all" ]
+then
+
+aclocal
+automake -a
+autoconf
+
+./configure ${USBnullOPTIONS} --prefix=${PCSX2PLUGINS}
+make clean
+make install
+
+else
 make $@
+fi
 
 if [ $? -ne 0 ]
 then
 exit 1
 fi
 
-if [ -s cfgUSBnull ] && [ -s libUSBnull.so ]
-then
-cp cfgUSBnull libUSBnull.so ${PCSX2PLUGINS}
-fi
+#if [ -s cfgFWnull ] && [ -s libUSBnull.so ]
+#then
+#cp cfgFWnull libFWnull.so ${PCSX2PLUGINS}
+#fi

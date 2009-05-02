@@ -161,7 +161,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\USB.c"
+				RelativePath="..\USB.cpp"
 				>
 			</File>
 			<File

@@ -22,8 +22,11 @@
 
 #include <stdio.h>
 
+extern "C"
+{
 #define USBdefs
 #include "PS2Edefs.h"
+}
 
 #ifdef _WIN32
 
@@ -46,19 +49,24 @@ typedef struct {
   int Log;
 } Config;
 
-Config conf;
+//extern void (*USBirq)();
+extern USBcallback USBirq;
+extern Config conf;
+extern FILE *usbLog;
 
 
-
+#ifdef _MSC_VER
+#define EXPORT_C_(type) extern "C" __declspec(dllexport) type CALLBACK
+#else
+#define EXPORT_C_(type) extern "C" type
+#endif
 
 #define PSXCLK	36864000	/* 36.864 Mhz */
 
-USBcallback USBirq;
 
 void SaveConfig();
 void LoadConfig();
 
-FILE *usbLog;
 void __Log(char *fmt, ...);
 
 void SysMessage(char *fmt, ...);
