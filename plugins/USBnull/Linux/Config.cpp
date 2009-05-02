@@ -26,12 +26,18 @@
 #include <string>
 using namespace std;
 
+ #ifdef __cplusplus
 extern "C"
 {
-#include "interface.h"
+#endif
+
 #include "support.h"
-//#include "callbacks.h"
+#include "callbacks.h"
+#include "interface.h"
+
+#ifdef __cplusplus
 }
+#endif
 
 #include "USB.h"
 

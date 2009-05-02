@@ -29,12 +29,18 @@ using namespace std;
 #include "FW.h"
 #include "Config.h"
 
+ #ifdef __cplusplus
 extern "C"
 {
-#include "interface.h"
+#endif
+
 #include "support.h"
-//#include "callbacks.h"
+#include "callbacks.h"
+#include "interface.h"
+
+#ifdef __cplusplus
 }
+#endif
 
 GtkWidget *MsgDlg, *About, *Conf;
 extern string s_strIniPath;

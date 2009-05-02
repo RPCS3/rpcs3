@@ -1,6 +1,6 @@
-AC_INIT(SPU2null, 0.5,arcum42@gmail.com)
+AC_INIT(SPU2null, 0.71,arcum42@gmail.com)
 
-AM_INIT_AUTOMAKE(SPU2null,0.8)
+AM_INIT_AUTOMAKE(SPU2null,0.71)
 
 AC_PROG_CC([gcc g++ cl KCC CC cxx cc++ xlC aCC c++])
 AC_PROG_CXX([gcc g++ cl KCC CC cxx cc++ xlC aCC c++])
@@ -13,8 +13,8 @@ dnl necessary for compiling assembly
 AM_PROG_AS
 
 AC_SUBST(SPU2null_CURRENT, 0)
-AC_SUBST(SPU2null_REVISION, 8)
-AC_SUBST(SPU2null_AGE, 0)
+AC_SUBST(SPU2null_REVISION, 7)
+AC_SUBST(SPU2null_AGE, 1)
 AC_SUBST(SPU2null_RELEASE,[$SPU2null_CURRENT].[$SPU2null_REVISION].[$SPU2null_AGE])
 AC_SUBST(SPU2null_SONAME,libSPU2null.so.[$SPU2null_CURRENT].[$SPU2null_REVISION].[$SPU2null_AGE])
 

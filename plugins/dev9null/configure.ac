@@ -13,7 +13,7 @@ dnl necessary for compiling assembly
 AM_PROG_AS
 
 AC_SUBST(DEV9null_CURRENT, 0)
-AC_SUBST(DEV9null_REVISION, 8)
+AC_SUBST(DEV9null_REVISION, 4)
 AC_SUBST(DEV9null_AGE, 0)
 AC_SUBST(DEV9null_RELEASE,[$DEV9null_CURRENT].[$DEV9null_REVISION].[$DEV9null_AGE])
 AC_SUBST(DEV9null_SONAME,libDEV9null.so.[$DEV9null_CURRENT].[$DEV9null_REVISION].[$DEV9null_AGE])

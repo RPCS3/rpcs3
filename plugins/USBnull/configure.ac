@@ -1,4 +1,4 @@
-AC_INIT(USBnull, 0.5,arcum42@gmail.com)
+AC_INIT(USBnull, 0.6,arcum42@gmail.com)
 
 AM_INIT_AUTOMAKE(USBnull,0.6)
 
