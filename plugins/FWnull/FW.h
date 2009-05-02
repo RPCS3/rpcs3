@@ -1,5 +1,5 @@
-/*  FWnull 
- *  Copyright (C) 2004-2005 PCSX2 Team
+/*  FWnull
+ *  Copyright (C) 2004-2009 PCSX2 Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -15,15 +15,17 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-
-
+ 
 #ifndef __FW_H__
 #define __FW_H__
 
 #include <stdio.h>
 
+extern "C"
+{
 #define FWdefs
 #include "PS2Edefs.h"
+}
 
 #ifdef _WIN32
 
@@ -35,25 +37,32 @@
 #include <gtk/gtk.h>
 #include <X11/Xlib.h>
 
-#define __inline inline
+#endif
 
+#ifdef _MSC_VER
+#define EXPORT_C_(type) extern "C" __declspec(dllexport) type CALLBACK
+#else
+#define EXPORT_C_(type) extern "C" type
 #endif
 
 #define FW_LOG __Log
 
-typedef struct {
-  int Log;
+#define fwRs32(mem)	(*(s32*)&fwregs[(mem) & 0xffff])
+#define fwRu32(mem)	(*(u32*)&fwregs[(mem) & 0xffff])
+
+typedef struct 
+{
+	int Log;
 } Config;
 
-Config conf;
-void (*FWirq)();
+extern Config conf;
+extern FILE *fwLog;
 
-void SaveConfig();
-void LoadConfig();
+extern void (*FWirq)();
 
-FILE *fwLog;
-void __Log(char *fmt, ...);
-
-void SysMessage(char *fmt, ...);
+extern void __Log(char *fmt, ...);
+extern void SysMessage(char *fmt, ...);
+extern void SaveConfig();
+extern void LoadConfig();
 
 #endif

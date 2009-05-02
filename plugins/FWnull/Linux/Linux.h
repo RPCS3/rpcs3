@@ -1,5 +1,5 @@
-/*  FireWire
- *  Copyright (C) 2002-2004  USBlinuz Team
+/*  FWnull
+ *  Copyright (C) 2004-2009 PCSX2 Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -15,37 +15,3 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <sys/stat.h>
-
-#include "FW.h"
-
-void LoadConfig() {
-	FILE *f;
-	char cfg[256];
-
-    sprintf(cfg, "%s/.PS2E/FWnull.cfg", getenv("HOME"));
-	f = fopen(cfg, "r");
-	if (f == NULL) {
-		return;
-	}
-	fclose(f);
-}
-
-void SaveConfig() {
-	FILE *f;
-	char cfg[256];
-
-    sprintf(cfg, "%s/.PS2E", getenv("HOME"));
-	mkdir(cfg, 0755);
-    sprintf(cfg, "%s/.PS2E/FWnull.cfg", getenv("HOME"));
-	f = fopen(cfg, "w");
-	if (f == NULL)
-		return;
-	fclose(f);
-}
-

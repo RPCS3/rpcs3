@@ -1,5 +1,5 @@
-/*  USBlinuz
- *  Copyright (C) 2002-2004  USBlinuz Team
+/*  FWnull
+ *  Copyright (C) 2004-2009 PCSX2 Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -18,3 +18,8 @@
 
 void SaveConf();
 void LoadConf();
+
+extern long CFGmessage(char *msg);
+extern void CFGconfigure();
+extern void cfgSysMessage(char *fmt, ...);
+extern void CFGabout();

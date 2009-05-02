@@ -23,7 +23,7 @@ BOOL CALLBACK ConfigureDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	switch(uMsg) {
 		case WM_INITDIALOG:
 			LoadConfig();
-            if (conf.Log)        CheckDlgButton(hW, IDC_LOGGING, TRUE);
+			if (conf.Log) CheckDlgButton(hW, IDC_LOGGING, TRUE);
 			return TRUE;
 
 		case WM_COMMAND:

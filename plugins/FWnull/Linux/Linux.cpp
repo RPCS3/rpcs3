@@ -1,5 +1,5 @@
-/*  FireWire
- *  Copyright (C) 2002-2004  FireWire Team
+/*  FWnull
+ *  Copyright (C) 2004-2009 PCSX2 Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -26,10 +26,11 @@
 #include <unistd.h>
 
 #include "FW.h"
+#include "Config.h"
 
 int ExecCfg(char *arg) 
 {
-	char cfg[256];
+	/*char cfg[256];
 	struct stat buf;
 
 	strcpy(cfg, "./cfgFWnull");
@@ -61,7 +62,7 @@ int ExecCfg(char *arg)
 	}
 
 	printf("cfgFWnull file not found!\n");
-	return -1;
+	return -1;*/
 }
 
 void SysMessage(char *fmt, ...) 
@@ -74,25 +75,28 @@ void SysMessage(char *fmt, ...)
 	vsprintf(msg, fmt, list);
 	va_end(list);
 
-	sprintf(cmd, "message \"%s\"", msg);
-	ExecCfg(cmd);
+	//sprintf(cmd, "message \"%s\"", msg);
+	cfgSysMessage(msg);
+	//ExecCfg(cmd);
 }
 
 void FWconfigure() 
 {
-	char *file;
-	getcwd(file, ArraySize(file));
-	chdir("plugins");
-	ExecCfg("configure");
-	chdir(file);
+	//char *file;
+	//getcwd(file, ArraySize(file));
+	//chdir("plugins");
+	//ExecCfg("configure");
+	//chdir(file);
+	CFGconfigure();
 }
 
 void FWabout() 
 {
-	char *file;
-	getcwd(file, ArraySize(file));
-	chdir("plugins");
-	ExecCfg("about");
-	chdir(file);
+	//char *file;
+	//getcwd(file, ArraySize(file));
+	//chdir("plugins");
+	//ExecCfg("about");
+	//chdir(file);
+	CFGabout();
 }
 

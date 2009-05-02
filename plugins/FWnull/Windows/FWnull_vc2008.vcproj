@@ -161,7 +161,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\FW.c"
+				RelativePath="..\FW.cpp"
 				>
 			</File>
 			<File
