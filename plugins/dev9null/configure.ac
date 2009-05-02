@@ -1,6 +1,6 @@
-AC_INIT(CDVDnull, 0.6,arcum42@gmail.com)
+AC_INIT(DEV9null, 0.4,arcum42@gmail.com)
 
-AM_INIT_AUTOMAKE(CDVDnull,0.6)
+AM_INIT_AUTOMAKE(DEV9null,0.4)
 
 AC_PROG_CC([gcc g++ cl KCC CC cxx cc++ xlC aCC c++])
 AC_PROG_CXX([gcc g++ cl KCC CC cxx cc++ xlC aCC c++])
@@ -12,11 +12,11 @@ AC_PROG_RANLIB
 dnl necessary for compiling assembly
 AM_PROG_AS
 
-AC_SUBST(CDVDnull_CURRENT, 0)
-AC_SUBST(CDVDnull_REVISION, 8)
-AC_SUBST(CDVDnull_AGE, 0)
-AC_SUBST(CDVDnull_RELEASE,[$CDVDnull_CURRENT].[$CDVDnull_REVISION].[$CDVDnull_AGE])
-AC_SUBST(CDVDnull_SONAME,libCDVDnull.so.[$CDVDnull_CURRENT].[$CDVDnull_REVISION].[$CDVDnull_AGE])
+AC_SUBST(DEV9null_CURRENT, 0)
+AC_SUBST(DEV9null_REVISION, 8)
+AC_SUBST(DEV9null_AGE, 0)
+AC_SUBST(DEV9null_RELEASE,[$DEV9null_CURRENT].[$DEV9null_REVISION].[$DEV9null_AGE])
+AC_SUBST(DEV9null_SONAME,libDEV9null.so.[$DEV9null_CURRENT].[$DEV9null_REVISION].[$DEV9null_AGE])
 
 CFLAGS=
 CPPFLAGS=
@@ -49,7 +49,7 @@ AC_ARG_ENABLE(devbuild, AC_HELP_STRING([--enable-devbuild], [Special Build for d
  devbuild=$enableval,devbuild=no)
 if test "x$devbuild" == xyes
 then
- AC_DEFINE(CDVDnull_DEVBUILD,1,[CDVDnull_DEVBUILD])
+ AC_DEFINE(DEV9null_DEVBUILD,1,[DEV9null_DEVBUILD])
 fi
 AC_MSG_RESULT($devbuild)
 AM_CONDITIONAL(RELEASE_TO_PUBLIC, test x$devbuild = xno)
@@ -64,7 +64,7 @@ LIBS+=$(pkg-config --libs gtk+-2.0)
 dnl bindir = pcsx2exe
 
 dnl assuming linux environment
-so_ext=".so.$CDVDnull_RELEASE"
+so_ext=".so.$DEV9null_RELEASE"
 SHARED_LDFLAGS="-shared"
 AC_SUBST(so_ext)
 AC_SUBST(SHARED_LDFLAGS)
