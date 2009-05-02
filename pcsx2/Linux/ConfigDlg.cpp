@@ -157,10 +157,9 @@ void OnConfButton(GtkButton *button, gpointer user_data)
 	plugin_types type = strToPluginType(name);
 	plugin_callback call = strToPluginCall(name);
 	
-	// Don't uncomment till fixing CDVDIso's dialog box.
-	//gtk_widget_set_sensitive(ConfDlg, FALSE);
-	ConfPlugin(type, call, false);
-	//gtk_widget_set_sensitive(ConfDlg, TRUE);
+	gtk_widget_set_sensitive(ConfDlg, FALSE);
+	ConfPlugin(type, call, true);
+	gtk_widget_set_sensitive(ConfDlg, TRUE);
 }
 
 void SetComboToGList(GtkComboBox *widget, GList *list)
