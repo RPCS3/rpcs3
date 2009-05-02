@@ -354,7 +354,7 @@ BOOL CALLBACK ConfigureDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	return FALSE;
 }
 
-EXPORT_C(void) CDVDconfigure()
+EXPORT_C_(void) CDVDconfigure()
 {
 	DialogBox(hInst,
 	          MAKEINTRESOURCE(IDD_CONFIG),
@@ -380,7 +380,7 @@ BOOL CALLBACK AboutDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	return FALSE;
 }
 
-EXPORT_C(void) CDVDabout()
+EXPORT_C_(void) CDVDabout()
 {
 	DialogBox(hInst,
 	          MAKEINTRESOURCE(IDD_ABOUT),

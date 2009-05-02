@@ -1,0 +1,83 @@
+AC_INIT(CDVDiso, 0.9,arcum42@gmail.com)
+
+AM_INIT_AUTOMAKE(CDVDiso,0.9)
+
+AC_PROG_CC([gcc g++ cl KCC CC cxx cc++ xlC aCC c++])
+AC_PROG_CXX([gcc g++ cl KCC CC cxx cc++ xlC aCC c++])
+AC_PROG_CPP([gcc g++ cl KCC CC cxx cc++ xlC aCC c++])
+
+AC_PROG_INSTALL
+AC_PROG_RANLIB
+
+dnl necessary for compiling assembly
+AM_PROG_AS
+
+AC_SUBST(CDVDiso_CURRENT, 0)
+AC_SUBST(CDVDiso_REVISION, 9)
+AC_SUBST(CDVDiso_AGE, 0)
+AC_SUBST(CDVDiso_RELEASE,[$CDVDiso_CURRENT].[$CDVDiso_REVISION].[$CDVDiso_AGE])
+AC_SUBST(CDVDiso_SONAME,libCDVDiso.so.[$CDVDiso_CURRENT].[$CDVDiso_REVISION].[$CDVDiso_AGE])
+
+CFLAGS= 
+CPPFLAGS= 
+CXXFLAGS= 
+
+dnl Check for debug build
+AC_MSG_CHECKING(debug build)
+AC_ARG_ENABLE(debug, AC_HELP_STRING([--enable-debug], [debug build]),
+debug=$enableval,debug=no)
+if test "x$debug" == xyes
+then
+ AC_DEFINE(_DEBUG,1,[_DEBUG])
+ CFLAGS+=" -g -fPIC -Wall  -Wno-unused-value "
+ CPPFLAGS+=" -g -fPIC -Wall  -Wno-unused-value "
+ CXXFLAGS+=" -g -fPIC -Wall  -Wno-unused-value -fpermissive "
+else
+ AC_DEFINE(NDEBUG,1,[NDEBUG])
+ CFLAGS+=" -O3 -fomit-frame-pointer -fPIC -Wno-unused-value "
+ CPPFLAGS+=" -O3 -fomit-frame-pointer -fPIC -Wno-unused-value "
+ CXXFLAGS+=" -O3 -fomit-frame-pointer -fPIC -Wno-unused-value -fpermissive "
+fi
+AM_CONDITIONAL(DEBUGBUILD, test x$debug = xyes)
+AC_MSG_RESULT($debug)
+
+AC_DEFINE(__LINUX__,1,[__LINUX__])
+AC_DEFINE(_FILE_OFFSET_BITS,64,[_FILE_OFFSET_BITS])
+
+dnl Check for dev build
+AC_MSG_CHECKING(for development build...)
+AC_ARG_ENABLE(devbuild, AC_HELP_STRING([--enable-devbuild], [Special Build for developers that simplifies testing and adds extra checks]),
+ devbuild=$enableval,devbuild=no)
+if test "x$devbuild" == xyes
+then
+ AC_DEFINE(CDVDiso_DEVBUILD,1,[CDVDiso_DEVBUILD])
+fi
+AC_MSG_RESULT($devbuild)
+AM_CONDITIONAL(RELEASE_TO_PUBLIC, test x$devbuild = xno)
+
+AC_CHECK_FUNCS([ _aligned_malloc _aligned_free ], AC_DEFINE(HAVE_ALIGNED_MALLOC))
+
+dnl gtk
+AC_MSG_CHECKING(gtk2+)
+AC_CHECK_PROG(GTK_CONFIG, pkg-config, pkg-config)
+LIBS+=$(pkg-config --libs gtk+-2.0)
+
+dnl bindir = pcsx2exe
+
+dnl assuming linux environment
+so_ext=".so.$CDVDiso_RELEASE"
+SHARED_LDFLAGS="-shared"
+AC_SUBST(so_ext)
+AC_SUBST(SHARED_LDFLAGS)
+
+AC_CHECK_LIB(stdc++,main,[LIBS="$LIBS -lstdc++"])
+AC_CHECK_LIB(z,main,[LIBS="$LIBS -lz"])
+AC_CHECK_LIB(bz2,main,[LIBS="$LIBS -lbz2"])
+
+AC_OUTPUT([
+ Makefile
+ ])
+
+echo "Configuration:"
+echo "  Debug build?	       $debug"
+echo "  Dev build?	       $devbuild"

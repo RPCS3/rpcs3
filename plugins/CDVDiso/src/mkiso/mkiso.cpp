@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include "string.h"
 
 #include "CDVDiso.h"
 
@@ -150,7 +151,7 @@ void Decompress(char *filename)
 }
 
 
-int main(int argc, char *argv[])
+/*int main(int argc, char *argv[])
 {
 	if (argc < 3) return 0;
 
@@ -169,4 +170,4 @@ int main(int argc, char *argv[])
 	}
 
 	return 0;
-}
+}*/

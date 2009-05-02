@@ -16,211 +16,31 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <sys/ioctl.h>
-#include <linux/cdrom.h>
-#include <time.h>
-#include <string.h>
-#include <zlib.h>
-#include <bzlib.h>
-#include <gtk/gtk.h>
-
-#include "interface.h"
-#include "support.h"
-#include "CDVDiso.h"
 #include "Config.h"
-
-
-// Make it easier to check and set checkmarks in the gui
-#define is_checked(main_widget, widget_name) (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lookup_widget(main_widget, widget_name)))) 
-#define set_checked(main_widget,widget_name, state) gtk_toggle_button_set_state(GTK_TOGGLE_BUTTON(lookup_widget(main_widget, widget_name)), state)
 
 unsigned char Zbuf[CD_FRAMESIZE_RAW * 10 * 2];
 
-extern char *LibName;
-
-extern const unsigned char revision;
-extern const unsigned char build;
-
-GtkWidget *FileSel;
-
-void OnFile_Ok()
-{
-	gchar *File;
-
-	gtk_widget_hide(FileSel);
-	File = gtk_file_selection_get_filename(GTK_FILE_SELECTION(FileSel));
-	strcpy(IsoFile, File);
-	gtk_main_quit();
-}
-
-void OnFile_Cancel()
-{
-	gtk_widget_hide(FileSel);
-	gtk_main_quit();
-}
-
-void _CDRopen()
-{
-	GtkWidget *Ok, *Cancel;
-
-	FileSel = gtk_file_selection_new("Select Iso File");
-
-	Ok = GTK_FILE_SELECTION(FileSel)->ok_button;
-	gtk_signal_connect(GTK_OBJECT(Ok), "clicked",
-	                   GTK_SIGNAL_FUNC(OnFile_Ok), NULL);
-	gtk_widget_show(Ok);
-
-	Cancel = GTK_FILE_SELECTION(FileSel)->cancel_button;
-	gtk_signal_connect(GTK_OBJECT(Cancel), "clicked",
-	                   GTK_SIGNAL_FUNC(OnFile_Cancel), NULL);
-	gtk_widget_show(Cancel);
-
-	gtk_widget_show(FileSel);
-	gdk_window_raise(FileSel->window);
-
-	gtk_main();
-
-	SaveConf();
-}
-
-GtkWidget *MsgDlg;
-
-void OnMsg_Ok()
-{
-	gtk_widget_destroy(MsgDlg);
-	gtk_main_quit();
-}
-
-static void SysMessageLoc(char *fmt, ...)
-{
-	GtkWidget *Ok, *Txt;
-	GtkWidget *Box, *Box1;
-	va_list list;
-	int w;
-	char msg[512];
-
-	va_start(list, fmt);
-	vsprintf(msg, fmt, list);
-	va_end(list);
-
-	if (msg[strlen(msg)-1] == '\n') msg[strlen(msg)-1] = 0;
-
-	w = strlen(msg) * 6 + 20;
-
-	MsgDlg = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	gtk_widget_set_usize(MsgDlg, w, 70);
-	gtk_window_set_position(GTK_WINDOW(MsgDlg), GTK_WIN_POS_CENTER);
-	gtk_window_set_title(GTK_WINDOW(MsgDlg), "cdriso Msg");
-	gtk_container_set_border_width(GTK_CONTAINER(MsgDlg), 0);
-
-	Box = gtk_vbox_new(0, 0);
-	gtk_container_add(GTK_CONTAINER(MsgDlg), Box);
-	gtk_widget_show(Box);
-
-	Txt = gtk_label_new(msg);
-
-	gtk_box_pack_start(GTK_BOX(Box), Txt, FALSE, FALSE, 5);
-	gtk_widget_show(Txt);
-
-	Box1 = gtk_hbutton_box_new();
-	gtk_box_pack_start(GTK_BOX(Box), Box1, FALSE, FALSE, 0);
-	gtk_widget_show(Box1);
-
-	Ok = gtk_button_new_with_label("Ok");
-	gtk_signal_connect(GTK_OBJECT(Ok), "clicked", GTK_SIGNAL_FUNC(OnMsg_Ok), NULL);
-	gtk_container_add(GTK_CONTAINER(Box1), Ok);
-	GTK_WIDGET_SET_FLAGS(Ok, GTK_CAN_DEFAULT);
-	gtk_widget_show(Ok);
-
-	gtk_widget_show(MsgDlg);
-
-	gtk_main();
-}
-
-GtkWidget *ConfDlg;
-GtkWidget *Edit, *CdEdit;
-GtkWidget *FileSel;
-GtkWidget *Progress;
-GtkWidget *BtnCompress;
-GtkWidget *BtnDecompress;
-GtkWidget *BtnCreate;
-GtkWidget *BtnCreateZ;
-GtkWidget *Method;
+GtkWidget *Method,*Progress;
+GtkWidget *BtnCompress, *BtnDecompress;
+GtkWidget *BtnCreate, *BtnCreateZ;
 
 GList *methodlist;
 extern char *methods[];
+unsigned char param[4];
+int cddev = -1;
+bool stop;
 
-int stop;
+#define CD_LEADOUT	(0xaa)
 
-void OnOk(GtkMenuItem * menuitem, gpointer userdata)
+union
 {
-	char *tmp;
+	struct cdrom_msf msf;
+	unsigned char buf[CD_FRAMESIZE_RAW];
+} cr;
 
-	stop = 1;
-	tmp = gtk_entry_get_text(GTK_ENTRY(Edit));
-	strcpy(IsoFile, tmp);
-	tmp = gtk_entry_get_text(GTK_ENTRY(CdEdit));
-	strcpy(CdDev, tmp);
-	
-	if is_checked(ConfDlg, "checkBlockDump")
-		BlockDump = 1;
-	else 
-		BlockDump = 0;
-	
-	SaveConf();
-	gtk_widget_destroy(ConfDlg);
-	gtk_main_quit();
-}
-
-void OnCancel(GtkMenuItem * menuitem, gpointer userdata)
+void OnStop(GtkButton *button,  gpointer user_data)
 {
-	stop = 1;
-	gtk_widget_destroy(ConfDlg);
-	gtk_main_quit();
-}
-
-void OnFileSel_Ok()
-{
-	gchar *File;
-
-	File = gtk_file_selection_get_filename(GTK_FILE_SELECTION(FileSel));
-	gtk_entry_set_text(GTK_ENTRY(Edit), File);
-	gtk_widget_destroy(FileSel);
-}
-
-void OnFileSel_Cancel()
-{
-	gtk_widget_destroy(FileSel);
-}
-
-void OnFileSel()
-{
-	GtkWidget *Ok, *Cancel;
-
-	FileSel = gtk_file_selection_new("Select Psx Iso File");
-	gtk_file_selection_set_filename(GTK_FILE_SELECTION(FileSel), IsoFile);
-
-	Ok = GTK_FILE_SELECTION(FileSel)->ok_button;
-	gtk_signal_connect(GTK_OBJECT(Ok), "clicked", GTK_SIGNAL_FUNC(OnFileSel_Ok), NULL);
-	gtk_widget_show(Ok);
-
-	Cancel = GTK_FILE_SELECTION(FileSel)->cancel_button;
-	gtk_signal_connect(GTK_OBJECT(Cancel), "clicked", GTK_SIGNAL_FUNC(OnFileSel_Cancel), NULL);
-	gtk_widget_show(Cancel);
-
-	gtk_widget_show(FileSel);
-	gdk_window_raise(FileSel->window);
-}
-
-void OnStop()
-{
-	stop = 1;
+	stop = true;
 }
 
 void UpdZmode()
@@ -234,7 +54,7 @@ void UpdZmode()
 
 char buffer[2352 * 10];
 
-void OnCompress()
+void OnCompress(GtkButton *button,  gpointer user_data)
 {
 	struct stat buf;
 	u32 lsn;
@@ -271,7 +91,7 @@ void OnCompress()
 	gtk_widget_set_sensitive(BtnDecompress, FALSE);
 	gtk_widget_set_sensitive(BtnCreate, FALSE);
 	gtk_widget_set_sensitive(BtnCreateZ, FALSE);
-	stop = 0;
+	stop = false;
 
 	for (lsn = 0; lsn < src->blocks; lsn++)
 	{
@@ -310,7 +130,7 @@ void OnCompress()
 	}
 }
 
-void OnDecompress()
+void OnDecompress(GtkButton *button,  gpointer user_data)
 {
 #if 0
 	struct stat buf;
@@ -366,7 +186,7 @@ void OnDecompress()
 	gtk_widget_set_sensitive(BtnDecompress, FALSE);
 	gtk_widget_set_sensitive(BtnCreate, FALSE);
 	gtk_widget_set_sensitive(BtnCreateZ, FALSE);
-	stop = 0;
+	stop = false;
 
 	if (Zmode == 1)
 	{
@@ -432,16 +252,6 @@ void OnDecompress()
 	if (!stop) SysMessageLoc("Iso Image Decompressed OK");
 #endif
 }
-
-#define CD_LEADOUT	(0xaa)
-unsigned char param[4];
-int cddev = -1;
-
-union
-{
-	struct cdrom_msf msf;
-	unsigned char buf[CD_FRAMESIZE_RAW];
-} cr;
 
 void incSector()
 {
@@ -535,7 +345,7 @@ char *CDR_readTrack(unsigned char *time)
 }
 
 
-void OnCreate()
+void OnCreate(GtkButton *button,  gpointer user_data)
 {
 	FILE *f;
 	struct stat buf;
@@ -600,7 +410,7 @@ void OnCreate()
 
 	time(&Ttime);
 
-	stop = 0;
+	stop = false;
 	s = MSF2SECT(end[0], end[1], end[2]);
 	gtk_widget_set_sensitive(BtnCompress, FALSE);
 	gtk_widget_set_sensitive(BtnDecompress, FALSE);
@@ -672,7 +482,7 @@ void OnCreate()
 	if (!stop) SysMessageLoc("Iso Image Created OK");
 }
 
-void OnCreateZ()
+void OnCreateZ(GtkButton *button,  gpointer user_data)
 {
 	FILE *f;
 	FILE *t;
@@ -758,7 +568,7 @@ void OnCreateZ()
 
 	time(&Ttime);
 
-	stop = 0;
+	stop = false;
 	s = MSF2SECT(end[0], end[1], end[2]) / blocks;
 	gtk_widget_set_sensitive(BtnCompress, FALSE);
 	gtk_widget_set_sensitive(BtnDecompress, FALSE);
@@ -857,110 +667,3 @@ void OnCreateZ()
 
 	if (!stop) SysMessageLoc("Compressed Iso Image Created OK");
 }
-
-long CDRconfigure(void)
-{
-	int i;
-
-	LoadConf();
-
-	ConfDlg = create_Config();
-
-	Edit = lookup_widget(ConfDlg, "GtkEntry_Iso");
-	gtk_entry_set_text(GTK_ENTRY(Edit), IsoFile);
-	CdEdit = lookup_widget(ConfDlg, "GtkEntry_CdDev");
-	gtk_entry_set_text(GTK_ENTRY(CdEdit), CdDev);
-
-	Progress = lookup_widget(ConfDlg, "GtkProgressBar_Progress");
-
-	BtnCompress   = lookup_widget(ConfDlg, "GtkButton_Compress");
-	BtnDecompress = lookup_widget(ConfDlg, "GtkButton_Decompress");
-	BtnCreate     = lookup_widget(ConfDlg, "GtkButton_Create");
-	BtnCreateZ    = lookup_widget(ConfDlg, "GtkButton_CreateZ");
-
-	methodlist = NULL;
-	for (i = 0; i < 2; i++)
-		methodlist = g_list_append(methodlist, methods[i]);
-		
-	Method = lookup_widget(ConfDlg, "GtkCombo_Method");
-	gtk_combo_set_popdown_strings(GTK_COMBO(Method), methodlist);
-	if (strstr(IsoFile, ".Z") != NULL)
-		gtk_entry_set_text(GTK_ENTRY(GTK_COMBO(Method)->entry), methods[0]);
-	else 
-		gtk_entry_set_text(GTK_ENTRY(GTK_COMBO(Method)->entry), methods[1]);
-	
-	set_checked(ConfDlg, "checkBlockDump", (BlockDump == 1));
-	
-	gtk_widget_show_all(ConfDlg);
-	gtk_main();
-
-	return 0;
-}
-
-GtkWidget *AboutDlg;
-
-void OnAboutOk(GtkMenuItem * menuitem, gpointer userdata)
-{
-	gtk_widget_hide(AboutDlg);
-	gtk_main_quit();
-}
-
-void CDRabout(void)
-{
-	GtkWidget *Label;
-	GtkWidget *Ok;
-	GtkWidget *Box, *BBox;
-	char AboutText[255];
-
-	sprintf(AboutText, "%s %d.%d\n", LibName, revision, build);
-
-	AboutDlg = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	gtk_widget_set_usize(AboutDlg, 260, 80);
-	gtk_window_set_title(GTK_WINDOW(AboutDlg), "CDVD About Dialog");
-	gtk_window_set_position(GTK_WINDOW(AboutDlg), GTK_WIN_POS_CENTER);
-	gtk_container_set_border_width(GTK_CONTAINER(AboutDlg), 10);
-
-	Box = gtk_vbox_new(0, 0);
-	gtk_container_add(GTK_CONTAINER(AboutDlg), Box);
-	gtk_widget_show(Box);
-
-	Label = gtk_label_new(AboutText);
-	gtk_box_pack_start(GTK_BOX(Box), Label, FALSE, FALSE, 0);
-	gtk_widget_show(Label);
-
-	BBox = gtk_hbutton_box_new();
-	gtk_box_pack_start(GTK_BOX(Box), BBox, FALSE, FALSE, 0);
-	gtk_widget_show(BBox);
-
-	Ok = gtk_button_new_with_label("Ok");
-	gtk_signal_connect(GTK_OBJECT(Ok), "clicked",
-	                   GTK_SIGNAL_FUNC(OnAboutOk), NULL);
-	gtk_container_add(GTK_CONTAINER(BBox), Ok);
-	GTK_WIDGET_SET_FLAGS(Ok, GTK_CAN_DEFAULT);
-	gtk_widget_show(Ok);
-
-	gtk_widget_show(AboutDlg);
-	gtk_main();
-}
-
-int main(int argc, char *argv[])
-{
-	if (argc < 2) return 0;
-
-	gtk_init(NULL, NULL);
-
-	if (!strcmp(argv[1], "open"))
-		_CDRopen();
-	else if (!strcmp(argv[1], "configure"))
-		CDRconfigure();
-	else if (!strcmp(argv[1], "message"))
-	{
-		if (argc > 2) SysMessageLoc(argv[2]);
-	}
-	else
-		CDRabout();
-
-	return 0;
-}
-
-

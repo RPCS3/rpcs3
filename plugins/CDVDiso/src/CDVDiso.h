@@ -16,6 +16,8 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#ifndef __CDVDISO_H__
+#define __CDVDISO_H__
 
 #ifdef _MSC_VER
 #pragma warning(disable:4018)
@@ -28,50 +30,50 @@
 #ifdef __cplusplus
 
 #ifdef _MSC_VER
-#define EXPORT_C(type) extern "C" __declspec(dllexport) type CALLBACK
+#define EXPORT_C_(type) extern "C" __declspec(dllexport) type CALLBACK
 #else
-#define EXPORT_C(type) extern "C" type
+#define EXPORT_C_(type) extern "C" type
 #endif
 
 #else
 
 #ifdef _MSC_VER
-#define EXPORT_C(type) __declspec(dllexport) type __stdcall
+#define EXPORT_C_(type) __declspec(dllexport) type __stdcall
 #else
-#define EXPORT_C(type) type
+#define EXPORT_C_(type) type
 #endif
 
 #endif
 
-EXPORT_C(u32)   PS2EgetLibType();
-EXPORT_C(u32)   PS2EgetLibVersion2(u32 type);
-EXPORT_C(char*) PS2EgetLibName();
+EXPORT_C_(u32)   PS2EgetLibType();
+EXPORT_C_(u32)   PS2EgetLibVersion2(u32 type);
+EXPORT_C_(char*) PS2EgetLibName();
 
 
-EXPORT_C(s32)  CDVDinit();
-EXPORT_C(s32)  CDVDopen(const char* pTitleFilename);
-EXPORT_C(void) CDVDclose();
-EXPORT_C(void) CDVDshutdown();
-EXPORT_C(s32)  CDVDreadTrack(u32 lsn, int mode);
+EXPORT_C_(s32)  CDVDinit();
+EXPORT_C_(s32)  CDVDopen(const char* pTitleFilename);
+EXPORT_C_(void) CDVDclose();
+EXPORT_C_(void) CDVDshutdown();
+EXPORT_C_(s32)  CDVDreadTrack(u32 lsn, int mode);
 
 // return can be NULL (for async modes)
-EXPORT_C(u8*)  CDVDgetBuffer();
+EXPORT_C_(u8*)  CDVDgetBuffer();
 
-EXPORT_C(s32)  CDVDreadSubQ(u32 lsn, cdvdSubQ* subq);//read subq from disc (only cds have subq data)
-EXPORT_C(s32)  CDVDgetTN(cdvdTN *Buffer);			//disk information
-EXPORT_C(s32)  CDVDgetTD(u8 Track, cdvdTD *Buffer);	//track info: min,sec,frame,type
-EXPORT_C(s32)  CDVDgetTOC(void* toc);				//gets ps2 style toc from disc
-EXPORT_C(s32)  CDVDgetDiskType();					//CDVD_TYPE_xxxx
-EXPORT_C(s32)  CDVDgetTrayStatus();					//CDVD_TRAY_xxxx
-EXPORT_C(s32)  CDVDctrlTrayOpen();					//open disc tray
-EXPORT_C(s32)  CDVDctrlTrayClose();					//close disc tray
+EXPORT_C_(s32)  CDVDreadSubQ(u32 lsn, cdvdSubQ* subq);//read subq from disc (only cds have subq data)
+EXPORT_C_(s32)  CDVDgetTN(cdvdTN *Buffer);			//disk information
+EXPORT_C_(s32)  CDVDgetTD(u8 Track, cdvdTD *Buffer);	//track info: min,sec,frame,type
+EXPORT_C_(s32)  CDVDgetTOC(void* toc);				//gets ps2 style toc from disc
+EXPORT_C_(s32)  CDVDgetDiskType();					//CDVD_TYPE_xxxx
+EXPORT_C_(s32)  CDVDgetTrayStatus();					//CDVD_TRAY_xxxx
+EXPORT_C_(s32)  CDVDctrlTrayOpen();					//open disc tray
+EXPORT_C_(s32)  CDVDctrlTrayClose();					//close disc tray
 
 // extended funcs
 
-EXPORT_C(void) CDVDconfigure();
-EXPORT_C(void) CDVDabout();
-EXPORT_C(s32)  CDVDtest();
-EXPORT_C(void) CDVDnewDiskCB(void (*callback)());
+EXPORT_C_(void) CDVDconfigure();
+EXPORT_C_(void) CDVDabout();
+EXPORT_C_(s32)  CDVDtest();
+EXPORT_C_(void) CDVDnewDiskCB(void (*callback)());
 
 #define CDVD_LOG __Log
 extern FILE *cdvdLog;
@@ -104,6 +106,10 @@ extern _cdIso cdIso[8];
 
 #define MSF2SECT(m,s,f)	(((m)*60+(s)-2)*75+(f))
 
+extern const unsigned char version;
+extern const unsigned char revision;
+extern const unsigned char build;
+
 extern char IsoFile[256];
 extern char IsoCWD[256];
 extern char CdDev[256];
@@ -130,3 +136,4 @@ void UpdateZmode();
 void CfgOpenFile();
 void SysMessage(char *fmt, ...);
 
+#endif

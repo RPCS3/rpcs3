@@ -55,7 +55,7 @@ char *LibName = "Linuz Iso CDVD ";
 
 const unsigned char version = PS2E_CDVD_VERSION;
 const unsigned char revision = 0;
-const unsigned char build = 8;
+const unsigned char build = 9;
 
 unsigned char cdbuffer[CD_FRAMESIZE_RAW * 10] = {0};
 
@@ -80,17 +80,17 @@ void lba_to_msf(s32 lba, u8* m, u8* s, u8* f)
 #define itob(i)		((i)/10*16 + (i)%10)		/* u_char to BCD */
 
 
-EXPORT_C(char*) PS2EgetLibName()
+EXPORT_C_(char*) PS2EgetLibName()
 {
 	return LibName;
 }
 
-EXPORT_C(u32) PS2EgetLibType()
+EXPORT_C_(u32) PS2EgetLibType()
 {
 	return PS2E_LT_CDVD;
 }
 
-EXPORT_C(u32) PS2EgetLibVersion2(u32 type)
+EXPORT_C_(u32) PS2EgetLibVersion2(u32 type)
 {
 	return (version << 16) | (revision << 8) | build;
 }
@@ -111,7 +111,7 @@ void __Log(char *fmt, ...)
 #endif
 
 
-EXPORT_C(s32) CDVDinit()
+EXPORT_C_(s32) CDVDinit()
 {
 #ifdef _DEBUG
 	cdvdLog = fopen("logs/cdvdLog.txt", "w");
@@ -133,7 +133,7 @@ EXPORT_C(s32) CDVDinit()
 	return 0;
 }
 
-EXPORT_C(void) CDVDshutdown()
+EXPORT_C_(void) CDVDshutdown()
 {
 	cdvdCurrentIso[0] = 0;
 #ifdef CDVD_LOG
@@ -141,7 +141,7 @@ EXPORT_C(void) CDVDshutdown()
 #endif
 }
 
-EXPORT_C(s32) CDVDopen(const char* pTitle)
+EXPORT_C_(s32) CDVDopen(const char* pTitle)
 {
 	LoadConf();
 
@@ -224,7 +224,7 @@ EXPORT_C(s32) CDVDopen(const char* pTitle)
 	return 0;
 }
 
-EXPORT_C(void) CDVDclose()
+EXPORT_C_(void) CDVDclose()
 {
 
 	strcpy(cdvdCurrentIso, IsoFile);
@@ -233,7 +233,7 @@ EXPORT_C(void) CDVDclose()
 	if (fdump != NULL) isoClose(fdump);
 }
 
-EXPORT_C(s32) CDVDreadSubQ(u32 lsn, cdvdSubQ* subq)
+EXPORT_C_(s32) CDVDreadSubQ(u32 lsn, cdvdSubQ* subq)
 {
 	// fake it
 	u8 min, sec, frm;
@@ -256,7 +256,7 @@ EXPORT_C(s32) CDVDreadSubQ(u32 lsn, cdvdSubQ* subq)
 	return 0;
 }
 
-EXPORT_C(s32) CDVDgetTN(cdvdTN *Buffer)
+EXPORT_C_(s32) CDVDgetTN(cdvdTN *Buffer)
 {
 	Buffer->strack = 1;
 	Buffer->etrack = 1;
@@ -264,7 +264,7 @@ EXPORT_C(s32) CDVDgetTN(cdvdTN *Buffer)
 	return 0;
 }
 
-EXPORT_C(s32) CDVDgetTD(u8 Track, cdvdTD *Buffer)
+EXPORT_C_(s32) CDVDgetTD(u8 Track, cdvdTD *Buffer)
 {
 	if (Track == 0)
 	{
@@ -280,7 +280,7 @@ EXPORT_C(s32) CDVDgetTD(u8 Track, cdvdTD *Buffer)
 }
 
 static int layer1start = -1;
-EXPORT_C(s32) CDVDgetTOC(void* toc)
+EXPORT_C_(s32) CDVDgetTOC(void* toc)
 {
 	u8 type = CDVDgetDiskType();
 	u8* tocBuff = (u8*)toc;
@@ -289,8 +289,6 @@ EXPORT_C(s32) CDVDgetTOC(void* toc)
 
 	if (type == CDVD_TYPE_DVDV || type == CDVD_TYPE_PS2DVD)
 	{
-		int i;
-
 		// get dvd structure format
 		// scsi command 0x43
 		memset(tocBuff, 0, 2048);
@@ -424,7 +422,7 @@ EXPORT_C(s32) CDVDgetTOC(void* toc)
 	return 0;
 }
 
-EXPORT_C(s32) CDVDreadTrack(u32 lsn, int mode)
+EXPORT_C_(s32) CDVDreadTrack(u32 lsn, int mode)
 {
 	int _lsn = lsn;
 
@@ -461,32 +459,32 @@ EXPORT_C(s32) CDVDreadTrack(u32 lsn, int mode)
 	return 0;
 }
 
-EXPORT_C(u8*) CDVDgetBuffer()
+EXPORT_C_(u8*) CDVDgetBuffer()
 {
 	return pbuffer;
 }
 
-EXPORT_C(s32) CDVDgetDiskType()
+EXPORT_C_(s32) CDVDgetDiskType()
 {
 	return cdtype;
 }
 
-EXPORT_C(s32) CDVDgetTrayStatus()
+EXPORT_C_(s32) CDVDgetTrayStatus()
 {
 	return CDVD_TRAY_CLOSE;
 }
 
-EXPORT_C(s32) CDVDctrlTrayOpen()
+EXPORT_C_(s32) CDVDctrlTrayOpen()
 {
 	return 0;
 }
-EXPORT_C(s32) CDVDctrlTrayClose()
+EXPORT_C_(s32) CDVDctrlTrayClose()
 {
 	return 0;
 }
 
 
-EXPORT_C(s32) CDVDtest()
+EXPORT_C_(s32) CDVDtest()
 {
 	if (*IsoFile == 0) return 0;
 

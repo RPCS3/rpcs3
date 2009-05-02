@@ -1,17 +1,34 @@
 #!/bin/sh
 
-curdir=`pwd`
-
 echo ----------------
 echo Building CDVDiso
 echo ----------------
 
-cd ${curdir}/src/Linux
-make clean
-make $@
+curdir=`pwd`
 
-# copy the files
-if [ -s cfgCDVDiso ] && [ -s libCDVDiso.so ]
+
+if test "${CDVDisoOPTIONS+set}" != set ; then
+export CDVDisoOPTIONS=""
+fi
+
+cd src
+
+if [ $# -gt 0 ] && [ $1 = "all" ]
 then
-cp cfgCDVDiso libCDVDiso.so ${PCSX2PLUGINS}
+
+aclocal
+automake -a
+autoconf
+
+./configure ${CDVDisoOPTIONS} --prefix=${PCSX2PLUGINS}
+make clean
+make install
+
+else
+make $@
+fi
+
+if [ $? -ne 0 ]
+then
+exit 1
 fi

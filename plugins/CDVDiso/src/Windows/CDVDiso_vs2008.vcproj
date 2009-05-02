@@ -265,7 +265,7 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath="..\CDVDisop.c"
+				RelativePath="..\CDVDisop.cpp"
 				>
 				<FileConfiguration
 					Name="Debug|Win32"
@@ -293,7 +293,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath=".\Config.c"
+				RelativePath=".\Config.cpp"
 				>
 				<FileConfiguration
 					Name="Debug|Win32"
@@ -321,7 +321,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\libiso.c"
+				RelativePath="..\libiso.cpp"
 				>
 				<FileConfiguration
 					Name="Debug|Win32"
@@ -349,7 +349,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath=".\Win32.c"
+				RelativePath=".\Win32.cpp"
 				>
 				<FileConfiguration
 					Name="Debug|Win32"

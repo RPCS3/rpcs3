@@ -637,7 +637,7 @@ int InitPlugins()
 	//	throw Exception::InvalidOperation( "Bad coder mojo - InitPlugins called prior to plugins having been loaded." );
 
 #ifndef _WIN32
-	chdir(MAIN_DIR);
+	//chdir(MAIN_DIR);
 #endif
 	int ret;
 
@@ -712,7 +712,7 @@ int OpenPlugins(const char* pTitleFilename)
 
 #ifndef _WIN32
 	// change dir so that CDVD can find its config file
-	char file[255], pNewTitle[255];
+	/*char file[255], pNewTitle[255];
 	chdir(MAIN_DIR);
 	chdir(Config.PluginsDir);
 
@@ -721,7 +721,7 @@ int OpenPlugins(const char* pTitleFilename)
 		// because we are changing the dir, we have to set a new title if it is a relative dir
 		sprintf(pNewTitle, "%s/%s", file, pTitleFilename);
 		pTitleFilename = pNewTitle;
-	}
+	}*/
 #endif
 
 	if( !OpenStatus.CDVD )
@@ -808,14 +808,14 @@ int OpenPlugins(const char* pTitleFilename)
 	}
 
 #ifndef _WIN32
-	chdir(MAIN_DIR);
+	//chdir(MAIN_DIR);
 #endif
 	return 0;
 
 OpenError:
 	ClosePlugins( true );
 #ifndef _WIN32
-	chdir(MAIN_DIR);
+	//chdir(MAIN_DIR);
 #endif
 
     return -1;
