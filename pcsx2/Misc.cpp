@@ -370,12 +370,19 @@ void CycleFrameLimit(int dir)
 			newFrameLimit = 0;
 		} else
 			newFrameLimit = oldFrameLimit;
-	} else if (dir > 0) {
-		// next
-		newFrameLimit = (curFrameLimit + PCSX2_FRAMELIMIT_LIMIT) & PCSX2_FRAMELIMIT_MASK;
-	} else {
-		// previous
-		newFrameLimit = (curFrameLimit + PCSX2_FRAMELIMIT_VUSKIP) & PCSX2_FRAMELIMIT_MASK;
+	}
+	else if (dir > 0)	// next
+	{
+		newFrameLimit = curFrameLimit + PCSX2_FRAMELIMIT_LIMIT;
+		if( newFrameLimit > PCSX2_FRAMELIMIT_SKIP )
+			newFrameLimit = 0;
+	}
+	else	// previous
+	{
+		if( newFrameLimit == 0 )
+			newFrameLimit = PCSX2_FRAMELIMIT_SKIP;
+		else
+			newFrameLimit = curFrameLimit - PCSX2_FRAMELIMIT_LIMIT;
 	}
 
 	newOptions = (Config.Options & ~PCSX2_FRAMELIMIT_MASK) | newFrameLimit;
@@ -390,7 +397,6 @@ void CycleFrameLimit(int dir)
 			limitMsg = "Limit";
 			break;
 		case PCSX2_FRAMELIMIT_SKIP:
-		case PCSX2_FRAMELIMIT_VUSKIP:
 			if( GSsetFrameSkip == NULL )
 			{
 				newOptions &= ~PCSX2_FRAMELIMIT_MASK;
@@ -402,7 +408,7 @@ void CycleFrameLimit(int dir)
 				// When enabling Skipping we have to make sure Skipper (GS) and Limiter (EE)
 				// are properly synchronized.
 				gsDynamicSkipEnable();
-				limitMsg = ((newOptions & PCSX2_FRAMELIMIT_MASK) == PCSX2_FRAMELIMIT_SKIP) ? "Skip" : "VUSkip";
+				limitMsg = "Skip";
 			}
 
 			break;

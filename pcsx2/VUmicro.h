@@ -123,10 +123,6 @@ extern void vu1ResetRegs();
 extern void vu1ExecMicro(u32 addr);
 extern void vu1Exec(VURegs* VU);
 
-extern void vu1MicroEnableSkip();
-extern void vu1MicroDisableSkip();
-extern bool vu1MicroIsSkipping();
-
 void VU0_UPPER_FD_00();
 void VU0_UPPER_FD_01();
 void VU0_UPPER_FD_10();

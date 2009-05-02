@@ -1,5 +1,5 @@
 /*  USBnull
- *  Copyright (C) 2002-2004  USBnull Team
+ *  Copyright (C) 2002-2009  USBnull Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -18,3 +18,7 @@
 
 void SaveConfig();
 void LoadConfig();
+void cfgSysMessage(char *fmt, ...);
+void CFGabout();
+void CFGconfigure();
+long CFGmessage(char *msg);

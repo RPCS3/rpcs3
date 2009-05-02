@@ -18,7 +18,7 @@
 #ifndef __PATCH_H__
 #define __PATCH_H__
 
-#include "PS2Etypes.h"
+#include "Pcsx2Defs.h"
 
 //
 // Defines

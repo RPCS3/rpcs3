@@ -85,9 +85,6 @@ u8 Test23[] = { 0x43, 0x58, 0x44, 0x32, 0x39 ,0x34, 0x30, 0x51 };
 //#define cdReadTime ((PSXCLK / 75) / BIAS)
 unsigned long cdReadTime;// = ((PSXCLK / 75) / BIAS);
 
-#define btoi(b)		((b)/16*10 + (b)%16)		/* BCD to u_char */
-#define itob(i)		((i)/10*16 + (i)%10)		/* u_char to BCD */
-
 #define CDR_INT(eCycle)    PSX_INT(IopEvt_Cdrom, eCycle)
 #define CDREAD_INT(eCycle) PSX_INT(IopEvt_CdromRead, eCycle)
 
@@ -112,13 +109,13 @@ static __forceinline void StopCdda() {
 	} 
 }
 
-__forceinline void SetResultSize(u8 size) {
+static __forceinline void SetResultSize(u8 size) {
     cdr.ResultP = 0;
 	cdr.ResultC = size;
 	cdr.ResultReady = 1;
 }
 
-__forceinline s32 MSFtoLSN(u8 *Time) {
+static __forceinline s32 MSFtoLSN(u8 *Time) {
 	u32 lsn;
 
 	lsn = Time[2];
@@ -127,7 +124,7 @@ __forceinline s32 MSFtoLSN(u8 *Time) {
 	return lsn;
 }
 
-void LSNtoMSF(u8 *Time, s32 lsn) {
+static __forceinline void LSNtoMSF(u8 *Time, s32 lsn) {
 	lsn += 150;
 	Time[2] = lsn / 4500;			// minuten
 	lsn = lsn - Time[2] * 4500;		// minuten rest
@@ -135,7 +132,7 @@ void LSNtoMSF(u8 *Time, s32 lsn) {
 	Time[0] = lsn - Time[1] * 75;		// sekunden rest
 }
 
-void ReadTrack() {
+static void ReadTrack() {
 	cdr.Prev[0] = itob(cdr.SetSector[0]);
 	cdr.Prev[1] = itob(cdr.SetSector[1]);
 	cdr.Prev[2] = itob(cdr.SetSector[2]);
@@ -152,7 +149,7 @@ void ReadTrack() {
 #define DataEnd		4
 #define DiskError	5
 
-void AddIrqQueue(u8 irq, unsigned long ecycle) {
+static void AddIrqQueue(u8 irq, unsigned long ecycle) {
 	cdr.Irq = irq;
 	if (cdr.Stat) {
 		cdr.eCycle = ecycle;

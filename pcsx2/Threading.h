@@ -22,7 +22,7 @@
 #include <errno.h> // EBUSY
 #include <semaphore.h>
 
-#include "PS2Etypes.h"
+#include "Pcsx2Defs.h"
 
 namespace Threading
 {

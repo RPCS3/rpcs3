@@ -19,8 +19,6 @@
 #ifndef __PCSX2TYPES_H__
 #define __PCSX2TYPES_H__
 
-// Note; this header is experamental, and will be a shifting target. Only use this if you are willing to repeatedly fix breakage.
-
 /*
  *  Based on PS2E Definitions by
 	   linuzappz@hotmail.com,
@@ -45,12 +43,10 @@ typedef unsigned __int32 u32;
 typedef unsigned __int64 u64;
 
 typedef unsigned int uint;
-typedef u32 uptr;
-typedef s32 sptr;
 
-#else // _MSC_VER
+#else // _MSC_VER*/
 
- #ifdef __LINUX__
+#ifdef __LINUX__
 
 #ifdef HAVE_STDINT_H
 #include "stdint.h"
@@ -86,9 +82,6 @@ typedef unsigned short u16;
 typedef unsigned int u32;
 typedef unsigned long long u64;
 
-typedef u32 uptr;
-typedef s32 sptr;
-
 #endif // HAVE_STDINT_H
 
 typedef unsigned int uint;
@@ -102,6 +95,15 @@ typedef union _LARGE_INTEGER
 #endif // __LINUX__
 #endif //_MSC_VER
 
+#if !defined(__LINUX__) || !defined(HAVE_STDINT_H)
+#if defined(__x86_64__)
+typedef u64 uptr;
+typedef s64 sptr;
+#else
+typedef u32 uptr;
+typedef s32 sptr;
+#endif
+#endif
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // A rough-and-ready cross platform 128-bit datatype, Non-SSE style.
@@ -154,4 +156,4 @@ typedef union _s128_t
 
 #endif
 
- #endif
+#endif

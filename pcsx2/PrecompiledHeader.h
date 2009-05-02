@@ -86,8 +86,7 @@ typedef int BOOL;
 // need a full recompile anyway, when modified (etc)
 
 #include "zlib/zlib.h"
-
-#include "PS2Etypes.h"
+#include "Pcsx2Defs.h"
 #include "Paths.h"
 #include "Config.h"
 #include "StringUtils.h"
@@ -152,35 +151,20 @@ static __forceinline u32 timeGetTime()
 #	define __releaseinline __forceinline
 #endif
 
-//////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////
 // Dev / Debug conditionals --
 //   Consts for using if() statements instead of uglier #ifdef macros.
-//   Abbreviated macros for dev/debug only consoles and msgboxes.
 
 #ifdef PCSX2_DEVBUILD
-
-#	define DevCon Console
-#	define DevMsg MsgBox
-	static const bool IsDevBuild = true;
-
+static const bool IsDevBuild = true;
 #else
-
-#	define DevCon 0&&Console
-#	define DevMsg
-	static const bool IsDevBuild = false;
-
+static const bool IsDevBuild = false;
 #endif
 
 #ifdef _DEBUG
-
-#	define DbgCon Console
-	static const bool IsDebugBuild = true;
-
+static const bool IsDebugBuild = true;
 #else
-
-#	define DbgCon 0&&Console
-	static const bool IsDebugBuild = false;
-
+static const bool IsDebugBuild = false;
 #endif
 
 #endif

@@ -70,7 +70,7 @@ public:
 	int LastIndex (u32 startpc) const;
 	BASEBLOCKEX* GetByX86(uptr ip);
 
-	inline int Index (u32 startpc) const
+	__forceinline int Index (u32 startpc) const
 	{
 		int idx = LastIndex(startpc);
 		// fixme: I changed the parenthesis to be unambiguous, but this needs to be checked to see if ((x or y or z) and w)
@@ -83,31 +83,43 @@ public:
 			return idx;
 	}
 
-	inline BASEBLOCKEX* operator[](int idx)
+	__forceinline BASEBLOCKEX* operator[](int idx)
 	{
 		if (idx < 0 || idx >= (int)blocks.size())
 			return 0;
 		return &blocks[idx];
 	}
 
-	inline BASEBLOCKEX* Get(u32 startpc)
+	__forceinline BASEBLOCKEX* Get(u32 startpc)
 	{
 		return (*this)[Index(startpc)];
 	}
 
-	inline void Remove(int idx)
+	__forceinline void Remove(int idx)
 	{
 		//u32 startpc = blocks[idx].startpc;
 		std::pair<linkiter_t, linkiter_t> range = links.equal_range(blocks[idx].startpc);
 		for (linkiter_t i = range.first; i != range.second; ++i)
 			*(u32*)i->second = recompiler - (i->second + 4);
+
+		if( IsDevBuild )
+		{
+			// Clear the first instruction to 0xcc (breakpoint), as a way to assert if some
+			// static jumps get left behind to this block.  Note: Do not clear more than the
+			// first byte, since this code is called during exception handlers and event handlers
+			// both of which expect to be able to return to the recompiled code.
+			
+			BASEBLOCKEX effu( blocks[idx] );
+			memset( (void*)effu.fnptr, 0xcc, 1 );
+		}
+
 		// TODO: remove links from this block?
 		blocks.erase(blocks.begin() + idx);
 	}
 
 	void Link(u32 pc, uptr jumpptr);
 
-	inline void Reset()
+	__forceinline void Reset()
 	{
 		blocks.clear();
 		links.clear();

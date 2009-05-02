@@ -146,7 +146,6 @@ microVUt(void) mVUanalyzeIALU2(int Is, int It) {
 
 microVUt(void) mVUanalyzeMR32(int Fs, int Ft) {
 	microVU* mVU = mVUx;
-	mVUprint("microVU: MR32 Opcode");
 	if (!Ft) { mVUinfo |= _isNOP; }
 	analyzeReg6(Fs);
 	analyzeReg2(Ft);
@@ -202,7 +201,6 @@ microVUt(void) mVUanalyzeEFU2(int Fs, u8 xCycles) {
 
 microVUt(void) mVUanalyzeMFP(int Ft) {
 	microVU* mVU = mVUx;
-	mVUprint("microVU: MFP Opcode");
 	if (!Ft) { mVUinfo |= _isNOP; }
 	analyzeReg2(Ft);
 }
@@ -239,14 +237,12 @@ microVUt(void) mVUanalyzeSQ(int Fs, int It, bool writeIt) {
 
 microVUt(void) mVUanalyzeR1(int Fs, int Fsf) {
 	microVU* mVU = mVUx;
-	mVUprint("microVU: R-reg Opcode");
 	analyzeReg5(Fs, Fsf);
 	analyzeRreg();
 }
 
 microVUt(void) mVUanalyzeR2(int Ft, bool canBeNOP) {
 	microVU* mVU = mVUx;
-	mVUprint("microVU: R-reg Opcode");
 	if (!Ft) { mVUinfo |= ((canBeNOP) ? _isNOP : _noWriteVF); }
 	analyzeReg2(Ft);
 	analyzeRreg();
@@ -258,7 +254,6 @@ microVUt(void) mVUanalyzeR2(int Ft, bool canBeNOP) {
 
 microVUt(void) mVUanalyzeSflag(int It) {
 	microVU* mVU = mVUx;
-	mVUprint("microVU: Sflag Opcode");
 	if (!It) { mVUinfo |= _isNOP; }
 	else {  // Sets _isSflag at instruction that FSxxx opcode reads it's status flag from
 		mVUinfo |= _swapOps;
@@ -274,7 +269,6 @@ microVUt(void) mVUanalyzeSflag(int It) {
 microVUt(void) mVUanalyzeFSSET() {
 	microVU* mVU = mVUx;
 	mVUinfo |= _isFSSET;
-	mVUprint("microVU: FSSET Opcode");
 	// mVUinfo &= ~_doStatus;
 	// Note: I'm not entirely sure if the non-sticky flags
 	// should be taken from the current upper instruction
@@ -288,7 +282,6 @@ microVUt(void) mVUanalyzeFSSET() {
 
 microVUt(void) mVUanalyzeMflag(int Is, int It) {
 	microVU* mVU = mVUx;
-	mVUprint("microVU: Mflag Opcode");
 	if (!It) { mVUinfo |= _isNOP; }
 	else { // Need set _doMac for 4 previous Ops (need to do all 4 because stalls could change the result needed)
 		mVUinfo |= _swapOps;
@@ -324,26 +317,26 @@ microVUt(void) mVUanalyzeXGkick(int Fs, int xCycles) {
 
 #define analyzeBranchVI(reg, infoVal) {													\
 	if (reg && (mVUcount > 0)) { /* Ensures branch is not first opcode in block */		\
-		incPC(-2);																		\
+		incPC2(-2);																		\
 		if (writesVI && (reg == mVU->VIbackup[0])) { /* If prev Op modified VI reg */	\
 			mVUinfo |= _backupVI;														\
-			incPC(2);																	\
+			incPC2(2);																	\
 			mVUinfo |= infoVal;															\
 		}																				\
-		else { incPC(2); }																\
+		else { incPC2(2); }																\
 	}																					\
 }
 
 microVUt(void) mVUanalyzeBranch1(int Is) {
 	microVU* mVU = mVUx;
-	if (mVUregs.VI[Is])	{ analyzeVIreg1(Is); }
-	else				{ analyzeBranchVI(Is, _memReadIs); }
+	if (mVUregs.VI[Is] || mVUstall)	{ analyzeVIreg1(Is); }
+	else							{ analyzeBranchVI(Is, _memReadIs); }
 }
 
 microVUt(void) mVUanalyzeBranch2(int Is, int It) {
 	microVU* mVU = mVUx;
-	if (mVUregs.VI[Is] || mVUregs.VI[It]) { analyzeVIreg1(Is); analyzeVIreg1(It); }
-	else								  { analyzeBranchVI(Is, _memReadIs); analyzeBranchVI(It, _memReadIt);}
+	if (mVUregs.VI[Is] || mVUregs.VI[It] || mVUstall) { analyzeVIreg1(Is); analyzeVIreg1(It); }
+	else											  { analyzeBranchVI(Is, _memReadIs); analyzeBranchVI(It, _memReadIt);}
 }
 
 #endif //PCSX2_MICROVU

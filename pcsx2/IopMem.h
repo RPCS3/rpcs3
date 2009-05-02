@@ -16,8 +16,7 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
-#ifndef __PSXMEMORY_H__
-#define __PSXMEMORY_H__
+#pragma once
 
 extern u8 *psxM;
 extern u8 *psxP;
@@ -90,21 +89,40 @@ void iopMemWrite32(u32 mem, u32 value);
 
 // x86reg and mmreg are always x86 regs
 void psxRecMemRead8();
-int psxRecMemConstRead8(u32 x86reg, u32 mem, u32 sign);
-
 void psxRecMemRead16();
-int psxRecMemConstRead16(u32 x86reg, u32 mem, u32 sign);
-
 void psxRecMemRead32();
-int psxRecMemConstRead32(u32 x86reg, u32 mem);
-
 void psxRecMemWrite8();
-int psxRecMemConstWrite8(u32 mem, int mmreg);
-
 void psxRecMemWrite16();
-int psxRecMemConstWrite16(u32 mem, int mmreg);
-
 void psxRecMemWrite32();
-int psxRecMemConstWrite32(u32 mem, int mmreg);
 
-#endif /* __PSXMEMORY_H__ */
+namespace IopMemory
+{
+	// Sif functions not made yet (will for future Iop improvements):
+	extern u8 __fastcall SifRead8( u32 iopaddr );
+	extern u16 __fastcall SifRead16( u32 iopaddr );
+	extern u32 __fastcall SifRead32( u32 iopaddr );
+
+	extern void __fastcall SifWrite8( u32 iopaddr, u8 data );
+	extern void __fastcall SifWrite16( u32 iopaddr, u16 data );
+	extern void __fastcall SifWrite32( u32 iopaddr, u32 data );
+
+	extern u8 __fastcall iopHwRead8_Page1( u32 iopaddr );
+	extern u8 __fastcall iopHwRead8_Page3( u32 iopaddr );
+	extern u8 __fastcall iopHwRead8_Page8( u32 iopaddr );
+	extern u16 __fastcall iopHwRead16_Page1( u32 iopaddr );
+	extern u16 __fastcall iopHwRead16_Page3( u32 iopaddr );
+	extern u16 __fastcall iopHwRead16_Page8( u32 iopaddr );
+	extern u32 __fastcall iopHwRead32_Page1( u32 iopaddr );
+	extern u32 __fastcall iopHwRead32_Page3( u32 iopaddr );
+	extern u32 __fastcall iopHwRead32_Page8( u32 iopaddr );
+
+	extern void __fastcall iopHwWrite8_Page1( u32 iopaddr, u8 data );
+	extern void __fastcall iopHwWrite8_Page3( u32 iopaddr, u8 data );
+	extern void __fastcall iopHwWrite8_Page8( u32 iopaddr, u8 data );
+	extern void __fastcall iopHwWrite16_Page1( u32 iopaddr, u16 data );
+	extern void __fastcall iopHwWrite16_Page3( u32 iopaddr, u16 data );
+	extern void __fastcall iopHwWrite16_Page8( u32 iopaddr, u16 data );
+	extern void __fastcall iopHwWrite32_Page1( u32 iopaddr, u32 data );
+	extern void __fastcall iopHwWrite32_Page3( u32 iopaddr, u32 data );
+	extern void __fastcall iopHwWrite32_Page8( u32 iopaddr, u32 data );
+}

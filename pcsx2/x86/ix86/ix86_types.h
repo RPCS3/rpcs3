@@ -54,12 +54,14 @@ struct CAPABILITIES
    u32 hasStreamingSIMD3Extensions;
    u32 hasSupplementalStreamingSIMD3Extensions;
    u32 hasStreamingSIMD4Extensions;
+   u32 hasStreamingSIMD4Extensions2;
 
    // AMD-specific CPU Features
    u32 hasMultimediaExtensionsExt;
    u32 hasAMD64BitArchitecture;
    u32 has3DNOWInstructionExtensionsExt;
    u32 has3DNOWInstructionExtensions;
+   u32 hasStreamingSIMD4ExtensionsA;
 };
 
 extern CAPABILITIES cpucaps;
@@ -73,6 +75,7 @@ struct CPUINFO
    u32 x86Flags;	   // Feature Flags
    u32 x86Flags2;	   // More Feature Flags
    u32 x86EFlags;	   // Extended Feature Flags
+   u32 x86EFlags2;	   // Extended Feature Flags pg2
 
    u32 PhysicalCores;
    u32 LogicalCores;

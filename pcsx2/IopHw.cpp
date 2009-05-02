@@ -560,7 +560,7 @@ u32 psxHwRead32(u32 add) {
 		case 0x1F808240:
 		case 0x1F808248:
 		case 0x1F808250:
-		case 0x1F80825C:
+		case 0x1F808258:
 			hard=sio2_getSend1((add-0x1F808240)/8);
 			PSXHW_LOG("SIO2 read send1[%d] (%lx)", (add-0x1F808240)/8, hard);
 			return hard;
@@ -568,7 +568,7 @@ u32 psxHwRead32(u32 add) {
 		case 0x1F808244:
 		case 0x1F80824C:
 		case 0x1F808254:
-		case 0x1F808258:
+		case 0x1F80825C:
 			hard=sio2_getSend2((add-0x1F808244)/8);
 			PSXHW_LOG("SIO2 read send2[%d] (%lx)", (add-0x1F808244)/8, hard);
 			return hard;
@@ -618,8 +618,8 @@ u32 psxHwRead32(u32 add) {
 }
 
 // A buffer that stores messages until it gets a /n or the number of chars (g_pbufi) is more then 1023.
-char g_pbuf[1024];
-int g_pbufi;
+static s8 g_pbuf[1024];
+static int g_pbufi;
 void psxHwWrite8(u32 add, u8 value) {
 	if (add >= HW_USB_START && add < HW_USB_END) {
 		USBwrite8(add, value); return;
@@ -666,14 +666,24 @@ void psxHwWrite8(u32 add, u8 value) {
 		case 0x1f801803: cdrWrite3(value); break;
 
 		case 0x1f80380c:
-			if (value == '\r') break;
-			if (value == '\n' || g_pbufi >= 1023) { // A line break, or the buffer is about to overflow.
-				g_pbuf[g_pbufi++] = 0; 
-				g_pbufi = 0;
+		{
+			bool flush = false;
+
+			// Terminate lines on CR or full buffers, and ignore \n's if the string contents
+			// are empty (otherwise terminate on \n too!)
+			if(	( value == '\r' ) || ( g_pbufi == 1023 ) ||
+				( value == '\n' && g_pbufi != 0 ) )
+			{
+				g_pbuf[g_pbufi] = 0;
 				DevCon::WriteLn( Color_Cyan, "%s", params g_pbuf );
+				g_pbufi = 0;
 			}
-			else g_pbuf[g_pbufi++] = value;
+			else if( value != '\n' )
+			{
+				g_pbuf[g_pbufi++] = value;
+			}
 			psxHu8(add) = value;
+		}
 		return;
 
 		case 0x1F808260:
@@ -758,7 +768,7 @@ void psxHwWrite16(u32 add, u16 value) {
 			psxRcntWcount16(0, value); return;
 		case IOP_T0_MODE:
 			PSXCNT_LOG("COUNTER 0 MODE 16bit write %x", value);
-			psxRcnt0Wmode(value); return;
+			psxRcntWmode16(0, value); return;
 		case IOP_T0_TARGET:
 			PSXCNT_LOG("COUNTER 0 TARGET 16bit write %x", value);
 			psxRcntWtarget16(0, value); return;
@@ -768,7 +778,7 @@ void psxHwWrite16(u32 add, u16 value) {
 			psxRcntWcount16(1, value); return;
 		case IOP_T1_MODE:
 			PSXCNT_LOG("COUNTER 1 MODE 16bit write %x", value);
-			psxRcnt1Wmode(value); return;
+			psxRcntWmode16(1, value); return;
 		case IOP_T1_TARGET:
 			PSXCNT_LOG("COUNTER 1 TARGET 16bit write %x", value);
 			psxRcntWtarget16(1, value); return;
@@ -778,7 +788,7 @@ void psxHwWrite16(u32 add, u16 value) {
 			psxRcntWcount16(2, value); return;
 		case IOP_T2_MODE:
 			PSXCNT_LOG("COUNTER 2 MODE 16bit write %x", value);
-			psxRcnt2Wmode(value); return;
+			psxRcntWmode16(2, value); return;
 		case IOP_T2_TARGET:
 			PSXCNT_LOG("COUNTER 2 TARGET 16bit write %x", value);
 			psxRcntWtarget16(2, value); return;
@@ -793,7 +803,7 @@ void psxHwWrite16(u32 add, u16 value) {
 			psxRcntWcount32(3, value); return;
 		case IOP_T3_MODE:
 			PSXCNT_LOG("COUNTER 3 MODE 16bit write %lx", value);
-			psxRcnt3Wmode(value); return;
+			psxRcntWmode32(3, value); return;
 		case IOP_T3_TARGET:
 			PSXCNT_LOG("COUNTER 3 TARGET 16bit write %lx", value);
 			psxRcntWtarget32(3, value); return;
@@ -803,7 +813,7 @@ void psxHwWrite16(u32 add, u16 value) {
 			psxRcntWcount32(4, value); return;
 		case IOP_T4_MODE:
 			PSXCNT_LOG("COUNTER 4 MODE 16bit write %lx", value);
-			psxRcnt4Wmode(value); return;
+			psxRcntWmode32(4, value); return;
 		case IOP_T4_TARGET:
 			PSXCNT_LOG("COUNTER 4 TARGET 16bit write %lx", value);
 			psxRcntWtarget32(4, value); return;
@@ -813,7 +823,7 @@ void psxHwWrite16(u32 add, u16 value) {
 			psxRcntWcount32(5, value); return;
 		case IOP_T5_MODE:
 			PSXCNT_LOG("COUNTER 5 MODE 16bit write %lx", value);
-			psxRcnt5Wmode(value); return;
+			psxRcntWmode32(5, value); return;
 		case IOP_T5_TARGET:
 			PSXCNT_LOG("COUNTER 5 TARGET 16bit write %lx", value);
 			psxRcntWtarget32(5, value); return;
@@ -1170,7 +1180,7 @@ void psxHwWrite32(u32 add, u32 value) {
 			psxRcntWcount16(0, value ); return;
 		case IOP_T0_MODE:
 			PSXCNT_LOG("COUNTER 0 MODE 32bit write %lx", value);
-			psxRcnt0Wmode(value); return;
+			psxRcntWmode16(0, value); return;
 		case IOP_T0_TARGET:
 			PSXCNT_LOG("COUNTER 0 TARGET 32bit write %lx", value);
 			psxRcntWtarget16(0, value ); return;
@@ -1180,7 +1190,7 @@ void psxHwWrite32(u32 add, u32 value) {
 			psxRcntWcount16(1, value ); return;
 		case IOP_T1_MODE:
 			PSXCNT_LOG("COUNTER 1 MODE 32bit write %lx", value);
-			psxRcnt1Wmode(value); return;
+			psxRcntWmode16(1, value); return;
 		case IOP_T1_TARGET:
 			PSXCNT_LOG("COUNTER 1 TARGET 32bit write %lx", value);
 			psxRcntWtarget16(1, value ); return;
@@ -1190,7 +1200,7 @@ void psxHwWrite32(u32 add, u32 value) {
 			psxRcntWcount16(2, value ); return;
 		case IOP_T2_MODE:
 			PSXCNT_LOG("COUNTER 2 MODE 32bit write %lx", value);
-			psxRcnt2Wmode(value); return;
+			psxRcntWmode16(0, value); return;
 		case IOP_T2_TARGET:
 			PSXCNT_LOG("COUNTER 2 TARGET 32bit write %lx", value);
 			psxRcntWtarget16(2, value); return;
@@ -1200,7 +1210,7 @@ void psxHwWrite32(u32 add, u32 value) {
 			psxRcntWcount32(3, value); return;
 		case IOP_T3_MODE:
 			PSXCNT_LOG("COUNTER 3 MODE 32bit write %lx", value);
-			psxRcnt3Wmode(value); return;
+			psxRcntWmode32(3, value); return;
 		case IOP_T3_TARGET:
 			PSXCNT_LOG("COUNTER 3 TARGET 32bit write %lx", value);
 			psxRcntWtarget32(3, value); return;
@@ -1210,7 +1220,7 @@ void psxHwWrite32(u32 add, u32 value) {
 			psxRcntWcount32(4, value); return;
 		case IOP_T4_MODE:
 			PSXCNT_LOG("COUNTER 4 MODE 32bit write %lx", value);
-			psxRcnt4Wmode(value); return;
+			psxRcntWmode32(4, value); return;
 		case IOP_T4_TARGET:
 			PSXCNT_LOG("COUNTER 4 TARGET 32bit write %lx", value);
 			psxRcntWtarget32(4, value); return;
@@ -1220,7 +1230,7 @@ void psxHwWrite32(u32 add, u32 value) {
 			psxRcntWcount32(5, value); return;
 		case IOP_T5_MODE:
 			PSXCNT_LOG("COUNTER 5 MODE 32bit write %lx", value);
-			psxRcnt5Wmode(value); return;
+			psxRcntWmode32(5, value); return;
 		case IOP_T5_TARGET:
 			PSXCNT_LOG("COUNTER 5 TARGET 32bit write %lx", value);
 			psxRcntWtarget32(5, value); return;
@@ -1303,89 +1313,42 @@ void psxHwWrite32(u32 add, u32 value) {
 	PSXHW_LOG("*Known 32bit write at address %lx value %lx", add, value);
 }
 
-u8 psxHw4Read8(u32 add) {
-	u8 hard;
-
-	switch (add) {
-		case 0x1f402004: return cdvdRead04();
-		case 0x1f402005: return cdvdRead05();
-		case 0x1f402006: return cdvdRead06();
-		case 0x1f402007: return cdvdRead07();
-		case 0x1f402008: return cdvdRead08();
-		case 0x1f40200A: return cdvdRead0A();
-		case 0x1f40200B: return cdvdRead0B();
-		case 0x1f40200C: return cdvdRead0C();
-		case 0x1f40200D: return cdvdRead0D();
-		case 0x1f40200E: return cdvdRead0E();
-		case 0x1f40200F: return cdvdRead0F();
-		case 0x1f402013: return cdvdRead13();
-		case 0x1f402015: return cdvdRead15();
-		case 0x1f402016: return cdvdRead16();
-		case 0x1f402017: return cdvdRead17();
-		case 0x1f402018: return cdvdRead18();
-		case 0x1f402020: return cdvdRead20();
-		case 0x1f402021: return cdvdRead21();
-		case 0x1f402022: return cdvdRead22();
-		case 0x1f402023: return cdvdRead23();
-		case 0x1f402024: return cdvdRead24();
-		case 0x1f402028: return cdvdRead28();
-		case 0x1f402029: return cdvdRead29();
-		case 0x1f40202A: return cdvdRead2A();
-		case 0x1f40202B: return cdvdRead2B();
-		case 0x1f40202C: return cdvdRead2C();
-		case 0x1f402030: return cdvdRead30();
-		case 0x1f402031: return cdvdRead31();
-		case 0x1f402032: return cdvdRead32();
-		case 0x1f402033: return cdvdRead33();
-		case 0x1f402034: return cdvdRead34();
-		case 0x1f402038: return cdvdRead38();
-		case 0x1f402039: return cdvdRead39();
-		case 0x1f40203A: return cdvdRead3A();
-		default:
-			// note: notify the console since this is a potentially serious emulation problem:
-			PSXHW_LOG("*Unknown 8bit read at address 0x%x", add);
-			Console::Error( "IOP Unknown 8bit read from addr 0x%x", params add );
-			return 0;
-	}
+u8 psxHw4Read8(u32 add) 
+{
+	//u8 hard;
+	u16 mem = add & 0xFF;
 	
-	PSXHW_LOG( "Known 8bit read from addr 0x%x = 0x%x", add, hard );
+	//Console::WriteLn("psxHw4Read8 0x%x, %x", params add, mem);
+	return cdvdRead(mem);
+	
+	//PSXHW_LOG( "Known 8bit read from addr 0x%x = 0x%x", add, hard );
 
-	return hard;
+	//return hard;
 }
 
-void psxHw4Write8(u32 add, u8 value) {
+void psxHw4Write8(u32 add, u8 value) 
+{
 	
-	switch (add) {
-		case 0x1f402004: cdvdWrite04(value); return;
-		case 0x1f402005: cdvdWrite05(value); return;
-		case 0x1f402006: cdvdWrite06(value); return;
-		case 0x1f402007: cdvdWrite07(value); return;
-		case 0x1f402008: cdvdWrite08(value); return;
-		case 0x1f40200A: cdvdWrite0A(value); return;
-		case 0x1f40200F: cdvdWrite0F(value); return;
-		case 0x1f402014: cdvdWrite14(value); return;
-		case 0x1f402016: cdvdWrite16(value); return;
-		case 0x1f402017: cdvdWrite17(value); return;
-		case 0x1f402018: cdvdWrite18(value); return;
-		case 0x1f40203A: cdvdWrite3A(value); return;
-		default:
-			//PSXHW_LOG("*Unknown 8bit write at address %lx value %x", add, value);
-			Console::Notice("IOP Unknown 8bit write to addr 0x%x = 0x%x", params add, value);
-			return;
-	}
+	u16 mem =  add & 0xFF;
+	//Console::WriteLn("psxHw4Write8 0x%x, %x", params add, mem);
+	cdvdWrite(mem, value); 
 	PSXHW_LOG("Known 8bit write to addr 0x%x = 0x%x", add, value);
 }
 
-void psxDmaInterrupt(int n) {
-	if (HW_DMA_ICR & (1 << (16 + n))) {
+void psxDmaInterrupt(int n)
+{
+	if (HW_DMA_ICR & (1 << (16 + n)))
+	{
 		HW_DMA_ICR|= (1 << (24 + n));
 		psxRegs.CP0.n.Cause |= 1 << (9 + n);
 		iopIntcIrq( 3 );
 	}
 }
 
-void psxDmaInterrupt2(int n) {
-	if (HW_DMA_ICR2 & (1 << (16 + n))) {
+void psxDmaInterrupt2(int n)
+{
+	if (HW_DMA_ICR2 & (1 << (16 + n)))
+	{
 /*		if (HW_DMA_ICR2 & (1 << (24 + n))) {
 			Console::WriteLn("*PCSX2*: HW_DMA_ICR2 n=%d already set", params n);
 		}

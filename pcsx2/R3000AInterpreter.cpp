@@ -335,43 +335,96 @@ void spyFunctions(){
 			}
 }
 */
-
 /*********************************************************
 * Register branch logic                                  *
 * Format:  OP rs, offset                                 *
 *********************************************************/
-#define RepZBranchi32(op)      if(_i32(_rRs_) op 0) doBranch(_BranchTarget_);
-#define RepZBranchLinki32(op)  if(_i32(_rRs_) op 0) { _SetLink(31); doBranch(_BranchTarget_); }
 
-void psxBGEZ()   { RepZBranchi32(>=) }      // Branch if Rs >= 0
-void psxBGEZAL() { RepZBranchLinki32(>=) }  // Branch if Rs >= 0 and link
-void psxBGTZ()   { RepZBranchi32(>) }       // Branch if Rs >  0
-void psxBLEZ()   { RepZBranchi32(<=) }      // Branch if Rs <= 0
-void psxBLTZ()   { RepZBranchi32(<) }       // Branch if Rs <  0
-void psxBLTZAL() { RepZBranchLinki32(<) }   // Branch if Rs <  0 and link
+void psxBGEZ()         // Branch if Rs >= 0
+{ 
+	if (_i32(_rRs_) >= 0) doBranch(_BranchTarget_); 
+}
+
+void psxBGEZAL()   // Branch if Rs >= 0 and link
+{ 
+	if (_i32(_rRs_) >= 0) 
+	{ 
+		_SetLink(31); 
+		doBranch(_BranchTarget_); 
+	} 
+}
+
+void psxBGTZ()          // Branch if Rs >  0
+{ 
+	if (_i32(_rRs_) > 0) doBranch(_BranchTarget_); 
+}
+
+void psxBLEZ()         // Branch if Rs <= 0
+{ 
+	if (_i32(_rRs_) <= 0) doBranch(_BranchTarget_); 
+}
+void psxBLTZ()          // Branch if Rs <  0
+{ 
+	if (_i32(_rRs_) < 0) doBranch(_BranchTarget_); 
+}
+
+void psxBLTZAL()    // Branch if Rs <  0 and link
+{ 
+	if (_i32(_rRs_) < 0) 
+		{
+			_SetLink(31); 
+			doBranch(_BranchTarget_); 
+		} 
+}
 
 /*********************************************************
 * Register branch logic                                  *
 * Format:  OP rs, rt, offset                             *
 *********************************************************/
-#define RepBranchi32(op)      if(_i32(_rRs_) op _i32(_rRt_)) doBranch(_BranchTarget_);
 
-void psxBEQ() {	RepBranchi32(==) }  // Branch if Rs == Rt
-void psxBNE() {	RepBranchi32(!=) }  // Branch if Rs != Rt
+void psxBEQ()   // Branch if Rs == Rt
+{ 
+	if (_i32(_rRs_) == _i32(_rRt_)) doBranch(_BranchTarget_);
+}
+
+void psxBNE()   // Branch if Rs != Rt
+{ 
+	if (_i32(_rRs_) != _i32(_rRt_)) doBranch(_BranchTarget_); 
+}
 
 /*********************************************************
 * Jump to target                                         *
 * Format:  OP target                                     *
 *********************************************************/
-void psxJ()   {               doBranch(_JumpTarget_); }
-void psxJAL() {	_SetLink(31); doBranch(_JumpTarget_); /*spyFunctions();*/ }
+void psxJ()   
+{             
+	doBranch(_JumpTarget_); 
+}
+
+void psxJAL() 
+{	
+	_SetLink(31);
+	doBranch(_JumpTarget_); 
+	/*spyFunctions();*/ 
+}
 
 /*********************************************************
 * Register jump                                          *
 * Format:  OP rs, rd                                     *
 *********************************************************/
-void psxJR()   {                 doBranch(_u32(_rRs_)); }
-void psxJALR() { if (_Rd_) { _SetLink(_Rd_); } doBranch(_u32(_rRs_)); }
+void psxJR()   
+{              
+	doBranch(_u32(_rRs_));
+}
+
+void psxJALR() 
+{
+	if (_Rd_) 
+	{
+		_SetLink(_Rd_);
+	} 
+	doBranch(_u32(_rRs_));
+}
 
 ///////////////////////////////////////////
 // These macros are used to assemble the repassembler functions

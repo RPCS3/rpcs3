@@ -677,8 +677,6 @@ extern void CDQE( void );
 extern void LAHF();
 extern void SAHF();
 
-extern void BT32ItoR( x86IntRegType to, u8 from );
-extern void BTR32ItoR( x86IntRegType to, u8 from );
 extern void BSRRtoR(x86IntRegType to, x86IntRegType from);
 extern void BSWAP32R( x86IntRegType to );
 

@@ -1625,6 +1625,22 @@
 						>
 					</File>
 				</Filter>
+				<Filter
+					Name="Hardware"
+					>
+					<File
+						RelativePath="..\..\ps2\Iop\IopHw_Internal.h"
+						>
+					</File>
+					<File
+						RelativePath="..\..\ps2\Iop\IopHwRead.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\ps2\Iop\IopHwWrite.cpp"
+						>
+					</File>
+				</Filter>
 			</Filter>
 			<Filter
 				Name="IPU"
@@ -2534,6 +2550,14 @@
 				</File>
 				<File
 					RelativePath="..\..\NewGUI\LogOptionsDialog.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\NewGUI\SpeedHacksDialog.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\NewGUI\SpeedHacksDialog.h"
 					>
 				</File>
 			</Filter>

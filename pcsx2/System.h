@@ -18,6 +18,8 @@
 
 #pragma once
 
+#include "Pcsx2Defs.h"
+#include "Paths.h"
 #include "Pcsx2Config.h"
 #include "SafeArray.h"
 #include "Misc.h"
@@ -199,3 +201,23 @@ using Console::Color_Magenta;
 using Console::Color_Cyan;
 using Console::Color_Yellow;
 using Console::Color_White;
+
+
+//////////////////////////////////////////////////////////////////////////////////////////
+// Dev / Debug conditionals --
+//   Consts for using if() statements instead of uglier #ifdef macros.
+//   Abbreviated macros for dev/debug only consoles and msgboxes.
+
+#ifdef PCSX2_DEVBUILD
+#	define DevCon Console
+#	define DevMsg MsgBox
+#else
+#	define DevCon 0&&Console
+#	define DevMsg 
+#endif
+
+#ifdef _DEBUG
+#	define DbgCon Console
+#else
+#	define DbgCon 0&&Console
+#endif

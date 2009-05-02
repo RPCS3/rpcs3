@@ -38,7 +38,7 @@ fi
 WARNING_FLAGS="-Wno-format -Wno-unused-parameter -Wno-unused-value -Wunused-variable "
 EXTRA_WARNING_FLAGS="-Wall -Wextra"
 NORMAL_FLAGS=" -pipe -msse -msse2 -O2 ${WARNING_FLAGS}"
-# These optimizations seem to cause issues with GCC 4.3.3, so we'll turn them off.
+# These optimizations seem to cause issues with GCC 4.3.3, so we'll turn them off. Comment if not on 4.3+
 NORMAL_FLAGS+=" -fno-guess-branch-probability -fno-dse -fno-tree-dse "
 
 DEBUG_FLAGS+=" -g -msse -msse2 ${EXTRA_WARNING_FLAGS} ${WARNING_FLAGS} "
@@ -92,24 +92,6 @@ then
  MYOBJDIR=$MYOBJDIR"Dev"
 fi
 AC_MSG_RESULT($devbuild)
-
-AC_MSG_CHECKING(force sse3 instructions)
-AC_ARG_ENABLE(sse3, AC_HELP_STRING([--enable-sse3], [Forces sse3 detection on CPUs]),
- sse3=$enableval,sse3=no)
-if test "x$sse3" == xyes
-then
- AC_DEFINE(PCSX2_FORCESSE3,1,[PCSX2_FORCESSE3])
-fi
-AC_MSG_RESULT(sse3)
-
-AC_MSG_CHECKING(force sse4 instructions)
-AC_ARG_ENABLE(sse4, AC_HELP_STRING([--enable-sse4], [Forces sse4 detection on CPUs]),
- sse4=$enableval,sse4=no)
-if test "x$sse4" == xyes
-then
- AC_DEFINE(PCSX2_FORCESSE4,1,[PCSX2_FORCESSE4])
-fi
-AC_MSG_RESULT(sse4)
 
 dnl gtk
 AC_MSG_CHECKING(gtk+)
@@ -178,7 +160,6 @@ echo "Configuration:"
 echo "  Target system type:    $target"
 echo "  Debug build?	       $debug"
 echo "  Dev build?	           $devbuild"
-echo "  Force sse3?	           $sse3"
 echo " nls support?   $nls"
 echo " local plugin inis? $localinis"
 echo " custom cflags? $customcflags"

@@ -479,7 +479,9 @@ void psxRcntUpdate()
 	for (i=0; i<6; i++) _rcntSet( i );
 }
 
-void psxRcntWcount16(int index, u32 value)
+//////////////////////////////////////////////////////////////////////////////////////////
+//
+void psxRcntWcount16(int index, u16 value)
 {
 	u32 change;
 
@@ -500,6 +502,8 @@ void psxRcntWcount16(int index, u32 value)
 	_rcntSet( index );
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////
+//
 void psxRcntWcount32(int index, u32 value)
 {
 	u32 change;
@@ -521,159 +525,119 @@ void psxRcntWcount32(int index, u32 value)
 	_rcntSet( index );
 }
 
-void psxRcnt0Wmode(u32 value)
+//////////////////////////////////////////////////////////////////////////////////////////
+//
+__forceinline void psxRcntWmode16( int index, u32 value )
 {
-	PSXCNT_LOG("IOP Counter[0] writeMode = %lx", value);
+	PSXCNT_LOG( "IOP Counter[%d] writeMode = 0x%04X", index, value );
 
-	psxCounters[0].mode = value;
-	psxCounters[0].mode|= 0x0400;
-	psxCounters[0].rate = 1;
+	jASSUME( index >= 0 && index < 3 );
+	psxCounter& counter = psxCounters[index];
 
-	if(value & IOPCNT_ALT_SOURCE)
-		psxCounters[0].rate = PSXPIXEL;
-	
-	if(psxCounters[0].mode & IOPCNT_ENABLE_GATE)
+	counter.mode  = value;
+	counter.mode |= 0x0400;
+
+	if( index == 2 )
 	{
-		// gated counters are added up as per the h/vblank timers.
-		PSXCNT_LOG("IOP Counter[0] Gate Check set, value = %x", value);
-		psxhblankgate |= 1;
-	}
-	else psxhblankgate &= ~1;
-
-	psxCounters[0].count = 0;
-	psxCounters[0].sCycleT = psxRegs.cycle;
-	psxCounters[0].target &= 0xffff;
-
-	_rcntSet( 0 );
-}
-
-void psxRcnt1Wmode(u32 value)
-{
-	PSXCNT_LOG("IOP Counter[0] writeMode = %lx", value);
-
-	psxCounters[1].mode = value;
-	psxCounters[1].mode|= 0x0400;
-	psxCounters[1].rate = 1;
-
-	if(value & IOPCNT_ALT_SOURCE)
-		psxCounters[1].rate = PSXHBLANK;
-
-	if(psxCounters[1].mode & IOPCNT_ENABLE_GATE)
-	{
-		PSXCNT_LOG("IOP Counter[1] Gate Check set, value = %x", value);
-		psxvblankgate |= 1<<1;
-	}
-	else psxvblankgate &= ~(1<<1);
-
-	psxCounters[1].count = 0;
-	psxCounters[1].sCycleT = psxRegs.cycle;
-	psxCounters[1].target &= 0xffff;
-	_rcntSet( 1 );
-}
-
-void psxRcnt2Wmode(u32 value)
-{
-	PSXCNT_LOG("IOP Counter[0] writeMode = %lx", value);
-
-	psxCounters[2].mode = value;
-	psxCounters[2].mode|= 0x0400;
-
-	switch(value & 0x200)
-	{
-		case 0x200: psxCounters[2].rate = 8; break;
+		switch(value & 0x200)
+		{
 		case 0x000: psxCounters[2].rate = 1; break;
+		case 0x200: psxCounters[2].rate = 8; break;
+			jNO_DEFAULT;
+		}
+
+		if((counter.mode & 0x7) == 0x7 || (counter.mode & 0x7) == 0x1)
+		{
+			counter.mode |= IOPCNT_STOPPED;
+		}
+	}
+	else
+	{
+		// Counters 0 and 1 can select PIXEL or HSYNC as an alternate source:
+		counter.rate = 1;
+
+		if(value & IOPCNT_ALT_SOURCE)
+			counter.rate = (index==0) ? PSXPIXEL : PSXHBLANK;
+
+		if(counter.mode & IOPCNT_ENABLE_GATE)
+		{
+			// gated counters are added up as per the h/vblank timers.
+			// (the PIXEL alt source becomes a vsync gate)
+
+			PSXCNT_LOG( "IOP Counter[%d] Gate Check set, value = 0x%04X", index, value );
+			if( index == 0 )
+				psxhblankgate |= 1;		// fixme: these gate flags should be one var >_<
+			else
+				psxvblankgate |= 1<<1;
+		}
+		else
+		{
+			if( index == 0 )
+				psxhblankgate &= ~1;
+			else
+				psxvblankgate &= ~(1<<1);
+		}
 	}
 
-	if((psxCounters[2].mode & 0x7) == 0x7 || (psxCounters[2].mode & 0x7) == 0x1)
-	{
-		//Console::WriteLn("Gate set on IOP C2, disabling");
-		psxCounters[2].mode |= IOPCNT_STOPPED;
-	}
-	
-	psxCounters[2].count = 0;
-	psxCounters[2].sCycleT = psxRegs.cycle;
-	psxCounters[2].target &= 0xffff;
-	_rcntSet( 2 );
+	counter.count = 0;
+	counter.sCycleT = psxRegs.cycle;
+	counter.target &= 0xffff;
+
+	_rcntSet( index );
 }
 
-void psxRcnt3Wmode(u32 value)
+//////////////////////////////////////////////////////////////////////////////////////////
+//
+__forceinline void psxRcntWmode32( int index, u32 value )
 {
-	PSXCNT_LOG("IOP Counter[3] writeMode = %lx", value);
+	PSXCNT_LOG( "IOP Counter[%d] writeMode = 0x%04x", index, value );
 
-	psxCounters[3].mode = value;
-	psxCounters[3].rate = 1;
-	psxCounters[3].mode|= 0x0400;
+	jASSUME( index >= 3 && index < 6 );
+	psxCounter& counter = psxCounters[index];
 
-	if(value & IOPCNT_ALT_SOURCE)
-		psxCounters[3].rate = PSXHBLANK;
-  
-	if(psxCounters[3].mode & IOPCNT_ENABLE_GATE)
+	counter.mode  = value;
+	counter.mode |= 0x0400;
+
+	if( index == 3 )
 	{
-		PSXCNT_LOG("IOP Counter[3] Gate Check set, value = %x", value);
-		psxvblankgate |= 1<<3;
-	}
-	else psxvblankgate &= ~(1<<3);
+		// Counter 3 has the HBlank as an alternate source.
+		counter.rate  = 1;
+		if(value & IOPCNT_ALT_SOURCE)
+			counter.rate = PSXHBLANK;
 
-	psxCounters[3].count = 0;
-	psxCounters[3].sCycleT = psxRegs.cycle;
-	psxCounters[3].target &= 0xffffffff;
-	_rcntSet( 3 );
+		if(counter.mode & IOPCNT_ENABLE_GATE)
+		{
+			PSXCNT_LOG("IOP Counter[3] Gate Check set, value = %x", value);
+			psxvblankgate |= 1<<3;
+		}
+		else psxvblankgate &= ~(1<<3);
+	}
+	else
+	{
+		switch(value & 0x6000)
+		{
+		case 0x0000: counter.rate = 1;   break;
+		case 0x2000: counter.rate = 8;   break;
+		case 0x4000: counter.rate = 16;  break;
+		case 0x6000: counter.rate = 256; break;
+		}
+
+		// Need to set a rate and target
+		if((counter.mode & 0x7) == 0x7 || (counter.mode & 0x7) == 0x1)
+		{
+			Console::WriteLn( "Gate set on IOP Counter %d, disabling", params index );
+			counter.mode |= IOPCNT_STOPPED;
+		}
+	}
+
+	counter.count = 0;
+	counter.sCycleT = psxRegs.cycle;
+	counter.target &= 0xffffffff;
+	_rcntSet( index );
 }
 
-void psxRcnt4Wmode(u32 value)
-{
-	PSXCNT_LOG("IOP Counter[4] writeMode = %lx", value);
-
-	psxCounters[4].mode = value;
-	psxCounters[4].mode|= 0x0400;
-
-	switch(value & 0x6000)
-	{
-		case 0x0000: psxCounters[4].rate = 1;   break;
-		case 0x2000: psxCounters[4].rate = 8;   break;
-		case 0x4000: psxCounters[4].rate = 16;  break;
-		case 0x6000: psxCounters[4].rate = 256; break;
-	}
-	// Need to set a rate and target
-	if((psxCounters[4].mode & 0x7) == 0x7 || (psxCounters[4].mode & 0x7) == 0x1)
-	{
-		Console::WriteLn("Gate set on IOP C4, disabling");
-		psxCounters[4].mode |= IOPCNT_STOPPED;
-	}
-	
-	psxCounters[4].count = 0;
-	psxCounters[4].sCycleT = psxRegs.cycle;
-	psxCounters[4].target &= 0xffffffff;
-	_rcntSet( 4 );
-}
-
-void psxRcnt5Wmode(u32 value)
-{
-	PSXCNT_LOG("IOP Counter[5] writeMode = %lx", value);
-
-	psxCounters[5].mode = value;
-	psxCounters[5].mode|= 0x0400;
-
-	switch(value & 0x6000)
-	{
-		case 0x0000: psxCounters[5].rate = 1; break;
-		case 0x2000: psxCounters[5].rate = 8; break;
-		case 0x4000: psxCounters[5].rate = 16; break;
-		case 0x6000: psxCounters[5].rate = 256; break;
-	}
-	// Need to set a rate and target
-	if((psxCounters[5].mode & 0x7) == 0x7 || (psxCounters[5].mode & 0x7) == 0x1)
-	{
-		Console::WriteLn("Gate set on IOP C5, disabling");
-		psxCounters[5].mode |= IOPCNT_STOPPED;
-	}
-	
-	psxCounters[5].count = 0;
-	psxCounters[5].sCycleT = psxRegs.cycle;
-	psxCounters[5].target &= 0xffffffff;
-	_rcntSet( 5 );
-}
-
+//////////////////////////////////////////////////////////////////////////////////////////
+//
 void psxRcntWtarget16(int index, u32 value)
 {
 	assert( index < 3 );

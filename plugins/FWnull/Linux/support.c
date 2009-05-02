@@ -10,17 +10,11 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <string.h>
+#include <stdio.h>
 
 #include <gtk/gtk.h>
 
 #include "support.h"
-
-/* This is an internally used function to check if a pixmap file exists. */
-static gchar* check_file_exists        (const gchar     *directory,
-                                        const gchar     *filename);
-
-/* This is an internally used function to create pixmaps. */
-static GtkWidget* create_dummy_pixmap  (GtkWidget       *widget);
 
 GtkWidget*
 lookup_widget                          (GtkWidget       *widget,
@@ -34,45 +28,18 @@ lookup_widget                          (GtkWidget       *widget,
         parent = gtk_menu_get_attach_widget (GTK_MENU (widget));
       else
         parent = widget->parent;
+      if (!parent)
+        parent = (GtkWidget*) g_object_get_data (G_OBJECT (widget), "GladeParentKey");
       if (parent == NULL)
         break;
       widget = parent;
     }
 
-  found_widget = (GtkWidget*) gtk_object_get_data (GTK_OBJECT (widget),
-                                                   widget_name);
+  found_widget = (GtkWidget*) g_object_get_data (G_OBJECT (widget),
+                                                 widget_name);
   if (!found_widget)
     g_warning ("Widget not found: %s", widget_name);
   return found_widget;
-}
-
-/* This is a dummy pixmap we use when a pixmap can't be found. */
-static char *dummy_pixmap_xpm[] = {
-/* columns rows colors chars-per-pixel */
-"1 1 1 1",
-"  c None",
-/* pixels */
-" "
-};
-
-/* This is an internally used function to create pixmaps. */
-static GtkWidget*
-create_dummy_pixmap                    (GtkWidget       *widget)
-{
-  GdkColormap *colormap;
-  GdkPixmap *gdkpixmap;
-  GdkBitmap *mask;
-  GtkWidget *pixmap;
-
-  colormap = gtk_widget_get_colormap (widget);
-  gdkpixmap = gdk_pixmap_colormap_create_from_xpm_d (NULL, colormap, &mask,
-                                                     NULL, dummy_pixmap_xpm);
-  if (gdkpixmap == NULL)
-    g_error ("Couldn't create replacement pixmap.");
-  pixmap = gtk_pixmap_new (gdkpixmap, mask);
-  gdk_pixmap_unref (gdkpixmap);
-  gdk_bitmap_unref (mask);
-  return pixmap;
 }
 
 static GList *pixmaps_directories = NULL;
@@ -85,78 +52,93 @@ add_pixmap_directory                   (const gchar     *directory)
                                         g_strdup (directory));
 }
 
+/* This is an internally used function to find pixmap files. */
+static gchar*
+find_pixmap_file                       (const gchar     *filename)
+{
+  GList *elem;
+
+  /* We step through each of the pixmaps directory to find it. */
+  elem = pixmaps_directories;
+  while (elem)
+    {
+      gchar *pathname = g_strdup_printf ("%s%s%s", (gchar*)elem->data,
+                                         G_DIR_SEPARATOR_S, filename);
+      if (g_file_test (pathname, G_FILE_TEST_EXISTS))
+        return pathname;
+      g_free (pathname);
+      elem = elem->next;
+    }
+  return NULL;
+}
+
 /* This is an internally used function to create pixmaps. */
 GtkWidget*
 create_pixmap                          (GtkWidget       *widget,
                                         const gchar     *filename)
 {
-  gchar *found_filename = NULL;
-  GdkColormap *colormap;
-  GdkPixmap *gdkpixmap;
-  GdkBitmap *mask;
+  gchar *pathname = NULL;
   GtkWidget *pixmap;
-  GList *elem;
 
   if (!filename || !filename[0])
-      return create_dummy_pixmap (widget);
+      return gtk_image_new ();
 
-  /* We first try any pixmaps directories set by the application. */
-  elem = pixmaps_directories;
-  while (elem)
+  pathname = find_pixmap_file (filename);
+
+  if (!pathname)
     {
-      found_filename = check_file_exists ((gchar*)elem->data, filename);
-      if (found_filename)
-        break;
-      elem = elem->next;
+      g_warning (_("Couldn't find pixmap file: %s"), filename);
+      return gtk_image_new ();
     }
 
-  /* If we haven't found the pixmap, try the source directory. */
-  if (!found_filename)
-    {
-      found_filename = check_file_exists ("pixmaps", filename);
-    }
-
-  if (!found_filename)
-    {
-      g_warning ("Couldn't find pixmap file: %s", filename);
-      return create_dummy_pixmap (widget);
-    }
-
-  colormap = gtk_widget_get_colormap (widget);
-  gdkpixmap = gdk_pixmap_colormap_create_from_xpm (NULL, colormap, &mask,
-                                                   NULL, found_filename);
-  if (gdkpixmap == NULL)
-    {
-      g_warning ("Error loading pixmap file: %s", found_filename);
-      g_free (found_filename);
-      return create_dummy_pixmap (widget);
-    }
-  g_free (found_filename);
-  pixmap = gtk_pixmap_new (gdkpixmap, mask);
-  gdk_pixmap_unref (gdkpixmap);
-  gdk_bitmap_unref (mask);
+  pixmap = gtk_image_new_from_file (pathname);
+  g_free (pathname);
   return pixmap;
 }
 
-/* This is an internally used function to check if a pixmap file exists. */
-static gchar*
-check_file_exists                      (const gchar     *directory,
-                                        const gchar     *filename)
+/* This is an internally used function to create pixmaps. */
+GdkPixbuf*
+create_pixbuf                          (const gchar     *filename)
 {
-  gchar *full_filename;
-  struct stat s;
-  gint status;
+  gchar *pathname = NULL;
+  GdkPixbuf *pixbuf;
+  GError *error = NULL;
 
-  full_filename = (gchar*) g_malloc (strlen (directory) + 1
-                                     + strlen (filename) + 1);
-  strcpy (full_filename, directory);
-  strcat (full_filename, G_DIR_SEPARATOR_S);
-  strcat (full_filename, filename);
+  if (!filename || !filename[0])
+      return NULL;
 
-  status = stat (full_filename, &s);
-  if (status == 0 && S_ISREG (s.st_mode))
-    return full_filename;
-  g_free (full_filename);
-  return NULL;
+  pathname = find_pixmap_file (filename);
+
+  if (!pathname)
+    {
+      g_warning (_("Couldn't find pixmap file: %s"), filename);
+      return NULL;
+    }
+
+  pixbuf = gdk_pixbuf_new_from_file (pathname, &error);
+  if (!pixbuf)
+    {
+      fprintf (stderr, "Failed to load pixbuf file: %s: %s\n",
+               pathname, error->message);
+      g_error_free (error);
+    }
+  g_free (pathname);
+  return pixbuf;
+}
+
+/* This is used to set ATK action descriptions. */
+void
+glade_set_atk_action_description       (AtkAction       *action,
+                                        const gchar     *action_name,
+                                        const gchar     *description)
+{
+  gint n_actions, i;
+
+  n_actions = atk_action_get_n_actions (action);
+  for (i = 0; i < n_actions; i++)
+    {
+      if (!strcmp (atk_action_get_name (action, i), action_name))
+        atk_action_set_description (action, i, description);
+    }
 }
 

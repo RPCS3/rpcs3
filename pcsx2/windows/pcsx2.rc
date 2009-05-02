@@ -828,7 +828,7 @@ BEGIN
     CONTROL         "EE Counters log",IDC_EECNTLOG,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,140,64,11
 END
 
-IDD_CPUDLG DIALOGEX 0, 0, 563, 321
+IDD_CPUDLG DIALOGEX 0, 0, 563, 305
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
@@ -843,13 +843,11 @@ BEGIN
     CONTROL         "Normal - All frames are rendered as fast as possible.",IDC_CPU_FL_NORMAL,
                     "Button",BS_AUTORADIOBUTTON | BS_MULTILINE | WS_GROUP,309,17,221,17
     CONTROL         "Limit - Force frames to normal speeds if too fast.\n      (You can set a custom FPS limit below.)",IDC_CPU_FL_LIMIT,
-                    "Button",BS_AUTORADIOBUTTON | BS_MULTILINE,309,33,222,15
+                    "Button",BS_AUTORADIOBUTTON | BS_MULTILINE,309,37,222,15
     CONTROL         "Frame Skip - In order to achieve normal speeds,\n      some frames are skipped (fast).\n      Fps displayed counts skipped frames too.",IDC_CPU_FL_SKIP,
-                    "Button",BS_AUTORADIOBUTTON | BS_MULTILINE,309,48,221,28
-    CONTROL         "VU Skip - Same as 'Frame Skip', but tries to skip more.\n       Artifacts might be present, but will be faster.",IDC_CPU_FL_SKIPVU,
-                    "Button",BS_AUTORADIOBUTTON | BS_MULTILINE,309,75,220,25
-    DEFPUSHBUTTON   "OK",IDOK,210,298,61,14
-    PUSHBUTTON      "Cancel",IDCANCEL,282,298,61,14,NOT WS_TABSTOP
+                    "Button",BS_AUTORADIOBUTTON | BS_MULTILINE,309,56,221,28
+    DEFPUSHBUTTON   "OK",IDOK,210,287,61,14
+    PUSHBUTTON      "Cancel",IDCANCEL,282,287,61,14,NOT WS_TABSTOP
     LTEXT           "CPU Vendor",IDC_VENDORNAME,12,23,88,8
     LTEXT           "Family",IDC_FAMILYNAME,12,41,88,8
     LTEXT           "Cpu Speed",IDC_CPUSPEEDNAME,12,60,88,8
@@ -860,19 +858,19 @@ BEGIN
     GROUPBOX        "VU Recompilers - All options are set by default",IDC_CPU_VUGROUP,7,119,265,46
     LTEXT           "Features",IDC_FEATURESNAME,12,78,88,8
     GROUPBOX        "",IDC_STATIC,7,7,265,90
-    LTEXT           "Custom FPS Limit (0=auto):",IDC_CUSTOM_FPS,327,113,124,12
-    EDITTEXT        IDC_CUSTOMFPS,456,113,53,13,ES_AUTOHSCROLL | ES_NUMBER
-    EDITTEXT        IDC_CUSTOM_FRAMESKIP,456,130,53,13,ES_AUTOHSCROLL | ES_NUMBER
-    EDITTEXT        IDC_CUSTOM_CONSECUTIVE_FRAMES,456,148,53,13,ES_AUTOHSCROLL | ES_NUMBER
-    LTEXT           "Skip Frames when slower than:\n(See Note 1)",IDC_FRAMESKIP_LABEL1,327,129,106,20
-    LTEXT           "Consecutive Frames before skipping:\n(See Note 2)",IDC_FRAMESKIP_LABEL2,327,149,121,17
-    GROUPBOX        "Frame Limiting (F4 key switches the mode in-game!)",IDC_FRAMELIMIT,301,7,250,280
-    GROUPBOX        "Detailed Settings",IDC_FRAMELIMIT_OPTIONS,310,99,234,185
-    LTEXT           "*Note 1: Will only skip when slower than this fps number.\n (0 = Auto) ; (9999 = Forced-Frameskip regardless of speed.)\n (e.g. If set to 45, will only skip when slower than 45fps.)",IDC_FRAMESKIP_LABEL3,318,189,217,26
-    LTEXT           "*Note 2: Will render this number of consecutive frames before\n  skipping the next frame. (0=default)\n (e.g. If set to 2, will render 2 frames before skipping 1.)",IDC_FRAMESKIP_LABEL4,318,216,217,25
-    EDITTEXT        IDC_CUSTOM_CONSECUTIVE_SKIP,456,166,53,13,ES_AUTOHSCROLL | ES_NUMBER
-    LTEXT           "Consecutive Frames to skip:\n(See Note 3)",IDC_FRAMESKIP_LABEL5,327,167,121,17
-    LTEXT           "*Note 3: Will skip this number of frames before\n  rendering the next sequence of frames. (0=default)\n (e.g. If set to 2, will skip 2 consecutive frames whenever its time\n  to skip.)",IDC_FRAMESKIP_LABEL6,318,244,217,32
+    LTEXT           "Custom FPS Limit (0=auto):",IDC_CUSTOM_FPS,327,103,124,12
+    EDITTEXT        IDC_CUSTOMFPS,456,103,53,13,ES_AUTOHSCROLL | ES_NUMBER
+    EDITTEXT        IDC_CUSTOM_FRAMESKIP,456,121,53,13,ES_AUTOHSCROLL | ES_NUMBER
+    EDITTEXT        IDC_CUSTOM_CONSECUTIVE_FRAMES,456,139,53,13,ES_AUTOHSCROLL | ES_NUMBER
+    LTEXT           "Skip Frames when slower than:\n(See Note 1)",IDC_FRAMESKIP_LABEL1,327,119,106,20
+    LTEXT           "Consecutive Frames before skipping:\n(See Note 2)",IDC_FRAMESKIP_LABEL2,327,139,121,17
+    GROUPBOX        "Frame Limiting (F4 key switches the mode in-game!)",IDC_FRAMELIMIT,301,7,250,274
+    GROUPBOX        "Detailed Settings",IDC_FRAMELIMIT_OPTIONS,310,89,234,185
+    LTEXT           "*Note 1: Will only skip when slower than this fps number.\n (0 = Auto) ; (9999 = Forced-Frameskip regardless of speed.)\n (e.g. If set to 45, will only skip when slower than 45fps.)",IDC_FRAMESKIP_LABEL3,318,179,217,26
+    LTEXT           "*Note 2: Will render this number of consecutive frames before\n  skipping the next frame. (0=default)\n (e.g. If set to 2, will render 2 frames before skipping 1.)",IDC_FRAMESKIP_LABEL4,318,206,217,25
+    EDITTEXT        IDC_CUSTOM_CONSECUTIVE_SKIP,456,157,53,13,ES_AUTOHSCROLL | ES_NUMBER
+    LTEXT           "Consecutive Frames to skip:\n(See Note 3)",IDC_FRAMESKIP_LABEL5,327,157,121,17
+    LTEXT           "*Note 3: Will skip this number of frames before\n  rendering the next sequence of frames. (0=default)\n (e.g. If set to 2, will skip 2 consecutive frames whenever its time\n  to skip.)",IDC_FRAMESKIP_LABEL6,318,234,217,32
 END
 
 

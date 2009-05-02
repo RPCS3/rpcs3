@@ -165,16 +165,10 @@ void gsSetVideoRegionType( u32 isPal )
 // Make sure framelimiter options are in sync with the plugin's capabilities.
 void gsInit()
 {
-	switch(CHECK_FRAMELIMIT)
+	if( (CHECK_FRAMELIMIT == PCSX2_FRAMELIMIT_SKIP) && (GSsetFrameSkip == NULL) )
 	{
-		case PCSX2_FRAMELIMIT_SKIP:
-		case PCSX2_FRAMELIMIT_VUSKIP:
-			if( GSsetFrameSkip == NULL )
-			{
-				Config.Options &= ~PCSX2_FRAMELIMIT_MASK;
-				Console::WriteLn("Notice: Disabling frameskip -- GS plugin does not support it.");
-			}
-		break;
+		Config.Options &= ~PCSX2_FRAMELIMIT_MASK;
+		Console::WriteLn("Notice: Disabling frameskip -- GS plugin does not support it.");
 	}
 }
 
@@ -619,8 +613,7 @@ __forceinline void gsFrameSkip( bool forceskip )
 	static u8 FramesToRender = 0;
 	static u8 FramesToSkip = 0;
 
-	if( CHECK_FRAMELIMIT != PCSX2_FRAMELIMIT_SKIP &&
-		CHECK_FRAMELIMIT != PCSX2_FRAMELIMIT_VUSKIP ) return;
+	if( CHECK_FRAMELIMIT != PCSX2_FRAMELIMIT_SKIP ) return;
 
 	// FrameSkip and VU-Skip Magic!
 	// Skips a sequence of consecutive frames after a sequence of rendered frames
@@ -652,14 +645,6 @@ __forceinline void gsFrameSkip( bool forceskip )
 		return;
 	}
 
-	// if we've already given the EE a skipcount assignment then don't do anything more.
-	// Otherwise we could start compounding the issue and skips would be too long.
-	if( g_vu1SkipCount > 0 )
-	{
-		//Console::Status("- Already Assigned a Skipcount.. %d", params g_vu1SkipCount );
-		return;
-	}
-
 	if( FramesToRender == 0 )
 	{
 		// -- Standard operation section --
@@ -680,20 +665,9 @@ __forceinline void gsFrameSkip( bool forceskip )
 			if( (m_justSkipped && (sSlowDeltaTime > m_iSlowTicks)) ||
 				(sSlowDeltaTime > m_iSlowTicks*2) )
 			{
-				//Console::Status( "Frameskip Initiated! Lateness: %d", params (int)( (sSlowDeltaTime*100) / m_iSlowTicks ) );
-
-				if( CHECK_FRAMELIMIT == PCSX2_FRAMELIMIT_VUSKIP )
-				{
-					// For best results we have to wait for the EE to
-					// tell us when to skip, so that VU skips are synched with GS skips.
-					AtomicExchangeAdd( g_vu1SkipCount, yesSkipFrames+1 );
-				}
-				else
-				{
-					GSsetFrameSkip(1);
-					FramesToRender = noSkipFrames+1;
-					FramesToSkip = yesSkipFrames;
-				}
+				GSsetFrameSkip(1);
+				FramesToRender = noSkipFrames+1;
+				FramesToSkip = yesSkipFrames;
 			}
 		}
 		else
@@ -771,7 +745,6 @@ void gsPostVsyncEnd( bool updategs )
 
 void _gs_ResetFrameskip()
 {
-	g_vu1SkipCount = 0;		// set to 0 so that EE will re-enable the VU at the next vblank.
 	GSsetFrameSkip( 0 );
 }
 

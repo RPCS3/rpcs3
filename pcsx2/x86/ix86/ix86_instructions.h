@@ -35,6 +35,9 @@
 
 namespace x86Emitter
 {
+	extern void xStoreReg( const xRegisterSSE& src );
+	extern void xRestoreReg( const xRegisterSSE& dest );
+
 	// ------------------------------------------------------------------------
 	// Group 1 Instruction Class
 

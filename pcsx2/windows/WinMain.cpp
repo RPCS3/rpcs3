@@ -196,10 +196,8 @@ void WinRun()
 	_doPluginOverride( "DEV9", g_Startup.dev9dll, Config.DEV9 );
 
 
-#ifndef _DEBUG
 	if( Config.Profiler )
 		ProfilerInit();
-#endif
 
 	InitCPUTicks();
 
@@ -798,7 +796,6 @@ LRESULT WINAPI MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				SaveConfig();
 				break;
 
-#ifndef _DEBUG
 			case ID_PROFILER:
 				Config.Profiler = !Config.Profiler;
 				if( Config.Profiler )
@@ -813,7 +810,6 @@ LRESULT WINAPI MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				}
 				SaveConfig();
 				break;
-#endif
 
 			default:
 				if (LOWORD(wParam) >= ID_LANGS && LOWORD(wParam) <= (ID_LANGS + langsMax))
@@ -987,9 +983,7 @@ void CreateMainMenu() {
 	ADDMENUITEM(0,_("Print cdvd &Info"), ID_CDVDPRINT);
 	ADDMENUITEM(0,_("Close GS Window on Esc"), ID_CLOSEGS);
 	ADDSEPARATOR(0);
-#ifndef _DEBUG
 	ADDMENUITEM(0,_("Enable &Profiler"), ID_PROFILER);
-#endif
 	ADDMENUITEM(0,_("Enable &Patches"), ID_PATCHES);
 	ADDMENUITEM(0,_("Enable &Console"), ID_CONSOLE); 
 	ADDSEPARATOR(0);

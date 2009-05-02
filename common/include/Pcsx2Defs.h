@@ -29,6 +29,8 @@
 #	endif
 #endif
 
+#include "Pcsx2Types.h"
+
 // Renamed ARRAYSIZE to ArraySize -- looks nice and gets rid of Windows.h conflicts (air)
 #ifndef ArraySize
 #define ArraySize(x) (sizeof(x)/sizeof((x)[0]))
@@ -58,8 +60,6 @@
 // disable the default case in a switch
 #define jNO_DEFAULT \
 { \
-	break; \
-	\
 default: \
 	jASSUME(0); \
 	break; \
@@ -79,6 +79,8 @@ default: \
 #define PCSX2_ALIGNED16_EXTERN(x) extern __declspec(align(16)) x
 
 #define __naked __declspec(naked)
+#define __unused /*unused*/
+#define __noinline __declspec(noinline) 
 #define CALLBACK    __stdcall
 
 #else
@@ -98,6 +100,7 @@ default: \
 #define __unused __attribute__((unused))
 #define _inline __inline__ __attribute__((unused))
 #define __forceinline __attribute__((always_inline,unused))
+#define __noinline __attribute__((noinline))
 #endif
 
 typedef struct {

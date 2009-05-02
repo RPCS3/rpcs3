@@ -16,18 +16,69 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
-#ifndef __PSXHW_H__
-#define __PSXHW_H__
+#pragma once
 
-#include "R3000A.h"
 #include "IopMem.h"
 
-#define HW_USB_START 0x1f801600
-#define HW_USB_END 0x1f801700
-#define HW_FW_START 0x1f808400
-#define HW_FW_END 0x1f808550
-#define HW_SPU2_START 0x1f801c00
-#define HW_SPU2_END 0x1f801e00
+static const u32
+	HW_USB_START	= 0x1f801600,
+	HW_USB_END		= 0x1f801700,
+	HW_FW_START		= 0x1f808400,
+	HW_FW_END		= 0x1f808550,	// end addr for FW is a guess...
+	HW_SPU2_START	= 0x1f801c00,
+	HW_SPU2_END		= 0x1f801e00;
+	
+static const u32
+	HW_SSBUS_SPD_ADDR	= 0x1f801000,
+	HW_SSBUS_PIO_ADDR	= 0x1f801004,
+	HW_SSBUS_SPD_DELAY	= 0x1f801008,
+	HW_SSBUS_DEV1_DELAY	= 0x1f80100C,
+	HW_SSBUS_ROM_DELAY	= 0x1f801010,
+	HW_SSBUS_SPU_DELAY	= 0x1f801014,
+	HW_SSBUS_DEV5_DELAY	= 0x1f801018,
+	HW_SSBUS_PIO_DELAY	= 0x1f80101c,
+	HW_SSBUS_COM_DELAY	= 0x1f801020,
+	
+	HW_SIO_DATA			= 0x1f801040,	// SIO read/write register
+	HW_SIO_STAT			= 0x1f801044,
+	HW_SIO_MODE			= 0x1f801048,
+	HW_SIO_CTRL			= 0x1f80104a,
+	HW_SIO_BAUD			= 0x1f80104e,
+
+	HW_IREG				= 0x1f801070,
+	HW_IMASK			= 0x1f801074,
+	HW_ICTRL			= 0x1f801078,
+
+	HW_SSBUS_DEV1_ADDR	= 0x1f801400,
+	HW_SSBUS_SPU_ADDR	= 0x1f801404,
+	HW_SSBUS_DEV5_ADDR	= 0x1f801408,
+	HW_SSBUS_SPU1_ADDR	= 0x1f80140c,
+	HW_SSBUS_DEV9_ADDR3	= 0x1f801410,
+	HW_SSBUS_SPU1_DELAY	= 0x1f801414,
+	HW_SSBUS_DEV9_DELAY2= 0x1f801418,
+	HW_SSBUS_DEV9_DELAY3= 0x1f80141c,
+	HW_SSBUS_DEV9_DELAY1= 0x1f801420,
+
+	HW_ICFG				= 0x1f801450,
+	HW_DEV9_DATA		= 0x1f80146e,	// DEV9 read/write register
+
+	// CDRom registers are used for various command, status, and data stuff.
+
+	HW_CDR_DATA0		= 0x1f801800,	// CDROM multipurpose data register 1
+	HW_CDR_DATA1		= 0x1f801801,	// CDROM multipurpose data register 2
+	HW_CDR_DATA2		= 0x1f801802,	// CDROM multipurpose data register 3
+	HW_CDR_DATA3		= 0x1f801803,	// CDROM multipurpose data register 4
+
+	// SIO2 is a DMA interface for the SIO.
+
+	HW_SIO2_DATAIN		= 0x1F808260,
+	HW_SIO2_FIFO		= 0x1f808264,
+	HW_SIO2_CTRL		= 0x1f808268,
+	HW_SIO2_RECV1		= 0x1f80826c,
+	HW_SIO2_RECV2		= 0x1f808270,
+	HW_SIO2_RECV3		= 0x1f808274,
+	HW_SIO2_INTR		= 0x1f808280;
+
 
 /* Registers for the IOP Counters */
 enum IOPCountRegs
@@ -37,7 +88,7 @@ enum IOPCountRegs
 	IOP_T2_COUNT = 0x1f801120,
 	IOP_T3_COUNT = 0x1f801480,
 	IOP_T4_COUNT = 0x1f801490,
-	IOP_T5_COUNT =  0x1f8014a0,
+	IOP_T5_COUNT = 0x1f8014a0,
 			
 	IOP_T0_MODE = 0x1f801104,
 	IOP_T1_MODE = 0x1f801114,
@@ -46,7 +97,7 @@ enum IOPCountRegs
 	IOP_T4_MODE = 0x1f801494,
 	IOP_T5_MODE = 0x1f8014a4,
 			
-	IOP_T0_TARGET= 0x1f801108,
+	IOP_T0_TARGET = 0x1f801108,
 	IOP_T1_TARGET = 0x1f801118,
 	IOP_T2_TARGET = 0x1f801128,
 	IOP_T3_TARGET = 0x1f801488,
@@ -166,6 +217,8 @@ extern void PSX_INT( IopEventId n, s32 ecycle);
 
 extern void psxSetNextBranch( u32 startCycle, s32 delta );
 extern void psxSetNextBranchDelta( s32 delta );
+extern int iopTestCycle( u32 startCycle, s32 delta );
+extern void _iopTestInterrupts();
 
 void psxHwReset();
 u8   psxHwRead8 (u32 add);
@@ -192,5 +245,3 @@ void psxHwConstWrite16(u32 add, int mmreg);
 void psxHwConstWrite32(u32 add, int mmreg);
 int psxHw4ConstRead8 (u32 x86reg, u32 add, u32 sign);
 void psxHw4ConstWrite8(u32 add, int mmreg);
-
-#endif /* __PSXHW_H__ */

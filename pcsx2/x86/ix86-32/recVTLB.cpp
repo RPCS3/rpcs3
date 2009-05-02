@@ -27,27 +27,83 @@
 using namespace vtlb_private;
 using namespace x86Emitter;
 
-// NOTICE: This function *destroys* EAX!!
-// Moves 128 bits of memory from the source register ptr to the dest register ptr.
-// (used as an equivalent to movaps, when a free XMM register is unavailable for some reason)
-void MOV128_MtoM( x86IntRegType destRm, x86IntRegType srcRm )
+//////////////////////////////////////////////////////////////////////////////////////////
+// iAllocRegSSE -- allocates an xmm register.  If no xmm register is available, xmm0 is
+// saved into g_globalXMMData and returned as a free register.
+//
+class iAllocRegSSE
 {
-	// (this is one of my test cases for the new emitter --air)
+protected:
+	xRegisterSSE m_reg;
+	bool m_free;
 
-	xAddressReg src( srcRm );
-	xAddressReg dest( destRm );
+public:
+	iAllocRegSSE() :
+		m_reg( xmm0 ),
+		m_free( !!_hasFreeXMMreg() )
+	{
+		if( m_free )
+			m_reg = xRegisterSSE( _allocTempXMMreg( XMMT_INT, -1 ) );
+		else
+			xStoreReg( m_reg );
+	}
 
-	xMOV( eax, ptr[src] );
-	xMOV( ptr[dest], eax );
+	~iAllocRegSSE()
+	{
+		if( m_free )
+			_freeXMMreg( m_reg.Id );
+		else
+			xRestoreReg( m_reg );
+	}
+	
+	operator xRegisterSSE() const { return m_reg; }
+};
 
-	xMOV( eax, ptr[src+4] );
-	xMOV( ptr[dest+4], eax );
+//////////////////////////////////////////////////////////////////////////////////////////
+// Moves 128 bits from point B to point A, using SSE's MOVAPS (or MOVDQA).
+// This instruction always uses an SSE register, even if all registers are allocated!  It
+// saves an SSE register to memory first, performs the copy, and restores the register.
+//
+void iMOV128_SSE( const ModSibBase& destRm, const ModSibBase& srcRm )
+{
+	iAllocRegSSE reg;
+	xMOVDQA( reg, srcRm );
+	xMOVDQA( destRm, reg );
+}
 
-	xMOV( eax, ptr[src+8] );
-	xMOV( ptr[dest+8], eax );
+//////////////////////////////////////////////////////////////////////////////////////////
+// Moves 64 bits of data from point B to point A, using either MMX, SSE, or x86 registers
+// if neither MMX nor SSE is available to the task.
+//
+// Optimizations: This method uses MMX is the cpu is in MMX mode, or SSE if it's in FPU
+// mode (saving on potential EMMS uses).
+//
+void iMOV64_Smart( const ModSibBase& destRm, const ModSibBase& srcRm )
+{
+	if( (x86FpuState == FPU_STATE) && _hasFreeXMMreg() )
+	{
+		// Move things using MOVLPS:
+		xRegisterSSE reg( _allocTempXMMreg( XMMT_INT, -1 ) );
+		xMOVL.PS( reg, srcRm );
+		xMOVL.PS( destRm, reg );
+		_freeXMMreg( reg.Id );
+		return;
+	}
 
-	xMOV( eax, ptr[src+12] );
-	xMOV( ptr[dest+12], eax );
+	if( _hasFreeMMXreg() )
+	{
+		xRegisterMMX reg( _allocMMXreg(-1, MMX_TEMP, 0) );
+		xMOVQ( reg, srcRm );
+		xMOVQ( destRm, reg );
+		_freeMMXreg( reg.Id );		
+	}
+	else
+	{
+		xMOV( eax, srcRm );
+		xMOV( destRm, eax );
+		xMOV( eax, srcRm+4 );
+		xMOV( destRm+4, eax );
+	}		
 }
 
 /*
@@ -127,38 +183,11 @@ static void _vtlb_DynGen_DirectRead( u32 bits, bool sign )
 		break;
 
 		case 64:
-			if( _hasFreeMMXreg() )
-			{
-				const int freereg = _allocMMXreg(-1, MMX_TEMP, 0);
-				MOVQRmtoR(freereg,ECX);
-				MOVQRtoRm(EDX,freereg);
-				_freeMMXreg(freereg);
-			}
-			else
-			{
-				MOV32RmtoR(EAX,ECX);
-				MOV32RtoRm(EDX,EAX);
-
-				MOV32RmtoR(EAX,ECX,4);
-				MOV32RtoRm(EDX,EAX,4);
-			}
+			iMOV64_Smart(ptr[edx],ptr[ecx]);
 		break;
 
 		case 128:
-			if( _hasFreeXMMreg() )
-			{
-				const int freereg = _allocTempXMMreg( XMMT_INT, -1 );
-				SSE2_MOVDQARmtoR(freereg,ECX);
-				SSE2_MOVDQARtoRm(EDX,freereg);
-				_freeXMMreg(freereg);
-			}
-			else
-			{
-				// Could put in an MMX optimization here as well, but no point really.
-				// It's almost never used since there's almost always a free XMM reg.
-
-				MOV128_MtoM( EDX, ECX );		// dest <- src!
-			}
+			iMOV128_SSE(ptr[edx],ptr[ecx]);
 		break;
 
 		jNO_DEFAULT
@@ -262,39 +291,11 @@ void vtlb_DynGenRead64_Const( u32 bits, u32 addr_const )
 		switch( bits )
 		{
 			case 64:
-				if( _hasFreeMMXreg() )
-				{
-					const int freereg = _allocMMXreg(-1, MMX_TEMP, 0);
-					MOVQMtoR(freereg,ppf);
-					MOVQRtoRm(EDX,freereg);
-					_freeMMXreg(freereg);
-				}
-				else
-				{
-					MOV32MtoR(EAX,ppf);
-					MOV32RtoRm(EDX,EAX);
-
-					MOV32MtoR(EAX,ppf+4);
-					MOV32RtoRm(EDX,EAX,4);
-				}
+				iMOV64_Smart(ptr[edx],ptr[ppf]);
 			break;
 
 			case 128:
-				if( _hasFreeXMMreg() )
-				{
-					const int freereg = _allocTempXMMreg( XMMT_INT, -1 );
-					SSE2_MOVDQA_M128_to_XMM( freereg, ppf );
-					SSE2_MOVDQARtoRm(EDX,freereg);
-					_freeXMMreg(freereg);
-				}
-				else
-				{
-					// Could put in an MMX optimization here as well, but no point really.
-					// It's almost never used since there's almost always a free XMM reg.
-
-					MOV32ItoR( ECX, ppf );
-					MOV128_MtoM( EDX, ECX );		// dest <- src!
-				}
+				iMOV128_SSE(ptr[edx],ptr[ppf]);
 			break;
 
 			jNO_DEFAULT
@@ -415,38 +416,11 @@ static void _vtlb_DynGen_DirectWrite( u32 bits )
 		break;
 
 		case 64:
-			if( _hasFreeMMXreg() )
-			{
-				const int freereg = _allocMMXreg(-1, MMX_TEMP, 0);
-				MOVQRmtoR(freereg,EDX);
-				MOVQRtoRm(ECX,freereg);
-				_freeMMXreg( freereg );
-			}
-			else
-			{
-				MOV32RmtoR(EAX,EDX);
-				MOV32RtoRm(ECX,EAX);
-
-				MOV32RmtoR(EAX,EDX,4);
-				MOV32RtoRm(ECX,EAX,4);
-			}
+			iMOV64_Smart(ptr[ecx],ptr[edx]);
 		break;
 
 		case 128:
-			if( _hasFreeXMMreg() )
-			{
-				const int freereg = _allocTempXMMreg( XMMT_INT, -1 );
-				SSE2_MOVDQARmtoR(freereg,EDX);
-				SSE2_MOVDQARtoRm(ECX,freereg);
-				_freeXMMreg( freereg );
-			}
-			else
-			{
-				// Could put in an MMX optimization here as well, but no point really.
-				// It's almost never used since there's almost always a free XMM reg.
-
-				MOV128_MtoM( ECX, EDX );	// dest <- src!
-			}
+			iMOV128_SSE(ptr[ecx],ptr[edx]);
 		break;
 	}
 }
@@ -514,39 +488,11 @@ void vtlb_DynGenWrite_Const( u32 bits, u32 addr_const )
 			break;
 
 			case 64:
-				if( _hasFreeMMXreg() )
-				{
-					const int freereg = _allocMMXreg(-1, MMX_TEMP, 0);
-					MOVQRmtoR(freereg,EDX);
-					MOVQRtoM(ppf,freereg);
-					_freeMMXreg( freereg );
-				}
-				else
-				{
-					MOV32RmtoR(EAX,EDX);
-					MOV32RtoM(ppf,EAX);
-
-					MOV32RmtoR(EAX,EDX,4);
-					MOV32RtoM(ppf+4,EAX);
-				}
+				iMOV64_Smart( ptr[ppf], ptr[edx] );
 			break;
 
 			case 128:
-				if( _hasFreeXMMreg() )
-				{
-					const int freereg = _allocTempXMMreg( XMMT_INT, -1 );
-					SSE2_MOVDQARmtoR(freereg,EDX);
-					SSE2_MOVDQA_XMM_to_M128(ppf,freereg);
-					_freeXMMreg( freereg );
-				}
-				else
-				{
-					// Could put in an MMX optimization here as well, but no point really.
-					// It's almost never used since there's almost always a free XMM reg.
-
-					MOV32ItoR( ECX, ppf );
-					MOV128_MtoM( ECX, EDX );	// dest <- src!
-				}
+				iMOV128_SSE( ptr[ppf], ptr[edx] );
 			break;
 		}
 
@@ -571,3 +517,4 @@ void vtlb_DynGenWrite_Const( u32 bits, u32 addr_const )
 		CALLFunc( (int)vtlbdata.RWFT[szidx][1][handler] );
 	}
 }
+

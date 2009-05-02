@@ -334,8 +334,6 @@ protected:
 			if(s_save) rt->m_texture.Save(str);
 			str.Format(_T("c:\\temp2\\_%05d_f%I64d_rz0_%05x_%d.bmp"), s_n-1, m_perfmon.GetFrame(), context->ZBUF.Block(), context->ZBUF.PSM);
 			if(s_savez) ds->m_texture.Save(str);
-			// if(s_savez) m_dev.SaveToFileD32S8X24(ds->m_texture, str); // TODO
-			// if(s_savez) m_dev.SaveToFileD24S8(ds->m_texture, str); // TODO
 		}
 
 		int prim = PRIM->PRIM;

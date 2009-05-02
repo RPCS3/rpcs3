@@ -61,7 +61,6 @@ vtlbHandler UnmappedVirtHandler1;
 vtlbHandler UnmappedPhyHandler0;
 vtlbHandler UnmappedPhyHandler1;
 
-
 	/*
 	__asm
 	{
@@ -87,7 +86,7 @@ callfunction:
 		jmp [readfunctions8-0x800000+eax];
 	}*/
 
-/////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////
 // Interpreter Implementations of VTLB Memory Operations.
 // See recVTLB.cpp for the dynarec versions.
 
@@ -117,6 +116,7 @@ __forceinline DataType __fastcall MemOp_r0(u32 addr)
 	}
 }
 
+// ------------------------------------------------------------------------
 // Interpreterd VTLB lookup for 64 and 128 bit accesses.
 template<int DataSize,typename DataType>
 __forceinline void __fastcall MemOp_r1(u32 addr, DataType* data)
@@ -148,6 +148,7 @@ __forceinline void __fastcall MemOp_r1(u32 addr, DataType* data)
 	}
 }
 
+// ------------------------------------------------------------------------
 template<int DataSize,typename DataType>
 __forceinline void __fastcall MemOp_w0(u32 addr, DataType data)
 {
@@ -174,6 +175,8 @@ __forceinline void __fastcall MemOp_w0(u32 addr, DataType data)
 		}
 	}
 }
+
+// ------------------------------------------------------------------------
 template<int DataSize,typename DataType>
 __forceinline void __fastcall MemOp_w1(u32 addr,const DataType* data)
 {
@@ -201,7 +204,6 @@ __forceinline void __fastcall MemOp_w1(u32 addr,const DataType* data)
 		}
 	}
 }
-
 
 mem8_t __fastcall vtlb_memRead8(u32 mem)
 {
@@ -328,7 +330,7 @@ void __fastcall vtlbDefaultPhyWrite64(u32 addr,const mem64_t* data) { Console::E
 void __fastcall vtlbDefaultPhyWrite128(u32 addr,const mem128_t* data) { Console::Error("vtlbDefaultPhyWrite128: 0x%X",params addr); verify(false); }
 
 
-/////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////
 // VTLB Public API -- Init/Term/RegisterHandler stuff
 //
 
@@ -361,6 +363,7 @@ vtlbHandler vtlb_RegisterHandler(	vtlbMemR8FP* r8,vtlbMemR16FP* r16,vtlbMemR32FP
 	return rv;
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////
 // Maps the given hander (created with vtlb_RegisterHandler) to the specified memory region.
 // New mappings always assume priority over previous mappings, so place "generic" mappings for
 // large areas of memory first, and then specialize specific small regions of memory afterward.
@@ -500,7 +503,8 @@ void vtlb_VMapUnmap(u32 vaddr,u32 sz)
 	}
 }
 
-// Clears vtlb handlers and memory mappings.
+//////////////////////////////////////////////////////////////////////////////////////////
+// vtlb_init -- Clears vtlb handlers and memory mappings.
 void vtlb_Init()
 {
 	vtlbHandlerCount=0;
@@ -540,7 +544,8 @@ void vtlb_Init()
 	vtlb_VMapUnmap((VTLB_VMAP_ITEMS-1)*VTLB_PAGE_SIZE,VTLB_PAGE_SIZE);
 }
 
-// Performs a COP0-level reset of the PS2's TLB.
+//////////////////////////////////////////////////////////////////////////////////////////
+// vtlb_Reset -- Performs a COP0-level reset of the PS2's TLB.
 // This function should probably be part of the COP0 rather than here in VTLB.
 void vtlb_Reset()
 {
@@ -552,30 +557,65 @@ void vtlb_Term()
 	//nothing to do for now
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////
+// Reserves the vtlb core allocation used by various emulation components!
+//
+void vtlb_Core_Alloc()
+{
+	if( vtlbdata.alloc_base != NULL ) return;
+
+	vtlbdata.alloc_current = 0;
+
+#ifdef __LINUX__
+	vtlbdata.alloc_base = SysMmapEx( 0x16000000, VTLB_ALLOC_SIZE, 0x80000000, "Vtlb" );
+#else
+	// Win32 just needs this, since malloc always maps below 2GB.
+	vtlbdata.alloc_base = (u8*)_aligned_malloc( VTLB_ALLOC_SIZE, 4096 );
+	if( vtlbdata.alloc_base == NULL )
+		throw Exception::OutOfMemory( "Fatal Error: could not allocate 42Meg buffer for PS2's mappable system ram." );
+#endif
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////
+//
+void vtlb_Core_Shutdown()
+{
+	if( vtlbdata.alloc_base == NULL ) return;
+
+#ifdef __LINUX__
+	SafeSysMunmap( vtlbdata.alloc_base, VTLB_ALLOC_SIZE );
+#else
+	// Make sure and unprotect memory first, since CrtDebug will try to write to it.
+	HostSys::MemProtect( vtlbdata.alloc_base, VTLB_ALLOC_SIZE, Protect_ReadWrite );
+	safe_aligned_free( vtlbdata.alloc_base );
+#endif
+
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////
 // This function allocates memory block with are compatible with the Vtlb's requirements
 // for memory locations.  The Vtlb requires the topmost bit (Sign bit) of the memory
 // pointer to be cleared.  Some operating systems and/or implementations of malloc do that,
 // but others do not.  So use this instead to allocate the memory correctly for your
 // platform.
-u8* vtlb_malloc( uint size, uint align, uptr tryBaseAddress )
+//
+u8* vtlb_malloc( uint size, uint align )
 {
-#ifdef __LINUX__
-	return SysMmapEx( tryBaseAddress, size, 0x80000000, "Vtlb" );
-#else
-	// Win32 just needs this, since malloc always maps below 2GB.
-	return (u8*)_aligned_malloc(size, align);
-#endif
+	vtlbdata.alloc_current += align-1;
+	vtlbdata.alloc_current &= ~(align-1);
+
+	int rv = vtlbdata.alloc_current;
+	vtlbdata.alloc_current += size;
+	return &vtlbdata.alloc_base[rv];
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////
+//
 void vtlb_free( void* pmem, uint size )
 {
-	if( pmem == NULL ) return;
-
-#ifdef __LINUX__
-	SafeSysMunmap( pmem, size );
-#else
-	// Make sure and unprotect memory first, since CrtDebug will try to write to it.
-	HostSys::MemProtect( pmem, size, Protect_ReadWrite );
-	safe_aligned_free( pmem );
-#endif
+	// Does nothing anymore!  Alloc/dealloc is now handled by vtlb_Core_Alloc /
+	// vtlb_Core_Shutdown.  Placebo is left in place in case it becomes useful again
+	// at a later date.
+	
+	return;
 }

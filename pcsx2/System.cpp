@@ -129,13 +129,15 @@ void SysDetect()
 		"\t%sDetected SSE2\n"
 		"\t%sDetected SSE3\n"
 		"\t%sDetected SSSE3\n"
-		"\t%sDetected SSE4.1\n", params
+		"\t%sDetected SSE4.1\n"
+		"\t%sDetected SSE4.2\n", params
 			cpucaps.hasMultimediaExtensions     ? "" : "Not ",
 			cpucaps.hasStreamingSIMDExtensions  ? "" : "Not ",
 			cpucaps.hasStreamingSIMD2Extensions ? "" : "Not ",
 			cpucaps.hasStreamingSIMD3Extensions ? "" : "Not ",
 			cpucaps.hasSupplementalStreamingSIMD3Extensions ? "" : "Not ",
-			cpucaps.hasStreamingSIMD4Extensions ? "" : "Not "
+			cpucaps.hasStreamingSIMD4Extensions  ? "" : "Not ",
+			cpucaps.hasStreamingSIMD4Extensions2 ? "" : "Not "
 	);
 
 	if ( cpuinfo.x86ID[0] == 'A' ) //AMD cpu
@@ -144,10 +146,12 @@ void SysDetect()
 		WriteLn(
 			"\t%sDetected MMX2\n"
 			"\t%sDetected 3DNOW\n"
-			"\t%sDetected 3DNOW2\n", params
+			"\t%sDetected 3DNOW2\n"
+			"\t%sDetected SSE4a\n", params
 			cpucaps.hasMultimediaExtensionsExt       ? "" : "Not ",
 			cpucaps.has3DNOWInstructionExtensions    ? "" : "Not ",
-			cpucaps.has3DNOWInstructionExtensionsExt ? "" : "Not "
+			cpucaps.has3DNOWInstructionExtensionsExt ? "" : "Not ",
+			cpucaps.hasStreamingSIMD4ExtensionsA     ? "" : "Not "
 		);
 	}
 
@@ -162,6 +166,7 @@ bool SysAllocateMem()
 
 	try
 	{
+		vtlb_Core_Alloc();
 		memAlloc();
 		psxMemAlloc();
 		vuMicroMemAlloc();
@@ -278,6 +283,7 @@ void SysShutdownMem()
 	vuMicroMemShutdown();
 	psxMemShutdown();
 	memShutdown();
+	vtlb_Core_Shutdown();
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -320,9 +326,6 @@ void SysClearExecutionCache()
 	psxCpu->Reset();
 
 	vuMicroCpuReset();
-
-	// make sure the VU1 doesn't have lingering "skip" enabled.
-	vu1MicroDisableSkip();
 }
 
 __forceinline void SysUpdate()

@@ -3859,7 +3859,6 @@ create_CpuDlg (void)
   GSList *GtkRadioButton_LimitNormal_group = NULL;
   GtkWidget *GtkRadioButton_LimitLimit;
   GtkWidget *GtkRadioButton_LimitFS;
-  GtkWidget *GtkRadioButton_VUSkip;
   GtkWidget *label41;
   GtkWidget *frame23;
   GtkWidget *alignment18;
@@ -4028,13 +4027,6 @@ create_CpuDlg (void)
   gtk_radio_button_set_group (GTK_RADIO_BUTTON (GtkRadioButton_LimitFS), GtkRadioButton_LimitNormal_group);
   GtkRadioButton_LimitNormal_group = gtk_radio_button_get_group (GTK_RADIO_BUTTON (GtkRadioButton_LimitFS));
 
-  GtkRadioButton_VUSkip = gtk_radio_button_new_with_mnemonic (NULL, _("VU Skip - Same as Frame Skip, but tried to skip more. \n               Artifacts might be present, but will be faster"));
-  gtk_widget_set_name (GtkRadioButton_VUSkip, "GtkRadioButton_VUSkip");
-  gtk_widget_show (GtkRadioButton_VUSkip);
-  gtk_box_pack_start (GTK_BOX (vbox29), GtkRadioButton_VUSkip, FALSE, FALSE, 0);
-  gtk_radio_button_set_group (GTK_RADIO_BUTTON (GtkRadioButton_VUSkip), GtkRadioButton_LimitNormal_group);
-  GtkRadioButton_LimitNormal_group = gtk_radio_button_get_group (GTK_RADIO_BUTTON (GtkRadioButton_VUSkip));
-
   label41 = gtk_label_new (_("Frame Limiting (F4 switches in-game)"));
   gtk_widget_set_name (label41, "label41");
   gtk_widget_show (label41);
@@ -4198,7 +4190,6 @@ create_CpuDlg (void)
   GLADE_HOOKUP_OBJECT (CpuDlg, GtkRadioButton_LimitNormal, "GtkRadioButton_LimitNormal");
   GLADE_HOOKUP_OBJECT (CpuDlg, GtkRadioButton_LimitLimit, "GtkRadioButton_LimitLimit");
   GLADE_HOOKUP_OBJECT (CpuDlg, GtkRadioButton_LimitFS, "GtkRadioButton_LimitFS");
-  GLADE_HOOKUP_OBJECT (CpuDlg, GtkRadioButton_VUSkip, "GtkRadioButton_VUSkip");
   GLADE_HOOKUP_OBJECT (CpuDlg, label41, "label41");
   GLADE_HOOKUP_OBJECT (CpuDlg, frame23, "frame23");
   GLADE_HOOKUP_OBJECT (CpuDlg, alignment18, "alignment18");

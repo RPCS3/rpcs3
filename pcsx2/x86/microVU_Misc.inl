@@ -264,7 +264,7 @@ microVUx(void) mVUmergeRegs(int dest, int src, int xyzw) {
 
 // Transforms the Address in gprReg to valid VU0/VU1 Address
 microVUt(void) mVUaddrFix(int gprReg) {
-	if ( vuIndex == 1 ) {
+	if (vuIndex) {
 		AND32ItoR(gprReg, 0x3ff); // wrap around
 		SHL32ItoR(gprReg, 4);
 	}
@@ -279,6 +279,24 @@ microVUt(void) mVUaddrFix(int gprReg) {
 		x86SetJ8(jmpB);
 		SHL32ItoR(gprReg, 4); // multiply by 16 (shift left by 4)
 	}
+}
+
+// Backup Volatile Regs (EAX, ECX, EDX, MM0~7, XMM0~7, are all volatile according to 32bit Win/Linux ABI)
+microVUt(void) mVUbackupRegs() {
+	microVU* mVU = mVUx;
+	SSE_MOVAPS_XMM_to_M128((uptr)&mVU->regs->ACC.UL[0], xmmACC);
+	SSE_MOVAPS_XMM_to_M128((uptr)&mVU->xmmPQb[0], xmmPQ);
+	PUSH32R(gprR); // Backup EDX
+}
+
+// Restore Volatile Regs
+microVUt(void) mVUrestoreRegs() {
+	microVU* mVU = mVUx;
+	SSE_MOVAPS_M128_to_XMM(xmmACC, (uptr)&mVU->regs->ACC.UL[0]);
+	SSE_MOVAPS_M128_to_XMM(xmmPQ,  (uptr)&mVU->xmmPQb[0]);
+	SSE_MOVAPS_M128_to_XMM(xmmMax, (uptr)mVU_maxvals);
+	SSE_MOVAPS_M128_to_XMM(xmmMin, (uptr)mVU_minvals);
+	POP32R(gprR); // Restore EDX
 }
 
 #endif //PCSX2_MICROVU

@@ -331,7 +331,6 @@ void mfifoGIFtransfer(int qwc);
 int _GIFchain();
 void  gifMFIFOInterrupt();
 
-extern u32 g_vu1SkipCount;
 extern u32 CSRw;
 extern u64 m_iSlowStart;
 

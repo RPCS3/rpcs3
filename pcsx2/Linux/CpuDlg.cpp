@@ -39,8 +39,6 @@ void OnCpu_Ok(GtkButton *button, gpointer user_data)
 		newopts |= PCSX2_FRAMELIMIT_LIMIT;
 	else if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lookup_widget(CpuDlg, "GtkRadioButton_LimitFS"))))
 		newopts |= PCSX2_FRAMELIMIT_SKIP;
-	else if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lookup_widget(CpuDlg, "GtkRadioButton_VUSkip"))))
-		newopts |= PCSX2_FRAMELIMIT_VUSKIP;
 
 	Config.CustomFps = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(lookup_widget(CpuDlg, "CustomFPSLimit")));
 	Config.CustomFrameSkip = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(lookup_widget(CpuDlg, "FrameThreshold")));
@@ -88,7 +86,6 @@ void OnConf_Cpu(GtkMenuItem *menuitem, gpointer user_data)
 	gtk_toggle_button_set_state(GTK_TOGGLE_BUTTON(lookup_widget(CpuDlg, "GtkRadioButton_LimitNormal")), CHECK_FRAMELIMIT == PCSX2_FRAMELIMIT_NORMAL);
 	gtk_toggle_button_set_state(GTK_TOGGLE_BUTTON(lookup_widget(CpuDlg, "GtkRadioButton_LimitLimit")), CHECK_FRAMELIMIT == PCSX2_FRAMELIMIT_LIMIT);
 	gtk_toggle_button_set_state(GTK_TOGGLE_BUTTON(lookup_widget(CpuDlg, "GtkRadioButton_LimitFS")), CHECK_FRAMELIMIT == PCSX2_FRAMELIMIT_SKIP);
-	gtk_toggle_button_set_state(GTK_TOGGLE_BUTTON(lookup_widget(CpuDlg, "GtkRadioButton_VUSkip")), CHECK_FRAMELIMIT == PCSX2_FRAMELIMIT_VUSKIP);
 
 	sprintf(str, "Cpu Vendor:     %s", cpuinfo.x86ID);
 	gtk_label_set_text(GTK_LABEL(lookup_widget(CpuDlg, "GtkLabel_CpuVendor")), str);

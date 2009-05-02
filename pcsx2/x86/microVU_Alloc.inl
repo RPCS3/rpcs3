@@ -72,7 +72,7 @@ microVUt(void) mVUallocFMAC2a(int& Fs, int& Ft) {
 
 microVUt(void) mVUallocFMAC2b(int& Ft) {
 	microVU* mVU = mVUx;
-	if (!_Ft_) { SysPrintf("microVU: If a game does this, its retarded...\n"); return; }
+	if (!_Ft_) return;
 	//if (CHECK_VU_OVERFLOW) mVUclamp1<vuIndex>(Ft, xmmT1, _X_Y_Z_W);
 	mVUsaveReg<vuIndex>(Ft, (uptr)&mVU->regs->VF[_Ft_].UL[0], _X_Y_Z_W, 1);
 }
@@ -533,7 +533,7 @@ microVUt(void) mVUallocFMAC18b(int& ACC, int& Fs) {
 }
 
 //------------------------------------------------------------------
-// FMAC19 - OPMULA FMAC Opcode
+// FMAC19 - OPMSUB FMAC Opcode
 //------------------------------------------------------------------
 
 microVUt(void) mVUallocFMAC19a(int& Fd, int& ACC, int& Fs, int& Ft) {
@@ -714,9 +714,9 @@ microVUt(void) mVUallocCFLAGb(int reg, int fInstance) {
 
 microVUt(void) mVUallocVIa(int GPRreg, int _reg_) {
 	microVU* mVU = mVUx;
-	if (_reg_ == 0)		{ XOR32RtoR(GPRreg, GPRreg); }
-	else if (_reg_ < 9)	{ MOVD32MMXtoR(GPRreg, mmVI(_reg_)); }
-	else				{ MOVZX32M16toR(GPRreg, (uptr)&mVU->regs->VI[_reg_].UL); }
+	if (!_reg_ || _reg_>15)	{ XOR32RtoR(GPRreg, GPRreg); }
+	else if (isMMX(_reg_))	{ MOVD32MMXtoR(GPRreg, mmVI(_reg_)); }
+	else					{ MOVZX32M16toR(GPRreg, (uptr)&mVU->regs->VI[_reg_].UL); }
 }
 
 microVUt(void) mVUallocVIb(int GPRreg, int _reg_) {
@@ -727,9 +727,9 @@ microVUt(void) mVUallocVIb(int GPRreg, int _reg_) {
 		MOV32RtoM((uptr)&mVU->VIbackup[0], GPRreg);
 		MOV32MtoR(GPRreg, (uptr)&mVU->VIbackup[1]);
 	}
-	if (_reg_ == 0)		{ return; }
-	else if (_reg_ < 9)	{ MOVD32RtoMMX(mmVI(_reg_), GPRreg); }
-	else				{ MOV16RtoM((uptr)&mVU->regs->VI[_reg_].UL, GPRreg); }
+	if (_reg_ == 0)			{ return; }
+	else if (isMMX(_reg_))	{ MOVD32RtoMMX(mmVI(_reg_), GPRreg); }
+	else if (_reg_ < 16)	{ MOV16RtoM((uptr)&mVU->regs->VI[_reg_].UL, GPRreg); }
 }
 
 //------------------------------------------------------------------

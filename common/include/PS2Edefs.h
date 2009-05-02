@@ -48,13 +48,7 @@
 
 */
 
-#include "PS2Etypes.h"
-
-
-/* common defines */
-#ifndef C_ASSERT
-#define C_ASSERT(e) typedef char __C_ASSERT__[(e)?1:-1]
-#endif
+#include "Pcsx2Defs.h"
 
 #if defined(GSdefs)   || defined(PADdefs)  || defined(SIOdefs)  || \
     defined(SPU2defs) || defined(CDVDdefs) || defined(DEV9defs) || \

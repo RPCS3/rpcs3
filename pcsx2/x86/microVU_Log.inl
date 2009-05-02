@@ -19,13 +19,9 @@
 #pragma once
 #ifdef PCSX2_MICROVU
 
-microVUt(void) __mVUsetupLog() {
-	if (!vuIndex) { if (!mVUlogFile[0]) mVUlogFile[0] = fopen(LOGS_DIR "\\microVU0.txt", "w"); }
-	else		  { if (!mVUlogFile[1]) mVUlogFile[1] = fopen(LOGS_DIR "\\microVU1.txt", "w"); }
-}
-
 // writes text directly to the microVU.txt, no newlines appended.
 microVUx(void) __mVULog(const char* fmt, ...) {
+	microVU* mVU = mVUx;
 	char tmp[2024];
 	va_list list;
 
@@ -35,10 +31,9 @@ microVUx(void) __mVULog(const char* fmt, ...) {
 	int length = vsprintf(tmp, fmt, list);
 	va_end(list);
 
-	if (mVUlogFile[vuIndex]) {
-		fputs(tmp, mVUlogFile[vuIndex]);
-		//fputs("\n", mVUlogFile[vuIndex]);
-		fflush(mVUlogFile[vuIndex]);
+	if (mVU->logFile) {
+		fputs(tmp, mVU->logFile);
+		fflush(mVU->logFile);
 	}
 }
 
@@ -46,15 +41,30 @@ microVUx(void) __mVULog(const char* fmt, ...) {
 
 microVUt(void) __mVUdumpProgram(int progIndex) {
 	microVU* mVU = mVUx;
-	bool bitX[7];
-	//mVU->prog.cur = progIndex; // Needed in order to set iPC
-	mVUlog("*********************\n",   progIndex);
-	mVUlog("* Micro-Program #%02d *\n", progIndex);
-	mVUlog("*********************\n\n", progIndex);
+	bool bitX[9];
+	char str[30];
+	int	delay = 0;
+	mVUbranch = 0;
+
+	sprintf(str, "%s\\microVU%d prog - %02d.html", LOGS_DIR, vuIndex, progIndex);
+	mVU->logFile = fopen(str, "w");
+	
+	mVUlog("<html>\n");
+	mVUlog("<title>microVU%d MicroProgram Log</title>\n", vuIndex);
+	mVUlog("<body bgcolor=\"#000000\" LINK=\"#1111ff\" VLINK=\"#1111ff\">\n");
+	mVUlog("<font face=\"Courier New\" color=\"#ffffff\">\n");
+
+	mVUlog("<font size=\"5\" color=\"#7099ff\">");
+	mVUlog("*********************\n<br>",		progIndex);
+	mVUlog("* Micro-Program #%02d *\n<br>",		progIndex);
+	mVUlog("*********************\n\n<br><br>",	progIndex);
+	mVUlog("</font>");
+
 	for (u32 i = 0; i < mVU->progSize; i+=2) {
 
+		if (delay)		{ delay--; mVUlog("</font>"); if (!delay) mVUlog("<hr/>"); }
+		if (mVUbranch)	{ delay = 1; mVUbranch = 0; }
 		mVU->code = mVU->prog.prog[progIndex].data[i+1];
-		mVUlog("[%04x] (%08x) ", i*4, mVU->code);
 
 		bitX[0] = 0;
 		bitX[1] = 0;
@@ -63,14 +73,21 @@ microVUt(void) __mVUdumpProgram(int progIndex) {
 		bitX[4] = 0;
 		bitX[5] = 0;
 		bitX[6] = 0;
+		bitX[7] = 0;
+		bitX[8] = 0;
 
-		if (mVU->code & _Ibit_) {bitX[0] = 1; bitX[5] = 1;}
-		if (mVU->code & _Ebit_) {bitX[1] = 1; bitX[5] = 1;}
-		if (mVU->code & _Mbit_) {bitX[2] = 1; bitX[5] = 1;}
-		if (mVU->code & _Dbit_) {bitX[3] = 1; bitX[5] = 1;}
-		if (mVU->code & _Tbit_) {bitX[4] = 1; bitX[5] = 1;}
+		if (mVU->code & _Ibit_) { bitX[0] = 1; bitX[5] = 1; bitX[7] = 1; }
+		if (mVU->code & _Ebit_) { bitX[1] = 1; bitX[5] = 1; delay = 2; }
+		if (mVU->code & _Mbit_) { bitX[2] = 1; bitX[5] = 1; }
+		if (mVU->code & _Dbit_) { bitX[3] = 1; bitX[5] = 1; }
+		if (mVU->code & _Tbit_) { bitX[4] = 1; bitX[5] = 1; }
 
-		iPC = (i+1)/4;
+		if (delay == 2) { mVUlog("<font color=\"#FFFF00\">"); }
+		if (delay == 1) { mVUlog("<font color=\"#999999\">"); }
+
+		iPC = (i+1);
+		mVUlog("<a name=\"addr%04x\">", i*4);
+		mVUlog("[%04x] (%08x)</a> ", i*4, mVU->code);
 		mVUopU<vuIndex, 2>();
 
 		if (bitX[5]) { 
@@ -83,12 +100,18 @@ microVUt(void) __mVUdumpProgram(int progIndex) {
 			mVUlog(")");
 		}
 
-		iPC = i/4;
+		iPC = i;
+		if (bitX[7]) { mVUlog("<font color=\"#0070ff\">"); }
 		mVU->code = mVU->prog.prog[progIndex].data[i];
-		mVUlog("\n[%04x] (%08x) ", i*4, mVU->code);
+		mVUlog("<br>\n[%04x] (%08x) ", i*4, mVU->code);
 		mVUopL<vuIndex, 2>();
-		mVUlog("\n\n");
+		mVUlog("\n\n<br><br>");
+		if (bitX[7]) { mVUlog("</font>"); }
 	}
+	mVUlog("</font>\n");
+	mVUlog("</body>\n");
+	mVUlog("</html>\n");
+	fclose(mVU->logFile);
 }
 
 #endif //PCSX2_MICROVU

@@ -34,30 +34,24 @@ struct psxCounter {
 #endif
 
 extern psxCounter psxCounters[NUM_COUNTERS];
-extern s32 psxNextCounter;
-extern u32 psxNextsCounter;
 
-void psxRcntInit();
-void psxRcntUpdate();
-void cntspu2async();
-void psxRcntWcount16(int index, u32 value);
-void psxRcntWcount32(int index, u32 value);
-void psxRcnt0Wmode(u32 value);
-void psxRcnt1Wmode(u32 value);
-void psxRcnt2Wmode(u32 value);
-void psxRcnt3Wmode(u32 value);
-void psxRcnt4Wmode(u32 value);
-void psxRcnt5Wmode(u32 value);
-void psxRcntWtarget16(int index, u32 value);
-void psxRcntWtarget32(int index, u32 value);
-u16  psxRcntRcount16(int index);
-u32  psxRcntRcount32(int index);
-u64  psxRcntCycles(int index);
+extern void psxRcntInit();
+extern void psxRcntUpdate();
+extern void cntspu2async();
+extern void psxRcntWcount16(int index, u16 value);
+extern void psxRcntWcount32(int index, u32 value);
+extern void psxRcntWmode16(int index, u32 value);
+extern void psxRcntWmode32(int index, u32 value);
+extern void psxRcntWtarget16(int index, u32 value);
+extern void psxRcntWtarget32(int index, u32 value);
+extern u16  psxRcntRcount16(int index);
+extern u32  psxRcntRcount32(int index);
+extern u64  psxRcntCycles(int index);
 
-void psxVBlankStart();
-void psxVBlankEnd();
-void psxCheckStartGate16(int i);
-void psxCheckEndGate16(int i);
+extern void psxVBlankStart();
+extern void psxVBlankEnd();
+extern void psxCheckStartGate16(int i);
+extern void psxCheckEndGate16(int i);
 //static void psxCheckStartGate32(int i);
 //static void psxCheckEndGate32(int i);
 

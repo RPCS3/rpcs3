@@ -77,7 +77,7 @@ namespace Console
 		if( FrameHandle != NULL )
 			FrameHandle->Write( fmt );
 
-		fwrite( fmt, 1, strlen( fmt ), emuLog );
+		fputs( fmt, emuLog );
 		return false;
 	}
 

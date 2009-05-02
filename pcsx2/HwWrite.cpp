@@ -168,16 +168,24 @@ void hwWrite8(u32 mem, u8 value) {
 		case RCNT3_TARGET: rcntWtarget(3, value); break;
 
 		case 0x1000f180:
-			if (value == '\n') {
+		{
+			bool flush = false;
+
+			// Terminate lines on CR or full buffers, and ignore \n's if the string contents
+			// are empty (otherwise terminate on \n too!)
+			if(	( value == '\r' ) || ( sio_count == 1023 ) ||
+				( value == '\n' && sio_count != 0 ) )
+			{
 				sio_buffer[sio_count] = 0;
 				Console::WriteLn( Color_Cyan, sio_buffer );
 				sio_count = 0;
-			} else {
-				if (sio_count < 1023) {
-					sio_buffer[sio_count++] = value;
-				}
 			}
-			break;
+			else if( value != '\n' )
+			{
+				sio_buffer[sio_count++] = value;
+			}
+		}
+		break;
 		
 		//case 0x10003c02: //Tony Hawks Project 8 uses this
 		//	vif1Write32(mem & ~0x2, value << 16);

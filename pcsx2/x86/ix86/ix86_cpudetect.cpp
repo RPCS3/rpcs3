@@ -23,6 +23,8 @@
 
 #include "RedtapeWindows.h"
 
+using namespace x86Emitter;
+
 #if defined (_MSC_VER) && _MSC_VER >= 1400
 
 	extern "C"
@@ -148,30 +150,28 @@ u64 GetCPUTick( void )
 #endif
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////
 // Note: This function doesn't support GCC/Linux.  Looking online it seems the only 
 // way to simulate the Micrsoft SEH model is to use unix signals, and the 'sigaction'
 // function specifically.  Maybe a project for a linux developer at a later date. :)
-void cpudetectSSE3(void* pfnCallSSE3)
-{
-	cpucaps.hasStreamingSIMD3Extensions = 1;
-
 #ifdef _MSC_VER
+static bool _test_instruction( void* pfnCall )
+{
 	__try {
-        ((void (*)())pfnCallSSE3)();
+        ((void (*)())pfnCall)();
 	}
 	__except(EXCEPTION_EXECUTE_HANDLER) {
-		cpucaps.hasStreamingSIMD3Extensions = 0;
+		return false;
 	}
-#else // linux
-
-#ifdef PCSX2_FORCESSE3
-    cpucaps.hasStreamingSIMD3Extensions = 1;
-#else
-    // exception handling doesn't work, so disable for x86 builds of linux
-    cpucaps.hasStreamingSIMD3Extensions = 0;
-#endif
-#endif
+	return true;
 }
+
+static char* bool_to_char( bool testcond )
+{
+	return testcond ? "true" : "false";
+}
+
+#endif
 
 #if defined __LINUX__
 
@@ -180,48 +180,41 @@ void cpudetectSSE3(void* pfnCallSSE3)
 
 #endif
 
-s64 CPUSpeedHz( unsigned int time )
+//////////////////////////////////////////////////////////////////////////////////////////
+//
+s64 CPUSpeedHz( int time )
 {
-   s64 timeStart, 
+   int timeStart, 
             timeStop;
    s64 startTick, 
             endTick;
-   s64 overhead;
 
    if( ! cpucaps.hasTimeStampCounter )
    {
       return 0; //check if function is supported
    }
-
-	overhead = GetCPUTick() - GetCPUTick();
 	
-	timeStart = timeGetTime( );
-	while( timeGetTime( ) == timeStart ) 
-   {
-      timeStart = timeGetTime( );
-   }
-	for(;;)
+	// Align the cpu execution to a timeGetTime boundary.
+	// Without this the result could be skewed by up to several milliseconds.
+	
+	do { timeStart = timeGetTime( );
+	} while( timeGetTime( ) == timeStart );
+
+	do
 	{
 		timeStop = timeGetTime( );
-		if ( ( timeStop - timeStart ) > 1 )	
-		{
-			startTick = GetCPUTick( );
-			break;
-		}
-	}
+		startTick = GetCPUTick( );
+	} while( ( timeStop - timeStart ) < 1 );
 
 	timeStart = timeStop;
-	for(;;)
+	do
 	{
-		timeStop = timeGetTime( );
-		if ( ( timeStop - timeStart ) > time )	
-		{
-			endTick = GetCPUTick( );
-			break;
-		}
+		timeStop = timeGetTime();
+		endTick = GetCPUTick();
 	}
+	while( ( timeStop - timeStart ) < time );
 
-	return (s64)( ( endTick - startTick ) + ( overhead ) );
+	return (s64)( endTick - startTick );
 }
 
 ////////////////////////////////////////////////////
@@ -294,6 +287,7 @@ void cpudetectInit()
 		 if ( iCpuId( 0x80000001, regs ) != -1 )
          {
 			x86_64_12BITBRANDID = regs[1] & 0xfff;
+			cpuinfo.x86EFlags2 = regs[ 2 ];
             cpuinfo.x86EFlags = regs[ 3 ];
             
          }
@@ -364,40 +358,85 @@ void cpudetectInit()
 	cpucaps.hasMultiThreading                            = ( cpuinfo.x86Flags >> 28 ) & 1;
 	cpucaps.hasThermalMonitor                            = ( cpuinfo.x86Flags >> 29 ) & 1;
 	cpucaps.hasIntel64BitArchitecture                    = ( cpuinfo.x86Flags >> 30 ) & 1;
+	
 	//that is only for AMDs
 	cpucaps.hasMultimediaExtensionsExt                   = ( cpuinfo.x86EFlags >> 22 ) & 1; //mmx2
 	cpucaps.hasAMD64BitArchitecture                      = ( cpuinfo.x86EFlags >> 29 ) & 1; //64bit cpu
 	cpucaps.has3DNOWInstructionExtensionsExt             = ( cpuinfo.x86EFlags >> 30 ) & 1; //3dnow+
 	cpucaps.has3DNOWInstructionExtensions                = ( cpuinfo.x86EFlags >> 31 ) & 1; //3dnow   
+	cpucaps.hasStreamingSIMD4ExtensionsA               = ( cpuinfo.x86EFlags2 >> 6 ) & 1; //INSERTQ / EXTRQ / MOVNT
 
-	cpuinfo.cpuspeed = (u32)(CPUSpeedHz( 1000 ) / 1000000);
 
-	// --> SSE 4.1 detection <--
-	// We don't care about the small subset of CPUs using SSE4 (which is also hard to
-	// detect, in addition to being of limited use due to the abbreviated instruction set).
-	// So we'll just leave it at SSE 4.1.  SSE4 cpu detection is ignored.
+	cpuinfo.cpuspeed = (u32)(CPUSpeedHz( 400 ) / 400000 );
 
-	cpucaps.hasStreamingSIMD4Extensions = ( cpuinfo.x86Flags2 >> 19 ) & 1; //sse4.1   
+	// --> SSE3 / SSSE3 / SSE4.1 / SSE 4.2 detection <--
 
-	// --> SSSE3 detection <--
-
+	cpucaps.hasStreamingSIMD3Extensions  = ( cpuinfo.x86Flags2 >> 0 ) & 1; //sse3
 	cpucaps.hasSupplementalStreamingSIMD3Extensions = ( cpuinfo.x86Flags2 >> 9 ) & 1; //ssse3  
+	cpucaps.hasStreamingSIMD4Extensions  = ( cpuinfo.x86Flags2 >> 19 ) & 1; //sse4.1   
+	cpucaps.hasStreamingSIMD4Extensions2 = ( cpuinfo.x86Flags2 >> 20 ) & 1; //sse4.2
 
-	// --> SSE3 detection <--
-	// These instructions may not be recognized by some compilers, or may not have
-	// intrinsic equivalents available.  So we use our own ix86 emitter to generate
-	// some code and run it that way. :)
+	// Can the SSE3 / SSE4.1 bits be trusted?  Using an instruction test is a very "complete"
+	// approach to ensuring the bit is accurate, and at least one reported case of a Q9550 not
+	// having SSE 4.1 set but still supporting it properly is fixed by this --air
 
+	#ifdef _MSC_VER
 	u8* recSSE = (u8*)HostSys::Mmap( NULL, 0x1000 );
 	if( recSSE != NULL )
 	{
-		x86SetPtr(recSSE);
-		SSE3_MOVSLDUP_XMM_to_XMM(XMM0, XMM0);
+		xSetPtr( recSSE );
+		xMOVSLDUP( xmm1, xmm0 );
 		RET();
-		cpudetectSSE3(recSSE);
+
+		u8* funcSSSE3 = xGetPtr();
+		xPABS.W( xmm0, xmm1 );
+		RET();
+
+		u8* funcSSE41 = xGetPtr();
+		xBLEND.VPD( xmm1, xmm0 );
+		RET();
+		
+		bool sse3_result = _test_instruction( recSSE );  // sse3
+		bool ssse3_result = _test_instruction( funcSSSE3 );
+		bool sse41_result = _test_instruction( funcSSE41 );
+
 		HostSys::Munmap( recSSE, 0x1000 );
+
+		// Test for and log any irregularities here.
+		// We take the instruction test result over cpuid since (in theory) it should be a
+		// more reliable gauge of the cpu's actual ability.
+
+		if( sse3_result != !!cpucaps.hasStreamingSIMD3Extensions )
+		{
+			Console::Notice( "SSE3 Detection Inconsistency: cpuid=%s, test_result=%s",
+				params bool_to_char( !!cpucaps.hasStreamingSIMD3Extensions ), bool_to_char( sse3_result ) );
+				
+			cpucaps.hasStreamingSIMD3Extensions = sse3_result;
+		}
+
+		if( ssse3_result != !!cpucaps.hasSupplementalStreamingSIMD3Extensions )
+		{
+			Console::Notice( "SSSE3 Detection Inconsistency: cpuid=%s, test_result=%s",
+				params bool_to_char( !!cpucaps.hasSupplementalStreamingSIMD3Extensions ), bool_to_char( ssse3_result ) );
+
+			cpucaps.hasSupplementalStreamingSIMD3Extensions = ssse3_result;
+		}
+
+		if( sse41_result != !!cpucaps.hasStreamingSIMD4Extensions )
+		{
+			Console::Notice( "SSE4 Detection Inconsistency: cpuid=%s, test_result=%s",
+				params bool_to_char( !!cpucaps.hasStreamingSIMD4Extensions ), bool_to_char( sse41_result ) );
+
+			cpucaps.hasStreamingSIMD4Extensions = sse41_result;
+		}
+
 	}
-	else { Console::Error("Error: Failed to allocate memory for SSE3 State detection."); }
+	else
+		Console::Notice(
+			"Notice: Could not allocate memory for SSE3/4 detection.\n"
+			"\tRelying on CPUID results. [this is not an error]"
+		);
+	#endif
 
 	//////////////////////////////////////
 	//  Core Counting!

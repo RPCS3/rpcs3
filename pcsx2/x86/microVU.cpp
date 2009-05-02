@@ -28,7 +28,6 @@
 
 PCSX2_ALIGNED16(microVU microVU0);
 PCSX2_ALIGNED16(microVU microVU1);
-FILE *mVUlogFile[2] = {NULL, NULL};
 
 declareAllVariables // Declares All Global Variables :D
 //------------------------------------------------------------------
@@ -46,7 +45,6 @@ microVUt(void) mVUinit(VURegs* vuRegsPtr) {
 	mVU->cache		= NULL;
 	memset(&mVU->prog, 0, sizeof(mVU->prog));
 	mVUprint((vuIndex) ? "microVU1: init" : "microVU0: init");
-	mVUsetupLog();
 
 	mVUreset<vuIndex>();
 }
@@ -84,6 +82,7 @@ microVUt(void) mVUreset() {
 	mVU->prog.cleared = 1;
 	mVU->prog.cur = -1;
 	mVU->prog.total = -1;
+	memset(&mVU->prog.lpState, 0, sizeof(mVU->prog.lpState));
 	//mVU->prog.lpState = &mVU->prog.prog[15].allocInfo.block.pState; // Blank Pipeline State (ToDo: finish implementation)
 
 	// Setup Dynarec Cache Limits for Each Program
@@ -151,21 +150,21 @@ microVUt(int) mVUfindLeastUsedProg() {
 	if (mVU->prog.total < mVU->prog.max) {
 		mVU->prog.total++;
 		mVUcacheProg<vuIndex>(mVU->prog.total); // Cache Micro Program
-		Console::Notice("microVU: Program Total = %d", params mVU->prog.total);
+		Console::Notice("microVU%d: Cached MicroPrograms = %d", params vuIndex, mVU->prog.total+1);
 		return mVU->prog.total;
 	}
 	else {
-		int j = 0;
-		u32 smallest = mVU->prog.prog[0].used;
-		for (int i = 1; i <= mVU->prog.total; i++) {
+		int j = (mVU->prog.cur + 1) & mVU->prog.max;
+		/*u32 smallest = mVU->prog.prog[j].used;
+		for (int i = ((j+1)&mVU->prog.max), z = 0; z < mVU->prog.max; i = (i+1)&mVU->prog.max, z++) {
 			if (smallest > mVU->prog.prog[i].used) {
 				smallest = mVU->prog.prog[i].used;
 				j = i;
 			}
-		}
+		}*/
 		mVUclearProg<vuIndex>(j); // Clear old data if overwriting old program
 		mVUcacheProg<vuIndex>(j); // Cache Micro Program
-		Console::Notice("microVU: Program Cache got Full!");
+		Console::Notice("microVU%d: MicroProgram Cache Full!", params vuIndex);
 		return j;
 	}
 }
@@ -175,9 +174,7 @@ microVUt(int) mVUsearchProg() {
 	microVU* mVU = mVUx;
 	if (mVU->prog.cleared) { // If cleared, we need to search for new program
 		for (int i = 0; i <= mVU->prog.total; i++) {
-			//if (i == mVU->prog.cur) continue; // We can skip the current program. (ToDo: Verify that games don't clear, and send the same microprogram :/)
 			if (!memcmp_mmx(mVU->prog.prog[i].data, mVU->regs->Micro, mVU->microSize)) {
-				//if (i == mVU->prog.cur) { mVUprint("microVU: Same micro program sent!"); }
 				mVU->prog.cur = i;
 				mVU->prog.cleared = 0;
 				mVU->prog.prog[i].used++;

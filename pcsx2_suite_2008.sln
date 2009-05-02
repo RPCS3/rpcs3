@@ -47,13 +47,13 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "xpad", "plugins\xpad\xpad_v
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CDVDolio", "plugins\CDVDolio\cdvd_vs2008.vcproj", "{FCDF5AE2-EA47-4CC6-9F20-23A0517FEBCB}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CDVDnull", "plugins\CDVDnull\Src\CDVDnull_vs2008.vcproj", "{F38D9DF0-F68D-49D9-B3A0-932E74FB74A0}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CDVDnull", "plugins\CDVDnull\Windows\CDVDnull_vs2008.vcproj", "{F38D9DF0-F68D-49D9-B3A0-932E74FB74A0}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "USBnull", "plugins\USBnull\Windows\USBnull_vc2008.vcproj", "{BF7B81A5-E348-4F7C-A69F-F74C8EEEAD70}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "FWnull", "plugins\FWnull\Windows\FWnull_vc2008.vcproj", "{3D0EB14D-32F3-4D82-9C6D-B806ADBB859C}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DEV9null", "plugins\dev9null\src\DEV9null_vc2008.vcproj", "{04439C5F-05FB-4A9C-AAD1-5388C25377DB}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DEV9null", "plugins\dev9null\Windows\DEV9null_vc2008.vcproj", "{04439C5F-05FB-4A9C-AAD1-5388C25377DB}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Nulls", "Nulls", "{E1828E40-2FBB-48FE-AE7F-5587755DCE0E}"
 EndProject

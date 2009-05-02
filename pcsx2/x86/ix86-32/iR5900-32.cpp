@@ -417,15 +417,20 @@ static void recAlloc()
 	x86FpuState = FPU_STATE;
 }
 
+PCSX2_ALIGNED16( static u16 manual_page[Ps2MemSize::Base >> 12] );
+PCSX2_ALIGNED16( static u8 manual_counter[Ps2MemSize::Base >> 12] );
+
 ////////////////////////////////////////////////////
 void recResetEE( void )
 {
-	DbgCon::Status( "iR5900-32 > Resetting recompiler memory and structures." );
+	Console::Status( "Issuing EE/iR5900-32 Recompiler Reset [mem/structure cleanup]" );
 
 	maxrecmem = 0;
 
 	memset_8<0xcc, REC_CACHEMEM>(recMem);	// 0xcc is INT3
 	memzero_ptr<m_recBlockAllocSize>( m_recBlockAlloc );
+	memzero_obj( manual_page );
+	memzero_obj( manual_counter );
 	ClearRecLUT((BASEBLOCK*)m_recBlockAlloc,
 		(((Ps2MemSize::Base + Ps2MemSize::Rom + Ps2MemSize::Rom1) / 4)));
 
@@ -719,7 +724,6 @@ static void ClearRecLUT(BASEBLOCK* base, int count)
 		base[i].SetFnptr((uptr)JITCompile);
 }
 
-// Returns the offset to the next instruction after any cleared memory
 void recClear(u32 addr, u32 size)
 {
 	BASEBLOCKEX* pexblock;
@@ -1085,10 +1089,8 @@ void recompileNextInstruction(int delayslot)
 	s_pCode = (int *)PSM( pc );
 	assert(s_pCode);
 
-	// why?
-#ifdef _DEBUG
-	MOV32ItoR(EAX, pc);
-#endif
+	if( IsDebugBuild )
+		MOV32ItoR(EAX, pc);		// acts as a tag for delimiting recompiled instructions when viewing x86 disasm.
 
 	cpuRegs.code = *(int *)s_pCode;
 	pc += 4;
@@ -1137,63 +1139,33 @@ void recompileNextInstruction(int delayslot)
 
 	const OPCODE& opcode = GetCurrentInstruction();
 
-	// peephole optimizations
-#ifdef PCSX2_VM_COISSUE
-	if( g_pCurInstInfo->info & EEINSTINFO_COREC ) {
+ 	//assert( !(g_pCurInstInfo->info & EEINSTINFO_NOREC) );
 
-		if( g_pCurInstInfo->numpeeps > 1 ) {
-			switch(_Opcode_) {
-				case 30: recLQ_coX(g_pCurInstInfo->numpeeps); break;
-				case 31: recSQ_coX(g_pCurInstInfo->numpeeps); break;
-				case 49: recLWC1_coX(g_pCurInstInfo->numpeeps); break;
-				case 57: recSWC1_coX(g_pCurInstInfo->numpeeps); break;
-				case 55: recLD_coX(g_pCurInstInfo->numpeeps); break;
-				case 63: recSD_coX(g_pCurInstInfo->numpeeps, 1); break; //not sure if should be set to 1 or 0; looks like "1" handles alignment, so i'm going with that for now
+	// if this instruction is a jump or a branch, exit right away
+	if( delayslot ) {
+		switch(_Opcode_) {
+			case 1:
+				switch(_Rt_) {
+					case 0: case 1: case 2: case 3: case 0x10: case 0x11: case 0x12: case 0x13:
+						Console::Notice("branch %x in delay slot!", params cpuRegs.code);
+						_clearNeededX86regs();
+						_clearNeededMMXregs();
+						_clearNeededXMMregs();
+						return;
+				}
+				break;
 
-				jNO_DEFAULT
-			}
-			pc += g_pCurInstInfo->numpeeps*4;
-			s_nBlockCycles += (g_pCurInstInfo->numpeeps+1) * opcode.cycles;
-			g_pCurInstInfo += g_pCurInstInfo->numpeeps;
-		}
-		else {
-			recBSC_co[_Opcode_]();
-			pc += 4;
-			g_pCurInstInfo++;
-			s_nBlockCycles += opcode.cycles*2;
+			case 2: case 3: case 4: case 5: case 6: case 7: case 0x14: case 0x15: case 0x16: case 0x17:
+				Console::Notice("branch %x in delay slot!", params cpuRegs.code);
+				_clearNeededX86regs();
+				_clearNeededMMXregs();
+				_clearNeededXMMregs();
+				return;
 		}
 	}
-	else
-#endif
-	{
-	 	//assert( !(g_pCurInstInfo->info & EEINSTINFO_NOREC) );
-
-		// if this instruction is a jump or a branch, exit right away
-		if( delayslot ) {
-			switch(_Opcode_) {
-				case 1:
-					switch(_Rt_) {
-						case 0: case 1: case 2: case 3: case 0x10: case 0x11: case 0x12: case 0x13:
-							Console::Notice("branch %x in delay slot!", params cpuRegs.code);
-							_clearNeededX86regs();
-							_clearNeededMMXregs();
-							_clearNeededXMMregs();
-							return;
-					}
-					break;
-
-				case 2: case 3: case 4: case 5: case 6: case 7: case 0x14: case 0x15: case 0x16: case 0x17:
-					Console::Notice("branch %x in delay slot!", params cpuRegs.code);
-					_clearNeededX86regs();
-					_clearNeededMMXregs();
-					_clearNeededXMMregs();
-					return;
-			}
-		}
-		//If thh COP0 DIE bit is disabled, double the cycles. Happens rarely.
-		s_nBlockCycles += opcode.cycles * (2 - ((cpuRegs.CP0.n.Config >> 18) & 0x1));
-		opcode.recompile();
-	}
+	//If thh COP0 DIE bit is disabled, double the cycles. Happens rarely.
+	s_nBlockCycles += opcode.cycles * (2 - ((cpuRegs.CP0.n.Config >> 18) & 0x1));
+	opcode.recompile();
 
 	if( !delayslot ) {
 		if( s_bFlushReg ) {
@@ -1255,14 +1227,16 @@ void badespfn() {
 
 void __fastcall dyna_block_discard(u32 start,u32 sz)
 {
-	DevCon::WriteLn("dyna_block_discard %08X , count %d", params start,sz);
-	Cpu->Clear(start,sz);
+	DevCon::WriteLn("dyna_block_discard .. start: %08X  count=%d", params start,sz);
+	Cpu->Clear(start, sz);
 }
 
-void __fastcall dyna_block_reset(u32 start,u32 sz)
+
+void __fastcall dyna_page_reset(u32 start,u32 sz)
 {
-	DevCon::WriteLn("dyna_block_reset %08X , count %d", params start,sz);
+	DevCon::WriteLn("dyna_page_reset .. start=%08X  size=%d", params start,sz*4);
 	Cpu->Clear(start & ~0xfffUL, 0x400);
+	manual_counter[start >> 12]++;
 	mmap_MarkCountedRamPage(PSM(start), start & ~0xfffUL);
 }
 
@@ -1283,7 +1257,6 @@ void recRecompile( const u32 startpc )
 
 	// if recPtr reached the mem limit reset whole mem
 	if ( ( (uptr)recPtr - (uptr)recMem ) >= REC_CACHEMEM-0x40000 || dumplog == 0xffffffff) {
-		DevCon::WriteLn( "EE Recompiler data reset" );
 		recResetEE();
 	}
 	if ( ( (uptr)recStackPtr - (uptr)recStack ) >= RECSTACK_SIZE-0x100 ) {
@@ -1351,25 +1324,38 @@ void recRecompile( const u32 startpc )
 	
 	while(1) {
 		BASEBLOCK* pblock = PC_GETBLOCK(i);
-		if (i != startpc && pblock->GetFnptr() != (uptr)JITCompile && pblock->GetFnptr() != (uptr)JITCompileInBlock) {
-			// branch = 3
-			willbranch3 = 1;
-			s_nEndBlock = i;
-			break;
+
+		if(i != startpc)	// Block size truncation checks.
+		{
+			if( (i & 0xffc) == 0x0 )	// breaks blocks at 4k page boundaries
+			{
+				willbranch3 = 1;
+				s_nEndBlock = i;
+
+				//DevCon::Notice( "Pagesplit @ %08X : size=%d insts", params startpc, (i-startpc) / 4 );
+				break;
+			}
+
+			if (pblock->GetFnptr() != (uptr)JITCompile && pblock->GetFnptr() != (uptr)JITCompileInBlock)
+			{
+				willbranch3 = 1;
+				s_nEndBlock = i;
+				break;
+			}
 		}
+
 		//HUH ? PSM ? whut ? THIS IS VIRTUAL ACCESS GOD DAMMIT
 		cpuRegs.code = *(int *)PSM(i);
 
 		switch(cpuRegs.code >> 26) {
 			case 0: // special
-
 				if( _Funct_ == 8 || _Funct_ == 9 ) { // JR, JALR
 					s_nEndBlock = i + 8;
 					s_nHasDelay = 1;
 					goto StartRecomp;
 				}
-
 				break;
+				
 			case 1: // regimm
 				
 				if( _Rt_ < 4 || (_Rt_ >= 16 && _Rt_ < 20) ) {
@@ -1383,7 +1369,6 @@ void recRecompile( const u32 startpc )
 
 					goto StartRecomp;
 				}
-
 				break;
 
 			case 2: // J
@@ -1489,98 +1474,6 @@ StartRecomp:
 			// instruction being analyzed.
 			if( usecop2 ) vucycle++;
 
-			// peephole optimizations //
-#ifdef PCSX2_VM_COISSUE
-			if( i < s_nEndBlock-4 && recompileCodeSafe(i) ) {
-				u32 curcode = cpuRegs.code;
-				u32 nextcode = *(u32*)PSM(i+4);
-				if( _eeIsLoadStoreCoIssue(curcode, nextcode) && recBSC_co[curcode>>26] != NULL ) {
-
-					// rs has to be the same, and cannot be just written
-					if( ((curcode >> 21) & 0x1F) == ((nextcode >> 21) & 0x1F) && !_eeLoadWritesRs(curcode) ) {
-
-						if( _eeIsLoadStoreCoX(curcode) && ((nextcode>>16)&0x1f) != ((curcode>>21)&0x1f) ) {
-							// see how many stores there are
-							u32 j;
-							// use xmmregs since only supporting lwc1,lq,swc1,sq
-							for(j = i+8; j < s_nEndBlock && j < i+4*iREGCNT_XMM; j += 4 ) {
-								u32 nncode = *(u32*)PSM(j);
-								if( (nncode>>26) != (curcode>>26) || ((curcode>>21)&0x1f) != ((nncode>>21)&0x1f) ||
-									_eeLoadWritesRs(nncode))
-									break;
-							}
-
-							if( j > i+8 ) {
-								u32 num = (j-i)>>2; // number of stores that can coissue
-								assert( num <= iREGCNT_XMM );
-
-								g_pCurInstInfo[0].numpeeps = num-1;
-								g_pCurInstInfo[0].info |= EEINSTINFO_COREC;
-
-								while(i < j-4) {
-									g_pCurInstInfo++;
-									g_pCurInstInfo[0].info |= EEINSTINFO_NOREC;
-									i += 4;	
-								}
-
-								continue;
-							}
-
-							// fall through
-						}
-
-						// unaligned loadstores
-
-						// if LWL, check if LWR and that offsets are +3 away
-						switch(curcode >> 26) {
-							case 0x22: // LWL
-								if( (nextcode>>26) != 0x26 || ((s16)nextcode)+3 != (s16)curcode )
-									continue;
-								break;
-							case 0x26: // LWR
-								if( (nextcode>>26) != 0x22 || ((s16)nextcode) != (s16)curcode+3 )
-									continue;
-								break;
-
-							case 0x2a: // SWL
-								if( (nextcode>>26) != 0x2e || ((s16)nextcode)+3 != (s16)curcode )
-									continue;
-								break;
-							case 0x2e: // SWR
-								if( (nextcode>>26) != 0x2a || ((s16)nextcode) != (s16)curcode+3 )
-									continue;
-								break;
-
-							case 0x1a: // LDL
-								if( (nextcode>>26) != 0x1b || ((s16)nextcode)+7 != (s16)curcode )
-									continue;
-								break;
-							case 0x1b: // LWR
-								if( (nextcode>>26) != 0x1aa || ((s16)nextcode) != (s16)curcode+7 )
-									continue;
-								break;
-
-							case 0x2c: // SWL
-								if( (nextcode>>26) != 0x2d || ((s16)nextcode)+7 != (s16)curcode )
-									continue;
-								break;
-							case 0x2d: // SWR
-								if( (nextcode>>26) != 0x2c || ((s16)nextcode) != (s16)curcode+7 )
-									continue;
-								break;
-						}
-						
-						// good enough
-						g_pCurInstInfo[0].info |= EEINSTINFO_COREC;
-						g_pCurInstInfo[0].numpeeps = 1;
-						g_pCurInstInfo[1].info |= EEINSTINFO_NOREC;
-						g_pCurInstInfo++;
-						i += 4;
-						continue;
-					}
-				}
-			}
-#endif // end peephole
 		}
 		// This *is* important because g_pCurInstInfo is checked a bit later on and
 		// if it's not equal to s_pInstCache it handles recompilation differently.
@@ -1610,57 +1503,86 @@ StartRecomp:
 		iDumpBlock(startpc, recPtr);
 #endif
 
-	static u16 manual_page[Ps2MemSize::Base >> 12];
-	u32 sz=(s_nEndBlock-startpc)>>2;
+	u32 sz = (s_nEndBlock-startpc) >> 2;
+	u32 inpage_ptr = HWADDR(startpc);
+	u32 inpage_sz  = sz*4;
 
-	u32 inpage_ptr=HWADDR(startpc);
-	u32 inpage_sz=sz*4;
+	// note: blocks are guaranteed to reside within the confines of a single page.
 
-	while(inpage_sz)
+	const int PageType = mmap_GetRamPageInfo((u32*)PSM(inpage_ptr));
+	const u32 inpage_offs = inpage_ptr & 0xFFF;
+	//const u32 pgsz = std::min(0x1000 - inpage_offs, inpage_sz);
+	const u32 pgsz = inpage_sz;
+
+	if(PageType!=-1)
 	{
-		int PageType = mmap_GetRamPageInfo((u32*)PSM(inpage_ptr));
-		u32 inpage_offs = inpage_ptr & 0xFFF;
-		u32 pgsz = std::min(0x1000 - inpage_offs, inpage_sz);
-
-		if(PageType!=-1)
+		if (PageType==0) {
+			mmap_MarkCountedRamPage(PSM(inpage_ptr),inpage_ptr&~0xFFF);
+			manual_page[inpage_ptr >> 12] = 0;
+		}
+		else
 		{
-			if (PageType==0) {
-				mmap_MarkCountedRamPage(PSM(inpage_ptr),inpage_ptr&~0xFFF);
-				manual_page[inpage_ptr >> 12] = 0;
+			xMOV( ecx, inpage_ptr );
+			xMOV( edx, pgsz / 4 );
+			//xMOV( eax, startpc );		// uncomment this to access startpc (as eax) in dyna_block_discard
+			
+			u32 lpc = inpage_ptr;
+			u32 stg = pgsz;
+			while(stg>0)
+			{
+				xCMP( ptr32[PSM(lpc)], *(u32*)PSM(lpc) );
+				xJNE( dyna_block_discard );
+
+				stg -= 4;
+				lpc += 4;
+			}
+			
+			// Tweakpoint!  3 is a 'magic' number representing the number of times a counted block
+			// is re-protected before the recompiler gives up and sets it up as an uncounted (permanent)
+			// manual block.  Higher thresholds result in more recompilations for blocks that share code
+			// and data on the same page.  Side effects of a lower threshold: over extended gameplay
+			// with several map changes, a game's overall performance could degrade.
+
+			// (ideally, perhaps, manual_counter should be reset to 0 every few minutes?)
+
+			if (startpc != 0x81fc0 && manual_counter[inpage_ptr >> 12] <= 3) {
+			
+				// Counted blocks add a weighted (by block size) value into manual_page each time they're
+				// run.  If the block gets run a lot, it resets and re-protects itself in the hope
+				// that whatever forced it to be manually-checked before was a 1-time deal.
+
+				// Counted blocks have a secondary threshold check in manual_counter, which forces a block
+				// to 'uncounted' mode if it's recompiled several time.  This protects against excessive
+				// recompilation of blocks that reside on the same codepage as data.
+
+				// fixme? Currently this algo is kinda dumb and results in the forced recompilation of a
+				// lot of blocks before it decides to mark a 'busy' page as uncounted.  There might be
+				// be a more clever approach that could streamline this process, by doing a first-pass
+				// test using the vtlb memory protection (without recompilation!) to reprotect a counted
+				// block.  But unless a new also is relatively simple in implementation, it's probably
+				// not worth the effort (tests show that we have lots of recompiler memory to spare, and
+				// that the current amount of recompilation is fairly cheap).
+
+				xADD(ptr16[&manual_page[inpage_ptr >> 12]], sz);
+				xJC( dyna_page_reset );
+
+				// note: clearcnt is measured per-page, not per-block!
+				DbgCon::WriteLn( "Manual block @ %08X : size=%3d  page/offs=%05X/%03X  inpgsz=%d  clearcnt=%d",
+					params startpc, sz, inpage_ptr>>12, inpage_offs, inpage_sz, manual_counter[inpage_ptr >> 12] );
 			}
 			else
 			{
-				MOV32ItoR(ECX, inpage_ptr);
-				MOV32ItoR(EDX, pgsz);
-
-				u32 lpc=inpage_ptr;
-				u32 stg=pgsz;
-				while(stg>0)
-				{
-					// was dyna_block_discard_recmem.  See note in recResetEE for details.
-					CMP32ItoM((uptr)PSM(lpc),*(u32*)PSM(lpc));
-					JNE32(((u32)&dyna_block_discard)- ( (u32)x86Ptr + 6 ));
-
-					stg-=4;
-					lpc+=4;
-				}
-				if (startpc != 0x81fc0) {
-					xADD(ptr16[&manual_page[inpage_ptr >> 12]], 1);
-					xJC( dyna_block_reset );
-				}
-
-				DbgCon::WriteLn("Manual block @ %08X : %08X %d %d %d %d", params
-					startpc,inpage_ptr,pgsz,0x1000-inpage_offs,inpage_sz,sz*4);
+				DbgCon::Notice( "Uncounted Manual block @ %08X : size=%3d page/offs=%05X/%03X  inpgsz=%d",
+					params startpc, sz, inpage_ptr>>12, inpage_offs, pgsz, inpage_sz );
 			}
-		}
-		inpage_ptr+=pgsz;
-		inpage_sz-=pgsz;
-	}
 
-	// finally recompile //
+		}
+	}
+	
+	// Finally: Generate x86 recompiled code!
 	g_pCurInstInfo = s_pInstCache;
 	while (!branch && pc < s_nEndBlock) {
-		recompileNextInstruction(0);
+		recompileNextInstruction(0);		// For the love of recursion, batman!
 	}
 
 #ifdef _DEBUG
@@ -1725,8 +1647,20 @@ StartRecomp:
 			ADD32ItoM((int)&cpuRegs.cycle, eeScaleBlockCycles() );
 
 		if( willbranch3 || !branch) {
+
 			iFlushCall(FLUSH_EVERYTHING);
-			iBranchTest(pc);
+
+			// Split Block concatenation mode.
+			// This code is run when blocks are split either to keep block sizes manageable
+			// or because we're crossing a 4k page protection boundary in ps2 mem.  The latter
+			// case can result in very short blocks which should not issue branch tests for
+			// performance reasons.
+
+			int numinsts = (pc - startpc) / 4;
+			if( numinsts > 12 )
+				iBranchTest(pc);
+			else
+				iBranch(pc,0);		// unconditional static link
 		}
 	}
 

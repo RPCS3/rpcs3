@@ -30,9 +30,22 @@ u8 g_globalXMMSaved = 0;
 PCSX2_ALIGNED16( static u64 g_globalMMXData[8] );
 PCSX2_ALIGNED16( static u64 g_globalXMMData[2*iREGCNT_XMM] );
 
+namespace x86Emitter
+{
+	void xStoreReg( const xRegisterSSE& src )
+	{
+		xMOVDQA( &g_globalXMMData[src.Id*2], src );
+	}
+
+	void xRestoreReg( const xRegisterSSE& dest )
+	{
+		xMOVDQA( dest, &g_globalXMMData[dest.Id*2] );
+	}
+}
+
 
 /////////////////////////////////////////////////////////////////////
-// SetCPUState -- for assugnment of SSE roundmodes and clampmodes.
+// SetCPUState -- for assignment of SSE roundmodes and clampmodes.
 
 u32 g_sseMXCSR = DEFAULT_sseMXCSR; 
 u32 g_sseVUMXCSR = DEFAULT_sseVUMXCSR;

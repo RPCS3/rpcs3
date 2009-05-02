@@ -32,7 +32,6 @@
 using namespace Threading;
 
 extern u8 psxhblankgate;
-u32 g_vu1SkipCount;	// number of frames to disable/skip VU1
 
 static const uint EECNT_FUTURE_TARGET = 0x10000000;
 
@@ -49,8 +48,6 @@ SyncCounter vsyncCounter;
 
 u32 nextsCounter;	// records the cpuRegs.cycle value of the last call to rcntUpdate()
 s32 nextCounter;	// delta from nextsCounter, in cycles, until the next rcntUpdate() 
-
-// VUSkip Locals and Globals
 
 void rcntReset(int index) {
 	counters[index].count = 0;
@@ -264,9 +261,6 @@ u32 UpdateVSyncRate()
 	m_iStart = GetCPUTicks();
 	cpuRcntSet();
 
-	// Initialize VU Skip Stuff...
-	g_vu1SkipCount = 0;
-
 	return (u32)m_iTicks;
 }
 
@@ -363,17 +357,7 @@ static __forceinline void VSyncEnd(u32 sCycle)
 
 	iFrame++;
 
-	if( g_vu1SkipCount > 0 )
-	{
-		gsPostVsyncEnd( false );
-		AtomicDecrement( g_vu1SkipCount );
-		vu1MicroEnableSkip();
-	}
-	else
-	{
-		gsPostVsyncEnd( true );
-		vu1MicroDisableSkip();
-	}
+	gsPostVsyncEnd( true );
 
 	hwIntcIrq(INTC_VBLANK_E);  // HW Irq
 	psxVBlankEnd(); // psxCounters vBlank End

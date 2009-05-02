@@ -285,7 +285,7 @@ float4 ps_main(PS_INPUT input) : COLOR
 		}
 		else if(ATST == 4) // e
 		{
-			clip(0.9f/256 - abs(c.a - AREF));
+			clip(0.6f / 256 - abs(c.a - AREF)); // FIXME: 0.5f is too small
 		}
 		else if(ATST == 5 || ATST == 6) // ge, g
 		{
@@ -293,7 +293,7 @@ float4 ps_main(PS_INPUT input) : COLOR
 		}
 		else if(ATST == 7) // ne
 		{
-			clip(abs(c.a - AREF) - 0.9f/256);
+			clip(abs(c.a - AREF) - 0.4f / 255); // FIXME: 0.5f is too much
 		}
 	}
 

@@ -37,7 +37,7 @@ static const uint m_psxMemSize =
 void psxMemAlloc()
 {
 	if( m_psxAllMem == NULL )
-		m_psxAllMem = vtlb_malloc( m_psxMemSize, 4096, 0x21000000 );
+		m_psxAllMem = vtlb_malloc( m_psxMemSize, 4096 );
 
 	if( m_psxAllMem == NULL)
 		throw Exception::OutOfMemory( "psxMemAlloc > failed allocating memory for the IOP processor." );
@@ -72,13 +72,9 @@ void psxMemReset()
 	for (int i=0; i<0x0080; i++)
 	{
 		psxMemWLUT[i + 0x0000] = (uptr)&psxM[(i & 0x1f) << 16];
-		//psxMemWLUT[i + 0x8000] = (uptr)&psxM[(i & 0x1f) << 16];
-		//psxMemWLUT[i + 0xa000] = (uptr)&psxM[(i & 0x1f) << 16];
 
 		// RLUTs, accessed through WLUT.
 		psxMemWLUT[i + 0x2000] = (uptr)&psxM[(i & 0x1f) << 16];
-		//psxMemWLUT[i + 0x18000] = (uptr)&psxM[(i & 0x1f) << 16];
-		//psxMemWLUT[i + 0x1a000] = (uptr)&psxM[(i & 0x1f) << 16];
 	}
 
 	// A few single-page allocations for things we store in special locations.
@@ -94,24 +90,16 @@ void psxMemReset()
 	for (int i=0; i<0x0040; i++)
 	{
 		psxMemWLUT[i + 0x2000 + 0x1fc0] = (uptr)&PS2MEM_ROM[i << 16];
-		//psxMemWLUT[i + 0x19fc0] = (uptr)&PS2MEM_ROM[i << 16];
-		//psxMemWLUT[i + 0x1bfc0] = (uptr)&PS2MEM_ROM[i << 16];
 	}
 
 	for (int i=0; i<0x0004; i++)
 	{
 		psxMemWLUT[i + 0x2000 + 0x1e00] = (uptr)&PS2MEM_ROM1[i << 16];
-		//psxMemWLUT[i + 0x19e00] = (uptr)&PS2MEM_ROM1[i << 16];
-		//psxMemWLUT[i + 0x1be00] = (uptr)&PS2MEM_ROM1[i << 16];
 	}
 
 	// sif!! (which is read only? (air))
 	psxMemWLUT[0x2000 + 0x1d00] = (uptr)psxS;
 	//psxMemWLUT[0x1bd00] = (uptr)psxS;
-
-	// why isn't scratchpad read/write? (air)
-	//for (i=0; i<0x0001; i++) psxMemWLUT[i + 0x1d00] = (uptr)&psxS[i << 16];
-	//for (i=0; i<0x0001; i++) psxMemWLUT[i + 0xbd00] = (uptr)&psxS[i << 16];
 
 	// this one looks like an old hack for some special write-only memory area,
 	// but leaving it in for reference (air)
@@ -136,10 +124,21 @@ u8 iopMemRead8(u32 mem)
 
 	if (t == 0x1f80)
 	{
-		if (mem < 0x1f801000)
-			return psxHu8(mem);
-		else
-			return psxHwRead8(mem);
+		switch( mem & 0xf000 )
+		{
+			case 0x1000: return IopMemory::iopHwRead8_Page1(mem);
+			case 0x3000: return IopMemory::iopHwRead8_Page3(mem);
+			case 0x8000: return IopMemory::iopHwRead8_Page8(mem);
+
+			// code for regression testing -- selectively enable these to help narrow out
+			// which register became buggy with the new Hw handlers.
+			//case 0x1000: return psxHwRead8(mem);
+			//case 0x3000: return psxHwRead8(mem);
+			//case 0x8000: return psxHwRead8(mem);
+			
+			default:
+				return psxHu8(mem);
+		}
 	}
 	else if (t == 0x1f40)
 	{
@@ -169,10 +168,21 @@ u16 iopMemRead16(u32 mem)
 
 	if (t == 0x1f80)
 	{
-		if (mem < 0x1f801000)
-			return psxHu16(mem);
-		else
-			return psxHwRead16(mem);
+		switch( mem & 0xf000 )
+		{
+			case 0x1000: return IopMemory::iopHwRead16_Page1(mem);
+			case 0x3000: return IopMemory::iopHwRead16_Page3(mem);
+			case 0x8000: return IopMemory::iopHwRead16_Page8(mem);
+
+			// code for regression testing -- selectively enable these to help narrow out
+			// which register became buggy with the new Hw handlers.
+			//case 0x1000: return psxHwRead16(mem);
+			//case 0x3000: return psxHwRead16(mem);
+			//case 0x8000: return psxHwRead16(mem);
+			
+			default:
+				return psxHu16(mem);
+		}
 	}
 	else
 	{
@@ -224,10 +234,21 @@ u32 iopMemRead32(u32 mem)
 
 	if (t == 0x1f80)
 	{
-		if (mem < 0x1f801000)
-			return psxHu32(mem);
-		else
-			return psxHwRead32(mem);
+		switch( mem & 0xf000 )
+		{
+			case 0x1000: return IopMemory::iopHwRead32_Page1(mem);
+			case 0x3000: return IopMemory::iopHwRead32_Page3(mem);
+			case 0x8000: return IopMemory::iopHwRead32_Page8(mem);
+
+			// code for regression testing -- selectively enable these to help narrow out
+			// which register became buggy with the new Hw handlers.
+			//case 0x1000: return psxHwRead32(mem);
+			//case 0x3000: return psxHwRead32(mem);
+			//case 0x8000: return psxHwRead32(mem);
+			
+			default:
+				return psxHu32(mem);
+		}
 	} else
 	{
 		//see also Hw.c
@@ -282,10 +303,31 @@ void iopMemWrite8(u32 mem, u8 value)
 	
 	if (t == 0x1f80)
 	{
-		if (mem < 0x1f801000)
-			psxHu8(mem) = value;
-		else
-			psxHwWrite8(mem, value);
+		switch( mem & 0xf000 )
+		{
+			// Regression testing: selectively pass ranges of registers to new or old
+			// handlers.  Helps narrow out which area of registers is erroring out.
+			/*case 0x1000:
+				if( mem >= 0x1f801000 )
+					psxHwWrite8( mem, value );
+				else
+					IopMemory::iopHwWrite8_Page1(mem,value);
+			break;*/
+
+			case 0x1000: IopMemory::iopHwWrite8_Page1(mem,value); break;
+			case 0x3000: IopMemory::iopHwWrite8_Page3(mem,value); break;
+			case 0x8000: IopMemory::iopHwWrite8_Page8(mem,value); break;
+
+			// code for regression testing -- selectively enable these to help narrow out
+			// which register became buggy with the new Hw handlers.
+			//case 0x1000: psxHwWrite8(mem,value); break;
+			//case 0x3000: psxHwWrite8(mem,value); break;
+			//case 0x8000: psxHwWrite8(mem,value); break;
+			
+			default:
+				psxHu8(mem) = value;
+			break;
+		}
 	}
 	else if (t == 0x1f40)
 	{
@@ -323,10 +365,29 @@ void iopMemWrite16(u32 mem, u16 value)
 
 	if (t == 0x1f80)
 	{
-		if (mem < 0x1f801000)
-			psxHu16(mem) = value;
-		else
-			psxHwWrite16(mem, value);
+		switch( mem & 0xf000 )
+		{
+			// Regression testing: selectively pass ranges of registers to new or old
+			// handlers.  Helps narrow out which area of registers is erroring out.
+			/*case 0x1000:
+				if( mem >= 0x1f801000 )
+					psxHwWrite16( mem, value );
+				else
+					IopMemory::iopHwWrite16_Page1(mem,value);
+			break;*/
+
+			case 0x1000: IopMemory::iopHwWrite16_Page1(mem,value); break;
+			case 0x3000: IopMemory::iopHwWrite16_Page3(mem,value); break;
+			case 0x8000: IopMemory::iopHwWrite16_Page8(mem,value); break;
+
+			//case 0x1000: psxHwWrite16(mem,value); break;
+			//case 0x3000: psxHwWrite16(mem,value); break;
+			//case 0x8000: psxHwWrite16(mem,value); break;
+			
+			default:
+				psxHu16(mem) = value;
+			break;
+		}
 	} else
 	{
 		u8* p = (u8 *)(psxMemWLUT[mem >> 16]);
@@ -386,10 +447,29 @@ void iopMemWrite32(u32 mem, u32 value)
 	
 	if (t == 0x1f80)
 	{
-		if (mem < 0x1f801000)
-			psxHu32(mem) = value;
-		else
-			psxHwWrite32(mem, value);
+		switch( mem & 0xf000 )
+		{
+			// Regression testing: selectively pass ranges of registers to new or old
+			// handlers.  Helps narrow out which area of registers is erroring out.
+			/*case 0x1000:
+				if( mem >= 0x1f801528 )
+					psxHwWrite32( mem, value );
+				else
+					IopMemory::iopHwWrite32_Page1(mem,value);
+			break;*/
+
+			case 0x1000: IopMemory::iopHwWrite32_Page1(mem,value); break;
+			case 0x3000: IopMemory::iopHwWrite32_Page3(mem,value); break;
+			case 0x8000: IopMemory::iopHwWrite32_Page8(mem,value); break;
+
+			//case 0x1000: psxHwWrite32(mem,value); break;
+			//case 0x3000: psxHwWrite32(mem,value); break;
+			//case 0x8000: psxHwWrite32(mem,value); break;
+			
+			default:
+				psxHu32(mem) = value;
+			break;
+		}
 	} else
 	{
 		//see also Hw.c
