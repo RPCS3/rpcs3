@@ -160,11 +160,7 @@
 			Filter="cpp;c;cxx;def;odl;idl;hpj;bat;asm"
 			>
 			<File
-				RelativePath=".\DEV9.h"
-				>
-			</File>
-			<File
-				RelativePath=".\dev9null.c"
+				RelativePath="..\DEV9.cpp"
 				>
 			</File>
 			<File
@@ -172,6 +168,10 @@
 				>
 			</File>
 		</Filter>
+		<File
+			RelativePath="..\DEV9.h"
+			>
+		</File>
 	</Files>
 	<Globals>
 	</Globals>

@@ -36,8 +36,14 @@ extern "C"
 #include <windowsx.h>
 #endif
 
-#ifdef _MSC_VER
+/*#ifdef _MSC_VER
 #define EXPORT_C_(type) extern "C" __declspec(dllexport) type CALLBACK
+#else
+#define EXPORT_C_(type) extern "C" type
+#endif*/
+
+#ifdef _MSC_VER
+#define EXPORT_C_(type) extern "C" type CALLBACK
 #else
 #define EXPORT_C_(type) extern "C" type
 #endif

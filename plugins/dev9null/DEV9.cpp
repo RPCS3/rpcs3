@@ -140,7 +140,7 @@ EXPORT_C_(void) DEV9about()
 
 HINSTANCE hInst;
 
-void SysMessage(char *fmt, ...) 
+void SysMessage(const char *fmt, ...) 
 {
 	va_list list;
 	char tmp[512];

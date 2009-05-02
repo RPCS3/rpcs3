@@ -157,7 +157,7 @@
 			Filter="cpp;c;cxx;def;odl;idl;hpj;bat;asm"
 			>
 			<File
-				RelativePath="Config.c"
+				RelativePath=".\Config.cpp"
 				>
 			</File>
 			<File
@@ -165,7 +165,7 @@
 				>
 			</File>
 			<File
-				RelativePath="Win32.c"
+				RelativePath=".\Win32.cpp"
 				>
 			</File>
 		</Filter>

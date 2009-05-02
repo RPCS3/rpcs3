@@ -21,11 +21,15 @@
 
 #include <stdio.h>
 
+#ifdef __cplusplus
 extern "C"
 {
+#endif 
 #define FWdefs
 #include "PS2Edefs.h"
+#ifdef __cplusplus
 }
+#endif
 
 #ifdef _WIN32
 
@@ -39,8 +43,14 @@ extern "C"
 
 #endif
 
-#ifdef _MSC_VER
+/*#ifdef _MSC_VER
 #define EXPORT_C_(type) extern "C" __declspec(dllexport) type CALLBACK
+#else
+#define EXPORT_C_(type) extern "C" type
+#endif*/
+
+#ifdef _MSC_VER
+#define EXPORT_C_(type) extern "C" type CALLBACK
 #else
 #define EXPORT_C_(type) extern "C" type
 #endif
