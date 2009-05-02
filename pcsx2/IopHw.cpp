@@ -618,8 +618,8 @@ u32 psxHwRead32(u32 add) {
 }
 
 // A buffer that stores messages until it gets a /n or the number of chars (g_pbufi) is more then 1023.
-s8 g_pbuf[1024];
-int g_pbufi;
+static s8 g_pbuf[1024];
+static int g_pbufi;
 void psxHwWrite8(u32 add, u8 value) {
 	if (add >= HW_USB_START && add < HW_USB_END) {
 		USBwrite8(add, value); return;
@@ -768,7 +768,7 @@ void psxHwWrite16(u32 add, u16 value) {
 			psxRcntWcount16(0, value); return;
 		case IOP_T0_MODE:
 			PSXCNT_LOG("COUNTER 0 MODE 16bit write %x", value);
-			psxRcnt0Wmode(value); return;
+			psxRcntWmode16(0, value); return;
 		case IOP_T0_TARGET:
 			PSXCNT_LOG("COUNTER 0 TARGET 16bit write %x", value);
 			psxRcntWtarget16(0, value); return;
@@ -778,7 +778,7 @@ void psxHwWrite16(u32 add, u16 value) {
 			psxRcntWcount16(1, value); return;
 		case IOP_T1_MODE:
 			PSXCNT_LOG("COUNTER 1 MODE 16bit write %x", value);
-			psxRcnt1Wmode(value); return;
+			psxRcntWmode16(1, value); return;
 		case IOP_T1_TARGET:
 			PSXCNT_LOG("COUNTER 1 TARGET 16bit write %x", value);
 			psxRcntWtarget16(1, value); return;
@@ -788,7 +788,7 @@ void psxHwWrite16(u32 add, u16 value) {
 			psxRcntWcount16(2, value); return;
 		case IOP_T2_MODE:
 			PSXCNT_LOG("COUNTER 2 MODE 16bit write %x", value);
-			psxRcnt2Wmode(value); return;
+			psxRcntWmode16(2, value); return;
 		case IOP_T2_TARGET:
 			PSXCNT_LOG("COUNTER 2 TARGET 16bit write %x", value);
 			psxRcntWtarget16(2, value); return;
@@ -803,7 +803,7 @@ void psxHwWrite16(u32 add, u16 value) {
 			psxRcntWcount32(3, value); return;
 		case IOP_T3_MODE:
 			PSXCNT_LOG("COUNTER 3 MODE 16bit write %lx", value);
-			psxRcnt3Wmode(value); return;
+			psxRcntWmode32(3, value); return;
 		case IOP_T3_TARGET:
 			PSXCNT_LOG("COUNTER 3 TARGET 16bit write %lx", value);
 			psxRcntWtarget32(3, value); return;
@@ -813,7 +813,7 @@ void psxHwWrite16(u32 add, u16 value) {
 			psxRcntWcount32(4, value); return;
 		case IOP_T4_MODE:
 			PSXCNT_LOG("COUNTER 4 MODE 16bit write %lx", value);
-			psxRcnt4Wmode(value); return;
+			psxRcntWmode32(4, value); return;
 		case IOP_T4_TARGET:
 			PSXCNT_LOG("COUNTER 4 TARGET 16bit write %lx", value);
 			psxRcntWtarget32(4, value); return;
@@ -823,7 +823,7 @@ void psxHwWrite16(u32 add, u16 value) {
 			psxRcntWcount32(5, value); return;
 		case IOP_T5_MODE:
 			PSXCNT_LOG("COUNTER 5 MODE 16bit write %lx", value);
-			psxRcnt5Wmode(value); return;
+			psxRcntWmode32(5, value); return;
 		case IOP_T5_TARGET:
 			PSXCNT_LOG("COUNTER 5 TARGET 16bit write %lx", value);
 			psxRcntWtarget32(5, value); return;
@@ -1180,7 +1180,7 @@ void psxHwWrite32(u32 add, u32 value) {
 			psxRcntWcount16(0, value ); return;
 		case IOP_T0_MODE:
 			PSXCNT_LOG("COUNTER 0 MODE 32bit write %lx", value);
-			psxRcnt0Wmode(value); return;
+			psxRcntWmode16(0, value); return;
 		case IOP_T0_TARGET:
 			PSXCNT_LOG("COUNTER 0 TARGET 32bit write %lx", value);
 			psxRcntWtarget16(0, value ); return;
@@ -1190,7 +1190,7 @@ void psxHwWrite32(u32 add, u32 value) {
 			psxRcntWcount16(1, value ); return;
 		case IOP_T1_MODE:
 			PSXCNT_LOG("COUNTER 1 MODE 32bit write %lx", value);
-			psxRcnt1Wmode(value); return;
+			psxRcntWmode16(1, value); return;
 		case IOP_T1_TARGET:
 			PSXCNT_LOG("COUNTER 1 TARGET 32bit write %lx", value);
 			psxRcntWtarget16(1, value ); return;
@@ -1200,7 +1200,7 @@ void psxHwWrite32(u32 add, u32 value) {
 			psxRcntWcount16(2, value ); return;
 		case IOP_T2_MODE:
 			PSXCNT_LOG("COUNTER 2 MODE 32bit write %lx", value);
-			psxRcnt2Wmode(value); return;
+			psxRcntWmode16(0, value); return;
 		case IOP_T2_TARGET:
 			PSXCNT_LOG("COUNTER 2 TARGET 32bit write %lx", value);
 			psxRcntWtarget16(2, value); return;
@@ -1210,7 +1210,7 @@ void psxHwWrite32(u32 add, u32 value) {
 			psxRcntWcount32(3, value); return;
 		case IOP_T3_MODE:
 			PSXCNT_LOG("COUNTER 3 MODE 32bit write %lx", value);
-			psxRcnt3Wmode(value); return;
+			psxRcntWmode32(3, value); return;
 		case IOP_T3_TARGET:
 			PSXCNT_LOG("COUNTER 3 TARGET 32bit write %lx", value);
 			psxRcntWtarget32(3, value); return;
@@ -1220,7 +1220,7 @@ void psxHwWrite32(u32 add, u32 value) {
 			psxRcntWcount32(4, value); return;
 		case IOP_T4_MODE:
 			PSXCNT_LOG("COUNTER 4 MODE 32bit write %lx", value);
-			psxRcnt4Wmode(value); return;
+			psxRcntWmode32(4, value); return;
 		case IOP_T4_TARGET:
 			PSXCNT_LOG("COUNTER 4 TARGET 32bit write %lx", value);
 			psxRcntWtarget32(4, value); return;
@@ -1230,7 +1230,7 @@ void psxHwWrite32(u32 add, u32 value) {
 			psxRcntWcount32(5, value); return;
 		case IOP_T5_MODE:
 			PSXCNT_LOG("COUNTER 5 MODE 32bit write %lx", value);
-			psxRcnt5Wmode(value); return;
+			psxRcntWmode32(5, value); return;
 		case IOP_T5_TARGET:
 			PSXCNT_LOG("COUNTER 5 TARGET 32bit write %lx", value);
 			psxRcntWtarget32(5, value); return;
@@ -1335,16 +1335,20 @@ void psxHw4Write8(u32 add, u8 value)
 	PSXHW_LOG("Known 8bit write to addr 0x%x = 0x%x", add, value);
 }
 
-void psxDmaInterrupt(int n) {
-	if (HW_DMA_ICR & (1 << (16 + n))) {
+void psxDmaInterrupt(int n)
+{
+	if (HW_DMA_ICR & (1 << (16 + n)))
+	{
 		HW_DMA_ICR|= (1 << (24 + n));
 		psxRegs.CP0.n.Cause |= 1 << (9 + n);
 		iopIntcIrq( 3 );
 	}
 }
 
-void psxDmaInterrupt2(int n) {
-	if (HW_DMA_ICR2 & (1 << (16 + n))) {
+void psxDmaInterrupt2(int n)
+{
+	if (HW_DMA_ICR2 & (1 << (16 + n)))
+	{
 /*		if (HW_DMA_ICR2 & (1 << (24 + n))) {
 			Console::WriteLn("*PCSX2*: HW_DMA_ICR2 n=%d already set", params n);
 		}
