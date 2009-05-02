@@ -92,7 +92,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="copy $(TargetPath) ..\..\..\..\bin\plugins"
+				CommandLine="copy $(TargetPath) ..\..\..\..\..\bin\plugins"
 			/>
 		</Configuration>
 		<Configuration
@@ -170,7 +170,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="copy $(TargetPath) ..\..\..\..\bin\plugins"
+				CommandLine="copy $(TargetPath) ..\..\..\..\..\bin\plugins"
 			/>
 		</Configuration>
 	</Configurations>
@@ -187,7 +187,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\SPU2.cpp"
+				RelativePath="..\SPU2.cpp"
 				>
 			</File>
 			<File
@@ -201,11 +201,11 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
-				RelativePath=".\PS2Edefs.h"
+				RelativePath="..\..\..\common\include\PS2Edefs.h"
 				>
 			</File>
 			<File
-				RelativePath=".\PS2Etypes.h"
+				RelativePath="..\..\..\common\include\PS2Etypes.h"
 				>
 			</File>
 			<File
@@ -213,7 +213,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\SPU2.h"
+				RelativePath="..\SPU2.h"
 				>
 			</File>
 		</Filter>
