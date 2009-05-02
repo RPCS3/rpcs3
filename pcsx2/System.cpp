@@ -319,9 +319,6 @@ void SysClearExecutionCache()
 	psxCpu->Reset();
 
 	vuMicroCpuReset();
-
-	// make sure the VU1 doesn't have lingering "skip" enabled.
-	vu1MicroDisableSkip();
 }
 
 __forceinline void SysUpdate()

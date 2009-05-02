@@ -424,7 +424,7 @@ PCSX2_ALIGNED16( static u8 manual_counter[Ps2MemSize::Base >> 12] );
 ////////////////////////////////////////////////////
 void recResetEE( void )
 {
-	DbgCon::Status( "iR5900-32 > Resetting recompiler memory and structures." );
+	Console::Status( "Issuing EE/iR5900-32 Recompiler Reset [mem/structure cleanup]" );
 
 	maxrecmem = 0;
 
@@ -1258,7 +1258,6 @@ void recRecompile( const u32 startpc )
 
 	// if recPtr reached the mem limit reset whole mem
 	if ( ( (uptr)recPtr - (uptr)recMem ) >= REC_CACHEMEM-0x40000 || dumplog == 0xffffffff) {
-		DevCon::WriteLn( "EE Recompiler data reset" );
 		recResetEE();
 	}
 	if ( ( (uptr)recStackPtr - (uptr)recStack ) >= RECSTACK_SIZE-0x100 ) {
@@ -1334,10 +1333,7 @@ void recRecompile( const u32 startpc )
 				willbranch3 = 1;
 				s_nEndBlock = i;
 
-				// Log the pagesplits verbosely for now, until we see if any games are affected 
-				// adversely by excessive splits.
-				DevCon::Notice( "Pagesplit @ %08X : size=%d insts", params startpc, (i-startpc) / 4 );
-
+				//DevCon::Notice( "Pagesplit @ %08X : size=%d insts", params startpc, (i-startpc) / 4 );
 				break;
 			}
 
@@ -1508,86 +1504,80 @@ StartRecomp:
 		iDumpBlock(startpc, recPtr);
 #endif
 
-	// fixme!  The following manual/protected block code can be greatly simplified now.
-	// It originally had to account for cross-page blocks, but we have since guaranteed
-	// that no block will cross a page boundary.
-
 	u32 sz = (s_nEndBlock-startpc) >> 2;
 	u32 inpage_ptr = HWADDR(startpc);
 	u32 inpage_sz  = sz*4;
 
-	while(inpage_sz)
-	{
-		int PageType = mmap_GetRamPageInfo((u32*)PSM(inpage_ptr));
-		u32 inpage_offs = inpage_ptr & 0xFFF;
-		u32 pgsz = std::min(0x1000 - inpage_offs, inpage_sz);
+	// note: blocks are guaranteed to reside within the confines of a single page.
 
-		if(PageType!=-1)
+	const int PageType = mmap_GetRamPageInfo((u32*)PSM(inpage_ptr));
+	const u32 inpage_offs = inpage_ptr & 0xFFF;
+	//const u32 pgsz = std::min(0x1000 - inpage_offs, inpage_sz);
+	const u32 pgsz = inpage_sz;
+
+	if(PageType!=-1)
+	{
+		if (PageType==0) {
+			mmap_MarkCountedRamPage(PSM(inpage_ptr),inpage_ptr&~0xFFF);
+			manual_page[inpage_ptr >> 12] = 0;
+		}
+		else
 		{
-			if (PageType==0) {
-				mmap_MarkCountedRamPage(PSM(inpage_ptr),inpage_ptr&~0xFFF);
-				manual_page[inpage_ptr >> 12] = 0;
+			xMOV( ecx, inpage_ptr );
+			xMOV( edx, pgsz / 4 );
+			//xMOV( eax, startpc );		// uncomment this to access startpc (as eax) in dyna_block_discard
+			
+			u32 lpc = inpage_ptr;
+			u32 stg = pgsz;
+			while(stg>0)
+			{
+				xCMP( ptr32[PSM(lpc)], *(u32*)PSM(lpc) );
+				xJNE( dyna_block_discard );
+
+				stg -= 4;
+				lpc += 4;
+			}
+			
+			// Tweakpoint!  3 is a 'magic' number representing the number of times a counted block
+			// is re-protected before the recompiler gives up and sets it up as an uncounted (permanent)
+			// manual block.  Higher thresholds result in more recompilations for blocks that share code
+			// and data on the same page.  Side effects of a lower threshold: over extended gameplay
+			// with several map changes, a game's overall performance could degrade.
+
+			// (ideally, perhaps, manual_counter should be reset to 0 every few minutes?)
+
+			if (startpc != 0x81fc0 && manual_counter[inpage_ptr >> 12] <= 3) {
+			
+				// Counted blocks add a weighted (by block size) value into manual_page each time they're
+				// run.  If the block gets run a lot, it resets and re-protects itself in the hope
+				// that whatever forced it to be manually-checked before was a 1-time deal.
+
+				// Counted blocks have a secondary threshold check in manual_counter, which forces a block
+				// to 'uncounted' mode if it's recompiled several time.  This protects against excessive
+				// recompilation of blocks that reside on the same codepage as data.
+
+				// fixme? Currently this algo is kinda dumb and results in the forced recompilation of a
+				// lot of blocks before it decides to mark a 'busy' page as uncounted.  There might be
+				// be a more clever approach that could streamline this process, by doing a first-pass
+				// test using the vtlb memory protection (without recompilation!) to reprotect a counted
+				// block.  But unless a new also is relatively simple in implementation, it's probably
+				// not worth the effort (tests show that we have lots of recompiler memory to spare, and
+				// that the current amount of recompilation is fairly cheap).
+
+				xADD(ptr16[&manual_page[inpage_ptr >> 12]], sz);
+				xJC( dyna_page_reset );
+
+				// note: clearcnt is measured per-page, not per-block!
+				DbgCon::WriteLn( "Manual block @ %08X : size=%3d  page/offs=%05X/%03X  inpgsz=%d  clearcnt=%d",
+					params startpc, sz, inpage_ptr>>12, inpage_offs, inpage_sz, manual_counter[inpage_ptr >> 12] );
 			}
 			else
 			{
-				xMOV( ecx, inpage_ptr );
-				xMOV( edx, pgsz / 4 );
-				//xMOV( eax, startpc );		// uncomment this to access startpc (as eax) in dyna_block_discard
-				
-				u32 lpc = inpage_ptr;
-				u32 stg = pgsz;
-				while(stg>0)
-				{
-					xCMP( ptr32[PSM(lpc)], *(u32*)PSM(lpc) );
-					xJNE( dyna_block_discard );
-
-					stg -= 4;
-					lpc += 4;
-				}
-				
-				// Tweakpoint!  3 is a 'magic' number representing the number of times a counted block
-				// is re-protected before the recompiler gives up and sets it up as an uncounted (permanent)
-				// manual block.  4 definitely seemed too high, but 2 might be better?  Side effects of a
-				// lower threshold: over extended gameplay with several map changes, a game's overall
-				// performance could degrade.
-
-				// (ideally, perhaps, manual_counter should be reset to 0 every few minutes?)
-
-				if (startpc != 0x81fc0 && manual_counter[inpage_ptr >> 12] <= 3) {
-				
-					// Counted blocks add a weighted (by block size) value into manual_page each time they're
-					// run.  If the block gets run a lot, it resets and re-protects itself in the hope
-					// that whatever forced it to be manually-checked before was a 1-time deal.
-
-					// Counted blocks have a secondary threshold check in manual_counter, which forces a block
-					// to 'uncounted' mode if it's recompiled several time.  This protects against excessive
-					// recompilation of blocks that reside on the same codepage as data.
-
-					// fixme? Currently this algo is kinda dumb and results in the forced recompilation of a
-					// lot of blocks before it decides to mark a 'busy' page as uncounted.  There might be
-					// be a more clever approach that could streamline this process, by doing a first-pass
-					// test using the vtlb memory protection (without recompilation!) to reprotect a counted
-					// block.  But unless a new also is relatively simple in implementation, it's probably
-					// not worth the effort (tests show that we have lots of recompiler memory to spare, and
-					// that the current amount of recompilation is fairly cheap).
-
-					xADD(ptr16[&manual_page[inpage_ptr >> 12]], sz);
-					xJC( dyna_page_reset );
-
-					// note: clearcnt is measured per-page, not per-block!
-					DbgCon::WriteLn( "Manual block @ %08X : size=%3d  page/offs=%05X/%03X  inpgsz=%d  clearcnt=%d",
-						params startpc, sz, inpage_ptr>>12, inpage_offs, inpage_sz, manual_counter[inpage_ptr >> 12] );
-				}
-				else
-				{
-					DbgCon::Notice( "Uncounted Manual block @ %08X : size=%3d page/offs=%05X/%03X  inpgsz=%d",
-						params startpc, sz, inpage_ptr>>12, inpage_offs, pgsz, inpage_sz );
-				}
-
+				DbgCon::Notice( "Uncounted Manual block @ %08X : size=%3d page/offs=%05X/%03X  inpgsz=%d",
+					params startpc, sz, inpage_ptr>>12, inpage_offs, pgsz, inpage_sz );
 			}
+
 		}
-		inpage_ptr += pgsz;
-		inpage_sz  -= pgsz;
 	}
 	
 	// Finally: Generate x86 recompiled code!

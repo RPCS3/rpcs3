@@ -580,13 +580,6 @@ static void VIFunpack(u32 *data, vifCode *v, unsigned int size, const unsigned i
 		vif = &vif1;
 		vifRow = g_vifRow1;
 		assert(v->addr < memsize);
-
-		if (vu1MicroIsSkipping())
-		{
-			// don't process since the frame is dummy
-			vif->tag.addr += (size / (VIFfuncTable[ vif->cmd & 0xf ].gsize * vifRegs->cycle.wl)) * ((vifRegs->cycle.cl - vifRegs->cycle.wl) * 16);
-			return;
-		}
 	}
 
 	dest = (u32*)(VU->Mem + v->addr);
