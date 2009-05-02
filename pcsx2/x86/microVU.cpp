@@ -82,6 +82,7 @@ microVUt(void) mVUreset() {
 	mVU->prog.cleared = 1;
 	mVU->prog.cur = -1;
 	mVU->prog.total = -1;
+	memset(&mVU->prog.lpState, 0, sizeof(mVU->prog.lpState));
 	//mVU->prog.lpState = &mVU->prog.prog[15].allocInfo.block.pState; // Blank Pipeline State (ToDo: finish implementation)
 
 	// Setup Dynarec Cache Limits for Each Program

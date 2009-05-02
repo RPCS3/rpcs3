@@ -50,6 +50,7 @@
 
 #define startLoop()			{ mVUdebug1(); mVUstall = 0; memset(&mVUregsTemp, 0, sizeof(mVUregsTemp)); }
 #define calcCycles(reg, x)	{ reg = ((reg > x) ? (reg - x) : 0); }
+#define tCycles(dest, src)	{ dest = aMax(dest, src); }
 #define incP()				{ mVU->p = (mVU->p+1) & 1; }
 #define incQ()				{ mVU->q = (mVU->q+1) & 1; }
 #define doUpperOp()			{ mVUopU<vuIndex, 1>(); mVUdivSet<vuIndex>(); }
@@ -212,18 +213,26 @@ microVUt(void) mVUsetCycles() {
 	incCycles(mVUstall);
 	if (mVUregsTemp.VFreg[0] == mVUregsTemp.VFreg[1] && mVUregsTemp.VFreg[0]) {	// If upper Op && lower Op write to same VF reg
 		mVUinfo |= (mVUregsTemp.r || mVUregsTemp.VI) ? _noWriteVF : _isNOP;		// If lower Op doesn't modify anything else, then make it a NOP
-		mVUregsTemp.VF[1].x = aMax(mVUregsTemp.VF[0].x, mVUregsTemp.VF[1].x);	// Use max cycles from each vector
-		mVUregsTemp.VF[1].y = aMax(mVUregsTemp.VF[0].y, mVUregsTemp.VF[1].y);
-		mVUregsTemp.VF[1].z = aMax(mVUregsTemp.VF[0].z, mVUregsTemp.VF[1].z);
-		mVUregsTemp.VF[1].w = aMax(mVUregsTemp.VF[0].w, mVUregsTemp.VF[1].w);
+		tCycles(mVUregsTemp.VF[1].x, mVUregsTemp.VF[0].x) // Use max cycles from each vector
+		tCycles(mVUregsTemp.VF[1].y, mVUregsTemp.VF[0].y)
+		tCycles(mVUregsTemp.VF[1].z, mVUregsTemp.VF[0].z)
+		tCycles(mVUregsTemp.VF[1].w, mVUregsTemp.VF[0].w)
 	}
-	mVUregs.VF[mVUregsTemp.VFreg[0]].reg = mVUregsTemp.VF[0].reg;
-	mVUregs.VF[mVUregsTemp.VFreg[1]].reg = mVUregsTemp.VF[1].reg;
-	mVUregs.VI[mVUregsTemp.VIreg]		 = mVUregsTemp.VI;
-	mVUregs.q							 = mVUregsTemp.q;
-	mVUregs.p							 = mVUregsTemp.p;
-	mVUregs.r							 = mVUregsTemp.r;
-	mVUregs.xgkick						 = mVUregsTemp.xgkick;
+	tCycles(mVUregs.VF[mVUregsTemp.VFreg[0]].x, mVUregsTemp.VF[0].x);
+	tCycles(mVUregs.VF[mVUregsTemp.VFreg[0]].y, mVUregsTemp.VF[0].y);
+	tCycles(mVUregs.VF[mVUregsTemp.VFreg[0]].z, mVUregsTemp.VF[0].z);
+	tCycles(mVUregs.VF[mVUregsTemp.VFreg[0]].w, mVUregsTemp.VF[0].w);
+
+	tCycles(mVUregs.VF[mVUregsTemp.VFreg[1]].x, mVUregsTemp.VF[1].x);
+	tCycles(mVUregs.VF[mVUregsTemp.VFreg[1]].y, mVUregsTemp.VF[1].y);
+	tCycles(mVUregs.VF[mVUregsTemp.VFreg[1]].z, mVUregsTemp.VF[1].z);
+	tCycles(mVUregs.VF[mVUregsTemp.VFreg[1]].w, mVUregsTemp.VF[1].w);
+
+	tCycles(mVUregs.VI[mVUregsTemp.VIreg],	mVUregsTemp.VI);
+	tCycles(mVUregs.q,						mVUregsTemp.q);
+	tCycles(mVUregs.p,						mVUregsTemp.p);
+	tCycles(mVUregs.r,						mVUregsTemp.r);
+	tCycles(mVUregs.xgkick,					mVUregsTemp.xgkick);
 }
 
 microVUt(void) mVUdivSet() {

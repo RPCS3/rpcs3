@@ -41,7 +41,7 @@ public:
 		microBlock* thisBlock = search(&pBlock->pState);
 		if (!thisBlock) {
 			listSize++;
-			listSize &= MaxBlocks;
+			if (listSize > MaxBlocks) { Console::Error("microVU Warning: Block List Overflow"); listSize &= MaxBlocks; }
 			memcpy_fast(&blockList[listSize], pBlock, sizeof(microBlock));
 			thisBlock = &blockList[listSize];
 		}
