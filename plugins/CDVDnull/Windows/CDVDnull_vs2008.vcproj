@@ -102,11 +102,11 @@
 			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 			>
 			<File
-				RelativePath=".\CDVD.c"
+				RelativePath="..\CDVD.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\CDVD.h"
+				RelativePath="..\CDVD.h"
 				>
 			</File>
 			<File
