@@ -4,6 +4,7 @@
 <glade-interface>
 
 <widget class="GtkAboutDialog" id="About">
+  <property name="border_width">5</property>
   <property name="visible">True</property>
   <property name="destroy_with_parent">False</property>
   <property name="name" translatable="yes">ZeroPAD</property>
@@ -144,6 +145,48 @@ and SSSPSXPad, TwinPad authors</property>
 			  <property name="draw_indicator">True</property>
 			  <property name="group">PAD1</property>
 			  <signal name="clicked" handler="OnConf_Pad2" last_modification_time="Sat, 31 Mar 2007 21:46:18 GMT"/>
+			</widget>
+			<packing>
+			  <property name="padding">0</property>
+			  <property name="expand">False</property>
+			  <property name="fill">False</property>
+			</packing>
+		      </child>
+
+		      <child>
+			<widget class="GtkRadioButton" id="PAD3">
+			  <property name="visible">True</property>
+			  <property name="can_focus">True</property>
+			  <property name="label" translatable="yes">PAD1 alt.</property>
+			  <property name="use_underline">True</property>
+			  <property name="relief">GTK_RELIEF_NORMAL</property>
+			  <property name="focus_on_click">True</property>
+			  <property name="active">False</property>
+			  <property name="inconsistent">False</property>
+			  <property name="draw_indicator">True</property>
+			  <property name="group">PAD1</property>
+			  <signal name="clicked" handler="OnConf_Pad3" last_modification_time="Sat, 31 Mar 2007 21:46:03 GMT"/>
+			</widget>
+			<packing>
+			  <property name="padding">0</property>
+			  <property name="expand">False</property>
+			  <property name="fill">False</property>
+			</packing>
+		      </child>
+
+		      <child>
+			<widget class="GtkRadioButton" id="PAD4">
+			  <property name="visible">True</property>
+			  <property name="can_focus">True</property>
+			  <property name="label" translatable="yes">PAD2 alt.</property>
+			  <property name="use_underline">True</property>
+			  <property name="relief">GTK_RELIEF_NORMAL</property>
+			  <property name="focus_on_click">True</property>
+			  <property name="active">False</property>
+			  <property name="inconsistent">False</property>
+			  <property name="draw_indicator">True</property>
+			  <property name="group">PAD1</property>
+			  <signal name="clicked" handler="OnConf_Pad4" last_modification_time="Sat, 31 Mar 2007 21:46:18 GMT"/>
 			</widget>
 			<packing>
 			  <property name="padding">0</property>

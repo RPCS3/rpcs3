@@ -54,7 +54,7 @@ void SaveConfig()
 	if(!szTemp) return;
 	strcpy(szTemp, "\\inis\\zeropad.ini");
 
-	for (j=0; j<2; j++) {
+	for (j=0; j<2 * PADSUBKEYS; j++) {
 		for (i=0; i<PADKEYS; i++) {
             sprintf(szProf, "%d_%d", j, i);
 			sprintf(szValue, "%d", conf.keys[j][i]);
@@ -105,7 +105,7 @@ void LoadConfig()
 	}
 	fclose(fp);
 
-    for (j=0; j<2; j++) {
+    for (j=0; j<2 * PADSUBKEYS; j++) {
 		for (i=0; i<PADKEYS; i++) {
             sprintf(szProf, "%d_%d", j, i);
             GetPrivateProfileString("Interface", szProf, NULL, szValue, 20, szIniFile);
@@ -181,33 +181,19 @@ LRESULT WINAPI PADwndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			if (lParam & 0x40000000)
 				return TRUE;
 
-            for(pad = 0; pad < 2; ++pad ) {
-                for (i=0; i<PADKEYS; i++) {
-                    if (wParam == conf.keys[pad][i]) {
+			i = FindKey(wparam, pad);
                         keyPress[pad] |=(1<<i);
                         keyRelease[pad] &=~(1<<i);
-                        break;
-                    }
-                }
-            }
-
-            event.evt = KEYPRESS;
-            event.key = wParam;
+   		       	event.evt = KEYPRESS;
+			event.key = wParam;
 			break;
 
 		case WM_KEYUP:
-            for(pad = 0; pad < 2; ++pad ) {
-			    for (i=0; i<PADKEYS; i++) {
-                    if (wParam == conf.keys[pad][i]) {
+			i = FindKey(wparam, pad);
                         keyPress[pad] &=~(1<<i);
                         keyRelease[pad] |= (1<<i);
-                        break;
-                    }
-                }
-            }
-
-            event.evt = KEYRELEASE;
-            event.key = wParam;
+		        event.evt = KEYRELEASE;
+		        event.key = wParam;
 			break;
 
 		case WM_LBUTTONDOWN:

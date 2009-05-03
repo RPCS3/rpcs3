@@ -103,7 +103,7 @@ void SaveConfig()
         return;
     }
     
-	for (j=0; j<2; j++) {
+	for (j=0; j<2 * PADSUBKEYS; j++) {
 		for (i=0; i<PADKEYS; i++) {
 			fprintf(f, "[%d][%d] = 0x%lx\n", j, i, conf.keys[j][i]);
 		}
@@ -127,12 +127,12 @@ string GetLabelFromButton(const char* buttonname)
 }
 
 void LoadConfig() {
-    FILE *f;
+	FILE *f;
 	char str[256];
-    char cfg[255];
+	char cfg[255];
 	int i, j;
 
-    memset(&conf, 0, sizeof(conf));
+	memset(&conf, 0, sizeof(conf));
 	conf.keys[0][0] = XK_a;			// L2
 	conf.keys[0][1] = XK_semicolon;			// R2
 	conf.keys[0][2] = XK_w;			// L1
@@ -149,23 +149,24 @@ void LoadConfig() {
 	conf.keys[0][15] = XK_s;	// LEFT
 	conf.log = 0;
 
-    strcpy(cfg, s_strIniPath.c_str());
-    f = fopen(cfg, "r");
-    if (f == NULL) {
-        printf("ZeroPAD: failed to load ini %s\n", s_strIniPath.c_str());
-        SaveConfig();//save and return
-        return;
-    }
+	strcpy(cfg, s_strIniPath.c_str());
+	f = fopen(cfg, "r");
+	if (f == NULL) {
+	        printf("ZeroPAD: failed to load ini %s\n", s_strIniPath.c_str());
+        	SaveConfig();//save and return
+	        return;
+	}
 
-	for (j=0; j<2; j++) {
+	for (j=0; j < 2 * PADSUBKEYS; j++) {
 		for (i=0; i<PADKEYS; i++) {
 			sprintf(str, "[%d][%d] = 0x%%x\n", j, i);
-			fscanf(f, str, &conf.keys[j][i]);
+			if (fscanf(f, str, &conf.keys[j][i]) == 0)
+				conf.keys[j][i] = 0;
 		}
 	}
-    fscanf(f, "log = %d\n", &conf.log);
-    fscanf(f, "options = %d\n", &conf.options);
-    fclose(f);
+	fscanf(f, "log = %d\n", &conf.log);
+	fscanf(f, "options = %d\n", &conf.options);
+	fclose(f);
 }
 
 GtkWidget *MsgDlg;
@@ -251,16 +252,16 @@ void _PADupdate(int pad)
 
 int _GetJoystickIdFromPAD(int pad)
 {
-    // select the right joystick id
-    int joyid = -1;
-    for(int i = 0; i < PADKEYS; ++i) {
-        if( IS_JOYSTICK(conf.keys[pad][i]) || IS_JOYBUTTONS(conf.keys[pad][i]) ) {
-            joyid = PAD_GETJOYID(conf.keys[pad][i]);
-            break;
-        }
-    }
-
-    return joyid;
+	// select the right joystick id
+	int joyid = -1;
+	for (int p = 0; p < PADSUBKEYS; p++) {
+		for(int i = 0; i < PADKEYS; ++i) {
+	       		if (IS_JOYSTICK(conf.keys[(PadEnum[pad][p])][i]) || IS_JOYBUTTONS(conf.keys[(PadEnum[pad][p])][i])) {
+			        joyid = PAD_GETJOYID(conf.keys[(PadEnum[pad][p])][i]);
+				return joyid;
+		        }
+		}
+	}
 }
 
 void CALLBACK PADupdate(int pad)
@@ -275,30 +276,20 @@ void CALLBACK PADupdate(int pad)
 		XNextEvent(GSdsp, &E);
 		switch (E.type) {
         case KeyPress:
-            //_KeyPress(pad, XLookupKeysym((XKeyEvent *)&E, 0)); break;
             key = XLookupKeysym((XKeyEvent *)&E, 0);
-            for (i=0; i<PADKEYS; i++) {
-                if (key == conf.keys[pad][i]) {
-                    keyPress|=(1<<i);
-                    keyRelease&=~(1<<i);
-                    break;
-                }
-            }
-            
+
+	    i = FindKey(key, pad);
+            keyPress |= (1 << i);
+            keyRelease &= ~(1 << i);
+           
             event.evt = KEYPRESS;
             event.key = key;
             break;
         case KeyRelease:
             key = XLookupKeysym((XKeyEvent *)&E, 0);
-            //_KeyRelease(pad, XLookupKeysym((XKeyEvent *)&E, 0));
-            for (i=0; i<PADKEYS; i++) {
-                if (key == conf.keys[pad][i]) {
-                    keyPress&=~(1<<i);
-                    keyRelease|= (1<<i);
-                    break;
-                }
-            }
-            
+	    i = FindKey(key, pad); 
+            keyPress &= ~(1<<i);
+            keyRelease |= (1<<i);
             event.evt = KEYRELEASE;
             event.key = key;
             break;
@@ -316,24 +307,24 @@ void CALLBACK PADupdate(int pad)
     // joystick info
 #ifdef JOYSTICK_SUPPORT
 
-    SDL_JoystickUpdate();
-    for (int i=0; i<PADKEYS; i++) {
-        int key = conf.keys[pad][i];
-        JoystickInfo* pjoy = NULL;
+	SDL_JoystickUpdate();
+	for (int i=0; i<PADKEYS; i++) {
+	        int key = conf.keys[PadEnum[pad][0]][i];
+		JoystickInfo* pjoy = NULL;
         
-        if( IS_JOYBUTTONS(key) ) {
-            int joyid = PAD_GETJOYID(key);
-            if( joyid >= 0 && joyid < (int)s_vjoysticks.size()) {
-                pjoy = s_vjoysticks[joyid];
-                if( SDL_JoystickGetButton((pjoy)->GetJoy(), PAD_GETJOYBUTTON(key)) ) {
-                    status[(pjoy)->GetPAD()] &= ~(1<<i); // pressed
-                }
-                else
-                    status[(pjoy)->GetPAD()] |= (1<<i); // pressed
-            }
-        }
-        else if( IS_JOYSTICK(key) ) {
-            int joyid = PAD_GETJOYID(key);
+		if( IS_JOYBUTTONS(key) ) {
+	            	int joyid = PAD_GETJOYID(key);
+        	    	if( joyid >= 0 && joyid < (int)s_vjoysticks.size()) {
+                		pjoy = s_vjoysticks[joyid];
+	        	        if( SDL_JoystickGetButton((pjoy)->GetJoy(), PAD_GETJOYBUTTON(key)) ) {
+        			        status[(pjoy)->GetPAD()] &= ~(1<<i); // pressed
+	                	}
+		                else
+        			        status[(pjoy)->GetPAD()] |= (1<<i); // pressed
+			}
+        	}
+	        else if( IS_JOYSTICK(key) ) {
+        	int joyid = PAD_GETJOYID(key);
             if( joyid >= 0 && joyid < (int)s_vjoysticks.size()) {
 
                 pjoy = s_vjoysticks[joyid];
@@ -411,10 +402,10 @@ static int s_selectedpad = 0;
 
 void UpdateConf(int pad)
 {
-    s_selectedpad = pad;
+	s_selectedpad = pad;
 
 	int i;
-    GtkWidget *Btn;
+	GtkWidget *Btn;
 	for (i=0; i<ArraySize(s_pGuiKeyMap); i++) {
         
         if( s_pGuiKeyMap[i] == NULL )
@@ -583,6 +574,18 @@ void OnConf_Pad2(GtkButton *button, gpointer user_data)
 {
     if( gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(button)) )
         UpdateConf(1);
+}
+
+void OnConf_Pad3(GtkButton *button, gpointer user_data)
+{
+	if( gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(button)) )
+	        UpdateConf(2);
+}
+
+void OnConf_Pad4(GtkButton *button, gpointer user_data)
+{
+	if( gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(button)) )
+	        UpdateConf(3);
 }
 
 void OnConf_Ok(GtkButton *button, gpointer user_data)

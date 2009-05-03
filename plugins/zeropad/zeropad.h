@@ -71,8 +71,11 @@ extern char libraryName[256];
 #define PADOPTION_REVERTRX 0x8
 #define PADOPTION_REVERTRY 0x10
 
+#define PADSUBKEYS 2
+extern int PadEnum[2][2];
+
 typedef struct {
-	unsigned long keys[2][PADKEYS];
+	unsigned long keys[2 * PADSUBKEYS][PADKEYS];
 	int log;
     int options;  // upper 16 bits are for pad2
 } PADconf;
@@ -128,6 +131,13 @@ void LoadConfig();
 void SaveConfig();
 
 void SysMessage(char *fmt, ...);
+
+inline int FindKey(int key, int pad) {
+	for (int p=0; p < PADSUBKEYS; p++)
+		for (int i=0; i<PADKEYS; i++)
+			if (key == conf.keys[(PadEnum[pad][p])][i])
+		   		return i;
+}
 
 #endif
 

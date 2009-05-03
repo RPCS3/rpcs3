@@ -46,6 +46,7 @@ const unsigned char version  = PS2E_PAD_VERSION;
 const unsigned char revision = 0;
 const unsigned char build    = 2;    // increase that with each version
 
+int PadEnum[2][2] = {{0, 2}, {1, 3}};
 
 u32 pads=0;
 u8 stdpar[2][20] = { {0xff, 0x5a, 0xff, 0xff, 0x80, 0x80, 0x80, 0x80,
@@ -108,14 +109,16 @@ int POV(u32 direction, u32 angle){
 
 void _KeyPress(int pad, u32 key)
 {
-    int i;
+	int i;
 
-    for (i=0; i<PADKEYS; i++) {
-        if (key == conf.keys[pad][i]) {
-            status[pad]&=~(1<<i);
-            return;
-        }
-    }
+	for (int p=0; p <PADSUBKEYS; p++) {
+		for (i=0; i<PADKEYS; i++) {
+			if (key == conf.keys[PadEnum[pad][p]][i]) {
+				status[pad]&=~(1<<i);
+		        	return;
+		        }
+		}
+	}
 
 	event.evt = KEYPRESS;
 	event.key = key;
@@ -123,12 +126,14 @@ void _KeyPress(int pad, u32 key)
 
 void _KeyRelease(int pad, u32 key)
 {
-    int i;
+	int i;
         
-	for (i=0; i<PADKEYS; i++) {
-		if (key == conf.keys[pad][i]) {
-			status[pad]|= (1<<i);
-			return;
+	for (int p=0; p <PADSUBKEYS; p++) {
+		for (i=0; i<PADKEYS; i++) {
+			if (key == conf.keys[PadEnum[pad][p]][i]) {
+				status[pad]|= (1<<i);
+				return;
+			}
 		}
 	}
 
@@ -139,39 +144,39 @@ void _KeyRelease(int pad, u32 key)
 static void InitLibraryName()
 {
 #ifdef _WIN32
-#ifdef PUBLIC
+#	ifdef PUBLIC
 
 	// Public Release!
 	// Output a simplified string that's just our name:
 
 	strcpy( libraryName, "ZeroPAD" );
 
-#elif defined( SVN_REV_UNKNOWN )
+#	elif defined( SVN_REV_UNKNOWN )
 
 	// Unknown revision.
 	// Output a name that includes devbuild status but not
 	// subversion revision tags:
 
 	strcpy( libraryName, "ZeroPAD"
-#	ifdef _DEBUG
+#		ifdef _DEBUG
 		"-Debug"
-#	endif
+#		endif
 		);
-#else
+#	else
 
 	// Use TortoiseSVN's SubWCRev utility's output
 	// to label the specific revision:
 
 	sprintf_s( libraryName, "ZeroPAD r%d%s"
-#	ifdef _DEBUG
+#		ifdef _DEBUG
 		"-Debug"
-#	else
+#		else
 		"-Dev"
-#	endif
+#		endif
 		,SVN_REV,
 		SVN_MODS ? "m" : ""
 	);
-#endif
+#	endif
 #else
 // I'll fix up SVN support later. --arcum42
 
