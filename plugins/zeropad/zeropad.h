@@ -40,7 +40,8 @@
 using namespace std;
 
 #define PADdefs
-extern "C" {
+extern "C"
+{
 #include "PS2Edefs.h"
 }
 
@@ -48,20 +49,20 @@ extern char libraryName[256];
 
 #define FORIT(it, v) for(it = (v).begin(); it != (v).end(); (it)++)
 
-#define IS_KEYBOARD(key) (key<0x10000)
-#define IS_JOYBUTTONS(key) (key>=0x10000 && key<0x20000) // buttons
-#define IS_JOYSTICK(key) (key>=0x20000&&key<0x30000) // analog
-#define IS_POV(key) (key>=0x30000&&key<0x40000) // uses analog as buttons (cares about sign)
-#define IS_MOUSE(key) (key>=0x40000&&key<0x50000) // mouse
+#define IS_KEYBOARD(key) (key < 0x10000)
+#define IS_JOYBUTTONS(key) (key >= 0x10000 && key < 0x20000) // buttons
+#define IS_JOYSTICK(key) (key >= 0x20000 && key < 0x30000) // analog
+#define IS_POV(key) (key >= 0x30000 && key < 0x40000) // uses analog as buttons (cares about sign)
+#define IS_MOUSE(key) (key >= 0x40000 && key < 0x50000) // mouse
 
-#define PAD_GETKEY(key) ((key)&0xffff)
-#define PAD_GETJOYID(key) (((key)&0xf000)>>12)
-#define PAD_GETJOYBUTTON(key) ((key)&0xff)
-#define PAD_GETJOYSTICK_AXIS(key) ((key)&0xff)
-#define PAD_JOYBUTTON(joyid, buttonid) (0x10000|((joyid)<<12)|(buttonid))
-#define PAD_JOYSTICK(joyid, axisid) (0x20000|((joyid)<<12)|(axisid))
-#define PAD_POV(joyid, sign, axisid) (0x30000|((joyid)<<12)|((sign)<<8)|(axisid))
-#define PAD_GETPOVSIGN(key) (((key)&0x100)>>8)
+#define PAD_GETKEY(key) ((key) & 0xffff)
+#define PAD_GETJOYID(key) (((key) & 0xf000) >> 12)
+#define PAD_GETJOYBUTTON(key) ((key) & 0xff)
+#define PAD_GETJOYSTICK_AXIS(key) ((key) & 0xff)
+#define PAD_JOYBUTTON(joyid, buttonid) (0x10000 | ((joyid) << 12) | (buttonid))
+#define PAD_JOYSTICK(joyid, axisid) (0x20000 | ((joyid) << 12) | (axisid))
+#define PAD_POV(joyid, sign, axisid) (0x30000 | ((joyid) << 12) | ((sign) << 8) | (axisid))
+#define PAD_GETPOVSIGN(key) (((key) & 0x100) >> 8)
 
 #define PADKEYS 20
 
@@ -74,14 +75,16 @@ extern char libraryName[256];
 #define PADSUBKEYS 2
 extern int PadEnum[2][2];
 
-typedef struct {
+typedef struct
+{
 	unsigned long keys[2 * PADSUBKEYS][PADKEYS];
 	int log;
-    int options;  // upper 16 bits are for pad2
+	int options;  // upper 16 bits are for pad2
 } PADconf;
 
-typedef struct {
-	u8 x,y;
+typedef struct
+{
+	u8 x, y;
 } PADAnalog;
 
 extern PADconf conf;
@@ -90,28 +93,31 @@ extern PADAnalog g_lanalog[2], g_ranalog[2];
 extern FILE *padLog;
 #define PAD_LOG __Log
 
-#define PAD_RY        19
-#define PAD_LY        18
-#define PAD_RX        17
-#define PAD_LX        16
-#define PAD_LEFT      15
-#define PAD_DOWN      14
-#define PAD_RIGHT     13
-#define PAD_UP        12
-#define PAD_START     11
-#define PAD_R3        10
-#define PAD_L3        9
-#define PAD_SELECT    8
-#define PAD_SQUARE    7
-#define PAD_CROSS     6
-#define PAD_CIRCLE    5
-#define PAD_TRIANGLE  4
-#define PAD_R1        3
-#define PAD_L1        2
-#define PAD_R2        1
-#define PAD_L2        0
+enum gamePadValues 
+{
+	PAD_RY = 19,
+	PAD_LY = 18,
+	PAD_RX = 17,
+	PAD_LX = 16,
+	PAD_LEFT = 15,
+	PAD_DOWN = 14,
+	PAD_RIGHT = 13,
+	PAD_UP = 12,
+	PAD_START = 11,
+	PAD_R3 = 10,
+	PAD_L3 = 9,
+	PAD_SELECT = 8,
+	PAD_SQUARE = 7,
+	PAD_CROSS = 6,
+	PAD_CIRCLE = 5,
+	PAD_TRIANGLE = 4,
+	PAD_R1 = 3,
+	PAD_L1 = 2,
+	PAD_R2 = 1,
+	PAD_L2 = 0
+};
 
-// Put in the code for bolche's analog contols hack, ifdeffed out, so I don't forget to 
+// Put in the code for bolche's analog contols hack, ifdeffed out, so I don't forget to
 // add a gui some day and activate it.
 //#define ANALOG_CONTROLS_HACK
 // The various KEY_PAD_xxx definitions are defined as the value of whatever key is pressed.
@@ -151,11 +157,11 @@ void SaveConfig();
 
 void SysMessage(char *fmt, ...);
 
-inline int FindKey(int key, int pad) {
-	for (int p=0; p < PADSUBKEYS; p++)
-		for (int i=0; i<PADKEYS; i++)
-			if (key == conf.keys[(PadEnum[pad][p])][i])
-		   		return i;
+inline int FindKey(int key, int pad)
+{
+	for (int p = 0; p < PADSUBKEYS; p++)
+		for (int i = 0; i < PADKEYS; i++)
+			if (key == conf.keys[(PadEnum[pad][p])][i]) return i;
 }
 
 #endif
