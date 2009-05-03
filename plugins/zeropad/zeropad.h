@@ -111,6 +111,25 @@ extern FILE *padLog;
 #define PAD_R2        1
 #define PAD_L2        0
 
+// Put in the code for bolche's analog contols hack, ifdeffed out, so I don't forget to 
+// add a gui some day and activate it.
+//#define ANALOG_CONTROLS_HACK
+// The various KEY_PAD_xxx definitions are defined as the value of whatever key is pressed.
+// DEF_VALUE is the strength you press the control.
+// Code taken from http://forums.pcsx2.net/thread-4699.html
+
+#ifdef ANALOG_CONTROLS_HACK
+#define KEY_PAD_RY_UP        	0xff50
+#define KEY_PAD_RY_DOWN        	0xff57
+#define KEY_PAD_LY_UP        	0xff52
+#define KEY_PAD_LY_DOWN       	0xff54
+#define KEY_PAD_RX_LEFT        	0xffff
+#define KEY_PAD_RX_RIGHT        0xff56
+#define KEY_PAD_LX_LEFT        	0xff51
+#define KEY_PAD_LX_RIGHT        0xff53
+#define DEF_VALUE	  	32766
+#endif
+
 /* end of pad.h */
 
 extern keyEvent event;

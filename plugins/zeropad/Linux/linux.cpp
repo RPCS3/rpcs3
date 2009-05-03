@@ -278,6 +278,59 @@ void CALLBACK PADupdate(int pad)
         case KeyPress:
             key = XLookupKeysym((XKeyEvent *)&E, 0);
 
+#ifdef ANALOG_CONTROLS_HACK	
+ 	    switch(key) {
+                 case KEY_PAD_LX_LEFT:
+                	    g_lanalog[pad].x = DEF_VALUE/256;
+ 	            if( conf.options&PADOPTION_REVERTLX )
+ 	                g_lanalog[pad].x = -g_lanalog[pad].x;
+ 	            g_lanalog[pad].x += 0x80;
+                     break;
+                 case KEY_PAD_LX_RIGHT:
+                	    g_lanalog[pad].x = -DEF_VALUE/256;
+ 	            if( conf.options&PADOPTION_REVERTLX )
+ 	                g_lanalog[pad].x = -g_lanalog[pad].x;
+ 	            g_lanalog[pad].x += 0x80;
+ 		    break;
+                 case KEY_PAD_LY_UP:
+                	    g_lanalog[pad].y = DEF_VALUE/256;
+ 	            if( conf.options&PADOPTION_REVERTLY )
+ 	                g_lanalog[pad].y = -g_lanalog[pad].y;
+ 	            g_lanalog[pad].y += 0x80;
+                     break;
+                 case KEY_PAD_LY_DOWN:
+                	    g_lanalog[pad].y = -DEF_VALUE/256;
+ 	            if( conf.options&PADOPTION_REVERTLY )
+ 	                g_lanalog[pad].y = -g_lanalog[pad].y;
+ 	            g_lanalog[pad].y += 0x80;
+                     break;
+                 case KEY_PAD_RX_LEFT:
+                	    g_ranalog[pad].x = DEF_VALUE/256;
+ 	            if( conf.options&PADOPTION_REVERTRX )
+ 	                g_ranalog[pad].x = -g_ranalog[pad].x;
+ 	            g_ranalog[pad].x += 0x80;
+                     break;
+                 case KEY_PAD_RX_RIGHT:
+                	    g_ranalog[pad].x = -DEF_VALUE/256;
+ 	            if( conf.options&PADOPTION_REVERTRX )
+ 	                g_ranalog[pad].x = -g_ranalog[pad].x;
+ 	            g_ranalog[pad].x += 0x80;
+ 		    break;
+                 case KEY_PAD_RY_UP:
+                	    g_ranalog[pad].y = DEF_VALUE/256;
+ 	            if( conf.options&PADOPTION_REVERTRY )
+ 	                g_ranalog[pad].y = -g_ranalog[pad].y;
+ 	            g_ranalog[pad].y += 0x80;
+                     break;
+                 case KEY_PAD_RY_DOWN:
+                	    g_ranalog[pad].y = -DEF_VALUE/256;
+ 	            if( conf.options&PADOPTION_REVERTRY )
+ 	                g_ranalog[pad].y = -g_ranalog[pad].y;
+ 	            g_ranalog[pad].y += 0x80;
+                     break;
+                 }
+#endif
+		 
 	    i = FindKey(key, pad);
             keyPress |= (1 << i);
             keyRelease &= ~(1 << i);
@@ -287,6 +340,36 @@ void CALLBACK PADupdate(int pad)
             break;
         case KeyRelease:
             key = XLookupKeysym((XKeyEvent *)&E, 0);
+	
+#ifdef ANALOG_CONTROLS_HACK
+	    switch(key) {
+                case KEY_PAD_LX_LEFT:
+	            g_lanalog[pad].x = 0x80;
+                    break;
+                case KEY_PAD_LY_UP:
+	            g_lanalog[pad].y = 0x80;
+                    break;
+                case KEY_PAD_RX_LEFT:
+	            g_ranalog[pad].x = 0x80;
+                    break;
+                case KEY_PAD_RY_UP:
+	            g_ranalog[pad].y = 0x80;
+                    break;
+                case KEY_PAD_LX_RIGHT:
+	            g_lanalog[pad].x = 0x80;
+                    break;
+                case KEY_PAD_LY_DOWN:
+	            g_lanalog[pad].y = 0x80;
+                    break;
+                case KEY_PAD_RX_RIGHT:
+	            g_ranalog[pad].x = 0x80;
+                    break;
+                case KEY_PAD_RY_DOWN:
+	            g_ranalog[pad].y = 0x80;
+                    break;
+                }
+#endif
+	
 	    i = FindKey(key, pad); 
             keyPress &= ~(1<<i);
             keyRelease |= (1<<i);
