@@ -437,7 +437,7 @@ void CycleFrameLimit(int dir)
 	const char* limitMsg;
 	u32 newOptions;
 	u32 curFrameLimit = Config.Options & PCSX2_FRAMELIMIT_MASK;
-	u32 newFrameLimit;
+	u32 newFrameLimit = 0;
 	static u32 oldFrameLimit = PCSX2_FRAMELIMIT_LIMIT;
 
 	if( dir == 0 ) {

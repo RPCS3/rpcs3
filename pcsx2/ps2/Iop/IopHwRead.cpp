@@ -399,7 +399,7 @@ u32 __fastcall iopHwRead32_Page8( u32 addr )
 		{
 			switch( masked_addr )
 			{
-				mcase(0x1f801264):		// unknown / reserved.
+				mcase(HW_SIO2_FIFO):		// 0x1f801264 wouldn't make it here, so I assume you mean 01f808264, which is fifo, Jake...
 					ret = psxHu32(addr);
 				break;
 
@@ -431,7 +431,17 @@ u32 __fastcall iopHwRead32_Page8( u32 addr )
 					ret = sio2_getIntr();
 				break;
 				
-				jNO_DEFAULT;
+				mcase(0x1f80847c):		// I'm adding this to try to counter reports of pcsx2 crashing when this address is called.
+					Console::Error("iopHwRead32_Page8: Calling 0x1f80847c for some unknown reason.");
+					ret = psxHu32(addr);
+				break;
+				
+				// Do we really want to assert here, if it's an unknown address? 
+				//jNO_DEFAULT;		
+				default:
+					Console::Error("iopHwRead32_Page8: Why are we calling 0x%x?", params addr);
+					ret = psxHu32(addr);
+				break;
 			}
 		}
 	}
