@@ -190,17 +190,21 @@ LRESULT WINAPI PADwndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			if (lParam & 0x40000000)
 				return TRUE;
 
-			i = FindKey(wparam, pad);
-			keyPress[pad] |= (1 << i);
-			keyRelease[pad] &= ~(1 << i);
+			i = FindKey(wParam, pad);
+			if (i != -1) {
+				keyPress[pad] |= (1 << i);
+				keyRelease[pad] &= ~(1 << i);
+			}
 			event.evt = KEYPRESS;
 			event.key = wParam;
 			break;
 
 		case WM_KEYUP:
-			i = FindKey(wparam, pad);
-			keyPress[pad] &= ~(1 << i);
-			keyRelease[pad] |= (1 << i);
+			i = FindKey(wParam, pad);
+			if (i != -1) {
+				keyPress[pad] &= ~(1 << i);
+				keyRelease[pad] |= (1 << i);
+			}
 			event.evt = KEYRELEASE;
 			event.key = wParam;
 			break;

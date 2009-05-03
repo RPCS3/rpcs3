@@ -317,6 +317,7 @@ int _GetJoystickIdFromPAD(int pad)
 			}
 		}
 	}
+	return joyid;
 }
 
 void CALLBACK PADupdate(int pad)
@@ -382,9 +383,10 @@ void CALLBACK PADupdate(int pad)
 #endif
 
 				i = FindKey(key, pad);
-				keyPress |= (1 << i);
-				keyRelease &= ~(1 << i);
-
+				if (i != -1) {
+					keyPress |= (1 << i);
+					keyRelease &= ~(1 << i);
+				}
 				event.evt = KEYPRESS;
 				event.key = key;
 				break;
@@ -423,8 +425,10 @@ void CALLBACK PADupdate(int pad)
 #endif
 
 				i = FindKey(key, pad);
-				keyPress &= ~(1 << i);
-				keyRelease |= (1 << i);
+				if (i != -1) {
+					keyPress &= ~(1 << i); 
+					keyRelease |= (1 << i);
+				}
 				event.evt = KEYRELEASE;
 				event.key = key;
 				break;

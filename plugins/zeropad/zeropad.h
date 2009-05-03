@@ -162,6 +162,7 @@ inline int FindKey(int key, int pad)
 	for (int p = 0; p < PADSUBKEYS; p++)
 		for (int i = 0; i < PADKEYS; i++)
 			if (key == conf.keys[(PadEnum[pad][p])][i]) return i;
+	return -1;
 }
 
 #endif
