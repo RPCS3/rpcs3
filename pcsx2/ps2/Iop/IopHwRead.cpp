@@ -50,28 +50,28 @@ u8 __fastcall iopHwRead8_Page1( u32 addr )
 		default:
 			if( masked_addr >= 0x100 && masked_addr < 0x130 )
 			{
-				DevCon::Notice( "*Hardware Read8 from Counter16 [ignored] [addr=0x%02x]", params addr, psxHu8(addr) );
+				DevCon::Notice( "HwRead8 from Counter16 [ignored], addr 0x%08x = 0x%02x", params addr, psxHu8(addr) );
 				ret = psxHu8( addr );
 			}
 			else if( masked_addr >= 0x480 && masked_addr < 0x4a0 )
 			{
-				DevCon::Notice( "*Hardware Read8 from Counter32 [ignored] [addr=0x%02x]", params addr, psxHu8(addr) );
+				DevCon::Notice( "HwRead8 from Counter32 [ignored], addr 0x%08x = 0x%02x", params addr, psxHu8(addr) );
 				ret = psxHu8( addr );
 			}
 			else if( (masked_addr >= pgmsk(HW_USB_START)) && (masked_addr < pgmsk(HW_USB_END)) )
 			{
 				ret = USBread8( addr );
-				PSXHW_LOG( "Hardware Read8 from USB: addr 0x%08x = 0x%02x", addr, ret );
+				PSXHW_LOG( "HwRead8 from USB, addr 0x%08x = 0x%02x", addr, ret );
 			}
 			else
 			{
 				ret = psxHu8(addr);
-				PSXHW_LOG( "*Unknown Hardware Read8 from addr 0x%08x = 0x%02x", addr, ret );
+				PSXHW_LOG( "HwRead8 from Unknown, addr 0x%08x = 0x%02x", addr, ret );
 			}
 		return ret;
 	}
 
-	PSXHW_LOG( "*Hardware Read8 from %s, addr 0x%08x = 0x%02x", _log_GetIopHwName<u8>( addr ), addr, ret );
+	PSXHW_LOG( "HwRead8 from %s, addr 0x%08x = 0x%02x", _log_GetIopHwName<u8>( addr ), addr, ret );
 	return ret;
 }
 
@@ -88,7 +88,7 @@ u8 __fastcall iopHwRead8_Page3( u32 addr )
 	else
 		ret = psxHu8( addr );
 
-	PSXHW_LOG( "Hardware Read8 from %s, addr 0x%08x = 0x%02x", _log_GetIopHwName<u8>( addr ), addr, psxHu8(addr) );
+	PSXHW_LOG( "HwRead8 from %s, addr 0x%08x = 0x%02x", _log_GetIopHwName<u8>( addr ), addr, psxHu8(addr) );
 	return ret;
 }
 
@@ -106,7 +106,7 @@ u8 __fastcall iopHwRead8_Page8( u32 addr )
 	else
 		ret = psxHu8( addr );
 
-	PSXHW_LOG( "Hardware Read8 from %s, addr 0x%08x = 0x%02x", _log_GetIopHwName<u8>( addr ), addr, psxHu8(addr) );
+	PSXHW_LOG( "HwRead8 from %s, addr 0x%08x = 0x%02x", _log_GetIopHwName<u8>( addr ), addr, psxHu8(addr) );
 	return ret;	
 }
 
@@ -215,7 +215,7 @@ static __forceinline T _HwRead_16or32_Page1( u32 addr )
 			ret = SPU2read( addr );
 		else
 		{
-			DevCon::Notice( "*PCSX2* SPU2 Hardware Read32 (addr=0x%08X)?  What manner of trickery is this?!", params addr );
+			DevCon::Notice( "HwRead32 from SPU2? (addr=0x%08X) .. What manner of trickery is this?!", params addr );
 			ret = psxHu32(addr);
 		}
 	}
@@ -311,7 +311,7 @@ static __forceinline T _HwRead_16or32_Page1( u32 addr )
 		}
 	}
 	
-	PSXHW_LOG( "Hardware Read%s from %s, addr 0x%08x = 0x%04x",
+	PSXHW_LOG( "HwRead%s from %s, addr 0x%08x = 0x%04x",
 		(sizeof(T) == 2) ? "16" : "32", _log_GetIopHwName<T>( addr ), addr, ret
 	);
 	return ret;
@@ -336,7 +336,7 @@ u16 __fastcall iopHwRead16_Page3( u32 addr )
 	jASSUME( (addr >> 12) == 0x1f803 );
 
 	u16 ret = psxHu16(addr);
-	PSXHW_LOG( "Hardware Read16 from %s, addr 0x%08x = 0x%04x", _log_GetIopHwName<u16>( addr ), addr, ret );
+	PSXHW_LOG( "HwRead16 from %s, addr 0x%08x = 0x%04x", _log_GetIopHwName<u16>( addr ), addr, ret );
 	return ret;
 }
 
@@ -348,7 +348,7 @@ u16 __fastcall iopHwRead16_Page8( u32 addr )
 	jASSUME( (addr >> 12) == 0x1f808 );
 
 	u16 ret = psxHu16(addr);
-	PSXHW_LOG( "Hardware Read16 from %s, addr 0x%08x = 0x%04x", _log_GetIopHwName<u16>( addr ), addr, ret );
+	PSXHW_LOG( "HwRead16 from %s, addr 0x%08x = 0x%04x", _log_GetIopHwName<u16>( addr ), addr, ret );
 	return ret;
 }
 
@@ -366,7 +366,7 @@ u32 __fastcall iopHwRead32_Page3( u32 addr )
 	// all addresses are assumed to be prefixed with 0x1f803xxx:
 	jASSUME( (addr >> 12) == 0x1f803 );
 	const u32 ret = psxHu32(addr);
-	PSXHW_LOG( "Hardware Read32 from %s, addr 0x%08x = 0x%08x", _log_GetIopHwName<u32>( addr ), addr, ret );
+	PSXHW_LOG( "HwRead32 from %s, addr 0x%08x = 0x%08x", _log_GetIopHwName<u32>( addr ), addr, ret );
 	return ret;
 }
 
@@ -399,34 +399,25 @@ u32 __fastcall iopHwRead32_Page8( u32 addr )
 		{
 			switch( masked_addr )
 			{
-				mcase(HW_SIO2_CTRL):
-					ret = sio2_getCtrl();
-				break;
-
-				mcase(HW_SIO2_RECV1):
-					ret = sio2_getRecv1();
-				break;
-
-				mcase(HW_SIO2_RECV2):
-					ret = sio2_getRecv2();
-				break;
-
-				mcase(HW_SIO2_RECV3):
-					ret = sio2_getRecv3();
-				break;
-
-				mcase(0x1f808278):
-					ret = sio2_get8278();
-				break;
-
-				mcase(0x1f80827C):
-					ret = sio2_get827C();
-				break;
-
-				mcase(HW_SIO2_INTR):
-					ret = sio2_getIntr();
-				break;
+				mcase(HW_SIO2_CTRL):	ret = sio2_getCtrl();	break;
+				mcase(HW_SIO2_RECV1):	ret = sio2_getRecv1();	break;
+				mcase(HW_SIO2_RECV2):	ret = sio2_getRecv2();	break;
+				mcase(HW_SIO2_RECV3):	ret = sio2_getRecv3();	break;
+				mcase(0x1f808278):		ret = sio2_get8278();	break;
+				mcase(0x1f80827C):		ret = sio2_get827C();	break;
+				mcase(HW_SIO2_INTR):	ret = sio2_getIntr();	break;
 				
+				// HW_SIO2_FIFO -- A yet unknown: Should this be ignored on 32 bit writes, or handled as a
+				// 4-byte FIFO input?
+				// The old IOP system just ignored it, so that's what we do here.  I've included commented code
+				// for treating it as a 16/32 bit write though [which si what the SIO does, for example).
+				mcase(HW_SIO2_FIFO):
+					//ret = sio2_fifoOut();
+					//ret |= sio2_fifoOut() << 8;
+					//ret |= sio2_fifoOut() << 16;
+					//ret |= sio2_fifoOut() << 24;
+				//break;
+
 				default:
 					ret = psxHu32(addr);
 				break;
@@ -435,7 +426,7 @@ u32 __fastcall iopHwRead32_Page8( u32 addr )
 	}
 	else ret = psxHu32(addr);
 
-	PSXHW_LOG( "Hardware Read32 from %s, addr 0x%08x = 0x%02x", _log_GetIopHwName<u32>( addr ), addr, ret );
+	PSXHW_LOG( "HwRead32 from %s, addr 0x%08x = 0x%02x", _log_GetIopHwName<u32>( addr ), addr, ret );
 	return ret;
 }
 

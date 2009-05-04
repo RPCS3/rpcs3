@@ -30,6 +30,8 @@
 #include "Pcsx2Types.h"
 
 // Renamed ARRAYSIZE to ArraySize -- looks nice and gets rid of Windows.h conflicts (air)
+// Notes: I'd have used ARRAY_SIZE instead but ran into cross-platform lib conflicts with
+// that as well.  >_<
 #ifndef ArraySize
 #define ArraySize(x) (sizeof(x)/sizeof((x)[0]))
 #endif
@@ -39,29 +41,42 @@
 //  This is primarily useful for the default case switch optimizer, which enables VC to
 //  generate more compact switches.
 
-#ifdef NDEBUG
-#	define jBREAKPOINT() ((void) 0)
-#	ifdef _MSC_VER
-#		define jASSUME(exp) (__assume(exp))
+#ifndef jASSUME
+#	ifdef NDEBUG
+#		define jBREAKPOINT() ((void) 0)
+#		ifdef _MSC_VER
+#			define jASSUME(exp) (__assume(exp))
+#		else
+#			define jASSUME(exp) ((void) sizeof(exp))
+#		endif
 #	else
-#		define jASSUME(exp) ((void) sizeof(exp))
+#		if defined(_MSC_VER)
+#			define jBREAKPOINT() do { __asm int 3 } while(0)
+#		else
+#			define jBREAKPOINT() ((void) *(volatile char *) 0)
+#		endif
+#		define jASSUME(exp) if(exp) ; else jBREAKPOINT()
 #	endif
-#else
-#	if defined(_MSC_VER)
-#		define jBREAKPOINT() do { __asm int 3 } while(0)
-#	else
-#		define jBREAKPOINT() ((void) *(volatile char *) 0)
-#	endif
-#	define jASSUME(exp) if(exp) ; else jBREAKPOINT()
 #endif
 
-// disable the default case in a switch
+//////////////////////////////////////////////////////////////////////////////////////////
+// jNO_DEFAULT -- disables the default case in a switch, which improves switch optimization
+// under MSVC.
+//
+// How it Works: jASSUME turns into an __assume(0) under msvc compilers, which when specified
+// in the default: case of a switch tells the compiler that the case is unreachable, and so
+// the compiler will not generate any code, LUTs, or conditionals to handle it.  In debug
+// builds the default case will cause an assertion (meaning the jNO_DEFAULT has been used
+// incorrectly, and that the default case is in fact used and needs to be handled).
+//
+#ifndef jNO_DEFAULT
 #define jNO_DEFAULT \
 { \
 default: \
 	jASSUME(0); \
 	break; \
 }
+#endif
 
 /* common defines */
 #ifndef C_ASSERT

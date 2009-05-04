@@ -12,6 +12,7 @@
 #ifdef PCSX2_DEVBUILD
 #	define _SECURE_SCL 1
 #	define _SECURE_SCL_THROWS 1
+#	pragma warning(disable:4244)	// disable warning C4244: '=' : conversion from 'big' to 'small', possible loss of data
 #else
 #	define _SECURE_SCL 0
 #endif
@@ -19,15 +20,25 @@
 
 #define NOMINMAX		// Disables other libs inclusion of their own min/max macros (we use std instead)
 
-#if defined (__linux__)  // some distributions are lower case
-#	define __LINUX__
+#ifndef _WIN32
+#	include <unistd.h>		// Non-Windows platforms need this
 #endif
 
-#ifdef _WIN32
-// disable warning C4244: '=' : conversion from 'big' to 'small', possible loss of data
-#	pragma warning(disable:4244)
-#else
-#	include <unistd.h>		// Non-Windows platforms need this
+//////////////////////////////////////////////////////////////////////////////////////////
+// Custom version of jNO_DEFAULT macro for devel builds.
+// Raises an exception if the default case is reached.  This notifies us that a jNO_DEFAULT
+// directive has been used incorrectly.
+//
+// MSVC Note: To stacktrace LogicError exceptions, add Exception::LogicError to the C++ First-
+// Chance Exception list (under Debug->Exceptions menu).
+//
+#ifdef PCSX2_DEVBUILD
+#define jNO_DEFAULT \
+{ \
+default: \
+	throw Exception::LogicError( "Incorrect usage of jNO_DEFAULT detected (default case is not unreachable!)" ); \
+	break; \
+}
 #endif
 
 //////////////////////////////////////////////////////////////////////////////////////////
