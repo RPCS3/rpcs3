@@ -136,6 +136,14 @@ void _KeyPress(int pad, u32 key)
 {
 	int i;
 
+#ifdef _WIN32
+	    for (i=0; i<PADKEYS; i++) {
+        if (key == conf.keys[pad][i]) {
+            status[pad]&=~(1<<i);
+            return;
+        }
+    }
+#else
 	for (int p = 0; p < PADSUBKEYS; p++)
 	{
 		for (i = 0; i < PADKEYS; i++)
@@ -147,6 +155,7 @@ void _KeyPress(int pad, u32 key)
 			}
 		}
 	}
+#endif
 
 	event.evt = KEYPRESS;
 	event.key = key;
@@ -156,6 +165,14 @@ void _KeyRelease(int pad, u32 key)
 {
 	int i;
 
+#ifdef _WIN32
+        for (i=0; i<PADKEYS; i++) {
+                if (key == conf.keys[pad][i]) {
+                        status[pad]|= (1<<i);
+                        return;
+                }
+        }
+#else
 	for (int p = 0; p < PADSUBKEYS; p++)
 	{
 		for (i = 0; i < PADKEYS; i++)
@@ -167,7 +184,7 @@ void _KeyRelease(int pad, u32 key)
 			}
 		}
 	}
-
+#endif
 	event.evt = KEYRELEASE;
 	event.key = key;
 }

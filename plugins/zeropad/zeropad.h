@@ -72,7 +72,12 @@ extern char libraryName[256];
 #define PADOPTION_REVERTRX 0x8
 #define PADOPTION_REVERTRY 0x10
 
+#ifdef _WIN32
+#define PADSUBKEYS 1
+#else
 #define PADSUBKEYS 2
+#endif
+
 extern int PadEnum[2][2];
 
 typedef struct
