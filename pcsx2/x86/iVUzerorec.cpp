@@ -3637,7 +3637,7 @@ void recVUMI_IBQ_prep()
 		s_JumpX86 = _allocX86reg(-1, X86TYPE_VUJUMP, 0, MODE_WRITE);
 
 		if( isreg >= 0 ) {
-			CMP16RtoR(isreg, 0);
+			CMP16ItoR(isreg, 0);
 		}
         else CMP16ItoM(SuperVUGetVIAddr(_Is_, 1), 0);
 
