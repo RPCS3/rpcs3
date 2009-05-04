@@ -155,6 +155,10 @@ vtlbHandler hw_by_page[0x10];
 vtlbHandler gs_page_0;
 vtlbHandler gs_page_1;
 
+vtlbHandler iopHw_by_page_01;
+vtlbHandler iopHw_by_page_03;
+vtlbHandler iopHw_by_page_08;
+
 
 // Used to remap the VUmicro memory according to the VU0/VU1 dynarec setting.
 // (the VU memory operations are different for recs vs. interpreters)
@@ -195,12 +199,6 @@ void memMapPhy()
 	vtlb_MapHandler(tlb_fallback_2,0x1f800000,0x10000);
 	vtlb_MapHandler(tlb_fallback_8,0x1f900000,0x10000);
 
-#ifdef PCSX2_DEVBUILD
-	// Bind fallback handlers used for logging purposes only.
-	// In release mode the Vtlb will map these addresses directly instead of using
-	// the read/write handlers (which just issue logs and do normal memOps)
-#endif
-
 	// map specific optimized page handlers for HW accesses
 	vtlb_MapHandler(hw_by_page[0x0], 0x10000000, 0x01000);
 	vtlb_MapHandler(hw_by_page[0x1], 0x10001000, 0x01000);
@@ -216,6 +214,11 @@ void memMapPhy()
 
 	vtlb_MapHandler(gs_page_0, 0x12000000, 0x01000);
 	vtlb_MapHandler(gs_page_1, 0x12001000, 0x01000);
+	
+	vtlb_MapHandler(hw_by_page[0x1], 0x1f801000, 0x01000);
+	vtlb_MapHandler(hw_by_page[0x3], 0x1f803000, 0x01000);
+	vtlb_MapHandler(hw_by_page[0x8], 0x1f808000, 0x01000);
+
 }
 
 //Why is this required ?
@@ -245,8 +248,6 @@ mem8_t __fastcall _ext_memRead8 (u32 mem)
 	{
 		case 1: // hwm
 			return hwRead8(mem);
-		case 2: // psh
-			return psxHwRead8(mem);
 		case 3: // psh4
 			return psxHw4Read8(mem);
 		case 6: // gsm
@@ -301,8 +302,6 @@ mem32_t __fastcall _ext_memRead32(u32 mem)
 {
 	switch (p)
 	{
-		case 2: // psh
-			return psxHwRead32(mem);
 		case 6: // gsm
 			return gsRead32(mem);
 		case 7: // dev9
@@ -354,8 +353,6 @@ void __fastcall _ext_memWrite8 (u32 mem, u8  value)
 		case 1: // hwm
 			hwWrite8(mem, value);
 			return;
-		case 2: // psh
-			psxHwWrite8(mem, value); return;
 		case 3: // psh4
 			psxHw4Write8(mem, value); return;
 		case 6: // gsm
@@ -398,8 +395,6 @@ template<int p>
 void __fastcall _ext_memWrite32(u32 mem, u32 value)
 {
 	switch (p) {
-		case 2: // psh
-			psxHwWrite32(mem, value); return;
 		case 6: // gsm
 			gsWrite32(mem, value); return;
 		case 7: // dev9
@@ -660,14 +655,13 @@ void memReset()
 
 	vtlb_Init();
 
-	tlb_fallback_0=vtlb_RegisterHandlerTempl1(_ext_mem,0);
-	tlb_fallback_2=vtlb_RegisterHandlerTempl1(_ext_mem,2);
-	tlb_fallback_3=vtlb_RegisterHandlerTempl1(_ext_mem,3);
-	tlb_fallback_4=vtlb_RegisterHandlerTempl1(_ext_mem,4);
-	tlb_fallback_5=vtlb_RegisterHandlerTempl1(_ext_mem,5);
-	//tlb_fallback_6=vtlb_RegisterHandlerTempl1(_ext_mem,6);
-	tlb_fallback_7=vtlb_RegisterHandlerTempl1(_ext_mem,7);
-	tlb_fallback_8=vtlb_RegisterHandlerTempl1(_ext_mem,8);
+	tlb_fallback_0 = vtlb_RegisterHandlerTempl1(_ext_mem,0);
+	tlb_fallback_3 = vtlb_RegisterHandlerTempl1(_ext_mem,3);
+	tlb_fallback_4 = vtlb_RegisterHandlerTempl1(_ext_mem,4);
+	tlb_fallback_5 = vtlb_RegisterHandlerTempl1(_ext_mem,5);
+	//tlb_fallback_6 = vtlb_RegisterHandlerTempl1(_ext_mem,6);
+	tlb_fallback_7 = vtlb_RegisterHandlerTempl1(_ext_mem,7);
+	tlb_fallback_8 = vtlb_RegisterHandlerTempl1(_ext_mem,8);
 
 	// Dynarec versions of VUs
 	vu0_micro_mem[0] = vtlb_RegisterHandlerTempl2(vuMicro,0,true);
@@ -677,7 +671,36 @@ void memReset()
 	vu0_micro_mem[1] = vtlb_RegisterHandlerTempl2(vuMicro,0,false);
 	vu1_micro_mem[1] = vtlb_RegisterHandlerTempl2(vuMicro,1,false);
 
-	//////////////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////////////////////////////////
+	// IOP's "secret" Hardware Register mapping, accessible from the EE (and meant for use
+	// by debugging or BIOS only).  The IOP's hw regs are divided into three main pages in
+	// the 0x1f80 segment, and then another oddball page for CDVD in the 0x1f40 segment.
+	//
+
+	using namespace IopMemory;
+
+	tlb_fallback_2 = vtlb_RegisterHandler(
+		iopHwRead8_generic, iopHwRead16_generic, iopHwRead32_generic, _ext_memRead64<2>, _ext_memRead128<2>,
+		iopHwWrite8_generic, iopHwWrite16_generic, iopHwWrite32_generic, _ext_memWrite64<2>, _ext_memWrite128<2>
+	);
+
+	iopHw_by_page_01 = vtlb_RegisterHandler(
+		iopHwRead8_Page1, iopHwRead16_Page1, iopHwRead32_Page1, _ext_memRead64<2>, _ext_memRead128<2>,
+		iopHwWrite8_Page1, iopHwWrite16_Page1, iopHwWrite32_Page1, _ext_memWrite64<2>, _ext_memWrite128<2>
+	);
+
+	iopHw_by_page_03 = vtlb_RegisterHandler(
+		iopHwRead8_Page3, iopHwRead16_Page3, iopHwRead32_Page3, _ext_memRead64<2>, _ext_memRead128<2>,
+		iopHwWrite8_Page3, iopHwWrite16_Page3, iopHwWrite32_Page3, _ext_memWrite64<2>, _ext_memWrite128<2>
+	);
+
+	iopHw_by_page_08 = vtlb_RegisterHandler(
+		iopHwRead8_Page8, iopHwRead16_Page8, iopHwRead32_Page8, _ext_memRead64<2>, _ext_memRead128<2>,
+		iopHwWrite8_Page8, iopHwWrite16_Page8, iopHwWrite32_Page8, _ext_memWrite64<2>, _ext_memWrite128<2>
+	);
+
+
+	//////////////////////////////////////////////////////////////////////////////////////////
 	// psHw Optimized Mappings
 	// The HW Registers have been split into pages to improve optimization.
 	// Anything not explicitly mapped into one of the hw_by_page handlers will be handled

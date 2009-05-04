@@ -23,6 +23,41 @@ namespace IopMemory {
 
 using namespace Internal;
 
+// Template-compatible version of the psxHu macro.  Used for writing.
+#define psxHu(mem)	(*(u32*)&psxH[(mem) & 0xffff])
+
+
+//////////////////////////////////////////////////////////////////////////////////////////
+//
+template< typename T >
+static __forceinline void _generic_write( u32 addr, T val )
+{
+	int bitsize = (sizeof(T) == 1) ? 8 : ( (sizeof(T) == 2) ? 16 : 32 );
+	PSXHW_LOG( "HwWrite%d to %s, addr 0x%08x = 0x%08x\n", bitsize, _log_GetIopHwName<T>(addr), addr, val );
+	psxHu(addr) = val;
+}
+
+void __fastcall iopHwWrite8_generic( u32 addr, u8 val )	{ _generic_write<u8>( addr, val ); }
+void __fastcall iopHwWrite16_generic( u32 addr, u16 val )	{ _generic_write<u16>( addr, val ); }
+void __fastcall iopHwWrite32_generic( u32 addr, u32 val )	{ _generic_write<u32>( addr, val ); }
+
+//////////////////////////////////////////////////////////////////////////////////////////
+//
+template< typename T >
+static __forceinline T _generic_read( u32 addr )
+{
+	int bitsize = (sizeof(T) == 1) ? 8 : ( (sizeof(T) == 2) ? 16 : 32 );
+
+	T ret = psxHu(addr);
+	PSXHW_LOG( "HwRead%d from %s, addr 0x%08x = 0x%08x\n", bitsize, _log_GetIopHwName<T>(addr), addr, ret );
+	return ret;
+}
+
+u8 __fastcall iopHwRead8_generic( u32 addr )		{ return _generic_read<u8>( addr ); }
+u16 __fastcall iopHwRead16_generic( u32 addr )	{ return _generic_read<u16>( addr ); }
+u32 __fastcall iopHwRead32_generic( u32 addr )	{ return _generic_read<u32>( addr ); }
+
+
 //////////////////////////////////////////////////////////////////////////////////////////
 //
 void __fastcall iopHwWrite8_Page1( u32 addr, u8 val )
@@ -115,9 +150,6 @@ void __fastcall iopHwWrite8_Page8( u32 addr, u8 val )
 	PSXHW_LOG( "HwWrite8 to %s, addr 0x%08x = 0x%02x", _log_GetIopHwName<u8>(addr), addr, psxHu8(addr) );
 	
 }
-
-// Template-compatible version of the psxHu macro.  Used for writing.
-#define psxHu(mem)	(*(u32*)&psxH[(mem) & 0xffff])
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // Templated handler for both 32 and 16 bit write operations, to Page 1 registers.
@@ -508,7 +540,6 @@ void __fastcall iopHwWrite32_Page8( u32 addr, u32 val )
 	else psxHu32(addr) = val;
 
 	PSXHW_LOG( "HwWrite32 to %s, addr 0x%08x = 0x%02x", _log_GetIopHwName<u32>( addr ), addr, val );
-
 }
 
 }

@@ -9,13 +9,13 @@
 // disabled in release builds. :)
 
 #ifdef _MSC_VER
-#ifdef PCSX2_DEVBUILD
-#	define _SECURE_SCL 1
-#	define _SECURE_SCL_THROWS 1
 #	pragma warning(disable:4244)	// disable warning C4244: '=' : conversion from 'big' to 'small', possible loss of data
-#else
-#	define _SECURE_SCL 0
-#endif
+#	ifdef PCSX2_DEVBUILD
+#		define _SECURE_SCL 1
+#		define _SECURE_SCL_THROWS 1
+#	else
+#		define _SECURE_SCL 0
+#	endif
 #endif
 
 #define NOMINMAX		// Disables other libs inclusion of their own min/max macros (we use std instead)

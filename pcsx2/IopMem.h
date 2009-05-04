@@ -106,6 +106,14 @@ namespace IopMemory
 	extern void __fastcall SifWrite16( u32 iopaddr, u16 data );
 	extern void __fastcall SifWrite32( u32 iopaddr, u32 data );
 
+	extern u8 __fastcall iopHwRead8_generic( u32 addr );
+	extern u16 __fastcall iopHwRead16_generic( u32 addr );
+	extern u32 __fastcall iopHwRead32_generic( u32 addr );
+	extern void __fastcall iopHwWrite8_generic( u32 addr, u8 val );
+	extern void __fastcall iopHwWrite16_generic( u32 addr, u16 val );
+	extern void __fastcall iopHwWrite32_generic( u32 addr, u32 val );
+
+
 	extern u8 __fastcall iopHwRead8_Page1( u32 iopaddr );
 	extern u8 __fastcall iopHwRead8_Page3( u32 iopaddr );
 	extern u8 __fastcall iopHwRead8_Page8( u32 iopaddr );
