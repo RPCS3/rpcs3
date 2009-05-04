@@ -1585,10 +1585,6 @@
 				Name="GS"
 				>
 				<File
-					RelativePath="..\..\Gif.cpp"
-					>
-				</File>
-				<File
 					RelativePath="..\..\GS.cpp"
 					>
 				</File>
@@ -2140,6 +2136,10 @@
 				<Filter
 					Name="DMAC"
 					>
+					<File
+						RelativePath="..\..\Gif.cpp"
+						>
+					</File>
 					<Filter
 						Name="Vif"
 						>
