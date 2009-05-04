@@ -470,8 +470,8 @@ MakeDisF(disCVTSw,		dName("CVTSw"); dCP132(_Fd_); dCP132(_Fs_);)
 * Format:  OP rt, offset(base)                           *
 *********************************************************/
 
-MakeDisF(disLWC1,		dName("LWC1"); dCP132(_Rt_); dOffset();)
-MakeDisF(disSWC1,		dName("SWC1"); dCP132(_Rt_); dOffset();)
+MakeDisF(disLWC1,		dName("LWC1"); dCP132(_Ft_); dOffset();)
+MakeDisF(disSWC1,		dName("SWC1"); dCP132(_Ft_); dOffset();)
 
 /*********************************************************
 * Conditional Move                                       *

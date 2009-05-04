@@ -42,6 +42,9 @@ typedef char* (*TdisR5900F)DisFInterface;
 #define _Ft_ ((code >> 16) & 0x1F)  // The rt part of the instruction register 
 #define _Fs_ ((code >> 11) & 0x1F)  // The rd part of the instruction register 
 #define _Fd_ ((code >>  6) & 0x1F)  // The sa part of the instruction register
+#define _It_ (_Ft_ & 15)
+#define _Is_ (_Fs_ & 15)
+#define _Id_ (_Fd_ & 15)
 
 #define dName(i) sprintf(ostr, "%s %-12s", ostr, i); \
 

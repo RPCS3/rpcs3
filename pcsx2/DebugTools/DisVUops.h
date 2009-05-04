@@ -26,55 +26,55 @@
 MakeDisF(dis##VU##MI_DIV,		dName("DIV");     dCP232f(_Fs_, _Fsf_); dCP232f(_Ft_, _Ftf_);) \
 MakeDisF(dis##VU##MI_SQRT,		dName("SQRT");    dCP232f(_Ft_, _Ftf_);) \
 MakeDisF(dis##VU##MI_RSQRT, 	dName("RSQRT");   dCP232f(_Fs_, _Fsf_); dCP232f(_Ft_, _Ftf_);) \
-MakeDisF(dis##VU##MI_IADDI, 	dName("IADDI");   dCP232i(_Ft_); dCP232i(_Fs_); dImm5();) \
-MakeDisF(dis##VU##MI_IADDIU, 	dName("IADDIU");  dCP232i(_Ft_); dCP232i(_Fs_); dImm15();) \
-MakeDisF(dis##VU##MI_IADD, 		dName("IADD");    dCP232i(_Fd_); dCP232i(_Fs_); dCP232i(_Ft_);) \
-MakeDisF(dis##VU##MI_IAND, 		dName("IAND");    dCP232i(_Fd_); dCP232i(_Fs_); dCP232i(_Ft_);) \
-MakeDisF(dis##VU##MI_IOR, 		dName("IOR");     dCP232i(_Fd_); dCP232i(_Fs_); dCP232i(_Ft_);) \
-MakeDisF(dis##VU##MI_ISUB, 		dName("ISUB");    dCP232i(_Fd_); dCP232i(_Fs_); dCP232i(_Ft_);) \
-MakeDisF(dis##VU##MI_ISUBIU, 	dName("ISUBIU");  dCP232i(_Ft_); dCP232i(_Fs_); dImm15();) \
+MakeDisF(dis##VU##MI_IADDI, 	dName("IADDI");   dCP232i(_It_); dCP232i(_Is_); dImm5();) \
+MakeDisF(dis##VU##MI_IADDIU, 	dName("IADDIU");  dCP232i(_It_); dCP232i(_Is_); dImm15();) \
+MakeDisF(dis##VU##MI_IADD, 		dName("IADD");    dCP232i(_Id_); dCP232i(_Is_); dCP232i(_It_);) \
+MakeDisF(dis##VU##MI_IAND, 		dName("IAND");    dCP232i(_Id_); dCP232i(_Is_); dCP232i(_It_);) \
+MakeDisF(dis##VU##MI_IOR, 		dName("IOR");     dCP232i(_Id_); dCP232i(_Is_); dCP232i(_It_);) \
+MakeDisF(dis##VU##MI_ISUB, 		dName("ISUB");    dCP232i(_Id_); dCP232i(_Is_); dCP232i(_It_);) \
+MakeDisF(dis##VU##MI_ISUBIU, 	dName("ISUBIU");  dCP232i(_It_); dCP232i(_Is_); dImm15();) \
 MakeDisF(dis##VU##MI_MOVE, 		if (_Fs_ == 0 && _Ft_ == 0) { dNameU("NOP"); } else { dNameU("MOVE"); dCP2128f(_Ft_); dCP2128f(_Fs_); }) \
-MakeDisF(dis##VU##MI_MFIR, 		dNameU("MFIR");   dCP2128f(_Ft_); dCP232i(_Fs_);) \
-MakeDisF(dis##VU##MI_MTIR, 		dNameU("MTIR");   dCP232i(_Ft_); dCP232f(_Fs_, _Fsf_);) \
+MakeDisF(dis##VU##MI_MFIR, 		dNameU("MFIR");   dCP2128f(_Ft_); dCP232i(_Is_);) \
+MakeDisF(dis##VU##MI_MTIR, 		dNameU("MTIR");   dCP232i(_It_); dCP232f(_Fs_, _Fsf_);) \
 MakeDisF(dis##VU##MI_MR32, 		dNameU("MR32");    dCP2128f(_Ft_); dCP2128f(_Fs_);) \
-MakeDisF(dis##VU##MI_LQ, 		dNameU("LQ");      dCP2128f(_Ft_); dCP232i(_Fs_); dImm11();) \
-MakeDisF(dis##VU##MI_LQD, 		dNameU("LQD");     dCP2128f(_Ft_); dCP232i(_Fs_);) \
-MakeDisF(dis##VU##MI_LQI, 		dNameU("LQI");     dCP2128f(_Ft_); dCP232i(_Fs_);) \
-MakeDisF(dis##VU##MI_SQ, 		dNameU("SQ");      dCP2128f(_Fs_); dCP232i(_Ft_); dImm11(); ) \
-MakeDisF(dis##VU##MI_SQD, 		dNameU("SQD");     dCP2128f(_Fs_); dCP232i(_Ft_);) \
-MakeDisF(dis##VU##MI_SQI, 		dNameU("SQI");     dCP2128f(_Fs_); dCP232i(_Ft_);) \
-MakeDisF(dis##VU##MI_ILW, 		dNameU("ILW");     dCP232i(_Ft_); dImm11(); dCP232i(_Fs_);) \
-MakeDisF(dis##VU##MI_ISW, 		dNameU("ISW");     dCP232i(_Ft_); dImm11(); dCP232i(_Fs_);) \
-MakeDisF(dis##VU##MI_ILWR, 		dNameU("ILWR");    dCP232i(_Ft_); dCP232i(_Fs_);) \
-MakeDisF(dis##VU##MI_ISWR, 		dNameU("ISWR");    dCP232i(_Ft_); dCP232i(_Fs_);) \
+MakeDisF(dis##VU##MI_LQ, 		dNameU("LQ");      dCP2128f(_Ft_); dCP232i(_Is_); dImm11();) \
+MakeDisF(dis##VU##MI_LQD, 		dNameU("LQD");     dCP2128f(_Ft_); dCP232i(_Is_);) \
+MakeDisF(dis##VU##MI_LQI, 		dNameU("LQI");     dCP2128f(_Ft_); dCP232i(_Is_);) \
+MakeDisF(dis##VU##MI_SQ, 		dNameU("SQ");      dCP2128f(_Fs_); dCP232i(_It_); dImm11(); ) \
+MakeDisF(dis##VU##MI_SQD, 		dNameU("SQD");     dCP2128f(_Fs_); dCP232i(_It_);) \
+MakeDisF(dis##VU##MI_SQI, 		dNameU("SQI");     dCP2128f(_Fs_); dCP232i(_It_);) \
+MakeDisF(dis##VU##MI_ILW, 		dNameU("ILW");     dCP232i(_It_); dImm11(); dCP232i(_Is_);) \
+MakeDisF(dis##VU##MI_ISW, 		dNameU("ISW");     dCP232i(_It_); dImm11(); dCP232i(_Is_);) \
+MakeDisF(dis##VU##MI_ILWR, 		dNameU("ILWR");    dCP232i(_It_); dCP232i(_Is_);) \
+MakeDisF(dis##VU##MI_ISWR, 		dNameU("ISWR");    dCP232i(_It_); dCP232i(_Is_);) \
 MakeDisF(dis##VU##MI_LOI, 		dName("LOI"); ) \
 MakeDisF(dis##VU##MI_RINIT, 	dNameU("RINIT");   dCP232i(REG_R); dCP232f(_Fs_, _Fsf_);) \
 MakeDisF(dis##VU##MI_RGET, 		dNameU("RGET");    dCP232i(REG_R); dCP2128f(_Ft_);) \
 MakeDisF(dis##VU##MI_RNEXT, 	dNameU("RNEXT");   dCP232i(REG_R); dCP2128f(_Ft_);) \
 MakeDisF(dis##VU##MI_RXOR, 		dNameU("RXOR");    dCP232i(REG_R); dCP232f(_Fs_, _Fsf_);) \
 MakeDisF(dis##VU##MI_WAITQ, 	dName("WAITQ");  ) \
-MakeDisF(dis##VU##MI_FSAND, 	dName("FSAND");   dCP232i(_Ft_); dCP232i(REG_STATUS_FLAG); sprintf(ostr, "%s %.3x,", ostr, code&0xfff); ) \
-MakeDisF(dis##VU##MI_FSEQ, 		dName("FSEQ");    dCP232i(_Ft_); dCP232i(REG_STATUS_FLAG); sprintf(ostr, "%s %.3x,", ostr, code&0xfff);) \
-MakeDisF(dis##VU##MI_FSOR, 		dName("FSOR");    dCP232i(_Ft_); dCP232i(REG_STATUS_FLAG); sprintf(ostr, "%s %.3x,", ostr, code&0xfff);) \
+MakeDisF(dis##VU##MI_FSAND, 	dName("FSAND");   dCP232i(_It_); dCP232i(REG_STATUS_FLAG); sprintf(ostr, "%s %.3x,", ostr, code&0xfff); ) \
+MakeDisF(dis##VU##MI_FSEQ, 		dName("FSEQ");    dCP232i(_It_); dCP232i(REG_STATUS_FLAG); sprintf(ostr, "%s %.3x,", ostr, code&0xfff);) \
+MakeDisF(dis##VU##MI_FSOR, 		dName("FSOR");    dCP232i(_It_); dCP232i(REG_STATUS_FLAG); sprintf(ostr, "%s %.3x,", ostr, code&0xfff);) \
 MakeDisF(dis##VU##MI_FSSET, 	dName("FSSET");   dCP232i(REG_STATUS_FLAG);) \
-MakeDisF(dis##VU##MI_FMAND, 	dName("FMAND");   dCP232i(_Ft_); dCP232i(REG_MAC_FLAG); dCP232i(_Fs_);) \
-MakeDisF(dis##VU##MI_FMEQ, 		dName("FMEQ");    dCP232i(_Ft_); dCP232i(REG_MAC_FLAG); dCP232i(_Fs_);) \
-MakeDisF(dis##VU##MI_FMOR, 		dName("FMOR");    dCP232i(_Ft_); dCP232i(REG_MAC_FLAG); dCP232i(_Fs_);) \
+MakeDisF(dis##VU##MI_FMAND, 	dName("FMAND");   dCP232i(_It_); dCP232i(REG_MAC_FLAG); dCP232i(_Is_);) \
+MakeDisF(dis##VU##MI_FMEQ, 		dName("FMEQ");    dCP232i(_It_); dCP232i(REG_MAC_FLAG); dCP232i(_Is_);) \
+MakeDisF(dis##VU##MI_FMOR, 		dName("FMOR");    dCP232i(_It_); dCP232i(REG_MAC_FLAG); dCP232i(_Is_);) \
 MakeDisF(dis##VU##MI_FCAND, 	dName("FCAND");   dCP232i(1);    sprintf(ostr, "%s %8.8x,", ostr, code&0xffffff); ) \
 MakeDisF(dis##VU##MI_FCEQ, 		dName("FCEQ");    dCP232i(1);    dCP232i(REG_CLIP_FLAG);) \
 MakeDisF(dis##VU##MI_FCOR, 		dName("FCOR");    dCP232i(1);    dCP232i(REG_CLIP_FLAG);) \
 MakeDisF(dis##VU##MI_FCSET, 	dName("FCSET");   dCP232i(REG_CLIP_FLAG); sprintf(ostr, "%s %.6x,", ostr, code&0xffffff); ) \
-MakeDisF(dis##VU##MI_FCGET, 	dName("FCGET");   dCP232i(_Ft_); dCP232i(REG_CLIP_FLAG);) \
-MakeDisF(dis##VU##MI_IBEQ, 		dName("IBEQ");    dImm11(); dCP232i(_Ft_); dCP232i(_Fs_);) \
-MakeDisF(dis##VU##MI_IBGEZ, 	dName("IBEZ");    dImm11(); dCP232i(_Ft_); dCP232i(_Fs_);) \
-MakeDisF(dis##VU##MI_IBGTZ, 	dName("IBGTZ");   dImm11(); dCP232i(_Ft_); dCP232i(_Fs_);) \
-MakeDisF(dis##VU##MI_IBLEZ, 	dName("IBLEZ");   dImm11(); dCP232i(_Ft_); dCP232i(_Fs_);) \
-MakeDisF(dis##VU##MI_IBLTZ, 	dName("IBLTZ");   dImm11(); dCP232i(_Ft_); dCP232i(_Fs_);) \
-MakeDisF(dis##VU##MI_IBNE, 		dName("IBNE");    dImm11(); dCP232i(_Ft_); dCP232i(_Fs_);) \
+MakeDisF(dis##VU##MI_FCGET, 	dName("FCGET");   dCP232i(_It_); dCP232i(REG_CLIP_FLAG);) \
+MakeDisF(dis##VU##MI_IBEQ, 		dName("IBEQ");    dImm11(); dCP232i(_It_); dCP232i(_Is_);) \
+MakeDisF(dis##VU##MI_IBGEZ, 	dName("IBEZ");    dImm11(); dCP232i(_It_); dCP232i(_Is_);) \
+MakeDisF(dis##VU##MI_IBGTZ, 	dName("IBGTZ");   dImm11(); dCP232i(_It_); dCP232i(_Is_);) \
+MakeDisF(dis##VU##MI_IBLEZ, 	dName("IBLEZ");   dImm11(); dCP232i(_It_); dCP232i(_Is_);) \
+MakeDisF(dis##VU##MI_IBLTZ, 	dName("IBLTZ");   dImm11(); dCP232i(_It_); dCP232i(_Is_);) \
+MakeDisF(dis##VU##MI_IBNE, 		dName("IBNE");    dImm11(); dCP232i(_It_); dCP232i(_Is_);) \
 MakeDisF(dis##VU##MI_B, 		dName("B");       dImm11();) \
-MakeDisF(dis##VU##MI_BAL, 		dName("BAL");     dImm11(); dCP232i(_Ft_);) \
-MakeDisF(dis##VU##MI_JR, 		dName("JR");      dCP232i(_Fs_);) \
-MakeDisF(dis##VU##MI_JALR, 		dName("JALR");    dCP232i(_Ft_); dCP232i(_Fs_); ) \
+MakeDisF(dis##VU##MI_BAL, 		dName("BAL");     dImm11(); dCP232i(_It_);) \
+MakeDisF(dis##VU##MI_JR, 		dName("JR");      dCP232i(_Is_);) \
+MakeDisF(dis##VU##MI_JALR, 		dName("JALR");    dCP232i(_It_); dCP232i(_Is_); ) \
 MakeDisF(dis##VU##MI_MFP, 		dNameU("MFP");     dCP2128f(_Ft_); dCP232i(REG_P);) \
 MakeDisF(dis##VU##MI_WAITP, 	dName("WAITP");  ) \
 MakeDisF(dis##VU##MI_ESADD, 	dName("ESADD");  dCP2128f(_Fs_);) \
@@ -83,16 +83,16 @@ MakeDisF(dis##VU##MI_ELENG, 	dName("ELENG"); dCP2128f(_Fs_); ) \
 MakeDisF(dis##VU##MI_ERLENG, 	dName("ERLENG"); dCP2128f(_Fs_); ) \
 MakeDisF(dis##VU##MI_EATANxy,	dName("EATANxy"); dCP2128f(_Fs_);) \
 MakeDisF(dis##VU##MI_EATANxz,	dName("EATANxz"); dCP2128f(_Fs_);) \
-MakeDisF(dis##VU##MI_ESUM, 		dName("ESUM");  dCP232i(_Fs_); ) \
+MakeDisF(dis##VU##MI_ESUM, 		dName("ESUM");  dCP2128f(_Fs_); ) \
 MakeDisF(dis##VU##MI_ERCPR, 	dName("ERCPR"); dCP232f(_Fs_, _Fsf_); ) \
 MakeDisF(dis##VU##MI_ESQRT, 	dName("ESQRT"); dCP232f(_Fs_, _Fsf_); ) \
 MakeDisF(dis##VU##MI_ERSQRT, 	dName("ERSQRT"); dCP232f(_Fs_, _Fsf_); ) \
 MakeDisF(dis##VU##MI_ESIN, 		dName("ESIN"); dCP232f(_Fs_, _Fsf_);  ) \
 MakeDisF(dis##VU##MI_EATAN, 	dName("EATAN"); dCP232f(_Fs_, _Fsf_); ) \
 MakeDisF(dis##VU##MI_EEXP, 		dName("EEXP");  dCP232f(_Fs_, _Fsf_); ) \
-MakeDisF(dis##VU##MI_XITOP, 	dName("XITOP");  dCP232i(_Ft_);) \
-MakeDisF(dis##VU##MI_XGKICK, 	dName("XGKICK"); dCP232i(_Fs_);) \
-MakeDisF(dis##VU##MI_XTOP, 		dName("XTOP");   dCP232i(_Ft_);) \
+MakeDisF(dis##VU##MI_XITOP, 	dName("XITOP");  dCP232i(_It_);) \
+MakeDisF(dis##VU##MI_XGKICK, 	dName("XGKICK"); dCP232i(_Is_);) \
+MakeDisF(dis##VU##MI_XTOP, 		dName("XTOP");   dCP232i(_It_);) \
  \
  \
 /*****************/ \

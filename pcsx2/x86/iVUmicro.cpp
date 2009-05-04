@@ -46,6 +46,9 @@
 #define _Ft_ (( VU->code >> 16) & 0x1F)  // The rt part of the instruction register 
 #define _Fs_ (( VU->code >> 11) & 0x1F)  // The rd part of the instruction register 
 #define _Fd_ (( VU->code >>  6) & 0x1F)  // The sa part of the instruction register
+#define _It_ (_Ft_ & 15)
+#define _Is_ (_Fs_ & 15)
+#define _Id_ (_Fd_ & 15)
 
 #define _X (( VU->code>>24) & 0x1)
 #define _Y (( VU->code>>23) & 0x1)

@@ -71,6 +71,9 @@ extern void iDumpVU1Registers();
 #define _Ft_ ((VU->code >> 16) & 0x1F)  // The rt part of the instruction register 
 #define _Fs_ ((VU->code >> 11) & 0x1F)  // The rd part of the instruction register 
 #define _Fd_ ((VU->code >>  6) & 0x1F)  // The sa part of the instruction register
+#define _It_ (_Ft_ & 15)
+#define _Is_ (_Fs_ & 15)
+#define _Id_ (_Fd_ & 15)
 
 static const u32 QWaitTimes[] = { 6, 12 };
 static const u32 PWaitTimes[] = { 53, 43, 28, 23, 17, 11, 10 };
@@ -3600,92 +3603,92 @@ void recVUMI_BranchHandle()
 // supervu specific insts
 void recVUMI_IBQ_prep()
 {
-	int fsreg, ftreg;
+	int isreg, itreg;
 
-	if( _Fs_ == 0 ) {
+	if( _Is_ == 0 ) {
 #ifdef SUPERVU_VIBRANCHDELAY
-        if( s_pCurInst->vicached >= 0 && s_pCurInst->vicached == _Ft_ ) {
-            ftreg = -1;
+        if( s_pCurInst->vicached >= 0 && s_pCurInst->vicached == _It_ ) {
+            itreg = -1;
         }
         else
 #endif
         {
-		    ftreg = _checkX86reg(X86TYPE_VI|(VU==&VU1?X86TYPE_VU1:0), _Ft_, MODE_READ);
+		    itreg = _checkX86reg(X86TYPE_VI|(VU==&VU1?X86TYPE_VU1:0), _It_, MODE_READ);
         }
 
 		s_JumpX86 = _allocX86reg(-1, X86TYPE_VUJUMP, 0, MODE_WRITE);
 
-		if( ftreg >= 0 ) {
-			CMP16ItoR( ftreg, 0 );
+		if( itreg >= 0 ) {
+			CMP16ItoR(itreg, 0);
 		}
-		else CMP16ItoM(SuperVUGetVIAddr(_Ft_, 1), 0);
+		else CMP16ItoM(SuperVUGetVIAddr(_It_, 1), 0);
 	}
-	else if( _Ft_ == 0 ) {
+	else if( _It_ == 0 ) {
 #ifdef SUPERVU_VIBRANCHDELAY
-        if( s_pCurInst->vicached >= 0 && s_pCurInst->vicached == _Fs_ ) {
-            fsreg = -1;
+        if( s_pCurInst->vicached >= 0 && s_pCurInst->vicached == _Is_ ) {
+            isreg = -1;
         }
         else
 #endif
         {
-		    fsreg = _checkX86reg(X86TYPE_VI|(VU==&VU1?X86TYPE_VU1:0), _Fs_, MODE_READ);
+		    isreg = _checkX86reg(X86TYPE_VI|(VU==&VU1?X86TYPE_VU1:0), _Is_, MODE_READ);
         }
 
 		s_JumpX86 = _allocX86reg(-1, X86TYPE_VUJUMP, 0, MODE_WRITE);
 
-		if( fsreg >= 0 ) {
-			CMP16ItoR( fsreg, 0 );
+		if( isreg >= 0 ) {
+			CMP16RtoR(isreg, 0);
 		}
-        else CMP16ItoM(SuperVUGetVIAddr(_Fs_, 1), 0);
+        else CMP16ItoM(SuperVUGetVIAddr(_Is_, 1), 0);
 
 	}
 	else {
-        _addNeededX86reg(X86TYPE_VI|(VU==&VU1?X86TYPE_VU1:0), _Ft_);
+        _addNeededX86reg(X86TYPE_VI|(VU==&VU1?X86TYPE_VU1:0), _It_);
 
 #ifdef SUPERVU_VIBRANCHDELAY
-        if( s_pCurInst->vicached >= 0 && s_pCurInst->vicached == _Fs_ ) {
-            fsreg = -1;
+        if( s_pCurInst->vicached >= 0 && s_pCurInst->vicached == _Is_ ) {
+            isreg = -1;
         }
         else
 #endif
         {
-            fsreg = _checkX86reg(X86TYPE_VI|(VU==&VU1?X86TYPE_VU1:0), _Fs_, MODE_READ);
+            isreg = _checkX86reg(X86TYPE_VI|(VU==&VU1?X86TYPE_VU1:0), _Is_, MODE_READ);
         }
 
 #ifdef SUPERVU_VIBRANCHDELAY
-        if( s_pCurInst->vicached >= 0 && s_pCurInst->vicached == _Ft_ ) {
-            ftreg = -1;
+        if( s_pCurInst->vicached >= 0 && s_pCurInst->vicached == _It_ ) {
+            itreg = -1;
 
-            if( fsreg <= 0 ) {
+            if( isreg <= 0 ) {
                 // allocate fsreg
-                if( s_pCurInst->vicached >= 0 && s_pCurInst->vicached == _Fs_ ) {
-                    fsreg = _allocX86reg(-1, X86TYPE_TEMP, 0, MODE_READ|MODE_WRITE);
-                    MOV32MtoR(fsreg, SuperVUGetVIAddr(_Fs_, 1));
+                if( s_pCurInst->vicached >= 0 && s_pCurInst->vicached == _Is_ ) {
+                    isreg = _allocX86reg(-1, X86TYPE_TEMP, 0, MODE_READ|MODE_WRITE);
+                    MOV32MtoR(isreg, SuperVUGetVIAddr(_Is_, 1));
                 }
                 else
-                    fsreg = _allocX86reg(-1, X86TYPE_VI|(VU==&VU1?X86TYPE_VU1:0), _Fs_, MODE_READ);
+                    isreg = _allocX86reg(-1, X86TYPE_VI|(VU==&VU1?X86TYPE_VU1:0), _Is_, MODE_READ);
             }
         }
         else
 #endif
         {
-            ftreg = _checkX86reg(X86TYPE_VI|(VU==&VU1?X86TYPE_VU1:0), _Ft_, MODE_READ);
+            itreg = _checkX86reg(X86TYPE_VI|(VU==&VU1?X86TYPE_VU1:0), _It_, MODE_READ);
         }
 
 		s_JumpX86 = _allocX86reg(-1, X86TYPE_VUJUMP, 0, MODE_WRITE);
 
-		if( fsreg >= 0 ) {
-			if( ftreg >= 0 ) {
-				CMP16RtoR( fsreg, ftreg );
+		if( isreg >= 0 ) {
+			if( itreg >= 0 ) {
+				CMP16RtoR( isreg, itreg );
 			}
-			else CMP16MtoR(fsreg, SuperVUGetVIAddr(_Ft_, 1));
+			else CMP16MtoR(isreg, SuperVUGetVIAddr(_It_, 1));
 		}
-		else if( ftreg >= 0 ) {
-			CMP16MtoR(ftreg, SuperVUGetVIAddr(_Fs_, 1));
+		else if( itreg >= 0 ) {
+			CMP16MtoR(itreg, SuperVUGetVIAddr(_Is_, 1));
 		}
 		else {
-			fsreg = _allocX86reg(-1, X86TYPE_VI|(VU==&VU1?X86TYPE_VU1:0), _Fs_, MODE_READ);
-			CMP16MtoR(fsreg, SuperVUGetVIAddr(_Ft_, 1));
+			isreg = _allocX86reg(-1, X86TYPE_VI|(VU==&VU1?X86TYPE_VU1:0), _Is_, MODE_READ);
+			CMP16MtoR(isreg, SuperVUGetVIAddr(_It_, 1));
 		}
 	}
 }
@@ -3699,25 +3702,25 @@ void recVUMI_IBEQ( VURegs* vuu, s32 info )
 
 void recVUMI_IBGEZ( VURegs* vuu, s32 info )
 {
-	int fsreg;
+	int isreg;
 	s_JumpX86 = _allocX86reg(-1, X86TYPE_VUJUMP, 0, MODE_WRITE);
 
 #ifdef SUPERVU_VIBRANCHDELAY
-	if( s_pCurInst->vicached >= 0 && s_pCurInst->vicached == _Fs_ ) {
-		fsreg = -1;
+	if( s_pCurInst->vicached >= 0 && s_pCurInst->vicached == _Is_ ) {
+		isreg = -1;
 	}
     else
 #endif
 	{
-		fsreg = _checkX86reg(X86TYPE_VI|(VU==&VU1?X86TYPE_VU1:0), _Fs_, MODE_READ);
+		isreg = _checkX86reg(X86TYPE_VI|(VU==&VU1?X86TYPE_VU1:0), _Is_, MODE_READ);
 	}
 
-	if( fsreg >= 0 ) {
-		OR16RtoR(fsreg, fsreg);
+	if( isreg >= 0 ) {
+		TEST16RtoR(isreg, isreg);
 		j8Ptr[ 0 ] = JS8( 0 );
 	}
 	else {
-		CMP16ItoM( SuperVUGetVIAddr(_Fs_, 1), 0x0 );
+		CMP16ItoM( SuperVUGetVIAddr(_Is_, 1), 0x0 );
 		j8Ptr[ 0 ] = JL8( 0 );
 	}
 
@@ -3726,25 +3729,25 @@ void recVUMI_IBGEZ( VURegs* vuu, s32 info )
 
 void recVUMI_IBGTZ( VURegs* vuu, s32 info )
 {
-	int fsreg;
+	int isreg;
 	s_JumpX86 = _allocX86reg(-1, X86TYPE_VUJUMP, 0, MODE_WRITE);
 
 #ifdef SUPERVU_VIBRANCHDELAY
-	if( s_pCurInst->vicached >= 0 && s_pCurInst->vicached == _Fs_ ) {
-		fsreg = -1;
+	if( s_pCurInst->vicached >= 0 && s_pCurInst->vicached == _Is_ ) {
+		isreg = -1;
 	}
     else
 #endif
 	{
-		fsreg = _checkX86reg(X86TYPE_VI|(VU==&VU1?X86TYPE_VU1:0), _Fs_, MODE_READ);
+		isreg = _checkX86reg(X86TYPE_VI|(VU==&VU1?X86TYPE_VU1:0), _Is_, MODE_READ);
 	}
 
-	if( fsreg >= 0 ) {
-		CMP16ItoR(fsreg, 0);
+	if( isreg >= 0 ) {
+		CMP16ItoR(isreg, 0);
 		j8Ptr[ 0 ] = JLE8( 0 );
 	}
 	else {
-		CMP16ItoM( SuperVUGetVIAddr(_Fs_, 1), 0x0 );
+		CMP16ItoM( SuperVUGetVIAddr(_Is_, 1), 0x0 );
 		j8Ptr[ 0 ] = JLE8( 0 );
 	}
 	recVUMI_BranchHandle();
@@ -3752,25 +3755,25 @@ void recVUMI_IBGTZ( VURegs* vuu, s32 info )
 
 void recVUMI_IBLEZ( VURegs* vuu, s32 info )
 {
-	int fsreg;
+	int isreg;
 	s_JumpX86 = _allocX86reg(-1, X86TYPE_VUJUMP, 0, MODE_WRITE);
 
 #ifdef SUPERVU_VIBRANCHDELAY
-	if( s_pCurInst->vicached >= 0 && s_pCurInst->vicached == _Fs_ ) {
-		fsreg = -1;
+	if( s_pCurInst->vicached >= 0 && s_pCurInst->vicached == _Is_ ) {
+		isreg = -1;
 	}
     else
 #endif
 	{
-		fsreg = _checkX86reg(X86TYPE_VI|(VU==&VU1?X86TYPE_VU1:0), _Fs_, MODE_READ);
+		isreg = _checkX86reg(X86TYPE_VI|(VU==&VU1?X86TYPE_VU1:0), _Is_, MODE_READ);
 	}
 
-	if( fsreg >= 0 ) {
-		CMP16ItoR(fsreg, 0);
+	if( isreg >= 0 ) {
+		CMP16ItoR(isreg, 0);
 		j8Ptr[ 0 ] = JG8( 0 );
 	}
 	else {
-		CMP16ItoM( SuperVUGetVIAddr(_Fs_, 1), 0x0 );
+		CMP16ItoM( SuperVUGetVIAddr(_Is_, 1), 0x0 );
 		j8Ptr[ 0 ] = JG8( 0 );
 	}
 	recVUMI_BranchHandle();
@@ -3778,25 +3781,25 @@ void recVUMI_IBLEZ( VURegs* vuu, s32 info )
 
 void recVUMI_IBLTZ( VURegs* vuu, s32 info )
 {
-	int fsreg;
+	int isreg;
 	s_JumpX86 = _allocX86reg(-1, X86TYPE_VUJUMP, 0, MODE_WRITE);
 
 #ifdef SUPERVU_VIBRANCHDELAY
-	if( s_pCurInst->vicached >= 0 && s_pCurInst->vicached == _Fs_ ) {
-		fsreg = -1;
+	if( s_pCurInst->vicached >= 0 && s_pCurInst->vicached == _Is_ ) {
+		isreg = -1;
 	}
     else
 #endif
 	{
-		fsreg = _checkX86reg(X86TYPE_VI|(VU==&VU1?X86TYPE_VU1:0), _Fs_, MODE_READ);
+		isreg = _checkX86reg(X86TYPE_VI|(VU==&VU1?X86TYPE_VU1:0), _Is_, MODE_READ);
 	}
 
-	if( fsreg >= 0 ) {
-		OR16RtoR(fsreg, fsreg);
+	if( isreg >= 0 ) {
+		TEST16RtoR(isreg, isreg);
 		j8Ptr[ 0 ] = JNS8( 0 );
 	}
 	else {
-		CMP16ItoM( SuperVUGetVIAddr(_Fs_, 1), 0x0 );
+		CMP16ItoM( SuperVUGetVIAddr(_Is_, 1), 0x0 );
 		j8Ptr[ 0 ] = JGE8( 0 );
 	}
 	recVUMI_BranchHandle();
@@ -3842,9 +3845,9 @@ void recVUMI_BAL( VURegs* vuu, s32 info )
 		SuperVUTestVU0Condition(0);
 	}
 
-	if ( _Ft_ ) {
-		_deleteX86reg(X86TYPE_VI|(s_vu?X86TYPE_VU1:0), _Ft_, 2);
-		MOV16ItoM( SuperVUGetVIAddr(_Ft_, 0), (pc+8)>>3 );
+	if ( _It_ ) {
+		_deleteX86reg(X86TYPE_VI|(s_vu?X86TYPE_VU1:0), _It_, 2);
+		MOV16ItoM( SuperVUGetVIAddr(_It_, 0), (pc+8)>>3 );
 	}
 
 	if( s_pCurBlock->blocks.size() > 1 ) {
@@ -3859,8 +3862,8 @@ void recVUMI_BAL( VURegs* vuu, s32 info )
 
 void recVUMI_JR( VURegs* vuu, s32 info )
 {
-	int fsreg = _allocX86reg(-1, X86TYPE_VI|(s_vu?X86TYPE_VU1:0), _Fs_, MODE_READ);
-	LEA32RStoR(EAX, fsreg, 3);
+	int isreg = _allocX86reg(-1, X86TYPE_VI|(s_vu?X86TYPE_VU1:0), _Is_, MODE_READ);
+	LEA32RStoR(EAX, isreg, 3);
 
 	//Mask the address to something valid
 	if(vuu == &VU0)
@@ -3879,10 +3882,10 @@ void recVUMI_JR( VURegs* vuu, s32 info )
 
 void recVUMI_JALR( VURegs* vuu, s32 info )
 {
-	_addNeededX86reg(X86TYPE_VI|(s_vu?X86TYPE_VU1:0), _Ft_);
+	_addNeededX86reg(X86TYPE_VI|(s_vu?X86TYPE_VU1:0), _It_);
 
-	int fsreg = _allocX86reg(-1, X86TYPE_VI|(s_vu?X86TYPE_VU1:0), _Fs_, MODE_READ);
-	LEA32RStoR(EAX, fsreg, 3);
+	int isreg = _allocX86reg(-1, X86TYPE_VI|(s_vu?X86TYPE_VU1:0), _Is_, MODE_READ);
+	LEA32RStoR(EAX, isreg, 3);
 
 	//Mask the address to something valid
 	if(vuu == &VU0)
@@ -3890,9 +3893,9 @@ void recVUMI_JALR( VURegs* vuu, s32 info )
 	else
 		AND32ItoR(EAX, 0x3fff);
 
-	if ( _Ft_ ) {
-		_deleteX86reg(X86TYPE_VI|(s_vu?X86TYPE_VU1:0), _Ft_, 2);
-		MOV16ItoM( SuperVUGetVIAddr(_Ft_, 0), (pc+8)>>3 );
+	if ( _It_ ) {
+		_deleteX86reg(X86TYPE_VI|(s_vu?X86TYPE_VU1:0), _It_, 2);
+		MOV16ItoM( SuperVUGetVIAddr(_It_, 0), (pc+8)>>3 );
 	}
 
 	if( (s_pCurBlock->type & BLOCKTYPE_HASEOP) || s_vu == 0 ) MOV32RtoM(SuperVUGetVIAddr(REG_TPC, 0), EAX);
@@ -3957,15 +3960,15 @@ void recVUMI_XGKICK( VURegs *VU, int info )
 		recVUMI_XGKICK_(VU);
 	}
 
-	int fsreg = _allocX86reg(X86ARG2, X86TYPE_VI|(s_vu?X86TYPE_VU1:0), _Fs_, MODE_READ);
-	_freeX86reg(fsreg); // flush
-	x86regs[fsreg].inuse = 1;
-	x86regs[fsreg].type = X86TYPE_VITEMP;
-	x86regs[fsreg].needed = 1;
-	x86regs[fsreg].mode = MODE_WRITE|MODE_READ;
-	SHL32ItoR(fsreg, 4);
-	AND32ItoR(fsreg, 0x3fff);
-	s_XGKICKReg = fsreg;
+	int isreg = _allocX86reg(X86ARG2, X86TYPE_VI|(s_vu?X86TYPE_VU1:0), _Is_, MODE_READ);
+	_freeX86reg(isreg); // flush
+	x86regs[isreg].inuse = 1;
+	x86regs[isreg].type = X86TYPE_VITEMP;
+	x86regs[isreg].needed = 1;
+	x86regs[isreg].mode = MODE_WRITE|MODE_READ;
+	SHL32ItoR(isreg, 4);
+	AND32ItoR(isreg, 0x3fff);
+	s_XGKICKReg = isreg;
 
     if( !SUPERVU_XGKICKDELAY || pc == s_pCurBlock->endpc ) {
 		recVUMI_XGKICK_(VU);

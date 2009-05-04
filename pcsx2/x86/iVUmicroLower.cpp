@@ -38,6 +38,9 @@
 #define _Ft_ (( VU->code >> 16) & 0x1F)  // The rt part of the instruction register 
 #define _Fs_ (( VU->code >> 11) & 0x1F)  // The rd part of the instruction register 
 #define _Fd_ (( VU->code >>  6) & 0x1F)  // The sa part of the instruction register
+#define _It_ (_Ft_ & 15)
+#define _Is_ (_Fs_ & 15)
+#define _Id_ (_Fd_ & 15)
 
 #define _X (( VU->code>>24) & 0x1)
 #define _Y (( VU->code>>23) & 0x1)
@@ -257,28 +260,28 @@ void recVUMI_RSQRT(VURegs *VU, int info)
 //------------------------------------------------------------------
 void _addISIMMtoIT(VURegs *VU, s16 imm, int info)
 {
-	int fsreg = -1, ftreg;
-	if (_Ft_ == 0) return;
+	int isreg = -1, itreg;
+	if (_It_ == 0) return;
 
-	if( _Fs_ == 0 ) {
-		ftreg = ALLOCVI(_Ft_, MODE_WRITE);
-		MOV32ItoR(ftreg, imm&0xffff);
+	if( _Is_ == 0 ) {
+		itreg = ALLOCVI(_It_, MODE_WRITE);
+		MOV32ItoR(itreg, imm&0xffff);
 		return;
 	}
 
-	ADD_VI_NEEDED(_Ft_);
-	fsreg = ALLOCVI(_Fs_, MODE_READ);
-	ftreg = ALLOCVI(_Ft_, MODE_WRITE);
+	ADD_VI_NEEDED(_It_);
+	isreg = ALLOCVI(_Is_, MODE_READ);
+	itreg = ALLOCVI(_It_, MODE_WRITE);
 
-	if ( _Ft_ == _Fs_ ) {
-		if (imm != 0 ) ADD16ItoR(ftreg, imm);
+	if ( _It_ == _Is_ ) {
+		if (imm != 0 ) ADD16ItoR(itreg, imm);
 	} 
 	else {
 		if( imm ) {
-			LEA32RtoR(ftreg, fsreg, imm);
-			MOVZX32R16toR(ftreg, ftreg);
+			LEA32RtoR(itreg, isreg, imm);
+			MOVZX32R16toR(itreg, itreg);
 		}
-		else MOV32RtoR(ftreg, fsreg);
+		else MOV32RtoR(itreg, isreg);
 	}
 }
 //------------------------------------------------------------------
@@ -291,7 +294,7 @@ void recVUMI_IADDI(VURegs *VU, int info)
 {
 	s16 imm;
 
-	if ( _Ft_ == 0 ) return;
+	if ( _It_ == 0 ) return;
 	//Console::WriteLn("recVUMI_IADDI");
 	imm = ( VU->code >> 6 ) & 0x1f;
 	imm = ( imm & 0x10 ? 0xfff0 : 0) | ( imm & 0xf );
@@ -307,7 +310,7 @@ void recVUMI_IADDIU(VURegs *VU, int info)
 {
 	s16 imm;
 
-	if ( _Ft_ == 0 ) return;
+	if ( _It_ == 0 ) return;
 	//Console::WriteLn("recVUMI_IADDIU");
 	imm = ( ( VU->code >> 10 ) & 0x7800 ) | ( VU->code & 0x7ff );
 	_addISIMMtoIT(VU, imm, info);
@@ -320,42 +323,42 @@ void recVUMI_IADDIU(VURegs *VU, int info)
 //------------------------------------------------------------------
 void recVUMI_IADD( VURegs *VU, int info )
 {
-	int fdreg, fsreg = -1, ftreg = -1;
-	if ( _Fd_ == 0 ) return;
+	int idreg, isreg = -1, itreg = -1;
+	if ( _Id_ == 0 ) return;
 	//Console::WriteLn("recVUMI_IADD");
-	if ( ( _Ft_ == 0 ) && ( _Fs_ == 0 ) ) {
-		fdreg = ALLOCVI(_Fd_, MODE_WRITE);
-		XOR32RtoR(fdreg, fdreg);
+	if ( ( _It_ == 0 ) && ( _Is_ == 0 ) ) {
+		idreg = ALLOCVI(_Id_, MODE_WRITE);
+		XOR32RtoR(idreg, idreg);
 		return;
 	}
 
-	ADD_VI_NEEDED(_Fs_);
-	ADD_VI_NEEDED(_Ft_);
-	fdreg = ALLOCVI(_Fd_, MODE_WRITE);
+	ADD_VI_NEEDED(_Is_);
+	ADD_VI_NEEDED(_It_);
+	idreg = ALLOCVI(_Id_, MODE_WRITE);
 
-	if ( _Fs_ == 0 )
+	if ( _Is_ == 0 )
 	{
-		if( (ftreg = _checkX86reg(X86TYPE_VI|((VU==&VU1)?X86TYPE_VU1:0), _Ft_, MODE_READ)) >= 0 ) {
-			if( fdreg != ftreg ) MOV32RtoR(fdreg, ftreg);
+		if( (itreg = _checkX86reg(X86TYPE_VI|((VU==&VU1)?X86TYPE_VU1:0), _It_, MODE_READ)) >= 0 ) {
+			if( idreg != itreg ) MOV32RtoR(idreg, itreg);
 		}
-		else MOVZX32M16toR(fdreg, VU_VI_ADDR(_Ft_, 1));
+		else MOVZX32M16toR(idreg, VU_VI_ADDR(_It_, 1));
 	}
-	else if ( _Ft_ == 0 )
+	else if ( _It_ == 0 )
 	{
-		if( (fsreg = _checkX86reg(X86TYPE_VI|((VU==&VU1)?X86TYPE_VU1:0), _Fs_, MODE_READ)) >= 0 ) {
-			if( fdreg != fsreg ) MOV32RtoR(fdreg, fsreg);
+		if( (isreg = _checkX86reg(X86TYPE_VI|((VU==&VU1)?X86TYPE_VU1:0), _Is_, MODE_READ)) >= 0 ) {
+			if( idreg != isreg ) MOV32RtoR(idreg, isreg);
 		}
-		else MOVZX32M16toR(fdreg, VU_VI_ADDR(_Fs_, 1));
+		else MOVZX32M16toR(idreg, VU_VI_ADDR(_Is_, 1));
 	}
 	else {
-		//ADD_VI_NEEDED(_Ft_);
-		fsreg = ALLOCVI(_Fs_, MODE_READ);
-		ftreg = ALLOCVI(_Ft_, MODE_READ);
+		//ADD_VI_NEEDED(_It_);
+		isreg = ALLOCVI(_Is_, MODE_READ);
+		itreg = ALLOCVI(_It_, MODE_READ);
 
-		if( fdreg == fsreg ) ADD32RtoR(fdreg, ftreg);
-		else if( fdreg == ftreg ) ADD32RtoR(fdreg, fsreg);
-		else LEA32RRtoR(fdreg, fsreg, ftreg);
-		MOVZX32R16toR(fdreg, fdreg); // needed since don't know if fdreg's upper bits are 0
+		if( idreg == isreg ) ADD32RtoR(idreg, itreg);
+		else if( idreg == itreg ) ADD32RtoR(idreg, isreg);
+		else LEA32RRtoR(idreg, isreg, itreg);
+		MOVZX32R16toR(idreg, idreg); // needed since don't know if idreg's upper bits are 0
 	}
 }
 //------------------------------------------------------------------
@@ -366,27 +369,27 @@ void recVUMI_IADD( VURegs *VU, int info )
 //------------------------------------------------------------------
 void recVUMI_IAND( VURegs *VU, int info )
 {
-	int fdreg, fsreg = -1, ftreg = -1;
-	if ( _Fd_ == 0 ) return;
+	int idreg, isreg = -1, itreg = -1;
+	if ( _Id_ == 0 ) return;
 	//Console::WriteLn("recVUMI_IAND");
-	if ( ( _Fs_ == 0 ) || ( _Ft_ == 0 ) ) {
-		fdreg = ALLOCVI(_Fd_, MODE_WRITE);
-		XOR32RtoR(fdreg, fdreg);
+	if ( ( _Is_ == 0 ) || ( _It_ == 0 ) ) {
+		idreg = ALLOCVI(_Id_, MODE_WRITE);
+		XOR32RtoR(idreg, idreg);
 		return;
 	}
 
-	ADD_VI_NEEDED(_Fs_);
-	ADD_VI_NEEDED(_Ft_);
-	fdreg = ALLOCVI(_Fd_, MODE_WRITE);
+	ADD_VI_NEEDED(_Is_);
+	ADD_VI_NEEDED(_It_);
+	idreg = ALLOCVI(_Id_, MODE_WRITE);
 
-	fsreg = ALLOCVI(_Fs_, MODE_READ);
-	ftreg = ALLOCVI(_Ft_, MODE_READ);
+	isreg = ALLOCVI(_Is_, MODE_READ);
+	itreg = ALLOCVI(_It_, MODE_READ);
 
-	if( fdreg == fsreg ) AND16RtoR(fdreg, ftreg);
-	else if( fdreg == ftreg ) AND16RtoR(fdreg, fsreg);
+	if( idreg == isreg ) AND16RtoR(idreg, itreg);
+	else if( idreg == itreg ) AND16RtoR(idreg, isreg);
 	else {
-		MOV32RtoR(fdreg, ftreg);
-		AND32RtoR(fdreg, fsreg);
+		MOV32RtoR(idreg, itreg);
+		AND32RtoR(idreg, isreg);
 	}
 }
 //------------------------------------------------------------------
@@ -397,43 +400,43 @@ void recVUMI_IAND( VURegs *VU, int info )
 //------------------------------------------------------------------
 void recVUMI_IOR( VURegs *VU, int info )
 {
-	int fdreg, fsreg = -1, ftreg = -1;
-	if ( _Fd_ == 0 ) return;
+	int idreg, isreg = -1, itreg = -1;
+	if ( _Id_ == 0 ) return;
 	//Console::WriteLn("recVUMI_IOR");
-	if ( ( _Ft_ == 0 ) && ( _Fs_ == 0 ) ) {
-		fdreg = ALLOCVI(_Fd_, MODE_WRITE);
-		XOR32RtoR(fdreg, fdreg);
+	if ( ( _It_ == 0 ) && ( _Is_ == 0 ) ) {
+		idreg = ALLOCVI(_Id_, MODE_WRITE);
+		XOR32RtoR(idreg, idreg);
 		return;
 	} 
 
-	ADD_VI_NEEDED(_Fs_);
-	ADD_VI_NEEDED(_Ft_);
-	fdreg = ALLOCVI(_Fd_, MODE_WRITE);
+	ADD_VI_NEEDED(_Is_);
+	ADD_VI_NEEDED(_It_);
+	idreg = ALLOCVI(_Id_, MODE_WRITE);
 
-	if ( _Fs_ == 0 )
+	if ( _Is_ == 0 )
 	{
-		if( (ftreg = _checkX86reg(X86TYPE_VI|((VU==&VU1)?X86TYPE_VU1:0), _Ft_, MODE_READ)) >= 0 ) {
-			if( fdreg != ftreg ) MOV32RtoR(fdreg, ftreg);
+		if( (itreg = _checkX86reg(X86TYPE_VI|((VU==&VU1)?X86TYPE_VU1:0), _It_, MODE_READ)) >= 0 ) {
+			if( idreg != itreg ) MOV32RtoR(idreg, itreg);
 		}
-		else MOVZX32M16toR(fdreg, VU_VI_ADDR(_Ft_, 1));
+		else MOVZX32M16toR(idreg, VU_VI_ADDR(_It_, 1));
 	}
-	else if ( _Ft_ == 0 )
+	else if ( _It_ == 0 )
 	{
-		if( (fsreg = _checkX86reg(X86TYPE_VI|((VU==&VU1)?X86TYPE_VU1:0), _Fs_, MODE_READ)) >= 0 ) {
-			if( fdreg != fsreg ) MOV32RtoR(fdreg, fsreg);
+		if( (isreg = _checkX86reg(X86TYPE_VI|((VU==&VU1)?X86TYPE_VU1:0), _Is_, MODE_READ)) >= 0 ) {
+			if( idreg != isreg ) MOV32RtoR(idreg, isreg);
 		}
-		else MOVZX32M16toR(fdreg, VU_VI_ADDR(_Fs_, 1));
+		else MOVZX32M16toR(idreg, VU_VI_ADDR(_Is_, 1));
 	}
 	else
 	{
-		fsreg = ALLOCVI(_Fs_, MODE_READ);
-		ftreg = ALLOCVI(_Ft_, MODE_READ);
+		isreg = ALLOCVI(_Is_, MODE_READ);
+		itreg = ALLOCVI(_It_, MODE_READ);
 
-		if( fdreg == fsreg ) OR16RtoR(fdreg, ftreg);
-		else if( fdreg == ftreg ) OR16RtoR(fdreg, fsreg);
+		if( idreg == isreg ) OR16RtoR(idreg, itreg);
+		else if( idreg == itreg ) OR16RtoR(idreg, isreg);
 		else {
-			MOV32RtoR(fdreg, fsreg);
-			OR32RtoR(fdreg, ftreg);
+			MOV32RtoR(idreg, isreg);
+			OR32RtoR(idreg, itreg);
 		}
 	}
 }
@@ -445,47 +448,47 @@ void recVUMI_IOR( VURegs *VU, int info )
 //------------------------------------------------------------------
 void recVUMI_ISUB( VURegs *VU, int info )
 {
-	int fdreg, fsreg = -1, ftreg = -1;
-	if ( _Fd_ == 0 ) return;
+	int idreg, isreg = -1, itreg = -1;
+	if ( _Id_ == 0 ) return;
 	//Console::WriteLn("recVUMI_ISUB");
-	if ( ( _Ft_ == 0 ) && ( _Fs_ == 0 ) ) {
-		fdreg = ALLOCVI(_Fd_, MODE_WRITE);
-		XOR32RtoR(fdreg, fdreg);
+	if ( ( _It_ == 0 ) && ( _Is_ == 0 ) ) {
+		idreg = ALLOCVI(_Id_, MODE_WRITE);
+		XOR32RtoR(idreg, idreg);
 		return;
 	} 
 	
-	ADD_VI_NEEDED(_Fs_);
-	ADD_VI_NEEDED(_Ft_);
-	fdreg = ALLOCVI(_Fd_, MODE_WRITE);
+	ADD_VI_NEEDED(_Is_);
+	ADD_VI_NEEDED(_It_);
+	idreg = ALLOCVI(_Id_, MODE_WRITE);
 
-	if ( _Fs_ == 0 )
+	if ( _Is_ == 0 )
 	{
-		if( (ftreg = _checkX86reg(X86TYPE_VI|((VU==&VU1)?X86TYPE_VU1:0), _Ft_, MODE_READ)) >= 0 ) {
-			if( fdreg != ftreg ) MOV32RtoR(fdreg, ftreg);
+		if( (itreg = _checkX86reg(X86TYPE_VI|((VU==&VU1)?X86TYPE_VU1:0), _It_, MODE_READ)) >= 0 ) {
+			if( idreg != itreg ) MOV32RtoR(idreg, itreg);
 		}
-		else MOVZX32M16toR(fdreg, VU_VI_ADDR(_Ft_, 1));
-		NEG16R(fdreg);
+		else MOVZX32M16toR(idreg, VU_VI_ADDR(_It_, 1));
+		NEG16R(idreg);
 	}
-	else if ( _Ft_ == 0 )
+	else if ( _It_ == 0 )
 	{
-		if( (fsreg = _checkX86reg(X86TYPE_VI|((VU==&VU1)?X86TYPE_VU1:0), _Fs_, MODE_READ)) >= 0 ) {
-			if( fdreg != fsreg ) MOV32RtoR(fdreg, fsreg);
+		if( (isreg = _checkX86reg(X86TYPE_VI|((VU==&VU1)?X86TYPE_VU1:0), _Is_, MODE_READ)) >= 0 ) {
+			if( idreg != isreg ) MOV32RtoR(idreg, isreg);
 		}
-		else MOVZX32M16toR(fdreg, VU_VI_ADDR(_Fs_, 1));
+		else MOVZX32M16toR(idreg, VU_VI_ADDR(_Is_, 1));
 	}
 	else
 	{
-		fsreg = ALLOCVI(_Fs_, MODE_READ);
-		ftreg = ALLOCVI(_Ft_, MODE_READ);
+		isreg = ALLOCVI(_Is_, MODE_READ);
+		itreg = ALLOCVI(_It_, MODE_READ);
 
-		if( fdreg == fsreg ) SUB16RtoR(fdreg, ftreg);
-		else if( fdreg == ftreg ) {
-			SUB16RtoR(fdreg, fsreg);
-			NEG16R(fdreg);
+		if( idreg == isreg ) SUB16RtoR(idreg, itreg);
+		else if( idreg == itreg ) {
+			SUB16RtoR(idreg, isreg);
+			NEG16R(idreg);
 		}
 		else {
-			MOV32RtoR(fdreg, fsreg);
-			SUB16RtoR(fdreg, ftreg);
+			MOV32RtoR(idreg, isreg);
+			SUB16RtoR(idreg, itreg);
 		}
 	}
 }
@@ -498,7 +501,7 @@ void recVUMI_ISUBIU( VURegs *VU, int info )
 {
 	s16 imm;
 
-	if ( _Ft_ == 0 ) return;
+	if ( _It_ == 0 ) return;
 	//Console::WriteLn("recVUMI_ISUBIU");
 	imm = ( ( VU->code >> 10 ) & 0x7800 ) | ( VU->code & 0x7ff );
 	imm = -imm;
@@ -531,23 +534,23 @@ void recVUMI_MFIR( VURegs *VU, int info )
 {
 	if ( (_Ft_ == 0)  || (_X_Y_Z_W == 0) ) return;
 	//Console::WriteLn("recVUMI_MFIR");
-	_deleteX86reg(X86TYPE_VI|((VU==&VU1)?X86TYPE_VU1:0), _Fs_, 1);
+	_deleteX86reg(X86TYPE_VI|((VU==&VU1)?X86TYPE_VU1:0), _Is_, 1);
 
 	if( _XYZW_SS ) {
-		SSE2_MOVD_M32_to_XMM(EEREC_TEMP, VU_VI_ADDR(_Fs_, 1)-2);
+		SSE2_MOVD_M32_to_XMM(EEREC_TEMP, VU_VI_ADDR(_Is_, 1)-2);
 		_vuFlipRegSS(VU, EEREC_T);
 		SSE2_PSRAD_I8_to_XMM(EEREC_TEMP, 16);
 		SSE_MOVSS_XMM_to_XMM(EEREC_T, EEREC_TEMP);
 		_vuFlipRegSS(VU, EEREC_T);
 	}
 	else if (_X_Y_Z_W != 0xf) {
-		SSE2_MOVD_M32_to_XMM(EEREC_TEMP, VU_VI_ADDR(_Fs_, 1)-2);
+		SSE2_MOVD_M32_to_XMM(EEREC_TEMP, VU_VI_ADDR(_Is_, 1)-2);
 		SSE2_PSRAD_I8_to_XMM(EEREC_TEMP, 16);
 		SSE_SHUFPS_XMM_to_XMM(EEREC_TEMP, EEREC_TEMP, 0);
 		VU_MERGE_REGS(EEREC_T, EEREC_TEMP);
 	} 
 	else {
-		SSE2_MOVD_M32_to_XMM(EEREC_T, VU_VI_ADDR(_Fs_, 1)-2);
+		SSE2_MOVD_M32_to_XMM(EEREC_T, VU_VI_ADDR(_Is_, 1)-2);
 		SSE2_PSRAD_I8_to_XMM(EEREC_T, 16);
 		SSE_SHUFPS_XMM_to_XMM(EEREC_T, EEREC_T, 0);
 	}
@@ -560,19 +563,19 @@ void recVUMI_MFIR( VURegs *VU, int info )
 //------------------------------------------------------------------
 void recVUMI_MTIR( VURegs *VU, int info )
 {
-	if ( _Ft_ == 0 ) return;
+	if ( _It_ == 0 ) return;
 	//Console::WriteLn("recVUMI_MTIR");
-	_deleteX86reg(X86TYPE_VI|((VU==&VU1)?X86TYPE_VU1:0), _Ft_, 2);
+	_deleteX86reg(X86TYPE_VI|((VU==&VU1)?X86TYPE_VU1:0), _It_, 2);
 
 	if( _Fsf_ == 0 ) {
-		SSE_MOVSS_XMM_to_M32(VU_VI_ADDR(_Ft_, 0), EEREC_S);
+		SSE_MOVSS_XMM_to_M32(VU_VI_ADDR(_It_, 0), EEREC_S);
 	}
 	else {
 		_unpackVFSS_xyzw(EEREC_TEMP, EEREC_S, _Fsf_);
-		SSE_MOVSS_XMM_to_M32(VU_VI_ADDR(_Ft_, 0), EEREC_TEMP);
+		SSE_MOVSS_XMM_to_M32(VU_VI_ADDR(_It_, 0), EEREC_TEMP);
 	}
 
-	AND32ItoM(VU_VI_ADDR(_Ft_, 0), 0xffff);
+	AND32ItoM(VU_VI_ADDR(_It_, 0), 0xffff);
 } 
 //------------------------------------------------------------------
 
@@ -723,12 +726,12 @@ void recVUMI_LQ(VURegs *VU, int info)
 	if ( _Ft_ == 0 ) return;
 	//Console::WriteLn("recVUMI_LQ");
 	imm = (VU->code & 0x400) ? (VU->code & 0x3ff) | 0xfc00 : (VU->code & 0x3ff); 
-	if (_Fs_ == 0) {
+	if (_Is_ == 0) {
 		_loadEAX(VU, -1, (uptr)GET_VU_MEM(VU, (u32)imm*16), info);
 	} 
 	else {
-		int fsreg = ALLOCVI(_Fs_, MODE_READ);
-		_loadEAX(VU, recVUTransformAddr(fsreg, VU, _Fs_, imm), (uptr)VU->Mem, info);
+		int isreg = ALLOCVI(_Is_, MODE_READ);
+		_loadEAX(VU, recVUTransformAddr(isreg, VU, _Is_, imm), (uptr)VU->Mem, info);
 	}
 }
 //------------------------------------------------------------------
@@ -739,17 +742,17 @@ void recVUMI_LQ(VURegs *VU, int info)
 //------------------------------------------------------------------
 void recVUMI_LQD( VURegs *VU, int info )
 {
-	int fsreg;
+	int isreg;
 	//Console::WriteLn("recVUMI_LQD");
-	if ( _Fs_ != 0 ) {
-		fsreg = ALLOCVI(_Fs_, MODE_READ|MODE_WRITE);
-		SUB16ItoR( fsreg, 1 );
+	if ( _Is_ != 0 ) {
+		isreg = ALLOCVI(_Is_, MODE_READ|MODE_WRITE);
+		SUB16ItoR( isreg, 1 );
 	}
 
 	if ( _Ft_ == 0 ) return;
 
-	if ( _Fs_ == 0 ) _loadEAX(VU, -1, (uptr)VU->Mem, info);
-	else _loadEAX(VU, recVUTransformAddr(fsreg, VU, _Fs_, 0), (uptr)VU->Mem, info);
+	if ( _Is_ == 0 ) _loadEAX(VU, -1, (uptr)VU->Mem, info);
+	else _loadEAX(VU, recVUTransformAddr(isreg, VU, _Is_, 0), (uptr)VU->Mem, info);
 }
 //------------------------------------------------------------------
 
@@ -759,27 +762,27 @@ void recVUMI_LQD( VURegs *VU, int info )
 //------------------------------------------------------------------
 void recVUMI_LQI(VURegs *VU, int info)
 {
-	int fsreg;
+	int isreg;
 	//Console::WriteLn("recVUMI_LQI");
 	if ( _Ft_ == 0 ) {
-		if( _Fs_ != 0 ) {
-			if( (fsreg = _checkX86reg(X86TYPE_VI|(VU==&VU1?X86TYPE_VU1:0), _Fs_, MODE_WRITE|MODE_READ)) >= 0 ) {
-				ADD16ItoR(fsreg, 1);
+		if( _Is_ != 0 ) {
+			if( (isreg = _checkX86reg(X86TYPE_VI|(VU==&VU1?X86TYPE_VU1:0), _Is_, MODE_WRITE|MODE_READ)) >= 0 ) {
+				ADD16ItoR(isreg, 1);
 			}
 			else {
-				ADD16ItoM( VU_VI_ADDR( _Fs_, 0 ), 1 );
+				ADD16ItoM( VU_VI_ADDR( _Is_, 0 ), 1 );
 			}
 		}
 		return;
 	}
 
-    if (_Fs_ == 0) {
+    if (_Is_ == 0) {
 		_loadEAX(VU, -1, (uptr)VU->Mem, info);
     } 
 	else {
-		fsreg = ALLOCVI(_Fs_, MODE_READ|MODE_WRITE);
-		_loadEAX(VU, recVUTransformAddr(fsreg, VU, _Fs_, 0), (uptr)VU->Mem, info);
-		ADD16ItoR( fsreg, 1 );
+		isreg = ALLOCVI(_Is_, MODE_READ|MODE_WRITE);
+		_loadEAX(VU, recVUTransformAddr(isreg, VU, _Is_, 0), (uptr)VU->Mem, info);
+		ADD16ItoR( isreg, 1 );
     }
 }
 //------------------------------------------------------------------
@@ -948,10 +951,10 @@ void recVUMI_SQ(VURegs *VU, int info)
 	s16 imm;
 	//Console::WriteLn("recVUMI_SQ");
 	imm = ( VU->code & 0x400) ? ( VU->code & 0x3ff) | 0xfc00 : ( VU->code & 0x3ff); 
-	if ( _Ft_ == 0 ) _saveEAX(VU, -1, (uptr)GET_VU_MEM(VU, (int)imm * 16), info);
+	if ( _It_ == 0 ) _saveEAX(VU, -1, (uptr)GET_VU_MEM(VU, (int)imm * 16), info);
 	else {
-		int ftreg = ALLOCVI(_Ft_, MODE_READ);
-		_saveEAX(VU, recVUTransformAddr(ftreg, VU, _Ft_, imm), (uptr)VU->Mem, info);
+		int itreg = ALLOCVI(_It_, MODE_READ);
+		_saveEAX(VU, recVUTransformAddr(itreg, VU, _It_, imm), (uptr)VU->Mem, info);
 	}
 }
 //------------------------------------------------------------------
@@ -963,11 +966,11 @@ void recVUMI_SQ(VURegs *VU, int info)
 void recVUMI_SQD(VURegs *VU, int info)
 {
 	//Console::WriteLn("recVUMI_SQD");
-	if (_Ft_ == 0) _saveEAX(VU, -1, (uptr)VU->Mem, info);
+	if (_It_ == 0) _saveEAX(VU, -1, (uptr)VU->Mem, info);
 	else {
-		int ftreg = ALLOCVI(_Ft_, MODE_READ|MODE_WRITE);
-		SUB16ItoR( ftreg, 1 );
-		_saveEAX(VU, recVUTransformAddr(ftreg, VU, _Ft_, 0), (uptr)VU->Mem, info);
+		int itreg = ALLOCVI(_It_, MODE_READ|MODE_WRITE);
+		SUB16ItoR( itreg, 1 );
+		_saveEAX(VU, recVUTransformAddr(itreg, VU, _It_, 0), (uptr)VU->Mem, info);
 	}
 }
 //------------------------------------------------------------------
@@ -979,11 +982,11 @@ void recVUMI_SQD(VURegs *VU, int info)
 void recVUMI_SQI(VURegs *VU, int info)
 {
 	//Console::WriteLn("recVUMI_SQI");
-	if (_Ft_ == 0) _saveEAX(VU, -1, (uptr)VU->Mem, info);
+	if (_It_ == 0) _saveEAX(VU, -1, (uptr)VU->Mem, info);
 	else {
-		int ftreg = ALLOCVI(_Ft_, MODE_READ|MODE_WRITE);
-		_saveEAX(VU, recVUTransformAddr(ftreg, VU, _Ft_, 0), (uptr)VU->Mem, info);
-		ADD16ItoR( ftreg, 1 );
+		int itreg = ALLOCVI(_It_, MODE_READ|MODE_WRITE);
+		_saveEAX(VU, recVUTransformAddr(itreg, VU, _It_, 0), (uptr)VU->Mem, info);
+		ADD16ItoR( itreg, 1 );
 	}
 }
 //------------------------------------------------------------------
@@ -994,10 +997,10 @@ void recVUMI_SQI(VURegs *VU, int info)
 //------------------------------------------------------------------
 void recVUMI_ILW(VURegs *VU, int info)
 {
-	int ftreg;
+	int itreg;
 	s16 imm, off;
  
-	if ( ( _Ft_ == 0 ) || ( _X_Y_Z_W == 0 ) ) return;
+	if ( ( _It_ == 0 ) || ( _X_Y_Z_W == 0 ) ) return;
 	//Console::WriteLn("recVUMI_ILW");
 	imm = ( VU->code & 0x400) ? ( VU->code & 0x3ff) | 0xfc00 : ( VU->code & 0x3ff);
 	if (_X) off = 0;
@@ -1005,15 +1008,15 @@ void recVUMI_ILW(VURegs *VU, int info)
 	else if (_Z) off = 8;
 	else if (_W) off = 12;
 
-	ADD_VI_NEEDED(_Fs_);
-	ftreg = ALLOCVI(_Ft_, MODE_WRITE);
+	ADD_VI_NEEDED(_Is_);
+	itreg = ALLOCVI(_It_, MODE_WRITE);
 
-	if ( _Fs_ == 0 ) {
-		MOVZX32M16toR( ftreg, (uptr)GET_VU_MEM(VU, (int)imm * 16 + off) );
+	if ( _Is_ == 0 ) {
+		MOVZX32M16toR( itreg, (uptr)GET_VU_MEM(VU, (int)imm * 16 + off) );
 	}
 	else {
-		int fsreg = ALLOCVI(_Fs_, MODE_READ);
-		MOV32RmtoR(ftreg, recVUTransformAddr(fsreg, VU, _Fs_, imm), (uptr)VU->Mem + off);
+		int isreg = ALLOCVI(_Is_, MODE_READ);
+		MOV32RmtoR(itreg, recVUTransformAddr(isreg, VU, _Is_, imm), (uptr)VU->Mem + off);
 	}
 }
 //------------------------------------------------------------------
@@ -1028,28 +1031,28 @@ void recVUMI_ISW( VURegs *VU, int info )
 	//Console::WriteLn("recVUMI_ISW");
 	imm = ( VU->code & 0x400) ? ( VU->code & 0x3ff) | 0xfc00 : ( VU->code & 0x3ff); 
 
-	if (_Fs_ == 0) {
+	if (_Is_ == 0) {
 		uptr off = (uptr)GET_VU_MEM(VU, (int)imm * 16);
-		int ftreg = ALLOCVI(_Ft_, MODE_READ);
+		int itreg = ALLOCVI(_It_, MODE_READ);
 
-		if (_X) MOV32RtoM(off, ftreg);
-		if (_Y) MOV32RtoM(off+4, ftreg);
-		if (_Z) MOV32RtoM(off+8, ftreg);
-		if (_W) MOV32RtoM(off+12, ftreg);
+		if (_X) MOV32RtoM(off, itreg);
+		if (_Y) MOV32RtoM(off+4, itreg);
+		if (_Z) MOV32RtoM(off+8, itreg);
+		if (_W) MOV32RtoM(off+12, itreg);
 	}
 	else {
-		int x86reg, fsreg, ftreg;
+		int x86reg, isreg, itreg;
 
-		ADD_VI_NEEDED(_Ft_);
-		fsreg = ALLOCVI(_Fs_, MODE_READ);
-		ftreg = ALLOCVI(_Ft_, MODE_READ);
+		ADD_VI_NEEDED(_It_);
+		isreg = ALLOCVI(_Is_, MODE_READ);
+		itreg = ALLOCVI(_It_, MODE_READ);
 
-		x86reg = recVUTransformAddr(fsreg, VU, _Fs_, imm);
+		x86reg = recVUTransformAddr(isreg, VU, _Is_, imm);
 
-		if (_X) MOV32RtoRm(x86reg, ftreg, (uptr)VU->Mem);
-		if (_Y) MOV32RtoRm(x86reg, ftreg, (uptr)VU->Mem+4);
-		if (_Z) MOV32RtoRm(x86reg, ftreg, (uptr)VU->Mem+8);
-		if (_W) MOV32RtoRm(x86reg, ftreg, (uptr)VU->Mem+12);
+		if (_X) MOV32RtoRm(x86reg, itreg, (uptr)VU->Mem);
+		if (_Y) MOV32RtoRm(x86reg, itreg, (uptr)VU->Mem+4);
+		if (_Z) MOV32RtoRm(x86reg, itreg, (uptr)VU->Mem+8);
+		if (_W) MOV32RtoRm(x86reg, itreg, (uptr)VU->Mem+12);
 	}
 }
 //------------------------------------------------------------------
@@ -1060,24 +1063,24 @@ void recVUMI_ISW( VURegs *VU, int info )
 //------------------------------------------------------------------
 void recVUMI_ILWR( VURegs *VU, int info )
 {
-	int off, ftreg;
+	int off, itreg;
 
-	if ( ( _Ft_ == 0 ) || ( _X_Y_Z_W == 0 ) ) return;
+	if ( ( _It_ == 0 ) || ( _X_Y_Z_W == 0 ) ) return;
 	//Console::WriteLn("recVUMI_ILWR");
 	if (_X) off = 0;
 	else if (_Y) off = 4;
 	else if (_Z) off = 8;
 	else if (_W) off = 12;
 
-	ADD_VI_NEEDED(_Fs_);
-	ftreg = ALLOCVI(_Ft_, MODE_WRITE);
+	ADD_VI_NEEDED(_Is_);
+	itreg = ALLOCVI(_It_, MODE_WRITE);
 
-	if ( _Fs_ == 0 ) {
-		MOVZX32M16toR( ftreg, (uptr)VU->Mem + off );
+	if ( _Is_ == 0 ) {
+		MOVZX32M16toR( itreg, (uptr)VU->Mem + off );
 	}
 	else {
-		int fsreg = ALLOCVI(_Fs_, MODE_READ);
-		MOVZX32Rm16toR(ftreg, recVUTransformAddr(fsreg, VU, _Fs_, 0), (uptr)VU->Mem + off);
+		int isreg = ALLOCVI(_Is_, MODE_READ);
+		MOVZX32Rm16toR(itreg, recVUTransformAddr(isreg, VU, _Is_, 0), (uptr)VU->Mem + off);
 	}
 }
 //------------------------------------------------------------------
@@ -1088,26 +1091,26 @@ void recVUMI_ILWR( VURegs *VU, int info )
 //------------------------------------------------------------------
 void recVUMI_ISWR( VURegs *VU, int info )
 {
-	int ftreg;
+	int itreg;
 	//Console::WriteLn("recVUMI_ISWR");
-	ADD_VI_NEEDED(_Fs_);
-	ftreg = ALLOCVI(_Ft_, MODE_READ);
+	ADD_VI_NEEDED(_Is_);
+	itreg = ALLOCVI(_It_, MODE_READ);
 
-	if (_Fs_ == 0) {
-		if (_X) MOV32RtoM((uptr)VU->Mem, ftreg);
-		if (_Y) MOV32RtoM((uptr)VU->Mem+4, ftreg);
-		if (_Z) MOV32RtoM((uptr)VU->Mem+8, ftreg);
-		if (_W) MOV32RtoM((uptr)VU->Mem+12, ftreg);
+	if (_Is_ == 0) {
+		if (_X) MOV32RtoM((uptr)VU->Mem, itreg);
+		if (_Y) MOV32RtoM((uptr)VU->Mem+4, itreg);
+		if (_Z) MOV32RtoM((uptr)VU->Mem+8, itreg);
+		if (_W) MOV32RtoM((uptr)VU->Mem+12, itreg);
 	}
 	else {
 		int x86reg;
-		int fsreg = ALLOCVI(_Fs_, MODE_READ);
-		x86reg = recVUTransformAddr(fsreg, VU, _Fs_, 0);
+		int isreg = ALLOCVI(_Is_, MODE_READ);
+		x86reg = recVUTransformAddr(isreg, VU, _Is_, 0);
 
-		if (_X) MOV32RtoRm(x86reg, ftreg, (uptr)VU->Mem);
-		if (_Y) MOV32RtoRm(x86reg, ftreg, (uptr)VU->Mem+4);
-		if (_Z) MOV32RtoRm(x86reg, ftreg, (uptr)VU->Mem+8);
-		if (_W) MOV32RtoRm(x86reg, ftreg, (uptr)VU->Mem+12);
+		if (_X) MOV32RtoRm(x86reg, itreg, (uptr)VU->Mem);
+		if (_Y) MOV32RtoRm(x86reg, itreg, (uptr)VU->Mem+4);
+		if (_Z) MOV32RtoRm(x86reg, itreg, (uptr)VU->Mem+8);
+		if (_W) MOV32RtoRm(x86reg, itreg, (uptr)VU->Mem+12);
 	}
 }
 //------------------------------------------------------------------
@@ -1262,15 +1265,15 @@ void recVUMI_WAITQ( VURegs *VU, int info )
 //------------------------------------------------------------------
 void recVUMI_FSAND( VURegs *VU, int info )
 {
-	int ftreg;
+	int itreg;
 	u16 imm;
 	//Console::WriteLn("recVUMI_FSAND");
 	imm = (((VU->code >> 21 ) & 0x1) << 11) | (VU->code & 0x7ff);
-	if(_Ft_ == 0) return; 
+	if(_It_ == 0) return; 
 
-	ftreg = ALLOCVI(_Ft_, MODE_WRITE);
-	MOV32MtoR( ftreg, VU_VI_ADDR(REG_STATUS_FLAG, 1) );
-	AND32ItoR( ftreg, imm );
+	itreg = ALLOCVI(_It_, MODE_WRITE);
+	MOV32MtoR( itreg, VU_VI_ADDR(REG_STATUS_FLAG, 1) );
+	AND32ItoR( itreg, imm );
 }
 //------------------------------------------------------------------
 
@@ -1280,18 +1283,18 @@ void recVUMI_FSAND( VURegs *VU, int info )
 //------------------------------------------------------------------
 void recVUMI_FSEQ( VURegs *VU, int info )
 {
-	int ftreg;
+	int itreg;
 	u16 imm;
-	if ( _Ft_ == 0 ) return;
+	if ( _It_ == 0 ) return;
 	//Console::WriteLn("recVUMI_FSEQ");
 	imm = (((VU->code >> 21 ) & 0x1) << 11) | (VU->code & 0x7ff);
 
-	ftreg = ALLOCVI(_Ft_, MODE_WRITE|MODE_8BITREG);
+	itreg = ALLOCVI(_It_, MODE_WRITE|MODE_8BITREG);
 
 	MOVZX32M16toR( EAX, VU_VI_ADDR(REG_STATUS_FLAG, 1) );
-	XOR32RtoR(ftreg, ftreg);
+	XOR32RtoR(itreg, itreg);
 	CMP16ItoR(EAX, imm);
-	SETE8R(ftreg);
+	SETE8R(itreg);
 }
 //------------------------------------------------------------------
 
@@ -1301,16 +1304,16 @@ void recVUMI_FSEQ( VURegs *VU, int info )
 //------------------------------------------------------------------
 void recVUMI_FSOR( VURegs *VU, int info )
 {
-	int ftreg;
+	int itreg;
 	u32 imm;
-	if(_Ft_ == 0) return; 
+	if(_It_ == 0) return; 
 	//Console::WriteLn("recVUMI_FSOR");
 	imm = (((VU->code >> 21 ) & 0x1) << 11) | (VU->code & 0x7ff);
 
-	ftreg = ALLOCVI(_Ft_, MODE_WRITE);
+	itreg = ALLOCVI(_It_, MODE_WRITE);
 
-	MOVZX32M16toR( ftreg, VU_VI_ADDR(REG_STATUS_FLAG, 1) );
-	OR32ItoR( ftreg, imm );
+	MOVZX32M16toR( itreg, VU_VI_ADDR(REG_STATUS_FLAG, 1) );
+	OR32ItoR( itreg, imm );
 }
 //------------------------------------------------------------------
 
@@ -1346,18 +1349,18 @@ void recVUMI_FSSET(VURegs *VU, int info)
 //------------------------------------------------------------------
 void recVUMI_FMAND( VURegs *VU, int info )
 {
-	int fsreg, ftreg;
-	if ( _Ft_ == 0 ) return;
+	int isreg, itreg;
+	if ( _It_ == 0 ) return;
 	//Console::WriteLn("recVUMI_FMAND");
-	fsreg = _checkX86reg(X86TYPE_VI|(VU==&VU1?X86TYPE_VU1:0), _Fs_, MODE_READ);
-	ftreg = ALLOCVI(_Ft_, MODE_WRITE);//|MODE_8BITREG);
+	isreg = _checkX86reg(X86TYPE_VI|(VU==&VU1?X86TYPE_VU1:0), _Is_, MODE_READ);
+	itreg = ALLOCVI(_It_, MODE_WRITE);//|MODE_8BITREG);
 
-	if( fsreg >= 0 ) {
-		if( ftreg != fsreg ) MOV32RtoR(ftreg, fsreg);
+	if( isreg >= 0 ) {
+		if( itreg != isreg ) MOV32RtoR(itreg, isreg);
 	}
-	else MOVZX32M16toR(ftreg, VU_VI_ADDR(_Fs_, 1));
+	else MOVZX32M16toR(itreg, VU_VI_ADDR(_Is_, 1));
 
-	AND16MtoR( ftreg, VU_VI_ADDR(REG_MAC_FLAG, 1));
+	AND16MtoR( itreg, VU_VI_ADDR(REG_MAC_FLAG, 1));
 }
 //------------------------------------------------------------------
 
@@ -1367,25 +1370,25 @@ void recVUMI_FMAND( VURegs *VU, int info )
 //------------------------------------------------------------------
 void recVUMI_FMEQ( VURegs *VU, int info )
 {
-	int ftreg, fsreg;
-	if ( _Ft_ == 0 ) return;
+	int itreg, isreg;
+	if ( _It_ == 0 ) return;
 	//Console::WriteLn("recVUMI_FMEQ");
-	if( _Ft_ == _Fs_ ) {
-		ftreg = ALLOCVI(_Ft_, MODE_WRITE|MODE_READ);//|MODE_8BITREG
+	if( _It_ == _Is_ ) {
+		itreg = ALLOCVI(_It_, MODE_WRITE|MODE_READ);//|MODE_8BITREG
 
-		CMP16MtoR(ftreg, VU_VI_ADDR(REG_MAC_FLAG, 1));
+		CMP16MtoR(itreg, VU_VI_ADDR(REG_MAC_FLAG, 1));
 		SETE8R(EAX);
-		MOVZX32R8toR(ftreg, EAX);
+		MOVZX32R8toR(itreg, EAX);
 	}
 	else {
-		ADD_VI_NEEDED(_Fs_);
-		ftreg = ALLOCVI(_Ft_, MODE_WRITE|MODE_8BITREG);
-		fsreg = ALLOCVI(_Fs_, MODE_READ);
+		ADD_VI_NEEDED(_Is_);
+		itreg = ALLOCVI(_It_, MODE_WRITE|MODE_8BITREG);
+		isreg = ALLOCVI(_Is_, MODE_READ);
 		
-		XOR32RtoR(ftreg, ftreg);
+		XOR32RtoR(itreg, itreg);
 		
-		CMP16MtoR(fsreg, VU_VI_ADDR(REG_MAC_FLAG, 1));
-		SETE8R(ftreg);
+		CMP16MtoR(isreg, VU_VI_ADDR(REG_MAC_FLAG, 1));
+		SETE8R(itreg);
 	}
 }
 //------------------------------------------------------------------
@@ -1396,27 +1399,27 @@ void recVUMI_FMEQ( VURegs *VU, int info )
 //------------------------------------------------------------------
 void recVUMI_FMOR( VURegs *VU, int info )
 {
-	int fsreg, ftreg;
-	if ( _Ft_ == 0 ) return;
+	int isreg, itreg;
+	if ( _It_ == 0 ) return;
 	//Console::WriteLn("recVUMI_FMOR");
-	if( _Fs_ == 0 ) {
-		ftreg = ALLOCVI(_Ft_, MODE_WRITE);//|MODE_8BITREG);
-		MOVZX32M16toR( ftreg, VU_VI_ADDR(REG_MAC_FLAG, 1) );
+	if( _Is_ == 0 ) {
+		itreg = ALLOCVI(_It_, MODE_WRITE);//|MODE_8BITREG);
+		MOVZX32M16toR( itreg, VU_VI_ADDR(REG_MAC_FLAG, 1) );
 	}
-	else if( _Ft_ == _Fs_ ) {
-		ftreg = ALLOCVI(_Ft_, MODE_WRITE|MODE_READ);//|MODE_8BITREG);
-		OR16MtoR( ftreg, VU_VI_ADDR(REG_MAC_FLAG, 1) );
+	else if( _It_ == _Is_ ) {
+		itreg = ALLOCVI(_It_, MODE_WRITE|MODE_READ);//|MODE_8BITREG);
+		OR16MtoR( itreg, VU_VI_ADDR(REG_MAC_FLAG, 1) );
 	}
 	else {
-		fsreg = _checkX86reg(X86TYPE_VI|(VU==&VU1?X86TYPE_VU1:0), _Fs_, MODE_READ);
-		ftreg = ALLOCVI(_Ft_, MODE_WRITE);
+		isreg = _checkX86reg(X86TYPE_VI|(VU==&VU1?X86TYPE_VU1:0), _Is_, MODE_READ);
+		itreg = ALLOCVI(_It_, MODE_WRITE);
 
-		MOVZX32M16toR( ftreg, VU_VI_ADDR(REG_MAC_FLAG, 1) );
+		MOVZX32M16toR( itreg, VU_VI_ADDR(REG_MAC_FLAG, 1) );
 
-		if( fsreg >= 0 )
-			OR16RtoR( ftreg, fsreg );
+		if( isreg >= 0 )
+			OR16RtoR( itreg, isreg );
 		else
-			OR16MtoR( ftreg, VU_VI_ADDR(_Fs_, 1) );
+			OR16MtoR( itreg, VU_VI_ADDR(_Is_, 1) );
 	}
 }
 //------------------------------------------------------------------
@@ -1427,13 +1430,13 @@ void recVUMI_FMOR( VURegs *VU, int info )
 //------------------------------------------------------------------
 void recVUMI_FCAND( VURegs *VU, int info )
 {
-	int ftreg = ALLOCVI(1, MODE_WRITE|MODE_8BITREG);
+	int itreg = ALLOCVI(1, MODE_WRITE|MODE_8BITREG);
 	//Console::WriteLn("recVUMI_FCAND");
 	MOV32MtoR( EAX, VU_VI_ADDR(REG_CLIP_FLAG, 1) );
-	XOR32RtoR( ftreg, ftreg );
+	XOR32RtoR( itreg, itreg );
 	AND32ItoR( EAX, VU->code & 0xFFFFFF );
 
-	SETNZ8R(ftreg);
+	SETNZ8R(itreg);
 }
 //------------------------------------------------------------------
 
@@ -1443,14 +1446,14 @@ void recVUMI_FCAND( VURegs *VU, int info )
 //------------------------------------------------------------------
 void recVUMI_FCEQ( VURegs *VU, int info )
 {
-	int ftreg = ALLOCVI(1, MODE_WRITE|MODE_8BITREG);
+	int itreg = ALLOCVI(1, MODE_WRITE|MODE_8BITREG);
 	//Console::WriteLn("recVUMI_FCEQ");
 	MOV32MtoR( EAX, VU_VI_ADDR(REG_CLIP_FLAG, 1) );
 	AND32ItoR( EAX, 0xffffff );
-	XOR32RtoR( ftreg, ftreg );
+	XOR32RtoR( itreg, itreg );
 	CMP32ItoR( EAX, VU->code&0xffffff );
 
-	SETE8R(ftreg);
+	SETE8R(itreg);
 }
 //------------------------------------------------------------------
 
@@ -1460,14 +1463,14 @@ void recVUMI_FCEQ( VURegs *VU, int info )
 //------------------------------------------------------------------
 void recVUMI_FCOR( VURegs *VU, int info )
 {
-	int ftreg;
+	int itreg;
 	//Console::WriteLn("recVUMI_FCOR");
-	ftreg = ALLOCVI(1, MODE_WRITE);
-	MOV32MtoR( ftreg, VU_VI_ADDR(REG_CLIP_FLAG, 1) );
-	OR32ItoR ( ftreg, VU->code );
-	AND32ItoR( ftreg, 0xffffff );
-	ADD32ItoR( ftreg, 1 );	// If 24 1's will make 25th bit 1, else 0
-	SHR32ItoR( ftreg, 24 );	// Get the 25th bit (also clears the rest of the garbage in the reg)	
+	itreg = ALLOCVI(1, MODE_WRITE);
+	MOV32MtoR( itreg, VU_VI_ADDR(REG_CLIP_FLAG, 1) );
+	OR32ItoR ( itreg, VU->code );
+	AND32ItoR( itreg, 0xffffff );
+	ADD32ItoR( itreg, 1 );	// If 24 1's will make 25th bit 1, else 0
+	SHR32ItoR( itreg, 24 );	// Get the 25th bit (also clears the rest of the garbage in the reg)	
 }
 //------------------------------------------------------------------
 
@@ -1492,13 +1495,13 @@ void recVUMI_FCSET( VURegs *VU, int info )
 //------------------------------------------------------------------
 void recVUMI_FCGET( VURegs *VU, int info )
 {
-	int ftreg;
-	if(_Ft_ == 0) return;
+	int itreg;
+	if(_It_ == 0) return;
 	//Console::WriteLn("recVUMI_FCGET");
-	ftreg = ALLOCVI(_Ft_, MODE_WRITE);
+	itreg = ALLOCVI(_It_, MODE_WRITE);
 
-	MOV32MtoR(ftreg, VU_VI_ADDR(REG_CLIP_FLAG, 1));
-	AND32ItoR(ftreg, 0x0fff);
+	MOV32MtoR(itreg, VU_VI_ADDR(REG_CLIP_FLAG, 1));
+	AND32ItoR(itreg, 0x0fff);
 }
 //------------------------------------------------------------------
 
@@ -1944,11 +1947,11 @@ void recVUMI_EEXP( VURegs *VU, int info )
 //------------------------------------------------------------------
 void recVUMI_XITOP( VURegs *VU, int info )
 {
-	int ftreg;
-	if (_Ft_ == 0) return;
+	int itreg;
+	if (_It_ == 0) return;
 	//Console::WriteLn("recVUMI_XITOP");
-	ftreg = ALLOCVI(_Ft_, MODE_WRITE);
-	MOVZX32M16toR( ftreg, (uptr)&VU->vifRegs->itop );
+	itreg = ALLOCVI(_It_, MODE_WRITE);
+	MOVZX32M16toR( itreg, (uptr)&VU->vifRegs->itop );
 }
 //------------------------------------------------------------------
 
@@ -1958,11 +1961,11 @@ void recVUMI_XITOP( VURegs *VU, int info )
 //------------------------------------------------------------------
 void recVUMI_XTOP( VURegs *VU, int info )
 {
-	int ftreg;
-	if ( _Ft_ == 0 ) return;
+	int itreg;
+	if ( _It_ == 0 ) return;
 	//Console::WriteLn("recVUMI_XTOP");
-	ftreg = ALLOCVI(_Ft_, MODE_WRITE);
-	MOVZX32M16toR( ftreg, (uptr)&VU->vifRegs->top );
+	itreg = ALLOCVI(_It_, MODE_WRITE);
+	MOVZX32M16toR( itreg, (uptr)&VU->vifRegs->top );
 }
 //------------------------------------------------------------------
 
