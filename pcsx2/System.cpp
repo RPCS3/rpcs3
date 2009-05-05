@@ -400,8 +400,11 @@ void SysPrepareExecution( const char* elf_file, bool use_bios )
 			return;
 		}
 
-		if (OpenPlugins(NULL) == -1)
-			return;
+		// Don't Open CDVD plugin if directly loading an elf file
+		if (elf_file) { g_Startup.BootMode = BootMode_Elf; }
+		if (OpenPlugins(NULL) == -1) { 
+			return; 
+		}
 
 		if( elf_file == NULL )
 		{
@@ -422,7 +425,6 @@ void SysPrepareExecution( const char* elf_file, bool use_bios )
 		{
 			// Custom ELF specified (not using CDVD).
 			// Run the BIOS and load the ELF.
-
 			loadElfFile( elf_file );
 		}
 	}

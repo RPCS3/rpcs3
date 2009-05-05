@@ -151,6 +151,7 @@ microVUt(void) mVUcleanUp() {
 	//mVUprint("microVU: VI0 = %x", params mVU->regs->VI[0].UL);
 	mVUcurProg.x86ptr = x86Ptr;
 	mVUcacheCheck(x86Ptr, mVUcurProg.x86start, (uptr)(mVUcurProg.x86end - mVUcurProg.x86start));
+	mVU->regs->cycle += mVU->totalCycles - mVU->cycles;
 }
 
 //------------------------------------------------------------------

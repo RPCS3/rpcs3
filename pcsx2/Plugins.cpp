@@ -21,6 +21,7 @@
 
 #include "IopCommon.h"
 #include "GS.h"
+#include "HostGui.h"
 
 _GSinit            GSinit;
 _GSopen            GSopen;
@@ -724,7 +725,8 @@ int OpenPlugins(const char* pTitleFilename)
 	}*/
 #endif
 
-	if( !OpenStatus.CDVD )
+	// Don't Open CDVD plugin if directly loading an elf file
+	if( !OpenStatus.CDVD && g_Startup.BootMode != BootMode_Elf)
 	{
 		//first we need the data
 		if (CDVDnewDiskCB) CDVDnewDiskCB(cdvdNewDiskCB);

@@ -138,6 +138,7 @@ microVUt(void) mVUsetFlags(int* bStatus, int* bMac) {
 		}
 		incPC2(-2);
 	}
+	iPC = endPC;
 }
 
 #define getFlagReg1(x)	((x == 3) ? gprF3 : ((x == 2) ? gprF2 : ((x == 1) ? gprF1 : gprF0)))
@@ -213,10 +214,6 @@ microVUt(void) mVUsetCycles() {
 	incCycles(mVUstall);
 	if (mVUregsTemp.VFreg[0] == mVUregsTemp.VFreg[1] && mVUregsTemp.VFreg[0]) {	// If upper Op && lower Op write to same VF reg
 		mVUinfo |= (mVUregsTemp.r || mVUregsTemp.VI) ? _noWriteVF : _isNOP;		// If lower Op doesn't modify anything else, then make it a NOP
-		tCycles(mVUregsTemp.VF[1].x, mVUregsTemp.VF[0].x) // Use max cycles from each vector
-		tCycles(mVUregsTemp.VF[1].y, mVUregsTemp.VF[0].y)
-		tCycles(mVUregsTemp.VF[1].z, mVUregsTemp.VF[0].z)
-		tCycles(mVUregsTemp.VF[1].w, mVUregsTemp.VF[0].w)
 	}
 	tCycles(mVUregs.VF[mVUregsTemp.VFreg[0]].x, mVUregsTemp.VF[0].x);
 	tCycles(mVUregs.VF[mVUregsTemp.VFreg[0]].y, mVUregsTemp.VF[0].y);
@@ -241,10 +238,12 @@ microVUt(void) mVUdivSet() {
 	if (doDivFlag) {
 		getFlagReg(flagReg1, fsInstance);
 		if (!doStatus) { getFlagReg(flagReg2, fpsInstance); MOV16RtoR(flagReg1, flagReg2); }
-		MOV32RtoR(gprT1, flagReg1);
-		AND32ItoR(gprT1, 0xffff0fcf);
-		OR32MtoR (gprT1, (uptr)&mVU->divFlag);
-		MOV32RtoR(flagReg1, gprT1);
+		//MOV32RtoR(gprT1, flagReg1);
+		//AND32ItoR(gprT1, 0xffff0fcf);
+		//OR32MtoR (gprT1, (uptr)&mVU->divFlag);
+		//MOV32RtoR(flagReg1, gprT1);
+		AND16ItoR(flagReg1, 0x0fcf);
+		OR32MtoR (flagReg1, (uptr)&mVU->divFlag);
 	}
 }
 
@@ -252,13 +251,17 @@ microVUt(void) mVUendProgram() {
 	microVU* mVU = mVUx;
 	incCycles(100); // Ensures Valid P/Q instances (And sets all cycle data to 0)
 	mVUcycles -= 100;
+
 	if (mVU->q) { SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, 0xe5); }
 	SSE_MOVSS_XMM_to_M32((uptr)&mVU->regs->VI[REG_Q].UL, xmmPQ);
-	SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVU->p ? 3 : 2);
-	SSE_MOVSS_XMM_to_M32((uptr)&mVU->regs->VI[REG_P].UL, xmmPQ);
+	if (vuIndex) {
+		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVU->p ? 3 : 2);
+		SSE_MOVSS_XMM_to_M32((uptr)&mVU->regs->VI[REG_P].UL, xmmPQ);
+	}
 
 	//memcpy_fast(&pBlock->pStateEnd, &mVUregs, sizeof(microRegInfo));
 	//MOV32ItoM((uptr)&mVU->prog.lpState, (int)&mVUblock.pState); // Save pipeline state (clipflag instance)
+	//AND32ItoM((uptr)&VU0.VI[REG_VPU_STAT].UL, (vuIndex ? ~0x100 : ~0x001)); // VBS0/VBS1 flag
 	AND32ItoM((uptr)&microVU0.regs->VI[REG_VPU_STAT].UL, (vuIndex ? ~0x100 : ~0x001)); // VBS0/VBS1 flag
 	AND32ItoM((uptr)&mVU->regs->vifRegs->stat, ~0x4); // Clear VU 'is busy' signal for vif
 	MOV32ItoM((uptr)&mVU->regs->VI[REG_TPC].UL, xPC);
@@ -270,7 +273,7 @@ microVUt(void) mVUtestCycles() {
 	iPC = mVUstartPC;
 	CMP32ItoM((uptr)&mVU->cycles, 0);
 	u8* jmp8 = JG8(0);
-	mVUendProgram<vuIndex>();
+		mVUendProgram<vuIndex>();
 	x86SetJ8(jmp8);
 	SUB32ItoM((uptr)&mVU->cycles, mVUcycles);
 }
