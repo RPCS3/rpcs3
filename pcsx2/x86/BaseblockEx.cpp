@@ -21,9 +21,6 @@
 
 BASEBLOCKEX* BaseBlocks::New(u32 startpc, uptr fnptr)
 {
-	if (blocks.size() == size)
-		return 0;
-
 	BASEBLOCKEX newblock;
 	std::vector<BASEBLOCKEX>::iterator iter;
 	memset(&newblock, 0, sizeof newblock);

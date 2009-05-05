@@ -51,7 +51,6 @@ uptr psxhwLUT[0x10000];
 
 #define HWADDR(mem) (psxhwLUT[mem >> 16] + (mem))
 
-#define PSX_NUMBLOCKS (1<<12)
 #define MAPBASE			0x48000000
 #define RECMEM_SIZE		(8*1024*1024)
 
@@ -63,7 +62,7 @@ static BASEBLOCK *recRAM = NULL;	// and the ptr to the blocks here
 static BASEBLOCK *recROM = NULL;	// and here
 static BASEBLOCK *recROM1 = NULL;	// also here
 void iopJITCompile();
-static BaseBlocks recBlocks(PSX_NUMBLOCKS, (uptr)iopJITCompile);
+static BaseBlocks recBlocks((uptr)iopJITCompile);
 static u8 *recPtr = NULL;
 u32 psxpc;			// recompiler psxpc
 int psxbranch;		// set for branch
@@ -986,16 +985,8 @@ void iopRecRecompile(u32 startpc)
 		|| s_pCurBlock->GetFnptr() == (uptr)iopJITCompileInBlock);
 
 	s_pCurBlockEx = recBlocks.Get(HWADDR(startpc));
-	if(!s_pCurBlockEx || s_pCurBlockEx->startpc != HWADDR(startpc)) {
+	if(!s_pCurBlockEx || s_pCurBlockEx->startpc != HWADDR(startpc))
 		s_pCurBlockEx = recBlocks.New(HWADDR(startpc), (uptr)recPtr);
-
-		if( s_pCurBlockEx == NULL ) {
-			DevCon::WriteLn("IOP Recompiler data reset");
-			recResetIOP();
-			x86SetPtr( recPtr );
-			s_pCurBlockEx = recBlocks.New(HWADDR(startpc), (uptr)recPtr);
-		}
-	}
 	
     psxbranch = 0;
 
