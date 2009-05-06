@@ -18,6 +18,8 @@
 
 #pragma once
 
+#include "MemoryTypes.h"
+
 extern u8 *psxM;
 extern u8 *psxP;
 extern u8 *psxH;

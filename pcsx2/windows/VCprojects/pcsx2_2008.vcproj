@@ -2089,6 +2089,10 @@
 						>
 					</File>
 					<File
+						RelativePath="..\..\MemoryTypes.h"
+						>
+					</File>
+					<File
 						RelativePath="..\..\x86\ix86-32\recVTLB.cpp"
 						>
 					</File>

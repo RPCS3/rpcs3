@@ -23,23 +23,8 @@
 #endif
 
 //#define ENABLECACHE
+#include "MemoryTypes.h"
 #include "vtlb.h"
-
-namespace Ps2MemSize
-{
-	static const uint Base	= 0x02000000;		// 32 MB main memory!
-	static const uint Rom	= 0x00400000;		// 4 MB main rom
-	static const uint Rom1	= 0x00040000;		// DVD player
-	static const uint Rom2	= 0x00080000;		// Chinese rom extension (?)
-	static const uint ERom	= 0x001C0000;		// DVD player extensions (?)
-	static const uint Hardware = 0x00010000;
-	static const uint Scratch = 0x00004000;
-
-	static const uint IopRam = 0x00200000;	// 2MB main ram on the IOP.
-	static const uint IopHardware = 0x00010000;
-
-	static const uint GSregs = 0x00002000;		// 8k for the GS registers and stuff.
-}
 
 extern u8  *psM; //32mb Main Ram
 extern u8  *psR; //4mb rom area
@@ -56,7 +41,6 @@ extern u8  *psS; //0.015 mb, scratch pad
 #define PS2MEM_EROM		psER
 #define PS2MEM_SCRATCH	psS
 
-extern u8 g_RealGSMem[Ps2MemSize::GSregs];
 #define PS2MEM_GS	g_RealGSMem
 #define PS2GS_BASE(mem) (g_RealGSMem+(mem&0x13ff))
 
@@ -173,35 +157,6 @@ extern void mmap_ClearCpuBlock( uint offset );
 #define memWrite32 vtlb_memWrite32
 #define memWrite64 vtlb_memWrite64
 #define memWrite128 vtlb_memWrite128
-
-#define _eeReadConstMem8 0&&
-#define _eeReadConstMem16 0&&
-#define _eeReadConstMem32 0&&
-#define _eeReadConstMem128 0&&
-#define _eeWriteConstMem8 0&&
-#define _eeWriteConstMem16 0&&
-#define _eeWriteConstMem32 0&&
-#define _eeWriteConstMem64 0&&
-#define _eeWriteConstMem128 0&&
-#define _eeMoveMMREGtoR 0&&
-
-// extra ops
-// These allow the old unused const versions of various HW accesses to continue to compile.
-// (code left in for reference purposes, but is not needed by Vtlb)
-#define _eeWriteConstMem16OP 0&&
-#define _eeWriteConstMem32OP 0&&
-
-#define recMemConstRead8 0&&
-#define recMemConstRead16 0&&
-#define recMemConstRead32 0&&
-#define recMemConstRead64 0&&
-#define recMemConstRead128 0&&
-
-#define recMemConstWrite8 0&&
-#define recMemConstWrite16 0&&
-#define recMemConstWrite32 0&&
-#define recMemConstWrite64 0&&
-#define recMemConstWrite128 0&&
 
 extern void loadBiosRom( const char *ext, u8 *dest, long maxSize );
 extern u16 ba0R16(u32 mem);

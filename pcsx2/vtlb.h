@@ -1,11 +1,5 @@
-#ifndef _VTLB_H_
-#define _VTLB_H_
 
-typedef u8 mem8_t;
-typedef u16 mem16_t;
-typedef u32 mem32_t;
-typedef u64 mem64_t;
-typedef u64 mem128_t;
+#pragma once
 
 // Specialized function pointers for each read type
 typedef  mem8_t __fastcall vtlbMemR8FP(u32 addr);
@@ -95,5 +89,3 @@ namespace vtlb_private
 
 	PCSX2_ALIGNED_EXTERN( 64, MapData vtlbdata );
 }
-
-#endif

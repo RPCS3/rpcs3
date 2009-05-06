@@ -344,8 +344,7 @@ int _flushUnusedConstReg()
 // recAllocStackMem -- an optimization trick to write data to a location so that
 // recompiled code can reference it later on during execution.
 //
-// Intended use is for setting up 128 bit SSE immediates, and for compiling a
-// struct-worth of const data for calling a function/handler (vtlb).
+// Intended use is for setting up 64/128 bit SSE immediates, primarily.
 //
 u32* recAllocStackMem(int size, int align)
 {
