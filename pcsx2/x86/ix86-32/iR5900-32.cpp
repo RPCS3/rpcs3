@@ -340,14 +340,22 @@ int _flushUnusedConstReg()
 	return 0;
 }
 
+// ------------------------------------------------------------------------
+// recAllocStackMem -- an optimization trick to write data to a location so that
+// recompiled code can reference it later on during execution.
+//
+// Intended use is for setting up 128 bit SSE immediates, and for compiling a
+// struct-worth of const data for calling a function/handler (vtlb).
+//
 u32* recAllocStackMem(int size, int align)
 {
-	// write to a temp loc, trick
-	if( (u32)recStackPtr % align ) recStackPtr += align - ((u32)recStackPtr%align);
+	recStackPtr += align - ((u32)recStackPtr % align);
 	recStackPtr += size;
 	return (u32*)(recStackPtr-size);
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////
+//
 static const int REC_CACHEMEM = 0x01000000;
 static void __fastcall dyna_block_discard(u32 start,u32 sz);
 

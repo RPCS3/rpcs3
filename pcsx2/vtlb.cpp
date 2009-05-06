@@ -61,30 +61,6 @@ vtlbHandler UnmappedVirtHandler1;
 vtlbHandler UnmappedPhyHandler0;
 vtlbHandler UnmappedPhyHandler1;
 
-	/*
-	__asm
-	{
-		mov eax,ecx;
-		shr ecx,12;
-		mov ecx,[ecx*4+vmap];	//translate
-		add ecx,eax;			//transform
-		
-		js callfunction;		//if <0 its invalid ptr :)
-
-		mov eax,[ecx];
-		mov [edx],eax;
-		xor eax,eax;
-		ret;
-
-callfunction:
-		xchg eax,ecx;
-		shr eax,12; //get the 'ppn'
-
-		//ecx = original addr
-		//eax = function entry + 0x800000
-		//edx = data ptr
-		jmp [readfunctions8-0x800000+eax];
-	}*/
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // Interpreter Implementations of VTLB Memory Operations.
@@ -516,22 +492,27 @@ void vtlb_Init()
 	//the physical address space can be 'compressed' to just 29 bits.However, to properly handle exceptions
 	//there must be a way to get the full address back.Thats why i use these 2 functions and encode the hi bit directly into em :)
 
-	UnmappedVirtHandler0=vtlb_RegisterHandler(vtlbUnmappedVRead8<0>,vtlbUnmappedVRead16<0>,vtlbUnmappedVRead32<0>,vtlbUnmappedVRead64<0>,vtlbUnmappedVRead128<0>,
-											  vtlbUnmappedVWrite8<0>,vtlbUnmappedVWrite16<0>,vtlbUnmappedVWrite32<0>,vtlbUnmappedVWrite64<0>,vtlbUnmappedVWrite128<0>);
+	UnmappedVirtHandler0 = vtlb_RegisterHandler(
+		vtlbUnmappedVRead8<0>,vtlbUnmappedVRead16<0>,vtlbUnmappedVRead32<0>,vtlbUnmappedVRead64<0>,vtlbUnmappedVRead128<0>,
+		vtlbUnmappedVWrite8<0>,vtlbUnmappedVWrite16<0>,vtlbUnmappedVWrite32<0>,vtlbUnmappedVWrite64<0>,vtlbUnmappedVWrite128<0>
+	);
 
-	UnmappedVirtHandler1=vtlb_RegisterHandler(vtlbUnmappedVRead8<0x80000000>,vtlbUnmappedVRead16<0x80000000>,vtlbUnmappedVRead32<0x80000000>,
-												vtlbUnmappedVRead64<0x80000000>,vtlbUnmappedVRead128<0x80000000>,
-											  vtlbUnmappedVWrite8<0x80000000>,vtlbUnmappedVWrite16<0x80000000>,vtlbUnmappedVWrite32<0x80000000>,
-												vtlbUnmappedVWrite64<0x80000000>,vtlbUnmappedVWrite128<0x80000000>);
+	UnmappedVirtHandler1 = vtlb_RegisterHandler(
+		vtlbUnmappedVRead8<0x80000000>,vtlbUnmappedVRead16<0x80000000>,vtlbUnmappedVRead32<0x80000000>, vtlbUnmappedVRead64<0x80000000>,vtlbUnmappedVRead128<0x80000000>,
+		vtlbUnmappedVWrite8<0x80000000>,vtlbUnmappedVWrite16<0x80000000>,vtlbUnmappedVWrite32<0x80000000>, vtlbUnmappedVWrite64<0x80000000>,vtlbUnmappedVWrite128<0x80000000>
+	);
 
-	UnmappedPhyHandler0=vtlb_RegisterHandler(vtlbUnmappedPRead8<0>,vtlbUnmappedPRead16<0>,vtlbUnmappedPRead32<0>,vtlbUnmappedPRead64<0>,vtlbUnmappedPRead128<0>,
-											  vtlbUnmappedPWrite8<0>,vtlbUnmappedPWrite16<0>,vtlbUnmappedPWrite32<0>,vtlbUnmappedPWrite64<0>,vtlbUnmappedPWrite128<0>);
+	UnmappedPhyHandler0 = vtlb_RegisterHandler(
+		vtlbUnmappedPRead8<0>,vtlbUnmappedPRead16<0>,vtlbUnmappedPRead32<0>,vtlbUnmappedPRead64<0>,vtlbUnmappedPRead128<0>,
+		vtlbUnmappedPWrite8<0>,vtlbUnmappedPWrite16<0>,vtlbUnmappedPWrite32<0>,vtlbUnmappedPWrite64<0>,vtlbUnmappedPWrite128<0>
+	);
 
-	UnmappedPhyHandler1=vtlb_RegisterHandler(vtlbUnmappedPRead8<0x80000000>,vtlbUnmappedPRead16<0x80000000>,vtlbUnmappedPRead32<0x80000000>,
-												vtlbUnmappedPRead64<0x80000000>,vtlbUnmappedPRead128<0x80000000>,
-											  vtlbUnmappedPWrite8<0x80000000>,vtlbUnmappedPWrite16<0x80000000>,vtlbUnmappedPWrite32<0x80000000>,
-												vtlbUnmappedPWrite64<0x80000000>,vtlbUnmappedPWrite128<0x80000000>);
-	DefaultPhyHandler=vtlb_RegisterHandler(0,0,0,0,0,0,0,0,0,0);
+	UnmappedPhyHandler1 = vtlb_RegisterHandler(
+		vtlbUnmappedPRead8<0x80000000>,vtlbUnmappedPRead16<0x80000000>,vtlbUnmappedPRead32<0x80000000>, vtlbUnmappedPRead64<0x80000000>,vtlbUnmappedPRead128<0x80000000>,
+		vtlbUnmappedPWrite8<0x80000000>,vtlbUnmappedPWrite16<0x80000000>,vtlbUnmappedPWrite32<0x80000000>, vtlbUnmappedPWrite64<0x80000000>,vtlbUnmappedPWrite128<0x80000000>
+	);
+
+	DefaultPhyHandler = vtlb_RegisterHandler(0,0,0,0,0,0,0,0,0,0);
 
 	//done !
 
@@ -542,6 +523,9 @@ void vtlb_Init()
 	vtlb_VMapUnmap(0,(VTLB_VMAP_ITEMS-1)*VTLB_PAGE_SIZE);
 	//yeah i know, its stupid .. but this code has to be here for now ;p
 	vtlb_VMapUnmap((VTLB_VMAP_ITEMS-1)*VTLB_PAGE_SIZE,VTLB_PAGE_SIZE);
+	
+	extern void vtlb_dynarec_init();
+	vtlb_dynarec_init();
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////

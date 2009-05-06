@@ -68,6 +68,11 @@ namespace x86Emitter
 		return xAddressInfo( *this, right );
 	}
 
+	__forceinline xAddressInfo xAddressReg::operator+( const void* right ) const
+	{
+		return xAddressInfo( *this, (s32)right );
+	}
+
 	__forceinline xAddressInfo xAddressReg::operator*( u32 right ) const
 	{
 		return xAddressInfo( Empty, *this, right );

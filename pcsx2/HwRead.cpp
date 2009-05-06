@@ -52,7 +52,7 @@ static __forceinline void IntCHackCheck()
 /////////////////////////////////////////////////////////////////////////
 // Hardware READ 8 bit
 
-__forceinline u8 hwRead8(u32 mem)
+__forceinline mem8_t hwRead8(u32 mem)
 {
 	u8 ret;
 
@@ -117,7 +117,7 @@ __forceinline u8 hwRead8(u32 mem)
 /////////////////////////////////////////////////////////////////////////
 // Hardware READ 16 bit
 
-__forceinline u16 hwRead16(u32 mem)
+__forceinline mem16_t hwRead16(u32 mem)
 {
 	u16 ret;
 

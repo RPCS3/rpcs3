@@ -157,87 +157,204 @@ void iMOV64_Smart( const ModSibBase& destRm, const ModSibBase& srcRm )
 
 	*/
 
-//////////////////////////////////////////////////////////////////////////////////////////
-//                            Dynarec Load Implementations
-
-static void _vtlb_DynGen_DirectRead( u32 bits, bool sign )
+/*template< u32 ReadOrWrite, u32 bitType >
+static __naked void _indirectMagicNaked()
 {
-	switch( bits )
+	enum
 	{
-		case 8:
-			if( sign )
-				MOVSX32Rm8toR(EAX,ECX);
-			else
-				MOVZX32Rm8toR(EAX,ECX);
-		break;
+		OffsetRWFT = (128*4*2*bitType) + (128*4*ReadOrWrite)
+	};
 
-		case 16:
-			if( sign )
-				MOVSX32Rm16toR(EAX,ECX);
-			else
-				MOVZX32Rm16toR(EAX,ECX);
-		break;
+	__asm
+	{
+		movzx eax, al
+		push ebx		// return address - the indirect handler will return to this.
+		sub ecx, 0x80000000
+		sub ecx, eax
+		
+		// jump to the indirect handler, which is a __fastcall C++ function.
+		// [edx is address, ecx is data, and the stack si the return address]
+		jmp [eax*4 + vtlbdata.RWFT + OffsetRWFT]
+	}
+}*/
 
-		case 32:
-			MOV32RmtoR(EAX,ECX);
-		break;
+namespace vtlb_private
+{
+	static void DynGen_DirectRead( u32 bits, bool sign )
+	{
+		switch( bits )
+		{
+			case 8:
+				if( sign )
+					MOVSX32Rm8toR(EAX,ECX);
+				else
+					MOVZX32Rm8toR(EAX,ECX);
+			break;
 
-		case 64:
-			iMOV64_Smart(ptr[edx],ptr[ecx]);
-		break;
+			case 16:
+				if( sign )
+					MOVSX32Rm16toR(EAX,ECX);
+				else
+					MOVZX32Rm16toR(EAX,ECX);
+			break;
 
-		case 128:
-			iMOV128_SSE(ptr[edx],ptr[ecx]);
-		break;
+			case 32:
+				MOV32RmtoR(EAX,ECX);
+			break;
 
-		jNO_DEFAULT
+			case 64:
+				iMOV64_Smart(ptr[edx],ptr[ecx]);
+			break;
+
+			case 128:
+				iMOV128_SSE(ptr[edx],ptr[ecx]);
+			break;
+
+			jNO_DEFAULT
+		}
+	}
+
+	// ------------------------------------------------------------------------
+	static void DynGen_IndirectRead( u32 bits )
+	{
+		int szidx;
+
+		switch( bits )
+		{
+			case 8:  szidx=0;	break;
+			case 16: szidx=1;	break;
+			case 32: szidx=2;	break;
+			case 64: szidx=3;	break;
+			case 128: szidx=4;	break;
+			jNO_DEFAULT
+		}
+
+		MOVZX32R8toR(EAX,EAX);
+		SUB32ItoR(ECX,0x80000000);
+		SUB32RtoR(ECX,EAX);
+		xCALL( ptr32[(eax*4) + vtlbdata.RWFT[szidx][0]] );
+	}
+
+	// ------------------------------------------------------------------------
+	static void DynGen_DirectWrite( u32 bits )
+	{
+		switch(bits)
+		{
+			//8 , 16, 32 : data on EDX
+			case 8:
+				MOV8RtoRm(ECX,EDX);
+			break;
+			case 16:
+				MOV16RtoRm(ECX,EDX);
+			break;
+			case 32:
+				MOV32RtoRm(ECX,EDX);
+			break;
+
+			case 64:
+				iMOV64_Smart(ptr[ecx],ptr[edx]);
+			break;
+
+			case 128:
+				iMOV128_SSE(ptr[ecx],ptr[edx]);
+			break;
+		}
 	}
 }
 
 // ------------------------------------------------------------------------
-static void _vtlb_DynGen_IndirectRead( u32 bits )
+// allocate one page for our naked indirect dispatcher function.
+// this *must* be a full page, since we'll give it execution permission later.
+// If it were smaller than a page we'd end up allowing execution rights on some
+// other vars additionally (bad!).
+//
+PCSX2_ALIGNED( 0x1000, static u8 m_IndirectDispatchers[0x1000] );
+
+// ------------------------------------------------------------------------
+// mode        - 0 for read, 1 for write!
+// operandsize - 0 thru 4 represents 8, 16, 32, 64, and 128 bits.
+//
+static u8* GetIndirectDispatcherPtr( int mode, int operandsize )
+{
+	// Each dispatcher is aligned to 64 bytes.  The actual dispatchers are only like
+	// 20-some bytes each, but 64 byte alignment on functions that are called
+	// more frequently than a hot sex hotline at 1:15am is probably a good thing.
+
+	// 5*64?  Because 5 operand types per each mode :D
+
+	return &m_IndirectDispatchers[(mode*(5*64)) + (operandsize*64)];
+}
+
+// ------------------------------------------------------------------------
+// Generates a JS instruction that targets the appropriate templated instance of
+// the vtlb Indirect Dispatcher.
+//
+static void DynGen_IndirectDispatch( int mode, int bits )
 {
 	int szidx;
-
 	switch( bits )
 	{
-		case 8:  szidx=0;	break;
-		case 16: szidx=1;	break;
-		case 32: szidx=2;	break;
-		case 64: szidx=3;	break;
-		case 128: szidx=4;	break;
-		jNO_DEFAULT
+		case 8:		szidx=0;	break;
+		case 16:	szidx=1;	break;
+		case 32:	szidx=2;	break;
+		case 64:	szidx=3;	break;
+		case 128:	szidx=4;	break;
+		jNO_DEFAULT;
 	}
-
-	MOVZX32R8toR(EAX,EAX);
-	SUB32RtoR(ECX,EAX);
-	//eax=[funct+eax]
-	MOV32RmSOffsettoR(EAX,EAX,(int)vtlbdata.RWFT[szidx][0],2);
-	SUB32ItoR(ECX,0x80000000);
-	CALL32R(EAX);
+	xJS( GetIndirectDispatcherPtr( mode, szidx ) );
 }
 
-// ------------------------------------------------------------------------
-// Recompiled input registers:
-//   ecx = source addr to read from
-//   edx = ptr to dest to write to
+//////////////////////////////////////////////////////////////////////////////////////////
+// One-time initialization procedure.  Calling it multiple times shouldn't
+// hurt anything tho.
+//
+void vtlb_dynarec_init()
+{
+	// In case init gets called multiple times:
+	HostSys::MemProtect( m_IndirectDispatchers, 0x1000, Protect_ReadWrite, false );
+
+	// clear the buffer to 0xcc (easier debugging).
+	memset_8<0xcc,0x1000>( m_IndirectDispatchers );
+
+	u8* baseptr = m_IndirectDispatchers;
+
+	for( int mode=0; mode<2; ++mode )
+	{
+		for( int bits=0; bits<5; ++bits )
+		{
+			xSetPtr( GetIndirectDispatcherPtr( mode, bits ) );
+
+			xMOVZX( eax, al );
+			xSUB( ecx, 0x80000000 );
+			xSUB( ecx, eax );
+
+			// jump to the indirect handler, which is a __fastcall C++ function.
+			// [edx is address, ecx is data]
+			xCALL( ptr32[(eax*4) + vtlbdata.RWFT[bits][mode]] );
+			xJMP( ebx );
+		}
+	}
+
+	HostSys::MemProtect( m_IndirectDispatchers, 0x1000, Protect_ReadOnly, true );
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////
+//                            Dynarec Load Implementations
 void vtlb_DynGenRead64(u32 bits)
 {
 	jASSUME( bits == 64 || bits == 128 );
 
-	MOV32RtoR(EAX,ECX);
-	SHR32ItoR(EAX,VTLB_PAGE_BITS);
-	MOV32RmSOffsettoR(EAX,EAX,(int)vtlbdata.vmap,2);
-	ADD32RtoR(ECX,EAX);
-	xForwardJS8 _fullread;
+	xMOV( eax, ecx );
+	xSHR( eax, VTLB_PAGE_BITS );
+	xMOV( eax, ptr[(eax*4) + vtlbdata.vmap] );
+	xMOV( ebx, 0xcdcdcdcd );
+	uptr* writeback = ((uptr*)xGetPtr()) - 1;
+	xADD( ecx, eax );
 
-	_vtlb_DynGen_DirectRead( bits, false );
-	xForwardJump8 cont;
-
-	_fullread.SetTarget();
+	DynGen_IndirectDispatch( 0, bits );
+	DynGen_DirectRead( bits, false );
 	
-	_vtlb_DynGen_IndirectRead( bits );
-	cont.SetTarget();
+	*writeback = (uptr)xGetPtr();		// return target for indirect's call/ret
 }
 
 // ------------------------------------------------------------------------
@@ -248,17 +365,17 @@ void vtlb_DynGenRead32(u32 bits, bool sign)
 {
 	jASSUME( bits <= 32 );
 
-	MOV32RtoR(EAX,ECX);
-	SHR32ItoR(EAX,VTLB_PAGE_BITS);
-	MOV32RmSOffsettoR(EAX,EAX,(int)vtlbdata.vmap,2);
-	ADD32RtoR(ECX,EAX);
-	xForwardJS8 _fullread;
+	xMOV( eax, ecx );
+	xSHR( eax, VTLB_PAGE_BITS );
+	xMOV( eax, ptr[(eax*4) + vtlbdata.vmap] );
+	xMOV( ebx, 0xcdcdcdcd );
+	uptr* writeback = ((uptr*)xGetPtr()) - 1;
+	xADD( ecx, eax );
 
-	_vtlb_DynGen_DirectRead( bits, sign );
-	xForwardJump8 cont;
-
-	_fullread.SetTarget();
-	_vtlb_DynGen_IndirectRead( bits );
+	DynGen_IndirectDispatch( 0, bits );
+	DynGen_DirectRead( bits, sign );
+	
+	*writeback = (uptr)xGetPtr();
 
 	// perform sign extension on the result:
 
@@ -276,7 +393,6 @@ void vtlb_DynGenRead32(u32 bits, bool sign)
 		else
 			MOVZX32R16toR(EAX,EAX);
 	}
-	cont.SetTarget();
 }
 
 // ------------------------------------------------------------------------
@@ -326,6 +442,7 @@ void vtlb_DynGenRead64_Const( u32 bits, u32 addr_const )
 //
 // TLB lookup is performed in const, with the assumption that the COP0/TLB will clear the
 // recompiler if the TLB is changed.
+//
 void vtlb_DynGenRead32_Const( u32 bits, bool sign, u32 addr_const )
 {
 	u32 vmv_ptr = vtlbdata.vmap[addr_const>>VTLB_PAGE_BITS];
@@ -336,16 +453,16 @@ void vtlb_DynGenRead32_Const( u32 bits, bool sign, u32 addr_const )
 		{
 			case 8:
 				if( sign )
-					MOVSX32M8toR(EAX,ppf);
+					xMOVSX( eax, ptr8[ppf] );
 				else
-					MOVZX32M8toR(EAX,ppf);
+					xMOVZX( eax, ptr8[ppf] );					
 			break;
 
 			case 16:
 				if( sign )
-					MOVSX32M16toR(EAX,ppf);
+					xMOVSX( eax, ptr16[ppf] );
 				else
-					MOVZX32M16toR(EAX,ppf);
+					xMOVZX( eax, ptr16[ppf] );
 			break;
 
 			case 32:
@@ -382,16 +499,16 @@ void vtlb_DynGenRead32_Const( u32 bits, bool sign, u32 addr_const )
 			if( bits==8 )
 			{
 				if( sign )
-					MOVSX32R8toR(EAX,EAX);
+					xMOVSX( eax, al );
 				else
-					MOVZX32R8toR(EAX,EAX);
+					xMOVZX( eax, al );
 			}
 			else if( bits==16 )
 			{
 				if( sign )
-					MOVSX32R16toR(EAX,EAX);
+					xMOVSX( eax, ax );
 				else
-					MOVZX32R16toR(EAX,EAX);
+					xMOVZX( eax, ax );
 			}
 		}
 	}
@@ -400,67 +517,19 @@ void vtlb_DynGenRead32_Const( u32 bits, bool sign, u32 addr_const )
 //////////////////////////////////////////////////////////////////////////////////////////
 //                            Dynarec Store Implementations
 
-static void _vtlb_DynGen_DirectWrite( u32 bits )
-{
-	switch(bits)
-	{
-		//8 , 16, 32 : data on EDX
-		case 8:
-			MOV8RtoRm(ECX,EDX);
-		break;
-		case 16:
-			MOV16RtoRm(ECX,EDX);
-		break;
-		case 32:
-			MOV32RtoRm(ECX,EDX);
-		break;
-
-		case 64:
-			iMOV64_Smart(ptr[ecx],ptr[edx]);
-		break;
-
-		case 128:
-			iMOV128_SSE(ptr[ecx],ptr[edx]);
-		break;
-	}
-}
-
-// ------------------------------------------------------------------------
-static void _vtlb_DynGen_IndirectWrite( u32 bits )
-{
-	int szidx=0;
-	switch( bits )
-	{
-		case 8:  szidx=0;	break;
-		case 16:   szidx=1;	break;
-		case 32:   szidx=2;	break;
-		case 64:   szidx=3;	break;
-		case 128:   szidx=4; break;
-	}
-	MOVZX32R8toR(EAX,EAX);
-	SUB32RtoR(ECX,EAX);
-	//eax=[funct+eax]
-	MOV32RmSOffsettoR(EAX,EAX,(int)vtlbdata.RWFT[szidx][1],2);
-	SUB32ItoR(ECX,0x80000000);
-	CALL32R(EAX);
-}
-
-// ------------------------------------------------------------------------
 void vtlb_DynGenWrite(u32 sz)
 {
-	MOV32RtoR(EAX,ECX);
-	SHR32ItoR(EAX,VTLB_PAGE_BITS);
-	MOV32RmSOffsettoR(EAX,EAX,(int)vtlbdata.vmap,2);
-	ADD32RtoR(ECX,EAX);
-	xForwardJS8 _full;
+	xMOV( eax, ecx );
+	xSHR( eax, VTLB_PAGE_BITS );
+	xMOV( eax, ptr[(eax*4) + vtlbdata.vmap] );
+	xMOV( ebx, 0xcdcdcdcd );
+	uptr* writeback = ((uptr*)xGetPtr()) - 1;
+	xADD( ecx, eax );
 
-	_vtlb_DynGen_DirectWrite( sz );
-	xForwardJump8 cont;
+	DynGen_IndirectDispatch( 1, sz );
+	DynGen_DirectWrite( sz );
 
-	_full.SetTarget();
-	_vtlb_DynGen_IndirectWrite( sz );
-
-	cont.SetTarget();
+	*writeback = (uptr)xGetPtr();
 }
 
 

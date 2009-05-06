@@ -347,7 +347,7 @@ void __fastcall _ext_memRead128(u32 mem, mem128_t *out)
 }
 
 template<int p>
-void __fastcall _ext_memWrite8 (u32 mem, u8  value)
+void __fastcall _ext_memWrite8 (u32 mem, mem8_t  value)
 {
 	switch (p) {
 		case 1: // hwm
@@ -367,7 +367,7 @@ void __fastcall _ext_memWrite8 (u32 mem, u8  value)
 	cpuTlbMissW(mem, cpuRegs.branch);
 }
 template<int p>
-void __fastcall _ext_memWrite16(u32 mem, u16 value)
+void __fastcall _ext_memWrite16(u32 mem, mem16_t value)
 {
 	switch (p) {
 		case 1: // hwm
@@ -392,7 +392,7 @@ void __fastcall _ext_memWrite16(u32 mem, u16 value)
 }
 
 template<int p>
-void __fastcall _ext_memWrite32(u32 mem, u32 value)
+void __fastcall _ext_memWrite32(u32 mem, mem32_t value)
 {
 	switch (p) {
 		case 6: // gsm
@@ -407,7 +407,7 @@ void __fastcall _ext_memWrite32(u32 mem, u32 value)
 }
 
 template<int p>
-void __fastcall _ext_memWrite64(u32 mem, const u64* value)
+void __fastcall _ext_memWrite64(u32 mem, const mem64_t* value)
 {
 
 	/*switch (p) {
@@ -423,7 +423,7 @@ void __fastcall _ext_memWrite64(u32 mem, const u64* value)
 }
 
 template<int p>
-void __fastcall _ext_memWrite128(u32 mem, const u64 *value)
+void __fastcall _ext_memWrite128(u32 mem, const mem128_t *value)
 {
 	/*switch (p) {
 		//case 1: // hwm

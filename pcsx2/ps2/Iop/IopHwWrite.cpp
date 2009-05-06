@@ -37,9 +37,9 @@ static __forceinline void _generic_write( u32 addr, T val )
 	psxHu(addr) = val;
 }
 
-void __fastcall iopHwWrite8_generic( u32 addr, u8 val )	{ _generic_write<u8>( addr, val ); }
-void __fastcall iopHwWrite16_generic( u32 addr, u16 val )	{ _generic_write<u16>( addr, val ); }
-void __fastcall iopHwWrite32_generic( u32 addr, u32 val )	{ _generic_write<u32>( addr, val ); }
+void __fastcall iopHwWrite8_generic( u32 addr, mem8_t val )		{ _generic_write<mem8_t>( addr, val ); }
+void __fastcall iopHwWrite16_generic( u32 addr, mem16_t val )	{ _generic_write<mem16_t>( addr, val ); }
+void __fastcall iopHwWrite32_generic( u32 addr, mem32_t val )	{ _generic_write<mem32_t>( addr, val ); }
 
 //////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -53,14 +53,14 @@ static __forceinline T _generic_read( u32 addr )
 	return ret;
 }
 
-u8 __fastcall iopHwRead8_generic( u32 addr )		{ return _generic_read<u8>( addr ); }
-u16 __fastcall iopHwRead16_generic( u32 addr )	{ return _generic_read<u16>( addr ); }
-u32 __fastcall iopHwRead32_generic( u32 addr )	{ return _generic_read<u32>( addr ); }
+mem8_t __fastcall iopHwRead8_generic( u32 addr )	{ return _generic_read<mem8_t>( addr ); }
+mem16_t __fastcall iopHwRead16_generic( u32 addr )	{ return _generic_read<mem16_t>( addr ); }
+mem32_t __fastcall iopHwRead32_generic( u32 addr )	{ return _generic_read<mem32_t>( addr ); }
 
 
 //////////////////////////////////////////////////////////////////////////////////////////
 //
-void __fastcall iopHwWrite8_Page1( u32 addr, u8 val )
+void __fastcall iopHwWrite8_Page1( u32 addr, mem8_t val )
 {
 	// all addresses are assumed to be prefixed with 0x1f801xxx:
 	jASSUME( (addr >> 12) == 0x1f801 );
@@ -103,13 +103,13 @@ void __fastcall iopHwWrite8_Page1( u32 addr, u8 val )
 		break;
 	}
 
-	PSXHW_LOG( "HwWrite8 to %s, addr 0x%08x = 0x%02x\n", _log_GetIopHwName<u8>(addr), addr, val );
+	PSXHW_LOG( "HwWrite8 to %s, addr 0x%08x = 0x%02x\n", _log_GetIopHwName<mem8_t>(addr), addr, val );
 }
 
 static char g_pbuf[1024];
 static int g_pbufi;
 
-void __fastcall iopHwWrite8_Page3( u32 addr, u8 val )
+void __fastcall iopHwWrite8_Page3( u32 addr, mem8_t val )
 {
 	// all addresses are assumed to be prefixed with 0x1f803xxx:
 	jASSUME( (addr >> 12) == 0x1f803 );
@@ -133,11 +133,11 @@ void __fastcall iopHwWrite8_Page3( u32 addr, u8 val )
 		}
 	}
 
-	PSXHW_LOG( "HwWrite8 to %s, addr 0x%08x = 0x%02x", _log_GetIopHwName<u8>(addr), addr, psxHu8(addr) );
+	PSXHW_LOG( "HwWrite8 to %s, addr 0x%08x = 0x%02x", _log_GetIopHwName<mem8_t>(addr), addr, psxHu8(addr) );
 	psxHu8( addr ) = val;
 }
 
-void __fastcall iopHwWrite8_Page8( u32 addr, u8 val )
+void __fastcall iopHwWrite8_Page8( u32 addr, mem8_t val )
 {
 	// all addresses are assumed to be prefixed with 0x1f808xxx:
 	jASSUME( (addr >> 12) == 0x1f808 );
@@ -147,7 +147,7 @@ void __fastcall iopHwWrite8_Page8( u32 addr, u8 val )
 	else
 		psxHu8( addr ) = val;
 
-	PSXHW_LOG( "HwWrite8 to %s, addr 0x%08x = 0x%02x", _log_GetIopHwName<u8>(addr), addr, psxHu8(addr) );
+	PSXHW_LOG( "HwWrite8 to %s, addr 0x%08x = 0x%02x", _log_GetIopHwName<mem8_t>(addr), addr, psxHu8(addr) );
 	
 }
 
@@ -463,43 +463,43 @@ static __forceinline void _HwWrite_16or32_Page1( u32 addr, T val )
 
 //////////////////////////////////////////////////////////////////////////////////////////
 //
-void __fastcall iopHwWrite16_Page1( u32 addr, u16 val )
+void __fastcall iopHwWrite16_Page1( u32 addr, mem16_t val )
 {
-	_HwWrite_16or32_Page1<u16>( addr, val );
+	_HwWrite_16or32_Page1<mem16_t>( addr, val );
 }
 
-void __fastcall iopHwWrite16_Page3( u32 addr, u16 val )
+void __fastcall iopHwWrite16_Page3( u32 addr, mem16_t val )
 {
 	// all addresses are assumed to be prefixed with 0x1f803xxx:
 	jASSUME( (addr >> 12) == 0x1f803 );
 	psxHu16(addr) = val;
-	PSXHW_LOG( "HwWrite16 to %s, addr 0x%08x = 0x%04x", _log_GetIopHwName<u16>( addr ), addr, val );
+	PSXHW_LOG( "HwWrite16 to %s, addr 0x%08x = 0x%04x", _log_GetIopHwName<mem16_t>( addr ), addr, val );
 }
 
-void __fastcall iopHwWrite16_Page8( u32 addr, u16 val )
+void __fastcall iopHwWrite16_Page8( u32 addr, mem16_t val )
 {
 	// all addresses are assumed to be prefixed with 0x1f808xxx:
 	jASSUME( (addr >> 12) == 0x1f808 );
 	psxHu16(addr) = val;
-	PSXHW_LOG( "HwWrite16 to %s, addr 0x%08x = 0x%04x", _log_GetIopHwName<u16>( addr ), addr, val );
+	PSXHW_LOG( "HwWrite16 to %s, addr 0x%08x = 0x%04x", _log_GetIopHwName<mem16_t>( addr ), addr, val );
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
 //
-void __fastcall iopHwWrite32_Page1( u32 addr, u32 val )
+void __fastcall iopHwWrite32_Page1( u32 addr, mem32_t val )
 {
-	_HwWrite_16or32_Page1<u32>( addr, val );
+	_HwWrite_16or32_Page1<mem32_t >( addr, val );
 }
 
-void __fastcall iopHwWrite32_Page3( u32 addr, u32 val )
+void __fastcall iopHwWrite32_Page3( u32 addr, mem32_t val )
 {
 	// all addresses are assumed to be prefixed with 0x1f803xxx:
 	jASSUME( (addr >> 12) == 0x1f803 );
 	psxHu16(addr) = val;
-	PSXHW_LOG( "HwWrite32 to %s, addr 0x%08x = 0x%04x", _log_GetIopHwName<u16>( addr ), addr, val );
+	PSXHW_LOG( "HwWrite32 to %s, addr 0x%08x = 0x%04x", _log_GetIopHwName<mem32_t>( addr ), addr, val );
 }
 
-void __fastcall iopHwWrite32_Page8( u32 addr, u32 val )
+void __fastcall iopHwWrite32_Page8( u32 addr, mem32_t val )
 {
 	// all addresses are assumed to be prefixed with 0x1f808xxx:
 	jASSUME( (addr >> 12) == 0x1f808 );
@@ -539,7 +539,7 @@ void __fastcall iopHwWrite32_Page8( u32 addr, u32 val )
 	}
 	else psxHu32(addr) = val;
 
-	PSXHW_LOG( "HwWrite32 to %s, addr 0x%08x = 0x%02x", _log_GetIopHwName<u32>( addr ), addr, val );
+	PSXHW_LOG( "HwWrite32 to %s, addr 0x%08x = 0x%02x", _log_GetIopHwName<mem32_t>( addr ), addr, val );
 }
 
 }

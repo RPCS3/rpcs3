@@ -56,7 +56,7 @@ void MapTLB(int i)
 	if (tlb[i].S)
 	{
 		DevCon::WriteLn("OMG SPRAM MAPPING %08X %08X\n",params tlb[i].VPN2,tlb[i].Mask);
-		vtlb_VMapBuffer(tlb[i].VPN2,psS,0x4000);
+		vtlb_VMapBuffer(tlb[i].VPN2, psS, 0x4000);
 	}
 
 	if (tlb[i].VPN2 == 0x70000000) return; //uh uhh right ...

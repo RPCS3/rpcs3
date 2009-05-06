@@ -48,13 +48,13 @@ extern void vtlb_VMapUnmap(u32 vaddr,u32 sz);
 
 //Memory functions
 
-extern u8 __fastcall vtlb_memRead8(u32 mem);
-extern u16 __fastcall vtlb_memRead16(u32 mem);
+extern mem8_t __fastcall vtlb_memRead8(u32 mem);
+extern mem16_t __fastcall vtlb_memRead16(u32 mem);
 extern u32 __fastcall vtlb_memRead32(u32 mem);
 extern void __fastcall vtlb_memRead64(u32 mem, u64 *out);
 extern void __fastcall vtlb_memRead128(u32 mem, u64 *out);
-extern void __fastcall vtlb_memWrite8 (u32 mem, u8  value);
-extern void __fastcall vtlb_memWrite16(u32 mem, u16 value);
+extern void __fastcall vtlb_memWrite8 (u32 mem, mem8_t  value);
+extern void __fastcall vtlb_memWrite16(u32 mem, mem16_t value);
 extern void __fastcall vtlb_memWrite32(u32 mem, u32 value);
 extern void __fastcall vtlb_memWrite64(u32 mem, const u64* value);
 extern void __fastcall vtlb_memWrite128(u32 mem, const u64* value);

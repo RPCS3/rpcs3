@@ -317,6 +317,7 @@ __forceinline void xWrite( T val )
 		xAddressInfo operator+( const xAddressReg& right ) const;
 		xAddressInfo operator+( const xAddressInfo& right ) const;
 		xAddressInfo operator+( s32 right ) const;
+		xAddressInfo operator+( const void* right ) const;
 
 		xAddressInfo operator*( u32 factor ) const;
 		xAddressInfo operator<<( u32 shift ) const;
@@ -381,6 +382,7 @@ __forceinline void xWrite( T val )
 		__forceinline xAddressInfo operator+( const xAddressInfo& right ) const { return xAddressInfo( *this ).Add( right ); }
 		__forceinline xAddressInfo operator+( s32 imm ) const { return xAddressInfo( *this ).Add( imm ); }
 		__forceinline xAddressInfo operator-( s32 imm ) const { return xAddressInfo( *this ).Add( -imm ); }
+		__forceinline xAddressInfo operator+( const void* addr ) const { return xAddressInfo( *this ).Add( (uptr)addr ); }
 	};
 
 	extern const xRegisterSSE
