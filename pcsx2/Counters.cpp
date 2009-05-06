@@ -82,16 +82,39 @@ static __forceinline void _rcntSet( int cntidx )
 
 	c = ((0x10000 - counter.count) * counter.rate) - (cpuRegs.cycle - counter.sCycleT);
 	c += cpuRegs.cycle - nextsCounter;		// adjust for time passed since last rcntUpdate();
-	if (c < nextCounter) nextCounter = c;
-
+	if (c < nextCounter) 
+	{
+		nextCounter = c;
+		
+		if((g_nextBranchCycle - nextsCounter) > (u32)nextCounter) //Need to update on counter resets/target changes
+		{
+			g_nextBranchCycle = nextsCounter + nextCounter;
+		}
+	}
+	
 	// Ignore target diff if target is currently disabled.
 	// (the overflow is all we care about since it goes first, and then the 
 	// target will be turned on afterward).
 
-	if( counter.target & EECNT_FUTURE_TARGET ) return;
-	c = ((counter.target - counter.count) * counter.rate) - (cpuRegs.cycle - counter.sCycleT);
-	c += cpuRegs.cycle - nextsCounter;		// adjust for time passed since last rcntUpdate();
-	if (c < nextCounter) nextCounter = c;
+	if( counter.target & EECNT_FUTURE_TARGET ) 
+	{
+		return;
+	}
+	else
+	{
+		c = ((counter.target - counter.count) * counter.rate) - (cpuRegs.cycle - counter.sCycleT);
+		c += cpuRegs.cycle - nextsCounter;		// adjust for time passed since last rcntUpdate();
+		if (c < nextCounter) 
+		{
+			nextCounter = c;
+
+			if((g_nextBranchCycle - nextsCounter) > (u32)nextCounter) //Need to update on counter resets/target changes
+			{
+				g_nextBranchCycle = nextsCounter + nextCounter;
+			}
+		}	
+	}
+	//cpuSetNextBranch( nextsCounter, nextCounter );
 }
 
 
@@ -100,7 +123,7 @@ static __forceinline void cpuRcntSet()
 	int i;
 
 	nextsCounter = cpuRegs.cycle;
-	nextCounter = (vsyncCounter.sCycle + vsyncCounter.CycleT) - cpuRegs.cycle;
+	nextCounter = vsyncCounter.CycleT - (cpuRegs.cycle - vsyncCounter.sCycle);
 
 	for (i = 0; i < 4; i++)
 		_rcntSet( i );
@@ -713,6 +736,19 @@ __forceinline void rcntWtarget(int index, u32 value)
 	// guard against premature (instant) targeting.
 	// If the target is behind the current count, set it up so that the counter must
 	// overflow first before the target fires:
+
+	if(counters[index].mode.IsCounting) {
+		if(counters[index].mode.ClockSource != 0x3) {
+
+			u32 change = cpuRegs.cycle - counters[index].sCycleT;
+			if( change > 0 )
+			{
+				counters[index].count += change / counters[index].rate;
+				change -= (change / counters[index].rate) * counters[index].rate;
+				counters[index].sCycleT = cpuRegs.cycle - change;
+			}
+		}
+	}
 
 	if( counters[index].target <= rcntCycle(index) )
 		counters[index].target |= EECNT_FUTURE_TARGET;

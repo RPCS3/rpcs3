@@ -231,10 +231,13 @@ __releaseinline void psxBranchTest()
 		psxRcntUpdate();
 		iopBranchAction = true;
 	}
-
+	else
+	{
 	// start the next branch at the next counter event by default
 	// the interrupt code below will assign nearer branches if needed.
-	g_psxNextBranchCycle = psxNextsCounter+psxNextCounter;
+		g_psxNextBranchCycle = psxNextsCounter+psxNextCounter;
+	}
+	
 	
 	if (psxRegs.interrupt)
 	{

@@ -91,14 +91,32 @@ static void _rcntSet( int cntidx )
 
 	c = (u64)((overflowCap - counter.count) * counter.rate) - (psxRegs.cycle - counter.sCycleT);
 	c += psxRegs.cycle - psxNextsCounter;		// adjust for time passed since last rcntUpdate();
-	if(c < (u64)psxNextCounter) psxNextCounter = (u32)c;
+
+	if(c < (u64)psxNextCounter) 
+	{
+		psxNextCounter = (u32)c;
+
+		if((g_psxNextBranchCycle - psxNextsCounter) > (u32)psxNextCounter) //Need to update on counter resets/target changes
+		{
+			g_psxNextBranchCycle = psxNextsCounter + psxNextCounter;
+		} 
+	}
 
 	//if((counter.mode & 0x10) == 0 || psxCounters[i].target > 0xffff) continue;
 	if( counter.target & IOPCNT_FUTURE_TARGET ) return;
 
-	c = (s64)((counter.target - counter.count) * counter.rate) - (psxRegs.cycle - counter.sCycleT);
-	c += psxRegs.cycle - psxNextsCounter;		// adjust for time passed since last rcntUpdate();
-	if(c < (u64)psxNextCounter) psxNextCounter = (u32)c;
+		c = (s64)((counter.target - counter.count) * counter.rate) - (psxRegs.cycle - counter.sCycleT);
+		c += psxRegs.cycle - psxNextsCounter;		// adjust for time passed since last rcntUpdate();
+
+	if(c < (u64)psxNextCounter) 
+	{
+		psxNextCounter = (u32)c;
+
+		if((g_psxNextBranchCycle - psxNextsCounter) > (u32)psxNextCounter) //Need to update on counter resets/target changes
+		{
+			g_psxNextBranchCycle = psxNextsCounter + psxNextCounter;
+		} 
+	}
 }
 
 
@@ -383,6 +401,11 @@ void psxRcntUpdate()
 	int i;
 	//u32 change = 0;
 
+	g_psxNextBranchCycle = psxRegs.cycle + 32;
+
+	psxNextCounter = 0x7fffffff;
+	psxNextsCounter = psxRegs.cycle;
+
 	for (i=0; i<=5; i++)
 	{
 		s32 change = psxRegs.cycle - psxCounters[i].sCycleT;
@@ -424,9 +447,7 @@ void psxRcntUpdate()
 
 		//if( psxCounters[i].count >= psxCounters[i].target ) _rcntTestTarget( i );
 	}
-
-	psxNextCounter = 0xffffff;
-	psxNextsCounter = psxRegs.cycle;
+	
 
 	if(SPU2async)
 	{	
