@@ -521,7 +521,7 @@ void __fastcall iopHwWrite32_Page8( u32 addr, mem32_t val )
 			const int parm = (masked_addr-0x240) / 8;
 			if(masked_addr & 4) sio2_setSend2( parm, val ); else sio2_setSend1( parm, val );
 		}
-		else
+		else if( masked_addr <= 0x280 )
 		{
 			switch( masked_addr )
 			{
@@ -535,6 +535,10 @@ void __fastcall iopHwWrite32_Page8( u32 addr, mem32_t val )
 					psxHu32(addr) = val;
 				break;					
 			}
+		}
+		else if( addr >= pgmsk(HW_FW_START) && addr <= pgmsk(HW_FW_END) )
+		{
+			FWwrite32( addr, val );
 		}
 	}
 	else psxHu32(addr) = val;

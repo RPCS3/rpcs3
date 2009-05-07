@@ -1623,11 +1623,8 @@ StartRecomp:
 	}
 	else
 	{
-		assert( branch != 3 );
 		if( branch )
 			assert( !willbranch3 );
-		else
-			ADD32ItoM((int)&cpuRegs.cycle, eeScaleBlockCycles() );
 
 		if( willbranch3 || !branch) {
 
