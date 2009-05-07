@@ -22,7 +22,7 @@
 
 #define JOYSTICK_SUPPORT
 #ifdef JOYSTICK_SUPPORT
-#include <SDL/SDL.h>
+#include "joystick.h"
 #endif
 
 #include "zeropad.h"
@@ -37,126 +37,11 @@ extern "C"
 Display *GSdsp;
 static pthread_spinlock_t s_mutexStatus;
 static u32 s_keyPress[2], s_keyRelease[2]; // thread safe
-static u32 s_bSDLInit = false;
 
-// holds all joystick info
-class JoystickInfo
-{
-	public:
-		JoystickInfo();
-		~JoystickInfo()
-		{
-			Destroy();
-		}
-
-		void Destroy();
-		// opens handles to all possible joysticks
-		static void EnumerateJoysticks(vector<JoystickInfo*>& vjoysticks);
-
-		bool Init(int id, bool bStartThread = true); // opens a handle and gets information
-		void Assign(int pad); // assigns a joystick to a pad
-
-		void TestForce();
-
-		const string& GetName()
-		{
-			return devname;
-		}
-		int GetNumButtons()
-		{
-			return numbuttons;
-		}
-		int GetNumAxes()
-		{
-			return numaxes;
-		}
-		int GetNumPOV()
-		{
-			return numpov;
-		}
-		int GetId()
-		{
-			return _id;
-		}
-		int GetPAD()
-		{
-			return pad;
-		}
-		int GetDeadzone(int axis)
-		{
-			return deadzone;
-		}
-
-		void SaveState();
-		int GetButtonState(int i)
-		{
-			return vbutstate[i];
-		}
-		int GetAxisState(int i)
-		{
-			return vaxisstate[i];
-		}
-		void SetButtonState(int i, int state)
-		{
-			vbutstate[i] = state;
-		}
-		void SetAxisState(int i, int value)
-		{
-			vaxisstate[i] = value;
-		}
-#ifdef JOYSTICK_SUPPORT
-		SDL_Joystick* GetJoy()
-		{
-			return joy;
-		}
-#endif
-
-	private:
-
-		string devname; // pretty device name
-		int _id;
-		int numbuttons, numaxes, numpov;
-		int axisrange, deadzone;
-		int pad;
-
-		vector<int> vbutstate, vaxisstate;
-
-#ifdef JOYSTICK_SUPPORT
-		SDL_Joystick* joy;
-#endif
-};
-
-static vector<JoystickInfo*> s_vjoysticks;
-
+extern GtkWidget *Conf, *s_devicecombo;
 extern string s_strIniPath;
 
-void SaveConfig()
-{
-	int i, j;
-	FILE *f;
-	char cfg[255];
-
-	strcpy(cfg, s_strIniPath.c_str());
-	f = fopen(cfg, "w");
-	if (f == NULL)
-	{
-		printf("ZeroPAD: failed to save ini %s\n", s_strIniPath.c_str());
-		return;
-	}
-
-	for (j = 0; j < 2 * PADSUBKEYS; j++)
-	{
-		for (i = 0; i < PADKEYS; i++)
-		{
-			fprintf(f, "[%d][%d] = 0x%lx\n", j, i, conf.keys[j][i]);
-		}
-	}
-	fprintf(f, "log = %d\n", conf.log);
-	fprintf(f, "options = %d\n", conf.options);
-	fclose(f);
-}
-
-static char* s_pGuiKeyMap[] = 
+static const char* s_pGuiKeyMap[] = 
 { 
 	"L2", "R2", "L1", "R1",
 	"Triangle", "Circle", "Cross", "Square",
@@ -172,102 +57,6 @@ string GetLabelFromButton(const char* buttonname)
 	return label;
 }
 
-void LoadConfig()
-{
-	FILE *f;
-	char str[256];
-	char cfg[255];
-	int i, j;
-
-	memset(&conf, 0, sizeof(conf));
-	conf.keys[0][0] = XK_a;			// L2
-	conf.keys[0][1] = XK_semicolon;	// R2
-	conf.keys[0][2] = XK_w;			// L1
-	conf.keys[0][3] = XK_p;			// R1
-	conf.keys[0][4] = XK_i;			// TRIANGLE
-	conf.keys[0][5] = XK_l;			// CIRCLE
-	conf.keys[0][6] = XK_k;			// CROSS
-	conf.keys[0][7] = XK_j;			// SQUARE
-	conf.keys[0][8] = XK_v;			// SELECT
-	conf.keys[0][11] = XK_n; 			// START
-	conf.keys[0][12] = XK_e;			// UP
-	conf.keys[0][13] = XK_f;			// RIGHT
-	conf.keys[0][14] = XK_d;			// DOWN
-	conf.keys[0][15] = XK_s;			// LEFT
-	conf.log = 0;
-
-	strcpy(cfg, s_strIniPath.c_str());
-	f = fopen(cfg, "r");
-	if (f == NULL)
-	{
-		printf("ZeroPAD: failed to load ini %s\n", s_strIniPath.c_str());
-		SaveConfig(); //save and return
-		return;
-	}
-
-	for (j = 0; j < 2 * PADSUBKEYS; j++)
-	{
-		for (i = 0; i < PADKEYS; i++)
-		{
-			sprintf(str, "[%d][%d] = 0x%%x\n", j, i);
-			if (fscanf(f, str, &conf.keys[j][i]) == 0) conf.keys[j][i] = 0;
-		}
-	}
-	fscanf(f, "log = %d\n", &conf.log);
-	fscanf(f, "options = %d\n", &conf.options);
-	fclose(f);
-}
-
-GtkWidget *MsgDlg;
-
-void OnMsg_Ok()
-{
-	gtk_widget_destroy(MsgDlg);
-	gtk_main_quit();
-}
-
-void SysMessage(char *fmt, ...)
-{
-	GtkWidget *Ok, *Txt;
-	GtkWidget *Box, *Box1;
-	va_list list;
-	char msg[512];
-
-	va_start(list, fmt);
-	vsprintf(msg, fmt, list);
-	va_end(list);
-
-	if (msg[strlen(msg)-1] == '\n') msg[strlen(msg)-1] = 0;
-
-	MsgDlg = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	gtk_window_set_position(GTK_WINDOW(MsgDlg), GTK_WIN_POS_CENTER);
-	gtk_window_set_title(GTK_WINDOW(MsgDlg), "GSsoft Msg");
-	gtk_container_set_border_width(GTK_CONTAINER(MsgDlg), 5);
-
-	Box = gtk_vbox_new(5, 0);
-	gtk_container_add(GTK_CONTAINER(MsgDlg), Box);
-	gtk_widget_show(Box);
-
-	Txt = gtk_label_new(msg);
-
-	gtk_box_pack_start(GTK_BOX(Box), Txt, FALSE, FALSE, 5);
-	gtk_widget_show(Txt);
-
-	Box1 = gtk_hbutton_box_new();
-	gtk_box_pack_start(GTK_BOX(Box), Box1, FALSE, FALSE, 0);
-	gtk_widget_show(Box1);
-
-	Ok = gtk_button_new_with_label("Ok");
-	gtk_signal_connect(GTK_OBJECT(Ok), "clicked", GTK_SIGNAL_FUNC(OnMsg_Ok), NULL);
-	gtk_container_add(GTK_CONTAINER(Box1), Ok);
-	GTK_WIDGET_SET_FLAGS(Ok, GTK_CAN_DEFAULT);
-	gtk_widget_show(Ok);
-
-	gtk_widget_show(MsgDlg);
-
-	gtk_main();
-}
-
 s32  _PADopen(void *pDsp)
 {
 	GSdsp = *(Display**)pDsp;
@@ -276,7 +65,9 @@ s32  _PADopen(void *pDsp)
 	s_keyRelease[0] = s_keyRelease[1] = 0;
 	XAutoRepeatOff(GSdsp);
 
+#ifdef JOYSTICK_SUPPORT
 	JoystickInfo::EnumerateJoysticks(s_vjoysticks);
+#endif
 
 	return 0;
 }
@@ -286,8 +77,15 @@ void _PADclose()
 	pthread_spin_destroy(&s_mutexStatus);
 	XAutoRepeatOn(GSdsp);
 
-	vector<JoystickInfo*>::iterator it;
-	FORIT(it, s_vjoysticks) delete *it;
+	vector<JoystickInfo*>::iterator it = s_vjoysticks.begin();
+	
+	// Delete everything in the vector vjoysticks.
+	while (it < s_vjoysticks.end())
+	{
+		delete *it;
+		it ++;
+	}
+	
 	s_vjoysticks.clear();
 }
 
@@ -482,8 +280,7 @@ void CALLBACK PADupdate(int pad)
 						if (abs(value) > (pjoy)->GetDeadzone(value))
 						{
 							g_lanalog[pad].x = value / 256;
-							if (conf.options&PADOPTION_REVERTLX)
-								g_lanalog[pad].x = -g_lanalog[pad].x;
+							if (conf.options & PADOPTION_REVERTLX) g_lanalog[pad].x = -g_lanalog[pad].x;
 							g_lanalog[pad].x += 0x80;
 						}
 						else 
@@ -495,8 +292,7 @@ void CALLBACK PADupdate(int pad)
 						if (abs(value) > (pjoy)->GetDeadzone(value))
 						{
 							g_lanalog[pad].y = value / 256;
-							if (conf.options&PADOPTION_REVERTLX)
-								g_lanalog[pad].y = -g_lanalog[pad].y;
+							if (conf.options & PADOPTION_REVERTLY) g_lanalog[pad].y = -g_lanalog[pad].y;
 							g_lanalog[pad].y += 0x80;
 						}
 						else
@@ -508,8 +304,7 @@ void CALLBACK PADupdate(int pad)
 						if (abs(value) > (pjoy)->GetDeadzone(value))
 						{
 							g_ranalog[pad].x = value / 256;
-							if (conf.options&PADOPTION_REVERTLX)
-								g_ranalog[pad].x = -g_ranalog[pad].x;
+							if (conf.options & PADOPTION_REVERTRX) g_ranalog[pad].x = -g_ranalog[pad].x;
 							g_ranalog[pad].x += 0x80;
 						}
 						else 
@@ -521,7 +316,7 @@ void CALLBACK PADupdate(int pad)
 						if (abs(value) > (pjoy)->GetDeadzone(value))
 						{
 							g_ranalog[pad].y = value / 256;
-							if (conf.options&PADOPTION_REVERTLX) g_ranalog[pad].y = -g_ranalog[pad].y;
+							if (conf.options&PADOPTION_REVERTRY) g_ranalog[pad].y = -g_ranalog[pad].y;
 							g_ranalog[pad].y += 0x80;
 						}
 						else 
@@ -559,9 +354,6 @@ void CALLBACK PADupdate(int pad)
 	s_keyRelease[pad] &= ~keyPress;
 	pthread_spin_unlock(&s_mutexStatus);
 }
-
-static GtkWidget *Conf = NULL, *s_devicecombo = NULL;
-static int s_selectedpad = 0;
 
 void UpdateConf(int pad)
 {
@@ -654,12 +446,18 @@ void OnConf_Key(GtkButton *button, gpointer user_data)
 	int key = id % PADKEYS;
 	unsigned long *pkey = &conf.keys[pad][key];
 
-	vector<JoystickInfo*>::iterator itjoy;
-
 	// save the states
 #ifdef JOYSTICK_SUPPORT
+	vector<JoystickInfo*>::iterator itjoy = s_vjoysticks.begin();
+
 	SDL_JoystickUpdate();
-	FORIT(itjoy, s_vjoysticks)(*itjoy)->SaveState();
+	
+	// Save everything in the vector s_vjoysticks.
+	while (itjoy < s_vjoysticks.end())
+	{
+		(*itjoy)->SaveState();
+		itjoy++;
+	}
 #endif
 
 	for (;;)
@@ -681,8 +479,11 @@ void OnConf_Key(GtkButton *button, gpointer user_data)
 		}
 
 #ifdef JOYSTICK_SUPPORT
+		itjoy = s_vjoysticks.begin();
+		
 		SDL_JoystickUpdate();
-		FORIT(itjoy, s_vjoysticks)
+		
+		while (itjoy < s_vjoysticks.end())
 		{
 			// MAKE sure to look for changes in the state!!
 			for (int i = 0; i < (*itjoy)->GetNumButtons(); ++i)
@@ -740,49 +541,26 @@ void OnConf_Key(GtkButton *button, gpointer user_data)
 					}
 				}
 			}
+			
+			
+			/*for (int i = 0; i < (*itjoy)->GetNumHats(); ++i)
+			{
+				int value = SDL_JoystickGetHat((*itjoy)->GetJoy(), i);
+
+				if (value != (*itjoy)->GetAxisState(i))
+				{
+					*pkey = PAD_HAT((*itjoy)->GetId(), i);
+					char str[32];
+					sprintf(str, "JHat %d", i);
+					gtk_entry_set_text(GTK_ENTRY(label), str);
+					return;
+				}
+			}*/
+			
+			itjoy++;
 		}
 #endif
 	}
-}
-
-void OnConf_Pad1(GtkButton *button, gpointer user_data)
-{
-	if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(button)))
-		UpdateConf(0);
-}
-
-void OnConf_Pad2(GtkButton *button, gpointer user_data)
-{
-	if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(button)))
-		UpdateConf(1);
-}
-
-void OnConf_Pad3(GtkButton *button, gpointer user_data)
-{
-	if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(button)))
-		UpdateConf(2);
-}
-
-void OnConf_Pad4(GtkButton *button, gpointer user_data)
-{
-	if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(button)))
-		UpdateConf(3);
-}
-
-void OnConf_Ok(GtkButton *button, gpointer user_data)
-{
-//	conf.analog = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(Analog));
-	SaveConfig();
-
-	gtk_widget_destroy(Conf);
-	gtk_main_quit();
-}
-
-void OnConf_Cancel(GtkButton *button, gpointer user_data)
-{
-	gtk_widget_destroy(Conf);
-	gtk_main_quit();
-	LoadConfig(); // load previous config
 }
 
 void CALLBACK PADconfigure()
@@ -797,19 +575,23 @@ void CALLBACK PADconfigure()
 	Conf = create_Conf();
 
 	// recreate
+#ifdef JOYSTICK_SUPPORT
 	JoystickInfo::EnumerateJoysticks(s_vjoysticks);
+#endif
 
-	s_devicecombo  = lookup_widget(Conf, "joydevicescombo");
+	s_devicecombo = lookup_widget(Conf, "joydevicescombo");
 
 	// fill the combo
 	char str[255];
-	vector<JoystickInfo*>::iterator it;
+	vector<JoystickInfo*>::iterator it = s_vjoysticks.begin();
 	
-	FORIT(it, s_vjoysticks)
+	// Delete everything in the vector vjoysticks.
+	while (it < s_vjoysticks.end())
 	{
 		sprintf(str, "%d: %s - but: %d, axes: %d, pov: %d", (*it)->GetId(), (*it)->GetName().c_str(),
-		        (*it)->GetNumButtons(), (*it)->GetNumAxes(), (*it)->GetNumPOV());
+		        (*it)->GetNumButtons(), (*it)->GetNumAxes(), (*it)->GetNumPOV()/*, (*it)->GetNumHats()*/); // ,hats: %d
 		gtk_combo_box_append_text(GTK_COMBO_BOX(s_devicecombo), str);
+		it++;
 	}
 	
 	gtk_combo_box_append_text(GTK_COMBO_BOX(s_devicecombo), "No Gamepad");
@@ -818,223 +600,4 @@ void CALLBACK PADconfigure()
 
 	gtk_widget_show_all(Conf);
 	gtk_main();
-}
-
-// GUI event handlers
-void on_joydevicescombo_changed(GtkComboBox     *combobox, gpointer         user_data)
-{
-	int joyid = gtk_combo_box_get_active(combobox);
-
-	// unassign every joystick with this pad
-	for (int i = 0; i < (int)s_vjoysticks.size(); ++i)
-	{
-		if (s_vjoysticks[i]->GetPAD() == s_selectedpad) s_vjoysticks[i]->Assign(-1);
-	}
-
-	if (joyid >= 0 && joyid < (int)s_vjoysticks.size()) s_vjoysticks[joyid]->Assign(s_selectedpad);
-}
-
-void on_checkbutton_reverselx_toggled(GtkToggleButton *togglebutton, gpointer         user_data)
-{
-	int mask = PADOPTION_REVERTLX << (16 * s_selectedpad);
-	if (gtk_toggle_button_get_active(togglebutton))
-		conf.options |= mask;
-	else 
-		conf.options &= ~mask;
-}
-
-void on_checkbutton_reversely_toggled(GtkToggleButton *togglebutton, gpointer         user_data)
-{
-	int mask = PADOPTION_REVERTLY << (16 * s_selectedpad);
-	if (gtk_toggle_button_get_active(togglebutton))
-		conf.options |= mask;
-	else 
-		conf.options &= ~mask;
-}
-
-void on_checkbutton_reverserx_toggled(GtkToggleButton *togglebutton, gpointer         user_data)
-{
-	int mask = PADOPTION_REVERTRX << (16 * s_selectedpad);
-	if (gtk_toggle_button_get_active(togglebutton)) 
-		conf.options |= mask;
-	else 
-		conf.options &= ~mask;
-}
-
-void on_checkbutton_reversery_toggled(GtkToggleButton *togglebutton, gpointer         user_data)
-{
-	int mask = PADOPTION_REVERTRY << (16 * s_selectedpad);
-	if (gtk_toggle_button_get_active(togglebutton)) 
-		conf.options |= mask;
-	else 
-		conf.options &= ~mask;
-}
-
-void on_forcefeedback_toggled(GtkToggleButton *togglebutton, gpointer user_data)
-{
-	int mask = PADOPTION_REVERTLX << (16 * s_selectedpad);
-	if (gtk_toggle_button_get_active(togglebutton))
-	{
-		conf.options |= mask;
-
-		int joyid = gtk_combo_box_get_active(GTK_COMBO_BOX(s_devicecombo));
-		if (joyid >= 0 && joyid < (int)s_vjoysticks.size()) s_vjoysticks[joyid]->TestForce();
-	}
-	else 
-	{
-		conf.options &= ~mask;
-	}
-}
-
-GtkWidget *About = NULL;
-
-void OnAbout_Ok(GtkButton *button, gpointer user_data)
-{
-	gtk_widget_destroy(About);
-	gtk_main_quit();
-}
-
-void CALLBACK PADabout()
-{
-
-	About = create_About();
-
-	gtk_widget_show_all(About);
-	gtk_main();
-}
-
-s32 CALLBACK PADtest()
-{
-	return 0;
-}
-
-//////////////////////////
-// Joystick definitions //
-//////////////////////////
-
-// opens handles to all possible joysticks
-void JoystickInfo::EnumerateJoysticks(vector<JoystickInfo*>& vjoysticks)
-{
-#ifdef JOYSTICK_SUPPORT
-
-	if (!s_bSDLInit)
-	{
-		if (SDL_Init(SDL_INIT_JOYSTICK) < 0) return;
-		SDL_JoystickEventState(SDL_QUERY);
-		s_bSDLInit = true;
-	}
-
-	vector<JoystickInfo*>::iterator it;
-	FORIT(it, vjoysticks) delete *it;
-
-	vjoysticks.resize(SDL_NumJoysticks());
-	for (int i = 0; i < (int)vjoysticks.size(); ++i)
-	{
-		vjoysticks[i] = new JoystickInfo();
-		vjoysticks[i]->Init(i, true);
-	}
-
-	// set the pads
-	for (int pad = 0; pad < 2; ++pad)
-	{
-		// select the right joystick id
-		int joyid = -1;
-		for (int i = 0; i < PADKEYS; ++i)
-		{
-			if (IS_JOYSTICK(conf.keys[pad][i]) || IS_JOYBUTTONS(conf.keys[pad][i]))
-			{
-				joyid = PAD_GETJOYID(conf.keys[pad][i]);
-				break;
-			}
-		}
-
-		if (joyid >= 0 && joyid < (int)s_vjoysticks.size())
-			s_vjoysticks[joyid]->Assign(pad);
-	}
-
-#endif
-}
-
-JoystickInfo::JoystickInfo()
-{
-#ifdef JOYSTICK_SUPPORT
-	joy = NULL;
-#endif
-	_id = -1;
-	pad = -1;
-	axisrange = 0x7fff;
-	deadzone = 2000;
-}
-
-void JoystickInfo::Destroy()
-{
-#ifdef JOYSTICK_SUPPORT
-	if (joy != NULL)
-	{
-		if (SDL_JoystickOpened(_id)) SDL_JoystickClose(joy);
-		joy = NULL;
-	}
-#endif
-}
-
-bool JoystickInfo::Init(int id, bool bStartThread)
-{
-#ifdef JOYSTICK_SUPPORT
-	Destroy();
-	_id = id;
-
-	joy = SDL_JoystickOpen(id);
-	if (joy == NULL)
-	{
-		printf("failed to open joystick %d\n", id);
-		return false;
-	}
-
-	numaxes = SDL_JoystickNumAxes(joy);
-	numbuttons = SDL_JoystickNumButtons(joy);
-	numpov = SDL_JoystickNumHats(joy);
-	devname = SDL_JoystickName(id);
-	vbutstate.resize(numbuttons);
-	vaxisstate.resize(numbuttons);
-
-	return true;
-#else
-	return false;
-#endif
-}
-
-// assigns a joystick to a pad
-void JoystickInfo::Assign(int newpad)
-{
-	if (pad == newpad) return;
-	pad = newpad;
-
-	if (pad >= 0)
-	{
-		for (int i = 0; i < PADKEYS; ++i)
-		{
-			if (IS_JOYBUTTONS(conf.keys[pad][i]))
-			{
-				conf.keys[pad][i] = PAD_JOYBUTTON(_id, PAD_GETJOYBUTTON(conf.keys[pad][i]));
-			}
-			else if (IS_JOYSTICK(conf.keys[pad][i]))
-			{
-				conf.keys[pad][i] = PAD_JOYSTICK(_id, PAD_GETJOYBUTTON(conf.keys[pad][i]));
-			}
-		}
-	}
-}
-
-void JoystickInfo::SaveState()
-{
-#ifdef JOYSTICK_SUPPORT
-	for (int i = 0; i < numbuttons; ++i)
-		vbutstate[i] = SDL_JoystickGetButton(joy, i);
-	for (int i = 0; i < numaxes; ++i)
-		vaxisstate[i] = SDL_JoystickGetAxis(joy, i);
-#endif
-}
-
-void JoystickInfo::TestForce()
-{
 }
