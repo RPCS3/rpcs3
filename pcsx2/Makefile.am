@@ -19,7 +19,7 @@ ps2/Iop/IopHwRead.cpp ps2/Iop/IopHwWrite.cpp ps2/Iop/IopHw_Internal.h
 libpcsx2_a_SOURCES += \
 CDVD.h CDVDiso.h CDVDisodrv.h CDVDlib.h COP0.h Cache.h CdRom.h Common.h Counters.h Decode_XA.h \
 Elfheader.h Exceptions.h GS.h Hw.h IopBios.h IopBios2.h IopCounters.h IopDma.h IopHw.h IopMem.h IopSio2.h Memcpyfast.h \
-Memory.h MemoryCard.h Misc.h Patch.h Paths.h Plugins.h PrecompiledHeader.h IopCommon.h R3000A.h R5900.h R5900OpcodeTables.h \
+Memory.h MemoryTypes.h MemoryCard.h Misc.h Patch.h Paths.h Plugins.h PrecompiledHeader.h IopCommon.h R3000A.h R5900.h R5900OpcodeTables.h \
 SPR.h SamplProf.h SaveState.h Sif.h Sifcmd.h Sio.h SafeArray.h Stats.h StringUtils.h System.h Threading.h \
 VU.h VUflags.h VUmicro.h VUops.h Vif.h VifDma.h cheatscpp.h vtlb.h NakedAsm.h R5900Exceptions.h HostGui.h Pcsx2Config.h \
 Dump.h

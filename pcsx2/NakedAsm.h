@@ -38,8 +38,8 @@ extern "C"
 
 #ifdef __LINUX__
 
-PCSX2_ALIGNED16_EXTERN( u8 _xmm_backup[16*2] );
-PCSX2_ALIGNED16_EXTERN( u8 _mmx_backup[8*4] );
+PCSX2_ALIGNED16( u8 _xmm_backup[16*2] );
+PCSX2_ALIGNED16( u8 _mmx_backup[8*4] );
 
 extern "C" 
 {
