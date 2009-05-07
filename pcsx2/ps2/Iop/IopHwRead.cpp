@@ -423,7 +423,7 @@ mem32_t __fastcall iopHwRead32_Page8( u32 addr )
 				break;
 			}
 		}
-		else if( addr >= pgmsk(HW_FW_START) && addr <= pgmsk(HW_FW_END) )
+		else if( masked_addr >= pgmsk(HW_FW_START) && masked_addr <= pgmsk(HW_FW_END) )
 		{
 			ret = FWread32( addr );
 		}

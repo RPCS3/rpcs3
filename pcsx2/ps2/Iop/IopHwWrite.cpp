@@ -536,7 +536,7 @@ void __fastcall iopHwWrite32_Page8( u32 addr, mem32_t val )
 				break;					
 			}
 		}
-		else if( addr >= pgmsk(HW_FW_START) && addr <= pgmsk(HW_FW_END) )
+		else if( masked_addr >= pgmsk(HW_FW_START) && masked_addr <= pgmsk(HW_FW_END) )
 		{
 			FWwrite32( addr, val );
 		}
