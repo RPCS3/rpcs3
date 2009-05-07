@@ -30,7 +30,7 @@
 	incPC2(1);																\
 	bBlock = mVUblocks[iPC/2]->search((microRegInfo*)&mVUregs);				\
 	incPC2(-1);																\
-	if (bBlock)	{ nJMPcc((uptr)pBlock->x86ptrStart - ((uptr)x86Ptr + 6)); }	\
+	if (bBlock)	{ nJMPcc((uptr)bBlock->x86ptrStart - ((uptr)x86Ptr + 6)); }	\
 	else		{ ajmp = JMPcc((uptr)0); }									\
 	break
 
@@ -347,12 +347,12 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 			microBlock* bBlock = NULL;
 			u32* ajmp = 0;
 			switch (mVUbranch) {
-				case 3: branchCase(JZ32,  JNZ32);	// IBEQ
+				case 3: branchCase(JE32,  JNE32);	// IBEQ
 				case 4: branchCase(JGE32, JNGE32);	// IBGEZ
 				case 5: branchCase(JG32,  JNG32);	// IBGTZ
 				case 6: branchCase(JLE32, JNLE32);	// IBLEQ
 				case 7: branchCase(JL32,  JNL32);	// IBLTZ
-				case 8: branchCase(JNZ32, JZ32);	// IBNEQ
+				case 8: branchCase(JNE32, JE32);	// IBNEQ
 				case 1: case 2: // B/BAL
 
 					mVUprint("mVUcompile B/BAL");

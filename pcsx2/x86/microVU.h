@@ -17,8 +17,8 @@
  */
 
 #pragma once
-#define mVUdebug	// Prints Extra Info to Console
-#define mVUlogProg	// Dumps MicroPrograms into microVU0.txt/microVU1.txt
+//#define mVUdebug	// Prints Extra Info to Console
+//#define mVUlogProg	// Dumps MicroPrograms into microVU0.txt/microVU1.txt
 #include "Common.h"
 #include "VU.h"
 #include "GS.h"
@@ -74,7 +74,7 @@ struct microProgram {
 	microAllocInfo<progSize> allocInfo;
 };
 
-#define mMaxProg 16 // The amount of Micro Programs Recs will 'remember' (For n = 1, 2, 4, 8, 16, etc...)
+#define mMaxProg 32 // The amount of Micro Programs Recs will 'remember' (For n = 1, 2, 4, 8, 16, etc...)
 template<u32 pSize>
 struct microProgManager {
 	microProgram<pSize>	prog[mMaxProg];	// Store MicroPrograms in memory

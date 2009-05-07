@@ -195,7 +195,6 @@ declareAllVariables
 #define _fvmInstance (3<<16) // Mac		Read Instance (at T-stage for lower instruction)
 #define _fvsInstance (3<<18) // Status	Read Instance (at T-stage for lower instruction)
 #define _fvcInstance (3<<20) // Clip	Read Instance (at T-stage for lower instruction)
-#define _noWriteVF	 (1<<21) // Don't write back the result of a lower op to VF reg if upper op writes to same reg (or if VF = 0)
 #define _backupVI	 (1<<22) // Backup VI reg to memory if modified before branch (branch uses old VI value unless opcode is ILW or ILWR)
 #define _memReadIs	 (1<<23) // Read Is (VI reg) from memory (used by branches)
 #define _memReadIt	 (1<<24) // Read If (VI reg) from memory (used by branches)
@@ -204,6 +203,8 @@ declareAllVariables
 #define _isFSSET	 (1<<27) // Cur Instruction is FSSET
 #define _doDivFlag	 (1<<28) // Transfer Div flag to Status Flag
 #define _doClip		 (1<<29)
+#define _noWriteVF	 (1<<30) // Don't write back the result of a lower op to VF reg if upper op writes to same reg (or if VF = 0)
+
 
 #define isNOP		 (mVUinfo & (1<<0))
 #define isBranch	 (mVUinfo & (1<<1))
@@ -225,7 +226,6 @@ declareAllVariables
 #define fvmInstance	((mVUinfo >> 16) & 3)
 #define fvsInstance	((mVUinfo >> 18) & 3)
 #define fvcInstance	((mVUinfo >> 20) & 3)
-#define noWriteVF	 (mVUinfo & (1<<21))
 #define backupVI	 (mVUinfo & (1<<22))
 #define memReadIs	 (mVUinfo & (1<<23))
 #define memReadIt	 (mVUinfo & (1<<24))
@@ -234,6 +234,7 @@ declareAllVariables
 #define isFSSET		 (mVUinfo & (1<<27))
 #define doDivFlag	 (mVUinfo & (1<<28))
 #define doClip		 (mVUinfo & (1<<29))
+#define noWriteVF	 (mVUinfo & (1<<30))
 
 #define isMMX(_VIreg_)	0//(_VIreg_ >= 1 && _VIreg_ <=8)
 #define mmVI(_VIreg_)	(_VIreg_ - 1)

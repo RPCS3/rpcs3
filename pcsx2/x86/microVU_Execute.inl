@@ -82,10 +82,6 @@ microVUt(void) mVUdispatcherB() {
 	microVU* mVU = mVUx;
 	mVU->exitFunct = x86Ptr;
 
-	// __fastcall = The first two DWORD or smaller arguments are passed in ECX and EDX registers; all other arguments are passed right to left.
-	if (!vuIndex) { CALLFunc((uptr)mVUcleanUpVU0); }
-	else		  { CALLFunc((uptr)mVUcleanUpVU1); }
-
 	// Load EE's MXCSR state
 	eeMXCSR = g_sseMXCSR;
 	SSE_LDMXCSR((uptr)&eeMXCSR);
@@ -98,14 +94,15 @@ microVUt(void) mVUdispatcherB() {
 	MOV32RtoM((uptr)&mVU->regs->VI[REG_STATUS_FLAG].UL,	gprT1);
 	MOV32RtoM((uptr)&mVU->regs->VI[REG_MAC_FLAG].UL,	gprF0);
 	
-	for (int i = 0; i < 8; i++) {
-		
-	}
 	for (int i = 1; i < 16; i++) {
 		if (isMMX(i)) { MOVDMMXtoM((uptr)&mVU->regs->VI[i].UL, mmVI(i)); }
 	}
 
 	SSE_MOVAPS_XMM_to_M128((uptr)&mVU->regs->ACC.UL[0], xmmACC);
+
+	// __fastcall = The first two DWORD or smaller arguments are passed in ECX and EDX registers; all other arguments are passed right to left.
+	if (!vuIndex) { CALLFunc((uptr)mVUcleanUpVU0); }
+	else		  { CALLFunc((uptr)mVUcleanUpVU1); }
 
 	// Restore cpu state
 	POP32R(EDI);
