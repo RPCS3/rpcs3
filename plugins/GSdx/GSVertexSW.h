@@ -244,11 +244,14 @@ public:
 		struct {DWORD xyzf:4, stq:4, rgba:4;};
 	} m_eq;
 
-	void Update(const GSVertexSW* v, int count, GS_PRIM_CLASS primclass, DWORD iip, DWORD tme, DWORD tfx)
+	void Update(const GSVertexSW* v, int count, GS_PRIM_CLASS primclass, DWORD iip, DWORD tme, DWORD tfx, DWORD tcc)
 	{
-		if(!tme) tfx = 0;
+		DWORD key = primclass | (iip << 2) | (tme << 3);
 
-		DWORD key = primclass | (iip << 2) | (tme << 3) | (tfx << 4);
+		if(!(tme && tfx == TFX_DECAL && tcc))
+		{
+			key |= 1 << 4;
+		}
 
 		m_map.Lookup(key)(v, count, m_min, m_max);
 

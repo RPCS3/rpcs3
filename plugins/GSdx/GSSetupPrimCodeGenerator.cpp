@@ -33,7 +33,7 @@ GSSetupPrimCodeGenerator::GSSetupPrimCodeGenerator(GSScanlineEnvironment& env, U
 	m_en.z = m_sel.zb ? 1 : 0;
 	m_en.f = m_sel.fb && m_sel.fge ? 1 : 0;
 	m_en.t = m_sel.fb && m_sel.tfx != TFX_NONE ? 1 : 0;
-	m_en.c = m_sel.fb && m_sel.tfx != TFX_DECAL ? 1 : 0;
+	m_en.c = m_sel.fb && !(m_sel.tfx == TFX_DECAL && m_sel.tcc) ? 1 : 0;
 
 	#if _M_AMD64
 	#error TODO

@@ -38,8 +38,7 @@ GSVertexTrace::GSVertexTraceCodeGenerator::GSVertexTraceCodeGenerator(DWORD key,
 	DWORD primclass = (key >> 0) & 3;
 	DWORD iip = (key >> 2) & 1;
 	DWORD tme = (key >> 3) & 1;
-	DWORD tfx = (key >> 4) & 3;
-	DWORD color = !(tme && tfx == TFX_DECAL);
+	DWORD color = (key >> 4) & 1;
 
 	int n = 1;
 

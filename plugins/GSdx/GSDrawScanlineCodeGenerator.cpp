@@ -35,6 +35,11 @@ GSDrawScanlineCodeGenerator::GSDrawScanlineCodeGenerator(GSScanlineEnvironment& 
 
 	m_sel.key = key;
 
+	if(m_sel.tfx == TFX_DECAL && m_sel.tcc == 0)
+	{
+		printf("*** TFX_DECAL && !TCC *** \n");
+	}
+
 	Generate();
 }
 
@@ -449,7 +454,7 @@ void GSDrawScanlineCodeGenerator::Init(int params)
 			}
 		}
 
-		if(m_sel.tfx != TFX_DECAL)
+		if(!(m_sel.tfx == TFX_DECAL && m_sel.tcc))
 		{
 			if(m_sel.iip)
 			{
@@ -582,7 +587,7 @@ void GSDrawScanlineCodeGenerator::Step()
 			}
 		}
 
-		if(m_sel.tfx != TFX_DECAL)
+		if(!(m_sel.tfx == TFX_DECAL && m_sel.tcc))
 		{
 			if(m_sel.iip)
 			{
@@ -1201,6 +1206,19 @@ void GSDrawScanlineCodeGenerator::AlphaTFX()
 		break;
 
 	case TFX_DECAL:
+
+		// if(!tcc) gat = gat.mix16(ga.srl16(7));
+
+		if(!m_sel.tcc)
+		{
+			// GSVector4i ga = iip ? gaf : m_env.c.ga;
+
+			movdqa(xmm4, xmmword[m_sel.iip ? &m_env.temp.ga : &m_env.c.ga]);
+
+			psrlw(xmm4, 7);
+
+			mix16(xmm6, xmm4, xmm3);
+		}
 
 		break;
 

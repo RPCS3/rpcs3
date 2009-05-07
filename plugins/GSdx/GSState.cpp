@@ -2130,6 +2130,25 @@ bool GSC_TalesOfAbyss(const GSFrameInfo& fi, int& skip)
 	return true;
 }
 
+bool GSC_SonicUnleashed(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME && fi.FBP == 0x02200 && fi.FPSM == PSM_PSMCT16S && fi.TBP0 == 0x00000 && fi.TPSM == PSM_PSMCT16)
+		{
+			skip = 1000; // shadow
+		}
+	}
+	else
+	{
+		if(fi.TME && fi.FBP == 0x00000 && fi.FPSM == PSM_PSMCT16 && fi.TBP0 == 0x02200 && fi.TPSM == PSM_PSMCT16S)
+		{
+			skip = 2;
+		}
+	}
+
+	return true;
+}
 bool GSState::IsBadFrame(int& skip)
 {
 	GSFrameInfo fi;
@@ -2175,6 +2194,7 @@ bool GSState::IsBadFrame(int& skip)
 		map[CRC::GiTS] = GSC_GiTS;
 		map[CRC::Onimusha3] = GSC_Onimusha3;
 		map[CRC::TalesOfAbyss] = GSC_TalesOfAbyss;
+		map[CRC::SonicUnleashed] = GSC_SonicUnleashed;
 	}
 
 	// TODO: just set gsc in SetGameCRC once

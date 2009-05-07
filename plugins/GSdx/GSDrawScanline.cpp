@@ -189,6 +189,7 @@ void GSDrawScanline::BeginDraw(const GSRasterizerData* data, Functions* f)
 
 	sel.iip = m_sel.iip;
 	sel.tfx = m_sel.tfx;
+	sel.tcc = m_sel.tcc;
 	sel.fst = m_sel.fst;
 	sel.fge = m_sel.fge;
 	sel.sprite = m_sel.sprite;

@@ -63,7 +63,8 @@ public:
 		Onimusha3,
 		MajokkoALaMode2,
 		TalesOfAbyss,
-		TitleCount
+		SonicUnleashed,
+		TitleCount,
 	};
 
 	enum Region 

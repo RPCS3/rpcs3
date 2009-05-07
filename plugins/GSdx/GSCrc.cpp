@@ -128,6 +128,7 @@ CRC::Game CRC::m_games[] =
 	{0x14FE77F7, TalesOfAbyss, US},
 	{0x045D77E9, TalesOfAbyss, US}, // undub
 	{0xAA5EC3A3, TalesOfAbyss, JP}, 
+	{0xFB236A46, SonicUnleashed, US},
 };
 
 CAtlMap<DWORD, CRC::Game*> CRC::m_map;

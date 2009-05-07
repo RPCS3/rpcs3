@@ -423,7 +423,14 @@ PS_OUTPUT ps_main(PS_INPUT input)
 	}
 	else if(TFX == 1)
 	{
-		c = t;
+		if(TCC == 0) 
+		{
+			c.rgb = t.rgb;
+		}
+		else
+		{
+			c = t;
+		}
 	}
 	else if(TFX == 2)
 	{

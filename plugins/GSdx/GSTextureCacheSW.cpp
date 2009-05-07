@@ -54,7 +54,7 @@ const GSTextureCacheSW::GSTexture* GSTextureCacheSW::Lookup(const GIFRegTEX0& TE
 			continue;
 		}
 
-		if((psm.trbpp == 16 || psm.trbpp == 24) && (t2->m_TEX0.TCC != TEX0.TCC || TEX0.TCC == 1 && !(t2->m_TEXA == (GSVector4i)TEXA).alltrue()))
+		if((psm.trbpp == 16 || psm.trbpp == 24) && (t2->m_TEX0.TCC != TEX0.TCC || TEX0.TCC && !(t2->m_TEXA == (GSVector4i)TEXA).alltrue()))
 		{
 			continue;
 		}
@@ -306,6 +306,8 @@ bool GSTextureCacheSW::GSTexture::Update(const GIFRegTEX0& TEX0, const GIFRegTEX
 
 			// unfortunatelly a block may be part of the same texture multiple times at different places (when (1 << tw) > (tbw << 6), ex. 1024 > 640), 
 			// so just can't set the block's bit to valid in one pass, even if 99.9% of the games don't address the repeated part at the right side
+			
+			// TODO: still bogus if those repeated parts aren't fetched together
 
 			// m_valid[row] |= col;
 

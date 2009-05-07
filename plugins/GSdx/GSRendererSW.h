@@ -134,7 +134,7 @@ protected:
 
 			int amin, amax;
 
-			if(PRIM->TME && (context->TEX0.TCC || context->TEX0.TFX == TFX_DECAL))
+			if(PRIM->TME && context->TEX0.TCC)
 			{
 				DWORD bpp = GSLocalMemory::m_psm[context->TEX0.PSM].trbpp;
 				DWORD cbpp = GSLocalMemory::m_psm[context->TEX0.CPSM].trbpp;
@@ -325,11 +325,6 @@ protected:
 					}
 				}
 
-				if(p.sel.tfx == TFX_DECAL)
-				{
-					p.sel.tcc = 1;
-				}
-
 				if(p.sel.fst == 0)
 				{
 					// skip per pixel division if q is constant
@@ -500,7 +495,7 @@ protected:
 	{
 		GS_PRIM_CLASS primclass = GSUtil::GetPrimClass(PRIM->PRIM);
 
-		m_vtrace.Update(m_vertices, m_count, primclass, PRIM->IIP, PRIM->TME, m_context->TEX0.TFX);
+		m_vtrace.Update(m_vertices, m_count, primclass, PRIM->IIP, PRIM->TME, m_context->TEX0.TFX, m_context->TEX0.TCC);
 
 		if(m_dump) 
 		{
@@ -522,9 +517,9 @@ protected:
 			str.Format(_T("c:\\temp1\\_%05d_f%I64d_tex_%05x_%d.bmp"), s_n++, m_perfmon.GetFrame(), (int)m_context->TEX0.TBP0, (int)m_context->TEX0.PSM);
 			if(PRIM->TME) if(s_save) {m_mem.SaveBMP(str, m_context->TEX0.TBP0, m_context->TEX0.TBW, m_context->TEX0.PSM, 1 << m_context->TEX0.TW, 1 << m_context->TEX0.TH);}
 			str.Format(_T("c:\\temp1\\_%05d_f%I64d_rt0_%05x_%d.bmp"), s_n++, m_perfmon.GetFrame(), m_context->FRAME.Block(), m_context->FRAME.PSM);
-			if(s_save) {m_mem.SaveBMP(str, m_context->FRAME.Block(), m_context->FRAME.FBW, m_context->FRAME.PSM, GetFrameSize(1).cx, 512);}//GetFrameSize(1).cy);
+			if(s_save) {m_mem.SaveBMP(str, m_context->FRAME.Block(), m_context->FRAME.FBW, m_context->FRAME.PSM, GetFrameSize().cx, 512);}//GetFrameSize(1).cy);
 			str.Format(_T("c:\\temp1\\_%05d_f%I64d_rz0_%05x_%d.bmp"), s_n-1, m_perfmon.GetFrame(), m_context->ZBUF.Block(), m_context->ZBUF.PSM);
-			if(s_savez) {m_mem.SaveBMP(str, m_context->ZBUF.Block(), m_context->FRAME.FBW, m_context->ZBUF.PSM, GetFrameSize(1).cx, 512);}
+			if(s_savez) {m_mem.SaveBMP(str, m_context->ZBUF.Block(), m_context->FRAME.FBW, m_context->ZBUF.PSM, GetFrameSize().cx, 512);}
 		}
 
 		GSRasterizerData data;
@@ -581,9 +576,9 @@ protected:
 		{
 			CString str;
 			str.Format(_T("c:\\temp1\\_%05d_f%I64d_rt1_%05x_%d.bmp"), s_n++, m_perfmon.GetFrame(), m_context->FRAME.Block(), m_context->FRAME.PSM);
-			if(s_save) {m_mem.SaveBMP(str, m_context->FRAME.Block(), m_context->FRAME.FBW, m_context->FRAME.PSM, GetFrameSize(1).cx, 512);}//GetFrameSize(1).cy);
+			if(s_save) {m_mem.SaveBMP(str, m_context->FRAME.Block(), m_context->FRAME.FBW, m_context->FRAME.PSM, GetFrameSize().cx, 512);}//GetFrameSize(1).cy);
 			str.Format(_T("c:\\temp1\\_%05d_f%I64d_rz1_%05x_%d.bmp"), s_n-1, m_perfmon.GetFrame(), m_context->ZBUF.Block(), m_context->ZBUF.PSM);
-			if(s_savez) {m_mem.SaveBMP(str, m_context->ZBUF.Block(), m_context->FRAME.FBW, m_context->ZBUF.PSM, GetFrameSize(1).cx, 512);}
+			if(s_savez) {m_mem.SaveBMP(str, m_context->ZBUF.Block(), m_context->FRAME.FBW, m_context->ZBUF.PSM, GetFrameSize().cx, 512);}
 		}
 
 		if(0)//stats.ticks > 1000000)
