@@ -22,18 +22,13 @@
 #include "StdAfx.h"
 #include "GSTextureCacheSW.h"
 
-// static FILE* m_log = NULL;
-
 GSTextureCacheSW::GSTextureCacheSW(GSState* state)
 	: m_state(state)
 {
-	// m_log = _tfopen(_T("c:\\log.txt"), _T("w"));
 }
 
 GSTextureCacheSW::~GSTextureCacheSW()
 {
-	// fclose(m_log);
-
 	RemoveAll();
 }
 
@@ -43,20 +38,16 @@ const GSTextureCacheSW::GSTexture* GSTextureCacheSW::Lookup(const GIFRegTEX0& TE
 
 	const GSLocalMemory::psm_t& psm = GSLocalMemory::m_psm[TEX0.PSM];
 
-	const CAtlList<GSTexturePage*>& t2p = m_p2t[TEX0.TBP0 >> 5];
-
-	// fprintf(m_log, "lu %05x %d %d (%d) ", TEX0.TBP0, TEX0.TBW, TEX0.PSM, t2p.GetCount());
-
-	// if(r) fprintf(m_log, "(%d %d %d %d) ", r->left, r->top, r->right, r->bottom);
+	const CAtlMap<GSTexture*, bool>& map = m_map[TEX0.TBP0 >> 5];
 
 	GSTexture* t = NULL;
 
-	POSITION pos = t2p.GetHeadPosition();
+	POSITION pos = map.GetStartPosition();
 
 	while(pos)
 	{
-		GSTexture* t2 = t2p.GetNext(pos)->t;
-
+		GSTexture* t2 = map.GetNextKey(pos);
+			
 		// if(t2->m_TEX0.TBP0 != TEX0.TBP0 || t2->m_TEX0.TBW != TEX0.TBW || t2->m_TEX0.PSM != TEX0.PSM || t2->m_TEX0.TW != TEX0.TW || t2->m_TEX0.TH != TEX0.TH)
 		if(((t2->m_TEX0.ai32[0] ^ TEX0.ai32[0]) | ((t2->m_TEX0.ai32[1] ^ TEX0.ai32[1]) & 3)) != 0)
 		{
@@ -68,8 +59,6 @@ const GSTextureCacheSW::GSTexture* GSTextureCacheSW::Lookup(const GIFRegTEX0& TE
 			continue;
 		}
 
-		// fprintf(m_log, "cache hit\n");
-
 		t = t2;
 
 		t->m_age = 0;
@@ -79,8 +68,6 @@ const GSTextureCacheSW::GSTexture* GSTextureCacheSW::Lookup(const GIFRegTEX0& TE
 
 	if(t == NULL)
 	{
-		// fprintf(m_log, "cache miss\n");
-
 		t = new GSTexture(m_state);
 
 		t->m_pos = m_textures.AddTail(t);
@@ -91,37 +78,38 @@ const GSTextureCacheSW::GSTexture* GSTextureCacheSW::Lookup(const GIFRegTEX0& TE
 		DWORD bp = TEX0.TBP0;
 		DWORD bw = TEX0.TBW;
 
-		for(int j = 0, y = 0; y < th; j++, y += psm.pgs.cy)
+		CSize s = (bp & 31) == 0 ? psm.pgs : psm.bs;
+
+		for(int y = 0; y < th; y += s.cy)
 		{
-			DWORD page = psm.pgn(0, y, bp, bw);
+			DWORD base = psm.bn(0, y, bp, bw);
 
-			for(int i = 0, x = 0; x < tw && page < MAX_PAGES; i++, x += psm.pgs.cx, page++)
+			for(int x = 0; x < tw; x += s.cx)
 			{
-				GSTexturePage* p = new GSTexturePage();
-				
-				p->t = t;
-				p->row = j;
-				p->col = i;
+				DWORD page = (base + psm.blockOffset[x >> 3]) >> 5;
 
-				GSTexturePageEntry* p2te = new GSTexturePageEntry();
+				if(page >= MAX_PAGES)
+				{
+					continue;
+				}
 
-				p2te->p2t = &m_p2t[page];
-				p2te->pos = m_p2t[page].AddHead(p);
-
-				t->m_p2te.AddTail(p2te);
-
-				t->m_maxpages++;
+				m_map[page].SetAt(t, true);
 			}
 		}
 	}
 
 	if(!t->Update(TEX0, TEXA, r))
 	{
+		printf("!@#$%\n"); // memory allocation may fail if the game is too hungry
+
 		m_textures.RemoveAt(t->m_pos);
 
-		delete t;
+		for(int i = 0; i < MAX_PAGES; i++)
+		{
+			m_map[i].RemoveKey(t);
+		}
 
-		printf("!@#$%\n"); // memory allocation may fail if the game is too hungry
+		delete t;
 
 		return NULL;
 	}
@@ -142,18 +130,7 @@ void GSTextureCacheSW::RemoveAll()
 
 	for(int i = 0; i < MAX_PAGES; i++)
 	{
-		CAtlList<GSTexturePage*>& t2p = m_p2t[i];
-
-		ASSERT(t2p.IsEmpty());
-
-		POSITION pos = t2p.GetHeadPosition();
-
-		while(pos)
-		{
-			delete t2p.GetNext(pos);
-		}
-
-		t2p.RemoveAll();
+		m_map[i].RemoveAll();
 	}
 }
 
@@ -167,61 +144,60 @@ void GSTextureCacheSW::IncAge()
 
 		GSTexture* t = m_textures.GetNext(pos);
 
-		if(++t->m_age > 3)
+		if(++t->m_age > 30)
 		{
 			m_textures.RemoveAt(cur);
+
+			for(int i = 0; i < MAX_PAGES; i++)
+			{
+				m_map[i].RemoveKey(t);
+			}
 
 			delete t;
 		}
 	}
 }
 
-void GSTextureCacheSW::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const CRect& r)
+void GSTextureCacheSW::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const CRect& rect)
 {
 	const GSLocalMemory::psm_t& psm = GSLocalMemory::m_psm[BITBLTBUF.DPSM];
-
-	CRect r2;
-
-	r2.left = r.left & ~(psm.pgs.cx - 1);
-	r2.top = r.top & ~(psm.pgs.cy - 1);
-	r2.right = (r.right + (psm.pgs.cx - 1)) & ~(psm.pgs.cx - 1);
-	r2.bottom = (r.bottom + (psm.pgs.cy - 1)) & ~(psm.pgs.cy - 1);
 
 	DWORD bp = BITBLTBUF.DBP;
 	DWORD bw = BITBLTBUF.DBW;
 
-	// fprintf(m_log, "ivm %05x %d %d (%d %d %d %d)\n", bp, bw, BITBLTBUF.DPSM, r2.left, r2.top, r2.right, r2.bottom);
+	CSize s = (bp & 31) == 0 ? psm.pgs : psm.bs;
 
-	for(int y = r2.top; y < r2.bottom; y += psm.pgs.cy)
+	CRect r;
+
+	r.left = rect.left & ~(s.cx - 1);
+	r.top = rect.top & ~(s.cy - 1);
+	r.right = (rect.right + (s.cx - 1)) & ~(s.cx - 1);
+	r.bottom = (rect.bottom + (s.cy - 1)) & ~(s.cy - 1);
+
+	for(int y = r.top; y < r.bottom; y += s.cy)
 	{
-		DWORD page = psm.pgn(r2.left, y, bp, bw);
+		DWORD base = psm.bn(0, y, bp, bw);
 
-		for(int x = r2.left; x < r2.right && page < MAX_PAGES; x += psm.pgs.cx, page++)
+		for(int x = r.left; x < r.right; x += s.cx)
 		{
-			const CAtlList<GSTexturePage*>& t2p = m_p2t[page];
+			DWORD page = (base + psm.blockOffset[x >> 3]) >> 5;
 
-			POSITION pos = t2p.GetHeadPosition();
+			if(page >= MAX_PAGES)
+			{
+				continue;
+			}
+
+			const CAtlMap<GSTexture*, bool>& map = m_map[page];
+
+			POSITION pos = map.GetStartPosition();
 
 			while(pos)
 			{
-				GSTexturePage* p = t2p.GetNext(pos);
+				GSTexture* t = map.GetNextKey(pos);
 
-				DWORD flag = 1 << p->col;
+				t->m_valid[page] = 0;
 
-				if((p->t->m_valid[p->row] & flag) == 0)
-				{
-					continue;
-				}
-
-				if(GSUtil::HasSharedBits(BITBLTBUF.DPSM, p->t->m_TEX0.PSM))
-				{
-					p->t->m_valid[p->row] &= ~flag;
-					p->t->m_pages--;
-
-					// fprintf(m_log, "ivm hit %05x %d %d (%d %d) (%d)", p->t->m_TEX0.TBP0, p->t->m_TEX0.TBW, p->t->m_TEX0.PSM, p->row, p->col, p->t->m_pages);
-					// if(p->t->m_pages == 0) fprintf(m_log, " *");
-					// fprintf(m_log, "\n");
-				}
+				t->m_complete = false;
 			}
 		}
 	}
@@ -233,10 +209,9 @@ GSTextureCacheSW::GSTexture::GSTexture(GSState* state)
 	: m_state(state)
 	, m_buff(NULL)
 	, m_tw(0)
-	, m_maxpages(0)
-	, m_pages(0)
-	, m_pos(NULL)
 	, m_age(0)
+	, m_pos(NULL)
+	, m_complete(false)
 {
 	memset(m_valid, 0, sizeof(m_valid));
 }
@@ -247,30 +222,11 @@ GSTextureCacheSW::GSTexture::~GSTexture()
 	{
 		_aligned_free(m_buff);
 	}
-
-	POSITION pos = m_p2te.GetHeadPosition();
-
-	while(pos)
-	{
-		GSTexturePageEntry* p2te = m_p2te.GetNext(pos);
-
-		GSTexturePage* p = p2te->p2t->GetAt(p2te->pos);
-
-		ASSERT(p->t == this);
-
-		delete p;
-
-		p2te->p2t->RemoveAt(p2te->pos);
-
-		delete p2te;
-	}
-
-	m_p2te.RemoveAll();
 }
 
-bool GSTextureCacheSW::GSTexture::Update(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, const CRect* r)
+bool GSTextureCacheSW::GSTexture::Update(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, const CRect* rect)
 {
-	if(m_pages == m_maxpages)
+	if(m_complete)
 	{
 		return true;
 	}
@@ -282,16 +238,16 @@ bool GSTextureCacheSW::GSTexture::Update(const GIFRegTEX0& TEX0, const GIFRegTEX
 
 	const GSLocalMemory::psm_t& psm = GSLocalMemory::m_psm[TEX0.PSM];
 
-	int tw = 1 << TEX0.TW;
-	int th = 1 << TEX0.TH;
+	DWORD bp = TEX0.TBP0;
+	DWORD bw = TEX0.TBW;
 
-	if(tw < psm.bs.cx) tw = psm.bs.cx;
-	if(th < psm.bs.cy) th = psm.bs.cy;
+	CSize s = psm.bs;
+
+	int tw = max(1 << TEX0.TW, s.cx);
+	int th = max(1 << TEX0.TH, s.cy);
 
 	if(m_buff == NULL)
 	{
-		// fprintf(m_log, "up new (%d %d)\n", tw, th);
-
 		m_buff = _aligned_malloc(tw * th * sizeof(DWORD), 16);
 
 		if(m_buff == NULL)
@@ -302,73 +258,82 @@ bool GSTextureCacheSW::GSTexture::Update(const GIFRegTEX0& TEX0, const GIFRegTEX
 		m_tw = max(psm.pal > 0 ? 5 : 3, TEX0.TW); // makes one row 32 bytes at least, matches the smallest block size that is allocated above for m_buff
 	}
 
-	CRect r2;
+	CRect r(0, 0, tw, th);
 
-	if(r)
+	if(rect)
 	{
-		r2.left = r->left & ~(psm.pgs.cx - 1);
-		r2.top = r->top & ~(psm.pgs.cy - 1);
-		r2.right = (r->right + (psm.pgs.cx - 1)) & ~(psm.pgs.cx - 1);
-		r2.bottom = (r->bottom + (psm.pgs.cy - 1)) & ~(psm.pgs.cy - 1);
+		r.left = rect->left & ~(s.cx - 1);
+		r.top = rect->top & ~(s.cy - 1);
+		r.right = (rect->right + (s.cx - 1)) & ~(s.cx - 1);
+		r.bottom = (rect->bottom + (s.cy - 1)) & ~(s.cy - 1);
 	}
 
-	// TODO
+	if(r.left == 0 && r.top == 0 && r.right == tw && r.bottom == th)
+	{
+		m_complete = true; // lame, but better than nothing
+	}
 
-	GSLocalMemory::readTexture rt = psm.pal > 0 ? psm.rtxP : psm.rtx;
+	GSLocalMemory::readTextureBlock rtxb = psm.rtxbP;
+	
 	int bytes = psm.pal > 0 ? 1 : 4;
 
-	BYTE* dst = (BYTE*)m_buff;
-
 	DWORD pitch = (1 << m_tw) * bytes;
-	DWORD mask = pitch - 1;
 
-	for(int j = 0, y = 0; y < th; j++, y += psm.pgs.cy, dst += pitch * psm.pgs.cy)
+	BYTE* dst = (BYTE*)m_buff + pitch * r.top;
+
+	DWORD blocks = 0;
+
+	for(int y = r.top, o = pitch * s.cy; y < r.bottom; y += s.cy, dst += o)
 	{
-		if(m_valid[j] == mask)
+		DWORD base = psm.bn(0, y, bp, bw);
+
+		for(int x = r.left; x < r.right; x += s.cx)
 		{
-			continue;
-		}
+			DWORD block = base + psm.blockOffset[x >> 3];
 
-		if(r)
-		{
-			if(y < r2.top) continue;
-			if(y >= r2.bottom) break;
-		}
-
-		DWORD page = psm.pgn(0, y, TEX0.TBP0, TEX0.TBW);
-
-		for(int i = 0, x = 0; x < tw && page < MAX_PAGES; i++, x += psm.pgs.cx, page++)
-		{
-			if(r)
-			{
-				if(x < r2.left) continue;
-				if(x >= r2.right) break;
-			}
-
-			DWORD flag = 1 << i;
-
-			if(m_valid[j] & flag)
+			if(block >= MAX_BLOCKS)
 			{
 				continue;
 			}
 
-			m_valid[j] |= flag;
-			m_pages++;
+			DWORD row = block >> 5;
+			DWORD col = 1 << (block & 31);
 
-			ASSERT(m_pages <= m_maxpages);
+			if(m_valid[row] & col)
+			{
+				continue;
+			}
 
-			CRect r;
-			
-			r.left = x;
-			r.top = y;
-			r.right = min(x + psm.pgs.cx, tw);
-			r.bottom = min(y + psm.pgs.cy, th);
+			// unfortunatelly a block may be part of the same texture multiple times at different places (when (1 << tw) > (tbw << 6), ex. 1024 > 640), 
+			// so just can't set the block's bit to valid in one pass, even if 99.9% of the games don't address the repeated part at the right side
 
-			// fprintf(m_log, "up fetch (%d %d) (%d %d %d %d)\n", j, i, r.left, r.top, r.right, r.bottom);
+			// m_valid[row] |= col;
 
-			(mem.*rt)(r, &dst[x * bytes], pitch, TEX0, TEXA);
+			(mem.*rtxb)(block, &dst[x * bytes], pitch, TEXA);
 
-			m_state->m_perfmon.Put(GSPerfMon::Unswizzle, r.Width() * r.Height() * bytes);
+			blocks++;
+		}
+	}
+
+	m_state->m_perfmon.Put(GSPerfMon::Unswizzle, s.cx * s.cy * bytes * blocks);
+
+	for(int y = r.top; y < r.bottom; y += s.cy)
+	{
+		DWORD base = psm.bn(0, y, bp, bw);
+
+		for(int x = r.left; x < r.right; x += s.cx)
+		{
+			DWORD block = base + psm.blockOffset[x >> 3];
+
+			if(block >= MAX_BLOCKS)
+			{
+				continue;
+			}
+
+			DWORD row = block >> 5;
+			DWORD col = 1 << (block & 31);
+
+			m_valid[row] |= col;
 		}
 	}
 

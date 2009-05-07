@@ -44,12 +44,13 @@ public:
 	typedef void (GSLocalMemory::*writeImage)(int& tx, int& ty, BYTE* src, int len, GIFRegBITBLTBUF& BITBLTBUF, GIFRegTRXPOS& TRXPOS, GIFRegTRXREG& TRXREG);
 	typedef void (GSLocalMemory::*readImage)(int& tx, int& ty, BYTE* dst, int len, GIFRegBITBLTBUF& BITBLTBUF, GIFRegTRXPOS& TRXPOS, GIFRegTRXREG& TRXREG) const;
 	typedef void (GSLocalMemory::*readTexture)(const CRect& r, BYTE* dst, int dstpitch, const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA) const;
+	typedef void (GSLocalMemory::*readTextureBlock)(DWORD bp, BYTE* dst, int dstpitch, const GIFRegTEXA& TEXA) const;
 
 	typedef union 
 	{
 		struct
 		{
-			pixelAddress pa, ba, pga, pgn;
+			pixelAddress pa, bn;
 			readPixel rp;
 			readPixelAddr rpa;
 			writePixel wp;
@@ -60,11 +61,16 @@ public:
 			writeImage wi;
 			readImage ri;
 			readTexture rtx, rtxNP, rtxP;
-			DWORD bpp, pal, trbpp; 
+			readTextureBlock rtxb, rtxbP;
+			WORD bpp, trbpp;
+			DWORD pal; 
 			CSize bs, pgs;
 			int* rowOffset[8];
+			int* blockOffset;
 		};
+
 		BYTE dummy[128];
+
 	} psm_t;
 
 	static psm_t m_psm[64];
@@ -110,6 +116,15 @@ protected:
 	static int rowOffset8[2][2048];
 	static int rowOffset4[2][2048];
 
+	static int blockOffset32[256];
+	static int blockOffset32Z[256];
+	static int blockOffset16[256];
+	static int blockOffset16S[256];
+	static int blockOffset16Z[256];
+	static int blockOffset16SZ[256];
+	static int blockOffset8[256];
+	static int blockOffset4[256];
+
 	__forceinline static DWORD Expand24To32(DWORD c, const GIFRegTEXA& TEXA)
 	{
 		return (((!TEXA.AEM | (c & 0xffffff)) ? TEXA.TA0 : 0) << 24) | (c & 0xffffff);
@@ -138,180 +153,135 @@ public:
 
 	// address
 
-	static DWORD PageNumber32(int x, int y, DWORD bp, DWORD bw)
+	static DWORD BlockNumber32(int x, int y, DWORD bp, DWORD bw)
 	{
-		return (bp >> 5) + (y >> 5) * bw + (x >> 6); 
+		return bp + (y & ~0x1f) * bw + ((x >> 1) & ~0x1f) + blockTable32[(y >> 3) & 3][(x >> 3) & 7];
 	}
 
-	static DWORD PageNumber16(int x, int y, DWORD bp, DWORD bw)
+	static DWORD BlockNumber16(int x, int y, DWORD bp, DWORD bw)
 	{
-		return (bp >> 5) + (y >> 6) * bw + (x >> 6);
+		return bp + ((y >> 1) & ~0x1f) * bw + ((x >> 1) & ~0x1f) + blockTable16[(y >> 3) & 7][(x >> 4) & 3];
 	}
 
-	static DWORD PageNumber8(int x, int y, DWORD bp, DWORD bw)
+	static DWORD BlockNumber16S(int x, int y, DWORD bp, DWORD bw)
+	{
+		return bp + ((y >> 1) & ~0x1f) * bw + ((x >> 1) & ~0x1f) + blockTable16S[(y >> 3) & 7][(x >> 4) & 3];
+	}
+
+	static DWORD BlockNumber8(int x, int y, DWORD bp, DWORD bw)
 	{
 		ASSERT((bw & 1) == 0);
 
-		return (bp >> 5) + (y >> 6) * (bw >> 1) + (x >> 7); 
+		return bp + ((y >> 1) & ~0x1f) * (bw >> 1) + ((x >> 2) & ~0x1f) + blockTable8[(y >> 4) & 3][(x >> 4) & 7];
 	}
 
-	static DWORD PageNumber4(int x, int y, DWORD bp, DWORD bw)
+	static DWORD BlockNumber4(int x, int y, DWORD bp, DWORD bw)
 	{
 		ASSERT((bw & 1) == 0);
 
-		return (bp >> 5) + (y >> 7) * (bw >> 1) + (x >> 7);
+		return bp + ((y >> 2) & ~0x1f) * (bw >> 1) + ((x >> 2) & ~0x1f) + blockTable4[(y >> 4) & 7][(x >> 5) & 3];
 	}
 
-	static DWORD PageAddress32(int x, int y, DWORD bp, DWORD bw)
+	static DWORD BlockNumber32Z(int x, int y, DWORD bp, DWORD bw)
 	{
-		return PageNumber32(x, y, bp, bw) << 11; 
+		return bp + (y & ~0x1f) * bw + ((x >> 1) & ~0x1f) + blockTable32Z[(y >> 3) & 3][(x >> 3) & 7];
 	}
 
-	static DWORD PageAddress16(int x, int y, DWORD bp, DWORD bw)
+	static DWORD BlockNumber16Z(int x, int y, DWORD bp, DWORD bw)
 	{
-		return PageNumber16(x, y, bp, bw) << 12;
+		return bp + ((y >> 1) & ~0x1f) * bw + ((x >> 1) & ~0x1f) + blockTable16Z[(y >> 3) & 7][(x >> 4) & 3];
 	}
 
-	static DWORD PageAddress8(int x, int y, DWORD bp, DWORD bw)
+	static DWORD BlockNumber16SZ(int x, int y, DWORD bp, DWORD bw)
 	{
-		return PageNumber8(x, y, bp, bw) << 13; 
+		return bp + ((y >> 1) & ~0x1f) * bw + ((x >> 1) & ~0x1f) + blockTable16SZ[(y >> 3) & 7][(x >> 4) & 3];
 	}
 
-	static DWORD PageAddress4(int x, int y, DWORD bp, DWORD bw)
+	BYTE* BlockPtr(DWORD bp) const
 	{
-		return PageNumber4(x, y, bp, bw) << 14;
+		ASSERT(bp < 16384);
+
+		return &m_vm8[bp << 8];
 	}
 
-	static DWORD BlockAddress32(int x, int y, DWORD bp, DWORD bw)
+	BYTE* BlockPtr32(int x, int y, DWORD bp, DWORD bw) const
 	{
-		DWORD page = bp + (y & ~0x1f) * bw + ((x >> 1) & ~0x1f);
-		DWORD block = blockTable32[(y >> 3) & 3][(x >> 3) & 7];
-		return (page + block) << 6;
+		return &m_vm8[BlockNumber32(x, y, bp, bw) << 8];
 	}
 
-	static DWORD BlockAddress16(int x, int y, DWORD bp, DWORD bw)
+	BYTE* BlockPtr16(int x, int y, DWORD bp, DWORD bw) const
 	{
-		DWORD page = bp + ((y >> 1) & ~0x1f) * bw + ((x >> 1) & ~0x1f); 
-		DWORD block = blockTable16[(y >> 3) & 7][(x >> 4) & 3];
-		return (page + block) << 7;
+		return &m_vm8[BlockNumber16(x, y, bp, bw) << 8];
 	}
 
-	static DWORD BlockAddress16S(int x, int y, DWORD bp, DWORD bw)
+	BYTE* BlockPtr16S(int x, int y, DWORD bp, DWORD bw) const
 	{
-		DWORD page = bp + ((y >> 1) & ~0x1f) * bw + ((x >> 1) & ~0x1f); 
-		DWORD block = blockTable16S[(y >> 3) & 7][(x >> 4) & 3];
-		return (page + block) << 7;
+		return &m_vm8[BlockNumber16S(x, y, bp, bw) << 8];
 	}
 
-	static DWORD BlockAddress8(int x, int y, DWORD bp, DWORD bw)
+	BYTE* BlockPtr8(int x, int y, DWORD bp, DWORD bw) const
 	{
-		ASSERT((bw & 1) == 0);
-		DWORD page = bp + ((y >> 1) & ~0x1f) * (bw >> 1) + ((x >> 2) & ~0x1f); 
-		DWORD block = blockTable8[(y >> 4) & 3][(x >> 4) & 7];
-		return (page + block) << 8;
+		return &m_vm8[BlockNumber8(x, y, bp, bw) << 8];
 	}
 
-	static DWORD BlockAddress4(int x, int y, DWORD bp, DWORD bw)
+	BYTE* BlockPtr4(int x, int y, DWORD bp, DWORD bw) const
 	{
-		ASSERT((bw & 1) == 0);
-		DWORD page = bp + ((y >> 2) & ~0x1f) * (bw >> 1) + ((x >> 2) & ~0x1f); 
-		DWORD block = blockTable4[(y >> 4) & 7][(x >> 5) & 3];
-		return (page + block) << 9;
+		return &m_vm8[BlockNumber4(x, y, bp, bw) << 8];
 	}
 
-	static DWORD BlockAddress32Z(int x, int y, DWORD bp, DWORD bw)
+	BYTE* BlockPtr32Z(int x, int y, DWORD bp, DWORD bw) const
 	{
-		DWORD page = bp + (y & ~0x1f) * bw + ((x >> 1) & ~0x1f); 
-		DWORD block = blockTable32Z[(y >> 3) & 3][(x >> 3) & 7];
-		return (page + block) << 6;
+		return &m_vm8[BlockNumber32Z(x, y, bp, bw) << 8];
 	}
 
-	static DWORD BlockAddress16Z(int x, int y, DWORD bp, DWORD bw)
+	BYTE* BlockPtr16Z(int x, int y, DWORD bp, DWORD bw) const
 	{
-		DWORD page = bp + ((y >> 1) & ~0x1f) * bw + ((x >> 1) & ~0x1f); 
-		DWORD block = blockTable16Z[(y >> 3) & 7][(x >> 4) & 3];
-		return (page + block) << 7;
+		return &m_vm8[BlockNumber16Z(x, y, bp, bw) << 8];
 	}
 
-	static DWORD BlockAddress16SZ(int x, int y, DWORD bp, DWORD bw)
+	BYTE* BlockPtr16SZ(int x, int y, DWORD bp, DWORD bw) const
 	{
-		DWORD page = bp + ((y >> 1) & ~0x1f) * bw + ((x >> 1) & ~0x1f); 
-		DWORD block = blockTable16SZ[(y >> 3) & 7][(x >> 4) & 3];
-		return (page + block) << 7;
+		return &m_vm8[BlockNumber16SZ(x, y, bp, bw) << 8];
 	}
 
 	static DWORD PixelAddressOrg32(int x, int y, DWORD bp, DWORD bw)
 	{
-		DWORD page = bp + (y & ~0x1f) * bw + ((x >> 1) & ~0x1f);
-		DWORD block = blockTable32[(y >> 3) & 3][(x >> 3) & 7];
-		DWORD word = ((page + block) << 6) + columnTable32[y & 7][x & 7];
-		ASSERT(word < 1024*1024);
-		return word;
+		return (BlockNumber32(x, y, bp, bw) << 6) + columnTable32[y & 7][x & 7];
 	}
 
 	static DWORD PixelAddressOrg16(int x, int y, DWORD bp, DWORD bw)
 	{
-		DWORD page = bp + ((y >> 1) & ~0x1f) * bw + ((x >> 1) & ~0x1f); 
-		DWORD block = blockTable16[(y >> 3) & 7][(x >> 4) & 3];
-		DWORD word = ((page + block) << 7) + columnTable16[y & 7][x & 15];
-		ASSERT(word < 1024*1024*2);
-		return word;
+		return (BlockNumber16(x, y, bp, bw) << 7) + columnTable16[y & 7][x & 15];
 	}
 
 	static DWORD PixelAddressOrg16S(int x, int y, DWORD bp, DWORD bw)
 	{
-		DWORD page = bp + ((y >> 1) & ~0x1f) * bw + ((x >> 1) & ~0x1f); 
-		DWORD block = blockTable16S[(y >> 3) & 7][(x >> 4) & 3];
-		DWORD word = ((page + block) << 7) + columnTable16[y & 7][x & 15];
-		ASSERT(word < 1024*1024*2);
-		return word;
+		return (BlockNumber16S(x, y, bp, bw) << 7) + columnTable16[y & 7][x & 15];
 	}
 
 	static DWORD PixelAddressOrg8(int x, int y, DWORD bp, DWORD bw)
 	{
-		ASSERT((bw & 1) == 0);
-		DWORD page = bp + ((y >> 1) & ~0x1f) * (bw >> 1) + ((x >> 2) & ~0x1f); 
-		DWORD block = blockTable8[(y >> 4) & 3][(x >> 4) & 7];
-		DWORD word = ((page + block) << 8) + columnTable8[y & 15][x & 15];
-		ASSERT(word < 1024*1024*4);
-		return word;
+		return (BlockNumber8(x, y, bp, bw) << 8) + columnTable8[y & 15][x & 15];
 	}
 
 	static DWORD PixelAddressOrg4(int x, int y, DWORD bp, DWORD bw)
 	{
-		ASSERT((bw & 1) == 0);
-		DWORD page = bp + ((y >> 2) & ~0x1f) * (bw >> 1) + ((x >> 2) & ~0x1f); 
-		DWORD block = blockTable4[(y >> 4) & 7][(x >> 5) & 3];
-		DWORD word = ((page + block) << 9) + columnTable4[y & 15][x & 31];
-		ASSERT(word < 1024*1024*8);
-		return word;
+		return (BlockNumber4(x, y, bp, bw) << 9) + columnTable4[y & 15][x & 31];
 	}
 
 	static DWORD PixelAddressOrg32Z(int x, int y, DWORD bp, DWORD bw)
 	{
-		DWORD page = bp + (y & ~0x1f) * bw + ((x >> 1) & ~0x1f); 
-		DWORD block = blockTable32Z[(y >> 3) & 3][(x >> 3) & 7];
-		DWORD word = ((page + block) << 6) + columnTable32[y & 7][x & 7];
-		ASSERT(word < 1024*1024);
-		return word;
+		return (BlockNumber32Z(x, y, bp, bw) << 6) + columnTable32[y & 7][x & 7];
 	}
 
 	static DWORD PixelAddressOrg16Z(int x, int y, DWORD bp, DWORD bw)
 	{
-		DWORD page = bp + ((y >> 1) & ~0x1f) * bw + ((x >> 1) & ~0x1f); 
-		DWORD block = blockTable16Z[(y >> 3) & 7][(x >> 4) & 3];
-		DWORD word = ((page + block) << 7) + columnTable16[y & 7][x & 15];
-		ASSERT(word < 1024*1024*2);
-		return word;
+		return (BlockNumber16Z(x, y, bp, bw) << 7) + columnTable16[y & 7][x & 15];
 	}
 
 	static DWORD PixelAddressOrg16SZ(int x, int y, DWORD bp, DWORD bw)
 	{
-		DWORD page = bp + ((y >> 1) & ~0x1f) * bw + ((x >> 1) & ~0x1f); 
-		DWORD block = blockTable16SZ[(y >> 3) & 7][(x >> 4) & 3];
-		DWORD word = ((page + block) << 7) + columnTable16[y & 7][x & 15];
-		ASSERT(word < 1024*1024*2);
-		return word;
+		return (BlockNumber16SZ(x, y, bp, bw) << 7) + columnTable16[y & 7][x & 15];
 	}
 
 	static __forceinline DWORD PixelAddress32(int x, int y, DWORD bp, DWORD bw)
@@ -952,7 +922,7 @@ public:
 
 	void ReadImageX(int& tx, int& ty, BYTE* dst, int len, GIFRegBITBLTBUF& BITBLTBUF, GIFRegTRXPOS& TRXPOS, GIFRegTRXREG& TRXREG) const;
 
-	//
+	// * => 32
 
 	void ReadTexture32(const CRect& r, BYTE* dst, int dstpitch, const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA) const;
 	void ReadTexture24(const CRect& r, BYTE* dst, int dstpitch, const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA) const;
@@ -971,7 +941,21 @@ public:
 	void ReadTexture(const CRect& r, BYTE* dst, int dstpitch, const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, const GIFRegCLAMP& CLAMP);
 	void ReadTextureNC(const CRect& r, BYTE* dst, int dstpitch, const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, const GIFRegCLAMP& CLAMP);
 
-	// 32/16
+	void ReadTextureBlock32(DWORD bp, BYTE* dst, int dstpitch, const GIFRegTEXA& TEXA) const;
+	void ReadTextureBlock24(DWORD bp, BYTE* dst, int dstpitch, const GIFRegTEXA& TEXA) const;
+	void ReadTextureBlock16(DWORD bp, BYTE* dst, int dstpitch, const GIFRegTEXA& TEXA) const;
+	void ReadTextureBlock16S(DWORD bp, BYTE* dst, int dstpitch, const GIFRegTEXA& TEXA) const;
+	void ReadTextureBlock8(DWORD bp, BYTE* dst, int dstpitch, const GIFRegTEXA& TEXA) const;
+	void ReadTextureBlock4(DWORD bp, BYTE* dst, int dstpitch, const GIFRegTEXA& TEXA) const;
+	void ReadTextureBlock8H(DWORD bp, BYTE* dst, int dstpitch, const GIFRegTEXA& TEXA) const;
+	void ReadTextureBlock4HL(DWORD bp, BYTE* dst, int dstpitch, const GIFRegTEXA& TEXA) const;
+	void ReadTextureBlock4HH(DWORD bp, BYTE* dst, int dstpitch, const GIFRegTEXA& TEXA) const;
+	void ReadTextureBlock32Z(DWORD bp, BYTE* dst, int dstpitch, const GIFRegTEXA& TEXA) const;
+	void ReadTextureBlock24Z(DWORD bp, BYTE* dst, int dstpitch, const GIFRegTEXA& TEXA) const;
+	void ReadTextureBlock16Z(DWORD bp, BYTE* dst, int dstpitch, const GIFRegTEXA& TEXA) const;
+	void ReadTextureBlock16SZ(DWORD bp, BYTE* dst, int dstpitch, const GIFRegTEXA& TEXA) const;
+
+	// * => 32/16
 
 	void ReadTexture16NP(const CRect& r, BYTE* dst, int dstpitch, const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA) const;
 	void ReadTexture16SNP(const CRect& r, BYTE* dst, int dstpitch, const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA) const;
@@ -986,13 +970,19 @@ public:
 	void ReadTextureNP(const CRect& r, BYTE* dst, int dstpitch, const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, const GIFRegCLAMP& CLAMP);
 	void ReadTextureNPNC(const CRect& r, BYTE* dst, int dstpitch, const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, const GIFRegCLAMP& CLAMP);
 
-	// 32/8
+	// pal ? 8 : 32
 
 	void ReadTexture8P(const CRect& r, BYTE* dst, int dstpitch, const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA) const;
 	void ReadTexture4P(const CRect& r, BYTE* dst, int dstpitch, const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA) const;
 	void ReadTexture8HP(const CRect& r, BYTE* dst, int dstpitch, const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA) const;
 	void ReadTexture4HLP(const CRect& r, BYTE* dst, int dstpitch, const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA) const;
 	void ReadTexture4HHP(const CRect& r, BYTE* dst, int dstpitch, const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA) const;
+
+	void ReadTextureBlock8P(DWORD bp, BYTE* dst, int dstpitch, const GIFRegTEXA& TEXA) const;
+	void ReadTextureBlock4P(DWORD bp, BYTE* dst, int dstpitch, const GIFRegTEXA& TEXA) const;
+	void ReadTextureBlock8HP(DWORD bp, BYTE* dst, int dstpitch, const GIFRegTEXA& TEXA) const;
+	void ReadTextureBlock4HLP(DWORD bp, BYTE* dst, int dstpitch, const GIFRegTEXA& TEXA) const;
+	void ReadTextureBlock4HHP(DWORD bp, BYTE* dst, int dstpitch, const GIFRegTEXA& TEXA) const;
 
 	//
 

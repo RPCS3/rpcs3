@@ -61,6 +61,15 @@ int GSLocalMemory::rowOffset16SZ[2048];
 int GSLocalMemory::rowOffset8[2][2048];
 int GSLocalMemory::rowOffset4[2][2048];
 
+int GSLocalMemory::blockOffset32[256];
+int GSLocalMemory::blockOffset32Z[256];
+int GSLocalMemory::blockOffset16[256];
+int GSLocalMemory::blockOffset16S[256];
+int GSLocalMemory::blockOffset16Z[256];
+int GSLocalMemory::blockOffset16SZ[256];
+int GSLocalMemory::blockOffset8[256];
+int GSLocalMemory::blockOffset4[256];
+
 //
 
 DWORD GSLocalMemory::m_xtbl[1024];
@@ -138,22 +147,60 @@ GSLocalMemory::GSLocalMemory()
 
 	for(int x = 0; x < countof(rowOffset8[0]); x++)
 	{
-		rowOffset8[0][x] = (int)PixelAddress8(x, 0, 0, 32) - (int)PixelAddress8(0, 0, 0, 32),
+		rowOffset8[0][x] = (int)PixelAddress8(x, 0, 0, 32) - (int)PixelAddress8(0, 0, 0, 32);
 		rowOffset8[1][x] = (int)PixelAddress8(x, 2, 0, 32) - (int)PixelAddress8(0, 2, 0, 32);
 	}
 
 	for(int x = 0; x < countof(rowOffset4[0]); x++)
 	{
-		rowOffset4[0][x] = (int)PixelAddress4(x, 0, 0, 32) - (int)PixelAddress4(0, 0, 0, 32),
+		rowOffset4[0][x] = (int)PixelAddress4(x, 0, 0, 32) - (int)PixelAddress4(0, 0, 0, 32);
 		rowOffset4[1][x] = (int)PixelAddress4(x, 2, 0, 32) - (int)PixelAddress4(0, 2, 0, 32);
+	}
+
+	for(int x = 0; x < countof(blockOffset32); x++)
+	{
+		blockOffset32[x] = (int)BlockNumber32(x << 3, 0, 0, 32) - (int)BlockNumber32(0, 0, 0, 32);
+	}
+
+	for(int x = 0; x < countof(blockOffset32Z); x++)
+	{
+		blockOffset32Z[x] = (int)BlockNumber32Z(x << 3, 0, 0, 32) - (int)BlockNumber32Z(0, 0, 0, 32);
+	}
+
+	for(int x = 0; x < countof(blockOffset16); x++)
+	{
+		blockOffset16[x] = (int)BlockNumber16(x << 3, 0, 0, 32) - (int)BlockNumber16(0, 0, 0, 32);
+	}
+
+	for(int x = 0; x < countof(blockOffset16S); x++)
+	{
+		blockOffset16S[x] = (int)BlockNumber16S(x << 3, 0, 0, 32) - (int)BlockNumber16S(0, 0, 0, 32);
+	}
+
+	for(int x = 0; x < countof(blockOffset16Z); x++)
+	{
+		blockOffset16Z[x] = (int)BlockNumber16Z(x << 3, 0, 0, 32) - (int)BlockNumber16Z(0, 0, 0, 32);
+	}
+
+	for(int x = 0; x < countof(blockOffset16SZ); x++)
+	{
+		blockOffset16SZ[x] = (int)BlockNumber16SZ(x << 3, 0, 0, 32) - (int)BlockNumber16SZ(0, 0, 0, 32);
+	}
+
+	for(int x = 0; x < countof(blockOffset8); x++)
+	{
+		blockOffset8[x] = (int)BlockNumber8(x << 3, 0, 0, 32) - (int)BlockNumber8(0, 0, 0, 32);
+	}
+
+	for(int x = 0; x < countof(blockOffset4); x++)
+	{
+		blockOffset4[x] = (int)BlockNumber4(x << 3, 0, 0, 32) - (int)BlockNumber4(0, 0, 0, 32);
 	}
 
 	for(int i = 0; i < countof(m_psm); i++)
 	{
 		m_psm[i].pa = &GSLocalMemory::PixelAddress32;
-		m_psm[i].ba = &GSLocalMemory::BlockAddress32;
-		m_psm[i].pga = &GSLocalMemory::PageAddress32;
-		m_psm[i].pgn = &GSLocalMemory::PageNumber32;
+		m_psm[i].bn = &GSLocalMemory::BlockNumber32;
 		m_psm[i].rp = &GSLocalMemory::ReadPixel32;
 		m_psm[i].rpa = &GSLocalMemory::ReadPixel32;
 		m_psm[i].wp = &GSLocalMemory::WritePixel32;
@@ -167,11 +214,14 @@ GSLocalMemory::GSLocalMemory()
 		m_psm[i].rtx = &GSLocalMemory::ReadTexture32;
 		m_psm[i].rtxNP = &GSLocalMemory::ReadTexture32;
 		m_psm[i].rtxP = &GSLocalMemory::ReadTexture32;
+		m_psm[i].rtxb = &GSLocalMemory::ReadTextureBlock32;
+		m_psm[i].rtxbP = &GSLocalMemory::ReadTextureBlock32;
 		m_psm[i].bpp = m_psm[i].trbpp = 32;
 		m_psm[i].pal = 0;
 		m_psm[i].bs = CSize(8, 8);
 		m_psm[i].pgs = CSize(64, 32);
 		for(int j = 0; j < 8; j++) m_psm[i].rowOffset[j] = rowOffset32;
+		m_psm[i].blockOffset = blockOffset32;
 	}
 
 	m_psm[PSM_PSMCT16].pa = &GSLocalMemory::PixelAddress16;
@@ -183,28 +233,14 @@ GSLocalMemory::GSLocalMemory()
 	m_psm[PSM_PSMZ16].pa = &GSLocalMemory::PixelAddress16Z;
 	m_psm[PSM_PSMZ16S].pa = &GSLocalMemory::PixelAddress16SZ;
 
-	m_psm[PSM_PSMCT16].ba = &GSLocalMemory::BlockAddress16;
-	m_psm[PSM_PSMCT16S].ba = &GSLocalMemory::BlockAddress16S;
-	m_psm[PSM_PSMT8].ba = &GSLocalMemory::BlockAddress8;
-	m_psm[PSM_PSMT4].ba = &GSLocalMemory::BlockAddress4;
-	m_psm[PSM_PSMZ32].ba = &GSLocalMemory::BlockAddress32Z;
-	m_psm[PSM_PSMZ24].ba = &GSLocalMemory::BlockAddress32Z;
-	m_psm[PSM_PSMZ16].ba = &GSLocalMemory::BlockAddress16Z;
-	m_psm[PSM_PSMZ16S].ba = &GSLocalMemory::BlockAddress16SZ;
-
-	m_psm[PSM_PSMCT16].pga = &GSLocalMemory::PageAddress16;
-	m_psm[PSM_PSMCT16S].pga = &GSLocalMemory::PageAddress16;
-	m_psm[PSM_PSMZ16].pga = &GSLocalMemory::PageAddress16;
-	m_psm[PSM_PSMZ16S].pga = &GSLocalMemory::PageAddress16;
-	m_psm[PSM_PSMT8].pga = &GSLocalMemory::PageAddress8;
-	m_psm[PSM_PSMT4].pga = &GSLocalMemory::PageAddress4;
-
-	m_psm[PSM_PSMCT16].pgn = &GSLocalMemory::PageNumber16;
-	m_psm[PSM_PSMCT16S].pgn = &GSLocalMemory::PageNumber16;
-	m_psm[PSM_PSMZ16].pgn = &GSLocalMemory::PageNumber16;
-	m_psm[PSM_PSMZ16S].pgn = &GSLocalMemory::PageNumber16;
-	m_psm[PSM_PSMT8].pgn = &GSLocalMemory::PageNumber8;
-	m_psm[PSM_PSMT4].pgn = &GSLocalMemory::PageNumber4;
+	m_psm[PSM_PSMCT16].bn = &GSLocalMemory::BlockNumber16;
+	m_psm[PSM_PSMCT16S].bn = &GSLocalMemory::BlockNumber16S;
+	m_psm[PSM_PSMT8].bn = &GSLocalMemory::BlockNumber8;
+	m_psm[PSM_PSMT4].bn = &GSLocalMemory::BlockNumber4;
+	m_psm[PSM_PSMZ32].bn = &GSLocalMemory::BlockNumber32Z;
+	m_psm[PSM_PSMZ24].bn = &GSLocalMemory::BlockNumber32Z;
+	m_psm[PSM_PSMZ16].bn = &GSLocalMemory::BlockNumber16Z;
+	m_psm[PSM_PSMZ16S].bn = &GSLocalMemory::BlockNumber16SZ;
 
 	m_psm[PSM_PSMCT24].rp = &GSLocalMemory::ReadPixel24;
 	m_psm[PSM_PSMCT16].rp = &GSLocalMemory::ReadPixel16;
@@ -342,11 +378,44 @@ GSLocalMemory::GSLocalMemory()
 	m_psm[PSM_PSMZ16].rtxNP = &GSLocalMemory::ReadTexture16ZNP;
 	m_psm[PSM_PSMZ16S].rtxNP = &GSLocalMemory::ReadTexture16SZNP;
 
+	m_psm[PSM_PSMCT24].rtxP = &GSLocalMemory::ReadTexture24;
+	m_psm[PSM_PSMCT16].rtxP = &GSLocalMemory::ReadTexture16;
+	m_psm[PSM_PSMCT16S].rtxP = &GSLocalMemory::ReadTexture16S;
 	m_psm[PSM_PSMT8].rtxP = &GSLocalMemory::ReadTexture8P;
 	m_psm[PSM_PSMT4].rtxP = &GSLocalMemory::ReadTexture4P;
 	m_psm[PSM_PSMT8H].rtxP = &GSLocalMemory::ReadTexture8HP;
 	m_psm[PSM_PSMT4HL].rtxP = &GSLocalMemory::ReadTexture4HLP;
 	m_psm[PSM_PSMT4HH].rtxP = &GSLocalMemory::ReadTexture4HHP;
+	m_psm[PSM_PSMZ32].rtxP = &GSLocalMemory::ReadTexture32Z;
+	m_psm[PSM_PSMZ24].rtxP = &GSLocalMemory::ReadTexture24Z;
+	m_psm[PSM_PSMZ16].rtxP = &GSLocalMemory::ReadTexture16Z;
+	m_psm[PSM_PSMZ16S].rtxP = &GSLocalMemory::ReadTexture16SZ;
+
+	m_psm[PSM_PSMCT24].rtxb = &GSLocalMemory::ReadTextureBlock24;
+	m_psm[PSM_PSMCT16].rtxb = &GSLocalMemory::ReadTextureBlock16;
+	m_psm[PSM_PSMCT16S].rtxb = &GSLocalMemory::ReadTextureBlock16S;
+	m_psm[PSM_PSMT8].rtxb = &GSLocalMemory::ReadTextureBlock8;
+	m_psm[PSM_PSMT4].rtxb = &GSLocalMemory::ReadTextureBlock4;
+	m_psm[PSM_PSMT8H].rtxb = &GSLocalMemory::ReadTextureBlock8H;
+	m_psm[PSM_PSMT4HL].rtxb = &GSLocalMemory::ReadTextureBlock4HL;
+	m_psm[PSM_PSMT4HH].rtxb = &GSLocalMemory::ReadTextureBlock4HH;
+	m_psm[PSM_PSMZ32].rtxb = &GSLocalMemory::ReadTextureBlock32Z;
+	m_psm[PSM_PSMZ24].rtxb = &GSLocalMemory::ReadTextureBlock24Z;
+	m_psm[PSM_PSMZ16].rtxb = &GSLocalMemory::ReadTextureBlock16Z;
+	m_psm[PSM_PSMZ16S].rtxb = &GSLocalMemory::ReadTextureBlock16SZ;
+
+	m_psm[PSM_PSMCT24].rtxbP = &GSLocalMemory::ReadTextureBlock24;
+	m_psm[PSM_PSMCT16].rtxbP = &GSLocalMemory::ReadTextureBlock16;
+	m_psm[PSM_PSMCT16S].rtxbP = &GSLocalMemory::ReadTextureBlock16S;
+	m_psm[PSM_PSMT8].rtxbP = &GSLocalMemory::ReadTextureBlock8P;
+	m_psm[PSM_PSMT4].rtxbP = &GSLocalMemory::ReadTextureBlock4P;
+	m_psm[PSM_PSMT8H].rtxbP = &GSLocalMemory::ReadTextureBlock8HP;
+	m_psm[PSM_PSMT4HL].rtxbP = &GSLocalMemory::ReadTextureBlock4HLP;
+	m_psm[PSM_PSMT4HH].rtxbP = &GSLocalMemory::ReadTextureBlock4HHP;
+	m_psm[PSM_PSMZ32].rtxbP = &GSLocalMemory::ReadTextureBlock32Z;
+	m_psm[PSM_PSMZ24].rtxbP = &GSLocalMemory::ReadTextureBlock24Z;
+	m_psm[PSM_PSMZ16].rtxbP = &GSLocalMemory::ReadTextureBlock16Z;
+	m_psm[PSM_PSMZ16S].rtxbP = &GSLocalMemory::ReadTextureBlock16SZ;
 
 	m_psm[PSM_PSMT8].pal = m_psm[PSM_PSMT8H].pal = 256;
 	m_psm[PSM_PSMT4].pal = m_psm[PSM_PSMT4HL].pal = m_psm[PSM_PSMT4HH].pal = 16;
@@ -381,6 +450,15 @@ GSLocalMemory::GSLocalMemory()
 	for(int i = 0; i < 8; i++) m_psm[PSM_PSMZ24].rowOffset[i] = rowOffset32Z;
 	for(int i = 0; i < 8; i++) m_psm[PSM_PSMZ16].rowOffset[i] = rowOffset16Z;
 	for(int i = 0; i < 8; i++) m_psm[PSM_PSMZ16S].rowOffset[i] = rowOffset16SZ;
+
+	m_psm[PSM_PSMCT16].blockOffset = blockOffset16;
+	m_psm[PSM_PSMCT16S].blockOffset = blockOffset16S;
+	m_psm[PSM_PSMT8].blockOffset = blockOffset8;
+	m_psm[PSM_PSMT4].blockOffset = blockOffset4;
+	m_psm[PSM_PSMZ32].blockOffset = blockOffset32Z;
+	m_psm[PSM_PSMZ24].blockOffset = blockOffset32Z;
+	m_psm[PSM_PSMZ16].blockOffset = blockOffset16Z;
+	m_psm[PSM_PSMZ16S].blockOffset = blockOffset16SZ;
 }
 
 GSLocalMemory::~GSLocalMemory()
@@ -505,20 +583,18 @@ bool GSLocalMemory::FillRect(const GSVector4i& r, DWORD c, DWORD psm, DWORD bp, 
 	const psm_t& tbl = m_psm[psm];
 
 	writePixel wp = tbl.wp;
-	pixelAddress ba = tbl.ba;
+	pixelAddress bn = tbl.bn;
 
 	int w = tbl.bs.cx;
 	int h = tbl.bs.cy;
 	int bpp = tbl.bpp;
 
-	int shift = 0;
-
 	switch(bpp)
 	{
-	case 32: shift = 0; break;
-	case 16: shift = 1; c = (c & 0xffff) * 0x00010001; break;
-	case 8: shift = 2; c = (c & 0xff) * 0x01010101; break;
-	case 4: shift = 3; c = (c & 0xf) * 0x11111111; break;
+	case 32: break;
+	case 16: c = (c & 0xffff) * 0x00010001; break;
+	case 8: c = (c & 0xff) * 0x01010101; break;
+	case 4: c = (c & 0xf) * 0x11111111; break;
 	}
 
 	CRect clip;
@@ -574,7 +650,7 @@ bool GSLocalMemory::FillRect(const GSVector4i& r, DWORD c, DWORD psm, DWORD bp, 
 		{
 			for(int x = clip.left; x < clip.right; x += w)
 			{
-				GSVector4i* p = (GSVector4i*)&m_vm8[ba(x, y, bp, bw) << 2 >> shift];
+				GSVector4i* p = (GSVector4i*)&m_vm8[bn(x, y, bp, bw) << 8];
 
 				for(int i = 0; i < 16; i += 4)
 				{
@@ -594,7 +670,7 @@ bool GSLocalMemory::FillRect(const GSVector4i& r, DWORD c, DWORD psm, DWORD bp, 
 		{
 			for(int x = clip.left; x < clip.right; x += w)
 			{
-				DWORD* p = &m_vm32[ba(x, y, bp, bw)];
+				DWORD* p = (DWORD*)&m_vm8[bn(x, y, bp, bw) << 8];
 
 				for(int i = 0; i < 64; i += 4)
 				{
@@ -618,7 +694,7 @@ bool GSLocalMemory::FillRect(const GSVector4i& r, DWORD c, DWORD psm, DWORD bp, 
 		{
 			for(int x = clip.left; x < clip.right; x += w)
 			{
-				GSVector4i* p = (GSVector4i*)&m_vm8[ba(x, y, bp, bw) << 2 >> shift];
+				GSVector4i* p = (GSVector4i*)&m_vm8[bn(x, y, bp, bw) << 8];
 
 				for(int i = 0; i < 16; i += 4)
 				{
@@ -636,7 +712,7 @@ bool GSLocalMemory::FillRect(const GSVector4i& r, DWORD c, DWORD psm, DWORD bp, 
 		{
 			for(int x = clip.left; x < clip.right; x += w)
 			{
-				DWORD* p = (DWORD*)&m_vm8[ba(x, y, bp, bw) << 2 >> shift];
+				DWORD* p = (DWORD*)&m_vm8[bn(x, y, bp, bw) << 8];
 
 				for(int i = 0; i < 64; i += 4)
 				{
@@ -670,14 +746,14 @@ void GSLocalMemory::WriteImageColumn(int l, int r, int y, int h, BYTE* src, int 
 		{
 			switch(psm)
 			{
-			case PSM_PSMCT32: WriteColumn32<aligned, 0xffffffff>(y, (BYTE*)&m_vm32[BlockAddress32(x, y, bp, bw)], &src[x * 4], srcpitch); break;
-			case PSM_PSMCT16: WriteColumn16<aligned>(y, (BYTE*)&m_vm16[BlockAddress16(x, y, bp, bw)], &src[x * 2], srcpitch); break;
-			case PSM_PSMCT16S: WriteColumn16<aligned>(y, (BYTE*)&m_vm16[BlockAddress16S(x, y, bp, bw)], &src[x * 2], srcpitch); break;
-			case PSM_PSMT8: WriteColumn8<aligned>(y, (BYTE*)&m_vm8[BlockAddress8(x, y, bp, bw)], &src[x], srcpitch); break;
-			case PSM_PSMT4: WriteColumn4<aligned>(y, (BYTE*)&m_vm8[BlockAddress4(x, y, bp, bw) >> 1], &src[x >> 1], srcpitch); break;
-			case PSM_PSMZ32: WriteColumn32<aligned, 0xffffffff>(y, (BYTE*)&m_vm32[BlockAddress32Z(x, y, bp, bw)], &src[x * 4], srcpitch); break;
-			case PSM_PSMZ16: WriteColumn16<aligned>(y, (BYTE*)&m_vm16[BlockAddress16Z(x, y, bp, bw)], &src[x * 2], srcpitch); break;
-			case PSM_PSMZ16S: WriteColumn16<aligned>(y, (BYTE*)&m_vm16[BlockAddress16SZ(x, y, bp, bw)], &src[x * 2], srcpitch); break;
+			case PSM_PSMCT32: WriteColumn32<aligned, 0xffffffff>(y, BlockPtr32(x, y, bp, bw), &src[x * 4], srcpitch); break;
+			case PSM_PSMCT16: WriteColumn16<aligned>(y, BlockPtr16(x, y, bp, bw), &src[x * 2], srcpitch); break;
+			case PSM_PSMCT16S: WriteColumn16<aligned>(y, BlockPtr16S(x, y, bp, bw), &src[x * 2], srcpitch); break;
+			case PSM_PSMT8: WriteColumn8<aligned>(y, BlockPtr8(x, y, bp, bw), &src[x], srcpitch); break;
+			case PSM_PSMT4: WriteColumn4<aligned>(y, BlockPtr4(x, y, bp, bw), &src[x >> 1], srcpitch); break;
+			case PSM_PSMZ32: WriteColumn32<aligned, 0xffffffff>(y, BlockPtr32Z(x, y, bp, bw), &src[x * 4], srcpitch); break;
+			case PSM_PSMZ16: WriteColumn16<aligned>(y, BlockPtr16Z(x, y, bp, bw), &src[x * 2], srcpitch); break;
+			case PSM_PSMZ16S: WriteColumn16<aligned>(y, BlockPtr16SZ(x, y, bp, bw), &src[x * 2], srcpitch); break;
 			// TODO
 			default: __assume(0);
 			}
@@ -697,14 +773,14 @@ void GSLocalMemory::WriteImageBlock(int l, int r, int y, int h, BYTE* src, int s
 		{
 			switch(psm)
 			{
-			case PSM_PSMCT32: WriteBlock32<aligned, 0xffffffff>((BYTE*)&m_vm32[BlockAddress32(x, y, bp, bw)], &src[x * 4], srcpitch); break;
-			case PSM_PSMCT16: WriteBlock16<aligned>((BYTE*)&m_vm16[BlockAddress16(x, y, bp, bw)], &src[x * 2], srcpitch); break;
-			case PSM_PSMCT16S: WriteBlock16<aligned>((BYTE*)&m_vm16[BlockAddress16S(x, y, bp, bw)], &src[x * 2], srcpitch); break;
-			case PSM_PSMT8: WriteBlock8<aligned>((BYTE*)&m_vm8[BlockAddress8(x, y, bp, bw)], &src[x], srcpitch); break;
-			case PSM_PSMT4: WriteBlock4<aligned>((BYTE*)&m_vm8[BlockAddress4(x, y, bp, bw) >> 1], &src[x >> 1], srcpitch); break;
-			case PSM_PSMZ32: WriteBlock32<aligned, 0xffffffff>((BYTE*)&m_vm32[BlockAddress32Z(x, y, bp, bw)], &src[x * 4], srcpitch); break;
-			case PSM_PSMZ16: WriteBlock16<aligned>((BYTE*)&m_vm16[BlockAddress16Z(x, y, bp, bw)], &src[x * 2], srcpitch); break;
-			case PSM_PSMZ16S: WriteBlock16<aligned>((BYTE*)&m_vm16[BlockAddress16SZ(x, y, bp, bw)], &src[x * 2], srcpitch); break;
+			case PSM_PSMCT32: WriteBlock32<aligned, 0xffffffff>(BlockPtr32(x, y, bp, bw), &src[x * 4], srcpitch); break;
+			case PSM_PSMCT16: WriteBlock16<aligned>(BlockPtr16(x, y, bp, bw), &src[x * 2], srcpitch); break;
+			case PSM_PSMCT16S: WriteBlock16<aligned>(BlockPtr16S(x, y, bp, bw), &src[x * 2], srcpitch); break;
+			case PSM_PSMT8: WriteBlock8<aligned>(BlockPtr8(x, y, bp, bw), &src[x], srcpitch); break;
+			case PSM_PSMT4: WriteBlock4<aligned>(BlockPtr4(x, y, bp, bw), &src[x >> 1], srcpitch); break;
+			case PSM_PSMZ32: WriteBlock32<aligned, 0xffffffff>(BlockPtr32Z(x, y, bp, bw), &src[x * 4], srcpitch); break;
+			case PSM_PSMZ16: WriteBlock16<aligned>(BlockPtr16Z(x, y, bp, bw), &src[x * 2], srcpitch); break;
+			case PSM_PSMZ16S: WriteBlock16<aligned>(BlockPtr16SZ(x, y, bp, bw), &src[x * 2], srcpitch); break;
 			// TODO
 			default: __assume(0);
 			}
@@ -763,14 +839,14 @@ void GSLocalMemory::WriteImageTopBottom(int l, int r, int y, int h, BYTE* src, i
 
 			switch(psm)
 			{
-			case PSM_PSMCT32: dst = (BYTE*)&m_vm32[BlockAddress32(x, y, bp, bw)]; break;
-			case PSM_PSMCT16: dst = (BYTE*)&m_vm16[BlockAddress16(x, y, bp, bw)]; break;
-			case PSM_PSMCT16S: dst = (BYTE*)&m_vm16[BlockAddress16S(x, y, bp, bw)]; break;
-			case PSM_PSMT8: dst = (BYTE*)&m_vm8[BlockAddress8(x, y, bp, bw)]; break;
-			case PSM_PSMT4: dst = (BYTE*)&m_vm8[BlockAddress4(x, y, bp, bw) >> 1]; break;
-			case PSM_PSMZ32: dst = (BYTE*)&m_vm32[BlockAddress32Z(x, y, bp, bw)]; break;
-			case PSM_PSMZ16: dst = (BYTE*)&m_vm16[BlockAddress16Z(x, y, bp, bw)]; break;
-			case PSM_PSMZ16S: dst = (BYTE*)&m_vm16[BlockAddress16SZ(x, y, bp, bw)]; break;
+			case PSM_PSMCT32: dst = BlockPtr32(x, y, bp, bw); break;
+			case PSM_PSMCT16: dst = BlockPtr16(x, y, bp, bw); break;
+			case PSM_PSMCT16S: dst = BlockPtr16S(x, y, bp, bw); break;
+			case PSM_PSMT8: dst = BlockPtr8(x, y, bp, bw); break;
+			case PSM_PSMT4: dst = BlockPtr4(x, y, bp, bw); break;
+			case PSM_PSMZ32: dst = BlockPtr32Z(x, y, bp, bw); break;
+			case PSM_PSMZ16: dst = BlockPtr16Z(x, y, bp, bw); break;
+			case PSM_PSMZ16S: dst = BlockPtr16SZ(x, y, bp, bw); break;
 			// TODO
 			default: __assume(0);
 			}
@@ -844,14 +920,14 @@ void GSLocalMemory::WriteImageTopBottom(int l, int r, int y, int h, BYTE* src, i
 
 			switch(psm)
 			{
-			case PSM_PSMCT32: dst = (BYTE*)&m_vm32[BlockAddress32(x, y, bp, bw)]; break;
-			case PSM_PSMCT16: dst = (BYTE*)&m_vm16[BlockAddress16(x, y, bp, bw)]; break;
-			case PSM_PSMCT16S: dst = (BYTE*)&m_vm16[BlockAddress16S(x, y, bp, bw)]; break;
-			case PSM_PSMT8: dst = (BYTE*)&m_vm8[BlockAddress8(x, y, bp, bw)]; break;
-			case PSM_PSMT4: dst = (BYTE*)&m_vm8[BlockAddress4(x, y, bp, bw) >> 1]; break;
-			case PSM_PSMZ32: dst = (BYTE*)&m_vm32[BlockAddress32Z(x, y, bp, bw)]; break;
-			case PSM_PSMZ16: dst = (BYTE*)&m_vm16[BlockAddress16Z(x, y, bp, bw)]; break;
-			case PSM_PSMZ16S: dst = (BYTE*)&m_vm16[BlockAddress16SZ(x, y, bp, bw)]; break;
+			case PSM_PSMCT32: dst = BlockPtr32(x, y, bp, bw); break;
+			case PSM_PSMCT16: dst = BlockPtr16(x, y, bp, bw); break;
+			case PSM_PSMCT16S: dst = BlockPtr16S(x, y, bp, bw); break;
+			case PSM_PSMT8: dst = BlockPtr8(x, y, bp, bw); break;
+			case PSM_PSMT4: dst = BlockPtr4(x, y, bp, bw); break;
+			case PSM_PSMZ32: dst = BlockPtr32Z(x, y, bp, bw); break;
+			case PSM_PSMZ16: dst = BlockPtr16Z(x, y, bp, bw); break;
+			case PSM_PSMZ16S: dst = BlockPtr16SZ(x, y, bp, bw); break;
 			// TODO
 			default: __assume(0);
 			}
@@ -1026,7 +1102,7 @@ void GSLocalMemory::WriteImage24(int& tx, int& ty, BYTE* src, int len, GIFRegBIT
 		{
 			for(int x = tx; x < tw; x += 8)
 			{
-				UnpackAndWriteBlock24(src + (x - tx) * 3, srcpitch, (BYTE*)&m_vm32[BlockAddress32(x, y, bp, bw)]);
+				UnpackAndWriteBlock24(src + (x - tx) * 3, srcpitch, BlockPtr32(x, y, bp, bw));
 			}
 		}
 
@@ -1060,7 +1136,7 @@ void GSLocalMemory::WriteImage8H(int& tx, int& ty, BYTE* src, int len, GIFRegBIT
 		{
 			for(int x = tx; x < tw; x += 8)
 			{
-				UnpackAndWriteBlock8H(src + (x - tx), srcpitch, (BYTE*)&m_vm32[BlockAddress32(x, y, bp, bw)]);
+				UnpackAndWriteBlock8H(src + (x - tx), srcpitch, BlockPtr32(x, y, bp, bw));
 			}
 		}
 
@@ -1094,7 +1170,7 @@ void GSLocalMemory::WriteImage4HL(int& tx, int& ty, BYTE* src, int len, GIFRegBI
 		{
 			for(int x = tx; x < tw; x += 8)
 			{
-				UnpackAndWriteBlock4HL(src + (x - tx) / 2, srcpitch, (BYTE*)&m_vm32[BlockAddress32(x, y, bp, bw)]);
+				UnpackAndWriteBlock4HL(src + (x - tx) / 2, srcpitch, BlockPtr32(x, y, bp, bw));
 			}
 		}
 
@@ -1128,7 +1204,7 @@ void GSLocalMemory::WriteImage4HH(int& tx, int& ty, BYTE* src, int len, GIFRegBI
 		{
 			for(int x = tx; x < tw; x += 8)
 			{
-				UnpackAndWriteBlock4HH(src + (x - tx) / 2, srcpitch, (BYTE*)&m_vm32[BlockAddress32(x, y, bp, bw)]);
+				UnpackAndWriteBlock4HH(src + (x - tx) / 2, srcpitch, BlockPtr32(x, y, bp, bw));
 			}
 		}
 
@@ -1161,7 +1237,7 @@ void GSLocalMemory::WriteImage24Z(int& tx, int& ty, BYTE* src, int len, GIFRegBI
 		{
 			for(int x = tx; x < tw; x += 8)
 			{
-				UnpackAndWriteBlock24(src + (x - tx) * 3, srcpitch, (BYTE*)&m_vm32[BlockAddress32Z(x, y, bp, bw)]);
+				UnpackAndWriteBlock24(src + (x - tx) * 3, srcpitch, BlockPtr32Z(x, y, bp, bw));
 			}
 		}
 
@@ -1525,10 +1601,9 @@ void GSLocalMemory::ReadTexture32(const CRect& r, BYTE* dst, int dstpitch, const
 {
 	FOREACH_BLOCK_START(8, 8, 32)
 	{
-		ReadBlock32<true>((BYTE*)&m_vm32[BlockAddress32(x, y, bp, bw)], dst, dstpitch);
+		ReadBlock32<true>(BlockPtr32(x, y, bp, bw), dst, dstpitch);
 	}
 	FOREACH_BLOCK_END
-
 }
 
 void GSLocalMemory::ReadTexture24(const CRect& r, BYTE* dst, int dstpitch, const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA) const
@@ -1537,7 +1612,7 @@ void GSLocalMemory::ReadTexture24(const CRect& r, BYTE* dst, int dstpitch, const
 	{
 		FOREACH_BLOCK_START(8, 8, 32)
 		{
-			ReadAndExpandBlock24<true>((BYTE*)&m_vm32[BlockAddress32(x, y, bp, bw)], dst, dstpitch, TEXA);
+			ReadAndExpandBlock24<true>(BlockPtr32(x, y, bp, bw), dst, dstpitch, TEXA);
 		}
 		FOREACH_BLOCK_END
 	}
@@ -1545,7 +1620,7 @@ void GSLocalMemory::ReadTexture24(const CRect& r, BYTE* dst, int dstpitch, const
 	{
 		FOREACH_BLOCK_START(8, 8, 32)
 		{
-			ReadAndExpandBlock24<false>((BYTE*)&m_vm32[BlockAddress32(x, y, bp, bw)], dst, dstpitch, TEXA);
+			ReadAndExpandBlock24<false>(BlockPtr32(x, y, bp, bw), dst, dstpitch, TEXA);
 		}
 		FOREACH_BLOCK_END
 	}
@@ -1557,7 +1632,7 @@ void GSLocalMemory::ReadTexture16(const CRect& r, BYTE* dst, int dstpitch, const
 
 	FOREACH_BLOCK_START(16, 8, 32)
 	{
-		ReadBlock16<true>((BYTE*)&m_vm16[BlockAddress16(x, y, bp, bw)], (BYTE*)block, sizeof(block) / 8);
+		ReadBlock16<true>(BlockPtr16(x, y, bp, bw), (BYTE*)block, sizeof(block) / 8);
 
 		ExpandBlock16(block, dst, dstpitch, TEXA);
 	}
@@ -1570,7 +1645,7 @@ void GSLocalMemory::ReadTexture16S(const CRect& r, BYTE* dst, int dstpitch, cons
 
 	FOREACH_BLOCK_START(16, 8, 32)
 	{
-		ReadBlock16<true>((BYTE*)&m_vm16[BlockAddress16S(x, y, bp, bw)], (BYTE*)block, sizeof(block) / 8);
+		ReadBlock16<true>(BlockPtr16S(x, y, bp, bw), (BYTE*)block, sizeof(block) / 8);
 
 		ExpandBlock16(block, dst, dstpitch, TEXA);
 	}
@@ -1583,7 +1658,7 @@ void GSLocalMemory::ReadTexture8(const CRect& r, BYTE* dst, int dstpitch, const 
 
 	FOREACH_BLOCK_START(16, 16, 32)
 	{
-		ReadAndExpandBlock8_32((BYTE*)&m_vm8[BlockAddress8(x, y, bp, bw)], dst, dstpitch, pal);
+		ReadAndExpandBlock8_32(BlockPtr8(x, y, bp, bw), dst, dstpitch, pal);
 	}
 	FOREACH_BLOCK_END
 }
@@ -1594,7 +1669,7 @@ void GSLocalMemory::ReadTexture4(const CRect& r, BYTE* dst, int dstpitch, const 
 
 	FOREACH_BLOCK_START(32, 16, 32)
 	{
-		ReadAndExpandBlock4_32((BYTE*)&m_vm8[BlockAddress4(x, y, bp, bw) >> 1], dst, dstpitch, pal);
+		ReadAndExpandBlock4_32(BlockPtr4(x, y, bp, bw), dst, dstpitch, pal);
 	}
 	FOREACH_BLOCK_END
 }
@@ -1605,7 +1680,7 @@ void GSLocalMemory::ReadTexture8H(const CRect& r, BYTE* dst, int dstpitch, const
 
 	FOREACH_BLOCK_START(8, 8, 32)
 	{
-		ReadAndExpandBlock8H_32((BYTE*)&m_vm32[BlockAddress32(x, y, bp, bw)], dst, dstpitch, pal);
+		ReadAndExpandBlock8H_32(BlockPtr32(x, y, bp, bw), dst, dstpitch, pal);
 	}
 	FOREACH_BLOCK_END
 }
@@ -1616,7 +1691,7 @@ void GSLocalMemory::ReadTexture4HL(const CRect& r, BYTE* dst, int dstpitch, cons
 
 	FOREACH_BLOCK_START(8, 8, 32)
 	{
-		ReadAndExpandBlock4HL_32((BYTE*)&m_vm32[BlockAddress32(x, y, bp, bw)], dst, dstpitch, pal);
+		ReadAndExpandBlock4HL_32(BlockPtr32(x, y, bp, bw), dst, dstpitch, pal);
 	}
 	FOREACH_BLOCK_END
 }
@@ -1627,7 +1702,7 @@ void GSLocalMemory::ReadTexture4HH(const CRect& r, BYTE* dst, int dstpitch, cons
 
 	FOREACH_BLOCK_START(8, 8, 32)
 	{
-		ReadAndExpandBlock4HH_32((BYTE*)&m_vm32[BlockAddress32(x, y, bp, bw)], dst, dstpitch, pal);
+		ReadAndExpandBlock4HH_32(BlockPtr32(x, y, bp, bw), dst, dstpitch, pal);
 	}
 	FOREACH_BLOCK_END
 }
@@ -1636,7 +1711,7 @@ void GSLocalMemory::ReadTexture32Z(const CRect& r, BYTE* dst, int dstpitch, cons
 {
 	FOREACH_BLOCK_START(8, 8, 32)
 	{
-		ReadBlock32<true>((BYTE*)&m_vm32[BlockAddress32Z(x, y, bp, bw)], dst, dstpitch);
+		ReadBlock32<true>(BlockPtr32Z(x, y, bp, bw), dst, dstpitch);
 	}
 	FOREACH_BLOCK_END
 }
@@ -1647,7 +1722,7 @@ void GSLocalMemory::ReadTexture24Z(const CRect& r, BYTE* dst, int dstpitch, cons
 	{
 		FOREACH_BLOCK_START(8, 8, 32)
 		{
-			ReadAndExpandBlock24<true>((BYTE*)&m_vm32[BlockAddress32Z(x, y, bp, bw)], dst, dstpitch, TEXA);
+			ReadAndExpandBlock24<true>(BlockPtr32Z(x, y, bp, bw), dst, dstpitch, TEXA);
 		}
 		FOREACH_BLOCK_END
 	}
@@ -1655,7 +1730,7 @@ void GSLocalMemory::ReadTexture24Z(const CRect& r, BYTE* dst, int dstpitch, cons
 	{
 		FOREACH_BLOCK_START(8, 8, 32)
 		{
-			ReadAndExpandBlock24<false>((BYTE*)&m_vm32[BlockAddress32Z(x, y, bp, bw)], dst, dstpitch, TEXA);
+			ReadAndExpandBlock24<false>(BlockPtr32Z(x, y, bp, bw), dst, dstpitch, TEXA);
 		}
 		FOREACH_BLOCK_END
 	}
@@ -1667,7 +1742,7 @@ void GSLocalMemory::ReadTexture16Z(const CRect& r, BYTE* dst, int dstpitch, cons
 
 	FOREACH_BLOCK_START(16, 8, 32)
 	{
-		ReadBlock16<true>((BYTE*)&m_vm16[BlockAddress16Z(x, y, bp, bw)], (BYTE*)block, sizeof(block) / 8);
+		ReadBlock16<true>(BlockPtr16Z(x, y, bp, bw), (BYTE*)block, sizeof(block) / 8);
 
 		ExpandBlock16(block, dst, dstpitch, TEXA);
 	}
@@ -1680,11 +1755,118 @@ void GSLocalMemory::ReadTexture16SZ(const CRect& r, BYTE* dst, int dstpitch, con
 
 	FOREACH_BLOCK_START(16, 8, 32)
 	{
-		ReadBlock16<true>((BYTE*)&m_vm16[BlockAddress16SZ(x, y, bp, bw)], (BYTE*)block, sizeof(block) / 8);
+		ReadBlock16<true>(BlockPtr16SZ(x, y, bp, bw), (BYTE*)block, sizeof(block) / 8);
 
 		ExpandBlock16(block, dst, dstpitch, TEXA);
 	}
 	FOREACH_BLOCK_END
+}
+
+///////////////////
+
+void GSLocalMemory::ReadTextureBlock32(DWORD bp, BYTE* dst, int dstpitch, const GIFRegTEXA& TEXA) const
+{
+	ReadBlock32<true>(BlockPtr(bp), dst, dstpitch);
+}
+
+void GSLocalMemory::ReadTextureBlock24(DWORD bp, BYTE* dst, int dstpitch, const GIFRegTEXA& TEXA) const
+{
+	if(TEXA.AEM)
+	{
+		ReadAndExpandBlock24<true>(BlockPtr(bp), dst, dstpitch, TEXA);
+	}
+	else
+	{
+		ReadAndExpandBlock24<false>(BlockPtr(bp), dst, dstpitch, TEXA);
+	}
+}
+
+void GSLocalMemory::ReadTextureBlock16(DWORD bp, BYTE* dst, int dstpitch, const GIFRegTEXA& TEXA) const
+{
+	__declspec(align(16)) WORD block[16 * 8];
+
+	ReadBlock16<true>(BlockPtr(bp), (BYTE*)block, sizeof(block) / 8);
+
+	ExpandBlock16(block, dst, dstpitch, TEXA);
+}
+
+void GSLocalMemory::ReadTextureBlock16S(DWORD bp, BYTE* dst, int dstpitch, const GIFRegTEXA& TEXA) const
+{
+	__declspec(align(16)) WORD block[16 * 8];
+
+	ReadBlock16<true>(BlockPtr(bp), (BYTE*)block, sizeof(block) / 8);
+
+	ExpandBlock16(block, dst, dstpitch, TEXA);
+}
+
+void GSLocalMemory::ReadTextureBlock8(DWORD bp, BYTE* dst, int dstpitch, const GIFRegTEXA& TEXA) const
+{
+	const DWORD* pal = m_clut;
+
+	ReadAndExpandBlock8_32(BlockPtr(bp), dst, dstpitch, pal);
+}
+
+void GSLocalMemory::ReadTextureBlock4(DWORD bp, BYTE* dst, int dstpitch, const GIFRegTEXA& TEXA) const
+{
+	const UINT64* pal = m_clut;
+
+	ReadAndExpandBlock4_32(BlockPtr(bp), dst, dstpitch, pal);
+}
+
+void GSLocalMemory::ReadTextureBlock8H(DWORD bp, BYTE* dst, int dstpitch, const GIFRegTEXA& TEXA) const
+{
+	const DWORD* pal = m_clut;
+
+	ReadAndExpandBlock8H_32(BlockPtr(bp), dst, dstpitch, pal);
+}
+
+void GSLocalMemory::ReadTextureBlock4HL(DWORD bp, BYTE* dst, int dstpitch, const GIFRegTEXA& TEXA) const
+{
+	const DWORD* pal = m_clut;
+
+	ReadAndExpandBlock4HL_32(BlockPtr(bp), dst, dstpitch, pal);
+}
+
+void GSLocalMemory::ReadTextureBlock4HH(DWORD bp, BYTE* dst, int dstpitch, const GIFRegTEXA& TEXA) const
+{
+	const DWORD* pal = m_clut;
+
+	ReadAndExpandBlock4HH_32(BlockPtr(bp), dst, dstpitch, pal);
+}
+
+void GSLocalMemory::ReadTextureBlock32Z(DWORD bp, BYTE* dst, int dstpitch, const GIFRegTEXA& TEXA) const
+{
+	ReadBlock32<true>(BlockPtr(bp), dst, dstpitch);
+}
+
+void GSLocalMemory::ReadTextureBlock24Z(DWORD bp, BYTE* dst, int dstpitch, const GIFRegTEXA& TEXA) const
+{
+	if(TEXA.AEM)
+	{
+		ReadAndExpandBlock24<true>(BlockPtr(bp), dst, dstpitch, TEXA);
+	}
+	else
+	{
+		ReadAndExpandBlock24<false>(BlockPtr(bp), dst, dstpitch, TEXA);
+	}
+}
+
+void GSLocalMemory::ReadTextureBlock16Z(DWORD bp, BYTE* dst, int dstpitch, const GIFRegTEXA& TEXA) const
+{
+	__declspec(align(16)) WORD block[16 * 8];
+
+	ReadBlock16<true>(BlockPtr(bp), (BYTE*)block, sizeof(block) / 8);
+
+	ExpandBlock16(block, dst, dstpitch, TEXA);
+}
+
+void GSLocalMemory::ReadTextureBlock16SZ(DWORD bp, BYTE* dst, int dstpitch, const GIFRegTEXA& TEXA) const
+{
+	__declspec(align(16)) WORD block[16 * 8];
+
+	ReadBlock16<true>(BlockPtr(bp), (BYTE*)block, sizeof(block) / 8);
+
+	ExpandBlock16(block, dst, dstpitch, TEXA);
 }
 
 ///////////////////
@@ -1731,7 +1913,7 @@ void GSLocalMemory::ReadTexture16NP(const CRect& r, BYTE* dst, int dstpitch, con
 {
 	FOREACH_BLOCK_START(16, 8, 16)
 	{
-		ReadBlock16<true>((BYTE*)&m_vm16[BlockAddress16(x, y, bp, bw)], dst, dstpitch);
+		ReadBlock16<true>(BlockPtr16(x, y, bp, bw), dst, dstpitch);
 	}
 	FOREACH_BLOCK_END
 }
@@ -1740,7 +1922,7 @@ void GSLocalMemory::ReadTexture16SNP(const CRect& r, BYTE* dst, int dstpitch, co
 {
 	FOREACH_BLOCK_START(16, 8, 16)
 	{
-		ReadBlock16<true>((BYTE*)&m_vm16[BlockAddress16S(x, y, bp, bw)], dst, dstpitch);
+		ReadBlock16<true>(BlockPtr16S(x, y, bp, bw), dst, dstpitch);
 	}
 	FOREACH_BLOCK_END
 }
@@ -1753,7 +1935,7 @@ void GSLocalMemory::ReadTexture8NP(const CRect& r, BYTE* dst, int dstpitch, cons
 	{
 		FOREACH_BLOCK_START(16, 16, 32)
 		{
-			ReadAndExpandBlock8_32((BYTE*)&m_vm8[BlockAddress8(x, y, bp, bw)], dst, dstpitch, pal);
+			ReadAndExpandBlock8_32(BlockPtr8(x, y, bp, bw), dst, dstpitch, pal);
 		}
 		FOREACH_BLOCK_END
 	}
@@ -1765,7 +1947,7 @@ void GSLocalMemory::ReadTexture8NP(const CRect& r, BYTE* dst, int dstpitch, cons
 
 		FOREACH_BLOCK_START(16, 16, 16)
 		{
-			ReadBlock8<true>(&m_vm8[BlockAddress8(x, y, bp, bw)], (BYTE*)block, sizeof(block) / 16);
+			ReadBlock8<true>(BlockPtr8(x, y, bp, bw), (BYTE*)block, sizeof(block) / 16);
 
 			ExpandBlock8_16(block, dst, dstpitch, pal);
 		}
@@ -1781,7 +1963,7 @@ void GSLocalMemory::ReadTexture4NP(const CRect& r, BYTE* dst, int dstpitch, cons
 	{
 		FOREACH_BLOCK_START(32, 16, 32)
 		{
-			ReadAndExpandBlock4_32(&m_vm8[BlockAddress4(x, y, bp, bw) >> 1], dst, dstpitch, pal);
+			ReadAndExpandBlock4_32(BlockPtr4(x, y, bp, bw), dst, dstpitch, pal);
 		}
 		FOREACH_BLOCK_END
 	}
@@ -1793,7 +1975,7 @@ void GSLocalMemory::ReadTexture4NP(const CRect& r, BYTE* dst, int dstpitch, cons
 
 		FOREACH_BLOCK_START(32, 16, 16)
 		{
-			ReadBlock4<true>(&m_vm8[BlockAddress4(x, y, bp, bw)>>1], (BYTE*)block, sizeof(block) / 16);
+			ReadBlock4<true>(BlockPtr4(x, y, bp, bw), (BYTE*)block, sizeof(block) / 16);
 
 			ExpandBlock4_16(block, dst, dstpitch, pal);
 		}
@@ -1809,7 +1991,7 @@ void GSLocalMemory::ReadTexture8HNP(const CRect& r, BYTE* dst, int dstpitch, con
 	{
 		FOREACH_BLOCK_START(8, 8, 32)
 		{
-			ReadAndExpandBlock8H_32((const BYTE*)&m_vm32[BlockAddress32(x, y, bp, bw)], dst, dstpitch, pal);
+			ReadAndExpandBlock8H_32(BlockPtr32(x, y, bp, bw), dst, dstpitch, pal);
 		}
 		FOREACH_BLOCK_END
 	}
@@ -1821,7 +2003,7 @@ void GSLocalMemory::ReadTexture8HNP(const CRect& r, BYTE* dst, int dstpitch, con
 
 		FOREACH_BLOCK_START(8, 8, 16)
 		{
-			ReadBlock32<true>((const BYTE*)&m_vm32[BlockAddress32(x, y, bp, bw)], (BYTE*)block, sizeof(block) / 8);
+			ReadBlock32<true>(BlockPtr32(x, y, bp, bw), (BYTE*)block, sizeof(block) / 8);
 
 			ExpandBlock8H_16(block, dst, dstpitch, pal);
 		}
@@ -1837,7 +2019,7 @@ void GSLocalMemory::ReadTexture4HLNP(const CRect& r, BYTE* dst, int dstpitch, co
 	{
 		FOREACH_BLOCK_START(8, 8, 32)
 		{
-			ReadAndExpandBlock4HL_32((const BYTE*)&m_vm32[BlockAddress32(x, y, bp, bw)], dst, dstpitch, pal);
+			ReadAndExpandBlock4HL_32(BlockPtr32(x, y, bp, bw), dst, dstpitch, pal);
 		}
 		FOREACH_BLOCK_END
 	}
@@ -1849,7 +2031,7 @@ void GSLocalMemory::ReadTexture4HLNP(const CRect& r, BYTE* dst, int dstpitch, co
 
 		FOREACH_BLOCK_START(8, 8, 16)
 		{
-			ReadBlock32<true>((const BYTE*)&m_vm32[BlockAddress32(x, y, bp, bw)], (BYTE*)block, sizeof(block) / 8);
+			ReadBlock32<true>(BlockPtr32(x, y, bp, bw), (BYTE*)block, sizeof(block) / 8);
 
 			ExpandBlock4HL_16(block, dst, dstpitch, pal);
 		}
@@ -1865,7 +2047,7 @@ void GSLocalMemory::ReadTexture4HHNP(const CRect& r, BYTE* dst, int dstpitch, co
 	{
 		FOREACH_BLOCK_START(8, 8, 32)
 		{
-			ReadAndExpandBlock4HH_32((const BYTE*)&m_vm32[BlockAddress32(x, y, bp, bw)], dst, dstpitch, pal);
+			ReadAndExpandBlock4HH_32(BlockPtr32(x, y, bp, bw), dst, dstpitch, pal);
 		}
 		FOREACH_BLOCK_END
 	}
@@ -1877,7 +2059,7 @@ void GSLocalMemory::ReadTexture4HHNP(const CRect& r, BYTE* dst, int dstpitch, co
 
 		FOREACH_BLOCK_START(8, 8, 16)
 		{
-			ReadBlock32<true>((const BYTE*)&m_vm32[BlockAddress32(x, y, bp, bw)], (BYTE*)block, sizeof(block) / 8);
+			ReadBlock32<true>(BlockPtr32(x, y, bp, bw), (BYTE*)block, sizeof(block) / 8);
 
 			ExpandBlock4HH_16(block, dst, dstpitch, pal);
 		}
@@ -1889,7 +2071,7 @@ void GSLocalMemory::ReadTexture16ZNP(const CRect& r, BYTE* dst, int dstpitch, co
 {
 	FOREACH_BLOCK_START(16, 8, 16)
 	{
-		ReadBlock16<true>((const BYTE*)&m_vm16[BlockAddress16Z(x, y, bp, bw)], dst, dstpitch);
+		ReadBlock16<true>(BlockPtr16Z(x, y, bp, bw), dst, dstpitch);
 	}
 	FOREACH_BLOCK_END
 }
@@ -1898,7 +2080,7 @@ void GSLocalMemory::ReadTexture16SZNP(const CRect& r, BYTE* dst, int dstpitch, c
 {
 	FOREACH_BLOCK_START(16, 8, 16)
 	{
-		ReadBlock16<true>((const BYTE*)&m_vm16[BlockAddress16SZ(x, y, bp, bw)], dst, dstpitch);
+		ReadBlock16<true>(BlockPtr16SZ(x, y, bp, bw), dst, dstpitch);
 	}
 	FOREACH_BLOCK_END
 }
@@ -1996,7 +2178,7 @@ void GSLocalMemory::ReadTexture8P(const CRect& r, BYTE* dst, int dstpitch, const
 {
 	FOREACH_BLOCK_START(16, 16, 8)
 	{
-		ReadBlock8<true>(&m_vm8[BlockAddress8(x, y, bp, bw)], dst, dstpitch);
+		ReadBlock8<true>(BlockPtr8(x, y, bp, bw), dst, dstpitch);
 	}
 	FOREACH_BLOCK_END
 }
@@ -2005,7 +2187,7 @@ void GSLocalMemory::ReadTexture4P(const CRect& r, BYTE* dst, int dstpitch, const
 {
 	FOREACH_BLOCK_START(32, 16, 8)
 	{
-		ReadBlock4P(&m_vm8[BlockAddress4(x, y, bp, bw) >> 1], dst, dstpitch);
+		ReadBlock4P(BlockPtr4(x, y, bp, bw), dst, dstpitch);
 	}
 	FOREACH_BLOCK_END
 }
@@ -2014,7 +2196,7 @@ void GSLocalMemory::ReadTexture8HP(const CRect& r, BYTE* dst, int dstpitch, cons
 {
 	FOREACH_BLOCK_START(8, 8, 8)
 	{
-		ReadBlock8HP((BYTE*)&m_vm32[BlockAddress32(x, y, bp, bw)], dst, dstpitch);
+		ReadBlock8HP(BlockPtr32(x, y, bp, bw), dst, dstpitch);
 	}
 	FOREACH_BLOCK_END
 }
@@ -2023,7 +2205,7 @@ void GSLocalMemory::ReadTexture4HLP(const CRect& r, BYTE* dst, int dstpitch, con
 {
 	FOREACH_BLOCK_START(8, 8, 8)
 	{
-		ReadBlock4HLP((BYTE*)&m_vm32[BlockAddress32(x, y, bp, bw)], dst, dstpitch);
+		ReadBlock4HLP(BlockPtr32(x, y, bp, bw), dst, dstpitch);
 	}
 	FOREACH_BLOCK_END
 }
@@ -2032,9 +2214,36 @@ void GSLocalMemory::ReadTexture4HHP(const CRect& r, BYTE* dst, int dstpitch, con
 {
 	FOREACH_BLOCK_START(8, 8, 8)
 	{
-		ReadBlock4HHP((BYTE*)&m_vm32[BlockAddress32(x, y, bp, bw)], dst, dstpitch);
+		ReadBlock4HHP(BlockPtr32(x, y, bp, bw), dst, dstpitch);
 	}
 	FOREACH_BLOCK_END
+}
+
+//
+
+void GSLocalMemory::ReadTextureBlock8P(DWORD bp, BYTE* dst, int dstpitch, const GIFRegTEXA& TEXA) const
+{
+	ReadBlock8<true>(BlockPtr(bp), dst, dstpitch);
+}
+
+void GSLocalMemory::ReadTextureBlock4P(DWORD bp, BYTE* dst, int dstpitch, const GIFRegTEXA& TEXA) const
+{
+	ReadBlock4P(BlockPtr(bp), dst, dstpitch);
+}
+
+void GSLocalMemory::ReadTextureBlock8HP(DWORD bp, BYTE* dst, int dstpitch, const GIFRegTEXA& TEXA) const
+{
+	ReadBlock8HP(BlockPtr(bp), dst, dstpitch);
+}
+
+void GSLocalMemory::ReadTextureBlock4HLP(DWORD bp, BYTE* dst, int dstpitch, const GIFRegTEXA& TEXA) const
+{
+	ReadBlock4HLP(BlockPtr(bp), dst, dstpitch);
+}
+
+void GSLocalMemory::ReadTextureBlock4HHP(DWORD bp, BYTE* dst, int dstpitch, const GIFRegTEXA& TEXA) const
+{
+	ReadBlock4HHP(BlockPtr(bp), dst, dstpitch);
 }
 
 //

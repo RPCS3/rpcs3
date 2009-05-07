@@ -128,7 +128,7 @@ void GSClut::WriteCLUT32_I8_CSM1(const GIFRegTEX0& TEX0, const GIFRegTEXCLUT& TE
 {
 	ASSERT(TEX0.CSA == 0);
 
-	WriteCLUT_T32_I8_CSM1(&m_mem->m_vm32[m_mem->BlockAddress32(0, 0, TEX0.CBP, 1)], m_clut + (TEX0.CSA << 4));
+	WriteCLUT_T32_I8_CSM1((DWORD*)m_mem->BlockPtr32(0, 0, TEX0.CBP, 1), m_clut + (TEX0.CSA << 4));
 }
 
 void GSClut::WriteCLUT32_I4_CSM1(const GIFRegTEX0& TEX0, const GIFRegTEXCLUT& TEXCLUT)
@@ -137,31 +137,31 @@ void GSClut::WriteCLUT32_I4_CSM1(const GIFRegTEX0& TEX0, const GIFRegTEXCLUT& TE
 
 	GSVector4i dummy; // this just forces stack alignment and enables inlining the next call
 
-	WriteCLUT_T32_I4_CSM1(&m_mem->m_vm32[m_mem->BlockAddress32(0, 0, TEX0.CBP, 1)], m_clut + (TEX0.CSA << 4));
+	WriteCLUT_T32_I4_CSM1((DWORD*)m_mem->BlockPtr32(0, 0, TEX0.CBP, 1), m_clut + (TEX0.CSA << 4));
 }
 
 void GSClut::WriteCLUT16_I8_CSM1(const GIFRegTEX0& TEX0, const GIFRegTEXCLUT& TEXCLUT)
 {
 	ASSERT(TEX0.CSA < 16);
 
-	WriteCLUT_T16_I8_CSM1(&m_mem->m_vm16[m_mem->BlockAddress16(0, 0, TEX0.CBP, 1)], m_clut + (TEX0.CSA << 4));
+	WriteCLUT_T16_I8_CSM1((WORD*)m_mem->BlockPtr16(0, 0, TEX0.CBP, 1), m_clut + (TEX0.CSA << 4));
 }
 
 void GSClut::WriteCLUT16_I4_CSM1(const GIFRegTEX0& TEX0, const GIFRegTEXCLUT& TEXCLUT)
 {
 	ASSERT(TEX0.CSA < 32);
 
-	WriteCLUT_T16_I4_CSM1(&m_mem->m_vm16[m_mem->BlockAddress16(0, 0, TEX0.CBP, 1)], m_clut + (TEX0.CSA << 4));
+	WriteCLUT_T16_I4_CSM1((WORD*)m_mem->BlockPtr16(0, 0, TEX0.CBP, 1), m_clut + (TEX0.CSA << 4));
 }
 
 void GSClut::WriteCLUT16S_I8_CSM1(const GIFRegTEX0& TEX0, const GIFRegTEXCLUT& TEXCLUT)
 {
-	WriteCLUT_T16_I8_CSM1(&m_mem->m_vm16[m_mem->BlockAddress16S(0, 0, TEX0.CBP, 1)], m_clut + (TEX0.CSA << 4));
+	WriteCLUT_T16_I8_CSM1((WORD*)m_mem->BlockPtr16S(0, 0, TEX0.CBP, 1), m_clut + (TEX0.CSA << 4));
 }
 
 void GSClut::WriteCLUT16S_I4_CSM1(const GIFRegTEX0& TEX0, const GIFRegTEXCLUT& TEXCLUT)
 {
-	WriteCLUT_T16_I4_CSM1(&m_mem->m_vm16[m_mem->BlockAddress16S(0, 0, TEX0.CBP, 1)], m_clut + (TEX0.CSA << 4));
+	WriteCLUT_T16_I4_CSM1((WORD*)m_mem->BlockPtr16S(0, 0, TEX0.CBP, 1), m_clut + (TEX0.CSA << 4));
 }
 
 template<int n> void GSClut::WriteCLUT32_CSM2(const GIFRegTEX0& TEX0, const GIFRegTEXCLUT& TEXCLUT)

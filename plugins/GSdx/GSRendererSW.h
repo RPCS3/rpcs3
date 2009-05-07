@@ -654,28 +654,29 @@ protected:
 		if(fst)
 		{
 			GSVector4i uv = GSVector4i(m_vtrace.m_min.t.xyxy(m_vtrace.m_max.t)).sra32(16);
-/*
-			int tw = context->TEX0.TW;
-			int th = context->TEX0.TH;
 
-			GSVector4i u = uv & GSVector4i::xffffffff().srl32(32 - tw);
-			GSVector4i v = uv & GSVector4i::xffffffff().srl32(32 - th);
+			GSVector4i u, v;
 
-			GSVector4i uu = uv.sra32(tw);
-			GSVector4i vv = uv.sra32(th);
+			int mask;
 
-			int mask = (uu.upl32(vv) == uu.uph32(vv)).mask();
-*/
+			if(wms == CLAMP_REPEAT || wmt == CLAMP_REPEAT)
+			{
+				int tw = context->TEX0.TW;
+				int th = context->TEX0.TH;
+
+				u = uv & GSVector4i::xffffffff().srl32(32 - tw);
+				v = uv & GSVector4i::xffffffff().srl32(32 - th);
+
+				GSVector4i uu = uv.sra32(tw);
+				GSVector4i vv = uv.sra32(th);
+
+				mask = (uu.upl32(vv) == uu.uph32(vv)).mask();
+			}
+
 			switch(wms)
 			{
 			case CLAMP_REPEAT:
-/*
-				if(mask & 0x000f)
-				{
-					if(vr.x < u.x) vr.x = u.x;
-					if(vr.z > u.z + 1) vr.z = u.z + 1;
-				}
-*/
+				if(mask & 0x000f) {if(vr.x < u.x) vr.x = u.x; if(vr.z > u.z + 1) vr.z = u.z + 1;}
 				break;
 			case CLAMP_CLAMP:
 			case CLAMP_REGION_CLAMP:
@@ -691,13 +692,7 @@ protected:
 			switch(wmt)
 			{
 			case CLAMP_REPEAT:
-/*
-				if(mask & 0xf000)
-				{
-					if(vr.y < v.y) vr.y = v.y;
-					if(vr.w > v.w + 1) vr.w = v.w + 1;
-				}
-*/
+				if(mask & 0xf000) {if(vr.y < v.y) vr.y = v.y; if(vr.w > v.w + 1) vr.w = v.w + 1;}
 				break;
 			case CLAMP_CLAMP:
 			case CLAMP_REGION_CLAMP:

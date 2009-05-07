@@ -24,27 +24,11 @@
 #include "GSRenderer.h"
 
 #define MAX_PAGES 512
+#define MAX_BLOCKS 16384
 
 class GSTextureCacheSW
 {
 public:
-	class GSTexture;
-	class GSTexturePage;
-
-	class GSTexturePage
-	{
-	public:
-		GSTexture* t;
-		DWORD row, col;
-	};
-
-	class GSTexturePageEntry
-	{
-	public:
-		CAtlList<GSTexturePage*>* p2t;
-		POSITION pos;
-	};
-
 	class GSTexture
 	{
 	public:
@@ -53,12 +37,10 @@ public:
 		GIFRegTEXA m_TEXA;
 		void* m_buff;
 		DWORD m_tw;
-		DWORD m_valid[32];
-		DWORD m_maxpages;
-		DWORD m_pages;
-		CAtlList<GSTexturePageEntry*> m_p2te;
-		POSITION m_pos;
+		DWORD m_valid[MAX_PAGES]; // each DWORD bits map to the 32 blocks of that page
 		DWORD m_age;
+		POSITION m_pos;
+		bool m_complete;
 
 		explicit GSTexture(GSState* state);
 		virtual ~GSTexture();
@@ -69,7 +51,7 @@ public:
 protected:
 	GSState* m_state;
 	CAtlList<GSTexture*> m_textures;
-	CAtlList<GSTexturePage*> m_p2t[MAX_PAGES];
+	CAtlMap<GSTexture*, bool> m_map[MAX_PAGES];
 
 public:
 	GSTextureCacheSW(GSState* state);
