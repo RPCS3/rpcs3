@@ -95,11 +95,7 @@ static void _rcntSet( int cntidx )
 	if(c < (u64)psxNextCounter) 
 	{
 		psxNextCounter = (u32)c;
-
-		if((g_psxNextBranchCycle - psxNextsCounter) > (u32)psxNextCounter) //Need to update on counter resets/target changes
-		{
-			g_psxNextBranchCycle = psxNextsCounter + psxNextCounter;
-		} 
+		psxSetNextBranch( psxNextsCounter, psxNextCounter );	//Need to update on counter resets/target changes
 	}
 
 	//if((counter.mode & 0x10) == 0 || psxCounters[i].target > 0xffff) continue;
@@ -111,11 +107,7 @@ static void _rcntSet( int cntidx )
 	if(c < (u64)psxNextCounter) 
 	{
 		psxNextCounter = (u32)c;
-
-		if((g_psxNextBranchCycle - psxNextsCounter) > (u32)psxNextCounter) //Need to update on counter resets/target changes
-		{
-			g_psxNextBranchCycle = psxNextsCounter + psxNextCounter;
-		} 
+		psxSetNextBranch( psxNextsCounter, psxNextCounter );	//Need to update on counter resets/target changes
 	}
 }
 

@@ -85,16 +85,12 @@ static __forceinline void _rcntSet( int cntidx )
 	if (c < nextCounter) 
 	{
 		nextCounter = c;
-		
-		if((g_nextBranchCycle - nextsCounter) > (u32)nextCounter) //Need to update on counter resets/target changes
-		{
-			g_nextBranchCycle = nextsCounter + nextCounter;
-		}
+		cpuSetNextBranch( nextsCounter, nextCounter );	//Need to update on counter resets/target changes
 	}
 	
 	// Ignore target diff if target is currently disabled.
 	// (the overflow is all we care about since it goes first, and then the 
-	// target will be turned on afterward).
+	// target will be turned on afterward, and handled in the next event test).
 
 	if( counter.target & EECNT_FUTURE_TARGET ) 
 	{
@@ -107,14 +103,9 @@ static __forceinline void _rcntSet( int cntidx )
 		if (c < nextCounter) 
 		{
 			nextCounter = c;
-
-			if((g_nextBranchCycle - nextsCounter) > (u32)nextCounter) //Need to update on counter resets/target changes
-			{
-				g_nextBranchCycle = nextsCounter + nextCounter;
-			}
+			cpuSetNextBranch( nextsCounter, nextCounter );	//Need to update on counter resets/target changes
 		}	
 	}
-	//cpuSetNextBranch( nextsCounter, nextCounter );
 }
 
 

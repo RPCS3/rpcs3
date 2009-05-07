@@ -25,43 +25,39 @@
 // Common to Windows and Linux
 extern "C" 
 {
-// acoroutine.S
-void so_call(coroutine_t coro);
-void so_resume(void);
-void so_exit(void);
+	// acoroutine.S
+	void so_call(coroutine_t coro);
+	void so_resume(void);
+	void so_exit(void);
 
-// I can't find where the Linux recRecompile is defined.  Is it used anymore?
-// If so, namespacing might break it. :/  (air)
-void recRecompile( u32 startpc );
+	void recRecompile( u32 startpc );
 
-// aR3000A.S
-void iopRecRecompile(u32 startpc);
+	// aR3000A.S
+	void iopRecRecompile(u32 startpc);
 }
 
-// Linux specific
 #ifdef __LINUX__
 
-PCSX2_ALIGNED16( u8 _xmm_backup[16*2] );
-PCSX2_ALIGNED16( u8 _mmx_backup[8*4] );
+PCSX2_ALIGNED16_EXTERN( u8 _xmm_backup[16*2] );
+PCSX2_ALIGNED16_EXTERN( u8 _mmx_backup[8*4] );
 
 extern "C" 
 {
-// aVUzerorec.S
-void* SuperVUGetProgram(u32 startpc, int vuindex);
-void SuperVUCleanupProgram(u32 startpc, int vuindex);
-void svudispfn();
-	
-// aR3000A.S
-void iopJITCompile();
-void iopJITCompileInBlock();
-void iopDispatcherReg();
-	
-// aR5900-32.S
-void JITCompile();
-void JITCompileInBlock();
-void DispatcherReg();
-
+	// aVUzerorec.S
+	void* SuperVUGetProgram(u32 startpc, int vuindex);
+	void SuperVUCleanupProgram(u32 startpc, int vuindex);
+	void svudispfn();
+		
+	// aR3000A.S
+	void iopJITCompile();
+	void iopJITCompileInBlock();
+	void iopDispatcherReg();
+		
+	// aR5900-32.S
+	void JITCompile();
+	void JITCompileInBlock();
+	void DispatcherReg();
 }
 #endif
-#endif
 
+#endif

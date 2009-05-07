@@ -484,15 +484,6 @@ void recResetEE( void )
 		recLUT_SetPage(recLUT, hwLUT, recROM1, 0xa000, i, i - 0x1e00);
 	}
 
-	// drk||Raziel says this is useful but I'm not sure why.  Something to do with forward jumps.
-	// Anyways, it causes random crashing for some reasom, possibly because of memory
-	// corrupition elsewhere in the recs.  I can't reproduce the problem here though,
-	// so a fix will have to wait until later. -_- (air)
-
-	//x86SetPtr(recMem+REC_CACHEMEM);
-	//dyna_block_discard_recmem=(u8*)x86Ptr;
-	//JMP32( (uptr)&dyna_block_discard - ( (u32)x86Ptr + 5 ));
-
 	x86SetPtr(recMem);
 
 	recPtr = recMem;
@@ -725,7 +716,7 @@ void recBREAK( void ) {
 } } }		// end namespace R5900::Dynarec::OpcodeImpl
 
 // Clears the recLUT table so that all blocks are mapped to the JIT recompiler by default.
-static void ClearRecLUT(BASEBLOCK* base, int count)
+static __releaseinline void ClearRecLUT(BASEBLOCK* base, int count)
 {
 	for (int i = 0; i < count; i++)
 		base[i].SetFnptr((uptr)JITCompile);
@@ -967,7 +958,7 @@ void iFlushCall(int flushtype)
 //}
 
 
-u32 eeScaleBlockCycles()
+static u32 scaleBlockCycles_helper()
 {
 	// Note: s_nBlockCycles is 3 bit fixed point.  Divide by 8 when done!
 
@@ -999,12 +990,6 @@ u32 eeScaleBlockCycles()
 			scalarHigh = 7;
 		break;
 
-		case 3:		// Sync hack x3
-			scalarLow = 10;
-			scalarMid = 19;
-			scalarHigh = 10;
-		break;
-
 		jNO_DEFAULT
 	}
 
@@ -1016,18 +1001,13 @@ u32 eeScaleBlockCycles()
 	return temp >> (3+2);
 }
 
-static void iBranch(u32 newpc, int type)
+static u32 eeScaleBlockCycles()
 {
-	u32* ptr;
-
-	MOV32ItoM((uptr)&cpuRegs.pc, newpc);
-	if (type == 0)
-		ptr = JMP32(0);
-	else if (type == 1)
-		ptr = JS32(0);
-
-	recBlocks.Link(HWADDR(newpc), (uptr)ptr);
+	// Ensures block cycles count is never less than 1:
+	u32 retval = scaleBlockCycles_helper();
+	return (retval < 1) ? 1 : retval;
 }
+
 
 // Generates dynarec code for Event tests followed by a block dispatch (branch).
 // Parameters:
@@ -1058,20 +1038,23 @@ static void iBranchTest(u32 newpc, bool noDispatch)
 		xCMP(eax, ptr32[&cpuRegs.cycle]);
 		xCMOVL(eax, ptr32[&cpuRegs.cycle]);
 		xMOV(ptr32[&cpuRegs.cycle], eax);
-		RET();
 	} else {
-		MOV32MtoR(EAX, (uptr)&cpuRegs.cycle);
-		ADD32ItoR(EAX, eeScaleBlockCycles());
-		MOV32RtoM((uptr)&cpuRegs.cycle, EAX); // update cycles
-		SUB32MtoR(EAX, (uptr)&g_nextBranchCycle);
-		if (!noDispatch) {
+		xMOV(eax, &cpuRegs.cycle);
+		xADD(eax, eeScaleBlockCycles());
+		xMOV(&cpuRegs.cycle, eax); // update cycles
+		xSUB(eax, &g_nextBranchCycle);
+		if (!noDispatch)
+		{
 			if (newpc == 0xffffffff)
-				JS32((uptr)DispatcherReg - ( (uptr)x86Ptr + 6 ));
+				xJS( DispatcherReg );
 			else
-				iBranch(newpc, 1);
+			{
+				xMOV( ptr32[&cpuRegs.pc], newpc );
+				recBlocks.Link( HWADDR(newpc), xJcc32( Jcc_Signed ) );
+			}
 		}
-		RET();
 	}
+	xRET();
 }
 
 static void checkcodefn()
@@ -1170,7 +1153,7 @@ void recompileNextInstruction(int delayslot)
 				return;
 		}
 	}
-	//If thh COP0 DIE bit is disabled, double the cycles. Happens rarely.
+	//If the COP0 DIE bit is disabled, double the cycles. Happens rarely.
 	s_nBlockCycles += opcode.cycles * (2 - ((cpuRegs.CP0.n.Config >> 18) & 0x1));
 	opcode.recompile();
 
@@ -1235,14 +1218,14 @@ void badespfn() {
 void __fastcall dyna_block_discard(u32 start,u32 sz)
 {
 	DevCon::WriteLn("dyna_block_discard .. start: %08X  count=%d", params start,sz);
-	Cpu->Clear(start, sz);
+	recClear(start, sz);
 }
 
 
 void __fastcall dyna_page_reset(u32 start,u32 sz)
 {
 	DevCon::WriteLn("dyna_page_reset .. start=%08X  size=%d", params start,sz*4);
-	Cpu->Clear(start & ~0xfffUL, 0x400);
+	recClear(start & ~0xfffUL, 0x400);
 	manual_counter[start >> 12]++;
 	mmap_MarkCountedRamPage(PSM(start), start & ~0xfffUL);
 }
@@ -1657,10 +1640,14 @@ StartRecomp:
 			// performance reasons.
 
 			int numinsts = (pc - startpc) / 4;
-			if( numinsts > 12 )
+			if( numinsts > 6 )
 				iBranchTest(pc);
 			else
-				iBranch(pc,0);		// unconditional static link
+			{
+				xMOV( ptr32[&cpuRegs.pc], pc );
+				xADD( ptr32[&cpuRegs.cycle], eeScaleBlockCycles() );
+				recBlocks.Link( HWADDR(pc), xJcc32() );
+			}
 		}
 	}
 

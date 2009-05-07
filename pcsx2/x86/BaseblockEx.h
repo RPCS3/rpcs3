@@ -115,7 +115,7 @@ public:
 		blocks.erase(blocks.begin() + idx);
 	}
 
-	void Link(u32 pc, uptr jumpptr);
+	void Link(u32 pc, s32* jumpptr);
 
 	__forceinline void Reset()
 	{

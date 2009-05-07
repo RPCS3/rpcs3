@@ -39,6 +39,8 @@
 #include "SamplProf.h"
 #include "NakedAsm.h"
 
+using namespace x86Emitter;
+
 extern u32 g_psxNextBranchCycle;
 extern void psxBREAK();
 extern void zeroEx();
@@ -57,11 +59,51 @@ uptr psxhwLUT[0x10000];
 // R3000A statics
 int psxreclog = 0;
 
+#ifdef _MSC_VER
+
+static u32 g_temp;
+
+// The address for all cleared blocks.  It recompiles the current pc and then
+// dispatches to the recompiled block address.
+static __declspec(naked) void iopJITCompile()
+{
+	__asm {
+		mov esi, dword ptr [psxRegs.pc]
+		push esi
+		call iopRecRecompile
+		add esp, 4
+		mov ebx, esi
+		shr esi, 16
+		mov ecx, dword ptr [psxRecLUT+esi*4]
+		jmp dword ptr [ecx+ebx]
+	}
+}
+
+static __declspec(naked) void iopJITCompileInBlock()
+{
+	__asm {
+		jmp iopJITCompile
+	}
+}
+
+// called when jumping to variable psxpc address
+static __declspec(naked) void iopDispatcherReg()
+{
+	__asm {
+		mov eax, dword ptr [psxRegs.pc]
+		mov ebx, eax
+		shr eax, 16
+		mov ecx, dword ptr [psxRecLUT+eax*4]
+		jmp dword ptr [ecx+ebx]
+	}
+}
+#endif // _MSC_VER
+
+
 static u8 *recMem = NULL;	// the recompiled blocks will be here
 static BASEBLOCK *recRAM = NULL;	// and the ptr to the blocks here
 static BASEBLOCK *recROM = NULL;	// and here
 static BASEBLOCK *recROM1 = NULL;	// also here
-void iopJITCompile();
 static BaseBlocks recBlocks((uptr)iopJITCompile);
 static u8 *recPtr = NULL;
 u32 psxpc;			// recompiler psxpc
@@ -596,46 +638,6 @@ static void recShutdown()
 
 u32 g_psxlastpc = 0;
 
-#ifdef _MSC_VER
-
-static u32 g_temp;
-
-// The address for all cleared blocks.  It recompiles the current pc and then
-// dispatches to the recompiled block address.
-static __declspec(naked) void iopJITCompile()
-{
-	__asm {
-		mov esi, dword ptr [psxRegs.pc]
-		push esi
-		call iopRecRecompile
-		add esp, 4
-		mov ebx, esi
-		shr esi, 16
-		mov ecx, dword ptr [psxRecLUT+esi*4]
-		jmp dword ptr [ecx+ebx]
-	}
-}
-
-static __declspec(naked) void iopJITCompileInBlock()
-{
-	__asm {
-		jmp iopJITCompile
-	}
-}
-
-// called when jumping to variable psxpc address
-static __declspec(naked) void iopDispatcherReg()
-{
-	__asm {
-		mov eax, dword ptr [psxRegs.pc]
-		mov ebx, eax
-		shr eax, 16
-		mov ecx, dword ptr [psxRecLUT+eax*4]
-		jmp dword ptr [ecx+ebx]
-	}
-}
-#endif // _MSC_VER
-
 static void iopClearRecLUT(BASEBLOCK* base, int count)
 {
 	for (int i = 0; i < count; i++)
@@ -778,7 +780,6 @@ void psxSetBranchReg(u32 reg)
 
 void psxSetBranchImm( u32 imm )
 {
-	u32* ptr;
 	psxbranch = 1;
 	assert( imm );
 
@@ -787,15 +788,8 @@ void psxSetBranchImm( u32 imm )
 	_psxFlushCall(FLUSH_EVERYTHING);
 	iPsxBranchTest(imm, imm <= psxpc);
 
-	ptr = JMP32(0);
-	recBlocks.Link(HWADDR(imm), (uptr)ptr);
+	recBlocks.Link(HWADDR(imm), xJcc32());
 }
-
-//fixme : this is all a huge hack, we base the counter advancements on the average an opcode should take (wtf?)
-//		  If that wasn't bad enough we have default values like 9/8 which will get cast to int later
-//		  (yeah, that means all sync code couldn't have worked to begin with)
-//		  So for now these are new settings that work.
-//		  (rama)
 
 static __forceinline u32 psxScaleBlockCycles()
 {
@@ -1139,8 +1133,7 @@ StartRecomp:
 			assert( psxpc == s_nEndBlock );
 			_psxFlushCall(FLUSH_EVERYTHING);
 			MOV32ItoM((uptr)&psxRegs.pc, psxpc);
-			u32 *ptr = JMP32(0);
-			recBlocks.Link(HWADDR(s_nEndBlock), (uptr)ptr);
+			recBlocks.Link(HWADDR(s_nEndBlock), xJcc32() );
 			psxbranch = 3;
 		}
 	}

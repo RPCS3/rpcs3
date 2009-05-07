@@ -73,6 +73,34 @@ xSmartJump::~xSmartJump()
 	m_baseptr = NULL;	// just in case (sometimes helps in debugging too)
 }
 
+// ------------------------------------------------------------------------
+// Emits a 32 bit jump, and returns a pointer to the 32 bit displacement.
+// (displacements should be assigned relative to the end of the jump instruction,
+// or in other words *(retval+1) )
+__emitinline s32* xJcc32( JccComparisonType comparison, s32 displacement )
+{
+	if( comparison == Jcc_Unconditional )
+		xWrite8( 0xe9 );
+	else
+	{
+		xWrite8( 0x0f );
+		xWrite8( 0x80 | comparison );
+	}
+	xWrite<s32>( displacement );
+
+	return ((s32*)xGetPtr()) - 1;
+}
+
+// ------------------------------------------------------------------------
+// Emits a 32 bit jump, and returns a pointer to the 8 bit displacement.
+// (displacements should be assigned relative to the end of the jump instruction,
+// or in other words *(retval+1) )
+__emitinline s8* xJcc8( JccComparisonType comparison, s8 displacement )
+{
+	xWrite8( (comparison == Jcc_Unconditional) ? 0xeb : (0x70 | comparison) );
+	xWrite<s8>( displacement );
+	return (s8*)xGetPtr() - 1;
+}
 
 // ------------------------------------------------------------------------
 // Writes a jump at the current x86Ptr, which targets a pre-established target address.
@@ -84,7 +112,7 @@ xSmartJump::~xSmartJump()
 __emitinline void Internal::xJccKnownTarget( JccComparisonType comparison, const void* target, bool slideForward )
 {
 	// Calculate the potential j8 displacement first, assuming an instruction length of 2:
-	sptr displacement8 = (sptr)target - ((sptr)xGetPtr() + 2);
+	sptr displacement8 = (sptr)target - (sptr)(xGetPtr() + 2);
 
 	const int slideVal = slideForward ? ((comparison == Jcc_Unconditional) ? 3 : 4) : 0;
 	displacement8 -= slideVal;
@@ -94,22 +122,12 @@ __emitinline void Internal::xJccKnownTarget( JccComparisonType comparison, const
 	if( slideForward ) jASSUME( displacement8 >= 0 );
 	
 	if( is_s8( displacement8 ) )
-	{
-		xWrite8( (comparison == Jcc_Unconditional) ? 0xeb : (0x70 | comparison) );
-		xWrite<s8>( displacement8 );
-	}
+		xJcc8( comparison, displacement8 );
 	else
 	{
 		// Perform a 32 bit jump instead. :(
-
-		if( comparison == Jcc_Unconditional )
-			xWrite8( 0xe9 );
-		else
-		{
-			xWrite8( 0x0f );
-			xWrite8( 0x80 | comparison );
-		}
-		xWrite<s32>( (sptr)target - ((sptr)xGetPtr() + 4) );
+		s32* bah = xJcc32( comparison );
+		*bah = (s32)target - (s32)xGetPtr();
 	}
 }
 
