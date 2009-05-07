@@ -80,7 +80,7 @@ void _PADclose()
 	vector<JoystickInfo*>::iterator it = s_vjoysticks.begin();
 	
 	// Delete everything in the vector vjoysticks.
-	while (it < s_vjoysticks.end())
+	while (it != s_vjoysticks.end())
 	{
 		delete *it;
 		it ++;
@@ -336,6 +336,7 @@ void CALLBACK PADupdate(int pad)
 
 				int value = SDL_JoystickGetAxis((pjoy)->GetJoy(), PAD_GETJOYSTICK_AXIS(key));
 				int pad = (pjoy)->GetPAD();
+				
 				if (PAD_GETPOVSIGN(key) && (value < -2048))
 					status[pad] &= ~(1 << i);
 				else if (!PAD_GETPOVSIGN(key) && (value > 2048))
@@ -453,7 +454,7 @@ void OnConf_Key(GtkButton *button, gpointer user_data)
 	SDL_JoystickUpdate();
 	
 	// Save everything in the vector s_vjoysticks.
-	while (itjoy < s_vjoysticks.end())
+	while (itjoy != s_vjoysticks.end())
 	{
 		(*itjoy)->SaveState();
 		itjoy++;
@@ -483,7 +484,7 @@ void OnConf_Key(GtkButton *button, gpointer user_data)
 		
 		SDL_JoystickUpdate();
 		
-		while (itjoy < s_vjoysticks.end())
+		while (itjoy != s_vjoysticks.end())
 		{
 			// MAKE sure to look for changes in the state!!
 			for (int i = 0; i < (*itjoy)->GetNumButtons(); ++i)
@@ -586,7 +587,7 @@ void CALLBACK PADconfigure()
 	vector<JoystickInfo*>::iterator it = s_vjoysticks.begin();
 	
 	// Delete everything in the vector vjoysticks.
-	while (it < s_vjoysticks.end())
+	while (it != s_vjoysticks.end())
 	{
 		sprintf(str, "%d: %s - but: %d, axes: %d, pov: %d", (*it)->GetId(), (*it)->GetName().c_str(),
 		        (*it)->GetNumButtons(), (*it)->GetNumAxes(), (*it)->GetNumPOV()/*, (*it)->GetNumHats()*/); // ,hats: %d

@@ -40,7 +40,7 @@ void JoystickInfo::EnumerateJoysticks(vector<JoystickInfo*>& vjoysticks)
 	vector<JoystickInfo*>::iterator it = vjoysticks.begin();
 	
 	// Delete everything in the vector vjoysticks.
-	while (it < vjoysticks.end())
+	while (it != vjoysticks.end())
 	{
 		delete *it;
 		it ++;
