@@ -635,7 +635,7 @@ __forceinline void xWrite( T val )
 		JccComparisonType m_cc;		// comparison type of the instruction
 
 	public:
-		const int GetMaxInstructionSize() const
+		int GetMaxInstructionSize() const
 		{
 			jASSUME( m_cc != Jcc_Unknown );
 			return ( m_cc == Jcc_Unconditional ) ? 5 : 6;

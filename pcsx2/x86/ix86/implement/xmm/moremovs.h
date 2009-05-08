@@ -64,6 +64,7 @@ public:
 // This happens when using Mem,Reg or Reg,Mem forms where the address is simple displacement
 // which can be checked for alignment at runtime.
 // 
+	
 template< u8 Prefix, bool isAligned >
 class SimdImpl_MoveSSE
 {
@@ -78,9 +79,17 @@ public:
 		if( to != from ) xOpWrite0F( Prefix, OpcodeA, to, from );
 	}
 
-	__forceinline void operator()( const xRegisterSSE& to, const void* from ) const	
+	__forceinline void operator()( const xRegisterSSE& to, void* from ) const	
 	{
-		xOpWrite0F( Prefix, (isAligned || ((uptr)from & 0x0f) == 0) ? OpcodeA : OpcodeU, to, from );
+		u16 opcode;
+		
+		// @$@$@!$#@! GCC & Debug builds.
+		if (isAligned || ((uptr)from & 0x0f) == 0) 
+			opcode = OpcodeA;
+		else 
+			opcode = OpcodeU;
+		
+		xOpWrite0F( Prefix, opcode, to, from );
 	}
 
 	__forceinline void operator()( void* to, const xRegisterSSE& from ) const
@@ -92,7 +101,15 @@ public:
 	{
 		// ModSib form is aligned if it's displacement-only and the displacement is aligned:
 		bool isReallyAligned = isAligned || ( ((from.Displacement & 0x0f) == 0) && from.Index.IsEmpty() && from.Base.IsEmpty() );
-		xOpWrite0F( Prefix, isReallyAligned ? OpcodeA : OpcodeU, to, from );
+		u16 opcode;
+		
+		// See previous comment.
+		if (isReallyAligned) 
+			opcode = OpcodeA;
+		else 
+			opcode = OpcodeU;
+		
+		xOpWrite0F( Prefix, opcode, to, from );
 	}
 
 	__forceinline void operator()( const ModSibBase& to, const xRegisterSSE& from ) const
