@@ -679,27 +679,25 @@ microVUt(void) mVUallocFMAC26b(int& ACCw, int& ACCr) {
 }
 
 microVUt(void) mVUallocSFLAGa(int reg, int fInstance) {
-	microVU* mVU = mVUx;
 	getFlagReg(fInstance, fInstance);
 	MOVZX32R16toR(reg, fInstance);
 }
 
 microVUt(void) mVUallocSFLAGb(int reg, int fInstance) {
 	getFlagReg(fInstance, fInstance);
-	MOV16RtoR(fInstance, reg);
+	//AND32ItoR(reg, 0xffff);
+	MOV32RtoR(fInstance, reg);
 }
 
 microVUt(void) mVUallocMFLAGa(int reg, int fInstance) {
-	getFlagReg(fInstance, fInstance);
-	MOV32RtoR(reg, fInstance);
-	SHR32ItoR(reg, 16);
+	microVU* mVU = mVUx;
+	MOVZX32M16toR(reg, (uptr)&mVU->macFlag[fInstance]);
 }
 
 microVUt(void) mVUallocMFLAGb(int reg, int fInstance) {
-	getFlagReg(fInstance, fInstance);
-	AND32ItoR(fInstance, 0xffff);
-	SHL32ItoR(reg, 16);
-	OR32RtoR(fInstance, reg);
+	microVU* mVU = mVUx;
+	//AND32ItoR(reg, 0xffff);
+	MOV32RtoM((uptr)&mVU->macFlag[fInstance], reg);
 }
 
 microVUt(void) mVUallocCFLAGa(int reg, int fInstance) {

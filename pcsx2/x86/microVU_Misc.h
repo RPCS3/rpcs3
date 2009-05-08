@@ -129,11 +129,11 @@ declareAllVariables
 #define gprT1	0 // Temp Reg
 #define gprT2	1 // Temp Reg
 #define gprR	2 // R Reg
-#define gprF0	3 // MAC Flag::Status Flag 0
+#define gprF0	3 // Status Flag 0
 #define gprESP	4 // Don't use?
-#define gprF1	5 // MAC Flag::Status Flag 1
-#define gprF2	6 // MAC Flag::Status Flag 2
-#define gprF3	7 // MAC Flag::Status Flag 3
+#define gprF1	5 // Status Flag 1
+#define gprF2	6 // Status Flag 2
+#define gprF3	7 // Status Flag 3
 
 // Template Stuff
 #define mVUx (vuIndex ? &microVU1 : &microVU0)

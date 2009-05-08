@@ -120,12 +120,9 @@ microVUt(void) mVUendProgram(int fStatus, int fMac) {
 
 	// Save Flag Instances
 	getFlagReg(fStatus, fStatus);
-	getFlagReg(fMac,	fMac);
-	MOV32RtoR(gprT1, fStatus);
-	AND32ItoR(gprT1, 0xffff);
-	SHR32ItoR(fMac, 16);	
-	MOV32RtoM((uptr)&mVU->regs->VI[REG_STATUS_FLAG].UL,	gprT1);
-	MOV32RtoM((uptr)&mVU->regs->VI[REG_MAC_FLAG].UL,	fMac);
+	mVUallocMFLAGa<vuIndex>(gprT1, fMac);
+	MOV32RtoM((uptr)&mVU->regs->VI[REG_STATUS_FLAG].UL,	fStatus);
+	MOV32RtoM((uptr)&mVU->regs->VI[REG_MAC_FLAG].UL,	gprT1);
 
 	//memcpy_fast(&pBlock->pStateEnd, &mVUregs, sizeof(microRegInfo));
 	//MOV32ItoM((uptr)&mVU->prog.lpState, (int)&mVUblock.pState); // Save pipeline state (clipflag instance)

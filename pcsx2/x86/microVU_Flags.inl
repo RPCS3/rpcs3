@@ -39,7 +39,7 @@ microVUt(void) mVUdivSet() {
 	int flagReg1, flagReg2;
 	if (doDivFlag) {
 		getFlagReg(flagReg1, fsInstance);
-		if (!doStatus) { getFlagReg(flagReg2, fpsInstance); MOV16RtoR(flagReg1, flagReg2); }
+		if (!doStatus) { getFlagReg(flagReg2, fpsInstance); MOV32RtoR(flagReg1, flagReg2); }
 		AND16ItoR(flagReg1, 0x0fcf);
 		OR32MtoR (flagReg1, (uptr)&mVU->divFlag);
 	}
@@ -134,42 +134,25 @@ microVUt(void) mVUsetFlags(int* bStatus, int* bMac) {
 }
 
 #define getFlagReg1(x)	((x == 3) ? gprF3 : ((x == 2) ? gprF2 : ((x == 1) ? gprF1 : gprF0)))
-#define getFlagReg2(x)	((x == bStatus[3]) ? gprESP : ((x == bStatus[2]) ? gprR : ((x == bStatus[1]) ? gprT2 : gprT1)))
+#define shuffleMac		((bMac[3]<<6)|(bMac[2]<<4)|(bMac[1]<<2)|bMac[0])
 
 // Recompiles Code for Proper Flags on Block Linkings
 microVUt(void) mVUsetupFlags(int* bStatus, int* bMac) {
 	microVU* mVU = mVUx;
 
-	PUSH32R(gprR);   // Backup gprR
-	MOV32RtoM((uptr)&mVU->espBackup, gprESP);
-
+	PUSH32R(gprR); // Backup gprR
 	MOV32RtoR(gprT1,  getFlagReg1(bStatus[0])); 
 	MOV32RtoR(gprT2,  getFlagReg1(bStatus[1]));
 	MOV32RtoR(gprR,   getFlagReg1(bStatus[2]));
-	MOV32RtoR(gprESP, getFlagReg1(bStatus[3]));
+	MOV32RtoR(gprF3,  getFlagReg1(bStatus[3]));
+	MOV32RtoR(gprF0,  gprT1);
+	MOV32RtoR(gprF1,  gprT2); 
+	MOV32RtoR(gprF2,  gprR); 
+	POP32R(gprR);  // Restore gprR
 
-	MOV32RtoR(gprF0, gprT1);
-	MOV32RtoR(gprF1, gprT2); 
-	MOV32RtoR(gprF2, gprR); 
-	MOV32RtoR(gprF3, gprESP);
-
-	AND32ItoR(gprT1,  0xffff0000);
-	AND32ItoR(gprT2,  0xffff0000);
-	AND32ItoR(gprR,   0xffff0000);
-	AND32ItoR(gprESP, 0xffff0000);
-
-	AND32ItoR(gprF0,  0x0000ffff);
-	AND32ItoR(gprF1,  0x0000ffff);
-	AND32ItoR(gprF2,  0x0000ffff);
-	AND32ItoR(gprF3,  0x0000ffff);
-
-	OR32RtoR(gprF0, getFlagReg2(bMac[0])); 
-	OR32RtoR(gprF1, getFlagReg2(bMac[1]));
-	OR32RtoR(gprF2, getFlagReg2(bMac[2]));
-	OR32RtoR(gprF3, getFlagReg2(bMac[3]));
-
-	MOV32MtoR(gprESP, (uptr)&mVU->espBackup);
-	POP32R(gprR);   // Restore gprR
+	SSE_MOVAPS_M128_to_XMM(xmmT1, (uptr)mVU->macFlag);
+	SSE_SHUFPS_XMM_to_XMM (xmmT1, xmmT1, shuffleMac);
+	SSE_MOVAPS_XMM_to_M128((uptr)mVU->macFlag, xmmT1);
 }
 
 #endif //PCSX2_MICROVU

@@ -102,7 +102,6 @@ struct microVU {
 	u8*		exitFunct;	 // Ptr Function to the Exit code for recompiled programs
 	u32		code;		 // Contains the current Instruction
 	u32		iReg;		 // iReg (only used in recompilation, not execution)
-	u32		clipFlag[4]; // 4 instances of clip flag (used in execution)
 	u32		divFlag;	 // 1 instance of I/D flags
 	u32		VIbackup[2]; // Holds a backup of a VI reg if modified before a branch
 	u32		branch;		 // Holds branch compare result (IBxx) OR Holds address to Jump to (JALR/JR)
@@ -112,7 +111,9 @@ struct microVU {
 	u32		totalCycles;
 	u32		cycles;
 
-	PCSX2_ALIGNED16(u32 xmmPQb[4]); // Backup for xmmPQ
+	PCSX2_ALIGNED16(u32 macFlag[4]);  // 4 instances of mac  flag (used in execution)
+	PCSX2_ALIGNED16(u32 clipFlag[4]); // 4 instances of clip flag (used in execution)
+	PCSX2_ALIGNED16(u32 xmmPQb[4]);   // Backup for xmmPQ
 };
 
 // microVU rec structs

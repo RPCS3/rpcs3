@@ -34,13 +34,14 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 	static u8 *pjmp, *pjmp2;
 	static const u16 flipMask[16] = {0, 8, 4, 12, 2, 10, 6, 14, 1, 9, 5, 13, 3, 11, 7, 15};
 
+	//SysPrintf("doStatus = %d; doMac = %d\n", doStatus>>9, doMac>>8);
 	if (!doFlags) return;
 	if (!doMac) { regT1 = reg; }
 	else		{ SSE2_PSHUFD_XMM_to_XMM(regT1, reg, 0x1B); } // Flip wzyx to xyzw
 	if (doStatus) {
 		getFlagReg(sReg, fsInstance); // Set sReg to valid GPR by Cur Flag Instance
 		mVUallocSFLAGa<vuIndex>(sReg, fpsInstance); // Get Prev Status Flag
-		AND16ItoR(sReg, 0xff0); // Keep Sticky and D/I flags
+		AND32ItoR(sReg, 0xff0); // Keep Sticky and D/I flags
 	}
 
 	//-------------------------Check for Signed flags------------------------------
@@ -53,7 +54,7 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 
 	SSE_MOVMSKPS_XMM_to_R32(mReg, regT2); // Move the sign bits of the t1reg
 
-	AND16ItoR(mReg, AND_XYZW);  // Grab "Is Signed" bits from the previous calculation
+	AND32ItoR(mReg, AND_XYZW);  // Grab "Is Signed" bits from the previous calculation
 	pjmp = JZ8(0); // Skip if none are
 		if (doMac)	  SHL16ItoR(mReg, 4 + ADD_XYZW);
 		if (doStatus) OR16ItoR(sReg, 0x82); // SS, S flags
@@ -62,7 +63,7 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 
 	//-------------------------Check for Zero flags------------------------------
 
-	AND16ItoR(gprT2, AND_XYZW);  // Grab "Is Zero" bits from the previous calculation
+	AND32ItoR(gprT2, AND_XYZW);  // Grab "Is Zero" bits from the previous calculation
 	pjmp = JZ8(0); // Skip if none are
 		if (doMac)	  { SHIFT_XYZW(gprT2); OR32RtoR(mReg, gprT2); }	
 		if (doStatus) { OR16ItoR(sReg, 0x41); } // ZS, Z flags		
