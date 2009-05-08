@@ -217,10 +217,9 @@ namespace x86Emitter
 			{
 				assert( false );
 // Don't ask. --arcum42
-#ifdef __LINUX__
-#ifndef DEBUG
+#if !defined(__LINUX__) || !defined(DEBUG)
+
 				Console::Error( "Emitter Error: Invalid short jump displacement = 0x%x", params (int)displacement );
-#endif
 #endif
 			}
 			BasePtr[-1] = (s8)displacement;
