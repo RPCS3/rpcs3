@@ -1,5 +1,5 @@
 /*  Pcsx2 - Pc Ps2 Emulator
-*  Copyright (C) 2009  Pcsx2-Playground Team
+*  Copyright (C) 2009  Pcsx2 Team
 *
 *  This program is free software; you can redistribute it and/or modify
 *  it under the terms of the GNU General Public License as published by
@@ -15,6 +15,7 @@
 *  along with this program; if not, write to the Free Software
 *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
+
 #pragma once
 #ifdef PCSX2_MICROVU
 
@@ -77,15 +78,6 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 //------------------------------------------------------------------
 // Helper Macros
 //------------------------------------------------------------------
-
-#define mVUlogFtFs() { mVUlog(".%s vf%02d, vf%02d", _XYZW_String, _Ft_, _Fs_); }
-#define mVUlogFd()	 { mVUlog(".%s vf%02d, vf%02d", _XYZW_String, _Fd_, _Fs_); }
-#define mVUlogACC()	 { mVUlog(".%s ACC, vf%02d", _XYZW_String, _Fs_); }
-#define mVUlogFt()	 { mVUlog(", vf%02d", _Ft_); }
-#define mVUlogBC()	 { mVUlog(", vf%02d%s", _Ft_, _BC_String); }
-#define mVUlogI()	 { mVUlog(", I"); }
-#define mVUlogQ()	 { mVUlog(", Q"); }
-#define mVUlogCLIP() { mVUlog("w.xyz vf%02d, vf%02dw", _Fs_, _Ft_); }
 
 // FMAC1 - Normal FMAC Opcodes
 #define mVU_FMAC1(operation, OPname) {								\

@@ -1,5 +1,5 @@
 /*  Pcsx2 - Pc Ps2 Emulator
- *  Copyright (C) 2009  Pcsx2-Playground Team
+ *  Copyright (C) 2009  Pcsx2 Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -142,10 +142,12 @@ declareAllVariables
 #define microVUf(aType) template<int vuIndex, int recPass> aType
 #define microVUq(aType) template<int vuIndex, int recPass>  __forceinline aType
 
+// Define Passes
 #define pass1 if (recPass == 0)
 #define pass2 if (recPass == 1)
 #define pass3 if (recPass == 2)
 
+// Misc Macros...
 #define mVUcurProg	 mVU->prog.prog[mVU->prog.cur]
 #define mVUblocks	 mVU->prog.prog[mVU->prog.cur].block
 #define mVUallocInfo mVU->prog.prog[mVU->prog.cur].allocInfo
@@ -169,13 +171,8 @@ declareAllVariables
 #define bSaveAddr	 (((xPC + (2 * 8)) & ((vuIndex) ? 0x3ff8:0xff8)) / 8)
 #define branchAddr	 ((xPC + 8 + (_Imm11_ * 8)) & ((vuIndex) ? 0x3ff8:0xff8))
 #define shufflePQ	 (((mVU->p) ? 0xb0 : 0xe0) | ((mVU->q) ? 0x01 : 0x04))
-#define _Fsf_String	 ((_Fsf_ == 3) ? "w" : ((_Fsf_ == 2) ? "z" : ((_Fsf_ == 1) ? "y" : "x")))
-#define _Ftf_String	 ((_Ftf_ == 3) ? "w" : ((_Ftf_ == 2) ? "z" : ((_Ftf_ == 1) ? "y" : "x")))
-#define xyzwStr(x,s) (_X_Y_Z_W == x) ? s :
-#define _XYZW_String (xyzwStr(1, "w") (xyzwStr(2, "z") (xyzwStr(3, "zw") (xyzwStr(4, "y") (xyzwStr(5, "yw") (xyzwStr(6, "yz") (xyzwStr(7, "yzw") (xyzwStr(8, "x") (xyzwStr(9, "xw") (xyzwStr(10, "xz") (xyzwStr(11, "xzw") (xyzwStr(12, "xy") (xyzwStr(13, "xyw") (xyzwStr(14, "xyz") "xyzw"))))))))))))))
-#define _BC_String	 (_bc_x ? "x" : (_bc_y ? "y" : (_bc_z ? "z" : "w")))
 
-
+// Pass 1 uses these to set mVUinfo
 #define _isNOP		 (1<<0) // Skip Lower Instruction
 #define _isBranch	 (1<<1) // Cur Instruction is a Branch
 #define _isEOB		 (1<<2) // End of Block
@@ -206,7 +203,7 @@ declareAllVariables
 #define _doClip		 (1<<29)
 #define _noWriteVF	 (1<<30) // Don't write back the result of a lower op to VF reg if upper op writes to same reg (or if VF = 0)
 
-
+// Pass 2 uses these to read mVUinfo
 #define isNOP		 (mVUinfo & (1<<0))
 #define isBranch	 (mVUinfo & (1<<1))
 #define isEOB		 (mVUinfo & (1<<2))
@@ -237,9 +234,26 @@ declareAllVariables
 #define doClip		 (mVUinfo & (1<<29))
 #define noWriteVF	 (mVUinfo & (1<<30))
 
-#define isMMX(_VIreg_)	0//(_VIreg_ >= 1 && _VIreg_ <=8)
+// Pass 3 Helper Macros
+#define _Fsf_String	 ((_Fsf_ == 3) ? "w" : ((_Fsf_ == 2) ? "z" : ((_Fsf_ == 1) ? "y" : "x")))
+#define _Ftf_String	 ((_Ftf_ == 3) ? "w" : ((_Ftf_ == 2) ? "z" : ((_Ftf_ == 1) ? "y" : "x")))
+#define xyzwStr(x,s) (_X_Y_Z_W == x) ? s :
+#define _XYZW_String (xyzwStr(1, "w") (xyzwStr(2, "z") (xyzwStr(3, "zw") (xyzwStr(4, "y") (xyzwStr(5, "yw") (xyzwStr(6, "yz") (xyzwStr(7, "yzw") (xyzwStr(8, "x") (xyzwStr(9, "xw") (xyzwStr(10, "xz") (xyzwStr(11, "xzw") (xyzwStr(12, "xy") (xyzwStr(13, "xyw") (xyzwStr(14, "xyz") "xyzw"))))))))))))))
+#define _BC_String	 (_bc_x ? "x" : (_bc_y ? "y" : (_bc_z ? "z" : "w")))
+#define mVUlogFtFs() { mVUlog(".%s vf%02d, vf%02d", _XYZW_String, _Ft_, _Fs_); }
+#define mVUlogFd()	 { mVUlog(".%s vf%02d, vf%02d", _XYZW_String, _Fd_, _Fs_); }
+#define mVUlogACC()	 { mVUlog(".%s ACC, vf%02d", _XYZW_String, _Fs_); }
+#define mVUlogFt()	 { mVUlog(", vf%02d", _Ft_); }
+#define mVUlogBC()	 { mVUlog(", vf%02d%s", _Ft_, _BC_String); }
+#define mVUlogI()	 { mVUlog(", I"); }
+#define mVUlogQ()	 { mVUlog(", Q"); }
+#define mVUlogCLIP() { mVUlog("w.xyz vf%02d, vf%02dw", _Fs_, _Ft_); }
+
+// Store VI regs in mmx regs?
+#define isMMX(_VIreg_)	0 //(_VIreg_ >= 1 && _VIreg_ <=8)
 #define mmVI(_VIreg_)	(_VIreg_ - 1)
 
+// Debug Stuff...
 #ifdef mVUdebug
 #define mVUprint Console::Status
 #define mVUdebug1() {											\
@@ -254,6 +268,7 @@ declareAllVariables
 #define mVUdebug1() {}
 #endif
 
+// Program Logging...
 #ifdef mVUlogProg
 #define mVUlog __mVULog<vuIndex>
 #define mVUdumpProg __mVUdumpProgram<vuIndex>
@@ -262,6 +277,7 @@ declareAllVariables
 #define mVUdumpProg 0&&
 #endif
 
+// Cache Limit Check
 #define mVUcacheCheck(ptr, start, limit) {  \
 	uptr diff = ptr - start; \
 	if (diff >= limit) { Console::Error("microVU Error: Program went over its cache limit. Size = 0x%x", params diff); } \

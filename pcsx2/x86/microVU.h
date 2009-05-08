@@ -1,5 +1,5 @@
 /*  Pcsx2 - Pc Ps2 Emulator
- *  Copyright (C) 2009  Pcsx2-Playground Team
+ *  Copyright (C) 2009  Pcsx2 Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -151,5 +151,6 @@ typedef void (*mVUrecCall)(u32, u32) __attribute__((__fastcall)); // Not sure if
 #include "microVU_Upper.inl"
 #include "microVU_Lower.inl"
 #include "microVU_Tables.inl"
+#include "microVU_Flags.inl"
 #include "microVU_Compile.inl"
 #include "microVU_Execute.inl"

@@ -1,26 +1,26 @@
 /*  Pcsx2 - Pc Ps2 Emulator
-*  Copyright (C) 2009  Pcsx2-Playground Team
-*
-*  This program is free software; you can redistribute it and/or modify
-*  it under the terms of the GNU General Public License as published by
-*  the Free Software Foundation; either version 2 of the License, or
-*  (at your option) any later version.
-*  
-*  This program is distributed in the hope that it will be useful,
-*  but WITHOUT ANY WARRANTY; without even the implied warranty of
-*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*  GNU General Public License for more details.
-*  
-*  You should have received a copy of the GNU General Public License
-*  along with this program; if not, write to the Free Software
-*  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
-*/
+ *  Copyright (C) 2009  Pcsx2 Team
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *  
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *  
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
+ */
 
 #pragma once
 #ifdef PCSX2_MICROVU
 
 //------------------------------------------------------------------
-// Micro VU - recPass 0 Functions
+// Micro VU - Pass 1 Functions
 //------------------------------------------------------------------
 
 //------------------------------------------------------------------
@@ -51,7 +51,6 @@
 
 microVUt(void) mVUanalyzeFMAC1(int Fd, int Fs, int Ft) {
 	microVU* mVU = mVUx;
-	//mVUprint("microVU: FMAC1 Opcode");
 	mVUinfo |= _doStatus;
 	analyzeReg1(Fs);
 	analyzeReg1(Ft);
@@ -64,7 +63,6 @@ microVUt(void) mVUanalyzeFMAC1(int Fd, int Fs, int Ft) {
 
 microVUt(void) mVUanalyzeFMAC2(int Fs, int Ft) {
 	microVU* mVU = mVUx;
-	//mVUprint("microVU: FMAC2 Opcode");
 	analyzeReg1(Fs);
 	analyzeReg2(Ft);
 }
@@ -84,7 +82,6 @@ microVUt(void) mVUanalyzeFMAC2(int Fs, int Ft) {
 
 microVUt(void) mVUanalyzeFMAC3(int Fd, int Fs, int Ft) {
 	microVU* mVU = mVUx;
-	//mVUprint("microVU: FMAC3 Opcode");
 	mVUinfo |= _doStatus;
 	analyzeReg1(Fs);
 	analyzeReg3(Ft);
@@ -115,7 +112,6 @@ microVUt(void) mVUanalyzeFMAC4(int Fs, int Ft) {
 
 microVUt(void) mVUanalyzeIALU1(int Id, int Is, int It) {
 	microVU* mVU = mVUx;
-	//mVUprint("microVU: IALU1 Opcode");
 	if (!Id) { mVUinfo |= _isNOP; }
 	analyzeVIreg1(Is);
 	analyzeVIreg1(It);
@@ -124,7 +120,6 @@ microVUt(void) mVUanalyzeIALU1(int Id, int Is, int It) {
 
 microVUt(void) mVUanalyzeIALU2(int Is, int It) {
 	microVU* mVU = mVUx;
-	//mVUprint("microVU: IALU2 Opcode");
 	if (!It) { mVUinfo |= _isNOP; }
 	analyzeVIreg1(Is);
 	analyzeVIreg2(It, 1);
@@ -211,7 +206,6 @@ microVUt(void) mVUanalyzeMFP(int Ft) {
 
 microVUt(void) mVUanalyzeLQ(int Ft, int Is, bool writeIs) {
 	microVU* mVU = mVUx;
-	//mVUprint("microVU: LQ Opcode");
 	analyzeVIreg1(Is);
 	analyzeReg2(Ft);
 	if (!Ft)	 { mVUinfo |= (writeIs && Is) ? _noWriteVF : _isNOP; }

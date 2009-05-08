@@ -2051,6 +2051,10 @@
 								>
 							</File>
 							<File
+								RelativePath="..\..\x86\microVU_Flags.inl"
+								>
+							</File>
+							<File
 								RelativePath="..\..\x86\microVU_Log.inl"
 								>
 							</File>
