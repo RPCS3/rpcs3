@@ -400,8 +400,8 @@ void SysPrepareExecution( const char* elf_file, bool use_bios )
 			return;
 		}
 
-		// Don't Open CDVD plugin if directly loading an elf file
-		if (elf_file) { g_Startup.BootMode = BootMode_Elf; }
+		g_Startup.BootMode = (elf_file) ? BootMode_Elf : BootMode_Normal;
+
 		if (OpenPlugins(NULL) == -1) { 
 			return; 
 		}

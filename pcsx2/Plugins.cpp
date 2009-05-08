@@ -607,6 +607,7 @@ static PluginOpenStatusFlags OpenStatus = {0};
 
 static bool loadp = false;
 static bool initp = false;
+static bool cdvdElf = false;
 
 int LoadPlugins()
 {
@@ -659,6 +660,7 @@ int InitPlugins()
 	ret = FWinit();
 	if (ret != 0) { Msgbox::Alert("FWinit error: %d", params ret); return -1; }
 
+	cdvdElf = false;
 	initp = true;
 	return 0;
 }
@@ -725,18 +727,23 @@ int OpenPlugins(const char* pTitleFilename)
 	}*/
 #endif
 
-	// Don't Open CDVD plugin if directly loading an elf file
-	if( !OpenStatus.CDVD && g_Startup.BootMode != BootMode_Elf)
+	// Don't Repetitively Open CDVD plugin if directly loading an elf file and Open failed once already
+	if( !OpenStatus.CDVD && !cdvdElf)
 	{
 		//first we need the data
 		if (CDVDnewDiskCB) CDVDnewDiskCB(cdvdNewDiskCB);
 
 		ret = CDVDopen(pTitleFilename);
 
-		if (ret != 0) { Msgbox::Alert("Error Opening CDVD Plugin"); goto OpenError; }
+		if (ret != 0) { 
+			if (g_Startup.BootMode != BootMode_Elf) { Msgbox::Alert("Error Opening CDVD Plugin"); goto OpenError; }
+			else { Console::Notice("Running ELF File Without CDVD Plugin Support!"); cdvdElf = 1; goto skipOpenCDVD; }
+		}
 		OpenStatus.CDVD = true;
 		cdvdNewDiskCB();
 	}
+
+skipOpenCDVD:
 
 	if( !OpenStatus.GS ) {
 		ret = gsOpen();
@@ -833,7 +840,7 @@ OpenError:
 
 void ClosePlugins( bool closegs )
 {
-	// Close pads first since they attatch to the GS's window.
+	// Close pads first since they attach to the GS's window.
 
 	CLOSE_PLUGIN( PAD1 );
 	CLOSE_PLUGIN( PAD2 );
