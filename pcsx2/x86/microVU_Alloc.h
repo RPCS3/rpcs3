@@ -29,6 +29,10 @@ union regInfo {
 	};
 };
 
+#if defined(_MSC_VER)
+#pragma pack(push, 1)
+#pragma warning(disable:4996)
+#endif
 struct microRegInfo {
 	regInfo VF[32];
 	u8 VI[32];
@@ -38,7 +42,12 @@ struct microRegInfo {
 	u8 xgkick;
 	u8 clip;
 	u8 needExactMatch; // If set, block needs an exact match of pipeline state (needs to be last byte in struct)
+#if defined(_MSC_VER)
 };
+#pragma pack(pop)
+#else
+} __attribute__((packed));
+#endif
 
 struct microTempRegInfo {
 	regInfo VF[2];	// Holds cycle info for Fd, VF[0] = Upper Instruction, VF[1] = Lower Instruction
@@ -59,6 +68,7 @@ struct microBlock {
 
 template<u32 pSize>
 struct microAllocInfo {
+	microBlock*		 pBlock;   // Pointer to a block in mVUblocks
 	microBlock		 block;	   // Block/Pipeline info
 	microTempRegInfo regsTemp; // Temp Pipeline info (used so that new pipeline info isn't conflicting between upper and lower instructions in the same cycle)
 	u8  branch;			// 0 = No Branch, 1 = B. 2 = BAL, 3~8 = Conditional Branches, 9 = JALR, 10 = JR

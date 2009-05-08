@@ -86,19 +86,13 @@ microVUt(void) mVUdispatcherB() {
 	eeMXCSR = g_sseMXCSR;
 	SSE_LDMXCSR((uptr)&eeMXCSR);
 	
-	// Save Regs
-	MOV32RtoR(gprT1, gprF0); // ToDo: Ensure Correct Flag instances
-	AND32ItoR(gprT1, 0xffff);
-	SHR32ItoR(gprF0, 16);
-	MOV32RtoM((uptr)&mVU->regs->VI[REG_R].UL,			gprR);
-	MOV32RtoM((uptr)&mVU->regs->VI[REG_STATUS_FLAG].UL,	gprT1);
-	MOV32RtoM((uptr)&mVU->regs->VI[REG_MAC_FLAG].UL,	gprF0);
-	
+	// Save Regs (Other Regs Saved in mVUcompile)
+	MOV32RtoM((uptr)&mVU->regs->VI[REG_R].UL, gprR);
+	SSE_MOVAPS_XMM_to_M128((uptr)&mVU->regs->ACC.UL[0], xmmACC);
+
 	for (int i = 1; i < 16; i++) {
 		if (isMMX(i)) { MOVDMMXtoM((uptr)&mVU->regs->VI[i].UL, mmVI(i)); }
 	}
-
-	SSE_MOVAPS_XMM_to_M128((uptr)&mVU->regs->ACC.UL[0], xmmACC);
 
 	// __fastcall = The first two DWORD or smaller arguments are passed in ECX and EDX registers; all other arguments are passed right to left.
 	if (!vuIndex) { CALLFunc((uptr)mVUcleanUpVU0); }
@@ -109,8 +103,6 @@ microVUt(void) mVUdispatcherB() {
 	POP32R(ESI);
 	POP32R(EBP);
 	POP32R(EBX);
-
-	//write8(0xcc);
 
 	if (isMMX(1)) EMMS();
 	RET();

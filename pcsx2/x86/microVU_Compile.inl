@@ -127,6 +127,12 @@ microVUt(void) mVUsetFlags(int* bStatus, int* bMac) {
 	mVUcount = xCount; // Restore count
 	mVUregs.clip = xClip&3; // Note: Clip timing isn't cycle-accurate between block linking; but hopefully doesn't matter
 
+	// Temp Hack-fix until flag-algorithm rewrite
+	for (int i = 0; i < 4; i++) {
+		bStatus[i] = 0;
+		bMac[i]    = 0;
+	}
+
 	// Setup Last 4 instances of Status/Mac flags (needed for accurate block linking)
 	iPC = endPC;
 	for (int i = 3, j = 3, ii = 1, jj = 1; aCount > 0; ii++, jj++, aCount--) {
@@ -238,26 +244,32 @@ microVUt(void) mVUdivSet() {
 	if (doDivFlag) {
 		getFlagReg(flagReg1, fsInstance);
 		if (!doStatus) { getFlagReg(flagReg2, fpsInstance); MOV16RtoR(flagReg1, flagReg2); }
-		//MOV32RtoR(gprT1, flagReg1);
-		//AND32ItoR(gprT1, 0xffff0fcf);
-		//OR32MtoR (gprT1, (uptr)&mVU->divFlag);
-		//MOV32RtoR(flagReg1, gprT1);
 		AND16ItoR(flagReg1, 0x0fcf);
 		OR32MtoR (flagReg1, (uptr)&mVU->divFlag);
 	}
 }
 
-microVUt(void) mVUendProgram() {
+microVUt(void) mVUendProgram(int fStatus, int fMac) {
 	microVU* mVU = mVUx;
 	incCycles(100); // Ensures Valid P/Q instances (And sets all cycle data to 0)
 	mVUcycles -= 100;
 
+	// Save P/Q Regs
 	if (mVU->q) { SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, 0xe5); }
 	SSE_MOVSS_XMM_to_M32((uptr)&mVU->regs->VI[REG_Q].UL, xmmPQ);
 	if (vuIndex) {
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVU->p ? 3 : 2);
 		SSE_MOVSS_XMM_to_M32((uptr)&mVU->regs->VI[REG_P].UL, xmmPQ);
 	}
+
+	// Save Flag Instances
+	getFlagReg(fStatus, fStatus);
+	getFlagReg(fMac,	fMac);
+	MOV32RtoR(gprT1, fStatus);
+	AND32ItoR(gprT1, 0xffff);
+	SHR32ItoR(fMac, 16);	
+	MOV32RtoM((uptr)&mVU->regs->VI[REG_STATUS_FLAG].UL,	gprT1);
+	MOV32RtoM((uptr)&mVU->regs->VI[REG_MAC_FLAG].UL,	fMac);
 
 	//memcpy_fast(&pBlock->pStateEnd, &mVUregs, sizeof(microRegInfo));
 	//MOV32ItoM((uptr)&mVU->prog.lpState, (int)&mVUblock.pState); // Save pipeline state (clipflag instance)
@@ -273,7 +285,7 @@ microVUt(void) mVUtestCycles() {
 	iPC = mVUstartPC;
 	CMP32ItoM((uptr)&mVU->cycles, 0);
 	u8* jmp8 = JG8(0);
-		mVUendProgram<vuIndex>();
+		mVUendProgram<vuIndex>(0, 0);
 	x86SetJ8(jmp8);
 	SUB32ItoM((uptr)&mVU->cycles, mVUcycles);
 }
@@ -304,6 +316,7 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 	memcpy_fast(&mVUregs, (microRegInfo*)pState, sizeof(microRegInfo)); // Loads up Pipeline State Info
 	mVUblock.x86ptrStart = thisPtr;
 	pBlock = mVUblocks[startPC/8]->add(&mVUblock); // Add this block to block manager
+	mVUpBlock = pBlock;
 
 	for (int branch = 0;; ) {
 		incPC(1);
@@ -330,6 +343,9 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 	int bStatus[4]; int bMac[4];
 	mVUsetFlags<vuIndex>(bStatus, bMac);
 	mVUtestCycles<vuIndex>();
+	//SysPrintf("bS[0] = %08x, bS[1] = %08x, bS[2] = %08x, bS[3] = %08x\n", bStatus[0], bStatus[1], bStatus[2], bStatus[3]);
+	//SysPrintf("bM[0] = %08x, bM[1] = %08x, bM[2] = %08x, bM[3] = %08x\n", bMac[0], bMac[1], bMac[2], bMac[3]);
+	//SysPrintf("mVUcount = %d\n", mVUcount);
 
 	// Second Pass
 	iPC = mVUstartPC;
@@ -414,7 +430,7 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 	if (x == (vuIndex?(0x3fff/8):(0xfff/8))) { mVUprint("microVU: Possible infinite compiling loop!"); }
 
 	// Do E-bit end stuff here
-	mVUendProgram<vuIndex>();
+	mVUendProgram<vuIndex>(bStatus[3], bMac[3]);
 
 	return thisPtr; //ToDo: Save pipeline state?
 }

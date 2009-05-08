@@ -117,10 +117,6 @@ microVUt(void) mVUclear(u32 addr, u32 size) {
 	microVU* mVU = mVUx;
 	memset(&mVU->prog.lpState, 0, sizeof(mVU->prog.lpState));
 	mVU->prog.cleared = 1; // Next execution searches/creates a new microprogram
-	// Note: It might be better to copy old recompiled blocks to the new microprogram rec data
-	// however, if games primarily do big writes, its probably not worth it.
-	// The cost of invalidating bad blocks is also kind of expensive, which is another reason
-	// that its probably not worth it...
 }
 
 //------------------------------------------------------------------

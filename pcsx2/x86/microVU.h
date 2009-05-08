@@ -49,16 +49,17 @@ public:
 	}
 	microBlock* search(microRegInfo* pState) {
 		if (listSize < 0) return NULL;
-		//if (blockList[0].pState.needExactMatch) { // Needs Detailed Search (Exact Match of Pipeline State)
+		if (blockList[0].pState.needExactMatch) { // Needs Detailed Search (Exact Match of Pipeline State)
 			for (int i = 0; i <= listSize; i++) {
 				if (!memcmp(pState, &blockList[i].pState, sizeof(microRegInfo) - 1)) return &blockList[i];
 			}
-		/*}
+		}
 		else { // Can do Simple Search (Only Matches the Important Pipeline Stuff)
 			for (int i = 0; i <= listSize; i++) {
-				if ((blockList[i].pState.q == pState->q) && (blockList[i].pState.p == pState->p)) { return &blockList[i]; }
+				if ((blockList[i].pState.q == pState->q) && (blockList[i].pState.p == pState->p) 
+				&&  (blockList[i].pState.clip == pState->clip)) { return &blockList[i]; }
 			}
-		}*/
+		}
 		return NULL;
 	}
 };
@@ -90,7 +91,7 @@ struct microVU {
 	u32 index;		// VU Index (VU0 or VU1)
 	u32 microSize;	// VU Micro Memory Size
 	u32 progSize;	// VU Micro Program Size (microSize/4)
-	static const u32 cacheSize = 0x800000; // VU Cache Size
+	static const u32 cacheSize = 0xb00000; // VU Cache Size
 
 	microProgManager<0x4000> prog; // Micro Program Data
 

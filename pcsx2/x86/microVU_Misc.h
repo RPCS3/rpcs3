@@ -152,6 +152,7 @@ declareAllVariables
 #define mVUbranch	 mVUallocInfo.branch
 #define mVUcycles	 mVUallocInfo.cycles
 #define mVUcount	 mVUallocInfo.count
+#define mVUpBlock	 mVUallocInfo.pBlock
 #define mVUblock	 mVUallocInfo.block
 #define mVUregs		 mVUallocInfo.block.pState
 #define mVUregsTemp	 mVUallocInfo.regsTemp
@@ -263,5 +264,5 @@ declareAllVariables
 
 #define mVUcacheCheck(ptr, start, limit) {  \
 	uptr diff = ptr - start; \
-	if (diff >= limit) { Console::Error("microVU Error: Program went over it's cache limit. Size = %x", params diff); } \
+	if (diff >= limit) { Console::Error("microVU Error: Program went over its cache limit. Size = 0x%x", params diff); } \
 }

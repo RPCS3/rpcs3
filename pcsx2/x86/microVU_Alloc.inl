@@ -665,13 +665,17 @@ microVUt(void) mVUallocFMAC26b(int& ACCw, int& ACCr) {
 // Flag Allocators
 //------------------------------------------------------------------
 
-#define getFlagReg(regX, fInst) {		\
-	switch (fInst) {					\
-		case 0: regX = gprF0;	break;  \
-		case 1: regX = gprF1;	break;  \
-		case 2: regX = gprF2;	break;  \
-		case 3: regX = gprF3;	break;  \
-	}									\
+#define getFlagReg(regX, fInst) {														\
+	switch (fInst) {																	\
+		case 0: regX = gprF0;	break;													\
+		case 1: regX = gprF1;	break;													\
+		case 2: regX = gprF2;	break;													\
+		case 3: regX = gprF3;	break;													\
+		default:																		\
+			Console::Error("microVU: Flag Instance Error (fInst = %d)", params fInst);	\
+			regX = gprF0;																\
+			break;																		\
+	}																					\
 }
 
 microVUt(void) mVUallocSFLAGa(int reg, int fInstance) {
