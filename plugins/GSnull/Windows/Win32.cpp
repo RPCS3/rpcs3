@@ -4,7 +4,7 @@
 
 
 #include "resource.h"
-#include "../FW.h"
+#include "../GS.h"
 
 HINSTANCE hInst;
 
@@ -15,7 +15,7 @@ void SysMessage(char *fmt, ...) {
 	va_start(list,fmt);
 	vsprintf(tmp,fmt,list);
 	va_end(list);
-	MessageBox(0, tmp, "FW Plugin Msg", 0);
+	MessageBox(0, tmp, "GS Plugin Msg", 0);
 }
 
 BOOL CALLBACK ConfigureDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam) {
@@ -58,14 +58,14 @@ BOOL CALLBACK AboutDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 	return FALSE;
 }
 
-void CALLBACK FWconfigure() {
+EXPORT_C_(void) GSconfigure() {
     DialogBox(hInst,
               MAKEINTRESOURCE(IDD_CONFIG),
               GetActiveWindow(),  
               (DLGPROC)ConfigureDlgProc); 
 }
 
-void CALLBACK FWabout() {
+EXPORT_C_(void) GSabout() {
     DialogBox(hInst,
               MAKEINTRESOURCE(IDD_ABOUT),
               GetActiveWindow(),  

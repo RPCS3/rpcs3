@@ -72,7 +72,6 @@ EXPORT_C_(void) GSprintf(int timeout, char *fmt, ...)
 {
 	va_list list;
 	char msg[512];
-	char cmd[512];
 
 	va_start(list, fmt);
 	vsprintf(msg, fmt, list);

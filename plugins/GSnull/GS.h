@@ -21,16 +21,6 @@
 
 #include <stdio.h>
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif 
-#define GSdefs
-#include "PS2Edefs.h"
-#ifdef __cplusplus
-}
-#endif
-
 #ifdef _WIN32
 
 #include <windows.h>
@@ -42,6 +32,16 @@ extern "C"
 #include <X11/Xlib.h>
 #include <X11/keysym.h>
 
+#endif
+
+#ifdef __cplusplus
+extern "C"
+{
+#endif 
+#define GSdefs
+#include "PS2Edefs.h"
+#ifdef __cplusplus
+}
 #endif
 
 /*#ifdef _MSC_VER
@@ -62,6 +62,7 @@ typedef struct
 {
 	int Log;
 } Config;
+
 
 extern Config conf;
 extern FILE *gsLog;

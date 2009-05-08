@@ -1,6 +1,6 @@
 #include <stdlib.h>
 
-#include "../FW.h"
+#include "../GS.h"
 
 extern HINSTANCE hInst;
 void SaveConfig() 
@@ -14,7 +14,7 @@ void SaveConfig()
 	szTemp = strrchr(szIniFile, '\\');
 
 	if(!szTemp) return;
-	strcpy(szTemp, "\\inis\\fwnull.ini");
+	strcpy(szTemp, "\\inis\\gsnull.ini");
 	sprintf(szValue,"%u",Conf1->Log);
     WritePrivateProfileString("Interface", "Logging",szValue,szIniFile);
 
@@ -32,8 +32,8 @@ void LoadConfig() {
 	szTemp = strrchr(szIniFile, '\\');
 
 	if(!szTemp) return ;
-	strcpy(szTemp, "\\inis\\fwnull.ini");
-    fp=fopen("inis\\fwnull.ini","rt");//check if firewirenull.ini really exists
+	strcpy(szTemp, "\\inis\\gsnull.ini");
+    fp=fopen("inis\\gsnull.ini","rt");//check if gsnull.ini really exists
 	if (!fp)
 	{
 		CreateDirectory("inis",NULL); 
