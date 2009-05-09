@@ -31,6 +31,9 @@ using namespace std;
 Display *display;
 int screen;
 #endif
+#ifdef _WIN32
+HINSTANCE HInst;
+#endif
 
 const unsigned char version  = PS2E_GS_VERSION;
 const unsigned char revision = 0;
@@ -125,7 +128,7 @@ EXPORT_C_(s32) GSopen(void *pDsp, char *Title, int multithread)
 #ifdef GS_LOG
 	GS_LOG("GS open\n");
 #endif
-	assert( GSirq != NULL );
+	//assert( GSirq != NULL );
 	
 #ifdef __LINUX__
 	display = XOpenDisplay(0);
@@ -133,8 +136,8 @@ EXPORT_C_(s32) GSopen(void *pDsp, char *Title, int multithread)
 
 	if( pDsp != NULL ) *(Display**)pDsp = display;
 #else
-	// Haven't implemented anything for Windows yet.
-	pDsp = NULL;
+	if( pDsp != NULL ) *(int*)pDsp = (int)GetNextWindow(GetForegroundWindow(),GW_HWNDNEXT); 
+(NULL);
 #endif
 	SysPrintf("Opening GSnull\n");
 	return 0;

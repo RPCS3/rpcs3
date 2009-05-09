@@ -63,7 +63,6 @@ typedef struct
 	int Log;
 } Config;
 
-
 extern Config conf;
 extern FILE *gsLog;
 
