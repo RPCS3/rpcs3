@@ -251,18 +251,31 @@ u32 CALLBACK PS2EgetLibVersion2(u32 type)
 	return (version << 16) | (revision << 8) | build;
 }
 
-void __Log(char *fmt, ...)
+void __Log(const char *fmt, ...) 
 {
 	va_list list;
 
-	if (!conf.log || padLog == NULL) return;
+	//if (padLog == NULL || !conf.log) return;
+	if (padLog == NULL) return;
 	va_start(list, fmt);
 	vfprintf(padLog, fmt, list);
 	va_end(list);
 }
 
+void __LogToConsole(const char *fmt, ...) 
+{
+	va_list list;
 
-s32 CALLBACK PADinit(u32 flags)
+	va_start(list, fmt);
+
+	if (padLog != NULL) vfprintf(padLog, fmt, list);
+
+	printf("ZeroPad: ");
+	vprintf(fmt, list);
+	va_end(list);
+}
+
+void initLogging()
 {
 #ifdef PAD_LOG
 	if (padLog == NULL)
@@ -272,6 +285,11 @@ s32 CALLBACK PADinit(u32 flags)
 	}
 	PAD_LOG("PADinit\n");
 #endif
+}
+
+s32 CALLBACK PADinit(u32 flags)
+{
+	initLogging();
 
 	pads |= flags;
 	status[0] = 0xffff;

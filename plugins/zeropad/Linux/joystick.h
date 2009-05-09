@@ -87,7 +87,7 @@ class JoystickInfo
 		
 		int GetPOVState(int i)
 		{
-			//printf("Getting POV State of %d.\n", i);
+			//PAD_LOG("Getting POV State of %d.\n", i);
 			return vpovstate[i];
 		}
 		
@@ -103,7 +103,7 @@ class JoystickInfo
 		
 		void SetPOVState(int i, int value)
 		{
-			//printf("We should set %d to %d.\n", i, value);
+			//PAD_LOG("We should set %d to %d.\n", i, value);
 			vpovstate[i] = value;
 		}
 		

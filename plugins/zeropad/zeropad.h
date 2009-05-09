@@ -96,7 +96,9 @@ typedef struct
 extern PADconf conf;
 extern PADAnalog g_lanalog[2], g_ranalog[2];
 extern FILE *padLog;
+extern void initLogging();
 #define PAD_LOG __Log
+//#define PAD_LOG __LogToConsole
 
 enum PadCommands
 {
@@ -171,7 +173,8 @@ void _KeyRelease(int pad, u32 key);
 void PADsetMode(int pad, int mode);
 void _PADupdate(int pad);
 
-void __Log(char *fmt, ...);
+void __Log(const char *fmt, ...);
+void __LogToConsole(const char *fmt, ...);
 void LoadConfig();
 void SaveConfig();
 

@@ -266,6 +266,7 @@ void CALLBACK PADupdate(int pad)
 					status[pad] |= (1 << i);
 			}
 		}
+		// Need to add in new POV code here, to match the new configuration pov code.
 	}
 #endif
 
@@ -279,6 +280,7 @@ void CALLBACK PADupdate(int pad)
 
 void UpdateConf(int pad)
 {
+	initLogging();
 	s_selectedpad = pad;
 
 	int i;
@@ -292,7 +294,7 @@ void UpdateConf(int pad)
 		Btn = lookup_widget(Conf, GetLabelFromButton(s_pGuiKeyMap[i]).c_str());
 		if (Btn == NULL)
 		{
-			printf("ZeroPAD: cannot find key %s\n", s_pGuiKeyMap[i]);
+			PAD_LOG("ZeroPAD: cannot find key %s\n", s_pGuiKeyMap[i]);
 			continue;
 		}
 
@@ -359,7 +361,7 @@ void OnConf_Key(GtkButton *button, gpointer user_data)
 	GtkWidget* label = lookup_widget(Conf, GetLabelFromButton(gtk_button_get_label(button)).c_str());
 	if (label == NULL)
 	{
-		printf("couldn't find correct label\n");
+		PAD_LOG("couldn't find correct label\n");
 		return;
 	}
 
@@ -433,15 +435,14 @@ void OnConf_Key(GtkButton *button, gpointer user_data)
 
 				if (value != (*itjoy)->GetAxisState(i))
 				{
+					PAD_LOG("Change in joystick %d: %d.\n", i, value);
 
 					if (abs(value) <= (*itjoy)->GetAxisState(i))  // we don't want this
 					{
 						// released, we don't really want this
-						// SetButtonState? Shouldn't this be SetAxisState?
-						(*itjoy)->SetButtonState(i, value);
+						(*itjoy)->SetAxisState(i, value);
 						break;
 					}
-
 
 					if (abs(value) > 0x3fff)
 					{
@@ -465,33 +466,44 @@ void OnConf_Key(GtkButton *button, gpointer user_data)
 				}
 			}
 			
-			/*for (int i = 0; i < (*itjoy)->GetNumPOV(); ++i)
+#ifdef EXPERAMENTAL_POV_CODE
+			for (int i = 0; i < (*itjoy)->GetNumPOV(); ++i)
 			{
 				int value = SDL_JoystickGetHat((*itjoy)->GetJoy(), i);
 
 				if (value != (*itjoy)->GetPOVState(i))
 				{
-					if (abs(value) > 0x3fff)
+					switch (value)
 					{
-						if (key < 16)    // POV
-						{
+						char str[32];
+						
+						case SDL_HAT_UP:
 							*pkey = PAD_POV((*itjoy)->GetId(), value < 0, i);
-							char str[32];
-							sprintf(str, "JPOV %d%s", i, value < 0 ? "-" : "+");
+							sprintf(str, "JPOV%d%s", i, "U");
 							gtk_entry_set_text(GTK_ENTRY(label), str);
 							return;
-						}
-						else   // axis
-						{
-							*pkey = PAD_JOYSTICK((*itjoy)->GetId(), i);
-							char str[32];
-							sprintf(str, "JAxis %d", i);
+						case SDL_HAT_RIGHT:
+							*pkey = PAD_POV((*itjoy)->GetId(), value < 0, i);
+							sprintf(str, "JPOV%d%s", i, "R");
 							gtk_entry_set_text(GTK_ENTRY(label), str);
 							return;
-						}
+						case SDL_HAT_DOWN:
+							*pkey = PAD_POV((*itjoy)->GetId(), value < 0, i);
+							sprintf(str, "JPOV%d%s", i, "D");
+							gtk_entry_set_text(GTK_ENTRY(label), str);
+							return;
+						case SDL_HAT_LEFT:
+							*pkey = PAD_POV((*itjoy)->GetId(), value < 0, i);
+							sprintf(str, "JPOV%d%s", i, "L");
+							gtk_entry_set_text(GTK_ENTRY(label), str);
+							return;
+						// Not handling SDL_HAT_RIGHTUP, SDL_HAT_RIGHTDOWN, 
+						// SDL_HAT_LEFTUP, or SDL_HAT_LEFTDOWN here. They should be 
+						// handled in the PADUpdate code, though.
 					}
 				}
-			}*/
+			}
+#endif
 			itjoy++;
 		}
 #endif

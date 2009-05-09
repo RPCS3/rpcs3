@@ -101,7 +101,7 @@ bool JoystickInfo::Init(int id, bool bStartThread)
 	joy = SDL_JoystickOpen(id);
 	if (joy == NULL)
 	{
-		printf("failed to open joystick %d\n", id);
+		PAD_LOG("failed to open joystick %d\n", id);
 		return false;
 	}
 
@@ -109,9 +109,12 @@ bool JoystickInfo::Init(int id, bool bStartThread)
 	numbuttons = SDL_JoystickNumButtons(joy);
 	numpov = SDL_JoystickNumHats(joy);
 	devname = SDL_JoystickName(id);
+	
+	vaxisstate.resize(numaxes);
 	vbutstate.resize(numbuttons);
-	vaxisstate.resize(numbuttons);
+	vpovstate.resize(numpov);
 
+	//PAD_LOG("There are %d buttons, %d axises, and %d povs.\n", numbuttons, numaxes, numpov);
 	return true;
 }
 
@@ -140,11 +143,11 @@ void JoystickInfo::Assign(int newpad)
 void JoystickInfo::SaveState()
 {
 	for (int i = 0; i < numbuttons; ++i)
-		vbutstate[i] = SDL_JoystickGetButton(joy, i);
+		SetButtonState(i, SDL_JoystickGetButton(joy, i));
 	for (int i = 0; i < numaxes; ++i)
-		vaxisstate[i] = SDL_JoystickGetAxis(joy, i);
-	/*for (int i = 0; i < numpov; ++i)
-		vpovstate[i] = SDL_JoystickGetHat(joy, i);*/
+		SetAxisState(i, SDL_JoystickGetAxis(joy, i));
+	for (int i = 0; i < numpov; ++i)
+		SetPOVState(i, SDL_JoystickGetHat(joy, i));
 }
 
 void JoystickInfo::TestForce()

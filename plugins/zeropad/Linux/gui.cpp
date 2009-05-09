@@ -199,7 +199,7 @@ void SysMessage(char *fmt, ...)
 
 	MsgDlg = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	gtk_window_set_position(GTK_WINDOW(MsgDlg), GTK_WIN_POS_CENTER);
-	gtk_window_set_title(GTK_WINDOW(MsgDlg), "GSsoft Msg");
+	gtk_window_set_title(GTK_WINDOW(MsgDlg), "ZeroPad");
 	gtk_container_set_border_width(GTK_CONTAINER(MsgDlg), 5);
 
 	Box = gtk_vbox_new(5, 0);
