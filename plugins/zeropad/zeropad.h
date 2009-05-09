@@ -44,6 +44,7 @@ extern "C"
 {
 #include "PS2Edefs.h"
 }
+#include "analog.h"
 
 extern char libraryName[256];
 
@@ -93,10 +94,24 @@ typedef struct
 } PADAnalog;
 
 extern PADconf conf;
-
 extern PADAnalog g_lanalog[2], g_ranalog[2];
 extern FILE *padLog;
 #define PAD_LOG __Log
+
+enum PadCommands
+{
+	CMD_SET_VREF_PARAM = 0x40,
+	CMD_QUERY_DS2_ANALOG_MODE = 0x41,
+	CMD_READ_DATA_AND_VIBRATE = 0x42,
+	CMD_CONFIG_MODE = 0x43,
+	CMD_SET_MODE_AND_LOCK = 0x44,
+	CMD_QUERY_MODEL_AND_MODE = 0x45,
+	CMD_QUERY_ACT = 0x46, // ??
+	CMD_QUERY_COMB = 0x47, // ??
+	CMD_QUERY_MODE = 0x4C, // QUERY_MODE ??
+	CMD_VIBRATION_TOGGLE = 0x4D,
+	CMD_SET_DS2_NATIVE_MODE = 0x4F // SET_DS2_NATIVE_MODE
+};
 
 enum gamePadValues 
 {

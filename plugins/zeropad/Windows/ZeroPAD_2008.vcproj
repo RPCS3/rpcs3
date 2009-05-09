@@ -250,6 +250,10 @@
 				RelativePath="..\zeropad.cpp"
 				>
 			</File>
+			<File
+				RelativePath="..\analog.cpp"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"
@@ -270,6 +274,10 @@
 			</File>
 			<File
 				RelativePath="..\zeropad.h"
+				>
+			</File>
+			<File
+				RelativePath="..\analog.h"
 				>
 			</File>
 		</Filter>

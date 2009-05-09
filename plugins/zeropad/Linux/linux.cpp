@@ -138,50 +138,23 @@ void CALLBACK PADupdate(int pad)
 				switch (key)
 				{
 					case KEY_PAD_LX_LEFT:
-						g_lanalog[pad].x = DEF_VALUE / 256;
-						if (conf.options&PADOPTION_REVERTLX) g_lanalog[pad].x = -g_lanalog[pad].x;
-						g_lanalog[pad].x += 0x80;
+					case KEY_PAD_LY_UP:
+					case KEY_PAD_RX_LEFT:
+					case KEY_PAD_RY_UP:
+						Analog::ConfigurePad(KeypadToPad(key), pad, DEF_VALUE);
 						break;
 					case KEY_PAD_LX_RIGHT:
-						g_lanalog[pad].x = -DEF_VALUE / 256;
-						if (conf.options&PADOPTION_REVERTLX) g_lanalog[pad].x = -g_lanalog[pad].x;
-						g_lanalog[pad].x += 0x80;
-						break;
-					case KEY_PAD_LY_UP:
-						g_lanalog[pad].y = DEF_VALUE / 256;
-						if (conf.options&PADOPTION_REVERTLY) g_lanalog[pad].y = -g_lanalog[pad].y;
-						g_lanalog[pad].y += 0x80;
-						break;
 					case KEY_PAD_LY_DOWN:
-						g_lanalog[pad].y = -DEF_VALUE / 256;
-						if (conf.options&PADOPTION_REVERTLY) g_lanalog[pad].y = -g_lanalog[pad].y;
-						g_lanalog[pad].y += 0x80;
-						break;
-					case KEY_PAD_RX_LEFT:
-						g_ranalog[pad].x = DEF_VALUE / 256;
-						if (conf.options&PADOPTION_REVERTRX) g_ranalog[pad].x = -g_ranalog[pad].x;
-						g_ranalog[pad].x += 0x80;
-						break;
 					case KEY_PAD_RX_RIGHT:
-						g_ranalog[pad].x = -DEF_VALUE / 256;
-						if (conf.options&PADOPTION_REVERTRX) g_ranalog[pad].x = -g_ranalog[pad].x;
-						g_ranalog[pad].x += 0x80;
-						break;
-					case KEY_PAD_RY_UP:
-						g_ranalog[pad].y = DEF_VALUE / 256;
-						if (conf.options&PADOPTION_REVERTRY) g_ranalog[pad].y = -g_ranalog[pad].y;
-						g_ranalog[pad].y += 0x80;
-						break;
 					case KEY_PAD_RY_DOWN:
-						g_ranalog[pad].y = -DEF_VALUE / 256;
-						if (conf.options&PADOPTION_REVERTRY) g_ranalog[pad].y = -g_ranalog[pad].y;
-						g_ranalog[pad].y += 0x80;
+						Analog::ConfigurePad(KeypadToPad(key), pad, -DEF_VALUE);
 						break;
 				}
 #endif
 
 				i = FindKey(key, pad);
-				if (i != -1) {
+				if (i != -1) 
+				{
 					keyPress |= (1 << i);
 					keyRelease &= ~(1 << i);
 				}
@@ -196,34 +169,21 @@ void CALLBACK PADupdate(int pad)
 				switch (key)
 				{
 					case KEY_PAD_LX_LEFT:
-						g_lanalog[pad].x = 0x80;
-						break;
-					case KEY_PAD_LY_UP:
-						g_lanalog[pad].y = 0x80;
-						break;
-					case KEY_PAD_RX_LEFT:
-						g_ranalog[pad].x = 0x80;
-						break;
-					case KEY_PAD_RY_UP:
-						g_ranalog[pad].y = 0x80;
-						break;
 					case KEY_PAD_LX_RIGHT:
-						g_lanalog[pad].x = 0x80;
-						break;
+					case KEY_PAD_LY_UP:
 					case KEY_PAD_LY_DOWN:
-						g_lanalog[pad].y = 0x80;
-						break;
+					case KEY_PAD_RX_LEFT:
 					case KEY_PAD_RX_RIGHT:
-						g_ranalog[pad].x = 0x80;
-						break;
+					case KEY_PAD_RY_UP:
 					case KEY_PAD_RY_DOWN:
-						g_ranalog[pad].y = 0x80;
+						Analog::ResetPad(KeypadToPad(key));
 						break;
 				}
 #endif
 
 				i = FindKey(key, pad);
-				if (i != -1) {
+				if (i != -1) 
+				{
 					keyPress &= ~(1 << i); 
 					keyRelease |= (1 << i);
 				}
@@ -277,52 +237,13 @@ void CALLBACK PADupdate(int pad)
 				switch (i)
 				{
 					case PAD_LX:
-						if (abs(value) > (pjoy)->GetDeadzone(value))
-						{
-							g_lanalog[pad].x = value / 256;
-							if (conf.options & PADOPTION_REVERTLX) g_lanalog[pad].x = -g_lanalog[pad].x;
-							g_lanalog[pad].x += 0x80;
-						}
-						else 
-						{
-							g_lanalog[pad].x = 0x80;
-						}
-						break;
 					case PAD_LY:
-						if (abs(value) > (pjoy)->GetDeadzone(value))
-						{
-							g_lanalog[pad].y = value / 256;
-							if (conf.options & PADOPTION_REVERTLY) g_lanalog[pad].y = -g_lanalog[pad].y;
-							g_lanalog[pad].y += 0x80;
-						}
-						else
-						{
-							g_lanalog[pad].y = 0x80;
-						}
-						break;
 					case PAD_RX:
-						if (abs(value) > (pjoy)->GetDeadzone(value))
-						{
-							g_ranalog[pad].x = value / 256;
-							if (conf.options & PADOPTION_REVERTRX) g_ranalog[pad].x = -g_ranalog[pad].x;
-							g_ranalog[pad].x += 0x80;
-						}
-						else 
-						{
-							g_ranalog[pad].x = 0x80;
-						}
-						break;
 					case PAD_RY:
 						if (abs(value) > (pjoy)->GetDeadzone(value))
-						{
-							g_ranalog[pad].y = value / 256;
-							if (conf.options&PADOPTION_REVERTRY) g_ranalog[pad].y = -g_ranalog[pad].y;
-							g_ranalog[pad].y += 0x80;
-						}
+							Analog::ConfigurePad(i, pad, value);
 						else 
-						{
-							g_ranalog[pad].y = 0x80;
-						}
+							Analog::ResetPad(i, pad);
 						break;
 				}
 			}
@@ -516,6 +437,7 @@ void OnConf_Key(GtkButton *button, gpointer user_data)
 					if (abs(value) <= (*itjoy)->GetAxisState(i))  // we don't want this
 					{
 						// released, we don't really want this
+						// SetButtonState? Shouldn't this be SetAxisState?
 						(*itjoy)->SetButtonState(i, value);
 						break;
 					}
@@ -543,21 +465,33 @@ void OnConf_Key(GtkButton *button, gpointer user_data)
 				}
 			}
 			
-			
-			/*for (int i = 0; i < (*itjoy)->GetNumHats(); ++i)
+			/*for (int i = 0; i < (*itjoy)->GetNumPOV(); ++i)
 			{
 				int value = SDL_JoystickGetHat((*itjoy)->GetJoy(), i);
 
-				if (value != (*itjoy)->GetAxisState(i))
+				if (value != (*itjoy)->GetPOVState(i))
 				{
-					*pkey = PAD_HAT((*itjoy)->GetId(), i);
-					char str[32];
-					sprintf(str, "JHat %d", i);
-					gtk_entry_set_text(GTK_ENTRY(label), str);
-					return;
+					if (abs(value) > 0x3fff)
+					{
+						if (key < 16)    // POV
+						{
+							*pkey = PAD_POV((*itjoy)->GetId(), value < 0, i);
+							char str[32];
+							sprintf(str, "JPOV %d%s", i, value < 0 ? "-" : "+");
+							gtk_entry_set_text(GTK_ENTRY(label), str);
+							return;
+						}
+						else   // axis
+						{
+							*pkey = PAD_JOYSTICK((*itjoy)->GetId(), i);
+							char str[32];
+							sprintf(str, "JAxis %d", i);
+							gtk_entry_set_text(GTK_ENTRY(label), str);
+							return;
+						}
+					}
 				}
 			}*/
-			
 			itjoy++;
 		}
 #endif
@@ -590,7 +524,7 @@ void CALLBACK PADconfigure()
 	while (it != s_vjoysticks.end())
 	{
 		sprintf(str, "%d: %s - but: %d, axes: %d, pov: %d", (*it)->GetId(), (*it)->GetName().c_str(),
-		        (*it)->GetNumButtons(), (*it)->GetNumAxes(), (*it)->GetNumPOV()/*, (*it)->GetNumHats()*/); // ,hats: %d
+		        (*it)->GetNumButtons(), (*it)->GetNumAxes(), (*it)->GetNumPOV());
 		gtk_combo_box_append_text(GTK_COMBO_BOX(s_devicecombo), str);
 		it++;
 	}

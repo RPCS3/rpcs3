@@ -42,60 +42,71 @@ class JoystickInfo
 		{
 			return devname;
 		}
+		
 		int GetNumButtons()
 		{
 			return numbuttons;
 		}
+		
 		int GetNumAxes()
 		{
 			return numaxes;
 		}
+		
 		int GetNumPOV()
 		{
 			return numpov;
 		}
-		/*int GetNumHats()
-		{
-			return numhats;
-		}*/
+		
 		int GetId()
 		{
 			return _id;
 		}
+		
 		int GetPAD()
 		{
 			return pad;
 		}
+		
 		int GetDeadzone(int axis)
 		{
 			return deadzone;
 		}
 
 		void SaveState();
+		
 		int GetButtonState(int i)
 		{
 			return vbutstate[i];
 		}
+		
 		int GetAxisState(int i)
 		{
 			return vaxisstate[i];
 		}
-		/*int GetHatState(int i)
+		
+		int GetPOVState(int i)
 		{
-			return vhatstate[i];
-		}*/
+			//printf("Getting POV State of %d.\n", i);
+			return vpovstate[i];
+		}
+		
 		void SetButtonState(int i, int state)
 		{
 			vbutstate[i] = state;
 		}
+		
 		void SetAxisState(int i, int value)
 		{
 			vaxisstate[i] = value;
 		}
-		/*void SetHatState(int i, int value)
+		
+		void SetPOVState(int i, int value)
 		{
-			vhatstate[i] = value;
-		}*/
+			//printf("We should set %d to %d.\n", i, value);
+			vpovstate[i] = value;
+		}
+		
 		SDL_Joystick* GetJoy()
 		{
 			return joy;
@@ -105,11 +116,11 @@ class JoystickInfo
 
 		string devname; // pretty device name
 		int _id;
-		int numbuttons, numaxes, numpov, numhats;
+		int numbuttons, numaxes, numpov;
 		int axisrange, deadzone;
 		int pad;
 
-		vector<int> vbutstate, vaxisstate;
+		vector<int> vbutstate, vaxisstate, vpovstate;
 
 		SDL_Joystick* joy;
 };
@@ -117,10 +128,3 @@ class JoystickInfo
 
 extern int s_selectedpad;
 extern vector<JoystickInfo*> s_vjoysticks;
-//extern void JoystickInfo::EnumerateJoysticks(vector<JoystickInfo*>& vjoysticks);
-/*extern JoystickInfo::JoystickInfo();
-extern void JoystickInfo::Destroy();
-extern bool JoystickInfo::Init(int id, bool bStartThread);
-extern void JoystickInfo::Assign(int newpad);
-extern void JoystickInfo::SaveState();
-extern void JoystickInfo::TestForce();*/

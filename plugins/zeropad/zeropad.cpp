@@ -33,7 +33,6 @@
 
 char libraryName[256];
 
-PADAnalog g_lanalog[2], g_ranalog[2];
 PADconf conf;
 
 keyEvent event;
@@ -44,7 +43,7 @@ string s_strIniPath = "inis/zeropad.ini";
 
 const unsigned char version  = PS2E_PAD_VERSION;
 const unsigned char revision = 0;
-const unsigned char build    = 2;    // increase that with each version
+const unsigned char build    = 3;    // increase that with each version
 
 int PadEnum[2][2] = {{0, 2}, {1, 3}};
 
@@ -291,13 +290,7 @@ s32 CALLBACK PADinit(u32 flags)
 	PADsetMode(1, 0);
 
 	pressure = 100;
-	for (int i = 0; i < 2; ++i)
-	{
-		g_ranalog[i].x = 0x80;
-		g_ranalog[i].y = 0x80;
-		g_lanalog[i].x = 0x80;
-		g_lanalog[i].y = 0x80;
-	}
+	Analog::Init();
 
 	return 0;
 }
@@ -385,26 +378,26 @@ u8  _PADpoll(u8 value)
 		curCmd = value;
 		switch (value)
 		{
-			case 0x40: // DUALSHOCK2 ENABLER
+			case CMD_SET_VREF_PARAM: // DUALSHOCK2 ENABLER
 				cmdLen = 8;
 				buf = cmd40[curPad];
 				return 0xf3;
 
-			case 0x41: // QUERY_DS2_ANALOG_MODE
+			case CMD_QUERY_DS2_ANALOG_MODE: // QUERY_DS2_ANALOG_MODE
 				cmdLen = 8;
 				buf = cmd41[curPad];
 				return 0xf3;
 
-			case 0x42: // READ_DATA
+			case CMD_READ_DATA_AND_VIBRATE: // READ_DATA
 
 				_PADupdate(curPad);
 
 				stdpar[curPad][2] = status[curPad] >> 8;
 				stdpar[curPad][3] = status[curPad] & 0xff;
-				stdpar[curPad][4] = g_ranalog[curPad].x;
-				stdpar[curPad][5] = g_ranalog[curPad].y;
-				stdpar[curPad][6] = g_lanalog[curPad].x;
-				stdpar[curPad][7] = g_lanalog[curPad].y;
+				stdpar[curPad][4] = Analog::Pad(PAD_RX, curPad);
+				stdpar[curPad][5] = Analog::Pad(PAD_RY, curPad);
+				stdpar[curPad][6] = Analog::Pad(PAD_LX, curPad);
+				stdpar[curPad][7] = Analog::Pad(PAD_LY, curPad);
 			
 				if (padMode[curPad] == 1) 
 					cmdLen = 20;
@@ -473,44 +466,44 @@ u8  _PADpoll(u8 value)
 				buf = stdpar[curPad];
 				return padID[curPad];
 
-			case 0x43: // CONFIG_MODE
+			case CMD_CONFIG_MODE: // CONFIG_MODE
 				cmdLen = 8;
 				buf = stdcfg[curPad];
 				if (stdcfg[curPad][3] == 0xff) return 0xf3;
 				else return padID[curPad];
 
-			case 0x44: // SET_MODE_AND_LOCK
+			case CMD_SET_MODE_AND_LOCK: // SET_MODE_AND_LOCK
 				cmdLen = 8;
 				buf = stdmode[curPad];
 				return 0xf3;
 
-			case 0x45: // QUERY_MODEL_AND_MODE
+			case CMD_QUERY_MODEL_AND_MODE: // QUERY_MODEL_AND_MODE
 				cmdLen = 8;
 				buf = stdmodel[curPad];
 				buf[4] = padMode[curPad];
 				return 0xf3;
 
-			case 0x46: // ??
+			case CMD_QUERY_ACT: // ??
 				cmdLen = 8;
 				buf = unk46[curPad];
 				return 0xf3;
 
-			case 0x47: // ??
+			case CMD_QUERY_COMB: // ??
 				cmdLen = 8;
 				buf = unk47[curPad];
 				return 0xf3;
 
-			case 0x4c: // QUERY_MODE ??
+			case CMD_QUERY_MODE: // QUERY_MODE ??
 				cmdLen = 8;
 				buf = unk4c[curPad];
 				return 0xf3;
 
-			case 0x4d:
+			case CMD_VIBRATION_TOGGLE:
 				cmdLen = 8;
 				buf = unk4d[curPad];
 				return 0xf3;
 
-			case 0x4f: // SET_DS2_NATIVE_MODE
+			case CMD_SET_DS2_NATIVE_MODE: // SET_DS2_NATIVE_MODE
 				cmdLen = 8;
 				padID[curPad] = 0x79; // setting ds2 mode
 				ds2mode = 1; // Set DS2 Mode
@@ -527,7 +520,7 @@ u8  _PADpoll(u8 value)
 
 	switch (curCmd)
 	{
-		case 0x43:
+		case CMD_CONFIG_MODE:
 			if (curByte == 2)
 			{
 				switch (value)
@@ -544,14 +537,14 @@ u8  _PADpoll(u8 value)
 			}
 			break;
 
-		case 0x44:
+		case CMD_SET_MODE_AND_LOCK:
 			if (curByte == 2)
 			{
 				PADsetMode(curPad, value);
 			}
 			break;
 
-		case 0x46:
+		case CMD_QUERY_ACT:
 			if (curByte == 2)
 			{
 				switch (value)
@@ -570,7 +563,7 @@ u8  _PADpoll(u8 value)
 			}
 			break;
 
-		case 0x4c:
+		case CMD_QUERY_MODE:
 			if (curByte == 2)
 			{
 				switch (value)

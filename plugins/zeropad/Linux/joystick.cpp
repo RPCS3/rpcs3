@@ -108,7 +108,6 @@ bool JoystickInfo::Init(int id, bool bStartThread)
 	numaxes = SDL_JoystickNumAxes(joy);
 	numbuttons = SDL_JoystickNumButtons(joy);
 	numpov = SDL_JoystickNumHats(joy);
-	numhats = SDL_JoystickNumHats(joy);
 	devname = SDL_JoystickName(id);
 	vbutstate.resize(numbuttons);
 	vaxisstate.resize(numbuttons);
@@ -144,9 +143,8 @@ void JoystickInfo::SaveState()
 		vbutstate[i] = SDL_JoystickGetButton(joy, i);
 	for (int i = 0; i < numaxes; ++i)
 		vaxisstate[i] = SDL_JoystickGetAxis(joy, i);
-	
-	//for (int i = 0; i < numhats; ++i)
-	//	vhatstate[i] = SDL_JoystickGetHat(joy, i);
+	/*for (int i = 0; i < numpov; ++i)
+		vpovstate[i] = SDL_JoystickGetHat(joy, i);*/
 }
 
 void JoystickInfo::TestForce()
