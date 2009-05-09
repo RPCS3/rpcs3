@@ -283,61 +283,83 @@ bool GSTextureCacheSW::GSTexture::Update(const GIFRegTEX0& TEX0, const GIFRegTEX
 
 	DWORD blocks = 0;
 
-	for(int y = r.top, o = pitch * s.cy; y < r.bottom; y += s.cy, dst += o)
+	if(tw <= (bw << 6))
 	{
-		DWORD base = psm.bn(0, y, bp, bw);
-
-		for(int x = r.left; x < r.right; x += s.cx)
+		for(int y = r.top, o = pitch * s.cy; y < r.bottom; y += s.cy, dst += o)
 		{
-			DWORD block = base + psm.blockOffset[x >> 3];
+			DWORD base = psm.bn(0, y, bp, bw);
 
-			if(block >= MAX_BLOCKS)
+			for(int x = r.left; x < r.right; x += s.cx)
 			{
-				continue;
+				DWORD block = base + psm.blockOffset[x >> 3];
+
+				if(block < MAX_BLOCKS)
+				{
+					DWORD row = block >> 5;
+					DWORD col = 1 << (block & 31);
+
+					if((m_valid[row] & col) == 0)
+					{
+						m_valid[row] |= col;
+
+						(mem.*rtxb)(block, &dst[x * bytes], pitch, TEXA);
+
+						blocks++;
+					}
+				}
 			}
+		}
+	}
+	else
+	{
+		// unfortunatelly a block may be part of the same texture multiple times at different places (tw 1024 > tbw 640, between 640 -> 1024 it is repeated from the next row), 
+		// so just can't set the block's bit to valid in one pass, even if 99.9% of the games don't address the repeated part at the right side
+		
+		// TODO: still bogus if those repeated parts aren't fetched together
 
-			DWORD row = block >> 5;
-			DWORD col = 1 << (block & 31);
+		for(int y = r.top, o = pitch * s.cy; y < r.bottom; y += s.cy, dst += o)
+		{
+			DWORD base = psm.bn(0, y, bp, bw);
 
-			if(m_valid[row] & col)
+			for(int x = r.left; x < r.right; x += s.cx)
 			{
-				continue;
+				DWORD block = base + psm.blockOffset[x >> 3];
+
+				if(block < MAX_BLOCKS)
+				{
+					DWORD row = block >> 5;
+					DWORD col = 1 << (block & 31);
+
+					if((m_valid[row] & col) == 0)
+					{
+						(mem.*rtxb)(block, &dst[x * bytes], pitch, TEXA);
+
+						blocks++;
+					}
+				}
 			}
+		}
 
-			// unfortunatelly a block may be part of the same texture multiple times at different places (when (1 << tw) > (tbw << 6), ex. 1024 > 640), 
-			// so just can't set the block's bit to valid in one pass, even if 99.9% of the games don't address the repeated part at the right side
-			
-			// TODO: still bogus if those repeated parts aren't fetched together
+		for(int y = r.top; y < r.bottom; y += s.cy)
+		{
+			DWORD base = psm.bn(0, y, bp, bw);
 
-			// m_valid[row] |= col;
+			for(int x = r.left; x < r.right; x += s.cx)
+			{
+				DWORD block = base + psm.blockOffset[x >> 3];
 
-			(mem.*rtxb)(block, &dst[x * bytes], pitch, TEXA);
+				if(block < MAX_BLOCKS)
+				{
+					DWORD row = block >> 5;
+					DWORD col = 1 << (block & 31);
 
-			blocks++;
+					m_valid[row] |= col;
+				}
+			}
 		}
 	}
 
 	m_state->m_perfmon.Put(GSPerfMon::Unswizzle, s.cx * s.cy * bytes * blocks);
-
-	for(int y = r.top; y < r.bottom; y += s.cy)
-	{
-		DWORD base = psm.bn(0, y, bp, bw);
-
-		for(int x = r.left; x < r.right; x += s.cx)
-		{
-			DWORD block = base + psm.blockOffset[x >> 3];
-
-			if(block >= MAX_BLOCKS)
-			{
-				continue;
-			}
-
-			DWORD row = block >> 5;
-			DWORD col = 1 << (block & 31);
-
-			m_valid[row] |= col;
-		}
-	}
 
 	return true;
 }

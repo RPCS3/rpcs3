@@ -510,7 +510,9 @@ REG64_(GIFReg, ALPHA)
 	UINT32 FIX:8;
 	UINT32 _PAD2:24;
 REG_END2
-	__forceinline bool IsOpaque() const {return (A == B || C == 2 && FIX == 0) && D == 0 || (A == 0 && B == 2 && C == 2 && D == 2 && FIX == 0x80);} // output will be Cs/As
+	// opaque => output will be Cs/As
+	__forceinline bool IsOpaque() const {return (A == B || C == 2 && FIX == 0) && D == 0 || (A == 0 && B == D && C == 2 && FIX == 0x80);}
+	__forceinline bool IsOpaque(int amin, int amax) const {return (A == B || amax == 0) && D == 0 || A == 0 && B == D && amin == 0x80 && amax == 0x80;}
 REG_END2
 
 REG64_(GIFReg, BITBLTBUF)
@@ -1061,21 +1063,41 @@ REG_SET_END
 __declspec(align(16)) struct GIFPath
 {
 	GIFTag tag; 
+	UINT32 reg;
 	UINT32 nreg;
-	UINT32 _pad[3];
+	UINT32 nloop;
+	UINT32 adonly;
 	GSVector4i regs;
 
 	void SetTag(const void* mem)
 	{
 		GSVector4i v = GSVector4i::load<false>(mem);
 		GSVector4i::store<true>(&tag, v);
-		nreg = 0;
+		reg = 0;
 		regs = v.uph8(v >> 4) & 0x0f0f0f0f;
+		nreg = tag.NREG;
+		nloop = tag.NLOOP;
+		adonly = nreg == 1 && regs.u8[0] == GIF_REG_A_D;
 	}
 
-	DWORD GetReg() 
+	__forceinline DWORD GetReg() 
 	{
-		return regs.u8[nreg]; // (DWORD)GET_GIF_REG(tag, nreg);
+		return regs.u8[reg]; // (DWORD)GET_GIF_REG(tag, nreg);
+	}
+
+	__forceinline bool StepReg()
+	{
+		if((++reg & 0xf) == nreg) 
+		{
+			reg = 0; 
+
+			if(--nloop == 0)
+			{
+				return false;
+			}
+		}
+
+		return true;
 	}
 };
 

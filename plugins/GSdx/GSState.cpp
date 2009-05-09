@@ -80,7 +80,7 @@ GSState::GSState(BYTE* base, bool mt, void (*irq)())
 	m_sssize += sizeof(m_tr.x);
 	m_sssize += sizeof(m_tr.y);
 	m_sssize += m_mem.m_vmsize;
-	m_sssize += (sizeof(m_path[0].tag) + sizeof(m_path[0].nreg)) * 3;
+	m_sssize += (sizeof(m_path[0].tag) + sizeof(m_path[0].reg)) * 3;
 	m_sssize += sizeof(m_q);
 
 	ASSERT(base);
@@ -451,14 +451,6 @@ void GSState::GIFPackedRegHandlerXYZ3(GIFPackedReg* r)
 void GSState::GIFPackedRegHandlerA_D(GIFPackedReg* r)
 {
 	(this->*m_fpGIFRegHandlers[(BYTE)r->A_D.ADDR])(&r->r);
-}
-
-void GSState::GIFPackedRegHandlerA_D(GIFPackedReg* r, int size)
-{
-	for(int i = 0; i < size; i++)
-	{
-		(this->*m_fpGIFRegHandlers[(BYTE)r[i].A_D.ADDR])(&r[i].r);
-	}
 }
 
 void GSState::GIFPackedRegHandlerNOP(GIFPackedReg* r)
@@ -1181,7 +1173,7 @@ template<int index> void GSState::Transfer(BYTE* mem, UINT32 size)
 
 	while(size > 0)
 	{
-		if(path.tag.NLOOP == 0)
+		if(path.nloop == 0)
 		{
 			path.SetTag(mem);
 
@@ -1193,20 +1185,15 @@ template<int index> void GSState::Transfer(BYTE* mem, UINT32 size)
 				m_path3hack = 1;
 			}
 
-			if(path.tag.NLOOP > 0) // eeuser 7.2.2. GIFtag: "... when NLOOP is 0, the GIF does not output anything, and values other than the EOP field are disregarded."
+			if(path.nloop > 0) // eeuser 7.2.2. GIFtag: "... when NLOOP is 0, the GIF does not output anything, and values other than the EOP field are disregarded."
 			{
 				m_q = 1.0f;
 
-				if(path.tag.PRE)
+				if(path.tag.PRE && (path.tag.FLG & 2) == 0)
 				{
-					ASSERT(path.tag.FLG != GIF_FLG_IMAGE); // kingdom hearts, ffxii, tales of abyss, berserk
-
-					if((path.tag.FLG & 2) == 0)
-					{
-						GIFReg r;
-						r.i64 = path.tag.PRIM;
-						(this->*m_fpGIFRegHandlers[GIF_A_D_REG_PRIM])(&r);
-					}
+					GIFReg r;
+					r.i64 = path.tag.PRIM;
+					(this->*m_fpGIFRegHandlers[GIF_A_D_REG_PRIM])(&r);
 				}
 			}
 		}
@@ -1218,37 +1205,44 @@ template<int index> void GSState::Transfer(BYTE* mem, UINT32 size)
 
 				// first try a shortcut for a very common case
 
-				if(path.nreg == 0 && path.tag.NREG == 1 && size >= path.tag.NLOOP && path.GetReg() == GIF_REG_A_D)
+				if(path.adonly && size >= path.nloop)
 				{
-					int n = path.tag.NLOOP;
+					size -= path.nloop;
 
-					GIFPackedRegHandlerA_D((GIFPackedReg*)mem, n);
+					do
+					{
+						(this->*m_fpGIFRegHandlers[(BYTE)((GIFPackedReg*)mem)->A_D.ADDR])(&((GIFPackedReg*)mem)->r);
 
-					mem += n * sizeof(GIFPackedReg);
-					size -= n;
-
-					path.tag.NLOOP = 0;
+						mem += sizeof(GIFPackedReg);
+					}
+					while(--path.nloop > 0);
 				}
 				else
 				{
-					while(size > 0)
+					do
 					{
-						(this->*m_fpGIFPackedRegHandlers[path.GetReg()])((GIFPackedReg*)mem);
+						DWORD reg = path.GetReg();
 
-						size--;
-						mem += sizeof(GIFPackedReg);
-
-						if((++path.nreg & 0xf) == path.tag.NREG) 
+						switch(reg)
 						{
-							path.nreg = 0; 
-							path.tag.NLOOP--;
-
-							if(path.tag.NLOOP == 0)
-							{
-								break;
-							}
+						case GIF_REG_RGBA:
+							GIFPackedRegHandlerRGBA((GIFPackedReg*)mem);
+							break;
+						case GIF_REG_STQ:
+							GIFPackedRegHandlerSTQ((GIFPackedReg*)mem);
+							break;
+						case GIF_REG_UV:
+							GIFPackedRegHandlerUV((GIFPackedReg*)mem);
+							break;
+						default:
+							(this->*m_fpGIFPackedRegHandlers[reg])((GIFPackedReg*)mem);
+							break;
 						}
+
+						mem += sizeof(GIFPackedReg);
+						size--;
 					}
+					while(path.StepReg() && size > 0);
 				}
 
 				break;
@@ -1257,24 +1251,14 @@ template<int index> void GSState::Transfer(BYTE* mem, UINT32 size)
 
 				size *= 2;
 
-				while(size > 0)
+				do
 				{
 					(this->*m_fpGIFRegHandlers[path.GetReg()])((GIFReg*)mem);
 
-					size--;
 					mem += sizeof(GIFReg);
-
-					if((++path.nreg & 0xf) == path.tag.NREG) 
-					{
-						path.nreg = 0; 
-						path.tag.NLOOP--;
-
-						if(path.tag.NLOOP == 0)
-						{
-							break;
-						}
-					}
+					size--;
 				}
+				while(path.StepReg() && size > 0);
 			
 				if(size & 1) mem += sizeof(GIFReg);
 
@@ -1286,13 +1270,13 @@ template<int index> void GSState::Transfer(BYTE* mem, UINT32 size)
 
 				ASSERT(0);
 
-				path.tag.NLOOP = 0;
+				path.nloop = 0;
 
 				break;
 
 			case GIF_FLG_IMAGE:
 				{
-					int len = (int)min(size, path.tag.NLOOP);
+					int len = (int)min(size, path.nloop);
 
 					//ASSERT(!(len&3));
 
@@ -1315,7 +1299,7 @@ template<int index> void GSState::Transfer(BYTE* mem, UINT32 size)
 					}
 
 					mem += len * 16;
-					path.tag.NLOOP -= len;
+					path.nloop -= len;
 					size -= len;
 				}
 
@@ -1328,7 +1312,7 @@ template<int index> void GSState::Transfer(BYTE* mem, UINT32 size)
 
 		if(index == 0)
 		{
-			if(path.tag.EOP && path.tag.NLOOP == 0)
+			if(path.tag.EOP && path.nloop == 0)
 			{
 				break;
 			}
@@ -1342,13 +1326,13 @@ template<int index> void GSState::Transfer(BYTE* mem, UINT32 size)
 
 	if(index == 0)
 	{
-		if(size == 0 && path.tag.NLOOP > 0)
+		if(size == 0 && path.nloop > 0)
 		{
 			if(m_mt)
 			{
 				// TODO
 
-				path.tag.NLOOP = 0;
+				path.nloop = 0;
 			}
 			else
 			{
@@ -1433,8 +1417,11 @@ int GSState::Freeze(GSFreezeData* fd, bool sizeonly)
 
 	for(int i = 0; i < 3; i++)
 	{
+		m_path[i].tag.NREG = m_path[i].nreg;
+		m_path[i].tag.NLOOP = m_path[i].nloop;
+
 		WriteState(data, &m_path[i].tag);
-		WriteState(data, &m_path[i].nreg);
+		WriteState(data, &m_path[i].reg);
 	}
 
 	WriteState(data, &m_q);
@@ -1525,7 +1512,7 @@ int GSState::Defrost(const GSFreezeData* fd)
 	for(int i = 0; i < 3; i++)
 	{
 		ReadState(&m_path[i].tag, data);
-		ReadState(&m_path[i].nreg, data);
+		ReadState(&m_path[i].reg, data);
 
 		m_path[i].SetTag(&m_path[i].tag); // expand regs
 	}

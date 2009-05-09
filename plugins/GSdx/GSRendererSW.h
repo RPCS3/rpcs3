@@ -117,9 +117,74 @@ protected:
 		return true;
 	}
 
+	void GetAlphaMinMax()
+	{
+		if(m_vtrace.m_alpha.valid)
+		{
+			return;
+		}
+
+		const GSDrawingEnvironment& env = m_env;
+		const GSDrawingContext* context = m_context;
+
+		GSVector4i a = GSVector4i(m_vtrace.m_min.c.wwww(m_vtrace.m_max.c)) >> 7;
+
+		if(PRIM->TME && context->TEX0.TCC)
+		{
+			DWORD bpp = GSLocalMemory::m_psm[context->TEX0.PSM].trbpp;
+			DWORD cbpp = GSLocalMemory::m_psm[context->TEX0.CPSM].trbpp;
+			DWORD pal = GSLocalMemory::m_psm[context->TEX0.PSM].pal;
+
+			if(bpp == 32)
+			{
+				a.y = 0;
+				a.w = 0xff;
+			}
+			else if(bpp == 24)
+			{
+				a.y = env.TEXA.AEM ? 0 : env.TEXA.TA0;
+				a.w = env.TEXA.TA0;
+			}
+			else if(bpp == 16)
+			{
+				a.y = env.TEXA.AEM ? 0 : min(env.TEXA.TA0, env.TEXA.TA1);
+				a.w = max(env.TEXA.TA0, env.TEXA.TA1);
+			}
+			else
+			{
+				m_mem.m_clut.GetAlphaMinMax32(a.y, a.w);
+			}
+
+			switch(context->TEX0.TFX)
+			{
+			case TFX_MODULATE:
+				a.x = (a.x * a.y) >> 7;
+				a.z = (a.z * a.w) >> 7;
+				if(a.x > 0xff) a.x = 0xff;
+				if(a.z > 0xff) a.z = 0xff;
+				break;
+			case TFX_DECAL:
+				break;
+			case TFX_HIGHLIGHT:
+				a.x = a.x + a.y;
+				a.z = a.z + a.w;
+				if(a.x > 0xff) a.x = 0xff;
+				if(a.z > 0xff) a.z = 0xff;
+				break;
+			case TFX_HIGHLIGHT2:
+				break;
+			default:
+				__assume(0);
+			}
+		}
+
+		m_vtrace.m_alpha.min = a.x;
+		m_vtrace.m_alpha.max = a.z;
+		m_vtrace.m_alpha.valid = true;
+	}
+
 	bool TryAlphaTest(DWORD& fm, DWORD& zm)
 	{
-		const GSDrawingEnvironment& env = m_env;
 		const GSDrawingContext* context = m_context;
 
 		bool pass = true;
@@ -130,62 +195,10 @@ protected:
 		}
 		else if(context->TEST.ATST != ATST_ALWAYS)
 		{
-			GSVector4i af = GSVector4i(m_vtrace.m_min.c.wwww(m_vtrace.m_max.c)) >> 7;
+			GetAlphaMinMax();
 
-			int amin, amax;
-
-			if(PRIM->TME && context->TEX0.TCC)
-			{
-				DWORD bpp = GSLocalMemory::m_psm[context->TEX0.PSM].trbpp;
-				DWORD cbpp = GSLocalMemory::m_psm[context->TEX0.CPSM].trbpp;
-				DWORD pal = GSLocalMemory::m_psm[context->TEX0.PSM].pal;
-
-				if(bpp == 32)
-				{
-					return false;
-				}
-				else if(bpp == 24)
-				{
-					amin = env.TEXA.AEM ? 0 : env.TEXA.TA0;
-					amax = env.TEXA.TA0;
-				}
-				else if(bpp == 16)
-				{
-					amin = env.TEXA.AEM ? 0 : min(env.TEXA.TA0, env.TEXA.TA1);
-					amax = max(env.TEXA.TA0, env.TEXA.TA1);
-				}
-				else
-				{
-					m_mem.m_clut.GetAlphaMinMax32(amin, amax);
-				}
-
-				switch(context->TEX0.TFX)
-				{
-				case TFX_MODULATE:
-					amin = (amin * af.x) >> 7;
-					amax = (amax * af.z) >> 7;
-					if(amin > 255) amin = 255;
-					if(amax > 255) amax = 255;
-					break;
-				case TFX_DECAL:
-					break;
-				case TFX_HIGHLIGHT:
-					amin = amin + af.x;
-					amax = amax + af.z;
-					if(amin > 255) amin = 255;
-					if(amax > 255) amax = 255;
-					break;
-				case TFX_HIGHLIGHT2:
-					break;
-				default:
-					__assume(0);
-				}
-			}
-			else
-			{
-				amin = af.x;
-				amax = af.z;
-			}
+			int amin = m_vtrace.m_alpha.min;
+			int amax = m_vtrace.m_alpha.max;
 
 			int aref = context->TEST.AREF;
 
@@ -252,7 +265,7 @@ protected:
 		const GSDrawingEnvironment& env = m_env;
 		const GSDrawingContext* context = m_context;
 
-		p.vm = m_mem.m_vm32;
+		p.vm = m_mem.m_vm8;
 
 		p.fbo = m_mem.GetOffset(context->FRAME.Block(), context->FRAME.FBW, context->FRAME.PSM);
 		p.zbo = m_mem.GetOffset(context->ZBUF.Block(), context->FRAME.FBW, context->ZBUF.PSM);
@@ -446,7 +459,31 @@ protected:
 				p.sel.datm = context->TEST.DATM;
 			}
 
-			if(PRIM->ABE && !context->ALPHA.IsOpaque() || PRIM->AA1)
+			int amin = 0, amax = 0xff;
+
+			if(PRIM->ABE && context->ALPHA.A != context->ALPHA.B && !PRIM->AA1)
+			{
+				if(context->ALPHA.C == 0)
+				{
+					GetAlphaMinMax();
+
+					amin = m_vtrace.m_alpha.min;
+					amax = m_vtrace.m_alpha.max;
+				}
+				else if(context->ALPHA.C == 1)
+				{
+					if(p.sel.fpsm == 1)
+					{
+						amin = amax = 0x80;
+					}
+				}
+				else if(context->ALPHA.C == 1)
+				{
+					amin = amax = context->ALPHA.FIX;
+				}
+			}
+
+			if(PRIM->ABE && !context->ALPHA.IsOpaque(amin, amax) || PRIM->AA1)
 			{
 				p.sel.abe = PRIM->ABE;
 				p.sel.ababcd = context->ALPHA.ai32[0];
@@ -581,7 +618,7 @@ protected:
 			if(s_savez) {m_mem.SaveBMP(str, m_context->ZBUF.Block(), m_context->FRAME.FBW, m_context->ZBUF.PSM, GetFrameSize().cx, 512);}
 		}
 
-		if(0)//stats.ticks > 1000000)
+		if(0)//stats.ticks > 5000000)
 		{
 			printf("* [%I64d | %012I64x] ticks %I64d prims %d (%d) pixels %d (%d)\n", 
 				m_perfmon.GetFrame(), p.sel.key, 

@@ -237,6 +237,8 @@ __declspec(align(16)) class GSVertexTrace
 public:
 	GSVertexSW m_min, m_max;
 
+	struct {int min, max; bool valid;} m_alpha; // source alpha range after tfx
+
 	union
 	{
 		DWORD value; 
@@ -256,9 +258,10 @@ public:
 		m_map.Lookup(key)(v, count, m_min, m_max);
 
 		m_eq.value = (m_min.p == m_max.p).mask() | ((m_min.t == m_max.t).mask() << 4) | ((m_min.c == m_max.c).mask() << 8);
+
+		m_alpha.valid = false;
 	}
 /*
-*/
 	void Update(const GSVertexSW* v, int count)
 	{
 		GSVertexSW min, max;
@@ -284,5 +287,8 @@ public:
 		m_max = max;
 
 		m_eq.value = (min.p == max.p).mask() | ((min.t == max.t).mask() << 4) | ((min.c == max.c).mask() << 8);
+
+		m_alpha.valid = false;
 	}
+*/
 };

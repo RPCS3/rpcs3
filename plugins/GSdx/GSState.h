@@ -55,7 +55,6 @@ class GSState : public GSAlignedClass<16>
 	void GIFPackedRegHandlerXYZF3(GIFPackedReg* r);
 	void GIFPackedRegHandlerXYZ3(GIFPackedReg* r);
 	void GIFPackedRegHandlerA_D(GIFPackedReg* r);
-	void GIFPackedRegHandlerA_D(GIFPackedReg* r, int size);
 	void GIFPackedRegHandlerNOP(GIFPackedReg* r);
 
 	typedef void (GSState::*GIFRegHandler)(GIFReg* r);
