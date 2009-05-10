@@ -280,6 +280,10 @@
 				RelativePath="..\analog.h"
 				>
 			</File>
+			<File
+				RelativePath="..\bitwise.h"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Resource Files"

@@ -45,6 +45,7 @@ extern "C"
 #include "PS2Edefs.h"
 }
 #include "analog.h"
+#include "bitwise.h"
 
 extern char libraryName[256];
 
@@ -65,7 +66,11 @@ extern char libraryName[256];
 #define PAD_POV(joyid, sign, axisid) (0x30000 | ((joyid) << 12) | ((sign) << 8) | (axisid))
 #define PAD_GETPOVSIGN(key) (((key) & 0x100) >> 8)
 
+#ifdef __LINUX__
+#define PADKEYS 28
+#else
 #define PADKEYS 20
+#endif
 
 #define PADOPTION_FORCEFEEDBACK 1
 #define PADOPTION_REVERTLX 0x2
@@ -79,13 +84,14 @@ extern char libraryName[256];
 #define PADSUBKEYS 2
 #endif
 
+//#define EXPERAMENTAL_POV_CODE
 extern int PadEnum[2][2];
 
 typedef struct
 {
-	unsigned long keys[2 * PADSUBKEYS][PADKEYS];
-	int log;
-	int options;  // upper 16 bits are for pad2
+	u32 keys[2 * PADSUBKEYS][PADKEYS];
+	u32 log;
+	u32 options;  // upper 16 bits are for pad2
 } PADconf;
 
 typedef struct
@@ -117,6 +123,14 @@ enum PadCommands
 
 enum gamePadValues 
 {
+	PAD_R_LEFT = 27,
+	PAD_R_DOWN = 26,
+	PAD_R_RIGHT = 25,
+	PAD_R_UP = 24,
+	PAD_L_LEFT = 23,
+	PAD_L_DOWN = 22,
+	PAD_L_RIGHT = 21,
+	PAD_L_UP = 20,
 	PAD_RY = 19,
 	PAD_LY = 18,
 	PAD_RX = 17,
@@ -141,20 +155,11 @@ enum gamePadValues
 
 // Put in the code for bolche's analog contols hack, ifdeffed out, so I don't forget to
 // add a gui some day and activate it.
-//#define ANALOG_CONTROLS_HACK
-// The various KEY_PAD_xxx definitions are defined as the value of whatever key is pressed.
+#define ANALOG_CONTROLS_HACK
 // DEF_VALUE is the strength you press the control.
 // Code taken from http://forums.pcsx2.net/thread-4699.html
 
 #ifdef ANALOG_CONTROLS_HACK
-#define KEY_PAD_RY_UP        	0xff50
-#define KEY_PAD_RY_DOWN        	0xff57
-#define KEY_PAD_LY_UP        	0xff52
-#define KEY_PAD_LY_DOWN       	0xff54
-#define KEY_PAD_RX_LEFT        	0xffff
-#define KEY_PAD_RX_RIGHT        0xff56
-#define KEY_PAD_LX_LEFT        	0xff51
-#define KEY_PAD_LX_RIGHT        0xff53
 #define DEF_VALUE	  	32766
 #endif
 

@@ -39,11 +39,12 @@ keyEvent event;
 
 u16 status[2];
 int pressure;
+static keyEvent s_event;
 string s_strIniPath = "inis/zeropad.ini";
 
-const unsigned char version  = PS2E_PAD_VERSION;
-const unsigned char revision = 0;
-const unsigned char build    = 3;    // increase that with each version
+const u32 version  = PS2E_PAD_VERSION;
+const u32 revision = 0;
+const u32 build    = 3;    // increase that with each version
 
 int PadEnum[2][2] = {{0, 2}, {1, 3}};
 
@@ -120,73 +121,6 @@ int curCmd;
 int cmdLen;
 int ds2mode = 0; // DS Mode at start
 FILE *padLog = NULL;
-
-int POV(u32 direction, u32 angle)
-{
-	if ((direction == 0) && (angle >=    0) && (angle < 4500))	return 1;//forward
-	if ((direction == 2) && (angle >= 4500) && (angle < 13500))	return 1;//right
-	if ((direction == 1) && (angle >= 13500) && (angle < 22500))	return 1;//backward
-	if ((direction == 3) && (angle >= 22500) && (angle < 31500))	return 1;//left
-	if ((direction == 0) && (angle >= 31500) && (angle < 36000))	return 1;//forward
-	return 0;
-}
-
-void _KeyPress(int pad, u32 key)
-{
-	int i;
-
-#ifdef _WIN32
-	    for (i=0; i<PADKEYS; i++) {
-        if (key == conf.keys[pad][i]) {
-            status[pad]&=~(1<<i);
-            return;
-        }
-    }
-#else
-	for (int p = 0; p < PADSUBKEYS; p++)
-	{
-		for (i = 0; i < PADKEYS; i++)
-		{
-			if (key == conf.keys[PadEnum[pad][p]][i])
-			{
-				status[pad] &= ~(1 << i);
-				return;
-			}
-		}
-	}
-#endif
-
-	event.evt = KEYPRESS;
-	event.key = key;
-}
-
-void _KeyRelease(int pad, u32 key)
-{
-	int i;
-
-#ifdef _WIN32
-        for (i=0; i<PADKEYS; i++) {
-                if (key == conf.keys[pad][i]) {
-                        status[pad]|= (1<<i);
-                        return;
-                }
-        }
-#else
-	for (int p = 0; p < PADSUBKEYS; p++)
-	{
-		for (i = 0; i < PADKEYS; i++)
-		{
-			if (key == conf.keys[PadEnum[pad][p]][i])
-			{
-				status[pad] |= (1 << i);
-				return;
-			}
-		}
-	}
-#endif
-	event.evt = KEYRELEASE;
-	event.key = key;
-}
 
 static void InitLibraryName()
 {
@@ -487,8 +421,10 @@ u8  _PADpoll(u8 value)
 			case CMD_CONFIG_MODE: // CONFIG_MODE
 				cmdLen = 8;
 				buf = stdcfg[curPad];
-				if (stdcfg[curPad][3] == 0xff) return 0xf3;
-				else return padID[curPad];
+				if (stdcfg[curPad][3] == 0xff)
+					return 0xf3;
+				else 
+					return padID[curPad];
 
 			case CMD_SET_MODE_AND_LOCK: // SET_MODE_AND_LOCK
 				cmdLen = 8;
@@ -529,9 +465,7 @@ u8  _PADpoll(u8 value)
 				return 0xf3;
 
 			default:
-#ifdef PAD_LOG
 				PAD_LOG("*PADpoll*: unknown cmd %x\n", value);
-#endif
 				break;
 		}
 	}
@@ -612,7 +546,6 @@ u8 CALLBACK PADpoll(u8 value)
 }
 
 // PADkeyEvent is called every vsync (return NULL if no event)
-static keyEvent s_event;
 keyEvent* CALLBACK PADkeyEvent()
 {
 	s_event = event;

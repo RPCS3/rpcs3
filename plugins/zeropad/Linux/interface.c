@@ -95,33 +95,50 @@ create_Conf (void)
   GtkWidget *eLx;
   GtkWidget *eRy;
   GtkWidget *eLy;
-  GtkWidget *Select;
-  GtkWidget *L1;
-  GtkWidget *Left;
-  GtkWidget *Down;
-  GtkWidget *Analog;
-  GtkWidget *R2;
-  GtkWidget *Start;
-  GtkWidget *R1;
-  GtkWidget *Cross;
-  GtkWidget *Triangle;
-  GtkWidget *Circle;
-  GtkWidget *Square;
-  GtkWidget *L3;
-  GtkWidget *Up;
-  GtkWidget *L2;
-  GtkWidget *Lx;
-  GtkWidget *Ly;
-  GtkWidget *Rx;
-  GtkWidget *Ry;
-  GtkWidget *Right;
-  GtkWidget *label3;
+  GtkWidget *eL_Up;
+  GtkWidget *eL_Left;
+  GtkWidget *eL_Right;
+  GtkWidget *eL_Down;
+  GtkWidget *eR_Up;
+  GtkWidget *eR_Left;
+  GtkWidget *eR_Right;
+  GtkWidget *eR_Down;
   GtkWidget *R3;
+  GtkWidget *Select;
+  GtkWidget *Start;
+  GtkWidget *Square;
+  GtkWidget *Circle;
+  GtkWidget *L2;
+  GtkWidget *L1;
+  GtkWidget *Down;
+  GtkWidget *Up;
+  GtkWidget *Left;
+  GtkWidget *Right;
+  GtkWidget *R1;
+  GtkWidget *R2;
+  GtkWidget *Triangle;
+  GtkWidget *Cross;
+  GtkWidget *L3;
+  GtkWidget *checkbutton_reversery;
+  GtkWidget *checkbutton_reverserx;
+  GtkWidget *R_Down;
+  GtkWidget *Ry;
+  GtkWidget *Rx;
+  GtkWidget *R_Up;
+  GtkWidget *R_Right;
+  GtkWidget *R_Left;
+  GtkWidget *forcefeedback;
   GtkWidget *checkbutton_reverselx;
   GtkWidget *checkbutton_reversely;
-  GtkWidget *checkbutton_reverserx;
-  GtkWidget *checkbutton_reversery;
-  GtkWidget *forcefeedback;
+  GtkWidget *L_Down;
+  GtkWidget *Ly;
+  GtkWidget *Lx;
+  GtkWidget *L_Up;
+  GtkWidget *L_Left;
+  GtkWidget *L_Right;
+  GtkWidget *label3;
+  GtkWidget *Analog;
+  GtkWidget *label6;
   GtkWidget *dialog_action_area1;
   GtkWidget *cancelbutton1;
   GtkWidget *okbutton1;
@@ -194,7 +211,7 @@ create_Conf (void)
   vbox2 = gtk_vbox_new (FALSE, 0);
   gtk_widget_set_name (vbox2, "vbox2");
   gtk_widget_show (vbox2);
-  gtk_box_pack_start (GTK_BOX (vbox1), vbox2, TRUE, TRUE, 0);
+  gtk_box_pack_start (GTK_BOX (vbox1), vbox2, FALSE, TRUE, 0);
 
   label5 = gtk_label_new (_("Joystick to use for this PAD"));
   gtk_widget_set_name (label5, "label5");
@@ -204,7 +221,7 @@ create_Conf (void)
   joydevicescombo = gtk_combo_box_entry_new_text ();
   gtk_widget_set_name (joydevicescombo, "joydevicescombo");
   gtk_widget_show (joydevicescombo);
-  gtk_box_pack_start (GTK_BOX (vbox2), joydevicescombo, TRUE, TRUE, 0);
+  gtk_box_pack_start (GTK_BOX (vbox2), joydevicescombo, FALSE, TRUE, 0);
 
   fixed1 = gtk_fixed_new ();
   gtk_widget_set_name (fixed1, "fixed1");
@@ -214,7 +231,7 @@ create_Conf (void)
   eL2 = gtk_entry_new ();
   gtk_widget_set_name (eL2, "eL2");
   gtk_widget_show (eL2);
-  gtk_fixed_put (GTK_FIXED (fixed1), eL2, 64, 40);
+  gtk_fixed_put (GTK_FIXED (fixed1), eL2, 64, 32);
   gtk_widget_set_size_request (eL2, 64, 24);
   gtk_editable_set_editable (GTK_EDITABLE (eL2), FALSE);
   gtk_entry_set_invisible_char (GTK_ENTRY (eL2), 8226);
@@ -222,14 +239,14 @@ create_Conf (void)
   eL1 = gtk_entry_new ();
   gtk_widget_set_name (eL1, "eL1");
   gtk_widget_show (eL1);
-  gtk_fixed_put (GTK_FIXED (fixed1), eL1, 64, 104);
+  gtk_fixed_put (GTK_FIXED (fixed1), eL1, 64, 80);
   gtk_widget_set_size_request (eL1, 64, 24);
   gtk_entry_set_invisible_char (GTK_ENTRY (eL1), 8226);
 
   eSelect = gtk_entry_new ();
   gtk_widget_set_name (eSelect, "eSelect");
   gtk_widget_show (eSelect);
-  gtk_fixed_put (GTK_FIXED (fixed1), eSelect, 168, 64);
+  gtk_fixed_put (GTK_FIXED (fixed1), eSelect, 200, 184);
   gtk_widget_set_size_request (eSelect, 64, 24);
   gtk_editable_set_editable (GTK_EDITABLE (eSelect), FALSE);
   gtk_entry_set_invisible_char (GTK_ENTRY (eSelect), 8226);
@@ -237,7 +254,7 @@ create_Conf (void)
   eStart = gtk_entry_new ();
   gtk_widget_set_name (eStart, "eStart");
   gtk_widget_show (eStart);
-  gtk_fixed_put (GTK_FIXED (fixed1), eStart, 280, 64);
+  gtk_fixed_put (GTK_FIXED (fixed1), eStart, 272, 184);
   gtk_widget_set_size_request (eStart, 64, 24);
   gtk_editable_set_editable (GTK_EDITABLE (eStart), FALSE);
   gtk_entry_set_invisible_char (GTK_ENTRY (eStart), 8226);
@@ -245,14 +262,14 @@ create_Conf (void)
   eUp = gtk_entry_new ();
   gtk_widget_set_name (eUp, "eUp");
   gtk_widget_show (eUp);
-  gtk_fixed_put (GTK_FIXED (fixed1), eUp, 64, 168);
+  gtk_fixed_put (GTK_FIXED (fixed1), eUp, 64, 136);
   gtk_widget_set_size_request (eUp, 64, 24);
   gtk_entry_set_invisible_char (GTK_ENTRY (eUp), 8226);
 
   eRight = gtk_entry_new ();
   gtk_widget_set_name (eRight, "eRight");
   gtk_widget_show (eRight);
-  gtk_fixed_put (GTK_FIXED (fixed1), eRight, 128, 208);
+  gtk_fixed_put (GTK_FIXED (fixed1), eRight, 128, 184);
   gtk_widget_set_size_request (eRight, 64, 24);
   gtk_editable_set_editable (GTK_EDITABLE (eRight), FALSE);
   gtk_entry_set_invisible_char (GTK_ENTRY (eRight), 8226);
@@ -260,7 +277,7 @@ create_Conf (void)
   eLeft = gtk_entry_new ();
   gtk_widget_set_name (eLeft, "eLeft");
   gtk_widget_show (eLeft);
-  gtk_fixed_put (GTK_FIXED (fixed1), eLeft, 0, 208);
+  gtk_fixed_put (GTK_FIXED (fixed1), eLeft, 0, 184);
   gtk_widget_set_size_request (eLeft, 64, 24);
   gtk_editable_set_editable (GTK_EDITABLE (eLeft), FALSE);
   gtk_entry_set_invisible_char (GTK_ENTRY (eLeft), 8226);
@@ -268,7 +285,7 @@ create_Conf (void)
   eDown = gtk_entry_new ();
   gtk_widget_set_name (eDown, "eDown");
   gtk_widget_show (eDown);
-  gtk_fixed_put (GTK_FIXED (fixed1), eDown, 64, 256);
+  gtk_fixed_put (GTK_FIXED (fixed1), eDown, 64, 232);
   gtk_widget_set_size_request (eDown, 64, 24);
   gtk_editable_set_editable (GTK_EDITABLE (eDown), FALSE);
   gtk_entry_set_invisible_char (GTK_ENTRY (eDown), 8226);
@@ -276,7 +293,7 @@ create_Conf (void)
   eR2 = gtk_entry_new ();
   gtk_widget_set_name (eR2, "eR2");
   gtk_widget_show (eR2);
-  gtk_fixed_put (GTK_FIXED (fixed1), eR2, 368, 32);
+  gtk_fixed_put (GTK_FIXED (fixed1), eR2, 408, 32);
   gtk_widget_set_size_request (eR2, 64, 24);
   gtk_editable_set_editable (GTK_EDITABLE (eR2), FALSE);
   gtk_entry_set_invisible_char (GTK_ENTRY (eR2), 8226);
@@ -284,7 +301,7 @@ create_Conf (void)
   eR1 = gtk_entry_new ();
   gtk_widget_set_name (eR1, "eR1");
   gtk_widget_show (eR1);
-  gtk_fixed_put (GTK_FIXED (fixed1), eR1, 368, 104);
+  gtk_fixed_put (GTK_FIXED (fixed1), eR1, 408, 80);
   gtk_widget_set_size_request (eR1, 64, 24);
   gtk_editable_set_editable (GTK_EDITABLE (eR1), FALSE);
   gtk_entry_set_invisible_char (GTK_ENTRY (eR1), 8226);
@@ -292,7 +309,7 @@ create_Conf (void)
   eAnalog = gtk_entry_new ();
   gtk_widget_set_name (eAnalog, "eAnalog");
   gtk_widget_show (eAnalog);
-  gtk_fixed_put (GTK_FIXED (fixed1), eAnalog, 224, 128);
+  gtk_fixed_put (GTK_FIXED (fixed1), eAnalog, 240, 232);
   gtk_widget_set_size_request (eAnalog, 64, 24);
   gtk_editable_set_editable (GTK_EDITABLE (eAnalog), FALSE);
   gtk_entry_set_invisible_char (GTK_ENTRY (eAnalog), 8226);
@@ -300,7 +317,7 @@ create_Conf (void)
   eSquare = gtk_entry_new ();
   gtk_widget_set_name (eSquare, "eSquare");
   gtk_widget_show (eSquare);
-  gtk_fixed_put (GTK_FIXED (fixed1), eSquare, 304, 208);
+  gtk_fixed_put (GTK_FIXED (fixed1), eSquare, 344, 184);
   gtk_widget_set_size_request (eSquare, 64, 24);
   gtk_editable_set_editable (GTK_EDITABLE (eSquare), FALSE);
   gtk_entry_set_invisible_char (GTK_ENTRY (eSquare), 8226);
@@ -308,7 +325,7 @@ create_Conf (void)
   eTriangle = gtk_entry_new ();
   gtk_widget_set_name (eTriangle, "eTriangle");
   gtk_widget_show (eTriangle);
-  gtk_fixed_put (GTK_FIXED (fixed1), eTriangle, 368, 168);
+  gtk_fixed_put (GTK_FIXED (fixed1), eTriangle, 408, 136);
   gtk_widget_set_size_request (eTriangle, 64, 24);
   gtk_editable_set_editable (GTK_EDITABLE (eTriangle), FALSE);
   gtk_entry_set_invisible_char (GTK_ENTRY (eTriangle), 8226);
@@ -316,7 +333,7 @@ create_Conf (void)
   eCircle = gtk_entry_new ();
   gtk_widget_set_name (eCircle, "eCircle");
   gtk_widget_show (eCircle);
-  gtk_fixed_put (GTK_FIXED (fixed1), eCircle, 432, 208);
+  gtk_fixed_put (GTK_FIXED (fixed1), eCircle, 472, 184);
   gtk_widget_set_size_request (eCircle, 64, 24);
   gtk_editable_set_editable (GTK_EDITABLE (eCircle), FALSE);
   gtk_entry_set_invisible_char (GTK_ENTRY (eCircle), 8226);
@@ -324,7 +341,7 @@ create_Conf (void)
   eCross = gtk_entry_new ();
   gtk_widget_set_name (eCross, "eCross");
   gtk_widget_show (eCross);
-  gtk_fixed_put (GTK_FIXED (fixed1), eCross, 368, 256);
+  gtk_fixed_put (GTK_FIXED (fixed1), eCross, 408, 232);
   gtk_widget_set_size_request (eCross, 64, 24);
   gtk_editable_set_editable (GTK_EDITABLE (eCross), FALSE);
   gtk_entry_set_invisible_char (GTK_ENTRY (eCross), 8226);
@@ -332,7 +349,7 @@ create_Conf (void)
   eR3 = gtk_entry_new ();
   gtk_widget_set_name (eR3, "eR3");
   gtk_widget_show (eR3);
-  gtk_fixed_put (GTK_FIXED (fixed1), eR3, 272, 272);
+  gtk_fixed_put (GTK_FIXED (fixed1), eR3, 272, 56);
   gtk_widget_set_size_request (eR3, 64, 24);
   gtk_editable_set_editable (GTK_EDITABLE (eR3), FALSE);
   gtk_entry_set_invisible_char (GTK_ENTRY (eR3), 8226);
@@ -340,7 +357,7 @@ create_Conf (void)
   eL3 = gtk_entry_new ();
   gtk_widget_set_name (eL3, "eL3");
   gtk_widget_show (eL3);
-  gtk_fixed_put (GTK_FIXED (fixed1), eL3, 176, 272);
+  gtk_fixed_put (GTK_FIXED (fixed1), eL3, 200, 56);
   gtk_widget_set_size_request (eL3, 64, 24);
   gtk_editable_set_editable (GTK_EDITABLE (eL3), FALSE);
   gtk_entry_set_invisible_char (GTK_ENTRY (eL3), 8226);
@@ -348,197 +365,302 @@ create_Conf (void)
   eRx = gtk_entry_new ();
   gtk_widget_set_name (eRx, "eRx");
   gtk_widget_show (eRx);
-  gtk_fixed_put (GTK_FIXED (fixed1), eRx, 272, 352);
-  gtk_widget_set_size_request (eRx, 80, 24);
+  gtk_fixed_put (GTK_FIXED (fixed1), eRx, 408, 384);
+  gtk_widget_set_size_request (eRx, 64, 24);
   gtk_editable_set_editable (GTK_EDITABLE (eRx), FALSE);
   gtk_entry_set_invisible_char (GTK_ENTRY (eRx), 8226);
 
   eLx = gtk_entry_new ();
   gtk_widget_set_name (eLx, "eLx");
   gtk_widget_show (eLx);
-  gtk_fixed_put (GTK_FIXED (fixed1), eLx, 160, 352);
-  gtk_widget_set_size_request (eLx, 80, 24);
+  gtk_fixed_put (GTK_FIXED (fixed1), eLx, 64, 384);
+  gtk_widget_set_size_request (eLx, 64, 24);
   gtk_editable_set_editable (GTK_EDITABLE (eLx), FALSE);
   gtk_entry_set_invisible_char (GTK_ENTRY (eLx), 8226);
 
   eRy = gtk_entry_new ();
   gtk_widget_set_name (eRy, "eRy");
   gtk_widget_show (eRy);
-  gtk_fixed_put (GTK_FIXED (fixed1), eRy, 272, 416);
-  gtk_widget_set_size_request (eRy, 80, 24);
+  gtk_fixed_put (GTK_FIXED (fixed1), eRy, 408, 432);
+  gtk_widget_set_size_request (eRy, 64, 24);
   gtk_editable_set_editable (GTK_EDITABLE (eRy), FALSE);
   gtk_entry_set_invisible_char (GTK_ENTRY (eRy), 8226);
 
   eLy = gtk_entry_new ();
   gtk_widget_set_name (eLy, "eLy");
   gtk_widget_show (eLy);
-  gtk_fixed_put (GTK_FIXED (fixed1), eLy, 160, 416);
-  gtk_widget_set_size_request (eLy, 80, 24);
+  gtk_fixed_put (GTK_FIXED (fixed1), eLy, 64, 432);
+  gtk_widget_set_size_request (eLy, 64, 24);
   gtk_editable_set_editable (GTK_EDITABLE (eLy), FALSE);
   gtk_entry_set_invisible_char (GTK_ENTRY (eLy), 8226);
+
+  eL_Up = gtk_entry_new ();
+  gtk_widget_set_name (eL_Up, "eL_Up");
+  gtk_widget_show (eL_Up);
+  gtk_fixed_put (GTK_FIXED (fixed1), eL_Up, 64, 336);
+  gtk_widget_set_size_request (eL_Up, 64, 24);
+
+  eL_Left = gtk_entry_new ();
+  gtk_widget_set_name (eL_Left, "eL_Left");
+  gtk_widget_show (eL_Left);
+  gtk_fixed_put (GTK_FIXED (fixed1), eL_Left, 0, 408);
+  gtk_widget_set_size_request (eL_Left, 64, 24);
+
+  eL_Right = gtk_entry_new ();
+  gtk_widget_set_name (eL_Right, "eL_Right");
+  gtk_widget_show (eL_Right);
+  gtk_fixed_put (GTK_FIXED (fixed1), eL_Right, 128, 408);
+  gtk_widget_set_size_request (eL_Right, 64, 24);
+
+  eL_Down = gtk_entry_new ();
+  gtk_widget_set_name (eL_Down, "eL_Down");
+  gtk_widget_show (eL_Down);
+  gtk_fixed_put (GTK_FIXED (fixed1), eL_Down, 64, 480);
+  gtk_widget_set_size_request (eL_Down, 64, 24);
+
+  eR_Up = gtk_entry_new ();
+  gtk_widget_set_name (eR_Up, "eR_Up");
+  gtk_widget_show (eR_Up);
+  gtk_fixed_put (GTK_FIXED (fixed1), eR_Up, 408, 336);
+  gtk_widget_set_size_request (eR_Up, 64, 24);
+
+  eR_Left = gtk_entry_new ();
+  gtk_widget_set_name (eR_Left, "eR_Left");
+  gtk_widget_show (eR_Left);
+  gtk_fixed_put (GTK_FIXED (fixed1), eR_Left, 344, 408);
+  gtk_widget_set_size_request (eR_Left, 64, 24);
+
+  eR_Right = gtk_entry_new ();
+  gtk_widget_set_name (eR_Right, "eR_Right");
+  gtk_widget_show (eR_Right);
+  gtk_fixed_put (GTK_FIXED (fixed1), eR_Right, 472, 408);
+  gtk_widget_set_size_request (eR_Right, 64, 24);
+
+  eR_Down = gtk_entry_new ();
+  gtk_widget_set_name (eR_Down, "eR_Down");
+  gtk_widget_show (eR_Down);
+  gtk_fixed_put (GTK_FIXED (fixed1), eR_Down, 408, 480);
+  gtk_widget_set_size_request (eR_Down, 64, 24);
+
+  R3 = gtk_button_new_with_mnemonic (_("R3"));
+  gtk_widget_set_name (R3, "R3");
+  gtk_widget_show (R3);
+  gtk_fixed_put (GTK_FIXED (fixed1), R3, 272, 32);
+  gtk_widget_set_size_request (R3, 64, 24);
 
   Select = gtk_button_new_with_mnemonic (_("Select"));
   gtk_widget_set_name (Select, "Select");
   gtk_widget_show (Select);
-  gtk_fixed_put (GTK_FIXED (fixed1), Select, 168, 32);
-  gtk_widget_set_size_request (Select, 64, 32);
-
-  L1 = gtk_button_new_with_mnemonic (_("L1"));
-  gtk_widget_set_name (L1, "L1");
-  gtk_widget_show (L1);
-  gtk_fixed_put (GTK_FIXED (fixed1), L1, 64, 72);
-  gtk_widget_set_size_request (L1, 64, 32);
-
-  Left = gtk_button_new_with_mnemonic (_("Left"));
-  gtk_widget_set_name (Left, "Left");
-  gtk_widget_show (Left);
-  gtk_fixed_put (GTK_FIXED (fixed1), Left, 0, 176);
-  gtk_widget_set_size_request (Left, 64, 32);
-
-  Down = gtk_button_new_with_mnemonic (_("Down"));
-  gtk_widget_set_name (Down, "Down");
-  gtk_widget_show (Down);
-  gtk_fixed_put (GTK_FIXED (fixed1), Down, 64, 224);
-  gtk_widget_set_size_request (Down, 64, 32);
-
-  Analog = gtk_button_new_with_mnemonic (_("Analog"));
-  gtk_widget_set_name (Analog, "Analog");
-  gtk_widget_show (Analog);
-  gtk_fixed_put (GTK_FIXED (fixed1), Analog, 224, 96);
-  gtk_widget_set_size_request (Analog, 64, 32);
-
-  R2 = gtk_button_new_with_mnemonic (_("R2"));
-  gtk_widget_set_name (R2, "R2");
-  gtk_widget_show (R2);
-  gtk_fixed_put (GTK_FIXED (fixed1), R2, 368, 0);
-  gtk_widget_set_size_request (R2, 64, 32);
+  gtk_fixed_put (GTK_FIXED (fixed1), Select, 200, 160);
+  gtk_widget_set_size_request (Select, 64, 24);
 
   Start = gtk_button_new_with_mnemonic (_("Start"));
   gtk_widget_set_name (Start, "Start");
   gtk_widget_show (Start);
-  gtk_fixed_put (GTK_FIXED (fixed1), Start, 280, 32);
-  gtk_widget_set_size_request (Start, 64, 32);
-
-  R1 = gtk_button_new_with_mnemonic (_("R1"));
-  gtk_widget_set_name (R1, "R1");
-  gtk_widget_show (R1);
-  gtk_fixed_put (GTK_FIXED (fixed1), R1, 368, 72);
-  gtk_widget_set_size_request (R1, 64, 32);
-
-  Cross = gtk_button_new_with_mnemonic (_("Cross"));
-  gtk_widget_set_name (Cross, "Cross");
-  gtk_widget_show (Cross);
-  gtk_fixed_put (GTK_FIXED (fixed1), Cross, 368, 224);
-  gtk_widget_set_size_request (Cross, 64, 32);
-
-  Triangle = gtk_button_new_with_mnemonic (_("Triangle"));
-  gtk_widget_set_name (Triangle, "Triangle");
-  gtk_widget_show (Triangle);
-  gtk_fixed_put (GTK_FIXED (fixed1), Triangle, 368, 136);
-  gtk_widget_set_size_request (Triangle, 64, 32);
-
-  Circle = gtk_button_new_with_mnemonic (_("Circle"));
-  gtk_widget_set_name (Circle, "Circle");
-  gtk_widget_show (Circle);
-  gtk_fixed_put (GTK_FIXED (fixed1), Circle, 432, 176);
-  gtk_widget_set_size_request (Circle, 64, 32);
+  gtk_fixed_put (GTK_FIXED (fixed1), Start, 272, 160);
+  gtk_widget_set_size_request (Start, 64, 24);
 
   Square = gtk_button_new_with_mnemonic (_("Square"));
   gtk_widget_set_name (Square, "Square");
   gtk_widget_show (Square);
-  gtk_fixed_put (GTK_FIXED (fixed1), Square, 304, 176);
-  gtk_widget_set_size_request (Square, 64, 32);
+  gtk_fixed_put (GTK_FIXED (fixed1), Square, 344, 160);
+  gtk_widget_set_size_request (Square, 64, 24);
 
-  L3 = gtk_button_new_with_mnemonic (_("L3"));
-  gtk_widget_set_name (L3, "L3");
-  gtk_widget_show (L3);
-  gtk_fixed_put (GTK_FIXED (fixed1), L3, 176, 240);
-  gtk_widget_set_size_request (L3, 64, 32);
-
-  Up = gtk_button_new_with_mnemonic (_("Up"));
-  gtk_widget_set_name (Up, "Up");
-  gtk_widget_show (Up);
-  gtk_fixed_put (GTK_FIXED (fixed1), Up, 64, 136);
-  gtk_widget_set_size_request (Up, 64, 32);
+  Circle = gtk_button_new_with_mnemonic (_("Circle"));
+  gtk_widget_set_name (Circle, "Circle");
+  gtk_widget_show (Circle);
+  gtk_fixed_put (GTK_FIXED (fixed1), Circle, 472, 160);
+  gtk_widget_set_size_request (Circle, 64, 24);
 
   L2 = gtk_button_new_with_mnemonic (_("L2"));
   gtk_widget_set_name (L2, "L2");
   gtk_widget_show (L2);
   gtk_fixed_put (GTK_FIXED (fixed1), L2, 64, 8);
-  gtk_widget_set_size_request (L2, 64, 32);
+  gtk_widget_set_size_request (L2, 64, 24);
 
-  Lx = gtk_button_new_with_mnemonic (_("Lx"));
-  gtk_widget_set_name (Lx, "Lx");
-  gtk_widget_show (Lx);
-  gtk_fixed_put (GTK_FIXED (fixed1), Lx, 160, 320);
-  gtk_widget_set_size_request (Lx, 80, 32);
+  L1 = gtk_button_new_with_mnemonic (_("L1"));
+  gtk_widget_set_name (L1, "L1");
+  gtk_widget_show (L1);
+  gtk_fixed_put (GTK_FIXED (fixed1), L1, 64, 56);
+  gtk_widget_set_size_request (L1, 64, 24);
 
-  Ly = gtk_button_new_with_mnemonic (_("Ly"));
-  gtk_widget_set_name (Ly, "Ly");
-  gtk_widget_show (Ly);
-  gtk_fixed_put (GTK_FIXED (fixed1), Ly, 160, 384);
-  gtk_widget_set_size_request (Ly, 80, 32);
+  Down = gtk_button_new_with_mnemonic (_("Down"));
+  gtk_widget_set_name (Down, "Down");
+  gtk_widget_show (Down);
+  gtk_fixed_put (GTK_FIXED (fixed1), Down, 64, 208);
+  gtk_widget_set_size_request (Down, 64, 24);
 
-  Rx = gtk_button_new_with_mnemonic (_("Rx"));
-  gtk_widget_set_name (Rx, "Rx");
-  gtk_widget_show (Rx);
-  gtk_fixed_put (GTK_FIXED (fixed1), Rx, 272, 320);
-  gtk_widget_set_size_request (Rx, 80, 32);
+  Up = gtk_button_new_with_mnemonic (_("Up"));
+  gtk_widget_set_name (Up, "Up");
+  gtk_widget_show (Up);
+  gtk_fixed_put (GTK_FIXED (fixed1), Up, 64, 112);
+  gtk_widget_set_size_request (Up, 64, 24);
 
-  Ry = gtk_button_new_with_mnemonic (_("Ry"));
-  gtk_widget_set_name (Ry, "Ry");
-  gtk_widget_show (Ry);
-  gtk_fixed_put (GTK_FIXED (fixed1), Ry, 272, 384);
-  gtk_widget_set_size_request (Ry, 80, 32);
+  Left = gtk_button_new_with_mnemonic (_("Left"));
+  gtk_widget_set_name (Left, "Left");
+  gtk_widget_show (Left);
+  gtk_fixed_put (GTK_FIXED (fixed1), Left, 0, 160);
+  gtk_widget_set_size_request (Left, 64, 24);
 
   Right = gtk_button_new_with_mnemonic (_("Right"));
   gtk_widget_set_name (Right, "Right");
   gtk_widget_show (Right);
-  gtk_fixed_put (GTK_FIXED (fixed1), Right, 128, 176);
-  gtk_widget_set_size_request (Right, 64, 32);
+  gtk_fixed_put (GTK_FIXED (fixed1), Right, 128, 160);
+  gtk_widget_set_size_request (Right, 64, 24);
 
-  label3 = gtk_label_new (_("Analog Controls (move mouse or analog joystick to select)"));
-  gtk_widget_set_name (label3, "label3");
-  gtk_widget_show (label3);
-  gtk_fixed_put (GTK_FIXED (fixed1), label3, 48, 296);
-  gtk_widget_set_size_request (label3, 408, 16);
-  gtk_label_set_single_line_mode (GTK_LABEL (label3), TRUE);
+  R1 = gtk_button_new_with_mnemonic (_("R1"));
+  gtk_widget_set_name (R1, "R1");
+  gtk_widget_show (R1);
+  gtk_fixed_put (GTK_FIXED (fixed1), R1, 408, 56);
+  gtk_widget_set_size_request (R1, 64, 24);
 
-  R3 = gtk_button_new_with_mnemonic (_("R3"));
-  gtk_widget_set_name (R3, "R3");
-  gtk_widget_show (R3);
-  gtk_fixed_put (GTK_FIXED (fixed1), R3, 272, 240);
-  gtk_widget_set_size_request (R3, 64, 32);
+  R2 = gtk_button_new_with_mnemonic (_("R2"));
+  gtk_widget_set_name (R2, "R2");
+  gtk_widget_show (R2);
+  gtk_fixed_put (GTK_FIXED (fixed1), R2, 408, 8);
+  gtk_widget_set_size_request (R2, 64, 24);
+
+  Triangle = gtk_button_new_with_mnemonic (_("Triangle"));
+  gtk_widget_set_name (Triangle, "Triangle");
+  gtk_widget_show (Triangle);
+  gtk_fixed_put (GTK_FIXED (fixed1), Triangle, 408, 112);
+  gtk_widget_set_size_request (Triangle, 64, 24);
+
+  Cross = gtk_button_new_with_mnemonic (_("Cross"));
+  gtk_widget_set_name (Cross, "Cross");
+  gtk_widget_show (Cross);
+  gtk_fixed_put (GTK_FIXED (fixed1), Cross, 408, 208);
+  gtk_widget_set_size_request (Cross, 64, 24);
+
+  L3 = gtk_button_new_with_mnemonic (_("L3"));
+  gtk_widget_set_name (L3, "L3");
+  gtk_widget_show (L3);
+  gtk_fixed_put (GTK_FIXED (fixed1), L3, 200, 32);
+  gtk_widget_set_size_request (L3, 64, 24);
+
+  checkbutton_reversery = gtk_check_button_new_with_mnemonic (_("Reverse RY"));
+  gtk_widget_set_name (checkbutton_reversery, "checkbutton_reversery");
+  gtk_widget_show (checkbutton_reversery);
+  gtk_fixed_put (GTK_FIXED (fixed1), checkbutton_reversery, 384, 536);
+  gtk_widget_set_size_request (checkbutton_reversery, 111, 22);
+
+  checkbutton_reverserx = gtk_check_button_new_with_mnemonic (_("Reverse RX"));
+  gtk_widget_set_name (checkbutton_reverserx, "checkbutton_reverserx");
+  gtk_widget_show (checkbutton_reverserx);
+  gtk_fixed_put (GTK_FIXED (fixed1), checkbutton_reverserx, 384, 512);
+  gtk_widget_set_size_request (checkbutton_reverserx, 111, 22);
+
+  R_Down = gtk_button_new_with_mnemonic (_("Down"));
+  gtk_widget_set_name (R_Down, "R_Down");
+  gtk_widget_show (R_Down);
+  gtk_fixed_put (GTK_FIXED (fixed1), R_Down, 408, 456);
+  gtk_widget_set_size_request (R_Down, 64, 24);
+
+  Ry = gtk_button_new_with_mnemonic (_("Ry"));
+  gtk_widget_set_name (Ry, "Ry");
+  gtk_widget_show (Ry);
+  gtk_fixed_put (GTK_FIXED (fixed1), Ry, 408, 408);
+  gtk_widget_set_size_request (Ry, 64, 24);
+
+  Rx = gtk_button_new_with_mnemonic (_("Rx"));
+  gtk_widget_set_name (Rx, "Rx");
+  gtk_widget_show (Rx);
+  gtk_fixed_put (GTK_FIXED (fixed1), Rx, 408, 360);
+  gtk_widget_set_size_request (Rx, 64, 24);
+
+  R_Up = gtk_button_new_with_mnemonic (_("Up"));
+  gtk_widget_set_name (R_Up, "R_Up");
+  gtk_widget_show (R_Up);
+  gtk_fixed_put (GTK_FIXED (fixed1), R_Up, 408, 312);
+  gtk_widget_set_size_request (R_Up, 64, 24);
+
+  R_Right = gtk_button_new_with_mnemonic (_("Right"));
+  gtk_widget_set_name (R_Right, "R_Right");
+  gtk_widget_show (R_Right);
+  gtk_fixed_put (GTK_FIXED (fixed1), R_Right, 472, 384);
+  gtk_widget_set_size_request (R_Right, 64, 24);
+
+  R_Left = gtk_button_new_with_mnemonic (_("Left"));
+  gtk_widget_set_name (R_Left, "R_Left");
+  gtk_widget_show (R_Left);
+  gtk_fixed_put (GTK_FIXED (fixed1), R_Left, 344, 384);
+  gtk_widget_set_size_request (R_Left, 64, 24);
+
+  forcefeedback = gtk_check_button_new_with_mnemonic (_("Enable Force\nFeedback"));
+  gtk_widget_set_name (forcefeedback, "forcefeedback");
+  gtk_widget_show (forcefeedback);
+  gtk_fixed_put (GTK_FIXED (fixed1), forcefeedback, 216, 512);
+  gtk_widget_set_size_request (forcefeedback, 112, 48);
 
   checkbutton_reverselx = gtk_check_button_new_with_mnemonic (_("Reverse LX"));
   gtk_widget_set_name (checkbutton_reverselx, "checkbutton_reverselx");
   gtk_widget_show (checkbutton_reverselx);
-  gtk_fixed_put (GTK_FIXED (fixed1), checkbutton_reverselx, 16, 328);
+  gtk_fixed_put (GTK_FIXED (fixed1), checkbutton_reverselx, 48, 512);
   gtk_widget_set_size_request (checkbutton_reverselx, 111, 22);
 
   checkbutton_reversely = gtk_check_button_new_with_mnemonic (_("Reverse LY"));
   gtk_widget_set_name (checkbutton_reversely, "checkbutton_reversely");
   gtk_widget_show (checkbutton_reversely);
-  gtk_fixed_put (GTK_FIXED (fixed1), checkbutton_reversely, 16, 352);
+  gtk_fixed_put (GTK_FIXED (fixed1), checkbutton_reversely, 48, 536);
   gtk_widget_set_size_request (checkbutton_reversely, 111, 22);
 
-  checkbutton_reverserx = gtk_check_button_new_with_mnemonic (_("Reverse RX"));
-  gtk_widget_set_name (checkbutton_reverserx, "checkbutton_reverserx");
-  gtk_widget_show (checkbutton_reverserx);
-  gtk_fixed_put (GTK_FIXED (fixed1), checkbutton_reverserx, 16, 376);
-  gtk_widget_set_size_request (checkbutton_reverserx, 111, 22);
+  L_Down = gtk_button_new_with_mnemonic (_("Down"));
+  gtk_widget_set_name (L_Down, "L_Down");
+  gtk_widget_show (L_Down);
+  gtk_fixed_put (GTK_FIXED (fixed1), L_Down, 64, 456);
+  gtk_widget_set_size_request (L_Down, 64, 24);
 
-  checkbutton_reversery = gtk_check_button_new_with_mnemonic (_("Reverse RY"));
-  gtk_widget_set_name (checkbutton_reversery, "checkbutton_reversery");
-  gtk_widget_show (checkbutton_reversery);
-  gtk_fixed_put (GTK_FIXED (fixed1), checkbutton_reversery, 16, 400);
-  gtk_widget_set_size_request (checkbutton_reversery, 111, 22);
+  Ly = gtk_button_new_with_mnemonic (_("Ly"));
+  gtk_widget_set_name (Ly, "Ly");
+  gtk_widget_show (Ly);
+  gtk_fixed_put (GTK_FIXED (fixed1), Ly, 64, 408);
+  gtk_widget_set_size_request (Ly, 64, 24);
 
-  forcefeedback = gtk_check_button_new_with_mnemonic (_("Enable Force\nFeedback"));
-  gtk_widget_set_name (forcefeedback, "forcefeedback");
-  gtk_widget_show (forcefeedback);
-  gtk_fixed_put (GTK_FIXED (fixed1), forcefeedback, 384, 320);
-  gtk_widget_set_size_request (forcefeedback, 112, 48);
+  Lx = gtk_button_new_with_mnemonic (_("Lx"));
+  gtk_widget_set_name (Lx, "Lx");
+  gtk_widget_show (Lx);
+  gtk_fixed_put (GTK_FIXED (fixed1), Lx, 64, 360);
+  gtk_widget_set_size_request (Lx, 64, 24);
+
+  L_Up = gtk_button_new_with_mnemonic (_("Up"));
+  gtk_widget_set_name (L_Up, "L_Up");
+  gtk_widget_show (L_Up);
+  gtk_fixed_put (GTK_FIXED (fixed1), L_Up, 64, 312);
+  gtk_widget_set_size_request (L_Up, 64, 24);
+
+  L_Left = gtk_button_new_with_mnemonic (_("Left"));
+  gtk_widget_set_name (L_Left, "L_Left");
+  gtk_widget_show (L_Left);
+  gtk_fixed_put (GTK_FIXED (fixed1), L_Left, 0, 384);
+  gtk_widget_set_size_request (L_Left, 64, 24);
+
+  L_Right = gtk_button_new_with_mnemonic (_("Right"));
+  gtk_widget_set_name (L_Right, "L_Right");
+  gtk_widget_show (L_Right);
+  gtk_fixed_put (GTK_FIXED (fixed1), L_Right, 128, 384);
+  gtk_widget_set_size_request (L_Right, 64, 24);
+
+  label3 = gtk_label_new (_("Analog Controls (move mouse or analog joystick to select)"));
+  gtk_widget_set_name (label3, "label3");
+  gtk_widget_show (label3);
+  gtk_fixed_put (GTK_FIXED (fixed1), label3, 72, 256);
+  gtk_widget_set_size_request (label3, 400, 24);
+  gtk_label_set_line_wrap (GTK_LABEL (label3), TRUE);
+  gtk_label_set_single_line_mode (GTK_LABEL (label3), TRUE);
+
+  Analog = gtk_button_new_with_mnemonic (_("Analog"));
+  gtk_widget_set_name (Analog, "Analog");
+  gtk_widget_show (Analog);
+  gtk_fixed_put (GTK_FIXED (fixed1), Analog, 240, 208);
+  gtk_widget_set_size_request (Analog, 64, 24);
+
+  label6 = gtk_label_new (_("(Note: The analog key controls and joystick controls do not work well together currently, and should not be mixed. )"));
+  gtk_widget_set_name (label6, "label6");
+  gtk_widget_show (label6);
+  gtk_fixed_put (GTK_FIXED (fixed1), label6, 56, 280);
+  gtk_widget_set_size_request (label6, 448, 32);
+  gtk_label_set_justify (GTK_LABEL (label6), GTK_JUSTIFY_CENTER);
+  gtk_label_set_line_wrap (GTK_LABEL (label6), TRUE);
 
   dialog_action_area1 = GTK_DIALOG (Conf)->action_area;
   gtk_widget_set_name (dialog_action_area1, "dialog_action_area1");
@@ -572,68 +694,80 @@ create_Conf (void)
   g_signal_connect ((gpointer) joydevicescombo, "changed",
                     G_CALLBACK (on_joydevicescombo_changed),
                     NULL);
+  g_signal_connect ((gpointer) R3, "clicked",
+                    G_CALLBACK (OnConf_Key),
+                    NULL);
   g_signal_connect ((gpointer) Select, "clicked",
-                    G_CALLBACK (OnConf_Key),
-                    NULL);
-  g_signal_connect ((gpointer) L1, "clicked",
-                    G_CALLBACK (OnConf_Key),
-                    NULL);
-  g_signal_connect ((gpointer) Left, "clicked",
-                    G_CALLBACK (OnConf_Key),
-                    NULL);
-  g_signal_connect ((gpointer) Down, "clicked",
-                    G_CALLBACK (OnConf_Key),
-                    NULL);
-  g_signal_connect ((gpointer) Analog, "clicked",
-                    G_CALLBACK (OnConf_Key),
-                    NULL);
-  g_signal_connect ((gpointer) R2, "clicked",
                     G_CALLBACK (OnConf_Key),
                     NULL);
   g_signal_connect ((gpointer) Start, "clicked",
                     G_CALLBACK (OnConf_Key),
                     NULL);
-  g_signal_connect ((gpointer) R1, "clicked",
-                    G_CALLBACK (OnConf_Key),
-                    NULL);
-  g_signal_connect ((gpointer) Cross, "clicked",
-                    G_CALLBACK (OnConf_Key),
-                    NULL);
-  g_signal_connect ((gpointer) Triangle, "clicked",
+  g_signal_connect ((gpointer) Square, "clicked",
                     G_CALLBACK (OnConf_Key),
                     NULL);
   g_signal_connect ((gpointer) Circle, "clicked",
                     G_CALLBACK (OnConf_Key),
                     NULL);
-  g_signal_connect ((gpointer) Square, "clicked",
+  g_signal_connect ((gpointer) L2, "clicked",
                     G_CALLBACK (OnConf_Key),
                     NULL);
-  g_signal_connect ((gpointer) L3, "clicked",
+  g_signal_connect ((gpointer) L1, "clicked",
+                    G_CALLBACK (OnConf_Key),
+                    NULL);
+  g_signal_connect ((gpointer) Down, "clicked",
                     G_CALLBACK (OnConf_Key),
                     NULL);
   g_signal_connect ((gpointer) Up, "clicked",
                     G_CALLBACK (OnConf_Key),
                     NULL);
-  g_signal_connect ((gpointer) L2, "clicked",
-                    G_CALLBACK (OnConf_Key),
-                    NULL);
-  g_signal_connect ((gpointer) Lx, "clicked",
-                    G_CALLBACK (OnConf_Key),
-                    NULL);
-  g_signal_connect ((gpointer) Ly, "clicked",
-                    G_CALLBACK (OnConf_Key),
-                    NULL);
-  g_signal_connect ((gpointer) Rx, "clicked",
-                    G_CALLBACK (OnConf_Key),
-                    NULL);
-  g_signal_connect ((gpointer) Ry, "clicked",
+  g_signal_connect ((gpointer) Left, "clicked",
                     G_CALLBACK (OnConf_Key),
                     NULL);
   g_signal_connect ((gpointer) Right, "clicked",
                     G_CALLBACK (OnConf_Key),
                     NULL);
-  g_signal_connect ((gpointer) R3, "clicked",
+  g_signal_connect ((gpointer) R1, "clicked",
                     G_CALLBACK (OnConf_Key),
+                    NULL);
+  g_signal_connect ((gpointer) R2, "clicked",
+                    G_CALLBACK (OnConf_Key),
+                    NULL);
+  g_signal_connect ((gpointer) Triangle, "clicked",
+                    G_CALLBACK (OnConf_Key),
+                    NULL);
+  g_signal_connect ((gpointer) Cross, "clicked",
+                    G_CALLBACK (OnConf_Key),
+                    NULL);
+  g_signal_connect ((gpointer) L3, "clicked",
+                    G_CALLBACK (OnConf_Key),
+                    NULL);
+  g_signal_connect ((gpointer) checkbutton_reversery, "toggled",
+                    G_CALLBACK (on_checkbutton_reversery_toggled),
+                    NULL);
+  g_signal_connect ((gpointer) checkbutton_reverserx, "toggled",
+                    G_CALLBACK (on_checkbutton_reverserx_toggled),
+                    NULL);
+  g_signal_connect ((gpointer) R_Down, "clicked",
+                    G_CALLBACK (OnConf_Key),
+                    NULL);
+  g_signal_connect ((gpointer) Ry, "clicked",
+                    G_CALLBACK (OnConf_Key),
+                    NULL);
+  g_signal_connect ((gpointer) Rx, "clicked",
+                    G_CALLBACK (OnConf_Key),
+                    NULL);
+  g_signal_connect ((gpointer) R_Up, "clicked",
+                    G_CALLBACK (OnConf_Key),
+                    NULL);
+  g_signal_connect ((gpointer) R_Right, "clicked",
+                    G_CALLBACK (OnConf_Key),
+                    NULL);
+  g_signal_connect ((gpointer) R_Left, "clicked",
+                    G_CALLBACK (OnConf_Key),
+                    NULL);
+  g_signal_connect ((gpointer) forcefeedback, "toggled",
+                    G_CALLBACK (on_forcefeedback_toggled),
                     NULL);
   g_signal_connect ((gpointer) checkbutton_reverselx, "toggled",
                     G_CALLBACK (on_checkbutton_reverselx_toggled),
@@ -641,14 +775,26 @@ create_Conf (void)
   g_signal_connect ((gpointer) checkbutton_reversely, "toggled",
                     G_CALLBACK (on_checkbutton_reversely_toggled),
                     NULL);
-  g_signal_connect ((gpointer) checkbutton_reverserx, "toggled",
-                    G_CALLBACK (on_checkbutton_reverserx_toggled),
+  g_signal_connect ((gpointer) L_Down, "clicked",
+                    G_CALLBACK (OnConf_Key),
                     NULL);
-  g_signal_connect ((gpointer) checkbutton_reversery, "toggled",
-                    G_CALLBACK (on_checkbutton_reversery_toggled),
+  g_signal_connect ((gpointer) Ly, "clicked",
+                    G_CALLBACK (OnConf_Key),
                     NULL);
-  g_signal_connect ((gpointer) forcefeedback, "toggled",
-                    G_CALLBACK (on_forcefeedback_toggled),
+  g_signal_connect ((gpointer) Lx, "clicked",
+                    G_CALLBACK (OnConf_Key),
+                    NULL);
+  g_signal_connect ((gpointer) L_Up, "clicked",
+                    G_CALLBACK (OnConf_Key),
+                    NULL);
+  g_signal_connect ((gpointer) L_Left, "clicked",
+                    G_CALLBACK (OnConf_Key),
+                    NULL);
+  g_signal_connect ((gpointer) L_Right, "clicked",
+                    G_CALLBACK (OnConf_Key),
+                    NULL);
+  g_signal_connect ((gpointer) Analog, "clicked",
+                    G_CALLBACK (OnConf_Key),
                     NULL);
   g_signal_connect ((gpointer) cancelbutton1, "clicked",
                     G_CALLBACK (OnConf_Cancel),
@@ -694,33 +840,50 @@ create_Conf (void)
   GLADE_HOOKUP_OBJECT (Conf, eLx, "eLx");
   GLADE_HOOKUP_OBJECT (Conf, eRy, "eRy");
   GLADE_HOOKUP_OBJECT (Conf, eLy, "eLy");
-  GLADE_HOOKUP_OBJECT (Conf, Select, "Select");
-  GLADE_HOOKUP_OBJECT (Conf, L1, "L1");
-  GLADE_HOOKUP_OBJECT (Conf, Left, "Left");
-  GLADE_HOOKUP_OBJECT (Conf, Down, "Down");
-  GLADE_HOOKUP_OBJECT (Conf, Analog, "Analog");
-  GLADE_HOOKUP_OBJECT (Conf, R2, "R2");
-  GLADE_HOOKUP_OBJECT (Conf, Start, "Start");
-  GLADE_HOOKUP_OBJECT (Conf, R1, "R1");
-  GLADE_HOOKUP_OBJECT (Conf, Cross, "Cross");
-  GLADE_HOOKUP_OBJECT (Conf, Triangle, "Triangle");
-  GLADE_HOOKUP_OBJECT (Conf, Circle, "Circle");
-  GLADE_HOOKUP_OBJECT (Conf, Square, "Square");
-  GLADE_HOOKUP_OBJECT (Conf, L3, "L3");
-  GLADE_HOOKUP_OBJECT (Conf, Up, "Up");
-  GLADE_HOOKUP_OBJECT (Conf, L2, "L2");
-  GLADE_HOOKUP_OBJECT (Conf, Lx, "Lx");
-  GLADE_HOOKUP_OBJECT (Conf, Ly, "Ly");
-  GLADE_HOOKUP_OBJECT (Conf, Rx, "Rx");
-  GLADE_HOOKUP_OBJECT (Conf, Ry, "Ry");
-  GLADE_HOOKUP_OBJECT (Conf, Right, "Right");
-  GLADE_HOOKUP_OBJECT (Conf, label3, "label3");
+  GLADE_HOOKUP_OBJECT (Conf, eL_Up, "eL_Up");
+  GLADE_HOOKUP_OBJECT (Conf, eL_Left, "eL_Left");
+  GLADE_HOOKUP_OBJECT (Conf, eL_Right, "eL_Right");
+  GLADE_HOOKUP_OBJECT (Conf, eL_Down, "eL_Down");
+  GLADE_HOOKUP_OBJECT (Conf, eR_Up, "eR_Up");
+  GLADE_HOOKUP_OBJECT (Conf, eR_Left, "eR_Left");
+  GLADE_HOOKUP_OBJECT (Conf, eR_Right, "eR_Right");
+  GLADE_HOOKUP_OBJECT (Conf, eR_Down, "eR_Down");
   GLADE_HOOKUP_OBJECT (Conf, R3, "R3");
+  GLADE_HOOKUP_OBJECT (Conf, Select, "Select");
+  GLADE_HOOKUP_OBJECT (Conf, Start, "Start");
+  GLADE_HOOKUP_OBJECT (Conf, Square, "Square");
+  GLADE_HOOKUP_OBJECT (Conf, Circle, "Circle");
+  GLADE_HOOKUP_OBJECT (Conf, L2, "L2");
+  GLADE_HOOKUP_OBJECT (Conf, L1, "L1");
+  GLADE_HOOKUP_OBJECT (Conf, Down, "Down");
+  GLADE_HOOKUP_OBJECT (Conf, Up, "Up");
+  GLADE_HOOKUP_OBJECT (Conf, Left, "Left");
+  GLADE_HOOKUP_OBJECT (Conf, Right, "Right");
+  GLADE_HOOKUP_OBJECT (Conf, R1, "R1");
+  GLADE_HOOKUP_OBJECT (Conf, R2, "R2");
+  GLADE_HOOKUP_OBJECT (Conf, Triangle, "Triangle");
+  GLADE_HOOKUP_OBJECT (Conf, Cross, "Cross");
+  GLADE_HOOKUP_OBJECT (Conf, L3, "L3");
+  GLADE_HOOKUP_OBJECT (Conf, checkbutton_reversery, "checkbutton_reversery");
+  GLADE_HOOKUP_OBJECT (Conf, checkbutton_reverserx, "checkbutton_reverserx");
+  GLADE_HOOKUP_OBJECT (Conf, R_Down, "R_Down");
+  GLADE_HOOKUP_OBJECT (Conf, Ry, "Ry");
+  GLADE_HOOKUP_OBJECT (Conf, Rx, "Rx");
+  GLADE_HOOKUP_OBJECT (Conf, R_Up, "R_Up");
+  GLADE_HOOKUP_OBJECT (Conf, R_Right, "R_Right");
+  GLADE_HOOKUP_OBJECT (Conf, R_Left, "R_Left");
+  GLADE_HOOKUP_OBJECT (Conf, forcefeedback, "forcefeedback");
   GLADE_HOOKUP_OBJECT (Conf, checkbutton_reverselx, "checkbutton_reverselx");
   GLADE_HOOKUP_OBJECT (Conf, checkbutton_reversely, "checkbutton_reversely");
-  GLADE_HOOKUP_OBJECT (Conf, checkbutton_reverserx, "checkbutton_reverserx");
-  GLADE_HOOKUP_OBJECT (Conf, checkbutton_reversery, "checkbutton_reversery");
-  GLADE_HOOKUP_OBJECT (Conf, forcefeedback, "forcefeedback");
+  GLADE_HOOKUP_OBJECT (Conf, L_Down, "L_Down");
+  GLADE_HOOKUP_OBJECT (Conf, Ly, "Ly");
+  GLADE_HOOKUP_OBJECT (Conf, Lx, "Lx");
+  GLADE_HOOKUP_OBJECT (Conf, L_Up, "L_Up");
+  GLADE_HOOKUP_OBJECT (Conf, L_Left, "L_Left");
+  GLADE_HOOKUP_OBJECT (Conf, L_Right, "L_Right");
+  GLADE_HOOKUP_OBJECT (Conf, label3, "label3");
+  GLADE_HOOKUP_OBJECT (Conf, Analog, "Analog");
+  GLADE_HOOKUP_OBJECT (Conf, label6, "label6");
   GLADE_HOOKUP_OBJECT_NO_REF (Conf, dialog_action_area1, "dialog_action_area1");
   GLADE_HOOKUP_OBJECT (Conf, cancelbutton1, "cancelbutton1");
   GLADE_HOOKUP_OBJECT (Conf, okbutton1, "okbutton1");

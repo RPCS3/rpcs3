@@ -26,6 +26,7 @@
 #endif
 
 #include "zeropad.h"
+#include "linux.h"
 
 extern "C"
 {
@@ -119,7 +120,7 @@ void OnMsg_Ok()
 }
 
 // GUI event handlers
-void on_joydevicescombo_changed(GtkComboBox     *combobox, gpointer         user_data)
+void on_joydevicescombo_changed(GtkComboBox *combobox, gpointer user_data)
 {
 	int joyid = gtk_combo_box_get_active(combobox);
 
@@ -132,7 +133,7 @@ void on_joydevicescombo_changed(GtkComboBox     *combobox, gpointer         user
 	if (joyid >= 0 && joyid < (int)s_vjoysticks.size()) s_vjoysticks[joyid]->Assign(s_selectedpad);
 }
 
-void on_checkbutton_reverselx_toggled(GtkToggleButton *togglebutton, gpointer         user_data)
+void on_checkbutton_reverselx_toggled(GtkToggleButton *togglebutton, gpointer user_data)
 {
 	int mask = PADOPTION_REVERTLX << (16 * s_selectedpad);
 	if (gtk_toggle_button_get_active(togglebutton))
@@ -141,7 +142,7 @@ void on_checkbutton_reverselx_toggled(GtkToggleButton *togglebutton, gpointer   
 		conf.options &= ~mask;
 }
 
-void on_checkbutton_reversely_toggled(GtkToggleButton *togglebutton, gpointer         user_data)
+void on_checkbutton_reversely_toggled(GtkToggleButton *togglebutton, gpointer user_data)
 {
 	int mask = PADOPTION_REVERTLY << (16 * s_selectedpad);
 	if (gtk_toggle_button_get_active(togglebutton))
@@ -150,7 +151,7 @@ void on_checkbutton_reversely_toggled(GtkToggleButton *togglebutton, gpointer   
 		conf.options &= ~mask;
 }
 
-void on_checkbutton_reverserx_toggled(GtkToggleButton *togglebutton, gpointer         user_data)
+void on_checkbutton_reverserx_toggled(GtkToggleButton *togglebutton, gpointer user_data)
 {
 	int mask = PADOPTION_REVERTRX << (16 * s_selectedpad);
 	if (gtk_toggle_button_get_active(togglebutton)) 
@@ -159,7 +160,7 @@ void on_checkbutton_reverserx_toggled(GtkToggleButton *togglebutton, gpointer   
 		conf.options &= ~mask;
 }
 
-void on_checkbutton_reversery_toggled(GtkToggleButton *togglebutton, gpointer         user_data)
+void on_checkbutton_reversery_toggled(GtkToggleButton *togglebutton, gpointer user_data)
 {
 	int mask = PADOPTION_REVERTRY << (16 * s_selectedpad);
 	if (gtk_toggle_button_get_active(togglebutton)) 
@@ -228,26 +229,22 @@ void SysMessage(char *fmt, ...)
 
 void OnConf_Pad1(GtkButton *button, gpointer user_data)
 {
-	if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(button)))
-		UpdateConf(0);
+	if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(button))) UpdateConf(0);
 }
 
 void OnConf_Pad2(GtkButton *button, gpointer user_data)
 {
-	if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(button)))
-		UpdateConf(1);
+	if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(button))) UpdateConf(1);
 }
 
 void OnConf_Pad3(GtkButton *button, gpointer user_data)
 {
-	if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(button)))
-		UpdateConf(2);
+	if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(button))) UpdateConf(2);
 }
 
 void OnConf_Pad4(GtkButton *button, gpointer user_data)
 {
-	if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(button)))
-		UpdateConf(3);
+	if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(button))) UpdateConf(3);
 }
 
 void OnConf_Ok(GtkButton *button, gpointer user_data)

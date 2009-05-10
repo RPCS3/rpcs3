@@ -121,33 +121,11 @@ namespace Analog
 	
 	void ConfigurePad(int padvalue, u8 i, int value)
 	{
+		int temp = Pad(padvalue, i);
 		SetPad(padvalue, i, value / 256);
 		if (RevertPad(padvalue)) InvertPad(padvalue, i);
 		SetPad(padvalue, i, Pad(padvalue, i) + 0x80);
+		
+		PAD_LOG("Setting pad[%d]@%d to %d from %d\n", padvalue, i, value, temp);
 	}
-
-#ifdef ANALOG_CONTROLS_HACK
-	int KeypadToPad(u8 keypress)
-	{
-		switch (keypress)
-		{
-			case KEY_PAD_LX_LEFT:
-			case KEY_PAD_LX_RIGHT:
-				return PAD_LX;
-				break;
-			case KEY_PAD_LY_UP:
-			case KEY_PAD_LY_DOWN:
-				return PAD_LY;
-				break;
-			case KEY_PAD_RX_LEFT:
-			case KEY_PAD_RX_RIGHT:
-				return PAD_RX;
-				break;
-			case KEY_PAD_RY_UP:
-			case KEY_PAD_RY_DOWN:
-				return PAD_RY;
-				break;
-		}
-	}
-#endif
 }

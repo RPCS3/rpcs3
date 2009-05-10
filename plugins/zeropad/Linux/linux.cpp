@@ -16,30 +16,11 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include <string.h>
-#include <gtk/gtk.h>
-#include <pthread.h>
-
-#define JOYSTICK_SUPPORT
-#ifdef JOYSTICK_SUPPORT
-#include "joystick.h"
-#endif
-
-#include "zeropad.h"
-
-extern "C"
-{
-#include "interface.h"
-#include "support.h"
-#include "callbacks.h"
-}
+#include "linux.h"
 
 Display *GSdsp;
 static pthread_spinlock_t s_mutexStatus;
 static u32 s_keyPress[2], s_keyRelease[2]; // thread safe
-
-extern GtkWidget *Conf, *s_devicecombo;
-extern string s_strIniPath;
 
 static const char* s_pGuiKeyMap[] = 
 { 
@@ -47,7 +28,9 @@ static const char* s_pGuiKeyMap[] =
 	"Triangle", "Circle", "Cross", "Square",
 	"Select", "L3", "R3", "Start",
 	"Up", "Right", "Down", "Left",
-	"Lx", "Rx", "Ly", "Ry"
+	"Lx", "Rx", "Ly", "Ry",
+	"L_Up", "L_Right", "L_Down", "L_Left",
+	"R_Up", "R_Right", "R_Down", "R_Left"
 };
 
 string GetLabelFromButton(const char* buttonname)
@@ -108,9 +91,11 @@ int _GetJoystickIdFromPAD(int pad)
 	{
 		for (int i = 0; i < PADKEYS; ++i)
 		{
-			if (IS_JOYSTICK(conf.keys[(PadEnum[pad][p])][i]) || IS_JOYBUTTONS(conf.keys[(PadEnum[pad][p])][i]))
+			u32 temp = conf.keys[(PadEnum[pad][p])][i];
+			
+			if (IS_JOYSTICK( temp) || IS_JOYBUTTONS(temp))
 			{
-				joyid = PAD_GETJOYID(conf.keys[(PadEnum[pad][p])][i]);
+				joyid = PAD_GETJOYID(temp);
 				return joyid;
 			}
 		}
@@ -134,30 +119,47 @@ void CALLBACK PADupdate(int pad)
 			case KeyPress:
 				key = XLookupKeysym((XKeyEvent *) & E, 0);
 
+				i = FindKey(key, pad);
 #ifdef ANALOG_CONTROLS_HACK
-				switch (key)
+				if ((i > PAD_RY) && (i <= PAD_R_LEFT))
 				{
-					case KEY_PAD_LX_LEFT:
-					case KEY_PAD_LY_UP:
-					case KEY_PAD_RX_LEFT:
-					case KEY_PAD_RY_UP:
-						Analog::ConfigurePad(KeypadToPad(key), pad, DEF_VALUE);
+				switch (i)
+				{
+					case PAD_R_LEFT:
+						Analog::ConfigurePad(PAD_RX, pad, DEF_VALUE);
 						break;
-					case KEY_PAD_LX_RIGHT:
-					case KEY_PAD_LY_DOWN:
-					case KEY_PAD_RX_RIGHT:
-					case KEY_PAD_RY_DOWN:
-						Analog::ConfigurePad(KeypadToPad(key), pad, -DEF_VALUE);
+					case PAD_R_UP:
+						Analog::ConfigurePad(PAD_RY, pad, DEF_VALUE);
+						break;
+					case PAD_L_LEFT:
+						Analog::ConfigurePad(PAD_LX, pad, DEF_VALUE);
+						break;
+					case PAD_L_UP:
+						Analog::ConfigurePad(PAD_LY, pad, DEF_VALUE);
+						break;
+					case PAD_R_DOWN:
+						Analog::ConfigurePad(PAD_RY, pad, -DEF_VALUE);
+						break;
+					case PAD_R_RIGHT:
+						Analog::ConfigurePad(PAD_RX, pad, -DEF_VALUE);
+						break;
+					case PAD_L_DOWN:
+						Analog::ConfigurePad(PAD_LY, pad, -DEF_VALUE);
+						break;
+					case PAD_L_RIGHT:
+						Analog::ConfigurePad(PAD_LX, pad, -DEF_VALUE);
 						break;
 				}
+				i += 0xff00;
+				}
 #endif
-
-				i = FindKey(key, pad);
 				if (i != -1) 
 				{
 					keyPress |= (1 << i);
 					keyRelease &= ~(1 << i);
 				}
+				//PAD_LOG("Key pressed:%d\n", i);
+
 				event.evt = KEYPRESS;
 				event.key = key;
 				break;
@@ -165,28 +167,47 @@ void CALLBACK PADupdate(int pad)
 			case KeyRelease:
 				key = XLookupKeysym((XKeyEvent *) & E, 0);
 
+				i = FindKey(key, pad);
 #ifdef ANALOG_CONTROLS_HACK
-				switch (key)
+			
+				if ((i > PAD_RY) && (i <= PAD_R_LEFT))
 				{
-					case KEY_PAD_LX_LEFT:
-					case KEY_PAD_LX_RIGHT:
-					case KEY_PAD_LY_UP:
-					case KEY_PAD_LY_DOWN:
-					case KEY_PAD_RX_LEFT:
-					case KEY_PAD_RX_RIGHT:
-					case KEY_PAD_RY_UP:
-					case KEY_PAD_RY_DOWN:
-						Analog::ResetPad(KeypadToPad(key));
+				switch (i)
+				{
+					case PAD_R_LEFT:
+						Analog::ResetPad(PAD_RX, pad);
+						break;
+					case PAD_R_UP:
+						Analog::ResetPad(PAD_RY, pad);
+						break;
+					case PAD_L_LEFT:
+						Analog::ResetPad(PAD_LX, pad);
+						break;
+					case PAD_L_UP:
+						Analog::ResetPad(PAD_LY, pad);
+						break;
+					case PAD_R_DOWN:
+						Analog::ResetPad(PAD_RY, pad);
+						break;
+					case PAD_R_RIGHT:
+						Analog::ResetPad(PAD_RX, pad);
+						break;
+					case PAD_L_DOWN:
+						Analog::ResetPad(PAD_LY, pad);
+						break;
+					case PAD_L_RIGHT:
+						Analog::ResetPad(PAD_LX, pad);
 						break;
 				}
+				i += 0xff00;
+				}
 #endif
-
-				i = FindKey(key, pad);
 				if (i != -1) 
 				{
-					keyPress &= ~(1 << i); 
-					keyRelease |= (1 << i);
+					clear_bit(keyPress, i); 
+					set_bit(keyRelease, i);
 				}
+
 				event.evt = KEYRELEASE;
 				event.key = key;
 				break;
@@ -215,20 +236,20 @@ void CALLBACK PADupdate(int pad)
 		{
 			int joyid = PAD_GETJOYID(key);
 			
-			if (joyid >= 0 && joyid < (int)s_vjoysticks.size())
+			if ((joyid >= 0) && (joyid < (int)s_vjoysticks.size()))
 			{
 				pjoy = s_vjoysticks[joyid];
 				
 				if (SDL_JoystickGetButton((pjoy)->GetJoy(), PAD_GETJOYBUTTON(key)))
-					status[(pjoy)->GetPAD()] &= ~(1 << i); // pressed
+					clear_bit(status[(pjoy)->GetPAD()], i); // pressed
 				else
-					status[(pjoy)->GetPAD()] |= (1 << i); // pressed
+					set_bit(status[(pjoy)->GetPAD()], i); // pressed
 			}
 		}
 		else if (IS_JOYSTICK(key))
 		{
 			int joyid = PAD_GETJOYID(key);
-			if (joyid >= 0 && joyid < (int)s_vjoysticks.size())
+			if ((joyid >= 0) && (joyid < (int)s_vjoysticks.size()))
 			{
 
 				pjoy = s_vjoysticks[joyid];
@@ -248,10 +269,29 @@ void CALLBACK PADupdate(int pad)
 				}
 			}
 		}
+#ifdef EXPERAMENTAL_POV_CODE
 		else if (IS_POV(key))
 		{
 			int joyid = PAD_GETJOYID(key);
-			if (joyid >= 0 && joyid < (int)s_vjoysticks.size())
+			if ((joyid >= 0) && (joyid < (int)s_vjoysticks.size()))
+			{
+				pjoy = s_vjoysticks[joyid];
+
+				int value = SDL_JoystickGetHat((pjoy)->GetJoy(), PAD_GETJOYSTICK_AXIS(key));
+				int pad = (pjoy)->GetPAD();
+				
+				//PAD_LOG("Hat = %d for key %d\n", PAD_GETPOVSIGN(key), key);
+				if PAD_GETPOVSIGN(key)
+					set_bit(status[pad], i);
+				else
+					clear_bit(status[pad], i);
+			}
+		}
+#else
+		else if (IS_POV(key))
+		{
+			int joyid = PAD_GETJOYID(key);
+			if (joyid >= 0 && (joyid < (int)s_vjoysticks.size()))
 			{
 				pjoy = s_vjoysticks[joyid];
 
@@ -259,20 +299,20 @@ void CALLBACK PADupdate(int pad)
 				int pad = (pjoy)->GetPAD();
 				
 				if (PAD_GETPOVSIGN(key) && (value < -2048))
-					status[pad] &= ~(1 << i);
+					clear_bit(status[pad], i);
 				else if (!PAD_GETPOVSIGN(key) && (value > 2048))
-					status[pad] &= ~(1 << i);
+					clear_bit(status[pad], i);
 				else
-					status[pad] |= (1 << i);
+					set_bit(status[pad], i);
 			}
 		}
-		// Need to add in new POV code here, to match the new configuration pov code.
+#endif
 	}
 #endif
 
 	pthread_spin_lock(&s_mutexStatus);
 	s_keyPress[pad] |= keyPress;
-	s_keyPress[pad] &= ~keyRelease;
+	s_keyPress[pad] &= ~keyRelease; 
 	s_keyRelease[pad] |= keyRelease;
 	s_keyRelease[pad] &= ~keyPress;
 	pthread_spin_unlock(&s_mutexStatus);
@@ -288,8 +328,7 @@ void UpdateConf(int pad)
 	for (i = 0; i < ArraySize(s_pGuiKeyMap); i++)
 	{
 
-		if (s_pGuiKeyMap[i] == NULL)
-			continue;
+		if (s_pGuiKeyMap[i] == NULL) continue;
 
 		Btn = lookup_widget(Conf, GetLabelFromButton(s_pGuiKeyMap[i]).c_str());
 		if (Btn == NULL)
@@ -306,19 +345,43 @@ void UpdateConf(int pad)
 		}
 		else if (IS_JOYBUTTONS(conf.keys[pad][i]))
 		{
-			tmp.resize(20);
+			tmp.resize(28);
 			sprintf(&tmp[0], "JBut %d", PAD_GETJOYBUTTON(conf.keys[pad][i]));
 		}
 		else if (IS_JOYSTICK(conf.keys[pad][i]))
 		{
-			tmp.resize(20);
+			tmp.resize(28);
 			sprintf(&tmp[0], "JAxis %d", PAD_GETJOYSTICK_AXIS(conf.keys[pad][i]));
 		}
 		else if (IS_POV(conf.keys[pad][i]))
+#ifdef EXPERAMENTAL_POV_CODE
 		{
-			tmp.resize(20);
+			tmp.resize(28);
+			switch(PAD_GETPOVSIGN(conf.keys[pad][i]))
+			{
+				case SDL_HAT_UP:
+					sprintf(&tmp[0], "JPOVU-%d", PAD_GETJOYSTICK_AXIS(conf.keys[pad][i]));
+					break;
+					
+				case SDL_HAT_RIGHT:
+					sprintf(&tmp[0], "JPOVR-%d", PAD_GETJOYSTICK_AXIS(conf.keys[pad][i]));
+					break;
+					
+				case SDL_HAT_DOWN:
+					sprintf(&tmp[0], "JPOVD-%d", PAD_GETJOYSTICK_AXIS(conf.keys[pad][i]));
+					break;
+					
+				case SDL_HAT_LEFT:
+					sprintf(&tmp[0], "JPOVL-%d", PAD_GETJOYSTICK_AXIS(conf.keys[pad][i]));
+					break;
+			}
+		}
+#else
+		{
+			tmp.resize(28);
 			sprintf(&tmp[0], "JPOV %d%s", PAD_GETJOYSTICK_AXIS(conf.keys[pad][i]), PAD_GETPOVSIGN(conf.keys[pad][i]) ? "-" : "+");
 		}
+#endif
 
 		if (tmp.size() > 0)
 		{
@@ -327,13 +390,13 @@ void UpdateConf(int pad)
 		else
 			gtk_entry_set_text(GTK_ENTRY(Btn), "Unknown");
 
-		gtk_object_set_user_data(GTK_OBJECT(Btn), (void*)(PADKEYS*pad + i));
+		gtk_object_set_user_data(GTK_OBJECT(Btn), (void*)(PADKEYS * pad + i));
 	}
 
 	// check bounds
 	int joyid = _GetJoystickIdFromPAD(pad);
 	
-	if (joyid < 0 || joyid >= (int)s_vjoysticks.size())
+	if ((joyid < 0) || (joyid >= (int)s_vjoysticks.size()))
 	{
 		// get first unused joystick
 		for (joyid = 0; joyid < s_vjoysticks.size(); ++joyid)
@@ -348,17 +411,20 @@ void UpdateConf(int pad)
 		gtk_combo_box_set_active(GTK_COMBO_BOX(s_devicecombo), s_vjoysticks.size()); // no gamepad
 
 	int padopts = conf.options >> (16 * pad);
-	gtk_toggle_button_set_state(GTK_TOGGLE_BUTTON(lookup_widget(Conf, "checkbutton_reverselx")), padopts&PADOPTION_REVERTLX);
-	gtk_toggle_button_set_state(GTK_TOGGLE_BUTTON(lookup_widget(Conf, "checkbutton_reversely")), padopts&PADOPTION_REVERTLY);
-	gtk_toggle_button_set_state(GTK_TOGGLE_BUTTON(lookup_widget(Conf, "checkbutton_reverserx")), padopts&PADOPTION_REVERTRX);
-	gtk_toggle_button_set_state(GTK_TOGGLE_BUTTON(lookup_widget(Conf, "checkbutton_reversery")), padopts&PADOPTION_REVERTRY);
-	gtk_toggle_button_set_state(GTK_TOGGLE_BUTTON(lookup_widget(Conf, "forcefeedback")), padopts&PADOPTION_FORCEFEEDBACK);
+	
+	set_checked(Conf, "checkbutton_reverselx", padopts & PADOPTION_REVERTLX);
+	set_checked(Conf, "checkbutton_reversely", padopts & PADOPTION_REVERTLY);
+	set_checked(Conf, "checkbutton_reverserx", padopts & PADOPTION_REVERTRX);
+	set_checked(Conf, "checkbutton_reversery", padopts & PADOPTION_REVERTRY);
+	set_checked(Conf, "forcefeedback", padopts & PADOPTION_FORCEFEEDBACK);
 }
 
 void OnConf_Key(GtkButton *button, gpointer user_data)
 {
 	GdkEvent *ev;
-	GtkWidget* label = lookup_widget(Conf, GetLabelFromButton(gtk_button_get_label(button)).c_str());
+	const char* buttonname = gtk_widget_get_name(GTK_WIDGET(button));//gtk_button_get_label(button);
+	const char* labelname = GetLabelFromButton(buttonname).c_str();
+	GtkWidget* label = lookup_widget(Conf, labelname);
 	if (label == NULL)
 	{
 		PAD_LOG("couldn't find correct label\n");
@@ -368,7 +434,8 @@ void OnConf_Key(GtkButton *button, gpointer user_data)
 	int id = (int)(uptr)gtk_object_get_user_data(GTK_OBJECT(label));
 	int pad = id / PADKEYS;
 	int key = id % PADKEYS;
-	unsigned long *pkey = &conf.keys[pad][key];
+	PAD_LOG("Button = '%s', Label = '%s', id = %d, pad = %d, key = %d\n", buttonname, labelname, id, pad, key);
+	u32 *pkey = &conf.keys[pad][key];
 
 	// save the states
 #ifdef JOYSTICK_SUPPORT
@@ -478,23 +545,23 @@ void OnConf_Key(GtkButton *button, gpointer user_data)
 						char str[32];
 						
 						case SDL_HAT_UP:
-							*pkey = PAD_POV((*itjoy)->GetId(), value < 0, i);
-							sprintf(str, "JPOV%d%s", i, "U");
+							*pkey = PAD_POV((*itjoy)->GetId(), value, i);
+							sprintf(str, "JPOVU-%d", i);
 							gtk_entry_set_text(GTK_ENTRY(label), str);
 							return;
 						case SDL_HAT_RIGHT:
-							*pkey = PAD_POV((*itjoy)->GetId(), value < 0, i);
-							sprintf(str, "JPOV%d%s", i, "R");
+							*pkey = PAD_POV((*itjoy)->GetId(), value, i);
+							sprintf(str, "JPOVR-%d", i);
 							gtk_entry_set_text(GTK_ENTRY(label), str);
 							return;
 						case SDL_HAT_DOWN:
-							*pkey = PAD_POV((*itjoy)->GetId(), value < 0, i);
-							sprintf(str, "JPOV%d%s", i, "D");
+							*pkey = PAD_POV((*itjoy)->GetId(), value, i);
+							sprintf(str, "JPOVD-%d", i);
 							gtk_entry_set_text(GTK_ENTRY(label), str);
 							return;
 						case SDL_HAT_LEFT:
-							*pkey = PAD_POV((*itjoy)->GetId(), value < 0, i);
-							sprintf(str, "JPOV%d%s", i, "L");
+							*pkey = PAD_POV((*itjoy)->GetId(), value, i);
+							sprintf(str, "JPOVL-%d", i);
 							gtk_entry_set_text(GTK_ENTRY(label), str);
 							return;
 						// Not handling SDL_HAT_RIGHTUP, SDL_HAT_RIGHTDOWN, 
