@@ -35,6 +35,7 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 	static const u16 flipMask[16] = {0, 8, 4, 12, 2, 10, 6, 14, 1, 9, 5, 13, 3, 11, 7, 15};
 
 	//SysPrintf("doStatus = %d; doMac = %d\n", doStatus>>9, doMac>>8);
+	if (mVUflagHack) { mVUinfo &= ~_doStatus; }
 	if (!doFlags) return;
 	if (!doMac) { regT1 = reg; }
 	else		{ SSE2_PSHUFD_XMM_to_XMM(regT1, reg, 0x1B); } // Flip wzyx to xyzw

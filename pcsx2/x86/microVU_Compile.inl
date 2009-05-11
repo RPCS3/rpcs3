@@ -118,10 +118,12 @@ microVUt(void) mVUendProgram(int fStatus, int fMac, int fClip) {
 	}
 
 	// Save Flag Instances
-	getFlagReg(fStatus, fStatus);
+	if (!mVUflagHack) {
+		getFlagReg(fStatus, fStatus);
+		MOV32RtoM((uptr)&mVU->regs->VI[REG_STATUS_FLAG].UL,	fStatus);
+	}
 	mVUallocMFLAGa<vuIndex>(gprT1, fMac);
 	mVUallocCFLAGa<vuIndex>(gprT2, fClip);
-	MOV32RtoM((uptr)&mVU->regs->VI[REG_STATUS_FLAG].UL,	fStatus);
 	MOV32RtoM((uptr)&mVU->regs->VI[REG_MAC_FLAG].UL,	gprT1);
 	MOV32RtoM((uptr)&mVU->regs->VI[REG_CLIP_FLAG].UL,	gprT2);
 

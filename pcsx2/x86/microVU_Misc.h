@@ -160,7 +160,8 @@ declareAllVariables
 #define mVUregs		 mVUallocInfo.block.pState
 #define mVUregsTemp	 mVUallocInfo.regsTemp
 #define iPC			 mVUallocInfo.curPC
-#define mVUflagInfo	 mVUregs.needExactMatch //mVUallocInfo.flagInfo
+#define mVUflagInfo	 mVUregs.needExactMatch
+#define mVUsFlagHack mVUallocInfo.sFlagHack
 #define mVUinfo		 mVUallocInfo.info[iPC / 2]
 #define mVUstall	 mVUallocInfo.stall[iPC / 2]
 #define mVUstartPC	 mVUallocInfo.startPC
@@ -285,6 +286,10 @@ declareAllVariables
 #define mVUlog 0&&
 #define mVUdumpProg 0&&
 #endif
+
+// Status Flag Speed Hack
+#define CHECK_VU_FLAGHACK 0 // Set to 1 to turn hack on
+#define mVUflagHack (mVUcurProg.sFlagHack)
 
 // Cache Limit Check
 #define mVUcacheCheck(ptr, start, limit) {  \

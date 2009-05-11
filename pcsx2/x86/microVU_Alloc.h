@@ -75,7 +75,7 @@ struct microAllocInfo {
 	u32 count;			// Number of VU 64bit instructions ran (starts at 0 for each block)
 	u32 curPC;			// Current PC
 	u32 startPC;		// Start PC for Cur Block
-	u32 flagInfo;		// Holds information to help with flag instances on block linking
+	u32 sFlagHack;		// Optimize out all Status flag updates if microProgram doesn't use Status flags
 	u32 info[pSize/8];	// Info for Instructions in current block
 	u8 stall[pSize/8];	// Info on how much each instruction stalled (stores the max amount of cycles to stall for the current opcodes)
 };

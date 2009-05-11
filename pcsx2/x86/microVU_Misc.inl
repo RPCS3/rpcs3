@@ -299,4 +299,21 @@ microVUt(void) mVUrestoreRegs() {
 	POP32R(gprR); // Restore EDX
 }
 
+
+microVUt(void) mVUcheckSflag(int progIndex) {
+	if (CHECK_VU_FLAGHACK) {
+
+		microVU* mVU = mVUx;
+		mVUsFlagHack = 1;
+		for (u32 i = 0; i < mVU->progSize; i+=2) {
+			mVU->code = mVU->prog.prog[progIndex].data[i+1];
+			mVUopU<vuIndex, 3>();
+			mVU->code = mVU->prog.prog[progIndex].data[i];
+			mVUopL<vuIndex, 3>();
+		}
+		mVUflagInfo = 0;
+		mVU->prog.prog[progIndex].sFlagHack = mVUsFlagHack;
+	}
+}
+
 #endif //PCSX2_MICROVU

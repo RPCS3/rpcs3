@@ -128,6 +128,7 @@ microVUt(void) mVUclear(u32 addr, u32 size) {
 microVUt(void) mVUclearProg(int progIndex) {
 	microVU* mVU = mVUx;
 	mVU->prog.prog[progIndex].used = 1;
+	mVU->prog.prog[progIndex].sFlagHack = 0;
 	mVU->prog.prog[progIndex].x86ptr = mVU->prog.prog[progIndex].x86start;
 	for (u32 i = 0; i < (mVU->progSize / 2); i++) {
 		mVU->prog.prog[progIndex].block[i]->reset();
@@ -139,6 +140,7 @@ microVUt(void) mVUcacheProg(int progIndex) {
 	microVU* mVU = mVUx;
 	memcpy_fast(mVU->prog.prog[progIndex].data, mVU->regs->Micro, mVU->microSize);
 	mVUdumpProg(progIndex);
+	mVUcheckSflag<vuIndex>(progIndex);
 }
 
 // Finds the least used program, (if program list full clears and returns an old program; if not-full, returns free program)

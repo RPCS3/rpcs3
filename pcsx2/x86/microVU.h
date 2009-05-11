@@ -68,6 +68,7 @@ template<u32 progSize>
 struct microProgram {
 	u32 data[progSize/4];
 	u32 used;		// Number of times its been used
+	u32 sFlagHack;	// Optimize out Status Flag Updates if Program doesn't use Status Flags
 	u8* x86ptr;		// Pointer to program's recompilation code
 	u8* x86start;	// Start of program's rec-cache
 	u8* x86end;		// Limit of program's rec-cache

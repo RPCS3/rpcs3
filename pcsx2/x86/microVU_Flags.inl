@@ -151,7 +151,7 @@ microVUt(int) mVUsetFlags(int* xStatus, int* xMac, int* xClip) {
 microVUt(void) mVUsetupFlags(int* xStatus, int* xMac, int* xClip, int cycles) {
 	microVU* mVU = mVUx;
 
-	if (__Status) {
+	if (__Status && !mVUflagHack) {
 		int bStatus[4];
 		sortFlag(xStatus, bStatus, cycles);
 		PUSH32R(gprR); // Backup gprR
