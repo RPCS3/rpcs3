@@ -166,7 +166,7 @@ void GSTexture7::Unmap()
 	}
 }
 
-bool GSTexture7::Save(CString fn, bool dds)
+bool GSTexture7::Save(const string& fn, bool dds)
 {
 	// TODO
 

@@ -239,9 +239,7 @@ EXPORT_C GPUupdateLace()
 
 EXPORT_C GPUmakeSnapshot()
 {
-	LPCTSTR path = _T("C:\\"); // TODO
-
-	s_gpu->MakeSnapshot(path);
+	s_gpu->MakeSnapshot("c:\\"); // TODO
 }
 
 EXPORT_C GPUdisplayText(char* text)

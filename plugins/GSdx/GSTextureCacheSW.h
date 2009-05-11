@@ -39,7 +39,6 @@ public:
 		DWORD m_tw;
 		DWORD m_valid[MAX_PAGES]; // each DWORD bits map to the 32 blocks of that page
 		DWORD m_age;
-		POSITION m_pos;
 		bool m_complete;
 
 		explicit GSTexture(GSState* state);
@@ -50,8 +49,8 @@ public:
 
 protected:
 	GSState* m_state;
-	CAtlList<GSTexture*> m_textures;
-	CAtlMap<GSTexture*, bool> m_map[MAX_PAGES];
+	hash_map<GSTexture*, bool> m_textures;
+	hash_map<GSTexture*, bool> m_map[MAX_PAGES];
 
 public:
 	GSTextureCacheSW(GSState* state);

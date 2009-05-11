@@ -46,7 +46,7 @@ struct InterlaceConstantBuffer
 
 template<class Texture> class GSDevice
 {
-	CAtlList<Texture> m_pool;
+	list<Texture> m_pool;
 
 protected:
 	HWND m_hWnd;
@@ -62,15 +62,15 @@ protected:
 	{
 		Recycle(t);
 
-		for(POSITION pos = m_pool.GetHeadPosition(); pos; m_pool.GetNext(pos))
+		for(list<Texture>::iterator i = m_pool.begin(); i != m_pool.end(); i++)
 		{
-			const Texture& t2 = m_pool.GetAt(pos);
+			const Texture& t2 = *i;
 
 			if(t2.GetType() == type && t2.GetWidth() == w && t2.GetHeight() == h && t2.GetFormat() == format)
 			{
 				t = t2;
 
-				m_pool.RemoveAt(pos);
+				m_pool.erase(i);
 
 				return true;
 			}
@@ -102,7 +102,7 @@ public:
 	
 	virtual bool Reset(int w, int h, bool fs)
 	{
-		m_pool.RemoveAll();
+		m_pool.clear();
 		m_backbuffer = Texture();
 		m_merge = Texture();
 		m_weavebob = Texture();
@@ -121,7 +121,7 @@ public:
 
 	virtual void EndScene() = 0;
 
-	virtual void Draw(LPCTSTR str) = 0;
+	virtual void Draw(const string& s) = 0;
 
 	virtual bool CopyOffscreen(Texture& src, const GSVector4& sr, Texture& dst, int w, int h, int format = 0) = 0;
 
@@ -157,18 +157,18 @@ public:
 	{
 		if(t)
 		{
-			m_pool.AddHead(t);
+			m_pool.push_front(t);
 
-			while(m_pool.GetCount() > 200)
+			while(m_pool.size() > 200)
 			{
-				m_pool.RemoveTail();
+				m_pool.pop_back();
 			}
 
 			t = Texture();
 		}
 	}
 
-	bool SaveCurrent(LPCTSTR fn)
+	bool SaveCurrent(const string& fn)
 	{
 		return m_current.Save(fn);
 	}

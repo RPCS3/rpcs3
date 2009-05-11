@@ -62,9 +62,17 @@ CRect GSDirtyRect::GetDirtyRect(const GIFRegTEX0& TEX0)
 
 CRect GSDirtyRectList::GetDirtyRect(const GIFRegTEX0& TEX0, CSize size)
 {
-	if(IsEmpty()) return CRect(0, 0, 0, 0);
+	if(empty())
+	{
+		return CRect(0, 0, 0, 0);
+	}
+	
 	CRect r(INT_MAX, INT_MAX, 0, 0);
-	POSITION pos = GetHeadPosition();
-	while(pos) r |= GetNext(pos).GetDirtyRect(TEX0);
+
+	for(list<GSDirtyRect>::iterator i = begin(); i != end(); i++)
+	{
+		r |= i->GetDirtyRect(TEX0);
+	}
+
 	return r & CRect(0, 0, size.cx, size.cy);
 }

@@ -40,5 +40,5 @@ public:
 	bool Update(const CRect& r, const void* data, int pitch) {return true;}
 	bool Map(BYTE** bits, int& pitch, const RECT* r = NULL) {return true;}
 	void Unmap() {}
-	bool Save(CString fn, bool dds = false) {return false;}
+	bool Save(const string& fn, bool dds = false) {return false;}
 };

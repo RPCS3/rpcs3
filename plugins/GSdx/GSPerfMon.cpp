@@ -33,7 +33,6 @@ GSPerfMon::GSPerfMon()
 {
 	memset(m_counters, 0, sizeof(m_counters));
 	memset(m_stats, 0, sizeof(m_stats));
-	memset(m_warnings, 0, sizeof(m_warnings));
 }
 
 void GSPerfMon::Put(counter_t c, double val)

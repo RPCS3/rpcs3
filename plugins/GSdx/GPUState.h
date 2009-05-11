@@ -88,7 +88,7 @@ protected:
 
 	int s_n;
 
-	void Dump(LPCTSTR s, UINT32 TP, const CRect& r, int inc = true)
+	void Dump(const string& s, UINT32 TP, const CRect& r, int inc = true)
 	{
 		//if(m_perfmon.GetFrame() < 1000) 
 		//if((m_env.TWIN.ai32 & 0xfffff) == 0)
@@ -103,12 +103,10 @@ protected:
 #ifdef DEBUG
 		dir = 2;
 #endif
-		CString str;
-		str.Format(_T("c:\\temp%d\\%04d_%s.bmp"), dir, s_n, s);
-		m_mem.SaveBMP(str, r, TP, m_env.CLUT.X, m_env.CLUT.Y);
+		m_mem.SaveBMP(format("c:\\temp%d\\%04d_%s.bmp", dir, s_n, s), r, TP, m_env.CLUT.X, m_env.CLUT.Y);
 	}
 
-	void Dump(LPCTSTR s, int inc = true)
+	void Dump(const string& s, int inc = true)
 	{
 		Dump(s, 2, CRect(0, 0, 1024, 512), inc);
 	}

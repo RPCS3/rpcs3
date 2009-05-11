@@ -35,7 +35,7 @@ GSWnd::~GSWnd()
 	DestroyWindow();
 }
 
-bool GSWnd::Create(LPCTSTR title)
+bool GSWnd::Create(const string& title)
 {
 	CRect r;
 
@@ -53,7 +53,7 @@ bool GSWnd::Create(LPCTSTR title)
 
 	LPCTSTR wc = AfxRegisterWndClass(CS_VREDRAW|CS_HREDRAW|CS_DBLCLKS, AfxGetApp()->LoadStandardCursor(IDC_ARROW), 0, 0);
 
-	return !!CreateEx(0, wc, title, WS_OVERLAPPEDWINDOW, r, NULL, 0);
+	return !!CreateEx(0, wc, title.c_str(), WS_OVERLAPPEDWINDOW, r, NULL, 0);
 }
 
 void GSWnd::Show()

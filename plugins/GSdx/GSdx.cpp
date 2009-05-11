@@ -21,6 +21,8 @@
 
 #include "stdafx.h"
 #include "GSdx.h"
+#include <atlbase.h>
+#include <atlpath.h>
 
 //
 //	Note!

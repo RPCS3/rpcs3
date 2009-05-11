@@ -44,11 +44,11 @@ int GSCaptureDlg::GetSelCodec(Codec& c)
 
 	if(iSel < 0) return 0;
 
-	POSITION pos = (POSITION)m_codeclist.GetItemDataPtr(iSel);
+	Codec* codec = (Codec*)m_codeclist.GetItemDataPtr(iSel);
 
-	if(pos == NULL) return 2;
+	if(codec == NULL) return 2;
 
-	c = m_codecs.GetAt(pos);
+	c = *codec;
 
 	if(!c.filter)
 	{
@@ -83,7 +83,7 @@ BOOL GSCaptureDlg::OnInitDialog()
 {
 	__super::OnInitDialog();
 
-	m_codecs.RemoveAll();
+	m_codecs.clear();
 
 	m_codeclist.ResetContent();
 	m_codeclist.SetItemDataPtr(m_codeclist.AddString(_T("Uncompressed")), NULL);
@@ -116,7 +116,8 @@ BOOL GSCaptureDlg::OnInitDialog()
 		else if(str.Find(L"@device:cm:") == 0) prefix = _T("(VfW) ");
 		c.FriendlyName = prefix + c.FriendlyName;
 
-		m_codeclist.SetItemDataPtr(m_codeclist.AddString(c.FriendlyName), m_codecs.AddTail(c));
+		m_codecs.push_back(c);
+		m_codeclist.SetItemDataPtr(m_codeclist.AddString(c.FriendlyName), &m_codecs.back());
 	}
 	EndEnumSysDev
 
@@ -128,13 +129,17 @@ BOOL GSCaptureDlg::OnInitDialog()
 	{
 		CString DisplayName;
 
-		POSITION pos = (POSITION)m_codeclist.GetItemDataPtr(i);
+		Codec* codec = (Codec*)m_codeclist.GetItemDataPtr(i);
 
-		if(pos) DisplayName = m_codecs.GetAt(pos).DisplayName;
+		if(codec)
+		{
+			DisplayName = codec->DisplayName;
+		}
 
 		if(DisplayName == DisplayNameToFind)
 		{
 			m_codeclist.SetCurSel(i);
+
 			break;
 		}
 	}

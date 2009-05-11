@@ -60,7 +60,7 @@ GSSource : public CBaseFilter, private CCritSec, public IGSSource
 	class GSSourceOutputPin : public CBaseOutputPin
 	{
 		CSize m_size;
-		CAtlArray<CMediaType> m_mts;
+		vector<CMediaType> m_mts;
 
 	public:
 		GSSourceOutputPin(CSize size, REFERENCE_TIME atpf, CBaseFilter* pFilter, CCritSec* pLock, HRESULT& hr)
@@ -91,7 +91,7 @@ GSSource : public CBaseFilter, private CCritSec, public IGSSource
 			vih.bmiHeader.biSizeImage = m_size.cx * m_size.cy * 2;
 			mt.SetFormat((BYTE*)&vih, sizeof(vih));
 
-			m_mts.Add(mt);
+			m_mts.push_back(mt);
 
 			#endif
 
@@ -106,7 +106,7 @@ GSSource : public CBaseFilter, private CCritSec, public IGSSource
 			vih.bmiHeader.biSizeImage = m_size.cx * m_size.cy * 4;
 			mt.SetFormat((BYTE*)&vih, sizeof(vih));
 
-			m_mts.Add(mt);
+			m_mts.push_back(mt);
 		}
 
 		HRESULT GSSourceOutputPin::DecideBufferSize(IMemAllocator* pAlloc, ALLOCATOR_PROPERTIES* pProperties)
@@ -137,9 +137,9 @@ GSSource : public CBaseFilter, private CCritSec, public IGSSource
 
 	    HRESULT CheckMediaType(const CMediaType* pmt)
 		{
-			for(int i = 0, j = m_mts.GetCount(); i < j; i++)
+			for(vector<CMediaType>::iterator i = m_mts.begin(); i != m_mts.end(); i++)
 			{
-				if(m_mts[i].majortype == pmt->majortype && m_mts[i].subtype == pmt->subtype)
+				if(i->majortype == pmt->majortype && i->subtype == pmt->subtype)
 				{
 					return S_OK;
 				}

@@ -29,7 +29,7 @@ class GPUSettingsDlg : public CDialog
 	DECLARE_DYNAMIC(GPUSettingsDlg)
 
 private:
-	CAtlList<D3DDISPLAYMODE> m_modes;
+	list<D3DDISPLAYMODE> m_modes;
 
 public:
 	GPUSettingsDlg(CWnd* pParent = NULL);   // standard constructor

@@ -33,7 +33,7 @@ GSRendererHW9::GSRendererHW9(BYTE* base, bool mt, void (*irq)(), const GSRendere
 	InitVertexKick<GSRendererHW9>();
 }
 
-bool GSRendererHW9::Create(LPCTSTR title)
+bool GSRendererHW9::Create(const string& title)
 {
 	if(!__super::Create(title))
 		return false;

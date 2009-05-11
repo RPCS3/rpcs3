@@ -139,7 +139,7 @@ public:
 	void Present(const CRect& r);
 	void BeginScene();
 	void EndScene();
-	void Draw(LPCTSTR str);
+	void Draw(const string& s);
 	bool CopyOffscreen(Texture& src, const GSVector4& sr, Texture& dst, int w, int h, int format = 0);
 
 	void ClearRenderTarget(Texture& t, const GSVector4& c);
@@ -179,14 +179,11 @@ public:
 	void StretchRect(Texture& st, const GSVector4& sr, Texture& dt, const GSVector4& dr, IDirect3DPixelShader9* ps, const float* ps_cb, int ps_cb_len, bool linear = true);
 	void StretchRect(Texture& st, const GSVector4& sr, Texture& dt, const GSVector4& dr, IDirect3DPixelShader9* ps, const float* ps_cb, int ps_cb_len, Direct3DBlendState9* bs, bool linear = true);
 
-	HRESULT CompileShader(UINT id, LPCSTR entry, const D3DXMACRO* macro, IDirect3DVertexShader9** vs, const D3DVERTEXELEMENT9* layout, int count, IDirect3DVertexDeclaration9** il);
-	HRESULT CompileShader(UINT id, LPCSTR entry, const D3DXMACRO* macro, IDirect3DPixelShader9** ps);
+	HRESULT CompileShader(UINT id, const string& entry, const D3DXMACRO* macro, IDirect3DVertexShader9** vs, const D3DVERTEXELEMENT9* layout, int count, IDirect3DVertexDeclaration9** il);
+	HRESULT CompileShader(UINT id, const string& entry, const D3DXMACRO* macro, IDirect3DPixelShader9** ps);
 
 	virtual bool IsCurrentRGBA()
 	{
 		return false;
 	}
-
-	// TODO
-	bool SaveToFileD24S8(IDirect3DSurface9* ds, LPCTSTR fn);
 };

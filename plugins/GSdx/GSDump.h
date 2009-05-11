@@ -55,7 +55,7 @@ public:
 	GSDump();
 	virtual ~GSDump();
 
-	void Open(const CString& fn, DWORD crc, const GSFreezeData& fd, const GSPrivRegSet* regs);
+	void Open(const string& fn, DWORD crc, const GSFreezeData& fd, const GSPrivRegSet* regs);
 	void Close();
 	void ReadFIFO(UINT32 size);
 	void Transfer(int index, BYTE* mem, size_t size);

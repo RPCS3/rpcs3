@@ -23,7 +23,7 @@
 
 class GSCodeBuffer
 {
-	CAtlList<void*> m_buffers;
+	list<void*> m_buffers;
 	size_t m_blocksize;
 	size_t m_pos, m_reserved;
 	BYTE* m_ptr;

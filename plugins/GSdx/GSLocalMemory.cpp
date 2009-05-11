@@ -465,11 +465,9 @@ GSLocalMemory::~GSLocalMemory()
 {
 	VirtualFree(m_vm8, 0, MEM_RELEASE);
 
-	POSITION pos = m_omap.GetHeadPosition();
-
-	while(pos)
+	for(hash_map<DWORD, Offset*>::iterator i = m_omap.begin(); i != m_omap.end(); i++)
 	{
-		Offset* o = m_omap.GetNextValue(pos);
+		Offset* o = (*i).second;
 
 		for(int i = 0; i < countof(o->col); i++)
 		{
@@ -479,16 +477,10 @@ GSLocalMemory::~GSLocalMemory()
 		_aligned_free(o);
 	}
 
-	m_omap.RemoveAll();
-
-	pos = m_o4map.GetHeadPosition();
-
-	while(pos)
+	for(hash_map<DWORD, Offset4*>::iterator i = m_o4map.begin(); i != m_o4map.end(); i++)
 	{
-		_aligned_free(m_o4map.GetNextValue(pos));
+		_aligned_free((*i).second);
 	}
-
-	m_o4map.RemoveAll();
 }
 
 GSLocalMemory::Offset* GSLocalMemory::GetOffset(DWORD bp, DWORD bw, DWORD psm)
@@ -499,9 +491,11 @@ GSLocalMemory::Offset* GSLocalMemory::GetOffset(DWORD bp, DWORD bw, DWORD psm)
 
 	DWORD hash = bp | (bw << 14) | (psm << 20);
 
-	if(CRBMap<DWORD, Offset*>::CPair* pair = m_omap.Lookup(hash))
+	hash_map<DWORD, Offset*>::iterator i = m_omap.find(hash);
+
+	if(i != m_omap.end())
 	{
-		return pair->m_value;
+		return (*i).second;
 	}
 
 	Offset* o = (Offset*)_aligned_malloc(sizeof(Offset), 16);
@@ -524,7 +518,7 @@ GSLocalMemory::Offset* GSLocalMemory::GetOffset(DWORD bp, DWORD bw, DWORD psm)
 		memcpy(o->col[i], m_psm[psm].rowOffset[0], sizeof(int) * 2048);
 	}
 
-	m_omap.SetAt(hash, o);
+	m_omap[hash] = o;
 
 	return o;
 }
@@ -546,9 +540,11 @@ GSLocalMemory::Offset4* GSLocalMemory::GetOffset4(const GIFRegFRAME& FRAME, cons
 
 	DWORD hash = (FRAME.FBP << 0) | (ZBUF.ZBP << 9) | (bw << 18) | (fpsm_hash << 24) | (zpsm_hash << 28);
 
-	if(CRBMap<DWORD, Offset4*>::CPair* pair = m_o4map.Lookup(hash))
+	hash_map<DWORD, Offset4*>::iterator i = m_o4map.find(hash);
+
+	if(i != m_o4map.end())
 	{
-		return pair->m_value;
+		return (*i).second;
 	}
 
 	Offset4* o = (Offset4*)_aligned_malloc(sizeof(Offset4), 16);
@@ -573,7 +569,7 @@ GSLocalMemory::Offset4* GSLocalMemory::GetOffset4(const GIFRegFRAME& FRAME, cons
 		o->col[i].y = m_psm[zpsm].rowOffset[0][i * 4] << zs;
 	}
 
-	m_o4map.SetAt(hash, o);
+	m_o4map[hash] = o;
 
 	return o;
 }
@@ -2543,7 +2539,7 @@ if(!aligned) printf("unaligned memory pointer passed to ReadTexture\n");
 	}
 }
 
-HRESULT GSLocalMemory::SaveBMP(LPCTSTR fn, DWORD bp, DWORD bw, DWORD psm, int w, int h)
+HRESULT GSLocalMemory::SaveBMP(const string& fn, DWORD bp, DWORD bw, DWORD psm, int w, int h)
 {
 	int pitch = w * 4;
 	int size = pitch * h;
@@ -2571,7 +2567,7 @@ HRESULT GSLocalMemory::SaveBMP(LPCTSTR fn, DWORD bp, DWORD bw, DWORD psm, int w,
 		for(int i = 0; i < w; i++)
 			((DWORD*)p)[i] = (this->*rp)(i, j, TEX0.TBP0, TEX0.TBW);
 
-	if(FILE* fp = _tfopen(fn, _T("wb")))
+	if(FILE* fp = fopen(fn.c_str(), "wb"))
 	{
 		BITMAPINFOHEADER bih;
 		memset(&bih, 0, sizeof(bih));

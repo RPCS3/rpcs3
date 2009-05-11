@@ -136,17 +136,17 @@ BOOL GPUSettingsDlg::OnInitDialog()
 	memset(&caps, 0, sizeof(caps));
 	caps.PixelShaderVersion = D3DPS_VERSION(0, 0);
 
-	m_modes.RemoveAll();
+	m_modes.clear();
 
 	// windowed
 
 	{
 		D3DDISPLAYMODE mode;
 		memset(&mode, 0, sizeof(mode));
-		m_modes.AddTail(mode);
+		m_modes.push_back(mode);
 
 		int iItem = m_resolution.AddString(_T("Windowed"));
-		m_resolution.SetItemDataPtr(iItem, m_modes.GetTailPosition());
+		m_resolution.SetItemDataPtr(iItem, &m_modes.back());
 		m_resolution.SetCurSel(iItem);
 	}
 
@@ -170,8 +170,8 @@ BOOL GPUSettingsDlg::OnInitDialog()
 				str.Format(_T("%dx%d %dHz"), mode.Width, mode.Height, mode.RefreshRate);
 				int iItem = m_resolution.AddString(str);
 
-				m_modes.AddTail(mode);
-				m_resolution.SetItemDataPtr(iItem, m_modes.GetTailPosition());
+				m_modes.push_back(mode);
+				m_resolution.SetItemDataPtr(iItem, &m_modes.back());
 
 				if(ModeWidth == mode.Width && ModeHeight == mode.Height && ModeRefreshRate == mode.RefreshRate)
 				{
@@ -185,16 +185,16 @@ BOOL GPUSettingsDlg::OnInitDialog()
 
 	bool isdx10avail = GSUtil::IsDirect3D10Available();
 
-	CAtlArray<GSSetting> renderers;
+	vector<GSSetting> renderers;
 
 	for(size_t i = 0; i < countof(g_renderers); i++)
 	{
 		if(i == 2 && !isdx10avail) continue;
 
-		renderers.Add(g_renderers[i]);
+		renderers.push_back(g_renderers[i]);
 	}
 
-	GSSetting::InitComboBox(renderers.GetData(), renderers.GetCount(), m_renderer, pApp->GetProfileInt(_T("GPUSettings"), _T("Renderer"), 1));
+	GSSetting::InitComboBox(&renderers[0], renderers.size(), m_renderer, pApp->GetProfileInt(_T("GPUSettings"), _T("Renderer"), 1));
 	GSSetting::InitComboBox(g_psversion, countof(g_psversion), m_psversion, pApp->GetProfileInt(_T("Settings"), _T("PixelShaderVersion2"), D3DPS_VERSION(2, 0)), caps.PixelShaderVersion);
 	GSSetting::InitComboBox(g_filter, countof(g_filter), m_filter, pApp->GetProfileInt(_T("GPUSettings"), _T("filter"), 0));
 	GSSetting::InitComboBox(g_dithering, countof(g_dithering), m_dithering, pApp->GetProfileInt(_T("GPUSettings"), _T("dithering"), 1));
@@ -225,7 +225,8 @@ void GPUSettingsDlg::OnOK()
 
 	if(m_resolution.GetCurSel() >= 0)
 	{
-        D3DDISPLAYMODE& mode = m_modes.GetAt((POSITION)m_resolution.GetItemData(m_resolution.GetCurSel()));
+		D3DDISPLAYMODE& mode = *(D3DDISPLAYMODE*)m_resolution.GetItemData(m_resolution.GetCurSel());
+
 		pApp->WriteProfileInt(_T("Settings"), _T("ModeWidth"), mode.Width);
 		pApp->WriteProfileInt(_T("Settings"), _T("ModeHeight"), mode.Height);
 		pApp->WriteProfileInt(_T("Settings"), _T("ModeRefreshRate"), mode.RefreshRate);

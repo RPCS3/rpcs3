@@ -1000,11 +1000,11 @@ void GSState::FlushWrite()
 	InvalidateVideoMem(m_env.BITBLTBUF, r);
 /*
 	static int n = 0;
-	CString str;
-	str.Format(_T("c:\\temp1\\[%04d]_%05x_%d_%d_%d_%d_%d_%d.bmp"), 
+	string s;
+	s = format("c:\\temp1\\[%04d]_%05x_%d_%d_%d_%d_%d_%d.bmp", 
 		n++, (int)m_env.BITBLTBUF.DBP, (int)m_env.BITBLTBUF.DBW, (int)m_env.BITBLTBUF.DPSM, 
 		r.left, r.top, r.right, r.bottom);
-	m_mem.SaveBMP(str, m_env.BITBLTBUF.DBP, m_env.BITBLTBUF.DBW, m_env.BITBLTBUF.DPSM, r.right, r.bottom);
+	m_mem.SaveBMP(s, m_env.BITBLTBUF.DBP, m_env.BITBLTBUF.DBW, m_env.BITBLTBUF.DPSM, r.right, r.bottom);
 */
 }
 
@@ -1275,6 +1275,7 @@ template<int index> void GSState::Transfer(BYTE* mem, UINT32 size)
 				break;
 
 			case GIF_FLG_IMAGE:
+
 				{
 					int len = (int)min(size, path.nloop);
 

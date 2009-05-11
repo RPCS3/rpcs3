@@ -133,7 +133,7 @@ static INT32 GSopen(void* dsp, char* title, int mt, int renderer)
 
 	s_hr = ::CoInitializeEx(NULL, COINIT_MULTITHREADED);
 
-	if(!s_gs->Create(CString(title)))
+	if(!s_gs->Create(title))
 	{
 		GSclose();
 
@@ -152,15 +152,21 @@ static INT32 GSopen(void* dsp, char* title, int mt, int renderer)
 EXPORT_C_(INT32) GSopen(void* dsp, char* title, int mt)
 {
 	AFX_MANAGE_STATE(AfxGetStaticModuleState());
+
 	int renderer;
 	
-	if (mt == 2){ //pcsx2 sent a switch renderer request
+	if(mt == 2)
+	{
+		// pcsx2 sent a switch renderer request
 		renderer = 1; //DX9 sw
 		mt = 1;	
 	}
-	else { //normal init
+	else 
+	{
+		// normal init
 		renderer = AfxGetApp()->GetProfileInt(_T("Settings"), _T("renderer"), 0);
 	}
+
 	return GSopen(dsp, title, mt, renderer);
 }
 
@@ -211,7 +217,7 @@ EXPORT_C GSvsync(int field)
 
 EXPORT_C_(UINT32) GSmakeSnapshot(char* path)
 {
-	return s_gs->MakeSnapshot(CString(path) + _T("gsdx"));
+	return s_gs->MakeSnapshot(string(path) + "gsdx");
 }
 
 EXPORT_C GSkeyEvent(keyEvent* ev)
@@ -303,7 +309,7 @@ EXPORT_C GSReplay(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow)
 
 	::SetPriorityClass(::GetCurrentProcess(), HIGH_PRIORITY_CLASS);
 
-	CAtlArray<BYTE> buff;
+	vector<BYTE> buff;
 
 	if(FILE* fp = fopen(lpszCmdLine, "rb"))
 	{
@@ -313,7 +319,7 @@ EXPORT_C GSReplay(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow)
 		GSsetBaseMem(regs);
 
 		HWND hWnd = NULL;
-		GSopen(&hWnd, _T(""), true, renderer);
+		GSopen(&hWnd, "", true, renderer);
 
 		DWORD crc;
 		fread(&crc, 4, 1, fp);
@@ -348,20 +354,20 @@ EXPORT_C GSReplay(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow)
 				switch(index)
 				{
 				case 0:
-					if(buff.GetCount() < 0x4000) buff.SetCount(0x4000);
+					if(buff.size() < 0x4000) buff.resize(0x4000);
 					addr = 0x4000 - size;
-					fread(buff.GetData() + addr, size, 1, fp);
-					GSgifTransfer1(buff.GetData(), addr);
+					fread(&buff[0] + addr, size, 1, fp);
+					GSgifTransfer1(&buff[0], addr);
 					break;
 				case 1:
-					if(buff.GetCount() < size) buff.SetCount(size);
-					fread(buff.GetData(), size, 1, fp);
-					GSgifTransfer2(buff.GetData(), size / 16);
+					if(buff.size() < size) buff.resize(size);
+					fread(&buff[0], size, 1, fp);
+					GSgifTransfer2(&buff[0], size / 16);
 					break;
 				case 2:
-					if(buff.GetCount() < size) buff.SetCount(size);
-					fread(buff.GetData(), size, 1, fp);
-					GSgifTransfer3(buff.GetData(), size / 16);
+					if(buff.size() < size) buff.resize(size);
+					fread(&buff[0], size, 1, fp);
+					GSgifTransfer3(&buff[0], size / 16);
 					break;
 				}
 				break;
@@ -371,8 +377,8 @@ EXPORT_C GSReplay(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow)
 				break;
 			case 2:
 				fread(&size, 4, 1, fp);
-				if(buff.GetCount() < size) buff.SetCount(size);
-				GSreadFIFO2(buff.GetData(), size / 16);
+				if(buff.size() < size) buff.resize(size);
+				GSreadFIFO2(&buff[0], size / 16);
 				break;
 			case 3:
 				fread(regs, 0x2000, 1, fp);
@@ -394,15 +400,15 @@ EXPORT_C GSBenchmark(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow
 {
 	::SetPriorityClass(::GetCurrentProcess(), HIGH_PRIORITY_CLASS);
 
-	FILE* file = _tfopen(_T("c:\\log.txt"), _T("a"));
+	FILE* file = fopen("c:\\log.txt", "a");
 
-	_ftprintf(file, _T("-------------------------\n\n"));
+	fprintf(file, "-------------------------\n\n");
 
 	if(1)
 	{
 		GSLocalMemory mem;
 
-		static struct {int psm; LPCSTR name;} s_format[] = 
+		static struct {int psm; const char* name;} s_format[] = 
 		{
 			{PSM_PSMCT32, "32"},
 			{PSM_PSMCT24, "24"},
@@ -432,7 +438,7 @@ EXPORT_C GSBenchmark(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow
 			int w = 1 << tbw;
 			int h = 1 << tbw;
 
-			_ftprintf(file, _T("%d x %d\n\n"), w, h);
+			fprintf(file, "%d x %d\n\n", w, h);
 
 			for(int i = 0; i < countof(s_format); i++)
 			{
@@ -496,7 +502,7 @@ EXPORT_C GSBenchmark(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow
 
 				end = clock();
 
-				_ftprintf(file, _T("%6d %6d | "), (int)((float)trlen * n / (end - start) / 1000), (int)((float)(w * h) * n / (end - start) / 1000));
+				fprintf(file, "%6d %6d | ", (int)((float)trlen * n / (end - start) / 1000), (int)((float)(w * h) * n / (end - start) / 1000));
 
 				start = clock();
 
@@ -510,7 +516,7 @@ EXPORT_C GSBenchmark(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow
 
 				end = clock();
 
-				_ftprintf(file, _T("%6d %6d | "), (int)((float)trlen * n / (end - start) / 1000), (int)((float)(w * h) * n / (end - start) / 1000));
+				fprintf(file, "%6d %6d | ", (int)((float)trlen * n / (end - start) / 1000), (int)((float)(w * h) * n / (end - start) / 1000));
 
 				start = clock();
 
@@ -521,7 +527,7 @@ EXPORT_C GSBenchmark(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow
 
 				end = clock();
 
-				_ftprintf(file, _T("%6d %6d "), (int)((float)len * n / (end - start) / 1000), (int)((float)(w * h) * n / (end - start) / 1000));
+				fprintf(file, "%6d %6d ", (int)((float)len * n / (end - start) / 1000), (int)((float)(w * h) * n / (end - start) / 1000));
 
 				if(psm.pal > 0)
 				{
@@ -534,15 +540,15 @@ EXPORT_C GSBenchmark(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow
 
 					end = clock();
 
-					_ftprintf(file, _T("| %6d %6d "), (int)((float)len * n / (end - start) / 1000), (int)((float)(w * h) * n / (end - start) / 1000));
+					fprintf(file, "| %6d %6d ", (int)((float)len * n / (end - start) / 1000), (int)((float)(w * h) * n / (end - start) / 1000));
 				}
 
-				_ftprintf(file, _T("\n"));
+				fprintf(file, "\n");
 
 				fflush(file);
 			}
 
-			_ftprintf(file, _T("\n"));
+			fprintf(file, "\n");
 		}
 
 		_aligned_free(ptr);

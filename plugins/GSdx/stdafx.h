@@ -36,15 +36,23 @@
 #include <afxcmn.h>			// MFC support for Windows Common Controls
 #endif // _AFX_NO_AFXCMN_SUPPORT
 //#include <afxmt.h>
-#include <atlbase.h>
-#include <atlcoll.h>
-#include <atlpath.h>
 #include <ddraw.h>
 #include <d3d9.h>
 #include <d3dx9.h>
 #include <d3d10.h>
 #include <d3dx10.h>
 #include <math.h>
+
+#include <string>
+#include <vector>
+#include <list>
+#include <map>
+#include <hash_map>
+
+using namespace std;
+using namespace stdext;
+
+extern string format(const char* fmt, ...);
 
 #if !defined(_M_SSE) && (defined(_M_AMD64) || defined(_M_IX86_FP) && _M_IX86_FP >= 2)
 #define _M_SSE 0x200
@@ -73,35 +81,3 @@
 #define D3DCOLORWRITEENABLE_RGBA (D3DCOLORWRITEENABLE_RGB|D3DCOLORWRITEENABLE_ALPHA)
 
 #define QI(i) (riid == __uuidof(i)) ? GetInterface((i*)this, ppv) :
-
-template<class K, class V> class CRBMapC : public CRBMap<K, V>
-{
-	// CRBMap + a cache for the last value (simple, but already a lot better)
-
-	CPair* m_pair;
-
-public:
-	CRBMapC() : m_pair(NULL) {}
-
-	CPair* Lookup(KINARGTYPE key)
-	{
-		if(m_pair && key == m_pair->m_key)
-		{
-			return m_pair;
-		}
-
-		m_pair = __super::Lookup(key);
-
-		return m_pair;
-	}
-
-	POSITION SetAt(KINARGTYPE key, VINARGTYPE value)
-	{
-		POSITION pos = __super::SetAt(key, value);
-
-		m_pair = __super::GetAt(pos);
-
-		return pos;
-	}
-};
-

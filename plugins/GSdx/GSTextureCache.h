@@ -114,11 +114,9 @@ public:
 
 			CRect r(0, 0, w, h);
 
-			POSITION pos = m_dirty.GetHeadPosition();
-
-			while(pos)
+			for(list<GSDirtyRect>::iterator i = m_dirty.begin(); i != m_dirty.end(); i++)
 			{
-				const CRect& dirty = m_dirty.GetNext(pos).GetDirtyRect(m_TEX0) & r;
+				const CRect& dirty = i->GetDirtyRect(m_TEX0) & r;
 
 				if(!(m_valid & dirty).IsRectEmpty())
 				{
@@ -145,7 +143,7 @@ public:
 				}
 			}
 
-			m_dirty.RemoveAll();
+			m_dirty.clear();
 
 			m_renderer->MinMaxUV(w, h, r);
 
@@ -214,23 +212,21 @@ public:
 
 protected:
 	GSRenderer<Device>* m_renderer;
-	CAtlList<GSRenderTarget*> m_rt;
-	CAtlList<GSDepthStencil*> m_ds;
-	CAtlList<GSTexture*> m_tex;
+	list<GSRenderTarget*> m_rt;
+	list<GSDepthStencil*> m_ds;
+	list<GSTexture*> m_tex;
 
-	template<class T> void RecycleByAge(CAtlList<T*>& l, int maxage = 60)
+	template<class T> void RecycleByAge(list<T*>& l, int maxage = 60)
 	{
-		POSITION pos = l.GetHeadPosition();
-
-		while(pos)
+		for(list<T*>::iterator i = l.begin(); i != l.end(); )
 		{
-			POSITION cur = pos;
+			list<T*>::iterator j = i++;
 
-			T* t = l.GetNext(pos);
+			T* t = *j;
 
 			if(++t->m_age > maxage)
 			{
-				l.RemoveAt(cur);
+				l.erase(j);
 
 				delete t;
 			}
@@ -254,9 +250,26 @@ public:
 
 	void RemoveAll()
 	{
-		while(m_rt.GetCount()) delete m_rt.RemoveHead();
-		while(m_ds.GetCount()) delete m_ds.RemoveHead();
-		while(m_tex.GetCount()) delete m_tex.RemoveHead();
+		for(list<GSRenderTarget*>::iterator i = m_rt.begin(); i != m_rt.end(); i++)
+		{
+			delete *i;
+		}
+
+		m_rt.clear();
+
+		for(list<GSDepthStencil*>::iterator i = m_ds.begin(); i != m_ds.end(); i++)
+		{
+			delete *i;
+		}
+
+		m_ds.clear();
+
+		for(list<GSTexture*>::iterator i = m_tex.begin(); i != m_tex.end(); i++)
+		{
+			delete *i;
+		}
+
+		m_tex.clear();
 	}
 
 	GSRenderTarget* GetRenderTarget(const GIFRegTEX0& TEX0, int w, int h, bool fb = false)
@@ -265,13 +278,13 @@ public:
 
 		if(rt == NULL)
 		{
-			for(POSITION pos = m_rt.GetHeadPosition(); pos; m_rt.GetNext(pos))
+			for(list<GSRenderTarget*>::iterator i = m_rt.begin(); i != m_rt.end(); i++)
 			{
-				GSRenderTarget* rt2 = m_rt.GetAt(pos);
+				GSRenderTarget* rt2 = *i;
 
 				if(rt2->m_TEX0.TBP0 == TEX0.TBP0)
 				{
-					m_rt.MoveToHead(pos);
+					m_rt.splice(m_rt.begin(), m_rt, i);
 
 					rt = rt2;
 
@@ -288,9 +301,9 @@ public:
 		{
 			// HACK: try to find something close to the base pointer
 
-			for(POSITION pos = m_rt.GetHeadPosition(); pos; m_rt.GetNext(pos))
+			for(list<GSRenderTarget*>::iterator i = m_rt.begin(); i != m_rt.end(); i++)
 			{
-				GSRenderTarget* rt2 = m_rt.GetAt(pos);
+				GSRenderTarget* rt2 = *i;
 
 				if(rt2->m_TEX0.TBP0 <= TEX0.TBP0 && TEX0.TBP0 < rt2->m_TEX0.TBP0 + 0x700 && (!rt || rt2->m_TEX0.TBP0 >= rt->m_TEX0.TBP0))
 				{
@@ -317,7 +330,7 @@ public:
 				return NULL;
 			}
 
-			m_rt.AddHead(rt);
+			m_rt.push_front(rt);
 		}
 
 		if(m_renderer->CanUpscale())
@@ -351,13 +364,13 @@ public:
 
 		if(ds == NULL)
 		{
-			for(POSITION pos = m_ds.GetHeadPosition(); pos; m_ds.GetNext(pos))
+			for(list<GSDepthStencil*>::iterator i = m_ds.begin(); i != m_ds.end(); i++)
 			{
-				GSDepthStencil* ds2 = m_ds.GetAt(pos);
+				GSDepthStencil* ds2 = *i;
 
 				if(ds2->m_TEX0.TBP0 == TEX0.TBP0)
 				{
-					m_ds.MoveToHead(pos);
+					m_ds.splice(m_ds.begin(), m_ds, i);
 
 					ds = ds2;
 
@@ -383,7 +396,7 @@ public:
 				return NULL;
 			}
 
-			m_ds.AddHead(ds);
+			m_ds.push_front(ds);
 		}
 
 		if(m_renderer->m_context->DepthWrite())
@@ -459,9 +472,9 @@ public:
 
 		GSTexture* t = NULL;
 
-		for(POSITION pos = m_tex.GetHeadPosition(); pos; m_tex.GetNext(pos))
+		for(list<GSTexture*>::iterator i = m_tex.begin(); i != m_tex.end(); i++)
 		{
-			t = m_tex.GetAt(pos);
+			t = *i;
 
 			if(GSUtil::HasSharedBits(t->m_TEX0.TBP0, t->m_TEX0.PSM, TEX0.TBP0, TEX0.PSM))
 			{
@@ -470,7 +483,7 @@ public:
 				&& (m_renderer->m_psrr || (CLAMP.WMS != 3 && t->m_CLAMP.WMS != 3 && CLAMP.WMT != 3 && t->m_CLAMP.WMT != 3 || CLAMP.i64 == t->m_CLAMP.i64))
 				&& (pal == 0 || TEX0.CPSM == t->m_TEX0.CPSM && GSVector4i::compare(t->m_clut, clut, pal * sizeof(clut[0]))))
 				{
-					m_tex.MoveToHead(pos);
+					m_tex.splice(m_tex.begin(), m_tex, i);
 
 					break;
 				}
@@ -481,11 +494,11 @@ public:
 
 		if(t == NULL)
 		{
-			for(POSITION pos = m_rt.GetHeadPosition(); pos; m_rt.GetNext(pos))
+			for(list<GSRenderTarget*>::iterator i = m_rt.begin(); i != m_rt.end(); i++)
 			{
-				GSRenderTarget* rt = m_rt.GetAt(pos);
+				GSRenderTarget* rt = *i;
 
-				if(rt->m_dirty.IsEmpty() && GSUtil::HasSharedBits(rt->m_TEX0.TBP0, rt->m_TEX0.PSM, TEX0.TBP0, TEX0.PSM))
+				if(rt->m_dirty.empty() && GSUtil::HasSharedBits(rt->m_TEX0.TBP0, rt->m_TEX0.PSM, TEX0.TBP0, TEX0.PSM))
 				{
 					t = CreateTexture();
 
@@ -496,7 +509,7 @@ public:
 						return NULL;
 					}
 
-					m_tex.AddHead(t);
+					m_tex.push_front(t);
 
 					break;
 				}
@@ -505,11 +518,11 @@ public:
 
 		if(t == NULL)
 		{
-			for(POSITION pos = m_ds.GetHeadPosition(); pos; m_ds.GetNext(pos))
+			for(list<GSDepthStencil*>::iterator i = m_ds.begin(); i != m_ds.end(); i++)
 			{
-				GSDepthStencil* ds = m_ds.GetAt(pos);
+				GSDepthStencil* ds = *i;
 
-				if(ds->m_dirty.IsEmpty() && ds->m_used && GSUtil::HasSharedBits(ds->m_TEX0.TBP0, ds->m_TEX0.PSM, TEX0.TBP0, TEX0.PSM))
+				if(ds->m_dirty.empty() && ds->m_used && GSUtil::HasSharedBits(ds->m_TEX0.TBP0, ds->m_TEX0.PSM, TEX0.TBP0, TEX0.PSM))
 				{
 					t = CreateTexture();
 
@@ -520,7 +533,7 @@ public:
 						return NULL;
 					}
 
-					m_tex.AddHead(t);
+					m_tex.push_front(t);
 
 					break;
 				}
@@ -538,7 +551,7 @@ public:
 				return NULL;
 			}
 
-			m_tex.AddHead(t);
+			m_tex.push_front(t);
 		}
 
 		if(pal > 0)
@@ -574,18 +587,16 @@ public:
 
 	void InvalidateTextures(const GIFRegFRAME& FRAME, const GIFRegZBUF& ZBUF)
 	{
-		POSITION pos = m_tex.GetHeadPosition();
-
-		while(pos)
+		for(list<GSTexture*>::iterator i = m_tex.begin(); i != m_tex.end(); )
 		{
-			POSITION cur = pos;
+			list<GSTexture*>::iterator j = i++;
 
-			GSTexture* t = m_tex.GetNext(pos);
+			GSTexture* t = *j;
 
 			if(GSUtil::HasSharedBits(FRAME.Block(), FRAME.PSM, t->m_TEX0.TBP0, t->m_TEX0.PSM)
 			|| GSUtil::HasSharedBits(ZBUF.Block(), ZBUF.PSM, t->m_TEX0.TBP0, t->m_TEX0.PSM))
 			{
-				m_tex.RemoveAt(cur);
+				m_tex.erase(j);
 
 				delete t;
 			}
@@ -596,26 +607,23 @@ public:
 	{
 		bool found = false;
 
-		POSITION pos = m_tex.GetHeadPosition();
-
-		while(pos)
+		for(list<GSTexture*>::iterator i = m_tex.begin(); i != m_tex.end(); )
 		{
-			POSITION cur = pos;
+			list<GSTexture*>::iterator j = i++;
 
-			GSTexture* t = m_tex.GetNext(pos);
+			GSTexture* t = *j;
 
 			if(GSUtil::HasSharedBits(BITBLTBUF.DBP, BITBLTBUF.DPSM, t->m_TEX0.TBP0, t->m_TEX0.PSM))
 			{
 				if(BITBLTBUF.DBW == t->m_TEX0.TBW && !t->m_rendered)
 				{
-					t->m_dirty.AddTail(GSDirtyRect(BITBLTBUF.DPSM, r));
+					t->m_dirty.push_back(GSDirtyRect(BITBLTBUF.DPSM, r));
 
 					found = true;
 				}
 				else
 				{
-					m_tex.RemoveAt(cur);
-
+					m_tex.erase(j);
 					delete t;
 				}
 			}
@@ -637,31 +645,29 @@ public:
 
 						if(r2.bottom > 0 && r2.top < h && r2.right > 0 && r2.left < w)
 						{
-							t->m_dirty.AddTail(GSDirtyRect(BITBLTBUF.DPSM, r2));
+							t->m_dirty.push_back(GSDirtyRect(BITBLTBUF.DPSM, r2));
 						}
 					}
 				}
 			}
 		}
 
-		pos = m_rt.GetHeadPosition();
-
-		while(pos)
+		for(list<GSRenderTarget*>::iterator i = m_rt.begin(); i != m_rt.end(); )
 		{
-			POSITION cur = pos;
+			list<GSRenderTarget*>::iterator j = i++;
 
-			GSRenderTarget* rt = m_rt.GetNext(pos);
+			GSRenderTarget* rt = *j;
 
 			if(GSUtil::HasSharedBits(BITBLTBUF.DBP, BITBLTBUF.DPSM, rt->m_TEX0.TBP0, rt->m_TEX0.PSM))
 			{
 				if(!found && GSUtil::HasCompatibleBits(BITBLTBUF.DPSM, rt->m_TEX0.PSM))
 				{
-					rt->m_dirty.AddTail(GSDirtyRect(BITBLTBUF.DPSM, r));
+					rt->m_dirty.push_back(GSDirtyRect(BITBLTBUF.DPSM, r));
 					rt->m_TEX0.TBW = BITBLTBUF.DBW;
 				}
 				else
 				{
-					m_rt.RemoveAt(cur);
+					m_rt.erase(j);
 					delete rt;
 					continue;
 				}
@@ -679,7 +685,7 @@ public:
 					if(r.bottom > y)
 					{
 						// TODO: do not add this rect above too
-						rt->m_dirty.AddTail(GSDirtyRect(BITBLTBUF.DPSM, CRect(r.left, r.top - y, r.right, r.bottom - y)));
+						rt->m_dirty.push_back(GSDirtyRect(BITBLTBUF.DPSM, CRect(r.left, r.top - y, r.right, r.bottom - y)));
 						rt->m_TEX0.TBW = BITBLTBUF.DBW;
 						continue;
 					}
@@ -689,24 +695,22 @@ public:
 
 		// copypaste for ds
 
-		pos = m_ds.GetHeadPosition();
-
-		while(pos)
+		for(list<GSDepthStencil*>::iterator i = m_ds.begin(); i != m_ds.end(); )
 		{
-			POSITION cur = pos;
+			list<GSDepthStencil*>::iterator j = i++;
 
-			GSDepthStencil* ds = m_ds.GetNext(pos);
+			GSDepthStencil* ds = *j;
 
 			if(GSUtil::HasSharedBits(BITBLTBUF.DBP, BITBLTBUF.DPSM, ds->m_TEX0.TBP0, ds->m_TEX0.PSM))
 			{
 				if(!found && GSUtil::HasCompatibleBits(BITBLTBUF.DPSM, ds->m_TEX0.PSM))
 				{
-					ds->m_dirty.AddTail(GSDirtyRect(BITBLTBUF.DPSM, r));
+					ds->m_dirty.push_back(GSDirtyRect(BITBLTBUF.DPSM, r));
 					ds->m_TEX0.TBW = BITBLTBUF.DBW;
 				}
 				else
 				{
-					m_ds.RemoveAt(cur);
+					m_ds.erase(j);
 					delete ds;
 					continue;
 				}
@@ -724,7 +728,7 @@ public:
 					if(r.bottom > y)
 					{
 						// TODO: do not add this rect above too
-						ds->m_dirty.AddTail(GSDirtyRect(BITBLTBUF.DPSM, CRect(r.left, r.top - y, r.right, r.bottom - y)));
+						ds->m_dirty.push_back(GSDirtyRect(BITBLTBUF.DPSM, CRect(r.left, r.top - y, r.right, r.bottom - y)));
 						ds->m_TEX0.TBW = BITBLTBUF.DBW;
 						continue;
 					}
@@ -736,13 +740,11 @@ public:
 
 	void InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, const CRect& r)
 	{
-		POSITION pos = m_rt.GetHeadPosition();
-
-		while(pos)
+		for(list<GSRenderTarget*>::iterator i = m_rt.begin(); i != m_rt.end(); )
 		{
-			POSITION cur = pos;
+			list<GSRenderTarget*>::iterator j = i++;
 
-			GSRenderTarget* rt = m_rt.GetNext(pos);
+			GSRenderTarget* rt = *j;
 
 			if(GSUtil::HasSharedBits(BITBLTBUF.SBP, BITBLTBUF.SPSM, rt->m_TEX0.TBP0, rt->m_TEX0.PSM))
 			{
@@ -760,7 +762,7 @@ public:
 				}
 				else
 				{
-					m_rt.RemoveAt(cur);
+					m_rt.erase(j);
 					delete rt;
 					continue;
 				}

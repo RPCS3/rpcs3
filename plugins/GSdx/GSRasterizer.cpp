@@ -922,10 +922,12 @@ GSRasterizerList::~GSRasterizerList()
 
 void GSRasterizerList::FreeRasterizers()
 {
-	while(!IsEmpty()) 
+	for(list<IRasterizer*>::iterator i = begin(); i != end(); i++)
 	{
-		delete RemoveHead();
+		delete *i;
 	}
+
+	clear();
 }
 
 void GSRasterizerList::Draw(const GSRasterizerData* data)
@@ -936,11 +938,9 @@ void GSRasterizerList::Draw(const GSRasterizerData* data)
 
 	__int64 start = __rdtsc();
 
-	POSITION pos = GetTailPosition();
-
-	while(pos)
+	for(list<IRasterizer*>::reverse_iterator i = rbegin(); i != rend(); i++)
 	{
-		GetPrev(pos)->Draw(data);
+		(*i)->Draw(data);
 	}
 
 	while(*m_sync)
@@ -950,13 +950,11 @@ void GSRasterizerList::Draw(const GSRasterizerData* data)
 
 	m_stats.ticks = __rdtsc() - start;
 
-	pos = GetHeadPosition();
-
-	while(pos)
+	for(list<IRasterizer*>::iterator i = begin(); i != end(); i++)
 	{
 		GSRasterizerStats s;
 
-		GetNext(pos)->GetStats(s);
+		(*i)->GetStats(s);
 
 		m_stats.pixels += s.pixels;
 		m_stats.prims = max(m_stats.prims, s.prims);
@@ -970,8 +968,8 @@ void GSRasterizerList::GetStats(GSRasterizerStats& stats)
 
 void GSRasterizerList::PrintStats()
 {
-	if(!IsEmpty())
+	if(!empty())
 	{
-		GetHead()->PrintStats();
+		front()->PrintStats();
 	}
 }

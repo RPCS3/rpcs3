@@ -38,13 +38,15 @@ class GPURendererBase : public GPUState, protected GPURendererSettings
 protected:
 	HWND m_hWnd;
 	WNDPROC m_wndproc;
-	static CAtlMap<HWND, GPURendererBase*> m_wnd2gpu;
+	static map<HWND, GPURendererBase*> m_wnd2gpu;
 
 	static LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	{
-		if(CAtlMap<HWND, GPURendererBase*>::CPair* pair = m_wnd2gpu.Lookup(hWnd))
+		map<HWND, GPURendererBase*>::iterator i = m_wnd2gpu.find(hWnd);
+
+		if(i != m_wnd2gpu.end())
 		{
-			return pair->m_value->OnMessage(message, wParam, lParam);
+			return (*i).second->OnMessage(message, wParam, lParam);
 		}
 
 		ASSERT(0);
@@ -92,7 +94,7 @@ public:
 		{
 			SetWindowLongPtr(m_hWnd, GWLP_WNDPROC, (LONG_PTR)m_wndproc);
 
-			m_wnd2gpu.RemoveKey(m_hWnd);
+			m_wnd2gpu.erase(m_hWnd);
 		}
 	}
 
@@ -102,7 +104,8 @@ public:
 
 		m_wndproc = (WNDPROC)GetWindowLongPtr(hWnd, GWLP_WNDPROC);
 		SetWindowLongPtr(hWnd, GWLP_WNDPROC, (LONG_PTR)WndProc);
-		m_wnd2gpu.SetAt(hWnd, this);
+
+		m_wnd2gpu[hWnd] = this;
 
 		DWORD style = GetWindowLong(hWnd, GWL_STYLE);
 		style |= WS_OVERLAPPEDWINDOW;
@@ -115,7 +118,7 @@ public:
 	}
 
 	virtual void VSync() = 0;
-	virtual bool MakeSnapshot(LPCTSTR path) = 0;
+	virtual bool MakeSnapshot(const string& path) = 0;
 };
 
 template<class Device, class Vertex> 
@@ -207,7 +210,7 @@ protected:
 		if(m_count > 0)
 		{
 			/*
-			Dump(_T("db"));
+			Dump("db");
 
 			if(m_env.PRIM.TME)
 			{
@@ -218,9 +221,7 @@ protected:
 				r.right = r.left + 256;
 				r.bottom = r.top + 256;
 
-				CString str;
-				str.Format(_T("da_%d_%d_%d_%d_%d"), m_env.STATUS.TP, r);
-				Dump(str, m_env.STATUS.TP, r, false);
+				Dump(format("da_%d_%d_%d_%d_%d", m_env.STATUS.TP, r).c_str(), m_env.STATUS.TP, r, false);
 			}
 			*/
 
@@ -228,7 +229,7 @@ protected:
 
 			m_count = 0;
 
-			//Dump(_T("dc"), false);
+			//Dump("dc", false);
 		}
 	}
 
@@ -334,7 +335,7 @@ public:
 		// osd 
 
 		static UINT64 s_frame = 0;
-		static CString s_stats;
+		static string s_stats;
 
 		if(m_perfmon.GetFrame() - s_frame >= 30)
 		{
@@ -349,8 +350,8 @@ public:
 			int w = r.Width() << m_scale.cx;
 			int h = r.Height() << m_scale.cy;
 
-			s_stats.Format(
-				_T("%I64d | %d x %d | %.2f fps (%d%%) | %d/%d | %d%% CPU | %.2f | %.2f"), 
+			s_stats = format(
+				"%I64d | %d x %d | %.2f fps (%d%%) | %d/%d | %d%% CPU | %.2f | %.2f", 
 				m_perfmon.GetFrame(), w, h, fps, (int)(100.0 * fps / m_env.GetFPS()),
 				(int)m_perfmon.Get(GSPerfMon::Prim),
 				(int)m_perfmon.Get(GSPerfMon::Draw),
@@ -363,10 +364,10 @@ public:
 
 			if(fillrate > 0)
 			{
-				s_stats.Format(_T("%s | %.2f mpps"), CString(s_stats), fps * fillrate / (1024 * 1024));
+				s_stats = format("%s | %.2f mpps", s_stats.c_str(), fps * fillrate / (1024 * 1024));
 			}
 
-			SetWindowText(m_hWnd, s_stats);
+			SetWindowText(m_hWnd, s_stats.c_str());
 		}
 
 		if(m_dev.IsLost())
@@ -383,12 +384,8 @@ public:
 		m_dev.Present(r);
 	}
 
-	virtual bool MakeSnapshot(LPCTSTR path)
+	virtual bool MakeSnapshot(const string& path)
 	{
-		CString fn;
-
-		fn.Format(_T("%s_%s"), path, CTime::GetCurrentTime().Format(_T("%Y%m%d%H%M%S")));
-
-		return m_dev.SaveCurrent(fn + _T(".bmp"));
+		return m_dev.SaveCurrent(format("%s_%s", path.c_str(), CTime::GetCurrentTime().Format(_T("%Y%m%d%H%M%S"))) + ".bmp");
 	}
 };

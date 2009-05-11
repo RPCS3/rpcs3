@@ -141,8 +141,8 @@ protected:
 
 	//
 
-	CRBMapC<DWORD, Offset*> m_omap;
-	CRBMapC<DWORD, Offset4*> m_o4map;
+	hash_map<DWORD, Offset*> m_omap;
+	hash_map<DWORD, Offset4*> m_o4map;
 
 public:
 	GSLocalMemory();
@@ -993,7 +993,7 @@ public:
 
 	//
 
-	HRESULT SaveBMP(LPCTSTR fn, DWORD bp, DWORD bw, DWORD psm, int w, int h);
+	HRESULT SaveBMP(const string& fn, DWORD bp, DWORD bw, DWORD psm, int w, int h);
 };
 
 #pragma warning(default: 4244)

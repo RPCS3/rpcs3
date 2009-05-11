@@ -138,7 +138,7 @@ void GSTexture9::Unmap()
 	}
 }
 
-bool GSTexture9::Save(CString fn, bool dds)
+bool GSTexture9::Save(const string& fn, bool dds)
 {
 	CComPtr<IDirect3DSurface9> surface;
 	
@@ -181,12 +181,12 @@ bool GSTexture9::Save(CString fn, bool dds)
 
 	if(surface != NULL)
 	{
-		return SUCCEEDED(D3DXSaveSurfaceToFile(fn, dds ? D3DXIFF_DDS : D3DXIFF_BMP, surface, NULL, NULL));
+		return SUCCEEDED(D3DXSaveSurfaceToFile(fn.c_str(), dds ? D3DXIFF_DDS : D3DXIFF_BMP, surface, NULL, NULL));
 	}
 /*
 	if(CComQIPtr<IDirect3DTexture9> texture = surface)
 	{
-		return SUCCEEDED(D3DXSaveTextureToFile(fn, dds ? D3DXIFF_DDS : D3DXIFF_BMP, texture, NULL));
+		return SUCCEEDED(D3DXSaveTextureToFile(fn.c_str(), dds ? D3DXIFF_DDS : D3DXIFF_BMP, texture, NULL));
 	}
 */
 	return false;

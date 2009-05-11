@@ -79,7 +79,7 @@ public:
 	void Expand16(const WORD* RESTRICT src, DWORD* RESTRICT dst, int pixels);
 	void Expand24(const WORD* RESTRICT src, DWORD* RESTRICT dst, int pixels);
 
-	void SaveBMP(LPCTSTR path, CRect r, int tp, int cx, int cy);
+	void SaveBMP(const string& path, CRect r, int tp, int cx, int cy);
 };
 
 #pragma warning(default: 4244)

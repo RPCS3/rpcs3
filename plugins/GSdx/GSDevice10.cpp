@@ -112,9 +112,7 @@ bool GSDevice10::Create(HWND hWnd, bool vsync)
 
 	for(int i = 0; i < countof(m_convert.ps); i++)
 	{
-		CStringA main;
-		main.Format("ps_main%d", i);
-		hr = CompileShader(IDR_CONVERT10_FX, main, NULL, &m_convert.ps[i]);
+		hr = CompileShader(IDR_CONVERT10_FX, format("ps_main%d", i), NULL, &m_convert.ps[i]);
 	}
 
 	memset(&bd, 0, sizeof(bd));
@@ -155,9 +153,7 @@ bool GSDevice10::Create(HWND hWnd, bool vsync)
 
 	for(int i = 0; i < countof(m_merge.ps); i++)
 	{
-		CStringA main;
-		main.Format("ps_main%d", i);
-		hr = CompileShader(IDR_MERGE10_FX, main, NULL, &m_merge.ps[i]);
+		hr = CompileShader(IDR_MERGE10_FX, format("ps_main%d", i), NULL, &m_merge.ps[i]);
 	}
 
 	memset(&bsd, 0, sizeof(bsd));
@@ -187,9 +183,7 @@ bool GSDevice10::Create(HWND hWnd, bool vsync)
 
 	for(int i = 0; i < countof(m_interlace.ps); i++)
 	{
-		CStringA main;
-		main.Format("ps_main%d", i);
-		hr = CompileShader(IDR_INTERLACE10_FX, main, NULL, &m_interlace.ps[i]);
+		hr = CompileShader(IDR_INTERLACE10_FX, format("ps_main%d", i), NULL, &m_interlace.ps[i]);
 	}
 
 	//
@@ -298,7 +292,7 @@ void GSDevice10::EndScene()
 	// OMSetRenderTargets(NULL, NULL);
 }
 
-void GSDevice10::Draw(LPCTSTR str)
+void GSDevice10::Draw(const string& s)
 {
 	/*
 	BOOL fs;
@@ -741,13 +735,13 @@ void GSDevice10::StretchRect(Texture& st, const GSVector4& sr, Texture& dt, cons
 	EndScene();
 }
 
-HRESULT GSDevice10::CompileShader(UINT id, LPCSTR entry, D3D10_SHADER_MACRO* macro, ID3D10VertexShader** ps, D3D10_INPUT_ELEMENT_DESC* layout, int count, ID3D10InputLayout** il)
+HRESULT GSDevice10::CompileShader(UINT id, const string& entry, D3D10_SHADER_MACRO* macro, ID3D10VertexShader** ps, D3D10_INPUT_ELEMENT_DESC* layout, int count, ID3D10InputLayout** il)
 {
 	HRESULT hr;
 
 	CComPtr<ID3D10Blob> shader, error;
 
-    hr = D3DX10CompileFromResource(AfxGetInstanceHandle(), MAKEINTRESOURCE(id), NULL, macro, NULL, entry, "vs_4_0", 0, 0, NULL, &shader, &error, NULL);
+    hr = D3DX10CompileFromResource(AfxGetInstanceHandle(), MAKEINTRESOURCE(id), NULL, macro, NULL, entry.c_str(), "vs_4_0", 0, 0, NULL, &shader, &error, NULL);
 	
 	if(error)
 	{
@@ -776,13 +770,13 @@ HRESULT GSDevice10::CompileShader(UINT id, LPCSTR entry, D3D10_SHADER_MACRO* mac
 	return hr;
 }
 
-HRESULT GSDevice10::CompileShader(UINT id, LPCSTR entry, D3D10_SHADER_MACRO* macro, ID3D10GeometryShader** gs)
+HRESULT GSDevice10::CompileShader(UINT id, const string& entry, D3D10_SHADER_MACRO* macro, ID3D10GeometryShader** gs)
 {
 	HRESULT hr;
 
 	CComPtr<ID3D10Blob> shader, error;
 
-    hr = D3DX10CompileFromResource(AfxGetInstanceHandle(), MAKEINTRESOURCE(id), NULL, macro, NULL, entry, "gs_4_0", 0, 0, NULL, &shader, &error, NULL);
+    hr = D3DX10CompileFromResource(AfxGetInstanceHandle(), MAKEINTRESOURCE(id), NULL, macro, NULL, entry.c_str(), "gs_4_0", 0, 0, NULL, &shader, &error, NULL);
 	
 	if(error)
 	{
@@ -804,13 +798,13 @@ HRESULT GSDevice10::CompileShader(UINT id, LPCSTR entry, D3D10_SHADER_MACRO* mac
 	return hr;
 }
 
-HRESULT GSDevice10::CompileShader(UINT id, LPCSTR entry, D3D10_SHADER_MACRO* macro, ID3D10PixelShader** ps)
+HRESULT GSDevice10::CompileShader(UINT id, const string& entry, D3D10_SHADER_MACRO* macro, ID3D10PixelShader** ps)
 {
 	HRESULT hr;
 
 	CComPtr<ID3D10Blob> shader, error;
 
-    hr = D3DX10CompileFromResource(AfxGetInstanceHandle(), MAKEINTRESOURCE(id), NULL, macro, NULL, entry, "ps_4_0", 0, 0, NULL, &shader, &error, NULL);
+    hr = D3DX10CompileFromResource(AfxGetInstanceHandle(), MAKEINTRESOURCE(id), NULL, macro, NULL, entry.c_str(), "ps_4_0", 0, 0, NULL, &shader, &error, NULL);
 	
 	if(error)
 	{

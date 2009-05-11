@@ -109,7 +109,7 @@ void GSTexture10::Unmap()
 	}
 }
 
-bool GSTexture10::Save(CString fn, bool dds)
+bool GSTexture10::Save(const string& fn, bool dds)
 {
 	CComPtr<ID3D10Resource> res;
 
@@ -164,7 +164,7 @@ bool GSTexture10::Save(CString fn, bool dds)
 		res = m_texture;
 	}
 
-	return SUCCEEDED(D3DX10SaveTextureToFile(res, dds ? D3DX10_IFF_DDS : D3DX10_IFF_BMP, fn));
+	return SUCCEEDED(D3DX10SaveTextureToFile(res, dds ? D3DX10_IFF_DDS : D3DX10_IFF_BMP, fn.c_str()));
 }
 
 ID3D10Texture2D* GSTexture10::operator->()

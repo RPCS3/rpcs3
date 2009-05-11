@@ -131,11 +131,11 @@ CRC::Game CRC::m_games[] =
 	{0xFB236A46, SonicUnleashed, US},
 };
 
-CAtlMap<DWORD, CRC::Game*> CRC::m_map;
+hash_map<DWORD, CRC::Game*> CRC::m_map;
 
 CRC::Game CRC::Lookup(DWORD crc)
 {
-	if(m_map.IsEmpty())
+	if(m_map.empty())
 	{
 		for(int i = 0; i < countof(m_games); i++)
 		{
@@ -143,9 +143,11 @@ CRC::Game CRC::Lookup(DWORD crc)
 		}
 	}
 
-	if(CAtlMap<DWORD, Game*>::CPair* pair = m_map.Lookup(crc))
+	hash_map<DWORD, Game*>::iterator i = m_map.find(crc);
+
+	if(i != m_map.end())
 	{
-		return *pair->m_value;
+		return *(*i).second;
 	}
 
 	return m_games[0];

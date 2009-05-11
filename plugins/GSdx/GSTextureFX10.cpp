@@ -163,27 +163,29 @@ bool GSTextureFX10::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 {
 	CComPtr<ID3D10VertexShader> vs;
 
-	if(CRBMap<DWORD, CComPtr<ID3D10VertexShader> >::CPair* pair = m_vs.Lookup(sel))
+	hash_map<DWORD, CComPtr<ID3D10VertexShader> >::iterator i = m_vs.find(sel);
+
+	if(i != m_vs.end())
 	{
-		vs = pair->m_value;
+		vs = (*i).second;
 	}
 	else
 	{
-		CStringA str[5];
+		string str[5];
 
-		str[0].Format("%d", sel.bpp);
-		str[1].Format("%d", sel.bppz);
-		str[2].Format("%d", sel.tme);
-		str[3].Format("%d", sel.fst);
-		str[4].Format("%d", sel.prim);
+		str[0] = format("%d", sel.bpp);
+		str[1] = format("%d", sel.bppz);
+		str[2] = format("%d", sel.tme);
+		str[3] = format("%d", sel.fst);
+		str[4] = format("%d", sel.prim);
 
 		D3D10_SHADER_MACRO macro[] =
 		{
-			{"VS_BPP", str[0]},
-			{"VS_BPPZ", str[1]},
-			{"VS_TME", str[2]},
-			{"VS_FST", str[3]},
-			{"VS_PRIM", str[4]},
+			{"VS_BPP", str[0].c_str()},
+			{"VS_BPPZ", str[1].c_str()},
+			{"VS_TME", str[2].c_str()},
+			{"VS_FST", str[3].c_str()},
+			{"VS_PRIM", str[4].c_str()},
 			{NULL, NULL},
 		};
 
@@ -206,7 +208,7 @@ bool GSTextureFX10::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 			m_il = il;
 		}
 
-		m_vs.SetAt(sel, vs);
+		m_vs[sel] = vs;
 	}
 
 	if(m_vs_cb_cache.Update(cb))
@@ -227,27 +229,29 @@ bool GSTextureFX10::SetupGS(GSSelector sel)
 
 	if(sel.prim > 0 && (sel.iip == 0 || sel.prim == 3)) // geometry shader works in every case, but not needed
 	{
-		if(CRBMap<DWORD, CComPtr<ID3D10GeometryShader> >::CPair* pair = m_gs.Lookup(sel))
+		hash_map<DWORD, CComPtr<ID3D10GeometryShader> >::iterator i = m_gs.find(sel);
+
+		if(i != m_gs.end())
 		{
-			gs = pair->m_value;
+			gs = (*i).second;
 		}
 		else
 		{
-			CStringA str[2];
+			string str[2];
 
-			str[0].Format("%d", sel.iip);
-			str[1].Format("%d", sel.prim);
+			str[0] = format("%d", sel.iip);
+			str[1] = format("%d", sel.prim);
 
 			D3D10_SHADER_MACRO macro[] =
 			{
-				{"IIP", str[0]},
-				{"PRIM", str[1]},
+				{"IIP", str[0].c_str()},
+				{"PRIM", str[1].c_str()},
 				{NULL, NULL},
 			};
 
 			hr = m_dev->CompileShader(IDR_TFX10_FX, "gs_main", macro, &gs);
 
-			m_gs.SetAt(sel, gs);
+			m_gs[sel] = gs;
 		}
 	}
 
@@ -271,49 +275,51 @@ void GSTextureFX10::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSampl
 
 	CComPtr<ID3D10PixelShader> ps;
 
-	if(CRBMap<DWORD, CComPtr<ID3D10PixelShader> >::CPair* pair = m_ps.Lookup(sel))
+	hash_map<DWORD, CComPtr<ID3D10PixelShader> >::iterator i = m_ps.find(sel);
+
+	if(i != m_ps.end())
 	{
-		ps = pair->m_value;
+		ps = (*i).second;
 	}
 	else
 	{
-		CStringA str[13];
+		string str[13];
 
-		str[0].Format("%d", sel.fst);
-		str[1].Format("%d", sel.wms);
-		str[2].Format("%d", sel.wmt);
-		str[3].Format("%d", sel.bpp);
-		str[4].Format("%d", sel.aem);
-		str[5].Format("%d", sel.tfx);
-		str[6].Format("%d", sel.tcc);
-		str[7].Format("%d", sel.ate);
-		str[8].Format("%d", sel.atst);
-		str[9].Format("%d", sel.fog);
-		str[10].Format("%d", sel.clr1);
-		str[11].Format("%d", sel.fba);
-		str[12].Format("%d", sel.aout);
+		str[0] = format("%d", sel.fst);
+		str[1] = format("%d", sel.wms);
+		str[2] = format("%d", sel.wmt);
+		str[3] = format("%d", sel.bpp);
+		str[4] = format("%d", sel.aem);
+		str[5] = format("%d", sel.tfx);
+		str[6] = format("%d", sel.tcc);
+		str[7] = format("%d", sel.ate);
+		str[8] = format("%d", sel.atst);
+		str[9] = format("%d", sel.fog);
+		str[10] = format("%d", sel.clr1);
+		str[11] = format("%d", sel.fba);
+		str[12] = format("%d", sel.aout);
 
 		D3D10_SHADER_MACRO macro[] =
 		{
-			{"FST", str[0]},
-			{"WMS", str[1]},
-			{"WMT", str[2]},
-			{"BPP", str[3]},
-			{"AEM", str[4]},
-			{"TFX", str[5]},
-			{"TCC", str[6]},
-			{"ATE", str[7]},
-			{"ATST", str[8]},
-			{"FOG", str[9]},
-			{"CLR1", str[10]},
-			{"FBA", str[11]},
-			{"AOUT", str[12]},
+			{"FST", str[0].c_str()},
+			{"WMS", str[1].c_str()},
+			{"WMT", str[2].c_str()},
+			{"BPP", str[3].c_str()},
+			{"AEM", str[4].c_str()},
+			{"TFX", str[5].c_str()},
+			{"TCC", str[6].c_str()},
+			{"ATE", str[7].c_str()},
+			{"ATST", str[8].c_str()},
+			{"FOG", str[9].c_str()},
+			{"CLR1", str[10].c_str()},
+			{"FBA", str[11].c_str()},
+			{"AOUT", str[12].c_str()},
 			{NULL, NULL},
 		};
 
 		hr = m_dev->CompileShader(IDR_TFX10_FX, "ps_main", macro, &ps);
 
-		m_ps.SetAt(sel, ps);
+		m_ps[sel] = ps;
 	}
 
 	if(m_ps_cb_cache.Update(cb))
@@ -332,9 +338,11 @@ void GSTextureFX10::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSampl
 			ssel.min = ssel.mag = 0;
 		}
 
-		if(CRBMap<DWORD, CComPtr<ID3D10SamplerState> >::CPair* pair = m_ps_ss.Lookup(ssel))
+		hash_map<DWORD, CComPtr<ID3D10SamplerState> >::iterator i = m_ps_ss.find(ssel);
+
+		if(i != m_ps_ss.end())
 		{
-			ss0 = pair->m_value;
+			ss0 = (*i).second;
 		}
 		else
 		{
@@ -358,7 +366,7 @@ void GSTextureFX10::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSampl
 
 			hr = (*m_dev)->CreateSamplerState(&sd, &ss0);
 
-			m_ps_ss.SetAt(ssel, ss0);
+			m_ps_ss[ssel] = ss0;
 		}
 
 		if(sel.bpp == 3)
@@ -388,9 +396,11 @@ void GSTextureFX10::UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel,
 
 	CComPtr<ID3D10DepthStencilState> dss;
 
-	if(CRBMap<DWORD, CComPtr<ID3D10DepthStencilState> >::CPair* pair = m_om_dss.Lookup(dssel))
+	hash_map<DWORD, CComPtr<ID3D10DepthStencilState> >::iterator i = m_om_dss.find(dssel);
+
+	if(i != m_om_dss.end())
 	{
-		dss = pair->m_value;
+		dss = (*i).second;
 	}
 	else
 	{
@@ -430,16 +440,18 @@ void GSTextureFX10::UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel,
 
 		hr = (*m_dev)->CreateDepthStencilState(&dsd, &dss);
 
-		m_om_dss.SetAt(dssel, dss);
+		m_om_dss[dssel] = dss;
 	}
 
 	m_dev->OMSetDepthStencilState(dss, 1);
 
 	CComPtr<ID3D10BlendState> bs;
 
-	if(CRBMap<DWORD, CComPtr<ID3D10BlendState> >::CPair* pair = m_om_bs.Lookup(bsel))
+	hash_map<DWORD, CComPtr<ID3D10BlendState> >::iterator j = m_om_bs.find(bsel);
+
+	if(j != m_om_bs.end())
 	{
-		bs = pair->m_value;
+		bs = (*j).second;
 	}
 	else
 	{
@@ -571,7 +583,7 @@ void GSTextureFX10::UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel,
 
 		hr = (*m_dev)->CreateBlendState(&bd, &bs);
 
-		m_om_bs.SetAt(bsel, bs);
+		m_om_bs[bsel] = bs;
 	}
 
 	m_dev->OMSetBlendState(bs, bf);

@@ -103,7 +103,7 @@ public:
 	void Present(const CRect& r);
 	void BeginScene();
 	void EndScene();
-	void Draw(LPCTSTR str);
+	void Draw(const string& s);
 	bool CopyOffscreen(Texture& src, const GSVector4& sr, Texture& dst, int w, int h, int format = 0);
 
 	void ClearRenderTarget(Texture& t, const GSVector4& c);
@@ -138,10 +138,7 @@ public:
 	void StretchRect(Texture& st, const GSVector4& sr, Texture& dt, const GSVector4& dr, ID3D10PixelShader* ps, ID3D10Buffer* ps_cb, bool linear = true);
 	void StretchRect(Texture& st, const GSVector4& sr, Texture& dt, const GSVector4& dr, ID3D10PixelShader* ps, ID3D10Buffer* ps_cb, ID3D10BlendState* bs, bool linear = true);
 
-	HRESULT CompileShader(UINT id, LPCSTR entry, D3D10_SHADER_MACRO* macro, ID3D10VertexShader** vs, D3D10_INPUT_ELEMENT_DESC* layout, int count, ID3D10InputLayout** il);
-	HRESULT CompileShader(UINT id, LPCSTR entry, D3D10_SHADER_MACRO* macro, ID3D10GeometryShader** gs);
-	HRESULT CompileShader(UINT id, LPCSTR entry, D3D10_SHADER_MACRO* macro, ID3D10PixelShader** ps);
-
-	// TODO
-	bool SaveToFileD32S8X24(ID3D10Texture2D* ds, LPCTSTR fn);
+	HRESULT CompileShader(UINT id, const string& entry, D3D10_SHADER_MACRO* macro, ID3D10VertexShader** vs, D3D10_INPUT_ELEMENT_DESC* layout, int count, ID3D10InputLayout** il);
+	HRESULT CompileShader(UINT id, const string& entry, D3D10_SHADER_MACRO* macro, ID3D10GeometryShader** gs);
+	HRESULT CompileShader(UINT id, const string& entry, D3D10_SHADER_MACRO* macro, ID3D10PixelShader** ps);
 };

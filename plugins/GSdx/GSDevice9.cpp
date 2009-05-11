@@ -141,9 +141,7 @@ bool GSDevice9::Create(HWND hWnd, bool vsync)
 
 	for(int i = 0; i < countof(m_convert.ps); i++)
 	{
-		CStringA main;
-		main.Format("ps_main%d", i);
-		CompileShader(IDR_CONVERT9_FX, main, NULL, &m_convert.ps[i]);
+		CompileShader(IDR_CONVERT9_FX, format("ps_main%d", i), NULL, &m_convert.ps[i]);
 	}
 
 	m_convert.dss.DepthEnable = false;
@@ -170,9 +168,7 @@ bool GSDevice9::Create(HWND hWnd, bool vsync)
 
 	for(int i = 0; i < countof(m_merge.ps); i++)
 	{
-		CStringA main;
-		main.Format("ps_main%d", i);
-		CompileShader(IDR_MERGE9_FX, main, NULL, &m_merge.ps[i]);
+		CompileShader(IDR_MERGE9_FX, format("ps_main%d", i), NULL, &m_merge.ps[i]);
 	}
 
 	m_merge.bs.BlendEnable = true;
@@ -188,9 +184,7 @@ bool GSDevice9::Create(HWND hWnd, bool vsync)
 
 	for(int i = 0; i < countof(m_interlace.ps); i++)
 	{
-		CStringA main;
-		main.Format("ps_main%d", i);
-		CompileShader(IDR_INTERLACE9_FX, main, NULL, &m_interlace.ps[i]);
+		CompileShader(IDR_INTERLACE9_FX, format("ps_main%d", i), NULL, &m_interlace.ps[i]);
 	}
 
 	//
@@ -393,7 +387,7 @@ void GSDevice9::EndScene()
 	m_dev->EndScene();
 }
 
-void GSDevice9::Draw(LPCTSTR str)
+void GSDevice9::Draw(const string& s)
 {
 	/*
 	if(!m_pp.Windowed)
@@ -941,9 +935,9 @@ static HRESULT LoadShader(UINT id, LPCSTR& data, DWORD& size)
 	return S_OK;
 }
 
-HRESULT GSDevice9::CompileShader(UINT id, LPCSTR entry, const D3DXMACRO* macro, IDirect3DVertexShader9** vs, const D3DVERTEXELEMENT9* layout, int count, IDirect3DVertexDeclaration9** il)
+HRESULT GSDevice9::CompileShader(UINT id, const string& entry, const D3DXMACRO* macro, IDirect3DVertexShader9** vs, const D3DVERTEXELEMENT9* layout, int count, IDirect3DVertexDeclaration9** il)
 {
-	LPCSTR target;
+	const char* target;
 
 	if(m_d3dcaps.VertexShaderVersion >= D3DVS_VERSION(3, 0))
 	{
@@ -962,7 +956,7 @@ HRESULT GSDevice9::CompileShader(UINT id, LPCSTR entry, const D3DXMACRO* macro, 
 
 	CComPtr<ID3DXBuffer> shader, error;
 
-	// FIXME: hr = D3DXCompileShaderFromResource(AfxGetResourceHandle(), MAKEINTRESOURCE(id), macro, NULL, entry, target, 0, &shader, &error, NULL);
+	// FIXME: hr = D3DXCompileShaderFromResource(AfxGetResourceHandle(), MAKEINTRESOURCE(id), macro, NULL, entry.c_str(), target, 0, &shader, &error, NULL);
 
 	LPCSTR data;
 	DWORD size;
@@ -971,7 +965,7 @@ HRESULT GSDevice9::CompileShader(UINT id, LPCSTR entry, const D3DXMACRO* macro, 
 
 	if(FAILED(hr)) return E_FAIL;
 
-	hr = D3DXCompileShader(data, size, macro, NULL, entry, target, 0, &shader, &error, NULL);
+	hr = D3DXCompileShader(data, size, macro, NULL, entry.c_str(), target, 0, &shader, &error, NULL);
 
 	if(SUCCEEDED(hr))
 	{
@@ -1001,9 +995,9 @@ HRESULT GSDevice9::CompileShader(UINT id, LPCSTR entry, const D3DXMACRO* macro, 
 	return S_OK;
 }
 
-HRESULT GSDevice9::CompileShader(UINT id, LPCSTR entry, const D3DXMACRO* macro, IDirect3DPixelShader9** ps)
+HRESULT GSDevice9::CompileShader(UINT id, const string& entry, const D3DXMACRO* macro, IDirect3DPixelShader9** ps)
 {
-	LPCSTR target = NULL;
+	const char* target = NULL;
 	UINT flags = 0;
 
 	if(m_d3dcaps.PixelShaderVersion >= D3DPS_VERSION(3, 0))
@@ -1024,7 +1018,7 @@ HRESULT GSDevice9::CompileShader(UINT id, LPCSTR entry, const D3DXMACRO* macro, 
 
 	CComPtr<ID3DXBuffer> shader, error;
 
-	// FIXME: hr = D3DXCompileShaderFromResource(AfxGetResourceHandle(), MAKEINTRESOURCE(id), macro, NULL, entry, target, flags, &shader, &error, NULL);
+	// FIXME: hr = D3DXCompileShaderFromResource(AfxGetResourceHandle(), MAKEINTRESOURCE(id), macro, NULL, entry.c_str(), target, flags, &shader, &error, NULL);
 
 	LPCSTR data;
 	DWORD size;
@@ -1033,7 +1027,7 @@ HRESULT GSDevice9::CompileShader(UINT id, LPCSTR entry, const D3DXMACRO* macro, 
 
 	if(FAILED(hr)) return E_FAIL;
 
-	hr = D3DXCompileShader(data, size, macro, NULL, entry, target, 0, &shader, &error, NULL);
+	hr = D3DXCompileShader(data, size, macro, NULL, entry.c_str(), target, 0, &shader, &error, NULL);
 
 	if(SUCCEEDED(hr))
 	{

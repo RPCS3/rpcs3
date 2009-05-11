@@ -108,9 +108,9 @@ public:
 		m_blur = rs.m_blur;
 	};
 
-	virtual bool Create(LPCTSTR title) = 0;
+	virtual bool Create(const string& title) = 0;
 	virtual void VSync(int field) = 0;
-	virtual bool MakeSnapshot(LPCTSTR path) = 0;
+	virtual bool MakeSnapshot(const string& path) = 0;
 };
 
 template<class Device> class GSRenderer : public GSRendererBase
@@ -323,7 +323,7 @@ protected:
 
 	void DoSnapshot(int field)
 	{
-		if(!m_snapshot.IsEmpty())
+		if(!m_snapshot.empty())
 		{
 			if(!m_dump && (::GetAsyncKeyState(VK_SHIFT) & 0x8000))
 			{
@@ -339,9 +339,9 @@ protected:
 				delete [] fd.data;
 			}
 
-			m_dev.SaveCurrent(m_snapshot + _T(".bmp"));
+			m_dev.SaveCurrent(m_snapshot + ".bmp");
 
-			m_snapshot.Empty();
+			m_snapshot.clear();
 		}
 		else
 		{
@@ -408,7 +408,7 @@ public:
 	bool s_save;
 	bool s_savez;
 
-	CString m_snapshot;
+	string m_snapshot;
 	GSCapture m_capture;
 
 public:
@@ -422,9 +422,9 @@ public:
 		s_savez = !!AfxGetApp()->GetProfileInt(_T("Debug"), _T("savez"), 0);
 	}
 
-	bool Create(LPCTSTR title)
+	bool Create(const string& title)
 	{
-		if(!m_wnd.Create(title))
+		if(!m_wnd.Create(title.c_str()))
 		{
 			return false;
 		}
@@ -456,7 +456,7 @@ public:
 		// osd 
 
 		static UINT64 s_frame = 0;
-		static CString s_stats;
+		static string s_stats;
 
 		if(m_perfmon.GetFrame() - s_frame >= 30)
 		{
@@ -465,11 +465,13 @@ public:
 			s_frame = m_perfmon.GetFrame();
 
 			double fps = 1000.0f / m_perfmon.Get(GSPerfMon::Frame);
+
+			string interlace = m_regs->SMODE2.INT ? (string("Interlaced ") + (m_regs->SMODE2.FFMD ? "(frame)" : "(field)")) : "Progressive";
 			
-			s_stats.Format(
-				_T("%I64d | %d x %d | %.2f fps (%d%%) | %s - %s | %s | %d/%d/%d | %d%% CPU | %.2f | %.2f"), 
+			s_stats = format(
+				"%I64d | %d x %d | %.2f fps (%d%%) | %s - %s | %s | %d/%d/%d | %d%% CPU | %.2f | %.2f", 
 				m_perfmon.GetFrame(), GetDisplaySize().cx, GetDisplaySize().cy, fps, (int)(100.0 * fps / GetFPS()),
-				m_regs->SMODE2.INT ? (CString(_T("Interlaced ")) + (m_regs->SMODE2.FFMD ? _T("(frame)") : _T("(field)"))) : _T("Progressive"),
+				interlace.c_str(),
 				GSSettingsDlg::g_interlace[m_interlace].name,
 				GSSettingsDlg::g_aspectratio[m_aspectratio].name,
 				(int)m_perfmon.Get(GSPerfMon::Quad),
@@ -484,26 +486,20 @@ public:
 
 			if(fillrate > 0)
 			{
-				s_stats.Format(_T("%s | %.2f mpps"), CString(s_stats), fps * fillrate / (1024 * 1024));
+				s_stats += format(" | %.2f mpps", fps * fillrate / (1024 * 1024));
 			}
 
 			if(m_capture.IsCapturing())
 			{
-				s_stats += _T(" | Recording...");
+				s_stats += " | Recording...";
 			}
 
-			if(m_perfmon.Get(GSPerfMon::COLCLAMP)) _tprintf(_T("*** NOT SUPPORTED: color wrap ***\n"));
-			if(m_perfmon.Get(GSPerfMon::PABE)) _tprintf(_T("*** NOT SUPPORTED: per pixel alpha blend ***\n"));
-			if(m_perfmon.Get(GSPerfMon::DATE)) _tprintf(_T("*** PERFORMANCE WARNING: destination alpha test used ***\n"));
-			if(m_perfmon.Get(GSPerfMon::ABE)) _tprintf(_T("*** NOT SUPPORTED: alpha blending mode ***\n"));
-			if(m_perfmon.Get(GSPerfMon::DepthTexture)) _tprintf(_T("*** NOT SUPPORTED: depth texture ***\n"));		
-
-			m_wnd.SetWindowText(s_stats);
+			m_wnd.SetWindowText(s_stats.c_str());
 		}
 
 		if(m_osd)
 		{
-			m_dev.Draw(s_stats + _T("\n\nF5: interlace mode\nF6: aspect ratio\nF7: OSD"));
+			m_dev.Draw(s_stats + "\n\nF5: interlace mode\nF6: aspect ratio\nF7: OSD");
 		}
 
 		if(m_frameskip)
@@ -535,11 +531,11 @@ public:
 		DoCapture();
 	}
 
-	bool MakeSnapshot(LPCTSTR path)
+	bool MakeSnapshot(const string& path)
 	{
-		if(m_snapshot.IsEmpty())
+		if(m_snapshot.empty())
 		{
-			m_snapshot.Format(_T("%s_%s"), path, CTime::GetCurrentTime().Format(_T("%Y%m%d%H%M%S")));
+			m_snapshot = format("%s_%s", path.c_str(), CTime::GetCurrentTime().Format(_T("%Y%m%d%H%M%S")));
 		}
 
 		return true;

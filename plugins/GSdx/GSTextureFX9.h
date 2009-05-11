@@ -149,13 +149,13 @@ public:
 private:
 	GSDevice9* m_dev;
 	CComPtr<IDirect3DVertexDeclaration9> m_il;
-	CRBMapC<DWORD, CComPtr<IDirect3DVertexShader9> > m_vs;
+	hash_map<DWORD, CComPtr<IDirect3DVertexShader9> > m_vs;
 	D3DXHANDLE m_vs_params;
-	CRBMapC<DWORD, CComPtr<IDirect3DPixelShader9> > m_ps;
-	CRBMapC<DWORD, Direct3DSamplerState9* > m_ps_ss;
-	CRBMapC<DWORD, Direct3DDepthStencilState9* > m_om_dss;	
-	CRBMapC<DWORD, Direct3DBlendState9* > m_om_bs;	
-	CRBMapC<DWORD, GSTexture9> m_mskfix;
+	hash_map<DWORD, CComPtr<IDirect3DPixelShader9> > m_ps;
+	hash_map<DWORD, Direct3DSamplerState9* > m_ps_ss;
+	hash_map<DWORD, Direct3DDepthStencilState9* > m_om_dss;	
+	hash_map<DWORD, Direct3DBlendState9* > m_om_bs;	
+	hash_map<DWORD, GSTexture9> m_mskfix;
 
 public:
 	GSTextureFX9();

@@ -148,11 +148,7 @@ void GSUtil::FitRect(CRect& r, int aspectratio)
 
 bool GSUtil::CheckDirectX()
 {
-	CString str;
-
-	str.Format(_T("d3dx9_%d.dll"), D3DX_SDK_VERSION);
-
-	if(HINSTANCE hDll = LoadLibrary(str))
+	if(HINSTANCE hDll = LoadLibrary(format("d3dx9_%d.dll", D3DX_SDK_VERSION).c_str()))
 	{
 		FreeLibrary(hDll);
 	}
@@ -199,9 +195,9 @@ bool GSUtil::CheckSSE()
 {
 	if(!_CheckSSE())
 	{
-		CString str;
-		str.Format(_T("This CPU does not support SSE %d.%02d"), _M_SSE >> 8, _M_SSE & 0xff);
-		AfxMessageBox(str, MB_OK);
+		string s = format("This CPU does not support SSE %d.%02d", _M_SSE >> 8, _M_SSE & 0xff);
+		
+		AfxMessageBox(s.c_str(), MB_OK);
 
 		return false;
 	}
@@ -223,50 +219,40 @@ bool GSUtil::IsDirect3D10Available()
 
 char* GSUtil::GetLibName()
 {
-	CString str;
+	static string str = format("GSdx %d", SVN_REV);
 
-	str.Format(_T("GSdx %d"), SVN_REV);
-
-	if(SVN_MODS) str += _T("m");
+	if(SVN_MODS) str += "m";
 
 #if _M_AMD64
-	str += _T(" 64-bit");
+	str += " 64-bit";
 #endif
 
-	CAtlList<CString> sl;
+	list<string> sl;
 
 #ifdef __INTEL_COMPILER
-	CString s;
-	s.Format(_T("Intel C++ %d.%02d"), __INTEL_COMPILER/100, __INTEL_COMPILER%100);
-	sl.AddTail(s);
+	sl.push_back(format("Intel C++ %d.%02d", __INTEL_COMPILER / 100, __INTEL_COMPILER % 100));
 #elif _MSC_VER
-	CString s;
-	s.Format(_T("MSVC %d.%02d"), _MSC_VER/100, _MSC_VER%100);
-	sl.AddTail(s);
+	sl.push_back(format("MSVC %d.%02d", _MSC_VER / 100, _MSC_VER % 100));
 #endif
 
 #if _M_SSE >= 0x402
-	sl.AddTail(_T("SSE42"));
+	sl.push_back("SSE42");
 #elif _M_SSE >= 0x401
-	sl.AddTail(_T("SSE41"));
+	sl.push_back("SSE41");
 #elif _M_SSE >= 0x301
-	sl.AddTail(_T("SSSE3"));
+	sl.push_back("SSSE3");
 #elif _M_SSE >= 0x200
-	sl.AddTail(_T("SSE2"));
+	sl.push_back("SSE2");
 #elif _M_SSE >= 0x100
-	sl.AddTail(_T("SSE"));
+	sl.push_back("SSE");
 #endif
 
-	POSITION pos = sl.GetHeadPosition();
-
-	while(pos)
+	for(list<string>::iterator i = sl.begin(); i != sl.end(); )
 	{
-		if(pos == sl.GetHeadPosition()) str += _T(" (");
-		str += sl.GetNext(pos);
-		str += pos ? _T(", ") : _T(")");
+		if(i == sl.begin()) str += " (";
+		str += *i;
+		str += ++i != sl.end() ? ", " : ")";
 	}
 
-	static char buff[256];
-	strncpy(buff, CStringA(str), min(countof(buff)-1, str.GetLength()));
-	return buff;
+	return (char*)str.c_str();
 }

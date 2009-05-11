@@ -32,9 +32,9 @@ GSCodeBuffer::GSCodeBuffer(size_t blocksize)
 
 GSCodeBuffer::~GSCodeBuffer()
 {
-	while(!m_buffers.IsEmpty())
+	for(list<void*>::iterator i = m_buffers.begin(); i != m_buffers.end(); i++)
 	{
-		VirtualFree(m_buffers.RemoveHead(), 0, MEM_RELEASE);
+		VirtualFree(*i, 0, MEM_RELEASE);
 	}
 }
 
@@ -51,7 +51,7 @@ void* GSCodeBuffer::GetBuffer(size_t size)
 
 		m_pos = 0;
 
-		m_buffers.AddTail(m_ptr);
+		m_buffers.push_back(m_ptr);
 	}
 
 	BYTE* ptr = &m_ptr[m_pos];

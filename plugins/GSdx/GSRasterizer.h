@@ -123,7 +123,7 @@ public:
 	void Draw(const GSRasterizerData* data);
 };
 
-class GSRasterizerList : protected CAtlList<IRasterizer*>, public IRasterizer
+class GSRasterizerList : protected list<IRasterizer*>, public IRasterizer
 {
 	long* m_sync;
 	GSRasterizerStats m_stats;
@@ -142,7 +142,7 @@ public:
 
 		for(int i = 0; i < threads; i++) 
 		{
-			AddTail(new GSRasterizerMT(new DS(parent, i), i, threads, m_sync));
+			push_back(new GSRasterizerMT(new DS(parent, i), i, threads, m_sync));
 		}
 	}
 

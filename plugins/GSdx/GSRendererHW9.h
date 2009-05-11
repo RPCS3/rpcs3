@@ -59,7 +59,7 @@ protected:
 public:
 	GSRendererHW9(BYTE* base, bool mt, void (*irq)(), const GSRendererSettings& rs);
 
-	bool Create(LPCTSTR title);
+	bool Create(const string& title);
 
 	template<DWORD prim, DWORD tme, DWORD fst> void VertexKick(bool skip);
 };

@@ -109,9 +109,12 @@ protected:
 
 		if(s_dump)
 		{
-			CString str;
-			str.Format(_T("c:\\temp1\\_%05d_f%I64d_fr%d_%05x_%d.bmp"), s_n++, m_perfmon.GetFrame(), i, (int)TEX0.TBP0, (int)TEX0.PSM);
-			if(s_save) t.Save(str);
+			if(s_save)
+			{
+				t.Save(format("c:\\temp1\\_%05d_f%I64d_fr%d_%05x_%d.bmp", s_n, m_perfmon.GetFrame(), i, (int)TEX0.TBP0, (int)TEX0.PSM));
+			}
+
+			s_n++;
 		}
 
 		return true;
@@ -550,13 +553,34 @@ protected:
 
 		if(s_dump)
 		{
-			CString str;
-			str.Format(_T("c:\\temp1\\_%05d_f%I64d_tex_%05x_%d.bmp"), s_n++, m_perfmon.GetFrame(), (int)m_context->TEX0.TBP0, (int)m_context->TEX0.PSM);
-			if(PRIM->TME) if(s_save) {m_mem.SaveBMP(str, m_context->TEX0.TBP0, m_context->TEX0.TBW, m_context->TEX0.PSM, 1 << m_context->TEX0.TW, 1 << m_context->TEX0.TH);}
-			str.Format(_T("c:\\temp1\\_%05d_f%I64d_rt0_%05x_%d.bmp"), s_n++, m_perfmon.GetFrame(), m_context->FRAME.Block(), m_context->FRAME.PSM);
-			if(s_save) {m_mem.SaveBMP(str, m_context->FRAME.Block(), m_context->FRAME.FBW, m_context->FRAME.PSM, GetFrameSize().cx, 512);}//GetFrameSize(1).cy);
-			str.Format(_T("c:\\temp1\\_%05d_f%I64d_rz0_%05x_%d.bmp"), s_n-1, m_perfmon.GetFrame(), m_context->ZBUF.Block(), m_context->ZBUF.PSM);
-			if(s_savez) {m_mem.SaveBMP(str, m_context->ZBUF.Block(), m_context->FRAME.FBW, m_context->ZBUF.PSM, GetFrameSize().cx, 512);}
+			UINT64 frame = m_perfmon.GetFrame();
+
+			string s;
+
+			if(s_save && PRIM->TME) 
+			{
+				s = format("c:\\temp1\\_%05d_f%I64d_tex_%05x_%d.bmp", s_n, frame, (int)m_context->TEX0.TBP0, (int)m_context->TEX0.PSM);
+
+				m_mem.SaveBMP(s, m_context->TEX0.TBP0, m_context->TEX0.TBW, m_context->TEX0.PSM, 1 << m_context->TEX0.TW, 1 << m_context->TEX0.TH);
+			}
+
+			s_n++;
+
+			if(s_save)
+			{
+				s = format("c:\\temp1\\_%05d_f%I64d_rt0_%05x_%d.bmp", s_n, frame, m_context->FRAME.Block(), m_context->FRAME.PSM);
+
+				m_mem.SaveBMP(s, m_context->FRAME.Block(), m_context->FRAME.FBW, m_context->FRAME.PSM, GetFrameSize().cx, 512);//GetFrameSize(1).cy);
+			}
+
+			if(s_savez)
+			{
+				s = format("c:\\temp1\\_%05d_f%I64d_rz0_%05x_%d.bmp", s_n, frame, m_context->ZBUF.Block(), m_context->ZBUF.PSM);
+
+				m_mem.SaveBMP(s, m_context->ZBUF.Block(), m_context->FRAME.FBW, m_context->ZBUF.PSM, GetFrameSize().cx, 512);
+			}
+
+			s_n++;
 		}
 
 		GSRasterizerData data;
@@ -611,11 +635,25 @@ protected:
 
 		if(s_dump)
 		{
-			CString str;
-			str.Format(_T("c:\\temp1\\_%05d_f%I64d_rt1_%05x_%d.bmp"), s_n++, m_perfmon.GetFrame(), m_context->FRAME.Block(), m_context->FRAME.PSM);
-			if(s_save) {m_mem.SaveBMP(str, m_context->FRAME.Block(), m_context->FRAME.FBW, m_context->FRAME.PSM, GetFrameSize().cx, 512);}//GetFrameSize(1).cy);
-			str.Format(_T("c:\\temp1\\_%05d_f%I64d_rz1_%05x_%d.bmp"), s_n-1, m_perfmon.GetFrame(), m_context->ZBUF.Block(), m_context->ZBUF.PSM);
-			if(s_savez) {m_mem.SaveBMP(str, m_context->ZBUF.Block(), m_context->FRAME.FBW, m_context->ZBUF.PSM, GetFrameSize().cx, 512);}
+			UINT64 frame = m_perfmon.GetFrame();
+
+			string s;
+
+			if(s_save)
+			{
+				s = format("c:\\temp1\\_%05d_f%I64d_rt1_%05x_%d.bmp", s_n, frame, m_context->FRAME.Block(), m_context->FRAME.PSM);
+
+				m_mem.SaveBMP(s, m_context->FRAME.Block(), m_context->FRAME.FBW, m_context->FRAME.PSM, GetFrameSize().cx, 512);//GetFrameSize(1).cy);
+			}
+
+			if(s_savez)
+			{
+				s = format("c:\\temp1\\_%05d_f%I64d_rz1_%05x_%d.bmp", s_n, frame, m_context->ZBUF.Block(), m_context->ZBUF.PSM);
+
+				m_mem.SaveBMP(s, m_context->ZBUF.Block(), m_context->FRAME.FBW, m_context->ZBUF.PSM, GetFrameSize().cx, 512);
+			}
+
+			s_n++;
 		}
 
 		if(0)//stats.ticks > 5000000)

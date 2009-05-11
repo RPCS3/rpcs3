@@ -356,7 +356,7 @@ int GPUState::PH_Command(GPUReg* r, int size)
 
 		Invalidate(r2);
 
-		Dump(_T("f"));
+		Dump("f");
 
 		return 3;
 	}
@@ -568,7 +568,7 @@ int GPUState::PH_Move(GPUReg* r, int size)
 
 	Invalidate(CRect(dst, CSize(w, h)));
 
-	// Dump(_T("m"));
+	// Dump("m");
 
 	return 4;
 }
@@ -597,7 +597,7 @@ int GPUState::PH_Write(GPUReg* r, int size)
 
 	Invalidate(r2);
 
-	Dump(_T("w"));
+	Dump("w");
 
 	m_perfmon.Put(GSPerfMon::Swizzle, w * h * 2);
 
@@ -626,7 +626,7 @@ int GPUState::PH_Read(GPUReg* r, int size)
 
 	m_mem.ReadRect(r2, (WORD*)m_read.buff);
 
-	Dump(_T("r"));
+	Dump("r");
 
 	m_env.STATUS.IMG = 1;
 

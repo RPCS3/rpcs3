@@ -39,7 +39,7 @@ void GSTextureCache10::GSRenderTargetHW10::Update()
 
 	CRect r = m_dirty.GetDirtyRect(m_TEX0, m_texture.GetSize());
 
-	m_dirty.RemoveAll();
+	m_dirty.clear();
 
 	if(r.IsRectEmpty()) return;
 
@@ -93,7 +93,7 @@ void GSTextureCache10::GSRenderTargetHW10::Read(CRect r)
 		return;
 	}
 
-	if(!m_dirty.IsEmpty())
+	if(!m_dirty.empty())
 	{
 		return;
 	}

@@ -43,7 +43,7 @@ public:
 	void Present(const CRect& r) {}
 	void BeginScene() {}
 	void EndScene() {}
-	void Draw(LPCTSTR str) {}
+	void Draw(const string& s) {}
 	bool CopyOffscreen(Texture& src, const GSVector4& sr, Texture& dst, int w, int h, int format = 0) {return false;}
 
 	void ClearRenderTarget(Texture& t, const GSVector4& c) {}

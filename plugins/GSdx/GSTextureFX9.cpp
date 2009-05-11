@@ -50,9 +50,11 @@ bool GSTextureFX9::CreateMskFix(GSTexture9& t, DWORD size, DWORD msk, DWORD fix)
 {
 	DWORD hash = (size << 20) | (msk << 10) | fix;
 
-	if(CRBMap<DWORD, GSTexture9>::CPair* pair = m_mskfix.Lookup(hash))
+	hash_map<DWORD, GSTexture9>::iterator i = m_mskfix.find(hash);
+
+	if(i != m_mskfix.end())
 	{
-		t = pair->m_value;
+		t = (*i).second;
 	}
 	else
 	{
@@ -74,7 +76,7 @@ bool GSTextureFX9::CreateMskFix(GSTexture9& t, DWORD size, DWORD msk, DWORD fix)
 			t.Unmap();
 		}
 
-		m_mskfix.SetAt(hash, t);
+		m_mskfix[hash] = t;
 	}
 
 	return true;
@@ -93,25 +95,27 @@ bool GSTextureFX9::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 {
 	CComPtr<IDirect3DVertexShader9> vs;
 
-	if(CRBMap<DWORD, CComPtr<IDirect3DVertexShader9> >::CPair* pair = m_vs.Lookup(sel))
+	hash_map<DWORD, CComPtr<IDirect3DVertexShader9> >::iterator i = m_vs.find(sel);
+
+	if(i != m_vs.end())
 	{
-		vs = pair->m_value;
+		vs = (*i).second;
 	}
 	else
 	{
-		CStringA str[4];
+		string str[4];
 
-		str[0].Format("%d", sel.bppz);
-		str[1].Format("%d", sel.tme);
-		str[2].Format("%d", sel.fst);
-		str[3].Format("%d", sel.logz);
+		str[0] = format("%d", sel.bppz);
+		str[1] = format("%d", sel.tme);
+		str[2] = format("%d", sel.fst);
+		str[3] = format("%d", sel.logz);
 
 		D3DXMACRO macro[] =
 		{
-			{"VS_BPPZ", str[0]},
-			{"VS_TME", str[1]},
-			{"VS_FST", str[2]},
-			{"VS_LOGZ", str[3]},
+			{"VS_BPPZ", str[0].c_str()},
+			{"VS_TME", str[1].c_str()},
+			{"VS_FST", str[2].c_str()},
+			{"VS_LOGZ", str[3].c_str()},
 			{NULL, NULL},
 		};
 
@@ -133,7 +137,7 @@ bool GSTextureFX9::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 			m_il = il;
 		}
 
-		m_vs.SetAt(sel, vs);
+		m_vs[sel] = vs;
 	}
 
 	m_dev->VSSetShader(vs, (const float*)cb, sizeof(*cb) / sizeof(GSVector4));
@@ -187,47 +191,49 @@ void GSTextureFX9::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSample
 
 	CComPtr<IDirect3DPixelShader9> ps;
 
-	if(CRBMap<DWORD, CComPtr<IDirect3DPixelShader9> >::CPair* pair = m_ps.Lookup(sel))
+	hash_map<DWORD, CComPtr<IDirect3DPixelShader9> >::iterator i = m_ps.find(sel);
+
+	if(i != m_ps.end())
 	{
-		ps = pair->m_value;
+		ps = (*i).second;
 	}
 	else
 	{
-		CStringA str[12];
+		string str[12];
 
-		str[0].Format("%d", sel.fst);
-		str[1].Format("%d", sel.wms);
-		str[2].Format("%d", sel.wmt);
-		str[3].Format("%d", sel.bpp);
-		str[4].Format("%d", sel.aem);
-		str[5].Format("%d", sel.tfx);
-		str[6].Format("%d", sel.tcc);
-		str[7].Format("%d", sel.ate);
-		str[8].Format("%d", sel.atst);
-		str[9].Format("%d", sel.fog);
-		str[10].Format("%d", sel.clr1);
-		str[11].Format("%d", sel.rt);
+		str[0] = format("%d", sel.fst);
+		str[1] = format("%d", sel.wms);
+		str[2] = format("%d", sel.wmt);
+		str[3] = format("%d", sel.bpp);
+		str[4] = format("%d", sel.aem);
+		str[5] = format("%d", sel.tfx);
+		str[6] = format("%d", sel.tcc);
+		str[7] = format("%d", sel.ate);
+		str[8] = format("%d", sel.atst);
+		str[9] = format("%d", sel.fog);
+		str[10] = format("%d", sel.clr1);
+		str[11] = format("%d", sel.rt);
 
 		D3DXMACRO macro[] =
 		{
-			{"FST", str[0]},
-			{"WMS", str[1]},
-			{"WMT", str[2]},
-			{"BPP", str[3]},
-			{"AEM", str[4]},
-			{"TFX", str[5]},
-			{"TCC", str[6]},
-			{"ATE", str[7]},
-			{"ATST", str[8]},
-			{"FOG", str[9]},
-			{"CLR1", str[10]},
-			{"RT", str[11]},
+			{"FST", str[0].c_str()},
+			{"WMS", str[1].c_str()},
+			{"WMT", str[2].c_str()},
+			{"BPP", str[3].c_str()},
+			{"AEM", str[4].c_str()},
+			{"TFX", str[5].c_str()},
+			{"TCC", str[6].c_str()},
+			{"ATE", str[7].c_str()},
+			{"ATST", str[8].c_str()},
+			{"FOG", str[9].c_str()},
+			{"CLR1", str[10].c_str()},
+			{"RT", str[11].c_str()},
 			{NULL, NULL},
 		};
 
 		hr = m_dev->CompileShader(IDR_TFX9_FX, "ps_main", macro, &ps);
 
-		m_ps.SetAt(sel, ps);
+		m_ps[sel] = ps;
 	}
 
 	m_dev->PSSetShader(ps, (const float*)cb, sizeof(*cb) / sizeof(GSVector4));
@@ -241,9 +247,11 @@ void GSTextureFX9::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSample
 			ssel.min = ssel.mag = 0;
 		}
 
-		if(CRBMap<DWORD, Direct3DSamplerState9*>::CPair* pair = m_ps_ss.Lookup(ssel))
+		hash_map<DWORD, Direct3DSamplerState9* >::iterator i = m_ps_ss.find(ssel);
+
+		if(i != m_ps_ss.end())
 		{
-			ss = pair->m_value;
+			ss = (*i).second;
 		}
 		else
 		{
@@ -259,7 +267,7 @@ void GSTextureFX9::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSample
 			ss->AddressU = ssel.tau ? D3DTADDRESS_WRAP : D3DTADDRESS_CLAMP;
 			ss->AddressV = ssel.tav ? D3DTADDRESS_WRAP : D3DTADDRESS_CLAMP;
 
-			m_ps_ss.SetAt(ssel, ss);
+			m_ps_ss[ssel] = ss;
 		}
 	}
 
@@ -282,9 +290,11 @@ void GSTextureFX9::UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, 
 {
 	Direct3DDepthStencilState9* dss = NULL;
 
-	if(CRBMap<DWORD, Direct3DDepthStencilState9*>::CPair* pair = m_om_dss.Lookup(dssel))
+	hash_map<DWORD, Direct3DDepthStencilState9*>::iterator i = m_om_dss.find(dssel);
+
+	if(i != m_om_dss.end())
 	{
-		dss = pair->m_value;
+		dss = (*i).second;
 	}
 	else
 	{
@@ -318,16 +328,18 @@ void GSTextureFX9::UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, 
 			dss->DepthFunc = ztst[dssel.ztst];
 		}
 
-		m_om_dss.SetAt(dssel, dss);
+		m_om_dss[dssel] = dss;
 	}
 
 	m_dev->OMSetDepthStencilState(dss, 3);
 
 	Direct3DBlendState9* bs = NULL;
 	
-	if(CRBMap<DWORD, Direct3DBlendState9*>::CPair* pair = m_om_bs.Lookup(bsel))
+	hash_map<DWORD, Direct3DBlendState9*>::iterator j = m_om_bs.find(bsel);
+
+	if(j != m_om_bs.end())
 	{
-		bs = pair->m_value;
+		bs = (*j).second;
 	}
 	else
 	{
@@ -457,7 +469,7 @@ void GSTextureFX9::UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, 
 		if(bsel.wb) bs->RenderTargetWriteMask |= D3DCOLORWRITEENABLE_BLUE;
 		if(bsel.wa) bs->RenderTargetWriteMask |= D3DCOLORWRITEENABLE_ALPHA;
 
-		m_om_bs.SetAt(bsel, bs);
+		m_om_bs[bsel] = bs;
 	}
 
 	m_dev->OMSetBlendState(bs, 0x010101 * bf);

@@ -22,6 +22,7 @@
 #pragma once
 
 #include "GS.h"
+#include "GSCodeBuffer.h"
 
 struct GSRasterizerStats
 {
@@ -50,8 +51,9 @@ protected:
 		VALUE f;
 	};
 
-	CRBMap<KEY, VALUE> m_map;
-	CRBMap<KEY, ActivePtr*> m_map_active;
+	hash_map<KEY, VALUE> m_map;
+	hash_map<KEY, ActivePtr*> m_map_active;
+
 	ActivePtr* m_active;
 
 	virtual VALUE GetDefaultFunction(KEY key) = 0;
@@ -64,28 +66,25 @@ public:
 
 	virtual ~GSFunctionMap()
 	{
-		POSITION pos = m_map_active.GetHeadPosition();
-
-		while(pos)
+		for(hash_map<KEY, ActivePtr*>::iterator i = m_map_active.begin(); i != m_map_active.end(); i++)
 		{
-			delete m_map_active.GetNextValue(pos);
+			delete (*i).second;
 		}
-
-		m_map_active.RemoveAll();
-	}
-
-	void SetAt(KEY key, VALUE f)
-	{
-		m_map.SetAt(key, f);
 	}
 
 	VALUE Lookup(KEY key)
 	{
 		m_active = NULL;
 
-		if(!m_map_active.Lookup(key, m_active))
+		hash_map<KEY, ActivePtr*>::iterator i = m_map_active.find(key);
+
+		if(i != m_map_active.end())
 		{
-			CRBMap<KEY, VALUE>::CPair* pair = m_map.Lookup(key);
+			m_active = (*i).second;
+		}
+		else
+		{
+			hash_map<KEY, VALUE>::iterator i = m_map.find(key);
 
 			ActivePtr* p = new ActivePtr();
 
@@ -93,9 +92,9 @@ public:
 
 			p->frame = (UINT64)-1;
 
-			p->f = pair ? pair->m_value : GetDefaultFunction(key);
+			p->f = i != m_map.end() ? (*i).second : GetDefaultFunction(key);
 
-			m_map_active.SetAt(key, p);
+			m_map_active[key] = p;
 
 			m_active = p;
 		}
@@ -122,11 +121,9 @@ public:
 	{
 		__int64 ttpf = 0;
 
-		POSITION pos = m_map_active.GetHeadPosition();
-
-		while(pos)
+		for(hash_map<KEY, ActivePtr*>::iterator i = m_map_active.begin(); i != m_map_active.end(); i++)
 		{
-			ActivePtr* p = m_map_active.GetNextValue(pos);
+			ActivePtr* p = (*i).second;
 			
 			if(p->frames)
 			{
@@ -134,14 +131,10 @@ public:
 			}
 		}
 
-		pos = m_map_active.GetHeadPosition();
-
-		while(pos)
+		for(hash_map<KEY, ActivePtr*>::iterator i = m_map_active.begin(); i != m_map_active.end(); i++)
 		{
-			KEY key;
-			ActivePtr* p;
-
-			m_map_active.GetNextAssoc(pos, key, p);
+			KEY key = (*i).first;
+			ActivePtr* p = (*i).second;
 
 			if(p->frames > 0)
 			{
@@ -150,7 +143,7 @@ public:
 				__int64 ppf = p->frames > 0 ? p->pixels / p->frames : 0;
 
 				printf("[%012I64x]%c %6.2f%% | %5.2f%% | f %4I64d | p %10I64d | tpp %4I64d | tpf %9I64d | ppf %7I64d\n", 
-					(UINT64)key, !m_map.Lookup(key) ? '*' : ' ',
+					(UINT64)key, m_map.find(key) == m_map.end() ? '*' : ' ',
 					(float)(tpf * 10000 / 50000000) / 100, 
 					(float)(tpf * 10000 / ttpf) / 100, 
 					p->frames, p->pixels, 
@@ -160,15 +153,14 @@ public:
 	}
 };
 
-#include "GSCodeBuffer.h"
 #include "vtune/JITProfiling.h"
 
 template<class CG, class KEY, class VALUE>
 class GSCodeGeneratorFunctionMap : public GSFunctionMap<KEY, VALUE>
 {
 	DWORD m_id;
-	CStringA m_name;
-	CRBMap<UINT64, CG*> m_cgmap;
+	string m_name;
+	hash_map<UINT64, CG*> m_cgmap;
 	GSCodeBuffer m_cb;
 
 	enum {MAX_SIZE = 4096};
@@ -177,7 +169,7 @@ protected:
 	virtual CG* Create(KEY key, void* ptr, size_t maxsize = MAX_SIZE) = 0;
 
 public:
-	GSCodeGeneratorFunctionMap(LPCSTR name)
+	GSCodeGeneratorFunctionMap(const char* name)
 		: m_id(0x100000)
 		, m_name(name)
 	{
@@ -185,11 +177,9 @@ public:
 
 	virtual ~GSCodeGeneratorFunctionMap()
 	{
-		POSITION pos = m_cgmap.GetHeadPosition();
-
-		while(pos)
+		for(hash_map<UINT64, CG*>::iterator i = m_cgmap.begin(); i != m_cgmap.end(); i++)
 		{
-			delete m_cgmap.GetNextValue(pos);
+			delete (*i).second;
 		}
 	}
 
@@ -197,7 +187,13 @@ public:
 	{
 		CG* cg = NULL;
 
-		if(!m_cgmap.Lookup(key, cg))
+		hash_map<UINT64, CG*>::iterator i = m_cgmap.find(key);
+
+		if(i != m_cgmap.end())
+		{
+			cg = (*i).second;
+		}
+		else
 		{
 			void* ptr = m_cb.GetBuffer(MAX_SIZE);
 
@@ -207,20 +203,18 @@ public:
 
 			m_cb.ReleaseBuffer(cg->getSize());
 
-			m_cgmap.SetAt(key, cg);
+			m_cgmap[key] = cg;
 
 			// vtune method registration
 
-			CStringA name;
-
-			name.Format("%s<%016I64x>()", m_name, (UINT64)key);
+			string name = format("%s<%016I64x>()", m_name.c_str(), (UINT64)key);
 
 			iJIT_Method_Load ml;
 
 			memset(&ml, 0, sizeof(ml));
 
 			ml.method_id = m_id++;
-			ml.method_name = (LPSTR)(LPCSTR)name;
+			ml.method_name = (char*)name.c_str();
 			ml.method_load_address = (void*)cg->getCode();
 			ml.method_size = cg->getSize();
 

@@ -42,7 +42,7 @@ public:
 	virtual bool Update(const CRect& r, const void* data, int pitch) = 0;
 	virtual bool Map(BYTE** bits, int& pitch, const RECT* r = NULL) = 0;
 	virtual void Unmap() = 0;
-	virtual bool Save(CString fn, bool dds = false) = 0;
+	virtual bool Save(const string& fn, bool dds = false) = 0;
 
 	CSize GetSize() {return CSize(GetWidth(), GetHeight());}
 };

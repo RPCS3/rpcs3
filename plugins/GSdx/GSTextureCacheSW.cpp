@@ -38,16 +38,14 @@ const GSTextureCacheSW::GSTexture* GSTextureCacheSW::Lookup(const GIFRegTEX0& TE
 
 	const GSLocalMemory::psm_t& psm = GSLocalMemory::m_psm[TEX0.PSM];
 
-	const CAtlMap<GSTexture*, bool>& map = m_map[TEX0.TBP0 >> 5];
+	const hash_map<GSTexture*, bool>& map = m_map[TEX0.TBP0 >> 5];
 
 	GSTexture* t = NULL;
 
-	POSITION pos = map.GetStartPosition();
-
-	while(pos)
+	for(hash_map<GSTexture*, bool>::const_iterator i = map.begin(); i != map.end(); i++)
 	{
-		GSTexture* t2 = map.GetNextKey(pos);
-			
+		GSTexture* t2 = (*i).first;
+
 		// if(t2->m_TEX0.TBP0 != TEX0.TBP0 || t2->m_TEX0.TBW != TEX0.TBW || t2->m_TEX0.PSM != TEX0.PSM || t2->m_TEX0.TW != TEX0.TW || t2->m_TEX0.TH != TEX0.TH)
 		if(((t2->m_TEX0.ai32[0] ^ TEX0.ai32[0]) | ((t2->m_TEX0.ai32[1] ^ TEX0.ai32[1]) & 3)) != 0)
 		{
@@ -70,7 +68,7 @@ const GSTextureCacheSW::GSTexture* GSTextureCacheSW::Lookup(const GIFRegTEX0& TE
 	{
 		t = new GSTexture(m_state);
 
-		t->m_pos = m_textures.AddTail(t);
+		m_textures[t] = true;
 
 		int tw = 1 << TEX0.TW;
 		int th = 1 << TEX0.TH;
@@ -93,7 +91,7 @@ const GSTextureCacheSW::GSTexture* GSTextureCacheSW::Lookup(const GIFRegTEX0& TE
 					continue;
 				}
 
-				m_map[page].SetAt(t, true);
+				m_map[page][t] = true;
 			}
 		}
 	}
@@ -102,11 +100,11 @@ const GSTextureCacheSW::GSTexture* GSTextureCacheSW::Lookup(const GIFRegTEX0& TE
 	{
 		printf("!@#$%\n"); // memory allocation may fail if the game is too hungry
 
-		m_textures.RemoveAt(t->m_pos);
+		m_textures.erase(t);
 
 		for(int i = 0; i < MAX_PAGES; i++)
 		{
-			m_map[i].RemoveKey(t);
+			m_map[i].erase(t);
 		}
 
 		delete t;
@@ -119,38 +117,34 @@ const GSTextureCacheSW::GSTexture* GSTextureCacheSW::Lookup(const GIFRegTEX0& TE
 
 void GSTextureCacheSW::RemoveAll()
 {
-	POSITION pos = m_textures.GetHeadPosition();
-
-	while(pos)
+	for(hash_map<GSTexture*, bool>::iterator i = m_textures.begin(); i != m_textures.end(); i++)
 	{
-		delete m_textures.GetNext(pos);
+		delete i->first;
 	}
 
-	m_textures.RemoveAll();
+	m_textures.clear();
 
 	for(int i = 0; i < MAX_PAGES; i++)
 	{
-		m_map[i].RemoveAll();
+		m_map[i].clear();
 	}
 }
 
 void GSTextureCacheSW::IncAge()
 {
-	POSITION pos = m_textures.GetHeadPosition();
-
-	while(pos)
+	for(hash_map<GSTexture*, bool>::iterator i = m_textures.begin(); i != m_textures.end(); )
 	{
-		POSITION cur = pos;
+		hash_map<GSTexture*, bool>::iterator j = i++;
 
-		GSTexture* t = m_textures.GetNext(pos);
+		GSTexture* t = j->first;
 
 		if(++t->m_age > 30)
 		{
-			m_textures.RemoveAt(cur);
+			m_textures.erase(j);
 
 			for(int i = 0; i < MAX_PAGES; i++)
 			{
-				m_map[i].RemoveKey(t);
+				m_map[i].erase(t);
 			}
 
 			delete t;
@@ -187,13 +181,11 @@ void GSTextureCacheSW::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, cons
 				continue;
 			}
 
-			const CAtlMap<GSTexture*, bool>& map = m_map[page];
+			const hash_map<GSTexture*, bool>& map = m_map[page];
 
-			POSITION pos = map.GetStartPosition();
-
-			while(pos)
+			for(hash_map<GSTexture*, bool>::const_iterator i = map.begin(); i != map.end(); i++)
 			{
-				GSTexture* t = map.GetNextKey(pos);
+				GSTexture* t = (*i).first;
 
 				t->m_valid[page] = 0;
 
@@ -210,7 +202,6 @@ GSTextureCacheSW::GSTexture::GSTexture(GSState* state)
 	, m_buff(NULL)
 	, m_tw(0)
 	, m_age(0)
-	, m_pos(NULL)
 	, m_complete(false)
 {
 	memset(m_valid, 0, sizeof(m_valid));

@@ -568,7 +568,7 @@ void GPULocalMemory::Expand24(const WORD* RESTRICT src, DWORD* RESTRICT dst, int
 	}
 }
 
-void GPULocalMemory::SaveBMP(LPCTSTR path, CRect r, int tp, int cx, int cy)
+void GPULocalMemory::SaveBMP(const string& path, CRect r, int tp, int cx, int cy)
 {
 	r.left <<= m_scale.cx;
 	r.top <<= m_scale.cy;
@@ -578,7 +578,7 @@ void GPULocalMemory::SaveBMP(LPCTSTR path, CRect r, int tp, int cx, int cy)
 	r.left &= ~1;
 	r.right &= ~1;
 
-	if(FILE* fp = _tfopen(path, _T("wb")))
+	if(FILE* fp = fopen(path.c_str(), "wb"))
 	{
 		BITMAPINFOHEADER bih;
 		memset(&bih, 0, sizeof(bih));

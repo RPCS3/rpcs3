@@ -35,8 +35,8 @@ public:
 	}
 };
 
-typedef __declspec(align(8)) GSVector2T<float> GSVector2;
-typedef __declspec(align(8)) GSVector2T<int> GSVector2i;
+typedef GSVector2T<float> GSVector2;
+typedef GSVector2T<int> GSVector2i;
 
 class GSVector4;
 

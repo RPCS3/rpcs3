@@ -29,7 +29,7 @@ public:
 	GSWnd();
 	virtual ~GSWnd();
 
-	virtual bool Create(LPCTSTR title);
+	virtual bool Create(const string& title);
 
 	void Show();
 	void Hide();

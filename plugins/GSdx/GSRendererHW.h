@@ -261,9 +261,12 @@ protected:
 
 			if(s_dump)
 			{
-				CString str;
-				str.Format(_T("c:\\temp2\\_%05d_f%I64d_fr%d_%05x_%d.bmp"), s_n++, m_perfmon.GetFrame(), i, (int)TEX0.TBP0, (int)TEX0.PSM);
-				if(s_save) rt->m_texture.Save(str);
+				if(s_save) 
+				{
+					rt->m_texture.Save(format("c:\\temp2\\_%05d_f%I64d_fr%d_%05x_%d.bmp", s_n, m_perfmon.GetFrame(), i, (int)TEX0.TBP0, (int)TEX0.PSM));
+				}
+
+				s_n++;
 			}
 
 			return true;
@@ -321,19 +324,45 @@ protected:
 
 		if(s_dump)
 		{
-			CString str;
-			str.Format(_T("c:\\temp2\\_%05d_f%I64d_tex_%05x_%d_%d%d_%02x_%02x_%02x_%02x.dds"), 
-				s_n++, m_perfmon.GetFrame(), (int)context->TEX0.TBP0, (int)context->TEX0.PSM,
-				(int)context->CLAMP.WMS, (int)context->CLAMP.WMT, 
-				(int)context->CLAMP.MINU, (int)context->CLAMP.MAXU, 
-				(int)context->CLAMP.MINV, (int)context->CLAMP.MAXV);
-			if(PRIM->TME) if(s_save) tex->m_texture.Save(str, true);
-			str.Format(_T("c:\\temp2\\_%05d_f%I64d_tpx_%05x_%d.dds"), s_n-1, m_perfmon.GetFrame(), context->TEX0.CBP, context->TEX0.CPSM);
-			if(PRIM->TME && tex->m_palette) if(s_save) tex->m_palette.Save(str, true);
-			str.Format(_T("c:\\temp2\\_%05d_f%I64d_rt0_%05x_%d.bmp"), s_n++, m_perfmon.GetFrame(), context->FRAME.Block(), context->FRAME.PSM);
-			if(s_save) rt->m_texture.Save(str);
-			str.Format(_T("c:\\temp2\\_%05d_f%I64d_rz0_%05x_%d.bmp"), s_n-1, m_perfmon.GetFrame(), context->ZBUF.Block(), context->ZBUF.PSM);
-			if(s_savez) ds->m_texture.Save(str);
+			UINT64 frame = m_perfmon.GetFrame();
+
+			string s;
+			
+			if(s_save && PRIM->TME) 
+			{
+				s = format("c:\\temp2\\_%05d_f%I64d_tex_%05x_%d_%d%d_%02x_%02x_%02x_%02x.dds", 
+					s_n, frame, (int)context->TEX0.TBP0, (int)context->TEX0.PSM,
+					(int)context->CLAMP.WMS, (int)context->CLAMP.WMT, 
+					(int)context->CLAMP.MINU, (int)context->CLAMP.MAXU, 
+					(int)context->CLAMP.MINV, (int)context->CLAMP.MAXV);
+
+				tex->m_texture.Save(s, true);
+
+				if(tex->m_palette)
+				{
+					s = format("c:\\temp2\\_%05d_f%I64d_tpx_%05x_%d.dds", s_n, frame, context->TEX0.CBP, context->TEX0.CPSM);
+
+					tex->m_palette.Save(s, true);
+				}
+			}
+
+			s_n++;
+
+			if(s_save)
+			{
+				s = format("c:\\temp2\\_%05d_f%I64d_rt0_%05x_%d.bmp", s_n, frame, context->FRAME.Block(), context->FRAME.PSM);
+
+				rt->m_texture.Save(s);
+			}
+
+			if(s_savez)
+			{
+				s = format("c:\\temp2\\_%05d_f%I64d_rz0_%05x_%d.bmp", s_n, frame, context->ZBUF.Block(), context->ZBUF.PSM);
+
+				ds->m_texture.Save(s);
+			}
+
+			s_n++;
 		}
 
 		int prim = PRIM->PRIM;
@@ -349,12 +378,25 @@ protected:
 
 		if(s_dump)
 		{
-			CString str;
-			str.Format(_T("c:\\temp2\\_%05d_f%I64d_rt1_%05x_%d.bmp"), s_n++, m_perfmon.GetFrame(), context->FRAME.Block(), context->FRAME.PSM);
-			if(s_save) rt->m_texture.Save(str);
-			str.Format(_T("c:\\temp2\\_%05d_f%I64d_rz1_%05x_%d.bmp"), s_n-1, m_perfmon.GetFrame(), context->ZBUF.Block(), context->ZBUF.PSM);
-			if(s_savez) ds->m_texture.Save(str);
-			// if(s_savez) m_dev.SaveToFileD32S8X24(ds->m_texture, str); // TODO
+			UINT64 frame = m_perfmon.GetFrame();
+
+			string s;
+
+			if(s_save)
+			{
+				s = format("c:\\temp2\\_%05d_f%I64d_rt1_%05x_%d.bmp", s_n, frame, context->FRAME.Block(), context->FRAME.PSM);
+
+				rt->m_texture.Save(s);
+			}
+
+			if(s_savez)
+			{
+				s = format("c:\\temp2\\_%05d_f%I64d_rz1_%05x_%d.bmp", s_n, frame, context->ZBUF.Block(), context->ZBUF.PSM);
+
+				ds->m_texture.Save(s);
+			}
+
+			s_n++;
 		}
 
 		m_tc->InvalidateTextures(context->FRAME, context->ZBUF);

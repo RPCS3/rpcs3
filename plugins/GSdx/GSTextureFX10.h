@@ -213,15 +213,15 @@ public:
 private:
 	GSDevice10* m_dev;
 	CComPtr<ID3D10InputLayout> m_il;
-	CRBMapC<DWORD, CComPtr<ID3D10VertexShader> > m_vs;
+	hash_map<DWORD, CComPtr<ID3D10VertexShader> > m_vs;
 	CComPtr<ID3D10Buffer> m_vs_cb;
-	CRBMapC<DWORD, CComPtr<ID3D10GeometryShader> > m_gs;
-	CRBMapC<DWORD, CComPtr<ID3D10PixelShader> > m_ps;
+	hash_map<DWORD, CComPtr<ID3D10GeometryShader> > m_gs;
+	hash_map<DWORD, CComPtr<ID3D10PixelShader> > m_ps;
 	CComPtr<ID3D10Buffer> m_ps_cb;
-	CRBMapC<DWORD, CComPtr<ID3D10SamplerState> > m_ps_ss;
+	hash_map<DWORD, CComPtr<ID3D10SamplerState> > m_ps_ss;
 	CComPtr<ID3D10SamplerState> m_palette_ss;
-	CRBMapC<DWORD, CComPtr<ID3D10DepthStencilState> > m_om_dss;	
-	CRBMapC<DWORD, CComPtr<ID3D10BlendState> > m_om_bs;	
+	hash_map<DWORD, CComPtr<ID3D10DepthStencilState> > m_om_dss;	
+	hash_map<DWORD, CComPtr<ID3D10BlendState> > m_om_bs;	
 
 	CComPtr<ID3D10Buffer> m_vb, m_vb_old;
 	int m_vb_max;

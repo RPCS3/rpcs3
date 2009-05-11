@@ -45,7 +45,7 @@ public:
 	bool Update(const CRect& r, const void* data, int pitch);
 	bool Map(BYTE** bits, int& pitch, const RECT* r = NULL);
 	void Unmap();
-	bool Save(CString fn, bool dds = false);
+	bool Save(const string& fn, bool dds = false);
 
 	IDirect3DTexture9* operator->(); // TODO: remove direct access
 

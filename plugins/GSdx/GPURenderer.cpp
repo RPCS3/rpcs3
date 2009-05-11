@@ -22,4 +22,4 @@
 #include "StdAfx.h"
 #include "GPURenderer.h"
 
-CAtlMap<HWND, GPURendererBase*> GPURendererBase::m_wnd2gpu;
+map<HWND, GPURendererBase*> GPURendererBase::m_wnd2gpu;

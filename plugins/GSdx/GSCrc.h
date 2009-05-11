@@ -91,7 +91,7 @@ public:
 
 private:
 	static Game m_games[];
-	static CAtlMap<DWORD, Game*> m_map;
+	static hash_map<DWORD, Game*> m_map;
 
 public:
 	static Game Lookup(DWORD crc);
