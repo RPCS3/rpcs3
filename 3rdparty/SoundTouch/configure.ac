@@ -16,9 +16,9 @@ CPPFLAGS=
 CXXFLAGS=
 CCASFLAGS=
 
-CFLAGS+="-g -fPIC -Wall  -Wno-unused-value -m32 "
-CPPFLAGS+="-g -fPIC -Wall  -Wno-unused-value -m32 "
-CXXFLAGS+="-g -fPIC -Wall  -Wno-unused-value -m32 "
+CFLAGS+=" -m32 "
+CPPFLAGS+=" -m32 "
+CXXFLAGS+=" -m32 "
 CCASFLAGS+=" -m32 "
  
 dnl Check for 64bit CPU

@@ -18,6 +18,8 @@
 
 /*  This code was based on the FPSE v0.08 Mdec decoder*/
 
+#ifdef 0
+
 #include <stdio.h>
 #include <string.h>
 
@@ -413,7 +415,7 @@ int SaveState::mdecFreeze() {
 	return 0;
 
 }
-
+#endif
 
 
 
