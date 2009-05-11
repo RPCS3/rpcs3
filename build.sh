@@ -28,7 +28,7 @@ export PCSX2PLUGINS="`pwd`/bin/plugins"
 curdir=`pwd`
 
 echo "Building the Pcsx2 Suite."
-echo "Note: will not compile on Linux x64."
+echo "Note: binaries generated are 32 bit, and require 32 bit versions of all dependencies."
 cd ${curdir}/plugins
 sh build.sh $option
 
@@ -39,7 +39,7 @@ exit 1
 fi
 
 echo "Building Pcsx2."
-echo "Note: will not compile on Linux x64."
+echo "Note: binaries generated are 32 bit, and require 32 bit versions of all dependencies."
 cd ${curdir}/pcsx2
 sh build.sh $option
 

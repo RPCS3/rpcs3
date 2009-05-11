@@ -21,6 +21,7 @@ AC_SUBST(CDVDiso_SONAME,libCDVDiso.so.[$CDVDiso_CURRENT].[$CDVDiso_REVISION].[$C
 CFLAGS= 
 CPPFLAGS= 
 CXXFLAGS= 
+CCASFLAGS=
 
 dnl Check for debug build
 AC_MSG_CHECKING(debug build)
@@ -29,14 +30,16 @@ debug=$enableval,debug=no)
 if test "x$debug" == xyes
 then
  AC_DEFINE(_DEBUG,1,[_DEBUG])
- CFLAGS+=" -g -fPIC -Wall  -Wno-unused-value "
- CPPFLAGS+=" -g -fPIC -Wall  -Wno-unused-value "
- CXXFLAGS+=" -g -fPIC -Wall  -Wno-unused-value -fpermissive "
+ CFLAGS+=" -g -fPIC -Wall  -Wno-unused-value -m32 "
+ CPPFLAGS+=" -g -fPIC -Wall  -Wno-unused-value -m32 "
+ CXXFLAGS+=" -g -fPIC -Wall  -Wno-unused-value -fpermissive -m32 "
+ CCASFLAGS+=" -m32 "
 else
  AC_DEFINE(NDEBUG,1,[NDEBUG])
- CFLAGS+=" -O3 -fomit-frame-pointer -fPIC -Wno-unused-value "
- CPPFLAGS+=" -O3 -fomit-frame-pointer -fPIC -Wno-unused-value "
- CXXFLAGS+=" -O3 -fomit-frame-pointer -fPIC -Wno-unused-value -fpermissive "
+ CFLAGS+=" -O3 -fomit-frame-pointer -fPIC -Wno-unused-value -m32 "
+ CPPFLAGS+=" -O3 -fomit-frame-pointer -fPIC -Wno-unused-value -m32 "
+ CXXFLAGS+=" -O3 -fomit-frame-pointer -fPIC -Wno-unused-value -fpermissive -m32 "
+ CCASFLAGS+=" -m32 "
 fi
 AM_CONDITIONAL(DEBUGBUILD, test x$debug = xyes)
 AC_MSG_RESULT($debug)

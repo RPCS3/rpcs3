@@ -3,7 +3,7 @@ PLUGIN = libCDVDisoEFP.so
 PLUGINOBJS = CDVDiso.o
 PLUGINHEADERS = CDVDiso.h
 PLUGINFLAGS = -fPIC -Wall -O2 -fomit-frame-pointer -D_LARGEFILE64_SOURCE \
-	-I.. -I. -I./Linux
+	-I.. -I. -I./Linux -m32 
 PLUGINLIBS = -lz -lbz2
 
 CFG = cfgCDVDisoEFP
@@ -14,7 +14,7 @@ CFGHEADERS = interface.h aboutbox.h mainbox.h selectionbox.h \
 	devicebox.h conversionbox.h progressbox.h messagebox.h \
 	tablerebuild.h device.h CD.h DVD.h
 CFGFLAGS = -fPIC -Wall -O2 -fomit-frame-pointer -D_LARGEFILE64_SOURCE \
-	-I.. -I. -I./Linux
+	-I.. -I. -I./Linux -m32 
 CFGLIBS = -lz -lbz2
 
 COMP = compCDVDisoEFP

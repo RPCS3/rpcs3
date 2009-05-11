@@ -22,6 +22,7 @@ AC_SUBST(ZEROGS_SONAME, libZeroGSogl.so.[$ZEROGS_CURRENT].[$ZEROGS_REVISION].[$Z
 CFLAGS=" -I/opt/cg/include -L/opt/cg/lib "
 CPPFLAGS=" -I/opt/cg/include -L/opt/cg/lib "
 CXXFLAGS=" -I/opt/cg/include -L/opt/cg/lib "
+CCASFLAGS=
 
 dnl Check for debug build
 AC_MSG_CHECKING(debug build)
@@ -30,14 +31,16 @@ AC_ARG_ENABLE(debug, AC_HELP_STRING([--enable-debug], [debug build]),
 if test "x$debug" == xyes
 then
  AC_DEFINE(_DEBUG,1,[_DEBUG])
- CFLAGS+="-g "
- CPPFLAGS+="-g "
- CXXFLAGS+="-g -fpermissive "
+ CFLAGS+="-g -m32 "
+ CPPFLAGS+="-g -m32 "
+ CXXFLAGS+="-g -fpermissive -m32 "
+ CCASFLAGS+=" -m32 "
 else
  AC_DEFINE(NDEBUG,1,[NDEBUG])
- CFLAGS+="-O3 -fomit-frame-pointer "
- CPPFLAGS+="-O3 -fomit-frame-pointer "
- CXXFLAGS+="-O3 -fomit-frame-pointer -fpermissive "
+ CFLAGS+="-O3 -fomit-frame-pointer -m32 "
+ CPPFLAGS+="-O3 -fomit-frame-pointer -m32 "
+ CXXFLAGS+="-O3 -fomit-frame-pointer -fpermissive -m32 "
+ CCASFLAGS+=" -m32 "
 fi
 AC_MSG_RESULT($debug)
 

@@ -11,6 +11,16 @@ AC_PROG_CXX
 AC_PROG_CC
 AC_PROG_RANLIB
 
+CFLAGS=
+CPPFLAGS=
+CXXFLAGS=
+CCASFLAGS=
+
+CFLAGS+="-g -fPIC -Wall  -Wno-unused-value -m32 "
+CPPFLAGS+="-g -fPIC -Wall  -Wno-unused-value -m32 "
+CXXFLAGS+="-g -fPIC -Wall  -Wno-unused-value -m32 "
+CCASFLAGS+=" -m32 "
+ 
 dnl Check for 64bit CPU
 AC_MSG_CHECKING(for a x86-64 CPU)
 dnl if test "$build_os" == "target_os"

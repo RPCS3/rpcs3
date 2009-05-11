@@ -7,6 +7,10 @@ AC_PROG_CPP([gcc g++ cl KCC CC cxx cc++ xlC aCC c++])
 
 AC_PROG_RANLIB
 
+#AS="$CC"
+#AC_SUBST(AS)
+#AC_SUBST(ASFLAGS)
+
 dnl necessary for compiling assembly
 AM_PROG_AS
 
@@ -50,14 +54,19 @@ AC_ARG_ENABLE(debug, AC_HELP_STRING([--enable-debug], [debug build]),
 if test "x$debug" == xyes
 then
  AC_DEFINE(_DEBUG,1,[_DEBUG])
- CFLAGS+=" ${DEBUG_FLAGS} -Xlinker -zmuldefs "
- CXXFLAGS+=" ${DEBUG_FLAGS} -fpermissive -Xlinker -zmuldefs "
- CCASFLAGS+=" -D_DEBUG ${DEBUG_FLAGS} "
+ CFLAGS+=" ${DEBUG_FLAGS} -Xlinker -zmuldefs -m32 "
+ CXXFLAGS+=" ${DEBUG_FLAGS} -fpermissive -Xlinker -zmuldefs -m32 "
+ CCASFLAGS+=" -D_DEBUG ${DEBUG_FLAGS}  -m32 "
+ #LDFLAGS+=" -m32 "
+ #ASFLAGS+=" -m32 "
  MYOBJDIR="Debug"
 else
  AC_DEFINE(NDEBUG,1,[NDEBUG])
- CFLAGS+=" ${NORMAL_FLAGS}"
- CXXFLAGS+=" ${NORMAL_FLAGS} -fpermissive -Xlinker -zmuldefs "
+ CFLAGS+=" ${NORMAL_FLAGS} -m32 "
+ CXXFLAGS+=" ${NORMAL_FLAGS} -fpermissive -Xlinker -zmuldefs -m32 "
+ CCASFLAGS+=" ${NORMAL_FLAGS} -m32 "
+ #LDFLAGS+=" -m32 "
+ #ASFLAGS+=" -m32 "
  MYOBJDIR="Release"
 fi
 AC_MSG_RESULT($debug)

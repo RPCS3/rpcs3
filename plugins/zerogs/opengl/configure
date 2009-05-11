@@ -4428,6 +4428,7 @@ ZEROGS_SONAME=libZeroGSogl.so.$ZEROGS_CURRENT.$ZEROGS_REVISION.$ZEROGS_AGE
 CFLAGS=" -I/opt/cg/include -L/opt/cg/lib "
 CPPFLAGS=" -I/opt/cg/include -L/opt/cg/lib "
 CXXFLAGS=" -I/opt/cg/include -L/opt/cg/lib "
+CCASFLAGS=
 
 { $as_echo "$as_me:$LINENO: checking debug build" >&5
 $as_echo_n "checking debug build... " >&6; }
@@ -4445,18 +4446,20 @@ cat >>confdefs.h <<\_ACEOF
 #define _DEBUG 1
 _ACEOF
 
- CFLAGS+="-g "
- CPPFLAGS+="-g "
- CXXFLAGS+="-g -fpermissive "
+ CFLAGS+="-g -m32 "
+ CPPFLAGS+="-g -m32 "
+ CXXFLAGS+="-g -fpermissive -m32 "
+ CCASFLAGS+=" -m32 "
 else
 
 cat >>confdefs.h <<\_ACEOF
 #define NDEBUG 1
 _ACEOF
 
- CFLAGS+="-O3 -fomit-frame-pointer "
- CPPFLAGS+="-O3 -fomit-frame-pointer "
- CXXFLAGS+="-O3 -fomit-frame-pointer -fpermissive "
+ CFLAGS+="-O3 -fomit-frame-pointer -m32 "
+ CPPFLAGS+="-O3 -fomit-frame-pointer -m32 "
+ CXXFLAGS+="-O3 -fomit-frame-pointer -fpermissive -m32 "
+ CCASFLAGS+=" -m32 "
 fi
 { $as_echo "$as_me:$LINENO: result: $debug" >&5
 $as_echo "$debug" >&6; }
