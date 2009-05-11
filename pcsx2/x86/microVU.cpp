@@ -43,6 +43,7 @@ microVUt(void) mVUinit(VURegs* vuRegsPtr) {
 	mVU->microSize	= (vuIndex ? 0x4000 : 0x1000);
 	mVU->progSize	= (vuIndex ? 0x4000 : 0x1000) / 4;
 	mVU->cache		= NULL;
+	mVU->cacheSize	= mVUcacheSize;
 	memset(&mVU->prog, 0, sizeof(mVU->prog));
 	mVUprint((vuIndex) ? "microVU1: init" : "microVU0: init");
 

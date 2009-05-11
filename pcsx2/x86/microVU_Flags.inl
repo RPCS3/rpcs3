@@ -19,20 +19,6 @@
 #pragma once
 #ifdef PCSX2_MICROVU
 
-// ToDo: Fix this properly.
-#define flagSetMacro(xFlag, pFlag, xF, yF, zF) {	\
-	yF += (mVUstall > 3) ? 3 : mVUstall;			\
-	if (yF > zF) {									\
-		pFlag += (yF-zF);							\
-		if (pFlag >= xFlag) pFlag = (xFlag-1);		\
-		zF++;										\
-		xF = (yF-zF);								\
-		zF = yF;									\
-		yF -= xF;									\
-	}												\
-	yF++;											\
-}
-
 // Sets FDIV Flags at the proper time
 microVUt(void) mVUdivSet() {
 	microVU* mVU = mVUx;
@@ -69,90 +55,177 @@ microVUt(void) mVUstatusFlagOp() {
 	iPC = curPC;
 }
 
+int findFlagInst(int* fFlag, int cycles) {
+	int j = 0, jValue = -1;
+	for (int i = 0; i < 4; i++) {
+		if ((fFlag[i] <= cycles) && (fFlag[i] > jValue)) { j = i; jValue = fFlag[i]; }
+	}
+	return j;
+}
+
+// Setup Last 4 instances of Status/Mac/Clip flags (needed for accurate block linking)
+void sortFlag(int* fFlag, int* bFlag, int cycles) {
+	for (int i = 0; i < 4; i++) {
+		bFlag[i] = findFlagInst(fFlag, cycles);
+		cycles++;
+	}
+}
+
 // Note: Flag handling is 'very' complex, it requires full knowledge of how microVU recs work, so don't touch!
-microVUt(void) mVUsetFlags(int* bStatus, int* bMac) {
+microVUt(int) mVUsetFlags(int* xStatus, int* xMac, int* xClip) {
 	microVU* mVU = mVUx;
 
-	// Ensure last ~4+ instructions update mac flags
 	int endPC  = iPC;
-	u32 aCount = 1; // Amount of instructions needed to get 4 valid status/mac flag instances
-	for (int i = mVUcount, iX = 0; i > 0; i--, aCount++) {
-		if (doStatus) { mVUinfo |= _doMac; iX++; if ((iX >= 4) || (aCount > 4)) { break; } }
+	u32 aCount = 1; // Amount of instructions needed to get valid mac flag instances for block linking
+
+	// Ensure last ~4+ instructions update mac flags
+	for (int i = mVUcount; i > 0; i--, aCount++) {
+		if (doStatus) { if (__Mac) { mVUinfo |= _doMac; } if (aCount > 4) { break; } }
 		incPC2(-2);
 	}
 
 	// Status/Mac Flags Setup Code
-	int xStatus	= 8, xMac = 8; // Flag Instances start at #0 on every block ((8&3) == 0)
-	int pStatus	= 3, pMac = 3;
-	int xClip = mVUregs.clip + 8, pClip = mVUregs.clip + 7; // Clip Instance starts from where it left off
-	int xS = 0, yS = 1, zS = 0;
-	int xM = 0, yM = 1, zM = 0;
-	int xC = 0, yC = 1, zC = 0;
+	int xS = 0, xM = 0, xC = 0;
+	for (int i = 0; i < 4; i++) {
+		xStatus[i] = i;
+		xMac   [i] = i;
+		xClip  [i] = i;
+	}
+
+	if (!(mVUpBlock->pState.needExactMatch & 0x00f)) {
+		xS = (mVUpBlock->pState.flags >> 0) & 3;
+		xStatus[0] = -1; xStatus[1] = -1;
+		xStatus[2] = -1; xStatus[3] = -1;
+		xStatus[(xS-1)&3] = 0;
+	}
+
+	if (!(mVUpBlock->pState.needExactMatch & 0xf00)) {
+		xC = (mVUpBlock->pState.flags >> 2) & 3;
+		xClip[0] = -1; xClip[1] = -1;
+		xClip[2] = -1; xClip[3] = -1;
+		xClip[(xC-1)&3] = 0;
+	}
+
+	if (!(mVUpBlock->pState.needExactMatch & 0x0f0)) {
+		xMac[0] = -1; xMac[1] = -1;
+		xMac[2] = -1; xMac[3] = -1;
+	}
+
+	int cycles	= 0;
 	u32 xCount	= mVUcount; // Backup count
 	iPC			= mVUstartPC;
 	for (mVUcount = 0; mVUcount < xCount; mVUcount++) {
-		if (((xCount - mVUcount) > aCount) && isFSSET) mVUstatusFlagOp<vuIndex>(); // Don't Optimize out on the last ~4+ instructions
+		if (isFSSET) {
+			if (__Status) { // Don't Optimize out on the last ~4+ instructions
+				if ((xCount - mVUcount) > aCount) { mVUstatusFlagOp<vuIndex>(); }
+			}
+			else mVUstatusFlagOp<vuIndex>();
+		}
+		cycles += mVUstall;
 
-		flagSetMacro(xStatus, pStatus, xS, yS, zS); // Handles _fvsinstances
-		flagSetMacro(xMac,	  pMac,	   xM, yM, zM); // Handles _fvminstances
-		flagSetMacro(xClip,	  pClip,   xC, yC, zC); // Handles _fvcinstances
+		mVUinfo |= findFlagInst(xStatus, cycles) << 18; // _fvsInstance
+		mVUinfo |= findFlagInst(xMac,	 cycles) << 16; // _fvmInstance
+		mVUinfo |= findFlagInst(xClip,	 cycles) << 20; // _fvcInstance
 
-		mVUinfo |= (xStatus&3)	<< 12; // _fsInstance
-		mVUinfo |= (xMac&3)		<< 10; // _fmInstance
-		mVUinfo |= (xClip&3)	<< 14; // _fcInstance
+		mVUinfo |= (xS & 3) << 12; // _fsInstance
+		mVUinfo |= (xM & 3) << 10; // _fmInstance
+		mVUinfo |= (xC & 3) << 14; // _fcInstance
 
-		mVUinfo |= (pStatus&3)	<< 18; // _fvsInstance
-		mVUinfo |= (pMac&3)		<< 16; // _fvmInstance
-		mVUinfo |= (pClip&3)	<< 20; // _fvcInstance
+		if (doStatus||isFSSET||doDivFlag) { xStatus	[xS] = cycles + 4; xS = (xS+1)&3; }
+		if (doMac)						  { xMac	[xM] = cycles + 4; xM = (xM+1)&3; }
+		if (doClip)						  { xClip	[xC] = cycles + 4; xC = (xC+1)&3; }
 
-		if (doStatus||isFSSET||doDivFlag) { xStatus = (xStatus+1); }
-		if (doMac)						  { xMac	= (xMac+1); }
-		if (doClip)						  { xClip	= (xClip+1); }
+		cycles++;
 		incPC2(2);
 	}
-	mVUcount = xCount; // Restore count
-	mVUregs.clip = xClip&3; // Note: Clip timing isn't cycle-accurate between block linking; but hopefully doesn't matter
 
-	// Temp Hack-fix until flag-algorithm rewrite
-	for (int i = 0; i < 4; i++) {
-		bStatus[i] = 0;
-		bMac[i]    = 0;
-	}
-
-	// Setup Last 4 instances of Status/Mac flags (needed for accurate block linking)
-	iPC = endPC;
-	for (int i = 3, j = 3, ii = 1, jj = 1; aCount > 0; ii++, jj++, aCount--) {
-		if ((doStatus||isFSSET||doDivFlag) && (i >= 0)) { 
-			for (; (ii > 0 && i >= 0); i--, ii--) { xStatus = (xStatus-1) & 3; bStatus[i] = xStatus; }
-		}
-		if (doMac && (j >= 0)) { 
-			for (; (jj > 0 && j >= 0); j--, jj--) { xMac = (xMac-1) & 3; bMac[j] = xMac; }
-		}
-		incPC2(-2);
-	}
-	iPC = endPC;
+	mVUregs.flags = ((__Clip) ? 0 : (xC << 2)) | ((__Status) ? 0 : xS);
+	return cycles;
 }
 
 #define getFlagReg1(x)	((x == 3) ? gprF3 : ((x == 2) ? gprF2 : ((x == 1) ? gprF1 : gprF0)))
-#define shuffleMac		((bMac[3]<<6)|(bMac[2]<<4)|(bMac[1]<<2)|bMac[0])
+#define shuffleMac		((bMac [3]<<6)|(bMac [2]<<4)|(bMac [1]<<2)|bMac [0])
+#define shuffleClip		((bClip[3]<<6)|(bClip[2]<<4)|(bClip[1]<<2)|bClip[0])
 
 // Recompiles Code for Proper Flags on Block Linkings
-microVUt(void) mVUsetupFlags(int* bStatus, int* bMac) {
+microVUt(void) mVUsetupFlags(int* xStatus, int* xMac, int* xClip, int cycles) {
 	microVU* mVU = mVUx;
 
-	PUSH32R(gprR); // Backup gprR
-	MOV32RtoR(gprT1,  getFlagReg1(bStatus[0])); 
-	MOV32RtoR(gprT2,  getFlagReg1(bStatus[1]));
-	MOV32RtoR(gprR,   getFlagReg1(bStatus[2]));
-	MOV32RtoR(gprF3,  getFlagReg1(bStatus[3]));
-	MOV32RtoR(gprF0,  gprT1);
-	MOV32RtoR(gprF1,  gprT2); 
-	MOV32RtoR(gprF2,  gprR); 
-	POP32R(gprR);  // Restore gprR
+	if (__Status) {
+		int bStatus[4];
+		sortFlag(xStatus, bStatus, cycles);
+		PUSH32R(gprR); // Backup gprR
+		MOV32RtoR(gprT1,  getFlagReg1(bStatus[0])); 
+		MOV32RtoR(gprT2,  getFlagReg1(bStatus[1]));
+		MOV32RtoR(gprR,   getFlagReg1(bStatus[2]));
+		MOV32RtoR(gprF3,  getFlagReg1(bStatus[3]));
+		MOV32RtoR(gprF0,  gprT1);
+		MOV32RtoR(gprF1,  gprT2); 
+		MOV32RtoR(gprF2,  gprR); 
+		POP32R(gprR);  // Restore gprR
+	}
 
-	SSE_MOVAPS_M128_to_XMM(xmmT1, (uptr)mVU->macFlag);
-	SSE_SHUFPS_XMM_to_XMM (xmmT1, xmmT1, shuffleMac);
-	SSE_MOVAPS_XMM_to_M128((uptr)mVU->macFlag, xmmT1);
+	if (__Mac) {
+		int bMac[4];
+		sortFlag(xMac, bMac, cycles);
+		SSE_MOVAPS_M128_to_XMM(xmmT1, (uptr)mVU->macFlag);
+		SSE_SHUFPS_XMM_to_XMM (xmmT1, xmmT1, shuffleMac);
+		SSE_MOVAPS_XMM_to_M128((uptr)mVU->macFlag, xmmT1);
+	}
+
+	if (__Clip) {
+		int bClip[4];
+		sortFlag(xClip, bClip, cycles);
+		SSE_MOVAPS_M128_to_XMM(xmmT1, (uptr)mVU->clipFlag);
+		SSE_SHUFPS_XMM_to_XMM (xmmT1, xmmT1, shuffleClip);
+		SSE_MOVAPS_XMM_to_M128((uptr)mVU->clipFlag, xmmT1);
+	}
+}
+
+microVUt(void) mVUpass4(int startPC) {
+
+	microVU* mVU  = mVUx;
+	int oldPC	  = iPC;
+	int oldCount  = mVUcount;
+	int oldBranch = mVUbranch;
+	iPC		  = startPC / 4;
+	mVUcount  = 0;
+	mVUbranch = 0;
+	for (int branch = 0; mVUcount < 4; mVUcount++) {
+		incPC(1);
+		if (  curI & _Ebit_   )	{ branch = 1; }
+		if (  curI & _MDTbit_ )	{ branch = 2; }
+		if (!(curI & _Ibit_)  )	{ incPC(-1); mVUopL<vuIndex, 3>(); incPC(1); }
+		if		(branch >= 2)	{ break; }
+		else if (branch == 1)	{ branch = 2; }
+		if		(mVUbranch)		{ branch = 3; mVUbranch = 0; }
+		incPC(1);
+	}
+	iPC		  = oldPC;
+	mVUcount  = oldCount;
+	mVUbranch = oldBranch;
+	setCode();
+}
+
+#define branchType1 if		(mVUbranch <= 2)	// B/BAL
+#define branchType2 else if (mVUbranch >= 9)	// JR/JALR
+#define branchType3 else						// Conditional Branch
+
+microVUt(void) mVUsetFlagInfo() {
+	microVU* mVU = mVUx;
+	branchType1 { incPC(-1); mVUpass4<vuIndex>(branchAddr); incPC(1); }
+	branchType2 { mVUflagInfo |= 0xffffffff; }
+	branchType3 {
+		incPC(-1); 
+		mVUpass4<vuIndex>(branchAddr);
+		int backupFlagInfo = mVUflagInfo;
+		mVUflagInfo = 0;
+		incPC(4); // Branch Not Taken
+		mVUpass4<vuIndex>(xPC);
+		incPC(-3);
+		//if (mVUflagInfo != backupFlagInfo) { mVUflagInfo |= __NeedExact; }		
+		mVUflagInfo |= backupFlagInfo;
+	}
 }
 
 #endif //PCSX2_MICROVU

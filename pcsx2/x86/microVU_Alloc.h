@@ -39,8 +39,8 @@ struct microRegInfo {
 	u8 p;
 	u8 r;
 	u8 xgkick;
-	u8 clip;
-	u8 needExactMatch; // If set, block needs an exact match of pipeline state (needs to be last byte in struct)
+	u8 flags; // clip x2 :: status x2
+	u32 needExactMatch; // If set, block needs an exact match of pipeline state (needs to be last 2 bytes in struct)
 #if defined(_MSC_VER)
 };
 #pragma pack(pop)
@@ -75,6 +75,7 @@ struct microAllocInfo {
 	u32 count;			// Number of VU 64bit instructions ran (starts at 0 for each block)
 	u32 curPC;			// Current PC
 	u32 startPC;		// Start PC for Cur Block
+	u32 flagInfo;		// Holds information to help with flag instances on block linking
 	u32 info[pSize/8];	// Info for Instructions in current block
 	u8 stall[pSize/8];	// Info on how much each instruction stalled (stores the max amount of cycles to stall for the current opcodes)
 };

@@ -37,1015 +37,195 @@ microVUf(void) mVUunknown();
 //------------------------------------------------------------------
 
 //------------------------------------------------------------------
-// mVULOWER_OPCODE
+// Opcode Tables
 //------------------------------------------------------------------
-void (* mVULOWER_OPCODE00 [128])() = {													
-	mVU_LQ<0,0>		, mVU_SQ<0,0>		, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVU_ILW<0,0>	, mVU_ISW<0,0>		, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVU_IADDIU<0,0>	, mVU_ISUBIU<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVU_FCEQ<0,0>	, mVU_FCSET<0,0>	, mVU_FCAND<0,0>	, mVU_FCOR<0,0>,	/* 0x10 */
-	mVU_FSEQ<0,0>	, mVU_FSSET<0,0>	, mVU_FSAND<0,0>	, mVU_FSOR<0,0>,
-	mVU_FMEQ<0,0>	, mVUunknown<0,0>	, mVU_FMAND<0,0>	, mVU_FMOR<0,0>,
-	mVU_FCGET<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVU_B<0,0>		, mVU_BAL<0,0>		, mVUunknown<0,0>	, mVUunknown<0,0>,	/* 0x20 */
-	mVU_JR<0,0>		, mVU_JALR<0,0>		, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVU_IBEQ<0,0>	, mVU_IBNE<0,0>		, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVU_IBLTZ<0,0>	, mVU_IBGTZ<0,0>	, mVU_IBLEZ<0,0>	, mVU_IBGEZ<0,0>,
-	mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,	/* 0x30 */
-	mVUunknown<0,0> , mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVUunknown<0,0> , mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVUunknown<0,0> , mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVULowerOP<0,0> , mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,	/* 0x40*/
-	mVUunknown<0,0> , mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVUunknown<0,0> , mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVUunknown<0,0> , mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVUunknown<0,0> , mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,	/* 0x50 */
-	mVUunknown<0,0> , mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVUunknown<0,0> , mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVUunknown<0,0> , mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVUunknown<0,0> , mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,	/* 0x60 */
-	mVUunknown<0,0> , mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVUunknown<0,0> , mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVUunknown<0,0> , mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVUunknown<0,0> , mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,	/* 0x70 */
-	mVUunknown<0,0> , mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVUunknown<0,0> , mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVUunknown<0,0> , mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
+#define microVU_LOWER_OPCODE(x, y) void (* mVULOWER_OPCODE##x##y [128])() = {					\
+	mVU_LQ<x,y>		, mVU_SQ<x,y>		, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVU_ILW<x,y>	, mVU_ISW<x,y>		, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVU_IADDIU<x,y>	, mVU_ISUBIU<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVU_FCEQ<x,y>	, mVU_FCSET<x,y>	, mVU_FCAND<x,y>	, mVU_FCOR<x,y>,	/* 0x10 */		\
+	mVU_FSEQ<x,y>	, mVU_FSSET<x,y>	, mVU_FSAND<x,y>	, mVU_FSOR<x,y>,					\
+	mVU_FMEQ<x,y>	, mVUunknown<x,y>	, mVU_FMAND<x,y>	, mVU_FMOR<x,y>,					\
+	mVU_FCGET<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVU_B<x,y>		, mVU_BAL<x,y>		, mVUunknown<x,y>	, mVUunknown<x,y>,	/* 0x20 */		\
+	mVU_JR<x,y>		, mVU_JALR<x,y>		, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVU_IBEQ<x,y>	, mVU_IBNE<x,y>		, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVU_IBLTZ<x,y>	, mVU_IBGTZ<x,y>	, mVU_IBLEZ<x,y>	, mVU_IBGEZ<x,y>,					\
+	mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,	/* 0x30 */		\
+	mVUunknown<x,y> , mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVUunknown<x,y> , mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVUunknown<x,y> , mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVULowerOP<x,y> , mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,	/* 0x40*/		\
+	mVUunknown<x,y> , mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVUunknown<x,y> , mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVUunknown<x,y> , mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVUunknown<x,y> , mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,	/* 0x50 */		\
+	mVUunknown<x,y> , mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVUunknown<x,y> , mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVUunknown<x,y> , mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVUunknown<x,y> , mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,	/* 0x60 */		\
+	mVUunknown<x,y> , mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVUunknown<x,y> , mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVUunknown<x,y> , mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVUunknown<x,y> , mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,	/* 0x70 */		\
+	mVUunknown<x,y> , mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVUunknown<x,y> , mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVUunknown<x,y> , mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
 };
 
-void (* mVULOWER_OPCODE01 [128])() = {													
-	mVU_LQ<0,1>		, mVU_SQ<0,1>		, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVU_ILW<0,1>	, mVU_ISW<0,1>		, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVU_IADDIU<0,1>	, mVU_ISUBIU<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVU_FCEQ<0,1>	, mVU_FCSET<0,1>	, mVU_FCAND<0,1>	, mVU_FCOR<0,1>,	/* 0x10 */
-	mVU_FSEQ<0,1>	, mVU_FSSET<0,1>	, mVU_FSAND<0,1>	, mVU_FSOR<0,1>,
-	mVU_FMEQ<0,1>	, mVUunknown<0,1>	, mVU_FMAND<0,1>	, mVU_FMOR<0,1>,
-	mVU_FCGET<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVU_B<0,1>		, mVU_BAL<0,1>		, mVUunknown<0,1>	, mVUunknown<0,1>,	/* 0x20 */
-	mVU_JR<0,1>		, mVU_JALR<0,1>		, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVU_IBEQ<0,1>	, mVU_IBNE<0,1>		, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVU_IBLTZ<0,1>	, mVU_IBGTZ<0,1>	, mVU_IBLEZ<0,1>	, mVU_IBGEZ<0,1>,
-	mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,	/* 0x30 */
-	mVUunknown<0,1> , mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVUunknown<0,1> , mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVUunknown<0,1> , mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVULowerOP<0,1> , mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,	/* 0x40*/
-	mVUunknown<0,1> , mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVUunknown<0,1> , mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVUunknown<0,1> , mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVUunknown<0,1> , mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,	/* 0x50 */
-	mVUunknown<0,1> , mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVUunknown<0,1> , mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVUunknown<0,1> , mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVUunknown<0,1> , mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,	/* 0x60 */
-	mVUunknown<0,1> , mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVUunknown<0,1> , mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVUunknown<0,1> , mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVUunknown<0,1> , mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,	/* 0x70 */
-	mVUunknown<0,1> , mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVUunknown<0,1> , mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVUunknown<0,1> , mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
+#define microVU_LowerOP_T3_00_OPCODE(x, y) void (* mVULowerOP_T3_00_OPCODE##x##y [32])() = {	\
+	mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVU_MOVE<x,y>	, mVU_LQI<x,y>		, mVU_DIV<x,y>		, mVU_MTIR<x,y>,					\
+	mVU_RNEXT<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>, /* 0x10 */		\
+	mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVUunknown<x,y>	, mVU_MFP<x,y>		, mVU_XTOP<x,y>		, mVU_XGKICK<x,y>,					\
+	mVU_ESADD<x,y>	, mVU_EATANxy<x,y>	, mVU_ESQRT<x,y>	, mVU_ESIN<x,y>,					\
 };
 
-void (* mVULOWER_OPCODE10 [128])() = {													
-	mVU_LQ<1,0>		, mVU_SQ<1,0>		, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVU_ILW<1,0>	, mVU_ISW<1,0>		, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVU_IADDIU<1,0>	, mVU_ISUBIU<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVU_FCEQ<1,0>	, mVU_FCSET<1,0>	, mVU_FCAND<1,0>	, mVU_FCOR<1,0>,	/* 0x10 */
-	mVU_FSEQ<1,0>	, mVU_FSSET<1,0>	, mVU_FSAND<1,0>	, mVU_FSOR<1,0>,
-	mVU_FMEQ<1,0>	, mVUunknown<1,0>	, mVU_FMAND<1,0>	, mVU_FMOR<1,0>,
-	mVU_FCGET<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVU_B<1,0>		, mVU_BAL<1,0>		, mVUunknown<1,0>	, mVUunknown<1,0>,	/* 0x20 */
-	mVU_JR<1,0>		, mVU_JALR<1,0>		, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVU_IBEQ<1,0>	, mVU_IBNE<1,0>		, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVU_IBLTZ<1,0>	, mVU_IBGTZ<1,0>	, mVU_IBLEZ<1,0>	, mVU_IBGEZ<1,0>,
-	mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,	/* 0x30 */
-	mVUunknown<1,0> , mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVUunknown<1,0> , mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVUunknown<1,0> , mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVULowerOP<1,0> , mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,	/* 0x40*/
-	mVUunknown<1,0> , mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVUunknown<1,0> , mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVUunknown<1,0> , mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVUunknown<1,0> , mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,	/* 0x50 */
-	mVUunknown<1,0> , mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVUunknown<1,0> , mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVUunknown<1,0> , mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVUunknown<1,0> , mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,	/* 0x60 */
-	mVUunknown<1,0> , mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVUunknown<1,0> , mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVUunknown<1,0> , mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVUunknown<1,0> , mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,	/* 0x70 */
-	mVUunknown<1,0> , mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVUunknown<1,0> , mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVUunknown<1,0> , mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
+#define microVU_LowerOP_T3_01_OPCODE(x, y) void (* mVULowerOP_T3_01_OPCODE##x##y [32])() = {	\
+	mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVU_MR32<x,y>	, mVU_SQI<x,y>		, mVU_SQRT<x,y>		, mVU_MFIR<x,y>,					\
+	mVU_RGET<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>, /* 0x10 */		\
+	mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVUunknown<x,y>	, mVUunknown<x,y>	, mVU_XITOP<x,y>	, mVUunknown<x,y>,					\
+	mVU_ERSADD<x,y>	, mVU_EATANxz<x,y>	, mVU_ERSQRT<x,y>	, mVU_EATAN<x,y>,					\
 };
 
-void (* mVULOWER_OPCODE11 [128])() = {													
-	mVU_LQ<1,1>		, mVU_SQ<1,1>		, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVU_ILW<1,1>	, mVU_ISW<1,1>		, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVU_IADDIU<1,1>	, mVU_ISUBIU<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVU_FCEQ<1,1>	, mVU_FCSET<1,1>	, mVU_FCAND<1,1>	, mVU_FCOR<1,1>,	/* 0x10 */
-	mVU_FSEQ<1,1>	, mVU_FSSET<1,1>	, mVU_FSAND<1,1>	, mVU_FSOR<1,1>,
-	mVU_FMEQ<1,1>	, mVUunknown<1,1>	, mVU_FMAND<1,1>	, mVU_FMOR<1,1>,
-	mVU_FCGET<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVU_B<1,1>		, mVU_BAL<1,1>		, mVUunknown<1,1>	, mVUunknown<1,1>,	/* 0x20 */
-	mVU_JR<1,1>		, mVU_JALR<1,1>		, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVU_IBEQ<1,1>	, mVU_IBNE<1,1>		, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVU_IBLTZ<1,1>	, mVU_IBGTZ<1,1>	, mVU_IBLEZ<1,1>	, mVU_IBGEZ<1,1>,
-	mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,	/* 0x30 */
-	mVUunknown<1,1> , mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVUunknown<1,1> , mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVUunknown<1,1> , mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVULowerOP<1,1> , mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,	/* 0x40*/
-	mVUunknown<1,1> , mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVUunknown<1,1> , mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVUunknown<1,1> , mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVUunknown<1,1> , mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,	/* 0x50 */
-	mVUunknown<1,1> , mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVUunknown<1,1> , mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVUunknown<1,1> , mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVUunknown<1,1> , mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,	/* 0x60 */
-	mVUunknown<1,1> , mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVUunknown<1,1> , mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVUunknown<1,1> , mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVUunknown<1,1> , mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,	/* 0x70 */
-	mVUunknown<1,1> , mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVUunknown<1,1> , mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVUunknown<1,1> , mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
+#define microVU_LowerOP_T3_10_OPCODE(x, y) void (* mVULowerOP_T3_10_OPCODE##x##y [32])() = {	\
+	mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVUunknown<x,y>	, mVU_LQD<x,y>		, mVU_RSQRT<x,y>	, mVU_ILWR<x,y>,					\
+	mVU_RINIT<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>, /* 0x10 */		\
+	mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVU_ELENG<x,y>	, mVU_ESUM<x,y>		, mVU_ERCPR<x,y>	, mVU_EEXP<x,y>,					\
 };
 
-void (* mVULOWER_OPCODE02 [128])() = {													
-	mVU_LQ<0,2>		, mVU_SQ<0,2>		, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVU_ILW<0,2>	, mVU_ISW<0,2>		, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVU_IADDIU<0,2>	, mVU_ISUBIU<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVU_FCEQ<0,2>	, mVU_FCSET<0,2>	, mVU_FCAND<0,2>	, mVU_FCOR<0,2>,	/* 0x10 */
-	mVU_FSEQ<0,2>	, mVU_FSSET<0,2>	, mVU_FSAND<0,2>	, mVU_FSOR<0,2>,
-	mVU_FMEQ<0,2>	, mVUunknown<0,2>	, mVU_FMAND<0,2>	, mVU_FMOR<0,2>,
-	mVU_FCGET<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVU_B<0,2>		, mVU_BAL<0,2>		, mVUunknown<0,2>	, mVUunknown<0,2>,	/* 0x20 */
-	mVU_JR<0,2>		, mVU_JALR<0,2>		, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVU_IBEQ<0,2>	, mVU_IBNE<0,2>		, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVU_IBLTZ<0,2>	, mVU_IBGTZ<0,2>	, mVU_IBLEZ<0,2>	, mVU_IBGEZ<0,2>,
-	mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,	/* 0x30 */
-	mVUunknown<0,2> , mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVUunknown<0,2> , mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVUunknown<0,2> , mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVULowerOP<0,2> , mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,	/* 0x40*/
-	mVUunknown<0,2> , mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVUunknown<0,2> , mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVUunknown<0,2> , mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVUunknown<0,2> , mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,	/* 0x50 */
-	mVUunknown<0,2> , mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVUunknown<0,2> , mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVUunknown<0,2> , mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVUunknown<0,2> , mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,	/* 0x60 */
-	mVUunknown<0,2> , mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVUunknown<0,2> , mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVUunknown<0,2> , mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVUunknown<0,2> , mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,	/* 0x70 */
-	mVUunknown<0,2> , mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVUunknown<0,2> , mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVUunknown<0,2> , mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
+#define microVU_LowerOP_T3_11_OPCODE(x, y) void (* mVULowerOP_T3_11_OPCODE##x##y [32])() = {	\
+	mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVUunknown<x,y>	, mVU_SQD<x,y>		, mVU_WAITQ<x,y>	, mVU_ISWR<x,y>,					\
+	mVU_RXOR<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>, /* 0x10 */		\
+	mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVU_ERLENG<x,y>	, mVUunknown<x,y>	, mVU_WAITP<x,y>	, mVUunknown<x,y>,					\
 };
 
-void (* mVULOWER_OPCODE12 [128])() = {													
-	mVU_LQ<1,2>		, mVU_SQ<1,2>		, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVU_ILW<1,2>	, mVU_ISW<1,2>		, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVU_IADDIU<1,2>	, mVU_ISUBIU<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVU_FCEQ<1,2>	, mVU_FCSET<1,2>	, mVU_FCAND<1,2>	, mVU_FCOR<1,2>,	/* 0x10 */
-	mVU_FSEQ<1,2>	, mVU_FSSET<1,2>	, mVU_FSAND<1,2>	, mVU_FSOR<1,2>,
-	mVU_FMEQ<1,2>	, mVUunknown<1,2>	, mVU_FMAND<1,2>	, mVU_FMOR<1,2>,
-	mVU_FCGET<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVU_B<1,2>		, mVU_BAL<1,2>		, mVUunknown<1,2>	, mVUunknown<1,2>,	/* 0x20 */
-	mVU_JR<1,2>		, mVU_JALR<1,2>		, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVU_IBEQ<1,2>	, mVU_IBNE<1,2>		, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVU_IBLTZ<1,2>	, mVU_IBGTZ<1,2>	, mVU_IBLEZ<1,2>	, mVU_IBGEZ<1,2>,
-	mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,	/* 0x30 */
-	mVUunknown<1,2> , mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVUunknown<1,2> , mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVUunknown<1,2> , mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVULowerOP<1,2> , mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,	/* 0x40*/
-	mVUunknown<1,2> , mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVUunknown<1,2> , mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVUunknown<1,2> , mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVUunknown<1,2> , mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,	/* 0x50 */
-	mVUunknown<1,2> , mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVUunknown<1,2> , mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVUunknown<1,2> , mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVUunknown<1,2> , mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,	/* 0x60 */
-	mVUunknown<1,2> , mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVUunknown<1,2> , mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVUunknown<1,2> , mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVUunknown<1,2> , mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,	/* 0x70 */
-	mVUunknown<1,2> , mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVUunknown<1,2> , mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVUunknown<1,2> , mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-};
-//------------------------------------------------------------------
-
-//------------------------------------------------------------------
-// mVULowerOP_T3_00_OPCODE
-//------------------------------------------------------------------
-void (* mVULowerOP_T3_00_OPCODE00 [32])() = {
-	mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVU_MOVE<0,0>	, mVU_LQI<0,0>		, mVU_DIV<0,0>		, mVU_MTIR<0,0>,
-	mVU_RNEXT<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>, /* 0x10 */
-	mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVUunknown<0,0>	, mVU_MFP<0,0>		, mVU_XTOP<0,0>		, mVU_XGKICK<0,0>,
-	mVU_ESADD<0,0>	, mVU_EATANxy<0,0>	, mVU_ESQRT<0,0>	, mVU_ESIN<0,0>,
+#define microVU_LowerOP_OPCODE(x, y) void (* mVULowerOP_OPCODE##x##y [64])() = {				\
+	mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>, /* 0x10 */		\
+	mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>, /* 0x20 */		\
+	mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVU_IADD<x,y>	, mVU_ISUB<x,y>		, mVU_IADDI<x,y>	, mVUunknown<x,y>, /* 0x30 */		\
+	mVU_IAND<x,y>	, mVU_IOR<x,y>		, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVULowerOP_T3_00<x,y>, mVULowerOP_T3_01<x,y>, mVULowerOP_T3_10<x,y>, mVULowerOP_T3_11<x,y>,	\
 };
 
-void (* mVULowerOP_T3_00_OPCODE01 [32])() = {
-	mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVU_MOVE<0,1>	, mVU_LQI<0,1>		, mVU_DIV<0,1>		, mVU_MTIR<0,1>,
-	mVU_RNEXT<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>, /* 0x10 */
-	mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVUunknown<0,1>	, mVU_MFP<0,1>		, mVU_XTOP<0,1>		, mVU_XGKICK<0,1>,
-	mVU_ESADD<0,1>	, mVU_EATANxy<0,1>	, mVU_ESQRT<0,1>	, mVU_ESIN<0,1>,
+#define microVU_UPPER_OPCODE(x, y) void (* mVU_UPPER_OPCODE##x##y [64])() = {					\
+	mVU_ADDx<x,y>	, mVU_ADDy<x,y>		, mVU_ADDz<x,y>		, mVU_ADDw<x,y>,					\
+	mVU_SUBx<x,y>	, mVU_SUBy<x,y>		, mVU_SUBz<x,y>		, mVU_SUBw<x,y>,					\
+	mVU_MADDx<x,y>	, mVU_MADDy<x,y>	, mVU_MADDz<x,y>	, mVU_MADDw<x,y>,					\
+	mVU_MSUBx<x,y>	, mVU_MSUBy<x,y>	, mVU_MSUBz<x,y>	, mVU_MSUBw<x,y>,					\
+	mVU_MAXx<x,y>	, mVU_MAXy<x,y>		, mVU_MAXz<x,y>		, mVU_MAXw<x,y>,	/* 0x10 */		\
+	mVU_MINIx<x,y>	, mVU_MINIy<x,y>	, mVU_MINIz<x,y>	, mVU_MINIw<x,y>,					\
+	mVU_MULx<x,y>	, mVU_MULy<x,y>		, mVU_MULz<x,y>		, mVU_MULw<x,y>,					\
+	mVU_MULq<x,y>	, mVU_MAXi<x,y>		, mVU_MULi<x,y>		, mVU_MINIi<x,y>,					\
+	mVU_ADDq<x,y>	, mVU_MADDq<x,y>	, mVU_ADDi<x,y>		, mVU_MADDi<x,y>,	/* 0x20 */		\
+	mVU_SUBq<x,y>	, mVU_MSUBq<x,y>	, mVU_SUBi<x,y>		, mVU_MSUBi<x,y>,					\
+	mVU_ADD<x,y>	, mVU_MADD<x,y>		, mVU_MUL<x,y>		, mVU_MAX<x,y>,						\
+	mVU_SUB<x,y>	, mVU_MSUB<x,y>		, mVU_OPMSUB<x,y>	, mVU_MINI<x,y>,					\
+	mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,	/* 0x30 */		\
+	mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVU_UPPER_FD_00<x,y>, mVU_UPPER_FD_01<x,y>, mVU_UPPER_FD_10<x,y>, mVU_UPPER_FD_11<x,y>,		\
 };
 
-void (* mVULowerOP_T3_00_OPCODE10 [32])() = {
-	mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVU_MOVE<1,0>	, mVU_LQI<1,0>		, mVU_DIV<1,0>		, mVU_MTIR<1,0>,
-	mVU_RNEXT<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>, /* 0x10 */
-	mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVUunknown<1,0>	, mVU_MFP<1,0>		, mVU_XTOP<1,0>		, mVU_XGKICK<1,0>,
-	mVU_ESADD<1,0>	, mVU_EATANxy<1,0>	, mVU_ESQRT<1,0>	, mVU_ESIN<1,0>,
+#define microVU_UPPER_FD_00_TABLE(x, y) void (* mVU_UPPER_FD_00_TABLE##x##y [32])() = {			\
+	mVU_ADDAx<x,y>	, mVU_SUBAx<x,y>	, mVU_MADDAx<x,y>	, mVU_MSUBAx<x,y>,					\
+	mVU_ITOF0<x,y>	, mVU_FTOI0<x,y>	, mVU_MULAx<x,y>	, mVU_MULAq<x,y>,					\
+	mVU_ADDAq<x,y>	, mVU_SUBAq<x,y>	, mVU_ADDA<x,y>		, mVU_SUBA<x,y>,					\
+	mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
 };
 
-void (* mVULowerOP_T3_00_OPCODE11 [32])() = {
-	mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVU_MOVE<1,1>	, mVU_LQI<1,1>		, mVU_DIV<1,1>		, mVU_MTIR<1,1>,
-	mVU_RNEXT<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>, /* 0x10 */
-	mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVUunknown<1,1>	, mVU_MFP<1,1>		, mVU_XTOP<1,1>		, mVU_XGKICK<1,1>,
-	mVU_ESADD<1,1>	, mVU_EATANxy<1,1>	, mVU_ESQRT<1,1>	, mVU_ESIN<1,1>,
+#define microVU_UPPER_FD_01_TABLE(x, y) void (* mVU_UPPER_FD_01_TABLE##x##y [32])() = {			\
+	mVU_ADDAy<x,y>	, mVU_SUBAy<x,y>	, mVU_MADDAy<x,y>	, mVU_MSUBAy<x,y>,					\
+	mVU_ITOF4<x,y>	, mVU_FTOI4<x,y>	, mVU_MULAy<x,y>	, mVU_ABS<x,y>,						\
+	mVU_MADDAq<x,y>	, mVU_MSUBAq<x,y>	, mVU_MADDA<x,y>	, mVU_MSUBA<x,y>,					\
+	mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
 };
 
-void (* mVULowerOP_T3_00_OPCODE02 [32])() = {
-	mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVU_MOVE<0,2>	, mVU_LQI<0,2>		, mVU_DIV<0,2>		, mVU_MTIR<0,2>,
-	mVU_RNEXT<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>, /* 0x10 */
-	mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVUunknown<0,2>	, mVU_MFP<0,2>		, mVU_XTOP<0,2>		, mVU_XGKICK<0,2>,
-	mVU_ESADD<0,2>	, mVU_EATANxy<0,2>	, mVU_ESQRT<0,2>	, mVU_ESIN<0,2>,
+#define microVU_UPPER_FD_10_TABLE(x, y) void (* mVU_UPPER_FD_10_TABLE##x##y [32])() = {			\
+	mVU_ADDAz<x,y>	, mVU_SUBAz<x,y>	, mVU_MADDAz<x,y>	, mVU_MSUBAz<x,y>,					\
+	mVU_ITOF12<x,y>	, mVU_FTOI12<x,y>	, mVU_MULAz<x,y>	, mVU_MULAi<x,y>,					\
+	mVU_ADDAi<x,y>	, mVU_SUBAi<x,y>	, mVU_MULA<x,y>		, mVU_OPMULA<x,y>,					\
+	mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
 };
 
-void (* mVULowerOP_T3_00_OPCODE12 [32])() = {
-	mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVU_MOVE<1,2>	, mVU_LQI<1,2>		, mVU_DIV<1,2>		, mVU_MTIR<1,2>,
-	mVU_RNEXT<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>, /* 0x10 */
-	mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVUunknown<1,2>	, mVU_MFP<1,2>		, mVU_XTOP<1,2>		, mVU_XGKICK<1,2>,
-	mVU_ESADD<1,2>	, mVU_EATANxy<1,2>	, mVU_ESQRT<1,2>	, mVU_ESIN<1,2>,
-};
-//------------------------------------------------------------------
-
-//------------------------------------------------------------------
-// mVULowerOP_T3_01_OPCODE
-//------------------------------------------------------------------
-void (* mVULowerOP_T3_01_OPCODE00 [32])() = {
-	mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVU_MR32<0,0>	, mVU_SQI<0,0>		, mVU_SQRT<0,0>		, mVU_MFIR<0,0>,
-	mVU_RGET<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>, /* 0x10 */
-	mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVUunknown<0,0>	, mVUunknown<0,0>	, mVU_XITOP<0,0>	, mVUunknown<0,0>,
-	mVU_ERSADD<0,0>	, mVU_EATANxz<0,0>	, mVU_ERSQRT<0,0>	, mVU_EATAN<0,0>,
-};
-
-void (* mVULowerOP_T3_01_OPCODE01 [32])() = {
-	mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVU_MR32<0,1>	, mVU_SQI<0,1>		, mVU_SQRT<0,1>		, mVU_MFIR<0,1>,
-	mVU_RGET<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>, /* 0x10 */
-	mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVUunknown<0,1>	, mVUunknown<0,1>	, mVU_XITOP<0,1>	, mVUunknown<0,1>,
-	mVU_ERSADD<0,1>	, mVU_EATANxz<0,1>	, mVU_ERSQRT<0,1>	, mVU_EATAN<0,1>,
-};
-
-void (* mVULowerOP_T3_01_OPCODE10 [32])() = {
-	mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVU_MR32<1,0>	, mVU_SQI<1,0>		, mVU_SQRT<1,0>		, mVU_MFIR<1,0>,
-	mVU_RGET<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>, /* 0x10 */
-	mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVUunknown<1,0>	, mVUunknown<1,0>	, mVU_XITOP<1,0>	, mVUunknown<1,0>,
-	mVU_ERSADD<1,0>	, mVU_EATANxz<1,0>	, mVU_ERSQRT<1,0>	, mVU_EATAN<1,0>,
-};
-
-void (* mVULowerOP_T3_01_OPCODE11 [32])() = {
-	mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVU_MR32<1,1>	, mVU_SQI<1,1>		, mVU_SQRT<1,1>		, mVU_MFIR<1,1>,
-	mVU_RGET<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>, /* 0x10 */
-	mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVUunknown<1,1>	, mVUunknown<1,1>	, mVU_XITOP<1,1>	, mVUunknown<1,1>,
-	mVU_ERSADD<1,1>	, mVU_EATANxz<1,1>	, mVU_ERSQRT<1,1>	, mVU_EATAN<1,1>,
-};
-
-void (* mVULowerOP_T3_01_OPCODE02 [32])() = {
-	mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVU_MR32<0,2>	, mVU_SQI<0,2>		, mVU_SQRT<0,2>		, mVU_MFIR<0,2>,
-	mVU_RGET<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>, /* 0x10 */
-	mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVUunknown<0,2>	, mVUunknown<0,2>	, mVU_XITOP<0,2>	, mVUunknown<0,2>,
-	mVU_ERSADD<0,2>	, mVU_EATANxz<0,2>	, mVU_ERSQRT<0,2>	, mVU_EATAN<0,2>,
-};
-
-void (* mVULowerOP_T3_01_OPCODE12 [32])() = {
-	mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVU_MR32<1,2>	, mVU_SQI<1,2>		, mVU_SQRT<1,2>		, mVU_MFIR<1,2>,
-	mVU_RGET<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>, /* 0x10 */
-	mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVUunknown<1,2>	, mVUunknown<1,2>	, mVU_XITOP<1,2>	, mVUunknown<1,2>,
-	mVU_ERSADD<1,2>	, mVU_EATANxz<1,2>	, mVU_ERSQRT<1,2>	, mVU_EATAN<1,2>,
+#define microVU_UPPER_FD_11_TABLE(x, y) void (* mVU_UPPER_FD_11_TABLE##x##y [32])() = {			\
+	mVU_ADDAw<x,y>	, mVU_SUBAw<x,y>	, mVU_MADDAw<x,y>	, mVU_MSUBAw<x,y>,					\
+	mVU_ITOF15<x,y>	, mVU_FTOI15<x,y>	, mVU_MULAw<x,y>	, mVU_CLIP<x,y>,					\
+	mVU_MADDAi<x,y>	, mVU_MSUBAi<x,y>	, mVUunknown<x,y>	, mVU_NOP<x,y>,						\
+	mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
+	mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>	, mVUunknown<x,y>,					\
 };
 
 //------------------------------------------------------------------
 
 //------------------------------------------------------------------
-// mVULowerOP_T3_10_OPCODE
+// Create Table Instances
 //------------------------------------------------------------------
-void (* mVULowerOP_T3_10_OPCODE00 [32])() = {
-	mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVUunknown<0,0>	, mVU_LQD<0,0>		, mVU_RSQRT<0,0>	, mVU_ILWR<0,0>,
-	mVU_RINIT<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>, /* 0x10 */
-	mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVU_ELENG<0,0>	, mVU_ESUM<0,0>		, mVU_ERCPR<0,0>	, mVU_EEXP<0,0>,
-};
+#define mVUcreateTable(x,y)			\
+microVU_LOWER_OPCODE(x,y)			\
+microVU_LowerOP_T3_00_OPCODE(x,y)	\
+microVU_LowerOP_T3_01_OPCODE(x,y)	\
+microVU_LowerOP_T3_10_OPCODE(x,y)	\
+microVU_LowerOP_T3_11_OPCODE(x,y)	\
+microVU_LowerOP_OPCODE(x,y)			\
+microVU_UPPER_OPCODE(x,y)			\
+microVU_UPPER_FD_00_TABLE(x,y)		\
+microVU_UPPER_FD_01_TABLE(x,y)		\
+microVU_UPPER_FD_10_TABLE(x,y)		\
+microVU_UPPER_FD_11_TABLE(x,y)
 
-void (* mVULowerOP_T3_10_OPCODE01 [32])() = {
-	mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVUunknown<0,1>	, mVU_LQD<0,1>		, mVU_RSQRT<0,1>	, mVU_ILWR<0,1>,
-	mVU_RINIT<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>, /* 0x10 */
-	mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVU_ELENG<0,1>	, mVU_ESUM<0,1>		, mVU_ERCPR<0,1>	, mVU_EEXP<0,1>,
-};
-
-void (* mVULowerOP_T3_10_OPCODE10 [32])() = {
-	mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVUunknown<1,0>	, mVU_LQD<1,0>		, mVU_RSQRT<1,0>	, mVU_ILWR<1,0>,
-	mVU_RINIT<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>, /* 0x10 */
-	mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVU_ELENG<1,0>	, mVU_ESUM<1,0>		, mVU_ERCPR<1,0>	, mVU_EEXP<1,0>,
-};
-
-void (* mVULowerOP_T3_10_OPCODE11 [32])() = {
-	mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVUunknown<1,1>	, mVU_LQD<1,1>		, mVU_RSQRT<1,1>	, mVU_ILWR<1,1>,
-	mVU_RINIT<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>, /* 0x10 */
-	mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVU_ELENG<1,1>	, mVU_ESUM<1,1>		, mVU_ERCPR<1,1>	, mVU_EEXP<1,1>,
-};
-
-void (* mVULowerOP_T3_10_OPCODE02 [32])() = {
-	mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVUunknown<0,2>	, mVU_LQD<0,2>		, mVU_RSQRT<0,2>	, mVU_ILWR<0,2>,
-	mVU_RINIT<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>, /* 0x10 */
-	mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVU_ELENG<0,2>	, mVU_ESUM<0,2>		, mVU_ERCPR<0,2>	, mVU_EEXP<0,2>,
-};
-
-void (* mVULowerOP_T3_10_OPCODE12 [32])() = {
-	mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVUunknown<1,2>	, mVU_LQD<1,2>		, mVU_RSQRT<1,2>	, mVU_ILWR<1,2>,
-	mVU_RINIT<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>, /* 0x10 */
-	mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVU_ELENG<1,2>	, mVU_ESUM<1,2>		, mVU_ERCPR<1,2>	, mVU_EEXP<1,2>,
-};
-//------------------------------------------------------------------
-
-//------------------------------------------------------------------
-// mVULowerOP_T3_11_OPCODE
-//------------------------------------------------------------------
-void (* mVULowerOP_T3_11_OPCODE00 [32])() = {
-	mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVUunknown<0,0>	, mVU_SQD<0,0>		, mVU_WAITQ<0,0>	, mVU_ISWR<0,0>,
-	mVU_RXOR<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>, /* 0x10 */
-	mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVU_ERLENG<0,0>	, mVUunknown<0,0>	, mVU_WAITP<0,0>	, mVUunknown<0,0>,
-};
-
-void (* mVULowerOP_T3_11_OPCODE01 [32])() = {
-	mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVUunknown<0,1>	, mVU_SQD<0,1>		, mVU_WAITQ<0,1>	, mVU_ISWR<0,1>,
-	mVU_RXOR<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>, /* 0x10 */
-	mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVU_ERLENG<0,1>	, mVUunknown<0,1>	, mVU_WAITP<0,1>	, mVUunknown<0,1>,
-};
-
-void (* mVULowerOP_T3_11_OPCODE10 [32])() = {
-	mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVUunknown<1,0>	, mVU_SQD<1,0>		, mVU_WAITQ<1,0>	, mVU_ISWR<1,0>,
-	mVU_RXOR<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>, /* 0x10 */
-	mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVU_ERLENG<1,0>	, mVUunknown<1,0>	, mVU_WAITP<1,0>	, mVUunknown<1,0>,
-};
-
-void (* mVULowerOP_T3_11_OPCODE11 [32])() = {
-	mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVUunknown<1,1>	, mVU_SQD<1,1>		, mVU_WAITQ<1,1>	, mVU_ISWR<1,1>,
-	mVU_RXOR<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>, /* 0x10 */
-	mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVU_ERLENG<1,1>	, mVUunknown<1,1>	, mVU_WAITP<1,1>	, mVUunknown<1,1>,
-};
-
-void (* mVULowerOP_T3_11_OPCODE02 [32])() = {
-	mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVUunknown<0,2>	, mVU_SQD<0,2>		, mVU_WAITQ<0,2>	, mVU_ISWR<0,2>,
-	mVU_RXOR<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>, /* 0x10 */
-	mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVU_ERLENG<0,2>	, mVUunknown<0,2>	, mVU_WAITP<0,2>	, mVUunknown<0,2>,
-};
-
-void (* mVULowerOP_T3_11_OPCODE12 [32])() = {
-	mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVUunknown<1,2>	, mVU_SQD<1,2>		, mVU_WAITQ<1,2>	, mVU_ISWR<1,2>,
-	mVU_RXOR<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>, /* 0x10 */
-	mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVU_ERLENG<1,2>	, mVUunknown<1,2>	, mVU_WAITP<1,2>	, mVUunknown<1,2>,
-};
-//------------------------------------------------------------------
-
-//------------------------------------------------------------------
-// mVULowerOP_OPCODE
-//------------------------------------------------------------------
-void (* mVULowerOP_OPCODE00 [64])() = {	
-	mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>, /* 0x10 */
-	mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>, /* 0x20 */
-	mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVU_IADD<0,0>	, mVU_ISUB<0,0>		, mVU_IADDI<0,0>	, mVUunknown<0,0>, /* 0x30 */
-	mVU_IAND<0,0>	, mVU_IOR<0,0>		, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVULowerOP_T3_00<0,0>, mVULowerOP_T3_01<0,0>, mVULowerOP_T3_10<0,0>, mVULowerOP_T3_11<0,0>,
-};
-
-void (* mVULowerOP_OPCODE01 [64])() = {	
-	mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>, /* 0x10 */
-	mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>, /* 0x20 */
-	mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVU_IADD<0,1>	, mVU_ISUB<0,1>		, mVU_IADDI<0,1>	, mVUunknown<0,1>, /* 0x30 */
-	mVU_IAND<0,1>	, mVU_IOR<0,1>		, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVULowerOP_T3_00<0,1>, mVULowerOP_T3_01<0,1>, mVULowerOP_T3_10<0,1>, mVULowerOP_T3_11<0,1>,
-};
-
-void (* mVULowerOP_OPCODE10 [64])() = {	
-	mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>, /* 0x10 */
-	mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>, /* 0x20 */
-	mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVU_IADD<1,0>	, mVU_ISUB<1,0>		, mVU_IADDI<1,0>	, mVUunknown<1,0>, /* 0x30 */
-	mVU_IAND<1,0>	, mVU_IOR<1,0>		, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVULowerOP_T3_00<1,0>, mVULowerOP_T3_01<1,0>, mVULowerOP_T3_10<1,0>, mVULowerOP_T3_11<1,0>,
-};
-
-void (* mVULowerOP_OPCODE11 [64])() = {	
-	mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>, /* 0x10 */
-	mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>, /* 0x20 */
-	mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVU_IADD<1,1>	, mVU_ISUB<1,1>		, mVU_IADDI<1,1>	, mVUunknown<1,1>, /* 0x30 */
-	mVU_IAND<1,1>	, mVU_IOR<1,1>		, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVULowerOP_T3_00<1,1>, mVULowerOP_T3_01<1,1>, mVULowerOP_T3_10<1,1>, mVULowerOP_T3_11<1,1>,
-};
-
-void (* mVULowerOP_OPCODE02 [64])() = {	
-	mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>, /* 0x10 */
-	mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>, /* 0x20 */
-	mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVU_IADD<0,2>	, mVU_ISUB<0,2>		, mVU_IADDI<0,2>	, mVUunknown<0,2>, /* 0x30 */
-	mVU_IAND<0,2>	, mVU_IOR<0,2>		, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVULowerOP_T3_00<0,2>, mVULowerOP_T3_01<0,2>, mVULowerOP_T3_10<0,2>, mVULowerOP_T3_11<0,2>,
-};
-
-void (* mVULowerOP_OPCODE12 [64])() = {	
-	mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>, /* 0x10 */
-	mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>, /* 0x20 */
-	mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVU_IADD<1,2>	, mVU_ISUB<1,2>		, mVU_IADDI<1,2>	, mVUunknown<1,2>, /* 0x30 */
-	mVU_IAND<1,2>	, mVU_IOR<1,2>		, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVULowerOP_T3_00<1,2>, mVULowerOP_T3_01<1,2>, mVULowerOP_T3_10<1,2>, mVULowerOP_T3_11<1,2>,
-};
-//------------------------------------------------------------------
-
-//------------------------------------------------------------------
-// mVU_UPPER_OPCODE
-//------------------------------------------------------------------
-void (* mVU_UPPER_OPCODE00 [64])() = {
-	mVU_ADDx<0,0>	, mVU_ADDy<0,0>		, mVU_ADDz<0,0>		, mVU_ADDw<0,0>,
-	mVU_SUBx<0,0>	, mVU_SUBy<0,0>		, mVU_SUBz<0,0>		, mVU_SUBw<0,0>,
-	mVU_MADDx<0,0>	, mVU_MADDy<0,0>	, mVU_MADDz<0,0>	, mVU_MADDw<0,0>,
-	mVU_MSUBx<0,0>	, mVU_MSUBy<0,0>	, mVU_MSUBz<0,0>	, mVU_MSUBw<0,0>,
-	mVU_MAXx<0,0>	, mVU_MAXy<0,0>		, mVU_MAXz<0,0>		, mVU_MAXw<0,0>,	/* 0x10 */ 
-	mVU_MINIx<0,0>	, mVU_MINIy<0,0>	, mVU_MINIz<0,0>	, mVU_MINIw<0,0>,
-	mVU_MULx<0,0>	, mVU_MULy<0,0>		, mVU_MULz<0,0>		, mVU_MULw<0,0>,
-	mVU_MULq<0,0>	, mVU_MAXi<0,0>		, mVU_MULi<0,0>		, mVU_MINIi<0,0>,
-	mVU_ADDq<0,0>	, mVU_MADDq<0,0>	, mVU_ADDi<0,0>		, mVU_MADDi<0,0>,	/* 0x20 */
-	mVU_SUBq<0,0>	, mVU_MSUBq<0,0>	, mVU_SUBi<0,0>		, mVU_MSUBi<0,0>,
-	mVU_ADD<0,0>	, mVU_MADD<0,0>		, mVU_MUL<0,0>		, mVU_MAX<0,0>,
-	mVU_SUB<0,0>	, mVU_MSUB<0,0>		, mVU_OPMSUB<0,0>	, mVU_MINI<0,0>,
-	mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,	/* 0x30 */
-	mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVU_UPPER_FD_00<0,0>, mVU_UPPER_FD_01<0,0>, mVU_UPPER_FD_10<0,0>, mVU_UPPER_FD_11<0,0>,
-};
-
-void (* mVU_UPPER_OPCODE01 [64])() = {
-	mVU_ADDx<0,1>	, mVU_ADDy<0,1>		, mVU_ADDz<0,1>		, mVU_ADDw<0,1>,
-	mVU_SUBx<0,1>	, mVU_SUBy<0,1>		, mVU_SUBz<0,1>		, mVU_SUBw<0,1>,
-	mVU_MADDx<0,1>	, mVU_MADDy<0,1>	, mVU_MADDz<0,1>	, mVU_MADDw<0,1>,
-	mVU_MSUBx<0,1>	, mVU_MSUBy<0,1>	, mVU_MSUBz<0,1>	, mVU_MSUBw<0,1>,
-	mVU_MAXx<0,1>	, mVU_MAXy<0,1>		, mVU_MAXz<0,1>		, mVU_MAXw<0,1>,	/* 0x10 */ 
-	mVU_MINIx<0,1>	, mVU_MINIy<0,1>	, mVU_MINIz<0,1>	, mVU_MINIw<0,1>,
-	mVU_MULx<0,1>	, mVU_MULy<0,1>		, mVU_MULz<0,1>		, mVU_MULw<0,1>,
-	mVU_MULq<0,1>	, mVU_MAXi<0,1>		, mVU_MULi<0,1>		, mVU_MINIi<0,1>,
-	mVU_ADDq<0,1>	, mVU_MADDq<0,1>	, mVU_ADDi<0,1>		, mVU_MADDi<0,1>,	/* 0x20 */
-	mVU_SUBq<0,1>	, mVU_MSUBq<0,1>	, mVU_SUBi<0,1>		, mVU_MSUBi<0,1>,
-	mVU_ADD<0,1>	, mVU_MADD<0,1>		, mVU_MUL<0,1>		, mVU_MAX<0,1>,
-	mVU_SUB<0,1>	, mVU_MSUB<0,1>		, mVU_OPMSUB<0,1>	, mVU_MINI<0,1>,
-	mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,	/* 0x30 */
-	mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVU_UPPER_FD_00<0,1>, mVU_UPPER_FD_01<0,1>, mVU_UPPER_FD_10<0,1>, mVU_UPPER_FD_11<0,1>,
-};
-
-void (* mVU_UPPER_OPCODE10 [64])() = {
-	mVU_ADDx<1,0>	, mVU_ADDy<1,0>		, mVU_ADDz<1,0>		, mVU_ADDw<1,0>,
-	mVU_SUBx<1,0>	, mVU_SUBy<1,0>		, mVU_SUBz<1,0>		, mVU_SUBw<1,0>,
-	mVU_MADDx<1,0>	, mVU_MADDy<1,0>	, mVU_MADDz<1,0>	, mVU_MADDw<1,0>,
-	mVU_MSUBx<1,0>	, mVU_MSUBy<1,0>	, mVU_MSUBz<1,0>	, mVU_MSUBw<1,0>,
-	mVU_MAXx<1,0>	, mVU_MAXy<1,0>		, mVU_MAXz<1,0>		, mVU_MAXw<1,0>,	/* 0x10 */ 
-	mVU_MINIx<1,0>	, mVU_MINIy<1,0>	, mVU_MINIz<1,0>	, mVU_MINIw<1,0>,
-	mVU_MULx<1,0>	, mVU_MULy<1,0>		, mVU_MULz<1,0>		, mVU_MULw<1,0>,
-	mVU_MULq<1,0>	, mVU_MAXi<1,0>		, mVU_MULi<1,0>		, mVU_MINIi<1,0>,
-	mVU_ADDq<1,0>	, mVU_MADDq<1,0>	, mVU_ADDi<1,0>		, mVU_MADDi<1,0>,	/* 0x20 */
-	mVU_SUBq<1,0>	, mVU_MSUBq<1,0>	, mVU_SUBi<1,0>		, mVU_MSUBi<1,0>,
-	mVU_ADD<1,0>	, mVU_MADD<1,0>		, mVU_MUL<1,0>		, mVU_MAX<1,0>,
-	mVU_SUB<1,0>	, mVU_MSUB<1,0>		, mVU_OPMSUB<1,0>	, mVU_MINI<1,0>,
-	mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,	/* 0x30 */
-	mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVU_UPPER_FD_00<1,0>, mVU_UPPER_FD_01<1,0>, mVU_UPPER_FD_10<1,0>, mVU_UPPER_FD_11<1,0>,
-};
-
-void (* mVU_UPPER_OPCODE11 [64])() = {
-	mVU_ADDx<1,1>	, mVU_ADDy<1,1>		, mVU_ADDz<1,1>		, mVU_ADDw<1,1>,
-	mVU_SUBx<1,1>	, mVU_SUBy<1,1>		, mVU_SUBz<1,1>		, mVU_SUBw<1,1>,
-	mVU_MADDx<1,1>	, mVU_MADDy<1,1>	, mVU_MADDz<1,1>	, mVU_MADDw<1,1>,
-	mVU_MSUBx<1,1>	, mVU_MSUBy<1,1>	, mVU_MSUBz<1,1>	, mVU_MSUBw<1,1>,
-	mVU_MAXx<1,1>	, mVU_MAXy<1,1>		, mVU_MAXz<1,1>		, mVU_MAXw<1,1>,	/* 0x10 */ 
-	mVU_MINIx<1,1>	, mVU_MINIy<1,1>	, mVU_MINIz<1,1>	, mVU_MINIw<1,1>,
-	mVU_MULx<1,1>	, mVU_MULy<1,1>		, mVU_MULz<1,1>		, mVU_MULw<1,1>,
-	mVU_MULq<1,1>	, mVU_MAXi<1,1>		, mVU_MULi<1,1>		, mVU_MINIi<1,1>,
-	mVU_ADDq<1,1>	, mVU_MADDq<1,1>	, mVU_ADDi<1,1>		, mVU_MADDi<1,1>,	/* 0x20 */
-	mVU_SUBq<1,1>	, mVU_MSUBq<1,1>	, mVU_SUBi<1,1>		, mVU_MSUBi<1,1>,
-	mVU_ADD<1,1>	, mVU_MADD<1,1>		, mVU_MUL<1,1>		, mVU_MAX<1,1>,
-	mVU_SUB<1,1>	, mVU_MSUB<1,1>		, mVU_OPMSUB<1,1>	, mVU_MINI<1,1>,
-	mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,	/* 0x30 */
-	mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVU_UPPER_FD_00<1,1>, mVU_UPPER_FD_01<1,1>, mVU_UPPER_FD_10<1,1>, mVU_UPPER_FD_11<1,1>,
-};
-
-void (* mVU_UPPER_OPCODE02 [64])() = {
-	mVU_ADDx<0,2>	, mVU_ADDy<0,2>		, mVU_ADDz<0,2>		, mVU_ADDw<0,2>,
-	mVU_SUBx<0,2>	, mVU_SUBy<0,2>		, mVU_SUBz<0,2>		, mVU_SUBw<0,2>,
-	mVU_MADDx<0,2>	, mVU_MADDy<0,2>	, mVU_MADDz<0,2>	, mVU_MADDw<0,2>,
-	mVU_MSUBx<0,2>	, mVU_MSUBy<0,2>	, mVU_MSUBz<0,2>	, mVU_MSUBw<0,2>,
-	mVU_MAXx<0,2>	, mVU_MAXy<0,2>		, mVU_MAXz<0,2>		, mVU_MAXw<0,2>,	/* 0x10 */ 
-	mVU_MINIx<0,2>	, mVU_MINIy<0,2>	, mVU_MINIz<0,2>	, mVU_MINIw<0,2>,
-	mVU_MULx<0,2>	, mVU_MULy<0,2>		, mVU_MULz<0,2>		, mVU_MULw<0,2>,
-	mVU_MULq<0,2>	, mVU_MAXi<0,2>		, mVU_MULi<0,2>		, mVU_MINIi<0,2>,
-	mVU_ADDq<0,2>	, mVU_MADDq<0,2>	, mVU_ADDi<0,2>		, mVU_MADDi<0,2>,	/* 0x20 */
-	mVU_SUBq<0,2>	, mVU_MSUBq<0,2>	, mVU_SUBi<0,2>		, mVU_MSUBi<0,2>,
-	mVU_ADD<0,2>	, mVU_MADD<0,2>		, mVU_MUL<0,2>		, mVU_MAX<0,2>,
-	mVU_SUB<0,2>	, mVU_MSUB<0,2>		, mVU_OPMSUB<0,2>	, mVU_MINI<0,2>,
-	mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,	/* 0x30 */
-	mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVU_UPPER_FD_00<0,2>, mVU_UPPER_FD_01<0,2>, mVU_UPPER_FD_10<0,2>, mVU_UPPER_FD_11<0,2>,
-};
-
-void (* mVU_UPPER_OPCODE12 [64])() = {
-	mVU_ADDx<1,2>	, mVU_ADDy<1,2>		, mVU_ADDz<1,2>		, mVU_ADDw<1,2>,
-	mVU_SUBx<1,2>	, mVU_SUBy<1,2>		, mVU_SUBz<1,2>		, mVU_SUBw<1,2>,
-	mVU_MADDx<1,2>	, mVU_MADDy<1,2>	, mVU_MADDz<1,2>	, mVU_MADDw<1,2>,
-	mVU_MSUBx<1,2>	, mVU_MSUBy<1,2>	, mVU_MSUBz<1,2>	, mVU_MSUBw<1,2>,
-	mVU_MAXx<1,2>	, mVU_MAXy<1,2>		, mVU_MAXz<1,2>		, mVU_MAXw<1,2>,	/* 0x10 */ 
-	mVU_MINIx<1,2>	, mVU_MINIy<1,2>	, mVU_MINIz<1,2>	, mVU_MINIw<1,2>,
-	mVU_MULx<1,2>	, mVU_MULy<1,2>		, mVU_MULz<1,2>		, mVU_MULw<1,2>,
-	mVU_MULq<1,2>	, mVU_MAXi<1,2>		, mVU_MULi<1,2>		, mVU_MINIi<1,2>,
-	mVU_ADDq<1,2>	, mVU_MADDq<1,2>	, mVU_ADDi<1,2>		, mVU_MADDi<1,2>,	/* 0x20 */
-	mVU_SUBq<1,2>	, mVU_MSUBq<1,2>	, mVU_SUBi<1,2>		, mVU_MSUBi<1,2>,
-	mVU_ADD<1,2>	, mVU_MADD<1,2>		, mVU_MUL<1,2>		, mVU_MAX<1,2>,
-	mVU_SUB<1,2>	, mVU_MSUB<1,2>		, mVU_OPMSUB<1,2>	, mVU_MINI<1,2>,
-	mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,	/* 0x30 */
-	mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVU_UPPER_FD_00<1,2>, mVU_UPPER_FD_01<1,2>, mVU_UPPER_FD_10<1,2>, mVU_UPPER_FD_11<1,2>,
-};
-//------------------------------------------------------------------
-
-//------------------------------------------------------------------
-// mVU_UPPER_FD_00_TABLE
-//------------------------------------------------------------------
-void (* mVU_UPPER_FD_00_TABLE00 [32])() = {
-	mVU_ADDAx<0,0>	, mVU_SUBAx<0,0>	, mVU_MADDAx<0,0>	, mVU_MSUBAx<0,0>,
-	mVU_ITOF0<0,0>	, mVU_FTOI0<0,0>	, mVU_MULAx<0,0>	, mVU_MULAq<0,0>,
-	mVU_ADDAq<0,0>	, mVU_SUBAq<0,0>	, mVU_ADDA<0,0>		, mVU_SUBA<0,0>,
-	mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-};
-
-void (* mVU_UPPER_FD_00_TABLE01 [32])() = {
-	mVU_ADDAx<0,1>	, mVU_SUBAx<0,1>	, mVU_MADDAx<0,1>	, mVU_MSUBAx<0,1>,
-	mVU_ITOF0<0,1>	, mVU_FTOI0<0,1>	, mVU_MULAx<0,1>	, mVU_MULAq<0,1>,
-	mVU_ADDAq<0,1>	, mVU_SUBAq<0,1>	, mVU_ADDA<0,1>		, mVU_SUBA<0,1>,
-	mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-};
-
-void (* mVU_UPPER_FD_00_TABLE10 [32])() = {
-	mVU_ADDAx<1,0>	, mVU_SUBAx<1,0>	, mVU_MADDAx<1,0>	, mVU_MSUBAx<1,0>,
-	mVU_ITOF0<1,0>	, mVU_FTOI0<1,0>	, mVU_MULAx<1,0>	, mVU_MULAq<1,0>,
-	mVU_ADDAq<1,0>	, mVU_SUBAq<1,0>	, mVU_ADDA<1,0>		, mVU_SUBA<1,0>,
-	mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-};
-
-void (* mVU_UPPER_FD_00_TABLE11 [32])() = {
-	mVU_ADDAx<1,1>	, mVU_SUBAx<1,1>	, mVU_MADDAx<1,1>	, mVU_MSUBAx<1,1>,
-	mVU_ITOF0<1,1>	, mVU_FTOI0<1,1>	, mVU_MULAx<1,1>	, mVU_MULAq<1,1>,
-	mVU_ADDAq<1,1>	, mVU_SUBAq<1,1>	, mVU_ADDA<1,1>		, mVU_SUBA<1,1>,
-	mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-};
-
-void (* mVU_UPPER_FD_00_TABLE02 [32])() = {
-	mVU_ADDAx<0,2>	, mVU_SUBAx<0,2>	, mVU_MADDAx<0,2>	, mVU_MSUBAx<0,2>,
-	mVU_ITOF0<0,2>	, mVU_FTOI0<0,2>	, mVU_MULAx<0,2>	, mVU_MULAq<0,2>,
-	mVU_ADDAq<0,2>	, mVU_SUBAq<0,2>	, mVU_ADDA<0,2>		, mVU_SUBA<0,2>,
-	mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-};
-
-void (* mVU_UPPER_FD_00_TABLE12 [32])() = {
-	mVU_ADDAx<1,2>	, mVU_SUBAx<1,2>	, mVU_MADDAx<1,2>	, mVU_MSUBAx<1,2>,
-	mVU_ITOF0<1,2>	, mVU_FTOI0<1,2>	, mVU_MULAx<1,2>	, mVU_MULAq<1,2>,
-	mVU_ADDAq<1,2>	, mVU_SUBAq<1,2>	, mVU_ADDA<1,2>		, mVU_SUBA<1,2>,
-	mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-};
-//------------------------------------------------------------------
-
-//------------------------------------------------------------------
-// mVU_UPPER_FD_01_TABLE
-//------------------------------------------------------------------
-void (* mVU_UPPER_FD_01_TABLE00 [32])() = {
-	mVU_ADDAy<0,0>	, mVU_SUBAy<0,0>	, mVU_MADDAy<0,0>	, mVU_MSUBAy<0,0>,
-	mVU_ITOF4<0,0>	, mVU_FTOI4<0,0>	, mVU_MULAy<0,0>	, mVU_ABS<0,0>,
-	mVU_MADDAq<0,0>	, mVU_MSUBAq<0,0>	, mVU_MADDA<0,0>	, mVU_MSUBA<0,0>,
-	mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-};
-
-void (* mVU_UPPER_FD_01_TABLE01 [32])() = {
-	mVU_ADDAy<0,1>	, mVU_SUBAy<0,1>	, mVU_MADDAy<0,1>	, mVU_MSUBAy<0,1>,
-	mVU_ITOF4<0,1>	, mVU_FTOI4<0,1>	, mVU_MULAy<0,1>	, mVU_ABS<0,1>,
-	mVU_MADDAq<0,1>	, mVU_MSUBAq<0,1>	, mVU_MADDA<0,1>	, mVU_MSUBA<0,1>,
-	mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-};
-
-void (* mVU_UPPER_FD_01_TABLE10 [32])() = {
-	mVU_ADDAy<1,0>	, mVU_SUBAy<1,0>	, mVU_MADDAy<1,0>	, mVU_MSUBAy<1,0>,
-	mVU_ITOF4<1,0>	, mVU_FTOI4<1,0>	, mVU_MULAy<1,0>	, mVU_ABS<1,0>,
-	mVU_MADDAq<1,0>	, mVU_MSUBAq<1,0>	, mVU_MADDA<1,0>	, mVU_MSUBA<1,0>,
-	mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-};
-
-void (* mVU_UPPER_FD_01_TABLE11 [32])() = {
-	mVU_ADDAy<1,1>	, mVU_SUBAy<1,1>	, mVU_MADDAy<1,1>	, mVU_MSUBAy<1,1>,
-	mVU_ITOF4<1,1>	, mVU_FTOI4<1,1>	, mVU_MULAy<1,1>	, mVU_ABS<1,1>,
-	mVU_MADDAq<1,1>	, mVU_MSUBAq<1,1>	, mVU_MADDA<1,1>	, mVU_MSUBA<1,1>,
-	mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-};
-
-void (* mVU_UPPER_FD_01_TABLE02 [32])() = {
-	mVU_ADDAy<0,2>	, mVU_SUBAy<0,2>	, mVU_MADDAy<0,2>	, mVU_MSUBAy<0,2>,
-	mVU_ITOF4<0,2>	, mVU_FTOI4<0,2>	, mVU_MULAy<0,2>	, mVU_ABS<0,2>,
-	mVU_MADDAq<0,2>	, mVU_MSUBAq<0,2>	, mVU_MADDA<0,2>	, mVU_MSUBA<0,2>,
-	mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-};
-
-void (* mVU_UPPER_FD_01_TABLE12 [32])() = {
-	mVU_ADDAy<1,2>	, mVU_SUBAy<1,2>	, mVU_MADDAy<1,2>	, mVU_MSUBAy<1,2>,
-	mVU_ITOF4<1,2>	, mVU_FTOI4<1,2>	, mVU_MULAy<1,2>	, mVU_ABS<1,2>,
-	mVU_MADDAq<1,2>	, mVU_MSUBAq<1,2>	, mVU_MADDA<1,2>	, mVU_MSUBA<1,2>,
-	mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-};
-//------------------------------------------------------------------
-
-//------------------------------------------------------------------
-// mVU_UPPER_FD_10_TABLE
-//------------------------------------------------------------------
-void (* mVU_UPPER_FD_10_TABLE00 [32])() = {
-	mVU_ADDAz<0,0>	, mVU_SUBAz<0,0>	, mVU_MADDAz<0,0>	, mVU_MSUBAz<0,0>,
-	mVU_ITOF12<0,0>	, mVU_FTOI12<0,0>	, mVU_MULAz<0,0>	, mVU_MULAi<0,0>,
-	mVU_ADDAi<0,0>	, mVU_SUBAi<0,0>	, mVU_MULA<0,0>		, mVU_OPMULA<0,0>,
-	mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-};
-
-void (* mVU_UPPER_FD_10_TABLE01 [32])() = {
-	mVU_ADDAz<0,1>	, mVU_SUBAz<0,1>	, mVU_MADDAz<0,1>	, mVU_MSUBAz<0,1>,
-	mVU_ITOF12<0,1>	, mVU_FTOI12<0,1>	, mVU_MULAz<0,1>	, mVU_MULAi<0,1>,
-	mVU_ADDAi<0,1>	, mVU_SUBAi<0,1>	, mVU_MULA<0,1>		, mVU_OPMULA<0,1>,
-	mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-};
-
-void (* mVU_UPPER_FD_10_TABLE10 [32])() = {
-	mVU_ADDAz<1,0>	, mVU_SUBAz<1,0>	, mVU_MADDAz<1,0>	, mVU_MSUBAz<1,0>,
-	mVU_ITOF12<1,0>	, mVU_FTOI12<1,0>	, mVU_MULAz<1,0>	, mVU_MULAi<1,0>,
-	mVU_ADDAi<1,0>	, mVU_SUBAi<1,0>	, mVU_MULA<1,0>		, mVU_OPMULA<1,0>,
-	mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-};
-
-void (* mVU_UPPER_FD_10_TABLE11 [32])() = {
-	mVU_ADDAz<1,1>	, mVU_SUBAz<1,1>	, mVU_MADDAz<1,1>	, mVU_MSUBAz<1,1>,
-	mVU_ITOF12<1,1>	, mVU_FTOI12<1,1>	, mVU_MULAz<1,1>	, mVU_MULAi<1,1>,
-	mVU_ADDAi<1,1>	, mVU_SUBAi<1,1>	, mVU_MULA<1,1>		, mVU_OPMULA<1,1>,
-	mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-};
-
-void (* mVU_UPPER_FD_10_TABLE02 [32])() = {
-	mVU_ADDAz<0,2>	, mVU_SUBAz<0,2>	, mVU_MADDAz<0,2>	, mVU_MSUBAz<0,2>,
-	mVU_ITOF12<0,2>	, mVU_FTOI12<0,2>	, mVU_MULAz<0,2>	, mVU_MULAi<0,2>,
-	mVU_ADDAi<0,2>	, mVU_SUBAi<0,2>	, mVU_MULA<0,2>		, mVU_OPMULA<0,2>,
-	mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-};
-
-void (* mVU_UPPER_FD_10_TABLE12 [32])() = {
-	mVU_ADDAz<1,2>	, mVU_SUBAz<1,2>	, mVU_MADDAz<1,2>	, mVU_MSUBAz<1,2>,
-	mVU_ITOF12<1,2>	, mVU_FTOI12<1,2>	, mVU_MULAz<1,2>	, mVU_MULAi<1,2>,
-	mVU_ADDAi<1,2>	, mVU_SUBAi<1,2>	, mVU_MULA<1,2>		, mVU_OPMULA<1,2>,
-	mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-};
-//------------------------------------------------------------------
-
-//------------------------------------------------------------------
-// mVU_UPPER_FD_11_TABLE
-//------------------------------------------------------------------
-void (* mVU_UPPER_FD_11_TABLE00 [32])() = {
-	mVU_ADDAw<0,0>	, mVU_SUBAw<0,0>	, mVU_MADDAw<0,0>	, mVU_MSUBAw<0,0>,
-	mVU_ITOF15<0,0>	, mVU_FTOI15<0,0>	, mVU_MULAw<0,0>	, mVU_CLIP<0,0>,
-	mVU_MADDAi<0,0>	, mVU_MSUBAi<0,0>	, mVUunknown<0,0>	, mVU_NOP<0,0>,
-	mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-	mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>	, mVUunknown<0,0>,
-};
-
-void (* mVU_UPPER_FD_11_TABLE01 [32])() = {
-	mVU_ADDAw<0,1>	, mVU_SUBAw<0,1>	, mVU_MADDAw<0,1>	, mVU_MSUBAw<0,1>,
-	mVU_ITOF15<0,1>	, mVU_FTOI15<0,1>	, mVU_MULAw<0,1>	, mVU_CLIP<0,1>,
-	mVU_MADDAi<0,1>	, mVU_MSUBAi<0,1>	, mVUunknown<0,1>	, mVU_NOP<0,1>,
-	mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-	mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>	, mVUunknown<0,1>,
-};
-
-void (* mVU_UPPER_FD_11_TABLE10 [32])() = {
-	mVU_ADDAw<1,0>	, mVU_SUBAw<1,0>	, mVU_MADDAw<1,0>	, mVU_MSUBAw<1,0>,
-	mVU_ITOF15<1,0>	, mVU_FTOI15<1,0>	, mVU_MULAw<1,0>	, mVU_CLIP<1,0>,
-	mVU_MADDAi<1,0>	, mVU_MSUBAi<1,0>	, mVUunknown<1,0>	, mVU_NOP<1,0>,
-	mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-	mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>	, mVUunknown<1,0>,
-};
-
-void (* mVU_UPPER_FD_11_TABLE11 [32])() = {
-	mVU_ADDAw<1,1>	, mVU_SUBAw<1,1>	, mVU_MADDAw<1,1>	, mVU_MSUBAw<1,1>,
-	mVU_ITOF15<1,1>	, mVU_FTOI15<1,1>	, mVU_MULAw<1,1>	, mVU_CLIP<1,1>,
-	mVU_MADDAi<1,1>	, mVU_MSUBAi<1,1>	, mVUunknown<1,1>	, mVU_NOP<1,1>,
-	mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-	mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>	, mVUunknown<1,1>,
-};
-
-void (* mVU_UPPER_FD_11_TABLE02 [32])() = {
-	mVU_ADDAw<0,2>	, mVU_SUBAw<0,2>	, mVU_MADDAw<0,2>	, mVU_MSUBAw<0,2>,
-	mVU_ITOF15<0,2>	, mVU_FTOI15<0,2>	, mVU_MULAw<0,2>	, mVU_CLIP<0,2>,
-	mVU_MADDAi<0,2>	, mVU_MSUBAi<0,2>	, mVUunknown<0,2>	, mVU_NOP<0,2>,
-	mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-	mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>	, mVUunknown<0,2>,
-};
-
-void (* mVU_UPPER_FD_11_TABLE12 [32])() = {
-	mVU_ADDAw<1,2>	, mVU_SUBAw<1,2>	, mVU_MADDAw<1,2>	, mVU_MSUBAw<1,2>,
-	mVU_ITOF15<1,2>	, mVU_FTOI15<1,2>	, mVU_MULAw<1,2>	, mVU_CLIP<1,2>,
-	mVU_MADDAi<1,2>	, mVU_MSUBAi<1,2>	, mVUunknown<1,2>	, mVU_NOP<1,2>,
-	mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-	mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>	, mVUunknown<1,2>,
-};
-//------------------------------------------------------------------
+mVUcreateTable(0,0)
+mVUcreateTable(0,1)
+mVUcreateTable(0,2)
+mVUcreateTable(0,3)
+mVUcreateTable(1,0)
+mVUcreateTable(1,1)
+mVUcreateTable(1,2)
+mVUcreateTable(1,3)
 
 //------------------------------------------------------------------
 // Table Functions
@@ -1053,15 +233,19 @@ void (* mVU_UPPER_FD_11_TABLE12 [32])() = {
 #define doTableStuff(tableName, args) {			\
 	pass1 {										\
 		if (vuIndex) tableName##10[ args ]();	\
-		else tableName##00[ args ]();			\
+		else		 tableName##00[ args ]();	\
 	}											\
 	pass2 {										\
 		if (vuIndex) tableName##11[ args ]();	\
-		else tableName##01[ args ]();			\
+		else		 tableName##01[ args ]();	\
 	}											\
 	pass3 {										\
 		if (vuIndex) tableName##12[ args ]();	\
-		else tableName##02[ args ]();			\
+		else		 tableName##02[ args ]();	\
+	}											\
+	pass4 {										\
+		if (vuIndex) tableName##13[ args ]();	\
+		else		 tableName##03[ args ]();	\
 	}											\
 }
 

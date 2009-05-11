@@ -440,6 +440,7 @@ microVUf(void) mVU_FCAND() {
 		mVUallocVIb<vuIndex>(gprT1, 1);
 	}
 	pass3 { mVUlog("FCAND vi01, $%x", _Imm24_); }
+	pass4 { mVUflagInfo |= 0xf << (/*mVUcount +*/ 8); }
 }
 
 microVUf(void) mVU_FCEQ() {
@@ -453,6 +454,7 @@ microVUf(void) mVU_FCEQ() {
 		mVUallocVIb<vuIndex>(gprT1, 1);
 	}
 	pass3 { mVUlog("FCEQ vi01, $%x", _Imm24_); }
+	pass4 { mVUflagInfo |= 0xf << (/*mVUcount +*/ 8); }
 }
 
 microVUf(void) mVU_FCGET() {
@@ -463,7 +465,8 @@ microVUf(void) mVU_FCGET() {
 		AND32ItoR(gprT1, 0xfff);
 		mVUallocVIb<vuIndex>(gprT1, _It_);
 	}
-	pass3 { mVUlog("FCGET vi%02d", _Ft_); }
+	pass3 { mVUlog("FCGET vi%02d", _Ft_);	   }
+	pass4 { mVUflagInfo |= 0xf << (/*mVUcount +*/ 8); }
 }
 
 microVUf(void) mVU_FCOR() {
@@ -477,6 +480,7 @@ microVUf(void) mVU_FCOR() {
 		mVUallocVIb<vuIndex>(gprT1, 1);
 	}
 	pass3 { mVUlog("FCOR vi01, $%x", _Imm24_); }
+	pass4 { mVUflagInfo |= 0xf << (/*mVUcount +*/ 8); }
 }
 
 microVUf(void) mVU_FCSET() {
@@ -503,6 +507,7 @@ microVUf(void) mVU_FMAND() {
 		mVUallocVIb<vuIndex>(gprT1, _It_);
 	}
 	pass3 { mVUlog("FMAND vi%02d, vi%02d", _Ft_, _Fs_); }
+	pass4 { mVUflagInfo |= 0xf << (/*mVUcount +*/ 4);   }
 }
 
 microVUf(void) mVU_FMEQ() {
@@ -517,6 +522,7 @@ microVUf(void) mVU_FMEQ() {
 		mVUallocVIb<vuIndex>(gprT1, _It_);
 	}
 	pass3 { mVUlog("FMEQ vi%02d, vi%02d", _Ft_, _Fs_); }
+	pass4 { mVUflagInfo |= 0xf << (/*mVUcount +*/ 4);  }
 }
 
 microVUf(void) mVU_FMOR() {
@@ -529,6 +535,7 @@ microVUf(void) mVU_FMOR() {
 		mVUallocVIb<vuIndex>(gprT1, _It_);
 	}
 	pass3 { mVUlog("FMOR vi%02d, vi%02d", _Ft_, _Fs_); }
+	pass4 { mVUflagInfo |= 0xf << (/*mVUcount +*/ 4);  }
 }
 
 //------------------------------------------------------------------
@@ -544,6 +551,7 @@ microVUf(void) mVU_FSAND() {
 		mVUallocVIb<vuIndex>(gprT1, _It_);
 	}
 	pass3 { mVUlog("FSAND vi%02d, $%x", _Ft_, _Imm12_); }
+	pass4 { mVUflagInfo |= 0xf << (/*mVUcount +*/ 0);   }
 }
 
 microVUf(void) mVU_FSEQ() {
@@ -557,6 +565,7 @@ microVUf(void) mVU_FSEQ() {
 		mVUallocVIb<vuIndex>(gprT1, _It_);
 	}
 	pass3 { mVUlog("FSEQ vi%02d, $%x", _Ft_, _Imm12_); }
+	pass4 { mVUflagInfo |= 0xf << (/*mVUcount +*/ 0);  }
 }
 
 microVUf(void) mVU_FSOR() {
@@ -568,6 +577,7 @@ microVUf(void) mVU_FSOR() {
 		mVUallocVIb<vuIndex>(gprT1, _It_);
 	}
 	pass3 { mVUlog("FSOR vi%02d, $%x", _Ft_, _Imm12_); }
+	pass4 { mVUflagInfo |= 0xf << (/*mVUcount +*/ 0); SysPrintf("b\n"); }
 }
 
 microVUf(void) mVU_FSSET() {

@@ -146,6 +146,7 @@ declareAllVariables
 #define pass1 if (recPass == 0)
 #define pass2 if (recPass == 1)
 #define pass3 if (recPass == 2)
+#define pass4 if (recPass == 3)
 
 // Misc Macros...
 #define mVUcurProg	 mVU->prog.prog[mVU->prog.cur]
@@ -159,6 +160,7 @@ declareAllVariables
 #define mVUregs		 mVUallocInfo.block.pState
 #define mVUregsTemp	 mVUallocInfo.regsTemp
 #define iPC			 mVUallocInfo.curPC
+#define mVUflagInfo	 mVUregs.needExactMatch //mVUallocInfo.flagInfo
 #define mVUinfo		 mVUallocInfo.info[iPC / 2]
 #define mVUstall	 mVUallocInfo.stall[iPC / 2]
 #define mVUstartPC	 mVUallocInfo.startPC
@@ -248,6 +250,13 @@ declareAllVariables
 #define mVUlogI()	 { mVUlog(", I"); }
 #define mVUlogQ()	 { mVUlog(", Q"); }
 #define mVUlogCLIP() { mVUlog("w.xyz vf%02d, vf%02dw", _Fs_, _Ft_); }
+
+// Flag Info
+//#define __NeedExact	 (1<<12)
+//#define __ExactMatch (mVUregs.needExactMatch & (1<<12))
+#define __Status	 (mVUflagInfo & (0xf<<0))
+#define __Mac		 (mVUflagInfo & (0xf<<4))
+#define __Clip		 (mVUflagInfo & (0xf<<8))
 
 // Store VI regs in mmx regs?
 #define isMMX(_VIreg_)	0 //(_VIreg_ >= 1 && _VIreg_ <=8)
