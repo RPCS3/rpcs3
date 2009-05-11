@@ -167,6 +167,8 @@ protected:
 				if(a.z > 0xff) a.z = 0xff;
 				break;
 			case TFX_DECAL:
+				a.x = a.y;
+				a.z = a.w;
 				break;
 			case TFX_HIGHLIGHT:
 				a.x = a.x + a.y;

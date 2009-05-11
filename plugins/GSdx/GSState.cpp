@@ -2051,14 +2051,21 @@ bool GSC_GodOfWar2(const GSFrameInfo& fi, int& skip)
 {
 	if(skip == 0)
 	{
-		if(fi.TME && fi.FBP == 0x00100 && fi.FPSM == PSM_PSMCT16 && fi.TBP0 == 0x00100 && fi.TPSM == PSM_PSMCT16 // ntsc
-		|| fi.TME && fi.FBP == 0x02100 && fi.FPSM == PSM_PSMCT16 && fi.TBP0 == 0x02100 && fi.TPSM == PSM_PSMCT16) // pal
+		if(fi.TME)
 		{
-			skip = 29; // shadows
-		}
-		else if(fi.TME && fi.FBP == 0x00500 && fi.FPSM == PSM_PSMCT24 && fi.TBP0 == 0x02100 && fi.TPSM == PSM_PSMCT32) // pal
-		{
-			// skip = 17; // only looks correct at native resolution
+			if(fi.FBP == 0x00100 && fi.FPSM == PSM_PSMCT16 && fi.TBP0 == 0x00100 && fi.TPSM == PSM_PSMCT16 // ntsc
+			|| fi.FBP == 0x02100 && fi.FPSM == PSM_PSMCT16 && fi.TBP0 == 0x02100 && fi.TPSM == PSM_PSMCT16) // pal
+			{
+				skip = 29; // shadows
+			}
+			else if(fi.FBP == 0x00500 && fi.FPSM == PSM_PSMCT24 && fi.TBP0 == 0x02100 && fi.TPSM == PSM_PSMCT32) // pal
+			{
+				// skip = 17; // only looks correct at native resolution
+			}
+			else if(fi.FBP == 0x01300 && fi.FPSM == PSM_PSMCT24 && fi.TBP0 == 0x00100 && fi.TPSM == PSM_PSMCT32) // ntsc
+			{
+				// skip = 15; // only looks correct at native resolution
+			}
 		}
 	}
 	else
