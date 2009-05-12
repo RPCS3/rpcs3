@@ -37,8 +37,8 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 	//SysPrintf("doStatus = %d; doMac = %d\n", doStatus>>9, doMac>>8);
 	if (mVUflagHack) { mVUinfo &= ~_doStatus; }
 	if (!doFlags) return;
-	if (!doMac) { regT1 = reg; }
-	else		{ SSE2_PSHUFD_XMM_to_XMM(regT1, reg, 0x1B); } // Flip wzyx to xyzw
+	if (!doMac || (_XYZW_SS && modXYZW)) { regT1 = reg; }
+	else { SSE2_PSHUFD_XMM_to_XMM(regT1, reg, 0x1B); } // Flip wzyx to xyzw
 	if (doStatus) {
 		getFlagReg(sReg, fsInstance); // Set sReg to valid GPR by Cur Flag Instance
 		mVUallocSFLAGa<vuIndex>(sReg, fpsInstance); // Get Prev Status Flag

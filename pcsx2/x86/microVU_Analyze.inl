@@ -28,7 +28,7 @@
 //------------------------------------------------------------------
 
 #define aReg(x) mVUregs.VF[x]
-#define bReg(x) mVUregsTemp.VFreg[0] = x; mVUregsTemp.VF[0]
+#define bReg(x, y) mVUregsTemp.VFreg[y] = x; mVUregsTemp.VF[0]
 #define aMax(x, y) ((x > y) ? x : y)
 
 #define analyzeReg1(reg) {									\
@@ -40,13 +40,13 @@
 	}														\
 }
 
-#define analyzeReg2(reg) {				\
-	if (reg) {							\
-		if (_X) { bReg(reg).x = 4; }	\
-		if (_Y) { bReg(reg).y = 4; }	\
-		if (_Z) { bReg(reg).z = 4; }	\
-		if (_W) { bReg(reg).w = 4; }	\
-	}									\
+#define analyzeReg2(reg, isLowOp) {				\
+	if (reg) {									\
+		if (_X) { bReg(reg, isLowOp).x = 4; }	\
+		if (_Y) { bReg(reg, isLowOp).y = 4; }	\
+		if (_Z) { bReg(reg, isLowOp).z = 4; }	\
+		if (_W) { bReg(reg, isLowOp).w = 4; }	\
+	}											\
 }
 
 microVUt(void) mVUanalyzeFMAC1(int Fd, int Fs, int Ft) {
@@ -54,7 +54,7 @@ microVUt(void) mVUanalyzeFMAC1(int Fd, int Fs, int Ft) {
 	mVUinfo |= _doStatus;
 	analyzeReg1(Fs);
 	analyzeReg1(Ft);
-	analyzeReg2(Fd);
+	analyzeReg2(Fd, 0);
 }
 
 //------------------------------------------------------------------
@@ -64,7 +64,7 @@ microVUt(void) mVUanalyzeFMAC1(int Fd, int Fs, int Ft) {
 microVUt(void) mVUanalyzeFMAC2(int Fs, int Ft) {
 	microVU* mVU = mVUx;
 	analyzeReg1(Fs);
-	analyzeReg2(Ft);
+	analyzeReg2(Ft, 0);
 }
 
 //------------------------------------------------------------------
@@ -85,7 +85,7 @@ microVUt(void) mVUanalyzeFMAC3(int Fd, int Fs, int Ft) {
 	mVUinfo |= _doStatus;
 	analyzeReg1(Fs);
 	analyzeReg3(Ft);
-	analyzeReg2(Fd);
+	analyzeReg2(Fd, 0);
 }
 
 //------------------------------------------------------------------
@@ -143,7 +143,7 @@ microVUt(void) mVUanalyzeMR32(int Fs, int Ft) {
 	microVU* mVU = mVUx;
 	if (!Ft) { mVUinfo |= _isNOP; }
 	analyzeReg6(Fs);
-	analyzeReg2(Ft);
+	analyzeReg2(Ft, 1);
 }
 
 //------------------------------------------------------------------
@@ -197,8 +197,21 @@ microVUt(void) mVUanalyzeEFU2(int Fs, u8 xCycles) {
 microVUt(void) mVUanalyzeMFP(int Ft) {
 	microVU* mVU = mVUx;
 	if (!Ft) { mVUinfo |= _isNOP; }
-	analyzeReg2(Ft);
+	analyzeReg2(Ft, 1);
 }
+
+//------------------------------------------------------------------
+// MOVE - MOVE Opcode
+//------------------------------------------------------------------
+
+microVUt(void) mVUanalyzeMOVE(int Fs, int Ft) {
+	microVU* mVU = mVUx;
+	if (!Ft || (Ft == Fs)) { mVUinfo |= _isNOP; }
+	if (mVUregsTemp.VFreg[0] == Fs) { mVUinfo |= _swapOps; } 
+	analyzeReg1(Fs);
+	analyzeReg2(Ft, 1);
+}
+
 
 //------------------------------------------------------------------
 // LQx - LQ/LQD/LQI Opcodes
@@ -207,7 +220,7 @@ microVUt(void) mVUanalyzeMFP(int Ft) {
 microVUt(void) mVUanalyzeLQ(int Ft, int Is, bool writeIs) {
 	microVU* mVU = mVUx;
 	analyzeVIreg1(Is);
-	analyzeReg2(Ft);
+	analyzeReg2(Ft, 1);
 	if (!Ft)	 { mVUinfo |= (writeIs && Is) ? _noWriteVF : _isNOP; }
 	if (writeIs) { analyzeVIreg2(Is, 1); }
 }
@@ -238,7 +251,7 @@ microVUt(void) mVUanalyzeR1(int Fs, int Fsf) {
 microVUt(void) mVUanalyzeR2(int Ft, bool canBeNOP) {
 	microVU* mVU = mVUx;
 	if (!Ft) { mVUinfo |= ((canBeNOP) ? _isNOP : _noWriteVF); }
-	analyzeReg2(Ft);
+	analyzeReg2(Ft, 1);
 	analyzeRreg();
 }
 

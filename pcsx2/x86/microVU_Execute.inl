@@ -27,7 +27,6 @@ void testFunction() { mVUprint("microVU: Entered Execution Mode"); }
 
 // Generates the code for entering recompiled blocks
 microVUt(void) mVUdispatcherA() {
-	static u32 PCSX2_ALIGNED16(vuMXCSR);
 	microVU* mVU = mVUx;
 	mVU->startFunct = x86Ptr;
 
@@ -42,8 +41,7 @@ microVUt(void) mVUdispatcherA() {
 	PUSH32R(EDI);
 
 	// Load VU's MXCSR state
-	vuMXCSR = g_sseVUMXCSR;
-	SSE_LDMXCSR((uptr)&vuMXCSR);
+	SSE_LDMXCSR((uptr)&g_sseVUMXCSR);
 
 	// Load Regs
 	MOV32MtoR(gprR,  (uptr)&mVU->regs->VI[REG_R].UL);
@@ -83,13 +81,11 @@ microVUt(void) mVUdispatcherA() {
 
 // Generates the code to exit from recompiled blocks
 microVUt(void) mVUdispatcherB() {
-	static u32 PCSX2_ALIGNED16(eeMXCSR);
 	microVU* mVU = mVUx;
 	mVU->exitFunct = x86Ptr;
 
 	// Load EE's MXCSR state
-	eeMXCSR = g_sseMXCSR;
-	SSE_LDMXCSR((uptr)&eeMXCSR);
+	SSE_LDMXCSR((uptr)&g_sseMXCSR);
 	
 	// Save Regs (Other Regs Saved in mVUcompile)
 	MOV32RtoM((uptr)&mVU->regs->VI[REG_R].UL, gprR);

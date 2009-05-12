@@ -699,7 +699,7 @@ microVUf(void) mVU_ISUBIU() {
 
 microVUf(void) mVU_MFIR() {
 	microVU* mVU = mVUx;
-	pass1 { if (!_Ft_) { mVUinfo |= _isNOP; } analyzeVIreg1(_Is_); analyzeReg2(_Ft_); }
+	pass1 { if (!_Ft_) { mVUinfo |= _isNOP; } analyzeVIreg1(_Is_); analyzeReg2(_Ft_, 1); }
 	pass2 { 
 		mVUallocVIa<vuIndex>(gprT1, _Is_);
 		MOVSX32R16toR(gprT1, gprT1);
@@ -722,7 +722,7 @@ microVUf(void) mVU_MFP() {
 
 microVUf(void) mVU_MOVE() {
 	microVU* mVU = mVUx;
-	pass1 { if (!_Ft_ || (_Ft_ == _Fs_)) { mVUinfo |= _isNOP; } analyzeReg1(_Fs_); analyzeReg2(_Ft_); }
+	pass1 { mVUanalyzeMOVE<vuIndex>(_Fs_, _Ft_); }
 	pass2 { 
 		mVUloadReg<vuIndex>(xmmT1, (uptr)&mVU->regs->VF[_Fs_].UL[0], _X_Y_Z_W);
 		mVUsaveReg<vuIndex>(xmmT1, (uptr)&mVU->regs->VF[_Ft_].UL[0], _X_Y_Z_W, 1);
