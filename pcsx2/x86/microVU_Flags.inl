@@ -143,7 +143,7 @@ microVUt(int) mVUsetFlags(int* xStatus, int* xMac, int* xClip) {
 		incPC2(2);
 	}
 
-	mVUregs.flags = ((__Clip) ? 0 : (xC << 2)) | ((__Status) ? 0 : xS);
+	mVUregs.flags = ((__Clip) ? 0 : ((xC & 3) << 2)) | ((__Status) ? 0 : (xS & 3));
 	return cycles;
 }
 
@@ -176,15 +176,15 @@ microVUt(void) mVUsetupFlags(int* xStatus, int* xMac, int* xClip, int cycles) {
 		SSE_SHUFPS_XMM_to_XMM (xmmT1, xmmT1, shuffleMac);
 		SSE_MOVAPS_XMM_to_M128((uptr)mVU->macFlag, xmmT1);
 	}
-/*
+
 	if (__Clip) {
 		int bClip[4];
-		//sortFlag(xClip, bClip, cycles);
-		SysPrintf("__Clip\n");
+		sortFlag(xClip, bClip, cycles);
+		//SysPrintf("__Clip\n");
 		SSE_MOVAPS_M128_to_XMM(xmmT1, (uptr)mVU->clipFlag);
 		SSE_SHUFPS_XMM_to_XMM (xmmT1, xmmT1, shuffleClip);
 		SSE_MOVAPS_XMM_to_M128((uptr)mVU->clipFlag, xmmT1);
-	}*/
+	}
 }
 
 microVUt(void) mVUpass4(int startPC) {
