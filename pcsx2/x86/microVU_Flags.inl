@@ -132,9 +132,12 @@ microVUt(int) mVUsetFlags(int* xStatus, int* xMac, int* xClip) {
 		mVUinfo |= (xM & 3) << 10; // _fmInstance
 		mVUinfo |= (xC & 3) << 14; // _fcInstance
 
-		if (doStatus||isFSSET||doDivFlag) { xStatus	[xS] = cycles + 4; xS = (xS+1)&3; }
-		if (doMac)						  { xMac	[xM] = cycles + 4; xM = (xM+1)&3; }
-		if (doClip)						  { xClip	[xC] = cycles + 4; xC = (xC+1)&3; }
+		if (doStatus || isFSSET || doDivFlag)
+			xStatus[xS++ & 3] = cycles + 4;
+		if (doMac)
+			xMac[xM++ & 3] = cycles + 4;
+		if (doClip)
+			xClip[xC++ & 3] = cycles + 4;
 
 		cycles++;
 		incPC2(2);
