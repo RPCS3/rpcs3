@@ -485,7 +485,7 @@ microVUf(void) mVU_FCOR() {
 
 microVUf(void) mVU_FCSET() {
 	microVU* mVU = mVUx;
-	pass1 { mVUinfo |= doClip; }
+	pass1 { mVUinfo |= _doClip; }
 	pass2 { 
 		MOV32ItoR(gprT1, _Imm24_);
 		mVUallocCFLAGb<vuIndex>(gprT1, fcInstance);
