@@ -53,11 +53,11 @@ microVUt(void) mVUdispatcherA() {
 
 	SSE_MOVAPS_M128_to_XMM(xmmT1, (uptr)&mVU->regs->VI[REG_MAC_FLAG].UL);
 	SSE_SHUFPS_XMM_to_XMM (xmmT1, xmmT1, 0);
-	SSE_MOVAPS_XMM_to_M128((uptr)&mVU->regs->VI[REG_MAC_FLAG].UL, xmmT1);
+	SSE_MOVAPS_XMM_to_M128((uptr)mVU->macFlag, xmmT1);
 
 	SSE_MOVAPS_M128_to_XMM(xmmT1, (uptr)&mVU->regs->VI[REG_CLIP_FLAG].UL);
 	SSE_SHUFPS_XMM_to_XMM (xmmT1, xmmT1, 0);
-	SSE_MOVAPS_XMM_to_M128((uptr)&mVU->regs->VI[REG_CLIP_FLAG].UL, xmmT1);
+	SSE_MOVAPS_XMM_to_M128((uptr)mVU->clipFlag, xmmT1);
 
 	SSE_MOVAPS_M128_to_XMM(xmmACC, (uptr)&mVU->regs->ACC.UL[0]);
 	SSE_MOVAPS_M128_to_XMM(xmmMax, (uptr)mVU_maxvals);

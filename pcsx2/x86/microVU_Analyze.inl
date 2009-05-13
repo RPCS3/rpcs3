@@ -234,6 +234,7 @@ microVUt(void) mVUanalyzeSQ(int Fs, int It, bool writeIt) {
 	analyzeReg1(Fs);
 	analyzeVIreg1(It);
 	if (writeIt) { analyzeVIreg2(It, 1); }
+	if (mVUregsTemp.VFreg[0] == Fs) { mVUinfo |= _swapOps; } 
 }
 
 //------------------------------------------------------------------

@@ -88,7 +88,7 @@ struct microProgManager {
 	microRegInfo		lpState;		// Pipeline state from where program left off (useful for continuing execution)
 };
 
-#define mVUcacheSize (0x1f00000 / ((vuIndex) ? 1 : 4))
+#define mVUcacheSize (0x2000000 / ((vuIndex) ? 1 : 4))
 struct microVU {
 	u32 index;		// VU Index (VU0 or VU1)
 	u32 microSize;	// VU Micro Memory Size

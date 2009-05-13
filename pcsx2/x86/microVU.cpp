@@ -163,7 +163,7 @@ microVUt(int) mVUfindLeastUsedProg() {
 		}*/
 		mVUclearProg<vuIndex>(j); // Clear old data if overwriting old program
 		mVUcacheProg<vuIndex>(j); // Cache Micro Program
-		Console::Notice("microVU%d: MicroProgram Cache Full!", params vuIndex);
+		//Console::Notice("microVU%d: MicroProgram Cache Full!", params vuIndex);
 		return j;
 	}
 }

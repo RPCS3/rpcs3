@@ -299,7 +299,7 @@ microVUt(void) mVUrestoreRegs() {
 	POP32R(gprR); // Restore EDX
 }
 
-
+// Reads entire microProgram and finds out if Status Flag is Used
 microVUt(void) mVUcheckSflag(int progIndex) {
 	if (CHECK_VU_FLAGHACK) {
 
