@@ -41,7 +41,7 @@ microVUx(void) __mVULog(const char* fmt, ...) {
 
 microVUt(void) __mVUdumpProgram(int progIndex) {
 	microVU* mVU = mVUx;
-	bool bitX[9];
+	bool bitX[7];
 	char str[30];
 	int	delay = 0;
 	mVUbranch = 0;
@@ -73,10 +73,8 @@ microVUt(void) __mVUdumpProgram(int progIndex) {
 		bitX[4] = 0;
 		bitX[5] = 0;
 		bitX[6] = 0;
-		bitX[7] = 0;
-		bitX[8] = 0;
 
-		if (mVU->code & _Ibit_) { bitX[0] = 1; bitX[5] = 1; bitX[7] = 1; }
+		if (mVU->code & _Ibit_) { bitX[0] = 1; bitX[5] = 1; }
 		if (mVU->code & _Ebit_) { bitX[1] = 1; bitX[5] = 1; delay = 2; }
 		if (mVU->code & _Mbit_) { bitX[2] = 1; bitX[5] = 1; }
 		if (mVU->code & _Dbit_) { bitX[3] = 1; bitX[5] = 1; }
@@ -101,12 +99,18 @@ microVUt(void) __mVUdumpProgram(int progIndex) {
 		}
 
 		iPC = i;
-		if (bitX[7]) { mVUlog("<font color=\"#0070ff\">"); }
 		mVU->code = mVU->prog.prog[progIndex].data[i];
-		mVUlog("<br>\n[%04x] (%08x) ", i*4, mVU->code);
-		mVUopL<vuIndex, 2>();
-		mVUlog("\n\n<br><br>");
-		if (bitX[7]) { mVUlog("</font>"); }
+
+		if(bitX[0]) {
+			mVUlog("<br>\n<font color=\"#FF7000\">");
+			mVUlog("[%04x] (%08x) %f", i*4, mVU->code, *(float*)&mVU->code);
+			mVUlog("</font>\n\n<br><br>");
+		}
+		else {
+			mVUlog("<br>\n[%04x] (%08x) ", i*4, mVU->code);
+			mVUopL<vuIndex, 2>();
+			mVUlog("\n\n<br><br>");
+		}
 	}
 	mVUlog("</font>\n");
 	mVUlog("</body>\n");

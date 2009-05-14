@@ -166,7 +166,7 @@ microVUt(void) mVUallocFMAC4a(int& ACC, int& Fs, int& Ft) {
 microVUt(void) mVUallocFMAC4b(int& ACC, int& Fs) {
 	microVU* mVU = mVUx;
 	if (CHECK_VU_OVERFLOW) mVUclamp1<vuIndex>(Fs, xmmT1, _xyzw_ACC);
-	mVUmergeRegs<vuIndex>(ACC, Fs, _X_Y_Z_W);
+	mVUmergeRegs(ACC, Fs, _X_Y_Z_W);
 }
 
 //------------------------------------------------------------------
@@ -435,7 +435,7 @@ microVUt(void) mVUallocFMAC14a(int& ACCw, int& ACCr, int& Fs, int& Ft) {
 microVUt(void) mVUallocFMAC14b(int& ACCw, int& ACCr) {
 	microVU* mVU = mVUx;
 	if (CHECK_VU_OVERFLOW) mVUclamp1<vuIndex>(ACCr, xmmFt, _xyzw_ACC);
-	mVUmergeRegs<vuIndex>(ACCw, ACCr, _X_Y_Z_W);
+	mVUmergeRegs(ACCw, ACCr, _X_Y_Z_W);
 }
 
 //------------------------------------------------------------------

@@ -107,6 +107,7 @@ declareAllVariables
 
 #define getVUmem(x)	(((vuIndex == 1) ? (x & 0x3ff) : ((x >= 0x400) ? (x & 0x43f) : (x & 0xff))) * 16)
 #define offsetSS	((_X) ? (0) : ((_Y) ? (4) : ((_Z) ? 8: 12)))
+#define offsetReg	((_X) ? (0) : ((_Y) ? (1) : ((_Z) ? 2:  3)))
 
 #define xmmT1	0 // Temp Reg
 #define xmmFs	1 // Holds the Value of Fs (writes back result Fd)
@@ -174,6 +175,7 @@ declareAllVariables
 #define bSaveAddr	 (((xPC + (2 * 8)) & ((vuIndex) ? 0x3ff8:0xff8)) / 8)
 #define branchAddr	 ((xPC + 8 + (_Imm11_ * 8)) & ((vuIndex) ? 0x3ff8:0xff8))
 #define shufflePQ	 (((mVU->p) ? 0xb0 : 0xe0) | ((mVU->q) ? 0x01 : 0x04))
+#define mVUflagHack  (mVUcurProg.sFlagHack)
 
 // Pass 1 uses these to set mVUinfo
 #define _isNOP		 (1<<0) // Skip Lower Instruction
@@ -287,9 +289,9 @@ declareAllVariables
 #define mVUdumpProg 0&&
 #endif
 
-// Status Flag Speed Hack
-#define CHECK_VU_FLAGHACK 0 // Set to 1 to turn hack on
-#define mVUflagHack (mVUcurProg.sFlagHack)
+// Speed Hacks (Set to 1 to turn On)
+#define CHECK_VU_FLAGHACK	0 // Status Flag Speed Hack
+#define CHECK_VU_MINMAXHACK	0 // Min/Max Speed Hack
 
 // Cache Limit Check
 #define mVUcacheCheck(ptr, start, limit) {  \

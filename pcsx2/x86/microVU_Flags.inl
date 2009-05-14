@@ -128,22 +128,19 @@ microVUt(int) mVUsetFlags(int* xStatus, int* xMac, int* xClip) {
 		mVUinfo |= findFlagInst(xMac,	 cycles) << 16; // _fvmInstance
 		mVUinfo |= findFlagInst(xClip,	 cycles) << 20; // _fvcInstance
 
-		mVUinfo |= (xS & 3) << 12; // _fsInstance
-		mVUinfo |= (xM & 3) << 10; // _fmInstance
-		mVUinfo |= (xC & 3) << 14; // _fcInstance
+		mVUinfo |= xS << 12; // _fsInstance
+		mVUinfo |= xM << 10; // _fmInstance
+		mVUinfo |= xC << 14; // _fcInstance
 
-		if (doStatus || isFSSET || doDivFlag)
-			xStatus[xS++ & 3] = cycles + 4;
-		if (doMac)
-			xMac[xM++ & 3] = cycles + 4;
-		if (doClip)
-			xClip[xC++ & 3] = cycles + 4;
+		if (doStatus || isFSSET || doDivFlag) { xStatus[xS] = cycles + 4;  xS = (xS+1) & 3; }
+		if (doMac)							  { xMac   [xM] = cycles + 4;  xM = (xM+1) & 3; }
+		if (doClip)							  { xClip  [xC] = cycles + 4;  xC = (xC+1) & 3; }
 
 		cycles++;
 		incPC2(2);
 	}
 
-	mVUregs.flags = ((__Clip) ? 0 : ((xC & 3) << 2)) | ((__Status) ? 0 : (xS & 3));
+	mVUregs.flags = ((__Clip) ? 0 : (xC << 2)) | ((__Status) ? 0 : xS);
 	return cycles;
 }
 
@@ -180,7 +177,6 @@ microVUt(void) mVUsetupFlags(int* xStatus, int* xMac, int* xClip, int cycles) {
 	if (__Clip) {
 		int bClip[4];
 		sortFlag(xClip, bClip, cycles);
-		//SysPrintf("__Clip\n");
 		SSE_MOVAPS_M128_to_XMM(xmmT1, (uptr)mVU->clipFlag);
 		SSE_SHUFPS_XMM_to_XMM (xmmT1, xmmT1, shuffleClip);
 		SSE_MOVAPS_XMM_to_M128((uptr)mVU->clipFlag, xmmT1);
