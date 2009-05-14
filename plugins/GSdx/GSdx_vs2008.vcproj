@@ -1269,10 +1269,6 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath=".\GSRect.cpp"
-				>
-			</File>
-			<File
 				RelativePath=".\GSRenderer.cpp"
 				>
 			</File>
@@ -1736,10 +1732,6 @@
 			</File>
 			<File
 				RelativePath=".\GSRasterizer.h"
-				>
-			</File>
-			<File
-				RelativePath=".\GSRect.h"
 				>
 			</File>
 			<File

@@ -260,10 +260,10 @@ public:
 	{
 		GSVector4i v;
 
-		v.x = min(max(x, a.x), b.z);
-		v.y = min(max(y, a.y), b.w);
-		v.z = min(max(z, a.x), b.z);
-		v.w = min(max(x, a.y), b.w);
+		v.x = min(max(x, a.x), a.z);
+		v.y = min(max(y, a.y), a.w);
+		v.z = min(max(z, a.x), a.z);
+		v.w = min(max(x, a.y), a.w);
 
 		return v;
 	}
@@ -2154,7 +2154,7 @@ public:
 	{
 		struct {float x, y, z, w;}; 
 		struct {float r, g, b, a;}; 
-		struct {int left, top, right, bottom;}; 
+		struct {float left, top, right, bottom;}; 
 		float v[4];
 		float f32[4];
 		int8 i8[16];
