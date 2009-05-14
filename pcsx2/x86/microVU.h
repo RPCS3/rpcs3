@@ -19,6 +19,7 @@
 #pragma once
 //#define mVUdebug	// Prints Extra Info to Console
 //#define mVUlogProg	// Dumps MicroPrograms into microVU0.txt/microVU1.txt
+
 #include "Common.h"
 #include "VU.h"
 #include "GS.h"
@@ -64,20 +65,21 @@ public:
 	}
 };
 
-template<u32 progSize>
+template<u32 progSize>		// progSize = VU program memory size / 4
 struct microProgram {
-	u32 data[progSize/4];
+	u32 data[progSize];
 	u32 used;		// Number of times its been used
+	u32 last_used;	// counters # of frames since last use (starts at 3 and counts backwards to 0 for each 30fps vsync)
 	u32 sFlagHack;	// Optimize out Status Flag Updates if Program doesn't use Status Flags
 	u8* x86ptr;		// Pointer to program's recompilation code
 	u8* x86start;	// Start of program's rec-cache
 	u8* x86end;		// Limit of program's rec-cache
-	microBlockManager* block[progSize/8];
+	microBlockManager* block[progSize/2];
 	microAllocInfo<progSize> allocInfo;
 };
 
-#define mMaxProg 32 // The amount of Micro Programs Recs will 'remember' (For n = 1, 2, 4, 8, 16, etc...)
-template<u32 pSize>
+#define mMaxProg 32		// The amount of Micro Programs Recs will 'remember' (For n = 1, 2, 4, 8, 16, etc...)
+template<u32 pSize>		// pSize = VU program memory size / 4
 struct microProgManager {
 	microProgram<pSize>	prog[mMaxProg];	// Store MicroPrograms in memory
 	static const int	max = mMaxProg - 1; 
@@ -95,7 +97,7 @@ struct microVU {
 	u32 progSize;	// VU Micro Program Size (microSize/4)
 	u32 cacheSize;	// VU Cache Size
 
-	microProgManager<0x4000> prog; // Micro Program Data
+	microProgManager<0x4000/4> prog; // Micro Program Data
 
 	FILE*	logFile;	 // Log File Pointer
 	VURegs*	regs;		 // VU Regs Struct
@@ -111,6 +113,12 @@ struct microVU {
 	u32		q;			 // Holds current Q instance index
 	u32		totalCycles; // Total Cycles that mVU is expected to run for
 	u32		cycles;		 // Cycles Counter
+
+	// WARNING!  MSVC does not reliably guarantee alignment on structure or class member variables,
+	// failing around 10-20% of the time to align (random depending on various circumstances).
+	// GCC fails to align the members at all, failing about 50-80% of the time (barring occasional
+	// random luck).  If you want these to be guaranteed aligned, move them to the top of the
+	// struct, and ensure the struct itself is aligned. :)  -- air
 
 	PCSX2_ALIGNED16(u32 macFlag[4]);  // 4 instances of mac  flag (used in execution)
 	PCSX2_ALIGNED16(u32 clipFlag[4]); // 4 instances of clip flag (used in execution)

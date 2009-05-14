@@ -27,6 +27,8 @@
 	mVUsetupBranch<vuIndex>(xStatus, xMac, xClip, xCycles);					\
 	CMP16ItoM((uptr)&mVU->branch, 0);										\
 	incPC2(1);																\
+	if( mVUblocks[iPC/2] == NULL )											\
+		mVUblocks[iPC/2] = new microBlockManager();							\
 	bBlock = mVUblocks[iPC/2]->search((microRegInfo*)&mVUregs);				\
 	incPC2(-1);																\
 	if (bBlock)	{ nJMPcc((uptr)bBlock->x86ptrStart - ((uptr)x86Ptr + 6)); }	\
@@ -160,6 +162,9 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 	if (startPC > ((vuIndex) ? 0x3fff : 0xfff)) { mVUprint("microVU: invalid startPC"); }
 	startPC &= (vuIndex ? 0x3ff8 : 0xff8);
 
+	if( mVUblocks[startPC/8] == NULL )
+		mVUblocks[startPC/8] = new microBlockManager();
+
 	// Searches for Existing Compiled Block (if found, then returns; else, compile)
 	microBlock* pBlock = mVUblocks[startPC/8]->search((microRegInfo*)pState);
 	if (pBlock) { return pBlock->x86ptrStart; }
@@ -225,6 +230,7 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 		else {
 			microBlock* bBlock = NULL;
 			u32* ajmp = 0;
+
 			switch (mVUbranch) {
 				case 3: branchCase(JE32,  JNE32);	// IBEQ
 				case 4: branchCase(JGE32, JNGE32);	// IBGEZ
@@ -237,6 +243,9 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 					mVUprint("mVUcompile B/BAL");
 					incPC(-3); // Go back to branch opcode (to get branch imm addr)
 					mVUsetupBranch<vuIndex>(xStatus, xMac, xClip, xCycles);
+
+					if( mVUblocks[branchAddr/8] == NULL )
+						mVUblocks[branchAddr/8] = new microBlockManager();
 
 					// Check if branch-block has already been compiled
 					pBlock = mVUblocks[branchAddr/8]->search((microRegInfo*)&mVUregs);
@@ -265,6 +274,10 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 			mVUprint("mVUcompile conditional branch");
 			if (bBlock) { // Branch non-taken has already been compiled
 				incPC(-3); // Go back to branch opcode (to get branch imm addr)
+
+				if( mVUblocks[branchAddr/8] == NULL )
+					mVUblocks[branchAddr/8] = new microBlockManager();
+
 				// Check if branch-block has already been compiled
 				pBlock = mVUblocks[branchAddr/8]->search((microRegInfo*)&mVUregs);
 				if (pBlock)		   { JMP32((uptr)pBlock->x86ptrStart - ((uptr)x86Ptr + 5)); }

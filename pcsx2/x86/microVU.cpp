@@ -47,6 +47,9 @@ microVUt(void) mVUinit(VURegs* vuRegsPtr) {
 	memset(&mVU->prog, 0, sizeof(mVU->prog));
 	mVUprint((vuIndex) ? "microVU1: init" : "microVU0: init");
 
+	mVU->cache = SysMmapEx((vuIndex ? 0x0f240000 : 0x0e240000), mVU->cacheSize + 0x1000, 0, (vuIndex ? "Micro VU1" : "Micro VU0"));
+	if ( mVU->cache == NULL ) throw Exception::OutOfMemory(fmt_string( "microVU Error: Failed to allocate recompiler memory! (addr: 0x%x)", (u32)mVU->cache));
+
 	mVUreset<vuIndex>();
 }
 
@@ -54,14 +57,17 @@ microVUt(void) mVUinit(VURegs* vuRegsPtr) {
 microVUt(void) mVUreset() {
 
 	microVU* mVU = mVUx;
-	mVUclose<vuIndex>(); // Close
-
 	mVUprint((vuIndex) ? "microVU1: reset" : "microVU0: reset");
 
+	// Delete Block Managers
+	for (int i = 0; i <= mVU->prog.max; i++) {
+		for (u32 j = 0; j < (mVU->progSize / 2); j++) {
+			safe_delete( mVU->prog.prog[i].block[j] );
+		}
+	}
+
 	// Dynarec Cache
-	mVU->cache = SysMmapEx((vuIndex ? 0x1e840000 : 0x0e840000), mVU->cacheSize, 0, (vuIndex ? "Micro VU1" : "Micro VU0"));
-	if ( mVU->cache == NULL ) throw Exception::OutOfMemory(fmt_string( "microVU Error: Failed to allocate recompiler memory! (addr: 0x%x)", params (u32)mVU->cache));
-	memset(mVU->cache, 0xcc, mVU->cacheSize);
+	memset(mVU->cache, 0xcc, mVU->cacheSize + 0x1000);
 
 	// Setup Entrance/Exit Points
 	x86SetPtr(mVU->cache);
@@ -72,11 +78,12 @@ microVUt(void) mVUreset() {
 	memset(&mVU->prog, 0, sizeof(mVU->prog));
 
 	// Create Block Managers
-	for (int i = 0; i <= mVU->prog.max; i++) {
+	// Block managers are now allocated "on-demand" by the recompiler -- air
+	/*for (int i = 0; i <= mVU->prog.max; i++) {
 		for (u32 j = 0; j < (mVU->progSize / 2); j++) {
 			mVU->prog.prog[i].block[j] = new microBlockManager();
 		}
-	}
+	}*/
 
 	// Program Variables
 	mVU->prog.finished = 1;
@@ -87,7 +94,7 @@ microVUt(void) mVUreset() {
 	//mVU->prog.lpState = &mVU->prog.prog[15].allocInfo.block.pState; // Blank Pipeline State (ToDo: finish implementation)
 
 	// Setup Dynarec Cache Limits for Each Program
-	u8* z = (mVU->cache + 512); // Dispatcher Code is in first 512 bytes
+	u8* z = (mVU->cache + 0x1000); // Dispatcher Code is in first page of cache
 	for (int i = 0; i <= mVU->prog.max; i++) {
 		mVU->prog.prog[i].x86start = z;
 		mVU->prog.prog[i].x86ptr = z;
@@ -107,7 +114,9 @@ microVUt(void) mVUclose() {
 	// Delete Block Managers
 	for (int i = 0; i <= mVU->prog.max; i++) {
 		for (u32 j = 0; j < (mVU->progSize / 2); j++) {
-			if (mVU->prog.prog[i].block[j]) delete mVU->prog.prog[i].block[j];
+			if (mVU->prog.prog[i].block[j]) {
+				safe_delete( mVU->prog.prog[i].block[j] );
+			}
 		}
 	}
 }
@@ -131,7 +140,8 @@ microVUt(void) mVUclearProg(int progIndex) {
 	mVU->prog.prog[progIndex].sFlagHack = 0;
 	mVU->prog.prog[progIndex].x86ptr = mVU->prog.prog[progIndex].x86start;
 	for (u32 i = 0; i < (mVU->progSize / 2); i++) {
-		mVU->prog.prog[progIndex].block[i]->reset();
+		if( mVU->prog.prog[progIndex].block[i] )
+			mVU->prog.prog[progIndex].block[i]->reset();
 	}
 }
 
@@ -153,30 +163,80 @@ microVUt(int) mVUfindLeastUsedProg() {
 		return mVU->prog.total;
 	}
 	else {
-		int j = (mVU->prog.cur + 1) & mVU->prog.max;
-		/*u32 smallest = mVU->prog.prog[j].used;
-		for (int i = ((j+1)&mVU->prog.max), z = 0; z < mVU->prog.max; i = (i+1)&mVU->prog.max, z++) {
-			if (smallest > mVU->prog.prog[i].used) {
-				smallest = mVU->prog.prog[i].used;
-				j = i;
+	
+		int startidx = (mVU->prog.cur + 1) & mVU->prog.max;
+		int endidx = mVU->prog.cur;
+		int smallidx = startidx;
+		u32 smallval = mVU->prog.prog[startidx].used;
+
+		for (int i = startidx; i != endidx; i = (i+1)&mVU->prog.max)
+		{
+			u32 used = mVU->prog.prog[i].used;
+			if (smallval > used)
+			{
+				smallval = used;
+				smallidx = i;
 			}
-		}*/
-		mVUclearProg<vuIndex>(j); // Clear old data if overwriting old program
-		mVUcacheProg<vuIndex>(j); // Cache Micro Program
-		//Console::Notice("microVU%d: MicroProgram Cache Full!", params vuIndex);
-		return j;
+		}
+
+		mVUclearProg<vuIndex>(smallidx); // Clear old data if overwriting old program
+		mVUcacheProg<vuIndex>(smallidx); // Cache Micro Program
+		Console::Notice("microVU%d: Overwriting existing program in slot %d [%d times used]", params vuIndex, smallidx, smallval );
+		return smallidx;
 	}
+}
+
+// mVUvsyncUpdate -->
+// This should be run at 30fps intervals from Counters.cpp (or 60fps works too, but 30fps is
+// probably all we need for accurate results)
+//
+// To fix the program cache to more efficiently dispose of "obsolete" programs, we need to use a
+// frame-based decrementing system in combination with a program-execution-based incrementing
+// system.  In english:  if last_used >= 2 it means the program has been used for the current
+// or prev frame.  if it's 0, the program hasn't been used for a while.
+//
+microVUt(void) __mVUvsyncUpdate() {
+
+	microVU* mVU = mVUx;
+
+	if (mVU->prog.total < mVU->prog.max) return;
+
+	for (int i = 0; i <= mVU->prog.total; i++) {
+		if( mVU->prog.prog[i].last_used != 0 )
+		{
+			if( mVU->prog.prog[i].last_used >= 3 )
+			{
+				// program has been used recently.  Give it's program execution counter a
+				// 'weighted' bonus signifying it's importance:
+				if( mVU->prog.prog[i].used < 0x4fffffff )
+					mVU->prog.prog[i].used += 0x200;
+			}
+			mVU->prog.prog[i].last_used--;
+		}
+		else
+			mVU->prog.prog[i].used /= 2;	// penalize unused programs.
+	}
+}
+
+void mVUvsyncUpdate()
+{
+	__mVUvsyncUpdate<0>();
+	__mVUvsyncUpdate<1>();
 }
 
 // Searches for Cached Micro Program and sets prog.cur to it (returns 1 if program found, else returns 0)
 microVUt(int) mVUsearchProg() {
 	microVU* mVU = mVUx;
+	
 	if (mVU->prog.cleared) { // If cleared, we need to search for new program
 		for (int i = 0; i <= mVU->prog.total; i++) {
 			if (!memcmp_mmx(mVU->prog.prog[i].data, mVU->regs->Micro, mVU->microSize)) {
 				mVU->prog.cur = i;
 				mVU->prog.cleared = 0;
-				mVU->prog.prog[i].used++;
+				if( mVU->prog.prog[i].used < 0x7fffffff )	// avoid overflows on well-used programs
+					mVU->prog.prog[i].used++;
+					
+				mVU->prog.prog[i].last_used = 3;		// add me to the mVU structs
 				return 1;
 			}
 		}

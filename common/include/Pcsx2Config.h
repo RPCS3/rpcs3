@@ -44,8 +44,8 @@ extern SessionOverrideFlags g_Session;
 //////////////////////////////////////////////////////////////////////////
 // Pcsx2 User Configuration Options!
 
-//#define PCSX2_MICROVU	// Use Micro VU recs instead of Zero VU Recs
-//#define PCSX2_MICROVU_	// Fully enable Micro VU recs (temporary option for now)
+#define PCSX2_MICROVU	// Use Micro VU recs instead of Zero VU Recs
+#define PCSX2_MICROVU_	// Fully enable Micro VU recs (temporary option for now)
 #define PCSX2_GSMULTITHREAD 1 // uses multi-threaded gs
 #define PCSX2_EEREC 0x10
 #define PCSX2_VU0REC 0x20
