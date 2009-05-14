@@ -88,7 +88,7 @@ static void ConfPlugin(plugin_types type, plugin_callback call, bool pullcombo =
 
 void OnConf_Menu(GtkMenuItem *menuitem, gpointer user_data)
 {
-	char *name = gtk_widget_get_name(GTK_WIDGET(menuitem));
+	char *name = (char*)gtk_widget_get_name(GTK_WIDGET(menuitem));
 	plugin_types type = strToPluginType(name);
 	
 	gtk_widget_set_sensitive(MainWindow, FALSE);
@@ -138,7 +138,7 @@ void OnConfConf_Ok(GtkButton *button, gpointer user_data)
 	{
 		PluginConf *confs = ConfS(type);
 		
-		if (!GetComboText(confs->Combo, confs->plist, PluginName(type)))
+		if (!GetComboText(confs->Combo, confs->plist, (char*)PluginName(type)))
 			applychanges = FALSE;
 	}
 
@@ -153,7 +153,7 @@ void OnConfConf_Ok(GtkButton *button, gpointer user_data)
 
 void OnConfButton(GtkButton *button, gpointer user_data)
 {
-	char *name = gtk_widget_get_name(GTK_WIDGET(button));
+	char *name = (char*)gtk_widget_get_name(GTK_WIDGET(button));
 	plugin_types type = strToPluginType(name);
 	plugin_callback call = strToPluginCall(name);
 	
@@ -196,7 +196,7 @@ void UpdateConfDlg()
 		sprintf(tmp, "GtkCombo_%s", PluginTypeToStr(type));
 		confs->Combo = lookup_widget(ConfDlg, tmp);
 		SetComboToGList(GTK_COMBO_BOX(confs->Combo), confs->PluginNameList);
-		FindComboText(confs->Combo, confs->plist, confs->PluginNameList, PluginName(type));
+		FindComboText(confs->Combo, confs->plist, confs->PluginNameList, (char*)PluginName(type));
 		
 	}
 }

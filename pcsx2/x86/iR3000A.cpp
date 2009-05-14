@@ -212,15 +212,15 @@ static void iIopDumpBlock( int startpc, u8 * ptr )
 	fclose( f );
 
 #ifdef __LINUX__
-    // dump the asm
-    f = fopen( "mydump1", "wb" );
+	// dump the asm
+	f = fopen( "mydump1", "wb" );
 	fwrite( ptr, 1, (uptr)x86Ptr - (uptr)ptr, f );
 	fclose( f );
 	sprintf( command, "objdump -D --target=binary --architecture=i386 -M intel mydump1 | cat %s - > tempdump", filename );
 	system( command );
-    sprintf(command, "mv tempdump %s", filename);
-    system(command);
-    f = fopen( filename.c_str(), "a+" );
+	sprintf(command, "mv tempdump %s", filename);
+	system(command);
+	f = fopen( filename.c_str(), "a+" );
 #endif
 }
 #endif
@@ -889,6 +889,7 @@ void psxRecompileNextInstruction(int delayslot)
 {
 	static u8 s_bFlushReg = 1;
 
+	// pblock isn't used elsewhere in this function.
 	BASEBLOCK* pblock = PSX_GETBLOCK(psxpc);
 
 #ifdef _DEBUG
@@ -982,7 +983,7 @@ void iopRecRecompile(u32 startpc)
 	if(!s_pCurBlockEx || s_pCurBlockEx->startpc != HWADDR(startpc))
 		s_pCurBlockEx = recBlocks.New(HWADDR(startpc), (uptr)recPtr);
 	
-    psxbranch = 0;
+	psxbranch = 0;
 
 	s_pCurBlock->SetFnptr( (uptr)x86Ptr );
 	s_psxBlockCycles = 0;

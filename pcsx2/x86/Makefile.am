@@ -10,17 +10,18 @@ ix86-32/iR5900MultDiv.cpp ix86-32/iCore-32.cpp ix86-32/aR5900-32.S ix86-32/iR590
 libx86recomp_a_SOURCES = \
 BaseblockEx.cpp iCOP0.cpp iCOP2.cpp iCore.cpp iFPU.cpp iFPUd.cpp iMMI.cpp iPsxMem.cpp iR3000A.cpp iR3000Atables.cpp \
 iR5900Misc.cpp iVU0micro.cpp iVU1micro.cpp iVUmicro.cpp iVUmicroLower.cpp iVUmicroUpper.cpp iVUzerorec.cpp iVif.cpp \
-ir5900tables.cpp  fast_routines.S aR3000A.S aVUzerorec.S aVif.S $(archfiles)
+ir5900tables.cpp  fast_routines.S aR3000A.S aVUzerorec.S aVif.S $(archfiles) 
+
+#ifdef PCSX2_MICROVU
+#libx86recomp_a_SOURCES += \
+#microVU.cpp microVU_Misc.inl microVU_Log.inl microVU_Analyze.inl microVU_Alloc.inl microVU_Upper.inl microVU_Lower.inl \
+#microVU_Tables.inl microVU_Flags.inl microVU_Compile.inl microVU_Execute.inl \
+#microVU.h microVU_Alloc.h microVU_Misc.h
+#endif
 
 libx86recomp_a_SOURCES += \
 BaseblockEx.h iCOP0.h iCore.h iFPU.h iMMI.h iR3000A.h iR5900.h iR5900Arit.h iR5900AritImm.h iR5900Branch.h iR5900Jump.h \
 iR5900LoadStore.h iR5900Move.h iR5900MultDiv.h iR5900Shift.h iVUmicro.h iVUops.h iVUzerorec.h 
-
-#ifdef PCSX2_MICROVU
-#libx86recomp_a_SOURCES += \
-#microVU.cpp microVU_Alloc.cpp microVU_Compile.cpp microVU_Lower.cpp microVU_Misc.cpp microVU_Upper.cpp aMicroVU.S \
-#microVU.h microVU_Alloc.h microVU_Misc.h microVU_Tables.h
-#endif
 
 libx86recomp_a_DEPENDENCIES = ix86/libix86.a
 

@@ -28,11 +28,11 @@ LIB = -lc -lm
 ifeq ($(USEALSA), TRUE)
 	OBJ+= alsa.o
 	LIB+= -lasound
-	LINKFLAGS = -shared -Wl,-soname,libspu2PeopsALSA.so -o libspu2PeopsALSA.so.1.0.3
+	LINKFLAGS = -m32 -shared -Wl,-soname,libspu2PeopsALSA.so  -o libspu2PeopsALSA.so.1.0.3
 	CCFLAGS3+= -DUSEALSA
 else
 	OBJ+= oss.o
-	LINKFLAGS = -shared -Wl,-soname,libspu2PeopsOSS.so.1.6 -fPIC -fomit-frame-pointer -o libspu2PeopsOSS.so.1.6 -m32 
+	LINKFLAGS = -m32 -shared -Wl,-soname,libspu2PeopsOSS.so.1.6 -fPIC -fomit-frame-pointer -o libspu2PeopsOSS.so.1.6
 endif
 
 ifeq ($(NOTHREADLIB), TRUE)

@@ -67,9 +67,6 @@ REC_FUNC(SQC2);
 #else
 
 PCSX2_ALIGNED16(u64 retValues[2]);
-static u32 s_bCachingMem = 0;
-static u32 s_nAddMemOffset = 0;
-static u32 s_tempaddr = 0;
 
 void _eeOnLoadWrite(int reg)
 {
@@ -93,6 +90,10 @@ void _eeOnLoadWrite(int reg)
 }
 
 #ifdef PCSX2_VIRTUAL_MEM
+
+static u32 s_bCachingMem = 0;
+static u32 s_nAddMemOffset = 0;
+static u32 s_tempaddr = 0;
 
 ////////////////////////////////////////////////////
 //#define REC_SLOWREAD

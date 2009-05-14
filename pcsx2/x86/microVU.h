@@ -147,11 +147,8 @@ microVUt(void)		mVUcacheProg(microVU* mVU, int progIndex);
 void* __fastcall	mVUexecuteVU0(u32 startPC, u32 cycles);
 void* __fastcall	mVUexecuteVU1(u32 startPC, u32 cycles);
 
-#ifndef __LINUX__
 typedef void (__fastcall *mVUrecCall)(u32, u32);
-#else
-typedef void (*mVUrecCall)(u32, u32) __attribute__((__fastcall)); // Not sure if this is correct syntax (should be close xD)
-#endif
+
 
 // Include all the *.inl files (Needed because C++ sucks with templates and *.cpp files)
 #include "microVU_Misc.inl"

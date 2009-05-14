@@ -169,7 +169,7 @@ void hwWrite8(u32 mem, u8 value) {
 
 		case 0x1000f180:
 		{
-			bool flush = false;
+			//bool flush = false;
 
 			// Terminate lines on CR or full buffers, and ignore \n's if the string contents
 			// are empty (otherwise terminate on \n too!)
