@@ -80,11 +80,11 @@ int GSTexture7::GetFormat() const
 	return (int)m_desc.ddpfPixelFormat.dwFourCC;
 }
 
-bool GSTexture7::Update(const CRect& r, const void* data, int pitch)
+bool GSTexture7::Update(const GSVector4i& r, const void* data, int pitch)
 {
 	HRESULT hr;
 
-	CRect r2 = r;
+	GSVector4i r2 = r;
 
 	DDSURFACEDESC2 desc;
 
@@ -92,14 +92,14 @@ bool GSTexture7::Update(const CRect& r, const void* data, int pitch)
 
 	desc.dwSize = sizeof(desc);
 
-	if(SUCCEEDED(hr = m_system->Lock(&r2, &desc, DDLOCK_WAIT | DDLOCK_SURFACEMEMORYPTR | DDLOCK_WRITEONLY, NULL)))
+	if(SUCCEEDED(hr = m_system->Lock(r2, &desc, DDLOCK_WAIT | DDLOCK_SURFACEMEMORYPTR | DDLOCK_WRITEONLY, NULL)))
 	{
-		BYTE* src = (BYTE*)data;
-		BYTE* dst = (BYTE*)desc.lpSurface;
+		uint8* src = (uint8*)data;
+		uint8* dst = (uint8*)desc.lpSurface;
 
 		int bytes = min(pitch, desc.lPitch);
 
-		for(int i = 0, j = r.Height(); i < j; i++, src += pitch, dst += desc.lPitch)
+		for(int i = 0, j = r.height(); i < j; i++, src += pitch, dst += desc.lPitch)
 		{
 			// memcpy(dst, src, bytes);
 
@@ -120,11 +120,11 @@ bool GSTexture7::Update(const CRect& r, const void* data, int pitch)
 			}
 		}
 
-		hr = m_system->Unlock(&r2);
+		hr = m_system->Unlock(r2);
 
 		if(m_video)
 		{
-			hr = m_video->Blt(&r2, m_system, &r2, DDBLT_WAIT, NULL);
+			hr = m_video->Blt(r2, m_system, r2, DDBLT_WAIT, NULL);
 		}
 
 		return true;
@@ -133,20 +133,16 @@ bool GSTexture7::Update(const CRect& r, const void* data, int pitch)
 	return false;
 }
 
-bool GSTexture7::Map(BYTE** bits, int& pitch, const RECT* r)
+bool GSTexture7::Map(uint8** bits, int& pitch)
 {
 	HRESULT hr;
 
-	CRect r2 = r;
-
 	DDSURFACEDESC2 desc;
 
-	if(SUCCEEDED(hr = m_system->Lock(&r2, &desc, DDLOCK_WAIT | DDLOCK_SURFACEMEMORYPTR, NULL)))
+	if(SUCCEEDED(hr = m_system->Lock(NULL, &desc, DDLOCK_WAIT | DDLOCK_SURFACEMEMORYPTR, NULL)))
 	{
-		*bits = (BYTE*)desc.lpSurface;
+		*bits = (uint8*)desc.lpSurface;
 		pitch = (int)desc.lPitch;
-
-		m_lr = r;
 
 		return true;
 	}
@@ -162,7 +158,7 @@ void GSTexture7::Unmap()
 
 	if(m_video)
 	{
-		hr = m_video->Blt(&m_lr, m_system, &m_lr, DDBLT_WAIT, NULL);
+		hr = m_video->Blt(NULL, m_system, NULL, DDBLT_WAIT, NULL);
 	}
 }
 

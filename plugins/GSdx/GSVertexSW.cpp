@@ -26,7 +26,7 @@
 
 using namespace Xbyak;
 
-GSVertexTrace::GSVertexTraceCodeGenerator::GSVertexTraceCodeGenerator(DWORD key, void* ptr, size_t maxsize)
+GSVertexTrace::GSVertexTraceCodeGenerator::GSVertexTraceCodeGenerator(uint32 key, void* ptr, size_t maxsize)
 	: CodeGenerator(maxsize, ptr)
 {
 	#if _M_AMD64
@@ -35,10 +35,10 @@ GSVertexTrace::GSVertexTraceCodeGenerator::GSVertexTraceCodeGenerator(DWORD key,
 
 	const int params = 0;
 
-	DWORD primclass = (key >> 0) & 3;
-	DWORD iip = (key >> 2) & 1;
-	DWORD tme = (key >> 3) & 1;
-	DWORD color = (key >> 4) & 1;
+	uint32 primclass = (key >> 0) & 3;
+	uint32 iip = (key >> 2) & 1;
+	uint32 tme = (key >> 3) & 1;
+	uint32 color = (key >> 4) & 1;
 
 	int n = 1;
 

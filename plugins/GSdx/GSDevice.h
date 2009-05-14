@@ -115,7 +115,7 @@ public:
 
 	virtual bool IsLost() = 0;
 
-	virtual void Present(const CRect& r) = 0;
+	virtual void Present(const GSVector4i& r) = 0;
 
 	virtual void BeginScene() = 0;
 
@@ -127,11 +127,11 @@ public:
 
 	virtual void ClearRenderTarget(Texture& t, const GSVector4& c) = 0;
 
-	virtual void ClearRenderTarget(Texture& t, DWORD c) = 0;
+	virtual void ClearRenderTarget(Texture& t, uint32 c) = 0;
 
 	virtual void ClearDepth(Texture& t, float c) = 0;
 
-	virtual void ClearStencil(Texture& t, BYTE c) = 0;
+	virtual void ClearStencil(Texture& t, uint8 c) = 0;
 
 	virtual bool CreateRenderTarget(Texture& t, int w, int h, int format = 0)
 	{
@@ -178,11 +178,11 @@ public:
 		t = m_current;
 	}
 
-	void Merge(Texture* st, GSVector4* sr, GSVector4* dr, CSize fs, bool slbg, bool mmod, GSVector4& c)
+	void Merge(Texture* st, GSVector4* sr, GSVector4* dr, const GSVector2i& fs, bool slbg, bool mmod, GSVector4& c)
 	{
-		if(!m_merge || m_merge.GetWidth() != fs.cx || m_merge.GetHeight() != fs.cy)
+		if(!m_merge || m_merge.GetWidth() != fs.x || m_merge.GetHeight() != fs.y)
 		{
-			CreateRenderTarget(m_merge, fs.cx, fs.cy);
+			CreateRenderTarget(m_merge, fs.x, fs.y);
 		}
 
 		// TODO: m_1x1
@@ -192,11 +192,11 @@ public:
 		m_current = m_merge;
 	}
 
-	bool Interlace(CSize ds, int field, int mode, float yoffset)
+	bool Interlace(const GSVector2i& ds, int field, int mode, float yoffset)
 	{
-		if(!m_weavebob || m_weavebob.GetWidth() != ds.cx || m_weavebob.GetHeight() != ds.cy)
+		if(!m_weavebob || m_weavebob.GetWidth() != ds.x || m_weavebob.GetHeight() != ds.y)
 		{
-			CreateRenderTarget(m_weavebob, ds.cx, ds.cy);
+			CreateRenderTarget(m_weavebob, ds.x, ds.y);
 		}
 
 		if(mode == 0 || mode == 2) // weave or blend
@@ -209,9 +209,9 @@ public:
 			{
 				// blend
 
-				if(!m_blend || m_blend.GetWidth() != ds.cx || m_blend.GetHeight() != ds.cy)
+				if(!m_blend || m_blend.GetWidth() != ds.x || m_blend.GetHeight() != ds.y)
 				{
-					CreateRenderTarget(m_blend, ds.cx, ds.cy);
+					CreateRenderTarget(m_blend, ds.x, ds.y);
 				}
 
 				DoInterlace(m_weavebob, m_blend, 2, false, 0);

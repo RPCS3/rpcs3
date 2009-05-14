@@ -154,13 +154,13 @@ BOOL GPUSettingsDlg::OnInitDialog()
 
 	if(CComPtr<IDirect3D9> d3d = Direct3DCreate9(D3D_SDK_VERSION))
 	{
-		UINT ModeWidth = pApp->GetProfileInt(_T("Settings"), _T("ModeWidth"), 0);
-		UINT ModeHeight = pApp->GetProfileInt(_T("Settings"), _T("ModeHeight"), 0);
-		UINT ModeRefreshRate = pApp->GetProfileInt(_T("Settings"), _T("ModeRefreshRate"), 0);
+		uint32 ModeWidth = pApp->GetProfileInt(_T("Settings"), _T("ModeWidth"), 0);
+		uint32 ModeHeight = pApp->GetProfileInt(_T("Settings"), _T("ModeHeight"), 0);
+		uint32 ModeRefreshRate = pApp->GetProfileInt(_T("Settings"), _T("ModeRefreshRate"), 0);
 
-		UINT nModes = d3d->GetAdapterModeCount(D3DADAPTER_DEFAULT, D3DFMT_X8R8G8B8);
+		uint32 nModes = d3d->GetAdapterModeCount(D3DADAPTER_DEFAULT, D3DFMT_X8R8G8B8);
 
-		for(UINT i = 0; i < nModes; i++)
+		for(uint32 i = 0; i < nModes; i++)
 		{
 			D3DDISPLAYMODE mode;
 

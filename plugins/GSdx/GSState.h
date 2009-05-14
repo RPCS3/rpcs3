@@ -117,7 +117,7 @@ class GSState : public GSAlignedClass<16>
 		int x, y; 
 		int start, end, total; 
 		bool overflow;
-		BYTE* buff;
+		uint8* buff;
 
 		GSTransferBuffer();
 		virtual ~GSTransferBuffer();
@@ -204,58 +204,49 @@ public:
 	GSDrawingContext* m_context;
 	GSVertex m_v;
 	float m_q;
-	DWORD m_vprim;
+	uint32 m_vprim;
 
 	GSPerfMon m_perfmon;
-	DWORD m_crc;
+	uint32 m_crc;
 	int m_options;
 	int m_frameskip;
 	CRC::Game m_game;
 	GSDump m_dump;
 
 public:
-	GSState(BYTE* base, bool mt, void (*irq)());
+	GSState(uint8* base, bool mt, void (*irq)());
 	virtual ~GSState();
 
 	void ResetHandlers();
 
-	CPoint GetDisplayPos(int i);
-	CSize GetDisplaySize(int i);
-	CRect GetDisplayRect(int i);
-	CSize GetDisplayPos();
-	CSize GetDisplaySize();
-	CRect GetDisplayRect();
-	CPoint GetFramePos(int i);
-	CSize GetFrameSize(int i);
-	CRect GetFrameRect(int i);
-	CSize GetFramePos();
-	CSize GetFrameSize();
-	CRect GetFrameRect();
-	CSize GetDeviceSize(int i);
-	CSize GetDeviceSize();
+	GSVector4i GetDisplayRect(int i = -1);
+	GSVector4i GetFrameRect(int i = -1);
+	GSVector4i GetDeviceRect(int i = -1);
+
 	bool IsEnabled(int i);
+
 	int GetFPS();
 
 	virtual void Reset();
 	virtual void Flush();
 	virtual void FlushPrim() = 0;
 	virtual void ResetPrim() = 0;
-	virtual void InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, CRect r) {}
-	virtual void InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, CRect r) {}
+	virtual void InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r) {}
+	virtual void InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r) {}
 	virtual void InvalidateTextureCache() {}
 
 	void Move();
-	void Write(BYTE* mem, int len);
-	void Read(BYTE* mem, int len);
+	void Write(uint8* mem, int len);
+	void Read(uint8* mem, int len);
 
-	void SoftReset(BYTE mask);
-	void WriteCSR(UINT32 csr) {m_regs->CSR.ai32[1] = csr;}
-	void ReadFIFO(BYTE* mem, int size);
-	template<int index> void Transfer(BYTE* mem, UINT32 size);
+	void SoftReset(uint32 mask);
+	void WriteCSR(uint32 csr) {m_regs->CSR.u32[1] = csr;}
+	void ReadFIFO(uint8* mem, int size);
+	template<int index> void Transfer(uint8* mem, uint32 size);
 	int Freeze(GSFreezeData* fd, bool sizeonly);
 	int Defrost(const GSFreezeData* fd);
-	void GetLastTag(UINT32* tag) {*tag = m_path3hack; m_path3hack = 0;}
-	virtual void SetGameCRC(DWORD crc, int options);
+	void GetLastTag(uint32* tag) {*tag = m_path3hack; m_path3hack = 0;}
+	virtual void SetGameCRC(uint32 crc, int options);
 	void SetFrameSkip(int frameskip);
 };
 

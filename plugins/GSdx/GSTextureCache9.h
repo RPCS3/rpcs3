@@ -34,7 +34,7 @@ class GSTextureCache9 : public GSTextureCache<GSDevice9>
 		explicit GSRenderTarget9(GSRenderer<GSDevice9>* renderer) : GSRenderTarget(renderer) {}
 
 		void Update();
-		void Read(CRect r);
+		void Read(const GSVector4i& r);
 	};
 
 	class GSDepthStencil9 : public GSDepthStencil
@@ -53,7 +53,6 @@ class GSTextureCache9 : public GSTextureCache<GSDevice9>
 		bool Create();
 		bool Create(GSRenderTarget* rt);
 		bool Create(GSDepthStencil* ds);
-		void Update();
 	};
 
 protected:

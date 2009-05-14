@@ -27,16 +27,16 @@ const GSVector4i GPULocalMemory::m_xxbx(0x00007c00);
 const GSVector4i GPULocalMemory::m_xgxx(0x000003e0);
 const GSVector4i GPULocalMemory::m_rxxx(0x0000001f);
 
-GPULocalMemory::GPULocalMemory(const CSize& scale)
+GPULocalMemory::GPULocalMemory(const GSVector2i& scale)
 {
-	m_scale.cx = min(max(scale.cx, 0), 2);
-	m_scale.cy = min(max(scale.cy, 0), 2);
+	m_scale.x = min(max(scale.x, 0), 2);
+	m_scale.y = min(max(scale.y, 0), 2);
 
 	//
 
-	int size = (1 << (12 + 11)) * sizeof(WORD);
+	int size = (1 << (12 + 11)) * sizeof(uint16);
 
-	m_vm = (WORD*)VirtualAlloc(NULL, size * 2, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+	m_vm = (uint16*)VirtualAlloc(NULL, size * 2, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 
 	memset(m_vm, 0, size);
 
@@ -49,7 +49,7 @@ GPULocalMemory::GPULocalMemory(const CSize& scale)
 
 	size = 256 * 256 * (1 + 1 + 4) * 32;
 
-	m_texture.buff[0] = (BYTE*)VirtualAlloc(NULL, size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+	m_texture.buff[0] = (uint8*)VirtualAlloc(NULL, size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 	m_texture.buff[1] = m_texture.buff[0] + 256 * 256 * 32;
 	m_texture.buff[2] = m_texture.buff[1] + 256 * 256 * 32;
 
@@ -61,8 +61,8 @@ GPULocalMemory::GPULocalMemory(const CSize& scale)
 	{
 		for(int x = 0; x < 16; x++, offset += 256 * 256)
 		{
-			m_texture.page[0][y][x] = &((BYTE*)m_texture.buff[0])[offset];
-			m_texture.page[1][y][x] = &((BYTE*)m_texture.buff[1])[offset];
+			m_texture.page[0][y][x] = &((uint8*)m_texture.buff[0])[offset];
+			m_texture.page[1][y][x] = &((uint8*)m_texture.buff[1])[offset];
 		}
 	}
 
@@ -70,7 +70,7 @@ GPULocalMemory::GPULocalMemory(const CSize& scale)
 	{
 		for(int x = 0; x < 16; x++, offset += 256 * 256)
 		{
-			m_texture.page[2][y][x] = &((DWORD*)m_texture.buff[2])[offset];
+			m_texture.page[2][y][x] = &((uint32*)m_texture.buff[2])[offset];
 		}
 	}
 }
@@ -82,18 +82,18 @@ GPULocalMemory::~GPULocalMemory()
 	VirtualFree(m_texture.buff[0], 0, MEM_RELEASE);
 }
 
-const WORD* GPULocalMemory::GetCLUT(int tp, int cx, int cy)
+const uint16* GPULocalMemory::GetCLUT(int tp, int cx, int cy)
 {
 	if(m_clut.dirty || m_clut.tp != tp || m_clut.cx != cx || m_clut.cy != cy)
 	{
-		WORD* src = GetPixelAddressScaled(cx << 4, cy);
-		WORD* dst = m_clut.buff;
+		uint16* src = GetPixelAddressScaled(cx << 4, cy);
+		uint16* dst = m_clut.buff;
 
-		if(m_scale.cx == 0)
+		if(m_scale.x == 0)
 		{
 			memcpy(dst, src, (tp == 0 ? 16 : 256) * 2);
 		}
-		else if(m_scale.cx == 1)
+		else if(m_scale.x == 1)
 		{
 			if(tp == 0)
 			{
@@ -110,7 +110,7 @@ const WORD* GPULocalMemory::GetCLUT(int tp, int cx, int cy)
 				}
 			}
 		}
-		else if(m_scale.cx == 2)
+		else if(m_scale.x == 2)
 		{
 			if(tp == 0)
 			{
@@ -152,7 +152,7 @@ const void* GPULocalMemory::GetTexture(int tp, int tx, int ty)
 
 	void* buff = m_texture.page[tp][ty][tx];
 
-	UINT32 flag = 1 << tx;
+	uint32 flag = 1 << tx;
 
 	if((m_texture.valid[tp][ty] & flag) == 0)
 	{
@@ -161,16 +161,16 @@ const void* GPULocalMemory::GetTexture(int tp, int tx, int ty)
 		switch(tp)
 		{
 		case 0: 
-			ReadPage4(tx, ty, (BYTE*)buff); 
+			ReadPage4(tx, ty, (uint8*)buff); 
 			bpp = 4;
 			break;
 		case 1: 
-			ReadPage8(tx, ty, (BYTE*)buff);
+			ReadPage8(tx, ty, (uint8*)buff);
 			bpp = 8;
 			break;
 		case 2: 
 		case 3: 
-			ReadPage16(tx, ty, (WORD*)buff);
+			ReadPage16(tx, ty, (uint16*)buff);
 			bpp = 16;
 		default:
 			// FIXME: __assume(0); // vc9 generates bogus code in release mode
@@ -185,7 +185,7 @@ const void* GPULocalMemory::GetTexture(int tp, int tx, int ty)
 	return buff;
 }
 
-void GPULocalMemory::Invalidate(const CRect& r)
+void GPULocalMemory::Invalidate(const GSVector4i& r)
 {
 	if(!m_clut.dirty)
 	{
@@ -207,7 +207,7 @@ void GPULocalMemory::Invalidate(const CRect& r)
 
 		for(int x = 0, xe = min(r.right, 1024), i = 0; x < xe; x += 64, i++)
 		{
-			DWORD flag = 1 << i;
+			uint32 flag = 1 << i;
 
 			if(r.left >= x + 256) continue;
 
@@ -224,14 +224,14 @@ void GPULocalMemory::Invalidate(const CRect& r)
 	}
 }
 
-void GPULocalMemory::FillRect(const CRect& r, WORD c)
+void GPULocalMemory::FillRect(const GSVector4i& r, uint16 c)
 {
 	Invalidate(r);
 
-	WORD* RESTRICT dst = GetPixelAddressScaled(r.left, r.top);
+	uint16* RESTRICT dst = GetPixelAddressScaled(r.left, r.top);
 
-	int w = r.Width() << m_scale.cx;
-	int h = r.Height() << m_scale.cy;
+	int w = r.width() << m_scale.x;
+	int h = r.height() << m_scale.y;
 
 	int pitch = GetWidth();
 
@@ -244,32 +244,32 @@ void GPULocalMemory::FillRect(const CRect& r, WORD c)
 	}
 }
 
-void GPULocalMemory::WriteRect(const CRect& r, const WORD* RESTRICT src)
+void GPULocalMemory::WriteRect(const GSVector4i& r, const uint16* RESTRICT src)
 {
 	Invalidate(r);
 
-	WORD* RESTRICT dst = GetPixelAddressScaled(r.left, r.top);
+	uint16* RESTRICT dst = GetPixelAddressScaled(r.left, r.top);
 
-	int w = r.Width();
-	int h = r.Height();
+	int w = r.width();
+	int h = r.height();
 
 	int pitch = GetWidth();
 
-	if(m_scale.cx == 0)
+	if(m_scale.x == 0)
 	{
 		for(int j = 0; j < h; j++, src += w)
 		{
-			for(int k = 1 << m_scale.cy; k >= 1; k--, dst += pitch)
+			for(int k = 1 << m_scale.y; k >= 1; k--, dst += pitch)
 			{
 				memcpy(dst, src, w * 2);
 			}
 		}
 	}
-	else if(m_scale.cx == 1)
+	else if(m_scale.x == 1)
 	{
 		for(int j = 0; j < h; j++, src += w)
 		{
-			for(int k = 1 << m_scale.cy; k >= 1; k--, dst += pitch)
+			for(int k = 1 << m_scale.y; k >= 1; k--, dst += pitch)
 			{
 				for(int i = 0; i < w; i++)
 				{
@@ -279,11 +279,11 @@ void GPULocalMemory::WriteRect(const CRect& r, const WORD* RESTRICT src)
 			}
 		}
 	}
-	else if(m_scale.cx == 2)
+	else if(m_scale.x == 2)
 	{
 		for(int j = 0; j < h; j++, src += w)
 		{
-			for(int k = 1 << m_scale.cy; k >= 1; k--, dst += pitch)
+			for(int k = 1 << m_scale.y; k >= 1; k--, dst += pitch)
 			{
 				for(int i = 0; i < w; i++)
 				{
@@ -301,23 +301,23 @@ void GPULocalMemory::WriteRect(const CRect& r, const WORD* RESTRICT src)
 	}
 }
 
-void GPULocalMemory::ReadRect(const CRect& r, WORD* RESTRICT dst)
+void GPULocalMemory::ReadRect(const GSVector4i& r, uint16* RESTRICT dst)
 {
-	WORD* RESTRICT src = GetPixelAddressScaled(r.left, r.top);
+	uint16* RESTRICT src = GetPixelAddressScaled(r.left, r.top);
 
-	int w = r.Width();
-	int h = r.Height();
+	int w = r.width();
+	int h = r.height();
 
-	int pitch = GetWidth() << m_scale.cy;
+	int pitch = GetWidth() << m_scale.y;
 
-	if(m_scale.cx == 0)
+	if(m_scale.x == 0)
 	{
 		for(int j = 0; j < h; j++, src += pitch, dst += w)
 		{
 			memcpy(dst, src, w * 2);
 		}
 	}
-	else if(m_scale.cx == 1)
+	else if(m_scale.x == 1)
 	{
 		for(int j = 0; j < h; j++, src += pitch, dst += w)
 		{
@@ -327,7 +327,7 @@ void GPULocalMemory::ReadRect(const CRect& r, WORD* RESTRICT dst)
 			}
 		}
 	}
-	else if(m_scale.cx == 2)
+	else if(m_scale.x == 2)
 	{
 		for(int j = 0; j < h; j++, src += pitch, dst += w)
 		{
@@ -343,31 +343,31 @@ void GPULocalMemory::ReadRect(const CRect& r, WORD* RESTRICT dst)
 	}
 }
 
-void GPULocalMemory::MoveRect(const CPoint& src, const CPoint& dst, int w, int h)
+void GPULocalMemory::MoveRect(int sx, int sy, int dx, int dy, int w, int h)
 {
-	Invalidate(CRect(dst, CSize(w, h)));
+	Invalidate(GSVector4i(dx, dy, dx + w, dy + h));
 
-	WORD* s = GetPixelAddressScaled(src.x, src.y);
-	WORD* d = GetPixelAddressScaled(dst.x, dst.y);
+	uint16* s = GetPixelAddressScaled(sx, sy);
+	uint16* d = GetPixelAddressScaled(dx, dy);
 
-	w <<= m_scale.cx;
-	h <<= m_scale.cy;
+	w <<= m_scale.x;
+	h <<= m_scale.y;
 
 	int pitch = GetWidth();
 
 	for(int i = 0; i < h; i++, s += pitch, d += pitch)
 	{
-		memcpy(d, s, w * sizeof(WORD));
+		memcpy(d, s, w * sizeof(uint16));
 	}
 }
 
-void GPULocalMemory::ReadPage4(int tx, int ty, BYTE* RESTRICT dst)
+void GPULocalMemory::ReadPage4(int tx, int ty, uint8* RESTRICT dst)
 {
-	WORD* src = GetPixelAddressScaled(tx << 6, ty << 8);
+	uint16* src = GetPixelAddressScaled(tx << 6, ty << 8);
 
-	int pitch = GetWidth() << m_scale.cy;
+	int pitch = GetWidth() << m_scale.y;
 
-	if(m_scale.cx == 0)
+	if(m_scale.x == 0)
 	{
 		for(int j = 0; j < 256; j++, src += pitch, dst += 256)
 		{
@@ -380,7 +380,7 @@ void GPULocalMemory::ReadPage4(int tx, int ty, BYTE* RESTRICT dst)
 			}
 		}
 	}
-	else if(m_scale.cx == 1)
+	else if(m_scale.x == 1)
 	{
 		for(int j = 0; j < 256; j++, src += pitch, dst += 256)
 		{
@@ -393,7 +393,7 @@ void GPULocalMemory::ReadPage4(int tx, int ty, BYTE* RESTRICT dst)
 			}
 		}
 	}
-	else if(m_scale.cx == 2)
+	else if(m_scale.x == 2)
 	{
 		for(int j = 0; j < 256; j++, src += pitch, dst += 256)
 		{
@@ -412,36 +412,36 @@ void GPULocalMemory::ReadPage4(int tx, int ty, BYTE* RESTRICT dst)
 	}
 }
 
-void GPULocalMemory::ReadPage8(int tx, int ty, BYTE* RESTRICT dst)
+void GPULocalMemory::ReadPage8(int tx, int ty, uint8* RESTRICT dst)
 {
-	WORD* src = GetPixelAddressScaled(tx << 6, ty << 8);
+	uint16* src = GetPixelAddressScaled(tx << 6, ty << 8);
 
-	int pitch = GetWidth() << m_scale.cy;
+	int pitch = GetWidth() << m_scale.y;
 
-	if(m_scale.cx == 0)
+	if(m_scale.x == 0)
 	{
 		for(int j = 0; j < 256; j++, src += pitch, dst += 256)
 		{
 			memcpy(dst, src, 256);
 		}
 	}
-	else if(m_scale.cx == 1)
+	else if(m_scale.x == 1)
 	{
 		for(int j = 0; j < 256; j++, src += pitch, dst += 256)
 		{
 			for(int i = 0; i < 128; i++)
 			{
-				((WORD*)dst)[i] = src[i * 2];
+				((uint16*)dst)[i] = src[i * 2];
 			}
 		}
 	}
-	else if(m_scale.cx == 2)
+	else if(m_scale.x == 2)
 	{
 		for(int j = 0; j < 256; j++, src += pitch, dst += 256)
 		{
 			for(int i = 0; i < 128; i++)
 			{
-				((WORD*)dst)[i] = src[i * 4];
+				((uint16*)dst)[i] = src[i * 4];
 			}
 		}
 	}
@@ -451,20 +451,20 @@ void GPULocalMemory::ReadPage8(int tx, int ty, BYTE* RESTRICT dst)
 	}
 }
 
-void GPULocalMemory::ReadPage16(int tx, int ty, WORD* RESTRICT dst)
+void GPULocalMemory::ReadPage16(int tx, int ty, uint16* RESTRICT dst)
 {
-	WORD* src = GetPixelAddressScaled(tx << 6, ty << 8);
+	uint16* src = GetPixelAddressScaled(tx << 6, ty << 8);
 
-	int pitch = GetWidth() << m_scale.cy;
+	int pitch = GetWidth() << m_scale.y;
 
-	if(m_scale.cx == 0)
+	if(m_scale.x == 0)
 	{
 		for(int j = 0; j < 256; j++, src += pitch, dst += 256)
 		{
 			memcpy(dst, src, 512);
 		}
 	}
-	else if(m_scale.cx == 1)
+	else if(m_scale.x == 1)
 	{
 		for(int j = 0; j < 256; j++, src += pitch, dst += 256)
 		{
@@ -474,7 +474,7 @@ void GPULocalMemory::ReadPage16(int tx, int ty, WORD* RESTRICT dst)
 			}
 		}
 	}
-	else if(m_scale.cx == 2)
+	else if(m_scale.x == 2)
 	{
 		for(int j = 0; j < 256; j++, src += pitch, dst += 256)
 		{
@@ -490,9 +490,9 @@ void GPULocalMemory::ReadPage16(int tx, int ty, WORD* RESTRICT dst)
 	}
 }
 
-void GPULocalMemory::ReadFrame32(const CRect& r, DWORD* RESTRICT dst, bool rgb24)
+void GPULocalMemory::ReadFrame32(const GSVector4i& r, uint32* RESTRICT dst, bool rgb24)
 {
-	WORD* src = GetPixelAddress(r.left, r.top);
+	uint16* src = GetPixelAddress(r.left, r.top);
 
 	int pitch = GetWidth();
 
@@ -500,19 +500,19 @@ void GPULocalMemory::ReadFrame32(const CRect& r, DWORD* RESTRICT dst, bool rgb24
 	{
 		for(int i = r.top; i < r.bottom; i++, src += pitch, dst += pitch)
 		{
-			Expand24(src, dst, r.Width());
+			Expand24(src, dst, r.width());
 		}
 	}
 	else
 	{
 		for(int i = r.top; i < r.bottom; i++, src += pitch, dst += pitch)
 		{
-			Expand16(src, dst, r.Width());
+			Expand16(src, dst, r.width());
 		}
 	}
 }
 
-void GPULocalMemory::Expand16(const WORD* RESTRICT src, DWORD* RESTRICT dst, int pixels)
+void GPULocalMemory::Expand16(const uint16* RESTRICT src, uint32* RESTRICT dst, int pixels)
 {
 	GSVector4i rm = m_rxxx;
 	GSVector4i gm = m_xgxx;
@@ -534,11 +534,11 @@ void GPULocalMemory::Expand16(const WORD* RESTRICT src, DWORD* RESTRICT dst, int
 	}
 }
 
-void GPULocalMemory::Expand24(const WORD* RESTRICT src, DWORD* RESTRICT dst, int pixels)
+void GPULocalMemory::Expand24(const uint16* RESTRICT src, uint32* RESTRICT dst, int pixels)
 {
-	BYTE* s = (BYTE*)src;
+	uint8* s = (uint8*)src;
 
-	if(m_scale.cx == 0)
+	if(m_scale.x == 0)
 	{
 		for(int i = 0; i < pixels; i += 2, s += 6)
 		{
@@ -546,7 +546,7 @@ void GPULocalMemory::Expand24(const WORD* RESTRICT src, DWORD* RESTRICT dst, int
 			dst[i + 1] = (s[5] << 16) | (s[4] << 8) | s[3];
 		}
 	}
-	else if(m_scale.cx == 1)
+	else if(m_scale.x == 1)
 	{
 		for(int i = 0; i < pixels; i += 4, s += 12)
 		{
@@ -554,7 +554,7 @@ void GPULocalMemory::Expand24(const WORD* RESTRICT src, DWORD* RESTRICT dst, int
 			dst[i + 2] = dst[i + 3] = (s[9] << 16) | (s[8] << 8) | s[5];
 		}
 	}
-	else if(m_scale.cx == 2)
+	else if(m_scale.x == 2)
 	{
 		for(int i = 0; i < pixels; i += 8, s += 24)
 		{
@@ -568,12 +568,14 @@ void GPULocalMemory::Expand24(const WORD* RESTRICT src, DWORD* RESTRICT dst, int
 	}
 }
 
-void GPULocalMemory::SaveBMP(const string& path, CRect r, int tp, int cx, int cy)
+void GPULocalMemory::SaveBMP(const string& path, const GSVector4i& r2, int tp, int cx, int cy)
 {
-	r.left <<= m_scale.cx;
-	r.top <<= m_scale.cy;
-	r.right <<= m_scale.cx;
-	r.bottom <<= m_scale.cy;
+	GSVector4i r;
+	
+	r.left = r2.left << m_scale.x;
+	r.top = r2.top << m_scale.y;
+	r.right = r2.right << m_scale.x;
+	r.bottom = r2.bottom << m_scale.y;
 
 	r.left &= ~1;
 	r.right &= ~1;
@@ -583,8 +585,8 @@ void GPULocalMemory::SaveBMP(const string& path, CRect r, int tp, int cx, int cy
 		BITMAPINFOHEADER bih;
 		memset(&bih, 0, sizeof(bih));
         bih.biSize = sizeof(bih);
-		bih.biWidth = r.Width();
-		bih.biHeight = r.Height();
+		bih.biWidth = r.width();
+		bih.biHeight = r.height();
         bih.biPlanes = 1;
         bih.biBitCount = 32;
         bih.biCompression = BI_RGB;
@@ -602,10 +604,10 @@ void GPULocalMemory::SaveBMP(const string& path, CRect r, int tp, int cx, int cy
 
 		int pitch = GetWidth();
 
-		WORD* buff = (WORD*)_aligned_malloc(pitch * sizeof(WORD), 16);
-		DWORD* buff32 = (DWORD*)_aligned_malloc(pitch * sizeof(DWORD), 16);
-		WORD* src = GetPixelAddress(r.left, r.bottom - 1);
-		const WORD* clut = GetCLUT(tp, cx, cy);
+		uint16* buff = (uint16*)_aligned_malloc(pitch * sizeof(WORD), 16);
+		uint32* buff32 = (uint32*)_aligned_malloc(pitch * sizeof(uint32), 16);
+		uint16* src = GetPixelAddress(r.left, r.bottom - 1);
+		const uint16* clut = GetCLUT(tp, cx, cy);
 
 		for(int j = r.bottom - 1; j >= r.top; j--, src -= pitch)
 		{
@@ -613,26 +615,26 @@ void GPULocalMemory::SaveBMP(const string& path, CRect r, int tp, int cx, int cy
 			{
 			case 0: // 4 bpp
 
-				for(int i = 0, k = r.Width() / 2; i < k; i++)
+				for(int i = 0, k = r.width() / 2; i < k; i++)
 				{
-					buff[i * 2 + 0] = clut[((BYTE*)src)[i] & 0xf];
-					buff[i * 2 + 1] = clut[((BYTE*)src)[i] >> 4];
+					buff[i * 2 + 0] = clut[((uint8*)src)[i] & 0xf];
+					buff[i * 2 + 1] = clut[((uint8*)src)[i] >> 4];
 				}
 
 				break;
 				
 			case 1: // 8 bpp
 
-				for(int i = 0, k = r.Width(); i < k; i++)
+				for(int i = 0, k = r.width(); i < k; i++)
 				{
-					buff[i] = clut[((BYTE*)src)[i]];
+					buff[i] = clut[((uint8*)src)[i]];
 				}
 
 				break;
 
 			case 2: // 16 bpp;
 
-				for(int i = 0, k = r.Width(); i < k; i++)
+				for(int i = 0, k = r.width(); i < k; i++)
 				{
 					buff[i] = src[i];
 				}
@@ -646,14 +648,14 @@ void GPULocalMemory::SaveBMP(const string& path, CRect r, int tp, int cx, int cy
 				break;
 			}
 
-			Expand16(buff, buff32, r.Width());
+			Expand16(buff, buff32, r.width());
 
-			for(int i = 0, k = r.Width(); i < k; i++)
+			for(int i = 0, k = r.width(); i < k; i++)
 			{
 				buff32[i] = (buff32[i] & 0xff00ff00) | ((buff32[i] & 0x00ff0000) >> 16) | ((buff32[i] & 0x000000ff) << 16);
 			}
 
-			fwrite(buff32, 1, r.Width() * 4, fp);
+			fwrite(buff32, 1, r.width() * 4, fp);
 		}
 
 		_aligned_free(buff);

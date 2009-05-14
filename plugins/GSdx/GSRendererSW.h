@@ -79,16 +79,16 @@ protected:
 		TEX0.TBW = DISPFB.FBW;
 		TEX0.PSM = DISPFB.PSM;
 
-		CRect r(0, 0, TEX0.TBW * 64, GetFrameRect(i).bottom);
+		GSVector4i r(0, 0, TEX0.TBW * 64, GetFrameRect(i).bottom);
 
 		// TODO: round up bottom
 
-		if(m_texture[i].GetWidth() != r.Width() || m_texture[i].GetHeight() != r.Height())
+		if(m_texture[i].GetWidth() != r.width() || m_texture[i].GetHeight() != r.height())
 		{
 			m_texture[i] = Texture();
 		}
 
-		if(!m_texture[i] && !m_dev.CreateTexture(m_texture[i], r.Width(), r.Height())) 
+		if(!m_texture[i] && !m_dev.CreateTexture(m_texture[i], r.width(), r.height())) 
 		{
 			return false;
 		}
@@ -98,7 +98,7 @@ protected:
 		CLAMP.WMS = CLAMP.WMT = 1;
 
 		// TODO
-		static BYTE* buff = (BYTE*)_aligned_malloc(1024 * 1024 * 4, 16);
+		static uint8* buff = (uint8*)_aligned_malloc(1024 * 1024 * 4, 16);
 		static int pitch = 1024 * 4;
 
 		m_mem.ReadTexture(r, buff, pitch, TEX0, m_env.TEXA, CLAMP);
@@ -134,9 +134,9 @@ protected:
 
 		if(PRIM->TME && context->TEX0.TCC)
 		{
-			DWORD bpp = GSLocalMemory::m_psm[context->TEX0.PSM].trbpp;
-			DWORD cbpp = GSLocalMemory::m_psm[context->TEX0.CPSM].trbpp;
-			DWORD pal = GSLocalMemory::m_psm[context->TEX0.PSM].pal;
+			uint32 bpp = GSLocalMemory::m_psm[context->TEX0.PSM].trbpp;
+			uint32 cbpp = GSLocalMemory::m_psm[context->TEX0.CPSM].trbpp;
+			uint32 pal = GSLocalMemory::m_psm[context->TEX0.PSM].pal;
 
 			if(bpp == 32)
 			{
@@ -177,6 +177,8 @@ protected:
 				if(a.z > 0xff) a.z = 0xff;
 				break;
 			case TFX_HIGHLIGHT2:
+				a.x = a.y;
+				a.z = a.w;
 				break;
 			default:
 				__assume(0);
@@ -188,7 +190,7 @@ protected:
 		m_vtrace.m_alpha.valid = true;
 	}
 
-	bool TryAlphaTest(DWORD& fm, DWORD& zm)
+	bool TryAlphaTest(uint32& fm, uint32& zm)
 	{
 		const GSDrawingContext* context = m_context;
 
@@ -440,10 +442,10 @@ protected:
 				}
 				*/
 
-				CRect r;
-				
 				int w = 1 << context->TEX0.TW;
 				int h = 1 << context->TEX0.TH;
+
+				GSVector4i r;
 
 				MinMaxUV(w, h, r, p.sel.fst);
 
@@ -491,7 +493,7 @@ protected:
 			if(PRIM->ABE && !context->ALPHA.IsOpaque(amin, amax) || PRIM->AA1)
 			{
 				p.sel.abe = PRIM->ABE;
-				p.sel.ababcd = context->ALPHA.ai32[0];
+				p.sel.ababcd = context->ALPHA.u32[0];
 
 				if(env.PABE.PABE)
 				{
@@ -572,14 +574,14 @@ protected:
 			{
 				s = format("c:\\temp1\\_%05d_f%I64d_rt0_%05x_%d.bmp", s_n, frame, m_context->FRAME.Block(), m_context->FRAME.PSM);
 
-				m_mem.SaveBMP(s, m_context->FRAME.Block(), m_context->FRAME.FBW, m_context->FRAME.PSM, GetFrameSize().cx, 512);//GetFrameSize(1).cy);
+				m_mem.SaveBMP(s, m_context->FRAME.Block(), m_context->FRAME.FBW, m_context->FRAME.PSM, GetFrameRect().width(), 512);//GetFrameSize(1).cy);
 			}
 
 			if(s_savez)
 			{
 				s = format("c:\\temp1\\_%05d_f%I64d_rz0_%05x_%d.bmp", s_n, frame, m_context->ZBUF.Block(), m_context->ZBUF.PSM);
 
-				m_mem.SaveBMP(s, m_context->ZBUF.Block(), m_context->FRAME.FBW, m_context->ZBUF.PSM, GetFrameSize().cx, 512);
+				m_mem.SaveBMP(s, m_context->ZBUF.Block(), m_context->FRAME.FBW, m_context->ZBUF.PSM, GetFrameRect().width(), 512);
 			}
 
 			s_n++;
@@ -604,16 +606,7 @@ protected:
 		m_perfmon.Put(GSPerfMon::Prim, stats.prims);
 		m_perfmon.Put(GSPerfMon::Fillrate, stats.pixels);
 
-		GSVector4i pos(m_vtrace.m_min.p.xyxy(m_vtrace.m_max.p));
-
-		GSVector4i scissor = data.scissor;
-
-		CRect r;
-
-		r.left = max(scissor.x, min(scissor.z, pos.x));
-		r.top = max(scissor.y, min(scissor.w, pos.y));
-		r.right = max(scissor.x, min(scissor.z, pos.z));
-		r.bottom = max(scissor.y, min(scissor.w, pos.w));
+		GSVector4i r = GSVector4i(m_vtrace.m_min.p.xyxy(m_vtrace.m_max.p)).rintersect(data.scissor);
 
 		GIFRegBITBLTBUF BITBLTBUF;
 
@@ -645,14 +638,14 @@ protected:
 			{
 				s = format("c:\\temp1\\_%05d_f%I64d_rt1_%05x_%d.bmp", s_n, frame, m_context->FRAME.Block(), m_context->FRAME.PSM);
 
-				m_mem.SaveBMP(s, m_context->FRAME.Block(), m_context->FRAME.FBW, m_context->FRAME.PSM, GetFrameSize().cx, 512);//GetFrameSize(1).cy);
+				m_mem.SaveBMP(s, m_context->FRAME.Block(), m_context->FRAME.FBW, m_context->FRAME.PSM, GetFrameRect().width(), 512);//GetFrameSize(1).cy);
 			}
 
 			if(s_savez)
 			{
 				s = format("c:\\temp1\\_%05d_f%I64d_rz1_%05x_%d.bmp", s_n, frame, m_context->ZBUF.Block(), m_context->ZBUF.PSM);
 
-				m_mem.SaveBMP(s, m_context->ZBUF.Block(), m_context->FRAME.FBW, m_context->ZBUF.PSM, GetFrameSize().cx, 512);
+				m_mem.SaveBMP(s, m_context->ZBUF.Block(), m_context->FRAME.FBW, m_context->ZBUF.PSM, GetFrameRect().width(), 512);
 			}
 
 			s_n++;
@@ -668,12 +661,12 @@ protected:
 		}
 	}
 
-	void InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, CRect r)
+	void InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r)
 	{
 		m_tc->InvalidateVideoMem(BITBLTBUF, r);
 	}
 
-	void MinMaxUV(int w, int h, CRect& r, DWORD fst)
+	void MinMaxUV(int w, int h, GSVector4i& r, uint32 fst)
 	{
 		const GSDrawingContext* context = m_context;
 
@@ -778,13 +771,11 @@ protected:
 			}
 		}
 
-		r = vr;
-
-		r &= CRect(0, 0, w, h);
+		r = vr.rintersect(GSVector4i(0, 0, w, h));
 	}
 
 public:
-	GSRendererSW(BYTE* base, bool mt, void (*irq)(), const GSRendererSettings& rs, int threads)
+	GSRendererSW(uint8* base, bool mt, void (*irq)(), const GSRendererSettings& rs, int threads)
 		: GSRendererT(base, mt, irq, rs)
 	{
 		m_rl.Create<GSDrawScanline>(this, threads);
@@ -799,12 +790,12 @@ public:
 		delete m_tc;
 	}
 
-	template<DWORD prim, DWORD tme, DWORD fst> 
+	template<uint32 prim, uint32 tme, uint32 fst> 
 	void VertexKick(bool skip)
 	{
 		const GSDrawingContext* context = m_context;
 
-		GSVector4i xy = GSVector4i::load((int)m_v.XYZ.ai32[0]);
+		GSVector4i xy = GSVector4i::load((int)m_v.XYZ.u32[0]);
 		
 		xy = xy.insert16<3>(m_v.FOG.F);
 		xy = xy.upl16();
@@ -814,7 +805,7 @@ public:
 
 		v.p = GSVector4(xy) * g_pos_scale;
 
-		v.c = GSVector4(GSVector4i::load((int)m_v.RGBAQ.ai32[0]).u8to32() << 7);
+		v.c = GSVector4(GSVector4i::load((int)m_v.RGBAQ.u32[0]).u8to32() << 7);
 
 		if(tme)
 		{
@@ -839,9 +830,9 @@ public:
 
 		dst = v;
 
-		dst.p.z = (float)min(m_v.XYZ.Z, 0xffffff00); // max value which can survive the DWORD => float => DWORD conversion
+		dst.p.z = (float)min(m_v.XYZ.Z, 0xffffff00); // max value which can survive the uint32 => float => uint32 conversion
 
-		DWORD count = 0;
+		int count = 0;
 		
 		if(GSVertexSW* v = DrawingKick<prim>(skip, count))
 		{
@@ -951,7 +942,7 @@ if(!m_dump)
 
 					m_count = 2;
 
-					UINT32 tmp = PRIM->PRIM;
+					uint32 tmp = PRIM->PRIM;
 					PRIM->PRIM = GS_SPRITE;
 
 					Flush();

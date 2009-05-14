@@ -67,9 +67,9 @@ private:
 	// state cache
 
 	IDirect3DVertexBuffer9* m_vb;
-	UINT m_vb_count;
+	int m_vb_count;
 	const void* m_vb_vertices;
-	UINT m_vb_stride;
+	size_t m_vb_stride;
 	IDirect3DVertexDeclaration9* m_layout;
 	D3DPRIMITIVETYPE m_topology;
 	IDirect3DVertexShader9* m_vs;
@@ -80,11 +80,11 @@ private:
 	float* m_ps_cb;
 	int m_ps_cb_len;
 	Direct3DSamplerState9* m_ps_ss;
-	CRect m_scissor;
+	GSVector4i m_scissor;
 	Direct3DDepthStencilState9* m_dss;
-	UINT m_sref;
+	uint32 m_sref;
 	Direct3DBlendState9* m_bs;
-	DWORD m_bf;
+	uint32 m_bf;
 	IDirect3DSurface9* m_rtv;
 	IDirect3DSurface9* m_dsv;
 
@@ -136,16 +136,16 @@ public:
 	bool Create(HWND hWnd, bool vsync);
 	bool Reset(int w, int h, bool fs);
 	bool IsLost();
-	void Present(const CRect& r);
+	void Present(const GSVector4i& r);
 	void BeginScene();
 	void EndScene();
 	void Draw(const string& s);
 	bool CopyOffscreen(Texture& src, const GSVector4& sr, Texture& dst, int w, int h, int format = 0);
 
 	void ClearRenderTarget(Texture& t, const GSVector4& c);
-	void ClearRenderTarget(Texture& t, DWORD c);
+	void ClearRenderTarget(Texture& t, uint32 c);
 	void ClearDepth(Texture& t, float c);
-	void ClearStencil(Texture& t, BYTE c);
+	void ClearStencil(Texture& t, uint8 c);
 
 	bool CreateRenderTarget(Texture& t, int w, int h, int format = 0);
 	bool CreateDepthStencil(Texture& t, int w, int h, int format = 0);
@@ -155,21 +155,21 @@ public:
 	IDirect3DDevice9* operator->() {return m_dev;}
 	operator IDirect3DDevice9*() {return m_dev;}
 
-	// TODO: void IASetVertexBuffer(IDirect3DVertexBuffer9* vb, UINT count, const void* vertices, UINT stride);
-	void IASetVertexBuffer(UINT count, const void* vertices, UINT stride);
+	// TODO: void IASetVertexBuffer(IDirect3DVertexBuffer9* vb, uint32 count, const void* vertices, size_t stride);
+	void IASetVertexBuffer(int count, const void* vertices, size_t stride);
 	void IASetInputLayout(IDirect3DVertexDeclaration9* layout);
 	void IASetPrimitiveTopology(D3DPRIMITIVETYPE topology);
 	void VSSetShader(IDirect3DVertexShader9* vs, const float* vs_cb, int vs_cb_len);
 	void PSSetShaderResources(IDirect3DTexture9* srv0, IDirect3DTexture9* srv1);
 	void PSSetShader(IDirect3DPixelShader9* ps, const float* ps_cb, int ps_cb_len);
 	void PSSetSamplerState(Direct3DSamplerState9* ss);
-	void RSSet(int width, int height, const RECT* scissor = NULL);
-	void OMSetDepthStencilState(Direct3DDepthStencilState9* dss, UINT sref);
-	void OMSetBlendState(Direct3DBlendState9* bs, DWORD bf);
+	void RSSet(int width, int height, const GSVector4i* scissor = NULL);
+	void OMSetDepthStencilState(Direct3DDepthStencilState9* dss, uint32 sref);
+	void OMSetBlendState(Direct3DBlendState9* bs, uint32 bf);
 	void OMSetRenderTargets(IDirect3DSurface9* rtv, IDirect3DSurface9* dsv);
 	void DrawPrimitive();
 
-	template<class T> void IASetVertexBuffer(UINT count, T* vertices)
+	template<class T> void IASetVertexBuffer(int count, T* vertices)
 	{
 		IASetVertexBuffer(count, vertices, sizeof(T));
 	}
@@ -179,8 +179,8 @@ public:
 	void StretchRect(Texture& st, const GSVector4& sr, Texture& dt, const GSVector4& dr, IDirect3DPixelShader9* ps, const float* ps_cb, int ps_cb_len, bool linear = true);
 	void StretchRect(Texture& st, const GSVector4& sr, Texture& dt, const GSVector4& dr, IDirect3DPixelShader9* ps, const float* ps_cb, int ps_cb_len, Direct3DBlendState9* bs, bool linear = true);
 
-	HRESULT CompileShader(UINT id, const string& entry, const D3DXMACRO* macro, IDirect3DVertexShader9** vs, const D3DVERTEXELEMENT9* layout, int count, IDirect3DVertexDeclaration9** il);
-	HRESULT CompileShader(UINT id, const string& entry, const D3DXMACRO* macro, IDirect3DPixelShader9** ps);
+	HRESULT CompileShader(uint32 id, const string& entry, const D3DXMACRO* macro, IDirect3DVertexShader9** vs, const D3DVERTEXELEMENT9* layout, int count, IDirect3DVertexDeclaration9** il);
+	HRESULT CompileShader(uint32 id, const string& entry, const D3DXMACRO* macro, IDirect3DPixelShader9** ps);
 
 	virtual bool IsCurrentRGBA()
 	{

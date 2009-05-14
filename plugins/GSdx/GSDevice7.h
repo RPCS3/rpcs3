@@ -45,14 +45,14 @@ public:
 	bool Create(HWND hWnd, bool vsync);
 	bool Reset(int w, int h, bool fs);
 	bool IsLost() {return false;}
-	void Present(const CRect& r);
+	void Present(const GSVector4i& r);
 	void BeginScene() {}
 	void EndScene() {}
 	void Draw(const string& s) {}
 	bool CopyOffscreen(Texture& src, const GSVector4& sr, Texture& dst, int w, int h, int format = 0) {return false;}
 
 	void ClearRenderTarget(Texture& t, const GSVector4& c) {}
-	void ClearRenderTarget(Texture& t, DWORD c) {}
+	void ClearRenderTarget(Texture& t, uint32 c) {}
 	void ClearDepth(Texture& t, float c) {}
-	void ClearStencil(Texture& t, BYTE c) {}
+	void ClearStencil(Texture& t, uint8 c) {}
 };

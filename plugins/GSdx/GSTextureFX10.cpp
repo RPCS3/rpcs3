@@ -163,7 +163,7 @@ bool GSTextureFX10::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 {
 	CComPtr<ID3D10VertexShader> vs;
 
-	hash_map<DWORD, CComPtr<ID3D10VertexShader> >::iterator i = m_vs.find(sel);
+	hash_map<uint32, CComPtr<ID3D10VertexShader> >::iterator i = m_vs.find(sel);
 
 	if(i != m_vs.end())
 	{
@@ -229,7 +229,7 @@ bool GSTextureFX10::SetupGS(GSSelector sel)
 
 	if(sel.prim > 0 && (sel.iip == 0 || sel.prim == 3)) // geometry shader works in every case, but not needed
 	{
-		hash_map<DWORD, CComPtr<ID3D10GeometryShader> >::iterator i = m_gs.find(sel);
+		hash_map<uint32, CComPtr<ID3D10GeometryShader> >::iterator i = m_gs.find(sel);
 
 		if(i != m_gs.end())
 		{
@@ -275,7 +275,7 @@ void GSTextureFX10::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSampl
 
 	CComPtr<ID3D10PixelShader> ps;
 
-	hash_map<DWORD, CComPtr<ID3D10PixelShader> >::iterator i = m_ps.find(sel);
+	hash_map<uint32, CComPtr<ID3D10PixelShader> >::iterator i = m_ps.find(sel);
 
 	if(i != m_ps.end())
 	{
@@ -338,7 +338,7 @@ void GSTextureFX10::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSampl
 			ssel.min = ssel.mag = 0;
 		}
 
-		hash_map<DWORD, CComPtr<ID3D10SamplerState> >::iterator i = m_ps_ss.find(ssel);
+		hash_map<uint32, CComPtr<ID3D10SamplerState> >::iterator i = m_ps_ss.find(ssel);
 
 		if(i != m_ps_ss.end())
 		{
@@ -378,7 +378,7 @@ void GSTextureFX10::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSampl
 	m_dev->PSSetSamplerState(ss0, ss1);
 }
 
-void GSTextureFX10::SetupRS(UINT w, UINT h, const RECT& scissor)
+void GSTextureFX10::SetupRS(int w, int h, const GSVector4i& scissor)
 {
 	m_dev->RSSet(w, h, &scissor);
 }
@@ -396,7 +396,7 @@ void GSTextureFX10::UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel,
 
 	CComPtr<ID3D10DepthStencilState> dss;
 
-	hash_map<DWORD, CComPtr<ID3D10DepthStencilState> >::iterator i = m_om_dss.find(dssel);
+	hash_map<uint32, CComPtr<ID3D10DepthStencilState> >::iterator i = m_om_dss.find(dssel);
 
 	if(i != m_om_dss.end())
 	{
@@ -447,7 +447,7 @@ void GSTextureFX10::UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel,
 
 	CComPtr<ID3D10BlendState> bs;
 
-	hash_map<DWORD, CComPtr<ID3D10BlendState> >::iterator j = m_om_bs.find(bsel);
+	hash_map<uint32, CComPtr<ID3D10BlendState> >::iterator j = m_om_bs.find(bsel);
 
 	if(j != m_om_bs.end())
 	{

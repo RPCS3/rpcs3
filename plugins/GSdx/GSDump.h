@@ -55,10 +55,10 @@ public:
 	GSDump();
 	virtual ~GSDump();
 
-	void Open(const string& fn, DWORD crc, const GSFreezeData& fd, const GSPrivRegSet* regs);
+	void Open(const string& fn, uint32 crc, const GSFreezeData& fd, const GSPrivRegSet* regs);
 	void Close();
-	void ReadFIFO(UINT32 size);
-	void Transfer(int index, BYTE* mem, size_t size);
+	void ReadFIFO(uint32 size);
+	void Transfer(int index, uint8* mem, size_t size);
 	void VSync(int field, bool last, const GSPrivRegSet* regs);
 	void Object(GSVertexSW* vertices, int count, GS_PRIM_CLASS primclass);
 	operator bool() {return m_gs != NULL;}

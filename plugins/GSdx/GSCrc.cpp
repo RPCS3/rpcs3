@@ -131,9 +131,9 @@ CRC::Game CRC::m_games[] =
 	{0xFB236A46, SonicUnleashed, US},
 };
 
-hash_map<DWORD, CRC::Game*> CRC::m_map;
+hash_map<uint32, CRC::Game*> CRC::m_map;
 
-CRC::Game CRC::Lookup(DWORD crc)
+CRC::Game CRC::Lookup(uint32 crc)
 {
 	if(m_map.empty())
 	{
@@ -143,7 +143,7 @@ CRC::Game CRC::Lookup(DWORD crc)
 		}
 	}
 
-	hash_map<DWORD, Game*>::iterator i = m_map.find(crc);
+	hash_map<uint32, Game*>::iterator i = m_map.find(crc);
 
 	if(i != m_map.end())
 	{

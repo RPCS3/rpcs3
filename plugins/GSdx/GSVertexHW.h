@@ -30,17 +30,19 @@ __declspec(align(16)) union GSVertexHW9
 	struct
 	{
 		GSVector2 t;
-		union {struct {BYTE r, g, b, a;}; DWORD c0;};
-		union {struct {BYTE ta0, ta1, res, f;}; DWORD c1;};
+		union {struct {uint8 r, g, b, a;}; uint32 c0;};
+		union {struct {uint8 ta0, ta1, res, f;}; uint32 c1;};
 		GSVector4 p;
 	};
+
+	#if _M_SSE >= 0x200
 	
 	struct {__m128i m128i[2];};
 	struct {__m128 m128[2];};
 
-#if _M_SSE >= 0x200
 	GSVertexHW9& operator = (GSVertexHW9& v) {m128i[0] = v.m128i[0]; m128i[1] = v.m128i[1]; return *this;}
-#endif
+	
+	#endif
 
 	float GetQ() {return p.w;}
 };
@@ -57,29 +59,31 @@ __declspec(align(16)) union GSVertexHW10
 
 		union
 		{
-			struct {union {struct {WORD x, y;}; DWORD xy;}; DWORD z;} p;
+			struct {union {struct {uint16 x, y;}; uint32 xy;}; uint32 z;} p;
 			GIFRegXYZ XYZ;
 		};
 		
 		union 
 		{
-			union {struct {BYTE r, g, b, a; float q;}; DWORD c0;};
+			union {struct {uint8 r, g, b, a; float q;}; uint32 c0;};
 			GIFRegRGBAQ RGBAQ;
 		};
 
 		union 
 		{
-			struct {DWORD _pad[1]; union {struct {BYTE ta0, ta1, res, f;}; DWORD c1;};};
+			struct {uint32 _pad; union {struct {uint8 ta0, ta1, res, f;}; uint32 c1;};};
 			GIFRegFOG FOG;
 		};
 	};
+
+	#if _M_SSE >= 0x200
 	
 	struct {__m128i m128i[2];};
 	struct {__m128 m128[2];};
 
-#if _M_SSE >= 0x200
 	GSVertexHW10& operator = (GSVertexHW10& v) {m128i[0] = v.m128i[0]; m128i[1] = v.m128i[1]; return *this;}
-#endif
+
+	#endif
 
 	float GetQ() {return q;}
 };

@@ -37,13 +37,13 @@ protected:
 	}
 
 public:
-	GSRendererNull(BYTE* base, bool mt, void (*irq)(), const GSRendererSettings& rs)
+	GSRendererNull(uint8* base, bool mt, void (*irq)(), const GSRendererSettings& rs)
 		: GSRendererT<Device, GSVertexNull>(base, mt, irq, rs)
 	{
 		InitVertexKick<GSRendererNull<Device> >();
 	}
 
-	template<DWORD prim, DWORD tme, DWORD fst> void VertexKick(bool skip)
+	template<uint32 prim, uint32 tme, uint32 fst> void VertexKick(bool skip)
 	{
 	}
 };

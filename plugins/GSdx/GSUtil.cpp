@@ -23,10 +23,11 @@
 #include "GS.h"
 #include "GSUtil.h"
 #include "svnrev.h"
+#include "xbyak/xbyak_util.h"
 
 static struct GSUtilMaps
 {
-	BYTE PrimClassField[8];
+	uint8 PrimClassField[8];
 	bool CompatibleBitsField[64][64];
 	bool SharedBitsField[64][64];
 
@@ -72,78 +73,43 @@ static struct GSUtilMaps
 
 } s_maps;
 
-GS_PRIM_CLASS GSUtil::GetPrimClass(DWORD prim)
+GS_PRIM_CLASS GSUtil::GetPrimClass(uint32 prim)
 {
 	return (GS_PRIM_CLASS)s_maps.PrimClassField[prim];
 }
 
-bool GSUtil::HasSharedBits(DWORD spsm, DWORD dpsm)
+bool GSUtil::HasSharedBits(uint32 spsm, uint32 dpsm)
 {
 	return s_maps.SharedBitsField[spsm][dpsm];
 }
 
-bool GSUtil::HasSharedBits(DWORD sbp, DWORD spsm, DWORD dbp, DWORD dpsm)
+bool GSUtil::HasSharedBits(uint32 sbp, uint32 spsm, uint32 dbp, uint32 dpsm)
 {
 	if(sbp != dbp) return false;
 
 	return HasSharedBits(spsm, dpsm);
 }
 
-bool GSUtil::HasCompatibleBits(DWORD spsm, DWORD dpsm)
+bool GSUtil::HasCompatibleBits(uint32 spsm, uint32 dpsm)
 {
 	if(spsm == dpsm) return true;
 
 	return s_maps.CompatibleBitsField[spsm][dpsm];
 }
 
-bool GSUtil::IsRectInRect(const CRect& inner, const CRect& outer)
+bool GSUtil::IsRectInRect(const GSVector4i& inner, const GSVector4i& outer)
 {
 	return outer.left <= inner.left && inner.right <= outer.right && outer.top <= inner.top && inner.bottom <= outer.bottom;
 }
 
-bool GSUtil::IsRectInRectH(const CRect& inner, const CRect& outer)
+bool GSUtil::IsRectInRectH(const GSVector4i& inner, const GSVector4i& outer)
 {
 	return outer.top <= inner.top && inner.bottom <= outer.bottom;
 }
 
-bool GSUtil::IsRectInRectV(const CRect& inner, const CRect& outer)
+bool GSUtil::IsRectInRectV(const GSVector4i& inner, const GSVector4i& outer)
 {
 	return outer.left <= inner.left && inner.right <= outer.right;
-}
-
-void GSUtil::FitRect(CRect& r, int aspectratio)
-{
-	static const int ar[][2] = {{0, 0}, {4, 3}, {16, 9}};
-
-	if(aspectratio <= 0 || aspectratio >= countof(ar))
-	{
-		return;
-	}
-
-	int arx = ar[aspectratio][0];
-	int ary = ar[aspectratio][1];
-
-	CRect r2 = r;
-
-	if(arx > 0 && ary > 0)
-	{
-		if(r.Width() * ary > r.Height() * arx)
-		{
-			int w = r.Height() * arx / ary;
-			r.left = r.CenterPoint().x - w / 2;
-			if(r.left & 1) r.left++;
-			r.right = r.left + w;
-		}
-		else
-		{
-			int h = r.Width() * ary / arx;
-			r.top = r.CenterPoint().y - h / 2;
-			if(r.top & 1) r.top++;
-			r.bottom = r.top + h;
-		}
-	}
-
-	r &= r2;
 }
 
 bool GSUtil::CheckDirectX()
@@ -167,33 +133,22 @@ bool GSUtil::CheckDirectX()
 	return true;
 }
 
-static bool _CheckSSE()
-{
-	__try
-	{
-		static __m128i m;
-
-		#if _M_SSE >= 0x402
-		m.m128i_i32[0] = _mm_popcnt_u32(1234);
-		#elif _M_SSE >= 0x401
-		m = _mm_packus_epi32(m, m);
-		#elif _M_SSE >= 0x301
-		m = _mm_alignr_epi8(m, m, 1);
-		#elif _M_SSE >= 0x200
-		m = _mm_packs_epi32(m, m);
-		#endif
-	}
-	__except(EXCEPTION_EXECUTE_HANDLER)
-	{
-		return false;
-	}
-
-	return true;
-}
-
 bool GSUtil::CheckSSE()
 {
-	if(!_CheckSSE())
+	Xbyak::util::Cpu cpu;
+	Xbyak::util::Cpu::Type type;
+
+	#if _M_SSE >= 0x402
+	type = Xbyak::util::Cpu::tSSE42;
+	#elif _M_SSE >= 0x401
+	type = Xbyak::util::Cpu::tSSE41;
+	#elif _M_SSE >= 0x301
+	type = Xbyak::util::Cpu::tSSSE3;
+	#elif _M_SSE >= 0x200
+	type = Xbyak::util::Cpu::tSSE2;
+	#endif
+
+	if(!cpu.has(type))
 	{
 		string s = format("This CPU does not support SSE %d.%02d", _M_SSE >> 8, _M_SSE & 0xff);
 		
@@ -223,29 +178,31 @@ char* GSUtil::GetLibName()
 
 	if(SVN_MODS) str += "m";
 
-#if _M_AMD64
+	#if _M_AMD64
 	str += " 64-bit";
-#endif
+	#endif
 
 	list<string> sl;
 
-#ifdef __INTEL_COMPILER
-	sl.push_back(format("Intel C++ %d.%02d", __INTEL_COMPILER / 100, __INTEL_COMPILER % 100));
-#elif _MSC_VER
-	sl.push_back(format("MSVC %d.%02d", _MSC_VER / 100, _MSC_VER % 100));
-#endif
+	// TODO: gcc
 
-#if _M_SSE >= 0x402
+	#ifdef __INTEL_COMPILER
+	sl.push_back(format("Intel C++ %d.%02d", __INTEL_COMPILER / 100, __INTEL_COMPILER % 100));
+	#elif _MSC_VER
+	sl.push_back(format("MSVC %d.%02d", _MSC_VER / 100, _MSC_VER % 100));
+	#endif
+	
+	#if _M_SSE >= 0x402
 	sl.push_back("SSE42");
-#elif _M_SSE >= 0x401
+	#elif _M_SSE >= 0x401
 	sl.push_back("SSE41");
-#elif _M_SSE >= 0x301
+	#elif _M_SSE >= 0x301
 	sl.push_back("SSSE3");
-#elif _M_SSE >= 0x200
+	#elif _M_SSE >= 0x200
 	sl.push_back("SSE2");
-#elif _M_SSE >= 0x100
+	#elif _M_SSE >= 0x100
 	sl.push_back("SSE");
-#endif
+	#endif
 
 	for(list<string>::iterator i = sl.begin(); i != sl.end(); )
 	{

@@ -165,13 +165,13 @@ BOOL GSSettingsDlg::OnInitDialog()
 
 	if(CComPtr<IDirect3D9> d3d = Direct3DCreate9(D3D_SDK_VERSION))
 	{
-		UINT ModeWidth = pApp->GetProfileInt(_T("Settings"), _T("ModeWidth"), 0);
-		UINT ModeHeight = pApp->GetProfileInt(_T("Settings"), _T("ModeHeight"), 0);
-		UINT ModeRefreshRate = pApp->GetProfileInt(_T("Settings"), _T("ModeRefreshRate"), 0);
+		uint32 ModeWidth = pApp->GetProfileInt(_T("Settings"), _T("ModeWidth"), 0);
+		uint32 ModeHeight = pApp->GetProfileInt(_T("Settings"), _T("ModeHeight"), 0);
+		uint32 ModeRefreshRate = pApp->GetProfileInt(_T("Settings"), _T("ModeRefreshRate"), 0);
 
-		UINT nModes = d3d->GetAdapterModeCount(D3DADAPTER_DEFAULT, D3DFMT_X8R8G8B8);
+		uint32 nModes = d3d->GetAdapterModeCount(D3DADAPTER_DEFAULT, D3DFMT_X8R8G8B8);
 
-		for(UINT i = 0; i < nModes; i++)
+		for(uint32 i = 0; i < nModes; i++)
 		{
 			D3DDISPLAYMODE mode;
 
@@ -259,22 +259,22 @@ void GSSettingsDlg::OnOK()
 
 	if(m_renderer.GetCurSel() >= 0)
 	{
-		pApp->WriteProfileInt(_T("Settings"), _T("Renderer"), (DWORD)m_renderer.GetItemData(m_renderer.GetCurSel()));
+		pApp->WriteProfileInt(_T("Settings"), _T("Renderer"), (uint32)m_renderer.GetItemData(m_renderer.GetCurSel()));
 	}
 
 	if(m_psversion.GetCurSel() >= 0)
 	{
-		pApp->WriteProfileInt(_T("Settings"), _T("PixelShaderVersion2"), (DWORD)m_psversion.GetItemData(m_psversion.GetCurSel()));
+		pApp->WriteProfileInt(_T("Settings"), _T("PixelShaderVersion2"), (uint32)m_psversion.GetItemData(m_psversion.GetCurSel()));
 	}
 
 	if(m_interlace.GetCurSel() >= 0)
 	{
-		pApp->WriteProfileInt(_T("Settings"), _T("Interlace"), (DWORD)m_interlace.GetItemData(m_interlace.GetCurSel()));
+		pApp->WriteProfileInt(_T("Settings"), _T("Interlace"), (uint32)m_interlace.GetItemData(m_interlace.GetCurSel()));
 	}
 
 	if(m_aspectratio.GetCurSel() >= 0)
 	{
-		pApp->WriteProfileInt(_T("Settings"), _T("AspectRatio"), (DWORD)m_aspectratio.GetItemData(m_aspectratio.GetCurSel()));
+		pApp->WriteProfileInt(_T("Settings"), _T("AspectRatio"), (uint32)m_aspectratio.GetItemData(m_aspectratio.GetCurSel()));
 	}
 
 	pApp->WriteProfileInt(_T("Settings"), _T("filter"), m_filter);

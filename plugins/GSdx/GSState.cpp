@@ -22,7 +22,7 @@
 #include "stdafx.h"
 #include "GSState.h"
 
-GSState::GSState(BYTE* base, bool mt, void (*irq)())
+GSState::GSState(uint8* base, bool mt, void (*irq)())
 	: m_mt(mt)
 	, m_irq(irq)
 	, m_crc(0)
@@ -202,110 +202,63 @@ void GSState::ResetHandlers()
 	m_fpGIFRegHandlers[GIF_A_D_REG_LABEL] = &GSState::GIFRegHandlerLABEL;
 }
 
-CPoint GSState::GetDisplayPos(int i)
+GSVector4i GSState::GetDisplayRect(int i)
 {
-	ASSERT(i >= 0 && i < 2);
+	if(i < 0) i = IsEnabled(1) ? 1 : 0;
 
-	CPoint p;
+	GSVector4i r;
 
-	p.x = m_regs->DISP[i].DISPLAY.DX / (m_regs->DISP[i].DISPLAY.MAGH + 1);
-	p.y = m_regs->DISP[i].DISPLAY.DY / (m_regs->DISP[i].DISPLAY.MAGV + 1);
+	r.left = m_regs->DISP[i].DISPLAY.DX / (m_regs->DISP[i].DISPLAY.MAGH + 1);
+	r.top = m_regs->DISP[i].DISPLAY.DY / (m_regs->DISP[i].DISPLAY.MAGV + 1);
+	r.right = r.left + (m_regs->DISP[i].DISPLAY.DW + 1) / (m_regs->DISP[i].DISPLAY.MAGH + 1);
+	r.bottom = r.top + (m_regs->DISP[i].DISPLAY.DH + 1) / (m_regs->DISP[i].DISPLAY.MAGV + 1);
 
-	return p;
+	return r;
 }
 
-CSize GSState::GetDisplaySize(int i)
+GSVector4i GSState::GetFrameRect(int i)
 {
-	ASSERT(i >= 0 && i < 2);
+	if(i < 0) i = IsEnabled(1) ? 1 : 0;
 
-	CSize s;
+	GSVector4i r = GetDisplayRect(i);
 
-	s.cx = (m_regs->DISP[i].DISPLAY.DW + 1) / (m_regs->DISP[i].DISPLAY.MAGH + 1);
-	s.cy = (m_regs->DISP[i].DISPLAY.DH + 1) / (m_regs->DISP[i].DISPLAY.MAGV + 1);
+	int w = r.width();
+	int h = r.height();
 
-	return s;
+	if(m_regs->SMODE2.INT && m_regs->SMODE2.FFMD && h > 1) h >>= 1;
+
+	r.left = m_regs->DISP[i].DISPFB.DBX;
+	r.top = m_regs->DISP[i].DISPFB.DBY;
+	r.right = r.left + w;
+	r.bottom = r.top + h;
+
+	return r;
 }
 
-CRect GSState::GetDisplayRect(int i)
-{
-	return CRect(GetDisplayPos(i), GetDisplaySize(i));
-}
-
-CSize GSState::GetDisplayPos()
-{
-	return GetDisplayPos(IsEnabled(1) ? 1 : 0);
-}	
-
-CSize GSState::GetDisplaySize()
-{
-	return GetDisplaySize(IsEnabled(1) ? 1 : 0);
-}	
-
-CRect GSState::GetDisplayRect()
-{
-	return GetDisplayRect(IsEnabled(1) ? 1 : 0);
-}
-
-CPoint GSState::GetFramePos(int i)
-{
-	ASSERT(i >= 0 && i < 2);
-
-	return CPoint(m_regs->DISP[i].DISPFB.DBX, m_regs->DISP[i].DISPFB.DBY);
-}
-
-CSize GSState::GetFrameSize(int i)
-{
-	CSize s = GetDisplaySize(i);
-
-	if(m_regs->SMODE2.INT && m_regs->SMODE2.FFMD && s.cy > 1) s.cy >>= 1;
-
-	return s;
-}
-
-CRect GSState::GetFrameRect(int i)
-{
-	return CRect(GetFramePos(i), GetFrameSize(i));
-}
-
-CSize GSState::GetFramePos()
-{
-	return GetFramePos(IsEnabled(1) ? 1 : 0);
-}	
-
-CSize GSState::GetFrameSize()
-{
-	return GetFrameSize(IsEnabled(1) ? 1 : 0);
-}	
-
-CRect GSState::GetFrameRect()
-{
-	return GetFrameRect(IsEnabled(1) ? 1 : 0);
-}
-
-CSize GSState::GetDeviceSize(int i)
+GSVector4i GSState::GetDeviceRect(int i)
 {
 	// TODO: other params of SMODE1 should affect the true device display size
 
 	// TODO2: pal games at 60Hz
 
-	CSize s = GetDisplaySize(i);
+	if(i < 0) i = IsEnabled(1) ? 1 : 0;
 
-	if(s.cy == 2 * 416 || s.cy == 2 * 448 || s.cy == 2 * 512)
+	GSVector4i r = GetDisplayRect(i);
+
+	int w = r.width();
+	int h = r.height();
+
+	if(h == 2 * 416 || h == 2 * 448 || h == 2 * 512)
 	{
-		s.cy /= 2;
+		h /= 2;
 	}
 	else
 	{
-		s.cy = (m_regs->SMODE1.CMOD & 1) ? 512 : 448;
+		h = (m_regs->SMODE1.CMOD & 1) ? 512 : 448;
 	}
 
-	return s;
+	return GSVector4i(0, 0, w, h);
 
-}
-
-CSize GSState::GetDeviceSize()
-{
-	return GetDeviceSize(IsEnabled(1) ? 1 : 0);
 }
 
 bool GSState::IsEnabled(int i)
@@ -349,12 +302,12 @@ void GSState::GIFPackedRegHandlerRGBA(GIFPackedReg* r)
 
 	GSVector4i mask = GSVector4i::load(0x0c080400);
 	GSVector4i v = GSVector4i::load<false>(r).shuffle8(mask);
-	m_v.RGBAQ.ai32[0] = (UINT32)GSVector4i::store(v);
+	m_v.RGBAQ.u32[0] = (uint32)GSVector4i::store(v);
 
 	#elif _M_SSE >= 0x200
 
 	GSVector4i v = GSVector4i::load<false>(r) & GSVector4i::x000000ff();
-	m_v.RGBAQ.ai32[0] = v.rgba32();
+	m_v.RGBAQ.u32[0] = v.rgba32();
 
 	#else
 
@@ -372,12 +325,12 @@ void GSState::GIFPackedRegHandlerSTQ(GIFPackedReg* r)
 {
 	#if defined(_M_AMD64)
 
-	m_v.ST.i64 = r->ai64[0];
+	m_v.ST.u64 = r->u64[0];
 
 	#elif _M_SSE >= 0x200
 
 	GSVector4i v = GSVector4i::loadl(r);
-	GSVector4i::storel(&m_v.ST.i64, v);
+	GSVector4i::storel(&m_v.ST.u64, v);
 
 	#else
 
@@ -394,7 +347,7 @@ void GSState::GIFPackedRegHandlerUV(GIFPackedReg* r)
 	#if _M_SSE >= 0x200
 
 	GSVector4i v = GSVector4i::loadl(r) & GSVector4i::x00003fff();
-	m_v.UV.ai32[0] = (UINT32)GSVector4i::store(v.ps32(v));
+	m_v.UV.u32[0] = (uint32)GSVector4i::store(v.ps32(v));
 
 	#else
 
@@ -425,12 +378,12 @@ void GSState::GIFPackedRegHandlerXYZ2(GIFPackedReg* r)
 
 template<int i> void GSState::GIFPackedRegHandlerTEX0(GIFPackedReg* r)
 {
-	GIFRegHandlerTEX0<i>((GIFReg*)&r->ai64[0]);
+	GIFRegHandlerTEX0<i>((GIFReg*)&r->u64[0]);
 }
 
 template<int i> void GSState::GIFPackedRegHandlerCLAMP(GIFPackedReg* r)
 {
-	GIFRegHandlerCLAMP<i>((GIFReg*)&r->ai64[0]);
+	GIFRegHandlerCLAMP<i>((GIFReg*)&r->u64[0]);
 }
 
 void GSState::GIFPackedRegHandlerFOG(GIFPackedReg* r)
@@ -440,17 +393,17 @@ void GSState::GIFPackedRegHandlerFOG(GIFPackedReg* r)
 
 void GSState::GIFPackedRegHandlerXYZF3(GIFPackedReg* r)
 {
-	GIFRegHandlerXYZF3((GIFReg*)&r->ai64[0]);
+	GIFRegHandlerXYZF3((GIFReg*)&r->u64[0]);
 }
 
 void GSState::GIFPackedRegHandlerXYZ3(GIFPackedReg* r)
 {
-	GIFRegHandlerXYZ3((GIFReg*)&r->ai64[0]);
+	GIFRegHandlerXYZ3((GIFReg*)&r->u64[0]);
 }
 
 void GSState::GIFPackedRegHandlerA_D(GIFPackedReg* r)
 {
-	(this->*m_fpGIFRegHandlers[(BYTE)r->A_D.ADDR])(&r->r);
+	(this->*m_fpGIFRegHandlers[r->A_D.ADDR])(&r->r);
 }
 
 void GSState::GIFPackedRegHandlerNOP(GIFPackedReg* r)
@@ -470,7 +423,7 @@ void GSState::GIFRegHandlerPRIM(GIFReg* r)
 
 	if(GSUtil::GetPrimClass(m_env.PRIM.PRIM) == GSUtil::GetPrimClass(r->PRIM.PRIM))
 	{
-		if(((m_env.PRIM.i64 ^ r->PRIM.i64) & ~7) != 0)
+		if(((m_env.PRIM.u64 ^ r->PRIM.u64) & ~7) != 0)
 		{
 			Flush();
 		}
@@ -502,7 +455,7 @@ void GSState::GIFRegHandlerST(GIFReg* r)
 
 void GSState::GIFRegHandlerUV(GIFReg* r)
 {
-	m_v.UV.ai32[0] = r->UV.ai32[0] & 0x3fff3fff;
+	m_v.UV.u32[0] = r->UV.u32[0] & 0x3fff3fff;
 }
 
 void GSState::GIFRegHandlerXYZF2(GIFReg* r)
@@ -513,9 +466,9 @@ void GSState::GIFRegHandlerXYZF2(GIFReg* r)
 	m_v.XYZ.Z = r->XYZF.Z;
 	m_v.FOG.F = r->XYZF.F;
 */
-	m_v.XYZ.ai32[0] = r->XYZF.ai32[0];
-	m_v.XYZ.ai32[1] = r->XYZF.ai32[1] & 0x00ffffff;
-	m_v.FOG.ai32[1] = r->XYZF.ai32[1] & 0xff000000;
+	m_v.XYZ.u32[0] = r->XYZF.u32[0];
+	m_v.XYZ.u32[1] = r->XYZF.u32[1] & 0x00ffffff;
+	m_v.FOG.u32[1] = r->XYZF.u32[1] & 0xff000000;
 
 	VertexKick(false);
 }
@@ -533,7 +486,7 @@ template<int i> void GSState::GIFRegHandlerTEX0(GIFReg* r)
 
 	bool wt = m_mem.m_clut.WriteTest(r->TEX0, m_env.TEXCLUT);
 
-	if(wt || PRIM->CTXT == i && !(m_env.CTXT[i].TEX0 == (GSVector4i)r->TEX0).alltrue())
+	if(wt || PRIM->CTXT == i && !((GSVector4i)r->TEX0).eq(m_env.CTXT[i].TEX0))
 	{
 		Flush(); 
 	}
@@ -558,7 +511,7 @@ template<int i> void GSState::GIFRegHandlerTEX0(GIFReg* r)
 
 template<int i> void GSState::GIFRegHandlerCLAMP(GIFReg* r)
 {
-	if(PRIM->CTXT == i && !(m_env.CTXT[i].CLAMP == (GSVector4i)r->CLAMP).alltrue())
+	if(PRIM->CTXT == i && !((GSVector4i)r->CLAMP).eq(m_env.CTXT[i].CLAMP))
 	{
 		Flush();
 	}
@@ -579,9 +532,9 @@ void GSState::GIFRegHandlerXYZF3(GIFReg* r)
 	m_v.XYZ.Z = r->XYZF.Z;
 	m_v.FOG.F = r->XYZF.F;
 */
-	m_v.XYZ.ai32[0] = r->XYZF.ai32[0];
-	m_v.XYZ.ai32[1] = r->XYZF.ai32[1] & 0x00ffffff;
-	m_v.FOG.ai32[1] = r->XYZF.ai32[1] & 0xff000000;
+	m_v.XYZ.u32[0] = r->XYZF.u32[0];
+	m_v.XYZ.u32[1] = r->XYZF.u32[1] & 0x00ffffff;
+	m_v.FOG.u32[1] = r->XYZF.u32[1] & 0xff000000;
 
 	VertexKick(true);
 }
@@ -599,7 +552,7 @@ void GSState::GIFRegHandlerNOP(GIFReg* r)
 
 template<int i> void GSState::GIFRegHandlerTEX1(GIFReg* r)
 {
-	if(PRIM->CTXT == i && !(m_env.CTXT[i].TEX1 == (GSVector4i)r->TEX1).alltrue())
+	if(PRIM->CTXT == i && !((GSVector4i)r->TEX1).eq(m_env.CTXT[i].TEX1))
 	{
 		Flush();
 	}
@@ -613,7 +566,7 @@ template<int i> void GSState::GIFRegHandlerTEX2(GIFReg* r)
 
 	UINT64 mask = 0xFFFFFFE003F00000ui64; // TEX2 bits
 
-	r->i64 = (r->i64 & mask) | (m_env.CTXT[i].TEX0.i64 & ~mask);
+	r->u64 = (r->u64 & mask) | (m_env.CTXT[i].TEX0.u64 & ~mask);
 
 	GIFRegHandlerTEX0<i>(r);
 }
@@ -622,7 +575,7 @@ template<int i> void GSState::GIFRegHandlerXYOFFSET(GIFReg* r)
 {
 	GSVector4i o = (GSVector4i)r->XYOFFSET & GSVector4i::x0000ffff();
 
-	if(!(m_env.CTXT[i].XYOFFSET == o).alltrue())
+	if(!o.eq(m_env.CTXT[i].XYOFFSET))
 	{
 		Flush();
 	}
@@ -634,7 +587,7 @@ template<int i> void GSState::GIFRegHandlerXYOFFSET(GIFReg* r)
 
 void GSState::GIFRegHandlerPRMODECONT(GIFReg* r)
 {
-	if(!(m_env.PRMODECONT == (GSVector4i)r->PRMODECONT).alltrue())
+	if(!((GSVector4i)r->PRMODECONT).eq(m_env.PRMODECONT))
 	{
 		Flush();
 	}
@@ -657,7 +610,7 @@ void GSState::GIFRegHandlerPRMODE(GIFReg* r)
 		Flush();
 	}
 
-	UINT32 _PRIM = m_env.PRMODE._PRIM;
+	uint32 _PRIM = m_env.PRMODE._PRIM;
 	m_env.PRMODE = (GSVector4i)r->PRMODE;
 	m_env.PRMODE._PRIM = _PRIM;
 
@@ -668,7 +621,7 @@ void GSState::GIFRegHandlerPRMODE(GIFReg* r)
 
 void GSState::GIFRegHandlerTEXCLUT(GIFReg* r)
 {
-	if(!(m_env.TEXCLUT == (GSVector4i)r->TEXCLUT).alltrue())
+	if(!((GSVector4i)r->TEXCLUT).eq(m_env.TEXCLUT))
 	{
 		Flush();
 	}
@@ -678,7 +631,7 @@ void GSState::GIFRegHandlerTEXCLUT(GIFReg* r)
 
 void GSState::GIFRegHandlerSCANMSK(GIFReg* r)
 {
-	if(!(m_env.SCANMSK == (GSVector4i)r->SCANMSK).alltrue())
+	if(!((GSVector4i)r->SCANMSK).eq(m_env.SCANMSK))
 	{
 		Flush();
 	}
@@ -688,7 +641,7 @@ void GSState::GIFRegHandlerSCANMSK(GIFReg* r)
 
 template<int i> void GSState::GIFRegHandlerMIPTBP1(GIFReg* r)
 {
-	if(PRIM->CTXT == i && !(m_env.CTXT[i].MIPTBP1 == (GSVector4i)r->MIPTBP1).alltrue())
+	if(PRIM->CTXT == i && !((GSVector4i)r->MIPTBP1).eq(m_env.CTXT[i].MIPTBP1))
 	{
 		Flush();
 	}
@@ -698,7 +651,7 @@ template<int i> void GSState::GIFRegHandlerMIPTBP1(GIFReg* r)
 
 template<int i> void GSState::GIFRegHandlerMIPTBP2(GIFReg* r)
 {
-	if(PRIM->CTXT == i && !(m_env.CTXT[i].MIPTBP2 == (GSVector4i)r->MIPTBP2).alltrue())
+	if(PRIM->CTXT == i && !((GSVector4i)r->MIPTBP2).eq(m_env.CTXT[i].MIPTBP2))
 	{
 		Flush();
 	}
@@ -708,7 +661,7 @@ template<int i> void GSState::GIFRegHandlerMIPTBP2(GIFReg* r)
 
 void GSState::GIFRegHandlerTEXA(GIFReg* r)
 {
-	if(!(m_env.TEXA == (GSVector4i)r->TEXA).alltrue())
+	if(!((GSVector4i)r->TEXA).eq(m_env.TEXA))
 	{
 		Flush();
 	}
@@ -718,7 +671,7 @@ void GSState::GIFRegHandlerTEXA(GIFReg* r)
 
 void GSState::GIFRegHandlerFOGCOL(GIFReg* r)
 {
-	if(!(m_env.FOGCOL == (GSVector4i)r->FOGCOL).alltrue())
+	if(!((GSVector4i)r->FOGCOL).eq(m_env.FOGCOL))
 	{
 		Flush();
 	}
@@ -735,7 +688,7 @@ void GSState::GIFRegHandlerTEXFLUSH(GIFReg* r)
 
 template<int i> void GSState::GIFRegHandlerSCISSOR(GIFReg* r)
 {
-	if(PRIM->CTXT == i && !(m_env.CTXT[i].SCISSOR == (GSVector4i)r->SCISSOR).alltrue())
+	if(PRIM->CTXT == i && !((GSVector4i)r->SCISSOR).eq(m_env.CTXT[i].SCISSOR))
 	{
 		Flush();
 	}
@@ -752,7 +705,7 @@ template<int i> void GSState::GIFRegHandlerALPHA(GIFReg* r)
 	ASSERT(r->ALPHA.C != 3);
 	ASSERT(r->ALPHA.D != 3);
 
-	if(PRIM->CTXT == i && !(m_env.CTXT[i].ALPHA == (GSVector4i)r->ALPHA).alltrue())
+	if(PRIM->CTXT == i && !((GSVector4i)r->ALPHA).eq(m_env.CTXT[i].ALPHA))
 	{
 		Flush();
 	}
@@ -761,14 +714,14 @@ template<int i> void GSState::GIFRegHandlerALPHA(GIFReg* r)
 
 	// A/B/C/D == 3? => 2
 
-	m_env.CTXT[i].ALPHA.ai32[0] = ((~m_env.CTXT[i].ALPHA.ai32[0] >> 1) | 0xAA) & m_env.CTXT[i].ALPHA.ai32[0];
+	m_env.CTXT[i].ALPHA.u32[0] = ((~m_env.CTXT[i].ALPHA.u32[0] >> 1) | 0xAA) & m_env.CTXT[i].ALPHA.u32[0];
 }
 
 void GSState::GIFRegHandlerDIMX(GIFReg* r)
 {
 	bool update = false;
 
-	if(!(m_env.DIMX == (GSVector4i)r->DIMX).alltrue())
+	if(!((GSVector4i)r->DIMX).eq(m_env.DIMX))
 	{
 		Flush();
 
@@ -785,7 +738,7 @@ void GSState::GIFRegHandlerDIMX(GIFReg* r)
 
 void GSState::GIFRegHandlerDTHE(GIFReg* r)
 {
-	if(!(m_env.DTHE == (GSVector4i)r->DTHE).alltrue())
+	if(!((GSVector4i)r->DTHE).eq(m_env.DTHE))
 	{
 		Flush();
 	}
@@ -795,7 +748,7 @@ void GSState::GIFRegHandlerDTHE(GIFReg* r)
 
 void GSState::GIFRegHandlerCOLCLAMP(GIFReg* r)
 {
-	if(!(m_env.COLCLAMP == (GSVector4i)r->COLCLAMP).alltrue())
+	if(!((GSVector4i)r->COLCLAMP).eq(m_env.COLCLAMP))
 	{
 		Flush();
 	}
@@ -805,7 +758,7 @@ void GSState::GIFRegHandlerCOLCLAMP(GIFReg* r)
 
 template<int i> void GSState::GIFRegHandlerTEST(GIFReg* r)
 {
-	if(PRIM->CTXT == i && !(m_env.CTXT[i].TEST == (GSVector4i)r->TEST).alltrue())
+	if(PRIM->CTXT == i && !((GSVector4i)r->TEST).eq(m_env.CTXT[i].TEST))
 	{
 		Flush();
 	}
@@ -815,7 +768,7 @@ template<int i> void GSState::GIFRegHandlerTEST(GIFReg* r)
 
 void GSState::GIFRegHandlerPABE(GIFReg* r)
 {
-	if(!(m_env.PABE == (GSVector4i)r->PABE).alltrue())
+	if(!((GSVector4i)r->PABE).eq(m_env.PABE))
 	{
 		Flush();
 	}
@@ -825,7 +778,7 @@ void GSState::GIFRegHandlerPABE(GIFReg* r)
 
 template<int i> void GSState::GIFRegHandlerFBA(GIFReg* r)
 {
-	if(PRIM->CTXT == i && !(m_env.CTXT[i].FBA == (GSVector4i)r->FBA).alltrue())
+	if(PRIM->CTXT == i && !((GSVector4i)r->FBA).eq(m_env.CTXT[i].FBA))
 	{
 		Flush();
 	}
@@ -835,7 +788,7 @@ template<int i> void GSState::GIFRegHandlerFBA(GIFReg* r)
 
 template<int i> void GSState::GIFRegHandlerFRAME(GIFReg* r)
 {
-	if(PRIM->CTXT == i && !(m_env.CTXT[i].FRAME == (GSVector4i)r->FRAME).alltrue())
+	if(PRIM->CTXT == i && !((GSVector4i)r->FRAME).eq(m_env.CTXT[i].FRAME))
 	{
 		Flush();
 	}
@@ -845,7 +798,7 @@ template<int i> void GSState::GIFRegHandlerFRAME(GIFReg* r)
 
 template<int i> void GSState::GIFRegHandlerZBUF(GIFReg* r)
 {
-	if(r->ZBUF.ai32[0] == 0)
+	if(r->ZBUF.u32[0] == 0)
 	{
 		// during startup all regs are cleared to 0 (by the bios or something), so we mask z until this register becomes valid
 
@@ -854,7 +807,7 @@ template<int i> void GSState::GIFRegHandlerZBUF(GIFReg* r)
 
 	r->ZBUF.PSM |= 0x30;
 
-	if(PRIM->CTXT == i && !(m_env.CTXT[i].ZBUF == (GSVector4i)r->ZBUF).alltrue())
+	if(PRIM->CTXT == i && !((GSVector4i)r->ZBUF).eq(m_env.CTXT[i].ZBUF))
 	{
 		Flush();
 	}
@@ -872,7 +825,7 @@ template<int i> void GSState::GIFRegHandlerZBUF(GIFReg* r)
 
 void GSState::GIFRegHandlerBITBLTBUF(GIFReg* r)
 {
-	if(!(m_env.BITBLTBUF == (GSVector4i)r->BITBLTBUF).alltrue())
+	if(!((GSVector4i)r->BITBLTBUF).eq(m_env.BITBLTBUF))
 	{
 		FlushWrite();
 	}
@@ -892,7 +845,7 @@ void GSState::GIFRegHandlerBITBLTBUF(GIFReg* r)
 
 void GSState::GIFRegHandlerTRXPOS(GIFReg* r)
 {
-	if(!(m_env.TRXPOS == (GSVector4i)r->TRXPOS).alltrue())
+	if(!((GSVector4i)r->TRXPOS).eq(m_env.TRXPOS))
 	{
 		FlushWrite();
 	}
@@ -902,7 +855,7 @@ void GSState::GIFRegHandlerTRXPOS(GIFReg* r)
 
 void GSState::GIFRegHandlerTRXREG(GIFReg* r)
 {
-	if(!(m_env.TRXREG == (GSVector4i)r->TRXREG).alltrue())
+	if(!((GSVector4i)r->TRXREG).eq(m_env.TRXREG))
 	{
 		FlushWrite();
 	}
@@ -937,7 +890,7 @@ void GSState::GIFRegHandlerHWREG(GIFReg* r)
 {
 	ASSERT(m_env.TRXDIR.XDIR == 0); // host => local
 
-	Write((BYTE*)r, 8); // hunting ground
+	Write((uint8*)r, 8); // hunting ground
 }
 
 void GSState::GIFRegHandlerSIGNAL(GIFReg* r)
@@ -990,7 +943,7 @@ void GSState::FlushWrite()
 
 	m_perfmon.Put(GSPerfMon::Swizzle, len);
 
-	CRect r;
+	GSVector4i r;
 	
 	r.left = m_env.TRXPOS.DSAX;
 	r.top = y;
@@ -1010,7 +963,7 @@ void GSState::FlushWrite()
 
 //
 
-void GSState::Write(BYTE* mem, int len)
+void GSState::Write(uint8* mem, int len)
 {
 	int dx = m_env.TRXPOS.DSAX;
 	int dy = m_env.TRXPOS.DSAY;
@@ -1041,7 +994,7 @@ void GSState::Write(BYTE* mem, int len)
 	m_mem.m_clut.Invalidate();
 }
 
-void GSState::Read(BYTE* mem, int len)
+void GSState::Read(uint8* mem, int len)
 {
 	if(len <= 0) return;
 
@@ -1059,7 +1012,7 @@ void GSState::Read(BYTE* mem, int len)
 
 	if(m_tr.x == sx && m_tr.y == sy)
 	{
-		InvalidateLocalMem(m_env.BITBLTBUF, CRect(CPoint(sx, sy), CSize(w, h)));
+		InvalidateLocalMem(m_env.BITBLTBUF, GSVector4i(sx, sy, sx + w, sy + h));
 	}
 
 	m_mem.ReadImageX(m_tr.x, m_tr.y, mem, len, m_env.BITBLTBUF, m_env.TRXPOS, m_env.TRXREG);
@@ -1077,8 +1030,8 @@ void GSState::Move()
 	int w = m_env.TRXREG.RRW;
 	int h = m_env.TRXREG.RRH;
 
-	InvalidateLocalMem(m_env.BITBLTBUF, CRect(CPoint(sx, sy), CSize(w, h)));
-	InvalidateVideoMem(m_env.BITBLTBUF, CRect(CPoint(dx, dy), CSize(w, h)));
+	InvalidateLocalMem(m_env.BITBLTBUF, GSVector4i(sx, sy, sx + w, sy + h));
+	InvalidateVideoMem(m_env.BITBLTBUF, GSVector4i(dx, dy, dx + w, dy + h));
 
 	int xinc = 1;
 	int yinc = 1;
@@ -1102,10 +1055,10 @@ void GSState::Move()
 	{
 		for(int y = 0; y < h; y++, sy += yinc, dy += yinc, sx -= xinc * w, dx -= xinc * w)
 		{
-			DWORD sbase = spsm.pa(0, sy, m_env.BITBLTBUF.SBP, m_env.BITBLTBUF.SBW);
+			uint32 sbase = spsm.pa(0, sy, m_env.BITBLTBUF.SBP, m_env.BITBLTBUF.SBW);
 			int* soffset = spsm.rowOffset[sy & 7];
 
-			DWORD dbase = dpsm.pa(0, dy, m_env.BITBLTBUF.DBP, m_env.BITBLTBUF.DBW);
+			uint32 dbase = dpsm.pa(0, dy, m_env.BITBLTBUF.DBP, m_env.BITBLTBUF.DBW);
 			int* doffset = dpsm.rowOffset[dy & 7];
 			
 			for(int x = 0; x < w; x++, sx += xinc, dx += xinc)
@@ -1118,10 +1071,10 @@ void GSState::Move()
 	{
 		for(int y = 0; y < h; y++, sy += yinc, dy += yinc, sx -= xinc * w, dx -= xinc * w)
 		{
-			DWORD sbase = spsm.pa(0, sy, m_env.BITBLTBUF.SBP, m_env.BITBLTBUF.SBW);
+			uint32 sbase = spsm.pa(0, sy, m_env.BITBLTBUF.SBP, m_env.BITBLTBUF.SBW);
 			int* soffset = spsm.rowOffset[sy & 7];
 
-			DWORD dbase = dpsm.pa(0, dy, m_env.BITBLTBUF.DBP, m_env.BITBLTBUF.DBW);
+			uint32 dbase = dpsm.pa(0, dy, m_env.BITBLTBUF.DBP, m_env.BITBLTBUF.DBW);
 			int* doffset = dpsm.rowOffset[dy & 7];
 			
 			for(int x = 0; x < w; x++, sx += xinc, dx += xinc)
@@ -1132,7 +1085,7 @@ void GSState::Move()
 	}
 }
 
-void GSState::SoftReset(BYTE mask)
+void GSState::SoftReset(uint32 mask)
 {
 	if(mask & 1) memset(&m_path[0], 0, sizeof(GIFPath));
 	if(mask & 2) memset(&m_path[1], 0, sizeof(GIFPath));
@@ -1143,7 +1096,7 @@ void GSState::SoftReset(BYTE mask)
 	m_q = 1;
 }
 
-void GSState::ReadFIFO(BYTE* mem, int size)
+void GSState::ReadFIFO(uint8* mem, int size)
 {
 	GSPerfMonAutoTimer pmat(m_perfmon);
 
@@ -1159,15 +1112,15 @@ void GSState::ReadFIFO(BYTE* mem, int size)
 	}
 }
 
-template void GSState::Transfer<0>(BYTE* mem, UINT32 size);
-template void GSState::Transfer<1>(BYTE* mem, UINT32 size);
-template void GSState::Transfer<2>(BYTE* mem, UINT32 size);
+template void GSState::Transfer<0>(uint8* mem, uint32 size);
+template void GSState::Transfer<1>(uint8* mem, uint32 size);
+template void GSState::Transfer<2>(uint8* mem, uint32 size);
 
-template<int index> void GSState::Transfer(BYTE* mem, UINT32 size)
+template<int index> void GSState::Transfer(uint8* mem, uint32 size)
 {
 	GSPerfMonAutoTimer pmat(m_perfmon);
 
-	BYTE* start = mem;
+	uint8* start = mem;
 
 	GIFPath& path = m_path[index];
 
@@ -1192,7 +1145,7 @@ template<int index> void GSState::Transfer(BYTE* mem, UINT32 size)
 				if(path.tag.PRE && (path.tag.FLG & 2) == 0)
 				{
 					GIFReg r;
-					r.i64 = path.tag.PRIM;
+					r.u64 = path.tag.PRIM;
 					(this->*m_fpGIFRegHandlers[GIF_A_D_REG_PRIM])(&r);
 				}
 			}
@@ -1211,7 +1164,7 @@ template<int index> void GSState::Transfer(BYTE* mem, UINT32 size)
 
 					do
 					{
-						(this->*m_fpGIFRegHandlers[(BYTE)((GIFPackedReg*)mem)->A_D.ADDR])(&((GIFPackedReg*)mem)->r);
+						(this->*m_fpGIFRegHandlers[((GIFPackedReg*)mem)->A_D.ADDR])(&((GIFPackedReg*)mem)->r);
 
 						mem += sizeof(GIFPackedReg);
 					}
@@ -1221,7 +1174,7 @@ template<int index> void GSState::Transfer(BYTE* mem, UINT32 size)
 				{
 					do
 					{
-						DWORD reg = path.GetReg();
+						uint32 reg = path.GetReg();
 
 						switch(reg)
 						{
@@ -1343,13 +1296,13 @@ template<int index> void GSState::Transfer(BYTE* mem, UINT32 size)
 	}
 }
 
-template<class T> static void WriteState(BYTE*& dst, T* src, size_t len = sizeof(T))
+template<class T> static void WriteState(uint8*& dst, T* src, size_t len = sizeof(T))
 {
 	memcpy(dst, src, len);
 	dst += len;
 }
 
-template<class T> static void ReadState(T* dst, BYTE*& src, size_t len = sizeof(T))
+template<class T> static void ReadState(T* dst, uint8*& src, size_t len = sizeof(T))
 {
 	memcpy(dst, src, len);
 	src += len;
@@ -1370,7 +1323,7 @@ int GSState::Freeze(GSFreezeData* fd, bool sizeonly)
 
 	Flush();
 
-	BYTE* data = fd->data;
+	uint8* data = fd->data;
 
 	WriteState(data, &m_version);
 	WriteState(data, &m_env.PRIM);
@@ -1442,7 +1395,7 @@ int GSState::Defrost(const GSFreezeData* fd)
 		return -1;
 	}
 
-	BYTE* data = fd->data;
+	uint8* data = fd->data;
 
 	int version;
 
@@ -1495,7 +1448,7 @@ int GSState::Defrost(const GSFreezeData* fd)
 
 		if(version <= 4)
 		{
-			data += sizeof(DWORD) * 7; // skip 
+			data += sizeof(uint32) * 7; // skip 
 		}
 	}
 
@@ -1536,7 +1489,7 @@ m_perfmon.SetFrame(5000);
 	return 0;
 }
 
-void GSState::SetGameCRC(DWORD crc, int options)
+void GSState::SetGameCRC(uint32 crc, int options)
 {
 	m_crc = crc;
 	m_options = options;
@@ -1608,7 +1561,7 @@ GSState::GSTransferBuffer::GSTransferBuffer()
 {
 	x = y = 0;
 	start = end = total = 0;
-	buff = (BYTE*)_aligned_malloc(1024 * 1024 * 4, 16);
+	buff = (uint8*)_aligned_malloc(1024 * 1024 * 4, 16);
 }
 
 GSState::GSTransferBuffer::~GSTransferBuffer()
@@ -1653,12 +1606,12 @@ bool GSState::GSTransferBuffer::Update(int tw, int th, int bpp, int& len)
 
 struct GSFrameInfo
 {
-	DWORD FBP;
-	DWORD FPSM;
-	DWORD FBMSK;
+	uint32 FBP;
+	uint32 FPSM;
+	uint32 FBMSK;
+	uint32 TBP0;
+	uint32 TPSM;
 	bool TME;
-	DWORD TBP0;
-	DWORD TPSM;
 };
 
 typedef bool (*GetSkipCount)(const GSFrameInfo& fi, int& skip);

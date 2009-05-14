@@ -875,10 +875,10 @@ void GSDrawScanlineCodeGenerator::SampleTexture()
 		// xmm1, xmm4, xmm6 = free
 		// xmm7 = used
 
-		// c00 = addr00.gather32_32((const DWORD/BYTE*)tex[, clut]);
-		// c01 = addr01.gather32_32((const DWORD/BYTE*)tex[, clut]);
-		// c10 = addr10.gather32_32((const DWORD/BYTE*)tex[, clut]);
-		// c11 = addr11.gather32_32((const DWORD/BYTE*)tex[, clut]);
+		// c00 = addr00.gather32_32((const uint32/uint8*)tex[, clut]);
+		// c01 = addr01.gather32_32((const uint32/uint8*)tex[, clut]);
+		// c10 = addr10.gather32_32((const uint32/uint8*)tex[, clut]);
+		// c11 = addr11.gather32_32((const uint32/uint8*)tex[, clut]);
 
 		ReadTexel(xmm6, xmm5, xmm1, xmm4);
 
@@ -994,7 +994,7 @@ void GSDrawScanlineCodeGenerator::SampleTexture()
 
 		paddd(xmm2, xmm4);
 
-		// c00 = addr00.gather32_32((const DWORD/BYTE*)tex[, clut]);
+		// c00 = addr00.gather32_32((const uint32/uint8*)tex[, clut]);
 
 		ReadTexel(xmm5, xmm2, xmm0, xmm1);
 

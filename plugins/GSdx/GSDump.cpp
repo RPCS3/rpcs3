@@ -36,7 +36,7 @@ GSDump::~GSDump()
 	Close();
 }
 
-void GSDump::Open(const string& fn, DWORD crc, const GSFreezeData& fd, const GSPrivRegSet* regs)
+void GSDump::Open(const string& fn, uint32 crc, const GSFreezeData& fd, const GSPrivRegSet* regs)
 {
 	m_gs = fopen((fn + ".gs").c_str(), "wb");
 	m_obj = fopen((fn + ".obj").c_str(), "wt");
@@ -60,7 +60,7 @@ void GSDump::Close()
 	if(m_obj) {fclose(m_obj); m_obj = NULL;}
 }
 
-void GSDump::Transfer(int index, BYTE* mem, size_t size)
+void GSDump::Transfer(int index, uint8* mem, size_t size)
 {
 	if(m_gs && size > 0)
 	{
@@ -71,7 +71,7 @@ void GSDump::Transfer(int index, BYTE* mem, size_t size)
 	}
 }
 
-void GSDump::ReadFIFO(UINT32 size)
+void GSDump::ReadFIFO(uint32 size)
 {
 	if(m_gs && size > 0)
 	{

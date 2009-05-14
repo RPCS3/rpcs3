@@ -24,6 +24,7 @@
 #include "GS.h"
 #include "GSVertexSW.h"
 #include "GSFunctionMap.h"
+#include "GSThread.h"
 
 __declspec(align(16)) class GSRasterizerData
 {
@@ -102,17 +103,13 @@ public:
 	void PrintStats() {m_ds->PrintStats();}
 };
 
-class GSRasterizerMT : public GSRasterizer
+class GSRasterizerMT : public GSRasterizer, private GSThread
 {
 	long* m_sync;
 	bool m_exit;
-    DWORD m_ThreadId;
-    HANDLE m_hThread;
 	const GSRasterizerData* m_data;
 
-	static DWORD WINAPI StaticThreadProc(LPVOID lpParam);
-
-	DWORD ThreadProc();
+	void ThreadProc();
 
 public:
 	GSRasterizerMT(IDrawScanline* ds, int id, int threads, long* sync);

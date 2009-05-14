@@ -24,7 +24,7 @@
 #include "GSCrc.h"
 #include "resource.h"
 
-GSRendererHW9::GSRendererHW9(BYTE* base, bool mt, void (*irq)(), const GSRendererSettings& rs)
+GSRendererHW9::GSRendererHW9(uint8* base, bool mt, void (*irq)(), const GSRendererSettings& rs)
 	: GSRendererHW<Device, Vertex, TextureCache>(base, mt, irq, rs, false)
 {
 	m_fba.enabled = !!AfxGetApp()->GetProfileInt(_T("Settings"), _T("fba"), TRUE);
@@ -74,7 +74,7 @@ bool GSRendererHW9::Create(const string& title)
 	return true;
 }
 
-template<DWORD prim, DWORD tme, DWORD fst> 
+template<uint32 prim, uint32 tme, uint32 fst> 
 void GSRendererHW9::VertexKick(bool skip)
 {
 	Vertex& dst = m_vl.AddTail();
@@ -83,8 +83,8 @@ void GSRendererHW9::VertexKick(bool skip)
 	dst.p.y = (float)(int)m_v.XYZ.Y;
 	dst.p.z = (float)m_v.XYZ.Z;
 
-	dst.c0 = m_v.RGBAQ.ai32[0];
-	dst.c1 = m_v.FOG.ai32[1];
+	dst.c0 = m_v.RGBAQ.u32[0];
+	dst.c1 = m_v.FOG.u32[1];
 
 	if(tme)
 	{
@@ -100,7 +100,7 @@ void GSRendererHW9::VertexKick(bool skip)
 		}
 	}
 
-	DWORD count = 0;
+	int count = 0;
 	
 	if(Vertex* v = DrawingKick<prim>(skip, count))
 	{
@@ -234,7 +234,7 @@ void GSRendererHW9::Draw(int prim, Texture& rt, Texture& ds, GSTextureCache<Devi
 	om_bsel.wb = (context->FRAME.FBMSK & 0x00ff0000) != 0x00ff0000;
 	om_bsel.wa = (context->FRAME.FBMSK & 0xff000000) != 0xff000000;
 
-	BYTE bf = context->ALPHA.FIX >= 0x80 ? 0xff : (BYTE)(context->ALPHA.FIX * 2);
+	uint8 bf = context->ALPHA.FIX >= 0x80 ? 0xff : (uint8)(context->ALPHA.FIX * 2);
 
 	// vs
 
@@ -386,7 +386,7 @@ void GSRendererHW9::Draw(int prim, Texture& rt, Texture& ds, GSTextureCache<Devi
 	int w = rt.GetWidth();
 	int h = rt.GetHeight();
 
-	CRect scissor = (CRect)GSVector4i(GSVector4(rt.m_scale).xyxy() * context->scissor.in) & CRect(0, 0, w, h);
+	GSVector4i scissor = GSVector4i(GSVector4(rt.m_scale).xyxy() * context->scissor.in).rintersect(GSVector4i(0, 0, w, h));
 
 	//
 
@@ -410,7 +410,7 @@ void GSRendererHW9::Draw(int prim, Texture& rt, Texture& ds, GSTextureCache<Devi
 	{
 		ASSERT(!env.PABE.PABE);
 
-		static const DWORD iatst[] = {1, 0, 5, 6, 7, 2, 3, 4};
+		static const uint32 iatst[] = {1, 0, 5, 6, 7, 2, 3, 4};
 
 		ps_sel.atst = iatst[ps_sel.atst];
 

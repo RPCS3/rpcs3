@@ -37,8 +37,8 @@ public:
 	int GetWidth() const {return m_desc.w;}
 	int GetHeight() const {return m_desc.h;}
 	int GetFormat() const {return m_desc.format;}
-	bool Update(const CRect& r, const void* data, int pitch) {return true;}
-	bool Map(BYTE** bits, int& pitch, const RECT* r = NULL) {return true;}
+	bool Update(const GSVector4i& r, const void* data, int pitch) {return true;}
+	bool Map(uint8** bits, int& pitch) {return true;}
 	void Unmap() {}
 	bool Save(const string& fn, bool dds = false) {return false;}
 };

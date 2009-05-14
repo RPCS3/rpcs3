@@ -119,7 +119,7 @@ void GPUDrawScanlineCodeGenerator::Init(int params)
 
 	mov(eax, dword[esp + _top]);
 
-	// WORD* fb = &m_env.vm[(top << (10 + m_env.sel.scalex)) + left];
+	// uint16* fb = &m_env.vm[(top << (10 + m_env.sel.scalex)) + left];
 
 	mov(edi, eax);
 	shl(edi, 10 + m_env.sel.scalex);
@@ -222,7 +222,7 @@ void GPUDrawScanlineCodeGenerator::Step()
 
 	// fb += 8;
 
-	add(edi, 8 * sizeof(WORD));
+	add(edi, 8 * sizeof(uint16));
 
 	if(m_env.sel.tme)
 	{
@@ -1020,7 +1020,7 @@ const GSVector4i GPUDrawScanlineCodeGenerator::m_test[8] =
 	GSVector4i::zero(),
 };
 
-__declspec(align(16)) const WORD GPUDrawScanlineCodeGenerator::m_dither[4][16] = 
+__declspec(align(16)) const uint16 GPUDrawScanlineCodeGenerator::m_dither[4][16] = 
 {
 	{7, 0, 6, 1, 7, 0, 6, 1, 7, 0, 6, 1, 7, 0, 6, 1},
 	{2, 5, 3, 4, 2, 5, 3, 4, 2, 5, 3, 4, 2, 5, 3, 4}, 

@@ -26,11 +26,11 @@
 GSClut::GSClut(const GSLocalMemory* mem)
 	: m_mem(mem)
 {
-	BYTE* p = (BYTE*)VirtualAlloc(NULL, 2 * 4096, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+	uint8* p = (uint8*)VirtualAlloc(NULL, 2 * 4096, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 
-	m_clut = (WORD*)&p[0]; // 1k + 1k for buffer overruns (sfex: PSM == PSM_PSMT8, CPSM == PSM_PSMCT32, CSA != 0)
-	m_buff32 = (DWORD*)&p[2048]; // 1k
-	m_buff64 = (UINT64*)&p[4096]; // 2k
+	m_clut = (uint16*)&p[0]; // 1k + 1k for buffer overruns (sfex: PSM == PSM_PSMT8, CPSM == PSM_PSMCT32, CSA != 0)
+	m_buff32 = (uint32*)&p[2048]; // 1k
+	m_buff64 = (uint64*)&p[4096]; // 2k
 	m_write.dirty = true;
 	m_read.dirty = true;
 
@@ -128,7 +128,7 @@ void GSClut::WriteCLUT32_I8_CSM1(const GIFRegTEX0& TEX0, const GIFRegTEXCLUT& TE
 {
 	ASSERT(TEX0.CSA == 0);
 
-	WriteCLUT_T32_I8_CSM1((DWORD*)m_mem->BlockPtr32(0, 0, TEX0.CBP, 1), m_clut + (TEX0.CSA << 4));
+	WriteCLUT_T32_I8_CSM1((uint32*)m_mem->BlockPtr32(0, 0, TEX0.CBP, 1), m_clut + (TEX0.CSA << 4));
 }
 
 void GSClut::WriteCLUT32_I4_CSM1(const GIFRegTEX0& TEX0, const GIFRegTEXCLUT& TEXCLUT)
@@ -137,72 +137,72 @@ void GSClut::WriteCLUT32_I4_CSM1(const GIFRegTEX0& TEX0, const GIFRegTEXCLUT& TE
 
 	GSVector4i dummy; // this just forces stack alignment and enables inlining the next call
 
-	WriteCLUT_T32_I4_CSM1((DWORD*)m_mem->BlockPtr32(0, 0, TEX0.CBP, 1), m_clut + (TEX0.CSA << 4));
+	WriteCLUT_T32_I4_CSM1((uint32*)m_mem->BlockPtr32(0, 0, TEX0.CBP, 1), m_clut + (TEX0.CSA << 4));
 }
 
 void GSClut::WriteCLUT16_I8_CSM1(const GIFRegTEX0& TEX0, const GIFRegTEXCLUT& TEXCLUT)
 {
 	ASSERT(TEX0.CSA < 16);
 
-	WriteCLUT_T16_I8_CSM1((WORD*)m_mem->BlockPtr16(0, 0, TEX0.CBP, 1), m_clut + (TEX0.CSA << 4));
+	WriteCLUT_T16_I8_CSM1((uint16*)m_mem->BlockPtr16(0, 0, TEX0.CBP, 1), m_clut + (TEX0.CSA << 4));
 }
 
 void GSClut::WriteCLUT16_I4_CSM1(const GIFRegTEX0& TEX0, const GIFRegTEXCLUT& TEXCLUT)
 {
 	ASSERT(TEX0.CSA < 32);
 
-	WriteCLUT_T16_I4_CSM1((WORD*)m_mem->BlockPtr16(0, 0, TEX0.CBP, 1), m_clut + (TEX0.CSA << 4));
+	WriteCLUT_T16_I4_CSM1((uint16*)m_mem->BlockPtr16(0, 0, TEX0.CBP, 1), m_clut + (TEX0.CSA << 4));
 }
 
 void GSClut::WriteCLUT16S_I8_CSM1(const GIFRegTEX0& TEX0, const GIFRegTEXCLUT& TEXCLUT)
 {
-	WriteCLUT_T16_I8_CSM1((WORD*)m_mem->BlockPtr16S(0, 0, TEX0.CBP, 1), m_clut + (TEX0.CSA << 4));
+	WriteCLUT_T16_I8_CSM1((uint16*)m_mem->BlockPtr16S(0, 0, TEX0.CBP, 1), m_clut + (TEX0.CSA << 4));
 }
 
 void GSClut::WriteCLUT16S_I4_CSM1(const GIFRegTEX0& TEX0, const GIFRegTEXCLUT& TEXCLUT)
 {
-	WriteCLUT_T16_I4_CSM1((WORD*)m_mem->BlockPtr16S(0, 0, TEX0.CBP, 1), m_clut + (TEX0.CSA << 4));
+	WriteCLUT_T16_I4_CSM1((uint16*)m_mem->BlockPtr16S(0, 0, TEX0.CBP, 1), m_clut + (TEX0.CSA << 4));
 }
 
 template<int n> void GSClut::WriteCLUT32_CSM2(const GIFRegTEX0& TEX0, const GIFRegTEXCLUT& TEXCLUT)
 {
-	WORD* RESTRICT clut = m_clut + (TEX0.CSA << 4);
+	uint16* RESTRICT clut = m_clut + (TEX0.CSA << 4);
 
-	DWORD base = m_mem->PixelAddress32(0, TEXCLUT.COV, TEX0.CBP, TEXCLUT.CBW);
+	uint32 base = m_mem->PixelAddress32(0, TEXCLUT.COV, TEX0.CBP, TEXCLUT.CBW);
 	int* offset = &m_mem->rowOffset32[TEXCLUT.COU << 4];
 
 	for(int i = 0; i < n; i++)
 	{
-		DWORD c = m_mem->ReadPixel32(base + offset[i]);
+		uint32 c = m_mem->ReadPixel32(base + offset[i]);
 
-		clut[i] = (WORD)(c & 0xffff);
-		clut[i + 256] = (WORD)(c >> 16);
+		clut[i] = (uint16)(c & 0xffff);
+		clut[i + 256] = (uint16)(c >> 16);
 	}
 }
 
 template<int n> void GSClut::WriteCLUT16_CSM2(const GIFRegTEX0& TEX0, const GIFRegTEXCLUT& TEXCLUT)
 {
-	WORD* RESTRICT clut = m_clut + (TEX0.CSA << 4);
+	uint16* RESTRICT clut = m_clut + (TEX0.CSA << 4);
 
-	DWORD base = m_mem->PixelAddress16(0, TEXCLUT.COV, TEX0.CBP, TEXCLUT.CBW);
+	uint32 base = m_mem->PixelAddress16(0, TEXCLUT.COV, TEX0.CBP, TEXCLUT.CBW);
 	int* offset = &m_mem->rowOffset16[TEXCLUT.COU << 4];
 
 	for(int i = 0; i < n; i++)
 	{
-		clut[i] = (WORD)m_mem->ReadPixel16(base + offset[i]);
+		clut[i] = (uint16)m_mem->ReadPixel16(base + offset[i]);
 	}
 }
 
 template<int n> void GSClut::WriteCLUT16S_CSM2(const GIFRegTEX0& TEX0, const GIFRegTEXCLUT& TEXCLUT)
 {
-	WORD* RESTRICT clut = m_clut + (TEX0.CSA << 4);
+	uint16* RESTRICT clut = m_clut + (TEX0.CSA << 4);
 
-	DWORD base = m_mem->PixelAddress16S(0, TEXCLUT.COV, TEX0.CBP, TEXCLUT.CBW);
+	uint32 base = m_mem->PixelAddress16S(0, TEXCLUT.COV, TEX0.CBP, TEXCLUT.CBW);
 	int* offset = &m_mem->rowOffset16S[TEXCLUT.COU << 4];
 
 	for(int i = 0; i < n; i++)
 	{
-		clut[i] = (WORD)m_mem->ReadPixel16(base + offset[i]);
+		clut[i] = (uint16)m_mem->ReadPixel16(base + offset[i]);
 	}
 }
 
@@ -213,7 +213,7 @@ void GSClut::Read(const GIFRegTEX0& TEX0)
 		m_read.TEX0 = TEX0;
 		m_read.dirty = false;
 
-		WORD* clut = m_clut + (TEX0.CSA << 4);
+		uint16* clut = m_clut + (TEX0.CSA << 4);
 
 		if(TEX0.CPSM == PSM_PSMCT32 || TEX0.CPSM == PSM_PSMCT24)
 		{
@@ -257,7 +257,7 @@ void GSClut::Read32(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA)
 		m_read.dirty = false;
 		m_read.adirty = true;
 
-		WORD* clut = m_clut + (TEX0.CSA << 4);
+		uint16* clut = m_clut + (TEX0.CSA << 4);
 
 		if(TEX0.CPSM == PSM_PSMCT32 || TEX0.CPSM == PSM_PSMCT24)
 		{
@@ -272,7 +272,7 @@ void GSClut::Read32(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA)
 			case PSM_PSMT4HH:
 				// TODO: merge these functions
 				ReadCLUT_T32_I4(clut, m_buff32);
-				ExpandCLUT64_T32_I8(m_buff32, (UINT64*)m_buff64); // sw renderer does not need m_buff64 anymore
+				ExpandCLUT64_T32_I8(m_buff32, (uint64*)m_buff64); // sw renderer does not need m_buff64 anymore
 				break;
 			}
 		}
@@ -289,7 +289,7 @@ void GSClut::Read32(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA)
 			case PSM_PSMT4HH:
 				// TODO: merge these functions
 				Expand16(clut, m_buff32, 16, TEXA);
-				ExpandCLUT64_T32_I8(m_buff32, (UINT64*)m_buff64); // sw renderer does not need m_buff64 anymore
+				ExpandCLUT64_T32_I8(m_buff32, (uint64*)m_buff64); // sw renderer does not need m_buff64 anymore
 				break;
 			}
 		}
@@ -306,9 +306,9 @@ void GSClut::GetAlphaMinMax32(int& amin, int& amax)
 	{
 		m_read.adirty = false;
 
-		// DWORD bpp = GSLocalMemory::m_psm[m_read.TEX0.PSM].trbpp;
-		DWORD cbpp = GSLocalMemory::m_psm[m_read.TEX0.CPSM].trbpp;
-		DWORD pal = GSLocalMemory::m_psm[m_read.TEX0.PSM].pal;
+		// uint32 bpp = GSLocalMemory::m_psm[m_read.TEX0.PSM].trbpp;
+		uint32 cbpp = GSLocalMemory::m_psm[m_read.TEX0.CPSM].trbpp;
+		uint32 pal = GSLocalMemory::m_psm[m_read.TEX0.PSM].pal;
 
 		if(cbpp == 24 && m_read.TEXA.AEM == 0)
 		{
@@ -352,10 +352,8 @@ void GSClut::GetAlphaMinMax32(int& amin, int& amax)
 
 //
 
-void GSClut::WriteCLUT_T32_I8_CSM1(const DWORD* RESTRICT src, WORD* RESTRICT clut)
+void GSClut::WriteCLUT_T32_I8_CSM1(const uint32* RESTRICT src, uint16* RESTRICT clut)
 {
-	#if _M_SSE >= 0x200
-
 	for(int i = 0; i < 64; i += 16)
 	{
 		WriteCLUT_T32_I4_CSM1(&src[i +   0], &clut[i * 2 +   0]);
@@ -363,26 +361,10 @@ void GSClut::WriteCLUT_T32_I8_CSM1(const DWORD* RESTRICT src, WORD* RESTRICT clu
 		WriteCLUT_T32_I4_CSM1(&src[i + 128], &clut[i * 2 + 128]);
 		WriteCLUT_T32_I4_CSM1(&src[i + 192], &clut[i * 2 + 144]);
 	}
-
-	#else
-
-	for(int j = 0; j < 2; j++, src += 128, clut += 128)
-	{
-		for(int i = 0; i < 128; i++) 
-		{
-			DWORD c = src[clutTableT32I8[i]];
-			clut[i] = (WORD)(c & 0xffff);
-			clut[i + 256] = (WORD)(c >> 16);
-		}
-	}
-
-	#endif
 }
 
-__forceinline void GSClut::WriteCLUT_T32_I4_CSM1(const DWORD* RESTRICT src, WORD* RESTRICT clut)
+__forceinline void GSClut::WriteCLUT_T32_I4_CSM1(const uint32* RESTRICT src, uint16* RESTRICT clut)
 {
-	#if _M_SSE >= 0x200
-
 	GSVector4i* s = (GSVector4i*)src;
 	GSVector4i* d = (GSVector4i*)clut;
 
@@ -400,23 +382,10 @@ __forceinline void GSClut::WriteCLUT_T32_I4_CSM1(const DWORD* RESTRICT src, WORD
 	d[1] = v1;
 	d[32] = v2;
 	d[33] = v3;
-
-	#else
-
-	for(int i = 0; i < 16; i++) 
-	{
-		DWORD c = src[clutTableT32I4[i]];
-		clut[i] = (WORD)(c & 0xffff);
-		clut[i + 256] = (WORD)(c >> 16);
-	}
-
-	#endif
 }
 
-void GSClut::WriteCLUT_T16_I8_CSM1(const WORD* RESTRICT src, WORD* RESTRICT clut)
+void GSClut::WriteCLUT_T16_I8_CSM1(const uint16* RESTRICT src, uint16* RESTRICT clut)
 {
-	#if _M_SSE >= 0x200
-
 	GSVector4i* s = (GSVector4i*)src;
 	GSVector4i* d = (GSVector4i*)clut;
 
@@ -436,21 +405,9 @@ void GSClut::WriteCLUT_T16_I8_CSM1(const WORD* RESTRICT src, WORD* RESTRICT clut
 		d[i + 2] = v1;
 		d[i + 3] = v3;
 	}
-
-	#else
-
-	for(int j = 0; j < 8; j++, src += 32, clut += 32) 
-	{
-		for(int i = 0; i < 32; i++)
-		{
-			clut[i] = src[clutTableT16I8[i]];
-		}
-	}
-
-	#endif
 }
 
-__forceinline void GSClut::WriteCLUT_T16_I4_CSM1(const WORD* RESTRICT src, WORD* RESTRICT clut)
+__forceinline void GSClut::WriteCLUT_T16_I4_CSM1(const uint16* RESTRICT src, uint16* RESTRICT clut)
 {
 	for(int i = 0; i < 16; i++) 
 	{
@@ -458,29 +415,16 @@ __forceinline void GSClut::WriteCLUT_T16_I4_CSM1(const WORD* RESTRICT src, WORD*
 	}
 }
 
-void GSClut::ReadCLUT_T32_I8(const WORD* RESTRICT clut, DWORD* RESTRICT dst)
+void GSClut::ReadCLUT_T32_I8(const uint16* RESTRICT clut, uint32* RESTRICT dst)
 {
-	#if _M_SSE >= 0x200
-
 	for(int i = 0; i < 256; i += 16)
 	{
 		ReadCLUT_T32_I4(&clut[i], &dst[i]);
 	}
-
-	#else 
-
-	for(int i = 0; i < 256; i++)
-	{
-		dst[i] = ((DWORD)clut[i + 256] << 16) | clut[i];
-	}
-
-	#endif
 }
 
-__forceinline void GSClut::ReadCLUT_T32_I4(const WORD* RESTRICT clut, DWORD* RESTRICT dst)
+__forceinline void GSClut::ReadCLUT_T32_I4(const uint16* RESTRICT clut, uint32* RESTRICT dst)
 {
-	#if _M_SSE >= 0x200
-
 	GSVector4i* s = (GSVector4i*)clut;
 	GSVector4i* d = (GSVector4i*)dst;
 
@@ -495,21 +439,10 @@ __forceinline void GSClut::ReadCLUT_T32_I4(const WORD* RESTRICT clut, DWORD* RES
 	d[1] = v1;
 	d[2] = v2;
 	d[3] = v3;
-
-	#else 
-
-	for(int i = 0; i < 16; i++)
-	{
-		dst[i] = ((DWORD)clut[i + 256] << 16) | clut[i];
-	}
-
-	#endif
 }
 
-__forceinline void GSClut::ReadCLUT_T32_I4(const WORD* RESTRICT clut, DWORD* RESTRICT dst32, UINT64* RESTRICT dst64)
+__forceinline void GSClut::ReadCLUT_T32_I4(const uint16* RESTRICT clut, uint32* RESTRICT dst32, uint64* RESTRICT dst64)
 {
-	#if _M_SSE >= 0x200
-
 	GSVector4i* s = (GSVector4i*)clut;
 	GSVector4i* d32 = (GSVector4i*)dst32;
 	GSVector4i* d64 = (GSVector4i*)dst64;
@@ -530,53 +463,18 @@ __forceinline void GSClut::ReadCLUT_T32_I4(const WORD* RESTRICT clut, DWORD* RES
 	ExpandCLUT64_T32(s1, s0, s1, s2, s3, &d64[32]);
 	ExpandCLUT64_T32(s2, s0, s1, s2, s3, &d64[64]);
 	ExpandCLUT64_T32(s3, s0, s1, s2, s3, &d64[96]);
-
-	#else 
-
-	for(int i = 0; i < 16; i++)
-	{
-		dst[i] = ((DWORD)clut[i + 256] << 16) | clut[i];
-	}
-
-	DWORD* d = (DWORD*)dst64;
-
-	for(int j = 0; j < 16; j++, d += 32)
-	{
-		DWORD hi = dst32[j];
-
-		for(int i = 0; i < 16; i++)
-		{
-			d[i * 2 + 0] = dst32[i];
-			d[i * 2 + 1] = hi;
-		}
-	}
-
-	#endif
 }
 
-void GSClut::ReadCLUT_T16_I8(const WORD* RESTRICT clut, DWORD* RESTRICT dst)
+void GSClut::ReadCLUT_T16_I8(const uint16* RESTRICT clut, uint32* RESTRICT dst)
 {
-	#if _M_SSE >= 0x200
-
 	for(int i = 0; i < 256; i += 16)
 	{
 		ReadCLUT_T16_I4(&clut[i], &dst[i]);
 	}
-
-	#else 
-
-	for(int i = 0; i < 256; i++)
-	{
-		dst[i] = (DWORD)clut[i];
-	}
-
-	#endif
 }
 
-__forceinline void GSClut::ReadCLUT_T16_I4(const WORD* RESTRICT clut, DWORD* RESTRICT dst)
+__forceinline void GSClut::ReadCLUT_T16_I4(const uint16* RESTRICT clut, uint32* RESTRICT dst)
 {
-	#if _M_SSE >= 0x200
-
 	GSVector4i* s = (GSVector4i*)clut;
 	GSVector4i* d = (GSVector4i*)dst;
 
@@ -587,21 +485,10 @@ __forceinline void GSClut::ReadCLUT_T16_I4(const WORD* RESTRICT clut, DWORD* RES
 	d[1] = v0.uph16();
 	d[2] = v1.upl16();
 	d[3] = v1.uph16();
-
-	#else 
-
-	for(int i = 0; i < 16; i++)
-	{
-		dst[i] = (DWORD)clut[i];
-	}
-
-	#endif
 }
 
-__forceinline void GSClut::ReadCLUT_T16_I4(const WORD* RESTRICT clut, DWORD* RESTRICT dst32, UINT64* RESTRICT dst64)
+__forceinline void GSClut::ReadCLUT_T16_I4(const uint16* RESTRICT clut, uint32* RESTRICT dst32, uint64* RESTRICT dst64)
 {
-	#if _M_SSE >= 0x200
-
 	GSVector4i* s = (GSVector4i*)clut;
 	GSVector4i* d32 = (GSVector4i*)dst32;
 	GSVector4i* d64 = (GSVector4i*)dst64;
@@ -623,33 +510,10 @@ __forceinline void GSClut::ReadCLUT_T16_I4(const WORD* RESTRICT clut, DWORD* RES
 	ExpandCLUT64_T16(s1, s0, s1, s2, s3, &d64[32]);
 	ExpandCLUT64_T16(s2, s0, s1, s2, s3, &d64[64]);
 	ExpandCLUT64_T16(s3, s0, s1, s2, s3, &d64[96]);
-
-	#else 
-
-	for(int i = 0; i < 16; i++)
-	{
-		dst32[i] = (DWORD)clut[i];
-	}
-
-	DWORD* d = (DWORD*)dst64;
-
-	for(int j = 0; j < 16; j++, d += 32)
-	{
-		DWORD hi = dst32[j] << 16;
-
-		for(int i = 0; i < 16; i++)
-		{
-			d[i * 2 + 0] = hi | (dst32[i] & 0xffff);
-		}
-	}
-
-	#endif
 }
 
-void GSClut::ExpandCLUT64_T32_I8(const DWORD* RESTRICT src, UINT64* RESTRICT dst)
+void GSClut::ExpandCLUT64_T32_I8(const uint32* RESTRICT src, uint64* RESTRICT dst)
 {
-	#if _M_SSE >= 0x200
-
 	GSVector4i* s = (GSVector4i*)src;
 	GSVector4i* d = (GSVector4i*)dst;
 
@@ -662,23 +526,6 @@ void GSClut::ExpandCLUT64_T32_I8(const DWORD* RESTRICT src, UINT64* RESTRICT dst
 	ExpandCLUT64_T32(s1, s0, s1, s2, s3, &d[32]);
 	ExpandCLUT64_T32(s2, s0, s1, s2, s3, &d[64]);
 	ExpandCLUT64_T32(s3, s0, s1, s2, s3, &d[96]);
-
-	#else 
-
-	DWORD* d = (DWORD*)dst;
-
-	for(int j = 0; j < 16; j++, d += 32)
-	{
-		DWORD hi = src[j];
-
-		for(int i = 0; i < 16; i++)
-		{
-			d[i * 2 + 0] = src[i];
-			d[i * 2 + 1] = hi;
-		}
-	}
-
-	#endif
 }
 
 __forceinline void GSClut::ExpandCLUT64_T32(const GSVector4i& hi, const GSVector4i& lo0, const GSVector4i& lo1, const GSVector4i& lo2, const GSVector4i& lo3, GSVector4i* dst)
@@ -707,10 +554,8 @@ __forceinline void GSClut::ExpandCLUT64_T32(const GSVector4i& hi, const GSVector
 	dst[1] = lo.uph32(hi);
 }
 
-void GSClut::ExpandCLUT64_T16_I8(const DWORD* RESTRICT src, UINT64* RESTRICT dst)
+void GSClut::ExpandCLUT64_T16_I8(const uint32* RESTRICT src, uint64* RESTRICT dst)
 {
-	#if _M_SSE >= 0x200
-
 	GSVector4i* s = (GSVector4i*)src;
 	GSVector4i* d = (GSVector4i*)dst;
 
@@ -723,22 +568,6 @@ void GSClut::ExpandCLUT64_T16_I8(const DWORD* RESTRICT src, UINT64* RESTRICT dst
 	ExpandCLUT64_T16(s1, s0, s1, s2, s3, &d[32]);
 	ExpandCLUT64_T16(s2, s0, s1, s2, s3, &d[64]);
 	ExpandCLUT64_T16(s3, s0, s1, s2, s3, &d[96]);
-
-	#else
-
-	DWORD* d = (DWORD*)dst;
-
-	for(int j = 0; j < 16; j++, d += 32)
-	{
-		DWORD hi = src[j] << 16;
-
-		for(int i = 0; i < 16; i++)
-		{
-			d[i * 2 + 0] = hi | (src[i] & 0xffff);
-		}
-	}
-
-	#endif
 }
 
 __forceinline void GSClut::ExpandCLUT64_T16(const GSVector4i& hi, const GSVector4i& lo0, const GSVector4i& lo1, const GSVector4i& lo2, const GSVector4i& lo3, GSVector4i* dst)
@@ -774,10 +603,8 @@ static const GSVector4i s_bm(0x00007c00);
 static const GSVector4i s_gm(0x000003e0);
 static const GSVector4i s_rm(0x0000001f);
 
-void GSClut::Expand16(const WORD* RESTRICT src, DWORD* RESTRICT dst, int w, const GIFRegTEXA& TEXA)
+void GSClut::Expand16(const uint16* RESTRICT src, uint32* RESTRICT dst, int w, const GIFRegTEXA& TEXA)
 {
-	#if _M_SSE >= 0x200
-
 	ASSERT((w & 7) == 0);
 
 	const GSVector4i rm = s_rm;
@@ -827,43 +654,21 @@ void GSClut::Expand16(const WORD* RESTRICT src, DWORD* RESTRICT dst, int w, cons
 			d[i * 2 + 1] = ((ch & rm) << 3) | ((ch & gm) << 6) | ((ch & bm) << 9) | TA0.blend8(TA1, ch.sra16(15)).andnot(ch == GSVector4i::zero());
 		}
 	}
-
-	#else
-
-	DWORD TA0 = (DWORD)TEXA.TA0 << 24;
-	DWORD TA1 = (DWORD)TEXA.TA1 << 24;
-
-	if(!TEXA.AEM)
-	{
-		for(int i = 0; i < w; i++)
-		{
-			dst[i] = ((src[i] & 0x8000) ? TA1 : TA0) | ((src[i] & 0x7c00) << 9) | ((src[i] & 0x03e0) << 6) | ((src[i] & 0x001f) << 3);
-		}
-	}
-	else
-	{
-		for(int i = 0; i < w; i++)
-		{
-			dst[i] = ((src[i] & 0x8000) ? TA1 : src[i] ? TA0 : 0) | ((src[i] & 0x7c00) << 9) | ((src[i] & 0x03e0) << 6) | ((src[i] & 0x001f) << 3);
-		}
-	}
-
-	#endif
 }
 
 //
 
 bool GSClut::WriteState::IsDirty(const GIFRegTEX0& TEX0, const GIFRegTEXCLUT& TEXCLUT)
 {
-	return dirty || !(GSVector4i::load<true>(this) == GSVector4i::load(&TEX0, &TEXCLUT)).alltrue();
+	return dirty || !GSVector4i::load<true>(this).eq(GSVector4i::load(&TEX0, &TEXCLUT));
 }
 
 bool GSClut::ReadState::IsDirty(const GIFRegTEX0& TEX0)
 {
-	return dirty || !(GSVector4i::load<true>(this) == GSVector4i::load(&TEX0, &this->TEXA)).alltrue();
+	return dirty || !GSVector4i::load<true>(this).eq(GSVector4i::load(&TEX0, &this->TEXA));
 }
 
 bool GSClut::ReadState::IsDirty(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA)
 {
-	return dirty || !(GSVector4i::load<true>(this) == GSVector4i::load(&TEX0, &TEXA)).alltrue();
+	return dirty || !GSVector4i::load<true>(this).eq(GSVector4i::load(&TEX0, &TEXA));
 }

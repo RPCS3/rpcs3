@@ -84,15 +84,15 @@ public:
 
 	struct Game 
 	{
-		DWORD crc; 
+		uint32 crc; 
 		Title title; 
 		Region region;
 	};
 
 private:
 	static Game m_games[];
-	static hash_map<DWORD, Game*> m_map;
+	static hash_map<uint32, Game*> m_map;
 
 public:
-	static Game Lookup(DWORD crc);
+	static Game Lookup(uint32 crc);
 };

@@ -55,21 +55,19 @@ public:
 		DVRANGE.Y2 = 256;
 	}
 
-	CRect GetDisplayRect()
+	GSVector4i GetDisplayRect()
 	{
 		static int s_width[] = {256, 320, 512, 640, 368, 384, 512, 640};
 		static int s_height[] = {240, 480};
 
-		CRect r;
+		GSVector4i r;
 
 		r.left = DAREA.X & ~7; // FIXME
 		r.top = DAREA.Y;
 		r.right = r.left + s_width[(STATUS.WIDTH1 << 2) | STATUS.WIDTH0];
 		r.bottom = r.top + (DVRANGE.Y2 - DVRANGE.Y1) * s_height[STATUS.HEIGHT] / 240;
 
-		r &= CRect(0, 0, 1024, 512);
-
-		return r;
+		return r.rintersect(GSVector4i(0, 0, 1024, 512));
 	}
 
 	int GetFPS()

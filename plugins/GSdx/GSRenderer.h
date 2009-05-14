@@ -95,7 +95,7 @@ public:
 	GSWnd m_wnd;
 
 public:
-	GSRendererBase(BYTE* base, bool mt, void (*irq)(), const GSRendererSettings& rs)
+	GSRendererBase(uint8* base, bool mt, void (*irq)(), const GSRendererSettings& rs)
 		: GSState(base, mt, irq)
 		, m_osd(true)
 	{
@@ -125,8 +125,8 @@ protected:
 	{
 		bool en[2];
 
-		CRect fr[2];
-		CRect dr[2];
+		GSVector4i fr[2];
+		GSVector4i dr[2];
 
 		int baseline = INT_MAX;
 
@@ -164,8 +164,8 @@ protected:
 
 		if(samesrc && m_regs->PMODE.SLBG == 0 && m_regs->PMODE.MMOD == 1 && m_regs->PMODE.ALP == 0x80)
 		{
-			if(fr[0] == fr[1] + CRect(0, 1, 0, 0) && dr[0] == dr[1] + CRect(0, 0, 0, 1)
-			|| fr[1] == fr[0] + CRect(0, 1, 0, 0) && dr[1] == dr[0] + CRect(0, 0, 0, 1))
+			if(fr[0].eq(fr[1] + GSVector4i(0, 1, 0, 0)) && dr[0].eq(dr[1] + GSVector4i(0, 0, 0, 1))
+			|| fr[1].eq(fr[0] + GSVector4i(0, 1, 0, 0)) && dr[1].eq(dr[0] + GSVector4i(0, 0, 0, 1)))
 			{
 				// persona 4:
 				//
@@ -195,7 +195,7 @@ protected:
 
 				blurdetected = true;
 			}
-			else if(dr[0] == dr[1] && (fr[0] == fr[1] + CPoint(0, 1) || fr[1] == fr[0] + CPoint(0, 1)))
+			else if(dr[0].eq(dr[1]) && (fr[0].eq(fr[1] + GSVector4i(0, 1, 0, 1)) || fr[1].eq(fr[0] + GSVector4i(0, 1, 0, 1))))
 			{
 				// dq5:
 				//
@@ -214,8 +214,8 @@ protected:
 			}
 		}
 
-		CSize fs(0, 0);
-		CSize ds(0, 0);
+		GSVector2i fs(0, 0);
+		GSVector2i ds(0, 0);
 
 		Texture tex[2];
 
@@ -238,13 +238,13 @@ protected:
 		{
 			if(!en[i] || !tex[i]) continue;
 
-			CRect r = fr[i];
+			GSVector4i r = fr[i];
 
 			// overscan hack
 
-			if(dr[i].Height() > 512) // hmm
+			if(dr[i].height() > 512) // hmm
 			{
-				int y = GetDeviceSize(i).cy;
+				int y = GetDeviceRect(i).height();
 				if(m_regs->SMODE2.INT && m_regs->SMODE2.FFMD) y /= 2;
 				r.bottom = r.top + y;
 			}
@@ -280,17 +280,16 @@ protected:
 
 			dst[i].x = o.x;
 			dst[i].y = o.y;
-			dst[i].z = o.x + tex[i].m_scale.x * r.Width();
-			dst[i].w = o.y + tex[i].m_scale.y * r.Height();
+			dst[i].z = o.x + tex[i].m_scale.x * r.width();
+			dst[i].w = o.y + tex[i].m_scale.y * r.height();
 
-			fs.cx = max(fs.cx, (int)(dst[i].z + 0.5f));
-			fs.cy = max(fs.cy, (int)(dst[i].w + 0.5f));
+			fs.x = max(fs.x, (int)(dst[i].z + 0.5f));
+			fs.y = max(fs.y, (int)(dst[i].w + 0.5f));
 		}
 
-		ds.cx = fs.cx;
-		ds.cy = fs.cy;
+		ds = fs;
 
-		if(m_regs->SMODE2.INT && m_regs->SMODE2.FFMD) ds.cy *= 2;
+		if(m_regs->SMODE2.INT && m_regs->SMODE2.FFMD) ds.y *= 2;
 
 		bool slbg = m_regs->PMODE.SLBG;
 		bool mmod = m_regs->PMODE.MMOD;
@@ -331,7 +330,7 @@ protected:
 				fd.size = 0;
 				fd.data = NULL;
 				Freeze(&fd, true);
-				fd.data = new BYTE[fd.size];
+				fd.data = new uint8[fd.size];
 				Freeze(&fd, false);
 
 				m_dump.Open(m_snapshot, m_crc, fd, m_regs);
@@ -359,7 +358,7 @@ protected:
 			return;
 		}
 
-		CSize size = m_capture.GetSize();
+		GSVector2i size = m_capture.GetSize();
 
 		Texture current;
 
@@ -367,9 +366,9 @@ protected:
 
 		Texture offscreen;
 
-		if(m_dev.CopyOffscreen(current, GSVector4(0, 0, 1, 1), offscreen, size.cx, size.cy))
+		if(m_dev.CopyOffscreen(current, GSVector4(0, 0, 1, 1), offscreen, size.x, size.y))
 		{
-			BYTE* bits = NULL;
+			uint8* bits = NULL;
 			int pitch = 0;
 
 			if(offscreen.Map(&bits, pitch))
@@ -412,7 +411,7 @@ public:
 	GSCapture m_capture;
 
 public:
-	GSRenderer(BYTE* base, bool mt, void (*irq)(), const GSRendererSettings& rs, bool psrr)
+	GSRenderer(uint8* base, bool mt, void (*irq)(), const GSRendererSettings& rs, bool psrr)
 		: GSRendererBase(base, mt, irq, rs)
 		, m_psrr(psrr)
 	{
@@ -466,12 +465,14 @@ public:
 
 			double fps = 1000.0f / m_perfmon.Get(GSPerfMon::Frame);
 
-			string interlace = m_regs->SMODE2.INT ? (string("Interlaced ") + (m_regs->SMODE2.FFMD ? "(frame)" : "(field)")) : "Progressive";
+			string s = m_regs->SMODE2.INT ? (string("Interlaced ") + (m_regs->SMODE2.FFMD ? "(frame)" : "(field)")) : "Progressive";
+
+			GSVector4i r = GetDisplayRect();
 			
 			s_stats = format(
 				"%I64d | %d x %d | %.2f fps (%d%%) | %s - %s | %s | %d/%d/%d | %d%% CPU | %.2f | %.2f", 
-				m_perfmon.GetFrame(), GetDisplaySize().cx, GetDisplaySize().cy, fps, (int)(100.0 * fps / GetFPS()),
-				interlace.c_str(),
+				m_perfmon.GetFrame(), r.width(), r.height(), fps, (int)(100.0 * fps / GetFPS()),
+				s.c_str(),
 				GSSettingsDlg::g_interlace[m_interlace].name,
 				GSSettingsDlg::g_aspectratio[m_aspectratio].name,
 				(int)m_perfmon.Get(GSPerfMon::Quad),
@@ -516,13 +517,11 @@ public:
 
 		//
 
-		CRect r;
+		GSVector4i r;
 		
-		m_wnd.GetClientRect(&r);
+		m_wnd.GetClientRect(r);
 
-		GSUtil::FitRect(r, m_aspectratio);
-
-		m_dev.Present(r);
+		m_dev.Present(r.fit(m_aspectratio));
 
 		//
 
@@ -541,7 +540,7 @@ public:
 		return true;
 	}
 
-	virtual void MinMaxUV(int w, int h, CRect& r) {r = CRect(0, 0, w, h);}
+	virtual void MinMaxUV(int w, int h, GSVector4i& r) {r = GSVector4i(0, 0, w, h);}
 	virtual bool CanUpscale() {return !m_nativeres;}
 };
 
@@ -603,7 +602,7 @@ protected:
 		m_maxcount -= 100;
 	}
 
-	template<DWORD prim> __forceinline Vertex* DrawingKick(bool skip, DWORD& count)
+	template<uint32 prim> __forceinline Vertex* DrawingKick(bool skip, int& count)
 	{
 		switch(prim)
 		{
@@ -683,7 +682,7 @@ protected:
 	virtual void Draw() = 0;
 
 public:
-	GSRendererT(BYTE* base, bool mt, void (*irq)(), const GSRendererSettings& rs, bool psrr = true)
+	GSRendererT(uint8* base, bool mt, void (*irq)(), const GSRendererSettings& rs, bool psrr = true)
 		: GSRenderer<Device>(base, mt, irq, rs, psrr)
 		, m_count(0)
 		, m_maxcount(0)

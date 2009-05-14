@@ -30,7 +30,7 @@ struct GPURendererSettings
 	int m_dither;
 	int m_aspectratio;
 	bool m_vsync;
-	CSize m_scale;
+	GSVector2i m_scale;
 };
 
 class GPURendererBase : public GPUState, protected GPURendererSettings
@@ -142,7 +142,7 @@ protected:
 
 	void VertexKick()
 	{
-		if(m_vl.GetCount() < m_env.PRIM.VTX)
+		if(m_vl.GetCount() < (int)m_env.PRIM.VTX)
 		{
 			return;
 		}
@@ -214,7 +214,7 @@ protected:
 
 			if(m_env.PRIM.TME)
 			{
-				CRect r;
+				GSVector4i r;
 
 				r.left = m_env.STATUS.TX << 6;
 				r.top = m_env.STATUS.TY << 8;
@@ -246,11 +246,8 @@ protected:
 			return false;
 		}
 
-		CSize s;
+		GSVector2i s = st[0].GetSize();
 		
-		s.cx = st[0].GetWidth();
-		s.cy = st[0].GetHeight();
-
 		GSVector4 sr[2];
 
 		sr[0].x = 0;
@@ -262,8 +259,8 @@ protected:
 
 		dr[0].x = 0;
 		dr[0].y = 0;
-		dr[0].z = (float)s.cx;
-		dr[0].w = (float)s.cy;
+		dr[0].z = (float)s.x;
+		dr[0].w = (float)s.y;
 
 		GSVector4 c(0, 0, 0, 1);
 
@@ -345,10 +342,10 @@ public:
 
 			double fps = 1000.0f / m_perfmon.Get(GSPerfMon::Frame);
 
-			CRect r = m_env.GetDisplayRect();
+			GSVector4i r = m_env.GetDisplayRect();
 
-			int w = r.Width() << m_scale.cx;
-			int h = r.Height() << m_scale.cy;
+			int w = r.width() << m_scale.x;
+			int h = r.height() << m_scale.y;
 
 			s_stats = format(
 				"%I64d | %d x %d | %.2f fps (%d%%) | %d/%d | %d%% CPU | %.2f | %.2f", 
@@ -375,13 +372,11 @@ public:
 			ResetDevice();
 		}
 
-		CRect r;
+		GSVector4i r;
 		
-		GetClientRect(m_hWnd, &r);
+		GetClientRect(m_hWnd, r);
 
-		GSUtil::FitRect(r, m_aspectratio);
-
-		m_dev.Present(r);
+		m_dev.Present(r.fit(m_aspectratio));
 	}
 
 	virtual bool MakeSnapshot(const string& path)

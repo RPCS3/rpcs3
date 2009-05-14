@@ -25,18 +25,22 @@
 
 class GSDirtyRect
 {
-	DWORD m_psm;
-	CRect m_rect;
+	int left;
+	int top;
+	int right;
+	int bottom;
+
+	uint32 psm;
 
 public:
 	GSDirtyRect();
-	GSDirtyRect(DWORD psm, CRect rect);
-	CRect GetDirtyRect(const GIFRegTEX0& TEX0);
+	GSDirtyRect(const GSVector4i& r, uint32 psm);
+	GSVector4i GetDirtyRect(const GIFRegTEX0& TEX0);
 };
 
 class GSDirtyRectList : public list<GSDirtyRect>
 {
 public:
 	GSDirtyRectList() {}
-	CRect GetDirtyRect(const GIFRegTEX0& TEX0, CSize size);
+	GSVector4i GetDirtyRectAndClear(const GIFRegTEX0& TEX0, const GSVector2i& size);
 };

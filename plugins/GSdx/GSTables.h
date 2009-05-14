@@ -21,19 +21,19 @@
 
 #pragma once
 
-extern const BYTE blockTable32[4][8];
-extern const BYTE blockTable32Z[4][8];
-extern const BYTE blockTable16[8][4];
-extern const BYTE blockTable16S[8][4];
-extern const BYTE blockTable16Z[8][4];
-extern const BYTE blockTable16SZ[8][4];
-extern const BYTE blockTable8[4][8];
-extern const BYTE blockTable4[8][4];
-extern const BYTE columnTable32[8][8];
-extern const BYTE columnTable16[8][16];
-extern const BYTE columnTable8[16][16];
-extern const WORD columnTable4[16][32];
-extern const BYTE clutTableT32I8[128];
-extern const BYTE clutTableT32I4[16]; 
-extern const BYTE clutTableT16I8[32];
-extern const BYTE clutTableT16I4[16];
+extern const uint8 blockTable32[4][8];
+extern const uint8 blockTable32Z[4][8];
+extern const uint8 blockTable16[8][4];
+extern const uint8 blockTable16S[8][4];
+extern const uint8 blockTable16Z[8][4];
+extern const uint8 blockTable16SZ[8][4];
+extern const uint8 blockTable8[4][8];
+extern const uint8 blockTable4[8][4];
+extern const uint8 columnTable32[8][8];
+extern const uint8 columnTable16[8][16];
+extern const uint8 columnTable8[16][16];
+extern const uint16 columnTable4[16][32];
+extern const uint8 clutTableT32I8[128];
+extern const uint8 clutTableT32I4[16]; 
+extern const uint8 clutTableT16I8[32];
+extern const uint8 clutTableT16I4[16];

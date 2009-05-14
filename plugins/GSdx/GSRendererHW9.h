@@ -57,9 +57,9 @@ protected:
 	void UpdateFBA(Texture& rt);
 
 public:
-	GSRendererHW9(BYTE* base, bool mt, void (*irq)(), const GSRendererSettings& rs);
+	GSRendererHW9(uint8* base, bool mt, void (*irq)(), const GSRendererSettings& rs);
 
 	bool Create(const string& title);
 
-	template<DWORD prim, DWORD tme, DWORD fst> void VertexKick(bool skip);
+	template<uint32 prim, uint32 tme, uint32 fst> void VertexKick(bool skip);
 };

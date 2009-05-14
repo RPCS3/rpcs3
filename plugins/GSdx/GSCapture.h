@@ -22,11 +22,12 @@
 #pragma once
 
 #include "GSCaptureDlg.h"
+#include "GSVector.h"
 
 class GSCapture : protected CCritSec
 {
 	bool m_capturing;
-	CSize m_size;
+	GSVector2i m_size;
 	CComPtr<IGraphBuilder> m_graph;
 	CComPtr<IBaseFilter> m_src;
 
@@ -39,5 +40,5 @@ public:
 	bool EndCapture();
 
 	bool IsCapturing() {return m_capturing;}
-	CSize GetSize() {return m_size;}
+	GSVector2i GetSize() {return m_size;}
 };

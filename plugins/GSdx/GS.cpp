@@ -35,9 +35,9 @@
 static HRESULT s_hr = E_FAIL;
 static GSRendererBase* s_gs = NULL;
 static void (*s_irq)() = NULL;
-static BYTE* s_basemem = NULL;
+static uint8* s_basemem = NULL;
 
-EXPORT_C_(UINT32) PS2EgetLibType()
+EXPORT_C_(uint32) PS2EgetLibType()
 {
 	return PS2E_LT_GS;
 }
@@ -47,15 +47,15 @@ EXPORT_C_(char*) PS2EgetLibName()
 	return GSUtil::GetLibName();
 }
 
-EXPORT_C_(UINT32) PS2EgetLibVersion2(UINT32 type)
+EXPORT_C_(uint32) PS2EgetLibVersion2(uint32 type)
 {
-	const UINT32 revision = 0;
-	const UINT32 build = 1;
+	const uint32 revision = 0;
+	const uint32 build = 1;
 
 	return (build << 0) | (revision << 8) | (PS2E_GS_VERSION << 16) | (PLUGIN_VERSION << 24);
 }
 
-EXPORT_C_(UINT32) PS2EgetCpuPlatform()
+EXPORT_C_(uint32) PS2EgetCpuPlatform()
 {
 #if _M_AMD64
 	return PS2E_X86_64;
@@ -64,7 +64,7 @@ EXPORT_C_(UINT32) PS2EgetCpuPlatform()
 #endif
 }
 
-EXPORT_C GSsetBaseMem(BYTE* mem)
+EXPORT_C GSsetBaseMem(uint8* mem)
 {
 	s_basemem = mem - 0x12000000;
 }
@@ -175,37 +175,37 @@ EXPORT_C GSreset()
 	s_gs->Reset();
 }
 
-EXPORT_C GSgifSoftReset(int mask)
+EXPORT_C GSgifSoftReset(uint32 mask)
 {
-	s_gs->SoftReset((BYTE)mask);
+	s_gs->SoftReset(mask);
 }
 
-EXPORT_C GSwriteCSR(UINT32 csr)
+EXPORT_C GSwriteCSR(uint32 csr)
 {
 	s_gs->WriteCSR(csr);
 }
 
-EXPORT_C GSreadFIFO(BYTE* mem)
+EXPORT_C GSreadFIFO(uint8* mem)
 {
 	s_gs->ReadFIFO(mem, 1);
 }
 
-EXPORT_C GSreadFIFO2(BYTE* mem, UINT32 size)
+EXPORT_C GSreadFIFO2(uint8* mem, uint32 size)
 {
 	s_gs->ReadFIFO(mem, size);
 }
 
-EXPORT_C GSgifTransfer1(BYTE* mem, UINT32 addr)
+EXPORT_C GSgifTransfer1(uint8* mem, uint32 addr)
 {
 	s_gs->Transfer<0>(mem + addr, (0x4000 - addr) / 16);
 }
 
-EXPORT_C GSgifTransfer2(BYTE* mem, UINT32 size)
+EXPORT_C GSgifTransfer2(uint8* mem, uint32 size)
 {
 	s_gs->Transfer<1>(mem, size);
 }
 
-EXPORT_C GSgifTransfer3(BYTE* mem, UINT32 size)
+EXPORT_C GSgifTransfer3(uint8* mem, uint32 size)
 {
 	s_gs->Transfer<2>(mem, size);
 }
@@ -215,7 +215,7 @@ EXPORT_C GSvsync(int field)
 	s_gs->VSync(field);
 }
 
-EXPORT_C_(UINT32) GSmakeSnapshot(char* path)
+EXPORT_C_(uint32) GSmakeSnapshot(char* path)
 {
 	return s_gs->MakeSnapshot(string(path) + "gsdx");
 }
@@ -224,7 +224,7 @@ EXPORT_C GSkeyEvent(keyEvent* ev)
 {
 }
 
-EXPORT_C_(INT32) GSfreeze(int mode, GSFreezeData* data)
+EXPORT_C_(int) GSfreeze(int mode, GSFreezeData* data)
 {
 	if(mode == FREEZE_SAVE)
 	{
@@ -279,12 +279,12 @@ EXPORT_C GSirqCallback(void (*irq)())
 	s_irq = irq;
 }
 
-EXPORT_C GSsetGameCRC(DWORD crc, int options)
+EXPORT_C GSsetGameCRC(uint32 crc, int options)
 {
 	s_gs->SetGameCRC(crc, options);
 }
 
-EXPORT_C GSgetLastTag(UINT32* tag) 
+EXPORT_C GSgetLastTag(uint32* tag) 
 {
 	s_gs->GetLastTag(tag);
 }
@@ -309,25 +309,25 @@ EXPORT_C GSReplay(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow)
 
 	::SetPriorityClass(::GetCurrentProcess(), HIGH_PRIORITY_CLASS);
 
-	vector<BYTE> buff;
+	vector<uint8> buff;
 
 	if(FILE* fp = fopen(lpszCmdLine, "rb"))
 	{
 		GSinit();
 
-		BYTE regs[0x2000];
+		uint8 regs[0x2000];
 		GSsetBaseMem(regs);
 
 		HWND hWnd = NULL;
 		GSopen(&hWnd, "", true, renderer);
 
-		DWORD crc;
+		uint32 crc;
 		fread(&crc, 4, 1, fp);
 		GSsetGameCRC(crc, 0);
 
 		GSFreezeData fd;
 		fread(&fd.size, 4, 1, fp);
-		fd.data = new BYTE[fd.size];
+		fd.data = new uint8[fd.size];
 		fread(fd.data, fd.size, 1, fp);
 		GSfreeze(FREEZE_LOAD, &fd);
 		delete [] fd.data;
@@ -425,9 +425,9 @@ EXPORT_C GSBenchmark(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow
 			{PSM_PSMZ16S, "16ZS"},
 		};
 
-		BYTE* ptr = (BYTE*)_aligned_malloc(1024 * 1024 * 4, 16);
+		uint8* ptr = (uint8*)_aligned_malloc(1024 * 1024 * 4, 16);
 
-		for(int i = 0; i < 1024 * 1024 * 4; i++) ptr[i] = (BYTE)i;
+		for(int i = 0; i < 1024 * 1024 * 4; i++) ptr[i] = (uint8)i;
 
 		// 
 
@@ -470,7 +470,7 @@ EXPORT_C GSBenchmark(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow
 				TRXREG.RRW = w;
 				TRXREG.RRH = h;
 
-				CRect r(0, 0, w, h);
+				GSVector4i r(0, 0, w, h);
 
 				GIFRegTEX0 TEX0;
 
@@ -560,9 +560,9 @@ EXPORT_C GSBenchmark(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow
 	{
 		GSLocalMemory mem;
 
-		BYTE* ptr = (BYTE*)_aligned_malloc(1024 * 1024 * 4, 16);
+		uint8* ptr = (uint8*)_aligned_malloc(1024 * 1024 * 4, 16);
 
-		for(int i = 0; i < 1024 * 1024 * 4; i++) ptr[i] = (BYTE)i;
+		for(int i = 0; i < 1024 * 1024 * 4; i++) ptr[i] = (uint8)i;
 
 		const GSLocalMemory::psm_t& psm = GSLocalMemory::m_psm[PSM_PSMCT32];
 

@@ -65,14 +65,14 @@ class GPUState : public GSAlignedClass<16>
 	public:
 		int bytes;
 		int maxbytes;
-		BYTE* buff;
+		uint8* buff;
 		int cur;
 
 	public:
 		Buffer();
 		~Buffer();
 		void Reserve(int size);
-		void Append(const BYTE* src, int size);
+		void Append(const uint8* src, int size);
 		void Remove(int size);
 		void RemoveAll();
 	};
@@ -88,10 +88,10 @@ protected:
 
 	int s_n;
 
-	void Dump(const string& s, UINT32 TP, const CRect& r, int inc = true)
+	void Dump(const string& s, uint32 TP, const GSVector4i& r, int inc = true)
 	{
 		//if(m_perfmon.GetFrame() < 1000) 
-		//if((m_env.TWIN.ai32 & 0xfffff) == 0)
+		//if((m_env.TWIN.u32 & 0xfffff) == 0)
 		//if(!m_env.STATUS.ME && !m_env.STATUS.MD)
 			return;
 
@@ -108,7 +108,7 @@ protected:
 
 	void Dump(const string& s, int inc = true)
 	{
-		Dump(s, 2, CRect(0, 0, 1024, 512), inc);
+		Dump(s, 2, GSVector4i(0, 0, 1024, 512), inc);
 	}
 
 public:
@@ -116,10 +116,10 @@ public:
 	GPULocalMemory m_mem;
 	GPUVertex m_v;
 	GSPerfMon m_perfmon;
-	UINT32 m_status[256];
+	uint32 m_status[256];
 
 public:
-	GPUState(const CSize& scale);
+	GPUState(const GSVector2i& scale);
 	virtual ~GPUState();
 
 	virtual void Reset();
@@ -127,13 +127,13 @@ public:
 	virtual void FlushPrim() = 0;
 	virtual void ResetPrim() = 0;
 	virtual void VertexKick() = 0;
-	virtual void Invalidate(const CRect& r);
+	virtual void Invalidate(const GSVector4i& r);
 
-	void WriteData(const BYTE* mem, UINT32 size);
-	void ReadData(BYTE* mem, UINT32 size);
+	void WriteData(const uint8* mem, uint32 size);
+	void ReadData(uint8* mem, uint32 size);
 
-	void WriteStatus(UINT32 status);
-	UINT32 ReadStatus();
+	void WriteStatus(uint32 status);
+	uint32 ReadStatus();
 
 	void Freeze(GPUFreezeData* data);
 	void Defrost(const GPUFreezeData* data);

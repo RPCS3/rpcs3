@@ -32,7 +32,7 @@ class GSRendererHW10 : public GSRendererHW<GSDevice10, GSVertexHW10, GSTextureCa
 	typedef GSVertexHW10 Vertex;
 	typedef GSTextureCache10 TextureCache;
 
-	bool WrapZ(DWORD maxz);
+	bool WrapZ(uint32 maxz);
 
 protected:
 	GSTextureFX10 m_tfx;
@@ -48,9 +48,9 @@ protected:
 	void SetupDATE(Texture& rt, Texture& ds);
 
 public:
-	GSRendererHW10(BYTE* base, bool mt, void (*irq)(), const GSRendererSettings& rs);
+	GSRendererHW10(uint8* base, bool mt, void (*irq)(), const GSRendererSettings& rs);
 
 	bool Create(const string& title);
 
-	template<DWORD prim, DWORD tme, DWORD fst> void VertexKick(bool skip);
+	template<uint32 prim, uint32 tme, uint32 fst> void VertexKick(bool skip);
 };

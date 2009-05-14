@@ -46,3 +46,55 @@ GSVector4 GSVector4::cast(const GSVector4i& v)
 {
 	return GSVector4(_mm_castsi128_ps(v.m));
 }
+
+GSVector4i GSVector4i::fit(int arx, int ary) const
+{
+	GSVector4i r = *this;
+
+	if(arx > 0 && ary > 0)
+	{
+		int w = width();
+		int h = height();
+
+		if(w * ary > h * arx)
+		{
+			int w2 = w * arx / ary;
+			r.left = (r.left + r.right - w2) >> 1;
+			if(r.left & 1) r.left++;
+			r.right = r.left + w2;
+		}
+		else
+		{
+			int h2 = w * ary / arx;
+			r.top = (r.top + r.bottom - h2) >> 1;
+			if(r.top & 1) r.top++;
+			r.bottom = r.top + h2;
+		}
+
+		r = r.rintersect(*this);
+	}
+	else
+	{
+		r = *this;
+	}
+
+	return r;
+}
+
+GSVector4i GSVector4i::fit(int preset) const
+{
+	GSVector4i r;
+
+	static const int ar[][2] = {{0, 0}, {4, 3}, {16, 9}};
+
+	if(preset > 0 && preset < countof(ar))
+	{
+		r = fit(ar[preset][0], ar[preset][1]);
+	}
+	else
+	{
+		r = *this;
+	}
+
+	return r;
+}

@@ -40,15 +40,15 @@ public:
 	{
 		struct
 		{
-			DWORD bppz:2;
-			DWORD tme:1;
-			DWORD fst:1;
-			DWORD logz:1;
+			uint32 bppz:2;
+			uint32 tme:1;
+			uint32 fst:1;
+			uint32 logz:1;
 		};
 
-		DWORD dw;
+		uint32 key;
 
-		operator DWORD() {return dw & 0x1f;}
+		operator uint32() {return key & 0x1f;}
 	};
 
 	struct PSConstantBuffer
@@ -58,10 +58,10 @@ public:
 		float MAXU;
 		float MINV;
 		float MAXV;
-		DWORD UMSK;
-		DWORD UFIX;
-		DWORD VMSK;
-		DWORD VFIX;
+		uint32 UMSK;
+		uint32 UFIX;
+		uint32 VMSK;
+		uint32 VFIX;
 		float TA0;
 		float TA1;
 		float AREF;
@@ -74,74 +74,74 @@ public:
 	{
 		struct
 		{
-			DWORD fst:1;
-			DWORD wms:2;
-			DWORD wmt:2;
-			DWORD bpp:3;
-			DWORD aem:1;
-			DWORD tfx:3;
-			DWORD tcc:1;
-			DWORD ate:1;
-			DWORD atst:3;
-			DWORD fog:1;
-			DWORD clr1:1;
-			DWORD rt:1;
+			uint32 fst:1;
+			uint32 wms:2;
+			uint32 wmt:2;
+			uint32 bpp:3;
+			uint32 aem:1;
+			uint32 tfx:3;
+			uint32 tcc:1;
+			uint32 ate:1;
+			uint32 atst:3;
+			uint32 fog:1;
+			uint32 clr1:1;
+			uint32 rt:1;
 		};
 
-		DWORD dw;
+		uint32 key;
 
-		operator DWORD() {return dw & 0xfffff;}
+		operator uint32() {return key & 0xfffff;}
 	};
 
 	union PSSamplerSelector
 	{
 		struct
 		{
-			DWORD tau:1;
-			DWORD tav:1;
-			DWORD min:1;
-			DWORD mag:1;
+			uint32 tau:1;
+			uint32 tav:1;
+			uint32 min:1;
+			uint32 mag:1;
 		};
 
-		DWORD dw;
+		uint32 key;
 
-		operator DWORD() {return dw & 0xf;}
+		operator uint32() {return key & 0xf;}
 	};
 
 	union OMDepthStencilSelector
 	{
 		struct
 		{
-			DWORD zte:1;
-			DWORD ztst:2;
-			DWORD zwe:1;
-			DWORD date:1;
-			DWORD fba:1;
+			uint32 zte:1;
+			uint32 ztst:2;
+			uint32 zwe:1;
+			uint32 date:1;
+			uint32 fba:1;
 		};
 
-		DWORD dw;
+		uint32 key;
 
-		operator DWORD() {return dw & 0x3f;}
+		operator uint32() {return key & 0x3f;}
 	};
 
 	union OMBlendSelector
 	{
 		struct
 		{
-			DWORD abe:1;
-			DWORD a:2;
-			DWORD b:2;
-			DWORD c:2;
-			DWORD d:2;
-			DWORD wr:1;
-			DWORD wg:1;
-			DWORD wb:1;
-			DWORD wa:1;
+			uint32 abe:1;
+			uint32 a:2;
+			uint32 b:2;
+			uint32 c:2;
+			uint32 d:2;
+			uint32 wr:1;
+			uint32 wg:1;
+			uint32 wb:1;
+			uint32 wa:1;
 		};
 
-		DWORD dw;
+		uint32 key;
 
-		operator DWORD() {return dw & 0x1fff;}
+		operator uint32() {return key & 0x1fff;}
 	};
 
 	#pragma pack(pop)
@@ -149,25 +149,25 @@ public:
 private:
 	GSDevice9* m_dev;
 	CComPtr<IDirect3DVertexDeclaration9> m_il;
-	hash_map<DWORD, CComPtr<IDirect3DVertexShader9> > m_vs;
+	hash_map<uint32, CComPtr<IDirect3DVertexShader9> > m_vs;
 	D3DXHANDLE m_vs_params;
-	hash_map<DWORD, CComPtr<IDirect3DPixelShader9> > m_ps;
-	hash_map<DWORD, Direct3DSamplerState9* > m_ps_ss;
-	hash_map<DWORD, Direct3DDepthStencilState9* > m_om_dss;	
-	hash_map<DWORD, Direct3DBlendState9* > m_om_bs;	
-	hash_map<DWORD, GSTexture9> m_mskfix;
+	hash_map<uint32, CComPtr<IDirect3DPixelShader9> > m_ps;
+	hash_map<uint32, Direct3DSamplerState9* > m_ps_ss;
+	hash_map<uint32, Direct3DDepthStencilState9* > m_om_dss;	
+	hash_map<uint32, Direct3DBlendState9* > m_om_bs;	
+	hash_map<uint32, GSTexture9> m_mskfix;
 
 public:
 	GSTextureFX9();
 
 	bool Create(GSDevice9* dev);
-	bool CreateMskFix(GSTexture9& t, DWORD size, DWORD msk, DWORD fix);
+	bool CreateMskFix(GSTexture9& t, uint32 size, uint32 msk, uint32 fix);
 	
-	bool SetupIA(const GSVertexHW9* vertices, UINT count, D3DPRIMITIVETYPE prim);
+	bool SetupIA(const GSVertexHW9* vertices, int count, D3DPRIMITIVETYPE prim);
 	bool SetupVS(VSSelector sel, const VSConstantBuffer* cb);
 	bool SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel, IDirect3DTexture9* tex, IDirect3DTexture9* pal, bool psrr);
 	void UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel, bool psrr);
-	void SetupRS(int w, int h, const RECT& scissor);
-	void SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, BYTE bf, IDirect3DSurface9* rt, IDirect3DSurface9* ds);
-	void UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, BYTE bf);
+	void SetupRS(int w, int h, const GSVector4i& scissor);
+	void SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 bf, IDirect3DSurface9* rt, IDirect3DSurface9* ds);
+	void UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 bf);
 };

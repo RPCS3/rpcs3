@@ -222,16 +222,16 @@ __declspec(align(16)) class GSVertexTrace
 	class GSVertexTraceCodeGenerator : public Xbyak::CodeGenerator
 	{
 	public:
-		GSVertexTraceCodeGenerator(DWORD key, void* ptr, size_t maxsize);
+		GSVertexTraceCodeGenerator(uint32 key, void* ptr, size_t maxsize);
 	};
 
 	typedef void (*VertexTracePtr)(const GSVertexSW* v, int count, GSVertexSW& min, GSVertexSW& max);
 
-	class GSVertexTraceMap : public GSCodeGeneratorFunctionMap<GSVertexTraceCodeGenerator, DWORD, VertexTracePtr>
+	class GSVertexTraceMap : public GSCodeGeneratorFunctionMap<GSVertexTraceCodeGenerator, uint32, VertexTracePtr>
 	{
 	public:
 		GSVertexTraceMap() : GSCodeGeneratorFunctionMap("VertexTrace") {}
-		GSVertexTraceCodeGenerator* Create(DWORD key, void* ptr, size_t maxsize) {return new GSVertexTraceCodeGenerator(key, ptr, maxsize);}
+		GSVertexTraceCodeGenerator* Create(uint32 key, void* ptr, size_t maxsize) {return new GSVertexTraceCodeGenerator(key, ptr, maxsize);}
 	} m_map;
 
 public:
@@ -241,14 +241,14 @@ public:
 
 	union
 	{
-		DWORD value; 
-		struct {DWORD x:1, y:1, z:1, f:1, s:1, t:1, q:1, _pad:1, r:1, g:1, b:1, a:1;};
-		struct {DWORD xyzf:4, stq:4, rgba:4;};
+		uint32 value; 
+		struct {uint32 x:1, y:1, z:1, f:1, s:1, t:1, q:1, _pad:1, r:1, g:1, b:1, a:1;};
+		struct {uint32 xyzf:4, stq:4, rgba:4;};
 	} m_eq;
 
-	void Update(const GSVertexSW* v, int count, GS_PRIM_CLASS primclass, DWORD iip, DWORD tme, DWORD tfx, DWORD tcc)
+	void Update(const GSVertexSW* v, int count, GS_PRIM_CLASS primclass, uint32 iip, uint32 tme, uint32 tfx, uint32 tcc)
 	{
-		DWORD key = primclass | (iip << 2) | (tme << 3);
+		uint32 key = primclass | (iip << 2) | (tme << 3);
 
 		if(!(tme && tfx == TFX_DECAL && tcc))
 		{

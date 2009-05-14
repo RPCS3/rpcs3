@@ -20,52 +20,44 @@
  */
 
 #include "StdAfx.h"
-#include "GSCodeBuffer.h"
+#include "GSThread.h"
 
-GSCodeBuffer::GSCodeBuffer(size_t blocksize)
-	: m_ptr(NULL)
-	, m_blocksize(blocksize)
-	, m_pos(0)
-	, m_reserved(0)
+GSThread::GSThread()
+	: m_ThreadId(0)
+	, m_hThread(NULL)
 {
 }
 
-GSCodeBuffer::~GSCodeBuffer()
+GSThread::~GSThread()
 {
-	for(list<void*>::iterator i = m_buffers.begin(); i != m_buffers.end(); i++)
+	CloseThread();
+}
+
+DWORD WINAPI GSThread::StaticThreadProc(LPVOID lpParam)
+{
+	((GSThread*)lpParam)->ThreadProc();
+
+	return 0;
+}
+
+void GSThread::CreateThread()
+{
+	m_hThread = ::CreateThread(NULL, 0, StaticThreadProc, (LPVOID)this, 0, &m_ThreadId);
+}
+
+void GSThread::CloseThread()
+{
+	if(m_hThread != NULL)
 	{
-		VirtualFree(*i, 0, MEM_RELEASE);
+		if(WaitForSingleObject(m_hThread, 5000) != WAIT_OBJECT_0)
+		{
+			TerminateThread(m_hThread, 1);
+		}
+
+		CloseHandle(m_hThread);
+
+		m_hThread = NULL;
+		m_ThreadId = 0;
 	}
 }
 
-void* GSCodeBuffer::GetBuffer(size_t size)
-{
-	ASSERT(size < m_blocksize);
-	ASSERT(m_reserved == 0);
-
-	size = (size + 15) & ~15;
-
-	if(m_ptr == NULL || m_pos + size > m_blocksize)
-	{
-		m_ptr = (uint8*)VirtualAlloc(NULL, m_blocksize, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
-
-		m_pos = 0;
-
-		m_buffers.push_back(m_ptr);
-	}
-
-	uint8* ptr = &m_ptr[m_pos];
-
-	m_reserved = size;
-
-	return ptr;
-}
-
-void GSCodeBuffer::ReleaseBuffer(size_t size)
-{
-	ASSERT(size <= m_reserved);
-
-	m_pos = ((m_pos + size) + 15) & ~15;
-
-	m_reserved = 0;
-}

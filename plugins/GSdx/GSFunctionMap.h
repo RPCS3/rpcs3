@@ -158,9 +158,9 @@ public:
 template<class CG, class KEY, class VALUE>
 class GSCodeGeneratorFunctionMap : public GSFunctionMap<KEY, VALUE>
 {
-	DWORD m_id;
+	uint32 m_id;
 	string m_name;
-	hash_map<UINT64, CG*> m_cgmap;
+	hash_map<uint64, CG*> m_cgmap;
 	GSCodeBuffer m_cb;
 
 	enum {MAX_SIZE = 4096};
@@ -177,7 +177,7 @@ public:
 
 	virtual ~GSCodeGeneratorFunctionMap()
 	{
-		for(hash_map<UINT64, CG*>::iterator i = m_cgmap.begin(); i != m_cgmap.end(); i++)
+		for(hash_map<uint64, CG*>::iterator i = m_cgmap.begin(); i != m_cgmap.end(); i++)
 		{
 			delete (*i).second;
 		}
@@ -207,7 +207,7 @@ public:
 
 			// vtune method registration
 
-			string name = format("%s<%016I64x>()", m_name.c_str(), (UINT64)key);
+			string name = format("%s<%016I64x>()", m_name.c_str(), (uint64)key);
 
 			iJIT_Method_Load ml;
 

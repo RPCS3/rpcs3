@@ -31,55 +31,56 @@ class GPULocalMemory
 	static const GSVector4i m_xgxx;
 	static const GSVector4i m_rxxx;
 
-	WORD* m_vm; 
+	uint16* m_vm; 
 
 	struct 
 	{
-		WORD* buff;
+		uint16* buff;
 		int tp, cx, cy;
 		bool dirty;
 	} m_clut;
 
 	struct
 	{
-		BYTE* buff[3];
+		uint8* buff[3];
 		void* page[3][2][16];
-		WORD valid[3][2];
+		uint16 valid[3][2];
 	} m_texture;
 
-	CSize m_scale;
+	GSVector2i m_scale;
 
 public:
-	GPULocalMemory(const CSize& scale);
+	GPULocalMemory(const GSVector2i& scale);
 	virtual ~GPULocalMemory();
 
-	CSize GetScale() {return m_scale;}
-	int GetWidth() {return 1 << (10 + m_scale.cx);}
-	int GetHeight() {return 1 << (9 + m_scale.cy);}
+	GSVector2i GetScale() {return m_scale;}
 
-	WORD* GetPixelAddress(int x, int y) const {return &m_vm[(y << (10 + m_scale.cx)) + x];}
-	WORD* GetPixelAddressScaled(int x, int y) const {return &m_vm[((y << m_scale.cy) << (10 + m_scale.cx)) + (x << m_scale.cx)];}
+	int GetWidth() {return 1 << (10 + m_scale.x);}
+	int GetHeight() {return 1 << (9 + m_scale.y);}
 
-	const WORD* GetCLUT(int tp, int cx, int cy);
+	uint16* GetPixelAddress(int x, int y) const {return &m_vm[(y << (10 + m_scale.x)) + x];}
+	uint16* GetPixelAddressScaled(int x, int y) const {return &m_vm[((y << m_scale.y) << (10 + m_scale.x)) + (x << m_scale.x)];}
+
+	const uint16* GetCLUT(int tp, int cx, int cy);
 	const void* GetTexture(int tp, int tx, int ty);
 
-	void Invalidate(const CRect& r);
+	void Invalidate(const GSVector4i& r);
 
-	void FillRect(const CRect& r, WORD c);
-	void WriteRect(const CRect& r, const WORD* RESTRICT src);
-	void ReadRect(const CRect& r, WORD* RESTRICT dst);
-	void MoveRect(const CPoint& src, const CPoint& dst, int w, int h);
+	void FillRect(const GSVector4i& r, uint16 c);
+	void WriteRect(const GSVector4i& r, const uint16* RESTRICT src);
+	void ReadRect(const GSVector4i& r, uint16* RESTRICT dst);
+	void MoveRect(int sx, int sy, int dx, int dy, int w, int h);
 
-	void ReadPage4(int tx, int ty, BYTE* RESTRICT dst);
-	void ReadPage8(int tx, int ty, BYTE* RESTRICT dst);
-	void ReadPage16(int tx, int ty, WORD* RESTRICT dst);
+	void ReadPage4(int tx, int ty, uint8* RESTRICT dst);
+	void ReadPage8(int tx, int ty, uint8* RESTRICT dst);
+	void ReadPage16(int tx, int ty, uint16* RESTRICT dst);
 
-	void ReadFrame32(const CRect& r, DWORD* RESTRICT dst, bool rgb24);
+	void ReadFrame32(const GSVector4i& r, uint32* RESTRICT dst, bool rgb24);
 
-	void Expand16(const WORD* RESTRICT src, DWORD* RESTRICT dst, int pixels);
-	void Expand24(const WORD* RESTRICT src, DWORD* RESTRICT dst, int pixels);
+	void Expand16(const uint16* RESTRICT src, uint32* RESTRICT dst, int pixels);
+	void Expand24(const uint16* RESTRICT src, uint32* RESTRICT dst, int pixels);
 
-	void SaveBMP(const string& path, CRect r, int tp, int cx, int cy);
+	void SaveBMP(const string& path, const GSVector4i& r, int tp, int cx, int cy);
 };
 
 #pragma warning(default: 4244)

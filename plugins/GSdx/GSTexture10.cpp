@@ -69,7 +69,7 @@ int GSTexture10::GetFormat() const
 	return m_desc.Format;
 }
 
-bool GSTexture10::Update(const CRect& r, const void* data, int pitch)
+bool GSTexture10::Update(const GSVector4i& r, const void* data, int pitch)
 {
 	if(m_dev && m_texture)
 	{
@@ -83,7 +83,7 @@ bool GSTexture10::Update(const CRect& r, const void* data, int pitch)
 	return false;
 }
 
-bool GSTexture10::Map(BYTE** bits, int& pitch, const RECT* r)
+bool GSTexture10::Map(uint8** bits, int& pitch)
 {
 	if(m_texture)
 	{
@@ -91,7 +91,7 @@ bool GSTexture10::Map(BYTE** bits, int& pitch, const RECT* r)
 
 		if(SUCCEEDED(m_texture->Map(0, D3D10_MAP_READ_WRITE, 0, &map)))
 		{
-			*bits = (BYTE*)map.pData;
+			*bits = (uint8*)map.pData;
 			pitch = (int)map.RowPitch;
 
 			return true;
@@ -143,14 +143,14 @@ bool GSTexture10::Save(const string& fn, bool dds)
 		hr = src->Map(0, D3D10_MAP_READ, 0, &sm);
 		hr = dst->Map(0, D3D10_MAP_WRITE, 0, &dm);
 
-		BYTE* s = (BYTE*)sm.pData;
-		BYTE* d = (BYTE*)dm.pData;
+		uint8* s = (uint8*)sm.pData;
+		uint8* d = (uint8*)dm.pData;
 
-		for(UINT y = 0; y < desc.Height; y++, s += sm.RowPitch, d += dm.RowPitch)
+		for(uint32 y = 0; y < desc.Height; y++, s += sm.RowPitch, d += dm.RowPitch)
 		{
-			for(UINT x = 0; x < desc.Width; x++)
+			for(uint32 x = 0; x < desc.Width; x++)
 			{
-				((UINT*)d)[x] = (UINT)(((float*)s)[x*2] * UINT_MAX);
+				((uint32*)d)[x] = (uint32)(((float*)s)[x*2] * UINT_MAX);
 			}
 		}
 

@@ -28,7 +28,7 @@ template<class Device> class GSTextureCache
 	typedef typename Device::Texture Texture;
 
 public:
-	class GSSurface
+	class GSSurface : public GSAlignedClass<16>
 	{
 	protected:
 		GSRenderer<Device>* m_renderer;
@@ -48,7 +48,7 @@ public:
 			, m_age(0)
 			, m_initpalette(false)
 		{
-			m_TEX0.TBP0 = (UINT32)~0;
+			m_TEX0.TBP0 = (uint32)~0;
 		}
 
 		virtual ~GSSurface()
@@ -81,7 +81,7 @@ public:
 			return m_renderer->m_dev.CreateRenderTarget(m_texture, w, h);
 		}
 
-		virtual void Read(CRect r) = 0;
+		virtual void Read(const GSVector4i& r) = 0;
 	};
 
 	class GSDepthStencil : public GSSurface
@@ -107,30 +107,30 @@ public:
 	class GSTexture : public GSSurface
 	{
 	protected:
-		bool GetDirtyRect(CRect& rr)
+		bool GetDirtyRect(GSVector4i& rr)
 		{
 			int w = 1 << m_TEX0.TW;
 			int h = 1 << m_TEX0.TH;
 
-			CRect r(0, 0, w, h);
+			GSVector4i r(0, 0, w, h);
 
 			for(list<GSDirtyRect>::iterator i = m_dirty.begin(); i != m_dirty.end(); i++)
 			{
-				const CRect& dirty = i->GetDirtyRect(m_TEX0) & r;
+				const GSVector4i& dirty = i->GetDirtyRect(m_TEX0).rintersect(r);
 
-				if(!(m_valid & dirty).IsRectEmpty())
+				if(!m_valid.rintersect(dirty).rempty())
 				{
 					 // find the rect having the largest area, outside dirty, inside m_valid
 
-					CRect left(m_valid.left, m_valid.top, min(m_valid.right, dirty.left), m_valid.bottom);
-					CRect top(m_valid.left, m_valid.top, m_valid.right, min(m_valid.bottom, dirty.top));
-					CRect right(max(m_valid.left, dirty.right), m_valid.top, m_valid.right, m_valid.bottom);
-					CRect bottom(m_valid.left, max(m_valid.top, dirty.bottom), m_valid.right, m_valid.bottom);
+					GSVector4i left(m_valid.left, m_valid.top, min(m_valid.right, dirty.left), m_valid.bottom);
+					GSVector4i top(m_valid.left, m_valid.top, m_valid.right, min(m_valid.bottom, dirty.top));
+					GSVector4i right(max(m_valid.left, dirty.right), m_valid.top, m_valid.right, m_valid.bottom);
+					GSVector4i bottom(m_valid.left, max(m_valid.top, dirty.bottom), m_valid.right, m_valid.bottom);
 
-					int leftsize = !left.IsRectEmpty() ? left.Width() * left.Height() : 0;
-					int topsize = !top.IsRectEmpty() ? top.Width() * top.Height() : 0;
-					int rightsize = !right.IsRectEmpty() ? right.Width() * right.Height() : 0;
-					int bottomsize = !bottom.IsRectEmpty() ? bottom.Width() * bottom.Height() : 0;
+					int leftsize = !left.rempty() ? left.width() * left.height() : 0;
+					int topsize = !top.rempty() ? top.width() * top.height() : 0;
+					int rightsize = !right.rempty() ? right.width() * right.height() : 0;
+					int bottomsize = !bottom.rempty() ? bottom.width() * bottom.height() : 0;
 
 					// TODO: sort
 
@@ -139,7 +139,7 @@ public:
 						topsize > 0 ? top : 
 						rightsize > 0 ? right : 
 						bottomsize > 0 ? bottom : 
-						CRect(0, 0, 0, 0);
+						GSVector4i::zero();
 				}
 			}
 
@@ -167,10 +167,10 @@ public:
 			}
 			else
 			{
-				r |= m_valid;
+				r = r.runion(m_valid);
 			}
 
-			if(r.IsRectEmpty())
+			if(r.rempty())
 			{
 				return false;
 			}
@@ -182,8 +182,8 @@ public:
 
 	public:
 		GIFRegCLAMP m_CLAMP;
-		DWORD* m_clut; // *
-		CRect m_valid;
+		uint32* m_clut; // *
+		GSVector4i m_valid;
 		int m_bpp;
 		int m_bpp2;
 		bool m_rendered;
@@ -195,7 +195,7 @@ public:
 			, m_bpp2(0)
 			, m_rendered(false)
 		{
-			m_clut = (DWORD*)_aligned_malloc(256 * sizeof(DWORD), 16);
+			m_clut = (uint32*)_aligned_malloc(256 * sizeof(uint32), 16);
 
 			memset(m_clut, 0, sizeof(m_clut));
 		}
@@ -203,6 +203,41 @@ public:
 		~GSTexture()
 		{
 			_aligned_free(m_clut);
+		}
+
+		void Update()
+		{
+			__super::Update();
+
+			if(m_rendered)
+			{
+				return;
+			}
+
+			GSVector4i r;
+
+			if(!GetDirtyRect(r))
+			{
+				return;
+			}
+
+			m_valid = m_valid.runion(r);
+
+			static uint8* bits = (uint8*)::_aligned_malloc(1024 * 1024 * 4, 16);
+			static int pitch = 1024 * 4;
+
+			if(m_renderer->m_psrr)
+			{
+				m_renderer->m_mem.ReadTextureNPNC(r, bits, pitch, m_renderer->m_context->TEX0, m_renderer->m_env.TEXA, m_renderer->m_context->CLAMP);
+			}
+			else
+			{
+				m_renderer->m_mem.ReadTextureNP(r, bits, pitch, m_renderer->m_context->TEX0, m_renderer->m_env.TEXA, m_renderer->m_context->CLAMP);
+			}
+
+			m_texture.Update(r, bits, pitch);
+
+			m_renderer->m_perfmon.Put(GSPerfMon::Unswizzle, r.width() * r.height() * m_bpp >> 3);
 		}
 
 		virtual bool Create() = 0;
@@ -335,10 +370,12 @@ public:
 
 		if(m_renderer->CanUpscale())
 		{
-			int ww = (int)(m_renderer->GetFramePos().cx + rt->m_TEX0.TBW * 64);
-			int hh = (int)(m_renderer->GetFramePos().cy + m_renderer->GetDisplaySize().cy);
+			GSVector4i fr = m_renderer->GetFrameRect();
 
-			if(hh <= m_renderer->GetDeviceSize().cy / 2)
+			int ww = (int)(fr.left + rt->m_TEX0.TBW * 64);
+			int hh = (int)(fr.top + m_renderer->GetDisplayRect().height());
+
+			if(hh <= m_renderer->GetDeviceRect().height() / 2)
 			{
 				hh *= 2;
 			}
@@ -412,7 +449,7 @@ public:
 		const GIFRegTEX0& TEX0 = m_renderer->m_context->TEX0;
 		const GIFRegCLAMP& CLAMP = m_renderer->m_context->CLAMP;
 
-		const DWORD* clut = m_renderer->m_mem.m_clut;
+		const uint32* clut = m_renderer->m_mem.m_clut;
 		const int pal = GSLocalMemory::m_psm[TEX0.PSM].pal;
 		
 		if(pal > 0)
@@ -480,7 +517,7 @@ public:
 			{
 				if(TEX0.PSM == t->m_TEX0.PSM && TEX0.TBW == t->m_TEX0.TBW
 				&& TEX0.TW == t->m_TEX0.TW && TEX0.TH == t->m_TEX0.TH
-				&& (m_renderer->m_psrr || (CLAMP.WMS != 3 && t->m_CLAMP.WMS != 3 && CLAMP.WMT != 3 && t->m_CLAMP.WMT != 3 || CLAMP.i64 == t->m_CLAMP.i64))
+				&& (m_renderer->m_psrr || (CLAMP.WMS != 3 && t->m_CLAMP.WMS != 3 && CLAMP.WMT != 3 && t->m_CLAMP.WMT != 3 || CLAMP.u64 == t->m_CLAMP.u64))
 				&& (pal == 0 || TEX0.CPSM == t->m_TEX0.CPSM && GSVector4i::compare(t->m_clut, clut, pal * sizeof(clut[0]))))
 				{
 					m_tex.splice(m_tex.begin(), m_tex, i);
@@ -563,14 +600,14 @@ public:
 				if(t->m_initpalette)
 				{
 					memcpy(t->m_clut, clut, size);
-					t->m_palette.Update(CRect(0, 0, pal, 1), t->m_clut, size);
+					t->m_palette.Update(GSVector4i(0, 0, pal, 1), t->m_clut, size);
 					t->m_initpalette = false;
 				}
 				else
 				{
 					if(GSVector4i::update(t->m_clut, clut, size))
 					{
-						t->m_palette.Update(CRect(0, 0, pal, 1), t->m_clut, size);
+						t->m_palette.Update(GSVector4i(0, 0, pal, 1), t->m_clut, size);
 					}
 				}
 			}
@@ -603,7 +640,7 @@ public:
 		}
 	}
 
-	void InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const CRect& r)
+	void InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r)
 	{
 		bool found = false;
 
@@ -617,7 +654,7 @@ public:
 			{
 				if(BITBLTBUF.DBW == t->m_TEX0.TBW && !t->m_rendered)
 				{
-					t->m_dirty.push_back(GSDirtyRect(BITBLTBUF.DPSM, r));
+					t->m_dirty.push_back(GSDirtyRect(r, BITBLTBUF.DPSM));
 
 					found = true;
 				}
@@ -636,16 +673,16 @@ public:
 
 					if(rowsize > 0 && offset % rowsize == 0)
 					{
-						int y = m_renderer->m_mem.m_psm[BITBLTBUF.DPSM].pgs.cy * offset / rowsize;
+						int y = m_renderer->m_mem.m_psm[BITBLTBUF.DPSM].pgs.y * offset / rowsize;
 
-						CRect r2(r.left, r.top + y, r.right, r.bottom + y);
+						GSVector4i r2(r.left, r.top + y, r.right, r.bottom + y);
 
 						int w = 1 << t->m_TEX0.TW;
 						int h = 1 << t->m_TEX0.TH;
 
 						if(r2.bottom > 0 && r2.top < h && r2.right > 0 && r2.left < w)
 						{
-							t->m_dirty.push_back(GSDirtyRect(BITBLTBUF.DPSM, r2));
+							t->m_dirty.push_back(GSDirtyRect(r2, BITBLTBUF.DPSM));
 						}
 					}
 				}
@@ -662,7 +699,7 @@ public:
 			{
 				if(!found && GSUtil::HasCompatibleBits(BITBLTBUF.DPSM, rt->m_TEX0.PSM))
 				{
-					rt->m_dirty.push_back(GSDirtyRect(BITBLTBUF.DPSM, r));
+					rt->m_dirty.push_back(GSDirtyRect(r, BITBLTBUF.DPSM));
 					rt->m_TEX0.TBW = BITBLTBUF.DBW;
 				}
 				else
@@ -675,17 +712,17 @@ public:
 
 			if(GSUtil::HasSharedBits(BITBLTBUF.DPSM, rt->m_TEX0.PSM) && BITBLTBUF.DBP < rt->m_TEX0.TBP0)
 			{
-				DWORD rowsize = BITBLTBUF.DBW * 8192;
-				DWORD offset = (DWORD)((rt->m_TEX0.TBP0 - BITBLTBUF.DBP) * 256);
+				uint32 rowsize = BITBLTBUF.DBW * 8192;
+				uint32 offset = (uint32)((rt->m_TEX0.TBP0 - BITBLTBUF.DBP) * 256);
 
 				if(rowsize > 0 && offset % rowsize == 0)
 				{
-					int y = m_renderer->m_mem.m_psm[BITBLTBUF.DPSM].pgs.cy * offset / rowsize;
+					int y = m_renderer->m_mem.m_psm[BITBLTBUF.DPSM].pgs.y * offset / rowsize;
 
 					if(r.bottom > y)
 					{
 						// TODO: do not add this rect above too
-						rt->m_dirty.push_back(GSDirtyRect(BITBLTBUF.DPSM, CRect(r.left, r.top - y, r.right, r.bottom - y)));
+						rt->m_dirty.push_back(GSDirtyRect(GSVector4i(r.left, r.top - y, r.right, r.bottom - y), BITBLTBUF.DPSM));
 						rt->m_TEX0.TBW = BITBLTBUF.DBW;
 						continue;
 					}
@@ -705,7 +742,7 @@ public:
 			{
 				if(!found && GSUtil::HasCompatibleBits(BITBLTBUF.DPSM, ds->m_TEX0.PSM))
 				{
-					ds->m_dirty.push_back(GSDirtyRect(BITBLTBUF.DPSM, r));
+					ds->m_dirty.push_back(GSDirtyRect(r, BITBLTBUF.DPSM));
 					ds->m_TEX0.TBW = BITBLTBUF.DBW;
 				}
 				else
@@ -718,17 +755,17 @@ public:
 
 			if(GSUtil::HasSharedBits(BITBLTBUF.DPSM, ds->m_TEX0.PSM) && BITBLTBUF.DBP < ds->m_TEX0.TBP0)
 			{
-				DWORD rowsize = BITBLTBUF.DBW * 8192;
-				DWORD offset = (DWORD)((ds->m_TEX0.TBP0 - BITBLTBUF.DBP) * 256);
+				uint32 rowsize = BITBLTBUF.DBW * 8192;
+				uint32 offset = (uint32)((ds->m_TEX0.TBP0 - BITBLTBUF.DBP) * 256);
 
 				if(rowsize > 0 && offset % rowsize == 0)
 				{
-					int y = m_renderer->m_mem.m_psm[BITBLTBUF.DPSM].pgs.cy * offset / rowsize;
+					int y = m_renderer->m_mem.m_psm[BITBLTBUF.DPSM].pgs.y * offset / rowsize;
 
 					if(r.bottom > y)
 					{
 						// TODO: do not add this rect above too
-						ds->m_dirty.push_back(GSDirtyRect(BITBLTBUF.DPSM, CRect(r.left, r.top - y, r.right, r.bottom - y)));
+						ds->m_dirty.push_back(GSDirtyRect(GSVector4i(r.left, r.top - y, r.right, r.bottom - y), BITBLTBUF.DPSM));
 						ds->m_TEX0.TBW = BITBLTBUF.DBW;
 						continue;
 					}
@@ -738,7 +775,7 @@ public:
 		}
 	}
 
-	void InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, const CRect& r)
+	void InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r)
 	{
 		for(list<GSRenderTarget*>::iterator i = m_rt.begin(); i != m_rt.end(); )
 		{
@@ -757,7 +794,7 @@ public:
 				{
 					// ffx-2 riku changing to her default (shoots some reflecting glass at the end), 16-bit rt read as 32-bit
 
-					rt->Read(CRect(r.left, r.top, r.right, r.top + (r.bottom - r.top) * 2));
+					rt->Read(GSVector4i(r.left, r.top, r.right, r.top + (r.bottom - r.top) * 2));
 					return;
 				}
 				else
@@ -784,12 +821,12 @@ public:
 			{
 				// ffx2 pause screen background
 
-				DWORD rowsize = BITBLTBUF.SBW * 8192;
-				DWORD offset = (DWORD)((BITBLTBUF.SBP - rt->m_TEX0.TBP0) * 256);
+				uint32 rowsize = BITBLTBUF.SBW * 8192;
+				uint32 offset = (uint32)((BITBLTBUF.SBP - rt->m_TEX0.TBP0) * 256);
 
 				if(rowsize > 0 && offset % rowsize == 0)
 				{
-					int y = m_renderer->m_mem.m_psm[BITBLTBUF.SPSM].pgs.cy * offset / rowsize;
+					int y = m_renderer->m_mem.m_psm[BITBLTBUF.SPSM].pgs.y * offset / rowsize;
 
 					if(y < ymin && y < 512)
 					{
@@ -802,7 +839,7 @@ public:
 
 		if(rt2)
 		{
-			rt2->Read(CRect(r.left, r.top + ymin, r.right, r.bottom + ymin));
+			rt2->Read(GSVector4i(r.left, r.top + ymin, r.right, r.bottom + ymin));
 		}
 
 		// TODO: ds

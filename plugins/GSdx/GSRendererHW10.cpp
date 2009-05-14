@@ -24,7 +24,7 @@
 #include "GSCrc.h"
 #include "resource.h"
 
-GSRendererHW10::GSRendererHW10(BYTE* base, bool mt, void (*irq)(), const GSRendererSettings& rs)
+GSRendererHW10::GSRendererHW10(uint8* base, bool mt, void (*irq)(), const GSRendererSettings& rs)
 	: GSRendererHW<Device, Vertex, TextureCache>(base, mt, irq, rs, true)
 {
 	InitVertexKick<GSRendererHW10>();
@@ -70,7 +70,7 @@ bool GSRendererHW10::Create(const string& title)
 	return true;
 }
 
-template<DWORD prim, DWORD tme, DWORD fst> 
+template<uint32 prim, uint32 tme, uint32 fst> 
 void GSRendererHW10::VertexKick(bool skip)
 {
 	Vertex& dst = m_vl.AddTail();
@@ -83,7 +83,7 @@ void GSRendererHW10::VertexKick(bool skip)
 		GSVector4::storel(&dst.ST, m_v.GetUV());
 	}
 
-	DWORD count = 0;
+	int count = 0;
 	
 	if(Vertex* v = DrawingKick<prim>(skip, count))
 	{
@@ -412,7 +412,7 @@ void GSRendererHW10::Draw(int prim, Texture& rt, Texture& ds, GSTextureCache<Dev
 	int w = rt.GetWidth();
 	int h = rt.GetHeight();
 
-	CRect scissor = (CRect)GSVector4i(GSVector4(rt.m_scale).xyxy() * context->scissor.in) & CRect(0, 0, w, h);
+	GSVector4i scissor = GSVector4i(GSVector4(rt.m_scale).xyxy() * context->scissor.in).rintersect(GSVector4i(0, 0, w, h));
 
 	//
 
@@ -436,7 +436,7 @@ void GSRendererHW10::Draw(int prim, Texture& rt, Texture& ds, GSTextureCache<Dev
 	{
 		ASSERT(!env.PABE.PABE);
 
-		static const DWORD iatst[] = {1, 0, 5, 6, 7, 2, 3, 4};
+		static const uint32 iatst[] = {1, 0, 5, 6, 7, 2, 3, 4};
 
 		ps_sel.atst = iatst[ps_sel.atst];
 
@@ -474,7 +474,7 @@ void GSRendererHW10::Draw(int prim, Texture& rt, Texture& ds, GSTextureCache<Dev
 	m_dev.EndScene();
 }
 
-bool GSRendererHW10::WrapZ(DWORD maxz)
+bool GSRendererHW10::WrapZ(uint32 maxz)
 {
 	// should only run once if z values are in the z buffer range
 

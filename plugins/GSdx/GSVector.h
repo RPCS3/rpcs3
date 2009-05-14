@@ -29,9 +29,11 @@ public:
 		*this = v;
 	}
 
-	void operator = (const GSVector2T& v) 
+	const GSVector2T& operator = (const GSVector2T& v) 
 	{
 		_mm_storel_epi64((__m128i*)this, _mm_loadl_epi64((__m128i*)&v));
+
+		return *this;
 	}
 };
 
@@ -47,16 +49,17 @@ public:
 	{
 		struct {int x, y, z, w;}; 
 		struct {int r, g, b, a;};
+		struct {int left, top, right, bottom;}; 
 		int v[4];
 		float f32[4];
-		unsigned __int64 u64[2];
-		__int8 i8[16];
-		__int16 i16[8];
-		__int32 i32[4];
-		__int64  i64[2];
-		unsigned __int8 u8[16];
-		unsigned __int16 u16[8];
-		unsigned __int32 u32[4];
+		int8 i8[16];
+		int16 i16[8];
+		int32 i32[4];
+		int64  i64[2];
+		uint8 u8[16];
+		uint16 u16[8];
+		uint32 u32[4];
+		uint64 u64[2];
 		__m128i m;
 	};
 
@@ -113,11 +116,6 @@ public:
 		this->m = m;
 	}
 
-	explicit GSVector4i(const CRect& r) 
-	{
-		*this = GSVector4i(r.left, r.top, r.right, r.bottom);
-	}
-
 	explicit GSVector4i(const GSVector4& v)
 	{
 		*this = v;
@@ -140,29 +138,70 @@ public:
 		this->m = m;
 	}
 
-	void operator = (const CRect& r)
-	{
-		m = GSVector4i(r);
-	}
-
 	operator __m128i() const 
 	{
 		return m;
 	}
 
-	operator CRect() const
+	// rect
+
+	int width() const
 	{
-		return *(CRect*)&m;
+		return right - left;
 	}
 
-	UINT32 rgba32() const
+	int height() const
+	{
+		return bottom - top;
+	}
+
+	bool rempty() const
+	{
+		return (*this < zwzw()).mask() != 0x00ff;
+	}
+
+	GSVector4i runion(const GSVector4i& a) const 
+	{
+		#if _M_SSE >= 0x401
+
+		return min_i32(a).upl64(max_i32(a).srl<8>());
+
+		#else
+
+		return GSVector4i(min(x, a.x), min(y, a.y), max(z, a.z), max(x, a.w));
+
+		#endif
+	}
+
+	GSVector4i rintersect(const GSVector4i& a) const 
+	{
+		return sat_i32(a);
+	}
+
+	GSVector4i fit(int arx, int ary) const;
+
+	GSVector4i fit(int preset) const;
+
+	operator LPCRECT() const
+	{
+		return (LPCRECT)this;
+	}
+
+	operator LPRECT()
+	{
+		return (LPRECT)this;
+	}
+
+	//
+
+	uint32 rgba32() const
 	{
 		GSVector4i v = *this;
 
 		v = v.ps32(v);
 		v = v.pu16(v);
 
-		return (UINT32)store(v);
+		return (uint32)store(v);
 	}
 
 	static GSVector4i cast(const GSVector4& v);
@@ -201,6 +240,32 @@ public:
 	GSVector4i sat_i32(const GSVector4i& a) const 
 	{
 		return max_i32(a.xyxy()).min_i32(a.zwzw());
+	}
+
+	#else
+
+	GSVector4i sat_i32(const GSVector4i& a, const GSVector4i& b) const 
+	{
+		GSVector4i v;
+
+		v.x = min(max(x, a.x), b.x);
+		v.y = min(max(y, a.y), b.y);
+		v.z = min(max(z, a.z), b.z);
+		v.w = min(max(x, a.w), b.w);
+
+		return v;
+	}
+
+	GSVector4i sat_i32(const GSVector4i& a) const 
+	{
+		GSVector4i v;
+
+		v.x = min(max(x, a.x), b.z);
+		v.y = min(max(y, a.y), b.w);
+		v.z = min(max(z, a.x), b.z);
+		v.w = min(max(x, a.y), b.w);
+
+		return v;
 	}
 
 	#endif
@@ -841,6 +906,18 @@ public:
 		return sll16(shift + 1).mul16hs(f);
 	}
 
+	bool eq(const GSVector4i& v) const
+	{
+		#if _M_SSE >= 0x401
+		// pxor, ptest, je
+		GSVector4i t = *this ^ v;
+		return _mm_testz_si128(t, t) != 0;
+		#else
+		// pcmpeqd, pmovmskb, cmp, je
+		return eq32(v).alltrue();
+		#endif
+	}
+
 	GSVector4i eq8(const GSVector4i& v) const
 	{
 		return GSVector4i(_mm_cmpeq_epi8(m, v.m));
@@ -1357,7 +1434,7 @@ public:
 		dst[1] = gather8_4<8>(ptr);
 	}
 
-	__forceinline void gather8_8(const BYTE* RESTRICT ptr, GSVector4i* RESTRICT dst) const
+	__forceinline void gather8_8(const uint8* RESTRICT ptr, GSVector4i* RESTRICT dst) const
 	{
 		dst[0] = gather8_8<>(ptr);
 	}
@@ -2077,16 +2154,17 @@ public:
 	{
 		struct {float x, y, z, w;}; 
 		struct {float r, g, b, a;}; 
+		struct {int left, top, right, bottom;}; 
 		float v[4];
 		float f32[4];
-		unsigned __int64 u64[2];
-		__int8 i8[16];
-		__int16 i16[8];
-		__int32 i32[4];
-		__int64  i64[2];
-		unsigned __int8 u8[16];
-		unsigned __int16 u16[8];
-		unsigned __int32 u32[4];
+		int8 i8[16];
+		int16 i16[8];
+		int32 i32[4];
+		int64 i64[2];
+		uint8 u8[16];
+		uint16 u16[8];
+		uint32 u32[4];
+		uint64 u64[2];
 		__m128 m;
 	};
 
@@ -2140,14 +2218,9 @@ public:
 		this->m = m;
 	}
 
-	explicit GSVector4(CRect r)
+	explicit GSVector4(uint32 u32)
 	{
-		m = _mm_set_ps((float)r.bottom, (float)r.right, (float)r.top, (float)r.left);
-	}
-
-	explicit GSVector4(DWORD dw)
-	{
-		*this = GSVector4(GSVector4i::load((int)dw).u8to32());
+		*this = GSVector4(GSVector4i::load((int)u32).u8to32());
 	}
 
 	explicit GSVector4(const GSVector4i& v)
@@ -2172,14 +2245,9 @@ public:
 		this->m = m;
 	}
 
-	void operator = (DWORD dw)
+	void operator = (uint32 u32)
 	{
-		*this = GSVector4(GSVector4i::load((int)dw).u8to32());
-	}
-
-	void operator = (CRect r)
-	{
-		*this = GSVector4(GSVector4i(r.left, r.top, r.right, r.bottom));
+		*this = GSVector4(GSVector4i::load((int)u32).u8to32());
 	}
 
 	operator __m128() const 
@@ -2187,7 +2255,7 @@ public:
 		return m;
 	}
 
-	UINT32 rgba32() const
+	uint32 rgba32() const
 	{
 		return GSVector4i(*this).rgba32();
 	}

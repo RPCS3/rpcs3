@@ -237,7 +237,7 @@ bool GSDevice9::Reset(int w, int h, bool fs)
 	m_ps_cb = NULL;
 	m_ps_cb_len = 0;
 	m_ps_ss = NULL;
-	m_scissor = CRect(0, 0, 0, 0);
+	m_scissor = GSVector4i::zero();
 	m_dss = NULL;
 	m_sref = 0;
 	m_bs = NULL;
@@ -280,7 +280,7 @@ bool GSDevice9::Reset(int w, int h, bool fs)
 
 	if(!m_dev)
 	{
-		UINT flags = D3DCREATE_MULTITHREADED | (m_d3dcaps.VertexProcessingCaps ? D3DCREATE_HARDWARE_VERTEXPROCESSING : D3DCREATE_SOFTWARE_VERTEXPROCESSING);
+		uint32 flags = D3DCREATE_MULTITHREADED | (m_d3dcaps.VertexProcessingCaps ? D3DCREATE_HARDWARE_VERTEXPROCESSING : D3DCREATE_SOFTWARE_VERTEXPROCESSING);
 
 		hr = m_d3d->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, m_hWnd, flags, &m_pp, &m_dev);
 
@@ -347,15 +347,15 @@ bool GSDevice9::IsLost()
 	return hr == D3DERR_DEVICELOST || hr == D3DERR_DEVICENOTRESET;
 }
 
-void GSDevice9::Present(const CRect& r)
+void GSDevice9::Present(const GSVector4i& r)
 {
-	CRect cr;
+	GSVector4i cr;
 
-	GetClientRect(m_hWnd, &cr);
+	GetClientRect(m_hWnd, cr);
 
-	if(m_backbuffer.GetWidth() != cr.Width() || m_backbuffer.GetHeight() != cr.Height())
+	if(m_backbuffer.GetWidth() != cr.width() || m_backbuffer.GetHeight() != cr.height())
 	{
-		Reset(cr.Width(), cr.Height(), false);
+		Reset(cr.width(), cr.height(), false);
 	}
 
 	OMSetRenderTargets(m_backbuffer, NULL);
@@ -396,13 +396,13 @@ void GSDevice9::Draw(const string& s)
 
 		OMSetRenderTargets(m_backbuffer, NULL);
 
-		CRect r(0, 0, m_backbuffer.GetWidth(), m_backbuffer.GetHeight());
+		GSVector4i r(0, 0, m_backbuffer.GetWidth(), m_backbuffer.GetHeight());
 
 		D3DCOLOR c = D3DCOLOR_ARGB(255, 0, 255, 0);
 
-		if(m_font->DrawText(NULL, str, -1, &r, DT_CALCRECT|DT_LEFT|DT_WORDBREAK, c))
+		if(m_font->DrawText(NULL, str, -1, r, DT_CALCRECT|DT_LEFT|DT_WORDBREAK, c))
 		{
-			m_font->DrawText(NULL, str, -1, &r, DT_LEFT|DT_WORDBREAK, c);
+			m_font->DrawText(NULL, str, -1, r, DT_LEFT|DT_WORDBREAK, c);
 		}
 
 		EndScene();
@@ -447,10 +447,10 @@ bool GSDevice9::CopyOffscreen(Texture& src, const GSVector4& sr, Texture& dst, i
 
 void GSDevice9::ClearRenderTarget(Texture& t, const GSVector4& c)
 {
-	ClearRenderTarget(t, D3DCOLOR_RGBA((BYTE)(c.r * 255 + 0.5f), (BYTE)(c.g * 255 + 0.5f), (BYTE)(c.b * 255 + 0.5f), (BYTE)(c.a * 255 + 0.5f)));
+	ClearRenderTarget(t, (c * 255 + 0.5f).zyxw().rgba32());
 }
 
-void GSDevice9::ClearRenderTarget(Texture& t, DWORD c)
+void GSDevice9::ClearRenderTarget(Texture& t, uint32 c)
 {
 	CComPtr<IDirect3DSurface9> surface;
 	m_dev->GetRenderTarget(0, &surface);
@@ -468,7 +468,7 @@ void GSDevice9::ClearDepth(Texture& t, float c)
 	m_dev->SetDepthStencilSurface(surface);
 }
 
-void GSDevice9::ClearStencil(Texture& t, BYTE c)
+void GSDevice9::ClearStencil(Texture& t, uint8 c)
 {
 	CComPtr<IDirect3DSurface9> surface;
 	m_dev->GetDepthStencilSurface(&surface);
@@ -580,7 +580,7 @@ void GSDevice9::DoInterlace(Texture& st, Texture& dt, int shader, bool linear, f
 	StretchRect(st, sr, dt, dr, m_interlace.ps[shader], (const float*)&cb, 1, linear);
 }
 /*
-void GSDevice9::IASetVertexBuffer(IDirect3DVertexBuffer9* vb, UINT count, const void* vertices, UINT stride)
+void GSDevice9::IASetVertexBuffer(IDirect3DVertexBuffer9* vb, uint32 count, const void* vertices, size_t stride)
 {
 	void* data = NULL;
 
@@ -600,7 +600,7 @@ void GSDevice9::IASetVertexBuffer(IDirect3DVertexBuffer9* vb, UINT count, const 
 	}
 }
 */
-void GSDevice9::IASetVertexBuffer(UINT count, const void* vertices, UINT stride)
+void GSDevice9::IASetVertexBuffer(int count, const void* vertices, size_t stride)
 {
 	m_vb_count = count;
 	m_vb_vertices = vertices;
@@ -728,19 +728,19 @@ void GSDevice9::PSSetSamplerState(Direct3DSamplerState9* ss)
 	}
 }
 
-void GSDevice9::RSSet(int width, int height, const RECT* scissor)
+void GSDevice9::RSSet(int width, int height, const GSVector4i* scissor)
 {
-	CRect r = scissor ? *scissor : CRect(0, 0, width, height);
+	GSVector4i r = scissor ? *scissor : GSVector4i(0, 0, width, height);
 
-	if(m_scissor != r)
+	if(!m_scissor.eq(r))
 	{
-		m_dev->SetScissorRect(&r);
+		m_dev->SetScissorRect(r);
 
 		m_scissor = r;
 	}
 }
 
-void GSDevice9::OMSetDepthStencilState(Direct3DDepthStencilState9* dss, UINT sref)
+void GSDevice9::OMSetDepthStencilState(Direct3DDepthStencilState9* dss, uint32 sref)
 {
 	if(m_dss != dss || m_sref != sref)
 	{
@@ -770,7 +770,7 @@ void GSDevice9::OMSetDepthStencilState(Direct3DDepthStencilState9* dss, UINT sre
 	}
 }
 
-void GSDevice9::OMSetBlendState(Direct3DBlendState9* bs, DWORD bf)
+void GSDevice9::OMSetBlendState(Direct3DBlendState9* bs, uint32 bf)
 {
 	if(m_bs != bs || m_bf != bf)
 	{
@@ -914,7 +914,7 @@ void GSDevice9::StretchRect(Texture& st, const GSVector4& sr, Texture& dt, const
 
 // FIXME: D3DXCompileShaderFromResource of d3dx9 v37 (march 2008) calls GetFullPathName on id for some reason and then crashes
 
-static HRESULT LoadShader(UINT id, LPCSTR& data, DWORD& size)
+static HRESULT LoadShader(uint32 id, LPCSTR& data, uint32& size)
 {
 	CComPtr<ID3DXBuffer> shader, error;
 
@@ -935,7 +935,7 @@ static HRESULT LoadShader(UINT id, LPCSTR& data, DWORD& size)
 	return S_OK;
 }
 
-HRESULT GSDevice9::CompileShader(UINT id, const string& entry, const D3DXMACRO* macro, IDirect3DVertexShader9** vs, const D3DVERTEXELEMENT9* layout, int count, IDirect3DVertexDeclaration9** il)
+HRESULT GSDevice9::CompileShader(uint32 id, const string& entry, const D3DXMACRO* macro, IDirect3DVertexShader9** vs, const D3DVERTEXELEMENT9* layout, int count, IDirect3DVertexDeclaration9** il)
 {
 	const char* target;
 
@@ -959,7 +959,7 @@ HRESULT GSDevice9::CompileShader(UINT id, const string& entry, const D3DXMACRO* 
 	// FIXME: hr = D3DXCompileShaderFromResource(AfxGetResourceHandle(), MAKEINTRESOURCE(id), macro, NULL, entry.c_str(), target, 0, &shader, &error, NULL);
 
 	LPCSTR data;
-	DWORD size;
+	uint32 size;
 
 	hr = LoadShader(id, data, size);
 
@@ -995,10 +995,10 @@ HRESULT GSDevice9::CompileShader(UINT id, const string& entry, const D3DXMACRO* 
 	return S_OK;
 }
 
-HRESULT GSDevice9::CompileShader(UINT id, const string& entry, const D3DXMACRO* macro, IDirect3DPixelShader9** ps)
+HRESULT GSDevice9::CompileShader(uint32 id, const string& entry, const D3DXMACRO* macro, IDirect3DPixelShader9** ps)
 {
 	const char* target = NULL;
-	UINT flags = 0;
+	uint32 flags = 0;
 
 	if(m_d3dcaps.PixelShaderVersion >= D3DPS_VERSION(3, 0))
 	{
@@ -1021,7 +1021,7 @@ HRESULT GSDevice9::CompileShader(UINT id, const string& entry, const D3DXMACRO* 
 	// FIXME: hr = D3DXCompileShaderFromResource(AfxGetResourceHandle(), MAKEINTRESOURCE(id), macro, NULL, entry.c_str(), target, flags, &shader, &error, NULL);
 
 	LPCSTR data;
-	DWORD size;
+	uint32 size;
 
 	hr = LoadShader(id, data, size);
 

@@ -63,16 +63,16 @@ public:
 	{
 		struct
 		{
-			DWORD bpp:3;
-			DWORD bppz:2;
-			DWORD tme:1;
-			DWORD fst:1;
-			DWORD prim:3;
+			uint32 bpp:3;
+			uint32 bppz:2;
+			uint32 tme:1;
+			uint32 fst:1;
+			uint32 prim:3;
 		};
 
-		DWORD dw;
+		uint32 key;
 
-		operator DWORD() {return dw & 0x3ff;}
+		operator uint32() {return key & 0x3ff;}
 	};
 
 	__declspec(align(16)) struct PSConstantBuffer
@@ -82,10 +82,10 @@ public:
 		float MAXU;
 		float MINV;
 		float MAXV;
-		DWORD UMSK;
-		DWORD UFIX;
-		DWORD VMSK;
-		DWORD VFIX;
+		uint32 UMSK;
+		uint32 UFIX;
+		uint32 VMSK;
+		uint32 VFIX;
 		float TA0;
 		float TA1;
 		float AREF;
@@ -125,87 +125,87 @@ public:
 	{
 		struct
 		{
-			DWORD fst:1;
-			DWORD wms:2;
-			DWORD wmt:2;
-			DWORD bpp:3;
-			DWORD aem:1;
-			DWORD tfx:3;
-			DWORD tcc:1;
-			DWORD ate:1;
-			DWORD atst:3;
-			DWORD fog:1;
-			DWORD clr1:1;
-			DWORD fba:1;
-			DWORD aout:1;
+			uint32 fst:1;
+			uint32 wms:2;
+			uint32 wmt:2;
+			uint32 bpp:3;
+			uint32 aem:1;
+			uint32 tfx:3;
+			uint32 tcc:1;
+			uint32 ate:1;
+			uint32 atst:3;
+			uint32 fog:1;
+			uint32 clr1:1;
+			uint32 fba:1;
+			uint32 aout:1;
 		};
 
-		DWORD dw;
+		uint32 key;
 
-		operator DWORD() {return dw & 0x1fffff;}
+		operator uint32() {return key & 0x1fffff;}
 	};
 
 	union GSSelector
 	{
 		struct
 		{
-			DWORD iip:1;
-			DWORD prim:2;
+			uint32 iip:1;
+			uint32 prim:2;
 		};
 
-		DWORD dw;
+		uint32 key;
 
-		operator DWORD() {return dw & 0x7;}
+		operator uint32() {return key & 0x7;}
 	};
 
 	union PSSamplerSelector
 	{
 		struct
 		{
-			DWORD tau:1;
-			DWORD tav:1;
-			DWORD min:1;
-			DWORD mag:1;
+			uint32 tau:1;
+			uint32 tav:1;
+			uint32 min:1;
+			uint32 mag:1;
 		};
 
-		DWORD dw;
+		uint32 key;
 
-		operator DWORD() {return dw & 0xf;}
+		operator uint32() {return key & 0xf;}
 	};
 
 	union OMDepthStencilSelector
 	{
 		struct
 		{
-			DWORD zte:1;
-			DWORD ztst:2;
-			DWORD zwe:1;
-			DWORD date:1;
+			uint32 zte:1;
+			uint32 ztst:2;
+			uint32 zwe:1;
+			uint32 date:1;
 		};
 
-		DWORD dw;
+		uint32 key;
 
-		operator DWORD() {return dw & 0x1f;}
+		operator uint32() {return key & 0x1f;}
 	};
 
 	union OMBlendSelector
 	{
 		struct
 		{
-			DWORD abe:1;
-			DWORD a:2;
-			DWORD b:2;
-			DWORD c:2;
-			DWORD d:2;
-			DWORD wr:1;
-			DWORD wg:1;
-			DWORD wb:1;
-			DWORD wa:1;
+			uint32 abe:1;
+			uint32 a:2;
+			uint32 b:2;
+			uint32 c:2;
+			uint32 d:2;
+			uint32 wr:1;
+			uint32 wg:1;
+			uint32 wb:1;
+			uint32 wa:1;
 		};
 
-		DWORD dw;
+		uint32 key;
 
-		operator DWORD() {return dw & 0x1fff;}
+		operator uint32() {return key & 0x1fff;}
 	};
 
 	#pragma pack(pop)
@@ -213,15 +213,15 @@ public:
 private:
 	GSDevice10* m_dev;
 	CComPtr<ID3D10InputLayout> m_il;
-	hash_map<DWORD, CComPtr<ID3D10VertexShader> > m_vs;
+	hash_map<uint32, CComPtr<ID3D10VertexShader> > m_vs;
 	CComPtr<ID3D10Buffer> m_vs_cb;
-	hash_map<DWORD, CComPtr<ID3D10GeometryShader> > m_gs;
-	hash_map<DWORD, CComPtr<ID3D10PixelShader> > m_ps;
+	hash_map<uint32, CComPtr<ID3D10GeometryShader> > m_gs;
+	hash_map<uint32, CComPtr<ID3D10PixelShader> > m_ps;
 	CComPtr<ID3D10Buffer> m_ps_cb;
-	hash_map<DWORD, CComPtr<ID3D10SamplerState> > m_ps_ss;
+	hash_map<uint32, CComPtr<ID3D10SamplerState> > m_ps_ss;
 	CComPtr<ID3D10SamplerState> m_palette_ss;
-	hash_map<DWORD, CComPtr<ID3D10DepthStencilState> > m_om_dss;	
-	hash_map<DWORD, CComPtr<ID3D10BlendState> > m_om_bs;	
+	hash_map<uint32, CComPtr<ID3D10DepthStencilState> > m_om_dss;	
+	hash_map<uint32, CComPtr<ID3D10BlendState> > m_om_bs;	
 
 	CComPtr<ID3D10Buffer> m_vb, m_vb_old;
 	int m_vb_max;
@@ -241,7 +241,7 @@ public:
 	bool SetupGS(GSSelector sel);
 	bool SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel, ID3D10ShaderResourceView* tex, ID3D10ShaderResourceView* pal);
 	void UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel);
-	void SetupRS(UINT w, UINT h, const RECT& scissor);
+	void SetupRS(int w, int h, const GSVector4i& scissor);
 	void SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, float bf, ID3D10RenderTargetView* rtv, ID3D10DepthStencilView* dsv);
 	void UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, float bf);
 	void Draw();

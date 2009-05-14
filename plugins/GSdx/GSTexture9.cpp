@@ -83,7 +83,7 @@ int GSTexture9::GetFormat() const
 	return m_desc.Format;
 }
 
-bool GSTexture9::Update(const CRect& r, const void* data, int pitch)
+bool GSTexture9::Update(const GSVector4i& r, const void* data, int pitch)
 {
 	if(CComPtr<IDirect3DSurface9> surface = *this)
 	{
@@ -91,12 +91,12 @@ bool GSTexture9::Update(const CRect& r, const void* data, int pitch)
 
 		if(SUCCEEDED(surface->LockRect(&lr, r, 0)))
 		{
-			BYTE* src = (BYTE*)data;
-			BYTE* dst = (BYTE*)lr.pBits;
+			uint8* src = (uint8*)data;
+			uint8* dst = (uint8*)lr.pBits;
 
 			int bytes = min(pitch, lr.Pitch);
 
-			for(int i = 0, j = r.Height(); i < j; i++, src += pitch, dst += lr.Pitch)
+			for(int i = 0, j = r.height(); i < j; i++, src += pitch, dst += lr.Pitch)
 			{
 				memcpy(dst, src, bytes);
 			}
@@ -110,7 +110,7 @@ bool GSTexture9::Update(const CRect& r, const void* data, int pitch)
 	return false;
 }
 
-bool GSTexture9::Map(BYTE** bits, int& pitch, const RECT* r)
+bool GSTexture9::Map(uint8** bits, int& pitch)
 {
 	HRESULT hr;
 
@@ -118,9 +118,9 @@ bool GSTexture9::Map(BYTE** bits, int& pitch, const RECT* r)
 	{
 		D3DLOCKED_RECT lr;
 
-		if(SUCCEEDED(hr = surface->LockRect(&lr, r, 0)))
+		if(SUCCEEDED(hr = surface->LockRect(&lr, NULL, 0)))
 		{
-			*bits = (BYTE*)lr.pBits;
+			*bits = (uint8*)lr.pBits;
 			pitch = (int)lr.Pitch;
 
 			return true;
@@ -160,12 +160,12 @@ bool GSTexture9::Save(const string& fn, bool dds)
 		hr = m_surface->LockRect(&slr, NULL, 0);
 		hr = surface->LockRect(&dlr, NULL, 0);
 
-		BYTE* s = (BYTE*)slr.pBits;
-		BYTE* d = (BYTE*)dlr.pBits;
+		uint8* s = (uint8*)slr.pBits;
+		uint8* d = (uint8*)dlr.pBits;
 
-		for(UINT y = 0; y < desc.Height; y++, s += slr.Pitch, d += dlr.Pitch)
+		for(uint32 y = 0; y < desc.Height; y++, s += slr.Pitch, d += dlr.Pitch)
 		{
-			for(UINT x = 0; x < desc.Width; x++)
+			for(uint32 x = 0; x < desc.Width; x++)
 			{
 				((float*)d)[x] = ((float*)s)[x];
 			}

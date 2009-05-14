@@ -37,16 +37,14 @@ void GSTextureCache10::GSRenderTargetHW10::Update()
 
 	// FIXME: the union of the rects may also update wrong parts of the render target (but a lot faster :)
 
-	CRect r = m_dirty.GetDirtyRect(m_TEX0, m_texture.GetSize());
+	GSVector4i r = m_dirty.GetDirtyRectAndClear(m_TEX0, m_texture.GetSize());
 
-	m_dirty.clear();
+	if(r.rempty()) return;
 
-	if(r.IsRectEmpty()) return;
+	int w = r.width();
+	int h = r.height();
 
-	int w = r.Width();
-	int h = r.Height();
-
-	static BYTE* buff = (BYTE*)_aligned_malloc(1024 * 1024 * 4, 16);
+	static uint8* buff = (uint8*)_aligned_malloc(1024 * 1024 * 4, 16);
 	static int pitch = 1024 * 4;
 
 	GIFRegTEXA TEXA;
@@ -69,7 +67,7 @@ void GSTextureCache10::GSRenderTargetHW10::Update()
 	if(!m_renderer->m_dev.CreateTexture(texture, w, h)) 
 		return;
 
-	texture.Update(CRect(0, 0, w, h), buff, pitch);
+	texture.Update(GSVector4i(0, 0, w, h), buff, pitch);
 
 	GSVector4 dr(
 		m_texture.m_scale.x * r.left, 
@@ -82,7 +80,7 @@ void GSTextureCache10::GSRenderTargetHW10::Update()
 	m_renderer->m_dev.Recycle(texture);
 }
 
-void GSTextureCache10::GSRenderTargetHW10::Read(CRect r)
+void GSTextureCache10::GSRenderTargetHW10::Read(const GSVector4i& r)
 {
 	if(m_TEX0.PSM != PSM_PSMCT32 
 	&& m_TEX0.PSM != PSM_PSMCT24
@@ -102,8 +100,8 @@ void GSTextureCache10::GSRenderTargetHW10::Read(CRect r)
 
 	// m_renderer->m_perfmon.Put(GSPerfMon::ReadRT, 1);
 
-	int w = r.Width();
-	int h = r.Height();
+	int w = r.width();
+	int h = r.height();
 
 	GSVector4 src;
 
@@ -119,15 +117,15 @@ void GSTextureCache10::GSRenderTargetHW10::Read(CRect r)
 	if(!m_renderer->m_dev.CopyOffscreen(m_texture, src, offscreen, w, h, format))
 		return;
 
-	BYTE* bits;
+	uint8* bits;
 	int pitch;
 
 	if(offscreen.Map(&bits, pitch))
 	{
 		// TODO: block level write
 
-		DWORD bp = m_TEX0.TBP0;
-		DWORD bw = m_TEX0.TBW;
+		uint32 bp = m_TEX0.TBP0;
+		uint32 bw = m_TEX0.TBW;
 
 		GSLocalMemory::pixelAddress pa = GSLocalMemory::m_psm[m_TEX0.PSM].pa;
 
@@ -135,12 +133,12 @@ void GSTextureCache10::GSRenderTargetHW10::Read(CRect r)
 		{
 			for(int y = r.top; y < r.bottom; y++, bits += pitch)
 			{
-				DWORD addr = pa(0, y, bp, bw);
+				uint32 addr = pa(0, y, bp, bw);
 				int* offset = GSLocalMemory::m_psm[m_TEX0.PSM].rowOffset[y & 7];
 
 				for(int x = r.left, i = 0; x < r.right; x++, i++)
 				{
-					m_renderer->m_mem.WritePixel32(addr + offset[x], ((DWORD*)bits)[i]);
+					m_renderer->m_mem.WritePixel32(addr + offset[x], ((uint32*)bits)[i]);
 				}
 			}
 		}
@@ -148,12 +146,12 @@ void GSTextureCache10::GSRenderTargetHW10::Read(CRect r)
 		{
 			for(int y = r.top; y < r.bottom; y++, bits += pitch)
 			{
-				DWORD addr = pa(0, y, bp, bw);
+				uint32 addr = pa(0, y, bp, bw);
 				int* offset = GSLocalMemory::m_psm[m_TEX0.PSM].rowOffset[y & 7];
 
 				for(int x = r.left, i = 0; x < r.right; x++, i++)
 				{
-					m_renderer->m_mem.WritePixel24(addr + offset[x], ((DWORD*)bits)[i]);
+					m_renderer->m_mem.WritePixel24(addr + offset[x], ((uint32*)bits)[i]);
 				}
 			}
 		}
@@ -161,12 +159,12 @@ void GSTextureCache10::GSRenderTargetHW10::Read(CRect r)
 		{
 			for(int y = r.top; y < r.bottom; y++, bits += pitch)
 			{
-				DWORD addr = pa(0, y, bp, bw);
+				uint32 addr = pa(0, y, bp, bw);
 				int* offset = GSLocalMemory::m_psm[m_TEX0.PSM].rowOffset[y & 7];
 
 				for(int x = r.left, i = 0; x < r.right; x++, i++)
 				{
-					m_renderer->m_mem.WritePixel16(addr + offset[x], ((WORD*)bits)[i]);
+					m_renderer->m_mem.WritePixel16(addr + offset[x], ((uint16*)bits)[i]);
 				}
 			}
 		}
@@ -199,7 +197,7 @@ bool GSTextureCache10::GSTextureHW10::Create()
 	m_TEX0 = m_renderer->m_context->TEX0;
 	m_CLAMP = m_renderer->m_context->CLAMP;
 
-	DWORD psm = m_TEX0.PSM;
+	uint32 psm = m_TEX0.PSM;
 
 	switch(psm)
 	{
@@ -412,41 +410,4 @@ bool GSTextureCache10::GSTextureHW10::Create(GSDepthStencil* ds)
 	// TODO
 
 	return false;
-}
-
-void GSTextureCache10::GSTextureHW10::Update()
-{
-	__super::Update();
-
-	if(m_rendered)
-	{
-		return;
-	}
-
-	CRect r;
-
-	if(!GetDirtyRect(r))
-	{
-		return;
-	}
-
-	m_valid |= r;
-
-	//TRACE(_T("GSTexture::Update %d,%d - %d,%d (%08x)\n"), r.left, r.top, r.right, r.bottom, m_TEX0.TBP0);
-
-	static BYTE* bits = (BYTE*)::_aligned_malloc(1024 * 1024 * 4, 16);
-	int pitch = 1024 * 4;
-
-	if(m_renderer->m_psrr)
-	{
-		m_renderer->m_mem.ReadTextureNPNC(r, bits, pitch, m_renderer->m_context->TEX0, m_renderer->m_env.TEXA, m_renderer->m_context->CLAMP);
-	}
-	else
-	{
-		m_renderer->m_mem.ReadTextureNP(r, bits, pitch, m_renderer->m_context->TEX0, m_renderer->m_env.TEXA, m_renderer->m_context->CLAMP);
-	}
-
-	m_texture.Update(r, bits, pitch);
-
-	m_renderer->m_perfmon.Put(GSPerfMon::Unswizzle, r.Width() * r.Height() * m_bpp >> 3);
 }

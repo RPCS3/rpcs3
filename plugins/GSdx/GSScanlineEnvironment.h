@@ -28,63 +28,63 @@ union GSScanlineSelector
 {
 	struct
 	{
-		DWORD fpsm:2; // 0
-		DWORD zpsm:2; // 2
-		DWORD ztst:2; // 4 (0: off, 1: write, 2: test (ge), 3: test (g))
-		DWORD atst:3; // 6
-		DWORD afail:2; // 9
-		DWORD iip:1; // 11
-		DWORD tfx:3; // 12
-		DWORD tcc:1; // 15
-		DWORD fst:1; // 16
-		DWORD ltf:1; // 17
-		DWORD tlu:1; // 18
-		DWORD fge:1; // 19
-		DWORD date:1; // 20
-		DWORD abe:1; // 21
-		DWORD aba:2; // 22
-		DWORD abb:2; // 24
-		DWORD abc:2; // 26
-		DWORD abd:2; // 28
-		DWORD pabe:1; // 30
-		DWORD aa1:1; // 31
+		uint32 fpsm:2; // 0
+		uint32 zpsm:2; // 2
+		uint32 ztst:2; // 4 (0: off, 1: write, 2: test (ge), 3: test (g))
+		uint32 atst:3; // 6
+		uint32 afail:2; // 9
+		uint32 iip:1; // 11
+		uint32 tfx:3; // 12
+		uint32 tcc:1; // 15
+		uint32 fst:1; // 16
+		uint32 ltf:1; // 17
+		uint32 tlu:1; // 18
+		uint32 fge:1; // 19
+		uint32 date:1; // 20
+		uint32 abe:1; // 21
+		uint32 aba:2; // 22
+		uint32 abb:2; // 24
+		uint32 abc:2; // 26
+		uint32 abd:2; // 28
+		uint32 pabe:1; // 30
+		uint32 aa1:1; // 31
 
-		DWORD fwrite:1; // 32
-		DWORD ftest:1; // 33
-		DWORD rfb:1; // 34
-		DWORD zwrite:1; // 35
-		DWORD ztest:1; // 36
-		DWORD zoverflow:1; // 37 (z max >= 0x80000000)
-		DWORD wms:2; // 38
-		DWORD wmt:2; // 40
-		DWORD datm:1; // 42
-		DWORD colclamp:1; // 43
-		DWORD fba:1; // 44
-		DWORD dthe:1; // 45
-		DWORD sprite:1; // 46
-		DWORD edge:1; // 47
+		uint32 fwrite:1; // 32
+		uint32 ftest:1; // 33
+		uint32 rfb:1; // 34
+		uint32 zwrite:1; // 35
+		uint32 ztest:1; // 36
+		uint32 zoverflow:1; // 37 (z max >= 0x80000000)
+		uint32 wms:2; // 38
+		uint32 wmt:2; // 40
+		uint32 datm:1; // 42
+		uint32 colclamp:1; // 43
+		uint32 fba:1; // 44
+		uint32 dthe:1; // 45
+		uint32 sprite:1; // 46
+		uint32 edge:1; // 47
 	};
 
 	struct
 	{
-		DWORD _pad1:22;
-		DWORD ababcd:8;
-		DWORD _pad2:2;
-		DWORD fb:2;
-		DWORD _pad3:1;
-		DWORD zb:2;
+		uint32 _pad1:22;
+		uint32 ababcd:8;
+		uint32 _pad2:2;
+		uint32 fb:2;
+		uint32 _pad3:1;
+		uint32 zb:2;
 	};
 
 	struct
 	{
-		DWORD lo;
-		DWORD hi;
+		uint32 lo;
+		uint32 hi;
 	};
 
-	UINT64 key;
+	uint64 key;
 
-	operator DWORD() {return lo;}
-	operator UINT64() {return key;}
+	operator uint32() {return lo;}
+	operator uint64() {return key;}
 
 	bool IsSolidRect()
 	{
@@ -105,22 +105,22 @@ __declspec(align(16)) struct GSScanlineParam
 
 	void* vm;
 	const void* tex;
-	const DWORD* clut;
-	DWORD tw;
+	const uint32* clut;
+	uint32 tw;
 
 	GSLocalMemory::Offset* fbo;
 	GSLocalMemory::Offset* zbo;
 	GSLocalMemory::Offset4* fzbo;
 
-	DWORD fm, zm;
+	uint32 fm, zm;
 };
 
 __declspec(align(16)) struct GSScanlineEnvironment
 {
 	void* vm;
 	const void* tex;
-	const DWORD* clut;
-	DWORD tw;
+	const uint32* clut;
+	uint32 tw;
 
 	GSVector4i* fbr;
 	GSVector4i* zbr;

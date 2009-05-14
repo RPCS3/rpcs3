@@ -112,7 +112,7 @@ bool GSDevice7::Reset(int w, int h, bool fs)
 
 		HRGN hrgn = CreateRectRgn(0, 0, w, h);
 
-		BYTE buff[1024];
+		uint8 buff[1024];
 
 		GetRegionData(hrgn, sizeof(buff), (RGNDATA*)buff);
 		
@@ -129,12 +129,13 @@ bool GSDevice7::Reset(int w, int h, bool fs)
 	return true;
 }
 
-void GSDevice7::Present(const CRect& r)
+void GSDevice7::Present(const GSVector4i& r)
 {
 	HRESULT hr;
 
-	CRect cr;
-	GetClientRect(m_hWnd, &cr);
+	GSVector4i cr;
+
+	GetClientRect(m_hWnd, cr);
 
     DDSURFACEDESC2 desc;
 	memset(&desc, 0, sizeof(desc));
@@ -142,9 +143,9 @@ void GSDevice7::Present(const CRect& r)
 
 	hr = m_backbuffer->GetSurfaceDesc(&desc);
 
-	if(desc.dwWidth != cr.Width() || desc.dwHeight != cr.Height())
+	if(desc.dwWidth != cr.width() || desc.dwHeight != cr.height())
 	{
-		Reset(cr.Width(), cr.Height(), false);
+		Reset(cr.width(), cr.height(), false);
 	}
 
 	DDBLTFX fx;
@@ -156,9 +157,9 @@ void GSDevice7::Present(const CRect& r)
 
 	hr = m_backbuffer->Blt(NULL, NULL, NULL, DDBLT_WAIT | DDBLT_COLORFILL, &fx);
 
-	CRect r2 = r;
+	GSVector4i r2 = r;
 
-	hr = m_backbuffer->Blt(&r2, m_merge, NULL, DDBLT_WAIT, NULL);
+	hr = m_backbuffer->Blt(r2, m_merge, NULL, DDBLT_WAIT, NULL);
 
 	r2 = cr;
 
@@ -169,7 +170,7 @@ void GSDevice7::Present(const CRect& r)
 		hr = m_dd->WaitForVerticalBlank(DDWAITVB_BLOCKBEGIN, NULL);
 	}
 
-	hr = m_primary->Blt(&r2, m_backbuffer, &cr, DDBLT_WAIT, NULL);
+	hr = m_primary->Blt(r2, m_backbuffer, cr, DDBLT_WAIT, NULL);
 
 	if(hr == DDERR_SURFACELOST)
 	{

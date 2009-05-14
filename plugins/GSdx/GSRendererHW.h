@@ -45,7 +45,7 @@ protected:
 		__super::Reset();
 	}
 
-	void MinMaxUV(int w, int h, CRect& r)
+	void MinMaxUV(int w, int h, GSVector4i& r)
 	{
 		int wms = m_context->CLAMP.WMS;
 		int wmt = m_context->CLAMP.WMT;
@@ -208,18 +208,15 @@ protected:
 			__assume(0);
 		}
 
-		r = vr;
+		r = vr + GSVector4i(-1, -1, 1, 1); // one more pixel because of bilinear filtering
 
-		r.InflateRect(1, 1); // one more pixel because of bilinear filtering
+		GSVector2i bs = GSLocalMemory::m_psm[m_context->TEX0.PSM].bs;
+		GSVector2i bsm(bs.x - 1, bs.y - 1);
 
-		CSize bs = GSLocalMemory::m_psm[m_context->TEX0.PSM].bs;
-		CSize bsm(bs.cx - 1, bs.cy - 1);
-
-		r.left = max(r.left & ~bsm.cx, 0);
-		r.right = min((r.right + bsm.cx) & ~bsm.cx, w);
-
-		r.top = max(r.top & ~bsm.cy, 0);
-		r.bottom = min((r.bottom + bsm.cy) & ~bsm.cy, h);
+		r.left = max(r.left & ~bsm.x, 0);
+		r.top = max(r.top & ~bsm.y, 0);
+		r.right = min((r.right + bsm.x) & ~bsm.x, w);
+		r.bottom = min((r.bottom + bsm.y) & ~bsm.y, h);
 	}
 
 	void VSync(int field)
@@ -275,14 +272,14 @@ protected:
 		return false;
 	}
 
-	void InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, CRect r)
+	void InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r)
 	{
 		TRACE(_T("[%d] InvalidateVideoMem %d,%d - %d,%d %05x (%d)\n"), (int)m_perfmon.GetFrame(), r.left, r.top, r.right, r.bottom, (int)BITBLTBUF.DBP, (int)BITBLTBUF.DPSM);
 
 		m_tc->InvalidateVideoMem(BITBLTBUF, r);
 	}
 
-	void InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, CRect r)
+	void InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r)
 	{
 		TRACE(_T("[%d] InvalidateLocalMem %d,%d - %d,%d %05x (%d)\n"), (int)m_perfmon.GetFrame(), r.left, r.top, r.right, r.bottom, (int)BITBLTBUF.SBP, (int)BITBLTBUF.SPSM);
 
@@ -410,18 +407,18 @@ protected:
 
 		if(m_game.title == CRC::FFXII && m_game.region == CRC::EU)
 		{
-			static DWORD* video = NULL;
+			static uint32* video = NULL;
 			static bool ok = false;
 
-			if(prim == GS_POINTLIST && m_count >= 448*448 && m_count <= 448*512)
+			if(prim == GS_POINTLIST && m_count >= 448 * 448 && m_count <= 448 * 512)
 			{
 				// incoming pixels are stored in columns, one column is 16x512, total res 448x512 or 448x454
 
-				if(!video) video = new DWORD[512*512];
+				if(!video) video = new uint32[512 * 512];
 
 				for(int x = 0, i = 0, rows = m_count / 448; x < 448; x += 16)
 				{
-					DWORD* dst = &video[x];
+					uint32* dst = &video[x];
 
 					for(int y = 0; y < rows; y++, dst += 512)
 					{
@@ -436,7 +433,7 @@ protected:
 
 				return false;
 			}
-			else if(prim == GS_LINELIST && m_count == 512*2 && ok)
+			else if(prim == GS_LINELIST && m_count == 512 * 2 && ok)
 			{
 				// normally, this step would copy the video onto screen with 512 texture mapped horizontal lines,
 				// but we use the stored video data to create a new texture, and replace the lines with two triangles
@@ -445,7 +442,7 @@ protected:
 
 				m_dev.CreateTexture(*t, 512, 512);
 
-				t->Update(CRect(0, 0, 448, 512), video, 512*4);
+				t->Update(GSVector4i(0, 0, 448, 512), video, 512 * 4);
 
 				m_vertices[0] = m_vertices[0];
 				m_vertices[1] = m_vertices[1];
@@ -467,9 +464,9 @@ protected:
 
 		if(m_game.title == CRC::FFX)
 		{
-			DWORD FBP = m_context->FRAME.Block();
-			DWORD ZBP = m_context->ZBUF.Block();
-			DWORD TBP = m_context->TEX0.TBP0;
+			uint32 FBP = m_context->FRAME.Block();
+			uint32 ZBP = m_context->ZBUF.Block();
+			uint32 TBP = m_context->TEX0.TBP0;
 
 			if((FBP == 0x00d00 || FBP == 0x00000) && ZBP == 0x02100 && PRIM->TME && TBP == 0x01a00 && m_context->TEX0.PSM == PSM_PSMCT16S)
 			{
@@ -504,8 +501,8 @@ protected:
 		{
 			if(prim == GS_POINTLIST && !PRIM->TME)
 			{
-				DWORD bp = m_context->FRAME.Block();
-				DWORD bw = m_context->FRAME.FBW;
+				uint32 bp = m_context->FRAME.Block();
+				uint32 bw = m_context->FRAME.FBW;
 
 				if(bp >= 0x03f40 && (bp & 0x1f) == 0)
 				{
@@ -551,9 +548,9 @@ protected:
 
 		if(m_game.title == CRC::GodOfWar2)
 		{
-			DWORD FBP = m_context->FRAME.Block();
-			DWORD FBW = m_context->FRAME.FBW;
-			DWORD FPSM = m_context->FRAME.PSM;
+			uint32 FBP = m_context->FRAME.Block();
+			uint32 FBW = m_context->FRAME.FBW;
+			uint32 FPSM = m_context->FRAME.PSM;
 
 			if((FBP == 0x00f00 || FBP == 0x00100) && FPSM == PSM_PSMZ24) // ntsc 0xf00, pal 0x100
 			{
@@ -585,8 +582,8 @@ protected:
 
 		if(m_game.title == CRC::DBZBT2)
 		{
-			DWORD FBP = m_context->FRAME.Block();
-			DWORD TBP0 = m_context->TEX0.TBP0;
+			uint32 FBP = m_context->FRAME.Block();
+			uint32 TBP0 = m_context->TEX0.TBP0;
 
 			if(PRIM->TME && (FBP == 0x03c00 && TBP0 == 0x03c80 || FBP == 0x03ac0 && TBP0 == 0x03b40))
 			{
@@ -596,7 +593,7 @@ protected:
 				BITBLTBUF.SBW = 1;
 				BITBLTBUF.SPSM = PSM_PSMCT32;
 
-				InvalidateLocalMem(BITBLTBUF, CRect(0, 0, 64, 64));
+				InvalidateLocalMem(BITBLTBUF, GSVector4i(0, 0, 64, 64));
 			}
 		}
 
@@ -606,7 +603,7 @@ protected:
 
 		if(m_game.title == CRC::MajokkoALaMode2)
 		{
-			DWORD FBP = m_context->FRAME.Block();
+			uint32 FBP = m_context->FRAME.Block();
 
 			if(!PRIM->TME && FBP == 0x03f40)
 			{
@@ -616,7 +613,7 @@ protected:
 				BITBLTBUF.SBW = 1;
 				BITBLTBUF.SPSM = PSM_PSMCT32;
 
-				InvalidateLocalMem(BITBLTBUF, CRect(0, 0, 16, 16));
+				InvalidateLocalMem(BITBLTBUF, GSVector4i(0, 0, 16, 16));
 			}
 		}
 
@@ -629,7 +626,7 @@ protected:
 
 		if(m_game.title == CRC::DBZBT2)
 		{
-			DWORD FBP = m_context->FRAME.Block();
+			uint32 FBP = m_context->FRAME.Block();
 
 			if(FBP == 0x03c00 || FBP == 0x03ac0)
 			{
@@ -643,7 +640,7 @@ protected:
 
 		if(m_game.title == CRC::MajokkoALaMode2)
 		{
-			DWORD FBP = m_context->FRAME.Block();
+			uint32 FBP = m_context->FRAME.Block();
 
 			if(FBP == 0x03f40)
 			{
@@ -657,7 +654,7 @@ protected:
 
 		if(m_game.title == CRC::TalesOfAbyss)
 		{
-			DWORD FBP = m_context->FRAME.Block();
+			uint32 FBP = m_context->FRAME.Block();
 
 			if(FBP == 0x036e0 || FBP == 0x03560 || FBP == 0x038e0)
 			{
@@ -671,7 +668,7 @@ protected:
 	}
 
 public:
-	GSRendererHW(BYTE* base, bool mt, void (*irq)(), const GSRendererSettings& rs, bool psrr)
+	GSRendererHW(uint8* base, bool mt, void (*irq)(), const GSRendererSettings& rs, bool psrr)
 		: GSRendererT<Device, Vertex>(base, mt, irq, rs, psrr)
 		, m_width(1024)
 		, m_height(1024)
@@ -692,7 +689,7 @@ public:
 		delete m_tc;
 	}
 
-	void SetGameCRC(DWORD crc, int options)
+	void SetGameCRC(uint32 crc, int options)
 	{
 		__super::SetGameCRC(crc, options);
 

@@ -22,7 +22,7 @@
 #include "stdafx.h"
 #include "GPUState.h"
 
-GPUState::GPUState(const CSize& scale)
+GPUState::GPUState(const GSVector2i& scale)
 	: m_mem(scale)
 	, s_n(0)
 {
@@ -64,7 +64,7 @@ void GPUState::Reset()
 {
 	m_env.Reset();
 
-	m_mem.Invalidate(CRect(0, 0, 1024, 512));
+	m_mem.Invalidate(GSVector4i(0, 0, 1024, 512));
 
 	memset(&m_v, 0, sizeof(m_v));
 }
@@ -88,18 +88,18 @@ void GPUState::SetPrim(GPUReg* r)
 	switch(r->PRIM.TYPE)
 	{
 	case GPU_POLYGON: 
-		PRIM.ai32 = (r->PRIM.ai32 & 0xF7000000) | 3; // TYPE IIP TME ABE TGE
+		PRIM.u32 = (r->PRIM.u32 & 0xF7000000) | 3; // TYPE IIP TME ABE TGE
 		break;
 	case GPU_LINE: 
-		PRIM.ai32 = (r->PRIM.ai32 & 0xF2000000) | 2; // TYPE IIP ABE
+		PRIM.u32 = (r->PRIM.u32 & 0xF2000000) | 2; // TYPE IIP ABE
 		PRIM.TGE = 1; // ?
 		break; 
 	case GPU_SPRITE: 
-		PRIM.ai32 = (r->PRIM.ai32 & 0xE7000000) | 2; // TYPE TME ABE TGE
+		PRIM.u32 = (r->PRIM.u32 & 0xE7000000) | 2; // TYPE TME ABE TGE
 		break; 
 	}
 
-	if(m_env.PRIM.ai32 != PRIM.ai32)
+	if(m_env.PRIM.u32 != PRIM.u32)
 	{
 		Flush();
 
@@ -109,38 +109,38 @@ void GPUState::SetPrim(GPUReg* r)
 
 void GPUState::SetCLUT(GPUReg* r)
 {
-	UINT32 mask = 0xFFFF0000; // X Y
+	uint32 mask = 0xFFFF0000; // X Y
 
-	UINT32 value = (m_env.CLUT.ai32 & ~mask) | (r->ai32 & mask);
+	uint32 value = (m_env.CLUT.u32 & ~mask) | (r->u32 & mask);
 
-	if(m_env.CLUT.ai32 != value)
+	if(m_env.CLUT.u32 != value)
 	{
 		Flush();
 
-		m_env.CLUT.ai32 = value;
+		m_env.CLUT.u32 = value;
 	}
 }
 
 void GPUState::SetTPAGE(GPUReg* r)
 {
-	UINT32 mask = 0x000001FF; // TP ABR TY TX
+	uint32 mask = 0x000001FF; // TP ABR TY TX
 
-	UINT32 value = (m_env.STATUS.ai32 & ~mask) | ((r->ai32 >> 16) & mask);
+	uint32 value = (m_env.STATUS.u32 & ~mask) | ((r->u32 >> 16) & mask);
 
-	if(m_env.STATUS.ai32 != value)
+	if(m_env.STATUS.u32 != value)
 	{
 		Flush();
 
-		m_env.STATUS.ai32 = value;
+		m_env.STATUS.u32 = value;
 	}
 }
 
-void GPUState::Invalidate(const CRect& r)
+void GPUState::Invalidate(const GSVector4i& r)
 {
 	m_mem.Invalidate(r);
 }
 
-void GPUState::WriteData(const BYTE* mem, UINT32 size)
+void GPUState::WriteData(const uint8* mem, uint32 size)
 {
 	GSPerfMonAutoTimer pmat(m_perfmon);
 
@@ -164,7 +164,7 @@ void GPUState::WriteData(const BYTE* mem, UINT32 size)
 	m_write.Remove(i);
 }
 
-void GPUState::ReadData(BYTE* mem, UINT32 size)
+void GPUState::ReadData(uint8* mem, uint32 size)
 {
 	GSPerfMonAutoTimer pmat(m_perfmon);
 
@@ -193,38 +193,38 @@ void GPUState::ReadData(BYTE* mem, UINT32 size)
 	}
 }
 
-void GPUState::WriteStatus(UINT32 status)
+void GPUState::WriteStatus(uint32 status)
 {
 	GSPerfMonAutoTimer pmat(m_perfmon);
 
-	UINT32 b = status >> 24;
+	uint32 b = status >> 24;
 
 	m_status[b] = status;
 
 	(this->*m_fpGPUStatusCommandHandlers[b])((GPUReg*)&status);	
 }
 
-UINT32 GPUState::ReadStatus()
+uint32 GPUState::ReadStatus()
 {
 	GSPerfMonAutoTimer pmat(m_perfmon);
 
 	m_env.STATUS.LCF = ~m_env.STATUS.LCF; // ?
 
-	return m_env.STATUS.ai32;
+	return m_env.STATUS.u32;
 }
 
 void GPUState::Freeze(GPUFreezeData* data)
 {
-	data->status = m_env.STATUS.ai32;
+	data->status = m_env.STATUS.u32;
 	memcpy(data->control, m_status, 256 * 4);
-	m_mem.ReadRect(CRect(0, 0, 1024, 512), data->vram);
+	m_mem.ReadRect(GSVector4i(0, 0, 1024, 512), data->vram);
 }
 
 void GPUState::Defrost(const GPUFreezeData* data)
 {
-	m_env.STATUS.ai32 = data->status;
+	m_env.STATUS.u32 = data->status;
 	memcpy(m_status, data->control, 256 * 4);
-	m_mem.WriteRect(CRect(0, 0, 1024, 512), data->vram);
+	m_mem.WriteRect(GSVector4i(0, 0, 1024, 512), data->vram);
 
 	for(int i = 0; i <= 8; i++)
 	{
@@ -289,24 +289,24 @@ void GPUState::SCH_DisplayMode(GPUReg* r)
 
 void GPUState::SCH_GPUInfo(GPUReg* r)
 {
-	UINT32 value = 0;
+	uint32 value = 0;
 
 	switch(r->GPUINFO.PARAM)
 	{
 	case 0x2: 
-		value = m_env.TWIN.ai32; 
+		value = m_env.TWIN.u32; 
 		break;
 	case 0x0:
 	case 0x1:
 	case 0x3: 
-		value = m_env.DRAREATL.ai32; 
+		value = m_env.DRAREATL.u32; 
 		break;
 	case 0x4: 
-		value = m_env.DRAREABR.ai32; 
+		value = m_env.DRAREABR.u32; 
 		break;
 	case 0x5: 
 	case 0x6: 
-		value = m_env.DROFF.ai32; 
+		value = m_env.DROFF.u32; 
 		break;
 	case 0x7: 
 		value = 2; 
@@ -321,7 +321,7 @@ void GPUState::SCH_GPUInfo(GPUReg* r)
 	}
 
 	m_read.RemoveAll();
-	m_read.Append((BYTE*)&value, 4);
+	m_read.Append((uint8*)&value, 4);
 	m_read.cur = 0;
 }
 
@@ -343,14 +343,14 @@ int GPUState::PH_Command(GPUReg* r, int size)
 
 		Flush();
 
-		CRect r2;
+		GSVector4i r2;
 
 		r2.left = r[1].XY.X;
 		r2.top = r[1].XY.Y;
 		r2.right = r2.left + r[2].XY.X;
 		r2.bottom = r2.top + r[2].XY.Y;
 
-		WORD c = (WORD)(((r[0].RGB.R >> 3) << 10) | ((r[0].RGB.R >> 3) << 5) | (r[0].RGB.R >> 3));
+		uint16 c = (uint16)(((r[0].RGB.R >> 3) << 10) | ((r[0].RGB.R >> 3) << 5) | (r[0].RGB.R >> 3));
 
 		m_mem.FillRect(r2, c);
 
@@ -439,7 +439,7 @@ int GPUState::PH_Line(GPUReg* r, int size)
 
 		for(int i = 1; i < size; i++)
 		{
-			if(r[i].ai32 == 0x55555555)
+			if(r[i].u32 == 0x55555555)
 			{
 				vertices = i - 1;
 			}
@@ -553,20 +553,18 @@ int GPUState::PH_Move(GPUReg* r, int size)
 
 	Flush();
 
-	CPoint src, dst;
+	int sx = r[1].XY.X;
+	int sy = r[1].XY.Y;
 
-	src.x = r[1].XY.X;
-	src.y = r[1].XY.Y;
-
-	dst.x = r[2].XY.X;
-	dst.y = r[2].XY.Y;
+	int dx = r[2].XY.X;
+	int dy = r[2].XY.Y;
 
 	int w = r[3].XY.X;
 	int h = r[3].XY.Y;
 
-	m_mem.MoveRect(src, dst, w, h);
+	m_mem.MoveRect(sx, sy, dx, dy, w, h);
 
-	Invalidate(CRect(dst, CSize(w, h)));
+	Invalidate(GSVector4i(dx, dy, dx + w, dy + h));
 
 	// Dump("m");
 
@@ -586,14 +584,14 @@ int GPUState::PH_Write(GPUReg* r, int size)
 
 	Flush();
 
-	CRect r2;
+	GSVector4i r2;
 
 	r2.left = r[1].XY.X;
 	r2.top = r[1].XY.Y;
 	r2.right = r2.left + w;
 	r2.bottom = r2.top + h;
 
-	m_mem.WriteRect(r2, (const WORD*)&r[3]);
+	m_mem.WriteRect(r2, (const uint16*)&r[3]);
 
 	Invalidate(r2);
 
@@ -613,7 +611,7 @@ int GPUState::PH_Read(GPUReg* r, int size)
 	int w = r[2].XY.X;
 	int h = r[2].XY.Y;
 
-	CRect r2;
+	GSVector4i r2;
 
 	r2.left = r[1].XY.X;
 	r2.top = r[1].XY.Y;
@@ -624,7 +622,7 @@ int GPUState::PH_Read(GPUReg* r, int size)
 	m_read.cur = 0;
 	m_read.Reserve(m_read.bytes);
 
-	m_mem.ReadRect(r2, (WORD*)m_read.buff);
+	m_mem.ReadRect(r2, (uint16*)m_read.buff);
 
 	Dump("r");
 
@@ -693,7 +691,7 @@ GPUState::Buffer::Buffer()
 {
 	bytes = 0;
 	maxbytes = 4096;
-	buff = (BYTE*)_aligned_malloc(maxbytes, 16);
+	buff = (uint8*)_aligned_malloc(maxbytes, 16);
 	cur = 0;
 }
 
@@ -708,11 +706,11 @@ void GPUState::Buffer::Reserve(int size)
 	{
 		maxbytes = (maxbytes + size + 1023) & ~1023;
 
-		buff = (BYTE*)_aligned_realloc(buff, maxbytes, 16);
+		buff = (uint8*)_aligned_realloc(buff, maxbytes, 16);
 	}
 }
 
-void GPUState::Buffer::Append(const BYTE* src, int size)
+void GPUState::Buffer::Append(const uint8* src, int size)
 {
 	Reserve(bytes + (int)size);
 

@@ -38,31 +38,32 @@ protected:
 
 	bool GetOutput(Texture& t)
 	{
-		CRect r = m_env.GetDisplayRect();
+		GSVector4i r = m_env.GetDisplayRect();
 
-		r.left <<= m_scale.cx;
-		r.top <<= m_scale.cy;
-		r.right <<= m_scale.cx;
-		r.bottom <<= m_scale.cy;
+		r.left <<= m_scale.x;
+		r.top <<= m_scale.y;
+		r.right <<= m_scale.x;
+		r.bottom <<= m_scale.y;
 
 		// TODO
-		static DWORD* buff = (DWORD*)_aligned_malloc(m_mem.GetWidth() * m_mem.GetHeight() * sizeof(DWORD), 16);
+		static uint32* buff = (uint32*)_aligned_malloc(m_mem.GetWidth() * m_mem.GetHeight() * sizeof(uint32), 16);
 
 		m_mem.ReadFrame32(r, buff, !!m_env.STATUS.ISRGB24);
 
-		r.OffsetRect(-r.TopLeft());
+		int w = r.width();
+		int h = r.height();
 
-		if(m_texture.GetWidth() != r.Width() || m_texture.GetHeight() != r.Height())
+		if(m_texture.GetWidth() != w || m_texture.GetHeight() != h)
 		{
 			m_texture = Texture();
 		}
 
-		if(!m_texture && !m_dev.CreateTexture(m_texture, r.Width(), r.Height())) 
+		if(!m_texture && !m_dev.CreateTexture(m_texture, w, h)) 
 		{
 			return false;
 		}
 
-		m_texture.Update(r, buff, m_mem.GetWidth() * sizeof(DWORD));
+		m_texture.Update(GSVector4i(0, 0, w, h), buff, m_mem.GetWidth() * sizeof(uint32));
 
 		t = m_texture;
 
@@ -75,8 +76,8 @@ protected:
 
 		// TODO: x/y + off.x/y should wrap around at +/-1024
 
-		int x = (int)(m_v.XY.X + m_env.DROFF.X) << m_scale.cx;
-		int y = (int)(m_v.XY.Y + m_env.DROFF.Y) << m_scale.cy;
+		int x = (int)(m_v.XY.X + m_env.DROFF.X) << m_scale.x;
+		int y = (int)(m_v.XY.Y + m_env.DROFF.Y) << m_scale.y;
 
 		int s = m_v.UV.X;
 		int t = m_v.UV.Y;
@@ -85,7 +86,7 @@ protected:
 
 		v.p = pt.xyxy(GSVector4::zero());
 		v.t = (pt.zwzw(GSVector4::zero()) + GSVector4(0.125f)) * 256.0f;
-		v.c = GSVector4((DWORD)m_v.RGB.ai32) * 128.0f;
+		v.c = GSVector4(m_v.RGB.u32) * 128.0f;
 
 		__super::VertexKick();
 	}
@@ -107,14 +108,14 @@ protected:
 
 	GSVector4i GetScissor()
 	{
-		GSVector4i v;
+		GSVector4i r;
 
-		v.x = (int)m_env.DRAREATL.X << m_scale.cx;
-		v.y = (int)m_env.DRAREATL.Y << m_scale.cy;
-		v.z = min((int)(m_env.DRAREABR.X + 1) << m_scale.cx, m_mem.GetWidth());
-		v.w = min((int)(m_env.DRAREABR.Y + 1) << m_scale.cy, m_mem.GetHeight());
+		r.left = (int)m_env.DRAREATL.X << m_scale.x;
+		r.top = (int)m_env.DRAREATL.Y << m_scale.y;
+		r.right = min((int)(m_env.DRAREABR.X + 1) << m_scale.x, m_mem.GetWidth());
+		r.bottom = min((int)(m_env.DRAREABR.Y + 1) << m_scale.y, m_mem.GetHeight());
 
-		return v;
+		return r;
 	}
 
 	void Draw()
@@ -141,7 +142,7 @@ protected:
 		{
 			p.sel.tme = env.PRIM.TME;
 			p.sel.tlu = env.STATUS.TP < 2;
-			p.sel.twin = (env.TWIN.ai32 & 0xfffff) != 0;
+			p.sel.twin = (env.TWIN.u32 & 0xfffff) != 0;
 			p.sel.ltf = m_filter == 1 && env.PRIM.TYPE == GPU_POLYGON || m_filter == 2 ? 1 : 0;
 
 			const void* t = m_mem.GetTexture(env.STATUS.TP, env.STATUS.TX, env.STATUS.TY);
@@ -155,7 +156,7 @@ protected:
 		p.sel.dtd = m_dither ? env.STATUS.DTD : 0;
 		p.sel.md = env.STATUS.MD;
 		p.sel.sprite = env.PRIM.TYPE == GPU_SPRITE;
-		p.sel.scalex = m_mem.GetScale().cx;
+		p.sel.scalex = m_mem.GetScale().x;
 
 		//
 
@@ -198,14 +199,12 @@ protected:
 				br = br.maxv(p);
 			}
 
-			GSVector4i scissor = data.scissor;
+			GSVector4i r = GSVector4i(tl.xyxy(br)).rintersect(data.scissor);
 
-			CRect r;
-
-			r.left = max(scissor.x, min(scissor.z, (int)tl.x)) >> m_scale.cx;
-			r.top = max(scissor.y, min(scissor.w, (int)tl.y)) >> m_scale.cy;
-			r.right = max(scissor.x, min(scissor.z, (int)br.x)) >> m_scale.cx;
-			r.bottom = max(scissor.y, min(scissor.w, (int)br.y)) >> m_scale.cy;
+			r.left >>= m_scale.x;
+			r.top >>= m_scale.y;
+			r.right >>= m_scale.x;
+			r.bottom >>= m_scale.y;
 
 			Invalidate(r);
 		}

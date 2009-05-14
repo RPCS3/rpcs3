@@ -62,7 +62,7 @@ enum {
 	DEFAULT_MAX_CODE_SIZE = 2048,
 	VERSION = 0x2070, /* 0xABCD = A.BC(D) */
 };
-
+/*
 #ifndef MIE_DEFINED_UINT32
 	#define MIE_DEFINED_UINT32
 	#ifdef _MSC_VER
@@ -81,7 +81,7 @@ enum {
 		#endif
 	#endif
 #endif
-
+*/
 enum Error {
 	ERR_NONE = 0,
 	ERR_BAD_ADDRESSING,

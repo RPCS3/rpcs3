@@ -21,31 +21,22 @@
 
 #pragma once
 
-#include "GSScanlineEnvironment.h"
-#include "xbyak/xbyak.h"
-#include "xbyak/xbyak_util.h"
-
-using namespace Xbyak;
-
-class GSSetupPrimCodeGenerator : public CodeGenerator
+class GSThread
 {
-	void operator = (const GSSetupPrimCodeGenerator&);
+	// TODO: linux
 
-	static const GSVector4 m_shift[5];
+    DWORD m_ThreadId;
+    HANDLE m_hThread;
 
-	util::Cpu m_cpu;
+	static DWORD WINAPI StaticThreadProc(LPVOID lpParam);
 
-	GSScanlineEnvironment& m_env;
-	GSScanlineSelector m_sel;
+protected:
+	virtual void ThreadProc() = 0;
 
-	struct {uint32 z:1, f:1, t:1, c:1;} m_en;
-
-	void Generate();
-
-	void Depth();
-	void Texture();
-	void Color();
+	void CreateThread();
+	void CloseThread();
 
 public:
-	GSSetupPrimCodeGenerator(GSScanlineEnvironment& env, uint64 key, void* ptr, size_t maxsize);
+	GSThread();
+	virtual ~GSThread();
 };
