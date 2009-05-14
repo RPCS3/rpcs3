@@ -1225,10 +1225,9 @@ microVUf(void) mVU_IBNE() {
 microVUf(void) mVU_JR() {
 	microVU* mVU = mVUx;
 	mVUbranch = 9;
-	pass1 { mVUanalyzeBranch1<vuIndex>(_Is_); }
+	pass1 { analyzeVIreg1(_Is_); }
 	pass2 {
-		if (memReadIs) MOV32MtoR(gprT1, (uptr)&mVU->VIbackup[0]);
-		else mVUallocVIa<vuIndex>(gprT1, _Is_);
+		mVUallocVIa<vuIndex>(gprT1, _Is_);
 		SHL32ItoR(gprT1, 3);
 		AND32ItoR(gprT1, vuIndex ? 0x3ff8 : 0xff8);
 		MOV32RtoM((uptr)&mVU->branch, gprT1);
@@ -1239,10 +1238,9 @@ microVUf(void) mVU_JR() {
 microVUf(void) mVU_JALR() {
 	microVU* mVU = mVUx;
 	mVUbranch = 10;
-	pass1 { mVUanalyzeBranch1<vuIndex>(_Is_); analyzeVIreg2(_It_, 1); }
+	pass1 { analyzeVIreg1(_Is_); analyzeVIreg2(_It_, 1); }
 	pass2 {
-		if (memReadIs) MOV32MtoR(gprT1, (uptr)&mVU->VIbackup[0]);
-		else mVUallocVIa<vuIndex>(gprT1, _Is_);
+		mVUallocVIa<vuIndex>(gprT1, _Is_);
 		SHL32ItoR(gprT1, 3);
 		AND32ItoR(gprT1, vuIndex ? 0x3ff8 : 0xff8);
 		MOV32RtoM((uptr)&mVU->branch, gprT1);

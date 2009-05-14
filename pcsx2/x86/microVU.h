@@ -109,9 +109,8 @@ struct microVU {
 	u32		branch;		 // Holds branch compare result (IBxx) OR Holds address to Jump to (JALR/JR)
 	u32		p;			 // Holds current P instance index
 	u32		q;			 // Holds current Q instance index
-	u32		espBackup;	 // Temp Backup for ESP
-	u32		totalCycles;
-	u32		cycles;
+	u32		totalCycles; // Total Cycles that mVU is expected to run for
+	u32		cycles;		 // Cycles Counter
 
 	PCSX2_ALIGNED16(u32 macFlag[4]);  // 4 instances of mac  flag (used in execution)
 	PCSX2_ALIGNED16(u32 clipFlag[4]); // 4 instances of clip flag (used in execution)
