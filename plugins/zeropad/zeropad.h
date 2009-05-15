@@ -65,6 +65,7 @@ extern char libraryName[256];
 #define PAD_JOYSTICK(joyid, axisid) (0x20000 | ((joyid) << 12) | (axisid))
 #define PAD_POV(joyid, sign, axisid) (0x30000 | ((joyid) << 12) | ((sign) << 8) | (axisid))
 #define PAD_GETPOVSIGN(key) (((key) & 0x100) >> 8)
+#define PAD_GETPOVDIR(key) (((key) & ~ 0x30000) >> 8)
 
 #ifdef __LINUX__
 #define PADKEYS 28

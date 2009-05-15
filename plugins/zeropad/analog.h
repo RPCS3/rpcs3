@@ -29,4 +29,5 @@
 	extern void ResetPad(int padvalue, u8 i);
 	extern void ConfigurePad(int padvalue, u8 i, int value);
 	extern int KeypadToPad(u8 keypress);
+	extern int AnalogToPad(int padvalue);
 }

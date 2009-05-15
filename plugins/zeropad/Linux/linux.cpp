@@ -126,28 +126,16 @@ void CALLBACK PADupdate(int pad)
 				switch (i)
 				{
 					case PAD_R_LEFT:
-						Analog::ConfigurePad(PAD_RX, pad, DEF_VALUE);
-						break;
 					case PAD_R_UP:
-						Analog::ConfigurePad(PAD_RY, pad, DEF_VALUE);
-						break;
 					case PAD_L_LEFT:
-						Analog::ConfigurePad(PAD_LX, pad, DEF_VALUE);
-						break;
 					case PAD_L_UP:
-						Analog::ConfigurePad(PAD_LY, pad, DEF_VALUE);
-						break;
-					case PAD_R_DOWN:
-						Analog::ConfigurePad(PAD_RY, pad, -DEF_VALUE);
+						Analog::ConfigurePad(Analog::AnalogToPad(i), pad, DEF_VALUE);
 						break;
 					case PAD_R_RIGHT:
-						Analog::ConfigurePad(PAD_RX, pad, -DEF_VALUE);
-						break;
-					case PAD_L_DOWN:
-						Analog::ConfigurePad(PAD_LY, pad, -DEF_VALUE);
-						break;
+					case PAD_R_DOWN:
 					case PAD_L_RIGHT:
-						Analog::ConfigurePad(PAD_LX, pad, -DEF_VALUE);
+					case PAD_L_DOWN:
+						Analog::ConfigurePad(Analog::AnalogToPad(i), pad, -DEF_VALUE);
 						break;
 				}
 				i += 0xff00;
@@ -172,34 +160,8 @@ void CALLBACK PADupdate(int pad)
 			
 				if ((i > PAD_RY) && (i <= PAD_R_LEFT))
 				{
-				switch (i)
-				{
-					case PAD_R_LEFT:
-						Analog::ResetPad(PAD_RX, pad);
-						break;
-					case PAD_R_UP:
-						Analog::ResetPad(PAD_RY, pad);
-						break;
-					case PAD_L_LEFT:
-						Analog::ResetPad(PAD_LX, pad);
-						break;
-					case PAD_L_UP:
-						Analog::ResetPad(PAD_LY, pad);
-						break;
-					case PAD_R_DOWN:
-						Analog::ResetPad(PAD_RY, pad);
-						break;
-					case PAD_R_RIGHT:
-						Analog::ResetPad(PAD_RX, pad);
-						break;
-					case PAD_L_DOWN:
-						Analog::ResetPad(PAD_LY, pad);
-						break;
-					case PAD_L_RIGHT:
-						Analog::ResetPad(PAD_LX, pad);
-						break;
-				}
-				i += 0xff00;
+					Analog::ResetPad(Analog::AnalogToPad(i), pad);
+					i += 0xff00;
 				}
 #endif
 				if (i != -1) 
@@ -255,6 +217,7 @@ void CALLBACK PADupdate(int pad)
 				pjoy = s_vjoysticks[joyid];
 				int value = SDL_JoystickGetAxis((pjoy)->GetJoy(), PAD_GETJOYSTICK_AXIS(key));
 				int pad = (pjoy)->GetPAD();
+				
 				switch (i)
 				{
 					case PAD_LX:
@@ -279,12 +242,46 @@ void CALLBACK PADupdate(int pad)
 
 				int value = SDL_JoystickGetHat((pjoy)->GetJoy(), PAD_GETJOYSTICK_AXIS(key));
 				int pad = (pjoy)->GetPAD();
+				int temp;
 				
-				//PAD_LOG("Hat = %d for key %d\n", PAD_GETPOVSIGN(key), key);
-				if PAD_GETPOVSIGN(key)
+				//PAD_LOG("Hat = %d for key %d\n", PAD_GETPOVDIR(key), key);
+				if (value != 0)
+				{
+					if (PAD_GETPOVDIR(key) == value)
+						set_bit(status[pad], i);
+					/*else
+						clear_bit(status[pad], i);*/
+						
+					switch (value)
+					{
+						case SDL_HAT_UP:
+							PAD_LOG("Up!\n");
+							break;
+					
+						case SDL_HAT_RIGHT:
+							PAD_LOG("Right!\n");
+							break;
+					
+						case SDL_HAT_DOWN:
+							PAD_LOG("Down!\n");
+							break;
+					
+						case SDL_HAT_LEFT:
+							PAD_LOG("Left!\n");
+							break;
+						case SDL_HAT_CENTER:
+							clear_bit(status[pad], i);
+							break;
+					}
+				}
+				else
+				{
+					//clear_bit(status[pad], i);
+				}
+				/*if PAD_GETPOVSIGN(key)
 					set_bit(status[pad], i);
 				else
-					clear_bit(status[pad], i);
+					clear_bit(status[pad], i);*/
 			}
 		}
 #else
@@ -357,7 +354,7 @@ void UpdateConf(int pad)
 #ifdef EXPERAMENTAL_POV_CODE
 		{
 			tmp.resize(28);
-			switch(PAD_GETPOVSIGN(conf.keys[pad][i]))
+			switch(PAD_GETPOVDIR(conf.keys[pad][i]))
 			{
 				case SDL_HAT_UP:
 					sprintf(&tmp[0], "JPOVU-%d", PAD_GETJOYSTICK_AXIS(conf.keys[pad][i]));

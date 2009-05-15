@@ -128,4 +128,35 @@ namespace Analog
 		
 		PAD_LOG("Setting pad[%d]@%d to %d from %d\n", padvalue, i, value, temp);
 	}
+	int AnalogToPad(int padvalue)
+	{
+		switch (padvalue)
+		{
+			case PAD_R_LEFT:
+				return PAD_RX;
+				break;
+			case PAD_R_UP:
+				return PAD_RY;
+				break;
+			case PAD_L_LEFT:
+				return PAD_LX;
+				break;
+			case PAD_L_UP:
+				return PAD_LY;
+				break;
+			case PAD_R_DOWN:
+				return PAD_RY;
+				break;
+			case PAD_R_RIGHT:
+				return PAD_RX;
+				break;
+			case PAD_L_DOWN:
+				return PAD_LY;
+				break;
+			case PAD_L_RIGHT:
+				return PAD_LX;
+				break;
+		}
+		return 0;
+	}
 }
