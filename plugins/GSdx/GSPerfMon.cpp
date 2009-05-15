@@ -22,8 +22,6 @@
 #include "stdafx.h"
 #include "GSPerfMon.h"
 
-extern "C" unsigned __int64 __rdtsc();
-
 GSPerfMon::GSPerfMon()
 	: m_total(0)
 	, m_begin(0)

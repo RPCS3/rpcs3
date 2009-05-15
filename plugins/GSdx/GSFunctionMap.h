@@ -26,7 +26,7 @@
 
 struct GSRasterizerStats
 {
-	__int64 ticks;
+	int64 ticks;
 	int prims, pixels;
 
 	GSRasterizerStats() 
@@ -46,8 +46,8 @@ template<class KEY, class VALUE> class GSFunctionMap
 protected:
 	struct ActivePtr
 	{
-		UINT64 frame, frames;
-		__int64 ticks, pixels;
+		uint64 frame, frames;
+		int64 ticks, pixels;
 		VALUE f;
 	};
 
@@ -90,7 +90,7 @@ public:
 
 			memset(p, 0, sizeof(*p));
 
-			p->frame = (UINT64)-1;
+			p->frame = (uint64)-1;
 
 			p->f = i != m_map.end() ? (*i).second : GetDefaultFunction(key);
 
@@ -102,7 +102,7 @@ public:
 		return m_active->f;
 	}
 
-	void UpdateStats(const GSRasterizerStats& stats, UINT64 frame)
+	void UpdateStats(const GSRasterizerStats& stats, uint64 frame)
 	{
 		if(m_active)
 		{
@@ -119,7 +119,7 @@ public:
 
 	virtual void PrintStats()
 	{
-		__int64 ttpf = 0;
+		int64 ttpf = 0;
 
 		for(hash_map<KEY, ActivePtr*>::iterator i = m_map_active.begin(); i != m_map_active.end(); i++)
 		{
@@ -138,12 +138,12 @@ public:
 
 			if(p->frames > 0)
 			{
-				__int64 tpp = p->pixels > 0 ? p->ticks / p->pixels : 0;
-				__int64 tpf = p->frames > 0 ? p->ticks / p->frames : 0;
-				__int64 ppf = p->frames > 0 ? p->pixels / p->frames : 0;
+				int64 tpp = p->pixels > 0 ? p->ticks / p->pixels : 0;
+				int64 tpf = p->frames > 0 ? p->ticks / p->frames : 0;
+				int64 ppf = p->frames > 0 ? p->pixels / p->frames : 0;
 
 				printf("[%012I64x]%c %6.2f%% | %5.2f%% | f %4I64d | p %10I64d | tpp %4I64d | tpf %9I64d | ppf %7I64d\n", 
-					(UINT64)key, m_map.find(key) == m_map.end() ? '*' : ' ',
+					(uint64)key, m_map.find(key) == m_map.end() ? '*' : ' ',
 					(float)(tpf * 10000 / 50000000) / 100, 
 					(float)(tpf * 10000 / ttpf) / 100, 
 					p->frames, p->pixels, 
@@ -187,7 +187,7 @@ public:
 	{
 		CG* cg = NULL;
 
-		hash_map<UINT64, CG*>::iterator i = m_cgmap.find(key);
+		hash_map<uint64, CG*>::iterator i = m_cgmap.find(key);
 
 		if(i != m_cgmap.end())
 		{

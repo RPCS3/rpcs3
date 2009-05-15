@@ -331,7 +331,7 @@ public:
 
 		// osd 
 
-		static UINT64 s_frame = 0;
+		static uint64 s_frame = 0;
 		static string s_stats;
 
 		if(m_perfmon.GetFrame() - s_frame >= 30)

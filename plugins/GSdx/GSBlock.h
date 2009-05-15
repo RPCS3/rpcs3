@@ -928,7 +928,7 @@ public:
 		}
 	}
 
-	__forceinline static void ExpandBlock4_32(const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch, const UINT64* RESTRICT pal)
+	__forceinline static void ExpandBlock4_32(const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch, const uint64* RESTRICT pal)
 	{
 		for(int j = 0; j < 16; j++, dst += dstpitch)
 		{
@@ -936,7 +936,7 @@ public:
 		}
 	}
 
-	__forceinline static void ExpandBlock4_16(const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch, const UINT64* RESTRICT pal)
+	__forceinline static void ExpandBlock4_16(const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch, const uint64* RESTRICT pal)
 	{
 		for(int j = 0; j < 16; j++, dst += dstpitch)
 		{
@@ -1478,7 +1478,7 @@ public:
 
 	// TODO: ReadAndExpandBlock8_16
 
-	__forceinline static void ReadAndExpandBlock4_32(const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch, const UINT64* RESTRICT pal)
+	__forceinline static void ReadAndExpandBlock4_32(const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch, const uint64* RESTRICT pal)
 	{
 		#if _M_SSE >= 0x401
 

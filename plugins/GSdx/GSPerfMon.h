@@ -29,7 +29,7 @@ public:
 protected:
 	double m_counters[CounterLast];
 	double m_stats[CounterLast];
-	UINT64 m_begin, m_total, m_start, m_frame;
+	uint64 m_begin, m_total, m_start, m_frame;
 	clock_t m_lastframe;
 	int m_count;
 
@@ -41,8 +41,8 @@ protected:
 public:
 	GSPerfMon();
 
-	void SetFrame(UINT64 frame) {m_frame = frame;}
-	UINT64 GetFrame() {return m_frame;}
+	void SetFrame(uint64 frame) {m_frame = frame;}
+	uint64 GetFrame() {return m_frame;}
 	void Put(counter_t c, double val = 0);
 	double Get(counter_t c) {return m_stats[c];}
 	void Update();

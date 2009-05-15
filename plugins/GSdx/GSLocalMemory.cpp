@@ -1757,7 +1757,7 @@ void GSLocalMemory::ReadTextureBlock8(uint32 bp, uint8* dst, int dstpitch, const
 
 void GSLocalMemory::ReadTextureBlock4(uint32 bp, uint8* dst, int dstpitch, const GIFRegTEXA& TEXA) const
 {
-	const UINT64* pal = m_clut;
+	const uint64* pal = m_clut;
 
 	ReadAndExpandBlock4_32(BlockPtr(bp), dst, dstpitch, pal);
 }
@@ -1906,7 +1906,7 @@ void GSLocalMemory::ReadTexture8NP(const GSVector4i& r, uint8* dst, int dstpitch
 
 void GSLocalMemory::ReadTexture4NP(const GSVector4i& r, uint8* dst, int dstpitch, const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA) const
 {
-	const UINT64* pal = m_clut;
+	const uint64* pal = m_clut;
 
 	if(TEX0.CPSM == PSM_PSMCT32 || TEX0.CPSM == PSM_PSMCT24)
 	{

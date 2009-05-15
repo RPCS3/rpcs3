@@ -25,7 +25,7 @@
 #include "StdAfx.h"
 #include "GSDrawScanlineCodeGenerator.h"
 
-GSDrawScanlineCodeGenerator::GSDrawScanlineCodeGenerator(GSScanlineEnvironment& env, UINT64 key, void* ptr, size_t maxsize)
+GSDrawScanlineCodeGenerator::GSDrawScanlineCodeGenerator(GSScanlineEnvironment& env, uint64 key, void* ptr, size_t maxsize)
 	: CodeGenerator(maxsize, ptr)
 	, m_env(env)
 {

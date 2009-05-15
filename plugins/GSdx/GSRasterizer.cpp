@@ -51,7 +51,7 @@ void GSRasterizer::Draw(const GSRasterizerData* data)
 
 	m_stats.Reset();
 
-	__int64 start = __rdtsc();
+	int64 start = __rdtsc();
 
 	switch(data->primclass)
 	{
@@ -897,7 +897,7 @@ void GSRasterizerList::Draw(const GSRasterizerData* data)
 
 	m_stats.Reset();
 
-	__int64 start = __rdtsc();
+	int64 start = __rdtsc();
 
 	for(list<IRasterizer*>::reverse_iterator i = rbegin(); i != rend(); i++)
 	{

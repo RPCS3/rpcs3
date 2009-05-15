@@ -557,7 +557,7 @@ protected:
 
 		if(s_dump)
 		{
-			UINT64 frame = m_perfmon.GetFrame();
+			uint64 frame = m_perfmon.GetFrame();
 
 			string s;
 
@@ -630,7 +630,7 @@ protected:
 
 		if(s_dump)
 		{
-			UINT64 frame = m_perfmon.GetFrame();
+			uint64 frame = m_perfmon.GetFrame();
 
 			string s;
 

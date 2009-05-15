@@ -80,6 +80,12 @@ typedef signed long long int64;
 	#endif
 #endif
 
+#ifdef __x86_64__
+	#define _M_AMD64
+#endif
+
+extern "C" uint64 __rdtsc(); // TODO: gcc
+
 // directx
 
 #include <ddraw.h>
@@ -149,4 +155,3 @@ typedef signed long long int64;
 	#include <smmintrin.h>
 
 #endif
-

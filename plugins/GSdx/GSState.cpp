@@ -564,7 +564,7 @@ template<int i> void GSState::GIFRegHandlerTEX2(GIFReg* r)
 {
 	// m_env.CTXT[i].TEX2 = r->TEX2; // not used
 
-	UINT64 mask = 0xFFFFFFE003F00000ui64; // TEX2 bits
+	uint64 mask = 0xFFFFFFE003F00000ui64; // TEX2 bits
 
 	r->u64 = (r->u64 & mask) | (m_env.CTXT[i].TEX0.u64 & ~mask);
 

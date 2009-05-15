@@ -168,7 +168,7 @@ public:
 
 		#else
 
-		return GSVector4i(min(x, a.x), min(y, a.y), max(z, a.z), max(x, a.w));
+		return GSVector4i(min(x, a.x), min(y, a.y), max(z, a.z), max(w, a.w));
 
 		#endif
 	}
@@ -251,7 +251,7 @@ public:
 		v.x = min(max(x, a.x), b.x);
 		v.y = min(max(y, a.y), b.y);
 		v.z = min(max(z, a.z), b.z);
-		v.w = min(max(x, a.w), b.w);
+		v.w = min(max(w, a.w), b.w);
 
 		return v;
 	}
@@ -263,7 +263,7 @@ public:
 		v.x = min(max(x, a.x), a.z);
 		v.y = min(max(y, a.y), a.w);
 		v.z = min(max(z, a.x), a.z);
-		v.w = min(max(x, a.y), a.w);
+		v.w = min(max(w, a.y), a.w);
 
 		return v;
 	}
@@ -1049,14 +1049,14 @@ public:
 
 	#if _M_SSE >= 0x401
 
-	template<int i> GSVector4i insert64(__int64 a) const
+	template<int i> GSVector4i insert64(int64 a) const
 	{
 		return GSVector4i(_mm_insert_epi64(m, a, i));
 	}
 
 	#endif
 
-	template<int i> __int64 extract64() const
+	template<int i> int64 extract64() const
 	{
 		if(i == 0) return GSVector4i::storeq(*this);
 		#if _M_SSE >= 0x401
@@ -1340,8 +1340,8 @@ public:
 	{
 		GSVector4i v;
 
-		v = loadq((__int64)ptr[extract8<src + 0>() & 0xf]);
-		v = v.insert64<1>((__int64)ptr[extract8<src + 0>() >> 4]);
+		v = loadq((int64)ptr[extract8<src + 0>() & 0xf]);
+		v = v.insert64<1>((int64)ptr[extract8<src + 0>() >> 4]);
 
 		return v;
 	}
@@ -1350,8 +1350,8 @@ public:
 	{
 		GSVector4i v;
 
-		v = loadq((__int64)ptr[extract8<src + 0>()]);
-		v = v.insert64<1>((__int64)ptr[extract8<src + 1>()]);
+		v = loadq((int64)ptr[extract8<src + 0>()]);
+		v = v.insert64<1>((int64)ptr[extract8<src + 1>()]);
 
 		return v;
 	}
@@ -1360,8 +1360,8 @@ public:
 	{
 		GSVector4i v;
 
-		v = loadq((__int64)ptr[extract16<src + 0>()]);
-		v = v.insert64<1>((__int64)ptr[extract16<src + 1>()]);
+		v = loadq((int64)ptr[extract16<src + 0>()]);
+		v = v.insert64<1>((int64)ptr[extract16<src + 1>()]);
 
 		return v;
 	}
@@ -1370,8 +1370,8 @@ public:
 	{
 		GSVector4i v;
 
-		v = loadq((__int64)ptr[extract32<src + 0>()]);
-		v = v.insert64<1>((__int64)ptr[extract32<src + 1>()]);
+		v = loadq((int64)ptr[extract32<src + 0>()]);
+		v = v.insert64<1>((int64)ptr[extract32<src + 1>()]);
 
 		return v;
 	}
@@ -1380,8 +1380,8 @@ public:
 	{
 		GSVector4i v;
 
-		v = loadq((__int64)ptr[extract64<0>()]);
-		v = v.insert64<1>((__int64)ptr[extract64<1>()]);
+		v = loadq((int64)ptr[extract64<0>()]);
+		v = v.insert64<1>((int64)ptr[extract64<1>()]);
 
 		return v;
 	}
@@ -1595,7 +1595,7 @@ public:
 
 	#ifdef _M_AMD64
 
-	static GSVector4i loadq(__int64 i)
+	static GSVector4i loadq(int64 i)
 	{
 		return GSVector4i(_mm_cvtsi64_si128(i));
 	}
@@ -1636,7 +1636,7 @@ public:
 
 	#ifdef _M_AMD64
 
-	static __int64 storeq(const GSVector4i& v)
+	static int64 storeq(const GSVector4i& v)
 	{
 		return _mm_cvtsi128_si64(v.m);
 	}
