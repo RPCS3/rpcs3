@@ -181,7 +181,7 @@ microVUt(int) mVUfindLeastUsedProg() {
 
 		mVUclearProg<vuIndex>(smallidx); // Clear old data if overwriting old program
 		mVUcacheProg<vuIndex>(smallidx); // Cache Micro Program
-		Console::Notice("microVU%d: Overwriting existing program in slot %d [%d times used]", params vuIndex, smallidx, smallval );
+		//Console::Notice("microVU%d: Overwriting existing program in slot %d [%d times used]", params vuIndex, smallidx, smallval );
 		return smallidx;
 	}
 }

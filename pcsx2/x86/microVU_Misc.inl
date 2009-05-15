@@ -105,20 +105,20 @@ microVUx(void) mVUsaveReg(int reg, uptr offset, int xyzw, bool modXYZW) {
 	return;*/
 
 	switch ( xyzw ) {
-		case 5:		SSE_SHUFPS_XMM_to_XMM(reg, reg, 0xe1); //WZXY
+		case 5:		SSE2_PSHUFD_XMM_to_XMM(reg, reg, 0xe1); //WZXY
 					SSE_MOVSS_XMM_to_M32(offset+4, reg);
-					SSE_SHUFPS_XMM_to_XMM(reg, reg, 0xff); //WWWW
+					SSE2_PSHUFD_XMM_to_XMM(reg, reg, 0xff); //WWWW
 					SSE_MOVSS_XMM_to_M32(offset+12, reg);
 					break; // YW
-		case 6:		SSE_SHUFPS_XMM_to_XMM(reg, reg, 0xc9);
+		case 6:		SSE2_PSHUFD_XMM_to_XMM(reg, reg, 0xc9);
 					SSE_MOVLPS_XMM_to_M64(offset+4, reg);
 					break; // YZ
-		case 7:		SSE_SHUFPS_XMM_to_XMM(reg, reg, 0x93); //ZYXW
+		case 7:		SSE2_PSHUFD_XMM_to_XMM(reg, reg, 0x93); //ZYXW
 					SSE_MOVHPS_XMM_to_M64(offset+4, reg);
 					SSE_MOVSS_XMM_to_M32(offset+12, reg);
 					break; // YZW
 		case 9:		SSE_MOVSS_XMM_to_M32(offset, reg);
-					SSE_SHUFPS_XMM_to_XMM(reg, reg, 0xff); //WWWW
+					SSE2_PSHUFD_XMM_to_XMM(reg, reg, 0xff); //WWWW
 					SSE_MOVSS_XMM_to_M32(offset+12, reg);
 					break; // XW
 		case 10:	SSE_MOVSS_XMM_to_M32(offset, reg);
@@ -128,7 +128,7 @@ microVUx(void) mVUsaveReg(int reg, uptr offset, int xyzw, bool modXYZW) {
 		case 11:	SSE_MOVSS_XMM_to_M32(offset, reg);
 					SSE_MOVHPS_XMM_to_M64(offset+8, reg);
 					break; //XZW
-		case 13:	SSE_SHUFPS_XMM_to_XMM(reg, reg, 0x4b); //YXZW				
+		case 13:	SSE2_PSHUFD_XMM_to_XMM(reg, reg, 0x4b); //YXZW				
 					SSE_MOVHPS_XMM_to_M64(offset, reg);
 					SSE_MOVSS_XMM_to_M32(offset+12, reg);
 					break; // XYW
@@ -163,20 +163,20 @@ microVUx(void) mVUsaveReg2(int reg, int gprReg, u32 offset, int xyzw) {
 	return;*/
 
 	switch ( xyzw ) {
-		case 5:		SSE_SHUFPS_XMM_to_XMM(reg, reg, 0xe1); //WZXY
+		case 5:		SSE2_PSHUFD_XMM_to_XMM(reg, reg, 0xe1); //WZXY
 					SSE_MOVSS_XMM_to_Rm(gprReg, reg, offset+4);
-					SSE_SHUFPS_XMM_to_XMM(reg, reg, 0xff); //WWWW
+					SSE2_PSHUFD_XMM_to_XMM(reg, reg, 0xff); //WWWW
 					SSE_MOVSS_XMM_to_Rm(gprReg, reg, offset+12);
 					break; // YW
-		case 6:		SSE_SHUFPS_XMM_to_XMM(reg, reg, 0xc9);
+		case 6:		SSE2_PSHUFD_XMM_to_XMM(reg, reg, 0xc9);
 					SSE_MOVLPS_XMM_to_Rm(gprReg, reg, offset+4);
 					break; // YZ
-		case 7:		SSE_SHUFPS_XMM_to_XMM(reg, reg, 0x93); //ZYXW
+		case 7:		SSE2_PSHUFD_XMM_to_XMM(reg, reg, 0x93); //ZYXW
 					SSE_MOVHPS_XMM_to_Rm(gprReg, reg, offset+4);
 					SSE_MOVSS_XMM_to_Rm(gprReg, reg, offset+12);
 					break; // YZW
 		case 9:		SSE_MOVSS_XMM_to_Rm(gprReg, reg, offset);
-					SSE_SHUFPS_XMM_to_XMM(reg, reg, 0xff); //WWWW
+					SSE2_PSHUFD_XMM_to_XMM(reg, reg, 0xff); //WWWW
 					SSE_MOVSS_XMM_to_Rm(gprReg, reg, offset+12);
 					break; // XW
 		case 10:	SSE_MOVSS_XMM_to_Rm(gprReg, reg, offset);
@@ -186,7 +186,7 @@ microVUx(void) mVUsaveReg2(int reg, int gprReg, u32 offset, int xyzw) {
 		case 11:	SSE_MOVSS_XMM_to_Rm(gprReg, reg, offset);
 					SSE_MOVHPS_XMM_to_Rm(gprReg, reg, offset+8);
 					break; //XZW
-		case 13:	SSE_SHUFPS_XMM_to_XMM(reg, reg, 0x4b); //YXZW				
+		case 13:	SSE2_PSHUFD_XMM_to_XMM(reg, reg, 0x4b); //YXZW				
 					SSE_MOVHPS_XMM_to_Rm(gprReg, reg, offset);
 					SSE_MOVSS_XMM_to_Rm(gprReg, reg, offset+12);
 					break; // XYW
@@ -316,7 +316,7 @@ microVUt(void) mVUcheckSflag(int progIndex) {
 	}
 }
 
-static const u32 PCSX2_ALIGNED16(MIN_MAX_MASK1[4]) = {0xffffffff, 0x80000000, 0xffffffff, 0x80000000};
+static const u32 PCSX2_ALIGNED16(MIN_MAX_MASK1[4]) = {0x7fffffff, 0x80000000, 0x7fffffff, 0x80000000};
 static const u32 PCSX2_ALIGNED16(MIN_MAX_MASK2[4]) = {0x00000000, 0x40000000, 0x00000000, 0x40000000};
 
 // Warning: Modifies xmmT1 and xmmT2
@@ -330,28 +330,27 @@ void MIN_MAX_(x86SSERegType to, x86SSERegType from, bool min) {
 	SSE2_PAND_M128_to_XMM (xmmT2, (uptr)MIN_MAX_MASK1);
 	SSE2_POR_M128_to_XMM  (xmmT2, (uptr)MIN_MAX_MASK2);
 	if (min) SSE2_MINPD_XMM_to_XMM(xmmT1, xmmT2);
-	else	 SSE2_MAXPD_XMM_to_XMM(xmmT1, xmmT2);
+	else     SSE2_MAXPD_XMM_to_XMM(xmmT1, xmmT2);
 	SSE2_PSHUFD_XMM_to_XMM(xmmT1, xmmT1, 0x88);
-	mVUmergeRegs(to, xmmT1, 0xc);
 
 	// ZW
-	SSE2_PSHUFD_XMM_to_XMM(xmmT1, to, 0xfa);
-	SSE2_PAND_M128_to_XMM (xmmT1, (uptr)MIN_MAX_MASK1);
-	SSE2_POR_M128_to_XMM  (xmmT1, (uptr)MIN_MAX_MASK2);
+	SSE2_PSHUFD_XMM_to_XMM(to, to, 0xfa);
+	SSE2_PAND_M128_to_XMM (to,	  (uptr)MIN_MAX_MASK1);
+	SSE2_POR_M128_to_XMM  (to,	  (uptr)MIN_MAX_MASK2);
 	SSE2_PSHUFD_XMM_to_XMM(xmmT2, from, 0xfa);
 	SSE2_PAND_M128_to_XMM (xmmT2, (uptr)MIN_MAX_MASK1);
 	SSE2_POR_M128_to_XMM  (xmmT2, (uptr)MIN_MAX_MASK2);
-	if (min) SSE2_MINPD_XMM_to_XMM(xmmT1, xmmT2);
-	else	 SSE2_MAXPD_XMM_to_XMM(xmmT1, xmmT2);
-	SSE2_PSHUFD_XMM_to_XMM(xmmT1, xmmT1, 0x88);
-	mVUmergeRegs(to, xmmT1, 0x3);
+	if (min) SSE2_MINPD_XMM_to_XMM(to, xmmT2);
+	else     SSE2_MAXPD_XMM_to_XMM(to, xmmT2);
+	SSE2_PSHUFD_XMM_to_XMM(to, to, 0x88);
+	SSE2_MOVSD_XMM_to_XMM (to, xmmT1);
 }
 
 // Warning: Modifies from and to's upper 3 vectors
 void MIN_MAX_SS(x86SSERegType to, x86SSERegType from, bool min) {
 	SSE2_PSHUFD_XMM_to_XMM(to, to, 0x50);
-	SSE2_PAND_M128_to_XMM (to, (uptr)MIN_MAX_MASK1);
-	SSE2_POR_M128_to_XMM  (to, (uptr)MIN_MAX_MASK2);
+	SSE2_PAND_M128_to_XMM (to,	 (uptr)MIN_MAX_MASK1);
+	SSE2_POR_M128_to_XMM  (to,	 (uptr)MIN_MAX_MASK2);
 	SSE2_PSHUFD_XMM_to_XMM(from, from, 0x50);
 	SSE2_PAND_M128_to_XMM (from, (uptr)MIN_MAX_MASK1);
 	SSE2_POR_M128_to_XMM  (from, (uptr)MIN_MAX_MASK2);

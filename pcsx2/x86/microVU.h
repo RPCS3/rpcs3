@@ -65,7 +65,7 @@ public:
 	}
 };
 
-template<u32 progSize>		// progSize = VU program memory size / 4
+template<u32 progSize> // progSize = VU program memory size / 4
 struct microProgram {
 	u32 data[progSize];
 	u32 used;		// Number of times its been used
@@ -92,6 +92,11 @@ struct microProgManager {
 
 #define mVUcacheSize (0x2000000 / ((vuIndex) ? 1 : 4))
 struct microVU {
+
+	PCSX2_ALIGNED16(u32 macFlag[4]);  // 4 instances of mac  flag (used in execution)
+	PCSX2_ALIGNED16(u32 clipFlag[4]); // 4 instances of clip flag (used in execution)
+	PCSX2_ALIGNED16(u32 xmmPQb[4]);   // Backup for xmmPQ
+
 	u32 index;		// VU Index (VU0 or VU1)
 	u32 microSize;	// VU Micro Memory Size
 	u32 progSize;	// VU Micro Program Size (microSize/4)
@@ -113,16 +118,6 @@ struct microVU {
 	u32		q;			 // Holds current Q instance index
 	u32		totalCycles; // Total Cycles that mVU is expected to run for
 	u32		cycles;		 // Cycles Counter
-
-	// WARNING!  MSVC does not reliably guarantee alignment on structure or class member variables,
-	// failing around 10-20% of the time to align (random depending on various circumstances).
-	// GCC fails to align the members at all, failing about 50-80% of the time (barring occasional
-	// random luck).  If you want these to be guaranteed aligned, move them to the top of the
-	// struct, and ensure the struct itself is aligned. :)  -- air
-
-	PCSX2_ALIGNED16(u32 macFlag[4]);  // 4 instances of mac  flag (used in execution)
-	PCSX2_ALIGNED16(u32 clipFlag[4]); // 4 instances of clip flag (used in execution)
-	PCSX2_ALIGNED16(u32 xmmPQb[4]);   // Backup for xmmPQ
 };
 
 // microVU rec structs
@@ -139,7 +134,7 @@ microVUt(void) mVUreset();
 microVUt(void) mVUclose();
 microVUt(void) mVUclear(u32, u32);
 
-// Prototypes for Linux.
+// Prototypes for Linux
 void  __fastcall mVUcleanUpVU0();
 void  __fastcall mVUcleanUpVU1();
 void* __fastcall mVUcompileVU0(u32 startPC, uptr pState);
@@ -150,7 +145,7 @@ microVUf(void) mVUopL();
 // Private Functions
 microVUt(void)		mVUclearProg(microVU* mVU, int progIndex);
 microVUt(int)		mVUfindLeastUsedProg(microVU* mVU);
-microVUt(int)		mVUsearchProg(/*microVU* mVU*/);
+microVUt(int)		mVUsearchProg();
 microVUt(void)		mVUcacheProg(microVU* mVU, int progIndex);
 void* __fastcall	mVUexecuteVU0(u32 startPC, u32 cycles);
 void* __fastcall	mVUexecuteVU1(u32 startPC, u32 cycles);
