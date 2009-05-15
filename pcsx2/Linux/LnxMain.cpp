@@ -216,6 +216,11 @@ void On_Dialog_Cancelled(GtkButton* button, gpointer user_data)
 	gtk_main_quit();
 }
 	
+void On_Dialog_Close(GtkDialog* dialog, gpointer user_data)
+{
+	gtk_widget_set_sensitive(MainWindow, TRUE);
+}
+
 void  RefreshMenuSlots()
 {
 	GtkWidget *Item;

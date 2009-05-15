@@ -45,6 +45,10 @@ create_Config (void)
   GList *GtkCombo_Hdd_items = NULL;
   GtkWidget *entry1;
   GtkWidget *label15;
+  GtkWidget *frame4;
+  GtkWidget *alignment1;
+  GtkWidget *check_logging;
+  GtkWidget *label16;
   GtkWidget *hbuttonbox1;
   GtkWidget *button1;
   GtkWidget *button2;
@@ -132,6 +136,29 @@ create_Config (void)
   gtk_widget_show (label15);
   gtk_frame_set_label_widget (GTK_FRAME (frame3), label15);
 
+  frame4 = gtk_frame_new (NULL);
+  gtk_widget_set_name (frame4, "frame4");
+  gtk_widget_show (frame4);
+  gtk_box_pack_start (GTK_BOX (vbox1), frame4, TRUE, TRUE, 0);
+  gtk_frame_set_shadow_type (GTK_FRAME (frame4), GTK_SHADOW_NONE);
+
+  alignment1 = gtk_alignment_new (0.5, 0.5, 1, 1);
+  gtk_widget_set_name (alignment1, "alignment1");
+  gtk_widget_show (alignment1);
+  gtk_container_add (GTK_CONTAINER (frame4), alignment1);
+  gtk_alignment_set_padding (GTK_ALIGNMENT (alignment1), 0, 0, 12, 0);
+
+  check_logging = gtk_check_button_new_with_mnemonic (_("Enable Logging"));
+  gtk_widget_set_name (check_logging, "check_logging");
+  gtk_widget_show (check_logging);
+  gtk_container_add (GTK_CONTAINER (alignment1), check_logging);
+
+  label16 = gtk_label_new (_("<b>Logging</b>"));
+  gtk_widget_set_name (label16, "label16");
+  gtk_widget_show (label16);
+  gtk_frame_set_label_widget (GTK_FRAME (frame4), label16);
+  gtk_label_set_use_markup (GTK_LABEL (label16), TRUE);
+
   hbuttonbox1 = gtk_hbutton_box_new ();
   gtk_widget_set_name (hbuttonbox1, "hbuttonbox1");
   gtk_widget_show (hbuttonbox1);
@@ -172,6 +199,10 @@ create_Config (void)
   GLADE_HOOKUP_OBJECT (Config, GtkCombo_Hdd, "GtkCombo_Hdd");
   GLADE_HOOKUP_OBJECT (Config, entry1, "entry1");
   GLADE_HOOKUP_OBJECT (Config, label15, "label15");
+  GLADE_HOOKUP_OBJECT (Config, frame4, "frame4");
+  GLADE_HOOKUP_OBJECT (Config, alignment1, "alignment1");
+  GLADE_HOOKUP_OBJECT (Config, check_logging, "check_logging");
+  GLADE_HOOKUP_OBJECT (Config, label16, "label16");
   GLADE_HOOKUP_OBJECT (Config, hbuttonbox1, "hbuttonbox1");
   GLADE_HOOKUP_OBJECT (Config, button1, "button1");
   GLADE_HOOKUP_OBJECT (Config, button2, "button2");

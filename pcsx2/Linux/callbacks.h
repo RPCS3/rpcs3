@@ -257,3 +257,7 @@ OnLogging_Ok                           (GtkButton       *button,
 void
 OnMemcards_Ok                          (GtkButton       *button,
                                         gpointer         user_data);
+
+void
+On_Dialog_Close                        (GtkDialog       *dialog,
+                                        gpointer         user_data);

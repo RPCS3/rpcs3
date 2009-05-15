@@ -523,6 +523,9 @@ create_AdvDlg (void)
   gtk_dialog_add_action_widget (GTK_DIALOG (AdvDlg), button80, GTK_RESPONSE_CANCEL);
   GTK_WIDGET_SET_FLAGS (button80, GTK_CAN_DEFAULT);
 
+  g_signal_connect ((gpointer) AdvDlg, "close",
+                    G_CALLBACK (On_Dialog_Close),
+                    NULL);
   g_signal_connect ((gpointer) AdvDefaultBtn, "clicked",
                     G_CALLBACK (on_Advanced_Defaults),
                     NULL);
@@ -831,6 +834,9 @@ create_SpeedHacksDlg (void)
   gtk_dialog_add_action_widget (GTK_DIALOG (SpeedHacksDlg), button98, GTK_RESPONSE_CANCEL);
   GTK_WIDGET_SET_FLAGS (button98, GTK_CAN_DEFAULT);
 
+  g_signal_connect ((gpointer) SpeedHacksDlg, "close",
+                    G_CALLBACK (On_Dialog_Close),
+                    NULL);
   g_signal_connect ((gpointer) EECycleHackScale, "value_changed",
                     G_CALLBACK (on_ee_slider_changed),
                     NULL);
@@ -969,6 +975,9 @@ create_GameFixDlg (void)
   gtk_dialog_add_action_widget (GTK_DIALOG (GameFixDlg), button83, GTK_RESPONSE_CANCEL);
   GTK_WIDGET_SET_FLAGS (button83, GTK_CAN_DEFAULT);
 
+  g_signal_connect ((gpointer) GameFixDlg, "close",
+                    G_CALLBACK (On_Dialog_Close),
+                    NULL);
   g_signal_connect ((gpointer) cancelbutton1, "clicked",
                     G_CALLBACK (on_Game_Fix_OK),
                     NULL);
@@ -4156,6 +4165,9 @@ create_CpuDlg (void)
   gtk_dialog_add_action_widget (GTK_DIALOG (CpuDlg), button97, 0);
   GTK_WIDGET_SET_FLAGS (button97, GTK_CAN_DEFAULT);
 
+  g_signal_connect ((gpointer) CpuDlg, "close",
+                    G_CALLBACK (On_Dialog_Close),
+                    NULL);
   g_signal_connect ((gpointer) button96, "clicked",
                     G_CALLBACK (OnCpu_Ok),
                     NULL);
@@ -4521,6 +4533,9 @@ create_Logging (void)
   gtk_dialog_add_action_widget (GTK_DIALOG (Logging), Logging2Cancel, GTK_RESPONSE_CANCEL);
   GTK_WIDGET_SET_FLAGS (Logging2Cancel, GTK_CAN_DEFAULT);
 
+  g_signal_connect ((gpointer) Logging, "close",
+                    G_CALLBACK (On_Dialog_Close),
+                    NULL);
   g_signal_connect ((gpointer) Logging_Ok, "clicked",
                     G_CALLBACK (OnLogging_Ok),
                     NULL);
@@ -4747,6 +4762,9 @@ create_MemDlg (void)
   gtk_dialog_add_action_widget (GTK_DIALOG (MemDlg), okbutton1, GTK_RESPONSE_CANCEL);
   GTK_WIDGET_SET_FLAGS (okbutton1, GTK_CAN_DEFAULT);
 
+  g_signal_connect ((gpointer) MemDlg, "close",
+                    G_CALLBACK (On_Dialog_Close),
+                    NULL);
   g_signal_connect ((gpointer) memcardcancelbutton, "clicked",
                     G_CALLBACK (OnMemcards_Ok),
                     NULL);

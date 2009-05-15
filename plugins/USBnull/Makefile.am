@@ -29,6 +29,5 @@ libUSBnull_a_SOURCES += \
 Linux/interface.h Linux/support.c  \
 Linux/interface.c Linux/support.h \
 Linux/callbacks.h 
-#Linux/callbacks.c 
 
 #SUBDIRS = Linux

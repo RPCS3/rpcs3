@@ -19,6 +19,7 @@
   <property name="focus_on_map">True</property>
   <property name="urgency_hint">False</property>
   <property name="has_separator">True</property>
+  <signal name="close" handler="On_Dialog_Close" last_modification_time="Fri, 15 May 2009 06:51:15 GMT"/>
 
   <child internal-child="vbox">
     <widget class="GtkVBox" id="dialog-vbox4">
@@ -1188,6 +1189,7 @@ Denormals are Zero - Your CPU makes Floating Point Denormals become Zero, so it 
   <property name="focus_on_map">True</property>
   <property name="urgency_hint">False</property>
   <property name="has_separator">True</property>
+  <signal name="close" handler="On_Dialog_Close" last_modification_time="Fri, 15 May 2009 06:51:23 GMT"/>
 
   <child internal-child="vbox">
     <widget class="GtkVBox" id="dialog-vbox3">
@@ -1777,6 +1779,7 @@ If you have problems, Disable all of these and try again.</property>
   <property name="focus_on_map">True</property>
   <property name="urgency_hint">False</property>
   <property name="has_separator">True</property>
+  <signal name="close" handler="On_Dialog_Close" last_modification_time="Fri, 15 May 2009 06:51:36 GMT"/>
 
   <child internal-child="vbox">
     <widget class="GtkVBox" id="dialog-vbox1">
@@ -6418,6 +6421,7 @@ Version x.x</property>
   <property name="focus_on_map">True</property>
   <property name="urgency_hint">False</property>
   <property name="has_separator">True</property>
+  <signal name="close" handler="On_Dialog_Close" last_modification_time="Fri, 15 May 2009 06:51:47 GMT"/>
 
   <child internal-child="vbox">
     <widget class="GtkVBox" id="dialog-vbox5">
@@ -7295,6 +7299,7 @@ Version x.x</property>
   <property name="focus_on_map">True</property>
   <property name="urgency_hint">False</property>
   <property name="has_separator">True</property>
+  <signal name="close" handler="On_Dialog_Close" last_modification_time="Fri, 15 May 2009 06:51:55 GMT"/>
 
   <child internal-child="vbox">
     <widget class="GtkVBox" id="dialog-vbox6">
@@ -8102,6 +8107,7 @@ Version x.x</property>
   <property name="focus_on_map">True</property>
   <property name="urgency_hint">False</property>
   <property name="has_separator">True</property>
+  <signal name="close" handler="On_Dialog_Close" last_modification_time="Fri, 15 May 2009 06:52:03 GMT"/>
 
   <child internal-child="vbox">
     <widget class="GtkVBox" id="dialog-vbox7">
