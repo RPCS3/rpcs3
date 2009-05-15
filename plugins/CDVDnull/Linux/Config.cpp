@@ -46,7 +46,7 @@ void SysMessage(const char *fmt, ...)
 
 	MsgDlg = gtk_window_new(GTK_WINDOW_POPUP);
 	gtk_window_set_position(GTK_WINDOW(MsgDlg), GTK_WIN_POS_CENTER);
-	gtk_window_set_title(GTK_WINDOW(MsgDlg), "SPU2null Msg");
+	gtk_window_set_title(GTK_WINDOW(MsgDlg), "CDVDnull Msg");
 	gtk_container_set_border_width(GTK_CONTAINER(MsgDlg), 5);
 
 	Box = gtk_vbox_new(5, 0);

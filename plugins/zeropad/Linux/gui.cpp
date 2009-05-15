@@ -270,9 +270,10 @@ void OnConf_Cancel(GtkButton *button, gpointer user_data)
 
 GtkWidget *About = NULL;
 
-void OnAbout_Ok(GtkButton *button, gpointer user_data)
+//void OnAbout_Ok(GtkButton *button, gpointer user_data)
+void OnAbout_Ok(GtkDialog *About, gint response_id, gpointer user_data)
 {
-	gtk_widget_destroy(About);
+	gtk_widget_destroy(GTK_WIDGET(About));
 	gtk_main_quit();
 }
 

@@ -20,7 +20,9 @@
 
 #include <assert.h>
 #include <stdlib.h>
-
+#include <string>
+using namespace std;
+ 
 const unsigned char version  = PS2E_SPU2_VERSION;
 const unsigned char revision = 0;
 const unsigned char build    = 7;    // increase that with each version
@@ -38,6 +40,7 @@ char *libraryName      = "SPU2null (Debug)";
 #else
 char *libraryName      = "SPU2null ";
 #endif
+string s_strIniPath="inis/SPU2null.ini";
 
 FILE *spu2Log;
 Config conf;

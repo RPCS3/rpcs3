@@ -23,13 +23,13 @@
 using namespace std;
 
 #include "USB.h"
-string s_strIniPath;
 
 const unsigned char version  = PS2E_USB_VERSION;
 const unsigned char revision = 0;
 const unsigned char build    = 6;    // increase that with each version
 
 static char *libraryName     = "USBnull Driver";
+string s_strIniPath="inis/USBnull.ini";
 //void (*USBirq)();
 USBcallback USBirq;
 Config conf;

@@ -18,8 +18,7 @@
 
 void SaveConf();
 void LoadConf();
+void SysMessage(char *fmt, ...);
 
-extern long CFGmessage(char *msg);
-extern void CFGconfigure();
-extern void cfgSysMessage(char *fmt, ...);
-extern void CFGabout();
+#define is_checked(main_widget, widget_name) (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lookup_widget(main_widget, widget_name))))
+#define set_checked(main_widget,widget_name, state) gtk_toggle_button_set_state(GTK_TOGGLE_BUTTON(lookup_widget(main_widget, widget_name)), state)

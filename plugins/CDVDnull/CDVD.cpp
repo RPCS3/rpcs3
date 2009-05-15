@@ -17,7 +17,6 @@
  */
  
 #include <stdio.h>
-
 #include "CDVD.h"
 
 const char *LibName = "CDVDnull Driver";

@@ -28,7 +28,7 @@
 #include "USB.h"
 #include "Config.h"
 
-void SysMessage(char *fmt, ...) 
+/*void SysMessage(char *fmt, ...) 
 {
 	va_list list;
 	char msg[512];
@@ -39,9 +39,9 @@ void SysMessage(char *fmt, ...)
 	va_end(list);
 
 	cfgSysMessage(msg);
-}
+}*/
 
-void USBconfigure() 
+/*void USBconfigure() 
 {
 	CFGconfigure();
 }
@@ -49,5 +49,5 @@ void USBconfigure()
 void USBabout() 
 {
 	CFGabout();
-}
+}*/
 

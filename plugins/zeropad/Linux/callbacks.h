@@ -52,3 +52,8 @@ OnConf_Cancel                          (GtkButton       *button,
 void
 OnConf_Ok                              (GtkButton       *button,
                                         gpointer         user_data);
+
+void
+OnAbout_Ok                             (GtkDialog       *dialog,
+                                        gint             response_id,
+                                        gpointer         user_data);

@@ -1,5 +1,5 @@
-/*  FWnull
- *  Copyright (C) 2004-2009 PCSX2 Team
+/*  CDVDnull
+ *  Copyright (C) 2002-2009  Pcsx2 Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -15,39 +15,3 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-
-#include <stdio.h>
-#include <stdarg.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/stat.h>
-#include <sys/ioctl.h>
-#include <pthread.h>
-#include <unistd.h>
-
-#include "FW.h"
-#include "Config.h"
-
-void SysMessage(char *fmt, ...) 
-{
-	va_list list;
-	char msg[512];
-	char cmd[512];
-
-	va_start(list, fmt);
-	vsprintf(msg, fmt, list);
-	va_end(list);
-
-	cfgSysMessage(msg);
-}
-
-void FWconfigure() 
-{
-	CFGconfigure();
-}
-
-void FWabout() 
-{
-	CFGabout();
-}
-

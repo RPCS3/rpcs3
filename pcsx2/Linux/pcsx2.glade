@@ -4413,7 +4413,7 @@ Configure them here.&lt;/b&gt;</property>
 	      </child>
 
 	      <child>
-		<widget class="GtkButton" id="GtkButton_FireWireabout">
+		<widget class="GtkButton" id="GtkButton_FWabout">
 		  <property name="visible">True</property>
 		  <property name="can_default">True</property>
 		  <property name="can_focus">True</property>

@@ -112,3 +112,12 @@ OnConf_Ok                              (GtkButton       *button,
 
 }
 
+
+void
+OnAbout_Ok                             (GtkDialog       *dialog,
+                                        gint             response_id,
+                                        gpointer         user_data)
+{
+
+}
+

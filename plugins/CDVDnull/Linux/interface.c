@@ -35,14 +35,14 @@ create_Config (void)
   GtkWidget *alignment1;
   GtkWidget *check_logging;
   GtkWidget *label15;
-  GtkWidget *hbuttonbox3;
-  GtkWidget *button4;
-  GtkWidget *button5;
+  GtkWidget *hbuttonbox1;
+  GtkWidget *button1;
+  GtkWidget *button2;
 
   Config = gtk_window_new (GTK_WINDOW_TOPLEVEL);
   gtk_widget_set_name (Config, "Config");
   gtk_container_set_border_width (GTK_CONTAINER (Config), 5);
-  gtk_window_set_title (GTK_WINDOW (Config), _("USBconfig"));
+  gtk_window_set_title (GTK_WINDOW (Config), _("CDVDconfig"));
 
   vbox1 = gtk_vbox_new (FALSE, 5);
   gtk_widget_set_name (vbox1, "vbox1");
@@ -54,6 +54,7 @@ create_Config (void)
   gtk_widget_set_name (frame3, "frame3");
   gtk_widget_show (frame3);
   gtk_box_pack_start (GTK_BOX (vbox1), frame3, TRUE, TRUE, 0);
+  gtk_frame_set_shadow_type (GTK_FRAME (frame3), GTK_SHADOW_NONE);
 
   alignment1 = gtk_alignment_new (0.5, 0.5, 1, 1);
   gtk_widget_set_name (alignment1, "alignment1");
@@ -72,28 +73,28 @@ create_Config (void)
   gtk_frame_set_label_widget (GTK_FRAME (frame3), label15);
   gtk_label_set_use_markup (GTK_LABEL (label15), TRUE);
 
-  hbuttonbox3 = gtk_hbutton_box_new ();
-  gtk_widget_set_name (hbuttonbox3, "hbuttonbox3");
-  gtk_widget_show (hbuttonbox3);
-  gtk_box_pack_start (GTK_BOX (vbox1), hbuttonbox3, TRUE, TRUE, 0);
-  gtk_box_set_spacing (GTK_BOX (hbuttonbox3), 30);
+  hbuttonbox1 = gtk_hbutton_box_new ();
+  gtk_widget_set_name (hbuttonbox1, "hbuttonbox1");
+  gtk_widget_show (hbuttonbox1);
+  gtk_box_pack_start (GTK_BOX (vbox1), hbuttonbox1, TRUE, TRUE, 0);
+  gtk_box_set_spacing (GTK_BOX (hbuttonbox1), 30);
 
-  button4 = gtk_button_new_with_mnemonic (_("Ok"));
-  gtk_widget_set_name (button4, "button4");
-  gtk_widget_show (button4);
-  gtk_container_add (GTK_CONTAINER (hbuttonbox3), button4);
-  GTK_WIDGET_SET_FLAGS (button4, GTK_CAN_DEFAULT);
+  button1 = gtk_button_new_with_mnemonic (_("Ok"));
+  gtk_widget_set_name (button1, "button1");
+  gtk_widget_show (button1);
+  gtk_container_add (GTK_CONTAINER (hbuttonbox1), button1);
+  GTK_WIDGET_SET_FLAGS (button1, GTK_CAN_DEFAULT);
 
-  button5 = gtk_button_new_with_mnemonic (_("Cancel"));
-  gtk_widget_set_name (button5, "button5");
-  gtk_widget_show (button5);
-  gtk_container_add (GTK_CONTAINER (hbuttonbox3), button5);
-  GTK_WIDGET_SET_FLAGS (button5, GTK_CAN_DEFAULT);
+  button2 = gtk_button_new_with_mnemonic (_("Cancel"));
+  gtk_widget_set_name (button2, "button2");
+  gtk_widget_show (button2);
+  gtk_container_add (GTK_CONTAINER (hbuttonbox1), button2);
+  GTK_WIDGET_SET_FLAGS (button2, GTK_CAN_DEFAULT);
 
-  g_signal_connect ((gpointer) button4, "clicked",
+  g_signal_connect ((gpointer) button1, "clicked",
                     G_CALLBACK (OnConf_Ok),
                     NULL);
-  g_signal_connect ((gpointer) button5, "clicked",
+  g_signal_connect ((gpointer) button2, "clicked",
                     G_CALLBACK (OnConf_Cancel),
                     NULL);
 
@@ -104,9 +105,9 @@ create_Config (void)
   GLADE_HOOKUP_OBJECT (Config, alignment1, "alignment1");
   GLADE_HOOKUP_OBJECT (Config, check_logging, "check_logging");
   GLADE_HOOKUP_OBJECT (Config, label15, "label15");
-  GLADE_HOOKUP_OBJECT (Config, hbuttonbox3, "hbuttonbox3");
-  GLADE_HOOKUP_OBJECT (Config, button4, "button4");
-  GLADE_HOOKUP_OBJECT (Config, button5, "button5");
+  GLADE_HOOKUP_OBJECT (Config, hbuttonbox1, "hbuttonbox1");
+  GLADE_HOOKUP_OBJECT (Config, button1, "button1");
+  GLADE_HOOKUP_OBJECT (Config, button2, "button2");
 
   return Config;
 }
@@ -124,7 +125,7 @@ create_About (void)
   About = gtk_window_new (GTK_WINDOW_TOPLEVEL);
   gtk_widget_set_name (About, "About");
   gtk_container_set_border_width (GTK_CONTAINER (About), 5);
-  gtk_window_set_title (GTK_WINDOW (About), _("DEV9about"));
+  gtk_window_set_title (GTK_WINDOW (About), _("CDVDabout"));
 
   vbox2 = gtk_vbox_new (FALSE, 5);
   gtk_widget_set_name (vbox2, "vbox2");
@@ -132,13 +133,13 @@ create_About (void)
   gtk_container_add (GTK_CONTAINER (About), vbox2);
   gtk_container_set_border_width (GTK_CONTAINER (vbox2), 5);
 
-  label2 = gtk_label_new (_("USB Null Driver"));
+  label2 = gtk_label_new (_("CDVD Null Driver"));
   gtk_widget_set_name (label2, "label2");
   gtk_widget_show (label2);
   gtk_box_pack_start (GTK_BOX (vbox2), label2, FALSE, FALSE, 0);
   gtk_label_set_justify (GTK_LABEL (label2), GTK_JUSTIFY_CENTER);
 
-  label3 = gtk_label_new (_("Original Author: linuzappz <linuzappz@hotmail.com>\nRevised by arcum42@gmail.com."));
+  label3 = gtk_label_new (_("Original Author: (Not sure. linuzappz?)\nRevised by arcum42@gmail.com"));
   gtk_widget_set_name (label3, "label3");
   gtk_widget_show (label3);
   gtk_box_pack_start (GTK_BOX (vbox2), label3, FALSE, FALSE, 0);

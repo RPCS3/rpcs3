@@ -44,10 +44,15 @@ create_About (void)
   About = gtk_about_dialog_new ();
   gtk_widget_set_name (About, "About");
   gtk_container_set_border_width (GTK_CONTAINER (About), 5);
+  gtk_window_set_destroy_with_parent (GTK_WINDOW (About), TRUE);
   gtk_about_dialog_set_version (GTK_ABOUT_DIALOG (About), VERSION);
   gtk_about_dialog_set_name (GTK_ABOUT_DIALOG (About), _("ZeroPAD"));
   gtk_about_dialog_set_authors (GTK_ABOUT_DIALOG (About), authors);
   gtk_about_dialog_set_translator_credits (GTK_ABOUT_DIALOG (About), translators);
+
+  g_signal_connect ((gpointer) About, "response",
+                    G_CALLBACK (OnAbout_Ok),
+                    NULL);
 
   /* Store pointers to all widgets, for use by lookup_widget(). */
   GLADE_HOOKUP_OBJECT_NO_REF (About, About, "About");

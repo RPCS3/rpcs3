@@ -29,10 +29,12 @@ const unsigned char revision = 0;
 const unsigned char build    = 5;    // increase that with each version
 
 static char *libraryName = "FWnull Driver";
+string s_strIniPath="inis/FWnull.ini";
+
 s8 *fwregs;
 FILE *fwLog;
 Config conf;
-string s_strIniPath="inis/FWnull.ini";
+
 void (*FWirq)();
 
 EXPORT_C_(u32) PS2EgetLibType() 

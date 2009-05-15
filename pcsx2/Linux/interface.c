@@ -2036,7 +2036,7 @@ create_ConfDlg (void)
   GtkWidget *hbuttonbox24;
   GtkWidget *GtkButton_FWconfigure;
   GtkWidget *GtkButton_FWtest;
-  GtkWidget *GtkButton_FireWireabout;
+  GtkWidget *GtkButton_FWabout;
   GtkWidget *label30;
   GtkWidget *GtkLabel_Bios;
   GtkWidget *hbox5;
@@ -2385,11 +2385,11 @@ create_ConfDlg (void)
   gtk_container_add (GTK_CONTAINER (hbuttonbox24), GtkButton_FWtest);
   GTK_WIDGET_SET_FLAGS (GtkButton_FWtest, GTK_CAN_DEFAULT);
 
-  GtkButton_FireWireabout = gtk_button_new_with_mnemonic (_("About"));
-  gtk_widget_set_name (GtkButton_FireWireabout, "GtkButton_FireWireabout");
-  gtk_widget_show (GtkButton_FireWireabout);
-  gtk_container_add (GTK_CONTAINER (hbuttonbox24), GtkButton_FireWireabout);
-  GTK_WIDGET_SET_FLAGS (GtkButton_FireWireabout, GTK_CAN_DEFAULT);
+  GtkButton_FWabout = gtk_button_new_with_mnemonic (_("About"));
+  gtk_widget_set_name (GtkButton_FWabout, "GtkButton_FWabout");
+  gtk_widget_show (GtkButton_FWabout);
+  gtk_container_add (GTK_CONTAINER (hbuttonbox24), GtkButton_FWabout);
+  GTK_WIDGET_SET_FLAGS (GtkButton_FWabout, GTK_CAN_DEFAULT);
 
   label30 = gtk_label_new (_("FireWire"));
   gtk_widget_set_name (label30, "label30");
@@ -2518,7 +2518,7 @@ create_ConfDlg (void)
   g_signal_connect ((gpointer) GtkButton_FWtest, "clicked",
                     G_CALLBACK (OnConfButton),
                     NULL);
-  g_signal_connect ((gpointer) GtkButton_FireWireabout, "clicked",
+  g_signal_connect ((gpointer) GtkButton_FWabout, "clicked",
                     G_CALLBACK (OnConfButton),
                     NULL);
   g_signal_connect ((gpointer) GtkButton_SelectPluginsDir, "clicked",
@@ -2585,7 +2585,7 @@ create_ConfDlg (void)
   GLADE_HOOKUP_OBJECT (ConfDlg, hbuttonbox24, "hbuttonbox24");
   GLADE_HOOKUP_OBJECT (ConfDlg, GtkButton_FWconfigure, "GtkButton_FWconfigure");
   GLADE_HOOKUP_OBJECT (ConfDlg, GtkButton_FWtest, "GtkButton_FWtest");
-  GLADE_HOOKUP_OBJECT (ConfDlg, GtkButton_FireWireabout, "GtkButton_FireWireabout");
+  GLADE_HOOKUP_OBJECT (ConfDlg, GtkButton_FWabout, "GtkButton_FWabout");
   GLADE_HOOKUP_OBJECT (ConfDlg, label30, "label30");
   GLADE_HOOKUP_OBJECT (ConfDlg, GtkLabel_Bios, "GtkLabel_Bios");
   GLADE_HOOKUP_OBJECT (ConfDlg, hbox5, "hbox5");

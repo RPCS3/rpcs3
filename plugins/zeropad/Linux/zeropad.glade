@@ -6,7 +6,7 @@
 <widget class="GtkAboutDialog" id="About">
   <property name="border_width">5</property>
   <property name="visible">True</property>
-  <property name="destroy_with_parent">False</property>
+  <property name="destroy_with_parent">True</property>
   <property name="name" translatable="yes">ZeroPAD</property>
   <property name="wrap_license">False</property>
   <property name="authors">Author: zerofrog(@gmail.com)
@@ -15,6 +15,7 @@ Thanks to:
 florin sasu &lt;florinsasu@hotmail.com&gt;
 and SSSPSXPad, TwinPad authors</property>
   <property name="translator_credits" translatable="yes" comments="TRANSLATORS: Replace this string with your names, one name per line.">translator-credits</property>
+  <signal name="response" handler="OnAbout_Ok" last_modification_time="Fri, 15 May 2009 05:54:57 GMT"/>
 </widget>
 
 <widget class="GtkDialog" id="Conf">
