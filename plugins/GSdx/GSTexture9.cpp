@@ -94,7 +94,10 @@ bool GSTexture9::Update(const GSVector4i& r, const void* data, int pitch)
 			uint8* src = (uint8*)data;
 			uint8* dst = (uint8*)lr.pBits;
 
-			int bytes = min(pitch, lr.Pitch);
+			int bytes = r.width() << (m_desc.Format == D3DFMT_A1R5G5B5 ? 1 : 2);
+
+			bytes = min(bytes, pitch);
+			bytes = min(bytes, lr.Pitch);
 
 			for(int i = 0, j = r.height(); i < j; i++, src += pitch, dst += lr.Pitch)
 			{

@@ -58,7 +58,7 @@ GSVector4i GSVector4i::fit(int arx, int ary) const
 
 		if(w * ary > h * arx)
 		{
-			int w2 = w * arx / ary;
+			int w2 = h * arx / ary;
 			r.left = (r.left + r.right - w2) >> 1;
 			if(r.left & 1) r.left++;
 			r.right = r.left + w2;

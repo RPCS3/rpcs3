@@ -224,7 +224,8 @@ public:
 			m_valid = m_valid.runion(r);
 
 			static uint8* bits = (uint8*)::_aligned_malloc(1024 * 1024 * 4, 16);
-			static int pitch = 1024 * 4;
+
+			int pitch = ((r.width() + 3) & ~3) * 4;
 
 			if(m_renderer->m_psrr)
 			{

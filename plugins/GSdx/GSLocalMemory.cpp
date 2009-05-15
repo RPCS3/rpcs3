@@ -28,7 +28,7 @@
 #include "GSLocalMemory.h"
 
 #define ASSERT_BLOCK(r, w, h) \
-	ASSERT((r).Width() >= w && (r).Height() >= h && !((r).left&(w-1)) && !((r).top&(h-1)) && !((r).right&(w-1)) && !((r).bottom&(h-1))); \
+	ASSERT((r).width() >= w && (r).height() >= h && !((r).left&(w-1)) && !((r).top&(h-1)) && !((r).right&(w-1)) && !((r).bottom&(h-1))); \
 
 #define FOREACH_BLOCK_START(w, h, bpp) \
 	uint32 bp = TEX0.TBP0; \
