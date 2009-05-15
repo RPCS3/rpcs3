@@ -27,6 +27,7 @@
 using namespace std;
 
 #include "GS.h"
+
 #ifdef __LINUX__
 Display *display;
 int screen;
@@ -174,14 +175,17 @@ EXPORT_C_(void) GSvsync(int field)
 
 EXPORT_C_(void) GSgifTransfer1(u32 *pMem, u32 addr)
 {
+	_GSgifTransfer1(pMem, addr);
 }
 
 EXPORT_C_(void) GSgifTransfer2(u32 *pMem, u32 size)
 {
+	_GSgifTransfer2(pMem, size);
 }
 
 EXPORT_C_(void) GSgifTransfer3(u32 *pMem, u32 size)
 {
+	_GSgifTransfer3(pMem, size);
 }
 
  // returns the last tag processed (64 bits)

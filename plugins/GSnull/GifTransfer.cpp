@@ -26,30 +26,39 @@
 
 using namespace std;
 
+u32 CSRw;
+GIFPath m_path[3];
+bool Path3transfer;
+
+PCSX2_ALIGNED16( u8 g_RealGSMem[0x2000] );
+#define GSCSRr *((u64*)(g_RealGSMem+0x1000))
+#define GSIMR *((u32*)(g_RealGSMem+0x1010))
+#define GSSIGLBLID ((GSRegSIGBLID*)(g_RealGSMem+0x1080))
+
 static void RegHandlerSIGNAL(const u32* data)
 {
 	//MTGS_LOG("MTGS SIGNAL data %x_%x CSRw %x\n",data[0], data[1], CSRw);
 
-	//GSSIGLBLID->SIGID = (GSSIGLBLID->SIGID&~data[1])|(data[0]&data[1]);
+	GSSIGLBLID->SIGID = (GSSIGLBLID->SIGID&~data[1])|(data[0]&data[1]);
 	
-	//if ((CSRw & 0x1))  GSCSRr |= 1; // signal
+	if ((CSRw & 0x1))  GSCSRr |= 1; // signal
 			
-	//if (!(GSIMR&0x100) ) gsIrq();
+	if (!(GSIMR & 0x100) ) GSirq();
 }
 
 static void RegHandlerFINISH(const u32* data)
 {
 	//MTGS_LOG("MTGS FINISH data %x_%x CSRw %x\n",data[0], data[1], CSRw);
 
-	//if ((CSRw & 0x2))  GSCSRr |= 2; // finish
+	if ((CSRw & 0x2))  GSCSRr |= 2; // finish
 		
-	//if (!(GSIMR&0x200) ) gsIrq();
+	if (!(GSIMR & 0x200) ) GSirq();
 	
 }
 
 static void RegHandlerLABEL(const u32* data)
 {
-	//GSSIGLBLID->LBLID = (GSSIGLBLID->LBLID&~data[1])|(data[0]&data[1]);
+	GSSIGLBLID->LBLID = (GSSIGLBLID->LBLID&~data[1])|(data[0]&data[1]);
 }
 
 typedef void (*GIFRegHandler)(const u32* data);
@@ -237,3 +246,30 @@ __forceinline u32 _gifTransfer( GIF_PATH pathidx, const u8* pMem, u32 size )
 	}
 	return size;
 }
+
+// This currently segfaults in the beginning of KH1 if defined.
+//#define DO_GIF_TRANSFERS
+
+void _GSgifTransfer1(u32 *pMem, u32 addr)
+{	
+#ifdef DO_GIF_TRANSFERS
+	/* This needs looking at, since I quickly grabbed it from ZeroGS. */
+	addr &= 0x3fff;
+	_gifTransfer( GIF_PATH_1, ((u8*)pMem+(u8)addr), (0x4000-addr)/16);
+#endif
+}
+
+void _GSgifTransfer2(u32 *pMem, u32 size)
+{
+#ifdef DO_GIF_TRANSFERS
+	_gifTransfer( GIF_PATH_2, (u8*)pMem, size);
+#endif
+}
+
+void _GSgifTransfer3(u32 *pMem, u32 size)
+{
+#ifdef DO_GIF_TRANSFERS
+	_gifTransfer( GIF_PATH_3, (u8*)pMem, size);
+#endif
+}
+

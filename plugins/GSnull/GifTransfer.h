@@ -16,6 +16,9 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
  
+ #ifndef __GIF_TRANSFER_H__
+ #define __GIF_TRANSFER_H__
+ 
 #include <assert.h>
 #include <algorithm>
 
@@ -84,5 +87,11 @@ struct GIFPath
 	u32 GetReg();
 };
 
-	GIFPath m_path[3];
-	bool Path3transfer;
+extern GIFPath m_path[3];
+extern bool Path3transfer;
+
+extern void _GSgifTransfer1(u32 *pMem, u32 addr);
+extern void _GSgifTransfer2(u32 *pMem, u32 size);
+extern void _GSgifTransfer3(u32 *pMem, u32 size);
+
+#endif

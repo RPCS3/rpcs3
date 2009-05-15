@@ -44,6 +44,8 @@ extern "C"
 }
 #endif
 
+#include "GifTransfer.h"
+
 /*#ifdef _MSC_VER
 #define EXPORT_C_(type) extern "C" __declspec(dllexport) type CALLBACK
 #else
