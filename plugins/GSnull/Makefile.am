@@ -28,7 +28,8 @@ FW.h Linux/Config.h Linux/Linux.h
 libGSnull_a_SOURCES += \
 Linux/interface.h Linux/support.c  \
 Linux/interface.c Linux/support.h \
-Linux/callbacks.h 
+Linux/callbacks.h \
+GifTransfer.cpp GifTransfer.h
 #Linux/callbacks.c 
 
 #SUBDIRS = Linux

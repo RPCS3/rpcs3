@@ -1,0 +1,239 @@
+/*  GSnull
+ *  Copyright (C) 2004-2009 PCSX2 Team
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+ 
+ // Processes a GIFtag & packet, and throws out some gsIRQs as needed.
+// Used to keep interrupts in sync with the EE, while the GS itself
+// runs potentially several frames behind.
+// size - size of the packet in simd128's
+
+#include "GS.h"
+#include "GifTransfer.h"
+
+using namespace std;
+
+static void RegHandlerSIGNAL(const u32* data)
+{
+	//MTGS_LOG("MTGS SIGNAL data %x_%x CSRw %x\n",data[0], data[1], CSRw);
+
+	//GSSIGLBLID->SIGID = (GSSIGLBLID->SIGID&~data[1])|(data[0]&data[1]);
+	
+	//if ((CSRw & 0x1))  GSCSRr |= 1; // signal
+			
+	//if (!(GSIMR&0x100) ) gsIrq();
+}
+
+static void RegHandlerFINISH(const u32* data)
+{
+	//MTGS_LOG("MTGS FINISH data %x_%x CSRw %x\n",data[0], data[1], CSRw);
+
+	//if ((CSRw & 0x2))  GSCSRr |= 2; // finish
+		
+	//if (!(GSIMR&0x200) ) gsIrq();
+	
+}
+
+static void RegHandlerLABEL(const u32* data)
+{
+	//GSSIGLBLID->LBLID = (GSSIGLBLID->LBLID&~data[1])|(data[0]&data[1]);
+}
+
+typedef void (*GIFRegHandler)(const u32* data);
+static GIFRegHandler s_GSHandlers[3] = 
+{ 
+	RegHandlerSIGNAL, RegHandlerFINISH, RegHandlerLABEL 
+};
+
+__forceinline void GIFPath::PrepRegs()
+{
+	if( tag.nreg == 0 )
+	{
+		u32 tempreg = tag.regs[0];
+		for(u32 i=0; i<16; ++i, tempreg >>= 4)
+		{
+			if( i == 8 ) tempreg = tag.regs[1];
+			assert( (tempreg&0xf) < 0x64 );
+			regs[i] = tempreg & 0xf;
+		}
+	}
+	else
+	{
+		u32 tempreg = tag.regs[0];
+		for(u32 i=0; i<tag.nreg; ++i, tempreg >>= 4)
+		{
+			assert( (tempreg&0xf) < 0x64 );
+			regs[i] = tempreg & 0xf;
+		}
+	}
+}
+
+void GIFPath::SetTag(const void* mem)
+{
+	tag = *((GIFTAG*)mem);
+	curreg = 0;
+
+	PrepRegs();
+}
+
+u32 GIFPath::GetReg() 
+{
+	return regs[curreg];
+}
+
+__forceinline u32 _gifTransfer( GIF_PATH pathidx, const u8* pMem, u32 size )
+{
+	GIFPath& path = m_path[pathidx];
+
+	while(size > 0)
+	{
+		bool eop = false;
+
+		if(path.tag.nloop == 0)
+		{
+			path.SetTag( pMem );
+
+			pMem += sizeof(GIFTAG);
+			--size;
+
+			if(pathidx == 2 && path.tag.eop)
+				Path3transfer = FALSE;
+
+			if( pathidx == 0 ) 
+			{                        
+				// hack: if too much data for VU1, just ignore.
+
+				// The GIF is evil : if nreg is 0, it's really 16.  Otherwise it's the value in nreg.
+				const int numregs = ((path.tag.nreg - 1) & 15) + 1;
+
+				if((path.tag.nloop * numregs) > (size * ((path.tag.flg == 1) ? 2 : 1)))
+				{
+					path.tag.nloop = 0;
+					return ++size;
+				}
+			}
+
+			if(path.tag.eop)
+			{
+				eop = true;
+			}
+			else if(path.tag.nloop == 0)
+			{
+				if(pathidx == 0)
+					continue;
+
+				eop = true;
+			}
+		}
+
+		if(path.tag.nloop > 0)
+		{
+			switch(path.tag.flg)
+			{
+			case GIF_FLG_PACKED:
+
+				while(size > 0)
+				{
+					if( path.GetReg() == 0xe )
+					{
+						const int handler = pMem[8];
+						if(handler >= 0x60 && handler < 0x63)
+							s_GSHandlers[handler & 0x3]((const u32*)pMem);
+					}
+					size--;
+					pMem += 16; // 128 bits! //sizeof(GIFPackedReg);
+
+					if((++path.curreg & 0xf) == path.tag.nreg) 
+					{
+						path.curreg = 0; 
+						path.tag.nloop--;
+
+						if(path.tag.nloop == 0)
+							break;
+					}
+				}
+			break;
+
+			case GIF_FLG_REGLIST:
+
+				size *= 2;
+
+				while(size > 0)
+				{
+					const int handler = path.GetReg();
+					if (handler >= 0x60 && handler < 0x63)
+						s_GSHandlers[handler&0x3]((const u32*)pMem);
+
+					size--;
+					pMem += 8; //sizeof(GIFReg); -- 64 bits!
+
+					if((++path.curreg & 0xf) == path.tag.nreg) 
+					{
+						path.curreg = 0; 
+						path.tag.nloop--;
+
+						if(path.tag.nloop == 0)
+						{
+							break;
+						}
+					}
+				}
+			
+				if (size & 1) pMem += 8; //sizeof(GIFReg);
+				size /= 2;
+
+			break;
+
+			case GIF_FLG_IMAGE2: // hmmm
+				assert(0);
+				path.tag.nloop = 0;
+
+			break;
+
+			case GIF_FLG_IMAGE:
+			{
+				int len = (int)min(size, path.tag.nloop);
+
+				pMem += len * 16;
+				path.tag.nloop -= len;
+				size -= len;
+			}
+			break;
+
+			jNO_DEFAULT;
+
+			}
+		}
+
+		if (eop && ((int)size <= 0 || pathidx == 0))
+		{
+			break;
+		}
+	}
+
+	if(pathidx == 0)
+	{
+		if (!path.tag.eop && path.tag.nloop > 0)
+		{
+			path.tag.nloop = 0;
+			SysPrintf( "path1 hack! " );
+
+			// This means that the giftag data got screwly somewhere
+			// along the way (often means curreg was in a bad state or something)
+		}
+	}
+	return size;
+}
