@@ -25,7 +25,7 @@ CDVDiso.h     Counters.h    HostGui.h      IopHw.h       MemoryTypes.h  R3000A.h
 CDVDisodrv.h  Decode_XA.h   Hw.h           IopMem.h      Misc.h         R5900.h              SaveState.h  Threading.h    cheatscpp.h \
 CDVDlib.h     Dump.h        IopBios.h      IopSio2.h     NakedAsm.h     R5900Exceptions.h    Sif.h        VU.h           vtlb.h \
 COP0.h        Elfheader.h   IopBios2.h     Mdec.h        Patch.h        R5900OpcodeTables.h  Sifcmd.h     VUflags.h \
-Cache.h       Exceptions.h  IopCommon.h    MemcpyFast.h  Paths.h                                Sio.h        VUmicro.h \
+Cache.h       Exceptions.h  IopCommon.h    MemcpyFast.h  Paths.h    Sio.h    Sio_internal.h    VUmicro.h \
 CdRom.h       GS.h          IopCounters.h  Memory.h      Plugins.h      SPR.h                Stats.h      VUops.h
 #RedtapeWindows.h
 

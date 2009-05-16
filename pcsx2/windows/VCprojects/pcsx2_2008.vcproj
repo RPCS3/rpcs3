@@ -1465,6 +1465,10 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\CDVD_internal.h"
+					>
+				</File>
+				<File
 					RelativePath="..\..\IopBios.cpp"
 					>
 				</File>

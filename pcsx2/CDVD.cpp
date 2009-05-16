@@ -23,6 +23,7 @@
 
 #include "IopCommon.h"
 #include "CDVDiso.h"
+#include "CDVD_internal.h"
 
 static cdvdStruct cdvd;
 
