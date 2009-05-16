@@ -2073,7 +2073,7 @@ static void Vif1CMDFlush()  // FLUSH/E/A
 		while ((gif->chcr & 0x100))
 		{
 			if (!Path3transfer && gif->qwc == 0) break;
-			vif1Regs->stat |= 0x4;
+			vif1Regs->stat |= VIF1_STAT_VGW;
 			break;
 			
 		}
@@ -2131,7 +2131,7 @@ static void Vif1CMDDirectHL()  // DIRECT/HL
 	{
 		//if(vif1Regs->mskpath3)CPU_INT(2, vif1ch->qwc - (vif1.vifpacketsize >> 2) * BIAS);
 		 //DirectHL flushes the lot
-		vif1Regs->stat |= 0x4;
+		vif1Regs->stat |= VIF1_STAT_VGW;
 		
 	}
 	
@@ -2219,7 +2219,7 @@ int VIF1transfer(u32 *data, int size, int istag)
 		if (vif1.tag.size != 0) DevCon::Error("no vif1 cmd but tag size is left last cmd read %x", params vif1Regs->code);
 
 		if (vif1.irq) break;
-		if(vif1Regs->stat & 0x4) break;
+		if(vif1Regs->stat & VIF1_STAT_VGW) break;
 
 		vif1.cmd = (data[0] >> 24);
 		vif1Regs->code = data[0];
@@ -2264,7 +2264,7 @@ int VIF1transfer(u32 *data, int size, int istag)
 				if (vif1.tag.size == 0) break;
 			}
 		}
-	if(vif1Regs->stat & 0x4) break;
+	if(vif1Regs->stat & VIF1_STAT_VGW) break;
 	} // End of Transfer loop
 
 	transferred += size - vif1.vifpacketsize;
@@ -2302,7 +2302,7 @@ int VIF1transfer(u32 *data, int size, int istag)
 		vif1ch->qwc -= transferred;		
 	}
 	
-	if(vif1Regs->stat & 0x4)
+	if(vif1Regs->stat & VIF1_STAT_VGW)
 	{
 		vif1.vifstalled = true;
 		return -1;
@@ -2489,7 +2489,7 @@ __forceinline void vif1Interrupt()
 	VIF_LOG("vif1Interrupt: %8.8x", cpuRegs.cycle);
 
 	g_vifCycles = 0;
-	if((vif1Regs->stat & 0x4) && 
+	if((vif1Regs->stat & VIF1_STAT_VGW) && 
 		((psHu32(GIF_MODE) & 0x1) ? (Path3transfer == true || gif->qwc > 0) : (gif->chcr & 0x100)))
 	{
 		int delay = 0;
@@ -2504,7 +2504,7 @@ __forceinline void vif1Interrupt()
 		CPU_INT(1, delay);
 		return;
 	}
-	vif1Regs->stat &= ~0x4;
+	vif1Regs->stat &= ~VIF1_STAT_VGW;
 	
 
 	if ((vif1ch->chcr & 0x100) == 0) Console::WriteLn("Vif1 running when CHCR == %x", params vif1ch->chcr);
