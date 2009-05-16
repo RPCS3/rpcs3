@@ -393,7 +393,7 @@ namespace HostSys
 
 		// make sure base and size are aligned to the system page size:
 		size = (size + m_pagemask) & ~m_pagemask;
-		baseaddr = (void*)( ((uptr)baseaddr) & ~mpagemask );
+		baseaddr = (void*)( ((uptr)baseaddr) & ~m_pagemask );
 
 		switch( mode )
 		{
