@@ -27,7 +27,7 @@
 #include "microVU_Alloc.h"
 #include "microVU_Misc.h"
 
-#define mMaxBlocks 32 // Max Blocks With Different Pipeline States (For n = 1, 2, 4, 8, 16, etc...)
+#define mMaxBlocks 32 // Max Blocks With Different Pipeline States
 class microBlockManager {
 private:
 	static const int MaxBlocks = mMaxBlocks - 1;
@@ -42,7 +42,7 @@ public:
 		microBlock* thisBlock = search(&pBlock->pState);
 		if (!thisBlock) {
 			listSize++;
-			if (listSize > MaxBlocks) { Console::Error("microVU Warning: Block List Overflow"); listSize &= MaxBlocks; }
+			if (listSize > MaxBlocks) { Console::Error("microVU Warning: Block List Overflow"); listSize = 0; }
 			memcpy_fast(&blockList[listSize], pBlock, sizeof(microBlock));
 			thisBlock = &blockList[listSize];
 		}
@@ -57,8 +57,10 @@ public:
 		}
 		else { // Can do Simple Search (Only Matches the Important Pipeline Stuff)
 			for (int i = 0; i <= listSize; i++) {
-				if ((blockList[i].pState.q == pState->q) && (blockList[i].pState.p == pState->p) 
-				&&  (blockList[i].pState.flags == pState->flags)) { return &blockList[i]; }
+				if ((blockList[i].pState.q == pState->q) 
+				&&  (blockList[i].pState.p == pState->p) 
+				&&  (blockList[i].pState.flags == pState->flags)
+				&& !(blockList[i].pState.needExactMatch & 0xf0f)) { return &blockList[i]; }
 			}
 		}
 		return NULL;
@@ -69,8 +71,9 @@ template<u32 progSize> // progSize = VU program memory size / 4
 struct microProgram {
 	u32 data[progSize];
 	u32 used;		// Number of times its been used
-	u32 last_used;	// counters # of frames since last use (starts at 3 and counts backwards to 0 for each 30fps vsync)
+	u32 last_used;	// Counters # of frames since last use (starts at 3 and counts backwards to 0 for each 30fps vSync)
 	u32 sFlagHack;	// Optimize out Status Flag Updates if Program doesn't use Status Flags
+	s32 range[2];	// The range of microMemory that has already been recompiled for the current program
 	u8* x86ptr;		// Pointer to program's recompilation code
 	u8* x86start;	// Start of program's rec-cache
 	u8* x86end;		// Limit of program's rec-cache
@@ -85,8 +88,8 @@ struct microProgManager {
 	static const int	max = mMaxProg - 1; 
 	int					cur;			// Index to Current MicroProgram thats running (-1 = uncached)
 	int					total;			// Total Number of valid MicroPrograms minus 1
+	int					isSame;			// Current cached microProgram is Exact Same program as mVU->regs->Micro
 	int					cleared;		// Micro Program is Indeterminate so must be searched for (and if no matches are found then recompile a new one)
-	int					finished;		// Completed MicroProgram by E-bit Termination
 	microRegInfo		lpState;		// Pipeline state from where program left off (useful for continuing execution)
 };
 

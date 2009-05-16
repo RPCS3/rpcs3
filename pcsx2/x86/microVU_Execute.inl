@@ -108,7 +108,7 @@ microVUt(void) mVUdispatcherB() {
 	if (isMMX(1)) EMMS();
 	RET();
 
-	mVUcacheCheck(x86Ptr, mVU->cache, 512);
+	mVUcacheCheck(x86Ptr, mVU->cache, 0x1000);
 }
 
 //------------------------------------------------------------------
