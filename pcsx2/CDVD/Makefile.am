@@ -9,12 +9,10 @@ ipu_dir = $(top_srcdir)/IPU
 linux_dir = $(top_srcdir)/Linux
 
 INCLUDES = -I$(top_srcdir) -I$(x86_dir) -I$(common_dir) -I$(third_dir)
-noinst_LIBRARIES = libIPU.a
+noinst_LIBRARIES = libps2_cdvd.a
 
-libIPU_a_SOURCES = IPU.cpp yuv2rgb.cpp coroutine.cpp \
-IPU.h yuv2rgb.h coroutine.h \
-acoroutine.S
+libps2_cdvd_a_SOURCES = \
+CDVD.cpp CDVDiso.cpp  CDVDisodrv.cpp  CdRom.cpp \
+CDVD.h CDVD_internal.h CDVDiso.h CDVDisodrv.h CDVDlib.h CdRom.h 
 
-SUBDIRS = mpeg2lib
-
-#libIPU_a_LIBADD = mpeg2lib/libmpeg2IPU.a
+#SUBDIRS =

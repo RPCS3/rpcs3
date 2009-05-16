@@ -9,6 +9,7 @@ AC_PROG_RANLIB
 
 dnl necessary for compiling assembly
 AM_PROG_AS
+AC_CONFIG_MACRO_DIR([m4])
 
 svnrev="`svn info | grep Revision:`"
 
@@ -110,6 +111,7 @@ fi
 
 AC_OUTPUT([
  Makefile
+ CDVD/Makefile
  DebugTools/Makefile
  Linux/Makefile
  IPU/Makefile
@@ -132,3 +134,4 @@ echo " local plugin inis? $localinis"
 echo " custom cflags? $customcflags"
 echo " memcpy_fast? $memcpyfast"
 #echo " microVU? $microVU"
+echo " pcsx2_dir = '$pcsx2_dir'"
