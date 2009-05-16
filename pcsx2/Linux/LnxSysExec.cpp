@@ -382,10 +382,18 @@ namespace HostSys
 
 	void MemProtect( void* baseaddr, size_t size, PageProtectionMode mode, bool allowExecution )
 	{
+		// Breakpoint this to trap potentially inappropriate use of page protection, which would
+		// be caused by failed aligned directives on global vars  (dunno if it's happening or not yet)
+		Console::Error(
+			"*PCSX2/Linux Warning* Inappropriate use of page protection detected.\n"
+			"\tbaseaddr not page aligned: 0x%08X", params (uptr)baseaddr
+		);
+
 		int lnxmode = 0;
 
-		// make sure size is aligned to the system page size:
+		// make sure base and size are aligned to the system page size:
 		size = (size + m_pagemask) & ~m_pagemask;
+		baseaddr = (void*)( ((uptr)baseaddr) & ~mpagemask );
 
 		switch( mode )
 		{
