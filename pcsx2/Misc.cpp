@@ -29,7 +29,7 @@
 #include "IopCommon.h"
 #include "HostGui.h"
 
-#include "CDVDisodrv.h"
+#include "CDVD/CDVDisodrv.h"
 #include "VUmicro.h"
 #include "VU.h"
 #include "iCore.h"

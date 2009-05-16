@@ -19,7 +19,7 @@
 #include "PrecompiledHeader.h"
 
 #include "Common.h"
-#include "CDVDisodrv.h"
+#include "CDVD/CDVDisodrv.h"
 
 using namespace std;
 

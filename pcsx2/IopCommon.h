@@ -23,8 +23,8 @@
 #include "R3000A.h"
 #include "Common.h"
 
-#include "CdRom.h"
-#include "CDVD.h"
+#include "CDVD/CdRom.h"
+#include "CDVD/CDVD.h"
 
 #include "Sio.h"
 #include "Sif.h"

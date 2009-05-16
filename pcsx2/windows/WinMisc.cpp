@@ -17,7 +17,7 @@
  */
  
 #include "Win32.h"
-#include "cdvd.h"
+#include "CDVD/CDVD.h"
 
 static LARGE_INTEGER lfreq;
 
