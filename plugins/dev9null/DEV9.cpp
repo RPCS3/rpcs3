@@ -63,7 +63,9 @@ void __Log(char *fmt, ...)
 
 EXPORT_C_(s32) DEV9init() 
 {
+#ifdef __LINUX__		// for until we get a win32 version sorted out / implemented...
 	LoadConfig();
+#endif
 
 #ifdef DEV9_LOG
 	dev9Log = fopen("logs/dev9Log.txt", "w");

@@ -17,8 +17,8 @@
  */
 
 #include "PrecompiledHeader.h"
-
 #include "IopCommon.h"
+#include "sio_internal.h"
 
 sio2Struct sio2;
 

@@ -1524,6 +1524,10 @@
 					RelativePath="..\..\Sio.h"
 					>
 				</File>
+				<File
+					RelativePath="..\..\sio_internal.h"
+					>
+				</File>
 				<Filter
 					Name="Hardware"
 					>
