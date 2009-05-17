@@ -26,7 +26,7 @@ static uptr current_offset = 0;
 static uptr offset_counter = 0;
 bool Slots[5] = { false, false, false, false, false };
 
-void InstallLinuxExceptionHandler()
+__noinline void InstallLinuxExceptionHandler()
 {
 	struct sigaction sa;
 	
@@ -36,15 +36,25 @@ void InstallLinuxExceptionHandler()
 	sigaction(SIGSEGV, &sa, NULL); 
 }
 
-void ReleaseLinuxExceptionHandler()
+__noinline void ReleaseLinuxExceptionHandler()
 {
-	// Code this later.
+	// This may be called too early or something, since implementing it causes all games to segfault.
+	// I'll look in to it. --arcum42
 }
 
+__noinline void KillLinuxExceptionHandler()
+{
+	struct sigaction sa;
+	
+	sigemptyset(&sa.sa_mask);
+	sa.sa_flags = SA_RESETHAND;
+	//sa.sa_sigaction = &SysPageFaultExceptionFilter;
+	sigaction(SIGSEGV, &sa, NULL); 
+}
 static const uptr m_pagemask = getpagesize()-1;
 
 // Linux implementation of SIGSEGV handler.  Bind it using sigaction().
-void SysPageFaultExceptionFilter( int signal, siginfo_t *info, void * )
+__noinline void SysPageFaultExceptionFilter( int signal, siginfo_t *info, void * )
 {
 	// get bad virtual address
 	uptr offset = (u8*)info->si_addr - psM;
@@ -60,6 +70,7 @@ void SysPageFaultExceptionFilter( int signal, siginfo_t *info, void * )
 		if (offset_counter > 500) 
 		{
 			DevCon::Status( "Offset 0x%x endlessly repeating. Aborting.", params offset );
+			KillLinuxExceptionHandler();
 			assert( false );
 		}
 	}
@@ -69,6 +80,7 @@ void SysPageFaultExceptionFilter( int signal, siginfo_t *info, void * )
 		// Bad mojo!  Completely invalid address.
 		// Instigate a crash or abort emulation or something.
 		DevCon::Status( "Offset 0x%x invalid. Legit SIGSEGV. Aborting.", params offset );
+		KillLinuxExceptionHandler();
 		assert( false );
 	}
 	
@@ -205,7 +217,6 @@ void OnStates_Load(GtkMenuItem *menuitem, gpointer user_data)
 	}
 	
 	sscanf(name, "Slot %d", &i);
-	//if (States_Load(i)) ExecuteCpu();
 	States_Load(i);
 	RefreshMenuSlots();
 }
@@ -218,8 +229,6 @@ void OnLoadOther_Ok(GtkButton* button, gpointer user_data)
 	File = (gchar*)gtk_file_selection_get_filename(GTK_FILE_SELECTION(FileSel));
 	strcpy(str, File);
 	gtk_widget_destroy(FileSel);
-
-	//if (States_Load(str)) ExecuteCpu();
 	States_Load(str);
 	RefreshMenuSlots();
 }
@@ -399,13 +408,13 @@ namespace HostSys
 	{
 		// Breakpoint this to trap potentially inappropriate use of page protection, which would
 		// be caused by failed aligned directives on global vars.
-		/*if( (baseaddr & m_pagemask) != 0 )
+		if( ((uptr)baseaddr & m_pagemask) != 0 )
 		{
 			Console::Error(
 				"*PCSX2/Linux Warning* Inappropriate use of page protection detected.\n"
 				"\tbaseaddr not page aligned: 0x%08X", params (uptr)baseaddr
 			);
-		}*/
+		}
 
 		int lnxmode = 0;
 

@@ -18,7 +18,7 @@
 #
 
 #Normal
-#export PCSX2OPTIONS="--enable-debug --enable-devbuild --enable-sse3 --enable-sse4 --prefix `pwd`"
+#export PCSX2OPTIONS="--prefix `pwd`"
 
 echo ---------------
 echo Building Pcsx2 
