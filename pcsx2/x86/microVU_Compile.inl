@@ -45,6 +45,36 @@
 // Helper Functions
 //------------------------------------------------------------------
 
+// Used by mVUsetupRange
+microVUt(void) mVUcheckIsSame() {
+	microVU* mVU = mVUx;
+
+	if (mVU->prog.isSame == -1) {
+		mVU->prog.isSame = !!memcmp_mmx(mVU->prog.prog[mVU->prog.cur].data, mVU->regs->Micro, mVU->microSize);
+	}
+	if (mVU->prog.isSame == 0) {
+		mVUcacheProg<vuIndex>(mVU->prog.cur);
+	}
+}
+
+// Sets up microProgram PC ranges based on whats been recompiled
+microVUt(void) mVUsetupRange(u32 pc) {
+	microVU* mVU = mVUx;
+
+	if (mVUcurProg.range[0] == -1) { 
+		mVUcurProg.range[0] = (s32)pc;
+		mVUcurProg.range[1] = (s32)pc;
+	}
+	else if (mVUcurProg.range[0] > (s32)pc) {
+		mVUcurProg.range[0] = (s32)pc;
+		mVUcheckIsSame<vuIndex>();
+	}
+	else if (mVUcurProg.range[1] < (s32)pc) {
+		mVUcurProg.range[1] = (s32)pc;
+		mVUcheckIsSame<vuIndex>();
+	}
+}
+
 // Recompiles Code for Proper Flags and Q/P regs on Block Linkings
 microVUt(void) mVUsetupBranch(int* xStatus, int* xMac, int* xClip, int xCycles) {
 	microVU* mVU = mVUx;
@@ -150,34 +180,6 @@ microVUt(void) mVUtestCycles() {
 	SUB32ItoM((uptr)&mVU->cycles, mVUcycles);
 }
 
-microVUt(void) mVUcheckIsSame() {
-	microVU* mVU = mVUx;
-
-	if (mVU->prog.isSame == -1) {
-		mVU->prog.isSame = !!memcmp_mmx(mVU->prog.prog[mVU->prog.cur].data, mVU->regs->Micro, mVU->microSize);
-	}
-	if (mVU->prog.isSame == 0) {
-		mVUcacheProg<vuIndex>(mVU->prog.cur);
-	}
-}
-
-microVUt(void) mVUsetupRange(u32 pc) {
-	microVU* mVU = mVUx;
-
-	if (mVUcurProg.range[0] == -1) { 
-		mVUcurProg.range[0] = (s32)pc;
-		mVUcurProg.range[1] = (s32)pc;
-	}
-	else if (mVUcurProg.range[0] > (s32)pc) {
-		mVUcurProg.range[0] = (s32)pc;
-		mVUcheckIsSame<vuIndex>();
-	}
-	else if (mVUcurProg.range[1] < (s32)pc) {
-		mVUcurProg.range[1] = (s32)pc;
-		mVUcheckIsSame<vuIndex>();
-	}
-}
-
 //------------------------------------------------------------------
 // Recompiler
 //------------------------------------------------------------------
@@ -276,7 +278,7 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 					incPC(-3); // Go back to branch opcode (to get branch imm addr)
 					mVUsetupBranch<vuIndex>(xStatus, xMac, xClip, xCycles);
 
-					if( mVUblocks[branchAddr/8] == NULL )
+					if (mVUblocks[branchAddr/8] == NULL)
 						mVUblocks[branchAddr/8] = new microBlockManager();
 
 					// Check if branch-block has already been compiled
@@ -293,7 +295,6 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 
 					mVUbackupRegs<vuIndex>();
 					MOV32MtoR(gprT2, (uptr)&mVU->branch);		 // Get startPC (ECX first argument for __fastcall)
-					//AND32ItoR(gprT2, (vuIndex)?0x3ff8:0xff8);	 // Ensure valid jump address
 					MOV32ItoR(gprR, (u32)&pBlock->pStateEnd);	 // Get pState (EDX second argument for __fastcall)
 
 					if (!vuIndex) CALLFunc((uptr)mVUcompileVU0); //(u32 startPC, uptr pState)

@@ -30,6 +30,7 @@ PCSX2_ALIGNED16(microVU microVU0);
 PCSX2_ALIGNED16(microVU microVU1);
 
 declareAllVariables // Declares All Global Variables :D
+
 //------------------------------------------------------------------
 // Micro VU - Main Functions
 //------------------------------------------------------------------
@@ -117,7 +118,6 @@ microVUt(void) mVUclose() {
 
 // Clears Block Data in specified range
 microVUt(void) mVUclear(u32 addr, u32 size) {
-
 	microVU* mVU = mVUx;
 	if (!mVU->prog.cleared) {
 		memset(&mVU->prog.lpState, 0, sizeof(mVU->prog.lpState));
@@ -139,7 +139,7 @@ microVUt(void) mVUclearProg(int progIndex) {
 	mVU->prog.prog[progIndex].range[1] = -1;
 	mVU->prog.prog[progIndex].x86ptr = mVU->prog.prog[progIndex].x86start;
 	for (u32 i = 0; i < (mVU->progSize / 2); i++) {
-		if( mVU->prog.prog[progIndex].block[i] )
+		if (mVU->prog.prog[progIndex].block[i])
 			mVU->prog.prog[progIndex].block[i]->reset();
 	}
 }
@@ -170,11 +170,9 @@ microVUt(int) mVUfindLeastUsedProg() {
 		int smallidx = startidx;
 		u32 smallval = mVU->prog.prog[startidx].used;
 
-		for (int i = startidx; i != endidx; i = (i+1)&mVU->prog.max)
-		{
+		for (int i = startidx; i != endidx; i = (i+1)&mVU->prog.max) {
 			u32 used = mVU->prog.prog[i].used;
-			if (smallval > used)
-			{
+			if (smallval > used) {
 				smallval = used;
 				smallidx = i;
 			}
@@ -195,7 +193,6 @@ microVUt(int) mVUfindLeastUsedProg() {
 // frame-based decrementing system in combination with a program-execution-based incrementing
 // system.  In english:  if last_used >= 2 it means the program has been used for the current
 // or prev frame.  if it's 0, the program hasn't been used for a while.
-//
 microVUt(void) __mVUvsyncUpdate() {
 
 	microVU* mVU = mVUx;
@@ -246,11 +243,7 @@ microVUt(int) mVUsearchProg() {
 		for (int i = 0; i <= mVU->prog.total; i++) {
 			if (mVUcmpProg<vuIndex>(i,  !mVU->prog.prog[i].used, 0, 0))
 				return 1; // Check Older Programs
-		}                                                  
-		/*for (int i = 0; i <= mVU->prog.total; i++) {
-			if (mVUcmpProg<vuIndex>(i, 1, 1, 0))
-				return 1; // Check Partial Program
-		}*/
+		}
 		mVU->prog.cur = mVUfindLeastUsedProg<vuIndex>(); // If cleared and program not found, make a new program instance
 		mVU->prog.cleared = 0;
 		mVU->prog.isSame  = 1;
@@ -260,27 +253,7 @@ microVUt(int) mVUsearchProg() {
 	mVU->prog.prog[mVU->prog.cur].last_used = 3;
 	return 1; // If !cleared, then we're still on the same program as last-time ;)
 }
-/*
-// Block Invalidation
-__forceinline void mVUinvalidateBlock(microVU* mVU, u32 addr, u32 size) {
 
-	int i = addr/8;
-	int end = i+((size+(8-(size&7)))/8); // ToDo: Can be simplified to addr+size if Size is always a multiple of 8
-
-	if (!mVU->prog.cleared) {
-		for ( ; i < end; i++) {
-			if ( mVU->prog.prog[mVU->prog.cur].block[i]->clear() ) {
-				mVU->prog.cleared = 1;
-				i++;
-				break;
-			}
-		}
-	}
-	for ( ; i < end; i++) {
-		mVU->prog.prog[mVU->prog.cur].block[i]->clearFast();
-	}
-}
-*/
 //------------------------------------------------------------------
 // Wrapper Functions - Called by other parts of the Emu
 //------------------------------------------------------------------

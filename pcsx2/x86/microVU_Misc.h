@@ -293,7 +293,10 @@ declareAllVariables
 #define CHECK_VU_MINMAXHACK	0 // Min/Max Speed Hack
 
 // Cache Limit Check
-#define mVUcacheCheck(ptr, start, limit) {  \
-	uptr diff = ptr - start; \
-	if (diff >= limit) { Console::Error("microVU Error: Program went over its cache limit. Size = 0x%x", params diff); } \
+#define mVUcacheCheck(ptr, start, limit) {																\
+	uptr diff = ptr - start;																			\
+	if (diff >= limit) {																				\
+		Console::Error("microVU Error: Program went over its cache limit. Size = 0x%x", params diff);	\
+		mVUreset<vuIndex>();																			\
+	}																									\
 }

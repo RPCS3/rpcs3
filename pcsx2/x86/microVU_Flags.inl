@@ -26,7 +26,7 @@ microVUt(void) mVUdivSet() {
 	if (doDivFlag) {
 		getFlagReg(flagReg1, fsInstance);
 		if (!doStatus) { getFlagReg(flagReg2, fpsInstance); MOV32RtoR(flagReg1, flagReg2); }
-		AND16ItoR(flagReg1, 0x0fcf);
+		AND32ItoR(flagReg1, 0x0fcf);
 		OR32MtoR (flagReg1, (uptr)&mVU->divFlag);
 	}
 }
@@ -223,8 +223,7 @@ microVUt(void) mVUsetFlagInfo() {
 		mVUflagInfo = 0;
 		incPC(4); // Branch Not Taken
 		mVUpass4<vuIndex>(xPC);
-		incPC(-3);
-		//if (mVUflagInfo != backupFlagInfo) { mVUflagInfo |= __NeedExact; }		
+		incPC(-3);		
 		mVUflagInfo |= backupFlagInfo;
 	}
 }

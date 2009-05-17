@@ -17,8 +17,8 @@
  */
 
 #pragma once
-//#define mVUdebug	// Prints Extra Info to Console
-//#define mVUlogProg	// Dumps MicroPrograms into microVU0.txt/microVU1.txt
+//#define mVUdebug		// Prints Extra Info to Console
+//#define mVUlogProg	// Dumps MicroPrograms to \logs\*.html
 
 #include "Common.h"
 #include "VU.h"
@@ -27,24 +27,26 @@
 #include "microVU_Alloc.h"
 #include "microVU_Misc.h"
 
-#define mMaxBlocks 32 // Max Blocks With Different Pipeline States
+#define mMaxBlocks 32 // Max Blocks With Different Pipeline States (For n = 1, 2, 4, 8, 16, etc...)
 class microBlockManager {
 private:
 	static const int MaxBlocks = mMaxBlocks - 1;
 	int listSize; // Total Items - 1
+	int listI;	  // Index to Add new block
 	microBlock blockList[mMaxBlocks];
 
 public:
 	microBlockManager()	 { reset(); }
 	~microBlockManager() {}
-	void reset()  { listSize = -1; };
+	void reset()  { listSize = -1; listI = -1; };
 	microBlock* add(microBlock* pBlock) {
 		microBlock* thisBlock = search(&pBlock->pState);
 		if (!thisBlock) {
-			listSize++;
-			if (listSize > MaxBlocks) { Console::Error("microVU Warning: Block List Overflow"); listSize = 0; }
-			memcpy_fast(&blockList[listSize], pBlock, sizeof(microBlock));
-			thisBlock = &blockList[listSize];
+			listI++;
+			if (listSize < MaxBlocks) { listSize++; }
+			if (listI    > MaxBlocks) { Console::Error("microVU Warning: Block List Overflow"); listI = 0; }
+			memcpy_fast(&blockList[listI], pBlock, sizeof(microBlock));
+			thisBlock = &blockList[listI];
 		}
 		return thisBlock;
 	}
