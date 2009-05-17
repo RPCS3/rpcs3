@@ -22,7 +22,8 @@
 
 static bool sinit = false;
 GtkWidget *FileSel;
-
+static uptr current_offset = 0;
+static uptr offset_counter = 0;
 bool Slots[5] = { false, false, false, false, false };
 
 void InstallLinuxExceptionHandler()
@@ -47,13 +48,27 @@ void SysPageFaultExceptionFilter( int signal, siginfo_t *info, void * )
 {
 	// get bad virtual address
 	uptr offset = (u8*)info->si_addr - psM;
-
-	DevCon::Status( "Protected memory cleanup. Offset 0x%x", params offset );
+	
+	if (offset != current_offset)
+	{
+		current_offset = offset;
+		offset_counter = 0;
+	}
+	else
+	{
+		offset_counter++;
+		if (offset_counter > 500) 
+		{
+			DevCon::Status( "Offset 0x%x endlessly repeating. Aborting.", params offset );
+			assert( false );
+		}
+	}
 
 	if (offset>=Ps2MemSize::Base)
 	{
 		// Bad mojo!  Completely invalid address.
 		// Instigate a crash or abort emulation or something.
+		DevCon::Status( "Offset 0x%x invalid. Legit SIGSEGV. Aborting.", params offset );
 		assert( false );
 	}
 	
@@ -384,10 +399,10 @@ namespace HostSys
 	{
 		// Breakpoint this to trap potentially inappropriate use of page protection, which would
 		// be caused by failed aligned directives on global vars  (dunno if it's happening or not yet)
-		Console::Error(
+		/*Console::Error(
 			"*PCSX2/Linux Warning* Inappropriate use of page protection detected.\n"
 			"\tbaseaddr not page aligned: 0x%08X", params (uptr)baseaddr
-		);
+		);*/
 
 		int lnxmode = 0;
 
