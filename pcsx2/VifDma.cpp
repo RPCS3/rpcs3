@@ -2019,8 +2019,7 @@ static void Vif1CMDMskPath3()  // MSKPATH3
 #ifdef GSPATH3FIX
 	if ((vif1Regs->code >> 15) & 0x1)
 	{
-		psHu32(GIF_STAT) |= 0x2;
-		psHu32(GIF_MODE) |= 0x1;
+		
 		while ((gif->chcr & 0x100)) //Can be done 2 different ways, depends on the game/company
 		{
 			if (!path3hack && !Path3transfer && (gif->qwc == 0)) break;
@@ -2030,14 +2029,13 @@ static void Vif1CMDMskPath3()  // MSKPATH3
 			if (path3hack && (gif->qwc == 0)) break; //add games not working with it to elfheader.c to enable this instead
 
 		}
-		
+		psHu32(GIF_STAT) |= 0x2;
 	}
 	else
 	{
 		// fixme: This is the *only* reason 'transferred' is global. Otherwise it'd be local to Vif1Transfer.
 		if (gif->chcr & 0x100) CPU_INT(2, (transferred >> 2) * BIAS);	// Restart Path3 on its own, time it right!
 		psHu32(GIF_STAT) &= ~0x2;
-		psHu32(GIF_MODE) &= ~0x1;
 	}
 #else
 	if (vif1Regs->mskpath3)
@@ -2073,10 +2071,8 @@ static void Vif1CMDFlush()  // FLUSH/E/A
 		while ((gif->chcr & 0x100))
 		{
 			if (!Path3transfer && gif->qwc == 0) break;
-			vif1Regs->stat |= VIF1_STAT_VGW;
-			break;
-			
-		}
+			gsInterrupt();
+	}
 	}
 
 	vif1.cmd &= ~0x7f;
@@ -2490,16 +2486,15 @@ __forceinline void vif1Interrupt()
 
 	g_vifCycles = 0;
 	if((vif1Regs->stat & VIF1_STAT_VGW) && 
-		((psHu32(GIF_MODE) & 0x1) ? (Path3transfer == true || gif->qwc > 0) : (gif->chcr & 0x100)))
+		(gif->chcr & 0x100))
 	{
 		int delay = 0;
-			
+
 		if ((psHu32(GIF_MODE) & 0x1))
 			delay = min( 8, (int)gif->qwc );
 		else
 			delay = gif->qwc * BIAS;
 
-		if((psHu32(GIF_MODE) & 0x1)) gsInterrupt();
 		//else CPU_INT(2, min( 64, (int)gif->qwc ) * BIAS);
 		CPU_INT(1, delay);
 		return;
