@@ -117,8 +117,6 @@ void loadBiosRom( const char *ext, u8 *dest, long maxSize )
 	fclose(fp);
 }
 
-static u32 psMPWC[(Ps2MemSize::Base/32)>>12];
-static std::vector<u32> psMPWVA[Ps2MemSize::Base>>12];
 
 u8  *psM = NULL; //32mb Main Ram
 u8  *psR = NULL; //4mb rom area
@@ -828,52 +826,122 @@ void memReset()
 	loadBiosRom("erom", PS2MEM_EROM, Ps2MemSize::ERom);
 }
 
-int mmap_GetRamPageInfo(void* ptr)
+//////////////////////////////////////////////////////////////////////////////////////////
+// Memory Protection and Block Checking, vtlb Style!
+//
+// For the first time code is recompiled (executed), the PS2 ram page for that code is
+// protected using Virtual Memory (mprotect).  If the game modifies its own code then this
+// protection causes an *exception* to be raised (signal in Linux), which is handled by
+// unprotecting the page and switching the recompiled block to "manual" protection.
+//
+// Manual protection uses a simple brute-force memcmp of the recompiled code to the code
+// currently in RAM for *each time* the block is executed.  Fool-proof, but slow, which
+// is why we default to using the exception-based protection scheme described above.
+//
+// Why manual blocks?  Because many games contain code and data in the same 4k page, so
+// we *cannot* automatically recompile and reprotect pages, lest we end up recompiling and
+// reprotecting them constantly (Which would be very slow).  As a counter, the R5900 side
+// of the block checking code does try to periodically re-protect blocks [going from manual
+// back to protected], so that blocks which underwent a single invalidation don't need to
+// incur a permanent performance penalty.
+//
+// Page Granularity:
+// Fortunately for us MIPS and x86 use the same page granularity for TLB and memory
+// protection, so we can use a 1:1 correspondence when protecting pages.  Page granularity
+// is 4096 (4k), which is why you'll see a lot of 0xfff's, >><< 12's, and 0x1000's in the
+// code below.
+//
+
+enum vtlb_ProtectionMode
 {
-	u32 offset=((u8*)ptr-psM);
-	if (offset>=Ps2MemSize::Base)
+	ProtMode_None = 0,		// page is 'unaccounted' -- neither protected nor unprotected
+	ProtMode_Write,			// page is under write protection (exception handler)
+	ProtMode_Manual			// page is under manual protection (self-checked at execution)
+};
+
+struct vtlb_PageProtectionInfo
+{
+	// Ram De-mapping -- used to convert fully translated/mapped offsets into psM back
+	// into their originating ps2 physical ram address.  Values are assigned when pages
+	// are marked for protection.
+	u32 ReverseRamMap;
+
+	vtlb_ProtectionMode Mode;
+};
+
+PCSX2_ALIGNED16( static vtlb_PageProtectionInfo m_PageProtectInfo[Ps2MemSize::Base >> 12] );
+
+
+// returns:
+//  -1 - unchecked block (resides in ROM, thus is integrity is constant)
+//   0 - page is using Write protection
+//   1 - page is using manual protection (recompiler must include execution-time
+//       self-checking of block integrity)
+//
+int mmap_GetRamPageInfo( u32 paddr )
+{
+	paddr &= ~0xfff;
+
+	uptr ptr = (uptr)PSM( paddr );
+	uptr rampage = ptr - (uptr)psM;
+
+	if (rampage >= Ps2MemSize::Base)
 		return -1; //not in ram, no tracking done ...
-	offset>>=12;
-	return (psMPWC[(offset/32)]&(1<<(offset&31)))?1:0;
+
+	rampage >>= 12;
+	return ( m_PageProtectInfo[rampage].Mode == ProtMode_Manual ) ? 1 : 0;
 }
 
-void mmap_MarkCountedRamPage(void* ptr,u32 vaddr)
+// paddr - physically mapped address
+void mmap_MarkCountedRamPage( u32 paddr )
 {
-	HostSys::MemProtect( ptr, 1, Protect_ReadOnly );
+	paddr &= ~0xfff;
 
-	u32 offset=((u8*)ptr-psM);
-	offset>>=12;
-	psMPWC[(offset/32)] &= ~(1<<(offset&31));
+	uptr ptr = (uptr)PSM( paddr );
+	int rampage = (ptr - (uptr)psM) >> 12;
 
-	for (u32 i=0;i<psMPWVA[offset].size();i++)
-	{
-		if (psMPWVA[offset][i]==vaddr)
-			return;
-	}
-	psMPWVA[offset].push_back(vaddr);
+	// Important: reassign paddr here, since TLB changes could alter the paddr->psM mapping
+	// (and clear blocks accordingly), but don't necessarily clear the protection status.
+	m_PageProtectInfo[rampage].ReverseRamMap = paddr;
+
+	if( m_PageProtectInfo[rampage].Mode == ProtMode_Write )
+		return;		// skip town if we're already protected.
+
+	if( m_PageProtectInfo[rampage].Mode == ProtMode_Manual )
+		DbgCon::WriteLn( "dyna_page_reset @ 0x%05x", params paddr>>12 );
+	else
+		DbgCon::WriteLn( "Write-protected page @ 0x%05x", params paddr>>12 );
+
+	m_PageProtectInfo[rampage].Mode = ProtMode_Write;
+	HostSys::MemProtect( &psM[rampage<<12], 1, Protect_ReadOnly );
 }
 
-void mmap_ResetBlockTracking()
-{
-	DevCon::WriteLn("vtlb/mmap: Block Tracking reset...");
-	memzero_obj(psMPWC);
-	for(u32 i=0;i<(Ps2MemSize::Base>>12);i++)
-	{
-		psMPWVA[i].clear();
-	}
-	HostSys::MemProtect( psM, Ps2MemSize::Base, Protect_ReadWrite );
-}
-
+// offset - offset of address relative to psM.  The exception handler for the platform/host
+// OS should ensure that only addresses within psM address space are passed.   Anything else
+// will produce undefined results (ie, crashes).
 void mmap_ClearCpuBlock( uint offset )
 {
-	HostSys::MemProtect( &psM[offset], 1, Protect_ReadWrite );
-	
-	offset>>=12;
-	psMPWC[(offset/32)]|=(1<<(offset&31));
+	int rampage = offset >> 12;
 
-	for (u32 i=0;i<psMPWVA[offset].size();i++)
-	{
-		Cpu->Clear(psMPWVA[offset][i],0x400);
-	}
-	psMPWVA[offset].clear();
+	// Assertion: This function should never be run on a block that's already under
+	// manual protection.  Indicates a logic error in the recompiler or protection code.
+	jASSUME( m_PageProtectInfo[rampage].Mode != ProtMode_Manual );
+
+	#ifndef __LINUX__		// this function is called from the signal handler
+	DbgCon::WriteLn( "Manual page @ 0x%05x", params m_PageProtectInfo[rampage].ReverseRamMap>>12 );
+	#endif
+
+	HostSys::MemProtect( &psM[rampage<<12], 1, Protect_ReadWrite );
+	m_PageProtectInfo[rampage].Mode = ProtMode_Manual;
+	Cpu->Clear( m_PageProtectInfo[rampage].ReverseRamMap, 0x400 );
+}
+
+// Clears all block tracking statuses, manual protection flags, and write protection.
+// This does not clear any recompiler blocks.  IT is assumed (and necessary) for the caller
+// to ensure the EErec is also reset in conjunction with calling this function.
+void mmap_ResetBlockTracking()
+{
+	DevCon::WriteLn( "vtlb/mmap: Block Tracking reset..." );
+	memzero_obj( m_PageProtectInfo );
+	HostSys::MemProtect( psM, Ps2MemSize::Base, Protect_ReadWrite );
 }

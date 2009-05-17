@@ -141,8 +141,8 @@ extern void memClearPageAddr(u32 vaddr);
 
 extern void memMapVUmicro();
 
-extern int mmap_GetRamPageInfo(void* ptr);
-extern void mmap_MarkCountedRamPage(void* ptr,u32 vaddr);
+extern int mmap_GetRamPageInfo( u32 paddr );
+extern void mmap_MarkCountedRamPage( u32 paddr );
 extern void mmap_ResetBlockTracking();
 extern void mmap_ClearCpuBlock( uint offset );
 

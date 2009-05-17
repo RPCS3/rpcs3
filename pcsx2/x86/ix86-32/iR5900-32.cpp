@@ -1215,19 +1215,20 @@ void badespfn() {
 	assert(0);
 }
 
+// Called when a block under manual protection fails it's pre-execution integrity check.
 void __fastcall dyna_block_discard(u32 start,u32 sz)
 {
-	DevCon::WriteLn("dyna_block_discard .. start: %08X  count=%d", params start,sz);
+	DevCon::WriteLn("dyna_block_discard .. start=0x%08X  size=%d", params start, sz*4);
 	recClear(start, sz);
 }
 
-
+// called when a block under manual protection has been run enough times to be a
+// candidate for being reset under the faster vtlb write protection.
 void __fastcall dyna_page_reset(u32 start,u32 sz)
 {
-	DevCon::WriteLn("dyna_page_reset .. start=%08X  size=%d", params start,sz*4);
 	recClear(start & ~0xfffUL, 0x400);
 	manual_counter[start >> 12]++;
-	mmap_MarkCountedRamPage(PSM(start), start & ~0xfffUL);
+	mmap_MarkCountedRamPage( start );
 }
 
 void recRecompile( const u32 startpc )
@@ -1492,15 +1493,14 @@ StartRecomp:
 
 	// note: blocks are guaranteed to reside within the confines of a single page.
 
-	const int PageType = mmap_GetRamPageInfo((u32*)PSM(inpage_ptr));
-	const u32 inpage_offs = inpage_ptr & 0xFFF;
+	const int PageType = mmap_GetRamPageInfo( inpage_ptr );
 	//const u32 pgsz = std::min(0x1000 - inpage_offs, inpage_sz);
 	const u32 pgsz = inpage_sz;
 
 	if(PageType!=-1)
 	{
 		if (PageType==0) {
-			mmap_MarkCountedRamPage(PSM(inpage_ptr),inpage_ptr&~0xFFF);
+			mmap_MarkCountedRamPage( inpage_ptr );
 			manual_page[inpage_ptr >> 12] = 0;
 		}
 		else
@@ -1550,13 +1550,13 @@ StartRecomp:
 				xJC( dyna_page_reset );
 
 				// note: clearcnt is measured per-page, not per-block!
-				DbgCon::WriteLn( "Manual block @ %08X : size=%3d  page/offs=%05X/%03X  inpgsz=%d  clearcnt=%d",
-					params startpc, sz, inpage_ptr>>12, inpage_offs, inpage_sz, manual_counter[inpage_ptr >> 12] );
+				//DbgCon::WriteLn( "Manual block @ %08X : size=%3d  page/offs=%05X/%03X  inpgsz=%d  clearcnt=%d",
+				//	params startpc, sz, inpage_ptr>>12, inpage_ptr&0xfff, inpage_sz, manual_counter[inpage_ptr >> 12] );
 			}
 			else
 			{
 				DbgCon::Notice( "Uncounted Manual block @ %08X : size=%3d page/offs=%05X/%03X  inpgsz=%d",
-					params startpc, sz, inpage_ptr>>12, inpage_offs, pgsz, inpage_sz );
+					params startpc, sz, inpage_ptr>>12, inpage_ptr&0xfff, pgsz, inpage_sz );
 			}
 
 		}

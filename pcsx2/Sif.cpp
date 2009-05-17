@@ -209,7 +209,8 @@ __forceinline void SIF0Dma()
 
 				SIF0read((u32*)ptag, readSize << 2);
 
-				Cpu->Clear(sif0dma->madr, readSize*4);
+				// Clearing handled by vtlb memory protection and manual blocks.
+				//Cpu->Clear(sif0dma->madr, readSize*4);
 
 				cycles += readSize * BIAS;	// fixme : BIAS is factored in below
 				sif0dma->qwc -= readSize;
