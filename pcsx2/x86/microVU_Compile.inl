@@ -150,6 +150,34 @@ microVUt(void) mVUtestCycles() {
 	SUB32ItoM((uptr)&mVU->cycles, mVUcycles);
 }
 
+microVUt(void) mVUcheckIsSame() {
+	microVU* mVU = mVUx;
+
+	if (mVU->prog.isSame == -1) {
+		mVU->prog.isSame = !!memcmp_mmx(mVU->prog.prog[mVU->prog.cur].data, mVU->regs->Micro, mVU->microSize);
+	}
+	if (mVU->prog.isSame == 0) {
+		mVUcacheProg<vuIndex>(mVU->prog.cur);
+	}
+}
+
+microVUt(void) mVUsetupRange(u32 pc) {
+	microVU* mVU = mVUx;
+
+	if (mVUcurProg.range[0] == -1) { 
+		mVUcurProg.range[0] = (s32)pc;
+		mVUcurProg.range[1] = (s32)pc;
+	}
+	else if (mVUcurProg.range[0] > (s32)pc) {
+		mVUcurProg.range[0] = (s32)pc;
+		mVUcheckIsSame<vuIndex>();
+	}
+	else if (mVUcurProg.range[1] < (s32)pc) {
+		mVUcurProg.range[1] = (s32)pc;
+		mVUcheckIsSame<vuIndex>();
+	}
+}
+
 //------------------------------------------------------------------
 // Recompiler
 //------------------------------------------------------------------
@@ -169,6 +197,9 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 	microBlock* pBlock = mVUblocks[startPC/8]->search((microRegInfo*)pState);
 	if (pBlock) { return pBlock->x86ptrStart; }
 	
+	// Setup Program Bounds/Range
+	mVUsetupRange<vuIndex>(startPC);
+
 	// First Pass
 	iPC = startPC / 4;
 	setCode();
@@ -230,6 +261,7 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 		else {
 			microBlock* bBlock = NULL;
 			u32* ajmp = 0;
+			mVUsetupRange<vuIndex>(xPC);
 
 			switch (mVUbranch) {
 				case 3: branchCase(JE32,  JNE32);	// IBEQ
@@ -308,6 +340,7 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 	if (x == (vuIndex?(0x3fff/8):(0xfff/8))) { Console::Error("microVU%d: Possible infinite compiling loop!", params vuIndex); }
 
 	// Do E-bit end stuff here
+	mVUsetupRange<vuIndex>(xPC - 8);
 	mVUendProgram<vuIndex>(findFlagInst(xStatus, 0x7fffffff), findFlagInst(xMac, 0x7fffffff), findFlagInst(xClip, 0x7fffffff));
 
 	return thisPtr; //ToDo: Save pipeline state?

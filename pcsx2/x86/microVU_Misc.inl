@@ -348,12 +348,10 @@ void MIN_MAX_(x86SSERegType to, x86SSERegType from, bool min) {
 
 // Warning: Modifies from and to's upper 3 vectors
 void MIN_MAX_SS(x86SSERegType to, x86SSERegType from, bool min) {
-	SSE2_PSHUFD_XMM_to_XMM(to, to, 0x50);
+	SSE_SHUFPS_XMM_to_XMM (to, from, 0);
 	SSE2_PAND_M128_to_XMM (to,	 (uptr)MIN_MAX_MASK1);
 	SSE2_POR_M128_to_XMM  (to,	 (uptr)MIN_MAX_MASK2);
-	SSE2_PSHUFD_XMM_to_XMM(from, from, 0x50);
-	SSE2_PAND_M128_to_XMM (from, (uptr)MIN_MAX_MASK1);
-	SSE2_POR_M128_to_XMM  (from, (uptr)MIN_MAX_MASK2);
+	SSE2_PSHUFD_XMM_to_XMM(from, to, 0xee);
 	if (min) SSE2_MINPD_XMM_to_XMM(to, from);
 	else	 SSE2_MAXPD_XMM_to_XMM(to, from);
 }

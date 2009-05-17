@@ -88,7 +88,7 @@ struct microProgManager {
 	static const int	max = mMaxProg - 1; 
 	int					cur;			// Index to Current MicroProgram thats running (-1 = uncached)
 	int					total;			// Total Number of valid MicroPrograms minus 1
-	int					isSame;			// Current cached microProgram is Exact Same program as mVU->regs->Micro
+	int					isSame;			// Current cached microProgram is Exact Same program as mVU->regs->Micro (-1 = unknown, 0 = No, 1 = Yes)
 	int					cleared;		// Micro Program is Indeterminate so must be searched for (and if no matches are found then recompile a new one)
 	microRegInfo		lpState;		// Pipeline state from where program left off (useful for continuing execution)
 };

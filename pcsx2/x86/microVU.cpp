@@ -77,15 +77,8 @@ microVUt(void) mVUreset() {
 	// Clear All Program Data
 	memset(&mVU->prog, 0, sizeof(mVU->prog));
 
-	// Create Block Managers
-	// Block managers are now allocated "on-demand" by the recompiler -- air
-	/*for (int i = 0; i <= mVU->prog.max; i++) {
-		for (u32 j = 0; j < (mVU->progSize / 2); j++) {
-			mVU->prog.prog[i].block[j] = new microBlockManager();
-		}
-	}*/
-
 	// Program Variables
+	mVU->prog.isSame = -1;
 	mVU->prog.cleared = 1;
 	mVU->prog.cur = -1;
 	mVU->prog.total = -1;
@@ -99,6 +92,8 @@ microVUt(void) mVUreset() {
 		mVU->prog.prog[i].x86ptr = z;
 		z += (mVU->cacheSize / (mVU->prog.max + 1));
 		mVU->prog.prog[i].x86end = z;
+		mVU->prog.prog[i].range[0] = -1; // Set range to 
+		mVU->prog.prog[i].range[1] = -1; // indeterminable status
 	}
 }
 
@@ -138,7 +133,10 @@ microVUt(void) mVUclear(u32 addr, u32 size) {
 microVUt(void) mVUclearProg(int progIndex) {
 	microVU* mVU = mVUx;
 	mVU->prog.prog[progIndex].used = 1;
+	mVU->prog.prog[progIndex].last_used = 3;
 	mVU->prog.prog[progIndex].sFlagHack = 0;
+	mVU->prog.prog[progIndex].range[0] = -1;
+	mVU->prog.prog[progIndex].range[1] = -1;
 	mVU->prog.prog[progIndex].x86ptr = mVU->prog.prog[progIndex].x86start;
 	for (u32 i = 0; i < (mVU->progSize / 2); i++) {
 		if( mVU->prog.prog[progIndex].block[i] )
@@ -160,6 +158,8 @@ microVUt(int) mVUfindLeastUsedProg() {
 	if (mVU->prog.total < mVU->prog.max) {
 		mVU->prog.total++;
 		mVUcacheProg<vuIndex>(mVU->prog.total); // Cache Micro Program
+		mVU->prog.prog[mVU->prog.total].used = 1;
+		mVU->prog.prog[mVU->prog.total].last_used = 3;
 		Console::Notice("microVU%d: Cached MicroPrograms = %d", params vuIndex, mVU->prog.total+1);
 		return mVU->prog.total;
 	}
@@ -214,13 +214,16 @@ microVUt(void) __mVUvsyncUpdate() {
 	}
 }
 
-microVUt(int) mVUcmpProg(int progIndex, bool progUsed, bool needOverflowCheck) {
+// Compare Cached microProgram to mVU->regs->Micro
+microVUt(int) mVUcmpProg(int progIndex, bool progUsed, bool needOverflowCheck, bool cmpWholeProg) {
 	microVU* mVU = mVUx;
-
+	
 	if (progUsed) {
-		if (!memcmp_mmx(mVU->prog.prog[progIndex].data, mVU->regs->Micro, mVU->microSize)) {
+		if (cmpWholeProg && (!memcmp_mmx((u8*)mVUprogI.data, mVU->regs->Micro, mVU->microSize)) ||
+		  (!cmpWholeProg && (!memcmp_mmx((u8*)mVUprogI.data + mVUprogI.range[0], (u8*)mVU->regs->Micro + mVUprogI.range[0], ((mVUprogI.range[1] + 8) - mVUprogI.range[0]))))) {
 			mVU->prog.cur = progIndex;
 			mVU->prog.cleared = 0;
+			mVU->prog.isSame = cmpWholeProg ? 1 : -1;
 			mVU->prog.prog[progIndex].last_used = 3;
 			if (!needOverflowCheck || mVU->prog.prog[progIndex].used < 0x7fffffff) {
 				mVU->prog.prog[progIndex].used++; // increment 'used' (avoiding overflows if necessary)
@@ -237,18 +240,24 @@ microVUt(int) mVUsearchProg() {
 	
 	if (mVU->prog.cleared) { // If cleared, we need to search for new program
 		for (int i = 0; i <= mVU->prog.total; i++) {
-			if (mVUcmpProg<vuIndex>(i, !!mVU->prog.prog[i].used, 1))
+			if (mVUcmpProg<vuIndex>(i, !!mVU->prog.prog[i].used, 1, 0))
 				return 1; // Check Recently Used Programs
 		}
 		for (int i = 0; i <= mVU->prog.total; i++) {
-			if (mVUcmpProg<vuIndex>(i,  !mVU->prog.prog[i].used, 0))
+			if (mVUcmpProg<vuIndex>(i,  !mVU->prog.prog[i].used, 0, 0))
 				return 1; // Check Older Programs
-		}
+		}                                                  
+		/*for (int i = 0; i <= mVU->prog.total; i++) {
+			if (mVUcmpProg<vuIndex>(i, 1, 1, 0))
+				return 1; // Check Partial Program
+		}*/
 		mVU->prog.cur = mVUfindLeastUsedProg<vuIndex>(); // If cleared and program not found, make a new program instance
 		mVU->prog.cleared = 0;
+		mVU->prog.isSame  = 1;
 		return 0;
 	}
 	mVU->prog.prog[mVU->prog.cur].used++;
+	mVU->prog.prog[mVU->prog.cur].last_used = 3;
 	return 1; // If !cleared, then we're still on the same program as last-time ;)
 }
 /*
