@@ -643,8 +643,6 @@ GREP
 SHARED_LDFLAGS
 so_ext
 GTK_CONFIG
-X86_64_FALSE
-X86_64_TRUE
 SSE2_FALSE
 SSE2_TRUE
 RELEASE_TO_PUBLIC_FALSE
@@ -4627,92 +4625,6 @@ else
 fi
 
 
-{ $as_echo "$as_me:$LINENO: checking for a x86-64 CPU" >&5
-$as_echo_n "checking for a x86-64 CPU... " >&6; }
-if test "$cross_compiling" = yes; then
-  { { $as_echo "$as_me:$LINENO: error: in \`$ac_pwd':" >&5
-$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
-{ { $as_echo "$as_me:$LINENO: error: cannot run test program while cross compiling
-See \`config.log' for more details." >&5
-$as_echo "$as_me: error: cannot run test program while cross compiling
-See \`config.log' for more details." >&2;}
-   { (exit 1); exit 1; }; }; }
-else
-  cat >conftest.$ac_ext <<_ACEOF
-/* confdefs.h.  */
-_ACEOF
-cat confdefs.h >>conftest.$ac_ext
-cat >>conftest.$ac_ext <<_ACEOF
-/* end confdefs.h.  */
-
-int main()
-{
-int a = 0;
-int*pa = &a;
-asm(".intel_syntax\n"
-	"mov %%rax, %0\n"
-    "mov %%eax, [%%rax]\n"
-    ".att_syntax\n"
-    : : "r"(pa) : "%rax");
-return 0;
-}
-
-_ACEOF
-rm -f conftest$ac_exeext
-if { (ac_try="$ac_link"
-case "(($ac_try" in
-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
-  *) ac_try_echo=$ac_try;;
-esac
-eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
-$as_echo "$ac_try_echo") >&5
-  (eval "$ac_link") 2>&5
-  ac_status=$?
-  $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } && { ac_try='./conftest$ac_exeext'
-  { (case "(($ac_try" in
-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
-  *) ac_try_echo=$ac_try;;
-esac
-eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
-$as_echo "$ac_try_echo") >&5
-  (eval "$ac_try") 2>&5
-  ac_status=$?
-  $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; }; then
-  cpu64=yes
-else
-  $as_echo "$as_me: program exited with status $ac_status" >&5
-$as_echo "$as_me: failed program was:" >&5
-sed 's/^/| /' conftest.$ac_ext >&5
-
-( exit $ac_status )
-cpu64=no
-fi
-rm -rf conftest.dSYM
-rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext conftest.$ac_objext conftest.$ac_ext
-fi
-
-
-if test "x$cpu64" == xyes
-then
-
-cat >>confdefs.h <<\_ACEOF
-#define __x86_64__ 1
-_ACEOF
-
-fi
-{ $as_echo "$as_me:$LINENO: result: $cpu64" >&5
-$as_echo "$cpu64" >&6; }
- if test x$cpu64 = xyes; then
-  X86_64_TRUE=
-  X86_64_FALSE='#'
-else
-  X86_64_TRUE='#'
-  X86_64_FALSE=
-fi
-
-
 { $as_echo "$as_me:$LINENO: checking gtk2+" >&5
 $as_echo_n "checking gtk2+... " >&6; }
 # Extract the first word of "pkg-config", so it can be a program name with args.
@@ -6124,13 +6036,6 @@ if test -z "${SSE2_TRUE}" && test -z "${SSE2_FALSE}"; then
   { { $as_echo "$as_me:$LINENO: error: conditional \"SSE2\" was never defined.
 Usually this means the macro was only invoked conditionally." >&5
 $as_echo "$as_me: error: conditional \"SSE2\" was never defined.
-Usually this means the macro was only invoked conditionally." >&2;}
-   { (exit 1); exit 1; }; }
-fi
-if test -z "${X86_64_TRUE}" && test -z "${X86_64_FALSE}"; then
-  { { $as_echo "$as_me:$LINENO: error: conditional \"X86_64\" was never defined.
-Usually this means the macro was only invoked conditionally." >&5
-$as_echo "$as_me: error: conditional \"X86_64\" was never defined.
 Usually this means the macro was only invoked conditionally." >&2;}
    { (exit 1); exit 1; }; }
 fi

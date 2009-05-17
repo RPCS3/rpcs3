@@ -24,13 +24,8 @@ AUTOMAKE_OPTIONS = foreign
 noinst_HEADERS=AAFilter.h cpu_detect.h FIRFilter.h RateTransposer.h TDStretch.h cpu_detect_x86_gcc.cpp
 noinst_LIBRARIES = libSoundTouch.a
 
-if X86_64
-libSoundTouch_a_CXXFLAGS = -fPIC
-libSoundTouch_a_CFLAGS = -fPIC
-else
 libSoundTouch_a_CXXFLAGS = -msse -mmmx
 libSoundTouch_a_CFLAGS = -msse -mmmx
-endif
 
 #lib_LTLIBRARIES=libSoundTouch.la
 # the mmx_gcc.cpp and cpu_detect_x86_gcc.cpp may need to be conditionally included here from things discovered in configure.ac

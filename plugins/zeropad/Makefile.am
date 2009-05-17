@@ -6,11 +6,6 @@ INCLUDES = -I@srcdir@/../../common/include
 libZeroPAD_a_CXXFLAGS = $(shell pkg-config --cflags gtk+-2.0)
 libZeroPAD_a_CFLAGS = $(shell pkg-config --cflags gtk+-2.0)
 
-if X86_64
-libZeroPAD_a_CXXFLAGS += -fPIC
-libZeroPAD_a_CFLAGS += -fPIC
-endif
-
 # Create a shared object by faking an exe (thanks to ODE makefiles)
 traplibdir=$(prefix)
 

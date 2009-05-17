@@ -169,28 +169,4 @@ namespace Threading
 		
 		return result;
 	}
-
-	#ifdef __x86_64__
-	__forceinline void pcsx2_InterlockedExchange64(volatile s64* Target, s64 Value)
-	{
-		__asm__ __volatile__(
-			".intel_syntax noprefix\n"
-			 "lock xchg [%0], rax\n"
-			 ".att_syntax\n" : : "r"(Target), "a"(Value) : "memory"
-		);
-		return 0;
-	}
-
-	__forceinline s64 pcsx2_InterlockedCompareExchange64(volatile s64* dest, s64 exch, s64 comp)
-	{
-		s64 old;
-		__asm__ __volatile__( 
-			"lock; cmpxchgq %q2, %q1"
-			: "=a" (old)
-			: "r" (exch), "m" (*dest), "a" (comp)
-		);
-		return old;
-	}
-#endif
-	
 }

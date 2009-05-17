@@ -6,11 +6,6 @@ INCLUDES = -I@srcdir@/../../common/include -I@srcdir@/../../3rdparty
 libZeroSPU2_a_CXXFLAGS = $(shell pkg-config --cflags gtk+-2.0)
 libZeroSPU2_a_CFLAGS = $(shell pkg-config --cflags gtk+-2.0)
 
-if X86_64
-libZeroSPU2_a_CXXFLAGS += -fPIC
-libZeroSPU2_a_CFLAGS += -fPIC
-endif
-
 # Create a shared object by faking an exe (thanks to ODE makefiles)
 traplibdir=$(prefix)
 

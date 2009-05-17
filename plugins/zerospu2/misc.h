@@ -23,7 +23,7 @@
 
 #define Sleep(ms) usleep(1000*ms)
 
-inline unsigned long timeGetTime()
+inline u32 timeGetTime()
 {
 #ifdef _WIN32
 	_timeb t;
@@ -33,7 +33,7 @@ inline unsigned long timeGetTime()
 	ftime(&t);
 #endif
 
-	return (unsigned long)(t.time*1000+t.millitm);
+	return (u32)(t.time*1000+t.millitm);
 }
 
 #include <sys/time.h>

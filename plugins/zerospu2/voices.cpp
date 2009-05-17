@@ -31,7 +31,7 @@ SPU_CONTROL_* VOICE_PROCESSED::GetCtrl()
 	return ((SPU_CONTROL_*)(spu2regs+memoffset+REG_C0_CTRL));
 }
 
-void VOICE_PROCESSED::SetVolume(int iProcessRight)
+void VOICE_PROCESSED::SetVolume(s32 iProcessRight)
 {
 	u16 vol = iProcessRight ? pvoice->right.word : pvoice->left.word;
 
@@ -101,8 +101,8 @@ void VOICE_PROCESSED::InterpolateUp()
 {
 	if (SB[32]==1)							   // flag == 1? calc step and set flag... and don't change the value in this pass
 	{
-		const int id1=SB[30]-SB[29];	// curr delta to next val
-		const int id2=SB[31]-SB[30];	// and next delta to next-next val :)
+		const s32 id1=SB[30]-SB[29];	// curr delta to next val
+		const s32 id2=SB[31]-SB[30];	// and next delta to next-next val :)
 
 		SB[32]=0;
 
@@ -159,9 +159,9 @@ void VOICE_PROCESSED::InterpolateDown()
 	}
 }
 
-void VOICE_PROCESSED::FModChangeFrequency(int ns)
+void VOICE_PROCESSED::FModChangeFrequency(s32 ns)
 {
-	int NP=pvoice->pitch;
+	s32 NP=pvoice->pitch;
 
 	NP=((32768L+iFMod[ns])*NP)/32768L;
 
@@ -173,8 +173,7 @@ void VOICE_PROCESSED::FModChangeFrequency(int ns)
 	iActFreq=NP;
 	iUsedFreq=NP;
 	sinc=(((NP/10)<<16)/4800);
-	if (!sinc)
-		sinc=1;
+	if (!sinc) sinc=1;
 
 	// freq change in simple interpolation mode
 	SB[32]=1;
@@ -188,7 +187,7 @@ static void __forceinline GetNoiseValues(s32& VD)
 
 	if(Seed&0x100) 
 		VD = (s32)((Seed&0xff)<<8);
-	else if(!(Seed&0xffff)) 
+	else if (!(Seed&0xffff)) 
 		VD = (s32)0x8000;
 	else 
 		VD = (s32)0x7fff;
@@ -226,7 +225,7 @@ static void __forceinline GetNoiseValues(s32& VD)
 // and sometimes the noise will be used as fmod modulation... pfff
 int VOICE_PROCESSED::iGetNoiseVal()
 {
-	int fa;
+	s32 fa;
 
 	/*if ((dwNoiseVal<<=1)&0x80000000L)
 	{
@@ -248,7 +247,7 @@ int VOICE_PROCESSED::iGetNoiseVal()
 	return fa;
 }								 
 
-void VOICE_PROCESSED::StoreInterpolationVal(int fa)
+void VOICE_PROCESSED::StoreInterpolationVal(s32 fa)
 {
 	if (bFMod==2)								// fmod freq channel
 		SB[29]=fa;
@@ -269,9 +268,9 @@ void VOICE_PROCESSED::StoreInterpolationVal(int fa)
 	}
 }
 
-int VOICE_PROCESSED::iGetInterpolationVal()
+s32 VOICE_PROCESSED::iGetInterpolationVal()
 {
-	int fa;
+	s32 fa;
 	
 	if (bFMod==2) return SB[29];
 

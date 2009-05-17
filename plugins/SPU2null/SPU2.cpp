@@ -23,10 +23,10 @@
 #include <string>
 using namespace std;
  
-const unsigned char version  = PS2E_SPU2_VERSION;
-const unsigned char revision = 0;
-const unsigned char build    = 7;    // increase that with each version
-const unsigned int minor = 1;    // increase that with each version
+const u8 version  = PS2E_SPU2_VERSION;
+const u8 revision = 0;
+const u8 build    = 8;    // increase that with each version
+const u32 minor = 0;    // increase that with each version
 
 // ADSR constants
 #define ATTACK_MS      494L
@@ -50,16 +50,16 @@ ADMA Adma7;
 
 u32 MemAddr[2];
 u32 g_nSpuInit = 0;
-unsigned short interrupt = 0;
+u16 interrupt = 0;
 s8 *spu2regs = NULL;
 u16* spu2mem = NULL;
 u16* pSpuIrq[2] = {NULL};
 u32 dwEndChannel2[2] = {0}; // keeps track of what channels have ended
-unsigned long   dwNoiseVal = 1;                        // global noise generator
+u32 dwNoiseVal = 1;                        // global noise generator
 
-int SPUCycles = 0, SPUWorkerCycles = 0;
-int SPUStartCycle[2];
-int SPUTargetCycle[2];
+s32 SPUCycles = 0, SPUWorkerCycles = 0;
+s32 SPUStartCycle[2];
+s32 SPUTargetCycle[2];
 
 int ADMAS4Write();
 int ADMAS7Write();
@@ -70,7 +70,7 @@ void (*irqCallbackSPU2)();                  // func of main emu, called on spu i
 void (*irqCallbackDMA4)() = 0;                // func of main emu, called on spu irq
 void (*irqCallbackDMA7)() = 0;                // func of main emu, called on spu irq
 
-const int f[5][2] = {   
+const s32 f[5][2] = {   
 	{    0,  0  },
 	{   60,  0  },
 	{  115, -52 },
@@ -221,9 +221,9 @@ EXPORT_C_(void) SPU2async(u32 cycle)
 
 void InitADSR()                                    // INIT ADSR
 {
-	unsigned long r, rs, rd;
-	int i;
-	memset(RateTable, 0, sizeof(unsigned long)*160);      // build the rate table according to Neill's rules (see at bottom of file)
+	u32 r, rs, rd;
+	s32 i;
+	memset(RateTable, 0, sizeof(u32)*160);      // build the rate table according to Neill's rules (see at bottom of file)
 
 	r = 3;
 	rs = 1;
@@ -678,9 +678,9 @@ int ADMAS4Write()
 
 	spuaddr = C0_SPUADDR;
 	// SPU2 Deinterleaves the Left and Right Channels
-	memcpy((short*)(spu2mem + spuaddr + 0x2000), (short*)Adma4.MemAddr, 512);
+	memcpy((s16*)(spu2mem + spuaddr + 0x2000), (s16*)Adma4.MemAddr, 512);
 	Adma4.MemAddr += 256;
-	memcpy((short*)(spu2mem + spuaddr + 0x2200), (short*)Adma4.MemAddr, 512);
+	memcpy((s16*)(spu2mem + spuaddr + 0x2200), (s16*)Adma4.MemAddr, 512);
 	Adma4.MemAddr += 256;
 	spuaddr = (spuaddr + 256) & 511;
 	C0_SPUADDR_SET(spuaddr);
@@ -704,9 +704,9 @@ int ADMAS7Write()
 
 	spuaddr = C1_SPUADDR;
 	// SPU2 Deinterleaves the Left and Right Channels
-	memcpy((short*)(spu2mem + spuaddr + 0x2400), (short*)Adma7.MemAddr, 512);
+	memcpy((s16*)(spu2mem + spuaddr + 0x2400), (s16*)Adma7.MemAddr, 512);
 	Adma7.MemAddr += 256;
-	memcpy((short*)(spu2mem + spuaddr + 0x2600), (short*)Adma7.MemAddr, 512);
+	memcpy((s16*)(spu2mem + spuaddr + 0x2600), (s16*)Adma7.MemAddr, 512);
 	Adma7.MemAddr += 256;
 	spuaddr = (spuaddr + 256) & 511;
 	C1_SPUADDR_SET(spuaddr);
@@ -740,7 +740,7 @@ EXPORT_C_(void) SPU2writeDMA4Mem(u16* pMem, int size)
 	}
 
 	spuaddr = C0_SPUADDR;
-	memcpy((unsigned char*)(spu2mem + spuaddr), (unsigned char*)pMem, size << 1);
+	memcpy((u8*)(spu2mem + spuaddr), (u8*)pMem, size << 1);
 	spuaddr += size;
 	C0_SPUADDR_SET(spuaddr);
 
@@ -779,7 +779,7 @@ EXPORT_C_(void) SPU2writeDMA7Mem(u16* pMem, int size)
 	}
 
 	spuaddr = C1_SPUADDR;
-	memcpy((unsigned char*)(spu2mem + spuaddr), (unsigned char*)pMem, size << 1);
+	memcpy((u8*)(spu2mem + spuaddr), (u8*)pMem, size << 1);
 	spuaddr += size;
 	C1_SPUADDR_SET(spuaddr);
 
@@ -820,9 +820,9 @@ EXPORT_C_(void) SPU2interruptDMA7()
 }
 
 // turn channels on
-void SoundOn(int start, int end, unsigned short val)   // SOUND ON PSX COMAND
+void SoundOn(s32 start, s32 end, u16 val)   // SOUND ON PSX COMAND
 {
-	for (int ch = start;ch < end;ch++, val >>= 1)             // loop channels
+	for (s32 ch = start;ch < end;ch++, val >>= 1)             // loop channels
 	{
 		if ((val&1) && voices[ch].pStart)                   // mmm... start has to be set before key on !?!
 		{
@@ -833,16 +833,16 @@ void SoundOn(int start, int end, unsigned short val)   // SOUND ON PSX COMAND
 }
 
 // turn channels off
-void SoundOff(int start, int end, unsigned short val)  // SOUND OFF PSX COMMAND
+void SoundOff(s32 start, s32 end, u16 val)  // SOUND OFF PSX COMMAND
 {
-	for (int ch = start;ch < end;ch++, val >>= 1)             // loop channels
+	for (s32 ch = start;ch < end;ch++, val >>= 1)             // loop channels
 	{
 		if (val&1)                                          // && s_chan[i].bOn)  mmm...
 			voices[ch].bStop = true;
 	}
 }
 
-void FModOn(int start, int end, unsigned short val)    // FMOD ON PSX COMMAND
+void FModOn(s32 start, s32 end, u16 val)    // FMOD ON PSX COMMAND
 {
 	int ch;
 
@@ -891,8 +891,10 @@ EXPORT_C_(void) SPU2write(u32 mem, u16 value)
 			case 4:
 				{
 					int NP;
-					if (value > 0x3fff) NP = 0x3fff;                        // get pitch val
-					else           NP = value;
+					if (value > 0x3fff) 
+						NP = 0x3fff;                        // get pitch val
+					else          
+						NP = value;
 
 					pvoice->pvoice->pitch = NP;
 
@@ -924,8 +926,8 @@ EXPORT_C_(void) SPU2write(u32 mem, u16 value)
 	// more channel info
 	if ((r >= 0x01c0 && r <= 0x02E0) || (r >= 0x05c0 && r <= 0x06E0))
 	{
-		int ch = 0;
-		unsigned long rx = r;
+		s32 ch = 0;
+		u32 rx = r;
 		if (rx >= 0x400)
 		{
 			ch = 24;
@@ -939,7 +941,7 @@ EXPORT_C_(void) SPU2write(u32 mem, u16 value)
 		switch (rx)
 		{
 			case 0x1C0:
-				pvoice->iStartAddr = (((unsigned long)value & 0x3f) << 16) | (pvoice->iStartAddr & 0xFFFF);
+				pvoice->iStartAddr = (((u32)value & 0x3f) << 16) | (pvoice->iStartAddr & 0xFFFF);
 				pvoice->pStart = (u8*)(spu2mem + pvoice->iStartAddr);
 				break;
 			case 0x1C2:
@@ -947,7 +949,7 @@ EXPORT_C_(void) SPU2write(u32 mem, u16 value)
 				pvoice->pStart = (u8*)(spu2mem + pvoice->iStartAddr);
 				break;
 			case 0x1C4:
-				pvoice->iLoopAddr = (((unsigned long)value & 0x3f) << 16) | (pvoice->iLoopAddr & 0xFFFF);
+				pvoice->iLoopAddr = (((u32)value & 0x3f) << 16) | (pvoice->iLoopAddr & 0xFFFF);
 				pvoice->pLoop = (u8*)(spu2mem + pvoice->iLoopAddr);
 				pvoice->bIgnoreLoop = pvoice->iLoopAddr > 0;
 				break;
@@ -958,7 +960,7 @@ EXPORT_C_(void) SPU2write(u32 mem, u16 value)
 				break;
 			case 0x1C8:
 				// unused... check if it gets written as well
-				pvoice->iNextAddr = (((unsigned long)value & 0x3f) << 16) | (pvoice->iNextAddr & 0xFFFF);
+				pvoice->iNextAddr = (((u32)value & 0x3f) << 16) | (pvoice->iNextAddr & 0xFFFF);
 				break;
 			case 0x1CA:
 				// unused... check if it gets written as well
@@ -982,8 +984,8 @@ EXPORT_C_(void) SPU2write(u32 mem, u16 value)
 				IRQINFO |= 4;
 				irqCallbackSPU2();
 			}
-			if (spuaddr > 0xFFFFE)
-				spuaddr = 0x2800;
+			if (spuaddr > 0xFFFFE) spuaddr = 0x2800;
+			
 			C0_SPUADDR_SET(spuaddr);
 			spu2Ru16(REG_C0_SPUSTAT) &= ~0x80;
 			spu2Ru16(REG_C0_CTRL) &= ~0x30;
@@ -998,8 +1000,8 @@ EXPORT_C_(void) SPU2write(u32 mem, u16 value)
 				IRQINFO |= 8;
 				irqCallbackSPU2();
 			}
-			if (spuaddr > 0xFFFFE)
-				spuaddr = 0x2800;
+			if (spuaddr > 0xFFFFE) spuaddr = 0x2800;
+			
 			C1_SPUADDR_SET(spuaddr);
 			spu2Ru16(REG_C1_SPUSTAT) &= ~0x80;
 			spu2Ru16(REG_C1_CTRL) &= ~0x30;
@@ -1082,23 +1084,27 @@ EXPORT_C_(u16) SPU2read(u32 mem)
 
 	if ((r >= 0x0000 && r <= 0x0180) || (r >= 0x0400 && r <= 0x0580))  // some channel info?
 	{
-		int ch = 0;
-		if (r >= 0x400) ch = ((r - 0x400) >> 4) + 24;
-		else ch = (r >> 4);
+		s32 ch = 0;
+		
+		if (r >= 0x400) 
+			ch = ((r - 0x400) >> 4) + 24;
+		else 
+			ch = (r >> 4);
 
 		VOICE_PROCESSED* pvoice = &voices[ch];
 
 		switch (r&0x0f)
 		{
 			case 10:
-				return (unsigned short)(pvoice->ADSRX.EnvelopeVol >> 16);
+				return (u16)(pvoice->ADSRX.EnvelopeVol >> 16);
 		}
 	}
 
 	if ((r > 0x01c0 && r <= 0x02E0) || (r > 0x05c0 && r <= 0x06E0))  // some channel info?
 	{
-		int ch = 0;
-		unsigned long rx = r;
+		s32 ch = 0;
+		u32 rx = r;
+		
 		if (rx >= 0x400)
 		{
 			ch = 24;
@@ -1132,16 +1138,15 @@ EXPORT_C_(u16) SPU2read(u32 mem)
 			spuaddr = C0_SPUADDR;
 			ret = spu2mem[spuaddr];
 			spuaddr++;
-			if (spuaddr > 0xfffff)
-				spuaddr = 0;
+			if (spuaddr > 0xfffff) spuaddr = 0;
 			C0_SPUADDR_SET(spuaddr);
 			break;
+		
 		case REG_C1_SPUDATA:
 			spuaddr = C1_SPUADDR;
 			ret = spu2mem[spuaddr];
 			spuaddr++;
-			if (spuaddr > 0xfffff)
-				spuaddr = 0;
+			if (spuaddr > 0xfffff) spuaddr = 0;
 			C1_SPUADDR_SET(spuaddr);
 			break;
 
@@ -1196,7 +1201,7 @@ void VOICE_PROCESSED::SetVolume(int iProcessRight)
 
 	if (vol&0x8000) // sweep not working
 	{
-		short sInc = 1;                                     // -> sweep up?
+		s16 sInc = 1;                                     // -> sweep up?
 		if (vol&0x2000) sInc = -1;                          // -> or down?
 		if (vol&0x1000) vol ^= 0xffff;                      // -> mmm... phase inverted? have to investigate this
 		vol = ((vol & 0x7f) + 1) / 2;                       // -> sweep: 0..127 -> 0..64
@@ -1270,7 +1275,10 @@ EXPORT_C_(s32) SPU2freeze(int mode, freezeData *data)
 		{
 			memcpy(spu2regs, spud->spu2regs, 0x10000);
 		}
-		else printf("SPU2null wrong format\n");
+		else 
+		{
+			printf("SPU2null wrong format\n");
+		}
 	}
 	else
 		if (mode == FREEZE_SAVE)
