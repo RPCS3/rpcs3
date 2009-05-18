@@ -280,8 +280,6 @@ __forceinline u32 mtgsThreadObject::_gifTransferDummy( GIF_PATH pathidx, const u
 
 	while(size > 0)
 	{
-		bool eop = false;
-
 		if(path.tag.nloop == 0)
 		{
 			path.SetTag( pMem );
@@ -290,7 +288,9 @@ __forceinline u32 mtgsThreadObject::_gifTransferDummy( GIF_PATH pathidx, const u
 			--size;
 
 			if(pathidx == 2 && path.tag.eop)
+			{
 				Path3transfer = FALSE;
+			}
 
 			if( pathidx == 0 ) 
 			{                        
@@ -305,42 +305,16 @@ __forceinline u32 mtgsThreadObject::_gifTransferDummy( GIF_PATH pathidx, const u
 					return ++size;
 				}
 			}
-
-
-			/*f(path.tag.pre)
-			{
-				assert(path.tag.flg != GIF_FLG_IMAGE); // kingdom hearts, ffxii, tales of abyss
-
-				if((path.tag.flg & 2) == 0)
-				{
-					// Primitive handler... Nothing for the Dummy to do here.
-
-					//GIFReg r;
-					//r.i64 = path.tag.PRIM;
-					//(this->*m_fpGIFRegHandlers[GIF_A_D_REG_PRIM])(&r);
-				}
-			}*/
-
-			if(path.tag.eop)
-			{
-				eop = true;
-			}
-			else if(path.tag.nloop == 0)
-			{
-				if(pathidx == 0)
-					continue;
-
-				eop = true;
-			}
 		}
-
-		if(path.tag.nloop > 0)
+		else
 		{
+			// NOTE: size > 0 => do {} while(size > 0); should be faster than while(size > 0) {}
+
 			switch(path.tag.flg)
 			{
 			case GIF_FLG_PACKED:
 
-				while(size > 0)
+				do
 				{
 					if( path.GetReg() == 0xe )
 					{
@@ -348,25 +322,19 @@ __forceinline u32 mtgsThreadObject::_gifTransferDummy( GIF_PATH pathidx, const u
 						if(handler >= 0x60 && handler < 0x63)
 							s_GSHandlers[handler&0x3]((const u32*)pMem);
 					}
+
 					size--;
 					pMem += 16; // 128 bits! //sizeof(GIFPackedReg);
-
-					if((++path.curreg & 0xf) == path.tag.nreg) 
-					{
-						path.curreg = 0; 
-						path.tag.nloop--;
-
-						if(path.tag.nloop == 0)
-							break;
-					}
 				}
+				while(path.StepReg() && size > 0);
+
 			break;
 
 			case GIF_FLG_REGLIST:
 
 				size *= 2;
 
-				while(size > 0)
+				do
 				{
 					const int handler = path.GetReg();
 					if(handler >= 0x60 && handler < 0x63)
@@ -374,20 +342,11 @@ __forceinline u32 mtgsThreadObject::_gifTransferDummy( GIF_PATH pathidx, const u
 
 					size--;
 					pMem += 8; //sizeof(GIFReg); -- 64 bits!
-
-					if((++path.curreg & 0xf) == path.tag.nreg) 
-					{
-						path.curreg = 0; 
-						path.tag.nloop--;
-
-						if(path.tag.nloop == 0)
-						{
-							break;
-						}
-					}
 				}
+				while(path.StepReg() && size > 0);
 			
 				if(size & 1) pMem += 8; //sizeof(GIFReg);
+
 				size /= 2;
 
 			break;
@@ -413,15 +372,18 @@ __forceinline u32 mtgsThreadObject::_gifTransferDummy( GIF_PATH pathidx, const u
 			}
 		}
 
-		if(eop && ((int)size <= 0 || pathidx == 0))
+		if(pathidx == 0)
 		{
-			break;
+			if(path.tag.eop && path.tag.nloop == 0)
+			{
+				break;
+			}
 		}
 	}
 
 	if(pathidx == 0)
 	{
-		if(!path.tag.eop && path.tag.nloop > 0)
+		if(size == 0 && path.tag.nloop > 0)
 		{
 			path.tag.nloop = 0;
 			DevCon::Write( "path1 hack! " );

@@ -99,6 +99,21 @@ struct GIFPath
 	__forceinline void PrepRegs();
 	void SetTag(const void* mem);
 	u32 GetReg();
+
+	__forceinline bool StepReg()
+	{
+		if((++curreg & 0xf) == tag.nreg) 
+		{
+			curreg = 0; 
+
+			if(--tag.nloop == 0)
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
 };
 
 

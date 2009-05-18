@@ -413,7 +413,7 @@ namespace HostGui
 			case VK_CAPITAL: keymod->capslock = TRUE; break;
 			
 			case VK_F1: case VK_F2:  case VK_F3:  case VK_F4:
-			case VK_F5: case VK_F6:  case VK_F7:  case VK_F8:
+			case VK_F8: // note: VK_F5-VK_F7 are reserved for GS
 			case VK_F9: case VK_F10: case VK_F11: case VK_F12: 
 				try
 				{
