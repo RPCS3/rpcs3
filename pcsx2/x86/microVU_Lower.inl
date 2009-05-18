@@ -73,8 +73,9 @@ microVUf(void) mVU_DIV() {
 			mVUclamp1<vuIndex>(xmmFs, xmmFt, 8);
 		x86SetJ8(djmp);
 
-		mVUunpack_xyzw<vuIndex>(xmmFs, xmmFs, 0);
-		mVUmergeRegs(xmmPQ, xmmFs, writeQ ? 4 : 8);
+		if (writeQ) SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, 0xe1);
+		SSE_MOVSS_XMM_to_XMM(xmmPQ, xmmFs);
+		if (writeQ) SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, 0xe1);
 	}
 	pass3 { mVUlog("DIV Q, vf%02d%s, vf%02d%s", _Fs_, _Fsf_String, _Ft_, _Ftf_String); }
 }
@@ -91,8 +92,9 @@ microVUf(void) mVU_SQRT() {
 
 		if (CHECK_VU_OVERFLOW) SSE_MINSS_XMM_to_XMM(xmmFt, xmmMax); // Clamp infinities (only need to do positive clamp since xmmFt is positive)
 		SSE_SQRTSS_XMM_to_XMM(xmmFt, xmmFt);
-		mVUunpack_xyzw<vuIndex>(xmmFt, xmmFt, 0);
-		mVUmergeRegs(xmmPQ, xmmFt, writeQ ? 4 : 8);
+		if (writeQ) SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, 0xe1);
+		SSE_MOVSS_XMM_to_XMM(xmmPQ, xmmFt);
+		if (writeQ) SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, 0xe1);
 	}
 	pass3 { mVUlog("SQRT Q, vf%02d%s", _Ft_, _Ftf_String); }
 }
@@ -129,8 +131,9 @@ microVUf(void) mVU_RSQRT() {
 			mVUclamp1<vuIndex>(xmmFs, xmmFt, 8);
 		x86SetJ8(djmp);
 
-		mVUunpack_xyzw<vuIndex>(xmmFs, xmmFs, 0);
-		mVUmergeRegs(xmmPQ, xmmFs, writeQ ? 4 : 8);
+		if (writeQ) SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, 0xe1);
+		SSE_MOVSS_XMM_to_XMM(xmmPQ, xmmFs);
+		if (writeQ) SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, 0xe1);
 	}
 	pass3 { mVUlog("RSQRT Q, vf%02d%s, vf%02d%s", _Fs_, _Fsf_String, _Ft_, _Ftf_String); }
 }
