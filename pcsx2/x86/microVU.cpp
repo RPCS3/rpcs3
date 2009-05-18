@@ -55,7 +55,7 @@ microVUt(void) mVUinit(VURegs* vuRegsPtr) {
 }
 
 // Resets Rec Data
-microVUt(void) mVUreset() {
+microVUx(void) mVUreset() {
 
 	microVU* mVU = mVUx;
 	mVUprint((vuIndex) ? "microVU1: reset" : "microVU0: reset");

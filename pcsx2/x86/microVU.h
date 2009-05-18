@@ -135,7 +135,7 @@ extern void (*mVU_LOWER_OPCODE[128])( VURegs* VU, s32 info );
 
 // Main Functions
 microVUt(void) mVUinit(VURegs*);
-microVUt(void) mVUreset();
+microVUx(void) mVUreset();
 microVUt(void) mVUclose();
 microVUt(void) mVUclear(u32, u32);
 
@@ -151,7 +151,7 @@ microVUf(void) mVUopL();
 microVUt(void)		mVUclearProg(microVU* mVU, int progIndex);
 microVUt(int)		mVUfindLeastUsedProg(microVU* mVU);
 microVUt(int)		mVUsearchProg();
-microVUt(void)		mVUcacheProg(microVU* mVU, int progIndex);
+microVUt(void)		mVUcacheProg(int progIndex);
 void* __fastcall	mVUexecuteVU0(u32 startPC, u32 cycles);
 void* __fastcall	mVUexecuteVU1(u32 startPC, u32 cycles);
 
