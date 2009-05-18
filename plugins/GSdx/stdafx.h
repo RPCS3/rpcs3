@@ -6,6 +6,8 @@
 
 #pragma warning(disable: 4996 4995 4324 4100)
 
+#ifdef _WINDOWS
+
 #ifndef VC_EXTRALEAN
 #define VC_EXTRALEAN		// Exclude rarely-used stuff from Windows headers
 #endif
@@ -35,11 +37,13 @@
 #ifndef _AFX_NO_AFXCMN_SUPPORT
 #include <afxcmn.h>			// MFC support for Windows Common Controls
 #endif // _AFX_NO_AFXCMN_SUPPORT
-//#include <afxmt.h>
+
+#endif
 
 // stdc
 
 #include <math.h>
+#include <time.h>
 
 #include <string>
 #include <vector>
@@ -71,17 +75,17 @@ typedef signed long long int64;
 #define EXPORT_C_(type) extern "C" __declspec(dllexport) type __stdcall
 
 #ifndef RESTRICT
-	#ifdef __INTEL_COMPILER
-		#define RESTRICT restrict
-	#elif _MSC_VER >= 1400 // TODO: gcc
-		#define RESTRICT __restrict
-	#else
-		#define RESTRICT
-	#endif
+#ifdef __INTEL_COMPILER
+	#define RESTRICT restrict
+#elif _MSC_VER >= 1400 // TODO: gcc
+	#define RESTRICT __restrict
+#else
+	#define RESTRICT
+#endif
 #endif
 
 #ifdef __x86_64__
-	#define _M_AMD64
+#define _M_AMD64
 #endif
 
 extern "C" uint64 __rdtsc(); // TODO: gcc

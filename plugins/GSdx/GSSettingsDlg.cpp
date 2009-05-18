@@ -141,8 +141,6 @@ BOOL GSSettingsDlg::OnInitDialog()
 {
 	__super::OnInitDialog();
 
-    CWinApp* pApp = AfxGetApp();
-
 	D3DCAPS9 caps;
 	memset(&caps, 0, sizeof(caps));
 	caps.PixelShaderVersion = D3DPS_VERSION(0, 0);
@@ -165,9 +163,9 @@ BOOL GSSettingsDlg::OnInitDialog()
 
 	if(CComPtr<IDirect3D9> d3d = Direct3DCreate9(D3D_SDK_VERSION))
 	{
-		uint32 ModeWidth = pApp->GetProfileInt(_T("Settings"), _T("ModeWidth"), 0);
-		uint32 ModeHeight = pApp->GetProfileInt(_T("Settings"), _T("ModeHeight"), 0);
-		uint32 ModeRefreshRate = pApp->GetProfileInt(_T("Settings"), _T("ModeRefreshRate"), 0);
+		uint32 ModeWidth = theApp.GetConfig("ModeWidth", 0);
+		uint32 ModeHeight = theApp.GetConfig("ModeHeight", 0);
+		uint32 ModeRefreshRate = theApp.GetConfig("ModeRefreshRate", 0);
 
 		uint32 nModes = d3d->GetAdapterModeCount(D3DADAPTER_DEFAULT, D3DFMT_X8R8G8B8);
 
@@ -204,27 +202,27 @@ BOOL GSSettingsDlg::OnInitDialog()
 		renderers.push_back(g_renderers[i]);
 	}
 
-	GSSetting::InitComboBox(&renderers[0], renderers.size(), m_renderer, pApp->GetProfileInt(_T("Settings"), _T("Renderer"), 0));
-	GSSetting::InitComboBox(g_psversion, countof(g_psversion), m_psversion, pApp->GetProfileInt(_T("Settings"), _T("PixelShaderVersion2"), D3DPS_VERSION(2, 0)), caps.PixelShaderVersion);
-	GSSetting::InitComboBox(g_interlace, countof(g_interlace), m_interlace, pApp->GetProfileInt(_T("Settings"), _T("Interlace"), 0));
-	GSSetting::InitComboBox(g_aspectratio, countof(g_aspectratio), m_aspectratio, pApp->GetProfileInt(_T("Settings"), _T("AspectRatio"), 1));
+	GSSetting::InitComboBox(&renderers[0], renderers.size(), m_renderer, theApp.GetConfig("Renderer", 0));
+	GSSetting::InitComboBox(g_psversion, countof(g_psversion), m_psversion, theApp.GetConfig("PixelShaderVersion2", D3DPS_VERSION(2, 0)), caps.PixelShaderVersion);
+	GSSetting::InitComboBox(g_interlace, countof(g_interlace), m_interlace, theApp.GetConfig("Interlace", 0));
+	GSSetting::InitComboBox(g_aspectratio, countof(g_aspectratio), m_aspectratio, theApp.GetConfig("AspectRatio", 1));
 
 	OnCbnSelchangeCombo1();
 
 	//
 
-	m_filter = pApp->GetProfileInt(_T("Settings"), _T("filter"), 1);
-	m_vsync = !!pApp->GetProfileInt(_T("Settings"), _T("vsync"), FALSE);
-	m_logz = !!pApp->GetProfileInt(_T("Settings"), _T("logz"), FALSE);
-	m_fba = !!pApp->GetProfileInt(_T("Settings"), _T("fba"), TRUE);
-	m_aa1 = !!pApp->GetProfileInt(_T("Settings"), _T("aa1"), FALSE);
-	m_blur = !!pApp->GetProfileInt(_T("Settings"), _T("blur"), FALSE);
+	m_filter = theApp.GetConfig("filter", 1);
+	m_vsync = !!theApp.GetConfig("vsync", 0);
+	m_logz = !!theApp.GetConfig("logz", 0);
+	m_fba = !!theApp.GetConfig("fba", 1);
+	m_aa1 = !!theApp.GetConfig("aa1", 0);
+	m_blur = !!theApp.GetConfig("blur", 0);
 
 	m_resx.SetRange(512, 4096);
 	m_resy.SetRange(512, 4096);
-	m_resx.SetPos(pApp->GetProfileInt(_T("Settings"), _T("resx"), 1024));
-	m_resy.SetPos(pApp->GetProfileInt(_T("Settings"), _T("resy"), 1024));
-	m_nativeres = !!pApp->GetProfileInt(_T("Settings"), _T("nativeres"), FALSE);
+	m_resx.SetPos(theApp.GetConfig("resx", 1024));
+	m_resy.SetPos(theApp.GetConfig("resy", 1024));
+	m_nativeres = !!theApp.GetConfig("nativeres", 0);
 
 	m_resx.EnableWindow(!m_nativeres);
 	m_resy.EnableWindow(!m_nativeres);
@@ -232,7 +230,7 @@ BOOL GSSettingsDlg::OnInitDialog()
 	m_resyedit.EnableWindow(!m_nativeres);
 
 	m_swthreads.SetRange(1, 16);
-	m_swthreads.SetPos(pApp->GetProfileInt(_T("Settings"), _T("swthreads"), 1));
+	m_swthreads.SetPos(theApp.GetConfig("swthreads", 1));
 
 	//
 
@@ -244,50 +242,48 @@ BOOL GSSettingsDlg::OnInitDialog()
 
 void GSSettingsDlg::OnOK()
 {
-	CWinApp* pApp = AfxGetApp();
-
 	UpdateData();
 
 	if(m_resolution.GetCurSel() >= 0)
 	{
 		D3DDISPLAYMODE& mode = *(D3DDISPLAYMODE*)m_resolution.GetItemData(m_resolution.GetCurSel());
 
-		pApp->WriteProfileInt(_T("Settings"), _T("ModeWidth"), mode.Width);
-		pApp->WriteProfileInt(_T("Settings"), _T("ModeHeight"), mode.Height);
-		pApp->WriteProfileInt(_T("Settings"), _T("ModeRefreshRate"), mode.RefreshRate);
+		theApp.SetConfig("ModeWidth", (int)mode.Width);
+		theApp.SetConfig("ModeHeight", (int)mode.Height);
+		theApp.SetConfig("ModeRefreshRate", (int)mode.RefreshRate);
 	}
 
 	if(m_renderer.GetCurSel() >= 0)
 	{
-		pApp->WriteProfileInt(_T("Settings"), _T("Renderer"), (uint32)m_renderer.GetItemData(m_renderer.GetCurSel()));
+		theApp.SetConfig("Renderer", (uint32)m_renderer.GetItemData(m_renderer.GetCurSel()));
 	}
 
 	if(m_psversion.GetCurSel() >= 0)
 	{
-		pApp->WriteProfileInt(_T("Settings"), _T("PixelShaderVersion2"), (uint32)m_psversion.GetItemData(m_psversion.GetCurSel()));
+		theApp.SetConfig("PixelShaderVersion2", (uint32)m_psversion.GetItemData(m_psversion.GetCurSel()));
 	}
 
 	if(m_interlace.GetCurSel() >= 0)
 	{
-		pApp->WriteProfileInt(_T("Settings"), _T("Interlace"), (uint32)m_interlace.GetItemData(m_interlace.GetCurSel()));
+		theApp.SetConfig("Interlace", (uint32)m_interlace.GetItemData(m_interlace.GetCurSel()));
 	}
 
 	if(m_aspectratio.GetCurSel() >= 0)
 	{
-		pApp->WriteProfileInt(_T("Settings"), _T("AspectRatio"), (uint32)m_aspectratio.GetItemData(m_aspectratio.GetCurSel()));
+		theApp.SetConfig("AspectRatio", (uint32)m_aspectratio.GetItemData(m_aspectratio.GetCurSel()));
 	}
 
-	pApp->WriteProfileInt(_T("Settings"), _T("filter"), m_filter);
-	pApp->WriteProfileInt(_T("Settings"), _T("vsync"), m_vsync);
-	pApp->WriteProfileInt(_T("Settings"), _T("logz"), m_logz);
-	pApp->WriteProfileInt(_T("Settings"), _T("fba"), m_fba);
-	pApp->WriteProfileInt(_T("Settings"), _T("aa1"), m_aa1);
-	pApp->WriteProfileInt(_T("Settings"), _T("blur"), m_blur);	
+	theApp.SetConfig("filter", m_filter);
+	theApp.SetConfig("vsync", m_vsync);
+	theApp.SetConfig("logz", m_logz);
+	theApp.SetConfig("fba", m_fba);
+	theApp.SetConfig("aa1", m_aa1);
+	theApp.SetConfig("blur", m_blur);	
 
-	pApp->WriteProfileInt(_T("Settings"), _T("resx"), m_resx.GetPos());
-	pApp->WriteProfileInt(_T("Settings"), _T("resy"), m_resy.GetPos());
-	pApp->WriteProfileInt(_T("Settings"), _T("swthreads"), m_swthreads.GetPos());
-	pApp->WriteProfileInt(_T("Settings"), _T("nativeres"), m_nativeres);
+	theApp.SetConfig("resx", m_resx.GetPos());
+	theApp.SetConfig("resy", m_resy.GetPos());
+	theApp.SetConfig("swthreads", m_swthreads.GetPos());
+	theApp.SetConfig("nativeres", m_nativeres);
 
 	__super::OnOK();
 }

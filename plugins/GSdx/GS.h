@@ -1163,7 +1163,7 @@ struct GSPrivRegSet
 #pragma pack(pop)
 
 enum {KEYPRESS=1, KEYRELEASE=2};
-struct keyEvent {uint32 key, event;};
+struct GSKeyEventData {uint32 key, type;};
 
 enum {FREEZE_LOAD=0, FREEZE_SAVE=1, FREEZE_SIZE=2};
 struct GSFreezeData {int size; uint8* data;};

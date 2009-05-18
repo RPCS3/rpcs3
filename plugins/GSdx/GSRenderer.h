@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include "GSdx.h"
 #include "GSWnd.h"
 #include "GSState.h"
 #include "GSVertexList.h"
@@ -43,56 +44,10 @@ class GSRendererBase : public GSState, protected GSRendererSettings
 protected:
 	bool m_osd;
 
-	void ProcessWindowMessages()
-	{
-		MSG msg;
-
-		memset(&msg, 0, sizeof(msg));
-
-		while(msg.message != WM_QUIT && PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
-		{
-			if(OnMessage(msg))
-			{
-				continue;
-			}
-
-			TranslateMessage(&msg);
-			DispatchMessage(&msg);
-		}
-	}
-
-	virtual bool OnMessage(const MSG& msg)
-	{
-		if(msg.message == WM_KEYDOWN)
-		{
-			int step = (::GetAsyncKeyState(VK_SHIFT) & 0x8000) ? -1 : 1;
-
-			switch(msg.wParam)
-			{
-			case VK_F5:
-				m_interlace = (m_interlace + 7 + step) % 7;
-				return true;
-			case VK_F6:
-				m_aspectratio = (m_aspectratio + 3 + step) % 3;
-				return true;
-			case VK_F7:
-				m_wnd.SetWindowText(_T("PCSX2"));
-				m_osd = !m_osd;
-				return true;
-			case VK_DELETE:
-				m_aa1 = !m_aa1;
-				return true;
-			case VK_END:
-				m_blur = !m_blur;
-				return true;
-			}
-		}
-
-		return false;
-	}
-
 public:
 	GSWnd m_wnd;
+	GSCapture m_capture;
+	string m_snapshot;
 
 public:
 	GSRendererBase(uint8* base, bool mt, void (*irq)(), const GSRendererSettings& rs)
@@ -108,9 +63,59 @@ public:
 		m_blur = rs.m_blur;
 	};
 
+	void KeyEvent(GSKeyEventData* e)
+	{
+		if(e->type == KEYPRESS)
+		{
+			// TODO: linux
+
+			int step = (::GetAsyncKeyState(VK_SHIFT) & 0x8000) ? -1 : 1;
+
+			switch(e->key)
+			{
+			case VK_F5:
+				m_interlace = (m_interlace + 7 + step) % 7;
+				return;
+			case VK_F6:
+				m_aspectratio = (m_aspectratio + 3 + step) % 3;
+				return;
+			case VK_F7:
+				m_wnd.SetWindowText(_T("PCSX2"));
+				m_osd = !m_osd;
+				return;
+			case VK_F12:
+				if(m_capture.IsCapturing()) m_capture.EndCapture();
+				else m_capture.BeginCapture(GetFPS());
+				return;
+			case VK_DELETE:
+				m_aa1 = !m_aa1;
+				return;
+			case VK_END:
+				m_blur = !m_blur;
+				return;
+			}
+		}
+	}
+
+	bool MakeSnapshot(const string& path)
+	{
+		if(m_snapshot.empty())
+		{
+			time_t t = time(NULL);
+
+			char buff[16];
+
+			if(strftime(buff, sizeof(buff), "%Y%m%d%H%M%S", localtime(&t)))
+			{
+				m_snapshot = format("%s_%s", path.c_str(), buff);
+			}
+		}
+
+		return true;
+	}
+
 	virtual bool Create(const string& title) = 0;
 	virtual void VSync(int field) = 0;
-	virtual bool MakeSnapshot(const string& path) = 0;
 };
 
 template<class Device> class GSRenderer : public GSRendererBase
@@ -382,21 +387,6 @@ protected:
 		}
 	}
 
-	virtual bool OnMessage(const MSG& msg)
-	{
-		if(msg.message == WM_KEYDOWN)
-		{
-			switch(msg.wParam)
-			{
-			case VK_F12:
-				if(m_capture.IsCapturing()) m_capture.EndCapture();
-				else m_capture.BeginCapture(GetFPS());
-				return true;
-			}
-		}
-
-		return __super::OnMessage(msg);
-	}
 
 public:
 	Device m_dev;
@@ -407,18 +397,15 @@ public:
 	bool s_save;
 	bool s_savez;
 
-	string m_snapshot;
-	GSCapture m_capture;
-
 public:
 	GSRenderer(uint8* base, bool mt, void (*irq)(), const GSRendererSettings& rs, bool psrr)
 		: GSRendererBase(base, mt, irq, rs)
 		, m_psrr(psrr)
 	{
 		s_n = 0;
-		s_dump = !!AfxGetApp()->GetProfileInt(_T("Debug"), _T("dump"), 0);
-		s_save = !!AfxGetApp()->GetProfileInt(_T("Debug"), _T("save"), 0);
-		s_savez = !!AfxGetApp()->GetProfileInt(_T("Debug"), _T("savez"), 0);
+		s_dump = !!theApp.GetConfig("dump", 0);
+		s_save = !!theApp.GetConfig("save", 0);
+		s_savez = !!theApp.GetConfig("savez", 0);
 	}
 
 	bool Create(const string& title)
@@ -445,8 +432,6 @@ public:
 		Flush();
 
 		m_perfmon.Put(GSPerfMon::Frame);
-
-		ProcessWindowMessages();
 
 		field = field ? 1 : 0;
 
@@ -528,16 +513,6 @@ public:
 		DoSnapshot(field);
 
 		DoCapture();
-	}
-
-	bool MakeSnapshot(const string& path)
-	{
-		if(m_snapshot.empty())
-		{
-			m_snapshot = format("%s_%s", path.c_str(), CTime::GetCurrentTime().Format(_T("%Y%m%d%H%M%S")));
-		}
-
-		return true;
 	}
 
 	virtual void MinMaxUV(int w, int h, GSVector4i& r) {r = GSVector4i(0, 0, w, h);}

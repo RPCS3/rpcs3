@@ -71,14 +71,11 @@ EXPORT_C GSsetBaseMem(uint8* mem)
 
 EXPORT_C_(INT32) GSinit()
 {
-	AFX_MANAGE_STATE(AfxGetStaticModuleState());
-
 	return 0;
 }
 
 EXPORT_C GSshutdown()
 {
-	AFX_MANAGE_STATE(AfxGetStaticModuleState());
 }
 
 EXPORT_C GSclose()
@@ -87,36 +84,51 @@ EXPORT_C GSclose()
 	
 	s_gs = NULL;
 
+#ifdef _WINDOWS
+
 	if(SUCCEEDED(s_hr))
 	{
 		::CoUninitialize();
 
 		s_hr = E_FAIL;
 	}
+
+#endif
 }
 
 static INT32 GSopen(void* dsp, char* title, int mt, int renderer)
 {
-	AFX_MANAGE_STATE(AfxGetStaticModuleState());
-
-	if(!GSUtil::CheckDirectX() || !GSUtil::CheckSSE())
-	{
-		return -1;
-	}
-
 	GSclose();
 
 	GSRendererSettings rs;
 
-	rs.m_interlace = AfxGetApp()->GetProfileInt(_T("Settings"), _T("interlace"), 0);
-	rs.m_aspectratio = AfxGetApp()->GetProfileInt(_T("Settings"), _T("aspectratio"), 1);
-	rs.m_filter = AfxGetApp()->GetProfileInt(_T("Settings"), _T("filter"), 1);
-	rs.m_vsync = !!AfxGetApp()->GetProfileInt(_T("Settings"), _T("vsync"), FALSE);
-	rs.m_nativeres = !!AfxGetApp()->GetProfileInt(_T("Settings"), _T("nativeres"), FALSE);
-	rs.m_aa1 = !!AfxGetApp()->GetProfileInt(_T("Settings"), _T("aa1"), FALSE);
-	rs.m_blur = !!AfxGetApp()->GetProfileInt(_T("Settings"), _T("blur"), FALSE);
+	int threads = 1;
 
-	int threads = AfxGetApp()->GetProfileInt(_T("Settings"), _T("swthreads"), 1);
+#ifdef _WINDOWS
+
+	s_hr = ::CoInitializeEx(NULL, COINIT_MULTITHREADED);
+
+	if(!GSUtil::CheckDirectX())
+	{
+		return -1;
+	}
+
+#endif
+
+	if(!GSUtil::CheckSSE())
+	{
+		return -1;
+	}
+
+	rs.m_interlace = theApp.GetConfig("interlace", 0);
+	rs.m_aspectratio = theApp.GetConfig("aspectratio", 1);
+	rs.m_filter = theApp.GetConfig("filter", 1);
+	rs.m_vsync = !!theApp.GetConfig("vsync", 0);
+	rs.m_nativeres = !!theApp.GetConfig("nativeres", 0);
+	rs.m_aa1 = !!theApp.GetConfig("aa1", 0);
+	rs.m_blur = !!theApp.GetConfig("blur", 0);
+
+	threads = theApp.GetConfig("swthreads", 1);
 
 	switch(renderer)
 	{
@@ -130,8 +142,6 @@ static INT32 GSopen(void* dsp, char* title, int mt, int renderer)
 	case 6: s_gs = new GSRendererSW<GSDeviceNull>(s_basemem, !!mt, s_irq, rs, threads); break;
 	case 7: s_gs = new GSRendererNull<GSDeviceNull>(s_basemem, !!mt, s_irq, rs); break;
 	}
-
-	s_hr = ::CoInitializeEx(NULL, COINIT_MULTITHREADED);
 
 	if(!s_gs->Create(title))
 	{
@@ -151,7 +161,11 @@ static INT32 GSopen(void* dsp, char* title, int mt, int renderer)
 
 EXPORT_C_(INT32) GSopen(void* dsp, char* title, int mt)
 {
+#ifdef _WINDOWS
+
 	AFX_MANAGE_STATE(AfxGetStaticModuleState());
+
+#endif
 
 	int renderer;
 	
@@ -164,7 +178,7 @@ EXPORT_C_(INT32) GSopen(void* dsp, char* title, int mt)
 	else 
 	{
 		// normal init
-		renderer = AfxGetApp()->GetProfileInt(_T("Settings"), _T("renderer"), 0);
+		renderer = theApp.GetConfig("renderer", 0);
 	}
 
 	return GSopen(dsp, title, mt, renderer);
@@ -212,6 +226,20 @@ EXPORT_C GSgifTransfer3(uint8* mem, uint32 size)
 
 EXPORT_C GSvsync(int field)
 {
+#ifdef _WINDOWS
+
+	MSG msg;
+
+	memset(&msg, 0, sizeof(msg));
+
+	while(msg.message != WM_QUIT && PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+	{
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
+	}
+
+#endif
+
 	s_gs->VSync(field);
 }
 
@@ -220,8 +248,9 @@ EXPORT_C_(uint32) GSmakeSnapshot(char* path)
 	return s_gs->MakeSnapshot(string(path) + "gsdx");
 }
 
-EXPORT_C GSkeyEvent(keyEvent* ev)
+EXPORT_C GSkeyEvent(GSKeyEventData* e)
 {
+	s_gs->KeyEvent(e);
 }
 
 EXPORT_C_(int) GSfreeze(int mode, GSFreezeData* data)
@@ -244,6 +273,8 @@ EXPORT_C_(int) GSfreeze(int mode, GSFreezeData* data)
 
 EXPORT_C GSconfigure()
 {
+#ifdef _WINDOWS
+
 	AFX_MANAGE_STATE(AfxGetStaticModuleState());
 
 	GSSettingsDlg dlg;
@@ -253,21 +284,14 @@ EXPORT_C GSconfigure()
 		GSshutdown();
 		GSinit();
 	}
+
+#endif
+
 }
 
 EXPORT_C_(INT32) GStest()
 {
 	return 0;
-
-	// TODO
-
-	/*
-	AFX_MANAGE_STATE(AfxGetStaticModuleState());
-
-	CComPtr<ID3D10Device> dev;
-
-	return SUCCEEDED(D3D10CreateDevice(NULL, D3D10_DRIVER_TYPE_HARDWARE, NULL, 0, D3D10_SDK_VERSION, &dev)) ? 0 : -1;
-	*/
 }
 
 EXPORT_C GSabout()
@@ -293,6 +317,8 @@ EXPORT_C GSsetFrameSkip(int frameskip)
 {
 	s_gs->SetFrameSkip(frameskip);
 }
+
+#ifdef _WINDOWS
 
 EXPORT_C GSReplay(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow)
 {
@@ -597,3 +623,4 @@ EXPORT_C GSBenchmark(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow
 	fclose(file);
 }
 
+#endif

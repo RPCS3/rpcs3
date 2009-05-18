@@ -130,8 +130,6 @@ BOOL GPUSettingsDlg::OnInitDialog()
 {
 	__super::OnInitDialog();
 
-    CWinApp* pApp = AfxGetApp();
-
 	D3DCAPS9 caps;
 	memset(&caps, 0, sizeof(caps));
 	caps.PixelShaderVersion = D3DPS_VERSION(0, 0);
@@ -154,9 +152,9 @@ BOOL GPUSettingsDlg::OnInitDialog()
 
 	if(CComPtr<IDirect3D9> d3d = Direct3DCreate9(D3D_SDK_VERSION))
 	{
-		uint32 ModeWidth = pApp->GetProfileInt(_T("Settings"), _T("ModeWidth"), 0);
-		uint32 ModeHeight = pApp->GetProfileInt(_T("Settings"), _T("ModeHeight"), 0);
-		uint32 ModeRefreshRate = pApp->GetProfileInt(_T("Settings"), _T("ModeRefreshRate"), 0);
+		uint32 ModeWidth = theApp.GetConfig("ModeWidth", 0);
+		uint32 ModeHeight = theApp.GetConfig("ModeHeight", 0);
+		uint32 ModeRefreshRate = theApp.GetConfig("ModeRefreshRate", 0);
 
 		uint32 nModes = d3d->GetAdapterModeCount(D3DADAPTER_DEFAULT, D3DFMT_X8R8G8B8);
 
@@ -194,12 +192,12 @@ BOOL GPUSettingsDlg::OnInitDialog()
 		renderers.push_back(g_renderers[i]);
 	}
 
-	GSSetting::InitComboBox(&renderers[0], renderers.size(), m_renderer, pApp->GetProfileInt(_T("GPUSettings"), _T("Renderer"), 1));
-	GSSetting::InitComboBox(g_psversion, countof(g_psversion), m_psversion, pApp->GetProfileInt(_T("Settings"), _T("PixelShaderVersion2"), D3DPS_VERSION(2, 0)), caps.PixelShaderVersion);
-	GSSetting::InitComboBox(g_filter, countof(g_filter), m_filter, pApp->GetProfileInt(_T("GPUSettings"), _T("filter"), 0));
-	GSSetting::InitComboBox(g_dithering, countof(g_dithering), m_dithering, pApp->GetProfileInt(_T("GPUSettings"), _T("dithering"), 1));
-	GSSetting::InitComboBox(g_aspectratio, countof(g_aspectratio), m_aspectratio, pApp->GetProfileInt(_T("GPUSettings"), _T("AspectRatio"), 1));
-	GSSetting::InitComboBox(g_internalresolution, countof(g_internalresolution), m_internalresolution, pApp->GetProfileInt(_T("GPUSettings"), _T("scale_x"), 0) | (pApp->GetProfileInt(_T("GPUSettings"), _T("scale_y"), 0) << 2));
+	GSSetting::InitComboBox(&renderers[0], renderers.size(), m_renderer, theApp.GetConfig("Renderer", 1));
+	GSSetting::InitComboBox(g_psversion, countof(g_psversion), m_psversion, theApp.GetConfig("PixelShaderVersion2", D3DPS_VERSION(2, 0)), caps.PixelShaderVersion);
+	GSSetting::InitComboBox(g_filter, countof(g_filter), m_filter, theApp.GetConfig("filter", 0));
+	GSSetting::InitComboBox(g_dithering, countof(g_dithering), m_dithering, theApp.GetConfig("dithering", 1));
+	GSSetting::InitComboBox(g_aspectratio, countof(g_aspectratio), m_aspectratio, theApp.GetConfig("AspectRatio", 1));
+	GSSetting::InitComboBox(g_internalresolution, countof(g_internalresolution), m_internalresolution, theApp.GetConfig("scale_x", 0) | (theApp.GetConfig("scale_y", 0) << 2));
 	
 
 	OnCbnSelchangeCombo1();
@@ -207,7 +205,7 @@ BOOL GPUSettingsDlg::OnInitDialog()
 	//
 
 	m_swthreads.SetRange(1, 16);
-	m_swthreads.SetPos(pApp->GetProfileInt(_T("GPUSettings"), _T("swthreads"), 1));
+	m_swthreads.SetPos(theApp.GetConfig("swthreads", 1));
 
 	//
 
@@ -219,53 +217,51 @@ BOOL GPUSettingsDlg::OnInitDialog()
 
 void GPUSettingsDlg::OnOK()
 {
-	CWinApp* pApp = AfxGetApp();
-
 	UpdateData();
 
 	if(m_resolution.GetCurSel() >= 0)
 	{
 		D3DDISPLAYMODE& mode = *(D3DDISPLAYMODE*)m_resolution.GetItemData(m_resolution.GetCurSel());
 
-		pApp->WriteProfileInt(_T("Settings"), _T("ModeWidth"), mode.Width);
-		pApp->WriteProfileInt(_T("Settings"), _T("ModeHeight"), mode.Height);
-		pApp->WriteProfileInt(_T("Settings"), _T("ModeRefreshRate"), mode.RefreshRate);
+		theApp.SetConfig("ModeWidth", (int)mode.Width);
+		theApp.SetConfig("ModeHeight", (int)mode.Height);
+		theApp.SetConfig("ModeRefreshRate", (int)mode.RefreshRate);
 	}
 
 	if(m_renderer.GetCurSel() >= 0)
 	{
-		pApp->WriteProfileInt(_T("GPUSettings"), _T("Renderer"), (DWORD)m_renderer.GetItemData(m_renderer.GetCurSel()));
+		theApp.SetConfig("Renderer", (int)m_renderer.GetItemData(m_renderer.GetCurSel()));
 	}
 
 	if(m_psversion.GetCurSel() >= 0)
 	{
-		pApp->WriteProfileInt(_T("Settings"), _T("PixelShaderVersion2"), (DWORD)m_psversion.GetItemData(m_psversion.GetCurSel()));
+		theApp.SetConfig("PixelShaderVersion2", (int)m_psversion.GetItemData(m_psversion.GetCurSel()));
 	}
 
 	if(m_filter.GetCurSel() >= 0)
 	{
-		pApp->WriteProfileInt(_T("GPUSettings"), _T("filter"), (DWORD)m_filter.GetItemData(m_filter.GetCurSel()));
+		theApp.SetConfig("filter", (int)m_filter.GetItemData(m_filter.GetCurSel()));
 	}
 
 	if(m_dithering.GetCurSel() >= 0)
 	{
-		pApp->WriteProfileInt(_T("GPUSettings"), _T("dithering"), (DWORD)m_dithering.GetItemData(m_dithering.GetCurSel()));
+		theApp.SetConfig("dithering", (int)m_dithering.GetItemData(m_dithering.GetCurSel()));
 	}
 
 	if(m_aspectratio.GetCurSel() >= 0)
 	{
-		pApp->WriteProfileInt(_T("GPUSettings"), _T("AspectRatio"), (DWORD)m_aspectratio.GetItemData(m_aspectratio.GetCurSel()));
+		theApp.SetConfig("AspectRatio", (int)m_aspectratio.GetItemData(m_aspectratio.GetCurSel()));
 	}
 
 	if(m_internalresolution.GetCurSel() >= 0)
 	{
-		DWORD value = (DWORD)m_internalresolution.GetItemData(m_internalresolution.GetCurSel());
+		int value = (int)m_internalresolution.GetItemData(m_internalresolution.GetCurSel());
 
-		pApp->WriteProfileInt(_T("GPUSettings"), _T("scale_x"), value & 3);
-		pApp->WriteProfileInt(_T("GPUSettings"), _T("scale_y"), (value >> 2) & 3);
+		theApp.SetConfig("scale_x", value & 3);
+		theApp.SetConfig("scale_y", (value >> 2) & 3);
 	}
 
-	pApp->WriteProfileInt(_T("GPUSettings"), _T("swthreads"), m_swthreads.GetPos());
+	theApp.SetConfig("swthreads", m_swthreads.GetPos());
 
 	__super::OnOK();
 }

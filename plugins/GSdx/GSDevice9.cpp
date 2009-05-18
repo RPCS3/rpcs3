@@ -20,6 +20,7 @@
  */
 
 #include "stdafx.h"
+#include "GSdx.h"
 #include "GSDevice9.h"
 #include "resource.h"
 
@@ -102,7 +103,7 @@ bool GSDevice9::Create(HWND hWnd, bool vsync)
 
 	m_d3d->GetDeviceCaps(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, &m_d3dcaps);
 
-	bool fs = AfxGetApp()->GetProfileInt(_T("Settings"), _T("ModeWidth"), 0) > 0;
+	bool fs = theApp.GetConfig("ModeWidth", 0) > 0;
 
 	if(!Reset(1, 1, fs)) return false;
 
@@ -110,7 +111,7 @@ bool GSDevice9::Create(HWND hWnd, bool vsync)
 
 	// shaders
 
-	DWORD psver = AfxGetApp()->GetProfileInt(_T("Settings"), _T("PixelShaderVersion2"), D3DPS_VERSION(2, 0));
+	uint32 psver = (uint32)theApp.GetConfig("PixelShaderVersion2", D3DPS_VERSION(2, 0));
 
 	if(psver > m_d3dcaps.PixelShaderVersion)
 	{
@@ -262,9 +263,9 @@ bool GSDevice9::Reset(int w, int h, bool fs)
 
 	// m_pp.Flags |= D3DPRESENTFLAG_VIDEO; // enables tv-out (but I don't think anyone would still use a regular tv...)
 
-	int mw = AfxGetApp()->GetProfileInt(_T("Settings"), _T("ModeWidth"), 0);
-	int mh = AfxGetApp()->GetProfileInt(_T("Settings"), _T("ModeHeight"), 0);
-	int mrr = AfxGetApp()->GetProfileInt(_T("Settings"), _T("ModeRefreshRate"), 0);
+	int mw = theApp.GetConfig("ModeWidth", 0);
+	int mh = theApp.GetConfig("ModeHeight", 0);
+	int mrr = theApp.GetConfig("ModeRefreshRate", 0);
 
 	if(fs && mw > 0 && mh > 0 && mrr >= 0)
 	{

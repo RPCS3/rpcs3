@@ -51,14 +51,11 @@
 //		details.
 //
 
-BEGIN_MESSAGE_MAP(GSdxApp, CWinApp)
-END_MESSAGE_MAP()
+GSdxApp theApp;
 
 GSdxApp::GSdxApp()
 {
 }
-
-GSdxApp theApp;
 
 BOOL GSdxApp::InitInstance()
 {
@@ -96,4 +93,24 @@ BOOL GSdxApp::InitInstance()
 	m_pszProfileName = _tcsdup((LPCTSTR)path);
 
 	return TRUE;
+}
+
+string GSdxApp::GetConfig(const char* entry, const char* value)
+{
+	return string(GetProfileString("Settings", entry, value));
+}
+
+void GSdxApp::SetConfig(const char* entry, const char* value)
+{
+	WriteProfileString("Settings", entry, value);
+}
+
+int GSdxApp::GetConfig(const char* entry, int value)
+{
+	return GetProfileInt("Settings", entry, value);
+}
+
+void GSdxApp::SetConfig(const char* entry, int value)
+{
+	WriteProfileInt("Settings", entry, value);
 }

@@ -20,6 +20,7 @@
  */
 
 #include "StdAfx.h"
+#include "GSdx.h"
 #include "GSWnd.h"
 
 BEGIN_MESSAGE_MAP(GSWnd, CWnd)
@@ -51,7 +52,7 @@ bool GSWnd::Create(const string& title)
 
 	r = CRect(r.CenterPoint() - CSize(s.cx / 2, s.cy / 2), s);
 
-	LPCTSTR wc = AfxRegisterWndClass(CS_VREDRAW|CS_HREDRAW|CS_DBLCLKS, AfxGetApp()->LoadStandardCursor(IDC_ARROW), 0, 0);
+	LPCTSTR wc = AfxRegisterWndClass(CS_VREDRAW|CS_HREDRAW|CS_DBLCLKS, theApp.LoadStandardCursor(IDC_ARROW), 0, 0);
 
 	return !!CreateEx(0, wc, title.c_str(), WS_OVERLAPPEDWINDOW, r, NULL, 0);
 }

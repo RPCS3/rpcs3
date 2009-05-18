@@ -20,6 +20,7 @@
  */
 
 #include "stdafx.h"
+#include "GSdx.h"
 #include "GSUtil.h"
 #include "GPURendererSW.h"
 #include "GSDevice7.h"
@@ -52,29 +53,21 @@ EXPORT_C_(uint32) PSEgetLibVersion()
 
 EXPORT_C_(int32) GPUinit()
 {
-	AFX_MANAGE_STATE(AfxGetStaticModuleState());
-
-	// TODO
-
 	return 0;
 }
 
 EXPORT_C_(int32) GPUshutdown()
 {
-	AFX_MANAGE_STATE(AfxGetStaticModuleState());
-
-	// TODO
-
 	return 0;
 }
 
 EXPORT_C_(int32) GPUclose()
 {
-	AFX_MANAGE_STATE(AfxGetStaticModuleState());
-
 	delete s_gpu; 
 	
 	s_gpu = NULL;
+
+#ifdef _WINDOWS
 
 	if(SUCCEEDED(s_hr))
 	{
@@ -83,32 +76,47 @@ EXPORT_C_(int32) GPUclose()
 		s_hr = E_FAIL;
 	}
 
+#endif
+
 	return 0;
 }
 
 EXPORT_C_(int32) GPUopen(HWND hWnd)
 {
-	AFX_MANAGE_STATE(AfxGetStaticModuleState());
-
-	if(!GSUtil::CheckDirectX() || !GSUtil::CheckSSE())
-	{
-		return -1;
-	}
-
 	GPUclose();
 
 	GPURendererSettings rs;
 
-	rs.m_filter = AfxGetApp()->GetProfileInt(_T("GPUSettings"), _T("filter"), 0);
-	rs.m_dither = AfxGetApp()->GetProfileInt(_T("GPUSettings"), _T("dithering"), 1);
-	rs.m_aspectratio = AfxGetApp()->GetProfileInt(_T("GPUSettings"), _T("AspectRatio"), 1);
-	rs.m_vsync = !!AfxGetApp()->GetProfileInt(_T("GPUSettings"), _T("vsync"), FALSE);
-	rs.m_scale.x = AfxGetApp()->GetProfileInt(_T("GPUSettings"), _T("scale_x"), 0);
-	rs.m_scale.y = AfxGetApp()->GetProfileInt(_T("GPUSettings"), _T("scale_y"), 0);
+	int threads = 1;
+	int renderer = 1;
 
-	int threads = AfxGetApp()->GetProfileInt(_T("GPUSettings"), _T("swthreads"), 1);
+#ifdef _WINDOWS
 
-	int renderer = AfxGetApp()->GetProfileInt(_T("GPUSettings"), _T("Renderer"), 1);
+	AFX_MANAGE_STATE(AfxGetStaticModuleState());
+
+	s_hr = ::CoInitializeEx(NULL, COINIT_MULTITHREADED);
+
+	if(!GSUtil::CheckDirectX())
+	{
+		return -1;
+	}
+
+#endif
+
+	if(!GSUtil::CheckSSE())
+	{
+		return -1;
+	}
+
+	rs.m_filter = theApp.GetConfig("filter", 0);
+	rs.m_dither = theApp.GetConfig("dithering", 1);
+	rs.m_aspectratio = theApp.GetConfig("AspectRatio", 1);
+	rs.m_vsync = !!theApp.GetConfig("vsync", 0);
+	rs.m_scale.x = theApp.GetConfig("scale_x", 0);
+	rs.m_scale.y = theApp.GetConfig("scale_y", 0);
+
+	threads = theApp.GetConfig("swthreads", 1);
+	renderer = theApp.GetConfig("Renderer", 1);
 
 	switch(renderer)
 	{
@@ -118,8 +126,6 @@ EXPORT_C_(int32) GPUopen(HWND hWnd)
 	case 2: s_gpu = new GPURendererSW<GSDevice10>(rs, threads); break;
 	// TODO: case 3: s_gpu = new GPURendererNull<GSDeviceNull>(rs, threads); break;
 	}
-
-	s_hr = ::CoInitializeEx(NULL, COINIT_MULTITHREADED);
 
 	if(!s_gpu->Create(hWnd))
 	{
@@ -133,6 +139,9 @@ EXPORT_C_(int32) GPUopen(HWND hWnd)
 
 EXPORT_C_(int32) GPUconfigure()
 {
+
+#ifdef _WINDOWS
+	
 	AFX_MANAGE_STATE(AfxGetStaticModuleState());
 
 	GPUSettingsDlg dlg;
@@ -143,13 +152,13 @@ EXPORT_C_(int32) GPUconfigure()
 		GPUinit();
 	}
 
+#endif
+
 	return 0;
 }
 
 EXPORT_C_(int32) GPUtest()
 {
-	// TODO
-
 	return 0;
 }
 

@@ -381,6 +381,15 @@ public:
 
 	virtual bool MakeSnapshot(const string& path)
 	{
-		return m_dev.SaveCurrent(format("%s_%s", path.c_str(), CTime::GetCurrentTime().Format(_T("%Y%m%d%H%M%S"))) + ".bmp");
+		time_t t = time(NULL);
+
+		char buff[16];
+
+		if(!strftime(buff, sizeof(buff), "%Y%m%d%H%M%S", localtime(&t)))
+		{
+			return false;
+		}
+
+		return m_dev.SaveCurrent(format("%s_%s.bmp", path.c_str(), buff));
 	}
 };

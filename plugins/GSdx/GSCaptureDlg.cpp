@@ -21,6 +21,7 @@
 
 #include "stdafx.h"
 #include <afxpriv.h>
+#include "GSdx.h"
 #include "GSCaptureDlg.h"
 
 // GSCaptureDlg dialog
@@ -29,9 +30,9 @@ IMPLEMENT_DYNAMIC(GSCaptureDlg, CDialog)
 GSCaptureDlg::GSCaptureDlg(CWnd* pParent /*=NULL*/)
 	: CDialog(GSCaptureDlg::IDD, pParent)
 {
-	m_width = AfxGetApp()->GetProfileInt(_T("Capture"), _T("Width"), 640);
-	m_height = AfxGetApp()->GetProfileInt(_T("Capture"), _T("Height"), 480);
-	m_filename = AfxGetApp()->GetProfileString(_T("Capture"), _T("FileName"));
+	m_width = theApp.GetConfig("CaptureWidth", 640);
+	m_height = theApp.GetConfig("CaptureHeight", 480);
+	m_filename = theApp.GetConfig("CaptureFileName", "").c_str();
 }
 
 GSCaptureDlg::~GSCaptureDlg()
@@ -123,7 +124,7 @@ BOOL GSCaptureDlg::OnInitDialog()
 
 	//
 
-	CString DisplayNameToFind = AfxGetApp()->GetProfileString(_T("Capture"), _T("VideoCodecDisplayName"));
+	CString DisplayNameToFind = theApp.GetConfig("CaptureVideoCodecDisplayName", "").c_str();
 
 	for(int i = 0; i < m_codeclist.GetCount(); i++)
 	{
@@ -230,10 +231,10 @@ void GSCaptureDlg::OnBnClickedOk()
 
 	m_enc = c.filter;
 
-	AfxGetApp()->WriteProfileInt(_T("Capture"), _T("Width"), m_width);
-	AfxGetApp()->WriteProfileInt(_T("Capture"), _T("Height"), m_height);
-	AfxGetApp()->WriteProfileString(_T("Capture"), _T("FileName"), m_filename);
-	AfxGetApp()->WriteProfileString(_T("Capture"), _T("VideoCodecDisplayName"), CString(c.DisplayName));
+	theApp.SetConfig("CaptureWidth", m_width);
+	theApp.SetConfig("CaptureHeight", m_height);
+	theApp.SetConfig("CaptureFileName", m_filename);
+	theApp.SetConfig("CaptureVideoCodecDisplayName", CString(c.DisplayName));
 
 	OnOK();
 }

@@ -677,8 +677,8 @@ public:
 	{
 		if(!m_nativeres)
 		{
-			m_width = AfxGetApp()->GetProfileInt(_T("Settings"), _T("resx"), m_width);
-			m_height = AfxGetApp()->GetProfileInt(_T("Settings"), _T("resy"), m_height);
+			m_width = theApp.GetConfig("resx", m_width);
+			m_height = theApp.GetConfig("resy", m_height);
 		}
 
 		m_tc = new TextureCache(this);

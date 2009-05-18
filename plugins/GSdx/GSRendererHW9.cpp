@@ -27,8 +27,8 @@
 GSRendererHW9::GSRendererHW9(uint8* base, bool mt, void (*irq)(), const GSRendererSettings& rs)
 	: GSRendererHW<Device, Vertex, TextureCache>(base, mt, irq, rs, false)
 {
-	m_fba.enabled = !!AfxGetApp()->GetProfileInt(_T("Settings"), _T("fba"), TRUE);
-	m_logz = !!AfxGetApp()->GetProfileInt(_T("Settings"), _T("logz"), FALSE);
+	m_fba.enabled = !!theApp.GetConfig("fba", 1);
+	m_logz = !!theApp.GetConfig("logz", 0);
 
 	InitVertexKick<GSRendererHW9>();
 }

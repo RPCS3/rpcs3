@@ -182,6 +182,8 @@ public:
 
 	GSVector4i fit(int preset) const;
 
+	#ifdef _WINDOWS
+
 	operator LPCRECT() const
 	{
 		return (LPCRECT)this;
@@ -191,6 +193,8 @@ public:
 	{
 		return (LPRECT)this;
 	}
+
+	#endif
 
 	//
 
