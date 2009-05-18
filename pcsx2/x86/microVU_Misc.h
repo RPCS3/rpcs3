@@ -222,7 +222,7 @@ declareAllVariables
 #define isSflag		 (mVUinfo & (1<<4))
 #define writeQ		((mVUinfo >> 5) & 1)
 #define readQ		((mVUinfo >> 6) & 1)
-#define writeP		((mVUinfo >> 7) & 1)
+#define writeP		(((mVUinfo >> 7) + 1) & 1)
 #define readP		((mVUinfo >> 7) & 1) // same as writeP
 #define doFlags		 (mVUinfo & (3<<8))
 #define doMac		 (mVUinfo & (1<<8))

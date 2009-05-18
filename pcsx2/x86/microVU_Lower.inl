@@ -261,14 +261,14 @@ microVUf(void) mVU_EEXP() {
 }
 
 microVUt(void) mVU_sumXYZ() { 
-	// regd.x =  x ^ 2 + y ^ 2 + z ^ 2
+	// xmmPQ.x =  x ^ 2 + y ^ 2 + z ^ 2
 	if( cpucaps.hasStreamingSIMD4Extensions ) {
 		SSE4_DPPS_XMM_to_XMM(xmmFs, xmmFs, 0x71);
 		SSE_MOVSS_XMM_to_XMM(xmmPQ, xmmFs);
 	}
 	else {
 		SSE_MULPS_XMM_to_XMM(xmmFs, xmmFs); // wzyx ^ 2
-		SSE_MOVSS_XMM_to_XMM(xmmPQ, xmmFs);
+		SSE_MOVSS_XMM_to_XMM(xmmPQ, xmmFs); // x ^ 2
 		SSE2_PSHUFD_XMM_to_XMM(xmmFs, xmmFs, 0xe1); // wzyx -> wzxy
 		SSE_ADDSS_XMM_to_XMM(xmmPQ, xmmFs); // x ^ 2 + y ^ 2
 		SSE2_PSHUFD_XMM_to_XMM(xmmFs, xmmFs, 0xD2); // wzxy -> wxyz
