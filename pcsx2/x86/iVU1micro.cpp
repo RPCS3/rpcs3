@@ -29,7 +29,49 @@
 #ifdef _DEBUG
 extern u32 vudump;
 #endif
+
+//#define DEBUG_COMPARE
+#ifdef DEBUG_COMPARE
+
+#include <windows.h>
+static int runAmount = 0;
+
+void VUtestPause() {
+
+	runAmount++;
+	if (runAmount < 100) return;
+
 #ifndef PCSX2_MICROVU_
+	SysPrintf("Super VU - Pass %d\n", runAmount);
+#else
+	SysPrintf("Micro VU - Pass %d\n", runAmount);
+#endif
+
+	for (int i = 0; i < 32; i++) {
+		SysPrintf("VF%02d = {%f, %f, %f, %f}\n", i, VU1.VF[i].F[0], VU1.VF[i].F[1], VU1.VF[i].F[2], VU1.VF[i].F[3]);
+	}
+
+	for (int i = 0; i < 16; i++) {
+		SysPrintf("VI%02d = % 8d ($%08x)\n", i, (s16)VU1.VI[i].UL, (s16)VU1.VI[i].UL);
+	}
+
+	u32 j = 0;
+	for (int i = 0; i < (0x4000 / 4); i++) {
+		j ^= ((u32*)(VU1.Mem))[i];
+	}
+	SysPrintf("VU Mem CRC = 0x%08x\n", j);
+	SysPrintf("EndPC = 0x%04x\n", VU1.VI[REG_TPC].UL);
+
+	for (int i = 0; i < 10000000; i++) {
+		Sleep(1000);
+	}
+}
+#else
+void VUtestPause() {}
+#endif
+
+#ifndef PCSX2_MICROVU_
+
 namespace VU1micro
 {
 	void recAlloc()
@@ -113,12 +155,17 @@ namespace VU1micro
 		}
 
 		assert( (VU1.VI[ REG_TPC ].UL&7) == 0 );
+#ifdef DEBUG_COMPARE
+		SysPrintf("StartPC = 0x%04x\n", VU1.VI[REG_TPC].UL);
+#endif
 
 		FreezeXMMRegs(1);
 		do { // while loop needed since not always will return finished
 			SuperVUExecuteProgram(VU1.VI[ REG_TPC ].UL & 0x3fff, 1);
 		} while( VU0.VI[ REG_VPU_STAT ].UL&0x100 );
 		FreezeXMMRegs(0);
+
+		VUtestPause();
 	}
 }
 #else
@@ -129,6 +176,7 @@ extern void resetVUrec(const int vuIndex);
 extern void clearVUrec(u32 addr, u32 size, const int vuIndex);
 extern void runVUrec(u32 startPC, u32 cycles, const int vuIndex);
 
+
 namespace VU1micro
 {
 	void recAlloc()								 { initVUrec(&VU1, 1); }
@@ -138,14 +186,20 @@ namespace VU1micro
 	static void recStep()						 {}
 	static void recExecuteBlock() {
 
-		if((VU0.VI[REG_VPU_STAT].UL & 0x100) == 0) return;
+		if ((VU0.VI[REG_VPU_STAT].UL & 0x100) == 0) return;
 		assert( (VU1.VI[REG_TPC].UL&7) == 0 );
+
+#ifdef DEBUG_COMPARE
+		SysPrintf("StartPC = 0x%04x\n", VU1.VI[REG_TPC].UL);
+#endif
 
 		FreezeXMMRegs(1);
 		//FreezeMMXRegs(1);
-		runVUrec(VU1.VI[REG_TPC].UL, 5000, 1);
-		FreezeXMMRegs(0);
+		runVUrec(VU1.VI[REG_TPC].UL, 300000 /*0x7fffffff*/, 1);
 		//FreezeMMXRegs(0);
+		FreezeXMMRegs(0);
+
+		VUtestPause();
 	}
 }
 #endif

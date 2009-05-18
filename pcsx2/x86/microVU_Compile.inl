@@ -160,8 +160,8 @@ microVUt(void) mVUendProgram(int fStatus, int fMac, int fClip) {
 
 	//memcpy_fast(&pBlock->pStateEnd, &mVUregs, sizeof(microRegInfo));
 	//MOV32ItoM((uptr)&mVU->prog.lpState, (int)&mVUblock.pState); // Save pipeline state (clipflag instance)
-	//AND32ItoM((uptr)&VU0.VI[REG_VPU_STAT].UL, (vuIndex ? ~0x100 : ~0x001)); // VBS0/VBS1 flag
-	AND32ItoM((uptr)&microVU0.regs->VI[REG_VPU_STAT].UL, (vuIndex ? ~0x100 : ~0x001)); // VBS0/VBS1 flag
+	//AND32ItoM((uptr)&microVU0.regs->VI[REG_VPU_STAT].UL, (vuIndex ? ~0x100 : ~0x001)); // VBS0/VBS1 flag
+	AND32ItoM((uptr)&VU0.VI[REG_VPU_STAT].UL, (vuIndex ? ~0x100 : ~0x001)); // VBS0/VBS1 flag
 	AND32ItoM((uptr)&mVU->regs->vifRegs->stat, ~0x4); // Clear VU 'is busy' signal for vif
 	MOV32ItoM((uptr)&mVU->regs->VI[REG_TPC].UL, xPC);
 	JMP32((uptr)mVU->exitFunct - ((uptr)x86Ptr + 5));
@@ -170,11 +170,16 @@ microVUt(void) mVUendProgram(int fStatus, int fMac, int fClip) {
 #define sI ((mVUpBlock->pState.needExactMatch & 0x000f) ? 0 : ((mVUpBlock->pState.flags >> 0) & 3))
 #define cI ((mVUpBlock->pState.needExactMatch & 0x0f00) ? 0 : ((mVUpBlock->pState.flags >> 2) & 3))
 
+void mVUwarning() { Console::Error("microVU Warning: Exiting Execution Early (Possible Infinite Loop)"); }
+
 microVUt(void) mVUtestCycles() {
 	microVU* mVU = mVUx;
 	iPC = mVUstartPC;
 	CMP32ItoM((uptr)&mVU->cycles, 0);
 	u8* jmp8 = JG8(0);
+		PUSH32R(gprR);
+		CALLFunc((uptr)mVUwarning);
+		POP32R(gprR);
 		mVUendProgram<vuIndex>(sI, 0, cI);
 	x86SetJ8(jmp8);
 	SUB32ItoM((uptr)&mVU->cycles, mVUcycles);
