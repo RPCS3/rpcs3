@@ -55,6 +55,22 @@ public:
 	SimdImpl_Compare() {} //GCWhat?
 };
 
+//////////////////////////////////////////////////////////////////////////////////////////
+// Compare scalar floating point values and set EFLAGS (Ordered or Unordered)
+//
+template< bool Ordered >
+class SimdImpl_COMI
+{
+protected:
+	static const u16 OpcodeSSE = Ordered ? 0x2f : 0x2e;
+
+public:
+	const SimdImpl_DestRegSSE<0x00,OpcodeSSE> SS;
+	const SimdImpl_DestRegSSE<0x66,OpcodeSSE> SD;
+	
+	SimdImpl_COMI() {}
+};
+
 
 //////////////////////////////////////////////////////////////////////////////////////////
 //

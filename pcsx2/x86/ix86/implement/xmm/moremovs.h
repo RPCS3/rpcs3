@@ -165,18 +165,6 @@ public:
 	}
 };
 
-
-//////////////////////////////////////////////////////////////////////////////////////////
-//
-template< u8 AltPrefix, u16 OpcodeSSE >
-class SimdImpl_UcomI
-{
-public:
-	const SimdImpl_DestRegSSE<0x00,OpcodeSSE> SS;
-	const SimdImpl_DestRegSSE<AltPrefix,OpcodeSSE> SD;
-	SimdImpl_UcomI() {}
-};
-
 //////////////////////////////////////////////////////////////////////////////////////////
 // Blend - Conditional copying of values in src into dest.
 //

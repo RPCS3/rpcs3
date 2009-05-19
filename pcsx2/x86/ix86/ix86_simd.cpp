@@ -90,26 +90,26 @@ const SimdImpl_MoveSSE<0x66,true> xMOVAPD;
 const SimdImpl_MoveSSE<0x66,false> xMOVUPD;
 #endif
 
-const MovhlImplAll<0x16> xMOVH;
-const MovhlImplAll<0x12> xMOVL;
-const MovhlImpl_RtoR<0x16> xMOVLH;
-const MovhlImpl_RtoR<0x12> xMOVHL;
+const MovhlImplAll<0x16>		xMOVH;
+const MovhlImplAll<0x12>		xMOVL;
+const MovhlImpl_RtoR<0x16>		xMOVLH;
+const MovhlImpl_RtoR<0x12>		xMOVHL;
+
+const SimdImpl_AndNot			xANDN;
+const SimdImpl_COMI<true>		xCOMI;
+const SimdImpl_COMI<false>		xUCOMI;
+const SimdImpl_rSqrt<0x53>		xRCP;
+const SimdImpl_rSqrt<0x52>		xRSQRT;
+const SimdImpl_Sqrt<0x51>		xSQRT;
+
+const SimdImpl_MinMax<0x5f>		xMAX;
+const SimdImpl_MinMax<0x5d>		xMIN;
+const SimdImpl_Shuffle<0xc6>	xSHUF;
 
 const SimdImpl_DestRegEither<0x66,0xdb> xPAND;
 const SimdImpl_DestRegEither<0x66,0xdf> xPANDN;
 const SimdImpl_DestRegEither<0x66,0xeb> xPOR;
 const SimdImpl_DestRegEither<0x66,0xef> xPXOR;
-
-const SimdImpl_AndNot xANDN;
-
-const SimdImpl_UcomI<0x66,0x2e> xUCOMI;
-const SimdImpl_rSqrt<0x53> xRCP;
-const SimdImpl_rSqrt<0x52> xRSQRT;
-const SimdImpl_Sqrt<0x51> xSQRT;
-
-const SimdImpl_MinMax<0x5f> xMAX;
-const SimdImpl_MinMax<0x5d> xMIN;
-const SimdImpl_Shuffle<0xc6> xSHUF;
 
 // ------------------------------------------------------------------------
 
