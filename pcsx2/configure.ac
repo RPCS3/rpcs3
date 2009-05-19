@@ -117,28 +117,47 @@ fi
 WARNING_FLAGS+=" -Wno-format -Wno-unused-parameter -Wno-unused-value "
 NORMAL_FLAGS+=" -msse -msse2 ${WARNING_FLAGS} "
 
-if test "x$unsupportedspeedfreak" == "xyes"
-then
-    dnl Don't even try to get support for this.
-    NORMAL_FLAGS+=" -pipe -O3 -march=native -funroll-loops -ffast-math "
-else
-  if test "x$optimization" == "xyes"
-  then
-    NORMAL_FLAGS+=" -pipe -O2 "
-  else
-    NORMAL_FLAGS+=" -O0 "
-  fi
-fi
-
-if test "x$unsupportedspeedfreak" == "xno"
-then
 dnl These optimizations seem to cause issues with GCC 4.3.3, so we'll turn them off. 
 dnl I really need to run some tests and see if they are still needed.
-    if test "$gccvernum" -ge "433"; then
-      NORMAL_FLAGS+=" -fno-guess-branch-probability -fno-dse -fno-tree-dse "
-    fi
-fi
-
+  if test "$gccvernum" -ge "433"; then
+    NORMAL_FLAGS+=" -fno-guess-branch-probability -fno-dse -fno-tree-dse "
+  fi
+  
+dnl Anything higher then -O0 seem to cause issues with GCC 4.4.0.
+  if test "x$optimization" == "xyes"
+  then
+   dnl Oddly, turning on all the optimizations up to -O2 one by one doesn't cause issues in GCC 4.4.0.
+  if test "$gccvernum" -ge "440"; then
+   NORMAL_FLAGS+=" -O0 "
+    dnl -O1, flag by flag, minus the 3 taken out on gcc 4.3.3
+    NORMAL_FLAGS+=" -ftree-builtin-call-dce -ftree-ccp -ftree-ch -ftree-copyrename "
+    NORMAL_FLAGS+=" -ftree-dce -ftree-dominator-opts "
+    NORMAL_FLAGS+=" -ftree-fre "
+    NORMAL_FLAGS+=" -ftree-sra "
+    NORMAL_FLAGS+=" -ftree-ter "
+    NORMAL_FLAGS+=" -fauto-inc-dec  -fcprop-registers -fdce -fdefer-pop "
+    NORMAL_FLAGS+=" -fif-conversion2 -fif-conversion "
+    NORMAL_FLAGS+=" -finline-small-functions -fipa-pure-const -fipa-reference -fmerge-constants " 
+    NORMAL_FLAGS+=" -fsplit-wide-types -funit-at-a-time -fno-omit-frame-pointer"
+    dnl And now for -O2. Comment out one that breaks compilation when turned on individually.
+    NORMAL_FLAGS+=" -fthread-jumps -falign-functions -falign-jumps -falign-loops -falign-labels "
+    NORMAL_FLAGS+=" -fcaller-saves -fcrossjumping -fcse-follow-jumps -fcse-skip-blocks "
+    NORMAL_FLAGS+=" -fdelete-null-pointer-checks -fexpensive-optimizations -fgcse -fgcse-lm "
+    NORMAL_FLAGS+=" -findirect-inlining -foptimize-sibling-calls -fpeephole2 -fregmove "
+    NORMAL_FLAGS+=" -freorder-blocks -freorder-functions -frerun-cse-after-loop "
+    NORMAL_FLAGS+=" -fsched-interblock "
+    NORMAL_FLAGS+=" -fsched-spec "
+    dnl NORMAL_FLAGS+=" -fschedule-insns "
+    NORMAL_FLAGS+=" -fschedule-insns2 "
+    NORMAL_FLAGS+=" -fstrict-aliasing -fstrict-overflow "
+    NORMAL_FLAGS+=" -ftree-switch-conversion -ftree-pre -ftree-vrp "
+  else
+    NORMAL_FLAGS+=" -pipe -O2 "
+  fi
+ else
+   NORMAL_FLAGS+=" -O0 "
+ fi
+  
  CFLAGS+=" ${NORMAL_FLAGS} -Xlinker -zmuldefs -m32 "
  CXXFLAGS+=" ${NORMAL_FLAGS} -fpermissive -Xlinker -zmuldefs -m32 "
  CCASFLAGS+=" ${NORMAL_FLAGS}  -m32 "
@@ -187,3 +206,15 @@ echo "  Custom cflags? $customcflags"
 echo "  Compiler warnings? $warnings"
 echo "  Compiler optimizations? $optimization"
 
+  if test "$gccvernum" -ge "440"; then
+    echo
+    echo "*Congratulations*! You are running GCC 4.4.0! Thanks to this wonderful fact, you get"
+    echo "millions of command line switches, probably seriously slowing down your compilation time."
+    echo
+    echo "GCC 4.4.0 causes pcsx2 to crash at *any* optimization above 0, yet mysteriously"
+    echo "works properly if you add in the flags for all the optimizations yourself, which I have done."
+    echo "Enjoy!"
+    echo
+  fi
+  
+    

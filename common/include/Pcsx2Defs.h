@@ -98,6 +98,29 @@ default: \
 
 #else
 
+// GCC 4.4.0 is a bit nutty, as compilers go. it gets a define to itself.
+#define GCC_VERSION (__GNUC__ * 10000 \
+                               + __GNUC_MINOR__ * 100 \
+                               + __GNUC_PATCHLEVEL__)
+          
+/* Test for GCC > 4.4.0; Should be adjusted when new versions come out */
+#if GCC_VERSION >= 40400
+#define THE_UNBEARABLE_LIGHTNESS_OF_BEING_GCC_4_4_0
+#define __nooptimization __attribute__((optimize("O0"))
+#endif
+
+/*
+This theoretically unoptimizes. Not having much luck so far.
+#ifdef THE_UNBEARABLE_LIGHTNESS_OF_BEING_GCC_4_4_0
+#pragma GCC optimize ("O0")
+#endif
+
+#ifdef THE_UNBEARABLE_LIGHTNESS_OF_BEING_GCC_4_4_0
+#pragma GCC reset_options
+#endif
+
+*/
+
 // fixme - is this needed for recent versions of GCC?  Or can we just use the first two macros
 // instead for both definitions (implementations) and declarations (includes)? -- air
 #define PCSX2_ALIGNED(alig,x) x __attribute((aligned(alig)))
@@ -114,6 +137,10 @@ default: \
 #define _inline __inline__ __attribute__((unused))
 #define __forceinline __attribute__((always_inline,unused))
 #define __noinline __attribute__((noinline))
+#endif
+
+#ifndef THE_UNBEARABLE_LIGHTNESS_OF_BEING_GCC_4_4_0
+#define __nooptimization
 #endif
 
 typedef struct {
