@@ -296,7 +296,6 @@ microVUt(void) mVUanalyzeSflag(int It) {
 		// Do to stalls, it can only be set one instruction prior to the status flag read instruction
 		// if we were guaranteed no-stalls were to happen, it could be set 4 instruction prior.
 	}
-	analyzeVIreg2(It, 1);
 }
 
 microVUt(void) mVUanalyzeFSSET() {
@@ -327,7 +326,6 @@ microVUt(void) mVUanalyzeMflag(int Is, int It) {
 		iPC = curPC;
 	}
 	analyzeVIreg1(Is);
-	analyzeVIreg2(It, 1);
 }
 
 //------------------------------------------------------------------
