@@ -249,7 +249,7 @@ protected:
 
 			if(dr[i].height() > 512) // hmm
 			{
-				int y = GetDeviceRect(i).height();
+				int y = GetDeviceSize(i).y;
 				if(m_regs->SMODE2.INT && m_regs->SMODE2.FFMD) y /= 2;
 				r.bottom = r.top + y;
 			}
@@ -258,35 +258,26 @@ protected:
 
 			if(m_blur && blurdetected && i == 1)
 			{
-				src[i].x = tex[i].m_scale.x * r.left / tex[i].GetWidth();
-				src[i].y = (tex[i].m_scale.y * r.top + 1) / tex[i].GetHeight();
-				src[i].z = tex[i].m_scale.x * r.right / tex[i].GetWidth();
-				src[i].w = (tex[i].m_scale.y * r.bottom + 1) / tex[i].GetHeight();
-			}
-			else
-			{
-				src[i].x = tex[i].m_scale.x * r.left / tex[i].GetWidth();
-				src[i].y = tex[i].m_scale.y * r.top / tex[i].GetHeight();
-				src[i].z = tex[i].m_scale.x * r.right / tex[i].GetWidth();
-				src[i].w = tex[i].m_scale.y * r.bottom / tex[i].GetHeight();
+				r += GSVector4i(0, 1).xyxy();
 			}
 
-			GSVector2 o;
+			GSVector4 scale = GSVector4(tex[i].m_scale).xyxy();
 
-			o.x = 0;
-			o.y = 0;
+			src[i] = GSVector4(r) * scale / GSVector4(tex[i].GetSize()).xyxy();
+
+			GSVector2 o(0, 0);
 			
 			if(dr[i].top - baseline >= 4) // 2?
 			{
 				o.y = tex[i].m_scale.y * (dr[i].top - baseline);
 			}
 
-			if(m_regs->SMODE2.INT && m_regs->SMODE2.FFMD) o.y /= 2;
+			if(m_regs->SMODE2.INT && m_regs->SMODE2.FFMD)
+			{
+				o.y /= 2;
+			}
 
-			dst[i].x = o.x;
-			dst[i].y = o.y;
-			dst[i].z = o.x + tex[i].m_scale.x * r.width();
-			dst[i].w = o.y + tex[i].m_scale.y * r.height();
+			dst[i] = GSVector4(o).xyxy() + scale * GSVector4(r.rsize());
 
 			fs.x = max(fs.x, (int)(dst[i].z + 0.5f));
 			fs.y = max(fs.y, (int)(dst[i].w + 0.5f));
@@ -301,12 +292,7 @@ protected:
 
 		if(tex[0] || tex[1])
 		{
-			GSVector4 c;
-
-			c.r = (float)m_regs->BGCOLOR.R / 255;
-			c.g = (float)m_regs->BGCOLOR.G / 255;
-			c.b = (float)m_regs->BGCOLOR.B / 255;
-			c.a = (float)m_regs->PMODE.ALP / 255;
+			GSVector4 c = GSVector4((int)m_regs->BGCOLOR.R, (int)m_regs->BGCOLOR.G, (int)m_regs->BGCOLOR.B, (int)m_regs->PMODE.ALP) / 255;
 
 			m_dev.Merge(tex, src, dst, fs, slbg, mmod, c);
 

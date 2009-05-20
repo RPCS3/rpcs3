@@ -235,7 +235,7 @@ GSVector4i GSState::GetFrameRect(int i)
 	return r;
 }
 
-GSVector4i GSState::GetDeviceRect(int i)
+GSVector2i GSState::GetDeviceSize(int i)
 {
 	// TODO: other params of SMODE1 should affect the true device display size
 
@@ -257,7 +257,7 @@ GSVector4i GSState::GetDeviceRect(int i)
 		h = (m_regs->SMODE1.CMOD & 1) ? 512 : 448;
 	}
 
-	return GSVector4i(0, 0, w, h);
+	return GSVector2i(w, h);
 
 }
 
@@ -279,7 +279,7 @@ bool GSState::IsEnabled(int i)
 
 int GSState::GetFPS()
 {
-	return ((m_regs->SMODE1.CMOD & 1) ? 50 : 60) / (m_regs->SMODE2.INT ? 1 : 2);
+	return ((m_regs->SMODE1.CMOD & 1) ? 50 : 60) >> (1 - m_regs->SMODE2.INT);
 }
 
 // GIFPackedRegHandler*
@@ -486,7 +486,7 @@ template<int i> void GSState::GIFRegHandlerTEX0(GIFReg* r)
 
 	bool wt = m_mem.m_clut.WriteTest(r->TEX0, m_env.TEXCLUT);
 
-	if(wt || PRIM->CTXT == i && !((GSVector4i)r->TEX0).eq(m_env.CTXT[i].TEX0))
+	if(wt || PRIM->CTXT == i && r->TEX0 != m_env.CTXT[i].TEX0)
 	{
 		Flush(); 
 	}
@@ -511,7 +511,7 @@ template<int i> void GSState::GIFRegHandlerTEX0(GIFReg* r)
 
 template<int i> void GSState::GIFRegHandlerCLAMP(GIFReg* r)
 {
-	if(PRIM->CTXT == i && !((GSVector4i)r->CLAMP).eq(m_env.CTXT[i].CLAMP))
+	if(PRIM->CTXT == i && r->CLAMP != m_env.CTXT[i].CLAMP)
 	{
 		Flush();
 	}
@@ -552,7 +552,7 @@ void GSState::GIFRegHandlerNOP(GIFReg* r)
 
 template<int i> void GSState::GIFRegHandlerTEX1(GIFReg* r)
 {
-	if(PRIM->CTXT == i && !((GSVector4i)r->TEX1).eq(m_env.CTXT[i].TEX1))
+	if(PRIM->CTXT == i && r->TEX1 != m_env.CTXT[i].TEX1)
 	{
 		Flush();
 	}
@@ -587,7 +587,7 @@ template<int i> void GSState::GIFRegHandlerXYOFFSET(GIFReg* r)
 
 void GSState::GIFRegHandlerPRMODECONT(GIFReg* r)
 {
-	if(!((GSVector4i)r->PRMODECONT).eq(m_env.PRMODECONT))
+	if(r->PRMODECONT != m_env.PRMODECONT)
 	{
 		Flush();
 	}
@@ -621,7 +621,7 @@ void GSState::GIFRegHandlerPRMODE(GIFReg* r)
 
 void GSState::GIFRegHandlerTEXCLUT(GIFReg* r)
 {
-	if(!((GSVector4i)r->TEXCLUT).eq(m_env.TEXCLUT))
+	if(r->TEXCLUT != m_env.TEXCLUT)
 	{
 		Flush();
 	}
@@ -631,7 +631,7 @@ void GSState::GIFRegHandlerTEXCLUT(GIFReg* r)
 
 void GSState::GIFRegHandlerSCANMSK(GIFReg* r)
 {
-	if(!((GSVector4i)r->SCANMSK).eq(m_env.SCANMSK))
+	if(r->SCANMSK != m_env.SCANMSK)
 	{
 		Flush();
 	}
@@ -641,7 +641,7 @@ void GSState::GIFRegHandlerSCANMSK(GIFReg* r)
 
 template<int i> void GSState::GIFRegHandlerMIPTBP1(GIFReg* r)
 {
-	if(PRIM->CTXT == i && !((GSVector4i)r->MIPTBP1).eq(m_env.CTXT[i].MIPTBP1))
+	if(PRIM->CTXT == i && r->MIPTBP1 != m_env.CTXT[i].MIPTBP1)
 	{
 		Flush();
 	}
@@ -651,7 +651,7 @@ template<int i> void GSState::GIFRegHandlerMIPTBP1(GIFReg* r)
 
 template<int i> void GSState::GIFRegHandlerMIPTBP2(GIFReg* r)
 {
-	if(PRIM->CTXT == i && !((GSVector4i)r->MIPTBP2).eq(m_env.CTXT[i].MIPTBP2))
+	if(PRIM->CTXT == i && r->MIPTBP2 != m_env.CTXT[i].MIPTBP2)
 	{
 		Flush();
 	}
@@ -661,7 +661,7 @@ template<int i> void GSState::GIFRegHandlerMIPTBP2(GIFReg* r)
 
 void GSState::GIFRegHandlerTEXA(GIFReg* r)
 {
-	if(!((GSVector4i)r->TEXA).eq(m_env.TEXA))
+	if(r->TEXA != m_env.TEXA)
 	{
 		Flush();
 	}
@@ -671,7 +671,7 @@ void GSState::GIFRegHandlerTEXA(GIFReg* r)
 
 void GSState::GIFRegHandlerFOGCOL(GIFReg* r)
 {
-	if(!((GSVector4i)r->FOGCOL).eq(m_env.FOGCOL))
+	if(r->FOGCOL != m_env.FOGCOL)
 	{
 		Flush();
 	}
@@ -688,7 +688,7 @@ void GSState::GIFRegHandlerTEXFLUSH(GIFReg* r)
 
 template<int i> void GSState::GIFRegHandlerSCISSOR(GIFReg* r)
 {
-	if(PRIM->CTXT == i && !((GSVector4i)r->SCISSOR).eq(m_env.CTXT[i].SCISSOR))
+	if(PRIM->CTXT == i && r->SCISSOR != m_env.CTXT[i].SCISSOR)
 	{
 		Flush();
 	}
@@ -705,7 +705,7 @@ template<int i> void GSState::GIFRegHandlerALPHA(GIFReg* r)
 	ASSERT(r->ALPHA.C != 3);
 	ASSERT(r->ALPHA.D != 3);
 
-	if(PRIM->CTXT == i && !((GSVector4i)r->ALPHA).eq(m_env.CTXT[i].ALPHA))
+	if(PRIM->CTXT == i && r->ALPHA != m_env.CTXT[i].ALPHA)
 	{
 		Flush();
 	}
@@ -721,7 +721,7 @@ void GSState::GIFRegHandlerDIMX(GIFReg* r)
 {
 	bool update = false;
 
-	if(!((GSVector4i)r->DIMX).eq(m_env.DIMX))
+	if(r->DIMX != m_env.DIMX)
 	{
 		Flush();
 
@@ -738,7 +738,7 @@ void GSState::GIFRegHandlerDIMX(GIFReg* r)
 
 void GSState::GIFRegHandlerDTHE(GIFReg* r)
 {
-	if(!((GSVector4i)r->DTHE).eq(m_env.DTHE))
+	if(r->DTHE != m_env.DTHE)
 	{
 		Flush();
 	}
@@ -748,7 +748,7 @@ void GSState::GIFRegHandlerDTHE(GIFReg* r)
 
 void GSState::GIFRegHandlerCOLCLAMP(GIFReg* r)
 {
-	if(!((GSVector4i)r->COLCLAMP).eq(m_env.COLCLAMP))
+	if(r->COLCLAMP != m_env.COLCLAMP)
 	{
 		Flush();
 	}
@@ -758,7 +758,7 @@ void GSState::GIFRegHandlerCOLCLAMP(GIFReg* r)
 
 template<int i> void GSState::GIFRegHandlerTEST(GIFReg* r)
 {
-	if(PRIM->CTXT == i && !((GSVector4i)r->TEST).eq(m_env.CTXT[i].TEST))
+	if(PRIM->CTXT == i && r->TEST != m_env.CTXT[i].TEST)
 	{
 		Flush();
 	}
@@ -768,7 +768,7 @@ template<int i> void GSState::GIFRegHandlerTEST(GIFReg* r)
 
 void GSState::GIFRegHandlerPABE(GIFReg* r)
 {
-	if(!((GSVector4i)r->PABE).eq(m_env.PABE))
+	if(r->PABE != m_env.PABE)
 	{
 		Flush();
 	}
@@ -778,7 +778,7 @@ void GSState::GIFRegHandlerPABE(GIFReg* r)
 
 template<int i> void GSState::GIFRegHandlerFBA(GIFReg* r)
 {
-	if(PRIM->CTXT == i && !((GSVector4i)r->FBA).eq(m_env.CTXT[i].FBA))
+	if(PRIM->CTXT == i && r->FBA != m_env.CTXT[i].FBA)
 	{
 		Flush();
 	}
@@ -788,7 +788,7 @@ template<int i> void GSState::GIFRegHandlerFBA(GIFReg* r)
 
 template<int i> void GSState::GIFRegHandlerFRAME(GIFReg* r)
 {
-	if(PRIM->CTXT == i && !((GSVector4i)r->FRAME).eq(m_env.CTXT[i].FRAME))
+	if(PRIM->CTXT == i && r->FRAME != m_env.CTXT[i].FRAME)
 	{
 		Flush();
 	}
@@ -807,7 +807,7 @@ template<int i> void GSState::GIFRegHandlerZBUF(GIFReg* r)
 
 	r->ZBUF.PSM |= 0x30;
 
-	if(PRIM->CTXT == i && !((GSVector4i)r->ZBUF).eq(m_env.CTXT[i].ZBUF))
+	if(PRIM->CTXT == i && r->ZBUF != m_env.CTXT[i].ZBUF)
 	{
 		Flush();
 	}
@@ -825,7 +825,7 @@ template<int i> void GSState::GIFRegHandlerZBUF(GIFReg* r)
 
 void GSState::GIFRegHandlerBITBLTBUF(GIFReg* r)
 {
-	if(!((GSVector4i)r->BITBLTBUF).eq(m_env.BITBLTBUF))
+	if(r->BITBLTBUF != m_env.BITBLTBUF)
 	{
 		FlushWrite();
 	}
@@ -845,7 +845,7 @@ void GSState::GIFRegHandlerBITBLTBUF(GIFReg* r)
 
 void GSState::GIFRegHandlerTRXPOS(GIFReg* r)
 {
-	if(!((GSVector4i)r->TRXPOS).eq(m_env.TRXPOS))
+	if(r->TRXPOS != m_env.TRXPOS)
 	{
 		FlushWrite();
 	}
@@ -855,7 +855,7 @@ void GSState::GIFRegHandlerTRXPOS(GIFReg* r)
 
 void GSState::GIFRegHandlerTRXREG(GIFReg* r)
 {
-	if(!((GSVector4i)r->TRXREG).eq(m_env.TRXREG))
+	if(r->TRXREG != m_env.TRXREG)
 	{
 		FlushWrite();
 	}
@@ -1036,9 +1036,15 @@ void GSState::Move()
 	int xinc = 1;
 	int yinc = 1;
 
-	if(sx < dx) {sx += w - 1; dx += w - 1; xinc = -1;}
-	if(sy < dy) {sy += h - 1; dy += h - 1; yinc = -1;}
-
+	if(m_env.TRXPOS.DIRX) {sx += w - 1; dx += w - 1; xinc = -1;}
+	if(m_env.TRXPOS.DIRY) {sy += h - 1; dy += h - 1; yinc = -1;}
+/*
+	printf("%05x %d %d => %05x %d %d (%d%d), %d %d %d %d %d %d\n", 
+		m_env.BITBLTBUF.SBP, m_env.BITBLTBUF.SBW, m_env.BITBLTBUF.SPSM,
+		m_env.BITBLTBUF.DBP, m_env.BITBLTBUF.DBW, m_env.BITBLTBUF.DPSM,
+		m_env.TRXPOS.DIRX, m_env.TRXPOS.DIRY,
+		sx, sy, dx, dy, w, h);
+*/
 /*
 	GSLocalMemory::readPixel rp = GSLocalMemory::m_psm[m_env.BITBLTBUF.SPSM].rp;
 	GSLocalMemory::writePixel wp = GSLocalMemory::m_psm[m_env.BITBLTBUF.DPSM].wp;
@@ -1051,19 +1057,80 @@ void GSState::Move()
 	const GSLocalMemory::psm_t& spsm = GSLocalMemory::m_psm[m_env.BITBLTBUF.SPSM];
 	const GSLocalMemory::psm_t& dpsm = GSLocalMemory::m_psm[m_env.BITBLTBUF.DPSM];
 
-	if(m_env.BITBLTBUF.SPSM == PSM_PSMCT32 && m_env.BITBLTBUF.DPSM == PSM_PSMCT32)
+	if(spsm.trbpp == dpsm.trbpp && spsm.trbpp >= 16)
+	{
+		int* soffset = spsm.rowOffset[0];
+		int* doffset = dpsm.rowOffset[0];
+
+		if(spsm.trbpp == 32)
+		{
+			for(int y = 0; y < h; y++, sy += yinc, dy += yinc, sx -= xinc * w, dx -= xinc * w)
+			{
+				uint32 sbase = spsm.pa(0, sy, m_env.BITBLTBUF.SBP, m_env.BITBLTBUF.SBW);
+				uint32 dbase = dpsm.pa(0, dy, m_env.BITBLTBUF.DBP, m_env.BITBLTBUF.DBW);
+				
+				for(int x = 0; x < w; x++, sx += xinc, dx += xinc)
+				{
+					m_mem.WritePixel32(dbase + doffset[dx], m_mem.ReadPixel32(sbase + soffset[sx]));
+				}
+			}
+		}
+		else if(spsm.trbpp == 24)
+		{
+			for(int y = 0; y < h; y++, sy += yinc, dy += yinc, sx -= xinc * w, dx -= xinc * w)
+			{
+				uint32 sbase = spsm.pa(0, sy, m_env.BITBLTBUF.SBP, m_env.BITBLTBUF.SBW);
+				uint32 dbase = dpsm.pa(0, dy, m_env.BITBLTBUF.DBP, m_env.BITBLTBUF.DBW);
+				
+				for(int x = 0; x < w; x++, sx += xinc, dx += xinc)
+				{
+					m_mem.WritePixel24(dbase + doffset[dx], m_mem.ReadPixel24(sbase + soffset[sx]));
+				}
+			}
+		}
+		else // if(spsm.trbpp == 16)
+		{
+			for(int y = 0; y < h; y++, sy += yinc, dy += yinc, sx -= xinc * w, dx -= xinc * w)
+			{
+				uint32 sbase = spsm.pa(0, sy, m_env.BITBLTBUF.SBP, m_env.BITBLTBUF.SBW);
+				uint32 dbase = dpsm.pa(0, dy, m_env.BITBLTBUF.DBP, m_env.BITBLTBUF.DBW);
+				
+				for(int x = 0; x < w; x++, sx += xinc, dx += xinc)
+				{
+					m_mem.WritePixel16(dbase + doffset[dx], m_mem.ReadPixel16(sbase + soffset[sx]));
+				}
+			}
+		}
+	}
+	else if(m_env.BITBLTBUF.SPSM == PSM_PSMT8 && m_env.BITBLTBUF.DPSM == PSM_PSMT8)
 	{
 		for(int y = 0; y < h; y++, sy += yinc, dy += yinc, sx -= xinc * w, dx -= xinc * w)
 		{
-			uint32 sbase = spsm.pa(0, sy, m_env.BITBLTBUF.SBP, m_env.BITBLTBUF.SBW);
+			uint32 sbase = GSLocalMemory::PixelAddress8(0, sy, m_env.BITBLTBUF.SBP, m_env.BITBLTBUF.SBW);
 			int* soffset = spsm.rowOffset[sy & 7];
 
-			uint32 dbase = dpsm.pa(0, dy, m_env.BITBLTBUF.DBP, m_env.BITBLTBUF.DBW);
+			uint32 dbase = GSLocalMemory::PixelAddress8(0, dy, m_env.BITBLTBUF.DBP, m_env.BITBLTBUF.DBW);
 			int* doffset = dpsm.rowOffset[dy & 7];
 			
 			for(int x = 0; x < w; x++, sx += xinc, dx += xinc)
 			{
-				m_mem.WritePixel32(dbase + doffset[dx], m_mem.ReadPixel32(sbase + soffset[sx]));
+				m_mem.WritePixel8(dbase + doffset[dx], m_mem.ReadPixel8(sbase + soffset[sx]));
+			}
+		}
+	}
+	else if(m_env.BITBLTBUF.SPSM == PSM_PSMT4 && m_env.BITBLTBUF.DPSM == PSM_PSMT4)
+	{
+		for(int y = 0; y < h; y++, sy += yinc, dy += yinc, sx -= xinc * w, dx -= xinc * w)
+		{
+			uint32 sbase = GSLocalMemory::PixelAddress4(0, sy, m_env.BITBLTBUF.SBP, m_env.BITBLTBUF.SBW);
+			int* soffset = spsm.rowOffset[sy & 7];
+
+			uint32 dbase = GSLocalMemory::PixelAddress4(0, dy, m_env.BITBLTBUF.DBP, m_env.BITBLTBUF.DBW);
+			int* doffset = dpsm.rowOffset[dy & 7];
+			
+			for(int x = 0; x < w; x++, sx += xinc, dx += xinc)
+			{
+				m_mem.WritePixel4(dbase + doffset[dx], m_mem.ReadPixel4(sbase + soffset[sx]));
 			}
 		}
 	}

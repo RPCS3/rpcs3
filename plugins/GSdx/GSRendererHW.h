@@ -93,7 +93,7 @@ protected:
 						maxv = maxv.maxv(v0);
 					}
 
-					mm = minv.xyxy(maxv) * GSVector4(16 << m_context->TEX0.TW, 16 << m_context->TEX0.TH, 16 << m_context->TEX0.TW, 16 << m_context->TEX0.TH).rcpnr();
+					mm = minv.xyxy(maxv) * GSVector4(16 << m_context->TEX0.TW, 16 << m_context->TEX0.TH).xyxy().rcpnr();
 				}
 				else
 				{
@@ -211,12 +211,8 @@ protected:
 		r = vr + GSVector4i(-1, -1, 1, 1); // one more pixel because of bilinear filtering
 
 		GSVector2i bs = GSLocalMemory::m_psm[m_context->TEX0.PSM].bs;
-		GSVector2i bsm(bs.x - 1, bs.y - 1);
 
-		r.left = max(r.left & ~bsm.x, 0);
-		r.top = max(r.top & ~bsm.y, 0);
-		r.right = min((r.right + bsm.x) & ~bsm.x, w);
-		r.bottom = min((r.bottom + bsm.y) & ~bsm.y, h);
+		r = r.ralign<GSVector4i::Outside>(bs).rintersect(GSVector4i(0, 0, w, h));
 	}
 
 	void VSync(int field)

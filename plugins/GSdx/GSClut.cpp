@@ -598,7 +598,6 @@ __forceinline void GSClut::ExpandCLUT64_T16(const GSVector4i& hi, const GSVector
 
 // TODO
 
-static const GSVector4i s_am(0x00008000);
 static const GSVector4i s_bm(0x00007c00);
 static const GSVector4i s_gm(0x000003e0);
 static const GSVector4i s_rm(0x0000001f);
@@ -610,7 +609,6 @@ void GSClut::Expand16(const uint16* RESTRICT src, uint32* RESTRICT dst, int w, c
 	const GSVector4i rm = s_rm;
 	const GSVector4i gm = s_gm;
 	const GSVector4i bm = s_bm;
-	// const GSVector4i am = s_am;
 
 	GSVector4i TA0(TEXA.TA0 << 24);
 	GSVector4i TA1(TEXA.TA1 << 24);
@@ -625,12 +623,6 @@ void GSClut::Expand16(const uint16* RESTRICT src, uint32* RESTRICT dst, int w, c
 		for(int i = 0, j = w >> 3; i < j; i++)
 		{
 			c = s[i];
-			/*
-			cl = c.upl16();
-			ch = c.uph16();
-			d[i * 2 + 0] = ((cl & rm) << 3) | ((cl & gm) << 6) | ((cl & bm) << 9) | TA1.blend(TA0, cl < am);
-			d[i * 2 + 1] = ((ch & rm) << 3) | ((ch & gm) << 6) | ((ch & bm) << 9) | TA1.blend(TA0, ch < am);
-			*/
 			cl = c.upl16(c);
 			ch = c.uph16(c);
 			d[i * 2 + 0] = ((cl & rm) << 3) | ((cl & gm) << 6) | ((cl & bm) << 9) | TA0.blend8(TA1, cl.sra16(15));
@@ -642,12 +634,6 @@ void GSClut::Expand16(const uint16* RESTRICT src, uint32* RESTRICT dst, int w, c
 		for(int i = 0, j = w >> 3; i < j; i++)
 		{
 			c = s[i];
-			/*
-			cl = c.upl16();
-			ch = c.uph16();
-			d[i * 2 + 0] = ((cl & rm) << 3) | ((cl & gm) << 6) | ((cl & bm) << 9) | TA1.blend(TA0, cl < am).andnot(cl == GSVector4i::zero());
-			d[i * 2 + 1] = ((ch & rm) << 3) | ((ch & gm) << 6) | ((ch & bm) << 9) | TA1.blend(TA0, ch < am).andnot(ch == GSVector4i::zero());
-			*/
 			cl = c.upl16(c);
 			ch = c.uph16(c);
 			d[i * 2 + 0] = ((cl & rm) << 3) | ((cl & gm) << 6) | ((cl & bm) << 9) | TA0.blend8(TA1, cl.sra16(15)).andnot(cl == GSVector4i::zero());

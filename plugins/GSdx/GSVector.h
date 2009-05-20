@@ -155,6 +155,11 @@ public:
 		return bottom - top;
 	}
 
+	GSVector4i rsize() const
+	{
+		return *this - xyxy(); // same as GSVector4i(0, 0, width(), height());
+	}
+
 	bool rempty() const
 	{
 		return (*this < zwzw()).mask() != 0x00ff;
@@ -176,6 +181,28 @@ public:
 	GSVector4i rintersect(const GSVector4i& a) const 
 	{
 		return sat_i32(a);
+	}
+
+	enum RoundMode {Outside, Inside, NegInf, PosInf};
+
+	template<int mode> GSVector4i ralign(const GSVector2i& a) const 
+	{
+		// a must be 1 << n
+
+		GSVector4i mask = GSVector4i(a) - GSVector4i(1, 1);
+
+		GSVector4i v;
+
+		switch(mode)
+		{
+		case Inside: v = *this + mask; break; 
+		case Outside: v = *this + mask.zwxy(); break;
+		case NegInf: v = *this; break; 
+		case PosInf: v = *this + mask.zwzw(); break;
+		default: ASSERT(0); break;
+		}
+
+		return v.andnot(mask.xyxy());
 	}
 
 	GSVector4i fit(int arx, int ary) const;
@@ -2194,7 +2221,9 @@ public:
 
 	GSVector4(int x, int y, int z, int w)
 	{
-		m = _mm_cvtepi32_ps(_mm_set_epi32(w, z, y, x));
+		GSVector4i v(x, y, z, w);
+
+		m = _mm_cvtepi32_ps(v.m);
 	}
 
 	GSVector4(int x, int y)
@@ -2210,6 +2239,11 @@ public:
 	explicit GSVector4(const GSVector2& v)
 	{
 		m = _mm_castsi128_ps(_mm_loadl_epi64((__m128i*)&v));
+	}
+
+	explicit GSVector4(const GSVector2i& v)
+	{
+		m = _mm_cvtepi32_ps(_mm_loadl_epi64((__m128i*)&v));
 	}
 
 	explicit GSVector4(float f)

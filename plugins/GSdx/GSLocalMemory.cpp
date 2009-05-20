@@ -593,13 +593,8 @@ bool GSLocalMemory::FillRect(const GSVector4i& r, uint32 c, uint32 psm, uint32 b
 	case 4: c = (c & 0xf) * 0x11111111; break;
 	}
 
-	GSVector4i clip;
+	GSVector4i clip = r.ralign<GSVector4i::Inside>(tbl.bs);
 	
-	clip.left = (r.left + (w - 1)) & ~(w - 1);
-	clip.top = (r.top + (h - 1)) & ~(h - 1);
-	clip.right = r.right & ~(w - 1);
-	clip.bottom = r.bottom & ~(h - 1);
-
 	for(int y = r.top; y < clip.top; y++)
 	{
 		for(int x = r.left; x < r.right; x++)

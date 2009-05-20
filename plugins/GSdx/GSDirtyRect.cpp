@@ -48,16 +48,13 @@ GSVector4i GSDirtyRect::GetDirtyRect(const GIFRegTEX0& TEX0)
 		GSVector2i dst = GSLocalMemory::m_psm[TEX0.PSM].bs;
 
 		r.left = MulDiv(left, dst.x, src.x);
-		r.right = MulDiv(right, dst.x, src.x);
 		r.top = MulDiv(top, dst.y, src.y);
+		r.right = MulDiv(right, dst.x, src.x);
 		r.bottom = MulDiv(bottom, dst.y, src.y);
 	}
 	else
 	{
-		r.left = left & ~(src.x - 1);
-		r.right = (right + (src.x - 1) /* + 1 */) & ~(src.x - 1);
-		r.top = top & ~(src.y - 1);
-		r.bottom = (bottom + (src.y - 1) /* + 1 */) & ~(src.y - 1);
+		r = GSVector4i(left, top, right, bottom).ralign<GSVector4i::Outside>(src);
 	}
 
 	return r;

@@ -221,7 +221,7 @@ public:
 
 	GSVector4i GetDisplayRect(int i = -1);
 	GSVector4i GetFrameRect(int i = -1);
-	GSVector4i GetDeviceRect(int i = -1);
+	GSVector2i GetDeviceSize(int i = -1);
 
 	bool IsEnabled(int i);
 

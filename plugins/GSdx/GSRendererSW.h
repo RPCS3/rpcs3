@@ -449,7 +449,7 @@ protected:
 
 				MinMaxUV(w, h, r, p.sel.fst);
 
-				const GSTextureCacheSW::GSTexture* t = m_tc->Lookup(context->TEX0, env.TEXA, &r);
+				const GSTextureCacheSW::GSTexture* t = m_tc->Lookup(context->TEX0, env.TEXA, r);
 
 				if(!t) {ASSERT(0); return;}
 

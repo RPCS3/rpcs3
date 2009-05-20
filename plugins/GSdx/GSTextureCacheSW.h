@@ -44,7 +44,7 @@ public:
 		explicit GSTexture(GSState* state);
 		virtual ~GSTexture();
 
-		bool Update(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, const GSVector4i* r = NULL);
+		bool Update(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, const GSVector4i& r);
 	};
 
 protected:
@@ -56,7 +56,7 @@ public:
 	GSTextureCacheSW(GSState* state);
 	virtual ~GSTextureCacheSW();
 
-	const GSTexture* Lookup(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, const GSVector4i* r = NULL);
+	const GSTexture* Lookup(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, const GSVector4i& r);
 
 	void RemoveAll();
 	void IncAge();

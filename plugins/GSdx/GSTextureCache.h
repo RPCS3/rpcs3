@@ -376,7 +376,7 @@ public:
 			int ww = (int)(fr.left + rt->m_TEX0.TBW * 64);
 			int hh = (int)(fr.top + m_renderer->GetDisplayRect().height());
 
-			if(hh <= m_renderer->GetDeviceRect().height() / 2)
+			if(hh <= m_renderer->GetDeviceSize().y / 2)
 			{
 				hh *= 2;
 			}

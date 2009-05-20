@@ -32,7 +32,7 @@ GSTextureCacheSW::~GSTextureCacheSW()
 	RemoveAll();
 }
 
-const GSTextureCacheSW::GSTexture* GSTextureCacheSW::Lookup(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, const GSVector4i* r)
+const GSTextureCacheSW::GSTexture* GSTextureCacheSW::Lookup(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, const GSVector4i& r)
 {
 	GSLocalMemory& mem = m_state->m_mem;
 
@@ -52,7 +52,7 @@ const GSTextureCacheSW::GSTexture* GSTextureCacheSW::Lookup(const GIFRegTEX0& TE
 			continue;
 		}
 
-		if((psm.trbpp == 16 || psm.trbpp == 24) && (t2->m_TEX0.TCC != TEX0.TCC || TEX0.TCC && !((GSVector4i)TEXA).eq(t2->m_TEXA)))
+		if((psm.trbpp == 16 || psm.trbpp == 24) && (t2->m_TEX0.TCC != TEX0.TCC || TEX0.TCC && TEXA != t2->m_TEXA))
 		{
 			continue;
 		}
@@ -161,12 +161,7 @@ void GSTextureCacheSW::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, cons
 
 	GSVector2i s = (bp & 31) == 0 ? psm.pgs : psm.bs;
 
-	GSVector4i r;
-
-	r.left = rect.left & ~(s.x - 1);
-	r.top = rect.top & ~(s.y - 1);
-	r.right = (rect.right + (s.x - 1)) & ~(s.x - 1);
-	r.bottom = (rect.bottom + (s.y - 1)) & ~(s.y - 1);
+	GSVector4i r = rect.ralign<GSVector4i::Outside>(s);
 
 	for(int y = r.top; y < r.bottom; y += s.y)
 	{
@@ -215,7 +210,7 @@ GSTextureCacheSW::GSTexture::~GSTexture()
 	}
 }
 
-bool GSTextureCacheSW::GSTexture::Update(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, const GSVector4i* rect)
+bool GSTextureCacheSW::GSTexture::Update(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, const GSVector4i& rect)
 {
 	if(m_complete)
 	{
@@ -249,15 +244,7 @@ bool GSTextureCacheSW::GSTexture::Update(const GIFRegTEX0& TEX0, const GIFRegTEX
 		m_tw = max(psm.pal > 0 ? 5 : 3, TEX0.TW); // makes one row 32 bytes at least, matches the smallest block size that is allocated above for m_buff
 	}
 
-	GSVector4i r(0, 0, tw, th);
-
-	if(rect)
-	{
-		r.left = rect->left & ~(s.x - 1);
-		r.top = rect->top & ~(s.y - 1);
-		r.right = (rect->right + (s.x - 1)) & ~(s.x - 1);
-		r.bottom = (rect->bottom + (s.y - 1)) & ~(s.y - 1);
-	}
+	GSVector4i r = rect.ralign<GSVector4i::Outside>(s);
 
 	if(r.left == 0 && r.top == 0 && r.right == tw && r.bottom == th)
 	{

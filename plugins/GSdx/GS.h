@@ -221,6 +221,8 @@ union name			\
 	uint64 u64;		\
 	uint32 u32[2];	\
 	void operator = (const GSVector4i& v) {GSVector4i::storel(this, v);} \
+	bool operator == (const union name& r) const {return ((GSVector4i)r).eq(*this);} \
+	bool operator != (const union name& r) const {return !((GSVector4i)r).eq(*this);} \
 	operator GSVector4i() const {return GSVector4i::loadl(this);} \
 	struct {		\
 
@@ -864,7 +866,8 @@ REG64_(GIFReg, TRXPOS)
 	uint32 DSAX:11;
 	uint32 _PAD3:5;
 	uint32 DSAY:11;
-	uint32 DIR:2;
+	uint32 DIRY:1;
+	uint32 DIRX:1;
 	uint32 _PAD4:3;
 REG_END
 

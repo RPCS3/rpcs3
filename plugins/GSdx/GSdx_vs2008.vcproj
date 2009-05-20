@@ -1399,6 +1399,14 @@
 			<File
 				RelativePath=".\GSTextureCacheSW.cpp"
 				>
+				<FileConfiguration
+					Name="Release SSE4|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AssemblerOutput="4"
+					/>
+				</FileConfiguration>
 			</File>
 			<File
 				RelativePath=".\GSTextureFX10.cpp"

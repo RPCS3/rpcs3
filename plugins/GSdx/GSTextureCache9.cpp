@@ -71,11 +71,7 @@ void GSTextureCache9::GSRenderTarget9::Update()
 		
 		// m_renderer->m_perfmon.Put(GSPerfMon::Unswizzle, r.Width() * r.Height() * 4);
 
-		GSVector4 dr(
-			m_texture.m_scale.x * r.left, 
-			m_texture.m_scale.y * r.top, 
-			m_texture.m_scale.x * r.right, 
-			m_texture.m_scale.y * r.bottom);
+		GSVector4 dr = GSVector4(r) * GSVector4(m_texture.m_scale).xyxy();
 
 		m_renderer->m_dev.StretchRect(texture, m_texture, dr);
 	}
@@ -106,12 +102,7 @@ void GSTextureCache9::GSRenderTarget9::Read(const GSVector4i& r)
 	int w = r.width();
 	int h = r.height();
 
-	GSVector4 src;
-
-	src.x = m_texture.m_scale.x * r.left / m_texture.GetWidth();
-	src.y = m_texture.m_scale.y * r.top / m_texture.GetHeight();
-	src.z = m_texture.m_scale.x * r.right / m_texture.GetWidth();
-	src.w = m_texture.m_scale.y * r.bottom / m_texture.GetHeight();
+	GSVector4 src = GSVector4(r) * GSVector4(m_texture.m_scale).xyxy() / GSVector4(m_texture.GetSize()).xyxy();
 
 	Texture offscreen;
 
@@ -270,14 +261,20 @@ bool GSTextureCache9::GSTexture9::Create(GSRenderTarget* rt)
 
 		m_renderer->m_dev.CreateRenderTarget(m_texture, rt->m_texture.GetWidth(), rt->m_texture.GetHeight());
 
+		GSVector4 size = GSVector4(rt->m_texture.GetSize()).xyxy();
+		GSVector4 scale = GSVector4(rt->m_texture.m_scale).xyxy();
+
 		int bw = 64;
 		int bh = m_TEX0.PSM == PSM_PSMCT32 || m_TEX0.PSM == PSM_PSMCT24 ? 32 : 64;
+
+		GSVector4i br(0, 0, bw, bh);
 
 		int sw = (int)rt->m_TEX0.TBW << 6;
 
 		int dw = (int)m_TEX0.TBW << 6;
 		int dh = 1 << m_TEX0.TH;
 
+		if(sw != 0)
 		for(int dy = 0; dy < dh; dy += bh)
 		{
 			for(int dx = 0; dx < dw; dx += bw)
@@ -287,17 +284,8 @@ bool GSTextureCache9::GSTexture9::Create(GSRenderTarget* rt)
 				int sx = o % sw;
 				int sy = o / sw;
 
-				GSVector4 src, dst;
-
-				src.x = rt->m_texture.m_scale.x * sx / rt->m_texture.GetWidth();
-				src.y = rt->m_texture.m_scale.y * sy / rt->m_texture.GetHeight();
-				src.z = rt->m_texture.m_scale.x * (sx + bw) / rt->m_texture.GetWidth();
-				src.w = rt->m_texture.m_scale.y * (sy + bh) / rt->m_texture.GetHeight();
-
-				dst.x = rt->m_texture.m_scale.x * dx;
-				dst.y = rt->m_texture.m_scale.y * dy;
-				dst.z = rt->m_texture.m_scale.x * (dx + bw);
-				dst.w = rt->m_texture.m_scale.y * (dy + bh);
+				GSVector4 src = GSVector4(GSVector4i(sx, sy).xyxy() + br) * scale / size;
+				GSVector4 dst = GSVector4(GSVector4i(dx, dy).xyxy() + br) * scale;
 
 				m_renderer->m_dev.StretchRect(rt->m_texture, src, m_texture, dst);
 
