@@ -99,7 +99,7 @@ microVUx(void) mVUsaveReg(int reg, uptr offset, int xyzw, bool modXYZW) {
 	if (modXYZW && (xyzw == 8 || xyzw == 4 || xyzw == 2 || xyzw == 1)) {
 		mVUunpack_xyzw<vuIndex>(reg, reg, 0);
 	}
-	mVUmergeRegs<vuIndex>(xmmT2, reg, xyzw);
+	mVUmergeRegs(xmmT2, reg, xyzw);
 
 	SSE_MOVAPS_XMM_to_M128(offset, xmmT2);
 	return;*/
@@ -158,7 +158,7 @@ microVUx(void) mVUsaveReg2(int reg, int gprReg, u32 offset, int xyzw) {
 	if (xyzw == 8 || xyzw == 4 || xyzw == 2 || xyzw == 1) {
 		mVUunpack_xyzw<vuIndex>(reg, reg, 0);
 	}
-	mVUmergeRegs<vuIndex>(xmmT2, reg, xyzw);
+	mVUmergeRegs(xmmT2, reg, xyzw);
 	SSE_MOVAPSRtoRm(gprReg, xmmT2, offset);
 	return;*/
 

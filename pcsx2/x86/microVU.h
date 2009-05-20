@@ -115,7 +115,6 @@ struct microVU {
 	u8*		startFunct;	 // Ptr Function to the Start code for recompiled programs
 	u8*		exitFunct;	 // Ptr Function to the Exit code for recompiled programs
 	u32		code;		 // Contains the current Instruction
-	u32		iReg;		 // iReg (only used in recompilation, not execution)
 	u32		divFlag;	 // 1 instance of I/D flags
 	u32		VIbackup[2]; // Holds a backup of a VI reg if modified before a branch
 	u32		branch;		 // Holds branch compare result (IBxx) OR Holds address to Jump to (JALR/JR)

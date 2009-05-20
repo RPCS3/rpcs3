@@ -29,7 +29,7 @@
 
 #define getReg(reg, _reg_) {  \
 	mVUloadReg<vuIndex>(reg, (uptr)&mVU->regs->VF[_reg_].UL[0], _X_Y_Z_W);  \
-	if (CHECK_VU_EXTRA_OVERFLOW) mVUclamp2<vuIndex>(reg, xmmT1, _X_Y_Z_W);  \
+	if (CHECK_VU_EXTRA_OVERFLOW) mVUclamp2<vuIndex>(reg, xmmT2, _X_Y_Z_W);  \
 }
 
 #define getZero(reg) {  \
@@ -83,12 +83,12 @@ microVUt(void) mVUallocFMAC2b(int& Ft) {
 
 #define getReg3SS(reg, _reg_) {  \
 	mVUloadReg<vuIndex>(reg, (uptr)&mVU->regs->VF[_reg_].UL[0], (1 << (3 - _bc_)));  \
-	if (CHECK_VU_EXTRA_OVERFLOW) mVUclamp2<vuIndex>(reg, xmmT1, (1 << (3 - _bc_)));  \
+	if (CHECK_VU_EXTRA_OVERFLOW) mVUclamp2<vuIndex>(reg, xmmT2, (1 << (3 - _bc_)));  \
 }
 
 #define getReg3(reg, _reg_) {  \
 	mVUloadReg<vuIndex>(reg, (uptr)&mVU->regs->VF[_reg_].UL[0], (1 << (3 - _bc_)));  \
-	if (CHECK_VU_EXTRA_OVERFLOW) mVUclamp2<vuIndex>(reg, xmmT1, (1 << (3 - _bc_)));  \
+	if (CHECK_VU_EXTRA_OVERFLOW) mVUclamp2<vuIndex>(reg, xmmT2, (1 << (3 - _bc_)));  \
 	mVUunpack_xyzw<vuIndex>(reg, reg, 0);  \
 }
 
@@ -135,7 +135,7 @@ microVUt(void) mVUallocFMAC3b(int& Fd) {
 
 #define getReg4(reg, _reg_) {  \
 	mVUloadReg<vuIndex>(reg, (uptr)&mVU->regs->VF[_reg_].UL[0], _xyzw_ACC);  \
-	if (CHECK_VU_EXTRA_OVERFLOW) mVUclamp2<vuIndex>(reg, xmmT1, _xyzw_ACC);  \
+	if (CHECK_VU_EXTRA_OVERFLOW) mVUclamp2<vuIndex>(reg, xmmT2, _xyzw_ACC);  \
 }
 
 #define getZero4(reg) {  \
@@ -204,7 +204,7 @@ microVUt(void) mVUallocFMAC5b(int& ACC, int& Fs) {
 #define getIreg(reg, modXYZW) {																	\
 	MOV32MtoR(gprT1, (uptr)&mVU->regs->VI[REG_I].UL);											\
 	SSE2_MOVD_R_to_XMM(reg, gprT1);																\
-	if (CHECK_VU_EXTRA_OVERFLOW) mVUclamp2<vuIndex>(reg, xmmT1, 8);								\
+	if (CHECK_VU_EXTRA_OVERFLOW) mVUclamp2<vuIndex>(reg, xmmT2, 8);								\
 	if (!((_XYZW_SS && modXYZW) || (_X_Y_Z_W == 8))) { mVUunpack_xyzw<vuIndex>(reg, reg, 0); }  \
 }
 
@@ -496,7 +496,7 @@ microVUt(void) mVUallocFMAC16b(int& ACCw, int& ACCr) {
 
 #define getReg9(reg, _reg_) {  \
 	mVUloadReg<vuIndex>(reg, (uptr)&mVU->regs->VF[_reg_].UL[0], 1);  \
-	if (CHECK_VU_EXTRA_OVERFLOW) mVUclamp2<vuIndex>(reg, xmmT1, 1);  \
+	if (CHECK_VU_EXTRA_OVERFLOW) mVUclamp2<vuIndex>(reg, xmmT2, 1);  \
 	mVUunpack_xyzw<vuIndex>(reg, reg, 0);  \
 }
 
@@ -754,7 +754,7 @@ microVUt(void) mVUallocVIb(int GPRreg, int _reg_) {
 	}  \
 	else {  \
 		mVUloadReg<vuIndex>(reg, (uptr)&mVU->regs->VF[_reg_].UL[0], (1 << (3 - _fxf_)));  \
-		if (CHECK_VU_EXTRA_OVERFLOW) mVUclamp2<vuIndex>(reg, xmmT1, (1 << (3 - _fxf_)));  \
+		if (CHECK_VU_EXTRA_OVERFLOW) mVUclamp2<vuIndex>(reg, xmmT2, (1 << (3 - _fxf_)));  \
 	}  \
 }
 

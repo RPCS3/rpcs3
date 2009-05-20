@@ -135,16 +135,14 @@ microVUt(void) mVUsetCycles() {
 	tCycles(mVUregs.xgkick,					mVUregsTemp.xgkick);
 }
 
-microVUt(void) mVUendProgram(int fStatus, int fMac, int fClip) {
+microVUt(void) mVUendProgram(int qInst, int pInst, int fStatus, int fMac, int fClip) {
 	microVU* mVU = mVUx;
-	incCycles(100); // Ensures Valid P/Q instances (And sets all cycle data to 0)
-	mVUcycles -= 100;
 
 	// Save P/Q Regs
-	if (mVU->q) { SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, 0xe5); }
+	if (qInst) { SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, 0xe5); }
 	SSE_MOVSS_XMM_to_M32((uptr)&mVU->regs->VI[REG_Q].UL, xmmPQ);
 	if (vuIndex) {
-		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVU->p ? 3 : 2);
+		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, pInst ? 3 : 2);
 		SSE_MOVSS_XMM_to_M32((uptr)&mVU->regs->VI[REG_P].UL, xmmPQ);
 	}
 
@@ -180,7 +178,7 @@ microVUt(void) mVUtestCycles() {
 		PUSH32R(gprR);
 		CALLFunc((uptr)mVUwarning);
 		POP32R(gprR);
-		mVUendProgram<vuIndex>(sI, 0, cI);
+		mVUendProgram<vuIndex>(0, 0, sI, 0, cI);
 	x86SetJ8(jmp8);
 	SUB32ItoM((uptr)&mVU->cycles, mVUcycles);
 }
@@ -345,9 +343,13 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 	mVUprint("mVUcompile ebit");
 	if (x == (vuIndex?(0x3fff/8):(0xfff/8))) { Console::Error("microVU%d: Possible infinite compiling loop!", params vuIndex); }
 
+
+	incCycles(100); // Ensures Valid P/Q instances (And sets all cycle data to 0)
+	mVUcycles -= 100;
+
 	// Do E-bit end stuff here
 	mVUsetupRange<vuIndex>(xPC - 8);
-	mVUendProgram<vuIndex>(findFlagInst(xStatus, 0x7fffffff), findFlagInst(xMac, 0x7fffffff), findFlagInst(xClip, 0x7fffffff));
+	mVUendProgram<vuIndex>(mVU->q, mVU->p, findFlagInst(xStatus, 0x7fffffff), findFlagInst(xMac, 0x7fffffff), findFlagInst(xClip, 0x7fffffff));
 
 	return thisPtr; //ToDo: Save pipeline state?
 }
