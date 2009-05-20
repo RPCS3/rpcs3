@@ -215,7 +215,7 @@ microVUt(void) mVUpass4(int startPC) {
 microVUt(void) mVUsetFlagInfo() {
 	microVU* mVU = mVUx;
 	branchType1 { incPC(-1); mVUpass4<vuIndex>(branchAddr); incPC(1); }
-	branchType2 { mVUflagInfo |= 0xffffffff; }
+	branchType2 { mVUflagInfo |= 0xfff; }
 	branchType3 {
 		incPC(-1); 
 		mVUpass4<vuIndex>(branchAddr);

@@ -434,7 +434,7 @@ microVUf(void) mVU_ESUM() {
 
 microVUf(void) mVU_FCAND() {
 	microVU* mVU = mVUx;
-	pass1 { mVUanalyzeCflag<vuIndex>(); }
+	pass1 { mVUanalyzeCflag<vuIndex>(1); }
 	pass2 { 
 		mVUallocCFLAGa<vuIndex>(gprT1, fvcInstance);
 		AND32ItoR(gprT1, _Imm24_);
@@ -448,7 +448,7 @@ microVUf(void) mVU_FCAND() {
 
 microVUf(void) mVU_FCEQ() {
 	microVU* mVU = mVUx;
-	pass1 { mVUanalyzeCflag<vuIndex>(); }
+	pass1 { mVUanalyzeCflag<vuIndex>(1); }
 	pass2 { 
 		mVUallocCFLAGa<vuIndex>(gprT1, fvcInstance);
 		XOR32ItoR(gprT1, _Imm24_);
@@ -462,7 +462,7 @@ microVUf(void) mVU_FCEQ() {
 
 microVUf(void) mVU_FCGET() {
 	microVU* mVU = mVUx;
-	pass1 { mVUanalyzeCflag<vuIndex>(); }
+	pass1 { mVUanalyzeCflag<vuIndex>(_It_); }
 	pass2 { 
 		mVUallocCFLAGa<vuIndex>(gprT1, fvcInstance);
 		AND32ItoR(gprT1, 0xfff);
@@ -474,7 +474,7 @@ microVUf(void) mVU_FCGET() {
 
 microVUf(void) mVU_FCOR() {
 	microVU* mVU = mVUx;
-	pass1 { mVUanalyzeCflag<vuIndex>(); }
+	pass1 { mVUanalyzeCflag<vuIndex>(1); }
 	pass2 { 
 		mVUallocCFLAGa<vuIndex>(gprT1, fvcInstance);
 		OR32ItoR(gprT1, _Imm24_);

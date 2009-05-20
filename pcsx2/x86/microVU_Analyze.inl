@@ -122,6 +122,7 @@ microVUt(void) mVUanalyzeFMAC4(int Fs, int Ft) {
 
 #define analyzeVIreg1(reg)			{ if (reg) { mVUstall = aMax(mVUstall, mVUregs.VI[reg]); } }
 #define analyzeVIreg2(reg, aCycles)	{ if (reg) { mVUregsTemp.VIreg = reg; mVUregsTemp.VI = aCycles; mVUinfo |= _writesVI; mVU->VIbackup[0] = reg; } }
+#define analyzeVIreg3(reg, aCycles)	{ if (reg) { mVUregsTemp.VIreg = reg; mVUregsTemp.VI = aCycles; } }
 
 microVUt(void) mVUanalyzeIALU1(int Id, int Is, int It) {
 	microVU* mVU = mVUx;
@@ -296,6 +297,7 @@ microVUt(void) mVUanalyzeSflag(int It) {
 		// Do to stalls, it can only be set one instruction prior to the status flag read instruction
 		// if we were guaranteed no-stalls were to happen, it could be set 4 instruction prior.
 	}
+	analyzeVIreg3(It, 1);
 }
 
 microVUt(void) mVUanalyzeFSSET() {
@@ -326,16 +328,18 @@ microVUt(void) mVUanalyzeMflag(int Is, int It) {
 		iPC = curPC;
 	}
 	analyzeVIreg1(Is);
+	analyzeVIreg3(It, 1);
 }
 
 //------------------------------------------------------------------
 // Cflag - Clip Flag Opcodes
 //------------------------------------------------------------------
 
-microVUt(void) mVUanalyzeCflag() {
+microVUt(void) mVUanalyzeCflag(int It) {
 	microVU* mVU = mVUx;
 	mVUinfo |= _swapOps;
 	if (mVUcount < 4) { mVUpBlock->pState.needExactMatch |= 0xf << (/*mVUcount +*/ 8); }
+	analyzeVIreg3(It, 1);
 }
 
 //------------------------------------------------------------------

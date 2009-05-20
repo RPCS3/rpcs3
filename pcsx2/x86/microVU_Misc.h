@@ -207,7 +207,7 @@ declareAllVariables
 #define _backupVI	 (1<<22) // Backup VI reg to memory if modified before branch (branch uses old VI value unless opcode is ILW or ILWR)
 #define _memReadIs	 (1<<23) // Read Is (VI reg) from memory (used by branches)
 #define _memReadIt	 (1<<24) // Read If (VI reg) from memory (used by branches)
-#define _writesVI	 (1<<25) // Current Instruction writes to VI
+#define _writesVI	 (1<<25) // Current Instruction writes to VI (used by branches; note that flag-modifying opcodes shouldn't set this)
 #define _swapOps	 (1<<26) // Runs Lower Instruction Before Upper Instruction
 #define _isFSSET	 (1<<27) // Cur Instruction is FSSET
 #define _doDivFlag	 (1<<28) // Transfer Div flag to Status Flag
