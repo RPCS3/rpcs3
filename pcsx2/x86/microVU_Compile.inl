@@ -34,6 +34,13 @@
 	else		{ ajmp = JMPcc((uptr)0); }									\
 	break
 
+#define branchWarning() {																						\
+	if (mVUbranch) {																							\
+		Console::Error("microVU%d Warning: Branch in E-bit/Branch delay slot! [%04x]", params vuIndex, xPC);	\
+		mVUinfo |= _isNOP;																						\
+	}																											\
+}
+
 #define startLoop()			{ mVUdebug1(); mVUstall = 0; memset(&mVUregsTemp, 0, sizeof(mVUregsTemp)); }
 #define calcCycles(reg, x)	{ reg = ((reg > x) ? (reg - x) : 0); }
 #define tCycles(dest, src)	{ dest = aMax(dest, src); }
@@ -50,7 +57,7 @@ microVUt(void) mVUcheckIsSame() {
 	microVU* mVU = mVUx;
 
 	if (mVU->prog.isSame == -1) {
-		mVU->prog.isSame = !!memcmp_mmx(mVU->prog.prog[mVU->prog.cur].data, mVU->regs->Micro, mVU->microSize);
+		mVU->prog.isSame = !memcmp_mmx(mVU->prog.prog[mVU->prog.cur].data, mVU->regs->Micro, mVU->microSize);
 	}
 	if (mVU->prog.isSame == 0) {
 		mVUcacheProg<vuIndex>(mVU->prog.cur);
@@ -235,7 +242,7 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 		if (mVU->p)			  { mVUinfo |= _readP; }
 		if (mVU->q)			  { mVUinfo |= _readQ; }
 		else				  { mVUinfo |= _writeQ; }
-		if		(branch >= 2) { mVUinfo |= _isEOB | ((branch == 3) ? _isBdelay : 0); mVUcount++; if (mVUbranch) { Console::Error("microVU Warning: Branch in E-bit/Branch delay slot!"); mVUinfo |= _isNOP; } break; }
+		if		(branch >= 2) { mVUinfo |= _isEOB | ((branch == 3) ? _isBdelay : 0); mVUcount++; branchWarning(); break; }
 		else if (branch == 1) { branch = 2; }
 		if		(mVUbranch)   { mVUsetFlagInfo<vuIndex>(); branch = 3; mVUbranch = 0; mVUinfo |= _isBranch; }
 		incPC(1);
@@ -308,7 +315,7 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 			}
 			// Conditional Branches
 			mVUprint("mVUcompile conditional branch");
-			if (bBlock) { // Branch non-taken has already been compiled
+			if (bBlock) {  // Branch non-taken has already been compiled
 				incPC(-3); // Go back to branch opcode (to get branch imm addr)
 
 				if (mVUblocks[branchAddr/8] == NULL)

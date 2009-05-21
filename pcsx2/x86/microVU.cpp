@@ -222,7 +222,7 @@ microVUt(int) mVUcmpProg(int progIndex, bool progUsed, bool needOverflowCheck, b
 			mVU->prog.cleared = 0;
 			mVU->prog.isSame = cmpWholeProg ? 1 : -1;
 			mVU->prog.prog[progIndex].last_used = 3;
-			if (!needOverflowCheck || mVU->prog.prog[progIndex].used < 0x7fffffff) {
+			if (needOverflowCheck && (mVU->prog.prog[progIndex].used < 0x7fffffff)) {
 				mVU->prog.prog[progIndex].used++; // increment 'used' (avoiding overflows if necessary)
 			}
 			return 1;
