@@ -62,7 +62,7 @@ extern "C"
 
 typedef struct 
 {
-	int Log;
+	s32 Log;
 } Config;
 
 extern Config conf;

@@ -106,9 +106,9 @@ extern _cdIso cdIso[8];
 
 #define MSF2SECT(m,s,f)	(((m)*60+(s)-2)*75+(f))
 
-extern const unsigned char version;
-extern const unsigned char revision;
-extern const unsigned char build;
+extern const u8 version;
+extern const u8 revision;
+extern const u8 build;
 
 extern char IsoFile[256];
 extern char IsoCWD[256];

@@ -24,9 +24,9 @@ using namespace std;
 
 #include "FW.h"
 
-const unsigned char version  = PS2E_FW_VERSION;
-const unsigned char revision = 0;
-const unsigned char build    = 5;    // increase that with each version
+const u8 version  = PS2E_FW_VERSION;
+const u8 revision = 0;
+const u8 build    = 5;    // increase that with each version
 
 static char *libraryName = "FWnull Driver";
 string s_strIniPath="inis/FWnull.ini";

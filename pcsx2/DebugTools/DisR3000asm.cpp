@@ -24,7 +24,7 @@
 
 namespace R3000A {
 
-unsigned long IOP_opcode_addr;
+u32 IOP_opcode_addr;
 
 const char *GPR_IOP_REG[32] = {
     "zero", "at", "v0", "v1", "a0", "a1", "a2", "a3",
@@ -223,7 +223,7 @@ char *disR3000Fasm(u32 code, u32 pc) {
 char *IOP_jump_decode(void)
 {
     static char buf[256];
-    unsigned long addr;
+    u32 addr;
     addr = (IOP_opcode_addr & 0xf0000000)|((psxRegs.code&0x3ffffff)<<2);
     sprintf(buf, "0x%08lX", addr);
     return buf;
@@ -231,8 +231,8 @@ char *IOP_jump_decode(void)
 char *IOP_offset_decode(void)
 {
     static char buf[256];
-    unsigned long addr;
-    addr = ((((short)( psxRegs.code & 0xFFFF) * 4) + IOP_opcode_addr + 4));
+    u32 addr;
+    addr = ((((s16)( psxRegs.code & 0xFFFF) * 4) + IOP_opcode_addr + 4));
     sprintf(buf, "0x%08lX", addr);
     return buf;
 }

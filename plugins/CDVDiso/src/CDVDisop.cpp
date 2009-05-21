@@ -53,11 +53,11 @@ char *LibName = "Linuz Iso CDVD (Debug) ";
 char *LibName = "Linuz Iso CDVD ";
 #endif
 
-const unsigned char version = PS2E_CDVD_VERSION;
-const unsigned char revision = 0;
-const unsigned char build = 9;
+const u8 version = PS2E_CDVD_VERSION;
+const u8 revision = 0;
+const u8 build = 9;
 
-unsigned char cdbuffer[CD_FRAMESIZE_RAW * 10] = {0};
+u8 cdbuffer[CD_FRAMESIZE_RAW * 10] = {0};
 
 s32 msf_to_lba(u8 m, u8 s, u8 f)
 {
@@ -279,7 +279,7 @@ EXPORT_C_(s32) CDVDgetTD(u8 Track, cdvdTD *Buffer)
 	return 0;
 }
 
-static int layer1start = -1;
+static s32 layer1start = -1;
 EXPORT_C_(s32) CDVDgetTOC(void* toc)
 {
 	u8 type = CDVDgetDiskType();

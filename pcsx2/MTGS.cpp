@@ -769,15 +769,16 @@ static u32 GSRingBufCopySz = 0;
 int mtgsThreadObject::PrepDataPacket( GIF_PATH pathidx, const u8* srcdata, u32 size )
 {
 #ifdef PCSX2_GSRING_TX_STATS
-	ringtx_s+=size;
-	ringtx_s_ulg+=size&0x7F;
-	ringtx_s_min=min(ringtx_s_min,size);
-	ringtx_s_max=max(ringtx_s_max,size);
+	ringtx_s += size;
+	ringtx_s_ulg += size&0x7F;
+	ringtx_s_min = min(ringtx_s_min,size);
+	ringtx_s_max = max(ringtx_s_max,size);
 	ringtx_c++;
-	unsigned long tx_sz;
+	u32 tx_sz;
+	
 	if (_BitScanReverse(&tx_sz,size))
 	{
-		unsigned long tx_algn;
+		u32 tx_algn;
 		_BitScanForward(&tx_algn,size);
 		ringtx_inf[tx_sz][tx_algn]++;
 		ringtx_inf_s[tx_sz]+=size;

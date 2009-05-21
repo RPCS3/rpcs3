@@ -52,8 +52,8 @@ extern void SysMessageLoc(char *fmt, ...);
 
 extern char *LibName;
 
-extern const unsigned char revision;
-extern const unsigned char build;
+extern const u8 revision;
+extern const u8 build;
 
 extern GtkWidget *AboutDlg, *ConfDlg, *MsgDlg, *FileSel;
 extern GtkWidget *Edit, *CdEdit;

@@ -18,7 +18,7 @@
 
 #include "DebugDlg.h"
 using namespace R5900;
-unsigned long DebuggerPC = 0;
+u32 DebuggerPC = 0;
 
 /*void UpdateDebugger()
 {
@@ -70,7 +70,7 @@ unsigned long DebuggerPC = 0;
 
 void UpdateDebugger(void)
 {
-   /* unsigned long t;
+   /* u32 t;
     int cnt;
     
 	if (DebuggerPC == 0) DebuggerPC = cpuRegs.pc; //- 0x00000038;

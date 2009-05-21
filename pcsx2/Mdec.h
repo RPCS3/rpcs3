@@ -94,16 +94,16 @@ void psxDma0(u32 madr, u32 bcr, u32 chcr);
 void psxDma1(u32 madr, u32 bcr, u32 chcr);
 int  mdecFreeze(gzFile f, int Mode);
 
-unsigned short* rl2blk(int *blk,unsigned short *mdec_rl);
+u16* rl2blk(int *blk,u16 *mdec_rl);
 void iqtab_init(int *iqtab,unsigned char *iq_y);
 void round_init(void);
 void yuv2rgb24(int *blk,unsigned char *image);
-void yuv2rgb15(int *blk,unsigned short *image);
+void yuv2rgb15(int *blk,u16 *image);
 
 struct {
-	unsigned long command;
-	unsigned long status;
-	unsigned short *rl;
+	u32 command;
+	u32 status;
+	u16 *rl;
 	int rlsize;
 } mdec;
 

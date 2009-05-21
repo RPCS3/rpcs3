@@ -48,7 +48,7 @@ struct cdrStruct
 	u8 ResultReady;
 	u8 Cmd;
 	u8 Readed;
-	unsigned long Reading;
+	u32 Reading;
 
 	cdvdTN ResultTN;
 	u8 ResultTD[4];
@@ -67,12 +67,12 @@ struct cdrStruct
 	int Init;
 
 	u8 Irq;
-	unsigned long eCycle;
+	u32 eCycle;
 
 	char Unused[4087];
 };
 
-void AddIrqQueue(u8 irq, unsigned long ecycle);
+void AddIrqQueue(u8 irq, u32 ecycle);
 
 extern cdrStruct cdr;
 

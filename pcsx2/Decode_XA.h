@@ -23,21 +23,23 @@
 #ifndef DECODEXA_H
 #define DECODEXA_H
 
+#include "PrecompiledHeader.h"
+
 typedef struct {
-	long	y0, y1;
+	s32	y0, y1;
 } ADPCM_Decode_t;
 
 typedef struct {
-	int				freq;
-	int				nbits;
-	int				stereo;
-	int				nsamples;
+	s32				freq;
+	s32				nbits;
+	s32				stereo;
+	s32				nsamples;
 	ADPCM_Decode_t	left, right;
-	short			pcm[16384];
+	s16			pcm[16384];
 } xa_decode_t;
 
-long xa_decode_sector( xa_decode_t *xdp,
-					   unsigned char *sectorp,
-					   int is_first_sector );
+s32 xa_decode_sector( xa_decode_t *xdp,
+					   u8*sectorp,
+					   s32 is_first_sector );
 
 #endif
