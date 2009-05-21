@@ -29,7 +29,5 @@ libGSnull_a_SOURCES += \
 Linux/interface.h Linux/support.c  \
 Linux/interface.c Linux/support.h \
 Linux/callbacks.h \
-GifTransfer.cpp GifTransfer.h
-#Linux/callbacks.c 
-
-#SUBDIRS = Linux
+GifTransfer.cpp GifTransfer.h \
+null/GSnull.cpp null/GSnull.h

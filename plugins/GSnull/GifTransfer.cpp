@@ -103,14 +103,24 @@ u32 GIFPath::GetReg()
 	return regs[curreg];
 }
 
-__forceinline u32 _gifTransfer( GIF_PATH pathidx, const u8* pMem, u32 size )
+__forceinline bool GIFPath::StepReg()
 {
-	GIFPath& path = m_path[pathidx];
+	if ((++curreg & 0xf) == tag.nreg) 
+	{
+		curreg = 0; 
+
+		if(--tag.nloop == 0)
+		{
+			return false;
+		}
+	}
+}
+
+__forceinline u32 _gifTransfer( GIF_PATH pathidx, const u8* pMem, u32 size )
+{	GIFPath& path = m_path[pathidx];
 
 	while(size > 0)
 	{
-		bool eop = false;
-
 		if(path.tag.nloop == 0)
 		{
 			path.SetTag( pMem );
@@ -119,14 +129,16 @@ __forceinline u32 _gifTransfer( GIF_PATH pathidx, const u8* pMem, u32 size )
 			--size;
 
 			if(pathidx == 2 && path.tag.eop)
+			{
 				Path3transfer = FALSE;
+			}
 
 			if( pathidx == 0 ) 
 			{                        
 				// hack: if too much data for VU1, just ignore.
 
 				// The GIF is evil : if nreg is 0, it's really 16.  Otherwise it's the value in nreg.
-				const int numregs = ((path.tag.nreg - 1) & 15) + 1;
+				const int numregs = ((path.tag.nreg-1)&15)+1;
 
 				if((path.tag.nloop * numregs) > (size * ((path.tag.flg == 1) ? 2 : 1)))
 				{
@@ -134,74 +146,48 @@ __forceinline u32 _gifTransfer( GIF_PATH pathidx, const u8* pMem, u32 size )
 					return ++size;
 				}
 			}
-
-			if(path.tag.eop)
-			{
-				eop = true;
-			}
-			else if(path.tag.nloop == 0)
-			{
-				if(pathidx == 0)
-					continue;
-
-				eop = true;
-			}
 		}
-
-		if(path.tag.nloop > 0)
+		else
 		{
+			// NOTE: size > 0 => do {} while(size > 0); should be faster than while(size > 0) {}
+
 			switch(path.tag.flg)
 			{
 			case GIF_FLG_PACKED:
 
-				while(size > 0)
+				do
 				{
 					if( path.GetReg() == 0xe )
 					{
 						const int handler = pMem[8];
 						if(handler >= 0x60 && handler < 0x63)
-							s_GSHandlers[handler & 0x3]((const u32*)pMem);
+							s_GSHandlers[handler&0x3]((const u32*)pMem);
 					}
+
 					size--;
 					pMem += 16; // 128 bits! //sizeof(GIFPackedReg);
-
-					if((++path.curreg & 0xf) == path.tag.nreg) 
-					{
-						path.curreg = 0; 
-						path.tag.nloop--;
-
-						if(path.tag.nloop == 0)
-							break;
-					}
 				}
+				while(path.StepReg() && size > 0);
+
 			break;
 
 			case GIF_FLG_REGLIST:
 
 				size *= 2;
 
-				while(size > 0)
+				do
 				{
 					const int handler = path.GetReg();
-					if (handler >= 0x60 && handler < 0x63)
+					if(handler >= 0x60 && handler < 0x63)
 						s_GSHandlers[handler&0x3]((const u32*)pMem);
 
 					size--;
 					pMem += 8; //sizeof(GIFReg); -- 64 bits!
-
-					if((++path.curreg & 0xf) == path.tag.nreg) 
-					{
-						path.curreg = 0; 
-						path.tag.nloop--;
-
-						if(path.tag.nloop == 0)
-						{
-							break;
-						}
-					}
 				}
+				while(path.StepReg() && size > 0);
 			
-				if (size & 1) pMem += 8; //sizeof(GIFReg);
+				if(size & 1) pMem += 8; //sizeof(GIFReg);
+
 				size /= 2;
 
 			break;
@@ -227,23 +213,27 @@ __forceinline u32 _gifTransfer( GIF_PATH pathidx, const u8* pMem, u32 size )
 			}
 		}
 
-		if (eop && ((int)size <= 0 || pathidx == 0))
+		if(pathidx == 0)
 		{
-			break;
+			if(path.tag.eop && path.tag.nloop == 0)
+			{
+				break;
+			}
 		}
 	}
 
 	if(pathidx == 0)
 	{
-		if (!path.tag.eop && path.tag.nloop > 0)
+		if(size == 0 && path.tag.nloop > 0)
 		{
 			path.tag.nloop = 0;
-			SysPrintf( "path1 hack! " );
+			SysPrintf( "path1 hack! \n" );
 
 			// This means that the giftag data got screwly somewhere
 			// along the way (often means curreg was in a bad state or something)
 		}
 	}
+	
 	return size;
 }
 

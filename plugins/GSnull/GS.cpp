@@ -27,6 +27,7 @@
 using namespace std;
 
 #include "GS.h"
+#include "null/GSnull.h"
 
 #ifdef __LINUX__
 Display *display;
@@ -43,6 +44,9 @@ const unsigned char build    = 1;    // increase that with each version
 static char *libraryName = "GSnull Driver";
 FILE *gsLog;
 Config conf;
+u32 GSKeyEvent = 0;
+bool GSShift = false, GSAlt = false;
+
 string s_strIniPath="inis/GSnull.ini";
 void (*GSirq)();
 
@@ -168,9 +172,37 @@ EXPORT_C_(s32) GStest()
 	return 0;
 }
 
+void ProcessMessages()
+{	
+#ifdef __LINUX__
+	if ( GSKeyEvent ) 
+		{
+		int myKeyEvent = GSKeyEvent;
+		bool myShift = GSShift;
+		GSKeyEvent = 0;
+			
+		switch ( myKeyEvent ) 
+		{
+			case XK_F5:
+			 	OnKeyboardF5(myShift);
+				break;
+			case XK_F6:
+				OnKeyboardF6(myShift);
+				break;
+			case XK_F7:
+				OnKeyboardF7(myShift);
+				break;	
+			case XK_F9:
+				OnKeyboardF9(myShift);
+				break;		
+		}
+	}
+#endif
+}
 
 EXPORT_C_(void) GSvsync(int field)
 {
+	ProcessMessages();
 }
 
 EXPORT_C_(void) GSgifTransfer1(u32 *pMem, u32 addr)
@@ -211,7 +243,41 @@ EXPORT_C_(void) GSreadFIFO2(u64 *mem, int qwc)
 // GSkeyEvent gets called when there is a keyEvent from the PAD plugin
 EXPORT_C_(void) GSkeyEvent(keyEvent *ev)
 {
-	//SysPrintf("There is a key event.\n");
+	switch(ev->evt) {
+		case KEYPRESS:
+			switch(ev->key) {
+				case XK_F5:
+				case XK_F6:
+				case XK_F7:
+				case XK_F9:
+					GSKeyEvent = ev->key ;
+					break;
+				case XK_Escape:
+					break;
+				case XK_Shift_L:
+				case XK_Shift_R:
+					//bShift = true;
+					GSShift = true;
+					break;
+				case XK_Alt_L:
+				case XK_Alt_R:
+					GSAlt = true;
+					break;
+				}
+			break;
+		case KEYRELEASE:
+			switch(ev->key) {
+				case XK_Shift_L:
+				case XK_Shift_R:
+					//bShift = false;
+					GSShift = false;
+					break;
+				case XK_Alt_L:
+				case XK_Alt_R:
+					GSAlt = false;
+					break;
+			}
+	}
 }
 
 EXPORT_C_(void) GSchangeSaveState(int, const char* filename)

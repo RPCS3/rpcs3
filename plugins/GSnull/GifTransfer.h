@@ -85,6 +85,7 @@ struct GIFPath
 	__forceinline void PrepRegs();
 	void SetTag(const void* mem);
 	u32 GetReg();
+	__forceinline bool StepReg();
 };
 
 extern GIFPath m_path[3];

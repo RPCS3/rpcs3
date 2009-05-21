@@ -165,6 +165,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\null\GSnull.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\GifTransfer.cpp"
 				>
 			</File>
@@ -183,6 +187,10 @@
 			</File>
 			<File
 				RelativePath="..\GifTransfer.h"
+				>
+			</File>
+			<File
+				RelativePath="..\null\GSnull.h"
 				>
 			</File>
 			<File
