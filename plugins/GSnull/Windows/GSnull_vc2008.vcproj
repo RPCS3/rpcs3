@@ -161,15 +161,39 @@
 				>
 			</File>
 			<File
+				RelativePath="..\GifTransfer.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\GS.cpp"
 				>
+			</File>
+			<File
+				RelativePath="..\Linux\GSLinux.cpp"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\null\GSnull.cpp"
 				>
 			</File>
 			<File
-				RelativePath="..\GifTransfer.cpp"
+				RelativePath=".\GSwin.cpp"
 				>
 			</File>
 			<File
@@ -182,15 +206,39 @@
 			Filter="h;hpp;hxx;hm;inl;inc"
 			>
 			<File
-				RelativePath="..\GS.h"
-				>
-			</File>
-			<File
 				RelativePath="..\GifTransfer.h"
 				>
 			</File>
 			<File
+				RelativePath="..\GS.h"
+				>
+			</File>
+			<File
+				RelativePath="..\Linux\GSLinux.h"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCustomBuildTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCustomBuildTool"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
 				RelativePath="..\null\GSnull.h"
+				>
+			</File>
+			<File
+				RelativePath=".\GSwin.h"
 				>
 			</File>
 			<File

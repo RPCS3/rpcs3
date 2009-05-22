@@ -29,15 +29,6 @@ using namespace std;
 #include "GS.h"
 #include "null/GSnull.h"
 
-#ifdef __LINUX__
-Display *display;
-int screen;
-#endif
-#ifdef _WIN32
-HINSTANCE HInst;
-HWND GShwnd;
-#endif
-
 const unsigned char version  = PS2E_GS_VERSION;
 const unsigned char revision = 0;
 const unsigned char build    = 1;    // increase that with each version
@@ -129,64 +120,24 @@ EXPORT_C_(void) GSshutdown()
 	SysPrintf("Shutting down GSnull\n");
 }
 
-#ifndef __LINUX__
-LRESULT CALLBACK MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
-{
-    switch(msg)
-    {
-        case WM_CLOSE:
-            DestroyWindow(hwnd);
-        break;
-        case WM_DESTROY:
-            PostQuitMessage(0);
-        break;
-        default:
-            return DefWindowProc(hwnd, msg, wParam, lParam);
-    }
-    return 0;
-}
-
-#endif
-
 EXPORT_C_(s32) GSopen(void *pDsp, char *Title, int multithread)
 {
+	int err = 0;
 #ifdef GS_LOG
 	GS_LOG("GS open\n");
 #endif
 	//assert( GSirq != NULL );
 	
-#ifdef __LINUX__
-	display = XOpenDisplay(0);
-	screen = DefaultScreen(display);
+	err = GSOpenWindow(pDsp, Title);
 
-	if( pDsp != NULL ) *(Display**)pDsp = display;
-#else
-	WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_CLASSDC, MsgProc, 0L, 0L, 
-					GetModuleHandle(NULL), NULL, NULL, NULL, NULL,
-					"PS2EMU_GSNULL", NULL };
-	RegisterClassEx( &wc );
-
-	GShwnd = CreateWindowEx( WS_EX_CLIENTEDGE, "PS2EMU_GSNULL", "The title of my window",
-        WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 240, 120, NULL, NULL, wc.hInstance, NULL);
-
-	if(GShwnd == NULL) 
-	{
-		GS_LOG("Failed to create window. Exiting...");
-		return -1;
-	}
-
-	if( pDsp != NULL ) *(int*)pDsp = (int)GShwnd;
-#endif
 	SysPrintf("Opening GSnull\n");
-	return 0;
+	return err;
 }
 
 EXPORT_C_(void) GSclose()
 {
 	SysPrintf("Closing GSnull\n");
-#ifdef __LINUX__
-	XCloseDisplay(display);
-#endif
+	GSCloseWindow();
 }
 
 EXPORT_C_(void) GSirqCallback(void (*callback)()) 
@@ -205,37 +156,9 @@ EXPORT_C_(s32) GStest()
 	return 0;
 }
 
-void ProcessMessages()
-{	
-#ifdef __LINUX__
-	if ( GSKeyEvent ) 
-		{
-		int myKeyEvent = GSKeyEvent;
-		bool myShift = GSShift;
-		GSKeyEvent = 0;
-			
-		switch ( myKeyEvent ) 
-		{
-			case XK_F5:
-			 	OnKeyboardF5(myShift);
-				break;
-			case XK_F6:
-				OnKeyboardF6(myShift);
-				break;
-			case XK_F7:
-				OnKeyboardF7(myShift);
-				break;	
-			case XK_F9:
-				OnKeyboardF9(myShift);
-				break;		
-		}
-	}
-#endif
-}
-
 EXPORT_C_(void) GSvsync(int field)
 {
-	ProcessMessages();
+	GSProcessMessages();
 }
 
 EXPORT_C_(void) GSgifTransfer1(u32 *pMem, u32 addr)
@@ -276,43 +199,7 @@ EXPORT_C_(void) GSreadFIFO2(u64 *mem, int qwc)
 // GSkeyEvent gets called when there is a keyEvent from the PAD plugin
 EXPORT_C_(void) GSkeyEvent(keyEvent *ev)
 {
-#ifdef __LINUX__
-	switch(ev->evt) {
-		case KEYPRESS:
-			switch(ev->key) {
-				case XK_F5:
-				case XK_F6:
-				case XK_F7:
-				case XK_F9:
-					GSKeyEvent = ev->key ;
-					break;
-				case XK_Escape:
-					break;
-				case XK_Shift_L:
-				case XK_Shift_R:
-					//bShift = true;
-					GSShift = true;
-					break;
-				case XK_Alt_L:
-				case XK_Alt_R:
-					GSAlt = true;
-					break;
-				}
-			break;
-		case KEYRELEASE:
-			switch(ev->key) {
-				case XK_Shift_L:
-				case XK_Shift_R:
-					//bShift = false;
-					GSShift = false;
-					break;
-				case XK_Alt_L:
-				case XK_Alt_R:
-					GSAlt = false;
-					break;
-			}
-	}
-#endif
+	HandleKeyEvent(ev);
 }
 
 EXPORT_C_(void) GSchangeSaveState(int, const char* filename)
@@ -370,10 +257,3 @@ EXPORT_C_(void) GSwriteCSR(u32 value)
 EXPORT_C_(void) GSgetDriverInfo(GSdriverInfo *info)
 {
 }
-
-#ifdef _WIN32
-EXPORT_C_(s32) GSsetWindowInfo(winInfo *info)
-{
-	return 0;
-}
-#endif

@@ -15,17 +15,10 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
- 
-#ifndef __GS_H__
-#define __GS_H__
 
-#include <stdio.h>
-
-#ifdef _WIN32
-#include "Windows/GSwin.h"
-#else
-#include "Linux/GSLinux.h"
-#endif
+#include <windows.h>
+#include <windowsx.h>
+#include "../GS.h"
 
 #ifdef __cplusplus
 extern "C"
@@ -37,36 +30,7 @@ extern "C"
 }
 #endif
 
-#include "GifTransfer.h"
-
-/*#ifdef _MSC_VER
-#define EXPORT_C_(type) extern "C" __declspec(dllexport) type CALLBACK
-#else
-#define EXPORT_C_(type) extern "C" type
-#endif*/
-
-#ifdef _MSC_VER
-#define EXPORT_C_(type) extern "C" type CALLBACK
-#else
-#define EXPORT_C_(type) extern "C" type
-#endif
-
-#define GS_LOG __Log
-
-typedef struct 
-{
-	int Log;
-} Config;
-
-extern Config conf;
-extern FILE *gsLog;
-
-extern void (*GSirq)();
-
-extern void __Log(char *fmt, ...);
-extern void SysMessage(char *fmt, ...);
-extern void SysPrintf(const char *fmt, ...);
-extern void SaveConfig();
-extern void LoadConfig();
-
-#endif
+int GSOpenWindow(void *pDsp, char *Title);
+void GSCloseWindow();
+void GSProcessMessages();
+void HandleKeyEvent(keyEvent *ev);
