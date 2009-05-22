@@ -147,39 +147,31 @@ namespace YAML
 		switch(curState) {
 				// document-level
 			case ES_WAITING_FOR_DOC:
-				std::cerr << "waiting for doc (pre)\n";
 				m_pState->SwitchState(ES_WRITING_DOC);
 				return true;
 			case ES_WRITING_DOC:
-				std::cerr << "writing doc (pre)\n";
 				return true;
 				
 				// block sequence
 			case ES_WAITING_FOR_BLOCK_SEQ_ENTRY:
-				std::cerr << "waiting for block seq entry (pre)\n";
 				m_stream << IndentTo(curIndent) << "-";
 				m_pState->RequireSeparation();
 				m_pState->SwitchState(ES_WRITING_BLOCK_SEQ_ENTRY);
 				return true;
 			case ES_WRITING_BLOCK_SEQ_ENTRY:
-				std::cerr << "writing block seq entry (pre)\n";
 				return true;
 			case ES_DONE_WITH_BLOCK_SEQ_ENTRY:
-				std::cerr << "done with block seq entry (pre)\n";
 				m_stream << '\n';
 				m_pState->SwitchState(ES_WAITING_FOR_BLOCK_SEQ_ENTRY);
 				return false;
 				
 				// flow sequence
 			case ES_WAITING_FOR_FLOW_SEQ_ENTRY:
-				std::cerr << "waiting for flow seq entry (pre)\n";
 				m_pState->SwitchState(ES_WRITING_FLOW_SEQ_ENTRY);
 				return true;
 			case ES_WRITING_FLOW_SEQ_ENTRY:
-				std::cerr << "writing flow seq entry (pre)\n";
 				return true;
 			case ES_DONE_WITH_FLOW_SEQ_ENTRY:
-				std::cerr << "done with flow seq entry (pre)\n";
 				m_stream << ',';
 				m_pState->RequireSeparation();
 				m_pState->SwitchState(ES_WAITING_FOR_FLOW_SEQ_ENTRY);
@@ -187,11 +179,9 @@ namespace YAML
 				
 				// block map
 			case ES_WAITING_FOR_BLOCK_MAP_ENTRY:
-				std::cerr << "waiting for block map entry (pre)\n";
 				m_pState->SetError(ErrorMsg::EXPECTED_KEY_TOKEN);
 				return true;
 			case ES_WAITING_FOR_BLOCK_MAP_KEY:
-				std::cerr << "waiting for block map key (pre)\n";
 				if(m_pState->CurrentlyInLongKey()) {
 					m_stream << IndentTo(curIndent) << '?';
 					m_pState->RequireSeparation();
@@ -199,14 +189,11 @@ namespace YAML
 				m_pState->SwitchState(ES_WRITING_BLOCK_MAP_KEY);
 				return true;
 			case ES_WRITING_BLOCK_MAP_KEY:
-				std::cerr << "writing block map key (pre)\n";
 				return true;
 			case ES_DONE_WITH_BLOCK_MAP_KEY:
-				std::cerr << "done with block map key (pre)\n";
 				m_pState->SetError(ErrorMsg::EXPECTED_VALUE_TOKEN);
 				return true;
 			case ES_WAITING_FOR_BLOCK_MAP_VALUE:
-				std::cerr << "waiting for block map value (pre)\n";
 				if(m_pState->CurrentlyInLongKey())
 					m_stream << IndentTo(curIndent);
 				m_stream << ':';
@@ -214,20 +201,16 @@ namespace YAML
 				m_pState->SwitchState(ES_WRITING_BLOCK_MAP_VALUE);
 				return true;
 			case ES_WRITING_BLOCK_MAP_VALUE:
-				std::cerr << "writing block map value (pre)\n";
 				return true;
 			case ES_DONE_WITH_BLOCK_MAP_VALUE:
-				std::cerr << "done with block map value (pre)\n";
 				m_pState->SetError(ErrorMsg::EXPECTED_KEY_TOKEN);
 				return true;
 				
 				// flow map
 			case ES_WAITING_FOR_FLOW_MAP_ENTRY:
-				std::cerr << "waiting for flow map entry (pre)\n";
 				m_pState->SetError(ErrorMsg::EXPECTED_KEY_TOKEN);
 				return true;
 			case ES_WAITING_FOR_FLOW_MAP_KEY:
-				std::cerr << "waiting for flow map key (pre)\n";
 				m_pState->SwitchState(ES_WRITING_FLOW_MAP_KEY);
 				if(m_pState->CurrentlyInLongKey()) {
 					EmitSeparationIfNecessary();
@@ -236,23 +219,18 @@ namespace YAML
 				}
 				return true;
 			case ES_WRITING_FLOW_MAP_KEY:
-				std::cerr << "writing flow map key (pre)\n";
 				return true;
 			case ES_DONE_WITH_FLOW_MAP_KEY:
-				std::cerr << "done with flow map key (pre)\n";
 				m_pState->SetError(ErrorMsg::EXPECTED_VALUE_TOKEN);
 				return true;
 			case ES_WAITING_FOR_FLOW_MAP_VALUE:
-				std::cerr << "waiting for flow map value (pre)\n";
 				m_stream << ':';
 				m_pState->RequireSeparation();
 				m_pState->SwitchState(ES_WRITING_FLOW_MAP_VALUE);
 				return true;
 			case ES_WRITING_FLOW_MAP_VALUE:
-				std::cerr << "writing flow map value (pre)\n";
 				return true;
 			case ES_DONE_WITH_FLOW_MAP_VALUE:
-				std::cerr << "done with flow map value (pre)\n";
 				m_pState->SetError(ErrorMsg::EXPECTED_KEY_TOKEN);
 				return true;
 			default:
