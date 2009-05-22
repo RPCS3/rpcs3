@@ -55,6 +55,9 @@ namespace YAML
 		// and finally eat any doc ends we see
 		while(!m_pScanner->empty() && m_pScanner->peek().type == TT_DOC_END)
 			m_pScanner->pop();
+
+		// clear anchors from the scanner, which are no longer relevant
+		m_pScanner->ClearAnchors();
 	}
 
 	// ParseDirectives

@@ -38,6 +38,8 @@ namespace YAML
 		const std::string CHAR_IN_ANCHOR       = "illegal character found while scanning anchor";
 		const std::string ZERO_INDENT_IN_BLOCK = "cannot set zero indentation for a block scalar";
 		const std::string CHAR_IN_BLOCK        = "unexpected character in block scalar";
+		const std::string AMBIGUOUS_ANCHOR     = "cannot assign the same alias to multiple nodes";
+		const std::string UNKNOWN_ANCHOR       = "the referenced anchor is not defined";
 
 		const std::string INVALID_SCALAR       = "invalid scalar";
 		const std::string KEY_NOT_FOUND        = "key not found";

@@ -1,4 +1,4 @@
-set(FILES content.cpp iterator.cpp node.cpp parserstate.cpp
+set(FILES alias.cpp content.cpp iterator.cpp node.cpp parserstate.cpp
           scalar.cpp scanscalar.cpp sequence.cpp stream.cpp
           exp.cpp map.cpp parser.cpp regex.cpp scanner.cpp
           scantoken.cpp simplekey.cpp)

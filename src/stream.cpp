@@ -55,6 +55,7 @@ namespace YAML
 	std::string Stream::get(int n)
 	{
 		std::string ret;
+		ret.reserve(n);
 		for(int i=0;i<n;i++)
 			ret += get();
 		return ret;

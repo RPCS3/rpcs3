@@ -167,6 +167,10 @@
 			<Filter
 				Name="Representation"
 				>
+			        <File
+				        RelativePath=".\src\alias.cpp"
+				        >
+				</File>
 				<File
 					RelativePath=".\src\content.cpp"
 					>
@@ -257,6 +261,10 @@
 			<Filter
 				Name="Representation"
 				>
+			        <File
+				        RelativePath=".\include\alias.h"
+					>
+				</File>
 				<File
 					RelativePath=".\src\content.h"
 					>

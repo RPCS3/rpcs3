@@ -16,6 +16,7 @@ namespace Test
 		files.push_back("tests/mixed.yaml");
 		files.push_back("tests/scalars.yaml");
 		files.push_back("tests/directives.yaml");
+		files.push_back("tests/aliased.yaml");
 
 		bool passed = true;
 		for(unsigned i=0;i<files.size();i++) {

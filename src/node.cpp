@@ -7,7 +7,9 @@
 #include "scalar.h"
 #include "sequence.h"
 #include "map.h"
+#include "alias.h"
 #include "iterpriv.h"
+#include <iostream>
 
 namespace YAML
 {
@@ -17,7 +19,7 @@ namespace YAML
 		return *pNode1 < *pNode2;
 	}
 
-	Node::Node(): m_pContent(0), m_alias(false)
+	Node::Node(): m_pContent(0), m_alias(false), m_pIdentity(this), m_referenced(true)
 	{
 	}
 
@@ -31,6 +33,9 @@ namespace YAML
 		delete m_pContent;
 		m_pContent = 0;
 		m_alias = false;
+		m_referenced = false;
+		m_anchor.clear();
+		m_tag.clear();
 	}
 
 	void Node::Parse(Scanner *pScanner, const ParserState& state)
@@ -47,30 +52,50 @@ namespace YAML
 
 		ParseHeader(pScanner, state);
 
-		// is this an alias? if so, it can have no content
-		if(m_alias)
+		// is this an alias? if so, its contents are an alias to
+		// a previously defined anchor
+		if(m_alias) {
+			// the scanner throws an exception if it doesn't know this anchor name
+			const Node *pReferencedNode = pScanner->Retrieve(m_anchor);
+			m_pIdentity = pReferencedNode;
+
+			// mark the referenced node for the sake of the client code
+			pReferencedNode->m_referenced = true;
+
+			// use of an Alias object keeps the referenced content from
+			// being deleted twice
+			Content *pAliasedContent = pReferencedNode->m_pContent;
+			if(pAliasedContent)
+				m_pContent = new Alias(pAliasedContent);
+			
 			return;
+		}
 
 		// now split based on what kind of node we should be
 		switch(pScanner->peek().type) {
 			case TT_SCALAR:
 				m_pContent = new Scalar;
-				m_pContent->Parse(pScanner, state);
 				break;
 			case TT_FLOW_SEQ_START:
 			case TT_BLOCK_SEQ_START:
 			case TT_BLOCK_ENTRY:
 				m_pContent = new Sequence;
-				m_pContent->Parse(pScanner, state);
 				break;
 			case TT_FLOW_MAP_START:
 			case TT_BLOCK_MAP_START:
 				m_pContent = new Map;
-				m_pContent->Parse(pScanner, state);
 				break;
 			default:
 				break;
 		}
+
+		// Have to save anchor before parsing to allow for aliases as
+		// contained node (recursive structure)
+		if(!m_anchor.empty())
+			pScanner->Save(m_anchor, this);
+
+		if(m_pContent)
+			m_pContent->Parse(pScanner, state);
 	}
 
 	// ParseHeader
@@ -129,33 +154,46 @@ namespace YAML
 
 	void Node::Write(std::ostream& out, int indent, bool startedLine, bool onlyOneCharOnLine) const
 	{
+		// If using an anchor or tag for the whole document, document start
+		// must be explicit
+		bool indicateDocStart = (indent == 0);
+
 		// write anchor/alias
 		if(m_anchor != "") {
+			if (indicateDocStart) {
+				out << "--- ";
+				indicateDocStart = false;
+			}
+
 			if(m_alias)
-				out << std::string("*");
+				out << "*";
 			else
-				out << std::string("&");
-			out << m_anchor << std::string(" ");
+				out << "&";
+			out << m_anchor << " ";
 			startedLine = true;
 			onlyOneCharOnLine = false;
 		}
 
 		// write tag
 		if(m_tag != "") {
+			if (indicateDocStart) {
+				out << "--- ";
+				indicateDocStart = false;
+			}
+
 			// put the tag in the "proper" brackets
-			if(m_tag.substr(0, 2) == "!<" && m_tag.substr(m_tag.size() - 1) == ">")
-				out << m_tag;
+			if(m_tag.substr(0, 2) == std::string("!<") && m_tag.substr(m_tag.size() - 1) == std::string(">"))
+				out << m_tag << " ";
 			else
-				out << std::string("!<") << m_tag << std::string("> ");
+				out << "!<" << m_tag << "> ";
 			startedLine = true;
 			onlyOneCharOnLine = false;
 		}
 
-		if(!m_pContent) {
-			out << std::string("\n");
-		} else {
+		if(!m_pContent)
+			out << "\n";
+		else
 			m_pContent->Write(out, indent, startedLine, onlyOneCharOnLine);
-		}
 	}
 
 	CONTENT_TYPE Node::GetType() const

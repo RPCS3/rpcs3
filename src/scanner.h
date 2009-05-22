@@ -5,11 +5,14 @@
 #include <queue>
 #include <stack>
 #include <set>
+#include <map>
 #include "stream.h"
 #include "token.h"
 
 namespace YAML
 {
+	class Node;
+
 	class Scanner
 	{
 	public:
@@ -20,6 +23,11 @@ namespace YAML
 		bool empty();
 		void pop();
 		Token& peek();
+
+		// anchor management
+		void Save(const std::string& anchor, Node* value);
+		const Node *Retrieve(const std::string& anchor) const;
+		void ClearAnchors();
 
 	private:
 		// scanning
@@ -35,6 +43,7 @@ namespace YAML
 		void InsertSimpleKey();
 		bool VerifySimpleKey(bool force = false);
 		void VerifyAllSimpleKeys();
+		void ThrowParserException(const std::string& msg) const;
 
 		bool IsWhitespaceToBeEaten(char ch);
 
@@ -81,5 +90,6 @@ namespace YAML
 		bool m_isLastKeyValid;
 		std::stack <SimpleKey> m_simpleKeys;
 		std::stack <int> m_indents;
+		std::map <std::string, const Node *> m_anchors;
 	};
 }

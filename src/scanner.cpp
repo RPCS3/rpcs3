@@ -29,8 +29,13 @@ namespace YAML
 	void Scanner::pop()
 	{
 		EnsureTokensInQueue();
-		if(!m_tokens.empty())
+		if(!m_tokens.empty()) {
+			// Saved anchors shouldn't survive popping the document end marker
+			if (m_tokens.front().type == TT_DOC_END) {
+				ClearAnchors();
+			}
 			m_tokens.pop();
+		}
 	}
 
 	// peek
@@ -217,6 +222,7 @@ namespace YAML
 		m_startedStream = true;
 		m_simpleKeyAllowed = true;
 		m_indents.push(-1);
+		m_anchors.clear();
 	}
 
 	// EndStream
@@ -272,5 +278,48 @@ namespace YAML
 			m_indents.pop();
 			m_tokens.push(Token(TT_BLOCK_END, INPUT.line, INPUT.column));
 		}
+	}
+
+	// Save
+	// . Saves a pointer to the Node object referenced by a particular anchor
+	//   name.
+	void Scanner::Save(const std::string& anchor, Node* value)
+	{
+		m_anchors[anchor] = value;
+	}
+
+	// Retrieve
+	// . Retrieves a pointer previously saved for an anchor name.
+	// . Throws an exception if the anchor has not been defined.
+	const Node *Scanner::Retrieve(const std::string& anchor) const
+	{
+		typedef std::map<std::string, const Node *> map;
+
+		map::const_iterator itNode = m_anchors.find(anchor);
+
+		if(m_anchors.end() == itNode)
+			ThrowParserException(ErrorMsg::UNKNOWN_ANCHOR);
+
+		return itNode->second;
+	}
+
+	// ThrowParserException
+	// . Throws a ParserException with the current token location
+	//   (if available).
+	// . Does not parse any more tokens.
+	void Scanner::ThrowParserException(const std::string& msg) const
+	{
+		int line = -1, column = -1;
+		if(!m_tokens.empty()) {
+			const Token& token = m_tokens.front();
+			line = token.line;
+			column = token.column;
+		}
+		throw ParserException(line, column, msg);
+	}
+
+	void Scanner::ClearAnchors()
+	{
+		m_anchors.clear();
 	}
 }

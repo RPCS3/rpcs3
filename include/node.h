@@ -66,6 +66,11 @@ namespace YAML
 		const Node& operator [] (unsigned u) const;
 		const Node& operator [] (int i) const;
 
+		// for anchors/aliases
+		const Node *Identity() const { return m_pIdentity; }
+		bool IsAlias() const { return m_alias; }
+		bool IsReferenced() const { return m_referenced; }
+
 		// insertion
 		friend std::ostream& operator << (std::ostream& out, const Node& node);
 
@@ -89,6 +94,8 @@ namespace YAML
 		std::string m_anchor, m_tag;
 		Content *m_pContent;
 		bool m_alias;
+		const Node *m_pIdentity;
+		mutable bool m_referenced;
 	};
 
 	// templated things we need to keep inline in the header
