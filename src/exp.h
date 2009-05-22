@@ -13,13 +13,16 @@ namespace YAML
 	namespace Exp
 	{
 		// misc
-		const RegEx Blank = RegEx(' ') || RegEx('\t');
+		const RegEx Space = RegEx(' ');
+		const RegEx Tab = RegEx('\t');
+		const RegEx Blank = Space || Tab;
 		const RegEx Break = RegEx('\n') || RegEx("\r\n");
 		const RegEx BlankOrBreak = Blank || Break;
 		const RegEx Digit = RegEx('0', '9');
 		const RegEx Alpha = RegEx('a', 'z') || RegEx('A', 'Z');
 		const RegEx AlphaNumeric = Alpha || Digit;
 		const RegEx Hex = Digit || RegEx('A', 'F') || RegEx('a', 'f');
+		const RegEx Printable = RegEx(0x20, 0x7E);
 
 		// actual tags
 

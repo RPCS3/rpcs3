@@ -4,6 +4,9 @@
 #include <iostream>
 #include <cstring>
 
+#include "emitter.h"
+#include "stlemitter.h"
+
 void run()
 {
 	std::ifstream fin("tests/test.yaml");
@@ -15,6 +18,9 @@ void run()
 		parser.GetNextDocument(doc);
 		std::cout << doc;
 	}
+	
+	// try some output
+	YAML::Emitter out;
 }
 
 int main(int argc, char **argv)
