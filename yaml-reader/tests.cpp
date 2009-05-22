@@ -101,16 +101,15 @@ namespace Test
 			YAML::Emitter out;
 			std::string desiredOutput;
 			test(out, desiredOutput);
-			std::stringstream output;
-			out.WriteToStream(output);
+			std::string output = out.c_str();
 
-			if(output.str() == desiredOutput) {
+			if(output == desiredOutput) {
 				std::cout << "Test passed: " << name << "\n";
 			} else {
 				passed = false;
 				std::cout << "Test failed: " << name << "\n";
 				std::cout << "Output:\n";
-				std::cout << output.str() << "<<<\n";
+				std::cout << output << "<<<\n";
 				std::cout << "Desired output:\n";
 				std::cout << desiredOutput << "<<<\n";				
 			}

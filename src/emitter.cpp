@@ -3,7 +3,6 @@
 #include "emitterutils.h"
 #include "indentation.h"
 #include "exceptions.h"
-#include <fstream>
 #include <sstream>
 
 namespace YAML
@@ -16,19 +15,14 @@ namespace YAML
 	{
 	}
 	
-	bool Emitter::WriteToStream(std::ostream& out) const
+	const char *Emitter::c_str() const
 	{
-		out << m_stream.str();
-		return true;
+		return m_stream.str();
 	}
 	
-	bool Emitter::WriteToFile(const std::string& fileName) const
+	unsigned Emitter::size() const
 	{
-		std::ofstream fout(fileName.c_str());
-		if(!fout)
-			return false;
-		
-		return WriteToStream(fout);
+		return m_stream.pos();
 	}
 	
 	// state checking

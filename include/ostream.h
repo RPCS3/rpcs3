@@ -16,6 +16,7 @@ namespace YAML
 		
 		unsigned row() const { return m_row; }
 		unsigned col() const { return m_col; }
+		unsigned pos() const { return m_pos; }
 		
 	private:
 		char *m_buffer;

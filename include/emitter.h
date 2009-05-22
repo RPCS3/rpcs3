@@ -15,8 +15,9 @@ namespace YAML
 		Emitter();
 		~Emitter();
 		
-		bool WriteToStream(std::ostream& out) const;
-		bool WriteToFile(const std::string& fileName) const;
+		// output
+		const char *c_str() const;
+		unsigned size() const;
 		
 		// state checking
 		bool good() const;
