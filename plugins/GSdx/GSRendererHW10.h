@@ -44,7 +44,7 @@ protected:
 	void SetupDATE(GSTexture* rt, GSTexture* ds);
 
 public:
-	GSRendererHW10(uint8* base, bool mt, void (*irq)(), const GSRendererSettings& rs);
+	GSRendererHW10(uint8* base, bool mt, void (*irq)());
 
 	bool Create(const string& title);
 

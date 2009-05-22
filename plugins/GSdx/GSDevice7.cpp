@@ -131,7 +131,7 @@ bool GSDevice7::Reset(int w, int h, bool fs)
 	return true;
 }
 
-void GSDevice7::Present(const GSVector4i& r)
+void GSDevice7::Present(const GSVector4i& r, int shader)
 {
 	HRESULT hr;
 

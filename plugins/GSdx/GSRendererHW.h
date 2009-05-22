@@ -247,7 +247,7 @@ protected:
 		TEX0.TBW = DISPFB.FBW;
 		TEX0.PSM = DISPFB.PSM;
 
-		TRACE(_T("[%d] GetOutput %d %05x (%d)\n"), (int)m_perfmon.GetFrame(), i, (int)TEX0.TBP0, (int)TEX0.PSM);
+		// TRACE(_T("[%d] GetOutput %d %05x (%d)\n"), (int)m_perfmon.GetFrame(), i, (int)TEX0.TBP0, (int)TEX0.PSM);
 
 		GSTexture* t = NULL;
 
@@ -665,9 +665,9 @@ protected:
 	}
 
 public:
-	GSRendererHW(uint8* base, bool mt, void (*irq)(), const GSRendererSettings& rs, bool psrr)
-		: GSRendererT<Vertex>(base, mt, irq, rs, psrr)
-		, m_tc(NULL)
+	GSRendererHW(uint8* base, bool mt, void (*irq)(), GSDevice* dev, GSTextureCache* tc, bool psrr)
+		: GSRendererT<Vertex>(base, mt, irq, dev, psrr)
+		, m_tc(tc)
 		, m_width(1024)
 		, m_height(1024)
 		, m_skip(0)

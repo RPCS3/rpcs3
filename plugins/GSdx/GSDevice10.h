@@ -71,7 +71,7 @@ public: // TODO
 		CComPtr<ID3D10Buffer> vb;
 		CComPtr<ID3D10InputLayout> il;
 		CComPtr<ID3D10VertexShader> vs;
-		CComPtr<ID3D10PixelShader> ps[5];
+		CComPtr<ID3D10PixelShader> ps[7];
 		CComPtr<ID3D10SamplerState> ln;
 		CComPtr<ID3D10SamplerState> pt;
 		CComPtr<ID3D10DepthStencilState> dss;
@@ -115,7 +115,7 @@ public:
 
 	GSTexture* CopyOffscreen(GSTexture* src, const GSVector4& sr, int w, int h, int format = 0);
 
-	void StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, bool linear = true);
+	void StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, int shader = 0, bool linear = true);
 	void StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, ID3D10PixelShader* ps, ID3D10Buffer* ps_cb, bool linear = true);
 	void StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, ID3D10PixelShader* ps, ID3D10Buffer* ps_cb, ID3D10BlendState* bs, bool linear = true);
 

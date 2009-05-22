@@ -65,3 +65,31 @@ float4 ps_main4(PS_INPUT input) : SV_Target0
 	
 	return fmod(c * 255 + 0.5f, 256) / 255;
 }
+
+float4 ps_crt(PS_INPUT input, uint i)
+{
+	float4 mask[4] = 
+	{
+		float4(1, 0, 0, 0), 
+		float4(0, 1, 0, 0), 
+		float4(0, 0, 1, 0), 
+		float4(1, 1, 1, 0)
+	};
+	
+	return Texture.Sample(Sampler, input.t) * saturate(mask[i] + 0.25f);
+}
+
+float4 ps_main5(PS_INPUT input) : SV_Target0 // triangular
+{
+	uint4 p = (uint4)input.p;
+
+	// return ps_crt(input, ((p.x + (p.y & 1) * 3) >> 1) % 3); 
+	return ps_crt(input, ((p.x + ((p.y >> 1) & 1) * 3) >> 1) % 3);
+}
+
+float4 ps_main6(PS_INPUT input) : SV_Target0 // diagonal
+{
+	uint4 p = (uint4)input.p;
+
+	return ps_crt(input, (p.x + (p.y % 3)) % 3);
+}

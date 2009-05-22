@@ -53,7 +53,7 @@ protected:
 	void UpdateFBA(GSTexture* rt);
 
 public:
-	GSRendererHW9(uint8* base, bool mt, void (*irq)(), const GSRendererSettings& rs);
+	GSRendererHW9(uint8* base, bool mt, void (*irq)());
 
 	bool Create(const string& title);
 

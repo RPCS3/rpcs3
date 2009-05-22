@@ -85,11 +85,6 @@ EXPORT_C_(int32) GPUopen(HWND hWnd)
 {
 	GPUclose();
 
-	GPURendererSettings rs;
-
-	int threads = 1;
-	int renderer = 1;
-
 #ifdef _WINDOWS
 
 	AFX_MANAGE_STATE(AfxGetStaticModuleState());
@@ -108,23 +103,15 @@ EXPORT_C_(int32) GPUopen(HWND hWnd)
 		return -1;
 	}
 
-	rs.m_filter = theApp.GetConfig("filter", 0);
-	rs.m_dither = theApp.GetConfig("dithering", 1);
-	rs.m_aspectratio = theApp.GetConfig("AspectRatio", 1);
-	rs.m_vsync = !!theApp.GetConfig("vsync", 0);
-	rs.m_scale.x = theApp.GetConfig("scale_x", 0);
-	rs.m_scale.y = theApp.GetConfig("scale_y", 0);
-
-	threads = theApp.GetConfig("swthreads", 1);
-	renderer = theApp.GetConfig("Renderer", 1);
+	int renderer = theApp.GetConfig("Renderer", 1);
 
 	switch(renderer)
 	{
 	default: 
-	case 0: s_gpu = new GPURendererSW(rs, new GSDevice7(), threads); break;
-	case 1: s_gpu = new GPURendererSW(rs, new GSDevice9(), threads); break;
-	case 2: s_gpu = new GPURendererSW(rs, new GSDevice10(), threads); break;
-	// TODO: case 3: s_gpu = new GPURendererNull(rs, new GSDeviceNull(), threads); break;
+	case 0: s_gpu = new GPURendererSW(new GSDevice7()); break;
+	case 1: s_gpu = new GPURendererSW(new GSDevice9()); break;
+	case 2: s_gpu = new GPURendererSW(new GSDevice10()); break;
+	// TODO: case 3: s_gpu = new GPURendererNull(new GSDeviceNull()); break;
 	}
 
 	if(!s_gpu->Create(hWnd))

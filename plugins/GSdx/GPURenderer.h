@@ -25,18 +25,15 @@
 #include "GSVertexList.h"
 #include "GSDevice.h"
 
-struct GPURendererSettings
+class GPURenderer : public GPUState
 {
+protected:
 	int m_filter;
 	int m_dither;
 	int m_aspectratio;
 	bool m_vsync;
 	GSVector2i m_scale;
-};
 
-class GPURenderer : public GPUState, protected GPURendererSettings
-{
-protected:
 	HWND m_hWnd;
 	WNDPROC m_wndproc;
 	static map<HWND, GPURenderer*> m_wnd2gpu;
@@ -46,7 +43,10 @@ protected:
 	LRESULT OnMessage(UINT message, WPARAM wParam, LPARAM lParam);
 
 public:
-	GPURenderer(const GPURendererSettings& rs);
+	GSDevice* m_dev;
+
+public:
+	GPURenderer(GSDevice* dev);
 	virtual ~GPURenderer();
 
 	virtual bool Create(HWND hWnd);
@@ -191,11 +191,8 @@ protected:
 	}
 
 public:
-	GSDevice* m_dev;
-
-public:
-	GPURendererT(const GPURendererSettings& rs)
-		: GPURenderer(rs)
+	GPURendererT(GSDevice* dev)
+		: GPURenderer(dev)
 		, m_count(0)
 		, m_maxcount(10000)
 	{
@@ -291,7 +288,7 @@ public:
 		
 		GetClientRect(m_hWnd, r);
 
-		m_dev->Present(r.fit(m_aspectratio));
+		m_dev->Present(r.fit(m_aspectratio), 0);
 	}
 
 	virtual bool MakeSnapshot(const string& path)

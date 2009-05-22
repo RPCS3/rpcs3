@@ -22,19 +22,19 @@
 #include "StdAfx.h"
 #include "GSRenderer.h"
 
-GSRenderer::GSRenderer(uint8* base, bool mt, void (*irq)(), const GSRendererSettings& rs, bool psrr)
+GSRenderer::GSRenderer(uint8* base, bool mt, void (*irq)(), GSDevice* dev, bool psrr)
 	: GSState(base, mt, irq)
-	, m_dev(NULL)
-	, m_osd(true)
+	, m_dev(dev)
+	, m_shader(0)
 	, m_psrr(psrr)
 {
-	m_interlace = rs.m_interlace;
-	m_aspectratio = rs.m_aspectratio;
-	m_filter = rs.m_filter;
-	m_vsync = rs.m_vsync;
-	m_nativeres = rs.m_nativeres;
-	m_aa1 = rs.m_aa1;
-	m_blur = rs.m_blur;
+	m_interlace = theApp.GetConfig("interlace", 0);
+	m_aspectratio = theApp.GetConfig("aspectratio", 1);
+	m_filter = theApp.GetConfig("filter", 1);
+	m_vsync = !!theApp.GetConfig("vsync", 0);
+	m_nativeres = !!theApp.GetConfig("nativeres", 0);
+	m_aa1 = !!theApp.GetConfig("aa1", 0);
+	m_blur = !!theApp.GetConfig("blur", 0);
 
 	s_n = 0;
 	s_dump = !!theApp.GetConfig("dump", 0);
@@ -328,7 +328,7 @@ void GSRenderer::VSync(int field)
 	
 	m_wnd.GetClientRect(r);
 
-	m_dev->Present(r.fit(m_aspectratio));
+	m_dev->Present(r.fit(m_aspectratio), m_shader);
 
 	// snapshot
 
@@ -406,8 +406,7 @@ void GSRenderer::KeyEvent(GSKeyEventData* e)
 			m_aspectratio = (m_aspectratio + 3 + step) % 3;
 			return;
 		case VK_F7:
-			m_wnd.SetWindowText(_T("PCSX2"));
-			m_osd = !m_osd;
+			m_shader = (m_shader + 3 + step) % 3;
 			return;
 		case VK_F12:
 			if(m_capture.IsCapturing()) m_capture.EndCapture();

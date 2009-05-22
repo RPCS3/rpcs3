@@ -24,14 +24,11 @@
 #include "GSCrc.h"
 #include "resource.h"
 
-GSRendererHW9::GSRendererHW9(uint8* base, bool mt, void (*irq)(), const GSRendererSettings& rs)
-	: GSRendererHW<GSVertexHW9>(base, mt, irq, rs, false)
+GSRendererHW9::GSRendererHW9(uint8* base, bool mt, void (*irq)())
+	: GSRendererHW<GSVertexHW9>(base, mt, irq, new GSDevice9(), new GSTextureCache9(this), false)
 {
 	m_fba.enabled = !!theApp.GetConfig("fba", 1);
 	m_logz = !!theApp.GetConfig("logz", 0);
-
-	m_dev = new GSDevice9();
-	m_tc = new GSTextureCache9(this);
 
 	InitVertexKick<GSRendererHW9>();
 }

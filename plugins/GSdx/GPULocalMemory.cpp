@@ -21,16 +21,17 @@
  
 #include "StdAfx.h"
 #include "GPULocalMemory.h"
+#include "GSdx.h"
 
 const GSVector4i GPULocalMemory::m_xxxa(0x00008000);
 const GSVector4i GPULocalMemory::m_xxbx(0x00007c00);
 const GSVector4i GPULocalMemory::m_xgxx(0x000003e0);
 const GSVector4i GPULocalMemory::m_rxxx(0x0000001f);
 
-GPULocalMemory::GPULocalMemory(const GSVector2i& scale)
+GPULocalMemory::GPULocalMemory()
 {
-	m_scale.x = min(max(scale.x, 0), 2);
-	m_scale.y = min(max(scale.y, 0), 2);
+	m_scale.x = min(max(theApp.GetConfig("scale_x", 0), 0), 2);
+	m_scale.y = min(max(theApp.GetConfig("scale_y", 0), 0), 2);
 
 	//
 

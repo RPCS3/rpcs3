@@ -24,16 +24,14 @@
 
 const GSVector4 g_pos_scale(1.0f / 16, 1.0f / 16, 1.0f, 128.0f);
 
-GSRendererSW::GSRendererSW(uint8* base, bool mt, void (*irq)(), const GSRendererSettings& rs, GSDevice* dev, int threads)
-	: GSRendererT(base, mt, irq, rs)
+GSRendererSW::GSRendererSW(uint8* base, bool mt, void (*irq)(), GSDevice* dev)
+	: GSRendererT(base, mt, irq, dev)
 {
-	m_dev = dev;
-
 	m_tc = new GSTextureCacheSW(this);
 
 	memset(m_texture, 0, sizeof(m_texture));
 
-	m_rl.Create<GSDrawScanline>(this, threads);
+	m_rl.Create<GSDrawScanline>(this, theApp.GetConfig("swthreads", 1));
 
 	InitVertexKick<GSRendererSW>();
 }

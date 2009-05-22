@@ -21,18 +21,19 @@
 
 #include "StdAfx.h"
 #include "GPURenderer.h"
+#include "GSdx.h"
 
 map<HWND, GPURenderer*> GPURenderer::m_wnd2gpu;
 
-GPURenderer::GPURenderer(const GPURendererSettings& rs)
-	: GPUState(rs.m_scale)
+GPURenderer::GPURenderer(GSDevice* dev)
+	: m_dev(dev)
 	, m_hWnd(NULL)
 	, m_wndproc(NULL)
 {
-	m_filter = rs.m_filter;
-	m_dither = rs.m_dither;
-	m_aspectratio = rs.m_aspectratio;
-	m_vsync = rs.m_vsync;
+	m_filter = theApp.GetConfig("filter", 0);
+	m_dither = theApp.GetConfig("dithering", 1);
+	m_aspectratio = theApp.GetConfig("AspectRatio", 1);
+	m_vsync = !!theApp.GetConfig("vsync", 0);
 	m_scale = m_mem.GetScale();
 }
 

@@ -70,7 +70,7 @@ bool GSDevice::Reset(int w, int h, bool fs)
 	return true;
 }
 
-void GSDevice::Present(const GSVector4i& r)
+void GSDevice::Present(const GSVector4i& r, int shader)
 {
 	GSVector4i cr;
 
@@ -85,7 +85,9 @@ void GSDevice::Present(const GSVector4i& r)
 
 	if(m_current)
 	{
-		StretchRect(m_current, m_backbuffer, GSVector4(r));
+		static int s_shader[3] = {0, 5, 6}; // FIXME
+
+		StretchRect(m_current, m_backbuffer, GSVector4(r), s_shader[shader]);
 	}
 
 	Flip();
@@ -145,9 +147,9 @@ GSTexture* GSDevice::CreateOffscreen(int w, int h, int format)
 	return Fetch(GSTexture::Offscreen, w, h, format);
 }
 
-void GSDevice::StretchRect(GSTexture* st, GSTexture* dt, const GSVector4& dr, bool linear)
+void GSDevice::StretchRect(GSTexture* st, GSTexture* dt, const GSVector4& dr, int shader, bool linear)
 {
-	StretchRect(st, GSVector4(0, 0, 1, 1), dt, dr, linear);
+	StretchRect(st, GSVector4(0, 0, 1, 1), dt, dr, shader, linear);
 }
 
 GSTexture* GSDevice::GetCurrent()

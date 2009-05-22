@@ -42,5 +42,5 @@ public:
 	bool Create(HWND hWnd, bool vsync);
 	bool Reset(int w, int h, bool fs);
 
-	void Present(const GSVector4i& r);
+	void Present(const GSVector4i& r, int shader);
 };

@@ -50,7 +50,7 @@ class GPULocalMemory
 	GSVector2i m_scale;
 
 public:
-	GPULocalMemory(const GSVector2i& scale);
+	GPULocalMemory();
 	virtual ~GPULocalMemory();
 
 	GSVector2i GetScale() {return m_scale;}

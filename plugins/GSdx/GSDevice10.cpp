@@ -228,13 +228,6 @@ bool GSDevice10::Create(HWND hWnd, bool vsync)
 	Reset(1, 1, true);
 
 	//
-/*
-	if(!m_mergefx.Create(this))
-	{
-		return false;
-	}
-*/
-	//
 
 	return true;
 }
@@ -409,9 +402,9 @@ GSTexture* GSDevice10::CopyOffscreen(GSTexture* src, const GSVector4& sr, int w,
 	return dst;
 }
 
-void GSDevice10::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, bool linear)
+void GSDevice10::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, int shader, bool linear)
 {
-	StretchRect(st, sr, dt, dr, m_convert.ps[0], NULL, linear);
+	StretchRect(st, sr, dt, dr, m_convert.ps[shader], NULL, linear);
 }
 
 void GSDevice10::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, ID3D10PixelShader* ps, ID3D10Buffer* ps_cb, bool linear)

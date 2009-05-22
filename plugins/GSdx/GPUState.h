@@ -119,7 +119,7 @@ public:
 	uint32 m_status[256];
 
 public:
-	GPUState(const GSVector2i& scale);
+	GPUState();
 	virtual ~GPUState();
 
 	virtual void Reset();

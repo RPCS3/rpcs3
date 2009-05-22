@@ -53,3 +53,30 @@ float4 ps_main4() : COLOR
 	return 1;
 }
 
+float4 ps_crt(float2 t, int i)
+{
+	float4 mask[4] = 
+	{
+		float4(1, 0, 0, 0), 
+		float4(0, 1, 0, 0), 
+		float4(0, 0, 1, 0), 
+		float4(1, 1, 1, 0)
+	};
+	
+	return tex2D(Texture, t) * saturate(mask[i] + 0.5f);
+}
+
+float4 ps_main5(float2 t : TEXCOORD0, float4 vPos : VPOS) : COLOR // triangular
+{
+	int4 p = (int4)vPos;
+
+	// return ps_crt(t, ((p.x + (p.y % 2) * 3) / 2) % 3);
+	return ps_crt(t, ((p.x + ((p.y / 2) % 2) * 3) / 2) % 3);
+}
+
+float4 ps_main6(float2 t : TEXCOORD0, float4 vPos : VPOS) : COLOR // diagonal
+{
+	int4 p = (int4)vPos;
+
+	return ps_crt(t, (p.x + (p.y % 3)) % 3);
+}

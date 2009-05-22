@@ -28,8 +28,15 @@
 #include "GSSettingsDlg.h"
 #include "GSCapture.h"
 
-struct GSRendererSettings
+class GSRenderer : public GSState
 {
+	GSCapture m_capture;
+	string m_snapshot;
+	int m_shader;
+
+	bool Merge(int field);
+
+protected:
 	int m_interlace;
 	int m_aspectratio;
 	int m_filter;
@@ -37,22 +44,13 @@ struct GSRendererSettings
 	bool m_nativeres;
 	bool m_aa1;
 	bool m_blur;
-};
 
-class GSRenderer : public GSState, protected GSRendererSettings
-{
-	bool Merge(int field);
-
-protected:
 	virtual void ResetDevice() {}
 	virtual GSTexture* GetOutput(int i) = 0;
 
 public:
 	GSWnd m_wnd;
 	GSDevice* m_dev;
-	GSCapture m_capture;
-	string m_snapshot;
-	bool m_osd;
 	bool m_psrr;
 
 	int s_n;
@@ -61,15 +59,13 @@ public:
 	bool s_savez;
 
 public:
-	GSRenderer(uint8* base, bool mt, void (*irq)(), const GSRendererSettings& rs, bool psrr = true);
+	GSRenderer(uint8* base, bool mt, void (*irq)(), GSDevice* dev, bool psrr = true);
 	virtual ~GSRenderer();
 
 	virtual bool Create(const string& title);
 
 	virtual void VSync(int field);
-
 	virtual void KeyEvent(GSKeyEventData* e);
-
 	virtual bool MakeSnapshot(const string& path);
 
 	virtual void MinMaxUV(int w, int h, GSVector4i& r)
@@ -221,8 +217,8 @@ protected:
 	virtual void Draw() = 0;
 
 public:
-	GSRendererT(uint8* base, bool mt, void (*irq)(), const GSRendererSettings& rs, bool psrr = true)
-		: GSRenderer(base, mt, irq, rs, psrr)
+	GSRendererT(uint8* base, bool mt, void (*irq)(), GSDevice* dev, bool psrr = true)
+		: GSRenderer(base, mt, irq, dev, psrr)
 		, m_count(0)
 		, m_maxcount(0)
 		, m_vertices(NULL)

@@ -120,7 +120,7 @@ bool GSUtil::CheckDirectX()
 	}
 	else
 	{
-		int res = AfxMessageBox(_T("Please update DirectX!\n\nWould you like to open the download page in your browser?"), MB_YESNO);
+		int res = AfxMessageBox(_T("You need to update directx, would you like to do it now?"), MB_YESNO);
 
 		if(res == IDYES)
 		{

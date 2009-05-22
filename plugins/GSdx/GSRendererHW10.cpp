@@ -24,12 +24,9 @@
 #include "GSCrc.h"
 #include "resource.h"
 
-GSRendererHW10::GSRendererHW10(uint8* base, bool mt, void (*irq)(), const GSRendererSettings& rs)
-	: GSRendererHW<GSVertexHW10>(base, mt, irq, rs, true)
+GSRendererHW10::GSRendererHW10(uint8* base, bool mt, void (*irq)())
+	: GSRendererHW<GSVertexHW10>(base, mt, irq, new GSDevice10(), new GSTextureCache10(this), true)
 {
-	m_dev = new GSDevice10();
-	m_tc = new GSTextureCache10(this);
-
 	InitVertexKick<GSRendererHW10>();
 }
 

@@ -108,7 +108,7 @@ public: // TODO
 	{
 		CComPtr<IDirect3DVertexShader9> vs;
 		CComPtr<IDirect3DVertexDeclaration9> il;
-		CComPtr<IDirect3DPixelShader9> ps[5];
+		CComPtr<IDirect3DPixelShader9> ps[7];
 		Direct3DSamplerState9 ln;
 		Direct3DSamplerState9 pt;
 		Direct3DDepthStencilState9 dss;
@@ -153,7 +153,7 @@ public:
 
 	virtual bool IsCurrentRGBA() {return false;}
 
-	void StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, bool linear = true);
+	void StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, int shader = 0, bool linear = true);
 	void StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, IDirect3DPixelShader9* ps, const float* ps_cb, int ps_cb_len, bool linear = true);
 	void StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, IDirect3DPixelShader9* ps, const float* ps_cb, int ps_cb_len, Direct3DBlendState9* bs, bool linear = true);
 

@@ -44,6 +44,6 @@ protected:
 	GSTexture* GetOutput();
 
 public:
-	GPURendererSW(const GPURendererSettings& rs, GSDevice* dev, int threads);
+	GPURendererSW(GSDevice* dev);
 	virtual ~GPURendererSW();
 };

@@ -21,14 +21,13 @@
 
 #include "StdAfx.h"
 #include "GPURendererSW.h"
+#include "GSdx.h"
 
-GPURendererSW::GPURendererSW(const GPURendererSettings& rs, GSDevice* dev, int threads)
-	: GPURendererT(rs)
+GPURendererSW::GPURendererSW(GSDevice* dev)
+	: GPURendererT(dev)
 	, m_texture(NULL)
 {
-	m_dev = dev;
-
-	m_rl.Create<GPUDrawScanline>(this, threads);
+	m_rl.Create<GPUDrawScanline>(this, theApp.GetConfig("swthreads", 1));
 
 	m_fpDrawingKickHandlers[GPU_POLYGON] = (DrawingKickHandler)&GPURendererSW::DrawingKickTriangle;
 	m_fpDrawingKickHandlers[GPU_LINE] = (DrawingKickHandler)&GPURendererSW::DrawingKickLine;

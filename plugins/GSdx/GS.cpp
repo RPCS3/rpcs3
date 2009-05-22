@@ -100,10 +100,6 @@ static INT32 GSopen(void* dsp, char* title, int mt, int renderer)
 {
 	GSclose();
 
-	GSRendererSettings rs;
-
-	int threads = 1;
-
 #ifdef _WINDOWS
 
 	s_hr = ::CoInitializeEx(NULL, COINIT_MULTITHREADED);
@@ -120,27 +116,17 @@ static INT32 GSopen(void* dsp, char* title, int mt, int renderer)
 		return -1;
 	}
 
-	rs.m_interlace = theApp.GetConfig("interlace", 0);
-	rs.m_aspectratio = theApp.GetConfig("aspectratio", 1);
-	rs.m_filter = theApp.GetConfig("filter", 1);
-	rs.m_vsync = !!theApp.GetConfig("vsync", 0);
-	rs.m_nativeres = !!theApp.GetConfig("nativeres", 0);
-	rs.m_aa1 = !!theApp.GetConfig("aa1", 0);
-	rs.m_blur = !!theApp.GetConfig("blur", 0);
-
-	threads = theApp.GetConfig("swthreads", 1);
-
 	switch(renderer)
 	{
 	default: 
-	case 0: s_gs = new GSRendererHW9(s_basemem, !!mt, s_irq, rs); break;
-	case 1: s_gs = new GSRendererSW(s_basemem, !!mt, s_irq, rs, new GSDevice9(), threads); break;
-	case 2: s_gs = new GSRendererNull(s_basemem, !!mt, s_irq, rs, new GSDevice9()); break;
-	case 3: s_gs = new GSRendererHW10(s_basemem, !!mt, s_irq, rs); break;
-	case 4: s_gs = new GSRendererSW(s_basemem, !!mt, s_irq, rs, new GSDevice10(), threads); break;
-	case 5: s_gs = new GSRendererNull(s_basemem, !!mt, s_irq, rs, new GSDevice10()); break;
-	case 6: s_gs = new GSRendererSW(s_basemem, !!mt, s_irq, rs, new GSDeviceNull(), threads); break;
-	case 7: s_gs = new GSRendererNull(s_basemem, !!mt, s_irq, rs, new GSDeviceNull()); break;
+	case 0: s_gs = new GSRendererHW9(s_basemem, !!mt, s_irq); break;
+	case 1: s_gs = new GSRendererSW(s_basemem, !!mt, s_irq, new GSDevice9()); break;
+	case 2: s_gs = new GSRendererNull(s_basemem, !!mt, s_irq, new GSDevice9()); break;
+	case 3: s_gs = new GSRendererHW10(s_basemem, !!mt, s_irq); break;
+	case 4: s_gs = new GSRendererSW(s_basemem, !!mt, s_irq, new GSDevice10()); break;
+	case 5: s_gs = new GSRendererNull(s_basemem, !!mt, s_irq, new GSDevice10()); break;
+	case 6: s_gs = new GSRendererSW(s_basemem, !!mt, s_irq, new GSDeviceNull()); break;
+	case 7: s_gs = new GSRendererNull(s_basemem, !!mt, s_irq, new GSDeviceNull()); break;
 	}
 
 	if(!s_gs->Create(title))
