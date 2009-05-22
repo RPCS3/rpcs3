@@ -23,6 +23,7 @@
 
 #include "GPUState.h"
 #include "GSVertexList.h"
+#include "GSDevice.h"
 
 struct GPURendererSettings
 {
@@ -33,100 +34,30 @@ struct GPURendererSettings
 	GSVector2i m_scale;
 };
 
-class GPURendererBase : public GPUState, protected GPURendererSettings
+class GPURenderer : public GPUState, protected GPURendererSettings
 {
 protected:
 	HWND m_hWnd;
 	WNDPROC m_wndproc;
-	static map<HWND, GPURendererBase*> m_wnd2gpu;
+	static map<HWND, GPURenderer*> m_wnd2gpu;
 
-	static LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
-	{
-		map<HWND, GPURendererBase*>::iterator i = m_wnd2gpu.find(hWnd);
+	static LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 
-		if(i != m_wnd2gpu.end())
-		{
-			return (*i).second->OnMessage(message, wParam, lParam);
-		}
-
-		ASSERT(0);
-
-		return 0;
-	}
-
-	LRESULT OnMessage(UINT message, WPARAM wParam, LPARAM lParam)
-	{
-		if(message == WM_KEYUP)
-		{
-			switch(wParam)
-			{
-			case VK_DELETE:
-				m_filter = (m_filter + 1) % 3;
-				return 0;
-			case VK_END:
-				m_dither = m_dither ? 0 : 1;
-				return 0;
-			case VK_NEXT:
-				m_aspectratio = (m_aspectratio + 1) % 3;
-				return 0;
-			}
-		}
-
-		return m_wndproc(m_hWnd, message, wParam, lParam);
-	}
+	LRESULT OnMessage(UINT message, WPARAM wParam, LPARAM lParam);
 
 public:
-	GPURendererBase(const GPURendererSettings& rs)
-		: GPUState(rs.m_scale)
-		, m_hWnd(NULL)
-		, m_wndproc(NULL)
-	{
-		m_filter = rs.m_filter;
-		m_dither = rs.m_dither;
-		m_aspectratio = rs.m_aspectratio;
-		m_vsync = rs.m_vsync;
-		m_scale = m_mem.GetScale();
-	}
+	GPURenderer(const GPURendererSettings& rs);
+	virtual ~GPURenderer();
 
-	virtual ~GPURendererBase()
-	{
-		if(m_wndproc)
-		{
-			SetWindowLongPtr(m_hWnd, GWLP_WNDPROC, (LONG_PTR)m_wndproc);
-
-			m_wnd2gpu.erase(m_hWnd);
-		}
-	}
-
-	virtual bool Create(HWND hWnd)
-	{
-		m_hWnd = hWnd;
-
-		m_wndproc = (WNDPROC)GetWindowLongPtr(hWnd, GWLP_WNDPROC);
-		SetWindowLongPtr(hWnd, GWLP_WNDPROC, (LONG_PTR)WndProc);
-
-		m_wnd2gpu[hWnd] = this;
-
-		DWORD style = GetWindowLong(hWnd, GWL_STYLE);
-		style |= WS_OVERLAPPEDWINDOW;
-		SetWindowLong(hWnd, GWL_STYLE, style);
-		UpdateWindow(hWnd);
-
-		ShowWindow(hWnd, SW_SHOWNORMAL);
-
-		return true;
-	}
-
+	virtual bool Create(HWND hWnd);
 	virtual void VSync() = 0;
 	virtual bool MakeSnapshot(const string& path) = 0;
 };
 
-template<class Device, class Vertex> 
-class GPURenderer : public GPURendererBase
+template<class Vertex> 
+class GPURendererT : public GPURenderer
 {
 protected:
-	typedef typename Device::Texture Texture;
-
 	Vertex* m_vertices;
 	int m_count;
 	int m_maxcount;
@@ -191,7 +122,7 @@ protected:
 		m_count += count;
 	}
 
-	typedef void (GPURenderer<Device, Vertex>::*DrawingKickHandler)(Vertex* v, int& count);
+	typedef void (GPURendererT<Vertex>::*DrawingKickHandler)(Vertex* v, int& count);
 
 	DrawingKickHandler m_fpDrawingKickHandlers[4];
 
@@ -235,46 +166,36 @@ protected:
 
 	virtual void ResetDevice() {}
 	virtual void Draw() = 0;
-	virtual bool GetOutput(Texture& t) = 0;
+	virtual GSTexture* GetOutput() = 0;
 
 	bool Merge()
 	{
-		Texture st[2];
+		GSTexture* st[2] = {GetOutput(), NULL};
 
-		if(!GetOutput(st[0]))
+		if(!st[0])
 		{
 			return false;
 		}
 
-		GSVector2i s = st[0].GetSize();
-		
+		GSVector2i s = st[0]->GetSize();
+
 		GSVector4 sr[2];
-
-		sr[0].x = 0;
-		sr[0].y = 0;
-		sr[0].z = 1.0f;
-		sr[0].w = 1.0f;
-
 		GSVector4 dr[2];
 
-		dr[0].x = 0;
-		dr[0].y = 0;
-		dr[0].z = (float)s.x;
-		dr[0].w = (float)s.y;
+		sr[0] = GSVector4(0, 0, 1, 1);
+		dr[0] = GSVector4(0, 0, s.x, s.y);
 
-		GSVector4 c(0, 0, 0, 1);
-
-		m_dev.Merge(st, sr, dr, s, 1, 1, c);
+		m_dev->Merge(st, sr, dr, s, 1, 1, GSVector4(0, 0, 0, 1));
 
 		return true;
 	}
 
 public:
-	Device m_dev;
+	GSDevice* m_dev;
 
 public:
-	GPURenderer(const GPURendererSettings& rs)
-		: GPURendererBase(rs)
+	GPURendererT(const GPURendererSettings& rs)
+		: GPURenderer(rs)
 		, m_count(0)
 		, m_maxcount(10000)
 	{
@@ -283,11 +204,11 @@ public:
 
 		for(int i = 0; i < countof(m_fpDrawingKickHandlers); i++)
 		{
-			m_fpDrawingKickHandlers[i] = &GPURenderer<Device, Vertex>::DrawingKickNull;
+			m_fpDrawingKickHandlers[i] = &GPURendererT<Vertex>::DrawingKickNull;
 		}
 	}
 
-	virtual ~GPURenderer()
+	virtual ~GPURendererT()
 	{
 		if(m_vertices) _aligned_free(m_vertices);
 	}
@@ -299,7 +220,7 @@ public:
 			return false;
 		}
 
-		if(!m_dev.Create(hWnd, m_vsync))
+		if(!m_dev->Create(hWnd, m_vsync))
 		{
 			return false;
 		}
@@ -313,21 +234,15 @@ public:
 	{
 		GSPerfMonAutoTimer pmat(m_perfmon);
 
+		m_perfmon.Put(GSPerfMon::Frame);
+
 		// m_env.STATUS.LCF = ~m_env.STATUS.LCF; // ?
 
-		if(!IsWindow(m_hWnd))
-		{
-			return;
-		}
+		if(!IsWindow(m_hWnd)) return;
 
 		Flush();
 
-		m_perfmon.Put(GSPerfMon::Frame);
-
-		if(!Merge())
-		{
-			return;
-		}
+		if(!Merge()) return;
 
 		// osd 
 
@@ -367,7 +282,7 @@ public:
 			SetWindowText(m_hWnd, s_stats.c_str());
 		}
 
-		if(m_dev.IsLost())
+		if(m_dev->IsLost())
 		{
 			ResetDevice();
 		}
@@ -376,7 +291,7 @@ public:
 		
 		GetClientRect(m_hWnd, r);
 
-		m_dev.Present(r.fit(m_aspectratio));
+		m_dev->Present(r.fit(m_aspectratio));
 	}
 
 	virtual bool MakeSnapshot(const string& path)
@@ -390,6 +305,11 @@ public:
 			return false;
 		}
 
-		return m_dev.SaveCurrent(format("%s_%s.bmp", path.c_str(), buff));
+		if(GSTexture* t = m_dev->GetCurrent())
+		{
+			return t->Save(format("%s_%s.bmp", path.c_str(), buff));
+		}
+
+		return false;
 	}
 };

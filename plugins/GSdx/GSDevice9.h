@@ -58,11 +58,8 @@ struct Direct3DBlendState9
     UINT8 RenderTargetWriteMask;
 };
 
-class GSDevice9 : public GSDevice<GSTexture9>
+class GSDevice9 : public GSDevice
 {
-public:
-	typedef GSTexture9 Texture;
-
 private:
 	// state cache
 
@@ -90,9 +87,10 @@ private:
 
 	//
 
-	bool Create(int type, Texture& t, int w, int h, int format);
-	void DoMerge(Texture* st, GSVector4* sr, GSVector4* dr, Texture& dt, bool slbg, bool mmod, GSVector4& c);
-	void DoInterlace(Texture& st, Texture& dt, int shader, bool linear, float yoffset = 0);
+	GSTexture* Create(int type, int w, int h, int format);
+
+	void DoMerge(GSTexture* st[2], GSVector4* sr, GSVector4* dr, GSTexture* dt, bool slbg, bool mmod, const GSVector4& c);
+	void DoInterlace(GSTexture* st, GSTexture* dt, int shader, bool linear, float yoffset = 0);
 
 	//
 
@@ -101,7 +99,6 @@ private:
 	CComPtr<IDirect3D9> m_d3d;
 	CComPtr<IDirect3DDevice9> m_dev;
 	CComPtr<IDirect3DSwapChain9> m_swapchain;
-	Texture m_backbuffer;
 
 public: // TODO
 	D3DPRESENT_PARAMETERS m_pp;
@@ -135,38 +132,43 @@ public:
 
 	bool Create(HWND hWnd, bool vsync);
 	bool Reset(int w, int h, bool fs);
+
 	bool IsLost();
-	void Present(const GSVector4i& r);
+	void Flip();
+
 	void BeginScene();
 	void EndScene();
-	void Draw(const string& s);
-	bool CopyOffscreen(Texture& src, const GSVector4& sr, Texture& dst, int w, int h, int format = 0);
 
-	void ClearRenderTarget(Texture& t, const GSVector4& c);
-	void ClearRenderTarget(Texture& t, uint32 c);
-	void ClearDepth(Texture& t, float c);
-	void ClearStencil(Texture& t, uint8 c);
+	void ClearRenderTarget(GSTexture* t, const GSVector4& c);
+	void ClearRenderTarget(GSTexture* t, uint32 c);
+	void ClearDepth(GSTexture* t, float c);
+	void ClearStencil(GSTexture* t, uint8 c);
 
-	bool CreateRenderTarget(Texture& t, int w, int h, int format = 0);
-	bool CreateDepthStencil(Texture& t, int w, int h, int format = 0);
-	bool CreateTexture(Texture& t, int w, int h, int format = 0);
-	bool CreateOffscreen(Texture& t, int w, int h, int format = 0);
+	GSTexture* CreateRenderTarget(int w, int h, int format = 0);
+	GSTexture* CreateDepthStencil(int w, int h, int format = 0);
+	GSTexture* CreateTexture(int w, int h, int format = 0);
+	GSTexture* CreateOffscreen(int w, int h, int format = 0);
 
-	IDirect3DDevice9* operator->() {return m_dev;}
-	operator IDirect3DDevice9*() {return m_dev;}
+	GSTexture* CopyOffscreen(GSTexture* src, const GSVector4& sr, int w, int h, int format = 0);
+
+	virtual bool IsCurrentRGBA() {return false;}
+
+	void StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, bool linear = true);
+	void StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, IDirect3DPixelShader9* ps, const float* ps_cb, int ps_cb_len, bool linear = true);
+	void StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, IDirect3DPixelShader9* ps, const float* ps_cb, int ps_cb_len, Direct3DBlendState9* bs, bool linear = true);
 
 	// TODO: void IASetVertexBuffer(IDirect3DVertexBuffer9* vb, uint32 count, const void* vertices, size_t stride);
 	void IASetVertexBuffer(int count, const void* vertices, size_t stride);
 	void IASetInputLayout(IDirect3DVertexDeclaration9* layout);
 	void IASetPrimitiveTopology(D3DPRIMITIVETYPE topology);
 	void VSSetShader(IDirect3DVertexShader9* vs, const float* vs_cb, int vs_cb_len);
-	void PSSetShaderResources(IDirect3DTexture9* srv0, IDirect3DTexture9* srv1);
+	void PSSetShaderResources(GSTexture* sr0, GSTexture* sr1);
 	void PSSetShader(IDirect3DPixelShader9* ps, const float* ps_cb, int ps_cb_len);
 	void PSSetSamplerState(Direct3DSamplerState9* ss);
 	void RSSet(int width, int height, const GSVector4i* scissor = NULL);
 	void OMSetDepthStencilState(Direct3DDepthStencilState9* dss, uint32 sref);
 	void OMSetBlendState(Direct3DBlendState9* bs, uint32 bf);
-	void OMSetRenderTargets(IDirect3DSurface9* rtv, IDirect3DSurface9* dsv);
+	void OMSetRenderTargets(GSTexture* rt, GSTexture* ds);
 	void DrawPrimitive();
 
 	template<class T> void IASetVertexBuffer(int count, T* vertices)
@@ -174,16 +176,9 @@ public:
 		IASetVertexBuffer(count, vertices, sizeof(T));
 	}
 
-	void StretchRect(Texture& st, Texture& dt, const GSVector4& dr, bool linear = true);
-	void StretchRect(Texture& st, const GSVector4& sr, Texture& dt, const GSVector4& dr, bool linear = true);
-	void StretchRect(Texture& st, const GSVector4& sr, Texture& dt, const GSVector4& dr, IDirect3DPixelShader9* ps, const float* ps_cb, int ps_cb_len, bool linear = true);
-	void StretchRect(Texture& st, const GSVector4& sr, Texture& dt, const GSVector4& dr, IDirect3DPixelShader9* ps, const float* ps_cb, int ps_cb_len, Direct3DBlendState9* bs, bool linear = true);
+	IDirect3DDevice9* operator->() {return m_dev;}
+	operator IDirect3DDevice9*() {return m_dev;}
 
 	HRESULT CompileShader(uint32 id, const string& entry, const D3DXMACRO* macro, IDirect3DVertexShader9** vs, const D3DVERTEXELEMENT9* layout, int count, IDirect3DVertexDeclaration9** il);
 	HRESULT CompileShader(uint32 id, const string& entry, const D3DXMACRO* macro, IDirect3DPixelShader9** ps);
-
-	virtual bool IsCurrentRGBA()
-	{
-		return false;
-	}
 };

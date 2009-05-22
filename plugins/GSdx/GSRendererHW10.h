@@ -26,18 +26,14 @@
 #include "GSTextureCache10.h"
 #include "GSTextureFX10.h"
 
-class GSRendererHW10 : public GSRendererHW<GSDevice10, GSVertexHW10, GSTextureCache10>
+class GSRendererHW10 : public GSRendererHW<GSVertexHW10>
 {
-	typedef GSDevice10 Device;
-	typedef GSVertexHW10 Vertex;
-	typedef GSTextureCache10 TextureCache;
-
 	bool WrapZ(uint32 maxz);
 
 protected:
 	GSTextureFX10 m_tfx;
 
-	void Draw(int prim, Texture& rt, Texture& ds, GSTextureCache<Device>::GSTexture* tex);
+	void Draw(int prim, GSTexture* rt, GSTexture* ds, GSTextureCache::GSCachedTexture* tex);
 
 	struct
 	{
@@ -45,7 +41,7 @@ protected:
 		CComPtr<ID3D10BlendState> bs;
 	} m_date;
 
-	void SetupDATE(Texture& rt, Texture& ds);
+	void SetupDATE(GSTexture* rt, GSTexture* ds);
 
 public:
 	GSRendererHW10(uint8* base, bool mt, void (*irq)(), const GSRendererSettings& rs);

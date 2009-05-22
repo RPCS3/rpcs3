@@ -25,8 +25,11 @@
 #include "resource.h"
 
 GSRendererHW10::GSRendererHW10(uint8* base, bool mt, void (*irq)(), const GSRendererSettings& rs)
-	: GSRendererHW<Device, Vertex, TextureCache>(base, mt, irq, rs, true)
+	: GSRendererHW<GSVertexHW10>(base, mt, irq, rs, true)
 {
+	m_dev = new GSDevice10();
+	m_tc = new GSTextureCache10(this);
+
 	InitVertexKick<GSRendererHW10>();
 }
 
@@ -35,7 +38,7 @@ bool GSRendererHW10::Create(const string& title)
 	if(!__super::Create(title))
 		return false;
 
-	if(!m_tfx.Create(&m_dev))
+	if(!m_tfx.Create((GSDevice10*)m_dev))
 		return false;
 
 	//
@@ -57,13 +60,13 @@ bool GSRendererHW10::Create(const string& title)
 	dsd.BackFace.StencilFailOp = D3D10_STENCIL_OP_KEEP;
 	dsd.BackFace.StencilDepthFailOp = D3D10_STENCIL_OP_KEEP;
 
-	m_dev->CreateDepthStencilState(&dsd, &m_date.dss);
+	(*(GSDevice10*)m_dev)->CreateDepthStencilState(&dsd, &m_date.dss);
 
 	D3D10_BLEND_DESC bd;
 
 	memset(&bd, 0, sizeof(bd));
 
-	m_dev->CreateBlendState(&bd, &m_date.bs);
+	(*(GSDevice10*)m_dev)->CreateBlendState(&bd, &m_date.bs);
 
 	//
 
@@ -73,7 +76,7 @@ bool GSRendererHW10::Create(const string& title)
 template<uint32 prim, uint32 tme, uint32 fst> 
 void GSRendererHW10::VertexKick(bool skip)
 {
-	Vertex& dst = m_vl.AddTail();
+	GSVertexHW10& dst = m_vl.AddTail();
 
 	dst.m128i[0] = m_v.m128i[0];
 	dst.m128i[1] = m_v.m128i[1];
@@ -85,7 +88,7 @@ void GSRendererHW10::VertexKick(bool skip)
 
 	int count = 0;
 	
-	if(Vertex* v = DrawingKick<prim>(skip, count))
+	if(GSVertexHW10* v = DrawingKick<prim>(skip, count))
 	{
 		GSVector4i scissor = m_context->scissor.dx10;
 
@@ -169,7 +172,7 @@ void GSRendererHW10::VertexKick(bool skip)
 	}
 }
 
-void GSRendererHW10::Draw(int prim, Texture& rt, Texture& ds, GSTextureCache<Device>::GSTexture* tex)
+void GSRendererHW10::Draw(int prim, GSTexture* rt, GSTexture* ds, GSTextureCache::GSCachedTexture* tex)
 {
 	GSDrawingEnvironment& env = m_env;
 	GSDrawingContext* context = m_context;
@@ -223,7 +226,7 @@ void GSRendererHW10::Draw(int prim, Texture& rt, Texture& ds, GSTextureCache<Dev
 
 	//
 
-	m_dev.BeginScene();
+	m_dev->BeginScene();
 
 	// om
 
@@ -285,8 +288,8 @@ void GSRendererHW10::Draw(int prim, Texture& rt, Texture& ds, GSTextureCache<Dev
 
 	GSTextureFX10::VSConstantBuffer vs_cb;
 
-	float sx = 2.0f * rt.m_scale.x / (rt.GetWidth() * 16);
-	float sy = 2.0f * rt.m_scale.y / (rt.GetHeight() * 16);
+	float sx = 2.0f * rt->m_scale.x / (rt->GetWidth() * 16);
+	float sy = 2.0f * rt->m_scale.y / (rt->GetHeight() * 16);
 	float ox = (float)(int)context->XYOFFSET.OFX;
 	float oy = (float)(int)context->XYOFFSET.OFY;
 
@@ -396,8 +399,8 @@ void GSRendererHW10::Draw(int prim, Texture& rt, Texture& ds, GSTextureCache<Dev
 			__assume(0);
 		}
 
-		float w = (float)tex->m_texture.GetWidth();
-		float h = (float)tex->m_texture.GetHeight();
+		float w = (float)tex->m_texture->GetWidth();
+		float h = (float)tex->m_texture->GetHeight();
 
 		ps_cb.WH = GSVector2(w, h);
 		ps_cb.rWrH = GSVector2(1.0f / w, 1.0f / h);
@@ -409,10 +412,10 @@ void GSRendererHW10::Draw(int prim, Texture& rt, Texture& ds, GSTextureCache<Dev
 
 	// rs
 
-	int w = rt.GetWidth();
-	int h = rt.GetHeight();
+	int w = rt->GetWidth();
+	int h = rt->GetHeight();
 
-	GSVector4i scissor = GSVector4i(GSVector4(rt.m_scale).xyxy() * context->scissor.in).rintersect(GSVector4i(0, 0, w, h));
+	GSVector4i scissor = GSVector4i(GSVector4(rt->m_scale).xyxy() * context->scissor.in).rintersect(GSVector4i(0, 0, w, h));
 
 	//
 
@@ -420,9 +423,7 @@ void GSRendererHW10::Draw(int prim, Texture& rt, Texture& ds, GSTextureCache<Dev
 	m_tfx.SetupIA(m_vertices, m_count, topology);
 	m_tfx.SetupVS(vs_sel, &vs_cb);
 	m_tfx.SetupGS(gs_sel);
-	m_tfx.SetupPS(ps_sel, &ps_cb, ps_ssel, 
-		tex ? (ID3D10ShaderResourceView*)tex->m_texture : NULL, 
-		tex ? (ID3D10ShaderResourceView*)tex->m_palette : NULL);
+	m_tfx.SetupPS(ps_sel, &ps_cb, ps_ssel, tex ? tex->m_texture : NULL, tex ? tex->m_palette : NULL);
 	m_tfx.SetupRS(w, h, scissor);
 
 	// draw
@@ -471,7 +472,7 @@ void GSRendererHW10::Draw(int prim, Texture& rt, Texture& ds, GSTextureCache<Dev
 		}
 	}
 
-	m_dev.EndScene();
+	m_dev->EndScene();
 }
 
 bool GSRendererHW10::WrapZ(uint32 maxz)
@@ -489,112 +490,114 @@ bool GSRendererHW10::WrapZ(uint32 maxz)
 	return true;
 }
 
-void GSRendererHW10::SetupDATE(Texture& rt, Texture& ds)
+void GSRendererHW10::SetupDATE(GSTexture* rt, GSTexture* ds)
 {
 	if(!m_context->TEST.DATE) return; // || (::GetAsyncKeyState(VK_CONTROL) & 0x8000)
 
-	// sfex3 (after the capcom logo), vf4 (first menu fading in), ffxii shadows, rumble roses shadows, persona4 shadows
+	GSDevice10* dev = (GSDevice10*)m_dev;
 
-	GSVector4 mm;
+	int w = rt->GetWidth();
+	int h = rt->GetHeight();
 
-	// TODO
-
-	mm = GSVector4(-1, -1, 1, 1);
-
-	// if(m_count < 100)
+	if(GSTexture* t = dev->CreateRenderTarget(w, h))
 	{
-		GSVector4 pmin(65535, 65535, 0, 0);
-		GSVector4 pmax = GSVector4::zero();
+		// sfex3 (after the capcom logo), vf4 (first menu fading in), ffxii shadows, rumble roses shadows, persona4 shadows
 
-		for(int i = 0, j = m_count; i < j; i++)
+		GSVector4 mm;
+
+		// TODO
+
+		mm = GSVector4(-1, -1, 1, 1);
+
+		// if(m_count < 100)
 		{
-			GSVector4 p(GSVector4i(m_vertices[i].m128i[0]).uph16());
+			GSVector4 pmin(65535, 65535, 0, 0);
+			GSVector4 pmax = GSVector4::zero();
 
-			pmin = p.minv(pmin);
-			pmax = p.maxv(pmax);
+			for(int i = 0, j = m_count; i < j; i++)
+			{
+				GSVector4 p(GSVector4i(m_vertices[i].m128i[0]).uph16());
+
+				pmin = p.minv(pmin);
+				pmax = p.maxv(pmax);
+			}
+
+			mm += pmin.xyxy(pmax);
+
+			float sx = 2.0f * rt->m_scale.x / (w * 16);
+			float sy = 2.0f * rt->m_scale.y / (h * 16);	
+			float ox = (float)(int)m_context->XYOFFSET.OFX;
+			float oy = (float)(int)m_context->XYOFFSET.OFY;
+
+			mm.x = (mm.x - ox) * sx - 1;
+			mm.y = (mm.y - oy) * sy - 1;
+			mm.z = (mm.z - ox) * sx - 1;
+			mm.w = (mm.w - oy) * sy - 1;
+
+			if(mm.x < -1) mm.x = -1;
+			if(mm.y < -1) mm.y = -1;
+			if(mm.z > +1) mm.z = +1;
+			if(mm.w > +1) mm.w = +1;
 		}
 
-		mm += pmin.xyxy(pmax);
+		GSVector4 uv = (mm + 1.0f) / 2.0f;
 
-		int w = rt.GetWidth();
-		int h = rt.GetHeight();
+		//
 
-		float sx = 2.0f * rt.m_scale.x / (w * 16);
-		float sy = 2.0f * rt.m_scale.y / (h * 16);	
-		float ox = (float)(int)m_context->XYOFFSET.OFX;
-		float oy = (float)(int)m_context->XYOFFSET.OFY;
+		dev->BeginScene();
 
-		mm.x = (mm.x - ox) * sx - 1;
-		mm.y = (mm.y - oy) * sy - 1;
-		mm.z = (mm.z - ox) * sx - 1;
-		mm.w = (mm.w - oy) * sy - 1;
+		dev->ClearStencil(ds, 0);
 
-		if(mm.x < -1) mm.x = -1;
-		if(mm.y < -1) mm.y = -1;
-		if(mm.z > +1) mm.z = +1;
-		if(mm.w > +1) mm.w = +1;
+		// om
+
+		dev->OMSetDepthStencilState(m_date.dss, 1);
+		dev->OMSetBlendState(m_date.bs, 0);
+		dev->OMSetRenderTargets(t, ds);
+
+		// ia
+
+		GSVertexPT1 vertices[] =
+		{
+			{GSVector4(mm.x, -mm.y, 0.5f, 1.0f), GSVector2(uv.x, uv.y)},
+			{GSVector4(mm.z, -mm.y, 0.5f, 1.0f), GSVector2(uv.z, uv.y)},
+			{GSVector4(mm.x, -mm.w, 0.5f, 1.0f), GSVector2(uv.x, uv.w)},
+			{GSVector4(mm.z, -mm.w, 0.5f, 1.0f), GSVector2(uv.z, uv.w)},
+		};
+
+		D3D10_BOX box = {0, 0, 0, sizeof(vertices), 1, 1};
+
+		(*dev)->UpdateSubresource(dev->m_convert.vb, 0, &box, vertices, 0, 0);
+
+		dev->IASetVertexBuffer(dev->m_convert.vb, sizeof(vertices[0]));
+		dev->IASetInputLayout(dev->m_convert.il);
+		dev->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+
+		// vs
+
+		dev->VSSetShader(dev->m_convert.vs, NULL);
+
+		// gs
+
+		dev->GSSetShader(NULL);
+
+		// ps
+
+		dev->PSSetShaderResources(rt, NULL);
+		dev->PSSetShader(dev->m_convert.ps[m_context->TEST.DATM ? 2 : 3], NULL);
+		dev->PSSetSamplerState(dev->m_convert.pt, NULL);
+
+		// rs
+
+		dev->RSSet(w, h);
+
+		// set
+
+		dev->DrawPrimitive(countof(vertices));
+
+		//
+
+		dev->EndScene();
+
+		dev->Recycle(t);
 	}
-
-	GSVector4 uv = (mm + 1.0f) / 2.0f;
-
-	//
-
-	m_dev.BeginScene();
-
-	// om
-
-	GSTexture10 tmp;
-
-	m_dev.CreateRenderTarget(tmp, rt.GetWidth(), rt.GetHeight());
-
-	m_dev.OMSetRenderTargets(tmp, ds);
-	m_dev.OMSetDepthStencilState(m_date.dss, 1);
-	m_dev.OMSetBlendState(m_date.bs, 0);
-
-	m_dev->ClearDepthStencilView(ds, D3D10_CLEAR_STENCIL, 0, 0);
-
-	// ia
-
-	GSVertexPT1 vertices[] =
-	{
-		{GSVector4(mm.x, -mm.y, 0.5f, 1.0f), GSVector2(uv.x, uv.y)},
-		{GSVector4(mm.z, -mm.y, 0.5f, 1.0f), GSVector2(uv.z, uv.y)},
-		{GSVector4(mm.x, -mm.w, 0.5f, 1.0f), GSVector2(uv.x, uv.w)},
-		{GSVector4(mm.z, -mm.w, 0.5f, 1.0f), GSVector2(uv.z, uv.w)},
-	};
-
-	D3D10_BOX box = {0, 0, 0, sizeof(vertices), 1, 1};
-	m_dev->UpdateSubresource(m_dev.m_convert.vb, 0, &box, vertices, 0, 0);
-
-	m_dev.IASetVertexBuffer(m_dev.m_convert.vb, sizeof(vertices[0]));
-	m_dev.IASetInputLayout(m_dev.m_convert.il);
-	m_dev.IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-
-	// vs
-
-	m_dev.VSSetShader(m_dev.m_convert.vs, NULL);
-
-	// gs
-
-	m_dev.GSSetShader(NULL);
-
-	// ps
-
-	m_dev.PSSetShaderResources(rt, NULL);
-	m_dev.PSSetShader(m_dev.m_convert.ps[m_context->TEST.DATM ? 2 : 3], NULL);
-	m_dev.PSSetSamplerState(m_dev.m_convert.pt, NULL);
-
-	// rs
-
-	m_dev.RSSet(tmp.GetWidth(), tmp.GetHeight());
-
-	// set
-
-	m_dev.DrawPrimitive(countof(vertices));
-
-	//
-
-	m_dev.EndScene();
-
-	m_dev.Recycle(tmp);
 }

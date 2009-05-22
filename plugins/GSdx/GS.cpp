@@ -33,7 +33,7 @@
 #define PS2E_X86_64 0x02   // 64 bit
 
 static HRESULT s_hr = E_FAIL;
-static GSRendererBase* s_gs = NULL;
+static GSRenderer* s_gs = NULL;
 static void (*s_irq)() = NULL;
 static uint8* s_basemem = NULL;
 
@@ -134,13 +134,13 @@ static INT32 GSopen(void* dsp, char* title, int mt, int renderer)
 	{
 	default: 
 	case 0: s_gs = new GSRendererHW9(s_basemem, !!mt, s_irq, rs); break;
-	case 1: s_gs = new GSRendererSW<GSDevice9>(s_basemem, !!mt, s_irq, rs, threads); break;
-	case 2: s_gs = new GSRendererNull<GSDevice9>(s_basemem, !!mt, s_irq, rs); break;
+	case 1: s_gs = new GSRendererSW(s_basemem, !!mt, s_irq, rs, new GSDevice9(), threads); break;
+	case 2: s_gs = new GSRendererNull(s_basemem, !!mt, s_irq, rs, new GSDevice9()); break;
 	case 3: s_gs = new GSRendererHW10(s_basemem, !!mt, s_irq, rs); break;
-	case 4: s_gs = new GSRendererSW<GSDevice10>(s_basemem, !!mt, s_irq, rs, threads); break;
-	case 5: s_gs = new GSRendererNull<GSDevice10>(s_basemem, !!mt, s_irq, rs); break;
-	case 6: s_gs = new GSRendererSW<GSDeviceNull>(s_basemem, !!mt, s_irq, rs, threads); break;
-	case 7: s_gs = new GSRendererNull<GSDeviceNull>(s_basemem, !!mt, s_irq, rs); break;
+	case 4: s_gs = new GSRendererSW(s_basemem, !!mt, s_irq, rs, new GSDevice10(), threads); break;
+	case 5: s_gs = new GSRendererNull(s_basemem, !!mt, s_irq, rs, new GSDevice10()); break;
+	case 6: s_gs = new GSRendererSW(s_basemem, !!mt, s_irq, rs, new GSDeviceNull(), threads); break;
+	case 7: s_gs = new GSRendererNull(s_basemem, !!mt, s_irq, rs, new GSDeviceNull()); break;
 	}
 
 	if(!s_gs->Create(title))

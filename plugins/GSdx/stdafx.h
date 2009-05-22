@@ -4,7 +4,7 @@
 
 #pragma once
 
-#pragma warning(disable: 4996 4995 4324 4100)
+#pragma warning(disable: 4996 4995 4324 4100 4101)
 
 #ifdef _WINDOWS
 
@@ -73,6 +73,8 @@ typedef signed long long int64;
 
 #define EXPORT_C extern "C" __declspec(dllexport) void __stdcall
 #define EXPORT_C_(type) extern "C" __declspec(dllexport) type __stdcall
+
+#define ALIGN_STACK(n) __declspec(align(n)) int __dummy;
 
 #ifndef RESTRICT
 #ifdef __INTEL_COMPILER

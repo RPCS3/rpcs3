@@ -22,7 +22,7 @@
 		<Configuration
 			Name="Debug|Win32"
 			ConfigurationType="2"
-			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\ProjectRootDir.vsprops;..\..\common\vsprops\BaseProperties.vsprops;.\vsprops\debug.vsprops"
+			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\ProjectRootDir.vsprops;.\vsprops\debug.vsprops"
 			UseOfMFC="1"
 			CharacterSet="2"
 			>
@@ -149,7 +149,7 @@
 		<Configuration
 			Name="Release|Win32"
 			ConfigurationType="2"
-			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\ProjectRootDir.vsprops;..\..\common\vsprops\BaseProperties.vsprops;.\vsprops\release.vsprops"
+			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\ProjectRootDir.vsprops;.\vsprops\release.vsprops"
 			UseOfMFC="1"
 			CharacterSet="2"
 			WholeProgramOptimization="1"
@@ -277,9 +277,8 @@
 		</Configuration>
 		<Configuration
 			Name="Debug SSE2|Win32"
-			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
 			ConfigurationType="2"
-			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\ProjectRootDir.vsprops;..\..\common\vsprops\BaseProperties.vsprops;.\vsprops\debug.vsprops;.\vsprops\sse2.vsprops"
+			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\ProjectRootDir.vsprops;.\vsprops\debug.vsprops;.\vsprops\sse2.vsprops"
 			UseOfMFC="1"
 			CharacterSet="2"
 			>
@@ -405,7 +404,7 @@
 		<Configuration
 			Name="Release SSE2|Win32"
 			ConfigurationType="2"
-			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\ProjectRootDir.vsprops;..\..\common\vsprops\BaseProperties.vsprops;.\vsprops\release.vsprops;.\vsprops\sse2.vsprops"
+			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\ProjectRootDir.vsprops;.\vsprops\release.vsprops;.\vsprops\sse2.vsprops"
 			UseOfMFC="1"
 			CharacterSet="2"
 			WholeProgramOptimization="1"
@@ -532,7 +531,7 @@
 		<Configuration
 			Name="Release SSSE3|Win32"
 			ConfigurationType="2"
-			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\ProjectRootDir.vsprops;.\vsprops\release.vsprops;.\vsprops\ssse3.vsprops;..\..\common\vsprops\BaseProperties.vsprops"
+			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\ProjectRootDir.vsprops;.\vsprops\release.vsprops;.\vsprops\ssse3.vsprops"
 			UseOfMFC="1"
 			CharacterSet="2"
 			WholeProgramOptimization="1"
@@ -659,7 +658,7 @@
 		<Configuration
 			Name="Debug SSSE3|Win32"
 			ConfigurationType="2"
-			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\ProjectRootDir.vsprops;..\..\common\vsprops\BaseProperties.vsprops;.\vsprops\debug.vsprops;.\vsprops\ssse3.vsprops"
+			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\ProjectRootDir.vsprops;.\vsprops\debug.vsprops;.\vsprops\ssse3.vsprops"
 			UseOfMFC="1"
 			CharacterSet="2"
 			>
@@ -784,7 +783,7 @@
 		<Configuration
 			Name="Debug SSE4|Win32"
 			ConfigurationType="2"
-			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\debug.vsprops;.\vsprops\ProjectRootDir.vsprops;..\..\common\vsprops\BaseProperties.vsprops;.\vsprops\sse4.vsprops"
+			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\debug.vsprops;.\vsprops\ProjectRootDir.vsprops;.\vsprops\sse4.vsprops"
 			UseOfMFC="1"
 			CharacterSet="2"
 			>
@@ -910,7 +909,7 @@
 		<Configuration
 			Name="Release SSE4|Win32"
 			ConfigurationType="2"
-			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\release.vsprops;.\vsprops\sse4.vsprops;.\vsprops\ProjectRootDir.vsprops;..\..\common\vsprops\BaseProperties.vsprops"
+			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\release.vsprops;.\vsprops\sse4.vsprops;.\vsprops\ProjectRootDir.vsprops"
 			UseOfMFC="1"
 			CharacterSet="2"
 			WholeProgramOptimization="1"
@@ -1221,6 +1220,14 @@
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Release SSSE3|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AssemblerOutput="4"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release SSE4|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"

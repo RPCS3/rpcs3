@@ -3,6 +3,7 @@
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="common"
+	OutputDirectory="$(SolutionDir)\bin\$(PcsxSubsection)"
 	IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 	>
 	<Tool
@@ -26,6 +27,10 @@
 	/>
 	<Tool
 		Name="VCPostBuildEventTool"
-		CommandLine=".\postBuild.cmd &quot;$(TargetPath)&quot; &quot;$(TargetName)&quot; $(TargetExt) plugins"
+		CommandLine=""
+	/>
+	<Tool
+		Name="VCPreBuildEventTool"
+		CommandLine="&quot;$(SvnCommonDir)\vsprops\preBuild.cmd&quot; &quot;$(ProjectRootDir)&quot;"
 	/>
 </VisualStudioPropertySheet>

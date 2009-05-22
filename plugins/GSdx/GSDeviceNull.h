@@ -24,30 +24,17 @@
 #include "GSDevice.h"
 #include "GSTextureNull.h"
 
-class GSDeviceNull : public GSDevice<GSTextureNull>
+class GSDeviceNull : public GSDevice
 {
-public:
-	typedef GSTextureNull Texture;
-
 private:
-	bool Create(int type, Texture& t, int w, int h, int format);
-	void DoMerge(Texture* st, GSVector4* sr, GSVector4* dr, Texture& dt, bool slbg, bool mmod, GSVector4& c) {}
-	void DoInterlace(Texture& st, Texture& dt, int shader, bool linear, float yoffset = 0) {}
+	GSTexture* Create(int type, int w, int h, int format);
+
+	void DoMerge(GSTexture* st[2], GSVector4* sr, GSVector4* dr, GSTexture* dt, bool slbg, bool mmod, const GSVector4& c) {}
+	void DoInterlace(GSTexture* st, GSTexture* dt, int shader, bool linear, float yoffset = 0) {}
 
 public:
 	GSDeviceNull() {}
 
 	bool Create(HWND hWnd, bool vsync);
 	bool Reset(int w, int h, bool fs);
-	bool IsLost() {return false;}
-	void Present(const GSVector4i& r) {}
-	void BeginScene() {}
-	void EndScene() {}
-	void Draw(const string& s) {}
-	bool CopyOffscreen(Texture& src, const GSVector4& sr, Texture& dst, int w, int h, int format = 0) {return false;}
-
-	void ClearRenderTarget(Texture& t, const GSVector4& c) {}
-	void ClearRenderTarget(Texture& t, uint32 c) {}
-	void ClearDepth(Texture& t, float c) {}
-	void ClearStencil(Texture& t, uint8 c) {}
 };

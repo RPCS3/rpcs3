@@ -44,5 +44,5 @@ public:
 	virtual void Unmap() = 0;
 	virtual bool Save(const string& fn, bool dds = false) = 0;
 
-	GSVector2i GetSize() {return GSVector2i(GetWidth(), GetHeight());}
+	GSVector2i GetSize() const {return GSVector2i(GetWidth(), GetHeight());}
 };

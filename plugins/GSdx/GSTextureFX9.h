@@ -155,19 +155,20 @@ private:
 	hash_map<uint32, Direct3DSamplerState9* > m_ps_ss;
 	hash_map<uint32, Direct3DDepthStencilState9* > m_om_dss;	
 	hash_map<uint32, Direct3DBlendState9* > m_om_bs;	
-	hash_map<uint32, GSTexture9> m_mskfix;
+	hash_map<uint32, GSTexture*> m_mskfix;
+
+	GSTexture* CreateMskFix(uint32 size, uint32 msk, uint32 fix);
 
 public:
 	GSTextureFX9();
 
 	bool Create(GSDevice9* dev);
-	bool CreateMskFix(GSTexture9& t, uint32 size, uint32 msk, uint32 fix);
 	
 	bool SetupIA(const GSVertexHW9* vertices, int count, D3DPRIMITIVETYPE prim);
 	bool SetupVS(VSSelector sel, const VSConstantBuffer* cb);
-	bool SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel, IDirect3DTexture9* tex, IDirect3DTexture9* pal, bool psrr);
+	bool SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel, GSTexture* tex, GSTexture* pal, bool psrr);
 	void UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel, bool psrr);
 	void SetupRS(int w, int h, const GSVector4i& scissor);
-	void SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 bf, IDirect3DSurface9* rt, IDirect3DSurface9* ds);
+	void SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 bf, GSTexture* rt, GSTexture* ds);
 	void UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 bf);
 };

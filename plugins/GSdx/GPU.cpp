@@ -31,7 +31,7 @@
 #define PSE_LT_GPU 2
 
 static HRESULT s_hr = E_FAIL;
-static GPURendererBase* s_gpu = NULL;
+static GPURenderer* s_gpu = NULL;
 
 EXPORT_C_(uint32) PSEgetLibType()
 {
@@ -121,10 +121,10 @@ EXPORT_C_(int32) GPUopen(HWND hWnd)
 	switch(renderer)
 	{
 	default: 
-	case 0: s_gpu = new GPURendererSW<GSDevice7>(rs, threads); break;
-	case 1: s_gpu = new GPURendererSW<GSDevice9>(rs, threads); break;
-	case 2: s_gpu = new GPURendererSW<GSDevice10>(rs, threads); break;
-	// TODO: case 3: s_gpu = new GPURendererNull<GSDeviceNull>(rs, threads); break;
+	case 0: s_gpu = new GPURendererSW(rs, new GSDevice7(), threads); break;
+	case 1: s_gpu = new GPURendererSW(rs, new GSDevice9(), threads); break;
+	case 2: s_gpu = new GPURendererSW(rs, new GSDevice10(), threads); break;
+	// TODO: case 3: s_gpu = new GPURendererNull(rs, new GSDeviceNull(), threads); break;
 	}
 
 	if(!s_gpu->Create(hWnd))

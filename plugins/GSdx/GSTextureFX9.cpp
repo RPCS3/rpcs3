@@ -46,11 +46,13 @@ bool GSTextureFX9::Create(GSDevice9* dev)
 	return true;
 }
 
-bool GSTextureFX9::CreateMskFix(GSTexture9& t, uint32 size, uint32 msk, uint32 fix)
+GSTexture* GSTextureFX9::CreateMskFix(uint32 size, uint32 msk, uint32 fix)
 {
+	GSTexture* t = NULL;
+
 	uint32 hash = (size << 20) | (msk << 10) | fix;
 
-	hash_map<uint32, GSTexture9>::iterator i = m_mskfix.find(hash);
+	hash_map<uint32, GSTexture*>::iterator i = m_mskfix.find(hash);
 
 	if(i != m_mskfix.end())
 	{
@@ -58,28 +60,28 @@ bool GSTextureFX9::CreateMskFix(GSTexture9& t, uint32 size, uint32 msk, uint32 f
 	}
 	else
 	{
-		if(!m_dev->CreateTexture(t, size, 1, D3DFMT_R32F))
-		{
-			return false;
-		}
+		t = m_dev->CreateTexture(size, 1, D3DFMT_R32F);
 
-		uint8* bits;
-		int pitch;
-		
-		if(t.Map(&bits, pitch))
+		if(t)
 		{
-			for(uint32 i = 0; i < size; i++)
+			uint8* bits;
+			int pitch;
+			
+			if(t->Map(&bits, pitch))
 			{
-				((float*)bits)[i] = (float)((i & msk) | fix) / size;
+				for(uint32 i = 0; i < size; i++)
+				{
+					((float*)bits)[i] = (float)((i & msk) | fix) / size;
+				}
+
+				t->Unmap();
 			}
 
-			t.Unmap();
+			m_mskfix[hash] = t;
 		}
-
-		m_mskfix[hash] = t;
 	}
 
-	return true;
+	return t;
 }
 
 bool GSTextureFX9::SetupIA(const GSVertexHW9* vertices, int count, D3DPRIMITIVETYPE prim)
@@ -145,32 +147,26 @@ bool GSTextureFX9::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 	return true;
 }
 
-bool GSTextureFX9::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel, IDirect3DTexture9* tex, IDirect3DTexture9* pal, bool psrr)
+bool GSTextureFX9::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel, GSTexture* tex, GSTexture* pal, bool psrr)
 {
 	m_dev->PSSetShaderResources(tex, pal);
 
-	if(tex && psrr)
+	if(tex && psrr && (sel.wms == 3 || sel.wmt == 3))
 	{
 		if(sel.wms == 3)
 		{
-			D3DSURFACE_DESC desc;
-			tex->GetLevelDesc(0, &desc);
-
-			GSTexture9 t;
-			CreateMskFix(t, desc.Width, cb->UMSK, cb->UFIX);			
-
-			(*m_dev)->SetTexture(2, t);
+			if(GSTexture* t = CreateMskFix(tex->GetWidth(), cb->UMSK, cb->UFIX))
+			{
+				(*m_dev)->SetTexture(2, *(GSTexture9*)t);
+			}
 		}
 
 		if(sel.wmt == 3)
 		{
-			D3DSURFACE_DESC desc;
-			tex->GetLevelDesc(0, &desc);
-
-			GSTexture9 t;
-			CreateMskFix(t, desc.Height, cb->VMSK, cb->VFIX);			
-
-			(*m_dev)->SetTexture(3, t);
+			if(GSTexture* t = CreateMskFix(tex->GetHeight(), cb->VMSK, cb->VFIX))
+			{
+				(*m_dev)->SetTexture(3, *(GSTexture9*)t);
+			}
 		}
 	}
 
@@ -279,7 +275,7 @@ void GSTextureFX9::SetupRS(int w, int h, const GSVector4i& scissor)
 	m_dev->RSSet(w, h, &scissor);
 }
 
-void GSTextureFX9::SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 bf, IDirect3DSurface9* rt, IDirect3DSurface9* ds)
+void GSTextureFX9::SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 bf, GSTexture* rt, GSTexture* ds)
 {
 	UpdateOM(dssel, bsel, bf);
 

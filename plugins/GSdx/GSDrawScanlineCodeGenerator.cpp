@@ -35,11 +35,6 @@ GSDrawScanlineCodeGenerator::GSDrawScanlineCodeGenerator(GSScanlineEnvironment& 
 
 	m_sel.key = key;
 
-	if(m_sel.tfx == TFX_DECAL && m_sel.tcc == 0)
-	{
-		printf("*** TFX_DECAL && !TCC *** \n");
-	}
-
 	Generate();
 }
 

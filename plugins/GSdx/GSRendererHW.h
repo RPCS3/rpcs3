@@ -25,16 +25,17 @@
 #include "GSTextureCache.h"
 #include "GSCrc.h"
 
-template<class Device, class Vertex, class TextureCache> 
-class GSRendererHW : public GSRendererT<Device, Vertex>
+template<class Vertex> 
+class GSRendererHW : public GSRendererT<Vertex>
 {
-	TextureCache* m_tc;
 	int m_width;
 	int m_height;
 	int m_skip;
 	bool m_reset;
 
 protected:
+	GSTextureCache* m_tc;
+
 	void Reset() 
 	{
 		// TODO: GSreset can come from the main thread too => crash
@@ -236,7 +237,7 @@ protected:
 		m_tc->RemoveAll();
 	}
 
-	bool GetOutput(int i, Texture& t)
+	GSTexture* GetOutput(int i)
 	{
 		const GSRegDISPFB& DISPFB = m_regs->DISP[i].DISPFB;
 
@@ -248,7 +249,9 @@ protected:
 
 		TRACE(_T("[%d] GetOutput %d %05x (%d)\n"), (int)m_perfmon.GetFrame(), i, (int)TEX0.TBP0, (int)TEX0.PSM);
 
-		if(GSTextureCache<Device>::GSRenderTarget* rt = m_tc->GetRenderTarget(TEX0, m_width, m_height, true))
+		GSTexture* t = NULL;
+
+		if(GSTextureCache::GSRenderTarget* rt = m_tc->GetRenderTarget(TEX0, m_width, m_height, true))
 		{
 			t = rt->m_texture;
 
@@ -256,16 +259,14 @@ protected:
 			{
 				if(s_save) 
 				{
-					rt->m_texture.Save(format("c:\\temp2\\_%05d_f%I64d_fr%d_%05x_%d.bmp", s_n, m_perfmon.GetFrame(), i, (int)TEX0.TBP0, (int)TEX0.PSM));
+					t->Save(format("c:\\temp2\\_%05d_f%I64d_fr%d_%05x_%d.bmp", s_n, m_perfmon.GetFrame(), i, (int)TEX0.TBP0, (int)TEX0.PSM));
 				}
 
 				s_n++;
 			}
-
-			return true;
 		}
 
-		return false;
+		return t;
 	}
 
 	void InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r)
@@ -298,15 +299,15 @@ protected:
 		TEX0.TBW = context->FRAME.FBW;
 		TEX0.PSM = context->FRAME.PSM;
 
-		GSTextureCache<Device>::GSRenderTarget* rt = m_tc->GetRenderTarget(TEX0, m_width, m_height);
+		GSTextureCache::GSRenderTarget* rt = m_tc->GetRenderTarget(TEX0, m_width, m_height);
 
 		TEX0.TBP0 = context->ZBUF.Block();
 		TEX0.TBW = context->FRAME.FBW;
 		TEX0.PSM = context->ZBUF.PSM;
 
-		GSTextureCache<Device>::GSDepthStencil* ds = m_tc->GetDepthStencil(TEX0, m_width, m_height);
+		GSTextureCache::GSDepthStencil* ds = m_tc->GetDepthStencil(TEX0, m_width, m_height);
 
-		GSTextureCache<Device>::GSTexture* tex = NULL;
+		GSTextureCache::GSCachedTexture* tex = NULL;
 
 		if(PRIM->TME)
 		{
@@ -329,13 +330,13 @@ protected:
 					(int)context->CLAMP.MINU, (int)context->CLAMP.MAXU, 
 					(int)context->CLAMP.MINV, (int)context->CLAMP.MAXV);
 
-				tex->m_texture.Save(s, true);
+				tex->m_texture->Save(s, true);
 
 				if(tex->m_palette)
 				{
 					s = format("c:\\temp2\\_%05d_f%I64d_tpx_%05x_%d.dds", s_n, frame, context->TEX0.CBP, context->TEX0.CPSM);
 
-					tex->m_palette.Save(s, true);
+					tex->m_palette->Save(s, true);
 				}
 			}
 
@@ -345,14 +346,14 @@ protected:
 			{
 				s = format("c:\\temp2\\_%05d_f%I64d_rt0_%05x_%d.bmp", s_n, frame, context->FRAME.Block(), context->FRAME.PSM);
 
-				rt->m_texture.Save(s);
+				rt->m_texture->Save(s);
 			}
 
 			if(s_savez)
 			{
 				s = format("c:\\temp2\\_%05d_f%I64d_rz0_%05x_%d.bmp", s_n, frame, context->ZBUF.Block(), context->ZBUF.PSM);
 
-				ds->m_texture.Save(s);
+				ds->m_texture->Save(s);
 			}
 
 			s_n++;
@@ -360,7 +361,7 @@ protected:
 
 		int prim = PRIM->PRIM;
 
-		if(!OverrideInput(prim, rt->m_texture, ds->m_texture, tex ? &tex->m_texture : NULL))
+		if(!OverrideInput(prim, rt->m_texture, ds->m_texture, tex ? tex->m_texture : NULL))
 		{
 			return;
 		}
@@ -379,14 +380,14 @@ protected:
 			{
 				s = format("c:\\temp2\\_%05d_f%I64d_rt1_%05x_%d.bmp", s_n, frame, context->FRAME.Block(), context->FRAME.PSM);
 
-				rt->m_texture.Save(s);
+				rt->m_texture->Save(s);
 			}
 
 			if(s_savez)
 			{
 				s = format("c:\\temp2\\_%05d_f%I64d_rz1_%05x_%d.bmp", s_n, frame, context->ZBUF.Block(), context->ZBUF.PSM);
 
-				ds->m_texture.Save(s);
+				ds->m_texture->Save(s);
 			}
 
 			s_n++;
@@ -395,9 +396,9 @@ protected:
 		m_tc->InvalidateTextures(context->FRAME, context->ZBUF);
 	}
 
-	virtual void Draw(int prim, Texture& rt, Texture& ds, typename GSTextureCache<Device>::GSTexture* tex) = 0;
+	virtual void Draw(int prim, GSTexture* rt, GSTexture* ds, typename GSTextureCache::GSCachedTexture* tex) = 0;
 
-	virtual bool OverrideInput(int& prim, Texture& rt, Texture& ds, Texture* t)
+	virtual bool OverrideInput(int& prim, GSTexture* rt, GSTexture* ds, GSTexture* t)
 	{
 		#pragma region ffxii pal video conversion
 
@@ -436,7 +437,7 @@ protected:
 
 				ok = false;
 
-				m_dev.CreateTexture(*t, 512, 512);
+				t = m_dev->CreateTexture(512, 512);
 
 				t->Update(GSVector4i(0, 0, 448, 512), video, 512 * 4);
 
@@ -466,7 +467,7 @@ protected:
 
 			if((FBP == 0x00d00 || FBP == 0x00000) && ZBP == 0x02100 && PRIM->TME && TBP == 0x01a00 && m_context->TEX0.PSM == PSM_PSMCT16S)
 			{
-				m_dev.ClearDepth(ds, 0);
+				m_dev->ClearDepth(ds, 0);
 			}
 
 			return true;
@@ -556,9 +557,9 @@ protected:
 				TEX0.TBW = FBW;
 				TEX0.PSM = FPSM;
 
-				if(GSTextureCache<Device>::GSDepthStencil* ds = m_tc->GetDepthStencil(TEX0, m_width, m_height))
+				if(GSTextureCache::GSDepthStencil* ds = m_tc->GetDepthStencil(TEX0, m_width, m_height))
 				{
-					m_dev.ClearDepth(ds->m_texture, 0);
+					m_dev->ClearDepth(ds->m_texture, 0);
 				}
 
 				return false;
@@ -665,7 +666,8 @@ protected:
 
 public:
 	GSRendererHW(uint8* base, bool mt, void (*irq)(), const GSRendererSettings& rs, bool psrr)
-		: GSRendererT<Device, Vertex>(base, mt, irq, rs, psrr)
+		: GSRendererT<Vertex>(base, mt, irq, rs, psrr)
+		, m_tc(NULL)
 		, m_width(1024)
 		, m_height(1024)
 		, m_skip(0)
@@ -676,8 +678,6 @@ public:
 			m_width = theApp.GetConfig("resx", m_width);
 			m_height = theApp.GetConfig("resy", m_height);
 		}
-
-		m_tc = new TextureCache(this);
 	}
 
 	virtual ~GSRendererHW()

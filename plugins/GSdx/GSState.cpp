@@ -965,8 +965,6 @@ void GSState::FlushWrite()
 
 void GSState::Write(uint8* mem, int len)
 {
-	int dx = m_env.TRXPOS.DSAX;
-	int dy = m_env.TRXPOS.DSAY;
 	int w = m_env.TRXREG.RRW;
 	int h = m_env.TRXREG.RRH;
 
@@ -1056,6 +1054,8 @@ void GSState::Move()
 
 	const GSLocalMemory::psm_t& spsm = GSLocalMemory::m_psm[m_env.BITBLTBUF.SPSM];
 	const GSLocalMemory::psm_t& dpsm = GSLocalMemory::m_psm[m_env.BITBLTBUF.DPSM];
+
+	// TODO: unroll inner loops (width has special size requirement, must be multiples of 1 << n, depending on the format)
 
 	if(spsm.trbpp == dpsm.trbpp && spsm.trbpp >= 16)
 	{
@@ -2164,6 +2164,7 @@ bool GSC_SonicUnleashed(const GSFrameInfo& fi, int& skip)
 
 	return true;
 }
+
 bool GSState::IsBadFrame(int& skip)
 {
 	GSFrameInfo fi;

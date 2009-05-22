@@ -42,9 +42,7 @@ bool GSDeviceNull::Reset(int w, int h, bool fs)
 	return true;
 }
 
-bool GSDeviceNull::Create(int type, Texture& t, int w, int h, int format)
+GSTexture* GSDeviceNull::Create(int type, int w, int h, int format)
 {
-	t = Texture(type, w, h, format);
-
-	return true;
+	return new GSTextureNull(type, w, h, format);
 }

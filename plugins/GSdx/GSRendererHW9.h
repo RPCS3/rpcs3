@@ -26,19 +26,15 @@
 #include "GSTextureCache9.h"
 #include "GSTextureFX9.h"
 
-class GSRendererHW9 : public GSRendererHW<GSDevice9, GSVertexHW9, GSTextureCache9>
+class GSRendererHW9 : public GSRendererHW<GSVertexHW9>
 {
-	typedef GSDevice9 Device;
-	typedef GSVertexHW9 Vertex;
-	typedef GSTextureCache9 TextureCache;
-
 	bool WrapZ(float maxz);
 
 protected:
 	GSTextureFX9 m_tfx;
 	bool m_logz;
 
-	void Draw(int prim, Texture& rt, Texture& ds, GSTextureCache<Device>::GSTexture* tex);
+	void Draw(int prim, GSTexture* rt, GSTexture* ds, GSTextureCache::GSCachedTexture* tex);
 
 	struct
 	{
@@ -53,8 +49,8 @@ protected:
 		Direct3DBlendState9 bs;
 	} m_fba;
 
-	void SetupDATE(Texture& rt, Texture& ds);
-	void UpdateFBA(Texture& rt);
+	void SetupDATE(GSTexture* rt, GSTexture* ds);
+	void UpdateFBA(GSTexture* rt);
 
 public:
 	GSRendererHW9(uint8* base, bool mt, void (*irq)(), const GSRendererSettings& rs);

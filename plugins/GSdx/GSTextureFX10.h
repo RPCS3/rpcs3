@@ -239,10 +239,10 @@ public:
 	bool SetupIA(const GSVertexHW10* vertices, int count, D3D10_PRIMITIVE_TOPOLOGY prim);
 	bool SetupVS(VSSelector sel, const VSConstantBuffer* cb);
 	bool SetupGS(GSSelector sel);
-	bool SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel, ID3D10ShaderResourceView* tex, ID3D10ShaderResourceView* pal);
+	bool SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel, GSTexture* tex, GSTexture* pal);
 	void UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel);
 	void SetupRS(int w, int h, const GSVector4i& scissor);
-	void SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, float bf, ID3D10RenderTargetView* rtv, ID3D10DepthStencilView* dsv);
+	void SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, float bf, GSTexture* rt, GSTexture* ds);
 	void UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, float bf);
 	void Draw();
 };

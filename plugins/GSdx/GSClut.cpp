@@ -126,6 +126,8 @@ void GSClut::Write(const GIFRegTEX0& TEX0, const GIFRegTEXCLUT& TEXCLUT)
 
 void GSClut::WriteCLUT32_I8_CSM1(const GIFRegTEX0& TEX0, const GIFRegTEXCLUT& TEXCLUT)
 {
+	ALIGN_STACK(16);
+
 	ASSERT(TEX0.CSA == 0);
 
 	WriteCLUT_T32_I8_CSM1((uint32*)m_mem->BlockPtr32(0, 0, TEX0.CBP, 1), m_clut + (TEX0.CSA << 4));
@@ -133,9 +135,9 @@ void GSClut::WriteCLUT32_I8_CSM1(const GIFRegTEX0& TEX0, const GIFRegTEXCLUT& TE
 
 void GSClut::WriteCLUT32_I4_CSM1(const GIFRegTEX0& TEX0, const GIFRegTEXCLUT& TEXCLUT)
 {
-	ASSERT(TEX0.CSA < 16);
+	ALIGN_STACK(16);
 
-	GSVector4i dummy; // this just forces stack alignment and enables inlining the next call
+	ASSERT(TEX0.CSA < 16);
 
 	WriteCLUT_T32_I4_CSM1((uint32*)m_mem->BlockPtr32(0, 0, TEX0.CBP, 1), m_clut + (TEX0.CSA << 4));
 }

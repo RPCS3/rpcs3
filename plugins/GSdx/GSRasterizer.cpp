@@ -277,7 +277,7 @@ void GSRasterizer::DrawTriangleTop(GSVertexSW* v, const GSVector4i& scissor)
 
 	longest.p = v[2].p - v[1].p;
 
-	int i = (longest.p > GSVector4::zero()).upl(longest.p == GSVector4::zero()).mask();
+	int i = longest.p.upl(longest.p == GSVector4::zero()).mask();
 
 	if(i & 2) return;
 
@@ -305,8 +305,8 @@ void GSRasterizer::DrawTriangleTop(GSVertexSW* v, const GSVector4i& scissor)
 
 	GSVertexSW dscan = longest * longest.p.xxxx().rcp();
 
-	GSVertexSW vl = v[2 - i] - l;
-	GSVector4 vr = v[1 + i].p - r;
+	GSVertexSW vl = v[1 + i] - l;
+	GSVector4 vr = v[2 - i].p - r;
 
 	GSVertexSW dl = vl / vl.p.yyyy();
 	GSVector4 dr = vr / vr.yyyy();
@@ -329,14 +329,14 @@ void GSRasterizer::DrawTriangleBottom(GSVertexSW* v, const GSVector4i& scissor)
 	
 	longest.p = v[1].p - v[0].p;
 
-	int i = (longest.p > GSVector4::zero()).upl(longest.p == GSVector4::zero()).mask();
+	int i = longest.p.upl(longest.p == GSVector4::zero()).mask();
 
 	if(i & 2) return;
 
 	i &= 1;
 
-	GSVertexSW& l = v[1 - i];
-	GSVector4& r = v[i].p;
+	GSVertexSW& l = v[i];
+	GSVector4& r = v[1 - i].p;
 
 	GSVector4 fscissor(scissor);
 
@@ -384,7 +384,7 @@ void GSRasterizer::DrawTriangleTopBottom(GSVertexSW* v, const GSVector4i& scisso
 
 	GSVertexSW longest = dv[1] * (dv[0].p / dv[1].p).yyyy() - dv[0];
 
-	int i = (longest.p > GSVector4::zero()).upl(longest.p == GSVector4::zero()).mask();
+	int i = longest.p.upl(longest.p == GSVector4::zero()).mask();
 
 	if(i & 2) return;
 
@@ -409,8 +409,8 @@ void GSRasterizer::DrawTriangleTopBottom(GSVertexSW* v, const GSVector4i& scisso
 	GSVertexSW& l = v[0];
 	GSVector4 r = v[0].p;
 
-	GSVertexSW dl = dv[1 - i] / dv[1 - i].p.yyyy();
-	GSVector4 dr = dv[i].p / dv[i].p.yyyy();
+	GSVertexSW dl = dv[i] / dv[i].p.yyyy();
+	GSVector4 dr = dv[1 - i].p / dv[1 - i].p.yyyy();
 
 	GSVector4 dy = tbmax.xxxx() - l.p.yyyy();
 
@@ -427,7 +427,7 @@ void GSRasterizer::DrawTriangleTopBottom(GSVertexSW* v, const GSVector4i& scisso
 
 	if(top < bottom)
 	{
-		if(i)
+		if(i == 0)
 		{
 			l = v[1];
 			dv[2] = v[2] - v[1];
