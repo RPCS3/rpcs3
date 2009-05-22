@@ -1,9 +1,5 @@
 #include "yaml.h"
 #include "tests.h"
-#include "parser.h"
-#include "emitter.h"
-#include "stlemitter.h"
-#include "exceptions.h"
 #include <fstream>
 #include <sstream>
 #include <vector>

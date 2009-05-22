@@ -4,9 +4,6 @@
 #include <iostream>
 #include <cstring>
 
-#include "emitter.h"
-#include "stlemitter.h"
-
 void run()
 {
 	std::ifstream fin("tests/test.yaml");
