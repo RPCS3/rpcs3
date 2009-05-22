@@ -111,6 +111,7 @@ static u32 dumplog = 0;
 
 static void iBranchTest(u32 newpc = 0xffffffff, bool noDispatch=false);
 static void ClearRecLUT(BASEBLOCK* base, int count);
+static u32 eeScaleBlockCycles();
 
 #ifdef PCSX2_VM_COISSUE
 static u8 _eeLoadWritesRs(u32 tempcode)

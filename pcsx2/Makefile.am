@@ -15,7 +15,7 @@ INCLUDES = -I$(x86_dir) -I$(cdvd_dir) -I$(common_dir) -I$(third_dir)
 noinst_LIBRARIES = libpcsx2.a
 
 libpcsx2_a_SOURCES = \
-AlignedMalloc.cpp  Decode_XA.cpp  HwRead.cpp       MTGS.cpp               R3000AInterpreter.cpp   Sio.cpp             VUflags.cpp \
+AlignedMalloc.cpp  HwRead.cpp       MTGS.cpp               R3000AInterpreter.cpp   Sio.cpp             VUflags.cpp \
 Dump.cpp       HwWrite.cpp                            R3000AOpcodeTables.cpp  SourceLog.cpp       VUmicroMem.cpp \
 Elfheader.cpp  Interpreter.cpp  Memory.cpp             R5900.cpp               Stats.cpp           VUops.cpp \
 FPU.cpp        IopBios.cpp      MemoryCard.cpp         R5900OpcodeImpl.cpp     System.cpp          Vif.cpp \
@@ -34,7 +34,7 @@ ps2/Iop/IopHwRead.cpp ps2/Iop/IopHwWrite.cpp ps2/Iop/IopHw_Internal.h
 libpcsx2_a_SOURCES += \
 Common.h      HashMap.h      IopDma.h      MemoryCard.h   PrecompiledHeader.h  SafeArray.h  StringUtils.h  Vif.h \
 Counters.h    HostGui.h      IopHw.h       MemoryTypes.h  R3000A.h             SamplProf.h  System.h       VifDma.h \
-Decode_XA.h   Hw.h           IopMem.h      Misc.h         R5900.h              SaveState.h  Threading.h    cheatscpp.h \
+Hw.h           IopMem.h      Misc.h         R5900.h              SaveState.h  Threading.h    cheatscpp.h \
 Dump.h        IopBios.h      IopSio2.h     NakedAsm.h     R5900Exceptions.h    Sif.h        VU.h           vtlb.h \
 COP0.h        Elfheader.h   IopBios2.h     Mdec.h        Patch.h        R5900OpcodeTables.h  Sifcmd.h     VUflags.h \
 Cache.h       Exceptions.h  IopCommon.h    MemcpyFast.h  Paths.h    Sio.h    Sio_internal.h    VUmicro.h \

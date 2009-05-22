@@ -90,7 +90,6 @@ void LoadBranchState();
 void recompileNextInstruction(int delayslot);
 void SetBranchReg( u32 reg );
 void SetBranchImm( u32 imm );
-u32 eeScaleBlockCycles();
 
 void iFlushCall(int flushtype);
 void recBranchCall( void (*func)() );

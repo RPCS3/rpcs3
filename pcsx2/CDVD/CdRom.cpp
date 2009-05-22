@@ -88,6 +88,9 @@ u32 cdReadTime;// = ((PSXCLK / 75) / BIAS);
 #define CDR_INT(eCycle)    PSX_INT(IopEvt_Cdrom, eCycle)
 #define CDREAD_INT(eCycle) PSX_INT(IopEvt_CdromRead, eCycle)
 
+
+static void AddIrqQueue(u8 irq, u32 ecycle);
+
 static __forceinline void StartReading(u32 type) {
    	cdr.Reading = type;
   	cdr.FirstSector = 1;

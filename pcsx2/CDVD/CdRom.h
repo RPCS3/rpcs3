@@ -20,8 +20,22 @@
 #define __CDROM_H__
 
 #include "IopCommon.h"
-#include "Decode_XA.h"
 #include "PS2Edefs.h"
+
+// Not used.
+typedef struct {
+	s32	y0, y1;
+} ADPCM_Decode_t;
+
+// Not used.
+typedef struct {
+	s32				freq;
+	s32				nbits;
+	s32				stereo;
+	s32				nsamples;
+	ADPCM_Decode_t	left, right;
+	s16			pcm[16384];
+} xa_decode_t;
 
 struct cdrStruct
 {
@@ -71,8 +85,6 @@ struct cdrStruct
 
 	char Unused[4087];
 };
-
-void AddIrqQueue(u8 irq, u32 ecycle);
 
 extern cdrStruct cdr;
 
