@@ -1,4 +1,4 @@
-/*  FWnull
+/*  PadNull
  *  Copyright (C) 2004-2009 PCSX2 Team
  *
  *  This program is free software; you can redistribute it and/or modify

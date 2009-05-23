@@ -1,4 +1,4 @@
-/*  FWnull
+/*  PadNull
  *  Copyright (C) 2004-2009 PCSX2 Team
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -16,53 +16,15 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
  
-#ifndef __PAD_H__
-#define __PAD_H__
-
-#include <stdio.h>
-
-#ifdef __cplusplus
-extern "C"
-{
-#endif 
-#define PADdefs
-#include "PS2Edefs.h"
-#ifdef __cplusplus
-}
-#endif
-
-#ifdef _WIN32
-#include "PadWin.h"
-#else
-#include "PadLinux.h"
-#endif
-
-/*#ifdef _MSC_VER
-#define EXPORT_C_(type) extern "C" __declspec(dllexport) type CALLBACK
-#else
-#define EXPORT_C_(type) extern "C" type
-#endif*/
-
-#ifdef _MSC_VER
-#define EXPORT_C_(type) extern "C" type CALLBACK
-#else
-#define EXPORT_C_(type) extern "C" type
-#endif
-
-#define PAD_LOG __Log
-
-typedef struct 
-{
-	s32 Log;
-} Config;
-
-extern Config conf;
-extern FILE *padLog;
-extern keyEvent event;
-
-extern void __Log(char *fmt, ...);
-extern void SysMessage(char *fmt, ...);
-extern void SaveConfig();
-extern void LoadConfig();
-
+#ifndef __PADLINUX_H__
+#define __PADLINUX_H__
+ 
+#include "../Pad.h"
+#include <windows.h>
+#include <windowsx.h>
+ 
+void _PadUpdate(int pad);
+s32  _PADOpen(void *pDsp);
+void _PADClose();
+ 
 #endif

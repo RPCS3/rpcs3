@@ -2,9 +2,9 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="9.00"
-	Name="FWnull"
+	Name="Padnull"
 	ProjectGUID="{3D0EB14D-32F3-4D82-9C6D-B806ADBB859C}"
-	RootNamespace="FWnull"
+	RootNamespace="Padnull"
 	Keyword="Win32Proj"
 	TargetFrameworkVersion="131072"
 	>
@@ -122,7 +122,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				ModuleDefinitionFile="FireWireNull.def"
+				ModuleDefinitionFile="PadNull.def"
 				RandomizedBaseAddress="1"
 				TargetMachine="1"
 			/>
@@ -161,7 +161,11 @@
 				>
 			</File>
 			<File
-				RelativePath="..\FW.cpp"
+				RelativePath="..\Pad.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\PadWin.cpp"
 				>
 			</File>
 			<File
@@ -174,7 +178,11 @@
 			Filter="h;hpp;hxx;hm;inl;inc"
 			>
 			<File
-				RelativePath="..\FW.h"
+				RelativePath="..\Pad.h"
+				>
+			</File>
+			<File
+				RelativePath=".\PadWin.h"
 				>
 			</File>
 			<File
@@ -187,11 +195,11 @@
 			Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe"
 			>
 			<File
-				RelativePath=".\FireWireNull.def"
+				RelativePath=".\PadNull.def"
 				>
 			</File>
 			<File
-				RelativePath=".\FireWireNull.rc"
+				RelativePath=".\PadNull.rc"
 				>
 			</File>
 		</Filter>
