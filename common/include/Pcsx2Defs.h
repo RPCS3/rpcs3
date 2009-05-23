@@ -50,12 +50,12 @@
 #			define jASSUME(exp) ((void) sizeof(exp))
 #		endif
 #	else
-#		if defined(_MSC_VER)
+#		ifdef _MSC_VER
 #			define jBREAKPOINT() do { __asm int 3 } while(0)
 #		else
 #			define jBREAKPOINT() ((void) *(volatile char *) 0)
 #		endif
-#		define jASSUME(exp) if(exp) ; else jBREAKPOINT()
+#		define jASSUME(exp) do { if(exp) ; else jBREAKPOINT() } while(0)
 #	endif
 #endif
 

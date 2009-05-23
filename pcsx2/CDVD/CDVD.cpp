@@ -812,7 +812,7 @@ static uint cdvdStartSeek( uint newsector, CDVD_MODE_TYPE mode )
 {
 	cdvd.SeekToSector = newsector;
 
-	uint delta = abs(cdvd.SeekToSector - cdvd.Sector);
+	uint delta = abs( (s32)(cdvd.SeekToSector - cdvd.Sector) );
 	uint seektime;
 
 	cdvd.Ready = CDVD_NOTREADY;
