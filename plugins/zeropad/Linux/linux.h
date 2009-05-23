@@ -18,6 +18,7 @@
  
 #include <string.h>
 #include <gtk/gtk.h>
+#include <gdk/gdkkeysyms.h>
 #include <pthread.h>
 
 #define JOYSTICK_SUPPORT

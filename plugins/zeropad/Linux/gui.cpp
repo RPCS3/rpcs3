@@ -36,7 +36,8 @@ extern "C"
 }
 
 extern string s_strIniPath;
-GtkWidget *Conf = NULL, *s_devicecombo = NULL;
+GtkWidget *Conf = NULL, *About = NULL;
+GtkWidget *s_devicecombo = NULL;
 extern void UpdateConf(int pad);
 
 void SaveConfig()
@@ -268,9 +269,6 @@ void OnConf_Cancel(GtkButton *button, gpointer user_data)
 	LoadConfig(); // load previous config
 }
 
-GtkWidget *About = NULL;
-
-//void OnAbout_Ok(GtkButton *button, gpointer user_data)
 void OnAbout_Ok(GtkDialog *About, gint response_id, gpointer user_data)
 {
 	gtk_widget_destroy(GTK_WIDGET(About));

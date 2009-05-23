@@ -85,7 +85,7 @@ extern char libraryName[256];
 #define PADSUBKEYS 2
 #endif
 
-//#define EXPERAMENTAL_POV_CODE
+//#define EXPERIMENTAL_POV_CODE
 extern int PadEnum[2][2];
 
 typedef struct
@@ -154,8 +154,7 @@ enum gamePadValues
 	PAD_L2 = 0
 };
 
-// Put in the code for bolche's analog contols hack, ifdeffed out, so I don't forget to
-// add a gui some day and activate it.
+// Activate bolche's analog contols hack
 #define ANALOG_CONTROLS_HACK
 // DEF_VALUE is the strength you press the control.
 // Code taken from http://forums.pcsx2.net/thread-4699.html
