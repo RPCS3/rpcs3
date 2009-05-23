@@ -232,8 +232,26 @@ void CALLBACK PADupdate(int pad)
 				}
 			}
 		}
-#ifdef EXPERIMENTAL_POV_CODE
 		else if (IS_POV(key))
+		{
+			int joyid = PAD_GETJOYID(key);
+			if (joyid >= 0 && (joyid < (int)s_vjoysticks.size()))
+			{
+				pjoy = s_vjoysticks[joyid];
+
+				int value = SDL_JoystickGetAxis((pjoy)->GetJoy(), PAD_GETJOYSTICK_AXIS(key));
+				int pad = (pjoy)->GetPAD();
+				
+				if (PAD_GETPOVSIGN(key) && (value < -2048))
+					clear_bit(status[pad], i);
+				else if (!PAD_GETPOVSIGN(key) && (value > 2048))
+					clear_bit(status[pad], i);
+				else
+					set_bit(status[pad], i);
+			}
+		}
+#ifdef EXPERIMENTAL_POV_CODE
+		else if (IS_HAT(key))
 		{
 			int joyid = PAD_GETJOYID(key);
 			if ((joyid >= 0) && (joyid < (int)s_vjoysticks.size()))
@@ -247,7 +265,7 @@ void CALLBACK PADupdate(int pad)
 				//PAD_LOG("Hat = %d for key %d\n", PAD_GETPOVDIR(key), key);
 				if (value != SDL_HAT_CENTERED)
 				{
-					if (PAD_GETPOVDIR(key) == value)
+					if (PAD_GETHATDIR(key) == value)
 						set_bit(status[pad], i);
 					else
 						clear_bit(status[pad], i);
@@ -271,29 +289,10 @@ void CALLBACK PADupdate(int pad)
 							break;
 					}
 				}
-				else
+				/*else
 				{
 					clear_bit(status[pad], i);
-				}
-			}
-		}
-#else
-		else if (IS_POV(key))
-		{
-			int joyid = PAD_GETJOYID(key);
-			if (joyid >= 0 && (joyid < (int)s_vjoysticks.size()))
-			{
-				pjoy = s_vjoysticks[joyid];
-
-				int value = SDL_JoystickGetAxis((pjoy)->GetJoy(), PAD_GETJOYSTICK_AXIS(key));
-				int pad = (pjoy)->GetPAD();
-				
-				if (PAD_GETPOVSIGN(key) && (value < -2048))
-					clear_bit(status[pad], i);
-				else if (!PAD_GETPOVSIGN(key) && (value > 2048))
-					clear_bit(status[pad], i);
-				else
-					set_bit(status[pad], i);
+				}*/
 			}
 		}
 #endif
@@ -347,7 +346,7 @@ void UpdateConf(int pad)
 #ifdef EXPERIMENTAL_POV_CODE
 		{
 			tmp.resize(28);
-			switch(PAD_GETPOVDIR(conf.keys[pad][i]))
+			switch(PAD_GETHATDIR(conf.keys[pad][i]))
 			{
 				case SDL_HAT_UP:
 					sprintf(&tmp[0], "JPOVU-%d", PAD_GETJOYSTICK_AXIS(conf.keys[pad][i]));
@@ -449,12 +448,18 @@ bool PollKeyboard(char* &temp, u32* &pkey)
 	{
 		if (ev->type == GDK_KEY_PRESS)
 		{
-			*pkey = ev->key.keyval;
 			
 			if (ev->key.keyval == GDK_Escape) 
+			{
 				temp = "Unknown";
+				*pkey = NULL;
+			}
 			else
+			{
 				temp = XKeysymToString(ev->key.keyval);
+				*pkey = ev->key.keyval;
+			}
+			
 				
 			return true;
 		}
@@ -545,7 +550,7 @@ bool PollPOV(vector<JoystickInfo*>::iterator itjoy, int &jbutton, int &dir, u32*
 				case SDL_HAT_RIGHT:
 				case SDL_HAT_DOWN:
 				case SDL_HAT_LEFT:
-					*pkey = PAD_POV((*itjoy)->GetId(), value, i);
+					*pkey = PAD_HAT((*itjoy)->GetId(), value, i);
 					jbutton = i;
 					dir = value;
 					PAD_LOG("Hat Pressed!");

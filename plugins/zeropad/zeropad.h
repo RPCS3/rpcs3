@@ -49,13 +49,13 @@ extern "C"
 
 extern char libraryName[256];
 
-#define FORIT(it, v) for(it = (v).begin(); it != (v).end(); (it)++)
-
 #define IS_KEYBOARD(key) (key < 0x10000)
 #define IS_JOYBUTTONS(key) (key >= 0x10000 && key < 0x20000) // buttons
 #define IS_JOYSTICK(key) (key >= 0x20000 && key < 0x30000) // analog
 #define IS_POV(key) (key >= 0x30000 && key < 0x40000) // uses analog as buttons (cares about sign)
-#define IS_MOUSE(key) (key >= 0x40000 && key < 0x50000) // mouse
+#define IS_HAT(key) (key >= 0x40000 && key < 0x50000) // uses hat as buttons (cares about sign)
+
+//#define IS_MOUSE(key) (key >= 0x40000 && key < 0x50000) // mouse
 
 #define PAD_GETKEY(key) ((key) & 0xffff)
 #define PAD_GETJOYID(key) (((key) & 0xf000) >> 12)
@@ -64,8 +64,10 @@ extern char libraryName[256];
 #define PAD_JOYBUTTON(joyid, buttonid) (0x10000 | ((joyid) << 12) | (buttonid))
 #define PAD_JOYSTICK(joyid, axisid) (0x20000 | ((joyid) << 12) | (axisid))
 #define PAD_POV(joyid, sign, axisid) (0x30000 | ((joyid) << 12) | ((sign) << 8) | (axisid))
+#define PAD_HAT(joyid, dir, axisid) (0x40000 | ((joyid) << 12) | ((dir) << 8) | (axisid))
+
 #define PAD_GETPOVSIGN(key) (((key) & 0x100) >> 8)
-#define PAD_GETPOVDIR(key) (((key) & ~ 0x30000) >> 8)
+#define PAD_GETHATDIR(key) (((key) & ~ 0x40000) >> 8)
 
 #ifdef __LINUX__
 #define PADKEYS 28
