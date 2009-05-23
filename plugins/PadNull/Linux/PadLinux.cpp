@@ -63,11 +63,7 @@ void _PadUpdate(int pad)
 
 s32  _PADOpen(void *pDsp)
 {
-	//XKeyboardState *settings;
-	
 	GSdsp = *(Display**)pDsp;
-	//XGetKeyboardControl(GSdsp, settings);
-	//autoRepeatMode = settings->global_auto_repeat;
 	XAutoRepeatOff(GSdsp);
 
 	return 0;
@@ -76,8 +72,4 @@ s32  _PADOpen(void *pDsp)
 void  _PADClose()
 { 
 	XAutoRepeatOn(GSdsp);
-	//XKeyboardControl *settings;
-	//settings->auto_repeat_mode = autoRepeatMode;
-	
-	//XChangeKeyboardControl(GSdsp, KBAutoRepeatMode, settings);
 }

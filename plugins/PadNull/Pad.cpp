@@ -106,8 +106,6 @@ EXPORT_C_(s32) PADopen(void *pDsp)
 	memset(&event, 0, sizeof(event));
 
 	return _PADOpen(pDsp);
-
-	return 0;
 }
 
 EXPORT_C_(void) PADclose() 
