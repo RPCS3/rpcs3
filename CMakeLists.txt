@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.6)
 
 project (YAML_CPP)
-set(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
+set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
 set(PUB_HDR
 	include/crt.h
