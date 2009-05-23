@@ -167,9 +167,9 @@
 			<Filter
 				Name="Representation"
 				>
-			        <File
-				        RelativePath=".\src\alias.cpp"
-				        >
+				<File
+					RelativePath=".\src\alias.cpp"
+					>
 				</File>
 				<File
 					RelativePath=".\src\content.cpp"
@@ -228,6 +228,26 @@
 					>
 				</File>
 			</Filter>
+			<Filter
+				Name="Emitter"
+				>
+				<File
+					RelativePath=".\src\emitter.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\src\emitterstate.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\src\emitterutils.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\src\ostream.cpp"
+					>
+				</File>
+			</Filter>
 		</Filter>
 		<Filter
 			Name="Header Files"
@@ -240,6 +260,14 @@
 			</File>
 			<File
 				RelativePath=".\include\exceptions.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\indentation.h"
+				>
+			</File>
+			<File
+				RelativePath=".\include\noncopyable.h"
 				>
 			</File>
 			<File
@@ -261,8 +289,8 @@
 			<Filter
 				Name="Representation"
 				>
-			        <File
-				        RelativePath=".\include\alias.h"
+				<File
+					RelativePath=".\include\alias.h"
 					>
 				</File>
 				<File
@@ -323,6 +351,34 @@
 				</File>
 				<File
 					RelativePath=".\src\token.h"
+					>
+				</File>
+			</Filter>
+			<Filter
+				Name="Emitter"
+				>
+				<File
+					RelativePath=".\include\emitter.h"
+					>
+				</File>
+				<File
+					RelativePath=".\include\emittermanip.h"
+					>
+				</File>
+				<File
+					RelativePath=".\src\emitterstate.h"
+					>
+				</File>
+				<File
+					RelativePath=".\src\emitterutils.h"
+					>
+				</File>
+				<File
+					RelativePath=".\include\ostream.h"
+					>
+				</File>
+				<File
+					RelativePath=".\include\stlemitter.h"
 					>
 				</File>
 			</Filter>
