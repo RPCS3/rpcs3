@@ -63,44 +63,9 @@ namespace YAML
 		return m_pRef->IsSequence();
 	}
 
-	bool Alias::Read(std::string& v) const
+	bool Alias::GetScalar(std::string& scalar) const
 	{
-		return m_pRef->Read(v);
-	}
-
-	bool Alias::Read(int& v) const
-	{
-		return m_pRef->Read(v);
-	}
-
-	bool Alias::Read(unsigned& v) const
-	{
-		return m_pRef->Read(v);
-	}
-
-	bool Alias::Read(long& v) const
-	{
-		return m_pRef->Read(v);
-	}
-
-	bool Alias::Read(float& v) const
-	{
-		return m_pRef->Read(v);
-	}
-
-	bool Alias::Read(double& v) const
-	{
-		return m_pRef->Read(v);
-	}
-
-	bool Alias::Read(char& v) const
-	{
-		return m_pRef->Read(v);
-	}
-
-	bool Alias::Read(bool& v) const
-	{
-		return m_pRef->Read(v);
+		return m_pRef->GetScalar(scalar);
 	}
 
 	int Alias::Compare(Content *pContent)

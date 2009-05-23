@@ -36,14 +36,7 @@ namespace YAML
 		virtual bool IsSequence() const { return false; }
 
 		// extraction
-		virtual bool Read(std::string&) const { return false; }
-		virtual bool Read(int&) const { return false; }
-		virtual bool Read(unsigned&) const { return false; }
-		virtual bool Read(long&) const { return false; }
-		virtual bool Read(float&) const { return false; }
-		virtual bool Read(double&) const { return false; }
-		virtual bool Read(char&) const { return false; }
-		virtual bool Read(bool&) const { return false; }
+		virtual bool GetScalar(std::string&) const { return false; }
 
 		// ordering
 		virtual int Compare(Content *) { return 0; }

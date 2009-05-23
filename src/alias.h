@@ -22,14 +22,7 @@ namespace YAML
 		virtual bool IsMap() const;
 		virtual bool IsSequence() const;
 
-		virtual bool Read(std::string&) const;
-		virtual bool Read(int&) const;
-		virtual bool Read(unsigned&) const;
-		virtual bool Read(long&) const;
-		virtual bool Read(float&) const;
-		virtual bool Read(double&) const;
-		virtual bool Read(char&) const;
-		virtual bool Read(bool&) const;
+		virtual bool GetScalar(std::string& s) const;
 
 		virtual int Compare(Content *);
 		virtual int Compare(Scalar *);

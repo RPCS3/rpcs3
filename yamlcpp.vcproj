@@ -176,6 +176,10 @@
 					>
 				</File>
 				<File
+					RelativePath=".\src\conversion.cpp"
+					>
+				</File>
+				<File
 					RelativePath=".\src\iterator.cpp"
 					>
 				</File>
@@ -290,11 +294,15 @@
 				Name="Representation"
 				>
 				<File
-					RelativePath=".\include\alias.h"
+					RelativePath=".\src\alias.h"
 					>
 				</File>
 				<File
 					RelativePath=".\src\content.h"
+					>
+				</File>
+				<File
+					RelativePath=".\include\conversion.h"
 					>
 				</File>
 				<File

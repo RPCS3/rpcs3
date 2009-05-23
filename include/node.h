@@ -7,6 +7,7 @@
 #include "parserstate.h"
 #include "exceptions.h"
 #include "iterator.h"
+#include "conversion.h"
 
 namespace YAML
 {
@@ -37,18 +38,11 @@ namespace YAML
 		unsigned size() const;
 
 		// extraction of scalars
-		bool Read(std::string& s) const;
-		bool Read(int& i) const;
-		bool Read(unsigned& u) const;
-		bool Read(long& l) const;
-		bool Read(float& f) const;
-		bool Read(double& d) const;
-		bool Read(char& c) const;
-		bool Read(bool& b) const;
+		bool GetScalar(std::string& s) const;
 
-		// so you can specialize for other values
+		// we can specialize this for other values
 		template <typename T>
-		friend bool Read(const Node& node, T& value);
+		bool Read(T& value) const;
 
 		template <typename T>
 		friend void operator >> (const Node& node, T& value);
@@ -100,15 +94,18 @@ namespace YAML
 
 	// templated things we need to keep inline in the header
 	template <typename T>
-	inline bool Read(const Node& node, T& value)
-	{
-		return node.Read(value);
+	inline bool Node::Read(T& value) const {
+		std::string scalar;
+		if(!GetScalar(scalar))
+			return false;
+
+		return Convert(scalar, value);
 	}
 
 	template <typename T>
 	inline void operator >> (const Node& node, T& value)
 	{
-		if(!Read(node, value))
+		if(!node.Read(value))
 			throw InvalidScalar(node.m_line, node.m_column);
 	}
 
@@ -120,7 +117,7 @@ namespace YAML
 
 		for(Iterator it=begin();it!=end();++it) {
 			T t;
-			if(YAML::Read(it.first(), t)) {
+			if(it.first().Read(t)) {
 				if(key == t)
 					return it.second();
 			}

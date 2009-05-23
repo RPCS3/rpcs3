@@ -4,6 +4,7 @@ project (YAML_CPP)
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
 set(PUB_HDR
+	include/conversion.h
 	include/crt.h
 	include/emitter.h
 	include/emittermanip.h
@@ -41,6 +42,7 @@ set(PVT_HDR
 set(SRC
 	src/alias.cpp
 	src/content.cpp
+	src/conversion.cpp
 	src/emitter.cpp
 	src/emitterstate.cpp
 	src/emitterutils.cpp

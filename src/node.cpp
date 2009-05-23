@@ -282,75 +282,11 @@ namespace YAML
 		return GetValue(i);
 	}
 
-	///////////////////////////////////////////////////////
-	// Extraction
-	// Note: these Read() functions are identical, but
-	// they're not templated because they use a Content virtual
-	// function, so we'd have to #include that in node.h, and
-	// I don't want to.
-
-	bool Node::Read(std::string& s) const
+	bool Node::GetScalar(std::string& s) const
 	{
 		if(!m_pContent)
 			return false;
-
-		return m_pContent->Read(s);
-	}
-
-	bool Node::Read(int& i) const
-	{
-		if(!m_pContent)
-			return false;
-
-		return m_pContent->Read(i);
-	}
-
-	bool Node::Read(unsigned& u) const
-	{
-		if(!m_pContent)
-			return false;
-
-		return m_pContent->Read(u);
-	}
-
-	bool Node::Read(long& l) const
-	{
-		if(!m_pContent)
-			return false;
-
-		return m_pContent->Read(l);
-	}
-
-	bool Node::Read(float& f) const
-	{
-		if(!m_pContent)
-			return false;
-
-		return m_pContent->Read(f);
-	}
-
-	bool Node::Read(double& d) const
-	{
-		if(!m_pContent)
-			return false;
-
-		return m_pContent->Read(d);
-	}
-
-	bool Node::Read(char& c) const
-	{
-		if(!m_pContent)
-			return false;
-
-		return m_pContent->Read(c);
-	}
-
-	bool Node::Read(bool& b) const
-	{
-		if(!m_pContent)
-			return false;
-
-		return m_pContent->Read(b);
+		return m_pContent->GetScalar(s);
 	}
 
 	std::ostream& operator << (std::ostream& out, const Node& node)
