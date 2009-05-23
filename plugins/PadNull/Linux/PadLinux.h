@@ -1,4 +1,4 @@
-/*  GSnull
+/*  FWnull
  *  Copyright (C) 2004-2009 PCSX2 Team
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -15,19 +15,16 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-
-#ifndef __GSLINUX_H__
-#define __GSLINUX_H__
-
+ 
+#ifndef __PADLINUX_H__
+#define __PADLINUX_H__
+ 
+#include "Pad.h"
 #include <gtk/gtk.h>
 #include <X11/Xlib.h>
-#include <X11/keysym.h>
-
-#include "GS.h"
-
-extern int GSOpenWindow(void *pDsp, char *Title);
-extern void GSCloseWindow();
-extern void GSProcessMessages();
-extern void HandleKeyEvent(keyEvent *ev);
-
+ 
+void _PadUpdate(int pad);
+s32  _PADOpen(void *pDsp);
+void _PADClose();
+ 
 #endif

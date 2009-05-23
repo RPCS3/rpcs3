@@ -1,4 +1,4 @@
-/*  GSnull
+/*  FWnull
  *  Copyright (C) 2004-2009 PCSX2 Team
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -16,18 +16,9 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef __GSLINUX_H__
-#define __GSLINUX_H__
+void SaveConf();
+void LoadConf();
+void SysMessage(char *fmt, ...);
 
-#include <gtk/gtk.h>
-#include <X11/Xlib.h>
-#include <X11/keysym.h>
-
-#include "GS.h"
-
-extern int GSOpenWindow(void *pDsp, char *Title);
-extern void GSCloseWindow();
-extern void GSProcessMessages();
-extern void HandleKeyEvent(keyEvent *ev);
-
-#endif
+#define is_checked(main_widget, widget_name) (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lookup_widget(main_widget, widget_name))))
+#define set_checked(main_widget,widget_name, state) gtk_toggle_button_set_state(GTK_TOGGLE_BUTTON(lookup_widget(main_widget, widget_name)), state)

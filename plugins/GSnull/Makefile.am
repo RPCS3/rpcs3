@@ -1,7 +1,7 @@
 # Create a shared library libGSnull
 AUTOMAKE_OPTIONS = foreign
 noinst_LIBRARIES = libGSnull.a
-INCLUDES = -I@srcdir@/../../common/include -I@srcdir@/../../3rdparty -I@srcdir@/Linux
+INCLUDES = -I@srcdir@/../../common/include -I@srcdir@/../../3rdparty -I@srcdir@/Linux  -I@srcdir@/null
 
 libGSnull_a_CXXFLAGS = $(shell pkg-config --cflags gtk+-2.0)
 libGSnull_a_CFLAGS = $(shell pkg-config --cflags gtk+-2.0)
@@ -24,7 +24,7 @@ libGSnull_LDADD=$(libGSnull_a_OBJECTS)
 
 libGSnull_a_SOURCES = \
 GS.cpp \
-Linux/Config.cpp Linux/Linux.cpp Linux/GSLinux.cpp
+Linux/Config.cpp Linux/Linux.cpp Linux/GSLinux.cpp \
 Linux/GSLinux.h Linux/Config.h Linux/Linux.h \
 GifTransfer.cpp GifTransfer.h \
 null/GSnull.cpp null/GSnull.h 

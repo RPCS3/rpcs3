@@ -16,6 +16,7 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#include "GS.h"
 #include "GSLinux.h"
 
 Display *display;
@@ -68,9 +69,11 @@ void GSProcessMessages()
 
 void HandleKeyEvent(keyEvent *ev)
 {
-	switch(ev->evt) {
+	switch(ev->evt) 
+	{
 		case KEYPRESS:
-			switch(ev->key) {
+			switch(ev->key) 
+			{
 				case XK_F5:
 				case XK_F6:
 				case XK_F7:
@@ -87,10 +90,11 @@ void HandleKeyEvent(keyEvent *ev)
 				case XK_Alt_R:
 					GSAlt = true;
 					break;
-				}
+			}
 			break;
 		case KEYRELEASE:
-			switch(ev->key) {
+			switch(ev->key) 
+			{
 				case XK_Shift_L:
 				case XK_Shift_R:
 					GSShift = false;
