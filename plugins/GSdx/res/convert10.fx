@@ -76,7 +76,7 @@ float4 ps_crt(PS_INPUT input, uint i)
 		float4(1, 1, 1, 0)
 	};
 	
-	return Texture.Sample(Sampler, input.t) * saturate(mask[i] + 0.25f);
+	return Texture.Sample(Sampler, input.t) * saturate(mask[i] + 0.5f);
 }
 
 float4 ps_main5(PS_INPUT input) : SV_Target0 // triangular

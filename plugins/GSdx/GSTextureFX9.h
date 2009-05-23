@@ -155,6 +155,12 @@ private:
 	hash_map<uint32, Direct3DSamplerState9* > m_ps_ss;
 	hash_map<uint32, Direct3DDepthStencilState9* > m_om_dss;	
 	hash_map<uint32, Direct3DBlendState9* > m_om_bs;	
+
+	CComPtr<IDirect3DVertexBuffer9> m_vb, m_vb_old;
+	int m_vb_max;
+	int m_vb_start;
+	int m_vb_count;
+
 	hash_map<uint32, GSTexture*> m_mskfix;
 
 	GSTexture* CreateMskFix(uint32 size, uint32 msk, uint32 fix);
@@ -171,4 +177,5 @@ public:
 	void SetupRS(int w, int h, const GSVector4i& scissor);
 	void SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 bf, GSTexture* rt, GSTexture* ds);
 	void UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 bf);
+	void Draw();
 };

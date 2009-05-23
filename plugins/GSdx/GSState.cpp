@@ -1765,9 +1765,9 @@ bool GSC_SFEX3(const GSFrameInfo& fi, int& skip)
 {
 	if(skip == 0)
 	{
-		if(fi.TME && fi.FBP == 0x00f00 && fi.FPSM == PSM_PSMCT16 && (fi.TBP0 == 0x00500 || fi.TBP0 == 0x00000) && fi.TPSM == PSM_PSMCT32)
+		if(fi.TME && fi.FBP == 0x00500 && fi.FPSM == PSM_PSMCT16 && fi.TBP0 == 0x00f00 && fi.TPSM == PSM_PSMCT16)
 		{
-			skip = 4;
+			skip = 2; // blur
 		}
 	}
 

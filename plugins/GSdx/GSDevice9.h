@@ -61,11 +61,7 @@ struct Direct3DBlendState9
 class GSDevice9 : public GSDevice
 {
 private:
-	// state cache
-
 	IDirect3DVertexBuffer9* m_vb;
-	int m_vb_count;
-	const void* m_vb_vertices;
 	size_t m_vb_stride;
 	IDirect3DVertexDeclaration9* m_layout;
 	D3DPRIMITIVETYPE m_topology;
@@ -106,8 +102,9 @@ public: // TODO
 
 	struct
 	{
-		CComPtr<IDirect3DVertexShader9> vs;
+		CComPtr<IDirect3DVertexBuffer9> vb;
 		CComPtr<IDirect3DVertexDeclaration9> il;
+		CComPtr<IDirect3DVertexShader9> vs;
 		CComPtr<IDirect3DPixelShader9> ps[7];
 		Direct3DSamplerState9 ln;
 		Direct3DSamplerState9 pt;
@@ -157,8 +154,7 @@ public:
 	void StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, IDirect3DPixelShader9* ps, const float* ps_cb, int ps_cb_len, bool linear = true);
 	void StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, IDirect3DPixelShader9* ps, const float* ps_cb, int ps_cb_len, Direct3DBlendState9* bs, bool linear = true);
 
-	// TODO: void IASetVertexBuffer(IDirect3DVertexBuffer9* vb, uint32 count, const void* vertices, size_t stride);
-	void IASetVertexBuffer(int count, const void* vertices, size_t stride);
+	void IASetVertexBuffer(IDirect3DVertexBuffer9* vb, size_t stride);
 	void IASetInputLayout(IDirect3DVertexDeclaration9* layout);
 	void IASetPrimitiveTopology(D3DPRIMITIVETYPE topology);
 	void VSSetShader(IDirect3DVertexShader9* vs, const float* vs_cb, int vs_cb_len);
@@ -169,12 +165,7 @@ public:
 	void OMSetDepthStencilState(Direct3DDepthStencilState9* dss, uint32 sref);
 	void OMSetBlendState(Direct3DBlendState9* bs, uint32 bf);
 	void OMSetRenderTargets(GSTexture* rt, GSTexture* ds);
-	void DrawPrimitive();
-
-	template<class T> void IASetVertexBuffer(int count, T* vertices)
-	{
-		IASetVertexBuffer(count, vertices, sizeof(T));
-	}
+	void DrawPrimitive(uint32 count, uint32 start = 0);
 
 	IDirect3DDevice9* operator->() {return m_dev;}
 	operator IDirect3DDevice9*() {return m_dev;}

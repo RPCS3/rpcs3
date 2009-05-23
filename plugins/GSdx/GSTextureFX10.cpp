@@ -37,8 +37,6 @@ bool GSTextureFX10::Create(GSDevice10* dev)
 {
 	m_dev = dev;
 
-	//
-
 	VSSelector sel;
 	
 	sel.bppz = 0;
@@ -127,19 +125,7 @@ bool GSTextureFX10::SetupIA(const GSVertexHW10* vertices, int count, D3D10_PRIMI
 
 	int next = m_vb_start + m_vb_count;
 
-	if(next + count > m_vb_max)
-	{
-		if(SUCCEEDED(m_vb->Map(D3D10_MAP_WRITE_DISCARD, 0, (void**)&v)))
-		{
-			memcpy(v, vertices, count * sizeof(vertices[0]));
-
-			m_vb->Unmap();
-		}
-
-		m_vb_start = 0;
-		m_vb_count = count;
-	}
-	else
+	if(next + count <= m_vb_max)
 	{
 		if(SUCCEEDED(m_vb->Map(D3D10_MAP_WRITE_NO_OVERWRITE, 0, (void**)&v)))
 		{
@@ -149,6 +135,18 @@ bool GSTextureFX10::SetupIA(const GSVertexHW10* vertices, int count, D3D10_PRIMI
 		}
 
 		m_vb_start = next;
+		m_vb_count = count;
+	}
+	else
+	{
+		if(SUCCEEDED(m_vb->Map(D3D10_MAP_WRITE_DISCARD, 0, (void**)&v)))
+		{
+			memcpy(v, vertices, count * sizeof(vertices[0]));
+
+			m_vb->Unmap();
+		}
+
+		m_vb_start = 0;
 		m_vb_count = count;
 	}
 

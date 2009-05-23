@@ -25,6 +25,9 @@
 
 GSTextureFX9::GSTextureFX9()
 	: m_dev(NULL)
+	, m_vb_max(0)
+	, m_vb_start(0)
+	, m_vb_count(0)
 {
 }
 
@@ -86,7 +89,57 @@ GSTexture* GSTextureFX9::CreateMskFix(uint32 size, uint32 msk, uint32 fix)
 
 bool GSTextureFX9::SetupIA(const GSVertexHW9* vertices, int count, D3DPRIMITIVETYPE prim)
 {
-	m_dev->IASetVertexBuffer(count, vertices);
+	HRESULT hr;
+
+	if(max(count * 3 / 2, 10000) > m_vb_max)
+	{
+		m_vb_old = m_vb;
+		m_vb = NULL;
+		m_vb_max = max(count * 2, 10000);
+		m_vb_start = 0;
+		m_vb_count = 0;
+	}
+
+	if(!m_vb)
+	{
+		hr = (*m_dev)->CreateVertexBuffer(m_vb_max * sizeof(vertices[0]), D3DUSAGE_DYNAMIC, 0, D3DPOOL_DEFAULT, &m_vb, NULL);
+
+		if(FAILED(hr)) return false;
+	}
+
+	GSVertexHW9* v = NULL;
+
+	int next = m_vb_start + m_vb_count;
+	int size = count * sizeof(vertices[0]);
+
+	if(next + count <= m_vb_max)
+	{
+		int offset = next * sizeof(vertices[0]);
+
+		if(SUCCEEDED(m_vb->Lock(offset, size, (void**)&v, D3DLOCK_NOOVERWRITE)))
+		{
+			memcpy(v, vertices, size);
+
+			m_vb->Unlock();
+		}
+
+		m_vb_start = next;
+		m_vb_count = count;
+	}
+	else
+	{
+		if(SUCCEEDED(m_vb->Lock(0, size, (void**)&v, D3DLOCK_DISCARD)))
+		{
+			memcpy(v, vertices, size);
+
+			m_vb->Unlock();
+		}
+
+		m_vb_start = 0;
+		m_vb_count = count;
+	}
+
+	m_dev->IASetVertexBuffer(m_vb, sizeof(vertices[0]));
 	m_dev->IASetInputLayout(m_il);
 	m_dev->IASetPrimitiveTopology(prim);
 
@@ -469,4 +522,9 @@ void GSTextureFX9::UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, 
 	}
 
 	m_dev->OMSetBlendState(bs, 0x010101 * bf);
+}
+
+void GSTextureFX9::Draw()
+{
+	m_dev->DrawPrimitive(m_vb_count, m_vb_start);
 }

@@ -27,10 +27,7 @@
 class GSDevice10 : public GSDevice
 {
 private:
-	// state cache
-
 	ID3D10Buffer* m_vb;
-	int m_vb_count;
 	size_t m_vb_stride;
 	ID3D10InputLayout* m_layout;
 	D3D10_PRIMITIVE_TOPOLOGY m_topology;

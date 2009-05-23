@@ -26,8 +26,6 @@
 
 GSDevice9::GSDevice9() 
 	: m_vb(NULL)
-	, m_vb_count(0)
-	, m_vb_vertices(NULL)
 	, m_vb_stride(0)
 	, m_layout(NULL)
 	, m_topology((D3DPRIMITIVETYPE)0)
@@ -144,6 +142,8 @@ bool GSDevice9::Create(HWND hWnd, bool vsync)
 	{
 		CompileShader(IDR_CONVERT9_FX, format("ps_main%d", i), NULL, &m_convert.ps[i]);
 	}
+
+	m_dev->CreateVertexBuffer(4 * sizeof(GSVertexPT1), D3DUSAGE_DYNAMIC, 0, D3DPOOL_DEFAULT, &m_convert.vb, NULL);
 
 	m_convert.dss.DepthEnable = false;
 	m_convert.dss.StencilEnable = false;
@@ -550,7 +550,16 @@ void GSDevice9::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, c
 		vertices[i].p.y += 1.0f / ds.y;
 	}
 
-	IASetVertexBuffer(4, vertices);
+	void* buff = NULL;
+
+	if(SUCCEEDED(m_convert.vb->Lock(0, 0, &buff, D3DLOCK_DISCARD)))
+	{
+		memcpy(buff, vertices, sizeof(vertices));
+
+		m_convert.vb->Unlock();
+	}
+
+	IASetVertexBuffer(m_convert.vb, sizeof(vertices[0]));
 	IASetInputLayout(m_convert.il);
 	IASetPrimitiveTopology(D3DPT_TRIANGLESTRIP);
 
@@ -570,7 +579,7 @@ void GSDevice9::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, c
 
 	//
 
-	DrawPrimitive();
+	DrawPrimitive(countof(vertices));
 
 	//
 
@@ -610,18 +619,9 @@ void GSDevice9::DoInterlace(GSTexture* st, GSTexture* dt, int shader, bool linea
 
 	StretchRect(st, sr, dt, dr, m_interlace.ps[shader], (const float*)&cb, 1, linear);
 }
-/*
-void GSDevice9::IASetVertexBuffer(IDirect3DVertexBuffer9* vb, uint32 count, const void* vertices, size_t stride)
+
+void GSDevice9::IASetVertexBuffer(IDirect3DVertexBuffer9* vb, size_t stride)
 {
-	void* data = NULL;
-
-	if(SUCCEEDED(vb->Lock(0, count * stride, &data, D3DLOCK_DISCARD)))
-	{
-		memcpy(data, vertices, count * stride);
-
-		vb->Unlock();
-	}
-
 	if(m_vb != vb || m_vb_stride != stride)
 	{
 		m_dev->SetStreamSource(0, vb, 0, stride);
@@ -630,23 +630,14 @@ void GSDevice9::IASetVertexBuffer(IDirect3DVertexBuffer9* vb, uint32 count, cons
 		m_vb_stride = stride;
 	}
 }
-*/
-void GSDevice9::IASetVertexBuffer(int count, const void* vertices, size_t stride)
-{
-	m_vb_count = count;
-	m_vb_vertices = vertices;
-	m_vb_stride = stride;
-}
 
 void GSDevice9::IASetInputLayout(IDirect3DVertexDeclaration9* layout)
 {
-	// TODO: get rid of all SetFVF before enabling this
-
-	// if(m_layout != layout)
+	if(m_layout != layout)
 	{
 		m_dev->SetVertexDeclaration(layout);
 
-		// m_layout = layout;
+		m_layout = layout;
 	}
 }
 
@@ -855,31 +846,31 @@ void GSDevice9::OMSetRenderTargets(GSTexture* rt, GSTexture* ds)
 	}
 }
 
-void GSDevice9::DrawPrimitive()
+void GSDevice9::DrawPrimitive(uint32 count, uint32 start)
 {
 	int prims = 0;
 
 	switch(m_topology)
 	{
     case D3DPT_TRIANGLELIST:
-		prims = m_vb_count / 3;
+		prims = count / 3;
 		break;
     case D3DPT_LINELIST:
-		prims = m_vb_count / 2;
+		prims = count / 2;
 		break;
     case D3DPT_POINTLIST:
-		prims = m_vb_count;
+		prims = count;
 		break;
     case D3DPT_TRIANGLESTRIP:
     case D3DPT_TRIANGLEFAN:
-		prims = m_vb_count - 2;
+		prims = count - 2;
 		break;
     case D3DPT_LINESTRIP:
-		prims = m_vb_count - 1;
+		prims = count - 1;
 		break;
 	}
 
-	m_dev->DrawPrimitiveUP(m_topology, prims, m_vb_vertices, m_vb_stride);
+	m_dev->DrawPrimitive(m_topology, start, prims);
 }
 
 // FIXME: D3DXCompileShaderFromResource of d3dx9 v37 (march 2008) calls GetFullPathName on id for some reason and then crashes

@@ -172,15 +172,32 @@ public:
 
 	GSVector4i runion(const GSVector4i& a) const 
 	{
-		#if _M_SSE >= 0x401
+		int i = (upl64(a) < uph64(a)).mask();
 
-		return min_i32(a).upl64(max_i32(a).srl<8>());
+		if(i == 0xffff)
+		{
+			#if _M_SSE >= 0x401
 
-		#else
+			return min_i32(a).upl64(max_i32(a).srl<8>());
 
-		return GSVector4i(min(x, a.x), min(y, a.y), max(z, a.z), max(w, a.w));
+			#else
 
-		#endif
+			return GSVector4i(min(x, a.x), min(y, a.y), max(z, a.z), max(w, a.w));
+
+			#endif
+		}
+
+		if((i & 0x00ff) == 0x00ff)
+		{
+			return *this;
+		}
+
+		if((i & 0xff00) == 0xff00)
+		{
+			return a;
+		}
+
+		return GSVector4i::zero();
 	}
 
 	GSVector4i rintersect(const GSVector4i& a) const 
