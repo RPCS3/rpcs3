@@ -156,14 +156,11 @@ enum gamePadValues
 	PAD_L2 = 0
 };
 
-// Activate bolche's analog contols hack
-#define ANALOG_CONTROLS_HACK
+// Activate bolche's analog controls hack
 // DEF_VALUE is the strength you press the control.
 // Code taken from http://forums.pcsx2.net/thread-4699.html
 
-#ifdef ANALOG_CONTROLS_HACK
 #define DEF_VALUE	  	32766
-#endif
 
 /* end of pad.h */
 

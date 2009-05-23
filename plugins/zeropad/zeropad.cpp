@@ -309,7 +309,7 @@ void PADsetMode(int pad, int mode)
 
 u8   CALLBACK PADstartPoll(int pad)
 {
-	PAD_LOG("PADstartPoll: %d\n", pad);
+	//PAD_LOG("PADstartPoll: %d\n", pad);
 	
 	curPad = pad - 1;
 	curByte = 0;
@@ -325,7 +325,7 @@ u8  _PADpoll(u8 value)
 	{
 		curByte++;
 		
-		PAD_LOG("PADpoll: cmd: %x\n", value);
+		//PAD_LOG("PADpoll: cmd: %x\n", value);
 
 		curCmd = value;
 		switch (value)
@@ -541,7 +541,7 @@ u8 CALLBACK PADpoll(u8 value)
 	u8 ret;
 	
 	ret = _PADpoll(value);
-	PAD_LOG("PADpoll: %x (%d: %x)\n", value, curByte, ret);
+	//PAD_LOG("PADpoll: %x (%d: %x)\n", value, curByte, ret);
 	return ret;
 }
 

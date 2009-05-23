@@ -120,7 +120,8 @@ void CALLBACK PADupdate(int pad)
 				key = XLookupKeysym((XKeyEvent *) & E, 0);
 
 				i = FindKey(key, pad);
-#ifdef ANALOG_CONTROLS_HACK
+			
+				// Analog controls.
 				if ((i > PAD_RY) && (i <= PAD_R_LEFT))
 				{
 				switch (i)
@@ -140,7 +141,7 @@ void CALLBACK PADupdate(int pad)
 				}
 				i += 0xff00;
 				}
-#endif
+				
 				if (i != -1) 
 				{
 					clear_bit(keyRelease, i); 
@@ -156,14 +157,14 @@ void CALLBACK PADupdate(int pad)
 				key = XLookupKeysym((XKeyEvent *) & E, 0);
 
 				i = FindKey(key, pad);
-#ifdef ANALOG_CONTROLS_HACK
 			
+				// Analog Controls.
 				if ((i > PAD_RY) && (i <= PAD_R_LEFT))
 				{
 					Analog::ResetPad(Analog::AnalogToPad(i), pad);
 					i += 0xff00;
 				}
-#endif
+				
 				if (i != -1) 
 				{
 					clear_bit(keyPress, i); 
@@ -260,39 +261,57 @@ void CALLBACK PADupdate(int pad)
 
 				int value = SDL_JoystickGetHat((pjoy)->GetJoy(), PAD_GETJOYSTICK_AXIS(key));
 				int pad = (pjoy)->GetPAD();
-				int temp;
 				
 				//PAD_LOG("Hat = %d for key %d\n", PAD_GETPOVDIR(key), key);
-				if (value != SDL_HAT_CENTERED)
+				if ((value != SDL_HAT_CENTERED) && (PAD_GETHATDIR(key) == value))
 				{
-					if (PAD_GETHATDIR(key) == value)
+					if ((value == SDL_HAT_UP) || (value == SDL_HAT_RIGHT) || (value == SDL_HAT_DOWN) ||(value == SDL_HAT_LEFT))
+					{
 						set_bit(status[pad], i);
+					}
 					else
+					{
 						clear_bit(status[pad], i);
+					}
+					switch (i)
+					{
+						case PAD_LEFT:
+							PAD_LOG("Hat Left!\n");
+							break;
+						case PAD_DOWN:
+							PAD_LOG("Hat Down!\n");
+							break;
+						case PAD_RIGHT:
+							PAD_LOG("Hat Right!\n");
+							break;
+						case PAD_UP:
+							PAD_LOG("Hat Up!\n");
+							break;
+					}
 						
 					switch (value)
 					{
 						case SDL_HAT_UP:
-							PAD_LOG("Up!\n");
+							PAD_LOG("D-pad Up!\n");
 							break;
 					
 						case SDL_HAT_RIGHT:
-							PAD_LOG("Right!\n");
+							PAD_LOG("D-pad Right!\n");
 							break;
 					
 						case SDL_HAT_DOWN:
-							PAD_LOG("Down!\n");
+							PAD_LOG("D-pad Down!\n");
 							break;
 					
 						case SDL_HAT_LEFT:
-							PAD_LOG("Left!\n");
+							PAD_LOG("D-pad Left!\n");
 							break;
 					}
 				}
-				/*else
+				else
 				{
 					clear_bit(status[pad], i);
-				}*/
+				}
 			}
 		}
 #endif
@@ -342,8 +361,8 @@ void UpdateConf(int pad)
 			tmp.resize(28);
 			sprintf(&tmp[0], "JAxis %d", PAD_GETJOYSTICK_AXIS(conf.keys[pad][i]));
 		}
-		else if (IS_POV(conf.keys[pad][i]))
 #ifdef EXPERIMENTAL_POV_CODE
+		else if (IS_HAT(conf.keys[pad][i]))
 		{
 			tmp.resize(28);
 			switch(PAD_GETHATDIR(conf.keys[pad][i]))
@@ -366,6 +385,7 @@ void UpdateConf(int pad)
 			}
 		}
 #else
+		else if (IS_POV(conf.keys[pad][i]))
 		{
 			tmp.resize(28);
 			sprintf(&tmp[0], "JPOV %d%s", PAD_GETJOYSTICK_AXIS(conf.keys[pad][i]), PAD_GETPOVSIGN(conf.keys[pad][i]) ? "-" : "+");
@@ -515,8 +535,8 @@ bool PollAxes(vector<JoystickInfo*>::iterator itjoy, bool pov, int &jbutton, boo
 				
 				if (pov)
 				{
-					*pkey = PAD_POV((*itjoy)->GetId(), value < 0, i);
 					negative = (value < 0);
+					*pkey = PAD_POV((*itjoy)->GetId(), negative, i);
 				}
 				else   // axis
 				{
@@ -535,7 +555,7 @@ SDL_HAT_DOWN, SDL_HAT_LEFT,
 SDL_HAT_RIGHTUP, SDL_HAT_RIGHTDOWN, 
 SDL_HAT_LEFTUP, SDL_HAT_LEFTDOWN*/
 
-bool PollPOV(vector<JoystickInfo*>::iterator itjoy, int &jbutton, int &dir, u32* &pkey)
+bool PollHAT(vector<JoystickInfo*>::iterator itjoy, int &jbutton, int &dir, u32* &pkey)
 {
 #ifdef EXPERIMENTAL_POV_CODE
 	for (int i = 0; i < (*itjoy)->GetNumPOV(); ++i)
@@ -628,7 +648,7 @@ void OnConf_Key(GtkButton *button, gpointer user_data)
 			}
 			
 #ifdef EXPERIMENTAL_POV_CODE
-			if (PollPOV(itjoy, jbutton, direction, pkey))
+			if (PollHAT(itjoy, jbutton, direction, pkey))
 			{
 				char str[32];
 				

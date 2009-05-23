@@ -145,8 +145,8 @@ create_Conf (void)
   GtkWidget *Analog;
   GtkWidget *label6;
   GtkWidget *dialog_action_area1;
-  GtkWidget *cancelbutton1;
   GtkWidget *okbutton1;
+  GtkWidget *cancelbutton1;
 
   Conf = gtk_dialog_new ();
   gtk_widget_set_name (Conf, "Conf");
@@ -672,17 +672,17 @@ create_Conf (void)
   gtk_widget_show (dialog_action_area1);
   gtk_button_box_set_layout (GTK_BUTTON_BOX (dialog_action_area1), GTK_BUTTONBOX_END);
 
-  cancelbutton1 = gtk_button_new_from_stock ("gtk-cancel");
-  gtk_widget_set_name (cancelbutton1, "cancelbutton1");
-  gtk_widget_show (cancelbutton1);
-  gtk_dialog_add_action_widget (GTK_DIALOG (Conf), cancelbutton1, GTK_RESPONSE_CANCEL);
-  GTK_WIDGET_SET_FLAGS (cancelbutton1, GTK_CAN_DEFAULT);
-
   okbutton1 = gtk_button_new_from_stock ("gtk-ok");
   gtk_widget_set_name (okbutton1, "okbutton1");
   gtk_widget_show (okbutton1);
   gtk_dialog_add_action_widget (GTK_DIALOG (Conf), okbutton1, GTK_RESPONSE_OK);
   GTK_WIDGET_SET_FLAGS (okbutton1, GTK_CAN_DEFAULT);
+
+  cancelbutton1 = gtk_button_new_from_stock ("gtk-cancel");
+  gtk_widget_set_name (cancelbutton1, "cancelbutton1");
+  gtk_widget_show (cancelbutton1);
+  gtk_dialog_add_action_widget (GTK_DIALOG (Conf), cancelbutton1, GTK_RESPONSE_CANCEL);
+  GTK_WIDGET_SET_FLAGS (cancelbutton1, GTK_CAN_DEFAULT);
 
   g_signal_connect ((gpointer) PAD1, "clicked",
                     G_CALLBACK (OnConf_Pad1),
@@ -801,11 +801,11 @@ create_Conf (void)
   g_signal_connect ((gpointer) Analog, "clicked",
                     G_CALLBACK (OnConf_Key),
                     NULL);
-  g_signal_connect ((gpointer) cancelbutton1, "clicked",
-                    G_CALLBACK (OnConf_Cancel),
-                    NULL);
   g_signal_connect ((gpointer) okbutton1, "clicked",
                     G_CALLBACK (OnConf_Ok),
+                    NULL);
+  g_signal_connect ((gpointer) cancelbutton1, "clicked",
+                    G_CALLBACK (OnConf_Cancel),
                     NULL);
 
   /* Store pointers to all widgets, for use by lookup_widget(). */
@@ -890,8 +890,8 @@ create_Conf (void)
   GLADE_HOOKUP_OBJECT (Conf, Analog, "Analog");
   GLADE_HOOKUP_OBJECT (Conf, label6, "label6");
   GLADE_HOOKUP_OBJECT_NO_REF (Conf, dialog_action_area1, "dialog_action_area1");
-  GLADE_HOOKUP_OBJECT (Conf, cancelbutton1, "cancelbutton1");
   GLADE_HOOKUP_OBJECT (Conf, okbutton1, "okbutton1");
+  GLADE_HOOKUP_OBJECT (Conf, cancelbutton1, "cancelbutton1");
 
   return Conf;
 }
