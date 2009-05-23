@@ -41,6 +41,15 @@
 	}																											\
 }
 
+#define branchEbit() {																							\
+	if (branch == 2) {																							\
+		if (!((mVUbranch == 1) || (mVUbranch == 2))) {															\
+			Console::Error("microVU%d Warning: Jump with E-bit not Implemented [%04x]", params vuIndex, xPC);	\
+		}																										\
+		else { eBitBranch = 1; }																				\
+	}																											\
+}
+
 #define startLoop()			{ mVUdebug1(); mVUstall = 0; memset(&mVUregsTemp, 0, sizeof(mVUregsTemp)); }
 #define calcCycles(reg, x)	{ reg = ((reg > x) ? (reg - x) : 0); }
 #define tCycles(dest, src)	{ dest = aMax(dest, src); }
@@ -163,9 +172,7 @@ microVUt(void) mVUendProgram(int qInst, int pInst, int fStatus, int fMac, int fC
 	MOV32RtoM((uptr)&mVU->regs->VI[REG_MAC_FLAG].UL,	gprT1);
 	MOV32RtoM((uptr)&mVU->regs->VI[REG_CLIP_FLAG].UL,	gprT2);
 
-	//memcpy_fast(&pBlock->pStateEnd, &mVUregs, sizeof(microRegInfo));
-	//MOV32ItoM((uptr)&mVU->prog.lpState, (int)&mVUblock.pState); // Save pipeline state (clipflag instance)
-	//AND32ItoM((uptr)&microVU0.regs->VI[REG_VPU_STAT].UL, (vuIndex ? ~0x100 : ~0x001)); // VBS0/VBS1 flag
+	// Clear 'is busy' Flags, Save PC, and Jump to Exit Point
 	AND32ItoM((uptr)&VU0.VI[REG_VPU_STAT].UL, (vuIndex ? ~0x100 : ~0x001)); // VBS0/VBS1 flag
 	AND32ItoM((uptr)&mVU->regs->vifRegs->stat, ~0x4); // Clear VU 'is busy' signal for vif
 	MOV32ItoM((uptr)&mVU->regs->VI[REG_TPC].UL, xPC);
@@ -175,7 +182,8 @@ microVUt(void) mVUendProgram(int qInst, int pInst, int fStatus, int fMac, int fC
 #define sI ((mVUpBlock->pState.needExactMatch & 0x000f) ? 0 : ((mVUpBlock->pState.flags >> 0) & 3))
 #define cI ((mVUpBlock->pState.needExactMatch & 0x0f00) ? 0 : ((mVUpBlock->pState.flags >> 2) & 3))
 
-void mVUwarning() { Console::Error("microVU Warning: Exiting Execution Early (Possible Infinite Loop)"); }
+void __fastcall mVUwarning0(u32 PC) { Console::Error("microVU0 Warning: Exiting from Possible Infinite Loop [%04x]", params PC); }
+void __fastcall mVUwarning1(u32 PC) { Console::Error("microVU1 Warning: Exiting from Possible Infinite Loop [%04x]", params PC); }
 
 microVUt(void) mVUtestCycles() {
 	microVU* mVU = mVUx;
@@ -183,7 +191,9 @@ microVUt(void) mVUtestCycles() {
 	CMP32ItoM((uptr)&mVU->cycles, 0);
 	u8* jmp8 = JG8(0);
 		PUSH32R(gprR);
-		CALLFunc((uptr)mVUwarning);
+		MOV32ItoR(gprT2, xPC);
+		if (!vuIndex) CALLFunc((uptr)mVUwarning0);
+		else		  CALLFunc((uptr)mVUwarning1);
 		POP32R(gprR);
 		mVUendProgram<vuIndex>(0, 0, sI, 0, cI);
 	x86SetJ8(jmp8);
@@ -224,9 +234,10 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 	memcpy_fast(&mVUregs, (microRegInfo*)pState, sizeof(microRegInfo)); // Loads up Pipeline State Info
 	mVUblock.x86ptrStart = thisPtr;
 	pBlock = mVUblocks[startPC/8]->add(&mVUblock); // Add this block to block manager
-	mVUpBlock = pBlock;
-	mVUregs.flags = 0;
-	mVUflagInfo = 0;
+	mVUpBlock		= pBlock;
+	mVUregs.flags	= 0;
+	mVUflagInfo		= 0;
+	bool eBitBranch = 0; // E-bit Set on Branch
 
 	for (int branch = 0;  mVUcount < (vuIndex ? (0x3fff/8) : (0xfff/8)); ) {
 		incPC(1);
@@ -235,7 +246,7 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 		startLoop();
 		mVUopU<vuIndex, 0>();
 		if (curI & _Ebit_)	  { branch = 1; }
-		if (curI & _MDTbit_)  { branch = 2; }
+		if (curI & _MDTbit_)  { branch = 4; }
 		if (curI & _Ibit_)	  { mVUinfo |= _isNOP; }
 		else				  { incPC(-1); mVUopL<vuIndex, 0>(); incPC(1); }
 		mVUsetCycles<vuIndex>();
@@ -244,7 +255,7 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 		else				  { mVUinfo |= _writeQ; }
 		if		(branch >= 2) { mVUinfo |= _isEOB | ((branch == 3) ? _isBdelay : 0); mVUcount++; branchWarning(); break; }
 		else if (branch == 1) { branch = 2; }
-		if		(mVUbranch)   { mVUsetFlagInfo<vuIndex>(); branch = 3; mVUbranch = 0; mVUinfo |= _isBranch; }
+		if		(mVUbranch)   { mVUsetFlagInfo<vuIndex>(); branchEbit(); branch = 3; mVUbranch = 0; mVUinfo |= _isBranch; }
 		incPC(1);
 		mVUcount++;
 	}
@@ -253,10 +264,6 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 	int xStatus[4], xMac[4], xClip[4];
 	int xCycles = mVUsetFlags<vuIndex>(xStatus, xMac, xClip);
 	mVUtestCycles<vuIndex>();
-	//SysPrintf("bS[0] = %08x, bS[1] = %08x, bS[2] = %08x, bS[3] = %08x\n", bStatus[0], bStatus[1], bStatus[2], bStatus[3]);
-	//SysPrintf("bM[0] = %08x, bM[1] = %08x, bM[2] = %08x, bM[3] = %08x\n", bMac[0], bMac[1], bMac[2], bMac[3]);
-	//SysPrintf("mVUcount = %d\n", mVUcount);
-	//SysPrintf("mVUflagInfo = %d\n", mVUflagInfo);
 
 	// Second Pass
 	iPC = mVUstartPC;
@@ -286,6 +293,8 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 
 					mVUprint("mVUcompile B/BAL");
 					incPC(-3); // Go back to branch opcode (to get branch imm addr)
+
+					if (eBitBranch) { iPC = branchAddr/4; goto eBitTemination; } // E-bit Was Set on Branch
 					mVUsetupBranch<vuIndex>(xStatus, xMac, xClip, xCycles);
 
 					if (mVUblocks[branchAddr/8] == NULL)
@@ -347,10 +356,11 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 			return thisPtr;
 		}
 	}
-	mVUprint("mVUcompile ebit");
 	if (x == (vuIndex?(0x3fff/8):(0xfff/8))) { Console::Error("microVU%d: Possible infinite compiling loop!", params vuIndex); }
 
+eBitTemination:
 
+	mVUprint("mVUcompile ebit");
 	incCycles(100); // Ensures Valid P/Q instances (And sets all cycle data to 0)
 	mVUcycles -= 100;
 
@@ -358,7 +368,7 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 	mVUsetupRange<vuIndex>(xPC - 8);
 	mVUendProgram<vuIndex>(mVU->q, mVU->p, findFlagInst(xStatus, 0x7fffffff), findFlagInst(xMac, 0x7fffffff), findFlagInst(xClip, 0x7fffffff));
 
-	return thisPtr; //ToDo: Save pipeline state?
+	return thisPtr;
 }
 
 void* __fastcall mVUcompileVU0(u32 startPC, uptr pState) { return mVUcompile<0>(startPC, pState); }

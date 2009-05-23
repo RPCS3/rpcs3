@@ -23,8 +23,6 @@
 // Dispatcher Functions
 //------------------------------------------------------------------
 
-void testFunction() { mVUprint("microVU: Entered Execution Mode"); }
-
 // Generates the code for entering recompiled blocks
 microVUt(void) mVUdispatcherA() {
 	microVU* mVU = mVUx;
@@ -69,11 +67,6 @@ microVUt(void) mVUdispatcherA() {
 	for (int i = 1; i < 16; i++) {
 		if (isMMX(i)) { MOVQMtoR(mmVI(i), (uptr)&mVU->regs->VI[i].UL); }
 	}
-
-	//PUSH32R(EAX);
-	//CALLFunc((uptr)testFunction);
-	//write8(0xcc);
-	//POP32R(EAX);
 
 	// Jump to Recompiled Code Block
 	JMPR(EAX);

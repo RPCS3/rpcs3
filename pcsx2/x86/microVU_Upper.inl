@@ -461,6 +461,11 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 	pass3 { mVUlog(OPname); mVUlogACC(); mVUlogQ(); }				\
 }
 
+// FMAC27~29 - MAX/MINI FMAC Opcodes
+#define mVU_FMAC27(operation, OPname) { mVU_FMAC1 (operation, OPname); pass1 { microVU* mVU = mVUx; mVUinfo &= ~_doStatus; } }
+#define mVU_FMAC28(operation, OPname) { mVU_FMAC6 (operation, OPname); pass1 { microVU* mVU = mVUx; mVUinfo &= ~_doStatus; } }
+#define mVU_FMAC29(operation, OPname) { mVU_FMAC3 (operation, OPname); pass1 { microVU* mVU = mVUx; mVUinfo &= ~_doStatus; } }
+
 //------------------------------------------------------------------
 // Micro VU Micromode Upper instructions
 //------------------------------------------------------------------
@@ -546,21 +551,21 @@ microVUf(void) mVU_MSUBAx()	 { mVU_FMAC15(SUB,  "MSUBAx"); }
 microVUf(void) mVU_MSUBAy()	 { mVU_FMAC15(SUB,  "MSUBAy"); }
 microVUf(void) mVU_MSUBAz()	 { mVU_FMAC15(SUB,  "MSUBAz"); }
 microVUf(void) mVU_MSUBAw()	 { mVU_FMAC15(SUB,  "MSUBAw"); }
-microVUf(void) mVU_MAX()	 { mVU_FMAC1 (MAX2, "MAX");    }
-microVUf(void) mVU_MAXi()	 { mVU_FMAC6 (MAX2, "MAXi");   }
-microVUf(void) mVU_MAXx()	 { mVU_FMAC3 (MAX2, "MAXx");   }
-microVUf(void) mVU_MAXy()	 { mVU_FMAC3 (MAX2, "MAXy");   }
-microVUf(void) mVU_MAXz()	 { mVU_FMAC3 (MAX2, "MAXz");   }
-microVUf(void) mVU_MAXw()	 { mVU_FMAC3 (MAX2, "MAXw");   }
-microVUf(void) mVU_MINI()	 { mVU_FMAC1 (MIN2, "MINI");   }
-microVUf(void) mVU_MINIi()	 { mVU_FMAC6 (MIN2, "MINIi");  }
-microVUf(void) mVU_MINIx()	 { mVU_FMAC3 (MIN2, "MINIx");  }
-microVUf(void) mVU_MINIy()	 { mVU_FMAC3 (MIN2, "MINIy");  }
-microVUf(void) mVU_MINIz()	 { mVU_FMAC3 (MIN2, "MINIz");  }
-microVUf(void) mVU_MINIw()	 { mVU_FMAC3 (MIN2, "MINIw");  }
+microVUf(void) mVU_MAX()	 { mVU_FMAC27(MAX2, "MAX");    }
+microVUf(void) mVU_MAXi()	 { mVU_FMAC28(MAX2, "MAXi");   }
+microVUf(void) mVU_MAXx()	 { mVU_FMAC29(MAX2, "MAXx");   }
+microVUf(void) mVU_MAXy()	 { mVU_FMAC29(MAX2, "MAXy");   }
+microVUf(void) mVU_MAXz()	 { mVU_FMAC29(MAX2, "MAXz");   }
+microVUf(void) mVU_MAXw()	 { mVU_FMAC29(MAX2, "MAXw");   }
+microVUf(void) mVU_MINI()	 { mVU_FMAC27(MIN2, "MINI");   }
+microVUf(void) mVU_MINIi()	 { mVU_FMAC28(MIN2, "MINIi");  }
+microVUf(void) mVU_MINIx()	 { mVU_FMAC29(MIN2, "MINIx");  }
+microVUf(void) mVU_MINIy()	 { mVU_FMAC29(MIN2, "MINIy");  }
+microVUf(void) mVU_MINIz()	 { mVU_FMAC29(MIN2, "MINIz");  }
+microVUf(void) mVU_MINIw()	 { mVU_FMAC29(MIN2, "MINIw");  }
 microVUf(void) mVU_OPMULA()	 { mVU_FMAC18(MUL,  "OPMULA"); }
 microVUf(void) mVU_OPMSUB()	 { mVU_FMAC19(SUB,  "OPMSUB"); }
-microVUf(void) mVU_NOP()	 { pass3 { mVUlog("NOP"); }   }
+microVUf(void) mVU_NOP()	 { pass3 { mVUlog("NOP"); }    }
 microVUq(void) mVU_FTOIx(uptr addr) {
 	microVU* mVU = mVUx;
 	pass1 { mVUanalyzeFMAC2<vuIndex>(_Fs_, _Ft_); }

@@ -590,8 +590,8 @@ microVUf(void) mVU_FSSET() {
 		int flagReg1, flagReg2;
 		getFlagReg(flagReg1, fsInstance);
 		if (!(doStatus||doDivFlag)) { getFlagReg(flagReg2, fpsInstance); MOV32RtoR(flagReg1, flagReg2); } // Get status result from last status setting instruction	
-		AND16ItoR(flagReg1, 0x03f); // Remember not to modify upper 16 bits because of mac flag 
-		OR16ItoR (flagReg1, (_Imm12_ & 0xfc0));
+		AND32ItoR(flagReg1, 0x03f);
+		OR32ItoR (flagReg1, (_Imm12_ & 0xfc0));
 	}
 	pass3 { mVUlog("FSSET $%x", _Imm12_); }
 	pass4 { mVUsFlagHack = 0; }
