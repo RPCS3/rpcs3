@@ -189,8 +189,8 @@ declareAllVariables
 #define _isEOB		 (1<<2) // End of Block
 #define _isBdelay	 (1<<3) // Cur Instruction in Branch Delay slot
 #define _isSflag	 (1<<4) // Cur Instruction uses status flag
-#define _writeQ		 (1<<5)
-#define _readQ		 (1<<6)
+#define _writeQ		 (1<<6)
+#define _readQ		 (1<<6) // same as writeQ
 #define _writeP		 (1<<7)
 #define _readP		 (1<<7) // same as writeP
 #define _doFlags	 (3<<8)
@@ -220,10 +220,10 @@ declareAllVariables
 #define isEOB		 (mVUinfo & (1<<2))
 #define isBdelay	 (mVUinfo & (1<<3))
 #define isSflag		 (mVUinfo & (1<<4))
-#define writeQ		((mVUinfo >> 5) & 1)
-#define readQ		((mVUinfo >> 6) & 1)
-#define writeP		(((mVUinfo >> 7) + 1) & 1)
+#define readQ		((mVUinfo >> 6) & 1) // same as writeQ
 #define readP		((mVUinfo >> 7) & 1) // same as writeP
+#define writeQ	   (((mVUinfo >> 6) + 1) & 1)
+#define writeP	   (((mVUinfo >> 7) + 1) & 1)
 #define doFlags		 (mVUinfo & (3<<8))
 #define doMac		 (mVUinfo & (1<<8))
 #define doStatus	 (mVUinfo & (1<<9))
@@ -289,8 +289,9 @@ declareAllVariables
 #endif
 
 // Speed Hacks (Set to 1 to turn On)
-#define CHECK_VU_FLAGHACK	0 // Status Flag Speed Hack
-#define CHECK_VU_MINMAXHACK	0 // Min/Max Speed Hack
+#define CHECK_VU_FLAGHACK	0 // Status Flag Speed Hack (Very-Compatible)
+#define CHECK_VU_FLAGHACK2	0 // Status Flag Speed Hack (More-Hacky)
+#define CHECK_VU_MINMAXHACK	0 // Min/Max Speed Hack		(Semi-Compatible)
 
 // Cache Limit Check
 #define mVUcacheCheck(ptr, start, limit) {																\

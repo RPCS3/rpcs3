@@ -291,6 +291,7 @@ microVUt(void) mVUanalyzeSflag(int It) {
 	if (!It) { mVUinfo |= _isNOP; }
 	else {
 		mVUinfo |= _swapOps;
+		mVUsFlagHack = 0; // Don't Optimize Out Status Flags for this block
 		if (mVUcount < 4)	{ mVUpBlock->pState.needExactMatch |= 0xf /*<< mVUcount*/; }
 		if (mVUcount >= 1)	{ incPC2(-2); mVUinfo |= _isSflag; incPC2(2); }
 		// Note: _isSflag is used for status flag optimizations.

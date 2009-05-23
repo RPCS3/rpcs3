@@ -237,6 +237,7 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 	mVUpBlock		= pBlock;
 	mVUregs.flags	= 0;
 	mVUflagInfo		= 0;
+	mVUsFlagHack	= CHECK_VU_FLAGHACK2 | mVUflagHack;
 	bool eBitBranch = 0; // E-bit Set on Branch
 
 	for (int branch = 0;  mVUcount < (vuIndex ? (0x3fff/8) : (0xfff/8)); ) {
@@ -252,7 +253,6 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 		mVUsetCycles<vuIndex>();
 		if (mVU->p)			  { mVUinfo |= _readP; }
 		if (mVU->q)			  { mVUinfo |= _readQ; }
-		else				  { mVUinfo |= _writeQ; }
 		if		(branch >= 2) { mVUinfo |= _isEOB | ((branch == 3) ? _isBdelay : 0); mVUcount++; branchWarning(); break; }
 		else if (branch == 1) { branch = 2; }
 		if		(mVUbranch)   { mVUsetFlagInfo<vuIndex>(); branchEbit(); branch = 3; mVUbranch = 0; mVUinfo |= _isBranch; }

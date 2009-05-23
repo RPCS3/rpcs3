@@ -72,6 +72,8 @@ void sortFlag(int* fFlag, int* bFlag, int cycles) {
 	}
 }
 
+#define sFlagCond ((doStatus && !mVUsFlagHack) || isFSSET || doDivFlag)
+
 // Note: Flag handling is 'very' complex, it requires full knowledge of how microVU recs work, so don't touch!
 microVUt(int) mVUsetFlags(int* xStatus, int* xMac, int* xClip) {
 	microVU* mVU = mVUx;
@@ -132,9 +134,9 @@ microVUt(int) mVUsetFlags(int* xStatus, int* xMac, int* xClip) {
 		mVUinfo |= xM << 10; // _fmInstance
 		mVUinfo |= xC << 14; // _fcInstance
 
-		if (doStatus || isFSSET || doDivFlag) { xStatus[xS] = cycles + 4;  xS = (xS+1) & 3; }
-		if (doMac)							  { xMac   [xM] = cycles + 4;  xM = (xM+1) & 3; }
-		if (doClip)							  { xClip  [xC] = cycles + 4;  xC = (xC+1) & 3; }
+		if (sFlagCond)	{ xStatus[xS] = cycles + 4;  xS = (xS+1) & 3; }
+		if (doMac)		{ xMac   [xM] = cycles + 4;  xM = (xM+1) & 3; }
+		if (doClip)		{ xClip  [xC] = cycles + 4;  xC = (xC+1) & 3; }
 
 		cycles++;
 		incPC2(2);
@@ -183,7 +185,7 @@ microVUt(void) mVUsetupFlags(int* xStatus, int* xMac, int* xClip, int cycles) {
 	}
 }
 
-microVUt(void) mVUpass4(int startPC) {
+microVUt(void) mVUflagPass(int startPC) {
 
 	microVU* mVU  = mVUx;
 	int oldPC	  = iPC;
@@ -195,7 +197,7 @@ microVUt(void) mVUpass4(int startPC) {
 	for (int branch = 0; mVUcount < 4; mVUcount++) {
 		incPC(1);
 		if (  curI & _Ebit_   )	{ branch = 1; }
-		if (  curI & _MDTbit_ )	{ branch = 2; }
+		if (  curI & _MDTbit_ )	{ branch = 4; }
 		if (!(curI & _Ibit_)  )	{ incPC(-1); mVUopL<vuIndex, 3>(); incPC(1); }
 		if		(branch >= 2)	{ break; }
 		else if (branch == 1)	{ branch = 2; }
@@ -215,15 +217,15 @@ microVUt(void) mVUpass4(int startPC) {
 
 microVUt(void) mVUsetFlagInfo() {
 	microVU* mVU = mVUx;
-	branchType1 { incPC(-1); mVUpass4<vuIndex>(branchAddr); incPC(1); }
+	branchType1 { incPC(-1); mVUflagPass<vuIndex>(branchAddr); incPC(1); }
 	branchType2 { mVUflagInfo |= 0xfff; }
 	branchType3 {
 		incPC(-1); 
-		mVUpass4<vuIndex>(branchAddr);
+		mVUflagPass<vuIndex>(branchAddr);
 		int backupFlagInfo = mVUflagInfo;
 		mVUflagInfo = 0;
 		incPC(4); // Branch Not Taken
-		mVUpass4<vuIndex>(xPC);
+		mVUflagPass<vuIndex>(xPC);
 		incPC(-3);		
 		mVUflagInfo |= backupFlagInfo;
 	}
