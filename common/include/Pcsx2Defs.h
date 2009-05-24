@@ -51,11 +51,11 @@
 #		endif
 #	else
 #		ifdef _MSC_VER
-#			define jBREAKPOINT() do { __asm int 3 } while(0)
+#			define jBREAKPOINT() do { __asm int 3 } while(0);
 #		else
 #			define jBREAKPOINT() ((void) *(volatile char *) 0)
 #		endif
-#		define jASSUME(exp) do { if(exp) ; else jBREAKPOINT() } while(0)
+#		define jASSUME(exp) do { if(exp) ; else jBREAKPOINT() } while(0);
 #	endif
 #endif
 
@@ -71,9 +71,9 @@
 //
 #ifndef jNO_DEFAULT
 #define jNO_DEFAULT \
-{ \
 default: \
-	jASSUME(0); \
+{ \
+		jASSUME(0); \
 	break; \
 }
 #endif
