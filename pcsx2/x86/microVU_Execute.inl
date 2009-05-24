@@ -42,7 +42,7 @@ microVUt(void) mVUdispatcherA() {
 	SSE_LDMXCSR((uptr)&g_sseVUMXCSR);
 
 	// Load Regs
-	MOV32MtoR(gprR,  (uptr)&mVU->regs->VI[REG_R].UL);
+	MOV32ItoR(gprR, Roffset); // Load VI Reg Offset
 	MOV32MtoR(gprF0, (uptr)&mVU->regs->VI[REG_STATUS_FLAG].UL);
 	AND32ItoR(gprF0, 0xffff);
 	MOV32RtoR(gprF1, gprF0);
@@ -81,7 +81,6 @@ microVUt(void) mVUdispatcherB() {
 	SSE_LDMXCSR((uptr)&g_sseMXCSR);
 	
 	// Save Regs (Other Regs Saved in mVUcompile)
-	MOV32RtoM((uptr)&mVU->regs->VI[REG_R].UL, gprR);
 	SSE_MOVAPS_XMM_to_M128((uptr)&mVU->regs->ACC.UL[0], xmmACC);
 
 	for (int i = 1; i < 16; i++) {

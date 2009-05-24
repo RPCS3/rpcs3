@@ -190,11 +190,10 @@ microVUt(void) mVUtestCycles() {
 	iPC = mVUstartPC;
 	CMP32ItoM((uptr)&mVU->cycles, 0);
 	u8* jmp8 = JG8(0);
-		PUSH32R(gprR);
 		MOV32ItoR(gprT2, xPC);
 		if (!vuIndex) CALLFunc((uptr)mVUwarning0);
 		else		  CALLFunc((uptr)mVUwarning1);
-		POP32R(gprR);
+		MOV32ItoR(gprR, Roffset); // Restore gprR
 		mVUendProgram<vuIndex>(0, 0, sI, 0, cI);
 	x86SetJ8(jmp8);
 	SUB32ItoM((uptr)&mVU->cycles, mVUcycles);

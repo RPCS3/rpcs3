@@ -129,7 +129,7 @@ declareAllVariables
 
 #define gprT1	0 // Temp Reg
 #define gprT2	1 // Temp Reg
-#define gprR	2 // R Reg
+#define gprR	2 // VI Reg Offset
 #define gprF0	3 // Status Flag 0
 #define gprESP	4 // Don't use?
 #define gprF1	5 // Status Flag 1
@@ -177,6 +177,8 @@ declareAllVariables
 #define bSaveAddr	 (((xPC + (2 * 8)) & ((vuIndex) ? 0x3ff8:0xff8)) / 8)
 #define branchAddr	 ((xPC + 8 + (_Imm11_ * 8)) & ((vuIndex) ? 0x3ff8:0xff8))
 #define shufflePQ	 (((mVU->p) ? 0xb0 : 0xe0) | ((mVU->q) ? 0x01 : 0x04))
+#define Rmem		 (uptr)&mVU->regs->VI[REG_R].UL
+#define Roffset		 (uptr)&mVU->regs->VI[9].UL
 
 // Flag Info
 #define __Status	 (mVUflagInfo & (0xf<<0))

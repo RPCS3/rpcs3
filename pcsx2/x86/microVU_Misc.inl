@@ -286,7 +286,6 @@ microVUt(void) mVUbackupRegs() {
 	microVU* mVU = mVUx;
 	SSE_MOVAPS_XMM_to_M128((uptr)&mVU->regs->ACC.UL[0], xmmACC);
 	SSE_MOVAPS_XMM_to_M128((uptr)&mVU->xmmPQb[0], xmmPQ);
-	PUSH32R(gprR); // Backup EDX
 }
 
 // Restore Volatile Regs
@@ -296,7 +295,7 @@ microVUt(void) mVUrestoreRegs() {
 	SSE_MOVAPS_M128_to_XMM(xmmPQ,  (uptr)&mVU->xmmPQb[0]);
 	SSE_MOVAPS_M128_to_XMM(xmmMax, (uptr)mVU_maxvals);
 	SSE_MOVAPS_M128_to_XMM(xmmMin, (uptr)mVU_minvals);
-	POP32R(gprR); // Restore EDX
+	MOV32ItoR(gprR, Roffset); // Restore gprR
 }
 
 // Reads entire microProgram and finds out if Status Flag is Used

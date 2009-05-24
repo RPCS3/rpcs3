@@ -157,7 +157,6 @@ microVUt(void) mVUsetupFlags(int* xStatus, int* xMac, int* xClip, int cycles) {
 	if (__Status && !mVUflagHack) {
 		int bStatus[4];
 		sortFlag(xStatus, bStatus, cycles);
-		PUSH32R(gprR); // Backup gprR
 		MOV32RtoR(gprT1,  getFlagReg1(bStatus[0])); 
 		MOV32RtoR(gprT2,  getFlagReg1(bStatus[1]));
 		MOV32RtoR(gprR,   getFlagReg1(bStatus[2]));
@@ -165,7 +164,7 @@ microVUt(void) mVUsetupFlags(int* xStatus, int* xMac, int* xClip, int cycles) {
 		MOV32RtoR(gprF0,  gprT1);
 		MOV32RtoR(gprF1,  gprT2); 
 		MOV32RtoR(gprF2,  gprR); 
-		POP32R(gprR);  // Restore gprR
+		MOV32ItoR(gprR, Roffset); // Restore gprR
 	}
 
 	if (__Mac) {

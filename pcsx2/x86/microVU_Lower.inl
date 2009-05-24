@@ -990,29 +990,30 @@ microVUf(void) mVU_RINIT() {
 	pass1 { mVUanalyzeR1<vuIndex>(_Fs_, _Fsf_); }
 	pass2 { 
 		if (_Fs_ || (_Fsf_ == 3)) {
-			getReg8(gprR, _Fs_, _Fsf_);
-			AND32ItoR(gprR, 0x007fffff);
-			OR32ItoR (gprR, 0x3f800000);
+			getReg8(gprT1, _Fs_, _Fsf_);
+			AND32ItoR(gprT1, 0x007fffff);
+			OR32ItoR (gprT1, 0x3f800000);
+			MOV32RtoM(Rmem, gprT1);
 		}
-		else MOV32ItoR(gprR, 0x3f800000);
+		else MOV32ItoM(Rmem, 0x3f800000);
 	}
 	pass3 { mVUlog("RINIT R, vf%02d%s", _Fs_, _Fsf_String); }
 }
 
-microVUt(void) mVU_RGET_() {
+microVUt(void) mVU_RGET_(int Rreg) {
 	microVU* mVU = mVUx;
 	if (!noWriteVF) {
-		if (_X) MOV32RtoM((uptr)&mVU->regs->VF[_Ft_].UL[0], gprR);
-		if (_Y) MOV32RtoM((uptr)&mVU->regs->VF[_Ft_].UL[1], gprR);
-		if (_Z) MOV32RtoM((uptr)&mVU->regs->VF[_Ft_].UL[2], gprR);
-		if (_W) MOV32RtoM((uptr)&mVU->regs->VF[_Ft_].UL[3], gprR);
+		if (_X) MOV32RtoM((uptr)&mVU->regs->VF[_Ft_].UL[0], Rreg);
+		if (_Y) MOV32RtoM((uptr)&mVU->regs->VF[_Ft_].UL[1], Rreg);
+		if (_Z) MOV32RtoM((uptr)&mVU->regs->VF[_Ft_].UL[2], Rreg);
+		if (_W) MOV32RtoM((uptr)&mVU->regs->VF[_Ft_].UL[3], Rreg);
 	}
 }
 
 microVUf(void) mVU_RGET() {
 	microVU* mVU = mVUx;
 	pass1 { mVUanalyzeR2<vuIndex>(_Ft_, 1); }
-	pass2 { mVU_RGET_<vuIndex>(); }
+	pass2 { MOV32MtoR(gprT1, Rmem); mVU_RGET_<vuIndex>(gprT1); }
 	pass3 { mVUlog("RGET.%s vf%02d, R", _XYZW_String, _Ft_); }
 }
 
@@ -1021,6 +1022,7 @@ microVUf(void) mVU_RNEXT() {
 	pass1 { mVUanalyzeR2<vuIndex>(_Ft_, 0); }
 	pass2 { 
 		// algorithm from www.project-fao.org
+		MOV32MtoR(gprR, Rmem);
 		MOV32RtoR(gprT1, gprR);
 		SHR32ItoR(gprT1, 4);
 		AND32ItoR(gprT1, 1);
@@ -1034,7 +1036,8 @@ microVUf(void) mVU_RNEXT() {
 		XOR32RtoR(gprR,  gprT1);
 		AND32ItoR(gprR, 0x007fffff);
 		OR32ItoR (gprR, 0x3f800000);
-		mVU_RGET_<vuIndex>(); 
+		mVU_RGET_<vuIndex>(gprR);
+		MOV32ItoR(gprR, Roffset); // Restore gprR
 	}
 	pass3 { mVUlog("RNEXT.%s vf%02d, R", _XYZW_String, _Ft_); }
 }
@@ -1046,7 +1049,7 @@ microVUf(void) mVU_RXOR() {
 		if (_Fs_ || (_Fsf_ == 3)) {
 			getReg8(gprT1, _Fs_, _Fsf_);
 			AND32ItoR(gprT1, 0x7fffff);
-			XOR32RtoR(gprR,  gprT1);
+			XOR32RtoM(Rmem,  gprT1);
 		}
 	}
 	pass3 { mVUlog("RXOR R, vf%02d%s", _Fs_, _Fsf_String); }
@@ -1128,8 +1131,8 @@ microVUf(void) mVU_XGKICK() {
 //------------------------------------------------------------------
 
 #define setBranchA(x, _x_) {															\
-	pass1 { if (_Imm11_ == 1 && !_x_) { mVUinfo |= _isNOP; return; } mVUbranch = x; }	\
-	pass2 { mVUbranch = x; }															\
+	mVUbranch = x;																		\
+	pass1 { if (_Imm11_ == 1 && !_x_) { mVUinfo |= _isNOP; mVUbranch = 0; return; } }	\
 }
 
 microVUf(void) mVU_B() {
