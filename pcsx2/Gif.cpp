@@ -328,7 +328,7 @@ void GIFdma()
 				GIF_LOG("dmaIrq Set");
 				gspath3done = 1;
 			}
-			GIF_LOG("gifdmaChain %8.8x_%8.8x size=%d, id=%d, addr=%lx", ptag[1], ptag[0], gif->qwc, id, gif->madr);
+			GIF_LOG("gifdmaChain %8.8x_%8.8x size=%d, id=%d, addr=%lx", ptag[1], ptag[0], gif->qwc, (ptag[0] >> 28) & 0x7, gif->madr);
 			GIFdmaEnd();
 			return;
 			

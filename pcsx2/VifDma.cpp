@@ -2110,13 +2110,14 @@ static void Vif1CMDDirectHL()  // DIRECT/HL
 	else
 		vif1.tag.size = vifImm << 2;
 
-	
+	//FIXME: This should have timing in both cases, see note below.
 	if((vif1.cmd & 0x7f) == 0x51)
 	{
-		if(gif->chcr & 0x100 && Path3progress == 0) //PATH3 is in image mode, so wait for end of transfer
+		if(gif->chcr & 0x100 /*&& Path3progress == 0*/) //PATH3 is in image mode, so wait for end of transfer
 		{
 			//DevCon::Notice("DirectHL gif chcr %x gif qwc %x mskpth3 %x", params gif->chcr, gif->qwc, vif1Regs->mskpath3);
-			vif1Regs->stat |= VIF1_STAT_VGW;
+			if(vif1Regs->mskpath3)vif1Regs->stat |= VIF1_STAT_VGW;
+			else while(gif->chcr & 0x100) gsInterrupt(); //Hacky as hell (no timing) but Soul Calibur 3 doesnt want timing :(
 		}
 		
 	}
@@ -2480,7 +2481,7 @@ __forceinline void vif1Interrupt()
 	{
 		if(gif->chcr & 0x100)
 		{			
-			CPU_INT(1, 2);
+			CPU_INT(1, 16);
 			return;
 		} 
 		else vif1Regs->stat &= ~VIF1_STAT_VGW;
@@ -2542,7 +2543,7 @@ __forceinline void vif1Interrupt()
 	vif1ch->chcr &= ~0x100;
 	g_vifCycles = 0;
 	hwDmacIrq(DMAC_VIF1);
-	if (vif1Regs->mskpath3 == 0 || (vif1ch->chcr & 0x1) == 0x1)vif1Regs->stat &= ~0x1F000000; // FQC=0
+	vif1Regs->stat &= ~0x1F000000; // FQC=0
 }
 
 void dmaVIF1()
