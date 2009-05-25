@@ -533,6 +533,17 @@ void vifMFIFOInterrupt()
 {
 	g_vifCycles = 0;
 	
+	if((vif1Regs->stat & VIF1_STAT_VGW))
+	{
+		if(gif->chcr & 0x100)
+		{			
+			CPU_INT(10, 16);
+			return;
+		} 
+		else vif1Regs->stat &= ~VIF1_STAT_VGW;
+	
+	}
+
 	if((spr0->chcr & 0x100) && spr0->qwc == 0)
 	{
 		spr0->chcr &= ~0x100;
