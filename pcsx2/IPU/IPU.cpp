@@ -1386,7 +1386,7 @@ int IPU1dma()
 	assert(!(g_nDMATransfer & IPU_DMA_TIE1));
 
 	//We need to make sure GIF has flushed before sending IPU data, it seems to REALLY screw FFX videos
-	while(gif->chcr & 0x100) 
+	while(gif->chcr & 0x100 && vif1Regs->mskpath3 == 0) 
 	{
 		GIF_LOG("Flushing gif chcr %x tadr %x madr %x qwc %x", gif->chcr, gif->tadr, gif->madr, gif->qwc);
 		gsInterrupt();
