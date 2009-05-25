@@ -153,7 +153,7 @@ static __forceinline void GIFchain()
 
 static __forceinline void dmaGIFend()
 {
-	CPU_INT(2, 2);
+	CPU_INT(2, 16);
 }
 
 // These could probably be consolidated into one function,
