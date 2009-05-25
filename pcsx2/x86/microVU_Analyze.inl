@@ -28,7 +28,7 @@
 //------------------------------------------------------------------
 
 #define aReg(x) mVUregs.VF[x]
-#define bReg(x, y) mVUregsTemp.VFreg[y] = x; mVUregsTemp.VF[0]
+#define bReg(x, y) mVUregsTemp.VFreg[y] = x; mVUregsTemp.VF[y]
 #define aMax(x, y) ((x > y) ? x : y)
 
 #define analyzeReg1(reg) {									\
