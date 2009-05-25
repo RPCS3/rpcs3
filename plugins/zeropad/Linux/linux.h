@@ -21,10 +21,7 @@
 #include <gdk/gdkkeysyms.h>
 #include <pthread.h>
 
-#define JOYSTICK_SUPPORT
-#ifdef JOYSTICK_SUPPORT
 #include "joystick.h"
-#endif
 
 #include "zeropad.h"
 

@@ -29,14 +29,14 @@ AC_ARG_ENABLE(debug, AC_HELP_STRING([--enable-debug], [debug build]),
 if test "x$debug" == xyes
 then
  AC_DEFINE(_DEBUG,1,[_DEBUG])
- CFLAGS+="-g -m32 "
- CXXFLAGS+="-g -m32 "
- CCASFLAGS+=" -m32 "
+ CFLAGS+="-g -m32 -fpic "
+ CXXFLAGS+="-g -m32 -fpic "
+ CCASFLAGS+=" -m32 -fpic "
 else
  AC_DEFINE(NDEBUG,1,[NDEBUG])
- CFLAGS+="-O2 -fomit-frame-pointer -m32 "
- CXXFLAGS+="-O2 -fomit-frame-pointer -m32 "
- CCASFLAGS+=" -m32 "
+ CFLAGS+="-O2 -fomit-frame-pointer -m32 -fpic "
+ CXXFLAGS+="-O2 -fomit-frame-pointer -m32 -fpic "
+ CCASFLAGS+=" -m32 -fpic "
 fi
 AM_CONDITIONAL(DEBUGBUILD, test x$debug = xyes)
 AC_MSG_RESULT($debug)

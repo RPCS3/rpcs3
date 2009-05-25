@@ -20,10 +20,7 @@
 #include <gtk/gtk.h>
 #include <pthread.h>
 
-#define JOYSTICK_SUPPORT
-#ifdef JOYSTICK_SUPPORT
 #include "joystick.h"
-#endif
 
 #include "zeropad.h"
 #include "linux.h"

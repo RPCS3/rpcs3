@@ -48,9 +48,7 @@ s32  _PADopen(void *pDsp)
 	s_keyRelease[0] = s_keyRelease[1] = 0;
 	XAutoRepeatOff(GSdsp);
 
-#ifdef JOYSTICK_SUPPORT
 	JoystickInfo::EnumerateJoysticks(s_vjoysticks);
-#endif
 
 	return 0;
 }
@@ -100,6 +98,16 @@ int _GetJoystickIdFromPAD(int pad)
 			}
 		}
 	}
+	
+	if ((joyid < 0) || (joyid >= (int)s_vjoysticks.size()))
+	{
+		// get first unused joystick
+		for (joyid = 0; joyid < s_vjoysticks.size(); ++joyid)
+		{
+			if (s_vjoysticks[joyid]->GetPAD() < 0) break;
+		}
+	}
+	
 	return joyid;
 }
 
@@ -186,8 +194,6 @@ void CALLBACK PADupdate(int pad)
 	}
 
 	// joystick info
-#ifdef JOYSTICK_SUPPORT
-	
 	SDL_JoystickUpdate();
 	
 	for (int i = 0; i < PADKEYS; i++)
@@ -202,22 +208,24 @@ void CALLBACK PADupdate(int pad)
 			if ((joyid >= 0) && (joyid < (int)s_vjoysticks.size()))
 			{
 				pjoy = s_vjoysticks[joyid];
+				int pad = (pjoy)->GetPAD();
+				int value = SDL_JoystickGetButton((pjoy)->GetJoy(), PAD_GETJOYBUTTON(key));
 				
-				if (SDL_JoystickGetButton((pjoy)->GetJoy(), PAD_GETJOYBUTTON(key)))
-					clear_bit(status[(pjoy)->GetPAD()], i); // pressed
+				if (value)
+					clear_bit(status[pad], i); // pressed
 				else
-					set_bit(status[(pjoy)->GetPAD()], i); // pressed
+					set_bit(status[pad], i); // pressed
 			}
 		}
 		else if (IS_JOYSTICK(key))
 		{
 			int joyid = PAD_GETJOYID(key);
+			
 			if ((joyid >= 0) && (joyid < (int)s_vjoysticks.size()))
 			{
-
 				pjoy = s_vjoysticks[joyid];
-				int value = SDL_JoystickGetAxis((pjoy)->GetJoy(), PAD_GETJOYSTICK_AXIS(key));
 				int pad = (pjoy)->GetPAD();
+				int value = SDL_JoystickGetAxis((pjoy)->GetJoy(), PAD_GETJOYSTICK_AXIS(key));
 				
 				switch (i)
 				{
@@ -233,34 +241,16 @@ void CALLBACK PADupdate(int pad)
 				}
 			}
 		}
-		else if (IS_POV(key))
-		{
-			int joyid = PAD_GETJOYID(key);
-			if (joyid >= 0 && (joyid < (int)s_vjoysticks.size()))
-			{
-				pjoy = s_vjoysticks[joyid];
-
-				int value = SDL_JoystickGetAxis((pjoy)->GetJoy(), PAD_GETJOYSTICK_AXIS(key));
-				int pad = (pjoy)->GetPAD();
-				
-				if (PAD_GETPOVSIGN(key) && (value < -2048))
-					clear_bit(status[pad], i);
-				else if (!PAD_GETPOVSIGN(key) && (value > 2048))
-					clear_bit(status[pad], i);
-				else
-					set_bit(status[pad], i);
-			}
-		}
 #ifdef EXPERIMENTAL_POV_CODE
 		else if (IS_HAT(key))
 		{
 			int joyid = PAD_GETJOYID(key);
+			
 			if ((joyid >= 0) && (joyid < (int)s_vjoysticks.size()))
 			{
 				pjoy = s_vjoysticks[joyid];
-
-				int value = SDL_JoystickGetHat((pjoy)->GetJoy(), PAD_GETJOYSTICK_AXIS(key));
 				int pad = (pjoy)->GetPAD();
+				int value = SDL_JoystickGetHat((pjoy)->GetJoy(), PAD_GETJOYSTICK_AXIS(key));
 				
 				//PAD_LOG("Hat = %d for key %d\n", PAD_GETPOVDIR(key), key);
 				if ((value != SDL_HAT_CENTERED) && (PAD_GETHATDIR(key) == value))
@@ -268,44 +258,11 @@ void CALLBACK PADupdate(int pad)
 					if ((value == SDL_HAT_UP) || (value == SDL_HAT_RIGHT) || (value == SDL_HAT_DOWN) ||(value == SDL_HAT_LEFT))
 					{
 						set_bit(status[pad], i);
+						PAD_LOG("Registered %s. Set (%d)\n", HatName(value), i);
 					}
 					else
 					{
 						clear_bit(status[pad], i);
-					}
-					switch (i)
-					{
-						case PAD_LEFT:
-							PAD_LOG("Hat Left!\n");
-							break;
-						case PAD_DOWN:
-							PAD_LOG("Hat Down!\n");
-							break;
-						case PAD_RIGHT:
-							PAD_LOG("Hat Right!\n");
-							break;
-						case PAD_UP:
-							PAD_LOG("Hat Up!\n");
-							break;
-					}
-						
-					switch (value)
-					{
-						case SDL_HAT_UP:
-							PAD_LOG("D-pad Up!\n");
-							break;
-					
-						case SDL_HAT_RIGHT:
-							PAD_LOG("D-pad Right!\n");
-							break;
-					
-						case SDL_HAT_DOWN:
-							PAD_LOG("D-pad Down!\n");
-							break;
-					
-						case SDL_HAT_LEFT:
-							PAD_LOG("D-pad Left!\n");
-							break;
 					}
 				}
 				else
@@ -315,8 +272,27 @@ void CALLBACK PADupdate(int pad)
 			}
 		}
 #endif
+		else if (IS_POV(key))
+		{
+			int joyid = PAD_GETJOYID(key);
+			
+			if (joyid >= 0 && (joyid < (int)s_vjoysticks.size()))
+			{
+				pjoy = s_vjoysticks[joyid];
+				int pad = (pjoy)->GetPAD();
+				int value = SDL_JoystickGetAxis((pjoy)->GetJoy(), PAD_GETJOYSTICK_AXIS(key));
+				
+				if (PAD_GETPOVSIGN(key) && (value < -2048))
+					clear_bit(status[pad], i);
+				else if (!PAD_GETPOVSIGN(key) && (value > 2048))
+					clear_bit(status[pad], i);
+				else
+					set_bit(status[pad], i);
+				
+			
+			}
+		}
 	}
-#endif
 
 	pthread_spin_lock(&s_mutexStatus);
 	s_keyPress[pad] |= keyPress;
@@ -335,6 +311,7 @@ void UpdateConf(int pad)
 	GtkWidget *Btn;
 	for (i = 0; i < ArraySize(s_pGuiKeyMap); i++)
 	{
+		string tmp;
 
 		if (s_pGuiKeyMap[i] == NULL) continue;
 
@@ -344,8 +321,7 @@ void UpdateConf(int pad)
 			PAD_LOG("ZeroPAD: cannot find key %s\n", s_pGuiKeyMap[i]);
 			continue;
 		}
-
-		string tmp;
+		
 		if (IS_KEYBOARD(conf.keys[pad][i]))
 		{
 			char* pstr = XKeysymToString(PAD_GETKEY(conf.keys[pad][i]));
@@ -353,44 +329,49 @@ void UpdateConf(int pad)
 		}
 		else if (IS_JOYBUTTONS(conf.keys[pad][i]))
 		{
+			int button = PAD_GETJOYBUTTON(conf.keys[pad][i]);
 			tmp.resize(28);
-			sprintf(&tmp[0], "JBut %d", PAD_GETJOYBUTTON(conf.keys[pad][i]));
+			
+			sprintf(&tmp[0], "JBut %d", button);
 		}
 		else if (IS_JOYSTICK(conf.keys[pad][i]))
 		{
+			int axis = PAD_GETJOYSTICK_AXIS(conf.keys[pad][i]);
 			tmp.resize(28);
-			sprintf(&tmp[0], "JAxis %d", PAD_GETJOYSTICK_AXIS(conf.keys[pad][i]));
+			
+			sprintf(&tmp[0], "JAxis %d", axis);
 		}
 #ifdef EXPERIMENTAL_POV_CODE
 		else if (IS_HAT(conf.keys[pad][i]))
 		{
+			int axis = PAD_GETJOYSTICK_AXIS(conf.keys[pad][i]);
 			tmp.resize(28);
+			
 			switch(PAD_GETHATDIR(conf.keys[pad][i]))
 			{
 				case SDL_HAT_UP:
-					sprintf(&tmp[0], "JPOVU-%d", PAD_GETJOYSTICK_AXIS(conf.keys[pad][i]));
+					sprintf(&tmp[0], "JPOVU-%d", axis);
 					break;
 					
 				case SDL_HAT_RIGHT:
-					sprintf(&tmp[0], "JPOVR-%d", PAD_GETJOYSTICK_AXIS(conf.keys[pad][i]));
+					sprintf(&tmp[0], "JPOVR-%d", axis);
 					break;
 					
 				case SDL_HAT_DOWN:
-					sprintf(&tmp[0], "JPOVD-%d", PAD_GETJOYSTICK_AXIS(conf.keys[pad][i]));
+					sprintf(&tmp[0], "JPOVD-%d", axis);
 					break;
 					
 				case SDL_HAT_LEFT:
-					sprintf(&tmp[0], "JPOVL-%d", PAD_GETJOYSTICK_AXIS(conf.keys[pad][i]));
+					sprintf(&tmp[0], "JPOVL-%d", axis);
 					break;
 			}
 		}
-#else
+#endif
 		else if (IS_POV(conf.keys[pad][i]))
 		{
 			tmp.resize(28);
 			sprintf(&tmp[0], "JPOV %d%s", PAD_GETJOYSTICK_AXIS(conf.keys[pad][i]), PAD_GETPOVSIGN(conf.keys[pad][i]) ? "-" : "+");
 		}
-#endif
 
 		if (tmp.size() > 0)
 		{
@@ -404,17 +385,8 @@ void UpdateConf(int pad)
 
 	// check bounds
 	int joyid = _GetJoystickIdFromPAD(pad);
-	
-	if ((joyid < 0) || (joyid >= (int)s_vjoysticks.size()))
-	{
-		// get first unused joystick
-		for (joyid = 0; joyid < s_vjoysticks.size(); ++joyid)
-		{
-			if (s_vjoysticks[joyid]->GetPAD() < 0) break;
-		}
-	}
 
-	if (joyid >= 0 && joyid < (int)s_vjoysticks.size())
+	if ((joyid >= 0) && (joyid < (int)s_vjoysticks.size()))
 		gtk_combo_box_set_active(GTK_COMBO_BOX(s_devicecombo), joyid); // select the combo
 	else 
 		gtk_combo_box_set_active(GTK_COMBO_BOX(s_devicecombo), s_vjoysticks.size()); // no gamepad
@@ -446,21 +418,7 @@ int GetLabelId(GtkWidget *label)
 	return (int)(uptr)gtk_object_get_user_data(GTK_OBJECT(label));	
 }
 
-void UpdateJoysticks(vector<JoystickInfo*>::iterator itjoy)
-{
-	itjoy = s_vjoysticks.begin();
-
-	SDL_JoystickUpdate();
-	
-	// Save everything in the vector s_vjoysticks.
-	while (itjoy != s_vjoysticks.end())
-	{
-		(*itjoy)->SaveState();
-		itjoy++;
-	}
-}
-
-bool PollKeyboard(char* &temp, u32* &pkey)
+bool PollKeyboard(char* &temp, u32 &pkey)
 {
 	GdkEvent *ev = gdk_event_get();
 	
@@ -472,186 +430,79 @@ bool PollKeyboard(char* &temp, u32* &pkey)
 			if (ev->key.keyval == GDK_Escape) 
 			{
 				temp = "Unknown";
-				*pkey = NULL;
+				pkey = NULL;
 			}
 			else
 			{
 				temp = XKeysymToString(ev->key.keyval);
-				*pkey = ev->key.keyval;
+				pkey = ev->key.keyval;
 			}
 			
-				
 			return true;
 		}
 	}
 	
-	return false;
-}
-
-bool PollButtons(vector<JoystickInfo*>::iterator itjoy, int &jbutton, u32* &pkey)
-{
-	// MAKE sure to look for changes in the state!!
-	for (int i = 0; i < (*itjoy)->GetNumButtons(); ++i)
-	{
-		int but = SDL_JoystickGetButton((*itjoy)->GetJoy(), i);
-		
-		if (but != (*itjoy)->GetButtonState(i))
-		{
-			if (!but)    // released, we don't really want this
-			{
-				(*itjoy)->SetButtonState(i, 0);
-				break;
-			}
-
-			*pkey = PAD_JOYBUTTON((*itjoy)->GetId(), i);
-			jbutton = i;
-			return true;
-		}
-	}
-	
-	return false;	
-}
-
-bool PollAxes(vector<JoystickInfo*>::iterator itjoy, bool pov, int &jbutton, bool &negative,  u32* &pkey)
-{
-	for (int i = 0; i < (*itjoy)->GetNumAxes(); ++i)
-	{
-		int value = SDL_JoystickGetAxis((*itjoy)->GetJoy(), i);
-
-		if (value != (*itjoy)->GetAxisState(i))
-		{
-			PAD_LOG("Change in joystick %d: %d.\n", i, value);
-
-			if (abs(value) <= (*itjoy)->GetAxisState(i))  // we don't want this
-			{
-				// released, we don't really want this
-				(*itjoy)->SetAxisState(i, value);
-				break;
-			}
-
-			if (abs(value) > 0x3fff)
-			{
-				jbutton = i;
-				
-				if (pov)
-				{
-					negative = (value < 0);
-					*pkey = PAD_POV((*itjoy)->GetId(), negative, i);
-				}
-				else   // axis
-				{
-					*pkey = PAD_JOYSTICK((*itjoy)->GetId(), i);
-				}
-				return true;
-			}
-		}
-	}
-	return false;
-}
-
-/*SDL_HAT_CENTERED,
-SDL_HAT_UP, SDL_HAT_RIGHT,
-SDL_HAT_DOWN, SDL_HAT_LEFT,
-SDL_HAT_RIGHTUP, SDL_HAT_RIGHTDOWN, 
-SDL_HAT_LEFTUP, SDL_HAT_LEFTDOWN*/
-
-bool PollHAT(vector<JoystickInfo*>::iterator itjoy, int &jbutton, int &dir, u32* &pkey)
-{
-#ifdef EXPERIMENTAL_POV_CODE
-	for (int i = 0; i < (*itjoy)->GetNumPOV(); ++i)
-	{
-		int value = SDL_JoystickGetHat((*itjoy)->GetJoy(), i);
-
-		if (value != SDL_HAT_CENTERED)
-		{
-			switch (value)
-			{
-				case SDL_HAT_UP:
-				case SDL_HAT_RIGHT:
-				case SDL_HAT_DOWN:
-				case SDL_HAT_LEFT:
-					*pkey = PAD_HAT((*itjoy)->GetId(), value, i);
-					jbutton = i;
-					dir = value;
-					PAD_LOG("Hat Pressed!");
-					return true;
-				default:
-					break;
-			}
-		}
-	}
-#endif
 	return false;
 }
 
 void OnConf_Key(GtkButton *button, gpointer user_data)
 {
-	u32 *pkey;
 	GtkWidget* label = GetLabelWidget(button);
+	bool captured = false;
+	char str[32];
 	int id = GetLabelId(label);
 	
 	if (id == -1) return;
 	
 	int pad = id / PADKEYS;
 	int key = id % PADKEYS;
-	pkey = &conf.keys[pad][key];
 
-	// save the states
-#ifdef JOYSTICK_SUPPORT
-	vector<JoystickInfo*>::iterator itjoy;
+	// save the joystick states
+	UpdateJoysticks();
 	
-	UpdateJoysticks(itjoy);
-#endif
-
-	for (;;)
+	while (!captured)
 	{
+		vector<JoystickInfo*>::iterator itjoy;
 		char *tmp;
 		
-		if (PollKeyboard(tmp, pkey)) 
+		if (PollKeyboard(tmp, conf.keys[pad][key])) 
 		{
-			gtk_entry_set_text(GTK_ENTRY(label), tmp);
-			return;
+			strcpy(str, tmp);
+			captured = true;
+			break;
 		}
-		
-#ifdef JOYSTICK_SUPPORT
-		itjoy = s_vjoysticks.begin();
 		
 		SDL_JoystickUpdate();
 		
-		while (itjoy != s_vjoysticks.end())
+		itjoy = s_vjoysticks.begin();
+		while ((itjoy != s_vjoysticks.end()) && (!captured))
 		{
 			int jbutton, direction;
 			
-			if (PollButtons(itjoy, jbutton, pkey))
+			if ((*itjoy)->PollButtons(jbutton, conf.keys[pad][key]))
 			{
-				char str[32];
 				
 				sprintf(str, "JBut %d", jbutton);
-				gtk_entry_set_text(GTK_ENTRY(label), str);
-				return;
+				captured = true;
+				break;
 			}
 
-			bool negative = false, pov = (key < 16);
+			bool negative = false;
+			bool pov = (!((key == PAD_RY) || (key == PAD_LY) || (key == PAD_RX) || (key == PAD_LX)));
 			
-			if (PollAxes(itjoy, pov, jbutton, negative, pkey))
+			if ((*itjoy)->PollAxes(pov, jbutton, negative, conf.keys[pad][key]))
 			{
-				char str[32];
-				
 				if (pov)
 					sprintf(str, "JPOV %d%s", jbutton, (negative) ? "-" : "+");
 				else
 					sprintf(str, "JAxis %d", jbutton);
-				
-				gtk_entry_set_text(GTK_ENTRY(label), str);
-				
-				return;
+				captured = true;
+				break;
 			}
 			
 #ifdef EXPERIMENTAL_POV_CODE
-			if (PollHAT(itjoy, jbutton, direction, pkey))
+			if ((*itjoy)->PollHats(jbutton, direction, conf.keys[pad][key]))
 			{
-				char str[32];
-				
 				switch (direction)
 				{
 					case SDL_HAT_UP: sprintf(str, "JPOVU-%d", jbutton); break;
@@ -659,16 +510,15 @@ void OnConf_Key(GtkButton *button, gpointer user_data)
 					case SDL_HAT_DOWN: sprintf(str, "JPOVD-%d", jbutton); break;
 					case SDL_HAT_LEFT: sprintf(str, "JPOVL-%d", jbutton); break;	
 				}
-				
-				gtk_entry_set_text(GTK_ENTRY(label), str);
-				return;
+				captured = true;
+				break;
 			}
 #endif
-			
 			itjoy++;
 		}
-#endif
 	}
+	
+	gtk_entry_set_text(GTK_ENTRY(label), str);
 }
 
 void CALLBACK PADconfigure()
@@ -683,9 +533,7 @@ void CALLBACK PADconfigure()
 	Conf = create_Conf();
 
 	// recreate
-#ifdef JOYSTICK_SUPPORT
 	JoystickInfo::EnumerateJoysticks(s_vjoysticks);
-#endif
 
 	s_devicecombo = lookup_widget(Conf, "joydevicescombo");
 
@@ -696,8 +544,8 @@ void CALLBACK PADconfigure()
 	// Delete everything in the vector vjoysticks.
 	while (it != s_vjoysticks.end())
 	{
-		sprintf(str, "%d: %s - but: %d, axes: %d, pov: %d", (*it)->GetId(), (*it)->GetName().c_str(),
-		        (*it)->GetNumButtons(), (*it)->GetNumAxes(), (*it)->GetNumPOV());
+		sprintf(str, "%d: %s - but: %d, axes: %d, hats: %d", (*it)->GetId(), (*it)->GetName().c_str(),
+		        (*it)->GetNumButtons(), (*it)->GetNumAxes(), (*it)->GetNumHats());
 		gtk_combo_box_append_text(GTK_COMBO_BOX(s_devicecombo), str);
 		it++;
 	}

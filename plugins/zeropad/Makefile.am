@@ -22,5 +22,5 @@ libZeroPAD_LDFLAGS= @SHARED_LDFLAGS@
 libZeroPAD_LDFLAGS+=-Wl,-soname,@ZEROPAD_SONAME@
 libZeroPAD_LDADD=$(libZeroPAD_a_OBJECTS)
 
-libZeroPAD_a_SOURCES = analog.cpp analog.h zeropad.cpp zeropad.h \
-Linux/gui.cpp Linux/linux.cpp Linux/joystick.cpp Linux/support.c Linux/interface.c
+libZeroPAD_a_SOURCES = joystick.cpp analog.cpp analog.h zeropad.cpp zeropad.h \
+Linux/gui.cpp Linux/linux.cpp  Linux/support.c Linux/interface.c

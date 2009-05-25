@@ -126,7 +126,7 @@ namespace Analog
 		if (RevertPad(padvalue)) InvertPad(padvalue, i);
 		SetPad(padvalue, i, Pad(padvalue, i) + 0x80);
 		
-		PAD_LOG("Setting pad[%d]@%d to %d from %d\n", padvalue, i, value, temp);
+		//PAD_LOG("Setting pad[%d]@%d to %d from %d\n", padvalue, i, value, temp);
 	}
 	int AnalogToPad(int padvalue)
 	{
