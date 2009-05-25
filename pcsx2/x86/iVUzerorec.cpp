@@ -4409,7 +4409,7 @@ void recVUMI_XGKICK_(VURegs *VU)
 		CALLFunc((uptr)GSgifTransfer1);
 #endif
 	}
-
+	psHu32(GIF_STAT) &= ~0x100;
 	s_ScheduleXGKICK = 0;
 }
 
@@ -4430,6 +4430,8 @@ void recVUMI_XGKICK(VURegs *VU, int info)
 	SHL32ItoR(isreg, 4);
 	AND32ItoR(isreg, 0x3fff);
 	s_XGKICKReg = isreg;
+	psHu32(GIF_STAT) |= 0x100;
+
 
 	if (!SUPERVU_XGKICKDELAY || pc == s_pCurBlock->endpc)
 	{

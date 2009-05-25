@@ -47,7 +47,7 @@ struct vifStruct {
 };
 
 extern vifStruct vif0, vif1;
-extern bool Path3transfer;
+extern int Path3progress;
 
 void __fastcall UNPACK_S_32( u32 *dest, u32 *data, int size );
 

@@ -58,8 +58,7 @@ static const unsigned int VIF0dmanum = 0;
 static const unsigned int VIF1dmanum = 1;
 
 int g_vifCycles = 0;
-bool path3hack = false;
-bool Path3transfer = false;
+int Path3progress = 2; //0 = Image Mode (DirectHL), 1 = transferring, 2 = Stopped at End of Packet
 
 u32 splittransfer[4];
 u32 splitptr = 0;
@@ -1891,6 +1890,7 @@ static int __fastcall Vif1TransDirectHL(u32 *data)
 	}
 	else
 	{
+		psHu32(GIF_STAT) &= ~0x80;
 		ret = vif1.tag.size;
 		vif1.tag.size = 0;
 		vif1.cmd = 0;
@@ -2019,22 +2019,11 @@ static void Vif1CMDMskPath3()  // MSKPATH3
 #ifdef GSPATH3FIX
 	if ((vif1Regs->code >> 15) & 0x1)
 	{
-		
-		while ((gif->chcr & 0x100)) //Can be done 2 different ways, depends on the game/company
-		{
-			if (!path3hack && !Path3transfer && (gif->qwc == 0)) break;
-
-			gsInterrupt();
-
-			if (path3hack && (gif->qwc == 0)) break; //add games not working with it to elfheader.c to enable this instead
-
-		}
 		psHu32(GIF_STAT) |= 0x2;
 	}
 	else
 	{
-		// fixme: This is the *only* reason 'transferred' is global. Otherwise it'd be local to Vif1Transfer.
-		if (gif->chcr & 0x100) CPU_INT(2, (transferred >> 2) * BIAS);	// Restart Path3 on its own, time it right!
+		Path3progress = 1; //Let the Gif know it can transfer again (making sure any vif stall isnt unset prematurely)
 		psHu32(GIF_STAT) &= ~0x2;
 	}
 #else
@@ -2068,11 +2057,10 @@ static void Vif1CMDFlush()  // FLUSH/E/A
 
 	if((vif1.cmd & 0x7f) == 0x13)
 	{
-		while ((gif->chcr & 0x100))
-		{
-			if (!Path3transfer && gif->qwc == 0) break;
-			gsInterrupt();
-	}
+		if(Path3progress != 2 && gif->chcr & 0x100) // Gif is already transferring so wait for it.
+		{	
+			vif1Regs->stat |= VIF1_STAT_VGW;			
+		}
 	}
 
 	vif1.cmd &= ~0x7f;
@@ -2123,13 +2111,16 @@ static void Vif1CMDDirectHL()  // DIRECT/HL
 		vif1.tag.size = vifImm << 2;
 
 	
-	if((gif->chcr & 0x100) && (vif1.cmd & 0x7f) == 0x51)
+	if((vif1.cmd & 0x7f) == 0x51)
 	{
-		//if(vif1Regs->mskpath3)CPU_INT(2, vif1ch->qwc - (vif1.vifpacketsize >> 2) * BIAS);
-		 //DirectHL flushes the lot
-		vif1Regs->stat |= VIF1_STAT_VGW;
+		if(gif->chcr & 0x100 && Path3progress == 0) //PATH3 is in image mode, so wait for end of transfer
+		{
+			//DevCon::Notice("DirectHL gif chcr %x gif qwc %x mskpth3 %x", params gif->chcr, gif->qwc, vif1Regs->mskpath3);
+			vif1Regs->stat |= VIF1_STAT_VGW;
+		}
 		
 	}
+	psHu32(GIF_STAT) |= 0x80;
 	
 }
 static void Vif1CMDNull()  // invalid opcode
@@ -2215,7 +2206,6 @@ int VIF1transfer(u32 *data, int size, int istag)
 		if (vif1.tag.size != 0) DevCon::Error("no vif1 cmd but tag size is left last cmd read %x", params vif1Regs->code);
 
 		if (vif1.irq) break;
-		if(vif1Regs->stat & VIF1_STAT_VGW) break;
 
 		vif1.cmd = (data[0] >> 24);
 		vif1Regs->code = data[0];
@@ -2459,7 +2449,7 @@ __forceinline void vif1SetupTransfer()
 				else
 					ret = VIF1transfer(vif1ptag + 2, 2, 1);  //Transfer Tag
 
-				if (ret < 0) 
+				if (ret < 0 && vif1.irqoffset < 2) 
 				{
 					vif1.inprogress = 0; //Better clear this so it has to do it again (Jak 1)
 					return;       //There has been an error or an interrupt
@@ -2485,22 +2475,18 @@ __forceinline void vif1Interrupt()
 	VIF_LOG("vif1Interrupt: %8.8x", cpuRegs.cycle);
 
 	g_vifCycles = 0;
-	if((vif1Regs->stat & VIF1_STAT_VGW) && 
-		(gif->chcr & 0x100))
+
+	if((vif1Regs->stat & VIF1_STAT_VGW))
 	{
-		int delay = 0;
-
-		if ((psHu32(GIF_MODE) & 0x1))
-			delay = min( 8, (int)gif->qwc );
-		else
-			delay = gif->qwc * BIAS;
-
-		//else CPU_INT(2, min( 64, (int)gif->qwc ) * BIAS);
-		CPU_INT(1, delay);
-		return;
-	}
-	vif1Regs->stat &= ~VIF1_STAT_VGW;
+		if(gif->chcr & 0x100)
+		{			
+			CPU_INT(1, 2);
+			return;
+		} 
+		else vif1Regs->stat &= ~VIF1_STAT_VGW;
 	
+	}
+
 
 	if ((vif1ch->chcr & 0x100) == 0) Console::WriteLn("Vif1 running when CHCR == %x", params vif1ch->chcr);
 
@@ -2539,7 +2525,7 @@ __forceinline void vif1Interrupt()
 
 		if ((vif1.inprogress & 0x1) == 0) vif1SetupTransfer();
 
-		CPU_INT(1, (vif1ch->qwc * BIAS) - (vif1.vifpacketsize >> 1));
+		CPU_INT(1, g_vifCycles);
 		return;
 	}
 	
@@ -2606,7 +2592,7 @@ void dmaVIF1()
 
 	// Chain Mode
 	vif1.done = false;
-	CPU_INT(1, 0);
+	vif1Interrupt();
 }
 
 

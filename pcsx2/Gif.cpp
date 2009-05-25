@@ -28,7 +28,7 @@
 
 using std::min;
 
-#define gifsplit 64
+#define gifsplit 0x10000
 enum gifstate_t
 {
 	GIF_STATE_READY = 0,
@@ -57,6 +57,9 @@ __forceinline void gsInterrupt() {
 		//Console::WriteLn("Eh? why are you still interrupting! chcr %x, qwc %x, done = %x", params gif->chcr, gif->qwc, done);
 		return;
 	}
+	
+	if(Path3progress == 2) vif1Regs->stat &= ~VIF1_STAT_VGW;
+
 	if (gif->qwc > 0 || gspath3done == 0) {
 		if (!(psHu32(DMAC_CTRL) & 0x1)) {
 			Console::Notice("gs dma masked, re-scheduling...");
@@ -66,19 +69,11 @@ __forceinline void gsInterrupt() {
 		}
 
 		GIFdma();
-#ifdef GSPATH3FIX
-		// re-raise the IRQ as part of the mysterious Path3fix.
-		// fixme - this hack *should* have the gs_irq raised from the VIF, I think.  It would be
-		// more efficient and more correct.  (air)
-		/*if (!(vif1Regs->mskpath3 && (vif1ch->chcr & 0x100)) || (psHu32(GIF_MODE) & 0x1))
-			CPU_INT( 2, 64 );*/
-#endif
-		if(gspath3done == 0 || gif->qwc > 0) return;
+		return;
 	}
 
 	gspath3done = 0;
 	gscycles = 0;
-	Path3transfer = FALSE;
 	gif->chcr &= ~0x100;
 	GSCSRr &= ~0xC000; //Clear FIFO stuff
 	GSCSRr |= 0x4000;  //FIFO empty
@@ -89,12 +84,10 @@ __forceinline void gsInterrupt() {
 
 }
 
-static void WRITERING_DMA(u32 *pMem, u32 qwc)
+static u32 WRITERING_DMA(u32 *pMem, u32 qwc)
 { 
 	psHu32(GIF_STAT) |= 0xE00;         
 
-	// Path3 transfer will be set to false by the GIFtag handler.
-	Path3transfer = TRUE;
 
 	if( mtgsThread != NULL )
 	{ 
@@ -114,15 +107,14 @@ static void WRITERING_DMA(u32 *pMem, u32 qwc)
 		memcpy_aligned(pgsmem, pMem, sizetoread<<4); 
 		
 		mtgsThread->SendDataPacket();
+		return sizetoread;
 	} 
 	else 
 	{ 
 		GSGIFTRANSFER3(pMem, qwc);
-		if (GSgetLastTag != NULL)
-		{ 
-			GSgetLastTag(&s_gstag); 
-			if (s_gstag == 1) Path3transfer = FALSE; /* fixes SRS and others */ 
-		} 
+		gif->madr+= qwc*16;
+		gif->qwc -= qwc;
+		return qwc;
 	} 
 } 
 
@@ -145,11 +137,11 @@ int  _GIFchain() {
 		Console::Notice( "Hackfix - NULL GIFchain" );
 		return -1;
 	}
-	WRITERING_DMA(pMem, qwc);
+	qwc = WRITERING_DMA(pMem, qwc);
 	
-	gif->madr+= qwc*16;
-	gif->qwc -= qwc;
-	return (qwc)*2;
+	/*gif->madr+= qwc*16;
+	gif->qwc -= qwc;*/
+	return (qwc);
 }
 
 static __forceinline void GIFchain() 
@@ -161,10 +153,7 @@ static __forceinline void GIFchain()
 
 static __forceinline void dmaGIFend()
 {
-	if ((psHu32(GIF_MODE) & 0x4) && gif->qwc != 0)
-		CPU_INT(2, min( 8, (int)gif->qwc ) /** BIAS*/);
-	else
-		CPU_INT(2, min( gifsplit, (int)gif->qwc )  /** BIAS*/);
+	CPU_INT(2, 2);
 }
 
 // These could probably be consolidated into one function,
@@ -172,10 +161,10 @@ static __forceinline void dmaGIFend()
 // not to do the gif->qwc != 0 check. --arcum42
 static __forceinline void GIFdmaEnd()
 {
-	if (psHu32(GIF_MODE) & 0x4)
-		CPU_INT(2, min( 8, (int)gif->qwc ) /** BIAS*/);
-	else
-		CPU_INT(2, min( gifsplit, (int)gif->qwc ) /** BIAS*/);
+	//if (psHu32(GIF_MODE) & 0x4)
+		CPU_INT(2, gscycles * BIAS);
+	/*else
+		CPU_INT(2, min( gifsplit, (int)gif->qwc ) * BIAS);*/
 }
 
 void GIFdma() 
@@ -183,7 +172,7 @@ void GIFdma()
 	u32 *ptag;
 	u32 id;
 	
-	gscycles= prevcycles ? prevcycles: gscycles;
+	gscycles= prevcycles ? prevcycles: 0;
 
 	if ((psHu32(GIF_CTRL) & 8)) { // temporarily stop
 		Console::WriteLn("Gif dma temp paused?");
@@ -219,6 +208,13 @@ void GIFdma()
 	GSCSRr |= 0x8000;   //FIFO full
 	psHu32(GIF_STAT)|= 0x10000000; // FQC=31, hack ;) [ used to be 0xE00; // OPH=1 | APATH=3]
 
+	if(((psHu32(GIF_STAT) & 0x100) || (vif1.cmd & 0x7f) == 0x50) && (psHu32(GIF_MODE) & 0x4) && Path3progress == 0) //Path2 gets priority in intermittent mode
+	{
+		//GIF_LOG("Waiting VU %x, PATH2 %x, GIFMODE %x Progress %x", psHu32(GIF_STAT) & 0x100, (vif1.cmd & 0x7f), psHu32(GIF_MODE), Path3progress);
+		dmaGIFend();
+		return;
+	}
+
 #ifdef GSPATH3FIX
 	if (vif1Regs->mskpath3 || (psHu32(GIF_MODE) & 0x1)) {
 		if(gif->qwc == 0) {
@@ -243,28 +239,26 @@ void GIFdma()
 					gspath3done |= 1;
 				}
 			}
+		} 
+		 
+		if(Path3progress == 2/* && gif->qwc != 0*/)
+		{
+			dmaGIFend();
+			return;
 		}
-		
-		GIFchain(); 
 
-		if((gif->qwc == 0) && ((gspath3done == 1) || (gif->chcr & 0xc) == 0)){ 
-			gspath3done = 0;
-			gif->chcr &= ~0x100;
-			GSCSRr &= ~0xC000;
-			GSCSRr |= 0x4000;  
-			Path3transfer = FALSE;
-			psHu32(GIF_STAT)&= ~0x1F000E00; // OPH=0 | APATH=0 | QFC=0
-			hwDmacIrq(DMAC_GIF);
-		}
-		//Dont unfreeze xmm regs here, Masked PATH3 can only be called by VIF, which is already handling it.
+		GIFchain();
+		GIFdmaEnd();
 		return;
 	}
 #endif
 	// Transfer Dn_QWC from Dn_MADR to GIF
 	if ((gif->chcr & 0xc) == 0 || gif->qwc > 0) { // Normal Mode
+		
 		if ((((psHu32(DMAC_CTRL) & 0xC0) == 0x80) && ((gif->chcr & 0xc) == 0))) { 
 			Console::WriteLn("DMA Stall Control on GIF normal");
 		}
+
 		GIFchain();	//Transfers the data set by the switch
 		
 		if (((gif->qwc == 0) && (gif->chcr & 0xc) == 0)) 
@@ -272,9 +266,8 @@ void GIFdma()
 		else if(gif->qwc > 0)
 		{
 			GIFdmaEnd();
-		return;
-		
-	}
+			return;		
+		}
 	}
 	if ((gif->chcr & 0xc) == 0x4 && gspath3done == 0)
 	{
@@ -322,23 +315,23 @@ void GIFdma()
 
 	prevcycles = 0;
 	if (!(vif1Regs->mskpath3 || (psHu32(GIF_MODE) & 0x1)))	{
-		if (gspath3done == 0 || gif->qwc > 0)
+		if (gspath3done == 0 && gif->qwc == 0)
 		{
-			if (gif->qwc != 0)
-			{
-				GIFdmaEnd();
-			} 
-			else
-			{
-				ptag = (u32*)dmaGetAddr(gif->tadr);  //Set memory pointer to TADR
-				gif->qwc  = (u16)ptag[0];			    //QWC set to lower 16bits of the tag
-				gif->chcr = ( gif->chcr & 0xFFFF ) | ( (*ptag) & 0xFFFF0000 );  //Transfer upper part of tag to CHCR bits 31-15
-				
-				GIFdmaEnd();
-				gif->qwc = 0;
-				return;
+			
+			ptag = (u32*)dmaGetAddr(gif->tadr);  //Set memory pointer to TADR
+			gif->qwc  = (u16)ptag[0];			    //QWC set to lower 16bits of the tag
+			gif->chcr = ( gif->chcr & 0xFFFF ) | ( (*ptag) & 0xFFFF0000 );  //Transfer upper part of tag to CHCR bits 31-15
+			gif->madr = ptag[1];
+
+			gspath3done = hwDmacSrcChainWithStack(gif, (ptag[0] >> 28) & 0x7);
+			if ((gif->chcr & 0x80) && (ptag[0] >> 31)) { //Check TIE bit of CHCR and IRQ bit of tag
+				GIF_LOG("dmaIrq Set");
+				gspath3done = 1;
 			}
-		}
+			GIFdmaEnd();
+			return;
+			
+		} else GIFdmaEnd();
 		gscycles = 0;
 	}
 }
@@ -358,23 +351,33 @@ void dmaGIF() {
 	GSCSRr &= ~0xC000;  //Clear FIFO stuff
 	GSCSRr |= 0x8000;   //FIFO full
 	psHu32(GIF_STAT)|= 0x10000000; // FQC=31, hack ;) [used to be 0xE00; // OPH=1 | APATH=3]
+	Path3progress = 2;
 
 	if ((gif->qwc == 0) && ((gif->chcr & 0xc) != 0)){
 		u32 *ptag;
 		ptag = (u32*)dmaGetAddr(gif->tadr); 
 		gif->qwc  = (u16)ptag[0];			    //QWC set to lower 16bits of the tag
 		gif->chcr = ( gif->chcr & 0xFFFF ) | ( (*ptag) & 0xFFFF0000 );  //Transfer upper part of tag to CHCR bits 31-15
-		
-		//gspath3done = hwDmacSrcChainWithStack(gif, (ptag[0] >> 28) & 0x7);
-		GIFdmaEnd();
-		gif->qwc = 0;
+		gif->madr = ptag[1];
+
+		GIF_LOG("gifdmaChain %8.8x_%8.8x size=%d, id=%d, addr=%lx", ptag[1], ptag[0], gif->qwc, (ptag[0] >> 28), gif->madr);
+
+
+		gspath3done = hwDmacSrcChainWithStack(gif, (ptag[0] >> 28) & 0x7);
+		if ((gif->chcr & 0x80) && (ptag[0] >> 31)) { //Check TIE bit of CHCR and IRQ bit of tag
+			GIF_LOG("dmaIrq Set");
+			gspath3done = 1;
+		}
+
+		GIFdma();
+		//gif->qwc = 0;
 		return;
 	}
 
 	//Halflife sets a QWC amount in chain mode, no tadr set.
 	if((gif->qwc > 0) && ((gif->chcr & 0x4) == 0x4)) gspath3done = 1;
 	
-	dmaGIFend();
+	GIFdma();
 }
 
 // called from only one location, so forceinline it:

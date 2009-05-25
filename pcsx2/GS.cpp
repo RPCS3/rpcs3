@@ -243,8 +243,6 @@ void gsReset()
 
 	memzero_obj(g_RealGSMem);
 
-	Path3transfer = FALSE;
-
 	GSCSRr = 0x551B400F;   // Set the FINISH bit to 1 for now
 	GSIMR = 0x7f00;
 	psHu32(GIF_STAT) = 0;

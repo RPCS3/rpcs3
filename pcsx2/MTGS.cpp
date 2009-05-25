@@ -287,9 +287,11 @@ __forceinline u32 mtgsThreadObject::_gifTransferDummy( GIF_PATH pathidx, const u
 			pMem += sizeof(GIFTAG);
 			--size;
 
-			if(pathidx == 2 && path.tag.eop)
-			{
-				Path3transfer = FALSE;
+			if(pathidx == 2)
+			{			
+				if(path.tag.flg != GIF_FLG_IMAGE)Path3progress = 1; //Other mode
+				else  Path3progress = 0; //IMAGE mode
+				//if(pathidx == 2) GIF_LOG("Set Giftag NLoop %d EOP %x Mode %d Path3msk %x Path3progress %x ", path.tag.nloop, path.tag.eop, path.tag.flg, vif1Regs->mskpath3, Path3progress);
 			}
 
 			if( pathidx == 0 ) 
@@ -305,11 +307,11 @@ __forceinline u32 mtgsThreadObject::_gifTransferDummy( GIF_PATH pathidx, const u
 					return ++size;
 				}
 			}
-		}
-		else
+		}else
 		{
 			// NOTE: size > 0 => do {} while(size > 0); should be faster than while(size > 0) {}
-
+		
+			//if(pathidx == 2) GIF_LOG("PATH3 NLoop %d EOP %x Mode %d Path3msk %x Path3progress %x ", path.tag.nloop, path.tag.eop, path.tag.flg, vif1Regs->mskpath3, Path3progress);
 			switch(path.tag.flg)
 			{
 			case GIF_FLG_PACKED:
@@ -371,11 +373,12 @@ __forceinline u32 mtgsThreadObject::_gifTransferDummy( GIF_PATH pathidx, const u
 
 			}
 		}
-
-		if(pathidx == 0)
+		
+		if(pathidx == 0 || pathidx == 2)
 		{
 			if(path.tag.eop && path.tag.nloop == 0)
 			{
+				//if(pathidx == 2) GIF_LOG("BREAK PATH3 NLoop %d EOP %x Mode %d Path3msk %x Path3progress %x ", path.tag.nloop, path.tag.eop, path.tag.flg, vif1Regs->mskpath3, Path3progress);
 				break;
 			}
 		}
@@ -392,6 +395,23 @@ __forceinline u32 mtgsThreadObject::_gifTransferDummy( GIF_PATH pathidx, const u
 			// along the way (often means curreg was in a bad state or something)
 		}
 	}
+
+	
+	if(pathidx == 2)
+		{
+			if(path.tag.nloop == 0 )
+			{
+				//DevCon::Notice("Finishing Giftag NLoop %d EOP %x Mode %d nregs %d Path3progress %d Vifstat VGW %x", 
+					//params path.tag.nloop, path.tag.eop, path.tag.flg, path.tag.nreg, Path3progress, vif1Regs->stat & VIF1_STAT_VGW);
+				if(path.tag.eop)
+				{
+					Path3progress = 2;	
+					//GIF_LOG("Set progress NLoop %d EOP %x Mode %d Path3msk %x Path3progress %x ", path.tag.nloop, path.tag.eop, path.tag.flg, vif1Regs->mskpath3, Path3progress);
+				}
+				
+			}
+		
+		}
 #ifdef PCSX2_GSRING_SAMPLING_STATS
 	__asm
 	{
@@ -838,6 +858,11 @@ int mtgsThreadObject::PrepDataPacket( GIF_PATH pathidx, const u8* srcdata, u32 s
 	// enough room for size - retval:
 	int retval = _gifTransferDummy( pathidx, srcdata, size );
 
+	if(pathidx == 2)
+	{
+		gif->madr += (size - retval) * 16;
+		gif->qwc -= size - retval;
+	}
 	size = size - retval;
 	m_packet_size = size;
 	size++;			// takes into account our command qword.
