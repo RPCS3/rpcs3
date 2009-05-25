@@ -328,6 +328,7 @@ void GIFdma()
 				GIF_LOG("dmaIrq Set");
 				gspath3done = 1;
 			}
+			GIF_LOG("gifdmaChain %8.8x_%8.8x size=%d, id=%d, addr=%lx", ptag[1], ptag[0], gif->qwc, id, gif->madr);
 			GIFdmaEnd();
 			return;
 			
@@ -397,12 +398,15 @@ static __forceinline int mfifoGIFrbTransfer() {
 		/* it does, so first copy 's1' bytes from 'addr' to 'data' */
 		src = (u32*)PSM(gif->madr);
 		if (src == NULL) return -1;
-		WRITERING_DMA(src, s1);
+		s1 = WRITERING_DMA(src, s1);
 
-		/* and second copy 's2' bytes from 'maddr' to '&data[s1]' */
-		src = (u32*)PSM(psHu32(DMAC_RBOR));
-		if (src == NULL) return -1;
-		WRITERING_DMA(src, (mfifoqwc - s1));
+		if(s1 == (((psHu32(DMAC_RBOR) + psHu32(DMAC_RBSR)+16) - gif->madr) >> 4)) 
+		{
+			/* and second copy 's2' bytes from 'maddr' to '&data[s1]' */
+			src = (u32*)PSM(psHu32(DMAC_RBOR));
+			if (src == NULL) return -1;
+			mfifoqwc = WRITERING_DMA(src, (mfifoqwc - s1)) + s1;
+		}
 		
 	} 
 	else 
@@ -412,13 +416,13 @@ static __forceinline int mfifoGIFrbTransfer() {
 		src = (u32*)PSM(gif->madr);
 		if (src == NULL) return -1;
 		
-		WRITERING_DMA(src, mfifoqwc);
+		mfifoqwc = WRITERING_DMA(src, mfifoqwc);
 		gif->madr = psHu32(DMAC_RBOR) + (gif->madr & psHu32(DMAC_RBSR));
 	}
 
 	gifqwc -= mfifoqwc;
-	gif->qwc -= mfifoqwc;
-	gif->madr += mfifoqwc*16;
+	//gif->qwc -= mfifoqwc;
+	//gif->madr += mfifoqwc*16;
 	//mfifocycles += (mfifoqwc) * 2; /* guessing */
 
 	return 0;
@@ -442,8 +446,8 @@ static __forceinline int mfifoGIFchain() {
 		if (pMem == NULL) return -1;
 
 		WRITERING_DMA(pMem, mfifoqwc);
-		gif->madr += mfifoqwc*16;
-		gif->qwc -= mfifoqwc;
+		//gif->madr += mfifoqwc*16;
+		//gif->qwc -= mfifoqwc;
 		mfifocycles += (mfifoqwc) * 2; /* guessing */
 	}
 
@@ -464,7 +468,7 @@ void mfifoGIFtransfer(int qwc) {
 		gifstate &= ~GIF_STATE_EMPTY;
 	}
 	
-	SPR_LOG("mfifoGIFtransfer %x madr %x, tadr %x", gif->chcr, gif->madr, gif->tadr);
+	GIF_LOG("mfifoGIFtransfer %x madr %x, tadr %x", gif->chcr, gif->madr, gif->tadr);
 		
 	if (gif->qwc == 0) {
 		if (gif->tadr == spr0->madr) {
@@ -482,7 +486,7 @@ void mfifoGIFtransfer(int qwc) {
 		mfifocycles += 2;
 			
 		gif->chcr = ( gif->chcr & 0xFFFF ) | ( (*ptag) & 0xFFFF0000 );
-		SPR_LOG("dmaChain %8.8x_%8.8x size=%d, id=%d, madr=%lx, tadr=%lx mfifo qwc = %x spr0 madr = %x",
+		GIF_LOG("dmaChain %8.8x_%8.8x size=%d, id=%d, madr=%lx, tadr=%lx mfifo qwc = %x spr0 madr = %x",
 				ptag[1], ptag[0], gif->qwc, id, gif->madr, gif->tadr, gifqwc, spr0->madr);
 
 		gifqwc--;
