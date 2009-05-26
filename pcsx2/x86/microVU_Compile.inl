@@ -184,10 +184,13 @@ microVUt(void) mVUendProgram(int qInst, int pInst, int fStatus, int fMac, int fC
 
 void __fastcall mVUwarning0(u32 PC) { Console::Error("microVU0 Warning: Exiting from Possible Infinite Loop [%04x]", params PC); }
 void __fastcall mVUwarning1(u32 PC) { Console::Error("microVU1 Warning: Exiting from Possible Infinite Loop [%04x]", params PC); }
+void __fastcall mVUprintPC1(u32 PC) { Console::WriteLn("Block startPC [%04x]",   params PC); }
+void __fastcall mVUprintPC2(u32 PC) { Console::WriteLn("Block endPC   [%04x]\n", params PC); }
 
 microVUt(void) mVUtestCycles() {
 	microVU* mVU = mVUx;
 	iPC = mVUstartPC;
+	mVUdebugNOW(0);
 	CMP32ItoM((uptr)&mVU->cycles, 0);
 	u8* jmp8 = JG8(0);
 		MOV32ItoR(gprT2, xPC);
@@ -209,7 +212,7 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 	
 	if (startPC > ((vuIndex) ? 0x3fff : 0xfff)) { Console::Error("microVU%d: invalid startPC", params vuIndex); }
 	startPC &= (vuIndex ? 0x3ff8 : 0xff8);
-
+	
 	if (mVUblocks[startPC/8] == NULL) {
 		mVUblocks[startPC/8] = new microBlockManager();
 	}
@@ -280,6 +283,7 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 			microBlock* bBlock = NULL;
 			u32* ajmp = 0;
 			mVUsetupRange<vuIndex>(xPC);
+			mVUdebugNOW(1);
 
 			switch (mVUbranch) {
 				case 3: branchCase(JE32,  JNE32);	// IBEQ

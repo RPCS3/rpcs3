@@ -132,6 +132,9 @@ extern PCSX2_ALIGNED16(microVU microVU1);
 extern void (*mVU_UPPER_OPCODE[64])( VURegs* VU, s32 info );
 extern void (*mVU_LOWER_OPCODE[128])( VURegs* VU, s32 info );
 
+// Debug Helper
+extern int mVUdebugNow;
+
 // Main Functions
 microVUt(void) mVUinit(VURegs*);
 microVUx(void) mVUreset();

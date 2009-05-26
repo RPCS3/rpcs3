@@ -731,7 +731,7 @@ microVUt(void) mVUallocVIb(int GPRreg, int _reg_) {
 	}
 	if (_reg_ == 0)			{ return; }
 	else if (isMMX(_reg_))	{ MOVD32RtoMMX(mmVI(_reg_), GPRreg); }
-	else if (_reg_ < 16)	{ MOV32RtoRm(gprR, GPRreg, (_reg_ - 9) * 16); }
+	else if (_reg_ < 16)	{ MOV16RtoRm(gprR, GPRreg, (_reg_ - 9) * 16); }
 }
 
 //------------------------------------------------------------------

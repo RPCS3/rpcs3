@@ -303,3 +303,12 @@ declareAllVariables
 		mVUreset<vuIndex>();																			\
 	}																									\
 }
+
+#define mVUdebugNOW(isEndPC) {							\
+	if (mVUdebugNow) {									\
+		MOV32ItoR(gprT2, xPC);							\
+		if (isEndPC) { CALLFunc((uptr)mVUprintPC2); }	\
+		else		 { CALLFunc((uptr)mVUprintPC1); }	\
+		MOV32ItoR(gprR, Roffset);						\
+	}													\
+}

@@ -1131,8 +1131,10 @@ microVUf(void) mVU_XGKICK() {
 //------------------------------------------------------------------
 
 #define setBranchA(x, _x_) {															\
-	mVUbranch = x;																		\
-	pass1 { if (_Imm11_ == 1 && !_x_) { mVUinfo |= _isNOP; mVUbranch = 0; return; } }	\
+	pass1 { if (_Imm11_ == 1 && !_x_) { mVUinfo |= _isNOP; return; } mVUbranch = x; }	\
+	pass2 { if (_Imm11_ == 1 && !_x_) { return; } mVUbranch = x; }						\
+	pass3 { mVUbranch = x; }															\
+	pass4 { if (_Imm11_ == 1 && !_x_) { return; } mVUbranch = x; }						\
 }
 
 microVUf(void) mVU_B() {
