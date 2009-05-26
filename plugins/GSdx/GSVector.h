@@ -1599,14 +1599,18 @@ public:
 
 	#endif
 
-	#if _M_SSE >= 0x401
-
 	static GSVector4i loadnt(const void* p)
 	{
-		return GSVector4i(_mm_stream_load_si128((__m128i*)p));
-	}
+		#if _M_SSE >= 0x401
 
-	#endif
+		return GSVector4i(_mm_stream_load_si128((__m128i*)p));
+
+		#else
+
+		return GSVector4i(_mm_load_si128((__m128i*)p));
+
+		#endif
+	}
 
 	static GSVector4i loadl(const void* p)
 	{
@@ -1695,6 +1699,31 @@ public:
 	}
 
 	#endif
+
+	static void storent(void* RESTRICT dst, const void* RESTRICT src, size_t size)
+	{
+		const GSVector4i* s = (const GSVector4i*)src;
+		GSVector4i* d = (GSVector4i*)dst;
+
+		if(size == 0) return;
+
+		size_t i = 0;
+		size_t j = size >> 6;
+
+		for(; i < j; i++, s += 4, d += 4)
+		{
+			storent(&d[0], s[0]);
+			storent(&d[1], s[1]);
+			storent(&d[2], s[2]);
+			storent(&d[3], s[3]);
+		}
+
+		size &= 63;
+
+		if(size == 0) return;
+
+		memcpy(d, s, size);
+	}
 
 	__forceinline static void transpose(GSVector4i& a, GSVector4i& b, GSVector4i& c, GSVector4i& d)
 	{

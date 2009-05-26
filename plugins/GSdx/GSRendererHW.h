@@ -361,7 +361,7 @@ protected:
 
 		int prim = PRIM->PRIM;
 
-		if(!OverrideInput(prim, rt->m_texture, ds->m_texture, tex ? tex->m_texture : NULL))
+		if(!OverrideInput(prim, rt->m_texture, ds->m_texture, tex))
 		{
 			return;
 		}
@@ -396,9 +396,9 @@ protected:
 		m_tc->InvalidateTextures(context->FRAME, context->ZBUF);
 	}
 
-	virtual void Draw(int prim, GSTexture* rt, GSTexture* ds, typename GSTextureCache::GSCachedTexture* tex) = 0;
+	virtual void Draw(int prim, GSTexture* rt, GSTexture* ds, GSTextureCache::GSCachedTexture* tex) = 0;
 
-	virtual bool OverrideInput(int& prim, GSTexture* rt, GSTexture* ds, GSTexture* t)
+	virtual bool OverrideInput(int& prim, GSTexture* rt, GSTexture* ds, GSTextureCache::GSCachedTexture* t)
 	{
 		#pragma region ffxii pal video conversion
 
@@ -437,9 +437,11 @@ protected:
 
 				ok = false;
 
-				t = m_dev->CreateTexture(512, 512);
+				m_dev->Recycle(t->m_texture);
 
-				t->Update(GSVector4i(0, 0, 448, 512), video, 512 * 4);
+				t->m_texture = m_dev->CreateTexture(512, 512);
+
+				t->m_texture->Update(GSVector4i(0, 0, 448, 512), video, 512 * 4);
 
 				m_vertices[0] = m_vertices[0];
 				m_vertices[1] = m_vertices[1];

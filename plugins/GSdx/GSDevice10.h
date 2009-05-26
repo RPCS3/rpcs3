@@ -58,14 +58,18 @@ private:
 
 	CComPtr<ID3D10Device> m_dev;
 	CComPtr<IDXGISwapChain> m_swapchain;
-	CComPtr<ID3DX10Font> m_font;
+
+	struct
+	{
+		CComPtr<ID3D10Buffer> vb, vb_old;
+		size_t stride, start, count, limit;
+	} m_vertices;
 
 public: // TODO
 	CComPtr<ID3D10RasterizerState> m_rs;
 
 	struct
 	{
-		CComPtr<ID3D10Buffer> vb;
 		CComPtr<ID3D10InputLayout> il;
 		CComPtr<ID3D10VertexShader> vs;
 		CComPtr<ID3D10PixelShader> ps[7];
@@ -98,6 +102,7 @@ public:
 	void Flip();
 
 	void BeginScene();
+	void DrawPrimitive();
 	void EndScene();
 
 	void ClearRenderTarget(GSTexture* t, const GSVector4& c);
@@ -116,6 +121,7 @@ public:
 	void StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, ID3D10PixelShader* ps, ID3D10Buffer* ps_cb, bool linear = true);
 	void StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, ID3D10PixelShader* ps, ID3D10Buffer* ps_cb, ID3D10BlendState* bs, bool linear = true);
 
+	void IASetVertexBuffer(const void* vertices, size_t stride, size_t count);
 	void IASetVertexBuffer(ID3D10Buffer* vb, size_t stride);
 	void IASetInputLayout(ID3D10InputLayout* layout);
 	void IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY topology);
@@ -128,7 +134,6 @@ public:
 	void OMSetDepthStencilState(ID3D10DepthStencilState* dss, uint8 sref);
 	void OMSetBlendState(ID3D10BlendState* bs, float bf);
 	void OMSetRenderTargets(GSTexture* rt, GSTexture* ds);
-	void DrawPrimitive(uint32 count, uint32 start = 0);
 
 	ID3D10Device* operator->() {return m_dev;}
 	operator ID3D10Device*() {return m_dev;}

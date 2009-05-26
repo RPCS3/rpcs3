@@ -1213,7 +1213,7 @@ template<int index> void GSState::Transfer(uint8* mem, uint32 size)
 				{
 					GIFReg r;
 					r.u64 = path.tag.PRIM;
-					(this->*m_fpGIFRegHandlers[GIF_A_D_REG_PRIM])(&r);
+					GIFRegHandlerPRIM(&r);
 				}
 			}
 		}

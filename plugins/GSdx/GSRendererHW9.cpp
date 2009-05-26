@@ -536,16 +536,7 @@ void GSRendererHW9::SetupDATE(GSTexture* rt, GSTexture* ds)
 			{GSVector4(mm.z, -mm.w, 0.5f, 1.0f), GSVector2(uv.z, uv.w)},
 		};
 
-		void* buff = NULL;
-
-		if(SUCCEEDED(dev->m_convert.vb->Lock(0, 0, &buff, D3DLOCK_DISCARD)))
-		{
-			memcpy(buff, vertices, sizeof(vertices));
-
-			dev->m_convert.vb->Unlock();
-		}
-
-		dev->IASetVertexBuffer(dev->m_convert.vb, sizeof(vertices[0]));
+		dev->IASetVertexBuffer(vertices, sizeof(vertices[0]), countof(vertices));
 		dev->IASetInputLayout(dev->m_convert.il);
 		dev->IASetPrimitiveTopology(D3DPT_TRIANGLESTRIP);
 
@@ -565,7 +556,7 @@ void GSRendererHW9::SetupDATE(GSTexture* rt, GSTexture* ds)
 
 		//
 
-		dev->DrawPrimitive(countof(vertices));
+		dev->DrawPrimitive();
 
 		//
 
@@ -579,11 +570,6 @@ void GSRendererHW9::UpdateFBA(GSTexture* rt)
 {
 	GSDevice9* dev = (GSDevice9*)m_dev;
 
-	int w = rt->GetWidth();
-	int h = rt->GetHeight();
-
-	GSVector4 mm = GSVector4(-1, -1, 1, 1);
-
 	dev->BeginScene();
 
 	// om
@@ -593,6 +579,8 @@ void GSRendererHW9::UpdateFBA(GSTexture* rt)
 
 	// ia
 
+	GSVector4 mm = GSVector4(-1, -1, 1, 1);
+
 	GSVertexPT1 vertices[] =
 	{
 		{GSVector4(mm.x, -mm.y, 0.5f, 1.0f), GSVector2(0, 0)},
@@ -601,16 +589,7 @@ void GSRendererHW9::UpdateFBA(GSTexture* rt)
 		{GSVector4(mm.z, -mm.w, 0.5f, 1.0f), GSVector2(0, 0)},
 	};
 
-	void* buff = NULL;
-
-	if(SUCCEEDED(dev->m_convert.vb->Lock(0, 0, &buff, D3DLOCK_DISCARD)))
-	{
-		memcpy(buff, vertices, sizeof(vertices));
-
-		dev->m_convert.vb->Unlock();
-	}
-
-	dev->IASetVertexBuffer(dev->m_convert.vb, sizeof(vertices[0]));
+	dev->IASetVertexBuffer(vertices, sizeof(vertices[0]), countof(vertices));
 	dev->IASetInputLayout(dev->m_convert.il);
 	dev->IASetPrimitiveTopology(D3DPT_TRIANGLESTRIP);
 
@@ -624,11 +603,11 @@ void GSRendererHW9::UpdateFBA(GSTexture* rt)
 
 	// rs
 
-	dev->RSSet(w, h);
+	dev->RSSet(rt->GetWidth(), rt->GetHeight());
 
 	//
 
-	dev->DrawPrimitive(countof(vertices));
+	dev->DrawPrimitive();
 
 	//
 

@@ -44,8 +44,6 @@ GSSetupPrimCodeGenerator::GSSetupPrimCodeGenerator(GSScanlineEnvironment& env, u
 
 void GSSetupPrimCodeGenerator::Generate()
 {
-	const int params = 0;
-
 	if((m_en.z || m_en.f) && !m_sel.sprite || m_en.t || m_en.c && m_sel.iip)
 	{
 		for(int i = 0; i < 5; i++)

@@ -96,13 +96,18 @@ private:
 	CComPtr<IDirect3DDevice9> m_dev;
 	CComPtr<IDirect3DSwapChain9> m_swapchain;
 
+	struct
+	{
+		CComPtr<IDirect3DVertexBuffer9> vb, vb_old;
+		size_t stride, start, count, limit;
+	} m_vertices;
+
 public: // TODO
 	D3DPRESENT_PARAMETERS m_pp;
 	CComPtr<ID3DXFont> m_font;
 
 	struct
 	{
-		CComPtr<IDirect3DVertexBuffer9> vb;
 		CComPtr<IDirect3DVertexDeclaration9> il;
 		CComPtr<IDirect3DVertexShader9> vs;
 		CComPtr<IDirect3DPixelShader9> ps[7];
@@ -134,6 +139,7 @@ public:
 	void Flip();
 
 	void BeginScene();
+	void DrawPrimitive();
 	void EndScene();
 
 	void ClearRenderTarget(GSTexture* t, const GSVector4& c);
@@ -154,6 +160,7 @@ public:
 	void StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, IDirect3DPixelShader9* ps, const float* ps_cb, int ps_cb_len, bool linear = true);
 	void StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, IDirect3DPixelShader9* ps, const float* ps_cb, int ps_cb_len, Direct3DBlendState9* bs, bool linear = true);
 
+	void IASetVertexBuffer(const void* vertices, size_t stride, size_t count);
 	void IASetVertexBuffer(IDirect3DVertexBuffer9* vb, size_t stride);
 	void IASetInputLayout(IDirect3DVertexDeclaration9* layout);
 	void IASetPrimitiveTopology(D3DPRIMITIVETYPE topology);
@@ -165,7 +172,6 @@ public:
 	void OMSetDepthStencilState(Direct3DDepthStencilState9* dss, uint32 sref);
 	void OMSetBlendState(Direct3DBlendState9* bs, uint32 bf);
 	void OMSetRenderTargets(GSTexture* rt, GSTexture* ds);
-	void DrawPrimitive(uint32 count, uint32 start = 0);
 
 	IDirect3DDevice9* operator->() {return m_dev;}
 	operator IDirect3DDevice9*() {return m_dev;}

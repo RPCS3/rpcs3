@@ -44,6 +44,11 @@ GSDevice10::GSDevice10()
 {
 	memset(m_ps_srv, 0, sizeof(m_ps_srv));
 	memset(m_ps_ss, 0, sizeof(m_ps_ss));
+
+	m_vertices.stride = 0;
+	m_vertices.start = 0;
+	m_vertices.count = 0;
+	m_vertices.limit = 0;
 }
 
 GSDevice10::~GSDevice10()
@@ -114,16 +119,6 @@ bool GSDevice10::Create(HWND hWnd, bool vsync)
 	{
 		hr = CompileShader(IDR_CONVERT10_FX, format("ps_main%d", i), NULL, &m_convert.ps[i]);
 	}
-
-	memset(&bd, 0, sizeof(bd));
-
-	bd.Usage = D3D10_USAGE_DEFAULT;
-	bd.BindFlags = D3D10_BIND_VERTEX_BUFFER;
-	bd.CPUAccessFlags = 0;
-	bd.MiscFlags = 0;
-	bd.ByteWidth = 4 * sizeof(GSVertexPT1);
-
-	hr = m_dev->CreateBuffer(&bd, NULL, &m_convert.vb);
 
 	memset(&dsd, 0, sizeof(dsd));
 
@@ -258,6 +253,11 @@ void GSDevice10::BeginScene()
 {
 }
 
+void GSDevice10::DrawPrimitive()
+{
+	m_dev->Draw(m_vertices.count, m_vertices.start);
+}
+
 void GSDevice10::EndScene()
 {
 	PSSetShaderResources(NULL, NULL);
@@ -265,6 +265,9 @@ void GSDevice10::EndScene()
 	// not clearing the rt/ds gives a little fps boost in complex games (5-10%)
 
 	// OMSetRenderTargets(NULL, NULL);
+
+	m_vertices.start += m_vertices.count;
+	m_vertices.count = 0;
 }
 
 void GSDevice10::ClearRenderTarget(GSTexture* t, const GSVector4& c)
@@ -439,11 +442,7 @@ void GSDevice10::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, 
 		{GSVector4(right, bottom, 0.5f, 1.0f), GSVector2(sr.z, sr.w)},
 	};
 
-	D3D10_BOX box = {0, 0, 0, sizeof(vertices), 1, 1};
-
-	m_dev->UpdateSubresource(m_convert.vb, 0, &box, vertices, 0, 0);
-
-	IASetVertexBuffer(m_convert.vb, sizeof(vertices[0]));
+	IASetVertexBuffer(vertices, sizeof(vertices[0]), countof(vertices));
 	IASetInputLayout(m_convert.il);
 	IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 
@@ -467,7 +466,7 @@ void GSDevice10::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, 
 
 	//
 
-	DrawPrimitive(countof(vertices));
+	DrawPrimitive();
 
 	//
 
@@ -506,6 +505,61 @@ void GSDevice10::DoInterlace(GSTexture* st, GSTexture* dt, int shader, bool line
 	m_dev->UpdateSubresource(m_interlace.cb, 0, NULL, &cb, 0, 0);
 
 	StretchRect(st, sr, dt, dr, m_interlace.ps[shader], m_interlace.cb, linear);
+}
+
+void GSDevice10::IASetVertexBuffer(const void* vertices, size_t stride, size_t count)
+{
+	ASSERT(m_vertices.count == 0);
+
+	if(count > m_vertices.limit)
+	{
+		m_vertices.vb_old = m_vertices.vb;
+		m_vertices.vb = NULL;
+		m_vertices.start = 0;
+		m_vertices.count = 0;
+		m_vertices.limit = max(count * 3 / 2, 10000);
+	}
+
+	if(m_vertices.vb == NULL)
+	{
+		D3D10_BUFFER_DESC bd;
+
+		memset(&bd, 0, sizeof(bd));
+
+		bd.Usage = D3D10_USAGE_DYNAMIC;
+		bd.ByteWidth = m_vertices.limit * stride;
+		bd.BindFlags = D3D10_BIND_VERTEX_BUFFER;
+		bd.CPUAccessFlags = D3D10_CPU_ACCESS_WRITE;
+
+		HRESULT hr;
+		
+		hr = m_dev->CreateBuffer(&bd, NULL, &m_vertices.vb);
+
+		if(FAILED(hr)) return;
+	}
+
+	D3D10_MAP type = D3D10_MAP_WRITE_NO_OVERWRITE;
+
+	if(m_vertices.start + count > m_vertices.limit || stride != m_vertices.stride)
+	{
+		m_vertices.start = 0;
+
+		type = D3D10_MAP_WRITE_DISCARD;
+	}
+
+	void* v = NULL;
+
+	if(SUCCEEDED(m_vertices.vb->Map(type, 0, &v)))
+	{
+		GSVector4i::storent((uint8*)v + m_vertices.start * stride, vertices, count * stride);
+
+		m_vertices.vb->Unmap();
+	}
+
+	m_vertices.count = count;
+	m_vertices.stride = stride;
+
+	IASetVertexBuffer(m_vertices.vb, stride);
 }
 
 void GSDevice10::IASetVertexBuffer(ID3D10Buffer* vb, size_t stride)
@@ -688,11 +742,6 @@ void GSDevice10::OMSetRenderTargets(GSTexture* rt, GSTexture* ds)
 	}
 }
 
-void GSDevice10::DrawPrimitive(uint32 count, uint32 start)
-{
-	m_dev->Draw(count, start);
-}
-
 HRESULT GSDevice10::CompileShader(uint32 id, const string& entry, D3D10_SHADER_MACRO* macro, ID3D10VertexShader** ps, D3D10_INPUT_ELEMENT_DESC* layout, int count, ID3D10InputLayout** il)
 {
 	HRESULT hr;
@@ -703,7 +752,7 @@ HRESULT GSDevice10::CompileShader(uint32 id, const string& entry, D3D10_SHADER_M
 	
 	if(error)
 	{
-		TRACE(_T("%s\n"), CString((LPCSTR)error->GetBufferPointer()));
+		printf("%s\n", (const char*)error->GetBufferPointer());
 	}
 
 	if(FAILED(hr))
@@ -738,7 +787,7 @@ HRESULT GSDevice10::CompileShader(uint32 id, const string& entry, D3D10_SHADER_M
 	
 	if(error)
 	{
-		TRACE(_T("%s\n"), CString((LPCSTR)error->GetBufferPointer()));
+		printf("%s\n", (const char*)error->GetBufferPointer());
 	}
 
 	if(FAILED(hr))
@@ -766,7 +815,7 @@ HRESULT GSDevice10::CompileShader(uint32 id, const string& entry, D3D10_SHADER_M
 	
 	if(error)
 	{
-		TRACE(_T("%s\n"), CString((LPCSTR)error->GetBufferPointer()));
+		printf("%s\n", (const char*)error->GetBufferPointer());
 	}
 
 	if(FAILED(hr))

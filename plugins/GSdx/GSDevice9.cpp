@@ -48,6 +48,11 @@ GSDevice9::GSDevice9()
 	memset(&m_ddcaps, 0, sizeof(m_ddcaps));
 	memset(&m_d3dcaps, 0, sizeof(m_d3dcaps));
 	memset(m_ps_srvs, 0, sizeof(m_ps_srvs));
+
+	m_vertices.stride = 0;
+	m_vertices.start = 0;
+	m_vertices.count = 0;
+	m_vertices.limit = 0;
 }
 
 GSDevice9::~GSDevice9()
@@ -142,8 +147,6 @@ bool GSDevice9::Create(HWND hWnd, bool vsync)
 	{
 		CompileShader(IDR_CONVERT9_FX, format("ps_main%d", i), NULL, &m_convert.ps[i]);
 	}
-
-	m_dev->CreateVertexBuffer(4 * sizeof(GSVertexPT1), D3DUSAGE_DYNAMIC, 0, D3DPOOL_DEFAULT, &m_convert.vb, NULL);
 
 	m_convert.dss.DepthEnable = false;
 	m_convert.dss.StencilEnable = false;
@@ -364,9 +367,39 @@ void GSDevice9::BeginScene()
 	m_dev->BeginScene();
 }
 
+void GSDevice9::DrawPrimitive()
+{
+	int prims = 0;
+
+	switch(m_topology)
+	{
+    case D3DPT_TRIANGLELIST:
+		prims = m_vertices.count / 3;
+		break;
+    case D3DPT_LINELIST:
+		prims = m_vertices.count / 2;
+		break;
+    case D3DPT_POINTLIST:
+		prims = m_vertices.count;
+		break;
+    case D3DPT_TRIANGLESTRIP:
+    case D3DPT_TRIANGLEFAN:
+		prims = m_vertices.count - 2;
+		break;
+    case D3DPT_LINESTRIP:
+		prims = m_vertices.count - 1;
+		break;
+	}
+
+	m_dev->DrawPrimitive(m_topology, m_vertices.start, prims);
+}
+
 void GSDevice9::EndScene()
 {
 	m_dev->EndScene();
+
+	m_vertices.start += m_vertices.count;
+	m_vertices.count = 0;
 }
 
 void GSDevice9::ClearRenderTarget(GSTexture* t, const GSVector4& c)
@@ -550,16 +583,7 @@ void GSDevice9::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, c
 		vertices[i].p.y += 1.0f / ds.y;
 	}
 
-	void* buff = NULL;
-
-	if(SUCCEEDED(m_convert.vb->Lock(0, 0, &buff, D3DLOCK_DISCARD)))
-	{
-		memcpy(buff, vertices, sizeof(vertices));
-
-		m_convert.vb->Unlock();
-	}
-
-	IASetVertexBuffer(m_convert.vb, sizeof(vertices[0]));
+	IASetVertexBuffer(vertices, sizeof(vertices[0]), countof(vertices));
 	IASetInputLayout(m_convert.il);
 	IASetPrimitiveTopology(D3DPT_TRIANGLESTRIP);
 
@@ -579,7 +603,7 @@ void GSDevice9::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, c
 
 	//
 
-	DrawPrimitive(countof(vertices));
+	DrawPrimitive();
 
 	//
 
@@ -618,6 +642,52 @@ void GSDevice9::DoInterlace(GSTexture* st, GSTexture* dt, int shader, bool linea
 	cb.hH = (float)s.y / 2;
 
 	StretchRect(st, sr, dt, dr, m_interlace.ps[shader], (const float*)&cb, 1, linear);
+}
+
+void GSDevice9::IASetVertexBuffer(const void* vertices, size_t stride, size_t count)
+{
+	ASSERT(m_vertices.count == 0);
+
+	if(count > m_vertices.limit)
+	{
+		m_vertices.vb_old = m_vertices.vb;
+		m_vertices.vb = NULL;
+		m_vertices.start = 0;
+		m_vertices.count = 0;
+		m_vertices.limit = max(count * 3 / 2, 10000);
+	}
+
+	if(m_vertices.vb == NULL)
+	{
+		HRESULT hr;
+		
+		hr = m_dev->CreateVertexBuffer(m_vertices.limit * stride, D3DUSAGE_DYNAMIC, 0, D3DPOOL_DEFAULT, &m_vertices.vb, NULL);
+
+		if(FAILED(hr)) return;
+	}
+
+	uint32 flags = D3DLOCK_NOOVERWRITE;
+
+	if(m_vertices.start + count > m_vertices.limit || stride != m_vertices.stride)
+	{
+		m_vertices.start = 0;
+
+		flags = D3DLOCK_DISCARD;
+	}
+
+	void* v = NULL;
+
+	if(SUCCEEDED(m_vertices.vb->Lock(m_vertices.start * stride, count * stride, &v, flags)))
+	{
+		GSVector4i::storent(v, vertices, count * stride);
+
+		m_vertices.vb->Unlock();
+	}
+
+	m_vertices.count = count;
+	m_vertices.stride = stride;
+
+	IASetVertexBuffer(m_vertices.vb, stride);
 }
 
 void GSDevice9::IASetVertexBuffer(IDirect3DVertexBuffer9* vb, size_t stride)
@@ -846,33 +916,6 @@ void GSDevice9::OMSetRenderTargets(GSTexture* rt, GSTexture* ds)
 	}
 }
 
-void GSDevice9::DrawPrimitive(uint32 count, uint32 start)
-{
-	int prims = 0;
-
-	switch(m_topology)
-	{
-    case D3DPT_TRIANGLELIST:
-		prims = count / 3;
-		break;
-    case D3DPT_LINELIST:
-		prims = count / 2;
-		break;
-    case D3DPT_POINTLIST:
-		prims = count;
-		break;
-    case D3DPT_TRIANGLESTRIP:
-    case D3DPT_TRIANGLEFAN:
-		prims = count - 2;
-		break;
-    case D3DPT_LINESTRIP:
-		prims = count - 1;
-		break;
-	}
-
-	m_dev->DrawPrimitive(m_topology, start, prims);
-}
-
 // FIXME: D3DXCompileShaderFromResource of d3dx9 v37 (march 2008) calls GetFullPathName on id for some reason and then crashes
 
 static HRESULT LoadShader(uint32 id, LPCSTR& data, uint32& size)
@@ -934,9 +977,7 @@ HRESULT GSDevice9::CompileShader(uint32 id, const string& entry, const D3DXMACRO
 	}
 	else if(error)
 	{
-		LPCSTR msg = (LPCSTR)error->GetBufferPointer();
-
-		TRACE(_T("%s\n"), CString(msg));
+		printf("%s\n", (const char*)error->GetBufferPointer());
 	}
 
 	ASSERT(SUCCEEDED(hr));
@@ -993,14 +1034,10 @@ HRESULT GSDevice9::CompileShader(uint32 id, const string& entry, const D3DXMACRO
 	if(SUCCEEDED(hr))
 	{
 		hr = m_dev->CreatePixelShader((DWORD*)shader->GetBufferPointer(), ps);
-
-		ASSERT(SUCCEEDED(hr));
 	}
 	else if(error)
 	{
-		LPCSTR msg = (LPCSTR)error->GetBufferPointer();
-
-		TRACE(_T("%s\n"), CString(msg));
+		printf("%s\n", (const char*)error->GetBufferPointer());
 	}
 
 	ASSERT(SUCCEEDED(hr));

@@ -561,11 +561,7 @@ void GSRendererHW10::SetupDATE(GSTexture* rt, GSTexture* ds)
 			{GSVector4(mm.z, -mm.w, 0.5f, 1.0f), GSVector2(uv.z, uv.w)},
 		};
 
-		D3D10_BOX box = {0, 0, 0, sizeof(vertices), 1, 1};
-
-		(*dev)->UpdateSubresource(dev->m_convert.vb, 0, &box, vertices, 0, 0);
-
-		dev->IASetVertexBuffer(dev->m_convert.vb, sizeof(vertices[0]));
+		dev->IASetVertexBuffer(vertices, sizeof(vertices[0]), countof(vertices));
 		dev->IASetInputLayout(dev->m_convert.il);
 		dev->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 
@@ -589,7 +585,7 @@ void GSRendererHW10::SetupDATE(GSTexture* rt, GSTexture* ds)
 
 		// set
 
-		dev->DrawPrimitive(countof(vertices));
+		dev->DrawPrimitive();
 
 		//
 

@@ -25,9 +25,6 @@
 
 GSTextureFX10::GSTextureFX10()
 	: m_dev(NULL)
-	, m_vb_max(0)
-	, m_vb_start(0)
-	, m_vb_count(0)
 {
 	memset(&m_vs_cb_cache, 0, sizeof(m_vs_cb_cache));
 	memset(&m_ps_cb_cache, 0, sizeof(m_ps_cb_cache));
@@ -94,63 +91,7 @@ bool GSTextureFX10::Create(GSDevice10* dev)
 
 bool GSTextureFX10::SetupIA(const GSVertexHW10* vertices, int count, D3D10_PRIMITIVE_TOPOLOGY prim)
 {
-	HRESULT hr;
-
-	if(max(count * 3 / 2, 10000) > m_vb_max)
-	{
-		m_vb_old = m_vb;
-		m_vb = NULL;
-		m_vb_max = max(count * 2, 10000);
-		m_vb_start = 0;
-		m_vb_count = 0;
-	}
-
-	if(!m_vb)
-	{
-		D3D10_BUFFER_DESC bd;
-
-		memset(&bd, 0, sizeof(bd));
-
-		bd.Usage = D3D10_USAGE_DYNAMIC;
-		bd.ByteWidth = m_vb_max * sizeof(vertices[0]);
-		bd.BindFlags = D3D10_BIND_VERTEX_BUFFER;
-		bd.CPUAccessFlags = D3D10_CPU_ACCESS_WRITE;
-
-		hr = (*m_dev)->CreateBuffer(&bd, NULL, &m_vb);
-
-		if(FAILED(hr)) return false;
-	}
-
-	GSVertexHW10* v = NULL;
-
-	int next = m_vb_start + m_vb_count;
-
-	if(next + count <= m_vb_max)
-	{
-		if(SUCCEEDED(m_vb->Map(D3D10_MAP_WRITE_NO_OVERWRITE, 0, (void**)&v)))
-		{
-			memcpy(&v[next], vertices, count * sizeof(vertices[0]));
-
-			m_vb->Unmap();
-		}
-
-		m_vb_start = next;
-		m_vb_count = count;
-	}
-	else
-	{
-		if(SUCCEEDED(m_vb->Map(D3D10_MAP_WRITE_DISCARD, 0, (void**)&v)))
-		{
-			memcpy(v, vertices, count * sizeof(vertices[0]));
-
-			m_vb->Unmap();
-		}
-
-		m_vb_start = 0;
-		m_vb_count = count;
-	}
-
-	m_dev->IASetVertexBuffer(m_vb, sizeof(vertices[0]));
+	m_dev->IASetVertexBuffer(vertices, sizeof(vertices[0]), count);
 	m_dev->IASetInputLayout(m_il);
 	m_dev->IASetPrimitiveTopology(prim);
 
@@ -589,5 +530,5 @@ void GSTextureFX10::UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel,
 
 void GSTextureFX10::Draw()
 {
-	m_dev->DrawPrimitive(m_vb_count, m_vb_start);
+	m_dev->DrawPrimitive();
 }
