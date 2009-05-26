@@ -122,7 +122,7 @@ microVUt(void) mVUincCycles(int x) {
 	}
 	if (mVUregs.p) {
 		calcCycles(mVUregs.p, x);
-		if (!mVUregs.p) { incP(); }
+		if (!mVUregs.p || (mVUregs.p && mVUregsTemp.p)) { incP(); }
 	}
 	calcCycles(mVUregs.r, x);
 	calcCycles(mVUregs.xgkick, x);
@@ -245,8 +245,8 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 	for (int branch = 0;  mVUcount < (vuIndex ? (0x3fff/8) : (0xfff/8)); ) {
 		incPC(1);
 		mVUinfo = 0;
-		incCycles(1);
 		startLoop();
+		incCycles(1);
 		mVUopU<vuIndex, 0>();
 		if (curI & _Ebit_)	  { branch = 1; }
 		if (curI & _MDTbit_)  { branch = 4; }
