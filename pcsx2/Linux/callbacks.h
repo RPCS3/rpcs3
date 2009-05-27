@@ -261,3 +261,7 @@ OnMemcards_Ok                          (GtkButton       *button,
 void
 On_Dialog_Close                        (GtkDialog       *dialog,
                                         gpointer         user_data);
+
+void
+OnCpuCheckToggled                      (GtkToggleButton *togglebutton,
+                                        gpointer         user_data);

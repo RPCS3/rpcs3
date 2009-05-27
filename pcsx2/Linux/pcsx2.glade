@@ -1538,176 +1538,122 @@ If you have problems, Disable all of these and try again.</property>
 		  <property name="spacing">0</property>
 
 		  <child>
-		    <widget class="GtkCheckButton" id="check_iop_cycle_rate">
+		    <widget class="GtkFrame" id="frame42">
 		      <property name="visible">True</property>
-		      <property name="tooltip" translatable="yes">Small speedup, and works well with most games.</property>
-		      <property name="can_focus">True</property>
-		      <property name="label" translatable="yes">Enable IOP x2 Cycle Rate</property>
-		      <property name="use_underline">True</property>
-		      <property name="relief">GTK_RELIEF_NORMAL</property>
-		      <property name="focus_on_click">True</property>
-		      <property name="active">False</property>
-		      <property name="inconsistent">False</property>
-		      <property name="draw_indicator">True</property>
-		    </widget>
-		    <packing>
-		      <property name="padding">0</property>
-		      <property name="expand">False</property>
-		      <property name="fill">False</property>
-		    </packing>
-		  </child>
-
-		  <child>
-		    <widget class="GtkLabel" id="label96">
-		      <property name="visible">True</property>
-		      <property name="label" translatable="yes">Small speedup, and works well with most games.</property>
-		      <property name="use_underline">False</property>
-		      <property name="use_markup">False</property>
-		      <property name="justify">GTK_JUSTIFY_LEFT</property>
-		      <property name="wrap">True</property>
-		      <property name="selectable">False</property>
-		      <property name="xalign">0.5</property>
-		      <property name="yalign">0.5</property>
-		      <property name="xpad">0</property>
-		      <property name="ypad">0</property>
-		      <property name="mnemonic_widget">check_iop_cycle_rate</property>
-		      <property name="ellipsize">PANGO_ELLIPSIZE_NONE</property>
-		      <property name="width_chars">-1</property>
-		      <property name="single_line_mode">False</property>
-		      <property name="angle">0</property>
-		    </widget>
-		    <packing>
-		      <property name="padding">0</property>
-		      <property name="expand">False</property>
-		      <property name="fill">False</property>
-		    </packing>
-		  </child>
-
-		  <child>
-		    <widget class="GtkCheckButton" id="check_wait_cycles_sync_hack">
-		      <property name="visible">True</property>
-		      <property name="tooltip" translatable="yes">Small speedup. Works well with most games, but it may cause certain games to crash, or freeze up during bootup or stage changes.</property>
-		      <property name="can_focus">True</property>
-		      <property name="label" translatable="yes">WaitCycles Sync Hack</property>
-		      <property name="use_underline">True</property>
-		      <property name="relief">GTK_RELIEF_NORMAL</property>
-		      <property name="focus_on_click">True</property>
-		      <property name="active">False</property>
-		      <property name="inconsistent">False</property>
-		      <property name="draw_indicator">True</property>
-		    </widget>
-		    <packing>
-		      <property name="padding">0</property>
-		      <property name="expand">False</property>
-		      <property name="fill">False</property>
-		    </packing>
-		  </child>
-
-		  <child>
-		    <widget class="GtkLabel" id="label97">
-		      <property name="visible">True</property>
-		      <property name="label" translatable="yes">Small speedup. Works well with most games, but it may cause certain games to crash, or freeze up during bootup or stage changes.</property>
-		      <property name="use_underline">False</property>
-		      <property name="use_markup">False</property>
-		      <property name="justify">GTK_JUSTIFY_LEFT</property>
-		      <property name="wrap">True</property>
-		      <property name="selectable">False</property>
-		      <property name="xalign">0.5</property>
-		      <property name="yalign">0.5</property>
-		      <property name="xpad">0</property>
-		      <property name="ypad">0</property>
-		      <property name="mnemonic_widget">check_wait_cycles_sync_hack</property>
-		      <property name="ellipsize">PANGO_ELLIPSIZE_NONE</property>
-		      <property name="width_chars">-1</property>
-		      <property name="single_line_mode">False</property>
-		      <property name="angle">0</property>
-		    </widget>
-		    <packing>
-		      <property name="padding">0</property>
-		      <property name="expand">False</property>
-		      <property name="fill">False</property>
-		    </packing>
-		  </child>
-
-		  <child>
-		    <widget class="GtkCheckButton" id="check_intc_sync_hack">
-		      <property name="visible">True</property>
-		      <property name="tooltip" translatable="yes">Huge speedup in many games, and a pretty high compatibility rate (some games still work better with EE sync hacks).</property>
-		      <property name="can_focus">True</property>
-		      <property name="label" translatable="yes">INTC Sync Hack</property>
-		      <property name="use_underline">True</property>
-		      <property name="relief">GTK_RELIEF_NORMAL</property>
-		      <property name="focus_on_click">True</property>
-		      <property name="active">False</property>
-		      <property name="inconsistent">False</property>
-		      <property name="draw_indicator">True</property>
-		    </widget>
-		    <packing>
-		      <property name="padding">0</property>
-		      <property name="expand">False</property>
-		      <property name="fill">False</property>
-		    </packing>
-		  </child>
-
-		  <child>
-		    <widget class="GtkLabel" id="label101">
-		      <property name="visible">True</property>
-		      <property name="label" translatable="yes">Huge speedup in many games, and a pretty high compatibility rate (some games still work better with EE sync hacks).</property>
-		      <property name="use_underline">False</property>
-		      <property name="use_markup">False</property>
-		      <property name="justify">GTK_JUSTIFY_LEFT</property>
-		      <property name="wrap">True</property>
-		      <property name="selectable">False</property>
-		      <property name="xalign">0.5</property>
-		      <property name="yalign">0.5</property>
-		      <property name="xpad">0</property>
-		      <property name="ypad">0</property>
-		      <property name="ellipsize">PANGO_ELLIPSIZE_NONE</property>
-		      <property name="width_chars">-1</property>
-		      <property name="single_line_mode">False</property>
-		      <property name="angle">0</property>
-		    </widget>
-		    <packing>
-		      <property name="padding">0</property>
-		      <property name="expand">False</property>
-		      <property name="fill">False</property>
-		    </packing>
-		  </child>
-
-		  <child>
-		    <widget class="GtkVBox" id="vbox71">
-		      <property name="visible">True</property>
-		      <property name="homogeneous">False</property>
-		      <property name="spacing">0</property>
+		      <property name="label_xalign">0</property>
+		      <property name="label_yalign">0.5</property>
+		      <property name="shadow_type">GTK_SHADOW_ETCHED_IN</property>
 
 		      <child>
-			<widget class="GtkCheckButton" id="check_idle_loop_fastforward">
+			<widget class="GtkAlignment" id="alignment37">
 			  <property name="visible">True</property>
-			  <property name="tooltip" translatable="yes">Speedup for a few games, including FFX with no known side effects.</property>
-			  <property name="can_focus">True</property>
-			  <property name="label" translatable="yes">Idle Loop Fast-Forward (experimental)</property>
-			  <property name="use_underline">True</property>
-			  <property name="relief">GTK_RELIEF_NORMAL</property>
-			  <property name="focus_on_click">True</property>
-			  <property name="active">False</property>
-			  <property name="inconsistent">False</property>
-			  <property name="draw_indicator">True</property>
+			  <property name="xalign">0.5</property>
+			  <property name="yalign">0.5</property>
+			  <property name="xscale">1</property>
+			  <property name="yscale">1</property>
+			  <property name="top_padding">0</property>
+			  <property name="bottom_padding">0</property>
+			  <property name="left_padding">12</property>
+			  <property name="right_padding">0</property>
+
+			  <child>
+			    <widget class="GtkVBox" id="vbox76">
+			      <property name="visible">True</property>
+			      <property name="homogeneous">False</property>
+			      <property name="spacing">0</property>
+
+			      <child>
+				<widget class="GtkCheckButton" id="check_iop_cycle_rate">
+				  <property name="visible">True</property>
+				  <property name="tooltip" translatable="yes">Small speedup, and works well with most games.</property>
+				  <property name="can_focus">True</property>
+				  <property name="label" translatable="yes">Enable IOP x2 Cycle Rate</property>
+				  <property name="use_underline">True</property>
+				  <property name="relief">GTK_RELIEF_NORMAL</property>
+				  <property name="focus_on_click">True</property>
+				  <property name="active">False</property>
+				  <property name="inconsistent">False</property>
+				  <property name="draw_indicator">True</property>
+				</widget>
+				<packing>
+				  <property name="padding">0</property>
+				  <property name="expand">False</property>
+				  <property name="fill">False</property>
+				</packing>
+			      </child>
+
+			      <child>
+				<widget class="GtkCheckButton" id="check_wait_cycles_sync_hack">
+				  <property name="visible">True</property>
+				  <property name="tooltip" translatable="yes">Small speedup. Works well with most games, but it may cause certain games to crash, or freeze up during bootup or stage changes.</property>
+				  <property name="can_focus">True</property>
+				  <property name="label" translatable="yes">WaitCycles Sync Hack</property>
+				  <property name="use_underline">True</property>
+				  <property name="relief">GTK_RELIEF_NORMAL</property>
+				  <property name="focus_on_click">True</property>
+				  <property name="active">False</property>
+				  <property name="inconsistent">False</property>
+				  <property name="draw_indicator">True</property>
+				</widget>
+				<packing>
+				  <property name="padding">0</property>
+				  <property name="expand">False</property>
+				  <property name="fill">False</property>
+				</packing>
+			      </child>
+
+			      <child>
+				<widget class="GtkCheckButton" id="check_intc_sync_hack">
+				  <property name="visible">True</property>
+				  <property name="tooltip" translatable="yes">Huge speedup in many games, and a pretty high compatibility rate (some games still work better with EE sync hacks).</property>
+				  <property name="can_focus">True</property>
+				  <property name="label" translatable="yes">INTC Sync Hack</property>
+				  <property name="use_underline">True</property>
+				  <property name="relief">GTK_RELIEF_NORMAL</property>
+				  <property name="focus_on_click">True</property>
+				  <property name="active">False</property>
+				  <property name="inconsistent">False</property>
+				  <property name="draw_indicator">True</property>
+				</widget>
+				<packing>
+				  <property name="padding">0</property>
+				  <property name="expand">False</property>
+				  <property name="fill">False</property>
+				</packing>
+			      </child>
+
+			      <child>
+				<widget class="GtkCheckButton" id="check_idle_loop_fastforward">
+				  <property name="visible">True</property>
+				  <property name="tooltip" translatable="yes">Speedup for a few games, including FFX with no known side effects.</property>
+				  <property name="can_focus">True</property>
+				  <property name="label" translatable="yes">Idle Loop Fast-Forward (experimental)</property>
+				  <property name="use_underline">True</property>
+				  <property name="relief">GTK_RELIEF_NORMAL</property>
+				  <property name="focus_on_click">True</property>
+				  <property name="active">False</property>
+				  <property name="inconsistent">False</property>
+				  <property name="draw_indicator">True</property>
+				</widget>
+				<packing>
+				  <property name="padding">0</property>
+				  <property name="expand">False</property>
+				  <property name="fill">False</property>
+				</packing>
+			      </child>
+			    </widget>
+			  </child>
 			</widget>
-			<packing>
-			  <property name="padding">0</property>
-			  <property name="expand">False</property>
-			  <property name="fill">False</property>
-			</packing>
 		      </child>
 
 		      <child>
-			<widget class="GtkLabel" id="label110">
+			<widget class="GtkLabel" id="label114">
 			  <property name="visible">True</property>
-			  <property name="label" translatable="yes">Speedup for a few games, including FFX with no known side effects.</property>
+			  <property name="label" translatable="yes">Misc Hacks</property>
 			  <property name="use_underline">False</property>
-			  <property name="use_markup">False</property>
+			  <property name="use_markup">True</property>
 			  <property name="justify">GTK_JUSTIFY_LEFT</property>
-			  <property name="wrap">True</property>
+			  <property name="wrap">False</property>
 			  <property name="selectable">False</property>
 			  <property name="xalign">0.5</property>
 			  <property name="yalign">0.5</property>
@@ -1719,22 +1665,128 @@ If you have problems, Disable all of these and try again.</property>
 			  <property name="angle">0</property>
 			</widget>
 			<packing>
-			  <property name="padding">0</property>
-			  <property name="expand">False</property>
-			  <property name="fill">False</property>
+			  <property name="type">label_item</property>
 			</packing>
 		      </child>
 		    </widget>
 		    <packing>
 		      <property name="padding">0</property>
-		      <property name="expand">True</property>
-		      <property name="fill">True</property>
+		      <property name="expand">False</property>
+		      <property name="fill">False</property>
 		    </packing>
 		  </child>
 
 		  <child>
-		    <widget class="GtkHSeparator" id="hseparator1">
+		    <widget class="GtkFrame" id="frame41">
 		      <property name="visible">True</property>
+		      <property name="label_xalign">0</property>
+		      <property name="label_yalign">0.5</property>
+		      <property name="shadow_type">GTK_SHADOW_ETCHED_IN</property>
+
+		      <child>
+			<widget class="GtkAlignment" id="alignment36">
+			  <property name="visible">True</property>
+			  <property name="xalign">0.5</property>
+			  <property name="yalign">0.5</property>
+			  <property name="xscale">1</property>
+			  <property name="yscale">1</property>
+			  <property name="top_padding">0</property>
+			  <property name="bottom_padding">0</property>
+			  <property name="left_padding">12</property>
+			  <property name="right_padding">0</property>
+
+			  <child>
+			    <widget class="GtkVBox" id="vbox75">
+			      <property name="visible">True</property>
+			      <property name="homogeneous">False</property>
+			      <property name="spacing">0</property>
+
+			      <child>
+				<widget class="GtkCheckButton" id="check_microvu_flag_hack_1">
+				  <property name="visible">True</property>
+				  <property name="tooltip" translatable="yes">Big Speedup and moderately compatible. May cause SPS and Infinite loop problems.</property>
+				  <property name="can_focus">True</property>
+				  <property name="label" translatable="yes">Flag Hack 1 (microVU only)</property>
+				  <property name="use_underline">True</property>
+				  <property name="relief">GTK_RELIEF_NORMAL</property>
+				  <property name="focus_on_click">True</property>
+				  <property name="active">False</property>
+				  <property name="inconsistent">False</property>
+				  <property name="draw_indicator">True</property>
+				</widget>
+				<packing>
+				  <property name="padding">0</property>
+				  <property name="expand">False</property>
+				  <property name="fill">False</property>
+				</packing>
+			      </child>
+
+			      <child>
+				<widget class="GtkCheckButton" id="check_microvu_flag_hack_2">
+				  <property name="visible">True</property>
+				  <property name="tooltip" translatable="yes">Big Speedup and moderately compatible. SuperVU does something similar by default.</property>
+				  <property name="can_focus">True</property>
+				  <property name="label" translatable="yes">Flag Hack 2 (microVU only)</property>
+				  <property name="use_underline">True</property>
+				  <property name="relief">GTK_RELIEF_NORMAL</property>
+				  <property name="focus_on_click">True</property>
+				  <property name="active">False</property>
+				  <property name="inconsistent">False</property>
+				  <property name="draw_indicator">True</property>
+				</widget>
+				<packing>
+				  <property name="padding">0</property>
+				  <property name="expand">False</property>
+				  <property name="fill">False</property>
+				</packing>
+			      </child>
+
+			      <child>
+				<widget class="GtkCheckButton" id="check_microvu_min_max_hack">
+				  <property name="visible">True</property>
+				  <property name="tooltip" translatable="yes">Small Speedup. May cause SPS, hanging, and missing geometry.</property>
+				  <property name="can_focus">True</property>
+				  <property name="label" translatable="yes">Min / Max Hack (microVU only)</property>
+				  <property name="use_underline">True</property>
+				  <property name="relief">GTK_RELIEF_NORMAL</property>
+				  <property name="focus_on_click">True</property>
+				  <property name="active">False</property>
+				  <property name="inconsistent">False</property>
+				  <property name="draw_indicator">True</property>
+				</widget>
+				<packing>
+				  <property name="padding">0</property>
+				  <property name="expand">False</property>
+				  <property name="fill">False</property>
+				</packing>
+			      </child>
+			    </widget>
+			  </child>
+			</widget>
+		      </child>
+
+		      <child>
+			<widget class="GtkLabel" id="label113">
+			  <property name="visible">True</property>
+			  <property name="label" translatable="yes">Vertex Unit (VU) Hacks</property>
+			  <property name="use_underline">False</property>
+			  <property name="use_markup">True</property>
+			  <property name="justify">GTK_JUSTIFY_LEFT</property>
+			  <property name="wrap">False</property>
+			  <property name="selectable">False</property>
+			  <property name="xalign">0.5</property>
+			  <property name="yalign">0.5</property>
+			  <property name="xpad">0</property>
+			  <property name="ypad">0</property>
+			  <property name="ellipsize">PANGO_ELLIPSIZE_NONE</property>
+			  <property name="width_chars">-1</property>
+			  <property name="single_line_mode">False</property>
+			  <property name="angle">0</property>
+			</widget>
+			<packing>
+			  <property name="type">label_item</property>
+			</packing>
+		      </child>
 		    </widget>
 		    <packing>
 		      <property name="padding">0</property>
@@ -1761,125 +1813,6 @@ If you have problems, Disable all of these and try again.</property>
 	  <property name="padding">0</property>
 	  <property name="expand">False</property>
 	  <property name="fill">False</property>
-	</packing>
-      </child>
-
-      <child>
-	<widget class="GtkFrame" id="frame41">
-	  <property name="visible">True</property>
-	  <property name="label_xalign">0</property>
-	  <property name="label_yalign">0.5</property>
-	  <property name="shadow_type">GTK_SHADOW_ETCHED_IN</property>
-
-	  <child>
-	    <widget class="GtkAlignment" id="alignment36">
-	      <property name="visible">True</property>
-	      <property name="xalign">0.5</property>
-	      <property name="yalign">0.5</property>
-	      <property name="xscale">1</property>
-	      <property name="yscale">1</property>
-	      <property name="top_padding">0</property>
-	      <property name="bottom_padding">0</property>
-	      <property name="left_padding">12</property>
-	      <property name="right_padding">0</property>
-
-	      <child>
-		<widget class="GtkVBox" id="vbox75">
-		  <property name="visible">True</property>
-		  <property name="homogeneous">False</property>
-		  <property name="spacing">0</property>
-
-		  <child>
-		    <widget class="GtkCheckButton" id="check_microvu_flag_hack_1">
-		      <property name="visible">True</property>
-		      <property name="tooltip" translatable="yes">Big Speedup and moderately compatible. May cause SPS and Infinite loop problems.</property>
-		      <property name="can_focus">True</property>
-		      <property name="label" translatable="yes">Flag Hack 1 (microVU only)</property>
-		      <property name="use_underline">True</property>
-		      <property name="relief">GTK_RELIEF_NORMAL</property>
-		      <property name="focus_on_click">True</property>
-		      <property name="active">False</property>
-		      <property name="inconsistent">False</property>
-		      <property name="draw_indicator">True</property>
-		    </widget>
-		    <packing>
-		      <property name="padding">0</property>
-		      <property name="expand">False</property>
-		      <property name="fill">False</property>
-		    </packing>
-		  </child>
-
-		  <child>
-		    <widget class="GtkCheckButton" id="check_microvu_flag_hack_2">
-		      <property name="visible">True</property>
-		      <property name="tooltip" translatable="yes">Big Speedup and moderately compatible. SuperVU does something similar by default.</property>
-		      <property name="can_focus">True</property>
-		      <property name="label" translatable="yes">Flag Hack 2 (microVU only)</property>
-		      <property name="use_underline">True</property>
-		      <property name="relief">GTK_RELIEF_NORMAL</property>
-		      <property name="focus_on_click">True</property>
-		      <property name="active">False</property>
-		      <property name="inconsistent">False</property>
-		      <property name="draw_indicator">True</property>
-		    </widget>
-		    <packing>
-		      <property name="padding">0</property>
-		      <property name="expand">False</property>
-		      <property name="fill">False</property>
-		    </packing>
-		  </child>
-
-		  <child>
-		    <widget class="GtkCheckButton" id="check_microvu_min_max_hack">
-		      <property name="visible">True</property>
-		      <property name="tooltip" translatable="yes">Small Speedup. May cause SPS, hanging, and missing geometry.</property>
-		      <property name="can_focus">True</property>
-		      <property name="label" translatable="yes">Min / Max Hack (microVU only)</property>
-		      <property name="use_underline">True</property>
-		      <property name="relief">GTK_RELIEF_NORMAL</property>
-		      <property name="focus_on_click">True</property>
-		      <property name="active">False</property>
-		      <property name="inconsistent">False</property>
-		      <property name="draw_indicator">True</property>
-		    </widget>
-		    <packing>
-		      <property name="padding">0</property>
-		      <property name="expand">False</property>
-		      <property name="fill">False</property>
-		    </packing>
-		  </child>
-		</widget>
-	      </child>
-	    </widget>
-	  </child>
-
-	  <child>
-	    <widget class="GtkLabel" id="label113">
-	      <property name="visible">True</property>
-	      <property name="label" translatable="yes">Vertex Unit (VU) Hacks</property>
-	      <property name="use_underline">False</property>
-	      <property name="use_markup">True</property>
-	      <property name="justify">GTK_JUSTIFY_LEFT</property>
-	      <property name="wrap">False</property>
-	      <property name="selectable">False</property>
-	      <property name="xalign">0.5</property>
-	      <property name="yalign">0.5</property>
-	      <property name="xpad">0</property>
-	      <property name="ypad">0</property>
-	      <property name="ellipsize">PANGO_ELLIPSIZE_NONE</property>
-	      <property name="width_chars">-1</property>
-	      <property name="single_line_mode">False</property>
-	      <property name="angle">0</property>
-	    </widget>
-	    <packing>
-	      <property name="type">label_item</property>
-	    </packing>
-	  </child>
-	</widget>
-	<packing>
-	  <property name="padding">0</property>
-	  <property name="expand">True</property>
-	  <property name="fill">True</property>
 	</packing>
       </child>
     </widget>
@@ -6802,13 +6735,14 @@ Version x.x</property>
 			<widget class="GtkCheckButton" id="GtkCheckButton_VU0rec">
 			  <property name="visible">True</property>
 			  <property name="can_focus">True</property>
-			  <property name="label" translatable="yes">VU0rec - enable recompiler for VU0 unit</property>
+			  <property name="label" translatable="yes">VU0rec - enable recompilers for VU0 unit</property>
 			  <property name="use_underline">True</property>
 			  <property name="relief">GTK_RELIEF_NORMAL</property>
 			  <property name="focus_on_click">True</property>
 			  <property name="active">False</property>
 			  <property name="inconsistent">False</property>
 			  <property name="draw_indicator">True</property>
+			  <signal name="toggled" handler="OnCpuCheckToggled" last_modification_time="Wed, 27 May 2009 20:04:55 GMT"/>
 			</widget>
 			<packing>
 			  <property name="padding">0</property>
@@ -6821,13 +6755,14 @@ Version x.x</property>
 			<widget class="GtkCheckButton" id="GtkCheckButton_VU1rec">
 			  <property name="visible">True</property>
 			  <property name="can_focus">True</property>
-			  <property name="label" translatable="yes">VU1rec - enable recompiler for VU1 unit</property>
+			  <property name="label" translatable="yes">VU1rec - enable recompilers for VU1 unit</property>
 			  <property name="use_underline">True</property>
 			  <property name="relief">GTK_RELIEF_NORMAL</property>
 			  <property name="focus_on_click">True</property>
 			  <property name="active">False</property>
 			  <property name="inconsistent">False</property>
 			  <property name="draw_indicator">True</property>
+			  <signal name="toggled" handler="OnCpuCheckToggled" last_modification_time="Wed, 27 May 2009 20:04:55 GMT"/>
 			</widget>
 			<packing>
 			  <property name="padding">0</property>
@@ -6906,6 +6841,7 @@ Version x.x</property>
 			      <property name="active">False</property>
 			      <property name="inconsistent">False</property>
 			      <property name="draw_indicator">True</property>
+			      <signal name="toggled" handler="OnCpuCheckToggled" last_modification_time="Wed, 27 May 2009 20:05:54 GMT"/>
 			    </widget>
 			    <packing>
 			      <property name="padding">0</property>
@@ -6925,6 +6861,7 @@ Version x.x</property>
 			      <property name="active">False</property>
 			      <property name="inconsistent">False</property>
 			      <property name="draw_indicator">True</property>
+			      <signal name="toggled" handler="OnCpuCheckToggled" last_modification_time="Wed, 27 May 2009 20:06:02 GMT"/>
 			    </widget>
 			    <packing>
 			      <property name="padding">0</property>
