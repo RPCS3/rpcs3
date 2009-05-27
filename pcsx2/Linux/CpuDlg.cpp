@@ -31,6 +31,10 @@ void OnCpu_Ok(GtkButton *button, gpointer user_data)
 		newopts |= PCSX2_VU0REC;
 	if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lookup_widget(CpuDlg, "GtkCheckButton_VU1rec"))))
 		newopts |= PCSX2_VU1REC;
+	if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lookup_widget(CpuDlg, "GtkCheckButton_microVU0rec"))))
+		newopts |= PCSX2_MICROVU0;
+	if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lookup_widget(CpuDlg, "GtkCheckButton_microVU1rec"))))
+		newopts |= PCSX2_MICROVU1;
 	if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lookup_widget(CpuDlg, "GtkCheckButton_MTGS"))))
 		newopts |= PCSX2_GSMULTITHREAD;
 	if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lookup_widget(CpuDlg, "GtkRadioButton_LimitNormal"))))
@@ -39,7 +43,7 @@ void OnCpu_Ok(GtkButton *button, gpointer user_data)
 		newopts |= PCSX2_FRAMELIMIT_LIMIT;
 	else if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lookup_widget(CpuDlg, "GtkRadioButton_LimitFS"))))
 		newopts |= PCSX2_FRAMELIMIT_SKIP;
-
+	
 	Config.CustomFps = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(lookup_widget(CpuDlg, "CustomFPSLimit")));
 	Config.CustomFrameSkip = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(lookup_widget(CpuDlg, "FrameThreshold")));
 	Config.CustomConsecutiveFrames = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(lookup_widget(CpuDlg, "FramesBeforeSkipping")));
@@ -82,6 +86,8 @@ void OnConf_Cpu(GtkMenuItem *menuitem, gpointer user_data)
 	gtk_toggle_button_set_state(GTK_TOGGLE_BUTTON(lookup_widget(CpuDlg, "GtkCheckButton_EERec")), !!CHECK_EEREC);
 	gtk_toggle_button_set_state(GTK_TOGGLE_BUTTON(lookup_widget(CpuDlg, "GtkCheckButton_VU0rec")), !!CHECK_VU0REC);
 	gtk_toggle_button_set_state(GTK_TOGGLE_BUTTON(lookup_widget(CpuDlg, "GtkCheckButton_VU1rec")), !!CHECK_VU1REC);
+	gtk_toggle_button_set_state(GTK_TOGGLE_BUTTON(lookup_widget(CpuDlg, "GtkCheckButton_microVU0rec")), !!CHECK_MICROVU0);
+	gtk_toggle_button_set_state(GTK_TOGGLE_BUTTON(lookup_widget(CpuDlg, "GtkCheckButton_microVU1rec")), !!CHECK_MICROVU1);
 	gtk_toggle_button_set_state(GTK_TOGGLE_BUTTON(lookup_widget(CpuDlg, "GtkCheckButton_MTGS")), !!CHECK_MULTIGS);
 	gtk_toggle_button_set_state(GTK_TOGGLE_BUTTON(lookup_widget(CpuDlg, "GtkRadioButton_LimitNormal")), CHECK_FRAMELIMIT == PCSX2_FRAMELIMIT_NORMAL);
 	gtk_toggle_button_set_state(GTK_TOGGLE_BUTTON(lookup_widget(CpuDlg, "GtkRadioButton_LimitLimit")), CHECK_FRAMELIMIT == PCSX2_FRAMELIMIT_LIMIT);

@@ -55,7 +55,7 @@
 #		else
 #			define jBREAKPOINT() ((void) *(volatile char *) 0)
 #		endif
-#		define jASSUME(exp) do { if(exp) ; else jBREAKPOINT() } while(0);
+#		define jASSUME(exp) do { if(exp) ; else jBREAKPOINT(); } while(0);
 #	endif
 #endif
 
@@ -94,6 +94,13 @@ default: \
 #define __naked __declspec(naked)
 #define __unused /*unused*/
 #define __noinline __declspec(noinline) 
+
+// Don't know if there are Visual C++ equivalents of these. 
+#define __hot
+#define __cold
+#define likely(x) x
+#define unlikely(x) x
+
 #define CALLBACK    __stdcall
 
 #else
@@ -106,7 +113,7 @@ default: \
 /* Test for GCC > 4.4.0; Should be adjusted when new versions come out */
 #if GCC_VERSION >= 40400
 #define THE_UNBEARABLE_LIGHTNESS_OF_BEING_GCC_4_4_0
-#define __nooptimization __attribute__((optimize("O0"))
+#define __nooptimization __attribute__((optimize("O0")))
 #endif
 
 /*
@@ -137,6 +144,10 @@ This theoretically unoptimizes. Not having much luck so far.
 #define _inline __inline__ __attribute__((unused))
 #define __forceinline __attribute__((always_inline,unused))
 #define __noinline __attribute__((noinline))
+#define __hot __attribute__((hot))
+#define __cold __attribute__((cold))
+#define likely(x)	__builtin_expect(!!(x), 1)
+#define unlikely(x)	__builtin_expect(!!(x), 0)
 #endif
 
 #ifndef THE_UNBEARABLE_LIGHTNESS_OF_BEING_GCC_4_4_0

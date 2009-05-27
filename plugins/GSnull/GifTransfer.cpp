@@ -37,8 +37,6 @@ PCSX2_ALIGNED16( u8 g_RealGSMem[0x2000] );
 
 static void RegHandlerSIGNAL(const u32* data)
 {
-	//MTGS_LOG("MTGS SIGNAL data %x_%x CSRw %x\n",data[0], data[1], CSRw);
-
 	GSSIGLBLID->SIGID = (GSSIGLBLID->SIGID&~data[1])|(data[0]&data[1]);
 	
 	if ((CSRw & 0x1))  GSCSRr |= 1; // signal
@@ -48,8 +46,6 @@ static void RegHandlerSIGNAL(const u32* data)
 
 static void RegHandlerFINISH(const u32* data)
 {
-	//MTGS_LOG("MTGS FINISH data %x_%x CSRw %x\n",data[0], data[1], CSRw);
-
 	if ((CSRw & 0x2))  GSCSRr |= 2; // finish
 		
 	if (!(GSIMR & 0x200) ) GSirq();

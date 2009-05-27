@@ -343,7 +343,12 @@ void SuperVUAlloc(int vuindex)
 	{
 		// upper 4 bits must be zero!
 		// Changed "first try base" to 0xb800000, since 0x0c000000 liked to fail a lot. (air)
+		// With microVU as optional now, Linux fails with 0x0e000000, and prefers 0x0c000000. --arcum42
+#ifdef __LINUX__
+		s_recVUMem = SysMmapEx(0x0c000000, VU_EXESIZE, 0x10000000, "SuperVUAlloc");
+#else
 		s_recVUMem = SysMmapEx(0x0e000000, VU_EXESIZE, 0x10000000, "SuperVUAlloc");
+#endif
 
 		if (s_recVUMem == NULL)
 		{

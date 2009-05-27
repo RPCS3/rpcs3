@@ -644,9 +644,19 @@ create_SpeedHacksDlg (void)
   GtkWidget *check_idle_loop_fastforward;
   GtkWidget *label110;
   GtkWidget *hseparator1;
+  GtkWidget *frame41;
+  GtkWidget *alignment36;
+  GtkWidget *vbox75;
+  GtkWidget *check_microvu_flag_hack_1;
+  GtkWidget *check_microvu_flag_hack_2;
+  GtkWidget *check_microvu_min_max_hack;
+  GtkWidget *label113;
   GtkWidget *dialog_action_area3;
   GtkWidget *button99;
   GtkWidget *button98;
+  GtkTooltips *tooltips;
+
+  tooltips = gtk_tooltips_new ();
 
   SpeedHacksDlg = gtk_dialog_new ();
   gtk_widget_set_name (SpeedHacksDlg, "SpeedHacksDlg");
@@ -717,7 +727,7 @@ create_SpeedHacksDlg (void)
   gtk_box_pack_start (GTK_BOX (vbox61), label91, FALSE, FALSE, 0);
   gtk_label_set_line_wrap (GTK_LABEL (label91), TRUE);
 
-  label105 = gtk_label_new (_("<b>EmotionEngine (EE) Sync Hacks</b>"));
+  label105 = gtk_label_new (_("EmotionEngine (EE) Sync Hacks"));
   gtk_widget_set_name (label105, "label105");
   gtk_widget_show (label105);
   gtk_frame_set_label_widget (GTK_FRAME (frame37), label105);
@@ -752,7 +762,7 @@ create_SpeedHacksDlg (void)
   gtk_box_pack_start (GTK_BOX (vbox73), vu_cycle_stealing_label, FALSE, FALSE, 0);
   gtk_label_set_line_wrap (GTK_LABEL (vu_cycle_stealing_label), TRUE);
 
-  label111 = gtk_label_new (_("<b>VU Cycle Stealing (Speedup for 3d geometry)</b>"));
+  label111 = gtk_label_new (_("VU Cycle Stealing (Speedup for 3d geometry)"));
   gtk_widget_set_name (label111, "label111");
   gtk_widget_show (label111);
   gtk_frame_set_label_widget (GTK_FRAME (frame39), label111);
@@ -767,8 +777,9 @@ create_SpeedHacksDlg (void)
   gtk_widget_set_name (check_iop_cycle_rate, "check_iop_cycle_rate");
   gtk_widget_show (check_iop_cycle_rate);
   gtk_box_pack_start (GTK_BOX (vbox60), check_iop_cycle_rate, FALSE, FALSE, 0);
+  gtk_tooltips_set_tip (tooltips, check_iop_cycle_rate, _("Small speedup, and works well with most games."), NULL);
 
-  label96 = gtk_label_new (_("Small speedup, and works well with most games,"));
+  label96 = gtk_label_new (_("Small speedup, and works well with most games."));
   gtk_widget_set_name (label96, "label96");
   gtk_widget_show (label96);
   gtk_box_pack_start (GTK_BOX (vbox60), label96, FALSE, FALSE, 0);
@@ -778,6 +789,7 @@ create_SpeedHacksDlg (void)
   gtk_widget_set_name (check_wait_cycles_sync_hack, "check_wait_cycles_sync_hack");
   gtk_widget_show (check_wait_cycles_sync_hack);
   gtk_box_pack_start (GTK_BOX (vbox60), check_wait_cycles_sync_hack, FALSE, FALSE, 0);
+  gtk_tooltips_set_tip (tooltips, check_wait_cycles_sync_hack, _("Small speedup. Works well with most games, but it may cause certain games to crash, or freeze up during bootup or stage changes."), NULL);
 
   label97 = gtk_label_new (_("Small speedup. Works well with most games, but it may cause certain games to crash, or freeze up during bootup or stage changes."));
   gtk_widget_set_name (label97, "label97");
@@ -789,6 +801,7 @@ create_SpeedHacksDlg (void)
   gtk_widget_set_name (check_intc_sync_hack, "check_intc_sync_hack");
   gtk_widget_show (check_intc_sync_hack);
   gtk_box_pack_start (GTK_BOX (vbox60), check_intc_sync_hack, FALSE, FALSE, 0);
+  gtk_tooltips_set_tip (tooltips, check_intc_sync_hack, _("Huge speedup in many games, and a pretty high compatibility rate (some games still work better with EE sync hacks)."), NULL);
 
   label101 = gtk_label_new (_("Huge speedup in many games, and a pretty high compatibility rate (some games still work better with EE sync hacks)."));
   gtk_widget_set_name (label101, "label101");
@@ -805,8 +818,9 @@ create_SpeedHacksDlg (void)
   gtk_widget_set_name (check_idle_loop_fastforward, "check_idle_loop_fastforward");
   gtk_widget_show (check_idle_loop_fastforward);
   gtk_box_pack_start (GTK_BOX (vbox71), check_idle_loop_fastforward, FALSE, FALSE, 0);
+  gtk_tooltips_set_tip (tooltips, check_idle_loop_fastforward, _("Speedup for a few games, including FFX with no known side effects."), NULL);
 
-  label110 = gtk_label_new (_("Speedup for a few games, including FFX with no known side effects.  More later."));
+  label110 = gtk_label_new (_("Speedup for a few games, including FFX with no known side effects."));
   gtk_widget_set_name (label110, "label110");
   gtk_widget_show (label110);
   gtk_box_pack_start (GTK_BOX (vbox71), label110, FALSE, FALSE, 0);
@@ -816,6 +830,46 @@ create_SpeedHacksDlg (void)
   gtk_widget_set_name (hseparator1, "hseparator1");
   gtk_widget_show (hseparator1);
   gtk_box_pack_start (GTK_BOX (vbox60), hseparator1, FALSE, FALSE, 0);
+
+  frame41 = gtk_frame_new (NULL);
+  gtk_widget_set_name (frame41, "frame41");
+  gtk_widget_show (frame41);
+  gtk_box_pack_start (GTK_BOX (dialog_vbox3), frame41, TRUE, TRUE, 0);
+
+  alignment36 = gtk_alignment_new (0.5, 0.5, 1, 1);
+  gtk_widget_set_name (alignment36, "alignment36");
+  gtk_widget_show (alignment36);
+  gtk_container_add (GTK_CONTAINER (frame41), alignment36);
+  gtk_alignment_set_padding (GTK_ALIGNMENT (alignment36), 0, 0, 12, 0);
+
+  vbox75 = gtk_vbox_new (FALSE, 0);
+  gtk_widget_set_name (vbox75, "vbox75");
+  gtk_widget_show (vbox75);
+  gtk_container_add (GTK_CONTAINER (alignment36), vbox75);
+
+  check_microvu_flag_hack_1 = gtk_check_button_new_with_mnemonic (_("Flag Hack 1 (microVU only)"));
+  gtk_widget_set_name (check_microvu_flag_hack_1, "check_microvu_flag_hack_1");
+  gtk_widget_show (check_microvu_flag_hack_1);
+  gtk_box_pack_start (GTK_BOX (vbox75), check_microvu_flag_hack_1, FALSE, FALSE, 0);
+  gtk_tooltips_set_tip (tooltips, check_microvu_flag_hack_1, _("Big Speedup and moderately compatible. May cause SPS and Infinite loop problems."), NULL);
+
+  check_microvu_flag_hack_2 = gtk_check_button_new_with_mnemonic (_("Flag Hack 2 (microVU only)"));
+  gtk_widget_set_name (check_microvu_flag_hack_2, "check_microvu_flag_hack_2");
+  gtk_widget_show (check_microvu_flag_hack_2);
+  gtk_box_pack_start (GTK_BOX (vbox75), check_microvu_flag_hack_2, FALSE, FALSE, 0);
+  gtk_tooltips_set_tip (tooltips, check_microvu_flag_hack_2, _("Big Speedup and moderately compatible. SuperVU does something similar by default."), NULL);
+
+  check_microvu_min_max_hack = gtk_check_button_new_with_mnemonic (_("Min / Max Hack (microVU only)"));
+  gtk_widget_set_name (check_microvu_min_max_hack, "check_microvu_min_max_hack");
+  gtk_widget_show (check_microvu_min_max_hack);
+  gtk_box_pack_start (GTK_BOX (vbox75), check_microvu_min_max_hack, FALSE, FALSE, 0);
+  gtk_tooltips_set_tip (tooltips, check_microvu_min_max_hack, _("Small Speedup. May cause SPS, hanging, and missing geometry."), NULL);
+
+  label113 = gtk_label_new (_("Vertex Unit (VU) Hacks"));
+  gtk_widget_set_name (label113, "label113");
+  gtk_widget_show (label113);
+  gtk_frame_set_label_widget (GTK_FRAME (frame41), label113);
+  gtk_label_set_use_markup (GTK_LABEL (label113), TRUE);
 
   dialog_action_area3 = GTK_DIALOG (SpeedHacksDlg)->action_area;
   gtk_widget_set_name (dialog_action_area3, "dialog_action_area3");
@@ -882,9 +936,17 @@ create_SpeedHacksDlg (void)
   GLADE_HOOKUP_OBJECT (SpeedHacksDlg, check_idle_loop_fastforward, "check_idle_loop_fastforward");
   GLADE_HOOKUP_OBJECT (SpeedHacksDlg, label110, "label110");
   GLADE_HOOKUP_OBJECT (SpeedHacksDlg, hseparator1, "hseparator1");
+  GLADE_HOOKUP_OBJECT (SpeedHacksDlg, frame41, "frame41");
+  GLADE_HOOKUP_OBJECT (SpeedHacksDlg, alignment36, "alignment36");
+  GLADE_HOOKUP_OBJECT (SpeedHacksDlg, vbox75, "vbox75");
+  GLADE_HOOKUP_OBJECT (SpeedHacksDlg, check_microvu_flag_hack_1, "check_microvu_flag_hack_1");
+  GLADE_HOOKUP_OBJECT (SpeedHacksDlg, check_microvu_flag_hack_2, "check_microvu_flag_hack_2");
+  GLADE_HOOKUP_OBJECT (SpeedHacksDlg, check_microvu_min_max_hack, "check_microvu_min_max_hack");
+  GLADE_HOOKUP_OBJECT (SpeedHacksDlg, label113, "label113");
   GLADE_HOOKUP_OBJECT_NO_REF (SpeedHacksDlg, dialog_action_area3, "dialog_action_area3");
   GLADE_HOOKUP_OBJECT (SpeedHacksDlg, button99, "button99");
   GLADE_HOOKUP_OBJECT (SpeedHacksDlg, button98, "button98");
+  GLADE_HOOKUP_OBJECT_NO_REF (SpeedHacksDlg, tooltips, "tooltips");
 
   return SpeedHacksDlg;
 }
@@ -3859,6 +3921,12 @@ create_CpuDlg (void)
   GtkWidget *GtkCheckButton_VU0rec;
   GtkWidget *GtkCheckButton_VU1rec;
   GtkWidget *label32;
+  GtkWidget *frame40;
+  GtkWidget *alignment35;
+  GtkWidget *vbox74;
+  GtkWidget *GtkCheckButton_microVU0rec;
+  GtkWidget *GtkCheckButton_microVU1rec;
+  GtkWidget *label112;
   GtkWidget *GtkCheckButton_MTGS;
   GtkWidget *vbox48;
   GtkWidget *frame9;
@@ -3984,10 +4052,43 @@ create_CpuDlg (void)
   gtk_widget_show (GtkCheckButton_VU1rec);
   gtk_box_pack_start (GTK_BOX (vbox26), GtkCheckButton_VU1rec, FALSE, FALSE, 0);
 
-  label32 = gtk_label_new (_("VU Recompilers - All options are set by default"));
+  label32 = gtk_label_new (_("VU Recompilers"));
   gtk_widget_set_name (label32, "label32");
   gtk_widget_show (label32);
   gtk_frame_set_label_widget (GTK_FRAME (frame6), label32);
+
+  frame40 = gtk_frame_new (NULL);
+  gtk_widget_set_name (frame40, "frame40");
+  gtk_widget_show (frame40);
+  gtk_box_pack_start (GTK_BOX (vbox47), frame40, FALSE, FALSE, 0);
+  gtk_container_set_border_width (GTK_CONTAINER (frame40), 5);
+
+  alignment35 = gtk_alignment_new (0.5, 0.5, 1, 1);
+  gtk_widget_set_name (alignment35, "alignment35");
+  gtk_widget_show (alignment35);
+  gtk_container_add (GTK_CONTAINER (frame40), alignment35);
+  gtk_container_set_border_width (GTK_CONTAINER (alignment35), 5);
+
+  vbox74 = gtk_vbox_new (FALSE, 0);
+  gtk_widget_set_name (vbox74, "vbox74");
+  gtk_widget_show (vbox74);
+  gtk_container_add (GTK_CONTAINER (alignment35), vbox74);
+
+  GtkCheckButton_microVU0rec = gtk_check_button_new_with_mnemonic (_("microVU0 - Use microVU rec instead of VU0rec. ! Beta !"));
+  gtk_widget_set_name (GtkCheckButton_microVU0rec, "GtkCheckButton_microVU0rec");
+  gtk_widget_show (GtkCheckButton_microVU0rec);
+  gtk_box_pack_start (GTK_BOX (vbox74), GtkCheckButton_microVU0rec, FALSE, FALSE, 0);
+
+  GtkCheckButton_microVU1rec = gtk_check_button_new_with_mnemonic (_("microVU1 - Use microVU rec instead of VU1rec. ! Beta !"));
+  gtk_widget_set_name (GtkCheckButton_microVU1rec, "GtkCheckButton_microVU1rec");
+  gtk_widget_show (GtkCheckButton_microVU1rec);
+  gtk_box_pack_start (GTK_BOX (vbox74), GtkCheckButton_microVU1rec, FALSE, FALSE, 0);
+
+  label112 = gtk_label_new (_("microVU Recompilers - ! Beta !"));
+  gtk_widget_set_name (label112, "label112");
+  gtk_widget_show (label112);
+  gtk_frame_set_label_widget (GTK_FRAME (frame40), label112);
+  gtk_label_set_use_markup (GTK_LABEL (label112), TRUE);
 
   GtkCheckButton_MTGS = gtk_check_button_new_with_mnemonic (_("Multi threaded GS mode (MTGS)\n (faster on dual core/HT CPUs, requires pcsx2 restart)"));
   gtk_widget_set_name (GtkCheckButton_MTGS, "GtkCheckButton_MTGS");
@@ -4194,6 +4295,12 @@ create_CpuDlg (void)
   GLADE_HOOKUP_OBJECT (CpuDlg, GtkCheckButton_VU0rec, "GtkCheckButton_VU0rec");
   GLADE_HOOKUP_OBJECT (CpuDlg, GtkCheckButton_VU1rec, "GtkCheckButton_VU1rec");
   GLADE_HOOKUP_OBJECT (CpuDlg, label32, "label32");
+  GLADE_HOOKUP_OBJECT (CpuDlg, frame40, "frame40");
+  GLADE_HOOKUP_OBJECT (CpuDlg, alignment35, "alignment35");
+  GLADE_HOOKUP_OBJECT (CpuDlg, vbox74, "vbox74");
+  GLADE_HOOKUP_OBJECT (CpuDlg, GtkCheckButton_microVU0rec, "GtkCheckButton_microVU0rec");
+  GLADE_HOOKUP_OBJECT (CpuDlg, GtkCheckButton_microVU1rec, "GtkCheckButton_microVU1rec");
+  GLADE_HOOKUP_OBJECT (CpuDlg, label112, "label112");
   GLADE_HOOKUP_OBJECT (CpuDlg, GtkCheckButton_MTGS, "GtkCheckButton_MTGS");
   GLADE_HOOKUP_OBJECT (CpuDlg, vbox48, "vbox48");
   GLADE_HOOKUP_OBJECT (CpuDlg, frame9, "frame9");
