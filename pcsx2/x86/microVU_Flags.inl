@@ -82,9 +82,10 @@ microVUt(int) mVUsetFlags(int* xStatus, int* xMac, int* xClip) {
 	u32 aCount = 1; // Amount of instructions needed to get valid mac flag instances for block linking
 
 	// Ensure last ~4+ instructions update mac flags
+	setCode();
 	for (int i = mVUcount; i > 0; i--, aCount++) {
-		if (doStatus) { if (__Mac) { mVUinfo |= _doMac; } if (aCount > 4) { break; } }
-		incPC2(-2);
+		if (doStatus) { if (__Mac) { mVUinfo |= _doMac; } if (aCount >= 4) { break; } }
+		incPC(-2);
 	}
 
 	// Status/Mac Flags Setup Code

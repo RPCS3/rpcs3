@@ -322,7 +322,7 @@ microVUt(void) mVUanalyzeMflag(int Is, int It) {
 		mVUinfo |= _swapOps;
 		if (mVUcount < 4) { mVUpBlock->pState.needExactMatch |= 0xf << (/*mVUcount +*/ 4); }
 		int curPC = iPC;
-		for (int i = mVUcount, j = 0; i > 1; i--, j++) {
+		for (int i = mVUcount, j = 0; i > 0; i--, j++) {
 			incPC2(-2);
 			if (doStatus) { mVUinfo |= _doMac; if (j >= 3) { break; } }
 		}
