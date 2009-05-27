@@ -511,7 +511,7 @@ void GSDevice10::IASetVertexBuffer(const void* vertices, size_t stride, size_t c
 {
 	ASSERT(m_vertices.count == 0);
 
-	if(count > m_vertices.limit)
+	if(count * stride > m_vertices.limit * m_vertices.stride)
 	{
 		m_vertices.vb_old = m_vertices.vb;
 		m_vertices.vb = NULL;

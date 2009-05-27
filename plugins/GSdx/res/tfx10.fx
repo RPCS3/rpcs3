@@ -414,11 +414,11 @@ PS_OUTPUT ps_main(PS_INPUT input)
 	{
 		if(TCC == 0) 
 		{
-			c.rgb = c.rgb * t.rgb * 2;
+			c.rgb = c.rgb * t.rgb * 255.0f / 128;
 		}
 		else
 		{
-			c = c * t * 2;
+			c = c * t * 255.0f / 128;
 		}
 	}
 	else if(TFX == 1)
@@ -434,7 +434,7 @@ PS_OUTPUT ps_main(PS_INPUT input)
 	}
 	else if(TFX == 2)
 	{
-		c.rgb = c.rgb * t.rgb * 2 + c.a;
+		c.rgb = c.rgb * t.rgb * 255.0f / 128 + c.a;
 		
 		if(TCC == 1) 
 		{
@@ -443,7 +443,7 @@ PS_OUTPUT ps_main(PS_INPUT input)
 	}
 	else if(TFX == 3)
 	{
-		c.rgb = c.rgb * t.rgb * 2 + c.a;
+		c.rgb = c.rgb * t.rgb * 255.0f / 128 + c.a;
 		
 		if(TCC == 1) 
 		{

@@ -241,11 +241,11 @@ float4 ps_main(PS_INPUT input) : COLOR
 	{
 		if(TCC == 0) 
 		{
-			c.rgb = c.rgb * t.rgb * 2;
+			c.rgb = c.rgb * t.rgb * 255.0f / 128;
 		}
 		else
 		{
-			c = c * t * 2;
+			c = c * t * 255.0f / 128;
 		}
 	}
 	else if(TFX == 1)
@@ -261,7 +261,7 @@ float4 ps_main(PS_INPUT input) : COLOR
 	}
 	else if(TFX == 2)
 	{
-		c.rgb = c.rgb * t.rgb * 2 + c.a;
+		c.rgb = c.rgb * t.rgb * 255.0f / 128 + c.a;
 
 		if(TCC == 1) 
 		{
@@ -270,7 +270,7 @@ float4 ps_main(PS_INPUT input) : COLOR
 	}
 	else if(TFX == 3)
 	{
-		c.rgb = c.rgb * t.rgb * 2 + c.a;
+		c.rgb = c.rgb * t.rgb * 255.0f / 128 + c.a;
 
 		if(TCC == 1) 
 		{
@@ -292,7 +292,7 @@ float4 ps_main(PS_INPUT input) : COLOR
 		}
 		else if(ATST == 4) // e
 		{
-			clip(0.6f / 256 - abs(c.a - AREF)); // FIXME: 0.5f is too small
+			clip(0.6f / 255 - abs(c.a - AREF)); // FIXME: 0.5f is too small
 		}
 		else if(ATST == 5 || ATST == 6) // ge, g
 		{
