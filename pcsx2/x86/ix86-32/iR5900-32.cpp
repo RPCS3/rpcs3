@@ -75,7 +75,7 @@ u32 g_cpuHasConstReg = 0, g_cpuFlushedConstReg = 0;
 // Static Private Variables - R5900 Dynarec
 
 #define X86
-static const int RECSTACK_SIZE = 0x00010000;
+static const int RECSTACK_SIZE = 0x00020000;
 
 static u8 *recMem = NULL;			// the recompiled blocks will be here
 static u8* recStack = NULL;			// stack mem
@@ -349,7 +349,9 @@ int _flushUnusedConstReg()
 //
 u32* recAllocStackMem(int size, int align)
 {
-	recStackPtr += align - ((u32)recStackPtr % align);
+	jASSUME( align == 4 || align == 8 || align == 16 );
+
+	recStackPtr = (u8*) ( (((uptr)recStackPtr) + (align-1)) & ~(align-1) );
 	recStackPtr += size;
 	return (u32*)(recStackPtr-size);
 }
