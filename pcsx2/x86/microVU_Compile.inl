@@ -56,6 +56,8 @@
 #define incP()				{ mVU->p = (mVU->p+1) & 1; }
 #define incQ()				{ mVU->q = (mVU->q+1) & 1; }
 #define doUpperOp()			{ mVUopU<vuIndex, 1>(); mVUdivSet<vuIndex>(); }
+#define doLowerOp()			{ incPC(-1); mVUopL<vuIndex, 1>(); incPC(1); }
+#define doIbit()			{ if (curI & _Ibit_) { incPC(-1); MOV32ItoM((uptr)&mVU->regs->VI[REG_I].UL, curI); incPC(1); } }
 
 //------------------------------------------------------------------
 // Helper Functions
@@ -274,8 +276,8 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 	int x;
 	for (x = 0; x < (vuIndex ? (0x3fff/8) : (0xfff/8)); x++) {
 		if (isEOB)			{ x = 0xffff; }
-		if (isNOP)			{ incPC(1); doUpperOp(); if (curI & _Ibit_) { incPC(-1); MOV32ItoM((uptr)&mVU->regs->VI[REG_I].UL, curI); incPC(1); } }
-		else if (!swapOps)	{ incPC(1); doUpperOp(); incPC(-1); mVUopL<vuIndex, 1>(); incPC(1); }
+		if (isNOP)			{ incPC(1); doUpperOp(); doIbit(); }
+		else if (!swapOps)	{ incPC(1); doUpperOp(); doLowerOp(); }
 		else				{ mVUopL<vuIndex, 1>(); incPC(1); doUpperOp(); }
 		
 		if (!isBdelay) { incPC(1); }
@@ -364,12 +366,22 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 eBitTemination:
 
 	mVUprint("mVUcompile ebit");
+	int lStatus = findFlagInst(xStatus, 0x7fffffff);
+	int lMac	= findFlagInst(xMac,	0x7fffffff);
+	int lClip	= findFlagInst(xClip,	0x7fffffff);
+	mVUinfo = 0;
 	incCycles(100); // Ensures Valid P/Q instances (And sets all cycle data to 0)
 	mVUcycles -= 100;
+	if (doDivFlag) {
+		int flagReg;
+		getFlagReg(flagReg, lStatus);
+		AND32ItoR (flagReg, 0x0fcf);
+		OR32MtoR  (flagReg, (uptr)&mVU->divFlag);
+	}
 
 	// Do E-bit end stuff here
 	mVUsetupRange<vuIndex>(xPC - 8);
-	mVUendProgram<vuIndex>(mVU->q, mVU->p, findFlagInst(xStatus, 0x7fffffff), findFlagInst(xMac, 0x7fffffff), findFlagInst(xClip, 0x7fffffff));
+	mVUendProgram<vuIndex>(mVU->q, mVU->p, lStatus, lMac, lClip);
 
 	return thisPtr;
 }

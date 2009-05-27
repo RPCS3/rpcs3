@@ -291,9 +291,9 @@ declareAllVariables
 #endif
 
 // Speed Hacks (Set to 1 to turn On)
-#define CHECK_VU_FLAGHACK	0 // Status Flag Speed Hack (Very-Compatible)
-#define CHECK_VU_FLAGHACK2	0 // Status Flag Speed Hack (More-Hacky)
-#define CHECK_VU_MINMAXHACK	0 // Min/Max Speed Hack		(Semi-Compatible)
+#define CHECK_VU_FLAGHACK	0 // Status Flag Speed Hack (Can cause Infinite loops, SPS, etc...)
+#define CHECK_VU_FLAGHACK2	0 // Status Flag Speed Hack (Can cause Infinite loops, SPS, etc...)
+#define CHECK_VU_MINMAXHACK	0 // Min/Max Speed Hack		(Can cause SPS, Black Screens,  etc...)
 
 // Cache Limit Check
 #define mVUcacheCheck(ptr, start, limit) {																\

@@ -44,6 +44,9 @@ microVUt(void) __mVUdumpProgram(int progIndex) {
 	bool bitX[7];
 	char str[30];
 	int	delay = 0;
+	int bBranch = mVUbranch;
+	int bCode	= mVU->code;
+	int bPC		= iPC;
 	mVUbranch = 0;
 
 	sprintf(str, "%s\\microVU%d prog - %02d.html", LOGS_DIR, vuIndex, progIndex);
@@ -116,6 +119,10 @@ microVUt(void) __mVUdumpProgram(int progIndex) {
 	mVUlog("</body>\n");
 	mVUlog("</html>\n");
 	fclose(mVU->logFile);
+	mVUbranch = bBranch;
+	mVU->code = bCode;
+	iPC		  = bPC;
+	setCode();
 }
 
 #endif //PCSX2_MICROVU

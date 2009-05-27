@@ -302,12 +302,15 @@ microVUt(void) mVUrestoreRegs() {
 microVUt(void) mVUcheckSflag(int progIndex) {
 	if (CHECK_VU_FLAGHACK) {
 		microVU* mVU = mVUx;
-		mVUsFlagHack = 1;
+		int bFlagInfo = mVUflagInfo;
+		int bCode	  = mVU->code;
+		mVUsFlagHack  = 1;
 		for (u32 i = 0; i < mVU->progSize; i+=2) {
 			mVU->code = mVU->prog.prog[progIndex].data[i];
 			mVUopL<vuIndex, 3>();
 		}
-		mVUflagInfo = 0;
+		mVUflagInfo = bFlagInfo;
+		mVU->code	= bCode;
 		mVU->prog.prog[progIndex].sFlagHack = mVUsFlagHack;
 	}
 }
