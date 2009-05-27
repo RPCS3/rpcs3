@@ -883,9 +883,9 @@ BEGIN
     LTEXT           "Consecutive Frames to skip:\n(See Note 3)",IDC_FRAMESKIP_LABEL5,327,157,121,17
     LTEXT           "*Note 3: Will skip this number of frames before\n  rendering the next sequence of frames. (0=default)\n (e.g. If set to 2, will skip 2 consecutive frames whenever its time\n  to skip.)",IDC_FRAMESKIP_LABEL6,318,234,217,32
     GROUPBOX        "Use microVU?",IDC_CPU_VUGROUP2,14,167,235,47
-    CONTROL         "microVU0 - Use microVU rec for VU0 recompilation.",IDC_CPU_MVU0,
+    CONTROL         "microVU0 - Use microVU rec for VU0 recompilation. ! Beta !",IDC_CPU_MVU0,
                     "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,24,180,215,13
-    CONTROL         "microVU1 - Use microVU rec for VU1 recompilation.",IDC_CPU_MVU1,
+    CONTROL         "microVU1 - Use microVU rec for VU1 recompilation. ! Beta !",IDC_CPU_MVU1,
                     "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,24,195,215,13
 END
 

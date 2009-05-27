@@ -159,7 +159,7 @@ microVUt(int) mVUfindLeastUsedProg() {
 		mVUcacheProg<vuIndex>(mVU->prog.total); // Cache Micro Program
 		mVU->prog.prog[mVU->prog.total].used = 1;
 		mVU->prog.prog[mVU->prog.total].last_used = 3;
-		Console::Notice("microVU%d: Cached MicroPrograms = %d", params vuIndex, mVU->prog.total+1);
+		DevCon::Notice("microVU%d: Cached MicroPrograms = %d", params vuIndex, mVU->prog.total+1);
 		return mVU->prog.total;
 	}
 	else {
