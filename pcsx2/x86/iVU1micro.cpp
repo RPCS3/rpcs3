@@ -145,6 +145,7 @@ namespace VU1micro
 		memcpy_fast((u8*)&VU1,		(u8*)backVUregs,	sizeof(VURegs));
 		memcpy_fast((u8*)VU1.Mem,	(u8*)backVUmem,		0x4000);
 
+		//Currently breaking mVU execution is disabled. Check mVUtestCycles<vuIndex>() in microVU_Compile.inl
 		runVUrec(VU1.VI[REG_TPC].UL, 300000 /*0x7fffffff*/, 1);
 
 		if ((memcmp((u8*)cmpVUregs, (u8*)&VU1, (16*32) + (16*16))) || (memcmp((u8*)cmpVUmem, (u8*)VU1.Mem, 0x4000))) {
@@ -274,6 +275,7 @@ namespace VU1micro
 #endif
 
 		FreezeXMMRegs(1);
+		//Currently breaking mVU execution is disabled. Check mVUtestCycles<vuIndex>() in microVU_Compile.inl
 		if (useMVU1) runVUrec(VU1.VI[REG_TPC].UL, 3000000, 1);
 		else {
 			if (VU1.VI[REG_TPC].UL >= VU1.maxmicro) { 

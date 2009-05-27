@@ -266,7 +266,8 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 	// Sets Up Flag instances
 	int xStatus[4], xMac[4], xClip[4];
 	int xCycles = mVUsetFlags<vuIndex>(xStatus, xMac, xClip);
-	mVUtestCycles<vuIndex>();
+	
+	//mVUtestCycles<vuIndex>(); //uncomment to re-enable breaking on bad programms, costs a few fps
 
 	// Second Pass
 	iPC = mVUstartPC;
