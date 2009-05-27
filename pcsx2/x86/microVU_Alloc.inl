@@ -17,7 +17,6 @@
  */
 
 #pragma once
-#ifdef PCSX2_MICROVU
 
 //------------------------------------------------------------------
 // Micro VU - Pass 2 Functions
@@ -769,5 +768,3 @@ microVUt(void) mVUallocVIb(int GPRreg, int _reg_) {
 	if (!_reg_ && (_fxf_ < 3))	{ XOR32RtoR(GPRreg, GPRreg); }  \
 	else						{ MOV32MtoR(GPRreg, (uptr)&mVU->regs->VF[_reg_].UL[0]); }  \
 }
-
-#endif //PCSX2_MICROVU

@@ -17,7 +17,6 @@
  */
 
 #pragma once
-#ifdef PCSX2_MICROVU
 
 //------------------------------------------------------------------
 // Declarations
@@ -265,4 +264,3 @@ microVUf(void) mVUunknown() {
 	pass3 { mVUlog("Unknown", mVUgetCode); }
 }
 
-#endif //PCSX2_MICROVU

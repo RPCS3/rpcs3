@@ -20,7 +20,6 @@
 
 #include "PrecompiledHeader.h"
 #include "microVU.h"
-#ifdef PCSX2_MICROVU
 
 //------------------------------------------------------------------
 // Micro VU - Global Variables
@@ -193,7 +192,7 @@ microVUt(int) mVUfindLeastUsedProg() {
 // frame-based decrementing system in combination with a program-execution-based incrementing
 // system.  In english:  if last_used >= 2 it means the program has been used for the current
 // or prev frame.  if it's 0, the program hasn't been used for a while.
-microVUt(void) __mVUvsyncUpdate() {
+microVUt(void) mVUvsyncUpdate() {
 
 	microVU* mVU = mVUx;
 	if (mVU->prog.total < mVU->prog.max) return;
@@ -283,9 +282,7 @@ void runVUrec(u32 startPC, u32 cycles, const int vuIndex) {
 	else			startVU1(startPC, cycles);
 }
 
-void mVUvsyncUpdate() {
-	__mVUvsyncUpdate<0>();
-	__mVUvsyncUpdate<1>();
+void vsyncVUrec(const int vuIndex) {
+	if (!vuIndex)	mVUvsyncUpdate<0>();
+	else			mVUvsyncUpdate<1>();
 }
-
-#endif // PCSX2_MICROVU

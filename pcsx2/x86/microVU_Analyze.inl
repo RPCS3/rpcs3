@@ -17,7 +17,6 @@
  */
 
 #pragma once
-#ifdef PCSX2_MICROVU
 
 //------------------------------------------------------------------
 // Micro VU - Pass 1 Functions
@@ -384,5 +383,3 @@ microVUt(void) mVUanalyzeBranch2(int Is, int It) {
 	if (mVUregs.VI[Is] || mVUregs.VI[It] || mVUstall) { analyzeVIreg1(Is); analyzeVIreg1(It); }
 	else											  { analyzeBranchVI(Is, _memReadIs); analyzeBranchVI(It, _memReadIt);}
 }
-
-#endif //PCSX2_MICROVU

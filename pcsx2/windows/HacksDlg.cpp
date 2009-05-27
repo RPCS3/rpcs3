@@ -48,6 +48,9 @@ BOOL APIENTRY HacksProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 			if(Config.Hacks.INTCSTATSlow) CheckDlgButton(hDlg, IDC_INTCSTATHACK, TRUE);
 			if(Config.Hacks.IdleLoopFF) CheckDlgButton(hDlg, IDC_IDLELOOPFF, TRUE);
 			if(Config.Hacks.ESCExits) CheckDlgButton(hDlg, IDC_ESCHACK, TRUE);
+			if(Config.Hacks.vuFlagHack1) CheckDlgButton(hDlg, IDC_VUHACK1, TRUE);
+			if(Config.Hacks.vuFlagHack2) CheckDlgButton(hDlg, IDC_VUHACK2, TRUE);
+			if(Config.Hacks.vuMinMax)	 CheckDlgButton(hDlg, IDC_VUHACK3, TRUE);
 
 			SendDlgItemMessage(hDlg, IDC_VUCYCLE, TBM_SETRANGE, TRUE, MAKELONG(0, 4));
 			CheckVUCycleHack(hDlg, Config.Hacks.VUCycleSteal);
@@ -87,11 +90,14 @@ BOOL APIENTRY HacksProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 					}
 
 					newhacks.IOPCycleDouble = !!IsDlgButtonChecked(hDlg, IDC_IOPSYNC);
-					newhacks.WaitCycleExt = !!IsDlgButtonChecked(hDlg, IDC_WAITCYCLES);
-					newhacks.INTCSTATSlow = !!IsDlgButtonChecked(hDlg, IDC_INTCSTATHACK);
-					newhacks.ESCExits = !!IsDlgButtonChecked(hDlg, IDC_ESCHACK);
-					newhacks.IdleLoopFF = !!IsDlgButtonChecked(hDlg, IDC_IDLELOOPFF);
-					newhacks.VUCycleSteal = SendDlgItemMessage(hDlg, IDC_VUCYCLE, TBM_GETPOS, 0, 0);
+					newhacks.WaitCycleExt	= !!IsDlgButtonChecked(hDlg, IDC_WAITCYCLES);
+					newhacks.INTCSTATSlow	= !!IsDlgButtonChecked(hDlg, IDC_INTCSTATHACK);
+					newhacks.ESCExits		= !!IsDlgButtonChecked(hDlg, IDC_ESCHACK);
+					newhacks.vuFlagHack1	= !!IsDlgButtonChecked(hDlg, IDC_VUHACK1);
+					newhacks.vuFlagHack2	= !!IsDlgButtonChecked(hDlg, IDC_VUHACK2);
+					newhacks.vuMinMax		= !!IsDlgButtonChecked(hDlg, IDC_VUHACK3);
+					newhacks.IdleLoopFF		= !!IsDlgButtonChecked(hDlg, IDC_IDLELOOPFF);
+					newhacks.VUCycleSteal	= SendDlgItemMessage(hDlg, IDC_VUCYCLE, TBM_GETPOS, 0, 0);
 					CheckVUCycleHack(hDlg, newhacks.VUCycleSteal);
 
 					EndDialog(hDlg, TRUE);

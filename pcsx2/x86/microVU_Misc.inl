@@ -17,7 +17,6 @@
 */
 
 #pragma once
-#ifdef PCSX2_MICROVU
 
 //------------------------------------------------------------------
 // Micro VU - Clamp Functions
@@ -300,7 +299,7 @@ microVUt(void) mVUrestoreRegs() {
 
 // Reads entire microProgram and finds out if Status Flag is Used
 microVUt(void) mVUcheckSflag(int progIndex) {
-	if (CHECK_VU_FLAGHACK) {
+	if (CHECK_VU_FLAGHACK1) {
 		microVU* mVU = mVUx;
 		int bFlagInfo = mVUflagInfo;
 		int bCode	  = mVU->code;
@@ -370,5 +369,3 @@ void SSE_MIN2SS_XMM_to_XMM(x86SSERegType to, x86SSERegType from) {
 	if (CHECK_VU_MINMAXHACK) { SSE_MINSS_XMM_to_XMM(to, from); }
 	else					 { MIN_MAX_SS(to, from, 1); }
 }
-
-#endif //PCSX2_MICROVU

@@ -17,7 +17,6 @@
  */
 
 #pragma once
-#ifdef PCSX2_MICROVU
 
 //------------------------------------------------------------------
 // Dispatcher Functions
@@ -149,4 +148,3 @@ void* __fastcall mVUexecuteVU1(u32 startPC, u32 cycles) { return mVUexecute<1>(s
 void  __fastcall mVUcleanUpVU0() { mVUcleanUp<0>(); }
 void  __fastcall mVUcleanUpVU1() { mVUcleanUp<1>(); }
 
-#endif //PCSX2_MICROVU

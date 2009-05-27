@@ -52,15 +52,14 @@ BOOL CALLBACK CpuDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			Static_SetText(GetDlgItem(hW, IDC_CPUSPEEDNAME), _("CPU Speed"));
 			Static_SetText(GetDlgItem(hW, IDC_FEATURESNAME), _("Features"));
 			Static_SetText(GetDlgItem(hW, IDC_CPU_EEREC), _("EERec -  EE/IOP recompiler (need MMX/SSE)"));
-			Static_SetText(GetDlgItem(hW, IDC_CPU_VUGROUP), _("VU Recompilers - All options are set by default"));
-			Static_SetText(GetDlgItem(hW, IDC_CPU_VU0REC), _("VU0rec - enable recompiler for VU0 unit"));
-			Static_SetText(GetDlgItem(hW, IDC_CPU_VU1REC), _("VU1rec - enable recompiler for VU1 unit"));
+			Static_SetText(GetDlgItem(hW, IDC_CPU_VUGROUP), _("VU Recompilers"));
+			Static_SetText(GetDlgItem(hW, IDC_CPU_VU0REC), _("VU0rec - Enable recompiler for VU0 unit."));
+			Static_SetText(GetDlgItem(hW, IDC_CPU_VU1REC), _("VU1rec - Enable recompiler for VU1 unit."));
 			Static_SetText(GetDlgItem(hW, IDC_CPU_GSMULTI), _("Multi threaded GS mode (MTGS)\n(faster on dual core/HT procs, requires pcsx2 restart)"));
 			Static_SetText(GetDlgItem(hW, IDC_FRAMELIMIT), _("Frame Limiting (F4 key switches the mode in-game!)"));
 			Static_SetText(GetDlgItem(hW, IDC_CPU_FL_NORMAL), _("Normal - All frames are rendered as fast as possible."));
 			Static_SetText(GetDlgItem(hW, IDC_CPU_FL_LIMIT), _("Limit - Force frames to normal speeds if too fast."));
 			Static_SetText(GetDlgItem(hW, IDC_CPU_FL_SKIP), _("Frame Skip - In order to achieve normal speeds,\nsome frames are skipped (fast).\nFps displayed counts skipped frames too."));
-			Static_SetText(GetDlgItem(hW, IDC_CPU_FL_SKIPVU), _("VU Skip - Same as 'Frame Skip', but tries to skip more.\nArtifacts might be present, but will be faster."));
 			Static_SetText(GetDlgItem(hW, IDC_CUSTOM_FPS), _("Custom FPS Limit (0=auto):"));
 			Static_SetText(GetDlgItem(hW, IDC_FRAMESKIP_LABEL1), _("Skip Frames when slower than:\n(See Note 1)"));
 			Static_SetText(GetDlgItem(hW, IDC_FRAMESKIP_LABEL2), _("Consecutive Frames before skipping:\n(See Note 2)"));
@@ -86,13 +85,15 @@ BOOL CALLBACK CpuDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam)
 //			if(cpucaps.hasAMD64BitArchitecture) strcat(features,",x86-64");
             SetDlgItemText(hW, IDC_FEATURESINPUT, features);
 
-			CheckDlgButton(hW, IDC_CPU_EEREC, !!(Config.Options&PCSX2_EEREC));
-			CheckDlgButton(hW, IDC_CPU_VU0REC, !!(Config.Options&PCSX2_VU0REC));
-			CheckDlgButton(hW, IDC_CPU_VU1REC, !!(Config.Options&PCSX2_VU1REC));
+			CheckDlgButton(hW, IDC_CPU_EEREC,	!!(Config.Options&PCSX2_EEREC));
+			CheckDlgButton(hW, IDC_CPU_VU0REC,	!!(Config.Options&PCSX2_VU0REC));
+			CheckDlgButton(hW, IDC_CPU_VU1REC,	!!(Config.Options&PCSX2_VU1REC));
+			CheckDlgButton(hW, IDC_CPU_MVU0,	!!(Config.Options&PCSX2_MICROVU0));
+			CheckDlgButton(hW, IDC_CPU_MVU1,	!!(Config.Options&PCSX2_MICROVU1));
 
-			EnableDlgItem( hW, IDC_CPU_EEREC, !g_Session.ForceDisableEErec );
-			EnableDlgItem( hW, IDC_CPU_VU0REC, !g_Session.ForceDisableVU0rec );
-			EnableDlgItem( hW, IDC_CPU_VU1REC, !g_Session.ForceDisableVU1rec );
+			EnableDlgItem( hW, IDC_CPU_EEREC,	!g_Session.ForceDisableEErec );
+			EnableDlgItem( hW, IDC_CPU_VU0REC,	!g_Session.ForceDisableVU0rec );
+			EnableDlgItem( hW, IDC_CPU_VU1REC,	!g_Session.ForceDisableVU1rec );
 
 			CheckDlgButton(hW, IDC_CPU_GSMULTI, !!CHECK_MULTIGS);
 
@@ -124,16 +125,19 @@ BOOL CALLBACK CpuDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam)
 				case IDOK:
 					newopts = 0;
 
-					if( SendDlgItemMessage(hW,IDC_CPU_EEREC,BM_GETCHECK,0,0) ) newopts |= PCSX2_EEREC;
+					if( SendDlgItemMessage(hW,IDC_CPU_EEREC,BM_GETCHECK,0,0) )	 newopts |= PCSX2_EEREC;
 
-					if( SendDlgItemMessage(hW,IDC_CPU_VU0REC,BM_GETCHECK,0,0) ) newopts |= PCSX2_VU0REC;
-					if( SendDlgItemMessage(hW,IDC_CPU_VU1REC,BM_GETCHECK,0,0) ) newopts |= PCSX2_VU1REC;
+					if( SendDlgItemMessage(hW,IDC_CPU_VU0REC,BM_GETCHECK,0,0) )  newopts |= PCSX2_VU0REC;
+					if( SendDlgItemMessage(hW,IDC_CPU_VU1REC,BM_GETCHECK,0,0) )  newopts |= PCSX2_VU1REC;
+
+					if( SendDlgItemMessage(hW,IDC_CPU_MVU0,BM_GETCHECK,0,0) )	 newopts |= PCSX2_MICROVU0;
+					if( SendDlgItemMessage(hW,IDC_CPU_MVU1,BM_GETCHECK,0,0) )	 newopts |= PCSX2_MICROVU1;
 
 					if( SendDlgItemMessage(hW,IDC_CPU_GSMULTI,BM_GETCHECK,0,0) ) newopts |= PCSX2_GSMULTITHREAD;
 
-					if( SendDlgItemMessage(hW,IDC_CPU_FL_NORMAL,BM_GETCHECK,0,0) ) newopts |= PCSX2_FRAMELIMIT_NORMAL;
-					else if( SendDlgItemMessage(hW,IDC_CPU_FL_LIMIT,BM_GETCHECK,0,0) ) newopts |= PCSX2_FRAMELIMIT_LIMIT;
-					else if( SendDlgItemMessage(hW,IDC_CPU_FL_SKIP,BM_GETCHECK,0,0) ) newopts |= PCSX2_FRAMELIMIT_SKIP;
+					if( SendDlgItemMessage(hW,IDC_CPU_FL_NORMAL,BM_GETCHECK,0,0) )		newopts |= PCSX2_FRAMELIMIT_NORMAL;
+					else if( SendDlgItemMessage(hW,IDC_CPU_FL_LIMIT,BM_GETCHECK,0,0) )	newopts |= PCSX2_FRAMELIMIT_LIMIT;
+					else if( SendDlgItemMessage(hW,IDC_CPU_FL_SKIP,BM_GETCHECK,0,0) )	newopts |= PCSX2_FRAMELIMIT_SKIP;
 
 					GetDlgItemText(hW, IDC_CUSTOMFPS, cfps, 20);
 					Config.CustomFps = atoi(cfps);

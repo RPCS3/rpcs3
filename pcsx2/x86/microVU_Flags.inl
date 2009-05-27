@@ -17,7 +17,6 @@
  */
 
 #pragma once
-#ifdef PCSX2_MICROVU
 
 // Sets FDIV Flags at the proper time
 microVUt(void) mVUdivSet() {
@@ -231,4 +230,3 @@ microVUt(void) mVUsetFlagInfo() {
 	}
 }
 
-#endif //PCSX2_MICROVU

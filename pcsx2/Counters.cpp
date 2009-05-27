@@ -446,11 +446,9 @@ __forceinline bool rcntUpdate_vSync()
 
 		// Accumulate hsync rounding errors:
 		hsyncCounter.sCycle += vSyncInfo.hSyncError;
-
-#ifdef PCSX2_MICROVU		
-		extern void mVUvsyncUpdate();
-		mVUvsyncUpdate();
-#endif
+	
+		if (CHECK_MICROVU0) vsyncVUrec(0);
+		if (CHECK_MICROVU1) vsyncVUrec(1);
 
 #		ifdef VSYNC_DEBUG
 		vblankinc++;

@@ -26,9 +26,7 @@
 #include "VUmicro.h"
 #include "iVUzerorec.h"
 
-#ifdef _DEBUG
-extern u32 vudump;
-#endif
+#define useMVU1 CHECK_MICROVU1
 
 int mVUdebugNow = 0;
 
@@ -45,11 +43,8 @@ void VUtestPause() {
 	runAmount++;
 	if (runAmount < 654) return;
 
-#ifndef PCSX2_MICROVU_
-	SysPrintf("Super VU - Pass %d\n", runAmount);
-#else
-	SysPrintf("Micro VU - Pass %d\n", runAmount);
-#endif
+	if (useMVU1) SysPrintf("Micro VU - Pass %d\n", runAmount);
+	else		 SysPrintf("Super VU - Pass %d\n", runAmount);
 
 	for (int i = 0; i < 32; i++) {
 		SysPrintf("VF%02d  = {%f, %f, %f, %f}\n", i, VU1.VF[i].F[0], VU1.VF[i].F[1], VU1.VF[i].F[2], VU1.VF[i].F[3]);
@@ -88,17 +83,15 @@ void VUtestPause() {
 void VUtestPause() {}
 #endif
 
+#ifdef _DEBUG
+extern u32 vudump;
+#endif
 
 #ifdef DEBUG_COMPARE2
 
 #ifndef DEBUG_COMPARE
 #include <windows.h>
 #endif
-extern void initVUrec(VURegs* vuRegs, const int vuIndex);
-extern void closeVUrec(const int vuIndex);
-extern void resetVUrec(const int vuIndex);
-extern void clearVUrec(u32 addr, u32 size, const int vuIndex);
-extern void runVUrec(u32 startPC, u32 cycles, const int vuIndex);
 
 PCSX2_ALIGNED16(u8 backVUregs[sizeof(VURegs)]);
 PCSX2_ALIGNED16(u8 cmpVUregs [sizeof(VURegs)]);
@@ -253,21 +246,24 @@ namespace VU1micro
 	}
 }
 #else 
-#ifdef PCSX2_MICROVU_
-
-extern void initVUrec(VURegs* vuRegs, const int vuIndex);
-extern void closeVUrec(const int vuIndex);
-extern void resetVUrec(const int vuIndex);
-extern void clearVUrec(u32 addr, u32 size, const int vuIndex);
-extern void runVUrec(u32 startPC, u32 cycles, const int vuIndex);
 
 namespace VU1micro
 {
-	void recAlloc()								 { initVUrec(&VU1, 1); }
-	void __fastcall recClear(u32 Addr, u32 Size) { clearVUrec(Addr, Size, 1); }
-	void recShutdown()							 { closeVUrec(1); }
-	static void recReset()						 { resetVUrec(1); x86FpuState = FPU_STATE; }
-	static void recStep()						 {}
+	void recAlloc()		{ initVUrec(&VU1, 1); SuperVUAlloc(1); }
+	void recShutdown()	{ closeVUrec(1);	  SuperVUDestroy(1); }
+	
+	void __fastcall recClear(u32 Addr, u32 Size) { 
+		if (useMVU1) clearVUrec(Addr, Size, 1); 
+		else		 SuperVUClear(Addr, Size, 1);
+	}
+
+	static void recReset() { 
+		if (useMVU1) resetVUrec(1); 
+		else		 SuperVUReset(1);
+		x86FpuState = FPU_STATE; 
+	}
+
+	static void recStep() {}
 	static void recExecuteBlock() {
 
 		if ((VU0.VI[REG_VPU_STAT].UL & 0x100) == 0) return;
@@ -278,42 +274,19 @@ namespace VU1micro
 #endif
 
 		FreezeXMMRegs(1);
-		//FreezeMMXRegs(1);
-		runVUrec(VU1.VI[REG_TPC].UL, 3000000 /*0x7fffffff*/, 1);
-		//FreezeMMXRegs(0);
+		if (useMVU1) runVUrec(VU1.VI[REG_TPC].UL, 3000000, 1);
+		else {
+			if (VU1.VI[REG_TPC].UL >= VU1.maxmicro) { 
+				Console::Error("VU1 memory overflow!!: %x", params VU1.VI[REG_TPC].UL); 
+			}
+			do { // while loop needed since not always will return finished
+				SuperVUExecuteProgram(VU1.VI[REG_TPC].UL & 0x3fff, 1);
+			} while( VU0.VI[REG_VPU_STAT].UL&0x100 );
+		}
 		FreezeXMMRegs(0);
-
 		VUtestPause();
 	}
 }
-#else
-
-namespace VU1micro
-{
-	void recAlloc()									{ SuperVUAlloc(1); }
-	void __fastcall recClear(u32 Addr, u32 Size)	{ SuperVUClear(Addr, Size, 1); }
-	void recShutdown()								{ SuperVUDestroy(1); }
-	static void recReset()							{ SuperVUReset(1); x86FpuState = FPU_STATE; }
-	static void recStep()							{}
-
-	static void recExecuteBlock(void)
-	{
-		if((VU0.VI[REG_VPU_STAT].UL & 0x100) == 0) return;
-		if (VU1.VI[REG_TPC].UL >= VU1.maxmicro) { Console::Error("VU1 memory overflow!!: %x", params  VU1.VI[REG_TPC].UL); }
-		assert((VU1.VI[ REG_TPC ].UL&7) == 0);
-
-#ifdef DEBUG_COMPARE
-		SysPrintf("(%08d) StartPC = 0x%04x\n", runAmount, VU1.VI[REG_TPC].UL);
-#endif
-
-		FreezeXMMRegs(1);
-		do { // while loop needed since not always will return finished
-			SuperVUExecuteProgram(VU1.VI[ REG_TPC ].UL & 0x3fff, 1);
-		} while( VU0.VI[ REG_VPU_STAT ].UL&0x100 );
-		FreezeXMMRegs(0);
-	}
-}
-#endif
 #endif
 
 using namespace VU1micro;

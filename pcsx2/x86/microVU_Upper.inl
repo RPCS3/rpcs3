@@ -17,7 +17,6 @@
 */
 
 #pragma once
-#ifdef PCSX2_MICROVU
 
 //------------------------------------------------------------------
 // mVUupdateFlags() - Updates status/mac flags
@@ -643,4 +642,4 @@ microVUf(void) mVU_CLIP() {
 	}
 	pass3 { mVUlog("CLIP"); mVUlogCLIP(); }
 }
-#endif //PCSX2_MICROVU
+

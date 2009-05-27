@@ -290,10 +290,10 @@ declareAllVariables
 #define mVUdumpProg 0&&
 #endif
 
-// Speed Hacks (Set to 1 to turn On)
-#define CHECK_VU_FLAGHACK	0 // Status Flag Speed Hack (Can cause Infinite loops, SPS, etc...)
-#define CHECK_VU_FLAGHACK2	0 // Status Flag Speed Hack (Can cause Infinite loops, SPS, etc...)
-#define CHECK_VU_MINMAXHACK	0 // Min/Max Speed Hack		(Can cause SPS, Black Screens,  etc...)
+// Speed Hacks
+#define CHECK_VU_FLAGHACK1	(u32)Config.Hacks.vuFlagHack1	// (Can cause Infinite loops, SPS, etc...)
+#define CHECK_VU_FLAGHACK2	(u32)Config.Hacks.vuFlagHack2	// (Can cause Infinite loops, SPS, etc...)
+#define CHECK_VU_MINMAXHACK	(u32)Config.Hacks.vuMinMax		// (Can cause SPS, Black Screens,  etc...)
 
 // Cache Limit Check
 #define mVUcacheCheck(ptr, start, limit) {																\

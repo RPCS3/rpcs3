@@ -17,7 +17,6 @@
  */
 
 #pragma once
-#ifdef PCSX2_MICROVU
 
 // writes text directly to the microVU.txt, no newlines appended.
 microVUx(void) __mVULog(const char* fmt, ...) {
@@ -124,5 +123,3 @@ microVUt(void) __mVUdumpProgram(int progIndex) {
 	iPC		  = bPC;
 	setCode();
 }
-
-#endif //PCSX2_MICROVU

@@ -104,12 +104,15 @@ int LoadConfig()
 	GetValuel("EECycleRate", Config.Hacks.EECycleRate);
 	if (Config.Hacks.EECycleRate > 2)
 		Config.Hacks.EECycleRate = 2;
-	GetValuel("IOPCycleDouble", Config.Hacks.IOPCycleDouble);
-	GetValuel("WaitCycleExt", Config.Hacks.WaitCycleExt);
-	GetValuel("INTCSTATSlow", Config.Hacks.INTCSTATSlow);
-	GetValuel("VUCycleSteal",  Config.Hacks.VUCycleSteal);
-	GetValuel("IdleLoopFF", Config.Hacks.IdleLoopFF);
-	GetValuel("ESCExits", Config.Hacks.ESCExits);
+	GetValuel("IOPCycleDouble",	Config.Hacks.IOPCycleDouble);
+	GetValuel("WaitCycleExt",	Config.Hacks.WaitCycleExt);
+	GetValuel("INTCSTATSlow",	Config.Hacks.INTCSTATSlow);
+	GetValuel("VUCycleSteal",	Config.Hacks.VUCycleSteal);
+	GetValuel("vuFlagHack1",	Config.Hacks.vuFlagHack1);
+	GetValuel("vuFlagHack2",	Config.Hacks.vuFlagHack2);
+	GetValuel("vuMinMax",		Config.Hacks.vuMinMax);
+	GetValuel("IdleLoopFF",		Config.Hacks.IdleLoopFF);
+	GetValuel("ESCExits",		Config.Hacks.ESCExits);
 
 	if (Config.Hacks.VUCycleSteal < 0 || Config.Hacks.VUCycleSteal > 4)
 		Config.Hacks.VUCycleSteal = 0;

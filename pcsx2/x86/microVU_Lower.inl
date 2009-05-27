@@ -17,7 +17,6 @@
  */
 
 #pragma once
-#ifdef PCSX2_MICROVU
 
 //------------------------------------------------------------------
 // Micro VU Micromode Lower instructions
@@ -1258,4 +1257,3 @@ microVUf(void) mVU_JALR() {
 	pass3 { mVUlog("JALR vi%02d, [vi%02d]", _Ft_, _Fs_); }
 }
 
-#endif //PCSX2_MICROVU
