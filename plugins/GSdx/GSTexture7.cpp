@@ -133,9 +133,16 @@ bool GSTexture7::Update(const GSVector4i& r, const void* data, int pitch)
 	return false;
 }
 
-bool GSTexture7::Map(uint8** bits, int& pitch)
+bool GSTexture7::Map(uint8** bits, int& pitch, const GSVector4i* r)
 {
 	HRESULT hr;
+
+	if(r != NULL)
+	{
+		// ASSERT(0); // not implemented
+
+		return false;
+	}
 
 	DDSURFACEDESC2 desc;
 

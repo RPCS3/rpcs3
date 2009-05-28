@@ -698,20 +698,41 @@ void GSTextureCache::GSCachedTexture::Update()
 
 	m_valid = m_valid.runion(r);
 
-	static uint8* bits = (uint8*)::_aligned_malloc(1024 * 1024 * 4, 16);
-
-	int pitch = ((r.width() + 3) & ~3) * 4;
-
-	if(m_renderer->m_psrr)
+	uint8* bits = NULL;
+	int pitch = 0;
+	
+	if(m_texture->Map(&bits, pitch, &r))
 	{
-		m_renderer->m_mem.ReadTextureNPNC(r, bits, pitch, m_renderer->m_context->TEX0, m_renderer->m_env.TEXA, m_renderer->m_context->CLAMP);
+		// in dx9 managed textures can be written directly, less copying is faster, but still not as fast as dx10's UpdateResource
+
+		if(m_renderer->m_psrr)
+		{
+			m_renderer->m_mem.ReadTextureNPNC(r, bits, pitch, m_renderer->m_context->TEX0, m_renderer->m_env.TEXA, m_renderer->m_context->CLAMP);
+		}
+		else
+		{
+			m_renderer->m_mem.ReadTextureNP(r, bits, pitch, m_renderer->m_context->TEX0, m_renderer->m_env.TEXA, m_renderer->m_context->CLAMP);
+		}
+
+		m_texture->Unmap();
 	}
 	else
 	{
-		m_renderer->m_mem.ReadTextureNP(r, bits, pitch, m_renderer->m_context->TEX0, m_renderer->m_env.TEXA, m_renderer->m_context->CLAMP);
-	}
+		static uint8* buff = (uint8*)::_aligned_malloc(1024 * 1024 * 4, 16);
+		
+		pitch = ((r.width() + 3) & ~3) * 4;
 
-	m_texture->Update(r, bits, pitch);
+		if(m_renderer->m_psrr)
+		{
+			m_renderer->m_mem.ReadTextureNPNC(r, buff, pitch, m_renderer->m_context->TEX0, m_renderer->m_env.TEXA, m_renderer->m_context->CLAMP);
+		}
+		else
+		{
+			m_renderer->m_mem.ReadTextureNP(r, buff, pitch, m_renderer->m_context->TEX0, m_renderer->m_env.TEXA, m_renderer->m_context->CLAMP);
+		}
+
+		m_texture->Update(r, buff, pitch);
+	}
 
 	m_renderer->m_perfmon.Put(GSPerfMon::Unswizzle, r.width() * r.height() * m_bpp >> 3);
 }

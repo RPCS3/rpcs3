@@ -83,8 +83,15 @@ bool GSTexture10::Update(const GSVector4i& r, const void* data, int pitch)
 	return false;
 }
 
-bool GSTexture10::Map(uint8** bits, int& pitch)
+bool GSTexture10::Map(uint8** bits, int& pitch, const GSVector4i* r)
 {
+	if(r != NULL)
+	{
+		// ASSERT(0); // not implemented
+
+		return false;
+	}
+
 	if(m_texture)
 	{
 		D3D10_MAPPED_TEXTURE2D map;

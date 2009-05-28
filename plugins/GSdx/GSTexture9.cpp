@@ -113,7 +113,7 @@ bool GSTexture9::Update(const GSVector4i& r, const void* data, int pitch)
 	return false;
 }
 
-bool GSTexture9::Map(uint8** bits, int& pitch)
+bool GSTexture9::Map(uint8** bits, int& pitch, const GSVector4i* r)
 {
 	HRESULT hr;
 
@@ -121,7 +121,7 @@ bool GSTexture9::Map(uint8** bits, int& pitch)
 	{
 		D3DLOCKED_RECT lr;
 
-		if(SUCCEEDED(hr = surface->LockRect(&lr, NULL, 0)))
+		if(SUCCEEDED(hr = surface->LockRect(&lr, (LPRECT)r, 0)))
 		{
 			*bits = (uint8*)lr.pBits;
 			pitch = (int)lr.Pitch;

@@ -38,7 +38,7 @@ public:
 	int GetHeight() const {return m_desc.h;}
 	int GetFormat() const {return m_desc.format;}
 	bool Update(const GSVector4i& r, const void* data, int pitch) {return true;}
-	bool Map(uint8** bits, int& pitch) {return true;}
+	bool Map(uint8** bits, int& pitch, const GSVector4i* r) {return false;}
 	void Unmap() {}
 	bool Save(const string& fn, bool dds = false) {return false;}
 };

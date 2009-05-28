@@ -43,7 +43,7 @@ public:
 	int GetHeight() const;
 	int GetFormat() const;
 	bool Update(const GSVector4i& r, const void* data, int pitch);
-	bool Map(uint8** bits, int& pitch);
+	bool Map(uint8** bits, int& pitch, const GSVector4i* r);
 	void Unmap();
 	bool Save(const string& fn, bool dds = false);
 

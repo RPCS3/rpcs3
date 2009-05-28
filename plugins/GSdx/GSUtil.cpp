@@ -174,7 +174,9 @@ bool GSUtil::IsDirect3D10Available()
 
 char* GSUtil::GetLibName()
 {
-	static string str = format("GSdx %d", SVN_REV);
+	static string str;
+	
+	str = format("GSdx %d", SVN_REV);
 
 	if(SVN_MODS) str += "m";
 
