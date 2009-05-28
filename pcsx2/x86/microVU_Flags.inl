@@ -52,7 +52,7 @@ microVUt(void) mVUstatusFlagOp() {
 		}
 	}
 	iPC = curPC;
-	DevCon::Notice("microVU%d: FSSET Optimization", params vuIndex);
+	DevCon::Status("microVU%d: FSSET Optimization", params vuIndex);
 }
 
 int findFlagInst(int* fFlag, int cycles) {

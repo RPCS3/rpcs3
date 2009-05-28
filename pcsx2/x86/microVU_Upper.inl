@@ -55,23 +55,23 @@ microVUt(void) mVUupdateFlags(int reg, int regT1, int regT2, int xyzw, bool modX
 	SSE_MOVMSKPS_XMM_to_R32(mReg, regT2); // Move the sign bits of the t1reg
 
 	AND32ItoR(mReg, AND_XYZW);  // Grab "Is Signed" bits from the previous calculation
-	pjmp = JZ8(0); // Skip if none are
+	if (doStatus) pjmp = JZ8(0); // Skip if none are
 		if (doMac)	  SHL32ItoR(mReg, 4 + ADD_XYZW);
 		if (doStatus) OR32ItoR(sReg, 0x82); // SS, S flags
-		if (_XYZW_SS) pjmp2 = JMP8(0); // If negative and not Zero, we can skip the Zero Flag checking
-	x86SetJ8(pjmp);
+		if (_XYZW_SS && doStatus) pjmp2 = JMP8(0); // If negative and not Zero, we can skip the Zero Flag checking
+	if (doStatus) x86SetJ8(pjmp);
 
 	//-------------------------Check for Zero flags------------------------------
 
 	AND32ItoR(gprT2, AND_XYZW);  // Grab "Is Zero" bits from the previous calculation
-	pjmp = JZ8(0); // Skip if none are
+	if (doStatus) pjmp = JZ8(0); // Skip if none are
 		if (doMac)	  { SHIFT_XYZW(gprT2); OR32RtoR(mReg, gprT2); }	
 		if (doStatus) { OR32ItoR(sReg, 0x41); } // ZS, Z flags		
-	x86SetJ8(pjmp);
+	if (doStatus) x86SetJ8(pjmp);
 
 	//-------------------------Write back flags------------------------------
 
-	if (_XYZW_SS) x86SetJ8(pjmp2); // If we skipped the Zero Flag Checking, return here
+	if (_XYZW_SS && doStatus) x86SetJ8(pjmp2); // If we skipped the Zero Flag Checking, return here
 
 	if (doMac) mVUallocMFLAGb<vuIndex>(mReg, fmInstance); // Set Mac Flag
 }

@@ -192,7 +192,7 @@ microVUt(void) mVUtestCycles() {
 	microVU* mVU = mVUx;
 	iPC = mVUstartPC;
 	mVUdebugNOW(0);
-	CMP32ItoM((uptr)&mVU->cycles, 0);
+	SUB32ItoM((uptr)&mVU->cycles, mVUcycles);
 	u8* jmp8 = JG8(0);
 		MOV32ItoR(gprT2, xPC);
 		if (!vuIndex) CALLFunc((uptr)mVUwarning0);
@@ -200,7 +200,6 @@ microVUt(void) mVUtestCycles() {
 		MOV32ItoR(gprR, Roffset); // Restore gprR
 		mVUendProgram<vuIndex>(0, 0, sI, 0, cI);
 	x86SetJ8(jmp8);
-	SUB32ItoM((uptr)&mVU->cycles, mVUcycles);
 }
 
 //------------------------------------------------------------------
@@ -266,8 +265,7 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 	// Sets Up Flag instances
 	int xStatus[4], xMac[4], xClip[4];
 	int xCycles = mVUsetFlags<vuIndex>(xStatus, xMac, xClip);
-	
-	//mVUtestCycles<vuIndex>(); //uncomment to re-enable breaking on bad programms, costs a few fps
+	mVUtestCycles<vuIndex>();
 
 	// Second Pass
 	iPC = mVUstartPC;

@@ -275,7 +275,6 @@ namespace VU1micro
 #endif
 
 		FreezeXMMRegs(1);
-		//Currently breaking mVU execution is disabled. Check mVUtestCycles<vuIndex>() in microVU_Compile.inl
 		if (useMVU1) runVUrec(VU1.VI[REG_TPC].UL, 3000000, 1);
 		else {
 			if (VU1.VI[REG_TPC].UL >= VU1.maxmicro) { 
