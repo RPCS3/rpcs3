@@ -125,8 +125,11 @@ microVUt(void) mVUincCycles(int x) {
 		calcCycles(mVUregs.p, x);
 		if (!mVUregs.p || (mVUregs.p && mVUregsTemp.p)) { incP(); }
 	}
+	if (mVUregs.xgkick) {
+		calcCycles(mVUregs.xgkick, x);
+		if (!mVUregs.xgkick) { mVUinfo |= _doXGKICK; }
+	}
 	calcCycles(mVUregs.r, x);
-	calcCycles(mVUregs.xgkick, x);
 }
 
 microVUt(void) mVUsetCycles() {
@@ -277,6 +280,7 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 		if (isNOP)			{ incPC(1); doUpperOp(); doIbit(); }
 		else if (!swapOps)	{ incPC(1); doUpperOp(); doLowerOp(); }
 		else				{ mVUopL<vuIndex, 1>(); incPC(1); doUpperOp(); }
+		if (doXGKICK)		{ mVU_XGKICK_DELAY<vuIndex>(); }
 		
 		if (!isBdelay) { incPC(1); }
 		else {
@@ -376,6 +380,7 @@ eBitTemination:
 		AND32ItoR (flagReg, 0x0fcf);
 		OR32MtoR  (flagReg, (uptr)&mVU->divFlag);
 	}
+	if (doXGKICK) { mVU_XGKICK_DELAY<vuIndex>(); }
 
 	// Do E-bit end stuff here
 	mVUsetupRange<vuIndex>(xPC - 8);

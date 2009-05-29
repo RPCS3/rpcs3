@@ -354,6 +354,12 @@ microVUt(void) mVUanalyzeXGkick(int Fs, int xCycles) {
 	analyzeVIreg1(Fs);
 	analyzeXGkick1();
 	analyzeXGkick2(xCycles);
+	// Note: Technically XGKICK should stall on the next instruction,
+	// this code stalls on the same instruction. The only case where this
+	// will be a problem with, is if you have very-specifically placed
+	// FMxxx or FSxxx opcodes checking flags near this instruction AND
+	// the XGKICK instruction stalls. No-game should be effected by 
+	// this minor difference.
 }
 
 //------------------------------------------------------------------

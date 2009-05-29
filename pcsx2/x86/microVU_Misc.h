@@ -191,6 +191,7 @@ declareAllVariables
 #define _isEOB		 (1<<2) // End of Block
 #define _isBdelay	 (1<<3) // Cur Instruction in Branch Delay slot
 #define _isSflag	 (1<<4) // Cur Instruction uses status flag
+#define _doXGKICK	 (1<<5) // Do XGKICK transfer on this instruction
 #define _writeQ		 (1<<6)
 #define _readQ		 (1<<6) // same as writeQ
 #define _writeP		 (1<<7)
@@ -222,6 +223,7 @@ declareAllVariables
 #define isEOB		 (mVUinfo & (1<<2))
 #define isBdelay	 (mVUinfo & (1<<3))
 #define isSflag		 (mVUinfo & (1<<4))
+#define doXGKICK	 (mVUinfo & (1<<5))
 #define readQ		((mVUinfo >> 6) & 1) // same as writeQ
 #define readP		((mVUinfo >> 7) & 1) // same as writeP
 #define writeQ	   (((mVUinfo >> 6) + 1) & 1)
@@ -294,6 +296,10 @@ declareAllVariables
 #define CHECK_VU_FLAGHACK1	(u32)Config.Hacks.vuFlagHack1	// (Can cause Infinite loops, SPS, etc...)
 #define CHECK_VU_FLAGHACK2	(u32)Config.Hacks.vuFlagHack2	// (Can cause Infinite loops, SPS, etc...)
 #define CHECK_VU_MINMAXHACK	(u32)Config.Hacks.vuMinMax		// (Can cause SPS, Black Screens,  etc...)
+
+// Unknown Data
+#define mVU_XGKICK_CYCLES 1 // Its unknown at recompile time how long the xgkick transfer will take
+							// so give it a value that makes games happy :) (SO3 is fine at 1 cycle delay)
 
 // Cache Limit Check
 #define mVUcacheCheck(ptr, start, limit) {																\

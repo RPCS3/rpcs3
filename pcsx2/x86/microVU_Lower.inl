@@ -1113,16 +1113,22 @@ void __fastcall mVU_XGKICK__(u32 addr) {
 
 microVUf(void) mVU_XGKICK() {
 	microVU* mVU = mVUx;
-	pass1 { mVUanalyzeXGkick<vuIndex>(_Is_, 4); }
+	pass1 { mVUanalyzeXGkick<vuIndex>(_Is_, mVU_XGKICK_CYCLES); }
 	pass2 {
 		mVUprint("XGkick");
-		mVUallocVIa<vuIndex>(gprT2, _Is_); // gprT2 = ECX for __fastcall
-		mVUbackupRegs<vuIndex>();
-		if (mtgsThread != NULL)	CALLFunc((uptr)mVU_XGKICK_);
-		else					CALLFunc((uptr)mVU_XGKICK__);
-		mVUrestoreRegs<vuIndex>();
+		mVUallocVIa<vuIndex>(gprT1, _Is_);
+		MOV32RtoM((uptr)&mVU->VIxgkick, gprT1);
 	}
 	pass3 { mVUlog("XGKICK vi%02d", _Fs_); }
+}
+
+microVUt(void) mVU_XGKICK_DELAY() {
+	microVU* mVU = mVUx;
+	MOV32MtoR(gprT2, (uptr)&mVU->VIxgkick); // gprT2 = ECX for __fastcall
+	mVUbackupRegs<vuIndex>();
+	if (mtgsThread != NULL)	CALLFunc((uptr)mVU_XGKICK_);
+	else					CALLFunc((uptr)mVU_XGKICK__);
+	mVUrestoreRegs<vuIndex>();
 }
 
 //------------------------------------------------------------------

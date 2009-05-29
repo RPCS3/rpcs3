@@ -117,6 +117,7 @@ struct microVU {
 	u32		code;		 // Contains the current Instruction
 	u32		divFlag;	 // 1 instance of I/D flags
 	u32		VIbackup[2]; // Holds a backup of a VI reg if modified before a branch
+	u32		VIxgkick;	 // Holds a backup of a VI reg used for xgkick-delays
 	u32		branch;		 // Holds branch compare result (IBxx) OR Holds address to Jump to (JALR/JR)
 	u32		p;			 // Holds current P instance index
 	u32		q;			 // Holds current Q instance index
