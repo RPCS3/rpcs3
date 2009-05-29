@@ -37,6 +37,7 @@
 #include <vector>
 #include <map>
 #include <string>
+#include <pthread.h>
 using namespace std;
 
 #define PADdefs
@@ -44,6 +45,9 @@ extern "C"
 {
 #include "PS2Edefs.h"
 }
+#ifdef __LINUX__
+#include "joystick.h"
+#endif
 #include "analog.h"
 #include "bitwise.h"
 

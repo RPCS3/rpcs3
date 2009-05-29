@@ -23,7 +23,6 @@
 #include <stdarg.h>
 
 #include "zeropad.h"
-#include "joystick.h"
 
 #ifndef _WIN32
 
@@ -270,7 +269,9 @@ s32 CALLBACK PADopen(void *pDsp)
 	s_keyPress[0] = s_keyPress[1] = 0;
 	s_keyRelease[0] = s_keyRelease[1] = 0;
 	
+#ifdef __LINUX__
 	JoystickInfo::EnumerateJoysticks(s_vjoysticks);
+#endif
 	return _PADopen(pDsp);
 }
 

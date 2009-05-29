@@ -20,13 +20,12 @@
 
 using namespace std;
 
-HINSTANCE hInst = NULL;
 extern u16 status[2];
 
 extern string s_strIniPath;
-LRESULT WINAPI PADwndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 WNDPROC GSwndProc = NULL;
 HWND GShwnd = NULL;
+HINSTANCE hInst = NULL;
 
 extern keyEvent event;
 
@@ -94,7 +93,7 @@ string GetKeyLabel(const int pad, const int index)
 	}
 	else if (key >= 0x3000 && key < 0x4000) // IS_POV; 0x30000 - 0x50000
 	{
-		static const char name[][7] = { "FORWARD", "RIGHT", "BACK", "LEFT" };
+		static const char name[][8] = { "FORWARD", "RIGHT", "BACK", "LEFT" };
 		const int pov = (key & 0xff);
 		
 		sprintf(buff, "J%d_POV%d_%s", (key & 0xfff) / 0x100, pov / 4, name[pov % 4]);
@@ -107,8 +106,9 @@ BOOL CALLBACK ConfigureDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	HWND hWC;
 	TCITEM tcI;
-	int i, key, numkeys;
-	u8* pkeyboard;
+	int i, key;
+	int numkeys;
+	//u8* pkeyboard;
 	static int disabled = 0;
 	static int padn = 0;
 
@@ -141,17 +141,18 @@ BOOL CALLBACK ConfigureDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		case WM_TIMER:
 			if (disabled)
 			{
-				key = 0;
 				//pkeyboard = SDL_GetKeyState(&numkeys);
-				// Yeah, there's no way this will work, given that it's disabled.
+				// Well, this doesn't exactly work either, but it's close...
+				numkeys = 256;
 				for (int i = 0; i < numkeys; ++i)
 				{
-					if (pkeyboard[i])
+					if (GetAsyncKeyState(i))
 					{
 						key = i;
 						break;
 					}
 				}
+
 
 				if (key == 0)
 				{
@@ -183,8 +184,7 @@ BOOL CALLBACK ConfigureDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 					EnableWindow(GetDlgItem(hW, disabled = wParam), FALSE);
 
-					// Wait a silly amount of time for a keypress.
-					SetTimer(hW, 0x80, 250, NULL);
+					SetTimer(hW, 0x80, 2500, NULL);
 
 					return TRUE;
 				}
@@ -250,10 +250,9 @@ BOOL CALLBACK AboutDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 void CALLBACK PADconfigure()
 {
-	DialogBox(hInst,
-	          MAKEINTRESOURCE(IDD_DIALOG1),
-	          GetActiveWindow(),
-	          (DLGPROC)ConfigureDlgProc);
+	INT_PTR ret;
+	
+	ret = DialogBoxParam(hInst,MAKEINTRESOURCE(IDD_DIALOG1),GetActiveWindow(),(DLGPROC)ConfigureDlgProc,1);
 }
 
 void CALLBACK PADabout()

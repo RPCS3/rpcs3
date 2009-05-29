@@ -31,8 +31,8 @@ extern bool PollX11Keyboard(char* &temp, u32 &pkey);
 
 #else
 
-extern WNDPROC GSwndProc = NULL;
-extern HWND GShwnd = NULL;
+extern WNDPROC GSwndProc;
+extern HWND GShwnd;
 
 #endif
  

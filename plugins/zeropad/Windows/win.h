@@ -31,3 +31,4 @@ extern void SaveConfig();
 extern void LoadConfig();
 extern void SysMessage(char *fmt, ...);
 extern LRESULT WINAPI PADwndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+extern HINSTANCE hInst;

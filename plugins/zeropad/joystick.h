@@ -16,10 +16,15 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
  
- #ifndef __JOYSTICK_H__
- #define __JOYSTICK_H__
- 
+#ifndef __JOYSTICK_H__
+#define __JOYSTICK_H__
+
+#ifdef __LINUX__
 #include <SDL/SDL.h>
+#else
+#include <SDL.h>
+#endif
+
 #include "zeropad.h"
 
 // holds all joystick info

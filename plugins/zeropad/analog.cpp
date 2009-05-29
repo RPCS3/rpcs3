@@ -98,19 +98,19 @@ namespace Analog
 		switch (padvalue)
 		{
 			case PAD_LX:
-				return (conf.options & PADOPTION_REVERTLX);
+				return ((conf.options & PADOPTION_REVERTLX) != 0);
 				break;
 			
 			case PAD_RX:
-				return (conf.options & PADOPTION_REVERTRX);
+				return ((conf.options & PADOPTION_REVERTRX) != 0);
 				break;
 			
 			case PAD_LY:
-				return (conf.options & PADOPTION_REVERTLY);
+				return ((conf.options & PADOPTION_REVERTLY) != 0);
 				break;
 			
 			case PAD_RY:
-				return (conf.options & PADOPTION_REVERTRY);
+				return ((conf.options & PADOPTION_REVERTRY) != 0);
 				break;
 			
 			default:

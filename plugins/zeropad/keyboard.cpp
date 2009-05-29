@@ -36,7 +36,10 @@ char* KeysymToChar(int keysym)
  #ifdef __LINUX__
 	return XKeysymToString(keysym);
 #else
-	return;
+	LPWORD temp;
+
+	ToAscii((UINT) keysym, NULL, NULL, temp, NULL);
+	return (char*)temp;
 	#endif
 }
 
@@ -172,7 +175,7 @@ bool PollX11Keyboard(char* &temp, u32 &pkey)
 #else
 LRESULT WINAPI PADwndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-	int i, pad, keyPress[2] = {0}, keyRelease[2] = {0};
+	int keyPress[2] = {0}, keyRelease[2] = {0};
 	static bool lbutton = false, rbutton = false;
 
 	switch (msg)
@@ -180,9 +183,9 @@ LRESULT WINAPI PADwndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		case WM_KEYDOWN:
 			if (lParam & 0x40000000) return TRUE;
 
-			for (pad = 0; pad < 2; ++pad)
+			for (int pad = 0; pad < 2; ++pad)
 			{
-				for (i = 0; i < PADKEYS; i++)
+				for (int i = 0; i < PADKEYS; i++)
 				{
 					if (wParam == conf.keys[pad][i])
 					{
@@ -198,9 +201,9 @@ LRESULT WINAPI PADwndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			break;
 
 		case WM_KEYUP:
-			for (pad = 0; pad < 2; ++pad)
+			for (int pad = 0; pad < 2; ++pad)
 			{
-				for (i = 0; i < PADKEYS; i++)
+				for (int i = 0; i < PADKEYS; i++)
 				{
 					if (wParam == conf.keys[pad][i])
 					{
@@ -267,9 +270,9 @@ LRESULT WINAPI PADwndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			return GSwndProc(hWnd, msg, wParam, lParam);
 	}
 
-	for (pad = 0; pad < 2; ++pad)
+	for (int pad = 0; pad < 2; ++pad)
 	{
-		UpdateKeys(pad, keyPress, keyRelease)
+		UpdateKeys(pad, keyPress[pad], keyRelease[pad]);
 	}
 
 	return TRUE;
