@@ -247,11 +247,19 @@
 				>
 			</File>
 			<File
+				RelativePath=".\gui.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\zeropad.cpp"
 				>
 			</File>
 			<File
 				RelativePath="..\analog.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\keyboard.cpp"
 				>
 			</File>
 		</Filter>
@@ -260,6 +268,10 @@
 			Filter="h;hpp;hxx;hm;inl;inc;xsd"
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
+			<File
+				RelativePath=".\win.h"
+				>
+			</File>
 			<File
 				RelativePath="..\PS2Edefs.h"
 				>
@@ -278,6 +290,10 @@
 			</File>
 			<File
 				RelativePath="..\analog.h"
+				>
+			</File>
+			<File
+				RelativePath="..\keyboard.h"
 				>
 			</File>
 			<File

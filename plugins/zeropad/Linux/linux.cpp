@@ -19,8 +19,6 @@
 #include "linux.h"
 
 Display *GSdsp;
-static pthread_spinlock_t s_mutexStatus;
-static u32 s_keyPress[2], s_keyRelease[2]; // thread safe
 
 static const char* s_pGuiKeyMap[] = 
 { 
@@ -43,20 +41,14 @@ string GetLabelFromButton(const char* buttonname)
 s32  _PADopen(void *pDsp)
 {
 	GSdsp = *(Display**)pDsp;
-	pthread_spin_init(&s_mutexStatus, PTHREAD_PROCESS_PRIVATE);
-	s_keyPress[0] = s_keyPress[1] = 0;
-	s_keyRelease[0] = s_keyRelease[1] = 0;
-	XAutoRepeatOff(GSdsp);
-
-	JoystickInfo::EnumerateJoysticks(s_vjoysticks);
+	SetAutoRepeat(false);
 
 	return 0;
 }
 
 void _PADclose()
 {
-	pthread_spin_destroy(&s_mutexStatus);
-	XAutoRepeatOn(GSdsp);
+	SetAutoRepeat(true);
 
 	vector<JoystickInfo*>::iterator it = s_vjoysticks.begin();
 	
@@ -68,16 +60,6 @@ void _PADclose()
 	}
 	
 	s_vjoysticks.clear();
-}
-
-void _PADupdate(int pad)
-{
-	pthread_spin_lock(&s_mutexStatus);
-	status[pad] |= s_keyRelease[pad];
-	status[pad] &= ~s_keyPress[pad];
-	s_keyRelease[pad] = 0;
-	s_keyPress[pad] = 0;
-	pthread_spin_unlock(&s_mutexStatus);
 }
 
 int _GetJoystickIdFromPAD(int pad)
@@ -99,7 +81,7 @@ int _GetJoystickIdFromPAD(int pad)
 		}
 	}
 	
-	if ((joyid < 0) || (joyid >= (int)s_vjoysticks.size()))
+	if (JoystickIdWithinBounds(joyid))
 	{
 		// get first unused joystick
 		for (joyid = 0; joyid < s_vjoysticks.size(); ++joyid)
@@ -113,85 +95,8 @@ int _GetJoystickIdFromPAD(int pad)
 
 void CALLBACK PADupdate(int pad)
 {
-	int i;
-	XEvent E;
-	int keyPress = 0, keyRelease = 0;
-	KeySym key;
-
-	// keyboard input
-	while (XPending(GSdsp) > 0)
-	{
-		XNextEvent(GSdsp, &E);
-		switch (E.type)
-		{
-			case KeyPress:
-				key = XLookupKeysym((XKeyEvent *) & E, 0);
-
-				i = FindKey(key, pad);
-			
-				// Analog controls.
-				if ((i > PAD_RY) && (i <= PAD_R_LEFT))
-				{
-				switch (i)
-				{
-					case PAD_R_LEFT:
-					case PAD_R_UP:
-					case PAD_L_LEFT:
-					case PAD_L_UP:
-						Analog::ConfigurePad(Analog::AnalogToPad(i), pad, DEF_VALUE);
-						break;
-					case PAD_R_RIGHT:
-					case PAD_R_DOWN:
-					case PAD_L_RIGHT:
-					case PAD_L_DOWN:
-						Analog::ConfigurePad(Analog::AnalogToPad(i), pad, -DEF_VALUE);
-						break;
-				}
-				i += 0xff00;
-				}
-				
-				if (i != -1) 
-				{
-					clear_bit(keyRelease, i); 
-					set_bit(keyPress, i);
-				}
-				//PAD_LOG("Key pressed:%d\n", i);
-
-				event.evt = KEYPRESS;
-				event.key = key;
-				break;
-				
-			case KeyRelease:
-				key = XLookupKeysym((XKeyEvent *) & E, 0);
-
-				i = FindKey(key, pad);
-			
-				// Analog Controls.
-				if ((i > PAD_RY) && (i <= PAD_R_LEFT))
-				{
-					Analog::ResetPad(Analog::AnalogToPad(i), pad);
-					i += 0xff00;
-				}
-				
-				if (i != -1) 
-				{
-					clear_bit(keyPress, i); 
-					set_bit(keyRelease, i);
-				}
-
-				event.evt = KEYRELEASE;
-				event.key = key;
-				break;
-
-			case FocusIn:
-				XAutoRepeatOff(GSdsp);
-				break;
-
-			case FocusOut:
-				XAutoRepeatOn(GSdsp);
-				break;
-		}
-	}
+	// Poll keyboard.
+	PollForKeyboardInput(pad);
 
 	// joystick info
 	SDL_JoystickUpdate();
@@ -199,34 +104,25 @@ void CALLBACK PADupdate(int pad)
 	for (int i = 0; i < PADKEYS; i++)
 	{
 		int key = conf.keys[PadEnum[pad][0]][i];
-		JoystickInfo* pjoy = NULL;
-
-		if (IS_JOYBUTTONS(key))
-		{
-			int joyid = PAD_GETJOYID(key);
 			
-			if ((joyid >= 0) && (joyid < (int)s_vjoysticks.size()))
+		if (JoystickIdWithinBounds(PAD_GETJOYID(key)))
+		{	
+			JoystickInfo* pjoy = s_vjoysticks[PAD_GETJOYID(key)];
+			int pad = (pjoy)->GetPAD();
+			
+			if (IS_JOYBUTTONS(key))
 			{
-				pjoy = s_vjoysticks[joyid];
-				int pad = (pjoy)->GetPAD();
 				int value = SDL_JoystickGetButton((pjoy)->GetJoy(), PAD_GETJOYBUTTON(key));
-				
+					
 				if (value)
-					clear_bit(status[pad], i); // pressed
+					clear_bit(status[pad], i); // released
 				else
 					set_bit(status[pad], i); // pressed
 			}
-		}
-		else if (IS_JOYSTICK(key))
-		{
-			int joyid = PAD_GETJOYID(key);
-			
-			if ((joyid >= 0) && (joyid < (int)s_vjoysticks.size()))
+			else if (IS_JOYSTICK(key))
 			{
-				pjoy = s_vjoysticks[joyid];
-				int pad = (pjoy)->GetPAD();
 				int value = SDL_JoystickGetAxis((pjoy)->GetJoy(), PAD_GETJOYSTICK_AXIS(key));
-				
+					
 				switch (i)
 				{
 					case PAD_LX:
@@ -240,18 +136,11 @@ void CALLBACK PADupdate(int pad)
 						break;
 				}
 			}
-		}
-#ifdef EXPERIMENTAL_POV_CODE
-		else if (IS_HAT(key))
-		{
-			int joyid = PAD_GETJOYID(key);
-			
-			if ((joyid >= 0) && (joyid < (int)s_vjoysticks.size()))
+	#ifdef EXPERIMENTAL_POV_CODE
+			else if (IS_HAT(key))
 			{
-				pjoy = s_vjoysticks[joyid];
-				int pad = (pjoy)->GetPAD();
 				int value = SDL_JoystickGetHat((pjoy)->GetJoy(), PAD_GETJOYSTICK_AXIS(key));
-				
+					
 				//PAD_LOG("Hat = %d for key %d\n", PAD_GETPOVDIR(key), key);
 				if ((value != SDL_HAT_CENTERED) && (PAD_GETHATDIR(key) == value))
 				{
@@ -270,16 +159,9 @@ void CALLBACK PADupdate(int pad)
 					clear_bit(status[pad], i);
 				}
 			}
-		}
-#endif
-		else if (IS_POV(key))
-		{
-			int joyid = PAD_GETJOYID(key);
-			
-			if (joyid >= 0 && (joyid < (int)s_vjoysticks.size()))
+	#endif
+			else if (IS_POV(key))
 			{
-				pjoy = s_vjoysticks[joyid];
-				int pad = (pjoy)->GetPAD();
 				int value = SDL_JoystickGetAxis((pjoy)->GetJoy(), PAD_GETJOYSTICK_AXIS(key));
 				
 				if (PAD_GETPOVSIGN(key) && (value < -2048))
@@ -288,18 +170,9 @@ void CALLBACK PADupdate(int pad)
 					clear_bit(status[pad], i);
 				else
 					set_bit(status[pad], i);
-				
-			
 			}
 		}
 	}
-
-	pthread_spin_lock(&s_mutexStatus);
-	s_keyPress[pad] |= keyPress;
-	s_keyPress[pad] &= ~keyRelease; 
-	s_keyRelease[pad] |= keyRelease;
-	s_keyRelease[pad] &= ~keyPress;
-	pthread_spin_unlock(&s_mutexStatus);
 }
 
 void UpdateConf(int pad)
@@ -324,7 +197,7 @@ void UpdateConf(int pad)
 		
 		if (IS_KEYBOARD(conf.keys[pad][i]))
 		{
-			char* pstr = XKeysymToString(PAD_GETKEY(conf.keys[pad][i]));
+			char* pstr = KeysymToChar(PAD_GETKEY(conf.keys[pad][i]));
 			if (pstr != NULL) tmp = pstr;
 		}
 		else if (IS_JOYBUTTONS(conf.keys[pad][i]))
@@ -386,7 +259,7 @@ void UpdateConf(int pad)
 	// check bounds
 	int joyid = _GetJoystickIdFromPAD(pad);
 
-	if ((joyid >= 0) && (joyid < (int)s_vjoysticks.size()))
+	if (JoystickIdWithinBounds(joyid))
 		gtk_combo_box_set_active(GTK_COMBO_BOX(s_devicecombo), joyid); // select the combo
 	else 
 		gtk_combo_box_set_active(GTK_COMBO_BOX(s_devicecombo), s_vjoysticks.size()); // no gamepad
@@ -418,33 +291,6 @@ int GetLabelId(GtkWidget *label)
 	return (int)(uptr)gtk_object_get_user_data(GTK_OBJECT(label));	
 }
 
-bool PollKeyboard(char* &temp, u32 &pkey)
-{
-	GdkEvent *ev = gdk_event_get();
-	
-	if (ev != NULL)
-	{
-		if (ev->type == GDK_KEY_PRESS)
-		{
-			
-			if (ev->key.keyval == GDK_Escape) 
-			{
-				temp = "Unknown";
-				pkey = NULL;
-			}
-			else
-			{
-				temp = XKeysymToString(ev->key.keyval);
-				pkey = ev->key.keyval;
-			}
-			
-			return true;
-		}
-	}
-	
-	return false;
-}
-
 void OnConf_Key(GtkButton *button, gpointer user_data)
 {
 	GtkWidget* label = GetLabelWidget(button);
@@ -465,7 +311,7 @@ void OnConf_Key(GtkButton *button, gpointer user_data)
 		vector<JoystickInfo*>::iterator itjoy;
 		char *tmp;
 		
-		if (PollKeyboard(tmp, conf.keys[pad][key])) 
+		if (PollX11Keyboard(tmp, conf.keys[pad][key])) 
 		{
 			strcpy(str, tmp);
 			captured = true;

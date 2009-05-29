@@ -23,6 +23,7 @@
 #include <stdarg.h>
 
 #include "zeropad.h"
+#include "joystick.h"
 
 #ifndef _WIN32
 
@@ -121,6 +122,9 @@ int curCmd;
 int cmdLen;
 int ds2mode = 0; // DS Mode at start
 FILE *padLog = NULL;
+
+pthread_spinlock_t s_mutexStatus;
+u32 s_keyPress[2], s_keyRelease[2];
 
 static void InitLibraryName()
 {
@@ -262,12 +266,38 @@ s32 CALLBACK PADopen(void *pDsp)
 {
 	memset(&event, 0, sizeof(event));
 
+	pthread_spin_init(&s_mutexStatus, PTHREAD_PROCESS_PRIVATE);
+	s_keyPress[0] = s_keyPress[1] = 0;
+	s_keyRelease[0] = s_keyRelease[1] = 0;
+	
+	JoystickInfo::EnumerateJoysticks(s_vjoysticks);
 	return _PADopen(pDsp);
 }
 
 void CALLBACK PADclose()
 {
+	pthread_spin_destroy(&s_mutexStatus);
 	_PADclose();
+}
+
+void _PADupdate(int pad)
+{
+	pthread_spin_lock(&s_mutexStatus);
+	status[pad] |= s_keyRelease[pad];
+	status[pad] &= ~s_keyPress[pad];
+	s_keyRelease[pad] = 0;
+	s_keyPress[pad] = 0;
+	pthread_spin_unlock(&s_mutexStatus);
+}
+
+void UpdateKeys(int pad, int keyPress, int keyRelease)
+{
+	pthread_spin_lock(&s_mutexStatus);
+	s_keyPress[pad] |= keyPress;
+	s_keyPress[pad] &= ~keyRelease; 
+	s_keyRelease[pad] |= keyRelease;
+	s_keyRelease[pad] &= ~keyPress;
+	pthread_spin_unlock(&s_mutexStatus);
 }
 
 u32 CALLBACK PADquery()

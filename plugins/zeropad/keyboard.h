@@ -16,26 +16,29 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
  
-#include "joystick.h"
-#include "keyboard.h"
+ #ifndef __KEYBOARD_H__
+ #define __KEYBOARD_H__
+ 
 #include "zeropad.h"
+ 
+#ifdef __LINUX__
 
-#include <string.h>
-#include <gtk/gtk.h>
-#include <gdk/gdkkeysyms.h>
-#include <pthread.h>
+#include "Linux/linux.h"
+ 
+extern Display *GSdsp;
+extern void PollForX11KeyboardInput(int pad);
+extern bool PollX11Keyboard(char* &temp, u32 &pkey);
 
+#else
 
-extern "C"
-{
-#include "interface.h"
-#include "support.h"
-#include "callbacks.h"
-}
+extern WNDPROC GSwndProc = NULL;
+extern HWND GShwnd = NULL;
 
-extern GtkWidget *Conf, *s_devicecombo;
-extern string s_strIniPath;
+#endif
+ 
+extern char* KeysymToChar(int keysym);
+extern void PollForKeyboardInput(int pad);
+extern void SetAutoRepeat(bool autorep);
+extern __forceinline int FindKey(int key, int pad);
 
-
-#define is_checked(main_widget, widget_name) (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lookup_widget(main_widget, widget_name))))
-#define set_checked(main_widget,widget_name, state) gtk_toggle_button_set_state(GTK_TOGGLE_BUTTON(lookup_widget(main_widget, widget_name)), state)
+ #endif

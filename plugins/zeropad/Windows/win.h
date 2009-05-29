@@ -16,26 +16,18 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
  
-#include "joystick.h"
-#include "keyboard.h"
-#include "zeropad.h"
+ #include <string.h>
+#include <windows.h>
+#include <windowsx.h>
+#include <commctrl.h>
 
-#include <string.h>
-#include <gtk/gtk.h>
-#include <gdk/gdkkeysyms.h>
+#include "resource.h"
+#include "../zeropad.h"
+
 #include <pthread.h>
+#include <string>
 
-
-extern "C"
-{
-#include "interface.h"
-#include "support.h"
-#include "callbacks.h"
-}
-
-extern GtkWidget *Conf, *s_devicecombo;
-extern string s_strIniPath;
-
-
-#define is_checked(main_widget, widget_name) (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lookup_widget(main_widget, widget_name))))
-#define set_checked(main_widget,widget_name, state) gtk_toggle_button_set_state(GTK_TOGGLE_BUTTON(lookup_widget(main_widget, widget_name)), state)
+extern void SaveConfig();
+extern void LoadConfig();
+extern void SysMessage(char *fmt, ...);
+extern LRESULT WINAPI PADwndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);

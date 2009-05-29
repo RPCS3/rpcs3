@@ -139,4 +139,5 @@ extern int s_selectedpad;
 extern vector<JoystickInfo*> s_vjoysticks;
 extern void UpdateJoysticks();
 extern const char *HatName(int value);
+extern bool JoystickIdWithinBounds(int joyid);
 #endif

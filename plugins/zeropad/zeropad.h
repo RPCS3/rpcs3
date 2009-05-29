@@ -183,14 +183,7 @@ void LoadConfig();
 void SaveConfig();
 
 void SysMessage(char *fmt, ...);
-
-inline int FindKey(int key, int pad)
-{
-	for (int p = 0; p < PADSUBKEYS; p++)
-		for (int i = 0; i < PADKEYS; i++)
-			if (key == conf.keys[(PadEnum[pad][p])][i]) return i;
-	return -1;
-}
+void UpdateKeys(int pad, int keyPress, int keyRelease);
 
 #endif
 
