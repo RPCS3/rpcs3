@@ -184,23 +184,32 @@ microVUt(void) mVUsetupFlags(int* xStatus, int* xMac, int* xClip, int cycles) {
 	}
 }
 
-microVUt(void) mVUflagPass(int startPC) {
+#define shortBranch() {												\
+	if (branch == 3) {												\
+		mVUflagPass<vuIndex>(aBranchAddr, (xCount - (mVUcount+1)));	\
+		mVUcount = 4;												\
+	}																\
+}
+
+// Scan through instructions and check if flags are read (FSxxx, FMxxx, FCxxx opcodes)
+microVUx(void) mVUflagPass(u32 startPC, u32 xCount) {
 
 	microVU* mVU  = mVUx;
 	int oldPC	  = iPC;
 	int oldCount  = mVUcount;
 	int oldBranch = mVUbranch;
+	int aBranchAddr;
 	iPC		  = startPC / 4;
 	mVUcount  = 0;
 	mVUbranch = 0;
-	for (int branch = 0; mVUcount < 4; mVUcount++) {
+	for (int branch = 0; mVUcount < xCount; mVUcount++) {
 		incPC(1);
 		if (  curI & _Ebit_   )	{ branch = 1; }
 		if (  curI & _MDTbit_ )	{ branch = 4; }
 		if (!(curI & _Ibit_)  )	{ incPC(-1); mVUopL<vuIndex, 3>(); incPC(1); }
-		if		(branch >= 2)	{ break; }
+		if		(branch >= 2)	{ shortBranch(); break; }
 		else if (branch == 1)	{ branch = 2; }
-		if		(mVUbranch)		{ branch = 3; mVUbranch = 0; }
+		if		(mVUbranch)		{ branch = (mVUbranch >= 9) ? 5 : 3; aBranchAddr = branchAddr; mVUbranch = 0; }
 		incPC(1);
 	}
 	if (mVUcount < 4) { mVUflagInfo |= 0xfff; }
@@ -214,17 +223,18 @@ microVUt(void) mVUflagPass(int startPC) {
 #define branchType2 else if (mVUbranch >= 9)	// JR/JALR
 #define branchType3 else						// Conditional Branch
 
+// Checks if the first 4 instructions of a block will read flags
 microVUt(void) mVUsetFlagInfo() {
 	microVU* mVU = mVUx;
-	branchType1 { incPC(-1); mVUflagPass<vuIndex>(branchAddr); incPC(1); }
+	branchType1 { incPC(-1); mVUflagPass<vuIndex>(branchAddr, 4); incPC(1); }
 	branchType2 { mVUflagInfo |= 0xfff; }
 	branchType3 {
 		incPC(-1); 
-		mVUflagPass<vuIndex>(branchAddr);
+		mVUflagPass<vuIndex>(branchAddr, 4);
 		int backupFlagInfo = mVUflagInfo;
 		mVUflagInfo = 0;
 		incPC(4); // Branch Not Taken
-		mVUflagPass<vuIndex>(xPC);
+		mVUflagPass<vuIndex>(xPC, 4);
 		incPC(-3);		
 		mVUflagInfo |= backupFlagInfo;
 	}
