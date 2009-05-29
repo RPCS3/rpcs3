@@ -4,7 +4,7 @@
 
 namespace YAML
 {
-	Stream::Stream(std::istream& input): buffer(0), pos(0), line(0), column(0), size(0)
+	Stream::Stream(std::istream& input): pos(0), line(0), column(0), size(0), buffer(0)
 	{
 		if(!input)
 			return;
