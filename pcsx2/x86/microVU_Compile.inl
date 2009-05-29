@@ -54,8 +54,8 @@
 #define tCycles(dest, src)	{ dest = aMax(dest, src); }
 #define incP()				{ mVU->p = (mVU->p+1) & 1; }
 #define incQ()				{ mVU->q = (mVU->q+1) & 1; }
-#define doUpperOp()			{ mVUopU<vuIndex, 1>(); mVUdivSet<vuIndex>(); }
-#define doLowerOp()			{ incPC(-1); mVUopL<vuIndex, 1>(); incPC(1); }
+#define doUpperOp()			{ mVUopU<vuIndex>(1); mVUdivSet<vuIndex>(); }
+#define doLowerOp()			{ incPC(-1); mVUopL<vuIndex>(1); incPC(1); }
 #define doIbit()			{ if (curI & _Ibit_) { incPC(-1); MOV32ItoM((uptr)&mVU->regs->VI[REG_I].UL, curI); incPC(1); } }
 
 //------------------------------------------------------------------
@@ -188,8 +188,8 @@ microVUt(void) mVUendProgram(int qInst, int pInst, int fStatus, int fMac, int fC
 
 void __fastcall mVUwarning0(u32 PC) { Console::Error("microVU0 Warning: Exiting from Possible Infinite Loop [%04x]", params PC); }
 void __fastcall mVUwarning1(u32 PC) { Console::Error("microVU1 Warning: Exiting from Possible Infinite Loop [%04x]", params PC); }
-void __fastcall mVUprintPC1(u32 PC) { Console::WriteLn("Block startPC [%04x]",   params PC); }
-void __fastcall mVUprintPC2(u32 PC) { Console::WriteLn("Block endPC   [%04x]\n", params PC); }
+void __fastcall mVUprintPC1(u32 PC) { Console::Write("Block PC [%04x] ", params PC); }
+void __fastcall mVUprintPC2(u32 PC) { Console::Write("[%04x]\n", params PC); }
 
 microVUt(void) mVUtestCycles() {
 	microVU* mVU = mVUx;
@@ -250,11 +250,11 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 		mVUinfo = 0;
 		startLoop();
 		incCycles(1);
-		mVUopU<vuIndex, 0>();
+		mVUopU<vuIndex>(0);
 		if (curI & _Ebit_)	  { branch = 1; }
 		if (curI & _MDTbit_)  { branch = 4; }
 		if (curI & _Ibit_)	  { mVUinfo |= _isNOP; }
-		else				  { incPC(-1); mVUopL<vuIndex, 0>(); incPC(1); }
+		else				  { incPC(-1); mVUopL<vuIndex>(0); incPC(1); }
 		mVUsetCycles<vuIndex>();
 		if (mVU->p)			  { mVUinfo |= _readP; }
 		if (mVU->q)			  { mVUinfo |= _readQ; }
@@ -279,7 +279,7 @@ microVUt(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 		if (isEOB)			{ x = 0xffff; }
 		if (isNOP)			{ incPC(1); doUpperOp(); doIbit(); }
 		else if (!swapOps)	{ incPC(1); doUpperOp(); doLowerOp(); }
-		else				{ mVUopL<vuIndex, 1>(); incPC(1); doUpperOp(); }
+		else				{ mVUopL<vuIndex>(1); incPC(1); doUpperOp(); }
 		if (doXGKICK)		{ mVU_XGKICK_DELAY<vuIndex>(); }
 		
 		if (!isBdelay) { incPC(1); }

@@ -147,8 +147,8 @@ void  __fastcall mVUcleanUpVU0();
 void  __fastcall mVUcleanUpVU1();
 void* __fastcall mVUcompileVU0(u32 startPC, uptr pState);
 void* __fastcall mVUcompileVU1(u32 startPC, uptr pState);
-microVUf(void) mVUopU();
-microVUf(void) mVUopL();
+microVUf(void) mVUopU(mF);
+microVUf(void) mVUopL(mF);
 
 // Private Functions
 microVUt(void)		mVUclearProg(microVU* mVU, int progIndex);

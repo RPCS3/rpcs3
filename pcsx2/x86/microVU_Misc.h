@@ -140,8 +140,11 @@ declareAllVariables
 #define mVUx (vuIndex ? &microVU1 : &microVU0)
 #define microVUt(aType) template<int vuIndex> __forceinline aType
 #define microVUx(aType) template<int vuIndex> aType
-#define microVUf(aType) template<int vuIndex, int recPass> aType
-#define microVUq(aType) template<int vuIndex, int recPass>  __forceinline aType
+#define microVUf(aType) template<int vuIndex> aType
+#define microVUq(aType) template<int vuIndex> __forceinline aType
+
+// Function Params
+#define mF int recPass
 
 // Define Passes
 #define pass1 if (recPass == 0)

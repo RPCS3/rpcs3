@@ -206,7 +206,7 @@ microVUx(void) mVUflagPass(u32 startPC, u32 xCount) {
 		incPC(1);
 		if (  curI & _Ebit_   )	{ branch = 1; }
 		if (  curI & _MDTbit_ )	{ branch = 4; }
-		if (!(curI & _Ibit_)  )	{ incPC(-1); mVUopL<vuIndex, 3>(); incPC(1); }
+		if (!(curI & _Ibit_)  )	{ incPC(-1); mVUopL<vuIndex>(3); incPC(1); }
 		if		(branch >= 2)	{ shortBranch(); break; }
 		else if (branch == 1)	{ branch = 2; }
 		if		(mVUbranch)		{ branch = (mVUbranch >= 9) ? 5 : 3; aBranchAddr = branchAddr; mVUbranch = 0; }
