@@ -58,8 +58,6 @@ __forceinline void gsInterrupt() {
 		return;
 	}
 	
-	if(Path3progress == 2) vif1Regs->stat &= ~VIF1_STAT_VGW;
-
 	if (gif->qwc > 0 || gspath3done == 0) {
 		if (!(psHu32(DMAC_CTRL) & 0x1)) {
 			Console::Notice("gs dma masked, re-scheduling...");
@@ -72,12 +70,14 @@ __forceinline void gsInterrupt() {
 		return;
 	}
 
+	vif1Regs->stat &= ~VIF1_STAT_VGW;
 	gspath3done = 0;
 	gscycles = 0;
 	gif->chcr &= ~0x100;
 	GSCSRr &= ~0xC000; //Clear FIFO stuff
 	GSCSRr |= 0x4000;  //FIFO empty
-	psHu32(GIF_STAT)&= ~0xE00; // OPH=0 | APATH=0
+	psHu32(GIF_STAT) &= ~GIF_STAT_P3Q;
+	//psHu32(GIF_STAT)&= ~0xE00; // OPH=0 | APATH=0
 	psHu32(GIF_STAT)&= ~0x1F000000; // QFC=0
 	hwDmacIrq(DMAC_GIF);
 	GIF_LOG("GIF DMA end");
@@ -86,7 +86,7 @@ __forceinline void gsInterrupt() {
 
 static u32 WRITERING_DMA(u32 *pMem, u32 qwc)
 { 
-	psHu32(GIF_STAT) |= 0xE00;         
+	psHu32(GIF_STAT) |= GIF_STAT_APATH3 | GIF_STAT_OPH;         
 
 
 	if( mtgsThread != NULL )
@@ -107,6 +107,7 @@ static u32 WRITERING_DMA(u32 *pMem, u32 qwc)
 		memcpy_aligned(pgsmem, pMem, sizetoread<<4); 
 		
 		mtgsThread->SendDataPacket();
+		if(Path3progress == 2) psHu32(GIF_STAT)&= ~(GIF_STAT_APATH3 | GIF_STAT_OPH); // OPH=0 | APATH=0
 		return sizetoread;
 	} 
 	else 
@@ -243,6 +244,7 @@ void GIFdma()
 		 
 		if(Path3progress == 2/* && gif->qwc != 0*/)
 		{
+			vif1Regs->stat &= ~VIF1_STAT_VGW;
 			dmaGIFend();
 			return;
 		}
@@ -347,8 +349,9 @@ void dmaGIF() {
 		return;
 	}
 
-	gspath3done = 0; // For some reason this doesnt clear? So when the system starts the thread, we will clear it :)
 
+	gspath3done = 0; // For some reason this doesnt clear? So when the system starts the thread, we will clear it :)
+	psHu32(GIF_STAT) |= GIF_STAT_P3Q;
 	GSCSRr &= ~0xC000;  //Clear FIFO stuff
 	GSCSRr |= 0x8000;   //FIFO full
 	psHu32(GIF_STAT)|= 0x10000000; // FQC=31, hack ;) [used to be 0xE00; // OPH=1 | APATH=3]
@@ -376,7 +379,7 @@ void dmaGIF() {
 	}
 
 	//Halflife sets a QWC amount in chain mode, no tadr set.
-	if((gif->qwc > 0) && ((gif->chcr & 0x4) == 0x4)) gspath3done = 1;
+	if(gif->qwc > 0) gspath3done = 1;
 	
 	GIFdma();
 }
@@ -391,7 +394,7 @@ static __forceinline int mfifoGIFrbTransfer() {
 	if ((gif->madr+mfifoqwc*16) > (psHu32(DMAC_RBOR) + psHu32(DMAC_RBSR)+16)) 
 	{
 		int s1 = ((psHu32(DMAC_RBOR) + psHu32(DMAC_RBSR)+16) - gif->madr) >> 4;
-
+		int s2 = (mfifoqwc - s1);
 		// fixme - I don't think these should use WRITERING_DMA, since our source
 		// isn't the DmaGetAddr(gif->madr) address that WRITERING_DMA expects.
 
@@ -400,13 +403,14 @@ static __forceinline int mfifoGIFrbTransfer() {
 		if (src == NULL) return -1;
 		s1 = WRITERING_DMA(src, s1);
 
-		if(s1 == (((psHu32(DMAC_RBOR) + psHu32(DMAC_RBSR)+16) - gif->madr) >> 4)) 
+		if(s1 == (mfifoqwc - s2)) 
 		{
 			/* and second copy 's2' bytes from 'maddr' to '&data[s1]' */
 			src = (u32*)PSM(psHu32(DMAC_RBOR));
 			if (src == NULL) return -1;
-			mfifoqwc = WRITERING_DMA(src, (mfifoqwc - s1)) + s1;
-		}
+			s2 = WRITERING_DMA(src, s2);
+		} else s2 = 0;
+		mfifoqwc = s1 + s2;
 		
 	} 
 	else 
@@ -579,10 +583,10 @@ void gifMFIFOInterrupt()
 	if (!gifmfifoirq) gifqwc = 0;
 	gifstate = GIF_STATE_READY;
 	gif->chcr &= ~0x100;
+	vif1Regs->stat &= ~VIF1_STAT_VGW;
 	hwDmacIrq(DMAC_GIF);
 	GSCSRr &= ~0xC000; //Clear FIFO stuff
 	GSCSRr |= 0x4000;  //FIFO empty
-	psHu32(GIF_STAT)&= ~0xE00; // OPH=0 | APATH=0
 	psHu32(GIF_STAT)&= ~0x1F000000; // QFC=0
 }
 

@@ -623,8 +623,8 @@ static void VIFunpack(u32 *data, vifCode *v, unsigned int size, const unsigned i
 		if(tempsize > (u32)(VIFdmanum ? 0x4000 : 0x1000)) 
 		{
 			
-			//DevCon::Notice("VIF%x Unpack ending %x > %x", params VIFdmanum, tempsize, VIFdmanum ? 0x4000 : 0x1000);
-			if(vifRegs->cycle.cl == 1 && ((u32)(VIFdmanum ? 0x4000 : 0x1000) + ((vifRegs->cycle.cl - vifRegs->cycle.wl) * 16)) == tempsize
+			
+			if(((vifRegs->cycle.cl != vifRegs->cycle.wl) && ((u32)(VIFdmanum ? 0x4000 : 0x1000) + ((vifRegs->cycle.cl - vifRegs->cycle.wl) * 16)) == tempsize)
 				|| tempsize == (u32)(VIFdmanum ? 0x4000 : 0x1000))
 			{
 				//Its a red herring! so ignore it! SSE unpacks will be much quicker
@@ -632,6 +632,7 @@ static void VIFunpack(u32 *data, vifCode *v, unsigned int size, const unsigned i
 			}
 			else
 			{
+				//DevCon::Notice("VIF%x Unpack ending %x > %x", params VIFdmanum, tempsize, VIFdmanum ? 0x4000 : 0x1000);
 				tempsize = size;
 				size = 0;
 			}
@@ -1678,7 +1679,7 @@ static __forceinline void vif1UNPACK(u32 *data)
 			return;
 		}
 	}
-	vif1FLUSH();
+	//vif1FLUSH();
 
 	vl = (vif1.cmd) & 0x3;
 	vn = (vif1.cmd >> 2) & 0x3;
@@ -1890,7 +1891,7 @@ static int __fastcall Vif1TransDirectHL(u32 *data)
 	}
 	else
 	{
-		psHu32(GIF_STAT) &= ~0x80;
+		psHu32(GIF_STAT) &= ~GIF_STAT_APATH2;
 		ret = vif1.tag.size;
 		vif1.tag.size = 0;
 		vif1.cmd = 0;
@@ -2057,7 +2058,7 @@ static void Vif1CMDFlush()  // FLUSH/E/A
 
 	if((vif1.cmd & 0x7f) == 0x13)
 	{
-		if(Path3progress != 2 && gif->chcr & 0x100) // Gif is already transferring so wait for it.
+		if((Path3progress != 2 || !vif1Regs->mskpath3) && gif->chcr & 0x100) // Gif is already transferring so wait for it.
 		{	
 			vif1Regs->stat |= VIF1_STAT_VGW;			
 		}
@@ -2089,7 +2090,7 @@ static void Vif1CMDSTRowCol() // STROW / STCOL
 static void Vif1CMDMPGTransfer()  // MPG
 {
 	int vifNum;
-	vif1FLUSH();
+	//vif1FLUSH();
 	vifNum = (u8)(vif1Regs->code >> 16);
 
 	if (vifNum == 0) vifNum = 256;
@@ -2113,15 +2114,15 @@ static void Vif1CMDDirectHL()  // DIRECT/HL
 	//FIXME: This should have timing in both cases, see note below.
 	if((vif1.cmd & 0x7f) == 0x51)
 	{
-		if(gif->chcr & 0x100 /*&& Path3progress == 0*/) //PATH3 is in image mode, so wait for end of transfer
+		if(gif->chcr & 0x100 && (!vif1Regs->mskpath3 || Path3progress != 2)) //PATH3 is in image mode, so wait for end of transfer
 		{
 			//DevCon::Notice("DirectHL gif chcr %x gif qwc %x mskpth3 %x", params gif->chcr, gif->qwc, vif1Regs->mskpath3);
-			if(vif1Regs->mskpath3)vif1Regs->stat |= VIF1_STAT_VGW;
-			else while(gif->chcr & 0x100) gsInterrupt(); //Hacky as hell (no timing) but Soul Calibur 3 doesnt want timing :(
+			/*if(vif1Regs->mskpath3)*/vif1Regs->stat |= VIF1_STAT_VGW;
+			//else while(gif->chcr & 0x100) gsInterrupt(); //Hacky as hell (no timing) but Soul Calibur 3 doesnt want timing :(
 		}
 		
 	}
-	psHu32(GIF_STAT) |= 0x80;
+	psHu32(GIF_STAT) |= GIF_STAT_APATH2;
 	
 }
 static void Vif1CMDNull()  // invalid opcode
@@ -2193,6 +2194,17 @@ int VIF1transfer(u32 *data, int size, int istag)
 
 	while (vif1.vifpacketsize > 0)
 	{
+		if((vif1.cmd & 0x7f) == 0x51)
+		{
+			if(gif->chcr & 0x100 && (!vif1Regs->mskpath3 || Path3progress != 2)) //PATH3 is in image mode, so wait for end of transfer
+			{
+				//DevCon::Notice("DirectHL gif chcr %x gif qwc %x mskpth3 %x", params gif->chcr, gif->qwc, vif1Regs->mskpath3);
+				/*if(vif1Regs->mskpath3)*/vif1Regs->stat |= VIF1_STAT_VGW;
+				//else while(gif->chcr & 0x100) gsInterrupt(); //Hacky as hell (no timing) but Soul Calibur 3 doesnt want timing :(
+			}
+			
+		}
+		if(vif1Regs->stat & VIF1_STAT_VGW) break;
 		if (vif1.cmd)
 		{
 			vif1Regs->stat |= VIF1_STAT_VPS_T; //Decompression has started
@@ -2350,7 +2362,7 @@ void vif1TransferFromMemory()
 	}
 	FreezeXMMRegs(0);
 
-	if (vif1Regs->mskpath3 == 0)vif1Regs->stat &= ~0x1f000000;
+	
 	g_vifCycles += vif1ch->qwc * 2;
 	vif1ch->madr += vif1ch->qwc * 16; // mgs3 scene changes
 	vif1ch->qwc = 0;
@@ -2401,6 +2413,7 @@ __forceinline void vif1SetupTransfer()
 		case 1: //Normal (From memory)
 			vif1.inprogress = 1;
 			vif1.done = true;
+			g_vifCycles = 2;
 			break;
 
 		case 2: //Chain
@@ -2513,7 +2526,12 @@ __forceinline void vif1Interrupt()
 		}
 	}
 
-	if (vif1.inprogress) _VIF1chain();
+	if (vif1.inprogress) 
+	{
+		_VIF1chain();
+		CPU_INT(1, g_vifCycles);
+		return;
+	}
 
 	if ((!vif1.done) || (vif1.inprogress & 0x1))
 	{
@@ -2543,7 +2561,7 @@ __forceinline void vif1Interrupt()
 	vif1ch->chcr &= ~0x100;
 	g_vifCycles = 0;
 	hwDmacIrq(DMAC_VIF1);
-	vif1Regs->stat &= ~0x1F000000; // FQC=0
+	if(vif1ch->chcr & 0x1)vif1Regs->stat &= ~0x1F000000; // FQC=0
 }
 
 void dmaVIF1()
@@ -2557,8 +2575,7 @@ void dmaVIF1()
 	g_vifCycles = 0;
 	vif1.inprogress = 0;
 
-	vif1Regs->stat |= 0x10000000; // FQC=16
-
+	
 	if (((psHu32(DMAC_CTRL) & 0xC) == 0x8))   // VIF MFIFO
 	{
 		//Console::WriteLn("VIFMFIFO\n");
@@ -2590,6 +2607,9 @@ void dmaVIF1()
 	{
 		vif1.dmamode = 2;
 	}
+
+	if(vif1.dmamode != 1)vif1Regs->stat |= 0x10000000; // FQC=16
+	else vif1Regs->stat |= min((u16)16, vif1ch->qwc) << 24; // FQC=16
 
 	// Chain Mode
 	vif1.done = false;
@@ -2705,7 +2725,7 @@ void vif1Write32(u32 mem, u32 value)
 			vif1Regs->stat = (vif1Regs->stat & ~VIF1_STAT_FDR) | (value & VIF1_STAT_FDR);
 			if (vif1Regs->stat & VIF1_STAT_FDR)
 			{
-				vif1Regs->stat |= 0x01000000;
+				vif1Regs->stat |= 0x01000000; // FQC=1 - hack but it checks this is true before tranfer? (fatal frame)
 			}
 			else
 			{

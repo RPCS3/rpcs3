@@ -1977,7 +1977,7 @@ void VU1XGKICK_MTGSTransfer(u32 *pMem, u32 addr)
 {
 	u32 size;
     u32* data = (u32*)((u8*)pMem + (addr&0x3fff));
-
+	
 	// fixme: The gifTagDummy function in the MTGS (called by PrepDataPacket) has a
 	// hack that aborts the packet if it goes past the end of VU1 memory.
 	// Chances are this should be a "loops around memory" situation, and the packet
@@ -1989,7 +1989,20 @@ void VU1XGKICK_MTGSTransfer(u32 *pMem, u32 addr)
     //if( size > 0 )
 	{
 		u8* pmem = mtgsThread->GetDataPacketPtr();
-		memcpy_aligned(pmem, (u8*)pMem+addr, size<<4);
+		
+	/*	if((size << 4) > (0x4000-(addr&0x3fff)))
+		{
+			//DevCon::Notice("addr + Size = 0x%x, transferring %x then doing %x", params (addr&0x3fff) + (size << 4), (0x4000-(addr&0x3fff)) >> 4, size - ((0x4000-(addr&0x3fff)) >> 4));
+			memcpy_aligned(pmem, (u8*)pMem+addr, 0x4000-(addr&0x3fff));
+			size -= (0x4000-(addr&0x3fff)) >> 4;
+			//DevCon::Notice("Size left %x", params size);
+			pmem += 0x4000-(addr&0x3fff);
+			memcpy_aligned(pmem, (u8*)pMem, size<<4);
+		}
+		else
+		{*/
+			memcpy_aligned(pmem, (u8*)pMem+addr, size<<4);
+	//	}
 		mtgsThread->SendDataPacket();
 	}
 }

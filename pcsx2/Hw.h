@@ -288,6 +288,23 @@ enum DMACIrqs
 #define VIF_STAT_ER1	(1<<13)
 #define VIF_STAT_FDR	(1<<23)
 
+//GIF_STAT 
+
+#define GIF_STAT_M3R    (1)  //GIF_MODE Mask
+#define GIF_STAT_M3P    (1<<1) //VIF PATH3 Mask
+#define GIF_STAT_IMT    (1<<2) //Intermittent Transfer Mode
+#define GIF_STAT_PSE    (1<<3) //Temporary Transfer Stop
+#define GIF_STAT_IP3    (1<<5) //Interrupted PATH3
+#define GIF_STAT_P3Q    (1<<6) //PATH3 request Queued
+#define GIF_STAT_P2Q    (1<<7) //PATH2 request Queued
+#define GIF_STAT_P1Q    (1<<8) //PATH1 request Queued
+#define GIF_STAT_OPH    (1<<9) //Output Path (Outputting Data)
+#define GIF_STAT_APATH1 (1<<10) //Data Transfer Path 1 (In progress)
+#define GIF_STAT_APATH2 (2<<10) //Data Transfer Path 2 (In progress)
+#define GIF_STAT_APATH3 (3<<10) //Data Transfer Path 3 (In progress) (Mask too)
+#define GIF_STAT_DIR	(1<<12) //Transfer Direction
+#define GIF_STAT_FQC    (31<<24) //QWC in GIF-FIFO
+
 //DMA interrupts & masks
 enum DMAInter
 {	

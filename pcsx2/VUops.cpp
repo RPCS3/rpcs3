@@ -2061,7 +2061,33 @@ void _vuXGKICK(VURegs * VU)
 		ptr = (u32*)GET_VU_MEM(VU, 0);
 		memcpy(&tempmem[temp], ptr, ((VU->VI[_Is_].US[0]*16) & 0x3fff));
 		GSGIFTRANSFER1((u32*)&tempmem[0], 0);
-	} else*/ GSGIFTRANSFER1((u32*)VU->Mem, (VU->VI[_Is_].US[0]*16) & 0x3fff);
+	} else*/ 
+	//DevCon::Notice("Addr %x", params VU->VI[_Is_].US[0] & 0x3fff);
+	if( mtgsThread != NULL )
+	{
+		u32* data = (u32*)((u8*)VU->Mem + ((VU->VI[_Is_].US[0]*16) & 0x3fff));
+		u32 size;
+		size = mtgsThread->PrepDataPacket( GIF_PATH_1, data, (0x4000-((VU->VI[_Is_].US[0]*16) & 0x3fff)) >> 4);
+		{
+			u8* pmem = mtgsThread->GetDataPacketPtr();
+			
+			if((size << 4) > (u32)(0x4000-((VU->VI[_Is_].US[0]*16) & 0x3fff)))
+			{
+				//DevCon::Notice("addr + Size = 0x%x, transferring %x then doing %x", params ((VU->VI[_Is_].US[0]*16) & 0x3fff) + (size << 4), (0x4000-((VU->VI[_Is_].US[0]*16) & 0x3fff)) >> 4, size - (0x4000-((VU->VI[_Is_].US[0]*16) & 0x3fff) >> 4));
+				memcpy_aligned(pmem, (u8*)VU->Mem+((VU->VI[_Is_].US[0]*16) & 0x3fff), 0x4000-((VU->VI[_Is_].US[0]*16) & 0x3fff));
+				size -= (0x4000-((VU->VI[_Is_].US[0]*16) & 0x3fff)) >> 4;
+				//DevCon::Notice("Size left %x", params size);
+				pmem += 0x4000-((VU->VI[_Is_].US[0]*16) & 0x3fff);
+				memcpy_aligned(pmem, (u8*)VU->Mem, size<<4);
+			}
+			else
+			{
+				memcpy_aligned(pmem, (u8*)VU->Mem+((VU->VI[_Is_].US[0]*16) & 0x3fff), size<<4);
+			}
+			mtgsThread->SendDataPacket();
+		}
+		
+	}else GSGIFTRANSFER1((u32*)VU->Mem, (VU->VI[_Is_].US[0]*16) & 0x3fff);
 }
 
 void _vuXTOP(VURegs * VU) {

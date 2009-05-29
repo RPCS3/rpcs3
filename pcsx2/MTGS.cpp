@@ -259,10 +259,11 @@ void mtgsThreadObject::Reset()
 // Used to keep interrupts in sync with the EE, while the GS itself
 // runs potentially several frames behind.
 // size - size of the packet in simd128's
-__forceinline u32 mtgsThreadObject::_gifTransferDummy( GIF_PATH pathidx, const u8* pMem, u32 size )
+__forceinline int mtgsThreadObject::_gifTransferDummy( GIF_PATH pathidx, const u8* pMem, u32 size )
 {
 	GIFPath& path = m_path[pathidx];
-
+  /*	bool path1loop = false;
+	int startval = size;*/
 #ifdef PCSX2_GSRING_SAMPLING_STATS
 	static uptr profStartPtr = 0;
 	static uptr profEndPtr = 0;
@@ -295,10 +296,25 @@ __forceinline u32 mtgsThreadObject::_gifTransferDummy( GIF_PATH pathidx, const u
 			}
 
 			if( pathidx == 0 ) 
-			{                        
+			{                       
+			//	int transize = 0;
 				// hack: if too much data for VU1, just ignore.
 
 				// The GIF is evil : if nreg is 0, it's really 16.  Otherwise it's the value in nreg.
+				/*const int numregs = path.tag.nreg ? path.tag.nreg : 16;
+				if(path.tag.flg < 2)
+				{
+					transize = (path.tag.nloop * numregs);
+				}
+				else transize = path.tag.nloop;
+
+				if(transize > (path.tag.flg == 1 ? 0x800 : 0x400))
+				{
+					//DevCon::Notice("Too much data");
+					path.tag.nloop = 0;
+					if(path1loop == true)return ++size - 0x400;
+					else return ++size;
+				}*/
 				const int numregs = ((path.tag.nreg-1)&15)+1;
 
 				if((path.tag.nloop * numregs) > (size * ((path.tag.flg == 1) ? 2 : 1)))
@@ -374,7 +390,22 @@ __forceinline u32 mtgsThreadObject::_gifTransferDummy( GIF_PATH pathidx, const u
 			}
 		}
 		
-		if(pathidx == 0 || pathidx == 2)
+		if(pathidx == 0)
+		{
+			if(path.tag.eop && path.tag.nloop == 0)
+			{
+				break;
+			}
+			/*if((path.tag.nloop > 0 || (!path.tag.eop && path.tag.nloop == 0)) && size == 0)
+			{
+				if(path1loop == true) return size - 0x400;
+				//DevCon::Notice("Looping Nloop %x, Eop %x, FLG %x", params path.tag.nloop, path.tag.eop, path.tag.flg);
+				size = 0x400;
+				pMem -= 0x4000;
+				path1loop = true;
+			}*/
+		}
+		if(pathidx == 2)
 		{
 			if(path.tag.eop && path.tag.nloop == 0)
 			{
@@ -386,6 +417,11 @@ __forceinline u32 mtgsThreadObject::_gifTransferDummy( GIF_PATH pathidx, const u
 
 	if(pathidx == 0)
 	{
+		//If the XGKick has spun around the VU memory end address, we need to INCREASE the size sent.
+		/*if(path1loop == true)
+		{
+			return (size - 0x400); //This will cause a negative making eg. size(20) - retval(-30) = 50;
+		}*/
 		if(size == 0 && path.tag.nloop > 0)
 		{
 			path.tag.nloop = 0;
@@ -533,8 +569,8 @@ int mtgsThreadObject::Callback()
 					const u128* data = m_RingBuffer.GetPtr( m_RingPos+1 );
 
 					// make sure that tag>>16 is the MAX size readable
-					//GSgifTransfer1(((u32*)data) - 0x1000 + 4*qsize, 0x4000-qsize*16);
 					GSgifTransfer1((u32*)(data - 0x400 + qsize), 0x4000-qsize*16);
+					//GSgifTransfer1((u32*)data, qsize);
 					ringposinc += qsize;
 				}
 				break;
@@ -863,6 +899,7 @@ int mtgsThreadObject::PrepDataPacket( GIF_PATH pathidx, const u8* srcdata, u32 s
 		gif->madr += (size - retval) * 16;
 		gif->qwc -= size - retval;
 	}
+	//if(retval < 0) DevCon::Notice("Increasing size from %x to %x path %x", params size, size-retval, pathidx+1);
 	size = size - retval;
 	m_packet_size = size;
 	size++;			// takes into account our command qword.
