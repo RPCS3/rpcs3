@@ -373,7 +373,7 @@ void SSE_MIN2SS_XMM_to_XMM(x86SSERegType to, x86SSERegType from) {
 // Warning: Modifies all vectors in 'to' and 'from', and Modifies xmmT1 and xmmT2
 void SSE_ADD2SS_XMM_to_XMM(x86SSERegType to, x86SSERegType from) {
 	
-	if (!CHECK_VUADDSUBHACK) return;
+	if (!CHECK_VUADDSUBHACK) { SSE_ADDSS_XMM_to_XMM(to, from); return; }
 	u8 *localptr[8];
 
 	SSE_MOVAPS_XMM_to_XMM(xmmT1, to);
