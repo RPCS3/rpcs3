@@ -2071,7 +2071,7 @@ void _vuXGKICK(VURegs * VU)
 		{
 			u8* pmem = mtgsThread->GetDataPacketPtr();
 			
-			if((size << 4) > (u32)(0x4000-((VU->VI[_Is_].US[0]*16) & 0x3fff)))
+		/*	if((size << 4) > (u32)(0x4000-((VU->VI[_Is_].US[0]*16) & 0x3fff)))
 			{
 				//DevCon::Notice("addr + Size = 0x%x, transferring %x then doing %x", params ((VU->VI[_Is_].US[0]*16) & 0x3fff) + (size << 4), (0x4000-((VU->VI[_Is_].US[0]*16) & 0x3fff)) >> 4, size - (0x4000-((VU->VI[_Is_].US[0]*16) & 0x3fff) >> 4));
 				memcpy_aligned(pmem, (u8*)VU->Mem+((VU->VI[_Is_].US[0]*16) & 0x3fff), 0x4000-((VU->VI[_Is_].US[0]*16) & 0x3fff));
@@ -2081,9 +2081,9 @@ void _vuXGKICK(VURegs * VU)
 				memcpy_aligned(pmem, (u8*)VU->Mem, size<<4);
 			}
 			else
-			{
+			{*/
 				memcpy_aligned(pmem, (u8*)VU->Mem+((VU->VI[_Is_].US[0]*16) & 0x3fff), size<<4);
-			}
+			//}
 			mtgsThread->SendDataPacket();
 		}
 		
