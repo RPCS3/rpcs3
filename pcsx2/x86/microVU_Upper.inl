@@ -481,7 +481,7 @@ microVUf(void) mVU_ABS() {
 	pass3 { mVUlog("ABS"); mVUlogFtFs(); }
 }
 microVUf(void) mVU_ADD()	 { mVU_FMAC1 (ADD,  "ADD");    }
-microVUf(void) mVU_ADDi()	 { mVU_FMAC6 (ADD,  "ADDi");   }
+microVUf(void) mVU_ADDi()	 { mVU_FMAC6 (ADD2, "ADDi");   }
 microVUf(void) mVU_ADDq()	 { mVU_FMAC22(ADD,  "ADDq");   }
 microVUf(void) mVU_ADDx()	 { mVU_FMAC3 (ADD,  "ADDx");   }
 microVUf(void) mVU_ADDy()	 { mVU_FMAC3 (ADD,  "ADDy");   }

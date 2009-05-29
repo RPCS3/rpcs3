@@ -369,3 +369,78 @@ void SSE_MIN2SS_XMM_to_XMM(x86SSERegType to, x86SSERegType from) {
 	if (CHECK_VU_MINMAXHACK) { SSE_MINSS_XMM_to_XMM(to, from); }
 	else					 { MIN_MAX_SS(to, from, 1); }
 }
+
+// Warning: Modifies all vectors in 'to' and 'from', and Modifies xmmT1 and xmmT2
+void SSE_ADD2SS_XMM_to_XMM(x86SSERegType to, x86SSERegType from) {
+	
+	if (!CHECK_VUADDSUBHACK) return;
+	u8 *localptr[8];
+
+	SSE_MOVAPS_XMM_to_XMM(xmmT1, to);
+	SSE_MOVAPS_XMM_to_XMM(xmmT2, from);
+	SSE2_MOVD_XMM_to_R(gprT2, to);
+	SHR32ItoR(gprT2, 23); 
+	SSE2_MOVD_XMM_to_R(gprT1, from);
+	SHR32ItoR(gprT1, 23);
+	AND32ItoR(gprT2, 0xff);
+	AND32ItoR(gprT1, 0xff); 
+	SUB32RtoR(gprT2, gprT1); //gprT2 = exponent difference
+
+	CMP32ItoR(gprT2, 25);
+	localptr[0] = JGE8(0);
+	CMP32ItoR(gprT2, 0);
+	localptr[1] = JG8(0);
+	localptr[2] = JE8(0);
+	CMP32ItoR(gprT2, -25);
+	localptr[3] = JLE8(0);
+		NEG32R(gprT2); 
+		DEC32R(gprT2);
+		MOV32ItoR(gprT1, 0xffffffff);
+		SHL32CLtoR(gprT1);
+		SSE2_PCMPEQB_XMM_to_XMM(to, to);
+		SSE2_MOVD_R_to_XMM(from, gprT1);
+		SSE_MOVSS_XMM_to_XMM(to, from);
+		SSE2_PCMPEQB_XMM_to_XMM(from, from);
+	localptr[4] = JMP8(0);
+
+	x86SetJ8(localptr[0]);
+		MOV32ItoR(gprT1, 0x80000000);
+		SSE2_PCMPEQB_XMM_to_XMM(from, from);
+		SSE2_MOVD_R_to_XMM(to, gprT1);
+		SSE_MOVSS_XMM_to_XMM(from, to);
+		SSE2_PCMPEQB_XMM_to_XMM(to, to);
+	localptr[5] = JMP8(0);
+
+	x86SetJ8(localptr[1]);
+		DEC32R(gprT2);
+		MOV32ItoR(gprT1, 0xffffffff);
+		SHL32CLtoR(gprT1); 
+		SSE2_PCMPEQB_XMM_to_XMM(from, from);
+		SSE2_MOVD_R_to_XMM(to, gprT1);
+		SSE_MOVSS_XMM_to_XMM(from, to);
+		SSE2_PCMPEQB_XMM_to_XMM(to, to);
+	localptr[6] = JMP8(0);
+
+	x86SetJ8(localptr[3]);
+		MOV32ItoR(gprT1, 0x80000000);
+		SSE2_PCMPEQB_XMM_to_XMM(to, to);
+		SSE2_MOVD_R_to_XMM(from, gprT1);
+		SSE_MOVSS_XMM_to_XMM(to, from);
+		SSE2_PCMPEQB_XMM_to_XMM(from, from);
+	localptr[7] = JMP8(0);
+
+	x86SetJ8(localptr[2]);
+	x86SetJ8(localptr[4]);
+	x86SetJ8(localptr[5]);
+	x86SetJ8(localptr[6]);
+	x86SetJ8(localptr[7]);
+
+	SSE_ANDPS_XMM_to_XMM(to,   xmmT1); //to contains mask
+	SSE_ANDPS_XMM_to_XMM(from, xmmT2); //from contains mask
+	SSE_ADDSS_XMM_to_XMM(to, from);
+}
+
+// Note: Wrapper function, Tri-Ace Games just need the SS implementation
+void SSE_ADD2PS_XMM_to_XMM(x86SSERegType to, x86SSERegType from) {
+	SSE_ADDPS_XMM_to_XMM(to, from);
+}
