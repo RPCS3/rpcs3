@@ -813,12 +813,12 @@ void GSLocalMemory::WriteImageTopBottom(int l, int r, int y, int h, uint8* src, 
 				break;
 			case PSM_PSMT8: 
 				ReadColumn8<true>(y, dst, buff, 16);
-				memcpy(&buff[y2 * 16], &src[x], h2 * 16);
+				for(int i = 0, j = y2; i < h2; i++, j++) memcpy(&buff[j * 16], &src[i * srcpitch + x], 16);
 				WriteColumn8<true>(y, dst, buff, 16);
 				break;
 			case PSM_PSMT4: 
 				ReadColumn4<true>(y, dst, buff, 16);
-				memcpy(&buff[y2 * 16], &src[x >> 1], h2 * 16);
+				for(int i = 0, j = y2; i < h2; i++, j++) memcpy(&buff[j * 16], &src[i * srcpitch + (x >> 1)], 16);
 				WriteColumn4<true>(y, dst, buff, 16);
 				break;
 			// TODO
@@ -894,12 +894,12 @@ void GSLocalMemory::WriteImageTopBottom(int l, int r, int y, int h, uint8* src, 
 				break;
 			case PSM_PSMT8: 
 				ReadColumn8<true>(y, dst, buff, 16);
-				memcpy(&buff[0], &src[x], h * 16);
+				for(int i = 0; i < h; i++) memcpy(&buff[i * 16], &src[i * srcpitch + x], 16);
 				WriteColumn8<true>(y, dst, buff, 16);
 				break;
 			case PSM_PSMT4: 
 				ReadColumn4<true>(y, dst, buff, 16);
-				memcpy(&buff[0], &src[x >> 1], h * 16);
+				for(int i = 0; i < h; i++) memcpy(&buff[i * 16], &src[i * srcpitch + (x >> 1)], 16);
 				WriteColumn4<true>(y, dst, buff, 16);
 				break;
 			// TODO
@@ -2522,8 +2522,6 @@ HRESULT GSLocalMemory::SaveBMP(const string& fn, uint32 bp, uint32 bw, uint32 ps
 	TEXA.AEM = 0;
 	TEXA.TA0 = 0;
 	TEXA.TA1 = 0x80;
-
-	// (this->*m_psm[TEX0.PSM].rtx)(GSVector4i(0, 0, w, h), bits, pitch, TEX0, TEXA);
 
 	readPixel rp = m_psm[psm].rp;
 

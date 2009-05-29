@@ -968,7 +968,7 @@ void GSState::Write(uint8* mem, int len)
 	int w = m_env.TRXREG.RRW;
 	int h = m_env.TRXREG.RRH;
 
-	// TRACE(_T("Write len=%d DBP=%05x DBW=%d DPSM=%d DSAX=%d DSAY=%d RRW=%d RRH=%d\n"), len, (int)m_env.BITBLTBUF.DBP, (int)m_env.BITBLTBUF.DBW, (int)m_env.BITBLTBUF.DPSM, dx, dy, w, h);
+	// TRACE(_T("Write len=%d DBP=%05x DBW=%d DPSM=%d DSAX=%d DSAY=%d RRW=%d RRH=%d\n"), len, m_env.BITBLTBUF.DBP, m_env.BITBLTBUF.DBW, m_env.BITBLTBUF.DPSM, m_env.TRXPOS.DSAX, m_env.TRXPOS.DSAY, m_env.TRXREG.RRW, m_env.TRXREG.RRH);
 
 	if(!m_tr.Update(w, h, GSLocalMemory::m_psm[m_env.BITBLTBUF.DPSM].trbpp, len))
 	{
@@ -1209,7 +1209,9 @@ template<int index> void GSState::Transfer(uint8* mem, uint32 size)
 			{
 				m_q = 1.0f;
 
-				if(path.tag.PRE && (path.tag.FLG & 2) == 0)
+				ASSERT(!(path.tag.PRE && path.tag.FLG == GIF_FLG_REGLIST));
+
+				if(path.tag.PRE && path.tag.FLG == GIF_FLG_PACKED)
 				{
 					GIFReg r;
 					r.u64 = path.tag.PRIM;

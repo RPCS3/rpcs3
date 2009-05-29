@@ -572,6 +572,30 @@ protected:
 
 		#pragma endregion
 
+		#pragma region Simpsons Game z buffer clear
+
+		if(m_game.title == CRC::SimpsonsGame)
+		{
+			uint32 FBP = m_context->FRAME.Block();
+			uint32 FBW = m_context->FRAME.FBW;
+			uint32 FPSM = m_context->FRAME.PSM;
+
+			if(FBP == 0x01800 && FPSM == PSM_PSMZ24)
+			{
+				// instead of just simply drawing a full height 512x512 sprite to clear the z buffer,
+				// it uses a 512x256 sprite only, yet it is still able to fill the whole surface with zeros,
+				// how? by using a render target that overlaps with the lower half of the z buffer...
+
+				m_dev->ClearDepth(ds, 0);
+
+				return false;
+			}
+
+			return true;
+		}
+
+		#pragma endregion
+
 		return true;
 	}
 

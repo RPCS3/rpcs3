@@ -407,31 +407,55 @@ void GSDevice9::ClearRenderTarget(GSTexture* t, const GSVector4& c)
 	ClearRenderTarget(t, (c * 255 + 0.5f).zyxw().rgba32());
 }
 
-void GSDevice9::ClearRenderTarget(GSTexture* t, uint32 c)
+void GSDevice9::ClearRenderTarget(GSTexture* rt, uint32 c)
 {
 	CComPtr<IDirect3DSurface9> surface;
 	m_dev->GetRenderTarget(0, &surface);
-	m_dev->SetRenderTarget(0, *(GSTexture9*)t);
+	m_dev->SetRenderTarget(0, *(GSTexture9*)rt);
 	m_dev->Clear(0, NULL, D3DCLEAR_TARGET, c, 0, 0);
 	m_dev->SetRenderTarget(0, surface);
 }
 
 void GSDevice9::ClearDepth(GSTexture* t, float c)
 {
-	CComPtr<IDirect3DSurface9> surface;
-	m_dev->GetDepthStencilSurface(&surface);
+	GSTexture* rt = CreateRenderTarget(t->GetWidth(), t->GetHeight());
+
+	CComPtr<IDirect3DSurface9> rtsurface;
+	CComPtr<IDirect3DSurface9> dssurface;
+
+	m_dev->GetRenderTarget(0, &rtsurface);
+	m_dev->GetDepthStencilSurface(&dssurface);
+
+	m_dev->SetRenderTarget(0, *(GSTexture9*)rt);
 	m_dev->SetDepthStencilSurface(*(GSTexture9*)t);
+
 	m_dev->Clear(0, NULL, D3DCLEAR_ZBUFFER, 0, c, 0);
-	m_dev->SetDepthStencilSurface(surface);
+
+	m_dev->SetRenderTarget(0, rtsurface);
+	m_dev->SetDepthStencilSurface(dssurface);
+
+	Recycle(rt);
 }
 
 void GSDevice9::ClearStencil(GSTexture* t, uint8 c)
 {
-	CComPtr<IDirect3DSurface9> surface;
-	m_dev->GetDepthStencilSurface(&surface);
+	GSTexture* rt = CreateRenderTarget(t->GetWidth(), t->GetHeight());
+
+	CComPtr<IDirect3DSurface9> rtsurface;
+	CComPtr<IDirect3DSurface9> dssurface;
+
+	m_dev->GetRenderTarget(0, &rtsurface);
+	m_dev->GetDepthStencilSurface(&dssurface);
+
+	m_dev->SetRenderTarget(0, *(GSTexture9*)rt);
 	m_dev->SetDepthStencilSurface(*(GSTexture9*)t);
+
 	m_dev->Clear(0, NULL, D3DCLEAR_STENCIL, 0, 0, c);
-	m_dev->SetDepthStencilSurface(surface);
+
+	m_dev->SetRenderTarget(0, rtsurface);
+	m_dev->SetDepthStencilSurface(dssurface);
+
+	Recycle(rt);
 }
 
 GSTexture* GSDevice9::Create(int type, int w, int h, int format)
@@ -492,7 +516,7 @@ GSTexture* GSDevice9::CreateRenderTarget(int w, int h, int format)
 
 GSTexture* GSDevice9::CreateDepthStencil(int w, int h, int format)
 {
-	return __super::CreateDepthStencil(w, h, format ? format : D3DFMT_D24S8);
+	return __super::CreateDepthStencil(w, h, format ? format : D3DFMT_D24S8); // D3DFMT_D32F_LOCKABLE
 }
 
 GSTexture* GSDevice9::CreateTexture(int w, int h, int format)
@@ -661,7 +685,7 @@ void GSDevice9::IASetVertexBuffer(const void* vertices, size_t stride, size_t co
 	{
 		HRESULT hr;
 		
-		hr = m_dev->CreateVertexBuffer(m_vertices.limit * stride, D3DUSAGE_DYNAMIC, 0, D3DPOOL_DEFAULT, &m_vertices.vb, NULL);
+		hr = m_dev->CreateVertexBuffer(m_vertices.limit * stride, D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY, 0, D3DPOOL_DEFAULT, &m_vertices.vb, NULL);
 
 		if(FAILED(hr)) return;
 	}

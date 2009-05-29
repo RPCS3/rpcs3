@@ -64,6 +64,7 @@ public:
 		MajokkoALaMode2,
 		TalesOfAbyss,
 		SonicUnleashed,
+		SimpsonsGame,
 		TitleCount,
 	};
 
