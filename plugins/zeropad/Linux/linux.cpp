@@ -81,7 +81,7 @@ int _GetJoystickIdFromPAD(int pad)
 		}
 	}
 	
-	if (JoystickIdWithinBounds(joyid))
+	if (!JoystickIdWithinBounds(joyid))
 	{
 		// get first unused joystick
 		for (joyid = 0; joyid < s_vjoysticks.size(); ++joyid)

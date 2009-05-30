@@ -71,7 +71,7 @@ const char *HatName(int value)
 
 bool JoystickIdWithinBounds(int joyid)
 {
-	return (!((joyid < 0) || (joyid >= (int)s_vjoysticks.size())));
+	return ((joyid >= 0) && (joyid < (int)s_vjoysticks.size()));
 }
 // opens handles to all possible joysticks
 void JoystickInfo::EnumerateJoysticks(vector<JoystickInfo*>& vjoysticks)
