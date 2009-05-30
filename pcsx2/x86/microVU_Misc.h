@@ -105,7 +105,9 @@ declareAllVariables
 #define _Tbit_ (1<<27)
 #define _MDTbit_ 0 //( _Mbit_ | _Dbit_ | _Tbit_ ) // ToDo: Implement this stuff...
 
-#define getVUmem(x)	(((vuIndex == 1) ? (x & 0x3ff) : ((x >= 0x400) ? (x & 0x43f) : (x & 0xff))) * 16)
+#define isVU1		(mVU == &microVU1)
+#define getIndex	(isVU1 ? 1 : 0)
+#define getVUmem(x)	(((isVU1) ? (x & 0x3ff) : ((x >= 0x400) ? (x & 0x43f) : (x & 0xff))) * 16)
 #define offsetSS	((_X) ? (0) : ((_Y) ? (4) : ((_Z) ? 8: 12)))
 #define offsetReg	((_X) ? (0) : ((_Y) ? (1) : ((_Z) ? 2:  3)))
 
@@ -136,15 +138,19 @@ declareAllVariables
 #define gprF2	6 // Status Flag 2
 #define gprF3	7 // Status Flag 3
 
-// Template Stuff
-#define mVUx (vuIndex ? &microVU1 : &microVU0)
-#define microVUt(aType) template<int vuIndex> __forceinline aType
-#define microVUx(aType) template<int vuIndex> aType
-#define microVUf(aType) template<int vuIndex> aType
-#define microVUq(aType) template<int vuIndex> __forceinline aType
-
 // Function Params
+#define mP microVU* mVU, int recPass
+#define mV microVU* mVU
 #define mF int recPass
+#define mX mVU, recPass
+
+// Function/Template Stuff
+#define mVUx (vuIndex ? &microVU1 : &microVU0)
+#define mVUop(opName)	void opName (mP)
+#define microVUt(aType) __forceinline aType
+#define microVUx(aType) template<int vuIndex> aType
+#define microVUf(aType) template<int vuIndex> __forceinline aType
+
 
 // Define Passes
 #define pass1 if (recPass == 0)
@@ -176,9 +182,9 @@ declareAllVariables
 #define setCode()	 { mVU->code = curI; }
 #define incPC(x)	 { iPC = ((iPC + x) & (mVU->progSize-1)); setCode(); }
 #define incPC2(x)	 { iPC = ((iPC + x) & (mVU->progSize-1)); }
-#define incCycles(x) { mVUincCycles<vuIndex>(x); }
-#define bSaveAddr	 (((xPC + (2 * 8)) & ((vuIndex) ? 0x3ff8:0xff8)) / 8)
-#define branchAddr	 ((xPC + 8 + (_Imm11_ * 8)) & ((vuIndex) ? 0x3ff8:0xff8))
+#define incCycles(x) { mVUincCycles(mVU, x); }
+#define bSaveAddr	 (((xPC + (2 * 8)) & ((isVU1) ? 0x3ff8:0xff8)) / 8)
+#define branchAddr	 ((xPC + 8 + (_Imm11_ * 8)) & ((isVU1) ? 0x3ff8 : 0xff8))
 #define shufflePQ	 (((mVU->p) ? 0xb0 : 0xe0) | ((mVU->q) ? 0x01 : 0x04))
 #define Rmem		 (uptr)&mVU->regs->VI[REG_R].UL
 #define Roffset		 (uptr)&mVU->regs->VI[9].UL
@@ -288,7 +294,7 @@ declareAllVariables
 
 // Program Logging...
 #ifdef mVUlogProg
-#define mVUlog __mVULog<vuIndex>
+#define mVUlog		((isVU1) ? __mVULog<1> : __mVULog<0>)
 #define mVUdumpProg __mVUdumpProgram<vuIndex>
 #else
 #define mVUlog 0&&
@@ -309,7 +315,8 @@ declareAllVariables
 	uptr diff = ptr - start;																			\
 	if (diff >= limit) {																				\
 		Console::Error("microVU Error: Program went over its cache limit. Size = 0x%x", params diff);	\
-		mVUreset<vuIndex>();																			\
+		if (!isVU1)	mVUreset<0>();																		\
+		else		mVUreset<1>();																		\
 	}																									\
 }
 

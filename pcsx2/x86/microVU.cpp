@@ -35,7 +35,7 @@ declareAllVariables // Declares All Global Variables :D
 //------------------------------------------------------------------
 
 // Only run this once per VU! ;)
-microVUt(void) mVUinit(VURegs* vuRegsPtr) {
+microVUf(void) mVUinit(VURegs* vuRegsPtr) {
 
 	microVU* mVU	= mVUx;
 	mVU->regs		= vuRegsPtr;
@@ -71,8 +71,8 @@ microVUx(void) mVUreset() {
 
 	// Setup Entrance/Exit Points
 	x86SetPtr(mVU->cache);
-	mVUdispatcherA<vuIndex>();
-	mVUdispatcherB<vuIndex>();
+	mVUdispatcherA(mVU);
+	mVUdispatcherB(mVU);
 
 	// Clear All Program Data
 	memset(&mVU->prog, 0, sizeof(mVU->prog));
@@ -98,7 +98,7 @@ microVUx(void) mVUreset() {
 }
 
 // Free Allocated Resources
-microVUt(void) mVUclose() {
+microVUf(void) mVUclose() {
 
 	microVU* mVU = mVUx;
 	mVUprint((vuIndex) ? "microVU1: close" : "microVU0: close");
@@ -116,7 +116,7 @@ microVUt(void) mVUclose() {
 }
 
 // Clears Block Data in specified range
-microVUt(void) mVUclear(u32 addr, u32 size) {
+microVUf(void) mVUclear(u32 addr, u32 size) {
 	microVU* mVU = mVUx;
 	if (!mVU->prog.cleared) {
 		memset(&mVU->prog.lpState, 0, sizeof(mVU->prog.lpState));
@@ -129,7 +129,7 @@ microVUt(void) mVUclear(u32 addr, u32 size) {
 //------------------------------------------------------------------
 
 // Clears program data (Sets used to 1 because calling this function implies the program will be used at least once)
-microVUt(void) mVUclearProg(int progIndex) {
+microVUf(void) mVUclearProg(int progIndex) {
 	microVU* mVU = mVUx;
 	mVU->prog.prog[progIndex].used = 1;
 	mVU->prog.prog[progIndex].last_used = 3;
@@ -144,22 +144,22 @@ microVUt(void) mVUclearProg(int progIndex) {
 }
 
 // Caches Micro Program
-microVUt(void) mVUcacheProg(int progIndex) {
+microVUf(void) mVUcacheProg(int progIndex) {
 	microVU* mVU = mVUx;
 	memcpy_fast(mVU->prog.prog[progIndex].data, mVU->regs->Micro, mVU->microSize);
 	mVUdumpProg(progIndex);
-	mVUcheckSflag<vuIndex>(progIndex);
+	mVUcheckSflag(mVU, progIndex);
 }
 
 // Finds the least used program, (if program list full clears and returns an old program; if not-full, returns free program)
-microVUt(int) mVUfindLeastUsedProg() {
+microVUf(int) mVUfindLeastUsedProg() {
 	microVU* mVU = mVUx;
 	if (mVU->prog.total < mVU->prog.max) {
 		mVU->prog.total++;
 		mVUcacheProg<vuIndex>(mVU->prog.total); // Cache Micro Program
 		mVU->prog.prog[mVU->prog.total].used = 1;
 		mVU->prog.prog[mVU->prog.total].last_used = 3;
-		DevCon::Notice("microVU%d: Cached MicroPrograms = %d", params vuIndex, mVU->prog.total+1);
+		Console::Notice("microVU%d: Cached MicroPrograms = %d", params vuIndex, mVU->prog.total+1);
 		return mVU->prog.total;
 	}
 	else {
@@ -192,7 +192,7 @@ microVUt(int) mVUfindLeastUsedProg() {
 // frame-based decrementing system in combination with a program-execution-based incrementing
 // system.  In english:  if last_used >= 2 it means the program has been used for the current
 // or prev frame.  if it's 0, the program hasn't been used for a while.
-microVUt(void) mVUvsyncUpdate() {
+microVUf(void) mVUvsyncUpdate() {
 
 	microVU* mVU = mVUx;
 	if (mVU->prog.total < mVU->prog.max) return;
@@ -211,7 +211,7 @@ microVUt(void) mVUvsyncUpdate() {
 }
 
 // Compare Cached microProgram to mVU->regs->Micro
-microVUt(int) mVUcmpProg(int progIndex, bool progUsed, bool needOverflowCheck, bool cmpWholeProg) {
+microVUf(int) mVUcmpProg(int progIndex, bool progUsed, bool needOverflowCheck, bool cmpWholeProg) {
 	microVU* mVU = mVUx;
 	
 	if (progUsed) {
@@ -231,7 +231,7 @@ microVUt(int) mVUcmpProg(int progIndex, bool progUsed, bool needOverflowCheck, b
 }
 
 // Searches for Cached Micro Program and sets prog.cur to it (returns 1 if program found, else returns 0)
-microVUt(int) mVUsearchProg() {
+microVUf(int) mVUsearchProg() {
 	microVU* mVU = mVUx;
 	
 	if (mVU->prog.cleared) { // If cleared, we need to search for new program

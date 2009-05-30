@@ -23,13 +23,12 @@
 //------------------------------------------------------------------
 
 // Generates the code for entering recompiled blocks
-microVUt(void) mVUdispatcherA() {
-	microVU* mVU = mVUx;
+microVUt(void) mVUdispatcherA(mV) {
 	mVU->startFunct = x86Ptr;
 
 	// __fastcall = The first two DWORD or smaller arguments are passed in ECX and EDX registers; all other arguments are passed right to left.
-	if (!vuIndex) { CALLFunc((uptr)mVUexecuteVU0); }
-	else		  { CALLFunc((uptr)mVUexecuteVU1); }
+	if (!isVU1)	{ CALLFunc((uptr)mVUexecuteVU0); }
+	else		{ CALLFunc((uptr)mVUexecuteVU1); }
 
 	// Backup cpu state
 	PUSH32R(EBX);
@@ -72,8 +71,7 @@ microVUt(void) mVUdispatcherA() {
 }
 
 // Generates the code to exit from recompiled blocks
-microVUt(void) mVUdispatcherB() {
-	microVU* mVU = mVUx;
+microVUt(void) mVUdispatcherB(mV) {
 	mVU->exitFunct = x86Ptr;
 
 	// Load EE's MXCSR state
@@ -87,8 +85,8 @@ microVUt(void) mVUdispatcherB() {
 	}
 
 	// __fastcall = The first two DWORD or smaller arguments are passed in ECX and EDX registers; all other arguments are passed right to left.
-	if (!vuIndex) { CALLFunc((uptr)mVUcleanUpVU0); }
-	else		  { CALLFunc((uptr)mVUcleanUpVU1); }
+	if (!isVU1) { CALLFunc((uptr)mVUcleanUpVU0); }
+	else		{ CALLFunc((uptr)mVUcleanUpVU1); }
 
 	// Restore cpu state
 	POP32R(EDI);
@@ -107,7 +105,7 @@ microVUt(void) mVUdispatcherB() {
 //------------------------------------------------------------------
 
 // Executes for number of cycles
-microVUt(void*) __fastcall mVUexecute(u32 startPC, u32 cycles) {
+microVUx(void*) __fastcall mVUexecute(u32 startPC, u32 cycles) {
 
 	microVU* mVU = mVUx;
 	//mVUprint("microVU%x: startPC = 0x%x, cycles = 0x%x", params vuIndex, startPC, cycles);
@@ -125,7 +123,7 @@ microVUt(void*) __fastcall mVUexecute(u32 startPC, u32 cycles) {
 // Cleanup Functions
 //------------------------------------------------------------------
 
-microVUt(void) mVUcleanUp() {
+microVUx(void) mVUcleanUp() {
 	microVU* mVU = mVUx;
 	//mVUprint("microVU: Program exited successfully!");
 	//mVUprint("microVU: VF0 = {%x,%x,%x,%x}", params mVU->regs->VF[0].UL[0], mVU->regs->VF[0].UL[1], mVU->regs->VF[0].UL[2], mVU->regs->VF[0].UL[3]);

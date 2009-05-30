@@ -23,7 +23,7 @@
 //------------------------------------------------------------------
 
 // Used for Result Clamping
-microVUx(void) mVUclamp1(int reg, int regT1, int xyzw) {
+void mVUclamp1(int reg, int regT1, int xyzw) {
 	switch (xyzw) {
 		case 1: case 2: case 4: case 8:
 			SSE_MINSS_XMM_to_XMM(reg, xmmMax);
@@ -37,7 +37,7 @@ microVUx(void) mVUclamp1(int reg, int regT1, int xyzw) {
 }
 
 // Used for Operand Clamping
-microVUx(void) mVUclamp2(int reg, int regT1, int xyzw) {
+void mVUclamp2(int reg, int regT1, int xyzw) {
 	if (CHECK_VU_SIGN_OVERFLOW) {
 		switch (xyzw) {
 			case 1: case 2: case 4: case 8:
@@ -56,14 +56,14 @@ microVUx(void) mVUclamp2(int reg, int regT1, int xyzw) {
 				break;
 		}
 	}
-	else mVUclamp1<vuIndex>(reg, regT1, xyzw);
+	else mVUclamp1(reg, regT1, xyzw);
 }
 
 //------------------------------------------------------------------
 // Micro VU - Misc Functions
 //------------------------------------------------------------------
 
-microVUx(void) mVUunpack_xyzw(int dstreg, int srcreg, int xyzw) {
+void mVUunpack_xyzw(int dstreg, int srcreg, int xyzw) {
 	switch ( xyzw ) {
 		case 0: SSE2_PSHUFD_XMM_to_XMM(dstreg, srcreg, 0x00); break;
 		case 1: SSE2_PSHUFD_XMM_to_XMM(dstreg, srcreg, 0x55); break;
@@ -72,7 +72,7 @@ microVUx(void) mVUunpack_xyzw(int dstreg, int srcreg, int xyzw) {
 	}
 }
 
-microVUx(void) mVUloadReg(int reg, uptr offset, int xyzw) {
+void mVUloadReg(int reg, uptr offset, int xyzw) {
 	switch( xyzw ) {
 		case 8:		SSE_MOVSS_M32_to_XMM(reg, offset);		break; // X
 		case 4:		SSE_MOVSS_M32_to_XMM(reg, offset+4);	break; // Y
@@ -82,7 +82,7 @@ microVUx(void) mVUloadReg(int reg, uptr offset, int xyzw) {
 	}
 }
 
-microVUx(void) mVUloadReg2(int reg, int gprReg, uptr offset, int xyzw) {
+void mVUloadReg2(int reg, int gprReg, uptr offset, int xyzw) {
 	switch( xyzw ) {
 		case 8:		SSE_MOVSS_Rm_to_XMM(reg, gprReg, offset);	 break; // X
 		case 4:		SSE_MOVSS_Rm_to_XMM(reg, gprReg, offset+4);  break; // Y
@@ -93,7 +93,7 @@ microVUx(void) mVUloadReg2(int reg, int gprReg, uptr offset, int xyzw) {
 }
 
 // Modifies the Source Reg!
-microVUx(void) mVUsaveReg(int reg, uptr offset, int xyzw, bool modXYZW) {
+void mVUsaveReg(int reg, uptr offset, int xyzw, bool modXYZW) {
 	/*SSE_MOVAPS_M128_to_XMM(xmmT2, offset);
 	if (modXYZW && (xyzw == 8 || xyzw == 4 || xyzw == 2 || xyzw == 1)) {
 		mVUunpack_xyzw<vuIndex>(reg, reg, 0);
@@ -135,13 +135,13 @@ microVUx(void) mVUsaveReg(int reg, uptr offset, int xyzw, bool modXYZW) {
 					SSE_MOVHLPS_XMM_to_XMM(reg, reg);
 					SSE_MOVSS_XMM_to_M32(offset+8, reg);
 					break; // XYZ
-		case 4:		if (!modXYZW) mVUunpack_xyzw<vuIndex>(reg, reg, 1);
+		case 4:		if (!modXYZW) mVUunpack_xyzw(reg, reg, 1);
 					SSE_MOVSS_XMM_to_M32(offset+4, reg);		 
 					break; // Y
-		case 2:		if (!modXYZW) mVUunpack_xyzw<vuIndex>(reg, reg, 2);
+		case 2:		if (!modXYZW) mVUunpack_xyzw(reg, reg, 2);
 					SSE_MOVSS_XMM_to_M32(offset+8, reg);	
 					break; // Z
-		case 1:		if (!modXYZW) mVUunpack_xyzw<vuIndex>(reg, reg, 3);
+		case 1:		if (!modXYZW) mVUunpack_xyzw(reg, reg, 3);
 					SSE_MOVSS_XMM_to_M32(offset+12, reg);	
 					break; // W
 		case 8:		SSE_MOVSS_XMM_to_M32(offset, reg);		break; // X
@@ -152,7 +152,7 @@ microVUx(void) mVUsaveReg(int reg, uptr offset, int xyzw, bool modXYZW) {
 }
 
 // Modifies the Source Reg!
-microVUx(void) mVUsaveReg2(int reg, int gprReg, u32 offset, int xyzw) {
+void mVUsaveReg2(int reg, int gprReg, u32 offset, int xyzw) {
 	/*SSE_MOVAPSRmtoR(xmmT2, gprReg, offset);
 	if (xyzw == 8 || xyzw == 4 || xyzw == 2 || xyzw == 1) {
 		mVUunpack_xyzw<vuIndex>(reg, reg, 0);
@@ -262,8 +262,8 @@ void mVUmergeRegs(int dest, int src, int xyzw) {
 }
 
 // Transforms the Address in gprReg to valid VU0/VU1 Address
-microVUt(void) mVUaddrFix(int gprReg) {
-	if (vuIndex) {
+microVUt(void) mVUaddrFix(mV, int gprReg) {
+	if (mVU == &microVU1) {
 		AND32ItoR(gprReg, 0x3ff); // wrap around
 		SHL32ItoR(gprReg, 4);
 	}
@@ -281,15 +281,13 @@ microVUt(void) mVUaddrFix(int gprReg) {
 }
 
 // Backup Volatile Regs (EAX, ECX, EDX, MM0~7, XMM0~7, are all volatile according to 32bit Win/Linux ABI)
-microVUt(void) mVUbackupRegs() {
-	microVU* mVU = mVUx;
+microVUt(void) mVUbackupRegs(mV) {
 	SSE_MOVAPS_XMM_to_M128((uptr)&mVU->regs->ACC.UL[0], xmmACC);
 	SSE_MOVAPS_XMM_to_M128((uptr)&mVU->xmmPQb[0], xmmPQ);
 }
 
 // Restore Volatile Regs
-microVUt(void) mVUrestoreRegs() {
-	microVU* mVU = mVUx;
+microVUt(void) mVUrestoreRegs(mV) {
 	SSE_MOVAPS_M128_to_XMM(xmmACC, (uptr)&mVU->regs->ACC.UL[0]);
 	SSE_MOVAPS_M128_to_XMM(xmmPQ,  (uptr)&mVU->xmmPQb[0]);
 	SSE_MOVAPS_M128_to_XMM(xmmMax, (uptr)mVU_maxvals);
@@ -298,15 +296,14 @@ microVUt(void) mVUrestoreRegs() {
 }
 
 // Reads entire microProgram and finds out if Status Flag is Used
-microVUt(void) mVUcheckSflag(int progIndex) {
+microVUt(void) mVUcheckSflag(mV, int progIndex) {
 	if (CHECK_VU_FLAGHACK1) {
-		microVU* mVU = mVUx;
 		int bFlagInfo = mVUflagInfo;
 		int bCode	  = mVU->code;
 		mVUsFlagHack  = 1;
 		for (u32 i = 0; i < mVU->progSize; i+=2) {
 			mVU->code = mVU->prog.prog[progIndex].data[i];
-			mVUopL<vuIndex>(3);
+			mVUopL(mVU, 3);
 		}
 		mVUflagInfo = bFlagInfo;
 		mVU->code	= bCode;

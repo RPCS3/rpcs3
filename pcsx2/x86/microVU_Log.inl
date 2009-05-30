@@ -38,7 +38,7 @@ microVUx(void) __mVULog(const char* fmt, ...) {
 
 #define commaIf() { if (bitX[6]) { mVUlog(","); bitX[6] = 0; } }
 
-microVUt(void) __mVUdumpProgram(int progIndex) {
+microVUx(void) __mVUdumpProgram(int progIndex) {
 	microVU* mVU = mVUx;
 	bool bitX[7];
 	char str[30];
@@ -46,6 +46,7 @@ microVUt(void) __mVUdumpProgram(int progIndex) {
 	int bBranch = mVUbranch;
 	int bCode	= mVU->code;
 	int bPC		= iPC;
+	int vuIndex = (mVU == &microVU1) ? 1 : 0;
 	mVUbranch = 0;
 
 	sprintf(str, "%s\\microVU%d prog - %02d.html", LOGS_DIR, vuIndex, progIndex);
@@ -88,7 +89,7 @@ microVUt(void) __mVUdumpProgram(int progIndex) {
 		iPC = (i+1);
 		mVUlog("<a name=\"addr%04x\">", i*4);
 		mVUlog("[%04x] (%08x)</a> ", i*4, mVU->code);
-		mVUopU<vuIndex, 2>();
+		mVUopU(mVU, 2);
 
 		if (bitX[5]) { 
 			mVUlog(" ("); 
@@ -110,7 +111,7 @@ microVUt(void) __mVUdumpProgram(int progIndex) {
 		}
 		else {
 			mVUlog("<br>\n[%04x] (%08x) ", i*4, mVU->code);
-			mVUopL<vuIndex, 2>();
+			mVUopL(mVU, 2);
 			mVUlog("\n\n<br><br>");
 		}
 	}
