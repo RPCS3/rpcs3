@@ -46,7 +46,7 @@ microVUx(void) __mVUdumpProgram(int progIndex) {
 	int bBranch = mVUbranch;
 	int bCode	= mVU->code;
 	int bPC		= iPC;
-	int vuIndex = (mVU == &microVU1) ? 1 : 0;
+	vuIndex = (mVU == &microVU1) ? 1 : 0;
 	mVUbranch = 0;
 
 	sprintf(str, "%s\\microVU%d prog - %02d.html", LOGS_DIR, vuIndex, progIndex);
