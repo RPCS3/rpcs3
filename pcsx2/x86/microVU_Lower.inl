@@ -1061,22 +1061,24 @@ void __fastcall mVU_XGKICK__(u32 addr) {
 	GSGIFTRANSFER1((u32*)microVU1.regs->Mem, ((addr<<4)&0x3fff));
 }
 
+microVUt(void) mVU_XGKICK_DELAY(mV, bool memVI) {
+	mVUbackupRegs(mVU);
+	if (memVI)		MOV32MtoR(gprT2, (uptr)&mVU->VIxgkick);
+	else			mVUallocVIa(mVU, gprT2, _Is_);
+	if (mtgsThread)	CALLFunc((uptr)mVU_XGKICK_);
+	else			CALLFunc((uptr)mVU_XGKICK__);
+	mVUrestoreRegs(mVU);
+}
+
 mVUop(mVU_XGKICK) {
 	pass1 { mVUanalyzeXGkick(mVU, _Is_, mVU_XGKICK_CYCLES); }
 	pass2 {
-		mVUprint("XGkick");
-		mVUallocVIa(mVU, gprT1, _Is_);
+		if (!mVU_XGKICK_CYCLES) { mVU_XGKICK_DELAY(mVU, 0); return; }
+		else if (doXGKICK)		{ mVU_XGKICK_DELAY(mVU, 1); mVUinfo &= ~_doXGKICK; }
+		mVUallocVIa(mVU, gprT1, _Is_); 
 		MOV32RtoM((uptr)&mVU->VIxgkick, gprT1);
 	}
 	pass3 { mVUlog("XGKICK vi%02d", _Fs_); }
-}
-
-microVUt(void) mVU_XGKICK_DELAY(mV) {
-	MOV32MtoR(gprT2, (uptr)&mVU->VIxgkick); // gprT2 = ECX for __fastcall
-	mVUbackupRegs(mVU);
-	if (mtgsThread != NULL)	CALLFunc((uptr)mVU_XGKICK_);
-	else					CALLFunc((uptr)mVU_XGKICK__);
-	mVUrestoreRegs(mVU);
 }
 
 //------------------------------------------------------------------

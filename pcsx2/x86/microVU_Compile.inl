@@ -274,7 +274,7 @@ microVUf(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 		if (isNOP)			{ incPC(1); doUpperOp(); doIbit(); }
 		else if (!swapOps)	{ incPC(1); doUpperOp(); doLowerOp(); }
 		else				{ mVUopL(mVU, 1); incPC(1); doUpperOp(); }
-		if (doXGKICK)		{ mVU_XGKICK_DELAY(mVU); }
+		if (doXGKICK)		{ mVU_XGKICK_DELAY(mVU, 1); }
 		
 		if (!isBdelay) { incPC(1); }
 		else {
@@ -374,7 +374,7 @@ eBitTemination:
 		AND32ItoR (flagReg, 0x0fcf);
 		OR32MtoR  (flagReg, (uptr)&mVU->divFlag);
 	}
-	if (doXGKICK) { mVU_XGKICK_DELAY(mVU); }
+	if (doXGKICK) { mVU_XGKICK_DELAY(mVU, 1); }
 
 	// Do E-bit end stuff here
 	mVUsetupRange(mVU, xPC - 8);
