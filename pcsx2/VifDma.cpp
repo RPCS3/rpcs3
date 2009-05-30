@@ -339,8 +339,7 @@ static int VIFalign(u32 *data, vifCode *v, unsigned int size, const unsigned int
 	const VIFUnpackFuncTable *ft;
 	VURegs * VU;
 	u8 *cdata = (u8*)data;
-	
-	
+
 #ifdef _DEBUG
 	u32 memsize = VIFdmanum ? 0x4000 : 0x1000;
 #endif
@@ -453,7 +452,6 @@ static int VIFalign(u32 *data, vifCode *v, unsigned int size, const unsigned int
 			VIFUNPACK_LOG("Aligning packet done size = %d offset %d addr %x", size, vifRegs->offset, vif->tag.addr);
 		}
 	}
-	
 
 	if (vif->cl != 0 || (size & 0xf))  //Check alignment for SSE unpacks
 	{
@@ -544,7 +542,6 @@ static int VIFalign(u32 *data, vifCode *v, unsigned int size, const unsigned int
 	return size>>2;
 }
 
-
 static void VIFunpack(u32 *data, vifCode *v, unsigned int size, const unsigned int VIFdmanum)
 {
 	u32 *dest;
@@ -554,9 +551,10 @@ static void VIFunpack(u32 *data, vifCode *v, unsigned int size, const unsigned i
 	VURegs * VU;
 	u8 *cdata = (u8*)data;
 	u32 tempsize = 0;
+	const u32 memlimit = (VIFdmanum ? 0x4000 : 0x1000);
 	
 #ifdef _DEBUG
-	u32 memsize = VIFdmanum ? 0x4000 : 0x1000;
+	u32 memsize = memlimit;
 #endif
 
 	_mm_prefetch((char*)data, _MM_HINT_NTA);
@@ -608,10 +606,10 @@ static void VIFunpack(u32 *data, vifCode *v, unsigned int size, const unsigned i
 #ifdef _DEBUG
 		static int s_count = 0;
 #endif
-		if(v->addr >= (u32)(VIFdmanum ? 0x4000 : 0x1000)) 
+		if (v->addr >= memlimit) 
 		{
 			//DevCon::Notice("Overflown at the start");
-			v->addr &= (u32)(VIFdmanum ? 0x3fff : 0xfff);
+			v->addr &= (memlimit - 1);
 			dest = (u32*)(VU->Mem + v->addr);
 		}
 
@@ -620,12 +618,11 @@ static void VIFunpack(u32 *data, vifCode *v, unsigned int size, const unsigned i
 			((vifRegs->cycle.cl - vifRegs->cycle.wl) * 16)) + (tempsize * 16);
 
 		//Sanity Check (memory overflow)
-		if(tempsize > (u32)(VIFdmanum ? 0x4000 : 0x1000)) 
+		if (tempsize > memlimit) 
 		{
-			
-			
-			if(((vifRegs->cycle.cl != vifRegs->cycle.wl) && ((u32)(VIFdmanum ? 0x4000 : 0x1000) + ((vifRegs->cycle.cl - vifRegs->cycle.wl) * 16)) == tempsize)
-				|| tempsize == (u32)(VIFdmanum ? 0x4000 : 0x1000))
+			if (((vifRegs->cycle.cl != vifRegs->cycle.wl) && 
+			       (memlimit + ((vifRegs->cycle.cl - vifRegs->cycle.wl) * 16)) == tempsize) || 
+			       (tempsize == memlimit))
 			{
 				//Its a red herring! so ignore it! SSE unpacks will be much quicker
 				tempsize = 0;
@@ -636,8 +633,11 @@ static void VIFunpack(u32 *data, vifCode *v, unsigned int size, const unsigned i
 				tempsize = size;
 				size = 0;
 			}
-		} else tempsize = 0;
-
+		} 
+		else 
+		{
+			tempsize = 0;
+		}
 
 		if (size >= ft->gsize)
 		{
@@ -673,7 +673,8 @@ static void VIFunpack(u32 *data, vifCode *v, unsigned int size, const unsigned i
 			}
 #endif
 
-			if ((vifRegs->cycle.cl == 0) || (vifRegs->cycle.wl == 0) || ((vifRegs->cycle.cl == vifRegs->cycle.wl) && !(vifRegs->code & 0x10000000)))
+			if ((vifRegs->cycle.cl == 0) || (vifRegs->cycle.wl == 0) || 
+			   ((vifRegs->cycle.cl == vifRegs->cycle.wl) && !(vifRegs->code & 0x10000000)))
 			{
 				oldcycle = *(u32*) & vifRegs->cycle;
 				vifRegs->cycle.cl = vifRegs->cycle.wl = 1;
@@ -745,9 +746,9 @@ static void VIFunpack(u32 *data, vifCode *v, unsigned int size, const unsigned i
 
 			while ((tempsize >= ft->gsize) && (vifRegs->num > 0))
 			{
-				if(v->addr >= (u32)(VIFdmanum ? 0x4000 : 0x1000)) 
+				if(v->addr >= memlimit) 
 				{
-					v->addr &= (u32)(VIFdmanum ? 0x3fff : 0xfff);
+					v->addr &= (memlimit - 1);
 					dest = (u32*)(VU->Mem + v->addr);
 				}
 				
@@ -778,9 +779,9 @@ static void VIFunpack(u32 *data, vifCode *v, unsigned int size, const unsigned i
 				vifRow[2] = vifRegs->r2;
 				vifRow[3] = vifRegs->r3;
 			}
-			if(v->addr >= (u32)(VIFdmanum ? 0x4000 : 0x1000)) 
+			if(v->addr >= memlimit) 
 				{
-					v->addr &= (u32)(VIFdmanum ? 0x3fff : 0xfff);
+					v->addr &= (memlimit - 1);
 					dest = (u32*)(VU->Mem + v->addr);
 				}
 			if(tempsize > 0) size = tempsize;
@@ -828,11 +829,13 @@ static void VIFunpack(u32 *data, vifCode *v, unsigned int size, const unsigned i
 					VIF_LOG("Out of Filling write data");
 					break;
 				}
+				
 				func(dest, (u32*)cdata, ft->qsize);
 				cdata += ft->gsize;
 				size -= ft->gsize;
 				vif->cl++;
 				vifRegs->num--;
+				
 				if (vif->cl == vifRegs->cycle.wl)
 				{
 					vif->cl = 0;
@@ -866,6 +869,7 @@ static void vuExecMicro(u32 addr, const u32 VIFdmanum)
 		VU = &VU1;
 		vif1FLUSH();
 	}
+	
 	if (VU->vifRegs->itops > (VIFdmanum ? 0x3ffu : 0xffu))
 		Console::WriteLn("VIF%d ITOP overrun! %x", params VIFdmanum, VU->vifRegs->itops);
 
@@ -1060,19 +1064,24 @@ static int __fastcall Vif0TransMPG(u32 *data)  // MPG
 	if (vif0.vifpacketsize < vif0.tag.size)
 	{
 		if((vif0.tag.addr + vif0.vifpacketsize) > 0x1000) DevCon::Notice("Vif0 MPG Split Overflow");
+		
 		vif0mpgTransfer(vif0.tag.addr, data, vif0.vifpacketsize);
 		vif0.tag.addr += vif0.vifpacketsize << 2;
 		vif0.tag.size -= vif0.vifpacketsize;
+		
 		return vif0.vifpacketsize;
 	}
 	else
 	{
 		int ret;
+		
 		if((vif0.tag.addr + vif0.tag.size) > 0x1000) DevCon::Notice("Vif0 MPG Overflow");
+		
 		vif0mpgTransfer(vif0.tag.addr, data, vif0.tag.size);
 		ret = vif0.tag.size;
 		vif0.tag.size = 0;
 		vif0.cmd = 0;
+		
 		return ret;
 	}
 }
@@ -1090,10 +1099,13 @@ static int __fastcall Vif0TransUnpack(u32 *data)	// UNPACK
 			vif0.tag.size -= vif0.vifpacketsize - VIFalign(data, &vif0.tag, vif0.vifpacketsize, VIF0dmanum);
 			ret = ret - vif0.tag.size;
 			data += ret;
+			
 			if(vif0.vifpacketsize > 0) VIFunpack(data, &vif0.tag, vif0.vifpacketsize - ret, VIF0dmanum);
+			
 			ProcessMemSkip((vif0.vifpacketsize - ret) << 2, (vif0.cmd & 0xf), VIF0dmanum);
 			vif0.tag.size -= (vif0.vifpacketsize - ret);
 			FreezeXMMRegs(0);
+			
 			return vif0.vifpacketsize;
 		} 
 		/* size is less that the total size, transfer is 'in pieces' */
@@ -1391,10 +1403,9 @@ int _chainVIF0()
 	{
 		VIF_LOG("dmaIrq Set\n");
 
-		vif0.done = true;
-		return (vif0.done)?1:0;												   //End Transfer
+		vif0.done = true;												   //End Transfer
 	}
-	return (vif0.done)?1:0;												   //Return Done
+	return (vif0.done) ? 1: 0;												   //Return Done
 }
 
 void  vif0Interrupt()
@@ -1414,6 +1425,7 @@ void  vif0Interrupt()
 			vif0ch->chcr &= ~0x100;
 			return;
 		}
+		
 		if (vif0ch->qwc > 0 || vif0.irqoffset > 0)
 		{
 			if (vif0.stallontag)
@@ -1448,6 +1460,7 @@ void  vif0Interrupt()
 
 	if (vif0ch->qwc > 0) Console::WriteLn("VIF0 Ending with QWC left");
 	if (vif0.cmd != 0) Console::WriteLn("vif0.cmd still set %x", params vif0.cmd);
+	
 	vif0ch->chcr &= ~0x100;
 	hwDmacIrq(DMAC_VIF0);
 	vif0Regs->stat &= ~0xF000000; // FQC=0
@@ -1508,6 +1521,7 @@ void dmaVIF0()
 			vif0.vifstalled = true;
 			return;
 		}
+		
 		vif0.done = true;
 		CPU_INT(0, g_vifCycles);
 		return;
@@ -1522,7 +1536,7 @@ void vif0Write32(u32 mem, u32 value)
 {
 	switch (mem)
 	{
-		case 0x10003830: // MARK
+		case VIF0_MARK:
 			VIF_LOG("VIF0_MARK write32 0x%8.8x", value);
 
 			/* Clear mark flag in VIF0_STAT and set mark with 'value' */
@@ -1530,7 +1544,7 @@ void vif0Write32(u32 mem, u32 value)
 			vif0Regs->mark = value;
 			break;
 		
-		case 0x10003810: // FBRST
+		case VIF0_FBRST:
 			VIF_LOG("VIF0_FBRST write32 0x%8.8x", value);
 
 			if (value & 0x1)
@@ -1546,6 +1560,7 @@ void vif0Write32(u32 mem, u32 value)
 				vif0Regs->err = 0;
 				vif0Regs->stat &= ~(0xF000000 | VIF0_STAT_INT | VIF0_STAT_VSS | VIF0_STAT_VIS | VIF0_STAT_VFS | VIF0_STAT_VPS); // FQC=0
 			}
+			
 			if (value & 0x2)
 			{
 				/* Force Break the VIF */
@@ -1555,7 +1570,8 @@ void vif0Write32(u32 mem, u32 value)
 				vif0Regs->stat &= ~VIF0_STAT_VPS;
 				vif0.vifstalled = true;
 				Console::WriteLn("vif0 force break");
-				}
+			}
+				
 			if (value & 0x4)
 			{
 				/* Stop VIF */
@@ -1565,6 +1581,7 @@ void vif0Write32(u32 mem, u32 value)
 				vif0Regs->stat &= ~VIF0_STAT_VPS;
 				vif0.vifstalled = true;
 			}
+			
 			if (value & 0x8)
 			{
 				bool cancel = false;
@@ -1594,7 +1611,7 @@ void vif0Write32(u32 mem, u32 value)
 			}
 			break;
 			
-		case 0x10003820:
+		case VIF0_ERR:
 			// ERR
 			VIF_LOG("VIF0_ERR write32 0x%8.8x", value);
 
@@ -1604,11 +1621,11 @@ void vif0Write32(u32 mem, u32 value)
 		
 		default:
 			Console::WriteLn("Unknown Vif0 write to %x", params mem);
-			if (mem >= 0x10003900 && mem < 0x10003980)
+			if (mem >= VIF0_R0 && mem < 0x10003980) // mem <= VIF0_C3?
 			{
 				assert((mem&0xf) == 0);
 
-				if (mem < 0x10003940)
+				if (mem < VIF0_C0)
 					g_vifRow0[(mem>>4)&3] = value;
 				else
 					g_vifCol0[(mem>>4)&3] = value;
@@ -1974,18 +1991,19 @@ static int  __fastcall Vif1TransUnpack(u32 *data)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Vif1 CMD Base Commands
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// fixme: Global variables should not have the same name as local variables, and this probably shouldn't be local anyways.
-int transferred = 0;
+
 static void Vif1CMDNop()  // NOP
 {
 	vif1.cmd &= ~0x7f;
 }
+
 static void Vif1CMDSTCycl()  // STCYCL
 {
 	vif1Regs->cycle.cl = (u8)vif1Regs->code;
 	vif1Regs->cycle.wl = (u8)(vif1Regs->code >> 8);
 	vif1.cmd &= ~0x7f;
 }
+
 static void Vif1CMDOffset()  // OFFSET
 {
 	vif1Regs->ofst  = vif1Regs->code & 0x3ff;
@@ -1993,11 +2011,13 @@ static void Vif1CMDOffset()  // OFFSET
 	vif1Regs->tops  = vif1Regs->base;
 	vif1.cmd &= ~0x7f;
 }
+
 static void Vif1CMDBase()  // BASE
 {
 	vif1Regs->base = vif1Regs->code & 0x3ff;
 	vif1.cmd &= ~0x7f;
 }
+
 static void Vif1CMDITop()  // ITOP
 {
 	vif1Regs->itops = vif1Regs->code & 0x3ff;
@@ -2010,10 +2030,8 @@ static void Vif1CMDSTMod()  // STMOD
 	vif1.cmd &= ~0x7f;
 }
 
-
 static void Vif1CMDMskPath3()  // MSKPATH3
 {
-
 	vif1Regs->mskpath3 = (vif1Regs->code >> 15) & 0x1;
 	//Console::WriteLn("VIF MSKPATH3 %x", params vif1Regs->mskpath3);
 
@@ -2036,11 +2054,8 @@ static void Vif1CMDMark()  // MARK
 	vif1.cmd &= ~0x7f;
 }
 
-
-
 static void Vif1CMDFlush()  // FLUSH/E/A
 {
-
 	vif1FLUSH();
 
 	if((vif1.cmd & 0x7f) == 0x13)
@@ -2053,21 +2068,25 @@ static void Vif1CMDFlush()  // FLUSH/E/A
 
 	vif1.cmd &= ~0x7f;
 }
+
 static void Vif1CMDMSCALF()  //MSCAL/F
 {
 	vif1FLUSH();
 	vuExecMicro((u16)(vif1Regs->code) << 3, VIF1dmanum);
 	vif1.cmd &= ~0x7f;
 }
+
 static void Vif1CMDMSCNT()  // MSCNT
 {
 	vuExecMicro(-1, VIF1dmanum);
 	vif1.cmd &= ~0x7f;
 }
+
 static void Vif1CMDSTMask()  // STMASK
 {
 	vif1.tag.size = 1;
 }
+
 static void Vif1CMDSTRowCol() // STROW / STCOL
 {
 	vif1.tag.addr = 0;
@@ -2085,8 +2104,6 @@ static void Vif1CMDMPGTransfer()  // MPG
 	vif1.tag.addr = (u16)((vif1Regs->code) << 3) & 0x3fff;
 	vif1.tag.size = vifNum * 2;
 }
-
-
 
 static void Vif1CMDDirectHL()  // DIRECT/HL
 {
@@ -2110,8 +2127,8 @@ static void Vif1CMDDirectHL()  // DIRECT/HL
 		
 	}
 	psHu32(GIF_STAT) |= (GIF_STAT_APATH2 | GIF_STAT_OPH);
-	
 }
+
 static void Vif1CMDNull()  // invalid opcode
 {
 	// if ME1, then force the vif to interrupt
@@ -2170,7 +2187,7 @@ void (*Vif1CMDTLB[82])() =
 int VIF1transfer(u32 *data, int size, int istag)
 {
 	int ret;
-	transferred = vif1.vifstalled ? vif1.irqoffset : 0; // irqoffset necessary to add up the right qws, or else will spin (spiderman)
+	int transferred = vif1.vifstalled ? vif1.irqoffset : 0; // irqoffset necessary to add up the right qws, or else will spin (spiderman)
 
 	VIF_LOG("VIF1transfer: size %x (vif1.cmd %x)", size, vif1.cmd);
 
@@ -2191,7 +2208,9 @@ int VIF1transfer(u32 *data, int size, int istag)
 			}
 			
 		}
+		
 		if(vif1Regs->stat & VIF1_STAT_VGW) break;
+		
 		if (vif1.cmd)
 		{
 			vif1Regs->stat |= VIF1_STAT_VPS_T; //Decompression has started
@@ -2263,7 +2282,7 @@ int VIF1transfer(u32 *data, int size, int istag)
 	{
 		vif1.vifstalled = true;
 
-		if (((vif1Regs->code >> 24) & 0x7f) != 0x7)vif1Regs->stat |= VIF1_STAT_VIS; // Note: commenting this out fixes WALL-E
+		if (((vif1Regs->code >> 24) & 0x7f) != 0x7) vif1Regs->stat |= VIF1_STAT_VIS; // Note: commenting this out fixes WALL-E
 
 		if (vif1ch->qwc == 0 && (vif1.irqoffset == 0 || istag == 1))
 			vif1.inprogress = 0;
@@ -2326,6 +2345,7 @@ void vif1TransferFromMemory()
 	// completely and execute the transfer there-after.
 
 	FreezeXMMRegs(1);
+	
 	if (GSreadFIFO2 == NULL)
 	{
 		for (size = vif1ch->qwc; size > 0; --size)
@@ -2349,8 +2369,8 @@ void vif1TransferFromMemory()
 		psHu64(0x5000) = pMem[2*vif1ch->qwc-2];
 		psHu64(0x5008) = pMem[2*vif1ch->qwc-1];
 	}
+	
 	FreezeXMMRegs(0);
-
 	
 	g_vifCycles += vif1ch->qwc * 2;
 	vif1ch->madr += vif1ch->qwc * 16; // mgs3 scene changes
@@ -2368,7 +2388,7 @@ int  _VIF1chain()
 		return 0;
 	}
 
-	if (vif1.dmamode == 1)
+	if (vif1.dmamode == VIF_NORMAL_MEM_MODE)
 	{
 		vif1TransferFromMemory();
 		vif1.inprogress = 0;
@@ -2398,14 +2418,14 @@ __forceinline void vif1SetupTransfer()
 {
 	switch (vif1.dmamode)
 	{
-		case 0: //Normal
-		case 1: //Normal (From memory)
+		case VIF_NORMAL_MODE: //Normal
+		case VIF_NORMAL_MEM_MODE: //Normal (From memory)
 			vif1.inprogress = 1;
 			vif1.done = true;
 			g_vifCycles = 2;
 			break;
 
-		case 2: //Chain
+		case VIF_CHAIN_MODE: //Chain
 			int id;
 			int ret;
 
@@ -2490,7 +2510,6 @@ __forceinline void vif1Interrupt()
 	
 	}
 
-
 	if ((vif1ch->chcr & 0x100) == 0) Console::WriteLn("Vif1 running when CHCR == %x", params vif1ch->chcr);
 
 	if (vif1.irq && vif1.tag.size == 0)
@@ -2556,7 +2575,6 @@ __forceinline void vif1Interrupt()
 
 void dmaVIF1()
 {
-
 	VIF_LOG("dmaVIF1 chcr = %lx, madr = %lx, qwc  = %lx\n"
 	        "        tadr = %lx, asr0 = %lx, asr1 = %lx",
 	        vif1ch->chcr, vif1ch->madr, vif1ch->qwc,
@@ -2564,7 +2582,6 @@ void dmaVIF1()
 
 	g_vifCycles = 0;
 	vif1.inprogress = 0;
-
 	
 	if (((psHu32(DMAC_CTRL) & 0xC) == 0x8))   // VIF MFIFO
 	{
@@ -2581,7 +2598,6 @@ void dmaVIF1()
 	}
 #endif
 
-	
 	if (!(vif1ch->chcr & 0x4) || vif1ch->qwc > 0)   // Normal Mode
 	{
 
@@ -2589,29 +2605,30 @@ void dmaVIF1()
 			Console::WriteLn("DMA Stall Control on VIF1 normal");
 
 		if ((vif1ch->chcr & 0x1))  // to Memory
-			vif1.dmamode = 0;
+			vif1.dmamode = VIF_NORMAL_MODE;
 		else
-			vif1.dmamode = 1;
+			vif1.dmamode = VIF_NORMAL_MEM_MODE;
 	}
 	else 
 	{
-		vif1.dmamode = 2;
+		vif1.dmamode = VIF_CHAIN_MODE;
 	}
 
-	if(vif1.dmamode != 1)vif1Regs->stat |= 0x10000000; // FQC=16
-	else vif1Regs->stat |= min((u16)16, vif1ch->qwc) << 24; // FQC=16
+	if(vif1.dmamode != VIF_NORMAL_MEM_MODE)
+		vif1Regs->stat |= 0x10000000; // FQC=16
+	else 
+		vif1Regs->stat |= min((u16)16, vif1ch->qwc) << 24; // FQC=16
 
 	// Chain Mode
 	vif1.done = false;
 	vif1Interrupt();
 }
 
-
 void vif1Write32(u32 mem, u32 value)
 {
 	switch (mem)
 	{
-		case 0x10003c30:   // MARK
+		case VIF1_MARK:
 			VIF_LOG("VIF1_MARK write32 0x%8.8x", value);
 
 			/* Clear mark flag in VIF1_STAT and set mark with 'value' */
@@ -2619,7 +2636,7 @@ void vif1Write32(u32 mem, u32 value)
 			vif1Regs->mark = value;
 			break;
 		
-		case 0x10003c10:   // FBRST
+		case VIF1_FBRST:   // FBRST
 			VIF_LOG("VIF1_FBRST write32 0x%8.8x", value);
 
 			if (value & 0x1)
@@ -2635,6 +2652,7 @@ void vif1Write32(u32 mem, u32 value)
 				vif1.inprogress = 0;
 				vif1Regs->stat &= ~(0x1F800000 | VIF1_STAT_INT | VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS | VIF1_STAT_VPS); // FQC=0
 			}
+			
 			if (value & 0x2)
 			{
 				/* Force Break the VIF */
@@ -2645,6 +2663,7 @@ void vif1Write32(u32 mem, u32 value)
 				vif1.vifstalled = true;
 				Console::WriteLn("vif1 force break");
 			}
+			
 			if (value & 0x4)
 			{
 				/* Stop VIF */
@@ -2655,6 +2674,7 @@ void vif1Write32(u32 mem, u32 value)
 				cpuRegs.interrupt &= ~((1 << 1) | (1 << 10)); //Stop all vif1 DMA's
 				vif1.vifstalled = true;
 			}
+			
 			if (value & 0x8)
 			{
 				bool cancel = false;
@@ -2690,15 +2710,15 @@ void vif1Write32(u32 mem, u32 value)
 			}
 			break;
 			
-		case 0x10003c20:   // ERR
+		case VIF1_ERR:   // ERR
 			VIF_LOG("VIF1_ERR write32 0x%8.8x", value);
 
 			/* Set VIF1_ERR with 'value' */
 			vif1Regs->err = value;
 			break;
 		
-		case 0x10003c00:   // STAT
-		VIF_LOG("VIF1_STAT write32 0x%8.8x", value);
+		case VIF1_STAT:   // STAT
+			VIF_LOG("VIF1_STAT write32 0x%8.8x", value);
 
 #ifdef PCSX2_DEVBUILD
 			/* Only FDR bit is writable, so mask the rest */
@@ -2726,16 +2746,16 @@ void vif1Write32(u32 mem, u32 value)
 			}
 			break;
 			
-		case 0x10003c50:   // MODE
+		case VIF1_MODE:   // MODE
 			vif1Regs->mode = value;
 			break;
 		
 		default:
 			Console::WriteLn("Unknown Vif1 write to %x", params mem);
-			if ((mem >= 0x10003d00) && (mem < 0x10003d80))
+			if ((mem >= VIF1_R0) && (mem < 0x10003d80)) // mem <= VIF1_C3?
 			{
 				assert((mem&0xf) == 0);
-				if (mem < 0x10003d40)
+				if (mem < VIF1_C0)
 					g_vifRow1[(mem>>4)&3] = value;
 				else 
 					g_vifCol1[(mem>>4)&3] = value;
