@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 2.6)
 
 project (YAML_CPP)
+
+enable_testing()
+
 set(LIBRARY_OUTPUT_PATH lib${LIB_SUFFIX})
 set(LIB_INSTALL_DIR lib${LIB_SUFFIX})
 set(INCLUDE_INSTALL_DIR include/yaml-cpp)
