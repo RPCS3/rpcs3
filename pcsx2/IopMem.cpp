@@ -195,13 +195,13 @@ u16 iopMemRead16(u32 mem)
 				switch(mem & 0xF0)
 				{
 				case 0x00:
-					ret= psHu16(0x1000F200);
+					ret= psHu16(SBUS_F200);
 					break;
 				case 0x10:
-					ret= psHu16(0x1000F210);
+					ret= psHu16(SBUS_F210);
 					break;
 				case 0x40:
-					ret= psHu16(0x1000F240) | 0x0002;
+					ret= psHu16(SBUS_F240) | 0x0002;
 					break;
 				case 0x60:
 					ret = 0;
@@ -261,19 +261,19 @@ u32 iopMemRead32(u32 mem)
 				switch(mem & 0xF0)
 				{
 				case 0x00:
-					ret= psHu32(0x1000F200);
+					ret= psHu32(SBUS_F200);
 					break;
 				case 0x10:
-					ret= psHu32(0x1000F210);
+					ret= psHu32(SBUS_F210);
 					break;
 				case 0x20:
-					ret= psHu32(0x1000F220);
+					ret= psHu32(SBUS_F220);
 					break;
 				case 0x30:	// EE Side
-					ret= psHu32(0x1000F230);
+					ret= psHu32(SBUS_F230);
 					break;
 				case 0x40:
-					ret= psHu32(0x1000F240) | 0xF0000002;
+					ret= psHu32(SBUS_F240) | 0xF0000002;
 					break;
 				case 0x60:
 					ret = 0;
@@ -405,7 +405,7 @@ void iopMemWrite16(u32 mem, u16 value)
 				{
 					case 0x10:
 						// write to ps2 mem
-						psHu16(0x1000F210) = value;
+						psHu16(SBUS_F210) = value;
 						return;
 					case 0x40:
 					{
@@ -413,17 +413,19 @@ void iopMemWrite16(u32 mem, u16 value)
 						// write to ps2 mem
 						if(value & 0x20 || value & 0x80)
 						{
-							psHu16(0x1000F240) &= ~0xF000;
-							psHu16(0x1000F240) |= 0x2000;
+							psHu16(SBUS_F240) &= ~0xF000;
+							psHu16(SBUS_F240) |= 0x2000;
 						}
 
 						
-						if(psHu16(0x1000F240) & temp) psHu16(0x1000F240) &= ~temp;
-						else psHu16(0x1000F240) |= temp;
+						if(psHu16(SBUS_F240) & temp) 
+							psHu16(SBUS_F240) &= ~temp;
+						else 
+							psHu16(SBUS_F240) |= temp;
 						return;
 					}
 					case 0x60:
-						psHu32(0x1000F260) = 0;
+						psHu32(SBUS_F260) = 0;
 						return;
 
 				}
@@ -490,36 +492,36 @@ void iopMemWrite32(u32 mem, u32 value)
 						return;		// this is the IOP, so read-only (do nothing)
 
 					case 0x10:		// IOP write path (EE/IOP readable)
-						psHu32(0x1000F210) = value;
+						psHu32(SBUS_F210) = value;
 						return;
 
 					case 0x20:		// Bits cleared when written from IOP.
-						psHu32(0x1000F220) &= ~value;
+						psHu32(SBUS_F220) &= ~value;
 						return;
 
 					case 0x30:		// bits set when written from IOP
-						psHu32(0x1000F230) |= value;
+						psHu32(SBUS_F230) |= value;
 						return;
 
 					case 0x40:		// Control Register
 					{
 						u32 temp = value & 0xF0;
-						if(value & 0x20 || value & 0x80)
+						if (value & 0x20 || value & 0x80)
 						{
-							psHu32(0x1000F240) &= ~0xF000;
-							psHu32(0x1000F240) |= 0x2000;
+							psHu32(SBUS_F240) &= ~0xF000;
+							psHu32(SBUS_F240) |= 0x2000;
 						}
 
 						
-						if(psHu32(0x1000F240) & temp)
-							psHu32(0x1000F240) &= ~temp;
+						if (psHu32(SBUS_F240) & temp)
+							psHu32(SBUS_F240) &= ~temp;
 						else
-							psHu32(0x1000F240) |= temp;
+							psHu32(SBUS_F240) |= temp;
 						return;
 					}
 
 					case 0x60:
-						psHu32(0x1000F260) = 0;
+						psHu32(SBUS_F260) = 0;
 					return;
 				}
 				psxSu32(mem) = value; 

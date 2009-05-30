@@ -170,13 +170,13 @@ void psxDma9(u32 madr, u32 bcr, u32 chcr)
 	SIF_LOG("IOP: dmaSIF0 chcr = %lx, madr = %lx, bcr = %lx, tadr = %lx",	chcr, madr, bcr, HW_DMA9_TADR);
 
 	iopsifbusy[0] = 1;
-	psHu32(0x1000F240) |= 0x2000;
+	psHu32(SBUS_F240) |= 0x2000;
 
 	if (eesifbusy[0] == 1)
 	{
 		SIF0Dma();
-		psHu32(0x1000F240) &= ~0x20;
-		psHu32(0x1000F240) &= ~0x2000;
+		psHu32(SBUS_F240) &= ~0x20;
+		psHu32(SBUS_F240) &= ~0x2000;
 	}
 }
 
@@ -185,15 +185,15 @@ void psxDma10(u32 madr, u32 bcr, u32 chcr)
 	SIF_LOG("IOP: dmaSIF1 chcr = %lx, madr = %lx, bcr = %lx",	chcr, madr, bcr);
 
 	iopsifbusy[1] = 1;
-	psHu32(0x1000F240) |= 0x4000;
+	psHu32(SBUS_F240) |= 0x4000;
 
 	if (eesifbusy[1] == 1)
 	{
 		FreezeXMMRegs(1);
 		SIF1Dma();
-		psHu32(0x1000F240) &= ~0x40;
-		psHu32(0x1000F240) &= ~0x100;
-		psHu32(0x1000F240) &= ~0x4000;
+		psHu32(SBUS_F240) &= ~0x40;
+		psHu32(SBUS_F240) &= ~0x100;
+		psHu32(SBUS_F240) &= ~0x4000;
 		FreezeXMMRegs(0);
 	}
 }

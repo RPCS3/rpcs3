@@ -452,15 +452,15 @@ __forceinline void dmaSIF0()
 		SIF_LOG("warning, sif0.fifoReadPos != sif0.fifoWritePos");
 	}
 
-	psHu32(0x1000F240) |= 0x2000;
+	psHu32(SBUS_F240) |= 0x2000;
 	eesifbusy[0] = 1;
 	if (iopsifbusy[0] == 1)
 	{
 		FreezeXMMRegs(1);
 		hwIntcIrq(INTC_SBUS);
 		SIF0Dma();
-		psHu32(0x1000F240) &= ~0x20;
-		psHu32(0x1000F240) &= ~0x2000;
+		psHu32(SBUS_F240) &= ~0x20;
+		psHu32(SBUS_F240) &= ~0x2000;
 		FreezeXMMRegs(0);
 	}
 }
@@ -475,15 +475,15 @@ __forceinline void dmaSIF1()
 		SIF_LOG("warning, sif1.fifoReadPos != sif1.fifoWritePos");
 	}
 
-	psHu32(0x1000F240) |= 0x4000;
+	psHu32(SBUS_F240) |= 0x4000;
 	eesifbusy[1] = 1;
 	if (iopsifbusy[1] == 1)
 	{
 		FreezeXMMRegs(1);
 		SIF1Dma();
-		psHu32(0x1000F240) &= ~0x40;
-		psHu32(0x1000F240) &= ~0x100;
-		psHu32(0x1000F240) &= ~0x4000;
+		psHu32(SBUS_F240) &= ~0x40;
+		psHu32(SBUS_F240) &= ~0x100;
+		psHu32(SBUS_F240) &= ~0x4000;
 		FreezeXMMRegs(0);
 	}
 

@@ -351,7 +351,6 @@ static int VIFalign(u32 *data, vifCode *v, unsigned int size, const unsigned int
 		vifMaskRegs = g_vif0Masks;
 		vif = &vif0;
 		vifRow = g_vifRow0;
-		assert(v->addr < memsize);
 	}
 	else
 	{
@@ -360,8 +359,8 @@ static int VIFalign(u32 *data, vifCode *v, unsigned int size, const unsigned int
 		vifMaskRegs = g_vif1Masks;
 		vif = &vif1;
 		vifRow = g_vifRow1;
-		assert(v->addr < memsize);
 	}
+	assert(v->addr < memsize);
 
 	dest = (u32*)(VU->Mem + v->addr);
 
@@ -1554,8 +1553,8 @@ void vif0Write32(u32 mem, u32 value)
 				memzero_obj(vif0);
 				vif0ch->qwc = 0; //?
 				cpuRegs.interrupt &= ~1; //Stop all vif0 DMA's
-				psHu64(0x10004000) = 0;
-				psHu64(0x10004008) = 0;
+				psHu64(VIF0_FIFO) = 0;
+				psHu64(0x10004008) = 0; // VIF0_FIFO + 8
 				vif0.done = true;
 				vif0Regs->err = 0;
 				vif0Regs->stat &= ~(0xF000000 | VIF0_STAT_INT | VIF0_STAT_VSS | VIF0_STAT_VIS | VIF0_STAT_VFS | VIF0_STAT_VPS); // FQC=0
@@ -1619,22 +1618,25 @@ void vif0Write32(u32 mem, u32 value)
 			vif0Regs->err = value;
 			break;
 		
+		case VIF0_R0:
+		case VIF0_R1:
+		case VIF0_R2:
+		case VIF0_R3:
+			assert((mem&0xf) == 0);
+			g_vifRow0[(mem>>4) & 3] = value;
+			break;
+		
+		case VIF0_C0:
+		case VIF0_C1:
+		case VIF0_C2:
+		case VIF0_C3:
+			assert((mem&0xf) == 0);
+			g_vifCol0[(mem>>4) & 3] = value;
+			break;
+		
 		default:
 			Console::WriteLn("Unknown Vif0 write to %x", params mem);
-			if (mem >= VIF0_R0 && mem < 0x10003980) // mem <= VIF0_C3?
-			{
-				assert((mem&0xf) == 0);
-
-				if (mem < VIF0_C0)
-					g_vifRow0[(mem>>4)&3] = value;
-				else
-					g_vifCol0[(mem>>4)&3] = value;
-
-			}
-			else
-			{
-				psHu32(mem) = value;
-			}
+			psHu32(mem) = value;
 			break;
 	}
 	/* Other registers are read-only so do nothing for them */
@@ -1646,8 +1648,8 @@ void vif0Reset()
 	memzero_obj(vif0);
 	memzero_obj(*vif0Regs);
 	SetNewMask(g_vif0Masks, g_vif0HasMask3, 0, 0xffffffff);
-	psHu64(0x10004000) = 0;
-	psHu64(0x10004008) = 0;
+	psHu64(VIF0_FIFO) = 0;
+	psHu64(0x10004008) = 0; // VIF0_FIFO + 8
 	vif0Regs->stat &= ~VIF0_STAT_VPS;
 	vif0.done = true;
 	vif0Regs->stat &= ~0xF000000; // FQC=0
@@ -1790,7 +1792,7 @@ static int __fastcall Vif1TransSTRow(u32 *data)
 			pmem[0] = data[0];
 			pmem2[0] = data[0];
 			break;
-			jNO_DEFAULT;
+		jNO_DEFAULT;
 	}
 	vif1.tag.addr += ret;
 	vif1.tag.size -= ret;
@@ -2645,8 +2647,8 @@ void vif1Write32(u32 mem, u32 value)
 				memzero_obj(vif1);
 				cpuRegs.interrupt &= ~((1 << 1) | (1 << 10)); //Stop all vif1 DMA's
 				vif1ch->qwc = 0; //?
-				psHu64(0x10005000) = 0;
-				psHu64(0x10005008) = 0;
+				psHu64(VIF1_FIFO) = 0;
+				psHu64(0x10005008) = 0; // VIF1_FIFO + 8
 				vif1.done = true;
 				vif1Regs->err = 0;
 				vif1.inprogress = 0;
@@ -2750,20 +2752,25 @@ void vif1Write32(u32 mem, u32 value)
 			vif1Regs->mode = value;
 			break;
 		
+		case VIF1_R0:
+		case VIF1_R1:
+		case VIF1_R2:
+		case VIF1_R3:
+			assert((mem&0xf) == 0);
+			g_vifRow1[(mem>>4) & 3] = value;
+			break;
+		
+		case VIF1_C0:
+		case VIF1_C1:
+		case VIF1_C2:
+		case VIF1_C3:
+			assert((mem&0xf) == 0);
+			g_vifCol1[(mem>>4) & 3] = value;
+			break;
+		
 		default:
 			Console::WriteLn("Unknown Vif1 write to %x", params mem);
-			if ((mem >= VIF1_R0) && (mem < 0x10003d80)) // mem <= VIF1_C3?
-			{
-				assert((mem&0xf) == 0);
-				if (mem < VIF1_C0)
-					g_vifRow1[(mem>>4)&3] = value;
-				else 
-					g_vifCol1[(mem>>4)&3] = value;
-			}
-			else 
-			{
-				psHu32(mem) = value;
-			}
+			psHu32(mem) = value;
 			break;
 	}
 
@@ -2776,8 +2783,8 @@ void vif1Reset()
 	memzero_obj(vif1);
 	memzero_obj(*vif1Regs);
 	SetNewMask(g_vif1Masks, g_vif1HasMask3, 0, 0xffffffff);
-	psHu64(0x10005000) = 0;
-	psHu64(0x10005008) = 0;
+	psHu64(VIF1_FIFO) = 0;
+	psHu64(0x10005008) = 0; // VIF1_FIFO + 8
 	vif1Regs->stat &= ~VIF1_STAT_VPS;
 	vif1.done = true;
 	cpuRegs.interrupt &= ~((1 << 1) | (1 << 10)); //Stop all vif1 DMA's
