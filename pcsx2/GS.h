@@ -27,7 +27,6 @@
 #include "Common.h"
 #include "Threading.h"
 
-#define GSPATH3FIX
 
 PCSX2_ALIGNED16( extern u8 g_RealGSMem[0x2000] );
 #define GSCSRr *((u64*)(g_RealGSMem+0x1000))

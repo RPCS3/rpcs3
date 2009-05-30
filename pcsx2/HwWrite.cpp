@@ -97,6 +97,7 @@ static void DmaExec( void (*func)(), u32 mem, u32 value )
 	//Its invalid for the hardware to write a DMA while it is active, not without Suspending the DMAC
 	if((value & 0x100) && (psHu32(mem) & 0x100) == 0x100 && (psHu32(DMAC_CTRL) & 0x1) == 1) {
 		DMA_LOG( "DMAExec32 Attempt to run DMA while one is already active mem = %x", mem );
+		return;
 	}
 
 	// Upper 16bits of QWC should not be written since QWC is 16bits in size.
@@ -1001,9 +1002,8 @@ void __fastcall hwWrite64_page_03( u32 mem, const mem64_t* srcval )
 
 		case GIF_MODE:
 		{
-#ifdef GSPATH3FIX
 			Console::Status("GIFMODE64 %x", params value);
-#endif
+
 			psHu64(GIF_MODE) = value;
 
 			// set/clear bits 0 and 2 as per the GIF_MODE value.

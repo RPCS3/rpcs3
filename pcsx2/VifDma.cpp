@@ -1891,7 +1891,7 @@ static int __fastcall Vif1TransDirectHL(u32 *data)
 	}
 	else
 	{
-		psHu32(GIF_STAT) &= ~GIF_STAT_APATH2;
+		psHu32(GIF_STAT) &= ~(GIF_STAT_APATH2 | GIF_STAT_OPH);
 		ret = vif1.tag.size;
 		vif1.tag.size = 0;
 		vif1.cmd = 0;
@@ -2017,7 +2017,6 @@ static void Vif1CMDMskPath3()  // MSKPATH3
 	vif1Regs->mskpath3 = (vif1Regs->code >> 15) & 0x1;
 	//Console::WriteLn("VIF MSKPATH3 %x", params vif1Regs->mskpath3);
 
-#ifdef GSPATH3FIX
 	if ((vif1Regs->code >> 15) & 0x1)
 	{
 		psHu32(GIF_STAT) |= 0x2;
@@ -2027,18 +2026,6 @@ static void Vif1CMDMskPath3()  // MSKPATH3
 		Path3progress = 1; //Let the Gif know it can transfer again (making sure any vif stall isnt unset prematurely)
 		psHu32(GIF_STAT) &= ~0x2;
 	}
-#else
-	if (vif1Regs->mskpath3)
-	{
-		if (gif->qwc) _GIFchain();		// Finish the transfer first
-		psHu32(GIF_STAT) |= 0x2;
-	}
-	else
-	{
-		psHu32(GIF_STAT) &= ~0x2;
-		if (gif->qwc) _GIFchain();		// Finish the transfer first
-	}
-#endif
 	vif1.cmd &= ~0x7f;
 }
 
@@ -2122,7 +2109,7 @@ static void Vif1CMDDirectHL()  // DIRECT/HL
 		}
 		
 	}
-	psHu32(GIF_STAT) |= GIF_STAT_APATH2;
+	psHu32(GIF_STAT) |= (GIF_STAT_APATH2 | GIF_STAT_OPH);
 	
 }
 static void Vif1CMDNull()  // invalid opcode
@@ -2263,6 +2250,8 @@ int VIF1transfer(u32 *data, int size, int istag)
 				if (vif1.tag.size == 0) break;
 			}
 		}
+	if(!vif1.cmd) vif1Regs->stat &= ~VIF1_STAT_VPS_D;
+
 	if(vif1Regs->stat & VIF1_STAT_VGW) break;
 	} // End of Transfer loop
 
@@ -2555,9 +2544,10 @@ __forceinline void vif1Interrupt()
 	}
 #ifdef PCSX2_DEVBUILD
 	if (vif1ch->qwc > 0) Console::WriteLn("VIF1 Ending with %x QWC left");
-	if (vif1.cmd != 0) Console::WriteLn("vif1.cmd still set %x", params vif1.cmd);
+	if (vif1.cmd != 0) Console::WriteLn("vif1.cmd still set %x tag size %x", params vif1.cmd, vif1.tag.size);
 #endif
 
+	vif1Regs->stat &= ~VIF1_STAT_VPS; //Vif goes idle as the stall happened between commands;
 	vif1ch->chcr &= ~0x100;
 	g_vifCycles = 0;
 	hwDmacIrq(DMAC_VIF1);

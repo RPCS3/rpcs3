@@ -57,7 +57,8 @@ __forceinline void gsInterrupt() {
 		//Console::WriteLn("Eh? why are you still interrupting! chcr %x, qwc %x, done = %x", params gif->chcr, gif->qwc, done);
 		return;
 	}
-	
+	if(Path3progress == 2) psHu32(GIF_STAT)&= ~(GIF_STAT_APATH3 | GIF_STAT_OPH); // OPH=0 | APATH=0
+
 	if (gif->qwc > 0 || gspath3done == 0) {
 		if (!(psHu32(DMAC_CTRL) & 0x1)) {
 			Console::Notice("gs dma masked, re-scheduling...");
@@ -74,6 +75,7 @@ __forceinline void gsInterrupt() {
 	gspath3done = 0;
 	gscycles = 0;
 	gif->chcr &= ~0x100;
+	psHu32(GIF_STAT)&= ~(GIF_STAT_APATH3 | GIF_STAT_OPH); // OPH=0 | APATH=0
 	GSCSRr &= ~0xC000; //Clear FIFO stuff
 	GSCSRr |= 0x4000;  //FIFO empty
 	psHu32(GIF_STAT) &= ~GIF_STAT_P3Q;
@@ -107,7 +109,6 @@ static u32 WRITERING_DMA(u32 *pMem, u32 qwc)
 		memcpy_aligned(pgsmem, pMem, sizetoread<<4); 
 		
 		mtgsThread->SendDataPacket();
-		if(Path3progress == 2) psHu32(GIF_STAT)&= ~(GIF_STAT_APATH3 | GIF_STAT_OPH); // OPH=0 | APATH=0
 		return sizetoread;
 	} 
 	else 
@@ -120,11 +121,8 @@ static u32 WRITERING_DMA(u32 *pMem, u32 qwc)
 } 
 
 int  _GIFchain() {
-#ifdef GSPATH3FIX
+
 	u32 qwc = ((psHu32(GIF_MODE) & 0x4) && (vif1Regs->mskpath3)) ? min(8, (int)gif->qwc) : min( gifsplit, (int)gif->qwc );
-#else
-	u32 qwc = gif->qwc;
-#endif
 	u32 *pMem;
 
 	pMem = (u32*)dmaGetAddr(gif->madr);
@@ -181,18 +179,6 @@ void GIFdma()
 	}
 
 	
-
-#ifndef GSPATH3FIX
-	if ( !(psHu32(GIF_MODE) & 0x4) ) {
-		if (vif1Regs->mskpath3 || psHu32(GIF_MODE) & 0x1) {
-			gif->chcr &= ~0x100;
-			psHu32(GIF_STAT)&= ~0xE00; // OPH=0 | APATH=0
-			hwDmacIrq(2);
-			return;
-		}
-	}
-#endif
-
 	if ((psHu32(DMAC_CTRL) & 0xC0) == 0x80 && prevcycles != 0) { // STD == GIF
 		Console::WriteLn("GS Stall Control Source = %x, Drain = %x\n MADR = %x, STADR = %x", params (psHu32(0xe000) >> 4) & 0x3, (psHu32(0xe000) >> 6) & 0x3, gif->madr, psHu32(DMAC_STADR));
 
@@ -216,7 +202,6 @@ void GIFdma()
 		return;
 	}
 
-#ifdef GSPATH3FIX
 	if (vif1Regs->mskpath3 || (psHu32(GIF_MODE) & 0x1)) {
 		if(gif->qwc == 0) {
 			if((gif->chcr & 0x10e) == 0x104) {
@@ -253,7 +238,7 @@ void GIFdma()
 		GIFdmaEnd();
 		return;
 	}
-#endif
+
 	// Transfer Dn_QWC from Dn_MADR to GIF
 	if ((gif->chcr & 0xc) == 0 || gif->qwc > 0) { // Normal Mode
 		
