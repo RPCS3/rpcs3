@@ -168,7 +168,15 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
+				RelativePath=".\yaml-reader\emittertests.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\yaml-reader\main.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\yaml-reader\parsertests.cpp"
 				>
 			</File>
 			<File
@@ -183,32 +191,6 @@
 			>
 			<File
 				RelativePath=".\yaml-reader\tests.h"
-				>
-			</File>
-		</Filter>
-		<Filter
-			Name="Resource Files"
-			Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav"
-			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}"
-			>
-			<File
-				RelativePath=".\yaml-reader\tests\directives.yaml"
-				>
-			</File>
-			<File
-				RelativePath=".\yaml-reader\tests\mixed.yaml"
-				>
-			</File>
-			<File
-				RelativePath=".\yaml-reader\tests\scalars.yaml"
-				>
-			</File>
-			<File
-				RelativePath=".\yaml-reader\tests\simple.yaml"
-				>
-			</File>
-			<File
-				RelativePath=".\yaml-reader\tests\test.yaml"
 				>
 			</File>
 		</Filter>

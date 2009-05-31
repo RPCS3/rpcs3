@@ -3,10 +3,32 @@
 namespace YAML { class Emitter; }
 
 namespace Test {
-	void RunAll(bool verbose);
-	bool Inout(const std::string& file, bool verbose);
+	void RunAll();
 	
+	bool RunParserTests();
 	bool RunEmitterTests();
+
+	namespace Parser {
+		// scalar tests
+		void SimpleScalar(std::string& inputScalar, std::string& desiredOutput);
+		void MultiLineScalar(std::string& inputScalar, std::string& desiredOutput);
+		void LiteralScalar(std::string& inputScalar, std::string& desiredOutput);
+		void FoldedScalar(std::string& inputScalar, std::string& desiredOutput);
+		void ChompedFoldedScalar(std::string& inputScalar, std::string& desiredOutput);
+		void ChompedLiteralScalar(std::string& inputScalar, std::string& desiredOutput);
+		void FoldedScalarWithIndent(std::string& inputScalar, std::string& desiredOutput);
+		void ColonScalar(std::string& inputScalar, std::string& desiredOutput);
+		void QuotedScalar(std::string& inputScalar, std::string& desiredOutput);
+		void CommaScalar(std::string& inputScalar, std::string& desiredOutput);
+		void DashScalar(std::string& inputScalar, std::string& desiredOutput);
+		void URLScalar(std::string& inputScalar, std::string& desiredOutput);
+
+		// misc tests
+		bool SimpleSeq();
+		bool SimpleMap();
+		bool FlowSeq();
+		bool FlowMap();
+	}
 	
 	namespace Emitter {
 		// correct emitting
