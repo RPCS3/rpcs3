@@ -36,7 +36,7 @@
 #define branchWarning() {																						\
 	if (mVUbranch) {																							\
 		Console::Error("microVU%d Warning: Branch in E-bit/Branch delay slot! [%04x]", params vuIndex, xPC);	\
-		mVUinfo |= _isNOP;																						\
+		mVUlow.isNOP = 1;																						\
 	}																											\
 }
 
@@ -49,14 +49,19 @@
 	}																											\
 }
 
-#define startLoop()			{ mVUdebug1(); mVUstall = 0; memset(&mVUregsTemp, 0, sizeof(mVUregsTemp)); }
+#define startLoop() {								\
+	mVUdebug1();									\
+	memset(&mVUinfo,	 0, sizeof(mVUinfo));		\
+	memset(&mVUregsTemp, 0, sizeof(mVUregsTemp));	\
+}
+
 #define calcCycles(reg, x)	{ reg = ((reg > x) ? (reg - x) : 0); }
 #define tCycles(dest, src)	{ dest = aMax(dest, src); }
 #define incP()				{ mVU->p = (mVU->p+1) & 1; }
 #define incQ()				{ mVU->q = (mVU->q+1) & 1; }
 #define doUpperOp()			{ mVUopU(mVU, 1); mVUdivSet(mVU); }
 #define doLowerOp()			{ incPC(-1); mVUopL(mVU, 1); incPC(1); }
-#define doIbit()			{ if (curI & _Ibit_) { incPC(-1); MOV32ItoM((uptr)&mVU->regs->VI[REG_I].UL, curI); incPC(1); } }
+#define doIbit()			{ if (mVUup.iBit) { incPC(-1); MOV32ItoM((uptr)&mVU->regs->VI[REG_I].UL, curI); incPC(1); } }
 
 //------------------------------------------------------------------
 // Helper Functions
@@ -114,7 +119,7 @@ microVUt(void) mVUincCycles(mV, int x) {
 		calcCycles(mVUregs.VI[z], x);
 	}
 	if (mVUregs.q) {
-		if (mVUregs.q > 4) { calcCycles(mVUregs.q, x); if (mVUregs.q <= 4) { mVUinfo |= _doDivFlag; } }
+		if (mVUregs.q > 4) { calcCycles(mVUregs.q, x); if (mVUregs.q <= 4) { mVUinfo.doDivFlag = 1; } }
 		else { calcCycles(mVUregs.q, x); }
 		if (!mVUregs.q) { incQ(); }
 	}
@@ -124,7 +129,7 @@ microVUt(void) mVUincCycles(mV, int x) {
 	}
 	if (mVUregs.xgkick) {
 		calcCycles(mVUregs.xgkick, x);
-		if (!mVUregs.xgkick) { mVUinfo |= _doXGKICK; }
+		if (!mVUregs.xgkick) { mVUinfo.doXGKICK = 1; }
 	}
 	calcCycles(mVUregs.r, x);
 }
@@ -132,7 +137,8 @@ microVUt(void) mVUincCycles(mV, int x) {
 microVUt(void) mVUsetCycles(mV) {
 	incCycles(mVUstall);
 	if (mVUregsTemp.VFreg[0] == mVUregsTemp.VFreg[1] && mVUregsTemp.VFreg[0]) {	// If upper Op && lower Op write to same VF reg
-		mVUinfo |= (mVUregsTemp.r || mVUregsTemp.VI) ? _noWriteVF : _isNOP;		// If lower Op doesn't modify anything else, then make it a NOP
+		if (mVUregsTemp.r || mVUregsTemp.VI) mVUlow.noWriteVF = 1; 
+		else mVUlow.isNOP = 1; // If lower Op doesn't modify anything else, then make it a NOP
 	}
 	tCycles(mVUregs.VF[mVUregsTemp.VFreg[0]].x, mVUregsTemp.VF[0].x);
 	tCycles(mVUregs.VF[mVUregsTemp.VFreg[0]].y, mVUregsTemp.VF[0].y);
@@ -241,20 +247,21 @@ microVUf(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 
 	for (int branch = 0;  mVUcount < (vuIndex ? (0x3fff/8) : (0xfff/8)); ) {
 		incPC(1);
-		mVUinfo = 0;
 		startLoop();
 		incCycles(1);
 		mVUopU(mVU, 0);
-		if (curI & _Ebit_)	  { branch = 1; }
+		if (curI & _Ebit_)	  { branch = 1; mVUup.eBit = 1; }
 		if (curI & _MDTbit_)  { branch = 4; }
-		if (curI & _Ibit_)	  { mVUinfo |= _isNOP; }
+		if (curI & _Ibit_)	  { mVUlow.isNOP = 1; mVUup.iBit = 1; }
 		else				  { incPC(-1); mVUopL(mVU, 0); incPC(1); }
 		mVUsetCycles(mVU);
-		if (mVU->p)			  { mVUinfo |= _readP; }
-		if (mVU->q)			  { mVUinfo |= _readQ; }
-		if		(branch >= 2) { mVUinfo |= _isEOB | ((branch == 3) ? _isBdelay : 0); mVUcount++; branchWarning(); break; }
+		mVUinfo.readQ  =  mVU->q;
+		mVUinfo.writeQ = !mVU->q;
+		mVUinfo.readP  =  mVU->p;
+		mVUinfo.writeP = !mVU->p;
+		if		(branch >= 2) { mVUinfo.isEOB = 1; if (branch == 3) { mVUinfo.isBdelay = 1; } mVUcount++; branchWarning(); break; }
 		else if (branch == 1) { branch = 2; }
-		if		(mVUbranch)   { mVUsetFlagInfo(mVU); branchEbit(); branch = 3; mVUbranch = 0; mVUinfo |= _isBranch; }
+		if		(mVUbranch)   { mVUsetFlagInfo(mVU); branchEbit(); branch = 3; mVUbranch = 0; }
 		incPC(1);
 		mVUcount++;
 	}
@@ -270,13 +277,13 @@ microVUf(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 	mVUbranch = 0;
 	int x;
 	for (x = 0; x < (vuIndex ? (0x3fff/8) : (0xfff/8)); x++) {
-		if (isEOB)			{ x = 0xffff; }
-		if (isNOP)			{ incPC(1); doUpperOp(); doIbit(); }
-		else if (!swapOps)	{ incPC(1); doUpperOp(); doLowerOp(); }
-		else				{ mVUopL(mVU, 1); incPC(1); doUpperOp(); }
-		if (doXGKICK)		{ mVU_XGKICK_DELAY(mVU, 1); }
+		if (mVUinfo.isEOB)			{ x = 0xffff; }
+		if (mVUlow.isNOP)			{ incPC(1); doUpperOp(); doIbit(); }
+		else if (!mVUinfo.swapOps)	{ incPC(1); doUpperOp(); doLowerOp(); }
+		else						{ mVUopL(mVU, 1); incPC(1); doUpperOp(); }
+		if (mVUinfo.doXGKICK)		{ mVU_XGKICK_DELAY(mVU, 1); }
 		
-		if (!isBdelay) { incPC(1); }
+		if (!mVUinfo.isBdelay) { incPC(1); }
 		else {
 			microBlock* bBlock = NULL;
 			u32* ajmp = 0;
@@ -365,16 +372,16 @@ eBitTemination:
 	int lStatus = findFlagInst(xStatus, 0x7fffffff);
 	int lMac	= findFlagInst(xMac,	0x7fffffff);
 	int lClip	= findFlagInst(xClip,	0x7fffffff);
-	mVUinfo = 0;
+	memset(&mVUinfo, 0, sizeof(mVUinfo));
 	incCycles(100); // Ensures Valid P/Q instances (And sets all cycle data to 0)
 	mVUcycles -= 100;
-	if (doDivFlag) {
+	if (mVUinfo.doDivFlag) {
 		int flagReg;
 		getFlagReg(flagReg, lStatus);
 		AND32ItoR (flagReg, 0x0fcf);
 		OR32MtoR  (flagReg, (uptr)&mVU->divFlag);
 	}
-	if (doXGKICK) { mVU_XGKICK_DELAY(mVU, 1); }
+	if (mVUinfo.doXGKICK) { mVU_XGKICK_DELAY(mVU, 1); }
 
 	// Do E-bit end stuff here
 	mVUsetupRange(mVU, xPC - 8);

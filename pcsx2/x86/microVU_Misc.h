@@ -172,8 +172,15 @@ declareAllVariables
 #define mVUregsTemp	 mVUallocInfo.regsTemp
 #define iPC			 mVUallocInfo.curPC
 #define mVUsFlagHack mVUallocInfo.sFlagHack
+
 #define mVUinfo		 mVUallocInfo.info[iPC / 2]
-#define mVUstall	 mVUallocInfo.stall[iPC / 2]
+#define mVUstall	 mVUinfo.stall
+#define mVUup		 mVUinfo.uOp
+#define mVUlow		 mVUinfo.lOp
+#define sFLAG		 mVUinfo.sFlag
+#define mFLAG		 mVUinfo.mFlag
+#define cFLAG		 mVUinfo.cFlag
+
 #define mVUstartPC	 mVUallocInfo.startPC
 #define mVUflagInfo	 mVUregs.needExactMatch
 #define mVUflagHack  (mVUcurProg.sFlagHack)
@@ -193,70 +200,6 @@ declareAllVariables
 #define __Status	 (mVUflagInfo & (0xf<<0))
 #define __Mac		 (mVUflagInfo & (0xf<<4))
 #define __Clip		 (mVUflagInfo & (0xf<<8))
-
-// Pass 1 uses these to set mVUinfo
-#define _isNOP		 (1<<0) // Skip Lower Instruction
-#define _isBranch	 (1<<1) // Cur Instruction is a Branch
-#define _isEOB		 (1<<2) // End of Block
-#define _isBdelay	 (1<<3) // Cur Instruction in Branch Delay slot
-#define _isSflag	 (1<<4) // Cur Instruction uses status flag
-#define _doXGKICK	 (1<<5) // Do XGKICK transfer on this instruction
-#define _writeQ		 (1<<6)
-#define _readQ		 (1<<6) // same as writeQ
-#define _writeP		 (1<<7)
-#define _readP		 (1<<7) // same as writeP
-#define _doFlags	 (3<<8)
-#define _doMac		 (1<<8)
-#define _doStatus	 (1<<9)
-#define _fmInstance	 (3<<10) // Mac		Write Instance
-#define _fsInstance	 (3<<12) // Status	Write Instance
-#define _fcInstance	 (3<<14) // Clip	Write Instance
-#define _fpsInstance (3<<12) // Prev.S.	Write Instance
-#define _fpcInstance (3<<14) // Prev.C.	Write Instance
-#define _fvmInstance (3<<16) // Mac		Read Instance (at T-stage for lower instruction)
-#define _fvsInstance (3<<18) // Status	Read Instance (at T-stage for lower instruction)
-#define _fvcInstance (3<<20) // Clip	Read Instance (at T-stage for lower instruction)
-#define _backupVI	 (1<<22) // Backup VI reg to memory if modified before branch (branch uses old VI value unless opcode is ILW or ILWR)
-#define _memReadIs	 (1<<23) // Read Is (VI reg) from memory (used by branches)
-#define _memReadIt	 (1<<24) // Read If (VI reg) from memory (used by branches)
-#define _writesVI	 (1<<25) // Current Instruction writes to VI (used by branches; note that flag-modifying opcodes shouldn't set this)
-#define _swapOps	 (1<<26) // Runs Lower Instruction Before Upper Instruction
-#define _isFSSET	 (1<<27) // Cur Instruction is FSSET
-#define _doDivFlag	 (1<<28) // Transfer Div flag to Status Flag
-#define _doClip		 (1<<29)
-#define _noWriteVF	 (1<<30) // Don't write back the result of a lower op to VF reg if upper op writes to same reg (or if VF = 0)
-
-// Pass 2 uses these to read mVUinfo
-#define isNOP		 (mVUinfo & (1<<0))
-#define isBranch	 (mVUinfo & (1<<1))
-#define isEOB		 (mVUinfo & (1<<2))
-#define isBdelay	 (mVUinfo & (1<<3))
-#define isSflag		 (mVUinfo & (1<<4))
-#define doXGKICK	 (mVUinfo & (1<<5))
-#define readQ		((mVUinfo >> 6) & 1) // same as writeQ
-#define readP		((mVUinfo >> 7) & 1) // same as writeP
-#define writeQ	   (((mVUinfo >> 6) + 1) & 1)
-#define writeP	   (((mVUinfo >> 7) + 1) & 1)
-#define doFlags		 (mVUinfo & (3<<8))
-#define doMac		 (mVUinfo & (1<<8))
-#define doStatus	 (mVUinfo & (1<<9))
-#define fmInstance	((mVUinfo >> 10) & 3)
-#define fsInstance	((mVUinfo >> 12) & 3)
-#define fpsInstance	((((mVUinfo>>12) & 3) - 1) & 0x3)
-#define fcInstance	((mVUinfo >> 14) & 3)
-#define fpcInstance	((((mVUinfo>>14) & 3) - 1) & 0x3)
-#define fvmInstance	((mVUinfo >> 16) & 3)
-#define fvsInstance	((mVUinfo >> 18) & 3)
-#define fvcInstance	((mVUinfo >> 20) & 3)
-#define backupVI	 (mVUinfo & (1<<22))
-#define memReadIs	 (mVUinfo & (1<<23))
-#define memReadIt	 (mVUinfo & (1<<24))
-#define writesVI	 (mVUinfo & (1<<25))
-#define swapOps		 (mVUinfo & (1<<26))
-#define isFSSET		 (mVUinfo & (1<<27))
-#define doDivFlag	 (mVUinfo & (1<<28))
-#define doClip		 (mVUinfo & (1<<29))
-#define noWriteVF	 (mVUinfo & (1<<30))
 
 // Pass 3 Helper Macros
 #define _Fsf_String	 ((_Fsf_ == 3) ? "w" : ((_Fsf_ == 2) ? "z" : ((_Fsf_ == 1) ? "y" : "x")))

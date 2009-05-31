@@ -65,17 +65,58 @@ struct microBlock {
 	u8* x86ptrStart;		// Start of code
 };
 
+struct microUpperOp {
+	bool eBit;		// Has E-bit set
+	bool iBit;		// Has I-bit set
+};
+
+struct microLowerOp {
+	bool isNOP;		// This instruction is a NOP
+	bool isFSSET;	// This instruction is a FSSET
+	bool useSflag;	// This instruction uses/reads Sflag
+	u32  branch;	// Branch Type (0 = Not a Branch, 1 = B. 2 = BAL, 3~8 = Conditional Branches, 9 = JALR, 10 = JR)
+	bool noWriteVF;	// Don't write back the result of a lower op to VF reg if upper op writes to same reg (or if VF = 0)
+	bool backupVI;	// Backup VI reg to memory if modified before branch (branch uses old VI value unless opcode is ILW or ILWR)
+	bool memReadIs;	// Read Is (VI reg) from memory (used by branches)
+	bool memReadIt;	// Read If (VI reg) from memory (used by branches)
+	bool writesVI;	// Current Instruction writes to VI (used by branches; note that flag-modifying opcodes shouldn't set this)
+};
+
+struct microFlagInst {
+	bool doFlag;	// Update Flag on this Instruction
+	u8	 write;		// Points to the instance that should be written to (s-stage write)
+	u8	 lastWrite;	// Points to the instance that was last written to (most up-to-date flag)
+	u8	 read;		// Points to the instance that should be read by a lower instruction (t-stage read)
+};
+
+struct microOp {
+	u8	 stall;			 // Info on how much current instruction stalled
+	bool isEOB;			 // Cur Instruction is last instruction in block (End of Block)
+	bool isBdelay;		 // Cur Instruction in Branch Delay slot
+	bool swapOps;		 // Run Lower Instruction before Upper Instruction
+	bool doXGKICK;		 // Do XGKICK transfer on this instruction
+	bool doDivFlag;		 // Transfer Div flag to Status Flag on this instruction
+	int	 readQ;			 // Q instance for reading
+	int	 writeQ;		 // Q instance for writing
+	int	 readP;			 // P instance for reading
+	int	 writeP;		 // P instance for writing
+	microFlagInst sFlag; // Status Flag Instance Info
+	microFlagInst mFlag; // Mac	   Flag Instance Info
+	microFlagInst cFlag; // Clip   Flag Instance Info
+	microUpperOp  uOp;	 // Upper Op Info
+	microLowerOp  lOp;	 // Lower Op Info
+};
+
 template<u32 pSize>
-struct microAllocInfo {
+struct microIR {
 	microBlock*		 pBlock;   // Pointer to a block in mVUblocks
 	microBlock		 block;	   // Block/Pipeline info
 	microTempRegInfo regsTemp; // Temp Pipeline info (used so that new pipeline info isn't conflicting between upper and lower instructions in the same cycle)
-	u8  branch;			// 0 = No Branch, 1 = B. 2 = BAL, 3~8 = Conditional Branches, 9 = JALR, 10 = JR
+	microOp			 info[pSize/2];	// Info for Instructions in current block
+	u8  branch;			
 	u32 cycles;			// Cycles for current block
 	u32 count;			// Number of VU 64bit instructions ran (starts at 0 for each block)
 	u32 curPC;			// Current PC
 	u32 startPC;		// Start PC for Cur Block
 	u32 sFlagHack;		// Optimize out all Status flag updates if microProgram doesn't use Status flags
-	u32 info[pSize/2];	// Info for Instructions in current block
-	u8 stall[pSize/2];	// Info on how much each instruction stalled (stores the max amount of cycles to stall for the current opcodes)
 };

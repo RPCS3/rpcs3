@@ -56,13 +56,13 @@
 			||  (mVUregsTemp.VF[0].y && _Y)		\
 			||  (mVUregsTemp.VF[0].z && _Z)		\
 			||  (mVUregsTemp.VF[0].w && _W))	\
-			{ mVUinfo |= _swapOps; }			\
+			{ mVUinfo.swapOps = 1; }			\
 		}										\
 	}											\
 }
 
 microVUt(void) mVUanalyzeFMAC1(mV, int Fd, int Fs, int Ft) {
-	mVUinfo |= _doStatus;
+	sFLAG.doFlag = 1;
 	analyzeReg1(Fs);
 	analyzeReg1(Ft);
 	analyzeReg2(Fd, 0);
@@ -91,7 +91,7 @@ microVUt(void) mVUanalyzeFMAC2(mV, int Fs, int Ft) {
 }
 
 microVUt(void) mVUanalyzeFMAC3(mV, int Fd, int Fs, int Ft) {
-	mVUinfo |= _doStatus;
+	sFLAG.doFlag = 1;
 	analyzeReg1(Fs);
 	analyzeReg3(Ft);
 	analyzeReg2(Fd, 0);
@@ -106,7 +106,7 @@ microVUt(void) mVUanalyzeFMAC3(mV, int Fd, int Fs, int Ft) {
 }
 
 microVUt(void) mVUanalyzeFMAC4(mV, int Fs, int Ft) {
-	mVUinfo |= _doClip;
+	cFLAG.doFlag = 1;
 	analyzeReg1(Fs);
 	analyzeReg4(Ft);
 }
@@ -116,18 +116,18 @@ microVUt(void) mVUanalyzeFMAC4(mV, int Fs, int Ft) {
 //------------------------------------------------------------------
 
 #define analyzeVIreg1(reg)			{ if (reg) { mVUstall = aMax(mVUstall, mVUregs.VI[reg]); } }
-#define analyzeVIreg2(reg, aCycles)	{ if (reg) { mVUregsTemp.VIreg = reg; mVUregsTemp.VI = aCycles; mVUinfo |= _writesVI; mVU->VIbackup[0] = reg; } }
+#define analyzeVIreg2(reg, aCycles)	{ if (reg) { mVUregsTemp.VIreg = reg; mVUregsTemp.VI = aCycles; mVUlow.writesVI = 1; mVU->VIbackup[0] = reg; } }
 #define analyzeVIreg3(reg, aCycles)	{ if (reg) { mVUregsTemp.VIreg = reg; mVUregsTemp.VI = aCycles; } }
 
 microVUt(void) mVUanalyzeIALU1(mV, int Id, int Is, int It) {
-	if (!Id) { mVUinfo |= _isNOP; }
+	if (!Id) { mVUlow.isNOP = 1; }
 	analyzeVIreg1(Is);
 	analyzeVIreg1(It);
 	analyzeVIreg2(Id, 1);
 }
 
 microVUt(void) mVUanalyzeIALU2(mV, int Is, int It) {
-	if (!It) { mVUinfo |= _isNOP; }
+	if (!It) { mVUlow.isNOP = 1; }
 	analyzeVIreg1(Is);
 	analyzeVIreg2(It, 1);
 }
@@ -148,13 +148,13 @@ microVUt(void) mVUanalyzeIALU2(mV, int Is, int It) {
 			||  (mVUregsTemp.VF[0].z && _Y)					\
 			||  (mVUregsTemp.VF[0].w && _Z)					\
 			||  (mVUregsTemp.VF[0].x && _W))				\
-			{ mVUinfo |= _swapOps; }						\
+			{ mVUinfo.swapOps = 1; }						\
 		}													\
 	}														\
 }
 
 microVUt(void) mVUanalyzeMR32(mV, int Fs, int Ft) {
-	if (!Ft) { mVUinfo |= _isNOP; }
+	if (!Ft) { mVUlow.isNOP = 1; }
 	analyzeReg6(Fs);
 	analyzeReg2(Ft, 1);
 }
@@ -176,7 +176,7 @@ microVUt(void) mVUanalyzeMR32(mV, int Fs, int Ft) {
 			||  (mVUregsTemp.VF[0].y && (fxf == 1))					\
 			||  (mVUregsTemp.VF[0].z && (fxf == 2))					\
 			||  (mVUregsTemp.VF[0].w && (fxf == 3)))				\
-			{ mVUinfo |= _swapOps; }								\
+			{ mVUinfo.swapOps = 1; }								\
 		}															\
 	}																\
 }
@@ -212,7 +212,7 @@ microVUt(void) mVUanalyzeEFU2(mV, int Fs, u8 xCycles) {
 //------------------------------------------------------------------
 
 microVUt(void) mVUanalyzeMFP(mV, int Ft) {
-	if (!Ft) { mVUinfo |= _isNOP; }
+	if (!Ft) { mVUlow.isNOP = 1; }
 	analyzeReg2(Ft, 1);
 }
 
@@ -221,7 +221,7 @@ microVUt(void) mVUanalyzeMFP(mV, int Ft) {
 //------------------------------------------------------------------
 
 microVUt(void) mVUanalyzeMOVE(mV, int Fs, int Ft) {
-	if (!Ft || (Ft == Fs)) { mVUinfo |= _isNOP; }
+	if (!Ft || (Ft == Fs)) { mVUlow.isNOP = 1; }
 	analyzeReg1b(Fs);
 	analyzeReg2(Ft, 1);
 }
@@ -234,7 +234,7 @@ microVUt(void) mVUanalyzeMOVE(mV, int Fs, int Ft) {
 microVUt(void) mVUanalyzeLQ(mV, int Ft, int Is, bool writeIs) {
 	analyzeVIreg1(Is);
 	analyzeReg2(Ft, 1);
-	if (!Ft)	 { mVUinfo |= (writeIs && Is) ? _noWriteVF : _isNOP; }
+	if (!Ft)	 { if (writeIs && Is) { mVUlow.noWriteVF = 1; } else { mVUlow.isNOP = 1; } }
 	if (writeIs) { analyzeVIreg2(Is, 1); }
 }
 
@@ -260,7 +260,7 @@ microVUt(void) mVUanalyzeR1(mV, int Fs, int Fsf) {
 }
 
 microVUt(void) mVUanalyzeR2(mV, int Ft, bool canBeNOP) {
-	if (!Ft) { mVUinfo |= ((canBeNOP) ? _isNOP : _noWriteVF); }
+	if (!Ft) { if (canBeNOP) { mVUlow.isNOP = 1; } else { mVUlow.noWriteVF = 1; } }
 	analyzeReg2(Ft, 1);
 	analyzeRreg();
 }
@@ -270,13 +270,13 @@ microVUt(void) mVUanalyzeR2(mV, int Ft, bool canBeNOP) {
 //------------------------------------------------------------------
 
 microVUt(void) mVUanalyzeSflag(mV, int It) {
-	if (!It) { mVUinfo |= _isNOP; }
+	if (!It) { mVUlow.isNOP = 1; }
 	else {
-		mVUinfo |= _swapOps;
+		mVUinfo.swapOps = 1;
 		mVUsFlagHack = 0; // Don't Optimize Out Status Flags for this block
 		if (mVUcount < 4)	{ mVUpBlock->pState.needExactMatch |= 0xf /*<< mVUcount*/; }
-		if (mVUcount >= 1)	{ incPC2(-2); mVUinfo |= _isSflag; incPC2(2); }
-		// Note: _isSflag is used for status flag optimizations.
+		if (mVUcount >= 1)	{ incPC2(-2); mVUlow.useSflag = 1; incPC2(2); }
+		// Note: useSflag is used for status flag optimizations when a FSSET instruction is called.
 		// Do to stalls, it can only be set one instruction prior to the status flag read instruction
 		// if we were guaranteed no-stalls were to happen, it could be set 4 instruction prior.
 	}
@@ -284,7 +284,7 @@ microVUt(void) mVUanalyzeSflag(mV, int It) {
 }
 
 microVUt(void) mVUanalyzeFSSET(mV) {
-	mVUinfo |= _isFSSET;
+	mVUlow.isFSSET = 1;
 	// mVUinfo &= ~_doStatus;
 	// Note: I'm not entirely sure if the non-sticky flags
 	// should be taken from the current upper instruction
@@ -297,14 +297,14 @@ microVUt(void) mVUanalyzeFSSET(mV) {
 //------------------------------------------------------------------
 
 microVUt(void) mVUanalyzeMflag(mV, int Is, int It) {
-	if (!It) { mVUinfo |= _isNOP; }
+	if (!It) { mVUlow.isNOP = 1; }
 	else { // Need set _doMac for 4 previous Ops (need to do all 4 because stalls could change the result needed)
-		mVUinfo |= _swapOps;
+		mVUinfo.swapOps = 1;
 		if (mVUcount < 4) { mVUpBlock->pState.needExactMatch |= 0xf << (/*mVUcount +*/ 4); }
 		int curPC = iPC;
 		for (int i = mVUcount, j = 0; i > 0; i--, j++) {
 			incPC2(-2);
-			if (doStatus) { mVUinfo |= _doMac; if (j >= 3) { break; } }
+			if (sFLAG.doFlag) { mFLAG.doFlag = 1; if (j >= 3) { break; } }
 		}
 		iPC = curPC;
 	}
@@ -317,7 +317,7 @@ microVUt(void) mVUanalyzeMflag(mV, int Is, int It) {
 //------------------------------------------------------------------
 
 microVUt(void) mVUanalyzeCflag(mV, int It) {
-	mVUinfo |= _swapOps;
+	mVUinfo.swapOps = 1;
 	if (mVUcount < 4) { mVUpBlock->pState.needExactMatch |= 0xf << (/*mVUcount +*/ 8); }
 	analyzeVIreg3(It, 1);
 }
@@ -345,24 +345,26 @@ microVUt(void) mVUanalyzeXGkick(mV, int Fs, int xCycles) {
 // Branches - Branch Opcodes
 //------------------------------------------------------------------
 
-#define analyzeBranchVI(reg, infoVal) {													\
-	if (reg && (mVUcount > 0)) { /* Ensures branch is not first opcode in block */		\
-		incPC2(-2);																		\
-		if (writesVI && (reg == mVU->VIbackup[0])) { /* If prev Op modified VI reg */	\
-			mVUinfo |= _backupVI;														\
-			incPC2(2);																	\
-			mVUinfo |= infoVal;															\
-		}																				\
-		else { incPC2(2); }																\
-	}																					\
+#define analyzeBranchVI(reg, infoVar) {						\
+	/* First ensure branch is not first opcode in block */	\
+	if (reg && (mVUcount > 0)) { 							\
+		incPC2(-2);											\
+		/* Check if prev Op modified VI reg */				\
+		if (mVUlow.writesVI && (reg == mVU->VIbackup[0])) { \
+			mVUlow.backupVI = 1;							\
+			incPC2(2);										\
+			infoVar = 1;									\
+		}													\
+		else { incPC2(2); }									\
+	}														\
 }
 
 microVUt(void) mVUanalyzeBranch1(mV, int Is) {
 	if (mVUregs.VI[Is] || mVUstall)	{ analyzeVIreg1(Is); }
-	else							{ analyzeBranchVI(Is, _memReadIs); }
+	else							{ analyzeBranchVI(Is, mVUlow.memReadIs); }
 }
 
 microVUt(void) mVUanalyzeBranch2(mV, int Is, int It) {
 	if (mVUregs.VI[Is] || mVUregs.VI[It] || mVUstall) { analyzeVIreg1(Is); analyzeVIreg1(It); }
-	else											  { analyzeBranchVI(Is, _memReadIs); analyzeBranchVI(It, _memReadIt);}
+	else { analyzeBranchVI(Is, mVUlow.memReadIs); analyzeBranchVI(It, mVUlow.memReadIt);}
 }

@@ -21,9 +21,9 @@
 // Sets FDIV Flags at the proper time
 microVUt(void) mVUdivSet(mV) {
 	int flagReg1, flagReg2;
-	if (doDivFlag) {
-		getFlagReg(flagReg1, fsInstance);
-		if (!doStatus) { getFlagReg(flagReg2, fpsInstance); MOV32RtoR(flagReg1, flagReg2); }
+	if (mVUinfo.doDivFlag) {
+		getFlagReg(flagReg1, sFLAG.write);
+		if (!sFLAG.doFlag) { getFlagReg(flagReg2, sFLAG.lastWrite); MOV32RtoR(flagReg1, flagReg2); }
 		AND32ItoR(flagReg1, 0x0fcf);
 		OR32MtoR (flagReg1, (uptr)&mVU->divFlag);
 	}
@@ -34,19 +34,19 @@ microVUt(void) mVUstatusFlagOp(mV) {
 	int curPC = iPC;
 	int i = mVUcount;
 	bool runLoop = 1;
-	if (doStatus) { mVUinfo |= _isSflag; }
+	if (sFLAG.doFlag) { mVUlow.useSflag = 1; }
 	else {
 		for (; i > 0; i--) {
 			incPC2(-2);
-			if (isSflag)  { runLoop = 0; break; }
-			if (doStatus) { mVUinfo |= _isSflag; break; }
+			if (mVUlow.useSflag) { runLoop = 0; break; }
+			if (sFLAG.doFlag)	 { mVUlow.useSflag = 1; break; }
 		}
 	}
 	if (runLoop) {
 		for (; i > 0; i--) {
 			incPC2(-2);
-			if (isSflag) break;
-			mVUinfo &= ~_doStatus;
+			if (mVUlow.useSflag) break;
+			sFLAG.doFlag = 0;
 		}
 	}
 	iPC = curPC;
@@ -69,7 +69,7 @@ void sortFlag(int* fFlag, int* bFlag, int cycles) {
 	}
 }
 
-#define sFlagCond ((doStatus && !mVUsFlagHack) || isFSSET || doDivFlag)
+#define sFlagCond ((sFLAG.doFlag && !mVUsFlagHack) || mVUlow.isFSSET || mVUinfo.doDivFlag)
 
 // Note: Flag handling is 'very' complex, it requires full knowledge of how microVU recs work, so don't touch!
 microVUt(int) mVUsetFlags(mV, int* xStatus, int* xMac, int* xClip) {
@@ -77,9 +77,9 @@ microVUt(int) mVUsetFlags(mV, int* xStatus, int* xMac, int* xClip) {
 	int endPC  = iPC;
 	u32 aCount = 1; // Amount of instructions needed to get valid mac flag instances for block linking
 
-	// Ensure last ~4+ instructions update mac flags
+	// Ensure last ~4+ instructions update mac flags (if next block's first 4 instructions will read them)
 	for (int i = mVUcount; i > 0; i--, aCount++) {
-		if (doStatus) { if (__Mac) { mVUinfo |= _doMac; } if (aCount >= 4) { break; } }
+		if (sFLAG.doFlag) { if (__Mac) { mFLAG.doFlag = 1; } if (aCount >= 4) { break; } }
 		incPC2(-2);
 	}
 
@@ -114,7 +114,7 @@ microVUt(int) mVUsetFlags(mV, int* xStatus, int* xMac, int* xClip) {
 	u32 xCount	= mVUcount; // Backup count
 	iPC			= mVUstartPC;
 	for (mVUcount = 0; mVUcount < xCount; mVUcount++) {
-		if (isFSSET) {
+		if (mVUlow.isFSSET) {
 			if (__Status) { // Don't Optimize out on the last ~4+ instructions
 				if ((xCount - mVUcount) > aCount) { mVUstatusFlagOp(mVU); }
 			}
@@ -122,17 +122,21 @@ microVUt(int) mVUsetFlags(mV, int* xStatus, int* xMac, int* xClip) {
 		}
 		cycles += mVUstall;
 
-		mVUinfo |= findFlagInst(xStatus, cycles) << 18; // _fvsInstance
-		mVUinfo |= findFlagInst(xMac,	 cycles) << 16; // _fvmInstance
-		mVUinfo |= findFlagInst(xClip,	 cycles) << 20; // _fvcInstance
+		sFLAG.read = findFlagInst(xStatus, cycles);
+		mFLAG.read = findFlagInst(xMac,	   cycles);
+		cFLAG.read = findFlagInst(xClip,   cycles);
+		
+		sFLAG.write = xS;
+		mFLAG.write = xM;
+		cFLAG.write = xC;
 
-		mVUinfo |= xS << 12; // _fsInstance
-		mVUinfo |= xM << 10; // _fmInstance
-		mVUinfo |= xC << 14; // _fcInstance
+		sFLAG.lastWrite = (xS-1) & 3;
+		mFLAG.lastWrite = (xM-1) & 3;
+		cFLAG.lastWrite = (xC-1) & 3;
 
-		if (sFlagCond)	{ xStatus[xS] = cycles + 4;  xS = (xS+1) & 3; }
-		if (doMac)		{ xMac   [xM] = cycles + 4;  xM = (xM+1) & 3; }
-		if (doClip)		{ xClip  [xC] = cycles + 4;  xC = (xC+1) & 3; }
+		if (sFlagCond)		{ xStatus[xS] = cycles + 4;  xS = (xS+1) & 3; }
+		if (mFLAG.doFlag)	{ xMac   [xM] = cycles + 4;  xM = (xM+1) & 3; }
+		if (cFLAG.doFlag)	{ xClip  [xC] = cycles + 4;  xC = (xC+1) & 3; }
 
 		cycles++;
 		incPC2(2);

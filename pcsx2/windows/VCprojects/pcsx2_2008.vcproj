@@ -2039,10 +2039,6 @@
 								>
 							</File>
 							<File
-								RelativePath="..\..\x86\microVU_Alloc.h"
-								>
-							</File>
-							<File
 								RelativePath="..\..\x86\microVU_Alloc.inl"
 								>
 							</File>
@@ -2060,6 +2056,10 @@
 							</File>
 							<File
 								RelativePath="..\..\x86\microVU_Flags.inl"
+								>
+							</File>
+							<File
+								RelativePath="..\..\x86\microVU_IR.h"
 								>
 							</File>
 							<File

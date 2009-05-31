@@ -24,7 +24,7 @@
 #include "VU.h"
 #include "GS.h"
 #include "ix86/ix86.h"
-#include "microVU_Alloc.h"
+#include "microVU_IR.h"
 #include "microVU_Misc.h"
 
 #define mMaxBlocks 32 // Max Blocks With Different Pipeline States (For n = 1, 2, 4, 8, 16, etc...)
@@ -80,7 +80,7 @@ struct microProgram {
 	u8* x86start;	// Start of program's rec-cache
 	u8* x86end;		// Limit of program's rec-cache
 	microBlockManager* block[progSize/2];
-	microAllocInfo<progSize> allocInfo;
+	microIR<progSize> allocInfo;
 };
 
 #define mMaxProg 32		// The amount of Micro Programs Recs will 'remember' (For n = 1, 2, 4, 8, 16, etc...)

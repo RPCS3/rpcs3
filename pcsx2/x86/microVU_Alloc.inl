@@ -537,7 +537,7 @@ microVUt(void) mVUallocFMAC19b(mV, int& Fd) {
 //------------------------------------------------------------------
 
 #define getQreg(reg) {														\
-	mVUunpack_xyzw(reg, xmmPQ, readQ);										\
+	mVUunpack_xyzw(reg, xmmPQ, mVUinfo.readQ);								\
 	/*if (CHECK_VU_EXTRA_OVERFLOW) mVUclamp2<vuIndex>(reg, xmmT1, 15);*/	\
 }
 
@@ -686,7 +686,7 @@ microVUt(void) mVUallocVIa(mV, int GPRreg, int _reg_) {
 }
 
 microVUt(void) mVUallocVIb(mV, int GPRreg, int _reg_) {
-	if (backupVI) { // Backs up reg to memory (used when VI is modified b4 a branch)
+	if (mVUlow.backupVI) { // Backs up reg to memory (used when VI is modified b4 a branch)
 		MOV32RtoM((uptr)&mVU->VIbackup[1], GPRreg);
 		mVUallocVIa(mVU, GPRreg, _reg_);
 		MOV32RtoM((uptr)&mVU->VIbackup[0], GPRreg);
@@ -702,7 +702,7 @@ microVUt(void) mVUallocVIb(mV, int GPRreg, int _reg_) {
 //------------------------------------------------------------------
 
 #define getPreg(reg) {											\
-	mVUunpack_xyzw(reg, xmmPQ, (2 + readP));					\
+	mVUunpack_xyzw(reg, xmmPQ, (2 + mVUinfo.readP));			\
 	/*if (CHECK_VU_EXTRA_OVERFLOW) mVUclamp2(reg, xmmT1, 15);*/	\
 }
 
