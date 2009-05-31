@@ -980,6 +980,7 @@ mVUop(mVU_RNEXT) {
 		XOR32RtoR(gprR,  gprT1);
 		AND32ItoR(gprR, 0x007fffff);
 		OR32ItoR (gprR, 0x3f800000);
+		MOV32RtoM(Rmem, gprR);
 		mVU_RGET_(mVU, gprR);
 		MOV32ItoR(gprR, Roffset); // Restore gprR
 	}
