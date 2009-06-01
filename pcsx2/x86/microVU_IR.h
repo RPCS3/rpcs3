@@ -65,12 +65,31 @@ struct microBlock {
 	u8* x86ptrStart;		// Start of code
 };
 
+struct microVFreg {
+	u8 reg; // Reg Index
+	u8 x;	// X vector read/written to?
+	u8 y;	// Y vector read/written to?
+	u8 z;	// Z vector read/written to?
+	u8 w;	// W vector read/written to?
+};
+
+struct microVIreg {
+	u8 reg;		// Reg Index
+	u8 used;	// Reg is Used? (Read/Written)
+};
+
 struct microUpperOp {
-	bool eBit;		// Has E-bit set
-	bool iBit;		// Has I-bit set
+	bool eBit;				// Has E-bit set
+	bool iBit;				// Has I-bit set
+	microVFreg VF_write;	// VF Vectors written to by this instruction
+	microVFreg VF_read[2];	// VF Vectors read by this instruction
 };
 
 struct microLowerOp {
+	microVFreg VF_write;	// VF Vectors written to by this instruction
+	microVFreg VF_read[2];	// VF Vectors read by this instruction
+	microVIreg VI_write;	// VI reg written to by this instruction
+	microVIreg VI_read[2];	// VI regs read by this instruction
 	bool isNOP;		// This instruction is a NOP
 	bool isFSSET;	// This instruction is a FSSET
 	bool useSflag;	// This instruction uses/reads Sflag
