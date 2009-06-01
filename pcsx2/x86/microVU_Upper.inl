@@ -28,48 +28,51 @@
 
 // Note: If modXYZW is true, then it adjusts XYZW for Single Scalar operations
 microVUt(void) mVUupdateFlags(mV, int reg, int regT1, int regT2, int xyzw, bool modXYZW) {
-	int /*sReg = gprT3,*/ mReg = gprT1;
+	int sReg, mReg = gprT1;
 	static u8 *pjmp, *pjmp2;
 	static const u16 flipMask[16] = {0, 8, 4, 12, 2, 10, 6, 14, 1, 9, 5, 13, 3, 11, 7, 15};
 
 	//SysPrintf("Status = %d; Mac = %d\n", sFLAG.doFlag, mFLAG.doFlag);
-	if (mVUsFlagHack) { sFLAG.doSticky = 0; sFLAG.doFlag = 0; }
-	if (!mVUup.doFlags || (!sFLAG.doSticky && !sFLAG.doFlag && !mFLAG.doFlag)) { return; }
-	if (!mFLAG.doFlag || (_XYZW_SS && modXYZW)) { regT1 = reg; }
+	if (mVUsFlagHack) { sFLAG.doFlag = 0; }
+	if (!sFLAG.doFlag && !mFLAG.doFlag)			{ return; }
+	if (!mFLAG.doFlag || (_XYZW_SS && modXYZW))	{ regT1 = reg; }
 	else { SSE2_PSHUFD_XMM_to_XMM(regT1, reg, 0x1B); } // Flip wzyx to xyzw
+	if (sFLAG.doFlag) {
+		getFlagReg(sReg, sFLAG.write); // Set sReg to valid GPR by Cur Flag Instance
+		mVUallocSFLAGa(sReg, sFLAG.lastWrite); // Get Prev Status Flag
+		AND32ItoR(sReg, 0xff0); // Keep Sticky and D/I flags
+	}
+
 	//-------------------------Check for Signed flags------------------------------
 
 	// The following code makes sure the Signed Bit isn't set with Negative Zero
-	SSE_XORPS_XMM_to_XMM(regT2, regT2);	   // Clear regT2
-	SSE_CMPEQPS_XMM_to_XMM(regT2, regT1);  // Set all F's if each vector is zero
+	SSE_XORPS_XMM_to_XMM(regT2, regT2); // Clear regT2
+	SSE_CMPEQPS_XMM_to_XMM(regT2, regT1); // Set all F's if each vector is zero
 	SSE_MOVMSKPS_XMM_to_R32(gprT2, regT2); // Used for Zero Flag Calculation
 	SSE_ANDNPS_XMM_to_XMM(regT2, regT1);
 
 	SSE_MOVMSKPS_XMM_to_R32(mReg, regT2); // Move the sign bits of the t1reg
 
 	AND32ItoR(mReg, AND_XYZW);  // Grab "Is Signed" bits from the previous calculation
-	if (sFLAG.doSticky||sFLAG.doFlag) pjmp = JZ8(0); // Skip if none are
-		if (mFLAG.doFlag)				SHL32ItoR(mReg, 4 + ADD_XYZW);
-		if (sFLAG.doSticky)				OR32ItoR (gprST, 0x82); // SS, S flags
-		else if (sFLAG.doFlag)			OR32ItoR (gprST, 0x02); // S flag
-		if ((sFLAG.doSticky||sFLAG.doFlag) && _XYZW_SS) pjmp2 = JMP8(0); // If negative and not Zero, we can skip the Zero Flag checking
-	if (sFLAG.doSticky||sFLAG.doFlag) x86SetJ8(pjmp);
+	if (sFLAG.doFlag) pjmp = JZ8(0); // Skip if none are
+		if (mFLAG.doFlag) SHL32ItoR(mReg, 4 + ADD_XYZW);
+		if (sFLAG.doFlag) OR32ItoR(sReg, 0x82); // SS, S flags
+		if (sFLAG.doFlag && _XYZW_SS) pjmp2 = JMP8(0); // If negative and not Zero, we can skip the Zero Flag checking
+	if (sFLAG.doFlag) x86SetJ8(pjmp);
 
 	//-------------------------Check for Zero flags------------------------------
 
 	AND32ItoR(gprT2, AND_XYZW);  // Grab "Is Zero" bits from the previous calculation
-	if (sFLAG.doSticky||sFLAG.doFlag) pjmp = JZ8(0); // Skip if none are
-		if (mFLAG.doFlag)		{ SHIFT_XYZW(gprT2); OR32RtoR(mReg, gprT2); }
-		if (sFLAG.doSticky)		{ OR32ItoR(gprST, 0x41); } // ZS, Z flags
-		else if (sFLAG.doFlag)	{ OR32ItoR(gprST, 0x01); } // Z flag
-	if (sFLAG.doSticky||sFLAG.doFlag) x86SetJ8(pjmp);
+	if (sFLAG.doFlag) pjmp = JZ8(0); // Skip if none are
+		if (mFLAG.doFlag) { SHIFT_XYZW(gprT2); OR32RtoR(mReg, gprT2); }	
+		if (sFLAG.doFlag) { OR32ItoR(sReg, 0x41); } // ZS, Z flags		
+	if (sFLAG.doFlag) x86SetJ8(pjmp);
 
 	//-------------------------Write back flags------------------------------
 
-	if ((sFLAG.doSticky||sFLAG.doFlag) && _XYZW_SS) x86SetJ8(pjmp2); // If we skipped the Zero Flag Checking, return here
-
-	if (mFLAG.doFlag) mVUallocMFLAGb(mVU, mReg,  mFLAG.write); // Set Mac Flag
-	if (sFLAG.doFlag) mVUallocSFLAGb(mVU, gprST, mFLAG.write); // Set Status Flag
+	if (sFLAG.doFlag && _XYZW_SS) x86SetJ8(pjmp2); // If we skipped the Zero Flag Checking, return here
+	
+	if (mFLAG.doFlag) mVUallocMFLAGb(mVU, mReg, mFLAG.write); // Set Mac Flag
 }
 
 //------------------------------------------------------------------
@@ -435,9 +438,9 @@ microVUt(void) mVUupdateFlags(mV, int reg, int regT1, int regT2, int xyzw, bool 
 }
 
 // FMAC27~29 - MAX/MINI FMAC Opcodes
-#define mVU_FMAC27(operation, OPname) { mVU_FMAC1 (operation, OPname); pass1 { mVUup.doFlags = 0; } }
-#define mVU_FMAC28(operation, OPname) { mVU_FMAC6 (operation, OPname); pass1 { mVUup.doFlags = 0; } }
-#define mVU_FMAC29(operation, OPname) { mVU_FMAC3 (operation, OPname); pass1 { mVUup.doFlags = 0; } }
+#define mVU_FMAC27(operation, OPname) { mVU_FMAC1 (operation, OPname); pass1 { sFLAG.doFlag = 0; } }
+#define mVU_FMAC28(operation, OPname) { mVU_FMAC6 (operation, OPname); pass1 { sFLAG.doFlag = 0; } }
+#define mVU_FMAC29(operation, OPname) { mVU_FMAC3 (operation, OPname); pass1 { sFLAG.doFlag = 0; } }
 
 //------------------------------------------------------------------
 // Micro VU Micromode Upper instructions

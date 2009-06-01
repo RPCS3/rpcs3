@@ -20,9 +20,12 @@
 
 // Sets FDIV Flags at the proper time
 microVUt(void) mVUdivSet(mV) {
+	int flagReg1, flagReg2;
 	if (mVUinfo.doDivFlag) {
-		AND32ItoR(gprST, 0xfcf);				// Clear D/I bits
-		OR32MtoR (gprST, (uptr)&mVU->divFlag);	// Set DS/IS/D/I bits
+		getFlagReg(flagReg1, sFLAG.write);
+		if (!sFLAG.doFlag) { getFlagReg(flagReg2, sFLAG.lastWrite); MOV32RtoR(flagReg1, flagReg2); }
+		AND32ItoR(flagReg1, 0x0fcf);
+		OR32MtoR (flagReg1, (uptr)&mVU->divFlag);
 	}
 }
 
@@ -31,19 +34,18 @@ microVUt(void) mVUstatusFlagOp(mV) {
 	int curPC = iPC;
 	int i = mVUcount;
 	bool runLoop = 1;
-	if (mVUup.doFlags) { mVUlow.useSflag = 1; }
+	if (sFLAG.doFlag) { mVUlow.useSflag = 1; }
 	else {
 		for (; i > 0; i--) {
 			incPC2(-2);
 			if (mVUlow.useSflag) { runLoop = 0; break; }
-			if (mVUup.doFlags)	 { mVUlow.useSflag = 1; break; }
+			if (sFLAG.doFlag)	 { mVUlow.useSflag = 1; break; }
 		}
 	}
 	if (runLoop) {
 		for (; i > 0; i--) {
 			incPC2(-2);
 			if (mVUlow.useSflag) break;
-			sFLAG.doSticky = 0;
 			sFLAG.doFlag = 0;
 		}
 	}
@@ -77,11 +79,7 @@ microVUt(int) mVUsetFlags(mV, int* xStatus, int* xMac, int* xClip) {
 
 	// Ensure last ~4+ instructions update mac flags (if next block's first 4 instructions will read them)
 	for (int i = mVUcount; i > 0; i--, aCount++) {
-		if (mVUup.doFlags) { 
-			if (__Status)	{ sFLAG.doFlag = 1; } 
-			if (__Mac)		{ mFLAG.doFlag = 1; } 
-			if (aCount >= 4) { break; } 
-		}
+		if (sFLAG.doFlag) { if (__Mac) { mFLAG.doFlag = 1; } if (aCount >= 4) { break; } }
 		incPC2(-2);
 	}
 
@@ -144,13 +142,13 @@ microVUt(int) mVUsetFlags(mV, int* xStatus, int* xMac, int* xClip) {
 		incPC2(2);
 	}
 
-	mVUregs.flags = ((__Clip) ? 0 : (xC << 2)) /*| ((__Status) ? 0 : xS)*/;
+	mVUregs.flags = ((__Clip) ? 0 : (xC << 2)) | ((__Status) ? 0 : xS);
 	return cycles;
 }
 
-#define shuffleStatus	((bStatus[3]<<6)|(bStatus[2]<<4)|(bStatus[1]<<2)|bStatus[0])
-#define shuffleMac		((bMac   [3]<<6)|(bMac   [2]<<4)|(bMac   [1]<<2)|bMac   [0])
-#define shuffleClip		((bClip  [3]<<6)|(bClip  [2]<<4)|(bClip  [1]<<2)|bClip  [0])
+#define getFlagReg1(x)	((x == 3) ? gprF3 : ((x == 2) ? gprF2 : ((x == 1) ? gprF1 : gprF0)))
+#define shuffleMac		((bMac [3]<<6)|(bMac [2]<<4)|(bMac [1]<<2)|bMac [0])
+#define shuffleClip		((bClip[3]<<6)|(bClip[2]<<4)|(bClip[1]<<2)|bClip[0])
 
 // Recompiles Code for Proper Flags on Block Linkings
 microVUt(void) mVUsetupFlags(mV, int* xStatus, int* xMac, int* xClip, int cycles) {
@@ -158,9 +156,14 @@ microVUt(void) mVUsetupFlags(mV, int* xStatus, int* xMac, int* xClip, int cycles
 	if (__Status && !mVUflagHack) {
 		int bStatus[4];
 		sortFlag(xStatus, bStatus, cycles);
-		SSE_MOVAPS_M128_to_XMM(xmmT1, (uptr)mVU->statusFlag);
-		SSE_SHUFPS_XMM_to_XMM (xmmT1, xmmT1, shuffleStatus);
-		SSE_MOVAPS_XMM_to_M128((uptr)mVU->statusFlag, xmmT1);
+		MOV32RtoR(gprT1,  getFlagReg1(bStatus[0])); 
+		MOV32RtoR(gprT2,  getFlagReg1(bStatus[1]));
+		MOV32RtoR(gprR,   getFlagReg1(bStatus[2]));
+		MOV32RtoR(gprF3,  getFlagReg1(bStatus[3]));
+		MOV32RtoR(gprF0,  gprT1);
+		MOV32RtoR(gprF1,  gprT2); 
+		MOV32RtoR(gprF2,  gprR); 
+		MOV32ItoR(gprR, Roffset); // Restore gprR
 	}
 
 	if (__Mac) {

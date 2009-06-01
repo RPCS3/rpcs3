@@ -634,13 +634,28 @@ microVUt(void) mVUallocFMAC26b(mV, int& ACCw, int& ACCr) {
 // Flag Allocators
 //------------------------------------------------------------------
 
-microVUt(void) mVUallocSFLAGa(mV, int reg, int fInstance) {
-	MOVZX32M16toR(reg, (uptr)&mVU->statusFlag[fInstance]);
+#define getFlagReg(regX, fInst) {														\
+	switch (fInst) {																	\
+		case 0: regX = gprF0;	break;													\
+		case 1: regX = gprF1;	break;													\
+		case 2: regX = gprF2;	break;													\
+		case 3: regX = gprF3;	break;													\
+		default:																		\
+			Console::Error("microVU: Flag Instance Error (fInst = %d)", params fInst);	\
+			regX = gprF0;																\
+			break;																		\
+	}																					\
 }
 
-microVUt(void) mVUallocSFLAGb(mV, int reg, int fInstance) {
+microVUt(void) mVUallocSFLAGa(int reg, int fInstance) {
+	getFlagReg(fInstance, fInstance);
+	MOVZX32R16toR(reg, fInstance);
+}
+
+microVUt(void) mVUallocSFLAGb(int reg, int fInstance) {
+	getFlagReg(fInstance, fInstance);
 	//AND32ItoR(reg, 0xffff);
-	MOV32RtoM((uptr)&mVU->statusFlag[fInstance], reg);
+	MOV32RtoR(fInstance, reg);
 }
 
 microVUt(void) mVUallocMFLAGa(mV, int reg, int fInstance) {

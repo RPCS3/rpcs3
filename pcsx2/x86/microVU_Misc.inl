@@ -292,6 +292,7 @@ microVUt(void) mVUrestoreRegs(mV) {
 	SSE_MOVAPS_M128_to_XMM(xmmPQ,  (uptr)&mVU->xmmPQb[0]);
 	SSE_MOVAPS_M128_to_XMM(xmmMax, (uptr)mVU_maxvals);
 	SSE_MOVAPS_M128_to_XMM(xmmMin, (uptr)mVU_minvals);
+	MOV32ItoR(gprR, Roffset); // Restore gprR
 }
 
 // Reads entire microProgram and finds out if Status Flag is Used

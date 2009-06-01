@@ -522,7 +522,7 @@ mVUop(mVU_FMOR) {
 mVUop(mVU_FSAND) {
 	pass1 { mVUanalyzeSflag(mVU, _It_); }
 	pass2 { 
-		mVUallocSFLAGa(mVU, gprT1, sFLAG.read);
+		mVUallocSFLAGa(gprT1, sFLAG.read);
 		AND16ItoR(gprT1, _Imm12_);
 		mVUallocVIb(mVU, gprT1, _It_);
 	}
@@ -533,7 +533,7 @@ mVUop(mVU_FSAND) {
 mVUop(mVU_FSEQ) {
 	pass1 { mVUanalyzeSflag(mVU, _It_); }
 	pass2 { 
-		mVUallocSFLAGa(mVU, gprT1, sFLAG.read);
+		mVUallocSFLAGa(gprT1, sFLAG.read);
 		XOR16ItoR(gprT1, _Imm12_);
 		SUB16ItoR(gprT1, 1);
 		SHR16ItoR(gprT1, 15);
@@ -546,7 +546,7 @@ mVUop(mVU_FSEQ) {
 mVUop(mVU_FSOR) {
 	pass1 { mVUanalyzeSflag(mVU, _It_); }
 	pass2 { 
-		mVUallocSFLAGa(mVU, gprT1, sFLAG.read);
+		mVUallocSFLAGa(gprT1, sFLAG.read);
 		OR16ItoR(gprT1, _Imm12_);
 		mVUallocVIb(mVU, gprT1, _It_);
 	}
@@ -557,9 +557,11 @@ mVUop(mVU_FSOR) {
 mVUop(mVU_FSSET) {
 	pass1 { mVUanalyzeFSSET(mVU); }
 	pass2 { 
-		int	imm = _Imm12_ & 0xfc0;
-		AND32ItoR(gprST, 0x3ff);
-		if (imm) OR32ItoR(gprST, imm);
+		int flagReg1, flagReg2;
+		getFlagReg(flagReg1, sFLAG.write);
+		if (!(sFLAG.doFlag||mVUinfo.doDivFlag)) { getFlagReg(flagReg2, sFLAG.lastWrite); MOV32RtoR(flagReg1, flagReg2); } // Get status result from last status setting instruction	
+		AND32ItoR(flagReg1, 0x03f);
+		OR32ItoR (flagReg1, (_Imm12_ & 0xfc0));
 	}
 	pass3 { mVUlog("FSSET $%x", _Imm12_); }
 	pass4 { mVUsFlagHack = 0; }
@@ -964,22 +966,23 @@ mVUop(mVU_RNEXT) {
 	pass1 { mVUanalyzeR2(mVU, _Ft_, 0); }
 	pass2 { 
 		// algorithm from www.project-fao.org
-		MOV32MtoR(gprT3, Rmem);
-		MOV32RtoR(gprT1, gprT3);
+		MOV32MtoR(gprR, Rmem);
+		MOV32RtoR(gprT1, gprR);
 		SHR32ItoR(gprT1, 4);
 		AND32ItoR(gprT1, 1);
 
-		MOV32RtoR(gprT2, gprT3);
+		MOV32RtoR(gprT2, gprR);
 		SHR32ItoR(gprT2, 22);
 		AND32ItoR(gprT2, 1);
 
-		SHL32ItoR(gprT3, 1);
+		SHL32ItoR(gprR, 1);
 		XOR32RtoR(gprT1, gprT2);
-		XOR32RtoR(gprT3, gprT1);
-		AND32ItoR(gprT3, 0x007fffff);
-		OR32ItoR (gprT3, 0x3f800000);
-		MOV32RtoM(Rmem, gprT3);
-		mVU_RGET_(mVU,  gprT3);
+		XOR32RtoR(gprR,  gprT1);
+		AND32ItoR(gprR, 0x007fffff);
+		OR32ItoR (gprR, 0x3f800000);
+		MOV32RtoM(Rmem, gprR);
+		mVU_RGET_(mVU, gprR);
+		MOV32ItoR(gprR, Roffset); // Restore gprR
 	}
 	pass3 { mVUlog("RNEXT.%s vf%02d, R", _XYZW_String, _Ft_); }
 }
