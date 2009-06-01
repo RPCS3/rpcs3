@@ -19,37 +19,30 @@ namespace YAML
 		// the operators
 		struct Operator {
 			virtual ~Operator() {}
-			virtual int Match(const std::string& str, const RegEx& regex) const = 0;
 			virtual int Match(const Buffer& buffer, const RegEx& regex) const = 0;
 		};
 
 		struct MatchOperator: public Operator {
-			virtual int Match(const std::string& str, const RegEx& regex) const;
 			virtual int Match(const Buffer& buffer, const RegEx& regex) const;
 		};
 
 		struct RangeOperator: public Operator {
-			virtual int Match(const std::string& str, const RegEx& regex) const;
 			virtual int Match(const Buffer& buffer, const RegEx& regex) const;
 		};
 
 		struct OrOperator: public Operator {
-			virtual int Match(const std::string& str, const RegEx& regex) const;
 			virtual int Match(const Buffer& buffer, const RegEx& regex) const;
 		};
 
 		struct AndOperator: public Operator {
-			virtual int Match(const std::string& str, const RegEx& regex) const;
 			virtual int Match(const Buffer& buffer, const RegEx& regex) const;
 		};
 
 		struct NotOperator: public Operator {
-			virtual int Match(const std::string& str, const RegEx& regex) const;
 			virtual int Match(const Buffer& buffer, const RegEx& regex) const;
 		};
 
 		struct SeqOperator: public Operator {
-			virtual int Match(const std::string& str, const RegEx& regex) const;
 			virtual int Match(const Buffer& buffer, const RegEx& regex) const;
 		};
 
