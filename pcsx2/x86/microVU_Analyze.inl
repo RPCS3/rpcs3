@@ -62,7 +62,8 @@
 }
 
 microVUt(void) mVUanalyzeFMAC1(mV, int Fd, int Fs, int Ft) {
-	sFLAG.doFlag = 1;
+	mVUup.doFlags = 1;
+	sFLAG.doSticky = 1;
 	analyzeReg1(Fs);
 	analyzeReg1(Ft);
 	analyzeReg2(Fd, 0);
@@ -91,7 +92,8 @@ microVUt(void) mVUanalyzeFMAC2(mV, int Fs, int Ft) {
 }
 
 microVUt(void) mVUanalyzeFMAC3(mV, int Fd, int Fs, int Ft) {
-	sFLAG.doFlag = 1;
+	mVUup.doFlags = 1;
+	sFLAG.doSticky = 1;
 	analyzeReg1(Fs);
 	analyzeReg3(Ft);
 	analyzeReg2(Fd, 0);
@@ -269,6 +271,15 @@ microVUt(void) mVUanalyzeR2(mV, int Ft, bool canBeNOP) {
 // Sflag - Status Flag Opcodes
 //------------------------------------------------------------------
 
+#define setFlagInst(xDoFlag) {										\
+	int curPC = iPC;												\
+	for (int i = mVUcount, j = 0; i > 0; i--, j++) {				\
+		incPC2(-2);													\
+		if (mVUup.doFlags) { xDoFlag = 1; if (j >= 3) { break; } }	\
+	}																\
+	iPC = curPC;													\
+}
+
 microVUt(void) mVUanalyzeSflag(mV, int It) {
 	if (!It) { mVUlow.isNOP = 1; }
 	else {
@@ -279,17 +290,15 @@ microVUt(void) mVUanalyzeSflag(mV, int It) {
 		// Note: useSflag is used for status flag optimizations when a FSSET instruction is called.
 		// Do to stalls, it can only be set one instruction prior to the status flag read instruction
 		// if we were guaranteed no-stalls were to happen, it could be set 4 instruction prior.
+		setFlagInst(sFLAG.doFlag);
 	}
 	analyzeVIreg3(It, 1);
 }
 
 microVUt(void) mVUanalyzeFSSET(mV) {
-	mVUlow.isFSSET = 1;
-	// mVUinfo &= ~_doStatus;
-	// Note: I'm not entirely sure if the non-sticky flags
-	// should be taken from the current upper instruction
-	// or if they should be taken from the previous instruction
-	// Uncomment the above line if the latter-case is true
+	mVUinfo.swapOps = 1;
+	mVUlow.isFSSET  = 1;
+	sFLAG.doSticky  = 0;
 }
 
 //------------------------------------------------------------------
@@ -301,12 +310,7 @@ microVUt(void) mVUanalyzeMflag(mV, int Is, int It) {
 	else { // Need set _doMac for 4 previous Ops (need to do all 4 because stalls could change the result needed)
 		mVUinfo.swapOps = 1;
 		if (mVUcount < 4) { mVUpBlock->pState.needExactMatch |= 0xf << (/*mVUcount +*/ 4); }
-		int curPC = iPC;
-		for (int i = mVUcount, j = 0; i > 0; i--, j++) {
-			incPC2(-2);
-			if (sFLAG.doFlag) { mFLAG.doFlag = 1; if (j >= 3) { break; } }
-		}
-		iPC = curPC;
+		setFlagInst(mFLAG.doFlag);
 	}
 	analyzeVIreg1(Is);
 	analyzeVIreg3(It, 1);

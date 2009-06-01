@@ -131,12 +131,22 @@ declareAllVariables
 
 #define gprT1	0 // Temp Reg
 #define gprT2	1 // Temp Reg
-#define gprR	2 // VI Reg Offset
-#define gprF0	3 // Status Flag 0
+#define gprT3	2 // Temp Reg
 #define gprESP	4 // Don't use?
-#define gprF1	5 // Status Flag 1
-#define gprF2	6 // Status Flag 2
-#define gprF3	7 // Status Flag 3
+#define gprT4	5 // Temp?
+#define gprT5	6 // Temp?
+#define gprR	7 // VI Reg Offset
+#define gprST	3 // Status Sticky Flag
+// gprST's Info is Stored as follows:
+//-----------------------------------------------------------------------------
+//|23 22 21 20||19 18 17 16||15 14 13 12||11 10 09 08||07 06 05 04||03 02 01 00|
+//|DS|IS|     ||     | D| I||    OS     ||    US     ||    SS     ||    ZS     |
+//-----------------------------------------------------------------------------
+// Storing Flags this way eliminates Jumps when updating sticky flags.
+//
+// When a Status Flag will be read, gprST is attached with 
+// the current status flag result in mVUupdateFlags. And the complete
+// Status flag instance is stored in memory (mVU->statusFlag[instance])
 
 // Function Params
 #define mP microVU* mVU, int recPass
@@ -172,15 +182,13 @@ declareAllVariables
 #define mVUregsTemp	 mVUallocInfo.regsTemp
 #define iPC			 mVUallocInfo.curPC
 #define mVUsFlagHack mVUallocInfo.sFlagHack
-
-#define mVUinfo		 mVUallocInfo.info[iPC / 2]
-#define mVUstall	 mVUinfo.stall
-#define mVUup		 mVUinfo.uOp
-#define mVUlow		 mVUinfo.lOp
-#define sFLAG		 mVUinfo.sFlag
-#define mFLAG		 mVUinfo.mFlag
-#define cFLAG		 mVUinfo.cFlag
-
+#define mVUinfo		 mVUallocInfo.info[iPC/2] // IR info for current 64bit instruction
+#define mVUstall	 mVUinfo.stall			  // Stall info for current instruction
+#define mVUup		 mVUinfo.uOp			  // Upper Instruction Info
+#define mVUlow		 mVUinfo.lOp			  // Lower Instruction Info
+#define sFLAG		 mVUinfo.sFlag			  // Status Flag info for cur instruction
+#define mFLAG		 mVUinfo.mFlag			  // Mac    Flag info for cur instruction
+#define cFLAG		 mVUinfo.cFlag			  // Clip   Flag info for cur instruction
 #define mVUstartPC	 mVUallocInfo.startPC
 #define mVUflagInfo	 mVUregs.needExactMatch
 #define mVUflagHack  (mVUcurProg.sFlagHack)
@@ -268,6 +276,5 @@ declareAllVariables
 		MOV32ItoR(gprT2, xPC);							\
 		if (isEndPC) { CALLFunc((uptr)mVUprintPC2); }	\
 		else		 { CALLFunc((uptr)mVUprintPC1); }	\
-		MOV32ItoR(gprR, Roffset);						\
 	}													\
 }

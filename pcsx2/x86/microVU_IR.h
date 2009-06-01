@@ -68,6 +68,7 @@ struct microBlock {
 struct microUpperOp {
 	bool eBit;		// Has E-bit set
 	bool iBit;		// Has I-bit set
+	bool doFlags;	// This instruction updates Status/Mac Flags
 };
 
 struct microLowerOp {
@@ -83,7 +84,8 @@ struct microLowerOp {
 };
 
 struct microFlagInst {
-	bool doFlag;	// Update Flag on this Instruction
+	bool doSticky;	// Update Sticky Flags (Status Flag Only)
+	bool doFlag;	// Update Flag on this Instruction (For Status Flag, this means non-sticky bits)
 	u8	 write;		// Points to the instance that should be written to (s-stage write)
 	u8	 lastWrite;	// Points to the instance that was last written to (most up-to-date flag)
 	u8	 read;		// Points to the instance that should be read by a lower instruction (t-stage read)

@@ -37,7 +37,7 @@
 	SSE_MOVMSKPS_XMM_to_R32(gprTemp, xmmReg);										\
 	TEST32ItoR(gprTemp, 1);								  /* Check sign bit */		\
 	aJump = JZ8(0);										  /* Skip if positive */	\
-		MOV32ItoM((uptr)&mVU->divFlag, 0x410);			  /* Set Invalid Flags */	\
+		MOV32ItoM((uptr)&mVU->divFlag, 0x410000);		  /* Set Invalid Flags */	\
 		SSE_ANDPS_M128_to_XMM(xmmReg, (uptr)mVU_absclip); /* Abs(xmmReg) */			\
 	x86SetJ8(aJump);																\
 }
@@ -54,10 +54,10 @@ mVUop(mVU_DIV) {
 
 			testZero(xmmFs, xmmT1, gprT1); // Test if Fs is zero
 			ajmp = JZ8(0);
-				MOV32ItoM((uptr)&mVU->divFlag, 0x410); // Set invalid flag (0/0)
+				MOV32ItoM((uptr)&mVU->divFlag, 0x410000); // Set invalid flag (0/0)
 				bjmp = JMP8(0);
 			x86SetJ8(ajmp);
-				MOV32ItoM((uptr)&mVU->divFlag, 0x820); // Zero divide (only when not 0/0)
+				MOV32ItoM((uptr)&mVU->divFlag, 0x820000); // Zero divide (only when not 0/0)
 			x86SetJ8(bjmp);
 
 			SSE_XORPS_XMM_to_XMM(xmmFs, xmmFt);
@@ -112,10 +112,10 @@ mVUop(mVU_RSQRT) {
 
 			testZero(xmmFs, xmmT1, gprT1); // Test if Fs is zero
 			bjmp = JZ8(0); // Skip if none are
-				MOV32ItoM((uptr)&mVU->divFlag, 0x410); // Set invalid flag (0/0)
+				MOV32ItoM((uptr)&mVU->divFlag, 0x410000); // Set invalid flag (0/0)
 				cjmp = JMP8(0);
 			x86SetJ8(bjmp);
-				MOV32ItoM((uptr)&mVU->divFlag, 0x820); // Zero divide flag (only when not 0/0)
+				MOV32ItoM((uptr)&mVU->divFlag, 0x820000); // Zero divide flag (only when not 0/0)
 			x86SetJ8(cjmp);
 
 			SSE_ANDPS_M128_to_XMM(xmmFs, (uptr)mVU_signbit);
@@ -522,7 +522,7 @@ mVUop(mVU_FMOR) {
 mVUop(mVU_FSAND) {
 	pass1 { mVUanalyzeSflag(mVU, _It_); }
 	pass2 { 
-		mVUallocSFLAGa(gprT1, sFLAG.read);
+		mVUallocSFLAGa(mVU, gprT1, sFLAG.read);
 		AND16ItoR(gprT1, _Imm12_);
 		mVUallocVIb(mVU, gprT1, _It_);
 	}
@@ -533,7 +533,7 @@ mVUop(mVU_FSAND) {
 mVUop(mVU_FSEQ) {
 	pass1 { mVUanalyzeSflag(mVU, _It_); }
 	pass2 { 
-		mVUallocSFLAGa(gprT1, sFLAG.read);
+		mVUallocSFLAGa(mVU, gprT1, sFLAG.read);
 		XOR16ItoR(gprT1, _Imm12_);
 		SUB16ItoR(gprT1, 1);
 		SHR16ItoR(gprT1, 15);
@@ -546,7 +546,7 @@ mVUop(mVU_FSEQ) {
 mVUop(mVU_FSOR) {
 	pass1 { mVUanalyzeSflag(mVU, _It_); }
 	pass2 { 
-		mVUallocSFLAGa(gprT1, sFLAG.read);
+		mVUallocSFLAGa(mVU, gprT1, sFLAG.read);
 		OR16ItoR(gprT1, _Imm12_);
 		mVUallocVIb(mVU, gprT1, _It_);
 	}
@@ -557,11 +557,13 @@ mVUop(mVU_FSOR) {
 mVUop(mVU_FSSET) {
 	pass1 { mVUanalyzeFSSET(mVU); }
 	pass2 { 
-		int flagReg1, flagReg2;
-		getFlagReg(flagReg1, sFLAG.write);
-		if (!(sFLAG.doFlag||mVUinfo.doDivFlag)) { getFlagReg(flagReg2, sFLAG.lastWrite); MOV32RtoR(flagReg1, flagReg2); } // Get status result from last status setting instruction	
-		AND32ItoR(flagReg1, 0x03f);
-		OR32ItoR (flagReg1, (_Imm12_ & 0xfc0));
+		int	mask;
+		if (_Imm12_ & 0x800) mask |= 0x800000;
+		if (_Imm12_ & 0x400) mask |= 0x400000;
+		if (_Imm12_ & 0x080) mask |= 0x0000f0;
+		if (_Imm12_ & 0xc40) mask |= 0x00000f;
+		AND32ItoR(gprST, 0x30000);
+		if (mask) OR32ItoR(gprST, mask);
 	}
 	pass3 { mVUlog("FSSET $%x", _Imm12_); }
 	pass4 { mVUsFlagHack = 0; }
@@ -966,23 +968,22 @@ mVUop(mVU_RNEXT) {
 	pass1 { mVUanalyzeR2(mVU, _Ft_, 0); }
 	pass2 { 
 		// algorithm from www.project-fao.org
-		MOV32MtoR(gprR, Rmem);
-		MOV32RtoR(gprT1, gprR);
+		MOV32MtoR(gprT3, Rmem);
+		MOV32RtoR(gprT1, gprT3);
 		SHR32ItoR(gprT1, 4);
 		AND32ItoR(gprT1, 1);
 
-		MOV32RtoR(gprT2, gprR);
+		MOV32RtoR(gprT2, gprT3);
 		SHR32ItoR(gprT2, 22);
 		AND32ItoR(gprT2, 1);
 
-		SHL32ItoR(gprR, 1);
+		SHL32ItoR(gprT3, 1);
 		XOR32RtoR(gprT1, gprT2);
-		XOR32RtoR(gprR,  gprT1);
-		AND32ItoR(gprR, 0x007fffff);
-		OR32ItoR (gprR, 0x3f800000);
-		MOV32RtoM(Rmem, gprR);
-		mVU_RGET_(mVU, gprR);
-		MOV32ItoR(gprR, Roffset); // Restore gprR
+		XOR32RtoR(gprT3, gprT1);
+		AND32ItoR(gprT3, 0x007fffff);
+		OR32ItoR (gprT3, 0x3f800000);
+		MOV32RtoM(Rmem, gprT3);
+		mVU_RGET_(mVU,  gprT3);
 	}
 	pass3 { mVUlog("RNEXT.%s vf%02d, R", _XYZW_String, _Ft_); }
 }
