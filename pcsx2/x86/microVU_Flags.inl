@@ -21,7 +21,7 @@
 // Sets FDIV Flags at the proper time
 microVUt(void) mVUdivSet(mV) {
 	if (mVUinfo.doDivFlag) {
-		AND32ItoR(gprST, 0xfffcffff);			// Clear D/I bits
+		AND32ItoR(gprST, 0xfcf);				// Clear D/I bits
 		OR32MtoR (gprST, (uptr)&mVU->divFlag);	// Set DS/IS/D/I bits
 	}
 }

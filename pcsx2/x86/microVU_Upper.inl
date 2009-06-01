@@ -28,7 +28,7 @@
 
 // Note: If modXYZW is true, then it adjusts XYZW for Single Scalar operations
 microVUt(void) mVUupdateFlags(mV, int reg, int regT1, int regT2, int xyzw, bool modXYZW) {
-	int sReg = gprT3, mReg = gprT1;
+	int /*sReg = gprT3,*/ mReg = gprT1;
 	static u8 *pjmp, *pjmp2;
 	static const u16 flipMask[16] = {0, 8, 4, 12, 2, 10, 6, 14, 1, 9, 5, 13, 3, 11, 7, 15};
 
@@ -37,54 +37,39 @@ microVUt(void) mVUupdateFlags(mV, int reg, int regT1, int regT2, int xyzw, bool 
 	if (!mVUup.doFlags || (!sFLAG.doSticky && !sFLAG.doFlag && !mFLAG.doFlag)) { return; }
 	if (!mFLAG.doFlag || (_XYZW_SS && modXYZW)) { regT1 = reg; }
 	else { SSE2_PSHUFD_XMM_to_XMM(regT1, reg, 0x1B); } // Flip wzyx to xyzw
-	if (sFLAG.doFlag) { XOR32RtoR(sReg, sReg); }
 	//-------------------------Check for Signed flags------------------------------
 
 	// The following code makes sure the Signed Bit isn't set with Negative Zero
-	SSE_XORPS_XMM_to_XMM(regT2, regT2); // Clear regT2
-	SSE_CMPEQPS_XMM_to_XMM(regT2, regT1); // Set all F's if each vector is zero
+	SSE_XORPS_XMM_to_XMM(regT2, regT2);	   // Clear regT2
+	SSE_CMPEQPS_XMM_to_XMM(regT2, regT1);  // Set all F's if each vector is zero
 	SSE_MOVMSKPS_XMM_to_R32(gprT2, regT2); // Used for Zero Flag Calculation
 	SSE_ANDNPS_XMM_to_XMM(regT2, regT1);
 
 	SSE_MOVMSKPS_XMM_to_R32(mReg, regT2); // Move the sign bits of the t1reg
 
 	AND32ItoR(mReg, AND_XYZW);  // Grab "Is Signed" bits from the previous calculation
-	if (sFLAG.doFlag) pjmp = JZ8(0); // Skip if none are
-		if (mFLAG.doFlag || sFLAG.doSticky) SHL32ItoR(mReg, 4 + ADD_XYZW);
-		if (sFLAG.doFlag)					OR32ItoR (sReg, 0x82); // SS, S flags
-		if (sFLAG.doFlag && _XYZW_SS)		pjmp2 = JMP8(0); // If negative and not Zero, we can skip the Zero Flag checking
-	if (sFLAG.doFlag) x86SetJ8(pjmp);
+	if (sFLAG.doSticky||sFLAG.doFlag) pjmp = JZ8(0); // Skip if none are
+		if (mFLAG.doFlag)				SHL32ItoR(mReg, 4 + ADD_XYZW);
+		if (sFLAG.doSticky)				OR32ItoR (gprST, 0x82); // SS, S flags
+		else if (sFLAG.doFlag)			OR32ItoR (gprST, 0x02); // S flag
+		if ((sFLAG.doSticky||sFLAG.doFlag) && _XYZW_SS) pjmp2 = JMP8(0); // If negative and not Zero, we can skip the Zero Flag checking
+	if (sFLAG.doSticky||sFLAG.doFlag) x86SetJ8(pjmp);
 
 	//-------------------------Check for Zero flags------------------------------
 
 	AND32ItoR(gprT2, AND_XYZW);  // Grab "Is Zero" bits from the previous calculation
-	if (sFLAG.doFlag) pjmp = JZ8(0); // Skip if none are
-		if (mFLAG.doFlag)					 { SHIFT_XYZW(gprT2); OR32RtoR(mReg, gprT2); }	
-		if (sFLAG.doSticky && !mFLAG.doFlag) { OR32RtoR(mReg, gprT2); }
-		if (sFLAG.doFlag)					 { OR32ItoR(sReg, 0x41); } // ZS, Z flags		
-	if (sFLAG.doFlag) x86SetJ8(pjmp);
+	if (sFLAG.doSticky||sFLAG.doFlag) pjmp = JZ8(0); // Skip if none are
+		if (mFLAG.doFlag)		{ SHIFT_XYZW(gprT2); OR32RtoR(mReg, gprT2); }
+		if (sFLAG.doSticky)		{ OR32ItoR(gprST, 0x41); } // ZS, Z flags
+		else if (sFLAG.doFlag)	{ OR32ItoR(gprST, 0x01); } // Z flag
+	if (sFLAG.doSticky||sFLAG.doFlag) x86SetJ8(pjmp);
 
 	//-------------------------Write back flags------------------------------
 
-	if (sFLAG.doFlag && _XYZW_SS) x86SetJ8(pjmp2); // If we skipped the Zero Flag Checking, return here
+	if ((sFLAG.doSticky||sFLAG.doFlag) && _XYZW_SS) x86SetJ8(pjmp2); // If we skipped the Zero Flag Checking, return here
 
-	if (sFLAG.doSticky) OR32RtoR(gprST, mReg); // Set Sticky Register (gprST)
-	if (mFLAG.doFlag)	mVUallocMFLAGb(mVU, mReg, mFLAG.write); // Set Mac Flag
-	if (sFLAG.doFlag) { // Attach Sticky Register With sReg
-		TEST32ItoR(gprST, 0x0f);
-		pjmp = JZ8(0); // Set Z bit?
-			OR32ItoR(sReg, 0x40);
-		x86SetJ8(pjmp);
-		TEST32ItoR(gprST, 0xf0);
-		pjmp = JZ8(0); // Set S bit?
-			OR32ItoR(sReg, 0x80);
-		x86SetJ8(pjmp);
-		MOV32RtoR(mReg, gprST);	   // Backup gprST
-		AND32ItoR(mReg, 0xc30000); // Get   D/I Bits
-		SHR32ItoR(mReg, 12);	   // Shift D/I Bits to proper position
-		OR32RtoR (sReg, mReg);	   // Set   D/I Bits
-		mVUallocSFLAGb(mVU, sReg, sFLAG.write); // Set Status Flag
-	}
+	if (mFLAG.doFlag) mVUallocMFLAGb(mVU, mReg,  mFLAG.write); // Set Mac Flag
+	if (sFLAG.doFlag) mVUallocSFLAGb(mVU, gprST, mFLAG.write); // Set Status Flag
 }
 
 //------------------------------------------------------------------

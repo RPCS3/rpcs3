@@ -137,16 +137,6 @@ declareAllVariables
 #define gprT5	6 // Temp?
 #define gprR	7 // VI Reg Offset
 #define gprST	3 // Status Sticky Flag
-// gprST's Info is Stored as follows:
-//-----------------------------------------------------------------------------
-//|23 22 21 20||19 18 17 16||15 14 13 12||11 10 09 08||07 06 05 04||03 02 01 00|
-//|DS|IS|     ||     | D| I||    OS     ||    US     ||    SS     ||    ZS     |
-//-----------------------------------------------------------------------------
-// Storing Flags this way eliminates Jumps when updating sticky flags.
-//
-// When a Status Flag will be read, gprST is attached with 
-// the current status flag result in mVUupdateFlags. And the complete
-// Status flag instance is stored in memory (mVU->statusFlag[instance])
 
 // Function Params
 #define mP microVU* mVU, int recPass

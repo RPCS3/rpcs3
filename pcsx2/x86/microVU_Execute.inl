@@ -42,10 +42,7 @@ microVUt(void) mVUdispatcherA(mV) {
 	// Load Regs
 	MOV32ItoR(gprR, Roffset); // Load VI Reg Offset
 	MOV32MtoR(gprST, (uptr)&mVU->regs->VI[REG_STATUS_FLAG].UL);
-	/*AND32ItoR(gprST, 0xffff);
-	MOV32RtoR(gprF1, gprST);
-	MOV32RtoR(gprF2, gprST);
-	MOV32RtoR(gprF3, gprST);*/
+	AND32ItoR(gprST, 0xffff);
 
 	SSE_MOVAPS_M128_to_XMM(xmmT1, (uptr)&mVU->regs->VI[REG_MAC_FLAG].UL);
 	SSE_SHUFPS_XMM_to_XMM (xmmT1, xmmT1, 0);

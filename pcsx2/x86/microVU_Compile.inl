@@ -59,7 +59,6 @@
 #define tCycles(dest, src)	{ dest = aMax(dest, src); }
 #define incP()				{ mVU->p = (mVU->p+1) & 1; }
 #define incQ()				{ mVU->q = (mVU->q+1) & 1; }
-#define doUpperOp()			{ mVUdivSet(mVU); mVUopU(mVU, 1); }
 #define doLowerOp()			{ incPC(-1); mVUopL(mVU, 1); incPC(1); }
 #define doIbit()			{ if (mVUup.iBit) { incPC(-1); MOV32ItoM((uptr)&mVU->regs->VI[REG_I].UL, curI); incPC(1); } }
 
@@ -275,10 +274,11 @@ microVUf(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 	mVUbranch = 0;
 	int x;
 	for (x = 0; x < (vuIndex ? (0x3fff/8) : (0xfff/8)); x++) {
+		mVUdivSet(mVU);
 		if (mVUinfo.isEOB)			{ x = 0xffff; }
-		if (mVUlow.isNOP)			{ incPC(1); doUpperOp(); doIbit(); }
-		else if (!mVUinfo.swapOps)	{ incPC(1); doUpperOp(); doLowerOp(); }
-		else						{ mVUopL(mVU, 1); incPC(1); doUpperOp(); }
+		if (mVUlow.isNOP)			{ incPC(1); mVUopU(mVU, 1); doIbit(); }
+		else if (!mVUinfo.swapOps)	{ incPC(1); mVUopU(mVU, 1); doLowerOp(); }
+		else						{ mVUopL(mVU, 1); incPC(1); mVUopU(mVU, 1); }
 		if (mVUinfo.doXGKICK)		{ mVU_XGKICK_DELAY(mVU, 1); }
 		
 		if (!mVUinfo.isBdelay) { incPC(1); }
@@ -373,12 +373,10 @@ eBitTemination:
 	memset(&mVUinfo, 0, sizeof(mVUinfo));
 	incCycles(100); // Ensures Valid P/Q instances (And sets all cycle data to 0)
 	mVUcycles -= 100;
-	/*if (mVUinfo.doDivFlag) {
-		int flagReg;
-		getFlagReg(flagReg, lStatus);
-		AND32ItoR (flagReg, 0x0fcf);
-		OR32MtoR  (flagReg, (uptr)&mVU->divFlag);
-	}*/
+	if (mVUinfo.doDivFlag) {
+		AND32ItoR(gprST, 0xfcf);
+		OR32MtoR (gprST, (uptr)&mVU->divFlag);
+	}
 	if (mVUinfo.doXGKICK) { mVU_XGKICK_DELAY(mVU, 1); }
 
 	// Do E-bit end stuff here

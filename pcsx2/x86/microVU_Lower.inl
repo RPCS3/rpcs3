@@ -37,7 +37,7 @@
 	SSE_MOVMSKPS_XMM_to_R32(gprTemp, xmmReg);										\
 	TEST32ItoR(gprTemp, 1);								  /* Check sign bit */		\
 	aJump = JZ8(0);										  /* Skip if positive */	\
-		MOV32ItoM((uptr)&mVU->divFlag, 0x410000);		  /* Set Invalid Flags */	\
+		MOV32ItoM((uptr)&mVU->divFlag, 0x410);			  /* Set Invalid Flags */	\
 		SSE_ANDPS_M128_to_XMM(xmmReg, (uptr)mVU_absclip); /* Abs(xmmReg) */			\
 	x86SetJ8(aJump);																\
 }
@@ -54,10 +54,10 @@ mVUop(mVU_DIV) {
 
 			testZero(xmmFs, xmmT1, gprT1); // Test if Fs is zero
 			ajmp = JZ8(0);
-				MOV32ItoM((uptr)&mVU->divFlag, 0x410000); // Set invalid flag (0/0)
+				MOV32ItoM((uptr)&mVU->divFlag, 0x410); // Set invalid flag (0/0)
 				bjmp = JMP8(0);
 			x86SetJ8(ajmp);
-				MOV32ItoM((uptr)&mVU->divFlag, 0x820000); // Zero divide (only when not 0/0)
+				MOV32ItoM((uptr)&mVU->divFlag, 0x820); // Zero divide (only when not 0/0)
 			x86SetJ8(bjmp);
 
 			SSE_XORPS_XMM_to_XMM(xmmFs, xmmFt);
@@ -112,10 +112,10 @@ mVUop(mVU_RSQRT) {
 
 			testZero(xmmFs, xmmT1, gprT1); // Test if Fs is zero
 			bjmp = JZ8(0); // Skip if none are
-				MOV32ItoM((uptr)&mVU->divFlag, 0x410000); // Set invalid flag (0/0)
+				MOV32ItoM((uptr)&mVU->divFlag, 0x410); // Set invalid flag (0/0)
 				cjmp = JMP8(0);
 			x86SetJ8(bjmp);
-				MOV32ItoM((uptr)&mVU->divFlag, 0x820000); // Zero divide flag (only when not 0/0)
+				MOV32ItoM((uptr)&mVU->divFlag, 0x820); // Zero divide flag (only when not 0/0)
 			x86SetJ8(cjmp);
 
 			SSE_ANDPS_M128_to_XMM(xmmFs, (uptr)mVU_signbit);
@@ -557,13 +557,9 @@ mVUop(mVU_FSOR) {
 mVUop(mVU_FSSET) {
 	pass1 { mVUanalyzeFSSET(mVU); }
 	pass2 { 
-		int	mask;
-		if (_Imm12_ & 0x800) mask |= 0x800000;
-		if (_Imm12_ & 0x400) mask |= 0x400000;
-		if (_Imm12_ & 0x080) mask |= 0x0000f0;
-		if (_Imm12_ & 0xc40) mask |= 0x00000f;
-		AND32ItoR(gprST, 0x30000);
-		if (mask) OR32ItoR(gprST, mask);
+		int	imm = _Imm12_ & 0xfc0;
+		AND32ItoR(gprST, 0x3ff);
+		if (imm) OR32ItoR(gprST, imm);
 	}
 	pass3 { mVUlog("FSSET $%x", _Imm12_); }
 	pass4 { mVUsFlagHack = 0; }
