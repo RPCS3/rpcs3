@@ -29,6 +29,7 @@
 #define aReg(x)	   mVUregs.VF[x]
 #define bReg(x, y) mVUregsTemp.VFreg[y] = x; mVUregsTemp.VF[y]
 #define aMax(x, y) ((x > y) ? x : y)
+#define aMin(x, y) ((x < y) ? x : y)
 
 // Read a VF reg by upper op
 #define analyzeReg1(xReg, vfRead) {																\
@@ -128,18 +129,6 @@
 
 // Writing to a VI reg
 #define analyzeVIreg2(xReg, viWrite, aCycles) {	\
-	if (xReg) {									\
-		mVUregsTemp.VIreg = xReg;				\
-		mVUregsTemp.VI = aCycles;				\
-		mVUlow.writesVI = 1;					\
-		mVU->VIbackup[0] = xReg;				\
-		viWrite.reg = xReg;						\
-		viWrite.used = aCycles;					\
-	}											\
-}
-
-// Writing to a VI reg (FSxxx, FMxxx, FCxxx opcodes)
-#define analyzeVIreg3(xReg, viWrite, aCycles) {	\
 	if (xReg) {									\
 		mVUregsTemp.VIreg = xReg;				\
 		mVUregsTemp.VI = aCycles;				\
@@ -319,16 +308,13 @@ microVUt(void) mVUanalyzeSflag(mV, int It) {
 		// Do to stalls, it can only be set one instruction prior to the status flag read instruction
 		// if we were guaranteed no-stalls were to happen, it could be set 4 instruction prior.
 	}
-	analyzeVIreg3(It, mVUlow.VI_write, 1);
+	mVUlow.readFlags = 1;
+	analyzeVIreg2(It, mVUlow.VI_write, 1);
 }
 
 microVUt(void) mVUanalyzeFSSET(mV) {
 	mVUlow.isFSSET = 1;
-	// mVUinfo &= ~_doStatus;
-	// Note: I'm not entirely sure if the non-sticky flags
-	// should be taken from the current upper instruction
-	// or if they should be taken from the previous instruction
-	// Uncomment the above line if the latter-case is true
+	mVUlow.readFlags = 1;
 }
 
 //------------------------------------------------------------------
@@ -347,8 +333,9 @@ microVUt(void) mVUanalyzeMflag(mV, int Is, int It) {
 		}
 		iPC = curPC;
 	}
+	mVUlow.readFlags = 1;
 	analyzeVIreg1(Is, mVUlow.VI_read[0]);
-	analyzeVIreg3(It, mVUlow.VI_write, 1);
+	analyzeVIreg2(It, mVUlow.VI_write, 1);
 }
 
 //------------------------------------------------------------------
@@ -357,8 +344,9 @@ microVUt(void) mVUanalyzeMflag(mV, int Is, int It) {
 
 microVUt(void) mVUanalyzeCflag(mV, int It) {
 	mVUinfo.swapOps = 1;
+	mVUlow.readFlags = 1;
 	if (mVUcount < 4) { mVUpBlock->pState.needExactMatch |= 0xf << (/*mVUcount +*/ 8); }
-	analyzeVIreg3(It, mVUlow.VI_write, 1);
+	analyzeVIreg2(It, mVUlow.VI_write, 1);
 }
 
 //------------------------------------------------------------------
@@ -381,18 +369,31 @@ microVUt(void) mVUanalyzeXGkick(mV, int Fs, int xCycles) {
 // Branches - Branch Opcodes
 //------------------------------------------------------------------
 
-#define analyzeBranchVI(reg, infoVar) {						\
-	/* First ensure branch is not first opcode in block */	\
-	if (reg && (mVUcount > 0)) { 							\
-		incPC2(-2);											\
-		/* Check if prev Op modified VI reg */				\
-		if (mVUlow.writesVI && (reg == mVU->VIbackup[0])) { \
-			mVUlow.backupVI = 1;							\
-			incPC2(2);										\
-			infoVar = 1;									\
-		}													\
-		else { incPC2(2); }									\
-	}														\
+#define analyzeBranchVI(xReg, infoVar) {											\
+	if (xReg) {																		\
+		int i;																		\
+		int iEnd = aMin(4, mVUcount);												\
+		int bPC = iPC;																\
+		for (i = 0; i < iEnd; i++) {												\
+			incPC2(-2)																\
+			if ((mVUlow.VI_write.reg == xReg) && mVUlow.VI_write.used) {			\
+				if (mVUlow.readFlags) break;										\
+				if (i == 0) continue;												\
+				if (((mVUlow.VI_read[0].reg == xReg) && (mVUlow.VI_read[0].used))	\
+				||	((mVUlow.VI_read[1].reg == xReg) && (mVUlow.VI_read[1].used)))	\
+				{ continue; }														\
+			}																		\
+			break;																	\
+		}																			\
+		if (i) {																	\
+			DevCon::Status("microVU%d: Branch VI-Delay (%d)", params getIndex, i);	\
+			incPC2(2);																\
+			mVUlow.backupVI = 1;													\
+			iPC = bPC;																\
+			infoVar = 1;															\
+		}																			\
+		iPC = bPC;																	\
+	}																				\
 }
 
 microVUt(void) mVUanalyzeBranch1(mV, int Is) {

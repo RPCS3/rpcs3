@@ -99,6 +99,7 @@ struct microLowerOp {
 	bool memReadIs;	// Read Is (VI reg) from memory (used by branches)
 	bool memReadIt;	// Read If (VI reg) from memory (used by branches)
 	bool writesVI;	// Current Instruction writes to VI (used by branches; note that flag-modifying opcodes shouldn't set this)
+	bool readFlags; // Current Instruction reads Status, Mac, or Clip flags
 };
 
 struct microFlagInst {
