@@ -95,15 +95,9 @@ bool GSTextureFX9::SetupIA(const GSVertexHW9* vertices, int count, D3DPRIMITIVET
 
 bool GSTextureFX9::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 {
-	CComPtr<IDirect3DVertexShader9> vs;
+	hash_map<uint32, CComPtr<IDirect3DVertexShader9> >::const_iterator i = m_vs.find(sel);
 
-	hash_map<uint32, CComPtr<IDirect3DVertexShader9> >::iterator i = m_vs.find(sel);
-
-	if(i != m_vs.end())
-	{
-		vs = (*i).second;
-	}
-	else
+	if(i == m_vs.end())
 	{
 		string str[4];
 
@@ -131,6 +125,7 @@ bool GSTextureFX9::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 		};
 
 		CComPtr<IDirect3DVertexDeclaration9> il;
+		CComPtr<IDirect3DVertexShader9> vs;
 
 		m_dev->CompileShader(IDR_TFX9_FX, "vs_main", macro, &vs, layout, countof(layout), &il);
 
@@ -140,9 +135,10 @@ bool GSTextureFX9::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 		}
 
 		m_vs[sel] = vs;
+		i = m_vs.find( sel );
 	}
 
-	m_dev->VSSetShader(vs, (const float*)cb, sizeof(*cb) / sizeof(GSVector4));
+	m_dev->VSSetShader( (*i).second, (const float*)cb, sizeof(*cb) / sizeof(GSVector4));
 
 	return true;
 }
@@ -185,15 +181,9 @@ void GSTextureFX9::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSample
 		if(sel.wmt == 3) sel.wmt = 0;
 	}
 
-	CComPtr<IDirect3DPixelShader9> ps;
+	hash_map<uint32, CComPtr<IDirect3DPixelShader9> >::const_iterator i = m_ps.find(sel);
 
-	hash_map<uint32, CComPtr<IDirect3DPixelShader9> >::iterator i = m_ps.find(sel);
-
-	if(i != m_ps.end())
-	{
-		ps = (*i).second;
-	}
-	else
+	if(i == m_ps.end())
 	{
 		string str[12];
 
@@ -227,12 +217,14 @@ void GSTextureFX9::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSample
 			{NULL, NULL},
 		};
 
+		CComPtr<IDirect3DPixelShader9> ps;
 		hr = m_dev->CompileShader(IDR_TFX9_FX, "ps_main", macro, &ps);
 
 		m_ps[sel] = ps;
+		i = m_ps.find(sel);
 	}
 
-	m_dev->PSSetShader(ps, (const float*)cb, sizeof(*cb) / sizeof(GSVector4));
+	m_dev->PSSetShader((*i).second, (const float*)cb, sizeof(*cb) / sizeof(GSVector4));
 
 	Direct3DSamplerState9* ss = NULL;
 
@@ -243,7 +235,7 @@ void GSTextureFX9::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSample
 			ssel.min = ssel.mag = 0;
 		}
 
-		hash_map<uint32, Direct3DSamplerState9* >::iterator i = m_ps_ss.find(ssel);
+		hash_map<uint32, Direct3DSamplerState9* >::const_iterator i = m_ps_ss.find(ssel);
 
 		if(i != m_ps_ss.end())
 		{
@@ -286,13 +278,9 @@ void GSTextureFX9::UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, 
 {
 	Direct3DDepthStencilState9* dss = NULL;
 
-	hash_map<uint32, Direct3DDepthStencilState9*>::iterator i = m_om_dss.find(dssel);
+	hash_map<uint32, Direct3DDepthStencilState9*>::const_iterator i = m_om_dss.find(dssel);
 
-	if(i != m_om_dss.end())
-	{
-		dss = (*i).second;
-	}
-	else
+	if(i == m_om_dss.end())
 	{
 		dss = new Direct3DDepthStencilState9();
 
@@ -325,22 +313,16 @@ void GSTextureFX9::UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, 
 		}
 
 		m_om_dss[dssel] = dss;
+		i = m_om_dss.find(dssel);
 	}
 
-	m_dev->OMSetDepthStencilState(dss, 3);
+	m_dev->OMSetDepthStencilState((*i).second, 3);
 
-	Direct3DBlendState9* bs = NULL;
-	
-	hash_map<uint32, Direct3DBlendState9*>::iterator j = m_om_bs.find(bsel);
+	hash_map<uint32, Direct3DBlendState9*>::const_iterator j = m_om_bs.find(bsel);
 
-	if(j != m_om_bs.end())
+	if(j == m_om_bs.end())
 	{
-		bs = (*j).second;
-	}
-	else
-	{
-		bs = new Direct3DBlendState9();
-
+		Direct3DBlendState9* bs = new Direct3DBlendState9();
 		memset(bs, 0, sizeof(*bs));
 
 		bs->BlendEnable = bsel.abe;
@@ -466,9 +448,10 @@ void GSTextureFX9::UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, 
 		if(bsel.wa) bs->RenderTargetWriteMask |= D3DCOLORWRITEENABLE_ALPHA;
 
 		m_om_bs[bsel] = bs;
+		j = m_om_bs.find(bsel);
 	}
 
-	m_dev->OMSetBlendState(bs, 0x010101 * bf);
+	m_dev->OMSetBlendState((*j).second, 0x010101 * bf);
 }
 
 void GSTextureFX9::Draw()

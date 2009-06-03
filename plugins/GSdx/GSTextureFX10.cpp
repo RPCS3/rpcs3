@@ -100,15 +100,9 @@ bool GSTextureFX10::SetupIA(const GSVertexHW10* vertices, int count, D3D10_PRIMI
 
 bool GSTextureFX10::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 {
-	CComPtr<ID3D10VertexShader> vs;
+	hash_map<uint32, CComPtr<ID3D10VertexShader> >::const_iterator i = m_vs.find(sel);
 
-	hash_map<uint32, CComPtr<ID3D10VertexShader> >::iterator i = m_vs.find(sel);
-
-	if(i != m_vs.end())
-	{
-		vs = (*i).second;
-	}
-	else
+	if(i == m_vs.end())
 	{
 		string str[5];
 
@@ -139,6 +133,7 @@ bool GSTextureFX10::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 		};
 
 		CComPtr<ID3D10InputLayout> il;
+		CComPtr<ID3D10VertexShader> vs;
 
 		m_dev->CompileShader(IDR_TFX10_FX, "vs_main", macro, &vs, layout, countof(layout), &il);
 
@@ -148,6 +143,7 @@ bool GSTextureFX10::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 		}
 
 		m_vs[sel] = vs;
+		i = m_vs.find( sel );
 	}
 
 	if(m_vs_cb_cache.Update(cb))
@@ -155,7 +151,7 @@ bool GSTextureFX10::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 		(*m_dev)->UpdateSubresource(m_vs_cb, 0, NULL, cb, 0, 0);
 	}
 
-	m_dev->VSSetShader(vs, m_vs_cb);
+	m_dev->VSSetShader((*i).second, m_vs_cb);
 
 	return true;
 }
@@ -164,11 +160,11 @@ bool GSTextureFX10::SetupGS(GSSelector sel)
 {
 	HRESULT hr;
 
-	CComPtr<ID3D10GeometryShader> gs;
+	ID3D10GeometryShader* gs = NULL;
 
 	if(sel.prim > 0 && (sel.iip == 0 || sel.prim == 3)) // geometry shader works in every case, but not needed
 	{
-		hash_map<uint32, CComPtr<ID3D10GeometryShader> >::iterator i = m_gs.find(sel);
+		hash_map<uint32, CComPtr<ID3D10GeometryShader> >::const_iterator i = m_gs.find(sel);
 
 		if(i != m_gs.end())
 		{
@@ -212,15 +208,9 @@ void GSTextureFX10::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSampl
 {
 	HRESULT hr;
 
-	CComPtr<ID3D10PixelShader> ps;
+	hash_map<uint32, CComPtr<ID3D10PixelShader> >::const_iterator i = m_ps.find(sel);
 
-	hash_map<uint32, CComPtr<ID3D10PixelShader> >::iterator i = m_ps.find(sel);
-
-	if(i != m_ps.end())
-	{
-		ps = (*i).second;
-	}
-	else
+	if(i == m_ps.end())
 	{
 		string str[13];
 
@@ -256,9 +246,11 @@ void GSTextureFX10::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSampl
 			{NULL, NULL},
 		};
 
+		CComPtr<ID3D10PixelShader> ps;
 		hr = m_dev->CompileShader(IDR_TFX10_FX, "ps_main", macro, &ps);
 
 		m_ps[sel] = ps;
+		i = m_ps.find(sel);
 	}
 
 	if(m_ps_cb_cache.Update(cb))
@@ -266,9 +258,9 @@ void GSTextureFX10::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSampl
 		(*m_dev)->UpdateSubresource(m_ps_cb, 0, NULL, cb, 0, 0);
 	}
 
-	m_dev->PSSetShader(ps, m_ps_cb);
+	m_dev->PSSetShader((*i).second, m_ps_cb);
 
-	CComPtr<ID3D10SamplerState> ss0, ss1;
+	ID3D10SamplerState* ss0=NULL, *ss1=NULL;
 
 	if(sel.tfx != 4)
 	{
@@ -277,7 +269,7 @@ void GSTextureFX10::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSampl
 			ssel.min = ssel.mag = 0;
 		}
 
-		hash_map<uint32, CComPtr<ID3D10SamplerState> >::iterator i = m_ps_ss.find(ssel);
+		hash_map<uint32, CComPtr<ID3D10SamplerState> >::const_iterator i = m_ps_ss.find(ssel);
 
 		if(i != m_ps_ss.end())
 		{
@@ -333,15 +325,9 @@ void GSTextureFX10::UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel,
 {
 	HRESULT hr;
 
-	CComPtr<ID3D10DepthStencilState> dss;
+	hash_map<uint32, CComPtr<ID3D10DepthStencilState> >::const_iterator i = m_om_dss.find(dssel);
 
-	hash_map<uint32, CComPtr<ID3D10DepthStencilState> >::iterator i = m_om_dss.find(dssel);
-
-	if(i != m_om_dss.end())
-	{
-		dss = (*i).second;
-	}
-	else
+	if(i == m_om_dss.end())
 	{
 		D3D10_DEPTH_STENCIL_DESC dsd;
 
@@ -377,22 +363,18 @@ void GSTextureFX10::UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel,
 			dsd.DepthFunc = ztst[dssel.ztst];
 		}
 
+		CComPtr<ID3D10DepthStencilState> dss;
 		hr = (*m_dev)->CreateDepthStencilState(&dsd, &dss);
 
 		m_om_dss[dssel] = dss;
+		i = m_om_dss.find(dssel);
 	}
 
-	m_dev->OMSetDepthStencilState(dss, 1);
+	m_dev->OMSetDepthStencilState((*i).second, 1);
 
-	CComPtr<ID3D10BlendState> bs;
+	hash_map<uint32, CComPtr<ID3D10BlendState> >::const_iterator j = m_om_bs.find(bsel);
 
-	hash_map<uint32, CComPtr<ID3D10BlendState> >::iterator j = m_om_bs.find(bsel);
-
-	if(j != m_om_bs.end())
-	{
-		bs = (*j).second;
-	}
-	else
+	if(j == m_om_bs.end())
 	{
 		D3D10_BLEND_DESC bd;
 
@@ -520,12 +502,14 @@ void GSTextureFX10::UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel,
 		if(bsel.wb) bd.RenderTargetWriteMask[0] |= D3D10_COLOR_WRITE_ENABLE_BLUE;
 		if(bsel.wa) bd.RenderTargetWriteMask[0] |= D3D10_COLOR_WRITE_ENABLE_ALPHA;
 
+		CComPtr<ID3D10BlendState> bs;
 		hr = (*m_dev)->CreateBlendState(&bd, &bs);
 
 		m_om_bs[bsel] = bs;
+		j = m_om_bs.find(bsel);
 	}
 
-	m_dev->OMSetBlendState(bs, bf);
+	m_dev->OMSetBlendState((*j).second, bf);
 }
 
 void GSTextureFX10::Draw()
