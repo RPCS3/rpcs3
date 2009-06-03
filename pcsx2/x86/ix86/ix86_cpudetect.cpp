@@ -196,20 +196,20 @@ s64 CPUSpeedHz( int time )
 	
 	// Align the cpu execution to a timeGetTime boundary.
 	// Without this the result could be skewed by up to several milliseconds.
-	
-	do { timeStart = timeGetTime( );
+
+	do { timeStart = GetCPUTicks();
 	} while( timeGetTime( ) == timeStart );
 
 	do
 	{
-		timeStop = timeGetTime( );
+		timeStop = GetCPUTicks( );
 		startTick = GetCPUTick( );
-	} while( ( timeStop - timeStart ) < 1 );
+	} while( ( timeStop - timeStart ) == 0 );
 
 	timeStart = timeStop;
 	do
 	{
-		timeStop = timeGetTime();
+		timeStop = GetCPUTicks();
 		endTick = GetCPUTick();
 	}
 	while( ( timeStop - timeStart ) < time );
@@ -364,10 +364,15 @@ void cpudetectInit()
 	cpucaps.hasAMD64BitArchitecture                      = ( cpuinfo.x86EFlags >> 29 ) & 1; //64bit cpu
 	cpucaps.has3DNOWInstructionExtensionsExt             = ( cpuinfo.x86EFlags >> 30 ) & 1; //3dnow+
 	cpucaps.has3DNOWInstructionExtensions                = ( cpuinfo.x86EFlags >> 31 ) & 1; //3dnow   
-	cpucaps.hasStreamingSIMD4ExtensionsA               = ( cpuinfo.x86EFlags2 >> 6 ) & 1; //INSERTQ / EXTRQ / MOVNT
+	cpucaps.hasStreamingSIMD4ExtensionsA                 = ( cpuinfo.x86EFlags2 >> 6 ) & 1; //INSERTQ / EXTRQ / MOVNT
 
+	InitCPUTicks();
+	uint span = GetTickFrequency();
 
-	cpuinfo.cpuspeed = (u32)(CPUSpeedHz( 400 ) / 400000 );
+	if( (span % 1000) < 400 )	// helps minimize rounding errors
+		cpuinfo.cpuspeed = (u32)( CPUSpeedHz( span / 1000 ) / 1000 );
+	else
+		cpuinfo.cpuspeed = (u32)( CPUSpeedHz( span / 500 ) / 2000 );
 
 	// --> SSE3 / SSSE3 / SSE4.1 / SSE 4.2 detection <--
 
