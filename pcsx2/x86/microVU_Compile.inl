@@ -169,8 +169,8 @@ microVUt(void) mVUendProgram(mV, int qInst, int pInst, int fStatus, int fMac, in
 
 	// Save Flag Instances
 	if (!mVUflagHack) {
-		getFlagReg(fStatus, fStatus);
-		MOV32RtoM((uptr)&mVU->regs->VI[REG_STATUS_FLAG].UL,	fStatus);
+		mVUallocSFLAGc(gprT1, gprT2, fStatus);
+		MOV32RtoM((uptr)&mVU->regs->VI[REG_STATUS_FLAG].UL,	gprT1);
 	}
 	mVUallocMFLAGa(mVU, gprT1, fMac);
 	mVUallocCFLAGa(mVU, gprT2, fClip);
@@ -196,13 +196,13 @@ microVUt(void) mVUtestCycles(mV) {
 	iPC = mVUstartPC;
 	mVUdebugNOW(0);
 	SUB32ItoM((uptr)&mVU->cycles, mVUcycles);
-	u8* jmp8 = JG8(0);
+	u32* jmp32 = JG32(0);
 		MOV32ItoR(gprT2, xPC);
 		if (!isVU1)	CALLFunc((uptr)mVUwarning0);
 		else		CALLFunc((uptr)mVUwarning1);
 		MOV32ItoR(gprR, Roffset); // Restore gprR
 		mVUendProgram(mVU, 0, 0, sI, 0, cI);
-	x86SetJ8(jmp8);
+	x86SetJ32(jmp32);
 }
 
 //------------------------------------------------------------------
@@ -378,7 +378,7 @@ eBitTemination:
 	if (mVUinfo.doDivFlag) {
 		int flagReg;
 		getFlagReg(flagReg, lStatus);
-		AND32ItoR (flagReg, 0x0fcf);
+		AND32ItoR (flagReg, 0xfff3ffff);
 		OR32MtoR  (flagReg, (uptr)&mVU->divFlag);
 	}
 	if (mVUinfo.doXGKICK) { mVU_XGKICK_DELAY(mVU, 1); }

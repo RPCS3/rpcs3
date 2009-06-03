@@ -105,6 +105,9 @@ declareAllVariables
 #define _Tbit_ (1<<27)
 #define _MDTbit_ 0 //( _Mbit_ | _Dbit_ | _Tbit_ ) // ToDo: Implement this stuff...
 
+#define divI 0x1040000
+#define divD 0x2080000
+
 #define isVU1		(mVU == &microVU1)
 #define getIndex	(isVU1 ? 1 : 0)
 #define getVUmem(x)	(((isVU1) ? (x & 0x3ff) : ((x >= 0x400) ? (x & 0x43f) : (x & 0xff))) * 16)

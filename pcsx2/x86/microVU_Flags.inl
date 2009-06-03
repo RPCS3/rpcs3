@@ -24,7 +24,7 @@ microVUt(void) mVUdivSet(mV) {
 	if (mVUinfo.doDivFlag) {
 		getFlagReg(flagReg1, sFLAG.write);
 		if (!sFLAG.doFlag) { getFlagReg(flagReg2, sFLAG.lastWrite); MOV32RtoR(flagReg1, flagReg2); }
-		AND32ItoR(flagReg1, 0x0fcf);
+		AND32ItoR(flagReg1, 0xfff3ffff);
 		OR32MtoR (flagReg1, (uptr)&mVU->divFlag);
 	}
 }

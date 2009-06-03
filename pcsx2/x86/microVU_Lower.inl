@@ -37,7 +37,7 @@
 	SSE_MOVMSKPS_XMM_to_R32(gprTemp, xmmReg);										\
 	TEST32ItoR(gprTemp, 1);								  /* Check sign bit */		\
 	aJump = JZ8(0);										  /* Skip if positive */	\
-		MOV32ItoM((uptr)&mVU->divFlag, 0x410);			  /* Set Invalid Flags */	\
+		MOV32ItoM((uptr)&mVU->divFlag, divI);			  /* Set Invalid Flags */	\
 		SSE_ANDPS_M128_to_XMM(xmmReg, (uptr)mVU_absclip); /* Abs(xmmReg) */			\
 	x86SetJ8(aJump);																\
 }
@@ -54,10 +54,10 @@ mVUop(mVU_DIV) {
 
 			testZero(xmmFs, xmmT1, gprT1); // Test if Fs is zero
 			ajmp = JZ8(0);
-				MOV32ItoM((uptr)&mVU->divFlag, 0x410); // Set invalid flag (0/0)
+				MOV32ItoM((uptr)&mVU->divFlag, divI); // Set invalid flag (0/0)
 				bjmp = JMP8(0);
 			x86SetJ8(ajmp);
-				MOV32ItoM((uptr)&mVU->divFlag, 0x820); // Zero divide (only when not 0/0)
+				MOV32ItoM((uptr)&mVU->divFlag, divD); // Zero divide (only when not 0/0)
 			x86SetJ8(bjmp);
 
 			SSE_XORPS_XMM_to_XMM(xmmFs, xmmFt);
@@ -112,10 +112,10 @@ mVUop(mVU_RSQRT) {
 
 			testZero(xmmFs, xmmT1, gprT1); // Test if Fs is zero
 			bjmp = JZ8(0); // Skip if none are
-				MOV32ItoM((uptr)&mVU->divFlag, 0x410); // Set invalid flag (0/0)
+				MOV32ItoM((uptr)&mVU->divFlag, divI); // Set invalid flag (0/0)
 				cjmp = JMP8(0);
 			x86SetJ8(bjmp);
-				MOV32ItoM((uptr)&mVU->divFlag, 0x820); // Zero divide flag (only when not 0/0)
+				MOV32ItoM((uptr)&mVU->divFlag, divD); // Zero divide flag (only when not 0/0)
 			x86SetJ8(cjmp);
 
 			SSE_ANDPS_M128_to_XMM(xmmFs, (uptr)mVU_signbit);
@@ -522,7 +522,7 @@ mVUop(mVU_FMOR) {
 mVUop(mVU_FSAND) {
 	pass1 { mVUanalyzeSflag(mVU, _It_); }
 	pass2 { 
-		mVUallocSFLAGa(gprT1, sFLAG.read);
+		mVUallocSFLAGc(gprT1, gprT2, sFLAG.read);
 		AND16ItoR(gprT1, _Imm12_);
 		mVUallocVIb(mVU, gprT1, _It_);
 	}
@@ -530,23 +530,10 @@ mVUop(mVU_FSAND) {
 	pass4 { mVUflagInfo |= 0xf << (/*mVUcount +*/ 0); mVUsFlagHack = 0; }
 }
 
-mVUop(mVU_FSEQ) {
-	pass1 { mVUanalyzeSflag(mVU, _It_); }
-	pass2 { 
-		mVUallocSFLAGa(gprT1, sFLAG.read);
-		XOR16ItoR(gprT1, _Imm12_);
-		SUB16ItoR(gprT1, 1);
-		SHR16ItoR(gprT1, 15);
-		mVUallocVIb(mVU, gprT1, _It_);
-	}
-	pass3 { mVUlog("FSEQ vi%02d, $%x", _Ft_, _Imm12_); }
-	pass4 { mVUflagInfo |= 0xf << (/*mVUcount +*/ 0); mVUsFlagHack = 0; }
-}
-
 mVUop(mVU_FSOR) {
 	pass1 { mVUanalyzeSflag(mVU, _It_); }
 	pass2 { 
-		mVUallocSFLAGa(gprT1, sFLAG.read);
+		mVUallocSFLAGc(gprT1, gprT2, sFLAG.read);
 		OR16ItoR(gprT1, _Imm12_);
 		mVUallocVIb(mVU, gprT1, _It_);
 	}
@@ -554,14 +541,54 @@ mVUop(mVU_FSOR) {
 	pass4 { mVUflagInfo |= 0xf << (/*mVUcount +*/ 0); mVUsFlagHack = 0; }
 }
 
+mVUop(mVU_FSEQ) {
+	pass1 { mVUanalyzeSflag(mVU, _It_); }
+	pass2 { 
+		u8 *pjmp;
+		int imm = 0;
+		if (_Imm12_ & 0x0001) imm |= 0x000000f; // Z
+		if (_Imm12_ & 0x0002) imm |= 0x00000f0; // S
+		if (_Imm12_ & 0x0004) imm |= 0x0010000; // U
+		if (_Imm12_ & 0x0008) imm |= 0x0020000; // O
+		if (_Imm12_ & 0x0010) imm |= 0x0040000; // I
+		if (_Imm12_ & 0x0020) imm |= 0x0080000; // D
+		if (_Imm12_ & 0x0040) imm |= 0x0000f00; // ZS
+		if (_Imm12_ & 0x0080) imm |= 0x000f000; // SS
+		if (_Imm12_ & 0x0100) imm |= 0x0400000; // US
+		if (_Imm12_ & 0x0200) imm |= 0x0800000; // OS
+		if (_Imm12_ & 0x0400) imm |= 0x1000000; // IS
+		if (_Imm12_ & 0x0800) imm |= 0x2000000; // DS
+
+		mVUallocSFLAGa(gprT1, sFLAG.read);
+		setBitFSEQ(0x000f); // Z  bit
+		setBitFSEQ(0x00f0); // S  bit
+		setBitFSEQ(0x0f00); // ZS bit
+		setBitFSEQ(0xf000); // SS bit
+		XOR32ItoR(gprT1, imm);
+		SUB32ItoR(gprT1, 1);
+		SHR32ItoR(gprT1, 31);
+		mVUallocVIb(mVU, gprT1, _It_);
+	}
+	pass3 { mVUlog("FSEQ vi%02d, $%x", _Ft_, _Imm12_); }
+	pass4 { mVUflagInfo |= 0xf << (/*mVUcount +*/ 0); mVUsFlagHack = 0; }
+}
+
 mVUop(mVU_FSSET) {
 	pass1 { mVUanalyzeFSSET(mVU); }
 	pass2 { 
-		int flagReg1, flagReg2;
-		getFlagReg(flagReg1, sFLAG.write);
-		if (!(sFLAG.doFlag||mVUinfo.doDivFlag)) { getFlagReg(flagReg2, sFLAG.lastWrite); MOV32RtoR(flagReg1, flagReg2); } // Get status result from last status setting instruction	
-		AND32ItoR(flagReg1, 0x03f);
-		OR32ItoR (flagReg1, (_Imm12_ & 0xfc0));
+		int sReg, imm = 0;
+		if (_Imm12_ & 0x0040) imm |= 0x0000f00; // ZS
+		if (_Imm12_ & 0x0080) imm |= 0x000f000; // SS
+		if (_Imm12_ & 0x0100) imm |= 0x0400000; // US
+		if (_Imm12_ & 0x0200) imm |= 0x0800000; // OS
+		if (_Imm12_ & 0x0400) imm |= 0x1000000; // IS
+		if (_Imm12_ & 0x0800) imm |= 0x2000000; // DS
+		getFlagReg(sReg, sFLAG.write);
+		if (!(sFLAG.doFlag || mVUinfo.doDivFlag)) { 
+			mVUallocSFLAGa(sReg, sFLAG.lastWrite); // Get Prev Status Flag
+		}
+		AND32ItoR(sReg, 0xf00ff); // Keep Non-Sticky Bits
+		if (imm) OR32ItoR(sReg, imm);
 	}
 	pass3 { mVUlog("FSSET $%x", _Imm12_); }
 	pass4 { mVUsFlagHack = 0; }

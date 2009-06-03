@@ -300,6 +300,7 @@ microVUt(void) mVUcheckSflag(mV, int progIndex) {
 	if (CHECK_VU_FLAGHACK1) {
 		int bFlagInfo = mVUflagInfo;
 		int bCode	  = mVU->code;
+		int bFlagHack = mVUsFlagHack;
 		mVUsFlagHack  = 1;
 		for (u32 i = 0; i < mVU->progSize; i+=2) {
 			mVU->code = mVU->prog.prog[progIndex].data[i];
@@ -308,6 +309,7 @@ microVUt(void) mVUcheckSflag(mV, int progIndex) {
 		mVUflagInfo  = bFlagInfo;
 		mVU->code	 = bCode;
 		mVU->prog.prog[progIndex].sFlagHack = mVUsFlagHack;
+		mVUsFlagHack = bFlagHack;
 	}
 }
 

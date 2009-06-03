@@ -29,7 +29,6 @@
 // Note: If modXYZW is true, then it adjusts XYZW for Single Scalar operations
 microVUt(void) mVUupdateFlags(mV, int reg, int regT1, int regT2, int xyzw, bool modXYZW) {
 	int sReg, mReg = gprT1;
-	static u8 *pjmp, *pjmp2;
 	static const u16 flipMask[16] = {0, 8, 4, 12, 2, 10, 6, 14, 1, 9, 5, 13, 3, 11, 7, 15};
 
 	//SysPrintf("Status = %d; Mac = %d\n", sFLAG.doFlag, mFLAG.doFlag);
@@ -40,7 +39,7 @@ microVUt(void) mVUupdateFlags(mV, int reg, int regT1, int regT2, int xyzw, bool 
 	if (sFLAG.doFlag) {
 		getFlagReg(sReg, sFLAG.write); // Set sReg to valid GPR by Cur Flag Instance
 		mVUallocSFLAGa(sReg, sFLAG.lastWrite); // Get Prev Status Flag
-		AND32ItoR(sReg, 0xff0); // Keep Sticky and D/I flags
+		AND32ItoR(sReg, 0xffffff00); // Keep Sticky and D/I flags
 	}
 
 	//-------------------------Check for Signed flags------------------------------
@@ -54,25 +53,22 @@ microVUt(void) mVUupdateFlags(mV, int reg, int regT1, int regT2, int xyzw, bool 
 	SSE_MOVMSKPS_XMM_to_R32(mReg, regT2); // Move the sign bits of the t1reg
 
 	AND32ItoR(mReg, AND_XYZW);  // Grab "Is Signed" bits from the previous calculation
-	if (sFLAG.doFlag) pjmp = JZ8(0); // Skip if none are
-		if (mFLAG.doFlag) SHL32ItoR(mReg, 4 + ADD_XYZW);
-		if (sFLAG.doFlag) OR32ItoR(sReg, 0x82); // SS, S flags
-		if (sFLAG.doFlag && _XYZW_SS) pjmp2 = JMP8(0); // If negative and not Zero, we can skip the Zero Flag checking
-	if (sFLAG.doFlag) x86SetJ8(pjmp);
+	SHL32ItoR(mReg, 4 + ADD_XYZW);
 
 	//-------------------------Check for Zero flags------------------------------
 
 	AND32ItoR(gprT2, AND_XYZW);  // Grab "Is Zero" bits from the previous calculation
-	if (sFLAG.doFlag) pjmp = JZ8(0); // Skip if none are
-		if (mFLAG.doFlag) { SHIFT_XYZW(gprT2); OR32RtoR(mReg, gprT2); }	
-		if (sFLAG.doFlag) { OR32ItoR(sReg, 0x41); } // ZS, Z flags		
-	if (sFLAG.doFlag) x86SetJ8(pjmp);
+	if (mFLAG.doFlag) { SHIFT_XYZW(gprT2); }
+	OR32RtoR(mReg, gprT2);	
 
 	//-------------------------Write back flags------------------------------
 
-	if (sFLAG.doFlag && _XYZW_SS) x86SetJ8(pjmp2); // If we skipped the Zero Flag Checking, return here
-	
 	if (mFLAG.doFlag) mVUallocMFLAGb(mVU, mReg, mFLAG.write); // Set Mac Flag
+	if (sFLAG.doFlag) {
+		OR32RtoR (sReg, mReg);
+		SHL32ItoR(mReg, 8);
+		OR32RtoR (sReg, mReg);
+	}
 }
 
 //------------------------------------------------------------------
