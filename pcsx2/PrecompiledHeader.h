@@ -103,13 +103,6 @@ typedef int BOOL;
 #		define __declspec(x)
 #	endif
 
-static __forceinline u32 timeGetTime()
-{
-	struct timeb t;
-	ftime(&t);
-	return (u32)(t.time*1000+t.millitm);
-}
-
 #	ifndef strnicmp
 #		define strnicmp strncasecmp
 #	endif

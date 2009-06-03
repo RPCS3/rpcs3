@@ -49,5 +49,4 @@ extern void SibSB( uint ss, uint index, uint base );
 extern void SET8R( int cc, int to );
 extern u8*  J8Rel( int cc, int to );
 extern u32* J32Rel( int cc, u32 to );
-extern u64  GetCPUTick( void );
 
