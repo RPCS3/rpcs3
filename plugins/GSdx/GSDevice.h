@@ -78,15 +78,15 @@ public:
 
 	virtual bool IsLost() {return false;}
 	virtual void Present(const GSVector4i& r, int shader);
-	virtual void Flip() {};
+	virtual void Flip() {}
 
-	virtual void BeginScene() {};
-	virtual void EndScene() {};
+	virtual void BeginScene() {}
+	virtual void EndScene() {}
 
-	virtual void ClearRenderTarget(GSTexture* t, const GSVector4& c) {};
-	virtual void ClearRenderTarget(GSTexture* t, uint32 c) {};
-	virtual void ClearDepth(GSTexture* t, float c) {};
-	virtual void ClearStencil(GSTexture* t, uint8 c) {};
+	virtual void ClearRenderTarget(GSTexture* t, const GSVector4& c) {}
+	virtual void ClearRenderTarget(GSTexture* t, uint32 c) {}
+	virtual void ClearDepth(GSTexture* t, float c) {}
+	virtual void ClearStencil(GSTexture* t, uint8 c) {}
 
 	virtual GSTexture* CreateRenderTarget(int w, int h, int format = 0);
 	virtual GSTexture* CreateDepthStencil(int w, int h, int format = 0);
@@ -105,5 +105,5 @@ public:
 	void Interlace(const GSVector2i& ds, int field, int mode, float yoffset);
 
 	virtual void PSSetShaderResources(GSTexture* sr0, GSTexture* sr1) {}
-	virtual void OMSetRenderTargets(GSTexture* rt, GSTexture* ds) {};
+	virtual void OMSetRenderTargets(GSTexture* rt, GSTexture* ds) {}
 };

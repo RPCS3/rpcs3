@@ -135,10 +135,11 @@ bool GSTextureFX9::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 		}
 
 		m_vs[sel] = vs;
-		i = m_vs.find( sel );
+
+		i = m_vs.find(sel);
 	}
 
-	m_dev->VSSetShader( (*i).second, (const float*)cb, sizeof(*cb) / sizeof(GSVector4));
+	m_dev->VSSetShader((*i).second, (const float*)cb, sizeof(*cb) / sizeof(GSVector4));
 
 	return true;
 }
@@ -218,9 +219,11 @@ void GSTextureFX9::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSample
 		};
 
 		CComPtr<IDirect3DPixelShader9> ps;
+
 		hr = m_dev->CompileShader(IDR_TFX9_FX, "ps_main", macro, &ps);
 
 		m_ps[sel] = ps;
+
 		i = m_ps.find(sel);
 	}
 
@@ -313,6 +316,7 @@ void GSTextureFX9::UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, 
 		}
 
 		m_om_dss[dssel] = dss;
+
 		i = m_om_dss.find(dssel);
 	}
 
@@ -323,6 +327,7 @@ void GSTextureFX9::UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, 
 	if(j == m_om_bs.end())
 	{
 		Direct3DBlendState9* bs = new Direct3DBlendState9();
+
 		memset(bs, 0, sizeof(*bs));
 
 		bs->BlendEnable = bsel.abe;
@@ -448,6 +453,7 @@ void GSTextureFX9::UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, 
 		if(bsel.wa) bs->RenderTargetWriteMask |= D3DCOLORWRITEENABLE_ALPHA;
 
 		m_om_bs[bsel] = bs;
+
 		j = m_om_bs.find(bsel);
 	}
 

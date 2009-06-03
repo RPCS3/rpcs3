@@ -143,7 +143,8 @@ bool GSTextureFX10::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 		}
 
 		m_vs[sel] = vs;
-		i = m_vs.find( sel );
+
+		i = m_vs.find(sel);
 	}
 
 	if(m_vs_cb_cache.Update(cb))
@@ -247,9 +248,11 @@ void GSTextureFX10::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSampl
 		};
 
 		CComPtr<ID3D10PixelShader> ps;
+		
 		hr = m_dev->CompileShader(IDR_TFX10_FX, "ps_main", macro, &ps);
 
 		m_ps[sel] = ps;
+
 		i = m_ps.find(sel);
 	}
 
@@ -364,9 +367,11 @@ void GSTextureFX10::UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel,
 		}
 
 		CComPtr<ID3D10DepthStencilState> dss;
+
 		hr = (*m_dev)->CreateDepthStencilState(&dsd, &dss);
 
 		m_om_dss[dssel] = dss;
+
 		i = m_om_dss.find(dssel);
 	}
 
@@ -503,9 +508,11 @@ void GSTextureFX10::UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel,
 		if(bsel.wa) bd.RenderTargetWriteMask[0] |= D3D10_COLOR_WRITE_ENABLE_ALPHA;
 
 		CComPtr<ID3D10BlendState> bs;
+
 		hr = (*m_dev)->CreateBlendState(&bd, &bs);
 
 		m_om_bs[bsel] = bs;
+
 		j = m_om_bs.find(bsel);
 	}
 

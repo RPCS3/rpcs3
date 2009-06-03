@@ -349,6 +349,8 @@ bool GSDevice9::IsLost()
 
 void GSDevice9::Flip()
 {
+	m_dev->EndScene();
+
 	if(m_swapchain)
 	{
 		m_swapchain->Present(NULL, NULL, NULL, NULL, 0);
@@ -357,11 +359,13 @@ void GSDevice9::Flip()
 	{
 		m_dev->Present(NULL, NULL, NULL, NULL);
 	}
+
+	m_dev->BeginScene();
 }
 
 void GSDevice9::BeginScene()
 {
-	m_dev->BeginScene();
+	// m_dev->BeginScene();
 }
 
 void GSDevice9::DrawPrimitive()
@@ -393,7 +397,7 @@ void GSDevice9::DrawPrimitive()
 
 void GSDevice9::EndScene()
 {
-	m_dev->EndScene();
+	// m_dev->EndScene();
 
 	m_vertices.start += m_vertices.count;
 	m_vertices.count = 0;
