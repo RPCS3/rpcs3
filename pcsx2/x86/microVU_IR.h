@@ -98,7 +98,6 @@ struct microLowerOp {
 	bool backupVI;	// Backup VI reg to memory if modified before branch (branch uses old VI value unless opcode is ILW or ILWR)
 	bool memReadIs;	// Read Is (VI reg) from memory (used by branches)
 	bool memReadIt;	// Read If (VI reg) from memory (used by branches)
-	bool writesVI;	// Current Instruction writes to VI (used by branches; note that flag-modifying opcodes shouldn't set this)
 	bool readFlags; // Current Instruction reads Status, Mac, or Clip flags
 };
 

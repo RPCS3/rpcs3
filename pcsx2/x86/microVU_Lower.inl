@@ -1112,9 +1112,9 @@ mVUop(mVU_IBEQ) {
 	setBranchA(3, 0);
 	pass1 { mVUanalyzeBranch2(mVU, _Is_, _It_); }
 	pass2 {
-		if (mVUlow.memReadIs) MOV32MtoR(gprT1, (uptr)&mVU->VIbackup[0]);
+		if (mVUlow.memReadIs) MOV32MtoR(gprT1, (uptr)&mVU->VIbackup);
 		else mVUallocVIa(mVU, gprT1, _Is_);
-		if (mVUlow.memReadIt) XOR32MtoR(gprT1, (uptr)&mVU->VIbackup[0]);
+		if (mVUlow.memReadIt) XOR32MtoR(gprT1, (uptr)&mVU->VIbackup);
 		else { mVUallocVIa(mVU, gprT2, _It_); XOR32RtoR(gprT1, gprT2); }
 		MOV32RtoM((uptr)&mVU->branch, gprT1);
 	}
@@ -1125,7 +1125,7 @@ mVUop(mVU_IBGEZ) {
 	setBranchA(4, 0);
 	pass1 { mVUanalyzeBranch1(mVU, _Is_); }
 	pass2 {
-		if (mVUlow.memReadIs) MOV32MtoR(gprT1, (uptr)&mVU->VIbackup[0]);
+		if (mVUlow.memReadIs) MOV32MtoR(gprT1, (uptr)&mVU->VIbackup);
 		else mVUallocVIa(mVU, gprT1, _Is_);
 		MOV32RtoM((uptr)&mVU->branch, gprT1);
 	}
@@ -1136,7 +1136,7 @@ mVUop(mVU_IBGTZ) {
 	setBranchA(5, 0);
 	pass1 { mVUanalyzeBranch1(mVU, _Is_); }
 	pass2 {
-		if (mVUlow.memReadIs) MOV32MtoR(gprT1, (uptr)&mVU->VIbackup[0]);
+		if (mVUlow.memReadIs) MOV32MtoR(gprT1, (uptr)&mVU->VIbackup);
 		else mVUallocVIa(mVU, gprT1, _Is_);
 		MOV32RtoM((uptr)&mVU->branch, gprT1);
 	}
@@ -1147,7 +1147,7 @@ mVUop(mVU_IBLEZ) {
 	setBranchA(6, 0);
 	pass1 { mVUanalyzeBranch1(mVU, _Is_); }
 	pass2 {
-		if (mVUlow.memReadIs) MOV32MtoR(gprT1, (uptr)&mVU->VIbackup[0]);
+		if (mVUlow.memReadIs) MOV32MtoR(gprT1, (uptr)&mVU->VIbackup);
 		else mVUallocVIa(mVU, gprT1, _Is_);
 		MOV32RtoM((uptr)&mVU->branch, gprT1);
 	}
@@ -1158,7 +1158,7 @@ mVUop(mVU_IBLTZ) {
 	setBranchA(7, 0);
 	pass1 { mVUanalyzeBranch1(mVU, _Is_); }
 	pass2 {
-		if (mVUlow.memReadIs) MOV32MtoR(gprT1, (uptr)&mVU->VIbackup[0]);
+		if (mVUlow.memReadIs) MOV32MtoR(gprT1, (uptr)&mVU->VIbackup);
 		else mVUallocVIa(mVU, gprT1, _Is_);
 		MOV32RtoM((uptr)&mVU->branch, gprT1);
 	}
@@ -1169,9 +1169,9 @@ mVUop(mVU_IBNE) {
 	setBranchA(8, 0);
 	pass1 { mVUanalyzeBranch2(mVU, _Is_, _It_); }
 	pass2 {
-		if (mVUlow.memReadIs) MOV32MtoR(gprT1, (uptr)&mVU->VIbackup[0]);
+		if (mVUlow.memReadIs) MOV32MtoR(gprT1, (uptr)&mVU->VIbackup);
 		else mVUallocVIa(mVU, gprT1, _Is_);
-		if (mVUlow.memReadIt) XOR32MtoR(gprT1, (uptr)&mVU->VIbackup[0]);
+		if (mVUlow.memReadIt) XOR32MtoR(gprT1, (uptr)&mVU->VIbackup);
 		else { mVUallocVIa(mVU, gprT2, _It_); XOR32RtoR(gprT1, gprT2); }
 		MOV32RtoM((uptr)&mVU->branch, gprT1);
 	}

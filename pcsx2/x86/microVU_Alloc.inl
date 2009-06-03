@@ -687,10 +687,9 @@ microVUt(void) mVUallocVIa(mV, int GPRreg, int _reg_) {
 
 microVUt(void) mVUallocVIb(mV, int GPRreg, int _reg_) {
 	if (mVUlow.backupVI) { // Backs up reg to memory (used when VI is modified b4 a branch)
-		MOV32RtoM((uptr)&mVU->VIbackup[1], GPRreg);
-		mVUallocVIa(mVU, GPRreg, _reg_);
-		MOV32RtoM((uptr)&mVU->VIbackup[0], GPRreg);
-		MOV32MtoR(GPRreg, (uptr)&mVU->VIbackup[1]);
+		MOVZX32M16toR(gprR, (uptr)&mVU->regs->VI[_reg_].UL);
+		MOV32RtoM((uptr)&mVU->VIbackup, gprR);
+		MOV32ItoR(gprR, Roffset);
 	}
 	if (_reg_ == 0)			{ return; }
 	else if (isMMX(_reg_))	{ MOVD32RtoMMX(mmVI(_reg_), GPRreg); }
