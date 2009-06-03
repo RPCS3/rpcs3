@@ -171,8 +171,7 @@ public:
 		bool INTCSTATSlow;
 		bool IdleLoopFF;
 		int  VUCycleSteal;
-		bool vuFlagHack1;
-		bool vuFlagHack2;
+		bool vuFlagHack;
 		bool vuMinMax;
 		bool ESCExits; // this is a hack!?
 	} Hacks;

@@ -74,7 +74,6 @@ struct microProgram {
 	u32 data[progSize];
 	u32 used;		// Number of times its been used
 	u32 last_used;	// Counters # of frames since last use (starts at 3 and counts backwards to 0 for each 30fps vSync)
-	u32 sFlagHack;	// Optimize out Status Flag Updates if Program doesn't use Status Flags
 	s32 range[2];	// The range of microMemory that has already been recompiled for the current program
 	u8* x86ptr;		// Pointer to program's recompilation code
 	u8* x86start;	// Start of program's rec-cache

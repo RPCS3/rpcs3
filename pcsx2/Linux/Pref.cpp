@@ -108,8 +108,7 @@ int LoadConfig()
 	GetValuel("WaitCycleExt",	Config.Hacks.WaitCycleExt);
 	GetValuel("INTCSTATSlow",	Config.Hacks.INTCSTATSlow);
 	GetValuel("VUCycleSteal",	Config.Hacks.VUCycleSteal);
-	GetValuel("vuFlagHack1",	Config.Hacks.vuFlagHack1);
-	GetValuel("vuFlagHack2",	Config.Hacks.vuFlagHack2);
+	GetValuel("vuFlagHack",		Config.Hacks.vuFlagHack);
 	GetValuel("vuMinMax",		Config.Hacks.vuMinMax);
 	GetValuel("IdleLoopFF",		Config.Hacks.IdleLoopFF);
 	GetValuel("ESCExits",		Config.Hacks.ESCExits);

@@ -168,10 +168,8 @@ microVUt(void) mVUendProgram(mV, int qInst, int pInst, int fStatus, int fMac, in
 	}
 
 	// Save Flag Instances
-	if (!mVUflagHack) {
-		mVUallocSFLAGc(gprT1, gprT2, fStatus);
-		MOV32RtoM((uptr)&mVU->regs->VI[REG_STATUS_FLAG].UL,	gprT1);
-	}
+	mVUallocSFLAGc(gprT1, gprT2, fStatus);
+	MOV32RtoM((uptr)&mVU->regs->VI[REG_STATUS_FLAG].UL,	gprT1);
 	mVUallocMFLAGa(mVU, gprT1, fMac);
 	mVUallocCFLAGa(mVU, gprT2, fClip);
 	MOV32RtoM((uptr)&mVU->regs->VI[REG_MAC_FLAG].UL,	gprT1);
@@ -242,7 +240,7 @@ microVUf(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 	mVUpBlock		= pBlock;
 	mVUregs.flags	= 0;
 	mVUflagInfo		= 0;
-	mVUsFlagHack	= CHECK_VU_FLAGHACK2 | mVUflagHack;
+	mVUsFlagHack	= CHECK_VU_FLAGHACK;
 	bool eBitBranch = 0; // E-bit Set on Branch
 
 	for (int branch = 0;  mVUcount < (vuIndex ? (0x3fff/8) : (0xfff/8)); ) {

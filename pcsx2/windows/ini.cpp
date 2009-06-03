@@ -231,8 +231,7 @@ void IniFile::DoConfig( PcsxConfig& Conf )
 	Entry("WaitCycleExt",	Config.Hacks.WaitCycleExt);
 	Entry("INTCSTATSlow",	Config.Hacks.INTCSTATSlow);
 	Entry("VUCycleSteal",	Config.Hacks.VUCycleSteal);
-	Entry("vuFlagHack1",	Config.Hacks.vuFlagHack1);
-	Entry("vuFlagHack2",	Config.Hacks.vuFlagHack2);
+	Entry("vuFlagHack",		Config.Hacks.vuFlagHack);
 	Entry("vuMinMax",		Config.Hacks.vuMinMax);
 	Entry("IdleLoopFF",		Config.Hacks.IdleLoopFF);
 	if (Conf.Hacks.VUCycleSteal < 0 || Conf.Hacks.VUCycleSteal > 4)

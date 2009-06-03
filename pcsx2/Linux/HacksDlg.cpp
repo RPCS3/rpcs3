@@ -75,13 +75,12 @@ void on_Speed_Hacks(GtkMenuItem *menuitem, gpointer user_data)
 	GtkRange *vuScale = GTK_RANGE(lookup_widget(SpeedHacksDlg, "VUCycleHackScale"));
 	GtkRange *eeScale = GTK_RANGE(lookup_widget(SpeedHacksDlg, "EECycleHackScale"));
 	
-	set_checked(SpeedHacksDlg, "check_iop_cycle_rate", Config.Hacks.IOPCycleDouble);
-	set_checked(SpeedHacksDlg, "check_wait_cycles_sync_hack", Config.Hacks.WaitCycleExt);
-	set_checked(SpeedHacksDlg, "check_intc_sync_hack", Config.Hacks.INTCSTATSlow);
-	set_checked(SpeedHacksDlg, "check_idle_loop_fastforward", Config.Hacks.IdleLoopFF);
-	set_checked(SpeedHacksDlg, "check_microvu_flag_hack_1", Config.Hacks.vuFlagHack1);
-	set_checked(SpeedHacksDlg, "check_microvu_flag_hack_2", Config.Hacks.vuFlagHack2);
-	set_checked(SpeedHacksDlg, "check_microvu_min_max_hack", Config.Hacks.vuMinMax);
+	set_checked(SpeedHacksDlg, "check_iop_cycle_rate",			Config.Hacks.IOPCycleDouble);
+	set_checked(SpeedHacksDlg, "check_wait_cycles_sync_hack",	Config.Hacks.WaitCycleExt);
+	set_checked(SpeedHacksDlg, "check_intc_sync_hack",			Config.Hacks.INTCSTATSlow);
+	set_checked(SpeedHacksDlg, "check_idle_loop_fastforward",	Config.Hacks.IdleLoopFF);
+	set_checked(SpeedHacksDlg, "check_microvu_flag_hack",		Config.Hacks.vuFlagHack);
+	set_checked(SpeedHacksDlg, "check_microvu_min_max_hack",	Config.Hacks.vuMinMax);
 
 	gtk_range_set_value(vuScale, Config.Hacks.VUCycleSteal);	
 	on_vu_slider_changed(vuScale,  NULL);
@@ -104,8 +103,7 @@ void on_Speed_Hack_OK(GtkButton *button, gpointer user_data)
 	newhacks.WaitCycleExt = is_checked(SpeedHacksDlg, "check_wait_cycles_sync_hack");
 	newhacks.INTCSTATSlow = is_checked(SpeedHacksDlg, "check_intc_sync_hack");
 	newhacks.IdleLoopFF = is_checked(SpeedHacksDlg, "check_idle_loop_fastforward");
-	newhacks.vuFlagHack1 = is_checked(SpeedHacksDlg, "check_microvu_flag_hack_1");
-	newhacks.vuFlagHack2 = is_checked(SpeedHacksDlg, "check_microvu_flag_hack_2");
+	newhacks.vuFlagHack  = is_checked(SpeedHacksDlg, "check_microvu_flag_hack");
 	newhacks.vuMinMax = is_checked(SpeedHacksDlg, "check_microvu_min_max_hack");
 	
 	newhacks.VUCycleSteal = gtk_range_get_value(GTK_RANGE(lookup_widget(SpeedHacksDlg, "VUCycleHackScale")));	

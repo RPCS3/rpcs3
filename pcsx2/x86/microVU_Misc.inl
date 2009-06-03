@@ -295,24 +295,6 @@ microVUt(void) mVUrestoreRegs(mV) {
 	MOV32ItoR(gprR, Roffset); // Restore gprR
 }
 
-// Reads entire microProgram and finds out if Status Flag is Used
-microVUt(void) mVUcheckSflag(mV, int progIndex) {
-	if (CHECK_VU_FLAGHACK1) {
-		int bFlagInfo = mVUflagInfo;
-		int bCode	  = mVU->code;
-		int bFlagHack = mVUsFlagHack;
-		mVUsFlagHack  = 1;
-		for (u32 i = 0; i < mVU->progSize; i+=2) {
-			mVU->code = mVU->prog.prog[progIndex].data[i];
-			mVUopL(mVU, 3);
-		}
-		mVUflagInfo  = bFlagInfo;
-		mVU->code	 = bCode;
-		mVU->prog.prog[progIndex].sFlagHack = mVUsFlagHack;
-		mVUsFlagHack = bFlagHack;
-	}
-}
-
 static const u32 PCSX2_ALIGNED16(MIN_MAX_MASK1[4]) = {0xffffffff, 0x80000000, 0xffffffff, 0x80000000};
 static const u32 PCSX2_ALIGNED16(MIN_MAX_MASK2[4]) = {0x00000000, 0x40000000, 0x00000000, 0x40000000};
 

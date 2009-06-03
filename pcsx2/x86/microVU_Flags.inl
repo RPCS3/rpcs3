@@ -153,7 +153,7 @@ microVUt(int) mVUsetFlags(mV, int* xStatus, int* xMac, int* xClip) {
 // Recompiles Code for Proper Flags on Block Linkings
 microVUt(void) mVUsetupFlags(mV, int* xStatus, int* xMac, int* xClip, int cycles) {
 
-	if (__Status && !mVUflagHack) {
+	if (__Status) {
 		int bStatus[4];
 		sortFlag(xStatus, bStatus, cycles);
 		MOV32RtoR(gprT1,  getFlagReg1(bStatus[0])); 

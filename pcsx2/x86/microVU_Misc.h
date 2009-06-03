@@ -154,7 +154,6 @@ declareAllVariables
 #define microVUx(aType) template<int vuIndex> aType
 #define microVUf(aType) template<int vuIndex> __forceinline aType
 
-
 // Define Passes
 #define pass1 if (recPass == 0)
 #define pass2 if (recPass == 1)
@@ -175,7 +174,6 @@ declareAllVariables
 #define mVUregsTemp	 mVUallocInfo.regsTemp
 #define iPC			 mVUallocInfo.curPC
 #define mVUsFlagHack mVUallocInfo.sFlagHack
-
 #define mVUinfo		 mVUallocInfo.info[iPC / 2]
 #define mVUstall	 mVUinfo.stall
 #define mVUup		 mVUinfo.uOp
@@ -183,10 +181,8 @@ declareAllVariables
 #define sFLAG		 mVUinfo.sFlag
 #define mFLAG		 mVUinfo.mFlag
 #define cFLAG		 mVUinfo.cFlag
-
 #define mVUstartPC	 mVUallocInfo.startPC
 #define mVUflagInfo	 mVUregs.needExactMatch
-#define mVUflagHack  (mVUcurProg.sFlagHack)
 #define xPC			 ((iPC / 2) * 8)
 #define curI		 ((u32*)mVU->regs->Micro)[iPC] //mVUcurProg.data[iPC]
 #define setCode()	 { mVU->code = curI; }
@@ -248,8 +244,7 @@ declareAllVariables
 #endif
 
 // Speed Hacks
-#define CHECK_VU_FLAGHACK1	(u32)Config.Hacks.vuFlagHack1	// (Can cause Infinite loops, SPS, etc...)
-#define CHECK_VU_FLAGHACK2	(u32)Config.Hacks.vuFlagHack2	// (Can cause Infinite loops, SPS, etc...)
+#define CHECK_VU_FLAGHACK	(u32)Config.Hacks.vuFlagHack	// (Can cause Infinite loops, SPS, etc...)
 #define CHECK_VU_MINMAXHACK	(u32)Config.Hacks.vuMinMax		// (Can cause SPS, Black Screens,  etc...)
 
 // Unknown Data
