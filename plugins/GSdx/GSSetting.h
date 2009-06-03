@@ -23,23 +23,7 @@
 
 struct GSSetting 
 {
-	DWORD id; 
-	const TCHAR* name; 
-	const TCHAR* note;
-
-	static void InitComboBox(const GSSetting* settings, int count, CComboBox& combobox, DWORD sel, DWORD maxid = ~0)
-	{
-		for(int i = 0; i < count; i++)
-		{
-			if(settings[i].id <= maxid)
-			{
-				CString str = settings[i].name;
-				if(settings[i].note != NULL) str = str + _T(" (") + settings[i].note + _T(")");
-				int item = combobox.AddString(str);
-				combobox.SetItemData(item, settings[i].id);
-				if(settings[i].id == sel) combobox.SetCurSel(item);
-			}
-		}
-	}
-
+	uint32 id; 
+	const char* name; 
+	const char* note;
 };

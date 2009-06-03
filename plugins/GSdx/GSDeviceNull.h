@@ -35,6 +35,6 @@ private:
 public:
 	GSDeviceNull() {}
 
-	bool Create(HWND hWnd, bool vsync);
+	bool Create(GSWnd* wnd, bool vsync);
 	bool Reset(int w, int h, bool fs);
 };

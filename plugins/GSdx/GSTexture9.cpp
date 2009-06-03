@@ -36,8 +36,9 @@ GSTexture9::GSTexture9(IDirect3DSurface9* surface)
 	
 	if(m_desc.Type != D3DRTYPE_SURFACE)
 	{
-		HRESULT hr = surface->GetContainer(__uuidof(IDirect3DTexture9), (void**)&m_texture);
-		ASSERT(SUCCEEDED(hr));
+		surface->GetContainer(__uuidof(IDirect3DTexture9), (void**)&m_texture);
+
+		ASSERT(m_texture != NULL);
 	}
 }
 

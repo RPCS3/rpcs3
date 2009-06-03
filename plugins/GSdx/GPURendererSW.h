@@ -31,17 +31,9 @@ protected:
 	GSTexture* m_texture;
 
 	void ResetDevice();
-
-	GSVector4i GetScissor();
-
-	void VertexKick();
-	void DrawingKickTriangle(GSVertexSW* v, int& count);
-	void DrawingKickLine(GSVertexSW* v, int& count);
-	void DrawingKickSprite(GSVertexSW* v, int& count);
-
-	void Draw();
-
 	GSTexture* GetOutput();
+	void VertexKick();
+	void Draw();
 
 public:
 	GPURendererSW(GSDevice* dev);

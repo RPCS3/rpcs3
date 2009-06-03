@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include "GSWnd.h"
 #include "GSTexture.h"
 #include "GSVertex.h"
 #include "GSAlignedClass.h"
@@ -52,7 +53,7 @@ class GSDevice : public GSAlignedClass<16>
 	GSTexture* Fetch(int type, int w, int h, int format);
 
 protected:
-	HWND m_hWnd;
+	GSWnd* m_wnd;
 	bool m_vsync;
 	GSTexture* m_backbuffer;
 	GSTexture* m_merge;
@@ -72,7 +73,7 @@ public:
 
 	void Recycle(GSTexture* t);
 
-	virtual bool Create(HWND hWnd, bool vsync);
+	virtual bool Create(GSWnd* wnd, bool vsync);
 	virtual bool Reset(int w, int h, bool fs);
 
 	virtual bool IsLost() {return false;}
@@ -101,7 +102,7 @@ public:
 	virtual bool IsCurrentRGBA() {return true;}
 
 	void Merge(GSTexture* st[2], GSVector4* sr, GSVector4* dr, const GSVector2i& fs, bool slbg, bool mmod, const GSVector4& c);
-	bool Interlace(const GSVector2i& ds, int field, int mode, float yoffset);
+	void Interlace(const GSVector2i& ds, int field, int mode, float yoffset);
 
 	virtual void PSSetShaderResources(GSTexture* sr0, GSTexture* sr1) {}
 	virtual void OMSetRenderTargets(GSTexture* rt, GSTexture* ds) {};

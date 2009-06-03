@@ -56,7 +56,7 @@ bool GSRenderer::Create(const string& title)
 
 	ASSERT(m_dev);
 
-	if(!m_dev->Create(m_wnd, m_vsync))
+	if(!m_dev->Create(&m_wnd, m_vsync))
 	{
 		return false;
 	}
@@ -243,10 +243,7 @@ bool GSRenderer::Merge(int field)
 			int field2 = 1 - ((m_interlace - 1) & 1);
 			int mode = (m_interlace - 1) >> 1;
 
-			if(!m_dev->Interlace(ds, field ^ field2, mode, tex[1]->m_scale.y))
-			{
-				return false;
-			}
+			m_dev->Interlace(ds, field ^ field2, mode, tex[1]->m_scale.y);
 		}
 	}
 
@@ -268,25 +265,20 @@ void GSRenderer::VSync(int field)
 
 	// osd 
 
-	static uint64 s_frame = 0;
-	static string s_stats;
-
-	if(m_perfmon.GetFrame() - s_frame >= 30)
+	if((m_perfmon.GetFrame() & 0x1f) == 0)
 	{
 		m_perfmon.Update();
 
-		s_frame = m_perfmon.GetFrame();
-
 		double fps = 1000.0f / m_perfmon.Get(GSPerfMon::Frame);
 
-		string s = m_regs->SMODE2.INT ? (string("Interlaced ") + (m_regs->SMODE2.FFMD ? "(frame)" : "(field)")) : "Progressive";
+		string s2 = m_regs->SMODE2.INT ? (string("Interlaced ") + (m_regs->SMODE2.FFMD ? "(frame)" : "(field)")) : "Progressive";
 
 		GSVector4i r = GetDisplayRect();
 		
-		s_stats = format(
+		string s = format(
 			"%I64d | %d x %d | %.2f fps (%d%%) | %s - %s | %s | %d/%d/%d | %d%% CPU | %.2f | %.2f", 
 			m_perfmon.GetFrame(), r.width(), r.height(), fps, (int)(100.0 * fps / GetFPS()),
-			s.c_str(),
+			s2.c_str(),
 			GSSettingsDlg::g_interlace[m_interlace].name,
 			GSSettingsDlg::g_aspectratio[m_aspectratio].name,
 			(int)m_perfmon.Get(GSPerfMon::Quad),
@@ -301,15 +293,15 @@ void GSRenderer::VSync(int field)
 
 		if(fillrate > 0)
 		{
-			s_stats += format(" | %.2f mpps", fps * fillrate / (1024 * 1024));
+			s += format(" | %.2f mpps", fps * fillrate / (1024 * 1024));
 		}
 
 		if(m_capture.IsCapturing())
 		{
-			s_stats += " | Recording...";
+			s += " | Recording...";
 		}
 
-		m_wnd.SetWindowText(s_stats.c_str());
+		m_wnd.SetWindowText(s.c_str());
 	}
 
 	if(m_frameskip)
@@ -324,11 +316,7 @@ void GSRenderer::VSync(int field)
 		ResetDevice();
 	}
 
-	GSVector4i r;
-	
-	m_wnd.GetClientRect(r);
-
-	m_dev->Present(r.fit(m_aspectratio), m_shader);
+	m_dev->Present(m_wnd.GetClientRect().fit(m_aspectratio), m_shader);
 
 	// snapshot
 
@@ -389,6 +377,23 @@ void GSRenderer::VSync(int field)
 	}
 }
 
+bool GSRenderer::MakeSnapshot(const string& path)
+{
+	if(m_snapshot.empty())
+	{
+		time_t t = time(NULL);
+
+		char buff[16];
+
+		if(strftime(buff, sizeof(buff), "%Y%m%d%H%M%S", localtime(&t)))
+		{
+			m_snapshot = format("%s_%s", path.c_str(), buff);
+		}
+	}
+
+	return true;
+}
+
 void GSRenderer::KeyEvent(GSKeyEventData* e)
 {
 	if(e->type == KEYPRESS)
@@ -422,19 +427,3 @@ void GSRenderer::KeyEvent(GSKeyEventData* e)
 	}
 }
 
-bool GSRenderer::MakeSnapshot(const string& path)
-{
-	if(m_snapshot.empty())
-	{
-		time_t t = time(NULL);
-
-		char buff[16];
-
-		if(strftime(buff, sizeof(buff), "%Y%m%d%H%M%S", localtime(&t)))
-		{
-			m_snapshot = format("%s_%s", path.c_str(), buff);
-		}
-	}
-
-	return true;
-}

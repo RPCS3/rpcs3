@@ -23,123 +23,55 @@
 #include "GSdx.h"
 #include "GSSettingsDlg.h"
 #include "GSUtil.h"
-#include <shlobj.h>
-#include <afxpriv.h>
+#include "resource.h"
 
 GSSetting GSSettingsDlg::g_renderers[] =
 {
-	{0, _T("Direct3D9 (Hardware)"), NULL},
-	{1, _T("Direct3D9 (Software)"), NULL},
-	{2, _T("Direct3D9 (Null)"), NULL},
-	{3, _T("Direct3D10 (Hardware)"), NULL},
-	{4, _T("Direct3D10 (Software)"), NULL},
-	{5, _T("Direct3D10 (Null)"), NULL},
-	{6, _T("Null (Software)"), NULL},
-	{7, _T("Null (Null)"), NULL},
+	{0, "Direct3D9 (Hardware)", NULL},
+	{1, "Direct3D9 (Software)", NULL},
+	{2, "Direct3D9 (Null)", NULL},
+	{3, "Direct3D10 (Hardware)", NULL},
+	{4, "Direct3D10 (Software)", NULL},
+	{5, "Direct3D10 (Null)", NULL},
+	{6, "Null (Software)", NULL},
+	{7, "Null (Null)", NULL},
 };
 
 GSSetting GSSettingsDlg::g_psversion[] =
 {
-	{D3DPS_VERSION(3, 0), _T("Pixel Shader 3.0"), NULL},
-	{D3DPS_VERSION(2, 0), _T("Pixel Shader 2.0"), NULL},
-	//{D3DPS_VERSION(1, 4), _T("Pixel Shader 1.4"), NULL},
-	//{D3DPS_VERSION(1, 1), _T("Pixel Shader 1.1"), NULL},
-	//{D3DPS_VERSION(0, 0), _T("Fixed Pipeline (bogus)"), NULL},
+	{D3DPS_VERSION(3, 0), "Pixel Shader 3.0", NULL},
+	{D3DPS_VERSION(2, 0), "Pixel Shader 2.0", NULL},
+	//{D3DPS_VERSION(1, 4), "Pixel Shader 1.4", NULL},
+	//{D3DPS_VERSION(1, 1), "Pixel Shader 1.1", NULL},
+	//{D3DPS_VERSION(0, 0), "Fixed Pipeline (bogus)", NULL},
 };
 
 GSSetting GSSettingsDlg::g_interlace[] =
 {
-	{0, _T("None"), NULL},
-	{1, _T("Weave tff"), _T("saw-tooth")},
-	{2, _T("Weave bff"), _T("saw-tooth")},
-	{3, _T("Bob tff"), _T("use blend if shaking")},
-	{4, _T("Bob bff"), _T("use blend if shaking")},
-	{5, _T("Blend tff"), _T("slight blur, 1/2 fps")},
-	{6, _T("Blend bff"), _T("slight blur, 1/2 fps")},
+	{0, "None", NULL},
+	{1, "Weave tff", "saw-tooth"},
+	{2, "Weave bff", "saw-tooth"},
+	{3, "Bob tff", "use blend if shaking"},
+	{4, "Bob bff", "use blend if shaking"},
+	{5, "Blend tff", "slight blur, 1/2 fps"},
+	{6, "Blend bff", "slight blur, 1/2 fps"},
 };
 
 GSSetting GSSettingsDlg::g_aspectratio[] =
 {
-	{0, _T("Stretch"), NULL},
-	{1, _T("4:3"), NULL},
-	{2, _T("16:9"), NULL},
+	{0, "Stretch", NULL},
+	{1, "4:3", NULL},
+	{2, "16:9", NULL},
 };
 
-IMPLEMENT_DYNAMIC(GSSettingsDlg, CDialog)
-GSSettingsDlg::GSSettingsDlg(CWnd* pParent /*=NULL*/)
-	: CDialog(GSSettingsDlg::IDD, pParent)
-	, m_filter(1)
-	, m_nativeres(FALSE)
-	, m_vsync(FALSE)
-	, m_logz(FALSE)
-	, m_fba(TRUE)
-	, m_aa1(FALSE)
-	, m_blur(FALSE)
+GSSettingsDlg::GSSettingsDlg()
+	: GSDialog(IDD_CONFIG)
 {
 }
 
-GSSettingsDlg::~GSSettingsDlg()
+void GSSettingsDlg::OnInit()
 {
-}
-
-LRESULT GSSettingsDlg::DefWindowProc(UINT message, WPARAM wParam, LPARAM lParam)
-{
-	LRESULT ret = __super::DefWindowProc(message, wParam, lParam);
-
-	if(message == WM_INITDIALOG)
-	{
-		SendMessage(WM_KICKIDLE);
-	}
-
-	return ret;
-}
-
-void GSSettingsDlg::DoDataExchange(CDataExchange* pDX)
-{
-	__super::DoDataExchange(pDX);
-	DDX_Control(pDX, IDC_COMBO3, m_resolution);
-	DDX_Control(pDX, IDC_COMBO1, m_renderer);
-	DDX_Control(pDX, IDC_COMBO4, m_psversion);
-	DDX_Control(pDX, IDC_COMBO2, m_interlace);
-	DDX_Control(pDX, IDC_COMBO5, m_aspectratio);
-	DDX_Check(pDX, IDC_CHECK4, m_filter);
-	DDX_Control(pDX, IDC_SPIN1, m_resx);
-	DDX_Control(pDX, IDC_SPIN2, m_resy);
-	DDX_Control(pDX, IDC_SPIN3, m_swthreads);
-	DDX_Check(pDX, IDC_CHECK1, m_nativeres);
-	DDX_Control(pDX, IDC_EDIT1, m_resxedit);
-	DDX_Control(pDX, IDC_EDIT2, m_resyedit);
-	DDX_Control(pDX, IDC_EDIT3, m_swthreadsedit);
-	DDX_Check(pDX, IDC_CHECK2, m_vsync);
-	DDX_Check(pDX, IDC_CHECK5, m_logz);
-	DDX_Check(pDX, IDC_CHECK7, m_fba);
-	DDX_Check(pDX, IDC_CHECK8, m_aa1);
-	DDX_Check(pDX, IDC_CHECK9, m_blur);
-}
-
-BEGIN_MESSAGE_MAP(GSSettingsDlg, CDialog)
-	ON_MESSAGE_VOID(WM_KICKIDLE, OnKickIdle)
-	ON_UPDATE_COMMAND_UI(IDC_SPIN1, OnUpdateResolution)
-	ON_UPDATE_COMMAND_UI(IDC_SPIN2, OnUpdateResolution)
-	ON_UPDATE_COMMAND_UI(IDC_EDIT1, OnUpdateResolution)
-	ON_UPDATE_COMMAND_UI(IDC_EDIT2, OnUpdateResolution)
-	ON_UPDATE_COMMAND_UI(IDC_COMBO4, OnUpdateD3D9Options)
-	ON_UPDATE_COMMAND_UI(IDC_CHECK3, OnUpdateD3D9Options)
-	ON_UPDATE_COMMAND_UI(IDC_CHECK5, OnUpdateD3D9Options)
-	ON_UPDATE_COMMAND_UI(IDC_CHECK7, OnUpdateD3D9Options)
-	ON_UPDATE_COMMAND_UI(IDC_SPIN3, OnUpdateSWOptions)
-	ON_UPDATE_COMMAND_UI(IDC_EDIT3, OnUpdateSWOptions)
-	ON_CBN_SELCHANGE(IDC_COMBO1, &GSSettingsDlg::OnCbnSelchangeCombo1)
-END_MESSAGE_MAP()
-
-void GSSettingsDlg::OnKickIdle()
-{
-	UpdateDialogControls(this, false);
-}
-
-BOOL GSSettingsDlg::OnInitDialog()
-{
-	__super::OnInitDialog();
+	__super::OnInit();
 
 	D3DCAPS9 caps;
 	memset(&caps, 0, sizeof(caps));
@@ -147,174 +79,140 @@ BOOL GSSettingsDlg::OnInitDialog()
 
 	m_modes.clear();
 
-	// windowed
-
 	{
 		D3DDISPLAYMODE mode;
 		memset(&mode, 0, sizeof(mode));
 		m_modes.push_back(mode);
 
-		int iItem = m_resolution.AddString(_T("Windowed"));
-		m_resolution.SetItemDataPtr(iItem, &m_modes.back());
-		m_resolution.SetCurSel(iItem);
-	}
+		HWND hWnd = GetDlgItem(m_hWnd, IDC_RESOLUTION);
 
-	// fullscreen
+		ComboBoxAppend(hWnd, "Windowed", (LPARAM)&m_modes.back(), true);
 
-	if(CComPtr<IDirect3D9> d3d = Direct3DCreate9(D3D_SDK_VERSION))
-	{
-		uint32 ModeWidth = theApp.GetConfig("ModeWidth", 0);
-		uint32 ModeHeight = theApp.GetConfig("ModeHeight", 0);
-		uint32 ModeRefreshRate = theApp.GetConfig("ModeRefreshRate", 0);
-
-		uint32 nModes = d3d->GetAdapterModeCount(D3DADAPTER_DEFAULT, D3DFMT_X8R8G8B8);
-
-		for(uint32 i = 0; i < nModes; i++)
+		if(CComPtr<IDirect3D9> d3d = Direct3DCreate9(D3D_SDK_VERSION))
 		{
-			D3DDISPLAYMODE mode;
+			uint32 w = theApp.GetConfig("ModeWidth", 0);
+			uint32 h = theApp.GetConfig("ModeHeight", 0);
+			uint32 hz = theApp.GetConfig("ModeRefreshRate", 0);
 
-			if(S_OK == d3d->EnumAdapterModes(D3DADAPTER_DEFAULT, D3DFMT_X8R8G8B8, i, &mode))
+			uint32 n = d3d->GetAdapterModeCount(D3DADAPTER_DEFAULT, D3DFMT_X8R8G8B8);
+
+			for(uint32 i = 0; i < n; i++)
 			{
-				string str = format("%dx%d %dHz", mode.Width, mode.Height, mode.RefreshRate);
-				int iItem = m_resolution.AddString(str.c_str());
-
-				m_modes.push_back(mode);
-				m_resolution.SetItemDataPtr(iItem, &m_modes.back());
-
-				if(ModeWidth == mode.Width && ModeHeight == mode.Height && ModeRefreshRate == mode.RefreshRate)
+				if(S_OK == d3d->EnumAdapterModes(D3DADAPTER_DEFAULT, D3DFMT_X8R8G8B8, i, &mode))
 				{
-					m_resolution.SetCurSel(iItem);
+					m_modes.push_back(mode);
+
+					string str = format("%dx%d %dHz", mode.Width, mode.Height, mode.RefreshRate);
+
+					ComboBoxAppend(hWnd, str.c_str(), (LPARAM)&m_modes.back(), w == mode.Width && h == mode.Height && hz == mode.RefreshRate);
 				}
 			}
+
+			d3d->GetDeviceCaps(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, &caps);
+		}
+	}
+
+	{
+		bool isdx10avail = GSUtil::IsDirect3D10Available();
+
+		vector<GSSetting> renderers;
+
+		for(size_t i = 0; i < countof(g_renderers); i++)
+		{
+			if(i >= 3 && i <= 5 && !isdx10avail) continue;
+
+			renderers.push_back(g_renderers[i]);
 		}
 
-		d3d->GetDeviceCaps(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, &caps);
+		HWND hWnd = GetDlgItem(m_hWnd, IDC_RENDERER);
+
+		ComboBoxInit(hWnd, &renderers[0], renderers.size(), theApp.GetConfig("Renderer", 0));
+
+		OnCommand(hWnd, IDC_RENDERER, CBN_SELCHANGE);
 	}
 
-	bool isdx10avail = GSUtil::IsDirect3D10Available();
+	ComboBoxInit(GetDlgItem(m_hWnd, IDC_SHADER), g_psversion, countof(g_psversion), theApp.GetConfig("PixelShaderVersion2", D3DPS_VERSION(2, 0)), caps.PixelShaderVersion);
+	ComboBoxInit(GetDlgItem(m_hWnd, IDC_INTERLACE), g_interlace, countof(g_interlace), theApp.GetConfig("Interlace", 0));
+	ComboBoxInit(GetDlgItem(m_hWnd, IDC_ASPECTRATIO), g_aspectratio, countof(g_aspectratio), theApp.GetConfig("AspectRatio", 1));
 
-	vector<GSSetting> renderers;
+	CheckDlgButton(m_hWnd, IDC_FILTER, theApp.GetConfig("filter", 1));
+	CheckDlgButton(m_hWnd, IDC_VSYNC, theApp.GetConfig("vsync", 0));
+	CheckDlgButton(m_hWnd, IDC_LOGZ, theApp.GetConfig("logz", 0));
+	CheckDlgButton(m_hWnd, IDC_FBA, theApp.GetConfig("fba", 1));
+	CheckDlgButton(m_hWnd, IDC_AA1, theApp.GetConfig("aa1", 0));
+	CheckDlgButton(m_hWnd, IDC_BLUR, theApp.GetConfig("blur", 0));
+	CheckDlgButton(m_hWnd, IDC_NATIVERES, theApp.GetConfig("nativeres", 0));
 
-	for(size_t i = 0; i < countof(g_renderers); i++)
-	{
-		if(i >= 3 && i <= 5 && !isdx10avail) continue;
+	SendMessage(GetDlgItem(m_hWnd, IDC_RESX), UDM_SETRANGE, 0, MAKELPARAM(4096, 512));
+	SendMessage(GetDlgItem(m_hWnd, IDC_RESX), UDM_SETPOS, 0, MAKELPARAM(theApp.GetConfig("resx", 1024), 0));
 
-		renderers.push_back(g_renderers[i]);
-	}
+	SendMessage(GetDlgItem(m_hWnd, IDC_RESY), UDM_SETRANGE, 0, MAKELPARAM(4096, 512));
+	SendMessage(GetDlgItem(m_hWnd, IDC_RESY), UDM_SETPOS, 0, MAKELPARAM(theApp.GetConfig("resy", 1024), 0));
 
-	GSSetting::InitComboBox(&renderers[0], renderers.size(), m_renderer, theApp.GetConfig("Renderer", 0));
-	GSSetting::InitComboBox(g_psversion, countof(g_psversion), m_psversion, theApp.GetConfig("PixelShaderVersion2", D3DPS_VERSION(2, 0)), caps.PixelShaderVersion);
-	GSSetting::InitComboBox(g_interlace, countof(g_interlace), m_interlace, theApp.GetConfig("Interlace", 0));
-	GSSetting::InitComboBox(g_aspectratio, countof(g_aspectratio), m_aspectratio, theApp.GetConfig("AspectRatio", 1));
-
-	OnCbnSelchangeCombo1();
-
-	//
-
-	m_filter = theApp.GetConfig("filter", 1);
-	m_vsync = !!theApp.GetConfig("vsync", 0);
-	m_logz = !!theApp.GetConfig("logz", 0);
-	m_fba = !!theApp.GetConfig("fba", 1);
-	m_aa1 = !!theApp.GetConfig("aa1", 0);
-	m_blur = !!theApp.GetConfig("blur", 0);
-
-	m_resx.SetRange(512, 4096);
-	m_resy.SetRange(512, 4096);
-	m_resx.SetPos(theApp.GetConfig("resx", 1024));
-	m_resy.SetPos(theApp.GetConfig("resy", 1024));
-	m_nativeres = !!theApp.GetConfig("nativeres", 0);
-
-	m_resx.EnableWindow(!m_nativeres);
-	m_resy.EnableWindow(!m_nativeres);
-	m_resxedit.EnableWindow(!m_nativeres);
-	m_resyedit.EnableWindow(!m_nativeres);
-
-	m_swthreads.SetRange(1, 16);
-	m_swthreads.SetPos(theApp.GetConfig("swthreads", 1));
-
-	//
-
-	UpdateData(FALSE);
-
-	return TRUE;  // return TRUE unless you set the focus to a control
-	// EXCEPTION: OCX Property Pages should return FALSE
+	SendMessage(GetDlgItem(m_hWnd, IDC_SWTHREADS), UDM_SETRANGE, 0, MAKELPARAM(16, 1));
+	SendMessage(GetDlgItem(m_hWnd, IDC_SWTHREADS), UDM_SETPOS, 0, MAKELPARAM(theApp.GetConfig("swthreads", 1), 0));
 }
 
-void GSSettingsDlg::OnOK()
+bool GSSettingsDlg::OnCommand(HWND hWnd, UINT id, UINT code)
 {
-	UpdateData();
-
-	if(m_resolution.GetCurSel() >= 0)
+	if(id == IDC_RENDERER && code == CBN_SELCHANGE)
 	{
-		D3DDISPLAYMODE& mode = *(D3DDISPLAYMODE*)m_resolution.GetItemData(m_resolution.GetCurSel());
+		int item = (int)SendMessage(hWnd, CB_GETCURSEL, 0, 0);
 
-		theApp.SetConfig("ModeWidth", (int)mode.Width);
-		theApp.SetConfig("ModeHeight", (int)mode.Height);
-		theApp.SetConfig("ModeRefreshRate", (int)mode.RefreshRate);
+		if(item >= 0)
+		{
+			int i = (int)SendMessage(hWnd, CB_GETITEMDATA, item, 0);
+
+			ShowWindow(GetDlgItem(m_hWnd, IDC_LOGO9), i >= 0 && i <= 2 ? SW_SHOW : SW_HIDE);
+			ShowWindow(GetDlgItem(m_hWnd, IDC_LOGO10), i >= 3 && i <= 5 ? SW_SHOW : SW_HIDE);
+		}
+	}
+	else if(id == IDOK)
+	{
+		INT_PTR data;
+
+		if(ComboBoxGetSelData(GetDlgItem(m_hWnd, IDC_RESOLUTION), data))
+		{
+			const D3DDISPLAYMODE* mode = (D3DDISPLAYMODE*)data;
+
+			theApp.SetConfig("ModeWidth", (int)mode->Width);
+			theApp.SetConfig("ModeHeight", (int)mode->Height);
+			theApp.SetConfig("ModeRefreshRate", (int)mode->RefreshRate);
+		}
+
+		if(ComboBoxGetSelData(GetDlgItem(m_hWnd, IDC_RENDERER), data))
+		{
+			theApp.SetConfig("Renderer", (int)data);
+		}
+
+		if(ComboBoxGetSelData(GetDlgItem(m_hWnd, IDC_SHADER), data))
+		{
+			theApp.SetConfig("PixelShaderVersion2", (int)data);
+		}
+
+		if(ComboBoxGetSelData(GetDlgItem(m_hWnd, IDC_INTERLACE), data))
+		{
+			theApp.SetConfig("Interlace", (int)data);
+		}
+
+		if(ComboBoxGetSelData(GetDlgItem(m_hWnd, IDC_ASPECTRATIO), data))
+		{
+			theApp.SetConfig("AspectRatio", (int)data);
+		}
+
+		theApp.SetConfig("filter", (int)IsDlgButtonChecked(m_hWnd, IDC_FILTER));
+		theApp.SetConfig("vsync", (int)IsDlgButtonChecked(m_hWnd, IDC_VSYNC));
+		theApp.SetConfig("logz", (int)IsDlgButtonChecked(m_hWnd, IDC_LOGZ));
+		theApp.SetConfig("fba", (int)IsDlgButtonChecked(m_hWnd, IDC_FBA));
+		theApp.SetConfig("aa1", (int)IsDlgButtonChecked(m_hWnd, IDC_AA1));
+		theApp.SetConfig("blur", (int)IsDlgButtonChecked(m_hWnd, IDC_BLUR));	
+		theApp.SetConfig("nativeres", (int)IsDlgButtonChecked(m_hWnd, IDC_NATIVERES));
+
+		theApp.SetConfig("resx", (int)SendMessage(GetDlgItem(m_hWnd, IDC_RESX), UDM_GETPOS, 0, 0));
+		theApp.SetConfig("resy", (int)SendMessage(GetDlgItem(m_hWnd, IDC_RESY), UDM_GETPOS, 0, 0));
+		theApp.SetConfig("swthreads", (int)SendMessage(GetDlgItem(m_hWnd, IDC_SWTHREADS), UDM_GETPOS, 0, 0));
 	}
 
-	if(m_renderer.GetCurSel() >= 0)
-	{
-		theApp.SetConfig("Renderer", (uint32)m_renderer.GetItemData(m_renderer.GetCurSel()));
-	}
-
-	if(m_psversion.GetCurSel() >= 0)
-	{
-		theApp.SetConfig("PixelShaderVersion2", (uint32)m_psversion.GetItemData(m_psversion.GetCurSel()));
-	}
-
-	if(m_interlace.GetCurSel() >= 0)
-	{
-		theApp.SetConfig("Interlace", (uint32)m_interlace.GetItemData(m_interlace.GetCurSel()));
-	}
-
-	if(m_aspectratio.GetCurSel() >= 0)
-	{
-		theApp.SetConfig("AspectRatio", (uint32)m_aspectratio.GetItemData(m_aspectratio.GetCurSel()));
-	}
-
-	theApp.SetConfig("filter", m_filter);
-	theApp.SetConfig("vsync", m_vsync);
-	theApp.SetConfig("logz", m_logz);
-	theApp.SetConfig("fba", m_fba);
-	theApp.SetConfig("aa1", m_aa1);
-	theApp.SetConfig("blur", m_blur);	
-
-	theApp.SetConfig("resx", m_resx.GetPos());
-	theApp.SetConfig("resy", m_resy.GetPos());
-	theApp.SetConfig("swthreads", m_swthreads.GetPos());
-	theApp.SetConfig("nativeres", m_nativeres);
-
-	__super::OnOK();
+	return __super::OnCommand(hWnd, id, code);
 }
 
-void GSSettingsDlg::OnUpdateResolution(CCmdUI* pCmdUI)
-{
-	UpdateData();
-
-	int i = (int)m_renderer.GetItemData(m_renderer.GetCurSel());
-
-	pCmdUI->Enable(!m_nativeres && (i == 0 || i == 3));
-}
-
-void GSSettingsDlg::OnUpdateD3D9Options(CCmdUI* pCmdUI)
-{
-	int i = (int)m_renderer.GetItemData(m_renderer.GetCurSel());
-
-	pCmdUI->Enable(i >= 0 && i <= 2);
-}
-
-void GSSettingsDlg::OnUpdateSWOptions(CCmdUI* pCmdUI)
-{
-	int i = (int)m_renderer.GetItemData(m_renderer.GetCurSel());
-
-	pCmdUI->Enable(i == 1 || i == 4 || i == 6);
-}
-
-void GSSettingsDlg::OnCbnSelchangeCombo1()
-{
-	int i = (int)m_renderer.GetItemData(m_renderer.GetCurSel());
-
-	GetDlgItem(IDC_LOGO9)->ShowWindow(i >= 0 && i <= 2 ? SW_SHOW : SW_HIDE);
-	GetDlgItem(IDC_LOGO10)->ShowWindow(i >= 3 && i <= 5 ? SW_SHOW : SW_HIDE);
-}

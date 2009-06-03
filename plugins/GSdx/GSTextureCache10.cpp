@@ -90,7 +90,7 @@ void GSTextureCache10::GSRenderTargetHW10::Read(const GSVector4i& r)
 		return;
 	}
 
-	TRACE(_T("GSRenderTarget::Read %d,%d - %d,%d (%08x)\n"), r.left, r.top, r.right, r.bottom, m_TEX0.TBP0);
+	// printf("GSRenderTarget::Read %d,%d - %d,%d (%08x)\n", r.left, r.top, r.right, r.bottom, m_TEX0.TBP0);
 
 	// m_renderer->m_perfmon.Put(GSPerfMon::ReadRT, 1);
 
@@ -202,7 +202,7 @@ bool GSTextureCache10::GSCachedTextureHW10::Create()
 	switch(psm)
 	{
 	default:
-		TRACE(_T("Invalid TEX0.PSM/CPSM (%I64d, %I64d)\n"), m_TEX0.PSM, m_TEX0.CPSM);
+		// printf("Invalid TEX0.PSM/CPSM (%I64d, %I64d)\n", m_TEX0.PSM, m_TEX0.CPSM);
 	case PSM_PSMCT32:
 		m_bpp = 32;
 		m_bpp2 = 0;

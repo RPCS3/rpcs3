@@ -20,230 +20,182 @@
  */
 
 #include "stdafx.h"
-#include <afxpriv.h>
 #include "GSdx.h"
 #include "GSCaptureDlg.h"
 
-// GSCaptureDlg dialog
-
-IMPLEMENT_DYNAMIC(GSCaptureDlg, CDialog)
-GSCaptureDlg::GSCaptureDlg(CWnd* pParent /*=NULL*/)
-	: CDialog(GSCaptureDlg::IDD, pParent)
+GSCaptureDlg::GSCaptureDlg()
+	: GSDialog(IDD_CAPTURE)
 {
 	m_width = theApp.GetConfig("CaptureWidth", 640);
 	m_height = theApp.GetConfig("CaptureHeight", 480);
-	m_filename = theApp.GetConfig("CaptureFileName", "").c_str();
-}
-
-GSCaptureDlg::~GSCaptureDlg()
-{
+	m_filename = theApp.GetConfig("CaptureFileName", "");
 }
 
 int GSCaptureDlg::GetSelCodec(Codec& c)
 {
-	int iSel = m_codeclist.GetCurSel();
+	INT_PTR data = 0;
 
-	if(iSel < 0) return 0;
-
-	Codec* codec = (Codec*)m_codeclist.GetItemDataPtr(iSel);
-
-	if(codec == NULL) return 2;
-
-	c = *codec;
-
-	if(!c.filter)
+	if(ComboBoxGetSelData(GetDlgItem(m_hWnd, IDC_CODECS), data))
 	{
-		c.moniker->BindToObject(NULL, NULL, __uuidof(IBaseFilter), (void**)&c.filter);
+		if(data == 0) return 2;
 
-		if(!c.filter) return 0;
+		c = *(Codec*)data;
+
+		if(!c.filter)
+		{
+			c.moniker->BindToObject(NULL, NULL, __uuidof(IBaseFilter), (void**)&c.filter);
+
+			if(!c.filter) return 0;
+		}
+
+		return 1;
 	}
 
-	return 1;
+	return 0;
 }
 
-LRESULT GSCaptureDlg::DefWindowProc(UINT message, WPARAM wParam, LPARAM lParam)
+void GSCaptureDlg::OnInit()
 {
-	LRESULT ret = __super::DefWindowProc(message, wParam, lParam);
+	__super::OnInit();
 
-	if(message == WM_INITDIALOG) SendMessage(WM_KICKIDLE);
-
-	return(ret);
-}
-
-void GSCaptureDlg::DoDataExchange(CDataExchange* pDX)
-{
-	__super::DoDataExchange(pDX);
-
-	DDX_Text(pDX, IDC_EDIT1, m_filename);
-	DDX_Control(pDX, IDC_COMBO1, m_codeclist);
-	DDX_Text(pDX, IDC_EDIT2, m_width);
-	DDX_Text(pDX, IDC_EDIT4, m_height);
-}
-
-BOOL GSCaptureDlg::OnInitDialog()
-{
-	__super::OnInitDialog();
+	SetTextAsInt(IDC_WIDTH, m_width);
+	SetTextAsInt(IDC_HEIGHT, m_height);
+	SetText(IDC_FILENAME, m_filename.c_str());
 
 	m_codecs.clear();
 
-	m_codeclist.ResetContent();
-	m_codeclist.SetItemDataPtr(m_codeclist.AddString(_T("Uncompressed")), NULL);
+	string selected = theApp.GetConfig("CaptureVideoCodecDisplayName", "");
+
+	HWND hWnd = GetDlgItem(m_hWnd, IDC_CODECS);
+
+	ComboBoxAppend(hWnd, "Uncompressed", 0, true);
 
 	BeginEnumSysDev(CLSID_VideoCompressorCategory, moniker)
 	{
 		Codec c;
+
 		c.moniker = moniker;
 
-		LPOLESTR strName = NULL;
-		if(FAILED(moniker->GetDisplayName(NULL, NULL, &strName)))
+		wstring prefix;
+
+		LPOLESTR str = NULL;
+
+		if(FAILED(moniker->GetDisplayName(NULL, NULL, &str)))
 			continue;
 
-		c.DisplayName = strName;
-		CoTaskMemFree(strName);
+		if(wcsstr(str, L"@device:dmo:")) prefix = L"(DMO) ";
+		else if(wcsstr(str, L"@device:sw:")) prefix = L"(DS) ";
+		else if(wcsstr(str, L"@device:cm:")) prefix = L"(VfW) ";
+
+		c.DisplayName = str;
+
+		CoTaskMemFree(str);
 
 		CComPtr<IPropertyBag> pPB;
-		moniker->BindToStorage(0, 0, IID_IPropertyBag, (void**)&pPB);
+
+		if(FAILED(moniker->BindToStorage(0, 0, IID_IPropertyBag, (void**)&pPB)))
+			continue;
 
 		CComVariant var;
+
 		if(FAILED(pPB->Read(CComBSTR(_T("FriendlyName")), &var, NULL)))
 			continue;
 		
-		c.FriendlyName = var.bstrVal;
-
-		CStringW str = CStringW(c.DisplayName).MakeLower();
-		CString prefix;
-		if(str.Find(L"@device:dmo:") == 0) prefix = _T("(DMO) ");
-		else if(str.Find(L"@device:sw:") == 0) prefix = _T("(DS) ");
-		else if(str.Find(L"@device:cm:") == 0) prefix = _T("(VfW) ");
-		c.FriendlyName = prefix + c.FriendlyName;
+		c.FriendlyName = prefix + var.bstrVal;
 
 		m_codecs.push_back(c);
-		m_codeclist.SetItemDataPtr(m_codeclist.AddString(c.FriendlyName), &m_codecs.back());
+
+		string s(c.FriendlyName.begin(), c.FriendlyName.end());
+
+		ComboBoxAppend(hWnd, s.c_str(), (LPARAM)&m_codecs.back(), s == selected);
 	}
 	EndEnumSysDev
+}
 
-	//
-
-	CString DisplayNameToFind = theApp.GetConfig("CaptureVideoCodecDisplayName", "").c_str();
-
-	for(int i = 0; i < m_codeclist.GetCount(); i++)
+bool GSCaptureDlg::OnCommand(HWND hWnd, UINT id, UINT code)
+{
+	if(id == IDC_BROWSE && code == BN_CLICKED)
 	{
-		CString DisplayName;
+		char buff[MAX_PATH] = {0};
 
-		Codec* codec = (Codec*)m_codeclist.GetItemDataPtr(i);
+		OPENFILENAME ofn;
 
-		if(codec)
+		memset(&ofn, 0, sizeof(ofn));
+
+		ofn.lStructSize = sizeof(ofn);
+		ofn.hwndOwner = m_hWnd;
+		ofn.lpstrFile = buff;
+		ofn.nMaxFile = countof(buff);
+		ofn.lpstrFilter = "Avi files (*.avi)\0*.avi\0";
+		ofn.Flags = OFN_EXPLORER | OFN_ENABLESIZING | OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT | OFN_PATHMUSTEXIST;
+
+		strcpy(ofn.lpstrFile, m_filename.c_str());
+
+		if(GetSaveFileName(&ofn))
 		{
-			DisplayName = codec->DisplayName;
+			m_filename = ofn.lpstrFile;
+
+			SetText(IDC_FILENAME, m_filename.c_str());
 		}
 
-		if(DisplayName == DisplayNameToFind)
-		{
-			m_codeclist.SetCurSel(i);
-
-			break;
-		}
+		return true;
 	}
-
-	//
-
-	UpdateData(FALSE);
-
-	return TRUE;  // return TRUE unless you set the focus to a control
-	// EXCEPTION: OCX Property Pages should return FALSE
-}
-
-BEGIN_MESSAGE_MAP(GSCaptureDlg, CDialog)
-	ON_MESSAGE_VOID(WM_KICKIDLE, OnKickIdle)
-	ON_BN_CLICKED(IDC_BUTTON1, OnBnClickedButton1)
-	ON_BN_CLICKED(IDC_BUTTON2, OnBnClickedButton2)
-	ON_UPDATE_COMMAND_UI(IDC_BUTTON2, OnUpdateButton2)
-	ON_BN_CLICKED(IDOK, OnBnClickedOk)
-	ON_UPDATE_COMMAND_UI(IDOK, OnUpdateOK)
-END_MESSAGE_MAP()
-
-// GSCaptureDlg message handlers
-
-void GSCaptureDlg::OnKickIdle()
-{
-	UpdateDialogControls(this, false);
-}
-
-void GSCaptureDlg::OnBnClickedButton1()
-{
-	UpdateData();
-
-	DWORD flags = OFN_EXPLORER|OFN_ENABLESIZING|OFN_HIDEREADONLY|OFN_OVERWRITEPROMPT|OFN_PATHMUSTEXIST;
-
-	CFileDialog fd(FALSE, _T("avi"), m_filename, flags, _T("Avi files (*.avi)|*.avi||"), this, 0);
-
-	if(fd.DoModal() == IDOK)
+	else if(id == IDC_CONFIGURE && code == BN_CLICKED)
 	{
-		m_filename = fd.GetPathName();
+		Codec c;
 
-		UpdateData(FALSE);
-	}
-}
-
-void GSCaptureDlg::OnBnClickedButton2()
-{
-	Codec c;
-
-	if(GetSelCodec(c) != 1) return;
-
-	if(CComQIPtr<ISpecifyPropertyPages> pSPP = c.filter)
-	{
-		CAUUID caGUID;
-
-		memset(&caGUID, 0, sizeof(caGUID));
-
-		if(SUCCEEDED(pSPP->GetPages(&caGUID)))
+		if(GetSelCodec(c) == 1)
 		{
-			IUnknown* lpUnk = NULL;
-			pSPP.QueryInterface(&lpUnk);
-			OleCreatePropertyFrame(m_hWnd, 0, 0, CStringW(c.FriendlyName), 1, (IUnknown**)&lpUnk, caGUID.cElems, caGUID.pElems, 0, 0, NULL);
-			lpUnk->Release();
+			if(CComQIPtr<ISpecifyPropertyPages> pSPP = c.filter)
+			{
+				CAUUID caGUID;
 
-			if(caGUID.pElems) CoTaskMemFree(caGUID.pElems);
+				memset(&caGUID, 0, sizeof(caGUID));
+
+				if(SUCCEEDED(pSPP->GetPages(&caGUID)))
+				{
+					IUnknown* lpUnk = NULL;
+					pSPP.QueryInterface(&lpUnk);
+					OleCreatePropertyFrame(m_hWnd, 0, 0, c.FriendlyName.c_str(), 1, (IUnknown**)&lpUnk, caGUID.cElems, caGUID.pElems, 0, 0, NULL);
+					lpUnk->Release();
+
+					if(caGUID.pElems) CoTaskMemFree(caGUID.pElems);
+				}
+			}
+			else if(CComQIPtr<IAMVfwCompressDialogs> pAMVfWCD = c.filter)
+			{
+				if(pAMVfWCD->ShowDialog(VfwCompressDialog_QueryConfig, NULL) == S_OK)
+				{
+					pAMVfWCD->ShowDialog(VfwCompressDialog_Config, m_hWnd);
+				}
+			}
 		}
+
+		return true;
 	}
-	else if(CComQIPtr<IAMVfwCompressDialogs> pAMVfWCD = c.filter)
+	else if(id == IDOK)
 	{
-		if(pAMVfWCD->ShowDialog(VfwCompressDialog_QueryConfig, NULL) == S_OK)
+		m_width = GetTextAsInt(IDC_WIDTH);
+		m_height = GetTextAsInt(IDC_HEIGHT);
+		m_filename = GetText(IDC_FILENAME);
+
+		Codec c;
+
+		if(GetSelCodec(c) == 0)
 		{
-			pAMVfWCD->ShowDialog(VfwCompressDialog_Config, m_hWnd);
+			return false;
 		}
+
+		m_enc = c.filter;
+
+		theApp.SetConfig("CaptureWidth", m_width);
+		theApp.SetConfig("CaptureHeight", m_height);
+		theApp.SetConfig("CaptureFileName", m_filename.c_str());
+
+		wstring s = wstring(c.DisplayName.m_str);
+
+		theApp.SetConfig("CaptureVideoCodecDisplayName", string(s.begin(), s.end()).c_str());
 	}
-}
 
-void GSCaptureDlg::OnUpdateButton2(CCmdUI* pCmdUI)
-{
-	pCmdUI->Enable(m_codeclist.GetCurSel() >= 0 && m_codeclist.GetItemDataPtr(m_codeclist.GetCurSel()) != NULL);
-}
-
-void GSCaptureDlg::OnBnClickedOk()
-{
-	UpdateData();
-
-	Codec c;
-
-	if(GetSelCodec(c) == 0) return;
-
-	m_enc = c.filter;
-
-	theApp.SetConfig("CaptureWidth", m_width);
-	theApp.SetConfig("CaptureHeight", m_height);
-	theApp.SetConfig("CaptureFileName", m_filename);
-	theApp.SetConfig("CaptureVideoCodecDisplayName", CString(c.DisplayName));
-
-	OnOK();
-}
-
-void GSCaptureDlg::OnUpdateOK(CCmdUI* pCmdUI)
-{
-	CString str;
-
-	GetDlgItem(IDC_EDIT1)->GetWindowText(str);
-
-	pCmdUI->Enable(!str.IsEmpty() && m_codeclist.GetCurSel() >= 0);
+	return __super::OnCommand(hWnd, id, code);
 }

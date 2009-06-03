@@ -25,8 +25,6 @@
 #include "GSTextureCacheSW.h"
 #include "GSDrawScanline.h"
 
-extern const GSVector4 g_pos_scale;
-
 class GSRendererSW : public GSRendererT<GSVertexSW>
 {
 protected:

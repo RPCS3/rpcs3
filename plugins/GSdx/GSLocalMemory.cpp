@@ -468,11 +468,8 @@ GSLocalMemory::~GSLocalMemory()
 	for(hash_map<uint32, Offset*>::iterator i = m_omap.begin(); i != m_omap.end(); i++)
 	{
 		Offset* o = (*i).second;
-
-		for(int i = 0; i < countof(o->col); i++)
-		{
-			_aligned_free(o->col);
-		}
+		
+		_aligned_free(o->col[0]);
 
 		_aligned_free(o);
 	}

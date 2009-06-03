@@ -138,7 +138,7 @@ static INT32 GSopen(void* dsp, char* title, int mt, int renderer)
 
 	s_gs->m_wnd.Show();
 
-	*(HWND*)dsp = s_gs->m_wnd;
+	*(HWND*)dsp = (HWND)s_gs->m_wnd.GetHandle();
 
 	// if(mt) _mm_setcsr(MXCSR);
 
@@ -147,12 +147,6 @@ static INT32 GSopen(void* dsp, char* title, int mt, int renderer)
 
 EXPORT_C_(INT32) GSopen(void* dsp, char* title, int mt)
 {
-#ifdef _WINDOWS
-
-	AFX_MANAGE_STATE(AfxGetStaticModuleState());
-
-#endif
-
 	int renderer;
 	
 	if(mt == 2)
@@ -259,10 +253,6 @@ EXPORT_C_(int) GSfreeze(int mode, GSFreezeData* data)
 
 EXPORT_C GSconfigure()
 {
-#ifdef _WINDOWS
-
-	AFX_MANAGE_STATE(AfxGetStaticModuleState());
-
 	GSSettingsDlg dlg;
 
 	if(IDOK == dlg.DoModal())
@@ -270,9 +260,6 @@ EXPORT_C GSconfigure()
 		GSshutdown();
 		GSinit();
 	}
-
-#endif
-
 }
 
 EXPORT_C_(INT32) GStest()

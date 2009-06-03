@@ -87,8 +87,6 @@ EXPORT_C_(int32) GPUopen(HWND hWnd)
 
 #ifdef _WINDOWS
 
-	AFX_MANAGE_STATE(AfxGetStaticModuleState());
-
 	s_hr = ::CoInitializeEx(NULL, COINIT_MULTITHREADED);
 
 	if(!GSUtil::CheckDirectX())
@@ -126,11 +124,6 @@ EXPORT_C_(int32) GPUopen(HWND hWnd)
 
 EXPORT_C_(int32) GPUconfigure()
 {
-
-#ifdef _WINDOWS
-	
-	AFX_MANAGE_STATE(AfxGetStaticModuleState());
-
 	GPUSettingsDlg dlg;
 
 	if(IDOK == dlg.DoModal())
@@ -138,8 +131,6 @@ EXPORT_C_(int32) GPUconfigure()
 		GPUshutdown();
 		GPUinit();
 	}
-
-#endif
 
 	return 0;
 }

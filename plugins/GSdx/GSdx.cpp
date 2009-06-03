@@ -21,96 +21,58 @@
 
 #include "stdafx.h"
 #include "GSdx.h"
-#include <atlbase.h>
-#include <atlpath.h>
 
-//
-//	Note!
-//
-//		If this DLL is dynamically linked against the MFC
-//		DLLs, any functions exported from this DLL which
-//		call into MFC must have the AFX_MANAGE_STATE macro
-//		added at the very beginning of the function.
-//
-//		For example:
-//
-//		extern "C" BOOL PASCAL EXPORT ExportedFunction()
-//		{
-//			AFX_MANAGE_STATE(AfxGetStaticModuleState());
-//			// normal function body here
-//		}
-//
-//		It is very important that this macro appear in each
-//		function, prior to any calls into MFC.  This means that
-//		it must appear as the first statement within the 
-//		function, even before any object variable declarations
-//		as their constructors may generate calls into the MFC
-//		DLL.
-//
-//		Please see MFC Technical Notes 33 and 58 for additional
-//		details.
-//
+static HMODULE s_hModule;
+
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserved)
+{
+	switch(ul_reason_for_call)
+	{
+	case DLL_PROCESS_ATTACH:
+		s_hModule = hModule;
+	case DLL_THREAD_ATTACH:
+	case DLL_THREAD_DETACH:
+	case DLL_PROCESS_DETACH:
+		break;
+	}
+
+	return TRUE;
+}
 
 GSdxApp theApp;
+
+const char* GSdxApp::m_ini = "inis/GSdx.ini";
+const char* GSdxApp::m_section = "Settings";
 
 GSdxApp::GSdxApp()
 {
 }
 
-BOOL GSdxApp::InitInstance()
+HMODULE GSdxApp::GetModuleHandle()
 {
-	__super::InitInstance();
-
-	SetRegistryKey(_T("Gabest"));
-
-	CString str;
-	GetModuleFileName(AfxGetInstanceHandle(), str.GetBuffer(MAX_PATH), MAX_PATH);
-	str.ReleaseBuffer();
-
-	CPath path(str);
-	path.RenameExtension(_T(".ini"));
-	
-	CPath fn = path;
-	fn.StripPath();
-
-	path.RemoveFileSpec();
-	path.Append(_T("..\\inis"));
-	CreateDirectory(path, NULL);
-	path.Append(fn);
-
-	if(m_pszRegistryKey)
-	{
-		free((void*)m_pszRegistryKey);
-	}
-
-	m_pszRegistryKey = NULL;
-	
-	if(m_pszProfileName)
-	{
-		free((void*)m_pszProfileName);
-	}
-
-	m_pszProfileName = _tcsdup((LPCTSTR)path);
-
-	return TRUE;
+	return s_hModule;
 }
 
 string GSdxApp::GetConfig(const char* entry, const char* value)
 {
-	return string(GetProfileString("Settings", entry, value));
+	char buff[4096] = {0};
+	GetPrivateProfileString(m_section, entry, value, buff, countof(buff), m_ini);
+	return string(buff);
 }
 
 void GSdxApp::SetConfig(const char* entry, const char* value)
 {
-	WriteProfileString("Settings", entry, value);
+	WritePrivateProfileString(m_section, entry, value, m_ini);
 }
 
 int GSdxApp::GetConfig(const char* entry, int value)
 {
-	return GetProfileInt("Settings", entry, value);
+	return GetPrivateProfileInt(m_section, entry, value, m_ini);
 }
 
 void GSdxApp::SetConfig(const char* entry, int value)
 {
-	WriteProfileInt("Settings", entry, value);
+	char buff[32] = {0};
+	itoa(value, buff, 10);
+	SetConfig(entry, buff);
 }

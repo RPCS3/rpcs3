@@ -20,6 +20,7 @@
  */
 
 #include "stdafx.h"
+#include "GSdx.h"
 #include "GSDevice10.h"
 #include "resource.h"
 
@@ -55,9 +56,9 @@ GSDevice10::~GSDevice10()
 {
 }
 
-bool GSDevice10::Create(HWND hWnd, bool vsync)
+bool GSDevice10::Create(GSWnd* wnd, bool vsync)
 {
-	if(!__super::Create(hWnd, vsync))
+	if(!__super::Create(wnd, vsync))
 	{
 		return false;
 	}
@@ -80,7 +81,7 @@ bool GSDevice10::Create(HWND hWnd, bool vsync)
 	//scd.BufferDesc.RefreshRate.Numerator = 60;
 	//scd.BufferDesc.RefreshRate.Denominator = 1;
 	scd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-	scd.OutputWindow = hWnd;
+	scd.OutputWindow = (HWND)m_wnd->GetHandle();
 	scd.SampleDesc.Count = 1;
 	scd.SampleDesc.Quality = 0;
 	scd.Windowed = TRUE;
@@ -748,7 +749,7 @@ HRESULT GSDevice10::CompileShader(uint32 id, const string& entry, D3D10_SHADER_M
 
 	CComPtr<ID3D10Blob> shader, error;
 
-    hr = D3DX10CompileFromResource(AfxGetInstanceHandle(), MAKEINTRESOURCE(id), NULL, macro, NULL, entry.c_str(), "vs_4_0", 0, 0, NULL, &shader, &error, NULL);
+    hr = D3DX10CompileFromResource(theApp.GetModuleHandle(), MAKEINTRESOURCE(id), NULL, macro, NULL, entry.c_str(), "vs_4_0", 0, 0, NULL, &shader, &error, NULL);
 	
 	if(error)
 	{
@@ -783,7 +784,7 @@ HRESULT GSDevice10::CompileShader(uint32 id, const string& entry, D3D10_SHADER_M
 
 	CComPtr<ID3D10Blob> shader, error;
 
-    hr = D3DX10CompileFromResource(AfxGetInstanceHandle(), MAKEINTRESOURCE(id), NULL, macro, NULL, entry.c_str(), "gs_4_0", 0, 0, NULL, &shader, &error, NULL);
+    hr = D3DX10CompileFromResource(theApp.GetModuleHandle(), MAKEINTRESOURCE(id), NULL, macro, NULL, entry.c_str(), "gs_4_0", 0, 0, NULL, &shader, &error, NULL);
 	
 	if(error)
 	{
@@ -811,7 +812,7 @@ HRESULT GSDevice10::CompileShader(uint32 id, const string& entry, D3D10_SHADER_M
 
 	CComPtr<ID3D10Blob> shader, error;
 
-    hr = D3DX10CompileFromResource(AfxGetInstanceHandle(), MAKEINTRESOURCE(id), NULL, macro, NULL, entry.c_str(), "ps_4_0", 0, 0, NULL, &shader, &error, NULL);
+    hr = D3DX10CompileFromResource(theApp.GetModuleHandle(), MAKEINTRESOURCE(id), NULL, macro, NULL, entry.c_str(), "ps_4_0", 0, 0, NULL, &shader, &error, NULL);
 	
 	if(error)
 	{

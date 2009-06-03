@@ -21,13 +21,15 @@
 
 #pragma once
 
-class GSdxApp : public CWinApp
+class GSdxApp
 {
-protected:
-	virtual BOOL InitInstance();
+	static const char* m_ini;
+	static const char* m_section;
 
 public:
 	GSdxApp();
+
+	HMODULE GetModuleHandle();
 
 	string GetConfig(const char* entry, const char* value);
 	void SetConfig(const char* entry, const char* value);

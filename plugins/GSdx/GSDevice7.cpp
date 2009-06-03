@@ -32,9 +32,9 @@ GSDevice7::~GSDevice7()
 {
 }
 
-bool GSDevice7::Create(HWND hWnd, bool vsync)
+bool GSDevice7::Create(GSWnd* wnd, bool vsync)
 {
-	if(!__super::Create(hWnd, vsync))
+	if(!__super::Create(wnd, vsync))
 	{
 		return false;
 	}
@@ -43,6 +43,8 @@ bool GSDevice7::Create(HWND hWnd, bool vsync)
 	{
 		return false;
 	}
+
+	HWND hWnd = (HWND)m_wnd->GetHandle();
 
 	// TODO: fullscreen
 
@@ -135,9 +137,7 @@ void GSDevice7::Present(const GSVector4i& r, int shader)
 {
 	HRESULT hr;
 
-	GSVector4i cr;
-
-	GetClientRect(m_hWnd, cr);
+	GSVector4i cr = m_wnd->GetClientRect();
 
 	if(m_backbuffer->GetWidth() != cr.width() || m_backbuffer->GetHeight() != cr.height())
 	{
@@ -163,7 +163,7 @@ void GSDevice7::Present(const GSVector4i& r, int shader)
 
 	r2 = cr;
 
-	MapWindowPoints(m_hWnd, HWND_DESKTOP, (POINT*)&r2, 2);
+	MapWindowPoints((HWND)m_wnd->GetHandle(), HWND_DESKTOP, (POINT*)&r2, 2);
 	
 	if(m_vsync)
 	{

@@ -403,14 +403,14 @@ bool GSCapture::BeginCapture(int fps)
 
 	EndCapture();
 
-	AFX_MANAGE_STATE(AfxGetStaticModuleState());
-
 	GSCaptureDlg dlg;
 
 	if(IDOK != dlg.DoModal()) return false;
 
 	m_size.x = (dlg.m_width + 7) & ~7;
 	m_size.y = (dlg.m_height + 7) & ~7; 
+
+	wstring fn(dlg.m_filename.begin(), dlg.m_filename.end());
 
 	//
 
@@ -422,7 +422,7 @@ bool GSCapture::BeginCapture(int fps)
 	if(FAILED(hr = m_graph.CoCreateInstance(CLSID_FilterGraph))
 	|| FAILED(hr = cgb.CoCreateInstance(CLSID_CaptureGraphBuilder2))
 	|| FAILED(hr = cgb->SetFiltergraph(m_graph))
-	|| FAILED(hr = cgb->SetOutputFileName(&MEDIASUBTYPE_Avi, CStringW(dlg.m_filename), &mux, NULL)))
+	|| FAILED(hr = cgb->SetOutputFileName(&MEDIASUBTYPE_Avi, fn.c_str(), &mux, NULL)))
 	{
 		return false;
 	}
@@ -445,7 +445,8 @@ bool GSCapture::BeginCapture(int fps)
 	{
 		CFilterInfo fi;
 		pBF->QueryFilterInfo(&fi);
-		printf("Filter [%p]: %s\n", pBF.p, CStringA(fi.achName));
+		wstring s(fi.achName);
+		printf("Filter [%p]: %s\n", pBF.p, string(s.begin(), s.end()).c_str());
 
 		BeginEnumPins(pBF, pEP, pPin)
 		{
@@ -454,7 +455,8 @@ bool GSCapture::BeginCapture(int fps)
 
 			CPinInfo pi;
 			pPin->QueryPinInfo(&pi);
-			printf("- Pin [%p - %p]: %s (%s)\n", pPin.p, pPinTo.p, CStringA(pi.achName), pi.dir ? "out" : "in");
+			wstring s(pi.achName);
+			printf("- Pin [%p - %p]: %s (%s)\n", pPin.p, pPinTo.p, string(s.begin(), s.end()).c_str(), pi.dir ? "out" : "in");
  
 			BeginEnumMediaTypes(pPin, pEMT, pmt)
 			{

@@ -175,7 +175,7 @@ void GPUState::ReadData(uint8* mem, uint32 size)
 	{
 		// ASSERT(0);
 
-		TRACE(_T("WARNING: ReadData\n"));
+		// printf"WARNING: ReadData\n");
 
 		// memset(&mem[remaining], 0, bytes - remaining);
 

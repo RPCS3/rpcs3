@@ -49,21 +49,134 @@ GPURenderer::~GPURenderer()
 
 bool GPURenderer::Create(HWND hWnd)
 {
+	// TODO: move subclassing inside GSWnd::Attach
+
 	m_hWnd = hWnd;
 
 	m_wndproc = (WNDPROC)GetWindowLongPtr(hWnd, GWLP_WNDPROC);
 	SetWindowLongPtr(hWnd, GWLP_WNDPROC, (LONG_PTR)WndProc);
+
+	if(!m_wnd.Attach(m_hWnd))
+	{
+		return false;
+	}
 
 	m_wnd2gpu[hWnd] = this;
 
 	DWORD style = GetWindowLong(hWnd, GWL_STYLE);
 	style |= WS_OVERLAPPEDWINDOW;
 	SetWindowLong(hWnd, GWL_STYLE, style);
-	UpdateWindow(hWnd);
 
-	ShowWindow(hWnd, SW_SHOWNORMAL);
+	m_wnd.Show();
+
+	if(!m_dev->Create(&m_wnd, m_vsync))
+	{
+		return false;
+	}
+
+	Reset();
 
 	return true;
+}
+
+bool GPURenderer::Merge()
+{
+	GSTexture* st[2] = {GetOutput(), NULL};
+
+	if(!st[0])
+	{
+		return false;
+	}
+
+	GSVector2i s = st[0]->GetSize();
+
+	GSVector4 sr[2];
+	GSVector4 dr[2];
+
+	sr[0] = GSVector4(0, 0, 1, 1);
+	dr[0] = GSVector4(0, 0, s.x, s.y);
+
+	m_dev->Merge(st, sr, dr, s, 1, 1, GSVector4(0, 0, 0, 1));
+
+	return true;
+}
+
+void GPURenderer::VSync()
+{
+	GSPerfMonAutoTimer pmat(m_perfmon);
+
+	m_perfmon.Put(GSPerfMon::Frame);
+
+	// m_env.STATUS.LCF = ~m_env.STATUS.LCF; // ?
+
+	if(!IsWindow(m_hWnd)) return;
+
+	Flush();
+
+	if(!Merge()) return;
+
+	// osd 
+
+	if((m_perfmon.GetFrame() & 0x1f) == 0)
+	{
+		m_perfmon.Update();
+
+		double fps = 1000.0f / m_perfmon.Get(GSPerfMon::Frame);
+
+		GSVector4i r = m_env.GetDisplayRect();
+
+		int w = r.width() << m_scale.x;
+		int h = r.height() << m_scale.y;
+
+		string s = format(
+			"%I64d | %d x %d | %.2f fps (%d%%) | %d/%d | %d%% CPU | %.2f | %.2f", 
+			m_perfmon.GetFrame(), w, h, fps, (int)(100.0 * fps / m_env.GetFPS()),
+			(int)m_perfmon.Get(GSPerfMon::Prim),
+			(int)m_perfmon.Get(GSPerfMon::Draw),
+			m_perfmon.CPU(),
+			m_perfmon.Get(GSPerfMon::Swizzle) / 1024,
+			m_perfmon.Get(GSPerfMon::Unswizzle) / 1024
+		);
+
+		double fillrate = m_perfmon.Get(GSPerfMon::Fillrate);
+
+		if(fillrate > 0)
+		{
+			s = format("%s | %.2f mpps", s.c_str(), fps * fillrate / (1024 * 1024));
+		}
+
+		SetWindowText(m_hWnd, s.c_str());
+	}
+
+	if(m_dev->IsLost())
+	{
+		ResetDevice();
+	}
+
+	GSVector4i r;
+	
+	GetClientRect(m_hWnd, r);
+
+	m_dev->Present(r.fit(m_aspectratio), 0);
+}
+
+bool GPURenderer::MakeSnapshot(const string& path)
+{
+	time_t t = time(NULL);
+
+	char buff[16];
+
+	if(!strftime(buff, sizeof(buff), "%Y%m%d%H%M%S", localtime(&t)))
+	{
+		return false;
+	}
+
+	if(GSTexture* t = m_dev->GetCurrent())
+	{
+		return t->Save(format("%s_%s.bmp", path.c_str(), buff));
+	}
+
+	return false;
 }
 
 LRESULT CALLBACK GPURenderer::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)

@@ -23,112 +23,64 @@
 #include "GSdx.h"
 #include "GSUtil.h"
 #include "GPUSettingsDlg.h"
-#include <shlobj.h>
-#include <afxpriv.h>
+#include "resource.h"
 
 GSSetting GPUSettingsDlg::g_renderers[] =
 {
-	{0, _T("Direct3D7 (Software)"), NULL},
-	{1, _T("Direct3D9 (Software)"), NULL},
-	{2, _T("Direct3D10 (Software)"), NULL},
-//	{3, _T("Null (Null)"), NULL},
+	{0, "Direct3D7 (Software)", NULL},
+	{1, "Direct3D9 (Software)", NULL},
+	{2, "Direct3D10 (Software)", NULL},
+//	{3, "Null (Null)", NULL},
 };
 
 GSSetting GPUSettingsDlg::g_psversion[] =
 {
-	{D3DPS_VERSION(3, 0), _T("Pixel Shader 3.0"), NULL},
-	{D3DPS_VERSION(2, 0), _T("Pixel Shader 2.0"), NULL},
-	//{D3DPS_VERSION(1, 4), _T("Pixel Shader 1.4"), NULL},
-	//{D3DPS_VERSION(1, 1), _T("Pixel Shader 1.1"), NULL},
-	//{D3DPS_VERSION(0, 0), _T("Fixed Pipeline (bogus)"), NULL},
+	{D3DPS_VERSION(3, 0), "Pixel Shader 3.0", NULL},
+	{D3DPS_VERSION(2, 0), "Pixel Shader 2.0", NULL},
+	//{D3DPS_VERSION(1, 4), "Pixel Shader 1.4", NULL},
+	//{D3DPS_VERSION(1, 1), "Pixel Shader 1.1", NULL},
+	//{D3DPS_VERSION(0, 0), "Fixed Pipeline (bogus)", NULL},
 };
 
 GSSetting GPUSettingsDlg::g_filter[] =
 {
-	{0, _T("Nearest"), NULL},
-	{1, _T("Bilinear (polygons only)"), NULL},
-	{2, _T("Bilinear"), NULL},
+	{0, "Nearest", NULL},
+	{1, "Bilinear (polygons only)", NULL},
+	{2, "Bilinear", NULL},
 };
 
 GSSetting GPUSettingsDlg::g_dithering[] =
 {
-	{0, _T("Disabled"), NULL},
-	{1, _T("Auto"), NULL},
+	{0, "Disabled", NULL},
+	{1, "Auto", NULL},
 };
 
 GSSetting GPUSettingsDlg::g_aspectratio[] =
 {
-	{0, _T("Stretch"), NULL},
-	{1, _T("4:3"), NULL},
-	{2, _T("16:9"), NULL},
+	{0, "Stretch", NULL},
+	{1, "4:3", NULL},
+	{2, "16:9", NULL},
 };
 
-GSSetting GPUSettingsDlg::g_internalresolution[] =
+GSSetting GPUSettingsDlg::g_scale[] =
 {
-	{0 | (0 << 2), _T("H x 1 - V x 1"), NULL},
-	{1 | (0 << 2), _T("H x 2 - V x 1"), NULL},
-	{0 | (1 << 2), _T("H x 1 - V x 2"), NULL},
-	{1 | (1 << 2), _T("H x 2 - V x 2"), NULL},
-	{2 | (1 << 2), _T("H x 4 - V x 2"), NULL},
-	{1 | (2 << 2), _T("H x 2 - V x 4"), NULL},
-	{2 | (2 << 2), _T("H x 4 - V x 4"), NULL},
+	{0 | (0 << 2), "H x 1 - V x 1", NULL},
+	{1 | (0 << 2), "H x 2 - V x 1", NULL},
+	{0 | (1 << 2), "H x 1 - V x 2", NULL},
+	{1 | (1 << 2), "H x 2 - V x 2", NULL},
+	{2 | (1 << 2), "H x 4 - V x 2", NULL},
+	{1 | (2 << 2), "H x 2 - V x 4", NULL},
+	{2 | (2 << 2), "H x 4 - V x 4", NULL},
 };
 
-IMPLEMENT_DYNAMIC(GPUSettingsDlg, CDialog)
-
-GPUSettingsDlg::GPUSettingsDlg(CWnd* pParent /*=NULL*/)
-	: CDialog(GPUSettingsDlg::IDD, pParent)
-{
-
-}
-
-GPUSettingsDlg::~GPUSettingsDlg()
+GPUSettingsDlg::GPUSettingsDlg()
+	: GSDialog(IDD_GPUCONFIG)
 {
 }
 
-LRESULT GPUSettingsDlg::DefWindowProc(UINT message, WPARAM wParam, LPARAM lParam)
+void GPUSettingsDlg::OnInit()
 {
-	LRESULT ret = __super::DefWindowProc(message, wParam, lParam);
-
-	if(message == WM_INITDIALOG)
-	{
-		SendMessage(WM_KICKIDLE);
-	}
-
-	return ret;
-}
-
-void GPUSettingsDlg::DoDataExchange(CDataExchange* pDX)
-{
-	__super::DoDataExchange(pDX);
-	DDX_Control(pDX, IDC_COMBO3, m_resolution);
-	DDX_Control(pDX, IDC_COMBO1, m_renderer);
-	DDX_Control(pDX, IDC_COMBO4, m_psversion);
-	DDX_Control(pDX, IDC_COMBO2, m_filter);
-	DDX_Control(pDX, IDC_COMBO5, m_dithering);
-	DDX_Control(pDX, IDC_COMBO6, m_aspectratio);
-	DDX_Control(pDX, IDC_COMBO7, m_internalresolution);
-	DDX_Control(pDX, IDC_SPIN3, m_swthreads);
-	DDX_Control(pDX, IDC_EDIT3, m_swthreadsedit);
-}
-
-BEGIN_MESSAGE_MAP(GPUSettingsDlg, CDialog)
-	ON_MESSAGE_VOID(WM_KICKIDLE, OnKickIdle)
-	ON_UPDATE_COMMAND_UI(IDC_COMBO4, OnUpdateD3D9Options)
-	ON_UPDATE_COMMAND_UI(IDC_COMBO7, OnUpdateSWOptions)
-	ON_UPDATE_COMMAND_UI(IDC_SPIN3, OnUpdateSWOptions)
-	ON_UPDATE_COMMAND_UI(IDC_EDIT3, OnUpdateSWOptions)
-	ON_CBN_SELCHANGE(IDC_COMBO1, &GPUSettingsDlg::OnCbnSelchangeCombo1)
-END_MESSAGE_MAP()
-
-void GPUSettingsDlg::OnKickIdle()
-{
-	UpdateDialogControls(this, false);
-}
-
-BOOL GPUSettingsDlg::OnInitDialog()
-{
-	__super::OnInitDialog();
+	__super::OnInit();
 
 	D3DCAPS9 caps;
 	memset(&caps, 0, sizeof(caps));
@@ -136,163 +88,128 @@ BOOL GPUSettingsDlg::OnInitDialog()
 
 	m_modes.clear();
 
-	// windowed
-
 	{
 		D3DDISPLAYMODE mode;
 		memset(&mode, 0, sizeof(mode));
 		m_modes.push_back(mode);
 
-		int iItem = m_resolution.AddString(_T("Windowed"));
-		m_resolution.SetItemDataPtr(iItem, &m_modes.back());
-		m_resolution.SetCurSel(iItem);
-	}
+		HWND hWnd = GetDlgItem(m_hWnd, IDC_RESOLUTION);
 
-	// fullscreen
+		ComboBoxAppend(hWnd, "Windowed", (LPARAM)&m_modes.back(), true);
 
-	if(CComPtr<IDirect3D9> d3d = Direct3DCreate9(D3D_SDK_VERSION))
-	{
-		uint32 ModeWidth = theApp.GetConfig("ModeWidth", 0);
-		uint32 ModeHeight = theApp.GetConfig("ModeHeight", 0);
-		uint32 ModeRefreshRate = theApp.GetConfig("ModeRefreshRate", 0);
-
-		uint32 nModes = d3d->GetAdapterModeCount(D3DADAPTER_DEFAULT, D3DFMT_X8R8G8B8);
-
-		for(uint32 i = 0; i < nModes; i++)
+		if(CComPtr<IDirect3D9> d3d = Direct3DCreate9(D3D_SDK_VERSION))
 		{
-			D3DDISPLAYMODE mode;
+			uint32 w = theApp.GetConfig("ModeWidth", 0);
+			uint32 h = theApp.GetConfig("ModeHeight", 0);
+			uint32 hz = theApp.GetConfig("ModeRefreshRate", 0);
 
-			if(S_OK == d3d->EnumAdapterModes(D3DADAPTER_DEFAULT, D3DFMT_X8R8G8B8, i, &mode))
+			uint32 n = d3d->GetAdapterModeCount(D3DADAPTER_DEFAULT, D3DFMT_X8R8G8B8);
+
+			for(uint32 i = 0; i < n; i++)
 			{
-				CString str;
-				str.Format(_T("%dx%d %dHz"), mode.Width, mode.Height, mode.RefreshRate);
-				int iItem = m_resolution.AddString(str);
-
-				m_modes.push_back(mode);
-				m_resolution.SetItemDataPtr(iItem, &m_modes.back());
-
-				if(ModeWidth == mode.Width && ModeHeight == mode.Height && ModeRefreshRate == mode.RefreshRate)
+				if(S_OK == d3d->EnumAdapterModes(D3DADAPTER_DEFAULT, D3DFMT_X8R8G8B8, i, &mode))
 				{
-					m_resolution.SetCurSel(iItem);
+					m_modes.push_back(mode);
+
+					string str = format("%dx%d %dHz", mode.Width, mode.Height, mode.RefreshRate);
+
+					ComboBoxAppend(hWnd, str.c_str(), (LPARAM)&m_modes.back(), w == mode.Width && h == mode.Height && hz == mode.RefreshRate);
 				}
 			}
+
+			d3d->GetDeviceCaps(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, &caps);
+		}
+	}
+
+	{
+		bool isdx10avail = GSUtil::IsDirect3D10Available();
+
+		vector<GSSetting> renderers;
+
+		for(size_t i = 0; i < countof(g_renderers); i++)
+		{
+			if(i >= 3 && i <= 5 && !isdx10avail) continue;
+
+			renderers.push_back(g_renderers[i]);
 		}
 
-		d3d->GetDeviceCaps(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, &caps);
+		HWND hWnd = GetDlgItem(m_hWnd, IDC_RENDERER);
+
+		ComboBoxInit(hWnd, &renderers[0], renderers.size(), theApp.GetConfig("Renderer", 0));
+
+		OnCommand(hWnd, IDC_RENDERER, CBN_SELCHANGE);
 	}
 
-	bool isdx10avail = GSUtil::IsDirect3D10Available();
+	ComboBoxInit(GetDlgItem(m_hWnd, IDC_SHADER), g_psversion, countof(g_psversion), theApp.GetConfig("PixelShaderVersion2", D3DPS_VERSION(2, 0)), caps.PixelShaderVersion);
+	ComboBoxInit(GetDlgItem(m_hWnd, IDC_FILTER), g_filter, countof(g_filter), theApp.GetConfig("filter", 0));
+	ComboBoxInit(GetDlgItem(m_hWnd, IDC_DITHERING), g_dithering, countof(g_dithering), theApp.GetConfig("dithering", 1));
+	ComboBoxInit(GetDlgItem(m_hWnd, IDC_ASPECTRATIO), g_aspectratio, countof(g_aspectratio), theApp.GetConfig("AspectRatio", 1));
+	ComboBoxInit(GetDlgItem(m_hWnd, IDC_SCALE), g_scale, countof(g_scale), theApp.GetConfig("scale_x", 0) | (theApp.GetConfig("scale_y", 0) << 2));
 
-	vector<GSSetting> renderers;
-
-	for(size_t i = 0; i < countof(g_renderers); i++)
-	{
-		if(i == 2 && !isdx10avail) continue;
-
-		renderers.push_back(g_renderers[i]);
-	}
-
-	GSSetting::InitComboBox(&renderers[0], renderers.size(), m_renderer, theApp.GetConfig("Renderer", 1));
-	GSSetting::InitComboBox(g_psversion, countof(g_psversion), m_psversion, theApp.GetConfig("PixelShaderVersion2", D3DPS_VERSION(2, 0)), caps.PixelShaderVersion);
-	GSSetting::InitComboBox(g_filter, countof(g_filter), m_filter, theApp.GetConfig("filter", 0));
-	GSSetting::InitComboBox(g_dithering, countof(g_dithering), m_dithering, theApp.GetConfig("dithering", 1));
-	GSSetting::InitComboBox(g_aspectratio, countof(g_aspectratio), m_aspectratio, theApp.GetConfig("AspectRatio", 1));
-	GSSetting::InitComboBox(g_internalresolution, countof(g_internalresolution), m_internalresolution, theApp.GetConfig("scale_x", 0) | (theApp.GetConfig("scale_y", 0) << 2));
-	
-
-	OnCbnSelchangeCombo1();
-
-	//
-
-	m_swthreads.SetRange(1, 16);
-	m_swthreads.SetPos(theApp.GetConfig("swthreads", 1));
-
-	//
-
-	UpdateData(FALSE);
-
-	return TRUE;  // return TRUE unless you set the focus to a control
-	// EXCEPTION: OCX Property Pages should return FALSE
+	SendMessage(GetDlgItem(m_hWnd, IDC_SWTHREADS), UDM_SETRANGE, 0, MAKELPARAM(16, 1));
+	SendMessage(GetDlgItem(m_hWnd, IDC_SWTHREADS), UDM_SETPOS, 0, MAKELPARAM(theApp.GetConfig("swthreads", 1), 0));
 }
 
-void GPUSettingsDlg::OnOK()
+bool GPUSettingsDlg::OnCommand(HWND hWnd, UINT id, UINT code)
 {
-	UpdateData();
-
-	if(m_resolution.GetCurSel() >= 0)
+	if(id == IDC_RENDERER && code == CBN_SELCHANGE)
 	{
-		D3DDISPLAYMODE& mode = *(D3DDISPLAYMODE*)m_resolution.GetItemData(m_resolution.GetCurSel());
+		int item = (int)SendMessage(hWnd, CB_GETCURSEL, 0, 0);
 
-		theApp.SetConfig("ModeWidth", (int)mode.Width);
-		theApp.SetConfig("ModeHeight", (int)mode.Height);
-		theApp.SetConfig("ModeRefreshRate", (int)mode.RefreshRate);
+		if(item >= 0)
+		{
+			int i = (int)SendMessage(hWnd, CB_GETITEMDATA, item, 0);
+
+			ShowWindow(GetDlgItem(m_hWnd, IDC_LOGO9), i == 1 ? SW_SHOW : SW_HIDE);
+			ShowWindow(GetDlgItem(m_hWnd, IDC_LOGO10), i == 2 ? SW_SHOW : SW_HIDE);
+		}
+	}
+	else if(id == IDOK)
+	{
+		INT_PTR data;
+
+		if(ComboBoxGetSelData(GetDlgItem(m_hWnd, IDC_RESOLUTION), data))
+		{
+			const D3DDISPLAYMODE* mode = (D3DDISPLAYMODE*)data;
+
+			theApp.SetConfig("ModeWidth", (int)mode->Width);
+			theApp.SetConfig("ModeHeight", (int)mode->Height);
+			theApp.SetConfig("ModeRefreshRate", (int)mode->RefreshRate);
+		}
+
+		if(ComboBoxGetSelData(GetDlgItem(m_hWnd, IDC_RENDERER), data))
+		{
+			theApp.SetConfig("Renderer", (int)data);
+		}
+
+		if(ComboBoxGetSelData(GetDlgItem(m_hWnd, IDC_SHADER), data))
+		{
+			theApp.SetConfig("PixelShaderVersion2", (int)data);
+		}
+
+		if(ComboBoxGetSelData(GetDlgItem(m_hWnd, IDC_FILTER), data))
+		{
+			theApp.SetConfig("filter", (int)data);
+		}
+
+		if(ComboBoxGetSelData(GetDlgItem(m_hWnd, IDC_DITHERING), data))
+		{
+			theApp.SetConfig("dithering", (int)data);
+		}
+
+		if(ComboBoxGetSelData(GetDlgItem(m_hWnd, IDC_ASPECTRATIO), data))
+		{
+			theApp.SetConfig("AspectRatio", (int)data);
+		}
+
+		if(ComboBoxGetSelData(GetDlgItem(m_hWnd, IDC_SCALE), data))
+		{
+			theApp.SetConfig("scale_x", data & 3);
+			theApp.SetConfig("scale_y", (data >> 2) & 3);
+		}
+
+		theApp.SetConfig("swthreads", (int)SendMessage(GetDlgItem(m_hWnd, IDC_SWTHREADS), UDM_GETPOS, 0, 0));
 	}
 
-	if(m_renderer.GetCurSel() >= 0)
-	{
-		theApp.SetConfig("Renderer", (int)m_renderer.GetItemData(m_renderer.GetCurSel()));
-	}
-
-	if(m_psversion.GetCurSel() >= 0)
-	{
-		theApp.SetConfig("PixelShaderVersion2", (int)m_psversion.GetItemData(m_psversion.GetCurSel()));
-	}
-
-	if(m_filter.GetCurSel() >= 0)
-	{
-		theApp.SetConfig("filter", (int)m_filter.GetItemData(m_filter.GetCurSel()));
-	}
-
-	if(m_dithering.GetCurSel() >= 0)
-	{
-		theApp.SetConfig("dithering", (int)m_dithering.GetItemData(m_dithering.GetCurSel()));
-	}
-
-	if(m_aspectratio.GetCurSel() >= 0)
-	{
-		theApp.SetConfig("AspectRatio", (int)m_aspectratio.GetItemData(m_aspectratio.GetCurSel()));
-	}
-
-	if(m_internalresolution.GetCurSel() >= 0)
-	{
-		int value = (int)m_internalresolution.GetItemData(m_internalresolution.GetCurSel());
-
-		theApp.SetConfig("scale_x", value & 3);
-		theApp.SetConfig("scale_y", (value >> 2) & 3);
-	}
-
-	theApp.SetConfig("swthreads", m_swthreads.GetPos());
-
-	__super::OnOK();
-}
-
-void GPUSettingsDlg::OnUpdateResolution(CCmdUI* pCmdUI)
-{
-	UpdateData();
-
-	int i = (int)m_renderer.GetItemData(m_renderer.GetCurSel());
-
-	pCmdUI->Enable(i == 1);
-}
-
-void GPUSettingsDlg::OnUpdateD3D9Options(CCmdUI* pCmdUI)
-{
-	int i = (int)m_renderer.GetItemData(m_renderer.GetCurSel());
-
-	pCmdUI->Enable(i == 1);
-}
-
-void GPUSettingsDlg::OnUpdateSWOptions(CCmdUI* pCmdUI)
-{
-	int i = (int)m_renderer.GetItemData(m_renderer.GetCurSel());
-
-	pCmdUI->Enable(i >= 0 && i <= 2);
-}
-
-void GPUSettingsDlg::OnCbnSelchangeCombo1()
-{
-	int i = (int)m_renderer.GetItemData(m_renderer.GetCurSel());
-
-	GetDlgItem(IDC_LOGO9)->ShowWindow(i == 1 ? SW_SHOW : SW_HIDE);
-	GetDlgItem(IDC_LOGO10)->ShowWindow(i == 2 ? SW_SHOW : SW_HIDE);
+	return __super::OnCommand(hWnd, id, code);
 }

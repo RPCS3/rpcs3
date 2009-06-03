@@ -22,9 +22,9 @@
 #include "stdafx.h"
 #include "GSDeviceNull.h"
 
-bool GSDeviceNull::Create(HWND hWnd, bool vsync)
+bool GSDeviceNull::Create(GSWnd* wnd, bool vsync)
 {
-	if(!__super::Create(hWnd, vsync))
+	if(!__super::Create(wnd, vsync))
 	{
 		return false;
 	}

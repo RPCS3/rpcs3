@@ -21,59 +21,22 @@
 
 #pragma once
 
+#include "GSDialog.h"
 #include "GSSetting.h"
-#include "resource.h"
 
-class GSSettingsDlg : public CDialog
+class GSSettingsDlg : public GSDialog
 {
-	DECLARE_DYNAMIC(GSSettingsDlg)
-
-private:
 	list<D3DDISPLAYMODE> m_modes;
 
+protected:
+	void OnInit();
+	bool OnCommand(HWND hWnd, UINT id, UINT code);
+
 public:
-	GSSettingsDlg(CWnd* pParent = NULL);   // standard constructor
-	virtual ~GSSettingsDlg();
+	GSSettingsDlg();
 
 	static GSSetting g_renderers[]; 
 	static GSSetting g_psversion[];
 	static GSSetting g_interlace[];
 	static GSSetting g_aspectratio[];
-
-// Dialog Data
-	enum { IDD = IDD_CONFIG };
-	CComboBox m_resolution;
-	CComboBox m_renderer;
-	CComboBox m_psversion;
-	CComboBox m_interlace;
-	CComboBox m_aspectratio;
-	int m_filter;
-	CSpinButtonCtrl m_resx;
-	CSpinButtonCtrl m_resy;
-	CSpinButtonCtrl m_swthreads;
-	BOOL m_nativeres;
-	CEdit m_resxedit;
-	CEdit m_resyedit;
-	CEdit m_swthreadsedit;
-	BOOL m_vsync;
-	BOOL m_logz;
-	BOOL m_fba;
-	BOOL m_aa1;
-	BOOL m_blur;
-
-protected:
-	virtual LRESULT DefWindowProc(UINT message, WPARAM wParam, LPARAM lParam);
-	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
-	virtual BOOL OnInitDialog();
-	virtual void OnOK();
-
-	DECLARE_MESSAGE_MAP()
-
-public:
-	afx_msg void OnKickIdle();
-	afx_msg void OnUpdateResolution(CCmdUI* pCmdUI);
-	afx_msg void OnUpdateD3D9Options(CCmdUI* pCmdUI);
-	afx_msg void OnUpdateSWOptions(CCmdUI* pCmdUI);
-	afx_msg void OnCbnSelchangeCombo1();
 };
-

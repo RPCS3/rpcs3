@@ -120,11 +120,11 @@ bool GSUtil::CheckDirectX()
 	}
 	else
 	{
-		int res = AfxMessageBox(_T("You need to update directx, would you like to do it now?"), MB_YESNO);
-
-		if(res == IDYES)
+		if(MessageBox(NULL, "You need to update directx, would you like to do it now?", "GSdx", MB_YESNO) == IDYES)
 		{
-			ShellExecute(NULL, _T("open"), _T("http://www.microsoft.com/downloads/details.aspx?FamilyId=2DA43D38-DB71-4C1B-BC6A-9B6652CD92A3"), NULL, NULL, SW_SHOWNORMAL);
+			const char* url = "http://www.microsoft.com/downloads/details.aspx?FamilyId=2DA43D38-DB71-4C1B-BC6A-9B6652CD92A3";
+
+			ShellExecute(NULL, "open", url, NULL, NULL, SW_SHOWNORMAL);
 		}
 
 		return false;
@@ -152,7 +152,7 @@ bool GSUtil::CheckSSE()
 	{
 		string s = format("This CPU does not support SSE %d.%02d", _M_SSE >> 8, _M_SSE & 0xff);
 		
-		AfxMessageBox(s.c_str(), MB_OK);
+		MessageBox(NULL, s.c_str(), "GSdx", MB_OK);
 
 		return false;
 	}

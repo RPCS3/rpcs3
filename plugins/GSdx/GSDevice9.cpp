@@ -61,9 +61,9 @@ GSDevice9::~GSDevice9()
 	if(m_ps_cb) _aligned_free(m_ps_cb);
 }
 
-bool GSDevice9::Create(HWND hWnd, bool vsync)
+bool GSDevice9::Create(GSWnd* wnd, bool vsync)
 {
-	if(!__super::Create(hWnd, vsync))
+	if(!__super::Create(wnd, vsync))
 	{
 		return false;
 	}
@@ -118,13 +118,12 @@ bool GSDevice9::Create(HWND hWnd, bool vsync)
 
 	if(psver > m_d3dcaps.PixelShaderVersion)
 	{
-		CString str;
-
-		str.Format(_T("Supported pixel shader version is too low!\n\nSupported: %d.%d\nSelected: %d.%d"),
+		string s = format(
+			"Supported pixel shader version is too low!\n\nSupported: %d.%d\nSelected: %d.%d",
 			D3DSHADER_VERSION_MAJOR(m_d3dcaps.PixelShaderVersion), D3DSHADER_VERSION_MINOR(m_d3dcaps.PixelShaderVersion),
 			D3DSHADER_VERSION_MAJOR(psver), D3DSHADER_VERSION_MINOR(psver));
 
-		AfxMessageBox(str);
+		MessageBox(NULL, s.c_str(), "GSdx", MB_OK);
 
 		return false;
 	}
@@ -251,7 +250,7 @@ bool GSDevice9::Reset(int w, int h, bool fs)
 	memset(&m_pp, 0, sizeof(m_pp));
 
 	m_pp.Windowed = TRUE;
-	m_pp.hDeviceWindow = m_hWnd;
+	m_pp.hDeviceWindow = (HWND)m_wnd->GetHandle();
 	m_pp.SwapEffect = D3DSWAPEFFECT_FLIP;
 	m_pp.BackBufferFormat = D3DFMT_X8R8G8B8;
 	m_pp.BackBufferWidth = 1;
@@ -276,16 +275,14 @@ bool GSDevice9::Reset(int w, int h, bool fs)
 		m_pp.BackBufferHeight = mh;
 		// m_pp.FullScreen_RefreshRateInHz = mrr;
 
-		::SetWindowLong(m_hWnd, GWL_STYLE, ::GetWindowLong(m_hWnd, GWL_STYLE) & ~(WS_CAPTION|WS_THICKFRAME));
-		::SetWindowPos(m_hWnd, NULL, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
-		::SetMenu(m_hWnd, NULL);
+		m_wnd->HideFrame();
 	}
 
 	if(!m_dev)
 	{
 		uint32 flags = D3DCREATE_MULTITHREADED | (m_d3dcaps.VertexProcessingCaps ? D3DCREATE_HARDWARE_VERTEXPROCESSING : D3DCREATE_SOFTWARE_VERTEXPROCESSING);
 
-		hr = m_d3d->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, m_hWnd, flags, &m_pp, &m_dev);
+		hr = m_d3d->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, (HWND)m_wnd->GetHandle(), flags, &m_pp, &m_dev);
 
 		if(FAILED(hr)) return false;
 	}
@@ -516,7 +513,8 @@ GSTexture* GSDevice9::CreateRenderTarget(int w, int h, int format)
 
 GSTexture* GSDevice9::CreateDepthStencil(int w, int h, int format)
 {
-	return __super::CreateDepthStencil(w, h, format ? format : D3DFMT_D24S8); // D3DFMT_D32F_LOCKABLE
+	return __super::CreateDepthStencil(w, h, format ? format : D3DFMT_D24S8);
+	// return __super::CreateDepthStencil(w, h, format ? format : D3DFMT_D32F_LOCKABLE); 
 }
 
 GSTexture* GSDevice9::CreateTexture(int w, int h, int format)
@@ -946,15 +944,15 @@ static HRESULT LoadShader(uint32 id, LPCSTR& data, uint32& size)
 {
 	CComPtr<ID3DXBuffer> shader, error;
 
-	HRSRC hRes = FindResource(AfxGetResourceHandle(), MAKEINTRESOURCE(id), RT_RCDATA);
+	HRSRC hRes = FindResource(theApp.GetModuleHandle(), MAKEINTRESOURCE(id), RT_RCDATA);
 
 	if(!hRes) return E_FAIL;
 
-	size = SizeofResource(AfxGetResourceHandle(), hRes);
+	size = SizeofResource(theApp.GetModuleHandle(), hRes);
 
 	if(size == 0) return E_FAIL;
 
-	HGLOBAL hResData  = LoadResource(AfxGetResourceHandle(), hRes);
+	HGLOBAL hResData  = LoadResource(theApp.GetModuleHandle(), hRes);
 
 	if(!hResData) return E_FAIL;
 
@@ -984,7 +982,7 @@ HRESULT GSDevice9::CompileShader(uint32 id, const string& entry, const D3DXMACRO
 
 	CComPtr<ID3DXBuffer> shader, error;
 
-	// FIXME: hr = D3DXCompileShaderFromResource(AfxGetResourceHandle(), MAKEINTRESOURCE(id), macro, NULL, entry.c_str(), target, 0, &shader, &error, NULL);
+	// FIXME: hr = D3DXCompileShaderFromResource(theApp.GetModuleHandle(), MAKEINTRESOURCE(id), macro, NULL, entry.c_str(), target, 0, &shader, &error, NULL);
 
 	LPCSTR data;
 	uint32 size;
@@ -1044,7 +1042,7 @@ HRESULT GSDevice9::CompileShader(uint32 id, const string& entry, const D3DXMACRO
 
 	CComPtr<ID3DXBuffer> shader, error;
 
-	// FIXME: hr = D3DXCompileShaderFromResource(AfxGetResourceHandle(), MAKEINTRESOURCE(id), macro, NULL, entry.c_str(), target, flags, &shader, &error, NULL);
+	// FIXME: hr = D3DXCompileShaderFromResource(theApp.GetModuleHandle(), MAKEINTRESOURCE(id), macro, NULL, entry.c_str(), target, flags, &shader, &error, NULL);
 
 	LPCSTR data;
 	uint32 size;

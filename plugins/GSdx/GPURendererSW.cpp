@@ -28,10 +28,6 @@ GPURendererSW::GPURendererSW(GSDevice* dev)
 	, m_texture(NULL)
 {
 	m_rl.Create<GPUDrawScanline>(this, theApp.GetConfig("swthreads", 1));
-
-	m_fpDrawingKickHandlers[GPU_POLYGON] = (DrawingKickHandler)&GPURendererSW::DrawingKickTriangle;
-	m_fpDrawingKickHandlers[GPU_LINE] = (DrawingKickHandler)&GPURendererSW::DrawingKickLine;
-	m_fpDrawingKickHandlers[GPU_SPRITE] = (DrawingKickHandler)&GPURendererSW::DrawingKickSprite;
 }
 
 GPURendererSW::~GPURendererSW()
@@ -45,52 +41,46 @@ void GPURendererSW::ResetDevice()
 	m_texture = NULL;
 }
 
-GSVector4i GPURendererSW::GetScissor()
+GSTexture* GPURendererSW::GetOutput()
 {
-	GSVector4i r;
+	GSVector4i r = m_env.GetDisplayRect();
 
-	r.left = (int)m_env.DRAREATL.X << m_scale.x;
-	r.top = (int)m_env.DRAREATL.Y << m_scale.y;
-	r.right = min((int)(m_env.DRAREABR.X + 1) << m_scale.x, m_mem.GetWidth());
-	r.bottom = min((int)(m_env.DRAREABR.Y + 1) << m_scale.y, m_mem.GetHeight());
+	r.left <<= m_scale.x;
+	r.top <<= m_scale.y;
+	r.right <<= m_scale.x;
+	r.bottom <<= m_scale.y;
 
-	return r;
-}
-
-void GPURendererSW::VertexKick()
-{
-	GSVertexSW& v = m_vl.AddTail();
-
-	// TODO: x/y + off.x/y should wrap around at +/-1024
-
-	int x = (int)(m_v.XY.X + m_env.DROFF.X) << m_scale.x;
-	int y = (int)(m_v.XY.Y + m_env.DROFF.Y) << m_scale.y;
-
-	int s = m_v.UV.X;
-	int t = m_v.UV.Y;
-
-	GSVector4 pt(x, y, s, t);
-
-	v.p = pt.xyxy(GSVector4::zero());
-	v.t = (pt.zwzw(GSVector4::zero()) + GSVector4(0.125f)) * 256.0f;
-	v.c = GSVector4(m_v.RGB.u32) * 128.0f;
-
-	__super::VertexKick();
-}
-
-void GPURendererSW::DrawingKickTriangle(GSVertexSW* v, int& count)
-{
 	// TODO
-}
+	static uint32* buff = (uint32*)_aligned_malloc(m_mem.GetWidth() * m_mem.GetHeight() * sizeof(uint32), 16);
 
-void GPURendererSW::DrawingKickLine(GSVertexSW* v, int& count)
-{
-	// TODO
-}
+	m_mem.ReadFrame32(r, buff, !!m_env.STATUS.ISRGB24);
 
-void GPURendererSW::DrawingKickSprite(GSVertexSW* v, int& count)
-{
-	// TODO
+	int w = r.width();
+	int h = r.height();
+
+	if(m_texture)
+	{
+		if(m_texture->GetWidth() != w || m_texture->GetHeight() != h)
+		{
+			delete m_texture;
+
+			m_texture = NULL;
+		}
+	}
+
+	if(!m_texture)
+	{
+		m_texture = m_dev->CreateTexture(w, h);
+
+		if(!m_texture)
+		{
+			return NULL;
+		}
+	}
+
+	m_texture->Update(GSVector4i(0, 0, w, h), buff, m_mem.GetWidth() * sizeof(uint32));
+
+	return m_texture;
 }
 
 void GPURendererSW::Draw()
@@ -137,10 +127,14 @@ void GPURendererSW::Draw()
 
 	GSRasterizerData data;
 
-	data.scissor = GetScissor();
 	data.vertices = m_vertices;
 	data.count = m_count;
 	data.param = &p;
+
+	data.scissor.left = (int)m_env.DRAREATL.X << m_scale.x;
+	data.scissor.top = (int)m_env.DRAREATL.Y << m_scale.y;
+	data.scissor.right = min((int)(m_env.DRAREABR.X + 1) << m_scale.x, m_mem.GetWidth());
+	data.scissor.bottom = min((int)(m_env.DRAREABR.Y + 1) << m_scale.y, m_mem.GetHeight());
 
 	switch(env.PRIM.TYPE)
 	{
@@ -185,45 +179,32 @@ void GPURendererSW::Draw()
 	}
 }
 
-GSTexture* GPURendererSW::GetOutput()
+void GPURendererSW::VertexKick()
 {
-	GSVector4i r = m_env.GetDisplayRect();
+	GSVertexSW& dst = m_vl.AddTail();
 
-	r.left <<= m_scale.x;
-	r.top <<= m_scale.y;
-	r.right <<= m_scale.x;
-	r.bottom <<= m_scale.y;
+	// TODO: x/y + off.x/y should wrap around at +/-1024
 
-	// TODO
-	static uint32* buff = (uint32*)_aligned_malloc(m_mem.GetWidth() * m_mem.GetHeight() * sizeof(uint32), 16);
+	int x = (int)(m_v.XY.X + m_env.DROFF.X) << m_scale.x;
+	int y = (int)(m_v.XY.Y + m_env.DROFF.Y) << m_scale.y;
 
-	m_mem.ReadFrame32(r, buff, !!m_env.STATUS.ISRGB24);
+	int s = m_v.UV.X;
+	int t = m_v.UV.Y;
 
-	int w = r.width();
-	int h = r.height();
+	GSVector4 pt(x, y, s, t);
 
-	if(m_texture)
+	dst.p = pt.xyxy(GSVector4::zero());
+	dst.t = (pt.zwzw(GSVector4::zero()) + GSVector4(0.125f)) * 256.0f;
+	// dst.c = GSVector4(m_v.RGB.u32) * 128.0f;
+	dst.c = GSVector4(GSVector4i::load((int)m_v.RGB.u32).u8to32() << 7);
+
+	int count = 0;
+	
+	if(GSVertexSW* v = DrawingKick(count))
 	{
-		if(m_texture->GetWidth() != w || m_texture->GetHeight() != h)
-		{
-			delete m_texture;
+		// TODO
 
-			m_texture = NULL;
-		}
+		m_count += count;
 	}
-
-	if(!m_texture)
-	{
-		m_texture = m_dev->CreateTexture(w, h);
-
-		if(!m_texture)
-		{
-			return NULL;
-		}
-	}
-
-	m_texture->Update(GSVector4i(0, 0, w, h), buff, m_mem.GetWidth() * sizeof(uint32));
-
-	return m_texture;
 }
 

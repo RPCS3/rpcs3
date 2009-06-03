@@ -63,10 +63,9 @@ public:
 	virtual ~GSRenderer();
 
 	virtual bool Create(const string& title);
-
 	virtual void VSync(int field);
-	virtual void KeyEvent(GSKeyEventData* e);
 	virtual bool MakeSnapshot(const string& path);
+	virtual void KeyEvent(GSKeyEventData* e);
 
 	virtual void MinMaxUV(int w, int h, GSVector4i& r)
 	{
@@ -225,7 +224,7 @@ public:
 	{
 	}
 
-	~GSRendererT()
+	virtual ~GSRendererT()
 	{
 		if(m_vertices) _aligned_free(m_vertices);
 	}

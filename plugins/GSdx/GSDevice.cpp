@@ -23,7 +23,7 @@
 #include "GSDevice.h"
 
 GSDevice::GSDevice() 
-	: m_hWnd(NULL)
+	: m_wnd(NULL)
 	, m_backbuffer(NULL)
 	, m_merge(NULL)
 	, m_weavebob(NULL)
@@ -36,9 +36,9 @@ GSDevice::~GSDevice()
 {
 }
 
-bool GSDevice::Create(HWND hWnd, bool vsync)
+bool GSDevice::Create(GSWnd* wnd, bool vsync)
 {
-	m_hWnd = hWnd;
+	m_wnd = wnd;
 	m_vsync = vsync;
 
 	return true;
@@ -72,9 +72,7 @@ bool GSDevice::Reset(int w, int h, bool fs)
 
 void GSDevice::Present(const GSVector4i& r, int shader)
 {
-	GSVector4i cr;
-
-	GetClientRect(m_hWnd, cr);
+	GSVector4i cr = m_wnd->GetClientRect();
 
 	if(m_backbuffer->GetWidth() != cr.width() || m_backbuffer->GetHeight() != cr.height())
 	{
@@ -171,7 +169,7 @@ void GSDevice::Merge(GSTexture* st[2], GSVector4* sr, GSVector4* dr, const GSVec
 	m_current = m_merge;
 }
 
-bool GSDevice::Interlace(const GSVector2i& ds, int field, int mode, float yoffset)
+void GSDevice::Interlace(const GSVector2i& ds, int field, int mode, float yoffset)
 {
 	if(!m_weavebob || !(m_weavebob->GetSize() == ds))
 	{
@@ -212,6 +210,4 @@ bool GSDevice::Interlace(const GSVector2i& ds, int field, int mode, float yoffse
 	{
 		m_current = m_merge;
 	}
-
-	return true;
 }

@@ -131,6 +131,7 @@ CRC::Game CRC::m_games[] =
 	{0xAA5EC3A3, TalesOfAbyss, JP}, 
 	{0xFB236A46, SonicUnleashed, US},
 	{0x4C7BB3C8, SimpsonsGame, Unknown},
+	{0x4C94B32C, SimpsonsGame, Unknown},
 };
 
 hash_map<uint32, CRC::Game*> CRC::m_map;
