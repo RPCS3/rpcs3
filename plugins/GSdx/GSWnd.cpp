@@ -105,9 +105,12 @@ bool GSWnd::Create(const string& title)
 	wc.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);
 	wc.lpszClassName = "GSWnd";
 
-	if(!RegisterClass(&wc))
+	if(!GetClassInfo(wc.hInstance, wc.lpszClassName, &wc))
 	{
-		return false;
+		if(!RegisterClass(&wc))
+		{
+			return false;
+		}
 	}
 
 	DWORD style = WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_OVERLAPPEDWINDOW | WS_BORDER;

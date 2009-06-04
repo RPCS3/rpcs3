@@ -263,7 +263,8 @@ void GSTextureFX10::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSampl
 
 	m_dev->PSSetShader((*i).second, m_ps_cb);
 
-	ID3D10SamplerState* ss0=NULL, *ss1=NULL;
+	ID3D10SamplerState* ss0 = NULL;
+	ID3D10SamplerState* ss1 = NULL;
 
 	if(sel.tfx != 4)
 	{
