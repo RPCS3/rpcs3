@@ -676,10 +676,10 @@ microVUt(void) mVUallocSFLAGc(int reg, int regT, int fInstance) {
 	u8 *pjmp;
 	XOR32RtoR(reg, reg);
 	mVUallocSFLAGa(regT, fInstance);
-	setBitSFLAG(0x000f, 0x0001); // Z  Bit
-	setBitSFLAG(0x00f0, 0x0002); // S  Bit
-	setBitSFLAG(0x0f00, 0x0040); // ZS Bit
-	setBitSFLAG(0xf000, 0x0080); // SS Bit
+	setBitSFLAG(0x0f00, 0x0001); // Z  Bit
+	setBitSFLAG(0xf000, 0x0002); // S  Bit
+	setBitSFLAG(0x000f, 0x0040); // ZS Bit
+	setBitSFLAG(0x00f0, 0x0080); // SS Bit
 	AND32ItoR(regT, 0xffff0000); // DS/DI/OS/US/D/I/O/U Bits
 	SHR32ItoR(regT, 14);
 	OR32RtoR(reg, regT);

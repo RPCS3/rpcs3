@@ -44,12 +44,12 @@ microVUt(void) mVUdispatcherA(mV) {
 	MOV32MtoR(gprF0, (uptr)&mVU->regs->VI[REG_STATUS_FLAG].UL);
 	
 	MOV32RtoR(gprF1, gprF0);
-	SHL32ItoR(gprF1, 3);
-	AND32ItoR(gprF1, 0x218);
+	SHR32ItoR(gprF1, 3);
+	AND32ItoR(gprF1, 0x18);
 
 	MOV32RtoR(gprF2, gprF0);
-	SHL32ItoR(gprF2, 5);
-	AND32ItoR(gprF2, 0x1000);
+	SHL32ItoR(gprF2, 11);
+	AND32ItoR(gprF2, 0x1800);
 	OR32RtoR (gprF1, gprF2);
 
 	MOV32RtoR(gprF3, gprF0);

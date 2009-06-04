@@ -523,7 +523,7 @@ mVUop(mVU_FSAND) {
 	pass1 { mVUanalyzeSflag(mVU, _It_); }
 	pass2 { 
 		mVUallocSFLAGc(gprT1, gprT2, sFLAG.read);
-		AND16ItoR(gprT1, _Imm12_);
+		AND32ItoR(gprT1, _Imm12_);
 		mVUallocVIb(mVU, gprT1, _It_);
 	}
 	pass3 { mVUlog("FSAND vi%02d, $%x", _Ft_, _Imm12_); }
@@ -534,7 +534,7 @@ mVUop(mVU_FSOR) {
 	pass1 { mVUanalyzeSflag(mVU, _It_); }
 	pass2 { 
 		mVUallocSFLAGc(gprT1, gprT2, sFLAG.read);
-		OR16ItoR(gprT1, _Imm12_);
+		OR32ItoR(gprT1, _Imm12_);
 		mVUallocVIb(mVU, gprT1, _It_);
 	}
 	pass3 { mVUlog("FSOR vi%02d, $%x", _Ft_, _Imm12_); }
@@ -546,24 +546,24 @@ mVUop(mVU_FSEQ) {
 	pass2 { 
 		u8 *pjmp;
 		int imm = 0;
-		if (_Imm12_ & 0x0001) imm |= 0x000000f; // Z
-		if (_Imm12_ & 0x0002) imm |= 0x00000f0; // S
+		if (_Imm12_ & 0x0001) imm |= 0x0000f00; // Z
+		if (_Imm12_ & 0x0002) imm |= 0x000f000; // S
 		if (_Imm12_ & 0x0004) imm |= 0x0010000; // U
 		if (_Imm12_ & 0x0008) imm |= 0x0020000; // O
 		if (_Imm12_ & 0x0010) imm |= 0x0040000; // I
 		if (_Imm12_ & 0x0020) imm |= 0x0080000; // D
-		if (_Imm12_ & 0x0040) imm |= 0x0000f00; // ZS
-		if (_Imm12_ & 0x0080) imm |= 0x000f000; // SS
+		if (_Imm12_ & 0x0040) imm |= 0x000000f; // ZS
+		if (_Imm12_ & 0x0080) imm |= 0x00000f0; // SS
 		if (_Imm12_ & 0x0100) imm |= 0x0400000; // US
 		if (_Imm12_ & 0x0200) imm |= 0x0800000; // OS
 		if (_Imm12_ & 0x0400) imm |= 0x1000000; // IS
 		if (_Imm12_ & 0x0800) imm |= 0x2000000; // DS
 
 		mVUallocSFLAGa(gprT1, sFLAG.read);
-		setBitFSEQ(0x000f); // Z  bit
-		setBitFSEQ(0x00f0); // S  bit
-		setBitFSEQ(0x0f00); // ZS bit
-		setBitFSEQ(0xf000); // SS bit
+		setBitFSEQ(0x0f00); // Z  bit
+		setBitFSEQ(0xf000); // S  bit
+		setBitFSEQ(0x000f); // ZS bit
+		setBitFSEQ(0x00f0); // SS bit
 		XOR32ItoR(gprT1, imm);
 		SUB32ItoR(gprT1, 1);
 		SHR32ItoR(gprT1, 31);
@@ -577,8 +577,8 @@ mVUop(mVU_FSSET) {
 	pass1 { mVUanalyzeFSSET(mVU); }
 	pass2 { 
 		int sReg, imm = 0;
-		if (_Imm12_ & 0x0040) imm |= 0x0000f00; // ZS
-		if (_Imm12_ & 0x0080) imm |= 0x000f000; // SS
+		if (_Imm12_ & 0x0040) imm |= 0x000000f; // ZS
+		if (_Imm12_ & 0x0080) imm |= 0x00000f0; // SS
 		if (_Imm12_ & 0x0100) imm |= 0x0400000; // US
 		if (_Imm12_ & 0x0200) imm |= 0x0800000; // OS
 		if (_Imm12_ & 0x0400) imm |= 0x1000000; // IS
@@ -587,7 +587,7 @@ mVUop(mVU_FSSET) {
 		if (!(sFLAG.doFlag || mVUinfo.doDivFlag)) { 
 			mVUallocSFLAGa(sReg, sFLAG.lastWrite); // Get Prev Status Flag
 		}
-		AND32ItoR(sReg, 0xf00ff); // Keep Non-Sticky Bits
+		AND32ItoR(sReg, 0xfff00); // Keep Non-Sticky Bits
 		if (imm) OR32ItoR(sReg, imm);
 	}
 	pass3 { mVUlog("FSSET $%x", _Imm12_); }
