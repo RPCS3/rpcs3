@@ -157,7 +157,7 @@ microVUt(void) mVUsetCycles(mV) {
 	tCycles(mVUregs.xgkick,					mVUregsTemp.xgkick);
 }
 
-microVUt(void) mVUendProgram(mV, int qInst, int pInst, int fStatus, int fMac, int fClip) {
+microVUt(void) mVUendProgram(mV, bool clearIsBusy, int qInst, int pInst, int fStatus, int fMac, int fClip) {
 
 	// Save P/Q Regs
 	if (qInst) { SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, 0xe5); }
@@ -175,9 +175,12 @@ microVUt(void) mVUendProgram(mV, int qInst, int pInst, int fStatus, int fMac, in
 	MOV32RtoM((uptr)&mVU->regs->VI[REG_MAC_FLAG].UL,	gprT1);
 	MOV32RtoM((uptr)&mVU->regs->VI[REG_CLIP_FLAG].UL,	gprT2);
 
-	// Clear 'is busy' Flags, Save PC, and Jump to Exit Point
-	AND32ItoM((uptr)&VU0.VI[REG_VPU_STAT].UL, (isVU1 ? ~0x100 : ~0x001)); // VBS0/VBS1 flag
-	AND32ItoM((uptr)&mVU->regs->vifRegs->stat, ~0x4); // Clear VU 'is busy' signal for vif
+	if (clearIsBusy) { // Clear 'is busy' Flags
+		AND32ItoM((uptr)&VU0.VI[REG_VPU_STAT].UL, (isVU1 ? ~0x100 : ~0x001)); // VBS0/VBS1 flag
+		AND32ItoM((uptr)&mVU->regs->vifRegs->stat, ~0x4); // Clear VU 'is busy' signal for vif
+	}
+
+	//Save PC, and Jump to Exit Point
 	MOV32ItoM((uptr)&mVU->regs->VI[REG_TPC].UL, xPC);
 	JMP32((uptr)mVU->exitFunct - ((uptr)x86Ptr + 5));
 }
@@ -196,10 +199,10 @@ microVUt(void) mVUtestCycles(mV) {
 	SUB32ItoM((uptr)&mVU->cycles, mVUcycles);
 	u32* jmp32 = JG32(0);
 		MOV32ItoR(gprT2, xPC);
-		if (!isVU1)	CALLFunc((uptr)mVUwarning0);
-		else		CALLFunc((uptr)mVUwarning1);
+		if (isVU1)  CALLFunc((uptr)mVUwarning1);
+		//else		CALLFunc((uptr)mVUwarning0); // VU0 is allowed early exit for COP2 Interlock Simulation
 		MOV32ItoR(gprR, Roffset); // Restore gprR
-		mVUendProgram(mVU, 0, 0, sI, 0, cI);
+		mVUendProgram(mVU, (isVU1)?1:0, 0, 0, sI, 0, cI);
 	x86SetJ32(jmp32);
 }
 
@@ -249,7 +252,9 @@ microVUf(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 		incCycles(1);
 		mVUopU(mVU, 0);
 		if (curI & _Ebit_)	  { branch = 1; mVUup.eBit = 1; }
-		if (curI & _MDTbit_)  { branch = 4; }
+		if (curI & _DTbit_)	  { branch = 4; }
+		if (curI & _Mbit_)	  { mVUup.mBit = 1; }
+		
 		if (curI & _Ibit_)	  { mVUlow.isNOP = 1; mVUup.iBit = 1; }
 		else				  { incPC(-1); mVUopL(mVU, 0); incPC(1); }
 		mVUsetCycles(mVU);
@@ -276,6 +281,7 @@ microVUf(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 	int x;
 	for (x = 0; x < (vuIndex ? (0x3fff/8) : (0xfff/8)); x++) {
 		if (mVUinfo.isEOB)			{ x = 0xffff; }
+		if (mVUup.mBit)				{ OR32ItoM((uptr)&mVU->regs->flags, VUFLAG_MFLAGSET); }
 		if (mVUlow.isNOP)			{ incPC(1); doUpperOp(); doIbit(); }
 		else if (!mVUinfo.swapOps)	{ incPC(1); doUpperOp(); doLowerOp(); }
 		else						{ mVUopL(mVU, 1); incPC(1); doUpperOp(); }
@@ -383,7 +389,7 @@ eBitTemination:
 
 	// Do E-bit end stuff here
 	mVUsetupRange(mVU, xPC - 8);
-	mVUendProgram(mVU, mVU->q, mVU->p, lStatus, lMac, lClip);
+	mVUendProgram(mVU, 1, mVU->q, mVU->p, lStatus, lMac, lClip);
 
 	return thisPtr;
 }

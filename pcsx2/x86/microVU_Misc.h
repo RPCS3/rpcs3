@@ -103,7 +103,7 @@ declareAllVariables
 #define _Mbit_ (1<<29)
 #define _Dbit_ (1<<28)
 #define _Tbit_ (1<<27)
-#define _MDTbit_ 0 //( _Mbit_ | _Dbit_ | _Tbit_ ) // ToDo: Implement this stuff...
+#define _DTbit_ 0 //( _Dbit_ | _Tbit_ ) // ToDo: Implement this stuff...
 
 #define divI 0x1040000
 #define divD 0x2080000
@@ -231,7 +231,11 @@ declareAllVariables
 }
 #else
 #define mVUprint 0&&
-#define mVUdebug1() {}
+#define mVUdebug1() {																	\
+	if (curI & _Mbit_)	{ Console::Status("microVU%d: M-bit set!", params getIndex); }	\
+	if (curI & _Dbit_)	{ DevCon::Status ("microVU%d: D-bit set!", params getIndex); }	\
+	if (curI & _Tbit_)	{ DevCon::Status ("microVU%d: T-bit set!", params getIndex); }	\
+}
 #endif
 
 // Program Logging...

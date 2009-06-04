@@ -207,7 +207,7 @@ void mVUflagPass(mV, u32 startPC, u32 xCount) {
 	for (int branch = 0; mVUcount < xCount; mVUcount++) {
 		incPC(1);
 		if (  curI & _Ebit_   )	{ branch = 1; }
-		if (  curI & _MDTbit_ )	{ branch = 4; }
+		if (  curI & _DTbit_ )	{ branch = 4; }
 		if (!(curI & _Ibit_)  )	{ incPC(-1); mVUopL(mVU, 3); incPC(1); }
 		if		(branch >= 2)	{ shortBranch(); break; }
 		else if (branch == 1)	{ branch = 2; }
