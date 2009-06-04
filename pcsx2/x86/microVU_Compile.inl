@@ -101,6 +101,7 @@ microVUt(void) mVUcheckIsSame(mV) {
 	if (mVU->prog.isSame == 0) {
 		if (!isVU1)	mVUcacheProg<0>(mVU->prog.cur);
 		else		mVUcacheProg<1>(mVU->prog.cur);
+		mVU->prog.isSame = 1;
 	}
 }
 
