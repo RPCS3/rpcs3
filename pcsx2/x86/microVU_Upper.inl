@@ -39,7 +39,7 @@ microVUt(void) mVUupdateFlags(mV, int reg, int regT1, int regT2, int xyzw, bool 
 	if (sFLAG.doFlag) {
 		getFlagReg(sReg, sFLAG.write); // Set sReg to valid GPR by Cur Flag Instance
 		mVUallocSFLAGa(sReg, sFLAG.lastWrite); // Get Prev Status Flag
-		AND32ItoR(sReg, 0xffffff00); // Keep Sticky and D/I flags
+		if (sFLAG.doNonSticky) AND32ItoR(sReg, 0xfffcff00); // Clear O,U,S,Z flags
 	}
 
 	//-------------------------Check for Signed flags------------------------------
@@ -59,15 +59,17 @@ microVUt(void) mVUupdateFlags(mV, int reg, int regT1, int regT2, int xyzw, bool 
 
 	AND32ItoR(gprT2, AND_XYZW);  // Grab "Is Zero" bits from the previous calculation
 	if (mFLAG.doFlag) { SHIFT_XYZW(gprT2); }
-	OR32RtoR(mReg, gprT2);	
+	OR32RtoR(mReg, gprT2);
 
 	//-------------------------Write back flags------------------------------
 
 	if (mFLAG.doFlag) mVUallocMFLAGb(mVU, mReg, mFLAG.write); // Set Mac Flag
 	if (sFLAG.doFlag) {
 		OR32RtoR (sReg, mReg);
-		SHL32ItoR(mReg, 8);
-		OR32RtoR (sReg, mReg);
+		if (sFLAG.doNonSticky) {
+			SHL32ItoR(mReg, 8);
+			OR32RtoR (sReg, mReg);
+		}
 	}
 }
 

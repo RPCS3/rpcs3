@@ -296,6 +296,15 @@ microVUt(void) mVUanalyzeR2(mV, int Ft, bool canBeNOP) {
 //------------------------------------------------------------------
 // Sflag - Status Flag Opcodes
 //------------------------------------------------------------------
+#define flagSet(xFLAG) {											\
+	int curPC = iPC;												\
+	for (int i = mVUcount, j = 0; i > 0; i--, j++) {				\
+		incPC2(-2);													\
+		if (sFLAG.doFlag) { xFLAG = 1; if (j >= 3) { break; } }		\
+	}																\
+	iPC = curPC;													\
+}
+
 
 microVUt(void) mVUanalyzeSflag(mV, int It) {
 	if (!It) { mVUlow.isNOP = 1; }
@@ -310,6 +319,7 @@ microVUt(void) mVUanalyzeSflag(mV, int It) {
 	}
 	mVUlow.readFlags = 1;
 	analyzeVIreg2(It, mVUlow.VI_write, 1);
+	flagSet(sFLAG.doNonSticky);
 }
 
 microVUt(void) mVUanalyzeFSSET(mV) {
@@ -326,16 +336,12 @@ microVUt(void) mVUanalyzeMflag(mV, int Is, int It) {
 	else { // Need set _doMac for 4 previous Ops (need to do all 4 because stalls could change the result needed)
 		mVUinfo.swapOps = 1;
 		if (mVUcount < 4) { mVUpBlock->pState.needExactMatch |= 0xf << (/*mVUcount +*/ 4); }
-		int curPC = iPC;
-		for (int i = mVUcount, j = 0; i > 0; i--, j++) {
-			incPC2(-2);
-			if (sFLAG.doFlag) { mFLAG.doFlag = 1; if (j >= 3) { break; } }
-		}
-		iPC = curPC;
+
 	}
 	mVUlow.readFlags = 1;
 	analyzeVIreg1(Is, mVUlow.VI_read[0]);
 	analyzeVIreg2(It, mVUlow.VI_write, 1);
+	flagSet(mFLAG.doFlag);
 }
 
 //------------------------------------------------------------------

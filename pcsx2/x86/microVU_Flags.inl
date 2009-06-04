@@ -77,9 +77,13 @@ microVUt(int) mVUsetFlags(mV, int* xStatus, int* xMac, int* xClip) {
 	int endPC  = iPC;
 	u32 aCount = 1; // Amount of instructions needed to get valid mac flag instances for block linking
 
-	// Ensure last ~4+ instructions update mac flags (if next block's first 4 instructions will read them)
+	// Ensure last ~4+ instructions update mac/status flags (if next block's first 4 instructions will read them)
 	for (int i = mVUcount; i > 0; i--, aCount++) {
-		if (sFLAG.doFlag) { if (__Mac) { mFLAG.doFlag = 1; } if (aCount >= 4) { break; } }
+		if (sFLAG.doFlag) { 
+			if (__Mac)	  { mFLAG.doFlag = 1; } 
+			if (__Status) { sFLAG.doNonSticky = 1; } 		
+			if (aCount >= 4) { break; } 
+		}
 		incPC2(-2);
 	}
 

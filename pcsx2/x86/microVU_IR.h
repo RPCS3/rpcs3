@@ -102,10 +102,11 @@ struct microLowerOp {
 };
 
 struct microFlagInst {
-	bool doFlag;	// Update Flag on this Instruction
-	u8	 write;		// Points to the instance that should be written to (s-stage write)
-	u8	 lastWrite;	// Points to the instance that was last written to (most up-to-date flag)
-	u8	 read;		// Points to the instance that should be read by a lower instruction (t-stage read)
+	bool doFlag;	  // Update Flag on this Instruction
+	bool doNonSticky; // Update O,U,S,Z (non-sticky) bits on this Instruction (status flag only)
+	u8	 write;		  // Points to the instance that should be written to (s-stage write)
+	u8	 lastWrite;	  // Points to the instance that was last written to (most up-to-date flag)
+	u8	 read;		  // Points to the instance that should be read by a lower instruction (t-stage read)
 };
 
 struct microOp {
