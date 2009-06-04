@@ -434,8 +434,8 @@ static __forceinline void *dmaGetAddr(u32 addr) {
 
 //	if (addr & 0xf) { DMA_LOG("*PCSX2*: DMA address not 128bit aligned: %8.8x", addr); }
 	
-	//  teh sux why the f00k 0xE0000000
-	if (addr & 0x80000000) return (void*)&psS[addr & 0x3ff0];
+	//  Need to check the physical address as well as just the "SPR" flag, as VTLB doesnt seem to handle it
+	if ((addr & 0x80000000) || (addr & 0x70000000) == 0x70000000) return (void*)&psS[addr & 0x3ff0];
 
 	ptr = (u8*)vtlb_GetPhyPtr(addr&0x1FFFFFF0);
 	if (ptr == NULL) {

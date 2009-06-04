@@ -576,7 +576,7 @@ __forceinline void psxRcntWmode16( int index, u32 value )
 		{
 			// gated counters are added up as per the h/vblank timers.
 			// (the PIXEL alt source becomes a vsync gate)
-
+			counter.mode |= IOPCNT_STOPPED;
 			PSXCNT_LOG( "IOP Counter[%d] Gate Check set, value = 0x%04X", index, value );
 			if( index == 0 )
 				psxhblankgate |= 1;		// fixme: these gate flags should be one var >_<
@@ -621,6 +621,7 @@ __forceinline void psxRcntWmode32( int index, u32 value )
 		if(counter.mode & IOPCNT_ENABLE_GATE)
 		{
 			PSXCNT_LOG("IOP Counter[3] Gate Check set, value = %x", value);
+			counter.mode |= IOPCNT_STOPPED;
 			psxvblankgate |= 1<<3;
 		}
 		else psxvblankgate &= ~(1<<3);

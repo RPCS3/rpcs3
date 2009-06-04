@@ -250,7 +250,7 @@ void GIFdma()
 		
 		if (((gif->qwc == 0) && (gif->chcr & 0xc) == 0)) 
 			gspath3done = 1;
-		else if(gif->qwc > 0)
+		else if(gif->qwc > 0 || gscycles)
 		{
 			GIFdmaEnd();
 			return;		
@@ -328,19 +328,20 @@ void dmaGIF() {
 	 //We used to addd wait time for the buffer to fill here, fixing some timing problems in path 3 masking
 	//It takes the time of 24 QW for the BUS to become ready - The Punisher, And1 Streetball
 	GIF_LOG("dmaGIFstart chcr = %lx, madr = %lx, qwc  = %lx\n tadr = %lx, asr0 = %lx, asr1 = %lx", gif->chcr, gif->madr, gif->qwc, gif->tadr, gif->asr0, gif->asr1);
-	if ((psHu32(DMAC_CTRL) & 0xC) == 0xC ) { // GIF MFIFO
-		//Console::WriteLn("GIF MFIFO");
-		gifMFIFOInterrupt();
-		return;
-	}
 
-
+	Path3progress = 2;
 	gspath3done = 0; // For some reason this doesnt clear? So when the system starts the thread, we will clear it :)
 	psHu32(GIF_STAT) |= GIF_STAT_P3Q;
 	GSCSRr &= ~0xC000;  //Clear FIFO stuff
 	GSCSRr |= 0x8000;   //FIFO full
 	psHu32(GIF_STAT)|= 0x10000000; // FQC=31, hack ;) [used to be 0xE00; // OPH=1 | APATH=3]
-	Path3progress = 2;
+
+	if ((psHu32(DMAC_CTRL) & 0xC) == 0xC ) { // GIF MFIFO
+		//Console::WriteLn("GIF MFIFO");
+		gifMFIFOInterrupt();
+		return;
+	}	
+	
 
 	if ((gif->qwc == 0) && ((gif->chcr & 0xc) != 0)){
 		u32 *ptag;
@@ -536,11 +537,22 @@ void mfifoGIFtransfer(int qwc) {
 
 void gifMFIFOInterrupt()
 {
+	mfifocycles = 0;
+	if(Path3progress == 2) psHu32(GIF_STAT)&= ~(GIF_STAT_APATH3 | GIF_STAT_OPH); // OPH=0 | APATH=0
+
 	if (!(gif->chcr & 0x100)) { 
 		Console::WriteLn("WTF GIFMFIFO");
 		cpuRegs.interrupt &= ~(1 << 11); 
 		return ; 
 	}
+
+	if(((psHu32(GIF_STAT) & 0x100) || (vif1.cmd & 0x7f) == 0x50) && (psHu32(GIF_MODE) & 0x4) && Path3progress == 0) //Path2 gets priority in intermittent mode
+	{
+		//GIF_LOG("Waiting VU %x, PATH2 %x, GIFMODE %x Progress %x", psHu32(GIF_STAT) & 0x100, (vif1.cmd & 0x7f), psHu32(GIF_MODE), Path3progress);
+		CPU_INT(11,mfifocycles);
+		return;
+	}
+
 	if((spr0->chcr & 0x100) && spr0->qwc == 0)
 	{
 		spr0->chcr &= ~0x100;
@@ -566,6 +578,11 @@ void gifMFIFOInterrupt()
 #endif
 	//if(gifqwc > 0) Console::WriteLn("GIF MFIFO ending with stuff in it %x", params gifqwc);
 	if (!gifmfifoirq) gifqwc = 0;
+
+	gspath3done = 0;
+	gscycles = 0;
+	psHu32(GIF_STAT)&= ~(GIF_STAT_APATH3 | GIF_STAT_OPH); // OPH=0 | APATH=0
+	psHu32(GIF_STAT) &= ~GIF_STAT_P3Q;
 	gifstate = GIF_STATE_READY;
 	gif->chcr &= ~0x100;
 	vif1Regs->stat &= ~VIF1_STAT_VGW;

@@ -212,7 +212,7 @@ __forceinline void SIF0Dma()
 				// Clearing handled by vtlb memory protection and manual blocks.
 				//Cpu->Clear(sif0dma->madr, readSize*4);
 
-				cycles += readSize * BIAS;	// fixme : BIAS is factored in below
+				cycles += readSize;	// fixme : BIAS is factored in below
 				sif0dma->qwc -= readSize;
 				sif0dma->madr += readSize << 4;
 			}
@@ -364,7 +364,7 @@ __forceinline void SIF1Dma()
 				SIF1write(data, qwTransfer << 2);
 
 				sif1dma->madr += qwTransfer << 4;
-				cycles += qwTransfer * BIAS;		// fixme : BIAS is factored in above
+				cycles += qwTransfer;		// fixme : BIAS is factored in above
 				sif1dma->qwc -= qwTransfer;
 			}
 		}
