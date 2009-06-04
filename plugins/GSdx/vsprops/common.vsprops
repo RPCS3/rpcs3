@@ -27,7 +27,7 @@
 	/>
 	<Tool
 		Name="VCPostBuildEventTool"
-		CommandLine=""
+		CommandLine=".\postBuild.cmd &quot;$(TargetPath)&quot; &quot;$(TargetName)&quot; $(TargetExt) $(PcsxSubsection)"
 	/>
 	<Tool
 		Name="VCPreBuildEventTool"
