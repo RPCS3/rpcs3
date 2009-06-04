@@ -49,6 +49,30 @@
 	}																											\
 }
 
+#define doBackupVF1() {																	\
+	if (mVUinfo.backupVF && !mVUlow.noWriteVF) {										\
+		DevCon::Status("microVU%d: Backing Up VF Reg [%04x]", params getIndex, xPC);	\
+		SSE_MOVAPS_M128_to_XMM(xmmT1, (uptr)&mVU->regs->VF[mVUlow.VF_write.reg].UL[0]);	\
+		SSE_MOVAPS_XMM_to_M128((uptr)mVU->xmmVFb, xmmT1);								\
+	}																					\
+}
+
+#define doBackupVF2() {																	\
+	if (mVUinfo.backupVF && !mVUlow.noWriteVF) {										\
+		SSE_MOVAPS_M128_to_XMM(xmmT1, (uptr)mVU->xmmVFb);								\
+		SSE_MOVAPS_M128_to_XMM(xmmT2, (uptr)&mVU->regs->VF[mVUlow.VF_write.reg].UL[0]);	\
+		SSE_MOVAPS_XMM_to_M128((uptr)&mVU->regs->VF[mVUlow.VF_write.reg].UL[0], xmmT1);	\
+		SSE_MOVAPS_XMM_to_M128((uptr)mVU->xmmVFb, xmmT2);								\
+	}																					\
+}
+
+#define doBackupVF3() {																	\
+	if (mVUinfo.backupVF && !mVUlow.noWriteVF) {										\
+		SSE_MOVAPS_M128_to_XMM(xmmT1, (uptr)mVU->xmmVFb);								\
+		SSE_MOVAPS_XMM_to_M128((uptr)&mVU->regs->VF[mVUlow.VF_write.reg].UL[0], xmmT1);	\
+	}																					\
+}
+
 #define startLoop() {								\
 	mVUdebug1();									\
 	memset(&mVUinfo,	 0, sizeof(mVUinfo));		\
@@ -61,6 +85,7 @@
 #define incQ()				{ mVU->q = (mVU->q+1) & 1; }
 #define doUpperOp()			{ mVUopU(mVU, 1); mVUdivSet(mVU); }
 #define doLowerOp()			{ incPC(-1); mVUopL(mVU, 1); incPC(1); }
+#define doSwapOp()			{ doBackupVF1(); mVUopL(mVU, 1); doBackupVF2(); incPC(1); doUpperOp(); doBackupVF3(); }
 #define doIbit()			{ if (mVUup.iBit) { incPC(-1); MOV32ItoM((uptr)&mVU->regs->VI[REG_I].UL, curI); incPC(1); } }
 
 //------------------------------------------------------------------
@@ -134,12 +159,34 @@ microVUt(void) mVUincCycles(mV, int x) {
 	calcCycles(mVUregs.r, x);
 }
 
+#define cmpVFregs(VFreg1, VFreg2, xVar) {	\
+	if (VFreg1.reg == VFreg2.reg) {			\
+		if ((VFreg1.x && VFreg2.x)			\
+		||	(VFreg1.y && VFreg2.y)			\
+		||	(VFreg1.z && VFreg2.z)			\
+		||	(VFreg1.w && VFreg2.w))			\
+		{ xVar = 1; }						\
+	}										\
+}
+
 microVUt(void) mVUsetCycles(mV) {
 	incCycles(mVUstall);
-	if (mVUregsTemp.VFreg[0] == mVUregsTemp.VFreg[1] && mVUregsTemp.VFreg[0]) {	// If upper Op && lower Op write to same VF reg
+	// If upper Op && lower Op write to same VF reg:
+	if ((mVUregsTemp.VFreg[0] == mVUregsTemp.VFreg[1]) && mVUregsTemp.VFreg[0]) {
 		if (mVUregsTemp.r || mVUregsTemp.VI) mVUlow.noWriteVF = 1; 
 		else mVUlow.isNOP = 1; // If lower Op doesn't modify anything else, then make it a NOP
 	}
+	// If lower op reads a VF reg that upper Op writes to:
+	if ((mVUlow.VF_read[0].reg || mVUlow.VF_read[1].reg) && mVUup.VF_write.reg) {
+		cmpVFregs(mVUup.VF_write, mVUlow.VF_read[0], mVUinfo.swapOps);
+		cmpVFregs(mVUup.VF_write, mVUlow.VF_read[1], mVUinfo.swapOps);
+	}
+	// If above case is true, and upper op reads a VF reg that lower Op Writes to:
+	if (mVUinfo.swapOps && ((mVUup.VF_read[0].reg || mVUup.VF_read[1].reg) && mVUlow.VF_write.reg)) {
+		cmpVFregs(mVUlow.VF_write, mVUup.VF_read[0], mVUinfo.backupVF);
+		cmpVFregs(mVUlow.VF_write, mVUup.VF_read[1], mVUinfo.backupVF);
+	}
+
 	tCycles(mVUregs.VF[mVUregsTemp.VFreg[0]].x, mVUregsTemp.VF[0].x);
 	tCycles(mVUregs.VF[mVUregsTemp.VFreg[0]].y, mVUregsTemp.VF[0].y);
 	tCycles(mVUregs.VF[mVUregsTemp.VFreg[0]].z, mVUregsTemp.VF[0].z);
@@ -254,7 +301,6 @@ microVUf(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 		if (curI & _Ebit_)	  { branch = 1; mVUup.eBit = 1; }
 		if (curI & _DTbit_)	  { branch = 4; }
 		if (curI & _Mbit_)	  { mVUup.mBit = 1; }
-		
 		if (curI & _Ibit_)	  { mVUlow.isNOP = 1; mVUup.iBit = 1; }
 		else				  { incPC(-1); mVUopL(mVU, 0); incPC(1); }
 		mVUsetCycles(mVU);
@@ -284,7 +330,7 @@ microVUf(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 		if (mVUup.mBit)				{ OR32ItoM((uptr)&mVU->regs->flags, VUFLAG_MFLAGSET); }
 		if (mVUlow.isNOP)			{ incPC(1); doUpperOp(); doIbit(); }
 		else if (!mVUinfo.swapOps)	{ incPC(1); doUpperOp(); doLowerOp(); }
-		else						{ mVUopL(mVU, 1); incPC(1); doUpperOp(); }
+		else						{ doSwapOp(); }
 		if (mVUinfo.doXGKICK)		{ mVU_XGKICK_DELAY(mVU, 1); }
 		
 		if (!mVUinfo.isBdelay) { incPC(1); }

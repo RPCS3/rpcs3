@@ -115,6 +115,7 @@ struct microOp {
 	bool isEOB;			 // Cur Instruction is last instruction in block (End of Block)
 	bool isBdelay;		 // Cur Instruction in Branch Delay slot
 	bool swapOps;		 // Run Lower Instruction before Upper Instruction
+	bool backupVF;		 // Backup mVUlow.VF_write.reg, and restore it before the Upper Instruction is called
 	bool doXGKICK;		 // Do XGKICK transfer on this instruction
 	bool doDivFlag;		 // Transfer Div flag to Status Flag on this instruction
 	int	 readQ;			 // Q instance for reading

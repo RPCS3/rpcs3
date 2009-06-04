@@ -31,7 +31,7 @@
 #define aMax(x, y) ((x > y) ? x : y)
 #define aMin(x, y) ((x < y) ? x : y)
 
-// Read a VF reg by upper op
+// Read a VF reg
 #define analyzeReg1(xReg, vfRead) {																\
 	if (xReg) {																					\
 		if (_X) { mVUstall = aMax(mVUstall, aReg(xReg).x); vfRead.reg = xReg; vfRead.x = 1; }	\
@@ -39,20 +39,6 @@
 		if (_Z) { mVUstall = aMax(mVUstall, aReg(xReg).z); vfRead.reg = xReg; vfRead.z = 1; }	\
 		if (_W) { mVUstall = aMax(mVUstall, aReg(xReg).w); vfRead.reg = xReg; vfRead.w = 1; }	\
 	}																							\
-}
-
-// Read a VF reg by lower op
-#define analyzeReg1b(xReg, vfRead) {			\
-	if (xReg) {									\
-		analyzeReg1(xReg, vfRead);				\
-		if (mVUregsTemp.VFreg[0] == xReg) {		\
-			if ((mVUregsTemp.VF[0].x && _X)		\
-			||  (mVUregsTemp.VF[0].y && _Y)		\
-			||  (mVUregsTemp.VF[0].z && _Z)		\
-			||  (mVUregsTemp.VF[0].w && _W))	\
-			{ mVUinfo.swapOps = 1; }			\
-		}										\
-	}											\
 }
 
 // Write to a VF reg
@@ -92,13 +78,6 @@
 			case 2: mVUstall = aMax(mVUstall, aReg(xReg).z); vfRead.reg = xReg; vfRead.z = 1; break;	\
 			case 3: mVUstall = aMax(mVUstall, aReg(xReg).w); vfRead.reg = xReg; vfRead.w = 1; break;	\
 		}																								\
-		if (mVUregsTemp.VFreg[0] == xReg) {																\
-			if ((mVUregsTemp.VF[0].x && (fxf == 0))														\
-			||  (mVUregsTemp.VF[0].y && (fxf == 1))														\
-			||  (mVUregsTemp.VF[0].z && (fxf == 2))														\
-			||  (mVUregsTemp.VF[0].w && (fxf == 3)))													\
-			{ mVUinfo.swapOps = 1; }																	\
-		}																								\
 	}																									\
 }
 
@@ -109,13 +88,6 @@
 		if (_Y) { mVUstall = aMax(mVUstall, aReg(xReg).z); vfRead.reg = xReg; vfRead.z = 1; }	\
 		if (_Z) { mVUstall = aMax(mVUstall, aReg(xReg).w); vfRead.reg = xReg; vfRead.w = 1; }	\
 		if (_W) { mVUstall = aMax(mVUstall, aReg(xReg).x); vfRead.reg = xReg; vfRead.x = 1; }	\
-		if (mVUregsTemp.VFreg[0] == xReg) {														\
-			if ((mVUregsTemp.VF[0].y && _X)														\
-			||  (mVUregsTemp.VF[0].z && _Y)														\
-			||  (mVUregsTemp.VF[0].w && _Z)														\
-			||  (mVUregsTemp.VF[0].x && _W))													\
-			{ mVUinfo.swapOps = 1; }															\
-		}																						\
 	}																							\
 }
 
@@ -234,7 +206,7 @@ microVUt(void) mVUanalyzeEFU1(mV, int Fs, int Fsf, u8 xCycles) {
 
 microVUt(void) mVUanalyzeEFU2(mV, int Fs, u8 xCycles) {
 	mVUprint("microVU: EFU Opcode");
-	analyzeReg1b(Fs, mVUlow.VF_read[0]);
+	analyzeReg1(Fs, mVUlow.VF_read[0]);
 	analyzePreg(xCycles);
 }
 
@@ -253,8 +225,8 @@ microVUt(void) mVUanalyzeMFP(mV, int Ft) {
 
 microVUt(void) mVUanalyzeMOVE(mV, int Fs, int Ft) {
 	if (!Ft || (Ft == Fs)) { mVUlow.isNOP = 1; }
-	analyzeReg1b(Fs, mVUlow.VF_read[0]);
-	analyzeReg2 (Ft, mVUlow.VF_write, 1);
+	analyzeReg1(Fs, mVUlow.VF_read[0]);
+	analyzeReg2(Ft, mVUlow.VF_write, 1);
 }
 
 //------------------------------------------------------------------
@@ -273,7 +245,7 @@ microVUt(void) mVUanalyzeLQ(mV, int Ft, int Is, bool writeIs) {
 //------------------------------------------------------------------
 
 microVUt(void) mVUanalyzeSQ(mV, int Fs, int It, bool writeIt) {
-	analyzeReg1b (Fs, mVUlow.VF_read[0]);
+	analyzeReg1  (Fs, mVUlow.VF_read[0]);
 	analyzeVIreg1(It, mVUlow.VI_read[0]);
 	if (writeIt) { analyzeVIreg2(It, mVUlow.VI_write, 1); }
 }

@@ -47,7 +47,7 @@ namespace VU0micro
 		if ((VU0.VI[REG_VPU_STAT].UL & 1) == 0) return;
 
 		FreezeXMMRegs(1);
-		if (useMVU0) runVUrec(VU0.VI[REG_TPC].UL, 50000, 0);
+		if (useMVU0) runVUrec(VU0.VI[REG_TPC].UL, 0x300, 0);
 		else		 SuperVUExecuteProgram(VU0.VI[REG_TPC].UL & 0xfff, 0);
 		FreezeXMMRegs(0);
 	}
