@@ -39,7 +39,7 @@ microVUt(void) mVUupdateFlags(mV, int reg, int regT1, int regT2, int xyzw, bool 
 	if (sFLAG.doFlag) {
 		getFlagReg(sReg, sFLAG.write); // Set sReg to valid GPR by Cur Flag Instance
 		mVUallocSFLAGa(sReg, sFLAG.lastWrite); // Get Prev Status Flag
-		if (sFLAG.doNonSticky) AND32ItoR(sReg, 0xfffcff00); // Clear O,U,S,Z flags
+		if (sFLAG.doNonSticky) AND32ItoR(sReg, 0xfffc00ff); // Clear O,U,S,Z flags
 	}
 
 	//-------------------------Check for Signed flags------------------------------

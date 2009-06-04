@@ -52,10 +52,9 @@ microVUt(void) mVUdispatcherA(mV) {
 	AND32ItoR(gprF2, 0x1800);
 	OR32RtoR (gprF1, gprF2);
 
-	MOV32RtoR(gprF3, gprF0);
-	SHL32ItoR(gprF3, 14);
-	AND32ItoR(gprF3, 0x3cf0000);
-	OR32RtoR (gprF1, gprF3);
+	SHL32ItoR(gprF0, 14);
+	AND32ItoR(gprF0, 0x3cf0000);
+	OR32RtoR (gprF1, gprF0);
 
 	MOV32RtoR(gprF0, gprF1);
 	MOV32RtoR(gprF2, gprF1);
