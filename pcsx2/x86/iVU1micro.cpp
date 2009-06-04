@@ -250,8 +250,8 @@ namespace VU1micro
 
 namespace VU1micro
 {
-	void recAlloc()		{ initVUrec(&VU1, 1); SuperVUAlloc(1); }
-	void recShutdown()	{ closeVUrec(1);	  SuperVUDestroy(1); }
+	void recAlloc()		{ SuperVUAlloc(1);   initVUrec(&VU1, 1); }
+	void recShutdown()	{ SuperVUDestroy(1); closeVUrec(1);}
 	
 	void __fastcall recClear(u32 Addr, u32 Size) { 
 		if (useMVU1) clearVUrec(Addr, Size, 1); 

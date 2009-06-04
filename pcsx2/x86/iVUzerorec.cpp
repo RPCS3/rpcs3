@@ -342,9 +342,9 @@ void SuperVUAlloc(int vuindex)
 	if (s_recVUMem == NULL)
 	{
 		// upper 4 bits must be zero!
-		// Changed "first try base" to 0xb800000, since 0x0c000000 liked to fail a lot. (air)
-		s_recVUMem = SysMmapEx(0x0c000000, VU_EXESIZE, 0x10000000, "SuperVUAlloc");
-
+		// Changed "first try base" to 0xf1e0000, since 0x0c000000 liked to fail a lot. (cottonvibes)
+		s_recVUMem = SysMmapEx(0xf1e0000, VU_EXESIZE, 0x10000000, "SuperVUAlloc");
+		
 		if (s_recVUMem == NULL)
 		{
 			throw Exception::OutOfMemory(

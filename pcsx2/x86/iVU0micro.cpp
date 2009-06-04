@@ -27,8 +27,8 @@
 
 namespace VU0micro
 {
-	void recAlloc()		{ initVUrec(&VU0, 0); SuperVUAlloc(0); }
-	void recShutdown()	{ closeVUrec(0);	  SuperVUDestroy(0); }
+	void recAlloc()		{ SuperVUAlloc(0);   initVUrec(&VU0, 0); }
+	void recShutdown()	{ SuperVUDestroy(0); closeVUrec(0); }
 
 	void __fastcall recClear(u32 Addr, u32 Size) { 
 		if (useMVU0) clearVUrec(Addr, Size, 0); 
