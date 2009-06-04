@@ -10,10 +10,10 @@
 #define IDC_CODECS                      2006
 #define IDC_RESOLUTION                  2007
 #define IDC_SHADER                      2008
-#define IDC_EDIT1                       2009
-#define IDC_EDIT2                       2010
+#define IDC_RESX_EDIT                   2009
+#define IDC_RESY_EDIT                   2010
 #define IDC_AA1		                    2011
-#define IDC_EDIT3                       2012
+#define IDC_SWTHREADS_EDIT              2012
 #define IDC_CUSTOM1                     2013
 #define IDC_CHECK4                      2014
 #define IDC_FILTER                      2015

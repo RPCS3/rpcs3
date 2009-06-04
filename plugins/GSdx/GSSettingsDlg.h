@@ -28,6 +28,8 @@ class GSSettingsDlg : public GSDialog
 {
 	list<D3DDISPLAYMODE> m_modes;
 
+	void UpdateControls();
+
 protected:
 	void OnInit();
 	bool OnCommand(HWND hWnd, UINT id, UINT code);

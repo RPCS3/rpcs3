@@ -112,25 +112,18 @@ void GSSettingsDlg::OnInit()
 		}
 	}
 
+	bool isdx10avail = GSUtil::IsDirect3D10Available();
+
+	vector<GSSetting> renderers;
+
+	for(size_t i = 0; i < countof(g_renderers); i++)
 	{
-		bool isdx10avail = GSUtil::IsDirect3D10Available();
+		if(i >= 3 && i <= 5 && !isdx10avail) continue;
 
-		vector<GSSetting> renderers;
-
-		for(size_t i = 0; i < countof(g_renderers); i++)
-		{
-			if(i >= 3 && i <= 5 && !isdx10avail) continue;
-
-			renderers.push_back(g_renderers[i]);
-		}
-
-		HWND hWnd = GetDlgItem(m_hWnd, IDC_RENDERER);
-
-		ComboBoxInit(hWnd, &renderers[0], renderers.size(), theApp.GetConfig("Renderer", 0));
-
-		OnCommand(hWnd, IDC_RENDERER, CBN_SELCHANGE);
+		renderers.push_back(g_renderers[i]);
 	}
 
+	ComboBoxInit(GetDlgItem(m_hWnd, IDC_RENDERER), &renderers[0], renderers.size(), theApp.GetConfig("Renderer", 0));
 	ComboBoxInit(GetDlgItem(m_hWnd, IDC_SHADER), g_psversion, countof(g_psversion), theApp.GetConfig("PixelShaderVersion2", D3DPS_VERSION(2, 0)), caps.PixelShaderVersion);
 	ComboBoxInit(GetDlgItem(m_hWnd, IDC_INTERLACE), g_interlace, countof(g_interlace), theApp.GetConfig("Interlace", 0));
 	ComboBoxInit(GetDlgItem(m_hWnd, IDC_ASPECTRATIO), g_aspectratio, countof(g_aspectratio), theApp.GetConfig("AspectRatio", 1));
@@ -151,21 +144,19 @@ void GSSettingsDlg::OnInit()
 
 	SendMessage(GetDlgItem(m_hWnd, IDC_SWTHREADS), UDM_SETRANGE, 0, MAKELPARAM(16, 1));
 	SendMessage(GetDlgItem(m_hWnd, IDC_SWTHREADS), UDM_SETPOS, 0, MAKELPARAM(theApp.GetConfig("swthreads", 1), 0));
+
+	UpdateControls();
 }
 
 bool GSSettingsDlg::OnCommand(HWND hWnd, UINT id, UINT code)
 {
 	if(id == IDC_RENDERER && code == CBN_SELCHANGE)
 	{
-		int item = (int)SendMessage(hWnd, CB_GETCURSEL, 0, 0);
-
-		if(item >= 0)
-		{
-			int i = (int)SendMessage(hWnd, CB_GETITEMDATA, item, 0);
-
-			ShowWindow(GetDlgItem(m_hWnd, IDC_LOGO9), i >= 0 && i <= 2 ? SW_SHOW : SW_HIDE);
-			ShowWindow(GetDlgItem(m_hWnd, IDC_LOGO10), i >= 3 && i <= 5 ? SW_SHOW : SW_HIDE);
-		}
+		UpdateControls();
+	}
+	else if(id == IDC_NATIVERES && code == BN_CLICKED)
+	{
+		UpdateControls();
 	}
 	else if(id == IDOK)
 	{
@@ -216,3 +207,32 @@ bool GSSettingsDlg::OnCommand(HWND hWnd, UINT id, UINT code)
 	return __super::OnCommand(hWnd, id, code);
 }
 
+void GSSettingsDlg::UpdateControls()
+{
+	INT_PTR i;
+
+	if(ComboBoxGetSelData(GetDlgItem(m_hWnd, IDC_RENDERER), i))
+	{
+		bool dx9 = i >= 0 && i <= 2;
+		bool dx10 = i >= 3 && i <= 5;
+		bool hw = i == 0 || i == 3;
+		bool sw = i == 1 || i == 4 || i == 6;
+		bool native = !!IsDlgButtonChecked(m_hWnd, IDC_NATIVERES);
+
+		ShowWindow(GetDlgItem(m_hWnd, IDC_LOGO9), dx9 ? SW_SHOW : SW_HIDE);
+		ShowWindow(GetDlgItem(m_hWnd, IDC_LOGO10), dx10 ? SW_SHOW : SW_HIDE);
+
+		EnableWindow(GetDlgItem(m_hWnd, IDC_RESOLUTION), dx9);
+		EnableWindow(GetDlgItem(m_hWnd, IDC_SHADER), dx9);
+		EnableWindow(GetDlgItem(m_hWnd, IDC_RESX), hw && !native);
+		EnableWindow(GetDlgItem(m_hWnd, IDC_RESX_EDIT), hw && !native);
+		EnableWindow(GetDlgItem(m_hWnd, IDC_RESY), hw && !native);
+		EnableWindow(GetDlgItem(m_hWnd, IDC_RESY_EDIT), hw && !native);
+		EnableWindow(GetDlgItem(m_hWnd, IDC_NATIVERES), hw);
+		EnableWindow(GetDlgItem(m_hWnd, IDC_LOGZ), dx9 && hw);
+		EnableWindow(GetDlgItem(m_hWnd, IDC_FBA), dx9 && hw);
+		EnableWindow(GetDlgItem(m_hWnd, IDC_AA1), sw);
+		EnableWindow(GetDlgItem(m_hWnd, IDC_SWTHREADS_EDIT), sw);
+		EnableWindow(GetDlgItem(m_hWnd, IDC_SWTHREADS), sw);
+	}
+}
