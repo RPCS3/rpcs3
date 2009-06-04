@@ -93,7 +93,7 @@ static u32 WRITERING_DMA(u32 *pMem, u32 qwc)
 
 	if( mtgsThread != NULL )
 	{ 
-		int sizetoread = (qwc)<<4; 
+		int sizetoread = qwc;
 		sizetoread = mtgsThread->PrepDataPacket( GIF_PATH_3, pMem, qwc );
 		u8* pgsmem = mtgsThread->GetDataPacketPtr();
 
@@ -122,7 +122,7 @@ static u32 WRITERING_DMA(u32 *pMem, u32 qwc)
 
 int  _GIFchain() {
 
-	u32 qwc = ((psHu32(GIF_MODE) & 0x4) && (vif1Regs->mskpath3)) ? min(8, (int)gif->qwc) : min( gifsplit, (int)gif->qwc );
+	u32 qwc = ((psHu32(GIF_MODE) & 0x4) || vif1Regs->mskpath3) ? min(8, (int)gif->qwc) : min( gifsplit, (int)gif->qwc );
 	u32 *pMem;
 
 	pMem = (u32*)dmaGetAddr(gif->madr);
@@ -301,27 +301,26 @@ void GIFdma()
 	}
 
 	prevcycles = 0;
-	if (!(vif1Regs->mskpath3 || (psHu32(GIF_MODE) & 0x1)))	{
-		if (gspath3done == 0 && gif->qwc == 0)
-		{
-			
-			ptag = (u32*)dmaGetAddr(gif->tadr);  //Set memory pointer to TADR
-			gif->qwc  = (u16)ptag[0];			    //QWC set to lower 16bits of the tag
-			gif->chcr = ( gif->chcr & 0xFFFF ) | ( (*ptag) & 0xFFFF0000 );  //Transfer upper part of tag to CHCR bits 31-15
-			gif->madr = ptag[1];
+	if (gspath3done == 0 && gif->qwc == 0)
+	{
+		
+		ptag = (u32*)dmaGetAddr(gif->tadr);  //Set memory pointer to TADR
+		gif->qwc  = (u16)ptag[0];			    //QWC set to lower 16bits of the tag
+		gif->chcr = ( gif->chcr & 0xFFFF ) | ( (*ptag) & 0xFFFF0000 );  //Transfer upper part of tag to CHCR bits 31-15
+		gif->madr = ptag[1];
 
-			gspath3done = hwDmacSrcChainWithStack(gif, (ptag[0] >> 28) & 0x7);
-			if ((gif->chcr & 0x80) && (ptag[0] >> 31)) { //Check TIE bit of CHCR and IRQ bit of tag
-				GIF_LOG("dmaIrq Set");
-				gspath3done = 1;
-			}
-			GIF_LOG("gifdmaChain %8.8x_%8.8x size=%d, id=%d, addr=%lx", ptag[1], ptag[0], gif->qwc, (ptag[0] >> 28) & 0x7, gif->madr);
-			GIFdmaEnd();
-			return;
-			
-		} else GIFdmaEnd();
-		gscycles = 0;
-	}
+		gspath3done = hwDmacSrcChainWithStack(gif, (ptag[0] >> 28) & 0x7);
+		if ((gif->chcr & 0x80) && (ptag[0] >> 31)) { //Check TIE bit of CHCR and IRQ bit of tag
+			GIF_LOG("dmaIrq Set");
+			gspath3done = 1;
+		}
+		GIF_LOG("gifdmaChain %8.8x_%8.8x size=%d, id=%d, addr=%lx", ptag[1], ptag[0], gif->qwc, (ptag[0] >> 28) & 0x7, gif->madr);
+		GIFdmaEnd();
+		return;
+		
+	} else GIFdmaEnd();
+	gscycles = 0;
+
 }
 
 void dmaGIF() {
@@ -372,7 +371,7 @@ void dmaGIF() {
 
 // called from only one location, so forceinline it:
 static __forceinline int mfifoGIFrbTransfer() {
-	u32 qwc = (psHu32(GIF_MODE) & 0x4 && vif1Regs->mskpath3) ? min(8, (int)gif->qwc) : gif->qwc;
+	u32 qwc = (psHu32(GIF_MODE) & 0x4 || vif1Regs->mskpath3) ? min(8, (int)gif->qwc) : gif->qwc;
 	int mfifoqwc = min(gifqwc, qwc);
 	u32 *src;
 
@@ -431,7 +430,7 @@ static __forceinline int mfifoGIFchain() {
 	} 
 	else 
 	{
-		int mfifoqwc = (psHu32(GIF_MODE) & 0x4 && vif1Regs->mskpath3) ? min(8, (int)gif->qwc) : gif->qwc;
+		int mfifoqwc = (psHu32(GIF_MODE) & 0x4 || vif1Regs->mskpath3) ? min(8, (int)gif->qwc) : gif->qwc;
 		u32 *pMem = (u32*)dmaGetAddr(gif->madr);
 		if (pMem == NULL) return -1;
 

@@ -390,13 +390,24 @@ __forceinline int mtgsThreadObject::_gifTransferDummy( GIF_PATH pathidx, const u
 			}
 		}
 		
-		if(pathidx == 0)
+		if(path.tag.nloop == 0)
 		{
-			if(path.tag.eop && path.tag.nloop == 0)
+			if(path.tag.eop)
 			{
-				break;
-			}
-			/*if((path.tag.nloop > 0 || (!path.tag.eop && path.tag.nloop == 0)) && size == 0)
+				if(pathidx != 1)
+				{				
+					break;
+				}
+				/*if((path.tag.nloop > 0 || (!path.tag.eop && path.tag.nloop == 0)) && size == 0)
+				{
+					if(path1loop == true) return size - 0x400;
+					//DevCon::Notice("Looping Nloop %x, Eop %x, FLG %x", params path.tag.nloop, path.tag.eop, path.tag.flg);
+					size = 0x400;
+					pMem -= 0x4000;
+					path1loop = true;
+				}*/
+			} 
+			/*else if(size == 0 && pathidx == 0)
 			{
 				if(path1loop == true) return size - 0x400;
 				//DevCon::Notice("Looping Nloop %x, Eop %x, FLG %x", params path.tag.nloop, path.tag.eop, path.tag.flg);
@@ -404,15 +415,15 @@ __forceinline int mtgsThreadObject::_gifTransferDummy( GIF_PATH pathidx, const u
 				pMem -= 0x4000;
 				path1loop = true;
 			}*/
-		}
-		if(pathidx == 2)
+		} 
+		/*else if(size == 0 && pathidx == 0)
 		{
-			if(path.tag.eop && path.tag.nloop == 0)
-			{
-				//if(pathidx == 2) GIF_LOG("BREAK PATH3 NLoop %d EOP %x Mode %d Path3msk %x Path3progress %x ", path.tag.nloop, path.tag.eop, path.tag.flg, vif1Regs->mskpath3, Path3progress);
-				break;
-			}
-		}
+			if(path1loop == true) return size - 0x400;
+			//DevCon::Notice("Looping Nloop %x, Eop %x, FLG %x", params path.tag.nloop, path.tag.eop, path.tag.flg);
+			size = 0x400;
+			pMem -= 0x4000;
+			path1loop = true;
+		}*/
 	}
 
 	if(pathidx == 0)
