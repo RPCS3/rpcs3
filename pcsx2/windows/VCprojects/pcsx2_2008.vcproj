@@ -224,7 +224,7 @@
 				SmallerTypeCheck="false"
 				BufferSecurityCheck="false"
 				EnableEnhancedInstructionSet="0"
-				UsePrecompiledHeader="0"
+				UsePrecompiledHeader="2"
 				PrecompiledHeaderThrough="PrecompiledHeader.h"
 				PrecompiledHeaderFile="$(IntDir)\$(TargetName).pch"
 				CompileAs="2"
@@ -479,6 +479,15 @@
 						PrecompiledHeaderFile="$(IntDir)\win32.pch"
 					/>
 				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PrecompiledHeaderThrough="Win32.h"
+						PrecompiledHeaderFile="$(IntDir)\win32.pch"
+					/>
+				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\McdConfigDlg.cpp"
@@ -559,6 +568,15 @@
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Devel|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						PrecompiledHeaderThrough="Win32.h"
+						PrecompiledHeaderFile="$(IntDir)\win32.pch"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -648,6 +666,16 @@
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Devel|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="1"
+						PrecompiledHeaderThrough="Win32.h"
+						PrecompiledHeaderFile="$(IntDir)\win32.pch"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -779,6 +807,15 @@
 							PrecompiledHeaderFile="$(IntDir)\win32.pch"
 						/>
 					</FileConfiguration>
+					<FileConfiguration
+						Name="Release|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							PrecompiledHeaderThrough="Win32.h"
+							PrecompiledHeaderFile="$(IntDir)\win32.pch"
+						/>
+					</FileConfiguration>
 				</File>
 				<File
 					RelativePath=".\..\Debugger.h"
@@ -793,7 +830,7 @@
 						<Tool
 							Name="VCCLCompilerTool"
 							PrecompiledHeaderThrough="Win32.h"
-							PrecompiledHeaderFile="$(IntDir)\Win32.pch"
+							PrecompiledHeaderFile="$(IntDir)\win32.pch"
 						/>
 					</FileConfiguration>
 					<FileConfiguration
@@ -802,7 +839,16 @@
 						<Tool
 							Name="VCCLCompilerTool"
 							PrecompiledHeaderThrough="Win32.h"
-							PrecompiledHeaderFile="$(IntDir)\Win32.pch"
+							PrecompiledHeaderFile="$(IntDir)\win32.pch"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							PrecompiledHeaderThrough="Win32.h"
+							PrecompiledHeaderFile="$(IntDir)\win32.pch"
 						/>
 					</FileConfiguration>
 				</File>
@@ -815,7 +861,7 @@
 						<Tool
 							Name="VCCLCompilerTool"
 							PrecompiledHeaderThrough="Win32.h"
-							PrecompiledHeaderFile="$(IntDir)\Win32.pch"
+							PrecompiledHeaderFile="$(IntDir)\win32.pch"
 						/>
 					</FileConfiguration>
 					<FileConfiguration
@@ -824,7 +870,16 @@
 						<Tool
 							Name="VCCLCompilerTool"
 							PrecompiledHeaderThrough="Win32.h"
-							PrecompiledHeaderFile="$(IntDir)\Win32.pch"
+							PrecompiledHeaderFile="$(IntDir)\win32.pch"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							PrecompiledHeaderThrough="Win32.h"
+							PrecompiledHeaderFile="$(IntDir)\win32.pch"
 						/>
 					</FileConfiguration>
 				</File>
@@ -1301,6 +1356,15 @@
 							PrecompiledHeaderFile="$(IntDir)\win32.pch"
 						/>
 					</FileConfiguration>
+					<FileConfiguration
+						Name="Release|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							PrecompiledHeaderThrough="..\Win32.h"
+							PrecompiledHeaderFile="$(IntDir)\win32.pch"
+						/>
+					</FileConfiguration>
 				</File>
 				<File
 					RelativePath="..\cheats\cheats.cpp"
@@ -1316,6 +1380,15 @@
 					</FileConfiguration>
 					<FileConfiguration
 						Name="Devel|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							PrecompiledHeaderThrough="..\Win32.h"
+							PrecompiledHeaderFile="$(IntDir)\win32.pch"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release|Win32"
 						>
 						<Tool
 							Name="VCCLCompilerTool"
@@ -2241,14 +2314,6 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Release|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							UsePrecompiledHeader="0"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
 						Name="Devel vm|Win32"
 						>
 						<Tool
@@ -2901,6 +2966,15 @@
 						<Tool
 							Name="VCCLCompilerTool"
 							PrecompiledHeaderThrough="Win32.h"
+							PrecompiledHeaderFile="$(IntDir)\win32.pch"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							PrecompiledHeaderThrough="win32.h"
 							PrecompiledHeaderFile="$(IntDir)\win32.pch"
 						/>
 					</FileConfiguration>
