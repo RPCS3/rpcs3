@@ -174,6 +174,27 @@ void ipuShutdown()
 {
 }
 
+void ReportIPU()
+{
+	Console::WriteLn("g_nDMATransfer = 0x%x.", params g_nDMATransfer);
+	Console::WriteLn("FIreadpos = 0x%x, FIwritepos = 0x%x.", params FIreadpos, FIwritepos);
+	Console::WriteLn("fifo_input = 0x%x.", params fifo_input);
+	Console::WriteLn("FOreadpos = 0x%x, FOwritepos = 0x%x.", params FOreadpos, FOwritepos);
+	Console::WriteLn("fifo_output = 0x%x.", params fifo_output);
+	Console::WriteLn("g_BP = 0x%x.", params g_BP);
+	Console::WriteLn("niq = 0x%x, iq = 0x%x.", params niq, iq);
+	Console::WriteLn("vqclut = 0x%x.", params vqclut);
+	Console::WriteLn("s_thresh = 0x%x.", params s_thresh);
+	Console::WriteLn("coded_block_pattern = 0x%x.", params coded_block_pattern);
+	Console::WriteLn("g_decoder = 0x%x.", params g_decoder);
+	Console::WriteLn("mpeg2_scan_norm = 0x%x, mpeg2_scan_alt = 0x%x.", params mpeg2_scan_norm, mpeg2_scan_alt);
+	Console::WriteLn("g_nCmdPos = 0x%x.", params g_nCmdPos);
+	Console::WriteLn("g_nCmdIndex = 0x%x.", params g_nCmdIndex);
+	Console::WriteLn("ipuCurCmd = 0x%x.", params ipuCurCmd);
+	Console::WriteLn("_readbits = 0x%x.", params _readbits);
+	Console::WriteLn("temp will equal 0x%x.", params readbits - _readbits);
+	Console::WriteLn("");
+}
 // fixme - ipuFreeze looks fairly broken. Should probably take a closer look at some point.
 
 void SaveState::ipuFreeze()
@@ -1352,22 +1373,33 @@ int FIFOto_write(u32* pMem, int size)
 	return firsttrans;
 }
 
-// To do: convert this into a static inlined function.
-#define IPU1chain() { \
-	if (ipu1dma->qwc > 0)	\
-	{	\
-		int qwc = ipu1dma->qwc; \
-		pMem = (u32*)dmaGetAddr(ipu1dma->madr); \
-		if (pMem == NULL) { Console::Error("ipu1dma NULL!"); return totalqwc; } \
-		qwc = FIFOto_write(pMem, qwc); \
-		ipu1dma->madr += qwc<< 4; \
-		ipu1dma->qwc -= qwc; \
-		totalqwc += qwc; \
-		if( ipu1dma->qwc > 0 ) { \
-			g_nDMATransfer |= IPU_DMA_ACTV1; \
-			return totalqwc; \
-		} \
-	} \
+static __forceinline s32 IPU1chain(u32* &pMem, int &totalqwc) 
+{
+	if (ipu1dma->qwc > 0)
+	{
+		int qwc = ipu1dma->qwc; 
+		
+		pMem = (u32*)dmaGetAddr(ipu1dma->madr); 
+		
+		if (pMem == NULL) 
+		{ 
+			Console::Error("ipu1dma NULL!"); 
+			return totalqwc; 
+		} 
+		
+		qwc = FIFOto_write(pMem, qwc); 
+		ipu1dma->madr += qwc<< 4; 
+		ipu1dma->qwc -= qwc; 
+		totalqwc += qwc; 
+		
+		if (ipu1dma->qwc > 0) 
+		{ 
+			g_nDMATransfer |= IPU_DMA_ACTV1; 
+			return totalqwc; 
+		} 
+	} 
+	
+	return -1;
 }
 
 extern void gsInterrupt();
@@ -1395,7 +1427,8 @@ int IPU1dma()
 	// in kh, qwc == 0 when dma_actv1 is set
 	if ((g_nDMATransfer & IPU_DMA_ACTV1) && ipu1dma->qwc > 0)
 	{
-		IPU1chain();
+		int temp = IPU1chain(pMem, totalqwc);
+		if (temp != -1) return temp;
 
 		//Check TIE bit of CHCR and IRQ bit of tag
 		if ((ipu1dma->chcr & 0x80) && (g_nDMATransfer&IPU_DMA_DOTIE1))
@@ -1467,7 +1500,10 @@ int IPU1dma()
 	{
 		IPU_LOG("dmaIPU1 Normal size=%d, addr=%lx, fifosize=%x",
 		        ipu1dma->qwc, ipu1dma->madr, 8 - g_BP.IFC);
-		IPU1chain();
+		
+		int temp = IPU1chain(pMem, totalqwc);
+		if (temp != -1) return temp;
+		
 		IPU_INT_TO((ipu1cycles + totalqwc)*BIAS);
 		return totalqwc;
 	}
@@ -1534,7 +1570,8 @@ int IPU1dma()
 		//Britney Dance beat does a blank NEXT tag, for some odd reason the fix doesnt work if after IPU1Chain O_o
 		if ((ipu1dma->qwc == 0) && (!done) && !(g_nDMATransfer & IPU_DMA_DOTIE1)) IPU1dma();
 
-		IPU1chain();
+		int temp = IPU1chain(pMem, totalqwc);
+		if (temp != -1) return temp;
 
 		if ((ipu1dma->chcr & 0x80) && (ptag[0]&0x80000000)  && ipu1dma->qwc == 0)  			 //Check TIE bit of CHCR and IRQ bit of tag
 		{
