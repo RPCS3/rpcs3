@@ -645,8 +645,7 @@ create_SpeedHacksDlg (void)
   GtkWidget *frame41;
   GtkWidget *alignment36;
   GtkWidget *vbox75;
-  GtkWidget *check_microvu_flag_hack_1;
-  GtkWidget *check_microvu_flag_hack_2;
+  GtkWidget *check_microvu_flag_hack;
   GtkWidget *check_microvu_min_max_hack;
   GtkWidget *label113;
   GtkWidget *dialog_action_area3;
@@ -833,23 +832,17 @@ create_SpeedHacksDlg (void)
   gtk_widget_show (vbox75);
   gtk_container_add (GTK_CONTAINER (alignment36), vbox75);
 
-  check_microvu_flag_hack_1 = gtk_check_button_new_with_mnemonic (_("Flag Hack 1 (microVU only)"));
-  gtk_widget_set_name (check_microvu_flag_hack_1, "check_microvu_flag_hack_1");
-  gtk_widget_show (check_microvu_flag_hack_1);
-  gtk_box_pack_start (GTK_BOX (vbox75), check_microvu_flag_hack_1, FALSE, FALSE, 0);
-  gtk_tooltips_set_tip (tooltips, check_microvu_flag_hack_1, _("Big Speedup and moderately compatible. May cause SPS and Infinite loop problems."), NULL);
-
-  check_microvu_flag_hack_2 = gtk_check_button_new_with_mnemonic (_("Flag Hack 2 (microVU only)"));
-  gtk_widget_set_name (check_microvu_flag_hack_2, "check_microvu_flag_hack_2");
-  gtk_widget_show (check_microvu_flag_hack_2);
-  gtk_box_pack_start (GTK_BOX (vbox75), check_microvu_flag_hack_2, FALSE, FALSE, 0);
-  gtk_tooltips_set_tip (tooltips, check_microvu_flag_hack_2, _("Big Speedup and moderately compatible. SuperVU does something similar by default."), NULL);
+  check_microvu_flag_hack = gtk_check_button_new_with_mnemonic (_("Status Flag Hack (microVU only)"));
+  gtk_widget_set_name (check_microvu_flag_hack, "check_microvu_flag_hack");
+  gtk_widget_show (check_microvu_flag_hack);
+  gtk_box_pack_start (GTK_BOX (vbox75), check_microvu_flag_hack, FALSE, FALSE, 0);
+  gtk_tooltips_set_tip (tooltips, check_microvu_flag_hack, _("Big Speedup and high compatiblity. SuperVU does something similar by default."), NULL);
 
   check_microvu_min_max_hack = gtk_check_button_new_with_mnemonic (_("Min / Max Hack (microVU only)"));
   gtk_widget_set_name (check_microvu_min_max_hack, "check_microvu_min_max_hack");
   gtk_widget_show (check_microvu_min_max_hack);
   gtk_box_pack_start (GTK_BOX (vbox75), check_microvu_min_max_hack, FALSE, FALSE, 0);
-  gtk_tooltips_set_tip (tooltips, check_microvu_min_max_hack, _("Small Speedup. May cause SPS, hanging, and missing geometry."), NULL);
+  gtk_tooltips_set_tip (tooltips, check_microvu_min_max_hack, _("Small Speedup. May cause SPS, hanging, graphical corruption, and missing geometry."), NULL);
 
   label113 = gtk_label_new (_("Vertex Unit (VU) Hacks"));
   gtk_widget_set_name (label113, "label113");
@@ -923,8 +916,7 @@ create_SpeedHacksDlg (void)
   GLADE_HOOKUP_OBJECT (SpeedHacksDlg, frame41, "frame41");
   GLADE_HOOKUP_OBJECT (SpeedHacksDlg, alignment36, "alignment36");
   GLADE_HOOKUP_OBJECT (SpeedHacksDlg, vbox75, "vbox75");
-  GLADE_HOOKUP_OBJECT (SpeedHacksDlg, check_microvu_flag_hack_1, "check_microvu_flag_hack_1");
-  GLADE_HOOKUP_OBJECT (SpeedHacksDlg, check_microvu_flag_hack_2, "check_microvu_flag_hack_2");
+  GLADE_HOOKUP_OBJECT (SpeedHacksDlg, check_microvu_flag_hack, "check_microvu_flag_hack");
   GLADE_HOOKUP_OBJECT (SpeedHacksDlg, check_microvu_min_max_hack, "check_microvu_min_max_hack");
   GLADE_HOOKUP_OBJECT (SpeedHacksDlg, label113, "label113");
   GLADE_HOOKUP_OBJECT_NO_REF (SpeedHacksDlg, dialog_action_area3, "dialog_action_area3");
