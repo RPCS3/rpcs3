@@ -1373,7 +1373,7 @@ int FIFOto_write(u32* pMem, int size)
 	return firsttrans;
 }
 
-static __forceinline s32 IPU1chain(u32* &pMem, int &totalqwc) 
+static __forceinline bool IPU1chain(u32* &pMem, int &totalqwc) 
 {
 	if (ipu1dma->qwc > 0)
 	{
@@ -1384,7 +1384,7 @@ static __forceinline s32 IPU1chain(u32* &pMem, int &totalqwc)
 		if (pMem == NULL) 
 		{ 
 			Console::Error("ipu1dma NULL!"); 
-			return totalqwc; 
+			return true; 
 		} 
 		
 		qwc = FIFOto_write(pMem, qwc); 
@@ -1395,11 +1395,25 @@ static __forceinline s32 IPU1chain(u32* &pMem, int &totalqwc)
 		if (ipu1dma->qwc > 0) 
 		{ 
 			g_nDMATransfer |= IPU_DMA_ACTV1; 
-			return totalqwc; 
+			return true; 
 		} 
 	} 
-	
-	return -1;
+	return false;
+}
+
+static __forceinline bool IncreaseTadr(u32 tag)
+{
+	switch (tag & 0x70000000)
+	{
+		case 0x00000000:
+			ipu1dma->tadr += 16;
+			return true;
+		
+		case 0x70000000:
+			ipu1dma->tadr = ipu1dma->madr;
+			return true;
+	}
+	return false;
 }
 
 extern void gsInterrupt();
@@ -1427,95 +1441,76 @@ int IPU1dma()
 	// in kh, qwc == 0 when dma_actv1 is set
 	if ((g_nDMATransfer & IPU_DMA_ACTV1) && ipu1dma->qwc > 0)
 	{
-		int temp = IPU1chain(pMem, totalqwc);
-		if (temp != -1) return temp;
+		if (IPU1chain(pMem, totalqwc)) return totalqwc;
 
 		//Check TIE bit of CHCR and IRQ bit of tag
-		if ((ipu1dma->chcr & 0x80) && (g_nDMATransfer&IPU_DMA_DOTIE1))
+		if ((ipu1dma->chcr & 0x80) && (g_nDMATransfer & IPU_DMA_DOTIE1))
 		{
 			Console::WriteLn("IPU1 TIE");
 
-			IPU_INT_TO(totalqwc*BIAS);
+			IPU_INT_TO(totalqwc * BIAS);
 			g_nDMATransfer &= ~(IPU_DMA_ACTV1 | IPU_DMA_DOTIE1);
 			g_nDMATransfer |= IPU_DMA_TIE1;
 			return totalqwc;
 		}
 
-		if ((ipu1dma->chcr&0xc) == 0)
+		if (!(ipu1dma->chcr & 0xc))
 		{
-			IPU_INT_TO(totalqwc*BIAS);
+			IPU_INT_TO(totalqwc * BIAS);
 			return totalqwc;
 		}
 		else
 		{
 			u32 tag = ipu1dma->chcr; // upper bits describe current tag
 
-			if ((ipu1dma->chcr & 0x80) && (tag&0x80000000))
+			if ((ipu1dma->chcr & 0x80) && (tag & 0x80000000))
 			{
 				ptag = (u32*)dmaGetAddr(ipu1dma->tadr);
 
-				switch (tag&0x70000000)
-				{
-					case 0x00000000:
-						ipu1dma->tadr += 16;
-						break;
-					case 0x70000000:
-						ipu1dma->tadr = ipu1dma->madr;
-						break;
-				}
+				IncreaseTadr(tag);
 
 				ipu1dma->chcr = (ipu1dma->chcr & 0xFFFF) | ((*ptag) & 0xFFFF0000);
 				IPU_LOG("IPU dmaIrq Set");
-				IPU_INT_TO(totalqwc*BIAS);
+				IPU_INT_TO(totalqwc * BIAS);
 				g_nDMATransfer |= IPU_DMA_TIE1;
 				return totalqwc;
 			}
 
-			switch (tag&0x70000000)
+			if (IncreaseTadr(tag))
 			{
-				case 0x00000000:
-					ipu1dma->tadr += 16;
-					IPU_INT_TO((1 + totalqwc)*BIAS);
-					return totalqwc;
-
-				case 0x70000000:
-					ipu1dma->tadr = ipu1dma->madr;
-					IPU_INT_TO((1 + totalqwc)*BIAS);
-					return totalqwc;
+				IPU_INT_TO((1 + totalqwc)*BIAS);
+				return totalqwc;
 			}
 		}
 
 		g_nDMATransfer &= ~(IPU_DMA_ACTV1 | IPU_DMA_DOTIE1);
 	}
-
-	if ((ipu1dma->chcr & 0xc) == 0 && ipu1dma->qwc == 0)   // Normal Mode
+	
+	if (((ipu1dma->chcr & 0xc) == 0) && (ipu1dma->qwc == 0))   // Normal Mode
 	{
 		//Console::WriteLn("ipu1 normal empty qwc?");
 		return totalqwc;
 	}
 
 	// Transfer Dn_QWC from Dn_MADR to GIF
-
-	if ((ipu1dma->chcr & 0xc) == 0 ||  ipu1dma->qwc > 0)   // Normal Mode
+	if (ipu1dma->qwc > 0)
 	{
 		IPU_LOG("dmaIPU1 Normal size=%d, addr=%lx, fifosize=%x",
 		        ipu1dma->qwc, ipu1dma->madr, 8 - g_BP.IFC);
 		
-		int temp = IPU1chain(pMem, totalqwc);
-		if (temp != -1) return temp;
+		if (!IPU1chain(pMem, totalqwc)) IPU_INT_TO((ipu1cycles + totalqwc) * BIAS);
 		
-		IPU_INT_TO((ipu1cycles + totalqwc)*BIAS);
 		return totalqwc;
 	}
 	else
 	{
-		// Chain Mode
+		// Chain Mode & ipu1dma->qwc is 0
 		ptag = (u32*)dmaGetAddr(ipu1dma->tadr);  //Set memory pointer to TADR
 		if (ptag == NULL)  					 //Is ptag empty?
 		{
 			Console::Error("IPU1 BUSERR");
 			ipu1dma->chcr = (ipu1dma->chcr & 0xFFFF) | ((*ptag) & 0xFFFF0000);      //Transfer upper part of tag to CHCR bits 31-15
-			psHu32(DMAC_STAT) |= 1 << 15;		 //If yes, set BEIS (BUSERR) in DMAC_STAT register
+			psHu32(DMAC_STAT) |= DMAC_STAT_BEIS;		 //If yes, set BEIS (BUSERR) in DMAC_STAT register
 			return totalqwc;
 		}
 
@@ -1566,55 +1561,45 @@ int IPU1dma()
 			g_nDMATransfer |= IPU_DMA_DOTIE1;
 		else
 			g_nDMATransfer &= ~IPU_DMA_DOTIE1;
-
-		//Britney Dance beat does a blank NEXT tag, for some odd reason the fix doesnt work if after IPU1Chain O_o
-		if ((ipu1dma->qwc == 0) && (!done) && !(g_nDMATransfer & IPU_DMA_DOTIE1)) IPU1dma();
-
-		int temp = IPU1chain(pMem, totalqwc);
-		if (temp != -1) return temp;
-
-		if ((ipu1dma->chcr & 0x80) && (ptag[0]&0x80000000)  && ipu1dma->qwc == 0)  			 //Check TIE bit of CHCR and IRQ bit of tag
-		{
-			Console::WriteLn("IPU1 TIE");
-
-			if (done)
-			{
-				ptag = (u32*)dmaGetAddr(ipu1dma->tadr);
-
-				switch (ptag[0]&0x70000000)
-				{
-					case 0x00000000:
-						ipu1dma->tadr += 16;
-						break;
-					case 0x70000000:
-						ipu1dma->tadr = ipu1dma->madr;
-						break;
-				}
-
-				ipu1dma->chcr = (ipu1dma->chcr & 0xFFFF) | ((*ptag) & 0xFFFF0000);
-			}
-
-			IPU_INT_TO(ipu1cycles + totalqwc*BIAS);
-			g_nDMATransfer |= IPU_DMA_TIE1;
-			return totalqwc;
-		}
-
+		
 		if (ipu1dma->qwc == 0)
 		{
-			switch (ptag[0]&0x70000000)
+			//if ((ipu1dma->chcr & 0x80) && (ptag[0] & 0x80000000))  	 //Check TIE bit of CHCR and IRQ bit of tag
+			if (g_nDMATransfer & IPU_DMA_DOTIE1)
 			{
-				case 0x00000000:
-					ipu1dma->tadr += 16;
-					break;
+				Console::WriteLn("IPU1 TIE");
+				
+				if (IPU1chain(pMem, totalqwc)) return totalqwc;
+				
+				if (done)
+				{
+					ptag = (u32*)dmaGetAddr(ipu1dma->tadr);
 
-				case 0x70000000:
-					ipu1dma->tadr = ipu1dma->madr;
-					break;
+					IncreaseTadr(ptag[0]);
+
+					ipu1dma->chcr = (ipu1dma->chcr & 0xFFFF) | ((*ptag) & 0xFFFF0000);
+				}
+
+				IPU_INT_TO(ipu1cycles + totalqwc * BIAS);  // Should it be (ipu1cycles + totalqwc) * BIAS?
+				g_nDMATransfer |= IPU_DMA_TIE1;
+				return totalqwc;
 			}
+			else
+			{
+				//Britney Dance beat does a blank NEXT tag, for some odd reason the fix doesnt work if after IPU1Chain O_o
+				if (!done) IPU1dma();
+				if (IPU1chain(pMem, totalqwc)) return totalqwc;
+			}
+
+			IncreaseTadr(ptag[0]);
+		}
+		else
+		{
+			if (IPU1chain(pMem, totalqwc)) return totalqwc;
 		}
 	}
 
-	IPU_INT_TO((ipu1cycles + totalqwc)*BIAS);
+	IPU_INT_TO((ipu1cycles + totalqwc) * BIAS);
 	return totalqwc;
 }
 
