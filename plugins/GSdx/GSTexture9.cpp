@@ -86,7 +86,7 @@ int GSTexture9::GetFormat() const
 
 bool GSTexture9::Update(const GSVector4i& r, const void* data, int pitch)
 {
-	if(CComPtr<IDirect3DSurface9> surface = *this)
+	if(IDirect3DSurface9* surface = *this)
 	{
 		D3DLOCKED_RECT lr;
 
@@ -118,7 +118,7 @@ bool GSTexture9::Map(uint8** bits, int& pitch, const GSVector4i* r)
 {
 	HRESULT hr;
 
-	if(CComPtr<IDirect3DSurface9> surface = *this)
+	if(IDirect3DSurface9* surface = *this)
 	{
 		D3DLOCKED_RECT lr;
 
@@ -136,7 +136,7 @@ bool GSTexture9::Map(uint8** bits, int& pitch, const GSVector4i* r)
 
 void GSTexture9::Unmap()
 {
-	if(CComPtr<IDirect3DSurface9> surface = *this)
+	if(IDirect3DSurface9* surface = *this)
 	{
 		surface->UnlockRect();
 	}
