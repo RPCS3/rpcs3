@@ -40,8 +40,8 @@ __declspec(align(16)) struct GSVertex
 			GIFRegFOG FOG;
 		};
 
-		struct {__m128i m128i[2];};
-		struct {__m128 m128[2];};
+		struct {GSVector4i vi[2];};
+		struct {GSVector4 vf[2];};
 	};
 
 	GIFRegUV UV;

@@ -77,10 +77,10 @@ protected:
 				{
 					for(int j = m_count - 3; i < j; i += 4)
 					{
-						GSVector4 v0 = GSVector4(v[i + 0].m128[0]);
-						GSVector4 v1 = GSVector4(v[i + 1].m128[0]);
-						GSVector4 v2 = GSVector4(v[i + 2].m128[0]);
-						GSVector4 v3 = GSVector4(v[i + 3].m128[0]);
+						GSVector4 v0 = v[i + 0].vf[0];
+						GSVector4 v1 = v[i + 1].vf[0];
+						GSVector4 v2 = v[i + 2].vf[0];
+						GSVector4 v3 = v[i + 3].vf[0];
 
 						minv = minv.minv((v0.minv(v1)).minv(v2.minv(v3)));
 						maxv = maxv.maxv((v0.maxv(v1)).maxv(v2.maxv(v3)));
@@ -88,7 +88,7 @@ protected:
 
 					for(int j = m_count; i < j; i++)
 					{
-						GSVector4 v0 = GSVector4(v[i + 0].m128[0]);
+						GSVector4 v0 = v[i + 0].vf[0];
 
 						minv = minv.minv(v0);
 						maxv = maxv.maxv(v0);

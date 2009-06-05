@@ -35,15 +35,11 @@ __declspec(align(16)) union GSVertexHW9
 		GSVector4 p;
 	};
 
-	#if _M_SSE >= 0x200
-	
-	struct {__m128i m128i[2];};
-	struct {__m128 m128[2];};
+	struct {GSVector4i vi[2];};
+	struct {GSVector4 vf[2];};
 
-	GSVertexHW9& operator = (GSVertexHW9& v) {m128i[0] = v.m128i[0]; m128i[1] = v.m128i[1]; return *this;}
+	GSVertexHW9& operator = (GSVertexHW9& v) {vi[0] = v.vi[0]; vi[1] = v.vi[1]; return *this;}
 	
-	#endif
-
 	float GetQ() {return p.w;}
 };
 
@@ -76,14 +72,10 @@ __declspec(align(16)) union GSVertexHW10
 		};
 	};
 
-	#if _M_SSE >= 0x200
-	
-	struct {__m128i m128i[2];};
-	struct {__m128 m128[2];};
+	struct {GSVector4i vi[2];};
+	struct {GSVector4 vf[2];};
 
-	GSVertexHW10& operator = (GSVertexHW10& v) {m128i[0] = v.m128i[0]; m128i[1] = v.m128i[1]; return *this;}
-
-	#endif
+	GSVertexHW10& operator = (GSVertexHW10& v) {vi[0] = v.vi[0]; vi[1] = v.vi[1]; return *this;}
 
 	float GetQ() {return q;}
 };

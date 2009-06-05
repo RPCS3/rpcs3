@@ -32,10 +32,8 @@ class GSTexture7 : public GSTexture
 	DDSURFACEDESC2 m_desc;
 
 public:
-	GSTexture7();
-	explicit GSTexture7(int type, IDirectDrawSurface7* system);
+	GSTexture7(int type, IDirectDrawSurface7* system);
 	GSTexture7(int type, IDirectDrawSurface7* system, IDirectDrawSurface7* video);
-	virtual ~GSTexture7();
 
 	operator bool();
 

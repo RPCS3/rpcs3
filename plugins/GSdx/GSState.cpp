@@ -968,25 +968,53 @@ void GSState::Write(uint8* mem, int len)
 	int w = m_env.TRXREG.RRW;
 	int h = m_env.TRXREG.RRH;
 
-	// TRACE(_T("Write len=%d DBP=%05x DBW=%d DPSM=%d DSAX=%d DSAY=%d RRW=%d RRH=%d\n"), len, m_env.BITBLTBUF.DBP, m_env.BITBLTBUF.DBW, m_env.BITBLTBUF.DPSM, m_env.TRXPOS.DSAX, m_env.TRXPOS.DSAY, m_env.TRXREG.RRW, m_env.TRXREG.RRH);
+	const GSLocalMemory::psm_t& psm = GSLocalMemory::m_psm[m_env.BITBLTBUF.DPSM];
 
-	if(!m_tr.Update(w, h, GSLocalMemory::m_psm[m_env.BITBLTBUF.DPSM].trbpp, len))
+	// printf("Write len=%d DBP=%05x DBW=%d DPSM=%d DSAX=%d DSAY=%d RRW=%d RRH=%d\n", len, m_env.BITBLTBUF.DBP, m_env.BITBLTBUF.DBW, m_env.BITBLTBUF.DPSM, m_env.TRXPOS.DSAX, m_env.TRXPOS.DSAY, m_env.TRXREG.RRW, m_env.TRXREG.RRH);
+
+	if(!m_tr.Update(w, h, psm.trbpp, len))
 	{
 		return;
 	}
-
-	memcpy(&m_tr.buff[m_tr.end], mem, len);
-
-	m_tr.end += len;
 
 	if(PRIM->TME && (m_env.BITBLTBUF.DBP == m_context->TEX0.TBP0 || m_env.BITBLTBUF.DBP == m_context->TEX0.CBP)) // TODO: hmmmm
 	{
 		FlushPrim();
 	}
 
-	if(m_tr.end >= m_tr.total)
+	if(m_tr.end == 0 && len >= m_tr.total) 
 	{
-		FlushWrite();
+		// received all data in one piece, no need to buffer it
+
+		// printf("%d >= %d\n", len, m_tr.total);
+
+		(m_mem.*psm.wi)(m_tr.x, m_tr.y, mem, m_tr.total, m_env.BITBLTBUF, m_env.TRXPOS, m_env.TRXREG);
+
+		m_tr.start = m_tr.end = m_tr.total;
+
+		m_perfmon.Put(GSPerfMon::Swizzle, len);
+
+		GSVector4i r;
+		
+		r.left = m_env.TRXPOS.DSAX;
+		r.top = m_env.TRXPOS.DSAY;
+		r.right = r.left + m_env.TRXREG.RRW;
+		r.bottom = r.top + m_env.TRXREG.RRH;
+
+		InvalidateVideoMem(m_env.BITBLTBUF, r);
+	}
+	else
+	{
+		// printf("%d += %d (%d)\n", m_tr.end, len, m_tr.total);
+
+		memcpy(&m_tr.buff[m_tr.end], mem, len);
+
+		m_tr.end += len;
+
+		if(m_tr.end >= m_tr.total)
+		{
+			FlushWrite();
+		}
 	}
 
 	m_mem.m_clut.Invalidate();
@@ -1001,7 +1029,7 @@ void GSState::Read(uint8* mem, int len)
 	int w = m_env.TRXREG.RRW;
 	int h = m_env.TRXREG.RRH;
 
-	// TRACE(_T("Read len=%d SBP=%05x SBW=%d SPSM=%d SSAX=%d SSAY=%d RRW=%d RRH=%d\n"), len, (int)m_env.BITBLTBUF.SBP, (int)m_env.BITBLTBUF.SBW, (int)m_env.BITBLTBUF.SPSM, sx, sy, w, h);
+	// printf("Read len=%d SBP=%05x SBW=%d SPSM=%d SSAX=%d SSAY=%d RRW=%d RRH=%d\n", len, (int)m_env.BITBLTBUF.SBP, (int)m_env.BITBLTBUF.SBW, (int)m_env.BITBLTBUF.SPSM, sx, sy, w, h);
 
 	if(!m_tr.Update(w, h, GSLocalMemory::m_psm[m_env.BITBLTBUF.SPSM].trbpp, len))
 	{

@@ -33,9 +33,7 @@ class GSTexture10 : public GSTexture
 	CComPtr<ID3D10DepthStencilView> m_dsv;
 
 public:
-	GSTexture10();
 	explicit GSTexture10(ID3D10Texture2D* texture);
-	virtual ~GSTexture10();
 
 	operator bool();
 
@@ -47,8 +45,6 @@ public:
 	bool Map(uint8** bits, int& pitch, const GSVector4i* r);
 	void Unmap();
 	bool Save(const string& fn, bool dds = false);
-
-	ID3D10Texture2D* operator->(); // TODO: remove direct access
 
 	operator ID3D10Texture2D*();
 	operator ID3D10ShaderResourceView*();

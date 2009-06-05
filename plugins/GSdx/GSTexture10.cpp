@@ -22,11 +22,6 @@
 #include "stdafx.h"
 #include "GSTexture10.h"
 
-GSTexture10::GSTexture10()
-{
-	memset(&m_desc, 0, sizeof(m_desc));
-}
-
 GSTexture10::GSTexture10(ID3D10Texture2D* texture)
 	: m_texture(texture)
 {
@@ -34,10 +29,6 @@ GSTexture10::GSTexture10(ID3D10Texture2D* texture)
 
 	m_texture->GetDevice(&m_dev);
 	m_texture->GetDesc(&m_desc);
-}
-
-GSTexture10::~GSTexture10()
-{
 }
 
 GSTexture10::operator bool()
@@ -172,11 +163,6 @@ bool GSTexture10::Save(const string& fn, bool dds)
 	}
 
 	return SUCCEEDED(D3DX10SaveTextureToFile(res, dds ? D3DX10_IFF_DDS : D3DX10_IFF_BMP, fn.c_str()));
-}
-
-ID3D10Texture2D* GSTexture10::operator->()
-{
-	return m_texture;
 }
 
 GSTexture10::operator ID3D10Texture2D*()

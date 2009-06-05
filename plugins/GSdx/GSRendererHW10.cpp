@@ -75,8 +75,8 @@ void GSRendererHW10::VertexKick(bool skip)
 {
 	GSVertexHW10& dst = m_vl.AddTail();
 
-	dst.m128i[0] = m_v.m128i[0];
-	dst.m128i[1] = m_v.m128i[1];
+	dst.vi[0] = m_v.vi[0];
+	dst.vi[1] = m_v.vi[1];
 
 	if(tme && fst)
 	{
@@ -513,7 +513,7 @@ void GSRendererHW10::SetupDATE(GSTexture* rt, GSTexture* ds)
 
 			for(int i = 0, j = m_count; i < j; i++)
 			{
-				GSVector4 p(GSVector4i(m_vertices[i].m128i[0]).uph16());
+				GSVector4 p(m_vertices[i].vi[0].uph16());
 
 				pmin = p.minv(pmin);
 				pmax = p.maxv(pmax);

@@ -31,7 +31,6 @@ class GSTexture9 : public GSTexture
 	D3DSURFACE_DESC m_desc;
 
 public:
-	GSTexture9();
 	explicit GSTexture9(IDirect3DSurface9* surface);
 	explicit GSTexture9(IDirect3DTexture9* texture);
 	virtual ~GSTexture9();
@@ -47,7 +46,7 @@ public:
 	void Unmap();
 	bool Save(const string& fn, bool dds = false);
 
-	IDirect3DTexture9* operator->(); // TODO: remove direct access
+	//IDirect3DTexture9* operator->(); // TODO: remove direct access
 
 	operator IDirect3DSurface9*();
 	operator IDirect3DTexture9*();

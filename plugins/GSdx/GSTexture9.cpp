@@ -22,11 +22,6 @@
 #include "stdafx.h"
 #include "GSTexture9.h"
 
-GSTexture9::GSTexture9()
-{
-	memset(&m_desc, 0, sizeof(m_desc));
-}
-
 GSTexture9::GSTexture9(IDirect3DSurface9* surface)
 {
 	m_surface = surface;
@@ -49,6 +44,8 @@ GSTexture9::GSTexture9(IDirect3DTexture9* texture)
 	texture->GetDevice(&m_dev);
 	texture->GetLevelDesc(0, &m_desc);
 	texture->GetSurfaceLevel(0, &m_surface);
+
+	ASSERT(m_surface != NULL);
 }
 
 GSTexture9::~GSTexture9()
@@ -86,11 +83,11 @@ int GSTexture9::GetFormat() const
 
 bool GSTexture9::Update(const GSVector4i& r, const void* data, int pitch)
 {
-	if(IDirect3DSurface9* surface = *this)
+	if(m_surface)
 	{
 		D3DLOCKED_RECT lr;
 
-		if(SUCCEEDED(surface->LockRect(&lr, r, 0)))
+		if(SUCCEEDED(m_surface->LockRect(&lr, r, 0)))
 		{
 			uint8* src = (uint8*)data;
 			uint8* dst = (uint8*)lr.pBits;
@@ -105,7 +102,7 @@ bool GSTexture9::Update(const GSVector4i& r, const void* data, int pitch)
 				memcpy(dst, src, bytes);
 			}
 
-			surface->UnlockRect();
+			m_surface->UnlockRect();
 
 			return true;
 		}
@@ -118,11 +115,11 @@ bool GSTexture9::Map(uint8** bits, int& pitch, const GSVector4i* r)
 {
 	HRESULT hr;
 
-	if(IDirect3DSurface9* surface = *this)
+	if(m_surface)
 	{
 		D3DLOCKED_RECT lr;
 
-		if(SUCCEEDED(hr = surface->LockRect(&lr, (LPRECT)r, 0)))
+		if(SUCCEEDED(hr = m_surface->LockRect(&lr, (LPRECT)r, 0)))
 		{
 			*bits = (uint8*)lr.pBits;
 			pitch = (int)lr.Pitch;
@@ -136,9 +133,9 @@ bool GSTexture9::Map(uint8** bits, int& pitch, const GSVector4i* r)
 
 void GSTexture9::Unmap()
 {
-	if(IDirect3DSurface9* surface = *this)
+	if(m_surface)
 	{
-		surface->UnlockRect();
+		m_surface->UnlockRect();
 	}
 }
 
@@ -196,29 +193,12 @@ bool GSTexture9::Save(const string& fn, bool dds)
 	return false;
 }
 
-IDirect3DTexture9* GSTexture9::operator->()
-{
-	return m_texture;
-}
-
 GSTexture9::operator IDirect3DSurface9*()
 {
-	if(m_texture && !m_surface)
-	{
-		m_texture->GetSurfaceLevel(0, &m_surface);
-	}
-
 	return m_surface;
 }
 
 GSTexture9::operator IDirect3DTexture9*()
 {
-	if(m_surface && !m_texture)
-	{
-		m_surface->GetContainer(__uuidof(IDirect3DTexture9), (void**)&m_texture);
-
-		ASSERT(m_texture);
-	}
-
 	return m_texture;
 }

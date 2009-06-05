@@ -22,12 +22,6 @@
 #include "stdafx.h"
 #include "GSTexture7.h"
 
-GSTexture7::GSTexture7()
-	: m_type(GSTexture::None)
-{
-	memset(&m_desc, 0, sizeof(m_desc));
-}
-
 GSTexture7::GSTexture7(int type, IDirectDrawSurface7* system)
 	: m_type(type)
 	, m_system(system)
@@ -49,10 +43,6 @@ GSTexture7::GSTexture7(int type, IDirectDrawSurface7* system, IDirectDrawSurface
 	m_desc.dwSize = sizeof(m_desc);
 
 	video->GetSurfaceDesc(&m_desc);
-}
-
-GSTexture7::~GSTexture7()
-{
 }
 
 GSTexture7::operator bool()
