@@ -179,8 +179,8 @@ protected:
 			vr.z = v.z;
 			break;
 		case CLAMP_REGION_REPEAT:
-			if(m_psrr) {vr.x = maxu; vr.z = vr.x + (minu + 1);}
-			//else {vr.x = 0; vr.z = w;}
+			vr.x = maxu; 
+			vr.z = vr.x + (minu + 1);
 			break;
 		default: 
 			__assume(0);
@@ -202,8 +202,8 @@ protected:
 			vr.w = v.w;
 			break;
 		case CLAMP_REGION_REPEAT:
-			if(m_psrr) {vr.y = maxv; vr.w = vr.y + (minv + 1);}
-			//else {r.y = 0; r.w = w;}
+			vr.y = maxv; 
+			vr.w = vr.y + (minv + 1);
 			break;
 		default:
 			__assume(0);
@@ -691,8 +691,8 @@ protected:
 	}
 
 public:
-	GSRendererHW(uint8* base, bool mt, void (*irq)(), GSDevice* dev, GSTextureCache* tc, bool psrr)
-		: GSRendererT<Vertex>(base, mt, irq, dev, psrr)
+	GSRendererHW(uint8* base, bool mt, void (*irq)(), GSDevice* dev, GSTextureCache* tc)
+		: GSRendererT<Vertex>(base, mt, irq, dev)
 		, m_tc(tc)
 		, m_width(1024)
 		, m_height(1024)

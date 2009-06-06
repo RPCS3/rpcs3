@@ -55,12 +55,12 @@ public:
 	{
 		GSVector4 FogColor;
 		float MINU;
-		float MAXU;
 		float MINV;
+		float MAXU;
 		float MAXV;
 		uint32 UMSK;
-		uint32 UFIX;
 		uint32 VMSK;
+		uint32 UFIX;
 		uint32 VFIX;
 		float TA0;
 		float TA1;
@@ -68,6 +68,7 @@ public:
 		float _pad[1];
 		GSVector2 WH;
 		GSVector2 rWrH;
+		GSVector4 HalfTexel;
 	};
 
 	union PSSelector
@@ -166,8 +167,8 @@ public:
 	
 	bool SetupIA(const GSVertexHW9* vertices, int count, D3DPRIMITIVETYPE prim);
 	bool SetupVS(VSSelector sel, const VSConstantBuffer* cb);
-	bool SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel, GSTexture* tex, GSTexture* pal, bool psrr);
-	void UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel, bool psrr);
+	bool SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel, GSTexture* tex, GSTexture* pal);
+	void UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel);
 	void SetupRS(int w, int h, const GSVector4i& scissor);
 	void SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 bf, GSTexture* rt, GSTexture* ds);
 	void UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 bf);

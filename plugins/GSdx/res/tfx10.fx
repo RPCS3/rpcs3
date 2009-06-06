@@ -155,28 +155,25 @@ void gs_main(line VS_OUTPUT input[2], inout TriangleStream<VS_OUTPUT> stream)
 
 #endif
 
-Texture2D Texture;
-Texture2D Palette;
+Texture2D<float4> Texture;
+Texture2D<float> Palette;
 SamplerState TextureSampler;
 SamplerState PaletteSampler;
 
 cbuffer cb1
 {
 	float4 FogColor;
-	float MINU;
-	float MAXU;
-	float MINV;
-	float MAXV;
-	uint UMSK;
-	uint UFIX;
-	uint VMSK;
-	uint VFIX;
+	float2 MINUV;
+	float2 MAXUV;
+	uint2 UVMSK;
+	uint2 UVFIX;
 	float TA0;
 	float TA1;
 	float AREF;
 	float _pad;
 	float2 WH;
 	float2 rWrH;
+	float4 HalfTexel;
 };
 
 struct PS_INPUT
@@ -194,8 +191,8 @@ struct PS_OUTPUT
 
 #ifndef FST
 #define FST 0
-#define WMS 3
-#define WMT 3
+#define WMS 0
+#define WMT 0
 #define BPP 0
 #define AEM 0
 #define TFX 0
@@ -225,191 +222,185 @@ float4 Extract16(uint i)
 	return f;
 }
 
-int repeatu(int tc)
+int2 wrapu(float2 f, int2 i)
 {
-	return WMS == 3 ? ((tc & UMSK) | UFIX) : tc;
-}
-
-int repeatv(int tc)
-{
-	return WMT == 3 ? ((tc & VMSK) | VFIX) : tc;
-}
-
-float4 sample(float2 tc)
-{
-	float4 t;
-	
-	// if(WMS >= 2 || WMT >= 2)
-	if(WMS >= 3 || WMT >= 3)
+	if(WMS == 0)
 	{
-		int4 itc = tc.xyxy * WH.xyxy;
-		
-		float4 tc01;
-		
-		tc01.x = repeatu(itc.x);
-		tc01.y = repeatv(itc.y);
-		tc01.z = repeatu(itc.z + 1);
-		tc01.w = repeatv(itc.w + 1);
-		
-		tc01 *= rWrH.xyxy;
+		i = frac(f) * WH.xx;
+	}
+	else if(WMS == 1)
+	{
+		i = saturate(f) * WH.xx;
+	}
+	else if(WMS == 2)
+	{
+		i = clamp(f, MINUV.xx, MAXUV.xx) * WH.xx;
+	}
+	else if(WMS == 3)
+	{
+		i = (i & UVMSK.xx) | UVFIX.xx;
+	}
+	
+	return i;
+}
 
-		float4 t00 = Texture.Sample(TextureSampler, tc01.xy);
-		float4 t01 = Texture.Sample(TextureSampler, tc01.zy);
-		float4 t10 = Texture.Sample(TextureSampler, tc01.xw);
-		float4 t11 = Texture.Sample(TextureSampler, tc01.zw);
+int2 wrapv(float2 f, int2 i)
+{
+	if(WMT == 0)
+	{
+		i = frac(f) * WH.yy;
+	}
+	else if(WMT == 1)
+	{
+		i = saturate(f) * WH.yy;
+	}
+	else if(WMT == 2)
+	{
+		i = clamp(f, MINUV.yy, MAXUV.yy) * WH.yy;
+	}
+	else if(WMT == 3)
+	{
+		i = (i & UVMSK.yy) | UVFIX.yy;
+	}
+	
+	return i;
+}
 
-		float2 dd = frac(tc * WH); 
+int4 wrapuv(float4 f, int4 i)
+{
+	if(WMT == 0)
+	{
+		i = frac(f) * WH.xyxy;
+	}
+	else if(WMT == 1)
+	{
+		i = saturate(f) * WH.xyxy;
+	}
+	else if(WMT == 2)
+	{
+		i = clamp(f, MINUV.xyxy, MAXUV.xyxy) * WH.xyxy;
+	}
+	else if(WMT == 3)
+	{
+		i = (i & UVMSK.xyxy) | UVFIX.xyxy;
+	}
 
-		t = lerp(lerp(t00, t01, dd.x), lerp(t10, t11, dd.x), dd.y);
+	return i;
+}
+
+int4 wrap(float4 uv, int4 iuv)
+{
+	if(WMS == WMT)
+	{
+		iuv = wrapuv(uv, iuv);
 	}
 	else
 	{
+		iuv.xz = wrapu(uv.xz, iuv.xz);
+		iuv.yw = wrapv(uv.yw, iuv.yw);
+	}
+	
+	return iuv;
+}
+
+float4 sample(float2 tc, float w)
+{
+	if(FST == 0)
+	{
+		tc /= w;
+	}
+	
+	float4 t;
+/*	
+	if(BPP < 3 && WMS < 2 && WMT < 2)
+	{
 		t = Texture.Sample(TextureSampler, tc);
+	}
+*/
+	if(BPP < 3 && WMS < 3 && WMT < 3)
+	{
+		if(WMS == 2 && WMT == 2) tc = clamp(tc, MINUV.xy, MAXUV.xy);
+		else if(WMS == 2) tc.x = clamp(tc.x, MINUV.x, MAXUV.x);
+		else if(WMT == 2) tc.y = clamp(tc.y, MINUV.y, MAXUV.y);
+	
+		t = Texture.Sample(TextureSampler, tc);
+	}
+	else
+	{
+		float4 uv = tc.xyxy + HalfTexel;
+		float4 uv2 = uv * WH.xyxy;
+		float2 dd = frac(uv2.xy); 
+		
+		int4 iuv = wrap(uv, uv2);
+
+		float4 t00, t01, t10, t11;
+
+		if(BPP == 3) // 8HP + 32-bit palette
+		{
+			float4 a;
+
+			a.x = Texture.Load(int3(iuv.xy, 0)).a;
+			a.y = Texture.Load(int3(iuv.zy, 0)).a;
+			a.z = Texture.Load(int3(iuv.xw, 0)).a;
+			a.w = Texture.Load(int3(iuv.zw, 0)).a;
+
+			t00 = Palette.Load(a.x);
+			t01 = Palette.Load(a.y);
+			t10 = Palette.Load(a.z);
+			t11 = Palette.Load(a.w);
+		}
+		else if(BPP == 4) // 8HP + 16-bit palette
+		{
+			// TODO: yuck, just pre-convert the palette to 32-bit
+		}
+		else if(BPP == 5) // 16P
+		{
+			float4 r;
+
+			r.x = Texture.Load(int3(iuv.xy, 0)).r;
+			r.y = Texture.Load(int3(iuv.zy, 0)).r;
+			r.z = Texture.Load(int3(iuv.xw, 0)).r;
+			r.w = Texture.Load(int3(iuv.zw, 0)).r;
+			
+			uint4 i = r * 65535;
+
+			t00 = Extract16(i.x);
+			t01 = Extract16(i.y);
+			t10 = Extract16(i.z);
+			t11 = Extract16(i.w);
+		}
+		else
+		{
+			t00 = Texture.Load(int3(iuv.xy, 0));
+			t01 = Texture.Load(int3(iuv.zy, 0));
+			t10 = Texture.Load(int3(iuv.xw, 0));
+			t11 = Texture.Load(int3(iuv.zw, 0));
+		}
+
+		t = lerp(lerp(t00, t01, dd.x), lerp(t10, t11, dd.x), dd.y);
+	}
+
+	if(BPP == 1) // 24
+	{
+		t.a = AEM == 0 || any(t.rgb) ? TA0 : 0;
+	}
+	else if(BPP == 2 || BPP == 5) // 16 || 16P
+	{
+		if(BPP == 5)
+		{
+			t = Normalize16(t);
+		}
+		
+		// a bit incompatible with up-scaling because the 1 bit alpha is interpolated
+		
+		t.a = t.a >= 0.5 ? TA1 : AEM == 0 || any(t.rgb) ? TA0 : 0;
 	}
 	
 	return t;
 }
 
-float4 sample8hp(float2 tc)
+float4 tfx(float4 t, float4 c)
 {
-	float4 tc01;
-	
-	// if(WMS >= 2 || WMT >= 2)
-	if(WMS >= 3 || WMT >= 3)
-	{
-		int4 itc = tc.xyxy * WH.xyxy;
-		
-		tc01.x = repeatu(itc.x);
-		tc01.y = repeatv(itc.y);
-		tc01.z = repeatu(itc.z + 1);
-		tc01.w = repeatv(itc.w + 1);
-
-		tc01 *= rWrH.xyxy;
-	}
-	else
-	{
-		tc01.x = tc.x;
-		tc01.y = tc.y;
-		tc01.z = tc.x + rWrH.x; 
-		tc01.w = tc.y + rWrH.y;
-	}
-
-	float4 t;
-	
-	t.x = Texture.Sample(TextureSampler, tc01.xy).a;
-	t.y = Texture.Sample(TextureSampler, tc01.zy).a;
-	t.z = Texture.Sample(TextureSampler, tc01.xw).a;
-	t.w = Texture.Sample(TextureSampler, tc01.zw).a;
-	
-	float4 t00 = Palette.Sample(PaletteSampler, t.x);
-	float4 t01 = Palette.Sample(PaletteSampler, t.y);
-	float4 t10 = Palette.Sample(PaletteSampler, t.z);
-	float4 t11 = Palette.Sample(PaletteSampler, t.w);
-
-	float2 dd = frac(tc * WH); 
-
-	return lerp(lerp(t00, t01, dd.x), lerp(t10, t11, dd.x), dd.y);
-}
-
-float4 sample16p(float2 tc)
-{
-	float4 t;
-	
-	float4 tc01;
-	
-	// if(WMS >= 2 || WMT >= 2)
-	if(WMS >= 3 || WMT >= 3)
-	{
-		int4 itc = tc.xyxy * WH.xyxy;
-		
-		tc01.x = repeatu(itc.x);
-		tc01.y = repeatv(itc.y);
-		tc01.z = repeatu(itc.z + 1);
-		tc01.w = repeatv(itc.w + 1);
-
-		tc01 *= rWrH.xyxy;
-	}
-	else
-	{
-		tc01.x = tc.x;
-		tc01.y = tc.y;
-		tc01.z = tc.x + rWrH.x; 
-		tc01.w = tc.y + rWrH.y;
-	}
-
-	t.x = Texture.Sample(TextureSampler, tc01.xy).r;
-	t.y = Texture.Sample(TextureSampler, tc01.zy).r;
-	t.z = Texture.Sample(TextureSampler, tc01.xw).r;
-	t.w = Texture.Sample(TextureSampler, tc01.zw).r;
-			
-	uint4 i = t * 65535;
-
-	float4 t00 = Extract16(i.x);
-	float4 t01 = Extract16(i.y);
-	float4 t10 = Extract16(i.z);
-	float4 t11 = Extract16(i.w);
-
-	float2 dd = frac(tc * WH); 
-
-	return Normalize16(lerp(lerp(t00, t01, dd.x), lerp(t10, t11, dd.x), dd.y));
-}
-
-PS_OUTPUT ps_main(PS_INPUT input)
-{
-	float2 tc = input.t.xy;
-
-	if(FST == 0)
-	{
-		tc /= input.t.w;
-	}
-	
-	tc -= rWrH / 2;
-	
-	if(WMS == 2)
-	{
-		tc.x = clamp(tc.x, MINU, MAXU);
-	}
-
-	if(WMT == 2)
-	{
-		tc.y = clamp(tc.y, MINV, MAXV);
-	}
-
-	float4 t;
-
-	if(BPP == 0) // 32
-	{
-		t = sample(tc);
-	}
-	else if(BPP == 1) // 24
-	{
-		t = sample(tc);
-
-		t.a = AEM == 0 || any(t.rgb) ? TA0 : 0;
-	}
-	else if(BPP == 2) // 16
-	{
-		t = sample(tc);
-
-		t.a = t.a >= 0.5 ? TA1 : AEM == 0 || any(t.rgb) ? TA0 : 0; // a bit incompatible with up-scaling because the 1 bit alpha is interpolated
-	}
-	else if(BPP == 3) // 8HP / 32-bit palette
-	{
-		t = sample8hp(tc);
-	}
-	else if(BPP == 4) // 8HP / 16-bit palette
-	{
-		// TODO: yuck, just pre-convert the palette to 32-bit
-	}
-	else if(BPP == 5) // 16P
-	{
-		t = sample16p(tc);
-
-		t.a = t.a >= 0.5 ? TA1 : AEM == 0 || any(t.rgb) ? TA0 : 0; // a bit incompatible with up-scaling because the 1 bit alpha is interpolated
-	}
-
-	float4 c = input.c;
-
 	if(TFX == 0)
 	{
 		if(TCC == 0) 
@@ -435,7 +426,7 @@ PS_OUTPUT ps_main(PS_INPUT input)
 	else if(TFX == 2)
 	{
 		c.rgb = c.rgb * t.rgb * 255.0f / 128 + c.a;
-		
+
 		if(TCC == 1) 
 		{
 			c.a += t.a;
@@ -444,15 +435,18 @@ PS_OUTPUT ps_main(PS_INPUT input)
 	else if(TFX == 3)
 	{
 		c.rgb = c.rgb * t.rgb * 255.0f / 128 + c.a;
-		
+
 		if(TCC == 1) 
 		{
 			c.a = t.a;
 		}
 	}
+	
+	return saturate(c);
+}
 
-	c = saturate(c);
-
+void atst(float4 c)
+{
 	if(ATE == 1)
 	{
 		if(ATST == 0)
@@ -476,11 +470,27 @@ PS_OUTPUT ps_main(PS_INPUT input)
 			clip(abs(c.a - AREF) - 0.4f / 255); // FIXME: 0.5f is too much
 		}
 	}
+}
 
+float4 fog(float4 c, float f)
+{
 	if(FOG == 1)
 	{
-		c.rgb = lerp(FogColor.rgb, c.rgb, input.t.z);
+		c.rgb = lerp(FogColor.rgb, c.rgb, f);
 	}
+
+	return c;
+}
+
+PS_OUTPUT ps_main(PS_INPUT input)
+{
+	float4 t = sample(input.t.xy, input.t.w);
+
+	float4 c = tfx(t, input.c);
+
+	atst(c);
+
+	c = fog(c, input.t.z);
 
 	if(CLR1 == 1) // needed for Cd * (As/Ad/F + 1) blending modes
 	{

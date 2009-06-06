@@ -71,22 +71,19 @@ VS_OUTPUT vs_main(VS_INPUT input)
 	return output;
 }
 
-float4 ps_params[5];
+float4 ps_params[6];
 
 #define FogColor	ps_params[0].bgra
-#define MINU		ps_params[1].x
-#define MAXU		ps_params[1].y
-#define MINV		ps_params[1].z
-#define MAXV		ps_params[1].w
-#define UMSK		ps_params[2].x
-#define UFIX		ps_params[2].y
-#define VMSK		ps_params[2].z
-#define VFIX		ps_params[2].w
+#define MINUV		ps_params[1].xy
+#define MAXUV		ps_params[1].zw
+#define UVMSK		ps_params[2].xy
+#define UVFIX		ps_params[2].zw
 #define TA0			ps_params[3].x
 #define TA1			ps_params[3].y
 #define AREF		ps_params[3].z
 #define WH			ps_params[4].xy
 #define rWrH		ps_params[4].zw
+#define HalfTexel	ps_params[5]
 
 struct PS_INPUT
 {
@@ -114,129 +111,170 @@ sampler1D Palette : register(s1);
 sampler1D UMSKFIX : register(s2);
 sampler1D VMSKFIX : register(s3);
 
-float repeatu(float tc)
+float2 wrapu(float2 f)
 {
-	return WMS == 3 ? tex1D(UMSKFIX, tc*rWrH.x)* WH.x : tc;
-}
-
-float repeatv(float tc)
-{
-	return WMT == 3 ? tex1D(VMSKFIX, tc*rWrH.y)* WH.y : tc;
-}
-
-float4 sample(float2 tc)
-{
-	float4 t;
-	
-	// if(WMS >= 2 || WMT >= 2)
-	if(WMS >= 3 || WMT >= 3)
+	if(WMS == 0)
 	{
-		tc -= rWrH / 2;	
-
-		int4 itc = tc.xyxy * WH.xyxy;
-		
-		float4 tc01;
-		
-		tc01.x = repeatu(itc.x);
-		tc01.y = repeatv(itc.y);
-		tc01.z = repeatu(itc.z + 1);
-		tc01.w = repeatv(itc.w + 1);
+		f = frac(f);
+	}
+	else if(WMS == 1)
+	{
+		f = saturate(f);
+	}
+	else if(WMS == 2)
+	{
+		f = clamp(f, MINUV.xx, MAXUV.xx);
+	}
+	else if(WMS == 3)
+	{
+		f.x = tex1D(UMSKFIX, f.x);
+		f.y = tex1D(UMSKFIX, f.y);
+	}
 	
-		tc01 *= rWrH.xyxy;
+	return f;
+}
 
-		float4 t00 = tex2D(Texture, tc01.xy);
-		float4 t01 = tex2D(Texture, tc01.zy);
-		float4 t10 = tex2D(Texture, tc01.xw);
-		float4 t11 = tex2D(Texture, tc01.zw);
+float2 wrapv(float2 f)
+{
+	if(WMS == 0)
+	{
+		f = frac(f);
+	}
+	else if(WMS == 1)
+	{
+		f = saturate(f);
+	}
+	else if(WMS == 2)
+	{
+		f = clamp(f, MINUV.yy, MAXUV.yy);
+	}
+	else if(WMS == 3)
+	{
+		f.x = tex1D(VMSKFIX, f.x);
+		f.y = tex1D(VMSKFIX, f.y);
+	}
 	
-		float2 dd = frac(tc * WH); 
+	return f;
+}
 
-		t = lerp(lerp(t00, t01, dd.x), lerp(t10, t11, dd.x), dd.y);
+float4 wrapuv(float4 f)
+{
+	if(WMS == 0)
+	{
+		f = frac(f);
+	}
+	else if(WMS == 1)
+	{
+		f = saturate(f);
+	}
+	else if(WMS == 2)
+	{
+		f = clamp(f, MINUV.xyxy, MAXUV.xyxy);
+	}
+	else if(WMS == 3)
+	{
+		f.x = tex1D(UMSKFIX, f.x);
+		f.y = tex1D(VMSKFIX, f.y);
+		f.z = tex1D(UMSKFIX, f.z);
+		f.w = tex1D(VMSKFIX, f.w);
+	}
+		
+	return f;
+}
+
+float4 wrap(float4 uv)
+{
+	if(WMS == WMT)
+	{
+		uv = wrapuv(uv);
 	}
 	else
 	{
+		uv.xz = wrapu(uv.xz);
+		uv.yw = wrapv(uv.yw);
+	}
+	
+	return uv;
+}
+
+float4 sample(float2 tc, float w)
+{
+	if(FST == 0)
+	{
+		tc /= w;
+	}
+	
+	float4 t;
+/*	
+	if(BPP < 3 && WMS < 2 && WMT < 2)
+	{
 		t = tex2D(Texture, tc);
+	}
+*/
+	if(BPP < 3 && WMS < 3 && WMT < 3)
+	{
+		if(WMS == 2 && WMT == 2) tc = clamp(tc, MINUV.xy, MAXUV.xy);
+		else if(WMS == 2) tc.x = clamp(tc.x, MINUV.x, MAXUV.x);
+		else if(WMT == 2) tc.y = clamp(tc.y, MINUV.y, MAXUV.y);
+	
+		t = tex2D(Texture, tc);
+	}
+	else
+	{
+		float4 uv = tc.xyxy + HalfTexel;
+		float2 dd = frac(uv.xy * WH); 
+		
+		uv = wrap(uv);
+
+		float4 t00, t01, t10, t11;
+
+		if(BPP == 3) // 8HP ln
+		{
+			float4 a;
+
+			a.x = tex2D(Texture, uv.xy).a;
+			a.y = tex2D(Texture, uv.zy).a;
+			a.z = tex2D(Texture, uv.xw).a;
+			a.w = tex2D(Texture, uv.zw).a;
+
+			if(RT == 1) a *= 0.5;
+			
+			t00 = tex1D(Palette, a.x);
+			t01 = tex1D(Palette, a.y);
+			t10 = tex1D(Palette, a.z);
+			t11 = tex1D(Palette, a.w);
+		}
+		else
+		{
+			t00 = tex2D(Texture, uv.xy);
+			t01 = tex2D(Texture, uv.zy);
+			t10 = tex2D(Texture, uv.xw);
+			t11 = tex2D(Texture, uv.zw);
+		}
+
+		t = lerp(lerp(t00, t01, dd.x), lerp(t10, t11, dd.x), dd.y);
+	}
+	
+	if(BPP == 0) // 32
+	{
+		if(RT == 1) t.a *= 0.5;
+	}
+	else if(BPP == 1) // 24
+	{
+		t.a = AEM == 0 || any(t.rgb) ? TA0 : 0;
+	}
+	else if(BPP == 2) // 16
+	{
+		// a bit incompatible with up-scaling because the 1 bit alpha is interpolated
+	
+		t.a = t.a >= 0.5 ? TA1 : AEM == 0 || any(t.rgb) ? TA0 : 0; 
 	}
 	
 	return t;
 }
 
-float4 sample8hp(float2 tc)
+float4 tfx(float4 t, float4 c)
 {
-	tc -= rWrH / 2;	
-
-	float4 tc01;
-	
-	tc01.x = tc.x;
-	tc01.y = tc.y;
-	tc01.z = tc.x + rWrH.x; 
-	tc01.w = tc.y + rWrH.y;
-
-	float4 t;
-
-	t.x = tex2D(Texture, tc01.xy).a;
-	t.y = tex2D(Texture, tc01.zy).a;
-	t.z = tex2D(Texture, tc01.xw).a;
-	t.w = tex2D(Texture, tc01.zw).a;
-
-	if(RT == 1) t *= 0.5;
-	
-	float4 t00 = tex1D(Palette, t.x);
-	float4 t01 = tex1D(Palette, t.y);
-	float4 t10 = tex1D(Palette, t.z);
-	float4 t11 = tex1D(Palette, t.w);
-
-	float2 dd = frac(tc * WH); 
-
-	return lerp(lerp(t00, t01, dd.x), lerp(t10, t11, dd.x), dd.y);
-}
-
-float4 ps_main(PS_INPUT input) : COLOR
-{
-	float2 tc = input.t.xy;
-
-	if(FST == 0)
-	{
-		tc /= input.t.w;
-	}
-
-	if(WMS == 2)
-	{
-		tc.x = clamp(tc.x, MINU, MAXU);
-	}
-	
-	if(WMT == 2)
-	{
-		tc.y = clamp(tc.y, MINV, MAXV);
-	}
-
-	float4 t;
-
-	if(BPP == 0) // 32
-	{
-		t = sample(tc);
-
-		if(RT == 1) t.a *= 0.5;
-	}
-	else if(BPP == 1) // 24
-	{
-		t = sample(tc);
-
-		t.a = AEM == 0 || any(t.rgb) ? TA0 : 0;
-	}
-	else if(BPP == 2) // 16
-	{
-		t = sample(tc);
-
-		t.a = t.a >= 0.5 ? TA1 : AEM == 0 || any(t.rgb) ? TA0 : 0; // a bit incompatible with up-scaling because the 1 bit alpha is interpolated
-	}
-	else if(BPP == 3) // 8HP ln
-	{
-		t = sample8hp(tc);
-	}
-
-	float4 c = input.c;
-
 	if(TFX == 0)
 	{
 		if(TCC == 0) 
@@ -277,9 +315,12 @@ float4 ps_main(PS_INPUT input) : COLOR
 			c.a = t.a;
 		}
 	}
+	
+	return saturate(c);
+}
 
-	c = saturate(c);
-
+void atst(float4 c)
+{
 	if(ATE == 1)
 	{
 		if(ATST == 0)
@@ -303,11 +344,27 @@ float4 ps_main(PS_INPUT input) : COLOR
 			clip(abs(c.a - AREF) - 0.4f / 255); // FIXME: 0.5f is too much
 		}
 	}
+}
 
+float4 fog(float4 c, float f)
+{
 	if(FOG == 1)
 	{
-		c.rgb = lerp(FogColor.rgb, c.rgb, input.t.z);
+		c.rgb = lerp(FogColor.rgb, c.rgb, f);
 	}
+
+	return c;
+}
+
+float4 ps_main(PS_INPUT input) : COLOR
+{
+	float4 t = sample(input.t.xy, input.t.w);
+
+	float4 c = tfx(t, input.c);
+	
+	atst(c);
+
+	c = fog(c, input.t.z);
 
 	if(CLR1 == 1) // needed for Cd * (As/Ad/F + 1) blending modes
 	{

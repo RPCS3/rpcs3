@@ -25,7 +25,7 @@
 #include "resource.h"
 
 GSRendererHW9::GSRendererHW9(uint8* base, bool mt, void (*irq)())
-	: GSRendererHW<GSVertexHW9>(base, mt, irq, new GSDevice9(), new GSTextureCache9(this), true)
+	: GSRendererHW<GSVertexHW9>(base, mt, irq, new GSDevice9(), new GSTextureCache9(this))
 {
 	m_fba.enabled = !!theApp.GetConfig("fba", 1);
 	m_logz = !!theApp.GetConfig("logz", 0);
@@ -335,7 +335,7 @@ void GSRendererHW9::Draw(int prim, GSTexture* rt, GSTexture* ds, GSTextureCache:
 			ps_ssel.tau = 0; 
 			break;
 		case 2: 
-			ps_cb.MINU = ((float)(int)context->CLAMP.MINU + 0.5f) / (1 << context->TEX0.TW);
+			ps_cb.MINU = ((float)(int)context->CLAMP.MINU) / (1 << context->TEX0.TW);
 			ps_cb.MAXU = ((float)(int)context->CLAMP.MAXU) / (1 << context->TEX0.TW);
 			ps_ssel.tau = 0; 
 			break;
@@ -357,7 +357,7 @@ void GSRendererHW9::Draw(int prim, GSTexture* rt, GSTexture* ds, GSTextureCache:
 			ps_ssel.tav = 0; 
 			break;
 		case 2: 
-			ps_cb.MINV = ((float)(int)context->CLAMP.MINV + 0.5f) / (1 << context->TEX0.TH);
+			ps_cb.MINV = ((float)(int)context->CLAMP.MINV) / (1 << context->TEX0.TH);
 			ps_cb.MAXV = ((float)(int)context->CLAMP.MAXV) / (1 << context->TEX0.TH);
 			ps_ssel.tav = 0; 
 			break;
@@ -375,6 +375,7 @@ void GSRendererHW9::Draw(int prim, GSTexture* rt, GSTexture* ds, GSTextureCache:
 
 		ps_cb.WH = GSVector2(w, h);
 		ps_cb.rWrH = GSVector2(1.0f / w, 1.0f / h);
+		ps_cb.HalfTexel = GSVector4(-0.5f / w, -0.5f / h, +0.5f / w, +0.5f / h);
 	}
 	else
 	{
@@ -393,7 +394,7 @@ void GSRendererHW9::Draw(int prim, GSTexture* rt, GSTexture* ds, GSTextureCache:
 	m_tfx.SetupOM(om_dssel, om_bsel, bf, rt, ds);
 	m_tfx.SetupIA(m_vertices, m_count, topology);
 	m_tfx.SetupVS(vs_sel, &vs_cb);
-	m_tfx.SetupPS(ps_sel, &ps_cb, ps_ssel, tex ? tex->m_texture : NULL, tex ? tex->m_palette : NULL, m_psrr);
+	m_tfx.SetupPS(ps_sel, &ps_cb, ps_ssel, tex ? tex->m_texture : NULL, tex ? tex->m_palette : NULL);
 	m_tfx.SetupRS(w, h, scissor);
 
 	// draw
@@ -411,7 +412,7 @@ void GSRendererHW9::Draw(int prim, GSTexture* rt, GSTexture* ds, GSTextureCache:
 
 		ps_sel.atst = iatst[ps_sel.atst];
 
-		m_tfx.UpdatePS(ps_sel, &ps_cb, ps_ssel, m_psrr);
+		m_tfx.UpdatePS(ps_sel, &ps_cb, ps_ssel);
 
 		bool z = om_dssel.zwe;
 		bool r = om_bsel.wr;

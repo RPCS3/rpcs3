@@ -25,7 +25,7 @@
 #include "resource.h"
 
 GSRendererHW10::GSRendererHW10(uint8* base, bool mt, void (*irq)())
-	: GSRendererHW<GSVertexHW10>(base, mt, irq, new GSDevice10(), new GSTextureCache10(this), true)
+	: GSRendererHW<GSVertexHW10>(base, mt, irq, new GSDevice10(), new GSTextureCache10(this))
 {
 	InitVertexKick<GSRendererHW10>();
 }
@@ -361,7 +361,7 @@ void GSRendererHW10::Draw(int prim, GSTexture* rt, GSTexture* ds, GSTextureCache
 			ps_ssel.tau = 0; 
 			break;
 		case 2: 
-			ps_cb.MINU = ((float)(int)context->CLAMP.MINU + 0.5f) / (1 << context->TEX0.TW);
+			ps_cb.MINU = ((float)(int)context->CLAMP.MINU) / (1 << context->TEX0.TW);
 			ps_cb.MAXU = ((float)(int)context->CLAMP.MAXU) / (1 << context->TEX0.TW);
 			ps_ssel.tau = 0; 
 			break;
@@ -383,7 +383,7 @@ void GSRendererHW10::Draw(int prim, GSTexture* rt, GSTexture* ds, GSTextureCache
 			ps_ssel.tav = 0; 
 			break;
 		case 2: 
-			ps_cb.MINV = ((float)(int)context->CLAMP.MINV + 0.5f) / (1 << context->TEX0.TH);
+			ps_cb.MINV = ((float)(int)context->CLAMP.MINV) / (1 << context->TEX0.TH);
 			ps_cb.MAXV = ((float)(int)context->CLAMP.MAXV) / (1 << context->TEX0.TH);
 			ps_ssel.tav = 0; 
 			break;
@@ -401,6 +401,7 @@ void GSRendererHW10::Draw(int prim, GSTexture* rt, GSTexture* ds, GSTextureCache
 
 		ps_cb.WH = GSVector2(w, h);
 		ps_cb.rWrH = GSVector2(1.0f / w, 1.0f / h);
+		ps_cb.HalfTexel = GSVector4(-0.5f / w, -0.5f / h, +0.5f / w, +0.5f / h);
 	}
 	else
 	{

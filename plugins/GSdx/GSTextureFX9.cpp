@@ -144,11 +144,11 @@ bool GSTextureFX9::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 	return true;
 }
 
-bool GSTextureFX9::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel, GSTexture* tex, GSTexture* pal, bool psrr)
+bool GSTextureFX9::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel, GSTexture* tex, GSTexture* pal)
 {
 	m_dev->PSSetShaderResources(tex, pal);
 
-	if(tex && psrr && (sel.wms == 3 || sel.wmt == 3))
+	if(tex && (sel.wms == 3 || sel.wmt == 3))
 	{
 		if(sel.wms == 3)
 		{
@@ -167,20 +167,14 @@ bool GSTextureFX9::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSampler
 		}
 	}
 
-	UpdatePS(sel, cb, ssel, psrr);
+	UpdatePS(sel, cb, ssel);
 
 	return true;
 }
 
-void GSTextureFX9::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel, bool psrr)
+void GSTextureFX9::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel)
 {
 	HRESULT hr;
-
-	if(!psrr)
-	{
-		if(sel.wms == 3) sel.wms = 0;
-		if(sel.wmt == 3) sel.wmt = 0;
-	}
 
 	hash_map<uint32, CComPtr<IDirect3DPixelShader9> >::const_iterator i = m_ps.find(sel);
 
@@ -233,10 +227,10 @@ void GSTextureFX9::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSample
 
 	if(sel.tfx != 4)
 	{
-		if(sel.bpp >= 3 || sel.wms >= 3 || sel.wmt >= 3) 
-		{
-			ssel.min = ssel.mag = 0;
-		}
+		bool b = sel.bpp < 3 && sel.wms < 3 && sel.wmt < 3;
+
+		ssel.min = b;
+		ssel.mag = b;
 
 		hash_map<uint32, Direct3DSamplerState9* >::const_iterator i = m_ps_ss.find(ssel);
 

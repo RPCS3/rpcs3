@@ -266,7 +266,6 @@ GSTextureCache::GSCachedTexture* GSTextureCache::GetTexture()
 		{
 			if(TEX0.PSM == t->m_TEX0.PSM && TEX0.TBW == t->m_TEX0.TBW
 			&& TEX0.TW == t->m_TEX0.TW && TEX0.TH == t->m_TEX0.TH
-			&& (m_renderer->m_psrr || (CLAMP.WMS != 3 && t->m_CLAMP.WMS != 3 && CLAMP.WMT != 3 && t->m_CLAMP.WMT != 3 || CLAMP.u64 == t->m_CLAMP.u64))
 			&& (pal == 0 || TEX0.CPSM == t->m_TEX0.CPSM && GSVector4i::compare(t->m_clut, clut, pal * sizeof(clut[0]))))
 			{
 				m_tex.splice(m_tex.begin(), m_tex, i);
@@ -705,14 +704,7 @@ void GSTextureCache::GSCachedTexture::Update()
 	{
 		// in dx9 managed textures can be written directly, less copying is faster, but still not as fast as dx10's UpdateResource
 
-		if(m_renderer->m_psrr)
-		{
-			m_renderer->m_mem.ReadTextureNPNC(r, bits, pitch, m_renderer->m_context->TEX0, m_renderer->m_env.TEXA, m_renderer->m_context->CLAMP);
-		}
-		else
-		{
-			m_renderer->m_mem.ReadTextureNP(r, bits, pitch, m_renderer->m_context->TEX0, m_renderer->m_env.TEXA, m_renderer->m_context->CLAMP);
-		}
+		m_renderer->m_mem.ReadTextureNPNC(r, bits, pitch, m_renderer->m_context->TEX0, m_renderer->m_env.TEXA, m_renderer->m_context->CLAMP);
 
 		m_texture->Unmap();
 	}
@@ -722,14 +714,7 @@ void GSTextureCache::GSCachedTexture::Update()
 		
 		pitch = ((r.width() + 3) & ~3) * 4;
 
-		if(m_renderer->m_psrr)
-		{
-			m_renderer->m_mem.ReadTextureNPNC(r, buff, pitch, m_renderer->m_context->TEX0, m_renderer->m_env.TEXA, m_renderer->m_context->CLAMP);
-		}
-		else
-		{
-			m_renderer->m_mem.ReadTextureNP(r, buff, pitch, m_renderer->m_context->TEX0, m_renderer->m_env.TEXA, m_renderer->m_context->CLAMP);
-		}
+		m_renderer->m_mem.ReadTextureNPNC(r, buff, pitch, m_renderer->m_context->TEX0, m_renderer->m_env.TEXA, m_renderer->m_context->CLAMP);
 
 		m_texture->Update(r, buff, pitch);
 	}

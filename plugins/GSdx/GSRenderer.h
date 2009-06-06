@@ -51,7 +51,6 @@ protected:
 public:
 	GSWnd m_wnd;
 	GSDevice* m_dev;
-	bool m_psrr;
 
 	int s_n;
 	bool s_dump;
@@ -59,7 +58,7 @@ public:
 	bool s_savez;
 
 public:
-	GSRenderer(uint8* base, bool mt, void (*irq)(), GSDevice* dev, bool psrr = true);
+	GSRenderer(uint8* base, bool mt, void (*irq)(), GSDevice* dev);
 	virtual ~GSRenderer();
 
 	virtual bool Create(const string& title);
@@ -216,8 +215,8 @@ protected:
 	virtual void Draw() = 0;
 
 public:
-	GSRendererT(uint8* base, bool mt, void (*irq)(), GSDevice* dev, bool psrr = true)
-		: GSRenderer(base, mt, irq, dev, psrr)
+	GSRendererT(uint8* base, bool mt, void (*irq)(), GSDevice* dev)
+		: GSRenderer(base, mt, irq, dev)
 		, m_count(0)
 		, m_maxcount(0)
 		, m_vertices(NULL)
