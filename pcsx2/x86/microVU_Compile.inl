@@ -171,7 +171,7 @@ microVUt(void) mVUincCycles(mV, int x) {
 }
 
 microVUt(void) mVUsetCycles(mV) {
-	incCycles(mVUstall);
+	mVUincCycles(mVU, mVUstall);
 	// If upper Op && lower Op write to same VF reg:
 	if ((mVUregsTemp.VFreg[0] == mVUregsTemp.VFreg[1]) && mVUregsTemp.VFreg[0]) {
 		if (mVUregsTemp.r || mVUregsTemp.VI) mVUlow.noWriteVF = 1; 
@@ -297,7 +297,7 @@ microVUf(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 	for (int branch = 0;  mVUcount < (vuIndex ? (0x3fff/8) : (0xfff/8)); ) {
 		incPC(1);
 		startLoop();
-		incCycles(1);
+		mVUincCycles(mVU, 1);
 		mVUopU(mVU, 0);
 		if (curI & _Ebit_)	  { branch = 1; mVUup.eBit = 1; }
 		if (curI & _DTbit_)	  { branch = 4; }
@@ -424,7 +424,7 @@ eBitTemination:
 	int lMac	= findFlagInst(xMac,	0x7fffffff);
 	int lClip	= findFlagInst(xClip,	0x7fffffff);
 	memset(&mVUinfo, 0, sizeof(mVUinfo));
-	incCycles(100); // Ensures Valid P/Q instances (And sets all cycle data to 0)
+	mVUincCycles(mVU, 100); // Ensures Valid P/Q instances (And sets all cycle data to 0)
 	mVUcycles -= 100;
 	if (mVUinfo.doDivFlag) {
 		int flagReg;

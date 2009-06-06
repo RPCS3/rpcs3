@@ -32,15 +32,16 @@ union regInfo {
 #pragma pack(push, 1)
 #pragma warning(disable:4996)
 #endif
-struct microRegInfo {
-	regInfo VF[32];
-	u8 VI[32];
+__declspec(align(16)) struct microRegInfo { // Ordered for Faster Compares
+	u32 needExactMatch;	// If set, block needs an exact match of pipeline state
 	u8 q;
 	u8 p;
 	u8 r;
 	u8 xgkick;
-	u8 flags; // clip x2 :: status x2
-	u32 needExactMatch; // If set, block needs an exact match of pipeline state (needs to be last 2 bytes in struct)
+	u8 VI[16];
+	regInfo VF[32];
+	u8 flags;			// clip x2 :: status x2
+	u8 padding[7];		// 160 bytes
 #if defined(_MSC_VER)
 };
 #pragma pack(pop)
@@ -59,9 +60,9 @@ struct microTempRegInfo {
 	u8 xgkick;		// Holds the cycle info for XGkick
 };
 
-struct microBlock {
+__declspec(align(16)) struct microBlock {
 	microRegInfo pState;	// Detailed State of Pipeline
-	microRegInfo pStateEnd;	// Detailed State of Pipeline at End of Block (needed by JR/JALR opcodes)
+	microRegInfo pStateEnd; // Detailed State of Pipeline at End of Block (needed by JR/JALR opcodes)
 	u8* x86ptrStart;		// Start of code
 };
 
@@ -91,10 +92,10 @@ struct microLowerOp {
 	microVFreg VF_read[2];	// VF Vectors read by this instruction
 	microVIreg VI_write;	// VI reg written to by this instruction
 	microVIreg VI_read[2];	// VI regs read by this instruction
+	u32  branch;	// Branch Type (0 = Not a Branch, 1 = B. 2 = BAL, 3~8 = Conditional Branches, 9 = JALR, 10 = JR)
 	bool isNOP;		// This instruction is a NOP
 	bool isFSSET;	// This instruction is a FSSET
 	bool useSflag;	// This instruction uses/reads Sflag
-	u32  branch;	// Branch Type (0 = Not a Branch, 1 = B. 2 = BAL, 3~8 = Conditional Branches, 9 = JALR, 10 = JR)
 	bool noWriteVF;	// Don't write back the result of a lower op to VF reg if upper op writes to same reg (or if VF = 0)
 	bool backupVI;	// Backup VI reg to memory if modified before branch (branch uses old VI value unless opcode is ILW or ILWR)
 	bool memReadIs;	// Read Is (VI reg) from memory (used by branches)

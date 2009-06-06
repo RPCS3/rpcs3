@@ -160,6 +160,18 @@ declareAllVariables
 #define pass3 if (recPass == 2)
 #define pass4 if (recPass == 3)
 
+// Define mVUquickSearch
+#if defined(_MSC_VER)
+extern u32 __fastcall mVUsearchXMM(void *dest, void *src);
+#define mVUquickSearch(dest, src, size) (mVUsearchXMM(dest, src) == 0xf)
+#else
+#define mVUquickSearch(dest, src, size) (!memcmp(dest, src, size))
+// Note: GCC might not guarantee alignment on microRegInfo, 
+// so to be safe I'm using normal memcmp. If at least 8-byte
+// alignment is guaranteed, the function below is faster.
+// #define mVUquickSearch(dest, src, size) (!memcmp_mmx(dest, src, size))
+#endif
+
 // Misc Macros...
 #define mVUprogI	 mVU->prog.prog[progIndex]
 #define mVUcurProg	 mVU->prog.prog[mVU->prog.cur]
@@ -188,7 +200,6 @@ declareAllVariables
 #define setCode()	 { mVU->code = curI; }
 #define incPC(x)	 { iPC = ((iPC + x) & (mVU->progSize-1)); setCode(); }
 #define incPC2(x)	 { iPC = ((iPC + x) & (mVU->progSize-1)); }
-#define incCycles(x) { mVUincCycles(mVU, x); }
 #define bSaveAddr	 (((xPC + (2 * 8)) & ((isVU1) ? 0x3ff8:0xff8)) / 8)
 #define branchAddr	 ((xPC + 8 + (_Imm11_ * 8)) & ((isVU1) ? 0x3ff8 : 0xff8))
 #define shufflePQ	 (((mVU->p) ? 0xb0 : 0xe0) | ((mVU->q) ? 0x01 : 0x04))

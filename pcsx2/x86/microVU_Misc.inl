@@ -60,7 +60,7 @@ void mVUclamp2(int reg, int regT1, int xyzw) {
 }
 
 //------------------------------------------------------------------
-// Micro VU - Misc Functions
+// Micro VU - Reg Loading/Saving/Shuffling/Unpacking/Merging...
 //------------------------------------------------------------------
 
 void mVUunpack_xyzw(int dstreg, int srcreg, int xyzw) {
@@ -261,6 +261,10 @@ void mVUmergeRegs(int dest, int src, int xyzw) {
 	}
 }
 
+//------------------------------------------------------------------
+// Micro VU - Misc Functions
+//------------------------------------------------------------------
+
 // Transforms the Address in gprReg to valid VU0/VU1 Address
 microVUt(void) mVUaddrFix(mV, int gprReg) {
 	if (mVU == &microVU1) {
@@ -294,6 +298,10 @@ microVUt(void) mVUrestoreRegs(mV) {
 	SSE_MOVAPS_M128_to_XMM(xmmMin, (uptr)mVU_minvals);
 	MOV32ItoR(gprR, Roffset); // Restore gprR
 }
+
+//------------------------------------------------------------------
+// Micro VU - Custom SSE Instructions
+//------------------------------------------------------------------
 
 static const u32 PCSX2_ALIGNED16(MIN_MAX_MASK1[4]) = {0xffffffff, 0x80000000, 0xffffffff, 0x80000000};
 static const u32 PCSX2_ALIGNED16(MIN_MAX_MASK2[4]) = {0x00000000, 0x40000000, 0x00000000, 0x40000000};
@@ -424,4 +432,55 @@ void SSE_ADD2SS_XMM_to_XMM(x86SSERegType to, x86SSERegType from) {
 // Note: Wrapper function, Tri-Ace Games just need the SS implementation
 void SSE_ADD2PS_XMM_to_XMM(x86SSERegType to, x86SSERegType from) {
 	SSE_ADDPS_XMM_to_XMM(to, from);
+}
+
+//------------------------------------------------------------------
+// Micro VU - Custom Quick Search
+//------------------------------------------------------------------
+
+// Generates a custom optimized block-search function (Note: Structs must be 16-byte aligned!)
+static __declspec(naked) u32 __fastcall mVUsearchXMM(void *dest, void *src) {
+
+	__asm {
+		movaps	xmm0, [ecx]
+		pcmpeqd	xmm0, [edx]
+		movaps	xmm1, [ecx + 0x10]
+		pcmpeqd	xmm1, [edx + 0x10]
+		pand	xmm0, xmm1
+
+		movmskps eax, xmm0
+		cmp eax, 0xf
+		jl exitPoint
+
+		movaps	xmm0, [ecx + 0x20]
+		pcmpeqd	xmm0, [edx + 0x20]
+		movaps	xmm1, [ecx + 0x30]
+		pcmpeqd	xmm1, [edx + 0x30]
+		pand	xmm0, xmm1
+
+		movaps	xmm2, [ecx + 0x40]
+		pcmpeqd	xmm2, [edx + 0x40]
+		movaps	xmm3, [ecx + 0x50]
+		pcmpeqd	xmm3, [edx + 0x50]
+		pand	xmm2, xmm3
+
+		movaps	xmm4, [ecx + 0x60]
+		pcmpeqd	xmm4, [edx + 0x60]
+		movaps	xmm5, [ecx + 0x70]
+		pcmpeqd	xmm5, [edx + 0x70]
+		pand	xmm4, xmm5
+
+		movaps	xmm6, [ecx + 0x80]
+		pcmpeqd	xmm6, [edx + 0x80]
+		movaps	xmm7, [ecx + 0x90]
+		pcmpeqd	xmm7, [edx + 0x90]
+		pand	xmm6, xmm7
+
+		pand	xmm0, xmm2
+		pand	xmm4, xmm6
+		pand	xmm0, xmm4
+		movmskps eax, xmm0
+exitPoint:
+		ret
+	}
 }

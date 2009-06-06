@@ -27,17 +27,18 @@
 #include "microVU_IR.h"
 #include "microVU_Misc.h"
 
+
 #define mMaxBlocks 32 // Max Blocks With Different Pipeline States (For n = 1, 2, 4, 8, 16, etc...)
 class microBlockManager {
 private:
 	static const int MaxBlocks = mMaxBlocks - 1;
 	int listSize; // Total Items - 1
 	int listI;	  // Index to Add new block
-	microBlock blockList[mMaxBlocks];
+	microBlock* blockList;
 
 public:
-	microBlockManager()	 { reset(); }
-	~microBlockManager() {}
+	microBlockManager()	 { blockList = (microBlock*)_aligned_malloc(sizeof(microBlock)*mMaxBlocks, 16); reset(); }
+	~microBlockManager() { if (blockList) { _aligned_free(blockList); } }
 	void reset()  { listSize = -1; listI = -1; };
 	microBlock* add(microBlock* pBlock) {
 		microBlock* thisBlock = search(&pBlock->pState);
@@ -54,7 +55,7 @@ public:
 		if (listSize < 0) return NULL;
 		if (pState->needExactMatch) { // Needs Detailed Search (Exact Match of Pipeline State)
 			for (int i = 0; i <= listSize; i++) {
-				if (!memcmp(pState, &blockList[i].pState, sizeof(microRegInfo)/* - 4*/)) return &blockList[i];
+				if (mVUquickSearch((void*)pState, (void*)&blockList[i].pState, sizeof(microRegInfo))) return &blockList[i];
 			}
 		}
 		else { // Can do Simple Search (Only Matches the Important Pipeline Stuff)
@@ -158,6 +159,7 @@ microVUf(void)		mVUcacheProg(int progIndex);
 void* __fastcall	mVUexecuteVU0(u32 startPC, u32 cycles);
 void* __fastcall	mVUexecuteVU1(u32 startPC, u32 cycles);
 
+// recCall Function Pointer
 typedef void (__fastcall *mVUrecCall)(u32, u32);
 
 
