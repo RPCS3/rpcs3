@@ -25,7 +25,7 @@
 #include "resource.h"
 
 GSRendererHW9::GSRendererHW9(uint8* base, bool mt, void (*irq)())
-	: GSRendererHW<GSVertexHW9>(base, mt, irq, new GSDevice9(), new GSTextureCache9(this), false)
+	: GSRendererHW<GSVertexHW9>(base, mt, irq, new GSDevice9(), new GSTextureCache9(this), true)
 {
 	m_fba.enabled = !!theApp.GetConfig("fba", 1);
 	m_logz = !!theApp.GetConfig("logz", 0);

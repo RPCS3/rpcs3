@@ -116,12 +116,12 @@ sampler1D VMSKFIX : register(s3);
 
 float repeatu(float tc)
 {
-	return WMS == 3 ? tex1D(UMSKFIX, tc) : tc;
+	return WMS == 3 ? tex1D(UMSKFIX, tc*rWrH.x)* WH.x : tc;
 }
 
 float repeatv(float tc)
 {
-	return WMT == 3 ? tex1D(VMSKFIX, tc) : tc;
+	return WMT == 3 ? tex1D(VMSKFIX, tc*rWrH.y)* WH.y : tc;
 }
 
 float4 sample(float2 tc)
