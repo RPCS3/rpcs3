@@ -900,7 +900,7 @@ static void __fastcall slice_non_intra_DCT (decoder_t * const decoder,
 }
 
 #if defined(_MSC_VER)
-#pragma pack(push, 1)
+#pragma pack(1)
 #endif
 struct TGA_HEADER
 {
@@ -922,7 +922,7 @@ struct TGA_HEADER
     // pixel data follows header
 #if defined(_MSC_VER)
 };
-#pragma pack(pop)
+#pragma pack()
 #else
 } __attribute__((packed));
 #endif

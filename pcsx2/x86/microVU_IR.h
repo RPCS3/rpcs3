@@ -29,7 +29,7 @@ union regInfo {
 };
 
 #if defined(_MSC_VER)
-#pragma pack(push, 1)
+#pragma pack(1)
 #pragma warning(disable:4996)
 #endif
 __declspec(align(16)) struct microRegInfo { // Ordered for Faster Compares
@@ -44,7 +44,8 @@ __declspec(align(16)) struct microRegInfo { // Ordered for Faster Compares
 	u8 padding[7];		// 160 bytes
 #if defined(_MSC_VER)
 };
-#pragma pack(pop)
+#pragma pack()
+#pragma pack(show)
 #else
 } __attribute__((packed));
 #endif
