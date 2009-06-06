@@ -438,6 +438,7 @@ void SSE_ADD2PS_XMM_to_XMM(x86SSERegType to, x86SSERegType from) {
 // Micro VU - Custom Quick Search
 //------------------------------------------------------------------
 
+#ifndef __LINUX__
 // Generates a custom optimized block-search function (Note: Structs must be 16-byte aligned!)
 static __declspec(naked) u32 __fastcall mVUsearchXMM(void *dest, void *src) {
 
@@ -484,3 +485,53 @@ exitPoint:
 		ret
 	}
 }
+#else
+// Generates a custom optimized block-search function (Note: Structs must be 16-byte aligned!)
+static u32 __fastcall mVUsearchXMM(void *dest, void *src) 
+{
+	__asm__
+	(
+		".intel_syntax noprefix\n"
+		"movaps	xmm0, [ecx]\n"
+		"pcmpeqd	xmm0, [edx]\n"
+		"movaps	xmm1, [ecx + 0x10]\n"
+		"pcmpeqd	xmm1, [edx + 0x10]\n"
+		"pand	xmm0, xmm1\n"
+
+		"movmskps eax, xmm0\n"
+		"cmp eax, 0xf\n"
+		"jl exitPoint\n"
+
+		"movaps	xmm0, [ecx + 0x20]\n"
+		"pcmpeqd	xmm0, [edx + 0x20]\n"
+		"movaps	xmm1, [ecx + 0x30]\n"
+		"pcmpeqd	xmm1, [edx + 0x30]\n"
+		"pand	xmm0, xmm1\n"
+
+		"movaps	xmm2, [ecx + 0x40]\n"
+		"pcmpeqd	xmm2, [edx + 0x40]\n"
+		"movaps	xmm3, [ecx + 0x50]\n"
+		"pcmpeqd	xmm3, [edx + 0x50]\n"
+		"pand	xmm2, xmm3\n"
+
+		"movaps	xmm4, [ecx + 0x60]\n"
+		"pcmpeqd	xmm4, [edx + 0x60]\n"
+		"movaps	xmm5, [ecx + 0x70]\n"
+		"pcmpeqd	xmm5, [edx + 0x70]\n"
+		"pand	xmm4, xmm5\n"
+
+		"movaps	xmm6, [ecx + 0x80]\n"
+		"pcmpeqd	xmm6, [edx + 0x80]\n"
+		"movaps	xmm7, [ecx + 0x90]\n"
+		"pcmpeqd	xmm7, [edx + 0x90]\n"
+		"pand	xmm6, xmm7\n"
+
+		"pand	xmm0, xmm2\n"
+		"pand	xmm4, xmm6\n"
+		"pand	xmm0, xmm4\n"
+		"movmskps eax, xmm0\n"
+"exitPoint:\n"
+		".att_syntax\n"
+	);
+}
+#endif

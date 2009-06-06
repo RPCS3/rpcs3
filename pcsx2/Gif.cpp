@@ -160,10 +160,7 @@ static __forceinline void dmaGIFend()
 // not to do the gif->qwc != 0 check. --arcum42
 static __forceinline void GIFdmaEnd()
 {
-	//if (psHu32(GIF_MODE) & 0x4)
 		CPU_INT(2, gscycles * BIAS);
-	/*else
-		CPU_INT(2, min( gifsplit, (int)gif->qwc ) * BIAS);*/
 }
 
 void GIFdma() 
@@ -178,7 +175,6 @@ void GIFdma()
 		return;
 	}
 
-	
 	if ((psHu32(DMAC_CTRL) & 0xC0) == 0x80 && prevcycles != 0) { // STD == GIF
 		Console::WriteLn("GS Stall Control Source = %x, Drain = %x\n MADR = %x, STADR = %x", params (psHu32(0xe000) >> 4) & 0x3, (psHu32(0xe000) >> 6) & 0x3, gif->madr, psHu32(DMAC_STADR));
 
@@ -324,8 +320,8 @@ void GIFdma()
 }
 
 void dmaGIF() {
-	 //We used to addd wait time for the buffer to fill here, fixing some timing problems in path 3 masking
-	//It takes the time of 24 QW for the BUS to become ready - The Punisher, And1 Streetball
+	 //We used to add wait time for the buffer to fill here, fixing some timing problems in path 3 masking
+	//It takes the time of 24 QW for the BUS to become ready - The Punisher And Streetball
 	GIF_LOG("dmaGIFstart chcr = %lx, madr = %lx, qwc  = %lx\n tadr = %lx, asr0 = %lx, asr1 = %lx", gif->chcr, gif->madr, gif->qwc, gif->tadr, gif->asr0, gif->asr1);
 
 	Path3progress = 2;
@@ -555,7 +551,7 @@ void gifMFIFOInterrupt()
 	if((spr0->chcr & 0x100) && spr0->qwc == 0)
 	{
 		spr0->chcr &= ~0x100;
-		hwDmacIrq(8);
+		hwDmacIrq(DMAC_FROM_SPR);
 	}
 	
 	if(gifstate != GIF_STATE_STALL) {

@@ -495,7 +495,7 @@ __forceinline void dmaSIF2()
 	        sif2dma->chcr, sif2dma->madr, sif2dma->qwc);
 
 	sif2dma->chcr &= ~0x100;
-	hwDmacIrq(7);
+	hwDmacIrq(DMAC_SIF2);
 	Console::WriteLn("*PCSX2*: dmaSIF2");
 }
 

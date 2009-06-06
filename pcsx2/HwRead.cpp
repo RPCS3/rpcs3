@@ -61,38 +61,37 @@ __forceinline mem8_t hwRead8(u32 mem)
 
 	switch (mem)
 	{
-		// Note: the values without defines = the defines + 1.
 		case RCNT0_COUNT: ret = (u8)rcntRcount(0); break;
 		case RCNT0_MODE: ret = (u8)counters[0].modeval; break;
 		case RCNT0_TARGET: ret = (u8)counters[0].target; break;
 		case RCNT0_HOLD: ret = (u8)counters[0].hold; break;
-		case 0x10000001: ret = (u8)(rcntRcount(0)>>8); break;
-		case 0x10000011: ret = (u8)(counters[0].modeval>>8); break;
-		case 0x10000021: ret = (u8)(counters[0].target>>8); break;
-		case 0x10000031: ret = (u8)(counters[0].hold>>8); break;
+		case RCNT0_COUNT + 1: ret = (u8)(rcntRcount(0)>>8); break;
+		case RCNT0_MODE + 1: ret = (u8)(counters[0].modeval>>8); break;
+		case RCNT0_TARGET + 1: ret = (u8)(counters[0].target>>8); break;
+		case RCNT0_HOLD + 1: ret = (u8)(counters[0].hold>>8); break;
 
 		case RCNT1_COUNT: ret = (u8)rcntRcount(1); break;
 		case RCNT1_MODE: ret = (u8)counters[1].modeval; break;
 		case RCNT1_TARGET: ret = (u8)counters[1].target; break;
 		case RCNT1_HOLD: ret = (u8)counters[1].hold; break;
-		case 0x10000801: ret = (u8)(rcntRcount(1)>>8); break;
-		case 0x10000811: ret = (u8)(counters[1].modeval>>8); break;
-		case 0x10000821: ret = (u8)(counters[1].target>>8); break;
-		case 0x10000831: ret = (u8)(counters[1].hold>>8); break;
+		case RCNT1_COUNT + 1: ret = (u8)(rcntRcount(1)>>8); break;
+		case RCNT1_MODE + 1: ret = (u8)(counters[1].modeval>>8); break;
+		case RCNT1_TARGET + 1: ret = (u8)(counters[1].target>>8); break;
+		case RCNT1_HOLD + 1: ret = (u8)(counters[1].hold>>8); break;
 
 		case RCNT2_COUNT: ret = (u8)rcntRcount(2); break;
 		case RCNT2_MODE: ret = (u8)counters[2].modeval; break;
 		case RCNT2_TARGET: ret = (u8)counters[2].target; break;
-		case 0x10001001: ret = (u8)(rcntRcount(2)>>8); break;
-		case 0x10001011: ret = (u8)(counters[2].modeval>>8); break;
-		case 0x10001021: ret = (u8)(counters[2].target>>8); break;
+		case RCNT2_COUNT + 1: ret = (u8)(rcntRcount(2)>>8); break;
+		case RCNT2_MODE + 1: ret = (u8)(counters[2].modeval>>8); break;
+		case RCNT2_TARGET + 1: ret = (u8)(counters[2].target>>8); break;
 
 		case RCNT3_COUNT: ret = (u8)rcntRcount(3); break;
 		case RCNT3_MODE: ret = (u8)counters[3].modeval; break;
 		case RCNT3_TARGET: ret = (u8)counters[3].target; break;
-		case 0x10001801: ret = (u8)(rcntRcount(3)>>8); break;
-		case 0x10001811: ret = (u8)(counters[3].modeval>>8); break;
-		case 0x10001821: ret = (u8)(counters[3].target>>8); break;
+		case RCNT3_COUNT + 1: ret = (u8)(rcntRcount(3)>>8); break;
+		case RCNT3_MODE + 1: ret = (u8)(counters[3].modeval>>8); break;
+		case RCNT3_TARGET + 1: ret = (u8)(counters[3].target>>8); break;
 
 		default:
 			if ((mem & 0xffffff0f) == SBUS_F200)
@@ -225,7 +224,7 @@ mem32_t __fastcall hwRead32_page_01(u32 mem)
 // This is used internally to produce two inline versions, one with INTC_HACK, and one without.
 static __forceinline mem32_t __hwRead32_page_0F( u32 mem, bool intchack )
 {
-	// *Performance Warning*  This function is called -A-LOT.  Be weary when making changes.  It
+	// *Performance Warning*  This function is called -A-LOT.  Be wary when making changes.  It
 	// could impact FPS significantly.
 
 	mem &= 0xffff;
@@ -258,7 +257,6 @@ static __forceinline mem32_t __hwRead32_page_0F( u32 mem, bool intchack )
 			return psHu32(0xf240) | 0xF0000102;
 
 		case 0xf440:	// MCH_DRD
-
 			if( !((psHu32(0xf430) >> 6) & 0xF) )
 			{
 				switch ((psHu32(0xf430)>>16) & 0xFFF)

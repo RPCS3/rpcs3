@@ -41,6 +41,10 @@
 #pragma pack(1)
 #endif
 
+
+#define ipumsk( src ) ( (src) & 0xff )
+#define ipucase( src ) case ipumsk(src)
+
 //
 // Bitfield Structure
 //

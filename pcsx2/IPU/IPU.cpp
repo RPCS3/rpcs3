@@ -241,7 +241,7 @@ void SaveState::ipuFreeze()
 
 bool ipuCanFreeze()
 {
-	return ipuCurCmd == 0xffffffff;
+	return (ipuCurCmd == 0xffffffff);
 }
 
 __forceinline u32 ipuRead32(u32 mem)
@@ -256,7 +256,7 @@ __forceinline u32 ipuRead32(u32 mem)
 
 	switch (mem)
 	{
-		case 0x10: // IPU_CTRL
+		ipucase(IPU_CTRL): // IPU_CTRL
 			ipuRegs->ctrl.IFC = g_BP.IFC;
 			ipuRegs->ctrl.CBP = coded_block_pattern;
 
@@ -265,7 +265,7 @@ __forceinline u32 ipuRead32(u32 mem)
 
 			return ipuRegs->ctrl._u32;
 
-		case 0x20: // IPU_BP
+		ipucase(IPU_BP): // IPU_BP
 
 			ipuRegs->ipubp = g_BP.BP & 0x7f;
 			ipuRegs->ipubp |= g_BP.IFC << 8;
@@ -290,20 +290,20 @@ __forceinline u64 ipuRead64(u32 mem)
 
 	switch (mem)
 	{
-		case 0x00: // IPU_CMD
-			if (ipuRegs->cmd.DATA&0xffffff)
+		ipucase(IPU_CMD): // IPU_CMD
+			if (ipuRegs->cmd.DATA & 0xffffff)
 				IPU_LOG("Ipu read64: IPU_CMD=BUSY=%x, DATA=%08X", ipuRegs->cmd.BUSY ? 1 : 0, ipuRegs->cmd.DATA);
 			break;
 
-		case 0x10:
+		ipucase(IPU_CTRL):
 			DevCon::Notice("reading 64bit IPU ctrl");
 			break;
 
-		case 0x20:
+		ipucase(IPU_BP):
 			DevCon::Notice("reading 64bit IPU top");
 			break;
 
-		case 0x30: // IPU_TOP
+		ipucase(IPU_TOP): // IPU_TOP
 			IPU_LOG("Ipu read64: IPU_TOP=%x,  bp = %d", ipuRegs->top, g_BP.BP);
 			break;
 
@@ -348,12 +348,12 @@ __forceinline void ipuWrite32(u32 mem, u32 value)
 
 	switch (mem)
 	{
-		case 0x00: // IPU_CMD
+		ipucase(IPU_CMD): // IPU_CMD
 			IPU_LOG("Ipu write32: IPU_CMD=0x%08X", value);
 			IPUCMD_WRITE(value);
 			break;
 
-		case 0x10: // IPU_CTRL
+		ipucase(IPU_CTRL): // IPU_CTRL
 			ipuRegs->ctrl._u32 = (value & 0x47f30000) | (ipuRegs->ctrl._u32 & 0x8000ffff);
 			if (ipuRegs->ctrl.IDP == 3)
 			{
@@ -385,7 +385,7 @@ __forceinline void ipuWrite64(u32 mem, u64 value)
 
 	switch (mem)
 	{
-		case 0x00:
+		ipucase(IPU_CMD):
 			IPU_LOG("Ipu write64: IPU_CMD=0x%08X", value);
 			IPUCMD_WRITE((u32)value);
 			break;
@@ -788,7 +788,6 @@ __forceinline void IPU_INTERRUPT() //dma
 
 void IPUCMD_WRITE(u32 val)
 {
-
 	// don't process anything if currently busy
 	if (ipuRegs->ctrl.BUSY) Console::WriteLn("IPU BUSY!"); // wait for thread
 

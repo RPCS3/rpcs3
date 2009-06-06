@@ -241,7 +241,7 @@ void SPRFROMinterrupt()
 	}
 	if (spr0finished == 0) return;
 	spr0->chcr &= ~0x100;
-	hwDmacIrq(8);
+	hwDmacIrq(DMAC_FROM_SPR);
 }
 
 
@@ -418,7 +418,7 @@ void SPRTOinterrupt()
 	_dmaSPR1();
 	if (spr1finished == 0) return;
 	spr1->chcr &= ~0x100;
-	hwDmacIrq(9);
+	hwDmacIrq(DMAC_TO_SPR);
 }
 
 void SaveState::sprFreeze()

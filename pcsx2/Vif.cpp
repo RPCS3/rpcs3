@@ -547,7 +547,7 @@ void vifMFIFOInterrupt()
 	if((spr0->chcr & 0x100) && spr0->qwc == 0)
 	{
 		spr0->chcr &= ~0x100;
-		hwDmacIrq(8);
+		hwDmacIrq(DMAC_FROM_SPR);
 	}
 
 	if (vif1.inprogress == 1) mfifo_VIF1chain();
