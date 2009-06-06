@@ -32,13 +32,26 @@
 class microBlockManager {
 private:
 	static const int MaxBlocks = mMaxBlocks - 1;
+	microBlock blockList[mMaxBlocks];	// note: should always be first in the class to ensure xmm alignment
 	int listSize; // Total Items - 1
 	int listI;	  // Index to Add new block
-	microBlock* blockList;
 
 public:
-	microBlockManager()	 { blockList = (microBlock*)_aligned_malloc(sizeof(microBlock)*mMaxBlocks, 16); reset(); }
-	~microBlockManager() { if (blockList) { _aligned_free(blockList); } }
+	// our aligned replacement for 'new':
+	static microBlockManager* AlignedNew() {
+		microBlockManager* alloc = (microBlockManager*)_aligned_malloc(sizeof(microBlockManager), 16);
+		new (alloc) microBlockManager();
+		return alloc;
+	}
+	
+	static void Delete( microBlockManager* dead ) {
+		if( dead == NULL ) return;
+		dead->~microBlockManager();
+		_aligned_free( dead );
+	}
+
+	microBlockManager()	 { reset(); }
+	~microBlockManager() { }
 	void reset()  { listSize = -1; listI = -1; };
 	microBlock* add(microBlock* pBlock) {
 		microBlock* thisBlock = search(&pBlock->pState);

@@ -45,7 +45,6 @@ __declspec(align(16)) struct microRegInfo { // Ordered for Faster Compares
 #if defined(_MSC_VER)
 };
 #pragma pack()
-#pragma pack(show)
 #else
 } __attribute__((packed));
 #endif

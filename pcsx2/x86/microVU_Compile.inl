@@ -26,7 +26,7 @@
 	mVUsetupBranch(mVU, xStatus, xMac, xClip, xCycles);						\
 	CMP16ItoM((uptr)&mVU->branch, 0);										\
 	incPC2(1);																\
-	if (!mVUblocks[iPC/2]) { mVUblocks[iPC/2] = new microBlockManager(); }	\
+	if (!mVUblocks[iPC/2]) { mVUblocks[iPC/2] = microBlockManager::AlignedNew(); }	\
 	bBlock = mVUblocks[iPC/2]->search((microRegInfo*)&mVUregs);				\
 	incPC2(-1);																\
 	if (bBlock)	{ nJMPcc((uptr)bBlock->x86ptrStart - ((uptr)x86Ptr + 6)); }	\
@@ -266,7 +266,7 @@ microVUf(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 	startPC &= (vuIndex ? 0x3ff8 : 0xff8);
 	
 	if (mVUblocks[startPC/8] == NULL) {
-		mVUblocks[startPC/8] = new microBlockManager();
+		mVUblocks[startPC/8] = microBlockManager::AlignedNew();
 	}
 
 	// Searches for Existing Compiled Block (if found, then returns; else, compile)
@@ -357,7 +357,7 @@ microVUf(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 					mVUsetupBranch(mVU, xStatus, xMac, xClip, xCycles);
 
 					if (mVUblocks[branchAddr/8] == NULL)
-						mVUblocks[branchAddr/8] = new microBlockManager();
+						mVUblocks[branchAddr/8] = microBlockManager::AlignedNew();
 
 					// Check if branch-block has already been compiled
 					pBlock = mVUblocks[branchAddr/8]->search((microRegInfo*)&mVUregs);
@@ -387,7 +387,7 @@ microVUf(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 				incPC(-3); // Go back to branch opcode (to get branch imm addr)
 
 				if (mVUblocks[branchAddr/8] == NULL)
-					mVUblocks[branchAddr/8] = new microBlockManager();
+					mVUblocks[branchAddr/8] = microBlockManager::AlignedNew();
 
 				// Check if branch-block has already been compiled
 				pBlock = mVUblocks[branchAddr/8]->search((microRegInfo*)&mVUregs);

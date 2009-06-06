@@ -62,7 +62,7 @@ microVUx(void) mVUreset() {
 	// Delete Block Managers
 	for (int i = 0; i <= mVU->prog.max; i++) {
 		for (u32 j = 0; j < (mVU->progSize / 2); j++) {
-			safe_delete( mVU->prog.prog[i].block[j] );
+			microBlockManager::Delete( mVU->prog.prog[i].block[j] );
 		}
 	}
 
@@ -109,7 +109,7 @@ microVUf(void) mVUclose() {
 	for (int i = 0; i <= mVU->prog.max; i++) {
 		for (u32 j = 0; j < (mVU->progSize / 2); j++) {
 			if (mVU->prog.prog[i].block[j]) {
-				safe_delete( mVU->prog.prog[i].block[j] );
+				microBlockManager::Delete( mVU->prog.prog[i].block[j] );
 			}
 		}
 	}
