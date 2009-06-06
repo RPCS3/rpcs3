@@ -35,10 +35,12 @@ public:
 	enum {None, RenderTarget, DepthStencil, Texture, Offscreen};
 
 	virtual operator bool() = 0;
+
 	virtual int GetType() const = 0;
 	virtual int GetWidth() const = 0;
 	virtual int GetHeight() const = 0;
 	virtual int GetFormat() const = 0;
+
 	virtual bool Update(const GSVector4i& r, const void* data, int pitch) = 0;
 	virtual bool Map(uint8** bits, int& pitch, const GSVector4i* r = NULL) = 0;
 	virtual void Unmap() = 0;

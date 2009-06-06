@@ -243,7 +243,7 @@ bool GSRenderer::Merge(int field)
 			int field2 = 1 - ((m_interlace - 1) & 1);
 			int mode = (m_interlace - 1) >> 1;
 
-			m_dev->Interlace(ds, field ^ field2, mode, tex[1]->m_scale.y);
+			m_dev->Interlace(ds, field ^ field2, mode, tex[1] ? tex[1]->m_scale.y : tex[0]->m_scale.y);
 		}
 	}
 
