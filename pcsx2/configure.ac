@@ -31,9 +31,6 @@ customcflags=$enableval,customcflags=no)
 AC_ARG_ENABLE(optimization, AC_HELP_STRING([--disable-optimization], [No optimizations when compiling]),
 optimization=$enableval,optimization=yes)
 
-AC_ARG_ENABLE(unsupportedspeedfreak, AC_HELP_STRING([--enable-unsupportedspeedfreak], [Set the compiler to do unreasonable optimizations that will probably make all your games crash.]),
-unsupportedspeedfreak=$enableval,unsupportedspeedfreak=no)
-
 dnl Check for debug build
 AC_MSG_CHECKING(debug build)
 AC_ARG_ENABLE(debug, AC_HELP_STRING([--enable-debug], [debug build]),
@@ -191,7 +188,7 @@ AC_OUTPUT([
  tinyxml/Makefile
  x86/Makefile
  x86/ix86/Makefile
- ../3rdparty/zlib/Makefile
+ 3rdparty/zlib/Makefile
  ])
 
 dnl bindir = pcsx2exe
