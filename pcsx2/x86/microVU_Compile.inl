@@ -22,30 +22,36 @@
 // Helper Macros
 //------------------------------------------------------------------
 
-#define branchCase(JMPcc, nJMPcc)											\
-	mVUsetupBranch(mVU, xStatus, xMac, xClip, xCycles);						\
-	CMP16ItoM((uptr)&mVU->branch, 0);										\
-	incPC2(1);																\
-	if (!mVUblocks[iPC/2]) { mVUblocks[iPC/2] = microBlockManager::AlignedNew(); }	\
-	bBlock = mVUblocks[iPC/2]->search((microRegInfo*)&mVUregs);				\
-	incPC2(-1);																\
-	if (bBlock)	{ nJMPcc((uptr)bBlock->x86ptrStart - ((uptr)x86Ptr + 6)); }	\
-	else		{ ajmp = JMPcc((uptr)0); }									\
+#define branchCase(JMPcc, nJMPcc, ebitJMP)												\
+	mVUsetupBranch(mVU, xStatus, xMac, xClip, xCycles);									\
+	CMP16ItoM((uptr)&mVU->branch, 0);													\
+	if (mVUup.eBit) { /* Conditional Branch With E-Bit Set */							\
+		mVUendProgram(mVU, 2, xStatus, xMac, xClip);									\
+		u8* eJMP = ebitJMP(0);															\
+			incPC(1); /* Set PC to First instruction of Non-Taken Side */				\
+			MOV32ItoM((uptr)&mVU->regs->VI[REG_TPC].UL, xPC);							\
+			JMP32((uptr)mVU->exitFunct - ((uptr)x86Ptr + 5));							\
+		x86SetJ8(eJMP);																	\
+		incPC(-4); /* Go Back to Branch Opcode to get branchAddr */						\
+		iPC = branchAddr/4;																\
+		MOV32ItoM((uptr)&mVU->regs->VI[REG_TPC].UL, xPC);								\
+		JMP32((uptr)mVU->exitFunct - ((uptr)x86Ptr + 5));								\
+		return thisPtr;																	\
+	}																					\
+	else { /* Normal Conditional Branch */												\
+		incPC2(1); /* Check if Branch Non-Taken Side has already been recompiled */		\
+		if (!mVUblocks[iPC/2]) { mVUblocks[iPC/2] = microBlockManager::AlignedNew(); }	\
+		bBlock = mVUblocks[iPC/2]->search((microRegInfo*)&mVUregs);						\
+		incPC2(-1);																		\
+		if (bBlock)	{ nJMPcc((uptr)bBlock->x86ptrStart - ((uptr)x86Ptr + 6)); }			\
+		else		{ ajmp = JMPcc((uptr)0); }											\
+	}																					\
 	break
 
 #define branchWarning() {																						\
 	if (mVUbranch) {																							\
 		Console::Error("microVU%d Warning: Branch in E-bit/Branch delay slot! [%04x]", params vuIndex, xPC);	\
 		mVUlow.isNOP = 1;																						\
-	}																											\
-}
-
-#define branchEbit() {																							\
-	if (branch == 2) {																							\
-		if (!((mVUbranch == 1) || (mVUbranch == 2))) {															\
-			Console::Error("microVU%d Warning: Jump with E-bit not Implemented [%04x]", params vuIndex, xPC);	\
-		}																										\
-		else { eBitBranch = 1; }																				\
 	}																											\
 }
 
@@ -205,7 +211,31 @@ microVUt(void) mVUsetCycles(mV) {
 	tCycles(mVUregs.xgkick,					mVUregsTemp.xgkick);
 }
 
-microVUt(void) mVUendProgram(mV, bool clearIsBusy, int qInst, int pInst, int fStatus, int fMac, int fClip) {
+#define sI ((mVUpBlock->pState.needExactMatch & 0x000f) ? 0 : ((mVUpBlock->pState.flags >> 0) & 3))
+#define cI ((mVUpBlock->pState.needExactMatch & 0x0f00) ? 0 : ((mVUpBlock->pState.flags >> 2) & 3))
+
+microVUt(void) mVUendProgram(mV, int isEbit, int* xStatus, int* xMac, int* xClip) {
+
+	int fStatus = (isEbit) ? findFlagInst(xStatus, 0x7fffffff) : sI;
+	int fMac	= (isEbit) ? findFlagInst(xMac,	   0x7fffffff) : 0;
+	int fClip	= (isEbit) ? findFlagInst(xClip,   0x7fffffff) : cI;
+	int qInst	= 0;
+	int pInst	= 0;
+
+	if (isEbit) {
+		mVUprint("mVUcompile ebit");
+		memset(&mVUinfo, 0, sizeof(mVUinfo));
+		mVUincCycles(mVU, 100); // Ensures Valid P/Q instances (And sets all cycle data to 0)
+		mVUcycles -= 100;
+		qInst = mVU->q;
+		pInst = mVU->p;
+		if (mVUinfo.doDivFlag) {
+			sFLAG.doFlag = 1;
+			sFLAG.write  = fStatus;
+			mVUdivSet(mVU);
+		}
+		if (mVUinfo.doXGKICK) { mVU_XGKICK_DELAY(mVU, 1); }
+	}
 
 	// Save P/Q Regs
 	if (qInst) { SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, 0xe5); }
@@ -223,18 +253,17 @@ microVUt(void) mVUendProgram(mV, bool clearIsBusy, int qInst, int pInst, int fSt
 	MOV32RtoM((uptr)&mVU->regs->VI[REG_MAC_FLAG].UL,	gprT1);
 	MOV32RtoM((uptr)&mVU->regs->VI[REG_CLIP_FLAG].UL,	gprT2);
 
-	if (clearIsBusy) { // Clear 'is busy' Flags
+	if (isEbit || !isVU1) { // Clear 'is busy' Flags
 		AND32ItoM((uptr)&VU0.VI[REG_VPU_STAT].UL, (isVU1 ? ~0x100 : ~0x001)); // VBS0/VBS1 flag
 		AND32ItoM((uptr)&mVU->regs->vifRegs->stat, ~0x4); // Clear VU 'is busy' signal for vif
 	}
 
-	//Save PC, and Jump to Exit Point
-	MOV32ItoM((uptr)&mVU->regs->VI[REG_TPC].UL, xPC);
-	JMP32((uptr)mVU->exitFunct - ((uptr)x86Ptr + 5));
+	if (isEbit != 2) { // Save PC, and Jump to Exit Point
+		mVUsetupRange(mVU, xPC);
+		MOV32ItoM((uptr)&mVU->regs->VI[REG_TPC].UL, xPC);
+		JMP32((uptr)mVU->exitFunct - ((uptr)x86Ptr + 5));
+	}
 }
-
-#define sI ((mVUpBlock->pState.needExactMatch & 0x000f) ? 0 : ((mVUpBlock->pState.flags >> 0) & 3))
-#define cI ((mVUpBlock->pState.needExactMatch & 0x0f00) ? 0 : ((mVUpBlock->pState.flags >> 2) & 3))
 
 void __fastcall mVUwarning0(u32 PC) { Console::Error("microVU0 Warning: Exiting from Possible Infinite Loop [%04x]", params PC); }
 void __fastcall mVUwarning1(u32 PC) { Console::Error("microVU1 Warning: Exiting from Possible Infinite Loop [%04x]", params PC); }
@@ -250,7 +279,7 @@ microVUt(void) mVUtestCycles(mV) {
 		if (isVU1)  CALLFunc((uptr)mVUwarning1);
 		//else		CALLFunc((uptr)mVUwarning0); // VU0 is allowed early exit for COP2 Interlock Simulation
 		MOV32ItoR(gprR, Roffset); // Restore gprR
-		mVUendProgram(mVU, (isVU1)?1:0, 0, 0, sI, 0, cI);
+		mVUendProgram(mVU, 0, NULL, NULL, NULL);
 	x86SetJ32(jmp32);
 }
 
@@ -292,7 +321,6 @@ microVUf(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 	mVUregs.flags	= 0;
 	mVUflagInfo		= 0;
 	mVUsFlagHack	= CHECK_VU_FLAGHACK;
-	bool eBitBranch = 0; // E-bit Set on Branch
 
 	for (int branch = 0;  mVUcount < (vuIndex ? (0x3fff/8) : (0xfff/8)); ) {
 		incPC(1);
@@ -311,7 +339,7 @@ microVUf(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 		mVUinfo.writeP = !mVU->p;
 		if		(branch >= 2) { mVUinfo.isEOB = 1; if (branch == 3) { mVUinfo.isBdelay = 1; } mVUcount++; branchWarning(); break; }
 		else if (branch == 1) { branch = 2; }
-		if		(mVUbranch)   { mVUsetFlagInfo(mVU); branchEbit(); branch = 3; mVUbranch = 0; }
+		if		(mVUbranch)   { mVUsetFlagInfo(mVU); branch = 3; mVUbranch = 0; }
 		incPC(1);
 		mVUcount++;
 	}
@@ -342,18 +370,18 @@ microVUf(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 			mVUdebugNOW(1);
 
 			switch (mVUbranch) {
-				case 3: branchCase(JE32,  JNE32);	// IBEQ
-				case 4: branchCase(JGE32, JNGE32);	// IBGEZ
-				case 5: branchCase(JG32,  JNG32);	// IBGTZ
-				case 6: branchCase(JLE32, JNLE32);	// IBLEQ
-				case 7: branchCase(JL32,  JNL32);	// IBLTZ
-				case 8: branchCase(JNE32, JE32);	// IBNEQ
+				case 3: branchCase(JE32,  JNE32,  JE8);	 // IBEQ
+				case 4: branchCase(JGE32, JNGE32, JGE8); // IBGEZ
+				case 5: branchCase(JG32,  JNG32,  JG8);	 // IBGTZ
+				case 6: branchCase(JLE32, JNLE32, JLE8); // IBLEQ
+				case 7: branchCase(JL32,  JNL32,  JL8);	 // IBLTZ
+				case 8: branchCase(JNE32, JE32,   JNE8); // IBNEQ
 				case 1: case 2: // B/BAL
 
 					mVUprint("mVUcompile B/BAL");
 					incPC(-3); // Go back to branch opcode (to get branch imm addr)
 
-					if (eBitBranch) { iPC = branchAddr/4; goto eBitTemination; } // E-bit Was Set on Branch
+					if (mVUup.eBit) { iPC = branchAddr/4; mVUendProgram(mVU, 1, xStatus, xMac, xClip); } // E-bit Branch
 					mVUsetupBranch(mVU, xStatus, xMac, xClip, xCycles);
 
 					if (mVUblocks[branchAddr/8] == NULL)
@@ -368,6 +396,16 @@ microVUf(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 				case 9: case 10: // JR/JALR
 
 					mVUprint("mVUcompile JR/JALR");
+					incPC(-3); // Go back to jump opcode
+
+					if (mVUup.eBit) { // E-bit Jump
+						mVUendProgram(mVU, 2, xStatus, xMac, xClip);
+						MOV32MtoR(gprT1, (uptr)&mVU->branch);
+						MOV32RtoM((uptr)&mVU->regs->VI[REG_TPC].UL, gprT1);
+						JMP32((uptr)mVU->exitFunct - ((uptr)x86Ptr + 5));
+						return thisPtr;
+					}
+
 					memcpy_fast(&pBlock->pStateEnd, &mVUregs, sizeof(microRegInfo));
 					mVUsetupBranch(mVU, xStatus, xMac, xClip, xCycles);
 
@@ -375,8 +413,8 @@ microVUf(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 					MOV32MtoR(gprT2, (uptr)&mVU->branch);		 // Get startPC (ECX first argument for __fastcall)
 					MOV32ItoR(gprR, (u32)&pBlock->pStateEnd);	 // Get pState (EDX second argument for __fastcall)
 
-					if (!isVU1)	CALLFunc((uptr)mVUcompileVU0); //(u32 startPC, uptr pState)
-					else		CALLFunc((uptr)mVUcompileVU1);
+					if (!vuIndex) CALLFunc((uptr)mVUcompileVU0); //(u32 startPC, uptr pState)
+					else		  CALLFunc((uptr)mVUcompileVU1);
 					mVUrestoreRegs(mVU);
 					JMPR(gprT1);  // Jump to rec-code address
 					return thisPtr;
@@ -397,8 +435,7 @@ microVUf(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 			}
 			else {
 				uptr jumpAddr;
-				u32 bPC = iPC; // mVUcompile can modify iPC, mVUregs, and mVUflagInfo, so back them up
-				u32 bFlagInfo = mVUflagInfo;
+				u32 bPC = iPC; // mVUcompile can modify iPC and mVUregs so back them up
 				memcpy_fast(&pBlock->pStateEnd, &mVUregs, sizeof(microRegInfo));
 	
 				incPC2(1);  // Get PC for branch not-taken
@@ -406,7 +443,6 @@ microVUf(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 				else		  mVUcompileVU1(xPC, (uptr)&mVUregs);
 
 				iPC = bPC;
-				mVUflagInfo = bFlagInfo;
 				incPC(-3); // Go back to branch opcode (to get branch imm addr)
 				if (!vuIndex) jumpAddr = (uptr)mVUcompileVU0(branchAddr, (uptr)&pBlock->pStateEnd);
 				else		  jumpAddr = (uptr)mVUcompileVU1(branchAddr, (uptr)&pBlock->pStateEnd);
@@ -417,27 +453,8 @@ microVUf(void*) __fastcall mVUcompile(u32 startPC, uptr pState) {
 	}
 	if (x == (vuIndex?(0x3fff/8):(0xfff/8))) { Console::Error("microVU%d: Possible infinite compiling loop!", params vuIndex); }
 
-eBitTemination:
-
-	mVUprint("mVUcompile ebit");
-	int lStatus = findFlagInst(xStatus, 0x7fffffff);
-	int lMac	= findFlagInst(xMac,	0x7fffffff);
-	int lClip	= findFlagInst(xClip,	0x7fffffff);
-	memset(&mVUinfo, 0, sizeof(mVUinfo));
-	mVUincCycles(mVU, 100); // Ensures Valid P/Q instances (And sets all cycle data to 0)
-	mVUcycles -= 100;
-	if (mVUinfo.doDivFlag) {
-		int flagReg;
-		getFlagReg(flagReg, lStatus);
-		AND32ItoR (flagReg, 0xfff3ffff);
-		OR32MtoR  (flagReg, (uptr)&mVU->divFlag);
-	}
-	if (mVUinfo.doXGKICK) { mVU_XGKICK_DELAY(mVU, 1); }
-
-	// Do E-bit end stuff here
-	mVUsetupRange(mVU, xPC - 8);
-	mVUendProgram(mVU, 1, mVU->q, mVU->p, lStatus, lMac, lClip);
-
+	// E-bit End
+	mVUendProgram(mVU, 1, xStatus, xMac, xClip);
 	return thisPtr;
 }
 
