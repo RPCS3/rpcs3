@@ -49,7 +49,8 @@ microVUf(void) mVUinit(VURegs* vuRegsPtr) {
 
 	mVU->cache = SysMmapEx((vuIndex ? 0x5f240000 : 0x5e240000), mVU->cacheSize + 0x1000, 0, (vuIndex ? "Micro VU1" : "Micro VU0"));
 	if ( mVU->cache == NULL ) throw Exception::OutOfMemory(fmt_string( "microVU Error: Failed to allocate recompiler memory! (addr: 0x%x)", (u32)mVU->cache));
-
+	
+	mVUemitSearch();
 	mVUreset<vuIndex>();
 }
 

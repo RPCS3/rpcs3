@@ -32,6 +32,7 @@ union regInfo {
 #pragma pack(1)
 #pragma warning(disable:4996)
 #endif
+
 __declspec(align(16)) struct microRegInfo { // Ordered for Faster Compares
 	u32 needExactMatch;	// If set, block needs an exact match of pipeline state
 	u8 q;
@@ -42,6 +43,16 @@ __declspec(align(16)) struct microRegInfo { // Ordered for Faster Compares
 	regInfo VF[32];
 	u8 flags;			// clip x2 :: status x2
 	u8 padding[7];		// 160 bytes
+#if defined(_MSC_VER)
+};
+#else
+} __attribute__((packed));
+#endif
+
+__declspec(align(16)) struct microBlock {
+	microRegInfo pState;	// Detailed State of Pipeline
+	microRegInfo pStateEnd; // Detailed State of Pipeline at End of Block (needed by JR/JALR opcodes)
+	u8* x86ptrStart;		// Start of code
 #if defined(_MSC_VER)
 };
 #pragma pack()
@@ -58,12 +69,6 @@ struct microTempRegInfo {
 	u8 p;			// Holds cycle info for P reg
 	u8 r;			// Holds cycle info for R reg (Will never cause stalls, but useful to know if R is modified)
 	u8 xgkick;		// Holds the cycle info for XGkick
-};
-
-__declspec(align(16)) struct microBlock {
-	microRegInfo pState;	// Detailed State of Pipeline
-	microRegInfo pStateEnd; // Detailed State of Pipeline at End of Block (needed by JR/JALR opcodes)
-	u8* x86ptrStart;		// Start of code
 };
 
 struct microVFreg {
@@ -132,8 +137,8 @@ struct microOp {
 
 template<u32 pSize>
 struct microIR {
-	microBlock*		 pBlock;   // Pointer to a block in mVUblocks
 	microBlock		 block;	   // Block/Pipeline info
+	microBlock*		 pBlock;   // Pointer to a block in mVUblocks
 	microTempRegInfo regsTemp; // Temp Pipeline info (used so that new pipeline info isn't conflicting between upper and lower instructions in the same cycle)
 	microOp			 info[pSize/2];	// Info for Instructions in current block
 	u8  branch;			

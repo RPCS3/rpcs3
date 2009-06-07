@@ -161,16 +161,13 @@ declareAllVariables
 #define pass4 if (recPass == 3)
 
 // Define mVUquickSearch
-#if defined(_MSC_VER)
-extern u32 __fastcall mVUsearchXMM(void *dest, void *src);
-#define mVUquickSearch(dest, src, size) (mVUsearchXMM(dest, src) == 0xf)
-#else
-#define mVUquickSearch(dest, src, size) (!memcmp(dest, src, size))
-// Note: GCC might not guarantee alignment on microRegInfo, 
-// so to be safe I'm using normal memcmp. If at least 8-byte
-// alignment is guaranteed, the function below is faster.
-// #define mVUquickSearch(dest, src, size) (!memcmp_mmx(dest, src, size))
-#endif
+extern u8 mVUsearchXMM[0x1000];
+typedef u32 (__fastcall *mVUCall)(void*, void*);
+#define mVUquickSearch(dest, src, size) ((((mVUCall)((void*)mVUsearchXMM))(dest, src)) == 0xf)
+// Note: If GCC builds crash with above function, it means
+// that they're not guaranteeing 16-byte alignment on the structs
+// being compared. So use this function instead:
+// #define mVUquickSearch(dest, src, size) (!memcmp(dest, src, size))
 
 // Misc Macros...
 #define mVUprogI	 mVU->prog.prog[progIndex]

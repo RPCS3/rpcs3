@@ -438,100 +438,55 @@ void SSE_ADD2PS_XMM_to_XMM(x86SSERegType to, x86SSERegType from) {
 // Micro VU - Custom Quick Search
 //------------------------------------------------------------------
 
-#ifndef __LINUX__
+PCSX2_ALIGNED(0x1000, static u8 mVUsearchXMM[0x1000]);
+
 // Generates a custom optimized block-search function (Note: Structs must be 16-byte aligned!)
-static __declspec(naked) u32 __fastcall mVUsearchXMM(void *dest, void *src) {
+void mVUemitSearch() {
+	using namespace x86Emitter;
+	HostSys::MemProtect(mVUsearchXMM, 0x1000, Protect_ReadWrite, false);
+	memset_8<0xcc,0x1000>(mVUsearchXMM);
+	xSetPtr(mVUsearchXMM);
 
-	__asm {
-		movaps	xmm0, [ecx]
-		pcmpeqd	xmm0, [edx]
-		movaps	xmm1, [ecx + 0x10]
-		pcmpeqd	xmm1, [edx + 0x10]
-		pand	xmm0, xmm1
+	xMOVAPS  (xmm0, ptr32[ecx]);
+	xPCMP.EQD(xmm0, ptr32[edx]);
+	xMOVAPS  (xmm1, ptr32[ecx + 0x10]);
+	xPCMP.EQD(xmm1, ptr32[edx + 0x10]);
+	xPAND	 (xmm0, xmm1);
 
-		movmskps eax, xmm0
-		cmp eax, 0xf
-		jl exitPoint
+	xMOVMSKPS(eax, xmm0);
+	xCMP	 (eax, 0xf);
+	xForwardJL8 exitPoint;
 
-		movaps	xmm0, [ecx + 0x20]
-		pcmpeqd	xmm0, [edx + 0x20]
-		movaps	xmm1, [ecx + 0x30]
-		pcmpeqd	xmm1, [edx + 0x30]
-		pand	xmm0, xmm1
+	xMOVAPS  (xmm0, ptr32[ecx + 0x20]);
+	xPCMP.EQD(xmm0, ptr32[edx + 0x20]);
+	xMOVAPS	 (xmm1, ptr32[ecx + 0x30]);
+	xPCMP.EQD(xmm1, ptr32[edx + 0x30]);
+	xPAND	 (xmm0, xmm1);
 
-		movaps	xmm2, [ecx + 0x40]
-		pcmpeqd	xmm2, [edx + 0x40]
-		movaps	xmm3, [ecx + 0x50]
-		pcmpeqd	xmm3, [edx + 0x50]
-		pand	xmm2, xmm3
+	xMOVAPS  (xmm2, ptr32[ecx + 0x40]);
+	xPCMP.EQD(xmm2, ptr32[edx + 0x40]);
+	xMOVAPS  (xmm3, ptr32[ecx + 0x50]);
+	xPCMP.EQD(xmm3, ptr32[edx + 0x50]);
+	xPAND	 (xmm2, xmm3);
 
-		movaps	xmm4, [ecx + 0x60]
-		pcmpeqd	xmm4, [edx + 0x60]
-		movaps	xmm5, [ecx + 0x70]
-		pcmpeqd	xmm5, [edx + 0x70]
-		pand	xmm4, xmm5
+	xMOVAPS	 (xmm4, ptr32[ecx + 0x60]);
+	xPCMP.EQD(xmm4, ptr32[edx + 0x60]);
+	xMOVAPS	 (xmm5, ptr32[ecx + 0x70]);
+	xPCMP.EQD(xmm5, ptr32[edx + 0x70]);
+	xPAND	 (xmm4, xmm5);
 
-		movaps	xmm6, [ecx + 0x80]
-		pcmpeqd	xmm6, [edx + 0x80]
-		movaps	xmm7, [ecx + 0x90]
-		pcmpeqd	xmm7, [edx + 0x90]
-		pand	xmm6, xmm7
+	xMOVAPS  (xmm6, ptr32[ecx + 0x80]);
+	xPCMP.EQD(xmm6, ptr32[edx + 0x80]);
+	xMOVAPS  (xmm7, ptr32[ecx + 0x90]);
+	xPCMP.EQD(xmm7, ptr32[edx + 0x90]);
+	xPAND	 (xmm6, xmm7);
 
-		pand	xmm0, xmm2
-		pand	xmm4, xmm6
-		pand	xmm0, xmm4
-		movmskps eax, xmm0
-exitPoint:
-		ret
-	}
+	xPAND (xmm0, xmm2);
+	xPAND (xmm4, xmm6);
+	xPAND (xmm0, xmm4);
+	xMOVMSKPS(eax, xmm0);
+
+	exitPoint.SetTarget();
+	xRET();
+	HostSys::MemProtect(mVUsearchXMM, 0x1000, Protect_ReadOnly, true );
 }
-#else
-// Generates a custom optimized block-search function (Note: Structs must be 16-byte aligned!)
-static u32 __fastcall mVUsearchXMM(void *dest, void *src) 
-{
-	__asm__
-	(
-		".intel_syntax noprefix\n"
-		"movaps	xmm0, [ecx]\n"
-		"pcmpeqd	xmm0, [edx]\n"
-		"movaps	xmm1, [ecx + 0x10]\n"
-		"pcmpeqd	xmm1, [edx + 0x10]\n"
-		"pand	xmm0, xmm1\n"
-
-		"movmskps eax, xmm0\n"
-		"cmp eax, 0xf\n"
-		"jl exitPoint\n"
-
-		"movaps	xmm0, [ecx + 0x20]\n"
-		"pcmpeqd	xmm0, [edx + 0x20]\n"
-		"movaps	xmm1, [ecx + 0x30]\n"
-		"pcmpeqd	xmm1, [edx + 0x30]\n"
-		"pand	xmm0, xmm1\n"
-
-		"movaps	xmm2, [ecx + 0x40]\n"
-		"pcmpeqd	xmm2, [edx + 0x40]\n"
-		"movaps	xmm3, [ecx + 0x50]\n"
-		"pcmpeqd	xmm3, [edx + 0x50]\n"
-		"pand	xmm2, xmm3\n"
-
-		"movaps	xmm4, [ecx + 0x60]\n"
-		"pcmpeqd	xmm4, [edx + 0x60]\n"
-		"movaps	xmm5, [ecx + 0x70]\n"
-		"pcmpeqd	xmm5, [edx + 0x70]\n"
-		"pand	xmm4, xmm5\n"
-
-		"movaps	xmm6, [ecx + 0x80]\n"
-		"pcmpeqd	xmm6, [edx + 0x80]\n"
-		"movaps	xmm7, [ecx + 0x90]\n"
-		"pcmpeqd	xmm7, [edx + 0x90]\n"
-		"pand	xmm6, xmm7\n"
-
-		"pand	xmm0, xmm2\n"
-		"pand	xmm4, xmm6\n"
-		"pand	xmm0, xmm4\n"
-		"movmskps eax, xmm0\n"
-"exitPoint:\n"
-		".att_syntax\n"
-	);
-}
-#endif
