@@ -737,13 +737,10 @@ int OpenPlugins(const char* pTitleFilename)
 
 		if (ret != 0) { 
 			if (g_Startup.BootMode != BootMode_Elf) { Msgbox::Alert("Error Opening CDVD Plugin"); goto OpenError; }
-			else { Console::Notice("Running ELF File Without CDVD Plugin Support!"); cdvdElf = 1; goto skipOpenCDVD; }
+			else { Console::Notice("Running ELF File Without CDVD Plugin Support!"); cdvdElf = 1; }
 		}
 		OpenStatus.CDVD = true;
-		cdvdNewDiskCB();
 	}
-
-skipOpenCDVD:
 
 	if( !OpenStatus.GS ) {
 		ret = gsOpen();
@@ -815,6 +812,9 @@ skipOpenCDVD:
 		if (ret != 0) { Msgbox::Alert("Error Opening FW Plugin"); goto OpenError; }
 		OpenStatus.FW = true;
 	}
+
+	if( !cdvdElf )
+		cdvdNewDiskCB();
 
 #ifndef _WIN32
 	//chdir(MAIN_DIR);

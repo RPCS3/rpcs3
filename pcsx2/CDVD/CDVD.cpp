@@ -402,7 +402,7 @@ void cdvdReadKey(u8 arg0, u16 arg1, u32 arg2, u8* key) {
 s32 cdvdGetToc(void* toc)
 {
 	s32 ret = CDVDgetTOC(toc);
-	if (ret == -1) ret = 0x80;
+	if (ret == -1) ret = 0x80;	
 	return ret;
 }
 
@@ -569,13 +569,25 @@ void cdvdNewDiskCB()
 {
 	cdvd.Type = CDVDgetDiskType();
 	
+	char str[g_MaxPath];
+	int result = GetPS2ElfName(str);
+
 	if (cdvd.Type == CDVD_TYPE_PS2CD) 
 	{
-		char str[g_MaxPath];
 		
 		 // Does the SYSTEM.CNF file only say "BOOT="? PS1 CD then.
-		if(GetPS2ElfName(str) == 1) cdvd.Type = CDVD_TYPE_PSCD;
+		if(result == 1) cdvd.Type = CDVD_TYPE_PSCD;
 	}
+	
+	// Now's a good time to reload the ELF info...
+	if( ElfCRC == 0 )
+	{
+		ElfCRC = loadElfCRC( str );
+		ElfApplyPatches();
+		LoadGameSpecificSettings();
+		GSsetGameCRC( ElfCRC, 0 );
+	}
+
 }
 
 void mechaDecryptBytes( u32 madr, int size )

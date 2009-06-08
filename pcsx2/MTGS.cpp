@@ -511,7 +511,7 @@ int mtgsThreadObject::Callback()
 {
 	Console::WriteLn("MTGS > Thread Started, Opening GS Plugin...");
 
-	memcpy_aligned( m_gsMem, PS2MEM_GS, sizeof(m_gsMem) );
+	memcpy_aligned( m_gsMem, PS2MEM_GS, sizeof(PS2MEM_GS) );
 	GSsetBaseMem( m_gsMem );
 	GSirqCallback( NULL );
 	
