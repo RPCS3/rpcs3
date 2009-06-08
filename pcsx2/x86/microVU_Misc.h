@@ -169,7 +169,8 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 // that they're not guaranteeing 16-byte alignment on the structs
 // being compared. So use this function instead:
 #else
-#define mVUquickSearch(dest, src, size) (!memcmp(dest, src, size))
+//#define mVUquickSearch(dest, src, size) (!memcmp(dest, src, size))
+#define mVUquickSearch(dest, src, size) (!memcmp_mmx(dest, src, size))
 #endif
 
 // Misc Macros...

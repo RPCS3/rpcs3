@@ -25,8 +25,6 @@
 #include <xmmintrin.h>
 #include <emmintrin.h>
 
-//#define USE_OLD_IVIF_CODE
-
 // sse2 highly optimized vif (~200 separate functions are built) zerofrog(@gmail.com)
 extern u32 g_vif1Masks[48], g_vif0Masks[48];
 extern u32 g_vif1HasMask3[4], g_vif0HasMask3[4];
@@ -55,7 +53,10 @@ extern u8 s_maskwrite[256];
 
 extern "C" PCSX2_ALIGNED16(u32 s_TempDecompress[4]) = {0};
 
-#if defined(_MSC_VER) || !defined(USE_OLD_IVIF_CODE)
+#ifdef __LINUX__
+static void __forceinline UseOldMaskCode(u32* &vif1masks, u32 &mask);
+#endif
+
 void __fastcall SetNewMask(u32* vif1masks, u32* hasmask, u32 mask, u32 oldmask)
 {
 	u32 i;
@@ -66,7 +67,13 @@ void __fastcall SetNewMask(u32* vif1masks, u32* hasmask, u32 mask, u32 oldmask)
 		prev |= s_maskwrite[mask&0xff];
 		hasmask[i] = prev;
 
-		if( (mask&0xff) != (oldmask&0xff) ) {
+		if ((mask&0xff) != (oldmask&0xff)) 
+#ifdef __LINUX__
+		if (mask == 0) // Temporary workaround for a bug causing a segfault.
+			UseOldMaskCode(vif1masks, mask);
+		else
+#endif
+		{
 			__m128i r0, r1, r2, r3;
 			r0 = _mm_load_si128((__m128i*)&s_maskarr[mask&15][0]);
 			r2 = _mm_unpackhi_epi16(r0, r0);
@@ -90,47 +97,29 @@ void __fastcall SetNewMask(u32* vif1masks, u32* hasmask, u32 mask, u32 oldmask)
 	FreezeXMMRegs(0);
 }
 
-#else // gcc
-//  After some experimentation, I'm putting the old code back in for now for testing purposes, as the 
-// other version reliably SegFaults when loading YuGiOh: Duelist of the Roses on Linux (when setting
-// r0 to _mm_load_si128, when vif1masks=0x846f670, hasmask=0x846f454, mask=0, and oldmask=5).
-// Seems to work everywhere else. It'll stay disabled for now, but it's easier for me to fiddle with if its in here. -arcum42
-void __fastcall SetNewMask(u32* vif1masks, u32* hasmask, u32 mask, u32 oldmask)
+#ifdef __LINUX__
+static void __forceinline UseOldMaskCode(u32* &vif1masks, u32 &mask)
 {
-    u32 i;
-        u32 prev = 0;
-        FreezeXMMRegs(1);
+	u8* p0 = (u8*)&s_maskarr[mask&15][0];
+	u8* p1 = (u8*)&s_maskarr[(mask>>4)&15][0];
 
-        for(i = 0; i < 4; ++i, mask >>= 8, oldmask >>= 8, vif1masks += 16) {
-
-                prev |= s_maskwrite[mask&0xff];//((mask&3)==3)||((mask&0xc)==0xc)||((mask&0x30)==0x30)||((mask&0xc0)==0xc0);
-                hasmask[i] = prev;
-
-                if( (mask&0xff) != (oldmask&0xff) ) {
-            u8* p0 = (u8*)&s_maskarr[mask&15][0];
-            u8* p1 = (u8*)&s_maskarr[(mask>>4)&15][0];
-
-            __asm__(".intel_syntax noprefix\n"
-                "movaps xmm0, [%0]\n"
-                "movaps xmm1, [%1]\n"
-                "movaps xmm2, xmm0\n"
-                "punpcklwd xmm0, xmm0\n"
-                "punpckhwd xmm2, xmm2\n"
-                "movaps xmm3, xmm1\n"
-                "punpcklwd xmm1, xmm1\n"
-                "punpckhwd xmm3, xmm3\n"
-                "movq [%2], xmm0\n"
-                "movq [%2+8], xmm1\n"
-                "movhps [%2+16], xmm0\n"
-                "movhps [%2+24], xmm1\n"
-                "movq [%2+32], xmm2\n"
-                "movq [%2+40], xmm3\n"
-                "movhps [%2+48], xmm2\n"
-                "movhps [%2+56], xmm3\n"
-                    ".att_syntax\n" : : "r"(p0), "r"(p1), "r"(vif1masks) );
-                }
-        }
-        FreezeXMMRegs(0);
+	__asm__(".intel_syntax noprefix\n"
+			"movaps xmm0, [%0]\n"
+			"movaps xmm1, [%1]\n"
+			"movaps xmm2, xmm0\n"
+			"punpcklwd xmm0, xmm0\n"
+			"punpckhwd xmm2, xmm2\n"
+			"movaps xmm3, xmm1\n"
+			"punpcklwd xmm1, xmm1\n"
+			"punpckhwd xmm3, xmm3\n"
+			"movq [%2], xmm0\n"
+			"movq [%2+8], xmm1\n"
+			"movhps [%2+16], xmm0\n"
+			"movhps [%2+24], xmm1\n"
+			"movq [%2+32], xmm2\n"
+			"movq [%2+40], xmm3\n"
+			"movhps [%2+48], xmm2\n"
+			"movhps [%2+56], xmm3\n"
+			".att_syntax\n" : : "r"(p0), "r"(p1), "r"(vif1masks) );
 }
-
 #endif
