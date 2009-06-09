@@ -376,7 +376,7 @@ BEGIN
                     "Button",BS_AUTOCHECKBOX | WS_TABSTOP,187,179,139,10
     LTEXT           "Speedup for a few games, including FFX with no known side effects.",IDC_STATIC,200,193,144,23
     GROUPBOX        "EmotionEngine (EE) Misc Hacks",IDC_STATIC,177,26,179,192
-    GROUPBOX        "Vertex Unit (VU) Hacks",IDC_STATIC,363,26,173,173
+    GROUPBOX        "Vector Unit (VU) Hacks",IDC_STATIC,363,26,173,173
     CONTROL         "Status Flag Hack (microVU only)",IDC_VUHACK1,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,372,42,155,12
     LTEXT           "Big Speedup and high compatibility.\nSuperVU does something similar by default.",IDC_STATIC,383,55,144,20
     CONTROL         "Min / Max Hack (microVU only)",IDC_VUHACK3,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,372,85,156,12
