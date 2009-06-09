@@ -213,7 +213,7 @@ void GSTextureFX10::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSampl
 
 	if(i == m_ps.end())
 	{
-		string str[13];
+		string str[14];
 
 		str[0] = format("%d", sel.fst);
 		str[1] = format("%d", sel.wms);
@@ -228,6 +228,7 @@ void GSTextureFX10::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSampl
 		str[10] = format("%d", sel.clr1);
 		str[11] = format("%d", sel.fba);
 		str[12] = format("%d", sel.aout);
+		str[13] = format("%d", sel.ltf);
 
 		D3D10_SHADER_MACRO macro[] =
 		{
@@ -244,6 +245,7 @@ void GSTextureFX10::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSampl
 			{"CLR1", str[10].c_str()},
 			{"FBA", str[11].c_str()},
 			{"AOUT", str[12].c_str()},
+			{"LTF", str[13].c_str()},
 			{NULL, NULL},
 		};
 
@@ -280,11 +282,7 @@ void GSTextureFX10::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSampl
 
 			memset(&sd, 0, sizeof(sd));
 
-			sd.Filter = D3D10_ENCODE_BASIC_FILTER(
-				(ssel.min ? D3D10_FILTER_TYPE_LINEAR : D3D10_FILTER_TYPE_POINT),
-				(ssel.mag ? D3D10_FILTER_TYPE_LINEAR : D3D10_FILTER_TYPE_POINT),
-				D3D10_FILTER_TYPE_POINT,
-				false);
+			sd.Filter = ssel.ltf ? D3D10_FILTER_MIN_MAG_LINEAR_MIP_POINT : D3D10_FILTER_MIN_MAG_MIP_POINT;
 
 			sd.AddressU = ssel.tau ? D3D10_TEXTURE_ADDRESS_WRAP : D3D10_TEXTURE_ADDRESS_CLAMP;
 			sd.AddressV = ssel.tav ? D3D10_TEXTURE_ADDRESS_WRAP : D3D10_TEXTURE_ADDRESS_CLAMP;

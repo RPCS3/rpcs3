@@ -180,7 +180,7 @@ void GSTextureFX9::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSample
 
 	if(i == m_ps.end())
 	{
-		string str[12];
+		string str[13];
 
 		str[0] = format("%d", sel.fst);
 		str[1] = format("%d", sel.wms);
@@ -194,6 +194,7 @@ void GSTextureFX9::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSample
 		str[9] = format("%d", sel.fog);
 		str[10] = format("%d", sel.clr1);
 		str[11] = format("%d", sel.rt);
+		str[12] = format("%d", sel.ltf);
 
 		D3DXMACRO macro[] =
 		{
@@ -209,6 +210,7 @@ void GSTextureFX9::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSample
 			{"FOG", str[9].c_str()},
 			{"CLR1", str[10].c_str()},
 			{"RT", str[11].c_str()},
+			{"LTF", str[12].c_str()},
 			{NULL, NULL},
 		};
 
@@ -227,10 +229,10 @@ void GSTextureFX9::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSample
 
 	if(sel.tfx != 4)
 	{
-		bool b = sel.bpp < 3 && sel.wms < 3 && sel.wmt < 3;
-
-		ssel.min = b;
-		ssel.mag = b;
+		if(!(sel.bpp < 3 && sel.wms < 3 && sel.wmt < 3))
+		{
+			ssel.ltf = 0;
+		}
 
 		hash_map<uint32, Direct3DSamplerState9* >::const_iterator i = m_ps_ss.find(ssel);
 
@@ -244,8 +246,8 @@ void GSTextureFX9::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSample
 
 			memset(ss, 0, sizeof(*ss));
 
-			ss->FilterMin[0] = ssel.min ? D3DTEXF_LINEAR : D3DTEXF_POINT;
-			ss->FilterMag[0] = ssel.mag ? D3DTEXF_LINEAR : D3DTEXF_POINT;
+			ss->FilterMin[0] = ssel.ltf ? D3DTEXF_LINEAR : D3DTEXF_POINT;
+			ss->FilterMag[0] = ssel.ltf ? D3DTEXF_LINEAR : D3DTEXF_POINT;
 			ss->FilterMin[1] = D3DTEXF_POINT;
 			ss->FilterMag[1] = D3DTEXF_POINT;
 

@@ -77,7 +77,11 @@ public:
 
 	__declspec(align(16)) struct PSConstantBuffer
 	{
-		GSVector4 FogColor;
+		GSVector4 FogColorAREF;
+		GSVector4 HalfTexel;
+		GSVector2 WH;
+		float TA0;
+		float TA1;
 		float MINU;
 		float MINV;
 		float MAXU;
@@ -86,13 +90,6 @@ public:
 		uint32 VMSK;
 		uint32 UFIX;
 		uint32 VFIX;
-		float TA0;
-		float TA1;
-		float AREF;
-		float _pad[1];
-		GSVector2 WH;
-		GSVector2 rWrH;
-		GSVector4 HalfTexel;
 
 		struct PSConstantBuffer() {memset(this, 0, sizeof(*this));}
 
@@ -106,22 +103,33 @@ public:
 			GSVector4i b2 = b[2];
 			GSVector4i b3 = b[3];
 			GSVector4i b4 = b[4];
-			GSVector4i b5 = b[5];
 
-			if(!((a[0] == b0) & (a[1] == b1) & (a[2] == b2) & (a[3] == b3) & (a[4] == b4) & (a[5] == b5)).alltrue())
+			if(!((a[0] == b0) & (a[1] == b1) & (a[2] == b2) & (a[3] == b3) & (a[4] == b4)).alltrue())
 			{
 				a[0] = b0;
 				a[1] = b1;
 				a[2] = b2;
 				a[3] = b3;
 				a[4] = b4;
-				a[5] = b5;
 
 				return true;
 			}
 
 			return false;
 		}
+	};
+
+	union GSSelector
+	{
+		struct
+		{
+			uint32 iip:1;
+			uint32 prim:2;
+		};
+
+		uint32 key;
+
+		operator uint32() {return key & 0x7;}
 	};
 
 	union PSSelector
@@ -141,24 +149,12 @@ public:
 			uint32 clr1:1;
 			uint32 fba:1;
 			uint32 aout:1;
+			uint32 ltf:1;
 		};
 
 		uint32 key;
 
-		operator uint32() {return key & 0x1fffff;}
-	};
-
-	union GSSelector
-	{
-		struct
-		{
-			uint32 iip:1;
-			uint32 prim:2;
-		};
-
-		uint32 key;
-
-		operator uint32() {return key & 0x7;}
+		operator uint32() {return key & 0x3fffff;}
 	};
 
 	union PSSamplerSelector
@@ -167,13 +163,12 @@ public:
 		{
 			uint32 tau:1;
 			uint32 tav:1;
-			uint32 min:1;
-			uint32 mag:1;
+			uint32 ltf:1;
 		};
 
 		uint32 key;
 
-		operator uint32() {return key & 0xf;}
+		operator uint32() {return key & 0x7;}
 	};
 
 	union OMDepthStencilSelector

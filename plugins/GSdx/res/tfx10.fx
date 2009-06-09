@@ -162,18 +162,16 @@ SamplerState PaletteSampler;
 
 cbuffer cb1
 {
-	float4 FogColor;
+	float3 FogColor;
+	float AREF;
+	float4 HalfTexel;
+	float2 WH;
+	float TA0;
+	float TA1;
 	float2 MINUV;
 	float2 MAXUV;
 	uint2 UVMSK;
 	uint2 UVFIX;
-	float TA0;
-	float TA1;
-	float AREF;
-	float _pad;
-	float2 WH;
-	float2 rWrH;
-	float4 HalfTexel;
 };
 
 struct PS_INPUT
@@ -191,18 +189,19 @@ struct PS_OUTPUT
 
 #ifndef FST
 #define FST 0
-#define WMS 0
-#define WMT 0
+#define WMS 1
+#define WMT 1
 #define BPP 0
 #define AEM 0
 #define TFX 0
 #define TCC 1
-#define ATE 0
+#define ATE 1
 #define ATST 2
-#define FOG 0
+#define FOG 1
 #define CLR1 0
 #define FBA 0
 #define AOUT 0
+#define LTF 1
 #endif
 
 float4 Normalize16(float4 f)
@@ -377,7 +376,14 @@ float4 sample(float2 tc, float w)
 			t11 = Texture.Load(int3(iuv.zw, 0));
 		}
 
-		t = lerp(lerp(t00, t01, dd.x), lerp(t10, t11, dd.x), dd.y);
+		if(LTF)
+		{
+			t = lerp(lerp(t00, t01, dd.x), lerp(t10, t11, dd.x), dd.y);
+		}
+		else
+		{
+			t = t00;
+		}
 	}
 
 	if(BPP == 1) // 24

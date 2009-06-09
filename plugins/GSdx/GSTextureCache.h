@@ -72,7 +72,6 @@ public:
 		bool GetDirtyRect(GSVector4i& r);
 
 	public:
-		GIFRegCLAMP m_CLAMP;
 		uint32* m_clut; // *
 		GSVector4i m_valid;
 		int m_bpp;
@@ -95,6 +94,8 @@ protected:
 	list<GSRenderTarget*> m_rt;
 	list<GSDepthStencil*> m_ds;
 	list<GSCachedTexture*> m_tex;
+
+	bool m_tex_used;
 
 	template<class T> void RecycleByAge(list<T*>& l, int maxage = 60)
 	{

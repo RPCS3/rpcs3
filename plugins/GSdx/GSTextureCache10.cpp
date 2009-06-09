@@ -55,12 +55,7 @@ void GSTextureCache10::GSRenderTargetHW10::Update()
 		TEXA.TA0 = 0;
 		TEXA.TA1 = 0x80;
 
-		GIFRegCLAMP CLAMP;
-
-		CLAMP.WMS = 0;
-		CLAMP.WMT = 0;
-
-		m_renderer->m_mem.ReadTexture(r, buff, pitch, m_TEX0, TEXA, CLAMP);
+		m_renderer->m_mem.ReadTexture(r, buff, pitch, m_TEX0, TEXA);
 		
 		// s->m_perfmon.Put(GSPerfMon::Unswizzle, w * h * 4);
 
@@ -182,7 +177,6 @@ bool GSTextureCache10::GSCachedTextureHW10::Create()
 	// m_renderer->m_perfmon.Put(GSPerfMon::WriteTexture, 1);
 
 	m_TEX0 = m_renderer->m_context->TEX0;
-	m_CLAMP = m_renderer->m_context->CLAMP;
 
 	uint32 psm = m_TEX0.PSM;
 
@@ -240,7 +234,6 @@ bool GSTextureCache10::GSCachedTextureHW10::Create(GSRenderTarget* rt)
 	// m_renderer->m_perfmon.Put(GSPerfMon::ConvertRT2T, 1);
 
 	m_TEX0 = m_renderer->m_context->TEX0;
-	m_CLAMP = m_renderer->m_context->CLAMP;
 	m_rendered = true;
 
 	int tw = 1 << m_TEX0.TW;

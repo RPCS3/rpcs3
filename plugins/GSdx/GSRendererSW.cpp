@@ -114,15 +114,11 @@ GSTexture* GSRendererSW::GetOutput(int i)
 		}
 	}
 
-	GIFRegCLAMP CLAMP;
-
-	CLAMP.WMS = CLAMP.WMT = 1;
-
 	// TODO
 	static uint8* buff = (uint8*)_aligned_malloc(1024 * 1024 * 4, 16);
 	static int pitch = 1024 * 4;
 
-	m_mem.ReadTexture(r, buff, pitch, TEX0, m_env.TEXA, CLAMP);
+	m_mem.ReadTexture(r, buff, pitch, TEX0, m_env.TEXA);
 
 	m_texture[i]->Update(r, buff, pitch);
 

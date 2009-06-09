@@ -1720,26 +1720,7 @@ void GSLocalMemory::ReadTextureBlock16SZ(uint32 bp, uint8* dst, int dstpitch, co
 
 ///////////////////
 
-void GSLocalMemory::ReadTexture(const GSVector4i& r, uint8* dst, int dstpitch, const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, const GIFRegCLAMP& CLAMP)
-{
-	readTexture rtx = m_psm[TEX0.PSM].rtx;
-	readTexel rt = m_psm[TEX0.PSM].rt;
-	GSVector2i bs = m_psm[TEX0.PSM].bs;
-
-	if(r.width() < bs.x || r.height() < bs.y 
-	|| (r.left & (bs.x - 1)) || (r.top & (bs.y - 1)) 
-	|| (r.right & (bs.x - 1)) || (r.bottom & (bs.y - 1)) 
-	|| CLAMP.WMS == 3 || CLAMP.WMT == 3)
-	{
-		ReadTexture<uint32>(r, dst, dstpitch, TEX0, TEXA, CLAMP, rt, rtx);
-	}
-	else
-	{
-		(this->*rtx)(r, dst, dstpitch, TEX0, TEXA);
-	}
-}
-
-void GSLocalMemory::ReadTextureNC(const GSVector4i& r, uint8* dst, int dstpitch, const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, const GIFRegCLAMP& CLAMP)
+void GSLocalMemory::ReadTexture(const GSVector4i& r, uint8* dst, int dstpitch, const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA)
 {
 	readTexture rtx = m_psm[TEX0.PSM].rtx;
 	readTexel rt = m_psm[TEX0.PSM].rt;
@@ -1749,7 +1730,7 @@ void GSLocalMemory::ReadTextureNC(const GSVector4i& r, uint8* dst, int dstpitch,
 	|| (r.left & (bs.x - 1)) || (r.top & (bs.y - 1)) 
 	|| (r.right & (bs.x - 1)) || (r.bottom & (bs.y - 1)))
 	{
-		ReadTextureNC<uint32>(r, dst, dstpitch, TEX0, TEXA, rt, rtx);
+		ReadTexture<uint32>(r, dst, dstpitch, TEX0, TEXA, rt, rtx);
 	}
 	else
 	{
@@ -1936,50 +1917,7 @@ void GSLocalMemory::ReadTexture16SZNP(const GSVector4i& r, uint8* dst, int dstpi
 
 ///////////////////
 
-void GSLocalMemory::ReadTextureNP(const GSVector4i& r, uint8* dst, int dstpitch, const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, const GIFRegCLAMP& CLAMP)
-{
-	readTexture rtx = m_psm[TEX0.PSM].rtxNP;
-	readTexel rt = m_psm[TEX0.PSM].rtNP;
-	GSVector2i bs = m_psm[TEX0.PSM].bs;
-
-	if(r.width() < bs.x || r.height() < bs.y 
-	|| (r.left & (bs.x - 1)) || (r.top & (bs.y - 1)) 
-	|| (r.right & (bs.x - 1)) || (r.bottom & (bs.y - 1)) 
-	|| CLAMP.WMS == 3 || CLAMP.WMT == 3)
-	{
-		uint32 psm = TEX0.PSM;
-
-		switch(psm)
-		{
-		case PSM_PSMT8:
-		case PSM_PSMT8H:
-		case PSM_PSMT4:
-		case PSM_PSMT4HL:
-		case PSM_PSMT4HH:
-			psm = TEX0.CPSM;
-			break;
-		}
-
-		switch(psm)
-		{
-		default:
-		case PSM_PSMCT32:
-		case PSM_PSMCT24:
-			ReadTexture<uint32>(r, dst, dstpitch, TEX0, TEXA, CLAMP, rt, rtx);
-			break;
-		case PSM_PSMCT16:
-		case PSM_PSMCT16S:
-			ReadTexture<uint16>(r, dst, dstpitch, TEX0, TEXA, CLAMP, rt, rtx);
-			break;
-		}
-	}
-	else
-	{
-		(this->*rtx)(r, dst, dstpitch, TEX0, TEXA);
-	}
-}
-
-void GSLocalMemory::ReadTextureNPNC(const GSVector4i& r, uint8* dst, int dstpitch, const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, const GIFRegCLAMP& CLAMP)
+void GSLocalMemory::ReadTextureNP(const GSVector4i& r, uint8* dst, int dstpitch, const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA)
 {
 	readTexture rtx = m_psm[TEX0.PSM].rtxNP;
 	readTexel rt = m_psm[TEX0.PSM].rtNP;
@@ -2007,11 +1945,11 @@ void GSLocalMemory::ReadTextureNPNC(const GSVector4i& r, uint8* dst, int dstpitc
 		default:
 		case PSM_PSMCT32:
 		case PSM_PSMCT24:
-			ReadTextureNC<uint32>(r, dst, dstpitch, TEX0, TEXA, rt, rtx);
+			ReadTexture<uint32>(r, dst, dstpitch, TEX0, TEXA, rt, rtx);
 			break;
 		case PSM_PSMCT16:
 		case PSM_PSMCT16S:
-			ReadTextureNC<uint16>(r, dst, dstpitch, TEX0, TEXA, rt, rtx);
+			ReadTexture<uint16>(r, dst, dstpitch, TEX0, TEXA, rt, rtx);
 			break;
 		}
 	}
@@ -2106,266 +2044,9 @@ void GSLocalMemory::ReadTextureBlock4HHP(uint32 bp, uint8* dst, int dstpitch, co
 //
 
 template<typename T> 
-void GSLocalMemory::ReadTexture(const GSVector4i& r2, uint8* dst, int dstpitch, const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, const GIFRegCLAMP& CLAMP, readTexel rt, readTexture rtx)
+void GSLocalMemory::ReadTexture(const GSVector4i& r, uint8* dst, int dstpitch, const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, readTexel rt, readTexture rtx)
 {
-	// TODO: this is a mess, make it more simple
-
-	GSVector4i r = r2;
-
-	uint32 wms = CLAMP.WMS, wmt = CLAMP.WMT;
-	uint32 minu = CLAMP.MINU, maxu = CLAMP.MAXU;
-	uint32 minv = CLAMP.MINV, maxv = CLAMP.MAXV;
-
-	GSVector2i bs = m_psm[TEX0.PSM].bs;
-
-	int bsxm = bs.x - 1;
-	int bsym = bs.y - 1;
-
-	if(wms == 3 || wmt == 3)
-	{
-		if(wms == 3 && wmt == 3)
-		{
-			int w = minu + 1;
-			int h = minv + 1;
-
-			w = (w + bsxm) & ~bsxm;
-			h = (h + bsym) & ~bsym;
-
-			if(w % bs.x == 0 && maxu % bs.x == 0 && h % bs.y == 0 && maxv % bs.y == 0)
-			{
-// printf("!!! 1 wms = %d, wmt = %d, %3x %3x %3x %3x, %d %d - %d %d\n", wms, wmt, minu, maxu, minv, maxv, r.left, r.top, r.right, r.bottom);
-
-				T* buff = (T*)_aligned_malloc(w * h * sizeof(T), 16);
-
-				(this->*rtx)(GSVector4i(maxu, maxv, maxu + w, maxv + h), (uint8*)buff, w * sizeof(T), TEX0, TEXA);
-
-				dst -= r.left * sizeof(T);
-
-//				int left = (r.left + minu) & ~minu;
-//				int right = r.right & ~minu;
-
-				for(int y = r.top; y < r.bottom; y++, dst += dstpitch)
-				{
-					T* src = &buff[(y & minv) * w];
-
-					int x = r.left;
-/*
-					for(; x < left; x++)
-					{
-						((T*)dst)[x] = src[x & minu];
-					}
-
-					for(; x < right; x += minu + 1)
-					{
-						memcpy(&((T*)dst)[x], src, sizeof(T) * (minu + 1));
-					}
-*/
-					for(; x < r.right; x++)
-					{
-						((T*)dst)[x] = src[x & minu];
-					}
-				}
-
-				_aligned_free(buff);
-
-				return;
-			}
-		}
-
-		if(wms == 2)
-		{
-			int left = r.left;
-			r.left = min(r.right, max(r.left, (int)minu));
-			r.right = max(r.left, min(r.right, (int)maxu + 1));
-			dst += (r.left - left) * sizeof(T);
-		}
-
-		if(wmt == 2)
-		{
-			int top = r.top;
-			r.top = min(r.bottom, max(r.top, (int)minv));
-			r.bottom = max(r.top, min(r.bottom, (int)maxv + 1));
-			dst += (r.top - top) * dstpitch;
-		}
-
-		if(wms == 3 && wmt != 3)
-		{
-			int w = ((minu + 1) + bsxm) & ~bsxm;
-
-			if(w % bs.x == 0 && maxu % bs.x == 0)
-			{
-// printf("!!! 2 wms = %d, wmt = %d, %3x %3x %3x %3x, %d %d - %d %d\n", wms, wmt, minu, maxu, minv, maxv, r.left, r.top, r.right, r.bottom);
-				int top = r.top & ~bsym; 
-				int bottom = (r.bottom + bsym) & ~bsym;
-				
-				int h = bottom - top;
-
-				T* buff = (T*)_aligned_malloc(w * h * sizeof(T), 16);
-
-				(this->*rtx)(GSVector4i(maxu, top, maxu + w, top + h), (uint8*)buff, w * sizeof(T), TEX0, TEXA);
-
-				dst -= r.left * sizeof(T);
-
-//				int left = (r.left + minu) & ~minu;
-//				int right = r.right & ~minu;
-
-				for(int y = r.top; y < r.bottom; y++, dst += dstpitch)
-				{
-					T* src = &buff[(y - top) * w];
-
-					int x = r.left;
-/*
-					for(; x < left; x++)
-					{
-						((T*)dst)[x] = src[x & minu];
-					}
-
-					for(; x < right; x += minu + 1)
-					{
-						memcpy(&((T*)dst)[x], src, sizeof(T) * (minu + 1));
-					}
-*/
-					for(; x < r.right; x++)
-					{
-						((T*)dst)[x] = src[x & minu];
-					}
-				}
-
-				_aligned_free(buff);
-
-				return;
-			}
-		}
-
-		if(wms != 3 && wmt == 3)
-		{
-			int h = (minv + 1 + bsym) & ~bsym;
-
-			if(h % bs.y == 0 && maxv % bs.y == 0)
-			{
-// printf("!!! 3 wms = %d, wmt = %d, %3x %3x %3x %3x, %d %d - %d %d\n", wms, wmt, minu, maxu, minv, maxv, r.left, r.top, r.right, r.bottom);
-				int left = r.left & ~bsxm; 
-				int right = (r.right + bsxm) & ~bsxm;
-				
-				int w = right - left;
-
-				T* buff = (T*)_aligned_malloc(w * h * sizeof(T), 16);
-
-				(this->*rtx)(GSVector4i(left, maxv, left + w, maxv + h), (uint8*)buff, w * sizeof(T), TEX0, TEXA);
-
-				for(int y = r.top; y < r.bottom; y++, dst += dstpitch)
-				{
-					T* src = &buff[(y & minv) * w + (r.left - left)];
-
-					memcpy(dst, src, sizeof(T) * r.width());
-				}
-
-				_aligned_free(buff);
-
-				return;
-			}
-		}
-
-		switch(wms)
-		{
-		default: for(int x = r.left; x < r.right; x++) m_xtbl[x] = x; break;
-		case 3: for(int x = r.left; x < r.right; x++) m_xtbl[x] = (x & minu) | maxu; break;
-		}
-
-		switch(wmt)
-		{
-		default: for(int y = r.top; y < r.bottom; y++) m_ytbl[y] = y; break;
-		case 3: for(int y = r.top; y < r.bottom; y++) m_ytbl[y] = (y & minv) | maxv; break;
-		}
-
-// printf("!!! 4 wms = %d, wmt = %d, %3x %3x %3x %3x, %d %d - %d %d\n", wms, wmt, minu, maxu, minv, maxv, r.left, r.top, r.right, r.bottom);
-
-		for(int y = r.top; y < r.bottom; y++, dst += dstpitch)
-			for(int x = r.left, i = 0; x < r.right; x++, i++)
-				((T*)dst)[i] = (T)(this->*rt)(m_xtbl[x], m_ytbl[y], TEX0, TEXA);
-	}
-	else
-	{
-		// find a block-aligned rect that fits between r and the region clamped area (if any)
-
-		GSVector4i r1 = r;
-		GSVector4i r2 = r;
-
-		r1.left = (r1.left + bsxm) & ~bsxm;
-		r1.top = (r1.top + bsym) & ~bsym;
-		r1.right = r1.right & ~bsxm; 
-		r1.bottom = r1.bottom & ~bsym; 
-
-		if(wms == 2 && minu < maxu) 
-		{
-			r2.left = minu & ~bsxm; 
-			r2.right = (maxu + bsxm) & ~bsxm;
-		}
-
-		if(wmt == 2 && minv < maxv) 
-		{
-			r2.top = minv & ~bsym; 
-			r2.bottom = (maxv + bsym) & ~bsym;
-		}
-
-		GSVector4i cr = r1.rintersect(r2);
-
-		bool aligned = ((DWORD_PTR)(dst + (cr.left - r.left) * sizeof(T)) & 0xf) == 0;
-
-		if(cr.rempty() || !aligned)
-		{
-			// TODO: expand r to block size, read into temp buffer, copy to r (like above)
-
-if(!aligned) printf("unaligned memory pointer passed to ReadTexture\n");
-
-// printf("!!! 5 wms = %d, wmt = %d, %3x %3x %3x %3x, %d %d - %d %d\n", wms, wmt, minu, maxu, minv, maxv, r.left, r.top, r.right, r.bottom);
-
-			for(int y = r.top; y < r.bottom; y++, dst += dstpitch)
-				for(int x = r.left, i = 0; x < r.right; x++, i++)
-					((T*)dst)[i] = (T)(this->*rt)(x, y, TEX0, TEXA);
-		}
-		else
-		{
-// printf("!!! 6 wms = %d, wmt = %d, %3x %3x %3x %3x, %d %d - %d %d\n", wms, wmt, minu, maxu, minv, maxv, r.left, r.top, r.right, r.bottom);
-
-			for(int y = r.top; y < cr.top; y++, dst += dstpitch)
-				for(int x = r.left, i = 0; x < r.right; x++, i++)
-					((T*)dst)[i] = (T)(this->*rt)(x, y, TEX0, TEXA);
-
-			if(!cr.rempty())
-			{
-				(this->*rtx)(cr, dst + (cr.left - r.left) * sizeof(T), dstpitch, TEX0, TEXA);
-			}
-
-			for(int y = cr.top; y < cr.bottom; y++, dst += dstpitch)
-			{
-				for(int x = r.left, i = 0; x < cr.left; x++, i++)
-					((T*)dst)[i] = (T)(this->*rt)(x, y, TEX0, TEXA);
-				for(int x = cr.right, i = x - r.left; x < r.right; x++, i++)
-					((T*)dst)[i] = (T)(this->*rt)(x, y, TEX0, TEXA);
-			}
-
-			for(int y = cr.bottom; y < r.bottom; y++, dst += dstpitch)
-				for(int x = r.left, i = 0; x < r.right; x++, i++)
-					((T*)dst)[i] = (T)(this->*rt)(x, y, TEX0, TEXA);
-		}
-	}
-}
-
-template<typename T> 
-void GSLocalMemory::ReadTextureNC(const GSVector4i& r, uint8* dst, int dstpitch, const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, readTexel rt, readTexture rtx)
-{
-	GSVector2i bs = m_psm[TEX0.PSM].bs;
-
-	int bsxm = bs.x - 1;
-	int bsym = bs.y - 1;
-
-	GSVector4i cr;
-
-	cr.left = (r.left + bsxm) & ~bsxm;
-	cr.top = (r.top + bsym) & ~bsym;
-	cr.right = r.right & ~bsxm; 
-	cr.bottom = r.bottom & ~bsym; 
+	GSVector4i cr = r.ralign<GSVector4i::Inside>(m_psm[TEX0.PSM].bs);
 
 	bool aligned = ((DWORD_PTR)(dst + (cr.left - r.left) * sizeof(T)) & 0xf) == 0;
 
@@ -2373,7 +2054,8 @@ void GSLocalMemory::ReadTextureNC(const GSVector4i& r, uint8* dst, int dstpitch,
 	{
 		// TODO: expand r to block size, read into temp buffer, copy to r (like above)
 
-if(!aligned) printf("unaligned memory pointer passed to ReadTexture\n");
+if(!aligned) 
+printf("unaligned memory pointer passed to ReadTexture\n");
 
 		for(int y = r.top; y < r.bottom; y++, dst += dstpitch)
 			for(int x = r.left, i = 0; x < r.right; x++, i++)

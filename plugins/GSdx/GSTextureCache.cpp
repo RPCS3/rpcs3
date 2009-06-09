@@ -260,21 +260,21 @@ GSTextureCache::GSCachedTexture* GSTextureCache::GetTexture()
 
 	for(list<GSCachedTexture*>::iterator i = m_tex.begin(); i != m_tex.end(); i++)
 	{
-		t = *i;
+		GSCachedTexture* t2 = *i;
 
-		if(GSUtil::HasSharedBits(t->m_TEX0.TBP0, t->m_TEX0.PSM, TEX0.TBP0, TEX0.PSM))
+		if((((t2->m_TEX0.u32[0] ^ TEX0.u32[0]) & 0xffefffff) | ((t2->m_TEX0.u32[1] ^ TEX0.u32[1]) & 3)) != 0) // TBP0 TBW (PSM & ~1) TW TH
 		{
-			if(TEX0.PSM == t->m_TEX0.PSM && TEX0.TBW == t->m_TEX0.TBW
-			&& TEX0.TW == t->m_TEX0.TW && TEX0.TH == t->m_TEX0.TH
-			&& (pal == 0 || TEX0.CPSM == t->m_TEX0.CPSM && GSVector4i::compare(t->m_clut, clut, pal * sizeof(clut[0]))))
-			{
-				m_tex.splice(m_tex.begin(), m_tex, i);
-
-				break;
-			}
+			continue;
 		}
 
-		t = NULL;
+		if(!(pal == 0 || t2->m_TEX0.CPSM == TEX0.CPSM && GSVector4i::compare(t2->m_clut, clut, pal * sizeof(clut[0]))))
+		{
+			continue;
+		}
+
+		t = t2;
+
+		m_tex.splice(m_tex.begin(), m_tex, i);
 	}
 
 	if(t == NULL)
@@ -366,6 +366,8 @@ GSTextureCache::GSCachedTexture* GSTextureCache::GetTexture()
 	}
 
 	t->Update();
+
+	m_tex_used = true;
 
 	return t;
 }
@@ -595,9 +597,11 @@ void GSTextureCache::InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, const 
 
 void GSTextureCache::IncAge()
 {
-	RecycleByAge(m_tex, 2);
+	RecycleByAge(m_tex, m_tex_used ? 2 : 30);
 	RecycleByAge(m_rt);
 	RecycleByAge(m_ds);
+
+	m_tex_used = false;
 }
 
 // GSTextureCache::GSSurface
@@ -704,7 +708,7 @@ void GSTextureCache::GSCachedTexture::Update()
 	{
 		// in dx9 managed textures can be written directly, less copying is faster, but still not as fast as dx10's UpdateResource
 
-		m_renderer->m_mem.ReadTextureNPNC(r, bits, pitch, m_renderer->m_context->TEX0, m_renderer->m_env.TEXA, m_renderer->m_context->CLAMP);
+		m_renderer->m_mem.ReadTextureNP(r, bits, pitch, m_renderer->m_context->TEX0, m_renderer->m_env.TEXA);
 
 		m_texture->Unmap();
 	}
@@ -714,7 +718,7 @@ void GSTextureCache::GSCachedTexture::Update()
 		
 		pitch = ((r.width() + 3) & ~3) * 4;
 
-		m_renderer->m_mem.ReadTextureNPNC(r, buff, pitch, m_renderer->m_context->TEX0, m_renderer->m_env.TEXA, m_renderer->m_context->CLAMP);
+		m_renderer->m_mem.ReadTextureNP(r, buff, pitch, m_renderer->m_context->TEX0, m_renderer->m_env.TEXA);
 
 		m_texture->Update(r, buff, pitch);
 	}

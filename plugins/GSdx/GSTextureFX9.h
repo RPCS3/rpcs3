@@ -53,7 +53,11 @@ public:
 
 	struct PSConstantBuffer
 	{
-		GSVector4 FogColor;
+		GSVector4 FogColorAREF;
+		GSVector4 HalfTexel;
+		GSVector2 WH;
+		float TA0;
+		float TA1;
 		float MINU;
 		float MINV;
 		float MAXU;
@@ -62,13 +66,6 @@ public:
 		uint32 VMSK;
 		uint32 UFIX;
 		uint32 VFIX;
-		float TA0;
-		float TA1;
-		float AREF;
-		float _pad[1];
-		GSVector2 WH;
-		GSVector2 rWrH;
-		GSVector4 HalfTexel;
 	};
 
 	union PSSelector
@@ -87,11 +84,12 @@ public:
 			uint32 fog:1;
 			uint32 clr1:1;
 			uint32 rt:1;
+			uint32 ltf:1;
 		};
 
 		uint32 key;
 
-		operator uint32() {return key & 0xfffff;}
+		operator uint32() {return key & 0x1fffff;}
 	};
 
 	union PSSamplerSelector
@@ -100,13 +98,12 @@ public:
 		{
 			uint32 tau:1;
 			uint32 tav:1;
-			uint32 min:1;
-			uint32 mag:1;
+			uint32 ltf:1;
 		};
 
 		uint32 key;
 
-		operator uint32() {return key & 0xf;}
+		operator uint32() {return key & 0x7;}
 	};
 
 	union OMDepthStencilSelector

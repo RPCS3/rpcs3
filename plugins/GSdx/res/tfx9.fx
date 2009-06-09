@@ -71,19 +71,16 @@ VS_OUTPUT vs_main(VS_INPUT input)
 	return output;
 }
 
-float4 ps_params[6];
+float4 ps_params[4];
 
-#define FogColor	ps_params[0].bgra
-#define MINUV		ps_params[1].xy
-#define MAXUV		ps_params[1].zw
-#define UVMSK		ps_params[2].xy
-#define UVFIX		ps_params[2].zw
-#define TA0			ps_params[3].x
-#define TA1			ps_params[3].y
-#define AREF		ps_params[3].z
-#define WH			ps_params[4].xy
-#define rWrH		ps_params[4].zw
-#define HalfTexel	ps_params[5]
+#define FogColor	ps_params[0].bgr
+#define AREF		ps_params[0].a
+#define HalfTexel	ps_params[1]
+#define WH			ps_params[2].xy
+#define TA0			ps_params[2].z
+#define TA1			ps_params[2].w
+#define MINUV		ps_params[3].xy
+#define MAXUV		ps_params[3].zw
 
 struct PS_INPUT
 {
@@ -93,17 +90,18 @@ struct PS_INPUT
 
 #ifndef FST
 #define FST 0
-#define WMS 3
-#define WMT 3
+#define WMS 1
+#define WMT 1
 #define BPP 0
 #define AEM 0
 #define TFX 0
 #define TCC 1
-#define ATE 0
-#define ATST 0
-#define FOG 0
+#define ATE 1
+#define ATST 4
+#define FOG 1
 #define CLR1 0
 #define RT 0
+#define LTF 1
 #endif
 
 sampler Texture : register(s0);
@@ -252,7 +250,14 @@ float4 sample(float2 tc, float w)
 			t11 = tex2D(Texture, uv.zw);
 		}
 
-		t = lerp(lerp(t00, t01, dd.x), lerp(t10, t11, dd.x), dd.y);
+		if(LTF)
+		{
+			t = lerp(lerp(t00, t01, dd.x), lerp(t10, t11, dd.x), dd.y);
+		}
+		else
+		{
+			t = t00;
+		}
 	}
 	
 	if(BPP == 0) // 32
@@ -350,7 +355,7 @@ float4 fog(float4 c, float f)
 {
 	if(FOG == 1)
 	{
-		c.rgb = lerp(FogColor.rgb, c.rgb, f);
+		c.rgb = lerp(FogColor, c.rgb, f);
 	}
 
 	return c;

@@ -298,28 +298,27 @@ void GSRendererHW9::Draw(int prim, GSTexture* rt, GSTexture* ds, GSTextureCache:
 	ps_sel.fog = PRIM->FGE;
 	ps_sel.clr1 = om_bsel.abe && om_bsel.a == 1 && om_bsel.b == 2 && om_bsel.d == 1;
 	ps_sel.rt = tex && tex->m_rendered;
+	ps_sel.ltf = m_filter == 2 ? context->TEX1.IsLinear() : m_filter;
 
 	GSTextureFX9::PSSamplerSelector ps_ssel;
 
-	ps_ssel.min = m_filter == 2 ? (context->TEX1.MMIN & 1) : m_filter;
-	ps_ssel.mag = m_filter == 2 ? (context->TEX1.MMAG & 1) : m_filter;
 	ps_ssel.tau = 0;
 	ps_ssel.tav = 0;
+	ps_ssel.ltf = ps_sel.ltf;
 
 	GSTextureFX9::PSConstantBuffer ps_cb;
 
-	ps_cb.FogColor = GSVector4(env.FOGCOL.FCR, env.FOGCOL.FCG, env.FOGCOL.FCB, 0) / 255.0f;
+	ps_cb.FogColorAREF = GSVector4((int)env.FOGCOL.FCR, (int)env.FOGCOL.FCG, (int)env.FOGCOL.FCB, (int)context->TEST.AREF) / 255;
 	ps_cb.TA0 = (float)(int)env.TEXA.TA0 / 255;
 	ps_cb.TA1 = (float)(int)env.TEXA.TA1 / 255;
-	ps_cb.AREF = (float)(int)context->TEST.AREF / 255;
 
 	if(context->TEST.ATST == 2 || context->TEST.ATST == 5)
 	{
-		ps_cb.AREF -= 0.9f/256;
+		ps_cb.FogColorAREF.a -= 0.9f / 255;
 	}
 	else if(context->TEST.ATST == 3 || context->TEST.ATST == 6)
 	{
-		ps_cb.AREF += 0.9f/256;
+		ps_cb.FogColorAREF.a += 0.9f / 255;
 	}
 
 	if(tex)
@@ -374,7 +373,6 @@ void GSRendererHW9::Draw(int prim, GSTexture* rt, GSTexture* ds, GSTextureCache:
 		float h = (float)tex->m_texture->GetHeight();
 
 		ps_cb.WH = GSVector2(w, h);
-		ps_cb.rWrH = GSVector2(1.0f / w, 1.0f / h);
 		ps_cb.HalfTexel = GSVector4(-0.5f / w, -0.5f / h, +0.5f / w, +0.5f / h);
 	}
 	else
