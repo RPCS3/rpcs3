@@ -66,6 +66,7 @@ declareAllVariables
 //------------------------------------------------------------------
 // Helper Macros
 //------------------------------------------------------------------
+
 #define _Ft_ ((mVU->code >> 16) & 0x1F)  // The ft part of the instruction register 
 #define _Fs_ ((mVU->code >> 11) & 0x1F)  // The fs part of the instruction register 
 #define _Fd_ ((mVU->code >>  6) & 0x1F)  // The fd part of the instruction register

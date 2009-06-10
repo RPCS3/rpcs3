@@ -62,11 +62,16 @@ int findFlagInst(int* fFlag, int cycles) {
 }
 
 // Setup Last 4 instances of Status/Mac/Clip flags (needed for accurate block linking)
-void sortFlag(int* fFlag, int* bFlag, int cycles) {
+int sortFlag(int* fFlag, int* bFlag, int cycles) {
+	int lFlag = -5;
+	int x = 0;
 	for (int i = 0; i < 4; i++) {
 		bFlag[i] = findFlagInst(fFlag, cycles);
+		if (lFlag != bFlag[i]) { x++; }
+		lFlag = bFlag[i];
 		cycles++;
 	}
+	return x; // Returns the number of Valid Flag Instances
 }
 
 #define sFlagCond ((sFLAG.doFlag && !mVUsFlagHack) || mVUlow.isFSSET || mVUinfo.doDivFlag)
@@ -151,6 +156,9 @@ microVUt(int) mVUsetFlags(mV, int* xStatus, int* xMac, int* xClip) {
 }
 
 #define getFlagReg1(x)	((x == 3) ? gprF3 : ((x == 2) ? gprF2 : ((x == 1) ? gprF1 : gprF0)))
+#define getFlagReg2(x)	((bStatus[0] == x) ? getFlagReg1(x) : gprT1)
+#define getFlagReg3(x)	((gFlag == x) ? gprT1 : getFlagReg1(x))
+#define getFlagReg4(x)	((gFlag == x) ? gprT1 : gprT2)
 #define shuffleMac		((bMac [3]<<6)|(bMac [2]<<4)|(bMac [1]<<2)|bMac [0])
 #define shuffleClip		((bClip[3]<<6)|(bClip[2]<<4)|(bClip[1]<<2)|bClip[0])
 
@@ -159,15 +167,44 @@ microVUt(void) mVUsetupFlags(mV, int* xStatus, int* xMac, int* xClip, int cycles
 
 	if (__Status) {
 		int bStatus[4];
-		sortFlag(xStatus, bStatus, cycles);
-		MOV32RtoR(gprT1,  getFlagReg1(bStatus[0])); 
-		MOV32RtoR(gprT2,  getFlagReg1(bStatus[1]));
-		MOV32RtoR(gprR,   getFlagReg1(bStatus[2]));
-		MOV32RtoR(gprF3,  getFlagReg1(bStatus[3]));
-		MOV32RtoR(gprF0,  gprT1);
-		MOV32RtoR(gprF1,  gprT2); 
-		MOV32RtoR(gprF2,  gprR); 
-		MOV32ItoR(gprR, Roffset); // Restore gprR
+		int sortRegs = sortFlag(xStatus, bStatus, cycles);
+		// DevCon::Status("sortRegs = %d", params sortRegs);
+		// Note: Emitter will optimize out mov(reg1, reg1) cases...
+		// There 'is' still room for small optimizations but the 
+		// sorting algorithm would be really complex and not really
+		// a noticeable improvement... (Most common cases are 1 & 2)
+		if (sortRegs == 1) {
+			MOV32RtoR(gprF0,  getFlagReg1(bStatus[0]));
+			MOV32RtoR(gprF1,  getFlagReg1(bStatus[1]));
+			MOV32RtoR(gprF2,  getFlagReg1(bStatus[2]));
+			MOV32RtoR(gprF3,  getFlagReg1(bStatus[3]));
+		}
+		else if (sortRegs == 2) {
+			MOV32RtoR(gprT1,  getFlagReg1(bStatus[3])); 
+			MOV32RtoR(gprF0,  getFlagReg1(bStatus[0]));
+			MOV32RtoR(gprF1,  getFlagReg2(bStatus[1]));
+			MOV32RtoR(gprF2,  getFlagReg2(bStatus[2]));
+			MOV32RtoR(gprF3,  gprT1);
+		}
+		else if (sortRegs == 3) {
+			int gFlag = (bStatus[0] == bStatus[1]) ? bStatus[2] : bStatus[1];
+			MOV32RtoR(gprT1,  getFlagReg1(gFlag)); 
+			MOV32RtoR(gprT2,  getFlagReg1(bStatus[3]));
+			MOV32RtoR(gprF0,  getFlagReg1(bStatus[0]));
+			MOV32RtoR(gprF1,  getFlagReg3(bStatus[1]));
+			MOV32RtoR(gprF2,  getFlagReg4(bStatus[2]));
+			MOV32RtoR(gprF3,  gprT2);
+		}
+		else {
+			MOV32RtoR(gprT1,  getFlagReg1(bStatus[0])); 
+			MOV32RtoR(gprT2,  getFlagReg1(bStatus[1]));
+			MOV32RtoR(gprR,   getFlagReg1(bStatus[2]));
+			MOV32RtoR(gprF3,  getFlagReg1(bStatus[3]));
+			MOV32RtoR(gprF0,  gprT1);
+			MOV32RtoR(gprF1,  gprT2); 
+			MOV32RtoR(gprF2,  gprR); 
+			MOV32ItoR(gprR, Roffset); // Restore gprR
+		}
 	}
 
 	if (__Mac) {
