@@ -287,8 +287,10 @@ void GSRendererHW10::Draw(int prim, GSTexture* rt, GSTexture* ds, GSTextureCache
 
 	float sx = 2.0f * rt->m_scale.x / (rt->GetWidth() * 16);
 	float sy = 2.0f * rt->m_scale.y / (rt->GetHeight() * 16);
-	float ox = (float)(int)context->XYOFFSET.OFX;
-	float oy = (float)(int)context->XYOFFSET.OFY;
+	float ox = (float)((int)context->XYOFFSET.OFX - 8);
+	float oy = (float)((int)context->XYOFFSET.OFY - 8);
+
+	// dx10 pixel center is different => offset - 8 (half pixel) 
 
 	vs_cb.VertexScale = GSVector4(sx, -sy, 1.0f / UINT_MAX, 0.0f);
 	vs_cb.VertexOffset = GSVector4(ox * sx + 1, -(oy * sy + 1), 0.0f, -1.0f);
@@ -351,6 +353,11 @@ void GSRendererHW10::Draw(int prim, GSTexture* rt, GSTexture* ds, GSTextureCache
 	{
 		ps_sel.bpp = tex->m_bpp2;
 
+		int w = tex->m_texture->GetWidth();
+		int h = tex->m_texture->GetHeight();
+
+		ps_cb.WH = GSVector2i(w, h);
+
 		switch(context->CLAMP.WMS)
 		{
 		case 0: 
@@ -360,13 +367,15 @@ void GSRendererHW10::Draw(int prim, GSTexture* rt, GSTexture* ds, GSTextureCache
 			ps_ssel.tau = 0; 
 			break;
 		case 2: 
-			ps_cb.MINU = ((float)(int)context->CLAMP.MINU) / (1 << context->TEX0.TW);
-			ps_cb.MAXU = ((float)(int)context->CLAMP.MAXU) / (1 << context->TEX0.TW);
+			ps_cb.MinMax.x = (int)context->CLAMP.MINU * w / (1 << context->TEX0.TW);
+			ps_cb.MinMax.z = (int)context->CLAMP.MAXU * w / (1 << context->TEX0.TW);
+			ps_cb.MinMaxF.x = ((float)(int)context->CLAMP.MINU + 0.5f) / (1 << context->TEX0.TW);
+			ps_cb.MinMaxF.z = ((float)(int)context->CLAMP.MAXU) / (1 << context->TEX0.TW);
 			ps_ssel.tau = 0; 
 			break;
 		case 3: 
-			ps_cb.UMSK = context->CLAMP.MINU;
-			ps_cb.UFIX = context->CLAMP.MAXU;
+			ps_cb.MskFix.x = context->CLAMP.MINU;
+			ps_cb.MskFix.z = context->CLAMP.MAXU;
 			ps_ssel.tau = 1; 
 			break;
 		default: 
@@ -382,24 +391,20 @@ void GSRendererHW10::Draw(int prim, GSTexture* rt, GSTexture* ds, GSTextureCache
 			ps_ssel.tav = 0; 
 			break;
 		case 2: 
-			ps_cb.MINV = ((float)(int)context->CLAMP.MINV) / (1 << context->TEX0.TH);
-			ps_cb.MAXV = ((float)(int)context->CLAMP.MAXV) / (1 << context->TEX0.TH);
+			ps_cb.MinMax.y = (int)context->CLAMP.MINV * h / (1 << context->TEX0.TH);
+			ps_cb.MinMax.w = (int)context->CLAMP.MAXV * h / (1 << context->TEX0.TH);
+			ps_cb.MinMaxF.y = ((float)(int)context->CLAMP.MINV + 0.5f) / (1 << context->TEX0.TH);
+			ps_cb.MinMaxF.w = ((float)(int)context->CLAMP.MAXV) / (1 << context->TEX0.TH);
 			ps_ssel.tav = 0; 
 			break;
 		case 3: 
-			ps_cb.VMSK = context->CLAMP.MINV;
-			ps_cb.VFIX = context->CLAMP.MAXV;
+			ps_cb.MskFix.y = context->CLAMP.MINV;
+			ps_cb.MskFix.w = context->CLAMP.MAXV;
 			ps_ssel.tav = 1; 
 			break;
 		default: 
 			__assume(0);
 		}
-
-		float w = (float)tex->m_texture->GetWidth();
-		float h = (float)tex->m_texture->GetHeight();
-
-		ps_cb.WH = GSVector2(w, h);
-		ps_cb.HalfTexel = GSVector4(-0.5f / w, -0.5f / h, +0.5f / w, +0.5f / h);
 	}
 	else
 	{

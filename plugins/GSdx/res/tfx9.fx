@@ -71,7 +71,7 @@ VS_OUTPUT vs_main(VS_INPUT input)
 	return output;
 }
 
-float4 ps_params[4];
+float4 ps_params[5];
 
 #define FogColor	ps_params[0].bgr
 #define AREF		ps_params[0].a
@@ -79,8 +79,8 @@ float4 ps_params[4];
 #define WH			ps_params[2].xy
 #define TA0			ps_params[2].z
 #define TA1			ps_params[2].w
-#define MINUV		ps_params[3].xy
-#define MAXUV		ps_params[3].zw
+#define MinMax		ps_params[3]
+#define MinMaxF		ps_params[4]
 
 struct PS_INPUT
 {
@@ -90,8 +90,8 @@ struct PS_INPUT
 
 #ifndef FST
 #define FST 0
-#define WMS 1
-#define WMT 1
+#define WMS 3
+#define WMT 3
 #define BPP 0
 #define AEM 0
 #define TFX 0
@@ -109,90 +109,67 @@ sampler1D Palette : register(s1);
 sampler1D UMSKFIX : register(s2);
 sampler1D VMSKFIX : register(s3);
 
-float2 wrapu(float2 f)
-{
-	if(WMS == 0)
-	{
-		f = frac(f);
-	}
-	else if(WMS == 1)
-	{
-		f = saturate(f);
-	}
-	else if(WMS == 2)
-	{
-		f = clamp(f, MINUV.xx, MAXUV.xx);
-	}
-	else if(WMS == 3)
-	{
-		f.x = tex1D(UMSKFIX, f.x);
-		f.y = tex1D(UMSKFIX, f.y);
-	}
-	
-	return f;
-}
-
-float2 wrapv(float2 f)
-{
-	if(WMS == 0)
-	{
-		f = frac(f);
-	}
-	else if(WMS == 1)
-	{
-		f = saturate(f);
-	}
-	else if(WMS == 2)
-	{
-		f = clamp(f, MINUV.yy, MAXUV.yy);
-	}
-	else if(WMS == 3)
-	{
-		f.x = tex1D(VMSKFIX, f.x);
-		f.y = tex1D(VMSKFIX, f.y);
-	}
-	
-	return f;
-}
-
-float4 wrapuv(float4 f)
-{
-	if(WMS == 0)
-	{
-		f = frac(f);
-	}
-	else if(WMS == 1)
-	{
-		f = saturate(f);
-	}
-	else if(WMS == 2)
-	{
-		f = clamp(f, MINUV.xyxy, MAXUV.xyxy);
-	}
-	else if(WMS == 3)
-	{
-		f.x = tex1D(UMSKFIX, f.x);
-		f.y = tex1D(VMSKFIX, f.y);
-		f.z = tex1D(UMSKFIX, f.z);
-		f.w = tex1D(VMSKFIX, f.w);
-	}
-		
-	return f;
-}
-
-float4 wrap(float4 uv)
+float4 wrapuv(float4 uv)
 {
 	if(WMS == WMT)
 	{
-		uv = wrapuv(uv);
+		switch(WMS)
+		{
+		case 0: uv = frac(uv); break;
+		case 1: uv = saturate(uv); break;
+		case 2: uv = clamp(uv, MinMax.xyxy, MinMax.zwzw); break;
+		case 3: 
+			uv.x = tex1D(UMSKFIX, uv.x);
+			uv.y = tex1D(VMSKFIX, uv.y);
+			uv.z = tex1D(UMSKFIX, uv.z);
+			uv.w = tex1D(VMSKFIX, uv.w);
+			break;
+		}
 	}
 	else
 	{
-		uv.xz = wrapu(uv.xz);
-		uv.yw = wrapv(uv.yw);
+		switch(WMS)
+		{
+		case 0: uv.xz = frac(uv.xz); break;
+		case 1: uv.xz = saturate(uv.xz); break;
+		case 2: uv.xz = clamp(uv.xz, MinMax.xx, MinMax.zz); break;
+		case 3:
+			uv.x = tex1D(UMSKFIX, uv.x);
+			uv.z = tex1D(UMSKFIX, uv.z);
+			break;
+		}
+
+		switch(WMT)
+		{
+		case 0: uv.yw = frac(uv.yw); break;
+		case 1: uv.yw = saturate(uv.yw); break;
+		case 2: uv.yw = clamp(uv.yw, MinMax.yy, MinMax.ww); break;
+		case 3:
+			uv.y = tex1D(VMSKFIX, uv.y);
+			uv.w = tex1D(VMSKFIX, uv.w);
+			break;
+		}
 	}
 	
 	return uv;
+}
+
+float2 clampuv(float2 tc)
+{
+	if(WMS == 2 && WMT == 2) 
+	{
+		tc = clamp(tc, MinMaxF.xy, MinMaxF.zw);
+	}
+	else if(WMS == 2)
+	{
+		tc.x = clamp(tc.x, MinMaxF.x, MinMaxF.z);
+	}
+	else if(WMT == 2)
+	{
+		tc.y = clamp(tc.y, MinMaxF.y, MinMaxF.w);
+	}
+	
+	return tc;
 }
 
 float4 sample(float2 tc, float w)
@@ -211,18 +188,13 @@ float4 sample(float2 tc, float w)
 */
 	if(BPP < 3 && WMS < 3 && WMT < 3)
 	{
-		if(WMS == 2 && WMT == 2) tc = clamp(tc, MINUV.xy, MAXUV.xy);
-		else if(WMS == 2) tc.x = clamp(tc.x, MINUV.x, MAXUV.x);
-		else if(WMT == 2) tc.y = clamp(tc.y, MINUV.y, MAXUV.y);
-	
-		t = tex2D(Texture, tc);
+		t = tex2D(Texture, clampuv(tc));
 	}
 	else
 	{
-		float4 uv = tc.xyxy + HalfTexel;
-		float2 dd = frac(uv.xy * WH); 
-		
-		uv = wrap(uv);
+		float4 tc2 = tc.xyxy + HalfTexel;
+		float2 dd = frac(tc2.xy * WH); 
+		float4 uv = wrapuv(tc2);
 
 		float4 t00, t01, t10, t11;
 

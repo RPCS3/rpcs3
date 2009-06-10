@@ -48,16 +48,7 @@ VS_OUTPUT vs_main(VS_INPUT input)
 
 	VS_OUTPUT output;
 
-	float4 p = float4(input.p, input.z, 0);
-	
-	// FIXME:
-	// A litte accuracy problem in many games where the screen is copied in columns and the sides have a half pixel gap for some reason 
-	// (probably to avoid page breaks with linear filtering). That half pixel coordinate gets multiplied by 2 (VertexScale) and occasionally 
-	// ends on .9999999, which the rasterizer floors to 1 less pixel we need, leaving a visible gap after drawing. 
-	
-	p += float4(0.5f, 0.5f, 0, 0); // add 1/32 pixel
-	
-	output.p = p * VertexScale - VertexOffset;
+	output.p = float4(input.p, input.z, 0) * VertexScale - VertexOffset;
 	
 	if(VS_TME == 1)
 	{
@@ -164,14 +155,12 @@ cbuffer cb1
 {
 	float3 FogColor;
 	float AREF;
-	float4 HalfTexel;
-	float2 WH;
+	uint2 WH;
 	float TA0;
 	float TA1;
-	float2 MINUV;
-	float2 MAXUV;
-	uint2 UVMSK;
-	uint2 UVFIX;
+	uint4 MinMax;
+	float4 MinMaxF;
+	uint4 MskFix;
 };
 
 struct PS_INPUT
@@ -189,14 +178,14 @@ struct PS_OUTPUT
 
 #ifndef FST
 #define FST 0
-#define WMS 1
-#define WMT 1
+#define WMS 3
+#define WMT 3
 #define BPP 0
 #define AEM 0
 #define TFX 0
 #define TCC 1
 #define ATE 1
-#define ATST 2
+#define ATST 4
 #define FOG 1
 #define CLR1 0
 #define FBA 0
@@ -221,85 +210,56 @@ float4 Extract16(uint i)
 	return f;
 }
 
-int2 wrapu(float2 f, int2 i)
-{
-	if(WMS == 0)
-	{
-		i = frac(f) * WH.xx;
-	}
-	else if(WMS == 1)
-	{
-		i = saturate(f) * WH.xx;
-	}
-	else if(WMS == 2)
-	{
-		i = clamp(f, MINUV.xx, MAXUV.xx) * WH.xx;
-	}
-	else if(WMS == 3)
-	{
-		i = (i & UVMSK.xx) | UVFIX.xx;
-	}
-	
-	return i;
-}
-
-int2 wrapv(float2 f, int2 i)
-{
-	if(WMT == 0)
-	{
-		i = frac(f) * WH.yy;
-	}
-	else if(WMT == 1)
-	{
-		i = saturate(f) * WH.yy;
-	}
-	else if(WMT == 2)
-	{
-		i = clamp(f, MINUV.yy, MAXUV.yy) * WH.yy;
-	}
-	else if(WMT == 3)
-	{
-		i = (i & UVMSK.yy) | UVFIX.yy;
-	}
-	
-	return i;
-}
-
-int4 wrapuv(float4 f, int4 i)
-{
-	if(WMT == 0)
-	{
-		i = frac(f) * WH.xyxy;
-	}
-	else if(WMT == 1)
-	{
-		i = saturate(f) * WH.xyxy;
-	}
-	else if(WMT == 2)
-	{
-		i = clamp(f, MINUV.xyxy, MAXUV.xyxy) * WH.xyxy;
-	}
-	else if(WMT == 3)
-	{
-		i = (i & UVMSK.xyxy) | UVFIX.xyxy;
-	}
-
-	return i;
-}
-
-int4 wrap(float4 uv, int4 iuv)
+int4 wrapuv(int4 uv)
 {
 	if(WMS == WMT)
 	{
-		iuv = wrapuv(uv, iuv);
+		switch(WMS)
+		{
+		case 0: uv &= WH.xyxy - 1; break;
+		case 1: uv = clamp(uv, 0, WH.xyxy); break;
+		case 2: uv = clamp(uv, MinMax.xyxy, MinMax.zwzw); break;
+		case 3: uv = (uv & MskFix.xyxy) | MskFix.zwzw; break;
+		}
 	}
 	else
 	{
-		iuv.xz = wrapu(uv.xz, iuv.xz);
-		iuv.yw = wrapv(uv.yw, iuv.yw);
+		switch(WMS)
+		{
+		case 0: uv.xz &= WH.xx - 1; break;
+		case 1: uv.xz = clamp(uv.xz, 0, WH.xx); break;
+		case 2: uv.xz = clamp(uv.xz, MinMax.xx, MinMax.zz); break;
+		case 3: uv.xz = (uv.xz & MskFix.xx) | MskFix.zz; break;
+		}
+		
+		switch(WMT)
+		{
+		case 0: uv.yw &= WH.yy - 1; break;
+		case 1: uv.yw = clamp(uv.yw, 0, WH.yy); break;
+		case 2: uv.yw = clamp(uv.yw, MinMax.yy, MinMax.ww); break;
+		case 3: uv.yw = (uv.yw & MskFix.yy) | MskFix.ww; break;
+		}
 	}
 	
-	return iuv;
+	return uv;
+}
+
+float2 clampuv(float2 tc)
+{
+	if(WMS == 2 && WMT == 2) 
+	{
+		tc = clamp(tc, MinMaxF.xy, MinMaxF.zw);
+	}
+	else if(WMS == 2)
+	{
+		tc.x = clamp(tc.x, MinMaxF.x, MinMaxF.z);
+	}
+	else if(WMT == 2)
+	{
+		tc.y = clamp(tc.y, MinMaxF.y, MinMaxF.w);
+	}
+	
+	return tc;
 }
 
 float4 sample(float2 tc, float w)
@@ -318,19 +278,13 @@ float4 sample(float2 tc, float w)
 */
 	if(BPP < 3 && WMS < 3 && WMT < 3)
 	{
-		if(WMS == 2 && WMT == 2) tc = clamp(tc, MINUV.xy, MAXUV.xy);
-		else if(WMS == 2) tc.x = clamp(tc.x, MINUV.x, MAXUV.x);
-		else if(WMT == 2) tc.y = clamp(tc.y, MINUV.y, MAXUV.y);
-	
-		t = Texture.Sample(TextureSampler, tc);
+		t = Texture.Sample(TextureSampler, clampuv(tc));
 	}
 	else
 	{
-		float4 uv = tc.xyxy + HalfTexel;
-		float4 uv2 = uv * WH.xyxy;
-		float2 dd = frac(uv2.xy); 
-		
-		int4 iuv = wrap(uv, uv2);
+		float4 tc2 = (tc * WH).xyxy + float4(-0.499, -0.499, 0.501, 0.501);
+		float2 dd = frac(tc2.xy);
+		int4 uv = wrapuv((int4)tc2);
 
 		float4 t00, t01, t10, t11;
 
@@ -338,10 +292,10 @@ float4 sample(float2 tc, float w)
 		{
 			float4 a;
 
-			a.x = Texture.Load(int3(iuv.xy, 0)).a;
-			a.y = Texture.Load(int3(iuv.zy, 0)).a;
-			a.z = Texture.Load(int3(iuv.xw, 0)).a;
-			a.w = Texture.Load(int3(iuv.zw, 0)).a;
+			a.x = Texture.Load(int3(uv.xy, 0)).a;
+			a.y = Texture.Load(int3(uv.zy, 0)).a;
+			a.z = Texture.Load(int3(uv.xw, 0)).a;
+			a.w = Texture.Load(int3(uv.zw, 0)).a;
 
 			t00 = Palette.Load(a.x);
 			t01 = Palette.Load(a.y);
@@ -356,10 +310,10 @@ float4 sample(float2 tc, float w)
 		{
 			float4 r;
 
-			r.x = Texture.Load(int3(iuv.xy, 0)).r;
-			r.y = Texture.Load(int3(iuv.zy, 0)).r;
-			r.z = Texture.Load(int3(iuv.xw, 0)).r;
-			r.w = Texture.Load(int3(iuv.zw, 0)).r;
+			r.x = Texture.Load(int3(uv.xy, 0)).r;
+			r.y = Texture.Load(int3(uv.zy, 0)).r;
+			r.z = Texture.Load(int3(uv.xw, 0)).r;
+			r.w = Texture.Load(int3(uv.zw, 0)).r;
 			
 			uint4 i = r * 65535;
 
@@ -370,10 +324,10 @@ float4 sample(float2 tc, float w)
 		}
 		else
 		{
-			t00 = Texture.Load(int3(iuv.xy, 0));
-			t01 = Texture.Load(int3(iuv.zy, 0));
-			t10 = Texture.Load(int3(iuv.xw, 0));
-			t11 = Texture.Load(int3(iuv.zw, 0));
+			t00 = Texture.Load(int3(uv.xy, 0));
+			t01 = Texture.Load(int3(uv.zy, 0));
+			t10 = Texture.Load(int3(uv.xw, 0));
+			t11 = Texture.Load(int3(uv.zw, 0));
 		}
 
 		if(LTF)

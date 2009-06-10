@@ -1237,7 +1237,7 @@ template<int index> void GSState::Transfer(uint8* mem, uint32 size)
 			{
 				m_q = 1.0f;
 
-				ASSERT(!(path.tag.PRE && path.tag.FLG == GIF_FLG_REGLIST));
+				// ASSERT(!(path.tag.PRE && path.tag.FLG == GIF_FLG_REGLIST)); // kingdom hearts
 
 				if(path.tag.PRE && path.tag.FLG == GIF_FLG_PACKED)
 				{

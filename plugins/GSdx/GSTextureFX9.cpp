@@ -152,7 +152,7 @@ bool GSTextureFX9::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSampler
 	{
 		if(sel.wms == 3)
 		{
-			if(GSTexture* t = CreateMskFix(tex->GetWidth(), cb->UMSK, cb->UFIX))
+			if(GSTexture* t = CreateMskFix(tex->GetWidth(), cb->MskFix.x, cb->MskFix.z))
 			{
 				(*m_dev)->SetTexture(2, *(GSTexture9*)t);
 			}
@@ -160,7 +160,7 @@ bool GSTextureFX9::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSampler
 
 		if(sel.wmt == 3)
 		{
-			if(GSTexture* t = CreateMskFix(tex->GetHeight(), cb->VMSK, cb->VFIX))
+			if(GSTexture* t = CreateMskFix(tex->GetHeight(), cb->MskFix.y, cb->MskFix.w))
 			{
 				(*m_dev)->SetTexture(3, *(GSTexture9*)t);
 			}

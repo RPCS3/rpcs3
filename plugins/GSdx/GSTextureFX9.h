@@ -58,14 +58,9 @@ public:
 		GSVector2 WH;
 		float TA0;
 		float TA1;
-		float MINU;
-		float MINV;
-		float MAXU;
-		float MAXV;
-		uint32 UMSK;
-		uint32 VMSK;
-		uint32 UFIX;
-		uint32 VFIX;
+		GSVector4 MinMax;
+		GSVector4 MinMaxF;
+		GSVector4i MskFix;
 	};
 
 	union PSSelector

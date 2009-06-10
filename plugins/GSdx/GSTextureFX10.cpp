@@ -270,6 +270,11 @@ void GSTextureFX10::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSampl
 
 	if(sel.tfx != 4)
 	{
+		if(!(sel.bpp < 3 && sel.wms < 3 && sel.wmt < 3))
+		{
+			ssel.ltf = 0;
+		}
+
 		hash_map<uint32, CComPtr<ID3D10SamplerState> >::const_iterator i = m_ps_ss.find(ssel);
 
 		if(i != m_ps_ss.end())

@@ -78,18 +78,12 @@ public:
 	__declspec(align(16)) struct PSConstantBuffer
 	{
 		GSVector4 FogColorAREF;
-		GSVector4 HalfTexel;
-		GSVector2 WH;
+		GSVector2i WH;
 		float TA0;
 		float TA1;
-		float MINU;
-		float MINV;
-		float MAXU;
-		float MAXV;
-		uint32 UMSK;
-		uint32 VMSK;
-		uint32 UFIX;
-		uint32 VFIX;
+		GSVector4i MinMax;
+		GSVector4 MinMaxF;
+		GSVector4i MskFix;
 
 		struct PSConstantBuffer() {memset(this, 0, sizeof(*this));}
 

@@ -115,6 +115,7 @@ CRC::Game CRC::m_games[] =
 	{0xA61A4C6D, GodOfWar, Unknown},
 	{0xE23D532B, GodOfWar, Unknown},
 	{0xDF1AF973, GodOfWar, Unknown},
+	{0xD6385328, GodOfWar, Unknown},	
 	{0x2F123FD8, GodOfWar2, RU},
 	{0x2F123FD8, GodOfWar2, US},
 	{0x44A8A22A, GodOfWar2, EU},

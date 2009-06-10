@@ -325,6 +325,12 @@ void GSRendererHW9::Draw(int prim, GSTexture* rt, GSTexture* ds, GSTextureCache:
 	{
 		ps_sel.bpp = tex->m_bpp2;
 
+		int w = tex->m_texture->GetWidth();
+		int h = tex->m_texture->GetHeight();
+
+		ps_cb.WH = GSVector2(w, h);
+		ps_cb.HalfTexel = GSVector4(-0.5f / w, -0.5f / h, +0.5f / w, +0.5f / h);
+
 		switch(context->CLAMP.WMS)
 		{
 		case 0: 
@@ -334,13 +340,15 @@ void GSRendererHW9::Draw(int prim, GSTexture* rt, GSTexture* ds, GSTextureCache:
 			ps_ssel.tau = 0; 
 			break;
 		case 2: 
-			ps_cb.MINU = ((float)(int)context->CLAMP.MINU) / (1 << context->TEX0.TW);
-			ps_cb.MAXU = ((float)(int)context->CLAMP.MAXU) / (1 << context->TEX0.TW);
+			ps_cb.MinMax.x = (float)(int)context->CLAMP.MINU / (1 << context->TEX0.TW);
+			ps_cb.MinMax.z = (float)(int)context->CLAMP.MAXU / (1 << context->TEX0.TW);
+			ps_cb.MinMaxF.x = ((float)(int)context->CLAMP.MINU + 0.5f) / (1 << context->TEX0.TW);
+			ps_cb.MinMaxF.z = ((float)(int)context->CLAMP.MAXU) / (1 << context->TEX0.TW);
 			ps_ssel.tau = 0; 
 			break;
 		case 3: 
-			ps_cb.UMSK = context->CLAMP.MINU;
-			ps_cb.UFIX = context->CLAMP.MAXU;
+			ps_cb.MskFix.x = context->CLAMP.MINU;
+			ps_cb.MskFix.z = context->CLAMP.MAXU;
 			ps_ssel.tau = 1; 
 			break;
 		default: 
@@ -356,24 +364,20 @@ void GSRendererHW9::Draw(int prim, GSTexture* rt, GSTexture* ds, GSTextureCache:
 			ps_ssel.tav = 0; 
 			break;
 		case 2: 
-			ps_cb.MINV = ((float)(int)context->CLAMP.MINV) / (1 << context->TEX0.TH);
-			ps_cb.MAXV = ((float)(int)context->CLAMP.MAXV) / (1 << context->TEX0.TH);
+			ps_cb.MinMax.y = (float)(int)context->CLAMP.MINV / (1 << context->TEX0.TH);
+			ps_cb.MinMax.w = (float)(int)context->CLAMP.MAXV / (1 << context->TEX0.TH);
+			ps_cb.MinMaxF.y = ((float)(int)context->CLAMP.MINV + 0.5f) / (1 << context->TEX0.TH);
+			ps_cb.MinMaxF.w = ((float)(int)context->CLAMP.MAXV) / (1 << context->TEX0.TH);
 			ps_ssel.tav = 0; 
 			break;
 		case 3: 
-			ps_cb.VMSK = context->CLAMP.MINV;
-			ps_cb.VFIX = context->CLAMP.MAXV;
+			ps_cb.MskFix.y = context->CLAMP.MINV;
+			ps_cb.MskFix.w = context->CLAMP.MAXV;
 			ps_ssel.tav = 1; 
 			break;
 		default: 
 			__assume(0);
 		}
-
-		float w = (float)tex->m_texture->GetWidth();
-		float h = (float)tex->m_texture->GetHeight();
-
-		ps_cb.WH = GSVector2(w, h);
-		ps_cb.HalfTexel = GSVector4(-0.5f / w, -0.5f / h, +0.5f / w, +0.5f / h);
 	}
 	else
 	{
