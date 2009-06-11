@@ -155,12 +155,9 @@ cbuffer cb1
 {
 	float3 FogColor;
 	float AREF;
-	uint2 WH;
-	float TA0;
-	float TA1;
+	float4 TA;
 	uint4 MinMax;
 	float4 MinMaxF;
-	uint4 MskFix;
 };
 
 struct PS_INPUT
@@ -178,8 +175,8 @@ struct PS_OUTPUT
 
 #ifndef FST
 #define FST 0
-#define WMS 3
-#define WMT 3
+#define WMS 1
+#define WMT 1
 #define BPP 0
 #define AEM 0
 #define TFX 0
@@ -216,28 +213,28 @@ int4 wrapuv(int4 uv)
 	{
 		switch(WMS)
 		{
-		case 0: uv &= WH.xyxy - 1; break;
-		case 1: uv = clamp(uv, 0, WH.xyxy); break;
+		case 0: uv &= MinMax.xyxy; break;
+		case 1: uv = clamp(uv, 0, MinMax.zwzw); break;
 		case 2: uv = clamp(uv, MinMax.xyxy, MinMax.zwzw); break;
-		case 3: uv = (uv & MskFix.xyxy) | MskFix.zwzw; break;
+		case 3: uv = (uv & MinMax.xyxy) | MinMax.zwzw; break;
 		}
 	}
 	else
 	{
 		switch(WMS)
 		{
-		case 0: uv.xz &= WH.xx - 1; break;
-		case 1: uv.xz = clamp(uv.xz, 0, WH.xx); break;
+		case 0: uv.xz &= MinMax.xx; break;
+		case 1: uv.xz = clamp(uv.xz, 0, MinMax.zz); break;
 		case 2: uv.xz = clamp(uv.xz, MinMax.xx, MinMax.zz); break;
-		case 3: uv.xz = (uv.xz & MskFix.xx) | MskFix.zz; break;
+		case 3: uv.xz = (uv.xz & MinMax.xx) | MinMax.zz; break;
 		}
 		
 		switch(WMT)
 		{
-		case 0: uv.yw &= WH.yy - 1; break;
-		case 1: uv.yw = clamp(uv.yw, 0, WH.yy); break;
+		case 0: uv.yw &= MinMax.yy; break;
+		case 1: uv.yw = clamp(uv.yw, 0, MinMax.ww); break;
 		case 2: uv.yw = clamp(uv.yw, MinMax.yy, MinMax.ww); break;
-		case 3: uv.yw = (uv.yw & MskFix.yy) | MskFix.ww; break;
+		case 3: uv.yw = (uv.yw & MinMax.yy) | MinMax.ww; break;
 		}
 	}
 	
@@ -282,7 +279,11 @@ float4 sample(float2 tc, float w)
 	}
 	else
 	{
-		float4 tc2 = (tc * WH).xyxy + float4(-0.499, -0.499, 0.501, 0.501);
+		float w, h;
+
+		Texture.GetDimensions(w, h);
+		
+		float4 tc2 = (tc * float2(w, h)).xyxy + float4(-0.499, -0.499, 0.501, 0.501);
 		float2 dd = frac(tc2.xy);
 		int4 uv = wrapuv((int4)tc2);
 
@@ -342,7 +343,7 @@ float4 sample(float2 tc, float w)
 
 	if(BPP == 1) // 24
 	{
-		t.a = AEM == 0 || any(t.rgb) ? TA0 : 0;
+		t.a = AEM == 0 || any(t.rgb) ? TA.x : 0;
 	}
 	else if(BPP == 2 || BPP == 5) // 16 || 16P
 	{
@@ -353,7 +354,7 @@ float4 sample(float2 tc, float w)
 		
 		// a bit incompatible with up-scaling because the 1 bit alpha is interpolated
 		
-		t.a = t.a >= 0.5 ? TA1 : AEM == 0 || any(t.rgb) ? TA0 : 0;
+		t.a = t.a >= 0.5 ? TA.y : AEM == 0 || any(t.rgb) ? TA.x : 0;
 	}
 	
 	return t;
