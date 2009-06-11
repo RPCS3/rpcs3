@@ -16,9 +16,7 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
-#ifndef __VUMICRO_H__
-#define __VUMICRO_H__
-
+#pragma once
 #include "VU.h"
 
 struct VUmicroCpu
@@ -1315,6 +1313,3 @@ void (*PREFIX##_LOWER_OPCODE[128])(_VURegsNum *VUregsn) = { \
 #endif
 
 #include "VUops.h"
-
-#endif
-

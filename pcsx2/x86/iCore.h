@@ -20,7 +20,7 @@
 #define _PCSX2_CORE_RECOMPILER_
 
 #include "ix86/ix86.h"
-#include "iVUmicro.h"
+#include "sVU_Micro.h"
 
 // Namespace Note : iCore32 contains all of the Register Allocation logic, in addition to a handful
 // of utility functions for emitting frequent code.

@@ -36,11 +36,11 @@
 #include "iMMI.h"
 #include "iFPU.h"
 #include "iCOP0.h"
-#include "iVUmicro.h"
+#include "sVU_Micro.h"
 #include "VU.h"
 #include "VUmicro.h"
 
-#include "iVUzerorec.h"
+#include "sVU_zerorec.h"
 #include "vtlb.h"
 
 #include "SamplProf.h"

@@ -25,7 +25,7 @@
 #include "iR5900.h"
 #include "R3000A.h"
 #include "IopMem.h"
-#include "iVUzerorec.h"		// for SuperVUReset
+#include "sVU_zerorec.h"		// for SuperVUReset
 
 #include "R5900Exceptions.h"
 

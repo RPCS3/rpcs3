@@ -221,7 +221,7 @@ v0.9.1:
  * 05/08/05:[+] Added faster Cd/DVD reads to the Advanced options (Refraction)
 			[-] The previous DVD/CD change by ref was just a hack, so i commited the old
 				version again
-			[-] I've commented out RECOMPILE_VUMI_LOADSTORE on iVUmicro.h, instead
+			[-] I've commented out RECOMPILE_VUMI_LOADSTORE on sVU_Micro.h, instead
 				of commenting it out in iVU1micro.c as ref did on last update, 
 				that way is better until i fix the real problem
 			[*] Improved vuDIV for .x to .x cases

@@ -25,7 +25,7 @@
 #include "VUmicro.h"
 #include "VU.h"
 #include "iCore.h"
-#include "iVUzerorec.h"
+#include "sVU_zerorec.h"
 
 #include "GS.h"
 #include "COP0.h"

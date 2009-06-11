@@ -27,8 +27,8 @@
 #include "VU.h"
 #include "VUops.h"
 #include "VUmicro.h"
-#include "iVUmicro.h"
-#include "iVUzerorec.h"
+#include "sVU_Micro.h"
+#include "sVU_zerorec.h"
 
 VURegs* g_pVU1;
 

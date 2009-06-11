@@ -33,7 +33,7 @@
 #include "VUmicro.h"
 #include "VU.h"
 #include "iCore.h"
-#include "iVUzerorec.h"
+#include "sVU_zerorec.h"
 #include "BaseblockEx.h"		// included for devbuild block dumping (which may or may not work anymore?)
 
 #include "GS.h"
