@@ -65,6 +65,7 @@ public:
 		TalesOfAbyss,
 		SonicUnleashed,
 		SimpsonsGame,
+		Genji,
 		TitleCount,
 	};
 
