@@ -134,7 +134,7 @@ void OnConfConf_Ok(GtkButton *button, gpointer user_data)
 	plugin_types type;
 	applychanges = TRUE;
 
-	for (type = GS; type <= BIOS; type = type + 1)
+	for (type = GS; type <= BIOS; type = (plugin_types)((int)type + 1))
 	{
 		PluginConf *confs = ConfS(type);
 		
@@ -188,7 +188,7 @@ void UpdateConfDlg()
 	plugin_types type;
 	FindPlugins();
 
-	for (type = GS; type <= BIOS; type = type + 1)
+	for (type = GS; type <= BIOS; type = (plugin_types)((int)type + 1))
 	{
 		char tmp[50];
 		PluginConf *confs = ConfS(type);
@@ -274,7 +274,7 @@ void FindPlugins()
 	char plugin[g_MaxPath], name[g_MaxPath];
 	plugin_types type;
 
-	for (type = GS; type <= BIOS; type = type + 1)
+	for (type = GS; type <= BIOS; type = (plugin_types)((int)type + 1))
 	{
 		PluginConf *confs = ConfS(type);
 		

@@ -162,7 +162,10 @@ declareAllVariables
 #define pass4 if (recPass == 3)
 
 // Define mVUquickSearch
+#ifndef __LINUX__
 extern u8 mVUsearchXMM[0x1000];
+#endif
+
 typedef u32 (__fastcall *mVUCall)(void*, void*);
 #ifndef __LINUX__
 #define mVUquickSearch(dest, src, size) ((((mVUCall)((void*)mVUsearchXMM))(dest, src)) == 0xf)
@@ -172,6 +175,7 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 #else
 //#define mVUquickSearch(dest, src, size) (!memcmp(dest, src, size))
 #define mVUquickSearch(dest, src, size) (!memcmp_mmx(dest, src, size))
+#define mVUemitSearch() 
 #endif
 
 // Misc Macros...

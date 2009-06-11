@@ -438,6 +438,7 @@ void SSE_ADD2PS_XMM_to_XMM(x86SSERegType to, x86SSERegType from) {
 // Micro VU - Custom Quick Search
 //------------------------------------------------------------------
 
+#ifndef __LINUX__
 PCSX2_ALIGNED(0x1000, static u8 mVUsearchXMM[0x1000]);
 
 // Generates a custom optimized block-search function (Note: Structs must be 16-byte aligned!)
@@ -490,3 +491,4 @@ void mVUemitSearch() {
 	xRET();
 	HostSys::MemProtect(mVUsearchXMM, 0x1000, Protect_ReadOnly, true );
 }
+#endif

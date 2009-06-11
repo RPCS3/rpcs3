@@ -927,9 +927,9 @@ void mmap_ClearCpuBlock( uint offset )
 	// manual protection.  Indicates a logic error in the recompiler or protection code.
 	jASSUME( m_PageProtectInfo[rampage].Mode != ProtMode_Manual );
 
-	#ifndef __LINUX__		// this function is called from the signal handler
-	DbgCon::WriteLn( "Manual page @ 0x%05x", params m_PageProtectInfo[rampage].ReverseRamMap>>12 );
-	#endif
+	//#ifndef __LINUX__		// this function is called from the signal handler
+	//DbgCon::WriteLn( "Manual page @ 0x%05x", params m_PageProtectInfo[rampage].ReverseRamMap>>12 );
+	//#endif
 
 	HostSys::MemProtect( &psM[rampage<<12], 1, Protect_ReadWrite );
 	m_PageProtectInfo[rampage].Mode = ProtMode_Manual;

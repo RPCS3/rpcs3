@@ -18,19 +18,19 @@ ix86-32/iR5900Shift.cpp ix86-32/iR5900Arit.cpp  ix86-32/iR5900Branch.cpp ix86-32
 ix86-32/iR5900MultDiv.cpp ix86-32/iCore-32.cpp ix86-32/aR5900-32.S ix86-32/iR5900Templates.cpp ix86-32/recVTLB.cpp
 
 libx86recomp_a_SOURCES = \
-BaseblockEx.cpp iCOP0.cpp iCOP2.cpp iCore.cpp iFPU.cpp iFPUd.cpp iMMI.cpp iPsxMem.cpp iR3000A.cpp iR3000Atables.cpp \
-iR5900Misc.cpp iVU0micro.cpp iVU1micro.cpp iVUmicro.cpp iVUmicroLower.cpp iVUmicroUpper.cpp iVUzerorec.cpp iVif.cpp \
-ir5900tables.cpp  fast_routines.S aR3000A.S aVUzerorec.S aVif.S $(archfiles) 
+BaseblockEx.cpp    iCOP2.cpp  iFPUd.cpp    iR3000A.cpp        iVU0micro.cpp  ir5900tables.cpp  sVU_Micro.cpp \
+iCore.cpp  iMMI.cpp     iR3000Atables.cpp  iVU1micro.cpp  microVU.cpp       sVU_Upper.cpp \
+iCOP0.cpp          iFPU.cpp   iPsxMem.cpp  iR5900Misc.cpp     iVif.cpp       sVU_Lower.cpp     sVU_zerorec.cpp \
+aR3000A.S  aVUzerorec.S  aVif.S  fast_routines.S $(archfiles) 
 
 libx86recomp_a_SOURCES += \
-BaseblockEx.h iCOP0.h iCore.h iFPU.h iMMI.h iR3000A.h iR5900.h iR5900Arit.h iR5900AritImm.h iR5900Branch.h iR5900Jump.h \
-iR5900LoadStore.h iR5900Move.h iR5900MultDiv.h iR5900Shift.h iVUmicro.h iVUops.h iVUzerorec.h 
+microVU_Alloc.inl    microVU_Compile.inl  microVU_Flags.inl  microVU_Lower.inl  microVU_Tables.inl \
+microVU_Analyze.inl  microVU_Execute.inl  microVU_Log.inl    microVU_Misc.inl   microVU_Upper.inl
 
-# Only active if PCSX2_MICROVU is defined.
 libx86recomp_a_SOURCES += \
-microVU.cpp microVU_Misc.inl microVU_Log.inl microVU_Analyze.inl microVU_Alloc.inl microVU_Upper.inl microVU_Lower.inl \
-microVU_Tables.inl microVU_Flags.inl microVU_Compile.inl microVU_Execute.inl \
-microVU.h microVU_Alloc.h microVU_Misc.h
+BaseblockEx.h  iFPU.h     iR5900.h         iR5900Branch.h     iR5900Move.h     microVU.h       sVU_Debug.h \
+iCOP0.h        iMMI.h     iR5900Arit.h     iR5900Jump.h       iR5900MultDiv.h  microVU_IR.h    sVU_Micro.h \
+iCore.h        iR3000A.h  iR5900AritImm.h  iR5900LoadStore.h  iR5900Shift.h    microVU_Misc.h  sVU_zerorec.h
 
 
 libx86recomp_a_DEPENDENCIES = ix86/libix86.a

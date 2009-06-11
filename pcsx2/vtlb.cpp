@@ -324,17 +324,17 @@ vtlbHandler vtlb_RegisterHandler(	vtlbMemR8FP* r8,vtlbMemR16FP* r16,vtlbMemR32FP
 	//write the code :p
 	vtlbHandler rv=vtlbHandlerCount++;
 	
-	vtlbdata.RWFT[0][0][rv] = (r8!=0)   ? r8:vtlbDefaultPhyRead8;
-	vtlbdata.RWFT[1][0][rv] = (r16!=0)  ? r16:vtlbDefaultPhyRead16;
-	vtlbdata.RWFT[2][0][rv] = (r32!=0)  ? r32:vtlbDefaultPhyRead32;
-	vtlbdata.RWFT[3][0][rv] = (r64!=0)  ? r64:vtlbDefaultPhyRead64;
-	vtlbdata.RWFT[4][0][rv] = (r128!=0) ? r128:vtlbDefaultPhyRead128;
+	vtlbdata.RWFT[0][0][rv] = (r8!=0) ? (void*)(r8): (void*)vtlbDefaultPhyRead8;
+	vtlbdata.RWFT[1][0][rv] = (r16!=0)  ? (void*)r16: (void*)vtlbDefaultPhyRead16;
+	vtlbdata.RWFT[2][0][rv] = (r32!=0)  ? (void*)r32: (void*)vtlbDefaultPhyRead32;
+	vtlbdata.RWFT[3][0][rv] = (r64!=0)  ? (void*)r64: (void*)vtlbDefaultPhyRead64;
+	vtlbdata.RWFT[4][0][rv] = (r128!=0) ? (void*)r128: (void*)vtlbDefaultPhyRead128;
 
-	vtlbdata.RWFT[0][1][rv] = (w8!=0)   ? w8:vtlbDefaultPhyWrite8;
-	vtlbdata.RWFT[1][1][rv] = (w16!=0)  ? w16:vtlbDefaultPhyWrite16;
-	vtlbdata.RWFT[2][1][rv] = (w32!=0)  ? w32:vtlbDefaultPhyWrite32;
-	vtlbdata.RWFT[3][1][rv] = (w64!=0)  ? w64:vtlbDefaultPhyWrite64;
-	vtlbdata.RWFT[4][1][rv] = (w128!=0) ? w128:vtlbDefaultPhyWrite128;
+	vtlbdata.RWFT[0][1][rv] = (w8!=0)   ? (void*)w8: (void*)vtlbDefaultPhyWrite8;
+	vtlbdata.RWFT[1][1][rv] = (w16!=0)  ? (void*)w16: (void*)vtlbDefaultPhyWrite16;
+	vtlbdata.RWFT[2][1][rv] = (w32!=0)  ? (void*)w32: (void*)vtlbDefaultPhyWrite32;
+	vtlbdata.RWFT[3][1][rv] = (w64!=0)  ? (void*)w64: (void*)vtlbDefaultPhyWrite64;
+	vtlbdata.RWFT[4][1][rv] = (w128!=0) ? (void*)w128: (void*)vtlbDefaultPhyWrite128;
 
 	return rv;
 }
