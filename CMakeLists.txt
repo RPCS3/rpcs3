@@ -4,8 +4,18 @@ project (YAML_CPP)
 
 enable_testing()
 
-set(LIBRARY_OUTPUT_PATH lib${LIB_SUFFIX})
-set(LIB_INSTALL_DIR lib${LIB_SUFFIX})
+if(WIN32)
+  set(_library_dir bin) # .dll are in PATH, like executables
+else(WIN32)
+  set(_library_dir lib)
+endif(WIN32)
+#
+set(_INSTALL_DESTINATIONS
+	RUNTIME DESTINATION bin
+	LIBRARY DESTINATION ${_library_dir}${LIB_SUFFIX} 
+	ARCHIVE DESTINATION lib${LIB_SUFFIX}
+)
+#
 set(INCLUDE_INSTALL_DIR include/yaml-cpp)
 
 file(GLOB public_headers include/*.h)
@@ -19,11 +29,7 @@ add_library(yaml-cpp
 	${sources}
 )
 
-install(
-	TARGETS yaml-cpp
-	LIBRARY ARCHIVE
-	DESTINATION ${LIB_INSTALL_DIR}
-)
+install(TARGETS yaml-cpp ${_INSTALL_DESTINATIONS})
 install(
 	FILES ${public_headers}
 	DESTINATION ${INCLUDE_INSTALL_DIR}
