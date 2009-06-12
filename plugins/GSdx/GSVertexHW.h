@@ -80,4 +80,6 @@ __declspec(align(16)) union GSVertexHW10
 	float GetQ() {return q;}
 };
 
+typedef GSVertexHW9 GSVertexOGL; // TODO
+
 #pragma pack(pop)

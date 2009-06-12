@@ -209,6 +209,8 @@ float4 Extract16(uint i)
 
 int4 wrapuv(int4 uv)
 {
+	// TODO: bitwise ops don't work with render target textures that were not rendered at the native resolution.
+
 	if(WMS == WMT)
 	{
 		switch(WMS)

@@ -31,7 +31,6 @@ class GSTextureCache10 : public GSTextureCache
 	public:
 		explicit GSRenderTargetHW10(GSRenderer* r) : GSRenderTarget(r) {}
 
-		void Update();
 		void Read(const GSVector4i& r);
 	};
 
@@ -39,8 +38,6 @@ class GSTextureCache10 : public GSTextureCache
 	{
 	public:
 		explicit GSDepthStencilHW10(GSRenderer* r) : GSDepthStencil(r) {}
-
-		void Update();
 	};
 
 	class GSCachedTextureHW10 : public GSCachedTexture

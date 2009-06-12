@@ -163,7 +163,7 @@ void GSDrawScanline::BeginDraw(const GSRasterizerData* data, Functions* f)
 
 	//
 
-	f->ssl = m_ds.Lookup(m_sel);
+	f->ssl = m_ds[m_sel];
 
 	if(m_sel.aa1)// && (m_state->m_perfmon.GetFrame() & 0x40))
 	{
@@ -173,7 +173,7 @@ void GSDrawScanline::BeginDraw(const GSRasterizerData* data, Functions* f)
 		sel.zwrite = 0;
 		sel.edge = 1;
 
-		f->ssle = m_ds.Lookup(sel);
+		f->ssle = m_ds[sel];
 	}
 
 	if(m_sel.IsSolidRect())
@@ -197,7 +197,7 @@ void GSDrawScanline::BeginDraw(const GSRasterizerData* data, Functions* f)
 	sel.zb = m_sel.zb;
 	sel.zoverflow = m_sel.zoverflow;
 
-	f->ssp = m_sp.Lookup(sel);
+	f->ssp = m_sp[sel];
 }
 
 void GSDrawScanline::EndDraw(const GSRasterizerStats& stats)

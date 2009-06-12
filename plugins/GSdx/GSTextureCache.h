@@ -52,6 +52,8 @@ public:
 
 		explicit GSRenderTarget(GSRenderer* r);
 
+		void Update();
+
 		virtual bool Create(int w, int h);
 		virtual void Read(const GSVector4i& r) = 0;
 	};
@@ -62,6 +64,8 @@ public:
 		bool m_used;
 
 		explicit GSDepthStencil(GSRenderer* renderer);
+
+		void Update();
 
 		virtual bool Create(int w, int h);
 	};

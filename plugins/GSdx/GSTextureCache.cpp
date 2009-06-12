@@ -128,7 +128,12 @@ GSTextureCache::GSRenderTarget* GSTextureCache::GetRenderTarget(const GIFRegTEX0
 		{
 			hh *= 2;
 		}
-
+/*
+		if(hh < 512)
+		{
+			hh = 512;
+		}
+*/
 		if(ww > 0 && hh > 0)
 		{
 			rt->m_texture->m_scale.x = (float)w / ww;
@@ -647,6 +652,54 @@ bool GSTextureCache::GSRenderTarget::Create(int w, int h)
 	return m_texture != NULL;
 }
 
+void GSTextureCache::GSRenderTarget::Update()
+{
+	__super::Update();
+
+	// FIXME: the union of the rects may also update wrong parts of the render target (but a lot faster :)
+
+	GSVector4i r = m_dirty.GetDirtyRectAndClear(m_TEX0, m_texture->GetSize());
+
+	if(r.rempty()) return;
+
+	int w = r.width();
+	int h = r.height();
+
+	if(GSTexture* t = m_renderer->m_dev->CreateTexture(w, h))
+	{
+		GIFRegTEXA TEXA;
+
+		TEXA.AEM = 1;
+		TEXA.TA0 = 0;
+		TEXA.TA1 = 0x80;
+
+		GSTexture::GSMap m;
+
+		if(t->Map(m))
+		{
+			m_renderer->m_mem.ReadTexture(r, m.bits,  m.pitch, m_TEX0, TEXA);
+
+			t->Unmap();
+		}
+		else
+		{
+			static uint8* buff = (uint8*)::_aligned_malloc(1024 * 1024 * 4, 16);
+			
+			int pitch = ((w + 3) & ~3) * 4;
+
+			m_renderer->m_mem.ReadTexture(r, buff, pitch, m_TEX0, TEXA);
+			
+			t->Update(r.rsize(), buff, pitch);
+		}
+
+		// m_renderer->m_perfmon.Put(GSPerfMon::Unswizzle, w * h * 4);
+
+		m_renderer->m_dev->StretchRect(t, m_texture, GSVector4(r) * GSVector4(m_texture->m_scale).xyxy());
+
+		m_renderer->m_dev->Recycle(t);
+	}
+}
+
 // GSTextureCache::GSDepthStencil
 
 GSTextureCache::GSDepthStencil::GSDepthStencil(GSRenderer* r)
@@ -662,6 +715,13 @@ bool GSTextureCache::GSDepthStencil::Create(int w, int h)
 	m_texture = m_renderer->m_dev->CreateDepthStencil(w, h);
 
 	return m_texture != NULL;
+}
+
+void GSTextureCache::GSDepthStencil::Update()
+{
+	__super::Update();
+
+	// TODO
 }
 
 // GSTextureCache::GSCachedTexture
@@ -701,14 +761,13 @@ void GSTextureCache::GSCachedTexture::Update()
 
 	m_valid = m_valid.runion(r);
 
-	uint8* bits = NULL;
-	int pitch = 0;
-	
-	if(m_texture->Map(&bits, pitch, &r))
+	GSTexture::GSMap m;
+
+	if(m_texture->Map(m, &r))
 	{
 		// in dx9 managed textures can be written directly, less copying is faster, but still not as fast as dx10's UpdateResource
 
-		m_renderer->m_mem.ReadTextureNP(r, bits, pitch, m_renderer->m_context->TEX0, m_renderer->m_env.TEXA);
+		m_renderer->m_mem.ReadTextureNP(r, m.bits, m.pitch, m_renderer->m_context->TEX0, m_renderer->m_env.TEXA);
 
 		m_texture->Unmap();
 	}
@@ -716,7 +775,7 @@ void GSTextureCache::GSCachedTexture::Update()
 	{
 		static uint8* buff = (uint8*)::_aligned_malloc(1024 * 1024 * 4, 16);
 		
-		pitch = ((r.width() + 3) & ~3) * 4;
+		int pitch = ((r.width() + 3) & ~3) * 4;
 
 		m_renderer->m_mem.ReadTextureNP(r, buff, pitch, m_renderer->m_context->TEX0, m_renderer->m_env.TEXA);
 

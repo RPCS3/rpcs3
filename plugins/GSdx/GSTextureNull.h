@@ -31,14 +31,12 @@ public:
 	GSTextureNull();
 	GSTextureNull(int type, int w, int h, int format);
 
-	operator bool() {return m_desc.type != 0;}
-
 	int GetType() const {return m_desc.type;}
 	int GetWidth() const {return m_desc.w;}
 	int GetHeight() const {return m_desc.h;}
 	int GetFormat() const {return m_desc.format;}
 	bool Update(const GSVector4i& r, const void* data, int pitch) {return true;}
-	bool Map(uint8** bits, int& pitch, const GSVector4i* r) {return false;}
+	bool Map(GSMap& m, const GSVector4i* r) {return false;}
 	void Unmap() {}
 	bool Save(const string& fn, bool dds = false) {return false;}
 };

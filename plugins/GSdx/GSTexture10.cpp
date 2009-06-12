@@ -31,11 +31,6 @@ GSTexture10::GSTexture10(ID3D10Texture2D* texture)
 	m_texture->GetDesc(&m_desc);
 }
 
-GSTexture10::operator bool()
-{
-	return !!m_texture;
-}
-
 int GSTexture10::GetType() const
 {
 	if(m_desc.BindFlags & D3D10_BIND_RENDER_TARGET) return GSTexture::RenderTarget;
@@ -74,7 +69,7 @@ bool GSTexture10::Update(const GSVector4i& r, const void* data, int pitch)
 	return false;
 }
 
-bool GSTexture10::Map(uint8** bits, int& pitch, const GSVector4i* r)
+bool GSTexture10::Map(GSMap& m, const GSVector4i* r)
 {
 	if(r != NULL)
 	{
@@ -89,8 +84,8 @@ bool GSTexture10::Map(uint8** bits, int& pitch, const GSVector4i* r)
 
 		if(SUCCEEDED(m_texture->Map(0, D3D10_MAP_READ_WRITE, 0, &map)))
 		{
-			*bits = (uint8*)map.pData;
-			pitch = (int)map.RowPitch;
+			m.bits = (uint8*)map.pData;
+			m.pitch = (int)map.RowPitch;
 
 			return true;
 		}

@@ -104,7 +104,6 @@ private:
 
 public: // TODO
 	D3DPRESENT_PARAMETERS m_pp;
-	CComPtr<ID3DXFont> m_font;
 
 	struct
 	{

@@ -64,14 +64,13 @@ GSTexture* GSTextureFX9::CreateMskFix(uint32 size, uint32 msk, uint32 fix)
 
 		if(t)
 		{
-			uint8* bits;
-			int pitch;
-			
-			if(t->Map(&bits, pitch))
+			GSTexture::GSMap m;
+
+			if(t->Map(m))
 			{
 				for(uint32 i = 0; i < size; i++)
 				{
-					((float*)bits)[i] = (float)((i & msk) | fix) / size;
+					((float*)m.bits)[i] = (float)((i & msk) | fix) / size;
 				}
 
 				t->Unmap();

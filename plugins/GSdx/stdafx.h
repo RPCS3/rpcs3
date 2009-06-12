@@ -99,6 +99,8 @@ typedef signed long long int64;
 	#define _M_AMD64
 #endif
 
+#ifdef _WINDOWS
+
 // directx
 
 #include <ddraw.h>
@@ -108,6 +110,14 @@ typedef signed long long int64;
 #include <d3dx10.h>
 
 #define D3DCOLORWRITEENABLE_RGBA (D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_ALPHA)
+
+#endif 
+
+// opengl
+
+#include <GL/glut.h>
+#include <CG/cg.h>
+#include <CG/cgGL.h>
 
 // sse
 

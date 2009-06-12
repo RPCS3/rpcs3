@@ -360,12 +360,11 @@ void GSRenderer::VSync(int field)
 
 			if(GSTexture* offscreen = m_dev->CopyOffscreen(current, GSVector4(0, 0, 1, 1), size.x, size.y))
 			{
-				uint8* bits = NULL;
-				int pitch = 0;
+				GSTexture::GSMap m;
 
-				if(offscreen->Map(&bits, pitch))
+				if(offscreen->Map(m))
 				{
-					m_capture.DeliverFrame(bits, pitch, m_dev->IsCurrentRGBA());
+					m_capture.DeliverFrame(m.bits, m.pitch, m_dev->IsCurrentRGBA());
 
 					offscreen->Unmap();
 				}

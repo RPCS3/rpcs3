@@ -37,8 +37,7 @@ protected:
 public:
 	GSSettingsDlg();
 
-	static GSSetting g_renderers[]; 
-	static GSSetting g_psversion[];
+	static GSSetting g_renderers[];
 	static GSSetting g_interlace[];
 	static GSSetting g_aspectratio[];
 };

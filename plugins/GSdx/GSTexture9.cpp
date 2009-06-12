@@ -52,11 +52,6 @@ GSTexture9::~GSTexture9()
 {
 }
 
-GSTexture9::operator bool()
-{
-	return !!m_surface;
-}
-
 int GSTexture9::GetType() const
 {
 	if(m_desc.Usage & D3DUSAGE_RENDERTARGET) return GSTexture::RenderTarget;
@@ -111,7 +106,7 @@ bool GSTexture9::Update(const GSVector4i& r, const void* data, int pitch)
 	return false;
 }
 
-bool GSTexture9::Map(uint8** bits, int& pitch, const GSVector4i* r)
+bool GSTexture9::Map(GSMap& m, const GSVector4i* r)
 {
 	HRESULT hr;
 
@@ -121,8 +116,8 @@ bool GSTexture9::Map(uint8** bits, int& pitch, const GSVector4i* r)
 
 		if(SUCCEEDED(hr = m_surface->LockRect(&lr, (LPRECT)r, 0)))
 		{
-			*bits = (uint8*)lr.pBits;
-			pitch = (int)lr.Pitch;
+			m.bits = (uint8*)lr.pBits;
+			m.pitch = (int)lr.Pitch;
 
 			return true;
 		}

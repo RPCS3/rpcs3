@@ -28,13 +28,15 @@ class GSTexture
 public:
 	GSVector2 m_scale;
 
+	struct GSMap {uint8* bits; int pitch;};
+
+	enum {None, RenderTarget, DepthStencil, Texture, Offscreen};
+
 public:
 	GSTexture() : m_scale(1, 1) {}
 	virtual ~GSTexture() {}
 
-	enum {None, RenderTarget, DepthStencil, Texture, Offscreen};
-
-	virtual operator bool() = 0;
+	virtual operator bool() {ASSERT(0); return false;}
 
 	virtual int GetType() const = 0;
 	virtual int GetWidth() const = 0;
@@ -42,7 +44,7 @@ public:
 	virtual int GetFormat() const = 0;
 
 	virtual bool Update(const GSVector4i& r, const void* data, int pitch) = 0;
-	virtual bool Map(uint8** bits, int& pitch, const GSVector4i* r = NULL) = 0;
+	virtual bool Map(GSMap& m, const GSVector4i* r = NULL) = 0;
 	virtual void Unmap() = 0;
 	virtual bool Save(const string& fn, bool dds = false) = 0;
 

@@ -18,7 +18,7 @@
 	/>
 	<Tool
 		Name="VCLinkerTool"
-		AdditionalDependencies="JITProfiling.lib d3d10.lib d3dx10.lib d3d9.lib d3dx9.lib ddraw.lib dxguid.lib winmm.lib strmiids.lib xinput.lib"
+		AdditionalDependencies="JITProfiling.lib d3d10.lib d3dx10.lib d3d9.lib d3dx9.lib ddraw.lib dxguid.lib winmm.lib strmiids.lib xinput.lib cg.lib cgGL.lib glut32.lib"
 		AdditionalLibraryDirectories="./vtune"
 		DelayLoadDLLs="d3d9.dll;d3dx9_41.dll;d3d10.dll;d3dx10_41.dll"
 		GenerateDebugInformation="true"

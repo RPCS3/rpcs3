@@ -255,7 +255,7 @@ public:
 			key |= 1 << 4;
 		}
 
-		m_map.Lookup(key)(v, count, m_min, m_max);
+		m_map[key](v, count, m_min, m_max);
 
 		m_eq.value = (m_min.p == m_max.p).mask() | ((m_min.t == m_max.t).mask() << 4) | ((m_min.c == m_max.c).mask() << 8);
 

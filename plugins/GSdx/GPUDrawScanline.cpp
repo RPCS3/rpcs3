@@ -69,7 +69,7 @@ void GPUDrawScanline::BeginDraw(const GSRasterizerData* data, Functions* f)
 
 	//
 
-	f->ssl = m_ds.Lookup(m_env.sel);
+	f->ssl = m_ds[m_env.sel];
 
 	f->sr = NULL; // TODO
 
@@ -84,7 +84,7 @@ void GPUDrawScanline::BeginDraw(const GSRasterizerData* data, Functions* f)
 	sel.twin = m_env.sel.twin;
 	sel.sprite = m_env.sel.sprite;
 
-	f->ssp = m_sp.Lookup(sel);
+	f->ssp = m_sp[sel];
 }
 
 void GPUDrawScanline::EndDraw(const GSRasterizerStats& stats)

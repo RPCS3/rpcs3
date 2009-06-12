@@ -103,7 +103,4 @@ public:
 
 	void Merge(GSTexture* st[2], GSVector4* sr, GSVector4* dr, const GSVector2i& fs, bool slbg, bool mmod, const GSVector4& c);
 	void Interlace(const GSVector2i& ds, int field, int mode, float yoffset);
-
-	virtual void PSSetShaderResources(GSTexture* sr0, GSTexture* sr1) {}
-	virtual void OMSetRenderTargets(GSTexture* rt, GSTexture* ds) {}
 };

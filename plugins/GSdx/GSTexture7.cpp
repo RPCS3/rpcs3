@@ -45,11 +45,6 @@ GSTexture7::GSTexture7(int type, IDirectDrawSurface7* system, IDirectDrawSurface
 	video->GetSurfaceDesc(&m_desc);
 }
 
-GSTexture7::operator bool()
-{
-	return !!m_system;
-}
-
 int GSTexture7::GetType() const
 {
 	return m_type;
@@ -123,7 +118,7 @@ bool GSTexture7::Update(const GSVector4i& r, const void* data, int pitch)
 	return false;
 }
 
-bool GSTexture7::Map(uint8** bits, int& pitch, const GSVector4i* r)
+bool GSTexture7::Map(GSMap& m, const GSVector4i* r)
 {
 	HRESULT hr;
 
@@ -138,8 +133,8 @@ bool GSTexture7::Map(uint8** bits, int& pitch, const GSVector4i* r)
 
 	if(SUCCEEDED(hr = m_system->Lock(NULL, &desc, DDLOCK_WAIT | DDLOCK_SURFACEMEMORYPTR, NULL)))
 	{
-		*bits = (uint8*)desc.lpSurface;
-		pitch = (int)desc.lPitch;
+		m.bits = (uint8*)desc.lpSurface;
+		m.pitch = (int)desc.lPitch;
 
 		return true;
 	}

@@ -72,7 +72,7 @@ public:
 		}
 	}
 
-	VALUE Lookup(KEY key)
+	VALUE operator [] (KEY key)
 	{
 		m_active = NULL;
 

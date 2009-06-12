@@ -33,17 +33,11 @@ GSSetting GSSettingsDlg::g_renderers[] =
 	{3, "Direct3D10 (Hardware)", NULL},
 	{4, "Direct3D10 (Software)", NULL},
 	{5, "Direct3D10 (Null)", NULL},
-	{6, "Null (Software)", NULL},
-	{7, "Null (Null)", NULL},
-};
-
-GSSetting GSSettingsDlg::g_psversion[] =
-{
-	{D3DPS_VERSION(3, 0), "Pixel Shader 3.0", NULL},
-	{D3DPS_VERSION(2, 0), "Pixel Shader 2.0", NULL},
-	//{D3DPS_VERSION(1, 4), "Pixel Shader 1.4", NULL},
-	//{D3DPS_VERSION(1, 1), "Pixel Shader 1.1", NULL},
-	//{D3DPS_VERSION(0, 0), "Fixed Pipeline (bogus)", NULL},
+	{6, "OpenGL (Hardware)", NULL},
+	{7, "OpenGL (Software)", NULL},
+	{8, "OpenGL (Null)", NULL},
+	{9, "Null (Software)", NULL},
+	{10, "Null (Null)", NULL},
 };
 
 GSSetting GSSettingsDlg::g_interlace[] =
@@ -72,10 +66,6 @@ GSSettingsDlg::GSSettingsDlg()
 void GSSettingsDlg::OnInit()
 {
 	__super::OnInit();
-
-	D3DCAPS9 caps;
-	memset(&caps, 0, sizeof(caps));
-	caps.PixelShaderVersion = D3DPS_VERSION(0, 0);
 
 	m_modes.clear();
 
@@ -107,8 +97,6 @@ void GSSettingsDlg::OnInit()
 					ComboBoxAppend(hWnd, str.c_str(), (LPARAM)&m_modes.back(), w == mode.Width && h == mode.Height && hz == mode.RefreshRate);
 				}
 			}
-
-			d3d->GetDeviceCaps(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, &caps);
 		}
 	}
 
@@ -124,7 +112,6 @@ void GSSettingsDlg::OnInit()
 	}
 
 	ComboBoxInit(GetDlgItem(m_hWnd, IDC_RENDERER), &renderers[0], renderers.size(), theApp.GetConfig("Renderer", 0));
-	ComboBoxInit(GetDlgItem(m_hWnd, IDC_SHADER), g_psversion, countof(g_psversion), theApp.GetConfig("PixelShaderVersion2", D3DPS_VERSION(2, 0)), caps.PixelShaderVersion);
 	ComboBoxInit(GetDlgItem(m_hWnd, IDC_INTERLACE), g_interlace, countof(g_interlace), theApp.GetConfig("Interlace", 0));
 	ComboBoxInit(GetDlgItem(m_hWnd, IDC_ASPECTRATIO), g_aspectratio, countof(g_aspectratio), theApp.GetConfig("AspectRatio", 1));
 
@@ -176,11 +163,6 @@ bool GSSettingsDlg::OnCommand(HWND hWnd, UINT id, UINT code)
 			theApp.SetConfig("Renderer", (int)data);
 		}
 
-		if(ComboBoxGetSelData(GetDlgItem(m_hWnd, IDC_SHADER), data))
-		{
-			theApp.SetConfig("PixelShaderVersion2", (int)data);
-		}
-
 		if(ComboBoxGetSelData(GetDlgItem(m_hWnd, IDC_INTERLACE), data))
 		{
 			theApp.SetConfig("Interlace", (int)data);
@@ -215,15 +197,15 @@ void GSSettingsDlg::UpdateControls()
 	{
 		bool dx9 = i >= 0 && i <= 2;
 		bool dx10 = i >= 3 && i <= 5;
-		bool hw = i == 0 || i == 3;
-		bool sw = i == 1 || i == 4 || i == 6;
+		bool ogl = i >= 6 && i <= 8;
+		bool hw = i == 0 || i == 3 || i == 6;
+		bool sw = i == 1 || i == 4 || i == 7;
 		bool native = !!IsDlgButtonChecked(m_hWnd, IDC_NATIVERES);
 
 		ShowWindow(GetDlgItem(m_hWnd, IDC_LOGO9), dx9 ? SW_SHOW : SW_HIDE);
 		ShowWindow(GetDlgItem(m_hWnd, IDC_LOGO10), dx10 ? SW_SHOW : SW_HIDE);
 
 		EnableWindow(GetDlgItem(m_hWnd, IDC_RESOLUTION), dx9);
-		EnableWindow(GetDlgItem(m_hWnd, IDC_SHADER), dx9);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_RESX), hw && !native);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_RESX_EDIT), hw && !native);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_RESY), hw && !native);

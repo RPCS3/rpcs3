@@ -114,22 +114,16 @@ bool GSDevice9::Create(GSWnd* wnd, bool vsync)
 
 	// shaders
 
-	uint32 psver = (uint32)theApp.GetConfig("PixelShaderVersion2", D3DPS_VERSION(2, 0));
-
-	if(psver > m_d3dcaps.PixelShaderVersion)
+	if(m_d3dcaps.PixelShaderVersion < D3DPS_VERSION(2, 0))
 	{
 		string s = format(
-			"Supported pixel shader version is too low!\n\nSupported: %d.%d\nSelected: %d.%d",
-			D3DSHADER_VERSION_MAJOR(m_d3dcaps.PixelShaderVersion), D3DSHADER_VERSION_MINOR(m_d3dcaps.PixelShaderVersion),
-			D3DSHADER_VERSION_MAJOR(psver), D3DSHADER_VERSION_MINOR(psver));
+			"Supported pixel shader version is too low!\n\nSupported: %d.%d\nNeeded: 2.0 or higher",
+			D3DSHADER_VERSION_MAJOR(m_d3dcaps.PixelShaderVersion), D3DSHADER_VERSION_MINOR(m_d3dcaps.PixelShaderVersion));
 
 		MessageBox(NULL, s.c_str(), "GSdx", MB_OK);
 
 		return false;
 	}
-
-	m_d3dcaps.PixelShaderVersion = min(psver, m_d3dcaps.PixelShaderVersion);
-	m_d3dcaps.VertexShaderVersion = m_d3dcaps.PixelShaderVersion & ~0x10000;
 
 	// convert
 
@@ -224,8 +218,6 @@ bool GSDevice9::Reset(int w, int h, bool fs)
 
 	m_swapchain = NULL;
 	
-	if(m_font) {m_font->OnLostDevice(); m_font = NULL;}
-
 	if(m_vs_cb) _aligned_free(m_vs_cb);
 	if(m_ps_cb) _aligned_free(m_ps_cb);
 
@@ -325,12 +317,6 @@ bool GSDevice9::Reset(int w, int h, bool fs)
 	}
 
 	m_backbuffer = new GSTexture9(backbuffer);
-
-	D3DXFONT_DESC fd;
-	memset(&fd, 0, sizeof(fd));
-	_tcscpy(fd.FaceName, _T("Arial"));
-	fd.Height = 20;
-	D3DXCreateFontIndirect(m_dev, &fd, &m_font);
 
 	m_dev->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
 	m_dev->SetRenderState(D3DRS_LIGHTING, FALSE);
