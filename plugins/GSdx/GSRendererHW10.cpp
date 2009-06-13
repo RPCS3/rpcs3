@@ -336,16 +336,15 @@ void GSRendererHW10::Draw(int prim, GSTexture* rt, GSTexture* ds, GSTextureCache
 
 	GSTextureFX10::PSConstantBuffer ps_cb;
 
-	ps_cb.FogColorAREF = GSVector4((int)env.FOGCOL.FCR, (int)env.FOGCOL.FCG, (int)env.FOGCOL.FCB, (int)context->TEST.AREF) / 255;
-	ps_cb.TA = GSVector4((int)env.TEXA.TA0, (int)env.TEXA.TA1) / 255;
+	ps_cb.FogColor_AREF = GSVector4((int)env.FOGCOL.FCR, (int)env.FOGCOL.FCG, (int)env.FOGCOL.FCB, (int)context->TEST.AREF) / 255;
 
 	if(context->TEST.ATST == 2 || context->TEST.ATST == 5)
 	{
-		ps_cb.FogColorAREF.a -= 0.9f / 255;
+		ps_cb.FogColor_AREF.a -= 0.9f / 255;
 	}
 	else if(context->TEST.ATST == 3 || context->TEST.ATST == 6)
 	{
-		ps_cb.FogColorAREF.a += 0.9f / 255;
+		ps_cb.FogColor_AREF.a += 0.9f / 255;
 	}
 
 	if(tex)
@@ -355,28 +354,27 @@ void GSRendererHW10::Draw(int prim, GSTexture* rt, GSTexture* ds, GSTextureCache
 		int w = tex->m_texture->GetWidth();
 		int h = tex->m_texture->GetHeight();
 
+		ps_cb.WH_TA = GSVector4((int)(1 << context->TEX0.TW), (int)(1 << context->TEX0.TH), env.TEXA.TA0, env.TEXA.TA1) / GSVector4(1, 255).xxyy();
+		ps_cb.HalfTexel = GSVector4(-0.5f, 0.5f).xxyy() / GSVector4(w, h).xyxy();
+
 		switch(context->CLAMP.WMS)
 		{
 		case 0: 
-			ps_cb.MinMax.x = w - 1;
-			ps_cb.MinMax.z = 0;
 			ps_ssel.tau = 1; 
 			break;
 		case 1: 
-			ps_cb.MinMax.x = 0;
-			ps_cb.MinMax.z = w - 1;
 			ps_ssel.tau = 0; 
 			break;
 		case 2: 
-			ps_cb.MinMax.x = (int)context->CLAMP.MINU * w / (1 << context->TEX0.TW);
-			ps_cb.MinMax.z = (int)context->CLAMP.MAXU * w / (1 << context->TEX0.TW);
+			ps_cb.MinMax.x = ((float)(int)context->CLAMP.MINU) / (1 << context->TEX0.TW);
+			ps_cb.MinMax.z = ((float)(int)context->CLAMP.MAXU) / (1 << context->TEX0.TW);
 			ps_cb.MinMaxF.x = ((float)(int)context->CLAMP.MINU + 0.5f) / (1 << context->TEX0.TW);
 			ps_cb.MinMaxF.z = ((float)(int)context->CLAMP.MAXU) / (1 << context->TEX0.TW);
 			ps_ssel.tau = 0; 
 			break;
 		case 3: 
-			ps_cb.MinMax.x = context->CLAMP.MINU;
-			ps_cb.MinMax.z = context->CLAMP.MAXU;
+			ps_cb.MskFix.x = context->CLAMP.MINU;
+			ps_cb.MskFix.z = context->CLAMP.MAXU;
 			ps_ssel.tau = 1; 
 			break;
 		default: 
@@ -386,25 +384,21 @@ void GSRendererHW10::Draw(int prim, GSTexture* rt, GSTexture* ds, GSTextureCache
 		switch(context->CLAMP.WMT)
 		{
 		case 0: 
-			ps_cb.MinMax.y = h - 1;
-			ps_cb.MinMax.w = 0;
 			ps_ssel.tav = 1; 
 			break;
 		case 1: 
-			ps_cb.MinMax.y = 0;
-			ps_cb.MinMax.w = h - 1;
 			ps_ssel.tav = 0; 
 			break;
 		case 2: 
-			ps_cb.MinMax.y = (int)context->CLAMP.MINV * h / (1 << context->TEX0.TH);
-			ps_cb.MinMax.w = (int)context->CLAMP.MAXV * h / (1 << context->TEX0.TH);
+			ps_cb.MinMax.y = ((float)(int)context->CLAMP.MINV) / (1 << context->TEX0.TH);
+			ps_cb.MinMax.w = ((float)(int)context->CLAMP.MAXV) / (1 << context->TEX0.TH);
 			ps_cb.MinMaxF.y = ((float)(int)context->CLAMP.MINV + 0.5f) / (1 << context->TEX0.TH);
 			ps_cb.MinMaxF.w = ((float)(int)context->CLAMP.MAXV) / (1 << context->TEX0.TH);
 			ps_ssel.tav = 0; 
 			break;
 		case 3: 
-			ps_cb.MinMax.y = context->CLAMP.MINV;
-			ps_cb.MinMax.w = context->CLAMP.MAXV;
+			ps_cb.MskFix.y = context->CLAMP.MINV;
+			ps_cb.MskFix.w = context->CLAMP.MAXV;
 			ps_ssel.tav = 1; 
 			break;
 		default: 

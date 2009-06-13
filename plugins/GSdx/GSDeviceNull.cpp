@@ -29,7 +29,7 @@ bool GSDeviceNull::Create(GSWnd* wnd, bool vsync)
 		return false;
 	}
 
-	Reset(1, 1, true);
+	Reset(1, 1, false);
 
 	return true;
 }

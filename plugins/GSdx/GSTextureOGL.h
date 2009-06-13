@@ -33,7 +33,8 @@ class GSTextureOGL : public GSTexture
 	int m_format;
 
 public:
-	explicit GSTextureOGL(GLuint texture);
+	GSTextureOGL(GLuint texture, int type, int width, int height, int format = 0);
+	virtual ~GSTextureOGL();
 
 	int GetType() const;
 	int GetWidth() const;

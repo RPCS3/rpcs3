@@ -53,11 +53,9 @@ public:
 
 	struct PSConstantBuffer
 	{
-		GSVector4 FogColorAREF;
+		GSVector4 FogColor_AREF;
 		GSVector4 HalfTexel;
-		GSVector2 WH;
-		float TA0;
-		float TA1;
+		GSVector4 WH_TA;
 		GSVector4 MinMax;
 		GSVector4 MinMaxF;
 		GSVector4i MskFix;

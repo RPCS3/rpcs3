@@ -26,7 +26,6 @@
 
 class GSDevice10 : public GSDevice
 {
-private:
 	ID3D10Buffer* m_vb;
 	size_t m_vb_stride;
 	ID3D10InputLayout* m_layout;

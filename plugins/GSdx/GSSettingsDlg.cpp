@@ -33,9 +33,11 @@ GSSetting GSSettingsDlg::g_renderers[] =
 	{3, "Direct3D10 (Hardware)", NULL},
 	{4, "Direct3D10 (Software)", NULL},
 	{5, "Direct3D10 (Null)", NULL},
+	#if 0
 	{6, "OpenGL (Hardware)", NULL},
 	{7, "OpenGL (Software)", NULL},
 	{8, "OpenGL (Null)", NULL},
+	#endif
 	{9, "Null (Software)", NULL},
 	{10, "Null (Null)", NULL},
 };

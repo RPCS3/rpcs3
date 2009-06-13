@@ -221,7 +221,7 @@ bool GSDevice10::Create(GSWnd* wnd, bool vsync)
 
 	//
 
-	Reset(1, 1, true);
+	Reset(1, 1, false);
 
 	//
 

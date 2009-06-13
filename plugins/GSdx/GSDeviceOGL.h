@@ -33,8 +33,22 @@ class GSDeviceOGL : public GSDevice
 	
 	#endif
 
+	GLuint m_vbo;
+	GLuint m_fbo;
+
+	struct
+	{
+		size_t stride, start, count, limit;
+	} m_vertices;
+
+	int m_topology;
+
+	//
+
 	static void OnStaticCgError(CGcontext ctx, CGerror err, void* p) {((GSDeviceOGL*)p)->OnCgError(ctx, err);}
 	void OnCgError(CGcontext ctx, CGerror err);
+
+	//
 
 	GSTexture* Create(int type, int w, int h, int format);
 
@@ -67,4 +81,8 @@ public:
 	GSTexture* CopyOffscreen(GSTexture* src, const GSVector4& sr, int w, int h, int format = 0);
 
 	void StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, int shader = 0, bool linear = true);
+
+	void IASetVertexBuffer(const void* vertices, size_t stride, size_t count);
+	void IASetInputLayout(); // TODO
+	void IASetPrimitiveTopology(int topology);
 };

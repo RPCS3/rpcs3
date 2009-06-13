@@ -77,10 +77,12 @@ public:
 
 	__declspec(align(16)) struct PSConstantBuffer
 	{
-		GSVector4 FogColorAREF;
-		GSVector4 TA;
-		GSVector4i MinMax;
+		GSVector4 FogColor_AREF;
+		GSVector4 HalfTexel;
+		GSVector4 WH_TA;
+		GSVector4 MinMax;
 		GSVector4 MinMaxF;
+		GSVector4i MskFix;
 
 		struct PSConstantBuffer() {memset(this, 0, sizeof(*this));}
 
@@ -93,13 +95,17 @@ public:
 			GSVector4i b1 = b[1];
 			GSVector4i b2 = b[2];
 			GSVector4i b3 = b[3];
+			GSVector4i b4 = b[4];
+			GSVector4i b5 = b[5];
 
-			if(!((a[0] == b0) & (a[1] == b1) & (a[2] == b2) & (a[3] == b3)).alltrue())
+			if(!((a[0] == b0) & (a[1] == b1) & (a[2] == b2) & (a[3] == b3) & (a[4] == b4) & (a[5] == b5)).alltrue())
 			{
 				a[0] = b0;
 				a[1] = b1;
 				a[2] = b2;
 				a[3] = b3;
+				a[4] = b4;
+				a[5] = b5;
 
 				return true;
 			}

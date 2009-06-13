@@ -308,17 +308,15 @@ void GSRendererHW9::Draw(int prim, GSTexture* rt, GSTexture* ds, GSTextureCache:
 
 	GSTextureFX9::PSConstantBuffer ps_cb;
 
-	ps_cb.FogColorAREF = GSVector4((int)env.FOGCOL.FCR, (int)env.FOGCOL.FCG, (int)env.FOGCOL.FCB, (int)context->TEST.AREF) / 255;
-	ps_cb.TA0 = (float)(int)env.TEXA.TA0 / 255;
-	ps_cb.TA1 = (float)(int)env.TEXA.TA1 / 255;
+	ps_cb.FogColor_AREF = GSVector4((int)env.FOGCOL.FCR, (int)env.FOGCOL.FCG, (int)env.FOGCOL.FCB, (int)context->TEST.AREF) / 255;
 
 	if(context->TEST.ATST == 2 || context->TEST.ATST == 5)
 	{
-		ps_cb.FogColorAREF.a -= 0.9f / 255;
+		ps_cb.FogColor_AREF.a -= 0.9f / 255;
 	}
 	else if(context->TEST.ATST == 3 || context->TEST.ATST == 6)
 	{
-		ps_cb.FogColorAREF.a += 0.9f / 255;
+		ps_cb.FogColor_AREF.a += 0.9f / 255;
 	}
 
 	if(tex)
@@ -328,8 +326,8 @@ void GSRendererHW9::Draw(int prim, GSTexture* rt, GSTexture* ds, GSTextureCache:
 		int w = tex->m_texture->GetWidth();
 		int h = tex->m_texture->GetHeight();
 
-		ps_cb.WH = GSVector2(w, h);
-		ps_cb.HalfTexel = GSVector4(-0.5f / w, -0.5f / h, +0.5f / w, +0.5f / h);
+		ps_cb.WH_TA = GSVector4(w, h, env.TEXA.TA0, env.TEXA.TA1) / GSVector4(1, 255).xxyy();
+		ps_cb.HalfTexel = GSVector4(-0.5f, 0.5f).xxyy() / GSVector4(w, h).xyxy();
 
 		switch(context->CLAMP.WMS)
 		{

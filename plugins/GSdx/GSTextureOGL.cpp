@@ -22,19 +22,29 @@
 #include "stdafx.h"
 #include "GSTextureOGL.h"
 
-GSTextureOGL::GSTextureOGL(GLuint texture)
+GSTextureOGL::GSTextureOGL(GLuint texture, int type, int width, int height, int format)
 	: m_texture(texture)
-	, m_type(None)
-	, m_width(0)
-	, m_height(0)
-	, m_format(0)
+	, m_type(type)
+	, m_width(width)
+	, m_height(height)
+	, m_format(format)
 {
-	// TODO: m_type, m_format, fb/ds?
+}
 
-	glBindTexture(GL_TEXTURE_2D, texture);
-
-    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &m_width);
-    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &m_height);
+GSTextureOGL::~GSTextureOGL()
+{
+	if(m_texture)
+	{
+		switch(m_type)
+		{
+		case DepthStencil:
+			glDeleteRenderbuffersEXT(1, &m_texture);
+			break;
+		default:
+			glDeleteTextures(1, &m_texture);
+			break;
+		}
+	}
 }
 
 int GSTextureOGL::GetType() const
@@ -59,7 +69,7 @@ int GSTextureOGL::GetFormat() const
 
 bool GSTextureOGL::Update(const GSVector4i& r, const void* data, int pitch)
 {
-	// TODO
+	// TODO: glTexSubImage2D looks like UpdateSubresource but does not take a pitch
 
 	return false;
 }

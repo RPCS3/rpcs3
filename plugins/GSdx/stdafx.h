@@ -115,9 +115,14 @@ typedef signed long long int64;
 
 // opengl
 
+#include <GL/glew.h>
 #include <GL/glut.h>
 #include <CG/cg.h>
 #include <CG/cgGL.h>
+
+#ifdef _WINDOWS
+#include <GL/wglew.h>
+#endif
 
 // sse
 
