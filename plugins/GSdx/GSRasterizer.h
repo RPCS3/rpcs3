@@ -43,6 +43,7 @@ public:
 
 	virtual void Draw(const GSRasterizerData* data) = 0;
 	virtual void GetStats(GSRasterizerStats& stats) = 0;
+	virtual void Terminate() = 0;
 	virtual void PrintStats() = 0;
 };
 
@@ -101,6 +102,7 @@ public:
 	void Draw(const GSRasterizerData* data);
 	void GetStats(GSRasterizerStats& stats);
 	void PrintStats() {m_ds->PrintStats();}
+	void Terminate() {}
 };
 
 class GSRasterizerMT : public GSRasterizer, private GSThread
@@ -118,6 +120,7 @@ public:
 	// IRasterizer
 
 	void Draw(const GSRasterizerData* data);
+	void Terminate();
 };
 
 class GSRasterizerList : protected list<IRasterizer*>, public IRasterizer
@@ -148,4 +151,5 @@ public:
 	void Draw(const GSRasterizerData* data);
 	void GetStats(GSRasterizerStats& stats);
 	void PrintStats();
+	void Terminate();
 };

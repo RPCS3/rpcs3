@@ -823,9 +823,12 @@ GSRasterizerMT::GSRasterizerMT(IDrawScanline* ds, int id, int threads, long* syn
 	}
 }
 
-GSRasterizerMT::~GSRasterizerMT()
+GSRasterizerMT::~GSRasterizerMT() {}
+
+void GSRasterizerMT::Terminate()
 {
 	m_exit = true;
+	CloseThread();
 }
 
 void GSRasterizerMT::Draw(const GSRasterizerData* data)
@@ -877,8 +880,14 @@ GSRasterizerList::GSRasterizerList()
 GSRasterizerList::~GSRasterizerList()
 {
 	_aligned_free(m_sync);
+}
 
-	FreeRasterizers();
+void GSRasterizerList::Terminate()
+{
+	for(list<IRasterizer*>::iterator i = begin(); i != end(); i++)
+	{
+		(*i)->Terminate();
+	}
 }
 
 void GSRasterizerList::FreeRasterizers()

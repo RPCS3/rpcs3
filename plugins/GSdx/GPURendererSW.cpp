@@ -32,6 +32,7 @@ GPURendererSW::GPURendererSW(GSDevice* dev)
 
 GPURendererSW::~GPURendererSW()
 {
+	m_rl.Terminate();
 }
 
 void GPURendererSW::ResetDevice() 
