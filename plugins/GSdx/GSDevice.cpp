@@ -164,7 +164,11 @@ void GSDevice::Merge(GSTexture* st[2], GSVector4* sr, GSVector4* dr, const GSVec
 
 	// TODO: m_1x1
 
-	DoMerge(st, sr, dr, m_merge, slbg, mmod, c);
+	// KH:COM crashes at startup when booting *through the bios* due to m_merge being NULL.
+	// (texture appears to be non-null, and is being re-created at a size around like 1700x340,
+	// dunno if that's relevant) -- air
+	if( m_merge )
+		DoMerge(st, sr, dr, m_merge, slbg, mmod, c);
 
 	m_current = m_merge;
 }
