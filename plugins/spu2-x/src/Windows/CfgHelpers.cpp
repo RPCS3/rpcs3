@@ -110,7 +110,7 @@ void CfgReadStr(const TCHAR* Section, const TCHAR* Name, TCHAR* Data, int DataSi
 	}
 }
 
-void CfgReadStr(const TCHAR* Section, const TCHAR* Name, wstring Data, int DataSize, const TCHAR* Default)
+void CfgReadStr(const TCHAR* Section, const TCHAR* Name, wstring& Data, int DataSize, const TCHAR* Default)
 {
 	wchar_t workspace[512];
 	GetPrivateProfileString(Section,Name,L"",workspace,DataSize,CfgFile);

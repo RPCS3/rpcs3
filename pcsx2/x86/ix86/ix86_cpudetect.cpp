@@ -180,20 +180,54 @@ static char* bool_to_char( bool testcond )
 
 #endif
 
+#ifdef _WINDOWS_
+static HANDLE s_threadId = NULL;
+static DWORD s_oldmask = ERROR_INVALID_PARAMETER;
+#endif
+
+static void SetSingleAffinity()
+{
+#ifdef _WINDOWS_
+	// Assign a single CPU thread affinity to ensure rdtsc() accuracy.
+	// (rdtsc for each CPU/core can differ, causing skewed results)
+
+	DWORD_PTR availProcCpus, availSysCpus;
+	if( !GetProcessAffinityMask( GetCurrentProcess(), &availProcCpus, &availSysCpus ) ) return;
+	
+	int i;
+	for( i=0; i<32; ++i )
+	{
+		if( availProcCpus & (1<<i) ) break;
+	}
+
+	HANDLE s_threadId = GetCurrentThread();
+	DWORD s_oldmask = SetThreadAffinityMask( s_threadId, (1UL<<i) );
+
+	if( s_oldmask == ERROR_INVALID_PARAMETER )
+	{
+		Console::Notice(
+			"CpuDetect: SetThreadAffinityMask failed...\n"
+			"\tSystem Affinity : 0x%08x"
+			"\tProcess Affinity: 0x%08x"
+			"\tAttempted Thread Affinity CPU: i",
+			params availProcCpus, availSysCpus, i
+		);
+	}
+#endif
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////
 //
 s64 CPUSpeedHz( u64 time )
 {
-   u64 timeStart, 
-            timeStop;
-   s64 startTick, 
-            endTick;
+	u64 timeStart, timeStop;
+	s64 startTick, endTick;
 
-   if( ! cpucaps.hasTimeStampCounter )
-   {
-      return 0; //check if function is supported
-   }
-	
+	if( ! cpucaps.hasTimeStampCounter )
+		return 0; //check if function is supported
+
+	SetSingleAffinity();
+
 	// Align the cpu execution to a cpuTick boundary.
 
 	do { timeStart = GetCPUTicks();
@@ -212,6 +246,11 @@ s64 CPUSpeedHz( u64 time )
 		endTick = GetRdtsc();
 	}
 	while( ( timeStop - timeStart ) < time );
+
+#ifdef _WINDOWS_
+	if( s_oldmask != ERROR_INVALID_PARAMETER )
+		SetThreadAffinityMask( s_threadId, s_oldmask );
+#endif
 
 	return (s64)( endTick - startTick );
 }

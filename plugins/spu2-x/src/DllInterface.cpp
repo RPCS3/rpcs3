@@ -307,8 +307,7 @@ EXPORT_C_(void) SPU2shutdown()
 
 EXPORT_C_(void) SPU2setClockPtr(u32 *ptr)
 {
-	cPtr=ptr;
-	hasPtr=(cPtr!=NULL);
+	cyclePtr = ptr;
 }
 
 bool numpad_plus = false, numpad_plus_old = false;
@@ -341,14 +340,14 @@ EXPORT_C_(void) SPU2async(u32 cycles)
 		numpad_plus_old = numpad_plus;*/
 	}
 
-	if(hasPtr)
+	if(cyclePtr != NULL)
 	{
-		TimeUpdate(*cPtr); 
+		TimeUpdate( *cyclePtr );
 	}
 	else
 	{
-		pClocks+=cycles;
-		TimeUpdate(pClocks);
+		pClocks += cycles;
+		TimeUpdate( pClocks );
 	}
 }
 
@@ -373,7 +372,7 @@ EXPORT_C_(u16) SPU2read(u32 rmem)
 	}
 	else
 	{
-		TimeUpdate( *cPtr );
+		TimeUpdate( *cyclePtr );
 
 		if (rmem>>16 == 0x1f80)
 		{
@@ -430,7 +429,9 @@ EXPORT_C_(void) SPU2write(u32 rmem, u16 value)
 		// If the SPU2 isn't in in sync with the IOP, samples can end up playing at rather
 		// incorrect pitches and loop lengths.
 
-		TimeUpdate( *cPtr );
+		if( cyclePtr != NULL )
+			TimeUpdate( *cyclePtr );
+
 		if (rmem>>16 == 0x1f80)
 			SPU_ps1_write(rmem,value);
 		else

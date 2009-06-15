@@ -194,10 +194,6 @@ public:
 	 
 		for(uint i=0;i<m_NumBuffers;i++)
 		{
-			// [Air] note: wfx.nBlockAlign modifier was *10 -- seems excessive to me but maybe
-			// it was needed for some quirky driver?  Theoretically we want the notification as soon
-			// as possible after the buffer has finished playing.
-
 			buffer_events[i] = CreateEvent(NULL,FALSE,FALSE,NULL);
 			not[i].dwOffset = (wfx.nBlockAlign + BufferSizeBytes*(i+1)) % desc.dwBufferBytes;
 			not[i].hEventNotify = buffer_events[i];

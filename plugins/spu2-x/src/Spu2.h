@@ -174,13 +174,12 @@ extern int PlayMode;
 extern int recording;
 
 extern u32 lClocks;
-extern u32* cPtr;
-extern bool hasPtr;
+extern u32* cyclePtr;
 
 extern void SPU2writeLog( const char* action, u32 rmem, u16 value );
 
 extern void TimeUpdate(u32 cClocks);
-extern u16 SPU_ps1_read(u32 mem);
+extern u16  SPU_ps1_read(u32 mem);
 extern void SPU_ps1_write(u32 mem, u16 value);
 extern void SPU2_FastWrite( u32 rmem, u16 value );
 

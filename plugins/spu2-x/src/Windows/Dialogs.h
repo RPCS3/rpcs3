@@ -69,7 +69,7 @@ void CfgWriteInt(const TCHAR* Section, const TCHAR* Name, int Value);
 void CfgWriteStr(const TCHAR* Section, const TCHAR* Name, const wstring& Data);
 
 bool CfgReadBool(const TCHAR *Section,const TCHAR* Name, bool Default);
-void CfgReadStr(const TCHAR* Section, const TCHAR* Name, wstring Data, int DataSize, const TCHAR* Default);
+void CfgReadStr(const TCHAR* Section, const TCHAR* Name, wstring& Data, int DataSize, const TCHAR* Default);
 void CfgReadStr(const TCHAR* Section, const TCHAR* Name, TCHAR* Data, int DataSize, const TCHAR* Default);
 int CfgReadInt(const TCHAR* Section, const TCHAR* Name,int Default);
 

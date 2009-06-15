@@ -53,10 +53,8 @@ s16 OutPos;
 s16 InputPos;
 u32 Cycles;
 
-u32* cPtr=NULL;
-u32  lClocks=0;
-
-bool hasPtr=false;
+u32* cyclePtr	= NULL;
+u32  lClocks	= 0;
 
 int PlayMode;
 
@@ -932,10 +930,13 @@ __forceinline void SPU2_FastWrite( u32 rmem, u16 value )
 
 				if( ((value>>15)&1) && (!thiscore.CoreEnabled) && (thiscore.InitDelay==0) ) // on init/reset
 				{
-					if(hasPtr)
+					// When we have exact cycle update info from the Pcsx2 IOP unit, then use
+					// the more accurate delayed initialization system.
+
+					if(cyclePtr != NULL)
 					{
-						thiscore.InitDelay=1;
-						thiscore.Regs.STATX=0;	
+						thiscore.InitDelay  = 1;
+						thiscore.Regs.STATX = 0;
 					}
 					else
 					{
