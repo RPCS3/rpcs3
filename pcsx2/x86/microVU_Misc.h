@@ -164,18 +164,15 @@ declareAllVariables
 // Define mVUquickSearch
 #ifndef __LINUX__
 extern u8 mVUsearchXMM[0x1000];
-#endif
-
 typedef u32 (__fastcall *mVUCall)(void*, void*);
-#ifndef __LINUX__
 #define mVUquickSearch(dest, src, size) ((((mVUCall)((void*)mVUsearchXMM))(dest, src)) == 0xf)
-// Note: If GCC builds crash with above function, it means
-// that they're not guaranteeing 16-byte alignment on the structs
-// being compared. So use this function instead:
+#define mVUemitSearch() { mVUcustomSearch(); }
 #else
-//#define mVUquickSearch(dest, src, size) (!memcmp(dest, src, size))
+// Note: GCC builds crash with custom search function, because
+// they're not guaranteeing 16-byte alignment on the structs :(
+// #define mVUquickSearch(dest, src, size) (!memcmp(dest, src, size))
 #define mVUquickSearch(dest, src, size) (!memcmp_mmx(dest, src, size))
-#define mVUemitSearch() 
+#define mVUemitSearch()
 #endif
 
 // Misc Macros...

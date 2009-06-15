@@ -277,21 +277,20 @@ microVUt(void) mVUanalyzeR2(mV, int Ft, bool canBeNOP) {
 	iPC = curPC;													\
 }
 
-
 microVUt(void) mVUanalyzeSflag(mV, int It) {
+	mVUlow.readFlags = 1;
+	analyzeVIreg2(It, mVUlow.VI_write, 1);
 	if (!It) { mVUlow.isNOP = 1; }
 	else {
 		mVUinfo.swapOps = 1;
 		mVUsFlagHack = 0; // Don't Optimize Out Status Flags for this block
-		if (mVUcount < 4)	{ mVUpBlock->pState.needExactMatch |= 0xf /*<< mVUcount*/; }
+		flagSet(sFLAG.doNonSticky);
+		if (mVUcount < 4)	{ mVUpBlock->pState.needExactMatch |= 0xf; }
 		if (mVUcount >= 1)	{ incPC2(-2); mVUlow.useSflag = 1; incPC2(2); }
 		// Note: useSflag is used for status flag optimizations when a FSSET instruction is called.
 		// Do to stalls, it can only be set one instruction prior to the status flag read instruction
 		// if we were guaranteed no-stalls were to happen, it could be set 4 instruction prior.
 	}
-	mVUlow.readFlags = 1;
-	analyzeVIreg2(It, mVUlow.VI_write, 1);
-	flagSet(sFLAG.doNonSticky);
 }
 
 microVUt(void) mVUanalyzeFSSET(mV) {
@@ -304,16 +303,15 @@ microVUt(void) mVUanalyzeFSSET(mV) {
 //------------------------------------------------------------------
 
 microVUt(void) mVUanalyzeMflag(mV, int Is, int It) {
-	if (!It) { mVUlow.isNOP = 1; }
-	else { // Need set _doMac for 4 previous Ops (need to do all 4 because stalls could change the result needed)
-		mVUinfo.swapOps = 1;
-		if (mVUcount < 4) { mVUpBlock->pState.needExactMatch |= 0xf << (/*mVUcount +*/ 4); }
-
-	}
 	mVUlow.readFlags = 1;
 	analyzeVIreg1(Is, mVUlow.VI_read[0]);
 	analyzeVIreg2(It, mVUlow.VI_write, 1);
-	flagSet(mFLAG.doFlag);
+	if (!It) { mVUlow.isNOP = 1; }
+	else { // Need set _doMac for 4 previous Ops (need to do all 4 because stalls could change the result needed)
+		mVUinfo.swapOps = 1;
+		if (mVUcount < 4) { mVUpBlock->pState.needExactMatch |= 0xf << 4; }
+		flagSet(mFLAG.doFlag);
+	}
 }
 
 //------------------------------------------------------------------
@@ -323,7 +321,7 @@ microVUt(void) mVUanalyzeMflag(mV, int Is, int It) {
 microVUt(void) mVUanalyzeCflag(mV, int It) {
 	mVUinfo.swapOps = 1;
 	mVUlow.readFlags = 1;
-	if (mVUcount < 4) { mVUpBlock->pState.needExactMatch |= 0xf << (/*mVUcount +*/ 8); }
+	if (mVUcount < 4) { mVUpBlock->pState.needExactMatch |= 0xf << 8; }
 	analyzeVIreg2(It, mVUlow.VI_write, 1);
 }
 
