@@ -30,6 +30,8 @@ GSDeviceOGL::GSDeviceOGL()
 	, m_vbo(0)
 	, m_fbo(0)
 	, m_topology(-1)
+	, m_rt((GLuint)-1)
+	, m_ds((GLuint)-1)
 {
 	m_vertices.stride = 0;
 	m_vertices.start = 0;
@@ -110,10 +112,26 @@ bool GSDeviceOGL::Create(GSWnd* wnd, bool vsync)
 		return false;
 	}
 
-	// const char* exts = (const char*)glGetString(GL_EXTENSIONS);
+	#ifdef _WINDOWS
 
-	glGenBuffers(1, &m_vbo);
-	glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
+	if(WGLEW_EXT_swap_control)
+	{
+		wglSwapIntervalEXT(vsync ? 1 : 0);
+	}
+
+	#endif
+
+	const char* vendor = (const char*)glGetString(GL_VENDOR);
+	const char* renderer = (const char*)glGetString(GL_RENDERER);
+	const char* version = (const char*)glGetString(GL_VERSION);
+	const char* exts = (const char*)glGetString(GL_EXTENSIONS);
+
+	printf("%s, %s, OpenGL %s\n", vendor, renderer, version);
+
+	const char* str = strstr(exts, "ARB_texture_non_power_of_two");
+
+	glGenBuffers(1, &m_vbo); CheckError();
+	glBindBuffer(GL_ARRAY_BUFFER, m_vbo); CheckError();
 	// TODO: setup layout?
 
 	GSVector4i r = wnd->GetClientRect();
@@ -128,31 +146,38 @@ bool GSDeviceOGL::Reset(int w, int h, bool fs)
 	if(!__super::Reset(w, h, fs))
 		return false;
 
-	m_backbuffer = new GSTextureOGL(0, GSTexture::RenderTarget, w, h);
+	glCullFace(GL_FRONT_AND_BACK); CheckError();
+	glDisable(GL_LIGHTING); CheckError();
+	glDisable(GL_ALPHA_TEST); CheckError();
+	glEnable(GL_SCISSOR_TEST); CheckError();
 
-	glCullFace(GL_FRONT_AND_BACK);
-	glDisable(GL_LIGHTING);
-	glDisable(GL_ALPHA_TEST);
-	glEnable(GL_SCISSOR_TEST);
+	glMatrixMode(GL_PROJECTION); CheckError();
+	glLoadIdentity(); CheckError();
+	glMatrixMode(GL_MODELVIEW); CheckError();
+	glLoadIdentity(); CheckError();
 
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity();
-
-	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
+	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST); CheckError();
 
 	// glViewport(0, 0, w, h);
 
 	if(m_fbo) {glDeleteFramebuffersEXT(1, &m_fbo); m_fbo = 0;}
 
-	glGenFramebuffers(1, &m_fbo);
+	glGenFramebuffers(1, &m_fbo); CheckError();
 
 	if(m_fbo == 0) return false;
 
-	glBindFramebuffer(GL_FRAMEBUFFER, m_fbo);
+	glBindFramebuffer(GL_FRAMEBUFFER, m_fbo); CheckError();
 
 	return true;
+}
+
+void GSDeviceOGL::Present(const GSVector4i& r, int shader)
+{
+	glBindFramebuffer(GL_FRAMEBUFFER, 0); CheckError();
+
+	// TODO: m_current => backbuffer
+
+	Flip();
 }
 
 void GSDeviceOGL::Flip()
@@ -170,7 +195,7 @@ void GSDeviceOGL::BeginScene()
 
 void GSDeviceOGL::DrawPrimitive()
 {
-	glDrawArrays(m_topology, m_vertices.count, m_vertices.start);
+	glDrawArrays(m_topology, m_vertices.count, m_vertices.start); CheckError();
 }
 
 void GSDeviceOGL::EndScene()
@@ -181,10 +206,21 @@ void GSDeviceOGL::EndScene()
 
 void GSDeviceOGL::ClearRenderTarget(GSTexture* t, const GSVector4& c)
 {
+	GLuint texture = *(GSTextureOGL*)t;
+
+	if(texture == 0)
+	{
+		// TODO: backbuffer
+	}
+	else
+	{
+		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, texture); CheckError();
+	}
+
 	// TODO: disable scissor, color mask
 
-    glClearColor(c.r, c.g, c.b, c.a);
-	glClear(GL_COLOR_BUFFER_BIT);
+    glClearColor(c.r, c.g, c.b, c.a); CheckError();
+	glClear(GL_COLOR_BUFFER_BIT); CheckError();
 }
 
 void GSDeviceOGL::ClearRenderTarget(GSTexture* t, uint32 c)
@@ -194,18 +230,22 @@ void GSDeviceOGL::ClearRenderTarget(GSTexture* t, uint32 c)
 
 void GSDeviceOGL::ClearDepth(GSTexture* t, float c)
 {
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_DEPTH_COMPONENT, *(GSTextureOGL*)t); CheckError();
+
 	// TODO: disable scissor, depth mask
 
-    glClearDepth(c);
-	glClear(GL_DEPTH_BUFFER_BIT);
+    glClearDepth(c); CheckError();
+	glClear(GL_DEPTH_BUFFER_BIT); CheckError();
 }
 
 void GSDeviceOGL::ClearStencil(GSTexture* t, uint8 c)
 {
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_STENCIL_INDEX, *(GSTextureOGL*)t); CheckError();
+
 	// TODO: disable scissor, depth (?) mask
 
-	glClearStencil((GLint)c);
-	glClear(GL_STENCIL_BUFFER_BIT);
+	glClearStencil((GLint)c); CheckError();
+	glClear(GL_STENCIL_BUFFER_BIT); CheckError();
 }
 
 GSTexture* GSDeviceOGL::Create(int type, int w, int h, int format)
@@ -215,20 +255,20 @@ GSTexture* GSDeviceOGL::Create(int type, int w, int h, int format)
 	switch(type)
 	{
 	case GSTexture::RenderTarget:
-		glGenTextures(1, &texture);
-		glBindTexture(GL_TEXTURE_2D, texture);
-		glTexImage2D(GL_TEXTURE_2D, 0, format, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+		glGenTextures(1, &texture); CheckError();
+		glBindTexture(GL_TEXTURE_2D, texture); CheckError();
+		glTexImage2D(GL_TEXTURE_2D, 0, format, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL); CheckError();
 		break;
 	case GSTexture::DepthStencil:
-	    glGenRenderbuffersEXT(1, &texture);
-        glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, texture);
-        glRenderbufferStorageEXT(GL_RENDERBUFFER_EXT, GL_DEPTH32F_STENCIL8, w, h);
+	    glGenRenderbuffers(1, &texture); CheckError();
+        glBindRenderbuffer(GL_RENDERBUFFER, texture); CheckError();
+        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH32F_STENCIL8, w, h); CheckError();
 		// TODO: depth textures?
 		break;
 	case GSTexture::Texture:
-		glGenTextures(1, &texture);
-		glBindTexture(GL_TEXTURE_2D, texture);
-		glTexImage2D(GL_TEXTURE_2D, 0, format, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+		glGenTextures(1, &texture); CheckError();
+		glBindTexture(GL_TEXTURE_2D, texture); CheckError();
+		glTexImage2D(GL_TEXTURE_2D, 0, format, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL); CheckError();
 		break;
 	case GSTexture::Offscreen:
 		// TODO: ???
@@ -298,34 +338,41 @@ void GSDeviceOGL::IASetVertexBuffer(const void* vertices, size_t stride, size_t 
 {
 	ASSERT(m_vertices.count == 0);
 
-	glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
+	glBindBuffer(GL_ARRAY_BUFFER, m_vbo); CheckError();
+
+	bool growbuffer = false;
+	bool discard = false; // in opengl 3.x this should be a flag to glMapBuffer, as I read somewhere
 
 	if(count * stride > m_vertices.limit * m_vertices.stride)
 	{
 		m_vertices.start = 0;
 		m_vertices.count = 0;
-		m_vertices.limit = 0;
-	}
-
-	if(m_vertices.limit == 0)
-	{
 		m_vertices.limit = max(count * 3 / 2, 10000);
 
-		glBufferData(GL_ARRAY_BUFFER, m_vertices.limit * stride, NULL, GL_DYNAMIC_DRAW); // GL_STREAM_DRAW?
+		growbuffer = true;
 	}
 
 	if(m_vertices.start + count > m_vertices.limit || stride != m_vertices.stride)
 	{
-		m_vertices.start = 0; // TODO: how to discard and not overwrite previous data?
+		m_vertices.start = 0;
+
+		discard = true;
 	}
 
+	if(growbuffer || discard)
+	{
+		glBufferData(GL_ARRAY_BUFFER, m_vertices.limit * stride, NULL, GL_DYNAMIC_DRAW); CheckError(); // GL_STREAM_DRAW?
+	}
+
+	glBufferSubData(GL_ARRAY_BUFFER, m_vertices.start * stride, count * stride, vertices); CheckError();
+/*
 	if(GLvoid* v = glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY))
 	{
 		GSVector4i::storent((uint8*)v + m_vertices.start * stride, vertices, count * stride);
 
-		glUnmapBuffer(GL_ARRAY_BUFFER);
+		glUnmapBuffer(GL_ARRAY_BUFFER); CheckError();
 	}
-
+*/
 	m_vertices.count = count;
 	m_vertices.stride = stride;
 }
@@ -340,3 +387,25 @@ void GSDeviceOGL::IASetPrimitiveTopology(int topology)
 	m_topology = topology;
 }
 
+void GSDeviceOGL::OMSetRenderTargets(GSTexture* rt, GSTexture* ds)
+{
+	GLuint rti = 0;
+	GLuint dsi = 0;
+
+	if(rt) rti = *(GSTextureOGL*)rt;
+	if(ds) dsi = *(GSTextureOGL*)ds;
+
+	// TODO: if(m_rt != rti)
+	{
+		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, rti); CheckError();
+
+		// TODO: m_rt = rti;
+	}
+
+	// TODO: if(m_ds != dsi)
+	{
+		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_DEPTH_COMPONENT, dsi); CheckError();
+
+		// TODO: m_ds = dsi;
+	}
+}

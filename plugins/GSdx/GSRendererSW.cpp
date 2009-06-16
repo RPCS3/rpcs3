@@ -38,8 +38,6 @@ GSRendererSW::GSRendererSW(uint8* base, bool mt, void (*irq)(), GSDevice* dev)
 
 GSRendererSW::~GSRendererSW()
 {
-	m_rl.Terminate();
-
 	delete m_tc;
 }
 

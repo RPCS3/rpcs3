@@ -21,6 +21,7 @@
 
 #include "stdafx.h"
 #include "GSTextureOGL.h"
+#include "GSDeviceOGL.h"
 
 GSTextureOGL::GSTextureOGL(GLuint texture, int type, int width, int height, int format)
 	: m_texture(texture)
@@ -29,19 +30,27 @@ GSTextureOGL::GSTextureOGL(GLuint texture, int type, int width, int height, int 
 	, m_height(height)
 	, m_format(format)
 {
+	// TODO: offscreen type should be just a memory array, also returned in Map
+
+	glGenBuffers(1, &m_pbo); GSDeviceOGL::CheckError();
 }
 
 GSTextureOGL::~GSTextureOGL()
 {
+	if(m_pbo)
+	{
+		glDeleteBuffers(1, &m_pbo); GSDeviceOGL::CheckError();
+	}
+
 	if(m_texture)
 	{
 		switch(m_type)
 		{
 		case DepthStencil:
-			glDeleteRenderbuffersEXT(1, &m_texture);
+			glDeleteRenderbuffers(1, &m_texture); GSDeviceOGL::CheckError();
 			break;
 		default:
-			glDeleteTextures(1, &m_texture);
+			glDeleteTextures(1, &m_texture); GSDeviceOGL::CheckError();
 			break;
 		}
 	}
@@ -69,7 +78,32 @@ int GSTextureOGL::GetFormat() const
 
 bool GSTextureOGL::Update(const GSVector4i& r, const void* data, int pitch)
 {
-	// TODO: glTexSubImage2D looks like UpdateSubresource but does not take a pitch
+	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, m_pbo); GSDeviceOGL::CheckError();
+
+	int w = r.width();
+	int h = r.height();
+	int bpp = 32; // TODO: should be in sync with m_format
+	int dstpitch = w * bpp >> 3;
+
+	glBufferData(GL_PIXEL_UNPACK_BUFFER, h * dstpitch, NULL, GL_STREAM_DRAW); GSDeviceOGL::CheckError();
+
+	if(uint8* dst = (uint8*)glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY))
+	{
+		uint8* src = (uint8*)data;
+
+		for(int i = 0; i < h; i++, src += pitch, dst += dstpitch)
+		{
+			memcpy(dst, src, dstpitch);
+		}
+
+	    glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER); GSDeviceOGL::CheckError();
+	}
+
+	glBindTexture(GL_TEXTURE_2D, m_texture); GSDeviceOGL::CheckError();
+	
+	glTexSubImage2D(GL_TEXTURE_2D, 0, r.left, r.top, w, h, GL_RGBA, GL_UNSIGNED_BYTE, 0); GSDeviceOGL::CheckError();
+
+	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0); GSDeviceOGL::CheckError();
 
 	return false;
 }

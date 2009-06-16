@@ -26,6 +26,7 @@
 class GSTextureOGL : public GSTexture
 {
 	GLuint m_texture;
+	GLuint m_pbo;
 
 	int m_type;
 	int m_width;
@@ -45,4 +46,6 @@ public:
 	bool Map(GSMap& m, const GSVector4i* r);
 	void Unmap();
 	bool Save(const string& fn, bool dds = false);
+
+	operator GLuint() {return m_texture;}
 };

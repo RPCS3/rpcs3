@@ -42,6 +42,8 @@ class GSDeviceOGL : public GSDevice
 	} m_vertices;
 
 	int m_topology;
+	GLuint m_rt;
+	GLuint m_ds;
 
 	//
 
@@ -62,6 +64,7 @@ public:
 	bool Create(GSWnd* wnd, bool vsync);
 	bool Reset(int w, int h, bool fs);
 
+	void Present(const GSVector4i& r, int shader);
 	void Flip();
 
 	void BeginScene();
@@ -85,4 +88,30 @@ public:
 	void IASetVertexBuffer(const void* vertices, size_t stride, size_t count);
 	void IASetInputLayout(); // TODO
 	void IASetPrimitiveTopology(int topology);
+
+	void OMSetRenderTargets(GSTexture* rt, GSTexture* ds);
+
+	static void CheckError() 
+	{
+		#ifdef _DEBUG
+
+		GLenum error = glGetError(); 
+		
+		if(error != GL_NO_ERROR)
+		{
+			printf("%s\n", gluErrorString(error));
+		}
+
+		#endif
+	}
+
+	static void CheckFrameBuffer()
+	{
+		GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+		
+		if(status != GL_FRAMEBUFFER_COMPLETE)
+		{
+			printf("%d\n", status);
+		}
+	}
 };
