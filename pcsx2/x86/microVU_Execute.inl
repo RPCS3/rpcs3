@@ -128,8 +128,7 @@ microVUx(void*) __fastcall mVUexecute(u32 startPC, u32 cycles) {
 	mVU->totalCycles = cycles;
 
 	x86SetPtr(mVUcurProg.x86ptr); // Set x86ptr to where program left off
-	if (!vuIndex)	return mVUcompileVU0(startPC, (uptr)&mVU->prog.lpState);
-	else			return mVUcompileVU1(startPC, (uptr)&mVU->prog.lpState);
+	return mVUblockFetch(mVU, startPC, (uptr)&mVU->prog.lpState);
 }
 
 //------------------------------------------------------------------

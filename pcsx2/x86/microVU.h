@@ -155,17 +155,15 @@ microVUf(void) mVUinit(VURegs*);
 microVUx(void) mVUreset();
 microVUf(void) mVUclose();
 microVUf(void) mVUclear(u32, u32);
+microVUt(void*) mVUblockFetch( microVU* mVU, u32 startPC, uptr pState );
 
 // Prototypes for Linux
 void  __fastcall mVUcleanUpVU0();
 void  __fastcall mVUcleanUpVU1();
-void* __fastcall mVUcompileVU0(u32 startPC, uptr pState);
-void* __fastcall mVUcompileVU1(u32 startPC, uptr pState);
 mVUop(mVUopU);
 mVUop(mVUopL);
 
 // Private Functions
-microVUf(void)		mVUclearProg(microVU* mVU, int progIndex);
 microVUf(int)		mVUfindLeastUsedProg(microVU* mVU);
 microVUf(int)		mVUsearchProg();
 microVUf(void)		mVUcacheProg(int progIndex);

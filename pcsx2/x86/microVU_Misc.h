@@ -94,7 +94,7 @@ declareAllVariables
 #define _Ftf_	((mVU->code >> 23) & 0x03)
 
 #define _Imm5_	(s16)(((mVU->code & 0x400) ? 0xfff0 : 0) | ((mVU->code >> 6) & 0xf))
-#define _Imm11_	(s32)((mVU->code & 0x400) ? (0xfffffc00 | (mVU->code & 0x3ff)) : mVU->code & 0x3ff)
+#define _Imm11_	(s32)((mVU->code & 0x400) ? (0xfffffc00 | (mVU->code & 0x3ff)) : (mVU->code & 0x3ff))
 #define _Imm12_	(((mVU->code >> 21) & 0x1) << 11) | (mVU->code & 0x7ff)
 #define _Imm15_	(((mVU->code >> 10) & 0x7800) | (mVU->code & 0x7ff))
 #define _Imm24_	(u32)(mVU->code & 0xffffff)
@@ -204,7 +204,7 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 #define incPC(x)	 { iPC = ((iPC + x) & (mVU->progSize-1)); setCode(); }
 #define incPC2(x)	 { iPC = ((iPC + x) & (mVU->progSize-1)); }
 #define bSaveAddr	 (((xPC + (2 * 8)) & ((isVU1) ? 0x3ff8:0xff8)) / 8)
-#define branchAddr	 ((xPC + 8 + (_Imm11_ * 8)) & ((isVU1) ? 0x3ff8 : 0xff8))
+#define branchAddr	 ((xPC + 8 + (_Imm11_ * 8)) & (mVU->microSize-8))
 #define shufflePQ	 (((mVU->p) ? 0xb0 : 0xe0) | ((mVU->q) ? 0x01 : 0x04))
 #define Rmem		 (uptr)&mVU->regs->VI[REG_R].UL
 #define Roffset		 (uptr)&mVU->regs->VI[9].UL
