@@ -535,6 +535,12 @@ void gifMFIFOInterrupt()
 	mfifocycles = 0;
 	if(Path3progress == 2) psHu32(GIF_STAT)&= ~(GIF_STAT_APATH3 | GIF_STAT_OPH); // OPH=0 | APATH=0
 
+	if((spr0->chcr & 0x100) && spr0->qwc == 0)
+	{
+		spr0->chcr &= ~0x100;
+		hwDmacIrq(DMAC_FROM_SPR);
+	}
+
 	if (!(gif->chcr & 0x100)) { 
 		Console::WriteLn("WTF GIFMFIFO");
 		cpuRegs.interrupt &= ~(1 << 11); 
@@ -546,13 +552,7 @@ void gifMFIFOInterrupt()
 		//GIF_LOG("Waiting VU %x, PATH2 %x, GIFMODE %x Progress %x", psHu32(GIF_STAT) & 0x100, (vif1.cmd & 0x7f), psHu32(GIF_MODE), Path3progress);
 		CPU_INT(11,mfifocycles);
 		return;
-	}
-
-	if((spr0->chcr & 0x100) && spr0->qwc == 0)
-	{
-		spr0->chcr &= ~0x100;
-		hwDmacIrq(DMAC_FROM_SPR);
-	}
+	}	
 	
 	if(gifstate != GIF_STATE_STALL) {
 		if(gifqwc <= 0) {
