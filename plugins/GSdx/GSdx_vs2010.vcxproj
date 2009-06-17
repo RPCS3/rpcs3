@@ -1306,6 +1306,7 @@
     <ClCompile Include="GSDevice7.cpp" />
     <ClCompile Include="GSDevice9.cpp" />
     <ClCompile Include="GSDeviceNull.cpp" />
+    <ClCompile Include="GSDeviceOGL.cpp" />
     <ClCompile Include="GSDialog.cpp" />
     <ClCompile Include="GSDirtyRect.cpp" />
     <ClCompile Include="GSDrawScanline.cpp" />
@@ -1321,6 +1322,7 @@
     <ClCompile Include="GSRendererHW10.cpp" />
     <ClCompile Include="GSRendererHW9.cpp" />
     <ClCompile Include="GSRendererNull.cpp" />
+    <ClCompile Include="GSRendererOGL.cpp" />
     <ClCompile Include="GSRendererSW.cpp" />
     <ClCompile Include="GSSetting.cpp" />
     <ClCompile Include="GSSettingsDlg.cpp" />
@@ -1334,10 +1336,12 @@
     <ClCompile Include="GSTextureCache.cpp" />
     <ClCompile Include="GSTextureCache10.cpp" />
     <ClCompile Include="GSTextureCache9.cpp" />
+    <ClCompile Include="GSTextureCacheOGL.cpp" />
     <ClCompile Include="GSTextureCacheSW.cpp" />
     <ClCompile Include="GSTextureFX10.cpp" />
     <ClCompile Include="GSTextureFX9.cpp" />
     <ClCompile Include="GSTextureNull.cpp" />
+    <ClCompile Include="GSTextureOGL.cpp" />
     <ClCompile Include="GSThread.cpp" />
     <ClCompile Include="GSUtil.cpp" />
     <ClCompile Include="GSVector.cpp" />
@@ -1418,6 +1422,7 @@
     <ClInclude Include="GSDevice7.h" />
     <ClInclude Include="GSDevice9.h" />
     <ClInclude Include="GSDeviceNull.h" />
+    <ClInclude Include="GSDeviceOGL.h" />
     <ClInclude Include="GSDialog.h" />
     <ClInclude Include="GSDirtyRect.h" />
     <ClInclude Include="GSDrawingContext.h" />
@@ -1435,6 +1440,7 @@
     <ClInclude Include="GSRendererHW10.h" />
     <ClInclude Include="GSRendererHW9.h" />
     <ClInclude Include="GSRendererNull.h" />
+    <ClInclude Include="GSRendererOGL.h" />
     <ClInclude Include="GSRendererSW.h" />
     <ClInclude Include="GSScanlineEnvironment.h" />
     <ClInclude Include="GSSetting.h" />
@@ -1449,10 +1455,12 @@
     <ClInclude Include="GSTextureCache.h" />
     <ClInclude Include="GSTextureCache10.h" />
     <ClInclude Include="GSTextureCache9.h" />
+    <ClInclude Include="GSTextureCacheOGL.h" />
     <ClInclude Include="GSTextureCacheSW.h" />
     <ClInclude Include="GSTextureFX10.h" />
     <ClInclude Include="GSTextureFX9.h" />
     <ClInclude Include="GSTextureNull.h" />
+    <ClInclude Include="GSTextureOGL.h" />
     <ClInclude Include="GSThread.h" />
     <ClInclude Include="GSUtil.h" />
     <ClInclude Include="GSVector.h" />

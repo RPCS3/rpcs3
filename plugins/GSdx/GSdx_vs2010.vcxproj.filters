@@ -159,6 +159,9 @@
     <ClCompile Include="GSDeviceNull.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="GSDeviceOGL.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="GSDialog.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -204,6 +207,9 @@
     <ClCompile Include="GSRendererNull.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="GSRendererOGL.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="GSRendererSW.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -243,6 +249,9 @@
     <ClCompile Include="GSTextureCache9.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="GSTextureCacheOGL.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="GSTextureCacheSW.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -253,6 +262,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="GSTextureNull.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSTextureOGL.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="GSThread.cpp">
@@ -440,6 +452,9 @@
     <ClInclude Include="GSDeviceNull.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="GSDeviceOGL.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="GSDialog.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -491,6 +506,9 @@
     <ClInclude Include="GSRendererNull.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="GSRendererOGL.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="GSRendererSW.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -533,6 +551,9 @@
     <ClInclude Include="GSTextureCache9.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="GSTextureCacheOGL.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="GSTextureCacheSW.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -543,6 +564,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="GSTextureNull.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSTextureOGL.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="GSThread.h">
