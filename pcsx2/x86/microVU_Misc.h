@@ -163,7 +163,7 @@ declareAllVariables
 
 // Define mVUquickSearch
 #ifndef __LINUX__
-extern u8 mVUsearchXMM[0x1000];
+PCSX2_ALIGNED16_EXTERN( u8 mVUsearchXMM[0x1000] );
 typedef u32 (__fastcall *mVUCall)(void*, void*);
 #define mVUquickSearch(dest, src, size) ((((mVUCall)((void*)mVUsearchXMM))(dest, src)) == 0xf)
 #define mVUemitSearch() { mVUcustomSearch(); }
@@ -201,10 +201,10 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 #define xPC			 ((iPC / 2) * 8)
 #define curI		 ((u32*)mVU->regs->Micro)[iPC] //mVUcurProg.data[iPC]
 #define setCode()	 { mVU->code = curI; }
-#define incPC(x)	 { iPC = ((iPC + x) & (mVU->progSize-1)); setCode(); }
-#define incPC2(x)	 { iPC = ((iPC + x) & (mVU->progSize-1)); }
+#define incPC(x)	 { iPC = ((iPC + x) & (mVU->progMemSize-1)); setCode(); }
+#define incPC2(x)	 { iPC = ((iPC + x) & (mVU->progMemSize-1)); }
 #define bSaveAddr	 (((xPC + (2 * 8)) & ((isVU1) ? 0x3ff8:0xff8)) / 8)
-#define branchAddr	 ((xPC + 8 + (_Imm11_ * 8)) & (mVU->microSize-8))
+#define branchAddr	 ((xPC + 8 + (_Imm11_ * 8)) & (mVU->microMemSize-8))
 #define shufflePQ	 (((mVU->p) ? 0xb0 : 0xe0) | ((mVU->q) ? 0x01 : 0x04))
 #define Rmem		 (uptr)&mVU->regs->VI[REG_R].UL
 #define Roffset		 (uptr)&mVU->regs->VI[9].UL

@@ -22,20 +22,20 @@
 // Helper Macros
 //------------------------------------------------------------------
 
-#define branchCase(JMPcc)												\
+#define branchCase(JMPcc)																\
 	mVUsetupBranch(mVU, xStatus, xMac, xClip, xCycles);									\
-	xCMP( ptr16[&mVU->branch], 0);													\
+	xCMP( ptr16[&mVU->branch], 0);														\
 	if (mVUup.eBit) { /* Conditional Branch With E-Bit Set */							\
 		mVUendProgram(mVU, 2, xStatus, xMac, xClip);									\
-		xForwardJump8 eJMP( JMPcc );															\
+		xForwardJump8 eJMP( JMPcc );													\
 			incPC(1); /* Set PC to First instruction of Non-Taken Side */				\
-			xMOV( ptr32[&mVU->regs->VI[REG_TPC].UL], xPC);							\
-			xJMP( mVU->exitFunct );							\
-		eJMP.SetTarget();																	\
+			xMOV( ptr32[&mVU->regs->VI[REG_TPC].UL], xPC);								\
+			xJMP( mVU->exitFunct );														\
+		eJMP.SetTarget();																\
 		incPC(-4); /* Go Back to Branch Opcode to get branchAddr */						\
 		iPC = branchAddr/4;																\
-		xMOV( ptr32[&mVU->regs->VI[REG_TPC].UL], xPC);								\
-		xJMP( mVU->exitFunct );								\
+		xMOV( ptr32[&mVU->regs->VI[REG_TPC].UL], xPC);									\
+		xJMP( mVU->exitFunct );															\
 		return thisPtr;																	\
 	}																					\
 	else { /* Normal Conditional Branch */												\
@@ -43,7 +43,7 @@
 		if (!mVUblocks[iPC/2]) { mVUblocks[iPC/2] = microBlockManager::AlignedNew(); }	\
 		bBlock = mVUblocks[iPC/2]->search((microRegInfo*)&mVUregs);						\
 		incPC2(-1);																		\
-		if (bBlock)	{ xJcc( xInvertCond( JMPcc ), bBlock->x86ptrStart ); }			\
+		if (bBlock)	{ xJcc( xInvertCond( JMPcc ), bBlock->x86ptrStart ); }				\
 		else		{ ajmp = xJcc32( JMPcc ); }											\
 	}																					\
 	break
@@ -102,7 +102,7 @@
 microVUt(void) mVUcheckIsSame(mV) {
 
 	if (mVU->prog.isSame == -1) {
-		mVU->prog.isSame = !memcmp_mmx(mVU->prog.prog[mVU->prog.cur].data, mVU->regs->Micro, mVU->microSize);
+		mVU->prog.isSame = !memcmp_mmx(mVU->prog.prog[mVU->prog.cur].data, mVU->regs->Micro, mVU->microMemSize);
 	}
 	if (mVU->prog.isSame == 0) {
 		if (!isVU1)	mVUcacheProg<0>(mVU->prog.cur);

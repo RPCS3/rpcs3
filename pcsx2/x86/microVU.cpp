@@ -40,8 +40,8 @@ microVUf(void) mVUinit(VURegs* vuRegsPtr) {
 	microVU* mVU	= mVUx;
 	mVU->regs		= vuRegsPtr;
 	mVU->index		= vuIndex;
-	mVU->microSize	= (vuIndex ? 0x4000 : 0x1000);
-	mVU->progSize	= (vuIndex ? 0x4000 : 0x1000) / 4;
+	mVU->microMemSize	= (vuIndex ? 0x4000 : 0x1000);
+	mVU->progMemSize	= (vuIndex ? 0x4000 : 0x1000) / 4;
 	mVU->cache		= NULL;
 	mVU->cacheSize	= mVUcacheSize;
 	memset(&mVU->prog, 0, sizeof(mVU->prog));
@@ -62,7 +62,7 @@ microVUx(void) mVUreset() {
 
 	// Delete Block Managers
 	for (int i = 0; i <= mVU->prog.max; i++) {
-		for (u32 j = 0; j < (mVU->progSize / 2); j++) {
+		for (u32 j = 0; j < (mVU->progMemSize / 2); j++) {
 			microBlockManager::Delete( mVU->prog.prog[i].block[j] );
 		}
 	}
@@ -108,7 +108,7 @@ microVUf(void) mVUclose() {
 
 	// Delete Block Managers
 	for (int i = 0; i <= mVU->prog.max; i++) {
-		for (u32 j = 0; j < (mVU->progSize / 2); j++) {
+		for (u32 j = 0; j < (mVU->progMemSize / 2); j++) {
 			if (mVU->prog.prog[i].block[j]) {
 				microBlockManager::Delete( mVU->prog.prog[i].block[j] );
 			}
@@ -137,7 +137,7 @@ microVUf(void) mVUclearProg(int progIndex) {
 	mVU->prog.prog[progIndex].range[0] = -1;
 	mVU->prog.prog[progIndex].range[1] = -1;
 	mVU->prog.prog[progIndex].x86ptr = mVU->prog.prog[progIndex].x86start;
-	for (u32 i = 0; i < (mVU->progSize / 2); i++) {
+	for (u32 i = 0; i < (mVU->progMemSize / 2); i++) {
 		if (mVU->prog.prog[progIndex].block[i])
 			mVU->prog.prog[progIndex].block[i]->reset();
 	}
@@ -146,7 +146,7 @@ microVUf(void) mVUclearProg(int progIndex) {
 // Caches Micro Program
 microVUf(void) mVUcacheProg(int progIndex) {
 	microVU* mVU = mVUx;
-	memcpy_fast(mVU->prog.prog[progIndex].data, mVU->regs->Micro, mVU->microSize);
+	memcpy_fast(mVU->prog.prog[progIndex].data, mVU->regs->Micro, mVU->microMemSize);
 	mVUdumpProg(progIndex);
 }
 
@@ -214,7 +214,7 @@ microVUf(int) mVUcmpProg(int progIndex, bool progUsed, bool needOverflowCheck, b
 	microVU* mVU = mVUx;
 	
 	if (progUsed) {
-		if (cmpWholeProg && (!memcmp_mmx((u8*)mVUprogI.data, mVU->regs->Micro, mVU->microSize)) ||
+		if (cmpWholeProg && (!memcmp_mmx((u8*)mVUprogI.data, mVU->regs->Micro, mVU->microMemSize)) ||
 		  (!cmpWholeProg && (!memcmp_mmx((u8*)mVUprogI.data + mVUprogI.range[0], (u8*)mVU->regs->Micro + mVUprogI.range[0], ((mVUprogI.range[1] + 8) - mVUprogI.range[0]))))) {
 			mVU->prog.cur = progIndex;
 			mVU->prog.cleared = 0;
@@ -275,7 +275,7 @@ static void* __fastcall mVUcompile( microVU* mVU, u32 startPC, uptr pState )
 	microBlock*	pBlock	= NULL;
 	u8*			thisPtr	= x86Ptr;
 
-	const u32 microSizeDiv8 = (mVU->microSize-1) / 8;
+	const u32 microSizeDiv8 = (mVU->microMemSize-1) / 8;
 
 	// First Pass
 	iPC = startPC / 4;
@@ -433,8 +433,8 @@ microVUt(void*) mVUblockFetch( microVU* mVU, u32 startPC, uptr pState )
 {
 	using namespace x86Emitter;
 
-	if (startPC > mVU->microSize-1) { Console::Error("microVU%d: invalid startPC", params mVU->index); }
-	startPC &= ~7;
+	if (startPC > mVU->microMemSize-8) { Console::Error("microVU%d: invalid startPC", params mVU->index); }
+	startPC &= mVU->microMemSize-8;
 	
 	if (mVUblocks[startPC/8] == NULL) {
 		mVUblocks[startPC/8] = microBlockManager::AlignedNew();

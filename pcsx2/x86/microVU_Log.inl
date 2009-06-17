@@ -62,7 +62,7 @@ microVUx(void) __mVUdumpProgram(int progIndex) {
 	mVUlog("*********************\n\n<br><br>",	progIndex);
 	mVUlog("</font>");
 
-	for (u32 i = 0; i < mVU->progSize; i+=2) {
+	for (u32 i = 0; i < mVU->progMemSize; i+=2) {
 
 		if (delay)		{ delay--; mVUlog("</font>"); if (!delay) mVUlog("<hr/>"); }
 		if (mVUbranch)	{ delay = 1; mVUbranch = 0; }
