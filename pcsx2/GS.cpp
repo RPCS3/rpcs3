@@ -324,7 +324,7 @@ void gsCSRwrite(u32 value)
 static void IMRwrite(u32 value)
 {
 	GSIMR = (value & 0x1f00)|0x6000;
-	CSRw |= (GSIMR >> 8) & 0x1f;
+	CSRw |= ~(GSIMR >> 8) & 0x1f;
 	// don't update mtgs mem
 }
 
