@@ -24,6 +24,46 @@
 #include "GSDevice.h"
 #include "GSTextureOGL.h"
 
+struct SamplerStateOGL
+{
+	struct {GLenum s, t;} wrap;
+	GLenum filter;
+};
+
+struct DepthStencilStateOGL
+{
+	struct
+	{
+		bool enable;
+		bool write;
+		GLenum func;
+	} depth;
+
+	struct
+	{
+		bool enable;
+		GLenum func;
+		GLint ref;
+		GLuint mask;
+		GLenum sfail;
+		GLenum dpfail;
+		GLenum dppass;
+		GLuint wmask;
+	} stencil;
+};
+
+struct BlendStateOGL
+{
+	bool enable;
+	GLenum srcRGB;
+	GLenum dstRGB;
+	GLenum srcAlpha;
+	GLenum dstAlpha;
+	GLenum modeRGB;
+	GLenum modeAlpha;
+	union {uint8 r:1, g:1, b:1, a:1;} mask;
+};
+
 class GSDeviceOGL : public GSDevice
 {
 	#ifdef _WINDOWS
@@ -42,10 +82,18 @@ class GSDeviceOGL : public GSDevice
 	} m_vertices;
 
 	int m_topology;
+	SamplerStateOGL* m_ps_ss;
+	GSVector4i m_scissor;
+	GSVector2i m_viewport;
+	DepthStencilStateOGL* m_dss;
+	BlendStateOGL* m_bs;
+	float m_bf;
 	GLuint m_rt;
 	GLuint m_ds;
 
 	//
+
+	CGcontext m_context;
 
 	static void OnStaticCgError(CGcontext ctx, CGerror err, void* p) {((GSDeviceOGL*)p)->OnCgError(ctx, err);}
 	void OnCgError(CGcontext ctx, CGerror err);
@@ -89,6 +137,10 @@ public:
 	void IASetInputLayout(); // TODO
 	void IASetPrimitiveTopology(int topology);
 
+	void PSSetSamplerState(SamplerStateOGL* ss);
+	void RSSet(int width, int height, const GSVector4i* scissor);
+	void OMSetDepthStencilState(DepthStencilStateOGL* dss);
+	void OMSetBlendState(BlendStateOGL* bs, float bf);
 	void OMSetRenderTargets(GSTexture* rt, GSTexture* ds);
 
 	static void CheckError() 
@@ -112,6 +164,23 @@ public:
 		if(status != GL_FRAMEBUFFER_COMPLETE)
 		{
 			printf("%d\n", status);
+		}
+	}
+
+	void CheckCgError()
+	{
+		CGerror error;
+
+		const char* s = cgGetLastErrorString(&error);
+
+		if(error != CG_NO_ERROR)
+		{
+			printf("%s\n", s);
+
+			if(error == CG_COMPILER_ERROR)
+			{
+				printf("%s\n", cgGetLastListing(m_context));
+			}
 		}
 	}
 };

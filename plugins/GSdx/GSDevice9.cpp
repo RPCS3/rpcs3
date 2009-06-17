@@ -38,7 +38,6 @@ GSDevice9::GSDevice9()
 	, m_ps_ss(NULL)
 	, m_scissor(0, 0, 0, 0)
 	, m_dss(NULL)
-	, m_sref(0)
 	, m_bs(NULL)
 	, m_bf(0xffffffff)
 	, m_rtv(NULL)
@@ -233,7 +232,6 @@ bool GSDevice9::Reset(int w, int h, bool fs)
 	m_ps_ss = NULL;
 	m_scissor = GSVector4i::zero();
 	m_dss = NULL;
-	m_sref = 0;
 	m_bs = NULL;
 	m_bf = 0xffffffff;
 	m_rtv = NULL;
@@ -570,7 +568,7 @@ void GSDevice9::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, c
 
 	// om
 
-	OMSetDepthStencilState(&m_convert.dss, 0);
+	OMSetDepthStencilState(&m_convert.dss);
 	OMSetBlendState(bs, 0);
 	OMSetRenderTargets(dt, NULL);
 
@@ -817,6 +815,7 @@ void GSDevice9::PSSetSamplerState(Direct3DSamplerState9* ss)
 {
 	if(ss && m_ps_ss != ss)
 	{
+
 		m_dev->SetSamplerState(0, D3DSAMP_ADDRESSU, ss->AddressU);
 		m_dev->SetSamplerState(0, D3DSAMP_ADDRESSV, ss->AddressV);
 		m_dev->SetSamplerState(1, D3DSAMP_ADDRESSU, ss->AddressU);
@@ -850,9 +849,9 @@ void GSDevice9::RSSet(int width, int height, const GSVector4i* scissor)
 	}
 }
 
-void GSDevice9::OMSetDepthStencilState(Direct3DDepthStencilState9* dss, uint32 sref)
+void GSDevice9::OMSetDepthStencilState(Direct3DDepthStencilState9* dss)
 {
-	if(m_dss != dss || m_sref != sref)
+	if(m_dss != dss)
 	{
 		m_dev->SetRenderState(D3DRS_ZENABLE, dss->DepthEnable);
 		m_dev->SetRenderState(D3DRS_ZWRITEENABLE, dss->DepthWriteMask);
@@ -872,11 +871,10 @@ void GSDevice9::OMSetDepthStencilState(Direct3DDepthStencilState9* dss, uint32 s
 			m_dev->SetRenderState(D3DRS_STENCILPASS, dss->StencilPassOp);
 			m_dev->SetRenderState(D3DRS_STENCILFAIL, dss->StencilFailOp);
 			m_dev->SetRenderState(D3DRS_STENCILZFAIL, dss->StencilDepthFailOp);
-			m_dev->SetRenderState(D3DRS_STENCILREF, sref);
+			m_dev->SetRenderState(D3DRS_STENCILREF, dss->StencilRef);
 		}
 
 		m_dss = dss;
-		m_sref = sref;
 	}
 }
 

@@ -126,7 +126,7 @@ static INT32 GSopen(void* dsp, char* title, int mt, int renderer)
 	case 3: s_gs = new GSRendererHW10(s_basemem, !!mt, s_irq); break;
 	case 4: s_gs = new GSRendererSW(s_basemem, !!mt, s_irq, new GSDevice10()); break;
 	case 5: s_gs = new GSRendererNull(s_basemem, !!mt, s_irq, new GSDevice10()); break;
-	#if 0
+	#if 1
 	case 6: s_gs = new GSRendererOGL(s_basemem, !!mt, s_irq); break;
 	case 7: s_gs = new GSRendererSW(s_basemem, !!mt, s_irq, new GSDeviceOGL()); break;
 	case 8: s_gs = new GSRendererNull(s_basemem, !!mt, s_irq, new GSDeviceOGL()); break;

@@ -22,8 +22,7 @@ struct VS_OUTPUT
 	float4 c : COLOR0;
 };
 
-#ifndef VS_BPP
-#define VS_BPP 0
+#ifndef VS_BPPZ
 #define VS_BPPZ 0
 #define VS_TME 1
 #define VS_FST 1
@@ -193,23 +192,6 @@ struct PS_OUTPUT
 #define LTF 1
 #endif
 
-float4 Normalize16(float4 f)
-{
-	return f / float4(0x001f, 0x03e0, 0x7c00, 0x8000);
-}
-
-float4 Extract16(uint i)
-{
-	float4 f;
-
-	f.r = i & 0x001f;
-	f.g = i & 0x03e0;
-	f.b = i & 0x7c00;
-	f.a = i & 0x8000;
-
-	return f;
-}
-
 float4 wrapuv(float4 uv)
 {
 	if(WMS == WMT)
@@ -318,7 +300,7 @@ float4 sample(float2 tc, float w)
 
 		float4 t00, t01, t10, t11;
 
-		if(BPP == 3) // 8HP + 32-bit palette
+		if(BPP == 3) // 8HP
 		{
 			float4 a;
 
@@ -331,26 +313,6 @@ float4 sample(float2 tc, float w)
 			t01 = Palette.Sample(PaletteSampler, a.y);
 			t10 = Palette.Sample(PaletteSampler, a.z);
 			t11 = Palette.Sample(PaletteSampler, a.w);
-		}
-		else if(BPP == 4) // 8HP + 16-bit palette
-		{
-			// TODO: yuck, just pre-convert the palette to 32-bit
-		}
-		else if(BPP == 5) // 16P
-		{
-			float4 r;
-
-			r.x = Texture.Sample(TextureSampler, uv.xy).r;
-			r.y = Texture.Sample(TextureSampler, uv.zy).r;
-			r.z = Texture.Sample(TextureSampler, uv.xw).r;
-			r.w = Texture.Sample(TextureSampler, uv.zw).r;
-			
-			uint4 i = r * 65535;
-
-			t00 = Extract16(i.x);
-			t01 = Extract16(i.y);
-			t10 = Extract16(i.z);
-			t11 = Extract16(i.w);
 		}
 		else
 		{
@@ -374,13 +336,8 @@ float4 sample(float2 tc, float w)
 	{
 		t.a = AEM == 0 || any(t.rgb) ? TA.x : 0;
 	}
-	else if(BPP == 2 || BPP == 5) // 16 || 16P
+	else if(BPP == 2) // 16
 	{
-		if(BPP == 5)
-		{
-			t = Normalize16(t);
-		}
-		
 		// a bit incompatible with up-scaling because the 1 bit alpha is interpolated
 		
 		t.a = t.a >= 0.5 ? TA.y : AEM == 0 || any(t.rgb) ? TA.x : 0;

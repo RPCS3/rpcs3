@@ -841,8 +841,6 @@ public:
 
 	//
 
-	static uint32 m_xtbl[1024], m_ytbl[1024]; 
-
 	template<typename T> void ReadTexture(const GSVector4i& r, uint8* dst, int dstpitch, const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, readTexel rt, readTexture rtx);
 
 	//

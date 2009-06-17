@@ -252,16 +252,10 @@ void GSRendererHW10::Draw(int prim, GSTexture* rt, GSTexture* ds, GSTextureCache
 
 	GSTextureFX10::VSSelector vs_sel;
 
-	vs_sel.bpp = 0;
 	vs_sel.bppz = 0;
 	vs_sel.tme = PRIM->TME;
 	vs_sel.fst = PRIM->FST;
 	vs_sel.prim = prim;
-
-	if(tex)
-	{
-		vs_sel.bpp = tex->m_bpp2;
-	}
 
 	if(om_dssel.zte && om_dssel.ztst > 0 && om_dssel.zwe)
 	{
@@ -349,7 +343,7 @@ void GSRendererHW10::Draw(int prim, GSTexture* rt, GSTexture* ds, GSTextureCache
 
 	if(tex)
 	{
-		ps_sel.bpp = tex->m_bpp2;
+		ps_sel.bpp = tex->m_bpp;
 
 		int w = tex->m_texture->GetWidth();
 		int h = tex->m_texture->GetHeight();

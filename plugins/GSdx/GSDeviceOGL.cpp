@@ -29,7 +29,14 @@ GSDeviceOGL::GSDeviceOGL()
 	, m_hGLRC(NULL)
 	, m_vbo(0)
 	, m_fbo(0)
+	, m_context(0)
 	, m_topology(-1)
+	, m_ps_ss(NULL)
+	, m_scissor(0, 0, 0, 0)
+	, m_viewport(0, 0)
+	, m_dss(NULL)
+	, m_bs(NULL)
+	, m_bf(-1)
 	, m_rt((GLuint)-1)
 	, m_ds((GLuint)-1)
 {
@@ -41,6 +48,7 @@ GSDeviceOGL::GSDeviceOGL()
 
 GSDeviceOGL::~GSDeviceOGL()
 {
+	if(m_context) cgDestroyContext(m_context);
 	if(m_vbo) glDeleteBuffers(1, &m_vbo);
 	if(m_fbo) glDeleteFramebuffers(1, &m_fbo);
 	
@@ -100,11 +108,6 @@ bool GSDeviceOGL::Create(GSWnd* wnd, bool vsync)
 		return false;
 	}
 
-	if(WGLEW_EXT_swap_control)
-	{
-		wglSwapIntervalEXT(vsync ? 1 : 0);
-	}
-
 	#endif
 
 	if(glewInit() != GLEW_OK)
@@ -134,6 +137,17 @@ bool GSDeviceOGL::Create(GSWnd* wnd, bool vsync)
 	glBindBuffer(GL_ARRAY_BUFFER, m_vbo); CheckError();
 	// TODO: setup layout?
 
+	m_context = cgCreateContext();
+
+	// cgGLSetDebugMode(CG_FALSE); CheckCgError();
+
+	cgSetParameterSettingMode(m_context, CG_DEFERRED_PARAMETER_SETTING); CheckCgError();
+/*
+	struct {CGprofile vs, gs, ps;} m_profile;
+	m_profile.vs = cgGLGetLatestProfile(CG_GL_VERTEX); CheckCgError();
+	m_profile.gs = cgGLGetLatestProfile(CG_GL_GEOMETRY); CheckCgError();
+	m_profile.ps = cgGLGetLatestProfile(CG_GL_FRAGMENT); CheckCgError();
+*/
 	GSVector4i r = wnd->GetClientRect();
 
 	Reset(r.width(), r.height(), false);
@@ -387,6 +401,111 @@ void GSDeviceOGL::IASetPrimitiveTopology(int topology)
 	m_topology = topology;
 }
 
+void GSDeviceOGL::PSSetSamplerState(SamplerStateOGL* ss)
+{
+	if(ss && m_ps_ss != ss)
+	{
+		glActiveTexture(GL_TEXTURE0);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, ss->wrap.s);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, ss->wrap.t);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, ss->filter);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, ss->filter);
+		
+		glActiveTexture(GL_TEXTURE1);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, ss->wrap.s);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, ss->wrap.t);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, ss->filter);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, ss->filter);
+		
+		glActiveTexture(GL_TEXTURE2);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_POINT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_POINT);
+		
+		glActiveTexture(GL_TEXTURE3);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_POINT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_POINT);
+		
+		m_ps_ss = ss;
+	}
+}
+
+void GSDeviceOGL::RSSet(int width, int height, const GSVector4i* scissor)
+{
+	if(m_viewport.x != width || m_viewport.y != height)
+	{
+		glViewport(0, 0, width, height); CheckError();
+
+		m_viewport = GSVector2i(width, height);
+	}
+
+	GSVector4i r = scissor ? *scissor : GSVector4i(0, 0, width, height);
+
+	if(!m_scissor.eq(r))
+	{
+		glScissor(r.left, r.top, r.width(), r.height()); CheckError();
+
+		m_scissor = r;
+	}
+}
+
+void GSDeviceOGL::OMSetDepthStencilState(DepthStencilStateOGL* dss)
+{
+	if(m_dss != dss)
+	{
+		if(dss->depth.enable)
+		{
+			glEnable(GL_DEPTH_TEST); CheckError();
+			glDepthFunc(dss->depth.func); CheckError();
+			glDepthMask(dss->depth.write); CheckError();
+		}
+		else
+		{
+			glDisable(GL_DEPTH_TEST); CheckError();
+		}
+
+		if(dss->stencil.enable)
+		{
+			glEnable(GL_STENCIL_TEST); CheckError();
+			glStencilFunc(dss->stencil.func, dss->stencil.ref, dss->stencil.mask); CheckError();
+			glStencilOp(dss->stencil.sfail, dss->stencil.dpfail, dss->stencil.dppass); CheckError();
+			glStencilMask(dss->stencil.wmask); CheckError();
+		}
+		else
+		{
+			glDisable(GL_STENCIL_TEST); CheckError();
+		}
+
+		m_dss = dss;
+	}
+}
+
+void GSDeviceOGL::OMSetBlendState(BlendStateOGL* bs, float bf)
+{
+	if(m_bs != bs || m_bf != bf)
+	{
+		if(bs->enable)
+		{
+			glEnable(GL_BLEND); CheckError();
+			glBlendEquationSeparate(bs->modeRGB, bs->modeAlpha); CheckError();
+			glBlendFuncSeparate(bs->srcRGB, bs->dstRGB, bs->srcAlpha, bs->dstAlpha); CheckError();
+			glBlendColor(bf, bf, bf, 0); CheckError();
+		}
+		else
+		{
+			glDisable(GL_BLEND); CheckError();
+		}
+		
+		glColorMask(bs->mask.r, bs->mask.g, bs->mask.b, bs->mask.a); CheckError();
+
+		m_bs = bs;
+		m_bf = bf;
+	}
+}
+
 void GSDeviceOGL::OMSetRenderTargets(GSTexture* rt, GSTexture* ds)
 {
 	GLuint rti = 0;
@@ -395,17 +514,17 @@ void GSDeviceOGL::OMSetRenderTargets(GSTexture* rt, GSTexture* ds)
 	if(rt) rti = *(GSTextureOGL*)rt;
 	if(ds) dsi = *(GSTextureOGL*)ds;
 
-	// TODO: if(m_rt != rti)
+	if(m_rt != rti)
 	{
 		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, rti); CheckError();
 
-		// TODO: m_rt = rti;
+		m_rt = rti;
 	}
 
-	// TODO: if(m_ds != dsi)
+	if(m_ds != dsi)
 	{
 		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_DEPTH_COMPONENT, dsi); CheckError();
 
-		// TODO: m_ds = dsi;
+		m_ds = dsi;
 	}
 }

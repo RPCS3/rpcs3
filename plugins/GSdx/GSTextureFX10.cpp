@@ -104,21 +104,19 @@ bool GSTextureFX10::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 
 	if(i == m_vs.end())
 	{
-		string str[5];
+		string str[4];
 
-		str[0] = format("%d", sel.bpp);
-		str[1] = format("%d", sel.bppz);
-		str[2] = format("%d", sel.tme);
-		str[3] = format("%d", sel.fst);
-		str[4] = format("%d", sel.prim);
+		str[0] = format("%d", sel.bppz);
+		str[1] = format("%d", sel.tme);
+		str[2] = format("%d", sel.fst);
+		str[3] = format("%d", sel.prim);
 
 		D3D10_SHADER_MACRO macro[] =
 		{
-			{"VS_BPP", str[0].c_str()},
-			{"VS_BPPZ", str[1].c_str()},
-			{"VS_TME", str[2].c_str()},
-			{"VS_FST", str[3].c_str()},
-			{"VS_PRIM", str[4].c_str()},
+			{"VS_BPPZ", str[0].c_str()},
+			{"VS_TME", str[1].c_str()},
+			{"VS_FST", str[2].c_str()},
+			{"VS_PRIM", str[3].c_str()},
 			{NULL, NULL},
 		};
 

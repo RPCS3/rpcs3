@@ -72,11 +72,6 @@ int GSLocalMemory::blockOffset4[256];
 
 //
 
-uint32 GSLocalMemory::m_xtbl[1024];
-uint32 GSLocalMemory::m_ytbl[1024]; 
-
-//
-
 GSLocalMemory::psm_t GSLocalMemory::m_psm[64];
 
 //

@@ -50,6 +50,7 @@ bool GSRendererHW9::Create(const string& title)
 	m_date.dss.StencilWriteMask = 1;
 	m_date.dss.StencilFunc = D3DCMP_ALWAYS;
 	m_date.dss.StencilPassOp = D3DSTENCILOP_REPLACE;
+	m_date.dss.StencilRef = 1;
 
 	memset(&m_date.bs, 0, sizeof(m_date.bs));
 
@@ -64,6 +65,7 @@ bool GSRendererHW9::Create(const string& title)
 	m_fba.dss.StencilPassOp = D3DSTENCILOP_ZERO;
 	m_fba.dss.StencilFailOp = D3DSTENCILOP_ZERO;
 	m_fba.dss.StencilDepthFailOp = D3DSTENCILOP_ZERO;
+	m_fba.dss.StencilRef = 2;
 
 	memset(&m_fba.bs, 0, sizeof(m_fba.bs));
 
@@ -321,7 +323,7 @@ void GSRendererHW9::Draw(int prim, GSTexture* rt, GSTexture* ds, GSTextureCache:
 
 	if(tex)
 	{
-		ps_sel.bpp = tex->m_bpp2;
+		ps_sel.bpp = tex->m_bpp;
 
 		int w = tex->m_texture->GetWidth();
 		int h = tex->m_texture->GetHeight();
@@ -523,7 +525,7 @@ void GSRendererHW9::SetupDATE(GSTexture* rt, GSTexture* ds)
 
 		// om
 
-		dev->OMSetDepthStencilState(&m_date.dss, 1);
+		dev->OMSetDepthStencilState(&m_date.dss);
 		dev->OMSetBlendState(&m_date.bs, 0);
 		dev->OMSetRenderTargets(t, ds);
 
@@ -575,7 +577,7 @@ void GSRendererHW9::UpdateFBA(GSTexture* rt)
 
 	// om
 
-	dev->OMSetDepthStencilState(&m_fba.dss, 2);
+	dev->OMSetDepthStencilState(&m_fba.dss);
 	dev->OMSetBlendState(&m_fba.bs, 0);
 
 	// ia

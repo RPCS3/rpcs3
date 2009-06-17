@@ -78,7 +78,7 @@ GSTexture* GPURendererSW::GetOutput()
 		}
 	}
 
-	m_texture->Update(GSVector4i(0, 0, w, h), buff, m_mem.GetWidth() * sizeof(uint32));
+	m_texture->Update(r.rsize(), buff, m_mem.GetWidth() * sizeof(uint32));
 
 	return m_texture;
 }

@@ -219,7 +219,7 @@ float4 sample(float2 tc, float w)
 
 		float4 t00, t01, t10, t11;
 
-		if(BPP == 3) // 8HP ln
+		if(BPP == 3) // 8HP
 		{
 			float4 a;
 

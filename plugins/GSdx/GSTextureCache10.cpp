@@ -129,50 +129,13 @@ bool GSTextureCache10::GSCachedTextureHW10::Create()
 	// m_renderer->m_perfmon.Put(GSPerfMon::WriteTexture, 1);
 
 	m_TEX0 = m_renderer->m_context->TEX0;
+	m_TEXA = m_renderer->m_env.TEXA;
 
-	uint32 psm = m_TEX0.PSM;
-
-	switch(psm)
-	{
-	case PSM_PSMT8:
-	case PSM_PSMT8H:
-	case PSM_PSMT4:
-	case PSM_PSMT4HL:
-	case PSM_PSMT4HH:
-		psm = m_TEX0.CPSM;
-		break;
-	}
-
-	DXGI_FORMAT format;
-
-	switch(psm)
-	{
-	default:
-		// printf("Invalid TEX0.PSM/CPSM (%I64d, %I64d)\n", m_TEX0.PSM, m_TEX0.CPSM);
-	case PSM_PSMCT32:
-		m_bpp = 32;
-		m_bpp2 = 0;
-		format = DXGI_FORMAT_R8G8B8A8_UNORM;
-		break;
-	case PSM_PSMCT24:
-		m_bpp = 32;
-		m_bpp2 = 1;
-		format = DXGI_FORMAT_R8G8B8A8_UNORM;
-		break;
-	case PSM_PSMCT16:
-	case PSM_PSMCT16S:
-		m_bpp = 16;
-		m_bpp2 = 5;
-		format = DXGI_FORMAT_R16_UNORM;
-		break;
-	}
-
-	int w = 1 << m_TEX0.TW;
-	int h = 1 << m_TEX0.TH;
+	m_bpp = 0;
 
 	ASSERT(m_texture == NULL);
 
-	m_texture = m_renderer->m_dev->CreateTexture(w, h, format);
+	m_texture = m_renderer->m_dev->CreateTexture(1 << m_TEX0.TW, 1 << m_TEX0.TH);
 
 	return m_texture != NULL;
 }
@@ -186,6 +149,8 @@ bool GSTextureCache10::GSCachedTextureHW10::Create(GSRenderTarget* rt)
 	// m_renderer->m_perfmon.Put(GSPerfMon::ConvertRT2T, 1);
 
 	m_TEX0 = m_renderer->m_context->TEX0;
+	m_TEXA = m_renderer->m_env.TEXA;
+
 	m_rendered = true;
 
 	int tw = 1 << m_TEX0.TW;
@@ -309,18 +274,18 @@ bool GSTextureCache10::GSCachedTextureHW10::Create(GSRenderTarget* rt)
 	switch(m_TEX0.PSM)
 	{
 	case PSM_PSMCT32:
-		m_bpp2 = 0;
+		m_bpp = 0;
 		break;
 	case PSM_PSMCT24:
-		m_bpp2 = 1;
+		m_bpp = 1;
 		break;
 	case PSM_PSMCT16:
 	case PSM_PSMCT16S:
-		m_bpp2 = 2;
+		m_bpp = 2;
 		break;
 	case PSM_PSMT8H:
-		m_bpp2 = 3;
-		m_palette = m_renderer->m_dev->CreateTexture(256, 1, m_TEX0.CPSM == PSM_PSMCT32 ? DXGI_FORMAT_R8G8B8A8_UNORM : DXGI_FORMAT_R16_UNORM); // 
+		m_bpp = 3;
+		m_palette = m_renderer->m_dev->CreateTexture(256, 1);
 		m_initpalette = true;
 		break;
 	case PSM_PSMT4HL:

@@ -202,13 +202,14 @@ GSTextureCache::GSCachedTexture* GSTextureCache::GetTexture()
 {
 	const GIFRegTEX0& TEX0 = m_renderer->m_context->TEX0;
 	const GIFRegCLAMP& CLAMP = m_renderer->m_context->CLAMP;
+	const GIFRegTEXA& TEXA = m_renderer->m_env.TEXA;
 
+	const GSLocalMemory::psm_t& psm = GSLocalMemory::m_psm[TEX0.PSM];
 	const uint32* clut = m_renderer->m_mem.m_clut;
-	const int pal = GSLocalMemory::m_psm[TEX0.PSM].pal;
 	
-	if(pal > 0)
+	if(psm.pal > 0)
 	{
-		m_renderer->m_mem.m_clut.Read(TEX0);
+		m_renderer->m_mem.m_clut.Read32(TEX0, TEXA);
 
 		/*
 		POSITION pos = m_tex.GetHeadPosition();
@@ -267,12 +268,17 @@ GSTextureCache::GSCachedTexture* GSTextureCache::GetTexture()
 	{
 		GSCachedTexture* t2 = *i;
 
-		if((((t2->m_TEX0.u32[0] ^ TEX0.u32[0]) & 0xffefffff) | ((t2->m_TEX0.u32[1] ^ TEX0.u32[1]) & 3)) != 0) // TBP0 TBW (PSM & ~1) TW TH
+		if(((t2->m_TEX0.u32[0] ^ TEX0.u32[0]) | ((t2->m_TEX0.u32[1] ^ TEX0.u32[1]) & 3)) != 0) // TBP0 TBW PSM TW TH
 		{
 			continue;
 		}
 
-		if(!(pal == 0 || t2->m_TEX0.CPSM == TEX0.CPSM && GSVector4i::compare(t2->m_clut, clut, pal * sizeof(clut[0]))))
+		if((psm.trbpp == 16 || psm.trbpp == 24) && TEX0.TCC && TEXA != t2->m_TEXA)
+		{
+			continue;
+		}
+
+		if(psm.pal > 0 && !(t2->m_TEX0.CPSM == TEX0.CPSM && GSVector4i::compare(t2->m_clut, clut, psm.pal * sizeof(clut[0]))))
 		{
 			continue;
 		}
@@ -344,23 +350,23 @@ GSTextureCache::GSCachedTexture* GSTextureCache::GetTexture()
 		m_tex.push_front(t);
 	}
 
-	if(pal > 0)
+	if(psm.pal > 0)
 	{
-		int size = pal * sizeof(clut[0]);
+		int size = psm.pal * sizeof(clut[0]);
 
 		if(t->m_palette)
 		{
 			if(t->m_initpalette)
 			{
 				memcpy(t->m_clut, clut, size);
-				t->m_palette->Update(GSVector4i(0, 0, pal, 1), t->m_clut, size);
+				t->m_palette->Update(GSVector4i(0, 0, psm.pal, 1), t->m_clut, size);
 				t->m_initpalette = false;
 			}
 			else
 			{
 				if(GSVector4i::update(t->m_clut, clut, size))
 				{
-					t->m_palette->Update(GSVector4i(0, 0, pal, 1), t->m_clut, size);
+					t->m_palette->Update(GSVector4i(0, 0, psm.pal, 1), t->m_clut, size);
 				}
 			}
 		}
@@ -728,11 +734,11 @@ void GSTextureCache::GSDepthStencil::Update()
 
 GSTextureCache::GSCachedTexture::GSCachedTexture(GSRenderer* r)
 	: GSSurface(r)
-	, m_valid(0, 0, 0, 0)
 	, m_bpp(0)
-	, m_bpp2(0)
 	, m_rendered(false)
 {
+	m_valid = GSVector4i::zero();
+
 	m_clut = (uint32*)_aligned_malloc(256 * sizeof(uint32), 16);
 
 	memset(m_clut, 0, sizeof(m_clut));
@@ -767,7 +773,7 @@ void GSTextureCache::GSCachedTexture::Update()
 	{
 		// in dx9 managed textures can be written directly, less copying is faster, but still not as fast as dx10's UpdateResource
 
-		m_renderer->m_mem.ReadTextureNP(r, m.bits, m.pitch, m_renderer->m_context->TEX0, m_renderer->m_env.TEXA);
+		m_renderer->m_mem.ReadTexture(r, m.bits, m.pitch, m_renderer->m_context->TEX0, m_renderer->m_env.TEXA);
 
 		m_texture->Unmap();
 	}
@@ -777,12 +783,12 @@ void GSTextureCache::GSCachedTexture::Update()
 		
 		int pitch = ((r.width() + 3) & ~3) * 4;
 
-		m_renderer->m_mem.ReadTextureNP(r, buff, pitch, m_renderer->m_context->TEX0, m_renderer->m_env.TEXA);
+		m_renderer->m_mem.ReadTexture(r, buff, pitch, m_renderer->m_context->TEX0, m_renderer->m_env.TEXA);
 
 		m_texture->Update(r, buff, pitch);
 	}
 
-	m_renderer->m_perfmon.Put(GSPerfMon::Unswizzle, r.width() * r.height() * m_bpp >> 3);
+	m_renderer->m_perfmon.Put(GSPerfMon::Unswizzle, r.width() * r.height() * 4);
 }
 
 bool GSTextureCache::GSCachedTexture::GetDirtyRect(GSVector4i& rr)

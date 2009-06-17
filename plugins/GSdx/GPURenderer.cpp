@@ -211,6 +211,6 @@ LRESULT GPURenderer::OnMessage(UINT message, WPARAM wParam, LPARAM lParam)
 		}
 	}
 
-	return m_wndproc(m_hWnd, message, wParam, lParam);
+	return CallWindowProc(m_wndproc, m_hWnd, message, wParam, lParam);
 }
 

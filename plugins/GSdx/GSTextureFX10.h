@@ -63,7 +63,6 @@ public:
 	{
 		struct
 		{
-			uint32 bpp:3;
 			uint32 bppz:2;
 			uint32 tme:1;
 			uint32 fst:1;
@@ -72,7 +71,7 @@ public:
 
 		uint32 key;
 
-		operator uint32() {return key & 0x3ff;}
+		operator uint32() {return key & 0x7f;}
 	};
 
 	__declspec(align(16)) struct PSConstantBuffer

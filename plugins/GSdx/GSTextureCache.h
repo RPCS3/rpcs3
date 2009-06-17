@@ -38,6 +38,7 @@ public:
 		int m_age;
 		GSDirtyRectList m_dirty;
 		GIFRegTEX0 m_TEX0;
+		GIFRegTEXA m_TEXA;
 
 		explicit GSSurface(GSRenderer* r);
 		virtual ~GSSurface();
@@ -79,7 +80,6 @@ public:
 		uint32* m_clut; // *
 		GSVector4i m_valid;
 		int m_bpp;
-		int m_bpp2;
 		bool m_rendered;
 
 		explicit GSCachedTexture(GSRenderer* renderer);

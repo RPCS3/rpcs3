@@ -293,6 +293,7 @@ void GSTextureFX9::UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, 
 			dss->StencilPassOp = dssel.fba ? D3DSTENCILOP_REPLACE : D3DSTENCILOP_KEEP;
 			dss->StencilFailOp = dssel.fba ? D3DSTENCILOP_ZERO : D3DSTENCILOP_KEEP;
 			dss->StencilDepthFailOp = dssel.fba ? D3DSTENCILOP_ZERO : D3DSTENCILOP_KEEP;
+			dss->StencilRef = 3;
 		}
 
 		if(!(dssel.zte && dssel.ztst == 1 && !dssel.zwe))
@@ -315,7 +316,7 @@ void GSTextureFX9::UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, 
 		i = m_om_dss.find(dssel);
 	}
 
-	m_dev->OMSetDepthStencilState((*i).second, 3);
+	m_dev->OMSetDepthStencilState((*i).second);
 
 	hash_map<uint32, Direct3DBlendState9*>::const_iterator j = m_om_bs.find(bsel);
 

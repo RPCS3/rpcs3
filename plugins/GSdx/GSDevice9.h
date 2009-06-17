@@ -44,6 +44,7 @@ struct Direct3DDepthStencilState9
     D3DSTENCILOP StencilDepthFailOp;
     D3DSTENCILOP StencilPassOp;
     D3DCMPFUNC StencilFunc;
+	uint32 StencilRef;
 };
 
 struct Direct3DBlendState9
@@ -75,7 +76,6 @@ private:
 	Direct3DSamplerState9* m_ps_ss;
 	GSVector4i m_scissor;
 	Direct3DDepthStencilState9* m_dss;
-	uint32 m_sref;
 	Direct3DBlendState9* m_bs;
 	uint32 m_bf;
 	IDirect3DSurface9* m_rtv;
@@ -168,7 +168,7 @@ public:
 	void PSSetShader(IDirect3DPixelShader9* ps, const float* ps_cb, int ps_cb_len);
 	void PSSetSamplerState(Direct3DSamplerState9* ss);
 	void RSSet(int width, int height, const GSVector4i* scissor = NULL);
-	void OMSetDepthStencilState(Direct3DDepthStencilState9* dss, uint32 sref);
+	void OMSetDepthStencilState(Direct3DDepthStencilState9* dss);
 	void OMSetBlendState(Direct3DBlendState9* bs, uint32 bf);
 	void OMSetRenderTargets(GSTexture* rt, GSTexture* ds);
 
