@@ -243,6 +243,7 @@ void gsReset()
 
 	memzero_obj(g_RealGSMem);
 
+	CSRw = 0;
 	GSCSRr = 0x551B400F;   // Set the FINISH bit to 1 for now
 	GSIMR = 0x7f00;
 	psHu32(GIF_STAT) = 0;
@@ -323,7 +324,7 @@ void gsCSRwrite(u32 value)
 static void IMRwrite(u32 value)
 {
 	GSIMR = (value & 0x1f00)|0x6000;
-
+	CSRw |= (GSIMR >> 8) & 0x1f;
 	// don't update mtgs mem
 }
 
