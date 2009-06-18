@@ -35,7 +35,7 @@ const u32 minor = 0;    // increase that with each version
 #define SUSTAIN_MS     441L
 #define RELEASE_MS     437L
 
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 char *libraryName      = "SPU2null (Debug)";
 #else
 char *libraryName      = "SPU2null ";

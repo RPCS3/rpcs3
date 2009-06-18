@@ -38,7 +38,7 @@ AC_ARG_ENABLE(debug, AC_HELP_STRING([--enable-debug], [debug build]),
  
 if test "x$debug" == "xyes"
 then
-  AC_DEFINE(_DEBUG,1,[_DEBUG])
+  AC_DEFINE(PCSX2_DEBUG,1,[PCSX2_DEBUG])
   AC_DEFINE(PCSX2_DEVBUILD,1,[PCSX2_DEVBUILD])
   MYOBJDIR="Debug"
   optimization="no"
@@ -112,7 +112,7 @@ then
 fi
 
 WARNING_FLAGS+=" -Wno-format -Wno-unused-parameter -Wno-unused-value "
-NORMAL_FLAGS+=" -msse -msse2 ${WARNING_FLAGS} "
+NORMAL_FLAGS+=" -msse -msse2 ${WARNING_FLAGS} -fno-strict-aliasing "
 
 dnl These optimizations seem to cause issues with GCC 4.3.3, so we'll turn them off. 
 dnl I really need to run some tests and see if they are still needed.
@@ -146,7 +146,7 @@ dnl Anything higher then -O0 seem to cause issues with GCC 4.4.0.
     NORMAL_FLAGS+=" -fsched-spec "
     dnl NORMAL_FLAGS+=" -fschedule-insns "
     NORMAL_FLAGS+=" -fschedule-insns2 "
-    NORMAL_FLAGS+=" -fstrict-aliasing -fstrict-overflow "
+    NORMAL_FLAGS+="  -fstrict-overflow "
     NORMAL_FLAGS+=" -ftree-switch-conversion -ftree-pre -ftree-vrp "
   else
     NORMAL_FLAGS+=" -pipe -O2 "

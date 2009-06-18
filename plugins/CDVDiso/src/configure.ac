@@ -29,7 +29,7 @@ AC_ARG_ENABLE(debug, AC_HELP_STRING([--enable-debug], [debug build]),
 debug=$enableval,debug=no)
 if test "x$debug" == xyes
 then
- AC_DEFINE(_DEBUG,1,[_DEBUG])
+ AC_DEFINE(PCSX2_DEBUG,1,[PCSX2_DEBUG])
  CFLAGS+=" -g -fPIC -Wall  -Wno-unused-value -m32 "
  CPPFLAGS+=" -g -fPIC -Wall  -Wno-unused-value -m32 "
  CXXFLAGS+=" -g -fPIC -Wall  -Wno-unused-value -fpermissive -m32 "
