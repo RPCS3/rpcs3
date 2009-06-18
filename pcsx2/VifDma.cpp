@@ -1348,7 +1348,13 @@ int  _VIF0chain()
 	if ((vif0ch->qwc == 0) && !vif0.vifstalled) return 0;
 
 	pMem = (u32*)dmaGetAddr(vif0ch->madr);
-	if (pMem == NULL) return -1;
+	if (pMem == NULL)
+	{
+		vif0.cmd = 0;
+		vif0.tag.size = 0;
+		vif0ch->qwc = 0;
+		return 0;
+	}
 
 	if (vif0.vifstalled)
 		ret = VIF0transfer(pMem + vif0.irqoffset, vif0ch->qwc * 4 - vif0.irqoffset, 0);
@@ -2406,7 +2412,13 @@ int  _VIF1chain()
 	}
 
 	pMem = (u32*)dmaGetAddr(vif1ch->madr);
-	if (pMem == NULL) return -1;
+	if (pMem == NULL) 
+	{
+		vif1.cmd = 0;
+		vif1.tag.size = 0;
+		vif1ch->qwc = 0;
+		return 0;
+	}
 
 	VIF_LOG("VIF1chain size=%d, madr=%lx, tadr=%lx",
 	        vif1ch->qwc, vif1ch->madr, vif1ch->tadr);
