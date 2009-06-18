@@ -373,8 +373,7 @@ void dmaGIF() {
 
 // called from only one location, so forceinline it:
 static __forceinline int mfifoGIFrbTransfer() {
-	u32 qwc = (psHu32(GIF_MODE) & 0x4 || vif1Regs->mskpath3) ? min(8, (int)gif->qwc) : gif->qwc;
-	int mfifoqwc = min(gifqwc, qwc);
+	u32 mfifoqwc = min(gifqwc, (u32)gif->qwc);
 	u32 *src;
 
 	/* Check if the transfer should wrap around the ring buffer */
@@ -432,11 +431,11 @@ static __forceinline int mfifoGIFchain() {
 	} 
 	else 
 	{
-		int mfifoqwc = (psHu32(GIF_MODE) & 0x4 || vif1Regs->mskpath3) ? min(8, (int)gif->qwc) : gif->qwc;
+		int mfifoqwc = gif->qwc;
 		u32 *pMem = (u32*)dmaGetAddr(gif->madr);
 		if (pMem == NULL) return -1;
 
-		WRITERING_DMA(pMem, mfifoqwc);
+		mfifoqwc = WRITERING_DMA(pMem, mfifoqwc);
 		//gif->madr += mfifoqwc*16;
 		//gif->qwc -= mfifoqwc;
 		mfifocycles += (mfifoqwc) * 2; /* guessing */
