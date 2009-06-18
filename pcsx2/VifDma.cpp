@@ -1857,6 +1857,17 @@ static int __fastcall Vif1TransDirectHL(u32 *data)
 {
 	int ret = 0;
 
+	if((vif1.cmd & 0x7f) == 0x51)
+	{
+		if(gif->chcr & 0x100 && (!vif1Regs->mskpath3 && Path3progress == 0)) //PATH3 is in image mode, so wait for end of transfer
+		{
+			vif1Regs->stat |= VIF1_STAT_VGW;
+			return 0;
+		}			
+	}
+
+	psHu32(GIF_STAT) |= (GIF_STAT_APATH2 | GIF_STAT_OPH);
+
 	if (splitptr > 0)  //Leftover data from the last packet, filling the rest and sending to the GS
 	{
 		if ((splitptr < 4) && (vif1.vifpacketsize >= (4 - splitptr)))
@@ -2032,12 +2043,14 @@ static void Vif1CMDSTMod()  // STMOD
 	vif1.cmd &= ~0x7f;
 }
 
-static void Vif1CMDMskPath3()  // MSKPATH3
+u8 schedulepath3msk = 0;
+
+static void Vif1MskPath3()  // MSKPATH3
 {
-	vif1Regs->mskpath3 = (vif1Regs->code >> 15) & 0x1;
+	vif1Regs->mskpath3 = schedulepath3msk & 0x1;
 	//Console::WriteLn("VIF MSKPATH3 %x", params vif1Regs->mskpath3);
 
-	if ((vif1Regs->code >> 15) & 0x1)
+	if (vif1Regs->mskpath3)
 	{
 		psHu32(GIF_STAT) |= 0x2;
 	}
@@ -2045,9 +2058,26 @@ static void Vif1CMDMskPath3()  // MSKPATH3
 	{
 		Path3progress = 1; //Let the Gif know it can transfer again (making sure any vif stall isnt unset prematurely)
 		psHu32(GIF_STAT) &= ~0x2;
+		CPU_INT(2, 4);		
+	}
+	
+	schedulepath3msk = 0;
+}
+static void Vif1CMDMskPath3()  // MSKPATH3
+{
+	if(vif1ch->chcr & 0x100)
+	{
+		schedulepath3msk = 0x10 | ((vif1Regs->code >> 15) & 0x1);
+		vif1.vifstalled = true;
+	}
+	else 
+	{
+		schedulepath3msk = (vif1Regs->code >> 15) & 0x1;
+		Vif1MskPath3();
 	}
 	vif1.cmd &= ~0x7f;
 }
+
 
 static void Vif1CMDMark()  // MARK
 {
@@ -2064,7 +2094,8 @@ static void Vif1CMDFlush()  // FLUSH/E/A
 	{
 		if((Path3progress != 2 || !vif1Regs->mskpath3) && gif->chcr & 0x100) // Gif is already transferring so wait for it.
 		{	
-			vif1Regs->stat |= VIF1_STAT_VGW;			
+			vif1Regs->stat |= VIF1_STAT_VGW;	
+			CPU_INT(2, 4);
 		}
 	}
 
@@ -2116,19 +2147,6 @@ static void Vif1CMDDirectHL()  // DIRECT/HL
 		vif1.tag.size = 65536 << 2;
 	else
 		vif1.tag.size = vifImm << 2;
-
-	//FIXME: This should have timing in both cases, see note below.
-	if((vif1.cmd & 0x7f) == 0x51)
-	{
-		if(gif->chcr & 0x100 && (!vif1Regs->mskpath3 && Path3progress == 0)) //PATH3 is in image mode, so wait for end of transfer
-		{
-			//DevCon::Notice("DirectHL gif chcr %x gif qwc %x mskpth3 %x", params gif->chcr, gif->qwc, vif1Regs->mskpath3);
-			/*if(vif1Regs->mskpath3)*/vif1Regs->stat |= VIF1_STAT_VGW;
-			//else while(gif->chcr & 0x100) gsInterrupt(); //Hacky as hell (no timing) but Soul Calibur 3 doesnt want timing :(
-		}
-		
-	}
-	psHu32(GIF_STAT) |= (GIF_STAT_APATH2 | GIF_STAT_OPH);
 }
 
 static void Vif1CMDNull()  // invalid opcode
@@ -2199,18 +2217,7 @@ int VIF1transfer(u32 *data, int size, int istag)
 	vif1.vifpacketsize = size;
 
 	while (vif1.vifpacketsize > 0)
-	{
-		if((vif1.cmd & 0x7f) == 0x51)
-		{
-			if(gif->chcr & 0x100 && (!vif1Regs->mskpath3 || Path3progress != 2)) //PATH3 is in image mode, so wait for end of transfer
-			{
-				//DevCon::Notice("DirectHL gif chcr %x gif qwc %x mskpth3 %x", params gif->chcr, gif->qwc, vif1Regs->mskpath3);
-				/*if(vif1Regs->mskpath3)*/vif1Regs->stat |= VIF1_STAT_VGW;
-				//else while(gif->chcr & 0x100) gsInterrupt(); //Hacky as hell (no timing) but Soul Calibur 3 doesnt want timing :(
-			}
-			
-		}
-		
+	{		
 		if(vif1Regs->stat & VIF1_STAT_VGW) break;
 		
 		if (vif1.cmd)
@@ -2271,9 +2278,10 @@ int VIF1transfer(u32 *data, int size, int istag)
 				if (vif1.tag.size == 0) break;
 			}
 		}
-	if(!vif1.cmd) vif1Regs->stat &= ~VIF1_STAT_VPS_D;
 
-	if(vif1Regs->stat & VIF1_STAT_VGW) break;
+		if(!vif1.cmd) vif1Regs->stat &= ~VIF1_STAT_VPS_D;
+
+		if((vif1Regs->stat & VIF1_STAT_VGW) || vif1.vifstalled == true) break;
 	} // End of Transfer loop
 
 	transferred += size - vif1.vifpacketsize;
@@ -2501,11 +2509,13 @@ __forceinline void vif1Interrupt()
 
 	g_vifCycles = 0;
 
+	if(schedulepath3msk) Vif1MskPath3();
+
 	if((vif1Regs->stat & VIF1_STAT_VGW))
 	{
 		if(gif->chcr & 0x100)
 		{			
-			CPU_INT(1, 16);
+			CPU_INT(1, gif->qwc * BIAS);
 			return;
 		} 
 		else vif1Regs->stat &= ~VIF1_STAT_VGW;

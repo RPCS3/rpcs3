@@ -58,9 +58,9 @@ __forceinline void gsInterrupt() {
 		return;
 	}
 
-	if((vif1.cmd & 0x7f) == 0x51 && Path3progress != 0)
+	if((vif1.cmd & 0x7f) == 0x51)
 	{
-		vif1Regs->stat &= ~VIF1_STAT_VGW;
+		if(Path3progress != 0)vif1Regs->stat &= ~VIF1_STAT_VGW;
 	}
 
 	if(Path3progress == 2) psHu32(GIF_STAT)&= ~(GIF_STAT_APATH3 | GIF_STAT_OPH); // OPH=0 | APATH=0
@@ -128,7 +128,7 @@ static u32 WRITERING_DMA(u32 *pMem, u32 qwc)
 
 int  _GIFchain() {
 
-	u32 qwc = ((psHu32(GIF_MODE) & 0x4) || vif1Regs->mskpath3) ? min(8, (int)gif->qwc) : min( gifsplit, (int)gif->qwc );
+	u32 qwc = /*((psHu32(GIF_MODE) & 0x4) || vif1Regs->mskpath3) ? min(8, (int)gif->qwc) :*/ min( gifsplit, (int)gif->qwc );
 	u32 *pMem;
 
 	pMem = (u32*)dmaGetAddr(gif->madr);
@@ -206,7 +206,7 @@ void GIFdma()
 
 	if (vif1Regs->mskpath3 || (psHu32(GIF_MODE) & 0x1)) {
 		if(gif->qwc == 0) {
-			if((gif->chcr & 0x10e) == 0x104) {
+			if((gif->chcr & 0x10c) == 0x104) {
 				ptag = (u32*)dmaGetAddr(gif->tadr);  //Set memory pointer to TADR
 
 				if (ptag == NULL) {					 //Is ptag empty?
@@ -229,10 +229,10 @@ void GIFdma()
 			}
 		} 
 		 
-		if(Path3progress == 2/* && gif->qwc != 0*/)
+		if(Path3progress == 2 /*|| (vif1Regs->stat |= VIF1_STAT_VGW) == 0*/)
 		{
 			vif1Regs->stat &= ~VIF1_STAT_VGW;
-			dmaGIFend();
+			if(gif->qwc == 0)dmaGIFend();
 			return;
 		}
 
