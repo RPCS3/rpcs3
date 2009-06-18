@@ -33,7 +33,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "bzip2", "3rdparty\bzip2\bzi
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "LilyPad", "plugins\LilyPad\LilyPad_VC2008.vcproj", "{E4081455-398C-4610-A87C-90A8A7D72DC3}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pthreads", "3rdparty\w32pthreads\pthreads_2008.vcproj", "{26511268-2902-4997-8421-ECD7055F9E28}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "w32pthreads", "3rdparty\w32pthreads\pthreads_2008.vcproj", "{26511268-2902-4997-8421-ECD7055F9E28}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ZeroSPU2", "plugins\zerospu2\Windows\ZeroSPU2_2008.vcproj", "{7F059854-568D-4E08-9D00-1E78E203E4DC}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -273,11 +273,11 @@ Global
 		{CDD9DB83-3BD9-4ED8-BB83-399A2F65F022}.Release SSE4|Win32.Build.0 = Release|Win32
 		{CDD9DB83-3BD9-4ED8-BB83-399A2F65F022}.Release SSSE3|Win32.ActiveCfg = Release|Win32
 		{CDD9DB83-3BD9-4ED8-BB83-399A2F65F022}.Release SSSE3|Win32.Build.0 = Release|Win32
-		{14259DC9-2A12-4B05-A7D7-23C1A9FFEA03}.Debug|Win32.ActiveCfg = Release SSE2
-		{14259DC9-2A12-4B05-A7D7-23C1A9FFEA03}.Devel|Win32.ActiveCfg = Release SSE2
-		{14259DC9-2A12-4B05-A7D7-23C1A9FFEA03}.Release SSE2|Win32.ActiveCfg = Release SSE2
-		{14259DC9-2A12-4B05-A7D7-23C1A9FFEA03}.Release SSE4|Win32.ActiveCfg = Release SSE4
-		{14259DC9-2A12-4B05-A7D7-23C1A9FFEA03}.Release SSSE3|Win32.ActiveCfg = Release SSSE3
+		{14259DC9-2A12-4B05-A7D7-23C1A9FFEA03}.Debug|Win32.ActiveCfg = Release
+		{14259DC9-2A12-4B05-A7D7-23C1A9FFEA03}.Devel|Win32.ActiveCfg = Release
+		{14259DC9-2A12-4B05-A7D7-23C1A9FFEA03}.Release SSE2|Win32.ActiveCfg = Release
+		{14259DC9-2A12-4B05-A7D7-23C1A9FFEA03}.Release SSE4|Win32.ActiveCfg = Release
+		{14259DC9-2A12-4B05-A7D7-23C1A9FFEA03}.Release SSSE3|Win32.ActiveCfg = Release
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
