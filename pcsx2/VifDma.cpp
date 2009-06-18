@@ -391,14 +391,11 @@ static int VIFalign(u32 *data, vifCode *v, unsigned int size, const unsigned int
 
 		VIFUNPACK_LOG("Aligning packet size = %d offset %d addr %x", size, vifRegs->offset, vif->tag.addr);
 
-		if(((size / ft->dsize) + vifRegs->offset) < (u32)ft->qsize)
-			VIFUNPACK_LOG("Warning! Size needed to align %x size chunks available %x offset %x", ft->qsize - ((size / ft->dsize) + vifRegs->offset), vifRegs->offset);
-		
 		if (((u32)size / (u32)ft->dsize) < ((u32)ft->qsize - vifRegs->offset))
 		{
 				DevCon::Error("Wasn't enough left size/dsize = %x left to write %x", params(size / ft->dsize), (ft->qsize - vifRegs->offset));
 		}
-			unpacksize = min(((u32)size / (u32)ft->dsize), ((u32)ft->qsize - vifRegs->offset));
+			unpacksize = min((size / ft->dsize), (ft->qsize - vifRegs->offset));
 		
 
 		VIFUNPACK_LOG("Increasing dest by %x from offset %x", (4 - ft->qsize) + unpacksize, vifRegs->offset);
@@ -406,8 +403,17 @@ static int VIFalign(u32 *data, vifCode *v, unsigned int size, const unsigned int
 		func(dest, (u32*)cdata, unpacksize);
 		size -= unpacksize * ft->dsize;
 		
-		vifRegs->num--;
-		++vif->cl;
+		if(vifRegs->offset == 0)
+		{
+			vifRegs->num--;
+			++vif->cl;
+		}
+		else
+		{
+			DevCon::Notice("Offset = %x", params vifRegs->offset);
+			vif->tag.addr += unpacksize * 4;
+			return size>>2;
+		}
 
 		if (vif->cl == vifRegs->cycle.wl)
 		{
@@ -2593,7 +2599,11 @@ __forceinline void vif1Interrupt()
 	vif1ch->chcr &= ~0x100;
 	g_vifCycles = 0;
 	hwDmacIrq(DMAC_VIF1);
-	if(vif1ch->chcr & 0x1)vif1Regs->stat &= ~0x1F000000; // FQC=0
+
+	//Im not totally sure why Path3 Masking makes it want to see stuff in the fifo 
+	//Games effected by setting, Fatal Frame, KH2, Shox, Crash N Burn, GT3/4 possibly
+	//Im guessing due to the full gs fifo before the reverse? (Refraction)
+	if(!vif1Regs->mskpath3)vif1Regs->stat &= ~0x1F000000; // FQC=0
 }
 
 void dmaVIF1()
