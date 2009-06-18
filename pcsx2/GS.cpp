@@ -317,6 +317,7 @@ void gsCSRwrite(u32 value)
 				GSreset();
 		}
 
+		CSRw = 0x1f;
 		GSCSRr = 0x551B4000;   // Set the FINISH bit to 1 - GS is always at a finish state as we don't have a FIFO(saqib)
 		GSIMR = 0x7F00; //This is bits 14-8 thats all that should be 1
 	}
