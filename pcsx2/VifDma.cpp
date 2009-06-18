@@ -2328,14 +2328,13 @@ int VIF1transfer(u32 *data, int size, int istag)
 	if(vif1Regs->stat & VIF1_STAT_VGW)
 	{
 		vif1.vifstalled = true;
-		return -1;
 	}
 	
 
 	if (vif1ch->qwc == 0 && (vif1.irqoffset == 0 || istag == 1))
 		vif1.inprogress = 0;
 
-	return 0;
+	return vif1.vifstalled ? -2 : 0;
 }
 
 void vif1TransferFromMemory()
