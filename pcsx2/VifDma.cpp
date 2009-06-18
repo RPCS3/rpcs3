@@ -2307,7 +2307,7 @@ int VIF1transfer(u32 *data, int size, int istag)
 		if (((vif1Regs->code >> 24) & 0x7f) != 0x7) vif1Regs->stat |= VIF1_STAT_VIS; // Note: commenting this out fixes WALL-E
 
 		if (vif1ch->qwc == 0 && (vif1.irqoffset == 0 || istag == 1))
-			vif1.inprogress = 0;
+			vif1.inprogress &= ~0x1;
 		
 		// spiderman doesn't break on qw boundaries
 		if (istag) return -2;
@@ -2338,7 +2338,7 @@ int VIF1transfer(u32 *data, int size, int istag)
 	
 
 	if (vif1ch->qwc == 0 && (vif1.irqoffset == 0 || istag == 1))
-		vif1.inprogress = 0;
+		vif1.inprogress &= ~0x1;
 
 	return vif1.vifstalled ? -2 : 0;
 }

@@ -464,8 +464,8 @@ void mfifoGIFtransfer(int qwc) {
 	if (gif->qwc == 0) {
 		if (gif->tadr == spr0->madr) {
 			//if( gifqwc > 1 ) DevCon::WriteLn("gif mfifo tadr==madr but qwc = %d", params gifqwc);
-			//hwDmacIrq(14);
-			
+			hwDmacIrq(14);
+			gifstate |= GIF_STATE_EMPTY;			
 			return;
 		}
 		gif->tadr = psHu32(DMAC_RBOR) + (gif->tadr & psHu32(DMAC_RBSR));
