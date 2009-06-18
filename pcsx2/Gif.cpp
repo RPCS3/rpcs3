@@ -57,6 +57,12 @@ __forceinline void gsInterrupt() {
 		//Console::WriteLn("Eh? why are you still interrupting! chcr %x, qwc %x, done = %x", params gif->chcr, gif->qwc, done);
 		return;
 	}
+
+	if((vif1.cmd & 0x7f) == 0x51 && Path3progress != 0)
+	{
+		vif1Regs->stat &= ~VIF1_STAT_VGW;
+	}
+
 	if(Path3progress == 2) psHu32(GIF_STAT)&= ~(GIF_STAT_APATH3 | GIF_STAT_OPH); // OPH=0 | APATH=0
 
 	if (gif->qwc > 0 || gspath3done == 0) {
@@ -193,7 +199,7 @@ void GIFdma()
 
 	if(((psHu32(GIF_STAT) & 0x100) || (vif1.cmd & 0x7f) == 0x50) && (psHu32(GIF_MODE) & 0x4) && Path3progress == 0) //Path2 gets priority in intermittent mode
 	{
-		//GIF_LOG("Waiting VU %x, PATH2 %x, GIFMODE %x Progress %x", psHu32(GIF_STAT) & 0x100, (vif1.cmd & 0x7f), psHu32(GIF_MODE), Path3progress);
+		GIF_LOG("Waiting VU %x, PATH2 %x, GIFMODE %x Progress %x", psHu32(GIF_STAT) & 0x100, (vif1.cmd & 0x7f), psHu32(GIF_MODE), Path3progress);
 		dmaGIFend();
 		return;
 	}
@@ -287,7 +293,7 @@ void GIFdma()
 					return;
 				}
 			}
-			GIFchain();	//Transfers the data set by the switch
+			//GIFchain();	//Transfers the data set by the switch
 
 			if ((gif->chcr & 0x80) && (ptag[0] >> 31)) { //Check TIE bit of CHCR and IRQ bit of tag
 				GIF_LOG("dmaIrq Set");

@@ -2120,7 +2120,7 @@ static void Vif1CMDDirectHL()  // DIRECT/HL
 	//FIXME: This should have timing in both cases, see note below.
 	if((vif1.cmd & 0x7f) == 0x51)
 	{
-		if(gif->chcr & 0x100 && (!vif1Regs->mskpath3 || Path3progress != 2)) //PATH3 is in image mode, so wait for end of transfer
+		if(gif->chcr & 0x100 && (!vif1Regs->mskpath3 && Path3progress == 0)) //PATH3 is in image mode, so wait for end of transfer
 		{
 			//DevCon::Notice("DirectHL gif chcr %x gif qwc %x mskpth3 %x", params gif->chcr, gif->qwc, vif1Regs->mskpath3);
 			/*if(vif1Regs->mskpath3)*/vif1Regs->stat |= VIF1_STAT_VGW;
