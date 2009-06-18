@@ -402,11 +402,11 @@ void psxRcntUpdate()
 	{
 		s32 change = psxRegs.cycle - psxCounters[i].sCycleT;
 
-		// don't count disabled, gated, or hblank counters...
+		// don't count disabled or hblank counters...
 		// We can't check the ALTSOURCE flag because the PSXCLOCK source *should*
 		// be counted here.
 
-		if( psxCounters[i].mode & (IOPCNT_STOPPED | IOPCNT_ENABLE_GATE) ) continue;
+		if( psxCounters[i].mode & IOPCNT_STOPPED ) continue;
 		if( psxCounters[i].rate == PSXHBLANK ) continue;
 		if( change <= 0 ) continue;
 
