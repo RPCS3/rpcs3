@@ -2603,7 +2603,8 @@ __forceinline void vif1Interrupt()
 	//Im not totally sure why Path3 Masking makes it want to see stuff in the fifo 
 	//Games effected by setting, Fatal Frame, KH2, Shox, Crash N Burn, GT3/4 possibly
 	//Im guessing due to the full gs fifo before the reverse? (Refraction)
-	if(!vif1Regs->mskpath3)vif1Regs->stat &= ~0x1F000000; // FQC=0
+	//Note also this is only the condition for reverse fifo mode, normal direction clears it as normal
+	if(!vif1Regs->mskpath3 || (vif1ch->chcr & 0x1))vif1Regs->stat &= ~0x1F000000; // FQC=0
 }
 
 void dmaVIF1()
