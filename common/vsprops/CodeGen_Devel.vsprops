@@ -2,7 +2,7 @@
 <VisualStudioPropertySheet
 	ProjectType="Visual C++"
 	Version="8.00"
-	Name="release"
+	Name="CodeGen_Devel"
 	>
 	<Tool
 		Name="VCCLCompilerTool"
@@ -10,17 +10,9 @@
 		InlineFunctionExpansion="2"
 		EnableIntrinsicFunctions="true"
 		FavorSizeOrSpeed="1"
-		OmitFramePointers="true"
-		WholeProgramOptimization="true"
-		PreprocessorDefinitions="NDEBUG"
-		StringPooling="true"
+		EnableFiberSafeOptimizations="true"
+		PreprocessorDefinitions="PCSX2_DEVEL"
 		RuntimeLibrary="2"
 		BufferSecurityCheck="false"
-	/>
-	<Tool
-		Name="VCLinkerTool"
-		LinkIncremental="1"
-		OptimizeReferences="2"
-		EnableCOMDATFolding="2"
 	/>
 </VisualStudioPropertySheet>

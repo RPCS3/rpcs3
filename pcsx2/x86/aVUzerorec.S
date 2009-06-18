@@ -26,7 +26,7 @@ SuperVUExecuteProgram:
         mov s_vu1esi, esi
         mov s_vuedi, edi
         mov s_vuebx, ebx
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
         mov s_vu1esp, esp
 #endif
         
@@ -44,7 +44,7 @@ SuperVUEndProgram:
 		mov edi, s_vuedi
 		mov ebx, s_vuebx
                 
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
         sub s_vu1esp, esp
 #endif
         

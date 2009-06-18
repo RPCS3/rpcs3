@@ -78,7 +78,7 @@ MEMCPY_AMD.CPP
 
 #if defined(_MSC_VER)
 
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 extern u8 g_globalMMXSaved;
 
 void checkregs()

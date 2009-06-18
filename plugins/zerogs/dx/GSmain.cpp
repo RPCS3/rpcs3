@@ -46,7 +46,7 @@ using namespace std;
 #pragma warning(disable:4244)
 #endif
 
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 HANDLE g_hCurrentThread = NULL;
 #endif
 
@@ -73,7 +73,7 @@ unsigned char revision = 0;	// revision and build gives plugin version
 unsigned char build	= VER;
 unsigned char minor = 1;
 
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 char *libraryName	= "ZeroGS (Debug) ";
 #elif defined(RELEASE_TO_PUBLIC)
 
@@ -354,7 +354,7 @@ s32 CALLBACK GSopen(void *pDsp, char *Title, int multithread) {
 
 	GS_LOG("GSopen\n");
 
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 	g_hCurrentThread = GetCurrentThread();
 #endif
 
@@ -760,7 +760,7 @@ void CALLBACK GSgetLastTag(u64* ptag)
 
 void _GSgifTransfer(pathInfo *path, u32 *pMem, u32 size)
 {
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 	assert( g_hCurrentThread == GetCurrentThread() );
 #endif
 
@@ -964,7 +964,7 @@ void CALLBACK GSgifTransfer1(u32 *pMem, u32 addr)
 
 	addr &= 0x3fff;
 
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 	PRIM_LOG("count: %d\n", count);
 	count++;
 #endif

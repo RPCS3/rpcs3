@@ -57,7 +57,7 @@ extern void iDumpVU1Registers();
 #define SUPERVU_PROPAGATEFLAGS  // the correct behavior of VUs, for some reason superman breaks gfx with it on...
 
 // registers won't be flushed at block boundaries (faster) (nothing noticable speed-wise, causes SPS in Ratchet and clank (Nneeve) )
-#ifndef _DEBUG
+#ifndef PCSX2_DEBUG
 //#define SUPERVU_INTERCACHING	
 #endif
 
@@ -104,7 +104,7 @@ extern void (*recVU_LOWER_OPCODE[128])(VURegs* VU, s32 info);
 
 //#define FORIT(it, v) for(it = (v).begin(); it != (v).end(); ++(it))
 
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 u32 s_vucount = 0;
 
 static u32 g_vu1lastrec = 0, skipparent = -1;
@@ -429,7 +429,7 @@ void SuperVUDestroy(int vuindex)
 // reset VU
 void SuperVUReset(int vuindex)
 {
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 	s_vucount = 0;
 #endif
 
@@ -722,16 +722,6 @@ void* SuperVUGetProgram(u32 startpc, int vuindex)
 
 	if (*pheader == NULL)
 	{
-#ifdef _DEBUG
-//		if( vuindex ) VU1.VI[REG_TPC].UL = startpc;
-//		else VU0.VI[REG_TPC].UL = startpc;
-//		__Log("VU: %x\n", startpc);
-//		iDumpVU1Registers();
-//		vudump |= 2;
-#endif
-
-		// measure run time
-		//QueryPerformanceCounter(&svubase);
 
 #ifdef SUPERVU_CACHING
 		void* pmem = (vuindex & 1) ? VU1.Micro : VU0.Micro;
@@ -763,9 +753,6 @@ void* SuperVUGetProgram(u32 startpc, int vuindex)
 			
 			return (void*)SuperVUEndProgram;
 		}
-
-		//QueryPerformanceCounter(&svufinal);
-		//svutime += (u32)(svufinal.QuadPart-svubase.QuadPart);
 
 		assert((*pheader)->pprogfunc != NULL);
 	}
@@ -906,7 +893,7 @@ static VuFunctionHeader* SuperVURecompileProgram(u32 startpc, int vuindex)
 	SuperVUEliminateDeadCode();
 	SuperVUAssignRegs();
 
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 	if ((s_vu && (vudump&1)) || (!s_vu && (vudump&16))) SuperVUDumpBlock(s_listBlocks, s_vu);
 #endif
 
@@ -934,7 +921,7 @@ static VuFunctionHeader* SuperVURecompileProgram(u32 startpc, int vuindex)
 		s_pFnHeader->ranges.push_back(r);
 	}
 
-#if defined(_DEBUG) && defined(__LINUX__)
+#if defined(PCSX2_DEBUG) && defined(__LINUX__)
 	// dump at the end to capture the actual code
 	if ((s_vu && (vudump&1)) || (!s_vu && (vudump&16))) SuperVUDumpBlock(s_listBlocks, s_vu);
 #endif
@@ -1855,7 +1842,7 @@ static void SuperVUEliminateDeadCode()
 	for(itblock = s_listBlocks.begin(); itblock != s_listBlocks.end(); itblock++)
 	{
 
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 		u32 startpc = (*itblock)->startpc;
 		u32 curpc = startpc;
 #endif
@@ -1965,8 +1952,8 @@ static void SuperVUEliminateDeadCode()
 					continue;
 				}
 			}
-#ifdef _DEBUG
-			else 
+#ifdef PCSX2_DEBUG
+			else
 			{
 				curpc += 8;
 			}
@@ -2601,7 +2588,7 @@ __declspec(naked) void SuperVUExecuteProgram(u32 startpc, int vuindex)
 		mov s_vuedi, edi // have to save even in Release
 		mov s_vuebx, ebx
 	}
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 	__asm
 	{
 		mov s_vu1esp, esp
@@ -2635,7 +2622,7 @@ __declspec(naked) static void SuperVUEndProgram()
 		mov ebx, s_vuebx
 	}
 
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 	__asm
 	{
 		sub s_vu1esp, esp
@@ -2820,7 +2807,7 @@ void svudispfntemp()
 {
 #endif
 
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 	static u32 i;
 
 	if (((vudump&8) && g_curdebugvu) || ((vudump&0x80) && !g_curdebugvu))    //&& g_vu1lastrec != g_vu1last ) {
@@ -2938,7 +2925,7 @@ void VuBaseBlock::Recompile()
 	x86Align(16);
 	pcode = x86Ptr;
 
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 	MOV32ItoM((uptr)&s_vufnheader, s_pFnHeader->startpc);
 	MOV32ItoM((uptr)&VU->VI[REG_TPC], startpc);
 	MOV32ItoM((uptr)&s_svulast, startpc);
@@ -3593,9 +3580,8 @@ void VuInstruction::Recompile(list<VuInstruction>::iterator& itinst, u32 vuxyz)
 
 	s_pCurBlock->prevFlagsOutOfBlock = 0;
 
-#ifdef _DEBUG
-	MOV32ItoR(EAX, pc);
-#endif
+	if( IsDebugBuild )
+		MOV32ItoR(EAX, pc);
 
 	assert(!(type & (INST_CLIP_WRITE | INST_STATUS_WRITE | INST_MAC_WRITE)));
 	pc += 8;

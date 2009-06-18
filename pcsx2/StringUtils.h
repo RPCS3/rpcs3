@@ -43,7 +43,7 @@ struct _VARG_PARAM
 	uint someval;
 };
 
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 
 #define params va_arg_dummy,
 #define varg_assert()  // jASSUME( dummy == &va_arg_dummy );

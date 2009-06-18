@@ -126,7 +126,7 @@ static void InitLibraryName()
 	// subversion revision tags:
 
 	strcpy( libraryName, "ZeroSPU2"
-#	ifdef _DEBUG
+#	ifdef PCSX2_DEBUG
 		"-Debug"
 #	elseif ZEROSPU2_DEVBUILD
 		"-Dev"
@@ -138,7 +138,7 @@ static void InitLibraryName()
 	// to label the specific revision:
 
 	sprintf_s( libraryName, "ZeroSPU2 r%d%s"
-#	ifdef _DEBUG
+#	ifdef PCSX2_DEBUG
 		"-Debug"
 #	elif ZEROSPU2_DEVBUILD
 		"-Dev"
@@ -151,7 +151,7 @@ static void InitLibraryName()
 // I'll hook in svn version code later. --arcum42
 
 	strcpy( libraryName, "ZeroSPU2 Playground"
-#	ifdef _DEBUG
+#	ifdef PCSX2_DEBUG
 		"-Debug"
 #	elif ZEROSPU2_DEVBUILD
 		"-Dev"

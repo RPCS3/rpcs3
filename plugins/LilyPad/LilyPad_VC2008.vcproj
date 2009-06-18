@@ -21,7 +21,7 @@
 		<Configuration
 			Name="Debug|Win32"
 			ConfigurationType="2"
-			InheritedPropertySheets=".\ProjectRootDir.vsprops;..\..\common\vsprops\BaseProperties.vsprops"
+			InheritedPropertySheets=".\ProjectRootDir.vsprops;..\..\common\vsprops\BaseProperties.vsprops;..\..\common\vsprops\CodeGen_Debug.vsprops"
 			UseOfMFC="0"
 			CharacterSet="2"
 			>
@@ -49,14 +49,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				PreprocessorDefinitions="_DEBUG;_USRDLL;TEST_EXPORTS"
-				MinimalRebuild="true"
-				ExceptionHandling="2"
-				BasicRuntimeChecks="3"
-				RuntimeLibrary="1"
-				WarningLevel="3"
-				SuppressStartupBanner="true"
-				DebugInformationFormat="4"
+				PreprocessorDefinitions="_USRDLL;TEST_EXPORTS"
 				DisableSpecificWarnings="4995, 4996"
 			/>
 			<Tool
@@ -110,7 +103,7 @@
 		<Configuration
 			Name="Release|Win32"
 			ConfigurationType="2"
-			InheritedPropertySheets=".\ProjectRootDir.vsprops;..\..\common\vsprops\BaseProperties.vsprops"
+			InheritedPropertySheets=".\ProjectRootDir.vsprops;..\..\common\vsprops\BaseProperties.vsprops;..\..\common\vsprops\CodeGen_Release.vsprops"
 			UseOfMFC="0"
 			CharacterSet="2"
 			WholeProgramOptimization="1"
@@ -137,20 +130,8 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="3"
-				InlineFunctionExpansion="2"
-				EnableIntrinsicFunctions="true"
-				FavorSizeOrSpeed="1"
-				OmitFramePointers="true"
 				PreprocessorDefinitions="NDEBUG;_USRDLL;TEST_EXPORTS"
-				StringPooling="true"
 				ExceptionHandling="0"
-				RuntimeLibrary="0"
-				BufferSecurityCheck="false"
-				EnableFunctionLevelLinking="true"
-				RuntimeTypeInfo="false"
-				WarningLevel="3"
-				SuppressStartupBanner="true"
 				CallingConvention="1"
 				DisableSpecificWarnings="4995, 4996"
 			/>

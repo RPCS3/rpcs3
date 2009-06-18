@@ -32,10 +32,6 @@
 // Uncomment this to enable profiling of the GS RingBufferCopy function.
 //#define PCSX2_GSRING_SAMPLING_STATS
 
-#ifdef PCSX2_GSRING_TX_STATS
-#include <intrin.h>
-#endif
-
 using namespace Threading;
 using namespace std;
 
@@ -178,7 +174,7 @@ mtgsThreadObject* mtgsThread = NULL;
 std::list<uint> ringposStack;
 #endif
 
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 // debug variable used to check for bad code bits where copies are started
 // but never closed, or closed without having been started.  (GSRingBufCopy calls
 // should always be followed by a call to GSRINGBUF_DONECOPY)
@@ -756,24 +752,25 @@ void mtgsThreadObject::SendDataPacket()
 	jASSUME( temp <= m_RingBufferSize );
 	temp &= m_RingBufferMask;
 
-#ifdef _DEBUG
-	if( m_packet_ringpos + m_packet_size < m_RingBufferSize )
+	if( IsDebugBuild )
 	{
-		uint readpos = volatize(m_RingPos);
-		if( readpos != m_WritePos )
+		if( m_packet_ringpos + m_packet_size < m_RingBufferSize )
 		{
-			// The writepos should never leapfrog the readpos
-			// since that indicates a bad write.
-			if( m_packet_ringpos < readpos )
-				assert( temp < readpos );
-		}
+			uint readpos = volatize(m_RingPos);
+			if( readpos != m_WritePos )
+			{
+				// The writepos should never leapfrog the readpos
+				// since that indicates a bad write.
+				if( m_packet_ringpos < readpos )
+					assert( temp < readpos );
+			}
 
-		// Updating the writepos should never make it equal the readpos, since
-		// that would stop the buffer prematurely (and indicates bad code in the
-		// ringbuffer manager)
-		assert( readpos != temp );
+			// Updating the writepos should never make it equal the readpos, since
+			// that would stop the buffer prematurely (and indicates bad code in the
+			// ringbuffer manager)
+			assert( readpos != temp );
+		}
 	}
-#endif
 
 	AtomicExchange( m_WritePos, temp );
 

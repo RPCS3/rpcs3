@@ -101,6 +101,7 @@ typedef s32 sptr;
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // A rough-and-ready cross platform 128-bit datatype, Non-SSE style.
+//
 #ifdef __cplusplus
 struct u128
 {

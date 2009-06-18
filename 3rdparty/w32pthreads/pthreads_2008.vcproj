@@ -2,7 +2,7 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="9.00"
-	Name="pthreads"
+	Name="w32pthreads"
 	ProjectGUID="{26511268-2902-4997-8421-ECD7055F9E28}"
 	RootNamespace="pthreads"
 	Keyword="Win32Proj"
@@ -18,8 +18,8 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			ConfigurationType="4"
-			InheritedPropertySheets="..\3rdparty.vsprops;..\..\common\vsprops\IncrementalLinking.vsprops"
+			ConfigurationType="2"
+			InheritedPropertySheets="..\3rdparty.vsprops;..\..\common\vsprops\CodeGen_Debug.vsprops;..\..\common\vsprops\IncrementalLinking.vsprops"
 			CharacterSet="2"
 			>
 			<Tool
@@ -39,15 +39,11 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="0"
 				AdditionalIncludeDirectories="&quot;$(ProjectDir)&quot;;&quot;$(ProjectDir)\include&quot;"
-				PreprocessorDefinitions="PTW32_STATIC_LIB;__CLEANUP_SEH;WIN32;_DEBUG;_LIB"
+				PreprocessorDefinitions="PTW32_BUILD;__CLEANUP_SEH;_DEBUG;_LIB"
 				ExceptionHandling="2"
-				BasicRuntimeChecks="3"
-				RuntimeLibrary="1"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
-				DebugInformationFormat="4"
 				CompileAs="1"
 			/>
 			<Tool
@@ -60,10 +56,16 @@
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
-				Name="VCLibrarianTool"
+				Name="VCLinkerTool"
+				AdditionalDependencies="ws2_32.lib"
+				OutputFile="$(SolutionDir)\bin\$(ProjectName).dll"
+				ImportLibrary="$(OutDir)\$(ProjectName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCManifestTool"
 			/>
 			<Tool
 				Name="VCXDCMakeTool"
@@ -75,13 +77,16 @@
 				Name="VCFxCopTool"
 			/>
 			<Tool
+				Name="VCAppVerifierTool"
+			/>
+			<Tool
 				Name="VCPostBuildEventTool"
 			/>
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			ConfigurationType="4"
-			InheritedPropertySheets="..\3rdparty.vsprops"
+			ConfigurationType="2"
+			InheritedPropertySheets="..\3rdparty.vsprops;..\..\common\vsprops\CodeGen_Release.vsprops"
 			CharacterSet="2"
 			WholeProgramOptimization="1"
 			>
@@ -102,23 +107,11 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="2"
-				InlineFunctionExpansion="2"
-				EnableIntrinsicFunctions="true"
-				FavorSizeOrSpeed="1"
-				EnableFiberSafeOptimizations="true"
 				AdditionalIncludeDirectories="&quot;$(ProjectDir)&quot;;&quot;$(ProjectDir)\include&quot;"
-				PreprocessorDefinitions="PTW32_STATIC_LIB;PTW32_BUILD_INLINED;__CLEANUP_SEH;WIN32;NDEBUG;_LIB"
-				StringPooling="true"
+				PreprocessorDefinitions="PTW32_BUILD;__CLEANUP_SEH;NDEBUG;_LIB"
 				ExceptionHandling="2"
-				RuntimeLibrary="0"
-				StructMemberAlignment="5"
-				BufferSecurityCheck="false"
-				EnableFunctionLevelLinking="false"
 				UsePrecompiledHeader="0"
-				BrowseInformation="1"
 				WarningLevel="3"
-				DebugInformationFormat="3"
 				CompileAs="1"
 			/>
 			<Tool
@@ -131,10 +124,16 @@
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
-				Name="VCLibrarianTool"
+				Name="VCLinkerTool"
+				AdditionalDependencies="ws2_32.lib"
+				OutputFile="$(SolutionDir)\bin\$(ProjectName).dll"
+				ImportLibrary="$(OutDir)\$(ProjectName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCManifestTool"
 			/>
 			<Tool
 				Name="VCXDCMakeTool"
@@ -146,13 +145,16 @@
 				Name="VCFxCopTool"
 			/>
 			<Tool
+				Name="VCAppVerifierTool"
+			/>
+			<Tool
 				Name="VCPostBuildEventTool"
 			/>
 		</Configuration>
 		<Configuration
 			Name="Devel|Win32"
-			ConfigurationType="4"
-			InheritedPropertySheets="..\3rdparty.vsprops;..\..\common\vsprops\IncrementalLinking.vsprops"
+			ConfigurationType="2"
+			InheritedPropertySheets="..\3rdparty.vsprops;..\..\common\vsprops\CodeGen_Devel.vsprops;..\..\common\vsprops\IncrementalLinking.vsprops"
 			CharacterSet="2"
 			WholeProgramOptimization="0"
 			>
@@ -173,22 +175,11 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="2"
-				InlineFunctionExpansion="2"
-				EnableIntrinsicFunctions="true"
-				FavorSizeOrSpeed="1"
-				EnableFiberSafeOptimizations="true"
-				WholeProgramOptimization="false"
 				AdditionalIncludeDirectories="&quot;$(ProjectDir)&quot;;&quot;$(ProjectDir)\include&quot;"
-				PreprocessorDefinitions="PTW32_STATIC_LIB;PTW32_BUILD_INLINED;__CLEANUP_SEH;WIN32;NDEBUG;_LIB"
-				StringPooling="true"
+				PreprocessorDefinitions="PTW32_BUILD;__CLEANUP_SEH;NDEBUG;_LIB"
 				ExceptionHandling="2"
-				RuntimeLibrary="0"
-				StructMemberAlignment="5"
-				BufferSecurityCheck="false"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
-				DebugInformationFormat="3"
 				CompileAs="1"
 			/>
 			<Tool
@@ -201,10 +192,16 @@
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
-				Name="VCLibrarianTool"
+				Name="VCLinkerTool"
+				AdditionalDependencies="ws2_32.lib"
+				OutputFile="$(SolutionDir)\bin\$(ProjectName).dll"
+				ImportLibrary="$(OutDir)\$(ProjectName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCManifestTool"
 			/>
 			<Tool
 				Name="VCXDCMakeTool"
@@ -214,6 +211,9 @@
 			/>
 			<Tool
 				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCAppVerifierTool"
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
@@ -438,6 +438,10 @@
 						PrecompiledHeaderFile="$(IntDir)\ptw32.pch"
 					/>
 				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\dll.c"
+				>
 			</File>
 			<File
 				RelativePath=".\errno.c"
@@ -754,6 +758,7 @@
 				>
 				<FileConfiguration
 					Name="Debug|Win32"
+					ExcludedFromBuild="true"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -764,6 +769,7 @@
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Release|Win32"
+					ExcludedFromBuild="true"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -774,6 +780,7 @@
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Devel|Win32"
+					ExcludedFromBuild="true"
 					>
 					<Tool
 						Name="VCCLCompilerTool"

@@ -74,7 +74,7 @@ extern void SysMessage(const char *fmt, ...);
 
 #endif
 
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 
 #	define DbgCon Console
 	static const bool IsDebugBuild = true;

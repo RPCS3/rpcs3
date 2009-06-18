@@ -77,6 +77,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Include", "Include", "{0FADC26C-0E9D-4DD7-84B1-BF4F7754E90C}"
 	ProjectSection(SolutionItems) = preProject
 		common\include\afxresmw.h = common\include\afxresmw.h
+		common\include\intrin_x86.h = common\include\intrin_x86.h
 		common\include\PS2Edefs.h = common\include\PS2Edefs.h
 		common\include\PS2Etypes.h = common\include\PS2Etypes.h
 	EndProjectSection

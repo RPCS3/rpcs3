@@ -47,7 +47,7 @@ char *methods[] =
 	NULL
 };
 
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 char *LibName = "Linuz Iso CDVD (Debug) ";
 #else
 char *LibName = "Linuz Iso CDVD ";
@@ -95,7 +95,7 @@ EXPORT_C_(u32) PS2EgetLibVersion2(u32 type)
 	return (version << 16) | (revision << 8) | build;
 }
 
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 void __Log(char *fmt, ...)
 {
 	va_list list;
@@ -113,7 +113,7 @@ void __Log(char *fmt, ...)
 
 EXPORT_C_(s32) CDVDinit()
 {
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 	cdvdLog = fopen("logs/cdvdLog.txt", "w");
 	if (cdvdLog == NULL)
 	{

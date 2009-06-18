@@ -219,4 +219,7 @@ EXPORT_C_(s32) SPU2freeze(int mode, freezeData *data)
 		
 		jNO_DEFAULT;
 	}
+	
+	// technically unreachable, but kills a warning:
+	return 0;
 }

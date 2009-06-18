@@ -503,7 +503,7 @@ static __forceinline StereoOut32 ReadInputPV( uint core )
 static __forceinline void spu2M_WriteFast( u32 addr, s16 value )
 {
 	// throw an assertion if the memory range is invalid:
-#ifndef _DEBUG_FAST
+#ifndef DEBUG_FAST
 	jASSUME( addr < SPU2_DYN_MEMLINE );
 #endif
 	*GetMemPtr( addr ) = value;

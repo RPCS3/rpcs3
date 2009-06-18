@@ -22,11 +22,8 @@
 #include <stdio.h>
 #include <malloc.h>
 
-// need C definitions
-extern "C" {
 #define GSdefs
 #include "PS2Edefs.h"
-}
 
 #ifdef _WIN32
 

@@ -32,7 +32,7 @@
 
 VURegs* g_pVU1;
 
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 u32 vudump = 0;
 #endif
 

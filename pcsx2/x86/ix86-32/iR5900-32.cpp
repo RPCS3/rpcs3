@@ -103,7 +103,7 @@ static EEINST* s_psaveInstInfo = NULL;
 
 static u32 s_savenBlockCycles = 0;
 
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 static u32 dumplog = 0;
 #else
 #define dumplog 0
@@ -1024,10 +1024,6 @@ static u32 eeScaleBlockCycles()
 //   setting "branch = 2";
 static void iBranchTest(u32 newpc, bool noDispatch)
 {
-#ifdef _DEBUG
-	//CALLFunc((uptr)testfpu);
-#endif
-
 	if( bExecBIOS ) CheckForBIOSEnd();
 
 	// Check the Event scheduler if our "cycle target" has been reached.
@@ -1089,7 +1085,7 @@ void recompileNextInstruction(int delayslot)
 	pc += 4;
 
 #if 0
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 	CMP32ItoM((u32)s_pCode, cpuRegs.code);
 	j8Ptr[0] = JE8(0);
 	MOV32ItoR(EAX, pc);
@@ -1188,8 +1184,6 @@ void recompileNextInstruction(int delayslot)
 		s_nEndBlock = pc;
 }
 
-extern u32 psxdump;
-
 static void printfn()
 {
 	static int lastrec = 0;
@@ -1241,7 +1235,7 @@ void recRecompile( const u32 startpc )
 	u32 willbranch3 = 0;
 	u32 usecop2;
 
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
     //dumplog |= 4;
     if( dumplog & 4 )
 		iDumpRegisters(startpc, 0);
@@ -1293,7 +1287,7 @@ void recRecompile( const u32 startpc )
 	_initXMMregs();
 	_initMMXregs();
 
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 	// for debugging purposes
 	MOV32ItoM((uptr)&g_lastpc, pc);
 	CALLFunc((uptr)printfn);
@@ -1478,7 +1472,7 @@ StartRecomp:
 		}
 	}
 
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 	// dump code
 	for(i = 0; i < ArraySize(s_recblocks); ++i) {
 		if( startpc == s_recblocks[i] ) {
@@ -1571,7 +1565,7 @@ StartRecomp:
 		recompileNextInstruction(0);		// For the love of recursion, batman!
 	}
 
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 	if( (dumplog & 1) )
 		iDumpBlock(startpc, recPtr);
 #endif

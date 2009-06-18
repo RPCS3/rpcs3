@@ -52,7 +52,7 @@ namespace Threading
 			LogicalCoresPerPhysicalCPU = CPUs;
 
 		cpuinfo.PhysicalCores = ( CPUs / LogicalCoresPerPhysicalCPU ) * PhysicalCoresPerPhysicalCPU;
-		ptw32_smp_system = ( cpuinfo.LogicalCores > 1 ) ? TRUE : FALSE;
+		//ptw32_smp_system = ( cpuinfo.LogicalCores > 1 ) ? TRUE : FALSE;
 	}
 
 	__forceinline void Timeslice()
@@ -76,13 +76,13 @@ namespace Threading
 	{
 		jASSUME( itsme != NULL );
 
-		pthread_win32_thread_attach_np();
+		//pthread_win32_thread_attach_np();
 
 		Thread& owner = *((Thread*)itsme);
 		owner.m_returncode = owner.Callback();
 		owner.m_terminated = true;
 
-		pthread_win32_thread_detach_np();
+		//pthread_win32_thread_detach_np();
 
 		return NULL;
 	}
@@ -97,14 +97,13 @@ namespace Threading
 
 	__forceinline long pcsx2_InterlockedExchange( volatile long* target, long srcval )
 	{
-		// Use the pthreads-win32 implementation...
-		return ptw32_InterlockedExchange( target, srcval );
+		return _InterlockedExchange( target, srcval );
 	}
 
 	__forceinline long pcsx2_InterlockedCompareExchange( volatile long* target, long srcval, long comp )
 	{
 		// Use the pthreads-win32 implementation...
-		return ptw32_InterlockedCompareExchange( target, srcval, comp );
+		return _InterlockedCompareExchange( target, srcval, comp );
 	}
 
 	__forceinline long pcsx2_InterlockedExchangeAdd( volatile long* target, long srcval )

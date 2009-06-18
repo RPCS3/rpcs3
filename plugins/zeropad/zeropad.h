@@ -41,10 +41,8 @@
 using namespace std;
 
 #define PADdefs
-extern "C"
-{
 #include "PS2Edefs.h"
-}
+
 #ifdef __LINUX__
 #include "joystick.h"
 #endif

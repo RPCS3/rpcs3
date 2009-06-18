@@ -14,6 +14,7 @@
 		WholeProgramOptimization="true"
 		PreprocessorDefinitions="NDEBUG;_SECURE_SCL=0"
 		StringPooling="true"
+		RuntimeLibrary="2"
 		BufferSecurityCheck="false"
 	/>
 	<Tool

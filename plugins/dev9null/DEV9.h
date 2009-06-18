@@ -29,11 +29,8 @@
 #include <commctrl.h>
 #endif
 
-extern "C"
-{
 #define DEV9defs
 #include "PS2Edefs.h"
-}
 
 typedef struct {
   int Log;

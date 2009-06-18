@@ -18,7 +18,7 @@
 #include "svnrev.h"
 #include "resource.h"
 
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 #include "crtdbg.h"
 #endif
 
@@ -577,7 +577,7 @@ u32 CALLBACK PS2EgetLibVersion2(u32 type) {
 
 // Used in about and config screens.
 void GetNameAndVersionString(wchar_t *out) {
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 	wsprintfW(out, L"LilyPad Debug %i.%i.%i (r%i)", (VERSION>>8)&0xFF, VERSION&0xFF, (VERSION>>24)&0xFF, SVN_REV);
 #elif (_MSC_VER != 1400)
 	wsprintfW(out, L"LilyPad svn %i.%i.%i (r%i)", (VERSION>>8)&0xFF, VERSION&0xFF, (VERSION>>24)&0xFF, SVN_REV);
@@ -587,7 +587,7 @@ void GetNameAndVersionString(wchar_t *out) {
 }
 
 char* CALLBACK PSEgetLibName() {
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 	static char version[50];
 	sprintf(version, "LilyPad Debug (r%i)", SVN_REV);
 	return version;
@@ -680,7 +680,7 @@ s32 CALLBACK PADinit(u32 flags) {
 		return PADinit(2);
 	}
 
-	#ifdef _DEBUG
+	#ifdef PCSX2_DEBUG
 	int tmpFlag = _CrtSetDbgFlag( _CRTDBG_REPORT_FLAG );
 	tmpFlag |= _CRTDBG_LEAK_CHECK_DF;
 	_CrtSetDbgFlag( tmpFlag );

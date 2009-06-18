@@ -220,18 +220,11 @@ namespace VU0micro
 	{
 		int i;
 
-	#ifdef _DEBUG
-		int prevbranch;
-	#endif
-
 		for (i = 128; i--;) {
 			
 			if ((VU0.VI[REG_VPU_STAT].UL & 0x1) == 0)
 				break;
 
-	#ifdef _DEBUG
-			prevbranch = vu0branch;
-	#endif
 			vu0Exec(&VU0);
 		}
 

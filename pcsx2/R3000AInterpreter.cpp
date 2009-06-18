@@ -465,11 +465,6 @@ static void intExecute() {
 	for (;;) execI();
 }
 
-#ifdef _DEBUG
-extern u32 psxdump;
-extern void iDumpPsxRegisters(u32,u32);
-#endif
-
 static s32 intExecuteBlock( s32 eeCycles )
 {
 	psxBreak = 0;

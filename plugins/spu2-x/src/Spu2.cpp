@@ -91,7 +91,7 @@ extern void SysMessage(const char *fmt, ...);
 
 __forceinline s16 * __fastcall GetMemPtr(u32 addr)
 {
-#ifndef _DEBUG_FAST
+#ifndef DEBUG_FAST
 	// In case you're wondering, this assert is the reason SPU2-X
 	// runs so incrediously slow in Debug mode. :P
 	jASSUME( addr < 0x100000 );

@@ -133,11 +133,7 @@ void rpsxpropBSC(EEINST* prev, EEINST* pinst);
 
 static void iopClearRecLUT(BASEBLOCK* base, int count);
 
-#ifdef _DEBUG
-u32 psxdump = 0;
-#else
-#define psxdump 0
-#endif
+static u32 psxdump = 0;
 
 #define PSX_GETBLOCK(x) PC_GETBLOCK_(x, psxRecLUT)
 
@@ -146,10 +142,11 @@ u32 psxdump = 0;
 		psxRecClearMem(mem) : 4)
 
 ////////////////////////////////////////////////////
-#ifdef _DEBUG
 using namespace R3000A;
 static void iIopDumpBlock( int startpc, u8 * ptr )
 {
+#ifdef PCSX2_DEBUG
+
 	FILE *f;
 #ifdef __LINUX__
 	char command[256];
@@ -222,8 +219,8 @@ static void iIopDumpBlock( int startpc, u8 * ptr )
 	system(command);
 	f = fopen( filename.c_str(), "a+" );
 #endif
-}
 #endif
+}
 
 u8 _psxLoadWritesRs(u32 tempcode)
 {
@@ -307,19 +304,9 @@ void _psxFlushConstRegs()
 				MOV32ItoM((uptr)&psxRegs.GPR.r[i], g_psxConstRegs[i]);
 				g_psxFlushedConstReg |= 1<<i;
 			}
-#if defined(_DEBUG)&&0
-			else {
-				// make sure the const regs are the same
-				u8* ptemp;
-				CMP32ItoM((uptr)&psxRegs.GPR.r[i], g_psxConstRegs[i]);
-				ptemp = JE8(0);
-				CALLFunc((uptr)checkconstreg);
-				x86SetJ8( ptemp );
-			}
-#else
+
 			if( g_psxHasConstReg == g_psxFlushedConstReg )
 				break;
-#endif
 		}
 	}
 }
@@ -448,12 +435,13 @@ void psxRecompileCodeConst1(R3000AFNPTR constcode, R3000AFNPTR_INFO noconstcode)
     if ( ! _Rt_ ) {
         if( (psxRegs.code>>26) == 9 ) {
             //ADDIU, call bios
-#ifdef _DEBUG
-            MOV32ItoM( (uptr)&psxRegs.code, psxRegs.code );
-	        MOV32ItoM( (uptr)&psxRegs.pc, psxpc );
-            _psxFlushCall(FLUSH_NODESTROY);
-            CALLFunc((uptr)zeroEx);
-#endif
+			if( IsDebugBuild )
+			{
+				MOV32ItoM( (uptr)&psxRegs.code, psxRegs.code );
+				MOV32ItoM( (uptr)&psxRegs.pc, psxpc );
+				_psxFlushCall(FLUSH_NODESTROY);
+				CALLFunc((uptr)zeroEx);
+			}
 			// Bios Call: Force the IOP to do a Branch Test ASAP.
 			// Important! This helps prevent game freeze-ups during boot-up and stage loads.
 			// Note: Fixes to cdvd have removed the need for this code.
@@ -892,22 +880,12 @@ void psxRecompileNextInstruction(int delayslot)
 	// pblock isn't used elsewhere in this function.
 	BASEBLOCK* pblock = PSX_GETBLOCK(psxpc);
 
-#ifdef _DEBUG
-	MOV32ItoR(EAX, psxpc);
-#endif
+	if( IsDebugBuild )
+		MOV32ItoR(EAX, psxpc);
 
 	psxRegs.code = iopMemRead32( psxpc );
 	s_psxBlockCycles++;
 	psxpc += 4;
-
-//#ifdef _DEBUG
-//	CMP32ItoM((uptr)s_pCode, psxRegs.code);
-//	j8Ptr[0] = JE8(0);
-//	MOV32ItoR(EAX, psxpc);
-//	CALLFunc((uptr)checkcodefn);
-//	x86SetJ8( j8Ptr[ 0 ] );
-//#endif
-
 
 	g_pCurInstInfo++;
 
@@ -926,9 +904,9 @@ void psxRecompileNextInstruction(int delayslot)
 	_clearNeededX86regs();
 }
 
-#ifdef _DEBUG
 static void printfn()
 {
+#ifdef PCSX2_DEBUG
 	extern void iDumpPsxRegisters(u32 startpc, u32 temp);
 
 	static int lastrec = 0;
@@ -948,8 +926,8 @@ static void printfn()
 
 		lastrec = g_psxlastpc;
 	}
-}
 #endif
+}
 
 void iopRecRecompile(u32 startpc)
 {
@@ -957,12 +935,11 @@ void iopRecRecompile(u32 startpc)
 	u32 branchTo;
 	u32 willbranch3 = 0;
 
-#ifdef _DEBUG
-	extern void iDumpPsxRegisters(u32 startpc, u32 temp);
-
-	if( psxdump & 4 )
+	if( IsDebugBuild && (psxdump & 4) )
+	{
+		extern void iDumpPsxRegisters(u32 startpc, u32 temp);
 		iDumpPsxRegisters(startpc, 0);
-#endif
+	}
 
 	assert( startpc );
 
@@ -994,11 +971,11 @@ void iopRecRecompile(u32 startpc)
 
 	_initX86regs();
 
-#ifdef _DEBUG
-	// for debugging purposes
-	MOV32ItoM((uptr)&g_psxlastpc, psxpc);
-	CALLFunc((uptr)printfn);
-#endif
+	if( IsDebugBuild )
+	{
+		MOV32ItoM((uptr)&g_psxlastpc, psxpc);
+		CALLFunc((uptr)printfn);
+	}
 
 	// go until the next branch
 	i = startpc;
@@ -1082,27 +1059,26 @@ StartRecomp:
 		}
 	}
 
-#ifdef _DEBUG
 	// dump code
-	for(i = 0; i < ArraySize(s_psxrecblocks); ++i) {
+	if( IsDebugBuild )
+	{
+		for(i = 0; i < ArraySize(s_psxrecblocks); ++i) {
 		if( startpc == s_psxrecblocks[i] ) {
 			iIopDumpBlock(startpc, recPtr);
+			}
 		}
-	}
 
-	if( (psxdump & 1) )
-		iIopDumpBlock(startpc, recPtr);
-#endif
+		if( (psxdump & 1) )
+			iIopDumpBlock(startpc, recPtr);
+	}
 	
 	g_pCurInstInfo = s_pInstCache;
 	while (!psxbranch && psxpc < s_nEndBlock) {
 		psxRecompileNextInstruction(0);
 	}
 
-#ifdef _DEBUG
-	if( (psxdump & 1) )
+	if( IsDebugBuild && (psxdump & 1) )
 		iIopDumpBlock(startpc, recPtr);
-#endif
 
 	assert( (psxpc-startpc)>>2 <= 0xffff );
 	s_pCurBlockEx->size = (psxpc-startpc)>>2;

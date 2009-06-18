@@ -292,10 +292,6 @@ extern _xmmregs xmmregs[iREGCNT_XMM], s_saveXMMregs[iREGCNT_XMM];
 extern u16 g_x86AllocCounter;
 extern u16 g_xmmAllocCounter;
 
-#ifdef _DEBUG
-extern char g_globalXMMLocked;
-#endif
-
 // allocates only if later insts use XMM, otherwise checks
 int _allocCheckGPRtoXMM(EEINST* pinst, int gprreg, int mode);
 int _allocCheckFPUtoXMM(EEINST* pinst, int fpureg, int mode);

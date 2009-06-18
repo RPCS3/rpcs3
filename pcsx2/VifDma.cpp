@@ -340,7 +340,7 @@ static int VIFalign(u32 *data, vifCode *v, unsigned int size, const unsigned int
 	VURegs * VU;
 	u8 *cdata = (u8*)data;
 
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 	u32 memsize = VIFdmanum ? 0x4000 : 0x1000;
 #endif
 
@@ -375,7 +375,7 @@ static int VIFalign(u32 *data, vifCode *v, unsigned int size, const unsigned int
 
 	size <<= 2;
 	
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 	memsize = size;
 #endif
 	
@@ -455,7 +455,7 @@ static int VIFalign(u32 *data, vifCode *v, unsigned int size, const unsigned int
 	if (vif->cl != 0 || (size & 0xf))  //Check alignment for SSE unpacks
 	{
 
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 		static int s_count = 0;
 #endif
 
@@ -552,7 +552,7 @@ static void VIFunpack(u32 *data, vifCode *v, unsigned int size, const unsigned i
 	u32 tempsize = 0;
 	const u32 memlimit = (VIFdmanum ? 0x4000 : 0x1000);
 	
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 	u32 memsize = memlimit;
 #endif
 
@@ -595,14 +595,14 @@ static void VIFunpack(u32 *data, vifCode *v, unsigned int size, const unsigned i
 
 	size <<= 2;
 	
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 	memsize = size;
 #endif
 	
 	if (vifRegs->cycle.cl >= vifRegs->cycle.wl)   // skipping write
 	{
 
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 		static int s_count = 0;
 #endif
 		if (v->addr >= memlimit) 

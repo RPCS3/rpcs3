@@ -23,7 +23,7 @@
 			Name="Debug|Win32"
 			ConfigurationType="2"
 			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\ProjectRootDir.vsprops;..\..\common\vsprops\BaseProperties.vsprops;.\vsprops\debug.vsprops"
-			UseOfMFC="1"
+			UseOfMFC="2"
 			CharacterSet="2"
 			>
 			<Tool
@@ -87,7 +87,7 @@
 			Name="Release|Win32"
 			ConfigurationType="2"
 			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\ProjectRootDir.vsprops;..\..\common\vsprops\BaseProperties.vsprops;.\vsprops\release.vsprops"
-			UseOfMFC="1"
+			UseOfMFC="2"
 			CharacterSet="2"
 			WholeProgramOptimization="1"
 			>
@@ -152,7 +152,7 @@
 			Name="Debug SSE2|Win32"
 			ConfigurationType="2"
 			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\ProjectRootDir.vsprops;..\..\common\vsprops\BaseProperties.vsprops;.\vsprops\debug.vsprops;.\vsprops\sse2.vsprops"
-			UseOfMFC="1"
+			UseOfMFC="2"
 			CharacterSet="2"
 			>
 			<Tool
@@ -216,7 +216,7 @@
 			Name="Release SSE2|Win32"
 			ConfigurationType="2"
 			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\ProjectRootDir.vsprops;..\..\common\vsprops\BaseProperties.vsprops;.\vsprops\release.vsprops;.\vsprops\sse2.vsprops"
-			UseOfMFC="1"
+			UseOfMFC="2"
 			CharacterSet="2"
 			WholeProgramOptimization="1"
 			>
@@ -281,7 +281,7 @@
 			Name="Release SSSE3|Win32"
 			ConfigurationType="2"
 			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\ProjectRootDir.vsprops;..\..\common\vsprops\BaseProperties.vsprops;.\vsprops\release.vsprops;.\vsprops\sse2.vsprops;.\vsprops\ssse3.vsprops"
-			UseOfMFC="1"
+			UseOfMFC="2"
 			CharacterSet="2"
 			WholeProgramOptimization="1"
 			>
@@ -346,7 +346,7 @@
 			Name="Debug SSSE3|Win32"
 			ConfigurationType="2"
 			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\ProjectRootDir.vsprops;..\..\common\vsprops\BaseProperties.vsprops;.\vsprops\debug.vsprops;.\vsprops\sse2.vsprops;.\vsprops\ssse3.vsprops"
-			UseOfMFC="1"
+			UseOfMFC="2"
 			CharacterSet="2"
 			>
 			<Tool
@@ -411,7 +411,7 @@
 			IntermediateDirectory="$(ConfigurationName)"
 			ConfigurationType="2"
 			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\ProjectRootDir.vsprops;..\..\common\vsprops\BaseProperties.vsprops;.\vsprops\debug.vsprops;.\vsprops\sse2.vsprops;.\vsprops\sse4.vsprops"
-			UseOfMFC="1"
+			UseOfMFC="2"
 			CharacterSet="2"
 			>
 			<Tool
@@ -475,7 +475,7 @@
 			Name="Release SSE4|Win32"
 			ConfigurationType="2"
 			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\ProjectRootDir.vsprops;..\..\common\vsprops\BaseProperties.vsprops;.\vsprops\release.vsprops;.\vsprops\sse2.vsprops;.\vsprops\sse4.vsprops"
-			UseOfMFC="1"
+			UseOfMFC="2"
 			CharacterSet="2"
 			WholeProgramOptimization="1"
 			>

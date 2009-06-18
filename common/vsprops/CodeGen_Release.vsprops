@@ -2,7 +2,7 @@
 <VisualStudioPropertySheet
 	ProjectType="Visual C++"
 	Version="8.00"
-	Name="GlobalOptimizations"
+	Name="CodeGen_Release"
 	>
 	<Tool
 		Name="VCCLCompilerTool"
@@ -11,9 +11,11 @@
 		EnableIntrinsicFunctions="true"
 		FavorSizeOrSpeed="1"
 		OmitFramePointers="true"
+		EnableFiberSafeOptimizations="true"
 		WholeProgramOptimization="true"
 		StringPooling="true"
 		MinimalRebuild="true"
+		RuntimeLibrary="2"
 		BufferSecurityCheck="false"
 	/>
 	<Tool

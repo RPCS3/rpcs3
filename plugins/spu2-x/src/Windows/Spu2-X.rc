@@ -7,7 +7,8 @@
 //
 // Generated from the TEXTINCLUDE 2 resource.
 //
-#include "afxresmw.h"
+#include "afxresmw.h"
+
 /////////////////////////////////////////////////////////////////////////////
 #undef APSTUDIO_READONLY_SYMBOLS
 
@@ -270,11 +271,6 @@ VS_VERSION_INFO VERSIONINFO
  FILEVERSION 1,1,1,0
  PRODUCTVERSION 1,1,1,0
  FILEFLAGSMASK 0x17L
-#ifdef _DEBUG
- FILEFLAGS 0x1L
-#else
- FILEFLAGS 0x0L
-#endif
  FILEOS 0x4L
  FILETYPE 0x2L
  FILESUBTYPE 0x0L

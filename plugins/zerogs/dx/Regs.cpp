@@ -77,7 +77,7 @@ u32 s_uTex1Data[2][2] = {0}, s_uClampData[2] = {0};
 
 void __fastcall	GIFPackedRegHandlerNull(u32* data)
 {
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 	DEBUG_LOG("Unexpected packed reg handler %8.8lx_%8.8lx %x\n", data[0], data[1], data[2]);
 #endif
 }
@@ -367,7 +367,7 @@ __forceinline void clampWrite(int i, u32 *data)
 
 void __fastcall GIFRegHandlerNull(u32* data)
 {
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 	if( (((uptr)&data[2])&0xffff) == 0 )
 		return;
 

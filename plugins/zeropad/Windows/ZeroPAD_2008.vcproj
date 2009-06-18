@@ -19,7 +19,7 @@
 		<Configuration
 			Name="Debug|Win32"
 			ConfigurationType="2"
-			InheritedPropertySheets="..\..\..\common\vsprops\plugin_svnroot.vsprops;.\ProjectRootDir.vsprops;..\..\..\common\vsprops\BaseProperties.vsprops;..\..\..\common\vsprops\3rdpartyDeps.vsprops;..\..\..\common\vsprops\pthreads.vsprops;..\..\..\common\vsprops\IncrementalLinking.vsprops"
+			InheritedPropertySheets="..\..\..\common\vsprops\plugin_svnroot.vsprops;.\ProjectRootDir.vsprops;..\..\..\common\vsprops\BaseProperties.vsprops;..\..\..\common\vsprops\3rdpartyDeps.vsprops;..\..\..\common\vsprops\pthreads.vsprops;..\..\..\common\vsprops\CodeGen_Debug.vsprops;..\..\..\common\vsprops\IncrementalLinking.vsprops"
 			CharacterSet="2"
 			>
 			<Tool
@@ -39,13 +39,8 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="0"
-				PreprocessorDefinitions="_DEBUG;_USRDLL;ZEROPAD_EXPORTS"
-				MinimalRebuild="true"
-				BasicRuntimeChecks="3"
-				RuntimeLibrary="1"
+				PreprocessorDefinitions="_USRDLL;ZEROPAD_EXPORTS"
 				UsePrecompiledHeader="0"
-				DebugInformationFormat="3"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -92,7 +87,7 @@
 		<Configuration
 			Name="Release|Win32"
 			ConfigurationType="2"
-			InheritedPropertySheets="..\..\..\common\vsprops\plugin_svnroot.vsprops;.\ProjectRootDir.vsprops;..\..\..\common\vsprops\BaseProperties.vsprops;..\..\..\common\vsprops\3rdpartyDeps.vsprops;..\..\..\common\vsprops\pthreads.vsprops;..\..\..\common\vsprops\GlobalLinking.vsprops"
+			InheritedPropertySheets="..\..\..\common\vsprops\plugin_svnroot.vsprops;.\ProjectRootDir.vsprops;..\..\..\common\vsprops\BaseProperties.vsprops;..\..\..\common\vsprops\3rdpartyDeps.vsprops;..\..\..\common\vsprops\CodeGen_Release.vsprops;..\..\..\common\vsprops\pthreads.vsprops"
 			CharacterSet="2"
 			WholeProgramOptimization="1"
 			>
@@ -113,12 +108,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="3"
-				InlineFunctionExpansion="2"
-				EnableIntrinsicFunctions="true"
-				FavorSizeOrSpeed="1"
 				PreprocessorDefinitions="NDEBUG;_USRDLL;ZEROPAD_EXPORTS"
-				RuntimeLibrary="0"
 				UsePrecompiledHeader="0"
 			/>
 			<Tool
@@ -163,7 +153,7 @@
 		<Configuration
 			Name="Devel|Win32"
 			ConfigurationType="2"
-			InheritedPropertySheets="..\..\..\common\vsprops\plugin_svnroot.vsprops;.\ProjectRootDir.vsprops;..\..\..\common\vsprops\BaseProperties.vsprops;..\..\..\common\vsprops\3rdpartyDeps.vsprops;..\..\..\common\vsprops\pthreads.vsprops;..\..\..\common\vsprops\IncrementalLinking.vsprops"
+			InheritedPropertySheets="..\..\..\common\vsprops\plugin_svnroot.vsprops;.\ProjectRootDir.vsprops;..\..\..\common\vsprops\BaseProperties.vsprops;..\..\..\common\vsprops\3rdpartyDeps.vsprops;..\..\..\common\vsprops\pthreads.vsprops;..\..\..\common\vsprops\CodeGen_Devel.vsprops;..\..\..\common\vsprops\IncrementalLinking.vsprops"
 			CharacterSet="2"
 			WholeProgramOptimization="0"
 			>
@@ -184,13 +174,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="3"
-				InlineFunctionExpansion="2"
-				EnableIntrinsicFunctions="true"
-				FavorSizeOrSpeed="1"
-				OmitFramePointers="true"
 				PreprocessorDefinitions="NDEBUG;_USRDLL;ZEROPAD_EXPORTS"
-				RuntimeLibrary="0"
 				UsePrecompiledHeader="0"
 			/>
 			<Tool
@@ -243,7 +227,7 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath=".\win.cpp"
+				RelativePath="..\analog.cpp"
 				>
 			</File>
 			<File
@@ -251,15 +235,15 @@
 				>
 			</File>
 			<File
-				RelativePath="..\zeropad.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\analog.cpp"
-				>
-			</File>
-			<File
 				RelativePath="..\keyboard.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\win.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\zeropad.cpp"
 				>
 			</File>
 		</Filter>
@@ -269,7 +253,15 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
-				RelativePath=".\win.h"
+				RelativePath="..\analog.h"
+				>
+			</File>
+			<File
+				RelativePath="..\bitwise.h"
+				>
+			</File>
+			<File
+				RelativePath="..\keyboard.h"
 				>
 			</File>
 			<File
@@ -285,19 +277,11 @@
 				>
 			</File>
 			<File
+				RelativePath=".\win.h"
+				>
+			</File>
+			<File
 				RelativePath="..\zeropad.h"
-				>
-			</File>
-			<File
-				RelativePath="..\analog.h"
-				>
-			</File>
-			<File
-				RelativePath="..\keyboard.h"
-				>
-			</File>
-			<File
-				RelativePath="..\bitwise.h"
 				>
 			</File>
 		</Filter>

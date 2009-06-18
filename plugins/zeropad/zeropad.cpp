@@ -142,7 +142,7 @@ static void InitLibraryName()
 	// subversion revision tags:
 
 	strcpy(libraryName, "ZeroPAD"
-#		ifdef _DEBUG
+#		ifdef PCSX2_DEBUG
 	       "-Debug"
 #		endif
 	      );
@@ -152,7 +152,7 @@ static void InitLibraryName()
 	// to label the specific revision:
 
 	sprintf_s(libraryName, "ZeroPAD r%d%s"
-#		ifdef _DEBUG
+#		ifdef PCSX2_DEBUG
 	          "-Debug"
 #		else
 	          "-Dev"
@@ -165,7 +165,7 @@ static void InitLibraryName()
 // I'll fix up SVN support later. --arcum42
 
 	strcpy(libraryName, "ZeroPAD"
-#	ifdef _DEBUG
+#	ifdef PCSX2_DEBUG
 	       "-Debug"
 #	endif
 	      );

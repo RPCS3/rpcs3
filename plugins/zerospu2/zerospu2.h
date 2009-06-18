@@ -23,10 +23,8 @@
 #include <string.h>
 #include <malloc.h>
 
-extern "C" {
 #define SPU2defs
 #include "PS2Edefs.h"
-}
 
 #include "reg.h"
 #include "misc.h"

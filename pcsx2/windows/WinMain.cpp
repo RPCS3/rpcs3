@@ -171,7 +171,7 @@ void WinClose()
 	ReleasePlugins();
 	Console::Close();
 
-	pthread_win32_process_detach_np();
+	//pthread_win32_process_detach_np();
 
 	SysShutdownDynarecs();
 	SysShutdownMem();
@@ -254,7 +254,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	pInstance=hInstance;
 	FirstShow=true;			// this is used by cheats.cpp to search for stuff (broken?)
 
-	pthread_win32_process_attach_np();
+	//pthread_win32_process_attach_np();
 
 	gApp.hInstance = hInstance;
 	gApp.hMenu = NULL;

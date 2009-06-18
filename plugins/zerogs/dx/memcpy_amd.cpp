@@ -75,9 +75,9 @@ MEMCPY_AMD.CPP
 #include <windows.h>
 #endif
 
-extern "C" {
-
 #include "PS2Etypes.h"
+
+extern "C" {
 
 #if defined(_MSC_VER) && !defined(__x86_64__)
 

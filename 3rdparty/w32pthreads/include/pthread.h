@@ -1077,6 +1077,7 @@ PTW32_DLLPORT int PTW32_CDECL pthread_condattr_setpshared (pthread_condattr_t * 
 /*
  * Condition Variable Functions
  */
+#ifdef PCSX2_ALLOW_COND
 PTW32_DLLPORT int PTW32_CDECL pthread_cond_init (pthread_cond_t * cond,
                                const pthread_condattr_t * attr);
 
@@ -1092,6 +1093,7 @@ PTW32_DLLPORT int PTW32_CDECL pthread_cond_timedwait (pthread_cond_t * cond,
 PTW32_DLLPORT int PTW32_CDECL pthread_cond_signal (pthread_cond_t * cond);
 
 PTW32_DLLPORT int PTW32_CDECL pthread_cond_broadcast (pthread_cond_t * cond);
+#endif
 
 /*
  * Scheduling

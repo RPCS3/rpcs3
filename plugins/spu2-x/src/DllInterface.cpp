@@ -68,9 +68,9 @@ static void InitLibraryName()
 		// subversion revision tags:
 
 		strcpy( libraryName, "SPU2-X"
-		#ifdef _DEBUG_FAST
+		#ifdef DEBUG_FAST
 			"-Debug"
-		#elif defined( DEBUG )
+		#elif defined( PCSX2_DEBUG )
 			"-Debug/Strict"		// strict debugging is slow!
 		#else
 			"-Dev"
@@ -83,9 +83,9 @@ static void InitLibraryName()
 		// to label the specific revision:
 
 		sprintf_s( libraryName, "SPU2-X r%d%s"
-		#ifdef _DEBUG_FAST
+		#ifdef DEBUG_FAST
 			"-Debug"
-		#elif defined( _DEBUG )
+		#elif defined( PCSX2_DEBUG )
 			"-Debug/Strict"		// strict debugging is slow!
 		#else
 			"-Dev"

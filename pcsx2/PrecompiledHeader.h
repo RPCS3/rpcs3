@@ -172,7 +172,7 @@ static const bool IsDevBuild = true;
 static const bool IsDevBuild = false;
 #endif
 
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 static const bool IsDebugBuild = true;
 #else
 static const bool IsDebugBuild = false;

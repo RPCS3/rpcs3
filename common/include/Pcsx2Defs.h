@@ -27,6 +27,12 @@
 #define __LINUX__
 #endif
 
+#ifdef _MSC_VER
+#	include <intrin.h>
+#else
+#	include <intrin_x86.h>
+#endif
+
 #include "Pcsx2Types.h"
 
 // Renamed ARRAYSIZE to ArraySize -- looks nice and gets rid of Windows.h conflicts (air)
@@ -51,7 +57,7 @@
 #		endif
 #	else
 #		ifdef _MSC_VER
-#			define jBREAKPOINT() do { __asm int 3 } while(0);
+#			define jBREAKPOINT() __debugbreak();
 #		else
 #			define jBREAKPOINT() ((void) *(volatile char *) 0)
 #		endif

@@ -268,7 +268,7 @@ void ZeroGS::CRenderTarget::Resolve()
 		D3DLOCKED_RECT locksrc;
 		pd3dDevice->GetRenderTargetData(psurf, psys);
 
-#if !defined(RELEASE_TO_PUBLIC) && defined(_DEBUG)
+#if !defined(RELEASE_TO_PUBLIC) && defined(PCSX2_DEBUG)
 		if( g_bSaveResolved ) {
 			D3DXSaveSurfaceToFile("resolved.tga", D3DXIFF_TGA, psys, NULL, NULL);
 			g_bSaveResolved = 0;
@@ -293,7 +293,7 @@ void ZeroGS::CRenderTarget::Resolve(int startrange, int endrange)
 		if( vb[0].prndr == this || vb[0].pdepth == this ) Flush(0);
 		if( vb[1].prndr == this || vb[1].pdepth == this ) Flush(1);
 
-#if !defined(RELEASE_TO_PUBLIC) && defined(_DEBUG)
+#if !defined(RELEASE_TO_PUBLIC) && defined(PCSX2_DEBUG)
 		if( g_bSaveResolved ) {
 			D3DXSaveSurfaceToFile("resolved.tga", D3DXIFF_TGA, psys, NULL, NULL);
 			g_bSaveResolved = 0;
@@ -589,7 +589,7 @@ void ZeroGS::CRenderTarget::ConvertTo32()
 	pd3dDevice->SetPixelShader(ppsConvert16to32);
 	pd3dDevice->DrawPrimitive(D3DPT_TRIANGLESTRIP, 0, 2);
 
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 	//g_bSaveZUpdate = 1;
 	//D3DXSaveSurfaceToFile("tex3.tga", D3DXIFF_TGA, psurfConv, NULL, NULL);
 	if( g_bSaveZUpdate ) {
@@ -801,7 +801,7 @@ void ZeroGS::CRenderTarget::ConvertTo16()
 	pd3dDevice->SetPixelShader(ppsConvert32to16);
 	pd3dDevice->DrawPrimitive(D3DPT_TRIANGLESTRIP, 0, 2);
 
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 	//g_bSaveZUpdate = 1;
 	if( g_bSaveZUpdate ) {
 		pd3dDevice->GetRenderTargetData(psurf, psys);
@@ -1186,7 +1186,7 @@ void ZeroGS::CDepthTarget::Update(int context, ZeroGS::CRenderTarget* prndr)
 	if( conf.options & GSOPTION_WIREFRAME ) SETRS(D3DRS_FILLMODE, D3DFILL_WIREFRAME);
 	SETRS(D3DRS_SCISSORTESTENABLE, TRUE);
 
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 	if( g_bSaveZUpdate ) {
 		if( pusetarg != NULL )
 			D3DXSaveTextureToFile("tex.tga", D3DXIFF_TGA, pusetarg->ptex, NULL);
@@ -1268,7 +1268,7 @@ CRenderTarget* ZeroGS::CRenderTargetMngr::GetTarg(const frameInfo& frame, DWORD 
 		// can be both 16bit and 32bit
 		if( (frame.psm&2) != (it->second->psm&2) ) {
 			// a lot of games do this actually...
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 			WARN_LOG("Really bad formats! %d %d\n", frame.psm, it->second->psm);
 #endif
 			if( !(opts&TO_StrictHeight) ) {
@@ -1949,7 +1949,7 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 		++it;
 	}
 
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 	PRIM_LOG("memtarget: tbp: %x tbw: %x th: %x psm: %x\n", tex0.tbp0, tex0.tbw, tex0.th, tex0.psm);
 #endif
 
@@ -2383,7 +2383,7 @@ void ZeroGS::CRangeManager::Insert(int start, int end)
 {
 	int imin = 0, imax = (int)ranges.size(), imid;
 	
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 	// sanity check
 	for(int i = 0; i < (int)ranges.size()-1; ++i) assert( ranges[i].end < ranges[i+1].start );
 #endif
@@ -2433,7 +2433,7 @@ void ZeroGS::CRangeManager::Insert(int start, int end)
 	if( startindex == 0 && end < ranges.front().start ) {
 		ranges.insert(ranges.begin(), RANGE(start, end));
 
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 		// sanity check
 		for(int i = 0; i < (int)ranges.size()-1; ++i) assert( ranges[i].end < ranges[i+1].start );
 #endif
@@ -2462,7 +2462,7 @@ void ZeroGS::CRangeManager::Insert(int start, int end)
 		// create a new range
 		ranges.insert(ranges.begin()+startindex, RANGE(start, end));
 
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 		// sanity check
 		for(int i = 0; i < (int)ranges.size()-1; ++i) assert( ranges[i].end < ranges[i+1].start );
 #endif
@@ -2480,7 +2480,7 @@ void ZeroGS::CRangeManager::Insert(int start, int end)
 		if( lastend > ranges.back().end ) ranges.back().end = lastend;
 		if( end > ranges.back().end ) ranges.back().end = end;
 
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 		// sanity check
 		for(int i = 0; i < (int)ranges.size()-1; ++i) assert( ranges[i].end < ranges[i+1].start );
 #endif
@@ -2493,7 +2493,7 @@ void ZeroGS::CRangeManager::Insert(int start, int end)
 		if( start < ranges.front().start ) ranges.front().start = start;
 		if( end > ranges.front().end ) ranges.front().end = end;
 		
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 		// sanity check
 		for(int i = 0; i < (int)ranges.size()-1; ++i) assert( ranges[i].end < ranges[i+1].start );
 #endif
@@ -2509,7 +2509,7 @@ void ZeroGS::CRangeManager::Insert(int start, int end)
 	if( start < ranges[startindex].start ) ranges[startindex].start = start;
 	if( end > ranges[startindex].end ) ranges[startindex].end = end;
 
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 	// sanity check
 	for(int i = 0; i < (int)ranges.size()-1; ++i) assert( ranges[i].end < ranges[i+1].start );
 #endif
@@ -2569,7 +2569,7 @@ void FlushTransferRanges(const tex0Info* ptex)
 //			Flush(0);
 //			Flush(1);
 //
-//#ifdef _DEBUG
+//#ifdef PCSX2_DEBUG
 //			// make sure targets are still the same
 //			list<CRenderTarget*>::iterator it;
 //			FORIT(it, listTransmissionUpdateTargs) {
@@ -2811,7 +2811,7 @@ void TransferHostLocal(const void* pbyMem, u32 nQWordSize)
 	}
 	else s_vTransferCache.resize(0);
 
-#if !defined(RELEASE_TO_PUBLIC) && defined(_DEBUG)
+#if !defined(RELEASE_TO_PUBLIC) && defined(PCSX2_DEBUG)
 	if( g_bSaveTrans ) {
 		tex0Info t;
 		t.tbp0 = gs.dstbuf.bp;
@@ -3244,7 +3244,7 @@ void TransferLocalLocal()
 
 	g_MemTargs.ClearRange(dststart, dstend);
 
-#if !defined(RELEASE_TO_PUBLIC) && defined(_DEBUG)
+#if !defined(RELEASE_TO_PUBLIC) && defined(PCSX2_DEBUG)
 	if( g_bSaveTrans ) {
 		tex0Info t;
 		t.tbp0 = gs.dstbuf.bp;

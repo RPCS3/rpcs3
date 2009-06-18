@@ -21,11 +21,8 @@
 
 #include <stdio.h>
 
-extern "C"
-{
 #define USBdefs
 #include "PS2Edefs.h"
-}
 
 #ifdef _WIN32
 

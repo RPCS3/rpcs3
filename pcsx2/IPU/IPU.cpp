@@ -467,11 +467,7 @@ static __forceinline BOOL ipuIDEC(u32 val)
 	return s_RoutineDone;
 }
 
-#ifdef _DEBUG
 static int s_bdec = 0;
-#else
-#define s_bdec 0
-#endif
 
 static __forceinline BOOL ipuBDEC(u32 val)
 {
@@ -497,9 +493,8 @@ static __forceinline BOOL ipuBDEC(u32 val)
 
 	IPU_LOG(" Quantizer step=0x%X", bdec.QSC);
 
-#ifdef _DEBUG
-	s_bdec++;
-#endif
+	if( IsDebugBuild )
+		s_bdec++;
 
 	g_BP.BP += bdec.FB;//skip FB bits
 	g_decoder.coding_type = I_TYPE;

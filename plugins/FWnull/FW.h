@@ -21,15 +21,8 @@
 
 #include <stdio.h>
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif 
 #define FWdefs
 #include "PS2Edefs.h"
-#ifdef __cplusplus
-}
-#endif
 
 #ifdef _WIN32
 

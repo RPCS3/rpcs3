@@ -80,7 +80,7 @@ void VUtestPause() {
 void VUtestPause() {}
 #endif
 
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 extern u32 vudump;
 #endif
 

@@ -86,7 +86,7 @@
 		<Configuration
 			Name="Release|Win32"
 			ConfigurationType="2"
-			InheritedPropertySheets="..\..\..\common\vsprops\plugin_svnroot.vsprops;.\ProjectRootDir.vsprops;..\..\..\common\vsprops\BaseProperties.vsprops;..\..\..\common\vsprops\GlobalLinking.vsprops"
+			InheritedPropertySheets="..\..\..\common\vsprops\plugin_svnroot.vsprops;.\ProjectRootDir.vsprops;..\..\..\common\vsprops\BaseProperties.vsprops;..\..\..\common\vsprops\CodeGen_Release.vsprops"
 			CharacterSet="2"
 			WholeProgramOptimization="1"
 			>
@@ -107,10 +107,6 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="2"
-				InlineFunctionExpansion="1"
-				OmitFramePointers="true"
-				RuntimeLibrary="0"
 				UsePrecompiledHeader="0"
 			/>
 			<Tool
