@@ -40,6 +40,8 @@ inline u32 timeGetTime()
 
 #include <sys/time.h>
 
+#define InterlockedExchangeAdd _InterlockedExchangeAdd
+
 #else
 #include <windows.h>
 #include <windowsx.h>

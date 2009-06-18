@@ -65,6 +65,12 @@
 	would use in the same case
 */
 
+
+#ifndef __SIZE_T
+#define __SIZE_T
+typedef unsigned int size_t;
+#endif
+
 /*** Stack frame juggling ***/
 #define _ReturnAddress() (__builtin_return_address(0))
 #define _AddressOfReturnAddress() (&(((void **)(__builtin_frame_address(0)))[1]))
