@@ -138,7 +138,12 @@ int ParseCommandLine( int tokenCount, TCHAR *const *const tokens )
 			else if( CmdSwitchIs( "dev9" ) ) {
 				g_Startup.dev9dll = param;
 			}
-
+			else if( CmdSwitchIs( "uninstall" ) ) {
+				char buff[256];
+				sprintf(buff, " /x %s", param);
+				ShellExecute(NULL, "open", "msiexec.exe", buff, NULL, SW_SHOWNORMAL);
+				ExitProcess(0);
+			}		
 		}
 	}
 	return 0;

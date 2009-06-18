@@ -82,6 +82,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Include", "Include", "{0FAD
 		common\include\PS2Etypes.h = common\include\PS2Etypes.h
 	EndProjectSection
 EndProject
+Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "setup", "setup\setup.vdproj", "{14259DC9-2A12-4B05-A7D7-23C1A9FFEA03}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -271,6 +273,11 @@ Global
 		{CDD9DB83-3BD9-4ED8-BB83-399A2F65F022}.Release SSE4|Win32.Build.0 = Release|Win32
 		{CDD9DB83-3BD9-4ED8-BB83-399A2F65F022}.Release SSSE3|Win32.ActiveCfg = Release|Win32
 		{CDD9DB83-3BD9-4ED8-BB83-399A2F65F022}.Release SSSE3|Win32.Build.0 = Release|Win32
+		{14259DC9-2A12-4B05-A7D7-23C1A9FFEA03}.Debug|Win32.ActiveCfg = Release SSE2
+		{14259DC9-2A12-4B05-A7D7-23C1A9FFEA03}.Devel|Win32.ActiveCfg = Release SSE2
+		{14259DC9-2A12-4B05-A7D7-23C1A9FFEA03}.Release SSE2|Win32.ActiveCfg = Release SSE2
+		{14259DC9-2A12-4B05-A7D7-23C1A9FFEA03}.Release SSE4|Win32.ActiveCfg = Release SSE4
+		{14259DC9-2A12-4B05-A7D7-23C1A9FFEA03}.Release SSSE3|Win32.ActiveCfg = Release SSSE3
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

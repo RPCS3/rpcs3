@@ -767,6 +767,7 @@ END
 // Icon with lowest ID value placed first to ensure application icon
 // remains consistent on all systems.
 IDI_ICON                ICON                    "Cdrom02.ico"
+IDI_UNINSTALL_ICON      ICON                    "uninstall.ico"
 #endif    // Spanish (Argentina) resources
 /////////////////////////////////////////////////////////////////////////////
 

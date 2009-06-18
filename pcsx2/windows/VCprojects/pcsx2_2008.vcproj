@@ -899,6 +899,10 @@
 					RelativePath="..\ps2_silver.bmp"
 					>
 				</File>
+				<File
+					RelativePath="..\uninstall.ico"
+					>
+				</File>
 			</Filter>
 			<Filter
 				Name="Include"

@@ -26,6 +26,7 @@
 #define IDD_ADDRAW                      178
 #define IDD_PNACHWRITER                 179
 #define IDD_CONF_MEMCARD                180
+#define IDI_UNINSTALL_ICON              181
 #define IDC_MEM_SCROLL                  1001
 #define IDC_MCD2                        1004
 #define IDC_MCD1                        1005
@@ -413,7 +414,7 @@
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        141
+#define _APS_NEXT_RESOURCE_VALUE        182
 #define _APS_NEXT_COMMAND_VALUE         40018
 #define _APS_NEXT_CONTROL_VALUE         1331
 #define _APS_NEXT_SYMED_VALUE           104
