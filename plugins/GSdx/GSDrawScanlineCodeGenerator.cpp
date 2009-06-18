@@ -707,18 +707,17 @@ void GSDrawScanlineCodeGenerator::TestZ(const Xmm& temp1, const Xmm& temp2)
 		switch(m_sel.ztst)
 		{
 		case ZTST_GEQUAL: 
-			// test |= zso < zdo; 
+			// test |= zso < zdo; // ~(zso >= zdo)
 			pcmpgtd(xmm1, xmm0);
 			por(xmm7, xmm1);
 			break;
 
-		case ZTST_GREATER: 
-			// test |= zso <= zdo; 
-			movdqa(xmm4, xmm1);
-			pcmpgtd(xmm1, xmm0);
-			por(xmm7, xmm1);
-			pcmpeqd(xmm4, xmm0);
-			por(xmm7, xmm1);
+		case ZTST_GREATER: // TODO: tidus hair and chocobo wings only appear fully when this is tested as ZTST_GEQUAL
+			// test |= zso <= zdo; // ~(zso > zdo)
+			pcmpgtd(xmm0, xmm1);
+			pcmpeqd(xmm4, xmm4);
+			pxor(xmm0, xmm4);
+			por(xmm7, xmm0);
 			break;
 		}
 

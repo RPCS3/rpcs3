@@ -30,6 +30,7 @@ public:
 		MetalSlug6,
 		TomoyoAfter,
 		Clannad,
+		Lamune,
 		FFX,
 		FFX2,
 		FFXII,
