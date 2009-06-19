@@ -197,19 +197,19 @@ void GSTextureFX9::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSample
 
 		D3DXMACRO macro[] =
 		{
-			{"FST", str[0].c_str()},
-			{"WMS", str[1].c_str()},
-			{"WMT", str[2].c_str()},
-			{"BPP", str[3].c_str()},
-			{"AEM", str[4].c_str()},
-			{"TFX", str[5].c_str()},
-			{"TCC", str[6].c_str()},
-			{"ATE", str[7].c_str()},
-			{"ATST", str[8].c_str()},
-			{"FOG", str[9].c_str()},
-			{"CLR1", str[10].c_str()},
-			{"RT", str[11].c_str()},
-			{"LTF", str[12].c_str()},
+			{"PS_FST", str[0].c_str()},
+			{"PS_WMS", str[1].c_str()},
+			{"PS_WMT", str[2].c_str()},
+			{"PS_BPP", str[3].c_str()},
+			{"PS_AEM", str[4].c_str()},
+			{"PS_TFX", str[5].c_str()},
+			{"PS_TCC", str[6].c_str()},
+			{"PS_ATE", str[7].c_str()},
+			{"PS_ATST", str[8].c_str()},
+			{"PS_FOG", str[9].c_str()},
+			{"PS_CLR1", str[10].c_str()},
+			{"PS_RT", str[11].c_str()},
+			{"PS_LTF", str[12].c_str()},
 			{NULL, NULL},
 		};
 
