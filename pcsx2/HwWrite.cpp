@@ -949,7 +949,7 @@ void __fastcall hwWrite32_generic( u32 mem, u32 value )
 			if (value & 0x100) 
 			{
 				vif1.done = false;  //This must be done here! some games (ala Crash of the Titans) pause the dma to start MFIFO
-			}
+			} else cpuRegs.interrupt &= ~(1<<10) | ~(1<<1); //Tekken tag seems to stop vif and start it again in normal, so we will cancel the mfifo loop
 			
 			DmaExec(dmaVIF1, mem, value);
 			return;

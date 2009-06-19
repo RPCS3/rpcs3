@@ -217,15 +217,15 @@ void COP0_DiagnosticPCCR()
 	if( cpuRegs.PERF.n.pccr.b.Event1 >= 7 && cpuRegs.PERF.n.pccr.b.Event1 <= 10 )
 		Console::Notice( "PERF/PCR1 Unsupported Update Event Mode = 0x%x", params cpuRegs.PERF.n.pccr.b.Event1 );
 }
-
+extern int branch;
 __forceinline void COP0_UpdatePCCR()
 {
-	if( cpuRegs.CP0.n.Status.b.ERL || !cpuRegs.PERF.n.pccr.b.CTE ) return;
+	//if( cpuRegs.CP0.n.Status.b.ERL || !cpuRegs.PERF.n.pccr.b.CTE ) return;
 
 	// TODO : Implement memory mode checks here (kernel/super/user)
 	// For now we just assume user mode.
 	
-	if( cpuRegs.PERF.n.pccr.b.U0 )
+	if( cpuRegs.PERF.n.pccr.val & 0xf )
 	{
 		// ----------------------------------
 		//    Update Performance Counter 0
@@ -243,24 +243,25 @@ __forceinline void COP0_UpdatePCCR()
 			
 			//prev ^= (1UL<<31);		// XOR is fun!
 			//if( (prev & cpuRegs.PERF.n.pcr0) & (1UL<<31) )
-			if( cpuRegs.PERF.n.pcr0 & 0x80000000 )
+			if( (cpuRegs.PERF.n.pcr0 & 0x80000000) && (cpuRegs.CP0.n.Status.b.ERL == 1) && cpuRegs.PERF.n.pccr.b.CTE)
 			{
 				// TODO: Vector to the appropriate exception here.
 				// This code *should* be correct, but is untested (and other parts of the emu are
 				// not prepared to handle proper Level 2 exception vectors yet)
 				
-				/*if( delay_slot )
+				//branch == 1 is probably not the best way to check for the delay slot, but it beats nothing! (Refraction)
+			/*	if( branch == 1 )
 				{
-					cpuRegs.CP0.ErrorEPC = cpuRegs.pc - 4;
-					cpuRegs.CP0.Cause.BD2 = 1;
+					cpuRegs.CP0.n.ErrorEPC = cpuRegs.pc - 4;
+					cpuRegs.CP0.n.Cause |= 0x40000000;
 				}
 				else
 				{
-					cpuRegs.CP0.ErrorEPC = cpuRegs.pc;
-					cpuRegs.CP0.Cause.BD2 = 0;
+					cpuRegs.CP0.n.ErrorEPC = cpuRegs.pc;
+					cpuRegs.CP0.n.Cause &= ~0x40000000;
 				}
 				
-				if( cpuRegs.CP0.Status.DEV )
+				if( cpuRegs.CP0.n.Status.b.DEV )
 				{
 					// Bootstrap vector
 					cpuRegs.pc = 0xbfc00280;
@@ -269,8 +270,8 @@ __forceinline void COP0_UpdatePCCR()
 				{
 					cpuRegs.pc = 0x80000080;
 				}
-				cpuRegs.CP0.Status.ERL = 1;
-				cpuRegs.CP0.Cause.EXC2 = 2;*/
+				cpuRegs.CP0.n.Status.b.ERL = 1;
+				cpuRegs.CP0.n.Cause |= 0x20000;*/
 			}
 		}
 	}
@@ -289,9 +290,36 @@ __forceinline void COP0_UpdatePCCR()
 			cpuRegs.PERF.n.pcr1 += incr;
 			s_iLastPERFCycle[1] = cpuRegs.cycle;
 
-			if( cpuRegs.PERF.n.pcr1 & 0x80000000 )
+			if( (cpuRegs.PERF.n.pcr1 & 0x80000000) && (cpuRegs.CP0.n.Status.b.ERL == 1) && cpuRegs.PERF.n.pccr.b.CTE)
 			{
-				// See PCR0 comments for notes on exceptions
+				// TODO: Vector to the appropriate exception here.
+				// This code *should* be correct, but is untested (and other parts of the emu are
+				// not prepared to handle proper Level 2 exception vectors yet)
+				
+				//branch == 1 is probably not the best way to check for the delay slot, but it beats nothing! (Refraction)
+
+				/*if( branch == 1 )
+				{
+					cpuRegs.CP0.n.ErrorEPC = cpuRegs.pc - 4;
+					cpuRegs.CP0.n.Cause |= 0x40000000;
+				}
+				else
+				{
+					cpuRegs.CP0.n.ErrorEPC = cpuRegs.pc;
+					cpuRegs.CP0.n.Cause &= ~0x40000000;
+				}
+				
+				if( cpuRegs.CP0.n.Status.b.DEV )
+				{
+					// Bootstrap vector
+					cpuRegs.pc = 0xbfc00280;
+				}
+				else
+				{
+					cpuRegs.pc = 0x80000080;
+				}
+				cpuRegs.CP0.n.Status.b.ERL = 1;
+				cpuRegs.CP0.n.Cause |= 0x20000;*/
 			}
 		}
 	}

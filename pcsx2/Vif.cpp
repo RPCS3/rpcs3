@@ -533,6 +533,8 @@ void vifMFIFOInterrupt()
 {
 	g_vifCycles = 0;
 	
+	if(schedulepath3msk) Vif1MskPath3();
+
 	if((vif1Regs->stat & VIF1_STAT_VGW))
 	{
 		if(gif->chcr & 0x100)
@@ -596,14 +598,6 @@ void vifMFIFOInterrupt()
 				CPU_INT(10, 0);
 				return;
 		}
-		
-		if (!(vif1.inprogress & 0x1)) mfifoVIF1transfer(0);
-
-		if (vif1ch->madr >= psHu32(DMAC_RBOR) && vif1ch->madr <= (psHu32(DMAC_RBOR) + psHu32(DMAC_RBSR)))
-			CPU_INT(10, 0);
-		else
-			CPU_INT(10, vif1ch->qwc * BIAS);
-
 		return;
 	} 
 	

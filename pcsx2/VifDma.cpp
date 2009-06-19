@@ -328,6 +328,10 @@ static void ProcessMemSkip(int size, unsigned int unpackType, const unsigned int
 		VIFUNPACK_LOG("addr aligned to %x", vif->tag.addr);
 		vif->tag.addr = (vif->tag.addr & ~0xf) + (vifRegs->offset * 4);
 	}
+	if(vif->tag.addr >= (u32)(VIFdmanum ? 0x4000 : 0x1000)) 
+	{
+		vif->tag.addr &= (u32)(VIFdmanum ? 0x3fff : 0xfff);
+	}
 	
 }
 
@@ -634,14 +638,16 @@ static void VIFunpack(u32 *data, vifCode *v, unsigned int size, const unsigned i
 			}
 			else
 			{
-				//DevCon::Notice("VIF%x Unpack ending %x > %x", params VIFdmanum, tempsize, VIFdmanum ? 0x4000 : 0x1000);
+				DevCon::Notice("VIF%x Unpack ending %x > %x", params VIFdmanum, tempsize, VIFdmanum ? 0x4000 : 0x1000);
 				tempsize = size;
 				size = 0;
 			}
 		} 
 		else 
 		{
-			tempsize = 0;
+			tempsize = 0;  //Commenting out this then
+			//tempsize = size; // -\_uncommenting these Two enables non-SSE unpacks
+			//size = 0;		 // -/  
 		}
 
 		if (size >= ft->gsize)
@@ -745,6 +751,7 @@ static void VIFunpack(u32 *data, vifCode *v, unsigned int size, const unsigned i
 		{
 			int incdest = ((vifRegs->cycle.cl - vifRegs->cycle.wl) << 2) + 4;
 			size = 0;
+			int addrstart = v->addr;
 			if((tempsize >> 2) != vif->tag.size) DevCon::Notice("split when size != tagsize");
 			
 			VIFUNPACK_LOG("sorting tempsize :p, size %d, vifnum %d, addr %x", tempsize, vifRegs->num, vif->tag.addr);
@@ -753,6 +760,7 @@ static void VIFunpack(u32 *data, vifCode *v, unsigned int size, const unsigned i
 			{
 				if(v->addr >= memlimit) 
 				{
+					DevCon::Notice("Mem limit ovf");
 					v->addr &= (memlimit - 1);
 					dest = (u32*)(VU->Mem + v->addr);
 				}
@@ -789,6 +797,7 @@ static void VIFunpack(u32 *data, vifCode *v, unsigned int size, const unsigned i
 					v->addr &= (memlimit - 1);
 					dest = (u32*)(VU->Mem + v->addr);
 				}
+			v->addr = addrstart;
 			if(tempsize > 0) size = tempsize;
 
 		}
@@ -2057,7 +2066,7 @@ static void Vif1CMDSTMod()  // STMOD
 
 u8 schedulepath3msk = 0;
 
-static void Vif1MskPath3()  // MSKPATH3
+void Vif1MskPath3()  // MSKPATH3
 {
 	vif1Regs->mskpath3 = schedulepath3msk & 0x1;
 	//Console::WriteLn("VIF MSKPATH3 %x", params vif1Regs->mskpath3);

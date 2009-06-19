@@ -55,6 +55,7 @@ struct vifStruct {
 
 extern vifStruct vif0, vif1;
 extern int Path3progress;
+extern u8 schedulepath3msk;
 
 void __fastcall UNPACK_S_32( u32 *dest, u32 *data, int size );
 
@@ -95,6 +96,7 @@ void vif0Init();
 void vif1Init();
 extern void  vif0Interrupt();
 extern void  vif1Interrupt();
+extern void Vif1MskPath3();
 
 void vif0Write32(u32 mem, u32 value);
 void vif1Write32(u32 mem, u32 value);

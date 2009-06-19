@@ -290,14 +290,7 @@ void gsGIFReset()
 
 void gsCSRwrite(u32 value)
 {
-	CSRw |= value & ~0x60;
-
-	if( mtgsThread != NULL )
-		mtgsThread->SendSimplePacket( GS_RINGTYPE_WRITECSR, CSRw, 0, 0 );
-	else
-		GSwriteCSR(CSRw);
-
-	GSCSRr = ((GSCSRr&~value)&0x1f)|(GSCSRr&~0x1f);
+	
 
 	// Our emulated GS has no FIFO...
 	/*if( value & 0x100 ) { // FLUSH
@@ -317,17 +310,36 @@ void gsCSRwrite(u32 value)
 				GSreset();
 		}
 
-		CSRw = 0x1f;
+		CSRw |= 0x1f;
 		GSCSRr = 0x551B4000;   // Set the FINISH bit to 1 - GS is always at a finish state as we don't have a FIFO(saqib)
 		GSIMR = 0x7F00; //This is bits 14-8 thats all that should be 1
+	} 
+	else if( value & 0x100 ) // FLUSH
+	{ 
+		//Console::WriteLn("GS_CSR FLUSH GS fifo: %x (CSRr=%x)", params value, GSCSRr);
 	}
+	else
+	{
+		CSRw |= value & 0x1f;
+
+		if( mtgsThread != NULL )
+			mtgsThread->SendSimplePacket( GS_RINGTYPE_WRITECSR, CSRw, 0, 0 );
+		else
+			GSwriteCSR(CSRw);
+
+		GSCSRr = ((GSCSRr&~value)&0x1f)|(GSCSRr&~0x1f);
+	}
+
 }
 
 static void IMRwrite(u32 value)
 {
 	GSIMR = (value & 0x1f00)|0x6000;
 
-	if((GSCSRr & 0x1f) & (~(GSIMR >> 8) & 0x1f)) gsIrq();
+	if((GSCSRr & 0x1f) & (~(GSIMR >> 8) & 0x1f)) 
+	{
+		gsIrq();
+	}
 	// don't update mtgs mem
 }
 
