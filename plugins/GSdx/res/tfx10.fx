@@ -46,8 +46,15 @@ VS_OUTPUT vs_main(VS_INPUT input)
 	}
 
 	VS_OUTPUT output;
+	
+	// pos -= 0.05 (1/320 pixel) helps avoiding rounding problems (integral part of pos is usually 5 digits, 0.05 is about as low as we can go)
+	// example: ceil(afterseveralvertextransformations(y = 133)) => 134 => line 133 stays empty
+	// input granularity is 1/16 pixel, anything smaller than that won't step drawing up/left by one pixel
+	// example: 133.0625 (133 + 1/16) should start from line 134, ceil(133.0625 - 0.05) still above 133
+	
+	float4 p = float4(input.p, input.z, 0) - float4(0.05f, 0.05f, 0, 0); 
 
-	output.p = float4(input.p, input.z, 0) * VertexScale - VertexOffset;
+	output.p = p * VertexScale - VertexOffset;
 	
 	if(VS_TME == 1)
 	{

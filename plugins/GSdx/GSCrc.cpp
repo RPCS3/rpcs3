@@ -29,6 +29,7 @@ CRC::Game CRC::m_games[] =
 	{0x42E05BAF, TomoyoAfter, JP},
 	{0x7800DC84, Clannad, JP},
 	{0xA6167B59, Lamune, JP},
+	{0xDDB59F46, KyuuketsuKitanMoonties, JP},	 
 	{0xa39517ab, FFX, EU},
 	{0xa39517ae, FFX, FR},
 	{0x941bb7d9, FFX, DE},

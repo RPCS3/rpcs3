@@ -494,9 +494,9 @@ protected:
 
 		#pragma endregion
 
-		#pragma region tomoyo after, clannad, lamune (palette uploaded in a point list, pure genius...)
+		#pragma region palette uploaded in a point list, pure genius...
 
-		if(m_game.title == CRC::TomoyoAfter || m_game.title == CRC::Clannad || m_game.title == CRC::Lamune)
+		if(m_game.title == CRC::TomoyoAfter || m_game.title == CRC::Clannad || m_game.title == CRC::Lamune || m_game.title == CRC::KyuuketsuKitanMoonties)
 		{
 			if(prim == GS_POINTLIST && !PRIM->TME)
 			{

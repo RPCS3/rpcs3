@@ -31,6 +31,7 @@ public:
 		TomoyoAfter,
 		Clannad,
 		Lamune,
+		KyuuketsuKitanMoonties,
 		FFX,
 		FFX2,
 		FFXII,

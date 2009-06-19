@@ -211,6 +211,7 @@ void GSSettingsDlg::UpdateControls()
 		EnableWindow(GetDlgItem(m_hWnd, IDC_RESY), hw && !native);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_RESY_EDIT), hw && !native);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_NATIVERES), hw);
+		EnableWindow(GetDlgItem(m_hWnd, IDC_FILTER), hw && !native);		
 		EnableWindow(GetDlgItem(m_hWnd, IDC_LOGZ), dx9 && hw);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_FBA), dx9 && hw);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_AA1), sw);

@@ -167,7 +167,7 @@ GSSource : public CBaseFilter, private CCritSec, public IGSSource
 		}
 	};
 
-	CAutoPtr<GSSourceOutputPin> m_output;
+	GSSourceOutputPin* m_output;
 
 public:
 
@@ -178,10 +178,15 @@ public:
 		, m_atpf(10000000i64 / fps)
 		, m_now(0)
 	{
-		m_output.Attach(new GSSourceOutputPin(m_size, m_atpf, this, this, hr));
+		m_output = new GSSourceOutputPin(m_size, m_atpf, this, this, hr);
 
 		// FIXME
 		if(fps == 60) m_atpf = 166834; // = 10000000i64 / 59.94
+	}
+
+	virtual ~GSSource()
+	{
+		delete m_output;
 	}
 
 	DECLARE_IUNKNOWN;
@@ -193,7 +198,7 @@ public:
 
 	CBasePin* GetPin(int n) 
 	{
-		return n == 0 ? m_output.m_p : NULL;
+		return n == 0 ? m_output : NULL;
 	}
 
 	// IGSSource

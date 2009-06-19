@@ -35,6 +35,8 @@ GSRenderer::GSRenderer(uint8* base, bool mt, void (*irq)(), GSDevice* dev)
 	m_aa1 = !!theApp.GetConfig("aa1", 0);
 	m_blur = !!theApp.GetConfig("blur", 0);
 
+	if(m_nativeres) m_filter = 2;
+
 	s_n = 0;
 	s_dump = !!theApp.GetConfig("dump", 0);
 	s_save = !!theApp.GetConfig("save", 0);
