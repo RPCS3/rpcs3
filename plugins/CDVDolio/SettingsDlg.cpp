@@ -2,193 +2,156 @@
 //
 
 #include "stdafx.h"
-#include "cdvd.h"
+#include "CDVD.h"
 #include "SettingsDlg.h"
 #include <dbt.h>
-#include <afxdlgs.h>
 
-// CSettingsDlg dialog
-
-IMPLEMENT_DYNAMIC(CSettingsDlg, CDialog)
-
-CSettingsDlg::CSettingsDlg(CWnd* pParent /*=NULL*/)
-	: CDialog(CSettingsDlg::IDD, pParent)
-	, m_iso(_T(""))
-{
-
-}
-
-CSettingsDlg::~CSettingsDlg()
+CDVDSettingsDlg::CDVDSettingsDlg()
+	: CDVDDialog(IDD_CONFIG)
 {
 }
 
-BOOL CSettingsDlg::OnInitDialog()
+void CDVDSettingsDlg::OnInit()
 {
-	__super::OnInitDialog();
+	__super::OnInit();
 
-	InitDrive();
-	InitISO();
+	UpdateDrives();
 
-	UpdateData(FALSE);
-
-	return TRUE;  // return TRUE unless you set the focus to a control
-	// EXCEPTION: OCX Property Pages should return FALSE
+	SetText(IDC_EDIT1, theApp.GetConfig("iso", "").c_str());
 }
 
-void CSettingsDlg::InitDrive()
+bool CDVDSettingsDlg::OnMessage(UINT message, WPARAM wParam, LPARAM lParam)
 {
-	int drive = AfxGetApp()->GetProfileInt(_T("Settings"), _T("drive"), -1);
-
-	int sel = m_drive.GetCurSel();
-
-	if(sel >= 0)
+	if(message == WM_DEVICECHANGE && (wParam == DBT_DEVICEARRIVAL || wParam == DBT_DEVICEREMOVECOMPLETE))
 	{
-		drive = m_drive.GetItemData(sel);
+		UpdateDrives();
+
+		DEV_BROADCAST_HDR* p = (DEV_BROADCAST_HDR*)lParam;
+
+		if(p->dbch_devicetype == DBT_DEVTYP_VOLUME)
+		{
+			DEV_BROADCAST_VOLUME* v = (DEV_BROADCAST_VOLUME*)p;
+
+			for(int i = 0; i < 32; i++)
+			{
+				if(v->dbcv_unitmask & (1 << i))
+				{
+					// printf("%c:\n", 'A' + i);
+
+					// TODO
+				}
+			}
+		}
 	}
 
-	while(m_drive.GetCount() > 0)
+	return __super::OnMessage(message, wParam, lParam);
+}
+
+bool CDVDSettingsDlg::OnCommand(HWND hWnd, UINT id, UINT code)
+{
+	if(id == IDOK)
 	{
-		m_drive.DeleteString(0);
+		INT_PTR data = 0;
+
+		if(!ComboBoxGetSelData(IDC_COMBO1, data))
+		{
+			data = -1;
+		}
+
+		theApp.SetConfig("drive", (int)data);
+
+		theApp.SetConfig("iso", GetText(IDC_EDIT1).c_str());
 	}
+	else if(id == IDC_BUTTON1 && code == BN_CLICKED)
+	{
+		char buff[MAX_PATH] = {0};
+
+		OPENFILENAME ofn;
+
+		memset(&ofn, 0, sizeof(ofn));
+
+		ofn.lStructSize = sizeof(ofn);
+		ofn.hwndOwner = m_hWnd;
+		ofn.lpstrFile = buff;
+		ofn.nMaxFile = countof(buff);
+		ofn.lpstrFilter = "ISO file\0*.iso\0All files\0*.*\0";
+		ofn.Flags = OFN_EXPLORER | OFN_ENABLESIZING | OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR;
+
+		strcpy(ofn.lpstrFile, GetText(IDC_EDIT1).c_str());
+
+		if(GetOpenFileName(&ofn))
+		{
+			SetText(IDC_EDIT1, ofn.lpstrFile);
+
+			HWND hWnd = GetDlgItem(m_hWnd, IDC_COMBO1);
+
+			SendMessage(hWnd, CB_SETCURSEL, SendMessage(hWnd, CB_GETCOUNT, 0, 0) - 1, 0);
+		}
+
+		return true;
+	}
+
+	return __super::OnCommand(hWnd, id, code);
+}
+
+void CDVDSettingsDlg::UpdateDrives()
+{
+	int drive = theApp.GetConfig("drive", -1);
+
+	INT_PTR data = 0;
+
+	if(ComboBoxGetSelData(IDC_COMBO1, data))
+	{
+		drive = (int)data;
+	}
+
+	vector<CDVDSetting> drives;
 
 	for(int i = 'A'; i <= 'Z'; i++)
 	{
-		CString path;
+		string path = format("%c:", i);
 
-		path.Format(_T("%c:"), i);
-
-		if(GetDriveType(path) == DRIVE_CDROM)
+		if(GetDriveType(path.c_str()) == DRIVE_CDROM)
 		{
-			CString label = path;
+			string label = path;
 
-			path.Format(_T("\\\\.\\%c:"), i);
+			path = format("\\\\.\\%c:", i);
 
 			CDVD cdvd;
 			
-			if(cdvd.Open(path))
+			if(cdvd.Open(path.c_str()))
 			{
-				CString str = cdvd.GetLabel();
+				string str = cdvd.GetLabel();
 
-				if(str.IsEmpty())
+				if(str.empty())
 				{
-					str = _T("(no label)");
+					str = "(no label)";
 				}
 
-				label.Format(_T("[%s] %s"), CString(label), str);
+				label = "[" + label + "] " + str;
 			}
 			else
 			{
-				label.Format(_T("[%s] (not detected)"), CString(label));
+				label = "[" + label + "] (not detected)";
 			}
 
-			m_drive.SetItemData(m_drive.AddString(label), (DWORD_PTR)i);
+			CDVDSetting s;
+
+			s.id = i;
+			s.name = label;
+
+			drives.push_back(s);
 		}
 	}
 
-	m_drive.SetItemData(m_drive.AddString(_T("Other...")), (DWORD_PTR)-1);
-
-	for(int i = 0, j = m_drive.GetCount(); i < j; i++)
 	{
-		if((int)m_drive.GetItemData(i) == drive)
-		{
-			m_drive.SetCurSel(i);
+		CDVDSetting s;
 
-			return;
-		}
+		s.id = -1;
+		s.name = "Other...";
+
+		drives.push_back(s);
 	}
 
-	m_drive.SetCurSel(-1);
-}
-
-void CSettingsDlg::InitISO()
-{
-	m_iso = AfxGetApp()->GetProfileString(_T("Settings"), _T("iso"), _T(""));
-}
-
-void CSettingsDlg::DoDataExchange(CDataExchange* pDX)
-{
-	CDialog::DoDataExchange(pDX);
-	DDX_Control(pDX, IDC_COMBO1, m_drive);
-	DDX_Text(pDX, IDC_EDIT1, m_iso);
-}
-
-BEGIN_MESSAGE_MAP(CSettingsDlg, CDialog)
-	ON_BN_CLICKED(IDC_BUTTON1, &CSettingsDlg::OnBrowse)
-	ON_BN_CLICKED(IDOK, &CSettingsDlg::OnBnClickedOk)
-END_MESSAGE_MAP()
-
-// CSettingsDlg message handlers
-
-LRESULT CSettingsDlg::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
-{
-	if(message == WM_DEVICECHANGE)
-	{
-		if(wParam == DBT_DEVICEARRIVAL || wParam == DBT_DEVICEREMOVECOMPLETE)
-		{
-			InitDrive();
-
-			DEV_BROADCAST_HDR* p = (DEV_BROADCAST_HDR*)lParam;
-
-			if(p->dbch_devicetype == DBT_DEVTYP_VOLUME)
-			{
-				DEV_BROADCAST_VOLUME* v = (DEV_BROADCAST_VOLUME*)p;
-
-				for(int i = 0; i < 32; i++)
-				{
-					if(v->dbcv_unitmask & (1 << i))
-					{
-						TRACE(_T("%c:\n"), 'A' + i);
-
-						// TODO
-					}
-				}
-			}
-		}
-	}
-
-	return __super::WindowProc(message, wParam, lParam);
-}
-
-void CSettingsDlg::OnBrowse()
-{
-	UpdateData();
-
-	CFileDialog fd(TRUE, NULL, m_iso, 
-		OFN_EXPLORER | OFN_ENABLESIZING | OFN_HIDEREADONLY, 
-		_T("ISO file|*.iso|All files|*.*|"), this);
-
-	if(fd.DoModal() == IDOK)
-	{
-		m_iso = fd.GetPathName();
-
-		UpdateData(FALSE);
-
-		for(int i = 0, j = m_drive.GetCount(); i < j; i++)
-		{
-			if((int)m_drive.GetItemData(i) < 0)
-			{
-				m_drive.SetCurSel(i);
-
-				break;
-			}
-		}
-	}
-}
-
-void CSettingsDlg::OnBnClickedOk()
-{
-	UpdateData();
-
-	int i = m_drive.GetCurSel();
-
-	if(i >= 0)
-	{
-		i = (int)m_drive.GetItemData(i);
-	}
-
-	AfxGetApp()->WriteProfileInt(_T("Settings"), _T("drive"), i);
-
-	AfxGetApp()->WriteProfileString(_T("Settings"), _T("iso"), m_iso);
-
-	OnOK();
+	ComboBoxInit(IDC_COMBO1, &drives[0], drives.size(), drive);
 }

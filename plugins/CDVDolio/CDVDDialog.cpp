@@ -20,28 +20,27 @@
  */
 
 #include "StdAfx.h"
-#include "GSdx.h"
-#include "GSDialog.h"
-#include "GSVector.h"
+#include "CDVD.h"
+#include "CDVDDialog.h"
 
-GSDialog::GSDialog(UINT id)
+CDVDDialog::CDVDDialog(UINT id)
 	: m_id(id)
 	, m_hWnd(NULL)
 {
 }
 
-INT_PTR GSDialog::DoModal()
+INT_PTR CDVDDialog::DoModal()
 {
 	return DialogBoxParam(theApp.GetModuleHandle(), MAKEINTRESOURCE(m_id), NULL, DialogProc, (LPARAM)this);
 }
 
-INT_PTR CALLBACK GSDialog::DialogProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+INT_PTR CALLBACK CDVDDialog::DialogProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-	GSDialog* dlg = NULL;
+	CDVDDialog* dlg = NULL;
 
 	if(message == WM_INITDIALOG)
 	{
-		dlg = (GSDialog*)lParam;
+		dlg = (CDVDDialog*)lParam;
 		SetWindowLongPtr(hWnd, GWL_USERDATA, (LONG_PTR)dlg);
 		dlg->m_hWnd = hWnd;
 
@@ -49,11 +48,11 @@ INT_PTR CALLBACK GSDialog::DialogProc(HWND hWnd, UINT message, WPARAM wParam, LP
 		mi.cbSize = sizeof(mi);
 		GetMonitorInfo(MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST), &mi);
 
-		GSVector4i r;
-		GetWindowRect(hWnd, r);
+		RECT r;
+		GetWindowRect(hWnd, &r);
  		
-		int x = (mi.rcWork.left + mi.rcWork.right - r.width()) / 2;
-		int y = (mi.rcWork.top + mi.rcWork.bottom - r.height()) / 2;
+		int x = (mi.rcWork.left + mi.rcWork.right - (r.right - r.left)) / 2;
+		int y = (mi.rcWork.top + mi.rcWork.bottom - (r.bottom - r.top)) / 2;
 
 		SetWindowPos(hWnd, NULL, x, y, -1, -1, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
 
@@ -62,17 +61,17 @@ INT_PTR CALLBACK GSDialog::DialogProc(HWND hWnd, UINT message, WPARAM wParam, LP
 		return true;
 	}
 
-	dlg = (GSDialog*)GetWindowLongPtr(hWnd, GWL_USERDATA);
+	dlg = (CDVDDialog*)GetWindowLongPtr(hWnd, GWL_USERDATA);
 	
 	return dlg != NULL ? dlg->OnMessage(message, wParam, lParam) : FALSE;
 }
 
-bool GSDialog::OnMessage(UINT message, WPARAM wParam, LPARAM lParam) 
+bool CDVDDialog::OnMessage(UINT message, WPARAM wParam, LPARAM lParam) 
 {
 	return message == WM_COMMAND ? OnCommand((HWND)lParam, LOWORD(wParam), HIWORD(wParam)) : false;
 }
 
-bool GSDialog::OnCommand(HWND hWnd, UINT id, UINT code)
+bool CDVDDialog::OnCommand(HWND hWnd, UINT id, UINT code)
 {
 	if(id == IDOK || id == IDCANCEL)
 	{
@@ -84,7 +83,7 @@ bool GSDialog::OnCommand(HWND hWnd, UINT id, UINT code)
 	return false;
 }
 
-string GSDialog::GetText(UINT id)
+string CDVDDialog::GetText(UINT id)
 {
 	string s;
 
@@ -106,24 +105,24 @@ string GSDialog::GetText(UINT id)
 	return s;
 }
 
-int GSDialog::GetTextAsInt(UINT id)
+int CDVDDialog::GetTextAsInt(UINT id)
 {
 	return atoi(GetText(id).c_str());
 }
 
-void GSDialog::SetText(UINT id, const char* str)
+void CDVDDialog::SetText(UINT id, const char* str)
 {
 	SetDlgItemText(m_hWnd, id, str);
 }
 
-void GSDialog::SetTextAsInt(UINT id, int i)
+void CDVDDialog::SetTextAsInt(UINT id, int i)
 {
 	char buff[32] = {0};
 	itoa(i, buff, 10);
 	SetText(id, buff);
 }
 
-void GSDialog::ComboBoxInit(UINT id, const GSSetting* settings, int count, uint32 selid, uint32 maxid)
+void CDVDDialog::ComboBoxInit(UINT id, const CDVDSetting* settings, int count, uint32 selid, uint32 maxid)
 {
 	HWND hWnd = GetDlgItem(m_hWnd, id);
 
@@ -135,7 +134,7 @@ void GSDialog::ComboBoxInit(UINT id, const GSSetting* settings, int count, uint3
 		{
 			string str = settings[i].name;
 			
-			if(settings[i].note != NULL) 
+			if(!settings[i].note.empty()) 
 			{
 				str = str + " (" + settings[i].note + ")";
 			}
@@ -145,7 +144,7 @@ void GSDialog::ComboBoxInit(UINT id, const GSSetting* settings, int count, uint3
 	}
 }
 
-int GSDialog::ComboBoxAppend(UINT id, const char* str, LPARAM data, bool select)
+int CDVDDialog::ComboBoxAppend(UINT id, const char* str, LPARAM data, bool select)
 {
 	HWND hWnd = GetDlgItem(m_hWnd, id);
 
@@ -161,7 +160,7 @@ int GSDialog::ComboBoxAppend(UINT id, const char* str, LPARAM data, bool select)
 	return item;
 }
 
-bool GSDialog::ComboBoxGetSelData(UINT id, INT_PTR& data)
+bool CDVDDialog::ComboBoxGetSelData(UINT id, INT_PTR& data)
 {
 	HWND hWnd = GetDlgItem(m_hWnd, id);
 

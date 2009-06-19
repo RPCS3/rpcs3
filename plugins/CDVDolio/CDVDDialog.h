@@ -21,9 +21,14 @@
 
 #pragma once
 
-#include "GSSetting.h"
+struct CDVDSetting 
+{
+	uint32 id; 
+	string name; 
+	string note;
+};
 
-class GSDialog 
+class CDVDDialog 
 {
 	int m_id;
 
@@ -37,8 +42,8 @@ protected:
 	virtual bool OnCommand(HWND hWnd, UINT id, UINT code);
 
 public:
-	GSDialog(UINT id);
-	virtual ~GSDialog() {}
+	CDVDDialog (UINT id);
+	virtual ~CDVDDialog () {}
 
 	INT_PTR DoModal();
 
@@ -48,7 +53,7 @@ public:
 	void SetText(UINT id, const char* str);
 	void SetTextAsInt(UINT id, int i);
 
-	void ComboBoxInit(UINT id, const GSSetting* settings, int count, uint32 selid, uint32 maxid = ~0);
+	void ComboBoxInit(UINT id, const CDVDSetting* settings, int count, uint32 selid, uint32 maxid = ~0);
 	int ComboBoxAppend(UINT id, const char* str, LPARAM data = 0, bool select = false);
 	bool ComboBoxGetSelData(UINT id, INT_PTR& data);
 };

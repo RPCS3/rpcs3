@@ -35,7 +35,7 @@ int GSCaptureDlg::GetSelCodec(Codec& c)
 {
 	INT_PTR data = 0;
 
-	if(ComboBoxGetSelData(GetDlgItem(m_hWnd, IDC_CODECS), data))
+	if(ComboBoxGetSelData(IDC_CODECS, data))
 	{
 		if(data == 0) return 2;
 
@@ -66,9 +66,7 @@ void GSCaptureDlg::OnInit()
 
 	string selected = theApp.GetConfig("CaptureVideoCodecDisplayName", "");
 
-	HWND hWnd = GetDlgItem(m_hWnd, IDC_CODECS);
-
-	ComboBoxAppend(hWnd, "Uncompressed", 0, true);
+	ComboBoxAppend(IDC_CODECS, "Uncompressed", 0, true);
 
 	BeginEnumSysDev(CLSID_VideoCompressorCategory, moniker)
 	{
@@ -107,7 +105,7 @@ void GSCaptureDlg::OnInit()
 
 		string s(c.FriendlyName.begin(), c.FriendlyName.end());
 
-		ComboBoxAppend(hWnd, s.c_str(), (LPARAM)&m_codecs.back(), s == selected);
+		ComboBoxAppend(IDC_CODECS, s.c_str(), (LPARAM)&m_codecs.back(), s == selected);
 	}
 	EndEnumSysDev
 }

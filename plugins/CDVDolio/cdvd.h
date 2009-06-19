@@ -21,48 +21,31 @@
 
 #pragma once
 
-#ifndef __AFXWIN_H__
-	#error include 'stdafx.h' before including this file for PCH
-#endif
-
-class cdvdApp : public CWinApp
-{
-public:
-	cdvdApp();
-
-public:
-	virtual BOOL InitInstance();
-
-	DECLARE_MESSAGE_MAP()
-};
-
-//
-
 struct cdvdSubQ
 {
-	BYTE ctrl:4;		// control and mode bits
-	BYTE mode:4;		// control and mode bits
-	BYTE trackNum;		// current track number (1 to 99)
-	BYTE trackIndex;	// current index within track (0 to 99)
-	BYTE trackM;		// current minute location on the disc (BCD encoded)
-	BYTE trackS;		// current sector location on the disc (BCD encoded)
-	BYTE trackF;		// current frame location on the disc (BCD encoded)
-	BYTE pad;			// unused
-	BYTE discM;			// current minute offset from first track (BCD encoded)
-	BYTE discS;			// current sector offset from first track (BCD encoded)
-	BYTE discF;			// current frame offset from first track (BCD encoded)
+	uint8 ctrl:4;		// control and mode bits
+	uint8 mode:4;		// control and mode bits
+	uint8 trackNum;		// current track number (1 to 99)
+	uint8 trackIndex;	// current index within track (0 to 99)
+	uint8 trackM;		// current minute location on the disc (BCD encoded)
+	uint8 trackS;		// current sector location on the disc (BCD encoded)
+	uint8 trackF;		// current frame location on the disc (BCD encoded)
+	uint8 pad;			// unused
+	uint8 discM;			// current minute offset from first track (BCD encoded)
+	uint8 discS;			// current sector offset from first track (BCD encoded)
+	uint8 discF;			// current frame offset from first track (BCD encoded)
 };
 
 struct cdvdTD // NOT bcd coded
 {
-	UINT32 lsn;
-	BYTE type;
+	uint32 lsn;
+	uint8 type;
 };
 
 struct cdvdTN
 {
-	BYTE strack;	// number of the first track (usually 1)
-	BYTE etrack;	// number of the last track
+	uint8 strack;	// number of the first track (usually 1)
+	uint8 etrack;	// number of the last track
 };
 
 // CDVDreadTrack mode values:
@@ -109,14 +92,34 @@ struct cdvdTN
 
 #define CACHE_BLOCK_COUNT 16
 
+class CDVDolioApp
+{
+	static const char* m_ini;
+	static const char* m_section;
+
+public:
+	CDVDolioApp();
+
+	HMODULE GetModuleHandle();
+
+	string GetConfig(const char* entry, const char* value);
+	void SetConfig(const char* entry, const char* value);
+	int GetConfig(const char* entry, int value);
+	void SetConfig(const char* entry, int value);
+};
+
+extern CDVDolioApp theApp;
+
+//
+
 class CDVD
 {
 	HANDLE m_hFile;
-	CString m_label;
+	string m_label;
 	OVERLAPPED m_overlapped;
 	struct {int count, size, offset;} m_block;
-	struct {BYTE buff[2048 * CACHE_BLOCK_COUNT]; bool pending; int start, count;} m_cache;
-	BYTE m_buff[2352];
+	struct {uint8 buff[2048 * CACHE_BLOCK_COUNT]; bool pending; int start, count;} m_cache;
+	uint8 m_buff[2352];
 
 	LARGE_INTEGER MakeOffset(int lsn);
 	bool SyncRead(int lsn);
@@ -125,12 +128,12 @@ public:
 	CDVD();
 	virtual ~CDVD();
 
-	bool Open(CString path);
+	bool Open(const char* path);
 	void Close();
-	CString GetLabel();
+	const char* GetLabel();
 	bool Read(int lsn, int mode = CDVD_MODE_2048);
-	BYTE* GetBuffer();
-	UINT32 GetTN(cdvdTN* buff);
-	UINT32 GetTD(BYTE track, cdvdTD* buff);
+	uint8* GetBuffer();
+	uint32 GetTN(cdvdTN* buff);
+	uint32 GetTD(uint8 track, cdvdTD* buff);
 };
 

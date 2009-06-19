@@ -80,9 +80,7 @@ void GPUSettingsDlg::OnInit()
 		memset(&mode, 0, sizeof(mode));
 		m_modes.push_back(mode);
 
-		HWND hWnd = GetDlgItem(m_hWnd, IDC_RESOLUTION);
-
-		ComboBoxAppend(hWnd, "Windowed", (LPARAM)&m_modes.back(), true);
+		ComboBoxAppend(IDC_RESOLUTION, "Windowed", (LPARAM)&m_modes.back(), true);
 
 		if(CComPtr<IDirect3D9> d3d = Direct3DCreate9(D3D_SDK_VERSION))
 		{
@@ -100,7 +98,7 @@ void GPUSettingsDlg::OnInit()
 
 					string str = format("%dx%d %dHz", mode.Width, mode.Height, mode.RefreshRate);
 
-					ComboBoxAppend(hWnd, str.c_str(), (LPARAM)&m_modes.back(), w == mode.Width && h == mode.Height && hz == mode.RefreshRate);
+					ComboBoxAppend(IDC_RESOLUTION, str.c_str(), (LPARAM)&m_modes.back(), w == mode.Width && h == mode.Height && hz == mode.RefreshRate);
 				}
 			}
 		}
@@ -117,11 +115,11 @@ void GPUSettingsDlg::OnInit()
 		renderers.push_back(g_renderers[i]);
 	}
 
-	ComboBoxInit(GetDlgItem(m_hWnd, IDC_RENDERER), &renderers[0], renderers.size(), theApp.GetConfig("Renderer", 0));
-	ComboBoxInit(GetDlgItem(m_hWnd, IDC_FILTER), g_filter, countof(g_filter), theApp.GetConfig("filter", 0));
-	ComboBoxInit(GetDlgItem(m_hWnd, IDC_DITHERING), g_dithering, countof(g_dithering), theApp.GetConfig("dithering", 1));
-	ComboBoxInit(GetDlgItem(m_hWnd, IDC_ASPECTRATIO), g_aspectratio, countof(g_aspectratio), theApp.GetConfig("AspectRatio", 1));
-	ComboBoxInit(GetDlgItem(m_hWnd, IDC_SCALE), g_scale, countof(g_scale), theApp.GetConfig("scale_x", 0) | (theApp.GetConfig("scale_y", 0) << 2));
+	ComboBoxInit(IDC_RENDERER, &renderers[0], renderers.size(), theApp.GetConfig("Renderer", 0));
+	ComboBoxInit(IDC_FILTER, g_filter, countof(g_filter), theApp.GetConfig("filter", 0));
+	ComboBoxInit(IDC_DITHERING, g_dithering, countof(g_dithering), theApp.GetConfig("dithering", 1));
+	ComboBoxInit(IDC_ASPECTRATIO, g_aspectratio, countof(g_aspectratio), theApp.GetConfig("AspectRatio", 1));
+	ComboBoxInit(IDC_SCALE, g_scale, countof(g_scale), theApp.GetConfig("scale_x", 0) | (theApp.GetConfig("scale_y", 0) << 2));
 
 	SendMessage(GetDlgItem(m_hWnd, IDC_SWTHREADS), UDM_SETRANGE, 0, MAKELPARAM(16, 1));
 	SendMessage(GetDlgItem(m_hWnd, IDC_SWTHREADS), UDM_SETPOS, 0, MAKELPARAM(theApp.GetConfig("swthreads", 1), 0));
@@ -139,7 +137,7 @@ bool GPUSettingsDlg::OnCommand(HWND hWnd, UINT id, UINT code)
 	{
 		INT_PTR data;
 
-		if(ComboBoxGetSelData(GetDlgItem(m_hWnd, IDC_RESOLUTION), data))
+		if(ComboBoxGetSelData(IDC_RESOLUTION, data))
 		{
 			const D3DDISPLAYMODE* mode = (D3DDISPLAYMODE*)data;
 
@@ -148,27 +146,27 @@ bool GPUSettingsDlg::OnCommand(HWND hWnd, UINT id, UINT code)
 			theApp.SetConfig("ModeRefreshRate", (int)mode->RefreshRate);
 		}
 
-		if(ComboBoxGetSelData(GetDlgItem(m_hWnd, IDC_RENDERER), data))
+		if(ComboBoxGetSelData(IDC_RENDERER, data))
 		{
 			theApp.SetConfig("Renderer", (int)data);
 		}
 
-		if(ComboBoxGetSelData(GetDlgItem(m_hWnd, IDC_FILTER), data))
+		if(ComboBoxGetSelData(IDC_FILTER, data))
 		{
 			theApp.SetConfig("filter", (int)data);
 		}
 
-		if(ComboBoxGetSelData(GetDlgItem(m_hWnd, IDC_DITHERING), data))
+		if(ComboBoxGetSelData(IDC_DITHERING, data))
 		{
 			theApp.SetConfig("dithering", (int)data);
 		}
 
-		if(ComboBoxGetSelData(GetDlgItem(m_hWnd, IDC_ASPECTRATIO), data))
+		if(ComboBoxGetSelData(IDC_ASPECTRATIO, data))
 		{
 			theApp.SetConfig("AspectRatio", (int)data);
 		}
 
-		if(ComboBoxGetSelData(GetDlgItem(m_hWnd, IDC_SCALE), data))
+		if(ComboBoxGetSelData(IDC_SCALE, data))
 		{
 			theApp.SetConfig("scale_x", data & 3);
 			theApp.SetConfig("scale_y", (data >> 2) & 3);
@@ -184,7 +182,7 @@ void GPUSettingsDlg::UpdateControls()
 {
 	INT_PTR i;
 
-	if(ComboBoxGetSelData(GetDlgItem(m_hWnd, IDC_RENDERER), i))
+	if(ComboBoxGetSelData(IDC_RENDERER, i))
 	{
 		bool dx9 = i == 1;
 		bool dx10 = i == 2;

@@ -76,9 +76,7 @@ void GSSettingsDlg::OnInit()
 		memset(&mode, 0, sizeof(mode));
 		m_modes.push_back(mode);
 
-		HWND hWnd = GetDlgItem(m_hWnd, IDC_RESOLUTION);
-
-		ComboBoxAppend(hWnd, "Windowed", (LPARAM)&m_modes.back(), true);
+		ComboBoxAppend(IDC_RESOLUTION, "Windowed", (LPARAM)&m_modes.back(), true);
 
 		if(CComPtr<IDirect3D9> d3d = Direct3DCreate9(D3D_SDK_VERSION))
 		{
@@ -96,7 +94,7 @@ void GSSettingsDlg::OnInit()
 
 					string str = format("%dx%d %dHz", mode.Width, mode.Height, mode.RefreshRate);
 
-					ComboBoxAppend(hWnd, str.c_str(), (LPARAM)&m_modes.back(), w == mode.Width && h == mode.Height && hz == mode.RefreshRate);
+					ComboBoxAppend(IDC_RESOLUTION, str.c_str(), (LPARAM)&m_modes.back(), w == mode.Width && h == mode.Height && hz == mode.RefreshRate);
 				}
 			}
 		}
@@ -113,9 +111,9 @@ void GSSettingsDlg::OnInit()
 		renderers.push_back(g_renderers[i]);
 	}
 
-	ComboBoxInit(GetDlgItem(m_hWnd, IDC_RENDERER), &renderers[0], renderers.size(), theApp.GetConfig("Renderer", 0));
-	ComboBoxInit(GetDlgItem(m_hWnd, IDC_INTERLACE), g_interlace, countof(g_interlace), theApp.GetConfig("Interlace", 0));
-	ComboBoxInit(GetDlgItem(m_hWnd, IDC_ASPECTRATIO), g_aspectratio, countof(g_aspectratio), theApp.GetConfig("AspectRatio", 1));
+	ComboBoxInit(IDC_RENDERER, &renderers[0], renderers.size(), theApp.GetConfig("Renderer", 0));
+	ComboBoxInit(IDC_INTERLACE, g_interlace, countof(g_interlace), theApp.GetConfig("Interlace", 0));
+	ComboBoxInit(IDC_ASPECTRATIO, g_aspectratio, countof(g_aspectratio), theApp.GetConfig("AspectRatio", 1));
 
 	CheckDlgButton(m_hWnd, IDC_FILTER, theApp.GetConfig("filter", 1));
 	CheckDlgButton(m_hWnd, IDC_VSYNC, theApp.GetConfig("vsync", 0));
@@ -151,7 +149,7 @@ bool GSSettingsDlg::OnCommand(HWND hWnd, UINT id, UINT code)
 	{
 		INT_PTR data;
 
-		if(ComboBoxGetSelData(GetDlgItem(m_hWnd, IDC_RESOLUTION), data))
+		if(ComboBoxGetSelData(IDC_RESOLUTION, data))
 		{
 			const D3DDISPLAYMODE* mode = (D3DDISPLAYMODE*)data;
 
@@ -160,17 +158,17 @@ bool GSSettingsDlg::OnCommand(HWND hWnd, UINT id, UINT code)
 			theApp.SetConfig("ModeRefreshRate", (int)mode->RefreshRate);
 		}
 
-		if(ComboBoxGetSelData(GetDlgItem(m_hWnd, IDC_RENDERER), data))
+		if(ComboBoxGetSelData(IDC_RENDERER, data))
 		{
 			theApp.SetConfig("Renderer", (int)data);
 		}
 
-		if(ComboBoxGetSelData(GetDlgItem(m_hWnd, IDC_INTERLACE), data))
+		if(ComboBoxGetSelData(IDC_INTERLACE, data))
 		{
 			theApp.SetConfig("Interlace", (int)data);
 		}
 
-		if(ComboBoxGetSelData(GetDlgItem(m_hWnd, IDC_ASPECTRATIO), data))
+		if(ComboBoxGetSelData(IDC_ASPECTRATIO, data))
 		{
 			theApp.SetConfig("AspectRatio", (int)data);
 		}
@@ -195,7 +193,7 @@ void GSSettingsDlg::UpdateControls()
 {
 	INT_PTR i;
 
-	if(ComboBoxGetSelData(GetDlgItem(m_hWnd, IDC_RENDERER), i))
+	if(ComboBoxGetSelData(IDC_RENDERER, i))
 	{
 		bool dx9 = i >= 0 && i <= 2;
 		bool dx10 = i >= 3 && i <= 5;
