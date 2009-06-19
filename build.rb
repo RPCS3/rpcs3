@@ -22,6 +22,7 @@ $pcsx2_prefix = " --prefix #{$main_dir}"
 $plugins_prefix = " --prefix #{$plugin_install_dir}"
 
 $plugin_list=["CDVDnull",  "dev9null", "FWnull", "USBnull", "SPU2null", "zerogs", "zzogl", "zeropad", "zerospu2", "PeopsSPU2", "CDVDiso", "CDVDisoEFP",  "CDVDlinuz"]
+$full_plugin_list=["CDVDnull",  "dev9null", "FWnull", "USBnull", "SPU2null", "zerogs", "zzogl", "zeropad", "zerospu2", "PeopsSPU2", "CDVDiso", "CDVDisoEFP",  "CDVDlinuz","GSnull","PadNull"]
 
 $pcsx2_build_types = {
 	"dev" => " --enable-devbuild ",
@@ -31,6 +32,9 @@ $pcsx2_build_types = {
 	
 $pcsx2_release_params=["dev","debug","release"]
 $make_params=["all", "clean","install"]
+
+$build_report =""
+$build_counter = 0
 
 def plugin_src_dir(plugin_name)
 	name = "#{$plugins_dir}/#{plugin_name}/"
@@ -56,6 +60,7 @@ end
 
 def make(options)
 	system("make #{options}")
+	($? == 0)
 end
 
 def rebuild(options)
@@ -68,7 +73,7 @@ def rebuild(options)
 end
 
 def install(build_name)
-	make "install"
+	ret = make "install"
 	
 	case build_name
 		# If the package isn't inclined to obey simple instructions...
@@ -91,9 +96,13 @@ def install(build_name)
 		svn_revision = /[0-9]+/.match(svn_revision)
 		system("cp #{$pcsx2_install_dir}/pcsx2 #{$pcsx2_install_dir}/pcsx2-#{svn_revision}")
 	end
+	
+	ret
 end
 
 def build(build_name, make_parameter)
+	completed = true
+	
 	announce "#{build_name.capitalize}"
 	
 	if build_name != "pcsx2" then
@@ -111,16 +120,24 @@ def build(build_name, make_parameter)
 			else
 				rebuild($plugins_prefix)
 			end
-			install(build_name)
+			completed = install(build_name)
 			
 		when "clean" then
 			make "clean"
 			
 		else
-			install(build_name)
+			completed = install(build_name)
 		end
 		
 	Dir.chdir $main_dir
+	
+	if completed then
+		$build_report += "#{build_name} was built successfully.\n"
+		$build_counter += 1
+	else
+		$build_report += "#{build_name} was not built successfully.\n"
+	end
+			
 end
 
 build_parameter = "all"
@@ -130,7 +147,7 @@ build_items = Array.new([])
 ARGV.each do |x|
 	make_parameter = x if $make_params.include?(x)
 	
-	build_items.push(x) if $plugin_list.include?(x) or (x == "pcsx2")
+	build_items.push(x) if $full_plugin_list.include?(x) or (x == "pcsx2")
 	$pcsx2_prefix = $pcsx2_build_types[x] + $pcsx2_prefix if $pcsx2_release_params.include?(x)
 	
 	if (x == "plugins") then
@@ -149,3 +166,9 @@ build_items.flatten!
 build_items.each do |x|
 	build(x,make_parameter)
 end
+
+print "\n--\n"
+print "Build Summary:\n"
+print $build_report 
+print "\n"
+print "#{$build_counter}/#{build_items.count} Successful.\n"
