@@ -251,7 +251,6 @@ bool GSRenderer::Merge(int field)
 	return true;
 }
 
-
 void GSRenderer::VSync(int field)
 {
 	GSPerfMonAutoTimer pmat(m_perfmon);

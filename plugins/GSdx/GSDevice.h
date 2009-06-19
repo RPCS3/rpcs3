@@ -103,4 +103,26 @@ public:
 
 	void Merge(GSTexture* st[2], GSVector4* sr, GSVector4* dr, const GSVector2i& fs, bool slbg, bool mmod, const GSVector4& c);
 	void Interlace(const GSVector2i& ds, int field, int mode, float yoffset);
+
+	template<class T> void PrepareShaderMacro(vector<T>& dst, const T* src, const char* model)
+	{
+		dst.clear();
+
+		while(src && src->Definition && src->Name)
+		{
+			dst.push_back(*src++);
+		}
+
+		T m;
+		
+		m.Name = "SHADER_MODEL";
+		m.Definition = model;
+
+		dst.push_back(m);
+
+		m.Name = NULL;
+		m.Definition = NULL;
+
+		dst.push_back(m);
+	}
 };

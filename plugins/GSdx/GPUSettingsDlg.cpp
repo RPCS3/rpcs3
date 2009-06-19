@@ -30,7 +30,8 @@ GSSetting GPUSettingsDlg::g_renderers[] =
 	{0, "Direct3D7 (Software)", NULL},
 	{1, "Direct3D9 (Software)", NULL},
 	{2, "Direct3D10 (Software)", NULL},
-//	{3, "Null (Null)", NULL},
+	{3, "Direct3D11 (Software)", NULL},
+//	{4, "Null (Null)", NULL},
 };
 
 GSSetting GPUSettingsDlg::g_filter[] =
@@ -105,12 +106,14 @@ void GPUSettingsDlg::OnInit()
 	}
 
 	bool isdx10avail = GSUtil::IsDirect3D10Available();
+	bool isdx11avail = GSUtil::IsDirect3D11Available();
 
 	vector<GSSetting> renderers;
 
 	for(size_t i = 0; i < countof(g_renderers); i++)
 	{
 		if(i >= 3 && i <= 5 && !isdx10avail) continue;
+		if(i >= 6 && i <= 8 && !isdx11avail) continue;
 
 		renderers.push_back(g_renderers[i]);
 	}
@@ -186,10 +189,12 @@ void GPUSettingsDlg::UpdateControls()
 	{
 		bool dx9 = i == 1;
 		bool dx10 = i == 2;
-		bool sw = i >= 0 && i <= 2;
+		bool dx11 = i == 3;
+		bool sw = i >= 0 && i <= 3;
 
 		ShowWindow(GetDlgItem(m_hWnd, IDC_LOGO9), dx9 ? SW_SHOW : SW_HIDE);
 		ShowWindow(GetDlgItem(m_hWnd, IDC_LOGO10), dx10 ? SW_SHOW : SW_HIDE);
+		// TODO: ShowWindow(GetDlgItem(m_hWnd, IDC_LOGO11), dx11 ? SW_SHOW : SW_HIDE);
 		
 		EnableWindow(GetDlgItem(m_hWnd, IDC_SCALE), sw);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_SWTHREADS_EDIT), sw);

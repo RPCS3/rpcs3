@@ -133,11 +133,11 @@ bool GSDevice9::Create(GSWnd* wnd, bool vsync)
 		D3DDECL_END()
 	};
 
-	CompileShader(IDR_CONVERT9_FX, "vs_main", NULL, &m_convert.vs, il_convert, countof(il_convert), &m_convert.il);
+	CompileShader(IDR_CONVERT_FX, "vs_main", NULL, &m_convert.vs, il_convert, countof(il_convert), &m_convert.il);
 
 	for(int i = 0; i < countof(m_convert.ps); i++)
 	{
-		CompileShader(IDR_CONVERT9_FX, format("ps_main%d", i), NULL, &m_convert.ps[i]);
+		CompileShader(IDR_CONVERT_FX, format("ps_main%d", i), NULL, &m_convert.ps[i]);
 	}
 
 	m_convert.dss.DepthEnable = false;
@@ -164,7 +164,7 @@ bool GSDevice9::Create(GSWnd* wnd, bool vsync)
 
 	for(int i = 0; i < countof(m_merge.ps); i++)
 	{
-		CompileShader(IDR_MERGE9_FX, format("ps_main%d", i), NULL, &m_merge.ps[i]);
+		CompileShader(IDR_MERGE_FX, format("ps_main%d", i), NULL, &m_merge.ps[i]);
 	}
 
 	m_merge.bs.BlendEnable = true;
@@ -180,7 +180,7 @@ bool GSDevice9::Create(GSWnd* wnd, bool vsync)
 
 	for(int i = 0; i < countof(m_interlace.ps); i++)
 	{
-		CompileShader(IDR_INTERLACE9_FX, format("ps_main%d", i), NULL, &m_interlace.ps[i]);
+		CompileShader(IDR_INTERLACE_FX, format("ps_main%d", i), NULL, &m_interlace.ps[i]);
 	}
 
 	//
@@ -952,25 +952,32 @@ static HRESULT LoadShader(uint32 id, LPCSTR& data, uint32& size)
 HRESULT GSDevice9::CompileShader(uint32 id, const string& entry, const D3DXMACRO* macro, IDirect3DVertexShader9** vs, const D3DVERTEXELEMENT9* layout, int count, IDirect3DVertexDeclaration9** il)
 {
 	const char* target;
+	const char* model;
 
 	if(m_d3dcaps.VertexShaderVersion >= D3DVS_VERSION(3, 0))
 	{
 		target = "vs_3_0";
+		model = "0x300";
 	}
 	else if(m_d3dcaps.VertexShaderVersion >= D3DVS_VERSION(2, 0))
 	{
 		target = "vs_2_0";
+		model = "0x200";
 	}
 	else
 	{
 		return E_FAIL;
 	}
 
+	vector<D3DXMACRO> m;
+
+	PrepareShaderMacro(m, macro, model);
+
 	HRESULT hr;
 
 	CComPtr<ID3DXBuffer> shader, error;
 
-	// FIXME: hr = D3DXCompileShaderFromResource(theApp.GetModuleHandle(), MAKEINTRESOURCE(id), macro, NULL, entry.c_str(), target, 0, &shader, &error, NULL);
+	// FIXME: hr = D3DXCompileShaderFromResource(theApp.GetModuleHandle(), MAKEINTRESOURCE(id), &m[0], NULL, entry.c_str(), target, 0, &shader, &error, NULL);
 
 	LPCSTR data;
 	uint32 size;
@@ -979,7 +986,7 @@ HRESULT GSDevice9::CompileShader(uint32 id, const string& entry, const D3DXMACRO
 
 	if(FAILED(hr)) return E_FAIL;
 
-	hr = D3DXCompileShader(data, size, macro, NULL, entry.c_str(), target, 0, &shader, &error, NULL);
+	hr = D3DXCompileShader(data, size, &m[0], NULL, entry.c_str(), target, 0, &shader, &error, NULL);
 
 	if(SUCCEEDED(hr))
 	{
@@ -1010,27 +1017,34 @@ HRESULT GSDevice9::CompileShader(uint32 id, const string& entry, const D3DXMACRO
 HRESULT GSDevice9::CompileShader(uint32 id, const string& entry, const D3DXMACRO* macro, IDirect3DPixelShader9** ps)
 {
 	const char* target = NULL;
+	const char* model;
 	uint32 flags = 0;
 
 	if(m_d3dcaps.PixelShaderVersion >= D3DPS_VERSION(3, 0))
 	{
 		target = "ps_3_0";
+		model = "0x300";
 		flags |= D3DXSHADER_AVOID_FLOW_CONTROL;
 	}
 	else if(m_d3dcaps.PixelShaderVersion >= D3DPS_VERSION(2, 0))
 	{
 		target = "ps_2_0";
+		model = "0x200";
 	}
 	else 
 	{
 		return false;
 	}
 
+	vector<D3DXMACRO> m;
+
+	PrepareShaderMacro(m, macro, model);
+
 	HRESULT hr;
 
 	CComPtr<ID3DXBuffer> shader, error;
 
-	// FIXME: hr = D3DXCompileShaderFromResource(theApp.GetModuleHandle(), MAKEINTRESOURCE(id), macro, NULL, entry.c_str(), target, flags, &shader, &error, NULL);
+	// FIXME: hr = D3DXCompileShaderFromResource(theApp.GetModuleHandle(), MAKEINTRESOURCE(id), &m[0], NULL, entry.c_str(), target, flags, &shader, &error, NULL);
 
 	LPCSTR data;
 	uint32 size;
@@ -1039,7 +1053,7 @@ HRESULT GSDevice9::CompileShader(uint32 id, const string& entry, const D3DXMACRO
 
 	if(FAILED(hr)) return E_FAIL;
 
-	hr = D3DXCompileShader(data, size, macro, NULL, entry.c_str(), target, 0, &shader, &error, NULL);
+	hr = D3DXCompileShader(data, size, &m[0], NULL, entry.c_str(), target, 0, &shader, &error, NULL);
 
 	if(SUCCEEDED(hr))
 	{

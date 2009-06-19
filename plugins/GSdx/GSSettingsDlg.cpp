@@ -33,13 +33,16 @@ GSSetting GSSettingsDlg::g_renderers[] =
 	{3, "Direct3D10 (Hardware)", NULL},
 	{4, "Direct3D10 (Software)", NULL},
 	{5, "Direct3D10 (Null)", NULL},
+	{6, "Direct3D11 (Hardware)", NULL},
+	{7, "Direct3D11 (Software)", NULL},
+	{8, "Direct3D11 (Null)", NULL},
 	#if 0
-	{6, "OpenGL (Hardware)", NULL},
-	{7, "OpenGL (Software)", NULL},
-	{8, "OpenGL (Null)", NULL},
+	{9, "OpenGL (Hardware)", NULL},
+	{10, "OpenGL (Software)", NULL},
+	{11, "OpenGL (Null)", NULL},
 	#endif
-	{9, "Null (Software)", NULL},
-	{10, "Null (Null)", NULL},
+	{12, "Null (Software)", NULL},
+	{13, "Null (Null)", NULL},
 };
 
 GSSetting GSSettingsDlg::g_interlace[] =
@@ -101,12 +104,14 @@ void GSSettingsDlg::OnInit()
 	}
 
 	bool isdx10avail = GSUtil::IsDirect3D10Available();
+	bool isdx11avail = GSUtil::IsDirect3D11Available();
 
 	vector<GSSetting> renderers;
 
 	for(size_t i = 0; i < countof(g_renderers); i++)
 	{
 		if(i >= 3 && i <= 5 && !isdx10avail) continue;
+		if(i >= 6 && i <= 8 && !isdx11avail) continue;
 
 		renderers.push_back(g_renderers[i]);
 	}
@@ -197,13 +202,16 @@ void GSSettingsDlg::UpdateControls()
 	{
 		bool dx9 = i >= 0 && i <= 2;
 		bool dx10 = i >= 3 && i <= 5;
-		bool ogl = i >= 6 && i <= 8;
-		bool hw = i == 0 || i == 3 || i == 6;
-		bool sw = i == 1 || i == 4 || i == 7;
+		bool dx11 = i >= 6 && i <= 8;
+		bool ogl = i >= 9 && i <= 12;
+		bool hw = i == 0 || i == 3 || i == 6 || i == 9;
+		bool sw = i == 1 || i == 4 || i == 7 || i == 10;
 		bool native = !!IsDlgButtonChecked(m_hWnd, IDC_NATIVERES);
 
 		ShowWindow(GetDlgItem(m_hWnd, IDC_LOGO9), dx9 ? SW_SHOW : SW_HIDE);
 		ShowWindow(GetDlgItem(m_hWnd, IDC_LOGO10), dx10 ? SW_SHOW : SW_HIDE);
+		// TODO: ShowWindow(GetDlgItem(m_hWnd, IDC_LOGO11), dx11 ? SW_SHOW : SW_HIDE);
+		// TODO: ShowWindow(GetDlgItem(m_hWnd, IDC_LOGO_OGL), ogl ? SW_SHOW : SW_HIDE);
 
 		EnableWindow(GetDlgItem(m_hWnd, IDC_RESOLUTION), dx9);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_RESX), hw && !native);

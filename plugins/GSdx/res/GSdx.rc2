@@ -10,13 +10,9 @@
 /////////////////////////////////////////////////////////////////////////////
 // Add manually edited resources here...
 
-IDR_CONVERT9_FX		RCDATA "res\\convert9.fx"
-IDR_TFX9_FX			RCDATA "res\\tfx9.fx"
-IDR_MERGE9_FX		RCDATA "res\\merge9.fx"
-IDR_INTERLACE9_FX	RCDATA "res\\interlace9.fx"
-IDR_CONVERT10_FX	RCDATA "res\\convert10.fx"
-IDR_TFX10_FX		RCDATA "res\\tfx10.fx"
-IDR_MERGE10_FX		RCDATA "res\\merge10.fx"
-IDR_INTERLACE10_FX	RCDATA "res\\interlace10.fx"
+IDR_CONVERT_FX		RCDATA "res\\convert.fx"
+IDR_TFX_FX			RCDATA "res\\tfx.fx"
+IDR_MERGE_FX		RCDATA "res\\merge.fx"
+IDR_INTERLACE_FX	RCDATA "res\\interlace.fx"
 
 /////////////////////////////////////////////////////////////////////////////

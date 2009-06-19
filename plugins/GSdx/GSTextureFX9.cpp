@@ -126,7 +126,7 @@ bool GSTextureFX9::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 		CComPtr<IDirect3DVertexDeclaration9> il;
 		CComPtr<IDirect3DVertexShader9> vs;
 
-		m_dev->CompileShader(IDR_TFX9_FX, "vs_main", macro, &vs, layout, countof(layout), &il);
+		m_dev->CompileShader(IDR_TFX_FX, "vs_main", macro, &vs, layout, countof(layout), &il);
 
 		if(m_il == NULL)
 		{
@@ -215,7 +215,7 @@ void GSTextureFX9::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSample
 
 		CComPtr<IDirect3DPixelShader9> ps;
 
-		hr = m_dev->CompileShader(IDR_TFX9_FX, "ps_main", macro, &ps);
+		hr = m_dev->CompileShader(IDR_TFX_FX, "ps_main", macro, &ps);
 
 		m_ps[sel] = ps;
 

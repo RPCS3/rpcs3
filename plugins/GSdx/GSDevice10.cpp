@@ -96,16 +96,6 @@ bool GSDevice10::Create(GSWnd* wnd, bool vsync)
 
 	if(FAILED(hr)) return false;
 
-	// font
-/*
-	// TODO: the driver crashes on alt-enter when using a font...
-
-	D3DX10_FONT_DESC fd;
-	memset(&fd, 0, sizeof(fd));
-	_tcscpy(fd.FaceName, _T("Arial"));
-	fd.Height = 20;
-	D3DX10CreateFontIndirect(m_dev, &fd, &m_font);
-*/
 	// convert
 
 	D3D10_INPUT_ELEMENT_DESC il_convert[] =
@@ -114,11 +104,11 @@ bool GSDevice10::Create(GSWnd* wnd, bool vsync)
 		{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 16, D3D10_INPUT_PER_VERTEX_DATA, 0},
 	};
 
-	hr = CompileShader(IDR_CONVERT10_FX, "vs_main", NULL, &m_convert.vs, il_convert, countof(il_convert), &m_convert.il);
+	hr = CompileShader(IDR_CONVERT_FX, "vs_main", NULL, &m_convert.vs, il_convert, countof(il_convert), &m_convert.il);
 
 	for(int i = 0; i < countof(m_convert.ps); i++)
 	{
-		hr = CompileShader(IDR_CONVERT10_FX, format("ps_main%d", i), NULL, &m_convert.ps[i]);
+		hr = CompileShader(IDR_CONVERT_FX, format("ps_main%d", i), NULL, &m_convert.ps[i]);
 	}
 
 	memset(&dsd, 0, sizeof(dsd));
@@ -142,14 +132,12 @@ bool GSDevice10::Create(GSWnd* wnd, bool vsync)
     bd.ByteWidth = sizeof(MergeConstantBuffer);
     bd.Usage = D3D10_USAGE_DEFAULT;
     bd.BindFlags = D3D10_BIND_CONSTANT_BUFFER;
-    bd.CPUAccessFlags = 0;
-    bd.MiscFlags = 0;
 
     hr = m_dev->CreateBuffer(&bd, NULL, &m_merge.cb);
 
 	for(int i = 0; i < countof(m_merge.ps); i++)
 	{
-		hr = CompileShader(IDR_MERGE10_FX, format("ps_main%d", i), NULL, &m_merge.ps[i]);
+		hr = CompileShader(IDR_MERGE_FX, format("ps_main%d", i), NULL, &m_merge.ps[i]);
 	}
 
 	memset(&bsd, 0, sizeof(bsd));
@@ -172,14 +160,12 @@ bool GSDevice10::Create(GSWnd* wnd, bool vsync)
     bd.ByteWidth = sizeof(InterlaceConstantBuffer);
     bd.Usage = D3D10_USAGE_DEFAULT;
     bd.BindFlags = D3D10_BIND_CONSTANT_BUFFER;
-    bd.CPUAccessFlags = 0;
-    bd.MiscFlags = 0;
 
     hr = m_dev->CreateBuffer(&bd, NULL, &m_interlace.cb);
 
 	for(int i = 0; i < countof(m_interlace.ps); i++)
 	{
-		hr = CompileShader(IDR_INTERLACE10_FX, format("ps_main%d", i), NULL, &m_interlace.ps[i]);
+		hr = CompileShader(IDR_INTERLACE_FX, format("ps_main%d", i), NULL, &m_interlace.ps[i]);
 	}
 
 	//
@@ -743,13 +729,17 @@ void GSDevice10::OMSetRenderTargets(GSTexture* rt, GSTexture* ds)
 	}
 }
 
-HRESULT GSDevice10::CompileShader(uint32 id, const string& entry, D3D10_SHADER_MACRO* macro, ID3D10VertexShader** ps, D3D10_INPUT_ELEMENT_DESC* layout, int count, ID3D10InputLayout** il)
+HRESULT GSDevice10::CompileShader(uint32 id, const string& entry, D3D10_SHADER_MACRO* macro, ID3D10VertexShader** vs, D3D10_INPUT_ELEMENT_DESC* layout, int count, ID3D10InputLayout** il)
 {
 	HRESULT hr;
 
+	vector<D3D10_SHADER_MACRO> m;
+
+	PrepareShaderMacro(m, macro, "0x400");
+
 	CComPtr<ID3D10Blob> shader, error;
 
-    hr = D3DX10CompileFromResource(theApp.GetModuleHandle(), MAKEINTRESOURCE(id), NULL, macro, NULL, entry.c_str(), "vs_4_0", 0, 0, NULL, &shader, &error, NULL);
+    hr = D3DX10CompileFromResource(theApp.GetModuleHandle(), MAKEINTRESOURCE(id), NULL, &m[0], NULL, entry.c_str(), "vs_4_0", 0, 0, NULL, &shader, &error, NULL);
 	
 	if(error)
 	{
@@ -761,7 +751,7 @@ HRESULT GSDevice10::CompileShader(uint32 id, const string& entry, D3D10_SHADER_M
 		return hr;
 	}
 
-	hr = m_dev->CreateVertexShader((void*)shader->GetBufferPointer(), shader->GetBufferSize(), ps);
+	hr = m_dev->CreateVertexShader((void*)shader->GetBufferPointer(), shader->GetBufferSize(), vs);
 
 	if(FAILED(hr))
 	{
@@ -782,9 +772,13 @@ HRESULT GSDevice10::CompileShader(uint32 id, const string& entry, D3D10_SHADER_M
 {
 	HRESULT hr;
 
+	vector<D3D10_SHADER_MACRO> m;
+
+	PrepareShaderMacro(m, macro, "0x400");
+
 	CComPtr<ID3D10Blob> shader, error;
 
-    hr = D3DX10CompileFromResource(theApp.GetModuleHandle(), MAKEINTRESOURCE(id), NULL, macro, NULL, entry.c_str(), "gs_4_0", 0, 0, NULL, &shader, &error, NULL);
+    hr = D3DX10CompileFromResource(theApp.GetModuleHandle(), MAKEINTRESOURCE(id), NULL, &m[0], NULL, entry.c_str(), "gs_4_0", 0, 0, NULL, &shader, &error, NULL);
 	
 	if(error)
 	{
@@ -810,9 +804,13 @@ HRESULT GSDevice10::CompileShader(uint32 id, const string& entry, D3D10_SHADER_M
 {
 	HRESULT hr;
 
+	vector<D3D10_SHADER_MACRO> m;
+
+	PrepareShaderMacro(m, macro, "0x400");
+
 	CComPtr<ID3D10Blob> shader, error;
 
-    hr = D3DX10CompileFromResource(theApp.GetModuleHandle(), MAKEINTRESOURCE(id), NULL, macro, NULL, entry.c_str(), "ps_4_0", 0, 0, NULL, &shader, &error, NULL);
+    hr = D3DX10CompileFromResource(theApp.GetModuleHandle(), MAKEINTRESOURCE(id), NULL, &m[0], NULL, entry.c_str(), "ps_4_0", 0, 0, NULL, &shader, &error, NULL);
 	
 	if(error)
 	{

@@ -40,20 +40,16 @@
 #define IDC_WIDTH                       2036
 #define IDC_HEIGHT                      2037
 #define IDC_CONFIGURE                   2038
-#define IDR_CONVERT9_FX                 10000
-#define IDR_TFX9_FX                     10001
-#define IDR_MERGE9_FX                   10002
-#define IDR_INTERLACE9_FX               10003
-#define IDR_CONVERT10_FX                10004
-#define IDR_TFX10_FX                    10005
-#define IDR_MERGE10_FX                  10006
-#define IDR_INTERLACE10_FX              10007
+#define IDR_CONVERT_FX                  10000
+#define IDR_TFX_FX                      10001
+#define IDR_MERGE_FX                    10002
+#define IDR_INTERLACE_FX                10003
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        10009
+#define _APS_NEXT_RESOURCE_VALUE        10004
 #define _APS_NEXT_COMMAND_VALUE         32771
 #define _APS_NEXT_CONTROL_VALUE         2039
 #define _APS_NEXT_SYMED_VALUE           5000

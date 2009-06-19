@@ -1303,6 +1303,7 @@
     <ClCompile Include="GSCrc.cpp" />
     <ClCompile Include="GSDevice.cpp" />
     <ClCompile Include="GSDevice10.cpp" />
+    <ClCompile Include="GSDevice11.cpp" />
     <ClCompile Include="GSDevice7.cpp" />
     <ClCompile Include="GSDevice9.cpp" />
     <ClCompile Include="GSDeviceNull.cpp" />
@@ -1320,6 +1321,7 @@
     <ClCompile Include="GSRenderer.cpp" />
     <ClCompile Include="GSRendererHW.cpp" />
     <ClCompile Include="GSRendererHW10.cpp" />
+    <ClCompile Include="GSRendererHW11.cpp" />
     <ClCompile Include="GSRendererHW9.cpp" />
     <ClCompile Include="GSRendererNull.cpp" />
     <ClCompile Include="GSRendererOGL.cpp" />
@@ -1331,14 +1333,17 @@
     <ClCompile Include="GSTables.cpp" />
     <ClCompile Include="GSTexture.cpp" />
     <ClCompile Include="GSTexture10.cpp" />
+    <ClCompile Include="GSTexture11.cpp" />
     <ClCompile Include="GSTexture7.cpp" />
     <ClCompile Include="GSTexture9.cpp" />
     <ClCompile Include="GSTextureCache.cpp" />
     <ClCompile Include="GSTextureCache10.cpp" />
+    <ClCompile Include="GSTextureCache11.cpp" />
     <ClCompile Include="GSTextureCache9.cpp" />
     <ClCompile Include="GSTextureCacheOGL.cpp" />
     <ClCompile Include="GSTextureCacheSW.cpp" />
     <ClCompile Include="GSTextureFX10.cpp" />
+    <ClCompile Include="GSTextureFX11.cpp" />
     <ClCompile Include="GSTextureFX9.cpp" />
     <ClCompile Include="GSTextureNull.cpp" />
     <ClCompile Include="GSTextureOGL.cpp" />
@@ -1419,6 +1424,7 @@
     <ClInclude Include="GSCrc.h" />
     <ClInclude Include="GSDevice.h" />
     <ClInclude Include="GSDevice10.h" />
+    <ClInclude Include="GSDevice11.h" />
     <ClInclude Include="GSDevice7.h" />
     <ClInclude Include="GSDevice9.h" />
     <ClInclude Include="GSDeviceNull.h" />
@@ -1438,6 +1444,7 @@
     <ClInclude Include="GSRenderer.h" />
     <ClInclude Include="GSRendererHW.h" />
     <ClInclude Include="GSRendererHW10.h" />
+    <ClInclude Include="GSRendererHW11.h" />
     <ClInclude Include="GSRendererHW9.h" />
     <ClInclude Include="GSRendererNull.h" />
     <ClInclude Include="GSRendererOGL.h" />
@@ -1450,14 +1457,17 @@
     <ClInclude Include="GSTables.h" />
     <ClInclude Include="GSTexture.h" />
     <ClInclude Include="GSTexture10.h" />
+    <ClInclude Include="GSTexture11.h" />
     <ClInclude Include="GSTexture7.h" />
     <ClInclude Include="GSTexture9.h" />
     <ClInclude Include="GSTextureCache.h" />
     <ClInclude Include="GSTextureCache10.h" />
+    <ClInclude Include="GSTextureCache11.h" />
     <ClInclude Include="GSTextureCache9.h" />
     <ClInclude Include="GSTextureCacheOGL.h" />
     <ClInclude Include="GSTextureCacheSW.h" />
     <ClInclude Include="GSTextureFX10.h" />
+    <ClInclude Include="GSTextureFX11.h" />
     <ClInclude Include="GSTextureFX9.h" />
     <ClInclude Include="GSTextureNull.h" />
     <ClInclude Include="GSTextureOGL.h" />
@@ -1481,17 +1491,13 @@
     <None Include="baseclasses\activex.rcv" />
     <None Include="baseclasses\activex.ver" />
     <None Include="GSdx.def" />
-    <None Include="res\convert10.fx" />
-    <None Include="res\convert9.fx" />
+    <None Include="res\convert.fx" />
     <None Include="res\GSdx.rc2" />
-    <None Include="res\interlace10.fx" />
-    <None Include="res\interlace9.fx" />
+    <None Include="res\interlace.fx" />
     <None Include="res\logo10.bmp" />
     <None Include="res\logo9.bmp" />
-    <None Include="res\merge10.fx" />
-    <None Include="res\merge9.fx" />
-    <None Include="res\tfx10.fx" />
-    <None Include="res\tfx9.fx" />
+    <None Include="res\merge.fx" />
+    <None Include="res\tfx.fx" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="GSdx.rc" />

@@ -172,6 +172,25 @@ bool GSUtil::IsDirect3D10Available()
 	return false;
 }
 
+bool GSUtil::IsDirect3D11Available()
+{
+	if(HMODULE hModule = LoadLibrary(_T("d3d11.dll")))
+	{
+		FreeLibrary(hModule);
+
+		return true;
+	}
+
+	if(HMODULE hModule = LoadLibrary(_T("d3d11_beta.dll")))
+	{
+		FreeLibrary(hModule);
+
+		return true;
+	}
+
+	return false;
+}
+
 char* GSUtil::GetLibName()
 {
 	static string str;

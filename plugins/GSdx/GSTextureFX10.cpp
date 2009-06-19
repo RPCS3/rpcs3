@@ -72,7 +72,7 @@ bool GSTextureFX10::Create(GSDevice10* dev)
 
 	memset(&sd, 0, sizeof(sd));
 
-	sd.Filter = D3D10_ENCODE_BASIC_FILTER(D3D10_FILTER_TYPE_POINT, D3D10_FILTER_TYPE_POINT, D3D10_FILTER_TYPE_POINT, false);
+	sd.Filter = D3D10_FILTER_MIN_MAG_MIP_POINT;
 	sd.AddressU = D3D10_TEXTURE_ADDRESS_CLAMP;
 	sd.AddressV = D3D10_TEXTURE_ADDRESS_CLAMP;
 	sd.AddressW = D3D10_TEXTURE_ADDRESS_CLAMP;
@@ -133,7 +133,7 @@ bool GSTextureFX10::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 		CComPtr<ID3D10InputLayout> il;
 		CComPtr<ID3D10VertexShader> vs;
 
-		m_dev->CompileShader(IDR_TFX10_FX, "vs_main", macro, &vs, layout, countof(layout), &il);
+		m_dev->CompileShader(IDR_TFX_FX, "vs_main", macro, &vs, layout, countof(layout), &il);
 
 		if(m_il == NULL)
 		{
@@ -178,12 +178,12 @@ bool GSTextureFX10::SetupGS(GSSelector sel)
 
 			D3D10_SHADER_MACRO macro[] =
 			{
-				{"IIP", str[0].c_str()},
-				{"PRIM", str[1].c_str()},
+				{"GS_IIP", str[0].c_str()},
+				{"GS_PRIM", str[1].c_str()},
 				{NULL, NULL},
 			};
 
-			hr = m_dev->CompileShader(IDR_TFX10_FX, "gs_main", macro, &gs);
+			hr = m_dev->CompileShader(IDR_TFX_FX, "gs_main", macro, &gs);
 
 			m_gs[sel] = gs;
 		}
@@ -230,26 +230,26 @@ void GSTextureFX10::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSampl
 
 		D3D10_SHADER_MACRO macro[] =
 		{
-			{"FST", str[0].c_str()},
-			{"WMS", str[1].c_str()},
-			{"WMT", str[2].c_str()},
-			{"BPP", str[3].c_str()},
-			{"AEM", str[4].c_str()},
-			{"TFX", str[5].c_str()},
-			{"TCC", str[6].c_str()},
-			{"ATE", str[7].c_str()},
-			{"ATST", str[8].c_str()},
-			{"FOG", str[9].c_str()},
-			{"CLR1", str[10].c_str()},
-			{"FBA", str[11].c_str()},
-			{"AOUT", str[12].c_str()},
-			{"LTF", str[13].c_str()},
+			{"PS_FST", str[0].c_str()},
+			{"PS_WMS", str[1].c_str()},
+			{"PS_WMT", str[2].c_str()},
+			{"PS_BPP", str[3].c_str()},
+			{"PS_AEM", str[4].c_str()},
+			{"PS_TFX", str[5].c_str()},
+			{"PS_TCC", str[6].c_str()},
+			{"PS_ATE", str[7].c_str()},
+			{"PS_ATST", str[8].c_str()},
+			{"PS_FOG", str[9].c_str()},
+			{"PS_CLR1", str[10].c_str()},
+			{"PS_FBA", str[11].c_str()},
+			{"PS_AOUT", str[12].c_str()},
+			{"PS_LTF", str[13].c_str()},
 			{NULL, NULL},
 		};
 
 		CComPtr<ID3D10PixelShader> ps;
 		
-		hr = m_dev->CompileShader(IDR_TFX10_FX, "ps_main", macro, &ps);
+		hr = m_dev->CompileShader(IDR_TFX_FX, "ps_main", macro, &ps);
 
 		m_ps[sel] = ps;
 

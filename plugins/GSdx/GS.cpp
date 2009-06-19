@@ -23,6 +23,7 @@
 #include "GSUtil.h"
 #include "GSRendererHW9.h"
 #include "GSRendererHW10.h"
+#include "GSRendererHW11.h"
 #include "GSRendererOGL.h"
 #include "GSRendererSW.h"
 #include "GSRendererNull.h"
@@ -126,13 +127,16 @@ static INT32 GSopen(void* dsp, char* title, int mt, int renderer)
 	case 3: s_gs = new GSRendererHW10(s_basemem, !!mt, s_irq); break;
 	case 4: s_gs = new GSRendererSW(s_basemem, !!mt, s_irq, new GSDevice10()); break;
 	case 5: s_gs = new GSRendererNull(s_basemem, !!mt, s_irq, new GSDevice10()); break;
+	case 6: s_gs = new GSRendererHW11(s_basemem, !!mt, s_irq); break;
+	case 7: s_gs = new GSRendererSW(s_basemem, !!mt, s_irq, new GSDevice11()); break;
+	case 8: s_gs = new GSRendererNull(s_basemem, !!mt, s_irq, new GSDevice11()); break;
 	#if 0
-	case 6: s_gs = new GSRendererOGL(s_basemem, !!mt, s_irq); break;
-	case 7: s_gs = new GSRendererSW(s_basemem, !!mt, s_irq, new GSDeviceOGL()); break;
-	case 8: s_gs = new GSRendererNull(s_basemem, !!mt, s_irq, new GSDeviceOGL()); break;
+	case 9: s_gs = new GSRendererOGL(s_basemem, !!mt, s_irq); break;
+	case 10: s_gs = new GSRendererSW(s_basemem, !!mt, s_irq, new GSDeviceOGL()); break;
+	case 11: s_gs = new GSRendererNull(s_basemem, !!mt, s_irq, new GSDeviceOGL()); break;
 	#endif
-	case 9: s_gs = new GSRendererSW(s_basemem, !!mt, s_irq, new GSDeviceNull()); break;
-	case 10: s_gs = new GSRendererNull(s_basemem, !!mt, s_irq, new GSDeviceNull()); break;
+	case 12: s_gs = new GSRendererSW(s_basemem, !!mt, s_irq, new GSDeviceNull()); break;
+	case 13: s_gs = new GSRendererNull(s_basemem, !!mt, s_irq, new GSDeviceNull()); break;
 	}
 
 	if(!s_gs->Create(title))

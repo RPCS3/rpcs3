@@ -150,6 +150,9 @@
     <ClCompile Include="GSDevice10.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="GSDevice11.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="GSDevice7.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -201,6 +204,9 @@
     <ClCompile Include="GSRendererHW10.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="GSRendererHW11.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="GSRendererHW9.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -234,6 +240,9 @@
     <ClCompile Include="GSTexture10.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="GSTexture11.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="GSTexture7.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -246,6 +255,9 @@
     <ClCompile Include="GSTextureCache10.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="GSTextureCache11.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="GSTextureCache9.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -256,6 +268,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="GSTextureFX10.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSTextureFX11.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="GSTextureFX9.cpp">
@@ -443,6 +458,9 @@
     <ClInclude Include="GSDevice10.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="GSDevice11.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="GSDevice7.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -500,6 +518,9 @@
     <ClInclude Include="GSRendererHW10.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="GSRendererHW11.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="GSRendererHW9.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -536,6 +557,9 @@
     <ClInclude Include="GSTexture10.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="GSTexture11.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="GSTexture7.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -548,6 +572,9 @@
     <ClInclude Include="GSTextureCache10.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="GSTextureCache11.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="GSTextureCache9.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -558,6 +585,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="GSTextureFX10.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSTextureFX11.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="GSTextureFX9.h">
@@ -625,19 +655,13 @@
     <None Include="GSdx.def">
       <Filter>Source Files</Filter>
     </None>
-    <None Include="res\convert10.fx">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="res\convert9.fx">
+    <None Include="res\convert.fx">
       <Filter>Shaders</Filter>
     </None>
     <None Include="res\GSdx.rc2">
       <Filter>Resource Files</Filter>
     </None>
-    <None Include="res\interlace10.fx">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="res\interlace9.fx">
+    <None Include="res\interlace.fx">
       <Filter>Shaders</Filter>
     </None>
     <None Include="res\logo10.bmp">
@@ -646,16 +670,10 @@
     <None Include="res\logo9.bmp">
       <Filter>Resource Files</Filter>
     </None>
-    <None Include="res\merge10.fx">
+    <None Include="res\merge.fx">
       <Filter>Shaders</Filter>
     </None>
-    <None Include="res\merge9.fx">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="res\tfx10.fx">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="res\tfx9.fx">
+    <None Include="res\tfx.fx">
       <Filter>Shaders</Filter>
     </None>
   </ItemGroup>

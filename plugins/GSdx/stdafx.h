@@ -90,6 +90,7 @@ typedef signed long long int64;
 #endif
 
 #if defined(_DEBUG) && defined(_MSC_VER)
+	#include <assert.h>
 	#define ASSERT assert
 #else
 	#define ASSERT(exp) ((void)0)
@@ -104,12 +105,18 @@ typedef signed long long int64;
 // directx
 
 #include <ddraw.h>
-#include <d3d9.h>
-#include <d3dx9.h>
+#include <d3d11.h>
+#include <d3dx11.h>
 #include <d3d10.h>
 #include <d3dx10.h>
+#include <d3d9.h>
+#include <d3dx9.h>
 
 #define D3DCOLORWRITEENABLE_RGBA (D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_ALPHA)
+
+// dxsdk beta missing these:
+#define D3D11_SHADER_MACRO D3D10_SHADER_MACRO
+#define ID3D11Blob ID3D10Blob
 
 #endif 
 
