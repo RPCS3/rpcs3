@@ -133,7 +133,7 @@ void SaveState::mtgsFreeze()
 
 static void RegHandlerSIGNAL(const u32* data)
 {
-	GIF_LOG("MTGS SIGNAL data %x_%x CSRw %x IMR %x CSRr\n",data[0], data[1], CSRw, GSIMR, GSCSRr);
+	MTGS_LOG("MTGS SIGNAL data %x_%x CSRw %x IMR %x CSRr\n",data[0], data[1], CSRw, GSIMR, GSCSRr);
 
 	GSSIGLBLID->SIGID = (GSSIGLBLID->SIGID&~data[1])|(data[0]&data[1]);
 	
@@ -151,7 +151,7 @@ static void RegHandlerSIGNAL(const u32* data)
 
 static void RegHandlerFINISH(const u32* data)
 {
-	DevCon::Notice("MTGS FINISH data %x_%x CSRw %x\n", params data[0], data[1], CSRw);
+	MTGS_LOG("MTGS FINISH data %x_%x CSRw %x\n", params data[0], data[1], CSRw);
 
 	if ((CSRw & 0x2))
 	{
