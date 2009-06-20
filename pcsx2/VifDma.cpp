@@ -724,7 +724,7 @@ static void VIFunpack(u32 *data, vifCode *v, unsigned int size, const unsigned i
 
 				if (size >= ft->dsize && vifRegs->num > 0)
 				{
-					//VIF_LOG("warning, end with size = %d", size);
+					VIF_LOG("warning, end with size = %d", size);
 
 					/* unpack one qword */
 					//vif->tag.addr += (size / ft->dsize) * 4;
@@ -806,7 +806,7 @@ static void VIFunpack(u32 *data, vifCode *v, unsigned int size, const unsigned i
 		}
 		if (size >= ft->dsize && vifRegs->num > 0) //Else write what we do have
 		{
-			//VIF_LOG("warning, end with size = %d", size);
+			VIF_LOG("warning, end with size = %d", size);
 
 			/* unpack one qword */
 			//vif->tag.addr += (size / ft->dsize) * 4;
@@ -933,8 +933,6 @@ void vif0Init()
 static __forceinline void vif0UNPACK(u32 *data)
 {
 	int vifNum;
-	int vl, vn;
-	int len;
 
 	if (vif0Regs->cycle.wl == 0 && vif0Regs->cycle.wl < vif0Regs->cycle.cl)
 	{
@@ -945,9 +943,7 @@ static __forceinline void vif0UNPACK(u32 *data)
 
 	vif0FLUSH();
 
-	vl = (vif0.cmd) & 0x3;
-	vn = (vif0.cmd >> 2) & 0x3;
-	vif0.tag.addr = (vif0Regs->code & 0x3ff) << 4;
+	vif0.tag.addr = (vif0Regs->code & 0xff) << 4;
 	vif0.usn = (vif0Regs->code >> 14) & 0x1;
 	vifNum = (vif0Regs->code >> 16) & 0xff;
 	if (vifNum == 0) vifNum = 256;
@@ -955,20 +951,18 @@ static __forceinline void vif0UNPACK(u32 *data)
 
 	if (vif0Regs->cycle.wl <= vif0Regs->cycle.cl)
 	{
-		vif0.tag.size = ((vifNum * VIFfuncTable[ vif1.cmd & 0xf ].gsize) + 3) >> 2;
+		vif0.tag.size = ((vifNum * VIFfuncTable[ vif0.cmd & 0xf ].gsize) + 3) >> 2;
 	}
 	else
 	{
 		int n = vif0Regs->cycle.cl * (vifNum / vif0Regs->cycle.wl) +
 		        _limit(vifNum % vif0Regs->cycle.wl, vif0Regs->cycle.cl);
 
-		
 		vif0.tag.size = ((n * VIFfuncTable[ vif0.cmd & 0xf ].gsize) + 3) >> 2;
 	}
 
 	vif0.cl = 0;
 	vif0.tag.cmd  = vif0.cmd;
-	vif0.tag.addr &= 0xfff;
 	vif0Regs->offset = 0;
 
 	
@@ -1711,7 +1705,6 @@ void vif1Init()
 static __forceinline void vif1UNPACK(u32 *data)
 {
 	int vifNum;
-	int vl, vn;
 
 	if (vif1Regs->cycle.wl == 0)
 	{
@@ -1723,9 +1716,6 @@ static __forceinline void vif1UNPACK(u32 *data)
 		}
 	}
 	//vif1FLUSH();
-
-	vl = (vif1.cmd) & 0x3;
-	vn = (vif1.cmd >> 2) & 0x3;
 
 	vif1.usn = (vif1Regs->code >> 14) & 0x1;
 	vifNum = (vif1Regs->code >> 16) & 0xff;
@@ -1741,10 +1731,9 @@ static __forceinline void vif1UNPACK(u32 *data)
 	{
 		int n = vif1Regs->cycle.cl * (vifNum / vif1Regs->cycle.wl) +
 		        _limit(vifNum % vif1Regs->cycle.wl, vif1Regs->cycle.cl);
-		vif1.tag.size = ((n * VIFfuncTable[ vif1.cmd & 0xf ].gsize) + 3) >> 2;
-		
-	}
-	
+
+		vif1.tag.size = ((n * VIFfuncTable[ vif1.cmd & 0xf ].gsize) + 3) >> 2;		
+	}	
 	
 	if ((vif1Regs->code >> 15) & 0x1)
 		vif1.tag.addr = (vif1Regs->code + vif1Regs->tops) & 0x3ff;
