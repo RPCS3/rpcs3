@@ -117,8 +117,9 @@ struct microVU {
 	PCSX2_ALIGNED16(u32 xmmVFb[4]);   // Backup for VF regs
 
 	u32 index;			// VU Index (VU0 or VU1)
+	u32 vuMemSize;		// VU Main  Memory Size (in bytes)
 	u32 microMemSize;	// VU Micro Memory Size (in bytes)
-	u32 progMemSize;	// VU Micro Program Size (microSize/4, because each instruction of a program is 4 bytes)
+	u32 progSize;		// VU Micro Memory Size (in u32's)
 	u32 cacheSize;		// VU Cache Size
 
 	microProgManager<0x4000/4> prog; // Micro Program Data
@@ -151,11 +152,12 @@ extern void (*mVU_LOWER_OPCODE[128])( VURegs* VU, s32 info );
 extern int mVUdebugNow;
 
 // Main Functions
-microVUf(void) mVUinit(VURegs*);
-microVUx(void) mVUreset();
-microVUf(void) mVUclose();
-microVUf(void) mVUclear(u32, u32);
-microVUt(void*) mVUblockFetch( microVU* mVU, u32 startPC, uptr pState );
+microVUt(void) mVUinit(VURegs*, int);
+microVUt(void) mVUreset(mV);
+microVUt(void) mVUclose(mV);
+microVUt(void) mVUclear(mV, u32, u32);
+microVUt(void*) mVUblockFetch(microVU* mVU, u32 startPC, uptr pState);
+microVUx(void*) __fastcall mVUcompileJIT(u32 startPC, uptr pState);
 
 // Prototypes for Linux
 void  __fastcall mVUcleanUpVU0();

@@ -201,8 +201,8 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 #define xPC			 ((iPC / 2) * 8)
 #define curI		 ((u32*)mVU->regs->Micro)[iPC] //mVUcurProg.data[iPC]
 #define setCode()	 { mVU->code = curI; }
-#define incPC(x)	 { iPC = ((iPC + x) & (mVU->progMemSize-1)); setCode(); }
-#define incPC2(x)	 { iPC = ((iPC + x) & (mVU->progMemSize-1)); }
+#define incPC(x)	 { iPC = ((iPC + x) & (mVU->progSize-1)); setCode(); }
+#define incPC2(x)	 { iPC = ((iPC + x) & (mVU->progSize-1)); }
 #define bSaveAddr	 (((xPC + (2 * 8)) & ((isVU1) ? 0x3ff8:0xff8)) / 8)
 #define branchAddr	 ((xPC + 8 + (_Imm11_ * 8)) & (mVU->microMemSize-8))
 #define shufflePQ	 (((mVU->p) ? 0xb0 : 0xe0) | ((mVU->q) ? 0x01 : 0x04))
@@ -274,8 +274,7 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 	uptr diff = ptr - start;																			\
 	if (diff >= limit) {																				\
 		Console::Error("microVU Error: Program went over its cache limit. Size = 0x%x", params diff);	\
-		if (!isVU1)	mVUreset<0>();																		\
-		else		mVUreset<1>();																		\
+		mVUreset(mVU);																					\
 	}																									\
 }
 
