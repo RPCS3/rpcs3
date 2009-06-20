@@ -249,14 +249,9 @@ void GIFdma()
 		}
 
 		GIFchain();	//Transfers the data set by the switch
-		
-		if (((gif->qwc == 0) && (gif->chcr & 0xc) == 0)) 
-			gspath3done = 1;
-		else if(gif->qwc > 0 || gscycles)
-		{
-			GIFdmaEnd();
-			return;		
-		}
+				 
+		GIFdmaEnd();
+		return;	
 	}
 	if ((gif->chcr & 0xc) == 0x4 && gspath3done == 0)
 	{

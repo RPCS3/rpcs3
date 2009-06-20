@@ -2691,6 +2691,12 @@ void vif1Write32(u32 mem, u32 value)
 				psHu64(VIF1_FIFO) = 0;
 				psHu64(0x10005008) = 0; // VIF1_FIFO + 8
 				vif1.done = true;
+				if(vif1Regs->mskpath3)
+				{
+					vif1Regs->mskpath3 = 0;
+					psHu32(GIF_STAT) &= ~0x2;
+					if(gif->chcr & 0x100) CPU_INT(2, 4);	
+				}
 				vif1Regs->err = 0;
 				vif1.inprogress = 0;
 				vif1Regs->stat &= ~(0x1F800000 | VIF1_STAT_INT | VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS | VIF1_STAT_VPS); // FQC=0
