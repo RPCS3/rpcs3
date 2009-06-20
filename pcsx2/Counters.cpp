@@ -338,13 +338,13 @@ static __forceinline void VSyncStart(u32 sCycle)
 
 	if ((CSRw & 0x8)) 
 	{
-		GSCSRr|= 0x8;
+		
 		
 		if (!(GSIMR&0x800)) 
 		{
 			gsIrq();
 		}
-		CSRw &= ~0x8; //Disable the interrupt from triggering twice
+		GSCSRr|= 0x8;
 	}
 
 	hwIntcIrq(INTC_VBLANK_S);
@@ -414,13 +414,13 @@ __forceinline void rcntUpdate_hScanline()
 	else { //HBLANK END / HRENDER Begin
 		if (CSRw & 0x4) 
 		{
-			GSCSRr |= 4; // signal
+			
 			
 			if (!(GSIMR&0x400)) 
 			{
 				gsIrq();
 			}
-			CSRw &= ~0x4; //Disable the interrupt from triggering twice
+			GSCSRr |= 4; // signal
 		}
 		if (gates) rcntEndGate(false, hsyncCounter.sCycle);
 		if (psxhblankgate) psxCheckEndGate16(0);

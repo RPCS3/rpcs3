@@ -139,13 +139,12 @@ static void RegHandlerSIGNAL(const u32* data)
 	
 	if ((CSRw & 0x1))
 	{
-		GSCSRr |= 1; // signal
-			
 		if (!(GSIMR&0x100) )  
 		{
 			gsIrq();
 		}
-		CSRw &= ~0x1; //Disable the interrupt from triggering twice
+
+		GSCSRr |= 1; // signal
 	}
 }
 
@@ -155,11 +154,10 @@ static void RegHandlerFINISH(const u32* data)
 
 	if ((CSRw & 0x2))
 	{
-		GSCSRr |= 2; // finish
-	
-		if (!(GSIMR&0x200) )
+		if (!(GSIMR&0x200))
 			gsIrq();
-		CSRw &= ~0x2; //Disable the interrupt from triggering twice
+
+		GSCSRr |= 2; // finish
 	}
 }
 
