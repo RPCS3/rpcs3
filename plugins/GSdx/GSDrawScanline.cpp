@@ -298,19 +298,25 @@ void GSDrawScanline::DrawSolidRectT(const GSVector4i* row, int* col, const GSVec
 
 	color = color.andnot(mask);
 
-	GSVector4i bm(8 * 4 / sizeof(T) - 1, 8 - 1);
-	GSVector4i br = (r + bm).andnot(bm.xyxy());
+	GSVector4i br = r.ralign<GSVector4i::Inside>(GSVector2i(8 * 4 / sizeof(T), 8));
 
-	FillRect<T, masked>(row, col, GSVector4i(r.x, r.y, r.z, br.y), c, m);
-	FillRect<T, masked>(row, col, GSVector4i(r.x, br.w, r.z, r.w), c, m);
-
-	if(r.x < br.x || br.z < r.z)
+	if(!br.rempty())
 	{
-		FillRect<T, masked>(row, col, GSVector4i(r.x, br.y, br.x, br.w), c, m);
-		FillRect<T, masked>(row, col, GSVector4i(br.z, br.y, r.z, br.w), c, m);
-	}
+		FillRect<T, masked>(row, col, GSVector4i(r.x, r.y, r.z, br.y), c, m);
+		FillRect<T, masked>(row, col, GSVector4i(r.x, br.w, r.z, r.w), c, m);
 
-	FillBlock<T, masked>(row, col, br, color, mask);
+		if(r.x < br.x || br.z < r.z)
+		{
+			FillRect<T, masked>(row, col, GSVector4i(r.x, br.y, br.x, br.w), c, m);
+			FillRect<T, masked>(row, col, GSVector4i(br.z, br.y, r.z, br.w), c, m);
+		}
+
+		FillBlock<T, masked>(row, col, br, color, mask);
+	}
+	else
+	{
+		FillRect<T, masked>(row, col, r, c, m);
+	}
 }
 
 template<class T, bool masked> 

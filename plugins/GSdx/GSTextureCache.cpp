@@ -286,6 +286,8 @@ GSTextureCache::GSCachedTexture* GSTextureCache::GetTexture()
 		t = t2;
 
 		m_tex.splice(m_tex.begin(), m_tex, i);
+
+		break;
 	}
 
 	if(t == NULL)
@@ -727,7 +729,13 @@ void GSTextureCache::GSDepthStencil::Update()
 {
 	__super::Update();
 
+	GSVector4i r = m_dirty.GetDirtyRectAndClear(m_TEX0, m_texture->GetSize());
+
+	if(r.rempty()) return;
+
 	// TODO
+
+	m_renderer->m_dev->ClearDepth(m_texture, 0);
 }
 
 // GSTextureCache::GSCachedTexture
