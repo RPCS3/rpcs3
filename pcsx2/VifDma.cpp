@@ -622,23 +622,28 @@ static void VIFunpack(u32 *data, vifCode *v, unsigned int size, const unsigned i
 			dest = (u32*)(VU->Mem + v->addr);
 		}
 
-		tempsize = min(vifRegs->num, (size / ft->gsize));
-		tempsize = (vif->tag.addr + (size / (ft->gsize * vifRegs->cycle.wl)) * 
-			((vifRegs->cycle.cl - vifRegs->cycle.wl) * 16)) + (tempsize * 16);
+		size = min(size, (int)vifRegs->num * ft->gsize); //size will always be the same or smaller
 
+		tempsize = vif->tag.addr + ((((vifRegs->num-1) / vifRegs->cycle.wl) * 
+			(vifRegs->cycle.cl - vifRegs->cycle.wl)) * 16) + (vifRegs->num * 16);
+
+		/*tempsize = vif->tag.addr + (((size / (ft->gsize * vifRegs->cycle.wl)) * 
+			(vifRegs->cycle.cl - vifRegs->cycle.wl)) * 16) + (vifRegs->num * 16);*/
+
+		
 		//Sanity Check (memory overflow)
 		if (tempsize > memlimit) 
 		{
 			if (((vifRegs->cycle.cl != vifRegs->cycle.wl) && 
-			       (memlimit + ((vifRegs->cycle.cl - vifRegs->cycle.wl) * 16)) == tempsize) || 
-			       (tempsize == memlimit))
+			       ((memlimit + (vifRegs->cycle.cl - vifRegs->cycle.wl) * 16) == tempsize) || 
+			       (tempsize == memlimit)))
 			{
 				//Its a red herring! so ignore it! SSE unpacks will be much quicker
 				tempsize = 0;
 			}
 			else
 			{
-				DevCon::Notice("VIF%x Unpack ending %x > %x", params VIFdmanum, tempsize, VIFdmanum ? 0x4000 : 0x1000);
+				//DevCon::Notice("VIF%x Unpack ending %x > %x", params VIFdmanum, tempsize, VIFdmanum ? 0x4000 : 0x1000);
 				tempsize = size;
 				size = 0;
 			}
@@ -691,8 +696,6 @@ static void VIFunpack(u32 *data, vifCode *v, unsigned int size, const unsigned i
 				vifRegs->cycle.cl = vifRegs->cycle.wl = 1;
 			}
 			
-			size = min(size, (int)vifRegs->num * ft->gsize); //size will always be the same or smaller
-
 			pfn = vif->usn ? VIFfuncTableSSE[unpackType].funcU : VIFfuncTableSSE[unpackType].funcS;
 			writemask = VIFdmanum ? g_vif1HasMask3[min(vifRegs->cycle.wl,(u8)3)] : g_vif0HasMask3[min(vifRegs->cycle.wl,(u8)3)];
 			writemask = pfn[(((vifRegs->code & 0x10000000)>>28)<<writemask)*3+vifRegs->mode](dest, (u32*)cdata, size);
@@ -952,20 +955,20 @@ static __forceinline void vif0UNPACK(u32 *data)
 
 	if (vif0Regs->cycle.wl <= vif0Regs->cycle.cl)
 	{
-		len = (((32 >> vl) * (vn + 1)) * vifNum + 31) >> 5;
+		vif0.tag.size = ((vifNum * VIFfuncTable[ vif1.cmd & 0xf ].gsize) + 3) >> 2;
 	}
 	else
 	{
 		int n = vif0Regs->cycle.cl * (vifNum / vif0Regs->cycle.wl) +
 		        _limit(vifNum % vif0Regs->cycle.wl, vif0Regs->cycle.cl);
 
-		len = ((((32 >> vl) * (vn + 1)) * n) + 31) >> 5;
+		
+		vif0.tag.size = ((n * VIFfuncTable[ vif0.cmd & 0xf ].gsize) + 3) >> 2;
 	}
 
 	vif0.cl = 0;
 	vif0.tag.cmd  = vif0.cmd;
 	vif0.tag.addr &= 0xfff;
-	vif0.tag.size = len;
 	vif0Regs->offset = 0;
 
 	
@@ -1732,14 +1735,17 @@ static __forceinline void vif1UNPACK(u32 *data)
 
 	if (vif1Regs->cycle.wl <= vif1Regs->cycle.cl)
 	{
-		vif1.tag.size = (((32 >> vl) * (vn + 1)) * vifNum + 31) >> 5;
+		vif1.tag.size = ((vifNum * VIFfuncTable[ vif1.cmd & 0xf ].gsize) + 3) >> 2;
 	}
 	else
 	{
 		int n = vif1Regs->cycle.cl * (vifNum / vif1Regs->cycle.wl) +
 		        _limit(vifNum % vif1Regs->cycle.wl, vif1Regs->cycle.cl);
-		vif1.tag.size = ((((32 >> vl) * (vn + 1)) * n) + 31) >> 5;
+		vif1.tag.size = ((n * VIFfuncTable[ vif1.cmd & 0xf ].gsize) + 3) >> 2;
+		
 	}
+	
+	
 	if ((vif1Regs->code >> 15) & 0x1)
 		vif1.tag.addr = (vif1Regs->code + vif1Regs->tops) & 0x3ff;
 	else
