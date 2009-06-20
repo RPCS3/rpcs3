@@ -64,7 +64,7 @@ public:
 		}
 		return thisBlock;
 	}
-	__releaseinline microBlock* search(microRegInfo* pState) {
+	__forceinline microBlock* search(microRegInfo* pState) {
 		if (listSize < 0) return NULL;
 		if (pState->needExactMatch) { // Needs Detailed Search (Exact Match of Pipeline State)
 			for (int i = 0; i <= listSize; i++) {

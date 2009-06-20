@@ -22,31 +22,7 @@
 // Helper Macros
 //------------------------------------------------------------------
 
-#define branchCase(JMPcc)																\
-	mVUsetupBranch(mVU, xStatus, xMac, xClip, xCycles);									\
-	xCMP( ptr16[&mVU->branch], 0);														\
-	if (mVUup.eBit) { /* Conditional Branch With E-Bit Set */							\
-		mVUendProgram(mVU, 2, xStatus, xMac, xClip);									\
-		xForwardJump8 eJMP( JMPcc );													\
-			incPC(1); /* Set PC to First instruction of Non-Taken Side */				\
-			xMOV( ptr32[&mVU->regs->VI[REG_TPC].UL], xPC);								\
-			xJMP( mVU->exitFunct );														\
-		eJMP.SetTarget();																\
-		incPC(-4); /* Go Back to Branch Opcode to get branchAddr */						\
-		iPC = branchAddr/4;																\
-		xMOV( ptr32[&mVU->regs->VI[REG_TPC].UL], xPC);									\
-		xJMP( mVU->exitFunct );															\
-		return thisPtr;																	\
-	}																					\
-	else { /* Normal Conditional Branch */												\
-		incPC2(1); /* Check if Branch Non-Taken Side has already been recompiled */		\
-		if (!mVUblocks[iPC/2]) { mVUblocks[iPC/2] = microBlockManager::AlignedNew(); }	\
-		bBlock = mVUblocks[iPC/2]->search((microRegInfo*)&mVUregs);						\
-		incPC2(-1);																		\
-		if (bBlock)	{ xJcc( xInvertCond( JMPcc ), bBlock->x86ptrStart ); }				\
-		else		{ ajmp = xJcc32( JMPcc ); }											\
-	}																					\
-	break
+#define branchCase(JMPcond) branchCaseFunct(mVU, bBlock, xStatus, xMac, xClip, xCycles, ajmp, JMPcond); break
 
 #define branchWarning() {																						\
 	if (mVUbranch) {																							\
@@ -93,6 +69,7 @@
 #define doLowerOp()			{ incPC(-1); mVUopL(mVU, 1); incPC(1); }
 #define doSwapOp()			{ doBackupVF1(); mVUopL(mVU, 1); doBackupVF2(); incPC(1); doUpperOp(); doBackupVF3(); }
 #define doIbit()			{ if (mVUup.iBit) { incPC(-1); MOV32ItoM((uptr)&mVU->regs->VI[REG_I].UL, curI); incPC(1); } }
+#define blockCreate(addr)	{ if (!mVUblocks[addr]) mVUblocks[addr] = microBlockManager::AlignedNew(); }
 
 //------------------------------------------------------------------
 // Helper Functions
@@ -265,6 +242,32 @@ microVUt(void) mVUendProgram(mV, int isEbit, int* xStatus, int* xMac, int* xClip
 	}
 }
 
+void branchCaseFunct(mV, microBlock* &bBlock, int* xStatus, int* xMac, int* xClip, int &xCycles, s32* &ajmp, int JMPcc) {
+	using namespace x86Emitter;
+	mVUsetupBranch(mVU, xStatus, xMac, xClip, xCycles);
+	xCMP(ptr16[&mVU->branch], 0);
+	if (mVUup.eBit) { // Conditional Branch With E-Bit Set
+		mVUendProgram(mVU, 2, xStatus, xMac, xClip);
+		xForwardJump8 eJMP((JccComparisonType)JMPcc);
+			incPC(1); // Set PC to First instruction of Non-Taken Side
+			xMOV(ptr32[&mVU->regs->VI[REG_TPC].UL], xPC);
+			xJMP(mVU->exitFunct);
+		eJMP.SetTarget();
+		incPC(-4); // Go Back to Branch Opcode to get branchAddr
+		iPC = branchAddr/4;
+		xMOV(ptr32[&mVU->regs->VI[REG_TPC].UL], xPC);
+		xJMP(mVU->exitFunct);
+	}
+	else { // Normal Conditional Branch
+		incPC2(1); // Check if Branch Non-Taken Side has already been recompiled
+		blockCreate(iPC/2);
+		bBlock = mVUblocks[iPC/2]->search((microRegInfo*)&mVUregs);
+		incPC2(-1);
+		if (bBlock)	{ xJcc( xInvertCond((JccComparisonType)JMPcc), bBlock->x86ptrStart ); }
+		else		{ ajmp = xJcc32((JccComparisonType)JMPcc); }
+	}
+}
+
 void __fastcall mVUwarning0(u32 PC) { Console::Error("microVU0 Warning: Exiting from Possible Infinite Loop [%04x]", params PC); }
 void __fastcall mVUwarning1(u32 PC) { Console::Error("microVU1 Warning: Exiting from Possible Infinite Loop [%04x]", params PC); }
 void __fastcall mVUprintPC1(u32 PC) { Console::Write("Block PC [%04x] ", params PC); }
@@ -287,7 +290,7 @@ microVUt(void) mVUtestCycles(mV) {
 // Recompiler
 //------------------------------------------------------------------
 
-static void* __fastcall mVUcompile(microVU* mVU, u32 startPC, uptr pState) {
+microVUt(void*) mVUcompile(microVU* mVU, u32 startPC, uptr pState) {
 	
 	using namespace x86Emitter;
 	microBlock*	pBlock	 = NULL;
@@ -375,10 +378,8 @@ static void* __fastcall mVUcompile(microVU* mVU, u32 startPC, uptr pState) {
 					if (mVUup.eBit) { iPC = branchAddr/4; mVUendProgram(mVU, 1, xStatus, xMac, xClip); } // E-bit Branch
 					mVUsetupBranch(mVU, xStatus, xMac, xClip, xCycles);
 
-					if (mVUblocks[branchAddr/8] == NULL)
-						mVUblocks[branchAddr/8] = microBlockManager::AlignedNew();
-
 					// Check if branch-block has already been compiled
+					blockCreate(branchAddr/8);
 					pBlock = mVUblocks[branchAddr/8]->search((microRegInfo*)&mVUregs);
 					if (pBlock)		   { xJMP(pBlock->x86ptrStart); }
 					else			   { mVUcompile(mVU, branchAddr, (uptr)&mVUregs); }
@@ -411,13 +412,12 @@ static void* __fastcall mVUcompile(microVU* mVU, u32 startPC, uptr pState) {
 			}
 			// Conditional Branches
 			mVUprint("mVUcompile conditional branch");
+			if (mVUup.eBit) return thisPtr; // Handled in Branch Case
 			if (bBlock) {  // Branch non-taken has already been compiled
 				incPC(-3); // Go back to branch opcode (to get branch imm addr)
 
-				if (mVUblocks[branchAddr/8] == NULL)
-					mVUblocks[branchAddr/8] = microBlockManager::AlignedNew();
-
 				// Check if branch-block has already been compiled
+				blockCreate(branchAddr/8);
 				pBlock = mVUblocks[branchAddr/8]->search((microRegInfo*)&mVUregs);
 				if (pBlock)			  { xJMP( pBlock->x86ptrStart ); }
 				else				  { mVUblockFetch(mVU, branchAddr, (uptr)&mVUregs); }
@@ -445,25 +445,20 @@ static void* __fastcall mVUcompile(microVU* mVU, u32 startPC, uptr pState) {
 	return thisPtr;
 }
 
-
+ // Search for Existing Compiled Block (if found, return x86ptr; else, compile and return x86ptr)
 microVUt(void*) mVUblockFetch(microVU* mVU, u32 startPC, uptr pState) {
 
 	using namespace x86Emitter;
-
 	if (startPC > mVU->microMemSize-8) { DevCon::Error("microVU%d: invalid startPC", params mVU->index); }
 	startPC &= mVU->microMemSize-8;
 	
-	if (mVUblocks[startPC/8] == NULL) {
-		mVUblocks[startPC/8] = microBlockManager::AlignedNew();
-	}
-
-	// Searches for Existing Compiled Block (if found, then returns; else, compile)
+	blockCreate(startPC/8);
 	microBlock* pBlock = mVUblocks[startPC/8]->search((microRegInfo*)pState);
 	if (pBlock) { return pBlock->x86ptrStart; }
 	else		{ return mVUcompile(mVU, startPC, pState); }
 }
 
-// Called By JR/JALR
+// mVUcompileJIT() - Called By JR/JALR during execution
 microVUx(void*) __fastcall mVUcompileJIT(u32 startPC, uptr pState) {
 	return mVUblockFetch(mVUx, startPC, pState);
 }
