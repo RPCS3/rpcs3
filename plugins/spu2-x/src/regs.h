@@ -1,22 +1,21 @@
-//GiGaHeRz's SPU2 Driver
-//Copyright (c) 2003-2008, David Quintana <gigaherz@gmail.com>
-//
-//This library is free software; you can redistribute it and/or
-//modify it under the terms of the GNU Lesser General Public
-//License as published by the Free Software Foundation; either
-//version 2.1 of the License, or (at your option) any later version.
-//
-//This library is distributed in the hope that it will be useful,
-//but WITHOUT ANY WARRANTY; without even the implied warranty of
-//MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-//Lesser General Public License for more details.
-//
-//You should have received a copy of the GNU Lesser General Public
-//License along with this library; if not, write to the Free Software
-//Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-//
-#ifndef REGS_H_INCLUDED
-#define REGS_H_INCLUDED
+/* SPU2-X, A plugin for Emulating the Sound Processing Unit of the Playstation 2
+ * Developed and maintained by the Pcsx2 Development Team.
+ * 
+ * Original portions from SPU2ghz are (c) 2008 by David Quintana [gigaherz]
+ *
+ * SPU2-X is free software: you can redistribute it and/or modify it under the terms
+ * of the GNU Lesser General Public License as published by the Free Software Found-
+ * ation, either version 3 of the License, or (at your option) any later version.
+ *
+ * SPU2-X is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+ * PURPOSE.  See the GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with SPU2-X.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#pragma once
 
 #define SPU2_CORE0       0x00000000
 #define SPU2_CORE1		 0x00000400
@@ -181,4 +180,3 @@ Core attributes (SD_C)
 #define VOICE_ADDR_LSAX      0x4		// Loop point address
 #define VOICE_ADDR_NAX       0x8		// Waveform data that should be read next
 
-#endif // REGS_H_INCLUDED //
