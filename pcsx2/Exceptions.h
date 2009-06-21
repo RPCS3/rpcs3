@@ -18,6 +18,8 @@
 
 #pragma once
 
+extern void DevAssert( bool condition, const char* msg );
+
 // This class provides an easy and clean method for ensuring objects are not copyable.
 class NoncopyableObject
 {
@@ -119,6 +121,14 @@ namespace Exception
 		explicit LogicError( const std::string& msg="An unhandled logic error has occured." ) :
 			BaseException( msg )
 		{}
+	};
+	
+	class AssertionFailure : public LogicError
+	{
+	public:
+		explicit AssertionFailure( const std::string& msg="Assertion Failure" ) :
+		LogicError( msg ) {}
+		virtual ~AssertionFailure() throw() {}
 	};
 	
 	//////////////////////////////////////////////////////////////////////////////////

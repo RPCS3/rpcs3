@@ -150,12 +150,13 @@ typedef int BOOL;
 #endif		// ENABLE_NLS
 
 //////////////////////////////////////////////////////////////////////////////////////////
-// Forceinline macro that is enabled for RELEASE/PUBLIC builds ONLY.  (non-inline in devel)
+// Forceinline macro that is enabled for RELEASE/PUBLIC builds ONLY.  (compiler-picked in devel)
 // This is useful because forceinline can make certain types of debugging problematic since
 // functions that look like they should be called won't breakpoint since their code is inlined.
-// Henceforth, use release_inline for things which we want inlined on public/release builds but
-// *not* in devel builds.
-
+// Henceforth, use __releaseinline for things which are generally large functions where trace
+// debugging from Devel builds is likely useful; but which should be inlined in an optimized
+// Release environment.
+//
 #ifdef PCSX2_DEVBUILD
 #	define __releaseinline
 #else
