@@ -372,7 +372,8 @@ EXPORT_C_(u16) SPU2read(u32 rmem)
 	}
 	else
 	{
-		TimeUpdate( *cyclePtr );
+		if( cyclePtr != NULL )
+			TimeUpdate( *cyclePtr );
 
 		if (rmem>>16 == 0x1f80)
 		{
