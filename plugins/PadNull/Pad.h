@@ -21,15 +21,8 @@
 
 #include <stdio.h>
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif 
 #define PADdefs
 #include "PS2Edefs.h"
-#ifdef __cplusplus
-}
-#endif
 
 #ifdef _WIN32
 #include "PadWin.h"

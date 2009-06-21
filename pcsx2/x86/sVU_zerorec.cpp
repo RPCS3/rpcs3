@@ -98,7 +98,7 @@ extern void (*recVU_LOWER_OPCODE[128])(VURegs* VU, s32 info);
 
 // Let's tempt fate by defining two different constants with almost identical names
 #define INST_DUMMY_			0x8000
-#define INST_DUMMY			0x83c0
+#define INST_DUMMY				0x83c0
 
 #define VFFREE_INVALID0     0x80000000 // (vffree[i]&0xf) is invalid
 
@@ -955,7 +955,7 @@ static int _recbranchAddr(u32 vucode)
 static VuInstruction SuperVUFlushInst()
 {
 	VuInstruction inst;
-	// don't need to raed q/p
+	// don't need to read q/p
 	inst.type = INST_DUMMY_;//|INST_Q_READ|INST_P_READ;
 	return inst;
 }

@@ -84,7 +84,7 @@ microVUt(void) mVUdispatcherA(mV) {
 }
 
 // Generates the code to exit from recompiled blocks
-microVUt(void) mVUdispatcherB(mV) {
+void mVUdispatcherB(mV) {
 	mVU->exitFunct = x86Ptr;
 
 	// Load EE's MXCSR state

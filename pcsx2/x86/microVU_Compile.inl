@@ -290,7 +290,7 @@ microVUt(void) mVUtestCycles(mV) {
 // Recompiler
 //------------------------------------------------------------------
 
-microVUt(void*) mVUcompile(microVU* mVU, u32 startPC, uptr pState) {
+void* mVUcompile(microVU* mVU, u32 startPC, uptr pState) {
 	
 	using namespace x86Emitter;
 	microBlock*	pBlock	 = NULL;
