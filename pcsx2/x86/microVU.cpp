@@ -49,8 +49,8 @@ microVUt(void) mVUinit(VURegs* vuRegsPtr, int vuIndex) {
 	mVUprint((vuIndex) ? "microVU1: init" : "microVU0: init");
 
 	mVU->cache = SysMmapEx((vuIndex ? 0x5f240000 : 0x5e240000), mVU->cacheSize + 0x1000, 0, (vuIndex ? "Micro VU1" : "Micro VU0"));
-	if ( mVU->cache == NULL ) throw Exception::OutOfMemory(fmt_string( "microVU Error: Failed to allocate recompiler memory! (addr: 0x%x)", (u32)mVU->cache));
-	
+	if (!mVU->cache) throw Exception::OutOfMemory(fmt_string("microVU Error: Failed to allocate recompiler memory!"));
+
 	mVUemitSearch();
 	mVUreset(mVU);
 }
@@ -117,10 +117,10 @@ microVUt(void) mVUclose(mV) {
 
 // Clears Block Data in specified range
 microVUt(void) mVUclear(mV, u32 addr, u32 size) {
-	if (!mVU->prog.cleared) {
-		memset(&mVU->prog.lpState, 0, sizeof(mVU->prog.lpState));
+	//if (!mVU->prog.cleared) {
+		//memset(&mVU->prog.lpState, 0, sizeof(mVU->prog.lpState));
 		mVU->prog.cleared = 1; // Next execution searches/creates a new microprogram
-	}
+	//}
 }
 
 //------------------------------------------------------------------
@@ -161,22 +161,20 @@ microVUf(int) mVUfindLeastUsedProg() {
 	}
 	else {
 	
-		int startidx = (mVU->prog.cur + 1) & mVU->prog.max;
-		int endidx = mVU->prog.cur;
-		int smallidx = startidx;
-		u32 smallval = mVU->prog.prog[startidx].used;
+		const int pMax	=  mVU->prog.max;
+		int smallidx	= (mVU->prog.cur+1)&pMax;
+		u32 smallval	=  mVU->prog.prog[smallidx].used;
 
-		for (int i = startidx; i != endidx; i = (i+1)&mVU->prog.max) {
-			u32 used = mVU->prog.prog[i].used;
-			if (smallval > used) {
-				smallval = used;
-				smallidx = i;
+		for (int i = 1, j = (smallidx+1)&pMax; i <= pMax; i++, j=(j+1)&pMax) {
+			if (smallval > mVU->prog.prog[j].used) {
+				smallval = mVU->prog.prog[j].used;
+				smallidx = j;
 			}
 		}
 
 		mVUclearProg<vuIndex>(smallidx); // Clear old data if overwriting old program
 		mVUcacheProg<vuIndex>(smallidx); // Cache Micro Program
-		//Console::Notice("microVU%d: Overwriting existing program in slot %d [%d times used]", params vuIndex, smallidx, smallval );
+		//Console::Notice("microVU%d: Overwriting existing program in slot %d [%d times used]", params vuIndex, smallidx, smallval);
 		return smallidx;
 	}
 }
@@ -187,13 +185,13 @@ microVUf(int) mVUfindLeastUsedProg() {
 //
 // To fix the program cache to more efficiently dispose of "obsolete" programs, we need to use a
 // frame-based decrementing system in combination with a program-execution-based incrementing
-// system.  In english:  if last_used >= 2 it means the program has been used for the current
+// system.  In English:  if last_used >= 2 it means the program has been used for the current
 // or prev frame.  if it's 0, the program hasn't been used for a while.
 microVUt(void) mVUvsyncUpdate(mV) {
 
 	if (mVU->prog.total < mVU->prog.max) return;
 
-	for (int i = 0; i <= mVU->prog.total; i++) {
+	for (int i = 0; i <= mVU->prog.max; i++) {
 		if (mVU->prog.prog[i].last_used != 0) {
 			if (mVU->prog.prog[i].last_used >= 3) {
 
@@ -212,7 +210,7 @@ microVUf(int) mVUcmpProg(int progIndex, bool progUsed, bool needOverflowCheck, b
 	
 	if (progUsed) {
 		if (cmpWholeProg && (!memcmp_mmx((u8*)mVUprogI.data, mVU->regs->Micro, mVU->microMemSize)) ||
-		  (!cmpWholeProg && (!memcmp_mmx((u8*)mVUprogI.data + mVUprogI.range[0], (u8*)mVU->regs->Micro + mVUprogI.range[0], ((mVUprogI.range[1] + 8) - mVUprogI.range[0]))))) {
+		  (!cmpWholeProg && (!memcmp_mmx(cmpOffset(mVUprogI.data), cmpOffset(mVU->regs->Micro), ((mVUprogI.range[1] + 8) - mVUprogI.range[0]))))) {
 			mVU->prog.cur = progIndex;
 			mVU->prog.cleared = 0;
 			mVU->prog.isSame = cmpWholeProg ? 1 : -1;
@@ -229,7 +227,7 @@ microVUf(int) mVUcmpProg(int progIndex, bool progUsed, bool needOverflowCheck, b
 // Searches for Cached Micro Program and sets prog.cur to it (returns 1 if program found, else returns 0)
 microVUf(int) mVUsearchProg() {
 	microVU* mVU = mVUx;
-	
+
 	if (mVU->prog.cleared) { // If cleared, we need to search for new program
 		for (int i = 0; i <= mVU->prog.total; i++) {
 			if (mVUcmpProg<vuIndex>(i, !!mVU->prog.prog[i].used, 1, 0))
@@ -253,13 +251,17 @@ microVUf(int) mVUsearchProg() {
 // Wrapper Functions - Called by other parts of the Emu
 //------------------------------------------------------------------
 
-void initVUrec (VURegs* vuRegs, const int vuIndex)		{ mVUinit(vuRegs, vuIndex); }
-void closeVUrec(const int vuIndex)						{ mVUclose(mVUx); }
-void resetVUrec(const int vuIndex)						{ mVUreset(mVUx); }
-void vsyncVUrec(const int vuIndex)						{ mVUvsyncUpdate(mVUx); }
-void clearVUrec(u32 addr, u32 size, const int vuIndex)	{ mVUclear(mVUx, addr, size); }
+void initVUrec (VURegs* vuRegs, const int vuIndex) { mVUinit(vuRegs, vuIndex); }
+void closeVUrec(const int vuIndex)				   { mVUclose(mVUx); }
+void resetVUrec(const int vuIndex)				   { mVUreset(mVUx); }
+void vsyncVUrec(const int vuIndex)				   { mVUvsyncUpdate(mVUx); }
 
-void runVUrec(u32 startPC, u32 cycles, const int vuIndex) {
-	if (!vuIndex)	startVU0(startPC, cycles);
-	else			startVU1(startPC, cycles);
+void __fastcall clearVUrec(u32 addr, u32 size, const int vuIndex) { 
+	mVUclear(mVUx, addr, size); 
 }
+
+void __fastcall runVUrec(u32 startPC, u32 cycles, const int vuIndex) {
+	if (!vuIndex) ((mVUrecCall)microVU0.startFunct)(startPC, cycles);
+	else		  ((mVUrecCall)microVU1.startFunct)(startPC, cycles);
+}
+

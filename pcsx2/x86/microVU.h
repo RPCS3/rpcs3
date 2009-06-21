@@ -85,15 +85,15 @@ public:
 
 template<u32 progSize> // progSize = VU program memory size / 4
 struct microProgram {
-	u32 data[progSize];
+	PCSX2_ALIGNED16(u32 data[progSize]);
+	microBlockManager* block[progSize/2];
+	microIR<progSize> allocInfo;
 	u32 used;		// Number of times its been used
 	u32 last_used;	// Counters # of frames since last use (starts at 3 and counts backwards to 0 for each 30fps vSync)
 	s32 range[2];	// The range of microMemory that has already been recompiled for the current program
 	u8* x86ptr;		// Pointer to program's recompilation code
 	u8* x86start;	// Start of program's rec-cache
 	u8* x86end;		// Limit of program's rec-cache
-	microBlockManager* block[progSize/2];
-	microIR<progSize> allocInfo;
 };
 
 #define mMaxProg 32		// The amount of Micro Programs Recs will 'remember' (For n = 1, 2, 4, 8, 16, etc...)
@@ -128,7 +128,7 @@ struct microVU {
 	VURegs*	regs;		 // VU Regs Struct
 	u8*		cache;		 // Dynarec Cache Start (where we will start writing the recompiled code to)
 	u8*		startFunct;	 // Ptr Function to the Start code for recompiled programs
-	u8*		exitFunct;	 // Ptr Function to the Exit code for recompiled programs
+	u8*		exitFunct;	 // Ptr Function to the Exit  code for recompiled programs
 	u32		code;		 // Contains the current Instruction
 	u32		divFlag;	 // 1 instance of I/D flags
 	u32		VIbackup;	 // Holds a backup of a VI reg if modified before a branch

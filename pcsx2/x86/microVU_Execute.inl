@@ -151,8 +151,6 @@ microVUx(void) mVUcleanUp() {
 // Caller Functions
 //------------------------------------------------------------------
 
-void  __fastcall startVU0(u32 startPC, u32 cycles) { ((mVUrecCall)microVU0.startFunct)(startPC, cycles); }
-void  __fastcall startVU1(u32 startPC, u32 cycles) { ((mVUrecCall)microVU1.startFunct)(startPC, cycles); }
 void* __fastcall mVUexecuteVU0(u32 startPC, u32 cycles) { return mVUexecute<0>(startPC, cycles); }
 void* __fastcall mVUexecuteVU1(u32 startPC, u32 cycles) { return mVUexecute<1>(startPC, cycles); }
 void  __fastcall mVUcleanUpVU0() { mVUcleanUp<0>(); }

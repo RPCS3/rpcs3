@@ -76,9 +76,9 @@ void vuMicroCpuReset();
 extern void initVUrec(VURegs* vuRegs, const int vuIndex);
 extern void closeVUrec(const int vuIndex);
 extern void resetVUrec(const int vuIndex);
-extern void clearVUrec(u32 addr, u32 size, const int vuIndex);
-extern void runVUrec(u32 startPC, u32 cycles, const int vuIndex);
 extern void vsyncVUrec(const int vuIndex);
+extern void __fastcall clearVUrec(u32 addr, u32 size, const int vuIndex);
+extern void __fastcall runVUrec(u32 startPC, u32 cycles, const int vuIndex);
 
 /////////////////////////////////////////////////////////////////
 // Everything else does stuff on a per-VU basis.
