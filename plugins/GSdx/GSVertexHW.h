@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include "GS.h"
 #include "GSVector.h"
 
 #pragma pack(push, 1)
@@ -53,16 +54,16 @@ __declspec(align(16)) union GSVertexHW10
 			GIFRegST ST;
 		};
 
-		union
-		{
-			struct {union {struct {uint16 x, y;}; uint32 xy;}; uint32 z;} p;
-			GIFRegXYZ XYZ;
-		};
-		
 		union 
 		{
 			union {struct {uint8 r, g, b, a; float q;}; uint32 c0;};
 			GIFRegRGBAQ RGBAQ;
+		};
+		
+		union
+		{
+			struct {union {struct {uint16 x, y;}; uint32 xy;}; uint32 z;} p;
+			GIFRegXYZ XYZ;
 		};
 
 		union 

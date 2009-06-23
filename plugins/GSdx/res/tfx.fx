@@ -345,7 +345,7 @@ VS_OUTPUT vs_main(VS_INPUT input)
 		input.z = input.z & 0xffff;
 	}
 
-	if(VS_PRIM == 6) // sprite
+	if(VS_PRIM == 3) // sprite
 	{
 		//input.p.xy = (input.p.xy + 15) & ~15; // HACK
 	}

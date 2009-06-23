@@ -142,6 +142,8 @@ bool GSTextureCache10::GSCachedTextureHW10::Create()
 
 bool GSTextureCache10::GSCachedTextureHW10::Create(GSRenderTarget* rt)
 {
+	m_rendered = true;
+
 	// TODO: clean up this mess
 
 	rt->Update();
@@ -150,8 +152,6 @@ bool GSTextureCache10::GSCachedTextureHW10::Create(GSRenderTarget* rt)
 
 	m_TEX0 = m_renderer->m_context->TEX0;
 	m_TEXA = m_renderer->m_env.TEXA;
-
-	m_rendered = true;
 
 	int tw = 1 << m_TEX0.TW;
 	int th = 1 << m_TEX0.TH;
@@ -301,7 +301,92 @@ bool GSTextureCache10::GSCachedTextureHW10::Create(GSDepthStencil* ds)
 {
 	m_rendered = true;
 
-	// TODO
-
 	return false;
+/*
+	// TODO: clean up this mess
+
+	ds->Update();
+
+	// m_renderer->m_perfmon.Put(GSPerfMon::ConvertRT2T, 1);
+
+	m_TEX0 = m_renderer->m_context->TEX0;
+	m_TEXA = m_renderer->m_env.TEXA;
+
+	int tw = 1 << m_TEX0.TW;
+	int th = 1 << m_TEX0.TH;
+	int tp = (int)m_TEX0.TW << 6;
+
+	// do not round here!!! if edge becomes a black pixel and addressing mode is clamp => everything outside the clamped area turns into black (kh2 shadows)
+
+	int w = (int)(ds->m_texture->m_scale.x * tw);
+	int h = (int)(ds->m_texture->m_scale.y * th); 
+
+	GSVector2i dssize = ds->m_texture->GetSize();
+
+	// pitch conversion
+
+	if(ds->m_TEX0.TBW != m_TEX0.TBW) // && rt->m_TEX0.PSM == m_TEX0.PSM
+	{
+		ASSERT(0);
+	}
+	else if(tw < tp)
+	{
+	}
+
+	// width/height conversion
+
+	GSVector2 scale = ds->m_texture->m_scale;
+
+	GSVector4 dst(0, 0, w, h);
+
+	if(w > dssize.x) 
+	{
+		scale.x = (float)dssize.x / tw;
+		dst.z = (float)dssize.x * scale.x / ds->m_texture->m_scale.x;
+		w = dssize.x;
+	}
+	
+	if(h > dssize.y) 
+	{
+		scale.y = (float)dssize.y / th;
+		dst.w = (float)dssize.y * scale.y / ds->m_texture->m_scale.y;
+		h = dssize.y;
+	}
+
+	m_texture = m_renderer->m_dev->CreateRenderTarget(w, h);
+
+	GSVector4 src(0, 0, w, h);
+
+	src.z /= ds->m_texture->GetWidth();
+	src.w /= ds->m_texture->GetHeight();
+
+	m_renderer->m_dev->StretchRect(ds->m_texture, src, m_texture, dst, 7);
+
+	m_texture->m_scale = scale;
+
+	switch(m_TEX0.PSM)
+	{
+	case PSM_PSMCT32:
+		m_bpp = 0;
+		break;
+	case PSM_PSMCT24:
+		m_bpp = 1;
+		break;
+	case PSM_PSMCT16:
+	case PSM_PSMCT16S:
+		m_bpp = 2;
+		break;
+	case PSM_PSMT8H:
+		m_bpp = 3;
+		m_palette = m_renderer->m_dev->CreateTexture(256, 1);
+		m_initpalette = true;
+		break;
+	case PSM_PSMT4HL:
+	case PSM_PSMT4HH:
+		ASSERT(0); // TODO
+		break;
+	}
+
+	return true;
+*/
 }

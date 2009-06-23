@@ -85,7 +85,7 @@ public:
 		explicit GSCachedTexture(GSRenderer* renderer);
 		virtual ~GSCachedTexture();
 
-		void Update();
+		void Update(const GSVector4i& rect);
 
 		virtual bool Create() = 0;
 		virtual bool Create(GSRenderTarget* rt) = 0;
@@ -130,7 +130,7 @@ public:
 
 	GSRenderTarget* GetRenderTarget(const GIFRegTEX0& TEX0, int w, int h, bool fb = false);
 	GSDepthStencil* GetDepthStencil(const GIFRegTEX0& TEX0, int w, int h);
-	GSCachedTexture* GetTexture();
+	GSCachedTexture* GetTexture(const GSVector4i& r);
 
 	void InvalidateTextures(const GIFRegFRAME& FRAME, const GIFRegZBUF& ZBUF);
 	void InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r);

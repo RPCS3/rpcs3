@@ -198,7 +198,7 @@ GSTextureCache::GSDepthStencil* GSTextureCache::GetDepthStencil(const GIFRegTEX0
 	return ds;
 }
 
-GSTextureCache::GSCachedTexture* GSTextureCache::GetTexture()
+GSTextureCache::GSCachedTexture* GSTextureCache::GetTexture(const GSVector4i& r)
 {
 	const GIFRegTEX0& TEX0 = m_renderer->m_context->TEX0;
 	const GIFRegCLAMP& CLAMP = m_renderer->m_context->CLAMP;
@@ -207,61 +207,6 @@ GSTextureCache::GSCachedTexture* GSTextureCache::GetTexture()
 	const GSLocalMemory::psm_t& psm = GSLocalMemory::m_psm[TEX0.PSM];
 	const uint32* clut = m_renderer->m_mem.m_clut;
 	
-	if(psm.pal > 0)
-	{
-		m_renderer->m_mem.m_clut.Read32(TEX0, TEXA);
-
-		/*
-		POSITION pos = m_tex.GetHeadPosition();
-
-		while(pos)
-		{
-			POSITION cur = pos;
-
-			GSSurface* s = m_tex.GetNext(pos);
-
-			if(s->m_TEX0.TBP0 == TEX0.CBP)
-			{
-				m_tex.RemoveAt(cur);
-
-				delete s;
-			}
-		}
-
-		pos = m_rt.GetHeadPosition();
-
-		while(pos)
-		{
-			POSITION cur = pos;
-
-			GSSurface* s = m_rt.GetNext(pos);
-
-			if(s->m_TEX0.TBP0 == TEX0.CBP)
-			{
-				m_rt.RemoveAt(cur);
-
-				delete s;
-			}
-		}
-
-		pos = m_ds.GetHeadPosition();
-
-		while(pos)
-		{
-			POSITION cur = pos;
-
-			GSSurface* s = m_ds.GetNext(pos);
-
-			if(s->m_TEX0.TBP0 == TEX0.CBP)
-			{
-				m_ds.RemoveAt(cur);
-
-				delete s;
-			}
-		}
-		*/
-	}
-
 	GSCachedTexture* t = NULL;
 
 	for(list<GSCachedTexture*>::iterator i = m_tex.begin(); i != m_tex.end(); i++)
@@ -378,7 +323,7 @@ GSTextureCache::GSCachedTexture* GSTextureCache::GetTexture()
 		}
 	}
 
-	t->Update();
+	t->Update(r);
 
 	m_tex_used = true;
 
@@ -757,7 +702,7 @@ GSTextureCache::GSCachedTexture::~GSCachedTexture()
 	_aligned_free(m_clut);
 }
 
-void GSTextureCache::GSCachedTexture::Update()
+void GSTextureCache::GSCachedTexture::Update(const GSVector4i& rect)
 {
 	__super::Update();
 
@@ -766,7 +711,7 @@ void GSTextureCache::GSCachedTexture::Update()
 		return;
 	}
 
-	GSVector4i r;
+	GSVector4i r = rect;
 
 	if(!GetDirtyRect(r))
 	{
@@ -799,16 +744,16 @@ void GSTextureCache::GSCachedTexture::Update()
 	m_renderer->m_perfmon.Put(GSPerfMon::Unswizzle, r.width() * r.height() * 4);
 }
 
-bool GSTextureCache::GSCachedTexture::GetDirtyRect(GSVector4i& rr)
+bool GSTextureCache::GSCachedTexture::GetDirtyRect(GSVector4i& r)
 {
 	int w = 1 << m_TEX0.TW;
 	int h = 1 << m_TEX0.TH;
 
-	GSVector4i r(0, 0, w, h);
+	GSVector4i tr(0, 0, w, h);
 
 	for(list<GSDirtyRect>::iterator i = m_dirty.begin(); i != m_dirty.end(); i++)
 	{
-		const GSVector4i& dirty = i->GetDirtyRect(m_TEX0).rintersect(r);
+		const GSVector4i& dirty = i->GetDirtyRect(m_TEX0).rintersect(tr);
 
 		if(!m_valid.rintersect(dirty).rempty())
 		{
@@ -837,8 +782,6 @@ bool GSTextureCache::GSCachedTexture::GetDirtyRect(GSVector4i& rr)
 
 	m_dirty.clear();
 
-	m_renderer->MinMaxUV(w, h, r);
-
 	if(GSUtil::IsRectInRect(r, m_valid))
 	{
 		return false;
@@ -866,8 +809,6 @@ bool GSTextureCache::GSCachedTexture::GetDirtyRect(GSVector4i& rr)
 	{
 		return false;
 	}
-
-	rr = r;
 
 	return true;
 }

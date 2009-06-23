@@ -28,12 +28,10 @@
 
 class GSRendererHW10 : public GSRendererHW<GSVertexHW10>
 {
-	bool WrapZ(uint32 maxz);
-
 protected:
 	GSTextureFX10 m_tfx;
 
-	void Draw(int prim, GSTexture* rt, GSTexture* ds, GSTextureCache::GSCachedTexture* tex);
+	void Draw(GS_PRIM_CLASS primclass, GSTexture* rt, GSTexture* ds, GSTextureCache::GSCachedTexture* tex);
 
 	struct
 	{

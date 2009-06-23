@@ -28,13 +28,11 @@
 
 class GSRendererHW9 : public GSRendererHW<GSVertexHW9>
 {
-	bool WrapZ(float maxz);
-
 protected:
 	GSTextureFX9 m_tfx;
 	bool m_logz;
 
-	void Draw(int prim, GSTexture* rt, GSTexture* ds, GSTextureCache::GSCachedTexture* tex);
+	void Draw(GS_PRIM_CLASS primclass, GSTexture* rt, GSTexture* ds, GSTextureCache::GSCachedTexture* tex);
 
 	struct
 	{

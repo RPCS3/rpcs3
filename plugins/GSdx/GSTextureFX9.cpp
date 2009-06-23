@@ -34,11 +34,6 @@ bool GSTextureFX9::Create(GSDevice9* dev)
 
 	VSSelector sel;
 	
-	sel.bppz = 0;
-	sel.tme = 0;
-	sel.fst = 0;
-	sel.logz = 0;
-
 	VSConstantBuffer cb;
 
 	SetupVS(sel, &cb); // creates layout
@@ -454,9 +449,4 @@ void GSTextureFX9::UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, 
 	}
 
 	m_dev->OMSetBlendState((*j).second, 0x010101 * bf);
-}
-
-void GSTextureFX9::Draw()
-{
-	m_dev->DrawPrimitive();
 }

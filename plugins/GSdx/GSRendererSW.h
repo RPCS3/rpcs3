@@ -30,7 +30,6 @@ class GSRendererSW : public GSRendererT<GSVertexSW>
 protected:
 	GSRasterizerList m_rl;
 	GSTextureCacheSW* m_tc;
-	GSVertexTrace m_vtrace;
 	GSTexture* m_texture[2];
 	bool m_reset;
 
@@ -42,9 +41,6 @@ protected:
 	void Draw();
 	void InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r);
 
-	void GetTextureMinMax(int w, int h, GSVector4i& r, uint32 fst);
-	void GetAlphaMinMax();
-	bool TryAlphaTest(uint32& fm, uint32& zm);
 	void GetScanlineParam(GSScanlineParam& p, GS_PRIM_CLASS primclass);
 
 public:

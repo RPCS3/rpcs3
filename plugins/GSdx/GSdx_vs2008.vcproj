@@ -1441,6 +1441,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath=".\GSTextureFX.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\GSTextureFX10.cpp"
 				>
 				<FileConfiguration
@@ -1494,6 +1498,10 @@
 			</File>
 			<File
 				RelativePath=".\GSVertexSW.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\GSVertexTrace.cpp"
 				>
 			</File>
 			<File
@@ -1879,6 +1887,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\GSTextureFX.h"
+				>
+			</File>
+			<File
 				RelativePath=".\GSTextureFX10.h"
 				>
 			</File>
@@ -1924,6 +1936,10 @@
 			</File>
 			<File
 				RelativePath=".\GSVertexSW.h"
+				>
+			</File>
+			<File
+				RelativePath=".\GSVertexTrace.h"
 				>
 			</File>
 			<File

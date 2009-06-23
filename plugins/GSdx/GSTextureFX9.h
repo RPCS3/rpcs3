@@ -21,123 +21,11 @@
 
 #pragma once
 
+#include "GSTextureFX.h"
 #include "GSDevice9.h"
 
-class GSTextureFX9
+class GSTextureFX9 : public GSTextureFX
 {
-public:
-	#pragma pack(push, 1)
-
-	struct VSConstantBuffer
-	{
-		GSVector4 VertexScale;
-		GSVector4 VertexOffset;
-		GSVector2 TextureScale;
-		float _pad[2];
-	};
-
-	union VSSelector
-	{
-		struct
-		{
-			uint32 bppz:2;
-			uint32 tme:1;
-			uint32 fst:1;
-			uint32 logz:1;
-		};
-
-		uint32 key;
-
-		operator uint32() {return key & 0x1f;}
-	};
-
-	struct PSConstantBuffer
-	{
-		GSVector4 FogColor_AREF;
-		GSVector4 HalfTexel;
-		GSVector4 WH_TA;
-		GSVector4 MinMax;
-		GSVector4 MinMaxF;
-		GSVector4i MskFix;
-	};
-
-	union PSSelector
-	{
-		struct
-		{
-			uint32 fst:1;
-			uint32 wms:2;
-			uint32 wmt:2;
-			uint32 bpp:3;
-			uint32 aem:1;
-			uint32 tfx:3;
-			uint32 tcc:1;
-			uint32 ate:1;
-			uint32 atst:3;
-			uint32 fog:1;
-			uint32 clr1:1;
-			uint32 rt:1;
-			uint32 ltf:1;
-		};
-
-		uint32 key;
-
-		operator uint32() {return key & 0x1fffff;}
-	};
-
-	union PSSamplerSelector
-	{
-		struct
-		{
-			uint32 tau:1;
-			uint32 tav:1;
-			uint32 ltf:1;
-		};
-
-		uint32 key;
-
-		operator uint32() {return key & 0x7;}
-	};
-
-	union OMDepthStencilSelector
-	{
-		struct
-		{
-			uint32 zte:1;
-			uint32 ztst:2;
-			uint32 zwe:1;
-			uint32 date:1;
-			uint32 fba:1;
-		};
-
-		uint32 key;
-
-		operator uint32() {return key & 0x3f;}
-	};
-
-	union OMBlendSelector
-	{
-		struct
-		{
-			uint32 abe:1;
-			uint32 a:2;
-			uint32 b:2;
-			uint32 c:2;
-			uint32 d:2;
-			uint32 wr:1;
-			uint32 wg:1;
-			uint32 wb:1;
-			uint32 wa:1;
-		};
-
-		uint32 key;
-
-		operator uint32() {return key & 0x1fff;}
-	};
-
-	#pragma pack(pop)
-
-private:
 	GSDevice9* m_dev;
 	CComPtr<IDirect3DVertexDeclaration9> m_il;
 	hash_map<uint32, CComPtr<IDirect3DVertexShader9> > m_vs;
@@ -162,5 +50,4 @@ public:
 	void SetupRS(int w, int h, const GSVector4i& scissor);
 	void SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 bf, GSTexture* rt, GSTexture* ds);
 	void UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 bf);
-	void Draw();
 };

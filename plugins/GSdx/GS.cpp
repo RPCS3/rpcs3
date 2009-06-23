@@ -73,6 +73,11 @@ EXPORT_C GSsetBaseMem(uint8* mem)
 
 EXPORT_C_(INT32) GSinit()
 {
+	if(!GSUtil::CheckSSE())
+	{
+		return -1;
+	}
+
 	return 0;
 }
 
@@ -112,11 +117,6 @@ static INT32 GSopen(void* dsp, char* title, int mt, int renderer)
 	}
 
 #endif
-
-	if(!GSUtil::CheckSSE())
-	{
-		return -1;
-	}
 
 	switch(renderer)
 	{

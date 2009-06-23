@@ -46,176 +46,6 @@ protected:
 		__super::Reset();
 	}
 
-	void MinMaxUV(int w, int h, GSVector4i& r)
-	{
-		int wms = m_context->CLAMP.WMS;
-		int wmt = m_context->CLAMP.WMT;
-
-		int minu = (int)m_context->CLAMP.MINU;
-		int minv = (int)m_context->CLAMP.MINV;
-		int maxu = (int)m_context->CLAMP.MAXU;
-		int maxv = (int)m_context->CLAMP.MAXV;
-
-		GSVector4i vr = GSVector4i(0, 0, w, h);
-
-		GSVector4i wm[3];
-
-		if(wms + wmt < 6)
-		{
-			GSVector4 mm;
-
-			if(m_count < 100)
-			{
-				Vertex* v = m_vertices;
-
-				GSVector4 minv(+1e10f);
-				GSVector4 maxv(-1e10f);
-
-				int i = 0;
-
-				if(PRIM->FST)
-				{
-					for(int j = m_count - 3; i < j; i += 4)
-					{
-						GSVector4 v0 = v[i + 0].vf[0];
-						GSVector4 v1 = v[i + 1].vf[0];
-						GSVector4 v2 = v[i + 2].vf[0];
-						GSVector4 v3 = v[i + 3].vf[0];
-
-						minv = minv.minv((v0.minv(v1)).minv(v2.minv(v3)));
-						maxv = maxv.maxv((v0.maxv(v1)).maxv(v2.maxv(v3)));
-					}
-
-					for(int j = m_count; i < j; i++)
-					{
-						GSVector4 v0 = v[i + 0].vf[0];
-
-						minv = minv.minv(v0);
-						maxv = maxv.maxv(v0);
-					}
-
-					mm = minv.xyxy(maxv) * GSVector4(16 << m_context->TEX0.TW, 16 << m_context->TEX0.TH).xyxy().rcpnr();
-				}
-				else
-				{
-					/*
-					for(int j = m_count - 3; i < j; i += 4)
-					{
-						GSVector4 v0 = GSVector4(v[i + 0].m128[0]) / GSVector4(v[i + 0].GetQ());
-						GSVector4 v1 = GSVector4(v[i + 1].m128[0]) / GSVector4(v[i + 1].GetQ());
-						GSVector4 v2 = GSVector4(v[i + 2].m128[0]) / GSVector4(v[i + 2].GetQ());
-						GSVector4 v3 = GSVector4(v[i + 3].m128[0]) / GSVector4(v[i + 3].GetQ());
-
-						minv = minv.minv((v0.minv(v1)).minv(v2.minv(v3)));
-						maxv = maxv.maxv((v0.maxv(v1)).maxv(v2.maxv(v3)));
-					}
-
-					for(int j = m_count; i < j; i++)
-					{
-						GSVector4 v0 = GSVector4(v[i + 0].m128[0]) / GSVector4(v[i + 0].GetQ());;
-
-						minv = minv.minv(v0);
-						maxv = maxv.maxv(v0);
-					}
-
-					mm = minv.xyxy(maxv);
-					*/
-
-					// just can't beat the compiler generated scalar sse code with packed div or rcp
-
-					mm.x = mm.y = +1e10;
-					mm.z = mm.w = -1e10;
-
-					for(int j = m_count; i < j; i++)
-					{
-						float w = 1.0f / v[i].GetQ();
-
-						float x = v[i].t.x * w;
-
-						if(x < mm.x) mm.x = x;
-						if(x > mm.z) mm.z = x;
-						
-						float y = v[i].t.y * w;
-
-						if(y < mm.y) mm.y = y;
-						if(y > mm.w) mm.w = y;
-					}
-				}
-			}
-			else
-			{
-				mm = GSVector4(0.0f, 0.0f, 1.0f, 1.0f);
-			}
-
-			GSVector4 v0 = GSVector4(vr);
-			GSVector4 v1 = v0.zwzw();
-
-			GSVector4 mmf = mm.floor();
-			GSVector4 mask = mmf.xyxy() == mmf.zwzw();
-
-			wm[0] = GSVector4i(v0.blend8((mm - mmf) * v1, mask));
-
-			mm *= v1;
-
-			wm[1] = GSVector4i(mm.sat(GSVector4::zero(), v1));
-			wm[2] = GSVector4i(mm.sat(GSVector4(minu, minv, maxu, maxv)));
-		}
-
-		GSVector4i v;
-
-		switch(wms)
-		{
-		case CLAMP_REPEAT:
-			v = wm[0];
-			if(v.x == 0 && v.z != w) v.z = w; // FIXME
-			vr.x = v.x;
-			vr.z = v.z;
-			break;
-		case CLAMP_CLAMP:
-		case CLAMP_REGION_CLAMP:
-			v = wm[wms];
-			if(v.x > v.z) v.x = v.z;
-			vr.x = v.x;
-			vr.z = v.z;
-			break;
-		case CLAMP_REGION_REPEAT:
-			vr.x = maxu; 
-			vr.z = vr.x + (minu + 1);
-			break;
-		default: 
-			__assume(0);
-		}
-
-		switch(wmt)
-		{
-		case CLAMP_REPEAT:
-			v = wm[0];
-			if(v.y == 0 && v.w != h) v.w = h; // FIXME
-			vr.y = v.y;
-			vr.w = v.w;
-			break;
-		case CLAMP_CLAMP:
-		case CLAMP_REGION_CLAMP:
-			v = wm[wmt];
-			if(v.y > v.w) v.y = v.w;
-			vr.y = v.y;
-			vr.w = v.w;
-			break;
-		case CLAMP_REGION_REPEAT:
-			vr.y = maxv; 
-			vr.w = vr.y + (minv + 1);
-			break;
-		default:
-			__assume(0);
-		}
-
-		r = vr + GSVector4i(-1, -1, 1, 1); // one more pixel because of bilinear filtering
-
-		GSVector2i bs = GSLocalMemory::m_psm[m_context->TEX0.PSM].bs;
-
-		r = r.ralign<GSVector4i::Outside>(bs).rintersect(GSVector4i(0, 0, w, h));
-	}
-
 	void VSync(int field)
 	{
 		__super::VSync(field);
@@ -285,10 +115,9 @@ protected:
 
 	void Draw()
 	{
-		if(IsBadFrame(m_skip))
-		{
-			return;
-		}
+		if(IsBadFrame(m_skip)) return;
+
+		m_vt.Update(m_vertices, m_count, GSUtil::GetPrimClass(PRIM->PRIM), PRIM, m_context);
 
 		GSDrawingEnvironment& env = m_env;
 		GSDrawingContext* context = m_context;
@@ -311,7 +140,13 @@ protected:
 
 		if(PRIM->TME)
 		{
-			tex = m_tc->GetTexture();
+			m_mem.m_clut.Read32(context->TEX0, env.TEXA);
+
+			GSVector4i r;
+
+			GetTextureMinMax(r);
+
+			tex = m_tc->GetTexture(r);
 
 			if(!tex) return;
 		}
@@ -366,7 +201,37 @@ protected:
 			return;
 		}
 
-		Draw(prim, rt->m_texture, ds->m_texture, tex);
+		// skip alpha test if possible
+
+		GIFRegTEST TEST = context->TEST;
+		GIFRegFRAME FRAME = context->FRAME;
+		GIFRegZBUF ZBUF = context->ZBUF;
+
+		uint32 fm = context->FRAME.FBMSK;
+		uint32 zm = context->ZBUF.ZMSK || context->TEST.ZTE == 0 ? 0xffffffff : 0;
+
+		if(context->TEST.ATE && context->TEST.ATST != ATST_ALWAYS)
+		{
+			if(TryAlphaTest(fm, zm))
+			{
+				context->TEST.ATE = 0;
+			}
+		}
+
+		context->FRAME.FBMSK = fm;
+		context->ZBUF.ZMSK = zm != 0;
+
+		//
+
+		Draw(GSUtil::GetPrimClass(prim), rt->m_texture, ds->m_texture, tex);
+
+		//
+
+		context->TEST = TEST;
+		context->FRAME = FRAME;
+		context->ZBUF = ZBUF;
+
+		//
 
 		OverrideOutput();
 
@@ -396,7 +261,7 @@ protected:
 		m_tc->InvalidateTextures(context->FRAME, context->ZBUF);
 	}
 
-	virtual void Draw(int prim, GSTexture* rt, GSTexture* ds, GSTextureCache::GSCachedTexture* tex) = 0;
+	virtual void Draw(GS_PRIM_CLASS primclass, GSTexture* rt, GSTexture* ds, GSTextureCache::GSCachedTexture* tex) = 0;
 
 	virtual bool OverrideInput(int& prim, GSTexture* rt, GSTexture* ds, GSTextureCache::GSCachedTexture* t)
 	{

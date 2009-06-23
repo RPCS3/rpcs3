@@ -35,8 +35,8 @@ __declspec(align(16)) struct GSVertex
 		struct
 		{
 			GIFRegST ST;
-			GIFRegXYZ XYZ;
 			GIFRegRGBAQ RGBAQ;
+			GIFRegXYZ XYZ;
 			GIFRegFOG FOG;
 		};
 

@@ -24,6 +24,7 @@
 #include "GSdx.h"
 #include "GSWnd.h"
 #include "GSState.h"
+#include "GSVertexTrace.h"
 #include "GSVertexList.h"
 #include "GSSettingsDlg.h"
 #include "GSCapture.h"
@@ -48,6 +49,15 @@ protected:
 	virtual void ResetDevice() {}
 	virtual GSTexture* GetOutput(int i) = 0;
 
+	GSVertexTrace m_vt;
+
+	// following functions need m_vt to be initialized
+
+	void GetTextureMinMax(GSVector4i& r);
+	void GetAlphaMinMax();
+	bool TryAlphaTest(uint32& fm, uint32& zm);
+	bool IsOpaque();
+
 public:
 	GSWnd m_wnd;
 	GSDevice* m_dev;
@@ -65,11 +75,6 @@ public:
 	virtual void VSync(int field);
 	virtual bool MakeSnapshot(const string& path);
 	virtual void KeyEvent(GSKeyEventData* e);
-
-	virtual void MinMaxUV(int w, int h, GSVector4i& r)
-	{
-		r = GSVector4i(0, 0, w, h);
-	}
 
 	virtual bool CanUpscale() 
 	{

@@ -36,10 +36,6 @@ bool GSTextureFX11::Create(GSDevice11* dev)
 
 	VSSelector sel;
 	
-	sel.bppz = 0;
-	sel.tme = 0;
-	sel.fst = 0;
-
 	VSConstantBuffer cb;
 
 	SetupVS(sel, &cb); // creates layout
@@ -122,11 +118,11 @@ bool GSTextureFX11::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 
 		D3D11_INPUT_ELEMENT_DESC layout[] =
 		{
-			{"POSITION", 0, DXGI_FORMAT_R16G16_UINT, 0, 8, D3D11_INPUT_PER_VERTEX_DATA, 0},
-			{"POSITION", 1, DXGI_FORMAT_R32_UINT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
 			{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
-			{"TEXCOORD", 1, DXGI_FORMAT_R32_FLOAT, 0, 20, D3D11_INPUT_PER_VERTEX_DATA, 0},
-			{"COLOR", 0, DXGI_FORMAT_R8G8B8A8_UNORM, 0, 16, D3D11_INPUT_PER_VERTEX_DATA, 0},
+			{"COLOR", 0, DXGI_FORMAT_R8G8B8A8_UNORM, 0, 8, D3D11_INPUT_PER_VERTEX_DATA, 0},
+			{"TEXCOORD", 1, DXGI_FORMAT_R32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
+			{"POSITION", 0, DXGI_FORMAT_R16G16_UINT, 0, 16, D3D11_INPUT_PER_VERTEX_DATA, 0},
+			{"POSITION", 1, DXGI_FORMAT_R32_UINT, 0, 20, D3D11_INPUT_PER_VERTEX_DATA, 0},
 			{"COLOR", 1, DXGI_FORMAT_R8G8B8A8_UNORM, 0, 28, D3D11_INPUT_PER_VERTEX_DATA, 0},
 		};
 
@@ -518,9 +514,4 @@ void GSTextureFX11::UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel,
 	}
 
 	m_dev->OMSetBlendState((*j).second, bf);
-}
-
-void GSTextureFX11::Draw()
-{
-	m_dev->DrawPrimitive();
 }

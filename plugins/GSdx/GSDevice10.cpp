@@ -302,7 +302,7 @@ GSTexture* GSDevice10::Create(int type, int w, int h, int format)
 		desc.BindFlags = D3D10_BIND_RENDER_TARGET | D3D10_BIND_SHADER_RESOURCE;
 		break;
 	case GSTexture::DepthStencil:
-		desc.BindFlags = D3D10_BIND_DEPTH_STENCIL;
+		desc.BindFlags = D3D10_BIND_DEPTH_STENCIL;// | D3D10_BIND_SHADER_RESOURCE;
 		break;
 	case GSTexture::Texture:
 		desc.BindFlags = D3D10_BIND_SHADER_RESOURCE;
@@ -344,7 +344,7 @@ GSTexture* GSDevice10::CreateRenderTarget(int w, int h, int format)
 
 GSTexture* GSDevice10::CreateDepthStencil(int w, int h, int format)
 {
-	return __super::CreateDepthStencil(w, h, format ? format : DXGI_FORMAT_D32_FLOAT_S8X24_UINT);
+	return __super::CreateDepthStencil(w, h, format ? format : DXGI_FORMAT_D32_FLOAT_S8X24_UINT); // DXGI_FORMAT_R32G8X24_TYPELESS
 }
 
 GSTexture* GSDevice10::CreateTexture(int w, int h, int format)

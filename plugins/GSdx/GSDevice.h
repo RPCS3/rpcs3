@@ -81,6 +81,7 @@ public:
 	virtual void Flip() {}
 
 	virtual void BeginScene() {}
+	virtual void DrawPrimitive() {};
 	virtual void EndScene() {}
 
 	virtual void ClearRenderTarget(GSTexture* t, const GSVector4& c) {}

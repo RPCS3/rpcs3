@@ -169,44 +169,26 @@ void GSRendererHW11::VertexKick(bool skip)
 	}
 }
 
-void GSRendererHW11::Draw(int prim, GSTexture* rt, GSTexture* ds, GSTextureCache::GSCachedTexture* tex)
+void GSRendererHW11::Draw(GS_PRIM_CLASS primclass, GSTexture* rt, GSTexture* ds, GSTextureCache::GSCachedTexture* tex)
 {
 	GSDrawingEnvironment& env = m_env;
 	GSDrawingContext* context = m_context;
-/*
-	if(s_dump)
-	{
-		TRACE(_T("\n"));
 
-		TRACE(_T("PRIM = %d, ZMSK = %d, ZTE = %d, ZTST = %d, ATE = %d, ATST = %d, AFAIL = %d, AREF = %02x\n"), 
-			PRIM->PRIM, context->ZBUF.ZMSK, 
-			context->TEST.ZTE, context->TEST.ZTST,
-			context->TEST.ATE, context->TEST.ATST, context->TEST.AFAIL, context->TEST.AREF);
-
-		for(int i = 0; i < m_count; i++)
-		{
-			TRACE(_T("[%d] %3.0f %3.0f %3.0f %3.0f\n"), i, (float)m_vertices[i].p.x / 16, (float)m_vertices[i].p.y / 16, (float)m_vertices[i].p.z, (float)m_vertices[i].a);
-		}
-	}
-*/
 	D3D11_PRIMITIVE_TOPOLOGY topology;
 	int prims = 0;
 
-	switch(prim)
+	switch(primclass)
 	{
-	case GS_POINTLIST:
+	case GS_POINT_CLASS:
 		topology = D3D11_PRIMITIVE_TOPOLOGY_POINTLIST;
 		prims = m_count;
 		break;
-	case GS_LINELIST: 
-	case GS_LINESTRIP:
-	case GS_SPRITE:
+	case GS_LINE_CLASS: 
+	case GS_SPRITE_CLASS:
 		topology = D3D11_PRIMITIVE_TOPOLOGY_LINELIST;
 		prims = m_count / 2;
 		break;
-	case GS_TRIANGLELIST: 
-	case GS_TRIANGLESTRIP: 
-	case GS_TRIANGLEFAN: 
+	case GS_TRIANGLE_CLASS:
 		topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 		prims = m_count / 3;
 		break;
@@ -227,16 +209,16 @@ void GSRendererHW11::Draw(int prim, GSTexture* rt, GSTexture* ds, GSTextureCache
 
 	// om
 
-	GSTextureFX11::OMDepthStencilSelector om_dssel;
+	GSTextureFX::OMDepthStencilSelector om_dssel;
 
 	om_dssel.zte = context->TEST.ZTE;
 	om_dssel.ztst = context->TEST.ZTST;
 	om_dssel.zwe = !context->ZBUF.ZMSK;
 	om_dssel.date = context->FRAME.PSM != PSM_PSMCT24 ? context->TEST.DATE : 0;
 
-	GSTextureFX11::OMBlendSelector om_bsel;
+	GSTextureFX::OMBlendSelector om_bsel;
 
-	om_bsel.abe = PRIM->ABE || (prim == 1 || prim == 2) && PRIM->AA1;
+	om_bsel.abe = !IsOpaque();
 	om_bsel.a = context->ALPHA.A;
 	om_bsel.b = context->ALPHA.B;
 	om_bsel.c = context->ALPHA.C;
@@ -250,34 +232,38 @@ void GSRendererHW11::Draw(int prim, GSTexture* rt, GSTexture* ds, GSTextureCache
 
 	// vs
 
-	GSTextureFX11::VSSelector vs_sel;
+	GSTextureFX::VSSelector vs_sel;
 
 	vs_sel.bppz = 0;
 	vs_sel.tme = PRIM->TME;
 	vs_sel.fst = PRIM->FST;
-	vs_sel.prim = prim;
+	vs_sel.prim = primclass;
 
 	if(om_dssel.zte && om_dssel.ztst > 0 && om_dssel.zwe)
 	{
 		if(context->ZBUF.PSM == PSM_PSMZ24)
 		{
-			if(WrapZ(0xffffff))
+			if(m_vt.m_max.p.z > 0xffffff)
 			{
+				ASSERT(m_vt.m_min.p.z > 0xffffff);
+
 				vs_sel.bppz = 1;
 				om_dssel.ztst = 1;
 			}
 		}
 		else if(context->ZBUF.PSM == PSM_PSMZ16 || context->ZBUF.PSM == PSM_PSMZ16S)
 		{
-			if(WrapZ(0xffff))
+			if(m_vt.m_max.p.z > 0xffff)
 			{
+				ASSERT(m_vt.m_min.p.z > 0xffff);
+
 				vs_sel.bppz = 2;
 				om_dssel.ztst = 1;
 			}
 		}
 	}
 
-	GSTextureFX11::VSConstantBuffer vs_cb;
+	GSTextureFX::VSConstantBuffer vs_cb;
 
 	float sx = 2.0f * rt->m_scale.x / (rt->GetWidth() * 16);
 	float sy = 2.0f * rt->m_scale.y / (rt->GetHeight() * 16);
@@ -298,14 +284,14 @@ void GSRendererHW11::Draw(int prim, GSTexture* rt, GSTexture* ds, GSTextureCache
 
 	// gs
 
-	GSTextureFX11::GSSelector gs_sel;
+	GSTextureFX::GSSelector gs_sel;
 
 	gs_sel.iip = PRIM->IIP;
-	gs_sel.prim = GSUtil::GetPrimClass(prim);
+	gs_sel.prim = primclass;
 
 	// ps
 
-	GSTextureFX11::PSSelector ps_sel;
+	GSTextureFX::PSSelector ps_sel;
 
 	ps_sel.fst = PRIM->FST;
 	ps_sel.wms = context->CLAMP.WMS;
@@ -322,21 +308,21 @@ void GSRendererHW11::Draw(int prim, GSTexture* rt, GSTexture* ds, GSTextureCache
 	ps_sel.aout = context->FRAME.PSM == PSM_PSMCT16 || context->FRAME.PSM == PSM_PSMCT16S || (context->FRAME.FBMSK & 0xff000000) == 0x7f000000 ? 1 : 0;
 	ps_sel.ltf = m_filter == 2 ? context->TEX1.IsLinear() : m_filter;
 
-	GSTextureFX11::PSSamplerSelector ps_ssel;
+	GSTextureFX::PSSamplerSelector ps_ssel;
 
 	ps_ssel.tau = 0;
 	ps_ssel.tav = 0;
 	ps_ssel.ltf = ps_sel.ltf;
 
-	GSTextureFX11::PSConstantBuffer ps_cb;
+	GSTextureFX::PSConstantBuffer ps_cb;
 
 	ps_cb.FogColor_AREF = GSVector4((int)env.FOGCOL.FCR, (int)env.FOGCOL.FCG, (int)env.FOGCOL.FCB, (int)context->TEST.AREF) / 255;
 
-	if(context->TEST.ATST == 2 || context->TEST.ATST == 5)
+	if(ps_sel.atst == 2 || ps_sel.atst == 5)
 	{
 		ps_cb.FogColor_AREF.a -= 0.9f / 255;
 	}
-	else if(context->TEST.ATST == 3 || context->TEST.ATST == 6)
+	else if(ps_sel.atst == 3 || ps_sel.atst == 6)
 	{
 		ps_cb.FogColor_AREF.a += 0.9f / 255;
 	}
@@ -424,7 +410,7 @@ void GSRendererHW11::Draw(int prim, GSTexture* rt, GSTexture* ds, GSTextureCache
 
 	if(context->TEST.DoFirstPass())
 	{
-		m_tfx.Draw();
+		m_dev->DrawPrimitive();
 	}
 
 	if(context->TEST.DoSecondPass())
@@ -462,26 +448,11 @@ void GSRendererHW11::Draw(int prim, GSTexture* rt, GSTexture* ds, GSTextureCache
 
 			m_tfx.UpdateOM(om_dssel, om_bsel, bf);
 
-			m_tfx.Draw();
+			m_dev->DrawPrimitive();
 		}
 	}
 
 	m_dev->EndScene();
-}
-
-bool GSRendererHW11::WrapZ(uint32 maxz)
-{
-	// should only run once if z values are in the z buffer range
-
-	for(int i = 0, j = m_count; i < j; i++)
-	{
-		if(m_vertices[i].p.z <= maxz)
-		{
-			return false;
-		}
-	}
-
-	return true;
 }
 
 void GSRendererHW11::SetupDATE(GSTexture* rt, GSTexture* ds)

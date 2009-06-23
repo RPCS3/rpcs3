@@ -169,7 +169,21 @@ GSTexture10::operator ID3D10ShaderResourceView*()
 {
 	if(!m_srv && m_dev && m_texture)
 	{
-		m_dev->CreateShaderResourceView(m_texture, NULL, &m_srv);
+		D3D10_SHADER_RESOURCE_VIEW_DESC* desc = NULL;
+
+		if(m_desc.Format == DXGI_FORMAT_R32G8X24_TYPELESS)
+		{
+			desc = new D3D10_SHADER_RESOURCE_VIEW_DESC();
+			memset(desc, 0, sizeof(*desc));
+			desc->Format = DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
+			desc->ViewDimension = D3D10_SRV_DIMENSION_TEXTURE2D;
+			desc->Texture2D.MostDetailedMip = 0;
+			desc->Texture2D.MipLevels = 1;
+		}
+
+		m_dev->CreateShaderResourceView(m_texture, desc, &m_srv);
+
+		delete desc;
 	}
 
 	return m_srv;
@@ -191,7 +205,19 @@ GSTexture10::operator ID3D10DepthStencilView*()
 {
 	if(!m_dsv && m_dev && m_texture)
 	{
-		m_dev->CreateDepthStencilView(m_texture, NULL, &m_dsv);
+		D3D10_DEPTH_STENCIL_VIEW_DESC* desc = NULL;
+
+		if(m_desc.Format == DXGI_FORMAT_R32G8X24_TYPELESS)
+		{
+			desc = new D3D10_DEPTH_STENCIL_VIEW_DESC();
+			memset(desc, 0, sizeof(*desc));
+			desc->Format = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
+			desc->ViewDimension = D3D10_DSV_DIMENSION_TEXTURE2D;
+		}
+
+		m_dev->CreateDepthStencilView(m_texture, desc, &m_dsv);
+
+		delete desc;
 	}
 
 	return m_dsv;
