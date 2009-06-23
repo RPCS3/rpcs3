@@ -78,7 +78,7 @@ bool GSTexture10::Map(GSMap& m, const GSVector4i* r)
 		return false;
 	}
 
-	if(m_texture)
+	if(m_texture && m_desc.Usage == D3D10_USAGE_STAGING)
 	{
 		D3D10_MAPPED_TEXTURE2D map;
 

@@ -80,7 +80,7 @@ bool GSTexture11::Map(GSMap& m, const GSVector4i* r)
 		return false;
 	}
 
-	if(m_texture)
+	if(m_texture && m_desc.Usage == D3D11_USAGE_STAGING)
 	{
 		D3D11_MAPPED_SUBRESOURCE map;
 

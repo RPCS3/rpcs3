@@ -1342,6 +1342,7 @@
     <ClCompile Include="GSTextureCache9.cpp" />
     <ClCompile Include="GSTextureCacheOGL.cpp" />
     <ClCompile Include="GSTextureCacheSW.cpp" />
+    <ClCompile Include="GSTextureFX.cpp" />
     <ClCompile Include="GSTextureFX10.cpp" />
     <ClCompile Include="GSTextureFX11.cpp" />
     <ClCompile Include="GSTextureFX9.cpp" />
@@ -1352,6 +1353,7 @@
     <ClCompile Include="GSVector.cpp" />
     <ClCompile Include="GSVertexList.cpp" />
     <ClCompile Include="GSVertexSW.cpp" />
+    <ClCompile Include="GSVertexTrace.cpp" />
     <ClCompile Include="GSWnd.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
@@ -1466,6 +1468,7 @@
     <ClInclude Include="GSTextureCache9.h" />
     <ClInclude Include="GSTextureCacheOGL.h" />
     <ClInclude Include="GSTextureCacheSW.h" />
+    <ClInclude Include="GSTextureFX.h" />
     <ClInclude Include="GSTextureFX10.h" />
     <ClInclude Include="GSTextureFX11.h" />
     <ClInclude Include="GSTextureFX9.h" />
@@ -1478,6 +1481,7 @@
     <ClInclude Include="GSVertexHW.h" />
     <ClInclude Include="GSVertexList.h" />
     <ClInclude Include="GSVertexSW.h" />
+    <ClInclude Include="GSVertexTrace.h" />
     <ClInclude Include="GSWnd.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="stdafx.h" />

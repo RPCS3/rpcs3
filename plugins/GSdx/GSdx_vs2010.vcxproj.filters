@@ -267,6 +267,9 @@
     <ClCompile Include="GSTextureCacheSW.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="GSTextureFX.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="GSTextureFX10.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -295,6 +298,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="GSVertexSW.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSVertexTrace.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="GSWnd.cpp">
@@ -584,6 +590,9 @@
     <ClInclude Include="GSTextureCacheSW.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="GSTextureFX.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="GSTextureFX10.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -618,6 +627,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="GSVertexSW.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSVertexTrace.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="GSWnd.h">

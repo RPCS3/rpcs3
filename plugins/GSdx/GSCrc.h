@@ -32,6 +32,7 @@ public:
 		Clannad,
 		Lamune,
 		KyuuketsuKitanMoonties,
+		PiaCarroteYoukosoGPGakuenPrincess,
 		FFX,
 		FFX2,
 		FFXII,
@@ -86,11 +87,17 @@ public:
 		ASIA
 	};
 
+	enum Flags
+	{
+		PointListPalette = 1,
+	};
+
 	struct Game 
 	{
 		uint32 crc; 
 		Title title; 
 		Region region;
+		uint32 flags;
 	};
 
 private:
