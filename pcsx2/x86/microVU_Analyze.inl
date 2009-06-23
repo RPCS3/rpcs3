@@ -345,45 +345,44 @@ microVUt(void) mVUanalyzeXGkick(mV, int Fs, int xCycles) {
 // Branches - Branch Opcodes
 //------------------------------------------------------------------
 
-#define analyzeBranchVI(xReg, infoVar) {											\
-	if (xReg) {																		\
-		int i;																		\
-		int iEnd = aMin(5, mVUcount);												\
-		int bPC = iPC;																\
-		for (i = 0; i < iEnd; i++) {												\
-			incPC2(-2)																\
-			if ((mVUlow.VI_write.reg == xReg) && mVUlow.VI_write.used) {			\
-				if (mVUlow.readFlags || i == 5) break;								\
-				if (i == 0) continue;												\
-				if (((mVUlow.VI_read[0].reg == xReg) && (mVUlow.VI_read[0].used))	\
-				||	((mVUlow.VI_read[1].reg == xReg) && (mVUlow.VI_read[1].used)))	\
-				{ continue; }														\
-			}																		\
-			break;																	\
-		}																			\
-		if (i) {																	\
-			DevCon::Status("microVU%d: Branch VI-Delay (%d)", params getIndex, i);	\
-			incPC2(2);																\
-			mVUlow.backupVI = 1;													\
-			iPC = bPC;																\
-			infoVar = 1;															\
-		}																			\
-		iPC = bPC;																	\
-	}																				\
+microVUt(void) analyzeBranchVI(mV, int xReg, bool &infoVar) {
+	if (!xReg) return;
+	int i;
+	int iEnd = aMin(5, mVUcount);
+	int bPC = iPC;
+	incPC2(-2);
+	for (i = 0; i < iEnd; i++) {
+		if ((mVUlow.VI_write.reg == xReg) && mVUlow.VI_write.used) {
+			if (mVUlow.readFlags || i == 5) break;
+			if (i == 0) { incPC2(-2); continue;	}
+			if (((mVUlow.VI_read[0].reg == xReg) && (mVUlow.VI_read[0].used))
+			||	((mVUlow.VI_read[1].reg == xReg) && (mVUlow.VI_read[1].used)))
+			{ incPC2(-2); continue; }
+		}
+		break;
+	}
+	if (i) {
+		incPC2(2);
+		mVUlow.backupVI = 1;
+		iPC = bPC;
+		infoVar = 1;
+		DevCon::Status("microVU%d: Branch VI-Delay (%d) [%04x]", params getIndex, i, xPC);
+	}
+	iPC = bPC;
 }
 
 microVUt(void) mVUanalyzeBranch1(mV, int Is) {
-	if (mVUregs.VI[Is] || mVUstall)	{ analyzeVIreg1(Is, mVUlow.VI_read[0]); }
-	else							{ analyzeBranchVI(Is, mVUlow.memReadIs); }
+	analyzeVIreg1(Is, mVUlow.VI_read[0]);
+	if (!mVUstall) { 
+		analyzeBranchVI(mVU, Is, mVUlow.memReadIs);
+	}
 }
 
 microVUt(void) mVUanalyzeBranch2(mV, int Is, int It) {
-	if (mVUregs.VI[Is] || mVUregs.VI[It] || mVUstall) {
-		analyzeVIreg1(Is, mVUlow.VI_read[0]);
-		analyzeVIreg1(It, mVUlow.VI_read[1]);
-	}
-	else {
-		analyzeBranchVI(Is, mVUlow.memReadIs);
-		analyzeBranchVI(It, mVUlow.memReadIt);
+	analyzeVIreg1(Is, mVUlow.VI_read[0]);
+	analyzeVIreg1(It, mVUlow.VI_read[1]);
+	if (!mVUstall) {
+		analyzeBranchVI(mVU, Is, mVUlow.memReadIs);
+		analyzeBranchVI(mVU, It, mVUlow.memReadIt);
 	}
 }
