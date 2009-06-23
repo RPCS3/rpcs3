@@ -148,9 +148,17 @@ declareAllVariables
 #define mF int recPass
 #define mX mVU, recPass
 
+// Recursive Inline
+#ifndef __LINUX__
+#define __recInline __forceinline
+#else
+#define __recInline inline
+#endif
+
 // Function/Template Stuff
 #define mVUx (vuIndex ? &microVU1 : &microVU0)
 #define mVUop(opName)	void opName (mP)
+#define microVUr(aType) __recInline aType
 #define microVUt(aType) __forceinline aType
 #define microVUx(aType) template<int vuIndex> aType
 #define microVUf(aType) template<int vuIndex> __forceinline aType
