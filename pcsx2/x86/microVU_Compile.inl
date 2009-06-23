@@ -230,7 +230,7 @@ microVUt(void) mVUendProgram(mV, int isEbit, int* xStatus, int* xMac, int* xClip
 	MOV32RtoM((uptr)&mVU->regs->VI[REG_MAC_FLAG].UL,	gprT1);
 	MOV32RtoM((uptr)&mVU->regs->VI[REG_CLIP_FLAG].UL,	gprT2);
 
-	if (isEbit || !isVU1) { // Clear 'is busy' Flags
+	if (isEbit || isVU1) { // Clear 'is busy' Flags
 		AND32ItoM((uptr)&VU0.VI[REG_VPU_STAT].UL, (isVU1 ? ~0x100 : ~0x001)); // VBS0/VBS1 flag
 		AND32ItoM((uptr)&mVU->regs->vifRegs->stat, ~0x4); // Clear VU 'is busy' signal for vif
 	}
