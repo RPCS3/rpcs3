@@ -317,7 +317,7 @@ microVUr(void*) mVUcompile(microVU* mVU, u32 startPC, uptr pState) {
 	mVUflagInfo		= 0;
 	mVUsFlagHack	= CHECK_VU_FLAGHACK;
 
-	for (int branch = 0;  mVUcount < endCount; mVUcount++) {
+	for (int branch = 0; mVUcount < endCount; mVUcount++) {
 		incPC(1);
 		startLoop();
 		mVUincCycles(mVU, 1);

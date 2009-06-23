@@ -73,9 +73,10 @@ public:
 		}
 		else { // Can do Simple Search (Only Matches the Important Pipeline Stuff)
 			for (int i = 0; i <= listSize; i++) {
-				if ((blockList[i].pState.q == pState->q) 
-				&&  (blockList[i].pState.p == pState->p) 
-				&&  (blockList[i].pState.flags == pState->flags)
+				if ((blockList[i].pState.q == pState->q)
+				&&  (blockList[i].pState.p == pState->p)
+				&&  (blockList[i].pState.xgkick == pState->xgkick)
+				&&  (blockList[i].pState.flags  == pState->flags)
 				&& !(blockList[i].pState.needExactMatch & 0xf0f)) { return &blockList[i]; }
 			}
 		}
