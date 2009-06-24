@@ -37,7 +37,9 @@ declareAllVariables // Declares All Global Variables :D
 // Only run this once per VU! ;)
 microVUt(void) mVUinit(VURegs* vuRegsPtr, int vuIndex) {
 
-	microVU* mVU	  = mVUx;
+	microVU* mVU = mVUx;
+	memset(&mVU->prog, 0, sizeof(mVU->prog));
+
 	mVU->regs		  = vuRegsPtr;
 	mVU->index		  = vuIndex;
 	mVU->vuMemSize	  = (vuIndex ? 0x4000 : 0x1000);
@@ -45,7 +47,7 @@ microVUt(void) mVUinit(VURegs* vuRegsPtr, int vuIndex) {
 	mVU->progSize	  = (vuIndex ? 0x4000 : 0x1000) / 4;
 	mVU->cache		  = NULL;
 	mVU->cacheSize	  = mVUcacheSize;
-	memset(&mVU->prog, 0, sizeof(mVU->prog));
+	mVU->prog.max	  = mMaxProg - 1;
 	mVUprint((vuIndex) ? "microVU1: init" : "microVU0: init");
 
 	mVU->cache = SysMmapEx((vuIndex ? 0x5f240000 : 0x5e240000), mVU->cacheSize + 0x1000, 0, (vuIndex ? "Micro VU1" : "Micro VU0"));
@@ -59,13 +61,7 @@ microVUt(void) mVUinit(VURegs* vuRegsPtr, int vuIndex) {
 microVUt(void) mVUreset(mV) {
 
 	mVUprint((mVU->index) ? "microVU1: reset" : "microVU0: reset");
-
-	// Delete Block Managers
-	for (int i = 0; i <= mVU->prog.max; i++) {
-		for (u32 j = 0; j < (mVU->progSize / 2); j++) {
-			microBlockManager::Delete( mVU->prog.prog[i].block[j] );
-		}
-	}
+	mVUclose(mVU, 1);
 
 	// Dynarec Cache
 	memset(mVU->cache, 0xcc, mVU->cacheSize + 0x1000);
@@ -77,14 +73,15 @@ microVUt(void) mVUreset(mV) {
 
 	// Clear All Program Data
 	memset(&mVU->prog, 0, sizeof(mVU->prog));
+	memset(&mVU->prog.lpState, 0, sizeof(mVU->prog.lpState));
 
 	// Program Variables
-	mVU->prog.isSame = -1;
-	mVU->prog.cleared = 1;
-	mVU->prog.cur = -1;
-	mVU->prog.total = -1;
-	memset(&mVU->prog.lpState, 0, sizeof(mVU->prog.lpState));
-	//mVU->prog.lpState = &mVU->prog.prog[15].allocInfo.block.pState; // Blank Pipeline State (ToDo: finish implementation)
+	mVU->prog.cleared =  1;
+	mVU->prog.isSame  = -1;
+	mVU->prog.cur	  = -1;
+	mVU->prog.total	  = -1;
+	mVU->prog.max	  = mMaxProg - 1;
+	mVU->prog.prog = (microProgram*)_aligned_malloc(sizeof(microProgram)*(mVU->prog.max+1), 64);
 
 	// Setup Dynarec Cache Limits for Each Program
 	u8* z = (mVU->cache + 0x1000); // Dispatcher Code is in first page of cache
@@ -99,19 +96,20 @@ microVUt(void) mVUreset(mV) {
 }
 
 // Free Allocated Resources
-microVUt(void) mVUclose(mV) {
+microVUt(void) mVUclose(mV, bool isReset) {
 
 	mVUprint((mVU->index) ? "microVU1: close" : "microVU0: close");
 
-	if (mVU->cache) { HostSys::Munmap(mVU->cache, mVU->cacheSize); mVU->cache = NULL; }
+	if (!isReset && mVU->cache) { HostSys::Munmap(mVU->cache, mVU->cacheSize); mVU->cache = NULL; }
 
-	// Delete Block Managers
-	for (int i = 0; i <= mVU->prog.max; i++) {
-		for (u32 j = 0; j < (mVU->progSize / 2); j++) {
-			if (mVU->prog.prog[i].block[j]) {
-				microBlockManager::Delete( mVU->prog.prog[i].block[j] );
+	// Delete Programs and Block Managers
+	if (mVU->prog.prog) {
+		for (int i = 0; i <= mVU->prog.max; i++) {
+			for (u32 j = 0; j < (mVU->progSize / 2); j++) {
+				microBlockManager::Delete(mVU->prog.prog[i].block[j]);
 			}
 		}
+		if (!isReset) { _aligned_free(mVU->prog.prog); }
 	}
 }
 
@@ -252,7 +250,7 @@ microVUf(int) mVUsearchProg() {
 //------------------------------------------------------------------
 
 void initVUrec (VURegs* vuRegs, const int vuIndex) { mVUinit(vuRegs, vuIndex); }
-void closeVUrec(const int vuIndex)				   { mVUclose(mVUx); }
+void closeVUrec(const int vuIndex)				   { mVUclose(mVUx, 0); }
 void resetVUrec(const int vuIndex)				   { mVUreset(mVUx); }
 void vsyncVUrec(const int vuIndex)				   { mVUvsyncUpdate(mVUx); }
 

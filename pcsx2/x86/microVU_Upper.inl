@@ -52,12 +52,12 @@ microVUt(void) mVUupdateFlags(mV, int reg, int regT1, int regT2, int xyzw, bool 
 
 	SSE_MOVMSKPS_XMM_to_R32(mReg, regT2); // Move the sign bits of the t1reg
 
-	AND32ItoR(mReg, AND_XYZW);  // Grab "Is Signed" bits from the previous calculation
+	AND32ItoR(mReg, AND_XYZW);	// Grab "Is Signed" bits from the previous calculation
 	SHL32ItoR(mReg, 4 + ADD_XYZW);
 
 	//-------------------------Check for Zero flags------------------------------
 
-	AND32ItoR(gprT2, AND_XYZW);  // Grab "Is Zero" bits from the previous calculation
+	AND32ItoR(gprT2, AND_XYZW);	// Grab "Is Zero" bits from the previous calculation
 	if (mFLAG.doFlag) { SHIFT_XYZW(gprT2); }
 	OR32RtoR(mReg, gprT2);
 

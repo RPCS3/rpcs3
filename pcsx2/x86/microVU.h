@@ -47,7 +47,7 @@ public:
 	static void Delete(microBlockManager* dead) {
 		if (dead == NULL) return;
 		dead->~microBlockManager();
-		_aligned_free( dead );
+		_aligned_free(dead);
 	}
 
 	microBlockManager()	 { reset(); }
@@ -84,11 +84,11 @@ public:
 	}
 };
 
-template<u32 progSize> // progSize = VU program memory size / 4
+#define mProgSize 0x4000/4
 struct microProgram {
-	PCSX2_ALIGNED16(u32 data[progSize]);
-	microBlockManager* block[progSize/2];
-	microIR<progSize> allocInfo;
+	u32				   data [mProgSize];
+	microBlockManager* block[mProgSize/2];
+	microIR<mProgSize> allocInfo;
 	u32 used;		// Number of times its been used
 	u32 last_used;	// Counters # of frames since last use (starts at 3 and counts backwards to 0 for each 30fps vSync)
 	s32 range[2];	// The range of microMemory that has already been recompiled for the current program
@@ -97,16 +97,15 @@ struct microProgram {
 	u8* x86end;		// Limit of program's rec-cache
 };
 
-#define mMaxProg 32		// The amount of Micro Programs Recs will 'remember' (For n = 1, 2, 4, 8, 16, etc...)
-template<u32 pSize>		// pSize = VU program memory size / 4
+#define mMaxProg ((mVU->index)?64:8) // The amount of Micro Programs Recs will 'remember' (For n = 1, 2, 4, 8, 16, etc...)
 struct microProgManager {
-	microProgram<pSize>	prog[mMaxProg];	// Store MicroPrograms in memory
-	static const int	max = mMaxProg - 1; 
-	int					cur;			// Index to Current MicroProgram thats running (-1 = uncached)
-	int					total;			// Total Number of valid MicroPrograms minus 1
-	int					isSame;			// Current cached microProgram is Exact Same program as mVU->regs->Micro (-1 = unknown, 0 = No, 1 = Yes)
-	int					cleared;		// Micro Program is Indeterminate so must be searched for (and if no matches are found then recompile a new one)
-	microRegInfo		lpState;		// Pipeline state from where program left off (useful for continuing execution)
+	microProgram*	prog;	 // Store MicroPrograms in memory
+	int				max;	 // Max Number of MicroPrograms minus 1
+	int				total;	 // Total Number of valid MicroPrograms minus 1
+	int				cur;	 // Index to Current MicroProgram thats running (-1 = uncached)
+	int				isSame;	 // Current cached microProgram is Exact Same program as mVU->regs->Micro (-1 = unknown, 0 = No, 1 = Yes)
+	int				cleared; // Micro Program is Indeterminate so must be searched for (and if no matches are found then recompile a new one)
+	microRegInfo	lpState; // Pipeline state from where program left off (useful for continuing execution)
 };
 
 #define mVUcacheSize (0x2000000 / ((vuIndex) ? 1 : 4))
@@ -123,7 +122,7 @@ struct microVU {
 	u32 progSize;		// VU Micro Memory Size (in u32's)
 	u32 cacheSize;		// VU Cache Size
 
-	microProgManager<0x4000/4> prog; // Micro Program Data
+	microProgManager prog; // Micro Program Data
 
 	FILE*	logFile;	 // Log File Pointer
 	VURegs*	regs;		 // VU Regs Struct
@@ -145,17 +144,13 @@ struct microVU {
 extern PCSX2_ALIGNED16(microVU microVU0);
 extern PCSX2_ALIGNED16(microVU microVU1);
 
-// Opcode Tables
-extern void (*mVU_UPPER_OPCODE[64])( VURegs* VU, s32 info );
-extern void (*mVU_LOWER_OPCODE[128])( VURegs* VU, s32 info );
-
 // Debug Helper
 extern int mVUdebugNow;
 
 // Main Functions
 microVUt(void) mVUinit(VURegs*, int);
 microVUt(void) mVUreset(mV);
-microVUt(void) mVUclose(mV);
+microVUt(void) mVUclose(mV, bool isReset);
 microVUt(void) mVUclear(mV, u32, u32);
 microVUt(void*) mVUblockFetch(microVU* mVU, u32 startPC, uptr pState);
 microVUx(void*) __fastcall mVUcompileJIT(u32 startPC, uptr pState);

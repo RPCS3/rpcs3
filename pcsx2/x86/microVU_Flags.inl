@@ -143,9 +143,9 @@ microVUt(int) mVUsetFlags(mV, int* xStatus, int* xMac, int* xClip) {
 		mFLAG.lastWrite = (xM-1) & 3;
 		cFLAG.lastWrite = (xC-1) & 3;
 
-		if (sFlagCond)		{ xStatus[xS] = cycles + 4;  xS = (xS+1) & 3; }
-		if (mFLAG.doFlag)	{ xMac   [xM] = cycles + 4;  xM = (xM+1) & 3; }
-		if (cFLAG.doFlag)	{ xClip  [xC] = cycles + 4;  xC = (xC+1) & 3; }
+		if (sFlagCond)		{ xStatus[xS] = cycles + 4; xS = (xS+1) & 3; }
+		if (mFLAG.doFlag)	{ xMac   [xM] = cycles + 4; xM = (xM+1) & 3; }
+		if (cFLAG.doFlag)	{ xClip  [xC] = cycles + 4; xC = (xC+1) & 3; }
 
 		cycles++;
 		incPC2(2);
