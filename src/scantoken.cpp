@@ -59,7 +59,7 @@ namespace YAML
 	// DocStart
 	void Scanner::ScanDocStart()
 	{
-		PopIndentTo(INPUT.column);
+		PopIndentTo(-1);
 		VerifyAllSimpleKeys();
 		m_simpleKeyAllowed = false;
 
