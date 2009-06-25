@@ -1056,6 +1056,7 @@ mVUop(mVU_XITOP) {
 	pass1 { if (!_It_) { mVUlow.isNOP = 1; } analyzeVIreg2(_It_, mVUlow.VI_write, 1); }
 	pass2 { 
 		MOVZX32M16toR(gprT1, (uptr)&mVU->regs->vifRegs->itop);
+		AND32ItoR(gprT1, isVU1 ? 0x3ff : 0xff);
 		mVUallocVIb(mVU, gprT1, _It_);
 	}
 	pass3 { mVUlog("XITOP vi%02d", _Ft_); }

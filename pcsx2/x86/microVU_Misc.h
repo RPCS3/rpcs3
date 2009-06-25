@@ -109,7 +109,7 @@ declareAllVariables
 #define divI 0x1040000
 #define divD 0x2080000
 
-#define isVU1		(mVU == &microVU1)
+#define isVU1		(mVU->index != 0)
 #define getIndex	(isVU1 ? 1 : 0)
 #define getVUmem(x)	(((isVU1) ? (x & 0x3ff) : ((x >= 0x400) ? (x & 0x43f) : (x & 0xff))) * 16)
 #define offsetSS	((_X) ? (0) : ((_Y) ? (4) : ((_Z) ? 8: 12)))
