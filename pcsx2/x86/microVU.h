@@ -108,7 +108,7 @@ struct microProgManager {
 	microRegInfo	lpState; // Pipeline state from where program left off (useful for continuing execution)
 };
 
-#define mVUcacheSize (0x2000000 / ((vuIndex) ? 1 : 4))
+#define mVUcacheSize (mMaxProg * 0xCCCCC) // 0.8mb per program
 struct microVU {
 
 	PCSX2_ALIGNED16(u32 macFlag[4]);  // 4 instances of mac  flag (used in execution)
