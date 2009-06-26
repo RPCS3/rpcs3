@@ -440,11 +440,6 @@ int CPCOND0() {
 
 //#define CPCOND0	1
 
-/*#define BC0(cond) \
-	if (CPCOND0() cond) { \
-		intDoBranch(_BranchTarget_); \
-	}*/
-
 void BC0F() {
 	if (CPCOND0() == 0) intDoBranch(_BranchTarget_); 
 	COP0_LOG( "COP0 > BC0F" );
@@ -454,11 +449,6 @@ void BC0T() {
 	if (CPCOND0() == 1) intDoBranch(_BranchTarget_); 
 	COP0_LOG( "COP0 > BC0T" );
 }
-
-/*#define BC0L(cond) \
-	if (CPCOND0() cond) { \
-		intDoBranch(_BranchTarget_); \
-	} else cpuRegs.pc+= 4;*/
 	
 void BC0FL() {
 	if (CPCOND0() == 0) 

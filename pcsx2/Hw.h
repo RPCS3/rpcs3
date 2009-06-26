@@ -306,6 +306,8 @@ enum DMACIrqs
 	DMAC_SIF2,
 	DMAC_FROM_SPR,
 	DMAC_TO_SPR,
+	DMAC_13 = 13, // Stall?
+	DMAC_14 = 14, // Transfer?
 	DMAC_ERROR = 15,
 };
 
@@ -519,8 +521,8 @@ extern void __fastcall hwWrite128_generic(u32 mem, const mem128_t *srcval);
 void hwIntcIrq(int n);
 void hwDmacIrq(int n);
 
-int  hwMFIFORead(u32 addr, u8 *data, u32 size);
-int  hwMFIFOWrite(u32 addr, u8 *data, u32 size);
+//bool hwMFIFORead(u32 addr, u8 *data, u32 size);
+bool  hwMFIFOWrite(u32 addr, u8 *data, u32 size);
 
 bool  hwDmacSrcChainWithStack(DMACh *dma, int id);
 bool  hwDmacSrcChain(DMACh *dma, int id);

@@ -224,8 +224,8 @@ void mtgsThreadObject::Start()
 
 	m_post_InitDone.Wait();
 
-	if( m_returncode != 0 )	// means the thread failed to init the GS plugin
-		throw Exception::PluginFailure( "GS", "The GS plugin failed to open/initialize." );
+	// means the thread failed to init the GS plugin
+	if ( m_returncode != 0 ) throw Exception::PluginFailure( "GS", "The GS plugin failed to open/initialize." );
 }
 
 mtgsThreadObject::~mtgsThreadObject()
@@ -282,21 +282,23 @@ __forceinline int mtgsThreadObject::_gifTransferDummy( GIF_PATH pathidx, const u
 
 	while(size > 0)
 	{
-		if(path.tag.nloop == 0)
+		if (path.tag.nloop == 0)
 		{
 			path.SetTag( pMem );
 
 			pMem += sizeof(GIFTAG);
 			--size;
 
-			if(pathidx == 2)
+			if (pathidx == 2)
 			{			
-				if(path.tag.flg != GIF_FLG_IMAGE)Path3progress = 1; //Other mode
-				else  Path3progress = 0; //IMAGE mode
+				if (path.tag.flg != GIF_FLG_IMAGE) 
+					Path3progress = TRANSFER_MODE; //Other mode (but not stopped, I guess?)
+				else  
+					Path3progress = IMAGE_MODE; //IMAGE mode
 				//if(pathidx == 2) GIF_LOG("Set Giftag NLoop %d EOP %x Mode %d Path3msk %x Path3progress %x ", path.tag.nloop, path.tag.eop, path.tag.flg, vif1Regs->mskpath3, Path3progress);
 			}
 
-			if( pathidx == 0 ) 
+			if (pathidx == 0) 
 			{                       
 			//	int transize = 0;
 				// hack: if too much data for VU1, just ignore.
@@ -324,7 +326,8 @@ __forceinline int mtgsThreadObject::_gifTransferDummy( GIF_PATH pathidx, const u
 					return ++size;
 				}
 			}
-		}else
+		}
+		else
 		{
 			// NOTE: size > 0 => do {} while(size > 0); should be faster than while(size > 0) {}
 		
@@ -453,7 +456,7 @@ __forceinline int mtgsThreadObject::_gifTransferDummy( GIF_PATH pathidx, const u
 					//params path.tag.nloop, path.tag.eop, path.tag.flg, path.tag.nreg, Path3progress, vif1Regs->stat & VIF1_STAT_VGW);
 				if(path.tag.eop)
 				{
-					Path3progress = 2;	
+					Path3progress = STOPPED_MODE;	
 					//GIF_LOG("Set progress NLoop %d EOP %x Mode %d Path3msk %x Path3progress %x ", path.tag.nloop, path.tag.eop, path.tag.flg, vif1Regs->mskpath3, Path3progress);
 				}
 				
@@ -1134,7 +1137,7 @@ void mtgsThreadObject::Freeze( SaveState& state )
 
 // this function is needed because of recompiled calls from iGS.cpp
 // (currently used in GCC only)
-void mtgsRingBufSimplePacket( s32 command, u32 data0, u32 data1, u32 data2 )
-{
-	mtgsThread->SendSimplePacket( (GS_RINGTYPE)command, data0, data1, data2 );
-}
+//void mtgsRingBufSimplePacket( s32 command, u32 data0, u32 data1, u32 data2 )
+//{
+//	mtgsThread->SendSimplePacket( (GS_RINGTYPE)command, data0, data1, data2 );
+//}

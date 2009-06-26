@@ -25,6 +25,13 @@ enum VifModes
 	VIF_CHAIN_MODE = 2
 };
 
+enum Path3Modes //0 = Image Mode (DirectHL), 1 = transferring, 2 = Stopped at End of Packet
+{
+	IMAGE_MODE = 0,
+	TRANSFER_MODE = 1,
+	STOPPED_MODE = 2
+};
+
 struct vifCode {
    u32 addr;
    u32 size;
@@ -54,7 +61,7 @@ struct vifStruct {
 };
 
 extern vifStruct vif0, vif1;
-extern int Path3progress;
+extern Path3Modes Path3progress;
 extern u8 schedulepath3msk;
 
 void __fastcall UNPACK_S_32( u32 *dest, u32 *data, int size );

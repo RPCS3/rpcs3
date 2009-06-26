@@ -582,7 +582,7 @@ void vifMFIFOInterrupt()
 					vifqwc = 0;
 					vif1.inprogress |= 0x10;
 					vif1Regs->stat &= ~0x1F000000; // FQC=0
-					hwDmacIrq(14);
+					hwDmacIrq(DMAC_14);
 					return;
 				}
 
@@ -606,7 +606,7 @@ void vifMFIFOInterrupt()
 		//Console::WriteLn("Empty 2");
 		//vif1.inprogress |= 0x10;
 		vif1Regs->stat &= ~0x1F000000; // FQC=0
-		hwDmacIrq(14);
+		hwDmacIrq(DMAC_14);
 	}*/
 
 	//On a TIE break we do not clear the MFIFO (Art of Fighting)

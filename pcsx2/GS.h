@@ -277,7 +277,7 @@ extern mtgsThreadObject* mtgsThread;
 
 void mtgsWaitGS();
 bool mtgsOpen();
-void mtgsRingBufSimplePacket( s32 command, u32 data0, u32 data1, u32 data2 );
+//void mtgsRingBufSimplePacket( s32 command, u32 data0, u32 data1, u32 data2 );
 
 /////////////////////////////////////////////////////////////////////////////
 // Generalized GS Functions and Stuff

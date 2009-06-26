@@ -58,7 +58,7 @@ static const unsigned int VIF0dmanum = 0;
 static const unsigned int VIF1dmanum = 1;
 
 int g_vifCycles = 0;
-int Path3progress = 2; //0 = Image Mode (DirectHL), 1 = transferring, 2 = Stopped at End of Packet
+Path3Modes Path3progress = STOPPED_MODE; 
 
 u32 splittransfer[4];
 u32 splitptr = 0;
@@ -1873,9 +1873,9 @@ static int __fastcall Vif1TransDirectHL(u32 *data)
 {
 	int ret = 0;
 
-	if((vif1.cmd & 0x7f) == 0x51)
+	if ((vif1.cmd & 0x7f) == 0x51)
 	{
-		if(gif->chcr & 0x100 && (!vif1Regs->mskpath3 && Path3progress == 0)) //PATH3 is in image mode, so wait for end of transfer
+		if (gif->chcr & 0x100 && (!vif1Regs->mskpath3 && (Path3progress == IMAGE_MODE))) //PATH3 is in image mode, so wait for end of transfer
 		{
 			vif1Regs->stat |= VIF1_STAT_VGW;
 			return 0;
@@ -2072,7 +2072,8 @@ void Vif1MskPath3()  // MSKPATH3
 	}
 	else
 	{
-		Path3progress = 1; //Let the Gif know it can transfer again (making sure any vif stall isnt unset prematurely)
+		//Let the Gif know it can transfer again (making sure any vif stall isnt unset prematurely)
+		Path3progress = TRANSFER_MODE; 
 		psHu32(GIF_STAT) &= ~0x2;
 		CPU_INT(2, 4);		
 	}
@@ -2106,9 +2107,10 @@ static void Vif1CMDFlush()  // FLUSH/E/A
 {
 	vif1FLUSH();
 
-	if((vif1.cmd & 0x7f) == 0x13)
+	if ((vif1.cmd & 0x7f) == 0x13)
 	{
-		if((Path3progress != 2 || !vif1Regs->mskpath3) && gif->chcr & 0x100) // Gif is already transferring so wait for it.
+		// Gif is already transferring so wait for it.
+		if (((Path3progress != STOPPED_MODE) || !vif1Regs->mskpath3) && gif->chcr & 0x100)
 		{	
 			vif1Regs->stat |= VIF1_STAT_VGW;	
 			CPU_INT(2, 4);
@@ -2488,7 +2490,7 @@ __forceinline void vif1SetupTransfer()
 				if ((vif1ch->madr + vif1ch->qwc * 16) >= psHu32(DMAC_STADR))
 				{
 					// stalled
-					hwDmacIrq(13);
+					hwDmacIrq(DMAC_13);
 					return;
 				}
 			}

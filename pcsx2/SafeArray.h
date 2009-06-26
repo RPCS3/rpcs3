@@ -420,9 +420,9 @@ class SafeAlignedArray : public SafeArray<T>
 protected:
 	T* _virtual_realloc( int newsize )
 	{
-		return (T*)( ( m_ptr == NULL ) ?
+		return (T*)( ( this->m_ptr == NULL ) ?
 			_aligned_malloc( newsize * sizeof(T), Alignment ) :
-			_aligned_realloc( m_ptr, newsize * sizeof(T), Alignment )
+			_aligned_realloc( this->m_ptr, newsize * sizeof(T), Alignment )
 		);
 	}
 
