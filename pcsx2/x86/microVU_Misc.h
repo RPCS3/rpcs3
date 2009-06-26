@@ -275,8 +275,10 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 #define CHECK_VU_MINMAXHACK	(u32)Config.Hacks.vuMinMax		// (Can cause SPS, Black Screens,  etc...)
 
 // Unknown Data
-#define mVU_XGKICK_CYCLES 1 // Its unknown at recompile time how long the xgkick transfer will take
-							// so give it a value that makes games happy :) (SO3 is fine at 1 cycle delay)
+#define mVU_XGKICK_CYCLES ((CHECK_XGKICKHACK) ? 3 : 1)
+// Its unknown at recompile time how long the xgkick transfer will take
+// so give it a value that makes games happy :) (SO3 is fine at 1 cycle delay)
+
 
 // Cache Limit Check
 #define mVUcacheCheck(ptr, start, limit) {																\

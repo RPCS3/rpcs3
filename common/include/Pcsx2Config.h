@@ -66,11 +66,12 @@ extern SessionOverrideFlags g_Session;
 #define CHECK_VU1REC (!g_Session.ForceDisableVU1rec && (Config.Options&PCSX2_VU1REC))
 
 //------------ SPECIAL GAME FIXES!!! ---------------
-#define CHECK_VUADDSUBHACK	 (Config.GameFixes & 0x1) // Special Fix for Tri-ace games, they use an encryption algorithm that requires VU addi opcode to be bit-accurate.
-#define CHECK_FPUCOMPAREHACK (Config.GameFixes & 0x4) // Special Fix for Digimon Rumble Arena 2, fixes spinning/hanging on intro-menu.
-#define CHECK_VUCLIPFLAGHACK (Config.GameFixes & 0x2) // Special Fix for Persona games, maybe others. It's to do with the VU clip flag (again).
-#define CHECK_FPUMULHACK	 (Config.GameFixes & 0x8) // Special Fix for Tales of Destiny hangs.
-#define CHECK_DMAEXECHACK (Config.GameFixes & 0x10) // Special Fix for Fatal Frame; breaks Gust and Tri-Ace games.
+#define CHECK_VUADDSUBHACK	 (Config.GameFixes & 0x01) // Special Fix for Tri-ace games, they use an encryption algorithm that requires VU addi opcode to be bit-accurate.
+#define CHECK_FPUCOMPAREHACK (Config.GameFixes & 0x04) // Special Fix for Digimon Rumble Arena 2, fixes spinning/hanging on intro-menu.
+#define CHECK_VUCLIPFLAGHACK (Config.GameFixes & 0x02) // Special Fix for Persona games, maybe others. It's to do with the VU clip flag (again).
+#define CHECK_FPUMULHACK	 (Config.GameFixes & 0x08) // Special Fix for Tales of Destiny hangs.
+#define CHECK_DMAEXECHACK	 (Config.GameFixes & 0x10) // Special Fix for Fatal Frame; breaks Gust and Tri-Ace games.
+#define CHECK_XGKICKHACK	 (Config.GameFixes & 0x20) // Special Fix for Erementar Gerad, adds more delay to VU XGkick instructions. Corrects the color of some graphics.
 
 //------------ Advanced Options!!! ---------------
 #define CHECK_VU_OVERFLOW		 (Config.vuOptions & 0x1)

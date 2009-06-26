@@ -237,7 +237,9 @@
 #define IDC_EE_ROUNDMODE0               1305
 #define IDC_FCOR                        1305
 #define IDC_GAMEFIX7                    1305
+#define IDC_GAMEFIX6                    1305
 #define IDC_EE_ROUNDMODE1               1306
+#define IDC_GAMEFIX8                    1306
 #define IDC_EE_ROUNDMODE2               1307
 #define IDC_EE_ROUNDMODE3               1308
 #define IDC_EESYNC_DEFAULT              1308

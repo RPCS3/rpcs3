@@ -521,22 +521,25 @@ BOOL APIENTRY GameFixes(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message) {
         case WM_INITDIALOG:
-			if(Config.GameFixes & 0x1) CheckDlgButton(hDlg, IDC_GAMEFIX2, TRUE);//Tri-Ace fix
-			if(Config.GameFixes & 0x4) CheckDlgButton(hDlg, IDC_GAMEFIX3, TRUE);//Digimon FPU compare fix
-			if(Config.GameFixes & 0x2) CheckDlgButton(hDlg, IDC_GAMEFIX4, TRUE);//Persona3/4 fix
-			if(Config.GameFixes & 0x8) CheckDlgButton(hDlg, IDC_GAMEFIX5, TRUE);//Tales of Destiny fix
-			//if(Config.GameFixes & 0x10) CheckDlgButton(hDlg, IDC_GAMEFIX?, TRUE);//Fatal Frame fix
+			if (Config.GameFixes & 0x01) CheckDlgButton(hDlg, IDC_GAMEFIX2, TRUE); // Tri-Ace fix
+			if (Config.GameFixes & 0x04) CheckDlgButton(hDlg, IDC_GAMEFIX3, TRUE); // Digimon FPU compare fix
+			if (Config.GameFixes & 0x02) CheckDlgButton(hDlg, IDC_GAMEFIX4, TRUE); // Persona3/4 fix
+			if (Config.GameFixes & 0x08) CheckDlgButton(hDlg, IDC_GAMEFIX5, TRUE); // Tales of Destiny fix
+			if (Config.GameFixes & 0x10) CheckDlgButton(hDlg, IDC_GAMEFIX6, TRUE); // Fatal Frame fix
+			if (Config.GameFixes & 0x20) CheckDlgButton(hDlg, IDC_GAMEFIX8, TRUE); // Erementar Gerad fix
+
 		return TRUE;
 
         case WM_COMMAND:
             if (LOWORD(wParam) == IDOK)
 			{
 				uint newfixes = 0;
-				newfixes |= IsDlgButtonChecked(hDlg, IDC_GAMEFIX2) ? 0x1 : 0;
-				newfixes |= IsDlgButtonChecked(hDlg, IDC_GAMEFIX3) ? 0x4 : 0;
-				newfixes |= IsDlgButtonChecked(hDlg, IDC_GAMEFIX4) ? 0x2 : 0;
-				newfixes |= IsDlgButtonChecked(hDlg, IDC_GAMEFIX5) ? 0x8 : 0;
-				//newfixes |= IsDlgButtonChecked(hDlg, IDC_GAMEFIX?) ? 0x10 : 0;
+				newfixes |= IsDlgButtonChecked(hDlg, IDC_GAMEFIX2) ? 0x01 : 0;
+				newfixes |= IsDlgButtonChecked(hDlg, IDC_GAMEFIX3) ? 0x04 : 0;
+				newfixes |= IsDlgButtonChecked(hDlg, IDC_GAMEFIX4) ? 0x02 : 0;
+				newfixes |= IsDlgButtonChecked(hDlg, IDC_GAMEFIX5) ? 0x08 : 0;
+				newfixes |= IsDlgButtonChecked(hDlg, IDC_GAMEFIX6) ? 0x10 : 0;
+				newfixes |= IsDlgButtonChecked(hDlg, IDC_GAMEFIX8) ? 0x20 : 0;
 				
 				EndDialog(hDlg, TRUE);
 

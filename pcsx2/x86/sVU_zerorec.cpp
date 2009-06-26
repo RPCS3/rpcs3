@@ -4417,12 +4417,7 @@ void recVUMI_XGKICK(VURegs *VU, int info)
 		recVUMI_XGKICK_(VU);
 	}
 	else {
-		// Erementar Gerad hack. 
-		// Corrects the color of some graphics on a game that has somewhat scrambled graphics either way, and only works with ZeroGS. Not even ZZOgl. :)
-		if (g_VUGameFixes & VUFIX_XGKICKDELAY2)
-			s_ScheduleXGKICK = min((u32)4, (s_pCurBlock->endpc - pc) / 8);
-		else
-			s_ScheduleXGKICK = 2; 
+		s_ScheduleXGKICK = (CHECK_XGKICKHACK) ? (min((u32)4, (s_pCurBlock->endpc-pc)/8)) : 2; 
 	}
 }
 
