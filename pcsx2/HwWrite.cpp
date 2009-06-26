@@ -100,7 +100,9 @@ static void DmaExec( void (*func)(), u32 mem, u32 value )
 	if ((value & 0x100) && ((psHu32(mem) & 0x100) == 0x100) && ((psHu32(DMAC_CTRL) & 0x1) == 1)) 
 	{
 		DMA_LOG( "DMAExec32 Attempt to run DMA while one is already active mem = %x", mem );
-		return;
+		
+		// Returning here breaks every single Gust game written. :(
+		//return;
 	}
 
 	// Upper 16bits of QWC should not be written since QWC is 16bits in size.
