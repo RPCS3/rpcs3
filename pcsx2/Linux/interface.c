@@ -939,6 +939,7 @@ create_GameFixDlg (void)
   GtkWidget *check_VU_Add_Sub;
   GtkWidget *check_FPU_Mul;
   GtkWidget *check_VU_Clip;
+  GtkWidget *check_DMAExec;
   GtkWidget *label42;
   GtkWidget *dialog_action_area1;
   GtkWidget *cancelbutton1;
@@ -990,6 +991,11 @@ create_GameFixDlg (void)
   gtk_widget_show (check_VU_Clip);
   gtk_box_pack_start (GTK_BOX (vbox30), check_VU_Clip, FALSE, FALSE, 0);
 
+  check_DMAExec = gtk_check_button_new_with_mnemonic (_("DMAExec Hack - Fixes Fatal Frame, possibly others.\nCauses freezing in Gust games and crashing in some TriAce games"));
+  gtk_widget_set_name (check_DMAExec, "check_DMAExec");
+  gtk_widget_show (check_DMAExec);
+  gtk_box_pack_start (GTK_BOX (vbox30), check_DMAExec, FALSE, FALSE, 0);
+
   label42 = gtk_label_new (_("<b>Some games need special settings.\nConfigure them here.</b>"));
   gtk_widget_set_name (label42, "label42");
   gtk_widget_show (label42);
@@ -1033,6 +1039,7 @@ create_GameFixDlg (void)
   GLADE_HOOKUP_OBJECT (GameFixDlg, check_VU_Add_Sub, "check_VU_Add_Sub");
   GLADE_HOOKUP_OBJECT (GameFixDlg, check_FPU_Mul, "check_FPU_Mul");
   GLADE_HOOKUP_OBJECT (GameFixDlg, check_VU_Clip, "check_VU_Clip");
+  GLADE_HOOKUP_OBJECT (GameFixDlg, check_DMAExec, "check_DMAExec");
   GLADE_HOOKUP_OBJECT (GameFixDlg, label42, "label42");
   GLADE_HOOKUP_OBJECT_NO_REF (GameFixDlg, dialog_action_area1, "dialog_action_area1");
   GLADE_HOOKUP_OBJECT (GameFixDlg, cancelbutton1, "cancelbutton1");

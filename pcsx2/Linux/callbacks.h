@@ -2,6 +2,10 @@
 
 
 void
+On_Dialog_Close                        (GtkDialog       *dialog,
+                                        gpointer         user_data);
+
+void
 on_Advanced_Defaults                   (GtkButton       *button,
                                         gpointer         user_data);
 
@@ -247,6 +251,10 @@ OnHelp_About                           (GtkMenuItem     *menuitem,
                                         gpointer         user_data);
 
 void
+OnCpuCheckToggled                      (GtkToggleButton *togglebutton,
+                                        gpointer         user_data);
+
+void
 OnCpu_Ok                               (GtkButton       *button,
                                         gpointer         user_data);
 
@@ -256,12 +264,4 @@ OnLogging_Ok                           (GtkButton       *button,
 
 void
 OnMemcards_Ok                          (GtkButton       *button,
-                                        gpointer         user_data);
-
-void
-On_Dialog_Close                        (GtkDialog       *dialog,
-                                        gpointer         user_data);
-
-void
-OnCpuCheckToggled                      (GtkToggleButton *togglebutton,
                                         gpointer         user_data);

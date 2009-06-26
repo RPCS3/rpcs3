@@ -525,6 +525,7 @@ BOOL APIENTRY GameFixes(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 			if(Config.GameFixes & 0x4) CheckDlgButton(hDlg, IDC_GAMEFIX3, TRUE);//Digimon FPU compare fix
 			if(Config.GameFixes & 0x2) CheckDlgButton(hDlg, IDC_GAMEFIX4, TRUE);//Persona3/4 fix
 			if(Config.GameFixes & 0x8) CheckDlgButton(hDlg, IDC_GAMEFIX5, TRUE);//Tales of Destiny fix
+			//if(Config.GameFixes & 0x10) CheckDlgButton(hDlg, IDC_GAMEFIX?, TRUE);//Fatal Frame fix
 		return TRUE;
 
         case WM_COMMAND:
@@ -535,6 +536,7 @@ BOOL APIENTRY GameFixes(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 				newfixes |= IsDlgButtonChecked(hDlg, IDC_GAMEFIX3) ? 0x4 : 0;
 				newfixes |= IsDlgButtonChecked(hDlg, IDC_GAMEFIX4) ? 0x2 : 0;
 				newfixes |= IsDlgButtonChecked(hDlg, IDC_GAMEFIX5) ? 0x8 : 0;
+				//newfixes |= IsDlgButtonChecked(hDlg, IDC_GAMEFIX?) ? 0x10 : 0;
 				
 				EndDialog(hDlg, TRUE);
 
@@ -1056,7 +1058,7 @@ void CreateMainWindow()
 	if(Config.PsxOut)	CheckMenuItem(gApp.hMenu,ID_CONSOLE,MF_CHECKED);
 	if(Config.Patch)	CheckMenuItem(gApp.hMenu,ID_PATCHES,MF_CHECKED);
 	if(Config.Profiler)	CheckMenuItem(gApp.hMenu,ID_PROFILER,MF_CHECKED);
-	if(Config.cdvdPrint)CheckMenuItem(gApp.hMenu,ID_CDVDPRINT,MF_CHECKED);
+	if(Config.cdvdPrint) CheckMenuItem(gApp.hMenu,ID_CDVDPRINT,MF_CHECKED);
 	if(Config.closeGSonEsc)CheckMenuItem(gApp.hMenu,ID_CLOSEGS,MF_CHECKED);
 
 	hStatusWnd = CreateStatusWindow(WS_CHILD | WS_VISIBLE, "", hWnd, 100);

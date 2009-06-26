@@ -102,8 +102,8 @@ static void DmaExec( void (*func)(), u32 mem, u32 value )
 		DMA_LOG( "DMAExec32 Attempt to run DMA while one is already active mem = %x", mem );
 		
 		// Returning here breaks every single Gust game written. :(
-		// Not returning here breaks a bunch of other games. I'll let someone else figure it out...
-		return;
+		// Not returning here breaks Fatal Frame. Gamefix time.
+		if (CHECK_DMAEXECHACK) return;
 	}
 
 	// Upper 16bits of QWC should not be written since QWC is 16bits in size.
