@@ -4376,18 +4376,15 @@ void recVUMI_XGKICK_(VURegs *VU)
 	_freeX86regs();
 	_freeXMMregs();
 
+	OR32ItoM((uptr)&psHu32(GIF_STAT), (GIF_STAT_APATH1 | GIF_STAT_OPH)); // Set PATH1 GIF Status Flags
 	PUSH32R(s_XGKICKReg);
 	PUSH32I((uptr)VU->Mem);
 
-	//CALLFunc((u32)countfn);
-
-	if (mtgsThread != NULL)
-	{
+	if (mtgsThread) {
 		CALLFunc((uptr)VU1XGKICK_MTGSTransfer);
 		ADD32ItoR(ESP, 8);
 	}
-	else
-	{
+	else {
 #ifdef PCSX2_DEVBUILD
 		CALLFunc((uptr)vu1xgkick);
 		ADD32ItoR(ESP, 8);
@@ -4395,14 +4392,13 @@ void recVUMI_XGKICK_(VURegs *VU)
 		CALLFunc((uptr)GSgifTransfer1);
 #endif
 	}
-	psHu32(GIF_STAT) &= ~(GIF_STAT_APATH1 | GIF_STAT_OPH); //Probably should be in the recompilation but im a rec nab :( (Refraction)
+	AND32ItoM((uptr)&psHu32(GIF_STAT), ~(GIF_STAT_APATH1 | GIF_STAT_OPH)); // Clear PATH1 GIF Status Flags
 	s_ScheduleXGKICK = 0;
 }
 
 void recVUMI_XGKICK(VURegs *VU, int info)
 {
-	if (s_ScheduleXGKICK)
-	{
+	if (s_ScheduleXGKICK) {
 		// second xgkick, so launch the first
 		recVUMI_XGKICK_(VU);
 	}
@@ -4416,15 +4412,11 @@ void recVUMI_XGKICK(VURegs *VU, int info)
 	SHL32ItoR(isreg, 4);
 	AND32ItoR(isreg, 0x3fff);
 	s_XGKICKReg = isreg;
-	psHu32(GIF_STAT) |= (GIF_STAT_APATH1 | GIF_STAT_OPH); //Probably should be in the recompilation but im a rec nab :( (Refraction)
-
-
-	if (!SUPERVU_XGKICKDELAY || pc == s_pCurBlock->endpc)
-	{
+	
+	if (!SUPERVU_XGKICKDELAY || pc == s_pCurBlock->endpc) {
 		recVUMI_XGKICK_(VU);
 	}
-	else
-	{
+	else {
 		// Erementar Gerad hack. 
 		// Corrects the color of some graphics on a game that has somewhat scrambled graphics either way, and only works with ZeroGS. Not even ZZOgl. :)
 		if (g_VUGameFixes & VUFIX_XGKICKDELAY2)
