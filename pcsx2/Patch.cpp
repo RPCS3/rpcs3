@@ -653,13 +653,10 @@ int AddPatch(int Mode, int Place, int Address, int Size, u64 data)
 	
 void patchFunc_ffxhack( char * cmd, char * param )
 {
-	 //Keeping this as a dummy a while :p
-	 //g_FFXHack = 1;
 }
 
 void patchFunc_xkickdelay( char * cmd, char * param )
 {
-	g_VUGameFixes |= VUFIX_XGKICKDELAY2;
 }
 
 void patchFunc_fastmemory( char * cmd, char * param )

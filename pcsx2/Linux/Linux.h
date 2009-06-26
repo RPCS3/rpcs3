@@ -127,6 +127,8 @@ char ee_cycle_labels[3][256] =
 #define FLAG_FPU_MUL 0x8
 //Fatal Frame
 #define FLAG_DMAExec 0x10
+//Erementar Gerad
+#define FLAG_XGKick 0x20
 
 #define FLAG_VU_NO_OVERFLOW 0x2
 #define FLAG_VU_EXTRA_OVERFLOW 0x40

@@ -196,10 +196,3 @@ static __forceinline u32* GET_VU_MEM(VURegs* VU, u32 addr)
 	
 	return (u32*)(VU0.Mem+(addr&0x0fff)); // for addr 0x0000 to 0x4000 just wrap around
 }
-
-
-// various fixes to enable per game (all are off by default)
-#define VUFIX_SIGNEDZERO        1
-#define VUFIX_EXTRAFLAGS        2
-#define VUFIX_XGKICKDELAY2      4
-extern int g_VUGameFixes;

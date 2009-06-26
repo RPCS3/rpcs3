@@ -394,7 +394,6 @@ void cdvdReadKey(u8 arg0, u16 arg1, u32 arg2, u8* key) {
 	{
 		ElfCRC = loadElfCRC( str );
 		ElfApplyPatches();
-		LoadGameSpecificSettings();
 		GSsetGameCRC( ElfCRC, 0 );
 	}
 }
@@ -584,7 +583,6 @@ void cdvdNewDiskCB()
 	{
 		ElfCRC = loadElfCRC( str );
 		ElfApplyPatches();
-		LoadGameSpecificSettings();
 		GSsetGameCRC( ElfCRC, 0 );
 	}
 

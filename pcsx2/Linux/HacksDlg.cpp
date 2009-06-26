@@ -30,6 +30,7 @@ GtkWidget *GameFixDlg, *SpeedHacksDlg;
 	set_checked(GameFixDlg, "check_FPU_Compare", (Config.GameFixes & FLAG_FPU_Compare));
 	set_checked(GameFixDlg, "check_FPU_Mul", (Config.GameFixes & FLAG_FPU_MUL));
 	set_checked(GameFixDlg, "check_DMAExec", (Config.GameFixes & FLAG_DMAExec));
+	set_checked(GameFixDlg, "check_XGKick", (Config.GameFixes & FLAG_XGKick));
 	
 	gtk_widget_show_all(GameFixDlg);
 	gtk_widget_set_sensitive(MainWindow, FALSE);
@@ -47,6 +48,7 @@ void on_Game_Fix_OK(GtkButton *button, gpointer user_data)
 	Config.GameFixes |= is_checked(GameFixDlg, "check_FPU_Compare") ? FLAG_FPU_Compare : 0;
 	Config.GameFixes |= is_checked(GameFixDlg, "check_FPU_Mul") ? FLAG_FPU_MUL : 0;
 	Config.GameFixes |= is_checked(GameFixDlg, "check_DMAExec") ? FLAG_DMAExec : 0;
+	Config.GameFixes |= is_checked(GameFixDlg, "check_XGKick") ? FLAG_XGKick : 0;
 
 	SaveConfig();
 	

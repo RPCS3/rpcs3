@@ -565,23 +565,7 @@ int loadElfFile(const char *filename)
 	Console::Status( "loadElfFile: %s; CRC = %8.8X", params filename, ElfCRC);
 
 	ElfApplyPatches();
-	LoadGameSpecificSettings();
-
+	
 	return 0;
 }
 
-#include "VU.h"
-int g_VUGameFixes = 0;
-
-// fixme - this should be moved to patches or eliminated
-void LoadGameSpecificSettings() 
-{
-	// default
-	g_VUGameFixes = 0;
-
-	switch(ElfCRC) {
-		case 0xb99379b7: // erementar gerad (discolored chars)
-			g_VUGameFixes |= VUFIX_XGKICKDELAY2; // Tested - still needed - arcum42
-			break;
-	}
-}
