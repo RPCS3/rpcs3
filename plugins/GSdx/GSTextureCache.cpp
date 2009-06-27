@@ -562,7 +562,7 @@ void GSTextureCache::Source::Update(const GIFRegTEX0& TEX0, const GIFRegTEXA& TE
 
 						if(right < x)
 						{
-							Write(GSVector4i(left, y, right, y + s.y).rintersect(tr), buff, pitch);
+							Write(GSVector4i(left, y, right, y + s.y), tr, buff, pitch);
 
 							left = right = x;
 						}
@@ -576,7 +576,7 @@ void GSTextureCache::Source::Update(const GIFRegTEX0& TEX0, const GIFRegTEXA& TE
 
 			if(left < right)
 			{
-				Write(GSVector4i(left, y, right, y + s.y).rintersect(tr), buff, pitch);
+				Write(GSVector4i(left, y, right, y + s.y), tr, buff, pitch);
 			}
 		}
 	}
@@ -607,7 +607,7 @@ void GSTextureCache::Source::Update(const GIFRegTEX0& TEX0, const GIFRegTEXA& TE
 					{
 						if(right < x)
 						{
-							Write(GSVector4i(left, y, right, y + s.y).rintersect(tr), buff, pitch);
+							Write(GSVector4i(left, y, right, y + s.y), tr, buff, pitch);
 
 							left = right = x;
 						}
@@ -621,7 +621,7 @@ void GSTextureCache::Source::Update(const GIFRegTEX0& TEX0, const GIFRegTEXA& TE
 
 			if(left < right)
 			{
-				Write(GSVector4i(left, y, right, y + s.y).rintersect(tr), buff, pitch);
+				Write(GSVector4i(left, y, right, y + s.y), tr, buff, pitch);
 			}
 		}
 
@@ -649,25 +649,34 @@ void GSTextureCache::Source::Update(const GIFRegTEX0& TEX0, const GIFRegTEXA& TE
 	m_renderer->m_perfmon.Put(GSPerfMon::Unswizzle, s.x * s.y * sizeof(uint32) * blocks);
 }
 
-void GSTextureCache::Source::Write(const GSVector4i& r, uint8* buff, int pitch)
+void GSTextureCache::Source::Write(const GSVector4i& r, const GSVector4i& tr, uint8* buff, int pitch)
 {
 	if(r.rempty()) return;
 
 	GSLocalMemory::readTexture rtx = GSLocalMemory::m_psm[m_TEX0.PSM].rtx;
 
-	GSTexture::GSMap m;
-
-	if(m_texture->Map(m, &r))
-	{
-		(m_renderer->m_mem.*rtx)(r, m.bits, m.pitch, m_TEX0, m_TEXA);
-
-		m_texture->Unmap();
-	}
-	else
+	if((r > tr).mask() & 0xff00)
 	{
 		(m_renderer->m_mem.*rtx)(r, buff, pitch, m_TEX0, m_TEXA);
 
-		m_texture->Update(r, buff, pitch);
+		m_texture->Update(r.rintersect(tr), buff, pitch);
+	}
+	else
+	{
+		GSTexture::GSMap m;
+
+		if(m_texture->Map(m, &r))
+		{
+			(m_renderer->m_mem.*rtx)(r, m.bits, m.pitch, m_TEX0, m_TEXA);
+
+			m_texture->Unmap();
+		}
+		else
+		{
+			(m_renderer->m_mem.*rtx)(r, buff, pitch, m_TEX0, m_TEXA);
+
+			m_texture->Update(r, buff, pitch);
+		}
 	}
 }
 

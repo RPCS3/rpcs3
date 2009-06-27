@@ -67,7 +67,7 @@ public:
 		virtual bool Create(Target* dst) = 0;
 		virtual void Update(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, const GSVector4i& rect);
 
-		void Write(const GSVector4i& r, uint8* buff, int pitch);
+		void Write(const GSVector4i& r, const GSVector4i& tr, uint8* buff, int pitch);
 	};
 
 	class Target : public Surface
