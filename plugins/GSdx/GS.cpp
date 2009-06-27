@@ -21,9 +21,9 @@
 
 #include "stdafx.h"
 #include "GSUtil.h"
-#include "GSRendererHW9.h"
-#include "GSRendererHW10.h"
-#include "GSRendererHW11.h"
+#include "GSRendererDX9.h"
+#include "GSRendererDX10.h"
+#include "GSRendererDX11.h"
 #include "GSRendererOGL.h"
 #include "GSRendererSW.h"
 #include "GSRendererNull.h"
@@ -121,13 +121,13 @@ static INT32 GSopen(void* dsp, char* title, int mt, int renderer)
 	switch(renderer)
 	{
 	default: 
-	case 0: s_gs = new GSRendererHW9(s_basemem, !!mt, s_irq); break;
+	case 0: s_gs = new GSRendererDX9(s_basemem, !!mt, s_irq); break;
 	case 1: s_gs = new GSRendererSW(s_basemem, !!mt, s_irq, new GSDevice9()); break;
 	case 2: s_gs = new GSRendererNull(s_basemem, !!mt, s_irq, new GSDevice9()); break;
-	case 3: s_gs = new GSRendererHW10(s_basemem, !!mt, s_irq); break;
+	case 3: s_gs = new GSRendererDX10(s_basemem, !!mt, s_irq); break;
 	case 4: s_gs = new GSRendererSW(s_basemem, !!mt, s_irq, new GSDevice10()); break;
 	case 5: s_gs = new GSRendererNull(s_basemem, !!mt, s_irq, new GSDevice10()); break;
-	case 6: s_gs = new GSRendererHW11(s_basemem, !!mt, s_irq); break;
+	case 6: s_gs = new GSRendererDX11(s_basemem, !!mt, s_irq); break;
 	case 7: s_gs = new GSRendererSW(s_basemem, !!mt, s_irq, new GSDevice11()); break;
 	case 8: s_gs = new GSRendererNull(s_basemem, !!mt, s_irq, new GSDevice11()); break;
 	#if 0

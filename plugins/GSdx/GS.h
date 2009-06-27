@@ -28,6 +28,9 @@
 
 #define PLUGIN_VERSION 15
 
+#define MAX_PAGES 512
+#define MAX_BLOCKS 16384
+
 #include "GSVector.h"
 
 #pragma pack(push, 1)
@@ -813,13 +816,39 @@ REG64_(GIFReg, TEX1)
 	uint32 K:12;
 	uint32 _PAD4:20;
 REG_END2
+
+	bool IsMinLinear() const {return (MMIN == 1) || (MMIN & 4);}
+	bool IsMagLinear() const {return MMAG;}
+
 	bool IsLinear() const 
 	{
-		bool mmag = (MMAG & 1);
-		bool mmin = (MMIN == 1) || (MMIN & 4);
+		bool mmin = IsMinLinear();
+		bool mmag = IsMagLinear();
 
 		return !LCM ? mmag || mmin : K <= 0 ? mmag : mmin;
 	}
+
+	bool IsLinear(float qmin, float qmax) const 
+	{
+		bool mmin = IsMinLinear();
+		bool mmag = IsMagLinear();
+
+		if(mmag == mmin) return mmag;
+
+		float LODmin = K;
+		float LODmax = K;
+
+		if(!LCM)
+		{
+			float f = (float)(1 << L) / log(2.0f);
+
+			LODmin += log(1.0f / abs(qmax)) * f;
+			LODmax += log(1.0f / abs(qmin)) * f;
+		}
+
+		return LODmax <= 0 ? mmag : LODmin > 0 ? mmin : mmag || mmin;
+	}
+
 REG_END2
 
 REG64_(GIFReg, TEX2)

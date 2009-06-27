@@ -30,9 +30,21 @@ __declspec(align(16)) union GSVertexHW9
 {
 	struct
 	{
-		GSVector2 t;
-		union {struct {uint8 r, g, b, a;}; uint32 c0;};
-		union {struct {uint8 ta0, ta1, res, f;}; uint32 c1;};
+		union 
+		{
+			struct
+			{
+				GSVector4 t;
+			};
+
+			struct
+			{
+				uint32 _pad[2];
+				union {struct {uint8 r, g, b, a;}; uint32 c0;};
+				union {struct {uint8 ta0, ta1, res, f;}; uint32 c1;};
+			};
+		};
+
 		GSVector4 p;
 	};
 

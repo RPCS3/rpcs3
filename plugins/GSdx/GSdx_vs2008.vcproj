@@ -1277,52 +1277,56 @@
 				>
 			</File>
 			<File
+				RelativePath=".\GSRendererDX.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\GSRendererDX10.cpp"
+				>
+				<FileConfiguration
+					Name="Release SSE2|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AssemblerOutput="4"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release SSSE3|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AssemblerOutput="4"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\GSRendererDX11.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\GSRendererDX9.cpp"
+				>
+				<FileConfiguration
+					Name="Release SSE2|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AssemblerOutput="4"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release SSSE3|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AssemblerOutput="4"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
 				RelativePath=".\GSRendererHW.cpp"
 				>
-			</File>
-			<File
-				RelativePath=".\GSRendererHW10.cpp"
-				>
-				<FileConfiguration
-					Name="Release SSE2|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AssemblerOutput="4"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release SSSE3|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AssemblerOutput="4"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath=".\GSRendererHW11.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\GSRendererHW9.cpp"
-				>
-				<FileConfiguration
-					Name="Release SSE2|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AssemblerOutput="4"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release SSSE3|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AssemblerOutput="4"
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath=".\GSRendererNull.cpp"
@@ -1791,19 +1795,23 @@
 				>
 			</File>
 			<File
+				RelativePath=".\GSRendererDX.h"
+				>
+			</File>
+			<File
+				RelativePath=".\GSRendererDX10.h"
+				>
+			</File>
+			<File
+				RelativePath=".\GSRendererDX11.h"
+				>
+			</File>
+			<File
+				RelativePath=".\GSRendererDX9.h"
+				>
+			</File>
+			<File
 				RelativePath=".\GSRendererHW.h"
-				>
-			</File>
-			<File
-				RelativePath=".\GSRendererHW10.h"
-				>
-			</File>
-			<File
-				RelativePath=".\GSRendererHW11.h"
-				>
-			</File>
-			<File
-				RelativePath=".\GSRendererHW9.h"
 				>
 			</File>
 			<File

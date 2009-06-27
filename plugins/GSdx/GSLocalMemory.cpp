@@ -30,14 +30,17 @@
 #define ASSERT_BLOCK(r, w, h) \
 	ASSERT((r).width() >= w && (r).height() >= h && !((r).left&(w-1)) && !((r).top&(h-1)) && !((r).right&(w-1)) && !((r).bottom&(h-1))); \
 
-#define FOREACH_BLOCK_START(w, h, bpp) \
+#define FOREACH_BLOCK_START(w, h, bpp, format) \
+	const GSLocalMemory::psm_t& psm = GSLocalMemory::m_psm[format]; \
 	uint32 bp = TEX0.TBP0; \
 	uint32 bw = TEX0.TBW; \
 	int offset = dstpitch * h - r.width() * bpp / 8; \
 	for(int y = r.top, ye = r.bottom; y < ye; y += h, dst += offset) \
 	{ ASSERT_BLOCK(r, w, h); \
+		uint32 base = psm.bn(0, y, bp, bw); \
 		for(int x = r.left, xe = r.right; x < xe; x += w, dst += w * bpp / 8) \
 		{ \
+			const uint8* src = BlockPtr(base + psm.blockOffset[x >> 3]); \
 
 #define FOREACH_BLOCK_END }}
 
@@ -462,7 +465,7 @@ GSLocalMemory::~GSLocalMemory()
 
 	for(hash_map<uint32, Offset*>::iterator i = m_omap.begin(); i != m_omap.end(); i++)
 	{
-		Offset* o = (*i).second;
+		Offset* o = i->second;
 		
 		_aligned_free(o->col[0]);
 
@@ -471,7 +474,7 @@ GSLocalMemory::~GSLocalMemory()
 
 	for(hash_map<uint32, Offset4*>::iterator i = m_o4map.begin(); i != m_o4map.end(); i++)
 	{
-		_aligned_free((*i).second);
+		_aligned_free(i->second);
 	}
 }
 
@@ -487,7 +490,7 @@ GSLocalMemory::Offset* GSLocalMemory::GetOffset(uint32 bp, uint32 bw, uint32 psm
 
 	if(i != m_omap.end())
 	{
-		return (*i).second;
+		return i->second;
 	}
 
 	Offset* o = (Offset*)_aligned_malloc(sizeof(Offset), 16);
@@ -536,7 +539,7 @@ GSLocalMemory::Offset4* GSLocalMemory::GetOffset4(const GIFRegFRAME& FRAME, cons
 
 	if(i != m_o4map.end())
 	{
-		return (*i).second;
+		return i->second;
 	}
 
 	Offset4* o = (Offset4*)_aligned_malloc(sizeof(Offset4), 16);
@@ -1435,9 +1438,9 @@ void GSLocalMemory::ReadImageX(int& tx, int& ty, uint8* dst, int len, GIFRegBITB
 
 void GSLocalMemory::ReadTexture32(const GSVector4i& r, uint8* dst, int dstpitch, const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA) const
 {
-	FOREACH_BLOCK_START(8, 8, 32)
+	FOREACH_BLOCK_START(8, 8, 32, PSM_PSMCT32)
 	{
-		ReadBlock32<true>(BlockPtr32(x, y, bp, bw), dst, dstpitch);
+		ReadBlock32<true>(src, dst, dstpitch);
 	}
 	FOREACH_BLOCK_END
 }
@@ -1446,17 +1449,17 @@ void GSLocalMemory::ReadTexture24(const GSVector4i& r, uint8* dst, int dstpitch,
 {
 	if(TEXA.AEM)
 	{
-		FOREACH_BLOCK_START(8, 8, 32)
+		FOREACH_BLOCK_START(8, 8, 32, PSM_PSMCT24)
 		{
-			ReadAndExpandBlock24<true>(BlockPtr32(x, y, bp, bw), dst, dstpitch, TEXA);
+			ReadAndExpandBlock24<true>(src, dst, dstpitch, TEXA);
 		}
 		FOREACH_BLOCK_END
 	}
 	else
 	{
-		FOREACH_BLOCK_START(8, 8, 32)
+		FOREACH_BLOCK_START(8, 8, 32, PSM_PSMCT24)
 		{
-			ReadAndExpandBlock24<false>(BlockPtr32(x, y, bp, bw), dst, dstpitch, TEXA);
+			ReadAndExpandBlock24<false>(src, dst, dstpitch, TEXA);
 		}
 		FOREACH_BLOCK_END
 	}
@@ -1466,9 +1469,9 @@ void GSLocalMemory::ReadTexture16(const GSVector4i& r, uint8* dst, int dstpitch,
 {
 	__declspec(align(16)) uint16 block[16 * 8];
 
-	FOREACH_BLOCK_START(16, 8, 32)
+	FOREACH_BLOCK_START(16, 8, 32, PSM_PSMCT16)
 	{
-		ReadBlock16<true>(BlockPtr16(x, y, bp, bw), (uint8*)block, sizeof(block) / 8);
+		ReadBlock16<true>(src, (uint8*)block, sizeof(block) / 8);
 
 		ExpandBlock16(block, dst, dstpitch, TEXA);
 	}
@@ -1479,9 +1482,9 @@ void GSLocalMemory::ReadTexture16S(const GSVector4i& r, uint8* dst, int dstpitch
 {
 	__declspec(align(16)) uint16 block[16 * 8];
 
-	FOREACH_BLOCK_START(16, 8, 32)
+	FOREACH_BLOCK_START(16, 8, 32, PSM_PSMCT16S)
 	{
-		ReadBlock16<true>(BlockPtr16S(x, y, bp, bw), (uint8*)block, sizeof(block) / 8);
+		ReadBlock16<true>(src, (uint8*)block, sizeof(block) / 8);
 
 		ExpandBlock16(block, dst, dstpitch, TEXA);
 	}
@@ -1492,9 +1495,9 @@ void GSLocalMemory::ReadTexture8(const GSVector4i& r, uint8* dst, int dstpitch, 
 {
 	const uint32* pal = m_clut;
 
-	FOREACH_BLOCK_START(16, 16, 32)
+	FOREACH_BLOCK_START(16, 16, 32, PSM_PSMT8)
 	{
-		ReadAndExpandBlock8_32(BlockPtr8(x, y, bp, bw), dst, dstpitch, pal);
+		ReadAndExpandBlock8_32(src, dst, dstpitch, pal);
 	}
 	FOREACH_BLOCK_END
 }
@@ -1503,9 +1506,9 @@ void GSLocalMemory::ReadTexture4(const GSVector4i& r, uint8* dst, int dstpitch, 
 {
 	const uint64* pal = m_clut;
 
-	FOREACH_BLOCK_START(32, 16, 32)
+	FOREACH_BLOCK_START(32, 16, 32, PSM_PSMT4)
 	{
-		ReadAndExpandBlock4_32(BlockPtr4(x, y, bp, bw), dst, dstpitch, pal);
+		ReadAndExpandBlock4_32(src, dst, dstpitch, pal);
 	}
 	FOREACH_BLOCK_END
 }
@@ -1514,9 +1517,9 @@ void GSLocalMemory::ReadTexture8H(const GSVector4i& r, uint8* dst, int dstpitch,
 {
 	const uint32* pal = m_clut;
 
-	FOREACH_BLOCK_START(8, 8, 32)
+	FOREACH_BLOCK_START(8, 8, 32, PSM_PSMT8H)
 	{
-		ReadAndExpandBlock8H_32(BlockPtr32(x, y, bp, bw), dst, dstpitch, pal);
+		ReadAndExpandBlock8H_32(src, dst, dstpitch, pal);
 	}
 	FOREACH_BLOCK_END
 }
@@ -1525,9 +1528,9 @@ void GSLocalMemory::ReadTexture4HL(const GSVector4i& r, uint8* dst, int dstpitch
 {
 	const uint32* pal = m_clut;
 
-	FOREACH_BLOCK_START(8, 8, 32)
+	FOREACH_BLOCK_START(8, 8, 32, PSM_PSMT4HL)
 	{
-		ReadAndExpandBlock4HL_32(BlockPtr32(x, y, bp, bw), dst, dstpitch, pal);
+		ReadAndExpandBlock4HL_32(src, dst, dstpitch, pal);
 	}
 	FOREACH_BLOCK_END
 }
@@ -1536,18 +1539,18 @@ void GSLocalMemory::ReadTexture4HH(const GSVector4i& r, uint8* dst, int dstpitch
 {
 	const uint32* pal = m_clut;
 
-	FOREACH_BLOCK_START(8, 8, 32)
+	FOREACH_BLOCK_START(8, 8, 32, PSM_PSMT4HH)
 	{
-		ReadAndExpandBlock4HH_32(BlockPtr32(x, y, bp, bw), dst, dstpitch, pal);
+		ReadAndExpandBlock4HH_32(src, dst, dstpitch, pal);
 	}
 	FOREACH_BLOCK_END
 }
 
 void GSLocalMemory::ReadTexture32Z(const GSVector4i& r, uint8* dst, int dstpitch, const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA) const
 {
-	FOREACH_BLOCK_START(8, 8, 32)
+	FOREACH_BLOCK_START(8, 8, 32, PSM_PSMZ32)
 	{
-		ReadBlock32<true>(BlockPtr32Z(x, y, bp, bw), dst, dstpitch);
+		ReadBlock32<true>(src, dst, dstpitch);
 	}
 	FOREACH_BLOCK_END
 }
@@ -1556,17 +1559,17 @@ void GSLocalMemory::ReadTexture24Z(const GSVector4i& r, uint8* dst, int dstpitch
 {
 	if(TEXA.AEM)
 	{
-		FOREACH_BLOCK_START(8, 8, 32)
+		FOREACH_BLOCK_START(8, 8, 32, PSM_PSMZ24)
 		{
-			ReadAndExpandBlock24<true>(BlockPtr32Z(x, y, bp, bw), dst, dstpitch, TEXA);
+			ReadAndExpandBlock24<true>(src, dst, dstpitch, TEXA);
 		}
 		FOREACH_BLOCK_END
 	}
 	else
 	{
-		FOREACH_BLOCK_START(8, 8, 32)
+		FOREACH_BLOCK_START(8, 8, 32, PSM_PSMZ24)
 		{
-			ReadAndExpandBlock24<false>(BlockPtr32Z(x, y, bp, bw), dst, dstpitch, TEXA);
+			ReadAndExpandBlock24<false>(src, dst, dstpitch, TEXA);
 		}
 		FOREACH_BLOCK_END
 	}
@@ -1576,9 +1579,9 @@ void GSLocalMemory::ReadTexture16Z(const GSVector4i& r, uint8* dst, int dstpitch
 {
 	__declspec(align(16)) uint16 block[16 * 8];
 
-	FOREACH_BLOCK_START(16, 8, 32)
+	FOREACH_BLOCK_START(16, 8, 32, PSM_PSMZ16)
 	{
-		ReadBlock16<true>(BlockPtr16Z(x, y, bp, bw), (uint8*)block, sizeof(block) / 8);
+		ReadBlock16<true>(src, (uint8*)block, sizeof(block) / 8);
 
 		ExpandBlock16(block, dst, dstpitch, TEXA);
 	}
@@ -1589,9 +1592,9 @@ void GSLocalMemory::ReadTexture16SZ(const GSVector4i& r, uint8* dst, int dstpitc
 {
 	__declspec(align(16)) uint16 block[16 * 8];
 
-	FOREACH_BLOCK_START(16, 8, 32)
+	FOREACH_BLOCK_START(16, 8, 32, PSM_PSMZ16S)
 	{
-		ReadBlock16<true>(BlockPtr16SZ(x, y, bp, bw), (uint8*)block, sizeof(block) / 8);
+		ReadBlock16<true>(src, (uint8*)block, sizeof(block) / 8);
 
 		ExpandBlock16(block, dst, dstpitch, TEXA);
 	}
@@ -1736,18 +1739,18 @@ void GSLocalMemory::ReadTexture(const GSVector4i& r, uint8* dst, int dstpitch, c
 
 void GSLocalMemory::ReadTexture16NP(const GSVector4i& r, uint8* dst, int dstpitch, const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA) const
 {
-	FOREACH_BLOCK_START(16, 8, 16)
+	FOREACH_BLOCK_START(16, 8, 16, PSM_PSMCT16)
 	{
-		ReadBlock16<true>(BlockPtr16(x, y, bp, bw), dst, dstpitch);
+		ReadBlock16<true>(src, dst, dstpitch);
 	}
 	FOREACH_BLOCK_END
 }
 
 void GSLocalMemory::ReadTexture16SNP(const GSVector4i& r, uint8* dst, int dstpitch, const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA) const
 {
-	FOREACH_BLOCK_START(16, 8, 16)
+	FOREACH_BLOCK_START(16, 8, 16, PSM_PSMCT16S)
 	{
-		ReadBlock16<true>(BlockPtr16S(x, y, bp, bw), dst, dstpitch);
+		ReadBlock16<true>(src, dst, dstpitch);
 	}
 	FOREACH_BLOCK_END
 }
@@ -1758,9 +1761,9 @@ void GSLocalMemory::ReadTexture8NP(const GSVector4i& r, uint8* dst, int dstpitch
 
 	if(TEX0.CPSM == PSM_PSMCT32 || TEX0.CPSM == PSM_PSMCT24)
 	{
-		FOREACH_BLOCK_START(16, 16, 32)
+		FOREACH_BLOCK_START(16, 16, 32, PSM_PSMT8)
 		{
-			ReadAndExpandBlock8_32(BlockPtr8(x, y, bp, bw), dst, dstpitch, pal);
+			ReadAndExpandBlock8_32(src, dst, dstpitch, pal);
 		}
 		FOREACH_BLOCK_END
 	}
@@ -1770,9 +1773,9 @@ void GSLocalMemory::ReadTexture8NP(const GSVector4i& r, uint8* dst, int dstpitch
 
 		__declspec(align(16)) uint8 block[16 * 16];
 
-		FOREACH_BLOCK_START(16, 16, 16)
+		FOREACH_BLOCK_START(16, 16, 16, PSM_PSMT8)
 		{
-			ReadBlock8<true>(BlockPtr8(x, y, bp, bw), (uint8*)block, sizeof(block) / 16);
+			ReadBlock8<true>(src, (uint8*)block, sizeof(block) / 16);
 
 			ExpandBlock8_16(block, dst, dstpitch, pal);
 		}
@@ -1786,9 +1789,9 @@ void GSLocalMemory::ReadTexture4NP(const GSVector4i& r, uint8* dst, int dstpitch
 
 	if(TEX0.CPSM == PSM_PSMCT32 || TEX0.CPSM == PSM_PSMCT24)
 	{
-		FOREACH_BLOCK_START(32, 16, 32)
+		FOREACH_BLOCK_START(32, 16, 32, PSM_PSMT4)
 		{
-			ReadAndExpandBlock4_32(BlockPtr4(x, y, bp, bw), dst, dstpitch, pal);
+			ReadAndExpandBlock4_32(src, dst, dstpitch, pal);
 		}
 		FOREACH_BLOCK_END
 	}
@@ -1798,9 +1801,9 @@ void GSLocalMemory::ReadTexture4NP(const GSVector4i& r, uint8* dst, int dstpitch
 
 		__declspec(align(16)) uint8 block[(32 / 2) * 16];
 
-		FOREACH_BLOCK_START(32, 16, 16)
+		FOREACH_BLOCK_START(32, 16, 16, PSM_PSMT4)
 		{
-			ReadBlock4<true>(BlockPtr4(x, y, bp, bw), (uint8*)block, sizeof(block) / 16);
+			ReadBlock4<true>(src, (uint8*)block, sizeof(block) / 16);
 
 			ExpandBlock4_16(block, dst, dstpitch, pal);
 		}
@@ -1814,9 +1817,9 @@ void GSLocalMemory::ReadTexture8HNP(const GSVector4i& r, uint8* dst, int dstpitc
 
 	if(TEX0.CPSM == PSM_PSMCT32 || TEX0.CPSM == PSM_PSMCT24)
 	{
-		FOREACH_BLOCK_START(8, 8, 32)
+		FOREACH_BLOCK_START(8, 8, 32, PSM_PSMT8H)
 		{
-			ReadAndExpandBlock8H_32(BlockPtr32(x, y, bp, bw), dst, dstpitch, pal);
+			ReadAndExpandBlock8H_32(src, dst, dstpitch, pal);
 		}
 		FOREACH_BLOCK_END
 	}
@@ -1826,9 +1829,9 @@ void GSLocalMemory::ReadTexture8HNP(const GSVector4i& r, uint8* dst, int dstpitc
 
 		__declspec(align(16)) uint32 block[8 * 8];
 
-		FOREACH_BLOCK_START(8, 8, 16)
+		FOREACH_BLOCK_START(8, 8, 16, PSM_PSMT8H)
 		{
-			ReadBlock32<true>(BlockPtr32(x, y, bp, bw), (uint8*)block, sizeof(block) / 8);
+			ReadBlock32<true>(src, (uint8*)block, sizeof(block) / 8);
 
 			ExpandBlock8H_16(block, dst, dstpitch, pal);
 		}
@@ -1842,9 +1845,9 @@ void GSLocalMemory::ReadTexture4HLNP(const GSVector4i& r, uint8* dst, int dstpit
 
 	if(TEX0.CPSM == PSM_PSMCT32 || TEX0.CPSM == PSM_PSMCT24)
 	{
-		FOREACH_BLOCK_START(8, 8, 32)
+		FOREACH_BLOCK_START(8, 8, 32, PSM_PSMT4HL)
 		{
-			ReadAndExpandBlock4HL_32(BlockPtr32(x, y, bp, bw), dst, dstpitch, pal);
+			ReadAndExpandBlock4HL_32(src, dst, dstpitch, pal);
 		}
 		FOREACH_BLOCK_END
 	}
@@ -1854,9 +1857,9 @@ void GSLocalMemory::ReadTexture4HLNP(const GSVector4i& r, uint8* dst, int dstpit
 
 		__declspec(align(16)) uint32 block[8 * 8];
 
-		FOREACH_BLOCK_START(8, 8, 16)
+		FOREACH_BLOCK_START(8, 8, 16, PSM_PSMT4HL)
 		{
-			ReadBlock32<true>(BlockPtr32(x, y, bp, bw), (uint8*)block, sizeof(block) / 8);
+			ReadBlock32<true>(src, (uint8*)block, sizeof(block) / 8);
 
 			ExpandBlock4HL_16(block, dst, dstpitch, pal);
 		}
@@ -1870,9 +1873,9 @@ void GSLocalMemory::ReadTexture4HHNP(const GSVector4i& r, uint8* dst, int dstpit
 
 	if(TEX0.CPSM == PSM_PSMCT32 || TEX0.CPSM == PSM_PSMCT24)
 	{
-		FOREACH_BLOCK_START(8, 8, 32)
+		FOREACH_BLOCK_START(8, 8, 32, PSM_PSMT4HH)
 		{
-			ReadAndExpandBlock4HH_32(BlockPtr32(x, y, bp, bw), dst, dstpitch, pal);
+			ReadAndExpandBlock4HH_32(src, dst, dstpitch, pal);
 		}
 		FOREACH_BLOCK_END
 	}
@@ -1882,9 +1885,9 @@ void GSLocalMemory::ReadTexture4HHNP(const GSVector4i& r, uint8* dst, int dstpit
 
 		__declspec(align(16)) uint32 block[8 * 8];
 
-		FOREACH_BLOCK_START(8, 8, 16)
+		FOREACH_BLOCK_START(8, 8, 16, PSM_PSMT4HH)
 		{
-			ReadBlock32<true>(BlockPtr32(x, y, bp, bw), (uint8*)block, sizeof(block) / 8);
+			ReadBlock32<true>(src, (uint8*)block, sizeof(block) / 8);
 
 			ExpandBlock4HH_16(block, dst, dstpitch, pal);
 		}
@@ -1894,18 +1897,18 @@ void GSLocalMemory::ReadTexture4HHNP(const GSVector4i& r, uint8* dst, int dstpit
 
 void GSLocalMemory::ReadTexture16ZNP(const GSVector4i& r, uint8* dst, int dstpitch, const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA) const
 {
-	FOREACH_BLOCK_START(16, 8, 16)
+	FOREACH_BLOCK_START(16, 8, 16, PSM_PSMZ16)
 	{
-		ReadBlock16<true>(BlockPtr16Z(x, y, bp, bw), dst, dstpitch);
+		ReadBlock16<true>(src, dst, dstpitch);
 	}
 	FOREACH_BLOCK_END
 }
 
 void GSLocalMemory::ReadTexture16SZNP(const GSVector4i& r, uint8* dst, int dstpitch, const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA) const
 {
-	FOREACH_BLOCK_START(16, 8, 16)
+	FOREACH_BLOCK_START(16, 8, 16, PSM_PSMZ16S)
 	{
-		ReadBlock16<true>(BlockPtr16SZ(x, y, bp, bw), dst, dstpitch);
+		ReadBlock16<true>(src, dst, dstpitch);
 	}
 	FOREACH_BLOCK_END
 }
@@ -1958,45 +1961,45 @@ void GSLocalMemory::ReadTextureNP(const GSVector4i& r, uint8* dst, int dstpitch,
 
 void GSLocalMemory::ReadTexture8P(const GSVector4i& r, uint8* dst, int dstpitch, const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA) const
 {
-	FOREACH_BLOCK_START(16, 16, 8)
+	FOREACH_BLOCK_START(16, 16, 8, PSM_PSMT8)
 	{
-		ReadBlock8<true>(BlockPtr8(x, y, bp, bw), dst, dstpitch);
+		ReadBlock8<true>(src, dst, dstpitch);
 	}
 	FOREACH_BLOCK_END
 }
 
 void GSLocalMemory::ReadTexture4P(const GSVector4i& r, uint8* dst, int dstpitch, const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA) const
 {
-	FOREACH_BLOCK_START(32, 16, 8)
+	FOREACH_BLOCK_START(32, 16, 8, PSM_PSMT4)
 	{
-		ReadBlock4P(BlockPtr4(x, y, bp, bw), dst, dstpitch);
+		ReadBlock4P(src, dst, dstpitch);
 	}
 	FOREACH_BLOCK_END
 }
 
 void GSLocalMemory::ReadTexture8HP(const GSVector4i& r, uint8* dst, int dstpitch, const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA) const
 {
-	FOREACH_BLOCK_START(8, 8, 8)
+	FOREACH_BLOCK_START(8, 8, 8, PSM_PSMT8H)
 	{
-		ReadBlock8HP(BlockPtr32(x, y, bp, bw), dst, dstpitch);
+		ReadBlock8HP(src, dst, dstpitch);
 	}
 	FOREACH_BLOCK_END
 }
 
 void GSLocalMemory::ReadTexture4HLP(const GSVector4i& r, uint8* dst, int dstpitch, const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA) const
 {
-	FOREACH_BLOCK_START(8, 8, 8)
+	FOREACH_BLOCK_START(8, 8, 8, PSM_PSMT4HL)
 	{
-		ReadBlock4HLP(BlockPtr32(x, y, bp, bw), dst, dstpitch);
+		ReadBlock4HLP(src, dst, dstpitch);
 	}
 	FOREACH_BLOCK_END
 }
 
 void GSLocalMemory::ReadTexture4HHP(const GSVector4i& r, uint8* dst, int dstpitch, const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA) const
 {
-	FOREACH_BLOCK_START(8, 8, 8)
+	FOREACH_BLOCK_START(8, 8, 8, PSM_PSMT4HH)
 	{
-		ReadBlock4HHP(BlockPtr32(x, y, bp, bw), dst, dstpitch);
+		ReadBlock4HHP(src, dst, dstpitch);
 	}
 	FOREACH_BLOCK_END
 }

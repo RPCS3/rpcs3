@@ -29,34 +29,27 @@ GSTextureCacheOGL::GSTextureCacheOGL(GSRenderer* r)
 {
 }
 
-// GSRenderTargetOGL
+// SourceOGL
 
-void GSTextureCacheOGL::GSRenderTargetOGL::Read(const GSVector4i& r)
-{
-	// TODO
-}
-
-// GSTextureOGL
-
-bool GSTextureCacheOGL::GSCachedTextureOGL::Create()
+bool GSTextureCacheOGL::SourceOGL::Create()
 {
 	// TODO
 
 	return true;
 }
 
-bool GSTextureCacheOGL::GSCachedTextureOGL::Create(GSRenderTarget* rt)
+bool GSTextureCacheOGL::SourceOGL::Create(Target* dst)
 {
+	m_target = true;
+
 	// TODO
 
 	return true;
 }
 
-bool GSTextureCacheOGL::GSCachedTextureOGL::Create(GSDepthStencil* ds)
+// TargetOGL
+
+void GSTextureCacheOGL::TargetOGL::Read(const GSVector4i& r)
 {
-	m_rendered = true;
-
 	// TODO
-
-	return false;
 }

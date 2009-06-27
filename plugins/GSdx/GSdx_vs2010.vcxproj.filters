@@ -201,13 +201,13 @@
     <ClCompile Include="GSRendererHW.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="GSRendererHW10.cpp">
+    <ClCompile Include="GSRendererDX10.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="GSRendererHW11.cpp">
+    <ClCompile Include="GSRendererDX11.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="GSRendererHW9.cpp">
+    <ClCompile Include="GSRendererDX9.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="GSRendererNull.cpp">
@@ -521,13 +521,13 @@
     <ClInclude Include="GSRendererHW.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="GSRendererHW10.h">
+    <ClInclude Include="GSRendererDX10.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="GSRendererHW11.h">
+    <ClInclude Include="GSRendererDX11.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="GSRendererHW9.h">
+    <ClInclude Include="GSRendererDX9.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="GSRendererNull.h">

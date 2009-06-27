@@ -21,32 +21,28 @@
 
 #pragma once
 
-#include "GSTextureCache.h"
-#include "GSDeviceOGL.h"
+#include "GSRendererDX.h"
+#include "GSVertexHW.h"
+#include "GSTextureCache11.h"
+#include "GSTextureFX11.h"
 
-class GSTextureCacheOGL : public GSTextureCache
+class GSRendererDX11 : public GSRendererDX<GSVertexHW11>
 {
-	class SourceOGL : public Source
-	{
-	public:
-		explicit SourceOGL(GSRenderer* r) : Source(r) {}
-
-		bool Create();
-		bool Create(Target* dst);
-	};
-
-	class TargetOGL : public Target
-	{
-	public:
-		explicit TargetOGL(GSRenderer* r) : Target(r) {}
-
-		void Read(const GSVector4i& r);
-	};
-
 protected:
-	Source* CreateSource() {return new SourceOGL(m_renderer);}
-	Target* CreateTarget() {return new TargetOGL(m_renderer);}
+	void Draw(GS_PRIM_CLASS primclass, GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex);
+
+	struct
+	{
+		CComPtr<ID3D11DepthStencilState> dss;
+		CComPtr<ID3D11BlendState> bs;
+	} m_date;
+
+	void SetupDATE(GSTexture* rt, GSTexture* ds);
 
 public:
-	GSTextureCacheOGL(GSRenderer* r);
+	GSRendererDX11(uint8* base, bool mt, void (*irq)());
+
+	bool Create(const string& title);
+
+	template<uint32 prim, uint32 tme, uint32 fst> void VertexKick(bool skip);
 };

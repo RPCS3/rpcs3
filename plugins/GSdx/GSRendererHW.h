@@ -81,7 +81,7 @@ protected:
 
 		GSTexture* t = NULL;
 
-		if(GSTextureCache::GSRenderTarget* rt = m_tc->GetRenderTarget(TEX0, m_width, m_height, true))
+		if(GSTextureCache::Target* rt = m_tc->LookupTarget(TEX0, m_width, m_height, GSTextureCache::RenderTarget, true, true))
 		{
 			t = rt->m_texture;
 
@@ -128,15 +128,15 @@ protected:
 		TEX0.TBW = context->FRAME.FBW;
 		TEX0.PSM = context->FRAME.PSM;
 
-		GSTextureCache::GSRenderTarget* rt = m_tc->GetRenderTarget(TEX0, m_width, m_height);
+		GSTextureCache::Target* rt = m_tc->LookupTarget(TEX0, m_width, m_height, GSTextureCache::RenderTarget, true);
 
 		TEX0.TBP0 = context->ZBUF.Block();
 		TEX0.TBW = context->FRAME.FBW;
 		TEX0.PSM = context->ZBUF.PSM;
 
-		GSTextureCache::GSDepthStencil* ds = m_tc->GetDepthStencil(TEX0, m_width, m_height);
+		GSTextureCache::Target* ds = m_tc->LookupTarget(TEX0, m_width, m_height, GSTextureCache::DepthStencil, m_context->DepthWrite());
 
-		GSTextureCache::GSCachedTexture* tex = NULL;
+		GSTextureCache::Source* tex = NULL;
 
 		if(PRIM->TME)
 		{
@@ -144,9 +144,9 @@ protected:
 
 			GSVector4i r;
 
-			GetTextureMinMax(r);
+			GetTextureMinMax(r, IsLinear());
 
-			tex = m_tc->GetTexture(r);
+			tex = m_tc->LookupSource(context->TEX0, env.TEXA, r);
 
 			if(!tex) return;
 		}
@@ -157,7 +157,7 @@ protected:
 
 			string s;
 			
-			if(s_save && PRIM->TME) 
+			if(s_save && tex) 
 			{
 				s = format("c:\\temp2\\_%05d_f%I64d_tex_%05x_%d_%d%d_%02x_%02x_%02x_%02x.dds", 
 					s_n, frame, (int)context->TEX0.TBP0, (int)context->TEX0.PSM,
@@ -233,6 +233,30 @@ protected:
 
 		//
 
+		GSVector4i r = GSVector4i(m_vt.m_min.p.xyxy(m_vt.m_max.p)).rintersect(GSVector4i(m_context->scissor.in));
+
+		GIFRegBITBLTBUF BITBLTBUF;
+
+		BITBLTBUF.DBW = context->FRAME.FBW;
+
+		if(fm != 0xffffffff)
+		{
+			BITBLTBUF.DBP = context->FRAME.Block();
+			BITBLTBUF.DPSM = context->FRAME.PSM;
+
+			m_tc->InvalidateVideoMem(BITBLTBUF, r, false);
+		}
+
+		if(zm != 0xffffffff)
+		{
+			BITBLTBUF.DBP = context->ZBUF.Block();
+			BITBLTBUF.DPSM = context->ZBUF.PSM;
+
+			m_tc->InvalidateVideoMem(BITBLTBUF, r, false);
+		}
+
+		//
+
 		OverrideOutput();
 
 		if(s_dump)
@@ -257,13 +281,11 @@ protected:
 
 			s_n++;
 		}
-
-		m_tc->InvalidateTextures(context->FRAME, context->ZBUF);
 	}
 
-	virtual void Draw(GS_PRIM_CLASS primclass, GSTexture* rt, GSTexture* ds, GSTextureCache::GSCachedTexture* tex) = 0;
+	virtual void Draw(GS_PRIM_CLASS primclass, GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex) = 0;
 
-	virtual bool OverrideInput(int& prim, GSTexture* rt, GSTexture* ds, GSTextureCache::GSCachedTexture* t)
+	virtual bool OverrideInput(int& prim, GSTexture* rt, GSTexture* ds, GSTextureCache::Source* t)
 	{
 		#pragma region ffxii pal video conversion
 
@@ -424,7 +446,7 @@ protected:
 				TEX0.TBW = FBW;
 				TEX0.PSM = FPSM;
 
-				if(GSTextureCache::GSDepthStencil* ds = m_tc->GetDepthStencil(TEX0, m_width, m_height))
+				if(GSTextureCache::Target* ds = m_tc->LookupTarget(TEX0, m_width, m_height, GSTextureCache::DepthStencil, true))
 				{
 					m_dev->ClearDepth(ds->m_texture, 0);
 				}

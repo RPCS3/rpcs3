@@ -33,6 +33,7 @@ public:
 		Lamune,
 		KyuuketsuKitanMoonties,
 		PiaCarroteYoukosoGPGakuenPrincess,
+		KazokuKeikakuKokoroNoKizuna,
 		FFX,
 		FFX2,
 		FFXII,

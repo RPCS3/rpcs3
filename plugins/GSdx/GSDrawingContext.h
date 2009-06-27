@@ -89,7 +89,7 @@ public:
 			(int)SCISSOR.SCAX1 + 1,
 			(int)SCISSOR.SCAY1 + 1);
 
-		scissor.ex = GSVector4i(
+		scissor.ex = GSVector4(
 			(int)SCISSOR.SCAX0,
 			(int)SCISSOR.SCAY0,
 			(int)SCISSOR.SCAX1,

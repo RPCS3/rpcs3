@@ -21,19 +21,14 @@
 
 #pragma once
 
-#include "GSRendererHW.h"
+#include "GSRendererDX.h"
 #include "GSVertexHW.h"
 #include "GSTextureCache9.h"
 #include "GSTextureFX9.h"
 
-class GSRendererHW9 : public GSRendererHW<GSVertexHW9>
+class GSRendererDX9 : public GSRendererDX<GSVertexHW9>
 {
 protected:
-	GSTextureFX9 m_tfx;
-	bool m_logz;
-
-	void Draw(GS_PRIM_CLASS primclass, GSTexture* rt, GSTexture* ds, GSTextureCache::GSCachedTexture* tex);
-
 	struct
 	{
 		Direct3DDepthStencilState9 dss;
@@ -42,16 +37,16 @@ protected:
 
 	struct
 	{
-		bool enabled;
 		Direct3DDepthStencilState9 dss;
 		Direct3DBlendState9 bs;
 	} m_fba;
 
+	void Draw(GS_PRIM_CLASS primclass, GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex);
 	void SetupDATE(GSTexture* rt, GSTexture* ds);
 	void UpdateFBA(GSTexture* rt);
 
 public:
-	GSRendererHW9(uint8* base, bool mt, void (*irq)());
+	GSRendererDX9(uint8* base, bool mt, void (*irq)());
 
 	bool Create(const string& title);
 

@@ -121,17 +121,12 @@ public:
 		this->m = m;
 	}
 
-	explicit GSVector4i(const GSVector4& v)
-	{
-		*this = v;
-	}
+	explicit GSVector4i(const GSVector4& v);
 
 	void operator = (const GSVector4i& v) 
 	{
 		m = v.m;
 	}
-
-	void operator = (const GSVector4& v);
 
 	void operator = (int i) 
 	{
@@ -1822,6 +1817,11 @@ public:
 		GSVector4i* s = (GSVector4i*)src;
 		GSVector4i* d = (GSVector4i*)dst;
 
+		if(!d[0].eq(s[0]))
+		{
+			return false;
+		}
+
 		GSVector4i v = GSVector4i::xffffffff();
 
 		for(int i = 0; i < size; i++)
@@ -2312,17 +2312,12 @@ public:
 		*this = GSVector4(GSVector4i::load((int)u32).u8to32());
 	}
 
-	explicit GSVector4(const GSVector4i& v)
-	{
-		*this = v;
-	}
+	explicit GSVector4(const GSVector4i& v);
 
 	void operator = (const GSVector4& v)
 	{
 		m = v.m;
 	}
-
-	void operator = (const GSVector4i& v);
 
 	void operator = (float f)
 	{
@@ -2625,10 +2620,10 @@ public:
 	{
 		GSVector4i mask = GSVector4i::x000000ff();
 
-		a = v & mask;
-		b = (v >> 8) & mask;
-		c = (v >> 16) & mask;
-		d = (v >> 24);
+		a = GSVector4(v & mask);
+		b = GSVector4((v >> 8) & mask);
+		c = GSVector4((v >> 16) & mask);
+		d = GSVector4((v >> 24));
 	}
 
 	__forceinline static void transpose(GSVector4& a, GSVector4& b, GSVector4& c, GSVector4& d)

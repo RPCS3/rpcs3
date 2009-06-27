@@ -22,8 +22,10 @@
 #pragma once
 
 #include "GSVector.h"
+#include "GSDevice.h"
+#include "GSAlignedClass.h"
 
-class GSTextureFX
+class GSTextureFX : public GSAlignedClass<16>
 {
 public:
 	#pragma pack(push, 1)
@@ -87,9 +89,9 @@ public:
 	{
 		GSVector4 FogColor_AREF;
 		GSVector4 HalfTexel;
-		GSVector4 WH_TA;
+		GSVector4 WH;
 		GSVector4 MinMax;
-		GSVector4 MinMaxF;
+		GSVector4 MinF_TA;
 		GSVector4i MskFix;
 
 		struct PSConstantBuffer() 
@@ -240,4 +242,21 @@ public:
 	};
 
 	#pragma pack(pop)
+
+protected:
+	GSDevice* m_dev;
+
+public:
+	GSTextureFX();
+
+	virtual bool Create(GSDevice* dev);
+	
+	virtual void SetupIA(const void* vertices, int count, int prim) = 0;
+	virtual void SetupVS(VSSelector sel, const VSConstantBuffer* cb) = 0;
+	virtual void SetupGS(GSSelector sel) = 0;
+	virtual void SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel, GSTexture* tex, GSTexture* pal) = 0;
+	virtual void UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel) = 0;
+	virtual void SetupRS(int w, int h, const GSVector4i& scissor) = 0;
+	virtual void SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix, GSTexture* rt, GSTexture* ds) = 0;
+	virtual void UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix) = 0;
 };

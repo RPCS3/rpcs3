@@ -426,7 +426,7 @@ void GSRenderer::KeyEvent(GSKeyEventData* e)
 	}
 }
 
-void GSRenderer::GetTextureMinMax(GSVector4i& r)
+void GSRenderer::GetTextureMinMax(GSVector4i& r, bool linear)
 {
 	const GSDrawingContext* context = m_context;
 
@@ -488,7 +488,7 @@ void GSRenderer::GetTextureMinMax(GSVector4i& r)
 	{
 		GSVector4 st = m_vt.m_min.t.xyxy(m_vt.m_max.t);
 
-		if(context->TEX1.IsLinear())
+		if(linear)
 		{
 			st += GSVector4(-0x8000, 0x8000).xxyy();
 		}
@@ -695,6 +695,21 @@ bool GSRenderer::TryAlphaTest(uint32& fm, uint32& zm)
 	}
 
 	return true;
+}
+
+bool GSRenderer::IsLinear()
+{
+	float qmin = m_vt.m_min.t.z;
+	float qmax = m_vt.m_max.t.z;
+
+	if(PRIM->FST)
+	{
+		// assume Q = 1.0f => LOD > 0 (should not, but Q is very often bogus, 0 or DEN)
+
+		qmin = qmax = 1.0f;
+	}
+
+	return m_context->TEX1.IsLinear(qmin, qmax);
 }
 
 bool GSRenderer::IsOpaque()

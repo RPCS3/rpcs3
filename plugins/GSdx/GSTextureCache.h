@@ -26,101 +26,86 @@
 class GSTextureCache
 {
 public:
-	class GSSurface : public GSAlignedClass<16>
+	enum {RenderTarget, DepthStencil};
+
+	class Surface : public GSAlignedClass<16>
 	{
 	protected:
 		GSRenderer* m_renderer;
 
 	public:
 		GSTexture* m_texture;
-		GSTexture* m_palette;
-		bool m_initpalette;
-		int m_age;
-		GSDirtyRectList m_dirty;
 		GIFRegTEX0 m_TEX0;
 		GIFRegTEXA m_TEXA;
+		int m_age;
 
-		explicit GSSurface(GSRenderer* r);
-		virtual ~GSSurface();
+	public:
+		explicit Surface(GSRenderer* r);
+		virtual ~Surface();
 
 		virtual void Update();
 	};
 
-	class GSRenderTarget : public GSSurface
+	class Target;
+
+	class Source : public Surface
 	{
 	public:
-		bool m_used;
-
-		explicit GSRenderTarget(GSRenderer* r);
-
-		void Update();
-
-		virtual bool Create(int w, int h);
-		virtual void Read(const GSVector4i& r) = 0;
-	};
-
-	class GSDepthStencil : public GSSurface
-	{
-	public:
-		bool m_used;
-
-		explicit GSDepthStencil(GSRenderer* renderer);
-
-		void Update();
-
-		virtual bool Create(int w, int h);
-	};
-
-	class GSCachedTexture : public GSSurface
-	{
-	protected:
-		bool GetDirtyRect(GSVector4i& r);
-
-	public:
-		uint32* m_clut; // *
-		GSVector4i m_valid;
+		GSTexture* m_palette;
+		bool m_initpalette;
+		list<int> m_pages;
+		uint32 m_valid[MAX_PAGES]; // each uint32 bits map to the 32 blocks of that page
+		uint32* m_clut;
 		int m_bpp;
-		bool m_rendered;
+		bool m_target;
 
-		explicit GSCachedTexture(GSRenderer* renderer);
-		virtual ~GSCachedTexture();
-
-		void Update(const GSVector4i& rect);
+	public:
+		explicit Source(GSRenderer* renderer);
+		virtual ~Source();
 
 		virtual bool Create() = 0;
-		virtual bool Create(GSRenderTarget* rt) = 0;
-		virtual bool Create(GSDepthStencil* ds) = 0;
+		virtual bool Create(Target* dst) = 0;
+		virtual void Update(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, const GSVector4i& rect);
+
+		void Write(const GSVector4i& r, uint8* buff, int pitch);
+	};
+
+	class Target : public Surface
+	{
+	public:
+		int m_type;
+		bool m_used;
+		GSDirtyRectList m_dirty;
+
+	public:
+		explicit Target(GSRenderer* r);
+
+		virtual bool Create(int w, int h, int type);
+		virtual void Update();
+		virtual void Read(const GSVector4i& r) = 0;
 	};
 
 protected:
 	GSRenderer* m_renderer;
 
-	list<GSRenderTarget*> m_rt;
-	list<GSDepthStencil*> m_ds;
-	list<GSCachedTexture*> m_tex;
-
-	bool m_tex_used;
-
-	template<class T> void RecycleByAge(list<T*>& l, int maxage = 60)
+	struct SourceMap
 	{
-		for(list<T*>::iterator i = l.begin(); i != l.end(); )
-		{
-			list<T*>::iterator j = i++;
+		hash_map<Source*, bool> m_surfaces;
+		hash_map<Source*, bool> m_map[MAX_PAGES];
+		bool m_used;
 
-			T* t = *j;
+		SourceMap() : m_used(false) {}
 
-			if(++t->m_age > maxage)
-			{
-				l.erase(j);
+		void Add(Source* s, const GIFRegTEX0& TEX0);
+		void RemoveAll();
+		void RemoveAt(Source* s);
 
-				delete t;
-			}
-		}
-	}
+	} m_src;
 
-	virtual GSRenderTarget* CreateRenderTarget() = 0;
-	virtual GSDepthStencil* CreateDepthStencil() = 0;
-	virtual GSCachedTexture* CreateTexture() = 0;
+	list<Target*> m_dst[2];
+
+	virtual Source* CreateSource() = 0;
+	virtual Target* CreateTarget() = 0;
 
 public:
 	GSTextureCache(GSRenderer* r);
@@ -128,12 +113,10 @@ public:
 
 	void RemoveAll();
 
-	GSRenderTarget* GetRenderTarget(const GIFRegTEX0& TEX0, int w, int h, bool fb = false);
-	GSDepthStencil* GetDepthStencil(const GIFRegTEX0& TEX0, int w, int h);
-	GSCachedTexture* GetTexture(const GSVector4i& r);
+	Source* LookupSource(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, const GSVector4i& r);
+	Target* LookupTarget(const GIFRegTEX0& TEX0, int w, int h, int type, bool used, bool fb = false);
 
-	void InvalidateTextures(const GIFRegFRAME& FRAME, const GIFRegZBUF& ZBUF);
-	void InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r);
+	void InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r, bool target = true);
 	void InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r);
 
 	void IncAge();

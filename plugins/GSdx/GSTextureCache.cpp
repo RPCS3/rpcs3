@@ -34,94 +34,172 @@ GSTextureCache::~GSTextureCache()
 
 void GSTextureCache::RemoveAll()
 {
-	for(list<GSRenderTarget*>::iterator i = m_rt.begin(); i != m_rt.end(); i++)
+	m_src.RemoveAll();
+
+	for(int type = 0; type < 2; type++)
 	{
-		delete *i;
+		for(list<Target*>::iterator i = m_dst[type].begin(); i != m_dst[type].end(); i++)
+		{
+			delete *i;
+		}
+
+		m_dst[type].clear();
 	}
-
-	m_rt.clear();
-
-	for(list<GSDepthStencil*>::iterator i = m_ds.begin(); i != m_ds.end(); i++)
-	{
-		delete *i;
-	}
-
-	m_ds.clear();
-
-	for(list<GSCachedTexture*>::iterator i = m_tex.begin(); i != m_tex.end(); i++)
-	{
-		delete *i;
-	}
-
-	m_tex.clear();
 }
 
-GSTextureCache::GSRenderTarget* GSTextureCache::GetRenderTarget(const GIFRegTEX0& TEX0, int w, int h, bool fb)
+GSTextureCache::Source* GSTextureCache::LookupSource(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, const GSVector4i& r)
 {
-	GSRenderTarget* rt = NULL;
+	const GSLocalMemory::psm_t& psm = GSLocalMemory::m_psm[TEX0.PSM];
+	const uint32* clut = m_renderer->m_mem.m_clut;
+	
+	Source* src = NULL;
 
-	if(rt == NULL)
+	const hash_map<Source*, bool>& map = m_src.m_map[TEX0.TBP0 >> 5];
+
+	for(hash_map<Source*, bool>::const_iterator i = map.begin(); i != map.end(); i++)
 	{
-		for(list<GSRenderTarget*>::iterator i = m_rt.begin(); i != m_rt.end(); i++)
+		Source* s = i->first;
+
+		if(((s->m_TEX0.u32[0] ^ TEX0.u32[0]) | ((s->m_TEX0.u32[1] ^ TEX0.u32[1]) & 3)) != 0) // TBP0 TBW PSM TW TH
 		{
-			GSRenderTarget* rt2 = *i;
+			continue;
+		}
 
-			if(rt2->m_TEX0.TBP0 == TEX0.TBP0)
+		if((psm.trbpp == 16 || psm.trbpp == 24) && TEX0.TCC && TEXA != s->m_TEXA)
+		{
+			continue;
+		}
+
+		if(psm.pal > 0 && !GSVector4i::compare(s->m_clut, clut, psm.pal * sizeof(clut[0])))
+		{
+			continue;
+		}
+
+		src = s;
+
+		break;
+	}
+
+	Target* dst = NULL;
+
+	if(src == NULL)
+	{
+		for(int type = 0; type < 2 && dst == NULL; type++)
+		{
+			for(list<Target*>::iterator i = m_dst[type].begin(); i != m_dst[type].end(); i++)
 			{
-				m_rt.splice(m_rt.begin(), m_rt, i);
+				Target* t = *i;
 
-				rt = rt2;
+				if(t->m_used && t->m_dirty.empty() && GSUtil::HasSharedBits(t->m_TEX0.TBP0, t->m_TEX0.PSM, TEX0.TBP0, TEX0.PSM))
+				{
+					dst = t;
 
-				if(!fb) rt->m_TEX0 = TEX0;
-
-				rt->Update();
-
-				break;
+					break;
+				}
 			}
 		}
 	}
 
-	if(rt == NULL && fb)
+	if(src == NULL)
 	{
-		// HACK: try to find something close to the base pointer
+		src = CreateSource();
 
-		for(list<GSRenderTarget*>::iterator i = m_rt.begin(); i != m_rt.end(); i++)
+		if(!(dst ? src->Create(dst) : src->Create()))
 		{
-			GSRenderTarget* rt2 = *i;
-
-			if(rt2->m_TEX0.TBP0 <= TEX0.TBP0 && TEX0.TBP0 < rt2->m_TEX0.TBP0 + 0x700 && (!rt || rt2->m_TEX0.TBP0 >= rt->m_TEX0.TBP0))
-			{
-				rt = rt2;
-			}
-		}
-
-		if(rt)
-		{
-			rt->Update();
-		}
-	}
-
-	if(rt == NULL)
-	{
-		rt = CreateRenderTarget();
-
-		rt->m_TEX0 = TEX0;
-
-		if(!rt->Create(w, h))
-		{
-			delete rt;
+			delete src;
 
 			return NULL;
 		}
 
-		m_rt.push_front(rt);
+		if(psm.pal > 0)
+		{
+			memcpy(src->m_clut, clut, psm.pal * sizeof(clut[0]));
+		}
+
+		m_src.Add(src, TEX0);
+	}
+
+	if(psm.pal > 0)
+	{
+		int size = psm.pal * sizeof(clut[0]);
+
+		if(src->m_palette)
+		{
+			if(src->m_initpalette || GSVector4i::update(src->m_clut, clut, size))
+			{
+				src->m_palette->Update(GSVector4i(0, 0, psm.pal, 1), src->m_clut, size);
+				src->m_initpalette = false;
+			}
+		}
+	}
+
+	src->Update(TEX0, TEXA, r);
+
+	m_src.m_used = true;
+
+	return src;
+}
+
+GSTextureCache::Target* GSTextureCache::LookupTarget(const GIFRegTEX0& TEX0, int w, int h, int type, bool used, bool fb)
+{
+	Target* dst = NULL;
+
+	for(list<Target*>::iterator i = m_dst[type].begin(); i != m_dst[type].end(); i++)
+	{
+		Target* t = *i;
+
+		if(t->m_TEX0.TBP0 == TEX0.TBP0)
+		{
+			m_dst[type].splice(m_dst[type].begin(), m_dst[type], i);
+
+			dst = t;
+
+			if(!fb) dst->m_TEX0 = TEX0;
+
+			break;
+		}
+	}
+
+	if(dst == NULL && fb)
+	{
+		// HACK: try to find something close to the base pointer
+
+		for(list<Target*>::iterator i = m_dst[type].begin(); i != m_dst[type].end(); i++)
+		{
+			Target* t = *i;
+
+			if(t->m_TEX0.TBP0 <= TEX0.TBP0 && TEX0.TBP0 < t->m_TEX0.TBP0 + 0x700 && (!dst || t->m_TEX0.TBP0 >= dst->m_TEX0.TBP0))
+			{
+				dst = t;
+			}
+		}
+	}
+
+	if(dst == NULL)
+	{
+		dst = CreateTarget();
+
+		dst->m_TEX0 = TEX0;
+
+		if(!dst->Create(w, h, type))
+		{
+			delete dst;
+
+			return NULL;
+		}
+
+		m_dst[type].push_front(dst);
+	}
+	else
+	{
+		dst->Update();
 	}
 
 	if(m_renderer->CanUpscale())
 	{
 		GSVector4i fr = m_renderer->GetFrameRect();
 
-		int ww = (int)(fr.left + rt->m_TEX0.TBW * 64);
+		int ww = (int)(fr.left + dst->m_TEX0.TBW * 64);
 		int hh = (int)(fr.top + m_renderer->GetDisplayRect().height());
 
 		if(hh <= m_renderer->GetDeviceSize().y / 2)
@@ -136,346 +214,129 @@ GSTextureCache::GSRenderTarget* GSTextureCache::GetRenderTarget(const GIFRegTEX0
 */
 		if(ww > 0 && hh > 0)
 		{
-			rt->m_texture->m_scale.x = (float)w / ww;
-			rt->m_texture->m_scale.y = (float)h / hh;
+			dst->m_texture->m_scale.x = (float)w / ww;
+			dst->m_texture->m_scale.y = (float)h / hh;
 		}
 	}
 
-	if(!fb)
+	if(used)
 	{
-		rt->m_used = true;
+		dst->m_used = true;
 	}
 
-	return rt;
+	return dst;
 }
 
-GSTextureCache::GSDepthStencil* GSTextureCache::GetDepthStencil(const GIFRegTEX0& TEX0, int w, int h)
-{
-	GSDepthStencil* ds = NULL;
-
-	if(ds == NULL)
-	{
-		for(list<GSDepthStencil*>::iterator i = m_ds.begin(); i != m_ds.end(); i++)
-		{
-			GSDepthStencil* ds2 = *i;
-
-			if(ds2->m_TEX0.TBP0 == TEX0.TBP0)
-			{
-				m_ds.splice(m_ds.begin(), m_ds, i);
-
-				ds = ds2;
-
-				ds->m_TEX0 = TEX0;
-
-				ds->Update();
-
-				break;
-			}
-		}
-	}
-
-	if(ds == NULL)
-	{
-		ds = CreateDepthStencil();
-
-		ds->m_TEX0 = TEX0;
-
-		if(!ds->Create(w, h))
-		{
-			delete ds;
-
-			return NULL;
-		}
-
-		m_ds.push_front(ds);
-	}
-
-	if(m_renderer->m_context->DepthWrite())
-	{
-		ds->m_used = true;
-	}
-
-	return ds;
-}
-
-GSTextureCache::GSCachedTexture* GSTextureCache::GetTexture(const GSVector4i& r)
-{
-	const GIFRegTEX0& TEX0 = m_renderer->m_context->TEX0;
-	const GIFRegCLAMP& CLAMP = m_renderer->m_context->CLAMP;
-	const GIFRegTEXA& TEXA = m_renderer->m_env.TEXA;
-
-	const GSLocalMemory::psm_t& psm = GSLocalMemory::m_psm[TEX0.PSM];
-	const uint32* clut = m_renderer->m_mem.m_clut;
-	
-	GSCachedTexture* t = NULL;
-
-	for(list<GSCachedTexture*>::iterator i = m_tex.begin(); i != m_tex.end(); i++)
-	{
-		GSCachedTexture* t2 = *i;
-
-		if(((t2->m_TEX0.u32[0] ^ TEX0.u32[0]) | ((t2->m_TEX0.u32[1] ^ TEX0.u32[1]) & 3)) != 0) // TBP0 TBW PSM TW TH
-		{
-			continue;
-		}
-
-		if((psm.trbpp == 16 || psm.trbpp == 24) && TEX0.TCC && TEXA != t2->m_TEXA)
-		{
-			continue;
-		}
-
-		if(psm.pal > 0 && !(t2->m_TEX0.CPSM == TEX0.CPSM && GSVector4i::compare(t2->m_clut, clut, psm.pal * sizeof(clut[0]))))
-		{
-			continue;
-		}
-
-		t = t2;
-
-		m_tex.splice(m_tex.begin(), m_tex, i);
-
-		break;
-	}
-
-	if(t == NULL)
-	{
-		for(list<GSRenderTarget*>::iterator i = m_rt.begin(); i != m_rt.end(); i++)
-		{
-			GSRenderTarget* rt = *i;
-
-			if(rt->m_dirty.empty() && GSUtil::HasSharedBits(rt->m_TEX0.TBP0, rt->m_TEX0.PSM, TEX0.TBP0, TEX0.PSM))
-			{
-				t = CreateTexture();
-
-				if(!t->Create(rt))
-				{
-					delete t;
-
-					return NULL;
-				}
-
-				m_tex.push_front(t);
-
-				break;
-			}
-		}
-	}
-
-	if(t == NULL)
-	{
-		for(list<GSDepthStencil*>::iterator i = m_ds.begin(); i != m_ds.end(); i++)
-		{
-			GSDepthStencil* ds = *i;
-
-			if(ds->m_dirty.empty() && ds->m_used && GSUtil::HasSharedBits(ds->m_TEX0.TBP0, ds->m_TEX0.PSM, TEX0.TBP0, TEX0.PSM))
-			{
-				t = CreateTexture();
-
-				if(!t->Create(ds))
-				{
-					delete t;
-
-					return NULL;
-				}
-
-				m_tex.push_front(t);
-
-				break;
-			}
-		}
-	}
-
-	if(t == NULL)
-	{
-		t = CreateTexture();
-
-		if(!t->Create())
-		{
-			delete t;
-
-			return NULL;
-		}
-
-		m_tex.push_front(t);
-	}
-
-	if(psm.pal > 0)
-	{
-		int size = psm.pal * sizeof(clut[0]);
-
-		if(t->m_palette)
-		{
-			if(t->m_initpalette)
-			{
-				memcpy(t->m_clut, clut, size);
-				t->m_palette->Update(GSVector4i(0, 0, psm.pal, 1), t->m_clut, size);
-				t->m_initpalette = false;
-			}
-			else
-			{
-				if(GSVector4i::update(t->m_clut, clut, size))
-				{
-					t->m_palette->Update(GSVector4i(0, 0, psm.pal, 1), t->m_clut, size);
-				}
-			}
-		}
-		else
-		{
-			memcpy(t->m_clut, clut, size);
-		}
-	}
-
-	t->Update(r);
-
-	m_tex_used = true;
-
-	return t;
-}
-
-void GSTextureCache::InvalidateTextures(const GIFRegFRAME& FRAME, const GIFRegZBUF& ZBUF)
-{
-	for(list<GSCachedTexture*>::iterator i = m_tex.begin(); i != m_tex.end(); )
-	{
-		list<GSCachedTexture*>::iterator j = i++;
-
-		GSCachedTexture* t = *j;
-
-		if(GSUtil::HasSharedBits(FRAME.Block(), FRAME.PSM, t->m_TEX0.TBP0, t->m_TEX0.PSM)
-		|| GSUtil::HasSharedBits(ZBUF.Block(), ZBUF.PSM, t->m_TEX0.TBP0, t->m_TEX0.PSM))
-		{
-			m_tex.erase(j);
-
-			delete t;
-		}
-	}
-}
-
-void GSTextureCache::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r)
+void GSTextureCache::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& rect, bool target)
 {
 	bool found = false;
 
-	for(list<GSCachedTexture*>::iterator i = m_tex.begin(); i != m_tex.end(); )
+	const GSLocalMemory::psm_t& psm = GSLocalMemory::m_psm[BITBLTBUF.DPSM];
+
+	uint32 bp = BITBLTBUF.DBP;
+	uint32 bw = BITBLTBUF.DBW;
+
+	GSVector2i bs = (bp & 31) == 0 ? psm.pgs : psm.bs;
+
+	GSVector4i r = rect.ralign<GSVector4i::Outside>(bs);
+
+	if(!target)
 	{
-		list<GSCachedTexture*>::iterator j = i++;
+		const hash_map<Source*, bool>& map = m_src.m_map[bp >> 5];
 
-		GSCachedTexture* t = *j;
-
-		if(GSUtil::HasSharedBits(BITBLTBUF.DBP, BITBLTBUF.DPSM, t->m_TEX0.TBP0, t->m_TEX0.PSM))
+		for(hash_map<Source*, bool>::const_iterator i = map.begin(); i != map.end(); )
 		{
-			if(BITBLTBUF.DBW == t->m_TEX0.TBW && !t->m_rendered)
-			{
-				t->m_dirty.push_back(GSDirtyRect(r, BITBLTBUF.DPSM));
+			hash_map<Source*, bool>::const_iterator j = i++;
 
-				found = true;
-			}
-			else
+			Source* s = j->first;
+
+			if(GSUtil::HasSharedBits(bp, BITBLTBUF.DPSM, s->m_TEX0.TBP0, s->m_TEX0.PSM))
 			{
-				m_tex.erase(j);
-				delete t;
+				m_src.RemoveAt(s);
 			}
 		}
-		else if(GSUtil::HasCompatibleBits(BITBLTBUF.DPSM, t->m_TEX0.PSM))
+	}
+
+	for(int y = r.top; y < r.bottom; y += bs.y)
+	{
+		uint32 base = psm.bn(0, y, bp, bw);
+
+		for(int x = r.left; x < r.right; x += bs.x)
 		{
-			if(BITBLTBUF.DBW == t->m_TEX0.TBW && !t->m_rendered)
+			uint32 page = (base + psm.blockOffset[x >> 3]) >> 5;
+
+			if(page < MAX_PAGES)
 			{
-				int rowsize = (int)BITBLTBUF.DBW * 8192;
-				int offset = ((int)BITBLTBUF.DBP - (int)t->m_TEX0.TBP0) * 256;
+				const hash_map<Source*, bool>& map = m_src.m_map[page];
 
-				if(rowsize > 0 && offset % rowsize == 0)
+				for(hash_map<Source*, bool>::const_iterator i = map.begin(); i != map.end(); )
 				{
-					int y = m_renderer->m_mem.m_psm[BITBLTBUF.DPSM].pgs.y * offset / rowsize;
+					hash_map<Source*, bool>::const_iterator j = i++;
 
-					GSVector4i r2(r.left, r.top + y, r.right, r.bottom + y);
+					Source* s = j->first;
 
-					int w = 1 << t->m_TEX0.TW;
-					int h = 1 << t->m_TEX0.TH;
-
-					if(r2.bottom > 0 && r2.top < h && r2.right > 0 && r2.left < w)
+					if(GSUtil::HasSharedBits(BITBLTBUF.DPSM, s->m_TEX0.PSM))
 					{
-						t->m_dirty.push_back(GSDirtyRect(r2, BITBLTBUF.DPSM));
+						if(!s->m_target)
+						{
+							s->m_valid[page] = 0;
+
+							found = true;
+						}
+						else
+						{
+							if(s->m_TEX0.TBP0 == bp)
+							{
+								m_src.RemoveAt(s);
+							}
+						}
 					}
 				}
 			}
 		}
 	}
 
-	for(list<GSRenderTarget*>::iterator i = m_rt.begin(); i != m_rt.end(); )
+	if(!target) return;
+
+	for(int type = 0; type < 2; type++)
 	{
-		list<GSRenderTarget*>::iterator j = i++;
-
-		GSRenderTarget* rt = *j;
-
-		if(GSUtil::HasSharedBits(BITBLTBUF.DBP, BITBLTBUF.DPSM, rt->m_TEX0.TBP0, rt->m_TEX0.PSM))
+		for(list<Target*>::iterator i = m_dst[type].begin(); i != m_dst[type].end(); )
 		{
-			if(!found && GSUtil::HasCompatibleBits(BITBLTBUF.DPSM, rt->m_TEX0.PSM))
-			{
-				rt->m_dirty.push_back(GSDirtyRect(r, BITBLTBUF.DPSM));
-				rt->m_TEX0.TBW = BITBLTBUF.DBW;
-			}
-			else
-			{
-				m_rt.erase(j);
-				delete rt;
-				continue;
-			}
-		}
+			list<Target*>::iterator j = i++;
 
-		if(GSUtil::HasSharedBits(BITBLTBUF.DPSM, rt->m_TEX0.PSM) && BITBLTBUF.DBP < rt->m_TEX0.TBP0)
-		{
-			uint32 rowsize = BITBLTBUF.DBW * 8192;
-			uint32 offset = (uint32)((rt->m_TEX0.TBP0 - BITBLTBUF.DBP) * 256);
+			Target* t = *j;
 
-			if(rowsize > 0 && offset % rowsize == 0)
+			if(GSUtil::HasSharedBits(BITBLTBUF.DBP, BITBLTBUF.DPSM, t->m_TEX0.TBP0, t->m_TEX0.PSM))
 			{
-				int y = m_renderer->m_mem.m_psm[BITBLTBUF.DPSM].pgs.y * offset / rowsize;
-
-				if(r.bottom > y)
+				if(!found && GSUtil::HasCompatibleBits(BITBLTBUF.DPSM, t->m_TEX0.PSM))
 				{
-					// TODO: do not add this rect above too
-					rt->m_dirty.push_back(GSDirtyRect(GSVector4i(r.left, r.top - y, r.right, r.bottom - y), BITBLTBUF.DPSM));
-					rt->m_TEX0.TBW = BITBLTBUF.DBW;
+					t->m_dirty.push_back(GSDirtyRect(r, BITBLTBUF.DPSM));
+					t->m_TEX0.TBW = BITBLTBUF.DBW;
+				}
+				else
+				{
+					m_dst[type].erase(j);
+					delete t;
 					continue;
 				}
 			}
-		}
-	}
 
-	// copypaste for ds
-
-	for(list<GSDepthStencil*>::iterator i = m_ds.begin(); i != m_ds.end(); )
-	{
-		list<GSDepthStencil*>::iterator j = i++;
-
-		GSDepthStencil* ds = *j;
-
-		if(GSUtil::HasSharedBits(BITBLTBUF.DBP, BITBLTBUF.DPSM, ds->m_TEX0.TBP0, ds->m_TEX0.PSM))
-		{
-			if(!found && GSUtil::HasCompatibleBits(BITBLTBUF.DPSM, ds->m_TEX0.PSM))
+			if(GSUtil::HasSharedBits(BITBLTBUF.DPSM, t->m_TEX0.PSM) && BITBLTBUF.DBP < t->m_TEX0.TBP0)
 			{
-				ds->m_dirty.push_back(GSDirtyRect(r, BITBLTBUF.DPSM));
-				ds->m_TEX0.TBW = BITBLTBUF.DBW;
-			}
-			else
-			{
-				m_ds.erase(j);
-				delete ds;
-				continue;
-			}
-		}
+				uint32 rowsize = BITBLTBUF.DBW * 8192;
+				uint32 offset = (uint32)((t->m_TEX0.TBP0 - BITBLTBUF.DBP) * 256);
 
-		if(GSUtil::HasSharedBits(BITBLTBUF.DPSM, ds->m_TEX0.PSM) && BITBLTBUF.DBP < ds->m_TEX0.TBP0)
-		{
-			uint32 rowsize = BITBLTBUF.DBW * 8192;
-			uint32 offset = (uint32)((ds->m_TEX0.TBP0 - BITBLTBUF.DBP) * 256);
-
-			if(rowsize > 0 && offset % rowsize == 0)
-			{
-				int y = m_renderer->m_mem.m_psm[BITBLTBUF.DPSM].pgs.y * offset / rowsize;
-
-				if(r.bottom > y)
+				if(rowsize > 0 && offset % rowsize == 0)
 				{
-					// TODO: do not add this rect above too
-					ds->m_dirty.push_back(GSDirtyRect(GSVector4i(r.left, r.top - y, r.right, r.bottom - y), BITBLTBUF.DPSM));
-					ds->m_TEX0.TBW = BITBLTBUF.DBW;
-					continue;
+					int y = GSLocalMemory::m_psm[BITBLTBUF.DPSM].pgs.y * offset / rowsize;
+
+					if(r.bottom > y)
+					{
+						// TODO: do not add this rect above too
+						t->m_dirty.push_back(GSDirtyRect(GSVector4i(r.left, r.top - y, r.right, r.bottom - y), BITBLTBUF.DPSM));
+						t->m_TEX0.TBW = BITBLTBUF.DBW;
+						continue;
+					}
 				}
 			}
 		}
@@ -484,31 +345,33 @@ void GSTextureCache::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const 
 
 void GSTextureCache::InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r)
 {
-	for(list<GSRenderTarget*>::iterator i = m_rt.begin(); i != m_rt.end(); )
+	for(list<Target*>::iterator i = m_dst[RenderTarget].begin(); i != m_dst[RenderTarget].end(); )
 	{
-		list<GSRenderTarget*>::iterator j = i++;
+		list<Target*>::iterator j = i++;
 
-		GSRenderTarget* rt = *j;
+		Target* t = *j;
 
-		if(GSUtil::HasSharedBits(BITBLTBUF.SBP, BITBLTBUF.SPSM, rt->m_TEX0.TBP0, rt->m_TEX0.PSM))
+		if(GSUtil::HasSharedBits(BITBLTBUF.SBP, BITBLTBUF.SPSM, t->m_TEX0.TBP0, t->m_TEX0.PSM))
 		{
-			if(GSUtil::HasCompatibleBits(BITBLTBUF.SPSM, rt->m_TEX0.PSM))
+			if(GSUtil::HasCompatibleBits(BITBLTBUF.SPSM, t->m_TEX0.PSM))
 			{
-				rt->Read(r);
+				t->Read(r);
+
 				return;
 			}
-			else if(BITBLTBUF.SPSM == PSM_PSMCT32 && (rt->m_TEX0.PSM == PSM_PSMCT16 || rt->m_TEX0.PSM == PSM_PSMCT16S)) 
+			else if(BITBLTBUF.SPSM == PSM_PSMCT32 && (t->m_TEX0.PSM == PSM_PSMCT16 || t->m_TEX0.PSM == PSM_PSMCT16S)) 
 			{
 				// ffx-2 riku changing to her default (shoots some reflecting glass at the end), 16-bit rt read as 32-bit
 
-				rt->Read(GSVector4i(r.left, r.top, r.right, r.top + (r.bottom - r.top) * 2));
+				t->Read(GSVector4i(r.left, r.top, r.right, r.top + (r.bottom - r.top) * 2));
+
 				return;
 			}
 			else
 			{
-				m_rt.erase(j);
-				delete rt;
-				continue;
+				m_dst[RenderTarget].erase(j);
+
+				delete t;
 			}
 		}
 	}
@@ -533,7 +396,7 @@ void GSTextureCache::InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, const 
 
 			if(rowsize > 0 && offset % rowsize == 0)
 			{
-				int y = m_renderer->m_mem.m_psm[BITBLTBUF.SPSM].pgs.y * offset / rowsize;
+				int y = GSLocalMemory::m_psm[BITBLTBUF.SPSM].pgs.y * offset / rowsize;
 
 				if(y < ymin && y < 512)
 				{
@@ -555,57 +418,291 @@ void GSTextureCache::InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, const 
 
 void GSTextureCache::IncAge()
 {
-	RecycleByAge(m_tex, m_tex_used ? 2 : 30);
-	RecycleByAge(m_rt);
-	RecycleByAge(m_ds);
+	int maxage = m_src.m_used ? 3 : 30;
 
-	m_tex_used = false;
+	for(hash_map<Source*, bool>::iterator i = m_src.m_surfaces.begin(); i != m_src.m_surfaces.end(); )
+	{
+		hash_map<Source*, bool>::iterator j = i++;
+
+		Source* s = j->first;
+
+		if(++s->m_age > maxage)
+		{
+			m_src.RemoveAt(s);
+		}
+	}
+
+	m_src.m_used = false;
+
+	maxage = 3;
+
+	for(int type = 0; type < 2; type++)
+	{
+		for(list<Target*>::iterator i = m_dst[type].begin(); i != m_dst[type].end(); )
+		{
+			list<Target*>::iterator j = i++;
+
+			Target* t = *j;
+
+			if(++t->m_age > maxage)
+			{
+				m_dst[type].erase(j);
+
+				delete t;
+			}
+		}
+	}
 }
 
-// GSTextureCache::GSSurface
+// GSTextureCache::Surface
 
-GSTextureCache::GSSurface::GSSurface(GSRenderer* r)
+GSTextureCache::Surface::Surface(GSRenderer* r)
 	: m_renderer(r)
 	, m_texture(NULL)
-	, m_palette(NULL)
-	, m_initpalette(false)
 	, m_age(0)
 {
 	m_TEX0.TBP0 = (uint32)~0;
 }
 
-GSTextureCache::GSSurface::~GSSurface()
+GSTextureCache::Surface::~Surface()
 {
 	m_renderer->m_dev->Recycle(m_texture);
-	m_renderer->m_dev->Recycle(m_palette);
-
-	m_texture = NULL;
-	m_palette = NULL;
 }
 
-void GSTextureCache::GSSurface::Update()
+void GSTextureCache::Surface::Update()
 {
 	m_age = 0;
 }
 
-// GSTextureCache::GSRenderTarget
+// GSTextureCache::Source
 
-GSTextureCache::GSRenderTarget::GSRenderTarget(GSRenderer* r)
-	: GSSurface(r)
-	, m_used(true)
+GSTextureCache::Source::Source(GSRenderer* r)
+	: Surface(r)
+	, m_palette(NULL)
+	, m_initpalette(false)
+	, m_bpp(0)
+	, m_target(false)
+{
+	memset(m_valid, 0, sizeof(m_valid));
+
+	m_clut = (uint32*)_aligned_malloc(256 * sizeof(uint32), 16);
+
+	memset(m_clut, 0, sizeof(m_clut));
+}
+
+GSTextureCache::Source::~Source()
+{
+	m_renderer->m_dev->Recycle(m_palette);
+
+	_aligned_free(m_clut);
+}
+
+void GSTextureCache::Source::Update(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, const GSVector4i& rect)
+{
+	__super::Update();
+
+	if(m_target)
+	{
+		return;
+	}
+
+	m_TEX0 = TEX0;
+	m_TEXA = TEXA;
+
+	const GSLocalMemory::psm_t& psm = GSLocalMemory::m_psm[m_TEX0.PSM];
+
+	GSVector2i s = psm.bs;
+
+	int tw = 1 << m_TEX0.TW;
+	int th = 1 << m_TEX0.TH;
+
+	GSVector4i tr(0, 0, tw, th);
+
+	GSVector4i r = rect.ralign<GSVector4i::Outside>(s);
+
+	uint32 bp = m_TEX0.TBP0;
+	uint32 bw = m_TEX0.TBW;
+
+	uint32 blocks = 0;
+
+	// TODO
+	static uint8* buff = (uint8*)_aligned_malloc(1024 * 16 * sizeof(uint32), 16); // max decompressed size for a row of blocks (1024 x 16, 4bpp)
+	
+	int pitch = max(tw, s.x) * sizeof(uint32);
+
+	GSLocalMemory::readTexture rtx = psm.rtx;
+
+	const GSLocalMemory& mem = m_renderer->m_mem;
+
+	// TODO: bw == 0 (sfex)
+
+	if(tw <= (bw << 6))
+	{
+		// r.right = min(r.right, bw << 6);
+
+		for(int y = r.top; y < r.bottom; y += s.y)
+		{
+			uint32 base = psm.bn(0, y, bp, bw);
+
+			int left = r.left;
+			int right = r.left;
+
+			for(int x = r.left; x < r.right; x += s.x)
+			{
+				uint32 block = base + psm.blockOffset[x >> 3];
+
+				if(block < MAX_BLOCKS)
+				{
+					uint32 row = block >> 5;
+					uint32 col = 1 << (block & 31);
+
+					if((m_valid[row] & col) == 0)
+					{
+						m_valid[row] |= col;
+
+						if(right < x)
+						{
+							Write(GSVector4i(left, y, right, y + s.y).rintersect(tr), buff, pitch);
+
+							left = right = x;
+						}
+
+						right += s.x;
+
+						blocks++;
+					}
+				}
+			}
+
+			if(left < right)
+			{
+				Write(GSVector4i(left, y, right, y + s.y).rintersect(tr), buff, pitch);
+			}
+		}
+	}
+	else
+	{
+		// unfortunatelly a block may be part of the same texture multiple times at different places (tw 1024 > tbw 640, between 640 -> 1024 it is repeated from the next row), 
+		// so just can't set the block's bit to valid in one pass, even if 99.9% of the games don't address the repeated part at the right side
+		
+		// TODO: still bogus if those repeated parts aren't fetched together
+
+		for(int y = r.top; y < r.bottom; y += s.y)
+		{
+			uint32 base = psm.bn(0, y, bp, bw);
+
+			int left = r.left;
+			int right = r.left;
+
+			for(int x = r.left; x < r.right; x += s.x)
+			{
+				uint32 block = base + psm.blockOffset[x >> 3];
+
+				if(block < MAX_BLOCKS)
+				{
+					uint32 row = block >> 5;
+					uint32 col = 1 << (block & 31);
+
+					if((m_valid[row] & col) == 0)
+					{
+						if(right < x)
+						{
+							Write(GSVector4i(left, y, right, y + s.y).rintersect(tr), buff, pitch);
+
+							left = right = x;
+						}
+
+						right += s.x;
+
+						blocks++;
+					}
+				}
+			}
+
+			if(left < right)
+			{
+				Write(GSVector4i(left, y, right, y + s.y).rintersect(tr), buff, pitch);
+			}
+		}
+
+		for(int y = r.top; y < r.bottom; y += s.y)
+		{
+			uint32 base = psm.bn(0, y, bp, bw);
+
+			for(int x = r.left; x < r.right; x += s.x)
+			{
+				uint32 block = base + psm.blockOffset[x >> 3];
+
+				if(block < MAX_BLOCKS)
+				{
+					uint32 row = block >> 5;
+					uint32 col = 1 << (block & 31);
+
+					m_valid[row] |= col;
+				}
+			}
+		}
+	}
+
+	//_aligned_free(buff);
+
+	m_renderer->m_perfmon.Put(GSPerfMon::Unswizzle, s.x * s.y * sizeof(uint32) * blocks);
+}
+
+void GSTextureCache::Source::Write(const GSVector4i& r, uint8* buff, int pitch)
+{
+	if(r.rempty()) return;
+
+	GSLocalMemory::readTexture rtx = GSLocalMemory::m_psm[m_TEX0.PSM].rtx;
+
+	GSTexture::GSMap m;
+
+	if(m_texture->Map(m, &r))
+	{
+		(m_renderer->m_mem.*rtx)(r, m.bits, m.pitch, m_TEX0, m_TEXA);
+
+		m_texture->Unmap();
+	}
+	else
+	{
+		(m_renderer->m_mem.*rtx)(r, buff, pitch, m_TEX0, m_TEXA);
+
+		m_texture->Update(r, buff, pitch);
+	}
+}
+
+// GSTextureCache::Target
+
+GSTextureCache::Target::Target(GSRenderer* r)
+	: Surface(r)
+	, m_type(-1)
+	, m_used(false)
 {
 }
 
-bool GSTextureCache::GSRenderTarget::Create(int w, int h)
+bool GSTextureCache::Target::Create(int w, int h, int type)
 {
+	ASSERT(m_texture == NULL);
+
 	// FIXME: initial data should be unswizzled from local mem in Update() if dirty
 
-	m_texture = m_renderer->m_dev->CreateRenderTarget(w, h);
+	m_type = type;
+
+	if(type == RenderTarget)
+	{
+		m_texture = m_renderer->m_dev->CreateRenderTarget(w, h);
+
+		m_used = true;
+	}
+	else if(type == DepthStencil)
+	{
+		m_texture = m_renderer->m_dev->CreateDepthStencil(w, h);
+	}
 
 	return m_texture != NULL;
 }
 
-void GSTextureCache::GSRenderTarget::Update()
+void GSTextureCache::Target::Update()
 {
 	__super::Update();
 
@@ -615,200 +712,112 @@ void GSTextureCache::GSRenderTarget::Update()
 
 	if(r.rempty()) return;
 
-	int w = r.width();
-	int h = r.height();
-
-	if(GSTexture* t = m_renderer->m_dev->CreateTexture(w, h))
+	if(m_type == RenderTarget)
 	{
-		GIFRegTEXA TEXA;
+		int w = r.width();
+		int h = r.height();
 
-		TEXA.AEM = 1;
-		TEXA.TA0 = 0;
-		TEXA.TA1 = 0x80;
-
-		GSTexture::GSMap m;
-
-		if(t->Map(m))
+		if(GSTexture* t = m_renderer->m_dev->CreateTexture(w, h))
 		{
-			m_renderer->m_mem.ReadTexture(r, m.bits,  m.pitch, m_TEX0, TEXA);
+			GIFRegTEXA TEXA;
 
-			t->Unmap();
-		}
-		else
-		{
-			static uint8* buff = (uint8*)::_aligned_malloc(1024 * 1024 * 4, 16);
-			
-			int pitch = ((w + 3) & ~3) * 4;
+			TEXA.AEM = 1;
+			TEXA.TA0 = 0;
+			TEXA.TA1 = 0x80;
 
-			m_renderer->m_mem.ReadTexture(r, buff, pitch, m_TEX0, TEXA);
-			
-			t->Update(r.rsize(), buff, pitch);
-		}
+			GSTexture::GSMap m;
 
-		// m_renderer->m_perfmon.Put(GSPerfMon::Unswizzle, w * h * 4);
+			if(t->Map(m))
+			{
+				m_renderer->m_mem.ReadTexture(r, m.bits,  m.pitch, m_TEX0, TEXA);
 
-		m_renderer->m_dev->StretchRect(t, m_texture, GSVector4(r) * GSVector4(m_texture->m_scale).xyxy());
+				t->Unmap();
+			}
+			else
+			{
+				static uint8* buff = (uint8*)::_aligned_malloc(1024 * 1024 * 4, 16);
+				
+				int pitch = ((w + 3) & ~3) * 4;
 
-		m_renderer->m_dev->Recycle(t);
-	}
-}
+				m_renderer->m_mem.ReadTexture(r, buff, pitch, m_TEX0, TEXA);
+				
+				t->Update(r.rsize(), buff, pitch);
+			}
 
-// GSTextureCache::GSDepthStencil
+			// m_renderer->m_perfmon.Put(GSPerfMon::Unswizzle, w * h * 4);
 
-GSTextureCache::GSDepthStencil::GSDepthStencil(GSRenderer* r)
-	: GSSurface(r)
-	, m_used(false)
-{
-}
+			m_renderer->m_dev->StretchRect(t, m_texture, GSVector4(r) * GSVector4(m_texture->m_scale).xyxy());
 
-bool GSTextureCache::GSDepthStencil::Create(int w, int h)
-{
-	// FIXME: initial data should be unswizzled from local mem in Update() if dirty
-
-	m_texture = m_renderer->m_dev->CreateDepthStencil(w, h);
-
-	return m_texture != NULL;
-}
-
-void GSTextureCache::GSDepthStencil::Update()
-{
-	__super::Update();
-
-	GSVector4i r = m_dirty.GetDirtyRectAndClear(m_TEX0, m_texture->GetSize());
-
-	if(r.rempty()) return;
-
-	// TODO
-
-	m_renderer->m_dev->ClearDepth(m_texture, 0);
-}
-
-// GSTextureCache::GSCachedTexture
-
-GSTextureCache::GSCachedTexture::GSCachedTexture(GSRenderer* r)
-	: GSSurface(r)
-	, m_bpp(0)
-	, m_rendered(false)
-{
-	m_valid = GSVector4i::zero();
-
-	m_clut = (uint32*)_aligned_malloc(256 * sizeof(uint32), 16);
-
-	memset(m_clut, 0, sizeof(m_clut));
-}
-
-GSTextureCache::GSCachedTexture::~GSCachedTexture()
-{
-	_aligned_free(m_clut);
-}
-
-void GSTextureCache::GSCachedTexture::Update(const GSVector4i& rect)
-{
-	__super::Update();
-
-	if(m_rendered)
-	{
-		return;
-	}
-
-	GSVector4i r = rect;
-
-	if(!GetDirtyRect(r))
-	{
-		return;
-	}
-
-	m_valid = m_valid.runion(r);
-
-	GSTexture::GSMap m;
-
-	if(m_texture->Map(m, &r))
-	{
-		// in dx9 managed textures can be written directly, less copying is faster, but still not as fast as dx10's UpdateResource
-
-		m_renderer->m_mem.ReadTexture(r, m.bits, m.pitch, m_renderer->m_context->TEX0, m_renderer->m_env.TEXA);
-
-		m_texture->Unmap();
-	}
-	else
-	{
-		static uint8* buff = (uint8*)::_aligned_malloc(1024 * 1024 * 4, 16);
-		
-		int pitch = ((r.width() + 3) & ~3) * 4;
-
-		m_renderer->m_mem.ReadTexture(r, buff, pitch, m_renderer->m_context->TEX0, m_renderer->m_env.TEXA);
-
-		m_texture->Update(r, buff, pitch);
-	}
-
-	m_renderer->m_perfmon.Put(GSPerfMon::Unswizzle, r.width() * r.height() * 4);
-}
-
-bool GSTextureCache::GSCachedTexture::GetDirtyRect(GSVector4i& r)
-{
-	int w = 1 << m_TEX0.TW;
-	int h = 1 << m_TEX0.TH;
-
-	GSVector4i tr(0, 0, w, h);
-
-	for(list<GSDirtyRect>::iterator i = m_dirty.begin(); i != m_dirty.end(); i++)
-	{
-		const GSVector4i& dirty = i->GetDirtyRect(m_TEX0).rintersect(tr);
-
-		if(!m_valid.rintersect(dirty).rempty())
-		{
-			 // find the rect having the largest area, outside dirty, inside m_valid
-
-			GSVector4i left(m_valid.left, m_valid.top, min(m_valid.right, dirty.left), m_valid.bottom);
-			GSVector4i top(m_valid.left, m_valid.top, m_valid.right, min(m_valid.bottom, dirty.top));
-			GSVector4i right(max(m_valid.left, dirty.right), m_valid.top, m_valid.right, m_valid.bottom);
-			GSVector4i bottom(m_valid.left, max(m_valid.top, dirty.bottom), m_valid.right, m_valid.bottom);
-
-			int leftsize = !left.rempty() ? left.width() * left.height() : 0;
-			int topsize = !top.rempty() ? top.width() * top.height() : 0;
-			int rightsize = !right.rempty() ? right.width() * right.height() : 0;
-			int bottomsize = !bottom.rempty() ? bottom.width() * bottom.height() : 0;
-
-			// TODO: sort
-
-			m_valid = 
-				leftsize > 0 ? left : 
-				topsize > 0 ? top : 
-				rightsize > 0 ? right : 
-				bottomsize > 0 ? bottom : 
-				GSVector4i::zero();
+			m_renderer->m_dev->Recycle(t);
 		}
 	}
+	else if(m_type == DepthStencil)
+	{
+		// do the most likely thing a direct write would do, clear it
 
-	m_dirty.clear();
+		m_renderer->m_dev->ClearDepth(m_texture, 0);
+	}
+}
 
-	if(GSUtil::IsRectInRect(r, m_valid))
+// GSTextureCache::SourceMap
+
+void GSTextureCache::SourceMap::Add(Source* s, const GIFRegTEX0& TEX0)
+{
+	m_surfaces[s] = true;
+
+	int tw = 1 << TEX0.TW;
+	int th = 1 << TEX0.TH;
+
+	uint32 bp = TEX0.TBP0;
+	uint32 bw = TEX0.TBW;
+
+	const GSLocalMemory::psm_t& psm = GSLocalMemory::m_psm[TEX0.PSM];
+
+	GSVector2i bs = (bp & 31) == 0 ? psm.pgs : psm.bs;
+
+	int blocks = 0;
+
+	for(int y = 0; y < th; y += bs.y)
 	{
-		return false;
+		uint32 base = psm.bn(0, y, bp, bw);
+
+		for(int x = 0; x < tw; x += bs.x)
+		{
+			uint32 page = (base + psm.blockOffset[x >> 3]) >> 5;
+
+			if(page < MAX_PAGES)
+			{
+				m_map[page][s] = true;
+
+				s->m_pages.push_back(page);
+			}
+		}
 	}
-	else if(GSUtil::IsRectInRectH(r, m_valid) && (r.left >= m_valid.left || r.right <= m_valid.right))
+}
+
+void GSTextureCache::SourceMap::RemoveAll()
+{
+	for(hash_map<Source*, bool>::iterator i = m_surfaces.begin(); i != m_surfaces.end(); i++)
 	{
-		r.top = m_valid.top;
-		r.bottom = m_valid.bottom;
-		if(r.left < m_valid.left) r.right = m_valid.left;
-		else r.left = m_valid.right; // if(r.right > m_valid.right)
-	}
-	else if(GSUtil::IsRectInRectV(r, m_valid) && (r.top >= m_valid.top || r.bottom <= m_valid.bottom))
-	{
-		r.left = m_valid.left;
-		r.right = m_valid.right;
-		if(r.top < m_valid.top) r.bottom = m_valid.top;
-		else r.top = m_valid.bottom; // if(r.bottom > m_valid.bottom)
-	}
-	else
-	{
-		r = r.runion(m_valid);
+		delete i->first;
 	}
 
-	if(r.rempty())
+	m_surfaces.clear();
+
+	for(int i = 0; i < MAX_PAGES; i++)
 	{
-		return false;
+		m_map[i].clear();
+	}
+}
+
+void GSTextureCache::SourceMap::RemoveAt(Source* s)
+{
+	m_surfaces.erase(s);
+
+	for(list<int>::iterator i = s->m_pages.begin(); i != s->m_pages.end(); i++)
+	{
+		m_map[*i].erase(s);
 	}
 
-	return true;
+	delete s;
 }

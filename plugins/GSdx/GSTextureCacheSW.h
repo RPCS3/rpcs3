@@ -23,9 +23,6 @@
 
 #include "GSRenderer.h"
 
-#define MAX_PAGES 512
-#define MAX_BLOCKS 16384
-
 class GSTextureCacheSW
 {
 public:

@@ -26,34 +26,26 @@
 
 class GSTextureCache10 : public GSTextureCache
 {
-	class GSRenderTargetHW10 : public GSRenderTarget
+	class Source10 : public Source
 	{
 	public:
-		explicit GSRenderTargetHW10(GSRenderer* r) : GSRenderTarget(r) {}
+		explicit Source10(GSRenderer* r) : Source(r) {}
+
+		bool Create();
+		bool Create(Target* dst);
+	};
+
+	class Target10 : public Target
+	{
+	public:
+		explicit Target10(GSRenderer* r) : Target(r) {}
 
 		void Read(const GSVector4i& r);
 	};
 
-	class GSDepthStencilHW10 : public GSDepthStencil
-	{
-	public:
-		explicit GSDepthStencilHW10(GSRenderer* r) : GSDepthStencil(r) {}
-	};
-
-	class GSCachedTextureHW10 : public GSCachedTexture
-	{
-	public:
-		explicit GSCachedTextureHW10(GSRenderer* r) : GSCachedTexture(r) {}
-
-		bool Create();
-		bool Create(GSRenderTarget* rt);
-		bool Create(GSDepthStencil* ds);
-	};
-
 protected:
-	GSRenderTarget* CreateRenderTarget() {return new GSRenderTargetHW10(m_renderer);}
-	GSDepthStencil* CreateDepthStencil() {return new GSDepthStencilHW10(m_renderer);}
-	GSCachedTexture* CreateTexture() {return new GSCachedTextureHW10(m_renderer);}
+	Source* CreateSource() {return new Source10(m_renderer);}
+	Target* CreateTarget() {return new Target10(m_renderer);}
 
 public:
 	GSTextureCache10(GSRenderer* r);

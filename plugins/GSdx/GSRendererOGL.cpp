@@ -64,13 +64,12 @@ void GSRendererOGL::VertexKick(bool skip)
 	}
 }
 
-void GSRendererOGL::Draw(int prim, GSTexture* rt, GSTexture* ds, GSTextureCache::GSCachedTexture* tex)
+void GSRendererOGL::Draw(int prim, GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex)
 {
 	GSDrawingEnvironment& env = m_env;
 	GSDrawingContext* context = m_context;
 
 	// m_perfmon.Put(GSPerfMon::Prim, prims);
-	m_perfmon.Put(GSPerfMon::Draw, 1);
 
 	m_dev->BeginScene();
 

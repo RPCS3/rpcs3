@@ -329,7 +329,7 @@ void GSRendererSW::GetScanlineParam(GSScanlineParam& p, GS_PRIM_CLASS primclass)
 			p.sel.tfx = context->TEX0.TFX;
 			p.sel.tcc = context->TEX0.TCC;
 			p.sel.fst = PRIM->FST;
-			p.sel.ltf = context->TEX1.IsLinear();
+			p.sel.ltf = IsLinear();
 			p.sel.tlu = GSLocalMemory::m_psm[context->TEX0.PSM].pal > 0;
 			p.sel.wms = context->CLAMP.WMS;
 			p.sel.wmt = context->CLAMP.WMT;
@@ -394,7 +394,7 @@ void GSRendererSW::GetScanlineParam(GSScanlineParam& p, GS_PRIM_CLASS primclass)
 
 			GSVector4i r;
 
-			GetTextureMinMax(r);
+			GetTextureMinMax(r, p.sel.ltf);
 
 			const GSTextureCacheSW::GSTexture* t = m_tc->Lookup(context->TEX0, env.TEXA, r);
 

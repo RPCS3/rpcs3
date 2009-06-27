@@ -68,7 +68,7 @@ public:
 	{
 		for(hash_map<KEY, ActivePtr*>::iterator i = m_map_active.begin(); i != m_map_active.end(); i++)
 		{
-			delete (*i).second;
+			delete i->second;
 		}
 	}
 
@@ -80,7 +80,7 @@ public:
 
 		if(i != m_map_active.end())
 		{
-			m_active = (*i).second;
+			m_active = i->second;
 		}
 		else
 		{
@@ -92,7 +92,7 @@ public:
 
 			p->frame = (uint64)-1;
 
-			p->f = i != m_map.end() ? (*i).second : GetDefaultFunction(key);
+			p->f = i != m_map.end() ? i->second : GetDefaultFunction(key);
 
 			m_map_active[key] = p;
 
@@ -123,7 +123,7 @@ public:
 
 		for(hash_map<KEY, ActivePtr*>::iterator i = m_map_active.begin(); i != m_map_active.end(); i++)
 		{
-			ActivePtr* p = (*i).second;
+			ActivePtr* p = i->second;
 			
 			if(p->frames)
 			{
@@ -133,8 +133,8 @@ public:
 
 		for(hash_map<KEY, ActivePtr*>::iterator i = m_map_active.begin(); i != m_map_active.end(); i++)
 		{
-			KEY key = (*i).first;
-			ActivePtr* p = (*i).second;
+			KEY key = i->first;
+			ActivePtr* p = i->second;
 
 			if(p->frames > 0)
 			{
@@ -179,7 +179,7 @@ public:
 	{
 		for(hash_map<uint64, CG*>::iterator i = m_cgmap.begin(); i != m_cgmap.end(); i++)
 		{
-			delete (*i).second;
+			delete i->second;
 		}
 	}
 
@@ -191,7 +191,7 @@ public:
 
 		if(i != m_cgmap.end())
 		{
-			cg = (*i).second;
+			cg = i->second;
 		}
 		else
 		{

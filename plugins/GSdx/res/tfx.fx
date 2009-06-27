@@ -76,10 +76,10 @@ cbuffer cb1
 	float3 FogColor;
 	float AREF;
 	float4 HalfTexel;
-	float2 WH;
-	float2 TA;
+	float4 WH;
 	float4 MinMax;
-	float4 MinMaxF;
+	float2 MinF;
+	float2 TA;
 	uint4 MskFix;
 };
 
@@ -145,11 +145,11 @@ float4 ps_params[5];
 #define FogColor	ps_params[0].bgr
 #define AREF		ps_params[0].a
 #define HalfTexel	ps_params[1]
-#define WH			ps_params[2].xy
-#define TA0			ps_params[2].z
-#define TA1			ps_params[2].w
+#define WH			ps_params[2]
 #define MinMax		ps_params[3]
-#define MinMaxF		ps_params[4]
+#define MinF		ps_params[4].xy
+#define TA0			ps_params[4].z
+#define TA1			ps_params[4].w
 
 #endif
 
@@ -198,7 +198,7 @@ float4 wrapuv(float4 uv)
 		else if(PS_WMS == 3)
 		{
 			#if SHADER_MODEL >= 0x400
-			uv.xz = (float2)(((int2)(uv * WH.xyxy).xz & MskFix.xx) | MskFix.zz) / WH;
+			uv.xz = (float2)(((int2)(uv * WH.xyxy).xz & MskFix.xx) | MskFix.zz) / WH.xy;
 			#elif SHADER_MODEL <= 0x300
 			uv.x = tex1D(UMSKFIX, uv.x);
 			uv.z = tex1D(UMSKFIX, uv.z);
@@ -220,7 +220,7 @@ float4 wrapuv(float4 uv)
 		else if(PS_WMT == 3)
 		{
 			#if SHADER_MODEL >= 0x400
-			uv.yw = (float2)(((int2)(uv * WH.xyxy).yw & MskFix.yy) | MskFix.ww) / WH;
+			uv.yw = (float2)(((int2)(uv * WH.xyxy).yw & MskFix.yy) | MskFix.ww) / WH.xy;
 			#elif SHADER_MODEL <= 0x300
 			uv.y = tex1D(VMSKFIX, uv.y);
 			uv.w = tex1D(VMSKFIX, uv.w);
@@ -235,15 +235,15 @@ float2 clampuv(float2 uv)
 {
 	if(PS_WMS == 2 && PS_WMT == 2) 
 	{
-		uv = clamp(uv, MinMaxF.xy, MinMaxF.zw);
+		uv = clamp(uv, MinF, MinMax.zw);
 	}
 	else if(PS_WMS == 2)
 	{
-		uv.x = clamp(uv.x, MinMaxF.x, MinMaxF.z);
+		uv.x = clamp(uv.x, MinF.x, MinMax.z);
 	}
 	else if(PS_WMT == 2)
 	{
-		uv.y = clamp(uv.y, MinMaxF.y, MinMaxF.w);
+		uv.y = clamp(uv.y, MinF.y, MinMax.w);
 	}
 	
 	return uv;
@@ -476,7 +476,7 @@ float4 sample(float2 tc, float w)
 		Texture.GetDimensions(w, h);
 		
 		float4 uv2 = tc.xyxy + HalfTexel;
-		float2 dd = frac(uv2.xy * float2(w, h)); 
+		float2 dd = frac(uv2.xy * float2(w, h)); // * WH.zw
 		float4 uv = wrapuv(uv2);
 
 		float4 t00, t01, t10, t11;
@@ -637,7 +637,7 @@ float4 sample(float2 tc, float w)
 	else
 	{
 		float4 uv2 = tc.xyxy + HalfTexel;
-		float2 dd = frac(uv2.xy * WH); 
+		float2 dd = frac(uv2.xy * WH.zw); 
 		float4 uv = wrapuv(uv2);
 
 		float4 t00, t01, t10, t11;

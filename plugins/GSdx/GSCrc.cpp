@@ -31,6 +31,7 @@ CRC::Game CRC::m_games[] =
 	{0xA6167B59, Lamune, JP, PointListPalette},
 	{0xDDB59F46, KyuuketsuKitanMoonties, JP, PointListPalette},
 	{0xC8EE2562, PiaCarroteYoukosoGPGakuenPrincess, JP, PointListPalette},
+	{0x6CF94A43, KazokuKeikakuKokoroNoKizuna, JP, PointListPalette},
 	{0xa39517ab, FFX, EU, 0},
 	{0xa39517ae, FFX, FR, 0},
 	{0x941bb7d9, FFX, DE, 0},
@@ -156,7 +157,7 @@ CRC::Game CRC::Lookup(uint32 crc)
 
 	if(i != m_map.end())
 	{
-		return *(*i).second;
+		return *i->second;
 	}
 
 	return m_games[0];

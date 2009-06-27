@@ -21,28 +21,25 @@
 
 #pragma once
 
-#include "GSRendererHW.h"
+#include "GSRendererDX.h"
 #include "GSVertexHW.h"
 #include "GSTextureCache10.h"
 #include "GSTextureFX10.h"
 
-class GSRendererHW10 : public GSRendererHW<GSVertexHW10>
+class GSRendererDX10 : public GSRendererDX<GSVertexHW10>
 {
 protected:
-	GSTextureFX10 m_tfx;
-
-	void Draw(GS_PRIM_CLASS primclass, GSTexture* rt, GSTexture* ds, GSTextureCache::GSCachedTexture* tex);
-
 	struct
 	{
 		CComPtr<ID3D10DepthStencilState> dss;
 		CComPtr<ID3D10BlendState> bs;
 	} m_date;
 
+	void Draw(GS_PRIM_CLASS primclass, GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex);
 	void SetupDATE(GSTexture* rt, GSTexture* ds);
 
 public:
-	GSRendererHW10(uint8* base, bool mt, void (*irq)());
+	GSRendererDX10(uint8* base, bool mt, void (*irq)());
 
 	bool Create(const string& title);
 

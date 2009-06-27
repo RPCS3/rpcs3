@@ -26,7 +26,6 @@
 
 class GSTextureFX11 : public GSTextureFX
 {
-	GSDevice11* m_dev;
 	CComPtr<ID3D11InputLayout> m_il;
 	hash_map<uint32, CComPtr<ID3D11VertexShader> > m_vs;
 	CComPtr<ID3D11Buffer> m_vs_cb;
@@ -44,14 +43,14 @@ class GSTextureFX11 : public GSTextureFX
 public:
 	GSTextureFX11();
 
-	bool Create(GSDevice11* dev);
+	bool Create(GSDevice* dev);
 	
-	bool SetupIA(const GSVertexHW11* vertices, int count, D3D11_PRIMITIVE_TOPOLOGY prim);
-	bool SetupVS(VSSelector sel, const VSConstantBuffer* cb);
-	bool SetupGS(GSSelector sel);
-	bool SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel, GSTexture* tex, GSTexture* pal);
+	void SetupIA(const void* vertices, int count, int prim);
+	void SetupVS(VSSelector sel, const VSConstantBuffer* cb);
+	void SetupGS(GSSelector sel);
+	void SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel, GSTexture* tex, GSTexture* pal);
 	void UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel);
 	void SetupRS(int w, int h, const GSVector4i& scissor);
-	void SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, float bf, GSTexture* rt, GSTexture* ds);
-	void UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, float bf);
+	void SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix, GSTexture* rt, GSTexture* ds);
+	void UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix);
 };

@@ -185,7 +185,7 @@ LRESULT CALLBACK GPURenderer::WndProc(HWND hWnd, UINT message, WPARAM wParam, LP
 
 	if(i != m_wnd2gpu.end())
 	{
-		return (*i).second->OnMessage(message, wParam, lParam);
+		return i->second->OnMessage(message, wParam, lParam);
 	}
 
 	ASSERT(0);

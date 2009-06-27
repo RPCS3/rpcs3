@@ -21,3 +21,16 @@
 
 #include "stdafx.h"
 #include "GSTextureFX.h"
+
+GSTextureFX::GSTextureFX() 
+	: m_dev(NULL)
+{
+}
+
+bool GSTextureFX::Create(GSDevice* dev) 
+{
+	m_dev = dev;
+
+	return true;
+}
+

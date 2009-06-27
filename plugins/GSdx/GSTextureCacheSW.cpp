@@ -34,17 +34,15 @@ GSTextureCacheSW::~GSTextureCacheSW()
 
 const GSTextureCacheSW::GSTexture* GSTextureCacheSW::Lookup(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, const GSVector4i& r)
 {
-	GSLocalMemory& mem = m_state->m_mem;
-
 	const GSLocalMemory::psm_t& psm = GSLocalMemory::m_psm[TEX0.PSM];
-
-	const hash_map<GSTexture*, bool>& map = m_map[TEX0.TBP0 >> 5];
 
 	GSTexture* t = NULL;
 
+	const hash_map<GSTexture*, bool>& map = m_map[TEX0.TBP0 >> 5];
+
 	for(hash_map<GSTexture*, bool>::const_iterator i = map.begin(); i != map.end(); i++)
 	{
-		GSTexture* t2 = (*i).first;
+		GSTexture* t2 = i->first;
 
 		if(((t2->m_TEX0.u32[0] ^ TEX0.u32[0]) | ((t2->m_TEX0.u32[1] ^ TEX0.u32[1]) & 3)) != 0) // TBP0 TBW PSM TW TH
 		{
@@ -85,12 +83,10 @@ const GSTextureCacheSW::GSTexture* GSTextureCacheSW::Lookup(const GIFRegTEX0& TE
 			{
 				uint32 page = (base + psm.blockOffset[x >> 3]) >> 5;
 
-				if(page >= MAX_PAGES)
+				if(page < MAX_PAGES)
 				{
-					continue;
+					m_map[page][t] = true;
 				}
-
-				m_map[page][t] = true;
 			}
 		}
 	}
@@ -170,20 +166,21 @@ void GSTextureCacheSW::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, cons
 		{
 			uint32 page = (base + psm.blockOffset[x >> 3]) >> 5;
 
-			if(page >= MAX_PAGES)
+			if(page < MAX_PAGES)
 			{
-				continue;
-			}
+				const hash_map<GSTexture*, bool>& map = m_map[page];
 
-			const hash_map<GSTexture*, bool>& map = m_map[page];
+				for(hash_map<GSTexture*, bool>::const_iterator i = map.begin(); i != map.end(); i++)
+				{
+					GSTexture* t = i->first;
 
-			for(hash_map<GSTexture*, bool>::const_iterator i = map.begin(); i != map.end(); i++)
-			{
-				GSTexture* t = (*i).first;
+					if(GSUtil::HasSharedBits(BITBLTBUF.DPSM, t->m_TEX0.PSM))
+					{
+						t->m_valid[page] = 0;
 
-				t->m_valid[page] = 0;
-
-				t->m_complete = false;
+						t->m_complete = false;
+					}
+				}
 			}
 		}
 	}
@@ -219,12 +216,7 @@ bool GSTextureCacheSW::GSTexture::Update(const GIFRegTEX0& TEX0, const GIFRegTEX
 	m_TEX0 = TEX0;
 	m_TEXA = TEXA;
 
-	GSLocalMemory& mem = m_state->m_mem;
-
 	const GSLocalMemory::psm_t& psm = GSLocalMemory::m_psm[TEX0.PSM];
-
-	uint32 bp = TEX0.TBP0;
-	uint32 bw = TEX0.TBW;
 
 	GSVector2i s = psm.bs;
 
@@ -250,8 +242,13 @@ bool GSTextureCacheSW::GSTexture::Update(const GIFRegTEX0& TEX0, const GIFRegTEX
 		m_complete = true; // lame, but better than nothing
 	}
 
+	GSLocalMemory& mem = m_state->m_mem;
+
+	uint32 bp = TEX0.TBP0;
+	uint32 bw = TEX0.TBW;
+
 	GSLocalMemory::readTextureBlock rtxb = psm.rtxbP;
-	
+
 	int bytes = psm.pal > 0 ? 1 : 4;
 
 	uint32 pitch = (1 << m_tw) * bytes;

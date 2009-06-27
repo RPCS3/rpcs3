@@ -24,21 +24,17 @@
 #include "resource.h"
 
 GSTextureFX11::GSTextureFX11()
-	: m_dev(NULL)
 {
 	memset(&m_vs_cb_cache, 0, sizeof(m_vs_cb_cache));
 	memset(&m_ps_cb_cache, 0, sizeof(m_ps_cb_cache));
 }
 
-bool GSTextureFX11::Create(GSDevice11* dev)
+bool GSTextureFX11::Create(GSDevice* dev)
 {
-	m_dev = dev;
-
-	VSSelector sel;
-	
-	VSConstantBuffer cb;
-
-	SetupVS(sel, &cb); // creates layout
+	if(!__super::Create(dev))
+	{
+		return false;
+	}
 
 	HRESULT hr;
 
@@ -50,7 +46,7 @@ bool GSTextureFX11::Create(GSDevice11* dev)
 	bd.Usage = D3D11_USAGE_DEFAULT;
 	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 
-	hr = (*m_dev)->CreateBuffer(&bd, NULL, &m_vs_cb);
+	hr = (*(GSDevice11*)dev)->CreateBuffer(&bd, NULL, &m_vs_cb);
 
 	if(FAILED(hr)) return false;
 
@@ -60,7 +56,7 @@ bool GSTextureFX11::Create(GSDevice11* dev)
 	bd.Usage = D3D11_USAGE_DEFAULT;
 	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 
-	hr = (*m_dev)->CreateBuffer(&bd, NULL, &m_ps_cb);
+	hr = (*(GSDevice11*)dev)->CreateBuffer(&bd, NULL, &m_ps_cb);
 
 	if(FAILED(hr)) return false;
 
@@ -76,7 +72,7 @@ bool GSTextureFX11::Create(GSDevice11* dev)
 	sd.MaxAnisotropy = 16; 
 	sd.ComparisonFunc = D3D11_COMPARISON_NEVER;
 
-	hr = (*m_dev)->CreateSamplerState(&sd, &m_palette_ss);
+	hr = (*(GSDevice11*)dev)->CreateSamplerState(&sd, &m_palette_ss);
 
 	if(FAILED(hr)) return false;
 
@@ -85,17 +81,19 @@ bool GSTextureFX11::Create(GSDevice11* dev)
 	return true;
 }
 
-bool GSTextureFX11::SetupIA(const GSVertexHW11* vertices, int count, D3D11_PRIMITIVE_TOPOLOGY prim)
+void GSTextureFX11::SetupIA(const void* vertices, int count, int prim)
 {
-	m_dev->IASetVertexBuffer(vertices, sizeof(vertices[0]), count);
-	m_dev->IASetInputLayout(m_il);
-	m_dev->IASetPrimitiveTopology(prim);
+	GSDevice11* dev = (GSDevice11*)m_dev;
 
-	return true;
+	dev->IASetVertexBuffer(vertices, sizeof(GSVertexHW11), count);
+	dev->IASetInputLayout(m_il);
+	dev->IASetPrimitiveTopology((D3D11_PRIMITIVE_TOPOLOGY)prim);
 }
 
-bool GSTextureFX11::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
+void GSTextureFX11::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 {
+	GSDevice11* dev = (GSDevice11*)m_dev;
+
 	hash_map<uint32, CComPtr<ID3D11VertexShader> >::const_iterator i = m_vs.find(sel);
 
 	if(i == m_vs.end())
@@ -129,7 +127,7 @@ bool GSTextureFX11::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 		CComPtr<ID3D11InputLayout> il;
 		CComPtr<ID3D11VertexShader> vs;
 
-		m_dev->CompileShader(IDR_TFX_FX, "vs_main", macro, &vs, layout, countof(layout), &il);
+		dev->CompileShader(IDR_TFX_FX, "vs_main", macro, &vs, layout, countof(layout), &il);
 
 		if(m_il == NULL)
 		{
@@ -143,19 +141,17 @@ bool GSTextureFX11::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 
 	if(m_vs_cb_cache.Update(cb))
 	{
-		ID3D11DeviceContext* ctx = *m_dev;
+		ID3D11DeviceContext* ctx = *dev;
 
 		ctx->UpdateSubresource(m_vs_cb, 0, NULL, cb, 0, 0);
 	}
 
-	m_dev->VSSetShader((*i).second, m_vs_cb);
-
-	return true;
+	dev->VSSetShader(i->second, m_vs_cb);
 }
 
-bool GSTextureFX11::SetupGS(GSSelector sel)
+void GSTextureFX11::SetupGS(GSSelector sel)
 {
-	HRESULT hr;
+	GSDevice11* dev = (GSDevice11*)m_dev;
 
 	ID3D11GeometryShader* gs = NULL;
 
@@ -165,7 +161,7 @@ bool GSTextureFX11::SetupGS(GSSelector sel)
 
 		if(i != m_gs.end())
 		{
-			gs = (*i).second;
+			gs = i->second;
 		}
 		else
 		{
@@ -181,29 +177,25 @@ bool GSTextureFX11::SetupGS(GSSelector sel)
 				{NULL, NULL},
 			};
 
-			hr = m_dev->CompileShader(IDR_TFX_FX, "gs_main", macro, &gs);
+			dev->CompileShader(IDR_TFX_FX, "gs_main", macro, &gs);
 
 			m_gs[sel] = gs;
 		}
 	}
 
-	m_dev->GSSetShader(gs);
-
-	return true;
+	dev->GSSetShader(gs);
 }
 
-bool GSTextureFX11::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel, GSTexture* tex, GSTexture* pal)
+void GSTextureFX11::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel, GSTexture* tex, GSTexture* pal)
 {
-	m_dev->PSSetShaderResources(tex, pal);
+	((GSDevice11*)m_dev)->PSSetShaderResources(tex, pal);
 
 	UpdatePS(sel, cb, ssel);
-
-	return true;
 }
 
 void GSTextureFX11::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel)
 {
-	HRESULT hr;
+	GSDevice11* dev = (GSDevice11*)m_dev;
 
 	hash_map<uint32, CComPtr<ID3D11PixelShader> >::const_iterator i = m_ps.find(sel);
 
@@ -247,7 +239,7 @@ void GSTextureFX11::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSampl
 
 		CComPtr<ID3D11PixelShader> ps;
 		
-		hr = m_dev->CompileShader(IDR_TFX_FX, "ps_main", macro, &ps);
+		dev->CompileShader(IDR_TFX_FX, "ps_main", macro, &ps);
 
 		m_ps[sel] = ps;
 
@@ -256,12 +248,12 @@ void GSTextureFX11::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSampl
 
 	if(m_ps_cb_cache.Update(cb))
 	{
-		ID3D11DeviceContext* ctx = *m_dev;
+		ID3D11DeviceContext* ctx = *dev;
 
 		ctx->UpdateSubresource(m_ps_cb, 0, NULL, cb, 0, 0);
 	}
 
-	m_dev->PSSetShader((*i).second, m_ps_cb);
+	dev->PSSetShader(i->second, m_ps_cb);
 
 	ID3D11SamplerState* ss0 = NULL;
 	ID3D11SamplerState* ss1 = NULL;
@@ -277,7 +269,7 @@ void GSTextureFX11::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSampl
 
 		if(i != m_ps_ss.end())
 		{
-			ss0 = (*i).second;
+			ss0 = i->second;
 		}
 		else
 		{
@@ -295,7 +287,7 @@ void GSTextureFX11::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSampl
 			sd.MaxAnisotropy = 16; 
 			sd.ComparisonFunc = D3D11_COMPARISON_NEVER;
 
-			hr = (*m_dev)->CreateSamplerState(&sd, &ss0);
+			(*dev)->CreateSamplerState(&sd, &ss0);
 
 			m_ps_ss[ssel] = ss0;
 		}
@@ -306,24 +298,24 @@ void GSTextureFX11::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSampl
 		}
 	}
 
-	m_dev->PSSetSamplerState(ss0, ss1);
+	dev->PSSetSamplerState(ss0, ss1);
 }
 
 void GSTextureFX11::SetupRS(int w, int h, const GSVector4i& scissor)
 {
-	m_dev->RSSet(w, h, &scissor);
+	((GSDevice11*)m_dev)->RSSet(w, h, &scissor);
 }
 
-void GSTextureFX11::SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, float bf, GSTexture* rt, GSTexture* ds)
+void GSTextureFX11::SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix, GSTexture* rt, GSTexture* ds)
 {
-	UpdateOM(dssel, bsel, bf);
+	UpdateOM(dssel, bsel, afix);
 
-	m_dev->OMSetRenderTargets(rt, ds);
+	((GSDevice11*)m_dev)->OMSetRenderTargets(rt, ds);
 }
 
-void GSTextureFX11::UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, float bf)
+void GSTextureFX11::UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix)
 {
-	HRESULT hr;
+	GSDevice11* dev = (GSDevice11*)m_dev;
 
 	hash_map<uint32, CComPtr<ID3D11DepthStencilState> >::const_iterator i = m_om_dss.find(dssel);
 
@@ -365,14 +357,14 @@ void GSTextureFX11::UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel,
 
 		CComPtr<ID3D11DepthStencilState> dss;
 
-		hr = (*m_dev)->CreateDepthStencilState(&dsd, &dss);
+		(*dev)->CreateDepthStencilState(&dsd, &dss);
 
 		m_om_dss[dssel] = dss;
 
 		i = m_om_dss.find(dssel);
 	}
 
-	m_dev->OMSetDepthStencilState((*i).second, 1);
+	dev->OMSetDepthStencilState(i->second, 1);
 
 	hash_map<uint32, CComPtr<ID3D11BlendState> >::const_iterator j = m_om_bs.find(bsel);
 
@@ -506,12 +498,12 @@ void GSTextureFX11::UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel,
 
 		CComPtr<ID3D11BlendState> bs;
 
-		hr = (*m_dev)->CreateBlendState(&bd, &bs);
+		(*dev)->CreateBlendState(&bd, &bs);
 
 		m_om_bs[bsel] = bs;
 
 		j = m_om_bs.find(bsel);
 	}
 
-	m_dev->OMSetBlendState((*j).second, bf);
+	dev->OMSetBlendState(j->second, (float)(int)afix / 0x80);
 }

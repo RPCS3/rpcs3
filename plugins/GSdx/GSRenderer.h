@@ -53,9 +53,10 @@ protected:
 
 	// following functions need m_vt to be initialized
 
-	void GetTextureMinMax(GSVector4i& r);
+	void GetTextureMinMax(GSVector4i& r, bool linear);
 	void GetAlphaMinMax();
 	bool TryAlphaTest(uint32& fm, uint32& zm);
+	bool IsLinear();
 	bool IsOpaque();
 
 public:
@@ -127,6 +128,8 @@ protected:
 				// FIXME: berserk fpsm = 27 (8H)
 
 				Draw();
+
+				m_perfmon.Put(GSPerfMon::Draw, 1);
 			}
 
 			m_count = 0;
@@ -222,9 +225,9 @@ protected:
 public:
 	GSRendererT(uint8* base, bool mt, void (*irq)(), GSDevice* dev)
 		: GSRenderer(base, mt, irq, dev)
+		, m_vertices(NULL)
 		, m_count(0)
 		, m_maxcount(0)
-		, m_vertices(NULL)
 	{
 	}
 

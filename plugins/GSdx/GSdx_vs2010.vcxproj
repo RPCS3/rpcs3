@@ -1320,9 +1320,9 @@
     <ClCompile Include="GSRasterizer.cpp" />
     <ClCompile Include="GSRenderer.cpp" />
     <ClCompile Include="GSRendererHW.cpp" />
-    <ClCompile Include="GSRendererHW10.cpp" />
-    <ClCompile Include="GSRendererHW11.cpp" />
-    <ClCompile Include="GSRendererHW9.cpp" />
+    <ClCompile Include="GSRendererDX10.cpp" />
+    <ClCompile Include="GSRendererDX11.cpp" />
+    <ClCompile Include="GSRendererDX9.cpp" />
     <ClCompile Include="GSRendererNull.cpp" />
     <ClCompile Include="GSRendererOGL.cpp" />
     <ClCompile Include="GSRendererSW.cpp" />
@@ -1445,9 +1445,9 @@
     <ClInclude Include="GSRasterizer.h" />
     <ClInclude Include="GSRenderer.h" />
     <ClInclude Include="GSRendererHW.h" />
-    <ClInclude Include="GSRendererHW10.h" />
-    <ClInclude Include="GSRendererHW11.h" />
-    <ClInclude Include="GSRendererHW9.h" />
+    <ClInclude Include="GSRendererDX10.h" />
+    <ClInclude Include="GSRendererDX11.h" />
+    <ClInclude Include="GSRendererDX9.h" />
     <ClInclude Include="GSRendererNull.h" />
     <ClInclude Include="GSRendererOGL.h" />
     <ClInclude Include="GSRendererSW.h" />

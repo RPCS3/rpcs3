@@ -29,7 +29,7 @@
 class GSRendererOGL : public GSRendererHW<GSVertexOGL>
 {
 protected:
-	void Draw(int prim, GSTexture* rt, GSTexture* ds, GSTextureCache::GSCachedTexture* tex);
+	void Draw(int prim, GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex);
 
 public:
 	GSRendererOGL(uint8* base, bool mt, void (*irq)());

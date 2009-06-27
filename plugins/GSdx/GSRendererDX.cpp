@@ -19,32 +19,5 @@
  *
  */
 
-#pragma once
-
-#include "GSRendererHW.h"
-#include "GSVertexHW.h"
-#include "GSTextureCache11.h"
-#include "GSTextureFX11.h"
-
-class GSRendererHW11 : public GSRendererHW<GSVertexHW11>
-{
-protected:
-	GSTextureFX11 m_tfx;
-
-	void Draw(GS_PRIM_CLASS primclass, GSTexture* rt, GSTexture* ds, GSTextureCache::GSCachedTexture* tex);
-
-	struct
-	{
-		CComPtr<ID3D11DepthStencilState> dss;
-		CComPtr<ID3D11BlendState> bs;
-	} m_date;
-
-	void SetupDATE(GSTexture* rt, GSTexture* ds);
-
-public:
-	GSRendererHW11(uint8* base, bool mt, void (*irq)());
-
-	bool Create(const string& title);
-
-	template<uint32 prim, uint32 tme, uint32 fst> void VertexKick(bool skip);
-};
+#include "stdafx.h"
+#include "GSRendererDX.h"
