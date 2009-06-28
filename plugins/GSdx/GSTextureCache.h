@@ -50,11 +50,16 @@ public:
 
 	class Source : public Surface
 	{
+		struct {GSVector4i* rect; uint32 count;} m_write;
+
+		void Write(const GSVector4i& r);
+		void Flush(uint32 count);
+
 	public:
 		GSTexture* m_palette;
 		bool m_initpalette;
-		list<int> m_pages;
-		uint32 m_valid[MAX_PAGES]; // each uint32 bits map to the 32 blocks of that page
+		uint32 m_blocks, m_total_blocks;
+		struct {uint32 block, count;} m_valid[MAX_PAGES]; // each uint32 bits map to the 32 blocks of that page
 		uint32* m_clut;
 		int m_bpp;
 		bool m_target;
@@ -66,8 +71,6 @@ public:
 		virtual bool Create() = 0;
 		virtual bool Create(Target* dst) = 0;
 		virtual void Update(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, const GSVector4i& rect);
-
-		void Write(const GSVector4i& r, const GSVector4i& tr, uint8* buff, int pitch);
 	};
 
 	class Target : public Surface

@@ -279,7 +279,10 @@ void GSTextureCache::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const 
 					{
 						if(!s->m_target)
 						{
-							s->m_valid[page] = 0;
+							s->m_blocks -= s->m_valid[page].count;
+
+							s->m_valid[page].block = 0;
+							s->m_valid[page].count = 0;
 
 							found = true;
 						}
@@ -488,6 +491,9 @@ GSTextureCache::Source::Source(GSRenderer* r)
 	m_clut = (uint32*)_aligned_malloc(256 * sizeof(uint32), 16);
 
 	memset(m_clut, 0, sizeof(m_clut));
+
+	m_write.rect = (GSVector4i*)_aligned_malloc(3 * sizeof(GSVector4i), 16);
+	m_write.count = 0;
 }
 
 GSTextureCache::Source::~Source()
@@ -495,6 +501,8 @@ GSTextureCache::Source::~Source()
 	m_renderer->m_dev->Recycle(m_palette);
 
 	_aligned_free(m_clut);
+
+	_aligned_free(m_write.rect);
 }
 
 void GSTextureCache::Source::Update(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, const GSVector4i& rect)
@@ -509,175 +517,170 @@ void GSTextureCache::Source::Update(const GIFRegTEX0& TEX0, const GIFRegTEXA& TE
 	m_TEX0 = TEX0;
 	m_TEXA = TEXA;
 
+	if(m_blocks == m_total_blocks)
+	{
+		return;
+	}
+
 	const GSLocalMemory::psm_t& psm = GSLocalMemory::m_psm[m_TEX0.PSM];
 
-	GSVector2i s = psm.bs;
+	GSVector2i bs = psm.bs;
+
+	GSVector4i r = rect.ralign<GSVector4i::Outside>(bs);
+
+	uint32 bp = m_TEX0.TBP0;
+	uint32 bw = m_TEX0.TBW;
+
+	bool repeating = (1 << m_TEX0.TW) > (bw << 6); // TODO: bw == 0
+
+	uint32 blocks = 0;
+
+	for(int y = r.top; y < r.bottom; y += bs.y)
+	{
+		uint32 base = psm.bn(0, y, bp, bw);
+
+		for(int x = r.left; x < r.right; x += bs.x)
+		{
+			uint32 block = base + psm.blockOffset[x >> 3];
+
+			if(block < MAX_BLOCKS)
+			{
+				uint32 row = block >> 5;
+				uint32 col = 1 << (block & 31);
+
+				if((m_valid[row].block & col) == 0)
+				{
+					if(!repeating) m_valid[row].block |= col;
+
+					m_valid[row].count++;
+
+					Write(GSVector4i(x, y, x + bs.x, y + bs.y));
+
+					blocks++;
+				}
+			}
+		}
+	}
+
+	if(blocks > 0)
+	{
+		if(repeating)
+		{
+			for(int y = r.top; y < r.bottom; y += bs.y)
+			{
+				uint32 base = psm.bn(0, y, bp, bw);
+
+				for(int x = r.left; x < r.right; x += bs.x)
+				{
+					uint32 block = base + psm.blockOffset[x >> 3];
+
+					if(block < MAX_BLOCKS)
+					{
+						uint32 row = block >> 5;
+						uint32 col = 1 << (block & 31);
+
+						m_valid[row].block |= col;
+					}
+				}
+			}
+		}
+
+		m_blocks += blocks;
+
+		m_renderer->m_perfmon.Put(GSPerfMon::Unswizzle, bs.x * bs.y * sizeof(uint32) * blocks);
+
+		Flush(m_write.count);
+	}
+}
+
+void GSTextureCache::Source::Write(const GSVector4i& r)
+{
+	m_write.rect[m_write.count++] = r;
+
+	while(m_write.count >= 2)
+	{
+		GSVector4i& a = m_write.rect[m_write.count - 2];
+		GSVector4i& b = m_write.rect[m_write.count - 1];
+
+		if((a == b.zyxw()).mask() == 0xfff0)
+		{
+			a.right = b.right; // extend right
+
+			m_write.count--;
+		}
+		else if((a == b.xwzy()).mask() == 0xff0f)
+		{
+			a.bottom = b.bottom; // extend down
+
+			m_write.count--;
+		}
+		else
+		{
+			break;
+		}
+	}
+
+	if(m_write.count > 2)
+	{
+		Flush(1);
+	}
+}
+
+void GSTextureCache::Source::Flush(uint32 count)
+{
+	const GSLocalMemory::psm_t& psm = GSLocalMemory::m_psm[m_TEX0.PSM];
 
 	int tw = 1 << m_TEX0.TW;
 	int th = 1 << m_TEX0.TH;
 
 	GSVector4i tr(0, 0, tw, th);
 
-	GSVector4i r = rect.ralign<GSVector4i::Outside>(s);
-
-	uint32 bp = m_TEX0.TBP0;
-	uint32 bw = m_TEX0.TBW;
-
-	uint32 blocks = 0;
-
 	// TODO
-	static uint8* buff = (uint8*)_aligned_malloc(1024 * 16 * sizeof(uint32), 16); // max decompressed size for a row of blocks (1024 x 16, 4bpp)
+	static uint8* buff = (uint8*)_aligned_malloc(1024 * 1024 * sizeof(uint32), 16);
 	
-	int pitch = max(tw, s.x) * sizeof(uint32);
-
-	GSLocalMemory::readTexture rtx = psm.rtx;
+	int pitch = max(tw, psm.bs.x) * sizeof(uint32);
 
 	const GSLocalMemory& mem = m_renderer->m_mem;
 
-	// TODO: bw == 0 (sfex)
+	GSLocalMemory::readTexture rtx = psm.rtx;
 
-	if(tw <= (bw << 6))
+	for(uint32 i = 0; i < count; i++)
 	{
-		// r.right = min(r.right, bw << 6);
+		GSVector4i r = m_write.rect[i];
 
-		for(int y = r.top; y < r.bottom; y += s.y)
+		if((r > tr).mask() & 0xff00)
 		{
-			uint32 base = psm.bn(0, y, bp, bw);
+			(mem.*rtx)(r, buff, pitch, m_TEX0, m_TEXA);
 
-			int left = r.left;
-			int right = r.left;
-
-			for(int x = r.left; x < r.right; x += s.x)
-			{
-				uint32 block = base + psm.blockOffset[x >> 3];
-
-				if(block < MAX_BLOCKS)
-				{
-					uint32 row = block >> 5;
-					uint32 col = 1 << (block & 31);
-
-					if((m_valid[row] & col) == 0)
-					{
-						m_valid[row] |= col;
-
-						if(right < x)
-						{
-							Write(GSVector4i(left, y, right, y + s.y), tr, buff, pitch);
-
-							left = right = x;
-						}
-
-						right += s.x;
-
-						blocks++;
-					}
-				}
-			}
-
-			if(left < right)
-			{
-				Write(GSVector4i(left, y, right, y + s.y), tr, buff, pitch);
-			}
-		}
-	}
-	else
-	{
-		// unfortunatelly a block may be part of the same texture multiple times at different places (tw 1024 > tbw 640, between 640 -> 1024 it is repeated from the next row), 
-		// so just can't set the block's bit to valid in one pass, even if 99.9% of the games don't address the repeated part at the right side
-		
-		// TODO: still bogus if those repeated parts aren't fetched together
-
-		for(int y = r.top; y < r.bottom; y += s.y)
-		{
-			uint32 base = psm.bn(0, y, bp, bw);
-
-			int left = r.left;
-			int right = r.left;
-
-			for(int x = r.left; x < r.right; x += s.x)
-			{
-				uint32 block = base + psm.blockOffset[x >> 3];
-
-				if(block < MAX_BLOCKS)
-				{
-					uint32 row = block >> 5;
-					uint32 col = 1 << (block & 31);
-
-					if((m_valid[row] & col) == 0)
-					{
-						if(right < x)
-						{
-							Write(GSVector4i(left, y, right, y + s.y), tr, buff, pitch);
-
-							left = right = x;
-						}
-
-						right += s.x;
-
-						blocks++;
-					}
-				}
-			}
-
-			if(left < right)
-			{
-				Write(GSVector4i(left, y, right, y + s.y), tr, buff, pitch);
-			}
-		}
-
-		for(int y = r.top; y < r.bottom; y += s.y)
-		{
-			uint32 base = psm.bn(0, y, bp, bw);
-
-			for(int x = r.left; x < r.right; x += s.x)
-			{
-				uint32 block = base + psm.blockOffset[x >> 3];
-
-				if(block < MAX_BLOCKS)
-				{
-					uint32 row = block >> 5;
-					uint32 col = 1 << (block & 31);
-
-					m_valid[row] |= col;
-				}
-			}
-		}
-	}
-
-	//_aligned_free(buff);
-
-	m_renderer->m_perfmon.Put(GSPerfMon::Unswizzle, s.x * s.y * sizeof(uint32) * blocks);
-}
-
-void GSTextureCache::Source::Write(const GSVector4i& r, const GSVector4i& tr, uint8* buff, int pitch)
-{
-	if(r.rempty()) return;
-
-	GSLocalMemory::readTexture rtx = GSLocalMemory::m_psm[m_TEX0.PSM].rtx;
-
-	if((r > tr).mask() & 0xff00)
-	{
-		(m_renderer->m_mem.*rtx)(r, buff, pitch, m_TEX0, m_TEXA);
-
-		m_texture->Update(r.rintersect(tr), buff, pitch);
-	}
-	else
-	{
-		GSTexture::GSMap m;
-
-		if(m_texture->Map(m, &r))
-		{
-			(m_renderer->m_mem.*rtx)(r, m.bits, m.pitch, m_TEX0, m_TEXA);
-
-			m_texture->Unmap();
+			m_texture->Update(r.rintersect(tr), buff, pitch);
 		}
 		else
 		{
-			(m_renderer->m_mem.*rtx)(r, buff, pitch, m_TEX0, m_TEXA);
+			GSTexture::GSMap m;
 
-			m_texture->Update(r, buff, pitch);
+			if(m_texture->Map(m, &r))
+			{
+				(mem.*rtx)(r, m.bits, m.pitch, m_TEX0, m_TEXA);
+
+				m_texture->Unmap();
+			}
+			else
+			{
+				(mem.*rtx)(r, buff, pitch, m_TEX0, m_TEXA);
+
+				m_texture->Update(r, buff, pitch);
+			}
 		}
 	}
+
+	if(count < m_write.count)
+	{
+		memcpy(m_write.rect[0], &m_write.rect[count], (m_write.count - count) * sizeof(m_write.rect[0]));
+	}
+
+	m_write.count -= count;
+
+	//_aligned_free(buff);
 }
 
 // GSTextureCache::Target
@@ -782,7 +785,7 @@ void GSTextureCache::SourceMap::Add(Source* s, const GIFRegTEX0& TEX0)
 
 	const GSLocalMemory::psm_t& psm = GSLocalMemory::m_psm[TEX0.PSM];
 
-	GSVector2i bs = (bp & 31) == 0 ? psm.pgs : psm.bs;
+	GSVector2i bs = psm.bs;
 
 	int blocks = 0;
 
@@ -792,16 +795,19 @@ void GSTextureCache::SourceMap::Add(Source* s, const GIFRegTEX0& TEX0)
 
 		for(int x = 0; x < tw; x += bs.x)
 		{
-			uint32 page = (base + psm.blockOffset[x >> 3]) >> 5;
+			uint32 block = base + psm.blockOffset[x >> 3];
 
-			if(page < MAX_PAGES)
+			if(block < MAX_BLOCKS)
 			{
-				m_map[page][s] = true;
+				m_map[block >> 5][s] = true;
 
-				s->m_pages.push_back(page);
+				blocks++;
 			}
 		}
 	}
+
+	s->m_blocks = 0;
+	s->m_total_blocks = blocks;
 }
 
 void GSTextureCache::SourceMap::RemoveAll()
@@ -823,9 +829,9 @@ void GSTextureCache::SourceMap::RemoveAt(Source* s)
 {
 	m_surfaces.erase(s);
 
-	for(list<int>::iterator i = s->m_pages.begin(); i != s->m_pages.end(); i++)
+	for(int i = 0; i < countof(m_map); i++)
 	{
-		m_map[*i].erase(s);
+		m_map[i].erase(s);
 	}
 
 	delete s;
