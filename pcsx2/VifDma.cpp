@@ -1385,7 +1385,7 @@ int _chainVIF0()
 	{
 		Console::Error("Vif0 Tag BUSERR");
 		vif0ch->chcr = (vif0ch->chcr & 0xFFFF) | ((*vif0ptag) & 0xFFFF0000);     //Transfer upper part of tag to CHCR bits 31-15
-		psHu32(DMAC_STAT) |= 1 << 15;       //If yes, set BEIS (BUSERR) in DMAC_STAT register
+		psHu32(DMAC_STAT) |= DMAC_STAT_BEIS;       //If yes, set BEIS (BUSERR) in DMAC_STAT register
 		return -1;						   //Return -1 as an error has occurred
 	}
 
@@ -2358,7 +2358,7 @@ void vif1TransferFromMemory()
 	if (pMem == NULL)  						//Is vif0ptag empty?
 	{
 		Console::WriteLn("Vif1 Tag BUSERR");
-		psHu32(DMAC_STAT) |= 1 << 15;       //If yes, set BEIS (BUSERR) in DMAC_STAT register
+		psHu32(DMAC_STAT) |= DMAC_STAT_BEIS;       //If yes, set BEIS (BUSERR) in DMAC_STAT register
 		vif1.done = true;
 		vif1Regs->stat &= ~0x1f000000;
 		vif1ch->qwc = 0;
@@ -2467,7 +2467,7 @@ __forceinline void vif1SetupTransfer()
 			{
 				Console::Error("Vif1 Tag BUSERR");
 				vif1ch->chcr = (vif1ch->chcr & 0xFFFF) | ((*vif1ptag) & 0xFFFF0000);     //Transfer upper part of tag to CHCR bits 31-15
-				psHu32(DMAC_STAT) |= 1 << 15;       //If yes, set BEIS (BUSERR) in DMAC_STAT register
+				psHu32(DMAC_STAT) |= DMAC_STAT_BEIS;       //If yes, set BEIS (BUSERR) in DMAC_STAT register
 				return;						   //Return -1 as an error has occurred
 			}
 

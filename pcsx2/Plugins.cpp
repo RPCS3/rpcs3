@@ -214,9 +214,39 @@ _FWfreeze          FWfreeze;
 _FWtest            FWtest;
 _FWabout           FWabout;
 
-
 DEV9handler dev9Handler;
 USBhandler usbHandler;
+
+enum PluginTypes
+{
+	GS = 0,
+	PAD,
+	PAD1,
+	PAD2,
+	SPU2,
+	CDVD,
+	DEV9,
+	USB,
+	FW
+};
+
+int PS2E_LT[9] = { 
+PS2E_LT_GS, 
+PS2E_LT_PAD,PS2E_LT_PAD, PS2E_LT_PAD, 
+PS2E_LT_SPU2, 
+PS2E_LT_CDVD, 
+PS2E_LT_DEV9,
+PS2E_LT_USB,
+PS2E_LT_FW};
+
+int PS2E_VERSION[9] = {
+PS2E_GS_VERSION, 
+PS2E_PAD_VERSION,PS2E_PAD_VERSION, PS2E_PAD_VERSION, 
+PS2E_SPU2_VERSION, 
+PS2E_CDVD_VERSION, 
+PS2E_DEV9_VERSION,
+PS2E_USB_VERSION,
+PS2E_FW_VERSION};
 
 #define Sfy(x) #x
 #define Strfy(x) Sfy(x)
@@ -235,13 +265,13 @@ USBhandler usbHandler;
 #define MapSymbol_Error(name) MapSymbolVar_Error(name,name)
 
 // for pad1/2
-#define MapSymbolPAD(var,sym,name) MapSymbolVar(var##name,sym##name)
-#define MapSymbolPAD_Fallback(var,sym,name) if((MapSymbolVarType(var##name,_##sym##name,sym##name))==NULL) var##name = var##_##name
-#define MapSymbolPAD_Error(var,sym,name) MapSymbolVar_Error(var##name,sym##name)
+#define MapSymbolPAD(var,name) MapSymbolVar(var##name,PAD##name)
+#define MapSymbolPAD_Fallback(var,name) if((MapSymbolVarType(var##name,_PAD##name,PAD##name))==NULL) var##name = var##_##name
+#define MapSymbolPAD_Error(var,name) MapSymbolVar_Error(var##name,PAD##name)
 
-#define TestPS2Esyms(type) if(_TestPS2Esyms(drv,PS2E_LT_##type,PS2E_##type##_VERSION,filename) < 0) return -1;
+void *GSplugin;
 
-int _TestPS2Esyms(void* drv, int type, int expected_version, const string& filename)
+static int _TestPS2Esyms(void* drv, int type, int expected_version, const string& filename)
 {
 	_PS2EgetLibType PS2EgetLibType;
 	_PS2EgetLibVersion2 PS2EgetLibVersion2;
@@ -261,10 +291,11 @@ int _TestPS2Esyms(void* drv, int type, int expected_version, const string& filen
 	return 0;
 }
 
-//static const char *err;
-//static int errval;
-
-void *GSplugin;
+static __forceinline bool TestPS2Esyms(void* &drv, PluginTypes type, const string& filename) 
+{
+	if (_TestPS2Esyms(drv, PS2E_LT[type],PS2E_VERSION[type],filename) < 0) return false;
+	return true;
+}
 
 void CALLBACK GS_printf(int timeout, char *fmt, ...) {
 	va_list list;
@@ -292,7 +323,7 @@ int LoadGSplugin(const string& filename)
 	GSplugin = SysLoadLibrary(filename.c_str());
 	if (GSplugin == NULL) { Msgbox::Alert ("Could Not Load GS Plugin '%hs': %s", params &filename, SysLibError()); return -1; }
 	drv = GSplugin;
-	TestPS2Esyms(GS);
+	if (!TestPS2Esyms(drv, GS, filename)) return -1;
 	MapSymbol_Error(GSinit);
 	MapSymbol_Error(GSshutdown);
 	MapSymbol_Error(GSopen);
@@ -347,24 +378,24 @@ int LoadPAD1plugin(const string& filename) {
 	PAD1plugin = SysLoadLibrary(filename.c_str());
 	if (PAD1plugin == NULL) { Msgbox::Alert("Could Not Load PAD1 Plugin '%hs': %s", params &filename, SysLibError()); return -1; }
 	drv = PAD1plugin;
-	TestPS2Esyms(PAD);
-	MapSymbolPAD_Error(PAD1,PAD,init);
-	MapSymbolPAD_Error(PAD1,PAD,shutdown);
-	MapSymbolPAD_Error(PAD1,PAD,open);
-	MapSymbolPAD_Error(PAD1,PAD,close);
-	MapSymbolPAD_Error(PAD1,PAD,keyEvent);
-	MapSymbolPAD_Error(PAD1,PAD,startPoll);
-	MapSymbolPAD_Error(PAD1,PAD,poll);
-	MapSymbolPAD_Error(PAD1,PAD,query);
-	MapSymbolPAD(PAD1,PAD,update);
+	if (!TestPS2Esyms(drv, PAD, filename)) return -1;
+	MapSymbolPAD_Error(PAD1,init);
+	MapSymbolPAD_Error(PAD1,shutdown);
+	MapSymbolPAD_Error(PAD1,open);
+	MapSymbolPAD_Error(PAD1,close);
+	MapSymbolPAD_Error(PAD1,keyEvent);
+	MapSymbolPAD_Error(PAD1,startPoll);
+	MapSymbolPAD_Error(PAD1,poll);
+	MapSymbolPAD_Error(PAD1,query);
+	MapSymbolPAD(PAD1,update);
 
-	MapSymbolPAD(PAD1,PAD,gsDriverInfo);
-	MapSymbolPAD_Fallback(PAD1,PAD,configure);
-	MapSymbolPAD_Fallback(PAD1,PAD,about);
-	MapSymbolPAD_Fallback(PAD1,PAD,test);
-	MapSymbolPAD_Fallback(PAD1,PAD,freeze);
-	MapSymbolPAD_Fallback(PAD1,PAD,setSlot);
-	MapSymbolPAD_Fallback(PAD1,PAD,queryMtap);
+	MapSymbolPAD(PAD1,gsDriverInfo);
+	MapSymbolPAD_Fallback(PAD1,configure);
+	MapSymbolPAD_Fallback(PAD1,about);
+	MapSymbolPAD_Fallback(PAD1,test);
+	MapSymbolPAD_Fallback(PAD1,freeze);
+	MapSymbolPAD_Fallback(PAD1,setSlot);
+	MapSymbolPAD_Fallback(PAD1,queryMtap);
 
 	return 0;
 }
@@ -384,24 +415,24 @@ int LoadPAD2plugin(const string& filename) {
 	PAD2plugin = SysLoadLibrary(filename.c_str());
 	if (PAD2plugin == NULL) { Msgbox::Alert("Could Not Load PAD2 Plugin '%hs': %s", params &filename, SysLibError()); return -1; }
 	drv = PAD2plugin;
-	TestPS2Esyms(PAD);
-	MapSymbolPAD_Error(PAD2,PAD,init);
-	MapSymbolPAD_Error(PAD2,PAD,shutdown);
-	MapSymbolPAD_Error(PAD2,PAD,open);
-	MapSymbolPAD_Error(PAD2,PAD,close);
-	MapSymbolPAD_Error(PAD2,PAD,keyEvent);
-	MapSymbolPAD_Error(PAD2,PAD,startPoll);
-	MapSymbolPAD_Error(PAD2,PAD,poll);
-	MapSymbolPAD_Error(PAD2,PAD,query);
-	MapSymbolPAD(PAD2,PAD,update);
+	if (!TestPS2Esyms(drv, PAD, filename)) return -1;
+	MapSymbolPAD_Error(PAD2,init);
+	MapSymbolPAD_Error(PAD2,shutdown);
+	MapSymbolPAD_Error(PAD2,open);
+	MapSymbolPAD_Error(PAD2,close);
+	MapSymbolPAD_Error(PAD2,keyEvent);
+	MapSymbolPAD_Error(PAD2,startPoll);
+	MapSymbolPAD_Error(PAD2,poll);
+	MapSymbolPAD_Error(PAD2,query);
+	MapSymbolPAD(PAD2,update);
 
-	MapSymbolPAD(PAD2,PAD,gsDriverInfo);
-	MapSymbolPAD_Fallback(PAD2,PAD,configure);
-	MapSymbolPAD_Fallback(PAD2,PAD,about);
-	MapSymbolPAD_Fallback(PAD2,PAD,test);
-	MapSymbolPAD_Fallback(PAD2,PAD,freeze);
-	MapSymbolPAD_Fallback(PAD2,PAD,setSlot);
-	MapSymbolPAD_Fallback(PAD2,PAD,queryMtap);
+	MapSymbolPAD(PAD2,gsDriverInfo);
+	MapSymbolPAD_Fallback(PAD2,configure);
+	MapSymbolPAD_Fallback(PAD2,about);
+	MapSymbolPAD_Fallback(PAD2,test);
+	MapSymbolPAD_Fallback(PAD2,freeze);
+	MapSymbolPAD_Fallback(PAD2,setSlot);
+	MapSymbolPAD_Fallback(PAD2,queryMtap);
 
 	return 0;
 }
@@ -419,7 +450,7 @@ int LoadSPU2plugin(const string& filename) {
 	SPU2plugin = SysLoadLibrary(filename.c_str());
 	if (SPU2plugin == NULL) { Msgbox::Alert("Could Not Load SPU2 Plugin '%hs': %s", params &filename, SysLibError()); return -1; }
 	drv = SPU2plugin;
-	TestPS2Esyms(SPU2);
+	if (!TestPS2Esyms(drv, SPU2, filename)) return -1;
 	MapSymbol_Error(SPU2init);
 	MapSymbol_Error(SPU2shutdown);
 	MapSymbol_Error(SPU2open);
@@ -462,7 +493,7 @@ int LoadCDVDplugin(const string& filename) {
 	CDVDplugin = SysLoadLibrary(filename.c_str());
 	if (CDVDplugin == NULL) { Msgbox::Alert("Could Not Load CDVD Plugin '%hs': %s", params &filename, SysLibError()); return -1; }
 	drv = CDVDplugin;
-	TestPS2Esyms(CDVD);
+	if (!TestPS2Esyms(drv, CDVD, filename)) return -1;
 	MapSymbol_Error(CDVDinit);
 	MapSymbol_Error(CDVDshutdown);
 	MapSymbol_Error(CDVDopen);
@@ -499,7 +530,7 @@ int LoadDEV9plugin(const string& filename) {
 	DEV9plugin = SysLoadLibrary(filename.c_str());
 	if (DEV9plugin == NULL) { Msgbox::Alert("Could Not Load DEV9 Plugin '%hs': %s", params &filename, SysLibError()); return -1; }
 	drv = DEV9plugin;
-	TestPS2Esyms(DEV9);
+	if (!TestPS2Esyms(drv, DEV9, filename)) return -1;
 	MapSymbol_Error(DEV9init);
 	MapSymbol_Error(DEV9shutdown);
 	MapSymbol_Error(DEV9open);
@@ -536,7 +567,7 @@ int LoadUSBplugin(const string& filename) {
 	USBplugin = SysLoadLibrary(filename.c_str());
 	if (USBplugin == NULL) { Msgbox::Alert("Could Not Load USB Plugin '%hs': %s", params &filename, SysLibError()); return -1; }
 	drv = USBplugin;
-	TestPS2Esyms(USB);
+	if (!TestPS2Esyms(drv, USB, filename)) return -1;
 	MapSymbol_Error(USBinit);
 	MapSymbol_Error(USBshutdown);
 	MapSymbol_Error(USBopen);
@@ -573,7 +604,7 @@ int LoadFWplugin(const string& filename) {
 	FWplugin = SysLoadLibrary(filename.c_str());
 	if (FWplugin == NULL) { Msgbox::Alert("Could Not Load FW Plugin '%hs': %s", params &filename, SysLibError()); return -1; }
 	drv = FWplugin;
-	TestPS2Esyms(FW);
+	if (!TestPS2Esyms(drv, FW, filename)) return -1;
 	MapSymbol_Error(FWinit);
 	MapSymbol_Error(FWshutdown);
 	MapSymbol_Error(FWopen);
@@ -605,13 +636,13 @@ struct PluginOpenStatusFlags
 
 static PluginOpenStatusFlags OpenStatus = {0};
 
-static bool loadp = false;
-static bool initp = false;
-static bool cdvdElf = false;
+static bool plugins_loaded = false;
+static bool plugins_initialized = false;
+static bool only_loading_elf = false;
 
 int LoadPlugins()
 {
-	if( loadp ) return 0;
+	if (plugins_loaded) return 0;
 
 	if (LoadGSplugin(	Path::Combine( Config.PluginsDir, Config.GS )) == -1) return -1;
 	if (LoadPAD1plugin(	Path::Combine( Config.PluginsDir, Config.PAD1 )) == -1) return -1;
@@ -622,80 +653,73 @@ int LoadPlugins()
 	if (LoadUSBplugin(	Path::Combine( Config.PluginsDir, Config.USB )) == -1) return -1;
 	if (LoadFWplugin(	Path::Combine( Config.PluginsDir, Config.FW )) == -1) return -1;
 
-	loadp = true;
+	plugins_loaded = true;
 
 	return 0;
 }
 
+bool ReportError(int err, const char *str)
+{
+	if (err != 0)
+	{
+		Msgbox::Alert("%s error: %d", params str, err); 
+		return true;
+	}
+	return false;
+}
+
+bool ReportError2(int err, const char *str)
+{
+	if (err != 0)
+	{
+		Msgbox::Alert("Error Opening %s Plugin", params str, err); 
+		return true;
+	}
+	return false;
+}
 
 int InitPlugins()
 {
-	if( initp ) return 0;
+	if (plugins_initialized) return 0;
 
 	// Ensure plugins have been loaded....
-	if( LoadPlugins() == -1 ) return -1;
+	if (LoadPlugins() == -1) return -1;
 
-	//if( !loadp )
-	//	throw Exception::InvalidOperation( "Bad coder mojo - InitPlugins called prior to plugins having been loaded." );
+	//if( !plugins_loaded ) throw Exception::InvalidOperation( "Bad coder mojo - InitPlugins called prior to plugins having been loaded." );
 
-#ifndef _WIN32
-	//chdir(MAIN_DIR);
-#endif
-	int ret;
+	if (ReportError(GSinit(), "GSinit")) return -1;
+	if (ReportError(PAD1init(1), "PAD1init")) return -1;
+	if (ReportError(PAD2init(2), "PAD2init")) return -1;
+	if (ReportError(SPU2init(), "SPU2init")) return -1;
+	if (ReportError(CDVDinit(), "CDVDinit")) return -1;
+	if (ReportError(DEV9init(), "DEV9init")) return -1;
+	if (ReportError(USBinit(), "USBinit")) return -1;
+	if (ReportError(FWinit(), "FWinit")) return -1;
 
-	ret = GSinit();
-	if (ret != 0) { Msgbox::Alert("GSinit error: %d", params ret); return -1; }
-	ret = PAD1init(1);
-	if (ret != 0) { Msgbox::Alert("PAD1init error: %d", params ret); return -1; }
-	ret = PAD2init(2);
-	if (ret != 0) { Msgbox::Alert("PAD2init error: %d", params ret); return -1; }
-	ret = SPU2init();
-	if (ret != 0) { Msgbox::Alert("SPU2init error: %d", params ret); return -1; }
-	ret = CDVDinit();
-	if (ret != 0) { Msgbox::Alert("CDVDinit error: %d", params ret); return -1; }
-	ret = DEV9init();
-	if (ret != 0) { Msgbox::Alert("DEV9init error: %d", params ret); return -1; }
-	ret = USBinit();
-	if (ret != 0) { Msgbox::Alert("USBinit error: %d", params ret); return -1; }
-	ret = FWinit();
-	if (ret != 0) { Msgbox::Alert("FWinit error: %d", params ret); return -1; }
-
-	cdvdElf = false;
-	initp = true;
+	only_loading_elf = false;
+	plugins_initialized = true;
 	return 0;
 }
 
 void ShutdownPlugins()
 {
-	if( !initp ) return;
+	if (!plugins_initialized) return;
 
 	mtgsWaitGS();
 	ClosePlugins( true );
 
-	if( GSshutdown != NULL )
-		GSshutdown();
+	if (GSshutdown != NULL) GSshutdown();
 
-	if( PAD1shutdown != NULL )
-		PAD1shutdown();
-	if( PAD2shutdown != NULL )
-		PAD2shutdown();
+	if (PAD1shutdown != NULL) PAD1shutdown();
+	if (PAD2shutdown != NULL) PAD2shutdown();
 
-	if( SPU2shutdown != NULL )
-		SPU2shutdown();
+	if (SPU2shutdown != NULL) SPU2shutdown();
+	if (CDVDshutdown != NULL) CDVDshutdown();
+	if (DEV9shutdown != NULL) DEV9shutdown();
+	if (USBshutdown != NULL) USBshutdown();
+	if (FWshutdown != NULL) FWshutdown();
 
-	if( CDVDshutdown != NULL )
-		CDVDshutdown();
-
-	if( DEV9shutdown != NULL )
-		DEV9shutdown();
-
-	if( USBshutdown != NULL )
-		USBshutdown();
-
-	if( FWshutdown != NULL )
-		FWshutdown();
-
-	initp = false;
+	plugins_initialized = false;
 }
 
 uptr pDsp;
@@ -703,131 +727,167 @@ extern void spu2DMA4Irq();
 extern void spu2DMA7Irq();
 extern void spu2Irq();
 
-int OpenPlugins(const char* pTitleFilename)
+bool OpenGS()
 {
 	GSdriverInfo info;
-	int ret;
-
-	if ( !initp )
+	
+	if (!OpenStatus.GS) 
 	{
-		if( InitPlugins() == -1 ) return -1;
-	}
-
-#ifndef _WIN32
-	// change dir so that CDVD can find its config file
-	/*char file[255], pNewTitle[255];
-	chdir(MAIN_DIR);
-	chdir(Config.PluginsDir);
-
-	if( pTitleFilename != NULL && pTitleFilename[0] != '/' )
-	{
-		// because we are changing the dir, we have to set a new title if it is a relative dir
-		sprintf(pNewTitle, "%s/%s", file, pTitleFilename);
-		pTitleFilename = pNewTitle;
-	}*/
-#endif
-
-	// Don't Repetitively Open CDVD plugin if directly loading an elf file and Open failed once already
-	if( !OpenStatus.CDVD && !cdvdElf)
-	{
-		//first we need the data
-		if (CDVDnewDiskCB) CDVDnewDiskCB(cdvdNewDiskCB);
-
-		ret = CDVDopen(pTitleFilename);
-
-		if (ret != 0) { 
-			if (g_Startup.BootMode != BootMode_Elf) { Msgbox::Alert("Error Opening CDVD Plugin"); goto OpenError; }
-			else { Console::Notice("Running ELF File Without CDVD Plugin Support!"); cdvdElf = 1; }
+		if (ReportError2(gsOpen(), "GS")) 
+		{ 
+			ClosePlugins(true);
+			return false; 
 		}
-		OpenStatus.CDVD = true;
-	}
 
-	if( !OpenStatus.GS ) {
-		ret = gsOpen();
-		if (ret != 0) { Msgbox::Alert("Error Opening GS Plugin"); goto OpenError; }
-		OpenStatus.GS = true;
-
-		//then the user input
-		if (GSgetDriverInfo) {
+		//Get the user input.
+		if (GSgetDriverInfo)
+		{
 			GSgetDriverInfo(&info);
 			if (PAD1gsDriverInfo) PAD1gsDriverInfo(&info);
 			if (PAD2gsDriverInfo) PAD2gsDriverInfo(&info);
 		}
+		OpenStatus.GS = true;
 	}
+	return true;
+}
 
-	if( !OpenStatus.PAD1 )
+bool OpenCDVD(const char* pTitleFilename)
+{
+	// Don't repetitively open the CDVD plugin if directly loading an elf file and open failed once already.
+	if (!OpenStatus.CDVD && !only_loading_elf)
 	{
-		ret = PAD1open((void *)&pDsp);
-		if (ret != 0) { Msgbox::Alert("Error Opening PAD1 Plugin"); goto OpenError; }
+		//First, we need the data.
+		if (CDVDnewDiskCB) CDVDnewDiskCB(cdvdNewDiskCB);
+
+		if (CDVDopen(pTitleFilename) != 0) 
+		{ 
+			if (g_Startup.BootMode != BootMode_Elf) 
+			{ 
+				Msgbox::Alert("Error Opening CDVD Plugin"); 
+				ClosePlugins(true); 
+				return false;
+			}
+			else 
+			{ 
+				Console::Notice("Running ELF File Without CDVD Plugin Support!"); 
+				only_loading_elf = true; 
+			}
+		}
+		OpenStatus.CDVD = true;
+	}
+	return true;
+}
+
+bool OpenPAD1()
+{
+	if (!OpenStatus.PAD1)
+	{
+		if (ReportError2(PAD1open((void *)&pDsp), "PAD1")) 
+		{ 
+			ClosePlugins(true); 
+			return false; 
+		}
 		OpenStatus.PAD1 = true;
 	}
+	return true;
+}
 
-	if( !OpenStatus.PAD2 )
+bool OpenPAD2()
+{	
+	if (!OpenStatus.PAD2)
 	{
-		ret = PAD2open((void *)&pDsp);
-		if (ret != 0) { Msgbox::Alert("Error Opening PAD2 Plugin"); goto OpenError; }
+		if (ReportError2(PAD2open((void *)&pDsp), "PAD2")) 
+		{ 
+			ClosePlugins(true); 
+			return false; 
+		}
 		OpenStatus.PAD2 = true;
 	}
+	return true;
+}
 
-	//the sound
-
-	if( !OpenStatus.SPU2 )
+bool OpenSPU2()
+{
+	if (!OpenStatus.SPU2)
 	{
 		SPU2irqCallback(spu2Irq,spu2DMA4Irq,spu2DMA7Irq);
-		if( SPU2setDMABaseAddr != NULL )
-			SPU2setDMABaseAddr((uptr)psxM);
+		
+		if (SPU2setDMABaseAddr != NULL) SPU2setDMABaseAddr((uptr)psxM);
+		if (SPU2setClockPtr != NULL) SPU2setClockPtr(&psxRegs.cycle);
 
-		if(SPU2setClockPtr != NULL)
-			SPU2setClockPtr(&psxRegs.cycle);
-
-		ret = SPU2open((void*)&pDsp);
-		if (ret != 0) { Msgbox::Alert("Error Opening SPU2 Plugin"); goto OpenError; }
+		if (ReportError2(SPU2open((void*)&pDsp), "SPU2")) 
+		{ 
+			ClosePlugins(true); 
+			return false; 
+		}
 		OpenStatus.SPU2 = true;
 	}
+	return true;
+}
 
-	//and last the dev9
-	if( !OpenStatus.DEV9 )
+bool OpenDEV9()
+{
+	if (!OpenStatus.DEV9)
 	{
 		DEV9irqCallback(dev9Irq);
 		dev9Handler = DEV9irqHandler();
-		ret = DEV9open(&psxRegs.pc); //((void *)&pDsp);
-		if (ret != 0) { Msgbox::Alert("Error Opening DEV9 Plugin"); goto OpenError; }
+		
+		if (ReportError2(DEV9open(&psxRegs.pc)/*((void *)&pDsp)*/, "DEV9")) 
+		{ 
+			ClosePlugins(true); 
+			return false; 
+		}
 		OpenStatus.DEV9 = true;
 	}
-
-	if( !OpenStatus.USB )
+	return true;
+}
+bool OpenUSB()
+{
+	if (!OpenStatus.USB)
 	{
 		USBirqCallback(usbIrq);
 		usbHandler = USBirqHandler();
 		USBsetRAM(psxM);
-		ret = USBopen((void *)&pDsp);
-		if (ret != 0) { Msgbox::Alert("Error Opening USB Plugin"); goto OpenError; }
+		
+		if (ReportError2(USBopen((void *)&pDsp), "USB")) 
+		{ 
+			ClosePlugins(true); 
+			return false; 
+		}
 		OpenStatus.USB = true;
 	}
+	return true;
+}
 
-	if( !OpenStatus.FW )
+bool OpenFW()
+{
+	if (!OpenStatus.FW)
 	{
 		FWirqCallback(fwIrq);
-		ret = FWopen((void *)&pDsp);
-		if (ret != 0) { Msgbox::Alert("Error Opening FW Plugin"); goto OpenError; }
+		
+		if (ReportError2(FWopen((void *)&pDsp), "FW")) 
+		{ 
+			ClosePlugins(true); 
+			return false; 
+		}
 		OpenStatus.FW = true;
 	}
+	return true;
+}
 
-	if( !cdvdElf )
-		cdvdNewDiskCB();
+int OpenPlugins(const char* pTitleFilename)
+{
+	if (!plugins_initialized)
+	{
+		if( InitPlugins() == -1 ) return -1;
+	}
 
-#ifndef _WIN32
-	//chdir(MAIN_DIR);
-#endif
+	if ((!OpenCDVD(pTitleFilename)) || (!OpenGS()) || (!OpenPAD1()) || (!OpenPAD2()) ||
+	    (!OpenSPU2()) || (!OpenDEV9()) || (!OpenUSB()) || (!OpenFW()))
+		return -1;
+	
+	if (!only_loading_elf) cdvdNewDiskCB();
 	return 0;
-
-OpenError:
-	ClosePlugins( true );
-#ifndef _WIN32
-	//chdir(MAIN_DIR);
-#endif
-
-    return -1;
 }
 
 
@@ -857,7 +917,9 @@ void ClosePlugins( bool closegs )
 			OpenStatus.GS = false;
 		}
 		else
+		{
 			mtgsWaitGS();
+		}
 	}
 
 	CLOSE_PLUGIN( CDVD );
@@ -865,16 +927,6 @@ void ClosePlugins( bool closegs )
 	CLOSE_PLUGIN( USB );
 	CLOSE_PLUGIN( FW );
 	CLOSE_PLUGIN( SPU2 );
-
-	// More special treatment for the GS.  It needs a complete shutdown and re-init
-	// or else it will tend to error out when we try to use it again.
-	if( 0 ) //closegs )
-	{
-		GSshutdown();
-
-		int ret = GSinit();
-		if (ret != 0) { Msgbox::Alert("GSinit error: %d", params ret);  }
-	}
 }
 
 //used to close the GS plugin window and pads, to switch gsdx renderer
@@ -894,11 +946,11 @@ void CloseGS()
 
 void ReleasePlugins()
 {
-	if (!loadp) return;
+	if (!plugins_loaded) return;
 
-	if (GSplugin   == NULL || PAD1plugin == NULL || PAD2plugin == NULL ||
-		SPU2plugin == NULL || CDVDplugin == NULL || DEV9plugin == NULL ||
-		USBplugin  == NULL || FWplugin == NULL) return;
+	if ((GSplugin == NULL) || (PAD1plugin == NULL) || (PAD2plugin == NULL) ||
+		(SPU2plugin == NULL) || (CDVDplugin == NULL) || (DEV9plugin == NULL) ||
+		(USBplugin == NULL) || (FWplugin == NULL)) return;
 
 	ShutdownPlugins();
 
@@ -910,7 +962,8 @@ void ReleasePlugins()
 	SysCloseLibrary(DEV9plugin); DEV9plugin = NULL;
 	SysCloseLibrary(USBplugin);  USBplugin = NULL;
 	SysCloseLibrary(FWplugin);   FWplugin = NULL;
-	loadp = false;
+	
+	plugins_loaded = false;
 }
 
 void PluginsResetGS()

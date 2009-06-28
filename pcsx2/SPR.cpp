@@ -347,7 +347,7 @@ void _dmaSPR1()   // toSPR work function
 		{
 			Console::WriteLn("SPR1 Tag BUSERR");
 			spr1->chcr = (spr1->chcr & 0xFFFF) | ((*ptag) & 0xFFFF0000);	//Transfer upper part of tag to CHCR bits 31-15
-			psHu32(DMAC_STAT) |= 1 << 15;				//If yes, set BEIS (BUSERR) in DMAC_STAT register
+			psHu32(DMAC_STAT) |= DMAC_STAT_BEIS;				//If yes, set BEIS (BUSERR) in DMAC_STAT register
 			done = TRUE;
 			spr1finished = (done) ? 1: 0;
 			return;
