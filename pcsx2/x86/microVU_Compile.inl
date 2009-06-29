@@ -79,7 +79,7 @@
 microVUt(void) mVUcheckIsSame(mV) {
 
 	if (mVU->prog.isSame == -1) {
-		mVU->prog.isSame = !memcmp_mmx(mVU->prog.prog[mVU->prog.cur].data, mVU->regs->Micro, mVU->microMemSize);
+		mVU->prog.isSame = !memcmp_mmx(mVUcurProg.data, mVU->regs->Micro, mVU->microMemSize);
 	}
 	if (mVU->prog.isSame == 0) {
 		if (!isVU1)	mVUcacheProg<0>(mVU->prog.cur);
@@ -89,19 +89,56 @@ microVUt(void) mVUcheckIsSame(mV) {
 }
 
 // Sets up microProgram PC ranges based on whats been recompiled
-microVUt(void) mVUsetupRange(mV, u32 pc) {
+microVUt(void) mVUsetupRange(mV, s32 pc, bool isStartPC) {
 
-	if (mVUcurProg.range[0] == -1) { 
-		mVUcurProg.range[0] = (s32)pc;
-		mVUcurProg.range[1] = (s32)pc;
+	for (int i = 0; i <= mVUcurProg.ranges.total; i++) {
+		if ((pc >= mVUcurProg.ranges.range[i][0])
+		&&	(pc <= mVUcurProg.ranges.range[i][1])) { return; }
 	}
-	else if (mVUcurProg.range[0] > (s32)pc) {
-		mVUcurProg.range[0] = (s32)pc;
-		mVUcheckIsSame(mVU);
+
+	mVUcheckIsSame(mVU);
+
+	if (isStartPC) {
+		if (mVUcurProg.ranges.total < mVUcurProg.ranges.max) {
+			mVUcurProg.ranges.total++;
+			mVUrange[0] = pc;
+		}
+		else {
+			mVUcurProg.ranges.total = 0;
+			mVUrange[0] = 0;
+			mVUrange[1] = mVU->microMemSize - 8;
+			DevCon::Status("microVU%d: Prog Range List Full", params mVU->index);
+		}
 	}
-	else if (mVUcurProg.range[1] < (s32)pc) {
-		mVUcurProg.range[1] = (s32)pc;
-		mVUcheckIsSame(mVU);
+	else {
+		if (mVUrange[1] != -1) return;
+		if (mVUrange[0] <= pc) {
+			mVUrange[1] = pc;
+			for (int i = 0; i <= (mVUcurProg.ranges.total-1); i++) {
+				if ((mVUrange[0]-8) == mVUcurProg.ranges.range[i][1]) {
+					mVUcurProg.ranges.range[i][1] = pc;
+					mVUrange[0] = -1;
+					mVUrange[1] = -1;
+					mVUcurProg.ranges.total--;
+					//DevCon::Status("microVU%d: Prog Range Merging", params mVU->index);
+				}
+			}
+		}
+		else {
+			DevCon::Status("microVU%d: Prog Range Wrap", params mVU->index);
+			mVUrange[1] = mVU->microMemSize - 8;
+			if (mVUcurProg.ranges.total < mVUcurProg.ranges.max) {
+				mVUcurProg.ranges.total++;
+				mVUrange[0] = 0;
+				mVUrange[1] = pc;
+			}
+			else {
+				mVUcurProg.ranges.total = 0;
+				mVUrange[0] = 0;
+				mVUrange[1] = mVU->microMemSize - 8;
+				DevCon::Status("microVU%d: Prog Range List Full", params mVU->index);
+			}
+		}
 	}
 }
 
@@ -236,7 +273,6 @@ microVUt(void) mVUendProgram(mV, int isEbit, int* xStatus, int* xMac, int* xClip
 	}
 
 	if (isEbit != 2) { // Save PC, and Jump to Exit Point
-		mVUsetupRange(mVU, xPC);
 		MOV32ItoM((uptr)&mVU->regs->VI[REG_TPC].UL, xPC);
 		JMP32((uptr)mVU->exitFunct - ((uptr)x86Ptr + 5));
 	}
@@ -298,7 +334,7 @@ microVUr(void*) mVUcompile(microVU* mVU, u32 startPC, uptr pState) {
 	const u32	endCount = (mVU->microMemSize / 8) - 1;
 
 	// Setup Program Bounds/Range
-	mVUsetupRange(mVU, startPC);
+	mVUsetupRange(mVU, startPC, 1);
 
 	// First Pass
 	iPC = startPC / 4;
@@ -360,7 +396,7 @@ microVUr(void*) mVUcompile(microVU* mVU, u32 startPC, uptr pState) {
 		else {
 			microBlock* bBlock = NULL;
 			s32* ajmp = 0;
-			mVUsetupRange(mVU, xPC);
+			mVUsetupRange(mVU, xPC, 0);
 			mVUdebugNOW(1);
 
 			switch (mVUbranch) {
@@ -441,6 +477,7 @@ microVUr(void*) mVUcompile(microVU* mVU, u32 startPC, uptr pState) {
 	if (x == endCount) { Console::Error("microVU%d: Possible infinite compiling loop!", params mVU->index); }
 
 	// E-bit End
+	mVUsetupRange(mVU, xPC, 0);
 	mVUendProgram(mVU, 1, xStatus, xMac, xClip);
 	return thisPtr;
 }

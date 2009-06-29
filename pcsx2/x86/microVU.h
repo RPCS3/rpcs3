@@ -84,14 +84,21 @@ public:
 	}
 };
 
+#define mMaxRanges 128
+struct microRange { 
+	static const int max = mMaxRanges - 1;
+	int total;
+	s32 range[mMaxRanges][2];
+};
+
 #define mProgSize 0x4000/4
 struct microProgram {
-	u32				   data [mProgSize];
-	microBlockManager* block[mProgSize/2];
-	microIR<mProgSize> allocInfo;
-	u32 used;		// Number of times its been used
+	u32				   data [mProgSize];   // Holds a copy of the VU microProgram
+	microBlockManager* block[mProgSize/2]; // Array of Block Managers
+	microIR<mProgSize> allocInfo;		   // IR information
+	microRange		   ranges;			   // The ranges of the microProgram that have already been recompiled
+	u64 used;		// Number of times its been used
 	u32 last_used;	// Counters # of frames since last use (starts at 3 and counts backwards to 0 for each 30fps vSync)
-	s32 range[2];	// The range of microMemory that has already been recompiled for the current program
 	u8* x86ptr;		// Pointer to program's recompilation code
 	u8* x86start;	// Start of program's rec-cache
 	u8* x86end;		// Limit of program's rec-cache

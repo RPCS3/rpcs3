@@ -90,8 +90,11 @@ microVUt(void) mVUreset(mV) {
 		mVU->prog.prog[i].x86ptr = z;
 		z += (mVU->cacheSize / (mVU->prog.max + 1));
 		mVU->prog.prog[i].x86end = z;
-		mVU->prog.prog[i].range[0] = -1; // Set range to 
-		mVU->prog.prog[i].range[1] = -1; // indeterminable status
+		for (int j = 0; j <= mVU->prog.prog[i].ranges.max; j++) {
+			mVU->prog.prog[i].ranges.range[j][0] = -1; // Set range to 
+			mVU->prog.prog[i].ranges.range[j][1] = -1; // indeterminable status
+			mVU->prog.prog[i].ranges.total		 = -1;
+		}
 	}
 }
 
@@ -128,14 +131,16 @@ microVUt(void) mVUclear(mV, u32 addr, u32 size) {
 // Clears program data (Sets used to 1 because calling this function implies the program will be used at least once)
 microVUf(void) mVUclearProg(int progIndex) {
 	microVU* mVU = mVUx;
-	mVU->prog.prog[progIndex].used = 1;
-	mVU->prog.prog[progIndex].last_used = 3;
-	mVU->prog.prog[progIndex].range[0] = -1;
-	mVU->prog.prog[progIndex].range[1] = -1;
-	mVU->prog.prog[progIndex].x86ptr = mVU->prog.prog[progIndex].x86start;
+	mVUprogI.used	   = 1;
+	mVUprogI.last_used = 3;
+	mVUprogI.x86ptr	   = mVUprogI.x86start;
+	for (int j = 0; j <= mVUprogI.ranges.max; j++) {
+		mVUprogI.ranges.range[j][0]	= -1; // Set range to 
+		mVUprogI.ranges.range[j][1]	= -1; // indeterminable status
+		mVUprogI.ranges.total		= -1;
+	}
 	for (u32 i = 0; i < (mVU->progSize / 2); i++) {
-		if (mVU->prog.prog[progIndex].block[i])
-			mVU->prog.prog[progIndex].block[i]->reset();
+		if (mVUprogI.block[i]) mVUprogI.block[i]->reset();
 	}
 }
 
@@ -161,7 +166,7 @@ microVUf(int) mVUfindLeastUsedProg() {
 	
 		const int pMax	=  mVU->prog.max;
 		int smallidx	= (mVU->prog.cur+1)&pMax;
-		u32 smallval	=  mVU->prog.prog[smallidx].used;
+		u64 smallval	=  mVU->prog.prog[smallidx].used;
 
 		for (int i = 1, j = (smallidx+1)&pMax; i <= pMax; i++, j=(j+1)&pMax) {
 			if (smallval > mVU->prog.prog[j].used) {
@@ -192,9 +197,7 @@ microVUt(void) mVUvsyncUpdate(mV) {
 	for (int i = 0; i <= mVU->prog.max; i++) {
 		if (mVU->prog.prog[i].last_used != 0) {
 			if (mVU->prog.prog[i].last_used >= 3) {
-
-				if (mVU->prog.prog[i].used < 0x4fffffff) // program has been used recently. Give it a
-					mVU->prog.prog[i].used += 0x200;	 // 'weighted' bonus signifying it's importance
+				mVU->prog.prog[i].used += 0x200; // give 'weighted' bonus
 			}
 			mVU->prog.prog[i].last_used--;
 		}
@@ -202,20 +205,27 @@ microVUt(void) mVUvsyncUpdate(mV) {
 	}
 }
 
-// Compare Cached microProgram to mVU->regs->Micro
-microVUf(int) mVUcmpProg(int progIndex, bool progUsed, bool needOverflowCheck, bool cmpWholeProg) {
+microVUf(bool) mVUcmpPartial(int progIndex) {
 	microVU* mVU = mVUx;
-	
+	for (int i = 0; i <= mVUprogI.ranges.total; i++) {
+		if (memcmp_mmx(cmpOffset(mVUprogI.data), cmpOffset(mVU->regs->Micro), ((mVUprogI.ranges.range[i][1] + 8) - mVUprogI.ranges.range[i][0]))) {
+			return 0;
+		}
+	}
+	return 1;
+}
+
+// Compare Cached microProgram to mVU->regs->Micro
+microVUf(bool) mVUcmpProg(int progIndex, bool progUsed, const bool cmpWholeProg) {
+	microVU* mVU = mVUx;
 	if (progUsed) {
-		if (cmpWholeProg && (!memcmp_mmx((u8*)mVUprogI.data, mVU->regs->Micro, mVU->microMemSize)) ||
-		  (!cmpWholeProg && (!memcmp_mmx(cmpOffset(mVUprogI.data), cmpOffset(mVU->regs->Micro), ((mVUprogI.range[1] + 8) - mVUprogI.range[0]))))) {
+		if (cmpWholeProg && (!memcmp_mmx((u8*)mVUprogI.data, mVU->regs->Micro, mVU->microMemSize))
+		||(!cmpWholeProg && mVUcmpPartial<vuIndex>(progIndex))) {
 			mVU->prog.cur = progIndex;
 			mVU->prog.cleared = 0;
 			mVU->prog.isSame = cmpWholeProg ? 1 : -1;
 			mVU->prog.prog[progIndex].last_used = 3;
-			if (needOverflowCheck && (mVU->prog.prog[progIndex].used < 0x7fffffff)) {
-				mVU->prog.prog[progIndex].used++; // increment 'used' (avoiding overflows if necessary)
-			}
+			mVU->prog.prog[progIndex].used++; // increment 'used'
 			return 1;
 		}
 	}
@@ -228,11 +238,11 @@ microVUf(int) mVUsearchProg() {
 
 	if (mVU->prog.cleared) { // If cleared, we need to search for new program
 		for (int i = 0; i <= mVU->prog.total; i++) {
-			if (mVUcmpProg<vuIndex>(i, !!mVU->prog.prog[i].used, 1, 0))
+			if (mVUcmpProg<vuIndex>(i, !!mVU->prog.prog[i].used, 0))
 				return 1; // Check Recently Used Programs
 		}
 		for (int i = 0; i <= mVU->prog.total; i++) {
-			if (mVUcmpProg<vuIndex>(i,  !mVU->prog.prog[i].used, 0, 0))
+			if (mVUcmpProg<vuIndex>(i,  !mVU->prog.prog[i].used, 0))
 				return 1; // Check Older Programs
 		}
 		mVU->prog.cur = mVUfindLeastUsedProg<vuIndex>(); // If cleared and program not found, make a new program instance
