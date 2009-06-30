@@ -219,8 +219,8 @@ microVUf(bool) mVUcmpPartial(int progIndex) {
 microVUf(bool) mVUcmpProg(int progIndex, bool progUsed, const bool cmpWholeProg) {
 	microVU* mVU = mVUx;
 	if (progUsed) {
-		if (cmpWholeProg && (!memcmp_mmx((u8*)mVUprogI.data, mVU->regs->Micro, mVU->microMemSize))
-		||(!cmpWholeProg && mVUcmpPartial<vuIndex>(progIndex))) {
+		if ((cmpWholeProg && !memcmp_mmx((u8*)mVUprogI.data, mVU->regs->Micro, mVU->microMemSize))
+		|| (!cmpWholeProg && mVUcmpPartial<vuIndex>(progIndex))) {
 			mVU->prog.cur = progIndex;
 			mVU->prog.cleared = 0;
 			mVU->prog.isSame = cmpWholeProg ? 1 : -1;
