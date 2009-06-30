@@ -96,7 +96,6 @@ microVUt(void) mVUsetupRange(mV, s32 pc, bool isStartPC) {
 		&&	(pc <= mVUcurProg.ranges.range[i][1])) { return; }
 	}
 
-	const u32 endMem = mVU->microMemSize-8;
 	mVUcheckIsSame(mVU);
 
 	if (isStartPC) {
@@ -107,7 +106,7 @@ microVUt(void) mVUsetupRange(mV, s32 pc, bool isStartPC) {
 		else {
 			mVUcurProg.ranges.total = 0;
 			mVUrange[0] = 0;
-			mVUrange[1] = endMem;
+			mVUrange[1] = mVU->microMemSize - 8;
 			DevCon::Status("microVU%d: Prog Range List Full", params mVU->index);
 		}
 	}
@@ -115,9 +114,10 @@ microVUt(void) mVUsetupRange(mV, s32 pc, bool isStartPC) {
 		if (mVUrange[0] <= pc) {
 			mVUrange[1] = pc;
 			for (int i = 0; i <= (mVUcurProg.ranges.total-1); i++) {
-				if ((mVUrange[0] == mVUcurProg.ranges.range[i][1])
-				||(((mVUrange[0]-8)&endMem) == mVUcurProg.ranges.range[i][1])) {
-					if (mVUcurProg.ranges.range[i][1] > pc) { continue; }
+				int rStart = (mVUrange[0] < 8) ? 0 : (mVUrange[0] - 8);
+				int rEnd   = pc;
+				if((mVUcurProg.ranges.range[i][1] >= rStart)
+				&& (mVUcurProg.ranges.range[i][1] <= rEnd)){
 					mVUcurProg.ranges.range[i][1] = pc;
 					mVUrange[0] = -1;
 					mVUrange[1] = -1;
@@ -137,7 +137,7 @@ microVUt(void) mVUsetupRange(mV, s32 pc, bool isStartPC) {
 			else {
 				mVUcurProg.ranges.total = 0;
 				mVUrange[0] = 0;
-				mVUrange[1] = endMem;
+				mVUrange[1] = mVU->microMemSize - 8;
 				DevCon::Status("microVU%d: Prog Range List Full", params mVU->index);
 			}
 		}
@@ -488,7 +488,7 @@ microVUr(void*) mVUcompile(microVU* mVU, u32 startPC, uptr pState) {
 microVUt(void*) mVUblockFetch(microVU* mVU, u32 startPC, uptr pState) {
 
 	using namespace x86Emitter;
-	if (startPC > mVU->microMemSize-8) { DevCon::Error("microVU%d: invalid startPC", params mVU->index); }
+	if (startPC > mVU->microMemSize-8) { DevCon::Error("microVU%d: invalid startPC [%04x]", params mVU->index, startPC); }
 	startPC &= mVU->microMemSize-8;
 	
 	blockCreate(startPC/8);
