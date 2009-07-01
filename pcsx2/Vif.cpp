@@ -37,7 +37,6 @@ PCSX2_ALIGNED16(u32 g_vifRow1[4]);
 PCSX2_ALIGNED16(u32 g_vifCol1[4]);
 
 extern int g_vifCycles;
-bool mfifodmairq = false;
 
 enum UnpackOffset
 {
@@ -449,8 +448,6 @@ void mfifoVIF1transfer(int qwc)
 		return;
 	}
 
-	mfifodmairq = false; //Clear any previous TIE interrupt
-
 	if (vif1ch->qwc == 0 && vifqwc > 0)
 	{
 		ptag = (u32*)dmaGetAddr(vif1ch->tadr);
@@ -520,7 +517,6 @@ void mfifoVIF1transfer(int qwc)
 		{
 			VIF_LOG("dmaIrq Set");
 			vif1.done = true;
-			mfifodmairq = true; //Let the handler know we have prematurely ended MFIFO
 		}
 	}
 	
@@ -608,10 +604,6 @@ void vifMFIFOInterrupt()
 		vif1Regs->stat &= ~0x1F000000; // FQC=0
 		hwDmacIrq(DMAC_14);
 	}*/
-
-	//On a TIE break we do not clear the MFIFO (Art of Fighting)
-	//If we dont clear it on MFIFO end, Tekken Tag breaks, understandably (Refraction)
-	if (!mfifodmairq)  vifqwc = 0;
 
 	vif1.done = 1;
 	g_vifCycles = 0;

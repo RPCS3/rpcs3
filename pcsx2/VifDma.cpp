@@ -2569,14 +2569,14 @@ __forceinline void vif1Interrupt()
 		}
 	}
 
-	if (vif1.inprogress) 
+	if (vif1.inprogress & 0x1) 
 	{
 		_VIF1chain();
 		CPU_INT(1, g_vifCycles);
 		return;
 	}
 
-	if ((!vif1.done) || (vif1.inprogress & 0x1))
+	if (!vif1.done)
 	{
 
 		if (!(psHu32(DMAC_CTRL) & 0x1))
