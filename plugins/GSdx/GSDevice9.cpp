@@ -502,7 +502,6 @@ GSTexture* GSDevice9::CreateRenderTarget(int w, int h, int format)
 GSTexture* GSDevice9::CreateDepthStencil(int w, int h, int format)
 {
 	return __super::CreateDepthStencil(w, h, format ? format : D3DFMT_D24S8);
-	// return __super::CreateDepthStencil(w, h, format ? format : D3DFMT_D32F_LOCKABLE); 
 }
 
 GSTexture* GSDevice9::CreateTexture(int w, int h, int format)

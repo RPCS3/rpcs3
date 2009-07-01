@@ -177,7 +177,6 @@ void GSTextureCacheSW::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, cons
 					if(GSUtil::HasSharedBits(BITBLTBUF.DPSM, t->m_TEX0.PSM))
 					{
 						t->m_valid[page] = 0;
-
 						t->m_complete = false;
 					}
 				}
@@ -237,7 +236,7 @@ bool GSTextureCacheSW::GSTexture::Update(const GIFRegTEX0& TEX0, const GIFRegTEX
 
 	GSVector4i r = rect.ralign<GSVector4i::Outside>(s);
 
-	if(r.left == 0 && r.top == 0 && r.right == tw && r.bottom == th)
+	if(r.eq(GSVector4i(0, 0, tw, th)))
 	{
 		m_complete = true; // lame, but better than nothing
 	}

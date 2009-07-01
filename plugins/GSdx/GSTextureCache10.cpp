@@ -203,8 +203,14 @@ bool GSTextureCache10::Source10::Create(Target* dst)
 		m_initpalette = true;
 		break;
 	case PSM_PSMT4HL:
+		m_bpp = 4;
+		m_palette = m_renderer->m_dev->CreateTexture(256, 1);
+		m_initpalette = true;
+		break;
 	case PSM_PSMT4HH:
-		ASSERT(0); // TODO
+		m_bpp = 5;
+		m_palette = m_renderer->m_dev->CreateTexture(256, 1);
+		m_initpalette = true;
 		break;
 	}
 

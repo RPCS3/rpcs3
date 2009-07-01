@@ -97,21 +97,6 @@ bool GSUtil::HasCompatibleBits(uint32 spsm, uint32 dpsm)
 	return s_maps.CompatibleBitsField[spsm][dpsm];
 }
 
-bool GSUtil::IsRectInRect(const GSVector4i& inner, const GSVector4i& outer)
-{
-	return outer.left <= inner.left && inner.right <= outer.right && outer.top <= inner.top && inner.bottom <= outer.bottom;
-}
-
-bool GSUtil::IsRectInRectH(const GSVector4i& inner, const GSVector4i& outer)
-{
-	return outer.top <= inner.top && inner.bottom <= outer.bottom;
-}
-
-bool GSUtil::IsRectInRectV(const GSVector4i& inner, const GSVector4i& outer)
-{
-	return outer.left <= inner.left && inner.right <= outer.right;
-}
-
 bool GSUtil::CheckDirectX()
 {
 	if(HINSTANCE hDll = LoadLibrary(format("d3dx9_%d.dll", D3DX_SDK_VERSION).c_str()))

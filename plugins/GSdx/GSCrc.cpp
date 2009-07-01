@@ -32,6 +32,7 @@ CRC::Game CRC::m_games[] =
 	{0xDDB59F46, KyuuketsuKitanMoonties, JP, PointListPalette},
 	{0xC8EE2562, PiaCarroteYoukosoGPGakuenPrincess, JP, PointListPalette},
 	{0x6CF94A43, KazokuKeikakuKokoroNoKizuna, JP, PointListPalette},
+	{0xEDAF602D, DuelSaviorDestiny, JP, PointListPalette},
 	{0xa39517ab, FFX, EU, 0},
 	{0xa39517ae, FFX, FR, 0},
 	{0x941bb7d9, FFX, DE, 0},
@@ -133,12 +134,13 @@ CRC::Game CRC::m_games[] =
 	{0x6BF11378, Onimusha3, US, 0},	
 	{0xF442260C, MajokkoALaMode2, JP, 0},
 	{0x14FE77F7, TalesOfAbyss, US, 0},
-	{0x045D77E9, TalesOfAbyss, US, 0}, // undub
+	{0x045D77E9, TalesOfAbyss, JPUNDUB, 0},
 	{0xAA5EC3A3, TalesOfAbyss, JP, 0}, 
 	{0xFB236A46, SonicUnleashed, US, 0},
 	{0x4C7BB3C8, SimpsonsGame, Unknown, 0},
 	{0x4C94B32C, SimpsonsGame, Unknown, 0},
 	{0xD71B57F4, Genji, Unknown, 0},
+	{0x23A97857, StarOcean3, JPUNDUB, 0},
 };
 
 hash_map<uint32, CRC::Game*> CRC::m_map;

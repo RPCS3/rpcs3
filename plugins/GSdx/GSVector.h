@@ -24,18 +24,6 @@ public:
 		this->y = y;
 	}
 
-	GSVector2T(const GSVector2T& v) 
-	{
-		*this = v;
-	}
-
-	const GSVector2T& operator = (const GSVector2T& v) 
-	{
-		_mm_storel_epi64((__m128i*)this, _mm_loadl_epi64((__m128i*)&v));
-
-		return *this;
-	}
-
 	bool operator == (const GSVector2T& v) const
 	{
 		return x == v.x && y == v.y;

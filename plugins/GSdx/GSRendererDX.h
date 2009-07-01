@@ -195,18 +195,25 @@ public:
 
 		ps_cb.FogColor_AREF = GSVector4((int)env.FOGCOL.FCR, (int)env.FOGCOL.FCG, (int)env.FOGCOL.FCB, (int)context->TEST.AREF) / 255;
 
-		if(ps_sel.atst == 2 || ps_sel.atst == 5)
+		if(ps_sel.atst == ATST_LESS || ps_sel.atst == ATST_GEQUAL)
 		{
-			ps_cb.FogColor_AREF.a -= 0.9f / 255;
+			ps_cb.FogColor_AREF.a -= 1.0f / 255;
 		}
-		else if(ps_sel.atst == 3 || ps_sel.atst == 6)
+		else if(ps_sel.atst == ATST_LEQUAL || ps_sel.atst == ATST_GREATER)
 		{
-			ps_cb.FogColor_AREF.a += 0.9f / 255;
+			// example: 
+			// ATST = ATST_GREATER, AREF = 127
+			// alpha = (int)127.0 => fail
+			// alpha = (int)127.5 => fail (!)
+			// alpha = (int)128.0 => pass
+
+			ps_cb.FogColor_AREF.a += 1.0f / 255; 
 		}
 
 		if(tex)
 		{
 			ps_sel.bpp = tex->m_bpp;
+			ps_sel.rt = tex->m_target;
 
 			int w = tex->m_texture->GetWidth();
 			int h = tex->m_texture->GetHeight();

@@ -167,7 +167,7 @@ struct EnableSetEip : public Gen {
 			Gen::call((void*)local::set_eip_to_esi);
 			break;
 		case Xbyak::Operand::EDI:
-			Gen::call((void*)local::set_eip_to_esi);
+			Gen::call((void*)local::set_eip_to_edi);
 			break;
 		case Xbyak::Operand::EBP:
 			Gen::call((void*)local::set_eip_to_ebp);

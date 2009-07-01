@@ -890,7 +890,7 @@ void GSState::GIFRegHandlerHWREG(GIFReg* r)
 {
 	ASSERT(m_env.TRXDIR.XDIR == 0); // host => local
 
-	Write((uint8*)r, 8); // hunting ground
+	Write((uint8*)r, 8); // haunting ground
 }
 
 void GSState::GIFRegHandlerSIGNAL(GIFReg* r)
@@ -2211,6 +2211,26 @@ bool GSC_Genji(const GSFrameInfo& fi, int& skip)
 	return true;
 }
 
+bool GSC_StarOcean3(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME && fi.FBP == fi.TBP0 && fi.FPSM == PSM_PSMCT32 && fi.TPSM == PSM_PSMT4HH)
+		{
+			skip = 1000; //
+		}
+	}
+	else
+	{
+		if(!(fi.TME && fi.FBP == fi.TBP0 && fi.FPSM == PSM_PSMCT32 && fi.TPSM == PSM_PSMT4HH))
+		{
+			skip = 0;
+		}
+	}
+
+	return true;
+}
+
 bool GSState::IsBadFrame(int& skip)
 {
 	GSFrameInfo fi;
@@ -2258,6 +2278,7 @@ bool GSState::IsBadFrame(int& skip)
 		map[CRC::TalesOfAbyss] = GSC_TalesOfAbyss;
 		map[CRC::SonicUnleashed] = GSC_SonicUnleashed;
 		map[CRC::Genji] = GSC_Genji;
+		map[CRC::StarOcean3] = GSC_StarOcean3;
 	}
 
 	// TODO: just set gsc in SetGameCRC once

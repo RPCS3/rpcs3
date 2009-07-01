@@ -58,11 +58,11 @@ public:
 	public:
 		GSTexture* m_palette;
 		bool m_initpalette;
-		uint32 m_blocks, m_total_blocks;
-		struct {uint32 block, count;} m_valid[MAX_PAGES]; // each uint32 bits map to the 32 blocks of that page
+		uint32 m_valid[MAX_PAGES]; // each uint32 bits map to the 32 blocks of that page
 		uint32* m_clut;
 		int m_bpp;
 		bool m_target;
+		bool m_complete;
 
 	public:
 		explicit Source(GSRenderer* renderer);
@@ -95,9 +95,10 @@ protected:
 	{
 		hash_map<Source*, bool> m_surfaces;
 		hash_map<Source*, bool> m_map[MAX_PAGES];
+		uint32 m_pages[16];
 		bool m_used;
 
-		SourceMap() : m_used(false) {}
+		SourceMap() : m_used(false) {memset(m_pages, 0, sizeof(m_pages));}
 
 		void Add(Source* s, const GIFRegTEX0& TEX0);
 		void RemoveAll();

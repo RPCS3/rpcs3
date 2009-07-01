@@ -34,6 +34,7 @@ public:
 		KyuuketsuKitanMoonties,
 		PiaCarroteYoukosoGPGakuenPrincess,
 		KazokuKeikakuKokoroNoKizuna,
+		DuelSaviorDestiny,
 		FFX,
 		FFX2,
 		FFXII,
@@ -70,6 +71,7 @@ public:
 		SonicUnleashed,
 		SimpsonsGame,
 		Genji,
+		StarOcean3,
 		TitleCount,
 	};
 

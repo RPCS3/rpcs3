@@ -54,9 +54,9 @@ GSTextureCache::Source* GSTextureCache::LookupSource(const GIFRegTEX0& TEX0, con
 	
 	Source* src = NULL;
 
-	const hash_map<Source*, bool>& map = m_src.m_map[TEX0.TBP0 >> 5];
+	hash_map<Source*, bool>& m = m_src.m_map[TEX0.TBP0 >> 5];
 
-	for(hash_map<Source*, bool>::const_iterator i = map.begin(); i != map.end(); i++)
+	for(hash_map<Source*, bool>::iterator i = m.begin(); i != m.end(); i++)
 	{
 		Source* s = i->first;
 
@@ -242,9 +242,9 @@ void GSTextureCache::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const 
 
 	if(!target)
 	{
-		const hash_map<Source*, bool>& map = m_src.m_map[bp >> 5];
+		const hash_map<Source*, bool>& m = m_src.m_map[bp >> 5];
 
-		for(hash_map<Source*, bool>::const_iterator i = map.begin(); i != map.end(); )
+		for(hash_map<Source*, bool>::const_iterator i = m.begin(); i != m.end(); )
 		{
 			hash_map<Source*, bool>::const_iterator j = i++;
 
@@ -267,9 +267,9 @@ void GSTextureCache::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const 
 
 			if(page < MAX_PAGES)
 			{
-				const hash_map<Source*, bool>& map = m_src.m_map[page];
+				const hash_map<Source*, bool>& m = m_src.m_map[page];
 
-				for(hash_map<Source*, bool>::const_iterator i = map.begin(); i != map.end(); )
+				for(hash_map<Source*, bool>::const_iterator i = m.begin(); i != m.end(); )
 				{
 					hash_map<Source*, bool>::const_iterator j = i++;
 
@@ -279,10 +279,8 @@ void GSTextureCache::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const 
 					{
 						if(!s->m_target)
 						{
-							s->m_blocks -= s->m_valid[page].count;
-
-							s->m_valid[page].block = 0;
-							s->m_valid[page].count = 0;
+							s->m_valid[page] = 0;
+							s->m_complete = false;
 
 							found = true;
 						}
@@ -485,6 +483,7 @@ GSTextureCache::Source::Source(GSRenderer* r)
 	, m_initpalette(false)
 	, m_bpp(0)
 	, m_target(false)
+	, m_complete(false)
 {
 	memset(m_valid, 0, sizeof(m_valid));
 
@@ -509,7 +508,7 @@ void GSTextureCache::Source::Update(const GIFRegTEX0& TEX0, const GIFRegTEXA& TE
 {
 	__super::Update();
 
-	if(m_target)
+	if(m_complete || m_target)
 	{
 		return;
 	}
@@ -517,16 +516,16 @@ void GSTextureCache::Source::Update(const GIFRegTEX0& TEX0, const GIFRegTEXA& TE
 	m_TEX0 = TEX0;
 	m_TEXA = TEXA;
 
-	if(m_blocks == m_total_blocks)
-	{
-		return;
-	}
-
 	const GSLocalMemory::psm_t& psm = GSLocalMemory::m_psm[m_TEX0.PSM];
 
 	GSVector2i bs = psm.bs;
 
 	GSVector4i r = rect.ralign<GSVector4i::Outside>(bs);
+
+	if(r.eq(GSVector4i(0, 0, 1 << m_TEX0.TW, 1 << m_TEX0.TH)))
+	{
+		m_complete = true; // lame, but better than nothing
+	}
 
 	uint32 bp = m_TEX0.TBP0;
 	uint32 bw = m_TEX0.TBW;
@@ -548,11 +547,12 @@ void GSTextureCache::Source::Update(const GIFRegTEX0& TEX0, const GIFRegTEXA& TE
 				uint32 row = block >> 5;
 				uint32 col = 1 << (block & 31);
 
-				if((m_valid[row].block & col) == 0)
+				if((m_valid[row] & col) == 0)
 				{
-					if(!repeating) m_valid[row].block |= col;
-
-					m_valid[row].count++;
+					if(!repeating)
+					{
+						m_valid[row] |= col;
+					}
 
 					Write(GSVector4i(x, y, x + bs.x, y + bs.y));
 
@@ -579,13 +579,11 @@ void GSTextureCache::Source::Update(const GIFRegTEX0& TEX0, const GIFRegTEXA& TE
 						uint32 row = block >> 5;
 						uint32 col = 1 << (block & 31);
 
-						m_valid[row].block |= col;
+						m_valid[row] |= col;
 					}
 				}
 			}
 		}
-
-		m_blocks += blocks;
 
 		m_renderer->m_perfmon.Put(GSPerfMon::Unswizzle, bs.x * bs.y * sizeof(uint32) * blocks);
 
@@ -785,9 +783,7 @@ void GSTextureCache::SourceMap::Add(Source* s, const GIFRegTEX0& TEX0)
 
 	const GSLocalMemory::psm_t& psm = GSLocalMemory::m_psm[TEX0.PSM];
 
-	GSVector2i bs = psm.bs;
-
-	int blocks = 0;
+	GSVector2i bs = (bp & 31) ? psm.pgs : psm.bs;
 
 	for(int y = 0; y < th; y += bs.y)
 	{
@@ -795,19 +791,33 @@ void GSTextureCache::SourceMap::Add(Source* s, const GIFRegTEX0& TEX0)
 
 		for(int x = 0; x < tw; x += bs.x)
 		{
-			uint32 block = base + psm.blockOffset[x >> 3];
+			uint32 page = (base + psm.blockOffset[x >> 3]) >> 5;
 
-			if(block < MAX_BLOCKS)
+			if(page < MAX_PAGES)
 			{
-				m_map[block >> 5][s] = true;
-
-				blocks++;
+				m_pages[page >> 5] |= 1 << (page & 31);
 			}
 		}
 	}
 
-	s->m_blocks = 0;
-	s->m_total_blocks = blocks;
+	for(int i = 0; i < countof(m_pages); i++)
+	{
+		if(m_pages[i])
+		{
+			hash_map<Source*, bool>* m = &m_map[i << 5];
+			uint32 p = m_pages[i];
+
+			for(int j = 0; j < 32; j++)
+			{
+				if(p & (1 << j))
+				{
+					m[j][s] = true;
+				}
+			}
+
+			m_pages[i] = 0;
+		}
+	}
 }
 
 void GSTextureCache::SourceMap::RemoveAll()
@@ -819,7 +829,7 @@ void GSTextureCache::SourceMap::RemoveAll()
 
 	m_surfaces.clear();
 
-	for(int i = 0; i < MAX_PAGES; i++)
+	for(uint32 i = 0; i < countof(m_map); i++)
 	{
 		m_map[i].clear();
 	}
@@ -829,7 +839,7 @@ void GSTextureCache::SourceMap::RemoveAt(Source* s)
 {
 	m_surfaces.erase(s);
 
-	for(int i = 0; i < countof(m_map); i++)
+	for(uint32 i = s->m_TEX0.TBP0 >> 5; i < countof(m_map); i++)
 	{
 		m_map[i].erase(s);
 	}

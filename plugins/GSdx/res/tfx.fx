@@ -481,7 +481,7 @@ float4 sample(float2 tc, float w)
 
 		float4 t00, t01, t10, t11;
 
-		if(PS_BPP == 3) // 8HP
+		if(PS_BPP == 3) // 8H
 		{
 			float4 a;
 
@@ -489,6 +489,38 @@ float4 sample(float2 tc, float w)
 			a.y = Texture.Sample(TextureSampler, uv.zy).a;
 			a.z = Texture.Sample(TextureSampler, uv.xw).a;
 			a.w = Texture.Sample(TextureSampler, uv.zw).a;
+
+			t00 = Palette.Sample(PaletteSampler, a.x);
+			t01 = Palette.Sample(PaletteSampler, a.y);
+			t10 = Palette.Sample(PaletteSampler, a.z);
+			t11 = Palette.Sample(PaletteSampler, a.w);
+		}
+		else if(PS_BPP == 4) // 4HL
+		{
+			float4 a;
+
+			a.x = Texture.Sample(TextureSampler, uv.xy).a;
+			a.y = Texture.Sample(TextureSampler, uv.zy).a;
+			a.z = Texture.Sample(TextureSampler, uv.xw).a;
+			a.w = Texture.Sample(TextureSampler, uv.zw).a;
+
+			a = fmod(a, 1.0f / 16);
+
+			t00 = Palette.Sample(PaletteSampler, a.x);
+			t01 = Palette.Sample(PaletteSampler, a.y);
+			t10 = Palette.Sample(PaletteSampler, a.z);
+			t11 = Palette.Sample(PaletteSampler, a.w);
+		}
+		else if(PS_BPP == 5) // 4HH
+		{
+			float4 a;
+
+			a.x = Texture.Sample(TextureSampler, uv.xy).a;
+			a.y = Texture.Sample(TextureSampler, uv.zy).a;
+			a.z = Texture.Sample(TextureSampler, uv.xw).a;
+			a.w = Texture.Sample(TextureSampler, uv.zw).a;
+
+			a = fmod(a * 16, 1.0f / 16);
 
 			t00 = Palette.Sample(PaletteSampler, a.x);
 			t01 = Palette.Sample(PaletteSampler, a.y);
@@ -653,6 +685,42 @@ float4 sample(float2 tc, float w)
 
 			if(PS_RT == 1) a *= 0.5;
 			
+			t00 = tex1D(Palette, a.x);
+			t01 = tex1D(Palette, a.y);
+			t10 = tex1D(Palette, a.z);
+			t11 = tex1D(Palette, a.w);
+		}
+		else if(PS_BPP == 4) // 4HL
+		{
+			float4 a;
+
+			a.x = tex2D(Texture, uv.xy).a;
+			a.y = tex2D(Texture, uv.zy).a;
+			a.z = tex2D(Texture, uv.xw).a;
+			a.w = tex2D(Texture, uv.zw).a;
+			
+			if(PS_RT == 1) a *= 0.5;
+			
+			a = fmod(a, 1.0f / 16);
+
+			t00 = tex1D(Palette, a.x);
+			t01 = tex1D(Palette, a.y);
+			t10 = tex1D(Palette, a.z);
+			t11 = tex1D(Palette, a.w);
+		}
+		else if(PS_BPP == 5) // 4HH
+		{
+			float4 a;
+
+			a.x = tex2D(Texture, uv.xy).a;
+			a.y = tex2D(Texture, uv.zy).a;
+			a.z = tex2D(Texture, uv.xw).a;
+			a.w = tex2D(Texture, uv.zw).a;
+
+			if(PS_RT == 1) a *= 0.5;
+			
+			a = fmod(a * 16, 1.0f / 16);
+
 			t00 = tex1D(Palette, a.x);
 			t01 = tex1D(Palette, a.y);
 			t10 = tex1D(Palette, a.z);
