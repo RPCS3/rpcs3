@@ -299,25 +299,27 @@ void atst(float4 c)
 {
 	if(PS_ATE == 1)
 	{
+		float a = trunc(c.a * 255);
+		
 		if(PS_ATST == 0)
 		{
 			discard;
 		}
 		else if(PS_ATST == 2 || PS_ATST == 3) // l, le
 		{
-			clip(AREF - c.a);
+			clip(AREF - a);
 		}
 		else if(PS_ATST == 4) // e
 		{
-			clip(0.6f / 255 - abs(c.a - AREF)); // FIXME: 0.5f is too small
+			clip(0.5f - abs(a - AREF));
 		}
 		else if(PS_ATST == 5 || PS_ATST == 6) // ge, g
 		{
-			clip(c.a - AREF);
+			clip(a - AREF);
 		}
 		else if(PS_ATST == 7) // ne
 		{
-			clip(abs(c.a - AREF) - 0.4f / 255); // FIXME: 0.5f is too much
+			clip(abs(a - AREF) - 0.5f);
 		}
 	}
 }

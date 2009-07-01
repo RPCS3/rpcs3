@@ -25,6 +25,7 @@
 GSTextureCacheSW::GSTextureCacheSW(GSState* state)
 	: m_state(state)
 {
+	memset(m_pages, 0, sizeof(m_pages));
 }
 
 GSTextureCacheSW::~GSTextureCacheSW()
@@ -85,7 +86,25 @@ const GSTextureCacheSW::GSTexture* GSTextureCacheSW::Lookup(const GIFRegTEX0& TE
 
 				if(page < MAX_PAGES)
 				{
-					m_map[page][t] = true;
+					m_pages[page >> 5] |= 1 << (page & 31);
+				}
+			}
+		}
+
+		for(int i = 0; i < countof(m_pages); i++)
+		{
+			if(uint32 p = m_pages[i])
+			{
+				m_pages[i] = 0;
+
+				hash_map<GSTexture*, bool>* m = &m_map[i << 5];
+
+				for(int j = 0; j < 32; j++)
+				{
+					if(p & (1 << j))
+					{
+						m[j][t] = true;
+					}
 				}
 			}
 		}

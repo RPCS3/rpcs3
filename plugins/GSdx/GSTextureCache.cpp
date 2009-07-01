@@ -802,10 +802,11 @@ void GSTextureCache::SourceMap::Add(Source* s, const GIFRegTEX0& TEX0)
 
 	for(int i = 0; i < countof(m_pages); i++)
 	{
-		if(m_pages[i])
+		if(uint32 p = m_pages[i])
 		{
+			m_pages[i] = 0;
+
 			hash_map<Source*, bool>* m = &m_map[i << 5];
-			uint32 p = m_pages[i];
 
 			for(int j = 0; j < 32; j++)
 			{
@@ -814,8 +815,6 @@ void GSTextureCache::SourceMap::Add(Source* s, const GIFRegTEX0& TEX0)
 					m[j][s] = true;
 				}
 			}
-
-			m_pages[i] = 0;
 		}
 	}
 }

@@ -193,21 +193,19 @@ public:
 
 		GSTextureFX::PSConstantBuffer ps_cb;
 
-		ps_cb.FogColor_AREF = GSVector4((int)env.FOGCOL.FCR, (int)env.FOGCOL.FCG, (int)env.FOGCOL.FCB, (int)context->TEST.AREF) / 255;
+		ps_cb.FogColor_AREF = GSVector4((int)env.FOGCOL.FCR, (int)env.FOGCOL.FCG, (int)env.FOGCOL.FCB, 0) / 255;
 
-		if(ps_sel.atst == ATST_LESS || ps_sel.atst == ATST_GEQUAL)
+		switch(ps_sel.atst)
 		{
-			ps_cb.FogColor_AREF.a -= 1.0f / 255;
-		}
-		else if(ps_sel.atst == ATST_LEQUAL || ps_sel.atst == ATST_GREATER)
-		{
-			// example: 
-			// ATST = ATST_GREATER, AREF = 127
-			// alpha = (int)127.0 => fail
-			// alpha = (int)127.5 => fail (!)
-			// alpha = (int)128.0 => pass
-
-			ps_cb.FogColor_AREF.a += 1.0f / 255; 
+		case ATST_LESS:
+			ps_cb.FogColor_AREF.a = (float)((int)context->TEST.AREF - 1);
+			break;
+		case ATST_GREATER:
+			ps_cb.FogColor_AREF.a = (float)((int)context->TEST.AREF + 1);
+			break;
+		default:
+			ps_cb.FogColor_AREF.a = (float)(int)context->TEST.AREF;
+			break;
 		}
 
 		if(tex)
@@ -306,6 +304,19 @@ public:
 			static const uint32 iatst[] = {1, 0, 5, 6, 7, 2, 3, 4};
 
 			ps_sel.atst = iatst[ps_sel.atst];
+
+			switch(ps_sel.atst)
+			{
+			case ATST_LESS:
+				ps_cb.FogColor_AREF.a = (float)((int)context->TEST.AREF - 1);
+				break;
+			case ATST_GREATER:
+				ps_cb.FogColor_AREF.a = (float)((int)context->TEST.AREF + 1);
+				break;
+			default:
+				ps_cb.FogColor_AREF.a = (float)(int)context->TEST.AREF;
+				break;
+			}
 
 			m_tfx->UpdatePS(ps_sel, &ps_cb, ps_ssel);
 
