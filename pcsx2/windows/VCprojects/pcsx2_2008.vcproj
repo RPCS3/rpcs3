@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="windows-1253"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="9.00"
+	Version="9,00"
 	Name="pcsx2"
 	ProjectGUID="{1CEFD830-2B76-4596-A4EE-BCD7280A60BD}"
 	RootNamespace="pcsx2"
@@ -1471,19 +1471,11 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\Docs\PS2Edefs.txt"
+				RelativePath="..\..\Docs\PCSX2 FAQ 0.9.6.rtf"
 				>
 			</File>
 			<File
-				RelativePath="..\..\Docs\readme 0.9.4.txt"
-				>
-			</File>
-			<File
-				RelativePath="..\..\Docs\readme Playground.txt"
-				>
-			</File>
-			<File
-				RelativePath="..\..\Docs\RemoteDebugging.txt"
+				RelativePath="..\..\Docs\PCSX2 readme 0.9.6.rtf"
 				>
 			</File>
 		</Filter>
