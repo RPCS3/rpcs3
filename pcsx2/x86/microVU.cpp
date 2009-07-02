@@ -83,6 +83,8 @@ microVUt(void) mVUreset(mV) {
 	mVU->prog.max	  = mMaxProg - 1;
 	mVU->prog.prog = (microProgram*)_aligned_malloc(sizeof(microProgram)*(mVU->prog.max+1), 64);
 
+	memset( mVU->prog.prog, 0, sizeof(microProgram)*(mVU->prog.max+1) );
+
 	// Setup Dynarec Cache Limits for Each Program
 	u8* z = (mVU->cache + 0x1000); // Dispatcher Code is in first page of cache
 	for (int i = 0; i <= mVU->prog.max; i++) {

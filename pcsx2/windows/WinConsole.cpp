@@ -21,9 +21,13 @@
 #include "System.h"
 #include "DebugTools/Debug.h"
 
+#include <fcntl.h>
+#include <io.h>
+
 namespace Console
 {
 	static HANDLE hConsole = NULL;
+	static int hCrt;
 
 	static const int tbl_color_codes[] = 
 	{
@@ -50,24 +54,34 @@ namespace Console
 		SMALL_RECT srect;
 
 		if( hConsole ) return;
+
 		AllocConsole();
 		SetConsoleTitle(_("Ps2 Output"));
 
+		hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+
+		hCrt = _open_osfhandle( (intptr_t)hConsole, _O_TEXT );
+		FILE* hfp = _fdopen( hCrt, "w" );
+		*stdout = *hfp;
+		*stderr = *hfp;
+		setvbuf( stdout, NULL, _IONBF, 0 );
+		setvbuf( stderr, NULL, _IONBF, 0 );
+
 		csize.X = 100;
 		csize.Y = 2048;
-		SetConsoleScreenBufferSize(GetStdHandle(STD_OUTPUT_HANDLE), csize);
-		GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbiInfo);
+		SetConsoleScreenBufferSize(hConsole, csize);
+		GetConsoleScreenBufferInfo(hConsole, &csbiInfo);
 
 		srect = csbiInfo.srWindow;
 		srect.Right = srect.Left + 99;
 		srect.Bottom = srect.Top + 64;
-		SetConsoleWindowInfo(GetStdHandle(STD_OUTPUT_HANDLE), TRUE, &srect);
-		hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+		SetConsoleWindowInfo(hConsole, TRUE, &srect);
 	}
 
 	void Close()
 	{
 		if( hConsole == NULL ) return;
+		_close( hCrt );
 		FreeConsole();
 		hConsole = NULL;
 	}
