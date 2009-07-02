@@ -286,6 +286,8 @@ void GSTextureCache::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const 
 						}
 						else
 						{
+							// TODO
+
 							if(s->m_TEX0.TBP0 == bp)
 							{
 								m_src.RemoveAt(s);
@@ -781,6 +783,15 @@ void GSTextureCache::SourceMap::Add(Source* s, const GIFRegTEX0& TEX0)
 	uint32 bp = TEX0.TBP0;
 	uint32 bw = TEX0.TBW;
 
+	if(s->m_target)
+	{
+		// TODO
+
+		m_map[bp >> 5][s] = true;
+
+		return;
+	}
+
 	const GSLocalMemory::psm_t& psm = GSLocalMemory::m_psm[TEX0.PSM];
 
 	GSVector2i bs = (bp & 31) ? psm.pgs : psm.bs;
@@ -838,9 +849,20 @@ void GSTextureCache::SourceMap::RemoveAt(Source* s)
 {
 	m_surfaces.erase(s);
 
-	for(uint32 i = s->m_TEX0.TBP0 >> 5; i < countof(m_map); i++)
+	uint32 page = s->m_TEX0.TBP0 >> 5;
+
+	if(s->m_target)
 	{
-		m_map[i].erase(s);
+		// TODO
+
+		m_map[page].erase(s);
+	}
+	else
+	{
+		for(uint32 i = page; i < countof(m_map); i++)
+		{
+			m_map[i].erase(s);
+		}
 	}
 
 	delete s;

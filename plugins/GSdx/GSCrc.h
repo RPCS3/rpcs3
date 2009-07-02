@@ -72,6 +72,7 @@ public:
 		SimpsonsGame,
 		Genji,
 		StarOcean3,
+		ValkyrieProfile2,
 		TitleCount,
 	};
 

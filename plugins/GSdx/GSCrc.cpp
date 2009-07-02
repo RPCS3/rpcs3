@@ -141,6 +141,7 @@ CRC::Game CRC::m_games[] =
 	{0x4C94B32C, SimpsonsGame, Unknown, 0},
 	{0xD71B57F4, Genji, Unknown, 0},
 	{0x23A97857, StarOcean3, JPUNDUB, 0},
+	{0xCC96CE93, ValkyrieProfile2, JPUNDUB, 0},	
 };
 
 hash_map<uint32, CRC::Game*> CRC::m_map;

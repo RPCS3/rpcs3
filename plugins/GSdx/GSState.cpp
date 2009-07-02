@@ -2231,6 +2231,26 @@ bool GSC_StarOcean3(const GSFrameInfo& fi, int& skip)
 	return true;
 }
 
+bool GSC_ValkyrieProfile2(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME && fi.FBP == fi.TBP0 && fi.FPSM == PSM_PSMCT32 && fi.TPSM == PSM_PSMT4HH)
+		{
+			skip = 1000; //
+		}
+	}
+	else
+	{
+		if(!(fi.TME && fi.FBP == fi.TBP0 && fi.FPSM == PSM_PSMCT32 && fi.TPSM == PSM_PSMT4HH))
+		{
+			skip = 0;
+		}
+	}
+
+	return true;
+}
+
 bool GSState::IsBadFrame(int& skip)
 {
 	GSFrameInfo fi;
@@ -2279,6 +2299,7 @@ bool GSState::IsBadFrame(int& skip)
 		map[CRC::SonicUnleashed] = GSC_SonicUnleashed;
 		map[CRC::Genji] = GSC_Genji;
 		map[CRC::StarOcean3] = GSC_StarOcean3;
+		map[CRC::ValkyrieProfile2] = GSC_ValkyrieProfile2;
 	}
 
 	// TODO: just set gsc in SetGameCRC once
