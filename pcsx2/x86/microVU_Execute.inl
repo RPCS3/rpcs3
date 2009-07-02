@@ -127,7 +127,7 @@ microVUx(void*) __fastcall mVUexecute(u32 startPC, u32 cycles) {
 	mVU->cycles		 = cycles;
 	mVU->totalCycles = cycles;
 
-	x86SetPtr(mVUcurProg.x86ptr); // Set x86ptr to where program left off
+	x86SetPtr(mVU->prog.x86ptr); // Set x86ptr to where last program left off
 	return mVUblockFetch(mVU, startPC, (uptr)&mVU->prog.lpState);
 }
 
@@ -140,8 +140,8 @@ microVUx(void) mVUcleanUp() {
 	//mVUprint("microVU: Program exited successfully!");
 	//mVUprint("microVU: VF0 = {%x,%x,%x,%x}", params mVU->regs->VF[0].UL[0], mVU->regs->VF[0].UL[1], mVU->regs->VF[0].UL[2], mVU->regs->VF[0].UL[3]);
 	//mVUprint("microVU: VI0 = %x", params mVU->regs->VI[0].UL);
-	mVUcurProg.x86ptr = x86Ptr;
-	mVUcacheCheck(x86Ptr, mVUcurProg.x86start, (uptr)(mVUcurProg.x86end - mVUcurProg.x86start));
+	mVU->prog.x86ptr = x86Ptr;
+	mVUcacheCheck(x86Ptr, mVU->prog.x86start, (uptr)(mVU->prog.x86end - mVU->prog.x86start));
 	mVU->cycles = mVU->totalCycles - mVU->cycles;
 	mVU->regs->cycle += mVU->cycles;
 	cpuRegs.cycle += ((mVU->cycles < 3000) ? mVU->cycles : 3000) * Config.Hacks.VUCycleSteal;

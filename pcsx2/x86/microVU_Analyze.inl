@@ -102,6 +102,7 @@
 // Writing to a VI reg
 #define analyzeVIreg2(xReg, viWrite, aCycles) {	\
 	if (xReg) {									\
+		mVUconstReg[xReg].isValid = 0;			\
 		mVUregsTemp.VIreg = xReg;				\
 		mVUregsTemp.VI = aCycles;				\
 		viWrite.reg = xReg;						\
@@ -114,6 +115,7 @@
 #define analyzeRreg()	  { mVUregsTemp.r = 1; }
 #define analyzeXGkick1()  { mVUstall = aMax(mVUstall, mVUregs.xgkick); }
 #define analyzeXGkick2(x) { mVUregsTemp.xgkick = x; }
+#define setConstReg(x, v) { if (x) { mVUconstReg[x].isValid = 1; mVUconstReg[x].regValue = v; } }
 
 //------------------------------------------------------------------
 // FMAC1 - Normal FMAC Opcodes
@@ -171,6 +173,11 @@ microVUt(void) mVUanalyzeIALU2(mV, int Is, int It) {
 	if (!It) { mVUlow.isNOP = 1; }
 	analyzeVIreg1(Is, mVUlow.VI_read[0]);
 	analyzeVIreg2(It, mVUlow.VI_write, 1);
+}
+
+microVUt(void) mVUanalyzeIADDI(mV, int Is, int It, s16 imm) {
+	mVUanalyzeIALU2(mVU, Is, It);
+	if (!Is) { setConstReg(It, imm); }
 }
 
 //------------------------------------------------------------------
@@ -384,5 +391,18 @@ microVUt(void) mVUanalyzeBranch2(mV, int Is, int It) {
 	if (!mVUstall) {
 		analyzeBranchVI(mVU, Is, mVUlow.memReadIs);
 		analyzeBranchVI(mVU, It, mVUlow.memReadIt);
+	}
+}
+
+microVUt(void) mVUanalyzeJump(mV, int Is, int It, bool isJALR) {
+	if (mVUconstReg[Is].isValid && !CHECK_VU_CONSTHACK) {
+		mVUlow.constJump.isValid  = 1;
+		mVUlow.constJump.regValue = mVUconstReg[Is].regValue;
+		//DevCon::Status("microVU%d: Constant JR/JALR Address Optimization", params mVU->index);
+	}
+	analyzeVIreg1(Is, mVUlow.VI_read[0]);
+	if (isJALR) {
+		analyzeVIreg2(It, mVUlow.VI_write, 1);
+		setConstReg(It, bSaveAddr);
 	}
 }

@@ -187,7 +187,7 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 #define mVUprogI	 mVU->prog.prog[progIndex]
 #define mVUcurProg	 mVU->prog.prog[mVU->prog.cur]
 #define mVUblocks	 mVU->prog.prog[mVU->prog.cur].block
-#define mVUallocInfo mVU->prog.prog[mVU->prog.cur].allocInfo
+#define mVUallocInfo mVU->prog.allocInfo
 #define mVUbranch	 mVUallocInfo.branch
 #define mVUcycles	 mVUallocInfo.cycles
 #define mVUcount	 mVUallocInfo.count
@@ -198,6 +198,7 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 #define iPC			 mVUallocInfo.curPC
 #define mVUsFlagHack mVUallocInfo.sFlagHack
 #define mVUinfo		 mVUallocInfo.info[iPC / 2]
+#define mVUconstReg	 mVUallocInfo.constReg
 #define mVUstall	 mVUinfo.stall
 #define mVUup		 mVUinfo.uOp
 #define mVUlow		 mVUinfo.lOp
@@ -212,7 +213,7 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 #define setCode()	 { mVU->code = curI; }
 #define incPC(x)	 { iPC = ((iPC + x) & (mVU->progSize-1)); setCode(); }
 #define incPC2(x)	 { iPC = ((iPC + x) & (mVU->progSize-1)); }
-#define bSaveAddr	 (((xPC + (2 * 8)) & ((isVU1) ? 0x3ff8:0xff8)) / 8)
+#define bSaveAddr	 (((xPC + 16) & (mVU->microMemSize-8)) / 8)
 #define branchAddr	 ((xPC + 8 + (_Imm11_ * 8)) & (mVU->microMemSize-8))
 #define shufflePQ	 (((mVU->p) ? 0xb0 : 0xe0) | ((mVU->q) ? 0x01 : 0x04))
 #define cmpOffset(x) ((u8*)&(((u8*)x)[mVUprogI.ranges.range[i][0]]))
@@ -272,6 +273,7 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 #endif
 
 // Speed Hacks
+#define CHECK_VU_CONSTHACK	0 // Only use for GoW (will be slower on other games)
 #define CHECK_VU_FLAGHACK	(u32)Config.Hacks.vuFlagHack	// (Can cause Infinite loops, SPS, etc...)
 #define CHECK_VU_MINMAXHACK	(u32)Config.Hacks.vuMinMax		// (Can cause SPS, Black Screens,  etc...)
 
@@ -282,12 +284,12 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 
 
 // Cache Limit Check
-#define mVUcacheCheck(ptr, start, limit) {																\
-	uptr diff = ptr - start;																			\
-	if (diff >= limit) {																				\
-		Console::Error("microVU Error: Program went over its cache limit. Size = 0x%x", params diff);	\
-		mVUreset(mVU);																					\
-	}																									\
+#define mVUcacheCheck(ptr, start, limit) {																 \
+	uptr diff = ptr - start;																			 \
+	if (diff >= limit) {																				 \
+		Console::Status("microVU%d: Program cache limit reached. Size = 0x%x", params mVU->index, diff); \
+		mVUreset(mVU);																					 \
+	}																									 \
 }
 
 #define mVUdebugNOW(isEndPC) {							\

@@ -35,6 +35,7 @@ union regInfo {
 
 __declspec(align(16)) struct microRegInfo { // Ordered for Faster Compares
 	u32 needExactMatch;	// If set, block needs an exact match of pipeline state
+	u32 vi15;			// Constant Prop Info for vi15 (only valid if sign-bit set)
 	u8 q;
 	u8 p;
 	u8 r;
@@ -42,7 +43,7 @@ __declspec(align(16)) struct microRegInfo { // Ordered for Faster Compares
 	u8 VI[16];
 	regInfo VF[32];
 	u8 flags;			// clip x2 :: status x2
-	u8 padding[7];		// 160 bytes
+	u8 padding[3];		// 160 bytes
 #if defined(_MSC_VER)
 };
 #else
@@ -84,6 +85,11 @@ struct microVIreg {
 	u8 used;	// Reg is Used? (Read/Written)
 };
 
+struct microConstInfo {
+	u8	isValid;  // Is the constant in regValue valid?
+	u32	regValue; // Constant Value
+};
+
 struct microUpperOp {
 	bool eBit;				// Has E-bit set
 	bool iBit;				// Has I-bit set
@@ -93,10 +99,11 @@ struct microUpperOp {
 };
 
 struct microLowerOp {
-	microVFreg VF_write;	// VF Vectors written to by this instruction
-	microVFreg VF_read[2];	// VF Vectors read by this instruction
-	microVIreg VI_write;	// VI reg written to by this instruction
-	microVIreg VI_read[2];	// VI regs read by this instruction
+	microVFreg VF_write;	  // VF Vectors written to by this instruction
+	microVFreg VF_read[2];	  // VF Vectors read by this instruction
+	microVIreg VI_write;	  // VI reg written to by this instruction
+	microVIreg VI_read[2];	  // VI regs read by this instruction
+	microConstInfo constJump; // Constant Reg Info for JR/JARL instructions
 	u32  branch;	// Branch Type (0 = Not a Branch, 1 = B. 2 = BAL, 3~8 = Conditional Branches, 9 = JALR, 10 = JR)
 	bool isNOP;		// This instruction is a NOP
 	bool isFSSET;	// This instruction is a FSSET
@@ -137,10 +144,11 @@ struct microOp {
 
 template<u32 pSize>
 struct microIR {
-	microBlock		 block;	   // Block/Pipeline info
-	microBlock*		 pBlock;   // Pointer to a block in mVUblocks
-	microTempRegInfo regsTemp; // Temp Pipeline info (used so that new pipeline info isn't conflicting between upper and lower instructions in the same cycle)
+	microBlock		 block;			// Block/Pipeline info
+	microBlock*		 pBlock;		// Pointer to a block in mVUblocks
+	microTempRegInfo regsTemp;		// Temp Pipeline info (used so that new pipeline info isn't conflicting between upper and lower instructions in the same cycle)
 	microOp			 info[pSize/2];	// Info for Instructions in current block
+	microConstInfo	 constReg[16];	// Simple Const Propagation Info for VI regs within blocks
 	u8  branch;			
 	u32 cycles;			// Cycles for current block
 	u32 count;			// Number of VU 64bit instructions ran (starts at 0 for each block)

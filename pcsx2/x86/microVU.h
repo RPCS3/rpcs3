@@ -27,57 +27,75 @@
 #include "microVU_IR.h"
 #include "microVU_Misc.h"
 
+struct microBlockLink {
+	microBlock*		block;
+	microBlockLink*	next;
+};
 
-#define mMaxBlocks 32 // Max Blocks With Different Pipeline States (For n = 1, 2, 4, 8, 16, etc...)
 class microBlockManager {
 private:
-	static const int MaxBlocks = mMaxBlocks - 1;
-	microBlock blockList[mMaxBlocks]; // Should always be first in the class to ensure 16-byte alignment
-	int listSize; // Total Items - 1
-	int listI;	  // Index to Add new block
+	microBlockLink  blockList;
+	microBlockLink* blockEnd;
+	int listI;
 
 public:
-	// Aligned replacement for 'new'
-	static microBlockManager* AlignedNew() {
-		microBlockManager* alloc = (microBlockManager*)_aligned_malloc(sizeof(microBlockManager), 16);
-		new (alloc) microBlockManager();
-		return alloc;
-	}
 	// Use instead of normal 'delete'
-	static void Delete(microBlockManager* dead) {
-		if (dead == NULL) return;
+	static void Delete(microBlockManager* &dead) {
+		if (!dead) return;
 		dead->~microBlockManager();
-		_aligned_free(dead);
+		safe_delete(dead);
 	}
-
-	microBlockManager()	 { reset(); }
-	~microBlockManager() {}
-	void reset()		 { listSize = -1; listI = -1; };
+	microBlockManager() { 
+		listI = -1;
+		blockList.block = NULL;
+		blockList.next  = NULL;
+		blockEnd = &blockList;
+	}
+	~microBlockManager() { reset(); }
+	void reset() {
+		if (listI >= 0) {
+			microBlockLink* linkI = &blockList;
+			microBlockLink* linkD = NULL;
+			for (int i = 0; i <= listI; i++) {
+				safe_aligned_free(linkI->block);
+				linkI = linkI->next;
+				safe_delete(linkD);
+				linkD = linkI;
+			}
+			safe_delete(linkI); 
+		}
+		listI = -1;
+		blockEnd = &blockList;
+	};
 	microBlock* add(microBlock* pBlock) {
 		microBlock* thisBlock = search(&pBlock->pState);
 		if (!thisBlock) {
 			listI++;
-			if (listSize < MaxBlocks) { listSize++; }
-			if (listI    > MaxBlocks) { Console::Error("microVU Warning: Block List Overflow"); listI = 0; }
-			memcpy_fast(&blockList[listI], pBlock, sizeof(microBlock));
-			thisBlock = &blockList[listI];
+			blockEnd->block = (microBlock*)_aligned_malloc(sizeof(microBlock), 16);
+			blockEnd->next  = new microBlockLink;
+			memcpy_fast(blockEnd->block, pBlock, sizeof(microBlock));
+			thisBlock = blockEnd->block;
+			blockEnd  = blockEnd->next;
 		}
 		return thisBlock;
 	}
-	__forceinline microBlock* search(microRegInfo* pState) {
-		if (listSize < 0) return NULL;
+	__releaseinline microBlock* search(microRegInfo* pState) {
+		microBlockLink* linkI = &blockList;
 		if (pState->needExactMatch) { // Needs Detailed Search (Exact Match of Pipeline State)
-			for (int i = 0; i <= listSize; i++) {
-				if (mVUquickSearch((void*)pState, (void*)&blockList[i].pState, sizeof(microRegInfo))) return &blockList[i];
+			for (int i = 0; i <= listI; i++) {
+				if (mVUquickSearch((void*)pState, (void*)&linkI->block->pState, sizeof(microRegInfo))) return linkI->block;
+				linkI = linkI->next;
 			}
 		}
 		else { // Can do Simple Search (Only Matches the Important Pipeline Stuff)
-			for (int i = 0; i <= listSize; i++) {
-				if ((blockList[i].pState.q == pState->q)
-				&&  (blockList[i].pState.p == pState->p)
-				&&  (blockList[i].pState.xgkick == pState->xgkick)
-				&&  (blockList[i].pState.flags  == pState->flags)
-				&& !(blockList[i].pState.needExactMatch & 0xf0f)) { return &blockList[i]; }
+			for (int i = 0; i <= listI; i++) {
+				if ((linkI->block->pState.q		 == pState->q)
+				&&  (linkI->block->pState.p		 == pState->p)
+				&&	(linkI->block->pState.vi15	 == pState->vi15)
+				&&  (linkI->block->pState.flags  == pState->flags)
+				&&  (linkI->block->pState.xgkick == pState->xgkick)
+				&& !(linkI->block->pState.needExactMatch & 0xf0f)) { return linkI->block; }
+				linkI = linkI->next;
 			}
 		}
 		return NULL;
@@ -95,27 +113,27 @@ struct microRange {
 struct microProgram {
 	u32				   data [mProgSize];   // Holds a copy of the VU microProgram
 	microBlockManager* block[mProgSize/2]; // Array of Block Managers
-	microIR<mProgSize> allocInfo;		   // IR information
 	microRange		   ranges;			   // The ranges of the microProgram that have already been recompiled
 	u64 used;		// Number of times its been used
 	u32 last_used;	// Counters # of frames since last use (starts at 3 and counts backwards to 0 for each 30fps vSync)
-	u8* x86ptr;		// Pointer to program's recompilation code
-	u8* x86start;	// Start of program's rec-cache
-	u8* x86end;		// Limit of program's rec-cache
 };
 
-#define mMaxProg ((mVU->index)?64:8) // The amount of Micro Programs Recs will 'remember' (For n = 1, 2, 4, 8, 16, etc...)
+#define mMaxProg ((mVU->index)?400:8) // The amount of Micro Programs Recs will 'remember' (For n = 1, 2, 4, 8, 16, etc...)
 struct microProgManager {
-	microProgram*	prog;	 // Store MicroPrograms in memory
-	int				max;	 // Max Number of MicroPrograms minus 1
-	int				total;	 // Total Number of valid MicroPrograms minus 1
-	int				cur;	 // Index to Current MicroProgram thats running (-1 = uncached)
-	int				isSame;	 // Current cached microProgram is Exact Same program as mVU->regs->Micro (-1 = unknown, 0 = No, 1 = Yes)
-	int				cleared; // Micro Program is Indeterminate so must be searched for (and if no matches are found then recompile a new one)
-	microRegInfo	lpState; // Pipeline state from where program left off (useful for continuing execution)
+	microIR<mProgSize>	allocInfo;	// IR information
+	microProgram*		prog;		// Store MicroPrograms in memory
+	int					max;		// Max Number of MicroPrograms minus 1
+	int					total;		// Total Number of valid MicroPrograms minus 1
+	int					cur;		// Index to Current MicroProgram thats running (-1 = uncached)
+	int					isSame;		// Current cached microProgram is Exact Same program as mVU->regs->Micro (-1 = unknown, 0 = No, 1 = Yes)
+	int					cleared;	// Micro Program is Indeterminate so must be searched for (and if no matches are found then recompile a new one)
+	u8*					x86ptr;		// Pointer to program's recompilation code
+	u8*					x86start;	// Start of program's rec-cache
+	u8*					x86end;		// Limit of program's rec-cache
+	microRegInfo		lpState;	// Pipeline state from where program left off (useful for continuing execution)
 };
 
-#define mVUcacheSize (mMaxProg * 0xCCCCC) // 0.8mb per program
+#define mVUcacheSize (mMaxProg * (0x100000 * 0.5)) // 0.5mb per program
 struct microVU {
 
 	PCSX2_ALIGNED16(u32 macFlag[4]);  // 4 instances of mac  flag (used in execution)
