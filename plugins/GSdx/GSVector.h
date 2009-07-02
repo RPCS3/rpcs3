@@ -1029,9 +1029,13 @@ public:
 		return _mm_movemask_epi8(m) == 0xffff;
 	}
 
-	bool anytrue() const
+	bool allfalse() const
 	{
-		return _mm_movemask_epi8(m) != 0x0000;
+		#if _M_SSE >= 0x401
+		return _mm_testz_si128(m, m);
+		#else
+		return _mm_movemask_epi8(m) == 0;
+		#endif
 	}
 
 	#if _M_SSE >= 0x401
@@ -2544,7 +2548,12 @@ public:
 
 	bool allfalse() const
 	{
+		#if _M_SSE >= 0x401
+		__m128i a = _mm_castps_si128(m);
+		return _mm_testz_si128(a, a);
+		#else
 		return _mm_movemask_ps(m) == 0;
+		#endif
 	}
 
 	// TODO: insert

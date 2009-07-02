@@ -73,6 +73,7 @@ public:
 		Genji,
 		StarOcean3,
 		ValkyrieProfile2,
+		RadiataStories,
 		TitleCount,
 	};
 

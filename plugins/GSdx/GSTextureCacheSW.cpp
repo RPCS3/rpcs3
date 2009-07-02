@@ -260,98 +260,76 @@ bool GSTextureCacheSW::GSTexture::Update(const GIFRegTEX0& TEX0, const GIFRegTEX
 		m_complete = true; // lame, but better than nothing
 	}
 
-	GSLocalMemory& mem = m_state->m_mem;
-
 	uint32 bp = TEX0.TBP0;
 	uint32 bw = TEX0.TBW;
 
-	GSLocalMemory::readTextureBlock rtxb = psm.rtxbP;
-
-	int bytes = psm.pal > 0 ? 1 : 4;
-
-	uint32 pitch = (1 << m_tw) * bytes;
-
-	uint8* dst = (uint8*)m_buff + pitch * r.top;
+	bool repeating = tw > (bw << 6); // TODO: bw == 0
 
 	uint32 blocks = 0;
 
-	if(tw <= (bw << 6))
+	GSLocalMemory& mem = m_state->m_mem;
+
+	GSLocalMemory::readTextureBlock rtxb = psm.rtxbP;
+
+	int shift = psm.pal == 0 ? 2 : 0;
+
+	uint32 pitch = (1 << m_tw) << shift;
+
+	uint8* dst = (uint8*)m_buff + pitch * r.top;
+
+	for(int y = r.top, o = pitch * s.y; y < r.bottom; y += s.y, dst += o)
 	{
-		for(int y = r.top, o = pitch * s.y; y < r.bottom; y += s.y, dst += o)
+		uint32 base = psm.bn(0, y, bp, bw);
+
+		for(int x = r.left; x < r.right; x += s.x)
 		{
-			uint32 base = psm.bn(0, y, bp, bw);
+			uint32 block = base + psm.blockOffset[x >> 3];
 
-			for(int x = r.left; x < r.right; x += s.x)
+			if(block < MAX_BLOCKS)
 			{
-				uint32 block = base + psm.blockOffset[x >> 3];
+				uint32 row = block >> 5;
+				uint32 col = 1 << (block & 31);
 
-				if(block < MAX_BLOCKS)
+				if((m_valid[row] & col) == 0)
 				{
-					uint32 row = block >> 5;
-					uint32 col = 1 << (block & 31);
-
-					if((m_valid[row] & col) == 0)
+					if(!repeating)
 					{
 						m_valid[row] |= col;
-
-						(mem.*rtxb)(block, &dst[x * bytes], pitch, TEXA);
-
-						blocks++;
 					}
+
+					(mem.*rtxb)(block, &dst[x << shift], pitch, TEXA);
+
+					blocks++;
 				}
 			}
 		}
 	}
-	else
+
+	if(blocks > 0)
 	{
-		// unfortunatelly a block may be part of the same texture multiple times at different places (tw 1024 > tbw 640, between 640 -> 1024 it is repeated from the next row), 
-		// so just can't set the block's bit to valid in one pass, even if 99.9% of the games don't address the repeated part at the right side
-		
-		// TODO: still bogus if those repeated parts aren't fetched together
-
-		for(int y = r.top, o = pitch * s.y; y < r.bottom; y += s.y, dst += o)
+		if(repeating)
 		{
-			uint32 base = psm.bn(0, y, bp, bw);
-
-			for(int x = r.left; x < r.right; x += s.x)
+			for(int y = r.top; y < r.bottom; y += s.y)
 			{
-				uint32 block = base + psm.blockOffset[x >> 3];
+				uint32 base = psm.bn(0, y, bp, bw);
 
-				if(block < MAX_BLOCKS)
+				for(int x = r.left; x < r.right; x += s.x)
 				{
-					uint32 row = block >> 5;
-					uint32 col = 1 << (block & 31);
+					uint32 block = base + psm.blockOffset[x >> 3];
 
-					if((m_valid[row] & col) == 0)
+					if(block < MAX_BLOCKS)
 					{
-						(mem.*rtxb)(block, &dst[x * bytes], pitch, TEXA);
+						uint32 row = block >> 5;
+						uint32 col = 1 << (block & 31);
 
-						blocks++;
+						m_valid[row] |= col;
 					}
 				}
 			}
 		}
 
-		for(int y = r.top; y < r.bottom; y += s.y)
-		{
-			uint32 base = psm.bn(0, y, bp, bw);
-
-			for(int x = r.left; x < r.right; x += s.x)
-			{
-				uint32 block = base + psm.blockOffset[x >> 3];
-
-				if(block < MAX_BLOCKS)
-				{
-					uint32 row = block >> 5;
-					uint32 col = 1 << (block & 31);
-
-					m_valid[row] |= col;
-				}
-			}
-		}
+		m_state->m_perfmon.Put(GSPerfMon::Unswizzle, s.x * s.y * blocks << shift);
 	}
-
-	m_state->m_perfmon.Put(GSPerfMon::Unswizzle, s.x * s.y * bytes * blocks);
 
 	return true;
 }
