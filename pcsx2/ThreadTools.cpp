@@ -38,6 +38,7 @@ namespace Threading
 
 	void Thread::Start()
 	{
+		m_terminated = false;
 		if( pthread_create( &m_thread, NULL, _internal_callback, this ) != 0 )
 			throw Exception::ThreadCreationError();
 	}
@@ -135,6 +136,26 @@ namespace Threading
 		err = pthread_mutex_init( &mutex, NULL );
 	}
 
+	MutexLock::MutexLock( bool isRecursive )
+	{
+		if( isRecursive )
+		{
+			pthread_mutexattr_t mutexAttribute; 
+			int status = pthread_mutexattr_init( &mutexAttribute );
+			if (status != 0) { /* ... */ } 
+			status = pthread_mutexattr_settype( &mutexAttribute, PTHREAD_MUTEX_RECURSIVE); 
+			if (status != 0) { /* ... */} 
+
+			int err = 0;
+			err = pthread_mutex_init( &mutex, &mutexAttribute );
+		}
+		else
+		{
+			int err = 0;
+			err = pthread_mutex_init( &mutex, NULL );
+		}
+	}
+
 	MutexLock::~MutexLock()
 	{
 		pthread_mutex_destroy( &mutex );
@@ -149,7 +170,7 @@ namespace Threading
 	{
 		pthread_mutex_unlock( &mutex );
 	}
-
+	
 	//////////////////////////////////////////////////////////////////////
 	// define some overloads for InterlockedExchanges
 	// for commonly used types, like u32 and s32.
