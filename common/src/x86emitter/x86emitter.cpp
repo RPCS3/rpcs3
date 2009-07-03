@@ -5,12 +5,12 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2 of the License, or
  *  (at your option) any later version.
- *  
+ *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
- *  
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
@@ -74,17 +74,17 @@ __forceinline void xWrite8( u8 val )
 }
 
 __forceinline void xWrite16( u16 val )
-{ 
+{
 	xWrite( val );
-} 
+}
 
 __forceinline void xWrite32( u32 val )
-{ 
+{
 	xWrite( val );
-} 
+}
 
 __forceinline void xWrite64( u64 val )
-{ 
+{
 	xWrite( val );
 }
 
@@ -93,7 +93,7 @@ const xAddressIndexer<u128> ptr128;
 const xAddressIndexer<u64> ptr64;
 const xAddressIndexer<u32> ptr32;
 const xAddressIndexer<u16> ptr16;
-const xAddressIndexer<u8> ptr8;	
+const xAddressIndexer<u8> ptr8;
 
 // ------------------------------------------------------------------------
 
@@ -130,7 +130,7 @@ const xRegister8
 	dl( 2 ), bl( 3 ),
 	ah( 4 ), ch( 5 ),
 	dh( 6 ), bh( 7 );
-	
+
 const xRegisterCL cl;
 
 const char *const x86_regnames_gpr8[8] =
@@ -174,9 +174,9 @@ namespace Internal
 		if( src.IsEmpty() ) return "empty";
 		switch( sizeof(T) )
 		{
-		case 1: return tbl_regnames_gpr8[ src.Id ];
-		case 2: return tbl_regnames_gpr16[ src.Id ];
-		case 4: return tbl_regnames_gpr32[ src.Id ];
+			case 1: return x86_regnames_gpr8[ src.Id ];
+			case 2: return x86_regnames_gpr16[ src.Id ];
+			case 4: return x86_regnames_gpr32[ src.Id ];
 		}
 	}
 
@@ -196,7 +196,7 @@ namespace Internal
 	// brand P4s with a broken barrel shifter?).  The workaround is to do our own manual
 	// x86Ptr access and update using a u32 instead of u8.  Thanks to little endianness,
 	// the same end result is achieved and no false dependencies are generated.  The draw-
-	// back is that it clobbers 3 bytes past the end of the write, which could cause a 
+	// back is that it clobbers 3 bytes past the end of the write, which could cause a
 	// headache for someone who himself is doing some kind of headache-inducing amount of
 	// recompiler SMC.  So we don't do a work-around, and just hope for the compiler to
 	// stop sucking someday instead. :)
@@ -277,7 +277,7 @@ namespace Internal
 	{
 		jASSUME( regfield < 8 );
 
-		int displacement_size = (info.Displacement == 0) ? 0 : 
+		int displacement_size = (info.Displacement == 0) ? 0 :
 			( ( info.IsByteSizeDisp() ) ? 1 : 2 );
 
 		if( !NeedsSibMagic( info ) )
@@ -444,7 +444,7 @@ const SetImplAll<Jcc_ParityOdd>			xSETPO;
 // Assigns the current emitter buffer target address.
 // This is provided instead of using x86Ptr directly, since we may in the future find
 // a need to change the storage class system for the x86Ptr 'under the hood.'
-__emitinline void xSetPtr( void* ptr ) 
+__emitinline void xSetPtr( void* ptr )
 {
 	x86Ptr = (u8*)ptr;
 }
@@ -459,7 +459,7 @@ __emitinline u8* xGetPtr()
 }
 
 // ------------------------------------------------------------------------
-__emitinline void xAlignPtr( uint bytes ) 
+__emitinline void xAlignPtr( uint bytes )
 {
 	// forward align
 	x86Ptr = (u8*)( ( (uptr)x86Ptr + bytes - 1) & ~(bytes - 1) );
@@ -483,13 +483,13 @@ __emitinline void xAdvancePtr( uint bytes )
 // Necessary because by default ModSib compounds registers into Index when possible.
 //
 // If the ModSib is in illegal form ([Base + Index*5] for example) then an assertion
-// followed by an InvalidParameter Exception will be tossed around in haphazard 
+// followed by an InvalidParameter Exception will be tossed around in haphazard
 // fashion.
 //
 // Optimization Note: Currently VC does a piss poor job of inlining this, even though
 // constant propagation *should* resove it to little or no code (VC's constprop fails
 // on C++ class initializers).  There is a work around [using array initializers instead]
-// but it's too much trouble for code that isn't performance critical anyway. 
+// but it's too much trouble for code that isn't performance critical anyway.
 // And, with luck, maybe VC10 will optimize it better and make it a non-issue. :D
 //
 void ModSibBase::Reduce()
@@ -518,7 +518,7 @@ void ModSibBase::Reduce()
 	}
 
 	// The Scale has a series of valid forms, all shown here:
-	
+
 	switch( Scale )
 	{
 		case 0: break;
@@ -530,7 +530,7 @@ void ModSibBase::Reduce()
 			Base = Index;
 			Scale = 1;
 		break;
-		
+
 		case 4: Scale = 2; break;
 
 		case 5:				// becomes [reg*4+reg]
@@ -538,15 +538,15 @@ void ModSibBase::Reduce()
 			Base = Index;
 			Scale = 2;
 		break;
-		
+
 		case 6:				// invalid!
 			assert( false );
 		break;
-		
+
 		case 7:				// so invalid!
 			assert( false );
 		break;
-		
+
 		case 8: Scale = 3; break;
 		case 9:				// becomes [reg*8+reg]
 			jASSUME( Base.IsEmpty() );
@@ -569,8 +569,8 @@ template< typename OperandType >
 static void EmitLeaMagic( xRegister<OperandType> to, const ModSibBase& src, bool preserve_flags )
 {
 	typedef xRegister<OperandType> ToReg;
-	
-	int displacement_size = (src.Displacement == 0) ? 0 : 
+
+	int displacement_size = (src.Displacement == 0) ? 0 :
 		( ( src.IsByteSizeDisp() ) ? 1 : 2 );
 
 	// See EmitSibMagic for commenting on SIB encoding.
@@ -597,7 +597,7 @@ static void EmitLeaMagic( xRegister<OperandType> to, const ModSibBase& src, bool
 			{
 				// encode as MOV and ADD combo.  Make sure to use the immediate on the
 				// ADD since it can encode as an 8-bit sign-extended value.
-				
+
 				xMOV( to, ToReg( src.Index.Id ) );
 				xADD( to, src.Displacement );
 				return;
@@ -659,7 +659,7 @@ static void EmitLeaMagic( xRegister<OperandType> to, const ModSibBase& src, bool
 				{
 					// special case handling of ESP as Index, which is replaceable with
 					// a single MOV even when preserve_flags is set! :D
-					
+
 					xMOV( to, ToReg( src.Base.Id ) );
 					return;
 				}

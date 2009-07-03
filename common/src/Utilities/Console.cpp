@@ -89,9 +89,7 @@ namespace Console
 	{
 		ScopedLock locker( m_writelock );
 		vssprintf( m_format_buffer, fmt, args );
-		const char* cstr = m_format_buffer.c_str();
-
-		Write( fmt );
+		Write( m_format_buffer.c_str() );
 	}
 
 	__forceinline void __fastcall _WriteLn( const char* fmt, va_list args )
@@ -106,7 +104,7 @@ namespace Console
 		_WriteLn( fmt, args );
 		ClearColor();
 	}
-		
+
 	// ------------------------------------------------------------------------
 	bool Write( const char* fmt, VARG_PARAM dummy, ... )
 	{

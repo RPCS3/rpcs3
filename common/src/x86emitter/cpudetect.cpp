@@ -5,12 +5,12 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2 of the License, or
  *  (at your option) any later version.
- *  
+ *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
- *  
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
@@ -35,7 +35,7 @@ static s32 iCpuId( u32 cmd, u32 *regs )
 		xor ecx, ecx;		// ecx should be zero for CPUID(4)
 	}
 #else
-	__asm__ ( "xor ecx, ecx" );
+	__asm__ ( "xor %ecx, %ecx" );
 #endif
 
    __cpuid( (int*)regs, cmd );
@@ -48,7 +48,7 @@ static u64 GetRdtsc( void )
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
-// Note: This function doesn't support GCC/Linux.  Looking online it seems the only 
+// Note: This function doesn't support GCC/Linux.  Looking online it seems the only
 // way to simulate the Microsoft SEH model is to use unix signals, and the 'sigaction'
 // function specifically.  Maybe a project for a linux developer at a later date. :)
 //
@@ -89,7 +89,7 @@ static void SetSingleAffinity()
 
 	DWORD_PTR availProcCpus, availSysCpus;
 	if( !GetProcessAffinityMask( GetCurrentProcess(), &availProcCpus, &availSysCpus ) ) return;
-	
+
 	int i;
 	for( i=0; i<32; ++i )
 	{
@@ -158,17 +158,17 @@ int arr[] = {
 	0x20202020,0x20402020,0x36362e32,0x7a4847
 };
 
-void cpudetectInit() 
+void cpudetectInit()
 {
    u32 regs[ 4 ];
    u32 cmds;
    int cputype=0;            // Cpu type
    //AMD 64 STUFF
    u32 x86_64_8BITBRANDID;
-   u32 x86_64_12BITBRANDID; 
+   u32 x86_64_12BITBRANDID;
    int num;
    char str[50];
-	
+
    memzero_obj( cpuinfo.x86ID );
    cpuinfo.x86Family = 0;
    cpuinfo.x86Model  = 0;
@@ -176,21 +176,21 @@ void cpudetectInit()
    cpuinfo.x86StepID = 0;
    cpuinfo.x86Flags  = 0;
    cpuinfo.x86EFlags = 0;
-   
+
    if ( iCpuId( 0, regs ) == -1 ) return;
 
    cmds = regs[ 0 ];
    ((u32*)cpuinfo.x86ID)[ 0 ] = regs[ 1 ];
    ((u32*)cpuinfo.x86ID)[ 1 ] = regs[ 3 ];
    ((u32*)cpuinfo.x86ID)[ 2 ] = regs[ 2 ];
-   
+
    // Hack - prevents reg[2] & reg[3] from being optimized out of existance!
    num = sprintf(str, "\tx86Flags  =  %8.8x %8.8x\n", regs[3], regs[2]);
-   
+
    u32 LogicalCoresPerPhysicalCPU = 0;
    u32 PhysicalCoresPerPhysicalCPU = 1;
 
-   if ( cmds >= 0x00000001 ) 
+   if ( cmds >= 0x00000001 )
    {
       if ( iCpuId( 0x00000001, regs ) != -1 )
       {
@@ -216,14 +216,14 @@ void cpudetectInit()
    if ( iCpuId( 0x80000000, regs ) != -1 )
    {
       cmds = regs[ 0 ];
-      if ( cmds >= 0x80000001 ) 
+      if ( cmds >= 0x80000001 )
       {
 		 if ( iCpuId( 0x80000001, regs ) != -1 )
          {
 			x86_64_12BITBRANDID = regs[1] & 0xfff;
 			cpuinfo.x86EFlags2 = regs[ 2 ];
             cpuinfo.x86EFlags = regs[ 3 ];
-            
+
          }
       }
       /* detect multicore for amd cpu */
@@ -235,7 +235,7 @@ void cpudetectInit()
          }
       }
    }
-   
+
 	switch(cpuinfo.x86PType)
 	{
 		case 0:
@@ -256,7 +256,7 @@ void cpudetectInit()
 	}
 	if ( cpuinfo.x86ID[ 0 ] == 'G' ){ cputype=0;}//trick lines but if you know a way better ;p
 	if ( cpuinfo.x86ID[ 0 ] == 'A' ){ cputype=1;}
-   
+
 	memzero_obj( cpuinfo.x86Fam );
 	iCpuId( 0x80000002, (u32*)cpuinfo.x86Fam);
 	iCpuId( 0x80000003, (u32*)(cpuinfo.x86Fam+16));
@@ -292,12 +292,12 @@ void cpudetectInit()
 	cpucaps.hasMultiThreading                            = ( cpuinfo.x86Flags >> 28 ) & 1;
 	cpucaps.hasThermalMonitor                            = ( cpuinfo.x86Flags >> 29 ) & 1;
 	cpucaps.hasIntel64BitArchitecture                    = ( cpuinfo.x86Flags >> 30 ) & 1;
-	
+
 	//that is only for AMDs
 	cpucaps.hasMultimediaExtensionsExt                   = ( cpuinfo.x86EFlags >> 22 ) & 1; //mmx2
 	cpucaps.hasAMD64BitArchitecture                      = ( cpuinfo.x86EFlags >> 29 ) & 1; //64bit cpu
 	cpucaps.has3DNOWInstructionExtensionsExt             = ( cpuinfo.x86EFlags >> 30 ) & 1; //3dnow+
-	cpucaps.has3DNOWInstructionExtensions                = ( cpuinfo.x86EFlags >> 31 ) & 1; //3dnow   
+	cpucaps.has3DNOWInstructionExtensions                = ( cpuinfo.x86EFlags >> 31 ) & 1; //3dnow
 	cpucaps.hasStreamingSIMD4ExtensionsA                 = ( cpuinfo.x86EFlags2 >> 6 ) & 1; //INSERTQ / EXTRQ / MOVNT
 
 	InitCPUTicks();
@@ -311,8 +311,8 @@ void cpudetectInit()
 	// --> SSE3 / SSSE3 / SSE4.1 / SSE 4.2 detection <--
 
 	cpucaps.hasStreamingSIMD3Extensions  = ( cpuinfo.x86Flags2 >> 0 ) & 1; //sse3
-	cpucaps.hasSupplementalStreamingSIMD3Extensions = ( cpuinfo.x86Flags2 >> 9 ) & 1; //ssse3  
-	cpucaps.hasStreamingSIMD4Extensions  = ( cpuinfo.x86Flags2 >> 19 ) & 1; //sse4.1   
+	cpucaps.hasSupplementalStreamingSIMD3Extensions = ( cpuinfo.x86Flags2 >> 9 ) & 1; //ssse3
+	cpucaps.hasStreamingSIMD4Extensions  = ( cpuinfo.x86Flags2 >> 19 ) & 1; //sse4.1
 	cpucaps.hasStreamingSIMD4Extensions2 = ( cpuinfo.x86Flags2 >> 20 ) & 1; //sse4.2
 
 	//////////////////////////////////////////////////////////////////////////////////////////
@@ -343,7 +343,7 @@ void cpudetectInit()
 		u8* funcSSE41 = xGetPtr();
 		xBLEND.VPD( xmm1, xmm0 );
 		xRET();
-		
+
 		bool sse3_result = _test_instruction( recSSE );  // sse3
 		bool ssse3_result = _test_instruction( funcSSSE3 );
 		bool sse41_result = _test_instruction( funcSSE41 );
@@ -359,7 +359,7 @@ void cpudetectInit()
 		{
 			Console::Notice( "SSE3 Detection Inconsistency: cpuid=%s, test_result=%s",
 				params bool_to_char( !!cpucaps.hasStreamingSIMD3Extensions ), bool_to_char( sse3_result ) );
-				
+
 			cpucaps.hasStreamingSIMD3Extensions = sse3_result;
 		}
 

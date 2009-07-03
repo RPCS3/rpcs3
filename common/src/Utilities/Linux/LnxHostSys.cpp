@@ -16,13 +16,15 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
-#include "PrecompiledHeader.h"
+#include "../PrecompiledHeader.h"
 
 #include <sys/mman.h>
 #include <signal.h>
 
 namespace HostSys
 {
+	static const uptr m_pagemask = getpagesize()-1;
+
 	void *Mmap(uptr base, u32 size)
 	{
 		u8 *Mem;

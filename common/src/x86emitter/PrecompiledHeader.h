@@ -1,6 +1,9 @@
 #ifndef EMITTER_PRECOMPILED_HEADER
 #define EMITTER_PRECOMPILED_HEADER
 
+// must include wx/setup.h first, otherwise we get warnings/errors regarding __LINUX__
+#include <wx/setup.h>
+
 #include "Pcsx2Defs.h"
 
 #include <wx/string.h>

@@ -51,7 +51,7 @@ namespace Threading
 
 	int Thread::GetReturnCode() const
 	{
-		if( !m_terminated ) 
+		if( !m_terminated )
 			throw std::logic_error( "Thread is still running. No return code is available." );
 
 		return m_returncode;
@@ -60,10 +60,10 @@ namespace Threading
 // pthread Cond is an evil api that is not suited for Pcsx2 needs.
 // Let's not use it. (Air)
 #if 0
-	WaitEvent::WaitEvent() 
+	WaitEvent::WaitEvent()
 	{
 		int err = 0;
-		
+
 		err = pthread_cond_init(&cond, NULL);
 		err = pthread_mutex_init(&mutex, NULL);
 	}
@@ -93,7 +93,7 @@ namespace Threading
 	{
 		sem_init( &sema, false, 0 );
 	}
-	
+
 	Semaphore::~Semaphore()
 	{
 		sem_destroy( &sema );
@@ -153,7 +153,23 @@ namespace Threading
 	//////////////////////////////////////////////////////////////////////
 	// define some overloads for InterlockedExchanges
 	// for commonly used types, like u32 and s32.
-	
+
+	__forceinline long pcsx2_InterlockedExchange( volatile long* target, long srcval )
+	{
+		return _InterlockedExchange( target, srcval );
+	}
+
+	__forceinline long pcsx2_InterlockedCompareExchange( volatile long* target, long srcval, long comp )
+	{
+		// Use the pthreads-win32 implementation...
+		return _InterlockedCompareExchange( target, srcval, comp );
+	}
+
+	__forceinline long pcsx2_InterlockedExchangeAdd( volatile long* target, long srcval )
+	{
+		return _InterlockedExchangeAdd( target, srcval );
+	}
+
 	__forceinline void AtomicExchange( volatile u32& Target, u32 value )
 	{
 		pcsx2_InterlockedExchange( (volatile long*)&Target, value );

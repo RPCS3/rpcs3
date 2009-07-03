@@ -18,6 +18,9 @@
 
 #pragma once
 
+// must include wx/setup.h first, otherwise we get warnings/errors regarding __LINUX__
+#include <wx/setup.h>
+
 #include "Pcsx2Defs.h"
 
 #include <wx/string.h>

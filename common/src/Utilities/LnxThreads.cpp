@@ -18,6 +18,7 @@
 
 #include "PrecompiledHeader.h"
 #include "Threading.h"
+#include "x86emitter/tools.h"
 
 // Note: assuming multicore is safer because it forces the interlocked routines to use
 // the LOCK prefix.  The prefix works on single core CPUs fine (but is slow), but not
@@ -74,99 +75,5 @@ namespace Threading
 		owner.m_terminated = true;
 
 		return NULL;
-	}
-
-	/////////////////////////////////////////////////////////////////////////
-	// Cross-platform atomic operations for GCC.
-	// These are much faster than the old versions for single core CPUs.
-	// Note, I've disabled the single core optimization, because pcsx2 shouldn't
-	// ever create threads on single core CPUs anyway.
-
-	__forceinline long pcsx2_InterlockedExchange(volatile long* Target, long Value)
-	{
-		long result;
-		/*
-		 * The XCHG instruction always locks the bus with or without the
-		 * LOCKED prefix. This makes it significantly slower than CMPXCHG on
-		 * uni-processor machines. The Windows InterlockedExchange function
-		 * is nearly 3 times faster than the XCHG instruction, so this routine
-		 * is not yet very useful for speeding up pthreads.
-		 */
-
-
-		if( true ) //isMultiCore )
-		{
-			__asm__ __volatile__ (
-				"xchgl          %2,%1"
-				:"=r" (result)
-				:"m"  (*Target), "0" (Value));
-		}
-		else
-		{
-		  /*
-		   * Faster version of XCHG for uni-processor systems because
-		   * it doesn't lock the bus. If an interrupt or context switch
-		   * occurs between the movl and the cmpxchgl then the value in
-		   * 'location' may have changed, in which case we will loop
-		   * back to do the movl again.
-		   */
-
-			__asm__ __volatile__ (
-				"0:\n\t"
-				"movl           %1,%%eax\n\t"
-				"cmpxchgl       %2,%1\n\t"
-				"jnz            0b"
-				:"=&a" (result)
-				:"m"  (*Target), "r" (Value));
-		}
-
-		return result;
-	}
-
-	__forceinline long pcsx2_InterlockedExchangeAdd(volatile long* Addend, long Value)
-	{
-		if( true ) //isMultiCore )
-		{
-			__asm__ __volatile__(
-				".intel_syntax noprefix\n"
-				 "lock xadd [%0], eax\n"
-				 ".att_syntax\n" : : "r"(Addend), "a"(Value) : "memory");
-		}
-		else
-		{
-			__asm__ __volatile__(
-				".intel_syntax noprefix\n"
-				 "xadd [%0], eax\n"
-				 ".att_syntax\n" : : "r"(Addend), "a"(Value) : "memory");
-		}
-	}
-
-	__forceinline long pcsx2_InterlockedCompareExchange(volatile long *dest, long value, long comp)
-	{
-		long result;
-
-		if( true ) //isMultiCore )
-		{
-			__asm__ __volatile__ (
-				"lock\n\t"
-				"cmpxchgl       %2,%1"      /* if (EAX == [location])  */
-											/*   [location] = value    */
-											/* else                    */
-											/*   EAX = [location]      */
-			:"=a" (result)
-			:"m"  (*dest), "r" (value), "a" (comp));
-		}
-		else
-		{
-		  __asm__ __volatile__ (
-				"cmpxchgl       %2,%1"      /* if (EAX == [location])  */
-											/*   [location] = value    */
-											/* else                    */
-											/*   EAX = [location]      */
-				:"=a" (result)
-				:"m"  (*dest), "r" (value), "a" (comp));
-		}
-
-		return result;
 	}
 }

@@ -5,12 +5,12 @@
 *  it under the terms of the GNU General Public License as published by
 *  the Free Software Foundation; either version 2 of the License, or
 *  (at your option) any later version.
-*  
+*
 *  This program is distributed in the hope that it will be useful,
 *  but WITHOUT ANY WARRANTY; without even the implied warranty of
 *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 *  GNU General Public License for more details.
-*  
+*
 *  You should have received a copy of the GNU General Public License
 *  along with this program; if not, write to the Free Software
 *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
@@ -95,7 +95,7 @@ static __forceinline ModSibStrict<ImmType> _mhlp2( x86IntRegType src1, x86IntReg
 	{ x##cod( _mhlp2<u##bits>(to1,to2) + offset, _reghlp<u##bits>(from) ); } \
 	emitterT void cod##bits##RmStoR( x86IntRegType to, x86IntRegType from1, x86IntRegType from2, int offset ) \
 	{ x##cod( _reghlp<u##bits>(to), _mhlp2<u##bits>(from1,from2) + offset ); }
-	
+
 #define DEFINE_LEGACY_SHIFT_HELPER( cod, bits ) \
 	emitterT void cod##bits##CLtoR( x86IntRegType to )						{ x##cod( _reghlp<u##bits>(to), cl ); } \
 	emitterT void cod##bits##ItoR( x86IntRegType to, u8 imm )				{ x##cod( _reghlp<u##bits>(to), imm ); } \
@@ -108,9 +108,9 @@ static __forceinline ModSibStrict<ImmType> _mhlp2( x86IntRegType src1, x86IntReg
 	emitterT void cod##bits##R( x86IntRegType to )					{ x##cod( _reghlp<u##bits>(to) ); } \
 	emitterT void cod##bits##M( uptr to )							{ x##cod( ptr##bits[to] ); } \
 	emitterT void cod##bits##Rm( x86IntRegType to, uptr offset )	{ x##cod( _mhlp<u##bits>(to) + offset ); }
-	
-//emitterT void cod##bits##RtoRmS( x86IntRegType to1, x86IntRegType to2, x86IntRegType from, int offset ) \
-//	{ cod( _mhlp2<u##bits>(to1,to2) + offset, _reghlp<u##bits>(from) ); } \
+
+//emitterT void cod##bits##RtoRmS( x86IntRegType to1, x86IntRegType to2, x86IntRegType from, int offset )
+//	{ cod( _mhlp2<u##bits>(to1,to2) + offset, _reghlp<u##bits>(from) ); }
 
 #define DEFINE_OPCODE_LEGACY( cod ) \
 	DEFINE_LEGACY_HELPER( cod, 32 ) \
@@ -199,18 +199,18 @@ emitterT void MOV8RmSOffsettoR( x86IntRegType to, x86IntRegType from1, s32 from2
 	xMOV( xRegister8(to), ptr[(xAddressReg(from1)<<scale) + from2] );
 }
 
-emitterT void AND32I8toR( x86IntRegType to, s8 from ) 
+emitterT void AND32I8toR( x86IntRegType to, s8 from )
 {
 	xAND( _reghlp<u32>(to), from );
 }
 
-emitterT void AND32I8toM( uptr to, s8 from ) 
+emitterT void AND32I8toM( uptr to, s8 from )
 {
 	xAND( ptr8[to], from );
 }
 
 /* cmove r32 to r32*/
-emitterT void CMOVE32RtoR( x86IntRegType to, x86IntRegType from ) 
+emitterT void CMOVE32RtoR( x86IntRegType to, x86IntRegType from )
 {
 	xCMOVE( xRegister32(to), xRegister32(from) );
 }
@@ -237,7 +237,7 @@ emitterT void MUL32M( u32 from )				{ xUMUL( ptr32[from] ); }
 emitterT void IMUL32M( u32 from )				{ xMUL( ptr32[from] ); }
 
 /* imul r32 by r32 to r32 */
-emitterT void IMUL32RtoR( x86IntRegType to, x86IntRegType from ) 
+emitterT void IMUL32RtoR( x86IntRegType to, x86IntRegType from )
 {
 	xMUL( xRegister32(to), xRegister32(from) );
 }
@@ -258,7 +258,7 @@ emitterT void LEA32RtoR(x86IntRegType to, x86IntRegType from, s32 offset)
 }
 
 emitterT void LEA32RRtoR(x86IntRegType to, x86IntRegType from0, x86IntRegType from1)
-{ 
+{
 	xLEA( xRegister32( to ), ptr[xAddressReg(from0)+xAddressReg(from1)] );
 }
 
@@ -357,7 +357,7 @@ emitterT u32* J32Rel( int cc, u32 to )
 }
 
 ////////////////////////////////////////////////////
-emitterT void x86SetPtr( u8* ptr ) 
+emitterT void x86SetPtr( u8* ptr )
 {
 	x86Ptr = ptr;
 }
@@ -401,7 +401,7 @@ void x86SetJ8A( u8* j8 )
 }
 
 ////////////////////////////////////////////////////
-emitterT void x86SetJ32( u32* j32 ) 
+emitterT void x86SetJ32( u32* j32 )
 {
 	*j32 = ( x86Ptr - (u8*)j32 ) - 4;
 }
@@ -413,7 +413,7 @@ emitterT void x86SetJ32A( u32* j32 )
 }
 
 ////////////////////////////////////////////////////
-emitterT void x86Align( int bytes ) 
+emitterT void x86Align( int bytes )
 {
 	// forward align
 	x86Ptr = (u8*)( ( (uptr)x86Ptr + bytes - 1) & ~( bytes - 1 ) );
@@ -432,29 +432,29 @@ emitterT void NOP( void ) { xNOP(); }
 ////////////////////////////////////
 
 /* jmp rel8 */
-emitterT u8* JMP8( u8 to ) 
+emitterT u8* JMP8( u8 to )
 {
-	xWrite8( 0xEB ); 
+	xWrite8( 0xEB );
 	xWrite8( to );
 	return x86Ptr - 1;
 }
 
 /* jmp rel32 */
-emitterT u32* JMP32( uptr to ) 
+emitterT u32* JMP32( uptr to )
 {
 	assert( (sptr)to <= 0x7fffffff && (sptr)to >= -0x7fffffff );
-	xWrite8( 0xE9 ); 
-	xWrite32( to ); 
+	xWrite8( 0xE9 );
+	xWrite32( to );
 	return (u32*)(x86Ptr - 4 );
 }
 
 /* jmp r32/r64 */
-emitterT void JMPR( x86IntRegType to ) 
+emitterT void JMPR( x86IntRegType to )
 {
 	xJMP( xRegister32(to) );
 }
 
-// jmp m32 
+// jmp m32
 emitterT void JMP32M( uptr to )
 {
 	xJMP( ptr32[to] );
@@ -476,247 +476,247 @@ emitterT u8* JE8( u8 to ) {
 }
 
 /* jz rel8 */
-emitterT u8* JZ8( u8 to ) 
+emitterT u8* JZ8( u8 to )
 {
-	return J8Rel( 0x74, to ); 
+	return J8Rel( 0x74, to );
 }
 
 /* js rel8 */
-emitterT u8* JS8( u8 to ) 
-{ 
+emitterT u8* JS8( u8 to )
+{
 	return J8Rel( 0x78, to );
 }
 
 /* jns rel8 */
-emitterT u8* JNS8( u8 to ) 
-{ 
+emitterT u8* JNS8( u8 to )
+{
 	return J8Rel( 0x79, to );
 }
 
 /* jg rel8 */
-emitterT u8* JG8( u8 to ) 
-{ 
+emitterT u8* JG8( u8 to )
+{
 	return J8Rel( 0x7F, to );
 }
 
 /* jge rel8 */
-emitterT u8* JGE8( u8 to ) 
-{ 
-	return J8Rel( 0x7D, to ); 
+emitterT u8* JGE8( u8 to )
+{
+	return J8Rel( 0x7D, to );
 }
 
 /* jl rel8 */
-emitterT u8* JL8( u8 to ) 
-{ 
-	return J8Rel( 0x7C, to ); 
+emitterT u8* JL8( u8 to )
+{
+	return J8Rel( 0x7C, to );
 }
 
 /* ja rel8 */
-emitterT u8* JA8( u8 to ) 
-{ 
-	return J8Rel( 0x77, to ); 
+emitterT u8* JA8( u8 to )
+{
+	return J8Rel( 0x77, to );
 }
 
-emitterT u8* JAE8( u8 to ) 
-{ 
-	return J8Rel( 0x73, to ); 
+emitterT u8* JAE8( u8 to )
+{
+	return J8Rel( 0x73, to );
 }
 
 /* jb rel8 */
-emitterT u8* JB8( u8 to ) 
-{ 
-	return J8Rel( 0x72, to ); 
+emitterT u8* JB8( u8 to )
+{
+	return J8Rel( 0x72, to );
 }
 
 /* jbe rel8 */
-emitterT u8* JBE8( u8 to ) 
-{ 
-	return J8Rel( 0x76, to ); 
+emitterT u8* JBE8( u8 to )
+{
+	return J8Rel( 0x76, to );
 }
 
 /* jle rel8 */
-emitterT u8* JLE8( u8 to ) 
-{ 
-	return J8Rel( 0x7E, to ); 
+emitterT u8* JLE8( u8 to )
+{
+	return J8Rel( 0x7E, to );
 }
 
 /* jne rel8 */
-emitterT u8* JNE8( u8 to ) 
-{ 
-	return J8Rel( 0x75, to ); 
+emitterT u8* JNE8( u8 to )
+{
+	return J8Rel( 0x75, to );
 }
 
 /* jnz rel8 */
-emitterT u8* JNZ8( u8 to ) 
-{ 
-	return J8Rel( 0x75, to ); 
+emitterT u8* JNZ8( u8 to )
+{
+	return J8Rel( 0x75, to );
 }
 
 /* jng rel8 */
-emitterT u8* JNG8( u8 to ) 
-{ 
-	return J8Rel( 0x7E, to ); 
+emitterT u8* JNG8( u8 to )
+{
+	return J8Rel( 0x7E, to );
 }
 
 /* jnge rel8 */
-emitterT u8* JNGE8( u8 to ) 
-{ 
-	return J8Rel( 0x7C, to ); 
+emitterT u8* JNGE8( u8 to )
+{
+	return J8Rel( 0x7C, to );
 }
 
 /* jnl rel8 */
-emitterT u8* JNL8( u8 to ) 
-{ 
-	return J8Rel( 0x7D, to ); 
+emitterT u8* JNL8( u8 to )
+{
+	return J8Rel( 0x7D, to );
 }
 
 /* jnle rel8 */
-emitterT u8* JNLE8( u8 to ) 
-{ 
-	return J8Rel( 0x7F, to ); 
+emitterT u8* JNLE8( u8 to )
+{
+	return J8Rel( 0x7F, to );
 }
 
 /* jo rel8 */
-emitterT u8* JO8( u8 to ) 
-{ 
-	return J8Rel( 0x70, to ); 
+emitterT u8* JO8( u8 to )
+{
+	return J8Rel( 0x70, to );
 }
 
 /* jno rel8 */
-emitterT u8* JNO8( u8 to ) 
-{ 
-	return J8Rel( 0x71, to ); 
+emitterT u8* JNO8( u8 to )
+{
+	return J8Rel( 0x71, to );
 }
-// jb rel32 
+// jb rel32
 emitterT u32* JB32( u32 to )
 {
 	return J32Rel( 0x82, to );
 }
 
 /* je rel32 */
-emitterT u32* JE32( u32 to ) 
+emitterT u32* JE32( u32 to )
 {
 	return J32Rel( 0x84, to );
 }
 
 /* jz rel32 */
-emitterT u32* JZ32( u32 to ) 
+emitterT u32* JZ32( u32 to )
 {
-	return J32Rel( 0x84, to ); 
+	return J32Rel( 0x84, to );
 }
 
 /* js rel32 */
-emitterT u32* JS32( u32 to ) 
-{ 
+emitterT u32* JS32( u32 to )
+{
 	return J32Rel( 0x88, to );
 }
 
 /* jns rel32 */
-emitterT u32* JNS32( u32 to ) 
-{ 
+emitterT u32* JNS32( u32 to )
+{
 	return J32Rel( 0x89, to );
 }
 
 /* jg rel32 */
-emitterT u32* JG32( u32 to ) 
-{ 
+emitterT u32* JG32( u32 to )
+{
 	return J32Rel( 0x8F, to );
 }
 
 /* jge rel32 */
-emitterT u32* JGE32( u32 to ) 
-{ 
-	return J32Rel( 0x8D, to ); 
+emitterT u32* JGE32( u32 to )
+{
+	return J32Rel( 0x8D, to );
 }
 
 /* jl rel32 */
-emitterT u32* JL32( u32 to ) 
-{ 
-	return J32Rel( 0x8C, to ); 
+emitterT u32* JL32( u32 to )
+{
+	return J32Rel( 0x8C, to );
 }
 
 /* jle rel32 */
-emitterT u32* JLE32( u32 to ) 
-{ 
-	return J32Rel( 0x8E, to ); 
+emitterT u32* JLE32( u32 to )
+{
+	return J32Rel( 0x8E, to );
 }
 
 /* ja rel32 */
-emitterT u32* JA32( u32 to ) 
-{ 
-	return J32Rel( 0x87, to ); 
+emitterT u32* JA32( u32 to )
+{
+	return J32Rel( 0x87, to );
 }
 
 /* jae rel32 */
-emitterT u32* JAE32( u32 to ) 
-{ 
-	return J32Rel( 0x83, to ); 
+emitterT u32* JAE32( u32 to )
+{
+	return J32Rel( 0x83, to );
 }
 
 /* jne rel32 */
-emitterT u32* JNE32( u32 to ) 
-{ 
-	return J32Rel( 0x85, to ); 
+emitterT u32* JNE32( u32 to )
+{
+	return J32Rel( 0x85, to );
 }
 
 /* jnz rel32 */
-emitterT u32* JNZ32( u32 to ) 
-{ 
-	return J32Rel( 0x85, to ); 
+emitterT u32* JNZ32( u32 to )
+{
+	return J32Rel( 0x85, to );
 }
 
 /* jng rel32 */
-emitterT u32* JNG32( u32 to ) 
-{ 
-	return J32Rel( 0x8E, to ); 
+emitterT u32* JNG32( u32 to )
+{
+	return J32Rel( 0x8E, to );
 }
 
 /* jnge rel32 */
-emitterT u32* JNGE32( u32 to ) 
-{ 
-	return J32Rel( 0x8C, to ); 
+emitterT u32* JNGE32( u32 to )
+{
+	return J32Rel( 0x8C, to );
 }
 
 /* jnl rel32 */
-emitterT u32* JNL32( u32 to ) 
-{ 
-	return J32Rel( 0x8D, to ); 
+emitterT u32* JNL32( u32 to )
+{
+	return J32Rel( 0x8D, to );
 }
 
 /* jnle rel32 */
-emitterT u32* JNLE32( u32 to ) 
-{ 
-	return J32Rel( 0x8F, to ); 
+emitterT u32* JNLE32( u32 to )
+{
+	return J32Rel( 0x8F, to );
 }
 
 /* jo rel32 */
-emitterT u32* JO32( u32 to ) 
-{ 
-	return J32Rel( 0x80, to ); 
+emitterT u32* JO32( u32 to )
+{
+	return J32Rel( 0x80, to );
 }
 
 /* jno rel32 */
-emitterT u32* JNO32( u32 to ) 
-{ 
-	return J32Rel( 0x81, to ); 
+emitterT u32* JNO32( u32 to )
+{
+	return J32Rel( 0x81, to );
 }
 
 
 
 /* call func */
-emitterT void CALLFunc( uptr func ) 
+emitterT void CALLFunc( uptr func )
 {
 	xCALL( (void*)func );
 }
 
 /* call r32 */
-emitterT void CALL32R( x86IntRegType to ) 
+emitterT void CALL32R( x86IntRegType to )
 {
 	xCALL( xRegister32( to ) );
 }
 
 /* call m32 */
-emitterT void CALL32M( u32 to ) 
+emitterT void CALL32M( u32 to )
 {
 	xCALL( ptr32[to] );
 }
@@ -726,7 +726,7 @@ emitterT void BSRRtoR(x86IntRegType to, x86IntRegType from)
 	xBSR( xRegister32(to), xRegister32(from) );
 }
 
-emitterT void BSWAP32R( x86IntRegType to ) 
+emitterT void BSWAP32R( x86IntRegType to )
 {
 	xBSWAP( xRegister32(to) );
 }

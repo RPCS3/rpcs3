@@ -7,7 +7,7 @@
 		<Option compiler="gcc" />
 		<Build>
 			<Target title="Debug">
-				<Option output="../../deps/debug/zlib-dbg" prefix_auto="0" extension_auto="1" />
+				<Option output="../../deps/debug/zlib" prefix_auto="0" extension_auto="1" />
 				<Option working_dir="" />
 				<Option object_output="./.objs/debug" />
 				<Option type="2" />
@@ -20,7 +20,7 @@
 				</Compiler>
 			</Target>
 			<Target title="Release">
-				<Option output="../../deps/zlib" prefix_auto="0" extension_auto="1" />
+				<Option output="../../deps/release/zlib" prefix_auto="0" extension_auto="1" />
 				<Option working_dir="" />
 				<Option object_output="./.objs/release" />
 				<Option type="2" />
@@ -33,7 +33,7 @@
 				</Compiler>
 			</Target>
 			<Target title="Devel">
-				<Option output="../../deps/devel/zlib-dev" prefix_auto="0" extension_auto="1" />
+				<Option output="../../deps/devel/zlib" prefix_auto="0" extension_auto="1" />
 				<Option working_dir="" />
 				<Option object_output="./.objs/devel" />
 				<Option type="2" />

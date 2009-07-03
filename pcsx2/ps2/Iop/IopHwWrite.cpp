@@ -5,12 +5,12 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2 of the License, or
  *  (at your option) any later version.
- *  
+ *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
- *  
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
@@ -68,7 +68,7 @@ void __fastcall iopHwWrite8_Page1( u32 addr, mem8_t val )
 	u32 masked_addr = pgmsk( addr );
 
 	switch( masked_addr )
-	{		
+	{
 		mcase(HW_SIO_DATA): sioWrite8( val ); break;
 
 		// for use of serial port ignore for now
@@ -116,8 +116,6 @@ void __fastcall iopHwWrite8_Page3( u32 addr, mem8_t val )
 
 	if( addr == 0x1f80380c )	// STDOUT
 	{
-		bool flush = false;
-
 		// Terminate lines on CR or full buffers, and ignore \n's if the string contents
 		// are empty (otherwise terminate on \n too!)
 		if(	( val == '\r' ) || ( g_pbufi == 1023 ) ||
@@ -148,7 +146,7 @@ void __fastcall iopHwWrite8_Page8( u32 addr, mem8_t val )
 		psxHu8( addr ) = val;
 
 	PSXHW_LOG( "HwWrite8 to %s, addr 0x%08x = 0x%02x", _log_GetIopHwName<mem8_t>(addr), addr, psxHu8(addr) );
-	
+
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -187,7 +185,7 @@ static __forceinline void _HwWrite_16or32_Page1( u32 addr, T val )
 			case 0x8:
 				psxRcntWtarget16( cntidx, val );
 			break;
-			
+
 			default:
 				psxHu(addr) = val;
 			break;
@@ -332,14 +330,14 @@ static __forceinline void _HwWrite_16or32_Page1( u32 addr, T val )
 				SPU2WriteMemAddr( 1, val );
 				HW_DMA7_MADR = val;
 			break;
-			
+
 			// ------------------------------------------------------------------------
 			//
 			/*
 			mcase(0x1f801088):	// DMA0 CHCR -- MDEC IN [ignored]
 				DmaExec(0);
 			break;
-			
+
 			mcase(0x1f801098):	// DMA1 CHCR -- MDEC OUT [ignored]
 				DmaExec(1);
 			break;
@@ -395,7 +393,7 @@ static __forceinline void _HwWrite_16or32_Page1( u32 addr, T val )
 
 			// ------------------------------------------------------------------------
 			// DMA ICR handlers -- General XOR behavior!
-			
+
 			mcase(0x1f8010f4):
 			{
 				u32 tmp = (~val) & HW_DMA_ICR;
@@ -417,7 +415,7 @@ static __forceinline void _HwWrite_16or32_Page1( u32 addr, T val )
 				psxHu(addr) = ((tmp ^ val) & 0xffffff) ^ tmp;
 			}
 			break;
-			
+
 			mcase(0x1f801576):		// ICR2_hi (16 bit?) [dunno if it ever happens]
 			{
 				const u32 val2 = (u32)val << 16;
@@ -454,7 +452,7 @@ static __forceinline void _HwWrite_16or32_Page1( u32 addr, T val )
 			break;
 		}
 	}
-	
+
 	PSXHW_LOG( "HwWrite%s to %s, addr 0x%08x = 0x%04x",
 		sizeof(T) == 2 ? "16" : "32", _log_GetIopHwName<T>( addr ), addr, val
 	);
@@ -517,7 +515,7 @@ void __fastcall iopHwWrite32_Page8( u32 addr, mem32_t val )
 		{
 			// SIO2 Send commands alternate registers.  First reg maps to Send1, second
 			// to Send2, third to Send1, etc.  And the following clever code does this:
-			
+
 			const int parm = (masked_addr-0x240) / 8;
 			if(masked_addr & 4) sio2_setSend2( parm, val ); else sio2_setSend1( parm, val );
 		}
@@ -533,7 +531,7 @@ void __fastcall iopHwWrite32_Page8( u32 addr, mem32_t val )
 				// Other SIO2 registers are read-only, no-ops on write.
 				default:
 					psxHu32(addr) = val;
-				break;					
+				break;
 			}
 		}
 		else if( masked_addr >= pgmsk(HW_FW_START) && masked_addr <= pgmsk(HW_FW_END) )

@@ -1,22 +1,13 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
 <CodeBlocks_workspace_file>
 	<Workspace title="pcsx2_suite_2008 workspace">
-		<Project filename="../../plugins/zerogs/dx/Windows/zerogs_2008.cbp" />
-		<Project filename="../../plugins/CDVDiso/src/Windows/CDVDiso_vs2008.cbp" />
-		<Project filename="../../plugins/spu2-x/src/Windows/Spu2-X_vs2008.cbp" />
-		<Project filename="../../3rdparty/SoundTouch/SoundTouch.cbp" />
-		<Project filename="../../3rdparty/zlib/zlib.cbp" />
-		<Project filename="../../3rdparty/bzip2/bzip2.cbp" />
-		<Project filename="../../plugins/LilyPad/LilyPad_VC2008.cbp" />
-		<Project filename="../../plugins/zerospu2/Windows/ZeroSPU2_2008.cbp" />
-		<Project filename="../../plugins/xpad/xpad_vs2008.cbp" />
-		<Project filename="../../plugins/CDVDnull/Src/CDVDnull_vs2008.cbp" />
-		<Project filename="../../plugins/USBnull/Windows/USBnull_vc2008.cbp" />
-		<Project filename="../../plugins/FWnull/Windows/FWnull_vc2008.cbp" />
-		<Project filename="../../plugins/dev9null/src/DEV9null_vc2008.cbp" />
-		<Project filename="../../plugins/zeropad/Windows/ZeroPAD_2008.cbp" />
 		<Project filename="pcsx2.cbp" active="1">
 			<Depends filename="../../3rdparty/zlib/zlib.cbp" />
 		</Project>
+		<Project filename="../../common/build/Utilities/Utilities.cbp" />
+		<Project filename="../../common/build/x86emitter/x86emitter.cbp" />
+		<Project filename="../../3rdparty/SoundTouch/SoundTouch.cbp" />
+		<Project filename="../../3rdparty/zlib/zlib.cbp" />
+		<Project filename="../../3rdparty/bzip2/bzip2.cbp" />
 	</Workspace>
 </CodeBlocks_workspace_file>

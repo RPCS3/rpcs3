@@ -87,58 +87,5 @@ namespace Threading
 
 		return NULL;
 	}
-
-	// Note: assuming multicore is safer because it forces the interlocked routines to use
-	// the LOCK prefix.  The prefix works on single core CPUs fine (but is slow), but not
-	// having the LOCK prefix is very bad indeed.
-
-	//////////////////////////////////////////////////////////////////////
-	// Win32 versions of InterlockedExchange.
-	// These are much faster than the Win32 Kernel versions thanks to inlining.
-
-	__forceinline long pcsx2_InterlockedExchange( volatile long* target, long srcval )
-	{
-		return _InterlockedExchange( target, srcval );
-	}
-
-	__forceinline long pcsx2_InterlockedCompareExchange( volatile long* target, long srcval, long comp )
-	{
-		// Use the pthreads-win32 implementation...
-		return _InterlockedCompareExchange( target, srcval, comp );
-	}
-
-	__forceinline long pcsx2_InterlockedExchangeAdd( volatile long* target, long srcval )
-	{
-		//long result;
-
-		// Use our own implementation...
-		// Pcsx2 won't use threads unless it's a multicore cpu, so no need to use
-		// the optimized single-core method.
-
-		if( true ) //ptw32_smp_system )
-		{
-			__asm
-			{
-				mov          ecx,dword ptr [target]
-				mov          eax,dword ptr [srcval]
-				lock xadd    dword ptr [ecx],eax
-
-				// msvc smartly returns eax for us without so much as a compiler warning even...
-				//mov          dword ptr [result], eax
-			}
-		}
-		else
-		{
-			__asm
-			{
-				mov          ecx,dword ptr [target]
-				mov          eax,dword ptr [srcval]
-				xadd         dword ptr [ecx],eax
-
-				// msvc smartly returns eax for us without so much as a compiler warning even...
-				//mov          dword ptr [result], eax
-			}
-		}
-// 		return result;
-	}
 }
+

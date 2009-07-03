@@ -28,7 +28,9 @@
 				</ResourceCompiler>
 				<Linker>
 					<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --debug=yes --libs`" />
-					<Add library="$(SvnRootDir)/deps/debug/zlib-dbg.a" />
+					<Add library="$(SvnRootDir)/deps/debug/zlib.a" />
+					<Add library="$(SvnRootDir)/deps/debug/libx86emitter.a" />
+					<Add library="$(SvnRootDir)/deps/debug/libUtilities.a" />
 				</Linker>
 			</Target>
 			<Target title="Devel">
@@ -53,7 +55,9 @@
 				</ResourceCompiler>
 				<Linker>
 					<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --debug=yes --libs`" />
-					<Add library="$(SvnRootDir)/deps/devel/zlib-dev.a" />
+					<Add library="$(SvnRootDir)/deps/devel/zlib.a" />
+					<Add library="$(SvnRootDir)/deps/devel/libx86emitter.a" />
+					<Add library="$(SvnRootDir)/deps/devel/libUtilities.a" />
 				</Linker>
 			</Target>
 			<Target title="Release">
@@ -77,7 +81,9 @@
 				<Linker>
 					<Add option="-s" />
 					<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --debug=no --libs`" />
-					<Add library="$(SvnRootDir)/deps/zlib.a" />
+					<Add library="$(SvnRootDir)/deps/release/zlib.a" />
+					<Add library="$(SvnRootDir)/deps/release/libx86emitter.a" />
+					<Add library="$(SvnRootDir)/deps/release/libUtilities.a" />
 				</Linker>
 			</Target>
 			<Environment>
@@ -102,22 +108,16 @@
 		<Unit filename="../../common/include/Pcsx2Config.h" />
 		<Unit filename="../../common/include/Pcsx2Defs.h" />
 		<Unit filename="../../common/include/Pcsx2Types.h" />
-		<Unit filename="../AlignedMalloc.cpp" />
-		<Unit filename="../CDVD.cpp" />
 		<Unit filename="../CDVD.h" />
-		<Unit filename="../CDVDiso.cpp" />
 		<Unit filename="../CDVDiso.h" />
-		<Unit filename="../CDVDisodrv.cpp" />
 		<Unit filename="../CDVDisodrv.h" />
 		<Unit filename="../COP0.cpp" />
 		<Unit filename="../COP2.cpp" />
 		<Unit filename="../Cache.cpp" />
 		<Unit filename="../Cache.h" />
-		<Unit filename="../CdRom.cpp" />
 		<Unit filename="../CdRom.h" />
 		<Unit filename="../Common.h" />
 		<Unit filename="../Config.h" />
-		<Unit filename="../Console.cpp" />
 		<Unit filename="../Counters.cpp" />
 		<Unit filename="../Counters.h" />
 		<Unit filename="../DebugTools/Debug.h" />
@@ -182,8 +182,6 @@
 		<Unit filename="../IopSio2.cpp" />
 		<Unit filename="../IopSio2.h" />
 		<Unit filename="../Linux/HostGui.cpp" />
-		<Unit filename="../Linux/LnxMisc.cpp" />
-		<Unit filename="../Linux/LnxThreads.cpp" />
 		<Unit filename="../Linux/memzero.h" />
 		<Unit filename="../MMI.cpp" />
 		<Unit filename="../MTGS.cpp" />
@@ -257,11 +255,9 @@
 		<Unit filename="../SourceLog.cpp" />
 		<Unit filename="../Stats.cpp" />
 		<Unit filename="../Stats.h" />
-		<Unit filename="../StringUtils.cpp" />
 		<Unit filename="../StringUtils.h" />
 		<Unit filename="../System.cpp" />
 		<Unit filename="../System.h" />
-		<Unit filename="../ThreadTools.cpp" />
 		<Unit filename="../Threading.h" />
 		<Unit filename="../Utilities/AsciiFile.h" />
 		<Unit filename="../Utilities/FileUtils.cpp" />
@@ -283,19 +279,10 @@
 		<Unit filename="../VifDma.cpp" />
 		<Unit filename="../VifDma.h" />
 		<Unit filename="../pcsxAbout.bmp" />
-		<Unit filename="../rdebug/deci2.cpp">
-			<Option target="&lt;{~None~}&gt;" />
-		</Unit>
 		<Unit filename="../rdebug/deci2.h">
 			<Option target="&lt;{~None~}&gt;" />
 		</Unit>
-		<Unit filename="../rdebug/deci2_dbgp.cpp">
-			<Option target="&lt;{~None~}&gt;" />
-		</Unit>
 		<Unit filename="../rdebug/deci2_dbgp.h">
-			<Option target="&lt;{~None~}&gt;" />
-		</Unit>
-		<Unit filename="../rdebug/deci2_dcmp.cpp">
 			<Option target="&lt;{~None~}&gt;" />
 		</Unit>
 		<Unit filename="../rdebug/deci2_dcmp.h">
@@ -304,19 +291,10 @@
 		<Unit filename="../rdebug/deci2_drfp.h">
 			<Option target="&lt;{~None~}&gt;" />
 		</Unit>
-		<Unit filename="../rdebug/deci2_iloadp.cpp">
-			<Option target="&lt;{~None~}&gt;" />
-		</Unit>
 		<Unit filename="../rdebug/deci2_iloadp.h">
 			<Option target="&lt;{~None~}&gt;" />
 		</Unit>
-		<Unit filename="../rdebug/deci2_netmp.cpp">
-			<Option target="&lt;{~None~}&gt;" />
-		</Unit>
 		<Unit filename="../rdebug/deci2_netmp.h">
-			<Option target="&lt;{~None~}&gt;" />
-		</Unit>
-		<Unit filename="../rdebug/deci2_ttyp.cpp">
 			<Option target="&lt;{~None~}&gt;" />
 		</Unit>
 		<Unit filename="../rdebug/deci2_ttyp.h">
@@ -328,18 +306,13 @@
 		<Unit filename="../tinyxml/tinyxml.h" />
 		<Unit filename="../tinyxml/tinyxmlerror.cpp" />
 		<Unit filename="../tinyxml/tinyxmlparser.cpp" />
-		<Unit filename="../vssprintf.cpp" />
 		<Unit filename="../vtlb.cpp" />
 		<Unit filename="../vtlb.h" />
 		<Unit filename="../x86/BaseblockEx.cpp" />
 		<Unit filename="../x86/BaseblockEx.h" />
-		<Unit filename="../x86/aMicroVU.S">
-			<Option target="&lt;{~None~}&gt;" />
-		</Unit>
 		<Unit filename="../x86/aR3000A.S" />
 		<Unit filename="../x86/aVUzerorec.S" />
 		<Unit filename="../x86/aVif.S" />
-		<Unit filename="../x86/fast_routines.S" />
 		<Unit filename="../x86/iCOP0.cpp" />
 		<Unit filename="../x86/iCOP0.h" />
 		<Unit filename="../x86/iCOP2.cpp" />
@@ -401,23 +374,14 @@
 		<Unit filename="../x86/ix86/implement/xmm/comparisons.h" />
 		<Unit filename="../x86/ix86/implement/xmm/moremovs.h" />
 		<Unit filename="../x86/ix86/implement/xmm/shufflepack.h" />
-		<Unit filename="../x86/ix86/ix86.cpp" />
 		<Unit filename="../x86/ix86/ix86.h" />
-		<Unit filename="../x86/ix86/ix86_3dnow.cpp" />
-		<Unit filename="../x86/ix86/ix86_cpudetect.cpp" />
-		<Unit filename="../x86/ix86/ix86_fpu.cpp" />
 		<Unit filename="../x86/ix86/ix86_inlines.inl" />
 		<Unit filename="../x86/ix86/ix86_instructions.h" />
 		<Unit filename="../x86/ix86/ix86_internal.h" />
-		<Unit filename="../x86/ix86/ix86_jmp.cpp" />
-		<Unit filename="../x86/ix86/ix86_legacy.cpp" />
 		<Unit filename="../x86/ix86/ix86_legacy_instructions.h" />
 		<Unit filename="../x86/ix86/ix86_legacy_internal.h" />
-		<Unit filename="../x86/ix86/ix86_legacy_sse.cpp" />
 		<Unit filename="../x86/ix86/ix86_legacy_types.h" />
-		<Unit filename="../x86/ix86/ix86_simd.cpp" />
 		<Unit filename="../x86/ix86/ix86_sse_helpers.h" />
-		<Unit filename="../x86/ix86/ix86_tools.cpp" />
 		<Unit filename="../x86/ix86/ix86_types.h" />
 		<Unit filename="../x86/ix86/ix86_writers.inl" />
 		<Unit filename="../x86/microVU.cpp" />
