@@ -132,7 +132,6 @@ microVUf(void) mVUclearProg(int progIndex) {
 	microVU* mVU = mVUx;
 	mVUprogI.used	   = 1;
 	mVUprogI.last_used = 3;
-	//mVUprogI.x86ptr	   = mVUprogI.x86start;
 	for (int j = 0; j <= mVUprogI.ranges.max; j++) {
 		mVUprogI.ranges.range[j][0]	= -1; // Set range to 
 		mVUprogI.ranges.range[j][1]	= -1; // indeterminable status
@@ -235,6 +234,8 @@ microVUt(void) mVUvsyncUpdate(mV) {
 microVUf(bool) mVUcmpPartial(int progIndex) {
 	microVU* mVU = mVUx;
 	for (int i = 0; i <= mVUprogI.ranges.total; i++) {
+		if ((mVUprogI.ranges.range[i][0] < 0)
+		||  (mVUprogI.ranges.range[i][1] < 0)) { DevCon::Error("microVU%d: Negative Range![%d][%d]", params mVU->index, i, mVUprogI.ranges.total); }
 		if (memcmp_mmx(cmpOffset(mVUprogI.data), cmpOffset(mVU->regs->Micro), ((mVUprogI.ranges.range[i][1] + 8) - mVUprogI.ranges.range[i][0]))) {
 			return 0;
 		}

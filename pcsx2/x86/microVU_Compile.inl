@@ -92,9 +92,11 @@ microVUt(void) mVUcheckIsSame(mV) {
 // Sets up microProgram PC ranges based on whats been recompiled
 microVUt(void) mVUsetupRange(mV, s32 pc, bool isStartPC) {
 
-	for (int i = 0; i <= mVUcurProg.ranges.total; i++) {
-		if ((pc >= mVUcurProg.ranges.range[i][0])
-		&&	(pc <= mVUcurProg.ranges.range[i][1])) { return; }
+	if (isStartPC || !(mVUrange[1] == -1)) {
+		for (int i = 0; i <= mVUcurProg.ranges.total; i++) {
+			if ((pc >= mVUcurProg.ranges.range[i][0])
+			&&	(pc <= mVUcurProg.ranges.range[i][1])) { return; }
+		}
 	}
 
 	mVUcheckIsSame(mVU);
@@ -114,17 +116,21 @@ microVUt(void) mVUsetupRange(mV, s32 pc, bool isStartPC) {
 	else {
 		if (mVUrange[0] <= pc) {
 			mVUrange[1] = pc;
+			bool mergedRange = 0;
 			for (int i = 0; i <= (mVUcurProg.ranges.total-1); i++) {
 				int rStart = (mVUrange[0] < 8) ? 0 : (mVUrange[0] - 8);
 				int rEnd   = pc;
 				if((mVUcurProg.ranges.range[i][1] >= rStart)
 				&& (mVUcurProg.ranges.range[i][1] <= rEnd)){
 					mVUcurProg.ranges.range[i][1] = pc;
-					mVUrange[0] = -1;
-					mVUrange[1] = -1;
-					mVUcurProg.ranges.total--;
+					mergedRange = 1;
 					//DevCon::Status("microVU%d: Prog Range Merging", params mVU->index);
 				}
+			}
+			if (mergedRange) {
+				mVUrange[0] = -1;
+				mVUrange[1] = -1;
+				mVUcurProg.ranges.total--;
 			}
 		}
 		else {
