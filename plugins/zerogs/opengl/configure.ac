@@ -22,6 +22,7 @@ AC_SUBST(ZEROGS_SONAME, libZeroGSogl.so.[$ZEROGS_CURRENT].[$ZEROGS_REVISION].[$Z
 CFLAGS=" -I/opt/cg/include -L/opt/cg/lib "
 CPPFLAGS=" -I/opt/cg/include -L/opt/cg/lib "
 CXXFLAGS=" -I/opt/cg/include -L/opt/cg/lib "
+CCASFLAGS=
 
 dnl Check for debug build
 AC_MSG_CHECKING(debug build)
@@ -30,14 +31,16 @@ AC_ARG_ENABLE(debug, AC_HELP_STRING([--enable-debug], [debug build]),
 if test "x$debug" == xyes
 then
  AC_DEFINE(_DEBUG,1,[_DEBUG])
- CFLAGS+="-g "
- CPPFLAGS+="-g "
- CXXFLAGS+="-g -fpermissive "
+ CFLAGS+="-g -m32 "
+ CPPFLAGS+="-g -m32 "
+ CXXFLAGS+="-g -fpermissive -m32 "
+ CCASFLAGS+=" -m32 "
 else
  AC_DEFINE(NDEBUG,1,[NDEBUG])
- CFLAGS+="-O3 -fomit-frame-pointer "
- CPPFLAGS+="-O3 -fomit-frame-pointer "
- CXXFLAGS+="-O3 -fomit-frame-pointer -fpermissive "
+ CFLAGS+="-O3 -fomit-frame-pointer -m32 "
+ CPPFLAGS+="-O3 -fomit-frame-pointer -m32 "
+ CXXFLAGS+="-O3 -fomit-frame-pointer -fpermissive -m32 "
+ CCASFLAGS+=" -m32 "
 fi
 AC_MSG_RESULT($debug)
 
@@ -64,33 +67,6 @@ then
 fi
 AC_MSG_RESULT($sse2)
 AM_CONDITIONAL(SSE2, test x$sse2 = xyes)
-
-dnl Check for 64bit CPU
-AC_MSG_CHECKING(for a x86-64 CPU)
-dnl if test "$build_os" == "target_os"
-dnl then
-AC_TRY_RUN([
-int main()
-{
-int a = 0;
-int*pa = &a;
-asm(".intel_syntax\n"
-	"mov %%rax, %0\n"
-    "mov %%eax, [%%rax]\n"
-    ".att_syntax\n"
-    : : "r"(pa) : "%rax");
-return 0;
-}
-],cpu64=yes,cpu64=no,)
-dnl else
-dnl cpu64=no
-dnl fi
-if test "x$cpu64" == xyes
-then
-AC_DEFINE(__x86_64__,1,[__x86_64__])
-fi
-AC_MSG_RESULT($cpu64)
-AM_CONDITIONAL(X86_64, test x$cpu64 = xyes)
 
 dnl gtk
 AC_MSG_CHECKING(gtk2+)

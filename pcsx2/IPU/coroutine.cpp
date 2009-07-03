@@ -26,8 +26,8 @@ struct coroutine {
 
     uptr storeebx, storeesi, storeedi, storeebp;
 	
-    int restore; // if nonzero, restore the registers
-    int alloc;
+    s32 restore; // if nonzero, restore the registers
+    s32 alloc;
 	//struct s_coroutine *caller;
 	//struct s_coroutine *restarget;
 	
@@ -45,7 +45,7 @@ coroutine_t so_create(void (*func)(void *), void *data, void *stack, int size)
 	int alloc = 0; // r = CO_STK_COROSIZE;
 	coroutine *co;
 
-	if ((size &= ~(sizeof(long) - 1)) < CO_MIN_SIZE) return NULL;
+	if ((size &= ~(sizeof(s32) - 1)) < CO_MIN_SIZE) return NULL;
 	if (!stack) {
 		size = (size + sizeof(coroutine) + CO_STK_ALIGN - 1) & ~(CO_STK_ALIGN - 1);
 		stack = malloc(size);

@@ -16,9 +16,7 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
-#ifndef __VU1OPS_H__
-#define __VU1OPS_H__
-
+#pragma once
 #include "VU.h"
 
 extern __forceinline u32 VU_MAC_UPDATE( int shift, VURegs * VU, float f);
@@ -395,5 +393,3 @@ void _vuRegsEEXP(VURegs * VU, _VURegsNum *VUregsn);
 void _vuRegsXITOP(VURegs * VU, _VURegsNum *VUregsn);
 void _vuRegsXGKICK(VURegs * VU, _VURegsNum *VUregsn);
 void _vuRegsXTOP(VURegs * VU, _VURegsNum *VUregsn);
-
-#endif

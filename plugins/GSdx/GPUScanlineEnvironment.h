@@ -28,32 +28,32 @@ union GPUScanlineSelector
 {
 	struct
 	{
-		DWORD iip:1; // 0
-		DWORD me:1; // 1
-		DWORD abe:1; // 2
-		DWORD abr:2; // 3
-		DWORD tge:1; // 5
-		DWORD tme:1; // 6
-		DWORD twin:1; // 7
-		DWORD tlu:1; // 8
-		DWORD dtd:1; // 9
-		DWORD ltf:1; // 10
-		DWORD md:1; // 11
-		DWORD sprite:1; // 12
-		DWORD scalex:2; // 13
+		uint32 iip:1; // 0
+		uint32 me:1; // 1
+		uint32 abe:1; // 2
+		uint32 abr:2; // 3
+		uint32 tge:1; // 5
+		uint32 tme:1; // 6
+		uint32 twin:1; // 7
+		uint32 tlu:1; // 8
+		uint32 dtd:1; // 9
+		uint32 ltf:1; // 10
+		uint32 md:1; // 11
+		uint32 sprite:1; // 12
+		uint32 scalex:2; // 13
 	};
 
 	struct
 	{
-		DWORD _pad1:1; // 0
-		DWORD rfb:2; // 1
-		DWORD _pad2:2; // 3
-		DWORD tfx:2; // 5
+		uint32 _pad1:1; // 0
+		uint32 rfb:2; // 1
+		uint32 _pad2:2; // 3
+		uint32 tfx:2; // 5
 	};
 
-	DWORD key;
+	uint32 key;
 
-	operator DWORD() {return key;}
+	operator uint32() {return key;}
 };
 
 __declspec(align(16)) struct GPUScanlineParam
@@ -61,17 +61,16 @@ __declspec(align(16)) struct GPUScanlineParam
 	GPUScanlineSelector sel;
 
 	const void* tex;
-	const WORD* clut;
+	const uint16* clut;
 };
 
 __declspec(align(16)) struct GPUScanlineEnvironment
 {
 	GPUScanlineSelector sel;
 
-	// GPULocalMemory* mem; // TODO: obsolite
 	void* vm;
 	const void* tex;
-	const WORD* clut;
+	const uint16* clut;
 
 	// GSVector4i md; // similar to gs fba
 

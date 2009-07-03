@@ -1,0 +1,184 @@
+#if SHADER_MODEL >= 0x400
+
+struct VS_INPUT
+{
+	float4 p : POSITION; 
+	float2 t : TEXCOORD0;
+};
+
+struct VS_OUTPUT
+{
+	float4 p : SV_Position;
+	float2 t : TEXCOORD0;
+};
+
+VS_OUTPUT vs_main(VS_INPUT input)
+{
+	VS_OUTPUT output;
+
+	output.p = input.p;
+	output.t = input.t;
+
+	return output;
+}
+
+Texture2D Texture;
+SamplerState Sampler;
+
+struct PS_INPUT
+{
+	float4 p : SV_Position;
+	float2 t : TEXCOORD0;
+};
+
+float4 ps_main0(PS_INPUT input) : SV_Target0
+{
+	return Texture.Sample(Sampler, input.t);
+}
+
+uint ps_main1(PS_INPUT input) : SV_Target0
+{
+	float4 f = Texture.Sample(Sampler, input.t);
+
+	f.a *= 256.0f/127; // hm, 0.5 won't give us 1.0 if we just multiply with 2
+
+	uint4 i = f * float4(0x001f, 0x03e0, 0x7c00, 0x8000);
+
+	return (i.x & 0x001f) | (i.y & 0x03e0) | (i.z & 0x7c00) | (i.w & 0x8000);	
+}
+
+float4 ps_main2(PS_INPUT input) : SV_Target0
+{
+	clip(Texture.Sample(Sampler, input.t).a - (0.5 - 0.9f/256));
+
+	return 0;
+}
+
+float4 ps_main3(PS_INPUT input) : SV_Target0
+{
+	clip((0.5 - 0.9f/256) -  Texture.Sample(Sampler, input.t).a);
+
+	return 0;
+}
+
+float4 ps_main4(PS_INPUT input) : SV_Target0
+{
+	float4 c = Texture.Sample(Sampler, input.t);
+	
+	return fmod(c * 255 + 0.5f, 256) / 255;
+}
+
+float4 ps_crt(PS_INPUT input, uint i)
+{
+	float4 mask[4] = 
+	{
+		float4(1, 0, 0, 0), 
+		float4(0, 1, 0, 0), 
+		float4(0, 0, 1, 0), 
+		float4(1, 1, 1, 0)
+	};
+	
+	return Texture.Sample(Sampler, input.t) * saturate(mask[i] + 0.5f);
+}
+
+float4 ps_main5(PS_INPUT input) : SV_Target0 // triangular
+{
+	uint4 p = (uint4)input.p;
+
+	// return ps_crt(input, ((p.x + (p.y & 1) * 3) >> 1) % 3); 
+	return ps_crt(input, ((p.x + ((p.y >> 1) & 1) * 3) >> 1) % 3);
+}
+
+float4 ps_main6(PS_INPUT input) : SV_Target0 // diagonal
+{
+	uint4 p = (uint4)input.p;
+
+	return ps_crt(input, (p.x + (p.y % 3)) % 3);
+}
+
+#elif SHADER_MODEL <= 0x300
+
+struct VS_INPUT
+{
+	float4 p : POSITION; 
+	float2 t : TEXCOORD0;
+};
+
+struct VS_OUTPUT
+{
+	float4 p : POSITION;
+	float2 t : TEXCOORD0;
+};
+
+VS_OUTPUT vs_main(VS_INPUT input)
+{
+	VS_OUTPUT output;
+
+	output.p = input.p;
+	output.t = input.t;
+
+	return output;
+}
+
+sampler Texture : register(s0);
+
+float4 ps_main0(float2 t : TEXCOORD0) : COLOR
+{
+	return tex2D(Texture, t);
+}
+
+float4 ps_main1(float2 t : TEXCOORD0) : COLOR
+{
+	float4 c = tex2D(Texture, t);
+	c.a *= 128.0f / 255; // *= 0.5f is no good here, need to do this in order to get 0x80 for 1.0f (instead of 0x7f)
+	return c;
+}
+
+float4 ps_main2(float2 t : TEXCOORD0) : COLOR
+{
+	clip(tex2D(Texture, t).a - (1.0f - 0.9f/256));
+
+	return 0;
+}
+
+float4 ps_main3(float2 t : TEXCOORD0) : COLOR
+{
+	clip((1.0f - 0.9f/256) -  tex2D(Texture, t).a);
+
+	return 0;
+}
+
+float4 ps_main4() : COLOR
+{
+	return 1;
+}
+
+float4 ps_crt(float2 t, int i)
+{
+	float4 mask[4] = 
+	{
+		float4(1, 0, 0, 0), 
+		float4(0, 1, 0, 0), 
+		float4(0, 0, 1, 0), 
+		float4(1, 1, 1, 0)
+	};
+	
+	return tex2D(Texture, t) * saturate(mask[i] + 0.5f);
+}
+
+float4 ps_main5(float2 t : TEXCOORD0, float4 vPos : VPOS) : COLOR // triangular
+{
+	int4 p = (int4)vPos;
+
+	// return ps_crt(t, ((p.x + (p.y % 2) * 3) / 2) % 3);
+	return ps_crt(t, ((p.x + ((p.y / 2) % 2) * 3) / 2) % 3);
+}
+
+float4 ps_main6(float2 t : TEXCOORD0, float4 vPos : VPOS) : COLOR // diagonal
+{
+	int4 p = (int4)vPos;
+
+	return ps_crt(t, (p.x + (p.y % 3)) % 3);
+}
+
+#endif

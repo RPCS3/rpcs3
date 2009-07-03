@@ -82,16 +82,30 @@ static __forceinline void _rcntSet( int cntidx )
 
 	c = ((0x10000 - counter.count) * counter.rate) - (cpuRegs.cycle - counter.sCycleT);
 	c += cpuRegs.cycle - nextsCounter;		// adjust for time passed since last rcntUpdate();
-	if (c < nextCounter) nextCounter = c;
-
+	if (c < nextCounter) 
+	{
+		nextCounter = c;
+		cpuSetNextBranch( nextsCounter, nextCounter );	//Need to update on counter resets/target changes
+	}
+	
 	// Ignore target diff if target is currently disabled.
 	// (the overflow is all we care about since it goes first, and then the 
-	// target will be turned on afterward).
+	// target will be turned on afterward, and handled in the next event test).
 
-	if( counter.target & EECNT_FUTURE_TARGET ) return;
-	c = ((counter.target - counter.count) * counter.rate) - (cpuRegs.cycle - counter.sCycleT);
-	c += cpuRegs.cycle - nextsCounter;		// adjust for time passed since last rcntUpdate();
-	if (c < nextCounter) nextCounter = c;
+	if( counter.target & EECNT_FUTURE_TARGET ) 
+	{
+		return;
+	}
+	else
+	{
+		c = ((counter.target - counter.count) * counter.rate) - (cpuRegs.cycle - counter.sCycleT);
+		c += cpuRegs.cycle - nextsCounter;		// adjust for time passed since last rcntUpdate();
+		if (c < nextCounter) 
+		{
+			nextCounter = c;
+			cpuSetNextBranch( nextsCounter, nextCounter );	//Need to update on counter resets/target changes
+		}	
+	}
 }
 
 
@@ -100,7 +114,7 @@ static __forceinline void cpuRcntSet()
 	int i;
 
 	nextsCounter = cpuRegs.cycle;
-	nextCounter = (vsyncCounter.sCycle + vsyncCounter.CycleT) - cpuRegs.cycle;
+	nextCounter = vsyncCounter.CycleT - (cpuRegs.cycle - vsyncCounter.sCycle);
 
 	for (i = 0; i < 4; i++)
 		_rcntSet( i );
@@ -322,8 +336,16 @@ static __forceinline void VSyncStart(u32 sCycle)
 	EECNT_LOG( "/////////  EE COUNTER VSYNC START  \\\\\\\\\\\\\\\\\\\\  (frame: %d)", iFrame );
 	vSyncDebugStuff( iFrame ); // EE Profiling and Debug code
 
-	if ((CSRw & 0x8)) GSCSRr|= 0x8;
-	if (!(GSIMR&0x800)) gsIrq();
+	if ((CSRw & 0x8)) 
+	{
+		
+		
+		if (!(GSIMR&0x800)) 
+		{
+			gsIrq();
+		}
+		GSCSRr|= 0x8;
+	}
 
 	hwIntcIrq(INTC_VBLANK_S);
 	psxVBlankStart();
@@ -390,8 +412,16 @@ __forceinline void rcntUpdate_hScanline()
 		hsyncCounter.Mode = MODE_HRENDER;
 	}
 	else { //HBLANK END / HRENDER Begin
-		if (CSRw & 0x4) GSCSRr |= 4; // signal
-		if (!(GSIMR&0x400)) gsIrq();
+		if (CSRw & 0x4) 
+		{
+			
+			
+			if (!(GSIMR&0x400)) 
+			{
+				gsIrq();
+			}
+			GSCSRr |= 4; // signal
+		}
 		if (gates) rcntEndGate(false, hsyncCounter.sCycle);
 		if (psxhblankgate) psxCheckEndGate16(0);
 
@@ -432,6 +462,9 @@ __forceinline bool rcntUpdate_vSync()
 
 		// Accumulate hsync rounding errors:
 		hsyncCounter.sCycle += vSyncInfo.hSyncError;
+	
+		if (CHECK_MICROVU0) vsyncVUrec(0);
+		if (CHECK_MICROVU1) vsyncVUrec(1);
 
 #		ifdef VSYNC_DEBUG
 		vblankinc++;
@@ -713,6 +746,19 @@ __forceinline void rcntWtarget(int index, u32 value)
 	// guard against premature (instant) targeting.
 	// If the target is behind the current count, set it up so that the counter must
 	// overflow first before the target fires:
+
+	if(counters[index].mode.IsCounting) {
+		if(counters[index].mode.ClockSource != 0x3) {
+
+			u32 change = cpuRegs.cycle - counters[index].sCycleT;
+			if( change > 0 )
+			{
+				counters[index].count += change / counters[index].rate;
+				change -= (change / counters[index].rate) * counters[index].rate;
+				counters[index].sCycleT = cpuRegs.cycle - change;
+			}
+		}
+	}
 
 	if( counters[index].target <= rcntCycle(index) )
 		counters[index].target |= EECNT_FUTURE_TARGET;

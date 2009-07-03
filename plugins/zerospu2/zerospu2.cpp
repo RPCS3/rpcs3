@@ -44,14 +44,14 @@ u16* spu2mem = NULL;
 u16* pSpuIrq[2] = {NULL};
 u32 dwNewChannel2[2] = {0}; // keeps track of what channels that have been turned on
 u32 dwEndChannel2[2] = {0}; // keeps track of what channels have ended
-unsigned long   dwNoiseVal=1;						  // global noise generator
+u32 dwNoiseVal=1;						  // global noise generator
 bool g_bPlaySound = true; // if true, will output sound, otherwise no
-int iFMod[NSSIZE];
-int s_buffers[NSSIZE][2]; // left and right buffers
+s32 iFMod[NSSIZE];
+s32 s_buffers[NSSIZE][2]; // left and right buffers
 
 // mixer thread variables
 static bool s_bThreadExit = true;
-static int s_nDropPacket = 0;
+static s32 s_nDropPacket = 0;
 string s_strIniPath="inis/zerospu2.ini";
 
 #ifdef _WIN32
@@ -66,7 +66,7 @@ void* SPU2ThreadProc(void*);
 #endif
 
 static AUDIOBUFFER s_pAudioBuffers[NSPACKETS];
-static int s_nCurBuffer = 0, s_nQueuedBuffers = 0;
+static s32 s_nCurBuffer = 0, s_nQueuedBuffers = 0;
 static s16* s_pCurOutput = NULL;
 static u32 g_startcount=0xffffffff;
 static u32 g_packetcount=0;
@@ -76,15 +76,15 @@ soundtouch::SoundTouch* pSoundTouch=NULL;
 WavOutFile* g_pWavRecord=NULL; // used for recording
 
 static u64 s_GlobalTimeStamp = 0;
-static int s_nDurations[64]={0};
-static int s_nCurDuration=0;
-static int s_nTotalDuration=0;
+static s32 s_nDurations[64]={0};
+static s32 s_nCurDuration=0;
+static s32 s_nTotalDuration=0;
 
-int SPUCycles = 0, SPUWorkerCycles = 0;
-int SPUStartCycle[2];
-int SPUTargetCycle[2];
+s32 SPUCycles = 0, SPUWorkerCycles = 0;
+s32 SPUStartCycle[2];
+s32 SPUTargetCycle[2];
 
-int g_logsound=0;
+s32 g_logsound=0;
 
 int ADMASWrite(int c);
 
@@ -97,7 +97,7 @@ void (*irqCallbackDMA7)()=0;
 
 uptr g_pDMABaseAddr=0;
 
-const int f[5][2] = {   
+const s32 f[5][2] = {   
 				{    0,     0 },
 				{  60,     0 },
 				{ 115, -52 },
@@ -126,7 +126,7 @@ static void InitLibraryName()
 	// subversion revision tags:
 
 	strcpy( libraryName, "ZeroSPU2"
-#	ifdef _DEBUG
+#	ifdef PCSX2_DEBUG
 		"-Debug"
 #	elseif ZEROSPU2_DEVBUILD
 		"-Dev"
@@ -138,7 +138,7 @@ static void InitLibraryName()
 	// to label the specific revision:
 
 	sprintf_s( libraryName, "ZeroSPU2 r%d%s"
-#	ifdef _DEBUG
+#	ifdef PCSX2_DEBUG
 		"-Debug"
 #	elif ZEROSPU2_DEVBUILD
 		"-Dev"
@@ -151,7 +151,7 @@ static void InitLibraryName()
 // I'll hook in svn version code later. --arcum42
 
 	strcpy( libraryName, "ZeroSPU2 Playground"
-#	ifdef _DEBUG
+#	ifdef PCSX2_DEBUG
 		"-Debug"
 #	elif ZEROSPU2_DEVBUILD
 		"-Dev"
@@ -239,7 +239,7 @@ s32 CALLBACK SPU2init()
 
 	memset(voices, 0, sizeof(voices));
 	// last 24 channels have higher mem offset
-	for (int i = 0; i < 24; ++i)
+	for (s32 i = 0; i < 24; ++i)
 		voices[i+24].memoffset = 0x400;
 
 	// init each channel
@@ -305,7 +305,7 @@ s32 CALLBACK SPU2open(void *pDsp)
 		s_pCurOutput = (s16*)s_pAudioBuffers[0].pbuf;
 		assert( s_pCurOutput != NULL);
 	
-		for (int i = 0; i < ArraySize(s_nDurations); ++i) 
+		for (s32 i = 0; i < ArraySize(s_nDurations); ++i) 
 		{
 			s_nDurations[i] = NSFRAMES*1000;
 		}
@@ -410,7 +410,7 @@ void CALLBACK SPU2async(u32 cycle)
 void InitADSR()									// INIT ADSR
 {
 	u32 r,rs,rd;
-	int i;
+	s32 i;
 	memset(RateTable,0,sizeof(u32)*160);		// build the rate table according to Neill's rules (see at bottom of file)
 
 	r=3;rs=1;rd=0;
@@ -434,7 +434,7 @@ void InitADSR()									// INIT ADSR
 	}
 }
 
-int MixADSR(VOICE_PROCESSED* pvoice)							 // MIX ADSR
+s32 MixADSR(VOICE_PROCESSED* pvoice)							 // MIX ADSR
 {
 	u32 rateadd[8] = { 0, 4, 6, 8, 9, 10, 11, 12 };
 	
@@ -536,11 +536,11 @@ int MixADSR(VOICE_PROCESSED* pvoice)							 // MIX ADSR
 	return 0;
 }
 
-void MixChannels(int core)
+void MixChannels(s32 core)
 {
 	// mix all channels
-	int c_offset = 0x0400 * core;
-	int dma, left_vol, right_vol;
+	s32 c_offset = 0x0400 * core;
+	s32 dma, left_vol, right_vol;
 	ADMA *Adma;
 	
 	if (core == 0)
@@ -560,12 +560,12 @@ void MixChannels(int core)
 	
 	if ((spu2Ru16(REG_C0_MMIX + c_offset) & 0xF0) && (spu2Ru16(REG_C0_ADMAS + c_offset) & (0x1 + core))) 
 	{
-		for (int ns=0;ns<NSSIZE;ns++) 
+		for (s32 ns=0;ns<NSSIZE;ns++) 
 		{ 
 			if ((spu2Ru16(REG_C0_MMIX + c_offset) & 0x80)) 
-				s_buffers[ns][0] += (((short*)spu2mem)[0x2000 + c_offset +Adma->Index]*(int)spu2Ru16(left_vol))>>16;
+				s_buffers[ns][0] += (((s16*)spu2mem)[0x2000 + c_offset +Adma->Index]*(s32)spu2Ru16(left_vol))>>16;
 			if ((spu2Ru16(REG_C0_MMIX + c_offset) & 0x40)) 
-				s_buffers[ns][1] += (((short*)spu2mem)[0x2200 + c_offset +Adma->Index]*(int)spu2Ru16(right_vol))>>16;
+				s_buffers[ns][1] += (((s16*)spu2mem)[0x2200 + c_offset +Adma->Index]*(s32)spu2Ru16(right_vol))>>16;
 			
 			Adma->Index +=1;
 			MemAddr[core] += 4;
@@ -602,7 +602,7 @@ void SPU2Worker()
 {
 	u8* start;
 	u32 nSample;
-	int ch, predict_nr, shift_factor, flags;
+	s32 ch, predict_nr, shift_factor, flags;
 
 	// assume s_buffers are zeroed out
 	if ( dwNewChannel2[0] || dwNewChannel2[1] )
@@ -624,11 +624,11 @@ void SPU2Worker()
 			pChannel->VoiceChangeFrequency();
 
 		// loop until 1 ms of data is reached
-		int ns = 0;
+		s32 ns = 0;
 		
 		while(ns<NSSIZE)
 		{
-			int s_1, s_2, fa;
+			s32 s_1, s_2, fa;
 			
 			// fmod freq channel
 			if (pChannel->bFMod==1 && iFMod[ns]) pChannel->FModChangeFrequency(ns);
@@ -662,8 +662,8 @@ void SPU2Worker()
 					
 					for (nSample=0; nSample<28; ++start)
 					{
-						int s;
-						int d = (int)*start;
+						s32 s;
+						s32 d = (s32)*start;
 						
 						s = ((d & 0xf)<<12);
 						if (s & 0x8000) s |= 0xffff0000;
@@ -685,7 +685,7 @@ void SPU2Worker()
 					}
 			
 					// irq occurs no matter what core access the address
-					for (int core = 0; core < 2; ++core) 
+					for (s32 core = 0; core < 2; ++core) 
 					{
 						if (((SPU_CONTROL_*)(spu2regs + (0x400 * core) + REG_C0_CTRL))->irq)		 // some callback and irq active?
 						{
@@ -736,7 +736,7 @@ void SPU2Worker()
 			else
 				fa=pChannel->iGetInterpolationVal();	   // get sample val
 
-			int sval = (MixADSR(pChannel) * fa) / 1023;   // mix adsr
+			s32 sval = (MixADSR(pChannel) * fa) / 1023;   // mix adsr
 
 			if (pChannel->bFMod == 2)						// fmod freq channel
 			{
@@ -767,7 +767,7 @@ ENDX:
 	{
 		assert( s_pCurOutput != NULL);
 
-		for (int ns=0; ns<NSSIZE; ns++) 
+		for (s32 ns=0; ns<NSSIZE; ns++) 
 		{
 			// clamp and write
 			clampandwrite16(s_pCurOutput[0],s_buffers[ns][0]);
@@ -784,7 +784,7 @@ ENDX:
 
 			if ( conf.options & OPTION_RECORDING ) 
 			{
-				static int lastrectime = 0;
+				static s32 lastrectime = 0;
 				if (timeGetTime() - lastrectime > 5000) 
 				{
 					WARN_LOG("ZeroSPU2: recording\n");
@@ -840,17 +840,17 @@ ENDX:
 }
 
 // resamples pStereoSamples
-void ResampleLinear(s16* pStereoSamples, int oldsamples, s16* pNewSamples, int newsamples)
+void ResampleLinear(s16* pStereoSamples, s32 oldsamples, s16* pNewSamples, s32 newsamples)
 {
-	for (int i = 0; i < newsamples; ++i) 
+	for (s32 i = 0; i < newsamples; ++i) 
 	{
-		int io = i * oldsamples;
-		int old = io / newsamples;
-		int rem = io - old * newsamples;
+		s32 io = i * oldsamples;
+		s32 old = io / newsamples;
+		s32 rem = io - old * newsamples;
 
 		old *= 2;
-		int newsampL = pStereoSamples[old] * (newsamples - rem) + pStereoSamples[old+2] * rem;
-		int newsampR = pStereoSamples[old+1] * (newsamples - rem) + pStereoSamples[old+3] * rem;
+		s32 newsampL = pStereoSamples[old] * (newsamples - rem) + pStereoSamples[old+2] * rem;
+		s32 newsampR = pStereoSamples[old+1] * (newsamples - rem) + pStereoSamples[old+3] * rem;
 		pNewSamples[2 * i] = newsampL / newsamples;
 		pNewSamples[2 * i + 1] = newsampR / newsamples;
 	}
@@ -868,7 +868,7 @@ DWORD WINAPI SPU2ThreadProc(LPVOID)
 void* SPU2ThreadProc(void* lpParam)
 #endif
 {
-	int nReadBuf = 0;
+	s32 nReadBuf = 0;
 
 	while (!s_bThreadExit) 
 	{
@@ -901,13 +901,13 @@ void* SPU2ThreadProc(void* lpParam)
 		}
 
 
-		//int ps2delay = timeGetTime() - s_pAudioBuffers[nReadBuf].timestamp;
-		int NewSamples = s_pAudioBuffers[nReadBuf].avgtime;
+		//s32 ps2delay = timeGetTime() - s_pAudioBuffers[nReadBuf].timestamp;
+		s32 NewSamples = s_pAudioBuffers[nReadBuf].avgtime;
 
 		if ( (conf.options & OPTION_TIMESTRETCH) ) 
 		{
 
-			int bytesbuf = SoundGetBytesBuffered();
+			s32 bytesbuf = SoundGetBytesBuffered();
 			if ( bytesbuf < 8000 )
 				NewSamples += 1000;
 			// check the current timestamp, if too far apart, speed up audio
@@ -928,25 +928,25 @@ void* SPU2ThreadProc(void* lpParam)
 
 			NewSamples = min(NewSamples, NSFRAMES * NSSIZE * 3);
 
-			int oldsamples = s_pAudioBuffers[nReadBuf].len / 4;
+			s32 oldsamples = s_pAudioBuffers[nReadBuf].len / 4;
 
 			if ((nReadBuf & 3) == 0)  // wow, this if statement makes the whole difference
 				pSoundTouch->setTempoChange(100.0f*(float)oldsamples/(float)NewSamples - 100.0f);
 
-			for( int sx=0; sx<oldsamples*2; sx++ )
+			for( s32 sx=0; sx<oldsamples*2; sx++ )
 				s_floatBuffer[sx] = ((s16*)s_pAudioBuffers[nReadBuf].pbuf)[sx]/65536.0f;
 
 			pSoundTouch->putSamples(s_floatBuffer, oldsamples);
 
 			// extract 2*NSFRAMES ms at a time
-			int nOutSamples;
+			s32 nOutSamples;
 			
 			do
 			{
 				nOutSamples = pSoundTouch->receiveSamples(s_floatBuffer, NSSIZE * NSFRAMES * 5);
 				if ( nOutSamples > 0 )
 				{
-					for( int sx=0; sx<nOutSamples*2; sx++ )
+					for( s32 sx=0; sx<nOutSamples*2; sx++ )
 						s_ThreadBuffer[sx] = (s16)(s_floatBuffer[sx]*65536.0f);
 
 					SoundFeedVoiceData((u8*)s_ThreadBuffer, nOutSamples * 4);
@@ -969,9 +969,9 @@ void* SPU2ThreadProc(void* lpParam)
 }
 
 // turn channels on
-void SoundOn(int start,int end,unsigned short val)	 // SOUND ON PSX COMAND
+void SoundOn(s32 start,s32 end,u16 val)	 // SOUND ON PSX COMAND
 {
-	for (int ch=start;ch<end;ch++,val>>=1)					 // loop channels
+	for (s32 ch=start;ch<end;ch++,val>>=1)					 // loop channels
 	{
 		if ((val&1) && voices[ch].pStart)					// mmm... start has to be set before key on !?!
 		{
@@ -983,17 +983,17 @@ void SoundOn(int start,int end,unsigned short val)	 // SOUND ON PSX COMAND
 }
 
 // turn channels off
-void SoundOff(int start,int end,unsigned short val)	// SOUND OFF PSX COMMAND
+void SoundOff(s32 start,s32 end,u16 val)	// SOUND OFF PSX COMMAND
 {
-	for (int ch=start;ch<end;ch++,val>>=1)  // loop channels
+	for (s32 ch=start;ch<end;ch++,val>>=1)  // loop channels
 	{					
 		if (val&1) voices[ch].bStop=true; // && s_chan[i].bOn)  mmm...				   
 	}
 }
 
-void FModOn(int start,int end,unsigned short val)	  // FMOD ON PSX COMMAND
+void FModOn(s32 start,s32 end,u16 val)	  // FMOD ON PSX COMMAND
 {
-	int ch;
+	s32 ch;
 
 	for (ch=start;ch<end;ch++,val>>=1) // loop channels
 	{					 
@@ -1010,9 +1010,9 @@ void FModOn(int start,int end,unsigned short val)	  // FMOD ON PSX COMMAND
 	}
 }
 
-void VolumeOn(int start,int end,unsigned short val,int iRight)  // VOLUME ON PSX COMMAND
+void VolumeOn(s32 start,s32 end,u16 val,s32 iRight)  // VOLUME ON PSX COMMAND
 {
-	int ch;
+	s32 ch;
 	
 	for (ch=start;ch<end;ch++,val>>=1) // loop channels
 	{					
@@ -1048,7 +1048,7 @@ void CALLBACK SPU2write(u32 mem, u16 value)
 	// channel info
 	if ((r<0x0180) || (r>=0x0400 && r<0x0580))  //  u32s are always >= 0.
 	{
-		int ch=0;
+		s32 ch=0;
 		if (r >= 0x400) 
 			ch = ((r - 0x400) >> 4) + 24;
 		else 
@@ -1064,7 +1064,7 @@ void CALLBACK SPU2write(u32 mem, u16 value)
 				break;
 			case 4:
 			{
-				int NP;
+				s32 NP;
 				if (value> 0x3fff) 
 					NP=0x3fff;							 // get pitch val
 				else		  
@@ -1100,8 +1100,8 @@ void CALLBACK SPU2write(u32 mem, u16 value)
 	// more channel info
 	if ((r>=0x01c0 && r<0x02E0)||(r>=0x05c0 && r<0x06E0))
 	{
-		int ch=0;
-		unsigned long rx=r;
+		s32 ch=0;
+		u32 rx=r;
 		if (rx>=0x400)
 		{
 			ch=24;
@@ -1257,7 +1257,7 @@ u16  CALLBACK SPU2read(u32 mem)
 	// if the register is any of the regs before core 0, or is somewhere between core 0 and 1...
 	if ((r < 0x0180) || (r >= 0x0400 && r < 0x0580))  //  u32s are always >= 0.
 	{
-		int ch = 0;
+		s32 ch = 0;
 		
 		if (r >= 0x400) 
 			ch=((r - 0x400) >> 4) + 24;
@@ -1272,8 +1272,8 @@ u16  CALLBACK SPU2read(u32 mem)
 	
 	if ((r>=REG_VA_SSA && r<REG_A_ESA) || (r>=0x05c0 && r<0x06E0))  // some channel info?
 	{
-		int ch=0;
-		unsigned long rx = r;
+		s32 ch=0;
+		u32 rx = r;
 		
 		if (rx >=0x400)
 		{
@@ -1390,24 +1390,24 @@ s32 CALLBACK SPU2test()
 }
 
 // size is in bytes
-void LogPacketSound(void* packet, int memsize)
+void LogPacketSound(void* packet, s32 memsize)
 {
 	u16 buf[28];
 
 	u8* pstart = (u8*)packet;
-	int s_1 = 0, s_2=0;
+	s32 s_1 = 0, s_2=0;
 	
-	for (int i = 0; i < memsize; i += 16) 
+	for (s32 i = 0; i < memsize; i += 16) 
 	{
-		int predict_nr=(int)pstart[0];
-		int shift_factor=predict_nr&0xf;
+		s32 predict_nr=(s32)pstart[0];
+		s32 shift_factor=predict_nr&0xf;
 		predict_nr >>= 4;
 		pstart += 2;
 
-		for (int nSample=0;nSample<28; ++pstart)
+		for (s32 nSample=0;nSample<28; ++pstart)
 		{
-			int d=(int)*pstart;
-			int s, fa;
+			s32 d=(s32)*pstart;
+			s32 s, fa;
 			
 			s =((d & 0xf) << 12);
 			SetPacket(s);
@@ -1420,7 +1420,7 @@ void LogPacketSound(void* packet, int memsize)
 	}
 }
 
-void LogRawSound(void* pleft, int leftstride, void* pright, int rightstride, int numsamples)
+void LogRawSound(void* pleft, s32 leftstride, void* pright, s32 rightstride, s32 numsamples)
 {
 	if (g_pWavRecord == NULL ) 
 		g_pWavRecord = new WavOutFile(RECORD_FILENAME, SAMPLE_RATE, 16, 2);
@@ -1431,7 +1431,7 @@ void LogRawSound(void* pleft, int leftstride, void* pright, int rightstride, int
 
 	tempbuf.resize(2 * numsamples);
 
-	for (int i = 0; i < numsamples; ++i) 
+	for (s32 i = 0; i < numsamples; ++i) 
 	{
 		tempbuf[2*i+0] = *(s16*)left;
 		tempbuf[2*i+1] = *(s16*)right;
@@ -1462,7 +1462,7 @@ int CALLBACK SPU2setupRecording(int start, void* pData)
 void save_data(freezeData *data)
 {
 	SPU2freezeData *spud;
-	int i;
+	s32 i;
 	
 	spud = (SPU2freezeData*)data->data;
 	spud->version = 0x70000001;
@@ -1470,8 +1470,8 @@ void save_data(freezeData *data)
 	memcpy(spud->spu2regs, spu2regs, 0x10000);
 	memcpy(spud->spu2mem, spu2mem, 0x200000);
 	
-	spud->nSpuIrq[0] = (int)(pSpuIrq[0] - spu2mem);
-	spud->nSpuIrq[1] = (int)(pSpuIrq[1] - spu2mem);
+	spud->nSpuIrq[0] = (s32)(pSpuIrq[0] - spu2mem);
+	spud->nSpuIrq[1] = (s32)(pSpuIrq[1] - spu2mem);
 	
 	memcpy(spud->dwNewChannel2, dwNewChannel2, 4*2);
 	memcpy(spud->dwEndChannel2, dwEndChannel2, 4*2);
@@ -1518,7 +1518,7 @@ void save_data(freezeData *data)
 void load_data(freezeData *data)
 {
 	SPU2freezeData *spud;
-	int i;
+	s32 i;
 	
 	spud = (SPU2freezeData*)data->data; 
 	
@@ -1556,7 +1556,7 @@ void load_data(freezeData *data)
 
 	for (i = 0; i < ArraySize(voices); ++i) 
 	{
-		memcpy(&voices[i], &spud->voices[i], min((int)SPU_VOICE_STATE_SIZE, spud->voicesize));
+		memcpy(&voices[i], &spud->voices[i], min((s32)SPU_VOICE_STATE_SIZE, spud->voicesize));
 		voices[i].pStart = (u8*)((uptr)spud->voices[i].pStart+(uptr)spu2mem);
 		voices[i].pLoop = (u8*)((uptr)spud->voices[i].pLoop+(uptr)spu2mem);
 		voices[i].pCurr = (u8*)((uptr)spud->voices[i].pCurr+(uptr)spu2mem);
@@ -1565,7 +1565,7 @@ void load_data(freezeData *data)
 	s_GlobalTimeStamp = 0;
 	g_startcount = 0xffffffff;
 		
-	for (int i = 0; i < ArraySize(s_nDurations); ++i) 
+	for (s32 i = 0; i < ArraySize(s_nDurations); ++i) 
 	{
 		s_nDurations[i] = NSFRAMES*1000;
 	}

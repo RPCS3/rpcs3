@@ -228,11 +228,13 @@ void IniFile::DoConfig( PcsxConfig& Conf )
 	Entry("EECycleRate", Config.Hacks.EECycleRate);
 	if (Config.Hacks.EECycleRate > 2)
 		Config.Hacks.EECycleRate = 2;
-	Entry("IOPCycleDouble", Config.Hacks.IOPCycleDouble);
-	Entry("WaitCycleExt", Config.Hacks.WaitCycleExt);
-	Entry("INTCSTATSlow", Config.Hacks.INTCSTATSlow);
-	Entry("VUCycleSteal", Config.Hacks.VUCycleSteal);
-	Entry("IdleLoopFF", Config.Hacks.IdleLoopFF);
+	Entry("IOPCycleDouble",	Config.Hacks.IOPCycleDouble);
+	Entry("WaitCycleExt",	Config.Hacks.WaitCycleExt);
+	Entry("INTCSTATSlow",	Config.Hacks.INTCSTATSlow);
+	Entry("VUCycleSteal",	Config.Hacks.VUCycleSteal);
+	Entry("vuFlagHack",		Config.Hacks.vuFlagHack);
+	Entry("vuMinMax",		Config.Hacks.vuMinMax);
+	Entry("IdleLoopFF",		Config.Hacks.IdleLoopFF);
 	if (Conf.Hacks.VUCycleSteal < 0 || Conf.Hacks.VUCycleSteal > 4)
 		Conf.Hacks.VUCycleSteal = 0;
 	Entry("ESCExits", Config.Hacks.ESCExits);

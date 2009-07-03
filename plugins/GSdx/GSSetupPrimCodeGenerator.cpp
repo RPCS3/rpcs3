@@ -24,7 +24,7 @@
 #include "StdAfx.h"
 #include "GSSetupPrimCodeGenerator.h"
 
-GSSetupPrimCodeGenerator::GSSetupPrimCodeGenerator(GSScanlineEnvironment& env, UINT64 key, void* ptr, size_t maxsize)
+GSSetupPrimCodeGenerator::GSSetupPrimCodeGenerator(GSScanlineEnvironment& env, uint64 key, void* ptr, size_t maxsize)
 	: CodeGenerator(maxsize, ptr)
 	, m_env(env)
 {
@@ -33,7 +33,7 @@ GSSetupPrimCodeGenerator::GSSetupPrimCodeGenerator(GSScanlineEnvironment& env, U
 	m_en.z = m_sel.zb ? 1 : 0;
 	m_en.f = m_sel.fb && m_sel.fge ? 1 : 0;
 	m_en.t = m_sel.fb && m_sel.tfx != TFX_NONE ? 1 : 0;
-	m_en.c = m_sel.fb && m_sel.tfx != TFX_DECAL ? 1 : 0;
+	m_en.c = m_sel.fb && !(m_sel.tfx == TFX_DECAL && m_sel.tcc) ? 1 : 0;
 
 	#if _M_AMD64
 	#error TODO
@@ -44,8 +44,6 @@ GSSetupPrimCodeGenerator::GSSetupPrimCodeGenerator(GSScanlineEnvironment& env, U
 
 void GSSetupPrimCodeGenerator::Generate()
 {
-	const int params = 0;
-
 	if((m_en.z || m_en.f) && !m_sel.sprite || m_en.t || m_en.c && m_sel.iip)
 	{
 		for(int i = 0; i < 5; i++)

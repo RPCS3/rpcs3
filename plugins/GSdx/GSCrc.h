@@ -30,6 +30,10 @@ public:
 		MetalSlug6,
 		TomoyoAfter,
 		Clannad,
+		Lamune,
+		KyuuketsuKitanMoonties,
+		PiaCarroteYoukosoGPGakuenPrincess,
+		KazokuKeikakuKokoroNoKizuna,
 		FFX,
 		FFX2,
 		FFXII,
@@ -63,7 +67,10 @@ public:
 		Onimusha3,
 		MajokkoALaMode2,
 		TalesOfAbyss,
-		TitleCount
+		SonicUnleashed,
+		SimpsonsGame,
+		Genji,
+		TitleCount,
 	};
 
 	enum Region 
@@ -81,17 +88,23 @@ public:
 		ASIA
 	};
 
+	enum Flags
+	{
+		PointListPalette = 1,
+	};
+
 	struct Game 
 	{
-		DWORD crc; 
+		uint32 crc; 
 		Title title; 
 		Region region;
+		uint32 flags;
 	};
 
 private:
 	static Game m_games[];
-	static CAtlMap<DWORD, Game*> m_map;
+	static hash_map<uint32, Game*> m_map;
 
 public:
-	static Game Lookup(DWORD crc);
+	static Game Lookup(uint32 crc);
 };

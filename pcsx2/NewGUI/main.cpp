@@ -29,8 +29,6 @@ IMPLEMENT_APP(Pcsx2App)
 
 AppConfig g_Conf;
 
-const wxRect wxDefaultRect( wxDefaultCoord, wxDefaultCoord, wxDefaultCoord, wxDefaultCoord );
-
 Pcsx2App::Pcsx2App()  :
 	m_ConsoleFrame( NULL )
 {

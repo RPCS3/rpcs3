@@ -31,23 +31,19 @@ class GSTexture9 : public GSTexture
 	D3DSURFACE_DESC m_desc;
 
 public:
-	GSTexture9();
 	explicit GSTexture9(IDirect3DSurface9* surface);
 	explicit GSTexture9(IDirect3DTexture9* texture);
 	virtual ~GSTexture9();
-
-	operator bool();
 
 	int GetType() const;
 	int GetWidth() const;
 	int GetHeight() const;
 	int GetFormat() const;
-	bool Update(const CRect& r, const void* data, int pitch);
-	bool Map(BYTE** bits, int& pitch, const RECT* r = NULL);
-	void Unmap();
-	bool Save(CString fn, bool dds = false);
 
-	IDirect3DTexture9* operator->(); // TODO: remove direct access
+	bool Update(const GSVector4i& r, const void* data, int pitch);
+	bool Map(GSMap& m, const GSVector4i* r);
+	void Unmap();
+	bool Save(const string& fn, bool dds = false);
 
 	operator IDirect3DSurface9*();
 	operator IDirect3DTexture9*();

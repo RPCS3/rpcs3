@@ -30,24 +30,20 @@ class GSTexture7 : public GSTexture
 	CComPtr<IDirectDrawSurface7> m_system;
 	CComPtr<IDirectDrawSurface7> m_video;
 	DDSURFACEDESC2 m_desc;
-	CRect m_lr;
 
 public:
-	GSTexture7();
-	explicit GSTexture7(int type, IDirectDrawSurface7* system);
+	GSTexture7(int type, IDirectDrawSurface7* system);
 	GSTexture7(int type, IDirectDrawSurface7* system, IDirectDrawSurface7* video);
-	virtual ~GSTexture7();
-
-	operator bool();
 
 	int GetType() const;
 	int GetWidth() const;
 	int GetHeight() const;
 	int GetFormat() const;
-	bool Update(const CRect& r, const void* data, int pitch);
-	bool Map(BYTE** bits, int& pitch, const RECT* r = NULL);
+
+	bool Update(const GSVector4i& r, const void* data, int pitch);
+	bool Map(GSMap& m, const GSVector4i* r);
 	void Unmap();
-	bool Save(CString fn, bool dds = false);
+	bool Save(const string& fn, bool dds = false);
 
 	IDirectDrawSurface7* operator->(); // TODO: remove direct access
 

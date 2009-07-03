@@ -180,7 +180,7 @@ namespace StateRecovery {
 
 		try
 		{
-			g_RecoveryState = new SafeArray<u8>( "Memory Savestate Recovery" );
+			g_RecoveryState = new SafeArray<u8>( L"Memory Savestate Recovery" );
 			RecoveryMemSavingState().FreezeAll();
 			safe_delete( g_gsRecoveryState );
 			g_EmulationInProgress = false;

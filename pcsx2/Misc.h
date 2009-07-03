@@ -39,29 +39,6 @@ int GetPS2ElfName( wxString& dest ); // Used in Misc, System, Linux, CDVD
 // Not sure what header these should go in. Probably not this one.
 void SetCPUState(u32 sseMXCSR, u32 sseVUMXCSR);
 extern u32 g_sseVUMXCSR, g_sseMXCSR;
-extern u8 g_globalMMXSaved, g_globalXMMSaved;
-extern bool g_EEFreezeRegs;
-
-// when using mmx/xmm regs, use; 0 is load
-// freezes no matter the state
-#ifndef __INTEL_COMPILER
-extern "C" void FreezeXMMRegs_(int save);
-extern "C" void FreezeMMXRegs_(int save);
-extern "C" void FreezeRegs(int save);
-#else
-extern void FreezeXMMRegs_(int save);
-extern void FreezeMMXRegs_(int save);
-extern void FreezeRegs(int save);
-#endif
-
-// these macros check to see if needs freezing
-#define FreezeXMMRegs(save) if( g_EEFreezeRegs ) { FreezeXMMRegs_(save); }
-#define FreezeMMXRegs(save) if( g_EEFreezeRegs ) { FreezeMMXRegs_(save); }
-
-// If we move the rest of this stuff, we can probably move these, too.
-extern void InitCPUTicks();
-extern u64 GetCPUTicks();
-extern u64 GetTickFrequency();
 
 // Used in Misc,and Windows/Linux files.
 extern void ProcessFKeys(int fkey,  struct KeyModifiers *keymod); // processes fkey related commands value 1-12

@@ -61,29 +61,17 @@ extern void SysMessage(const char *fmt, ...);
 //   Abbreviated macros for dev/debug only consoles and msgboxes.
 
 #ifdef SPU2X_DEVBUILD
-
 #	define DevCon Console
 #	define DevMsg MsgBox
-	static const bool IsDevBuild = true;
-
 #else
-
 #	define DevCon 0&&Console
 #	define DevMsg 
-	static const bool IsDevBuild = false;
-
 #endif
 
-#ifdef _DEBUG
-
+#ifdef PCSX2_DEBUG
 #	define DbgCon Console
-	static const bool IsDebugBuild = true;
-
 #else
-
 #	define DbgCon 0&&Console
-static const bool IsDebugBuild = false;
-
 #endif
 
 struct StereoOut16;

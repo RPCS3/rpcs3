@@ -42,10 +42,8 @@ class GSBlock
 	static const GSVector4i m_uw8hmask3;
 
 public:
-	template<int i, bool aligned, DWORD mask> __forceinline static void WriteColumn32(BYTE* RESTRICT dst, const BYTE* RESTRICT src, int srcpitch)
+	template<int i, bool aligned, uint32 mask> __forceinline static void WriteColumn32(uint8* RESTRICT dst, const uint8* RESTRICT src, int srcpitch)
 	{
-		#if _M_SSE >= 0x200
-
 		const GSVector4i* s0 = (const GSVector4i*)&src[srcpitch * 0];
 		const GSVector4i* s1 = (const GSVector4i*)&src[srcpitch * 1];
 
@@ -92,33 +90,10 @@ public:
 
 			#endif
 		}
-
-		#else
-
-		const BYTE* d = &columnTable32[(i & 3) << 1][0];
-
-		for(int j = 0; j < 2; j++, d += 8, src += srcpitch)
-		{
-			for(int i = 0; i < 8; i++)
-			{
-				if(mask == 0xffffffff)
-				{
-					((DWORD*)dst)[d[i]] = ((DWORD*)src)[i];
-				}
-				else
-				{
-					((DWORD*)dst)[d[i]] = (((DWORD*)dst)[d[i]] & ~mask) | (((DWORD*)src)[i] & mask);
-				}
-			}
-		}
-
-		#endif
 	}
 
-	template<int i, bool aligned> __forceinline static void WriteColumn16(BYTE* RESTRICT dst, const BYTE* RESTRICT src, int srcpitch)
+	template<int i, bool aligned> __forceinline static void WriteColumn16(uint8* RESTRICT dst, const uint8* RESTRICT src, int srcpitch)
 	{
-		#if _M_SSE >= 0x200
-
 		const GSVector4i* s0 = (const GSVector4i*)&src[srcpitch * 0];
 		const GSVector4i* s1 = (const GSVector4i*)&src[srcpitch * 1];
 
@@ -134,26 +109,10 @@ public:
 		((GSVector4i*)dst)[i * 4 + 1] = v2;
 		((GSVector4i*)dst)[i * 4 + 2] = v1;
 		((GSVector4i*)dst)[i * 4 + 3] = v3;
-
-		#else
-
-		const BYTE* d = &columnTable16[(i & 3) << 1][0];
-
-		for(int j = 0; j < 2; j++, d += 16, src += srcpitch)
-		{
-			for(int i = 0; i < 16; i++)
-			{
-				((WORD*)dst)[d[i]] = ((WORD*)src)[i];
-			}
-		}
-
-		#endif
 	}
 
-	template<int i, bool aligned> __forceinline static void WriteColumn8(BYTE* RESTRICT dst, const BYTE* RESTRICT src, int srcpitch)
+	template<int i, bool aligned> __forceinline static void WriteColumn8(uint8* RESTRICT dst, const uint8* RESTRICT src, int srcpitch)
 	{
-		#if _M_SSE >= 0x200
-
 		GSVector4i v0 = GSVector4i::load<aligned>(&src[srcpitch * 0]);
 		GSVector4i v1 = GSVector4i::load<aligned>(&src[srcpitch * 1]);
 		GSVector4i v2 = GSVector4i::load<aligned>(&src[srcpitch * 2]);
@@ -178,27 +137,11 @@ public:
 		((GSVector4i*)dst)[i * 4 + 1] = v2;
 		((GSVector4i*)dst)[i * 4 + 2] = v1;
 		((GSVector4i*)dst)[i * 4 + 3] = v3;
-
-		#else
-
-		const BYTE* d = &columnTable8[(i & 3) << 2][0];
-
-		for(int j = 0; j < 4; j++, d += 16, src += srcpitch)
-		{
-			for(int i = 0; i < 16; i++)
-			{
-				dst[d[i]] = src[i];
-			}
-		}
-
-		#endif
 	}
 
-	template<int i, bool aligned> __forceinline static void WriteColumn4(BYTE* RESTRICT dst, const BYTE* RESTRICT src, int srcpitch)
+	template<int i, bool aligned> __forceinline static void WriteColumn4(uint8* RESTRICT dst, const uint8* RESTRICT src, int srcpitch)
 	{
 		// TODO: pshufb
-
-		#if _M_SSE >= 0x200
 
 		GSVector4i v0 = GSVector4i::load<aligned>(&src[srcpitch * 0]);
 		GSVector4i v1 = GSVector4i::load<aligned>(&src[srcpitch * 1]);
@@ -225,26 +168,9 @@ public:
 		((GSVector4i*)dst)[i * 4 + 1] = v1;
 		((GSVector4i*)dst)[i * 4 + 2] = v2;
 		((GSVector4i*)dst)[i * 4 + 3] = v3;
-
-		#else
-
-		const WORD* d = &columnTable4[(i & 3) << 2][0];
-
-		for(int j = 0; j < 4; j++, d += 32, src += srcpitch)
-		{
-			for(int i = 0; i < 32; i++)
-			{
-				DWORD addr = d[i];
-				BYTE c = (src[i >> 1] >> ((i & 1) << 2)) & 0x0f;
-				DWORD shift = (addr & 1) << 2;
-				dst[addr >> 1] = (dst[addr >> 1] & (0xf0 >> shift)) | (c << shift);
-			}
-		}
-
-		#endif
 	}
 
-	template<bool aligned, DWORD mask> static void WriteColumn32(int y, BYTE* RESTRICT dst, const BYTE* RESTRICT src, int srcpitch)
+	template<bool aligned, uint32 mask> static void WriteColumn32(int y, uint8* RESTRICT dst, const uint8* RESTRICT src, int srcpitch)
 	{
 		switch((y >> 1) & 3)
 		{
@@ -256,7 +182,7 @@ public:
 		}
 	}
 
-	template<bool aligned> static void WriteColumn16(int y, BYTE* RESTRICT dst, const BYTE* RESTRICT src, int srcpitch)
+	template<bool aligned> static void WriteColumn16(int y, uint8* RESTRICT dst, const uint8* RESTRICT src, int srcpitch)
 	{
 		switch((y >> 1) & 3)
 		{
@@ -268,7 +194,7 @@ public:
 		}
 	}
 
-	template<bool aligned> static void WriteColumn8(int y, BYTE* RESTRICT dst, const BYTE* RESTRICT src, int srcpitch)
+	template<bool aligned> static void WriteColumn8(int y, uint8* RESTRICT dst, const uint8* RESTRICT src, int srcpitch)
 	{
 		switch((y >> 2) & 3)
 		{
@@ -280,7 +206,7 @@ public:
 		}
 	}
 
-	template<bool aligned> static void WriteColumn4(int y, BYTE* RESTRICT dst, const BYTE* RESTRICT src, int srcpitch)
+	template<bool aligned> static void WriteColumn4(int y, uint8* RESTRICT dst, const uint8* RESTRICT src, int srcpitch)
 	{
 		switch((y >> 2) & 3)
 		{
@@ -292,10 +218,8 @@ public:
 		}
 	}
 
-	template<bool aligned, DWORD mask> static void WriteBlock32(BYTE* RESTRICT dst, const BYTE* RESTRICT src, int srcpitch)
+	template<bool aligned, uint32 mask> static void WriteBlock32(uint8* RESTRICT dst, const uint8* RESTRICT src, int srcpitch)
 	{
-		#if _M_SSE >= 0x200
-
 		WriteColumn32<0, aligned, mask>(dst, src, srcpitch);
 		src += srcpitch * 2;
 		WriteColumn32<1, aligned, mask>(dst, src, srcpitch);
@@ -303,33 +227,10 @@ public:
 		WriteColumn32<2, aligned, mask>(dst, src, srcpitch);
 		src += srcpitch * 2;
 		WriteColumn32<3, aligned, mask>(dst, src, srcpitch);
-
-		#else
-
-		const BYTE* d = &columnTable32[0][0];
-
-		for(int j = 0; j < 8; j++, d += 8, src += srcpitch)
-		{
-			for(int i = 0; i < 8; i++)
-			{
-				if(mask == 0xffffffff)
-				{
-					((DWORD*)dst)[d[i]] = ((DWORD*)src)[i];
-				}
-				else
-				{
-					((DWORD*)dst)[d[i]] = (((DWORD*)dst)[d[i]] & ~mask) | (((DWORD*)src)[i] & mask);
-				}
-			}
-		}
-
-		#endif
 	}
 
-	template<bool aligned> static void WriteBlock16(BYTE* RESTRICT dst, const BYTE* RESTRICT src, int srcpitch)
+	template<bool aligned> static void WriteBlock16(uint8* RESTRICT dst, const uint8* RESTRICT src, int srcpitch)
 	{
-		#if _M_SSE >= 0x200
-
 		WriteColumn16<0, aligned>(dst, src, srcpitch);
 		src += srcpitch * 2;
 		WriteColumn16<1, aligned>(dst, src, srcpitch);
@@ -337,26 +238,10 @@ public:
 		WriteColumn16<2, aligned>(dst, src, srcpitch);
 		src += srcpitch * 2;
 		WriteColumn16<3, aligned>(dst, src, srcpitch);
-
-		#else
-
-		const BYTE* d = &columnTable16[0][0];
-
-		for(int j = 0; j < 8; j++, d += 16, src += srcpitch)
-		{
-			for(int i = 0; i < 16; i++)
-			{
-				((WORD*)dst)[d[i]] = ((WORD*)src)[i];
-			}
-		}
-
-		#endif
 	}
 
-	template<bool aligned> static void WriteBlock8(BYTE* RESTRICT dst, const BYTE* RESTRICT src, int srcpitch)
+	template<bool aligned> static void WriteBlock8(uint8* RESTRICT dst, const uint8* RESTRICT src, int srcpitch)
 	{
-		#if _M_SSE >= 0x200
-
 		WriteColumn8<0, aligned>(dst, src, srcpitch);
 		src += srcpitch * 4;
 		WriteColumn8<1, aligned>(dst, src, srcpitch);
@@ -364,26 +249,10 @@ public:
 		WriteColumn8<2, aligned>(dst, src, srcpitch);
 		src += srcpitch * 4;
 		WriteColumn8<3, aligned>(dst, src, srcpitch);
-
-		#else
-
-		const BYTE* d = &columnTable8[0][0];
-
-		for(int j = 0; j < 16; j++, d += 16, src += srcpitch)
-		{
-			for(int i = 0; i < 16; i++)
-			{
-				dst[d[i]] = src[i];
-			}
-		}
-
-		#endif
 	}
 
-	template<bool aligned> static void WriteBlock4(BYTE* RESTRICT dst, const BYTE* RESTRICT src, int srcpitch)
+	template<bool aligned> static void WriteBlock4(uint8* RESTRICT dst, const uint8* RESTRICT src, int srcpitch)
 	{
-		#if _M_SSE >= 0x200
-
 		WriteColumn4<0, aligned>(dst, src, srcpitch);
 		src += srcpitch * 4;
 		WriteColumn4<1, aligned>(dst, src, srcpitch);
@@ -391,29 +260,10 @@ public:
 		WriteColumn4<2, aligned>(dst, src, srcpitch);
 		src += srcpitch * 4;
 		WriteColumn4<3, aligned>(dst, src, srcpitch);
-
-		#else
-
-		const WORD* d = &columnTable4[0][0];
-
-		for(int j = 0; j < 16; j++, d += 32, src += srcpitch)
-		{
-			for(int i = 0; i < 32; i++)
-			{
-				DWORD addr = d[i];
-				BYTE c = (src[i >> 1] >> ((i & 1) << 2)) & 0x0f;
-				DWORD shift = (addr & 1) << 2;
-				dst[addr >> 1] = (dst[addr >> 1] & (0xf0 >> shift)) | (c << shift);
-			}
-		}
-
-		#endif
 	}
 
-	template<int i, bool aligned> __forceinline static void ReadColumn32(const BYTE* RESTRICT src, BYTE* RESTRICT dst, int dstpitch)
+	template<int i, bool aligned> __forceinline static void ReadColumn32(const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch)
 	{
-		#if _M_SSE >= 0x200
-
 		const GSVector4i* s = (const GSVector4i*)src;
 
 		GSVector4i v0 = s[i * 4 + 0]; 
@@ -430,23 +280,9 @@ public:
 		GSVector4i::store<aligned>(&d0[1], v1);
 		GSVector4i::store<aligned>(&d1[0], v2);
 		GSVector4i::store<aligned>(&d1[1], v3);
-
-		#else
-
-		const BYTE* s = &columnTable32[(i & 3) << 1][0];
-
-		for(int j = 0; j < 2; j++, s += 8, dst += dstpitch)
-		{
-			for(int i = 0; i < 8; i++)
-			{
-				((DWORD*)dst)[i] = ((DWORD*)src)[s[i]];
-			}
-		}
-
-		#endif
 	}
 
-	template<int i, bool aligned> __forceinline static void ReadColumn16(const BYTE* RESTRICT src, BYTE* RESTRICT dst, int dstpitch)
+	template<int i, bool aligned> __forceinline static void ReadColumn16(const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch)
 	{
 		#if _M_SSE >= 0x301
 
@@ -468,7 +304,7 @@ public:
 		GSVector4i::store<aligned>(&d1[0], v1);
 		GSVector4i::store<aligned>(&d1[1], v3);
 
-		#elif _M_SSE >= 0x200
+		#else
 
 		const GSVector4i* s = (const GSVector4i*)src;
 
@@ -489,22 +325,10 @@ public:
 		GSVector4i::store<aligned>(&d1[0], v2);
 		GSVector4i::store<aligned>(&d1[1], v3);
 
-		#else
-
-		const BYTE* s = &columnTable16[(i & 3) << 1][0];
-
-		for(int j = 0; j < 2; j++, s += 16, dst += dstpitch)
-		{
-			for(int i = 0; i < 16; i++)
-			{
-				((WORD*)dst)[i] = ((WORD*)src)[s[i]];
-			}
-		}
-
 		#endif
 	}
 
-	template<int i, bool aligned> __forceinline static void ReadColumn8(const BYTE* RESTRICT src, BYTE* RESTRICT dst, int dstpitch)
+	template<int i, bool aligned> __forceinline static void ReadColumn8(const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch)
 	{
 		#if _M_SSE >= 0x301
 
@@ -540,7 +364,7 @@ public:
 		GSVector4i::store<aligned>(&dst[dstpitch * 2], v1);
 		GSVector4i::store<aligned>(&dst[dstpitch * 3], v2);
 
-		#elif _M_SSE >= 0x200
+		#else
 
 		const GSVector4i* s = (const GSVector4i*)src;
 
@@ -570,22 +394,10 @@ public:
 		GSVector4i::store<aligned>(&dst[dstpitch * 2], v2);
 		GSVector4i::store<aligned>(&dst[dstpitch * 3], v3);
 
-		#else
-
-		const BYTE* s = &columnTable8[(i & 3) << 2][0];
-
-		for(int j = 0; j < 4; j++, s += 16, dst += dstpitch)
-		{
-			for(int i = 0; i < 16; i++)
-			{
-				dst[i] = src[s[i]];
-			}
-		}
-
 		#endif
 	}
 	
-	template<int i, bool aligned> __forceinline static void ReadColumn4(const BYTE* RESTRICT src, BYTE* RESTRICT dst, int dstpitch)
+	template<int i, bool aligned> __forceinline static void ReadColumn4(const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch)
 	{
 		#if _M_SSE >= 0x301
 
@@ -619,7 +431,7 @@ public:
 		GSVector4i::store<aligned>(&dst[dstpitch * 2], v2);
 		GSVector4i::store<aligned>(&dst[dstpitch * 3], v3);
 
-		#elif _M_SSE >= 0x200
+		#else
 
 		const GSVector4i* s = (const GSVector4i*)src;
 
@@ -657,25 +469,10 @@ public:
 		GSVector4i::store<aligned>(&dst[dstpitch * 2], v2);
 		GSVector4i::store<aligned>(&dst[dstpitch * 3], v3);
 
-		#else
-
-		const WORD* s = &columnTable4[(i & 3) << 2][0];
-
-		for(int j = 0; j < 4; j++, s += 32, dst += dstpitch)
-		{
-			for(int i = 0; i < 32; i++)
-			{
-				DWORD addr = s[i];
-				BYTE c = (src[addr >> 1] >> ((addr & 1) << 2)) & 0x0f;
-				int shift = (i & 1) << 2;
-				dst[i >> 1] = (dst[i >> 1] & (0xf0 >> shift)) | (c << shift);
-			}
-		}
-
 		#endif
 	}
 
-	template<bool aligned> static void ReadColumn32(int y, const BYTE* RESTRICT src, BYTE* RESTRICT dst, int dstpitch)
+	template<bool aligned> static void ReadColumn32(int y, const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch)
 	{
 		switch((y >> 1) & 3)
 		{
@@ -687,7 +484,7 @@ public:
 		}
 	}
 
-	template<bool aligned> static void ReadColumn16(int y, const BYTE* RESTRICT src, BYTE* RESTRICT dst, int dstpitch)
+	template<bool aligned> static void ReadColumn16(int y, const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch)
 	{
 		switch((y >> 1) & 3)
 		{
@@ -699,7 +496,7 @@ public:
 		}
 	}
 
-	template<bool aligned> static void ReadColumn8(int y, const BYTE* RESTRICT src, BYTE* RESTRICT dst, int dstpitch)
+	template<bool aligned> static void ReadColumn8(int y, const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch)
 	{
 		switch((y >> 2) & 3)
 		{
@@ -711,7 +508,7 @@ public:
 		}
 	}
 
-	template<bool aligned> static void ReadColumn4(int y, const BYTE* RESTRICT src, BYTE* RESTRICT dst, int dstpitch)
+	template<bool aligned> static void ReadColumn4(int y, const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch)
 	{
 		switch((y >> 2) & 3)
 		{
@@ -723,10 +520,8 @@ public:
 		}
 	}
 
-	template<bool aligned> static void ReadBlock32(const BYTE* RESTRICT src, BYTE* RESTRICT dst, int dstpitch)
+	template<bool aligned> static void ReadBlock32(const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch)
 	{
-		#if _M_SSE >= 0x200
-
 		ReadColumn32<0, aligned>(src, dst, dstpitch);
 		dst += dstpitch * 2;
 		ReadColumn32<1, aligned>(src, dst, dstpitch);
@@ -734,26 +529,10 @@ public:
 		ReadColumn32<2, aligned>(src, dst, dstpitch);
 		dst += dstpitch * 2;
 		ReadColumn32<3, aligned>(src, dst, dstpitch);
-
-		#else
-
-		const BYTE* s = &columnTable32[0][0];
-
-		for(int j = 0; j < 8; j++, s += 8, dst += dstpitch)
-		{
-			for(int i = 0; i < 8; i++)
-			{
-				((DWORD*)dst)[i] = ((DWORD*)src)[s[i]];
-			}
-		}
-
-		#endif
 	}
 
-	template<bool aligned> static void ReadBlock16(const BYTE* RESTRICT src, BYTE* RESTRICT dst, int dstpitch)
+	template<bool aligned> static void ReadBlock16(const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch)
 	{
-		#if _M_SSE >= 0x200
-
 		ReadColumn16<0, aligned>(src, dst, dstpitch);
 		dst += dstpitch * 2;
 		ReadColumn16<1, aligned>(src, dst, dstpitch);
@@ -761,26 +540,10 @@ public:
 		ReadColumn16<2, aligned>(src, dst, dstpitch);
 		dst += dstpitch * 2;
 		ReadColumn16<3, aligned>(src, dst, dstpitch);
-
-		#else
-
-		const BYTE* s = &columnTable16[0][0];
-
-		for(int j = 0; j < 8; j++, s += 16, dst += dstpitch)
-		{
-			for(int i = 0; i < 16; i++)
-			{
-				((WORD*)dst)[i] = ((WORD*)src)[s[i]];
-			}
-		}
-
-		#endif
 	}
 
-	template<bool aligned> static void ReadBlock8(const BYTE* RESTRICT src, BYTE* RESTRICT dst, int dstpitch)
+	template<bool aligned> static void ReadBlock8(const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch)
 	{
-		#if _M_SSE >= 0x200
-
 		ReadColumn8<0, aligned>(src, dst, dstpitch);
 		dst += dstpitch * 4;
 		ReadColumn8<1, aligned>(src, dst, dstpitch);
@@ -788,26 +551,10 @@ public:
 		ReadColumn8<2, aligned>(src, dst, dstpitch);
 		dst += dstpitch * 4;
 		ReadColumn8<3, aligned>(src, dst, dstpitch);
-
-		#else
-
-		const BYTE* s = &columnTable8[0][0];
-
-		for(int j = 0; j < 16; j++, s += 16, dst += dstpitch)
-		{
-			for(int i = 0; i < 16; i++)
-			{
-				dst[i] = src[s[i]];
-			}
-		}
-
-		#endif
 	}
 
-	template<bool aligned> static void ReadBlock4(const BYTE* RESTRICT src, BYTE* RESTRICT dst, int dstpitch)
+	template<bool aligned> static void ReadBlock4(const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch)
 	{
-		#if _M_SSE >= 0x200
-
 		ReadColumn4<0, aligned>(src, dst, dstpitch);
 		dst += dstpitch * 4;
 		ReadColumn4<1, aligned>(src, dst, dstpitch);
@@ -815,29 +562,10 @@ public:
 		ReadColumn4<2, aligned>(src, dst, dstpitch);
 		dst += dstpitch * 4;
 		ReadColumn4<3, aligned>(src, dst, dstpitch);
-
-		#else
-
-		const WORD* s = &columnTable4[0][0];
-
-		for(int j = 0; j < 16; j++, s += 32, dst += dstpitch)
-		{
-			for(int i = 0; i < 32; i++)
-			{
-				DWORD addr = s[i];
-				BYTE c = (src[addr >> 1] >> ((addr & 1) << 2)) & 0x0f;
-				int shift = (i & 1) << 2;
-				dst[i >> 1] = (dst[i >> 1] & (0xf0 >> shift)) | (c << shift);
-			}
-		}
-
-		#endif
 	}
 
-	__forceinline static void ReadBlock4P(const BYTE* RESTRICT src, BYTE* RESTRICT dst, int dstpitch)
+	__forceinline static void ReadBlock4P(const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch)
 	{
-		#if _M_SSE >= 0x200
-
 		const GSVector4i* s = (const GSVector4i*)src;
 
 		GSVector4i v0, v1, v2, v3;
@@ -896,18 +624,10 @@ public:
 
 			dst += dstpitch * 2;
 		}
-
-		#else
-
-		// TODO
-
-		#endif
 	}
 
-	__forceinline static void ReadBlock8HP(const BYTE* RESTRICT src, BYTE* RESTRICT dst, int dstpitch)
+	__forceinline static void ReadBlock8HP(const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch)
 	{
-		#if _M_SSE >= 0x200
-
 		const GSVector4i* s = (const GSVector4i*)src;
 
 		GSVector4i v0, v1, v2, v3;
@@ -931,26 +651,10 @@ public:
 			
 			dst += dstpitch;
 		}
-
-		#else
-
-		const BYTE* s = &columnTable32[0][0];
-
-		for(int j = 0; j < 8; j++, s += 8, dst += dstpitch)
-		{
-			for(int i = 0; i < 8; i++)
-			{
-				((BYTE*)dst)[i] = ((DWORD*)src)[s[i]] >> 24;
-			}
-		}
-
-		#endif
 	}
 
-	__forceinline static void ReadBlock4HLP(const BYTE* RESTRICT src, BYTE* RESTRICT dst, int dstpitch)
+	__forceinline static void ReadBlock4HLP(const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch)
 	{
-		#if _M_SSE >= 0x200
-
 		const GSVector4i* s = (const GSVector4i*)src;
 
 		GSVector4i v0, v1, v2, v3;
@@ -976,26 +680,10 @@ public:
 			
 			dst += dstpitch;
 		}
-
-		#else
-
-		const BYTE* s = &columnTable32[0][0];
-
-		for(int j = 0; j < 8; j++, s += 8, dst += dstpitch)
-		{
-			for(int i = 0; i < 8; i++)
-			{
-				((BYTE*)dst)[i] = (((DWORD*)src)[s[i]] >> 24) & 0xf;
-			}
-		}
-
-		#endif
 	}
 
-	__forceinline static void ReadBlock4HHP(const BYTE* RESTRICT src, BYTE* RESTRICT dst, int dstpitch)
+	__forceinline static void ReadBlock4HHP(const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch)
 	{
-		#if _M_SSE >= 0x200
-
 		const GSVector4i* s = (const GSVector4i*)src;
 
 		GSVector4i v0, v1, v2, v3;
@@ -1019,26 +707,10 @@ public:
 			
 			dst += dstpitch;
 		}
-
-		#else
-
-		const BYTE* s = &columnTable32[0][0];
-
-		for(int j = 0; j < 8; j++, s += 8, dst += dstpitch)
-		{
-			for(int i = 0; i < 8; i++)
-			{
-				((BYTE*)dst)[i] = ((DWORD*)src)[s[i]] >> 28;
-			}
-		}
-
-		#endif
 	}
 
-	static void UnpackBlock24(const BYTE* RESTRICT src, int srcpitch, DWORD* RESTRICT dst)
+	static void UnpackBlock24(const uint8* RESTRICT src, int srcpitch, uint32* RESTRICT dst)
 	{
-		#if _M_SSE >= 0x200
-
 		GSVector4i mask = GSVector4i::x00ffffff();
 
 		for(int i = 0; i < 4; i++, src += srcpitch * 2)
@@ -1061,24 +733,10 @@ public:
 
 			((GSVector4i*)dst)[i * 4 + 3] = v0.upl32(v0.srl<3>()).upl64(v0.srl<6>().upl32(v0.srl<9>())) & mask;
 		}
-
-		#else 
-
-		for(int j = 0, diff = srcpitch - 8 * 3; j < 8; j++, src += diff, dst += 8)
-		{
-			for(int i = 0; i < 8; i++, src += 3)
-			{
-				dst[i] = (src[2] << 16) | (src[1] << 8) | src[0];
-			}
-		}
-
-		#endif
 	}
 
-	static void UnpackBlock8H(const BYTE* RESTRICT src, int srcpitch, DWORD* RESTRICT dst)
+	static void UnpackBlock8H(const uint8* RESTRICT src, int srcpitch, uint32* RESTRICT dst)
 	{
-		#if _M_SSE >= 0x200
-
 		GSVector4i zero = GSVector4i::zero();
 
 		for(int i = 0; i < 4; i++, src += srcpitch * 2)
@@ -1093,34 +751,20 @@ public:
 			((GSVector4i*)dst)[i * 4 + 2] = zero.upl16(v1);
 			((GSVector4i*)dst)[i * 4 + 3] = zero.uph16(v1);
 		}
-
-		#else
-
-		for(int j = 0; j < 8; j++, src += srcpitch, dst += 8)
-		{
-			for(int i = 0; i < 8; i++)
-			{
-				dst[i] = src[i] << 24;
-			}
-		}
-
-		#endif
 	}
 
-	static void UnpackBlock4HL(const BYTE* RESTRICT src, int srcpitch, DWORD* RESTRICT dst)
+	static void UnpackBlock4HL(const uint8* RESTRICT src, int srcpitch, uint32* RESTRICT dst)
 	{
-		#if _M_SSE >= 0x200
-
 		GSVector4i zero = GSVector4i::zero();
 		GSVector4i mask(0x0f0f0f0f);
 
 		for(int i = 0; i < 2; i++, src += srcpitch * 4)
 		{
 			GSVector4i v(
-				*(DWORD*)&src[srcpitch * 0], 
-				*(DWORD*)&src[srcpitch * 1], 
-				*(DWORD*)&src[srcpitch * 2], 
-				*(DWORD*)&src[srcpitch * 3]);
+				*(uint32*)&src[srcpitch * 0], 
+				*(uint32*)&src[srcpitch * 1], 
+				*(uint32*)&src[srcpitch * 2], 
+				*(uint32*)&src[srcpitch * 3]);
 
 			GSVector4i lo = v & mask;
 			GSVector4i hi = (v >> 4) & mask;
@@ -1142,35 +786,20 @@ public:
 			((GSVector4i*)dst)[i * 8 + 6] = zero.upl16(v5);
 			((GSVector4i*)dst)[i * 8 + 7] = zero.uph16(v5);
 		}
-
-		#else
-
-		for(int j = 0; j < 8; j++, src += srcpitch, dst += 8)
-		{
-			for(int i = 0; i < 4; i++)
-			{
-				dst[i * 2 + 0] = (src[i] & 0x0f) << 24;
-				dst[i * 2 + 1] = (src[i] & 0xf0) << 20;
-			}
-		}
-
-		#endif
 	}
 
-	static void UnpackBlock4HH(const BYTE* RESTRICT src, int srcpitch, DWORD* RESTRICT dst)
+	static void UnpackBlock4HH(const uint8* RESTRICT src, int srcpitch, uint32* RESTRICT dst)
 	{
-		#if _M_SSE >= 0x200
-
 		GSVector4i zero = GSVector4i::zero();
 		GSVector4i mask(0xf0f0f0f0);
 
 		for(int i = 0; i < 2; i++, src += srcpitch * 4)
 		{
 			GSVector4i v(
-				*(DWORD*)&src[srcpitch * 0], 
-				*(DWORD*)&src[srcpitch * 1], 
-				*(DWORD*)&src[srcpitch * 2], 
-				*(DWORD*)&src[srcpitch * 3]);
+				*(uint32*)&src[srcpitch * 0], 
+				*(uint32*)&src[srcpitch * 1], 
+				*(uint32*)&src[srcpitch * 2], 
+				*(uint32*)&src[srcpitch * 3]);
 
 			GSVector4i lo = (v << 4) & mask;
 			GSVector4i hi = v & mask;
@@ -1192,25 +821,10 @@ public:
 			((GSVector4i*)dst)[i * 8 + 6] = zero.upl16(v5);
 			((GSVector4i*)dst)[i * 8 + 7] = zero.uph16(v5);
 		}
-
-		#else
-
-		for(int j = 0; j < 8; j++, src += srcpitch, dst += 8)
-		{
-			for(int i = 0; i < 4; i++)
-			{
-				dst[i * 2 + 0] = (src[i] & 0x0f) << 28;
-				dst[i * 2 + 1] = (src[i] & 0xf0) << 24;
-			}
-		}
-
-		#endif
 	}
 
-	template<bool AEM> static void ExpandBlock24(const DWORD* RESTRICT src, BYTE* RESTRICT dst, int dstpitch, const GIFRegTEXA& TEXA)
+	template<bool AEM> static void ExpandBlock24(const uint32* RESTRICT src, uint8* RESTRICT dst, int dstpitch, const GIFRegTEXA& TEXA)
 	{
-		#if _M_SSE >= 0x200
-
 		const GSVector4i* s = (const GSVector4i*)src;
 
 		GSVector4i TA0(TEXA.TA0 << 24);
@@ -1241,35 +855,10 @@ public:
 				d1[1] = v3 | TA0;
 			}
 		}
-
-		#else
-
-		DWORD TA0 = TEXA.TA0 << 24;
-
-		for(int j = 0; j < 8; j++, src += 8, dst += dstpitch)
-		{
-			for(int i = 0; i < 8; i++)
-			{
-				DWORD c = src[i] & 0xffffff;
-
-				if(AEM)
-				{
-					((DWORD*)dst)[i] = c | (c ? TA0 : 0);
-				}
-				else
-				{
-					((DWORD*)dst)[i] = c | TA0;
-				}
-			}
-		}
-
-		#endif
 	}
 
-	static void ExpandBlock16(const WORD* RESTRICT src, BYTE* RESTRICT dst, int dstpitch, const GIFRegTEXA& TEXA) // do not inline, uses too many xmm regs
+	static void ExpandBlock16(const uint16* RESTRICT src, uint8* RESTRICT dst, int dstpitch, const GIFRegTEXA& TEXA) // do not inline, uses too many xmm regs
 	{
-		#if _M_SSE >= 0x200
-
 		const GSVector4i* s = (const GSVector4i*)src;
 
 		GSVector4i TA0(TEXA.TA0 << 24);
@@ -1321,37 +910,9 @@ public:
 				((GSVector4i*)dst)[3] = ((h & rm) << 3) | ((h & gm) << 6) | ((h & bm) << 9) | TA0.blend(TA1, h.sra16(15));
 			}
 		}
-
-		#else
-
-		DWORD TA0 = TEXA.TA0 << 24;
-		DWORD TA1 = TEXA.TA1 << 24;
-
-		if(TEXA.AEM)
-		{
-			for(int j = 0; j < 8; j++, src += 16, dst += dstpitch)
-			{
-				for(int i = 0; i < 16; i++)
-				{
-					((DWORD*)dst)[i] = ((src[i] & 0x8000) ? TA1 : src[i] ? TA0 : 0) | ((src[i] & 0x7c00) << 9) | ((src[i] & 0x03e0) << 6) | ((src[i] & 0x001f) << 3);
-				}
-			}
-		}
-		else
-		{
-			for(int j = 0; j < 8; j++, src += 16, dst += dstpitch)
-			{
-				for(int i = 0; i < 16; i++)
-				{
-					((DWORD*)dst)[i] = ((src[i] & 0x8000) ? TA1 : TA0) | ((src[i] & 0x7c00) << 9) | ((src[i] & 0x03e0) << 6) | ((src[i] & 0x001f) << 3);
-				}
-			}
-		}
-
-		#endif
 	}
 
-	__forceinline static void ExpandBlock8_32(const BYTE* RESTRICT src, BYTE* RESTRICT dst, int dstpitch, const DWORD* RESTRICT pal)
+	__forceinline static void ExpandBlock8_32(const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch, const uint32* RESTRICT pal)
 	{
 		for(int j = 0; j < 16; j++, dst += dstpitch)
 		{
@@ -1359,7 +920,7 @@ public:
 		}
 	}
 
-	__forceinline static void ExpandBlock8_16(const BYTE* RESTRICT src, BYTE* RESTRICT dst, int dstpitch, const DWORD* RESTRICT pal)
+	__forceinline static void ExpandBlock8_16(const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch, const uint32* RESTRICT pal)
 	{
 		for(int j = 0; j < 16; j++, dst += dstpitch)
 		{
@@ -1367,7 +928,7 @@ public:
 		}
 	}
 
-	__forceinline static void ExpandBlock4_32(const BYTE* RESTRICT src, BYTE* RESTRICT dst, int dstpitch, const UINT64* RESTRICT pal)
+	__forceinline static void ExpandBlock4_32(const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch, const uint64* RESTRICT pal)
 	{
 		for(int j = 0; j < 16; j++, dst += dstpitch)
 		{
@@ -1375,7 +936,7 @@ public:
 		}
 	}
 
-	__forceinline static void ExpandBlock4_16(const BYTE* RESTRICT src, BYTE* RESTRICT dst, int dstpitch, const UINT64* RESTRICT pal)
+	__forceinline static void ExpandBlock4_16(const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch, const uint64* RESTRICT pal)
 	{
 		for(int j = 0; j < 16; j++, dst += dstpitch)
 		{
@@ -1383,7 +944,7 @@ public:
 		}
 	}
 
-	__forceinline static void ExpandBlock8H_32(DWORD* RESTRICT src, BYTE* RESTRICT dst, int dstpitch, const DWORD* RESTRICT pal)
+	__forceinline static void ExpandBlock8H_32(uint32* RESTRICT src, uint8* RESTRICT dst, int dstpitch, const uint32* RESTRICT pal)
 	{
 		for(int j = 0; j < 8; j++, dst += dstpitch)
 		{
@@ -1394,7 +955,7 @@ public:
 		}
 	}
 
-	__forceinline static void ExpandBlock8H_16(DWORD* RESTRICT src, BYTE* RESTRICT dst, int dstpitch, const DWORD* RESTRICT pal)
+	__forceinline static void ExpandBlock8H_16(uint32* RESTRICT src, uint8* RESTRICT dst, int dstpitch, const uint32* RESTRICT pal)
 	{
 		for(int j = 0; j < 8; j++, dst += dstpitch)
 		{
@@ -1411,14 +972,14 @@ public:
 
 			for(int i = 0; i < 8; i++)
 			{
-				((WORD*)dst)[i] = (WORD)pal[src[j * 8 + i] >> 24];
+				((uint16*)dst)[i] = (uint16)pal[src[j * 8 + i] >> 24];
 			}
 
 			#endif
 		}
 	}
 
-	__forceinline static void ExpandBlock4HL_32(DWORD* RESTRICT src, BYTE* RESTRICT dst, int dstpitch, const DWORD* RESTRICT pal)
+	__forceinline static void ExpandBlock4HL_32(uint32* RESTRICT src, uint8* RESTRICT dst, int dstpitch, const uint32* RESTRICT pal)
 	{
 		for(int j = 0; j < 8; j++, dst += dstpitch)
 		{
@@ -1429,7 +990,7 @@ public:
 		}
 	}
 
-	__forceinline static void ExpandBlock4HL_16(DWORD* RESTRICT src, BYTE* RESTRICT dst, int dstpitch, const DWORD* RESTRICT pal)
+	__forceinline static void ExpandBlock4HL_16(uint32* RESTRICT src, uint8* RESTRICT dst, int dstpitch, const uint32* RESTRICT pal)
 	{
 		for(int j = 0; j < 8; j++, dst += dstpitch)
 		{
@@ -1446,14 +1007,14 @@ public:
 
 			for(int i = 0; i < 8; i++)
 			{
-				((WORD*)dst)[i] = (WORD)pal[(src[j * 8 + i] >> 24) & 0xf];
+				((uint16*)dst)[i] = (uint16)pal[(src[j * 8 + i] >> 24) & 0xf];
 			}
 
 			#endif
 		}
 	}
 
-	__forceinline static void ExpandBlock4HH_32(DWORD* RESTRICT src, BYTE* RESTRICT dst, int dstpitch, const DWORD* RESTRICT pal)
+	__forceinline static void ExpandBlock4HH_32(uint32* RESTRICT src, uint8* RESTRICT dst, int dstpitch, const uint32* RESTRICT pal)
 	{
 		for(int j = 0; j < 8; j++, dst += dstpitch)
 		{
@@ -1464,7 +1025,7 @@ public:
 		}
 	}
 
-	__forceinline static void ExpandBlock4HH_16(DWORD* RESTRICT src, BYTE* RESTRICT dst, int dstpitch, const DWORD* RESTRICT pal)
+	__forceinline static void ExpandBlock4HH_16(uint32* RESTRICT src, uint8* RESTRICT dst, int dstpitch, const uint32* RESTRICT pal)
 	{
 		for(int j = 0; j < 8; j++, dst += dstpitch)
 		{
@@ -1481,17 +1042,15 @@ public:
 
 			for(int i = 0; i < 8; i++)
 			{
-				((WORD*)dst)[i] = (WORD)pal[src[j * 8 + i] >> 28];
+				((uint16*)dst)[i] = (uint16)pal[src[j * 8 + i] >> 28];
 			}
 
 			#endif
 		}
 	}
 
-	__forceinline static void UnpackAndWriteBlock24(const BYTE* RESTRICT src, int srcpitch, BYTE* RESTRICT dst)
+	__forceinline static void UnpackAndWriteBlock24(const uint8* RESTRICT src, int srcpitch, uint8* RESTRICT dst)
 	{
-		#if _M_SSE >= 0x200
-
 		GSVector4i mask(0x00ffffff);
 
 		for(int i = 0; i < 4; i++, src += srcpitch * 2)
@@ -1534,23 +1093,9 @@ public:
 
 			#endif
 		}
-
-		#else 
-
-		const BYTE* d = &columnTable32[0][0];
-
-		for(int j = 0, diff = srcpitch - 8 * 3; j < 8; j++, src += diff, d += 8)
-		{
-			for(int i = 0; i < 8; i++, src += 3)
-			{
-				((DWORD*)dst)[d[i]] = (((DWORD*)dst)[d[i]] & ~0x00ffffff) | (src[2] << 16) | (src[1] << 8) | src[0];
-			}
-		}
-
-		#endif
 	}
 
-	__forceinline static void UnpackAndWriteBlock8H(const BYTE* RESTRICT src, int srcpitch, BYTE* RESTRICT dst)
+	__forceinline static void UnpackAndWriteBlock8H(const uint8* RESTRICT src, int srcpitch, uint8* RESTRICT dst)
 	{
 		#if _M_SSE >= 0x301
 
@@ -1576,7 +1121,7 @@ public:
 			((GSVector4i*)dst)[i * 4 + 3] = ((GSVector4i*)dst)[i * 4 + 3].blend8(v3, mask);
 		}
 
-		#elif _M_SSE >= 0x200
+		#else
 
 		GSVector4i mask(0xff000000);
 
@@ -1600,22 +1145,10 @@ public:
 			((GSVector4i*)dst)[i * 4 + 3] = ((GSVector4i*)dst)[i * 4 + 3].blend8(v3, mask);
 		}
 
-		#else
-
-		const BYTE* d = &columnTable32[0][0];
-
-		for(int j = 0; j < 8; j++, src += srcpitch, dst += 8)
-		{
-			for(int i = 0; i < 8; i++)
-			{
-				((DWORD*)dst)[d[i]] = (((DWORD*)dst)[d[i]] & ~0xff000000) | (src[i] << 24);
-			}
-		}
-
 		#endif
 	}
 
-	__forceinline static void UnpackAndWriteBlock4HL(const BYTE* RESTRICT src, int srcpitch, BYTE* RESTRICT dst)
+	__forceinline static void UnpackAndWriteBlock4HL(const uint8* RESTRICT src, int srcpitch, uint8* RESTRICT dst)
 	{
 		#if _M_SSE >= 0x301
 
@@ -1629,10 +1162,10 @@ public:
 		for(int i = 0; i < 2; i++, src += srcpitch * 4)
 		{
 			GSVector4i v(
-				*(DWORD*)&src[srcpitch * 0], 
-				*(DWORD*)&src[srcpitch * 1], 
-				*(DWORD*)&src[srcpitch * 2], 
-				*(DWORD*)&src[srcpitch * 3]);
+				*(uint32*)&src[srcpitch * 0], 
+				*(uint32*)&src[srcpitch * 1], 
+				*(uint32*)&src[srcpitch * 2], 
+				*(uint32*)&src[srcpitch * 3]);
 
 			GSVector4i lo = v & mask;
 			GSVector4i hi = (v >> 4) & mask;
@@ -1666,13 +1199,13 @@ public:
 			}
 		}
 
-		#elif _M_SSE >= 0x200
+		#else
 /*
-		__declspec(align(16)) DWORD block[8 * 8];
+		__declspec(align(16)) uint32 block[8 * 8];
 
 		UnpackBlock4HL(src, srcpitch, block);
 
-		WriteBlock32<true, 0x0f000000>(dst, (BYTE*)block, sizeof(block) / 8);
+		WriteBlock32<true, 0x0f000000>(dst, (uint8*)block, sizeof(block) / 8);
 */
 		GSVector4i mask(0x0f0f0f0f);
 		GSVector4i mask2(0x0f000000);
@@ -1680,10 +1213,10 @@ public:
 		for(int i = 0; i < 2; i++, src += srcpitch * 4)
 		{
 			GSVector4i v(
-				*(DWORD*)&src[srcpitch * 0], 
-				*(DWORD*)&src[srcpitch * 1], 
-				*(DWORD*)&src[srcpitch * 2], 
-				*(DWORD*)&src[srcpitch * 3]);
+				*(uint32*)&src[srcpitch * 0], 
+				*(uint32*)&src[srcpitch * 1], 
+				*(uint32*)&src[srcpitch * 2], 
+				*(uint32*)&src[srcpitch * 3]);
 
 			GSVector4i lo = v & mask;
 			GSVector4i hi = (v >> 4) & mask;
@@ -1727,23 +1260,10 @@ public:
 			}
 		}
 
-		#else
-
-		const BYTE* d = &columnTable32[0][0];
-
-		for(int j = 0; j < 8; j++, d += 8, src += srcpitch)
-		{
-			for(int i = 0; i < 4; i++)
-			{
-				((DWORD*)dst)[d[i * 2 + 0]] = (((DWORD*)dst)[d[i * 2 + 0]] & ~0x0f000000) | ((src[i] & 0x0f) << 24);
-				((DWORD*)dst)[d[i * 2 + 1]] = (((DWORD*)dst)[d[i * 2 + 1]] & ~0x0f000000) | ((src[i] & 0xf0) << 20);
-			}
-		}
-
 		#endif
 	}
 
-	__forceinline static void UnpackAndWriteBlock4HH(const BYTE* RESTRICT src, int srcpitch, BYTE* RESTRICT dst)
+	__forceinline static void UnpackAndWriteBlock4HH(const uint8* RESTRICT src, int srcpitch, uint8* RESTRICT dst)
 	{
 		#if _M_SSE >= 0x301
 
@@ -1757,10 +1277,10 @@ public:
 		for(int i = 0; i < 2; i++, src += srcpitch * 4)
 		{
 			GSVector4i v(
-				*(DWORD*)&src[srcpitch * 0], 
-				*(DWORD*)&src[srcpitch * 1], 
-				*(DWORD*)&src[srcpitch * 2], 
-				*(DWORD*)&src[srcpitch * 3]);
+				*(uint32*)&src[srcpitch * 0], 
+				*(uint32*)&src[srcpitch * 1], 
+				*(uint32*)&src[srcpitch * 2], 
+				*(uint32*)&src[srcpitch * 3]);
 
 			GSVector4i lo = (v << 4) & mask;
 			GSVector4i hi = v & mask;
@@ -1794,13 +1314,13 @@ public:
 			}
 		}
 
-		#elif _M_SSE >= 0x200
+		#else
 /*
-		__declspec(align(16)) DWORD block[8 * 8];
+		__declspec(align(16)) uint32 block[8 * 8];
 
 		UnpackBlock4HH(src, srcpitch, block);
 
-		WriteBlock32<true, 0xf0000000>(dst, (BYTE*)block, sizeof(block) / 8);
+		WriteBlock32<true, 0xf0000000>(dst, (uint8*)block, sizeof(block) / 8);
 */
 		GSVector4i mask(0xf0f0f0f0);
 		GSVector4i mask2(0xf0000000);
@@ -1808,10 +1328,10 @@ public:
 		for(int i = 0; i < 2; i++, src += srcpitch * 4)
 		{
 			GSVector4i v(
-				*(DWORD*)&src[srcpitch * 0], 
-				*(DWORD*)&src[srcpitch * 1], 
-				*(DWORD*)&src[srcpitch * 2], 
-				*(DWORD*)&src[srcpitch * 3]);
+				*(uint32*)&src[srcpitch * 0], 
+				*(uint32*)&src[srcpitch * 1], 
+				*(uint32*)&src[srcpitch * 2], 
+				*(uint32*)&src[srcpitch * 3]);
 
 			GSVector4i lo = (v << 4) & mask;
 			GSVector4i hi = v & mask;
@@ -1855,26 +1375,11 @@ public:
 			}
 		}
 
-		#else
-
-		const BYTE* d = &columnTable32[0][0];
-
-		for(int j = 0; j < 8; j++, d += 8, src += srcpitch)
-		{
-			for(int i = 0; i < 4; i++)
-			{
-				((DWORD*)dst)[d[i * 2 + 0]] = (((DWORD*)dst)[d[i * 2 + 0]] & ~0xf0000000) | ((src[i] & 0x0f) << 28);
-				((DWORD*)dst)[d[i * 2 + 1]] = (((DWORD*)dst)[d[i * 2 + 1]] & ~0xf0000000) | ((src[i] & 0xf0) << 24);
-			}
-		}
-
 		#endif
 	}
 
-	template<bool AEM> __forceinline static void ReadAndExpandBlock24(const BYTE* RESTRICT src, BYTE* RESTRICT dst, int dstpitch, const GIFRegTEXA& TEXA)
+	template<bool AEM> __forceinline static void ReadAndExpandBlock24(const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch, const GIFRegTEXA& TEXA)
 	{
-		#if _M_SSE >= 0x200
-
 		const GSVector4i* s = (const GSVector4i*)src;
 
 		GSVector4i TA0(TEXA.TA0 << 24);
@@ -1912,34 +1417,9 @@ public:
 				d1[1] = v3 | TA0;
 			}
 		}
-
-		#else
-
-		DWORD TA0 = TEXA.TA0 << 24;
-
-		const BYTE* s = &columnTable32[0][0];
-
-		for(int j = 0; j < 8; j++, s += 8, dst += dstpitch)
-		{
-			for(int i = 0; i < 8; i++)
-			{
-				DWORD c = ((DWORD*)src)[s[i]] & 0xffffff;
-
-				if(AEM)
-				{
-					((DWORD*)dst)[i] = c | (c ? TA0 : 0);
-				}
-				else
-				{
-					((DWORD*)dst)[i] = c | TA0;
-				}
-			}
-		}
-
-		#endif
 	}
 
-	__forceinline static void ReadAndExpandBlock8_32(const BYTE* RESTRICT src, BYTE* RESTRICT dst, int dstpitch, const DWORD* RESTRICT pal)
+	__forceinline static void ReadAndExpandBlock8_32(const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch, const uint32* RESTRICT pal)
 	{
 		#if _M_SSE >= 0x401
 
@@ -1985,32 +1465,20 @@ public:
 			dst += dstpitch;
 		}
 
-		#elif _M_SSE >= 0x200
-
-		__declspec(align(16)) BYTE block[16 * 16];
-
-		ReadBlock8<true>(src, (BYTE*)block, sizeof(block) / 16);
-
-		ExpandBlock8_32(block, dst, dstpitch, pal);
-
 		#else
 
-		const BYTE* s = &columnTable8[0][0];
+		__declspec(align(16)) uint8 block[16 * 16];
 
-		for(int j = 0; j < 16; j++, s += 16, dst += dstpitch)
-		{
-			for(int i = 0; i < 16; i++)
-			{
-				((DWORD*)dst)[i] = pal[src[s[i]]];
-			}
-		}
+		ReadBlock8<true>(src, (uint8*)block, sizeof(block) / 16);
+
+		ExpandBlock8_32(block, dst, dstpitch, pal);
 
 		#endif
 	}
 
 	// TODO: ReadAndExpandBlock8_16
 
-	__forceinline static void ReadAndExpandBlock4_32(const BYTE* RESTRICT src, BYTE* RESTRICT dst, int dstpitch, const UINT64* RESTRICT pal)
+	__forceinline static void ReadAndExpandBlock4_32(const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch, const uint64* RESTRICT pal)
 	{
 		#if _M_SSE >= 0x401
 
@@ -2072,38 +1540,20 @@ public:
 			dst += dstpitch;
 		}
 
-		#elif _M_SSE >= 0x200
-
-		__declspec(align(16)) BYTE block[(32 / 2) * 16];
-
-		ReadBlock4<true>(src, (BYTE*)block, sizeof(block) / 16);
-
-		ExpandBlock4_32(block, dst, dstpitch, pal);
-
 		#else
 
-		const WORD* s = &columnTable4[0][0];
+		__declspec(align(16)) uint8 block[(32 / 2) * 16];
 
-		for(int j = 0; j < 16; j++, s += 32, dst += dstpitch)
-		{
-			for(int i = 0; i < 16; i++)
-			{
-				BYTE a0 = s[i * 2 + 0];
-				BYTE a1 = s[i * 2 + 1];
+		ReadBlock4<true>(src, (uint8*)block, sizeof(block) / 16);
 
-				BYTE c0 = (src[a0 >> 1] >> ((a0 & 1) << 2)) & 0x0f;
-				BYTE c1 = (src[a1 >> 1] >> ((a1 & 1) << 2)) & 0x0f;
-
-				((UINT64*)dst)[i] = pal[(c1 << 4) | c0];
-			}
-		}
+		ExpandBlock4_32(block, dst, dstpitch, pal);
 
 		#endif
 	}
 
 	// TODO: ReadAndExpandBlock4_16
 
-	__forceinline static void ReadAndExpandBlock8H_32(const BYTE* RESTRICT src, BYTE* RESTRICT dst, int dstpitch, const DWORD* RESTRICT pal)
+	__forceinline static void ReadAndExpandBlock8H_32(const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch, const uint32* RESTRICT pal)
 	{
 		#if _M_SSE >= 0x401
 
@@ -2131,32 +1581,20 @@ public:
 			dst += dstpitch;
 		}
 
-		#elif _M_SSE >= 0x200
-
-		__declspec(align(16)) DWORD block[8 * 8];
-
-		ReadBlock32<true>(src, (BYTE*)block, sizeof(block) / 8);
-
-		ExpandBlock8H_32(block, dst, dstpitch, pal);
-
 		#else
 
-		const BYTE* s = &columnTable32[0][0];
+		__declspec(align(16)) uint32 block[8 * 8];
 
-		for(int j = 0; j < 8; j++, s += 8, dst += dstpitch)
-		{
-			for(int i = 0; i < 8; i++)
-			{
-				((DWORD*)dst)[i] = pal[((DWORD*)src)[s[i]] >> 24];
-			}
-		}
+		ReadBlock32<true>(src, (uint8*)block, sizeof(block) / 8);
+
+		ExpandBlock8H_32(block, dst, dstpitch, pal);
 
 		#endif
 	}
 
 	// TODO: ReadAndExpandBlock8H_16
 
-	__forceinline static void ReadAndExpandBlock4HL_32(const BYTE* RESTRICT src, BYTE* RESTRICT dst, int dstpitch, const DWORD* RESTRICT pal)
+	__forceinline static void ReadAndExpandBlock4HL_32(const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch, const uint32* RESTRICT pal)
 	{
 		#if _M_SSE >= 0x401
 
@@ -2184,32 +1622,20 @@ public:
 			dst += dstpitch;
 		}
 
-		#elif _M_SSE >= 0x200
-
-		__declspec(align(16)) DWORD block[8 * 8];
-
-		ReadBlock32<true>(src, (BYTE*)block, sizeof(block) / 8);
-
-		ExpandBlock4HL_32(block, dst, dstpitch, pal);
-
 		#else
 
-		const BYTE* s = &columnTable32[0][0];
+		__declspec(align(16)) uint32 block[8 * 8];
 
-		for(int j = 0; j < 8; j++, s += 8, dst += dstpitch)
-		{
-			for(int i = 0; i < 8; i++)
-			{
-				((DWORD*)dst)[i] = pal[(((DWORD*)src)[s[i]] >> 24) & 0xf];
-			}
-		}
+		ReadBlock32<true>(src, (uint8*)block, sizeof(block) / 8);
+
+		ExpandBlock4HL_32(block, dst, dstpitch, pal);
 
 		#endif
 	}
 
 	// TODO: ReadAndExpandBlock4HL_16
 	
-	__forceinline static void ReadAndExpandBlock4HH_32(const BYTE* RESTRICT src, BYTE* RESTRICT dst, int dstpitch, const DWORD* RESTRICT pal)
+	__forceinline static void ReadAndExpandBlock4HH_32(const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch, const uint32* RESTRICT pal)
 	{
 		#if _M_SSE >= 0x401
 
@@ -2237,25 +1663,13 @@ public:
 			dst += dstpitch;
 		}
 
-		#elif _M_SSE >= 0x200
-
-		__declspec(align(16)) DWORD block[8 * 8];
-
-		ReadBlock32<true>(src, (BYTE*)block, sizeof(block) / 8);
-
-		ExpandBlock4HH_32(block, dst, dstpitch, pal);
-
 		#else
 
-		const BYTE* s = &columnTable32[0][0];
+		__declspec(align(16)) uint32 block[8 * 8];
 
-		for(int j = 0; j < 8; j++, s += 8, dst += dstpitch)
-		{
-			for(int i = 0; i < 8; i++)
-			{
-				((DWORD*)dst)[i] = pal[((DWORD*)src)[s[i]] >> 28];
-			}
-		}
+		ReadBlock32<true>(src, (uint8*)block, sizeof(block) / 8);
+
+		ExpandBlock4HH_32(block, dst, dstpitch, pal);
 
 		#endif
 	}

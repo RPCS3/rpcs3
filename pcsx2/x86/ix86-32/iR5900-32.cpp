@@ -36,11 +36,11 @@
 #include "iMMI.h"
 #include "iFPU.h"
 #include "iCOP0.h"
-#include "iVUmicro.h"
+#include "sVU_Micro.h"
 #include "VU.h"
 #include "VUmicro.h"
 
-#include "iVUzerorec.h"
+#include "sVU_zerorec.h"
 #include "vtlb.h"
 
 #include "SamplProf.h"
@@ -74,8 +74,7 @@ u32 g_cpuHasConstReg = 0, g_cpuFlushedConstReg = 0;
 // Static Private Variables - R5900 Dynarec
 
 #define X86
-static const int RECSTACK_SIZE = 0x00010000;
-static const int EE_NUMBLOCKS = (1<<15);
+static const int RECSTACK_SIZE = 0x00020000;
 
 static u8 *recMem = NULL;			// the recompiled blocks will be here
 static u8* recStack = NULL;			// stack mem
@@ -84,7 +83,7 @@ static BASEBLOCK *recROM = NULL;		// and here
 static BASEBLOCK *recROM1 = NULL;		// also here
 static u32 *recRAMCopy = NULL;
 void JITCompile();
-static BaseBlocks recBlocks(EE_NUMBLOCKS, (uptr)JITCompile);
+static BaseBlocks recBlocks((uptr)JITCompile);
 static u8* recPtr = NULL, *recStackPtr = NULL;
 EEINST* s_pInstCache = NULL;
 static u32 s_nInstCacheSize = 0;
@@ -103,7 +102,7 @@ static EEINST* s_psaveInstInfo = NULL;
 
 static u32 s_savenBlockCycles = 0;
 
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 static u32 dumplog = 0;
 #else
 #define dumplog 0
@@ -111,6 +110,7 @@ static u32 dumplog = 0;
 
 static void iBranchTest(u32 newpc = 0xffffffff, bool noDispatch=false);
 static void ClearRecLUT(BASEBLOCK* base, int count);
+static u32 eeScaleBlockCycles();
 
 #ifdef PCSX2_VM_COISSUE
 static u8 _eeLoadWritesRs(u32 tempcode)
@@ -340,14 +340,23 @@ int _flushUnusedConstReg()
 	return 0;
 }
 
+// ------------------------------------------------------------------------
+// recAllocStackMem -- an optimization trick to write data to a location so that
+// recompiled code can reference it later on during execution.
+//
+// Intended use is for setting up 64/128 bit SSE immediates, primarily.
+//
 u32* recAllocStackMem(int size, int align)
 {
-	// write to a temp loc, trick
-	if( (u32)recStackPtr % align ) recStackPtr += align - ((u32)recStackPtr%align);
+	jASSUME( align == 4 || align == 8 || align == 16 );
+
+	recStackPtr = (u8*) ( (((uptr)recStackPtr) + (align-1)) & ~(align-1) );
 	recStackPtr += size;
 	return (u32*)(recStackPtr-size);
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////
+//
 static const int REC_CACHEMEM = 0x01000000;
 static void __fastcall dyna_block_discard(u32 start,u32 sz);
 
@@ -476,15 +485,6 @@ void recResetEE( void )
 		recLUT_SetPage(recLUT, hwLUT, recROM1, 0x8000, i, i - 0x1e00);
 		recLUT_SetPage(recLUT, hwLUT, recROM1, 0xa000, i, i - 0x1e00);
 	}
-
-	// drk||Raziel says this is useful but I'm not sure why.  Something to do with forward jumps.
-	// Anyways, it causes random crashing for some reasom, possibly because of memory
-	// corrupition elsewhere in the recs.  I can't reproduce the problem here though,
-	// so a fix will have to wait until later. -_- (air)
-
-	//x86SetPtr(recMem+REC_CACHEMEM);
-	//dyna_block_discard_recmem=(u8*)x86Ptr;
-	//JMP32( (uptr)&dyna_block_discard - ( (u32)x86Ptr + 5 ));
 
 	x86SetPtr(recMem);
 
@@ -718,7 +718,7 @@ void recBREAK( void ) {
 } } }		// end namespace R5900::Dynarec::OpcodeImpl
 
 // Clears the recLUT table so that all blocks are mapped to the JIT recompiler by default.
-static void ClearRecLUT(BASEBLOCK* base, int count)
+static __releaseinline void ClearRecLUT(BASEBLOCK* base, int count)
 {
 	for (int i = 0; i < count; i++)
 		base[i].SetFnptr((uptr)JITCompile);
@@ -960,7 +960,7 @@ void iFlushCall(int flushtype)
 //}
 
 
-u32 eeScaleBlockCycles()
+static u32 scaleBlockCycles_helper()
 {
 	// Note: s_nBlockCycles is 3 bit fixed point.  Divide by 8 when done!
 
@@ -992,12 +992,6 @@ u32 eeScaleBlockCycles()
 			scalarHigh = 7;
 		break;
 
-		case 3:		// Sync hack x3
-			scalarLow = 10;
-			scalarMid = 19;
-			scalarHigh = 10;
-		break;
-
 		jNO_DEFAULT
 	}
 
@@ -1009,18 +1003,13 @@ u32 eeScaleBlockCycles()
 	return temp >> (3+2);
 }
 
-static void iBranch(u32 newpc, int type)
+static u32 eeScaleBlockCycles()
 {
-	u32* ptr;
-
-	MOV32ItoM((uptr)&cpuRegs.pc, newpc);
-	if (type == 0)
-		ptr = JMP32(0);
-	else if (type == 1)
-		ptr = JS32(0);
-
-	recBlocks.Link(HWADDR(newpc), (uptr)ptr);
+	// Ensures block cycles count is never less than 1:
+	u32 retval = scaleBlockCycles_helper();
+	return (retval < 1) ? 1 : retval;
 }
+
 
 // Generates dynarec code for Event tests followed by a block dispatch (branch).
 // Parameters:
@@ -1034,10 +1023,6 @@ static void iBranch(u32 newpc, int type)
 //   setting "branch = 2";
 static void iBranchTest(u32 newpc, bool noDispatch)
 {
-#ifdef _DEBUG
-	//CALLFunc((uptr)testfpu);
-#endif
-
 	if( bExecBIOS ) CheckForBIOSEnd();
 
 	// Check the Event scheduler if our "cycle target" has been reached.
@@ -1051,20 +1036,23 @@ static void iBranchTest(u32 newpc, bool noDispatch)
 		xCMP(eax, ptr32[&cpuRegs.cycle]);
 		xCMOVL(eax, ptr32[&cpuRegs.cycle]);
 		xMOV(ptr32[&cpuRegs.cycle], eax);
-		RET();
 	} else {
-		MOV32MtoR(EAX, (uptr)&cpuRegs.cycle);
-		ADD32ItoR(EAX, eeScaleBlockCycles());
-		MOV32RtoM((uptr)&cpuRegs.cycle, EAX); // update cycles
-		SUB32MtoR(EAX, (uptr)&g_nextBranchCycle);
-		if (!noDispatch) {
+		xMOV(eax, &cpuRegs.cycle);
+		xADD(eax, eeScaleBlockCycles());
+		xMOV(&cpuRegs.cycle, eax); // update cycles
+		xSUB(eax, &g_nextBranchCycle);
+		if (!noDispatch)
+		{
 			if (newpc == 0xffffffff)
-				JS32((uptr)DispatcherReg - ( (uptr)x86Ptr + 6 ));
+				xJS( DispatcherReg );
 			else
-				iBranch(newpc, 1);
+			{
+				xMOV( ptr32[&cpuRegs.pc], newpc );
+				recBlocks.Link( HWADDR(newpc), xJcc32( Jcc_Signed ) );
+			}
 		}
-		RET();
 	}
+	xRET();
 }
 
 static void checkcodefn()
@@ -1096,7 +1084,7 @@ void recompileNextInstruction(int delayslot)
 	pc += 4;
 
 #if 0
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 	CMP32ItoM((u32)s_pCode, cpuRegs.code);
 	j8Ptr[0] = JE8(0);
 	MOV32ItoR(EAX, pc);
@@ -1163,7 +1151,7 @@ void recompileNextInstruction(int delayslot)
 				return;
 		}
 	}
-	//If thh COP0 DIE bit is disabled, double the cycles. Happens rarely.
+	//If the COP0 DIE bit is disabled, double the cycles. Happens rarely.
 	s_nBlockCycles += opcode.cycles * (2 - ((cpuRegs.CP0.n.Config >> 18) & 0x1));
 	opcode.recompile();
 
@@ -1195,8 +1183,6 @@ void recompileNextInstruction(int delayslot)
 		s_nEndBlock = pc;
 }
 
-extern u32 psxdump;
-
 static void printfn()
 {
 	static int lastrec = 0;
@@ -1225,19 +1211,20 @@ void badespfn() {
 	assert(0);
 }
 
+// Called when a block under manual protection fails it's pre-execution integrity check.
 void __fastcall dyna_block_discard(u32 start,u32 sz)
 {
-	DevCon::WriteLn("dyna_block_discard .. start: %08X  count=%d", params start,sz);
-	Cpu->Clear(start, sz);
+	DevCon::WriteLn("dyna_block_discard .. start=0x%08X  size=%d", params start, sz*4);
+	recClear(start, sz);
 }
 
-
+// called when a block under manual protection has been run enough times to be a
+// candidate for being reset under the faster vtlb write protection.
 void __fastcall dyna_page_reset(u32 start,u32 sz)
 {
-	DevCon::WriteLn("dyna_page_reset .. start=%08X  size=%d", params start,sz*4);
-	Cpu->Clear(start & ~0xfffUL, 0x400);
+	recClear(start & ~0xfffUL, 0x400);
 	manual_counter[start >> 12]++;
-	mmap_MarkCountedRamPage(PSM(start), start & ~0xfffUL);
+	mmap_MarkCountedRamPage( start );
 }
 
 void recRecompile( const u32 startpc )
@@ -1247,7 +1234,7 @@ void recRecompile( const u32 startpc )
 	u32 willbranch3 = 0;
 	u32 usecop2;
 
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
     //dumplog |= 4;
     if( dumplog & 4 )
 		iDumpRegisters(startpc, 0);
@@ -1282,13 +1269,6 @@ void recRecompile( const u32 startpc )
 
 	s_pCurBlockEx = recBlocks.New(HWADDR(startpc), (uptr)recPtr);
 
-	if( s_pCurBlockEx == NULL ) {
-		//Console::WriteLn("ee reset (blocks)");
-		recResetEE();
-		x86SetPtr( recPtr );
-		s_pCurBlockEx = recBlocks.New(HWADDR(startpc), (uptr)recPtr);
-	}
-
 	assert(s_pCurBlockEx);
 
 	branch = 0;
@@ -1306,7 +1286,7 @@ void recRecompile( const u32 startpc )
 	_initXMMregs();
 	_initMMXregs();
 
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 	// for debugging purposes
 	MOV32ItoM((uptr)&g_lastpc, pc);
 	CALLFunc((uptr)printfn);
@@ -1491,7 +1471,7 @@ StartRecomp:
 		}
 	}
 
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 	// dump code
 	for(i = 0; i < ArraySize(s_recblocks); ++i) {
 		if( startpc == s_recblocks[i] ) {
@@ -1509,15 +1489,14 @@ StartRecomp:
 
 	// note: blocks are guaranteed to reside within the confines of a single page.
 
-	const int PageType = mmap_GetRamPageInfo((u32*)PSM(inpage_ptr));
-	const u32 inpage_offs = inpage_ptr & 0xFFF;
+	const int PageType = mmap_GetRamPageInfo( inpage_ptr );
 	//const u32 pgsz = std::min(0x1000 - inpage_offs, inpage_sz);
 	const u32 pgsz = inpage_sz;
 
 	if(PageType!=-1)
 	{
 		if (PageType==0) {
-			mmap_MarkCountedRamPage(PSM(inpage_ptr),inpage_ptr&~0xFFF);
+			mmap_MarkCountedRamPage( inpage_ptr );
 			manual_page[inpage_ptr >> 12] = 0;
 		}
 		else
@@ -1567,13 +1546,13 @@ StartRecomp:
 				xJC( dyna_page_reset );
 
 				// note: clearcnt is measured per-page, not per-block!
-				DbgCon::WriteLn( "Manual block @ %08X : size=%3d  page/offs=%05X/%03X  inpgsz=%d  clearcnt=%d",
-					params startpc, sz, inpage_ptr>>12, inpage_offs, inpage_sz, manual_counter[inpage_ptr >> 12] );
+				//DbgCon::WriteLn( "Manual block @ %08X : size=%3d  page/offs=%05X/%03X  inpgsz=%d  clearcnt=%d",
+				//	params startpc, sz, inpage_ptr>>12, inpage_ptr&0xfff, inpage_sz, manual_counter[inpage_ptr >> 12] );
 			}
 			else
 			{
 				DbgCon::Notice( "Uncounted Manual block @ %08X : size=%3d page/offs=%05X/%03X  inpgsz=%d",
-					params startpc, sz, inpage_ptr>>12, inpage_offs, pgsz, inpage_sz );
+					params startpc, sz, inpage_ptr>>12, inpage_ptr&0xfff, pgsz, inpage_sz );
 			}
 
 		}
@@ -1585,7 +1564,7 @@ StartRecomp:
 		recompileNextInstruction(0);		// For the love of recursion, batman!
 	}
 
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 	if( (dumplog & 1) )
 		iDumpBlock(startpc, recPtr);
 #endif
@@ -1640,11 +1619,8 @@ StartRecomp:
 	}
 	else
 	{
-		assert( branch != 3 );
 		if( branch )
 			assert( !willbranch3 );
-		else
-			ADD32ItoM((int)&cpuRegs.cycle, eeScaleBlockCycles() );
 
 		if( willbranch3 || !branch) {
 
@@ -1657,10 +1633,14 @@ StartRecomp:
 			// performance reasons.
 
 			int numinsts = (pc - startpc) / 4;
-			if( numinsts > 12 )
+			if( numinsts > 6 )
 				iBranchTest(pc);
 			else
-				iBranch(pc,0);		// unconditional static link
+			{
+				xMOV( ptr32[&cpuRegs.pc], pc );
+				xADD( ptr32[&cpuRegs.cycle], eeScaleBlockCycles() );
+				recBlocks.Link( HWADDR(pc), xJcc32() );
+			}
 		}
 	}
 

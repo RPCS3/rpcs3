@@ -25,21 +25,20 @@ void OnCpu_Ok(GtkButton *button, gpointer user_data)
 {
 	u32 newopts = 0;
 
-	if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lookup_widget(CpuDlg, "GtkCheckButton_EERec"))))
-		newopts |= PCSX2_EEREC;
-	if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lookup_widget(CpuDlg, "GtkCheckButton_VU0rec"))))
-		newopts |= PCSX2_VU0REC;
-	if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lookup_widget(CpuDlg, "GtkCheckButton_VU1rec"))))
-		newopts |= PCSX2_VU1REC;
-	if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lookup_widget(CpuDlg, "GtkCheckButton_MTGS"))))
-		newopts |= PCSX2_GSMULTITHREAD;
-	if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lookup_widget(CpuDlg, "GtkRadioButton_LimitNormal"))))
+	if is_checked(CpuDlg, "GtkCheckButton_EERec") newopts |= PCSX2_EEREC;
+	if is_checked(CpuDlg, "GtkCheckButton_VU0rec") newopts |= PCSX2_VU0REC;
+	if is_checked(CpuDlg, "GtkCheckButton_VU1rec") newopts |= PCSX2_VU1REC;
+	if is_checked(CpuDlg, "GtkCheckButton_microVU0rec") newopts |= PCSX2_MICROVU0;
+	if is_checked(CpuDlg, "GtkCheckButton_microVU1rec") newopts |= PCSX2_MICROVU1;
+	if is_checked(CpuDlg, "GtkCheckButton_MTGS") newopts |= PCSX2_GSMULTITHREAD;
+	
+	if is_checked(CpuDlg, "GtkRadioButton_LimitNormal")
 		newopts |= PCSX2_FRAMELIMIT_NORMAL;
-	else if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lookup_widget(CpuDlg, "GtkRadioButton_LimitLimit"))))
+	else if is_checked(CpuDlg, "GtkRadioButton_LimitLimit")
 		newopts |= PCSX2_FRAMELIMIT_LIMIT;
-	else if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lookup_widget(CpuDlg, "GtkRadioButton_LimitFS"))))
+	else if is_checked(CpuDlg, "GtkRadioButton_LimitFS")
 		newopts |= PCSX2_FRAMELIMIT_SKIP;
-
+	
 	Config.CustomFps = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(lookup_widget(CpuDlg, "CustomFPSLimit")));
 	Config.CustomFrameSkip = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(lookup_widget(CpuDlg, "FrameThreshold")));
 	Config.CustomConsecutiveFrames = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(lookup_widget(CpuDlg, "FramesBeforeSkipping")));
@@ -72,6 +71,19 @@ void OnCpu_Ok(GtkButton *button, gpointer user_data)
 	gtk_main_quit();
 }
 
+void DisableMicroVU()
+{
+	if is_checked(CpuDlg, "GtkCheckButton_VU0rec") 
+		gtk_widget_set_sensitive(lookup_widget(CpuDlg, "GtkCheckButton_microVU0rec"), true);
+	else
+		gtk_widget_set_sensitive(lookup_widget(CpuDlg, "GtkCheckButton_microVU0rec"), false);
+	
+	if is_checked(CpuDlg, "GtkCheckButton_VU1rec") 
+		gtk_widget_set_sensitive(lookup_widget(CpuDlg, "GtkCheckButton_microVU1rec"), true);
+	else
+		gtk_widget_set_sensitive(lookup_widget(CpuDlg, "GtkCheckButton_microVU1rec"), false);
+}
+
 void OnConf_Cpu(GtkMenuItem *menuitem, gpointer user_data)
 {
 	char str[512];
@@ -79,14 +91,17 @@ void OnConf_Cpu(GtkMenuItem *menuitem, gpointer user_data)
 	CpuDlg = create_CpuDlg();
 	gtk_window_set_title(GTK_WINDOW(CpuDlg), _("Configuration"));
 
-	gtk_toggle_button_set_state(GTK_TOGGLE_BUTTON(lookup_widget(CpuDlg, "GtkCheckButton_EERec")), !!CHECK_EEREC);
-	gtk_toggle_button_set_state(GTK_TOGGLE_BUTTON(lookup_widget(CpuDlg, "GtkCheckButton_VU0rec")), !!CHECK_VU0REC);
-	gtk_toggle_button_set_state(GTK_TOGGLE_BUTTON(lookup_widget(CpuDlg, "GtkCheckButton_VU1rec")), !!CHECK_VU1REC);
-	gtk_toggle_button_set_state(GTK_TOGGLE_BUTTON(lookup_widget(CpuDlg, "GtkCheckButton_MTGS")), !!CHECK_MULTIGS);
-	gtk_toggle_button_set_state(GTK_TOGGLE_BUTTON(lookup_widget(CpuDlg, "GtkRadioButton_LimitNormal")), CHECK_FRAMELIMIT == PCSX2_FRAMELIMIT_NORMAL);
-	gtk_toggle_button_set_state(GTK_TOGGLE_BUTTON(lookup_widget(CpuDlg, "GtkRadioButton_LimitLimit")), CHECK_FRAMELIMIT == PCSX2_FRAMELIMIT_LIMIT);
-	gtk_toggle_button_set_state(GTK_TOGGLE_BUTTON(lookup_widget(CpuDlg, "GtkRadioButton_LimitFS")), CHECK_FRAMELIMIT == PCSX2_FRAMELIMIT_SKIP);
-
+	set_checked(CpuDlg, "GtkCheckButton_EERec", !!CHECK_EEREC);
+	set_checked(CpuDlg, "GtkCheckButton_VU0rec", !!CHECK_VU0REC);
+	set_checked(CpuDlg, "GtkCheckButton_VU1rec", !!CHECK_VU1REC);
+	set_checked(CpuDlg, "GtkCheckButton_microVU0rec", !!CHECK_MICROVU0);
+	set_checked(CpuDlg, "GtkCheckButton_microVU1rec", !!CHECK_MICROVU1);
+	set_checked(CpuDlg, "GtkCheckButton_MTGS", !!CHECK_MULTIGS);
+	set_checked(CpuDlg, "GtkRadioButton_LimitNormal", CHECK_FRAMELIMIT == PCSX2_FRAMELIMIT_NORMAL);
+	set_checked(CpuDlg, "GtkRadioButton_LimitLimit", CHECK_FRAMELIMIT == PCSX2_FRAMELIMIT_LIMIT);
+	set_checked(CpuDlg, "GtkRadioButton_LimitFS", CHECK_FRAMELIMIT == PCSX2_FRAMELIMIT_SKIP);
+	DisableMicroVU();
+	
 	sprintf(str, "Cpu Vendor:     %s", cpuinfo.x86ID);
 	gtk_label_set_text(GTK_LABEL(lookup_widget(CpuDlg, "GtkLabel_CpuVendor")), str);
 	sprintf(str, "Familly:   %s", cpuinfo.x86Fam);
@@ -110,4 +125,9 @@ void OnConf_Cpu(GtkMenuItem *menuitem, gpointer user_data)
 	gtk_widget_show_all(CpuDlg);
 	if (MainWindow) gtk_widget_set_sensitive(MainWindow, FALSE);
 	gtk_main();
+}
+
+void OnCpuCheckToggled(GtkToggleButton *togglebutton, gpointer user_data)
+{
+	DisableMicroVU();
 }

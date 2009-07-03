@@ -6,11 +6,6 @@ INCLUDES = -I@srcdir@/../../common/include
 libZeroPAD_a_CXXFLAGS = $(shell pkg-config --cflags gtk+-2.0)
 libZeroPAD_a_CFLAGS = $(shell pkg-config --cflags gtk+-2.0)
 
-if X86_64
-libZeroPAD_a_CXXFLAGS += -fPIC
-libZeroPAD_a_CFLAGS += -fPIC
-endif
-
 # Create a shared object by faking an exe (thanks to ODE makefiles)
 traplibdir=$(prefix)
 
@@ -27,4 +22,5 @@ libZeroPAD_LDFLAGS= @SHARED_LDFLAGS@
 libZeroPAD_LDFLAGS+=-Wl,-soname,@ZEROPAD_SONAME@
 libZeroPAD_LDADD=$(libZeroPAD_a_OBJECTS)
 
-libZeroPAD_a_SOURCES = zeropad.cpp Linux/linux.cpp Linux/support.c Linux/interface.c
+libZeroPAD_a_SOURCES = joystick.cpp analog.cpp analog.h zeropad.cpp zeropad.h \
+Linux/gui.cpp Linux/linux.cpp  Linux/support.c Linux/interface.c keyboard.cpp keyboard.h

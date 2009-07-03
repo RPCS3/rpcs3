@@ -205,17 +205,11 @@ namespace VU1micro
 	static void intExecuteBlock()
 	{
 		int i;
-	#ifdef _DEBUG
-		int prevbranch;
-	#endif
 
 		for (i = 128; i--;) {
 			if ((VU0.VI[REG_VPU_STAT].UL & 0x100) == 0)
 				break;
 
-	#ifdef _DEBUG
-			prevbranch = vu1branch;
-	#endif
 			vu1Exec(&VU1);
 		}
 

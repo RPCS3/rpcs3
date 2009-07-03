@@ -74,23 +74,26 @@ LANGUAGE LANG_GERMAN, SUBLANG_GERMAN
 // Dialog
 //
 
-IDD_GAMEFIXES DIALOGEX 0, 0, 279, 123
+IDD_GAMEFIXES DIALOGEX 0, 0, 279, 154
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
-CAPTION "Game Special Fixes"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
-    DEFPUSHBUTTON   "OK",IDOK,87,96,50,14
-    PUSHBUTTON      "Cancel",IDCANCEL,142,96,50,14
+    DEFPUSHBUTTON   "OK",IDOK,86,133,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,142,133,50,14
     CTEXT           "Some games need special settings.\nConfigure them here.",IDC_STATIC,7,7,265,17
-    GROUPBOX        "PCSX2 Gamefixes",IDC_STATIC,7,22,265,94
+    GROUPBOX        "PCSX2 Gamefixes",IDC_STATIC,7,22,265,104
     CONTROL         "FPU Compare Hack - Special fix for Digimon Rumble Arena 2.",IDC_GAMEFIX3,
-                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,14,36,249,10
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,14,51,249,10
     CONTROL         "VU Add Hack - Special fix for Tri-Ace games!",IDC_GAMEFIX2,
-                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,14,65,252,10
-    CONTROL         "VU Clip Hack - Fixes missing ground geometry in Persona.",IDC_GAMEFIX4,
-                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,14,79,238,10
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,14,80,252,10
+    CONTROL         "VU Clip Hack - Fixes missing ground geometry in Persona. (Super VU)",IDC_GAMEFIX4,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,14,94,238,10
     CONTROL         "FPU Mul Hack - Special fix for Tales of Destiny.",IDC_GAMEFIX5,
-                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,14,50,249,10
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,14,65,249,10
+    CONTROL         "DMA Execution Hack - Special fix for Fatal Frame.",IDC_GAMEFIX6,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,14,37,238,10
+    CONTROL         "VU XGkick Hack - Special fix for Erementar Gerad.",IDC_GAMEFIX8,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,14,108,238,10
 END
 
 
@@ -108,8 +111,7 @@ BEGIN
         RIGHTMARGIN, 272
         VERTGUIDE, 14
         TOPMARGIN, 7
-        BOTTOMMARGIN, 116
-        HORZGUIDE, 103
+        BOTTOMMARGIN, 147
     END
 END
 #endif    // APSTUDIO_INVOKED
@@ -344,7 +346,7 @@ BEGIN
     CTEXT           "Pcsx2 Official Website and Forums",IDC_LINK_WEBSITE,79,151,273,10,SS_NOPREFIX | SS_NOTIFY
 END
 
-IDD_HACKS DIALOGEX 0, 0, 335, 263
+IDD_HACKS DIALOGEX 0, 0, 543, 229
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "PCSX2 Speed Hacks"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
@@ -352,29 +354,35 @@ BEGIN
     CONTROL         "Default Cycle Rate",IDC_EESYNC_DEFAULT,"Button",BS_AUTORADIOBUTTON,13,44,87,10
     CONTROL         "Use x1.5 Cycle Rate",IDC_EESYNC1,"Button",BS_AUTORADIOBUTTON,13,79,87,10
     CONTROL         "Use x2 Cycle Rate",IDC_EESYNC2,"Button",BS_AUTORADIOBUTTON,13,113,83,10
-    CONTROL         "Enable IOP x2 Cycle Rate",IDC_IOPSYNC,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,174,88,98,10
-    CONTROL         "WaitCycles Sync Hack",IDC_WAITCYCLES,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,174,127,90,10
-    CONTROL         "Escape Hack - Use Esc key to fully exit PCSX2.",IDC_ESCHACK,
-                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,13,238,180,10
-    DEFPUSHBUTTON   "OK",IDOK,217,242,50,14
-    PUSHBUTTON      "Cancel",IDCANCEL,278,242,50,14
-    CTEXT           "These hacks will speed up emulation but reduce emulation compatibility or cause visual errors.  If you have problems, disable all these and try again!",IDC_HACKDESC,18,7,286,19
-    GROUPBOX        "EmotionEngine (EE) Sync Hacks",IDC_STATIC,7,31,159,143
-    GROUPBOX        "Miscellaneous",IDC_STATIC,7,223,194,33
-    LTEXT           "Important: the X2 sync hack *will* cause choppy/skippy audio on many FMV movies.",IDC_STATIC,13,149,137,22
+    CONTROL         "Enable IOP x2 Cycle Rate",IDC_IOPSYNC,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,187,88,98,10
+    CONTROL         "WaitCycles Sync Hack",IDC_WAITCYCLES,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,187,127,90,10
+    CONTROL         "Esc Hack - Use Esc key to fully exit PCSX2.",IDC_ESCHACK,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,13,197,152,10
+    DEFPUSHBUTTON   "OK",IDOK,424,208,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,486,208,50,14
+    CTEXT           "These hacks will speed up emulation but reduce emulation compatibility or cause visual errors.\nIf you have problems, disable all these and try again!",IDC_HACKDESC,7,7,529,19
+    GROUPBOX        "EmotionEngine (EE) Sync Hacks",IDC_STATIC,7,26,162,148
+    GROUPBOX        "Miscellaneous",IDC_STATIC,7,184,162,33
+    LTEXT           "Important: the X2 sync hack *will* cause choppy/skippy audio on many FMV movies.",IDC_STATIC,13,146,137,25
     LTEXT           "Big speedup!  Works well with many games.",IDC_STATIC,25,124,125,19
     LTEXT           "Most compatible option - recommended for everyone with high-end machines.",IDC_STATIC,25,55,136,19
-    LTEXT           "Small speedup and works well with most games.",IDC_STATIC,186,100,134,22
-    LTEXT           "Small speedup. Works well with most games, but may cause certain games to crash or freeze up during bootup or stage changes.",IDC_STATIC,186,139,141,39
+    LTEXT           "Small speedup and works well with most games.",IDC_STATIC,200,100,134,22
+    LTEXT           "Small speedup. Works well with most games, but may cause certain games to crash or freeze up during bootup or stage changes.",IDC_STATIC,200,139,141,39
     LTEXT           "Moderate speedup and works well with most games.",IDC_STATIC,25,90,129,19
-    CONTROL         "INTC Sync Hack",IDC_INTCSTATHACK,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,174,43,127,10
-    LTEXT           "Huge speedup in many games, and a pretty high compatibility rate (some games still work better with EE sync hacks).",IDC_STATIC,186,55,140,28
-    CONTROL         "",IDC_VUCYCLE,"msctls_trackbar32",TBS_BOTH | TBS_NOTICKS | WS_TABSTOP,13,178,36,15
-    LTEXT           "This space intentionally left blank",IDC_VUCYCLEDESC,25,196,142,24
-    LTEXT           "VU Cycle Stealing (experimental)",IDC_STATIC,49,183,105,8
+    CONTROL         "INTC Sync Hack",IDC_INTCSTATHACK,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,187,43,127,10
+    LTEXT           "Huge speedup in many games, and a pretty high compatibility rate (some games still work better with EE sync hacks).",IDC_STATIC,200,55,140,28
+    CONTROL         "",IDC_VUCYCLE,"msctls_trackbar32",TBS_BOTH | TBS_NOTICKS | WS_TABSTOP,372,141,36,15
+    LTEXT           "This space intentionally left blank",IDC_VUCYCLEDESC,383,160,142,26
+    LTEXT           "VU Cycle Stealing (experimental)",IDC_STATIC,408,146,105,8
     CONTROL         "Idle Loop Fast-Forward (experimental)",IDC_IDLELOOPFF,
-                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,174,179,139,10
-    LTEXT           "Speedup for a few games, including FFX with no known side effects.  More later.",IDC_STATIC,186,193,142,26
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,187,179,139,10
+    LTEXT           "Speedup for a few games, including FFX with no known side effects.",IDC_STATIC,200,193,144,23
+    GROUPBOX        "EmotionEngine (EE) Misc Hacks",IDC_STATIC,177,26,179,192
+    GROUPBOX        "Vector Unit (VU) Hacks",IDC_STATIC,363,26,173,173
+    CONTROL         "Status Flag Hack (microVU only)",IDC_VUHACK1,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,372,42,155,12
+    LTEXT           "Big Speedup and high compatibility.\nSuperVU does something similar by default.",IDC_STATIC,383,55,144,20
+    CONTROL         "Min / Max Hack (microVU only)",IDC_VUHACK3,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,372,85,156,12
+    LTEXT           "Small Speedup. May cause SPS, hanging, graphical corruption, and missing geometry.",IDC_STATIC,383,99,143,28
 END
 
 
@@ -395,12 +403,16 @@ BEGIN
     IDD_HACKS, DIALOG
     BEGIN
         LEFTMARGIN, 7
-        RIGHTMARGIN, 328
+        RIGHTMARGIN, 536
         VERTGUIDE, 13
-        VERTGUIDE, 174
-        VERTGUIDE, 186
+        VERTGUIDE, 177
+        VERTGUIDE, 187
+        VERTGUIDE, 200
+        VERTGUIDE, 372
+        VERTGUIDE, 383
         TOPMARGIN, 7
-        BOTTOMMARGIN, 256
+        BOTTOMMARGIN, 222
+        HORZGUIDE, 26
     END
 END
 #endif    // APSTUDIO_INVOKED
@@ -757,6 +769,7 @@ END
 // Icon with lowest ID value placed first to ensure application icon
 // remains consistent on all systems.
 IDI_ICON                ICON                    "Cdrom02.ico"
+IDI_UNINSTALL_ICON      ICON                    "uninstall.ico"
 #endif    // Spanish (Argentina) resources
 /////////////////////////////////////////////////////////////////////////////
 
@@ -834,12 +847,12 @@ FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
     CONTROL         "EERec -  EE/IOP recompiler (need MMX/SSE/SSE2)",IDC_CPU_EEREC,
                     "Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,100,265,18
-    CONTROL         "VU0rec - enable recompiler for VU0 unit",IDC_CPU_VU0REC,
+    CONTROL         "VU0rec - Enable recompiler for VU0 unit.",IDC_CPU_VU0REC,
                     "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,14,127,219,18
-    CONTROL         "VU1rec - enable recompiler for VU1 unit",IDC_CPU_VU1REC,
+    CONTROL         "VU1rec - Enable recompiler for VU1 unit.",IDC_CPU_VU1REC,
                     "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,14,143,214,18
     CONTROL         "Multi threaded GS mode (MTGS)\n    (faster on dual core/HT procs, requires pcsx2 restart)",IDC_CPU_GSMULTI,
-                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,7,166,231,30
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,7,232,231,30
     CONTROL         "Normal - All frames are rendered as fast as possible.",IDC_CPU_FL_NORMAL,
                     "Button",BS_AUTORADIOBUTTON | BS_MULTILINE | WS_GROUP,309,17,221,17
     CONTROL         "Limit - Force frames to normal speeds if too fast.\n      (You can set a custom FPS limit below.)",IDC_CPU_FL_LIMIT,
@@ -855,7 +868,7 @@ BEGIN
     LTEXT           "",IDC_FAMILYINPUT,112,41,124,8
     LTEXT           "",IDC_FEATURESINPUT,111,79,124,8
     LTEXT           "",IDC_CPUSPEEDINPUT,111,61,124,8
-    GROUPBOX        "VU Recompilers - All options are set by default",IDC_CPU_VUGROUP,7,119,265,46
+    GROUPBOX        "VU Recompilers",IDC_CPU_VUGROUP,7,119,265,108
     LTEXT           "Features",IDC_FEATURESNAME,12,78,88,8
     GROUPBOX        "",IDC_STATIC,7,7,265,90
     LTEXT           "Custom FPS Limit (0=auto):",IDC_CUSTOM_FPS,327,103,124,12
@@ -871,6 +884,11 @@ BEGIN
     EDITTEXT        IDC_CUSTOM_CONSECUTIVE_SKIP,456,157,53,13,ES_AUTOHSCROLL | ES_NUMBER
     LTEXT           "Consecutive Frames to skip:\n(See Note 3)",IDC_FRAMESKIP_LABEL5,327,157,121,17
     LTEXT           "*Note 3: Will skip this number of frames before\n  rendering the next sequence of frames. (0=default)\n (e.g. If set to 2, will skip 2 consecutive frames whenever its time\n  to skip.)",IDC_FRAMESKIP_LABEL6,318,234,217,32
+    GROUPBOX        "Use microVU?",IDC_CPU_VUGROUP2,14,167,235,47
+    CONTROL         "microVU0 - Use microVU rec for VU0 recompilation. ! Beta !",IDC_CPU_MVU0,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,24,180,215,13
+    CONTROL         "microVU1 - Use microVU rec for VU1 recompilation. ! Beta !",IDC_CPU_MVU1,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,24,195,215,13
 END
 
 
@@ -894,6 +912,7 @@ BEGIN
     BEGIN
         LEFTMARGIN, 7
         RIGHTMARGIN, 558
+        VERTGUIDE, 24
         TOPMARGIN, 7
     END
 END

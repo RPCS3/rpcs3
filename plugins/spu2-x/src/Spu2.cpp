@@ -3,22 +3,17 @@
  * 
  * Original portions from SPU2ghz are (c) 2008 by David Quintana [gigaherz]
  *
- * This library is free software; you can redistribute it and/or modify it under
- * the terms of the GNU Lesser General Public License as published by the Free 
- * Software Foundation; either version 2.1 of the the License, or (at your
- * option) any later version.
- * 
- * This library is distributed in the hope that it will be useful, but WITHOUT 
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License
- * for more details.
- * 
- * You should have received a copy of the GNU Lesser General Public License along
- * with this library; if not, write to the Free Software Foundation, Inc., 59
- * Temple Place, Suite 330, Boston, MA  02111-1307  USA
- * 
+ * SPU2-X is free software: you can redistribute it and/or modify it under the terms
+ * of the GNU Lesser General Public License as published by the Free Software Found-
+ * ation, either version 3 of the License, or (at your option) any later version.
+ *
+ * SPU2-X is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+ * PURPOSE.  See the GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with SPU2-X.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 
 #include "Spu2.h"
 #include "RegTable.h"
@@ -53,10 +48,8 @@ s16 OutPos;
 s16 InputPos;
 u32 Cycles;
 
-u32* cPtr=NULL;
-u32  lClocks=0;
-
-bool hasPtr=false;
+u32* cyclePtr	= NULL;
+u32  lClocks	= 0;
 
 int PlayMode;
 
@@ -93,7 +86,7 @@ extern void SysMessage(const char *fmt, ...);
 
 __forceinline s16 * __fastcall GetMemPtr(u32 addr)
 {
-#ifndef _DEBUG_FAST
+#ifndef DEBUG_FAST
 	// In case you're wondering, this assert is the reason SPU2-X
 	// runs so incrediously slow in Debug mode. :P
 	jASSUME( addr < 0x100000 );
@@ -932,10 +925,13 @@ __forceinline void SPU2_FastWrite( u32 rmem, u16 value )
 
 				if( ((value>>15)&1) && (!thiscore.CoreEnabled) && (thiscore.InitDelay==0) ) // on init/reset
 				{
-					if(hasPtr)
+					// When we have exact cycle update info from the Pcsx2 IOP unit, then use
+					// the more accurate delayed initialization system.
+
+					if(cyclePtr != NULL)
 					{
-						thiscore.InitDelay=1;
-						thiscore.Regs.STATX=0;	
+						thiscore.InitDelay  = 1;
+						thiscore.Regs.STATX = 0;
 					}
 					else
 					{

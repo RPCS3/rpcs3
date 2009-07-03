@@ -164,7 +164,7 @@ __forceinline int psxTestCycle( u32 startCycle, s32 delta )
 __forceinline void PSX_INT( IopEventId n, s32 ecycle )
 {
 	// Generally speaking games shouldn't throw ints that haven't been cleared yet.
-	// It's usually indicative os something amiss in our emulation, so uncomment this
+	// It's usually indicative of something amiss in our emulation, so uncomment this
 	// code to help trap those sort of things.
 
 	// Exception: IRQ16 - SIO - it drops ints like crazy when handling PAD stuff.
@@ -231,10 +231,13 @@ __releaseinline void psxBranchTest()
 		psxRcntUpdate();
 		iopBranchAction = true;
 	}
-
+	else
+	{
 	// start the next branch at the next counter event by default
 	// the interrupt code below will assign nearer branches if needed.
-	g_psxNextBranchCycle = psxNextsCounter+psxNextCounter;
+		g_psxNextBranchCycle = psxNextsCounter+psxNextCounter;
+	}
+	
 	
 	if (psxRegs.interrupt)
 	{

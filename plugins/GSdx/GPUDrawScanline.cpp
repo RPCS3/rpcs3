@@ -51,7 +51,7 @@ void GPUDrawScanline::BeginDraw(const GSRasterizerData* data, Functions* f)
 
 		if(m_env.sel.twin)
 		{
-			DWORD u, v;
+			uint32 u, v;
 
 			u = ~(env.TWIN.TWW << 3) & 0xff;
 			v = ~(env.TWIN.TWH << 3) & 0xff;
@@ -69,7 +69,7 @@ void GPUDrawScanline::BeginDraw(const GSRasterizerData* data, Functions* f)
 
 	//
 
-	f->ssl = m_ds.Lookup(m_env.sel);
+	f->ssl = m_ds[m_env.sel];
 
 	f->sr = NULL; // TODO
 
@@ -84,7 +84,7 @@ void GPUDrawScanline::BeginDraw(const GSRasterizerData* data, Functions* f)
 	sel.twin = m_env.sel.twin;
 	sel.sprite = m_env.sel.sprite;
 
-	f->ssp = m_sp.Lookup(sel);
+	f->ssp = m_sp[sel];
 }
 
 void GPUDrawScanline::EndDraw(const GSRasterizerStats& stats)
@@ -100,7 +100,7 @@ GPUDrawScanline::GPUSetupPrimMap::GPUSetupPrimMap(GPUScanlineEnvironment& env)
 {
 }
 
-GPUSetupPrimCodeGenerator* GPUDrawScanline::GPUSetupPrimMap::Create(DWORD key, void* ptr, size_t maxsize)
+GPUSetupPrimCodeGenerator* GPUDrawScanline::GPUSetupPrimMap::Create(uint32 key, void* ptr, size_t maxsize)
 {
 	return new GPUSetupPrimCodeGenerator(m_env, ptr, maxsize);
 }
@@ -113,7 +113,7 @@ GPUDrawScanline::GPUDrawScanlineMap::GPUDrawScanlineMap(GPUScanlineEnvironment& 
 {
 }
 
-GPUDrawScanlineCodeGenerator* GPUDrawScanline::GPUDrawScanlineMap::Create(DWORD key, void* ptr, size_t maxsize)
+GPUDrawScanlineCodeGenerator* GPUDrawScanline::GPUDrawScanlineMap::Create(uint32 key, void* ptr, size_t maxsize)
 {
 	return new GPUDrawScanlineCodeGenerator(m_env, ptr, maxsize);
 }

@@ -22,51 +22,19 @@
 #include "stdafx.h"
 #include "xpad.h"
 
-#ifdef _DEBUG
-#define new DEBUG_NEW
-#endif
+static HMODULE s_hModule;
 
-//
-//	Note!
-//
-//		If this DLL is dynamically linked against the MFC
-//		DLLs, any functions exported from this DLL which
-//		call into MFC must have the AFX_MANAGE_STATE macro
-//		added at the very beginning of the function.
-//
-//		For example:
-//
-//		extern "C" BOOL PASCAL EXPORT ExportedFunction()
-//		{
-//			AFX_MANAGE_STATE(AfxGetStaticModuleState());
-//			// normal function body here
-//		}
-//
-//		It is very important that this macro appear in each
-//		function, prior to any calls into MFC.  This means that
-//		it must appear as the first statement within the 
-//		function, even before any object variable declarations
-//		as their constructors may generate calls into the MFC
-//		DLL.
-//
-//		Please see MFC Technical Notes 33 and 58 for additional
-//		details.
-//
-
-BEGIN_MESSAGE_MAP(xpadApp, CWinApp)
-END_MESSAGE_MAP()
-
-xpadApp::xpadApp()
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserved)
 {
-}
-
-xpadApp theApp;
-
-BOOL xpadApp::InitInstance()
-{
-	__super::InitInstance();
-
-	SetRegistryKey(_T("Gabest"));
+	switch(ul_reason_for_call)
+	{
+	case DLL_PROCESS_ATTACH:
+		s_hModule = hModule;
+	case DLL_THREAD_ATTACH:
+	case DLL_THREAD_DETACH:
+	case DLL_PROCESS_DETACH:
+		break;
+	}
 
 	return TRUE;
 }
@@ -328,7 +296,7 @@ public:
 
 static class XPadPlugin
 {
-	CAtlArray<XPad*> m_pads;
+	vector<XPad*> m_pads;
 	XPad* m_pad;
 	int m_index;
 	bool m_cfgreaddata;
@@ -531,7 +499,7 @@ static class XPadPlugin
 
 	BYTE UnknownCommand(int index, BYTE value)
 	{
-		TRACE(_T("Unknown command %02x (%d, %02x)\n"), m_cmd, index, value);
+		// printf("Unknown command %02x (%d, %02x)\n", m_cmd, index, value);
 
 		return 0;
 	}
@@ -544,8 +512,8 @@ public:
 		, m_cfgreaddata(false)
 		, m_handler(NULL)
 	{
-		m_pads.Add(new XPad(0));
-		m_pads.Add(new XPad(1));
+		m_pads.push_back(new XPad(0));
+		m_pads.push_back(new XPad(1));
 
 		for(int i = 0; i < countof(m_handlers); i++)
 		{
@@ -563,6 +531,16 @@ public:
 		m_handlers['L'] = &XPadPlugin::QueryUnknown3;
 		m_handlers['M'] = &XPadPlugin::ConfigVibration;
 		m_handlers['O'] = &XPadPlugin::SetDS2NativeMode;
+	}
+
+	virtual ~XPadPlugin()
+	{
+		for(vector<XPad*>::iterator i = m_pads.begin(); i != m_pads.end(); i++)
+		{
+			delete *i;
+		}
+
+		m_pads.clear();
 	}
 
 	void StartPoll(int pad)
@@ -602,7 +580,7 @@ static int s_nRefs = 0;
 static HWND s_hWnd = NULL;
 static WNDPROC s_GSWndProc = NULL;
 
-static class CKeyEventList : protected CAtlList<KeyEvent>, protected CCritSec 
+static class CKeyEventList : protected list<KeyEvent>, protected CCritSec 
 {
 public:
 	void Push(UINT32 event, UINT32 key)
@@ -614,16 +592,18 @@ public:
         e.event = event;
         e.key = key;
 
-		AddTail(e);
+		push_back(e);
 	}
 
 	bool Pop(KeyEvent& e)
 	{
 		CAutoLock cAutoLock(this);
 
-		if(IsEmpty()) return false;
-		
-		e = RemoveHead();
+		if(empty()) return false;
+
+		e = front();
+
+		pop_front();
 		
 		return true;
 	}
@@ -647,7 +627,7 @@ LRESULT WINAPI PADwndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		break;
 	}
 
-	return s_GSWndProc(hWnd, msg, wParam, lParam);
+	return CallWindowProc(s_GSWndProc, hWnd, msg, wParam, lParam);
 }
 
 //

@@ -99,6 +99,55 @@ enum HWaddress
 	GIF_CNT			=	0x10003080,
 	GIF_P3CNT		=	0x10003090,
 	GIF_P3TAG		=	0x100030A0,
+	
+	// Vif Memory Locations
+	VIF0_STAT		= 	0x10003800,
+	VIF0_FBRST		= 	0x10003810,
+	VIF0_ERR			= 	0x10003820,
+	VIF0_MARK		= 	0x10003830,
+	VIF0_CYCLE		=	0x10003840,
+	VIF0_MODE		= 	0x10003850,
+	VIF0_NUM			= 	0x10003860,
+	VIF0_MASK		= 	0x10003870,
+	VIF0_CODE		= 	0x10003880,
+	VIF0_ITOPS		=	0x10003890,
+	VIF0_ITOP		= 	0x100038d0,
+	VIF0_TOP			=	0x100038e0,
+	VIF0_R0			= 	0x10003900,
+	VIF0_R1			= 	0x10003910,
+	VIF0_R2			= 	0x10003920,
+	VIF0_R3			=	0x10003930,
+	VIF0_C0			= 	0x10003940,
+	VIF0_C1			= 	0x10003950,
+	VIF0_C2			=	0x10003960,
+	VIF0_C3			= 	0x10003970,
+	
+	VIF1_STAT		=	0x10003c00,
+	VIF1_FBRST		=	0x10003c10,
+	VIF1_ERR			= 	0x10003c20,
+	VIF1_MARK		= 	0x10003c30,
+	VIF1_CYCLE		=	0x10003c40,
+	VIF1_MODE		= 	0x10003c50,
+	VIF1_NUM			=	0x10003c60,
+	VIF1_MASK		=	0x10003c70,
+	VIF1_CODE		=	0x10003c80,
+	VIF1_ITOPS		= 	0x10003c90,
+	VIF1_BASE		=	0x10003ca0,
+	VIF1_OFST		= 	0x10003cb0,
+	VIF1_TOPS		= 	0x10003cc0,
+	VIF1_ITOP		= 	0x10003cd0,
+	VIF1_TOP			= 	0x10003ce0,
+	VIF1_R0			= 	0x10003d00,
+	VIF1_R1			= 	0x10003d10,
+	VIF1_R2			=	0x10003d20,
+	VIF1_R3			=	0x10003d30,
+	VIF1_C0			=	0x10003d40,
+	VIF1_C1			=	0x10003d50,
+	VIF1_C2			= 	0x10003d60,
+	VIF1_C3			= 	0x10003d70,
+	
+	VIF0_FIFO		=	0x10004000,
+	VIF1_FIFO		=	0x10005000,
 	GIF_FIFO			=	0x10006000,
 
 	IPUout_FIFO		=	0x10007000,
@@ -150,6 +199,7 @@ enum HWaddress
 	D6_CHCR			=	0x1000C400,
 	D6_MADR			=	0x1000C410,
 	D6_QWC			=	0x1000C420,
+	D6_TADR			=	0x1000C430,
 
 //SIF2
 	D7_CHCR			=	0x1000C800,
@@ -161,6 +211,7 @@ enum HWaddress
 	D8_MADR			=	0x1000D010,
 	D8_QWC			=	0x1000D020,
 	D8_SADR			=	0x1000D080,
+	SPR1_CHCR		=	0x1000D400,
 
 	DMAC_CTRL		=	0x1000E000,
 	DMAC_STAT		=	0x1000E010,
@@ -173,10 +224,26 @@ enum HWaddress
 	INTC_STAT		=	0x1000F000,
 	INTC_MASK		=	0x1000F010,
 
-	SBUS_F220		=	0x1000F220,
-	SBUS_SMFLG		=	0x1000F230,
+	SIO_LCR			=	0x1000F100,
+	SIO_LSR			=	0x1000F110,
+	SIO_IER			=	0x1000F120,
+	SIO_ISR			=	0x1000F130,//
+	SIO_FCR			=	0x1000F140,
+	SIO_BGR			=	0x1000F150,
+	SIO_TXFIFO		=	0x1000F180,
+	SIO_RXFIFO		=	0x1000F1C0,
+	
+	SBUS_F200		=	0x1000F200,	//MSCOM
+	SBUS_F210		=	0x1000F210,	//SMCOM
+	SBUS_F220		=	0x1000F220,	//MSFLG
+	SBUS_F230		=	0x1000F230,	//SMFLG
 	SBUS_F240		=	0x1000F240,
+	SBUS_F250		=	0x1000F250,
+	SBUS_F260		=	0x1000F260,
 
+	MCH_RICM		=	0x1000F430,
+	MCH_DRD		=	0x1000F440,
+	
 	DMAC_ENABLER	=	0x1000F520,
 	DMAC_ENABLEW	=	0x1000F590,
 
@@ -239,6 +306,8 @@ enum DMACIrqs
 	DMAC_SIF2,
 	DMAC_FROM_SPR,
 	DMAC_TO_SPR,
+	DMAC_13 = 13, // Stall?
+	DMAC_14 = 14, // Transfer?
 	DMAC_ERROR = 15,
 };
 
@@ -287,6 +356,23 @@ enum DMACIrqs
 #define VIF_STAT_ER0	(1<<12)
 #define VIF_STAT_ER1	(1<<13)
 #define VIF_STAT_FDR	(1<<23)
+
+//GIF_STAT 
+
+#define GIF_STAT_M3R    (1)  //GIF_MODE Mask
+#define GIF_STAT_M3P    (1<<1) //VIF PATH3 Mask
+#define GIF_STAT_IMT    (1<<2) //Intermittent Transfer Mode
+#define GIF_STAT_PSE    (1<<3) //Temporary Transfer Stop
+#define GIF_STAT_IP3    (1<<5) //Interrupted PATH3
+#define GIF_STAT_P3Q    (1<<6) //PATH3 request Queued
+#define GIF_STAT_P2Q    (1<<7) //PATH2 request Queued
+#define GIF_STAT_P1Q    (1<<8) //PATH1 request Queued
+#define GIF_STAT_OPH    (1<<9) //Output Path (Outputting Data)
+#define GIF_STAT_APATH1 (1<<10) //Data Transfer Path 1 (In progress)
+#define GIF_STAT_APATH2 (2<<10) //Data Transfer Path 2 (In progress)
+#define GIF_STAT_APATH3 (3<<10) //Data Transfer Path 3 (In progress) (Mask too)
+#define GIF_STAT_DIR	(1<<12) //Transfer Direction
+#define GIF_STAT_FQC    (31<<24) //QWC in GIF-FIFO
 
 //DMA interrupts & masks
 enum DMAInter
@@ -350,8 +436,8 @@ static __forceinline void *dmaGetAddr(u32 addr) {
 
 //	if (addr & 0xf) { DMA_LOG("*PCSX2*: DMA address not 128bit aligned: %8.8x", addr); }
 	
-	//  teh sux why the f00k 0xE0000000
-	if (addr & 0x80000000) return (void*)&psS[addr & 0x3ff0];
+	//  Need to check the physical address as well as just the "SPR" flag, as VTLB doesnt seem to handle it
+	if ((addr & 0x80000000) || (addr & 0x70000000) == 0x70000000) return (void*)&psS[addr & 0x3ff0];
 
 	ptr = (u8*)vtlb_GetPhyPtr(addr&0x1FFFFFF0);
 	if (ptr == NULL) {
@@ -384,8 +470,8 @@ void hwReset();
 void hwShutdown();
 
 // hw read functions
-extern u8   hwRead8 (u32 mem);
-extern u16  hwRead16(u32 mem);
+extern mem8_t   hwRead8 (u32 mem);
+extern mem16_t  hwRead16(u32 mem);
 
 extern mem32_t __fastcall hwRead32_page_00(u32 mem);
 extern mem32_t __fastcall hwRead32_page_01(u32 mem);
@@ -409,14 +495,14 @@ extern void __fastcall hwRead128_generic(u32 mem, mem128_t *out);
 extern void hwWrite8 (u32 mem, u8  value);
 extern void hwWrite16(u32 mem, u16 value);
 
-extern void __fastcall hwWrite32_page_00( u32 mem, u32 value );
-extern void __fastcall hwWrite32_page_01( u32 mem, u32 value );
-extern void __fastcall hwWrite32_page_02( u32 mem, u32 value );
-extern void __fastcall hwWrite32_page_03( u32 mem, u32 value );
-extern void __fastcall hwWrite32_page_0B( u32 mem, u32 value );
-extern void __fastcall hwWrite32_page_0E( u32 mem, u32 value );
-extern void __fastcall hwWrite32_page_0F( u32 mem, u32 value );
-extern void __fastcall hwWrite32_generic( u32 mem, u32 value );
+extern void __fastcall hwWrite32_page_00( u32 mem, mem32_t value );
+extern void __fastcall hwWrite32_page_01( u32 mem, mem32_t value );
+extern void __fastcall hwWrite32_page_02( u32 mem, mem32_t value );
+extern void __fastcall hwWrite32_page_03( u32 mem, mem32_t value );
+extern void __fastcall hwWrite32_page_0B( u32 mem, mem32_t value );
+extern void __fastcall hwWrite32_page_0E( u32 mem, mem32_t value );
+extern void __fastcall hwWrite32_page_0F( u32 mem, mem32_t value );
+extern void __fastcall hwWrite32_generic( u32 mem, mem32_t value );
 
 extern void __fastcall hwWrite64_page_02( u32 mem, const mem64_t* srcval );
 extern void __fastcall hwWrite64_page_03( u32 mem, const mem64_t* srcval );
@@ -435,8 +521,8 @@ extern void __fastcall hwWrite128_generic(u32 mem, const mem128_t *srcval);
 void hwIntcIrq(int n);
 void hwDmacIrq(int n);
 
-int  hwMFIFORead(u32 addr, u8 *data, u32 size);
-int  hwMFIFOWrite(u32 addr, u8 *data, u32 size);
+//bool hwMFIFORead(u32 addr, u8 *data, u32 size);
+bool  hwMFIFOWrite(u32 addr, u8 *data, u32 size);
 
 bool  hwDmacSrcChainWithStack(DMACh *dma, int id);
 bool  hwDmacSrcChain(DMACh *dma, int id);

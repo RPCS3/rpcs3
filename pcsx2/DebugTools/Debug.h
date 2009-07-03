@@ -16,9 +16,7 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
-
-#ifndef __DEBUG_H__
-#define __DEBUG_H__
+#pragma once
 
 #include "Pcsx2Config.h"
 
@@ -223,5 +221,3 @@ extern bool SrcLog_GPU( const char* fmt, ... );
 #else
 #define VIFUNPACK_LOG 0&&
 #endif
-
-#endif /* __DEBUG_H__ */

@@ -1,0 +1,697 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Baseclasses">
+      <UniqueIdentifier>{14a43ae4-91f3-4405-a71c-c8f2d790e36b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav</Extensions>
+    </Filter>
+    <Filter Include="Shaders">
+      <UniqueIdentifier>{e281bf48-1466-4355-b176-a117cc2dce40}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Xbyak">
+      <UniqueIdentifier>{62920db0-8592-425e-aa2f-9a2a7e85d851}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="baseclasses\amextra.cpp">
+      <Filter>Baseclasses</Filter>
+    </ClCompile>
+    <ClCompile Include="baseclasses\amfilter.cpp">
+      <Filter>Baseclasses</Filter>
+    </ClCompile>
+    <ClCompile Include="baseclasses\amvideo.cpp">
+      <Filter>Baseclasses</Filter>
+    </ClCompile>
+    <ClCompile Include="baseclasses\combase.cpp">
+      <Filter>Baseclasses</Filter>
+    </ClCompile>
+    <ClCompile Include="baseclasses\ctlutil.cpp">
+      <Filter>Baseclasses</Filter>
+    </ClCompile>
+    <ClCompile Include="baseclasses\ddmm.cpp">
+      <Filter>Baseclasses</Filter>
+    </ClCompile>
+    <ClCompile Include="baseclasses\mtype.cpp">
+      <Filter>Baseclasses</Filter>
+    </ClCompile>
+    <ClCompile Include="baseclasses\outputq.cpp">
+      <Filter>Baseclasses</Filter>
+    </ClCompile>
+    <ClCompile Include="baseclasses\pstream.cpp">
+      <Filter>Baseclasses</Filter>
+    </ClCompile>
+    <ClCompile Include="baseclasses\pullpin.cpp">
+      <Filter>Baseclasses</Filter>
+    </ClCompile>
+    <ClCompile Include="baseclasses\refclock.cpp">
+      <Filter>Baseclasses</Filter>
+    </ClCompile>
+    <ClCompile Include="baseclasses\renbase.cpp">
+      <Filter>Baseclasses</Filter>
+    </ClCompile>
+    <ClCompile Include="baseclasses\schedule.cpp">
+      <Filter>Baseclasses</Filter>
+    </ClCompile>
+    <ClCompile Include="baseclasses\seekpt.cpp">
+      <Filter>Baseclasses</Filter>
+    </ClCompile>
+    <ClCompile Include="baseclasses\source.cpp">
+      <Filter>Baseclasses</Filter>
+    </ClCompile>
+    <ClCompile Include="baseclasses\strmctl.cpp">
+      <Filter>Baseclasses</Filter>
+    </ClCompile>
+    <ClCompile Include="baseclasses\sysclock.cpp">
+      <Filter>Baseclasses</Filter>
+    </ClCompile>
+    <ClCompile Include="baseclasses\transfrm.cpp">
+      <Filter>Baseclasses</Filter>
+    </ClCompile>
+    <ClCompile Include="baseclasses\transip.cpp">
+      <Filter>Baseclasses</Filter>
+    </ClCompile>
+    <ClCompile Include="baseclasses\vtrans.cpp">
+      <Filter>Baseclasses</Filter>
+    </ClCompile>
+    <ClCompile Include="baseclasses\wxdebug.cpp">
+      <Filter>Baseclasses</Filter>
+    </ClCompile>
+    <ClCompile Include="baseclasses\wxlist.cpp">
+      <Filter>Baseclasses</Filter>
+    </ClCompile>
+    <ClCompile Include="baseclasses\wxutil.cpp">
+      <Filter>Baseclasses</Filter>
+    </ClCompile>
+    <ClCompile Include="GPU.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GPUDrawScanline.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GPUDrawScanlineCodeGenerator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GPULocalMemory.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GPURenderer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GPURendererSW.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GPUSettingsDlg.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GPUSetupPrimCodeGenerator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GPUState.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GS.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSAlignedClass.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSBlock.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSCapture.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSCaptureDlg.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSClut.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSCodeBuffer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSCrc.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSDevice.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSDevice10.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSDevice11.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSDevice7.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSDevice9.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSDeviceNull.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSDeviceOGL.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSDialog.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSDirtyRect.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSDrawScanline.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSDrawScanlineCodeGenerator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSDump.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSdx.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSFunctionMap.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSLocalMemory.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSPerfMon.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSRasterizer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSRenderer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSRendererHW.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSRendererDX10.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSRendererDX11.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSRendererDX9.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSRendererNull.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSRendererOGL.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSRendererSW.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSSetting.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSSettingsDlg.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSSetupPrimCodeGenerator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSState.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSTables.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSTexture.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSTexture10.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSTexture11.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSTexture7.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSTexture9.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSTextureCache.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSTextureCache10.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSTextureCache11.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSTextureCache9.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSTextureCacheOGL.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSTextureCacheSW.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSTextureFX.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSTextureFX10.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSTextureFX11.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSTextureFX9.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSTextureNull.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSTextureOGL.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSThread.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSUtil.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSVector.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSVertexList.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSVertexSW.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSVertexTrace.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSWnd.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="stdafx.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="baseclasses\amextra.h">
+      <Filter>Baseclasses</Filter>
+    </ClInclude>
+    <ClInclude Include="baseclasses\amfilter.h">
+      <Filter>Baseclasses</Filter>
+    </ClInclude>
+    <ClInclude Include="baseclasses\cache.h">
+      <Filter>Baseclasses</Filter>
+    </ClInclude>
+    <ClInclude Include="baseclasses\combase.h">
+      <Filter>Baseclasses</Filter>
+    </ClInclude>
+    <ClInclude Include="baseclasses\ctlutil.h">
+      <Filter>Baseclasses</Filter>
+    </ClInclude>
+    <ClInclude Include="baseclasses\ddmm.h">
+      <Filter>Baseclasses</Filter>
+    </ClInclude>
+    <ClInclude Include="baseclasses\dsschedule.h">
+      <Filter>Baseclasses</Filter>
+    </ClInclude>
+    <ClInclude Include="baseclasses\fourcc.h">
+      <Filter>Baseclasses</Filter>
+    </ClInclude>
+    <ClInclude Include="baseclasses\measure.h">
+      <Filter>Baseclasses</Filter>
+    </ClInclude>
+    <ClInclude Include="baseclasses\msgthrd.h">
+      <Filter>Baseclasses</Filter>
+    </ClInclude>
+    <ClInclude Include="baseclasses\mtype.h">
+      <Filter>Baseclasses</Filter>
+    </ClInclude>
+    <ClInclude Include="baseclasses\outputq.h">
+      <Filter>Baseclasses</Filter>
+    </ClInclude>
+    <ClInclude Include="baseclasses\pstream.h">
+      <Filter>Baseclasses</Filter>
+    </ClInclude>
+    <ClInclude Include="baseclasses\pullpin.h">
+      <Filter>Baseclasses</Filter>
+    </ClInclude>
+    <ClInclude Include="baseclasses\refclock.h">
+      <Filter>Baseclasses</Filter>
+    </ClInclude>
+    <ClInclude Include="baseclasses\reftime.h">
+      <Filter>Baseclasses</Filter>
+    </ClInclude>
+    <ClInclude Include="baseclasses\renbase.h">
+      <Filter>Baseclasses</Filter>
+    </ClInclude>
+    <ClInclude Include="baseclasses\schedule.h">
+      <Filter>Baseclasses</Filter>
+    </ClInclude>
+    <ClInclude Include="baseclasses\seekpt.h">
+      <Filter>Baseclasses</Filter>
+    </ClInclude>
+    <ClInclude Include="baseclasses\source.h">
+      <Filter>Baseclasses</Filter>
+    </ClInclude>
+    <ClInclude Include="baseclasses\streams.h">
+      <Filter>Baseclasses</Filter>
+    </ClInclude>
+    <ClInclude Include="baseclasses\strmctl.h">
+      <Filter>Baseclasses</Filter>
+    </ClInclude>
+    <ClInclude Include="baseclasses\sysclock.h">
+      <Filter>Baseclasses</Filter>
+    </ClInclude>
+    <ClInclude Include="baseclasses\transfrm.h">
+      <Filter>Baseclasses</Filter>
+    </ClInclude>
+    <ClInclude Include="baseclasses\transip.h">
+      <Filter>Baseclasses</Filter>
+    </ClInclude>
+    <ClInclude Include="baseclasses\vtrans.h">
+      <Filter>Baseclasses</Filter>
+    </ClInclude>
+    <ClInclude Include="baseclasses\wxdebug.h">
+      <Filter>Baseclasses</Filter>
+    </ClInclude>
+    <ClInclude Include="baseclasses\wxlist.h">
+      <Filter>Baseclasses</Filter>
+    </ClInclude>
+    <ClInclude Include="baseclasses\wxutil.h">
+      <Filter>Baseclasses</Filter>
+    </ClInclude>
+    <ClInclude Include="GPU.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GPUDrawingEnvironment.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GPUDrawScanline.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GPUDrawScanlineCodeGenerator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GPULocalMemory.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GPURenderer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GPURendererSW.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GPUScanlineEnvironment.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GPUSettingsDlg.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GPUSetupPrimCodeGenerator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GPUState.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GPUVertex.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GS.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSAlignedClass.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSBlock.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSCapture.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSCaptureDlg.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSClut.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSCodeBuffer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSCrc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSDevice.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSDevice10.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSDevice11.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSDevice7.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSDevice9.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSDeviceNull.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSDeviceOGL.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSDialog.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSDirtyRect.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSDrawingContext.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSDrawingEnvironment.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSDrawScanline.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSDrawScanlineCodeGenerator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSDump.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSdx.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSFunctionMap.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSLocalMemory.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSPerfMon.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSRasterizer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSRenderer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSRendererHW.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSRendererDX10.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSRendererDX11.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSRendererDX9.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSRendererNull.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSRendererOGL.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSRendererSW.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSScanlineEnvironment.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSSetting.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSSettingsDlg.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSSetupPrimCodeGenerator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSState.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSTables.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSTexture.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSTexture10.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSTexture11.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSTexture7.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSTexture9.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSTextureCache.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSTextureCache10.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSTextureCache11.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSTextureCache9.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSTextureCacheOGL.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSTextureCacheSW.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSTextureFX.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSTextureFX10.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSTextureFX11.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSTextureFX9.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSTextureNull.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSTextureOGL.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSThread.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSUtil.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSVector.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSVertex.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSVertexHW.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSVertexList.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSVertexSW.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSVertexTrace.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSWnd.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>Resource Files</Filter>
+    </ClInclude>
+    <ClInclude Include="stdafx.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="svnrev.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="xbyak\xbyak.h">
+      <Filter>Xbyak</Filter>
+    </ClInclude>
+    <ClInclude Include="xbyak\xbyak_bin2hex.h">
+      <Filter>Xbyak</Filter>
+    </ClInclude>
+    <ClInclude Include="xbyak\xbyak_mnemonic.h">
+      <Filter>Xbyak</Filter>
+    </ClInclude>
+    <ClInclude Include="xbyak\xbyak_util.h">
+      <Filter>Xbyak</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="baseclasses\activex.rcv">
+      <Filter>Baseclasses</Filter>
+    </None>
+    <None Include="baseclasses\activex.ver">
+      <Filter>Baseclasses</Filter>
+    </None>
+    <None Include="GSdx.def">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="res\convert.fx">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="res\GSdx.rc2">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="res\interlace.fx">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="res\logo10.bmp">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="res\logo9.bmp">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="res\merge.fx">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="res\tfx.fx">
+      <Filter>Shaders</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="GSdx.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+</Project>

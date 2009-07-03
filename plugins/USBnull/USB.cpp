@@ -23,13 +23,13 @@
 using namespace std;
 
 #include "USB.h"
-string s_strIniPath;
 
 const unsigned char version  = PS2E_USB_VERSION;
 const unsigned char revision = 0;
 const unsigned char build    = 6;    // increase that with each version
 
 static char *libraryName     = "USBnull Driver";
+string s_strIniPath="inis/USBnull.ini";
 //void (*USBirq)();
 USBcallback USBirq;
 Config conf;
@@ -95,35 +95,35 @@ EXPORT_C_(void) USBclose()
 
 EXPORT_C_(u8 ) USBread8(u32 addr)
 {
-	USB_LOG("*UnKnown 8bit read at address %lx ", addr);
+	USB_LOG("*Unknown 8bit read at address %lx ", addr);
 	return 0;
 }
 
 EXPORT_C_(u16) USBread16(u32 addr)
 {
-	USB_LOG("*UnKnown 16bit read at address %lx", addr);
+	USB_LOG("*Unknown 16bit read at address %lx", addr);
 	return 0;
 }
 
 EXPORT_C_(u32) USBread32(u32 addr)
 {
-	USB_LOG("*UnKnown 32bit read at address %lx", addr);
+	USB_LOG("*Unknown 32bit read at address %lx", addr);
 	return 0;
 }
 
 EXPORT_C_(void) USBwrite8(u32 addr,  u8 value)
 {
-	USB_LOG("*UnKnown 8bit write at address %lx value %x\n", addr, value);
+	USB_LOG("*Unknown 8bit write at address %lx value %x\n", addr, value);
 }
 
 EXPORT_C_(void) USBwrite16(u32 addr, u16 value)
 {
-	USB_LOG("*UnKnown 16bit write at address %lx value %x\n", addr, value);
+	USB_LOG("*Unknown 16bit write at address %lx value %x\n", addr, value);
 }
 
 EXPORT_C_(void) USBwrite32(u32 addr, u32 value)
 {
-	USB_LOG("*UnKnown 32bit write at address %lx value %lx\n", addr, value);
+	USB_LOG("*Unknown 32bit write at address %lx value %lx\n", addr, value);
 }
 
 EXPORT_C_(void) USBirqCallback(USBcallback callback) 
@@ -143,6 +143,7 @@ EXPORT_C_(USBhandler) USBirqHandler(void)
 
 EXPORT_C_(void) USBsetRAM(void *mem)
 {
+	USB_LOG("*Setting ram.\n");
 }
 
 // extended funcs

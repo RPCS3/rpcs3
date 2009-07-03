@@ -117,8 +117,6 @@ void loadBiosRom( const wxChar *ext, u8 *dest, long maxSize )
 	fp.Read( dest, min( maxSize, filesize ) );
 }
 
-static u32 psMPWC[(Ps2MemSize::Base/32)>>12];
-static std::vector<u32> psMPWVA[Ps2MemSize::Base>>12];
 
 u8  *psM = NULL; //32mb Main Ram
 u8  *psR = NULL; //4mb rom area
@@ -154,6 +152,10 @@ vtlbHandler vu1_micro_mem[2];		// 0 - dynarec, 1 - interpreter
 vtlbHandler hw_by_page[0x10];
 vtlbHandler gs_page_0;
 vtlbHandler gs_page_1;
+
+vtlbHandler iopHw_by_page_01;
+vtlbHandler iopHw_by_page_03;
+vtlbHandler iopHw_by_page_08;
 
 
 // Used to remap the VUmicro memory according to the VU0/VU1 dynarec setting.
@@ -195,12 +197,6 @@ void memMapPhy()
 	vtlb_MapHandler(tlb_fallback_2,0x1f800000,0x10000);
 	vtlb_MapHandler(tlb_fallback_8,0x1f900000,0x10000);
 
-#ifdef PCSX2_DEVBUILD
-	// Bind fallback handlers used for logging purposes only.
-	// In release mode the Vtlb will map these addresses directly instead of using
-	// the read/write handlers (which just issue logs and do normal memOps)
-#endif
-
 	// map specific optimized page handlers for HW accesses
 	vtlb_MapHandler(hw_by_page[0x0], 0x10000000, 0x01000);
 	vtlb_MapHandler(hw_by_page[0x1], 0x10001000, 0x01000);
@@ -216,6 +212,11 @@ void memMapPhy()
 
 	vtlb_MapHandler(gs_page_0, 0x12000000, 0x01000);
 	vtlb_MapHandler(gs_page_1, 0x12001000, 0x01000);
+	
+	vtlb_MapHandler(hw_by_page[0x1], 0x1f801000, 0x01000);
+	vtlb_MapHandler(hw_by_page[0x3], 0x1f803000, 0x01000);
+	vtlb_MapHandler(hw_by_page[0x8], 0x1f808000, 0x01000);
+
 }
 
 //Why is this required ?
@@ -245,8 +246,6 @@ mem8_t __fastcall _ext_memRead8 (u32 mem)
 	{
 		case 1: // hwm
 			return hwRead8(mem);
-		case 2: // psh
-			return psxHwRead8(mem);
 		case 3: // psh4
 			return psxHw4Read8(mem);
 		case 6: // gsm
@@ -301,8 +300,6 @@ mem32_t __fastcall _ext_memRead32(u32 mem)
 {
 	switch (p)
 	{
-		case 2: // psh
-			return psxHwRead32(mem);
 		case 6: // gsm
 			return gsRead32(mem);
 		case 7: // dev9
@@ -348,14 +345,12 @@ void __fastcall _ext_memRead128(u32 mem, mem128_t *out)
 }
 
 template<int p>
-void __fastcall _ext_memWrite8 (u32 mem, u8  value)
+void __fastcall _ext_memWrite8 (u32 mem, mem8_t  value)
 {
 	switch (p) {
 		case 1: // hwm
 			hwWrite8(mem, value);
 			return;
-		case 2: // psh
-			psxHwWrite8(mem, value); return;
 		case 3: // psh4
 			psxHw4Write8(mem, value); return;
 		case 6: // gsm
@@ -370,7 +365,7 @@ void __fastcall _ext_memWrite8 (u32 mem, u8  value)
 	cpuTlbMissW(mem, cpuRegs.branch);
 }
 template<int p>
-void __fastcall _ext_memWrite16(u32 mem, u16 value)
+void __fastcall _ext_memWrite16(u32 mem, mem16_t value)
 {
 	switch (p) {
 		case 1: // hwm
@@ -395,11 +390,9 @@ void __fastcall _ext_memWrite16(u32 mem, u16 value)
 }
 
 template<int p>
-void __fastcall _ext_memWrite32(u32 mem, u32 value)
+void __fastcall _ext_memWrite32(u32 mem, mem32_t value)
 {
 	switch (p) {
-		case 2: // psh
-			psxHwWrite32(mem, value); return;
 		case 6: // gsm
 			gsWrite32(mem, value); return;
 		case 7: // dev9
@@ -412,7 +405,7 @@ void __fastcall _ext_memWrite32(u32 mem, u32 value)
 }
 
 template<int p>
-void __fastcall _ext_memWrite64(u32 mem, const u64* value)
+void __fastcall _ext_memWrite64(u32 mem, const mem64_t* value)
 {
 
 	/*switch (p) {
@@ -428,7 +421,7 @@ void __fastcall _ext_memWrite64(u32 mem, const u64* value)
 }
 
 template<int p>
-void __fastcall _ext_memWrite128(u32 mem, const u64 *value)
+void __fastcall _ext_memWrite128(u32 mem, const mem128_t *value)
 {
 	/*switch (p) {
 		//case 1: // hwm
@@ -660,14 +653,13 @@ void memReset()
 
 	vtlb_Init();
 
-	tlb_fallback_0=vtlb_RegisterHandlerTempl1(_ext_mem,0);
-	tlb_fallback_2=vtlb_RegisterHandlerTempl1(_ext_mem,2);
-	tlb_fallback_3=vtlb_RegisterHandlerTempl1(_ext_mem,3);
-	tlb_fallback_4=vtlb_RegisterHandlerTempl1(_ext_mem,4);
-	tlb_fallback_5=vtlb_RegisterHandlerTempl1(_ext_mem,5);
-	//tlb_fallback_6=vtlb_RegisterHandlerTempl1(_ext_mem,6);
-	tlb_fallback_7=vtlb_RegisterHandlerTempl1(_ext_mem,7);
-	tlb_fallback_8=vtlb_RegisterHandlerTempl1(_ext_mem,8);
+	tlb_fallback_0 = vtlb_RegisterHandlerTempl1(_ext_mem,0);
+	tlb_fallback_3 = vtlb_RegisterHandlerTempl1(_ext_mem,3);
+	tlb_fallback_4 = vtlb_RegisterHandlerTempl1(_ext_mem,4);
+	tlb_fallback_5 = vtlb_RegisterHandlerTempl1(_ext_mem,5);
+	//tlb_fallback_6 = vtlb_RegisterHandlerTempl1(_ext_mem,6);
+	tlb_fallback_7 = vtlb_RegisterHandlerTempl1(_ext_mem,7);
+	tlb_fallback_8 = vtlb_RegisterHandlerTempl1(_ext_mem,8);
 
 	// Dynarec versions of VUs
 	vu0_micro_mem[0] = vtlb_RegisterHandlerTempl2(vuMicro,0,true);
@@ -677,7 +669,36 @@ void memReset()
 	vu0_micro_mem[1] = vtlb_RegisterHandlerTempl2(vuMicro,0,false);
 	vu1_micro_mem[1] = vtlb_RegisterHandlerTempl2(vuMicro,1,false);
 
-	//////////////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////////////////////////////////
+	// IOP's "secret" Hardware Register mapping, accessible from the EE (and meant for use
+	// by debugging or BIOS only).  The IOP's hw regs are divided into three main pages in
+	// the 0x1f80 segment, and then another oddball page for CDVD in the 0x1f40 segment.
+	//
+
+	using namespace IopMemory;
+
+	tlb_fallback_2 = vtlb_RegisterHandler(
+		iopHwRead8_generic, iopHwRead16_generic, iopHwRead32_generic, _ext_memRead64<2>, _ext_memRead128<2>,
+		iopHwWrite8_generic, iopHwWrite16_generic, iopHwWrite32_generic, _ext_memWrite64<2>, _ext_memWrite128<2>
+	);
+
+	iopHw_by_page_01 = vtlb_RegisterHandler(
+		iopHwRead8_Page1, iopHwRead16_Page1, iopHwRead32_Page1, _ext_memRead64<2>, _ext_memRead128<2>,
+		iopHwWrite8_Page1, iopHwWrite16_Page1, iopHwWrite32_Page1, _ext_memWrite64<2>, _ext_memWrite128<2>
+	);
+
+	iopHw_by_page_03 = vtlb_RegisterHandler(
+		iopHwRead8_Page3, iopHwRead16_Page3, iopHwRead32_Page3, _ext_memRead64<2>, _ext_memRead128<2>,
+		iopHwWrite8_Page3, iopHwWrite16_Page3, iopHwWrite32_Page3, _ext_memWrite64<2>, _ext_memWrite128<2>
+	);
+
+	iopHw_by_page_08 = vtlb_RegisterHandler(
+		iopHwRead8_Page8, iopHwRead16_Page8, iopHwRead32_Page8, _ext_memRead64<2>, _ext_memRead128<2>,
+		iopHwWrite8_Page8, iopHwWrite16_Page8, iopHwWrite32_Page8, _ext_memWrite64<2>, _ext_memWrite128<2>
+	);
+
+
+	//////////////////////////////////////////////////////////////////////////////////////////
 	// psHw Optimized Mappings
 	// The HW Registers have been split into pages to improve optimization.
 	// Anything not explicitly mapped into one of the hw_by_page handlers will be handled
@@ -804,52 +825,122 @@ void memReset()
 	loadBiosRom( L"erom", PS2MEM_EROM, Ps2MemSize::ERom );
 }
 
-int mmap_GetRamPageInfo(void* ptr)
+//////////////////////////////////////////////////////////////////////////////////////////
+// Memory Protection and Block Checking, vtlb Style!
+//
+// For the first time code is recompiled (executed), the PS2 ram page for that code is
+// protected using Virtual Memory (mprotect).  If the game modifies its own code then this
+// protection causes an *exception* to be raised (signal in Linux), which is handled by
+// unprotecting the page and switching the recompiled block to "manual" protection.
+//
+// Manual protection uses a simple brute-force memcmp of the recompiled code to the code
+// currently in RAM for *each time* the block is executed.  Fool-proof, but slow, which
+// is why we default to using the exception-based protection scheme described above.
+//
+// Why manual blocks?  Because many games contain code and data in the same 4k page, so
+// we *cannot* automatically recompile and reprotect pages, lest we end up recompiling and
+// reprotecting them constantly (Which would be very slow).  As a counter, the R5900 side
+// of the block checking code does try to periodically re-protect blocks [going from manual
+// back to protected], so that blocks which underwent a single invalidation don't need to
+// incur a permanent performance penalty.
+//
+// Page Granularity:
+// Fortunately for us MIPS and x86 use the same page granularity for TLB and memory
+// protection, so we can use a 1:1 correspondence when protecting pages.  Page granularity
+// is 4096 (4k), which is why you'll see a lot of 0xfff's, >><< 12's, and 0x1000's in the
+// code below.
+//
+
+enum vtlb_ProtectionMode
 {
-	u32 offset=((u8*)ptr-psM);
-	if (offset>=Ps2MemSize::Base)
+	ProtMode_None = 0,		// page is 'unaccounted' -- neither protected nor unprotected
+	ProtMode_Write,			// page is under write protection (exception handler)
+	ProtMode_Manual			// page is under manual protection (self-checked at execution)
+};
+
+struct vtlb_PageProtectionInfo
+{
+	// Ram De-mapping -- used to convert fully translated/mapped offsets into psM back
+	// into their originating ps2 physical ram address.  Values are assigned when pages
+	// are marked for protection.
+	u32 ReverseRamMap;
+
+	vtlb_ProtectionMode Mode;
+};
+
+PCSX2_ALIGNED16( static vtlb_PageProtectionInfo m_PageProtectInfo[Ps2MemSize::Base >> 12] );
+
+
+// returns:
+//  -1 - unchecked block (resides in ROM, thus is integrity is constant)
+//   0 - page is using Write protection
+//   1 - page is using manual protection (recompiler must include execution-time
+//       self-checking of block integrity)
+//
+int mmap_GetRamPageInfo( u32 paddr )
+{
+	paddr &= ~0xfff;
+
+	uptr ptr = (uptr)PSM( paddr );
+	uptr rampage = ptr - (uptr)psM;
+
+	if (rampage >= Ps2MemSize::Base)
 		return -1; //not in ram, no tracking done ...
-	offset>>=12;
-	return (psMPWC[(offset/32)]&(1<<(offset&31)))?1:0;
+
+	rampage >>= 12;
+	return ( m_PageProtectInfo[rampage].Mode == ProtMode_Manual ) ? 1 : 0;
 }
 
-void mmap_MarkCountedRamPage(void* ptr,u32 vaddr)
+// paddr - physically mapped address
+void mmap_MarkCountedRamPage( u32 paddr )
 {
-	HostSys::MemProtect( ptr, 1, Protect_ReadOnly );
+	paddr &= ~0xfff;
 
-	u32 offset=((u8*)ptr-psM);
-	offset>>=12;
-	psMPWC[(offset/32)] &= ~(1<<(offset&31));
+	uptr ptr = (uptr)PSM( paddr );
+	int rampage = (ptr - (uptr)psM) >> 12;
 
-	for (u32 i=0;i<psMPWVA[offset].size();i++)
-	{
-		if (psMPWVA[offset][i]==vaddr)
-			return;
-	}
-	psMPWVA[offset].push_back(vaddr);
+	// Important: reassign paddr here, since TLB changes could alter the paddr->psM mapping
+	// (and clear blocks accordingly), but don't necessarily clear the protection status.
+	m_PageProtectInfo[rampage].ReverseRamMap = paddr;
+
+	if( m_PageProtectInfo[rampage].Mode == ProtMode_Write )
+		return;		// skip town if we're already protected.
+
+	if( m_PageProtectInfo[rampage].Mode == ProtMode_Manual )
+		DbgCon::WriteLn( "dyna_page_reset @ 0x%05x", params paddr>>12 );
+	else
+		DbgCon::WriteLn( "Write-protected page @ 0x%05x", params paddr>>12 );
+
+	m_PageProtectInfo[rampage].Mode = ProtMode_Write;
+	HostSys::MemProtect( &psM[rampage<<12], 1, Protect_ReadOnly );
 }
 
-void mmap_ResetBlockTracking()
-{
-	DevCon::WriteLn("vtlb/mmap: Block Tracking reset...");
-	memzero_obj(psMPWC);
-	for(u32 i=0;i<(Ps2MemSize::Base>>12);i++)
-	{
-		psMPWVA[i].clear();
-	}
-	HostSys::MemProtect( psM, Ps2MemSize::Base, Protect_ReadWrite );
-}
-
+// offset - offset of address relative to psM.  The exception handler for the platform/host
+// OS should ensure that only addresses within psM address space are passed.   Anything else
+// will produce undefined results (ie, crashes).
 void mmap_ClearCpuBlock( uint offset )
 {
-	HostSys::MemProtect( &psM[offset], 1, Protect_ReadWrite );
+	int rampage = offset >> 12;
 
-	offset>>=12;
-	psMPWC[(offset/32)]|=(1<<(offset&31));
+	// Assertion: This function should never be run on a block that's already under
+	// manual protection.  Indicates a logic error in the recompiler or protection code.
+	jASSUME( m_PageProtectInfo[rampage].Mode != ProtMode_Manual );
 
-	for (u32 i=0;i<psMPWVA[offset].size();i++)
-	{
-		Cpu->Clear(psMPWVA[offset][i],0x400);
-	}
-	psMPWVA[offset].clear();
+	//#ifndef __LINUX__		// this function is called from the signal handler
+	//DbgCon::WriteLn( "Manual page @ 0x%05x", params m_PageProtectInfo[rampage].ReverseRamMap>>12 );
+	//#endif
+
+	HostSys::MemProtect( &psM[rampage<<12], 1, Protect_ReadWrite );
+	m_PageProtectInfo[rampage].Mode = ProtMode_Manual;
+	Cpu->Clear( m_PageProtectInfo[rampage].ReverseRamMap, 0x400 );
+}
+
+// Clears all block tracking statuses, manual protection flags, and write protection.
+// This does not clear any recompiler blocks.  IT is assumed (and necessary) for the caller
+// to ensure the EErec is also reset in conjunction with calling this function.
+void mmap_ResetBlockTracking()
+{
+	DevCon::WriteLn( "vtlb/mmap: Block Tracking reset..." );
+	memzero_obj( m_PageProtectInfo );
+	HostSys::MemProtect( psM, Ps2MemSize::Base, Protect_ReadWrite );
 }

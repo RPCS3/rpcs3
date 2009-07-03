@@ -1,6 +1,6 @@
 ; cdvd.def : Declares the module parameters for the DLL.
 
-LIBRARY      "cdvd"
+LIBRARY      "CDVDolio"
 
 EXPORTS
     ; Explicit exports can go here

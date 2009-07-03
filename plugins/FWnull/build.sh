@@ -30,8 +30,3 @@ if [ $? -ne 0 ]
 then
 exit 1
 fi
-
-if [ -s cfgFWnull ] && [ -s libFWnull.so ]
-then
-cp cfgFWnull libFWnull.so ${PCSX2PLUGINS}
-fi

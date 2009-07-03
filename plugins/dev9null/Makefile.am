@@ -22,6 +22,10 @@ libDEV9null_LDFLAGS= @SHARED_LDFLAGS@
 libDEV9null_LDFLAGS+=-Wl,-soname,@libDEV9null_SONAME@
 libDEV9null_LDADD=$(libDEV9null_a_OBJECTS)
 
-libDEV9null_a_SOURCES = DEV9.cpp DEV9.h Linux/Config.cpp
+libDEV9null_a_SOURCES = DEV9.cpp DEV9.h Linux/Config.cpp Linux/Config.h
 
+libDEV9null_a_SOURCES += \
+Linux/interface.h Linux/support.c  \
+Linux/interface.c Linux/support.h \
+Linux/callbacks.h 
 #SUBDIRS = Linux

@@ -4,104 +4,189 @@
 
 #pragma once
 
-#pragma warning(disable: 4996)
+#pragma warning(disable: 4996 4995 4324 4100 4101 4201)
 
-#ifndef VC_EXTRALEAN
-#define VC_EXTRALEAN		// Exclude rarely-used stuff from Windows headers
-#endif
+#ifdef _WINDOWS
+
+// The following macros define the minimum required platform.  The minimum required platform
+// is the earliest version of Windows, Internet Explorer etc. that has the necessary features to run 
+// your application.  The macros work by enabling all features available on platform versions up to and 
+// including the version specified.
 
 // Modify the following defines if you have to target a platform prior to the ones specified below.
 // Refer to MSDN for the latest info on corresponding values for different platforms.
-#ifndef WINVER				// Allow use of features specific to Windows 95 and Windows NT 4 or later.
-#define WINVER 0x0510		// Change this to the appropriate value to target Windows 98 and Windows 2000 or later.
+
+#ifndef WINVER                          // Specifies that the minimum required platform is Windows Vista.
+#define WINVER 0x0600           // Change this to the appropriate value to target other versions of Windows.
 #endif
 
-#ifndef _WIN32_WINNT		// Allow use of features specific to Windows NT 4 or later.
-#define _WIN32_WINNT 0x0400	// Change this to the appropriate value to target Windows 2000 or later.
-#endif						
+#ifndef _WIN32_WINNT            // Specifies that the minimum required platform is Windows Vista.
+#define _WIN32_WINNT 0x0600     // Change this to the appropriate value to target other versions of Windows.
+#endif
 
-#ifndef _WIN32_WINDOWS		// Allow use of features specific to Windows 98 or later.
+#ifndef _WIN32_WINDOWS          // Specifies that the minimum required platform is Windows 98.
 #define _WIN32_WINDOWS 0x0410 // Change this to the appropriate value to target Windows Me or later.
 #endif
 
-#ifndef _WIN32_IE			// Allow use of features specific to IE 4.0 or later.
-#define _WIN32_IE 0x0400	// Change this to the appropriate value to target IE 5.0 or later.
+#ifndef _WIN32_IE                       // Specifies that the minimum required platform is Internet Explorer 7.0.
+#define _WIN32_IE 0x0700        // Change this to the appropriate value to target other versions of IE.
 #endif
 
-#define _ATL_CSTRING_EXPLICIT_CONSTRUCTORS	// some CString constructors will be explicit
+#define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers
 
-#include <afxwin.h>         // MFC core and standard components
-//#include <afxext.h>         // MFC extensions
-#ifndef _AFX_NO_AFXCMN_SUPPORT
-#include <afxcmn.h>			// MFC support for Windows Common Controls
-#endif // _AFX_NO_AFXCMN_SUPPORT
-//#include <afxmt.h>
+#include <windows.h>
+#include <commctrl.h>
+#include <commdlg.h>
+#include <shellapi.h>
 #include <atlbase.h>
-#include <atlcoll.h>
-#include <atlpath.h>
-#include <ddraw.h>
-#include <d3d9.h>
-#include <d3dx9.h>
-#include <d3d10.h>
-#include <d3dx10.h>
-#include <math.h>
 
-#if !defined(_M_SSE) && (defined(_M_AMD64) || defined(_M_IX86_FP) && _M_IX86_FP >= 2)
-#define _M_SSE 0x200
 #endif
 
-#include "sse.h"
+// stdc
 
-#define countof(a) (sizeof(a)/sizeof(a[0]))
+#include <math.h>
+#include <time.h>
+#include <intrin.h>
+
+#include <string>
+#include <vector>
+#include <list>
+#include <map>
+#include <hash_map>
+
+using namespace std;
+using namespace stdext;
+
+extern string format(const char* fmt, ...);
+
+// syntactic sugar
+
+// put these into vc9/common7/ide/usertype.dat to have them highlighted
+
+typedef unsigned char uint8;
+typedef signed char int8;
+typedef unsigned short uint16;
+typedef signed short int16;
+typedef unsigned int uint32;
+typedef signed int int32;
+typedef unsigned long long uint64;
+typedef signed long long int64;
+
+#define countof(a) (sizeof(a) / sizeof(a[0]))
 
 #define EXPORT_C extern "C" __declspec(dllexport) void __stdcall
 #define EXPORT_C_(type) extern "C" __declspec(dllexport) type __stdcall
 
+#define ALIGN_STACK(n) __declspec(align(n)) int __dummy;
+
 #ifndef RESTRICT
 	#ifdef __INTEL_COMPILER
 		#define RESTRICT restrict
-	#elif _MSC_VER >= 1400
+	#elif _MSC_VER >= 1400 // TODO: gcc
 		#define RESTRICT __restrict
 	#else
 		#define RESTRICT
 	#endif
 #endif
 
-#pragma warning(disable : 4995 4324 4100)
+#if defined(_DEBUG) && defined(_MSC_VER)
+	#include <assert.h>
+	#define ASSERT assert
+#else
+	#define ASSERT(exp) ((void)0)
+#endif
 
-#define D3DCOLORWRITEENABLE_RGB (D3DCOLORWRITEENABLE_RED|D3DCOLORWRITEENABLE_GREEN|D3DCOLORWRITEENABLE_BLUE)
-#define D3DCOLORWRITEENABLE_RGBA (D3DCOLORWRITEENABLE_RGB|D3DCOLORWRITEENABLE_ALPHA)
+#ifdef __x86_64__
+	#define _M_AMD64
+#endif
 
-#define QI(i) (riid == __uuidof(i)) ? GetInterface((i*)this, ppv) :
+#ifdef _WINDOWS
 
-template<class K, class V> class CRBMapC : public CRBMap<K, V>
-{
-	// CRBMap + a cache for the last value (simple, but already a lot better)
+// directx
 
-	CPair* m_pair;
+#include <ddraw.h>
+#include <d3d11.h>
+#include <d3dx11.h>
+#include <d3d10.h>
+#include <d3dx10.h>
+#include <d3d9.h>
+#include <d3dx9.h>
 
-public:
-	CRBMapC() : m_pair(NULL) {}
+#define D3DCOLORWRITEENABLE_RGBA (D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_ALPHA)
 
-	CPair* Lookup(KINARGTYPE key)
-	{
-		if(m_pair && key == m_pair->m_key)
-		{
-			return m_pair;
-		}
+// dxsdk beta missing these:
+#define D3D11_SHADER_MACRO D3D10_SHADER_MACRO
+#define ID3D11Blob ID3D10Blob
 
-		m_pair = __super::Lookup(key);
+#endif 
 
-		return m_pair;
+// opengl
+
+#include <GL/glew.h>
+#include <GL/glut.h>
+#include <CG/cg.h>
+#include <CG/cgGL.h>
+
+#ifdef _WINDOWS
+#include <GL/wglew.h>
+#endif
+
+// sse
+
+#if !defined(_M_SSE) && (defined(_M_AMD64) || defined(_M_IX86_FP) && _M_IX86_FP >= 2)
+
+	#define _M_SSE 0x200
+
+#endif
+
+#if _M_SSE >= 0x200
+
+	#include <xmmintrin.h>
+	#include <emmintrin.h>
+
+	#ifndef _MM_DENORMALS_ARE_ZERO
+	#define _MM_DENORMALS_ARE_ZERO 0x0040
+	#endif
+
+	#define MXCSR (_MM_DENORMALS_ARE_ZERO | _MM_MASK_MASK | _MM_ROUND_NEAREST | _MM_FLUSH_ZERO_ON)
+
+	#if _MSC_VER < 1500
+
+	__forceinline __m128i _mm_castps_si128(__m128 a) {return *(__m128i*)&a;}
+	__forceinline __m128 _mm_castsi128_ps(__m128i a) {return *(__m128*)&a;}
+	__forceinline __m128i _mm_castpd_si128(__m128d a) {return *(__m128i*)&a;}
+	__forceinline __m128d _mm_castsi128_pd(__m128i a) {return *(__m128d*)&a;}
+	__forceinline __m128d _mm_castps_pd(__m128 a) {return *(__m128d*)&a;}
+	__forceinline __m128 _mm_castpd_ps(__m128d a) {return *(__m128*)&a;}
+
+	#endif
+
+	#define _MM_TRANSPOSE4_SI128(row0, row1, row2, row3) \
+	{ \
+		__m128 tmp0 = _mm_shuffle_ps(_mm_castsi128_ps(row0), _mm_castsi128_ps(row1), 0x44); \
+		__m128 tmp2 = _mm_shuffle_ps(_mm_castsi128_ps(row0), _mm_castsi128_ps(row1), 0xEE); \
+		__m128 tmp1 = _mm_shuffle_ps(_mm_castsi128_ps(row2), _mm_castsi128_ps(row3), 0x44); \
+		__m128 tmp3 = _mm_shuffle_ps(_mm_castsi128_ps(row2), _mm_castsi128_ps(row3), 0xEE); \
+		(row0) = _mm_castps_si128(_mm_shuffle_ps(tmp0, tmp1, 0x88)); \
+		(row1) = _mm_castps_si128(_mm_shuffle_ps(tmp0, tmp1, 0xDD)); \
+		(row2) = _mm_castps_si128(_mm_shuffle_ps(tmp2, tmp3, 0x88)); \
+		(row3) = _mm_castps_si128(_mm_shuffle_ps(tmp2, tmp3, 0xDD)); \
 	}
 
-	POSITION SetAt(KINARGTYPE key, VINARGTYPE value)
-	{
-		POSITION pos = __super::SetAt(key, value);
+#else
 
-		m_pair = __super::GetAt(pos);
+#error TODO: GSVector4 and GSRasterizer needs SSE2
 
-		return pos;
-	}
-};
+#endif
 
+#if _M_SSE >= 0x301
+
+	#include <tmmintrin.h>
+
+#endif
+
+#if _M_SSE >= 0x401
+
+	#include <smmintrin.h>
+
+#endif

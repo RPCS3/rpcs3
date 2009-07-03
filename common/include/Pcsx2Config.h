@@ -44,30 +44,34 @@ extern SessionOverrideFlags g_Session;
 //////////////////////////////////////////////////////////////////////////
 // Pcsx2 User Configuration Options!
 
-//#define PCSX2_MICROVU	// Use Micro VU recs instead of Zero VU Recs
-//#define PCSX2_MICROVU_	// Fully enable Micro VU recs (temporary option for now)
-#define PCSX2_GSMULTITHREAD 1 // uses multi-threaded gs
-#define PCSX2_EEREC 0x10
-#define PCSX2_VU0REC 0x20
-#define PCSX2_VU1REC 0x40
-#define PCSX2_FRAMELIMIT_MASK 0xc00
-#define PCSX2_FRAMELIMIT_NORMAL 0x000
-#define PCSX2_FRAMELIMIT_LIMIT 0x400
-#define PCSX2_FRAMELIMIT_SKIP 0x800
+#define PCSX2_GSMULTITHREAD		0x0001 // Use Multi-Threaded GS
+#define PCSX2_EEREC				0x0010
+#define PCSX2_VU0REC			0x0020
+#define PCSX2_VU1REC			0x0040
+#define PCSX2_FRAMELIMIT_MASK	0x0c00
+#define PCSX2_FRAMELIMIT_NORMAL	0x0000
+#define PCSX2_FRAMELIMIT_LIMIT	0x0400
+#define PCSX2_FRAMELIMIT_SKIP	0x0800
+#define PCSX2_MICROVU0			0x1000 // Use Micro VU0 recs instead of Zero VU0 Recs
+#define PCSX2_MICROVU1			0x2000 // Use Micro VU1 recs instead of Zero VU1 Recs
 
 #define CHECK_FRAMELIMIT (Config.Options&PCSX2_FRAMELIMIT_MASK)
 
 //------------ CPU Options!!! ---------------
-#define CHECK_MULTIGS (Config.Options&PCSX2_GSMULTITHREAD)
+#define CHECK_MULTIGS	(Config.Options&PCSX2_GSMULTITHREAD)
+#define CHECK_MICROVU0	(Config.Options&PCSX2_MICROVU0)
+#define CHECK_MICROVU1	(Config.Options&PCSX2_MICROVU1)
 #define CHECK_EEREC (!g_Session.ForceDisableEErec && Config.Options&PCSX2_EEREC)
 #define CHECK_VU0REC (!g_Session.ForceDisableVU0rec && Config.Options&PCSX2_VU0REC)
 #define CHECK_VU1REC (!g_Session.ForceDisableVU1rec && (Config.Options&PCSX2_VU1REC))
 
 //------------ SPECIAL GAME FIXES!!! ---------------
-#define CHECK_VUADDSUBHACK	 (Config.GameFixes & 0x1) // Special Fix for Tri-ace games, they use an encryption algorithm that requires VU addi opcode to be bit-accurate.
-#define CHECK_FPUCOMPAREHACK (Config.GameFixes & 0x4) // Special Fix for Digimon Rumble Arena 2, fixes spinning/hanging on intro-menu.
-#define CHECK_VUCLIPFLAGHACK (Config.GameFixes & 0x2) // Special Fix for Persona games, maybe others. It's to do with the VU clip flag (again).
-#define CHECK_FPUMULHACK	 (Config.GameFixes & 0x8) // Special Fix for Tales of Destiny hangs.
+#define CHECK_VUADDSUBHACK	 (Config.GameFixes & 0x01) // Special Fix for Tri-ace games, they use an encryption algorithm that requires VU addi opcode to be bit-accurate.
+#define CHECK_FPUCOMPAREHACK (Config.GameFixes & 0x04) // Special Fix for Digimon Rumble Arena 2, fixes spinning/hanging on intro-menu.
+#define CHECK_VUCLIPFLAGHACK (Config.GameFixes & 0x02) // Special Fix for Persona games, maybe others. It's to do with the VU clip flag (again).
+#define CHECK_FPUMULHACK	 (Config.GameFixes & 0x08) // Special Fix for Tales of Destiny hangs.
+#define CHECK_DMAEXECHACK	 (Config.GameFixes & 0x10) // Special Fix for Fatal Frame; breaks Gust and Tri-Ace games.
+#define CHECK_XGKICKHACK	 (Config.GameFixes & 0x20) // Special Fix for Erementar Gerad, adds more delay to VU XGkick instructions. Corrects the color of some graphics.
 
 //------------ Advanced Options!!! ---------------
 #define CHECK_VU_OVERFLOW		 (Config.vuOptions & 0x1)
@@ -161,12 +165,14 @@ public:
 	int Patch;
 	int CustomFps;
 	struct Hacks_t {
-		int EECycleRate;
+		int  EECycleRate;
 		bool IOPCycleDouble;
 		bool WaitCycleExt;
 		bool INTCSTATSlow;
-		int VUCycleSteal;
 		bool IdleLoopFF;
+		int  VUCycleSteal;
+		bool vuFlagHack;
+		bool vuMinMax;
 		bool ESCExits; // this is a hack!?
 	} Hacks;
 	int GameFixes;

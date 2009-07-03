@@ -15,7 +15,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-
+ 
 #ifndef __SPU2_H__
 #define __SPU2_H__
 
@@ -46,15 +46,15 @@ extern "C"
 extern FILE *spu2Log;
 #define SPU2_LOG __Log  //debug mode
 
-extern const unsigned char version;
-extern const unsigned char revision;
-extern const unsigned char build;
-extern const unsigned int minor;
+extern const u8 version;
+extern const u8 revision;
+extern const u8 build;
+extern const u32 minor;
 extern char *libraryName;
 
 typedef struct
 {
-	int Log;
+	s32 Log;
 } Config;
 
 extern Config conf;
@@ -218,18 +218,18 @@ struct _SPU_VOICE
 // ADSR INFOS PER   CHANNEL
 struct ADSRInfoEx
 {
-	int            State;
-	int            AttackModeExp;
-	int            AttackRate;
-	int            DecayRate;
-	int            SustainLevel;
-	int            SustainModeExp;
-	int            SustainIncrease;
-	int            SustainRate;
-	int            ReleaseModeExp;
-	int            ReleaseRate;
-	int            EnvelopeVol;
-	long           lVolume;
+	s32            State;
+	s32            AttackModeExp;
+	s32            AttackRate;
+	s32            DecayRate;
+	s32            SustainLevel;
+	s32            SustainModeExp;
+	s32            SustainIncrease;
+	s32            SustainRate;
+	s32            ReleaseModeExp;
+	s32            ReleaseRate;
+	s32            EnvelopeVol;
+	s32           lVolume;
 };
 
 #define NSSIZE      48      // ~ 1 ms of data
@@ -257,18 +257,18 @@ struct VOICE_PROCESSED
 
 	// start save state
 
-	int iSBPos;                             // mixing stuff
-	int spos;
-	int sinc;
+	s32 iSBPos;                             // mixing stuff
+	s32 spos;
+	s32 sinc;
 
-	int iActFreq;                           // current psx pitch
-	int iUsedFreq;                          // current pc pitch
+	s32 iActFreq;                           // current psx pitch
+	s32 iUsedFreq;                          // current pc pitch
 
-	int iStartAddr, iLoopAddr, iNextAddr;
+	s32 iStartAddr, iLoopAddr, iNextAddr;
 
 	ADSRInfoEx ADSRX;                              // next ADSR settings (will be moved to active on sample start)
 	bool bIgnoreLoop, bNew, bNoise, bReverb, bOn, bStop, bVolChanged;
-	int memoffset;                  // if first core, 0, if second, 0x400
+	s32 memoffset;                  // if first core, 0, if second, 0x400
 
 	// end save state
 
@@ -283,11 +283,11 @@ struct VOICE_PROCESSED
 
 struct ADMA
 {
-	unsigned short * MemAddr;
-	long	  IntPointer;
-	int Index;
-	int AmountLeft;
-	int Enabled;
+	u16 * MemAddr;
+	s32	  IntPointer;
+	s32 Index;
+	s32 AmountLeft;
+	s32 Enabled;
 };
 
 #endif /* __SPU2_H__ */

@@ -22,7 +22,7 @@
 			Name="Debug|Win32"
 			IntermediateDirectory="$(ConfigurationName)"
 			ConfigurationType="1"
-			InheritedPropertySheets=".\vsprops\common.vsprops;..\..\..\common\vsprops\BaseProperties.vsprops;..\..\..\common\vsprops\3rdpartyDeps.vsprops;.\vsprops\debug.vsprops;.\vsprops\devbuild.vsprops;..\..\..\common\vsprops\pthreads.vsprops;..\..\..\common\vsprops\IncrementalLinking.vsprops"
+			InheritedPropertySheets=".\vsprops\common.vsprops;..\..\..\common\vsprops\BaseProperties.vsprops;..\..\..\common\vsprops\3rdpartyDeps.vsprops;..\..\..\common\vsprops\pthreads.vsprops;.\vsprops\devbuild.vsprops;..\..\..\common\vsprops\CodeGen_Debug.vsprops;..\..\..\common\vsprops\IncrementalLinking.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="1"
@@ -55,7 +55,6 @@
 				AdditionalIncludeDirectories="&quot;$(ProjectRootDir)/NewGUI&quot;"
 				PreprocessorDefinitions="wxUSE_UNICODE=1"
 				ExceptionHandling="2"
-				SmallerTypeCheck="false"
 				UsePrecompiledHeader="2"
 				PrecompiledHeaderThrough="PrecompiledHeader.h"
 				PrecompiledHeaderFile="$(IntDir)\$(TargetName).pch"
@@ -100,8 +99,9 @@
 		</Configuration>
 		<Configuration
 			Name="Devel|Win32"
+			IntermediateDirectory="$(ConfigurationName)"
 			ConfigurationType="1"
-			InheritedPropertySheets=".\vsprops\common.vsprops;..\..\..\common\vsprops\BaseProperties.vsprops;..\..\..\common\vsprops\3rdpartyDeps.vsprops;.\vsprops\devbuild.vsprops;..\..\..\common\vsprops\pthreads.vsprops;..\..\..\common\vsprops\IncrementalLinking.vsprops"
+			InheritedPropertySheets=".\vsprops\common.vsprops;..\..\..\common\vsprops\BaseProperties.vsprops;..\..\..\common\vsprops\3rdpartyDeps.vsprops;.\vsprops\devbuild.vsprops;..\..\..\common\vsprops\pthreads.vsprops;..\..\..\common\vsprops\CodeGen_Devel.vsprops;..\..\..\common\vsprops\IncrementalLinking.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="1"
@@ -132,19 +132,13 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="3"
-				FavorSizeOrSpeed="1"
 				AdditionalIncludeDirectories="&quot;$(ProjectRootDir)/NewGUI&quot;"
 				PreprocessorDefinitions="NDEBUG;wxUSE_UNICODE=1"
 				ExceptionHandling="2"
-				SmallerTypeCheck="false"
-				BufferSecurityCheck="false"
 				UsePrecompiledHeader="2"
 				PrecompiledHeaderThrough="PrecompiledHeader.h"
 				PrecompiledHeaderFile="$(IntDir)\$(TargetName).pch"
 				WarningLevel="3"
-				SuppressStartupBanner="true"
-				DebugInformationFormat="3"
 				CompileAs="2"
 			/>
 			<Tool
@@ -186,8 +180,9 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
+			IntermediateDirectory="$(ConfigurationName)"
 			ConfigurationType="1"
-			InheritedPropertySheets=".\vsprops\common.vsprops;..\..\..\common\vsprops\BaseProperties.vsprops;..\..\..\common\vsprops\3rdpartyDeps.vsprops;..\..\..\common\vsprops\pthreads.vsprops;..\..\..\common\vsprops\GlobalLinking.vsprops"
+			InheritedPropertySheets=".\vsprops\common.vsprops;..\..\..\common\vsprops\BaseProperties.vsprops;..\..\..\common\vsprops\3rdpartyDeps.vsprops;..\..\..\common\vsprops\pthreads.vsprops;..\..\..\common\vsprops\CodeGen_Release.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="1"
@@ -218,14 +213,11 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				EnableFiberSafeOptimizations="true"
 				AdditionalIncludeDirectories="&quot;$(ProjectRootDir)/NewGUI&quot;"
 				PreprocessorDefinitions="NDEBUG;wxUSE_UNICODE=1"
 				ExceptionHandling="2"
-				SmallerTypeCheck="false"
-				BufferSecurityCheck="false"
 				EnableEnhancedInstructionSet="0"
-				UsePrecompiledHeader="0"
+				UsePrecompiledHeader="2"
 				PrecompiledHeaderThrough="PrecompiledHeader.h"
 				PrecompiledHeaderFile="$(IntDir)\$(TargetName).pch"
 				CompileAs="2"
@@ -271,20 +263,64 @@
 	</References>
 	<Files>
 		<Filter
-			Name="Elf"
-			>
-			<File
-				RelativePath="..\..\Elfheader.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\Elfheader.h"
-				>
-			</File>
-		</Filter>
-		<Filter
 			Name="Misc"
 			>
+			<File
+				RelativePath="..\..\AsciiString.cpp"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Devel|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\..\AsciiString.h"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCustomBuildTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Devel|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCustomBuildTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCustomBuildTool"
+					/>
+				</FileConfiguration>
+			</File>
 			<File
 				RelativePath="..\..\Dump.cpp"
 				>
@@ -303,6 +339,10 @@
 			</File>
 			<File
 				RelativePath="..\..\HashTools.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\x86\iMisc.cpp"
 				>
 			</File>
 			<File
@@ -326,10 +366,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\common\include\Pcsx2Config.h"
-				>
-			</File>
-			<File
 				RelativePath="..\..\PrecompiledHeader.cpp"
 				>
 				<FileConfiguration
@@ -342,6 +378,14 @@
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Devel|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="1"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -383,10 +427,6 @@
 			</File>
 			<File
 				RelativePath="..\..\SourceLog.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\WinMisc.cpp"
 				>
 			</File>
 			<Filter
@@ -779,18 +819,6 @@
 						RelativePath="..\..\x86\aVUzerorec.S"
 						>
 					</File>
-					<File
-						RelativePath="..\..\x86\fast_routines.S"
-						>
-					</File>
-				</Filter>
-				<Filter
-					Name="Include"
-					>
-					<File
-						RelativePath="..\..\Linux\memzero.h"
-						>
-					</File>
 				</Filter>
 			</Filter>
 			<Filter
@@ -805,15 +833,7 @@
 					>
 				</File>
 				<File
-					RelativePath="..\..\StringUtils.cpp"
-					>
-				</File>
-				<File
 					RelativePath="..\..\StringUtils.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\vssprintf.cpp"
 					>
 				</File>
 			</Filter>
@@ -1238,16 +1258,8 @@
 				>
 			</File>
 			<Filter
-				Name="EE"
+				Name="EmotionEngine"
 				>
-				<File
-					RelativePath="..\..\Cache.cpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\Cache.h"
-					>
-				</File>
 				<File
 					RelativePath="..\..\COP0.cpp"
 					>
@@ -1264,7 +1276,6 @@
 						>
 						<Tool
 							Name="VCCLCompilerTool"
-							RuntimeLibrary="0"
 							AssemblerOutput="4"
 						/>
 					</FileConfiguration>
@@ -1464,6 +1475,10 @@
 						RelativePath="..\..\x86\ir5900tables.cpp"
 						>
 					</File>
+					<File
+						RelativePath="..\..\VUmicroMem.cpp"
+						>
+					</File>
 					<Filter
 						Name="ix86-32"
 						>
@@ -1520,27 +1535,311 @@
 							>
 						</File>
 					</Filter>
+					<Filter
+						Name="Interpreter"
+						>
+						<File
+							RelativePath="..\..\VU0microInterp.cpp"
+							>
+						</File>
+						<File
+							RelativePath="..\..\VU1microInterp.cpp"
+							>
+						</File>
+						<File
+							RelativePath="..\..\VUflags.cpp"
+							>
+						</File>
+						<File
+							RelativePath="..\..\VUflags.h"
+							>
+						</File>
+						<File
+							RelativePath="..\..\VUops.cpp"
+							>
+						</File>
+						<File
+							RelativePath="..\..\VUops.h"
+							>
+						</File>
+					</Filter>
+				</Filter>
+				<Filter
+					Name="Hardware"
+					>
+					<File
+						RelativePath="..\..\FiFo.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\Hw.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\Hw.h"
+						>
+					</File>
+					<File
+						RelativePath="..\..\HwRead.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\HwWrite.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\SPR.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\SPR.h"
+						>
+					</File>
+				</Filter>
+				<Filter
+					Name="Memory"
+					>
+					<File
+						RelativePath="..\..\Cache.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\Cache.h"
+						>
+					</File>
+					<File
+						RelativePath="..\..\Memory.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\Memory.h"
+						>
+					</File>
+					<File
+						RelativePath="..\..\x86\ix86-32\recVTLB.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\vtlb.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\vtlb.h"
+						>
+					</File>
+				</Filter>
+				<Filter
+					Name="VUmicro"
+					>
+					<File
+						RelativePath="..\..\VU.h"
+						>
+					</File>
+					<File
+						RelativePath="..\..\VU0.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\VU0micro.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\VU0microInterp.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\VU1micro.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\VU1microInterp.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\VUflags.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\VUflags.h"
+						>
+					</File>
+					<File
+						RelativePath="..\..\VUmicro.h"
+						>
+					</File>
+					<File
+						RelativePath="..\..\VUmicroMem.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\VUops.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\VUops.h"
+						>
+					</File>
+					<Filter
+						Name="Dynarec"
+						>
+						<File
+							RelativePath="..\..\x86\iVU0micro.cpp"
+							>
+						</File>
+						<File
+							RelativePath="..\..\x86\iVU1micro.cpp"
+							>
+						</File>
+						<Filter
+							Name="microVU"
+							>
+							<File
+								RelativePath="..\..\x86\microVU.cpp"
+								>
+							</File>
+							<File
+								RelativePath="..\..\x86\microVU.h"
+								>
+							</File>
+							<File
+								RelativePath="..\..\x86\microVU_Alloc.h"
+								>
+							</File>
+							<File
+								RelativePath="..\..\x86\microVU_Alloc.inl"
+								>
+							</File>
+							<File
+								RelativePath="..\..\x86\microVU_Analyze.inl"
+								>
+							</File>
+							<File
+								RelativePath="..\..\x86\microVU_Compile.inl"
+								>
+							</File>
+							<File
+								RelativePath="..\..\x86\microVU_Execute.inl"
+								>
+							</File>
+							<File
+								RelativePath="..\..\x86\microVU_Log.inl"
+								>
+							</File>
+							<File
+								RelativePath="..\..\x86\microVU_Lower.inl"
+								>
+							</File>
+							<File
+								RelativePath="..\..\x86\microVU_Misc.h"
+								>
+							</File>
+							<File
+								RelativePath="..\..\x86\microVU_Misc.inl"
+								>
+							</File>
+							<File
+								RelativePath="..\..\x86\microVU_Tables.inl"
+								>
+							</File>
+							<File
+								RelativePath="..\..\x86\microVU_Upper.inl"
+								>
+							</File>
+						</Filter>
+						<Filter
+							Name="Super VU"
+							>
+							<File
+								RelativePath="..\..\x86\sVU_Debug.h"
+								>
+							</File>
+							<File
+								RelativePath="..\..\x86\sVU_Lower.cpp"
+								>
+							</File>
+							<File
+								RelativePath="..\..\x86\sVU_Micro.cpp"
+								>
+							</File>
+							<File
+								RelativePath="..\..\x86\sVU_Micro.h"
+								>
+							</File>
+							<File
+								RelativePath="..\..\x86\sVU_Upper.cpp"
+								>
+							</File>
+							<File
+								RelativePath="..\..\x86\sVU_zerorec.cpp"
+								>
+							</File>
+							<File
+								RelativePath="..\..\x86\sVU_zerorec.h"
+								>
+							</File>
+						</Filter>
+					</Filter>
+				</Filter>
+				<Filter
+					Name="DMAC"
+					>
+					<File
+						RelativePath="..\..\Gif.cpp"
+						>
+					</File>
+					<Filter
+						Name="Sif"
+						>
+						<File
+							RelativePath="..\..\Sif.cpp"
+							>
+						</File>
+						<File
+							RelativePath="..\..\Sif.h"
+							>
+						</File>
+						<File
+							RelativePath="..\..\Sifcmd.h"
+							>
+						</File>
+					</Filter>
+					<Filter
+						Name="Vif"
+						>
+						<File
+							RelativePath="..\..\Vif.cpp"
+							>
+						</File>
+						<File
+							RelativePath="..\..\Vif.h"
+							>
+						</File>
+						<File
+							RelativePath="..\..\VifDma.cpp"
+							>
+						</File>
+						<File
+							RelativePath="..\..\VifDma.h"
+							>
+						</File>
+						<Filter
+							Name="Dynarec"
+							>
+							<File
+								RelativePath="..\..\x86\ix86-32\aVif_proc-32.asm"
+								>
+							</File>
+							<File
+								RelativePath="..\..\x86\iVif.cpp"
+								>
+							</File>
+						</Filter>
+					</Filter>
 				</Filter>
 			</Filter>
 			<Filter
 				Name="Iop"
 				>
-				<File
-					RelativePath="..\..\CdRom.cpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\CdRom.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\CDVD.cpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\CDVD.h"
-					>
-				</File>
 				<File
 					RelativePath="..\..\IopBios.cpp"
 					>
@@ -1629,6 +1928,14 @@
 					Name="Hardware"
 					>
 					<File
+						RelativePath="..\..\IopHw.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\IopHw.h"
+						>
+					</File>
+					<File
 						RelativePath="..\..\ps2\Iop\IopHw_Internal.h"
 						>
 					</File>
@@ -1638,6 +1945,30 @@
 					</File>
 					<File
 						RelativePath="..\..\ps2\Iop\IopHwWrite.cpp"
+						>
+					</File>
+				</Filter>
+				<Filter
+					Name="CDVD"
+					>
+					<File
+						RelativePath="..\..\CDVD\CdRom.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\CDVD\CdRom.h"
+						>
+					</File>
+					<File
+						RelativePath="..\..\CDVD\CDVD.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\CDVD\CDVD.h"
+						>
+					</File>
+					<File
+						RelativePath="..\..\CDVD\CDVD_internal.h"
 						>
 					</File>
 				</Filter>
@@ -1670,14 +2001,6 @@
 					</FileConfiguration>
 					<FileConfiguration
 						Name="Devel|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							UsePrecompiledHeader="0"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Win32"
 						>
 						<Tool
 							Name="VCCLCompilerTool"
@@ -1743,36 +2066,8 @@
 				</Filter>
 			</Filter>
 			<Filter
-				Name="memory"
-				>
-				<File
-					RelativePath="..\..\Memory.cpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\Memory.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\x86\ix86-32\recVTLB.cpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\vtlb.cpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\vtlb.h"
-					>
-				</File>
-			</Filter>
-			<Filter
 				Name="GS"
 				>
-				<File
-					RelativePath="..\..\Gif.cpp"
-					>
-				</File>
 				<File
 					RelativePath="..\..\GS.cpp"
 					>
@@ -1787,154 +2082,6 @@
 				</File>
 			</Filter>
 			<Filter
-				Name="VUmicro"
-				>
-				<File
-					RelativePath="..\..\VU.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\VU0.cpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\VU0micro.cpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\VU0microInterp.cpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\VU1micro.cpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\VU1microInterp.cpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\VUflags.cpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\VUflags.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\VUmicro.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\VUmicroMem.cpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\VUops.cpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\VUops.h"
-					>
-				</File>
-				<Filter
-					Name="Dynarec"
-					>
-					<File
-						RelativePath="..\..\x86\iVU0micro.cpp"
-						>
-					</File>
-					<File
-						RelativePath="..\..\x86\iVU1micro.cpp"
-						>
-					</File>
-					<File
-						RelativePath="..\..\x86\iVUmicro.cpp"
-						>
-					</File>
-					<File
-						RelativePath="..\..\x86\iVUmicro.h"
-						>
-					</File>
-					<File
-						RelativePath="..\..\x86\iVUmicroLower.cpp"
-						>
-					</File>
-					<File
-						RelativePath="..\..\x86\iVUmicroUpper.cpp"
-						>
-					</File>
-					<File
-						RelativePath="..\..\x86\iVUops.h"
-						>
-					</File>
-					<File
-						RelativePath="..\..\x86\iVUzerorec.cpp"
-						>
-					</File>
-					<File
-						RelativePath="..\..\x86\iVUzerorec.h"
-						>
-					</File>
-					<Filter
-						Name="microVU"
-						>
-						<File
-							RelativePath="..\..\x86\microVU.cpp"
-							>
-						</File>
-						<File
-							RelativePath="..\..\x86\microVU.h"
-							>
-						</File>
-						<File
-							RelativePath="..\..\x86\microVU_Alloc.h"
-							>
-						</File>
-						<File
-							RelativePath="..\..\x86\microVU_Alloc.inl"
-							>
-						</File>
-						<File
-							RelativePath="..\..\x86\microVU_Analyze.inl"
-							>
-						</File>
-						<File
-							RelativePath="..\..\x86\microVU_Compile.inl"
-							>
-						</File>
-						<File
-							RelativePath="..\..\x86\microVU_Execute.inl"
-							>
-						</File>
-						<File
-							RelativePath="..\..\x86\microVU_Log.inl"
-							>
-						</File>
-						<File
-							RelativePath="..\..\x86\microVU_Lower.inl"
-							>
-						</File>
-						<File
-							RelativePath="..\..\x86\microVU_Misc.h"
-							>
-						</File>
-						<File
-							RelativePath="..\..\x86\microVU_Misc.inl"
-							>
-						</File>
-						<File
-							RelativePath="..\..\x86\microVU_Tables.inl"
-							>
-						</File>
-						<File
-							RelativePath="..\..\x86\microVU_Upper.inl"
-							>
-						</File>
-					</Filter>
-				</Filter>
-			</Filter>
-			<Filter
 				Name="Debug"
 				>
 				<File
@@ -1947,10 +2094,6 @@
 				</File>
 				<File
 					RelativePath="..\..\DebugTools\DisR3000A.cpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\DebugTools\DisR3000asm.cpp"
 					>
 				</File>
 				<File
@@ -1978,496 +2121,9 @@
 					>
 				</File>
 			</Filter>
-			<Filter
-				Name="Hardware"
-				>
-				<File
-					RelativePath="..\..\FiFo.cpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\Hw.cpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\Hw.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\HwRead.cpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\HwWrite.cpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\IopHw.cpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\IopHw.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\SPR.cpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\SPR.h"
-					>
-				</File>
-			</Filter>
-			<Filter
-				Name="Sif"
-				>
-				<File
-					RelativePath="..\..\Sif.cpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\Sif.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\Sifcmd.h"
-					>
-				</File>
-			</Filter>
-			<Filter
-				Name="Vif"
-				>
-				<File
-					RelativePath="..\..\Vif.cpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\Vif.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\VifDma.cpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\VifDma.h"
-					>
-				</File>
-				<Filter
-					Name="Dynarec"
-					>
-					<File
-						RelativePath="..\..\x86\ix86-32\aVif_proc-32.asm"
-						>
-					</File>
-					<File
-						RelativePath="..\..\x86\iVif.cpp"
-						>
-					</File>
-				</Filter>
-			</Filter>
 		</Filter>
 		<Filter
-			Name="ISO"
-			>
-			<File
-				RelativePath="..\..\CDVDiso.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\CDVDiso.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\CDVDisodrv.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\CDVDisodrv.h"
-				>
-			</File>
-		</Filter>
-		<Filter
-			Name="System"
-			>
-			<File
-				RelativePath="..\..\AlignedMalloc.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\AsciiString.cpp"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Devel|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\..\AsciiString.h"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCustomBuildTool"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Devel|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCustomBuildTool"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCustomBuildTool"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\..\Console.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\Exceptions.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\x86\fast_routines.cpp"
-				>
-				<FileConfiguration
-					Name="Devel|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\HostSys.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\PathUtils.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\Plugins.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\RecoverySystem.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\SamplProf.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\Saveslots.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\SaveState.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\System.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\ThreadTools.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\WinCompressNTFS.cpp"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PrecompiledHeaderThrough="Win32.h"
-						PrecompiledHeaderFile="$(IntDir)\win32.pch"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Devel|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PrecompiledHeaderThrough="Win32.h"
-						PrecompiledHeaderFile="$(IntDir)\win32.pch"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						PrecompiledHeaderThrough="Win32.h"
-						PrecompiledHeaderFile="$(IntDir)\win32.pch"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\WinThreads.cpp"
-				>
-			</File>
-			<Filter
-				Name="Include"
-				>
-				<File
-					RelativePath="..\..\Exceptions.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\HostGui.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\MemcpyFast.h"
-					>
-				</File>
-				<File
-					RelativePath="..\memzero.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\Paths.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\Plugins.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\SafeArray.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\SamplProf.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\SaveState.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\System.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\Threading.h"
-					>
-				</File>
-			</Filter>
-		</Filter>
-		<Filter
-			Name="x86Emitter"
-			>
-			<File
-				RelativePath="..\..\x86\ix86\ix86.cpp"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="2"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Devel vm|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="2"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug vm|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="2"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release vm|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="2"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\..\x86\ix86\ix86.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\x86\ix86\ix86_3dnow.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\x86\ix86\ix86_cpudetect.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\x86\ix86\ix86_fpu.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\x86\ix86\ix86_inlines.inl"
-				>
-			</File>
-			<File
-				RelativePath="..\..\x86\ix86\ix86_instructions.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\x86\ix86\ix86_internal.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\x86\ix86\ix86_jmp.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\x86\ix86\ix86_legacy.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\x86\ix86\ix86_legacy_instructions.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\x86\ix86\ix86_legacy_internal.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\x86\ix86\ix86_legacy_sse.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\x86\ix86\ix86_legacy_types.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\x86\ix86\ix86_simd.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\x86\ix86\ix86_sse_helpers.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\x86\ix86\ix86_tools.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\x86\ix86\ix86_types.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\x86\ix86\ix86_writers.inl"
-				>
-			</File>
-			<Filter
-				Name="Implement"
-				>
-				<File
-					RelativePath="..\..\x86\ix86\implement\dwshift.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\x86\ix86\implement\group1.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\x86\ix86\implement\group2.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\x86\ix86\implement\group3.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\x86\ix86\implement\incdec.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\x86\ix86\implement\jmpcall.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\x86\ix86\implement\movs.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\x86\ix86\implement\test.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\x86\ix86\implement\xchg.h"
-					>
-				</File>
-				<Filter
-					Name="xmm"
-					>
-					<File
-						RelativePath="..\..\x86\ix86\implement\xmm\arithmetic.h"
-						>
-					</File>
-					<File
-						RelativePath="..\..\x86\ix86\implement\xmm\basehelpers.h"
-						>
-					</File>
-					<File
-						RelativePath="..\..\x86\ix86\implement\xmm\comparisons.h"
-						>
-					</File>
-					<File
-						RelativePath="..\..\x86\ix86\implement\xmm\moremovs.h"
-						>
-					</File>
-					<File
-						RelativePath="..\..\x86\ix86\implement\xmm\shufflepack.h"
-						>
-					</File>
-				</Filter>
-			</Filter>
-		</Filter>
-		<Filter
-			Name="NewGUI"
+			Name="HostGUI"
 			>
 			<File
 				RelativePath="..\..\NewGUI\App.h"
@@ -2495,6 +2151,10 @@
 			</File>
 			<File
 				RelativePath="..\..\NewGUI\HostGui.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\HostGui.h"
 				>
 			</File>
 			<File
@@ -2574,6 +2234,98 @@
 				</File>
 				<File
 					RelativePath="..\..\Resources\ps2_silver.h"
+					>
+				</File>
+			</Filter>
+		</Filter>
+		<Filter
+			Name="HostSystem"
+			>
+			<File
+				RelativePath="..\..\PathUtils.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\Plugins.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\RecoverySystem.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\SamplProf.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\Saveslots.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\SaveState.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\System.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\WinCompressNTFS.cpp"
+				>
+			</File>
+			<Filter
+				Name="ISO"
+				>
+				<File
+					RelativePath="..\..\CDVD\CDVDiso.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\CDVD\CDVDiso.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\CDVD\CDVDisodrv.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\CDVD\CDVDisodrv.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\CDVD\CDVDlib.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\Elfheader.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\Elfheader.h"
+					>
+				</File>
+			</Filter>
+			<Filter
+				Name="Include"
+				>
+				<File
+					RelativePath="..\..\Paths.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\Plugins.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\SamplProf.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\SaveState.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\System.h"
 					>
 				</File>
 			</Filter>

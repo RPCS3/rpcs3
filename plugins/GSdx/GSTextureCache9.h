@@ -24,43 +24,29 @@
 #include "GSTextureCache.h"
 #include "GSDevice9.h"
 
-class GSTextureCache9 : public GSTextureCache<GSDevice9>
+class GSTextureCache9 : public GSTextureCache
 {
-	typedef GSDevice9::Texture Texture;
-
-	class GSRenderTarget9 : public GSRenderTarget
+	class Source9 : public Source
 	{
 	public:
-		explicit GSRenderTarget9(GSRenderer<GSDevice9>* renderer) : GSRenderTarget(renderer) {}
-
-		void Update();
-		void Read(CRect r);
-	};
-
-	class GSDepthStencil9 : public GSDepthStencil
-	{
-	public:
-		explicit GSDepthStencil9(GSRenderer<GSDevice9>* renderer) : GSDepthStencil(renderer) {}
-
-		void Update();
-	};
-
-	class GSTexture9 : public GSTexture
-	{
-	public:
-		explicit GSTexture9(GSRenderer<GSDevice9>* renderer) : GSTexture(renderer) {}
+		explicit Source9(GSRenderer* r) : Source(r) {}
 
 		bool Create();
-		bool Create(GSRenderTarget* rt);
-		bool Create(GSDepthStencil* ds);
-		void Update();
+		bool Create(Target* dst);
+	};
+
+	class Target9 : public Target
+	{
+	public:
+		explicit Target9(GSRenderer* r) : Target(r) {}
+
+		void Read(const GSVector4i& r);
 	};
 
 protected:
-	GSRenderTarget* CreateRenderTarget() {return new GSRenderTarget9(m_renderer);}
-	GSDepthStencil* CreateDepthStencil() {return new GSDepthStencil9(m_renderer);}
-	GSTexture* CreateTexture() {return new GSTexture9(m_renderer);}
+	Source* CreateSource() {return new Source9(m_renderer);}
+	Target* CreateTarget() {return new Target9(m_renderer);}
 
 public:
-	GSTextureCache9(GSRenderer<GSDevice9>* renderer);
+	GSTextureCache9(GSRenderer* r);
 };

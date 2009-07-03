@@ -6,15 +6,11 @@
 	>
 	<Tool
 		Name="VCCLCompilerTool"
-		AdditionalIncludeDirectories="&quot;$(SvnRootDir)\3rdparty&quot;"
-		PreprocessorDefinitions="PTW32_STATIC_LIB;WIN32_PTHREADS;__CLEANUP_SEH"
-	/>
-   	<Tool
-		Name="VCCLCompilerTool"
 		AdditionalIncludeDirectories="&quot;$(SvnRootDir)\3rdparty\w32pthreads\include&quot;"
+		PreprocessorDefinitions="WIN32_PTHREADS;__CLEANUP_SEH"
 	/>
 	<Tool
 		Name="VCLinkerTool"
-		AdditionalDependencies="pthreads.lib Ws2_32.lib"
+		AdditionalDependencies="w32pthreads.lib"
 	/>
 </VisualStudioPropertySheet>

@@ -16,8 +16,7 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
-#ifndef _PCSX2_STRINGUTILS_H_
-#define _PCSX2_STRINGUTILS_H_
+#pragma once
 
 #include <string>
 #include <cstdarg>
@@ -35,58 +34,3 @@ std::string to_string(const T& value)
 	return oss.str();
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// Helpers for wxWidgets stuff!
-//
-extern wxString ToString( const wxPoint& src, const wxString& separator=L"," );
-extern wxString ToString( const wxSize& src, const wxString& separator=L"," );
-extern wxString ToString( const wxRect& src, const wxString& separator=L"," );
-
-extern bool TryParse( wxPoint& dest, const wxStringTokenizer& parts );
-extern bool TryParse( wxSize& dest, const wxStringTokenizer& parts );
-
-extern bool TryParse( wxPoint& dest, const wxString& src, const wxPoint& defval=wxDefaultPosition, const wxString& separators=L",");
-extern bool TryParse( wxSize& dest, const wxString& src, const wxSize& defval=wxDefaultSize, const wxString& separators=L",");
-extern bool TryParse( wxRect& dest, const wxString& src, const wxRect& defval=wxDefaultRect, const wxString& separators=L",");
-
-
-//////////////////////////////////////////////////////////////////////////////////////////
-// dummy structure used to type-guard the dummy parameter that's been inserted to
-// allow us to use the va_list feature on references.
-struct _VARG_PARAM
-{
-	// just some value to make the struct length 32bits instead of 8 bits, so that the
-	// compiler generates somewhat more efficient code.
-	uint someval;
-};
-
-#ifdef _DEBUG
-
-#define params va_arg_dummy,
-#define varg_assert()  // jASSUME( dummy == &va_arg_dummy );
-// typedef the Va-Arg value to be a value type in debug builds.  The value
-// type requires a little more overhead in terms of code generation, but is always
-// type-safe.  The compiler will generate errors for any forgotten params value.
-typedef _VARG_PARAM VARG_PARAM;
-
-#else
-
-#define params NULL,	// using null is faster / more compact!
-#define varg_assert()	jASSUME( dummy == NULL );
-// typedef the Va-Arg value to be a pointer in release builds.  Pointers
-// generate more compact code by a small margin, but aren't entirely type safe since
-// the compiler won't generate errors if you pass NULL or other values.
-typedef _VARG_PARAM const * VARG_PARAM;
-
-#endif
-
-extern const _VARG_PARAM va_arg_dummy;
-
-extern void ssprintf(std::string& dest, const char* fmt, ...);
-extern void ssappendf( std::string& dest, const char* format, ...);
-extern void vssprintf(std::string& dest, const char* format, va_list args);
-extern void vssappendf(std::string& dest, const char* format, va_list args);
-
-extern std::string fmt_string( const char* fmt, ... );
-extern std::string vfmt_string( const char* fmt, va_list args );
-#endif

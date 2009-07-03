@@ -598,7 +598,7 @@ void ZeroGS::VB::CheckFrame(int tbp)
 		//u32 key = zbuf.zbp|(frame.fbw<<16);
 		//CRenderTargetMngr::MAPTARGETS::iterator it = s_RTs.mapTargets.find(key);
 //		if( it != s_RTs.mapTargets.end() ) {
-//#ifdef _DEBUG
+//#ifdef PCSX2_DEBUG
 //			DEBUG_LOG("zbuf resolve\n");
 //#endif
 //			if( it->second->status & CRenderTarget::TS_Resolved )
@@ -856,7 +856,7 @@ HRESULT ZeroGS::Create(LONG _width, LONG _height)
 	UINT adapter = D3DADAPTER_DEFAULT;
 	D3DDEVTYPE devtype = !DEBUG_PS2 ? D3DDEVTYPE_HAL : D3DDEVTYPE_REF;
 
-#ifndef _DEBUG
+#ifndef PCSX2_DEBUG
 	DWORD hwoptions = D3DCREATE_HARDWARE_VERTEXPROCESSING|D3DCREATE_PUREDEVICE;
 #else
 	DWORD hwoptions = D3DCREATE_HARDWARE_VERTEXPROCESSING;
@@ -1906,7 +1906,7 @@ void ZeroGS::Flush(int context)
 		return;
 	}
 
-#if defined(PRIM_LOG) && defined(_DEBUG)
+#if defined(PRIM_LOG) && defined(PCSX2_DEBUG)
 	static const char* patst[8] = { "NEVER", "ALWAYS", "LESS", "LEQUAL", "EQUAL", "GEQUAL", "GREATER", "NOTEQUAL"};
 	static const char* pztst[4] = { "NEVER", "ALWAYS", "GEQUAL", "GREATER" };
 	static const char* pafail[4] = { "KEEP", "FB_ONLY", "ZB_ONLY", "RGB_ONLY" };
@@ -2067,7 +2067,7 @@ void ZeroGS::Flush(int context)
 		else ptextarg = NULL;
 	}
 
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 	if( g_bSaveFlushedFrame & 0x80000000 ) {
 		char str[255];
 		sprintf(str, "rndr.tga", g_SaveFrameNum);
@@ -2393,7 +2393,7 @@ void ZeroGS::Flush(int context)
 		}
 		else {
 			// save the texture
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 //			CMemoryTarget* pmemtarg = g_MemTargs.GetMemoryTarget(curvb.tex0, 0);
 //			assert( curvb.pmemtarg == pmemtarg );
 //			if( PSMT_ISCLUT(curvb.tex0.psm) )
@@ -2546,7 +2546,7 @@ void ZeroGS::Flush(int context)
 		}
 	}
 
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 	if( bDestAlphaColor == 1 ) {
 		WARN_LOG("dest alpha blending! manipulate alpha here\n");
 	}
@@ -2719,7 +2719,7 @@ void ZeroGS::Flush(int context)
 		//WARN_LOG("Need to reset dest alpha color\n");
 	}
 
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 	if( g_bSaveFlushedFrame & 0xf ) {
 		char str[255];
 		sprintf(str, "frames\\frame%.4d.jpg", g_SaveFrameNum++);

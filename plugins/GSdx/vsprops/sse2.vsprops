@@ -6,7 +6,11 @@
 	>
 	<Tool
 		Name="VCCLCompilerTool"
-		EnableEnhancedInstructionSet="2"
 		PreprocessorDefinitions="_M_SSE=0x200"
+		EnableEnhancedInstructionSet="2"
+	/>
+	<UserMacro
+		Name="SSEtype"
+		Value="SSE2"
 	/>
 </VisualStudioPropertySheet>

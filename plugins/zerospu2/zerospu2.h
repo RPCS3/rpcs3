@@ -23,10 +23,8 @@
 #include <string.h>
 #include <malloc.h>
 
-extern "C" {
 #define SPU2defs
 #include "PS2Edefs.h"
-}
 
 #include "reg.h"
 #include "misc.h"
@@ -88,24 +86,24 @@ extern FILE *spu2Log;
 
 extern s8 *spu2regs;
 extern u16* spu2mem;
-extern int iFMod[NSSIZE];
+extern s32 iFMod[NSSIZE];
 extern u32 MemAddr[2];
-extern unsigned long   dwNoiseVal;						  // global noise generator
+extern u32   dwNoiseVal;						  // global noise generator
 
 // functions of main emu, called on spu irq
 extern void (*irqCallbackSPU2)();
 extern void (*irqCallbackDMA4)();
 extern void (*irqCallbackDMA7)();
 
-extern int SPUCycles, SPUWorkerCycles;
-extern int SPUStartCycle[2];
-extern int SPUTargetCycle[2];
+extern s32 SPUCycles, SPUWorkerCycles;
+extern s32 SPUStartCycle[2];
+extern s32 SPUTargetCycle[2];
 
 extern u16 interrupt;
 
 typedef struct {
-	int Log;
-	int options;
+	s32 Log;
+	s32 options;
 } Config;
 
 extern Config conf;
@@ -173,7 +171,7 @@ static __forceinline u32 C1_IRQA()
 	return SPU2_GET32BIT(REG_C1_IRQA_LO, REG_C1_IRQA_HI);
 }
 
-static __forceinline u32 C_IRQA(int c)
+static __forceinline u32 C_IRQA(s32 c)
 {
 	if (c == 0)
 		return C0_IRQA();
@@ -191,7 +189,7 @@ static __forceinline u32 C1_SPUADDR()
 	return SPU2_GET32BIT(REG_C1_SPUADDR_LO, REG_C1_SPUADDR_HI);
 }
 
-static __forceinline u32 C_SPUADDR(int c)
+static __forceinline u32 C_SPUADDR(s32 c)
 {
 	if (c == 0)
 		return C0_SPUADDR();
@@ -209,7 +207,7 @@ static __forceinline void C1_SPUADDR_SET(u32 value)
 	SPU2_SET32BIT(value, REG_C1_SPUADDR_LO, REG_C1_SPUADDR_HI);
 }
 
-static __forceinline void C_SPUADDR_SET(u32 value, int c)
+static __forceinline void C_SPUADDR_SET(u32 value, s32 c)
 {
 	if (c == 0)
 		C0_SPUADDR_SET(value);
@@ -282,18 +280,18 @@ struct _SPU_VOICE
 // ADSR INFOS PER   CHANNEL
 struct ADSRInfoEx
 {
-	int			State;
-	int			AttackModeExp;
-	int			AttackRate;
-	int			DecayRate;
-	int			SustainLevel;
-	int			SustainModeExp;
-	int			SustainIncrease;
-	int			SustainRate;
-	int			ReleaseModeExp;
-	int			ReleaseRate;
-	int			EnvelopeVol;
-	long		   lVolume;
+	s32			State;
+	s32			AttackModeExp;
+	s32			AttackRate;
+	s32			DecayRate;
+	s32			SustainLevel;
+	s32			SustainModeExp;
+	s32			SustainIncrease;
+	s32			SustainRate;
+	s32			ReleaseModeExp;
+	s32			ReleaseRate;
+	s32			EnvelopeVol;
+	s32			lVolume;
 };
 
 #define SPU_VOICE_STATE_SIZE (sizeof(VOICE_PROCESSED)-4*sizeof(void*))
@@ -311,34 +309,34 @@ struct VOICE_PROCESSED
 	void InterpolateUp();
 	void InterpolateDown();
 	void FModChangeFrequency(int ns);
-	int iGetNoiseVal();
+	s32 iGetNoiseVal();
 	void StoreInterpolationVal(int fa);
-	int iGetInterpolationVal();
+	s32 iGetInterpolationVal();
 	void Stop();
 
 	SPU_CONTROL_* GetCtrl();
 
 	// start save state
-	int leftvol, rightvol;	 // left right volumes
+	s32 leftvol, rightvol;	 // left right volumes
 
-	int iSBPos;							 // mixing stuff
-	int SB[32+32];
-	int spos;
-	int sinc;
+	s32 iSBPos;							 // mixing stuff
+	s32 SB[32+32];
+	s32 spos;
+	s32 sinc;
 
-	int iIrqDone;						   // debug irq done flag
-	int s_1;								// last decoding infos
-	int s_2;
-	int iOldNoise;						  // old noise val for this channel   
-	int			   iActFreq;						   // current psx pitch
-	int			   iUsedFreq;						  // current pc pitch
+	s32 iIrqDone;						   // debug irq done flag
+	s32 s_1;								// last decoding infos
+	s32 s_2;
+	s32 iOldNoise;						  // old noise val for this channel   
+	s32			   iActFreq;						   // current psx pitch
+	s32			   iUsedFreq;						  // current pc pitch
 
-	int iStartAddr, iLoopAddr, iNextAddr;
-	int bFMod;
+	s32 iStartAddr, iLoopAddr, iNextAddr;
+	s32 bFMod;
 
 	ADSRInfoEx ADSRX;							  // next ADSR settings (will be moved to active on sample start)
-	int memoffset;				  // if first core, 0, if second, 0x400
-	int chanid; // channel id
+	s32 memoffset;				  // if first core, 0, if second, 0x400
+	s32 chanid; // channel id
 
 	bool bIgnoreLoop, bNew, bNoise, bReverb, bOn, bStop, bVolChanged;
 	bool bVolumeR, bVolumeL;
@@ -363,15 +361,15 @@ struct AUDIOBUFFER
 	// Variable used to smooth out sound by concentrating on new voices
 	u32 timestamp; // in microseconds, only used for time stretching
 	u32 avgtime;
-	int newchannels;
+	s32 newchannels;
 };
 
 struct ADMA
 {
-	unsigned short * MemAddr;
-	int			  Index;
-	int			  AmountLeft;
-	int			  Enabled; 
+	u16*			  MemAddr;
+	s32			  Index;
+	s32			  AmountLeft;
+	s32			  Enabled; 
 	// used to make sure that ADMA doesn't get interrupted with a writeDMA call
 };
 
@@ -384,19 +382,19 @@ struct SPU2freezeData
 	u8 spu2regs[0x10000];
 	u8 spu2mem[0x200000];
 	u16 interrupt;
-	int nSpuIrq[2];
+	s32 nSpuIrq[2];
 	u32 dwNewChannel2[2], dwEndChannel2[2];
 	u32 dwNoiseVal;
-	int iFMod[NSSIZE];
+	s32 iFMod[NSSIZE];
 	u32 MemAddr[2];
 	ADMA adma[2];
 	u32 Adma4MemAddr, Adma7MemAddr;
 
-	int SPUCycles, SPUWorkerCycles;
-	int SPUStartCycle[2];
-	int SPUTargetCycle[2];
+	s32 SPUCycles, SPUWorkerCycles;
+	s32 SPUStartCycle[2];
+	s32 SPUTargetCycle[2];
 
-	int voicesize;
+	s32 voicesize;
 	VOICE_PROCESSED voices[SPU_NUMBER_VOICES+1];
 };
 

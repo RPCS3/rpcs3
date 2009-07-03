@@ -21,17 +21,20 @@
 
 #pragma once
 
-#ifndef __AFXWIN_H__
-	#error include 'stdafx.h' before including this file for PCH
-#endif
-
-class GSdxApp : public CWinApp
+class GSdxApp
 {
+	static const char* m_ini;
+	static const char* m_section;
+
 public:
 	GSdxApp();
 
-public:
-	virtual BOOL InitInstance();
+	HMODULE GetModuleHandle();
 
-	DECLARE_MESSAGE_MAP()
+	string GetConfig(const char* entry, const char* value);
+	void SetConfig(const char* entry, const char* value);
+	int GetConfig(const char* entry, int value);
+	void SetConfig(const char* entry, int value);
 };
+
+extern GSdxApp theApp;

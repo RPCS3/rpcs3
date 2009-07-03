@@ -20,13 +20,12 @@
  */
 
 #include "stdafx.h"
+#include "GSdx.h"
 #include "GSDevice9.h"
 #include "resource.h"
 
 GSDevice9::GSDevice9() 
 	: m_vb(NULL)
-	, m_vb_count(0)
-	, m_vb_vertices(NULL)
 	, m_vb_stride(0)
 	, m_layout(NULL)
 	, m_topology((D3DPRIMITIVETYPE)0)
@@ -39,7 +38,6 @@ GSDevice9::GSDevice9()
 	, m_ps_ss(NULL)
 	, m_scissor(0, 0, 0, 0)
 	, m_dss(NULL)
-	, m_sref(0)
 	, m_bs(NULL)
 	, m_bf(0xffffffff)
 	, m_rtv(NULL)
@@ -49,6 +47,11 @@ GSDevice9::GSDevice9()
 	memset(&m_ddcaps, 0, sizeof(m_ddcaps));
 	memset(&m_d3dcaps, 0, sizeof(m_d3dcaps));
 	memset(m_ps_srvs, 0, sizeof(m_ps_srvs));
+
+	m_vertices.stride = 0;
+	m_vertices.start = 0;
+	m_vertices.count = 0;
+	m_vertices.limit = 0;
 }
 
 GSDevice9::~GSDevice9()
@@ -57,9 +60,9 @@ GSDevice9::~GSDevice9()
 	if(m_ps_cb) _aligned_free(m_ps_cb);
 }
 
-bool GSDevice9::Create(HWND hWnd, bool vsync)
+bool GSDevice9::Create(GSWnd* wnd, bool vsync)
 {
-	if(!__super::Create(hWnd, vsync))
+	if(!__super::Create(wnd, vsync))
 	{
 		return false;
 	}
@@ -102,7 +105,7 @@ bool GSDevice9::Create(HWND hWnd, bool vsync)
 
 	m_d3d->GetDeviceCaps(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, &m_d3dcaps);
 
-	bool fs = AfxGetApp()->GetProfileInt(_T("Settings"), _T("ModeWidth"), 0) > 0;
+	bool fs = theApp.GetConfig("ModeWidth", 0) > 0;
 
 	if(!Reset(1, 1, fs)) return false;
 
@@ -110,23 +113,16 @@ bool GSDevice9::Create(HWND hWnd, bool vsync)
 
 	// shaders
 
-	DWORD psver = AfxGetApp()->GetProfileInt(_T("Settings"), _T("PixelShaderVersion2"), D3DPS_VERSION(2, 0));
-
-	if(psver > m_d3dcaps.PixelShaderVersion)
+	if(m_d3dcaps.PixelShaderVersion < D3DPS_VERSION(2, 0))
 	{
-		CString str;
+		string s = format(
+			"Supported pixel shader version is too low!\n\nSupported: %d.%d\nNeeded: 2.0 or higher",
+			D3DSHADER_VERSION_MAJOR(m_d3dcaps.PixelShaderVersion), D3DSHADER_VERSION_MINOR(m_d3dcaps.PixelShaderVersion));
 
-		str.Format(_T("Supported pixel shader version is too low!\n\nSupported: %d.%d\nSelected: %d.%d"),
-			D3DSHADER_VERSION_MAJOR(m_d3dcaps.PixelShaderVersion), D3DSHADER_VERSION_MINOR(m_d3dcaps.PixelShaderVersion),
-			D3DSHADER_VERSION_MAJOR(psver), D3DSHADER_VERSION_MINOR(psver));
-
-		AfxMessageBox(str);
+		MessageBox(NULL, s.c_str(), "GSdx", MB_OK);
 
 		return false;
 	}
-
-	m_d3dcaps.PixelShaderVersion = min(psver, m_d3dcaps.PixelShaderVersion);
-	m_d3dcaps.VertexShaderVersion = m_d3dcaps.PixelShaderVersion & ~0x10000;
 
 	// convert
 
@@ -137,13 +133,11 @@ bool GSDevice9::Create(HWND hWnd, bool vsync)
 		D3DDECL_END()
 	};
 
-	CompileShader(IDR_CONVERT9_FX, "vs_main", NULL, &m_convert.vs, il_convert, countof(il_convert), &m_convert.il);
+	CompileShader(IDR_CONVERT_FX, "vs_main", NULL, &m_convert.vs, il_convert, countof(il_convert), &m_convert.il);
 
 	for(int i = 0; i < countof(m_convert.ps); i++)
 	{
-		CStringA main;
-		main.Format("ps_main%d", i);
-		CompileShader(IDR_CONVERT9_FX, main, NULL, &m_convert.ps[i]);
+		CompileShader(IDR_CONVERT_FX, format("ps_main%d", i), NULL, &m_convert.ps[i]);
 	}
 
 	m_convert.dss.DepthEnable = false;
@@ -170,9 +164,7 @@ bool GSDevice9::Create(HWND hWnd, bool vsync)
 
 	for(int i = 0; i < countof(m_merge.ps); i++)
 	{
-		CStringA main;
-		main.Format("ps_main%d", i);
-		CompileShader(IDR_MERGE9_FX, main, NULL, &m_merge.ps[i]);
+		CompileShader(IDR_MERGE_FX, format("ps_main%d", i), NULL, &m_merge.ps[i]);
 	}
 
 	m_merge.bs.BlendEnable = true;
@@ -188,9 +180,7 @@ bool GSDevice9::Create(HWND hWnd, bool vsync)
 
 	for(int i = 0; i < countof(m_interlace.ps); i++)
 	{
-		CStringA main;
-		main.Format("ps_main%d", i);
-		CompileShader(IDR_INTERLACE9_FX, main, NULL, &m_interlace.ps[i]);
+		CompileShader(IDR_INTERLACE_FX, format("ps_main%d", i), NULL, &m_interlace.ps[i]);
 	}
 
 	//
@@ -220,16 +210,13 @@ bool GSDevice9::Reset(int w, int h, bool fs)
 
 		CComPtr<IDirect3DSurface9> backbuffer;
 		hr = m_swapchain->GetBackBuffer(0, D3DBACKBUFFER_TYPE_MONO, &backbuffer);
-		m_backbuffer = Texture(backbuffer);
+		m_backbuffer = new GSTexture9(backbuffer);
 
 		return true;
 	}
 
 	m_swapchain = NULL;
-	m_backbuffer = Texture();
-	if(m_font) m_font->OnLostDevice();
-	m_font = NULL;
-
+	
 	if(m_vs_cb) _aligned_free(m_vs_cb);
 	if(m_ps_cb) _aligned_free(m_ps_cb);
 
@@ -243,9 +230,8 @@ bool GSDevice9::Reset(int w, int h, bool fs)
 	m_ps_cb = NULL;
 	m_ps_cb_len = 0;
 	m_ps_ss = NULL;
-	m_scissor = CRect(0, 0, 0, 0);
+	m_scissor = GSVector4i::zero();
 	m_dss = NULL;
-	m_sref = 0;
 	m_bs = NULL;
 	m_bf = 0xffffffff;
 	m_rtv = NULL;
@@ -254,7 +240,7 @@ bool GSDevice9::Reset(int w, int h, bool fs)
 	memset(&m_pp, 0, sizeof(m_pp));
 
 	m_pp.Windowed = TRUE;
-	m_pp.hDeviceWindow = m_hWnd;
+	m_pp.hDeviceWindow = (HWND)m_wnd->GetHandle();
 	m_pp.SwapEffect = D3DSWAPEFFECT_FLIP;
 	m_pp.BackBufferFormat = D3DFMT_X8R8G8B8;
 	m_pp.BackBufferWidth = 1;
@@ -268,9 +254,9 @@ bool GSDevice9::Reset(int w, int h, bool fs)
 
 	// m_pp.Flags |= D3DPRESENTFLAG_VIDEO; // enables tv-out (but I don't think anyone would still use a regular tv...)
 
-	int mw = AfxGetApp()->GetProfileInt(_T("Settings"), _T("ModeWidth"), 0);
-	int mh = AfxGetApp()->GetProfileInt(_T("Settings"), _T("ModeHeight"), 0);
-	int mrr = AfxGetApp()->GetProfileInt(_T("Settings"), _T("ModeRefreshRate"), 0);
+	int mw = theApp.GetConfig("ModeWidth", 0);
+	int mh = theApp.GetConfig("ModeHeight", 0);
+	int mrr = theApp.GetConfig("ModeRefreshRate", 0);
 
 	if(fs && mw > 0 && mh > 0 && mrr >= 0)
 	{
@@ -279,16 +265,14 @@ bool GSDevice9::Reset(int w, int h, bool fs)
 		m_pp.BackBufferHeight = mh;
 		// m_pp.FullScreen_RefreshRateInHz = mrr;
 
-		::SetWindowLong(m_hWnd, GWL_STYLE, ::GetWindowLong(m_hWnd, GWL_STYLE) & ~(WS_CAPTION|WS_THICKFRAME));
-		::SetWindowPos(m_hWnd, NULL, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
-		::SetMenu(m_hWnd, NULL);
+		m_wnd->HideFrame();
 	}
 
 	if(!m_dev)
 	{
-		UINT flags = D3DCREATE_MULTITHREADED | (m_d3dcaps.VertexProcessingCaps ? D3DCREATE_HARDWARE_VERTEXPROCESSING : D3DCREATE_SOFTWARE_VERTEXPROCESSING);
+		uint32 flags = D3DCREATE_MULTITHREADED | (m_d3dcaps.VertexProcessingCaps ? D3DCREATE_HARDWARE_VERTEXPROCESSING : D3DCREATE_SOFTWARE_VERTEXPROCESSING);
 
-		hr = m_d3d->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, m_hWnd, flags, &m_pp, &m_dev);
+		hr = m_d3d->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, (HWND)m_wnd->GetHandle(), flags, &m_pp, &m_dev);
 
 		if(FAILED(hr)) return false;
 	}
@@ -330,13 +314,7 @@ bool GSDevice9::Reset(int w, int h, bool fs)
 		hr = m_dev->GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO, &backbuffer);
 	}
 
-	m_backbuffer = Texture(backbuffer);
-
-	D3DXFONT_DESC fd;
-	memset(&fd, 0, sizeof(fd));
-	_tcscpy(fd.FaceName, _T("Arial"));
-	fd.Height = 20;
-	D3DXCreateFontIndirect(m_dev, &fd, &m_font);
+	m_backbuffer = new GSTexture9(backbuffer);
 
 	m_dev->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
 	m_dev->SetRenderState(D3DRS_LIGHTING, FALSE);
@@ -353,25 +331,9 @@ bool GSDevice9::IsLost()
 	return hr == D3DERR_DEVICELOST || hr == D3DERR_DEVICENOTRESET;
 }
 
-void GSDevice9::Present(const CRect& r)
+void GSDevice9::Flip()
 {
-	CRect cr;
-
-	GetClientRect(m_hWnd, &cr);
-
-	if(m_backbuffer.GetWidth() != cr.Width() || m_backbuffer.GetHeight() != cr.Height())
-	{
-		Reset(cr.Width(), cr.Height(), false);
-	}
-
-	OMSetRenderTargets(m_backbuffer, NULL);
-
-	m_dev->Clear(0, NULL, D3DCLEAR_TARGET, 0, 1.0f, 0);
-
-	if(m_current)
-	{
-		StretchRect(m_current, m_backbuffer, GSVector4(r));
-	}
+	m_dev->EndScene();
 
 	if(m_swapchain)
 	{
@@ -381,109 +343,107 @@ void GSDevice9::Present(const CRect& r)
 	{
 		m_dev->Present(NULL, NULL, NULL, NULL);
 	}
+
+	m_dev->BeginScene();
 }
 
 void GSDevice9::BeginScene()
 {
-	m_dev->BeginScene();
+	// m_dev->BeginScene();
+}
+
+void GSDevice9::DrawPrimitive()
+{
+	int prims = 0;
+
+	switch(m_topology)
+	{
+    case D3DPT_TRIANGLELIST:
+		prims = m_vertices.count / 3;
+		break;
+    case D3DPT_LINELIST:
+		prims = m_vertices.count / 2;
+		break;
+    case D3DPT_POINTLIST:
+		prims = m_vertices.count;
+		break;
+    case D3DPT_TRIANGLESTRIP:
+    case D3DPT_TRIANGLEFAN:
+		prims = m_vertices.count - 2;
+		break;
+    case D3DPT_LINESTRIP:
+		prims = m_vertices.count - 1;
+		break;
+	}
+
+	m_dev->DrawPrimitive(m_topology, m_vertices.start, prims);
 }
 
 void GSDevice9::EndScene()
 {
-	m_dev->EndScene();
+	// m_dev->EndScene();
+
+	m_vertices.start += m_vertices.count;
+	m_vertices.count = 0;
 }
 
-void GSDevice9::Draw(LPCTSTR str)
+void GSDevice9::ClearRenderTarget(GSTexture* t, const GSVector4& c)
 {
-	/*
-	if(!m_pp.Windowed)
-	{
-		BeginScene();
-
-		OMSetRenderTargets(m_backbuffer, NULL);
-
-		CRect r(0, 0, m_backbuffer.GetWidth(), m_backbuffer.GetHeight());
-
-		D3DCOLOR c = D3DCOLOR_ARGB(255, 0, 255, 0);
-
-		if(m_font->DrawText(NULL, str, -1, &r, DT_CALCRECT|DT_LEFT|DT_WORDBREAK, c))
-		{
-			m_font->DrawText(NULL, str, -1, &r, DT_LEFT|DT_WORDBREAK, c);
-		}
-
-		EndScene();
-	}
-	*/
+	ClearRenderTarget(t, (c * 255 + 0.5f).zyxw().rgba32());
 }
 
-bool GSDevice9::CopyOffscreen(Texture& src, const GSVector4& sr, Texture& dst, int w, int h, int format)
-{
-	dst = Texture();
-
-	if(format == 0)
-	{
-		format = D3DFMT_A8R8G8B8;
-	}
-
-	if(format != D3DFMT_A8R8G8B8)
-	{
-		ASSERT(0);
-
-		return false;
-	}
-
-	Texture rt;
-
-	if(CreateRenderTarget(rt, w, h, format))
-	{
-		GSVector4 dr(0, 0, w, h);
-
-		StretchRect(src, sr, rt, dr, m_convert.ps[1], NULL, 0);
-
-		if(CreateOffscreen(dst, w, h, format))
-		{
-			m_dev->GetRenderTargetData(rt, dst);
-		}
-	}
-
-	Recycle(rt);
-
-	return !!dst;
-}
-
-void GSDevice9::ClearRenderTarget(Texture& t, const GSVector4& c)
-{
-	ClearRenderTarget(t, D3DCOLOR_RGBA((BYTE)(c.r * 255 + 0.5f), (BYTE)(c.g * 255 + 0.5f), (BYTE)(c.b * 255 + 0.5f), (BYTE)(c.a * 255 + 0.5f)));
-}
-
-void GSDevice9::ClearRenderTarget(Texture& t, DWORD c)
+void GSDevice9::ClearRenderTarget(GSTexture* rt, uint32 c)
 {
 	CComPtr<IDirect3DSurface9> surface;
 	m_dev->GetRenderTarget(0, &surface);
-	m_dev->SetRenderTarget(0, t);
+	m_dev->SetRenderTarget(0, *(GSTexture9*)rt);
 	m_dev->Clear(0, NULL, D3DCLEAR_TARGET, c, 0, 0);
 	m_dev->SetRenderTarget(0, surface);
 }
 
-void GSDevice9::ClearDepth(Texture& t, float c)
+void GSDevice9::ClearDepth(GSTexture* t, float c)
 {
-	CComPtr<IDirect3DSurface9> surface;
-	m_dev->GetDepthStencilSurface(&surface);
-	m_dev->SetDepthStencilSurface(t);
+	GSTexture* rt = CreateRenderTarget(t->GetWidth(), t->GetHeight());
+
+	CComPtr<IDirect3DSurface9> rtsurface;
+	CComPtr<IDirect3DSurface9> dssurface;
+
+	m_dev->GetRenderTarget(0, &rtsurface);
+	m_dev->GetDepthStencilSurface(&dssurface);
+
+	m_dev->SetRenderTarget(0, *(GSTexture9*)rt);
+	m_dev->SetDepthStencilSurface(*(GSTexture9*)t);
+
 	m_dev->Clear(0, NULL, D3DCLEAR_ZBUFFER, 0, c, 0);
-	m_dev->SetDepthStencilSurface(surface);
+
+	m_dev->SetRenderTarget(0, rtsurface);
+	m_dev->SetDepthStencilSurface(dssurface);
+
+	Recycle(rt);
 }
 
-void GSDevice9::ClearStencil(Texture& t, BYTE c)
+void GSDevice9::ClearStencil(GSTexture* t, uint8 c)
 {
-	CComPtr<IDirect3DSurface9> surface;
-	m_dev->GetDepthStencilSurface(&surface);
-	m_dev->SetDepthStencilSurface(t);
+	GSTexture* rt = CreateRenderTarget(t->GetWidth(), t->GetHeight());
+
+	CComPtr<IDirect3DSurface9> rtsurface;
+	CComPtr<IDirect3DSurface9> dssurface;
+
+	m_dev->GetRenderTarget(0, &rtsurface);
+	m_dev->GetDepthStencilSurface(&dssurface);
+
+	m_dev->SetRenderTarget(0, *(GSTexture9*)rt);
+	m_dev->SetDepthStencilSurface(*(GSTexture9*)t);
+
 	m_dev->Clear(0, NULL, D3DCLEAR_STENCIL, 0, 0, c);
-	m_dev->SetDepthStencilSurface(surface);
+
+	m_dev->SetRenderTarget(0, rtsurface);
+	m_dev->SetDepthStencilSurface(dssurface);
+
+	Recycle(rt);
 }
 
-bool GSDevice9::Create(int type, Texture& t, int w, int h, int format)
+GSTexture* GSDevice9::Create(int type, int w, int h, int format)
 {
 	HRESULT hr;
 
@@ -506,14 +466,16 @@ bool GSDevice9::Create(int type, Texture& t, int w, int h, int format)
 		break;
 	}
 
+	GSTexture9* t = NULL;
+
 	if(surface)
 	{
-		t = Texture(surface);
+		t = new GSTexture9(surface);
 	}
 
 	if(texture)
 	{
-		t = Texture(texture);
+		t = new GSTexture9(texture);
 	}
 
 	if(t)
@@ -527,34 +489,138 @@ bool GSDevice9::Create(int type, Texture& t, int w, int h, int format)
 			ClearDepth(t, 0);
 			break;
 		}
-
-		return t;
 	}
 
-	return false;
+	return t;
 }
 
-bool GSDevice9::CreateRenderTarget(Texture& t, int w, int h, int format)
+GSTexture* GSDevice9::CreateRenderTarget(int w, int h, int format)
 {
-	return __super::CreateRenderTarget(t, w, h, format ? format : D3DFMT_A8R8G8B8);
+	return __super::CreateRenderTarget(w, h, format ? format : D3DFMT_A8R8G8B8);
 }
 
-bool GSDevice9::CreateDepthStencil(Texture& t, int w, int h, int format)
+GSTexture* GSDevice9::CreateDepthStencil(int w, int h, int format)
 {
-	return __super::CreateDepthStencil(t, w, h, format ? format : D3DFMT_D24S8);
+	return __super::CreateDepthStencil(w, h, format ? format : D3DFMT_D24S8);
+	// return __super::CreateDepthStencil(w, h, format ? format : D3DFMT_D32F_LOCKABLE); 
 }
 
-bool GSDevice9::CreateTexture(Texture& t, int w, int h, int format)
+GSTexture* GSDevice9::CreateTexture(int w, int h, int format)
 {
-	return __super::CreateTexture(t, w, h, format ? format : D3DFMT_A8R8G8B8);
+	return __super::CreateTexture(w, h, format ? format : D3DFMT_A8R8G8B8);
 }
 
-bool GSDevice9::CreateOffscreen(Texture& t, int w, int h, int format)
+GSTexture* GSDevice9::CreateOffscreen(int w, int h, int format)
 {
-	return __super::CreateOffscreen(t, w, h, format ? format : D3DFMT_A8R8G8B8);
+	return __super::CreateOffscreen(w, h, format ? format : D3DFMT_A8R8G8B8);
 }
 
-void GSDevice9::DoMerge(Texture* st, GSVector4* sr, GSVector4* dr, Texture& dt, bool slbg, bool mmod, GSVector4& c)
+GSTexture* GSDevice9::CopyOffscreen(GSTexture* src, const GSVector4& sr, int w, int h, int format)
+{
+	GSTexture* dst = NULL;
+
+	if(format == 0)
+	{
+		format = D3DFMT_A8R8G8B8;
+	}
+
+	if(format != D3DFMT_A8R8G8B8)
+	{
+		ASSERT(0);
+
+		return false;
+	}
+
+	if(GSTexture* rt = CreateRenderTarget(w, h, format))
+	{
+		GSVector4 dr(0, 0, w, h);
+
+		StretchRect(src, sr, rt, dr, m_convert.ps[1], NULL, 0);
+
+		dst = CreateOffscreen(w, h, format);
+
+		if(dst)
+		{
+			m_dev->GetRenderTargetData(*(GSTexture9*)rt, *(GSTexture9*)dst);
+		}
+
+		Recycle(rt);
+	}
+
+	return dst;
+}
+
+void GSDevice9::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, int shader, bool linear)
+{
+	StretchRect(st, sr, dt, dr, m_convert.ps[shader], NULL, 0, linear);
+}
+
+void GSDevice9::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, IDirect3DPixelShader9* ps, const float* ps_cb, int ps_cb_len, bool linear)
+{
+	StretchRect(st, sr, dt, dr, ps, ps_cb, ps_cb_len, &m_convert.bs, linear);
+}
+
+void GSDevice9::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, IDirect3DPixelShader9* ps, const float* ps_cb, int ps_cb_len, Direct3DBlendState9* bs, bool linear)
+{
+	BeginScene();
+
+	GSVector2i ds = dt->GetSize();
+
+	// om
+
+	OMSetDepthStencilState(&m_convert.dss);
+	OMSetBlendState(bs, 0);
+	OMSetRenderTargets(dt, NULL);
+
+	// ia
+
+	float left = dr.x * 2 / ds.x - 1.0f;
+	float top = 1.0f - dr.y * 2 / ds.y;
+	float right = dr.z * 2 / ds.x - 1.0f;
+	float bottom = 1.0f - dr.w * 2 / ds.y;
+
+	GSVertexPT1 vertices[] =
+	{
+		{GSVector4(left, top, 0.5f, 1.0f), GSVector2(sr.x, sr.y)},
+		{GSVector4(right, top, 0.5f, 1.0f), GSVector2(sr.z, sr.y)},
+		{GSVector4(left, bottom, 0.5f, 1.0f), GSVector2(sr.x, sr.w)},
+		{GSVector4(right, bottom, 0.5f, 1.0f), GSVector2(sr.z, sr.w)},
+	};
+
+	for(int i = 0; i < countof(vertices); i++)
+	{
+		vertices[i].p.x -= 1.0f / ds.x;
+		vertices[i].p.y += 1.0f / ds.y;
+	}
+
+	IASetVertexBuffer(vertices, sizeof(vertices[0]), countof(vertices));
+	IASetInputLayout(m_convert.il);
+	IASetPrimitiveTopology(D3DPT_TRIANGLESTRIP);
+
+	// vs
+
+	VSSetShader(m_convert.vs, NULL, 0);
+
+	// ps
+
+	PSSetShader(ps, ps_cb, ps_cb_len);
+	PSSetSamplerState(linear ? &m_convert.ln : &m_convert.pt);
+	PSSetShaderResources(st, NULL);
+
+	// rs
+
+	RSSet(ds.x, ds.y);
+
+	//
+
+	DrawPrimitive();
+
+	//
+
+	EndScene();
+}
+
+void GSDevice9::DoMerge(GSTexture* st[2], GSVector4* sr, GSVector4* dr, GSTexture* dt, bool slbg, bool mmod, const GSVector4& c)
 {
 	ClearRenderTarget(dt, c);
 
@@ -573,30 +639,69 @@ void GSDevice9::DoMerge(Texture* st, GSVector4* sr, GSVector4* dr, Texture& dt, 
 	}
 }
 
-void GSDevice9::DoInterlace(Texture& st, Texture& dt, int shader, bool linear, float yoffset)
+void GSDevice9::DoInterlace(GSTexture* st, GSTexture* dt, int shader, bool linear, float yoffset)
 {
+	GSVector4 s = GSVector4(dt->GetSize());
+
 	GSVector4 sr(0, 0, 1, 1);
-	GSVector4 dr(0.0f, yoffset, (float)dt.GetWidth(), (float)dt.GetHeight() + yoffset);
+	GSVector4 dr(0.0f, yoffset, s.x, s.y + yoffset);
 
 	InterlaceConstantBuffer cb;
 
-	cb.ZrH = GSVector2(0, 1.0f / dt.GetHeight());
-	cb.hH = (float)dt.GetHeight() / 2;
+	cb.ZrH = GSVector2(0, 1.0f / s.y);
+	cb.hH = (float)s.y / 2;
 
 	StretchRect(st, sr, dt, dr, m_interlace.ps[shader], (const float*)&cb, 1, linear);
 }
-/*
-void GSDevice9::IASetVertexBuffer(IDirect3DVertexBuffer9* vb, UINT count, const void* vertices, UINT stride)
+
+void GSDevice9::IASetVertexBuffer(const void* vertices, size_t stride, size_t count)
 {
-	void* data = NULL;
+	ASSERT(m_vertices.count == 0);
 
-	if(SUCCEEDED(vb->Lock(0, count * stride, &data, D3DLOCK_DISCARD)))
+	if(count * stride > m_vertices.limit * m_vertices.stride)
 	{
-		memcpy(data, vertices, count * stride);
-
-		vb->Unlock();
+		m_vertices.vb_old = m_vertices.vb;
+		m_vertices.vb = NULL;
+		m_vertices.start = 0;
+		m_vertices.count = 0;
+		m_vertices.limit = max(count * 3 / 2, 10000);
 	}
 
+	if(m_vertices.vb == NULL)
+	{
+		HRESULT hr;
+		
+		hr = m_dev->CreateVertexBuffer(m_vertices.limit * stride, D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY, 0, D3DPOOL_DEFAULT, &m_vertices.vb, NULL);
+
+		if(FAILED(hr)) return;
+	}
+
+	uint32 flags = D3DLOCK_NOOVERWRITE;
+
+	if(m_vertices.start + count > m_vertices.limit || stride != m_vertices.stride)
+	{
+		m_vertices.start = 0;
+
+		flags = D3DLOCK_DISCARD;
+	}
+
+	void* v = NULL;
+
+	if(SUCCEEDED(m_vertices.vb->Lock(m_vertices.start * stride, count * stride, &v, flags)))
+	{
+		GSVector4i::storent(v, vertices, count * stride);
+
+		m_vertices.vb->Unlock();
+	}
+
+	m_vertices.count = count;
+	m_vertices.stride = stride;
+
+	IASetVertexBuffer(m_vertices.vb, stride);
+}
+
+void GSDevice9::IASetVertexBuffer(IDirect3DVertexBuffer9* vb, size_t stride)
+{
 	if(m_vb != vb || m_vb_stride != stride)
 	{
 		m_dev->SetStreamSource(0, vb, 0, stride);
@@ -605,23 +710,14 @@ void GSDevice9::IASetVertexBuffer(IDirect3DVertexBuffer9* vb, UINT count, const 
 		m_vb_stride = stride;
 	}
 }
-*/
-void GSDevice9::IASetVertexBuffer(UINT count, const void* vertices, UINT stride)
-{
-	m_vb_count = count;
-	m_vb_vertices = vertices;
-	m_vb_stride = stride;
-}
 
 void GSDevice9::IASetInputLayout(IDirect3DVertexDeclaration9* layout)
 {
-	// TODO: get rid of all SetFVF before enabling this
-
-	// if(m_layout != layout)
+	if(m_layout != layout)
 	{
 		m_dev->SetVertexDeclaration(layout);
 
-		// m_layout = layout;
+		m_layout = layout;
 	}
 }
 
@@ -661,8 +757,14 @@ void GSDevice9::VSSetShader(IDirect3DVertexShader9* vs, const float* vs_cb, int 
 	}
 }
 
-void GSDevice9::PSSetShaderResources(IDirect3DTexture9* srv0, IDirect3DTexture9* srv1)
+void GSDevice9::PSSetShaderResources(GSTexture* sr0, GSTexture* sr1)
 {
+	IDirect3DTexture9* srv0 = NULL;
+	IDirect3DTexture9* srv1 = NULL;
+	
+	if(sr0) srv0 = *(GSTexture9*)sr0;
+	if(sr1) srv1 = *(GSTexture9*)sr1;
+
 	if(m_ps_srvs[0] != srv0)
 	{
 		m_dev->SetTexture(0, srv0);
@@ -713,6 +815,7 @@ void GSDevice9::PSSetSamplerState(Direct3DSamplerState9* ss)
 {
 	if(ss && m_ps_ss != ss)
 	{
+
 		m_dev->SetSamplerState(0, D3DSAMP_ADDRESSU, ss->AddressU);
 		m_dev->SetSamplerState(0, D3DSAMP_ADDRESSV, ss->AddressV);
 		m_dev->SetSamplerState(1, D3DSAMP_ADDRESSU, ss->AddressU);
@@ -734,21 +837,21 @@ void GSDevice9::PSSetSamplerState(Direct3DSamplerState9* ss)
 	}
 }
 
-void GSDevice9::RSSet(int width, int height, const RECT* scissor)
+void GSDevice9::RSSet(int width, int height, const GSVector4i* scissor)
 {
-	CRect r = scissor ? *scissor : CRect(0, 0, width, height);
+	GSVector4i r = scissor ? *scissor : GSVector4i(0, 0, width, height);
 
-	if(m_scissor != r)
+	if(!m_scissor.eq(r))
 	{
-		m_dev->SetScissorRect(&r);
+		m_dev->SetScissorRect(r);
 
 		m_scissor = r;
 	}
 }
 
-void GSDevice9::OMSetDepthStencilState(Direct3DDepthStencilState9* dss, UINT sref)
+void GSDevice9::OMSetDepthStencilState(Direct3DDepthStencilState9* dss)
 {
-	if(m_dss != dss || m_sref != sref)
+	if(m_dss != dss)
 	{
 		m_dev->SetRenderState(D3DRS_ZENABLE, dss->DepthEnable);
 		m_dev->SetRenderState(D3DRS_ZWRITEENABLE, dss->DepthWriteMask);
@@ -768,15 +871,14 @@ void GSDevice9::OMSetDepthStencilState(Direct3DDepthStencilState9* dss, UINT sre
 			m_dev->SetRenderState(D3DRS_STENCILPASS, dss->StencilPassOp);
 			m_dev->SetRenderState(D3DRS_STENCILFAIL, dss->StencilFailOp);
 			m_dev->SetRenderState(D3DRS_STENCILZFAIL, dss->StencilDepthFailOp);
-			m_dev->SetRenderState(D3DRS_STENCILREF, sref);
+			m_dev->SetRenderState(D3DRS_STENCILREF, dss->StencilRef);
 		}
 
 		m_dss = dss;
-		m_sref = sref;
 	}
 }
 
-void GSDevice9::OMSetBlendState(Direct3DBlendState9* bs, DWORD bf)
+void GSDevice9::OMSetBlendState(Direct3DBlendState9* bs, uint32 bf)
 {
 	if(m_bs != bs || m_bf != bf)
 	{
@@ -801,8 +903,14 @@ void GSDevice9::OMSetBlendState(Direct3DBlendState9* bs, DWORD bf)
 	}
 }
 
-void GSDevice9::OMSetRenderTargets(IDirect3DSurface9* rtv, IDirect3DSurface9* dsv)
+void GSDevice9::OMSetRenderTargets(GSTexture* rt, GSTexture* ds)
 {
+	IDirect3DSurface9* rtv = NULL;
+	IDirect3DSurface9* dsv = NULL;
+
+	if(rt) rtv = *(GSTexture9*)rt;
+	if(ds) dsv = *(GSTexture9*)ds;
+
 	if(m_rtv != rtv)
 	{
 		m_dev->SetRenderTarget(0, rtv);
@@ -818,121 +926,21 @@ void GSDevice9::OMSetRenderTargets(IDirect3DSurface9* rtv, IDirect3DSurface9* ds
 	}
 }
 
-void GSDevice9::DrawPrimitive()
-{
-	int prims = 0;
-
-	switch(m_topology)
-	{
-    case D3DPT_TRIANGLELIST:
-		prims = m_vb_count / 3;
-		break;
-    case D3DPT_LINELIST:
-		prims = m_vb_count / 2;
-		break;
-    case D3DPT_POINTLIST:
-		prims = m_vb_count;
-		break;
-    case D3DPT_TRIANGLESTRIP:
-    case D3DPT_TRIANGLEFAN:
-		prims = m_vb_count - 2;
-		break;
-    case D3DPT_LINESTRIP:
-		prims = m_vb_count - 1;
-		break;
-	}
-
-	m_dev->DrawPrimitiveUP(m_topology, prims, m_vb_vertices, m_vb_stride);
-}
-
-void GSDevice9::StretchRect(Texture& st, Texture& dt, const GSVector4& dr, bool linear)
-{
-	StretchRect(st, GSVector4(0, 0, 1, 1), dt, dr, linear);
-}
-
-void GSDevice9::StretchRect(Texture& st, const GSVector4& sr, Texture& dt, const GSVector4& dr, bool linear)
-{
-	StretchRect(st, sr, dt, dr, m_convert.ps[0], NULL, 0, linear);
-}
-
-void GSDevice9::StretchRect(Texture& st, const GSVector4& sr, Texture& dt, const GSVector4& dr, IDirect3DPixelShader9* ps, const float* ps_cb, int ps_cb_len, bool linear)
-{
-	StretchRect(st, sr, dt, dr, ps, ps_cb, ps_cb_len, &m_convert.bs, linear);
-}
-
-void GSDevice9::StretchRect(Texture& st, const GSVector4& sr, Texture& dt, const GSVector4& dr, IDirect3DPixelShader9* ps, const float* ps_cb, int ps_cb_len, Direct3DBlendState9* bs, bool linear)
-{
-	BeginScene();
-
-	// om
-
-	OMSetDepthStencilState(&m_convert.dss, 0);
-	OMSetBlendState(bs, 0);
-	OMSetRenderTargets(dt, NULL);
-
-	// ia
-
-	float left = dr.x * 2 / dt.GetWidth() - 1.0f;
-	float top = 1.0f - dr.y * 2 / dt.GetHeight();
-	float right = dr.z * 2 / dt.GetWidth() - 1.0f;
-	float bottom = 1.0f - dr.w * 2 / dt.GetHeight();
-
-	GSVertexPT1 vertices[] =
-	{
-		{GSVector4(left, top, 0.5f, 1.0f), GSVector2(sr.x, sr.y)},
-		{GSVector4(right, top, 0.5f, 1.0f), GSVector2(sr.z, sr.y)},
-		{GSVector4(left, bottom, 0.5f, 1.0f), GSVector2(sr.x, sr.w)},
-		{GSVector4(right, bottom, 0.5f, 1.0f), GSVector2(sr.z, sr.w)},
-	};
-
-	for(int i = 0; i < countof(vertices); i++)
-	{
-		vertices[i].p.x -= 1.0f / dt.GetWidth();
-		vertices[i].p.y += 1.0f / dt.GetHeight();
-	}
-
-	IASetVertexBuffer(4, vertices);
-	IASetInputLayout(m_convert.il);
-	IASetPrimitiveTopology(D3DPT_TRIANGLESTRIP);
-
-	// vs
-
-	VSSetShader(m_convert.vs, NULL, 0);
-
-	// ps
-
-	PSSetShader(ps, ps_cb, ps_cb_len);
-	PSSetSamplerState(linear ? &m_convert.ln : &m_convert.pt);
-	PSSetShaderResources(st, NULL);
-
-	// rs
-
-	RSSet(dt.GetWidth(), dt.GetHeight());
-
-	//
-
-	DrawPrimitive();
-
-	//
-
-	EndScene();
-}
-
 // FIXME: D3DXCompileShaderFromResource of d3dx9 v37 (march 2008) calls GetFullPathName on id for some reason and then crashes
 
-static HRESULT LoadShader(UINT id, LPCSTR& data, DWORD& size)
+static HRESULT LoadShader(uint32 id, LPCSTR& data, uint32& size)
 {
 	CComPtr<ID3DXBuffer> shader, error;
 
-	HRSRC hRes = FindResource(AfxGetResourceHandle(), MAKEINTRESOURCE(id), RT_RCDATA);
+	HRSRC hRes = FindResource(theApp.GetModuleHandle(), MAKEINTRESOURCE(id), RT_RCDATA);
 
 	if(!hRes) return E_FAIL;
 
-	size = SizeofResource(AfxGetResourceHandle(), hRes);
+	size = SizeofResource(theApp.GetModuleHandle(), hRes);
 
 	if(size == 0) return E_FAIL;
 
-	HGLOBAL hResData  = LoadResource(AfxGetResourceHandle(), hRes);
+	HGLOBAL hResData  = LoadResource(theApp.GetModuleHandle(), hRes);
 
 	if(!hResData) return E_FAIL;
 
@@ -941,37 +949,44 @@ static HRESULT LoadShader(UINT id, LPCSTR& data, DWORD& size)
 	return S_OK;
 }
 
-HRESULT GSDevice9::CompileShader(UINT id, LPCSTR entry, const D3DXMACRO* macro, IDirect3DVertexShader9** vs, const D3DVERTEXELEMENT9* layout, int count, IDirect3DVertexDeclaration9** il)
+HRESULT GSDevice9::CompileShader(uint32 id, const string& entry, const D3DXMACRO* macro, IDirect3DVertexShader9** vs, const D3DVERTEXELEMENT9* layout, int count, IDirect3DVertexDeclaration9** il)
 {
-	LPCSTR target;
+	const char* target;
+	const char* model;
 
 	if(m_d3dcaps.VertexShaderVersion >= D3DVS_VERSION(3, 0))
 	{
 		target = "vs_3_0";
+		model = "0x300";
 	}
 	else if(m_d3dcaps.VertexShaderVersion >= D3DVS_VERSION(2, 0))
 	{
 		target = "vs_2_0";
+		model = "0x200";
 	}
 	else
 	{
 		return E_FAIL;
 	}
 
+	vector<D3DXMACRO> m;
+
+	PrepareShaderMacro(m, macro, model);
+
 	HRESULT hr;
 
 	CComPtr<ID3DXBuffer> shader, error;
 
-	// FIXME: hr = D3DXCompileShaderFromResource(AfxGetResourceHandle(), MAKEINTRESOURCE(id), macro, NULL, entry, target, 0, &shader, &error, NULL);
+	// FIXME: hr = D3DXCompileShaderFromResource(theApp.GetModuleHandle(), MAKEINTRESOURCE(id), &m[0], NULL, entry.c_str(), target, 0, &shader, &error, NULL);
 
 	LPCSTR data;
-	DWORD size;
+	uint32 size;
 
 	hr = LoadShader(id, data, size);
 
 	if(FAILED(hr)) return E_FAIL;
 
-	hr = D3DXCompileShader(data, size, macro, NULL, entry, target, 0, &shader, &error, NULL);
+	hr = D3DXCompileShader(data, size, &m[0], NULL, entry.c_str(), target, 0, &shader, &error, NULL);
 
 	if(SUCCEEDED(hr))
 	{
@@ -979,9 +994,7 @@ HRESULT GSDevice9::CompileShader(UINT id, LPCSTR entry, const D3DXMACRO* macro, 
 	}
 	else if(error)
 	{
-		LPCSTR msg = (LPCSTR)error->GetBufferPointer();
-
-		TRACE(_T("%s\n"), CString(msg));
+		printf("%s\n", (const char*)error->GetBufferPointer());
 	}
 
 	ASSERT(SUCCEEDED(hr));
@@ -1001,51 +1014,54 @@ HRESULT GSDevice9::CompileShader(UINT id, LPCSTR entry, const D3DXMACRO* macro, 
 	return S_OK;
 }
 
-HRESULT GSDevice9::CompileShader(UINT id, LPCSTR entry, const D3DXMACRO* macro, IDirect3DPixelShader9** ps)
+HRESULT GSDevice9::CompileShader(uint32 id, const string& entry, const D3DXMACRO* macro, IDirect3DPixelShader9** ps)
 {
-	LPCSTR target = NULL;
-	UINT flags = 0;
+	const char* target = NULL;
+	const char* model;
+	uint32 flags = 0;
 
 	if(m_d3dcaps.PixelShaderVersion >= D3DPS_VERSION(3, 0))
 	{
 		target = "ps_3_0";
+		model = "0x300";
 		flags |= D3DXSHADER_AVOID_FLOW_CONTROL;
 	}
 	else if(m_d3dcaps.PixelShaderVersion >= D3DPS_VERSION(2, 0))
 	{
 		target = "ps_2_0";
+		model = "0x200";
 	}
 	else 
 	{
 		return false;
 	}
 
+	vector<D3DXMACRO> m;
+
+	PrepareShaderMacro(m, macro, model);
+
 	HRESULT hr;
 
 	CComPtr<ID3DXBuffer> shader, error;
 
-	// FIXME: hr = D3DXCompileShaderFromResource(AfxGetResourceHandle(), MAKEINTRESOURCE(id), macro, NULL, entry, target, flags, &shader, &error, NULL);
+	// FIXME: hr = D3DXCompileShaderFromResource(theApp.GetModuleHandle(), MAKEINTRESOURCE(id), &m[0], NULL, entry.c_str(), target, flags, &shader, &error, NULL);
 
 	LPCSTR data;
-	DWORD size;
+	uint32 size;
 
 	hr = LoadShader(id, data, size);
 
 	if(FAILED(hr)) return E_FAIL;
 
-	hr = D3DXCompileShader(data, size, macro, NULL, entry, target, 0, &shader, &error, NULL);
+	hr = D3DXCompileShader(data, size, &m[0], NULL, entry.c_str(), target, 0, &shader, &error, NULL);
 
 	if(SUCCEEDED(hr))
 	{
 		hr = m_dev->CreatePixelShader((DWORD*)shader->GetBufferPointer(), ps);
-
-		ASSERT(SUCCEEDED(hr));
 	}
 	else if(error)
 	{
-		LPCSTR msg = (LPCSTR)error->GetBufferPointer();
-
-		TRACE(_T("%s\n"), CString(msg));
+		printf("%s\n", (const char*)error->GetBufferPointer());
 	}
 
 	ASSERT(SUCCEEDED(hr));

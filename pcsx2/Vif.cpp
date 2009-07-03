@@ -397,7 +397,7 @@ static __forceinline int mfifo_VIF1chain()
 	/* Is QWC = 0? if so there is nothing to transfer */
 	if ((vif1ch->qwc == 0) && (!vif1.vifstalled))
 	{
-		vif1.inprogress = 0;
+		vif1.inprogress &= ~1;
 		return 0;
 	}
 
@@ -451,7 +451,7 @@ void mfifoVIF1transfer(int qwc)
 
 	mfifodmairq = false; //Clear any previous TIE interrupt
 
-	if (vif1ch->qwc == 0)
+	if (vif1ch->qwc == 0 && vifqwc > 0)
 	{
 		ptag = (u32*)dmaGetAddr(vif1ch->tadr);
 
@@ -533,13 +533,28 @@ void vifMFIFOInterrupt()
 {
 	g_vifCycles = 0;
 	
+	if(schedulepath3msk) Vif1MskPath3();
+
+	if((vif1Regs->stat & VIF1_STAT_VGW))
+	{
+		if(gif->chcr & 0x100)
+		{			
+			CPU_INT(10, 16);
+			return;
+		} 
+		else vif1Regs->stat &= ~VIF1_STAT_VGW;
+	
+	}
+
 	if((spr0->chcr & 0x100) && spr0->qwc == 0)
 	{
 		spr0->chcr &= ~0x100;
-		hwDmacIrq(8);
+		hwDmacIrq(DMAC_FROM_SPR);
 	}
 
-	if (vif1.inprogress == 1) mfifo_VIF1chain();
+	
+
+	
 
 	if (vif1.irq && vif1.tag.size == 0)
 	{
@@ -554,33 +569,45 @@ void vifMFIFOInterrupt()
 		}
 	}
 	
-	if (!vif1.done || vif1.inprogress & 1)
+	if (vif1.done == false || vif1ch->qwc)
 	{
-		if (vifqwc <= 0)
-		{
-			//Console::WriteLn("Empty 1");
-			vif1.inprogress |= 0x10;
-			vif1Regs->stat &= ~0x1F000000; // FQC=0
-			hwDmacIrq(14);
-			return;
-		}
-		if (!(vif1.inprogress & 0x1)) mfifoVIF1transfer(0);
-
-		if (vif1ch->madr >= psHu32(DMAC_RBOR) && vif1ch->madr <= (psHu32(DMAC_RBOR) + psHu32(DMAC_RBSR)))
-			CPU_INT(10, 0);
-		else
-			CPU_INT(10, vif1ch->qwc * BIAS);
-
 		
+
+		switch(vif1.inprogress & 1)
+		{
+			case 0: //Set up transfer
+				if (vif1ch->tadr == spr0->madr)
+				{
+				//	Console::WriteLn("Empty 1");
+					vifqwc = 0;
+					vif1.inprogress |= 0x10;
+					vif1Regs->stat &= ~0x1F000000; // FQC=0
+					hwDmacIrq(DMAC_14);
+					return;
+				}
+
+				 mfifoVIF1transfer(0);
+				 if (vif1ch->madr >= psHu32(DMAC_RBOR) && vif1ch->madr <= (psHu32(DMAC_RBOR) + psHu32(DMAC_RBSR)))
+					CPU_INT(10, 0);
+				else
+					CPU_INT(10, vif1ch->qwc * BIAS);
+
+				return;
+			case 1: //Transfer data
+				mfifo_VIF1chain();	
+				CPU_INT(10, 0);
+				return;
+		}
 		return;
-	}
-	else if (vifqwc <= 0)
+	} 
+	
+	/*if (vifqwc <= 0)
 	{
 		//Console::WriteLn("Empty 2");
-		vif1.inprogress |= 0x10;
+		//vif1.inprogress |= 0x10;
 		vif1Regs->stat &= ~0x1F000000; // FQC=0
-		hwDmacIrq(14);
-	}
+		hwDmacIrq(DMAC_14);
+	}*/
 
 	//On a TIE break we do not clear the MFIFO (Art of Fighting)
 	//If we dont clear it on MFIFO end, Tekken Tag breaks, understandably (Refraction)

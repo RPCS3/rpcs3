@@ -16,8 +16,7 @@
 //Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 
-#ifndef SPU2REPLAY_H_INCLUDED
-#define SPU2REPLAY_H_INCLUDED
+#pragma once
 
 // s2r dumping
 int s2r_open(char *filename);
@@ -35,5 +34,3 @@ EXPORT_C_(void) s2r_replay(HWND hwnd, HINSTANCE hinst, LPSTR filename, int nCmdS
 #endif
 
 extern bool replay_mode;
-
-#endif//SPU2REPLAY_H_INCLUDED

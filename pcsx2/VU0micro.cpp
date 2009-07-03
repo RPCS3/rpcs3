@@ -32,7 +32,7 @@
 #include "VUflags.h"
 #include "VUops.h"
 
-#include "iVUzerorec.h"
+#include "sVU_zerorec.h"
 
 using namespace R5900;
 

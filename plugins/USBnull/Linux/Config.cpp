@@ -26,14 +26,21 @@
 #include <string>
 using namespace std;
 
+#include "USB.h"
+#include "Config.h"
+
+ #ifdef __cplusplus
 extern "C"
 {
-#include "interface.h"
-#include "support.h"
-//#include "callbacks.h"
-}
+#endif
 
-#include "USB.h"
+#include "support.h"
+#include "callbacks.h"
+#include "interface.h"
+
+#ifdef __cplusplus
+}
+#endif
 
 GtkWidget *MsgDlg, *About, *Conf;
 extern string s_strIniPath;
@@ -44,7 +51,7 @@ void OnMsg_Ok()
 	gtk_main_quit();
 }
 
-void cfgSysMessage(char *fmt, ...)
+void SysMessage(char *fmt, ...)
 {
 	GtkWidget *Ok, *Txt;
 	GtkWidget *Box, *Box1;
@@ -92,7 +99,7 @@ void OnAbout_Ok(GtkButton *button, gpointer user_data)
 	gtk_main_quit();
 }
 
-void CFGabout()
+EXPORT_C_(void) USBabout()
 {
 	About = create_About();
 	gtk_widget_show_all(About);
@@ -101,6 +108,9 @@ void CFGabout()
 
 void OnConf_Ok(GtkButton *button, gpointer user_data)
 {
+	conf.Log = is_checked(Conf, "check_logging");
+	SaveConfig();
+	
 	gtk_widget_destroy(Conf);
 	gtk_main_quit();
 }
@@ -111,19 +121,14 @@ void OnConf_Cancel(GtkButton *button, gpointer user_data)
 	gtk_main_quit();
 }
 
-void CFGconfigure()
+EXPORT_C_(void) USBconfigure()
 {
+	LoadConfig();
 	Conf = create_Config();
 
+	set_checked(Conf, "check_logging", conf.Log);
 	gtk_widget_show_all(Conf);
 	gtk_main();
-}
-
-long CFGmessage(char *msg)
-{
-	cfgSysMessage(msg);
-
-	return 0;
 }
 
 void LoadConfig()
@@ -135,10 +140,11 @@ void LoadConfig()
 	f = fopen(cfg, "r");
 	if (f == NULL) 
 	{
-		printf("failed to open %s\n", s_strIniPath.c_str());
+		printf("failed to open '%s'\n", s_strIniPath.c_str());
 		SaveConfig();//save and return
 		return;
 	}
+	fscanf(f, "logging = %hhx\n", &conf.Log);
 	//fscanf(f, "options = %hhx\n", &confOptions);
 	fclose(f);
 }
@@ -152,10 +158,11 @@ void SaveConfig()
 	f = fopen(cfg,"w");
 	if (f == NULL) 
 	{
-		printf("failed to open %s\n", s_strIniPath.c_str());
+		printf("failed to open '%s'\n", s_strIniPath.c_str());
 		return;
 	}
 	
+	fprintf(f, "logging = %hhx\n", conf.Log);
 	//fprintf(f, "options = %hhx\n", confOptions);
 	fclose(f);
 }

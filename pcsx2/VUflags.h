@@ -16,9 +16,7 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
-#ifndef __VUFLAGS_H__
-#define __VUFLAGS_H__
-
+#pragma once
 #include "VU.h"
 
 void vuUpdateDI(VURegs * VU);
@@ -32,8 +30,4 @@ __forceinline void VU_MACy_CLEAR(VURegs * VU);
 __forceinline void VU_MACz_CLEAR(VURegs * VU);
 __forceinline void VU_MACw_CLEAR(VURegs * VU);
 void VU_STAT_UPDATE(VURegs * VU);
-
-
-#endif
-
 

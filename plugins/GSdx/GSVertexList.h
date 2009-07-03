@@ -25,7 +25,7 @@ template <class Vertex> class GSVertexList
 {
 	void* m_base;
 	Vertex* m_v[3];
-	DWORD m_count;
+	int m_count;
 
 public:
 	GSVertexList()
@@ -80,7 +80,7 @@ public:
 		v = *m_v[i];
 	}
 
-	DWORD GetCount()
+	int GetCount()
 	{
 		return m_count;
 	}

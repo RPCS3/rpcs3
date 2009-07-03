@@ -21,7 +21,6 @@
 #include <sys/mman.h>
 #include <signal.h>
 #include "Common.h"
-//#include "x86/iR5900.h"
 
 extern void SysPageFaultExceptionFilter( int signal, siginfo_t *info, void * );
 extern void __fastcall InstallLinuxExceptionHandler();
@@ -65,39 +64,4 @@ void SysPageFaultExceptionFilter( int signal, siginfo_t *info, void * )
 	}
 
 	mmap_ClearCpuBlock( offset & ~m_pagemask );
-}
-
-namespace HostSys
-{
-	void *Mmap(uptr base, u32 size)
-	{
-		u8 *Mem;
-		Mem = (u8*)mmap((uptr*)base, size, PROT_EXEC | PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
-		if (Mem == MAP_FAILED) Console::Notice("Mmap Failed!");
-
-		return Mem;
-	}
-
-	void Munmap(uptr base, u32 size)
-	{
-		munmap((uptr*)base, size);
-	}
-
-	void MemProtect( void* baseaddr, size_t size, PageProtectionMode mode, bool allowExecution )
-	{
-		int lnxmode = 0;
-
-		// make sure size is aligned to the system page size:
-		size = (size + m_pagemask) & ~m_pagemask;
-
-		switch( mode )
-		{
-			case Protect_NoAccess: break;
-			case Protect_ReadOnly: lnxmode = PROT_READ; break;
-			case Protect_ReadWrite: lnxmode = PROT_READ | PROT_WRITE; break;
-		}
-
-		if( allowExecution ) lnxmode |= PROT_EXEC;
-		mprotect( baseaddr, size, lnxmode );
-	}
 }

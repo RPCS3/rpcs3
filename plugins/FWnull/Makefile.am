@@ -22,12 +22,11 @@ libFWnull_LDFLAGS= @SHARED_LDFLAGS@
 libFWnull_LDFLAGS+=-Wl,-soname,@libFWnull_SONAME@
 libFWnull_LDADD=$(libFWnull_a_OBJECTS)
 
-libFWnull_a_SOURCES = FW.cpp Linux/Config.cpp Linux/Linux.cpp \
-FW.h Linux/Config.h Linux/Linux.h
+libFWnull_a_SOURCES = FW.cpp FW.h Linux/Config.cpp Linux/Config.h
 
 libFWnull_a_SOURCES += \
 Linux/interface.h Linux/support.c  \
 Linux/interface.c Linux/support.h \
-Linux/callbacks.c Linux/callbacks.h 
+Linux/callbacks.h 
 
 #SUBDIRS = Linux

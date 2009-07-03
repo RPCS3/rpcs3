@@ -30,11 +30,11 @@
 #include "IopCommon.h"
 #include "HostGui.h"
 
-#include "CDVDisodrv.h"
+#include "CDVD/CDVDisodrv.h"
 #include "VUmicro.h"
 #include "VU.h"
 #include "iCore.h"
-#include "iVUzerorec.h"
+#include "sVU_zerorec.h"
 #include "BaseblockEx.h"		// included for devbuild block dumping (which may or may not work anymore?)
 
 #include "GS.h"
@@ -75,6 +75,40 @@ struct romdir
 #else
 } __attribute__((packed));
 #endif
+
+// ------------------------------------------------------------------------
+// Force DevAssert to *not* inline for devel/debug builds (allows using breakpoints to trap
+// assertions), and force it to inline for release builds (optimizes it out completely since
+// IsDevBuild is false).  Since Devel builds typically aren't enabled with Global Optimization/
+// LTCG, this currently isn't even necessary.  But might as well, in case we decide at a later
+// date to re-enable LTCG for devel.
+#ifdef PCSX2_DEVBUILD
+#	define DEVASSERT_INLINE __noinline
+#else
+#	define DEVASSERT_INLINE __forceinline
+#endif
+
+//////////////////////////////////////////////////////////////////////////////////////////
+// Assertion tool for Devel builds, intended for sanity checking and/or bounds checking
+// variables in areas which are not performance critical.
+//
+// How it works: This function throws an exception of type Exception::AssertionFailure if
+// the assertion conditional is false.  Typically for the end-user, this exception is handled
+// by the general handler, which (should eventually) create some state dumps and other
+// information for troubleshooting purposes.
+//
+// From a debugging environment, you can trap your DevAssert by either breakpointing the
+// exception throw below, or by adding either Exception::AssertionFailure or
+// Exception::LogicError to your First-Chance Exception catch list (Visual Studio, under
+// the Debug->Exceptions menu/dialog).
+//
+DEVASSERT_INLINE void DevAssert( bool condition, const char* msg )
+{
+	if( IsDevBuild && !condition )
+	{
+		throw Exception::AssertionFailure( msg );
+	}
+}
 
 u32 GetBiosVersion() {
 	unsigned int fileOffset=0;
@@ -360,7 +394,7 @@ void CycleFrameLimit(int dir)
 	const char* limitMsg;
 	u32 newOptions;
 	u32 curFrameLimit = Config.Options & PCSX2_FRAMELIMIT_MASK;
-	u32 newFrameLimit;
+	u32 newFrameLimit = 0;
 	static u32 oldFrameLimit = PCSX2_FRAMELIMIT_LIMIT;
 
 	if( dir == 0 ) {

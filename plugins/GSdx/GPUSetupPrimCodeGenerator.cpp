@@ -38,8 +38,6 @@ GPUSetupPrimCodeGenerator::GPUSetupPrimCodeGenerator(GPUScanlineEnvironment& env
 
 void GPUSetupPrimCodeGenerator::Generate()
 {
-	const int params = 0;
-
 	if(m_env.sel.tme && !m_env.sel.twin)
 	{
 		pcmpeqd(xmm0, xmm0);

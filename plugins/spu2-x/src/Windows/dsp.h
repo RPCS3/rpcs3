@@ -25,6 +25,8 @@
 // Configuration data should be stored in <dll directory>\plugin.ini
 // (look at the vis plugin for configuration code)
 
+#pragma once
+
 typedef struct winampDSPModule {
   char *description;		// description
   HWND hwndParent;			// parent window (filled in by calling app)

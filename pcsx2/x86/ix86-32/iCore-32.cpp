@@ -21,7 +21,7 @@
 #include "iR5900.h"
 #include "Vif.h"
 #include "VU.h"
-#include "ix86/ix86.h"
+#include "x86emitter/x86emitter.h"
 #include "R3000A.h"
 
 #include <vector>
@@ -139,10 +139,10 @@ void _flushConstReg(int reg)
 
 void _flushConstRegs()
 {
-	int i, j;
-	int zero_cnt = 0, minusone_cnt = 0;
-	int eaxval = 1; // 0, -1
-	unsigned long done[4] = {0, 0, 0, 0};
+	s32 i, j;
+	s32 zero_cnt = 0, minusone_cnt = 0;
+	s32 eaxval = 1; // 0, -1
+	u32 done[4] = {0, 0, 0, 0};
 	u8* rewindPtr;
 
 	// flush constants

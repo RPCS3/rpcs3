@@ -91,14 +91,24 @@ static void _rcntSet( int cntidx )
 
 	c = (u64)((overflowCap - counter.count) * counter.rate) - (psxRegs.cycle - counter.sCycleT);
 	c += psxRegs.cycle - psxNextsCounter;		// adjust for time passed since last rcntUpdate();
-	if(c < (u64)psxNextCounter) psxNextCounter = (u32)c;
+
+	if(c < (u64)psxNextCounter) 
+	{
+		psxNextCounter = (u32)c;
+		psxSetNextBranch( psxNextsCounter, psxNextCounter );	//Need to update on counter resets/target changes
+	}
 
 	//if((counter.mode & 0x10) == 0 || psxCounters[i].target > 0xffff) continue;
 	if( counter.target & IOPCNT_FUTURE_TARGET ) return;
 
-	c = (s64)((counter.target - counter.count) * counter.rate) - (psxRegs.cycle - counter.sCycleT);
-	c += psxRegs.cycle - psxNextsCounter;		// adjust for time passed since last rcntUpdate();
-	if(c < (u64)psxNextCounter) psxNextCounter = (u32)c;
+		c = (s64)((counter.target - counter.count) * counter.rate) - (psxRegs.cycle - counter.sCycleT);
+		c += psxRegs.cycle - psxNextsCounter;		// adjust for time passed since last rcntUpdate();
+
+	if(c < (u64)psxNextCounter) 
+	{
+		psxNextCounter = (u32)c;
+		psxSetNextBranch( psxNextsCounter, psxNextCounter );	//Need to update on counter resets/target changes
+	}
 }
 
 
@@ -383,15 +393,20 @@ void psxRcntUpdate()
 	int i;
 	//u32 change = 0;
 
+	g_psxNextBranchCycle = psxRegs.cycle + 32;
+
+	psxNextCounter = 0x7fffffff;
+	psxNextsCounter = psxRegs.cycle;
+
 	for (i=0; i<=5; i++)
 	{
 		s32 change = psxRegs.cycle - psxCounters[i].sCycleT;
 
-		// don't count disabled, gated, or hblank counters...
+		// don't count disabled or hblank counters...
 		// We can't check the ALTSOURCE flag because the PSXCLOCK source *should*
 		// be counted here.
 
-		if( psxCounters[i].mode & (IOPCNT_STOPPED | IOPCNT_ENABLE_GATE) ) continue;
+		if( psxCounters[i].mode & IOPCNT_STOPPED ) continue;
 		if( psxCounters[i].rate == PSXHBLANK ) continue;
 		if( change <= 0 ) continue;
 
@@ -424,9 +439,7 @@ void psxRcntUpdate()
 
 		//if( psxCounters[i].count >= psxCounters[i].target ) _rcntTestTarget( i );
 	}
-
-	psxNextCounter = 0xffffff;
-	psxNextsCounter = psxRegs.cycle;
+	
 
 	if(SPU2async)
 	{	
@@ -563,7 +576,7 @@ __forceinline void psxRcntWmode16( int index, u32 value )
 		{
 			// gated counters are added up as per the h/vblank timers.
 			// (the PIXEL alt source becomes a vsync gate)
-
+			counter.mode |= IOPCNT_STOPPED;
 			PSXCNT_LOG( "IOP Counter[%d] Gate Check set, value = 0x%04X", index, value );
 			if( index == 0 )
 				psxhblankgate |= 1;		// fixme: these gate flags should be one var >_<
@@ -608,6 +621,7 @@ __forceinline void psxRcntWmode32( int index, u32 value )
 		if(counter.mode & IOPCNT_ENABLE_GATE)
 		{
 			PSXCNT_LOG("IOP Counter[3] Gate Check set, value = %x", value);
+			counter.mode |= IOPCNT_STOPPED;
 			psxvblankgate |= 1<<3;
 		}
 		else psxvblankgate &= ~(1<<3);

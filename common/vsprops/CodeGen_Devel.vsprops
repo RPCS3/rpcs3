@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="windows-1250"?>
+<VisualStudioPropertySheet
+	ProjectType="Visual C++"
+	Version="8.00"
+	Name="CodeGen_Devel"
+	>
+	<Tool
+		Name="VCCLCompilerTool"
+		Optimization="2"
+		InlineFunctionExpansion="2"
+		EnableIntrinsicFunctions="true"
+		FavorSizeOrSpeed="1"
+		EnableFiberSafeOptimizations="true"
+		PreprocessorDefinitions="PCSX2_DEVEL;PCSX2_DEVBUILD;NDEBUG"
+		RuntimeLibrary="2"
+		BufferSecurityCheck="false"
+	/>
+</VisualStudioPropertySheet>

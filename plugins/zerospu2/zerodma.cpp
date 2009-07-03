@@ -27,7 +27,7 @@
 void CALLBACK SPU2readDMAMem(u16 *pMem, int size, int core)
 {
 	u32 spuaddr;
-	int i, dma, offset;
+	s32 i, dma, offset;
 	
 	if ( core == 0)
 	{
@@ -44,7 +44,7 @@ void CALLBACK SPU2readDMAMem(u16 *pMem, int size, int core)
 	
 	SPU2_LOG("SPU2 readDMA%dMem size %x, addr: %x\n", dma,  size, pMem);
 
-	for (i=0; i < size; i++)
+	for (i = 0; i < size; i++)
 	{
 		*pMem++ = *(u16*)(spu2mem + spuaddr);
 		if ((spu2Rs16(REG_C0_CTRL + offset) & 0x40) && (C_IRQA(core) == spuaddr))
@@ -94,7 +94,7 @@ int ADMASWrite(int core)
 {
 	u32 spuaddr;
 	ADMA *Adma;
-	int dma, offset;
+	s32 dma, offset;
 	
 	if (core == 0)
 	{
@@ -159,7 +159,7 @@ void CALLBACK SPU2writeDMAMem(u16* pMem, int size, int core)
 {
 	u32 spuaddr;
 	ADMA *Adma;
-	int dma, offset;
+	s32 dma, offset;
 	
 	if (core == 0)
 	{
@@ -240,7 +240,7 @@ void CALLBACK SPU2writeDMA7Mem(u16* pMem, int size)
 
 void CALLBACK SPU2interruptDMA(int core)
 {
-	int dma, offset;
+	s32 dma, offset;
 	
 	if (core == 0)
 	{

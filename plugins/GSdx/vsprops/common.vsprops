@@ -3,6 +3,7 @@
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="common"
+	OutputDirectory="$(SolutionDir)\bin\$(PcsxSubsection)"
 	IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 	>
 	<Tool
@@ -17,15 +18,19 @@
 	/>
 	<Tool
 		Name="VCLinkerTool"
-		AdditionalDependencies="JITProfiling.lib d3d10.lib d3dx10.lib d3d9.lib d3dx9.lib ddraw.lib dxguid.lib winmm.lib strmiids.lib xinput.lib"
+		AdditionalDependencies="JITProfiling.lib d3d11_beta.lib d3dx11.lib d3d10.lib d3dx10.lib d3d9.lib d3dx9.lib ddraw.lib dxguid.lib winmm.lib strmiids.lib xinput.lib cg.lib cgGL.lib glut32.lib glew32.lib"
 		AdditionalLibraryDirectories="./vtune"
-		DelayLoadDLLs="d3d9.dll;d3dx9_41.dll;d3d10.dll;d3dx10_41.dll"
+		DelayLoadDLLs="d3d9.dll;d3dx9_41.dll;d3d10.dll;d3dx10_41.dll;d3d11.dll;d3d11_beta.dll;d3dx11_41.dll;cg.dll;cgGL.dll;glut32.dll"
 		GenerateDebugInformation="true"
 		SubSystem="2"
 		RandomizedBaseAddress="1"
 	/>
 	<Tool
 		Name="VCPostBuildEventTool"
-		CommandLine=".\postBuild.cmd &quot;$(TargetPath)&quot; &quot;$(TargetName)&quot; $(TargetExt) plugins"
+		CommandLine=".\postBuild.cmd &quot;$(TargetPath)&quot; &quot;$(TargetName)&quot; $(TargetExt) $(PcsxSubsection)"
+	/>
+	<Tool
+		Name="VCPreBuildEventTool"
+		CommandLine="&quot;$(SvnCommonDir)\vsprops\preBuild.cmd&quot; &quot;$(ProjectRootDir)&quot;"
 	/>
 </VisualStudioPropertySheet>

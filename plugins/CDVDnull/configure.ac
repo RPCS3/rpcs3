@@ -21,6 +21,7 @@ AC_SUBST(CDVDnull_SONAME,libCDVDnull.so.[$CDVDnull_CURRENT].[$CDVDnull_REVISION]
 CFLAGS=
 CPPFLAGS=
 CXXFLAGS=
+CCASFLAGS=
 
 dnl Check for debug build
 AC_MSG_CHECKING(debug build)
@@ -28,15 +29,17 @@ AC_ARG_ENABLE(debug, AC_HELP_STRING([--enable-debug], [debug build]),
 debug=$enableval,debug=no)
 if test "x$debug" == xyes
 then
- AC_DEFINE(_DEBUG,1,[_DEBUG])
- CFLAGS+="-g -fPIC -Wall  -Wno-unused-value "
- CPPFLAGS+="-g -fPIC -Wall  -Wno-unused-value "
- CXXFLAGS+="-g -fPIC -Wall  -Wno-unused-value "
+ AC_DEFINE(PCSX2_DEBUG,1,[PCSX2_DEBUG])
+ CFLAGS+="-g -fPIC -Wall  -Wno-unused-value -m32 "
+ CPPFLAGS+="-g -fPIC -Wall  -Wno-unused-value -m32 "
+ CXXFLAGS+="-g -fPIC -Wall  -Wno-unused-value -m32 "
+ CCASFLAGS+=" -m32 "
 else
  AC_DEFINE(NDEBUG,1,[NDEBUG])
- CFLAGS+="-O3 -fomit-frame-pointer -fPIC -Wall  -Wno-unused-value "
- CPPFLAGS+="-O3 -fomit-frame-pointer -fPIC -Wall  -Wno-unused-value "
- CXXFLAGS+="-O3 -fomit-frame-pointer -fPIC -Wall  -Wno-unused-value "
+ CFLAGS+="-O3 -fomit-frame-pointer -fPIC -Wall  -Wno-unused-value -m32 "
+ CPPFLAGS+="-O3 -fomit-frame-pointer -fPIC -Wall  -Wno-unused-value -m32 "
+ CXXFLAGS+="-O3 -fomit-frame-pointer -fPIC -Wall  -Wno-unused-value -m32 "
+ CCASFLAGS+=" -m32 "
 fi
 AM_CONDITIONAL(DEBUGBUILD, test x$debug = xyes)
 AC_MSG_RESULT($debug)

@@ -90,7 +90,7 @@ __forceinline void  intcInterrupt()
 	cpuException(0x400, cpuRegs.branch);
 }
 
-__forceinline void  dmacInterrupt()
+__forceinline void dmacInterrupt()
 {
     if ((cpuRegs.CP0.n.Status.val & 0x10807) != 0x10801) return;
 
@@ -116,7 +116,7 @@ void hwDmacIrq(int n) {
 }
 
 /* Write 'size' bytes to memory address 'addr' from 'data'. */
-int hwMFIFOWrite(u32 addr, u8 *data, u32 size) {
+bool hwMFIFOWrite(u32 addr, u8 *data, u32 size) {
 	u32 msize = psHu32(DMAC_RBOR) + psHu32(DMAC_RBSR)+16;
 	u8 *dst;
 
@@ -129,22 +129,22 @@ int hwMFIFOWrite(u32 addr, u8 *data, u32 size) {
 
 		/* it does, so first copy 's1' bytes from 'data' to 'addr' */
 		dst = (u8*)PSM(addr);
-		if (dst == NULL) return -1;
+		if (dst == NULL) return false;
 		memcpy_fast(dst, data, s1);
 
 		/* and second copy 's2' bytes from '&data[s1]' to 'maddr' */
 		dst = (u8*)PSM(psHu32(DMAC_RBOR));
-		if (dst == NULL) return -1;
+		if (dst == NULL) return false;
 		memcpy_fast(dst, &data[s1], s2);
 	} 
 	else {
 		/* it doesn't, so just copy 'size' bytes from 'data' to 'addr' */
 		dst = (u8*)PSM(addr);
-		if (dst == NULL) return -1;
+		if (dst == NULL) return false;
 		memcpy_fast(dst, data, size);
 	}
 
-	return 0;
+	return true;
 }
 
 
@@ -206,7 +206,7 @@ bool hwDmacSrcChainWithStack(DMACh *dma, int id) {
 					dma->asr0 = 0;							//Clear ASR0
 				} else {									//Else if ASR1 and ASR0 are empty
 					//dma->tadr += 16;						   //Clear tag address - Kills Klonoa 2
-					return 1;								//End Transfer
+					return true;								//End Transfer
 				}
 			}
 			return false;

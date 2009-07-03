@@ -26,19 +26,17 @@
 class GSUtil
 {
 public:
-	static GS_PRIM_CLASS GetPrimClass(DWORD prim);
+	static GS_PRIM_CLASS GetPrimClass(uint32 prim);
 
-	static bool HasSharedBits(DWORD spsm, DWORD dpsm);
-	static bool HasSharedBits(DWORD sbp, DWORD spsm, DWORD dbp, DWORD dpsm);
-	static bool HasCompatibleBits(DWORD spsm, DWORD dpsm);
+	static bool HasSharedBits(uint32 spsm, uint32 dpsm);
+	static bool HasSharedBits(uint32 sbp, uint32 spsm, uint32 dbp, uint32 dpsm);
+	static bool HasCompatibleBits(uint32 spsm, uint32 dpsm);
 
-	static bool IsRectInRect(const CRect& inner, const CRect& outer);
-	static bool IsRectInRectH(const CRect& inner, const CRect& outer);
-	static bool IsRectInRectV(const CRect& inner, const CRect& outer);
-
-	static void FitRect(CRect& r, int aspectratio);
+	static bool IsRectInRect(const GSVector4i& inner, const GSVector4i& outer);
+	static bool IsRectInRectH(const GSVector4i& inner, const GSVector4i& outer);
+	static bool IsRectInRectV(const GSVector4i& inner, const GSVector4i& outer);
 	
-	static int EncodePSM(int psm)
+	static uint32 EncodePSM(uint32 psm)
 	{
 		switch(psm)
 		{
@@ -62,6 +60,7 @@ public:
 	static bool CheckSSE();
 
 	static bool IsDirect3D10Available();
+	static bool IsDirect3D11Available();
 
 	static char* GetLibName();
 };

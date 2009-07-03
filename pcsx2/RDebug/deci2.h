@@ -54,13 +54,13 @@ struct DECI2_DBGP_BRK{
 #define RUN		1
 
 extern DECI2_DBGP_BRK	ebrk[32], ibrk[32];
-extern int ebrk_count, ibrk_count;
+extern s32 ebrk_count, ibrk_count;
 extern volatile long runStatus;
-extern int runCode, runCount;
+extern s32 runCode, runCount;
 
 extern Threading::Semaphore* runEvent;
 
-extern int		connected;
+extern s32		connected;
 													//when add linux code this might change
 
 int	writeData(const u8 *result);

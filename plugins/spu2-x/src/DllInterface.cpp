@@ -3,20 +3,16 @@
  * 
  * Original portions from SPU2ghz are (c) 2008 by David Quintana [gigaherz]
  *
- * This library is free software; you can redistribute it and/or modify it under
- * the terms of the GNU Lesser General Public License as published by the Free 
- * Software Foundation; either version 2.1 of the the License, or (at your
- * option) any later version.
- * 
- * This library is distributed in the hope that it will be useful, but WITHOUT 
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License
- * for more details.
- * 
- * You should have received a copy of the GNU Lesser General Public License along
- * with this library; if not, write to the Free Software Foundation, Inc., 59
- * Temple Place, Suite 330, Boston, MA  02111-1307  USA
- * 
+ * SPU2-X is free software: you can redistribute it and/or modify it under the terms
+ * of the GNU Lesser General Public License as published by the Free Software Found-
+ * ation, either version 3 of the License, or (at your option) any later version.
+ *
+ * SPU2-X is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+ * PURPOSE.  See the GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with SPU2-X.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "Spu2.h"
@@ -68,9 +64,9 @@ static void InitLibraryName()
 		// subversion revision tags:
 
 		strcpy( libraryName, "SPU2-X"
-		#ifdef _DEBUG_FAST
+		#ifdef DEBUG_FAST
 			"-Debug"
-		#elif defined( DEBUG )
+		#elif defined( PCSX2_DEBUG )
 			"-Debug/Strict"		// strict debugging is slow!
 		#else
 			"-Dev"
@@ -83,9 +79,9 @@ static void InitLibraryName()
 		// to label the specific revision:
 
 		sprintf_s( libraryName, "SPU2-X r%d%s"
-		#ifdef _DEBUG_FAST
+		#ifdef DEBUG_FAST
 			"-Debug"
-		#elif defined( _DEBUG )
+		#elif defined( PCSX2_DEBUG )
 			"-Debug/Strict"		// strict debugging is slow!
 		#else
 			"-Dev"
@@ -307,8 +303,7 @@ EXPORT_C_(void) SPU2shutdown()
 
 EXPORT_C_(void) SPU2setClockPtr(u32 *ptr)
 {
-	cPtr=ptr;
-	hasPtr=(cPtr!=NULL);
+	cyclePtr = ptr;
 }
 
 bool numpad_plus = false, numpad_plus_old = false;
@@ -341,14 +336,14 @@ EXPORT_C_(void) SPU2async(u32 cycles)
 		numpad_plus_old = numpad_plus;*/
 	}
 
-	if(hasPtr)
+	if(cyclePtr != NULL)
 	{
-		TimeUpdate(*cPtr); 
+		TimeUpdate( *cyclePtr );
 	}
 	else
 	{
-		pClocks+=cycles;
-		TimeUpdate(pClocks);
+		pClocks += cycles;
+		TimeUpdate( pClocks );
 	}
 }
 
@@ -373,7 +368,8 @@ EXPORT_C_(u16) SPU2read(u32 rmem)
 	}
 	else
 	{
-		TimeUpdate( *cPtr );
+		if( cyclePtr != NULL )
+			TimeUpdate( *cyclePtr );
 
 		if (rmem>>16 == 0x1f80)
 		{
@@ -430,7 +426,9 @@ EXPORT_C_(void) SPU2write(u32 rmem, u16 value)
 		// If the SPU2 isn't in in sync with the IOP, samples can end up playing at rather
 		// incorrect pitches and loop lengths.
 
-		TimeUpdate( *cPtr );
+		if( cyclePtr != NULL )
+			TimeUpdate( *cyclePtr );
+
 		if (rmem>>16 == 0x1f80)
 			SPU_ps1_write(rmem,value);
 		else

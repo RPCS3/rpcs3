@@ -21,8 +21,10 @@
 
 #pragma once
 
+#include "GSWnd.h"
 #include "GSTexture.h"
 #include "GSVertex.h"
+#include "GSAlignedClass.h"
 
 #pragma pack(push, 1)
 
@@ -44,201 +46,84 @@ struct InterlaceConstantBuffer
 
 #pragma pack(pop)
 
-template<class Texture> class GSDevice
+class GSDevice : public GSAlignedClass<16>
 {
-	CAtlList<Texture> m_pool;
+	list<GSTexture*> m_pool;
+
+	GSTexture* Fetch(int type, int w, int h, int format);
 
 protected:
-	HWND m_hWnd;
+	GSWnd* m_wnd;
 	bool m_vsync;
-	Texture m_backbuffer;
-	Texture m_merge;
-	Texture m_weavebob;
-	Texture m_blend;
-	Texture m_1x1;
-	Texture m_current;
+	GSTexture* m_backbuffer;
+	GSTexture* m_merge;
+	GSTexture* m_weavebob;
+	GSTexture* m_blend;
+	GSTexture* m_1x1;
+	GSTexture* m_current;
 
-	bool Fetch(int type, Texture& t, int w, int h, int format)
-	{
-		Recycle(t);
+	virtual GSTexture* Create(int type, int w, int h, int format) = 0;
 
-		for(POSITION pos = m_pool.GetHeadPosition(); pos; m_pool.GetNext(pos))
-		{
-			const Texture& t2 = m_pool.GetAt(pos);
-
-			if(t2.GetType() == type && t2.GetWidth() == w && t2.GetHeight() == h && t2.GetFormat() == format)
-			{
-				t = t2;
-
-				m_pool.RemoveAt(pos);
-
-				return true;
-			}
-		}
-
-		return Create(type, t, w, h, format);
-	}
-
-	virtual bool Create(int type, Texture& t, int w, int h, int format) = 0;
-	virtual void DoMerge(Texture* st, GSVector4* sr, GSVector4* dr, Texture& dt, bool slbg, bool mmod, GSVector4& c) = 0;
-	virtual void DoInterlace(Texture& st, Texture& dt, int shader, bool linear, float yoffset) = 0;
+	virtual void DoMerge(GSTexture* st[2], GSVector4* sr, GSVector4* dr, GSTexture* dt, bool slbg, bool mmod, const GSVector4& c) = 0;
+	virtual void DoInterlace(GSTexture* st, GSTexture* dt, int shader, bool linear, float yoffset) = 0;
 
 public:
-	GSDevice() : m_hWnd(NULL)
+	GSDevice();
+	virtual ~GSDevice();
+
+	void Recycle(GSTexture* t);
+
+	virtual bool Create(GSWnd* wnd, bool vsync);
+	virtual bool Reset(int w, int h, bool fs);
+
+	virtual bool IsLost() {return false;}
+	virtual void Present(const GSVector4i& r, int shader);
+	virtual void Flip() {}
+
+	virtual void BeginScene() {}
+	virtual void DrawPrimitive() {};
+	virtual void EndScene() {}
+
+	virtual void ClearRenderTarget(GSTexture* t, const GSVector4& c) {}
+	virtual void ClearRenderTarget(GSTexture* t, uint32 c) {}
+	virtual void ClearDepth(GSTexture* t, float c) {}
+	virtual void ClearStencil(GSTexture* t, uint8 c) {}
+
+	virtual GSTexture* CreateRenderTarget(int w, int h, int format = 0);
+	virtual GSTexture* CreateDepthStencil(int w, int h, int format = 0);
+	virtual GSTexture* CreateTexture(int w, int h, int format = 0);
+	virtual GSTexture* CreateOffscreen(int w, int h, int format = 0);
+
+	virtual GSTexture* CopyOffscreen(GSTexture* src, const GSVector4& sr, int w, int h, int format = 0) {return NULL;}
+
+	virtual void StretchRect(GSTexture* st, GSTexture* dt, const GSVector4& dr, int shader = 0, bool linear = true);
+	virtual void StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, int shader = 0, bool linear = true) {}
+
+	GSTexture* GetCurrent();
+	virtual bool IsCurrentRGBA() {return true;}
+
+	void Merge(GSTexture* st[2], GSVector4* sr, GSVector4* dr, const GSVector2i& fs, bool slbg, bool mmod, const GSVector4& c);
+	void Interlace(const GSVector2i& ds, int field, int mode, float yoffset);
+
+	template<class T> void PrepareShaderMacro(vector<T>& dst, const T* src, const char* model)
 	{
-	}
+		dst.clear();
 
-	virtual ~GSDevice() 
-	{
-	}
-
-	virtual bool Create(HWND hWnd, bool vsync)
-	{
-		m_hWnd = hWnd;
-		m_vsync = vsync;
-
-		return true;
-	}
-	
-	virtual bool Reset(int w, int h, bool fs)
-	{
-		m_pool.RemoveAll();
-		m_backbuffer = Texture();
-		m_merge = Texture();
-		m_weavebob = Texture();
-		m_blend = Texture();
-		m_1x1 = Texture();
-		m_current = Texture();
-
-		return true;
-	}
-
-	virtual bool IsLost() = 0;
-
-	virtual void Present(const CRect& r) = 0;
-
-	virtual void BeginScene() = 0;
-
-	virtual void EndScene() = 0;
-
-	virtual void Draw(LPCTSTR str) = 0;
-
-	virtual bool CopyOffscreen(Texture& src, const GSVector4& sr, Texture& dst, int w, int h, int format = 0) = 0;
-
-	virtual void ClearRenderTarget(Texture& t, const GSVector4& c) = 0;
-
-	virtual void ClearRenderTarget(Texture& t, DWORD c) = 0;
-
-	virtual void ClearDepth(Texture& t, float c) = 0;
-
-	virtual void ClearStencil(Texture& t, BYTE c) = 0;
-
-	virtual bool CreateRenderTarget(Texture& t, int w, int h, int format = 0)
-	{
-		return Fetch(GSTexture::RenderTarget, t, w, h, format);
-	}
-
-	virtual bool CreateDepthStencil(Texture& t, int w, int h, int format = 0)
-	{
-		return Fetch(GSTexture::DepthStencil, t, w, h, format);
-	}
-
-	virtual bool CreateTexture(Texture& t, int w, int h, int format = 0)
-	{
-		return Fetch(GSTexture::Texture, t, w, h, format);
-	}
-
-	virtual bool CreateOffscreen(Texture& t, int w, int h, int format = 0)
-	{
-		return Fetch(GSTexture::Offscreen, t, w, h, format);
-	}
-
-	void Recycle(Texture& t)
-	{
-		if(t)
+		while(src && src->Definition && src->Name)
 		{
-			m_pool.AddHead(t);
-
-			while(m_pool.GetCount() > 200)
-			{
-				m_pool.RemoveTail();
-			}
-
-			t = Texture();
-		}
-	}
-
-	bool SaveCurrent(LPCTSTR fn)
-	{
-		return m_current.Save(fn);
-	}
-
-	void GetCurrent(Texture& t)
-	{
-		t = m_current;
-	}
-
-	void Merge(Texture* st, GSVector4* sr, GSVector4* dr, CSize fs, bool slbg, bool mmod, GSVector4& c)
-	{
-		if(!m_merge || m_merge.GetWidth() != fs.cx || m_merge.GetHeight() != fs.cy)
-		{
-			CreateRenderTarget(m_merge, fs.cx, fs.cy);
+			dst.push_back(*src++);
 		}
 
-		// TODO: m_1x1
+		T m;
+		
+		m.Name = "SHADER_MODEL";
+		m.Definition = model;
 
-		DoMerge(st, sr, dr, m_merge, slbg, mmod, c);
+		dst.push_back(m);
 
-		m_current = m_merge;
-	}
+		m.Name = NULL;
+		m.Definition = NULL;
 
-	bool Interlace(CSize ds, int field, int mode, float yoffset)
-	{
-		if(!m_weavebob || m_weavebob.GetWidth() != ds.cx || m_weavebob.GetHeight() != ds.cy)
-		{
-			CreateRenderTarget(m_weavebob, ds.cx, ds.cy);
-		}
-
-		if(mode == 0 || mode == 2) // weave or blend
-		{
-			// weave first
-
-			DoInterlace(m_merge, m_weavebob, field, false, 0);
-
-			if(mode == 2)
-			{
-				// blend
-
-				if(!m_blend || m_blend.GetWidth() != ds.cx || m_blend.GetHeight() != ds.cy)
-				{
-					CreateRenderTarget(m_blend, ds.cx, ds.cy);
-				}
-
-				DoInterlace(m_weavebob, m_blend, 2, false, 0);
-
-				m_current = m_blend;
-			}
-			else
-			{
-				m_current = m_weavebob;
-			}
-		}
-		else if(mode == 1) // bob
-		{
-			DoInterlace(m_merge, m_weavebob, 3, true, yoffset * field);
-
-			m_current = m_weavebob;
-		}
-		else
-		{
-			m_current = m_merge;
-		}
-
-		return true;
-	}
-
-	virtual bool IsCurrentRGBA()
-	{
-		return true;
+		dst.push_back(m);
 	}
 };

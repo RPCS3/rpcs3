@@ -20,6 +20,7 @@
  */
 
 #include "stdafx.h"
+#include "GSdx.h"
 #include "GSUtil.h"
 #include "GPURendererSW.h"
 #include "GSDevice7.h"
@@ -30,9 +31,9 @@
 #define PSE_LT_GPU 2
 
 static HRESULT s_hr = E_FAIL;
-static GPURendererBase* s_gpu = NULL;
+static GPURenderer* s_gpu = NULL;
 
-EXPORT_C_(UINT32) PSEgetLibType()
+EXPORT_C_(uint32) PSEgetLibType()
 {
 	return PSE_LT_GPU;
 }
@@ -42,39 +43,31 @@ EXPORT_C_(char*) PSEgetLibName()
 	return GSUtil::GetLibName();
 }
 
-EXPORT_C_(UINT32) PSEgetLibVersion()
+EXPORT_C_(uint32) PSEgetLibVersion()
 {
-	static const UINT32 version = 1;
-	static const UINT32 revision = 1;
+	static const uint32 version = 1;
+	static const uint32 revision = 1;
 
 	return version << 16 | revision << 8 | PLUGIN_VERSION;
 }
 
-EXPORT_C_(INT32) GPUinit()
+EXPORT_C_(int32) GPUinit()
 {
-	AFX_MANAGE_STATE(AfxGetStaticModuleState());
-
-	// TODO
-
 	return 0;
 }
 
-EXPORT_C_(INT32) GPUshutdown()
+EXPORT_C_(int32) GPUshutdown()
 {
-	AFX_MANAGE_STATE(AfxGetStaticModuleState());
-
-	// TODO
-
 	return 0;
 }
 
-EXPORT_C_(INT32) GPUclose()
+EXPORT_C_(int32) GPUclose()
 {
-	AFX_MANAGE_STATE(AfxGetStaticModuleState());
-
 	delete s_gpu; 
 	
 	s_gpu = NULL;
+
+#ifdef _WINDOWS
 
 	if(SUCCEEDED(s_hr))
 	{
@@ -83,43 +76,41 @@ EXPORT_C_(INT32) GPUclose()
 		s_hr = E_FAIL;
 	}
 
+#endif
+
 	return 0;
 }
 
-EXPORT_C_(INT32) GPUopen(HWND hWnd)
+EXPORT_C_(int32) GPUopen(HWND hWnd)
 {
-	AFX_MANAGE_STATE(AfxGetStaticModuleState());
+	GPUclose();
 
-	if(!GSUtil::CheckDirectX() || !GSUtil::CheckSSE())
+#ifdef _WINDOWS
+
+	s_hr = ::CoInitializeEx(NULL, COINIT_MULTITHREADED);
+
+	if(!GSUtil::CheckDirectX())
 	{
 		return -1;
 	}
 
-	GPUclose();
+#endif
 
-	GPURendererSettings rs;
+	if(!GSUtil::CheckSSE())
+	{
+		return -1;
+	}
 
-	rs.m_filter = AfxGetApp()->GetProfileInt(_T("GPUSettings"), _T("filter"), 0);
-	rs.m_dither = AfxGetApp()->GetProfileInt(_T("GPUSettings"), _T("dithering"), 1);
-	rs.m_aspectratio = AfxGetApp()->GetProfileInt(_T("GPUSettings"), _T("AspectRatio"), 1);
-	rs.m_vsync = !!AfxGetApp()->GetProfileInt(_T("GPUSettings"), _T("vsync"), FALSE);
-	rs.m_scale.cx = AfxGetApp()->GetProfileInt(_T("GPUSettings"), _T("scale_x"), 0);
-	rs.m_scale.cy = AfxGetApp()->GetProfileInt(_T("GPUSettings"), _T("scale_y"), 0);
-
-	int threads = AfxGetApp()->GetProfileInt(_T("GPUSettings"), _T("swthreads"), 1);
-
-	int renderer = AfxGetApp()->GetProfileInt(_T("GPUSettings"), _T("Renderer"), 1);
+	int renderer = theApp.GetConfig("Renderer", 1);
 
 	switch(renderer)
 	{
 	default: 
-	case 0: s_gpu = new GPURendererSW<GSDevice7>(rs, threads); break;
-	case 1: s_gpu = new GPURendererSW<GSDevice9>(rs, threads); break;
-	case 2: s_gpu = new GPURendererSW<GSDevice10>(rs, threads); break;
-	// TODO: case 3: s_gpu = new GPURendererNull<GSDeviceNull>(rs, threads); break;
+	case 0: s_gpu = new GPURendererSW(new GSDevice7()); break;
+	case 1: s_gpu = new GPURendererSW(new GSDevice9()); break;
+	case 2: s_gpu = new GPURendererSW(new GSDevice10()); break;
+	// TODO: case 3: s_gpu = new GPURendererNull(new GSDeviceNull()); break;
 	}
-
-	s_hr = ::CoInitializeEx(NULL, COINIT_MULTITHREADED);
 
 	if(!s_gpu->Create(hWnd))
 	{
@@ -131,10 +122,8 @@ EXPORT_C_(INT32) GPUopen(HWND hWnd)
 	return 0;
 }
 
-EXPORT_C_(INT32) GPUconfigure()
+EXPORT_C_(int32) GPUconfigure()
 {
-	AFX_MANAGE_STATE(AfxGetStaticModuleState());
-
 	GPUSettingsDlg dlg;
 
 	if(IDOK == dlg.DoModal())
@@ -146,10 +135,8 @@ EXPORT_C_(INT32) GPUconfigure()
 	return 0;
 }
 
-EXPORT_C_(INT32) GPUtest()
+EXPORT_C_(int32) GPUtest()
 {
-	// TODO
-
 	return 0;
 }
 
@@ -158,76 +145,79 @@ EXPORT_C GPUabout()
 	// TODO
 }
 
-EXPORT_C GPUwriteDataMem(const BYTE* mem, UINT32 size)
+EXPORT_C GPUwriteDataMem(const uint8* mem, uint32 size)
 {
 	s_gpu->WriteData(mem, size);
 }
 
-EXPORT_C GPUwriteData(UINT32 data)
+EXPORT_C GPUwriteData(uint32 data)
 {
-	s_gpu->WriteData((BYTE*)&data, 1);
+	s_gpu->WriteData((uint8*)&data, 1);
 }
 
-EXPORT_C GPUreadDataMem(BYTE* mem, UINT32 size)
+EXPORT_C GPUreadDataMem(uint8* mem, uint32 size)
 {
 	s_gpu->ReadData(mem, size);
 }
 
-EXPORT_C_(UINT32) GPUreadData()
+EXPORT_C_(uint32) GPUreadData()
 {
-	UINT32 data = 0;
+	uint32 data = 0;
 
-	s_gpu->ReadData((BYTE*)&data, 1);
+	s_gpu->ReadData((uint8*)&data, 1);
 
 	return data;
 }
 
-EXPORT_C GPUwriteStatus(UINT32 status)
+EXPORT_C GPUwriteStatus(uint32 status)
 {
 	s_gpu->WriteStatus(status);
 }
 
-EXPORT_C_(UINT32) GPUreadStatus()
+EXPORT_C_(uint32) GPUreadStatus()
 {
 	return s_gpu->ReadStatus();
 }
 
-EXPORT_C_(UINT32) GPUdmaChain(const BYTE* mem, UINT32 addr)
+EXPORT_C_(uint32) GPUdmaChain(const uint8* mem, uint32 addr)
 {
-	// TODO
-
-	UINT32 last[3];
+	uint32 last[3];
 
 	memset(last, 0xff, sizeof(last));
 
 	do
 	{
-		if(addr == last[1] || addr == last[2]) break;
+		if(addr == last[1] || addr == last[2]) 
+		{
+			break;
+		}
+
 		(addr < last[0] ? last[1] : last[2]) = addr;
+		
 		last[0] = addr;
 
-		BYTE size = mem[addr + 3];
+		uint8 size = mem[addr + 3];
 
 		if(size > 0)
 		{
 			s_gpu->WriteData(&mem[addr + 4], size);
 		}
 
-		addr = *(UINT32*)&mem[addr] & 0xffffff;
+		addr = *(uint32*)&mem[addr] & 0xffffff;
 	}
 	while(addr != 0xffffff);
 
 	return 0;
 }
 
-EXPORT_C_(UINT32) GPUgetMode()
+EXPORT_C_(uint32) GPUgetMode()
 {
 	// TODO
 
 	return 0;
 }
 
-EXPORT_C GPUsetMode(UINT32)
+EXPORT_C GPUsetMode(uint32 mode)
 {
 	// TODO
 }
@@ -239,9 +229,7 @@ EXPORT_C GPUupdateLace()
 
 EXPORT_C GPUmakeSnapshot()
 {
-	LPCTSTR path = _T("C:\\"); // TODO
-
-	s_gpu->MakeSnapshot(path);
+	s_gpu->MakeSnapshot("c:/"); // TODO
 }
 
 EXPORT_C GPUdisplayText(char* text)
@@ -249,12 +237,12 @@ EXPORT_C GPUdisplayText(char* text)
 	// TODO
 }
 
-EXPORT_C GPUdisplayFlags(UINT32 flags)
+EXPORT_C GPUdisplayFlags(uint32 flags)
 {
 	// TODO
 }
 
-EXPORT_C_(INT32) GPUfreeze(UINT32 type, GPUFreezeData* data)
+EXPORT_C_(int32) GPUfreeze(uint32 type, GPUFreezeData* data)
 {
 	if(!data || data->version != 1)
 	{
@@ -290,12 +278,12 @@ EXPORT_C_(INT32) GPUfreeze(UINT32 type, GPUFreezeData* data)
 	return 0;
 }
 
-EXPORT_C GPUgetScreenPic(BYTE* mem)
+EXPORT_C GPUgetScreenPic(uint8* mem)
 {
 	// TODO
 }
 
-EXPORT_C GPUshowScreenPic(BYTE* mem)
+EXPORT_C GPUshowScreenPic(uint8* mem)
 {
 	// TODO
 }

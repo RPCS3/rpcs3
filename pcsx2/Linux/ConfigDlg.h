@@ -171,7 +171,7 @@ __forceinline const char *PluginCallbackName(int type, int call)
 	return NULL;
 }
 
-__forceinline int strToPluginCall(char *s)
+__forceinline plugin_callback strToPluginCall(char *s)
 {
 	char *sub = NULL;
 	
@@ -187,7 +187,7 @@ __forceinline int strToPluginCall(char *s)
 	return PLUGIN_NULL;
 }
 
-__forceinline int strToPluginType(char *s)
+__forceinline plugin_types strToPluginType(char *s)
 {
 	char *sub = NULL;
 	

@@ -21,15 +21,8 @@
 
 #include <stdio.h>
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif 
 #define FWdefs
 #include "PS2Edefs.h"
-#ifdef __cplusplus
-}
-#endif
 
 #ifdef _WIN32
 
@@ -62,7 +55,7 @@ extern "C"
 
 typedef struct 
 {
-	int Log;
+	s32 Log;
 } Config;
 
 extern Config conf;

@@ -18,10 +18,8 @@
 
 #pragma once
 
-#include "RedtapeWindows.h"		// our "safe" include of windows (sets version and undefs uselessness)
+#include "Utilities/RedtapeWindows.h"		// our "safe" include of windows (sets version and undefs uselessness)
 #include <commctrl.h>
-
-#include "PrecompiledHeader.h"
 
 #include <windowsx.h>
 #include <tchar.h>

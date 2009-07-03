@@ -36,10 +36,10 @@ GSDump::~GSDump()
 	Close();
 }
 
-void GSDump::Open(const CString& fn, DWORD crc, const GSFreezeData& fd, const GSPrivRegSet* regs)
+void GSDump::Open(const string& fn, uint32 crc, const GSFreezeData& fd, const GSPrivRegSet* regs)
 {
-	m_gs = _tfopen(fn + _T(".gs"), _T("wb"));
-	m_obj = _tfopen(fn + _T(".obj"), _T("wt"));
+	m_gs = fopen((fn + ".gs").c_str(), "wb");
+	m_obj = fopen((fn + ".obj").c_str(), "wt");
 
 	m_frames = 0;
 	m_objects = 0;
@@ -60,7 +60,7 @@ void GSDump::Close()
 	if(m_obj) {fclose(m_obj); m_obj = NULL;}
 }
 
-void GSDump::Transfer(int index, BYTE* mem, size_t size)
+void GSDump::Transfer(int index, uint8* mem, size_t size)
 {
 	if(m_gs && size > 0)
 	{
@@ -71,7 +71,7 @@ void GSDump::Transfer(int index, BYTE* mem, size_t size)
 	}
 }
 
-void GSDump::ReadFIFO(UINT32 size)
+void GSDump::ReadFIFO(uint32 size)
 {
 	if(m_gs && size > 0)
 	{
@@ -123,20 +123,20 @@ void GSDump::Object(GSVertexSW* vertices, int count, GS_PRIM_CLASS primclass)
 				float y = vertices[i].p.y;
 				float z = vertices[i].p.z;
 
-				_ftprintf(m_obj, _T("v %f %f %f\n"), x, y, z);
+				fprintf(m_obj, "v %f %f %f\n", x, y, z);
 			}
 
 			for(int i = 0; i < count; i++)
 			{
-				_ftprintf(m_obj, _T("vt %f %f %f\n"), vertices[i].t.x, vertices[i].t.y, vertices[i].t.z);
+				fprintf(m_obj, "vt %f %f %f\n", vertices[i].t.x, vertices[i].t.y, vertices[i].t.z);
 			}
 
 			for(int i = 0; i < count; i++)
 			{
-				_ftprintf(m_obj, _T("vn %f %f %f\n"), 0.0f, 0.0f, 0.0f);
+				fprintf(m_obj, "vn %f %f %f\n", 0.0f, 0.0f, 0.0f);
 			}
 
-			_ftprintf(m_obj, _T("g f%d_o%d_p%d_v%d\n"), m_frames, m_objects, primclass, count);
+			fprintf(m_obj, "g f%d_o%d_p%d_v%d\n", m_frames, m_objects, primclass, count);
 
 			for(int i = 0; i < count; i += 3)
 			{
@@ -144,7 +144,7 @@ void GSDump::Object(GSVertexSW* vertices, int count, GS_PRIM_CLASS primclass)
 				int b = m_vertices + i + 2;
 				int c = m_vertices + i + 3;
 
-				_ftprintf(m_obj, _T("f %d/%d/%d %d/%d/%d %d/%d/%d \n"), a, a, a, b, b, b, c, c, c);
+				fprintf(m_obj, "f %d/%d/%d %d/%d/%d %d/%d/%d\n", a, a, a, b, b, b, c, c, c);
 			}
 
 			m_vertices += count;

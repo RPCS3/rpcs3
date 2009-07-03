@@ -3,14 +3,14 @@ PLUGIN = libCDVDlinuz.so
 PLUGINOBJS = CDVDlinuz.o ../buffer.o
 PLUGINHEADERS = CDVDlinuz.h ../buffer.h
 PLUGINFLAGS = -fPIC -Wall -O2 -fomit-frame-pointer -D_LARGEFILE64_SOURCE \
-	-I.. -I. -I./Linux
+	-I.. -I. -I./Linux -m32 
 PLUGINLIBS =
 
 CFG = cfgCDVDlinuz
 CFGOBJS = aboutbox.o mainbox.o interface.o
 CFGHEADERS = aboutbox.h mainbox.h interface.h
 CFGFLAGS = -fPIC -Wall -O2 -fomit-frame-pointer -D_LARGEFILE64_SOURCE \
-	-I.. -I. -I./Linux
+	-I.. -I. -I./Linux -m32 
 CFGLIBS =
 
 SHAREDOBJS = actualfile.o conf.o logfile.o \

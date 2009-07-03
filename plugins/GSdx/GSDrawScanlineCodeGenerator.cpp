@@ -25,7 +25,7 @@
 #include "StdAfx.h"
 #include "GSDrawScanlineCodeGenerator.h"
 
-GSDrawScanlineCodeGenerator::GSDrawScanlineCodeGenerator(GSScanlineEnvironment& env, UINT64 key, void* ptr, size_t maxsize)
+GSDrawScanlineCodeGenerator::GSDrawScanlineCodeGenerator(GSScanlineEnvironment& env, uint64 key, void* ptr, size_t maxsize)
 	: CodeGenerator(maxsize, ptr)
 	, m_env(env)
 {
@@ -449,7 +449,7 @@ void GSDrawScanlineCodeGenerator::Init(int params)
 			}
 		}
 
-		if(m_sel.tfx != TFX_DECAL)
+		if(!(m_sel.tfx == TFX_DECAL && m_sel.tcc))
 		{
 			if(m_sel.iip)
 			{
@@ -582,7 +582,7 @@ void GSDrawScanlineCodeGenerator::Step()
 			}
 		}
 
-		if(m_sel.tfx != TFX_DECAL)
+		if(!(m_sel.tfx == TFX_DECAL && m_sel.tcc))
 		{
 			if(m_sel.iip)
 			{
@@ -707,18 +707,17 @@ void GSDrawScanlineCodeGenerator::TestZ(const Xmm& temp1, const Xmm& temp2)
 		switch(m_sel.ztst)
 		{
 		case ZTST_GEQUAL: 
-			// test |= zso < zdo; 
+			// test |= zso < zdo; // ~(zso >= zdo)
 			pcmpgtd(xmm1, xmm0);
 			por(xmm7, xmm1);
 			break;
 
-		case ZTST_GREATER: 
-			// test |= zso <= zdo; 
-			movdqa(xmm4, xmm1);
-			pcmpgtd(xmm1, xmm0);
-			por(xmm7, xmm1);
-			pcmpeqd(xmm4, xmm0);
-			por(xmm7, xmm1);
+		case ZTST_GREATER: // TODO: tidus hair and chocobo wings only appear fully when this is tested as ZTST_GEQUAL
+			// test |= zso <= zdo; // ~(zso > zdo)
+			pcmpgtd(xmm0, xmm1);
+			pcmpeqd(xmm4, xmm4);
+			pxor(xmm0, xmm4);
+			por(xmm7, xmm0);
 			break;
 		}
 
@@ -870,10 +869,10 @@ void GSDrawScanlineCodeGenerator::SampleTexture()
 		// xmm1, xmm4, xmm6 = free
 		// xmm7 = used
 
-		// c00 = addr00.gather32_32((const DWORD/BYTE*)tex[, clut]);
-		// c01 = addr01.gather32_32((const DWORD/BYTE*)tex[, clut]);
-		// c10 = addr10.gather32_32((const DWORD/BYTE*)tex[, clut]);
-		// c11 = addr11.gather32_32((const DWORD/BYTE*)tex[, clut]);
+		// c00 = addr00.gather32_32((const uint32/uint8*)tex[, clut]);
+		// c01 = addr01.gather32_32((const uint32/uint8*)tex[, clut]);
+		// c10 = addr10.gather32_32((const uint32/uint8*)tex[, clut]);
+		// c11 = addr11.gather32_32((const uint32/uint8*)tex[, clut]);
 
 		ReadTexel(xmm6, xmm5, xmm1, xmm4);
 
@@ -989,7 +988,7 @@ void GSDrawScanlineCodeGenerator::SampleTexture()
 
 		paddd(xmm2, xmm4);
 
-		// c00 = addr00.gather32_32((const DWORD/BYTE*)tex[, clut]);
+		// c00 = addr00.gather32_32((const uint32/uint8*)tex[, clut]);
 
 		ReadTexel(xmm5, xmm2, xmm0, xmm1);
 
@@ -1201,6 +1200,19 @@ void GSDrawScanlineCodeGenerator::AlphaTFX()
 		break;
 
 	case TFX_DECAL:
+
+		// if(!tcc) gat = gat.mix16(ga.srl16(7));
+
+		if(!m_sel.tcc)
+		{
+			// GSVector4i ga = iip ? gaf : m_env.c.ga;
+
+			movdqa(xmm4, xmmword[m_sel.iip ? &m_env.temp.ga : &m_env.c.ga]);
+
+			psrlw(xmm4, 7);
+
+			mix16(xmm6, xmm4, xmm3);
+		}
 
 		break;
 

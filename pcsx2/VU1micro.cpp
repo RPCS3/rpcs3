@@ -27,12 +27,12 @@
 #include "VU.h"
 #include "VUops.h"
 #include "VUmicro.h"
-#include "iVUmicro.h"
-#include "iVUzerorec.h"
+#include "sVU_Micro.h"
+#include "sVU_zerorec.h"
 
 VURegs* g_pVU1;
 
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 u32 vudump = 0;
 #endif
 

@@ -19,7 +19,7 @@
 #include "PrecompiledHeader.h"
 
 #include "Common.h"
-#include "CDVDisodrv.h"
+#include "CDVD/CDVDisodrv.h"
 
 using namespace std;
 
@@ -232,7 +232,7 @@ struct ElfObject
 
 	ElfObject( const wxString& srcfile, uint hdrsize ) :
 		filename( srcfile )
-	,	data( hdrsize, "ELF headers" )
+	,	data( hdrsize, L"ELF headers" )
 	,	header( *(ELF_HEADER*)data.GetPtr() )
 	,	proghead( NULL )
 	,	secthead( NULL )
@@ -582,28 +582,7 @@ int loadElfFile(const wxString& filename)
 	Console::Status( wxsFormat( L"loadElfFile: %s; CRC = %8.8X", filename.c_str(), ElfCRC ) );
 
 	ElfApplyPatches();
-	LoadGameSpecificSettings();
-
+	
 	return 0;
 }
 
-#include "VU.h"
-extern bool path3hack;
-int g_VUGameFixes = 0;
-
-// fixme - this should be moved to patches or eliminated
-void LoadGameSpecificSettings()
-{
-	// default
-	g_VUGameFixes = 0;
-
-	switch(ElfCRC) {
-		case 0xb99379b7: // erementar gerad (discolored chars)
-			g_VUGameFixes |= VUFIX_XGKICKDELAY2; // Tested - still needed - arcum42
-			break;
-		//case 0xa08c4057:  //Sprint Cars (SLUS)
-		//case 0x8b0725d5:  //Flinstones Bedrock Racing (SLES)
-			//path3hack = TRUE; // We can move this to patch files right now
-			//break;
-	}
-}

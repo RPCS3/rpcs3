@@ -243,9 +243,7 @@ void gsReset()
 
 	memzero_obj(g_RealGSMem);
 
-	Path3transfer = FALSE;
-
-	GSCSRr = 0x551B400F;   // Set the FINISH bit to 1 for now
+	GSCSRr = 0x551B4000;   // Set the FINISH bit to 1 for now
 	GSIMR = 0x7f00;
 	psHu32(GIF_STAT) = 0;
 	psHu32(GIF_CTRL) = 0;
@@ -277,12 +275,14 @@ void gsGIFReset()
 {
 	// fixme - should this be here? (air)
 	//memzero_obj(g_RealGSMem);
+	// none of this should be here, its a GIF reset, not GS, only the dma side of it is reset. (Refraction)
 
 	// perform a soft reset (but do not do a full reset if the soft reset API is unavailable)
-	gsGIFSoftReset( 7 );
+	//gsGIFSoftReset( 7 );
 
-	GSCSRr = 0x551B400F;   // Set the FINISH bit to 1 for now
-	GSIMR = 0x7f00;
+
+	//GSCSRr = 0x551B4000;   // Set the FINISH bit to 1 for now
+	//GSIMR = 0x7f00;
 	psHu32(GIF_STAT) = 0;
 	psHu32(GIF_CTRL) = 0;
 	psHu32(GIF_MODE) = 0;
@@ -290,14 +290,7 @@ void gsGIFReset()
 
 void gsCSRwrite(u32 value)
 {
-	CSRw |= value & ~0x60;
-
-	if( mtgsThread != NULL )
-		mtgsThread->SendSimplePacket( GS_RINGTYPE_WRITECSR, CSRw, 0, 0 );
-	else
-		GSwriteCSR(CSRw);
-
-	GSCSRr = ((GSCSRr&~value)&0x1f)|(GSCSRr&~0x1f);
+	
 
 	// Our emulated GS has no FIFO...
 	/*if( value & 0x100 ) { // FLUSH
@@ -317,15 +310,36 @@ void gsCSRwrite(u32 value)
 				GSreset();
 		}
 
-		GSCSRr = 0x551B400F;   // Set the FINISH bit to 1 - GS is always at a finish state as we don't have a FIFO(saqib)
+		CSRw |= 0x1f;
+		GSCSRr = 0x551B4000;   // Set the FINISH bit to 1 - GS is always at a finish state as we don't have a FIFO(saqib)
 		GSIMR = 0x7F00; //This is bits 14-8 thats all that should be 1
+	} 
+	else if( value & 0x100 ) // FLUSH
+	{ 
+		//Console::WriteLn("GS_CSR FLUSH GS fifo: %x (CSRr=%x)", params value, GSCSRr);
 	}
+	else
+	{
+		CSRw |= value & 0x1f;
+
+		if( mtgsThread != NULL )
+			mtgsThread->SendSimplePacket( GS_RINGTYPE_WRITECSR, CSRw, 0, 0 );
+		else
+			GSwriteCSR(CSRw);
+
+		GSCSRr = ((GSCSRr&~value)&0x1f)|(GSCSRr&~0x1f);
+	}
+
 }
 
 static void IMRwrite(u32 value)
 {
 	GSIMR = (value & 0x1f00)|0x6000;
 
+	if((GSCSRr & 0x1f) & (~(GSIMR >> 8) & 0x1f)) 
+	{
+		gsIrq();
+	}
 	// don't update mtgs mem
 }
 
@@ -435,6 +449,8 @@ void __fastcall gsWrite64_page_00( u32 mem, const mem64_t* value )
 
 void __fastcall gsWrite64_page_01( u32 mem, const mem64_t* value )
 {
+	GIF_LOG("GS Write64 at %8.8lx with data %8.8x_%8.8x", mem, (u32*)value[1], (u32*)value[0]);
+
 	switch( mem )
 	{
 		case GS_CSR:

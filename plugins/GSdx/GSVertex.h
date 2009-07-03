@@ -35,20 +35,20 @@ __declspec(align(16)) struct GSVertex
 		struct
 		{
 			GIFRegST ST;
-			GIFRegXYZ XYZ;
 			GIFRegRGBAQ RGBAQ;
+			GIFRegXYZ XYZ;
 			GIFRegFOG FOG;
 		};
 
-		struct {__m128i m128i[2];};
-		struct {__m128 m128[2];};
+		struct {GSVector4i vi[2];};
+		struct {GSVector4 vf[2];};
 	};
 
 	GIFRegUV UV;
 
 	GSVertex() {memset(this, 0, sizeof(*this));}
 
-	GSVector4 GetUV() const {return GSVector4(GSVector4i::load(UV.ai32[0]).upl16());}
+	GSVector4 GetUV() const {return GSVector4(GSVector4i::load(UV.u32[0]).upl16());}
 };
 
 struct GSVertexOld

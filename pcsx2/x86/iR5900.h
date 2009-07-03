@@ -19,8 +19,8 @@
 #ifndef __IR5900_H__
 #define __IR5900_H__
 
-#include "ix86/ix86.h"
-#include "ix86/ix86_sse_helpers.h"
+#include "x86emitter/x86emitter.h"
+#include "x86emitter/sse_helpers.h"
 #include "R5900.h"
 #include "VU.h"
 #include "iCore.h"
@@ -90,7 +90,6 @@ void LoadBranchState();
 void recompileNextInstruction(int delayslot);
 void SetBranchReg( u32 reg );
 void SetBranchImm( u32 imm );
-u32 eeScaleBlockCycles();
 
 void iFlushCall(int flushtype);
 void recBranchCall( void (*func)() );

@@ -1567,9 +1567,10 @@ void rpsxBGEZAL()
 	_psxFlushAllUnused();
 
 	if( PSX_IS_CONST1(_Rs_) ) {
-		if( g_psxConstRegs[_Rs_] < 0 )
+		if( (int)g_psxConstRegs[_Rs_] < 0 )
 			branchTo = psxpc+4;
-		else MOV32ItoM((uptr)&psxRegs.GPR.r[31], psxpc+4);
+		else 
+			MOV32ItoM((uptr)&psxRegs.GPR.r[31], psxpc+4);
 
 		psxRecompileNextInstruction(1);
 		psxSetBranchImm( branchTo );

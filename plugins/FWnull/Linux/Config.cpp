@@ -29,12 +29,18 @@ using namespace std;
 #include "FW.h"
 #include "Config.h"
 
+ #ifdef __cplusplus
 extern "C"
 {
-#include "interface.h"
+#endif
+
 #include "support.h"
-//#include "callbacks.h"
+#include "callbacks.h"
+#include "interface.h"
+
+#ifdef __cplusplus
 }
+#endif
 
 GtkWidget *MsgDlg, *About, *Conf;
 extern string s_strIniPath;
@@ -45,7 +51,7 @@ void OnMsg_Ok()
 	gtk_main_quit();
 }
 
-void cfgSysMessage(char *fmt, ...) 
+void SysMessage(char *fmt, ...) 
 {
 	GtkWidget *Ok,*Txt;
 	GtkWidget *Box,*Box1;
@@ -86,21 +92,23 @@ void cfgSysMessage(char *fmt, ...)
 
 	gtk_main();
 }
-
+ 
 void OnAbout_Ok(GtkButton *button, gpointer user_data) 
 {
 	gtk_widget_destroy(About);
 	gtk_main_quit();
 }
 
-void CFGabout() 
+EXPORT_C_(void) FWabout() 
 {
 	About = create_About();
 	gtk_widget_show_all(About);
 	gtk_main();
 }
 
-void OnConf_Ok(GtkButton *button, gpointer user_data) {
+void OnConf_Ok(GtkButton *button, gpointer user_data) 
+{
+	conf.Log = is_checked(Conf, "check_logging");
 	SaveConfig();
 
 	gtk_widget_destroy(Conf);
@@ -113,35 +121,15 @@ void OnConf_Cancel(GtkButton *button, gpointer user_data)
 	gtk_main_quit();
 }
 
-void CFGconfigure() 
+EXPORT_C_(void) FWconfigure() 
 {
+	LoadConfig();
 	Conf = create_Config();
 
-	LoadConfig();
-
+	set_checked(Conf, "check_logging", conf.Log);
 	gtk_widget_show_all(Conf);
 	gtk_main();
 }
-
-long CFGmessage(char *msg) {
-	cfgSysMessage(msg);
-
-	return 0;
-}
-
-/*int main(int argc, char *argv[]) {
-	gtk_init(NULL, NULL);
-
-	if (!strcmp(argv[1], "configure")) {
-		CFGconfigure();
-	} else if (!strcmp(argv[1], "about")) {
-		CFGabout();
-	} else if (!strcmp(argv[1], "message")) {
-		CFGmessage(argv[2]);
-	}
-
-	return 0;
-}*/
 
 void LoadConfig() 
 {
@@ -156,6 +144,7 @@ void LoadConfig()
 		SaveConfig();//save and return
 		return;
 	}
+	fscanf(f, "logging = %hhx\n", &conf.Log);
 	//fscanf(f, "options = %hhx\n", &confOptions);
 	fclose(f);
 }
@@ -169,10 +158,10 @@ void SaveConfig()
 	f = fopen(cfg,"w");
 	if (f == NULL) 
 	{
-		printf("failed to open %s\n", s_strIniPath.c_str());
+		printf("failed to open '%s'\n", s_strIniPath.c_str());
 		return;
 	}
-	
+	fprintf(f, "logging = %hhx\n", conf.Log);
 	//fprintf(f, "options = %hhx\n", confOptions);
 	fclose(f);
 }

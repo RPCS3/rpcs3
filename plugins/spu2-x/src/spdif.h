@@ -15,8 +15,8 @@
 //License along with this library; if not, write to the Free Software
 //Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
-#ifndef SPDIF_H_INCLUDED
-#define SPDIF_H_INCLUDED
+
+#pragma once
 
 #ifndef u32
 typedef unsigned int u32;
@@ -109,4 +109,3 @@ typedef struct _chstatus
 	u8 reservd2[22];
 } chstatus:
 
-#endif//SPDIF_H_INCLUDED

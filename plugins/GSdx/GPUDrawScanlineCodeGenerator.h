@@ -32,7 +32,7 @@ class GPUDrawScanlineCodeGenerator : public CodeGenerator
 	void operator = (const GPUDrawScanlineCodeGenerator&);
 
 	static const GSVector4i m_test[8];
-	static const WORD m_dither[4][16];
+	static const uint16 m_dither[4][16];
 
 	util::Cpu m_cpu;
 

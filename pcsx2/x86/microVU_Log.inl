@@ -1,23 +1,22 @@
 /*  Pcsx2 - Pc Ps2 Emulator
-*  Copyright (C) 2009  Pcsx2-Playground Team
-*
-*  This program is free software; you can redistribute it and/or modify
-*  it under the terms of the GNU General Public License as published by
-*  the Free Software Foundation; either version 2 of the License, or
-*  (at your option) any later version.
-*  
-*  This program is distributed in the hope that it will be useful,
-*  but WITHOUT ANY WARRANTY; without even the implied warranty of
-*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*  GNU General Public License for more details.
-*  
-*  You should have received a copy of the GNU General Public License
-*  along with this program; if not, write to the Free Software
-*  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
-*/
+ *  Copyright (C) 2009  Pcsx2 Team
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *  
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *  
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
+ */
 
 #pragma once
-#ifdef PCSX2_MICROVU
 
 // writes text directly to the microVU.txt, no newlines appended.
 microVUx(void) __mVULog(const char* fmt, ...) {
@@ -39,12 +38,15 @@ microVUx(void) __mVULog(const char* fmt, ...) {
 
 #define commaIf() { if (bitX[6]) { mVUlog(","); bitX[6] = 0; } }
 
-microVUt(void) __mVUdumpProgram(int progIndex) {
+microVUx(void) __mVUdumpProgram(int progIndex) {
 	microVU* mVU = mVUx;
-	bool bitX[9];
+	bool bitX[7];
 	char str[30];
 	int	delay = 0;
-	mVUbranch = 0;
+	int bBranch = mVUbranch;
+	int bCode	= mVU->code;
+	int bPC		= iPC;
+	mVUbranch	= 0;
 
 	sprintf(str, "%s\\microVU%d prog - %02d.html", LOGS_DIR, vuIndex, progIndex);
 	mVU->logFile = fopen(str, "w");
@@ -73,10 +75,8 @@ microVUt(void) __mVUdumpProgram(int progIndex) {
 		bitX[4] = 0;
 		bitX[5] = 0;
 		bitX[6] = 0;
-		bitX[7] = 0;
-		bitX[8] = 0;
 
-		if (mVU->code & _Ibit_) { bitX[0] = 1; bitX[5] = 1; bitX[7] = 1; }
+		if (mVU->code & _Ibit_) { bitX[0] = 1; bitX[5] = 1; }
 		if (mVU->code & _Ebit_) { bitX[1] = 1; bitX[5] = 1; delay = 2; }
 		if (mVU->code & _Mbit_) { bitX[2] = 1; bitX[5] = 1; }
 		if (mVU->code & _Dbit_) { bitX[3] = 1; bitX[5] = 1; }
@@ -88,7 +88,7 @@ microVUt(void) __mVUdumpProgram(int progIndex) {
 		iPC = (i+1);
 		mVUlog("<a name=\"addr%04x\">", i*4);
 		mVUlog("[%04x] (%08x)</a> ", i*4, mVU->code);
-		mVUopU<vuIndex, 2>();
+		mVUopU(mVU, 2);
 
 		if (bitX[5]) { 
 			mVUlog(" ("); 
@@ -101,17 +101,25 @@ microVUt(void) __mVUdumpProgram(int progIndex) {
 		}
 
 		iPC = i;
-		if (bitX[7]) { mVUlog("<font color=\"#0070ff\">"); }
 		mVU->code = mVU->prog.prog[progIndex].data[i];
-		mVUlog("<br>\n[%04x] (%08x) ", i*4, mVU->code);
-		mVUopL<vuIndex, 2>();
-		mVUlog("\n\n<br><br>");
-		if (bitX[7]) { mVUlog("</font>"); }
+
+		if(bitX[0]) {
+			mVUlog("<br>\n<font color=\"#FF7000\">");
+			mVUlog("[%04x] (%08x) %f", i*4, mVU->code, *(float*)&mVU->code);
+			mVUlog("</font>\n\n<br><br>");
+		}
+		else {
+			mVUlog("<br>\n[%04x] (%08x) ", i*4, mVU->code);
+			mVUopL(mVU, 2);
+			mVUlog("\n\n<br><br>");
+		}
 	}
 	mVUlog("</font>\n");
 	mVUlog("</body>\n");
 	mVUlog("</html>\n");
 	fclose(mVU->logFile);
+	mVUbranch = bBranch;
+	mVU->code = bCode;
+	iPC		  = bPC;
+	setCode();
 }
-
-#endif //PCSX2_MICROVU

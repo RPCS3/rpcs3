@@ -25,9 +25,7 @@
 #include <string.h>
 
 #include "Common.h"
-#include "Threading.h"
-
-#define GSPATH3FIX
+#include "Utilities/Threading.h"
 
 PCSX2_ALIGNED16( extern u8 g_RealGSMem[0x2000] );
 #define GSCSRr *((u64*)(g_RealGSMem+0x1000))
@@ -99,6 +97,21 @@ struct GIFPath
 	__forceinline void PrepRegs();
 	void SetTag(const void* mem);
 	u32 GetReg();
+
+	__forceinline bool StepReg()
+	{
+		if((++curreg & 0xf) == tag.nreg) 
+		{
+			curreg = 0; 
+
+			if(--tag.nloop == 0)
+			{
+				return false;
+			}
+		}
+		
+		return true;
+	}
 };
 
 
@@ -250,7 +263,7 @@ protected:
 	// Processes a GIFtag & packet, and throws out some gsIRQs as needed.
 	// Used to keep interrupts in sync with the EE, while the GS itself
 	// runs potentially several frames behind.
-	u32 _gifTransferDummy( GIF_PATH pathidx, const u8 *pMem, u32 size );
+	int _gifTransferDummy( GIF_PATH pathidx, const u8 *pMem, u32 size );
 
 	// Used internally by SendSimplePacket type functions
 	uint _PrepForSimplePacket();
@@ -263,7 +276,7 @@ extern mtgsThreadObject* mtgsThread;
 
 void mtgsWaitGS();
 bool mtgsOpen();
-void mtgsRingBufSimplePacket( s32 command, u32 data0, u32 data1, u32 data2 );
+//void mtgsRingBufSimplePacket( s32 command, u32 data0, u32 data1, u32 data2 );
 
 /////////////////////////////////////////////////////////////////////////////
 // Generalized GS Functions and Stuff

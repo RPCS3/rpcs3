@@ -35,24 +35,24 @@ class GSDrawScanline : public GSAlignedClass<16>, public IDrawScanline
 
 	//
 
-	class GSSetupPrimMap : public GSCodeGeneratorFunctionMap<GSSetupPrimCodeGenerator, UINT64, SetupPrimStaticPtr>
+	class GSSetupPrimMap : public GSCodeGeneratorFunctionMap<GSSetupPrimCodeGenerator, uint64, SetupPrimStaticPtr>
 	{
 		GSScanlineEnvironment& m_env;
 
 	public:
 		GSSetupPrimMap(GSScanlineEnvironment& env);
-		GSSetupPrimCodeGenerator* Create(UINT64 key, void* ptr, size_t maxsize);
+		GSSetupPrimCodeGenerator* Create(uint64 key, void* ptr, size_t maxsize);
 	} m_sp;
 
 	//
 
-	class GSDrawScanlineMap : public GSCodeGeneratorFunctionMap<GSDrawScanlineCodeGenerator, UINT64, DrawScanlineStaticPtr>
+	class GSDrawScanlineMap : public GSCodeGeneratorFunctionMap<GSDrawScanlineCodeGenerator, uint64, DrawScanlineStaticPtr>
 	{
 		GSScanlineEnvironment& m_env;
 
 	public:
 		GSDrawScanlineMap(GSScanlineEnvironment& env);
-		GSDrawScanlineCodeGenerator* Create(UINT64 key, void* ptr, size_t maxsize);
+		GSDrawScanlineCodeGenerator* Create(uint64 key, void* ptr, size_t maxsize);
 	} m_ds;
 
 	//
@@ -60,10 +60,10 @@ class GSDrawScanline : public GSAlignedClass<16>, public IDrawScanline
 	void DrawSolidRect(const GSVector4i& r, const GSVertexSW& v);
 
 	template<class T, bool masked> 
-	void DrawSolidRectT(const GSVector4i* row, int* col, const GSVector4i& r, DWORD c, DWORD m);
+	void DrawSolidRectT(const GSVector4i* row, int* col, const GSVector4i& r, uint32 c, uint32 m);
 
 	template<class T, bool masked> 
-	__forceinline void FillRect(const GSVector4i* row, int* col, const GSVector4i& r, DWORD c, DWORD m);
+	__forceinline void FillRect(const GSVector4i* row, int* col, const GSVector4i& r, uint32 c, uint32 m);
 
 	template<class T, bool masked> 
 	__forceinline void FillBlock(const GSVector4i* row, int* col, const GSVector4i& r, const GSVector4i& c, const GSVector4i& m);

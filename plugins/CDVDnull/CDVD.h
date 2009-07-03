@@ -23,11 +23,8 @@
 #include <windows.h>
 #endif
 
-extern "C"
-{
 #define CDVDdefs
 #include "PS2Edefs.h"
-}
 
 #ifdef __LINUX__
 #include <gtk/gtk.h>

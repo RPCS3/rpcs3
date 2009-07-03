@@ -20,6 +20,7 @@
  */
 
 #include "stdafx.h"
+#include "GSdx.h"
 #include "GSDevice10.h"
 #include "resource.h"
 
@@ -44,15 +45,20 @@ GSDevice10::GSDevice10()
 {
 	memset(m_ps_srv, 0, sizeof(m_ps_srv));
 	memset(m_ps_ss, 0, sizeof(m_ps_ss));
+
+	m_vertices.stride = 0;
+	m_vertices.start = 0;
+	m_vertices.count = 0;
+	m_vertices.limit = 0;
 }
 
 GSDevice10::~GSDevice10()
 {
 }
 
-bool GSDevice10::Create(HWND hWnd, bool vsync)
+bool GSDevice10::Create(GSWnd* wnd, bool vsync)
 {
-	if(!__super::Create(hWnd, vsync))
+	if(!__super::Create(wnd, vsync))
 	{
 		return false;
 	}
@@ -75,12 +81,12 @@ bool GSDevice10::Create(HWND hWnd, bool vsync)
 	//scd.BufferDesc.RefreshRate.Numerator = 60;
 	//scd.BufferDesc.RefreshRate.Denominator = 1;
 	scd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-	scd.OutputWindow = hWnd;
+	scd.OutputWindow = (HWND)m_wnd->GetHandle();
 	scd.SampleDesc.Count = 1;
 	scd.SampleDesc.Quality = 0;
 	scd.Windowed = TRUE;
 
-	UINT flags = 0;
+	uint32 flags = 0;
 
 #ifdef DEBUG
 	flags |= D3D10_CREATE_DEVICE_DEBUG;
@@ -90,16 +96,6 @@ bool GSDevice10::Create(HWND hWnd, bool vsync)
 
 	if(FAILED(hr)) return false;
 
-	// font
-/*
-	// TODO: the driver crashes on alt-enter when using a font...
-
-	D3DX10_FONT_DESC fd;
-	memset(&fd, 0, sizeof(fd));
-	_tcscpy(fd.FaceName, _T("Arial"));
-	fd.Height = 20;
-	D3DX10CreateFontIndirect(m_dev, &fd, &m_font);
-*/
 	// convert
 
 	D3D10_INPUT_ELEMENT_DESC il_convert[] =
@@ -108,24 +104,12 @@ bool GSDevice10::Create(HWND hWnd, bool vsync)
 		{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 16, D3D10_INPUT_PER_VERTEX_DATA, 0},
 	};
 
-	hr = CompileShader(IDR_CONVERT10_FX, "vs_main", NULL, &m_convert.vs, il_convert, countof(il_convert), &m_convert.il);
+	hr = CompileShader(IDR_CONVERT_FX, "vs_main", NULL, &m_convert.vs, il_convert, countof(il_convert), &m_convert.il);
 
 	for(int i = 0; i < countof(m_convert.ps); i++)
 	{
-		CStringA main;
-		main.Format("ps_main%d", i);
-		hr = CompileShader(IDR_CONVERT10_FX, main, NULL, &m_convert.ps[i]);
+		hr = CompileShader(IDR_CONVERT_FX, format("ps_main%d", i), NULL, &m_convert.ps[i]);
 	}
-
-	memset(&bd, 0, sizeof(bd));
-
-	bd.Usage = D3D10_USAGE_DEFAULT;
-	bd.BindFlags = D3D10_BIND_VERTEX_BUFFER;
-	bd.CPUAccessFlags = 0;
-	bd.MiscFlags = 0;
-	bd.ByteWidth = 4 * sizeof(GSVertexPT1);
-
-	hr = m_dev->CreateBuffer(&bd, NULL, &m_convert.vb);
 
 	memset(&dsd, 0, sizeof(dsd));
 
@@ -148,16 +132,12 @@ bool GSDevice10::Create(HWND hWnd, bool vsync)
     bd.ByteWidth = sizeof(MergeConstantBuffer);
     bd.Usage = D3D10_USAGE_DEFAULT;
     bd.BindFlags = D3D10_BIND_CONSTANT_BUFFER;
-    bd.CPUAccessFlags = 0;
-    bd.MiscFlags = 0;
 
     hr = m_dev->CreateBuffer(&bd, NULL, &m_merge.cb);
 
 	for(int i = 0; i < countof(m_merge.ps); i++)
 	{
-		CStringA main;
-		main.Format("ps_main%d", i);
-		hr = CompileShader(IDR_MERGE10_FX, main, NULL, &m_merge.ps[i]);
+		hr = CompileShader(IDR_MERGE_FX, format("ps_main%d", i), NULL, &m_merge.ps[i]);
 	}
 
 	memset(&bsd, 0, sizeof(bsd));
@@ -180,16 +160,12 @@ bool GSDevice10::Create(HWND hWnd, bool vsync)
     bd.ByteWidth = sizeof(InterlaceConstantBuffer);
     bd.Usage = D3D10_USAGE_DEFAULT;
     bd.BindFlags = D3D10_BIND_CONSTANT_BUFFER;
-    bd.CPUAccessFlags = 0;
-    bd.MiscFlags = 0;
 
     hr = m_dev->CreateBuffer(&bd, NULL, &m_interlace.cb);
 
 	for(int i = 0; i < countof(m_interlace.ps); i++)
 	{
-		CStringA main;
-		main.Format("ps_main%d", i);
-		hr = CompileShader(IDR_INTERLACE10_FX, main, NULL, &m_interlace.ps[i]);
+		hr = CompileShader(IDR_INTERLACE_FX, format("ps_main%d", i), NULL, &m_interlace.ps[i]);
 	}
 
 	//
@@ -231,15 +207,8 @@ bool GSDevice10::Create(HWND hWnd, bool vsync)
 
 	//
 
-	Reset(1, 1, true);
+	Reset(1, 1, false);
 
-	//
-/*
-	if(!m_mergefx.Create(this))
-	{
-		return false;
-	}
-*/
 	//
 
 	return true;
@@ -257,36 +226,23 @@ bool GSDevice10::Reset(int w, int h, bool fs)
 	
 	CComPtr<ID3D10Texture2D> backbuffer;
 	m_swapchain->GetBuffer(0, __uuidof(ID3D10Texture2D), (void**)&backbuffer);
-	m_backbuffer = Texture(backbuffer);
+	m_backbuffer = new GSTexture10(backbuffer);
 
 	return true;
 }
 
-void GSDevice10::Present(const CRect& r)
+void GSDevice10::Flip()
 {
-	CRect cr;
-
-	GetClientRect(m_hWnd, &cr);
-
-	if(m_backbuffer.GetWidth() != cr.Width() || m_backbuffer.GetHeight() != cr.Height())
-	{
-		Reset(cr.Width(), cr.Height(), false);		
-	}
-
-	float color[4] = {0, 0, 0, 0};
-
-	m_dev->ClearRenderTargetView(m_backbuffer, color);
-
-	if(m_current)
-	{
-		StretchRect(m_current, m_backbuffer, GSVector4(r));
-	}
-
 	m_swapchain->Present(m_vsync ? 1 : 0, 0);
 }
 
 void GSDevice10::BeginScene()
 {
+}
+
+void GSDevice10::DrawPrimitive()
+{
+	m_dev->Draw(m_vertices.count, m_vertices.start);
 }
 
 void GSDevice10::EndScene()
@@ -296,94 +252,34 @@ void GSDevice10::EndScene()
 	// not clearing the rt/ds gives a little fps boost in complex games (5-10%)
 
 	// OMSetRenderTargets(NULL, NULL);
+
+	m_vertices.start += m_vertices.count;
+	m_vertices.count = 0;
 }
 
-void GSDevice10::Draw(LPCTSTR str)
+void GSDevice10::ClearRenderTarget(GSTexture* t, const GSVector4& c)
 {
-	/*
-	BOOL fs;
-	CComPtr<IDXGIOutput> target;
-
-	m_swapchain->GetFullscreenState(&fs, &target);
-
-	if(fs)
-	{
-		BeginScene();
-
-		OMSetRenderTargets(m_backbuffer, NULL);
-
-		CRect r(0, 0, m_backbuffer.GetWidth(), m_backbuffer.GetHeight());
-
-		D3DCOLOR c = D3DCOLOR_ARGB(255, 0, 255, 0);
-
-		if(m_font->DrawText(NULL, str, -1, &r, DT_CALCRECT|DT_LEFT|DT_WORDBREAK, c))
-		{
-			m_font->DrawText(NULL, str, -1, &r, DT_LEFT|DT_WORDBREAK, c);
-		}
-
-		EndScene();
-	}
-	*/
+	m_dev->ClearRenderTargetView(*(GSTexture10*)t, c.v);
 }
 
-bool GSDevice10::CopyOffscreen(Texture& src, const GSVector4& sr, Texture& dst, int w, int h, int format)
-{
-	dst = Texture();
-
-	if(format == 0)
-	{
-		format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	}
-
-	if(format != DXGI_FORMAT_R8G8B8A8_UNORM && format != DXGI_FORMAT_R16_UINT)
-	{
-		ASSERT(0);
-
-		return false;
-	}
-
-	Texture rt;
-
-	if(CreateRenderTarget(rt, w, h, format))
-	{
-		GSVector4 dr(0, 0, w, h);
-
-		StretchRect(src, sr, rt, dr, m_convert.ps[format == DXGI_FORMAT_R16_UINT ? 1 : 0], NULL);
-
-		if(CreateOffscreen(dst, w, h, format))
-		{
-			m_dev->CopyResource(dst, rt);
-		}
-	}
-
-	Recycle(rt);
-
-	return !!dst;
-}
-
-void GSDevice10::ClearRenderTarget(Texture& t, const GSVector4& c)
-{
-	m_dev->ClearRenderTargetView(t, c.v);
-}
-
-void GSDevice10::ClearRenderTarget(Texture& t, DWORD c)
+void GSDevice10::ClearRenderTarget(GSTexture* t, uint32 c)
 {
 	GSVector4 color = GSVector4(c) * (1.0f / 255);
 
-	m_dev->ClearRenderTargetView(t, color.v);
+	m_dev->ClearRenderTargetView(*(GSTexture10*)t, color.v);
 }
 
-void GSDevice10::ClearDepth(Texture& t, float c)
+void GSDevice10::ClearDepth(GSTexture* t, float c)
 {
-	m_dev->ClearDepthStencilView(t, D3D10_CLEAR_DEPTH, c, 0);
+	m_dev->ClearDepthStencilView(*(GSTexture10*)t, D3D10_CLEAR_DEPTH, c, 0);
 }
 
-void GSDevice10::ClearStencil(Texture& t, BYTE c)
+void GSDevice10::ClearStencil(GSTexture* t, uint8 c)
 {
-	m_dev->ClearDepthStencilView(t, D3D10_CLEAR_STENCIL, 0, c);
+	m_dev->ClearDepthStencilView(*(GSTexture10*)t, D3D10_CLEAR_STENCIL, 0, c);
 }
 
-bool GSDevice10::Create(int type, Texture& t, int w, int h, int format)
+GSTexture* GSDevice10::Create(int type, int w, int h, int format)
 {
 	HRESULT hr;
 
@@ -406,7 +302,7 @@ bool GSDevice10::Create(int type, Texture& t, int w, int h, int format)
 		desc.BindFlags = D3D10_BIND_RENDER_TARGET | D3D10_BIND_SHADER_RESOURCE;
 		break;
 	case GSTexture::DepthStencil:
-		desc.BindFlags = D3D10_BIND_DEPTH_STENCIL;
+		desc.BindFlags = D3D10_BIND_DEPTH_STENCIL;// | D3D10_BIND_SHADER_RESOURCE;
 		break;
 	case GSTexture::Texture:
 		desc.BindFlags = D3D10_BIND_SHADER_RESOURCE;
@@ -417,13 +313,15 @@ bool GSDevice10::Create(int type, Texture& t, int w, int h, int format)
 		break;
 	}
 
+	GSTexture10* t = NULL;
+
 	CComPtr<ID3D10Texture2D> texture;
 
 	hr = m_dev->CreateTexture2D(&desc, NULL, &texture);
 
 	if(SUCCEEDED(hr))
 	{
-		t = Texture(texture);
+		t = new GSTexture10(texture);
 
 		switch(type)
 		{
@@ -434,34 +332,135 @@ bool GSDevice10::Create(int type, Texture& t, int w, int h, int format)
 			ClearDepth(t, 0);
 			break;
 		}
-
-		return true;
 	}
 
-	return false;
+	return t;
 }
 
-bool GSDevice10::CreateRenderTarget(Texture& t, int w, int h, int format)
+GSTexture* GSDevice10::CreateRenderTarget(int w, int h, int format)
 {
-	return __super::CreateRenderTarget(t, w, h, format ? format : DXGI_FORMAT_R8G8B8A8_UNORM);
+	return __super::CreateRenderTarget(w, h, format ? format : DXGI_FORMAT_R8G8B8A8_UNORM);
 }
 
-bool GSDevice10::CreateDepthStencil(Texture& t, int w, int h, int format)
+GSTexture* GSDevice10::CreateDepthStencil(int w, int h, int format)
 {
-	return __super::CreateDepthStencil(t, w, h, format ? format : DXGI_FORMAT_D32_FLOAT_S8X24_UINT);
+	return __super::CreateDepthStencil(w, h, format ? format : DXGI_FORMAT_D32_FLOAT_S8X24_UINT); // DXGI_FORMAT_R32G8X24_TYPELESS
 }
 
-bool GSDevice10::CreateTexture(Texture& t, int w, int h, int format)
+GSTexture* GSDevice10::CreateTexture(int w, int h, int format)
 {
-	return __super::CreateTexture(t, w, h, format ? format : DXGI_FORMAT_R8G8B8A8_UNORM);
+	return __super::CreateTexture(w, h, format ? format : DXGI_FORMAT_R8G8B8A8_UNORM);
 }
 
-bool GSDevice10::CreateOffscreen(Texture& t, int w, int h, int format)
+GSTexture* GSDevice10::CreateOffscreen(int w, int h, int format)
 {
-	return __super::CreateOffscreen(t, w, h, format ? format : DXGI_FORMAT_R8G8B8A8_UNORM);
+	return __super::CreateOffscreen(w, h, format ? format : DXGI_FORMAT_R8G8B8A8_UNORM);
 }
 
-void GSDevice10::DoMerge(Texture* st, GSVector4* sr, GSVector4* dr, Texture& dt, bool slbg, bool mmod, GSVector4& c)
+GSTexture* GSDevice10::CopyOffscreen(GSTexture* src, const GSVector4& sr, int w, int h, int format)
+{
+	GSTexture* dst = NULL;
+
+	if(format == 0)
+	{
+		format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	}
+
+	if(format != DXGI_FORMAT_R8G8B8A8_UNORM && format != DXGI_FORMAT_R16_UINT)
+	{
+		ASSERT(0);
+
+		return false;
+	}
+
+	if(GSTexture* rt = CreateRenderTarget(w, h, format))
+	{
+		GSVector4 dr(0, 0, w, h);
+
+		StretchRect(src, sr, rt, dr, m_convert.ps[format == DXGI_FORMAT_R16_UINT ? 1 : 0], NULL);
+
+		dst = CreateOffscreen(w, h, format);
+
+		if(dst)
+		{
+			m_dev->CopyResource(*(GSTexture10*)dst, *(GSTexture10*)rt);
+		}
+
+		Recycle(rt);
+	}
+
+	return dst;
+}
+
+void GSDevice10::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, int shader, bool linear)
+{
+	StretchRect(st, sr, dt, dr, m_convert.ps[shader], NULL, linear);
+}
+
+void GSDevice10::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, ID3D10PixelShader* ps, ID3D10Buffer* ps_cb, bool linear)
+{
+	StretchRect(st, sr, dt, dr, ps, ps_cb, m_convert.bs, linear);
+}
+
+void GSDevice10::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, ID3D10PixelShader* ps, ID3D10Buffer* ps_cb, ID3D10BlendState* bs, bool linear)
+{
+	BeginScene();
+
+	GSVector2i ds = dt->GetSize();
+
+	// om
+
+	OMSetDepthStencilState(m_convert.dss, 0);
+	OMSetBlendState(bs, 0);
+	OMSetRenderTargets(dt, NULL);
+
+	// ia
+
+	float left = dr.x * 2 / ds.x - 1.0f;
+	float top = 1.0f - dr.y * 2 / ds.y;
+	float right = dr.z * 2 / ds.x - 1.0f;
+	float bottom = 1.0f - dr.w * 2 / ds.y;
+
+	GSVertexPT1 vertices[] =
+	{
+		{GSVector4(left, top, 0.5f, 1.0f), GSVector2(sr.x, sr.y)},
+		{GSVector4(right, top, 0.5f, 1.0f), GSVector2(sr.z, sr.y)},
+		{GSVector4(left, bottom, 0.5f, 1.0f), GSVector2(sr.x, sr.w)},
+		{GSVector4(right, bottom, 0.5f, 1.0f), GSVector2(sr.z, sr.w)},
+	};
+
+	IASetVertexBuffer(vertices, sizeof(vertices[0]), countof(vertices));
+	IASetInputLayout(m_convert.il);
+	IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+
+	// vs
+
+	VSSetShader(m_convert.vs, NULL);
+
+	// gs
+
+	GSSetShader(NULL);
+
+	// ps
+
+	PSSetShader(ps, ps_cb);
+	PSSetSamplerState(linear ? m_convert.ln : m_convert.pt, NULL);
+	PSSetShaderResources(st, NULL);
+
+	// rs
+
+	RSSet(ds.x, ds.y);
+
+	//
+
+	DrawPrimitive();
+
+	//
+
+	EndScene();
+}
+
+void GSDevice10::DoMerge(GSTexture* st[2], GSVector4* sr, GSVector4* dr, GSTexture* dt, bool slbg, bool mmod, const GSVector4& c)
 {
 	ClearRenderTarget(dt, c);
 
@@ -478,26 +477,83 @@ void GSDevice10::DoMerge(Texture* st, GSVector4* sr, GSVector4* dr, Texture& dt,
 	}
 }
 
-void GSDevice10::DoInterlace(Texture& st, Texture& dt, int shader, bool linear, float yoffset)
+void GSDevice10::DoInterlace(GSTexture* st, GSTexture* dt, int shader, bool linear, float yoffset)
 {
+	GSVector4 s = GSVector4(dt->GetSize());
+
 	GSVector4 sr(0, 0, 1, 1);
-	GSVector4 dr(0.0f, yoffset, (float)dt.GetWidth(), (float)dt.GetHeight() + yoffset);
+	GSVector4 dr(0.0f, yoffset, s.x, s.y + yoffset);
 
 	InterlaceConstantBuffer cb;
 
-	cb.ZrH = GSVector2(0, 1.0f / dt.GetHeight());
-	cb.hH = (float)dt.GetHeight() / 2;
+	cb.ZrH = GSVector2(0, 1.0f / s.y);
+	cb.hH = s.y / 2;
 
 	m_dev->UpdateSubresource(m_interlace.cb, 0, NULL, &cb, 0, 0);
 
 	StretchRect(st, sr, dt, dr, m_interlace.ps[shader], m_interlace.cb, linear);
 }
 
-void GSDevice10::IASetVertexBuffer(ID3D10Buffer* vb, UINT stride)
+void GSDevice10::IASetVertexBuffer(const void* vertices, size_t stride, size_t count)
+{
+	ASSERT(m_vertices.count == 0);
+
+	if(count * stride > m_vertices.limit * m_vertices.stride)
+	{
+		m_vertices.vb_old = m_vertices.vb;
+		m_vertices.vb = NULL;
+		m_vertices.start = 0;
+		m_vertices.count = 0;
+		m_vertices.limit = max(count * 3 / 2, 10000);
+	}
+
+	if(m_vertices.vb == NULL)
+	{
+		D3D10_BUFFER_DESC bd;
+
+		memset(&bd, 0, sizeof(bd));
+
+		bd.Usage = D3D10_USAGE_DYNAMIC;
+		bd.ByteWidth = m_vertices.limit * stride;
+		bd.BindFlags = D3D10_BIND_VERTEX_BUFFER;
+		bd.CPUAccessFlags = D3D10_CPU_ACCESS_WRITE;
+
+		HRESULT hr;
+		
+		hr = m_dev->CreateBuffer(&bd, NULL, &m_vertices.vb);
+
+		if(FAILED(hr)) return;
+	}
+
+	D3D10_MAP type = D3D10_MAP_WRITE_NO_OVERWRITE;
+
+	if(m_vertices.start + count > m_vertices.limit || stride != m_vertices.stride)
+	{
+		m_vertices.start = 0;
+
+		type = D3D10_MAP_WRITE_DISCARD;
+	}
+
+	void* v = NULL;
+
+	if(SUCCEEDED(m_vertices.vb->Map(type, 0, &v)))
+	{
+		GSVector4i::storent((uint8*)v + m_vertices.start * stride, vertices, count * stride);
+
+		m_vertices.vb->Unmap();
+	}
+
+	m_vertices.count = count;
+	m_vertices.stride = stride;
+
+	IASetVertexBuffer(m_vertices.vb, stride);
+}
+
+void GSDevice10::IASetVertexBuffer(ID3D10Buffer* vb, size_t stride)
 {
 	if(m_vb != vb || m_vb_stride != stride)
 	{
-		UINT offset = 0;
+		uint32 offset = 0;
 
 		m_dev->IASetVertexBuffers(0, 1, &vb, &stride, &offset);
 
@@ -553,8 +609,14 @@ void GSDevice10::GSSetShader(ID3D10GeometryShader* gs)
 	}
 }
 
-void GSDevice10::PSSetShaderResources(ID3D10ShaderResourceView* srv0, ID3D10ShaderResourceView* srv1)
+void GSDevice10::PSSetShaderResources(GSTexture* sr0, GSTexture* sr1)
 {
+	ID3D10ShaderResourceView* srv0 = NULL;
+	ID3D10ShaderResourceView* srv1 = NULL;
+	
+	if(sr0) srv0 = *(GSTexture10*)sr0;
+	if(sr1) srv1 = *(GSTexture10*)sr1;
+
 	if(m_ps_srv[0] != srv0 || m_ps_srv[1] != srv1)
 	{
 		ID3D10ShaderResourceView* srvs[] = {srv0, srv1};
@@ -596,9 +658,9 @@ void GSDevice10::PSSetSamplerState(ID3D10SamplerState* ss0, ID3D10SamplerState* 
 	}
 }
 
-void GSDevice10::RSSet(int width, int height, const RECT* scissor)
+void GSDevice10::RSSet(int width, int height, const GSVector4i* scissor)
 {
-	if(m_viewport.cx != width || m_viewport.cy != height)
+	if(m_viewport.x != width || m_viewport.y != height)
 	{
 		D3D10_VIEWPORT vp;
 
@@ -613,20 +675,20 @@ void GSDevice10::RSSet(int width, int height, const RECT* scissor)
 
 		m_dev->RSSetViewports(1, &vp);
 
-		m_viewport = CSize(width, height);
+		m_viewport = GSVector2i(width, height);
 	}
 
-	CRect r = scissor ? *scissor : CRect(0, 0, width, height);
+	GSVector4i r = scissor ? *scissor : GSVector4i(0, 0, width, height);
 
-	if(m_scissor != r)
+	if(!m_scissor.eq(r))
 	{
-		m_dev->RSSetScissorRects(1, &r);
+		m_dev->RSSetScissorRects(1, r);
 
 		m_scissor = r;
 	}
 }
 
-void GSDevice10::OMSetDepthStencilState(ID3D10DepthStencilState* dss, UINT sref)
+void GSDevice10::OMSetDepthStencilState(ID3D10DepthStencilState* dss, uint8 sref)
 {
 	if(m_dss != dss || m_sref != sref)
 	{
@@ -650,8 +712,14 @@ void GSDevice10::OMSetBlendState(ID3D10BlendState* bs, float bf)
 	}
 }
 
-void GSDevice10::OMSetRenderTargets(ID3D10RenderTargetView* rtv, ID3D10DepthStencilView* dsv)
+void GSDevice10::OMSetRenderTargets(GSTexture* rt, GSTexture* ds)
 {
+	ID3D10RenderTargetView* rtv = NULL;
+	ID3D10DepthStencilView* dsv = NULL;
+
+	if(rt) rtv = *(GSTexture10*)rt;
+	if(ds) dsv = *(GSTexture10*)ds;
+
 	if(m_rtv != rtv || m_dsv != dsv)
 	{
 		m_dev->OMSetRenderTargets(1, &rtv, dsv);
@@ -661,97 +729,21 @@ void GSDevice10::OMSetRenderTargets(ID3D10RenderTargetView* rtv, ID3D10DepthSten
 	}
 }
 
-void GSDevice10::DrawPrimitive(UINT count, UINT start)
-{
-	m_dev->Draw(count, start);
-}
-
-void GSDevice10::StretchRect(Texture& st, Texture& dt, const GSVector4& dr, bool linear)
-{
-	StretchRect(st, GSVector4(0, 0, 1, 1), dt, dr, linear);
-}
-
-void GSDevice10::StretchRect(Texture& st, const GSVector4& sr, Texture& dt, const GSVector4& dr, bool linear)
-{
-	StretchRect(st, sr, dt, dr, m_convert.ps[0], NULL, linear);
-}
-
-void GSDevice10::StretchRect(Texture& st, const GSVector4& sr, Texture& dt, const GSVector4& dr, ID3D10PixelShader* ps, ID3D10Buffer* ps_cb, bool linear)
-{
-	StretchRect(st, sr, dt, dr, ps, ps_cb, m_convert.bs, linear);
-}
-
-void GSDevice10::StretchRect(Texture& st, const GSVector4& sr, Texture& dt, const GSVector4& dr, ID3D10PixelShader* ps, ID3D10Buffer* ps_cb, ID3D10BlendState* bs, bool linear)
-{
-	BeginScene();
-
-	// om
-
-	OMSetDepthStencilState(m_convert.dss, 0);
-	OMSetBlendState(bs, 0);
-	OMSetRenderTargets(dt, NULL);
-
-	// ia
-
-	float left = dr.x * 2 / dt.GetWidth() - 1.0f;
-	float top = 1.0f - dr.y * 2 / dt.GetHeight();
-	float right = dr.z * 2 / dt.GetWidth() - 1.0f;
-	float bottom = 1.0f - dr.w * 2 / dt.GetHeight();
-
-	GSVertexPT1 vertices[] =
-	{
-		{GSVector4(left, top, 0.5f, 1.0f), GSVector2(sr.x, sr.y)},
-		{GSVector4(right, top, 0.5f, 1.0f), GSVector2(sr.z, sr.y)},
-		{GSVector4(left, bottom, 0.5f, 1.0f), GSVector2(sr.x, sr.w)},
-		{GSVector4(right, bottom, 0.5f, 1.0f), GSVector2(sr.z, sr.w)},
-	};
-
-	D3D10_BOX box = {0, 0, 0, sizeof(vertices), 1, 1};
-
-	m_dev->UpdateSubresource(m_convert.vb, 0, &box, vertices, 0, 0);
-
-	IASetVertexBuffer(m_convert.vb, sizeof(vertices[0]));
-	IASetInputLayout(m_convert.il);
-	IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-
-	// vs
-
-	VSSetShader(m_convert.vs, NULL);
-
-	// gs
-
-	GSSetShader(NULL);
-
-	// ps
-
-	PSSetShader(ps, ps_cb);
-	PSSetSamplerState(linear ? m_convert.ln : m_convert.pt, NULL);
-	PSSetShaderResources(st, NULL);
-
-	// rs
-
-	RSSet(dt.GetWidth(), dt.GetHeight());
-
-	//
-
-	DrawPrimitive(countof(vertices));
-
-	//
-
-	EndScene();
-}
-
-HRESULT GSDevice10::CompileShader(UINT id, LPCSTR entry, D3D10_SHADER_MACRO* macro, ID3D10VertexShader** ps, D3D10_INPUT_ELEMENT_DESC* layout, int count, ID3D10InputLayout** il)
+HRESULT GSDevice10::CompileShader(uint32 id, const string& entry, D3D10_SHADER_MACRO* macro, ID3D10VertexShader** vs, D3D10_INPUT_ELEMENT_DESC* layout, int count, ID3D10InputLayout** il)
 {
 	HRESULT hr;
 
+	vector<D3D10_SHADER_MACRO> m;
+
+	PrepareShaderMacro(m, macro, "0x400");
+
 	CComPtr<ID3D10Blob> shader, error;
 
-    hr = D3DX10CompileFromResource(AfxGetInstanceHandle(), MAKEINTRESOURCE(id), NULL, macro, NULL, entry, "vs_4_0", 0, 0, NULL, &shader, &error, NULL);
+    hr = D3DX10CompileFromResource(theApp.GetModuleHandle(), MAKEINTRESOURCE(id), NULL, &m[0], NULL, entry.c_str(), "vs_4_0", 0, 0, NULL, &shader, &error, NULL);
 	
 	if(error)
 	{
-		TRACE(_T("%s\n"), CString((LPCSTR)error->GetBufferPointer()));
+		printf("%s\n", (const char*)error->GetBufferPointer());
 	}
 
 	if(FAILED(hr))
@@ -759,7 +751,7 @@ HRESULT GSDevice10::CompileShader(UINT id, LPCSTR entry, D3D10_SHADER_MACRO* mac
 		return hr;
 	}
 
-	hr = m_dev->CreateVertexShader((DWORD*)shader->GetBufferPointer(), shader->GetBufferSize(), ps);
+	hr = m_dev->CreateVertexShader((void*)shader->GetBufferPointer(), shader->GetBufferSize(), vs);
 
 	if(FAILED(hr))
 	{
@@ -776,17 +768,21 @@ HRESULT GSDevice10::CompileShader(UINT id, LPCSTR entry, D3D10_SHADER_MACRO* mac
 	return hr;
 }
 
-HRESULT GSDevice10::CompileShader(UINT id, LPCSTR entry, D3D10_SHADER_MACRO* macro, ID3D10GeometryShader** gs)
+HRESULT GSDevice10::CompileShader(uint32 id, const string& entry, D3D10_SHADER_MACRO* macro, ID3D10GeometryShader** gs)
 {
 	HRESULT hr;
 
+	vector<D3D10_SHADER_MACRO> m;
+
+	PrepareShaderMacro(m, macro, "0x400");
+
 	CComPtr<ID3D10Blob> shader, error;
 
-    hr = D3DX10CompileFromResource(AfxGetInstanceHandle(), MAKEINTRESOURCE(id), NULL, macro, NULL, entry, "gs_4_0", 0, 0, NULL, &shader, &error, NULL);
+    hr = D3DX10CompileFromResource(theApp.GetModuleHandle(), MAKEINTRESOURCE(id), NULL, &m[0], NULL, entry.c_str(), "gs_4_0", 0, 0, NULL, &shader, &error, NULL);
 	
 	if(error)
 	{
-		TRACE(_T("%s\n"), CString((LPCSTR)error->GetBufferPointer()));
+		printf("%s\n", (const char*)error->GetBufferPointer());
 	}
 
 	if(FAILED(hr))
@@ -794,7 +790,7 @@ HRESULT GSDevice10::CompileShader(UINT id, LPCSTR entry, D3D10_SHADER_MACRO* mac
 		return hr;
 	}
 
-	hr = m_dev->CreateGeometryShader((DWORD*)shader->GetBufferPointer(), shader->GetBufferSize(), gs);
+	hr = m_dev->CreateGeometryShader((void*)shader->GetBufferPointer(), shader->GetBufferSize(), gs);
 
 	if(FAILED(hr))
 	{
@@ -804,17 +800,21 @@ HRESULT GSDevice10::CompileShader(UINT id, LPCSTR entry, D3D10_SHADER_MACRO* mac
 	return hr;
 }
 
-HRESULT GSDevice10::CompileShader(UINT id, LPCSTR entry, D3D10_SHADER_MACRO* macro, ID3D10PixelShader** ps)
+HRESULT GSDevice10::CompileShader(uint32 id, const string& entry, D3D10_SHADER_MACRO* macro, ID3D10PixelShader** ps)
 {
 	HRESULT hr;
 
+	vector<D3D10_SHADER_MACRO> m;
+
+	PrepareShaderMacro(m, macro, "0x400");
+
 	CComPtr<ID3D10Blob> shader, error;
 
-    hr = D3DX10CompileFromResource(AfxGetInstanceHandle(), MAKEINTRESOURCE(id), NULL, macro, NULL, entry, "ps_4_0", 0, 0, NULL, &shader, &error, NULL);
+    hr = D3DX10CompileFromResource(theApp.GetModuleHandle(), MAKEINTRESOURCE(id), NULL, &m[0], NULL, entry.c_str(), "ps_4_0", 0, 0, NULL, &shader, &error, NULL);
 	
 	if(error)
 	{
-		TRACE(_T("%s\n"), CString((LPCSTR)error->GetBufferPointer()));
+		printf("%s\n", (const char*)error->GetBufferPointer());
 	}
 
 	if(FAILED(hr))
@@ -822,7 +822,7 @@ HRESULT GSDevice10::CompileShader(UINT id, LPCSTR entry, D3D10_SHADER_MACRO* mac
 		return hr;
 	}
 
-	hr = m_dev->CreatePixelShader((DWORD*)shader->GetBufferPointer(), shader->GetBufferSize(), ps);
+	hr = m_dev->CreatePixelShader((void*)shader->GetBufferPointer(), shader->GetBufferSize(), ps);
 
 	if(FAILED(hr))
 	{

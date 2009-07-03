@@ -9,4 +9,8 @@
 		PreprocessorDefinitions="_M_SSE=0x401"
 		EnableEnhancedInstructionSet="2"
 	/>
+	<UserMacro
+		Name="SSEtype"
+		Value="SSE4"
+	/>
 </VisualStudioPropertySheet>

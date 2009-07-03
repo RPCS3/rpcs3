@@ -18,42 +18,11 @@
 
 #pragma once
 
-#include "Pcsx2Defs.h"
 #include "Paths.h"
 #include "Pcsx2Config.h"
-#include "SafeArray.h"
+#include "Utilities/SafeArray.h"
+#include "Utilities/Threading.h"		// to use threading stuff, include the Threading namespace in your file.
 #include "Misc.h"
-#include "Threading.h"		// to use threading stuff, include the Threading namespace in your file.
-
-enum PageProtectionMode
-{
-	Protect_NoAccess = 0,
-	Protect_ReadOnly,
-	Protect_ReadWrite
-};
-
-//////////////////////////////////////////////////////////////////////////////////////////
-// HostSys - Namespace housing general system-level implementations relating to loading
-// plugins and allocating memory.  For now, these functions are all accessed via Sys*
-// versions defined in System.h/cpp.
-namespace HostSys
-{
-	// Maps a block of memory for use as a recompiled code buffer.
-	// The allocated block has code execution privileges.
-	// Returns NULL on allocation failure.
-	extern void *Mmap(uptr base, u32 size);
-
-	// Unmaps a block allocated by SysMmap
-	extern void Munmap(uptr base, u32 size);
-
-	extern void MemProtect( void* baseaddr, size_t size, PageProtectionMode mode, bool allowExecution=false );
-
-	static __forceinline void Munmap( void* base, u32 size )
-	{
-		Munmap( (uptr)base, size );
-	}
-}
-
 
 extern void SysDetect();				// Detects cpu type and fills cpuInfo structs.
 extern void SysReset();					// Resets the various PS2 cpus, sub-systems, and recompilers.
@@ -86,103 +55,11 @@ extern void vSyncDebugStuff( uint frame );
 
 
 //////////////////////////////////////////////////////////////////////////////////////////
-// Console Namespace -- Replacements for SysPrintf.
-// SysPrintf is depreciated -- We should phase these in over time.
-namespace Console
-{
-	enum Colors
-	{
-		Color_Black = 0,
-		Color_Red,
-		Color_Green,
-		Color_Yellow,
-		Color_Blue,
-		Color_Magenta,
-		Color_Cyan,
-		Color_White
-	};
-
-	// va_args version of WriteLn, mostly for internal use only.
-	extern void __fastcall _WriteLn( Colors color, const char* fmt, va_list args );
-
-	extern void __fastcall SetTitle( const wxString& title );
-
-	// Changes the active console color.
-	// This color will be unset by calls to colored text methods
-	// such as ErrorMsg and Notice.
-	extern void __fastcall SetColor( Colors color );
-
-	// Restores the console color to default (usually low-intensity white on Win32)
-	extern void ClearColor();
-
-	// The following Write functions return bool so that we can use macros to exclude
-	// them from different build types.  The return values are always zero.
-
-	// Writes a newline to the console.
-	extern bool Newline();
-
-	// Writes an unformatted string of text to the console (fast!)
-	// No newline is appended.
-	extern bool __fastcall Write( const char* text );
-
-	// Writes an unformatted string of text to the console (fast!)
-	// A newline is automatically appended, and the console color reset to default
-	// after the log is written.
-	extern bool __fastcall Write( Colors color, const char* text );
-
-	// Writes an unformatted string of text to the console (fast!)
-	// A newline is automatically appended.
-	extern bool __fastcall WriteLn( const char* text );
-
-	// Writes an unformatted string of text to the console (fast!)
-	// A newline is automatically appended, and the console color reset to default
-	// after the log is written.
-	extern bool __fastcall WriteLn( Colors color, const char* text );
-
-	// Writes a line of colored text to the console, with automatic newline appendage.
-	// The console color is reset to default when the operation is complete.
-	extern bool WriteLn( Colors color, const char* fmt, VARG_PARAM dummy, ... );
-
-	// Writes a formatted message to the console, with appended newline.
-	extern bool WriteLn( const char* fmt, VARG_PARAM dummy, ... );
-
-	// Writes a line of colored text to the console (no newline).
-	// The console color is reset to default when the operation is complete.
-	extern bool Write( Colors color, const char* fmt, VARG_PARAM dummy, ... );
-
-	// Writes a formatted message to the console (no newline)
-	extern bool Write( const char* fmt, VARG_PARAM dummy, ... );
-
-	// Displays a message in the console with red emphasis.
-	// Newline is automatically appended.
-	extern bool Error( const char* fmt, VARG_PARAM dummy, ... );
-	extern bool __fastcall Error( const char* text );
-
-	// Displays a message in the console with yellow emphasis.
-	// Newline is automatically appended.
-	extern bool Notice( const char* fmt, VARG_PARAM dummy, ... );
-	extern bool __fastcall Notice( const char* text );
-
-	// Displays a message in the console with yellow emphasis.
-	// Newline is automatically appended.
-	extern bool Status( const char* fmt, VARG_PARAM dummy, ... );
-	extern bool __fastcall Status( const char* text );
-
-
-	extern bool __fastcall Write( const wxString& text );
-	extern bool __fastcall Write( Colors color, const wxString& text );
-	extern bool __fastcall WriteLn( const wxString& text );
-	extern bool __fastcall WriteLn( Colors color, const wxString& text );
-
-	extern bool __fastcall Error( const wxString& text );
-	extern bool __fastcall Notice( const wxString& text );
-	extern bool __fastcall Status( const wxString& text );
-}
-
 // Different types of message boxes that the emulator can employ from the friendly confines
 // of it's blissful unawareness of whatever GUI it runs under. :)  All message boxes exhibit
 // blocking behavior -- they prompt the user for action and only return after the user has
 // responded to the prompt.
+//
 namespace Msgbox
 {
 	// Pops up an alert Dialog Box with a singular "OK" button.
@@ -194,30 +71,3 @@ namespace Msgbox
 	extern bool OkCancel( const wxString& text );
 }
 
-using Console::Color_Red;
-using Console::Color_Green;
-using Console::Color_Blue;
-using Console::Color_Magenta;
-using Console::Color_Cyan;
-using Console::Color_Yellow;
-using Console::Color_White;
-
-
-//////////////////////////////////////////////////////////////////////////////////////////
-// Dev / Debug conditionals --
-//   Consts for using if() statements instead of uglier #ifdef macros.
-//   Abbreviated macros for dev/debug only consoles and msgboxes.
-
-#ifdef PCSX2_DEVBUILD
-#	define DevCon Console
-#	define DevMsg MsgBox
-#else
-#	define DevCon 0&&Console
-#	define DevMsg 
-#endif
-
-#ifdef _DEBUG
-#	define DbgCon Console
-#else
-#	define DbgCon 0&&Console
-#endif

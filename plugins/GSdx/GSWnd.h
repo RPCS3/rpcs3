@@ -21,17 +21,30 @@
 
 #pragma once
 
-class GSWnd : public CWnd
+#include "GSVector.h"
+
+class GSWnd
 {
-	DECLARE_MESSAGE_MAP()
+	HWND m_hWnd;
+
+	static LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
+	virtual LRESULT OnMessage(UINT message, WPARAM wParam, LPARAM lParam);
 
 public:
 	GSWnd();
 	virtual ~GSWnd();
 
-	virtual bool Create(LPCTSTR title);
+	bool Create(const string& title);
+	bool Attach(HWND hWnd);
+
+	void* GetHandle() {return m_hWnd;}
+
+	GSVector4i GetClientRect();
+
+	void SetWindowText(const char* title);
 
 	void Show();
 	void Hide();
-	void OnClose();
+
+	void HideFrame();
 };

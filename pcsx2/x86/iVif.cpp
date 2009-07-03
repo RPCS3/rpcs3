@@ -31,31 +31,35 @@ extern u32 g_vif1HasMask3[4], g_vif0HasMask3[4];
 
 // arranged in writearr, rowarr, colarr, updatearr
 static PCSX2_ALIGNED16(u32 s_maskarr[16][4]) = {
-	0xffffffff, 0x00000000, 0x00000000, 0xffffffff,
-	0xffff0000, 0x0000ffff, 0x00000000, 0xffffffff,
-	0xffff0000, 0x00000000, 0x0000ffff, 0xffffffff,
-	0xffff0000, 0x00000000, 0x00000000, 0xffff0000,
-	0x0000ffff, 0xffff0000, 0x00000000, 0xffffffff,
-	0x00000000, 0xffffffff, 0x00000000, 0xffffffff,
-	0x00000000, 0xffff0000, 0x0000ffff, 0xffffffff,
-	0x00000000, 0xffff0000, 0x00000000, 0xffff0000,
-	0x0000ffff, 0x00000000, 0xffff0000, 0xffffffff,
-	0x00000000, 0x0000ffff, 0xffff0000, 0xffffffff,
-	0x00000000, 0x00000000, 0xffffffff, 0xffffffff,
-	0x00000000, 0x00000000, 0xffff0000, 0xffff0000,
-	0x0000ffff, 0x00000000, 0x00000000, 0x0000ffff,
-	0x00000000, 0x0000ffff, 0x00000000, 0x0000ffff,
-	0x00000000, 0x00000000, 0x0000ffff, 0x0000ffff,
-	0x00000000, 0x00000000, 0x00000000, 0x00000000
+	{0xffffffff, 0x00000000, 0x00000000, 0xffffffff},
+	{0xffff0000, 0x0000ffff, 0x00000000, 0xffffffff},
+	{0xffff0000, 0x00000000, 0x0000ffff, 0xffffffff},
+	{0xffff0000, 0x00000000, 0x00000000, 0xffff0000},
+	{0x0000ffff, 0xffff0000, 0x00000000, 0xffffffff},
+	{0x00000000, 0xffffffff, 0x00000000, 0xffffffff},
+	{0x00000000, 0xffff0000, 0x0000ffff, 0xffffffff},
+	{0x00000000, 0xffff0000, 0x00000000, 0xffff0000},
+	{0x0000ffff, 0x00000000, 0xffff0000, 0xffffffff},
+	{0x00000000, 0x0000ffff, 0xffff0000, 0xffffffff},
+	{0x00000000, 0x00000000, 0xffffffff, 0xffffffff},
+	{0x00000000, 0x00000000, 0xffff0000, 0xffff0000},
+	{0x0000ffff, 0x00000000, 0x00000000, 0x0000ffff},
+	{0x00000000, 0x0000ffff, 0x00000000, 0x0000ffff},
+	{0x00000000, 0x00000000, 0x0000ffff, 0x0000ffff},
+	{0x00000000, 0x00000000, 0x00000000, 0x00000000}
 };
 
 extern u8 s_maskwrite[256];
 
 extern "C" PCSX2_ALIGNED16(u32 s_TempDecompress[4]) = {0};
 
+#ifdef __LINUX__
+static void __forceinline UseOldMaskCode(u32* &vif1masks, u32 &mask);
+#endif
+
 void __fastcall SetNewMask(u32* vif1masks, u32* hasmask, u32 mask, u32 oldmask)
 {
-    u32 i;
+	u32 i;
 	u32 prev = 0;
 	FreezeXMMRegs(1);
 	for(i = 0; i < 4; ++i, mask >>= 8, oldmask >>= 8, vif1masks += 16) {
@@ -63,7 +67,13 @@ void __fastcall SetNewMask(u32* vif1masks, u32* hasmask, u32 mask, u32 oldmask)
 		prev |= s_maskwrite[mask&0xff];
 		hasmask[i] = prev;
 
-		if( (mask&0xff) != (oldmask&0xff) ) {
+		if ((mask&0xff) != (oldmask&0xff)) 
+#ifdef __LINUX__
+		if (mask == 0) // Temporary workaround for a bug causing a segfault.
+			UseOldMaskCode(vif1masks, mask);
+		else
+#endif
+		{
 			__m128i r0, r1, r2, r3;
 			r0 = _mm_load_si128((__m128i*)&s_maskarr[mask&15][0]);
 			r2 = _mm_unpackhi_epi16(r0, r0);
@@ -86,3 +96,30 @@ void __fastcall SetNewMask(u32* vif1masks, u32* hasmask, u32 mask, u32 oldmask)
 	}
 	FreezeXMMRegs(0);
 }
+
+#ifdef __LINUX__
+static void __forceinline UseOldMaskCode(u32* &vif1masks, u32 &mask)
+{
+	u8* p0 = (u8*)&s_maskarr[mask&15][0];
+	u8* p1 = (u8*)&s_maskarr[(mask>>4)&15][0];
+
+	__asm__(".intel_syntax noprefix\n"
+			"movaps xmm0, [%0]\n"
+			"movaps xmm1, [%1]\n"
+			"movaps xmm2, xmm0\n"
+			"punpcklwd xmm0, xmm0\n"
+			"punpckhwd xmm2, xmm2\n"
+			"movaps xmm3, xmm1\n"
+			"punpcklwd xmm1, xmm1\n"
+			"punpckhwd xmm3, xmm3\n"
+			"movq [%2], xmm0\n"
+			"movq [%2+8], xmm1\n"
+			"movhps [%2+16], xmm0\n"
+			"movhps [%2+24], xmm1\n"
+			"movq [%2+32], xmm2\n"
+			"movq [%2+40], xmm3\n"
+			"movhps [%2+48], xmm2\n"
+			"movhps [%2+56], xmm3\n"
+			".att_syntax\n" : : "r"(p0), "r"(p1), "r"(vif1masks) );
+}
+#endif

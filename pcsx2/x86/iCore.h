@@ -19,8 +19,8 @@
 #ifndef _PCSX2_CORE_RECOMPILER_
 #define _PCSX2_CORE_RECOMPILER_
 
-#include "ix86/ix86.h"
-#include "iVUmicro.h"
+#include "x86emitter/x86emitter.h"
+#include "sVU_Micro.h"
 
 // Namespace Note : iCore32 contains all of the Register Allocation logic, in addition to a handful
 // of utility functions for emitting frequent code.
@@ -291,10 +291,6 @@ extern _xmmregs xmmregs[iREGCNT_XMM], s_saveXMMregs[iREGCNT_XMM];
 
 extern u16 g_x86AllocCounter;
 extern u16 g_xmmAllocCounter;
-
-#ifdef _DEBUG
-extern char g_globalXMMLocked;
-#endif
 
 // allocates only if later insts use XMM, otherwise checks
 int _allocCheckGPRtoXMM(EEINST* pinst, int gprreg, int mode);

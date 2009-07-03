@@ -10,7 +10,7 @@
 		PreprocessorDefinitions="_DEBUG"
 		MinimalRebuild="true"
 		BasicRuntimeChecks="1"
-		RuntimeLibrary="1"
+		RuntimeLibrary="3"
 	/>
 	<Tool
 		Name="VCLinkerTool"

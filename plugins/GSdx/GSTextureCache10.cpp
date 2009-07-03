@@ -24,233 +24,48 @@
 
 // GSTextureCache10
 
-GSTextureCache10::GSTextureCache10(GSRenderer<GSDevice10>* renderer)
-	: GSTextureCache<GSDevice10>(renderer)
+GSTextureCache10::GSTextureCache10(GSRenderer* r)
+	: GSTextureCache(r)
 {
 }
 
-// GSRenderTargetHW10
+// Source10
 
-void GSTextureCache10::GSRenderTargetHW10::Update()
-{
-	__super::Update();
-
-	// FIXME: the union of the rects may also update wrong parts of the render target (but a lot faster :)
-
-	CRect r = m_dirty.GetDirtyRect(m_TEX0, m_texture.GetSize());
-
-	m_dirty.RemoveAll();
-
-	if(r.IsRectEmpty()) return;
-
-	int w = r.Width();
-	int h = r.Height();
-
-	static BYTE* buff = (BYTE*)_aligned_malloc(1024 * 1024 * 4, 16);
-	static int pitch = 1024 * 4;
-
-	GIFRegTEXA TEXA;
-
-	TEXA.AEM = 1;
-	TEXA.TA0 = 0;
-	TEXA.TA1 = 0x80;
-
-	GIFRegCLAMP CLAMP;
-
-	CLAMP.WMS = 0;
-	CLAMP.WMT = 0;
-
-	m_renderer->m_mem.ReadTexture(r, buff, pitch, m_TEX0, TEXA, CLAMP);
-	
-	// s->m_perfmon.Put(GSPerfMon::Unswizzle, w * h * 4);
-
-	Texture texture;
-
-	if(!m_renderer->m_dev.CreateTexture(texture, w, h)) 
-		return;
-
-	texture.Update(CRect(0, 0, w, h), buff, pitch);
-
-	GSVector4 dr(
-		m_texture.m_scale.x * r.left, 
-		m_texture.m_scale.y * r.top, 
-		m_texture.m_scale.x * r.right, 
-		m_texture.m_scale.y * r.bottom);
-
-	m_renderer->m_dev.StretchRect(texture, m_texture, dr);
-
-	m_renderer->m_dev.Recycle(texture);
-}
-
-void GSTextureCache10::GSRenderTargetHW10::Read(CRect r)
-{
-	if(m_TEX0.PSM != PSM_PSMCT32 
-	&& m_TEX0.PSM != PSM_PSMCT24
-	&& m_TEX0.PSM != PSM_PSMCT16
-	&& m_TEX0.PSM != PSM_PSMCT16S)
-	{
-		//ASSERT(0);
-		return;
-	}
-
-	if(!m_dirty.IsEmpty())
-	{
-		return;
-	}
-
-	TRACE(_T("GSRenderTarget::Read %d,%d - %d,%d (%08x)\n"), r.left, r.top, r.right, r.bottom, m_TEX0.TBP0);
-
-	// m_renderer->m_perfmon.Put(GSPerfMon::ReadRT, 1);
-
-	int w = r.Width();
-	int h = r.Height();
-
-	GSVector4 src;
-
-	src.x = m_texture.m_scale.x * r.left / m_texture.GetWidth();
-	src.y = m_texture.m_scale.y * r.top / m_texture.GetHeight();
-	src.z = m_texture.m_scale.x * r.right / m_texture.GetWidth();
-	src.w = m_texture.m_scale.y * r.bottom / m_texture.GetHeight();
-
-	DXGI_FORMAT format = m_TEX0.PSM == PSM_PSMCT16 || m_TEX0.PSM == PSM_PSMCT16S ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R8G8B8A8_UNORM;
-
-	Texture offscreen;
-
-	if(!m_renderer->m_dev.CopyOffscreen(m_texture, src, offscreen, w, h, format))
-		return;
-
-	BYTE* bits;
-	int pitch;
-
-	if(offscreen.Map(&bits, pitch))
-	{
-		// TODO: block level write
-
-		DWORD bp = m_TEX0.TBP0;
-		DWORD bw = m_TEX0.TBW;
-
-		GSLocalMemory::pixelAddress pa = GSLocalMemory::m_psm[m_TEX0.PSM].pa;
-
-		if(m_TEX0.PSM == PSM_PSMCT32)
-		{
-			for(int y = r.top; y < r.bottom; y++, bits += pitch)
-			{
-				DWORD addr = pa(0, y, bp, bw);
-				int* offset = GSLocalMemory::m_psm[m_TEX0.PSM].rowOffset[y & 7];
-
-				for(int x = r.left, i = 0; x < r.right; x++, i++)
-				{
-					m_renderer->m_mem.WritePixel32(addr + offset[x], ((DWORD*)bits)[i]);
-				}
-			}
-		}
-		else if(m_TEX0.PSM == PSM_PSMCT24)
-		{
-			for(int y = r.top; y < r.bottom; y++, bits += pitch)
-			{
-				DWORD addr = pa(0, y, bp, bw);
-				int* offset = GSLocalMemory::m_psm[m_TEX0.PSM].rowOffset[y & 7];
-
-				for(int x = r.left, i = 0; x < r.right; x++, i++)
-				{
-					m_renderer->m_mem.WritePixel24(addr + offset[x], ((DWORD*)bits)[i]);
-				}
-			}
-		}
-		else if(m_TEX0.PSM == PSM_PSMCT16 || m_TEX0.PSM == PSM_PSMCT16S)
-		{
-			for(int y = r.top; y < r.bottom; y++, bits += pitch)
-			{
-				DWORD addr = pa(0, y, bp, bw);
-				int* offset = GSLocalMemory::m_psm[m_TEX0.PSM].rowOffset[y & 7];
-
-				for(int x = r.left, i = 0; x < r.right; x++, i++)
-				{
-					m_renderer->m_mem.WritePixel16(addr + offset[x], ((WORD*)bits)[i]);
-				}
-			}
-		}
-		else
-		{
-			ASSERT(0);
-		}
-
-		offscreen.Unmap();
-	}
-
-	m_renderer->m_dev.Recycle(offscreen);
-}
-
-// GSDepthStencilHW10
-
-void GSTextureCache10::GSDepthStencilHW10::Update()
-{
-	__super::Update();
-
-	// TODO
-}
-
-// GSTextureHW10
-
-bool GSTextureCache10::GSTextureHW10::Create()
+bool GSTextureCache10::Source10::Create()
 {
 	// m_renderer->m_perfmon.Put(GSPerfMon::WriteTexture, 1);
 
 	m_TEX0 = m_renderer->m_context->TEX0;
-	m_CLAMP = m_renderer->m_context->CLAMP;
+	m_TEXA = m_renderer->m_env.TEXA;
 
-	DWORD psm = m_TEX0.PSM;
+	m_bpp = 0;
 
-	switch(psm)
-	{
-	case PSM_PSMT8:
-	case PSM_PSMT8H:
-	case PSM_PSMT4:
-	case PSM_PSMT4HL:
-	case PSM_PSMT4HH:
-		psm = m_TEX0.CPSM;
-		break;
-	}
+	ASSERT(m_texture == NULL);
 
-	DXGI_FORMAT format;
+	m_texture = m_renderer->m_dev->CreateTexture(1 << m_TEX0.TW, 1 << m_TEX0.TH);
 
-	switch(psm)
-	{
-	default:
-		TRACE(_T("Invalid TEX0.PSM/CPSM (%I64d, %I64d)\n"), m_TEX0.PSM, m_TEX0.CPSM);
-	case PSM_PSMCT32:
-		m_bpp = 32;
-		m_bpp2 = 0;
-		format = DXGI_FORMAT_R8G8B8A8_UNORM;
-		break;
-	case PSM_PSMCT24:
-		m_bpp = 32;
-		m_bpp2 = 1;
-		format = DXGI_FORMAT_R8G8B8A8_UNORM;
-		break;
-	case PSM_PSMCT16:
-	case PSM_PSMCT16S:
-		m_bpp = 16;
-		m_bpp2 = 5;
-		format = DXGI_FORMAT_R16_UNORM;
-		break;
-	}
-
-	int w = 1 << m_TEX0.TW;
-	int h = 1 << m_TEX0.TH;
-
-	return m_renderer->m_dev.CreateTexture(m_texture, w, h, format);
+	return m_texture != NULL;
 }
 
-bool GSTextureCache10::GSTextureHW10::Create(GSRenderTarget* rt)
+bool GSTextureCache10::Source10::Create(Target* dst)
 {
-	rt->Update();
+	m_target = true;
+
+	if(dst->m_type != RenderTarget) 
+	{
+		// TODO
+
+		return false; 
+	}
+
+	// TODO: clean up this mess
+
+	dst->Update();
 
 	// m_renderer->m_perfmon.Put(GSPerfMon::ConvertRT2T, 1);
 
 	m_TEX0 = m_renderer->m_context->TEX0;
-	m_CLAMP = m_renderer->m_context->CLAMP;
-	m_rendered = true;
+	m_TEXA = m_renderer->m_env.TEXA;
 
 	int tw = 1 << m_TEX0.TW;
 	int th = 1 << m_TEX0.TH;
@@ -258,23 +73,32 @@ bool GSTextureCache10::GSTextureHW10::Create(GSRenderTarget* rt)
 
 	// do not round here!!! if edge becomes a black pixel and addressing mode is clamp => everything outside the clamped area turns into black (kh2 shadows)
 
-	int w = (int)(rt->m_texture.m_scale.x * tw);
-	int h = (int)(rt->m_texture.m_scale.y * th); 
+	int w = (int)(dst->m_texture->m_scale.x * tw);
+	int h = (int)(dst->m_texture->m_scale.y * th); 
+
+	GSVector2i dstsize = dst->m_texture->GetSize();
 
 	// pitch conversion
 
-	if(rt->m_TEX0.TBW != m_TEX0.TBW) // && rt->m_TEX0.PSM == m_TEX0.PSM
+	if(dst->m_TEX0.TBW != m_TEX0.TBW) // && dst->m_TEX0.PSM == m_TEX0.PSM
 	{
 		// sfex3 uses this trick (bw: 10 -> 5, wraps the right side below the left)
 
-		// ASSERT(rt->m_TEX0.TBW > m_TEX0.TBW); // otherwise scale.x need to be reduced to make the larger texture fit (TODO)
+		// ASSERT(dst->m_TEX0.TBW > m_TEX0.TBW); // otherwise scale.x need to be reduced to make the larger texture fit (TODO)
 
-		m_renderer->m_dev.CreateRenderTarget(m_texture, rt->m_texture.GetWidth(), rt->m_texture.GetHeight());
+		ASSERT(m_texture == NULL);
+
+		m_texture = m_renderer->m_dev->CreateRenderTarget(dstsize.x, dstsize.y);
+
+		GSVector4 size = GSVector4(dstsize).xyxy();
+		GSVector4 scale = GSVector4(dst->m_texture->m_scale).xyxy();
 
 		int bw = 64;
 		int bh = m_TEX0.PSM == PSM_PSMCT32 || m_TEX0.PSM == PSM_PSMCT24 ? 32 : 64;
 
-		int sw = (int)rt->m_TEX0.TBW << 6;
+		GSVector4i br(0, 0, bw, bh);
+
+		int sw = (int)dst->m_TEX0.TBW << 6;
 
 		int dw = (int)m_TEX0.TBW << 6;
 		int dh = 1 << m_TEX0.TH;
@@ -289,19 +113,10 @@ bool GSTextureCache10::GSTextureHW10::Create(GSRenderTarget* rt)
 				int sx = o % sw;
 				int sy = o / sw;
 
-				GSVector4 src, dst;
-
-				src.x = rt->m_texture.m_scale.x * sx / rt->m_texture.GetWidth();
-				src.y = rt->m_texture.m_scale.y * sy / rt->m_texture.GetHeight();
-				src.z = rt->m_texture.m_scale.x * (sx + bw) / rt->m_texture.GetWidth();
-				src.w = rt->m_texture.m_scale.y * (sy + bh) / rt->m_texture.GetHeight();
-
-				dst.x = rt->m_texture.m_scale.x * dx;
-				dst.y = rt->m_texture.m_scale.y * dy;
-				dst.z = rt->m_texture.m_scale.x * (dx + bw);
-				dst.w = rt->m_texture.m_scale.y * (dy + bh);
-
-				m_renderer->m_dev.StretchRect(rt->m_texture, src, m_texture, dst);
+				GSVector4 sr = GSVector4(GSVector4i(sx, sy).xyxy() + br) * scale / size;
+				GSVector4 dr = GSVector4(GSVector4i(dx, dy).xyxy() + br) * scale;
+					
+				m_renderer->m_dev->StretchRect(dst->m_texture, sr, m_texture, dr);
 
 				// TODO: this is quite a lot of StretchRect, do it with one Draw
 			}
@@ -319,81 +134,72 @@ bool GSTextureCache10::GSTextureHW10::Create(GSRenderTarget* rt)
 
 	// width/height conversion
 
-	GSVector2 scale = rt->m_texture.m_scale;
+	GSVector2 scale = dst->m_texture->m_scale;
 
-	GSVector4 dst(0, 0, w, h);
+	GSVector4 dr(0, 0, w, h);
 
-	if(w > rt->m_texture.GetWidth()) 
+	if(w > dstsize.x) 
 	{
-		scale.x = (float)rt->m_texture.GetWidth() / tw;
-		dst.z = (float)rt->m_texture.GetWidth() * scale.x / rt->m_texture.m_scale.x;
-		w = rt->m_texture.GetWidth();
+		scale.x = (float)dstsize.x / tw;
+		dr.z = (float)dstsize.x * scale.x / dst->m_texture->m_scale.x;
+		w = dstsize.x;
 	}
 	
-	if(h > rt->m_texture.GetHeight()) 
+	if(h > dstsize.y) 
 	{
-		scale.y = (float)rt->m_texture.GetHeight() / th;
-		dst.w = (float)rt->m_texture.GetHeight() * scale.y / rt->m_texture.m_scale.y;
-		h = rt->m_texture.GetHeight();
+		scale.y = (float)dstsize.y / th;
+		dr.w = (float)dstsize.y * scale.y / dst->m_texture->m_scale.y;
+		h = dstsize.y;
 	}
 
-	GSVector4 src(0, 0, w, h);
+	GSVector4 sr(0, 0, w, h);
 
-	Texture* st;
-	Texture* dt;
-	Texture tmp;
+	GSTexture* st = m_texture ? m_texture : dst->m_texture;
+	GSTexture* dt = m_renderer->m_dev->CreateRenderTarget(w, h);
 
 	if(!m_texture)
 	{
-		st = &rt->m_texture;
-		dt = &m_texture;
-	}
-	else
-	{
-		st = &m_texture;
-		dt = &tmp;
+		m_texture = dt;
 	}
 
-	m_renderer->m_dev.CreateRenderTarget(*dt, w, h);
-
-	if(src.x == dst.x && src.y == dst.y && src.z == dst.z && src.w == dst.w)
+	if((sr == dr).alltrue())
 	{
 		D3D10_BOX box = {0, 0, 0, w, h, 1};
 
-		m_renderer->m_dev->CopySubresourceRegion(*dt, 0, 0, 0, 0, *st, 0, &box);
+		(*(GSDevice10*)m_renderer->m_dev)->CopySubresourceRegion(*(GSTexture10*)dt, 0, 0, 0, 0, *(GSTexture10*)st, 0, &box);
 	}
 	else
 	{
-		src.z /= st->GetWidth();
-		src.w /= st->GetHeight();
+		sr.z /= st->GetWidth();
+		sr.w /= st->GetHeight();
 
-		m_renderer->m_dev.StretchRect(*st, src, *dt, dst);
+		m_renderer->m_dev->StretchRect(st, sr, dt, dr);
 	}
 
-	if(tmp)
+	if(dt != m_texture)
 	{
-		m_renderer->m_dev.Recycle(m_texture);
+		m_renderer->m_dev->Recycle(m_texture);
 
-		m_texture = tmp;
+		m_texture = dt;
 	}
 
-	m_texture.m_scale = scale;
+	m_texture->m_scale = scale;
 
 	switch(m_TEX0.PSM)
 	{
 	case PSM_PSMCT32:
-		m_bpp2 = 0;
+		m_bpp = 0;
 		break;
 	case PSM_PSMCT24:
-		m_bpp2 = 1;
+		m_bpp = 1;
 		break;
 	case PSM_PSMCT16:
 	case PSM_PSMCT16S:
-		m_bpp2 = 2;
+		m_bpp = 2;
 		break;
 	case PSM_PSMT8H:
-		m_bpp2 = 3;
-		m_renderer->m_dev.CreateTexture(m_palette, 256, 1, m_TEX0.CPSM == PSM_PSMCT32 ? DXGI_FORMAT_R8G8B8A8_UNORM : DXGI_FORMAT_R16_UNORM); // 
+		m_bpp = 3;
+		m_palette = m_renderer->m_dev->CreateTexture(256, 1);
 		m_initpalette = true;
 		break;
 	case PSM_PSMT4HL:
@@ -405,48 +211,104 @@ bool GSTextureCache10::GSTextureHW10::Create(GSRenderTarget* rt)
 	return true;
 }
 
-bool GSTextureCache10::GSTextureHW10::Create(GSDepthStencil* ds)
+
+// Target10
+
+void GSTextureCache10::Target10::Read(const GSVector4i& r)
 {
-	m_rendered = true;
+	if(m_type != RenderTarget) 
+	{
+		// TODO
 
-	// TODO
+		return; 
+	}
 
-	return false;
-}
+	if(m_TEX0.PSM != PSM_PSMCT32 
+	&& m_TEX0.PSM != PSM_PSMCT24
+	&& m_TEX0.PSM != PSM_PSMCT16
+	&& m_TEX0.PSM != PSM_PSMCT16S)
+	{
+		//ASSERT(0);
 
-void GSTextureCache10::GSTextureHW10::Update()
-{
-	__super::Update();
+		return;
+	}
 
-	if(m_rendered)
+	if(!m_dirty.empty())
 	{
 		return;
 	}
 
-	CRect r;
+	// printf("GSRenderTarget::Read %d,%d - %d,%d (%08x)\n", r.left, r.top, r.right, r.bottom, m_TEX0.TBP0);
 
-	if(!GetDirtyRect(r))
+	// m_renderer->m_perfmon.Put(GSPerfMon::ReadRT, 1);
+
+	int w = r.width();
+	int h = r.height();
+
+	GSVector4 src = GSVector4(r) * GSVector4(m_texture->m_scale).xyxy() / GSVector4(m_texture->GetSize()).xyxy();
+
+	DXGI_FORMAT format = m_TEX0.PSM == PSM_PSMCT16 || m_TEX0.PSM == PSM_PSMCT16S ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R8G8B8A8_UNORM;
+
+	if(GSTexture* offscreen = m_renderer->m_dev->CopyOffscreen(m_texture, src, w, h, format))
 	{
-		return;
+		GSTexture::GSMap m;
+
+		if(offscreen->Map(m))
+		{
+			// TODO: block level write
+
+			uint32 bp = m_TEX0.TBP0;
+			uint32 bw = m_TEX0.TBW;
+
+			GSLocalMemory::pixelAddress pa = GSLocalMemory::m_psm[m_TEX0.PSM].pa;
+
+			if(m_TEX0.PSM == PSM_PSMCT32)
+			{
+				for(int y = r.top; y < r.bottom; y++, m.bits += m.pitch)
+				{
+					uint32 addr = pa(0, y, bp, bw);
+					int* offset = GSLocalMemory::m_psm[m_TEX0.PSM].rowOffset[y & 7];
+
+					for(int x = r.left, i = 0; x < r.right; x++, i++)
+					{
+						m_renderer->m_mem.WritePixel32(addr + offset[x], ((uint32*)m.bits)[i]);
+					}
+				}
+			}
+			else if(m_TEX0.PSM == PSM_PSMCT24)
+			{
+				for(int y = r.top; y < r.bottom; y++, m.bits += m.pitch)
+				{
+					uint32 addr = pa(0, y, bp, bw);
+					int* offset = GSLocalMemory::m_psm[m_TEX0.PSM].rowOffset[y & 7];
+
+					for(int x = r.left, i = 0; x < r.right; x++, i++)
+					{
+						m_renderer->m_mem.WritePixel24(addr + offset[x], ((uint32*)m.bits)[i]);
+					}
+				}
+			}
+			else if(m_TEX0.PSM == PSM_PSMCT16 || m_TEX0.PSM == PSM_PSMCT16S)
+			{
+				for(int y = r.top; y < r.bottom; y++, m.bits += m.pitch)
+				{
+					uint32 addr = pa(0, y, bp, bw);
+					int* offset = GSLocalMemory::m_psm[m_TEX0.PSM].rowOffset[y & 7];
+
+					for(int x = r.left, i = 0; x < r.right; x++, i++)
+					{
+						m_renderer->m_mem.WritePixel16(addr + offset[x], ((uint16*)m.bits)[i]);
+					}
+				}
+			}
+			else
+			{
+				ASSERT(0);
+			}
+
+			offscreen->Unmap();
+		}
+
+		m_renderer->m_dev->Recycle(offscreen);
 	}
-
-	m_valid |= r;
-
-	//TRACE(_T("GSTexture::Update %d,%d - %d,%d (%08x)\n"), r.left, r.top, r.right, r.bottom, m_TEX0.TBP0);
-
-	static BYTE* bits = (BYTE*)::_aligned_malloc(1024 * 1024 * 4, 16);
-	int pitch = 1024 * 4;
-
-	if(m_renderer->m_psrr)
-	{
-		m_renderer->m_mem.ReadTextureNPNC(r, bits, pitch, m_renderer->m_context->TEX0, m_renderer->m_env.TEXA, m_renderer->m_context->CLAMP);
-	}
-	else
-	{
-		m_renderer->m_mem.ReadTextureNP(r, bits, pitch, m_renderer->m_context->TEX0, m_renderer->m_env.TEXA, m_renderer->m_context->CLAMP);
-	}
-
-	m_texture.Update(r, bits, pitch);
-
-	m_renderer->m_perfmon.Put(GSPerfMon::Unswizzle, r.Width() * r.Height() * m_bpp >> 3);
 }

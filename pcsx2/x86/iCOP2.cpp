@@ -27,7 +27,7 @@
 #include "R5900.h"
 #include "R5900OpcodeTables.h"
 #include "VUmicro.h"
-#include "iVUmicro.h"
+#include "sVU_Micro.h"
 
 extern void _vu0WaitMicro();
 

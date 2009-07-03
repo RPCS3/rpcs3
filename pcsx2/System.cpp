@@ -25,7 +25,7 @@
 #include "iR5900.h"
 #include "R3000A.h"
 #include "IopMem.h"
-#include "iVUzerorec.h"		// for SuperVUReset
+#include "sVU_zerorec.h"		// for SuperVUReset
 
 #include "R5900Exceptions.h"
 
@@ -407,8 +407,11 @@ void SysPrepareExecution( const wxString& elf_file, bool use_bios )
 			return;
 		}
 
-		if (OpenPlugins(NULL) == -1)
-			return;
+		g_Startup.BootMode = (elf_file) ? BootMode_Elf : BootMode_Normal;
+
+		if (OpenPlugins(NULL) == -1) { 
+			return; 
+		}
 
 		if( elf_file.IsEmpty() )
 		{
@@ -428,7 +431,6 @@ void SysPrepareExecution( const wxString& elf_file, bool use_bios )
 		{
 			// Custom ELF specified (not using CDVD).
 			// Run the BIOS and load the ELF.
-
 			loadElfFile( elf_file );
 		}
 	}

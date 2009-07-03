@@ -21,11 +21,11 @@
 #include "IopCommon.h"
 #include "SaveState.h"
 
-#include "CDVDisodrv.h"
+#include "CDVD/CDVDisodrv.h"
 #include "VUmicro.h"
 #include "VU.h"
 #include "iCore.h"
-#include "iVUzerorec.h"
+#include "sVU_zerorec.h"
 
 #include "GS.h"
 #include "COP0.h"

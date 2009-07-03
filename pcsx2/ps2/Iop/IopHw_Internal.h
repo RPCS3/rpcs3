@@ -190,13 +190,13 @@ static __forceinline const char* _log_GetIopHwName( u32 addr )
 			{
 				return "SPU2";
 			}
-			else if( addr >= 0x1f808200 )
+			else if( addr >= pgmsk(HW_FW_START) && addr <= pgmsk(HW_FW_END) )
 			{
-				if( addr < 0x1f808240 )
-					return "SIO2 param";
-				else if( addr < 0x260 )
-					return "SIO2 send";
+				return "FW";
 			}
+			else if( addr >= 0x1f808200 && addr < 0x1f808240 ) { return "SIO2 param"; }
+			else if( addr >= 0x1f808240 && addr < 0x1f808260 ) { return "SIO2 send"; }
+
 		return "Unknown";
 	}
 }

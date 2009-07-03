@@ -15,15 +15,17 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
- 
- #ifdef __LINUX__
+
+#pragma once
+
+#ifdef __LINUX__
 #include <unistd.h>
 #include <gtk/gtk.h>
 #include <sys/timeb.h>	// ftime(), struct timeb
 
 #define Sleep(ms) usleep(1000*ms)
 
-inline unsigned long timeGetTime()
+inline u32 timeGetTime()
 {
 #ifdef _WIN32
 	_timeb t;
@@ -33,10 +35,12 @@ inline unsigned long timeGetTime()
 	ftime(&t);
 #endif
 
-	return (unsigned long)(t.time*1000+t.millitm);
+	return (u32)(t.time*1000+t.millitm);
 }
 
 #include <sys/time.h>
+
+#define InterlockedExchangeAdd _InterlockedExchangeAdd
 
 #else
 #include <windows.h>
@@ -86,62 +90,4 @@ static __forceinline void pcsx2_aligned_free(void* pmem)
 
 #define _aligned_malloc pcsx2_aligned_malloc
 #define _aligned_free pcsx2_aligned_free
-#endif
-
-// Atomic Operations
-#if defined (_WIN32)
-
-#ifndef __x86_64__
-extern "C" LONG  __cdecl _InterlockedExchangeAdd(LPLONG volatile Addend, LONG Value);
-#endif
-
-#pragma intrinsic (_InterlockedExchangeAdd)
-#define InterlockedExchangeAdd _InterlockedExchangeAdd
-
-#else
-
-//typedef void* PVOID;
-
-static __forceinline long InterlockedExchange(volatile long* Target, long Value)
-{
-	long result;
-	/*
-	 * The XCHG instruction always locks the bus with or without the
-	 * LOCKED prefix. This makes it significantly slower than CMPXCHG on
-	 * uni-processor machines. The Windows InterlockedExchange function
-	 * is nearly 3 times faster than the XCHG instruction, so this routine
-	 * is not yet very useful for speeding up pthreads.
-	 */
-
-	__asm__ __volatile__ (
-		"xchgl          %2,%1"
-		:"=r" (result)
-		:"m"  (*Target), "0" (Value));
-		
-	return result;
-}
-
-static __forceinline long InterlockedExchangeAdd(volatile long* Addend, long Value)
-{
-	__asm__ __volatile__(
-		".intel_syntax\n"
-		"lock xadd [%0], %%eax\n"
-		".att_syntax\n" : : "r"(Addend), "a"(Value) : "memory");
-}
-
-static __forceinline long InterlockedCompareExchange(volatile long *dest, long value, long comp)
-{
-	long result;
-
-	__asm__ __volatile__ (
-		"lock\n\t"
-		"cmpxchgl       %2,%1"      /* if (EAX == [location])  */
-								/*   [location] = value    */
-							/* else                    */
-								/*   EAX = [location]      */
-		:"=a" (result)
-		:"m"  (*dest), "r" (value), "a" (comp));
-		
-	return result;
-}
 #endif

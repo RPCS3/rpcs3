@@ -24,30 +24,17 @@
 #include "resource.h"
 
 GSTextureFX10::GSTextureFX10()
-	: m_dev(NULL)
-	, m_vb_max(0)
-	, m_vb_start(0)
-	, m_vb_count(0)
 {
 	memset(&m_vs_cb_cache, 0, sizeof(m_vs_cb_cache));
 	memset(&m_ps_cb_cache, 0, sizeof(m_ps_cb_cache));
 }
 
-bool GSTextureFX10::Create(GSDevice10* dev)
+bool GSTextureFX10::Create(GSDevice* dev)
 {
-	m_dev = dev;
-
-	//
-
-	VSSelector sel;
-	
-	sel.bppz = 0;
-	sel.tme = 0;
-	sel.fst = 0;
-
-	VSConstantBuffer cb;
-
-	SetupVS(sel, &cb); // creates layout
+	if(!__super::Create(dev))
+	{
+		return false;
+	}
 
 	HRESULT hr;
 
@@ -59,7 +46,7 @@ bool GSTextureFX10::Create(GSDevice10* dev)
 	bd.Usage = D3D10_USAGE_DEFAULT;
 	bd.BindFlags = D3D10_BIND_CONSTANT_BUFFER;
 
-	hr = (*m_dev)->CreateBuffer(&bd, NULL, &m_vs_cb);
+	hr = (*(GSDevice10*)dev)->CreateBuffer(&bd, NULL, &m_vs_cb);
 
 	if(FAILED(hr)) return false;
 
@@ -69,7 +56,7 @@ bool GSTextureFX10::Create(GSDevice10* dev)
 	bd.Usage = D3D10_USAGE_DEFAULT;
 	bd.BindFlags = D3D10_BIND_CONSTANT_BUFFER;
 
-	hr = (*m_dev)->CreateBuffer(&bd, NULL, &m_ps_cb);
+	hr = (*(GSDevice10*)dev)->CreateBuffer(&bd, NULL, &m_ps_cb);
 
 	if(FAILED(hr)) return false;
 
@@ -77,7 +64,7 @@ bool GSTextureFX10::Create(GSDevice10* dev)
 
 	memset(&sd, 0, sizeof(sd));
 
-	sd.Filter = D3D10_ENCODE_BASIC_FILTER(D3D10_FILTER_TYPE_POINT, D3D10_FILTER_TYPE_POINT, D3D10_FILTER_TYPE_POINT, false);
+	sd.Filter = D3D10_FILTER_MIN_MAG_MIP_POINT;
 	sd.AddressU = D3D10_TEXTURE_ADDRESS_CLAMP;
 	sd.AddressV = D3D10_TEXTURE_ADDRESS_CLAMP;
 	sd.AddressW = D3D10_TEXTURE_ADDRESS_CLAMP;
@@ -85,7 +72,7 @@ bool GSTextureFX10::Create(GSDevice10* dev)
 	sd.MaxAnisotropy = 16; 
 	sd.ComparisonFunc = D3D10_COMPARISON_NEVER;
 
-	hr = (*m_dev)->CreateSamplerState(&sd, &m_palette_ss);
+	hr = (*(GSDevice10*)dev)->CreateSamplerState(&sd, &m_palette_ss);
 
 	if(FAILED(hr)) return false;
 
@@ -94,247 +81,191 @@ bool GSTextureFX10::Create(GSDevice10* dev)
 	return true;
 }
 
-bool GSTextureFX10::SetupIA(const GSVertexHW10* vertices, int count, D3D10_PRIMITIVE_TOPOLOGY prim)
+void GSTextureFX10::SetupIA(const void* vertices, int count, int prim)
 {
-	HRESULT hr;
+	GSDevice10* dev = (GSDevice10*)m_dev;
 
-	if(max(count * 3 / 2, 10000) > m_vb_max)
-	{
-		m_vb_old = m_vb;
-		m_vb = NULL;
-		m_vb_max = max(count * 2, 10000);
-		m_vb_start = 0;
-		m_vb_count = 0;
-	}
-
-	if(!m_vb)
-	{
-		D3D10_BUFFER_DESC bd;
-
-		memset(&bd, 0, sizeof(bd));
-
-		bd.Usage = D3D10_USAGE_DYNAMIC;
-		bd.ByteWidth = m_vb_max * sizeof(vertices[0]);
-		bd.BindFlags = D3D10_BIND_VERTEX_BUFFER;
-		bd.CPUAccessFlags = D3D10_CPU_ACCESS_WRITE;
-
-		hr = (*m_dev)->CreateBuffer(&bd, NULL, &m_vb);
-
-		if(FAILED(hr)) return false;
-	}
-
-	GSVertexHW10* v = NULL;
-
-	int next = m_vb_start + m_vb_count;
-
-	if(next + count > m_vb_max)
-	{
-		if(SUCCEEDED(m_vb->Map(D3D10_MAP_WRITE_DISCARD, 0, (void**)&v)))
-		{
-			memcpy(v, vertices, count * sizeof(vertices[0]));
-
-			m_vb->Unmap();
-		}
-
-		m_vb_start = 0;
-		m_vb_count = count;
-	}
-	else
-	{
-		if(SUCCEEDED(m_vb->Map(D3D10_MAP_WRITE_NO_OVERWRITE, 0, (void**)&v)))
-		{
-			memcpy(&v[next], vertices, count * sizeof(vertices[0]));
-
-			m_vb->Unmap();
-		}
-
-		m_vb_start = next;
-		m_vb_count = count;
-	}
-
-	m_dev->IASetVertexBuffer(m_vb, sizeof(vertices[0]));
-	m_dev->IASetInputLayout(m_il);
-	m_dev->IASetPrimitiveTopology(prim);
-
-	return true;
+	dev->IASetVertexBuffer(vertices, sizeof(GSVertexHW10), count);
+	dev->IASetInputLayout(m_il);
+	dev->IASetPrimitiveTopology((D3D10_PRIMITIVE_TOPOLOGY)prim);
 }
 
-bool GSTextureFX10::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
+void GSTextureFX10::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 {
-	CComPtr<ID3D10VertexShader> vs;
+	GSDevice10* dev = (GSDevice10*)m_dev;
 
-	if(CRBMap<DWORD, CComPtr<ID3D10VertexShader> >::CPair* pair = m_vs.Lookup(sel))
-	{
-		vs = pair->m_value;
-	}
-	else
-	{
-		CStringA str[5];
+	hash_map<uint32, CComPtr<ID3D10VertexShader> >::const_iterator i = m_vs.find(sel);
 
-		str[0].Format("%d", sel.bpp);
-		str[1].Format("%d", sel.bppz);
-		str[2].Format("%d", sel.tme);
-		str[3].Format("%d", sel.fst);
-		str[4].Format("%d", sel.prim);
+	if(i == m_vs.end())
+	{
+		string str[4];
+
+		str[0] = format("%d", sel.bppz);
+		str[1] = format("%d", sel.tme);
+		str[2] = format("%d", sel.fst);
+		str[3] = format("%d", sel.prim);
 
 		D3D10_SHADER_MACRO macro[] =
 		{
-			{"VS_BPP", str[0]},
-			{"VS_BPPZ", str[1]},
-			{"VS_TME", str[2]},
-			{"VS_FST", str[3]},
-			{"VS_PRIM", str[4]},
+			{"VS_BPPZ", str[0].c_str()},
+			{"VS_TME", str[1].c_str()},
+			{"VS_FST", str[2].c_str()},
+			{"VS_PRIM", str[3].c_str()},
 			{NULL, NULL},
 		};
 
 		D3D10_INPUT_ELEMENT_DESC layout[] =
 		{
-			{"POSITION", 0, DXGI_FORMAT_R16G16_UINT, 0, 8, D3D10_INPUT_PER_VERTEX_DATA, 0},
-			{"POSITION", 1, DXGI_FORMAT_R32_UINT, 0, 12, D3D10_INPUT_PER_VERTEX_DATA, 0},
 			{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D10_INPUT_PER_VERTEX_DATA, 0},
-			{"TEXCOORD", 1, DXGI_FORMAT_R32_FLOAT, 0, 20, D3D10_INPUT_PER_VERTEX_DATA, 0},
-			{"COLOR", 0, DXGI_FORMAT_R8G8B8A8_UNORM, 0, 16, D3D10_INPUT_PER_VERTEX_DATA, 0},
+			{"COLOR", 0, DXGI_FORMAT_R8G8B8A8_UNORM, 0, 8, D3D10_INPUT_PER_VERTEX_DATA, 0},
+			{"TEXCOORD", 1, DXGI_FORMAT_R32_FLOAT, 0, 12, D3D10_INPUT_PER_VERTEX_DATA, 0},
+			{"POSITION", 0, DXGI_FORMAT_R16G16_UINT, 0, 16, D3D10_INPUT_PER_VERTEX_DATA, 0},
+			{"POSITION", 1, DXGI_FORMAT_R32_UINT, 0, 20, D3D10_INPUT_PER_VERTEX_DATA, 0},
 			{"COLOR", 1, DXGI_FORMAT_R8G8B8A8_UNORM, 0, 28, D3D10_INPUT_PER_VERTEX_DATA, 0},
 		};
 
 		CComPtr<ID3D10InputLayout> il;
+		CComPtr<ID3D10VertexShader> vs;
 
-		m_dev->CompileShader(IDR_TFX10_FX, "vs_main", macro, &vs, layout, countof(layout), &il);
+		dev->CompileShader(IDR_TFX_FX, "vs_main", macro, &vs, layout, countof(layout), &il);
 
 		if(m_il == NULL)
 		{
 			m_il = il;
 		}
 
-		m_vs.SetAt(sel, vs);
+		m_vs[sel] = vs;
+
+		i = m_vs.find(sel);
 	}
 
 	if(m_vs_cb_cache.Update(cb))
 	{
-		(*m_dev)->UpdateSubresource(m_vs_cb, 0, NULL, cb, 0, 0);
+		(*dev)->UpdateSubresource(m_vs_cb, 0, NULL, cb, 0, 0);
 	}
 
-	m_dev->VSSetShader(vs, m_vs_cb);
-
-	return true;
+	dev->VSSetShader(i->second, m_vs_cb);
 }
 
-bool GSTextureFX10::SetupGS(GSSelector sel)
+void GSTextureFX10::SetupGS(GSSelector sel)
 {
-	HRESULT hr;
+	GSDevice10* dev = (GSDevice10*)m_dev;
 
-	CComPtr<ID3D10GeometryShader> gs;
+	ID3D10GeometryShader* gs = NULL;
 
 	if(sel.prim > 0 && (sel.iip == 0 || sel.prim == 3)) // geometry shader works in every case, but not needed
 	{
-		if(CRBMap<DWORD, CComPtr<ID3D10GeometryShader> >::CPair* pair = m_gs.Lookup(sel))
+		hash_map<uint32, CComPtr<ID3D10GeometryShader> >::const_iterator i = m_gs.find(sel);
+
+		if(i != m_gs.end())
 		{
-			gs = pair->m_value;
+			gs = i->second;
 		}
 		else
 		{
-			CStringA str[2];
+			string str[2];
 
-			str[0].Format("%d", sel.iip);
-			str[1].Format("%d", sel.prim);
+			str[0] = format("%d", sel.iip);
+			str[1] = format("%d", sel.prim);
 
 			D3D10_SHADER_MACRO macro[] =
 			{
-				{"IIP", str[0]},
-				{"PRIM", str[1]},
+				{"GS_IIP", str[0].c_str()},
+				{"GS_PRIM", str[1].c_str()},
 				{NULL, NULL},
 			};
 
-			hr = m_dev->CompileShader(IDR_TFX10_FX, "gs_main", macro, &gs);
+			dev->CompileShader(IDR_TFX_FX, "gs_main", macro, &gs);
 
-			m_gs.SetAt(sel, gs);
+			m_gs[sel] = gs;
 		}
 	}
 
-	m_dev->GSSetShader(gs);
-
-	return true;
+	dev->GSSetShader(gs);
 }
 
-bool GSTextureFX10::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel, ID3D10ShaderResourceView* tex, ID3D10ShaderResourceView* pal)
+void GSTextureFX10::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel, GSTexture* tex, GSTexture* pal)
 {
-	m_dev->PSSetShaderResources(tex, pal);
+	((GSDevice10*)m_dev)->PSSetShaderResources(tex, pal);
 
 	UpdatePS(sel, cb, ssel);
-
-	return true;
 }
 
 void GSTextureFX10::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel)
 {
-	HRESULT hr;
+	GSDevice10* dev = (GSDevice10*)m_dev;
 
-	CComPtr<ID3D10PixelShader> ps;
+	hash_map<uint32, CComPtr<ID3D10PixelShader> >::const_iterator i = m_ps.find(sel);
 
-	if(CRBMap<DWORD, CComPtr<ID3D10PixelShader> >::CPair* pair = m_ps.Lookup(sel))
+	if(i == m_ps.end())
 	{
-		ps = pair->m_value;
-	}
-	else
-	{
-		CStringA str[13];
+		string str[14];
 
-		str[0].Format("%d", sel.fst);
-		str[1].Format("%d", sel.wms);
-		str[2].Format("%d", sel.wmt);
-		str[3].Format("%d", sel.bpp);
-		str[4].Format("%d", sel.aem);
-		str[5].Format("%d", sel.tfx);
-		str[6].Format("%d", sel.tcc);
-		str[7].Format("%d", sel.ate);
-		str[8].Format("%d", sel.atst);
-		str[9].Format("%d", sel.fog);
-		str[10].Format("%d", sel.clr1);
-		str[11].Format("%d", sel.fba);
-		str[12].Format("%d", sel.aout);
+		str[0] = format("%d", sel.fst);
+		str[1] = format("%d", sel.wms);
+		str[2] = format("%d", sel.wmt);
+		str[3] = format("%d", sel.bpp);
+		str[4] = format("%d", sel.aem);
+		str[5] = format("%d", sel.tfx);
+		str[6] = format("%d", sel.tcc);
+		str[7] = format("%d", sel.ate);
+		str[8] = format("%d", sel.atst);
+		str[9] = format("%d", sel.fog);
+		str[10] = format("%d", sel.clr1);
+		str[11] = format("%d", sel.fba);
+		str[12] = format("%d", sel.aout);
+		str[13] = format("%d", sel.ltf);
 
 		D3D10_SHADER_MACRO macro[] =
 		{
-			{"FST", str[0]},
-			{"WMS", str[1]},
-			{"WMT", str[2]},
-			{"BPP", str[3]},
-			{"AEM", str[4]},
-			{"TFX", str[5]},
-			{"TCC", str[6]},
-			{"ATE", str[7]},
-			{"ATST", str[8]},
-			{"FOG", str[9]},
-			{"CLR1", str[10]},
-			{"FBA", str[11]},
-			{"AOUT", str[12]},
+			{"PS_FST", str[0].c_str()},
+			{"PS_WMS", str[1].c_str()},
+			{"PS_WMT", str[2].c_str()},
+			{"PS_BPP", str[3].c_str()},
+			{"PS_AEM", str[4].c_str()},
+			{"PS_TFX", str[5].c_str()},
+			{"PS_TCC", str[6].c_str()},
+			{"PS_ATE", str[7].c_str()},
+			{"PS_ATST", str[8].c_str()},
+			{"PS_FOG", str[9].c_str()},
+			{"PS_CLR1", str[10].c_str()},
+			{"PS_FBA", str[11].c_str()},
+			{"PS_AOUT", str[12].c_str()},
+			{"PS_LTF", str[13].c_str()},
 			{NULL, NULL},
 		};
 
-		hr = m_dev->CompileShader(IDR_TFX10_FX, "ps_main", macro, &ps);
+		CComPtr<ID3D10PixelShader> ps;
+		
+		dev->CompileShader(IDR_TFX_FX, "ps_main", macro, &ps);
 
-		m_ps.SetAt(sel, ps);
+		m_ps[sel] = ps;
+
+		i = m_ps.find(sel);
 	}
 
 	if(m_ps_cb_cache.Update(cb))
 	{
-		(*m_dev)->UpdateSubresource(m_ps_cb, 0, NULL, cb, 0, 0);
+		(*dev)->UpdateSubresource(m_ps_cb, 0, NULL, cb, 0, 0);
 	}
 
-	m_dev->PSSetShader(ps, m_ps_cb);
+	dev->PSSetShader(i->second, m_ps_cb);
 
-	CComPtr<ID3D10SamplerState> ss0, ss1;
+	ID3D10SamplerState* ss0 = NULL;
+	ID3D10SamplerState* ss1 = NULL;
 
 	if(sel.tfx != 4)
 	{
-		if(sel.bpp >= 3 || sel.wms >= 3 || sel.wmt >= 3) 
+		if(!(sel.bpp < 3 && sel.wms < 3 && sel.wmt < 3))
 		{
-			ssel.min = ssel.mag = 0;
+			ssel.ltf = 0;
 		}
 
-		if(CRBMap<DWORD, CComPtr<ID3D10SamplerState> >::CPair* pair = m_ps_ss.Lookup(ssel))
+		hash_map<uint32, CComPtr<ID3D10SamplerState> >::const_iterator i = m_ps_ss.find(ssel);
+
+		if(i != m_ps_ss.end())
 		{
-			ss0 = pair->m_value;
+			ss0 = (*i).second;
 		}
 		else
 		{
@@ -342,11 +273,7 @@ void GSTextureFX10::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSampl
 
 			memset(&sd, 0, sizeof(sd));
 
-			sd.Filter = D3D10_ENCODE_BASIC_FILTER(
-				(ssel.min ? D3D10_FILTER_TYPE_LINEAR : D3D10_FILTER_TYPE_POINT),
-				(ssel.mag ? D3D10_FILTER_TYPE_LINEAR : D3D10_FILTER_TYPE_POINT),
-				D3D10_FILTER_TYPE_POINT,
-				false);
+			sd.Filter = ssel.ltf ? D3D10_FILTER_MIN_MAG_LINEAR_MIP_POINT : D3D10_FILTER_MIN_MAG_MIP_POINT;
 
 			sd.AddressU = ssel.tau ? D3D10_TEXTURE_ADDRESS_WRAP : D3D10_TEXTURE_ADDRESS_CLAMP;
 			sd.AddressV = ssel.tav ? D3D10_TEXTURE_ADDRESS_WRAP : D3D10_TEXTURE_ADDRESS_CLAMP;
@@ -356,9 +283,9 @@ void GSTextureFX10::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSampl
 			sd.MaxAnisotropy = 16; 
 			sd.ComparisonFunc = D3D10_COMPARISON_NEVER;
 
-			hr = (*m_dev)->CreateSamplerState(&sd, &ss0);
+			(*dev)->CreateSamplerState(&sd, &ss0);
 
-			m_ps_ss.SetAt(ssel, ss0);
+			m_ps_ss[ssel] = ss0;
 		}
 
 		if(sel.bpp == 3)
@@ -367,32 +294,28 @@ void GSTextureFX10::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSampl
 		}
 	}
 
-	m_dev->PSSetSamplerState(ss0, ss1);
+	dev->PSSetSamplerState(ss0, ss1);
 }
 
-void GSTextureFX10::SetupRS(UINT w, UINT h, const RECT& scissor)
+void GSTextureFX10::SetupRS(int w, int h, const GSVector4i& scissor)
 {
-	m_dev->RSSet(w, h, &scissor);
+	((GSDevice10*)m_dev)->RSSet(w, h, &scissor);
 }
 
-void GSTextureFX10::SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, float bf, ID3D10RenderTargetView* rtv, ID3D10DepthStencilView* dsv)
+void GSTextureFX10::SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix, GSTexture* rt, GSTexture* ds)
 {
-	UpdateOM(dssel, bsel, bf);
+	UpdateOM(dssel, bsel, afix);
 
-	m_dev->OMSetRenderTargets(rtv, dsv);
+	((GSDevice10*)m_dev)->OMSetRenderTargets(rt, ds);
 }
 
-void GSTextureFX10::UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, float bf)
+void GSTextureFX10::UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix)
 {
-	HRESULT hr;
+	GSDevice10* dev = (GSDevice10*)m_dev;
 
-	CComPtr<ID3D10DepthStencilState> dss;
+	hash_map<uint32, CComPtr<ID3D10DepthStencilState> >::const_iterator i = m_om_dss.find(dssel);
 
-	if(CRBMap<DWORD, CComPtr<ID3D10DepthStencilState> >::CPair* pair = m_om_dss.Lookup(dssel))
-	{
-		dss = pair->m_value;
-	}
-	else
+	if(i == m_om_dss.end())
 	{
 		D3D10_DEPTH_STENCIL_DESC dsd;
 
@@ -428,20 +351,20 @@ void GSTextureFX10::UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel,
 			dsd.DepthFunc = ztst[dssel.ztst];
 		}
 
-		hr = (*m_dev)->CreateDepthStencilState(&dsd, &dss);
+		CComPtr<ID3D10DepthStencilState> dss;
 
-		m_om_dss.SetAt(dssel, dss);
+		(*dev)->CreateDepthStencilState(&dsd, &dss);
+
+		m_om_dss[dssel] = dss;
+
+		i = m_om_dss.find(dssel);
 	}
 
-	m_dev->OMSetDepthStencilState(dss, 1);
+	dev->OMSetDepthStencilState((*i).second, 1);
 
-	CComPtr<ID3D10BlendState> bs;
+	hash_map<uint32, CComPtr<ID3D10BlendState> >::const_iterator j = m_om_bs.find(bsel);
 
-	if(CRBMap<DWORD, CComPtr<ID3D10BlendState> >::CPair* pair = m_om_bs.Lookup(bsel))
-	{
-		bs = pair->m_value;
-	}
-	else
+	if(j == m_om_bs.end())
 	{
 		D3D10_BLEND_DESC bd;
 
@@ -569,15 +492,14 @@ void GSTextureFX10::UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel,
 		if(bsel.wb) bd.RenderTargetWriteMask[0] |= D3D10_COLOR_WRITE_ENABLE_BLUE;
 		if(bsel.wa) bd.RenderTargetWriteMask[0] |= D3D10_COLOR_WRITE_ENABLE_ALPHA;
 
-		hr = (*m_dev)->CreateBlendState(&bd, &bs);
+		CComPtr<ID3D10BlendState> bs;
 
-		m_om_bs.SetAt(bsel, bs);
+		(*dev)->CreateBlendState(&bd, &bs);
+
+		m_om_bs[bsel] = bs;
+
+		j = m_om_bs.find(bsel);
 	}
 
-	m_dev->OMSetBlendState(bs, bf);
-}
-
-void GSTextureFX10::Draw()
-{
-	m_dev->DrawPrimitive(m_vb_count, m_vb_start);
+	dev->OMSetBlendState(j->second, (float)(int)afix / 0x80);
 }

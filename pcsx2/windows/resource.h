@@ -26,6 +26,7 @@
 #define IDD_ADDRAW                      178
 #define IDD_PNACHWRITER                 179
 #define IDD_CONF_MEMCARD                180
+#define IDI_UNINSTALL_ICON              181
 #define IDC_MEM_SCROLL                  1001
 #define IDC_MCD2                        1004
 #define IDC_MCD1                        1005
@@ -176,8 +177,8 @@
 #define IDC_CPU_FL_NORMAL               1265
 #define IDC_CPU_FL_LIMIT                1266
 #define IDC_CPU_FL_SKIP                 1267
-#define IDC_CPU_FL_SKIPVU               1268
 #define IDC_CPU_VUGROUP                 1269
+#define IDC_CPU_VUGROUP2                1270
 #define IDC_GROUPS                      1272
 #define IDC_PATCHES                     1273
 #define IDC_CUSTOMFPS                   1275
@@ -236,7 +237,9 @@
 #define IDC_EE_ROUNDMODE0               1305
 #define IDC_FCOR                        1305
 #define IDC_GAMEFIX7                    1305
+#define IDC_GAMEFIX6                    1305
 #define IDC_EE_ROUNDMODE1               1306
+#define IDC_GAMEFIX8                    1306
 #define IDC_EE_ROUNDMODE2               1307
 #define IDC_EE_ROUNDMODE3               1308
 #define IDC_EESYNC_DEFAULT              1308
@@ -275,7 +278,13 @@
 #define IDC_SLIDER1                     1327
 #define IDC_VUCYCLE                     1327
 #define IDC_VUCYCLEDESC                 1328
+#define IDC_VUHACK1                     1329
 #define IDC_IDLELOOPFF                  1330
+#define IDC_VUHACK2                     1331
+#define IDC_INTCSTATHACK4               1332
+#define IDC_VUHACK3                     1332
+#define IDC_CPU_MVU0                    1335
+#define IDC_CPU_MVU1                    1336
 #define IDC_CPULOG                      1500
 #define IDC_MEMLOG                      1501
 #define IDC_HWLOG                       1502
@@ -407,7 +416,7 @@
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        141
+#define _APS_NEXT_RESOURCE_VALUE        182
 #define _APS_NEXT_COMMAND_VALUE         40018
 #define _APS_NEXT_CONTROL_VALUE         1331
 #define _APS_NEXT_SYMED_VALUE           104

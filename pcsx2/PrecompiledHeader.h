@@ -3,27 +3,7 @@
 
 //#pragma once
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// Microsoft specific STL extensions for bounds checking and stuff: Enabled in devbuilds,
-// disabled in release builds. :)
-
-#ifdef _MSC_VER
-#ifdef PCSX2_DEVBUILD
-#	define _SECURE_SCL 1
-#	define _SECURE_SCL_THROWS 1
-#else
-#	define _SECURE_SCL 0
-#endif
-#endif
-
 #define NOMINMAX		// Disables other libs inclusion of their own min/max macros (we use std instead)
-
-#ifdef _WIN32
-// disable warning C4244: '=' : conversion from 'big' to 'small', possible loss of data
-#	pragma warning(disable:4244)
-#else
-#	include <unistd.h>		// Non-Windows platforms need this
-#endif
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // Welcome wxWidgets to the party!
@@ -34,8 +14,6 @@
 #include <wx/intl.h>
 #include <wx/log.h>
 #include <wx/filename.h>
-
-extern const wxRect wxDefaultRect;	// wxWidgets lacks one of its own.
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // Include the STL junk that's actually handy.
@@ -71,9 +49,6 @@ typedef int BOOL;
 #define TRUE  1
 #define FALSE 0
 
-// This should prove useful....
-#define wxsFormat wxString::Format
-
 // macro provided for tagging translation strings, without actually running them through the
 // translator (which the _() does automatically, and sometimes we don't want that)
 #define wxLt(a)  a
@@ -89,10 +64,11 @@ typedef int BOOL;
 #include "Pcsx2Defs.h"
 #include "Paths.h"
 #include "Config.h"
-#include "StringUtils.h"
-#include "Exceptions.h"
-#include "MemcpyFast.h"
-
+#include "Utilities/Console.h"
+#include "Utilities/Exceptions.h"
+#include "Utilities/MemcpyFast.h"
+#include "Utilities/General.h"
+#include "x86emitter/tools.h"
 
 ////////////////////////////////////////////////////////////////////
 // Compiler/OS specific macros and defines -- Begin Section
@@ -112,13 +88,6 @@ typedef int BOOL;
 #		define __declspec(x)
 #	endif
 
-static __forceinline u32 timeGetTime()
-{
-	struct timeb t;
-	ftime(&t);
-	return (u32)(t.time*1000+t.millitm);
-}
-
 #	ifndef strnicmp
 #		define strnicmp strncasecmp
 #	endif
@@ -128,43 +97,5 @@ static __forceinline u32 timeGetTime()
 #	endif
 
 #endif		// end GCC/Linux stuff
-
-// compile-time assert
-#ifndef C_ASSERT
-#	define C_ASSERT(e) typedef char __C_ASSERT__[(e)?1:-1]
-#endif
-
-#ifndef __LINUX__
-#	define __unused
-#endif
-
-//////////////////////////////////////////////////////////////////////////////////////////
-// Forceinline macro that is enabled for RELEASE/PUBLIC builds ONLY.  (non-inline in devel)
-// This is useful because forceinline can make certain types of debugging problematic since
-// functions that look like they should be called won't breakpoint since their code is inlined.
-// Henceforth, use release_inline for things which we want inlined on public/release builds but
-// *not* in devel builds.
-
-#ifdef PCSX2_DEVBUILD
-#	define __releaseinline
-#else
-#	define __releaseinline __forceinline
-#endif
-
-//////////////////////////////////////////////////////////////////////////////////////////
-// Dev / Debug conditionals --
-//   Consts for using if() statements instead of uglier #ifdef macros.
-
-#ifdef PCSX2_DEVBUILD
-static const bool IsDevBuild = true;
-#else
-static const bool IsDevBuild = false;
-#endif
-
-#ifdef _DEBUG
-static const bool IsDebugBuild = true;
-#else
-static const bool IsDebugBuild = false;
-#endif
 
 #endif

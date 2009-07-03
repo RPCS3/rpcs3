@@ -3,24 +3,19 @@
  * 
  * Original portions from SPU2ghz are (c) 2008 by David Quintana [gigaherz]
  *
- * This library is free software; you can redistribute it and/or modify it under
- * the terms of the GNU Lesser General Public License as published by the Free 
- * Software Foundation; either version 2.1 of the the License, or (at your
- * option) any later version.
- * 
- * This library is distributed in the hope that it will be useful, but WITHOUT 
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License
- * for more details.
- * 
- * You should have received a copy of the GNU Lesser General Public License along
- * with this library; if not, write to the Free Software Foundation, Inc., 59
- * Temple Place, Suite 330, Boston, MA  02111-1307  USA
- * 
+ * SPU2-X is free software: you can redistribute it and/or modify it under the terms
+ * of the GNU Lesser General Public License as published by the Free Software Found-
+ * ation, either version 3 of the License, or (at your option) any later version.
+ *
+ * SPU2-X is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+ * PURPOSE.  See the GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with SPU2-X.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef DEFS_H_INCLUDED
-#define DEFS_H_INCLUDED
+#pragma once
 
 struct V_VolumeLR
 {
@@ -441,5 +436,3 @@ static __forceinline u32 timeGetTime()
 	return (u32)(t.time*1000+t.millitm);
 }
 #endif
-
-#endif // DEFS_H_INCLUDED //

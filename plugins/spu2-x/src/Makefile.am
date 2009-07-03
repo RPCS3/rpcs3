@@ -6,11 +6,6 @@ INCLUDES = -I@srcdir@/../../../common/include  -I@srcdir@/3rdparty -I@srcdir@/..
 libSPU2X_a_CXXFLAGS = $(shell pkg-config --cflags gtk+-2.0) -liconv
 libSPU2X_a_CFLAGS = $(shell pkg-config --cflags gtk+-2.0) -liconv
 
-if X86_64
-libSPU2X_a_CXXFLAGS += -fPIC
-libSPU2X_a_CFLAGS += -fPIC
-endif
-
 # Create a shared object by faking an exe (thanks to ODE makefiles)
 traplibdir=$(prefix)
 

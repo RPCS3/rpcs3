@@ -21,21 +21,6 @@
 
 #pragma once
 
-#ifndef __AFXWIN_H__
-	#error include 'stdafx.h' before including this file for PCH
-#endif
-
-class xpadApp : public CWinApp
-{
-public:
-	xpadApp();
-
-public:
-	virtual BOOL InitInstance();
-
-	DECLARE_MESSAGE_MAP()
-};
-
 // ps1
 
 #define PSE_LT_PAD 8

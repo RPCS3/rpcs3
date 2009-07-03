@@ -20,6 +20,7 @@
 
 #include "IopCommon.h"
 #include "MemoryCard.h"
+#include "sio_internal.h"
 
 _sio sio;
 

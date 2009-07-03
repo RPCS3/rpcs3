@@ -23,36 +23,38 @@
 #include "GSDirtyRect.h"
 
 GSDirtyRect::GSDirtyRect() 
-	: m_psm(PSM_PSMCT32)
-	, m_rect(0, 0, 0, 0)
+	: psm(PSM_PSMCT32)
 {
+	left = top = right = bottom = 0;
 }
 
-GSDirtyRect::GSDirtyRect(DWORD psm, CRect rect)
+GSDirtyRect::GSDirtyRect(const GSVector4i& r, uint32 psm)
+	: psm(psm)
 {
-	m_psm = psm;
-	m_rect = rect;
+	left = r.left;
+	top = r.top;
+	right = r.right;
+	bottom = r.bottom;
 }
 
-CRect GSDirtyRect::GetDirtyRect(const GIFRegTEX0& TEX0)
+GSVector4i GSDirtyRect::GetDirtyRect(const GIFRegTEX0& TEX0)
 {
-	CRect r = m_rect;
+	GSVector4i r;
 
-	CSize src = GSLocalMemory::m_psm[m_psm].bs;
+	GSVector2i src = GSLocalMemory::m_psm[psm].bs;
 
-	r.left = (r.left) & ~(src.cx-1);
-	r.right = (r.right + (src.cx-1) /* + 1 */) & ~(src.cx-1);
-	r.top = (r.top) & ~(src.cy-1);
-	r.bottom = (r.bottom + (src.cy-1) /* + 1 */) & ~(src.cy-1);
-
-	if(m_psm != TEX0.PSM)
+	if(psm != TEX0.PSM)
 	{
-		CSize dst = GSLocalMemory::m_psm[TEX0.PSM].bs;
+		GSVector2i dst = GSLocalMemory::m_psm[TEX0.PSM].bs;
 
-		r.left = MulDiv(m_rect.left, dst.cx, src.cx);
-		r.right = MulDiv(m_rect.right, dst.cx, src.cx);
-		r.top = MulDiv(m_rect.top, dst.cy, src.cy);
-		r.bottom = MulDiv(m_rect.bottom, dst.cy, src.cy);
+		r.left = MulDiv(left, dst.x, src.x);
+		r.top = MulDiv(top, dst.y, src.y);
+		r.right = MulDiv(right, dst.x, src.x);
+		r.bottom = MulDiv(bottom, dst.y, src.y);
+	}
+	else
+	{
+		r = GSVector4i(left, top, right, bottom).ralign<GSVector4i::Outside>(src);
 	}
 
 	return r;
@@ -60,11 +62,23 @@ CRect GSDirtyRect::GetDirtyRect(const GIFRegTEX0& TEX0)
 
 //
 
-CRect GSDirtyRectList::GetDirtyRect(const GIFRegTEX0& TEX0, CSize size)
+GSVector4i GSDirtyRectList::GetDirtyRectAndClear(const GIFRegTEX0& TEX0, const GSVector2i& size)
 {
-	if(IsEmpty()) return CRect(0, 0, 0, 0);
-	CRect r(INT_MAX, INT_MAX, 0, 0);
-	POSITION pos = GetHeadPosition();
-	while(pos) r |= GetNext(pos).GetDirtyRect(TEX0);
-	return r & CRect(0, 0, size.cx, size.cy);
+	if(!empty())
+	{
+		GSVector4i r(INT_MAX, INT_MAX, 0, 0);
+
+		for(list<GSDirtyRect>::iterator i = begin(); i != end(); i++)
+		{
+			r = r.runion(i->GetDirtyRect(TEX0));
+		}
+
+		clear();
+
+		GSVector2i bs = GSLocalMemory::m_psm[TEX0.PSM].bs;
+
+		return r.ralign<GSVector4i::Outside>(bs).rintersect(GSVector4i(0, 0, size.x, size.y));
+	}
+
+	return GSVector4i::zero();
 }

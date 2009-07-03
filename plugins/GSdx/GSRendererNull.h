@@ -24,26 +24,26 @@
 #include "GSRenderer.h"
 #include "GSDeviceNull.h"
 
-template<class Device> class GSRendererNull : public GSRendererT<Device, GSVertexNull>
+class GSRendererNull : public GSRendererT<GSVertexNull>
 {
 protected:
 	void Draw() 
 	{
 	}
 
-	bool GetOutput(int i, Texture& t) 
+	GSTexture* GetOutput(int i) 
 	{
-		return false;
+		return NULL;
 	}
 
 public:
-	GSRendererNull(BYTE* base, bool mt, void (*irq)(), const GSRendererSettings& rs)
-		: GSRendererT<Device, GSVertexNull>(base, mt, irq, rs)
+	GSRendererNull(uint8* base, bool mt, void (*irq)(), GSDevice* dev)
+		: GSRendererT<GSVertexNull>(base, mt, irq, dev)
 	{
-		InitVertexKick<GSRendererNull<Device> >();
+		InitVertexKick<GSRendererNull>();
 	}
 
-	template<DWORD prim, DWORD tme, DWORD fst> void VertexKick(bool skip)
+	template<uint32 prim, uint32 tme, uint32 fst> void VertexKick(bool skip)
 	{
 	}
 };

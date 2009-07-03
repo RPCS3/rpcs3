@@ -21,9 +21,6 @@
 
 BASEBLOCKEX* BaseBlocks::New(u32 startpc, uptr fnptr)
 {
-	if (blocks.size() == size)
-		return 0;
-
 	BASEBLOCKEX newblock;
 	std::vector<BASEBLOCKEX>::iterator iter;
 	memset(&newblock, 0, sizeof newblock);
@@ -93,12 +90,13 @@ BASEBLOCKEX* BaseBlocks::GetByX86(uptr ip)
 	return &blocks[imin];
 }
 
-void BaseBlocks::Link(u32 pc, uptr jumpptr)
+void BaseBlocks::Link(u32 pc, s32* jumpptr)
 {
 	BASEBLOCKEX *targetblock = Get(pc);
 	if (targetblock && targetblock->startpc == pc)
-		*(u32*)jumpptr = targetblock->fnptr - (jumpptr + 4);
+		*jumpptr = (s32)(targetblock->fnptr - (sptr)(jumpptr + 1));
 	else
-		*(u32*)jumpptr = recompiler - (jumpptr + 4);
-	links.insert(std::pair<u32, uptr>(pc, jumpptr));
+		*jumpptr = (s32)(recompiler - (sptr)(jumpptr + 1));
+	links.insert(std::pair<u32, uptr>(pc, (uptr)jumpptr));
 }
+

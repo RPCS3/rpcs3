@@ -18,7 +18,7 @@
 		<Configuration
 			Name="Debug|Win32"
 			ConfigurationType="4"
-			InheritedPropertySheets="..\3rdparty.vsprops;..\..\common\vsprops\IncrementalLinking.vsprops"
+			InheritedPropertySheets="..\3rdparty.vsprops;..\..\common\vsprops\CodeGen_Debug.vsprops;..\..\common\vsprops\IncrementalLinking.vsprops"
 			CharacterSet="2"
 			>
 			<Tool
@@ -38,9 +38,6 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="0"
-				BasicRuntimeChecks="3"
-				RuntimeLibrary="1"
 				WarningLevel="3"
 			/>
 			<Tool
@@ -74,7 +71,7 @@
 		<Configuration
 			Name="Release|Win32"
 			ConfigurationType="4"
-			InheritedPropertySheets="..\3rdparty.vsprops"
+			InheritedPropertySheets="..\3rdparty.vsprops;..\..\common\vsprops\CodeGen_Release.vsprops"
 			CharacterSet="2"
 			WholeProgramOptimization="1"
 			>
@@ -95,12 +92,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="2"
-				EnableIntrinsicFunctions="true"
-				RuntimeLibrary="0"
-				EnableFunctionLevelLinking="true"
 				WarningLevel="3"
-				DebugInformationFormat="3"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -133,7 +125,7 @@
 		<Configuration
 			Name="Devel|Win32"
 			ConfigurationType="4"
-			InheritedPropertySheets="..\3rdparty.vsprops;..\..\common\vsprops\IncrementalLinking.vsprops"
+			InheritedPropertySheets="..\3rdparty.vsprops;..\..\common\vsprops\CodeGen_Devel.vsprops;..\..\common\vsprops\IncrementalLinking.vsprops"
 			CharacterSet="2"
 			WholeProgramOptimization="1"
 			>
@@ -154,12 +146,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="2"
-				EnableIntrinsicFunctions="true"
-				RuntimeLibrary="0"
-				BufferSecurityCheck="false"
 				WarningLevel="3"
-				DebugInformationFormat="3"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"

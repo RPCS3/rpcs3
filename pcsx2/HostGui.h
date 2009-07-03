@@ -25,7 +25,8 @@ enum StartupMode
 {
 	BootMode_Bios,
 	BootMode_Quick,
-	BootMode_Elf
+	BootMode_Elf,
+	BootMode_Normal
 };
 
 class StartupParams

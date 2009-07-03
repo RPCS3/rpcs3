@@ -17,8 +17,8 @@
 	<Configurations>
 		<Configuration
 			Name="Devel|Win32"
-			InheritedPropertySheets=".\vsprops\pcsx2_plugin_common.vsprops"
 			ConfigurationType="2"
+			InheritedPropertySheets=".\vsprops\pcsx2_plugin_common.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="2"
@@ -102,11 +102,14 @@
 			<Tool
 				Name="VCAppVerifierTool"
 			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
 		</Configuration>
 		<Configuration
 			Name="Debug|Win32"
-			InheritedPropertySheets=".\vsprops\pcsx2_plugin_common.vsprops"
 			ConfigurationType="2"
+			InheritedPropertySheets=".\vsprops\pcsx2_plugin_common.vsprops"
 			CharacterSet="2"
 			>
 			<Tool
@@ -175,11 +178,14 @@
 			<Tool
 				Name="VCAppVerifierTool"
 			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			InheritedPropertySheets=".\vsprops\pcsx2_plugin_common.vsprops"
 			ConfigurationType="2"
+			InheritedPropertySheets=".\vsprops\pcsx2_plugin_common.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="2"
@@ -265,6 +271,9 @@
 			<Tool
 				Name="VCAppVerifierTool"
 			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
 		</Configuration>
 	</Configurations>
 	<References>
@@ -276,6 +285,14 @@
 			>
 			<File
 				RelativePath=".\Conf.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\GifTransfer.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\GifTransfer.h"
 				>
 			</File>
 			<File

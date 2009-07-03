@@ -39,7 +39,7 @@ distribution.
 #include <assert.h>
 
 // Help out windows:
-#if defined( _DEBUG ) && !defined( DEBUG )
+#if defined( PCSX2_DEBUG ) && !defined( DEBUG )
 #define DEBUG
 #endif
 

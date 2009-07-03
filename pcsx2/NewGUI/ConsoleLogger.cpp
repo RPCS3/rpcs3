@@ -19,6 +19,7 @@
 #include "PrecompiledHeader.h"
 #include "App.h"
 #include "MainFrame.h"
+#include "DebugTools/Debug.h"
 
 #include <wx/file.h>
 #include <wx/textfile.h>
@@ -221,4 +222,73 @@ void ConsoleLogFrame::Write( const char* text )
 #endif
 
 	m_TextCtrl.AppendText( wxString::FromAscii(text) );
+}
+
+namespace Console
+{
+	// ------------------------------------------------------------------------
+	void __fastcall SetTitle( const wxString& title )
+	{
+		if( ConsoleLogFrame* FrameHandle = wxGetApp().GetConsoleFrame() )
+			FrameHandle->SetTitle( title );
+	}
+
+	// ------------------------------------------------------------------------
+	void __fastcall SetColor( Colors color )
+	{
+		if( ConsoleLogFrame* FrameHandle = wxGetApp().GetConsoleFrame() )
+			FrameHandle->SetColor( color );
+	}
+
+	// ------------------------------------------------------------------------
+	void ClearColor()
+	{
+		if( ConsoleLogFrame* FrameHandle = wxGetApp().GetConsoleFrame() )
+			FrameHandle->ClearColor();		
+	}
+
+	// ------------------------------------------------------------------------
+	bool Newline()
+	{
+		if( ConsoleLogFrame* FrameHandle = wxGetApp().GetConsoleFrame() )
+			FrameHandle->Newline();
+
+		fputs( "\n", emuLog );
+		return false;
+	}
+
+	// ------------------------------------------------------------------------
+	bool __fastcall Write( const char* fmt )
+	{
+		if( ConsoleLogFrame* FrameHandle = wxGetApp().GetConsoleFrame() )
+			FrameHandle->Write( fmt );
+
+		fputs( fmt, emuLog );
+		return false;
+	}
+
+	// ------------------------------------------------------------------------
+	bool __fastcall Write( const wxString& fmt )
+	{
+		if( ConsoleLogFrame* FrameHandle = wxGetApp().GetConsoleFrame() )
+			FrameHandle->Write( fmt );
+
+		fputs( fmt.ToAscii().data(), emuLog );
+		return false;
+	}
+}
+
+namespace Msgbox
+{
+	bool Alert( const wxString& text )
+	{
+		wxMessageBox( text, L"Pcsx2 Message", wxOK, wxGetApp().GetTopWindow() );
+		return false;
+	}
+
+	bool OkCancel( const wxString& text )
+	{
+		int result = wxMessageBox( text, L"Pcsx2 Message", wxOK | wxCANCEL, wxGetApp().GetTopWindow() );
+		return result == wxOK;
+	}
 }

@@ -67,9 +67,6 @@ REC_FUNC(SQC2);
 #else
 
 PCSX2_ALIGNED16(u64 retValues[2]);
-static u32 s_bCachingMem = 0;
-static u32 s_nAddMemOffset = 0;
-static u32 s_tempaddr = 0;
 
 void _eeOnLoadWrite(int reg)
 {
@@ -93,6 +90,10 @@ void _eeOnLoadWrite(int reg)
 }
 
 #ifdef PCSX2_VIRTUAL_MEM
+
+static u32 s_bCachingMem = 0;
+static u32 s_nAddMemOffset = 0;
+static u32 s_tempaddr = 0;
 
 ////////////////////////////////////////////////////
 //#define REC_SLOWREAD
@@ -129,7 +130,7 @@ void recTransferX86ToReg(int x86reg, int gprreg, int sign)
 	}
 }
 
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 void testaddrs()
 {
 	register int tempaddr;
@@ -230,7 +231,7 @@ int recSetMemLocation(int regs, int imm, int mmreg, int msize, int j32)
 
 	if ( imm != 0 ) ADD32ItoR( ECX, imm );
 
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 	//CALLFunc((uptr)testaddrs);
 #endif
 
@@ -255,7 +256,7 @@ int recSetMemLocation(int regs, int imm, int mmreg, int msize, int j32)
 		x86SetJ8(ptr);
 		if( msize == 1 ) AND8ItoR(ECX, 0xf8);
 		else if( msize == 2 ) AND8ItoR(ECX, 0xf0);
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 		MOV32RtoR(EAX, ECX);
 		SHR32ItoR(EAX, 28);
 		CMP32ItoR(EAX, 1);

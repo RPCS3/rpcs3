@@ -108,7 +108,7 @@ namespace OpcodeImpl
 
 	// Asadr.Changed
 	//TODO: check this
-	// HUH why ? doesn;t make any sense ...
+	// HUH why ? doesn't make any sense ...
 	void SQC2() {
 		u32 addr = _Imm_ + cpuRegs.GPR.r[_Rs_].UL[0];
 		//memWrite64(addr,  VU0.VF[_Ft_].UD[0]); 

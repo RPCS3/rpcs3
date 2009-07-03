@@ -20,57 +20,155 @@
  */
 
 #include "StdAfx.h"
+#include "GSdx.h"
 #include "GSWnd.h"
 
-BEGIN_MESSAGE_MAP(GSWnd, CWnd)
-	ON_WM_CLOSE()
-END_MESSAGE_MAP()
-
 GSWnd::GSWnd()
+	: m_hWnd(NULL)
 {
 }
 
 GSWnd::~GSWnd()
 {
-	DestroyWindow();
 }
 
-bool GSWnd::Create(LPCTSTR title)
+LRESULT CALLBACK GSWnd::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-	CRect r;
+	GSWnd* wnd = NULL;
 
-	GetDesktopWindow()->GetWindowRect(r);
+	if(message == WM_NCCREATE)
+	{
+		wnd = (GSWnd*)((LPCREATESTRUCT)lParam)->lpCreateParams;
 
-	CSize s(r.Width() / 3, r.Width() / 4);
+		SetWindowLongPtr(hWnd, GWL_USERDATA, (LONG_PTR)wnd);
+
+		wnd->m_hWnd = hWnd;
+	}
+	else
+	{
+		wnd = (GSWnd*)GetWindowLongPtr(hWnd, GWL_USERDATA);
+	}
+
+	if(wnd == NULL)
+	{
+		return DefWindowProc(hWnd, message, wParam, lParam);
+	}
+
+	return wnd->OnMessage(message, wParam, lParam);
+}
+
+LRESULT GSWnd::OnMessage(UINT message, WPARAM wParam, LPARAM lParam)
+{
+	switch(message)
+	{
+	case WM_CLOSE:
+		Hide();
+		// DestroyWindow(m_hWnd);
+		return 0;
+	case WM_DESTROY:
+		PostQuitMessage(0);
+		return 0;
+	default:
+		break;
+	}
+
+	return DefWindowProc(m_hWnd, message, wParam, lParam);
+}
+
+bool GSWnd::Create(const string& title)
+{
+	GSVector4i r;
+
+	GetWindowRect(GetDesktopWindow(), r);
+
+	int w = r.width() / 3;
+	int h = r.width() / 4;
 
 	if(!GetSystemMetrics(SM_REMOTESESSION))
 	{
-		s.cx *= 2;
-		s.cy *= 2;
+		w *= 2;
+		h *= 2;
 	}
 
-	r = CRect(r.CenterPoint() - CSize(s.cx / 2, s.cy / 2), s);
+	int x = (r.left + r.right - w) / 2;
+	int y = (r.top + r.bottom - h) / 2;
 
-	LPCTSTR wc = AfxRegisterWndClass(CS_VREDRAW|CS_HREDRAW|CS_DBLCLKS, AfxGetApp()->LoadStandardCursor(IDC_ARROW), 0, 0);
+	WNDCLASS wc;
 
-	return !!CreateEx(0, wc, title, WS_OVERLAPPEDWINDOW, r, NULL, 0);
+	memset(&wc, 0, sizeof(wc));
+
+	wc.style = CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS;
+	wc.lpfnWndProc = WndProc;
+	wc.hInstance = theApp.GetModuleHandle();
+	// TODO: wc.hIcon = ;
+	wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+	wc.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);
+	wc.lpszClassName = "GSWnd";
+
+	if(!GetClassInfo(wc.hInstance, wc.lpszClassName, &wc))
+	{
+		if(!RegisterClass(&wc))
+		{
+			return false;
+		}
+	}
+
+	DWORD style = WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_OVERLAPPEDWINDOW | WS_BORDER;
+
+	m_hWnd = CreateWindow(wc.lpszClassName, title.c_str(), style, x, y, w, h, NULL, NULL, wc.hInstance, (LPVOID)this);
+
+	if(!m_hWnd)
+	{
+		return false;
+	}
+
+	return true;
+}
+
+bool GSWnd::Attach(HWND hWnd)
+{
+	// TODO: subclass
+
+	m_hWnd = hWnd;
+
+	return true;
+}
+
+GSVector4i GSWnd::GetClientRect()
+{
+	GSVector4i r;
+
+	::GetClientRect(m_hWnd, r);
+	
+	return r;
+}
+
+void GSWnd::SetWindowText(const char* title)
+{
+	::SetWindowText(m_hWnd, title);
 }
 
 void GSWnd::Show()
 {
-	SetWindowPos(&wndTop, 0, 0, 0, 0, SWP_NOMOVE|SWP_NOSIZE);
-	SetForegroundWindow();
-	ShowWindow(SW_SHOWNORMAL);
+	//SetWindowPos(&wndTop, 0, 0, 0, 0, SWP_NOMOVE|SWP_NOSIZE);
+	
+	SetForegroundWindow(m_hWnd);
+	
+	ShowWindow(m_hWnd, SW_SHOWNORMAL);
+	
+	UpdateWindow(m_hWnd);
 }
 
 void GSWnd::Hide()
 {
-	ShowWindow(SW_HIDE);
+	ShowWindow(m_hWnd, SW_HIDE);
 }
 
-void GSWnd::OnClose()
+void GSWnd::HideFrame()
 {
-	Hide();
-
-	PostMessage(WM_QUIT);
+	SetWindowLong(m_hWnd, GWL_STYLE, GetWindowLong(m_hWnd, GWL_STYLE) & ~(WS_CAPTION|WS_THICKFRAME));
+	
+	SetWindowPos(m_hWnd, NULL, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
+	
+	SetMenu(m_hWnd, NULL);
 }

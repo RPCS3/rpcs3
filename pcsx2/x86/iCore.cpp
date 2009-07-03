@@ -36,10 +36,6 @@ u32 g_cpuRegHasSignExt = 0, g_cpuPrevRegHasSignExt = 0; // set if upper 32 bits 
 // use FreezeMMXRegs, FreezeXMMRegs
 u32 g_recWriteback = 0;
 
-#ifdef _DEBUG
-char g_globalXMMLocked = 0;
-#endif
-
 _xmmregs xmmregs[iREGCNT_XMM], s_saveXMMregs[iREGCNT_XMM];
 
 // X86 caching

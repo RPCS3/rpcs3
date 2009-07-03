@@ -174,6 +174,27 @@ void ipuShutdown()
 {
 }
 
+void ReportIPU()
+{
+	Console::WriteLn("g_nDMATransfer = 0x%x.", params g_nDMATransfer);
+	Console::WriteLn("FIreadpos = 0x%x, FIwritepos = 0x%x.", params FIreadpos, FIwritepos);
+	Console::WriteLn("fifo_input = 0x%x.", params fifo_input);
+	Console::WriteLn("FOreadpos = 0x%x, FOwritepos = 0x%x.", params FOreadpos, FOwritepos);
+	Console::WriteLn("fifo_output = 0x%x.", params fifo_output);
+	Console::WriteLn("g_BP = 0x%x.", params g_BP);
+	Console::WriteLn("niq = 0x%x, iq = 0x%x.", params niq, iq);
+	Console::WriteLn("vqclut = 0x%x.", params vqclut);
+	Console::WriteLn("s_thresh = 0x%x.", params s_thresh);
+	Console::WriteLn("coded_block_pattern = 0x%x.", params coded_block_pattern);
+	Console::WriteLn("g_decoder = 0x%x.", params g_decoder);
+	Console::WriteLn("mpeg2_scan_norm = 0x%x, mpeg2_scan_alt = 0x%x.", params mpeg2_scan_norm, mpeg2_scan_alt);
+	Console::WriteLn("g_nCmdPos = 0x%x.", params g_nCmdPos);
+	Console::WriteLn("g_nCmdIndex = 0x%x.", params g_nCmdIndex);
+	Console::WriteLn("ipuCurCmd = 0x%x.", params ipuCurCmd);
+	Console::WriteLn("_readbits = 0x%x.", params _readbits);
+	Console::WriteLn("temp will equal 0x%x.", params readbits - _readbits);
+	Console::WriteLn("");
+}
 // fixme - ipuFreeze looks fairly broken. Should probably take a closer look at some point.
 
 void SaveState::ipuFreeze()
@@ -220,7 +241,7 @@ void SaveState::ipuFreeze()
 
 bool ipuCanFreeze()
 {
-	return ipuCurCmd == 0xffffffff;
+	return (ipuCurCmd == 0xffffffff);
 }
 
 __forceinline u32 ipuRead32(u32 mem)
@@ -235,7 +256,7 @@ __forceinline u32 ipuRead32(u32 mem)
 
 	switch (mem)
 	{
-		case 0x10: // IPU_CTRL
+		ipucase(IPU_CTRL): // IPU_CTRL
 			ipuRegs->ctrl.IFC = g_BP.IFC;
 			ipuRegs->ctrl.CBP = coded_block_pattern;
 
@@ -244,7 +265,7 @@ __forceinline u32 ipuRead32(u32 mem)
 
 			return ipuRegs->ctrl._u32;
 
-		case 0x20: // IPU_BP
+		ipucase(IPU_BP): // IPU_BP
 
 			ipuRegs->ipubp = g_BP.BP & 0x7f;
 			ipuRegs->ipubp |= g_BP.IFC << 8;
@@ -269,20 +290,20 @@ __forceinline u64 ipuRead64(u32 mem)
 
 	switch (mem)
 	{
-		case 0x00: // IPU_CMD
-			if (ipuRegs->cmd.DATA&0xffffff)
+		ipucase(IPU_CMD): // IPU_CMD
+			if (ipuRegs->cmd.DATA & 0xffffff)
 				IPU_LOG("Ipu read64: IPU_CMD=BUSY=%x, DATA=%08X", ipuRegs->cmd.BUSY ? 1 : 0, ipuRegs->cmd.DATA);
 			break;
 
-		case 0x10:
+		ipucase(IPU_CTRL):
 			DevCon::Notice("reading 64bit IPU ctrl");
 			break;
 
-		case 0x20:
+		ipucase(IPU_BP):
 			DevCon::Notice("reading 64bit IPU top");
 			break;
 
-		case 0x30: // IPU_TOP
+		ipucase(IPU_TOP): // IPU_TOP
 			IPU_LOG("Ipu read64: IPU_TOP=%x,  bp = %d", ipuRegs->top, g_BP.BP);
 			break;
 
@@ -327,12 +348,12 @@ __forceinline void ipuWrite32(u32 mem, u32 value)
 
 	switch (mem)
 	{
-		case 0x00: // IPU_CMD
+		ipucase(IPU_CMD): // IPU_CMD
 			IPU_LOG("Ipu write32: IPU_CMD=0x%08X", value);
 			IPUCMD_WRITE(value);
 			break;
 
-		case 0x10: // IPU_CTRL
+		ipucase(IPU_CTRL): // IPU_CTRL
 			ipuRegs->ctrl._u32 = (value & 0x47f30000) | (ipuRegs->ctrl._u32 & 0x8000ffff);
 			if (ipuRegs->ctrl.IDP == 3)
 			{
@@ -364,7 +385,7 @@ __forceinline void ipuWrite64(u32 mem, u64 value)
 
 	switch (mem)
 	{
-		case 0x00:
+		ipucase(IPU_CMD):
 			IPU_LOG("Ipu write64: IPU_CMD=0x%08X", value);
 			IPUCMD_WRITE((u32)value);
 			break;
@@ -446,11 +467,7 @@ static __forceinline BOOL ipuIDEC(u32 val)
 	return s_RoutineDone;
 }
 
-#ifdef _DEBUG
 static int s_bdec = 0;
-#else
-#define s_bdec 0
-#endif
 
 static __forceinline BOOL ipuBDEC(u32 val)
 {
@@ -476,9 +493,8 @@ static __forceinline BOOL ipuBDEC(u32 val)
 
 	IPU_LOG(" Quantizer step=0x%X", bdec.QSC);
 
-#ifdef _DEBUG
-	s_bdec++;
-#endif
+	if( IsDebugBuild )
+		s_bdec++;
 
 	g_BP.BP += bdec.FB;//skip FB bits
 	g_decoder.coding_type = I_TYPE;
@@ -767,7 +783,6 @@ __forceinline void IPU_INTERRUPT() //dma
 
 void IPUCMD_WRITE(u32 val)
 {
-
 	// don't process anything if currently busy
 	if (ipuRegs->ctrl.BUSY) Console::WriteLn("IPU BUSY!"); // wait for thread
 
@@ -1352,22 +1367,47 @@ int FIFOto_write(u32* pMem, int size)
 	return firsttrans;
 }
 
-// To do: convert this into a static inlined function.
-#define IPU1chain() { \
-	if (ipu1dma->qwc > 0)	\
-	{	\
-		int qwc = ipu1dma->qwc; \
-		pMem = (u32*)dmaGetAddr(ipu1dma->madr); \
-		if (pMem == NULL) { Console::Error("ipu1dma NULL!"); return totalqwc; } \
-		qwc = FIFOto_write(pMem, qwc); \
-		ipu1dma->madr += qwc<< 4; \
-		ipu1dma->qwc -= qwc; \
-		totalqwc += qwc; \
-		if( ipu1dma->qwc > 0 ) { \
-			g_nDMATransfer |= IPU_DMA_ACTV1; \
-			return totalqwc; \
-		} \
-	} \
+static __forceinline bool IPU1chain(u32* &pMem, int &totalqwc) 
+{
+	if (ipu1dma->qwc > 0)
+	{
+		int qwc = ipu1dma->qwc; 
+		
+		pMem = (u32*)dmaGetAddr(ipu1dma->madr); 
+		
+		if (pMem == NULL) 
+		{ 
+			Console::Error("ipu1dma NULL!"); 
+			return true; 
+		} 
+		
+		qwc = FIFOto_write(pMem, qwc); 
+		ipu1dma->madr += qwc<< 4; 
+		ipu1dma->qwc -= qwc; 
+		totalqwc += qwc; 
+		
+		if (ipu1dma->qwc > 0) 
+		{ 
+			g_nDMATransfer |= IPU_DMA_ACTV1; 
+			return true; 
+		} 
+	} 
+	return false;
+}
+
+static __forceinline bool IncreaseTadr(u32 tag)
+{
+	switch (tag & 0x70000000)
+	{
+		case 0x00000000:
+			ipu1dma->tadr += 16;
+			return true;
+		
+		case 0x70000000:
+			ipu1dma->tadr = ipu1dma->madr;
+			return true;
+	}
+	return false;
 }
 
 extern void gsInterrupt();
@@ -1386,7 +1426,7 @@ int IPU1dma()
 	assert(!(g_nDMATransfer & IPU_DMA_TIE1));
 
 	//We need to make sure GIF has flushed before sending IPU data, it seems to REALLY screw FFX videos
-	while(gif->chcr & 0x100) 
+	while(gif->chcr & 0x100 && vif1Regs->mskpath3 == 0) 
 	{
 		GIF_LOG("Flushing gif chcr %x tadr %x madr %x qwc %x", gif->chcr, gif->tadr, gif->madr, gif->qwc);
 		gsInterrupt();
@@ -1395,91 +1435,76 @@ int IPU1dma()
 	// in kh, qwc == 0 when dma_actv1 is set
 	if ((g_nDMATransfer & IPU_DMA_ACTV1) && ipu1dma->qwc > 0)
 	{
-		IPU1chain();
+		if (IPU1chain(pMem, totalqwc)) return totalqwc;
 
 		//Check TIE bit of CHCR and IRQ bit of tag
-		if ((ipu1dma->chcr & 0x80) && (g_nDMATransfer&IPU_DMA_DOTIE1))
+		if ((ipu1dma->chcr & 0x80) && (g_nDMATransfer & IPU_DMA_DOTIE1))
 		{
 			Console::WriteLn("IPU1 TIE");
 
-			IPU_INT_TO(totalqwc*BIAS);
+			IPU_INT_TO(totalqwc * BIAS);
 			g_nDMATransfer &= ~(IPU_DMA_ACTV1 | IPU_DMA_DOTIE1);
 			g_nDMATransfer |= IPU_DMA_TIE1;
 			return totalqwc;
 		}
 
-		if ((ipu1dma->chcr&0xc) == 0)
+		if (!(ipu1dma->chcr & 0xc))
 		{
-			IPU_INT_TO(totalqwc*BIAS);
+			IPU_INT_TO(totalqwc * BIAS);
 			return totalqwc;
 		}
 		else
 		{
 			u32 tag = ipu1dma->chcr; // upper bits describe current tag
 
-			if ((ipu1dma->chcr & 0x80) && (tag&0x80000000))
+			if ((ipu1dma->chcr & 0x80) && (tag & 0x80000000))
 			{
 				ptag = (u32*)dmaGetAddr(ipu1dma->tadr);
 
-				switch (tag&0x70000000)
-				{
-					case 0x00000000:
-						ipu1dma->tadr += 16;
-						break;
-					case 0x70000000:
-						ipu1dma->tadr = ipu1dma->madr;
-						break;
-				}
+				IncreaseTadr(tag);
 
 				ipu1dma->chcr = (ipu1dma->chcr & 0xFFFF) | ((*ptag) & 0xFFFF0000);
 				IPU_LOG("IPU dmaIrq Set");
-				IPU_INT_TO(totalqwc*BIAS);
+				IPU_INT_TO(totalqwc * BIAS);
 				g_nDMATransfer |= IPU_DMA_TIE1;
 				return totalqwc;
 			}
 
-			switch (tag&0x70000000)
+			if (IncreaseTadr(tag))
 			{
-				case 0x00000000:
-					ipu1dma->tadr += 16;
-					IPU_INT_TO((1 + totalqwc)*BIAS);
-					return totalqwc;
-
-				case 0x70000000:
-					ipu1dma->tadr = ipu1dma->madr;
-					IPU_INT_TO((1 + totalqwc)*BIAS);
-					return totalqwc;
+				IPU_INT_TO((1 + totalqwc)*BIAS);
+				return totalqwc;
 			}
 		}
 
 		g_nDMATransfer &= ~(IPU_DMA_ACTV1 | IPU_DMA_DOTIE1);
 	}
-
-	if ((ipu1dma->chcr & 0xc) == 0 && ipu1dma->qwc == 0)   // Normal Mode
+	
+	if (((ipu1dma->chcr & 0xc) == 0) && (ipu1dma->qwc == 0))   // Normal Mode
 	{
 		//Console::WriteLn("ipu1 normal empty qwc?");
 		return totalqwc;
 	}
 
 	// Transfer Dn_QWC from Dn_MADR to GIF
-
-	if ((ipu1dma->chcr & 0xc) == 0 ||  ipu1dma->qwc > 0)   // Normal Mode
+	if (ipu1dma->qwc > 0)
 	{
 		IPU_LOG("dmaIPU1 Normal size=%d, addr=%lx, fifosize=%x",
 		        ipu1dma->qwc, ipu1dma->madr, 8 - g_BP.IFC);
-		IPU1chain();
-		IPU_INT_TO((ipu1cycles + totalqwc)*BIAS);
+		
+		if (!IPU1chain(pMem, totalqwc)) IPU_INT_TO((ipu1cycles + totalqwc) * BIAS);
+		
 		return totalqwc;
 	}
 	else
 	{
-		// Chain Mode
+		// Chain Mode & ipu1dma->qwc is 0
 		ptag = (u32*)dmaGetAddr(ipu1dma->tadr);  //Set memory pointer to TADR
 		if (ptag == NULL)  					 //Is ptag empty?
 		{
 			Console::Error("IPU1 BUSERR");
 			ipu1dma->chcr = (ipu1dma->chcr & 0xFFFF) | ((*ptag) & 0xFFFF0000);      //Transfer upper part of tag to CHCR bits 31-15
-			psHu32(DMAC_STAT) |= 1 << 15;		 //If yes, set BEIS (BUSERR) in DMAC_STAT register
+			psHu32(DMAC_STAT) |= DMAC_STAT_BEIS;		 //If yes, set BEIS (BUSERR) in DMAC_STAT register
 			return totalqwc;
 		}
 
@@ -1530,54 +1555,45 @@ int IPU1dma()
 			g_nDMATransfer |= IPU_DMA_DOTIE1;
 		else
 			g_nDMATransfer &= ~IPU_DMA_DOTIE1;
-
-		//Britney Dance beat does a blank NEXT tag, for some odd reason the fix doesnt work if after IPU1Chain O_o
-		if ((ipu1dma->qwc == 0) && (!done) && !(g_nDMATransfer & IPU_DMA_DOTIE1)) IPU1dma();
-
-		IPU1chain();
-
-		if ((ipu1dma->chcr & 0x80) && (ptag[0]&0x80000000)  && ipu1dma->qwc == 0)  			 //Check TIE bit of CHCR and IRQ bit of tag
-		{
-			Console::WriteLn("IPU1 TIE");
-
-			if (done)
-			{
-				ptag = (u32*)dmaGetAddr(ipu1dma->tadr);
-
-				switch (ptag[0]&0x70000000)
-				{
-					case 0x00000000:
-						ipu1dma->tadr += 16;
-						break;
-					case 0x70000000:
-						ipu1dma->tadr = ipu1dma->madr;
-						break;
-				}
-
-				ipu1dma->chcr = (ipu1dma->chcr & 0xFFFF) | ((*ptag) & 0xFFFF0000);
-			}
-
-			IPU_INT_TO(ipu1cycles + totalqwc*BIAS);
-			g_nDMATransfer |= IPU_DMA_TIE1;
-			return totalqwc;
-		}
-
+		
 		if (ipu1dma->qwc == 0)
 		{
-			switch (ptag[0]&0x70000000)
+			//if ((ipu1dma->chcr & 0x80) && (ptag[0] & 0x80000000))  	 //Check TIE bit of CHCR and IRQ bit of tag
+			if (g_nDMATransfer & IPU_DMA_DOTIE1)
 			{
-				case 0x00000000:
-					ipu1dma->tadr += 16;
-					break;
+				Console::WriteLn("IPU1 TIE");
+				
+				if (IPU1chain(pMem, totalqwc)) return totalqwc;
+				
+				if (done)
+				{
+					ptag = (u32*)dmaGetAddr(ipu1dma->tadr);
 
-				case 0x70000000:
-					ipu1dma->tadr = ipu1dma->madr;
-					break;
+					IncreaseTadr(ptag[0]);
+
+					ipu1dma->chcr = (ipu1dma->chcr & 0xFFFF) | ((*ptag) & 0xFFFF0000);
+				}
+
+				IPU_INT_TO(ipu1cycles + totalqwc * BIAS);  // Should it be (ipu1cycles + totalqwc) * BIAS?
+				g_nDMATransfer |= IPU_DMA_TIE1;
+				return totalqwc;
 			}
+			else
+			{
+				//Britney Dance beat does a blank NEXT tag, for some odd reason the fix doesnt work if after IPU1Chain O_o
+				if (!done) IPU1dma();
+				if (IPU1chain(pMem, totalqwc)) return totalqwc;
+			}
+
+			IncreaseTadr(ptag[0]);
+		}
+		else
+		{
+			if (IPU1chain(pMem, totalqwc)) return totalqwc;
 		}
 	}
 
-	IPU_INT_TO((ipu1cycles + totalqwc)*BIAS);
+	IPU_INT_TO((ipu1cycles + totalqwc) * BIAS);
 	return totalqwc;
 }
 

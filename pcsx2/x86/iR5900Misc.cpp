@@ -8,7 +8,7 @@
 namespace R5900 {
 namespace Dynarec {
 
-// R5900 branch hepler!
+// R5900 branch helper!
 // Recompiles code for a branch test and/or skip, complete with delay slot
 // handling.  Note, for "likely" branches use iDoBranchImm_Likely instead, which
 // handles delay slots differently.

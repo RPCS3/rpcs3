@@ -53,17 +53,15 @@ private:
 	// switch to a hash map later?
 	std::multimap<u32, uptr> links;
 	typedef std::multimap<u32, uptr>::iterator linkiter_t;
-	unsigned long size;
 	uptr recompiler;
 	std::vector<BASEBLOCKEX> blocks;
 
 public:
-	BaseBlocks(unsigned long size_, uptr recompiler_) :
-		size(size_),
+	BaseBlocks(uptr recompiler_) :
 		recompiler(recompiler_),
 		blocks(0)
 	{
-		blocks.reserve(size);
+		blocks.reserve(0x4000);
 	}
 
 	BASEBLOCKEX* New(u32 startpc, uptr fnptr);
@@ -117,7 +115,7 @@ public:
 		blocks.erase(blocks.begin() + idx);
 	}
 
-	void Link(u32 pc, uptr jumpptr);
+	void Link(u32 pc, s32* jumpptr);
 
 	__forceinline void Reset()
 	{

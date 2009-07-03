@@ -22,55 +22,60 @@
 #include "stdafx.h"
 #include "cdvd.h"
 #include "SettingsDlg.h"
-#include <winioctl.h>
 
-#ifdef _DEBUG
-#define new DEBUG_NEW
-#endif
+static HMODULE s_hModule;
 
-//
-//	Note!
-//
-//		If this DLL is dynamically linked against the MFC
-//		DLLs, any functions exported from this DLL which
-//		call into MFC must have the AFX_MANAGE_STATE macro
-//		added at the very beginning of the function.
-//
-//		For example:
-//
-//		extern "C" BOOL PASCAL EXPORT ExportedFunction()
-//		{
-//			AFX_MANAGE_STATE(AfxGetStaticModuleState());
-//			// normal function body here
-//		}
-//
-//		It is very important that this macro appear in each
-//		function, prior to any calls into MFC.  This means that
-//		it must appear as the first statement within the 
-//		function, even before any object variable declarations
-//		as their constructors may generate calls into the MFC
-//		DLL.
-//
-//		Please see MFC Technical Notes 33 and 58 for additional
-//		details.
-//
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserved)
+{
+	switch(ul_reason_for_call)
+	{
+	case DLL_PROCESS_ATTACH:
+		s_hModule = hModule;
+	case DLL_THREAD_ATTACH:
+	case DLL_THREAD_DETACH:
+	case DLL_PROCESS_DETACH:
+		break;
+	}
 
-BEGIN_MESSAGE_MAP(cdvdApp, CWinApp)
-END_MESSAGE_MAP()
+	return TRUE;
+}
 
-cdvdApp::cdvdApp()
+CDVDolioApp theApp;
+
+const char* CDVDolioApp::m_ini = "inis/CDVDolio.ini";
+const char* CDVDolioApp::m_section = "Settings";
+
+CDVDolioApp::CDVDolioApp()
 {
 }
 
-cdvdApp theApp;
-
-BOOL cdvdApp::InitInstance()
+HMODULE CDVDolioApp::GetModuleHandle()
 {
-	__super::InitInstance();
+	return s_hModule;
+}
 
-	SetRegistryKey(_T("Gabest"));
+string CDVDolioApp::GetConfig(const char* entry, const char* value)
+{
+	char buff[4096] = {0};
+	GetPrivateProfileString(m_section, entry, value, buff, countof(buff), m_ini);
+	return string(buff);
+}
 
-	return TRUE;
+void CDVDolioApp::SetConfig(const char* entry, const char* value)
+{
+	WritePrivateProfileString(m_section, entry, value, m_ini);
+}
+
+int CDVDolioApp::GetConfig(const char* entry, int value)
+{
+	return GetPrivateProfileInt(m_section, entry, value, m_ini);
+}
+
+void CDVDolioApp::SetConfig(const char* entry, int value)
+{
+	char buff[32] = {0};
+	itoa(value, buff, 10);
+	SetConfig(entry, buff);
 }
 
 //
@@ -78,7 +83,7 @@ BOOL cdvdApp::InitInstance()
 #define PS2E_LT_CDVD 0x08
 #define PS2E_CDVD_VERSION 0x0005
 
-EXPORT_C_(UINT32) PS2EgetLibType()
+EXPORT_C_(uint32) PS2EgetLibType()
 {
 	return PS2E_LT_CDVD;
 }
@@ -88,11 +93,11 @@ EXPORT_C_(char*) PS2EgetLibName()
 	return "CDVDolio"; // olio = OverLapped I/O (duh)
 }
 
-EXPORT_C_(UINT32) PS2EgetLibVersion2(UINT32 type)
+EXPORT_C_(uint32) PS2EgetLibVersion2(UINT32 type)
 {
-	const UINT32 revision = 0;
-	const UINT32 build = 1;
-	const UINT32 minor = 0;
+	const uint32 revision = 0;
+	const uint32 build = 1;
+	const uint32 minor = 0;
 
 	return (build << 0) | (revision << 8) | (PS2E_CDVD_VERSION << 16) | (minor << 24);
 }
@@ -125,12 +130,12 @@ bool CDVD::SyncRead(int lsn)
 	return Read(lsn) && GetBuffer();
 }
 
-bool CDVD::Open(CString path)
+bool CDVD::Open(const char* path)
 {
-	m_label.Empty();
+	m_label.clear();
 
-	DWORD share = FILE_SHARE_READ;
-	DWORD flags = FILE_ATTRIBUTE_READONLY | FILE_FLAG_SEQUENTIAL_SCAN | FILE_FLAG_OVERLAPPED;
+	uint32 share = FILE_SHARE_READ;
+	uint32 flags = FILE_ATTRIBUTE_READONLY | FILE_FLAG_SEQUENTIAL_SCAN | FILE_FLAG_OVERLAPPED;
 
 	m_hFile = CreateFile(path, GENERIC_READ, share, NULL, OPEN_EXISTING, flags, (HANDLE)NULL);
 
@@ -164,8 +169,23 @@ bool CDVD::Open(CString path)
 		return false;
 	}
 
-	m_label = CString(CStringA((char*)&m_buff[24 + 40], 32));
-	m_label.Trim();
+	m_label = string((const char*)&m_buff[24 + 40], 32);
+
+	// trim
+
+	{
+		string::size_type i = m_label.find_first_not_of(' ');
+		string::size_type j = m_label.find_last_not_of(' ');
+
+		if(i == string::npos)
+		{
+			m_label.clear();
+		}
+		else
+		{
+			m_label = m_label.substr(i, (j != string::npos ? j + 1 : string::npos) - i);
+		}
+	}
 
 	// m_block.count = *(DWORD*)&m_buff[24 + 80];
 
@@ -184,12 +204,12 @@ void CDVD::Close()
 	m_cache.pending = false;
 	m_cache.count = 0;
 
-	m_label.Empty();
+	m_label.clear();
 }
 
-CString CDVD::GetLabel()
+const char* CDVD::GetLabel()
 {
-	return m_label;
+	return m_label.c_str();
 }
 
 bool CDVD::Read(int lsn, int mode)
@@ -237,7 +257,7 @@ bool CDVD::Read(int lsn, int mode)
 	return true;
 }
 
-BYTE* CDVD::GetBuffer()
+uint8* CDVD::GetBuffer()
 {
 	DWORD size = 0;
 
@@ -258,7 +278,7 @@ BYTE* CDVD::GetBuffer()
 	return &m_buff[24];
 }
 	
-UINT32 CDVD::GetTN(cdvdTN* buff)
+uint32 CDVD::GetTN(cdvdTN* buff)
 {
 	buff->strack = 1;
 	buff->etrack = 1;
@@ -266,7 +286,7 @@ UINT32 CDVD::GetTN(cdvdTN* buff)
 	return 0;
 }
 
-UINT32 CDVD::GetTD(BYTE track, cdvdTD* buff)
+uint32 CDVD::GetTD(BYTE track, cdvdTD* buff)
 {
 	if(track == 0)
 	{
@@ -285,7 +305,7 @@ static CDVD s_cdvd;
 
 //
 
-EXPORT_C_(UINT32) CDVDinit()
+EXPORT_C_(uint32) CDVDinit()
 {
 	return 0;
 }
@@ -294,22 +314,22 @@ EXPORT_C CDVDshutdown()
 {
 }
 
-EXPORT_C_(UINT32) CDVDopen(const char* title)
+EXPORT_C_(uint32) CDVDopen(const char* title)
 {
-	CString path;
+	string path;
 
-	int i = AfxGetApp()->GetProfileInt(_T("Settings"), _T("drive"), -1);
+	int i = theApp.GetConfig("drive", -1);
 
 	if(i >= 'A' && i <= 'Z')
 	{
-		path.Format(_T("\\\\.\\%c:"), i);
+		path = format("\\\\.\\%c:", i);
 	}
 	else
 	{
-		path = AfxGetApp()->GetProfileString(_T("Settings"), _T("iso"), _T(""));
+		path = theApp.GetConfig("iso", "");
 	}
 
-	return s_cdvd.Open(path) ? 0 : -1;
+	return s_cdvd.Open(path.c_str()) ? 0 : -1;
 }
 
 EXPORT_C CDVDclose()
@@ -317,61 +337,59 @@ EXPORT_C CDVDclose()
 	s_cdvd.Close();
 }
 
-EXPORT_C_(UINT32) CDVDreadTrack(int lsn, int mode)
+EXPORT_C_(uint32) CDVDreadTrack(int lsn, int mode)
 {
 	return s_cdvd.Read(lsn, mode) ? 0 : -1;
 }
 
-EXPORT_C_(BYTE*) CDVDgetBuffer()
+EXPORT_C_(uint8*) CDVDgetBuffer()
 {
 	return s_cdvd.GetBuffer();
 }
 
-EXPORT_C_(UINT32) CDVDreadSubQ(UINT32 lsn, cdvdSubQ* subq)
+EXPORT_C_(uint32) CDVDreadSubQ(uint32 lsn, cdvdSubQ* subq)
 {
 	return -1;
 }
 
-EXPORT_C_(UINT32) CDVDgetTN(cdvdTN* buff)
+EXPORT_C_(uint32) CDVDgetTN(cdvdTN* buff)
 {
 	return s_cdvd.GetTN(buff);
 }
 
-EXPORT_C_(UINT32) CDVDgetTD(BYTE track, cdvdTD* buff)
+EXPORT_C_(uint32) CDVDgetTD(uint8 track, cdvdTD* buff)
 {
 	return s_cdvd.GetTD(track, buff);
 }
 
-EXPORT_C_(UINT32) CDVDgetTOC(void* toc)
+EXPORT_C_(uint32) CDVDgetTOC(void* toc)
 {
 	return -1; // TODO
 }
 
-EXPORT_C_(UINT32) CDVDgetDiskType()
+EXPORT_C_(uint32) CDVDgetDiskType()
 {
 	return CDVD_TYPE_PS2DVD; // TODO
 }
 
-EXPORT_C_(UINT32) CDVDgetTrayStatus()
+EXPORT_C_(uint32) CDVDgetTrayStatus()
 {
 	return CDVD_TRAY_CLOSE;
 }
 
-EXPORT_C_(UINT32) CDVDctrlTrayOpen()
+EXPORT_C_(uint32) CDVDctrlTrayOpen()
 {
 	return 0;
 }
 
-EXPORT_C_(UINT32) CDVDctrlTrayClose()
+EXPORT_C_(uint32) CDVDctrlTrayClose()
 {
 	return 0;
 }
 
 EXPORT_C CDVDconfigure()
 {
-	AFX_MANAGE_STATE(AfxGetStaticModuleState());
-
-	CSettingsDlg dlg;
+	CDVDSettingsDlg dlg;
 
 	if(IDOK == dlg.DoModal())
 	{
@@ -384,7 +402,7 @@ EXPORT_C CDVDabout()
 {
 }
 
-EXPORT_C_(UINT32) CDVDtest()
+EXPORT_C_(uint32) CDVDtest()
 {
 	return 0;
 }

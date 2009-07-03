@@ -32,10 +32,6 @@
 // Uncomment this to enable profiling of the GS RingBufferCopy function.
 //#define PCSX2_GSRING_SAMPLING_STATS
 
-#ifdef PCSX2_GSRING_TX_STATS
-#include <intrin.h>
-#endif
-
 using namespace Threading;
 using namespace std;
 
@@ -137,27 +133,32 @@ void SaveState::mtgsFreeze()
 
 static void RegHandlerSIGNAL(const u32* data)
 {
-	MTGS_LOG("MTGS SIGNAL data %x_%x CSRw %x\n",data[0], data[1], CSRw);
+	MTGS_LOG("MTGS SIGNAL data %x_%x CSRw %x IMR %x CSRr\n",data[0], data[1], CSRw, GSIMR, GSCSRr);
 
 	GSSIGLBLID->SIGID = (GSSIGLBLID->SIGID&~data[1])|(data[0]&data[1]);
 	
-	if ((CSRw & 0x1)) 
+	if ((CSRw & 0x1))
+	{
+		if (!(GSIMR&0x100) )  
+		{
+			gsIrq();
+		}
+
 		GSCSRr |= 1; // signal
-			
-	if (!(GSIMR&0x100) ) 
-		gsIrq();
+	}
 }
 
 static void RegHandlerFINISH(const u32* data)
 {
-	MTGS_LOG("MTGS FINISH data %x_%x CSRw %x\n",data[0], data[1], CSRw);
+	MTGS_LOG("MTGS FINISH data %x_%x CSRw %x\n", params data[0], data[1], CSRw);
 
-	if ((CSRw & 0x2)) 
+	if ((CSRw & 0x2))
+	{
+		if (!(GSIMR&0x200))
+			gsIrq();
+
 		GSCSRr |= 2; // finish
-		
-	if (!(GSIMR&0x200) )
-		gsIrq();
-	
+	}
 }
 
 static void RegHandlerLABEL(const u32* data)
@@ -178,7 +179,7 @@ mtgsThreadObject* mtgsThread = NULL;
 std::list<uint> ringposStack;
 #endif
 
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 // debug variable used to check for bad code bits where copies are started
 // but never closed, or closed without having been started.  (GSRingBufCopy calls
 // should always be followed by a call to GSRINGBUF_DONECOPY)
@@ -259,10 +260,11 @@ void mtgsThreadObject::Reset()
 // Used to keep interrupts in sync with the EE, while the GS itself
 // runs potentially several frames behind.
 // size - size of the packet in simd128's
-__forceinline u32 mtgsThreadObject::_gifTransferDummy( GIF_PATH pathidx, const u8* pMem, u32 size )
+__forceinline int mtgsThreadObject::_gifTransferDummy( GIF_PATH pathidx, const u8* pMem, u32 size )
 {
 	GIFPath& path = m_path[pathidx];
-
+  /*	bool path1loop = false;
+	int startval = size;*/
 #ifdef PCSX2_GSRING_SAMPLING_STATS
 	static uptr profStartPtr = 0;
 	static uptr profEndPtr = 0;
@@ -280,23 +282,42 @@ __forceinline u32 mtgsThreadObject::_gifTransferDummy( GIF_PATH pathidx, const u
 
 	while(size > 0)
 	{
-		bool eop = false;
-
-		if(path.tag.nloop == 0)
+		if (path.tag.nloop == 0)
 		{
 			path.SetTag( pMem );
 
 			pMem += sizeof(GIFTAG);
 			--size;
 
-			if(pathidx == 2 && path.tag.eop)
-				Path3transfer = FALSE;
+			if (pathidx == 2)
+			{			
+				if (path.tag.flg != GIF_FLG_IMAGE) 
+					Path3progress = TRANSFER_MODE; //Other mode (but not stopped, I guess?)
+				else  
+					Path3progress = IMAGE_MODE; //IMAGE mode
+				//if(pathidx == 2) GIF_LOG("Set Giftag NLoop %d EOP %x Mode %d Path3msk %x Path3progress %x ", path.tag.nloop, path.tag.eop, path.tag.flg, vif1Regs->mskpath3, Path3progress);
+			}
 
-			if( pathidx == 0 ) 
-			{                        
+			if (pathidx == 0) 
+			{                       
+			//	int transize = 0;
 				// hack: if too much data for VU1, just ignore.
 
 				// The GIF is evil : if nreg is 0, it's really 16.  Otherwise it's the value in nreg.
+				/*const int numregs = path.tag.nreg ? path.tag.nreg : 16;
+				if(path.tag.flg < 2)
+				{
+					transize = (path.tag.nloop * numregs);
+				}
+				else transize = path.tag.nloop;
+
+				if(transize > (path.tag.flg == 1 ? 0x800 : 0x400))
+				{
+					//DevCon::Notice("Too much data");
+					path.tag.nloop = 0;
+					if(path1loop == true)return ++size - 0x400;
+					else return ++size;
+				}*/
 				const int numregs = ((path.tag.nreg-1)&15)+1;
 
 				if((path.tag.nloop * numregs) > (size * ((path.tag.flg == 1) ? 2 : 1)))
@@ -305,42 +326,17 @@ __forceinline u32 mtgsThreadObject::_gifTransferDummy( GIF_PATH pathidx, const u
 					return ++size;
 				}
 			}
-
-
-			/*f(path.tag.pre)
-			{
-				assert(path.tag.flg != GIF_FLG_IMAGE); // kingdom hearts, ffxii, tales of abyss
-
-				if((path.tag.flg & 2) == 0)
-				{
-					// Primitive handler... Nothing for the Dummy to do here.
-
-					//GIFReg r;
-					//r.i64 = path.tag.PRIM;
-					//(this->*m_fpGIFRegHandlers[GIF_A_D_REG_PRIM])(&r);
-				}
-			}*/
-
-			if(path.tag.eop)
-			{
-				eop = true;
-			}
-			else if(path.tag.nloop == 0)
-			{
-				if(pathidx == 0)
-					continue;
-
-				eop = true;
-			}
 		}
-
-		if(path.tag.nloop > 0)
+		else
 		{
+			// NOTE: size > 0 => do {} while(size > 0); should be faster than while(size > 0) {}
+		
+			//if(pathidx == 2) GIF_LOG("PATH3 NLoop %d EOP %x Mode %d Path3msk %x Path3progress %x ", path.tag.nloop, path.tag.eop, path.tag.flg, vif1Regs->mskpath3, Path3progress);
 			switch(path.tag.flg)
 			{
 			case GIF_FLG_PACKED:
 
-				while(size > 0)
+				do
 				{
 					if( path.GetReg() == 0xe )
 					{
@@ -348,25 +344,19 @@ __forceinline u32 mtgsThreadObject::_gifTransferDummy( GIF_PATH pathidx, const u
 						if(handler >= 0x60 && handler < 0x63)
 							s_GSHandlers[handler&0x3]((const u32*)pMem);
 					}
+
 					size--;
 					pMem += 16; // 128 bits! //sizeof(GIFPackedReg);
-
-					if((++path.curreg & 0xf) == path.tag.nreg) 
-					{
-						path.curreg = 0; 
-						path.tag.nloop--;
-
-						if(path.tag.nloop == 0)
-							break;
-					}
 				}
+				while(path.StepReg() && size > 0);
+
 			break;
 
 			case GIF_FLG_REGLIST:
 
 				size *= 2;
 
-				while(size > 0)
+				do
 				{
 					const int handler = path.GetReg();
 					if(handler >= 0x60 && handler < 0x63)
@@ -374,20 +364,11 @@ __forceinline u32 mtgsThreadObject::_gifTransferDummy( GIF_PATH pathidx, const u
 
 					size--;
 					pMem += 8; //sizeof(GIFReg); -- 64 bits!
-
-					if((++path.curreg & 0xf) == path.tag.nreg) 
-					{
-						path.curreg = 0; 
-						path.tag.nloop--;
-
-						if(path.tag.nloop == 0)
-						{
-							break;
-						}
-					}
 				}
+				while(path.StepReg() && size > 0);
 			
 				if(size & 1) pMem += 8; //sizeof(GIFReg);
+
 				size /= 2;
 
 			break;
@@ -412,16 +393,51 @@ __forceinline u32 mtgsThreadObject::_gifTransferDummy( GIF_PATH pathidx, const u
 
 			}
 		}
-
-		if(eop && ((int)size <= 0 || pathidx == 0))
+		
+		if(path.tag.nloop == 0)
 		{
-			break;
-		}
+			if(path.tag.eop)
+			{
+				if(pathidx != 1)
+				{				
+					break;
+				}
+				/*if((path.tag.nloop > 0 || (!path.tag.eop && path.tag.nloop == 0)) && size == 0)
+				{
+					if(path1loop == true) return size - 0x400;
+					//DevCon::Notice("Looping Nloop %x, Eop %x, FLG %x", params path.tag.nloop, path.tag.eop, path.tag.flg);
+					size = 0x400;
+					pMem -= 0x4000;
+					path1loop = true;
+				}*/
+			} 
+			/*else if(size == 0 && pathidx == 0)
+			{
+				if(path1loop == true) return size - 0x400;
+				//DevCon::Notice("Looping Nloop %x, Eop %x, FLG %x", params path.tag.nloop, path.tag.eop, path.tag.flg);
+				size = 0x400;
+				pMem -= 0x4000;
+				path1loop = true;
+			}*/
+		} 
+		/*else if(size == 0 && pathidx == 0)
+		{
+			if(path1loop == true) return size - 0x400;
+			//DevCon::Notice("Looping Nloop %x, Eop %x, FLG %x", params path.tag.nloop, path.tag.eop, path.tag.flg);
+			size = 0x400;
+			pMem -= 0x4000;
+			path1loop = true;
+		}*/
 	}
 
 	if(pathidx == 0)
 	{
-		if(!path.tag.eop && path.tag.nloop > 0)
+		//If the XGKick has spun around the VU memory end address, we need to INCREASE the size sent.
+		/*if(path1loop == true)
+		{
+			return (size - 0x400); //This will cause a negative making eg. size(20) - retval(-30) = 50;
+		}*/
+		if(size == 0 && path.tag.nloop > 0)
 		{
 			path.tag.nloop = 0;
 			DevCon::Write( "path1 hack! " );
@@ -430,6 +446,23 @@ __forceinline u32 mtgsThreadObject::_gifTransferDummy( GIF_PATH pathidx, const u
 			// along the way (often means curreg was in a bad state or something)
 		}
 	}
+
+	
+	if(pathidx == 2)
+		{
+			if(path.tag.nloop == 0 )
+			{
+				//DevCon::Notice("Finishing Giftag NLoop %d EOP %x Mode %d nregs %d Path3progress %d Vifstat VGW %x", 
+					//params path.tag.nloop, path.tag.eop, path.tag.flg, path.tag.nreg, Path3progress, vif1Regs->stat & VIF1_STAT_VGW);
+				if(path.tag.eop)
+				{
+					Path3progress = STOPPED_MODE;	
+					//GIF_LOG("Set progress NLoop %d EOP %x Mode %d Path3msk %x Path3progress %x ", path.tag.nloop, path.tag.eop, path.tag.flg, vif1Regs->mskpath3, Path3progress);
+				}
+				
+			}
+		
+		}
 #ifdef PCSX2_GSRING_SAMPLING_STATS
 	__asm
 	{
@@ -482,7 +515,7 @@ int mtgsThreadObject::Callback()
 {
 	Console::WriteLn("MTGS > Thread Started, Opening GS Plugin...");
 
-	memcpy_aligned( m_gsMem, PS2MEM_GS, sizeof(m_gsMem) );
+	memcpy_aligned( m_gsMem, PS2MEM_GS, sizeof(PS2MEM_GS) );
 	GSsetBaseMem( m_gsMem );
 	GSirqCallback( NULL );
 	
@@ -497,7 +530,7 @@ int mtgsThreadObject::Callback()
 	
 	Console::WriteLn( "MTGS > GSopen Finished, return code: 0x%x", params m_returncode );
 
-	GSCSRr = 0x551B400F; // 0x55190000
+	GSCSRr = 0x551B4000; // 0x55190000
 	m_post_InitDone.Post();
 	if (m_returncode != 0) { return m_returncode; }		// error msg will be issued to the user by Plugins.c
 
@@ -551,8 +584,8 @@ int mtgsThreadObject::Callback()
 					const u128* data = m_RingBuffer.GetPtr( m_RingPos+1 );
 
 					// make sure that tag>>16 is the MAX size readable
-					//GSgifTransfer1(((u32*)data) - 0x1000 + 4*qsize, 0x4000-qsize*16);
 					GSgifTransfer1((u32*)(data - 0x400 + qsize), 0x4000-qsize*16);
+					//GSgifTransfer1((u32*)data, qsize);
 					ringposinc += qsize;
 				}
 				break;
@@ -727,24 +760,25 @@ void mtgsThreadObject::SendDataPacket()
 	jASSUME( temp <= m_RingBufferSize );
 	temp &= m_RingBufferMask;
 
-#ifdef _DEBUG
-	if( m_packet_ringpos + m_packet_size < m_RingBufferSize )
+	if( IsDebugBuild )
 	{
-		uint readpos = volatize(m_RingPos);
-		if( readpos != m_WritePos )
+		if( m_packet_ringpos + m_packet_size < m_RingBufferSize )
 		{
-			// The writepos should never leapfrog the readpos
-			// since that indicates a bad write.
-			if( m_packet_ringpos < readpos )
-				assert( temp < readpos );
-		}
+			uint readpos = volatize(m_RingPos);
+			if( readpos != m_WritePos )
+			{
+				// The writepos should never leapfrog the readpos
+				// since that indicates a bad write.
+				if( m_packet_ringpos < readpos )
+					assert( temp < readpos );
+			}
 
-		// Updating the writepos should never make it equal the readpos, since
-		// that would stop the buffer prematurely (and indicates bad code in the
-		// ringbuffer manager)
-		assert( readpos != temp );
+			// Updating the writepos should never make it equal the readpos, since
+			// that would stop the buffer prematurely (and indicates bad code in the
+			// ringbuffer manager)
+			assert( readpos != temp );
+		}
 	}
-#endif
 
 	AtomicExchange( m_WritePos, temp );
 
@@ -807,15 +841,16 @@ static u32 GSRingBufCopySz = 0;
 int mtgsThreadObject::PrepDataPacket( GIF_PATH pathidx, const u8* srcdata, u32 size )
 {
 #ifdef PCSX2_GSRING_TX_STATS
-	ringtx_s+=size;
-	ringtx_s_ulg+=size&0x7F;
-	ringtx_s_min=min(ringtx_s_min,size);
-	ringtx_s_max=max(ringtx_s_max,size);
+	ringtx_s += size;
+	ringtx_s_ulg += size&0x7F;
+	ringtx_s_min = min(ringtx_s_min,size);
+	ringtx_s_max = max(ringtx_s_max,size);
 	ringtx_c++;
-	unsigned long tx_sz;
+	u32 tx_sz;
+	
 	if (_BitScanReverse(&tx_sz,size))
 	{
-		unsigned long tx_algn;
+		u32 tx_algn;
 		_BitScanForward(&tx_algn,size);
 		ringtx_inf[tx_sz][tx_algn]++;
 		ringtx_inf_s[tx_sz]+=size;
@@ -875,6 +910,12 @@ int mtgsThreadObject::PrepDataPacket( GIF_PATH pathidx, const u8* srcdata, u32 s
 	// enough room for size - retval:
 	int retval = _gifTransferDummy( pathidx, srcdata, size );
 
+	if(pathidx == 2)
+	{
+		gif->madr += (size - retval) * 16;
+		gif->qwc -= size - retval;
+	}
+	//if(retval < 0) DevCon::Notice("Increasing size from %x to %x path %x", params size, size-retval, pathidx+1);
 	size = size - retval;
 	m_packet_size = size;
 	size++;			// takes into account our command qword.
@@ -1096,7 +1137,7 @@ void mtgsThreadObject::Freeze( SaveState& state )
 
 // this function is needed because of recompiled calls from iGS.cpp
 // (currently used in GCC only)
-void mtgsRingBufSimplePacket( s32 command, u32 data0, u32 data1, u32 data2 )
-{
-	mtgsThread->SendSimplePacket( (GS_RINGTYPE)command, data0, data1, data2 );
-}
+//void mtgsRingBufSimplePacket( s32 command, u32 data0, u32 data1, u32 data2 )
+//{
+//	mtgsThread->SendSimplePacket( (GS_RINGTYPE)command, data0, data1, data2 );
+//}

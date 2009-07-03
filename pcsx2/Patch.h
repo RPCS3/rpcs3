@@ -82,7 +82,6 @@ void patchFunc_comment( char * text1, char * text2 );
 void patchFunc_gametitle( char * text1, char * text2 );
 void patchFunc_patch( char * text1, char * text2 );
 void patchFunc_fastmemory( char * text1, char * text2 );
-void patchFunc_path3hack( char * text1, char * text2 );
 void patchFunc_roundmode( char * text1, char * text2 );
 void patchFunc_zerogs( char * text1, char * text2 );
 void patchFunc_vunanmode( char * text1, char * text2 );
@@ -109,7 +108,6 @@ int AddPatch(int Mode, int Place, int Address, int Size, u64 data);
 
 extern void SetFastMemory(int); // iR5900LoadStore.c
 
-extern bool path3hack;
 //extern int g_VUGameFixes;
 extern int g_ZeroGSOptions;
 extern u32 g_sseMXCSR;

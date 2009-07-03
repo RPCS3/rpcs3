@@ -77,9 +77,17 @@
 #define PS2E_SIO_VERSION  0x0001
 #ifdef COMMONdefs
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 u32   CALLBACK PS2EgetLibType(void);
 u32   CALLBACK PS2EgetLibVersion2(u32 type);
 char* CALLBACK PS2EgetLibName(void);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
 

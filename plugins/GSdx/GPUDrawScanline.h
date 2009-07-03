@@ -34,24 +34,24 @@ class GPUDrawScanline : public GSAlignedClass<16>, public IDrawScanline
 
 	//
 
-	class GPUSetupPrimMap : public GSCodeGeneratorFunctionMap<GPUSetupPrimCodeGenerator, DWORD, SetupPrimStaticPtr>
+	class GPUSetupPrimMap : public GSCodeGeneratorFunctionMap<GPUSetupPrimCodeGenerator, uint32, SetupPrimStaticPtr>
 	{
 		GPUScanlineEnvironment& m_env;
 
 	public:
 		GPUSetupPrimMap(GPUScanlineEnvironment& env);
-		GPUSetupPrimCodeGenerator* Create(DWORD key, void* ptr, size_t maxsize);
+		GPUSetupPrimCodeGenerator* Create(uint32 key, void* ptr, size_t maxsize);
 	} m_sp;
 
 	//
 
-	class GPUDrawScanlineMap : public GSCodeGeneratorFunctionMap<GPUDrawScanlineCodeGenerator, DWORD, DrawScanlineStaticPtr>
+	class GPUDrawScanlineMap : public GSCodeGeneratorFunctionMap<GPUDrawScanlineCodeGenerator, uint32, DrawScanlineStaticPtr>
 	{
 		GPUScanlineEnvironment& m_env;
 
 	public:
 		GPUDrawScanlineMap(GPUScanlineEnvironment& env);
-		GPUDrawScanlineCodeGenerator* Create(DWORD key, void* ptr, size_t maxsize);
+		GPUDrawScanlineCodeGenerator* Create(uint32 key, void* ptr, size_t maxsize);
 	} m_ds;
 
 protected:

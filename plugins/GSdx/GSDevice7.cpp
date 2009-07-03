@@ -32,9 +32,9 @@ GSDevice7::~GSDevice7()
 {
 }
 
-bool GSDevice7::Create(HWND hWnd, bool vsync)
+bool GSDevice7::Create(GSWnd* wnd, bool vsync)
 {
-	if(!__super::Create(hWnd, vsync))
+	if(!__super::Create(wnd, vsync))
 	{
 		return false;
 	}
@@ -43,6 +43,8 @@ bool GSDevice7::Create(HWND hWnd, bool vsync)
 	{
 		return false;
 	}
+
+	HWND hWnd = (HWND)m_wnd->GetHandle();
 
 	// TODO: fullscreen
 
@@ -73,7 +75,7 @@ bool GSDevice7::Create(HWND hWnd, bool vsync)
 		return false;
 	}
 
-	Reset(1, 1, true);
+	Reset(1, 1, false);
 
 	return true;
 }
@@ -82,8 +84,6 @@ bool GSDevice7::Reset(int w, int h, bool fs)
 {
 	if(!__super::Reset(w, h, fs))
 		return false;
-
-	m_backbuffer = NULL;
 
     DDSURFACEDESC2 desc;
 
@@ -95,10 +95,14 @@ bool GSDevice7::Reset(int w, int h, bool fs)
 	desc.dwWidth = w;
 	desc.dwHeight = h;
 
-	if(FAILED(m_dd->CreateSurface(&desc, &m_backbuffer, NULL)))
+	CComPtr<IDirectDrawSurface7> backbuffer;
+
+	if(FAILED(m_dd->CreateSurface(&desc, &backbuffer, NULL)))
 	{
 		return false;
 	}
+
+	m_backbuffer = new GSTexture7(GSTexture::RenderTarget, backbuffer);
 
 	CComPtr<IDirectDrawClipper> clipper;
 
@@ -112,7 +116,7 @@ bool GSDevice7::Reset(int w, int h, bool fs)
 
 		HRGN hrgn = CreateRectRgn(0, 0, w, h);
 
-		BYTE buff[1024];
+		uint8 buff[1024];
 
 		GetRegionData(hrgn, sizeof(buff), (RGNDATA*)buff);
 		
@@ -120,7 +124,7 @@ bool GSDevice7::Reset(int w, int h, bool fs)
 
 		clipper->SetClipList((RGNDATA*)buff, 0);
 
-		if(FAILED(m_backbuffer->SetClipper(clipper)))
+		if(FAILED(backbuffer->SetClipper(clipper)))
 		{
 			return false;
 		}
@@ -129,23 +133,18 @@ bool GSDevice7::Reset(int w, int h, bool fs)
 	return true;
 }
 
-void GSDevice7::Present(const CRect& r)
+void GSDevice7::Present(const GSVector4i& r, int shader)
 {
 	HRESULT hr;
 
-	CRect cr;
-	GetClientRect(m_hWnd, &cr);
+	GSVector4i cr = m_wnd->GetClientRect();
 
-    DDSURFACEDESC2 desc;
-	memset(&desc, 0, sizeof(desc));
-	desc.dwSize = sizeof(desc);
-
-	hr = m_backbuffer->GetSurfaceDesc(&desc);
-
-	if(desc.dwWidth != cr.Width() || desc.dwHeight != cr.Height())
+	if(m_backbuffer->GetWidth() != cr.width() || m_backbuffer->GetHeight() != cr.height())
 	{
-		Reset(cr.Width(), cr.Height(), false);
+		Reset(cr.width(), cr.height(), false);
 	}
+
+	CComPtr<IDirectDrawSurface7> backbuffer = *(GSTexture7*)m_backbuffer;
 
 	DDBLTFX fx;
 	
@@ -154,22 +153,24 @@ void GSDevice7::Present(const CRect& r)
 	fx.dwSize = sizeof(fx);
 	fx.dwFillColor = 0;
 
-	hr = m_backbuffer->Blt(NULL, NULL, NULL, DDBLT_WAIT | DDBLT_COLORFILL, &fx);
+	hr = backbuffer->Blt(NULL, NULL, NULL, DDBLT_WAIT | DDBLT_COLORFILL, &fx);
 
-	CRect r2 = r;
+	GSVector4i r2 = r;
 
-	hr = m_backbuffer->Blt(&r2, m_merge, NULL, DDBLT_WAIT, NULL);
+	hr = backbuffer->Blt(r2, *(GSTexture7*)m_merge, NULL, DDBLT_WAIT, NULL);
+
+	// if ClearRenderTarget was implemented the parent class could handle these tasks until this point
 
 	r2 = cr;
 
-	MapWindowPoints(m_hWnd, HWND_DESKTOP, (POINT*)&r2, 2);
+	MapWindowPoints((HWND)m_wnd->GetHandle(), HWND_DESKTOP, (POINT*)&r2, 2);
 	
 	if(m_vsync)
 	{
 		hr = m_dd->WaitForVerticalBlank(DDWAITVB_BLOCKBEGIN, NULL);
 	}
 
-	hr = m_primary->Blt(&r2, m_backbuffer, &cr, DDBLT_WAIT, NULL);
+	hr = m_primary->Blt(r2, backbuffer, cr, DDBLT_WAIT, NULL);
 
 	if(hr == DDERR_SURFACELOST)
 	{
@@ -183,11 +184,9 @@ void GSDevice7::Present(const CRect& r)
 	}
 }
 
-bool GSDevice7::Create(int type, Texture& t, int w, int h, int format)
+GSTexture* GSDevice7::Create(int type, int w, int h, int format)
 {
 	HRESULT hr;
-
-	t = Texture();
 
 	DDSURFACEDESC2 desc;
 	
@@ -206,6 +205,8 @@ bool GSDevice7::Create(int type, Texture& t, int w, int h, int format)
 	desc.ddpfPixelFormat.dwGBitMask = 0x0000ff00;
 	desc.ddpfPixelFormat.dwBBitMask = 0x000000ff;
 
+	GSTexture7* t = NULL;
+
 	CComPtr<IDirectDrawSurface7> system, video;
 
 	switch(type)
@@ -217,25 +218,25 @@ bool GSDevice7::Create(int type, Texture& t, int w, int h, int format)
 		if(FAILED(hr = m_dd->CreateSurface(&desc, &system, NULL))) return false;
 		desc.ddsCaps.dwCaps = DDSCAPS_TEXTURE | DDSCAPS_VIDEOMEMORY;
 		if(FAILED(hr = m_dd->CreateSurface(&desc, &video, NULL))) return false;
-		t = Texture(type, system, video);
+		t = new GSTexture7(type, system, video);
 		break;
 	case GSTexture::Offscreen:
 		desc.ddsCaps.dwCaps = DDSCAPS_OFFSCREENPLAIN | DDSCAPS_VIDEOMEMORY;
 		if(FAILED(hr = m_dd->CreateSurface(&desc, &system, NULL))) return false;
-		t = Texture(type, system);
+		t = new GSTexture7(type, system);
 		break;
 	}
 
-	return !!t;
+	return t;
 }
 
-void GSDevice7::DoMerge(Texture* st, GSVector4* sr, GSVector4* dr, Texture& dt, bool slbg, bool mmod, GSVector4& c)
+void GSDevice7::DoMerge(GSTexture* st[2], GSVector4* sr, GSVector4* dr, GSTexture* dt, bool slbg, bool mmod, const GSVector4& c)
 {
 	HRESULT hr;
 
-	hr = dt->Blt(NULL, st[0], NULL, DDBLT_WAIT, NULL);
+	hr = (*(GSTexture7*)dt)->Blt(NULL, *(GSTexture7*)st[0], NULL, DDBLT_WAIT, NULL);
 }
 
-void GSDevice7::DoInterlace(Texture& st, Texture& dt, int shader, bool linear, float yoffset)
+void GSDevice7::DoInterlace(GSTexture* st, GSTexture* dt, int shader, bool linear, float yoffset)
 {
 }

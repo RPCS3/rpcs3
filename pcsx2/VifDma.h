@@ -18,6 +18,20 @@
 #ifndef __VIFDMA_H__
 #define __VIFDMA_H__
 
+enum VifModes
+{
+	VIF_NORMAL_MODE = 0,
+	VIF_NORMAL_MEM_MODE = 1,
+	VIF_CHAIN_MODE = 2
+};
+
+enum Path3Modes //0 = Image Mode (DirectHL), 1 = transferring, 2 = Stopped at End of Packet
+{
+	IMAGE_MODE = 0,
+	TRANSFER_MODE = 1,
+	STOPPED_MODE = 2
+};
+
 struct vifCode {
    u32 addr;
    u32 size;
@@ -47,7 +61,8 @@ struct vifStruct {
 };
 
 extern vifStruct vif0, vif1;
-extern bool Path3transfer;
+extern Path3Modes Path3progress;
+extern u8 schedulepath3msk;
 
 void __fastcall UNPACK_S_32( u32 *dest, u32 *data, int size );
 
@@ -88,6 +103,7 @@ void vif0Init();
 void vif1Init();
 extern void  vif0Interrupt();
 extern void  vif1Interrupt();
+extern void Vif1MskPath3();
 
 void vif0Write32(u32 mem, u32 value);
 void vif1Write32(u32 mem, u32 value);
