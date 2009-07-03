@@ -175,9 +175,14 @@ protected:
 	uint m_RingPos;		// cur pos gs is reading from
 	uint m_WritePos;	// cur pos ee thread is writing to
 
-	Threading::Semaphore m_post_InitDone;	// used to regulate thread startup and gsInit
-	Threading::MutexLock m_lock_RingRestart;
+	// used to regulate thread startup and gsInit
+	Threading::Semaphore m_post_InitDone;
 
+	Threading::MutexLock m_lock_RingRestart;
+	
+	// used to keep multiple threads from sending packets to the ringbuffer concurrently.
+	Threading::MutexLock m_PacketLocker;
+	
 	// Used to delay the sending of events.  Performance is better if the ringbuffer
 	// has more than one command in it when the thread is kicked.
 	int m_CopyCommandTally;

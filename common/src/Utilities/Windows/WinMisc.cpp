@@ -16,24 +16,24 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
  
-#include "PrecompiledHeader.h"
+#include "../PrecompiledHeader.h"
+#include "RedtapeWindows.h"
 
-#include <ctype.h>
-#include <time.h>
-#include <sys/time.h>
+static LARGE_INTEGER lfreq;
 
 void InitCPUTicks()
 {
+	QueryPerformanceFrequency( &lfreq );
 }
 
 u64 GetTickFrequency()
 {
-	return 1000000;		// unix measures in microseconds
+	return lfreq.QuadPart;
 }
 
 u64 GetCPUTicks()
 {
-	struct timeval t;
-	gettimeofday(&t, NULL);
-	return ((u64)t.tv_sec*GetTickFrequency())+t.tv_usec;
+	LARGE_INTEGER count;
+	QueryPerformanceCounter( &count );
+	return count.QuadPart;
 }

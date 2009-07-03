@@ -32,10 +32,6 @@ public:
 	static bool HasSharedBits(uint32 sbp, uint32 spsm, uint32 dbp, uint32 dpsm);
 	static bool HasCompatibleBits(uint32 spsm, uint32 dpsm);
 
-	static bool IsRectInRect(const GSVector4i& inner, const GSVector4i& outer);
-	static bool IsRectInRectH(const GSVector4i& inner, const GSVector4i& outer);
-	static bool IsRectInRectV(const GSVector4i& inner, const GSVector4i& outer);
-	
 	static uint32 EncodePSM(uint32 psm)
 	{
 		switch(psm)

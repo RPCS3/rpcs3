@@ -612,7 +612,7 @@ mVUop(mVU_IADD) {
 }
 
 mVUop(mVU_IADDI) {
-	pass1 { mVUanalyzeIALU2(mVU, _Is_, _It_); }
+	pass1 { mVUanalyzeIADDI(mVU, _Is_, _It_, _Imm5_); }
 	pass2 { 
 		mVUallocVIa(mVU, gprT1, _Is_);
 		ADD16ItoR(gprT1, _Imm5_);
@@ -622,7 +622,7 @@ mVUop(mVU_IADDI) {
 }
 
 mVUop(mVU_IADDIU) {
-	pass1 { mVUanalyzeIALU2(mVU, _Is_, _It_); }
+	pass1 { mVUanalyzeIADDI(mVU, _Is_, _It_, _Imm15_); }
 	pass2 { 
 		mVUallocVIa(mVU, gprT1, _Is_);
 		ADD16ItoR(gprT1, _Imm15_);
@@ -1127,7 +1127,7 @@ mVUop(mVU_B) {
 
 mVUop(mVU_BAL) {
 	setBranchA(2, _It_);
-	pass1 { analyzeVIreg2(_It_, mVUlow.VI_write, 1); }
+	pass1 { analyzeVIreg2(_It_, mVUlow.VI_write, 1); setConstReg(_It_, bSaveAddr); }
 	pass2 {
 		MOV32ItoR(gprT1, bSaveAddr);
 		mVUallocVIb(mVU, gprT1, _It_);
@@ -1207,24 +1207,28 @@ mVUop(mVU_IBNE) {
 
 mVUop(mVU_JR) {
 	mVUbranch = 9;
-	pass1 { analyzeVIreg1(_Is_, mVUlow.VI_read[0]); }
+	pass1 { mVUanalyzeJump(mVU, _Is_, 0, 0); }
 	pass2 {
-		mVUallocVIa(mVU, gprT1, _Is_);
-		SHL32ItoR(gprT1, 3);
-		AND32ItoR(gprT1, isVU1 ? 0x3ff8 : 0xff8);
-		MOV32RtoM((uptr)&mVU->branch, gprT1);
+		if (!mVUlow.constJump.isValid) {
+			mVUallocVIa(mVU, gprT1, _Is_);
+			SHL32ItoR(gprT1, 3);
+			AND32ItoR(gprT1, mVU->microMemSize - 8);
+			MOV32RtoM((uptr)&mVU->branch, gprT1);
+		}
 	}
 	pass3 { mVUlog("JR [vi%02d]", _Fs_); }
 }
 
 mVUop(mVU_JALR) {
 	mVUbranch = 10;
-	pass1 { analyzeVIreg1(_Is_, mVUlow.VI_read[0]); analyzeVIreg2(_It_, mVUlow.VI_write, 1); }
+	pass1 { mVUanalyzeJump(mVU, _Is_, _It_, 1); }
 	pass2 {
-		mVUallocVIa(mVU, gprT1, _Is_);
-		SHL32ItoR(gprT1, 3);
-		AND32ItoR(gprT1, isVU1 ? 0x3ff8 : 0xff8);
-		MOV32RtoM((uptr)&mVU->branch, gprT1);
+		if (!mVUlow.constJump.isValid) {
+			mVUallocVIa(mVU, gprT1, _Is_);
+			SHL32ItoR(gprT1, 3);
+			AND32ItoR(gprT1, mVU->microMemSize - 8);
+			MOV32RtoM((uptr)&mVU->branch, gprT1);
+		}
 		MOV32ItoR(gprT1, bSaveAddr);
 		mVUallocVIb(mVU, gprT1, _It_);
 	}

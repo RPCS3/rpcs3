@@ -197,6 +197,7 @@ mtgsThreadObject::mtgsThreadObject() :
 
 ,	m_post_InitDone()
 ,	m_lock_RingRestart()
+,	m_PacketLocker( true )		// true - makes it a recursive lock
 
 ,	m_CopyCommandTally( 0 )
 ,	m_CopyDataTally( 0 )
@@ -712,14 +713,12 @@ int mtgsThreadObject::Callback()
 void mtgsThreadObject::WaitGS()
 {
 	// Freeze registers because some kernel code likes to destroy them
-	FreezeRegs(1);
 	SetEvent();
 	while( volatize(m_RingPos) != volatize(m_WritePos) )
 	{
 		Timeslice();
 		//SpinWait();
 	}
-	FreezeRegs(0);
 }
 
 // Sets the gsEvent flag and releases a timeslice.
@@ -733,8 +732,6 @@ void mtgsThreadObject::SetEvent()
 
 void mtgsThreadObject::PrepEventWait()
 {
-	// Freeze registers because some kernel code likes to destroy them
-	FreezeRegs(1);
 	//Console::Notice( "MTGS Stall!  EE waits for nothing! ... except your GPU sometimes." );
 	SetEvent();
 	Timeslice();
@@ -742,7 +739,6 @@ void mtgsThreadObject::PrepEventWait()
 
 void mtgsThreadObject::PostEventWait() const
 {
-	FreezeRegs(0);
 }
 
 u8* mtgsThreadObject::GetDataPacketPtr() const
@@ -784,29 +780,29 @@ void mtgsThreadObject::SendDataPacket()
 
 	m_packet_size = 0;
 
-	if( m_RingBufferIsBusy ) return;
-
-	// The ringbuffer is current in a resting state, so if enough copies have
-	// queued up then go ahead and initiate the GS thread..
-	
-	// Optimization notes:  What we're doing here is initiating a "burst" mode on
-	// the thread, which improves its cache hit performance and makes it more friendly
-	// to other threads in Pcsx2 and such.  Primary is the Command Tally, and then a 
-	// secondary data size threshold for games that do lots of texture swizzling.
-	
-	// 16 was the best value I found so far.
-	// tested values:
-	//  24 - very slow on HT machines (+5% drop in fps)
-	//  8 - roughly 2% slower on HT machines.
-
-	m_CopyDataTally += m_packet_size;
-	if( ( m_CopyDataTally > 0x8000 ) || ( ++m_CopyCommandTally > 16 ) )
+	if( !m_RingBufferIsBusy )
 	{
-		FreezeRegs(1);
-		//Console::Status( "MTGS Kick! DataSize : 0x%5.8x, CommandTally : %d", m_CopyDataTally, m_CopyCommandTally );
-		SetEvent();
-		FreezeRegs(0);
+		// The ringbuffer is current in a resting state, so if enough copies have
+		// queued up then go ahead and initiate the GS thread..
+		
+		// Optimization notes:  What we're doing here is initiating a "burst" mode on
+		// the thread, which improves its cache hit performance and makes it more friendly
+		// to other threads in Pcsx2 and such.  Primary is the Command Tally, and then a 
+		// secondary data size threshold for games that do lots of texture swizzling.
+		
+		// 16 was the best value I found so far.
+		// tested values:
+		//  24 - very slow on HT machines (+5% drop in fps)
+		//  8 - roughly 2% slower on HT machines.
+
+		m_CopyDataTally += m_packet_size;
+		if( ( m_CopyDataTally > 0x8000 ) || ( ++m_CopyCommandTally > 16 ) )
+		{
+			//Console::Status( "MTGS Kick! DataSize : 0x%5.8x, CommandTally : %d", m_CopyDataTally, m_CopyCommandTally );
+			SetEvent();
+		}
 	}
+	//m_PacketLocker.Unlock();
 }
 
 int mtgsThreadObject::PrepDataPacket( GIF_PATH pathidx, const u64* srcdata, u32 size )
@@ -840,6 +836,8 @@ static u32 GSRingBufCopySz = 0;
 //  size - size of the packet data, in smd128's
 int mtgsThreadObject::PrepDataPacket( GIF_PATH pathidx, const u8* srcdata, u32 size )
 {
+	//m_PacketLocker.Lock();
+
 #ifdef PCSX2_GSRING_TX_STATS
 	ringtx_s += size;
 	ringtx_s_ulg += size&0x7F;
@@ -1064,6 +1062,8 @@ __forceinline void mtgsThreadObject::_FinishSimplePacket( uint future_writepos )
 
 void mtgsThreadObject::SendSimplePacket( GS_RINGTYPE type, int data0, int data1, int data2 )
 {
+	//ScopedLock locker( m_PacketLocker );
+
 	const uint thefuture = _PrepForSimplePacket();
 	PacketTagType& tag = (PacketTagType&)m_RingBuffer[m_WritePos];
 
@@ -1072,11 +1072,13 @@ void mtgsThreadObject::SendSimplePacket( GS_RINGTYPE type, int data0, int data1,
 	tag.data[1] = data1;
 	tag.data[2] = data2;
 
-	_FinishSimplePacket( thefuture );	
+	_FinishSimplePacket( thefuture );
 }
 
 void mtgsThreadObject::SendPointerPacket( GS_RINGTYPE type, u32 data0, void* data1 )
 {
+	//ScopedLock locker( m_PacketLocker );
+
 	const uint thefuture = _PrepForSimplePacket();
 	PacketTagType& tag = (PacketTagType&)m_RingBuffer[m_WritePos];
 

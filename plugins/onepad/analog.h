@@ -1,5 +1,8 @@
-/*  Pcsx2 - Pc Ps2 Emulator
- *  Copyright (C) 2002-2009  Pcsx2 Team
+/*  OnePAD - author: arcum42(@gmail.com)
+ *  Copyright (C) 2009
+ *
+ *  Based on ZeroPAD, author zerofrog@gmail.com
+ *  Copyright (C) 2006-2007
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -13,27 +16,21 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
  
-#include "PrecompiledHeader.h"
-#include "RedtapeWindows.h"
-
-static LARGE_INTEGER lfreq;
-
-void InitCPUTicks()
+ #define NUM_OF_PADS 2
+ 
+ #include "onepad.h"
+ namespace Analog
 {
-	QueryPerformanceFrequency( &lfreq );
-}
-
-u64 GetTickFrequency()
-{
-	return lfreq.QuadPart;
-}
-
-u64 GetCPUTicks()
-{
-	LARGE_INTEGER count;
-	QueryPerformanceCounter( &count );
-	return count.QuadPart;
+	extern void Init();
+	extern u8 Pad(int padvalue, u8 i);
+	extern void SetPad(int padvalue, u8 i, u8 value);
+	extern void InvertPad(int padvalue, u8 i);
+	extern bool RevertPad(u8 padvalue);
+	extern void ResetPad(int padvalue, u8 i);
+	extern void ConfigurePad(int padvalue, u8 i, int value);
+	extern int KeypadToPad(u8 keypress);
+	extern int AnalogToPad(int padvalue);
 }

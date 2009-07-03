@@ -48,11 +48,19 @@ microVUt(void) mVUinit(VURegs* vuRegsPtr, int vuIndex) {
 	mVU->cache		  = NULL;
 	mVU->cacheSize	  = mVUcacheSize;
 	mVU->prog.max	  = mMaxProg - 1;
+	mVU->prog.prog	  = (microProgram*)_aligned_malloc(sizeof(microProgram)*(mVU->prog.max+1), 64);
 	mVUprint((vuIndex) ? "microVU1: init" : "microVU0: init");
 
 	mVU->cache = SysMmapEx((vuIndex ? 0x5f240000 : 0x5e240000), mVU->cacheSize + 0x1000, 0, (vuIndex ? "Micro VU1" : "Micro VU0"));
 	if (!mVU->cache) throw Exception::OutOfMemory(L"microVU Error: Failed to allocate recompiler memory!");
-
+	
+	memset(mVU->cache, 0xcc, mVU->cacheSize + 0x1000);
+	memset(mVU->prog.prog, 0, sizeof(microProgram)*(mVU->prog.max+1));
+	
+	// Setup Entrance/Exit Points
+	x86SetPtr(mVU->cache);
+	mVUdispatcherA(mVU);
+	mVUdispatcherB(mVU);
 	mVUemitSearch();
 	mVUreset(mVU);
 }
@@ -63,16 +71,8 @@ microVUt(void) mVUreset(mV) {
 	mVUprint((mVU->index) ? "microVU1: reset" : "microVU0: reset");
 	mVUclose(mVU, 1);
 
-	// Dynarec Cache
-	memset(mVU->cache, 0xcc, mVU->cacheSize + 0x1000);
-
-	// Setup Entrance/Exit Points
-	x86SetPtr(mVU->cache);
-	mVUdispatcherA(mVU);
-	mVUdispatcherB(mVU);
-
 	// Clear All Program Data
-	memset(&mVU->prog, 0, sizeof(mVU->prog));
+	//memset(&mVU->prog, 0, sizeof(mVU->prog));
 	memset(&mVU->prog.lpState, 0, sizeof(mVU->prog.lpState));
 
 	// Program Variables
@@ -81,15 +81,14 @@ microVUt(void) mVUreset(mV) {
 	mVU->prog.cur	  = -1;
 	mVU->prog.total	  = -1;
 	mVU->prog.max	  = mMaxProg - 1;
-	mVU->prog.prog = (microProgram*)_aligned_malloc(sizeof(microProgram)*(mVU->prog.max+1), 64);
 
 	// Setup Dynarec Cache Limits for Each Program
 	u8* z = (mVU->cache + 0x1000); // Dispatcher Code is in first page of cache
+	mVU->prog.x86start	= z;
+	mVU->prog.x86ptr	= z;
+	mVU->prog.x86end	= (u8*)((uptr)z + (uptr)(mVU->cacheSize - (mVU->cacheSize*.05)));
+
 	for (int i = 0; i <= mVU->prog.max; i++) {
-		mVU->prog.prog[i].x86start = z;
-		mVU->prog.prog[i].x86ptr = z;
-		z += (mVU->cacheSize / (mVU->prog.max + 1));
-		mVU->prog.prog[i].x86end = z;
 		for (int j = 0; j <= mVU->prog.prog[i].ranges.max; j++) {
 			mVU->prog.prog[i].ranges.range[j][0] = -1; // Set range to 
 			mVU->prog.prog[i].ranges.range[j][1] = -1; // indeterminable status
@@ -112,7 +111,7 @@ microVUt(void) mVUclose(mV, bool isReset) {
 				microBlockManager::Delete(mVU->prog.prog[i].block[j]);
 			}
 		}
-		if (!isReset) { _aligned_free(mVU->prog.prog); }
+		if (!isReset) safe_aligned_free(mVU->prog.prog);
 	}
 }
 
@@ -133,14 +132,14 @@ microVUf(void) mVUclearProg(int progIndex) {
 	microVU* mVU = mVUx;
 	mVUprogI.used	   = 1;
 	mVUprogI.last_used = 3;
-	mVUprogI.x86ptr	   = mVUprogI.x86start;
 	for (int j = 0; j <= mVUprogI.ranges.max; j++) {
 		mVUprogI.ranges.range[j][0]	= -1; // Set range to 
 		mVUprogI.ranges.range[j][1]	= -1; // indeterminable status
 		mVUprogI.ranges.total		= -1;
 	}
 	for (u32 i = 0; i < (mVU->progSize / 2); i++) {
-		if (mVUprogI.block[i]) mVUprogI.block[i]->reset();
+		//if (mVUprogI.block[i]) { mVUprogI.block[i]->reset(); }
+		microBlockManager::Delete(mVUprogI.block[i]);
 	}
 }
 
@@ -151,6 +150,7 @@ microVUf(void) mVUcacheProg(int progIndex) {
 	mVUdumpProg(progIndex);
 }
 
+#define aWrap(x, nMax) ((x > nMax) ? 0 : x)
 // Finds the least used program, (if program list full clears and returns an old program; if not-full, returns free program)
 microVUf(int) mVUfindLeastUsedProg() {
 	microVU* mVU = mVUx;
@@ -163,22 +163,48 @@ microVUf(int) mVUfindLeastUsedProg() {
 		return mVU->prog.total;
 	}
 	else {
-	
-		const int pMax	=  mVU->prog.max;
-		int smallidx	= (mVU->prog.cur+1)&pMax;
-		u64 smallval	=  mVU->prog.prog[smallidx].used;
+/*
+		const int pMax	= mVU->prog.max;
+		int smallidx	= aWrap((mVU->prog.cur+1), pMax);
+		u64 smallval	= mVU->prog.prog[smallidx].used;
 
-		for (int i = 1, j = (smallidx+1)&pMax; i <= pMax; i++, j=(j+1)&pMax) {
+		for (int i = 1, j = aWrap((smallidx+1), pMax); i <= pMax; i++, aWrap((j+1), pMax)) {
 			if (smallval > mVU->prog.prog[j].used) {
 				smallval = mVU->prog.prog[j].used;
 				smallidx = j;
 			}
 		}
-
+		//smallidx = rand() % 200;
 		mVUclearProg<vuIndex>(smallidx); // Clear old data if overwriting old program
 		mVUcacheProg<vuIndex>(smallidx); // Cache Micro Program
 		//Console::Notice("microVU%d: Overwriting existing program in slot %d [%d times used]", params vuIndex, smallidx, smallval);
+		
 		return smallidx;
+*/
+
+/*
+		static int smallidx = 0;
+		const int pMax	= mVU->prog.max;
+		smallidx = aWrap((smallidx+1), pMax);
+		mVUclearProg<vuIndex>(smallidx); // Clear old data if overwriting old program
+		mVUcacheProg<vuIndex>(smallidx); // Cache Micro Program
+		//Console::Notice("microVU%d: Overwriting existing program in slot %d [%d times used]", params vuIndex, smallidx, smallval);	
+		return smallidx;
+*/
+
+		//mVUreset(mVU);
+		mVU->prog.x86ptr = mVU->prog.x86start;
+		for (int z = 0; z <= mVU->prog.max; z++) {
+			mVUclearProg<vuIndex>(z);
+			mVU->prog.prog[z].used		= 0;
+			mVU->prog.prog[z].last_used	= 0;
+		}
+		mVU->prog.total = 0;
+		mVUcacheProg<vuIndex>(mVU->prog.total); // Cache Micro Program
+		mVU->prog.prog[mVU->prog.total].used = 1;
+		mVU->prog.prog[mVU->prog.total].last_used = 3;
+		Console::Notice("microVU%d: Cached MicroPrograms = %d", params vuIndex, mVU->prog.total+1);
+		return mVU->prog.total;
 	}
 }
 
@@ -208,6 +234,8 @@ microVUt(void) mVUvsyncUpdate(mV) {
 microVUf(bool) mVUcmpPartial(int progIndex) {
 	microVU* mVU = mVUx;
 	for (int i = 0; i <= mVUprogI.ranges.total; i++) {
+		if ((mVUprogI.ranges.range[i][0] < 0)
+		||  (mVUprogI.ranges.range[i][1] < 0)) { DevCon::Error("microVU%d: Negative Range![%d][%d]", params mVU->index, i, mVUprogI.ranges.total); }
 		if (memcmp_mmx(cmpOffset(mVUprogI.data), cmpOffset(mVU->regs->Micro), ((mVUprogI.ranges.range[i][1] + 8) - mVUprogI.ranges.range[i][0]))) {
 			return 0;
 		}

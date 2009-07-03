@@ -173,6 +173,7 @@ void __fastcall WriteFIFO_page_6(u32 mem, const mem128_t *value)
 	psHu64(0x6000) = value[0];
 	psHu64(0x6008) = value[1];
 
+	FreezeRegs(1);
 	if( mtgsThread != NULL )
 	{
 		const uint count = mtgsThread->PrepDataPacket( GIF_PATH_3, value, 1 );
@@ -184,10 +185,9 @@ void __fastcall WriteFIFO_page_6(u32 mem, const mem128_t *value)
 	}
 	else
 	{
-		FreezeRegs(1);
 		GSGIFTRANSFER3((u32*)value, 1);
-		FreezeRegs(0);
 	}
+	FreezeRegs(0);
 }
 		
 void __fastcall WriteFIFO_page_7(u32 mem, const mem128_t *value)

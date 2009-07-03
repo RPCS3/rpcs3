@@ -1896,6 +1896,7 @@ static int __fastcall Vif1TransDirectHL(u32 *data)
 			}
 		}
 
+		FreezeRegs(1);
 		if (mtgsThread != NULL)
 		{
 			// copy 16 bytes the fast way:
@@ -1910,10 +1911,9 @@ static int __fastcall Vif1TransDirectHL(u32 *data)
 		}
 		else
 		{
-			FreezeRegs(1);
 			GSGIFTRANSFER2((u32*)splittransfer[0], 1);
-			FreezeRegs(0);
 		}
+		FreezeRegs(0);
 
 		if (vif1.tag.size == 0) vif1.cmd = 0;
 		splitptr = 0;
@@ -1945,6 +1945,7 @@ static int __fastcall Vif1TransDirectHL(u32 *data)
 
 	//TODO: ret is guaranteed to be qword aligned ?
 
+	FreezeRegs(1);
 	if (mtgsThread != NULL)
 	{
 		//unaligned copy.VIF handling is -very- messy, so i'l use this code til i fix it :)
@@ -1955,10 +1956,9 @@ static int __fastcall Vif1TransDirectHL(u32 *data)
 	}
 	else
 	{
-		FreezeRegs(1);
 		GSGIFTRANSFER2(data, (ret >> 2));
-		FreezeRegs(0);
 	}
+	FreezeRegs(0);
 
 	return ret;
 }
@@ -2569,14 +2569,14 @@ __forceinline void vif1Interrupt()
 		}
 	}
 
-	if (vif1.inprogress) 
+	if (vif1.inprogress & 0x1) 
 	{
 		_VIF1chain();
 		CPU_INT(1, g_vifCycles);
 		return;
 	}
 
-	if ((!vif1.done) || (vif1.inprogress & 0x1))
+	if (!vif1.done)
 	{
 
 		if (!(psHu32(DMAC_CTRL) & 0x1))

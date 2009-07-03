@@ -60,6 +60,7 @@ namespace Threading
 		pthread_mutex_t mutex;
 
 		MutexLock();
+		MutexLock( bool isRecursive );
 		~MutexLock();
 
 		void Lock();

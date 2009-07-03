@@ -193,20 +193,25 @@ public:
 
 		GSTextureFX::PSConstantBuffer ps_cb;
 
-		ps_cb.FogColor_AREF = GSVector4((int)env.FOGCOL.FCR, (int)env.FOGCOL.FCG, (int)env.FOGCOL.FCB, (int)context->TEST.AREF) / 255;
+		ps_cb.FogColor_AREF = GSVector4((int)env.FOGCOL.FCR, (int)env.FOGCOL.FCG, (int)env.FOGCOL.FCB, 0) / 255;
 
-		if(ps_sel.atst == 2 || ps_sel.atst == 5)
+		switch(ps_sel.atst)
 		{
-			ps_cb.FogColor_AREF.a -= 0.9f / 255;
-		}
-		else if(ps_sel.atst == 3 || ps_sel.atst == 6)
-		{
-			ps_cb.FogColor_AREF.a += 0.9f / 255;
+		case ATST_LESS:
+			ps_cb.FogColor_AREF.a = (float)((int)context->TEST.AREF - 1);
+			break;
+		case ATST_GREATER:
+			ps_cb.FogColor_AREF.a = (float)((int)context->TEST.AREF + 1);
+			break;
+		default:
+			ps_cb.FogColor_AREF.a = (float)(int)context->TEST.AREF;
+			break;
 		}
 
 		if(tex)
 		{
 			ps_sel.bpp = tex->m_bpp;
+			ps_sel.rt = tex->m_target;
 
 			int w = tex->m_texture->GetWidth();
 			int h = tex->m_texture->GetHeight();
@@ -299,6 +304,19 @@ public:
 			static const uint32 iatst[] = {1, 0, 5, 6, 7, 2, 3, 4};
 
 			ps_sel.atst = iatst[ps_sel.atst];
+
+			switch(ps_sel.atst)
+			{
+			case ATST_LESS:
+				ps_cb.FogColor_AREF.a = (float)((int)context->TEST.AREF - 1);
+				break;
+			case ATST_GREATER:
+				ps_cb.FogColor_AREF.a = (float)((int)context->TEST.AREF + 1);
+				break;
+			default:
+				ps_cb.FogColor_AREF.a = (float)(int)context->TEST.AREF;
+				break;
+			}
 
 			m_tfx->UpdatePS(ps_sel, &ps_cb, ps_ssel);
 

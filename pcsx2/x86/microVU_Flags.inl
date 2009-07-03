@@ -265,7 +265,10 @@ void mVUflagPass(mV, u32 startPC, u32 xCount) {
 // Checks if the first 4 instructions of a block will read flags
 microVUt(void) mVUsetFlagInfo(mV) {
 	branchType1 { incPC(-1); mVUflagPass(mVU, branchAddr, 4); incPC(1); }
-	branchType2 { mVUflagInfo |= 0xfff; }
+	branchType2 { 
+		if (!mVUlow.constJump.isValid) { mVUflagInfo |= 0xfff; } 
+		else { mVUflagPass(mVU, mVUlow.constJump.regValue, 4); }
+	}
 	branchType3 {
 		incPC(-1); 
 		mVUflagPass(mVU, branchAddr, 4);

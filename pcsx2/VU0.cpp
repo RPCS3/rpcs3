@@ -178,8 +178,7 @@ void CTC2() {
 			break;
 		case REG_CMSAR1: // REG_CMSAR1
 			if (!(VU0.VI[REG_VPU_STAT].UL & 0x100) ) {
-				VU1.VI[REG_TPC].UL = cpuRegs.GPR.r[_Rt_].US[0];
-				vu1ExecMicro(VU1.VI[REG_TPC].UL);	// Execute VU1 Micro SubRoutine
+				vu1ExecMicro(cpuRegs.GPR.r[_Rt_].US[0]);	// Execute VU1 Micro SubRoutine
 			}
 			break;
 		default:

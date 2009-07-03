@@ -1,0 +1,82 @@
+/*  OnePAD - author: arcum42(@gmail.com)
+ *  Copyright (C) 2009
+ *
+ *  Based on ZeroPAD, author zerofrog@gmail.com
+ *  Copyright (C) 2006-2007
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
+#ifndef __CONTROLLER_H__
+#define __CONTROLLER_H__
+
+#ifdef __LINUX__
+#define PADKEYS 28
+#else
+#define PADKEYS 20
+#endif
+
+#ifdef _WIN32
+#define PADSUBKEYS 1
+#else
+#define PADSUBKEYS 2
+#endif
+
+enum KeyType
+{
+	PAD_KEYBOARD = 0,
+	PAD_JOYBUTTONS,
+	PAD_JOYSTICK,
+	PAD_POV,
+	PAD_HAT,
+	PAD_NULL = -1
+};
+
+
+extern int set_key(int pad, int index, int value);
+extern int get_key(int pad, int index);
+
+extern KeyType type_of_key(int key);
+extern int pad_to_key(int key);
+extern int key_to_joystick_id(int key);
+extern int key_to_button(int key);
+extern int key_to_axis(int key);
+extern int button_to_key(int joy_id, int button_id);
+extern int joystick_to_key(int joy_id, int axis_id);
+extern int pov_to_key(int joy_id, int sign, int axis_id);
+extern int hat_to_key(int joy_id, int dir, int axis_id);
+extern int key_to_pov_sign(int key);
+extern int key_to_hat_dir(int key);
+
+//#define EXPERIMENTAL_POV_CODE
+extern int PadEnum[2][2];
+
+typedef struct
+{
+	u32 keys[2 * PADSUBKEYS][PADKEYS];
+	u32 log;
+	u32 options;  // upper 16 bits are for pad2
+} PADconf;
+
+
+typedef struct
+{
+	u8 x, y;
+} PADAnalog;
+
+extern PADconf conf;
+extern PADAnalog g_lanalog[2], g_ranalog[2];
+
+#endif

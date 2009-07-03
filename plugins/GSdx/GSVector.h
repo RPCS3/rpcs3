@@ -24,18 +24,6 @@ public:
 		this->y = y;
 	}
 
-	GSVector2T(const GSVector2T& v) 
-	{
-		*this = v;
-	}
-
-	const GSVector2T& operator = (const GSVector2T& v) 
-	{
-		_mm_storel_epi64((__m128i*)this, _mm_loadl_epi64((__m128i*)&v));
-
-		return *this;
-	}
-
 	bool operator == (const GSVector2T& v) const
 	{
 		return x == v.x && y == v.y;
@@ -1041,9 +1029,13 @@ public:
 		return _mm_movemask_epi8(m) == 0xffff;
 	}
 
-	bool anytrue() const
+	bool allfalse() const
 	{
-		return _mm_movemask_epi8(m) != 0x0000;
+		#if _M_SSE >= 0x401
+		return _mm_testz_si128(m, m);
+		#else
+		return _mm_movemask_epi8(m) == 0;
+		#endif
 	}
 
 	#if _M_SSE >= 0x401
@@ -2556,7 +2548,12 @@ public:
 
 	bool allfalse() const
 	{
+		#if _M_SSE >= 0x401
+		__m128i a = _mm_castps_si128(m);
+		return _mm_testz_si128(a, a);
+		#else
 		return _mm_movemask_ps(m) == 0;
+		#endif
 	}
 
 	// TODO: insert

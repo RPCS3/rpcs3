@@ -292,7 +292,7 @@ void GSTextureFX11::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSampl
 			m_ps_ss[ssel] = ss0;
 		}
 
-		if(sel.bpp == 3)
+		if(sel.bpp >= 3)
 		{
 			ss1 = m_palette_ss;
 		}

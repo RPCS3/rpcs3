@@ -48,6 +48,7 @@ protected:
 	GSState* m_state;
 	hash_map<GSTexture*, bool> m_textures;
 	hash_map<GSTexture*, bool> m_map[MAX_PAGES];
+	uint32 m_pages[16];
 
 public:
 	GSTextureCacheSW(GSState* state);

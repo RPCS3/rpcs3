@@ -62,6 +62,7 @@
 }
 
 #define calcCycles(reg, x)	{ reg = ((reg > x) ? (reg - x) : 0); }
+#define optimizeReg(rState) { rState = (rState==1) ? 0 : rState; }
 #define tCycles(dest, src)	{ dest = aMax(dest, src); }
 #define incP()				{ mVU->p = (mVU->p+1) & 1; }
 #define incQ()				{ mVU->q = (mVU->q+1) & 1; }
@@ -69,7 +70,7 @@
 #define doLowerOp()			{ incPC(-1); mVUopL(mVU, 1); incPC(1); }
 #define doSwapOp()			{ doBackupVF1(); mVUopL(mVU, 1); doBackupVF2(); incPC(1); doUpperOp(); doBackupVF3(); }
 #define doIbit()			{ if (mVUup.iBit) { incPC(-1); MOV32ItoM((uptr)&mVU->regs->VI[REG_I].UL, curI); incPC(1); } }
-#define blockCreate(addr)	{ if (!mVUblocks[addr]) mVUblocks[addr] = microBlockManager::AlignedNew(); }
+#define blockCreate(addr)	{ if (!mVUblocks[addr]) mVUblocks[addr] = new microBlockManager();/*microBlockManager::AlignedNew();*/ }
 
 //------------------------------------------------------------------
 // Helper Functions
@@ -91,9 +92,11 @@ microVUt(void) mVUcheckIsSame(mV) {
 // Sets up microProgram PC ranges based on whats been recompiled
 microVUt(void) mVUsetupRange(mV, s32 pc, bool isStartPC) {
 
-	for (int i = 0; i <= mVUcurProg.ranges.total; i++) {
-		if ((pc >= mVUcurProg.ranges.range[i][0])
-		&&	(pc <= mVUcurProg.ranges.range[i][1])) { return; }
+	if (isStartPC || !(mVUrange[1] == -1)) {
+		for (int i = 0; i <= mVUcurProg.ranges.total; i++) {
+			if ((pc >= mVUcurProg.ranges.range[i][0])
+			&&	(pc <= mVUcurProg.ranges.range[i][1])) { return; }
+		}
 	}
 
 	mVUcheckIsSame(mVU);
@@ -113,17 +116,21 @@ microVUt(void) mVUsetupRange(mV, s32 pc, bool isStartPC) {
 	else {
 		if (mVUrange[0] <= pc) {
 			mVUrange[1] = pc;
+			bool mergedRange = 0;
 			for (int i = 0; i <= (mVUcurProg.ranges.total-1); i++) {
 				int rStart = (mVUrange[0] < 8) ? 0 : (mVUrange[0] - 8);
 				int rEnd   = pc;
 				if((mVUcurProg.ranges.range[i][1] >= rStart)
 				&& (mVUcurProg.ranges.range[i][1] <= rEnd)){
 					mVUcurProg.ranges.range[i][1] = pc;
-					mVUrange[0] = -1;
-					mVUrange[1] = -1;
-					mVUcurProg.ranges.total--;
+					mergedRange = 1;
 					//DevCon::Status("microVU%d: Prog Range Merging", params mVU->index);
 				}
+			}
+			if (mergedRange) {
+				mVUrange[0] = -1;
+				mVUrange[1] = -1;
+				mVUcurProg.ranges.total--;
 			}
 		}
 		else {
@@ -142,6 +149,20 @@ microVUt(void) mVUsetupRange(mV, s32 pc, bool isStartPC) {
 			}
 		}
 	}
+}
+
+// Optimizes the End Pipeline State Removing Unnecessary Info
+microVUt(void) mVUoptimizePipeState(mV) {
+	for (int i = 0; i < 32; i++) {
+		optimizeReg(mVUregs.VF[i].x);
+		optimizeReg(mVUregs.VF[i].y);
+		optimizeReg(mVUregs.VF[i].z);
+		optimizeReg(mVUregs.VF[i].w);
+	}
+	for (int i = 0; i < 16; i++) {
+		optimizeReg(mVUregs.VI[i]);
+	}
+	mVUregs.r = 0;
 }
 
 // Recompiles Code for Proper Flags and Q/P regs on Block Linkings
@@ -324,6 +345,15 @@ microVUt(void) mVUtestCycles(mV) {
 	x86SetJ32(jmp32);
 }
 
+microVUt(void) mVUinitConstValues(mV) {
+	for (int i = 0; i < 16; i++) {
+		mVUconstReg[i].isValid	= 0;
+		mVUconstReg[i].regValue	= 0;
+	}
+	mVUconstReg[15].isValid  = mVUregs.vi15 >> 31;
+	mVUconstReg[15].regValue = mVUconstReg[15].isValid ? (mVUregs.vi15&0xffff) : 0;
+}
+
 //------------------------------------------------------------------
 // Recompiler
 //------------------------------------------------------------------
@@ -349,11 +379,13 @@ microVUr(void*) mVUcompile(microVU* mVU, u32 startPC, uptr pState) {
 	mVU->q		= 0; // All blocks start at q index #0
 	memcpy_fast(&mVUregs, (microRegInfo*)pState, sizeof(microRegInfo)); // Loads up Pipeline State Info
 	mVUblock.x86ptrStart = thisPtr;
-	pBlock = mVUblocks[startPC/8]->add(&mVUblock); // Add this block to block manager
+	pBlock			= mVUblocks[startPC/8]->add(&mVUblock); // Add this block to block manager
 	mVUpBlock		= pBlock;
 	mVUregs.flags	= 0;
 	mVUflagInfo		= 0;
 	mVUsFlagHack	= CHECK_VU_FLAGHACK;
+
+	mVUinitConstValues(mVU);
 
 	for (int branch = 0; mVUcount < endCount; mVUcount++) {
 		incPC(1);
@@ -380,6 +412,12 @@ microVUr(void*) mVUcompile(microVU* mVU, u32 startPC, uptr pState) {
 	int xStatus[4], xMac[4], xClip[4];
 	int xCycles = mVUsetFlags(mVU, xStatus, xMac, xClip);
 	mVUtestCycles(mVU);
+
+	// Fix up vi15 const info for propagation through blocks
+	mVUregs.vi15 = (mVUconstReg[15].isValid && !CHECK_VU_CONSTHACK) ? ((1<<31) | (mVUconstReg[15].regValue&0xffff)) : 0;
+
+	// Optimize the End Pipeline State for nicer Block Linking
+	mVUoptimizePipeState(mVU);
 
 	// Second Pass
 	iPC = mVUstartPC;
@@ -419,13 +457,30 @@ microVUr(void*) mVUcompile(microVU* mVU, u32 startPC, uptr pState) {
 					// Check if branch-block has already been compiled
 					blockCreate(branchAddr/8);
 					pBlock = mVUblocks[branchAddr/8]->search((microRegInfo*)&mVUregs);
-					if (pBlock)		   { xJMP(pBlock->x86ptrStart); }
-					else			   { mVUcompile(mVU, branchAddr, (uptr)&mVUregs); }
+					if (pBlock)	{ xJMP(pBlock->x86ptrStart); }
+					else		{ mVUcompile(mVU, branchAddr, (uptr)&mVUregs); }
 					return thisPtr;
 				case 9: case 10: // JR/JALR
 
 					mVUprint("mVUcompile JR/JALR");
 					incPC(-3); // Go back to jump opcode
+
+					if (mVUlow.constJump.isValid) {
+						if (mVUup.eBit) { // E-bit Jump
+							iPC = (mVUlow.constJump.regValue*2)&(mVU->progSize-1);
+							mVUendProgram(mVU, 1, xStatus, xMac, xClip);
+						}
+						else {
+							int jumpAddr = (mVUlow.constJump.regValue*8)&(mVU->microMemSize-8);
+							mVUsetupBranch(mVU, xStatus, xMac, xClip, xCycles);
+							// Check if jump-to-block has already been compiled
+							blockCreate(jumpAddr/8);
+							pBlock = mVUblocks[jumpAddr/8]->search((microRegInfo*)&mVUregs);
+							if (pBlock)	{ xJMP(pBlock->x86ptrStart); }
+							else		{ mVUcompile(mVU, jumpAddr, (uptr)&mVUregs); }
+						}
+						return thisPtr;
+					}
 
 					if (mVUup.eBit) { // E-bit Jump
 						mVUendProgram(mVU, 2, xStatus, xMac, xClip);

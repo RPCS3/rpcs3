@@ -16,76 +16,64 @@
  *	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
-
-#include "PrecompiledHeader.h"
-#include "RedtapeWindows.h"
-#include "x86emitter/tools.h"
+#include "../PrecompiledHeader.h"
 #include "Threading.h"
+#include "x86emitter/tools.h"
 
+// Note: assuming multicore is safer because it forces the interlocked routines to use
+// the LOCK prefix.  The prefix works on single core CPUs fine (but is slow), but not
+// having the LOCK prefix is very bad indeed.
 
-#ifdef _WIN32
-#include "implement.h"		// win32 pthreads implementations.
-#endif
+static bool isMultiCore = true;		// assume more than one CPU (safer)
 
 namespace Threading
 {
+	// Note: Apparently this solution is Linux/Solaris only.
+	// FreeBSD/OsX need something far more complicated (apparently)
 	void CountLogicalCores( int LogicalCoresPerPhysicalCPU, int PhysicalCoresPerPhysicalCPU )
 	{
-		DWORD vProcessCPUs;
-		DWORD vSystemCPUs;
-
-		cpuinfo.LogicalCores = 1;
-
-		if( !GetProcessAffinityMask (GetCurrentProcess (),
-			&vProcessCPUs, &vSystemCPUs) ) return;
-
-		int CPUs = 0;
-		DWORD bit;
-
-		for (bit = 1; bit != 0; bit <<= 1)
+		const uint numCPU = sysconf( _SC_NPROCESSORS_ONLN );
+		if( numCPU > 0 )
 		{
-			if (vSystemCPUs & bit)
-				CPUs++;
+			isMultiCore = numCPU > 1;
+			cpuinfo.LogicalCores = numCPU;
+			cpuinfo.PhysicalCores = ( numCPU / LogicalCoresPerPhysicalCPU ) * PhysicalCoresPerPhysicalCPU;
 		}
-
-		cpuinfo.LogicalCores = CPUs;
-		if( LogicalCoresPerPhysicalCPU > CPUs) // for 1-socket HTT-disabled machines
-			LogicalCoresPerPhysicalCPU = CPUs;
-
-		cpuinfo.PhysicalCores = ( CPUs / LogicalCoresPerPhysicalCPU ) * PhysicalCoresPerPhysicalCPU;
-		//ptw32_smp_system = ( cpuinfo.LogicalCores > 1 ) ? TRUE : FALSE;
+		else
+		{
+			// Indeterminate?
+			cpuinfo.LogicalCores = 1;
+			cpuinfo.PhysicalCores = 1;
+		}
 	}
 
 	__forceinline void Timeslice()
 	{
-		::Sleep(0);
+		usleep(500);
 	}
 
 	__forceinline void Sleep( int ms )
 	{
-		::Sleep( ms );
+		usleep( 1000*ms );
 	}
 
 	// For use in spin/wait loops,  Acts as a hint to Intel CPUs and should, in theory
 	// improve performance and reduce cpu power consumption.
 	__forceinline void SpinWait()
 	{
-		__asm { pause };
+		// If this doesn't compile you can just comment it out (it only serves as a
+		// performance hint and isn't required).
+		__asm__ ( "pause" );
 	}
 
 	void* Thread::_internal_callback( void* itsme )
 	{
 		jASSUME( itsme != NULL );
 
-		//pthread_win32_thread_attach_np();
-
 		Thread& owner = *((Thread*)itsme);
 		owner.m_returncode = owner.Callback();
 		owner.m_terminated = true;
 
-		//pthread_win32_thread_detach_np();
-
 		return NULL;
 	}
 }
-

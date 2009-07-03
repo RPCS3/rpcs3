@@ -227,11 +227,11 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\Utilities\WinMisc.cpp"
+				RelativePath="..\..\src\Utilities\Windows\WinMisc.cpp"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\Utilities\WinThreads.cpp"
+				RelativePath="..\..\src\Utilities\Windows\WinThreads.cpp"
 				>
 			</File>
 			<Filter
@@ -266,7 +266,7 @@
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\..\src\Utilities\LnxMisc.cpp"
+					RelativePath="..\..\src\Utilities\Linux\LnxMisc.cpp"
 					>
 					<FileConfiguration
 						Name="Debug|Win32"
@@ -294,7 +294,7 @@
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\..\src\Utilities\LnxThreads.cpp"
+					RelativePath="..\..\src\Utilities\Linux\LnxThreads.cpp"
 					>
 					<FileConfiguration
 						Name="Debug|Win32"
