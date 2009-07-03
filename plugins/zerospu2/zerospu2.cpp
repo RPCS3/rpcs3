@@ -128,7 +128,7 @@ static void InitLibraryName()
 	strcpy( libraryName, "ZeroSPU2"
 #	ifdef PCSX2_DEBUG
 		"-Debug"
-#	elseif ZEROSPU2_DEVBUILD
+#	elif defined( ZEROSPU2_DEVBUILD )
 		"-Dev"
 #	endif
 		);
@@ -140,7 +140,7 @@ static void InitLibraryName()
 	sprintf_s( libraryName, "ZeroSPU2 r%d%s"
 #	ifdef PCSX2_DEBUG
 		"-Debug"
-#	elif ZEROSPU2_DEVBUILD
+#	elif defined( ZEROSPU2_DEVBUILD )
 		"-Dev"
 #	endif
 		,SVN_REV,
@@ -153,7 +153,7 @@ static void InitLibraryName()
 	strcpy( libraryName, "ZeroSPU2 Playground"
 #	ifdef PCSX2_DEBUG
 		"-Debug"
-#	elif ZEROSPU2_DEVBUILD
+#	elif defined( ZEROSPU2_DEVBUILD )
 		"-Dev"
 #	endif
 		);

@@ -90,6 +90,8 @@ __forceinline DataType __fastcall MemOp_r0(u32 addr)
 
 		jNO_DEFAULT;
 	}
+
+	return 0;		// technically unreachable, but suppresses warnings.
 }
 
 // ------------------------------------------------------------------------
