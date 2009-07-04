@@ -248,6 +248,7 @@ protected:
 
 public:
 	GSTextureFX();
+	virtual ~GSTextureFX() {}
 
 	virtual bool Create(GSDevice* dev);
 	

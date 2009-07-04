@@ -25,7 +25,8 @@ template<int i> class GSAlignedClass
 {
 public:
 	GSAlignedClass() {}
-	virtual ~GSAlignedClass() {}
+	
+	// never put a destructor here, breaks the member callbacks of GSDrawScanline which also inherits IDrawScanline
 
 	void* operator new (size_t size)
 	{
