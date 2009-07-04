@@ -7,7 +7,7 @@
 		<Option compiler="gcc" />
 		<Build>
 			<Target title="Debug">
-				<Option output="../../deps/debug/libUtilities.a" prefix_auto="0" extension_auto="0" />
+				<Option output="../../../deps/debug/libUtilities" prefix_auto="1" extension_auto="1" />
 				<Option working_dir="" />
 				<Option object_output="./.objs/debug/" />
 				<Option type="2" />
@@ -17,12 +17,14 @@
 					<Add option="-Wall" />
 					<Add option="-g" />
 					<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --debug=yes --cflags`" />
+					<Add option="-DPCSX2_DEBUG" />
+					<Add option="-DPCSX2_DEVBUILD" />
 					<Add directory="../../include/Utilities" />
 					<Add directory="../../include" />
 				</Compiler>
 			</Target>
 			<Target title="Release">
-				<Option output="../../deps/release/libUtilities.a" prefix_auto="0" extension_auto="0" />
+				<Option output="../../../deps/release/libUtilities" prefix_auto="1" extension_auto="1" />
 				<Option working_dir="" />
 				<Option object_output="./.objs/release/" />
 				<Option type="2" />
@@ -32,13 +34,14 @@
 					<Add option="-O2" />
 					<Add option="-Wall" />
 					<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --debug=no --cflags`" />
+					<Add option="-DNDEBUG" />
 				</Compiler>
 				<Linker>
 					<Add option="-s" />
 				</Linker>
 			</Target>
 			<Target title="Devel">
-				<Option output="../../deps/devel/libUtilities.a" prefix_auto="0" extension_auto="0" />
+				<Option output="../../../deps/devel/libUtilities" prefix_auto="1" extension_auto="1" />
 				<Option working_dir="" />
 				<Option object_output="./.objs/devel/" />
 				<Option type="2" />
@@ -46,9 +49,17 @@
 				<Option createDefFile="1" />
 				<Compiler>
 					<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --debug=yes --cflags`" />
+					<Add option="-DPCSX2_DEVBUILD" />
+					<Add option="-DNDEBUG" />
 				</Compiler>
 			</Target>
 		</Build>
+		<Compiler>
+			<Add option="-march=athlon" />
+			<Add option="-march=pentium4" />
+			<Add option="-march=i686" />
+			<Add option="-march=i586" />
+		</Compiler>
 		<Unit filename="../../include/Utilities/Console.h" />
 		<Unit filename="../../include/Utilities/Dependencies.h" />
 		<Unit filename="../../include/Utilities/Exceptions.h" />
@@ -67,7 +78,6 @@
 		<Unit filename="../../src/Utilities/Linux/LnxHostSys.cpp" />
 		<Unit filename="../../src/Utilities/Linux/LnxMisc.cpp" />
 		<Unit filename="../../src/Utilities/Linux/LnxThreads.cpp" />
-		<Unit filename="../../src/Utilities/PrecompiledHeader.cpp" />
 		<Unit filename="../../src/Utilities/PrecompiledHeader.h" />
 		<Unit filename="../../src/Utilities/StringHelpers.cpp" />
 		<Unit filename="../../src/Utilities/ThreadTools.cpp" />

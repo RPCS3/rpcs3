@@ -17,11 +17,8 @@
 				<Compiler>
 					<Add option="-g" />
 					<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --debug=yes --cflags`" />
-					<Add option="-Wno-format -Wno-unused-parameter -Wno-unused-value -Wunused-variable" />
-					<Add option="-pipe -msse -msse2" />
-					<Add option="-fno-guess-branch-probability -fno-dse -fno-tree-dse" />
 					<Add option="-DPCSX2_DEVBUILD" />
-					<Add option="-D_DEBUG" />
+					<Add option="-DPCSX2_DEBUG" />
 				</Compiler>
 				<ResourceCompiler>
 					<Add directory="$(ProjectRootDir)/NewGUI" />
@@ -44,9 +41,6 @@
 					<Add option="-O2" />
 					<Add option="-W" />
 					<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --debug=yes --cflags`" />
-					<Add option="-Wno-format -Wno-unused-parameter -Wno-unused-value -Wunused-variable" />
-					<Add option="-pipe -msse -msse2" />
-					<Add option="-fno-guess-branch-probability -fno-dse -fno-tree-dse" />
 					<Add option="-DNDEBUG" />
 					<Add option="-DPCSX2_DEVBUILD" />
 				</Compiler>
@@ -70,9 +64,6 @@
 				<Compiler>
 					<Add option="-O2" />
 					<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --debug=no --cflags`" />
-					<Add option="-Wno-format -Wno-unused-parameter -Wno-unused-value -Wunused-variable" />
-					<Add option="-pipe -msse -msse2" />
-					<Add option="-fno-guess-branch-probability -fno-dse -fno-tree-dse" />
 					<Add option="-DNDEBUG" />
 				</Compiler>
 				<ResourceCompiler>
@@ -93,8 +84,18 @@
 			</Environment>
 		</Build>
 		<Compiler>
+			<Add option="-march=athlon" />
+			<Add option="-march=pentium4" />
+			<Add option="-march=i686" />
+			<Add option="-march=i586" />
+			<Add option="-Wno-format" />
+			<Add option="-Wno-unused-parameter" />
+			<Add option="-Wno-unused-value" />
+			<Add option="-Wunused-variable" />
 			<Add option="-fno-guess-branch-probability" />
-			<Add option="-fno-dse -fno-tree-dse" />
+			<Add option="-fno-dse" />
+			<Add option="-fno-tree-dse" />
+			<Add option="-pipe -msse -msse2" />
 			<Add option="-DWX_PRECOMP" />
 			<Add directory="$(SvnRootDir)/common/include/" />
 			<Add directory="$(SvnRootDir)/3rdparty/" />
@@ -108,14 +109,21 @@
 		<Unit filename="../../common/include/Pcsx2Config.h" />
 		<Unit filename="../../common/include/Pcsx2Defs.h" />
 		<Unit filename="../../common/include/Pcsx2Types.h" />
-		<Unit filename="../CDVD.h" />
-		<Unit filename="../CDVDiso.h" />
-		<Unit filename="../CDVDisodrv.h" />
+		<Unit filename="../CDVD/CDVD.cpp" />
+		<Unit filename="../CDVD/CDVD.h" />
+		<Unit filename="../CDVD/CDVD_internal.h" />
+		<Unit filename="../CDVD/CDVDiso.cpp" />
+		<Unit filename="../CDVD/CDVDiso.h" />
+		<Unit filename="../CDVD/CDVDisodrv.cpp" />
+		<Unit filename="../CDVD/CDVDisodrv.h" />
+		<Unit filename="../CDVD/CDVDlib.h" />
+		<Unit filename="../CDVD/CdRom.cpp" />
+		<Unit filename="../CDVD/CdRom.h" />
+		<Unit filename="../CDVD/Makefile.am" />
 		<Unit filename="../COP0.cpp" />
 		<Unit filename="../COP2.cpp" />
 		<Unit filename="../Cache.cpp" />
 		<Unit filename="../Cache.h" />
-		<Unit filename="../CdRom.h" />
 		<Unit filename="../Common.h" />
 		<Unit filename="../Config.h" />
 		<Unit filename="../Counters.cpp" />
@@ -123,7 +131,6 @@
 		<Unit filename="../DebugTools/Debug.h" />
 		<Unit filename="../DebugTools/DisASM.h" />
 		<Unit filename="../DebugTools/DisR3000A.cpp" />
-		<Unit filename="../DebugTools/DisR3000asm.cpp" />
 		<Unit filename="../DebugTools/DisR5900.cpp" />
 		<Unit filename="../DebugTools/DisR5900asm.cpp" />
 		<Unit filename="../DebugTools/DisVU0Micro.cpp" />
@@ -139,11 +146,8 @@
 		<Unit filename="../Docs/readme Playground.txt" />
 		<Unit filename="../Dump.cpp" />
 		<Unit filename="../Dump.h" />
-		<Unit filename="../EEregs.h" />
 		<Unit filename="../Elfheader.cpp" />
 		<Unit filename="../Elfheader.h" />
-		<Unit filename="../Exceptions.cpp" />
-		<Unit filename="../Exceptions.h" />
 		<Unit filename="../FPU.cpp" />
 		<Unit filename="../FiFo.cpp" />
 		<Unit filename="../GS.cpp" />
@@ -182,10 +186,8 @@
 		<Unit filename="../IopSio2.cpp" />
 		<Unit filename="../IopSio2.h" />
 		<Unit filename="../Linux/HostGui.cpp" />
-		<Unit filename="../Linux/memzero.h" />
 		<Unit filename="../MMI.cpp" />
 		<Unit filename="../MTGS.cpp" />
-		<Unit filename="../MemcpyFast.h" />
 		<Unit filename="../Memory.cpp" />
 		<Unit filename="../Memory.h" />
 		<Unit filename="../MemoryCard.cpp" />
@@ -222,7 +224,6 @@
 		<Unit filename="../Paths.h" />
 		<Unit filename="../Plugins.cpp" />
 		<Unit filename="../Plugins.h" />
-		<Unit filename="../PrecompiledHeader.cpp" />
 		<Unit filename="../PrecompiledHeader.h" />
 		<Unit filename="../R3000A.cpp" />
 		<Unit filename="../R3000A.h" />
@@ -235,7 +236,6 @@
 		<Unit filename="../R5900OpcodeTables.cpp" />
 		<Unit filename="../R5900OpcodeTables.h" />
 		<Unit filename="../RecoverySystem.cpp" />
-		<Unit filename="../RedtapeWindows.h" />
 		<Unit filename="../Resources/AppIcon.h" />
 		<Unit filename="../Resources/BackgroundLogo.h" />
 		<Unit filename="../Resources/EmbeddedImage.h" />
@@ -279,27 +279,9 @@
 		<Unit filename="../VifDma.cpp" />
 		<Unit filename="../VifDma.h" />
 		<Unit filename="../pcsxAbout.bmp" />
-		<Unit filename="../rdebug/deci2.h">
-			<Option target="&lt;{~None~}&gt;" />
-		</Unit>
-		<Unit filename="../rdebug/deci2_dbgp.h">
-			<Option target="&lt;{~None~}&gt;" />
-		</Unit>
-		<Unit filename="../rdebug/deci2_dcmp.h">
-			<Option target="&lt;{~None~}&gt;" />
-		</Unit>
-		<Unit filename="../rdebug/deci2_drfp.h">
-			<Option target="&lt;{~None~}&gt;" />
-		</Unit>
-		<Unit filename="../rdebug/deci2_iloadp.h">
-			<Option target="&lt;{~None~}&gt;" />
-		</Unit>
-		<Unit filename="../rdebug/deci2_netmp.h">
-			<Option target="&lt;{~None~}&gt;" />
-		</Unit>
-		<Unit filename="../rdebug/deci2_ttyp.h">
-			<Option target="&lt;{~None~}&gt;" />
-		</Unit>
+		<Unit filename="../ps2/Iop/IopHwRead.cpp" />
+		<Unit filename="../ps2/Iop/IopHwWrite.cpp" />
+		<Unit filename="../ps2/Iop/IopHw_Internal.h" />
 		<Unit filename="../tinyxml/tinystr.cpp" />
 		<Unit filename="../tinyxml/tinystr.h" />
 		<Unit filename="../tinyxml/tinyxml.cpp" />
@@ -323,6 +305,7 @@
 		<Unit filename="../x86/iFPUd.cpp" />
 		<Unit filename="../x86/iMMI.cpp" />
 		<Unit filename="../x86/iMMI.h" />
+		<Unit filename="../x86/iMisc.cpp" />
 		<Unit filename="../x86/iR3000A.cpp" />
 		<Unit filename="../x86/iR3000A.h" />
 		<Unit filename="../x86/iR3000Atables.cpp" />
@@ -338,12 +321,8 @@
 		<Unit filename="../x86/iR5900Shift.h" />
 		<Unit filename="../x86/iVU0micro.cpp" />
 		<Unit filename="../x86/iVU1micro.cpp" />
-		<Unit filename="../x86/iVUmicro.cpp" />
 		<Unit filename="../x86/iVUmicro.h" />
-		<Unit filename="../x86/iVUmicroLower.cpp" />
-		<Unit filename="../x86/iVUmicroUpper.cpp" />
 		<Unit filename="../x86/iVUops.h" />
-		<Unit filename="../x86/iVUzerorec.cpp" />
 		<Unit filename="../x86/iVUzerorec.h" />
 		<Unit filename="../x86/iVif.cpp" />
 		<Unit filename="../x86/ir5900tables.cpp" />
@@ -391,12 +370,21 @@
 		<Unit filename="../x86/microVU_Analyze.inl" />
 		<Unit filename="../x86/microVU_Compile.inl" />
 		<Unit filename="../x86/microVU_Execute.inl" />
+		<Unit filename="../x86/microVU_Flags.inl" />
+		<Unit filename="../x86/microVU_IR.h" />
 		<Unit filename="../x86/microVU_Log.inl" />
 		<Unit filename="../x86/microVU_Lower.inl" />
 		<Unit filename="../x86/microVU_Misc.h" />
 		<Unit filename="../x86/microVU_Misc.inl" />
 		<Unit filename="../x86/microVU_Tables.inl" />
 		<Unit filename="../x86/microVU_Upper.inl" />
+		<Unit filename="../x86/sVU_Debug.h" />
+		<Unit filename="../x86/sVU_Lower.cpp" />
+		<Unit filename="../x86/sVU_Micro.cpp" />
+		<Unit filename="../x86/sVU_Micro.h" />
+		<Unit filename="../x86/sVU_Upper.cpp" />
+		<Unit filename="../x86/sVU_zerorec.cpp" />
+		<Unit filename="../x86/sVU_zerorec.h" />
 		<Unit filename="../xmlpatchloader.cpp" />
 		<Extensions>
 			<envvars />

@@ -7,7 +7,7 @@
 		<Option compiler="gcc" />
 		<Build>
 			<Target title="Debug">
-				<Option output="../../deps/debug/libx86emitter.a" prefix_auto="0" extension_auto="0" />
+				<Option output="../../../deps/debug/libx86emitter.a" prefix_auto="0" extension_auto="0" />
 				<Option working_dir="" />
 				<Option object_output="./.objs/debug/" />
 				<Option type="2" />
@@ -17,10 +17,12 @@
 					<Add option="-Wall" />
 					<Add option="-g" />
 					<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --debug=yes --cflags`" />
+					<Add option="-DPCSX2_DEVBUILD" />
+					<Add option="-DPCSX2_DEBUG" />
 				</Compiler>
 			</Target>
 			<Target title="Release">
-				<Option output="../../deps/release/libx86emitter.a" prefix_auto="0" extension_auto="0" />
+				<Option output="../../../deps/release/libx86emitter.a" prefix_auto="0" extension_auto="0" />
 				<Option working_dir="" />
 				<Option object_output="./.objs/release/" />
 				<Option type="2" />
@@ -30,13 +32,14 @@
 					<Add option="-O2" />
 					<Add option="-Wall" />
 					<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --debug=no --cflags`" />
+					<Add option="-DNDEBUG" />
 				</Compiler>
 				<Linker>
 					<Add option="-s" />
 				</Linker>
 			</Target>
 			<Target title="Devel">
-				<Option output="../../deps/devel/libx86emitter.a" prefix_auto="0" extension_auto="0" />
+				<Option output="../../../deps/devel/libx86emitter.a" prefix_auto="0" extension_auto="0" />
 				<Option working_dir="" />
 				<Option object_output="./.objs/devel" />
 				<Option type="2" />
@@ -46,6 +49,8 @@
 					<Add option="-O2" />
 					<Add option="-Wall" />
 					<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --debug=no --cflags`" />
+					<Add option="-DPCSX2_DEVBUILD" />
+					<Add option="-DNDEBUG" />
 				</Compiler>
 				<Linker>
 					<Add option="-s" />
@@ -53,6 +58,16 @@
 			</Target>
 		</Build>
 		<Compiler>
+			<Add option="-march=athlon" />
+			<Add option="-march=pentium3" />
+			<Add option="-Wno-format" />
+			<Add option="-Wno-unused-parameter" />
+			<Add option="-Wno-unused-value" />
+			<Add option="-Wunused-variable" />
+			<Add option="-fno-guess-branch-probability" />
+			<Add option="-fno-dse" />
+			<Add option="-fno-tree-dse" />
+			<Add option="-pipe -msse -msse2" />
 			<Add directory="../../include/x86emitter" />
 			<Add directory="../../include" />
 		</Compiler>
@@ -83,7 +98,6 @@
 		<Unit filename="../../include/x86emitter/x86emitter.h" />
 		<Unit filename="../../include/x86emitter/x86types.h" />
 		<Unit filename="../../src/x86emitter/3dnow.cpp" />
-		<Unit filename="../../src/x86emitter/PrecompiledHeader.cpp" />
 		<Unit filename="../../src/x86emitter/PrecompiledHeader.h" />
 		<Unit filename="../../src/x86emitter/cpudetect.cpp" />
 		<Unit filename="../../src/x86emitter/fpu.cpp" />

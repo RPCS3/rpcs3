@@ -46,7 +46,7 @@ public:
 
 
 AboutBoxDialog::AboutBoxDialog( wxWindow* parent, int id ):
-	wxDialog( parent, id, _("About Pcsx2") ),
+	wxDialog( parent, id, _("About Pcsx2"), parent->GetPosition()-wxSize( 32, 32 ) ),
 	m_bitmap_logo( this, wxID_ANY, wxGetApp().GetLogoBitmap(),
 		wxDefaultPosition, wxDefaultSize, wxBORDER_SUNKEN ),
 	m_bitmap_ps2system( this, wxID_ANY, wxBitmap( EmbeddedImage<png_ps2_silver>().GetImage() ),
