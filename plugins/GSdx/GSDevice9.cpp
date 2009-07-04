@@ -90,12 +90,12 @@ bool GSDevice9::Create(GSWnd* wnd, bool vsync)
 
 	// d3d
 
-	m_d3d = Direct3DCreate9(D3D_SDK_VERSION);
+	m_d3d.Attach(Direct3DCreate9(D3D_SDK_VERSION));
 
 	if(!m_d3d) return false;
 
 	hr = m_d3d->CheckDeviceFormat(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, D3DFMT_X8R8G8B8, D3DUSAGE_DEPTHSTENCIL, D3DRTYPE_SURFACE, D3DFMT_D24S8);
-		
+
 	if(FAILED(hr)) return false;
 
 	hr = m_d3d->CheckDepthStencilMatch(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, D3DFMT_X8R8G8B8, D3DFMT_X8R8G8B8, D3DFMT_D24S8);
@@ -193,8 +193,6 @@ bool GSDevice9::Reset(int w, int h, int mode)
 		return false;
 
 	HRESULT hr;
-
-	if(!m_d3d) return false;
 
 	if(mode == DontCare)
 	{

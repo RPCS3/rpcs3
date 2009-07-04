@@ -45,6 +45,11 @@ GSRenderer::GSRenderer(uint8* base, bool mt, void (*irq)(), GSDevice* dev)
 
 GSRenderer::~GSRenderer()
 {
+	if(m_dev)
+	{
+		m_dev->Reset(1, 1, GSDevice::Windowed);
+	}
+
 	delete m_dev;
 }
 

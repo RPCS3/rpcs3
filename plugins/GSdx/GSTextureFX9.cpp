@@ -27,6 +27,11 @@ GSTextureFX9::GSTextureFX9()
 {
 }
 
+GSTextureFX9::~GSTextureFX9()
+{
+	for_each(m_mskfix.begin(), m_mskfix.end(), delete_second());
+}
+
 bool GSTextureFX9::Create(GSDevice* dev)
 {
 	if(!__super::Create(dev))

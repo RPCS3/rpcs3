@@ -32,6 +32,7 @@ GPURendererSW::GPURendererSW(GSDevice* dev)
 
 GPURendererSW::~GPURendererSW()
 {
+	delete m_texture;
 }
 
 void GPURendererSW::ResetDevice() 

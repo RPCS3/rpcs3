@@ -92,6 +92,7 @@ private:
 
 	DDCAPS m_ddcaps;
 	D3DCAPS9 m_d3dcaps;
+	D3DPRESENT_PARAMETERS m_pp;
 	CComPtr<IDirect3D9> m_d3d;
 	CComPtr<IDirect3DDevice9> m_dev;
 	CComPtr<IDirect3DSwapChain9> m_swapchain;
@@ -104,7 +105,6 @@ private:
 	} m_vertices;
 
 public: // TODO
-	D3DPRESENT_PARAMETERS m_pp;
 
 	struct
 	{

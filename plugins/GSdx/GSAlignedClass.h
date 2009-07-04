@@ -25,6 +25,7 @@ template<int i> class GSAlignedClass
 {
 public:
 	GSAlignedClass() {}
+	virtual ~GSAlignedClass() {}
 
 	void* operator new (size_t size)
 	{

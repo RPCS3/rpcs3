@@ -39,6 +39,11 @@ GSRendererSW::GSRendererSW(uint8* base, bool mt, void (*irq)(), GSDevice* dev)
 GSRendererSW::~GSRendererSW()
 {
 	delete m_tc;
+
+	for(int i = 0; i < countof(m_texture); i++)
+	{
+		delete m_texture[i];
+	}
 }
 
 void GSRendererSW::Reset() 
