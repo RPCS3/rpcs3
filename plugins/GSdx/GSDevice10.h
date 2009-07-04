@@ -96,8 +96,7 @@ public:
 	virtual ~GSDevice10();
 
 	bool Create(GSWnd* wnd, bool vsync);
-	bool Reset(int w, int h, bool fs);
-
+	bool Reset(int w, int h, int mode);
 	void Flip();
 
 	void BeginScene();

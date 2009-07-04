@@ -48,8 +48,8 @@ void GSDrawScanline::BeginDraw(const GSRasterizerData* data, Functions* f)
 	m_env.vm = p->vm;
 	m_env.fbr = p->fbo->row;
 	m_env.zbr = p->zbo->row;
-	m_env.fbc = p->fbo->col;
-	m_env.zbc = p->zbo->col;
+	m_env.fbc = p->fbo->col[0];
+	m_env.zbc = p->zbo->col[0];
 	m_env.fzbr = p->fzbo->row;
 	m_env.fzbc = p->fzbo->col;
 	m_env.fm = GSVector4i(p->fm);
@@ -116,8 +116,8 @@ void GSDrawScanline::BeginDraw(const GSRasterizerData* data, Functions* f)
 			m_env.t.mask.u32[0] = 0; 
 			break;
 		case CLAMP_REGION_CLAMP: 
-			m_env.t.min.u16[0] = min(context->CLAMP.MINU, tw - 1);
-			m_env.t.max.u16[0] = min(context->CLAMP.MAXU, tw - 1);
+			m_env.t.min.u16[0] = std::min<int>(context->CLAMP.MINU, tw - 1);
+			m_env.t.max.u16[0] = std::min<int>(context->CLAMP.MAXU, tw - 1);
 			m_env.t.mask.u32[0] = 0; 
 			break;
 		case CLAMP_REGION_REPEAT: 
@@ -142,8 +142,8 @@ void GSDrawScanline::BeginDraw(const GSRasterizerData* data, Functions* f)
 			m_env.t.mask.u32[2] = 0; 
 			break;
 		case CLAMP_REGION_CLAMP: 
-			m_env.t.min.u16[4] = min(context->CLAMP.MINV, th - 1);
-			m_env.t.max.u16[4] = min(context->CLAMP.MAXV, th - 1); // ffx anima summon scene, when the anchor appears (th = 256, maxv > 256)
+			m_env.t.min.u16[4] = std::min<int>(context->CLAMP.MINV, th - 1);
+			m_env.t.max.u16[4] = std::min<int>(context->CLAMP.MAXV, th - 1); // ffx anima summon scene, when the anchor appears (th = 256, maxv > 256)
 			m_env.t.mask.u32[2] = 0; 
 			break;
 		case CLAMP_REGION_REPEAT: 
@@ -224,22 +224,22 @@ void GSDrawScanline::DrawSolidRect(const GSVector4i& r, const GSVertexSW& v)
 		{
 			if(m == 0)
 			{
-				DrawSolidRectT<uint32, false>(m_env.zbr, m_env.zbc[0], r, z, m);
+				DrawSolidRectT<uint32, false>(m_env.zbr, m_env.zbc, r, z, m);
 			}
 			else
 			{
-				DrawSolidRectT<uint32, true>(m_env.zbr, m_env.zbc[0], r, z, m);
+				DrawSolidRectT<uint32, true>(m_env.zbr, m_env.zbc, r, z, m);
 			}
 		}
 		else
 		{
 			if(m == 0)
 			{
-				DrawSolidRectT<uint16, false>(m_env.zbr, m_env.zbc[0], r, z, m);
+				DrawSolidRectT<uint16, false>(m_env.zbr, m_env.zbc, r, z, m);
 			}
 			else
 			{
-				DrawSolidRectT<uint16, true>(m_env.zbr, m_env.zbc[0], r, z, m);
+				DrawSolidRectT<uint16, true>(m_env.zbr, m_env.zbc, r, z, m);
 			}
 		}
 	}
@@ -259,11 +259,11 @@ void GSDrawScanline::DrawSolidRect(const GSVector4i& r, const GSVertexSW& v)
 		{
 			if(m == 0)
 			{
-				DrawSolidRectT<uint32, false>(m_env.fbr, m_env.fbc[0], r, c, m);
+				DrawSolidRectT<uint32, false>(m_env.fbr, m_env.fbc, r, c, m);
 			}
 			else
 			{
-				DrawSolidRectT<uint32, true>(m_env.fbr, m_env.fbc[0], r, c, m);
+				DrawSolidRectT<uint32, true>(m_env.fbr, m_env.fbc, r, c, m);
 			}
 		}
 		else
@@ -272,18 +272,18 @@ void GSDrawScanline::DrawSolidRect(const GSVector4i& r, const GSVertexSW& v)
 
 			if(m == 0)
 			{
-				DrawSolidRectT<uint16, false>(m_env.fbr, m_env.fbc[0], r, c, m);
+				DrawSolidRectT<uint16, false>(m_env.fbr, m_env.fbc, r, c, m);
 			}
 			else
 			{
-				DrawSolidRectT<uint16, true>(m_env.fbr, m_env.fbc[0], r, c, m);
+				DrawSolidRectT<uint16, true>(m_env.fbr, m_env.fbc, r, c, m);
 			}
 		}
 	}
 }
 
 template<class T, bool masked> 
-void GSDrawScanline::DrawSolidRectT(const GSVector4i* row, int* col, const GSVector4i& r, uint32 c, uint32 m)
+void GSDrawScanline::DrawSolidRectT(const int* row, int* col, const GSVector4i& r, uint32 c, uint32 m)
 {
 	if(m == 0xffffffff) return;
 
@@ -320,13 +320,13 @@ void GSDrawScanline::DrawSolidRectT(const GSVector4i* row, int* col, const GSVec
 }
 
 template<class T, bool masked> 
-void GSDrawScanline::FillRect(const GSVector4i* row, int* col, const GSVector4i& r, uint32 c, uint32 m)
+void GSDrawScanline::FillRect(const int* row, int* col, const GSVector4i& r, uint32 c, uint32 m)
 {
 	if(r.x >= r.z) return;
 
 	for(int y = r.y; y < r.w; y++)
 	{
-		uint32 base = row[y].x;
+		uint32 base = row[y];
 
 		for(int x = r.x; x < r.z; x++)
 		{
@@ -338,13 +338,13 @@ void GSDrawScanline::FillRect(const GSVector4i* row, int* col, const GSVector4i&
 }
 
 template<class T, bool masked> 
-void GSDrawScanline::FillBlock(const GSVector4i* row, int* col, const GSVector4i& r, const GSVector4i& c, const GSVector4i& m)
+void GSDrawScanline::FillBlock(const int* row, int* col, const GSVector4i& r, const GSVector4i& c, const GSVector4i& m)
 {
 	if(r.x >= r.z) return;
 
 	for(int y = r.y; y < r.w; y += 8)
 	{
-		uint32 base = row[y].x;
+		uint32 base = row[y];
 
 		for(int x = r.x; x < r.z; x += 8 * 4 / sizeof(T))
 		{

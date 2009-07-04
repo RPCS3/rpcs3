@@ -73,10 +73,11 @@ public:
 
 	void Recycle(GSTexture* t);
 
-	virtual bool Create(GSWnd* wnd, bool vsync);
-	virtual bool Reset(int w, int h, bool fs);
+	enum {Windowed, Fullscreen, DontCare};
 
-	virtual bool IsLost() {return false;}
+	virtual bool Create(GSWnd* wnd, bool vsync);
+	virtual bool Reset(int w, int h, int mode);
+	virtual bool IsLost(bool update = false) {return false;}
 	virtual void Present(const GSVector4i& r, int shader);
 	virtual void Flip() {}
 
@@ -104,6 +105,8 @@ public:
 
 	void Merge(GSTexture* st[2], GSVector4* sr, GSVector4* dr, const GSVector2i& fs, bool slbg, bool mmod, const GSVector4& c);
 	void Interlace(const GSVector2i& ds, int field, int mode, float yoffset);
+
+	bool ResizeTexture(GSTexture** t, int w, int h);
 
 	template<class T> void PrepareShaderMacro(vector<T>& dst, const T* src, const char* model)
 	{

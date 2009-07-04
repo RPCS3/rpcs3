@@ -110,8 +110,7 @@ public:
 	virtual ~GSDeviceOGL();
 
 	bool Create(GSWnd* wnd, bool vsync);
-	bool Reset(int w, int h, bool fs);
-
+	bool Reset(int w, int h, int mode);
 	void Present(const GSVector4i& r, int shader);
 	void Flip();
 

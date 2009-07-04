@@ -50,35 +50,15 @@ GSTexture* GPURendererSW::GetOutput()
 	r.right <<= m_scale.x;
 	r.bottom <<= m_scale.y;
 
-	// TODO
-	static uint32* buff = (uint32*)_aligned_malloc(m_mem.GetWidth() * m_mem.GetHeight() * sizeof(uint32), 16);
-
-	m_mem.ReadFrame32(r, buff, !!m_env.STATUS.ISRGB24);
-
-	int w = r.width();
-	int h = r.height();
-
-	if(m_texture)
+	if(m_dev->ResizeTexture(&m_texture, r.width(), r.height()))
 	{
-		if(m_texture->GetWidth() != w || m_texture->GetHeight() != h)
-		{
-			delete m_texture;
+		// TODO
+		static uint32* buff = (uint32*)_aligned_malloc(m_mem.GetWidth() * m_mem.GetHeight() * sizeof(uint32), 16);
 
-			m_texture = NULL;
-		}
+		m_mem.ReadFrame32(r, buff, !!m_env.STATUS.ISRGB24);
+
+		m_texture->Update(r.rsize(), buff, m_mem.GetWidth() * sizeof(uint32));
 	}
-
-	if(!m_texture)
-	{
-		m_texture = m_dev->CreateTexture(w, h);
-
-		if(!m_texture)
-		{
-			return NULL;
-		}
-	}
-
-	m_texture->Update(r.rsize(), buff, m_mem.GetWidth() * sizeof(uint32));
 
 	return m_texture;
 }
@@ -164,8 +144,8 @@ void GPURendererSW::Draw()
 		{
 			GSVector4 p = m_vertices[i].p;
 
-			tl = tl.minv(p);
-			br = br.maxv(p);
+			tl = tl.min(p);
+			br = br.max(p);
 		}
 
 		GSVector4i r = GSVector4i(tl.xyxy(br)).rintersect(data.scissor);

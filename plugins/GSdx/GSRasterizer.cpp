@@ -290,8 +290,8 @@ void GSRasterizer::DrawTriangleTop(GSVertexSW* v, const GSVector4i& scissor)
 
 	GSVector4 tb = l.p.upl(v[2].p).ceil();
 
-	GSVector4 tbmax = tb.maxv(fscissor.yyyy());
-	GSVector4 tbmin = tb.minv(fscissor.wwww());
+	GSVector4 tbmax = tb.max(fscissor.yyyy());
+	GSVector4 tbmin = tb.min(fscissor.wwww());
 
 	GSVector4i tbi = GSVector4i(tbmax.zzww(tbmin));
 
@@ -342,8 +342,8 @@ void GSRasterizer::DrawTriangleBottom(GSVertexSW* v, const GSVector4i& scissor)
 
 	GSVector4 tb = l.p.upl(v[2].p).ceil();
 
-	GSVector4 tbmax = tb.maxv(fscissor.yyyy());
-	GSVector4 tbmin = tb.minv(fscissor.wwww());
+	GSVector4 tbmax = tb.max(fscissor.yyyy());
+	GSVector4 tbmin = tb.min(fscissor.wwww());
 
 	GSVector4i tbi = GSVector4i(tbmax.zzww(tbmin));
 
@@ -398,8 +398,8 @@ void GSRasterizer::DrawTriangleTopBottom(GSVertexSW* v, const GSVector4i& scisso
 
 	GSVector4 tb = v[0].p.upl(v[1].p).zwzw(v[1].p.upl(v[2].p)).ceil();
 
-	GSVector4 tbmax = tb.maxv(fscissor.yyyy());
-	GSVector4 tbmin = tb.minv(fscissor.wwww());
+	GSVector4 tbmax = tb.max(fscissor.yyyy());
+	GSVector4 tbmin = tb.min(fscissor.wwww());
 
 	GSVector4i tbi = GSVector4i(tbmax.xzyw(tbmin));
 
@@ -462,8 +462,8 @@ void GSRasterizer::DrawTriangleSection(int top, int bottom, GSVertexSW& l, const
 			{
 				GSVector4 lr = l.p.xyxy(r).ceil();
 
-				GSVector4 lrmax = lr.maxv(fscissor.xxxx());
-				GSVector4 lrmin = lr.minv(fscissor.zzzz());
+				GSVector4 lrmax = lr.max(fscissor.xxxx());
+				GSVector4 lrmin = lr.min(fscissor.zzzz());
 
 				GSVector4i lri = GSVector4i(lrmax.xxzz(lrmin));
 
@@ -503,8 +503,8 @@ void GSRasterizer::DrawTriangleSection(int top, int bottom, GSVertexSW& l, const
 			{
 				GSVector4 lr = l.p.ceil();
 
-				GSVector4 lrmax = lr.maxv(fscissor.xxxx());
-				GSVector4 lrmin = lr.minv(fscissor.zzzz());
+				GSVector4 lrmax = lr.max(fscissor.xxxx());
+				GSVector4 lrmin = lr.min(fscissor.zzzz());
 
 				GSVector4i lri = GSVector4i(lrmax.xxyy(lrmin));
 
@@ -613,8 +613,8 @@ void GSRasterizer::DrawEdge(const GSVertexSW& v0, const GSVertexSW& v1, const GS
 
 	if(orientation)
 	{
-		GSVector4 tbmax = lrtb.maxv(fscissor.yyyy());
-		GSVector4 tbmin = lrtb.minv(fscissor.wwww());
+		GSVector4 tbmax = lrtb.max(fscissor.yyyy());
+		GSVector4 tbmin = lrtb.min(fscissor.wwww());
 
 		GSVector4i tbi = GSVector4i(tbmax.zwzw(tbmin));
 
@@ -711,8 +711,8 @@ void GSRasterizer::DrawEdge(const GSVertexSW& v0, const GSVertexSW& v1, const GS
 	}
 	else
 	{
-		GSVector4 lrmax = lrtb.maxv(fscissor.xxxx());
-		GSVector4 lrmin = lrtb.minv(fscissor.zzzz());
+		GSVector4 lrmax = lrtb.max(fscissor.xxxx());
+		GSVector4 lrmin = lrtb.min(fscissor.zzzz());
 
 		GSVector4i lri = GSVector4i(lrmax.xyxy(lrmin));
 

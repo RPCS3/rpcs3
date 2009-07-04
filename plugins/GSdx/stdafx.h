@@ -190,3 +190,6 @@ typedef signed long long int64;
 	#include <smmintrin.h>
 
 #endif
+
+#undef min
+#undef max

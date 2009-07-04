@@ -150,14 +150,14 @@ bool GSDeviceOGL::Create(GSWnd* wnd, bool vsync)
 */
 	GSVector4i r = wnd->GetClientRect();
 
-	Reset(r.width(), r.height(), false);
+	Reset(r.width(), r.height(), Windowed);
 
 	return true;
 }
 
-bool GSDeviceOGL::Reset(int w, int h, bool fs)
+bool GSDeviceOGL::Reset(int w, int h, int mode)
 {
-	if(!__super::Reset(w, h, fs))
+	if(!__super::Reset(w, h, mode))
 		return false;
 
 	glCullFace(GL_FRONT_AND_BACK); CheckError();
@@ -361,7 +361,7 @@ void GSDeviceOGL::IASetVertexBuffer(const void* vertices, size_t stride, size_t 
 	{
 		m_vertices.start = 0;
 		m_vertices.count = 0;
-		m_vertices.limit = max(count * 3 / 2, 10000);
+		m_vertices.limit = std::max<int>(count * 3 / 2, 10000);
 
 		growbuffer = true;
 	}

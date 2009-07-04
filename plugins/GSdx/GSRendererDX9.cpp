@@ -122,14 +122,14 @@ void GSRendererDX9::VertexKick(bool skip)
 		case GS_LINELIST:
 		case GS_LINESTRIP:
 		case GS_SPRITE:
-			pmin = v[0].p.minv(v[1].p);
-			pmax = v[0].p.maxv(v[1].p);
+			pmin = v[0].p.min(v[1].p);
+			pmax = v[0].p.max(v[1].p);
 			break;
 		case GS_TRIANGLELIST:
 		case GS_TRIANGLESTRIP:
 		case GS_TRIANGLEFAN:
-			pmin = v[0].p.minv(v[1].p).minv(v[2].p);
-			pmax = v[0].p.maxv(v[1].p).maxv(v[2].p);
+			pmin = v[0].p.min(v[1].p).min(v[2].p);
+			pmax = v[0].p.max(v[1].p).max(v[2].p);
 			break;
 		}
 

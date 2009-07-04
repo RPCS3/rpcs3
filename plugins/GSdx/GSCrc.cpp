@@ -89,6 +89,7 @@ CRC::Game CRC::m_games[] =
 	{0x7D8F539A, SoTC, EU, 0},
 	{0x3122B508, OnePieceGrandAdventure, US, 0},
 	{0x8DF14A24, OnePieceGrandAdventure, Unknown, 0},
+	{0x5D02CC5B, OnePieceGrandBattle, Unknown, 0},
 	{0x6F8545DB, ICO, US, 0},
 	{0xB01A4C95, ICO, JP, 0},
 	{0x5C991F4E, ICO, Unknown, 0},
@@ -143,7 +144,9 @@ CRC::Game CRC::m_games[] =
 	{0x23A97857, StarOcean3, JPUNDUB, 0},
 	{0xCC96CE93, ValkyrieProfile2, US, 0},
 	{0x774DE8E2, ValkyrieProfile2, JP, 0},
-	{0x47B9B2FD, RadiataStories, US, 0},	
+	{0x04CCB600, ValkyrieProfile2, EU, 0},
+	{0x47B9B2FD, RadiataStories, US, 0},
+	{0xE8FCF8EC, SMTNocturne, US, ZWriteMustNotClear}, // saves/reloads z buffer around shadow drawing
 };
 
 hash_map<uint32, CRC::Game*> CRC::m_map;

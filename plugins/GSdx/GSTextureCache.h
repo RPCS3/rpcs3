@@ -100,7 +100,7 @@ protected:
 
 		SourceMap() : m_used(false) {memset(m_pages, 0, sizeof(m_pages));}
 
-		void Add(Source* s, const GIFRegTEX0& TEX0);
+		void Add(Source* s, const GIFRegTEX0& TEX0, GSLocalMemory& mem);
 		void RemoveAll();
 		void RemoveAt(Source* s);
 

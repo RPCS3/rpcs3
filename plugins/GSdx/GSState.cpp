@@ -948,7 +948,7 @@ void GSState::FlushWrite()
 	r.left = m_env.TRXPOS.DSAX;
 	r.top = y;
 	r.right = r.left + m_env.TRXREG.RRW;
-	r.bottom = min(r.top + m_env.TRXREG.RRH, m_tr.x == r.left ? m_tr.y : m_tr.y + 1);
+	r.bottom = std::min<int>(r.top + m_env.TRXREG.RRH, m_tr.x == r.left ? m_tr.y : m_tr.y + 1);
 
 	InvalidateVideoMem(m_env.BITBLTBUF, r);
 /*
@@ -1085,17 +1085,20 @@ void GSState::Move()
 
 	// TODO: unroll inner loops (width has special size requirement, must be multiples of 1 << n, depending on the format)
 
+	GSLocalMemory::PixelOffset* RESTRICT spo = m_mem.GetPixelOffset(m_env.BITBLTBUF.SBP, m_env.BITBLTBUF.SBW, m_env.BITBLTBUF.SPSM);
+	GSLocalMemory::PixelOffset* RESTRICT dpo = m_mem.GetPixelOffset(m_env.BITBLTBUF.DBP, m_env.BITBLTBUF.DBW, m_env.BITBLTBUF.DPSM);
+
 	if(spsm.trbpp == dpsm.trbpp && spsm.trbpp >= 16)
 	{
-		int* soffset = spsm.rowOffset[0];
-		int* doffset = dpsm.rowOffset[0];
+		int* soffset = spo->col[0];
+		int* doffset = dpo->col[0];
 
 		if(spsm.trbpp == 32)
 		{
 			for(int y = 0; y < h; y++, sy += yinc, dy += yinc, sx -= xinc * w, dx -= xinc * w)
 			{
-				uint32 sbase = spsm.pa(0, sy, m_env.BITBLTBUF.SBP, m_env.BITBLTBUF.SBW);
-				uint32 dbase = dpsm.pa(0, dy, m_env.BITBLTBUF.DBP, m_env.BITBLTBUF.DBW);
+				uint32 sbase = spo->row[sy];
+				uint32 dbase = dpo->row[dy];
 				
 				for(int x = 0; x < w; x++, sx += xinc, dx += xinc)
 				{
@@ -1107,8 +1110,8 @@ void GSState::Move()
 		{
 			for(int y = 0; y < h; y++, sy += yinc, dy += yinc, sx -= xinc * w, dx -= xinc * w)
 			{
-				uint32 sbase = spsm.pa(0, sy, m_env.BITBLTBUF.SBP, m_env.BITBLTBUF.SBW);
-				uint32 dbase = dpsm.pa(0, dy, m_env.BITBLTBUF.DBP, m_env.BITBLTBUF.DBW);
+				uint32 sbase = spo->row[sy];
+				uint32 dbase = dpo->row[dy];
 				
 				for(int x = 0; x < w; x++, sx += xinc, dx += xinc)
 				{
@@ -1120,8 +1123,8 @@ void GSState::Move()
 		{
 			for(int y = 0; y < h; y++, sy += yinc, dy += yinc, sx -= xinc * w, dx -= xinc * w)
 			{
-				uint32 sbase = spsm.pa(0, sy, m_env.BITBLTBUF.SBP, m_env.BITBLTBUF.SBW);
-				uint32 dbase = dpsm.pa(0, dy, m_env.BITBLTBUF.DBP, m_env.BITBLTBUF.DBW);
+				uint32 sbase = spo->row[sy];
+				uint32 dbase = dpo->row[dy];
 				
 				for(int x = 0; x < w; x++, sx += xinc, dx += xinc)
 				{
@@ -1134,11 +1137,11 @@ void GSState::Move()
 	{
 		for(int y = 0; y < h; y++, sy += yinc, dy += yinc, sx -= xinc * w, dx -= xinc * w)
 		{
-			uint32 sbase = GSLocalMemory::PixelAddress8(0, sy, m_env.BITBLTBUF.SBP, m_env.BITBLTBUF.SBW);
-			int* soffset = spsm.rowOffset[sy & 7];
+			uint32 sbase = spo->row[sy];
+			uint32 dbase = dpo->row[dy];
 
-			uint32 dbase = GSLocalMemory::PixelAddress8(0, dy, m_env.BITBLTBUF.DBP, m_env.BITBLTBUF.DBW);
-			int* doffset = dpsm.rowOffset[dy & 7];
+			int* soffset = spo->col[sy & 7];
+			int* doffset = dpo->col[dy & 7];
 			
 			for(int x = 0; x < w; x++, sx += xinc, dx += xinc)
 			{
@@ -1150,11 +1153,11 @@ void GSState::Move()
 	{
 		for(int y = 0; y < h; y++, sy += yinc, dy += yinc, sx -= xinc * w, dx -= xinc * w)
 		{
-			uint32 sbase = GSLocalMemory::PixelAddress4(0, sy, m_env.BITBLTBUF.SBP, m_env.BITBLTBUF.SBW);
-			int* soffset = spsm.rowOffset[sy & 7];
+			uint32 sbase = spo->row[sy];
+			uint32 dbase = dpo->row[dy];
 
-			uint32 dbase = GSLocalMemory::PixelAddress4(0, dy, m_env.BITBLTBUF.DBP, m_env.BITBLTBUF.DBW);
-			int* doffset = dpsm.rowOffset[dy & 7];
+			int* soffset = spo->col[sy & 7];
+			int* doffset = dpo->col[dy & 7];
 			
 			for(int x = 0; x < w; x++, sx += xinc, dx += xinc)
 			{
@@ -1166,11 +1169,11 @@ void GSState::Move()
 	{
 		for(int y = 0; y < h; y++, sy += yinc, dy += yinc, sx -= xinc * w, dx -= xinc * w)
 		{
-			uint32 sbase = spsm.pa(0, sy, m_env.BITBLTBUF.SBP, m_env.BITBLTBUF.SBW);
-			int* soffset = spsm.rowOffset[sy & 7];
+			uint32 sbase = spo->row[sy];
+			uint32 dbase = dpo->row[dy];
 
-			uint32 dbase = dpsm.pa(0, dy, m_env.BITBLTBUF.DBP, m_env.BITBLTBUF.DBW);
-			int* doffset = dpsm.rowOffset[dy & 7];
+			int* soffset = spo->col[sy & 7];
+			int* doffset = dpo->col[dy & 7];
 			
 			for(int x = 0; x < w; x++, sx += xinc, dx += xinc)
 			{

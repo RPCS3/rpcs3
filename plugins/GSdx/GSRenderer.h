@@ -127,7 +127,10 @@ protected:
 			{
 				// FIXME: berserk fpsm = 27 (8H)
 
-				Draw();
+				if(!m_dev->IsLost())
+				{
+					Draw();
+				}
 
 				m_perfmon.Put(GSPerfMon::Draw, 1);
 			}

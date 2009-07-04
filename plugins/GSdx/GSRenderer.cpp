@@ -259,9 +259,17 @@ void GSRenderer::VSync(int field)
 
 	Flush();
 
-	field = field ? 1 : 0;
-
-	if(!Merge(field)) return;
+	if(!m_dev->IsLost(true))
+	{
+		if(!Merge(field ? 1 : 0))
+		{
+			return;
+		}
+	}
+	else
+	{
+		ResetDevice();
+	}
 
 	// osd 
 
@@ -310,11 +318,6 @@ void GSRenderer::VSync(int field)
 	}
 
 	// present
-
-	if(m_dev->IsLost())
-	{
-		ResetDevice();
-	}
 
 	m_dev->Present(m_wnd.GetClientRect().fit(m_aspectratio), m_shader);
 

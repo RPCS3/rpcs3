@@ -87,49 +87,32 @@ GSTexture* GSRendererSW::GetOutput(int i)
 	TEX0.TBW = DISPFB.FBW;
 	TEX0.PSM = DISPFB.PSM;
 
-	GSVector4i r(0, 0, TEX0.TBW * 64, GetFrameRect(i).bottom);
+	int w = TEX0.TBW * 64;
+	int h = GetFrameRect(i).bottom;
 
 	// TODO: round up bottom
 
-	int w = r.width();
-	int h = r.height();
-
-	if(m_texture[i])
+	if(m_dev->ResizeTexture(&m_texture[i], w, h))
 	{
-		if(m_texture[i]->GetWidth() != w || m_texture[i]->GetHeight() != h)
+		// TODO
+		static uint8* buff = (uint8*)_aligned_malloc(1024 * 1024 * 4, 16);
+		static int pitch = 1024 * 4;
+
+		GSVector4i r(0, 0, w, h);
+
+		m_mem.ReadTexture(r, buff, pitch, TEX0, m_env.TEXA);
+
+		m_texture[i]->Update(r, buff, pitch);
+
+		if(s_dump)
 		{
-			delete m_texture[i];
+			if(s_save)
+			{
+				m_texture[i]->Save(format("c:\\temp1\\_%05d_f%I64d_fr%d_%05x_%d.bmp", s_n, m_perfmon.GetFrame(), i, (int)TEX0.TBP0, (int)TEX0.PSM));
+			}
 
-			m_texture[i] = NULL;
+			s_n++;
 		}
-	}
-
-	if(!m_texture[i])
-	{
-		m_texture[i] = m_dev->CreateTexture(w, h);
-
-		if(!m_texture[i])
-		{
-			return NULL;
-		}
-	}
-
-	// TODO
-	static uint8* buff = (uint8*)_aligned_malloc(1024 * 1024 * 4, 16);
-	static int pitch = 1024 * 4;
-
-	m_mem.ReadTexture(r, buff, pitch, TEX0, m_env.TEXA);
-
-	m_texture[i]->Update(r, buff, pitch);
-
-	if(s_dump)
-	{
-		if(s_save)
-		{
-			m_texture[i]->Save(format("c:\\temp1\\_%05d_f%I64d_fr%d_%05x_%d.bmp", s_n, m_perfmon.GetFrame(), i, (int)TEX0.TBP0, (int)TEX0.PSM));
-		}
-
-		s_n++;
 	}
 
 	return m_texture[i];
@@ -273,9 +256,9 @@ void GSRendererSW::GetScanlineParam(GSScanlineParam& p, GS_PRIM_CLASS primclass)
 
 	p.vm = m_mem.m_vm8;
 
-	p.fbo = m_mem.GetOffset(context->FRAME.Block(), context->FRAME.FBW, context->FRAME.PSM);
-	p.zbo = m_mem.GetOffset(context->ZBUF.Block(), context->FRAME.FBW, context->ZBUF.PSM);
-	p.fzbo = m_mem.GetOffset4(context->FRAME, context->ZBUF);
+	p.fbo = m_mem.GetPixelOffset(context->FRAME.Block(), context->FRAME.FBW, context->FRAME.PSM);
+	p.zbo = m_mem.GetPixelOffset(context->ZBUF.Block(), context->FRAME.FBW, context->ZBUF.PSM);
+	p.fzbo = m_mem.GetPixelOffset4(context->FRAME, context->ZBUF);
 
 	p.sel.key = 0;
 
@@ -517,14 +500,14 @@ if(!m_dump)
 		case GS_LINELIST:
 		case GS_LINESTRIP:
 		case GS_SPRITE:
-			pmin = v[0].p.minv(v[1].p);
-			pmax = v[0].p.maxv(v[1].p);
+			pmin = v[0].p.min(v[1].p);
+			pmax = v[0].p.max(v[1].p);
 			break;
 		case GS_TRIANGLELIST:
 		case GS_TRIANGLESTRIP:
 		case GS_TRIANGLEFAN:
-			pmin = v[0].p.minv(v[1].p).minv(v[2].p);
-			pmax = v[0].p.maxv(v[1].p).maxv(v[2].p);
+			pmin = v[0].p.min(v[1].p).min(v[2].p);
+			pmax = v[0].p.max(v[1].p).max(v[2].p);
 			break;
 		}
 

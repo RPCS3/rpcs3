@@ -244,16 +244,16 @@ bool GSDevice11::Create(GSWnd* wnd, bool vsync)
 
 	//
 
-	Reset(1, 1, false);
+	Reset(1, 1, Windowed);
 
 	//
 
 	return true;
 }
 
-bool GSDevice11::Reset(int w, int h, bool fs)
+bool GSDevice11::Reset(int w, int h, int mode)
 {
-	if(!__super::Reset(w, h, fs))
+	if(!__super::Reset(w, h, mode))
 		return false;
 
 	DXGI_SWAP_CHAIN_DESC scd;
@@ -541,7 +541,7 @@ void GSDevice11::IASetVertexBuffer(const void* vertices, size_t stride, size_t c
 		m_vertices.vb = NULL;
 		m_vertices.start = 0;
 		m_vertices.count = 0;
-		m_vertices.limit = max(count * 3 / 2, 10000);
+		m_vertices.limit = std::max<int>(count * 3 / 2, 10000);
 	}
 
 	if(m_vertices.vb == NULL)

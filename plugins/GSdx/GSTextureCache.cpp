@@ -60,7 +60,7 @@ GSTextureCache::Source* GSTextureCache::LookupSource(const GIFRegTEX0& TEX0, con
 	{
 		Source* s = i->first;
 
-		if(((s->m_TEX0.u32[0] ^ TEX0.u32[0]) | ((s->m_TEX0.u32[1] ^ TEX0.u32[1]) & 3)) != 0) // TBP0 TBW PSM TW TH
+		if(((TEX0.u32[0] ^ s->m_TEX0.u32[0]) | ((TEX0.u32[1] ^ s->m_TEX0.u32[1]) & 3)) != 0) // TBP0 TBW PSM TW TH
 		{
 			continue;
 		}
@@ -70,7 +70,7 @@ GSTextureCache::Source* GSTextureCache::LookupSource(const GIFRegTEX0& TEX0, con
 			continue;
 		}
 
-		if(psm.pal > 0 && !GSVector4i::compare(s->m_clut, clut, psm.pal * sizeof(clut[0])))
+		if(psm.pal > 0 && !GSVector4i::compare(clut, s->m_clut, psm.pal * sizeof(clut[0])))
 		{
 			continue;
 		}
@@ -84,13 +84,16 @@ GSTextureCache::Source* GSTextureCache::LookupSource(const GIFRegTEX0& TEX0, con
 
 	if(src == NULL)
 	{
+		uint32 bp = TEX0.TBP0;
+		uint32 psm = TEX0.PSM;
+
 		for(int type = 0; type < 2 && dst == NULL; type++)
 		{
 			for(list<Target*>::iterator i = m_dst[type].begin(); i != m_dst[type].end(); i++)
 			{
 				Target* t = *i;
 
-				if(t->m_used && t->m_dirty.empty() && GSUtil::HasSharedBits(t->m_TEX0.TBP0, t->m_TEX0.PSM, TEX0.TBP0, TEX0.PSM))
+				if(t->m_used && t->m_dirty.empty() && GSUtil::HasSharedBits(bp, psm, t->m_TEX0.TBP0, t->m_TEX0.PSM))
 				{
 					dst = t;
 
@@ -116,7 +119,7 @@ GSTextureCache::Source* GSTextureCache::LookupSource(const GIFRegTEX0& TEX0, con
 			memcpy(src->m_clut, clut, psm.pal * sizeof(clut[0]));
 		}
 
-		m_src.Add(src, TEX0);
+		m_src.Add(src, TEX0, m_renderer->m_mem);
 	}
 
 	if(psm.pal > 0)
@@ -142,13 +145,15 @@ GSTextureCache::Source* GSTextureCache::LookupSource(const GIFRegTEX0& TEX0, con
 
 GSTextureCache::Target* GSTextureCache::LookupTarget(const GIFRegTEX0& TEX0, int w, int h, int type, bool used, bool fb)
 {
+	uint32 bp = TEX0.TBP0;
+
 	Target* dst = NULL;
 
 	for(list<Target*>::iterator i = m_dst[type].begin(); i != m_dst[type].end(); i++)
 	{
 		Target* t = *i;
 
-		if(t->m_TEX0.TBP0 == TEX0.TBP0)
+		if(bp == t->m_TEX0.TBP0)
 		{
 			m_dst[type].splice(m_dst[type].begin(), m_dst[type], i);
 
@@ -168,7 +173,7 @@ GSTextureCache::Target* GSTextureCache::LookupTarget(const GIFRegTEX0& TEX0, int
 		{
 			Target* t = *i;
 
-			if(t->m_TEX0.TBP0 <= TEX0.TBP0 && TEX0.TBP0 < t->m_TEX0.TBP0 + 0x700 && (!dst || t->m_TEX0.TBP0 >= dst->m_TEX0.TBP0))
+			if(t->m_TEX0.TBP0 <= bp && bp < t->m_TEX0.TBP0 + 0x700 && (!dst || t->m_TEX0.TBP0 >= dst->m_TEX0.TBP0))
 			{
 				dst = t;
 			}
@@ -229,14 +234,13 @@ GSTextureCache::Target* GSTextureCache::LookupTarget(const GIFRegTEX0& TEX0, int
 
 void GSTextureCache::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& rect, bool target)
 {
-	bool found = false;
-
-	const GSLocalMemory::psm_t& psm = GSLocalMemory::m_psm[BITBLTBUF.DPSM];
-
 	uint32 bp = BITBLTBUF.DBP;
 	uint32 bw = BITBLTBUF.DBW;
+	uint32 psm = BITBLTBUF.DPSM;
 
-	GSVector2i bs = (bp & 31) == 0 ? psm.pgs : psm.bs;
+	const GSLocalMemory::BlockOffset* bo = m_renderer->m_mem.GetBlockOffset(bp, bw, psm);
+
+	GSVector2i bs = (bp & 31) == 0 ? GSLocalMemory::m_psm[psm].pgs : GSLocalMemory::m_psm[psm].bs;
 
 	GSVector4i r = rect.ralign<GSVector4i::Outside>(bs);
 
@@ -250,20 +254,22 @@ void GSTextureCache::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const 
 
 			Source* s = j->first;
 
-			if(GSUtil::HasSharedBits(bp, BITBLTBUF.DPSM, s->m_TEX0.TBP0, s->m_TEX0.PSM))
+			if(GSUtil::HasSharedBits(bp, psm, s->m_TEX0.TBP0, s->m_TEX0.PSM))
 			{
 				m_src.RemoveAt(s);
 			}
 		}
 	}
 
+	bool found = false;
+
 	for(int y = r.top; y < r.bottom; y += bs.y)
 	{
-		uint32 base = psm.bn(0, y, bp, bw);
+		uint32 base = bo->row[y >> 3];
 
 		for(int x = r.left; x < r.right; x += bs.x)
 		{
-			uint32 page = (base + psm.blockOffset[x >> 3]) >> 5;
+			uint32 page = (base + bo->col[x >> 3]) >> 5;
 
 			if(page < MAX_PAGES)
 			{
@@ -275,20 +281,22 @@ void GSTextureCache::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const 
 
 					Source* s = j->first;
 
-					if(GSUtil::HasSharedBits(BITBLTBUF.DPSM, s->m_TEX0.PSM))
+					if(GSUtil::HasSharedBits(psm, s->m_TEX0.PSM))
 					{
+						bool b = bp == s->m_TEX0.TBP0;
+
 						if(!s->m_target)
 						{
 							s->m_valid[page] = 0;
 							s->m_complete = false;
 
-							found = true;
+							found = b;
 						}
 						else
 						{
 							// TODO
 
-							if(s->m_TEX0.TBP0 == bp)
+							if(b)
 							{
 								m_src.RemoveAt(s);
 							}
@@ -309,12 +317,12 @@ void GSTextureCache::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const 
 
 			Target* t = *j;
 
-			if(GSUtil::HasSharedBits(BITBLTBUF.DBP, BITBLTBUF.DPSM, t->m_TEX0.TBP0, t->m_TEX0.PSM))
+			if(GSUtil::HasSharedBits(bp, psm, t->m_TEX0.TBP0, t->m_TEX0.PSM))
 			{
-				if(!found && GSUtil::HasCompatibleBits(BITBLTBUF.DPSM, t->m_TEX0.PSM))
+				if(!found && GSUtil::HasCompatibleBits(psm, t->m_TEX0.PSM))
 				{
-					t->m_dirty.push_back(GSDirtyRect(r, BITBLTBUF.DPSM));
-					t->m_TEX0.TBW = BITBLTBUF.DBW;
+					t->m_dirty.push_back(GSDirtyRect(r, psm));
+					t->m_TEX0.TBW = bw;
 				}
 				else
 				{
@@ -324,20 +332,20 @@ void GSTextureCache::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const 
 				}
 			}
 
-			if(GSUtil::HasSharedBits(BITBLTBUF.DPSM, t->m_TEX0.PSM) && BITBLTBUF.DBP < t->m_TEX0.TBP0)
+			if(GSUtil::HasSharedBits(psm, t->m_TEX0.PSM) && bp < t->m_TEX0.TBP0)
 			{
-				uint32 rowsize = BITBLTBUF.DBW * 8192;
-				uint32 offset = (uint32)((t->m_TEX0.TBP0 - BITBLTBUF.DBP) * 256);
+				uint32 rowsize = bw * 8192;
+				uint32 offset = (uint32)((t->m_TEX0.TBP0 - bp) * 256);
 
 				if(rowsize > 0 && offset % rowsize == 0)
 				{
-					int y = GSLocalMemory::m_psm[BITBLTBUF.DPSM].pgs.y * offset / rowsize;
+					int y = GSLocalMemory::m_psm[psm].pgs.y * offset / rowsize;
 
 					if(r.bottom > y)
 					{
 						// TODO: do not add this rect above too
-						t->m_dirty.push_back(GSDirtyRect(GSVector4i(r.left, r.top - y, r.right, r.bottom - y), BITBLTBUF.DPSM));
-						t->m_TEX0.TBW = BITBLTBUF.DBW;
+						t->m_dirty.push_back(GSDirtyRect(GSVector4i(r.left, r.top - y, r.right, r.bottom - y), psm));
+						t->m_TEX0.TBW = bw;
 						continue;
 					}
 				}
@@ -348,21 +356,24 @@ void GSTextureCache::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const 
 
 void GSTextureCache::InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r)
 {
+	uint32 bp = BITBLTBUF.SBP;
+	uint32 psm = BITBLTBUF.SPSM;
+
 	for(list<Target*>::iterator i = m_dst[RenderTarget].begin(); i != m_dst[RenderTarget].end(); )
 	{
 		list<Target*>::iterator j = i++;
 
 		Target* t = *j;
 
-		if(GSUtil::HasSharedBits(BITBLTBUF.SBP, BITBLTBUF.SPSM, t->m_TEX0.TBP0, t->m_TEX0.PSM))
+		if(GSUtil::HasSharedBits(bp, psm, t->m_TEX0.TBP0, t->m_TEX0.PSM))
 		{
-			if(GSUtil::HasCompatibleBits(BITBLTBUF.SPSM, t->m_TEX0.PSM))
+			if(GSUtil::HasCompatibleBits(psm, t->m_TEX0.PSM))
 			{
 				t->Read(r);
 
 				return;
 			}
-			else if(BITBLTBUF.SPSM == PSM_PSMCT32 && (t->m_TEX0.PSM == PSM_PSMCT16 || t->m_TEX0.PSM == PSM_PSMCT16S)) 
+			else if(psm == PSM_PSMCT32 && (t->m_TEX0.PSM == PSM_PSMCT16 || t->m_TEX0.PSM == PSM_PSMCT16S)) 
 			{
 				// ffx-2 riku changing to her default (shoots some reflecting glass at the end), 16-bit rt read as 32-bit
 
@@ -518,9 +529,7 @@ void GSTextureCache::Source::Update(const GIFRegTEX0& TEX0, const GIFRegTEXA& TE
 	m_TEX0 = TEX0;
 	m_TEXA = TEXA;
 
-	const GSLocalMemory::psm_t& psm = GSLocalMemory::m_psm[m_TEX0.PSM];
-
-	GSVector2i bs = psm.bs;
+	GSVector2i bs = GSLocalMemory::m_psm[m_TEX0.PSM].bs;
 
 	GSVector4i r = rect.ralign<GSVector4i::Outside>(bs);
 
@@ -529,20 +538,19 @@ void GSTextureCache::Source::Update(const GIFRegTEX0& TEX0, const GIFRegTEXA& TE
 		m_complete = true; // lame, but better than nothing
 	}
 
-	uint32 bp = m_TEX0.TBP0;
-	uint32 bw = m_TEX0.TBW;
+	const GSLocalMemory::BlockOffset* bo = m_renderer->m_mem.GetBlockOffset(m_TEX0.TBP0, m_TEX0.TBW, m_TEX0.PSM);
 
-	bool repeating = (1 << m_TEX0.TW) > (bw << 6); // TODO: bw == 0
+	bool repeating = m_TEX0.IsRepeating();
 
 	uint32 blocks = 0;
 
 	for(int y = r.top; y < r.bottom; y += bs.y)
 	{
-		uint32 base = psm.bn(0, y, bp, bw);
+		uint32 base = bo->row[y >> 3];
 
 		for(int x = r.left; x < r.right; x += bs.x)
 		{
-			uint32 block = base + psm.blockOffset[x >> 3];
+			uint32 block = base + bo->col[x >> 3];
 
 			if(block < MAX_BLOCKS)
 			{
@@ -570,11 +578,11 @@ void GSTextureCache::Source::Update(const GIFRegTEX0& TEX0, const GIFRegTEXA& TE
 		{
 			for(int y = r.top; y < r.bottom; y += bs.y)
 			{
-				uint32 base = psm.bn(0, y, bp, bw);
+				uint32 base = bo->row[y >> 3];
 
 				for(int x = r.left; x < r.right; x += bs.x)
 				{
-					uint32 block = base + psm.blockOffset[x >> 3];
+					uint32 block = base + bo->col[x >> 3];
 
 					if(block < MAX_BLOCKS)
 					{
@@ -640,7 +648,7 @@ void GSTextureCache::Source::Flush(uint32 count)
 	
 	int pitch = max(tw, psm.bs.x) * sizeof(uint32);
 
-	const GSLocalMemory& mem = m_renderer->m_mem;
+	GSLocalMemory& mem = m_renderer->m_mem;
 
 	GSLocalMemory::readTexture rtx = psm.rtx;
 
@@ -767,42 +775,44 @@ void GSTextureCache::Target::Update()
 	{
 		// do the most likely thing a direct write would do, clear it
 
-		m_renderer->m_dev->ClearDepth(m_texture, 0);
+		if((m_renderer->m_game.flags & CRC::ZWriteMustNotClear) == 0)
+		{
+			m_renderer->m_dev->ClearDepth(m_texture, 0);
+		}
 	}
 }
 
 // GSTextureCache::SourceMap
 
-void GSTextureCache::SourceMap::Add(Source* s, const GIFRegTEX0& TEX0)
+void GSTextureCache::SourceMap::Add(Source* s, const GIFRegTEX0& TEX0, GSLocalMemory& mem)
 {
 	m_surfaces[s] = true;
-
-	int tw = 1 << TEX0.TW;
-	int th = 1 << TEX0.TH;
-
-	uint32 bp = TEX0.TBP0;
-	uint32 bw = TEX0.TBW;
 
 	if(s->m_target)
 	{
 		// TODO
 
-		m_map[bp >> 5][s] = true;
+		m_map[TEX0.TBP0 >> 5][s] = true;
 
 		return;
 	}
 
+	const GSLocalMemory::BlockOffset* bo = mem.GetBlockOffset(TEX0.TBP0, TEX0.TBW, TEX0.PSM);
+
 	const GSLocalMemory::psm_t& psm = GSLocalMemory::m_psm[TEX0.PSM];
 
-	GSVector2i bs = (bp & 31) ? psm.pgs : psm.bs;
+	GSVector2i bs = (TEX0.TBP0 & 31) ? psm.pgs : psm.bs;
+
+	int tw = 1 << TEX0.TW;
+	int th = 1 << TEX0.TH;
 
 	for(int y = 0; y < th; y += bs.y)
 	{
-		uint32 base = psm.bn(0, y, bp, bw);
+		uint32 base = bo->row[y >> 3];
 
 		for(int x = 0; x < tw; x += bs.x)
 		{
-			uint32 page = (base + psm.blockOffset[x >> 3]) >> 5;
+			uint32 page = (base + bo->col[x >> 3]) >> 5;
 
 			if(page < MAX_PAGES)
 			{

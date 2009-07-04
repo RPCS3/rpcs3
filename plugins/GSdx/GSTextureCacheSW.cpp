@@ -45,7 +45,7 @@ const GSTextureCacheSW::GSTexture* GSTextureCacheSW::Lookup(const GIFRegTEX0& TE
 	{
 		GSTexture* t2 = i->first;
 
-		if(((t2->m_TEX0.u32[0] ^ TEX0.u32[0]) | ((t2->m_TEX0.u32[1] ^ TEX0.u32[1]) & 3)) != 0) // TBP0 TBW PSM TW TH
+		if(((TEX0.u32[0] ^ t2->m_TEX0.u32[0]) | ((TEX0.u32[1] ^ t2->m_TEX0.u32[1]) & 3)) != 0) // TBP0 TBW PSM TW TH
 		{
 			continue;
 		}
@@ -68,21 +68,20 @@ const GSTextureCacheSW::GSTexture* GSTextureCacheSW::Lookup(const GIFRegTEX0& TE
 
 		m_textures[t] = true;
 
+		const GSLocalMemory::BlockOffset* bo = m_state->m_mem.GetBlockOffset(TEX0.TBP0, TEX0.TBW, TEX0.PSM);
+
+		GSVector2i bs = (TEX0.TBP0 & 31) == 0 ? psm.pgs : psm.bs;
+
 		int tw = 1 << TEX0.TW;
 		int th = 1 << TEX0.TH;
 
-		uint32 bp = TEX0.TBP0;
-		uint32 bw = TEX0.TBW;
-
-		GSVector2i s = (bp & 31) == 0 ? psm.pgs : psm.bs;
-
-		for(int y = 0; y < th; y += s.y)
+		for(int y = 0; y < th; y += bs.y)
 		{
-			uint32 base = psm.bn(0, y, bp, bw);
+			uint32 base = bo->row[y >> 3];
 
-			for(int x = 0; x < tw; x += s.x)
+			for(int x = 0; x < tw; x += bs.x)
 			{
-				uint32 page = (base + psm.blockOffset[x >> 3]) >> 5;
+				uint32 page = (base + bo->col[x >> 3]) >> 5;
 
 				if(page < MAX_PAGES)
 				{
@@ -168,22 +167,23 @@ void GSTextureCacheSW::IncAge()
 
 void GSTextureCacheSW::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& rect)
 {
-	const GSLocalMemory::psm_t& psm = GSLocalMemory::m_psm[BITBLTBUF.DPSM];
-
 	uint32 bp = BITBLTBUF.DBP;
 	uint32 bw = BITBLTBUF.DBW;
+	uint32 psm = BITBLTBUF.DPSM;
 
-	GSVector2i s = (bp & 31) == 0 ? psm.pgs : psm.bs;
+	const GSLocalMemory::BlockOffset* bo = m_state->m_mem.GetBlockOffset(bp, bw, psm);
 
-	GSVector4i r = rect.ralign<GSVector4i::Outside>(s);
+	GSVector2i bs = (bp & 31) == 0 ? GSLocalMemory::m_psm[psm].pgs : GSLocalMemory::m_psm[psm].bs;
 
-	for(int y = r.top; y < r.bottom; y += s.y)
+	GSVector4i r = rect.ralign<GSVector4i::Outside>(bs);
+
+	for(int y = r.top; y < r.bottom; y += bs.y)
 	{
-		uint32 base = psm.bn(0, y, bp, bw);
+		uint32 base = bo->row[y >> 3];
 
-		for(int x = r.left; x < r.right; x += s.x)
+		for(int x = r.left; x < r.right; x += bs.x)
 		{
-			uint32 page = (base + psm.blockOffset[x >> 3]) >> 5;
+			uint32 page = (base + bo->col[x >> 3]) >> 5;
 
 			if(page < MAX_PAGES)
 			{
@@ -193,7 +193,7 @@ void GSTextureCacheSW::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, cons
 				{
 					GSTexture* t = i->first;
 
-					if(GSUtil::HasSharedBits(BITBLTBUF.DPSM, t->m_TEX0.PSM))
+					if(GSUtil::HasSharedBits(psm, t->m_TEX0.PSM))
 					{
 						t->m_valid[page] = 0;
 						t->m_complete = false;
@@ -236,10 +236,17 @@ bool GSTextureCacheSW::GSTexture::Update(const GIFRegTEX0& TEX0, const GIFRegTEX
 
 	const GSLocalMemory::psm_t& psm = GSLocalMemory::m_psm[TEX0.PSM];
 
-	GSVector2i s = psm.bs;
+	GSVector2i bs = psm.bs;
 
-	int tw = max(1 << TEX0.TW, s.x);
-	int th = max(1 << TEX0.TH, s.y);
+	int tw = max(1 << TEX0.TW, bs.x);
+	int th = max(1 << TEX0.TH, bs.y);
+
+	GSVector4i r = rect.ralign<GSVector4i::Outside>(bs);
+
+	if(r.eq(GSVector4i(0, 0, tw, th)))
+	{
+		m_complete = true; // lame, but better than nothing
+	}
 
 	if(m_buff == NULL)
 	{
@@ -250,24 +257,16 @@ bool GSTextureCacheSW::GSTexture::Update(const GIFRegTEX0& TEX0, const GIFRegTEX
 			return false;
 		}
 
-		m_tw = max(psm.pal > 0 ? 5 : 3, TEX0.TW); // makes one row 32 bytes at least, matches the smallest block size that is allocated above for m_buff
+		m_tw = std::max<int>(psm.pal > 0 ? 5 : 3, TEX0.TW); // makes one row 32 bytes at least, matches the smallest block size that is allocated above for m_buff
 	}
-
-	GSVector4i r = rect.ralign<GSVector4i::Outside>(s);
-
-	if(r.eq(GSVector4i(0, 0, tw, th)))
-	{
-		m_complete = true; // lame, but better than nothing
-	}
-
-	uint32 bp = TEX0.TBP0;
-	uint32 bw = TEX0.TBW;
-
-	bool repeating = tw > (bw << 6); // TODO: bw == 0
-
-	uint32 blocks = 0;
 
 	GSLocalMemory& mem = m_state->m_mem;
+
+	const GSLocalMemory::BlockOffset* bo = mem.GetBlockOffset(m_TEX0.TBP0, m_TEX0.TBW, m_TEX0.PSM);
+
+	bool repeating = m_TEX0.IsRepeating();
+
+	uint32 blocks = 0;
 
 	GSLocalMemory::readTextureBlock rtxb = psm.rtxbP;
 
@@ -277,13 +276,13 @@ bool GSTextureCacheSW::GSTexture::Update(const GIFRegTEX0& TEX0, const GIFRegTEX
 
 	uint8* dst = (uint8*)m_buff + pitch * r.top;
 
-	for(int y = r.top, o = pitch * s.y; y < r.bottom; y += s.y, dst += o)
+	for(int y = r.top, o = pitch * bs.y; y < r.bottom; y += bs.y, dst += o)
 	{
-		uint32 base = psm.bn(0, y, bp, bw);
+		uint32 base = bo->row[y >> 3];
 
-		for(int x = r.left; x < r.right; x += s.x)
+		for(int x = r.left; x < r.right; x += bs.x)
 		{
-			uint32 block = base + psm.blockOffset[x >> 3];
+			uint32 block = base + bo->col[x >> 3];
 
 			if(block < MAX_BLOCKS)
 			{
@@ -309,13 +308,13 @@ bool GSTextureCacheSW::GSTexture::Update(const GIFRegTEX0& TEX0, const GIFRegTEX
 	{
 		if(repeating)
 		{
-			for(int y = r.top; y < r.bottom; y += s.y)
+			for(int y = r.top; y < r.bottom; y += bs.y)
 			{
-				uint32 base = psm.bn(0, y, bp, bw);
+				uint32 base = bo->row[y >> 3];
 
-				for(int x = r.left; x < r.right; x += s.x)
+				for(int x = r.left; x < r.right; x += bs.x)
 				{
-					uint32 block = base + psm.blockOffset[x >> 3];
+					uint32 block = base + bo->col[x >> 3];
 
 					if(block < MAX_BLOCKS)
 					{
@@ -328,7 +327,7 @@ bool GSTextureCacheSW::GSTexture::Update(const GIFRegTEX0& TEX0, const GIFRegTEX
 			}
 		}
 
-		m_state->m_perfmon.Put(GSPerfMon::Unswizzle, s.x * s.y * blocks << shift);
+		m_state->m_perfmon.Put(GSPerfMon::Unswizzle, bs.x * bs.y * blocks << shift);
 	}
 
 	return true;

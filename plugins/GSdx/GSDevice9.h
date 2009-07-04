@@ -95,6 +95,7 @@ private:
 	CComPtr<IDirect3D9> m_d3d;
 	CComPtr<IDirect3DDevice9> m_dev;
 	CComPtr<IDirect3DSwapChain9> m_swapchain;
+	bool m_lost;
 
 	struct
 	{
@@ -132,9 +133,8 @@ public:
 	virtual ~GSDevice9();
 
 	bool Create(GSWnd* wnd, bool vsync);
-	bool Reset(int w, int h, bool fs);
-
-	bool IsLost();
+	bool Reset(int w, int h, int mode);
+	bool IsLost(bool update);
 	void Flip();
 
 	void BeginScene();

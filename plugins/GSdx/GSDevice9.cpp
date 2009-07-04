@@ -42,6 +42,7 @@ GSDevice9::GSDevice9()
 	, m_bf(0xffffffff)
 	, m_rtv(NULL)
 	, m_dsv(NULL)
+	, m_lost(false)
 {
 	memset(&m_pp, 0, sizeof(m_pp));
 	memset(&m_ddcaps, 0, sizeof(m_ddcaps));
@@ -105,9 +106,7 @@ bool GSDevice9::Create(GSWnd* wnd, bool vsync)
 
 	m_d3d->GetDeviceCaps(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, &m_d3dcaps);
 
-	bool fs = theApp.GetConfig("ModeWidth", 0) > 0;
-
-	if(!Reset(1, 1, fs)) return false;
+	if(!Reset(1, 1, theApp.GetConfig("ModeWidth", 0) > 0 ? Fullscreen : Windowed)) return false;
 
 	m_dev->Clear(0, NULL, D3DCLEAR_TARGET, 0, 1.0f, 0);
 
@@ -188,35 +187,48 @@ bool GSDevice9::Create(GSWnd* wnd, bool vsync)
 	return true;
 }
 
-bool GSDevice9::Reset(int w, int h, bool fs)
+bool GSDevice9::Reset(int w, int h, int mode)
 {
-	if(!__super::Reset(w, h, fs))
+	if(!__super::Reset(w, h, mode))
 		return false;
 
 	HRESULT hr;
 
 	if(!m_d3d) return false;
 
-	if(m_swapchain && !fs && m_pp.Windowed)
+	if(mode == DontCare)
 	{
-		m_swapchain = NULL;
+		mode = m_pp.Windowed ? Windowed : Fullscreen;
+	}
 
-		m_pp.BackBufferWidth = w;
-		m_pp.BackBufferHeight = h;
+	if(!m_lost)
+	{
+		if(m_swapchain && mode != Fullscreen && m_pp.Windowed)
+		{
+			m_swapchain = NULL;
 
-		hr = m_dev->CreateAdditionalSwapChain(&m_pp, &m_swapchain);
+			m_pp.BackBufferWidth = w;
+			m_pp.BackBufferHeight = h;
 
-		if(FAILED(hr)) return false;
+			hr = m_dev->CreateAdditionalSwapChain(&m_pp, &m_swapchain);
 
-		CComPtr<IDirect3DSurface9> backbuffer;
-		hr = m_swapchain->GetBackBuffer(0, D3DBACKBUFFER_TYPE_MONO, &backbuffer);
-		m_backbuffer = new GSTexture9(backbuffer);
+			if(FAILED(hr)) return false;
 
-		return true;
+			CComPtr<IDirect3DSurface9> backbuffer;
+			hr = m_swapchain->GetBackBuffer(0, D3DBACKBUFFER_TYPE_MONO, &backbuffer);
+			m_backbuffer = new GSTexture9(backbuffer);
+
+			return true;
+		}
 	}
 
 	m_swapchain = NULL;
-	
+
+	m_vertices.vb = NULL;
+	m_vertices.vb_old = NULL;
+	m_vertices.start = 0;
+	m_vertices.count = 0;
+
 	if(m_vs_cb) _aligned_free(m_vs_cb);
 	if(m_ps_cb) _aligned_free(m_ps_cb);
 
@@ -258,7 +270,7 @@ bool GSDevice9::Reset(int w, int h, bool fs)
 	int mh = theApp.GetConfig("ModeHeight", 0);
 	int mrr = theApp.GetConfig("ModeRefreshRate", 0);
 
-	if(fs && mw > 0 && mh > 0 && mrr >= 0)
+	if(mode == Fullscreen && mw > 0 && mh > 0 && mrr >= 0)
 	{
 		m_pp.Windowed = FALSE;
 		m_pp.BackBufferWidth = mw;
@@ -324,27 +336,39 @@ bool GSDevice9::Reset(int w, int h, bool fs)
 	return true;
 }
 
-bool GSDevice9::IsLost()
+bool GSDevice9::IsLost(bool update)
 {
-	HRESULT hr = m_dev->TestCooperativeLevel();
-	
-	return hr == D3DERR_DEVICELOST || hr == D3DERR_DEVICENOTRESET;
+	if(!m_lost || update)
+	{
+		HRESULT hr = m_dev->TestCooperativeLevel();
+
+		m_lost = hr == D3DERR_DEVICELOST || hr == D3DERR_DEVICENOTRESET;
+	}
+
+	return m_lost;
 }
 
 void GSDevice9::Flip()
 {
 	m_dev->EndScene();
 
+	HRESULT hr;
+
 	if(m_swapchain)
 	{
-		m_swapchain->Present(NULL, NULL, NULL, NULL, 0);
+		hr = m_swapchain->Present(NULL, NULL, NULL, NULL, 0);
 	}
 	else
 	{
-		m_dev->Present(NULL, NULL, NULL, NULL);
+		hr = m_dev->Present(NULL, NULL, NULL, NULL);
 	}
 
 	m_dev->BeginScene();
+
+	if(FAILED(hr))
+	{
+		m_lost = true;
+	}
 }
 
 void GSDevice9::BeginScene()
@@ -663,7 +687,7 @@ void GSDevice9::IASetVertexBuffer(const void* vertices, size_t stride, size_t co
 		m_vertices.vb = NULL;
 		m_vertices.start = 0;
 		m_vertices.count = 0;
-		m_vertices.limit = max(count * 3 / 2, 10000);
+		m_vertices.limit = std::max<int>(count * 3 / 2, 10000);
 	}
 
 	if(m_vertices.vb == NULL)

@@ -113,7 +113,17 @@ void GPURenderer::VSync()
 
 	Flush();
 
-	if(!Merge()) return;
+	if(!m_dev->IsLost(true))
+	{
+		if(!Merge())
+		{
+			return;
+		}
+	}
+	else
+	{
+		ResetDevice();
+	}
 
 	// osd 
 
@@ -146,11 +156,6 @@ void GPURenderer::VSync()
 		}
 
 		SetWindowText(m_hWnd, s.c_str());
-	}
-
-	if(m_dev->IsLost())
-	{
-		ResetDevice();
 	}
 
 	GSVector4i r;
