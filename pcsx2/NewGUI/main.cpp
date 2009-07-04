@@ -114,7 +114,8 @@ bool Pcsx2App::OnInit()
 		PathDefs::GetConfigs().Mkdir();
 
 		// Allow wx to use our config, and enforces auto-cleanup as well
-		wxConfigBase::Set( OpenConfig( Path::Combine( PathDefs::GetConfigs(), FilenameDefs::GetConfig() ) ) );
+		wxString confile( Path::Combine( PathDefs::GetConfigs(), FilenameDefs::GetConfig() ) );
+		wxConfigBase::Set( OpenConfig( confile ) );
 		wxConfigBase::Get()->SetRecordDefaults();
 	}
 

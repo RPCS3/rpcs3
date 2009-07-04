@@ -27,9 +27,9 @@
 
 namespace wxHelpers
 {
-	wxSizerFlags stdCenteredFlags( wxSizerFlags().Align(wxALIGN_CENTER).DoubleBorder() );
+	wxSizerFlags stdCenteredFlags( wxSizerFlags().Align( wxALIGN_CENTER ).DoubleBorder() );
 	wxSizerFlags stdSpacingFlags( wxSizerFlags().Border( wxALL, 6 ) );
-	wxSizerFlags stdButtonSizerFlags( wxSizerFlags().Align(wxALIGN_RIGHT).Border() );
+	wxSizerFlags stdButtonSizerFlags( wxSizerFlags().Align( wxALIGN_RIGHT ).Border() );
 	wxSizerFlags CheckboxFlags( wxSizerFlags().Border( wxALL, 6 ).Expand() );
 
 	wxCheckBox& AddCheckBoxTo( wxWindow* parent, wxBoxSizer& sizer, const wxString& label, wxWindowID id )
@@ -46,6 +46,40 @@ namespace wxHelpers
         sizer.Add(temp);
         return *temp;
     }
+    
+	// ------------------------------------------------------------------------
+	// Launches the specified file according to its mime type
+	//
+	void Launch( const wxString& filename )
+	{
+		if( !wxLaunchDefaultBrowser( filename ) )
+		{
+		}
+	}
+
+	void Launch(const char *filename)
+	{
+		Launch( wxString::FromAscii(filename) );
+	}
+
+	// ------------------------------------------------------------------------
+	// Launches a file explorer window on the specified path.  If the given path is not
+	// a qualified URI (with a prefix:// ), file:// is automatically prepended.
+	//
+	void Explore( const wxString& path )
+	{
+		if( wxLaunchDefaultBrowser(
+			!path.Contains( L"://") ? L"file://" + path : path )
+		)
+		{
+			// WARN_LOG
+		}
+	}
+
+	void Explore(const char *path)
+	{
+		Explore( wxString::FromAscii(path) );
+	}
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -58,8 +92,8 @@ wxDialogWithHelpers::wxDialogWithHelpers( wxWindow* parent, int id,  const wxStr
 		wxHelpProvider::Set( new wxSimpleHelpProvider() );
 
 	// Note: currently the Close (X) button doesn't appear to work in dialogs.  Docs indicate
-	// that is should so I presume the problem is in wxWidgets and that (hopefully!) an updated
-	// version will fix it later.  I treid to fix it using a manual Connect but it didn't do
+	// that it should, so I presume the problem is in wxWidgets and that (hopefully!) an updated
+	// version will fix it later.  I tried to fix it using a manual Connect but it didn't do
 	// any good.
 }
 

@@ -36,11 +36,14 @@ namespace PathDefs
 	const wxDirName MemoryCards( L"memcards" );
 	const wxDirName Configs( L"inis" );
 	const wxDirName Plugins( L"plugins" );
+	const wxDirName Logs( L"logs" );
+	const wxDirName Dumps( L"dumps" );
 
 	// Fetches the path location for user-consumable documents -- stuff users are likely to want to
 	// share with other programs: screenshots, memory cards, and savestates.
 	wxDirName GetDocuments()
 	{
+		wxString wtf( wxStandardPaths::Get().GetDocumentsDir() );
 		return (wxDirName)wxStandardPaths::Get().GetDocumentsDir() + (wxDirName)wxGetApp().GetAppName();
 	}
 
@@ -66,15 +69,27 @@ namespace PathDefs
 
 	wxDirName GetConfigs()
 	{
-		return (wxDirName)GetDocuments()+ Configs;
+		return (wxDirName)GetDocuments() + Configs;
 	}
 
 	wxDirName GetPlugins()
 	{
 		return (wxDirName)Plugins;
 	}
+
+	wxDirName GetLogs()
+	{
+		return (wxDirName)GetDocuments() + Logs;
+	}
+
+	wxDirName GetDumps()
+	{
+		return (wxDirName)GetDocuments() + Dumps;
+	}
 };
 
+//////////////////////////////////////////////////////////////////////////////////////////
+//
 namespace FilenameDefs
 {
 	wxFileName GetConfig()
@@ -104,7 +119,7 @@ wxFileName wxDirName::Combine( const wxFileName& right ) const
 	// for getting each component of the path.  So instead let's use Normalize:
 
 	wxFileName result( right );
-	result.Normalize( wxPATH_NORM_ENV_VARS | wxPATH_NORM_DOTS, GetPath() );
+	result.Normalize( wxPATH_NORM_ENV_VARS | wxPATH_NORM_DOTS | wxPATH_NORM_ABSOLUTE, GetPath() );
 	return result;
 }
 
@@ -113,7 +128,7 @@ wxDirName wxDirName::Combine( const wxDirName& right ) const
 	wxASSERT_MSG( IsDir() && right.IsDir(), L"Warning: Malformed directory name detected during wDirName concatenation." );
 
 	wxDirName result( right );
-	result.Normalize( wxPATH_NORM_ENV_VARS | wxPATH_NORM_DOTS, GetPath() );
+	result.Normalize( wxPATH_NORM_ENV_VARS | wxPATH_NORM_DOTS | wxPATH_NORM_ABSOLUTE, GetPath() );
 	return result;
 }
 
@@ -143,9 +158,7 @@ wxString AppConfig::FullpathHelpers::FW() const		{ return Path::Combine( m_conf.
 
 wxString AppConfig::FullpathHelpers::Mcd( uint mcdidx ) const { return Path::Combine( m_conf.Folders.MemoryCards, m_conf.MemoryCards.Mcd[mcdidx].Filename ); }
 
-//////////////////////////////////////////////////////////////////////////////////////////
-//
-
+// ------------------------------------------------------------------------
 #define IniEntry( varname, defval ) ini.Entry( wxT(#varname), varname, defval )
 
 void AppConfig::LoadSave( IniInterface& ini )
@@ -156,6 +169,8 @@ void AppConfig::LoadSave( IniInterface& ini )
 	// Process various sub-components:
 	ConLogBox.LoadSave( ini );
 	Speedhacks.LoadSave( ini );
+	Folders.LoadSave( ini );
+	BaseFilenames.LoadSave( ini );
 
 	ini.Flush();
 }
@@ -173,6 +188,7 @@ void AppConfig::Save()
 	LoadSave( saver );
 }
 
+// ------------------------------------------------------------------------
 void AppConfig::ConsoleLogOptions::LoadSave( IniInterface& ini )
 {
 	ini.SetPath( L"ConsoleLog" );
@@ -185,6 +201,49 @@ void AppConfig::ConsoleLogOptions::LoadSave( IniInterface& ini )
 	ini.SetPath( L".." );
 }
 
+// ------------------------------------------------------------------------
 void AppConfig::SpeedhackOptions::LoadSave( IniInterface& ini )
 {
+	ini.SetPath( L"Speedhacks" );
+	
+	ini.SetPath( L".." );
 }
+
+// ------------------------------------------------------------------------
+void AppConfig::FolderOptions::LoadSave( IniInterface& ini )
+{
+	ini.SetPath( L"Folders" );
+
+	const wxDirName def( L"default" );
+
+	IniEntry( Plugins,		PathDefs::GetPlugins() );
+	IniEntry( Bios,			PathDefs::GetBios() );
+	IniEntry( Snapshots,	PathDefs::GetSnapshots() );
+	IniEntry( Savestates,	PathDefs::GetSavestates() );
+	IniEntry( MemoryCards,	PathDefs::GetMemoryCards() );
+	IniEntry( Logs,			PathDefs::GetLogs() );
+	IniEntry( Dumps,		PathDefs::GetDumps() );
+
+	ini.SetPath( L".." );
+}
+
+// ------------------------------------------------------------------------
+void AppConfig::FilenameOptions::LoadSave( IniInterface& ini )
+{
+	ini.SetPath( L"Filenames" );
+
+	const wxFileName pc( L"Please Configure" );
+
+	IniEntry( Bios,		pc );
+	IniEntry( CDVD,		pc );
+	IniEntry( GS,		pc );
+	IniEntry( PAD1,		pc );
+	IniEntry( PAD2,		pc );
+	IniEntry( SPU2,		pc );
+	IniEntry( USB,		pc );
+	IniEntry( FW,		pc );
+	IniEntry( DEV9,		pc );
+
+	ini.SetPath( L".." );
+}
+

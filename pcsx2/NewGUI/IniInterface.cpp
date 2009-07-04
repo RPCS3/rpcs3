@@ -63,6 +63,24 @@ void IniLoader::Entry( const wxString& var, wxString& value, const wxString& def
 	m_Config.Read( var, &value, defvalue );
 }
 
+void IniLoader::Entry( const wxString& var, wxDirName& value, const wxDirName& defvalue )
+{
+	wxString dest;
+	m_Config.Read( var, &dest, wxString() );
+
+	if( dest.IsEmpty() )
+		value = defvalue;
+	else
+		value = dest;
+}
+
+void IniLoader::Entry( const wxString& var, wxFileName& value, const wxFileName& defvalue )
+{
+	wxString dest;
+	m_Config.Read( var, &dest, defvalue.GetFullPath() );
+	value = dest;
+}
+
 void IniLoader::Entry( const wxString& var, int& value, const int defvalue )
 {
 	m_Config.Read( var, &value, defvalue );
@@ -127,6 +145,19 @@ IniSaver::~IniSaver() {}
 void IniSaver::Entry( const wxString& var, wxString& value, const wxString& defvalue )
 {
 	m_Config.Write( var, value );
+}
+
+void IniSaver::Entry( const wxString& var, wxDirName& value, const wxDirName& defvalue )
+{
+	if( value == defvalue )
+		m_Config.Write( var, wxString() );
+	else
+		m_Config.Write( var, value.ToString() );
+}
+
+void IniSaver::Entry( const wxString& var, wxFileName& value, const wxFileName& defvalue )
+{
+	m_Config.Write( var, value.GetFullPath() );
 }
 
 void IniSaver::Entry( const wxString& var, int& value, const int defvalue )

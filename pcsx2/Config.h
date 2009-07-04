@@ -49,7 +49,10 @@ public:
 		wxDirName Snapshots;
 		wxDirName Savestates;
 		wxDirName MemoryCards;
+		wxDirName Logs;
 		wxDirName Dumps;
+
+		void LoadSave( IniInterface& conf );
 	};
 	
 	struct FilenameOptions
@@ -63,6 +66,8 @@ public:
 		wxFileName USB;
 		wxFileName FW;
 		wxFileName DEV9;
+
+		void LoadSave( IniInterface& conf );
 	};
 
 	// Options struct for each memory card.

@@ -41,8 +41,13 @@ public:
 
 	void SetPath( const wxString& path );
 	void Flush();
+
+	virtual bool IsLoading() const=0;
+	bool IsSaving() const { return !IsLoading(); }
 	
 	virtual void Entry( const wxString& var, wxString& value, const wxString& defvalue=wxString() )=0;
+	virtual void Entry( const wxString& var, wxDirName& value, const wxDirName& defvalue=wxDirName() )=0;
+	virtual void Entry( const wxString& var, wxFileName& value, const wxFileName& defvalue=wxFileName() )=0;
 	virtual void Entry( const wxString& var, int& value, const int defvalue=0 )=0;
 	virtual void Entry( const wxString& var, uint& value, const uint defvalue=0 )=0;
 	virtual void Entry( const wxString& var, bool& value, const bool defvalue=0 )=0;
@@ -69,7 +74,11 @@ public:
 	explicit IniLoader();
 	explicit IniLoader( wxConfigBase& config );
 
+	bool IsLoading() const { return true; }
+
 	void Entry( const wxString& var, wxString& value, const wxString& defvalue=wxString() );
+	void Entry( const wxString& var, wxDirName& value, const wxDirName& defvalue=wxDirName() );
+	void Entry( const wxString& var, wxFileName& value, const wxFileName& defvalue=wxFileName() );
 	void Entry( const wxString& var, int& value, const int defvalue=0 );
 	void Entry( const wxString& var, uint& value, const uint defvalue=0 );
 	void Entry( const wxString& var, bool& value, const bool defvalue=false );
@@ -96,7 +105,11 @@ public:
 	explicit IniSaver();
 	explicit IniSaver( wxConfigBase& config );
 
+	bool IsLoading() const { return false; }
+
 	void Entry( const wxString& var, wxString& value, const wxString& defvalue=wxString() );
+	void Entry( const wxString& var, wxDirName& value, const wxDirName& defvalue=wxDirName() );
+	void Entry( const wxString& var, wxFileName& value, const wxFileName& defvalue=wxFileName() );
 	void Entry( const wxString& var, int& value, const int defvalue=0 );
 	void Entry( const wxString& var, uint& value, const uint defvalue=0 );
 	void Entry( const wxString& var, bool& value, const bool defvalue=false );
