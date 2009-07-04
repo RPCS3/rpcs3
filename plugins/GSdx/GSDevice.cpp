@@ -74,6 +74,10 @@ void GSDevice::Present(const GSVector4i& r, int shader)
 {
 	GSVector4i cr = m_wnd->GetClientRect();
 
+	// Skip Presentation if the surface is invisible (minimized or hidden); prevents DX null swapchain crashes.
+	if(cr.width() == 0 || cr.height() == 0)
+		return;
+
 	if(m_backbuffer->GetWidth() != cr.width() || m_backbuffer->GetHeight() != cr.height())
 	{
 		Reset(cr.width(), cr.height(), false);
