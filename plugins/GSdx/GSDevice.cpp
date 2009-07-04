@@ -34,6 +34,13 @@ GSDevice::GSDevice()
 
 GSDevice::~GSDevice() 
 {
+	for_each(m_pool.begin(), m_pool.end(), delete_object());
+	
+	delete m_backbuffer;
+	delete m_merge; 
+	delete m_weavebob;
+	delete m_blend;
+	delete m_1x1;
 }
 
 bool GSDevice::Create(GSWnd* wnd, bool vsync)
@@ -46,10 +53,7 @@ bool GSDevice::Create(GSWnd* wnd, bool vsync)
 
 bool GSDevice::Reset(int w, int h, int mode)
 {
-	for(list<GSTexture*>::iterator i = m_pool.begin(); i != m_pool.end(); i++)
-	{
-		delete *i;
-	}
+	for_each(m_pool.begin(), m_pool.end(), delete_object());
 	
 	m_pool.clear();
 	

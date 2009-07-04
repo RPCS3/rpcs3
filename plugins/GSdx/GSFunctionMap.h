@@ -66,10 +66,7 @@ public:
 
 	virtual ~GSFunctionMap()
 	{
-		for(hash_map<KEY, ActivePtr*>::iterator i = m_map_active.begin(); i != m_map_active.end(); i++)
-		{
-			delete i->second;
-		}
+		for_each(m_map_active.begin(), m_map_active.end(), delete_second());
 	}
 
 	VALUE operator [] (KEY key)
@@ -177,10 +174,7 @@ public:
 
 	virtual ~GSCodeGeneratorFunctionMap()
 	{
-		for(hash_map<uint64, CG*>::iterator i = m_cgmap.begin(); i != m_cgmap.end(); i++)
-		{
-			delete i->second;
-		}
+		for_each(m_cgmap.begin(), m_cgmap.end(), delete_second());
 	}
 
 	VALUE GetDefaultFunction(KEY key)

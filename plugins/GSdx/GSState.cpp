@@ -87,8 +87,6 @@ GSState::GSState(uint8* base, bool mt, void (*irq)())
 
 	m_regs = (GSPrivRegSet*)(base + 0x12000000);
 
-	memset(m_regs, 0, sizeof(GSPrivRegSet));
-
 	PRIM = &m_env.PRIM;
 //	CSR->rREV = 0x20;
 	m_env.PRMODECONT.AC = 1;

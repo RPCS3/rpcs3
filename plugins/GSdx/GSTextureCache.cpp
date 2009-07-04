@@ -38,10 +38,7 @@ void GSTextureCache::RemoveAll()
 
 	for(int type = 0; type < 2; type++)
 	{
-		for(list<Target*>::iterator i = m_dst[type].begin(); i != m_dst[type].end(); i++)
-		{
-			delete *i;
-		}
+		for_each(m_dst[type].begin(), m_dst[type].end(), delete_object());
 
 		m_dst[type].clear();
 	}
@@ -842,10 +839,7 @@ void GSTextureCache::SourceMap::Add(Source* s, const GIFRegTEX0& TEX0, GSLocalMe
 
 void GSTextureCache::SourceMap::RemoveAll()
 {
-	for(hash_map<Source*, bool>::iterator i = m_surfaces.begin(); i != m_surfaces.end(); i++)
-	{
-		delete i->first;
-	}
+	for_each(m_surfaces.begin(), m_surfaces.end(), delete_first());
 
 	m_surfaces.clear();
 

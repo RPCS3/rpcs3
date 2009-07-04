@@ -130,10 +130,7 @@ const GSTextureCacheSW::GSTexture* GSTextureCacheSW::Lookup(const GIFRegTEX0& TE
 
 void GSTextureCacheSW::RemoveAll()
 {
-	for(hash_map<GSTexture*, bool>::iterator i = m_textures.begin(); i != m_textures.end(); i++)
-	{
-		delete i->first;
-	}
+	for_each(m_textures.begin(), m_textures.end(), delete_first());
 
 	m_textures.clear();
 

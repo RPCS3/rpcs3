@@ -883,10 +883,7 @@ GSRasterizerList::~GSRasterizerList()
 
 void GSRasterizerList::FreeRasterizers()
 {
-	for(list<IRasterizer*>::iterator i = begin(); i != end(); i++)
-	{
-		delete *i;
-	}
+	for_each(begin(), end(), delete_object());
 
 	clear();
 }

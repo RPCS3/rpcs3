@@ -53,11 +53,16 @@
 #include <list>
 #include <map>
 #include <hash_map>
+#include <algorithm>
 
 using namespace std;
 using namespace stdext;
 
 extern string format(const char* fmt, ...);
+
+struct delete_object {template<class T> void operator()(T& p) {delete p;}};
+struct delete_first {template<class T> void operator()(T& p) {delete p.first;}};
+struct delete_second {template<class T> void operator()(T& p) {delete p.second;}};
 
 // syntactic sugar
 
