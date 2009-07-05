@@ -111,7 +111,7 @@ GSTexture* GSRendererSW::GetOutput(int i)
 
 		if(s_dump)
 		{
-			if(s_save)
+			if(s_save && s_n >= s_saven)
 			{
 				m_texture[i]->Save(format("c:\\temp1\\_%05d_f%I64d_fr%d_%05x_%d.bmp", s_n, m_perfmon.GetFrame(), i, (int)TEX0.TBP0, (int)TEX0.PSM));
 			}
@@ -149,7 +149,7 @@ void GSRendererSW::Draw()
 
 		string s;
 
-		if(s_save && PRIM->TME) 
+		if(s_save && s_n >= s_saven && PRIM->TME) 
 		{
 			s = format("c:\\temp1\\_%05d_f%I64d_tex_%05x_%d.bmp", s_n, frame, (int)m_context->TEX0.TBP0, (int)m_context->TEX0.PSM);
 
@@ -158,14 +158,14 @@ void GSRendererSW::Draw()
 
 		s_n++;
 
-		if(s_save)
+		if(s_save && s_n >= s_saven)
 		{
 			s = format("c:\\temp1\\_%05d_f%I64d_rt0_%05x_%d.bmp", s_n, frame, m_context->FRAME.Block(), m_context->FRAME.PSM);
 
 			m_mem.SaveBMP(s, m_context->FRAME.Block(), m_context->FRAME.FBW, m_context->FRAME.PSM, GetFrameRect().width(), 512);//GetFrameSize(1).cy);
 		}
 
-		if(s_savez)
+		if(s_savez && s_n >= s_saven)
 		{
 			s = format("c:\\temp1\\_%05d_f%I64d_rz0_%05x_%d.bmp", s_n, frame, m_context->ZBUF.Block(), m_context->ZBUF.PSM);
 
@@ -222,14 +222,14 @@ void GSRendererSW::Draw()
 
 		string s;
 
-		if(s_save)
+		if(s_save && s_n >= s_saven)
 		{
 			s = format("c:\\temp1\\_%05d_f%I64d_rt1_%05x_%d.bmp", s_n, frame, m_context->FRAME.Block(), m_context->FRAME.PSM);
 
 			m_mem.SaveBMP(s, m_context->FRAME.Block(), m_context->FRAME.FBW, m_context->FRAME.PSM, GetFrameRect().width(), 512);//GetFrameSize(1).cy);
 		}
 
-		if(s_savez)
+		if(s_savez && s_n >= s_saven)
 		{
 			s = format("c:\\temp1\\_%05d_f%I64d_rz1_%05x_%d.bmp", s_n, frame, m_context->ZBUF.Block(), m_context->ZBUF.PSM);
 

@@ -67,6 +67,7 @@ public:
 	bool s_dump;
 	bool s_save;
 	bool s_savez;
+	int s_saven;
 
 public:
 	GSRenderer(uint8* base, bool mt, void (*irq)(), GSDevice* dev);

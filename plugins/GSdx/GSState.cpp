@@ -1881,6 +1881,19 @@ bool GSC_OnePieceGrandAdventure(const GSFrameInfo& fi, int& skip)
 	return true;
 }
 
+bool GSC_OnePieceGrandBattle(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME && fi.FBP == 0x02d00 && fi.FPSM == PSM_PSMCT16 && (fi.TBP0 == 0x00000 || fi.TBP0 == 0x00f00) && fi.TPSM == PSM_PSMCT16)
+		{
+			skip = 4;
+		}
+	}
+
+	return true;
+}
+
 bool GSC_ICO(const GSFrameInfo& fi, int& skip)
 {
 	if(skip == 0)
@@ -2301,6 +2314,7 @@ bool GSState::IsBadFrame(int& skip)
 		map[CRC::BullyCC] = GSC_BullyCC;
 		map[CRC::SoTC] = GSC_SoTC;
 		map[CRC::OnePieceGrandAdventure] = GSC_OnePieceGrandAdventure;
+		map[CRC::OnePieceGrandBattle] = GSC_OnePieceGrandBattle;
 		map[CRC::ICO] = GSC_ICO;
 		map[CRC::GT4] = GSC_GT4;
 		map[CRC::WildArms5] = GSC_WildArms5;

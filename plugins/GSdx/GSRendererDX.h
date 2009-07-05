@@ -91,10 +91,30 @@ public:
 		GSTextureFX::OMBlendSelector om_bsel;
 
 		om_bsel.abe = !IsOpaque();
-		om_bsel.a = context->ALPHA.A;
-		om_bsel.b = context->ALPHA.B;
-		om_bsel.c = context->ALPHA.C;
-		om_bsel.d = context->ALPHA.D;
+
+		if(om_bsel.abe)
+		{
+			om_bsel.a = context->ALPHA.A;
+			om_bsel.b = context->ALPHA.B;
+			om_bsel.c = context->ALPHA.C;
+			om_bsel.d = context->ALPHA.D;
+
+			if(env.PABE.PABE)
+			{
+				if(om_bsel.a == 0 && om_bsel.b == 1 && om_bsel.c == 0 && om_bsel.d == 1)
+				{
+					// this works because with PABE alpha blending is on when alpha >= 0x80, but since the pixel shader 
+					// cannot output anything over 0x80 (== 1.0) blending with 0x80 or turning it off gives the same result
+
+					om_bsel.abe = 0; 
+				}
+				else
+				{
+					ASSERT(0);
+				}
+			}
+		}
+
 		om_bsel.wr = (context->FRAME.FBMSK & 0x000000ff) != 0x000000ff;
 		om_bsel.wg = (context->FRAME.FBMSK & 0x0000ff00) != 0x0000ff00;
 		om_bsel.wb = (context->FRAME.FBMSK & 0x00ff0000) != 0x00ff0000;
@@ -193,19 +213,25 @@ public:
 
 		GSTextureFX::PSConstantBuffer ps_cb;
 
-		ps_cb.FogColor_AREF = GSVector4((int)env.FOGCOL.FCR, (int)env.FOGCOL.FCG, (int)env.FOGCOL.FCB, 0) / 255;
-
-		switch(ps_sel.atst)
+		if(ps_sel.fog)
 		{
-		case ATST_LESS:
-			ps_cb.FogColor_AREF.a = (float)((int)context->TEST.AREF - 1);
-			break;
-		case ATST_GREATER:
-			ps_cb.FogColor_AREF.a = (float)((int)context->TEST.AREF + 1);
-			break;
-		default:
-			ps_cb.FogColor_AREF.a = (float)(int)context->TEST.AREF;
-			break;
+			ps_cb.FogColor_AREF = GSVector4((int)env.FOGCOL.FCR, (int)env.FOGCOL.FCG, (int)env.FOGCOL.FCB, 0) / 255;
+		}
+
+		if(ps_sel.ate)
+		{
+			switch(ps_sel.atst)
+			{
+			case ATST_LESS:
+				ps_cb.FogColor_AREF.a = (float)((int)context->TEST.AREF - 1);
+				break;
+			case ATST_GREATER:
+				ps_cb.FogColor_AREF.a = (float)((int)context->TEST.AREF + 1);
+				break;
+			default:
+				ps_cb.FogColor_AREF.a = (float)(int)context->TEST.AREF;
+				break;
+			}
 		}
 
 		if(tex)
