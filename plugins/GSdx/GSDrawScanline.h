@@ -26,9 +26,8 @@
 #include "GSScanlineEnvironment.h"
 #include "GSSetupPrimCodeGenerator.h"
 #include "GSDrawScanlineCodeGenerator.h"
-#include "GSAlignedClass.h"
 
-class GSDrawScanline : public GSAlignedClass<16>, public IDrawScanline
+class GSDrawScanline : public IDrawScanline
 {
 	GSScanlineEnvironment m_env;
 	GSScanlineSelector m_sel;
