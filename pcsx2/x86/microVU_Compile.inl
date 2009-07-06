@@ -70,7 +70,7 @@
 #define doLowerOp()			{ incPC(-1); mVUopL(mVU, 1); incPC(1); }
 #define doSwapOp()			{ doBackupVF1(); mVUopL(mVU, 1); doBackupVF2(); incPC(1); doUpperOp(); doBackupVF3(); }
 #define doIbit()			{ if (mVUup.iBit) { incPC(-1); MOV32ItoM((uptr)&mVU->regs->VI[REG_I].UL, curI); incPC(1); } }
-#define blockCreate(addr)	{ if (!mVUblocks[addr]) mVUblocks[addr] = new microBlockManager();/*microBlockManager::AlignedNew();*/ }
+#define blockCreate(addr)	{ if (!mVUblocks[addr]) mVUblocks[addr] = new microBlockManager(); }
 
 //------------------------------------------------------------------
 // Helper Functions

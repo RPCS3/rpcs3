@@ -219,6 +219,7 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 #define cmpOffset(x) ((u8*)&(((u8*)x)[mVUprogI.ranges.range[i][0]]))
 #define Rmem		 (uptr)&mVU->regs->VI[REG_R].UL
 #define Roffset		 (uptr)&mVU->regs->VI[9].UL
+#define aWrap(x, m)	 ((x > m) ? 0 : x)
 
 // Flag Info
 #define __Status	 (mVUflagInfo & (0xf<<0))
