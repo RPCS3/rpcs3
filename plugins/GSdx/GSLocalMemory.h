@@ -635,6 +635,77 @@ public:
 		WriteFrame16(PixelAddress16SZ(x, y, bp, bw), c);
 	}
 
+	__forceinline void WritePixel32(uint8* RESTRICT src, uint32 pitch, PixelOffset* po, const GSVector4i& r) 
+	{
+		src -= r.left * sizeof(uint32);
+
+		for(int y = r.top; y < r.bottom; y++, src += pitch)
+		{
+			uint32* RESTRICT s = (uint32*)src;
+			uint32* RESTRICT d = &m_vm32[po->row[y]];
+			int* RESTRICT o = po->col[0];
+
+			for(int x = r.left; x < r.right; x++)
+			{
+				d[o[x]] = s[x];
+			}
+		}
+	}
+
+	__forceinline void WritePixel24(uint8* RESTRICT src, uint32 pitch, PixelOffset* po, const GSVector4i& r) 
+	{
+		src -= r.left * sizeof(uint32);
+
+		for(int y = r.top; y < r.bottom; y++, src += pitch)
+		{
+			uint32* RESTRICT s = (uint32*)src;
+			uint32* RESTRICT d = &m_vm32[po->row[y]];
+			int* RESTRICT o = po->col[0];
+
+			for(int x = r.left; x < r.right; x++)
+			{
+				d[o[x]] = (d[o[x]] & 0xff000000) | (s[x] & 0x00ffffff);
+			}
+		}
+	}
+
+	__forceinline void WritePixel16(uint8* RESTRICT src, uint32 pitch, PixelOffset* po, const GSVector4i& r) 
+	{
+		src -= r.left * sizeof(uint16);
+
+		for(int y = r.top; y < r.bottom; y++, src += pitch)
+		{
+			uint16* RESTRICT s = (uint16*)src;
+			uint16* RESTRICT d = &m_vm16[po->row[y]];
+			int* RESTRICT o = po->col[0];
+
+			for(int x = r.left; x < r.right; x++)
+			{
+				d[o[x]] = s[x];
+			}
+		}
+	}
+
+	__forceinline void WriteFrame16(uint8* RESTRICT src, uint32 pitch, PixelOffset* po, const GSVector4i& r) 
+	{
+		src -= r.left * sizeof(uint32);
+
+		for(int y = r.top; y < r.bottom; y++, src += pitch)
+		{
+			uint32* RESTRICT s = (uint32*)src;
+			uint16* RESTRICT d = &m_vm16[po->row[y]];
+			int* RESTRICT o = po->col[0];
+
+			for(int x = r.left; x < r.right; x++)
+			{
+				uint32 rb = s[x] & 0x00f800f8;
+				uint32 ga = s[x] & 0x8000f800;
+
+				d[o[x]] = (ga >> 16) | (rb >> 9) | (ga >> 6) | (rb >> 3);
+			}
+		}
+	}
+
 	__forceinline uint32 ReadTexel32(uint32 addr, const GIFRegTEXA& TEXA) const 
 	{
 		return m_vm32[addr];

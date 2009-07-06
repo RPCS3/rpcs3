@@ -59,13 +59,13 @@ class GSDrawScanline : public IDrawScanline
 	void DrawSolidRect(const GSVector4i& r, const GSVertexSW& v);
 
 	template<class T, bool masked> 
-	void DrawSolidRectT(const int* row, int* col, const GSVector4i& r, uint32 c, uint32 m);
+	void DrawSolidRectT(const int* RESTRICT row, const int* RESTRICT col, const GSVector4i& r, uint32 c, uint32 m);
 
 	template<class T, bool masked> 
-	__forceinline void FillRect(const int* row, int* col, const GSVector4i& r, uint32 c, uint32 m);
+	__forceinline void FillRect(const int* RESTRICT row, const int* RESTRICT col, const GSVector4i& r, uint32 c, uint32 m);
 
 	template<class T, bool masked> 
-	__forceinline void FillBlock(const int* row, int* col, const GSVector4i& r, const GSVector4i& c, const GSVector4i& m);
+	__forceinline void FillBlock(const int* RESTRICT row, const int* RESTRICT col, const GSVector4i& r, const GSVector4i& c, const GSVector4i& m);
 
 protected:
 	GSState* m_state;

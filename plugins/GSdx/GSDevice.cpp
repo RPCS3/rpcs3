@@ -24,6 +24,7 @@
 
 GSDevice::GSDevice() 
 	: m_wnd(NULL)
+	, m_rbswapped(false)
 	, m_backbuffer(NULL)
 	, m_merge(NULL)
 	, m_weavebob(NULL)

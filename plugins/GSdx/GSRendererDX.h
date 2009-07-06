@@ -193,7 +193,6 @@ public:
 		ps_sel.fst = PRIM->FST;
 		ps_sel.wms = context->CLAMP.WMS;
 		ps_sel.wmt = context->CLAMP.WMT;
-		ps_sel.bpp = 0;
 		ps_sel.aem = env.TEXA.AEM;
 		ps_sel.tfx = context->TEX0.TFX;
 		ps_sel.tcc = context->TEX0.TCC;
@@ -236,7 +235,7 @@ public:
 
 		if(tex)
 		{
-			ps_sel.bpp = tex->m_bpp;
+			ps_sel.fmt = tex->m_fmt;
 			ps_sel.rt = tex->m_target;
 
 			int w = tex->m_texture->GetWidth();

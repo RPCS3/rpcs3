@@ -512,8 +512,6 @@ GSLocalMemory::BlockOffset* GSLocalMemory::GetBlockOffset(uint32 bp, uint32 bw, 
 
 GSLocalMemory::PixelOffset* GSLocalMemory::GetPixelOffset(uint32 bp, uint32 bw, uint32 psm)
 {
-	if(bw == 0) {ASSERT(0); return NULL;}
-
 	uint32 hash = bp | (bw << 14) | (psm << 20);
 
 	hash_map<uint32, PixelOffset*>::iterator i = m_pomap.find(hash);

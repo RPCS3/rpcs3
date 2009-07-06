@@ -31,22 +31,6 @@ GSTextureCacheOGL::GSTextureCacheOGL(GSRenderer* r)
 
 // SourceOGL
 
-bool GSTextureCacheOGL::SourceOGL::Create()
-{
-	// TODO
-
-	return true;
-}
-
-bool GSTextureCacheOGL::SourceOGL::Create(Target* dst)
-{
-	m_target = true;
-
-	// TODO
-
-	return true;
-}
-
 // TargetOGL
 
 void GSTextureCacheOGL::TargetOGL::Read(const GSVector4i& r)

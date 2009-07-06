@@ -28,11 +28,11 @@ class GSTextureCache10 : public GSTextureCache
 {
 	class Source10 : public Source
 	{
+	protected:
+		int Get8bitFormat() {return DXGI_FORMAT_A8_UNORM;}
+
 	public:
 		explicit Source10(GSRenderer* r) : Source(r) {}
-
-		bool Create();
-		bool Create(Target* dst);
 	};
 
 	class Target10 : public Target

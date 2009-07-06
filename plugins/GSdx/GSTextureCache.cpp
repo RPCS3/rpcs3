@@ -21,10 +21,12 @@
 
 #include "StdAfx.h"
 #include "GSTextureCache.h"
+#include "GSTextureFX.h"
 
 GSTextureCache::GSTextureCache(GSRenderer* r)
 	: m_renderer(r)
 {
+	m_paltex = !!theApp.GetConfig("paltex", 0);
 }
 
 GSTextureCache::~GSTextureCache()
@@ -67,7 +69,7 @@ GSTextureCache::Source* GSTextureCache::LookupSource(const GIFRegTEX0& TEX0, con
 			continue;
 		}
 
-		if(psm.pal > 0 && !GSVector4i::compare(clut, s->m_clut, psm.pal * sizeof(clut[0])))
+		if(s->m_palette == NULL && psm.pal > 0 && !GSVector4i::compare(clut, s->m_clut, psm.pal * sizeof(clut[0])))
 		{
 			continue;
 		}
@@ -104,7 +106,7 @@ GSTextureCache::Source* GSTextureCache::LookupSource(const GIFRegTEX0& TEX0, con
 	{
 		src = CreateSource();
 
-		if(!(dst ? src->Create(dst) : src->Create()))
+		if(!(dst ? src->Create(dst) : src->Create(m_paltex)))
 		{
 			delete src;
 
@@ -125,7 +127,7 @@ GSTextureCache::Source* GSTextureCache::LookupSource(const GIFRegTEX0& TEX0, con
 
 		if(src->m_palette)
 		{
-			if(src->m_initpalette || GSVector4i::update(src->m_clut, clut, size))
+			if(src->m_initpalette || !GSVector4i::update(src->m_clut, clut, size))
 			{
 				src->m_palette->Update(GSVector4i(0, 0, psm.pal, 1), src->m_clut, size);
 				src->m_initpalette = false;
@@ -490,8 +492,8 @@ void GSTextureCache::Surface::Update()
 GSTextureCache::Source::Source(GSRenderer* r)
 	: Surface(r)
 	, m_palette(NULL)
-	, m_initpalette(false)
-	, m_bpp(0)
+	, m_initpalette(true)
+	, m_fmt(0)
 	, m_target(false)
 	, m_complete(false)
 {
@@ -512,6 +514,197 @@ GSTextureCache::Source::~Source()
 	_aligned_free(m_clut);
 
 	_aligned_free(m_write.rect);
+}
+
+bool GSTextureCache::Source::Create(bool paltex)
+{
+	m_TEX0 = m_renderer->m_context->TEX0;
+	m_TEXA = m_renderer->m_env.TEXA;
+
+	ASSERT(m_texture == NULL);
+
+	if(paltex && GSLocalMemory::m_psm[m_TEX0.PSM].pal > 0)
+	{
+		m_fmt = GSTextureFX::FMT_8;
+
+		m_texture = m_renderer->m_dev->CreateTexture(1 << m_TEX0.TW, 1 << m_TEX0.TH, Get8bitFormat());
+		m_palette = m_renderer->m_dev->CreateTexture(256, 1);
+	}
+	else
+	{
+		m_fmt = GSTextureFX::FMT_32;
+
+		m_texture = m_renderer->m_dev->CreateTexture(1 << m_TEX0.TW, 1 << m_TEX0.TH);
+	}
+
+	return m_texture != NULL;
+}
+
+bool GSTextureCache::Source::Create(Target* dst)
+{
+	m_target = true;
+
+	if(dst->m_type != RenderTarget) 
+	{
+		// TODO
+
+		return false; 
+	}
+
+	// TODO: clean up this mess
+
+	dst->Update();
+
+	// m_renderer->m_perfmon.Put(GSPerfMon::ConvertRT2T, 1);
+
+	m_TEX0 = m_renderer->m_context->TEX0;
+	m_TEXA = m_renderer->m_env.TEXA;
+
+	int tw = 1 << m_TEX0.TW;
+	int th = 1 << m_TEX0.TH;
+	int tp = (int)m_TEX0.TW << 6;
+
+	// do not round here!!! if edge becomes a black pixel and addressing mode is clamp => everything outside the clamped area turns into black (kh2 shadows)
+
+	int w = (int)(dst->m_texture->m_scale.x * tw);
+	int h = (int)(dst->m_texture->m_scale.y * th); 
+
+	GSVector2i dstsize = dst->m_texture->GetSize();
+
+	// pitch conversion
+
+	if(dst->m_TEX0.TBW != m_TEX0.TBW) // && dst->m_TEX0.PSM == m_TEX0.PSM
+	{
+		// sfex3 uses this trick (bw: 10 -> 5, wraps the right side below the left)
+
+		// ASSERT(dst->m_TEX0.TBW > m_TEX0.TBW); // otherwise scale.x need to be reduced to make the larger texture fit (TODO)
+
+		ASSERT(m_texture == NULL);
+
+		m_texture = m_renderer->m_dev->CreateRenderTarget(dstsize.x, dstsize.y);
+
+		GSVector4 size = GSVector4(dstsize).xyxy();
+		GSVector4 scale = GSVector4(dst->m_texture->m_scale).xyxy();
+
+		int bw = 64;
+		int bh = m_TEX0.PSM == PSM_PSMCT32 || m_TEX0.PSM == PSM_PSMCT24 ? 32 : 64;
+
+		GSVector4i br(0, 0, bw, bh);
+
+		int sw = (int)dst->m_TEX0.TBW << 6;
+
+		int dw = (int)m_TEX0.TBW << 6;
+		int dh = 1 << m_TEX0.TH;
+
+		if(sw != 0)
+		for(int dy = 0; dy < dh; dy += bh)
+		{
+			for(int dx = 0; dx < dw; dx += bw)
+			{
+				int o = dy * dw / bh + dx;
+
+				int sx = o % sw;
+				int sy = o / sw;
+
+				GSVector4 sr = GSVector4(GSVector4i(sx, sy).xyxy() + br) * scale / size;
+				GSVector4 dr = GSVector4(GSVector4i(dx, dy).xyxy() + br) * scale;
+
+				m_renderer->m_dev->StretchRect(dst->m_texture, sr, m_texture, dr);
+
+				// TODO: this is quite a lot of StretchRect, do it with one Draw
+			}
+		}
+	}
+	else if(tw < tp)
+	{
+		// FIXME: timesplitters blurs the render target by blending itself over a couple of times
+
+		if(tw == 256 && th == 128 && tp == 512 && (m_TEX0.TBP0 == 0 || m_TEX0.TBP0 == 0x00e00))
+		{
+			return false;
+		}
+	}
+
+	// width/height conversion
+
+	GSVector2 scale = dst->m_texture->m_scale;
+
+	GSVector4 dr(0, 0, w, h);
+
+	if(w > dstsize.x) 
+	{
+		scale.x = (float)dstsize.x / tw;
+		dr.z = (float)dstsize.x * scale.x / dst->m_texture->m_scale.x;
+		w = dstsize.x;
+	}
+	
+	if(h > dstsize.y) 
+	{
+		scale.y = (float)dstsize.y / th;
+		dr.w = (float)dstsize.y * scale.y / dst->m_texture->m_scale.y;
+		h = dstsize.y;
+	}
+
+	GSVector4 sr(0, 0, w, h);
+
+	GSTexture* st = m_texture ? m_texture : dst->m_texture;
+	GSTexture* dt = m_renderer->m_dev->CreateRenderTarget(w, h);
+
+	if(!m_texture)
+	{
+		m_texture = dt;
+	}
+
+	if((sr == dr).alltrue())
+	{
+		m_renderer->m_dev->CopyRect(st, dt, GSVector4i(0, 0, w, h));
+	}
+	else
+	{
+		sr.z /= st->GetWidth();
+		sr.w /= st->GetHeight();
+
+		m_renderer->m_dev->StretchRect(st, sr, dt, dr);
+	}
+
+	if(dt != m_texture)
+	{
+		m_renderer->m_dev->Recycle(m_texture);
+
+		m_texture = dt;
+	}
+
+	m_texture->m_scale = scale;
+
+	switch(m_TEX0.PSM)
+	{
+	default:
+		ASSERT(0);
+	case PSM_PSMCT32:
+		m_fmt = GSTextureFX::FMT_32;
+		break;
+	case PSM_PSMCT24:
+		m_fmt = GSTextureFX::FMT_24;
+		break;
+	case PSM_PSMCT16:
+	case PSM_PSMCT16S:
+		m_fmt = GSTextureFX::FMT_16;
+		break;
+	case PSM_PSMT8H:
+		m_fmt = GSTextureFX::FMT_8H;
+		m_palette = m_renderer->m_dev->CreateTexture(256, 1);
+		break;
+	case PSM_PSMT4HL:
+		m_fmt = GSTextureFX::FMT_4HL;
+		m_palette = m_renderer->m_dev->CreateTexture(256, 1);
+		break;
+	case PSM_PSMT4HH:
+		m_fmt = GSTextureFX::FMT_4HH;
+		m_palette = m_renderer->m_dev->CreateTexture(256, 1);
+		break;
+	}
+
+	return true;
 }
 
 void GSTextureCache::Source::Update(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, const GSVector4i& rect)
@@ -648,6 +841,12 @@ void GSTextureCache::Source::Flush(uint32 count)
 	GSLocalMemory& mem = m_renderer->m_mem;
 
 	GSLocalMemory::readTexture rtx = psm.rtx;
+
+	if(m_fmt == GSTextureFX::FMT_8)
+	{
+		pitch >>= 2;
+		rtx = psm.rtxP;
+	}
 
 	for(uint32 i = 0; i < count; i++)
 	{
@@ -798,7 +997,7 @@ void GSTextureCache::SourceMap::Add(Source* s, const GIFRegTEX0& TEX0, GSLocalMe
 
 	const GSLocalMemory::psm_t& psm = GSLocalMemory::m_psm[TEX0.PSM];
 
-	GSVector2i bs = (TEX0.TBP0 & 31) ? psm.pgs : psm.bs;
+	GSVector2i bs = (TEX0.TBP0 & 31) == 0 ? psm.pgs : psm.bs;
 
 	int tw = 1 << TEX0.TW;
 	int th = 1 << TEX0.TH;

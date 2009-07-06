@@ -283,7 +283,7 @@ void GSDrawScanline::DrawSolidRect(const GSVector4i& r, const GSVertexSW& v)
 }
 
 template<class T, bool masked> 
-void GSDrawScanline::DrawSolidRectT(const int* row, int* col, const GSVector4i& r, uint32 c, uint32 m)
+void GSDrawScanline::DrawSolidRectT(const int* RESTRICT row, const int* RESTRICT col, const GSVector4i& r, uint32 c, uint32 m)
 {
 	if(m == 0xffffffff) return;
 
@@ -320,35 +320,33 @@ void GSDrawScanline::DrawSolidRectT(const int* row, int* col, const GSVector4i& 
 }
 
 template<class T, bool masked> 
-void GSDrawScanline::FillRect(const int* row, int* col, const GSVector4i& r, uint32 c, uint32 m)
+void GSDrawScanline::FillRect(const int* RESTRICT row, const int* RESTRICT col, const GSVector4i& r, uint32 c, uint32 m)
 {
 	if(r.x >= r.z) return;
 
 	for(int y = r.y; y < r.w; y++)
 	{
-		uint32 base = row[y];
+		T* RESTRICT d = &((T*)m_env.vm)[row[y]];
 
 		for(int x = r.x; x < r.z; x++)
 		{
-			T* p = &((T*)m_env.vm)[base + col[x]];
-
-			*p = (T)(!masked ? c : (c | (*p & m)));
+			d[col[x]] = (T)(!masked ? c : (c | (d[col[x]] & m)));
 		}
 	}
 }
 
 template<class T, bool masked> 
-void GSDrawScanline::FillBlock(const int* row, int* col, const GSVector4i& r, const GSVector4i& c, const GSVector4i& m)
+void GSDrawScanline::FillBlock(const int* RESTRICT row, const int* RESTRICT col, const GSVector4i& r, const GSVector4i& c, const GSVector4i& m)
 {
 	if(r.x >= r.z) return;
 
 	for(int y = r.y; y < r.w; y += 8)
 	{
-		uint32 base = row[y];
+		T* RESTRICT d = &((T*)m_env.vm)[row[y]];
 
 		for(int x = r.x; x < r.z; x += 8 * 4 / sizeof(T))
 		{
-			GSVector4i* p = (GSVector4i*)&((T*)m_env.vm)[base + col[x]];
+			GSVector4i* RESTRICT p = (GSVector4i*)&d[col[x]];
 
 			for(int i = 0; i < 16; i += 4)
 			{

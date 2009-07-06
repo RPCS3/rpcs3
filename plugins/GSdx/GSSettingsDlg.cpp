@@ -121,6 +121,7 @@ void GSSettingsDlg::OnInit()
 	ComboBoxInit(IDC_ASPECTRATIO, g_aspectratio, countof(g_aspectratio), theApp.GetConfig("AspectRatio", 1));
 
 	CheckDlgButton(m_hWnd, IDC_FILTER, theApp.GetConfig("filter", 1));
+	CheckDlgButton(m_hWnd, IDC_PALTEX, theApp.GetConfig("paltex", 0));
 	CheckDlgButton(m_hWnd, IDC_VSYNC, theApp.GetConfig("vsync", 0));
 	CheckDlgButton(m_hWnd, IDC_LOGZ, theApp.GetConfig("logz", 0));
 	CheckDlgButton(m_hWnd, IDC_FBA, theApp.GetConfig("fba", 1));
@@ -179,6 +180,7 @@ bool GSSettingsDlg::OnCommand(HWND hWnd, UINT id, UINT code)
 		}
 
 		theApp.SetConfig("filter", (int)IsDlgButtonChecked(m_hWnd, IDC_FILTER));
+		theApp.SetConfig("paltex", (int)IsDlgButtonChecked(m_hWnd, IDC_PALTEX));
 		theApp.SetConfig("vsync", (int)IsDlgButtonChecked(m_hWnd, IDC_VSYNC));
 		theApp.SetConfig("logz", (int)IsDlgButtonChecked(m_hWnd, IDC_LOGZ));
 		theApp.SetConfig("fba", (int)IsDlgButtonChecked(m_hWnd, IDC_FBA));
@@ -220,6 +222,7 @@ void GSSettingsDlg::UpdateControls()
 		EnableWindow(GetDlgItem(m_hWnd, IDC_RESY_EDIT), hw && !native);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_NATIVERES), hw);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_FILTER), hw && !native);		
+		EnableWindow(GetDlgItem(m_hWnd, IDC_PALTEX), hw);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_LOGZ), dx9 && hw);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_FBA), dx9 && hw);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_AA1), sw);

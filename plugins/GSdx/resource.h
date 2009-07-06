@@ -4,6 +4,7 @@
 //
 #define IDC_NATIVERES                   2001
 #define IDC_VSYNC                       2002
+#define IDC_PALTEX                      2002
 #define IDC_CHECK3                      2003
 #define IDC_LOGZ                        2004
 #define IDC_CHECK6                      2005
@@ -12,7 +13,7 @@
 #define IDC_SHADER                      2008
 #define IDC_RESX_EDIT                   2009
 #define IDC_RESY_EDIT                   2010
-#define IDC_AA1		                    2011
+#define IDC_AA1                         2011
 #define IDC_SWTHREADS_EDIT              2012
 #define IDC_CUSTOM1                     2013
 #define IDC_CHECK4                      2014
@@ -30,9 +31,9 @@
 #define IDD_CAPTURE                     2026
 #define IDD_GPUCONFIG                   2027
 #define IDC_BLUR                        2028
-#define IDC_RENDERER					2029
-#define IDC_INTERLACE					2030
-#define IDC_ASPECTRATIO					2031
+#define IDC_RENDERER                    2029
+#define IDC_INTERLACE                   2030
+#define IDC_ASPECTRATIO                 2031
 #define IDC_SWTHREADS                   2032
 #define IDC_SCALE                       2033
 #define IDC_BROWSE                      2034

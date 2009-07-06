@@ -44,6 +44,8 @@ GSDevice9::GSDevice9()
 	, m_dsv(NULL)
 	, m_lost(false)
 {
+	m_rbswapped = true;
+
 	memset(&m_pp, 0, sizeof(m_pp));
 	memset(&m_ddcaps, 0, sizeof(m_ddcaps));
 	memset(&m_d3dcaps, 0, sizeof(m_d3dcaps));
@@ -569,6 +571,11 @@ GSTexture* GSDevice9::CopyOffscreen(GSTexture* src, const GSVector4& sr, int w, 
 	}
 
 	return dst;
+}
+
+void GSDevice9::CopyRect(GSTexture* st, GSTexture* dt, const GSVector4i& r)
+{
+	m_dev->StretchRect(*(GSTexture9*)st, r, *(GSTexture9*)dt, r, D3DTEXF_POINT);
 }
 
 void GSDevice9::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, int shader, bool linear)

@@ -23,7 +23,7 @@
 #include "GSClut.h"
 #include "GSLocalMemory.h"
 
-GSClut::GSClut(const GSLocalMemory* mem)
+GSClut::GSClut(GSLocalMemory* mem)
 	: m_mem(mem)
 {
 	uint8* p = (uint8*)VirtualAlloc(NULL, 2 * 4096, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
@@ -168,14 +168,16 @@ void GSClut::WriteCLUT16S_I4_CSM1(const GIFRegTEX0& TEX0, const GIFRegTEXCLUT& T
 
 template<int n> void GSClut::WriteCLUT32_CSM2(const GIFRegTEX0& TEX0, const GIFRegTEXCLUT& TEXCLUT)
 {
-	uint16* RESTRICT clut = m_clut + (TEX0.CSA << 4);
+	GSLocalMemory::PixelOffset* po = m_mem->GetPixelOffset(TEX0.CBP, TEXCLUT.CBW, PSM_PSMCT32);
 
-	uint32 base = m_mem->PixelAddress32(0, TEXCLUT.COV, TEX0.CBP, TEXCLUT.CBW);
-	int* offset = &m_mem->rowOffset32[TEXCLUT.COU << 4];
+	uint32* RESTRICT s = &m_mem->m_vm32[po->row[TEXCLUT.COV]];
+	int* RESTRICT o = &po->col[0][TEXCLUT.COU << 4];
+
+	uint16* RESTRICT clut = m_clut + (TEX0.CSA << 4);
 
 	for(int i = 0; i < n; i++)
 	{
-		uint32 c = m_mem->ReadPixel32(base + offset[i]);
+		uint32 c = s[o[i]];
 
 		clut[i] = (uint16)(c & 0xffff);
 		clut[i + 256] = (uint16)(c >> 16);
@@ -184,27 +186,31 @@ template<int n> void GSClut::WriteCLUT32_CSM2(const GIFRegTEX0& TEX0, const GIFR
 
 template<int n> void GSClut::WriteCLUT16_CSM2(const GIFRegTEX0& TEX0, const GIFRegTEXCLUT& TEXCLUT)
 {
-	uint16* RESTRICT clut = m_clut + (TEX0.CSA << 4);
+	GSLocalMemory::PixelOffset* po = m_mem->GetPixelOffset(TEX0.CBP, TEXCLUT.CBW, PSM_PSMCT16);
 
-	uint32 base = m_mem->PixelAddress16(0, TEXCLUT.COV, TEX0.CBP, TEXCLUT.CBW);
-	int* offset = &m_mem->rowOffset16[TEXCLUT.COU << 4];
+	uint16* RESTRICT s = &m_mem->m_vm16[po->row[TEXCLUT.COV]];
+	int* RESTRICT o = &po->col[0][TEXCLUT.COU << 4];
+
+	uint16* RESTRICT clut = m_clut + (TEX0.CSA << 4);
 
 	for(int i = 0; i < n; i++)
 	{
-		clut[i] = (uint16)m_mem->ReadPixel16(base + offset[i]);
+		clut[i] = s[o[i]];
 	}
 }
 
 template<int n> void GSClut::WriteCLUT16S_CSM2(const GIFRegTEX0& TEX0, const GIFRegTEXCLUT& TEXCLUT)
 {
-	uint16* RESTRICT clut = m_clut + (TEX0.CSA << 4);
+	GSLocalMemory::PixelOffset* po = m_mem->GetPixelOffset(TEX0.CBP, TEXCLUT.CBW, PSM_PSMCT16S);
 
-	uint32 base = m_mem->PixelAddress16S(0, TEXCLUT.COV, TEX0.CBP, TEXCLUT.CBW);
-	int* offset = &m_mem->rowOffset16S[TEXCLUT.COU << 4];
+	uint16* RESTRICT s = &m_mem->m_vm16[po->row[TEXCLUT.COV]];
+	int* RESTRICT o = &po->col[0][TEXCLUT.COU << 4];
+
+	uint16* RESTRICT clut = m_clut + (TEX0.CSA << 4);
 
 	for(int i = 0; i < n; i++)
 	{
-		clut[i] = (uint16)m_mem->ReadPixel16(base + offset[i]);
+		clut[i] = s[o[i]];
 	}
 }
 

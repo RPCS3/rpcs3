@@ -130,6 +130,8 @@ public:
 
 	GSTexture* CopyOffscreen(GSTexture* src, const GSVector4& sr, int w, int h, int format = 0);
 
+	void CopyRect(GSTexture* st, GSTexture* dt, const GSVector4i& r);
+
 	void StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, int shader = 0, bool linear = true);
 
 	void IASetVertexBuffer(const void* vertices, size_t stride, size_t count);

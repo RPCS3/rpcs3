@@ -92,8 +92,8 @@ bool GSDevice11::Create(GSWnd* wnd, bool vsync)
 	flags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
 
-	hr = D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, 0, NULL, 0, D3D11_SDK_VERSION, &scd, &m_swapchain, &m_dev, &m_level, &m_ctx);
-	// hr = D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_REFERENCE, NULL, 0, NULL, 0, D3D11_SDK_VERSION, &scd, &m_swapchain, &m_dev, &m_level, &m_ctx);
+	hr = D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, flags, NULL, 0, D3D11_SDK_VERSION, &scd, &m_swapchain, &m_dev, &m_level, &m_ctx);
+	// hr = D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_REFERENCE, NULL, flags, NULL, 0, D3D11_SDK_VERSION, &scd, &m_swapchain, &m_dev, &m_level, &m_ctx);
 
 	if(FAILED(hr)) return false;
 
@@ -427,6 +427,13 @@ GSTexture* GSDevice11::CopyOffscreen(GSTexture* src, const GSVector4& sr, int w,
 	}
 
 	return dst;
+}
+
+void GSDevice11::CopyRect(GSTexture* st, GSTexture* dt, const GSVector4i& r)
+{
+	D3D11_BOX box = {r.left, r.top, 0, r.right, r.bottom, 1};
+
+	m_ctx->CopySubresourceRegion(*(GSTexture11*)dt, 0, 0, 0, 0, *(GSTexture11*)st, 0, &box);
 }
 
 void GSDevice11::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, int shader, bool linear)

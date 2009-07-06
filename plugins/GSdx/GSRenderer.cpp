@@ -374,7 +374,7 @@ void GSRenderer::VSync(int field)
 
 				if(offscreen->Map(m))
 				{
-					m_capture.DeliverFrame(m.bits, m.pitch, m_dev->IsCurrentRGBA());
+					m_capture.DeliverFrame(m.bits, m.pitch, m_dev->IsRBSwapped());
 
 					offscreen->Unmap();
 				}

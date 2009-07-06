@@ -87,7 +87,14 @@ bool GSTexture9::Update(const GSVector4i& r, const void* data, int pitch)
 			uint8* src = (uint8*)data;
 			uint8* dst = (uint8*)lr.pBits;
 
-			int bytes = r.width() << (m_desc.Format == D3DFMT_A1R5G5B5 ? 1 : 2);
+			int bytes = r.width() * sizeof(uint32);
+			
+			switch(m_desc.Format)
+			{
+			case D3DFMT_A8: bytes >>= 2; break;
+			case D3DFMT_A1R5G5B5: bytes >>= 1; break;
+			default: ASSERT(m_desc.Format == D3DFMT_A8R8G8B8); break;
+			}
 
 			bytes = min(bytes, pitch);
 			bytes = min(bytes, lr.Pitch);
