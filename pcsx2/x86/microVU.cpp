@@ -112,7 +112,7 @@ microVUt(void) mVUclose(mV) {
 		}
 		safe_aligned_free(mVU->prog.prog);
 	}
-	safe_delete(mVU->prog.progList);
+	safe_delete_array(mVU->prog.progList);
 }
 
 // Clears Block Data in specified range
@@ -159,7 +159,7 @@ microVUt(void) mVUsortProg(mV, int progIndex) {
 		temp[i+1] = mVU->prog.progList[i+offset];
 	}
 	temp[0] = progIndex;
-	delete mVU->prog.progList;
+	delete[] mVU->prog.progList;
 	mVU->prog.progList = temp;
 }
 
