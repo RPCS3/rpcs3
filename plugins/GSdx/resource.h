@@ -4,8 +4,7 @@
 //
 #define IDC_NATIVERES                   2001
 #define IDC_VSYNC                       2002
-#define IDC_PALTEX                      2002
-#define IDC_CHECK3                      2003
+#define IDC_PALTEX                      2003
 #define IDC_LOGZ                        2004
 #define IDC_CHECK6                      2005
 #define IDC_CODECS                      2006
