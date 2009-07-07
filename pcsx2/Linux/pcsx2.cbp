@@ -21,7 +21,7 @@
 					<Add option="-DPCSX2_DEBUG" />
 				</Compiler>
 				<ResourceCompiler>
-					<Add directory="$(ProjectRootDir)/NewGUI" />
+					<Add directory="$(ProjectRootDir)/gui" />
 				</ResourceCompiler>
 				<Linker>
 					<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --debug=yes --libs`" />
@@ -45,7 +45,7 @@
 					<Add option="-DPCSX2_DEVBUILD" />
 				</Compiler>
 				<ResourceCompiler>
-					<Add directory="$(ProjectRootDir)/NewGUI" />
+					<Add directory="$(ProjectRootDir)/gui" />
 				</ResourceCompiler>
 				<Linker>
 					<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --debug=yes --libs`" />
@@ -67,7 +67,7 @@
 					<Add option="-DNDEBUG" />
 				</Compiler>
 				<ResourceCompiler>
-					<Add directory="$(ProjectRootDir)/NewGUI" />
+					<Add directory="$(ProjectRootDir)/gui" />
 				</ResourceCompiler>
 				<Linker>
 					<Add option="-s" />
@@ -100,7 +100,7 @@
 			<Add directory="$(SvnRootDir)/common/include/" />
 			<Add directory="$(SvnRootDir)/3rdparty/" />
 			<Add directory="$(ProjectRootDir)" />
-			<Add directory="$(ProjectRootDir)/NewGUI" />
+			<Add directory="$(ProjectRootDir)/gui" />
 			<Add directory="$(ProjectRootDir)/x86" />
 		</Compiler>
 		<Linker>
@@ -195,29 +195,29 @@
 		<Unit filename="../Misc.cpp" />
 		<Unit filename="../Misc.h" />
 		<Unit filename="../NakedAsm.h" />
-		<Unit filename="../NewGUI/AboutBoxDialog.cpp" />
-		<Unit filename="../NewGUI/AboutBoxDialog.h" />
-		<Unit filename="../NewGUI/AdvancedDialog.cpp" />
-		<Unit filename="../NewGUI/AdvancedDialog.h" />
-		<Unit filename="../NewGUI/App.h" />
-		<Unit filename="../NewGUI/AppConfig.cpp" />
-		<Unit filename="../NewGUI/CheckedStaticBox.cpp" />
-		<Unit filename="../NewGUI/CheckedStaticBox.h" />
-		<Unit filename="../NewGUI/ConsoleLogger.cpp" />
-		<Unit filename="../NewGUI/GameFixesDialog.cpp" />
-		<Unit filename="../NewGUI/GameFixesDialog.h" />
-		<Unit filename="../NewGUI/HostGui.cpp" />
-		<Unit filename="../NewGUI/IniInterface.cpp" />
-		<Unit filename="../NewGUI/IniInterface.h" />
-		<Unit filename="../NewGUI/LogOptionsDialog.cpp" />
-		<Unit filename="../NewGUI/LogOptionsDialog.h" />
-		<Unit filename="../NewGUI/MainFrame.cpp" />
-		<Unit filename="../NewGUI/MainFrame.h" />
-		<Unit filename="../NewGUI/SpeedHacksDialog.cpp" />
-		<Unit filename="../NewGUI/SpeedHacksDialog.h" />
-		<Unit filename="../NewGUI/main.cpp" />
-		<Unit filename="../NewGUI/wxHelpers.cpp" />
-		<Unit filename="../NewGUI/wxHelpers.h" />
+		<Unit filename="../gui/AboutBoxDialog.cpp" />
+		<Unit filename="../gui/AboutBoxDialog.h" />
+		<Unit filename="../gui/AdvancedDialog.cpp" />
+		<Unit filename="../gui/AdvancedDialog.h" />
+		<Unit filename="../gui/App.h" />
+		<Unit filename="../gui/AppConfig.cpp" />
+		<Unit filename="../gui/CheckedStaticBox.cpp" />
+		<Unit filename="../gui/CheckedStaticBox.h" />
+		<Unit filename="../gui/ConsoleLogger.cpp" />
+		<Unit filename="../gui/GameFixesDialog.cpp" />
+		<Unit filename="../gui/GameFixesDialog.h" />
+		<Unit filename="../gui/HostGui.cpp" />
+		<Unit filename="../gui/IniInterface.cpp" />
+		<Unit filename="../gui/IniInterface.h" />
+		<Unit filename="../gui/LogOptionsDialog.cpp" />
+		<Unit filename="../gui/LogOptionsDialog.h" />
+		<Unit filename="../gui/MainFrame.cpp" />
+		<Unit filename="../gui/MainFrame.h" />
+		<Unit filename="../gui/SpeedHacksDialog.cpp" />
+		<Unit filename="../gui/SpeedHacksDialog.h" />
+		<Unit filename="../gui/main.cpp" />
+		<Unit filename="../gui/wxHelpers.cpp" />
+		<Unit filename="../gui/wxHelpers.h" />
 		<Unit filename="../Patch.cpp" />
 		<Unit filename="../Patch.h" />
 		<Unit filename="../PathUtils.cpp" />
@@ -236,10 +236,10 @@
 		<Unit filename="../R5900OpcodeTables.cpp" />
 		<Unit filename="../R5900OpcodeTables.h" />
 		<Unit filename="../RecoverySystem.cpp" />
-		<Unit filename="../Resources/AppIcon.h" />
-		<Unit filename="../Resources/BackgroundLogo.h" />
-		<Unit filename="../Resources/EmbeddedImage.h" />
-		<Unit filename="../Resources/ps2_silver.h" />
+		<Unit filename="../gui/Resources/AppIcon.h" />
+		<Unit filename="../gui/Resources/BackgroundLogo.h" />
+		<Unit filename="../gui/Resources/EmbeddedImage.h" />
+		<Unit filename="../gui/Resources/ps2_silver.h" />
 		<Unit filename="../SPR.cpp" />
 		<Unit filename="../SPR.h" />
 		<Unit filename="../SafeArray.h" />

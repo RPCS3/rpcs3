@@ -134,6 +134,9 @@ public:
 	// compare with a filename string interpreted as a native file name
 	bool operator==(const wxString& filename) const { return SameAs(wxDirName(filename)); }
 	bool operator!=(const wxString& filename) const { return !SameAs(wxDirName(filename)); }
+	
+	const wxFileName& GetFilename() const { return *this; }
+	wxFileName& GetFilename() { return *this; }
 };
 
 // remove windows.h namespace pollution:
@@ -180,14 +183,16 @@ namespace PathDefs
 	extern const wxDirName MemoryCards;
 	extern const wxDirName Configs;
 	extern const wxDirName Plugins;
+	extern const wxDirName Themes;
 	
 	extern wxDirName GetDocuments();
 	extern wxDirName GetSnapshots();
 	extern wxDirName GetBios();
+	extern wxDirName GetThemes();
+	extern wxDirName GetPlugins();
 	extern wxDirName GetSavestates();
 	extern wxDirName GetMemoryCards();
 	extern wxDirName GetConfigs();
-	extern wxDirName GetPlugins();
 }
 
 namespace FilenameDefs

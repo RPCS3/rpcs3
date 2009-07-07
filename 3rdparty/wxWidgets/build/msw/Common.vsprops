@@ -8,5 +8,6 @@
 	<Tool
 		Name="VCCLCompilerTool"
 		PreprocessorDefinitions="WIN32;__WXMSW__;_LIB;wxUSE_UNICODE=1"
+		CompileAs="0"
 	/>
 </VisualStudioPropertySheet>

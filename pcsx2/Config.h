@@ -20,6 +20,19 @@
 
 class IniInterface;
 
+enum PluginsEnum_t
+{
+	Plugin_CDVD = 0,
+	Plugin_GS,
+	Plugin_PAD1,
+	Plugin_PAD2,
+	Plugin_SPU2,
+	Plugin_USB,
+	Plugin_FW,
+	Plugin_DEV9,
+	Plugin_Count
+};
+
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // Pcsx2 Application Configuration.
@@ -30,6 +43,7 @@ class IniInterface;
 class AppConfig
 {
 public:
+	// ------------------------------------------------------------------------
 	struct ConsoleLogOptions
 	{
 		bool Visible;
@@ -42,6 +56,7 @@ public:
 		void LoadSave( IniInterface& conf );
 	};
 
+	// ------------------------------------------------------------------------
 	struct FolderOptions
 	{
 		wxDirName Plugins;
@@ -55,28 +70,27 @@ public:
 		void LoadSave( IniInterface& conf );
 	};
 	
+	// ------------------------------------------------------------------------
 	struct FilenameOptions
 	{
 		wxFileName Bios;
-		wxFileName CDVD;
-		wxFileName GS;
-		wxFileName PAD1;
-		wxFileName PAD2;
-		wxFileName SPU2;
-		wxFileName USB;
-		wxFileName FW;
-		wxFileName DEV9;
+		wxFileName Plugins[Plugin_Count];
 
 		void LoadSave( IniInterface& conf );
+
+		const wxFileName& operator[]( PluginsEnum_t pluginidx ) const;
 	};
 
+	// ------------------------------------------------------------------------
 	// Options struct for each memory card.
+	//
 	struct McdOptions
 	{
 		wxFileName Filename;	// user-configured location of this memory card
 		bool Enabled;			// memory card enabled (if false, memcard will not show up in-game)
 	};
 
+	// ------------------------------------------------------------------------
 	struct McdSysOptions
 	{
 		McdOptions Mcd[2];
@@ -86,7 +100,7 @@ public:
 		void LoadSave( IniInterface& conf );
 	};
 
-	
+	// ------------------------------------------------------------------------
 	struct CpuRecompilerOptions
 	{
 		struct
@@ -112,6 +126,7 @@ public:
 		void LoadSave( IniInterface& conf );
 	};
 
+	// ------------------------------------------------------------------------
 	struct VideoOptions
 	{
 		bool MultithreadGS;		// Uses the multithreaded GS interface.
@@ -127,6 +142,7 @@ public:
 		void LoadSave( IniInterface& conf );
 	};
 
+	// ------------------------------------------------------------------------
 	struct GamefixOptions
 	{
 		bool
@@ -138,6 +154,7 @@ public:
 		void LoadSave();
 	};
 	
+	// ------------------------------------------------------------------------
 	struct SpeedhackOptions
 	{
 		int
@@ -149,23 +166,18 @@ public:
 		void LoadSave( IniInterface& conf );
 	};
 	
+	// ------------------------------------------------------------------------
 	// Helper functions for returning full pathnames of various Folders and files
+	//
 	struct FullpathHelpers
 	{
 		FullpathHelpers( const AppConfig& conf ) : m_conf( conf ) {}
 
 		const AppConfig& m_conf;
 
+		wxString operator[]( PluginsEnum_t pluginidx ) const;
+
 		wxString Bios() const;
-		wxString CDVD() const;
-		wxString GS() const;
-		wxString PAD1() const;
-		wxString PAD2() const;
-		wxString SPU2() const;
-		wxString DEV9() const;
-		wxString USB() const;
-		wxString FW() const;
-		
 		wxString Mcd( uint mcdidx ) const;
 	};
 
@@ -176,17 +188,27 @@ public:
 	
 	FullpathHelpers Files;
 	
-	wxPoint MainGuiPosition;
-	bool CdvdVerboseReads;		// enables cdvd read activity verbosely dumped to the console
+	wxPoint		MainGuiPosition;
+	bool		CdvdVerboseReads;		// enables cdvd read activity verbosely dumped to the console
+
+	// String value describing the desktop theme to use for pcsk2 (icons and background images)
+	// The theme name is used to look up files in the themes folder (relative to the executable).
+	wxString	DeskTheme;
 	
-	CpuRecompilerOptions Cpu;
-	SpeedhackOptions Speedhacks;
-	GamefixOptions Gamefixes;
-	VideoOptions Video;
-	ConsoleLogOptions ConLogBox;
-	FolderOptions Folders;
-	FilenameOptions BaseFilenames;
-	McdSysOptions MemoryCards;
+	// Enables use of 64x64 toolbar icons; when false 32x32 icons are used instead.
+	bool		Toolbar_UseLargeImages;
+
+	// Enables display of toolbar text labels.
+	bool		Toolbar_ShowLabels;
+
+	CpuRecompilerOptions	Cpu;
+	SpeedhackOptions		Speedhacks;
+	GamefixOptions			Gamefixes;
+	VideoOptions			Video;
+	ConsoleLogOptions		ConLogBox;
+	FolderOptions			Folders;
+	FilenameOptions			BaseFilenames;
+	McdSysOptions			MemoryCards;
 	
 public:
 	void Load();

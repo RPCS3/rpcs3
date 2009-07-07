@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="windows-1253"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="9,00"
+	Version="9.00"
 	Name="pcsx2"
 	ProjectGUID="{1CEFD830-2B76-4596-A4EE-BCD7280A60BD}"
 	RootNamespace="pcsx2"
@@ -52,7 +52,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="&quot;$(ProjectRootDir)/NewGUI&quot;"
+				AdditionalIncludeDirectories="&quot;$(ProjectRootDir)/gui&quot;"
 				PreprocessorDefinitions="wxUSE_UNICODE=1"
 				ExceptionHandling="2"
 				UsePrecompiledHeader="2"
@@ -132,7 +132,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="&quot;$(ProjectRootDir)/NewGUI&quot;"
+				AdditionalIncludeDirectories="&quot;$(ProjectRootDir)/gui&quot;"
 				PreprocessorDefinitions="NDEBUG;wxUSE_UNICODE=1"
 				ExceptionHandling="2"
 				UsePrecompiledHeader="2"
@@ -213,7 +213,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="&quot;$(ProjectRootDir)/NewGUI&quot;"
+				AdditionalIncludeDirectories="&quot;$(ProjectRootDir)/gui&quot;"
 				PreprocessorDefinitions="NDEBUG;wxUSE_UNICODE=1"
 				ExceptionHandling="2"
 				EnableEnhancedInstructionSet="0"
@@ -1910,31 +1910,31 @@
 			Name="HostGUI"
 			>
 			<File
-				RelativePath="..\..\NewGUI\App.h"
+				RelativePath="..\..\gui\App.h"
 				>
 			</File>
 			<File
-				RelativePath="..\..\NewGUI\AppConfig.cpp"
+				RelativePath="..\..\gui\AppConfig.cpp"
 				>
 			</File>
 			<File
-				RelativePath="..\..\NewGUI\CheckedStaticBox.cpp"
+				RelativePath="..\..\gui\CheckedStaticBox.cpp"
 				>
 			</File>
 			<File
-				RelativePath="..\..\NewGUI\CheckedStaticBox.h"
+				RelativePath="..\..\gui\CheckedStaticBox.h"
 				>
 			</File>
 			<File
-				RelativePath="..\..\NewGUI\ConsoleLogger.cpp"
+				RelativePath="..\..\gui\ConsoleLogger.cpp"
 				>
 			</File>
 			<File
-				RelativePath="..\..\Resources\EmbeddedImage.h"
+				RelativePath="..\..\gui\Resources\EmbeddedImage.h"
 				>
 			</File>
 			<File
-				RelativePath="..\..\NewGUI\HostGui.cpp"
+				RelativePath="..\..\gui\HostGui.cpp"
 				>
 			</File>
 			<File
@@ -1942,66 +1942,66 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\NewGUI\IniInterface.cpp"
+				RelativePath="..\..\gui\IniInterface.cpp"
 				>
 			</File>
 			<File
-				RelativePath="..\..\NewGUI\IniInterface.h"
+				RelativePath="..\..\gui\IniInterface.h"
 				>
 			</File>
 			<File
-				RelativePath="..\..\NewGUI\main.cpp"
+				RelativePath="..\..\gui\main.cpp"
 				>
 			</File>
 			<File
-				RelativePath="..\..\NewGUI\MainFrame.cpp"
+				RelativePath="..\..\gui\MainFrame.cpp"
 				>
 			</File>
 			<File
-				RelativePath="..\..\NewGUI\MainFrame.h"
+				RelativePath="..\..\gui\MainFrame.h"
 				>
 			</File>
 			<File
-				RelativePath="..\..\NewGUI\wxHelpers.cpp"
+				RelativePath="..\..\gui\wxHelpers.cpp"
 				>
 			</File>
 			<File
-				RelativePath="..\..\NewGUI\wxHelpers.h"
+				RelativePath="..\..\gui\wxHelpers.h"
 				>
 			</File>
 			<Filter
 				Name="Dialogs"
 				>
 				<File
-					RelativePath="..\..\NewGUI\AboutBoxDialog.cpp"
+					RelativePath="..\..\gui\AboutBoxDialog.cpp"
 					>
 				</File>
 				<File
-					RelativePath="..\..\NewGUI\AboutBoxDialog.h"
+					RelativePath="..\..\gui\AboutBoxDialog.h"
 					>
 				</File>
 				<File
-					RelativePath="..\..\NewGUI\GameFixesDialog.cpp"
+					RelativePath="..\..\gui\AdvancedDialog.cpp"
 					>
 				</File>
 				<File
-					RelativePath="..\..\NewGUI\GameFixesDialog.h"
+					RelativePath="..\..\gui\AdvancedDialog.h"
 					>
 				</File>
 				<File
-					RelativePath="..\..\NewGUI\LogOptionsDialog.cpp"
+					RelativePath="..\..\gui\Dialogs\ConfigurationDialog.cpp"
 					>
 				</File>
 				<File
-					RelativePath="..\..\NewGUI\LogOptionsDialog.h"
+					RelativePath="..\..\gui\Dialogs\ConfigurationDialog.h"
 					>
 				</File>
 				<File
-					RelativePath="..\..\NewGUI\SpeedHacksDialog.cpp"
+					RelativePath="..\..\gui\LogOptionsDialog.cpp"
 					>
 				</File>
 				<File
-					RelativePath="..\..\NewGUI\SpeedHacksDialog.h"
+					RelativePath="..\..\gui\LogOptionsDialog.h"
 					>
 				</File>
 			</Filter>
@@ -2009,15 +2009,87 @@
 				Name="Resources"
 				>
 				<File
-					RelativePath="..\..\Resources\AppIcon.h"
+					RelativePath="..\..\gui\Resources\AppIcon.h"
 					>
 				</File>
 				<File
-					RelativePath="..\..\Resources\BackgroundLogo.h"
+					RelativePath="..\..\gui\Resources\BackgroundLogo.h"
 					>
 				</File>
 				<File
-					RelativePath="..\..\Resources\ps2_silver.h"
+					RelativePath="..\..\gui\Resources\ConfigIcon_Cpu.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\gui\Resources\ConfigIcon_Gamefixes.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\gui\Resources\ConfigIcon_Paths.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\gui\Resources\ConfigIcon_Plugins.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\gui\Resources\ConfigIcon_Speedhacks.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\gui\Resources\ConfigIcon_Video.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\gui\Resources\ps2_silver.h"
+					>
+				</File>
+				<File
+					RelativePath=".\..\resource.h"
+					>
+				</File>
+				<File
+					RelativePath=".\..\testing.ico"
+					>
+				</File>
+				<File
+					RelativePath=".\..\wxResources.rc"
+					>
+				</File>
+			</Filter>
+			<Filter
+				Name="Panels"
+				>
+				<File
+					RelativePath="..\..\gui\Panels\AudioPanel.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\gui\Panels\ConfigurationPanels.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\gui\Panels\CpuPanel.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\gui\Panels\GameFixesPanel.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\gui\Panels\PathsPanel.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\gui\Panels\PluginSelectorPanel.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\gui\Panels\SpeedhacksPanel.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\gui\Panels\VideoPanel.cpp"
 					>
 				</File>
 			</Filter>
@@ -2120,6 +2192,10 @@
 		</File>
 		<File
 			RelativePath="..\..\Config.h"
+			>
+		</File>
+		<File
+			RelativePath=".\icon1.ico"
 			>
 		</File>
 		<File
