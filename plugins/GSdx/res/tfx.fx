@@ -307,7 +307,7 @@ float4 sample_4a(float4 uv)
 float4x4 sample_4p(float4 u)
 {
 	float4x4 c;
-
+	
 	c[0] = sample_p(u.x);
 	c[1] = sample_p(u.y);
 	c[2] = sample_p(u.z);
@@ -316,29 +316,40 @@ float4x4 sample_4p(float4 u)
 	return c;
 }
 
-float4 sample(float2 tc, float w)
+float4 sample(float2 st, float q)
 {
 	if(!PS_FST)
 	{
-		tc /= w;
+		st /= q;
 	}
 	
 	float4 t;
 /*	
 	if(PS_FMT <= FMT_16 && PS_WMS < 2 && PS_WMT < 2)
 	{
-		t = sample_c(tc);
+		t = sample_c(st);
 	}
 */
 	if(PS_FMT <= FMT_16 && PS_WMS < 3 && PS_WMT < 3)
 	{
-		t = sample_c(clampuv(tc));
+		t = sample_c(clampuv(st));
 	}
 	else
 	{
-		float4 uv2 = tc.xyxy + HalfTexel;
-		float2 dd = frac(uv2.xy * WH.zw); 
-		float4 uv = wrapuv(uv2);
+		float4 uv;
+		float2 dd;
+		
+		if(PS_LTF)
+		{
+			uv = st.xyxy + HalfTexel;
+			dd = frac(uv.xy * WH.zw); 
+		}
+		else
+		{
+			uv = st.xyxy;
+		}
+		
+		uv = wrapuv(uv);
 
 		float4x4 c;
 
@@ -651,7 +662,7 @@ VS_OUTPUT vs_main(VS_INPUT input)
 	else if(VS_BPPZ == 2) // 16
 	{
 		input.p.z = fmod(input.p.z, 0x10000);
-	} 
+	}
 
 	VS_OUTPUT output;
 	
@@ -659,7 +670,7 @@ VS_OUTPUT vs_main(VS_INPUT input)
 	// example: ceil(afterseveralvertextransformations(y = 133)) => 134 => line 133 stays empty
 	// input granularity is 1/16 pixel, anything smaller than that won't step drawing up/left by one pixel
 	// example: 133.0625 (133 + 1/16) should start from line 134, ceil(133.0625 - 0.05) still above 133
-	
+
 	float4 p = input.p - float4(0.05f, 0.05f, 0, 0);
 
 	output.p = p * VertexScale - VertexOffset;

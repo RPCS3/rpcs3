@@ -248,19 +248,19 @@ public:
 
 			switch(context->CLAMP.WMS)
 			{
-			case 0: 
+			case CLAMP_REPEAT: 
 				ps_ssel.tau = 1; 
 				break;
-			case 1: 
+			case CLAMP_CLAMP: 
 				ps_ssel.tau = 0; 
 				break;
-			case 2: 
+			case CLAMP_REGION_CLAMP: 
 				ps_cb.MinMax.x = ((float)(int)context->CLAMP.MINU) / (1 << context->TEX0.TW);
 				ps_cb.MinMax.z = ((float)(int)context->CLAMP.MAXU) / (1 << context->TEX0.TW);
 				ps_cb.MinF_TA.x = ((float)(int)context->CLAMP.MINU + 0.5f) / (1 << context->TEX0.TW);
 				ps_ssel.tau = 0; 
 				break;
-			case 3: 
+			case CLAMP_REGION_REPEAT: 
 				ps_cb.MskFix.x = context->CLAMP.MINU;
 				ps_cb.MskFix.z = context->CLAMP.MAXU;
 				ps_ssel.tau = 1; 
@@ -271,19 +271,19 @@ public:
 
 			switch(context->CLAMP.WMT)
 			{
-			case 0: 
+			case CLAMP_REPEAT: 
 				ps_ssel.tav = 1; 
 				break;
-			case 1: 
+			case CLAMP_CLAMP: 
 				ps_ssel.tav = 0; 
 				break;
-			case 2: 
+			case CLAMP_REGION_CLAMP: 
 				ps_cb.MinMax.y = ((float)(int)context->CLAMP.MINV) / (1 << context->TEX0.TH);
 				ps_cb.MinMax.w = ((float)(int)context->CLAMP.MAXV) / (1 << context->TEX0.TH);
 				ps_cb.MinF_TA.y = ((float)(int)context->CLAMP.MINV + 0.5f) / (1 << context->TEX0.TH);
 				ps_ssel.tav = 0; 
 				break;
-			case 3: 
+			case CLAMP_REGION_REPEAT: 
 				ps_cb.MskFix.y = context->CLAMP.MINV;
 				ps_cb.MskFix.w = context->CLAMP.MAXV;
 				ps_ssel.tav = 1; 

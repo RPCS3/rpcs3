@@ -846,16 +846,16 @@ void GSDevice9::PSSetSamplerState(Direct3DSamplerState9* ss)
 
 		m_dev->SetSamplerState(0, D3DSAMP_ADDRESSU, ss->AddressU);
 		m_dev->SetSamplerState(0, D3DSAMP_ADDRESSV, ss->AddressV);
-		m_dev->SetSamplerState(1, D3DSAMP_ADDRESSU, ss->AddressU);
-		m_dev->SetSamplerState(1, D3DSAMP_ADDRESSV, ss->AddressV);
+		m_dev->SetSamplerState(1, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
+		m_dev->SetSamplerState(1, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
 		m_dev->SetSamplerState(2, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
 		m_dev->SetSamplerState(2, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP);
 		m_dev->SetSamplerState(3, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
 		m_dev->SetSamplerState(3, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP);
 		m_dev->SetSamplerState(0, D3DSAMP_MINFILTER, ss->FilterMin[0]);
 		m_dev->SetSamplerState(0, D3DSAMP_MAGFILTER, ss->FilterMag[0]);
-		m_dev->SetSamplerState(1, D3DSAMP_MINFILTER, ss->FilterMin[1]);
-		m_dev->SetSamplerState(1, D3DSAMP_MAGFILTER, ss->FilterMag[1]);
+		m_dev->SetSamplerState(1, D3DSAMP_MINFILTER, D3DTEXF_POINT);
+		m_dev->SetSamplerState(1, D3DSAMP_MAGFILTER, D3DTEXF_POINT);
 		m_dev->SetSamplerState(2, D3DSAMP_MINFILTER, D3DTEXF_POINT);
 		m_dev->SetSamplerState(2, D3DSAMP_MAGFILTER, D3DTEXF_POINT);
 		m_dev->SetSamplerState(3, D3DSAMP_MINFILTER, D3DTEXF_POINT);
