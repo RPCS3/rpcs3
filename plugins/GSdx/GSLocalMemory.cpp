@@ -465,20 +465,9 @@ GSLocalMemory::~GSLocalMemory()
 {
 	VirtualFree(m_vm8, 0, MEM_RELEASE);
 
-	for(hash_map<uint32, BlockOffset*>::iterator i = m_bomap.begin(); i != m_bomap.end(); i++)
-	{
-		_aligned_free(i->second);
-	}
-
-	for(hash_map<uint32, PixelOffset*>::iterator i = m_pomap.begin(); i != m_pomap.end(); i++)
-	{
-		_aligned_free(i->second);
-	}
-
-	for(hash_map<uint32, PixelOffset4*>::iterator i = m_po4map.begin(); i != m_po4map.end(); i++)
-	{
-		_aligned_free(i->second);
-	}
+	for_each(m_bomap.begin(), m_bomap.end(), aligned_free_second());
+	for_each(m_pomap.begin(), m_pomap.end(), aligned_free_second());
+	for_each(m_po4map.begin(), m_po4map.end(), aligned_free_second());
 }
 
 GSLocalMemory::BlockOffset* GSLocalMemory::GetBlockOffset(uint32 bp, uint32 bw, uint32 psm)

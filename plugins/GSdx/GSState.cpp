@@ -1163,57 +1163,88 @@ void GSState::Move()
 	}
 	else if(m_env.BITBLTBUF.SPSM == PSM_PSMT8 && m_env.BITBLTBUF.DPSM == PSM_PSMT8)
 	{
-		for(int y = 0; y < h; y++, sy += yinc, dy += yinc)
+		if(xinc > 0)
 		{
-			uint8* RESTRICT s = &m_mem.m_vm8[spo->row[sy]];
-			uint8* RESTRICT d = &m_mem.m_vm8[dpo->row[dy]];
-
-			int* RESTRICT scol = &spo->col[sy & 7][sx];
-			int* RESTRICT dcol = &dpo->col[dy & 7][dx];
-
-			for(int x = 0; x < w; x++, scol += xinc, dcol += xinc)
+			for(int y = 0; y < h; y++, sy += yinc, dy += yinc)
 			{
-				d[*dcol] = s[*scol];
+				uint8* RESTRICT s = &m_mem.m_vm8[spo->row[sy]];
+				uint8* RESTRICT d = &m_mem.m_vm8[dpo->row[dy]];
+
+				int* RESTRICT scol = &spo->col[sy & 7][sx];
+				int* RESTRICT dcol = &dpo->col[dy & 7][dx];
+
+				for(int x = 0; x < w; x++) d[dcol[x]] = s[scol[x]];
+			}
+		}
+		else
+		{
+			for(int y = 0; y < h; y++, sy += yinc, dy += yinc)
+			{
+				uint8* RESTRICT s = &m_mem.m_vm8[spo->row[sy]];
+				uint8* RESTRICT d = &m_mem.m_vm8[dpo->row[dy]];
+
+				int* RESTRICT scol = &spo->col[sy & 7][sx];
+				int* RESTRICT dcol = &dpo->col[dy & 7][dx];
+
+				for(int x = 0; x > -w; x--) d[dcol[x]] = s[scol[x]];
 			}
 		}
 	}
 	else if(m_env.BITBLTBUF.SPSM == PSM_PSMT4 && m_env.BITBLTBUF.DPSM == PSM_PSMT4)
 	{
-		for(int y = 0; y < h; y++, sy += yinc, dy += yinc, sx -= xinc * w, dx -= xinc * w)
+		if(xinc > 0)
 		{
-			uint8* RESTRICT s = &m_mem.m_vm8[spo->row[sy] >> 1];
-			uint8* RESTRICT d = &m_mem.m_vm8[dpo->row[dy] >> 1];
-
-			int* RESTRICT scol = &spo->col[sy & 7][sx];
-			int* RESTRICT dcol = &dpo->col[dy & 7][dx];
-			
-			for(int x = 0; x < w; x += 2)
+			for(int y = 0; y < h; y++, sy += yinc, dy += yinc)
 			{
-				d[*dcol >> 1] = (d[*dcol >> 1] & 0xf0) | (s[*scol >> 1] & 0x0f);
+				uint32 sbase = spo->row[sy];
+				uint32 dbase = dpo->row[dy];
 
-				scol += xinc;
-				dcol += xinc;
+				int* RESTRICT scol = &spo->col[sy & 7][sx];
+				int* RESTRICT dcol = &dpo->col[dy & 7][dx];
+				
+				for(int x = 0; x < w; x++) m_mem.WritePixel4(dbase + dcol[x], m_mem.ReadPixel4(sbase + scol[x]));
+			}
+		}
+		else
+		{
+			for(int y = 0; y < h; y++, sy += yinc, dy += yinc)
+			{
+				uint32 sbase = spo->row[sy];
+				uint32 dbase = dpo->row[dy];
 
-				d[*dcol >> 1] = (d[*dcol >> 1] & 0x0f) | (s[*scol >> 1] & 0xf0);
-
-				scol += xinc;
-				dcol += xinc;
+				int* RESTRICT scol = &spo->col[sy & 7][sx];
+				int* RESTRICT dcol = &dpo->col[dy & 7][dx];
+				
+				for(int x = 0; x > -w; x--) m_mem.WritePixel4(dbase + dcol[x], m_mem.ReadPixel4(sbase + scol[x]));
 			}
 		}
 	}
 	else
 	{
-		for(int y = 0; y < h; y++, sy += yinc, dy += yinc, sx -= xinc * w, dx -= xinc * w)
+		if(xinc > 0)
 		{
-			uint32 sbase = spo->row[sy];
-			uint32 dbase = dpo->row[dy];
-
-			int* RESTRICT scol = spo->col[sy & 7];
-			int* RESTRICT dcol = dpo->col[dy & 7];
-			
-			for(int x = 0; x < w; x++, sx += xinc, dx += xinc)
+			for(int y = 0; y < h; y++, sy += yinc, dy += yinc)
 			{
-				(m_mem.*dpsm.wpa)(dbase + dcol[dx], (m_mem.*spsm.rpa)(sbase + scol[sx]));
+				uint32 sbase = spo->row[sy];
+				uint32 dbase = dpo->row[dy];
+
+				int* RESTRICT scol = &spo->col[sy & 7][sx];
+				int* RESTRICT dcol = &dpo->col[dy & 7][dx];
+				
+				for(int x = 0; x < w; x++) (m_mem.*dpsm.wpa)(dbase + dcol[x], (m_mem.*spsm.rpa)(sbase + scol[x]));
+			}
+		}
+		else
+		{
+			for(int y = 0; y < h; y++, sy += yinc, dy += yinc)
+			{
+				uint32 sbase = spo->row[sy];
+				uint32 dbase = dpo->row[dy];
+
+				int* RESTRICT scol = &spo->col[sy & 7][sx];
+				int* RESTRICT dcol = &dpo->col[dy & 7][dx];
+				
+				for(int x = 0; x > -w; x--) (m_mem.*dpsm.wpa)(dbase + dcol[x], (m_mem.*spsm.rpa)(sbase + scol[x]));
 			}
 		}
 	}

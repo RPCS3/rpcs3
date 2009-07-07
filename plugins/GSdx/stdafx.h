@@ -63,6 +63,9 @@ extern string format(const char* fmt, ...);
 struct delete_object {template<class T> void operator()(T& p) {delete p;}};
 struct delete_first {template<class T> void operator()(T& p) {delete p.first;}};
 struct delete_second {template<class T> void operator()(T& p) {delete p.second;}};
+struct aligned_free_object {template<class T> void operator()(T& p) {_aligned_free(p);}};
+struct aligned_free_first {template<class T> void operator()(T& p) {_aligned_free(p.first);}};
+struct aligned_free_second {template<class T> void operator()(T& p) {_aligned_free(p.second);}};
 
 // syntactic sugar
 
