@@ -120,10 +120,10 @@ void GSSettingsDlg::OnInit()
 	ComboBoxInit(IDC_INTERLACE, g_interlace, countof(g_interlace), theApp.GetConfig("Interlace", 0));
 	ComboBoxInit(IDC_ASPECTRATIO, g_aspectratio, countof(g_aspectratio), theApp.GetConfig("AspectRatio", 1));
 
-	CheckDlgButton(m_hWnd, IDC_FILTER, theApp.GetConfig("filter", 1));
-	CheckDlgButton(m_hWnd, IDC_PALTEX, theApp.GetConfig("paltex", 0));
+	CheckDlgButton(m_hWnd, IDC_FILTER, theApp.GetConfig("filter", 2));
+	CheckDlgButton(m_hWnd, IDC_PALTEX, theApp.GetConfig("paltex", 1));
 	CheckDlgButton(m_hWnd, IDC_VSYNC, theApp.GetConfig("vsync", 0));
-	CheckDlgButton(m_hWnd, IDC_LOGZ, theApp.GetConfig("logz", 0));
+	CheckDlgButton(m_hWnd, IDC_LOGZ, theApp.GetConfig("logz", 1));
 	CheckDlgButton(m_hWnd, IDC_FBA, theApp.GetConfig("fba", 1));
 	CheckDlgButton(m_hWnd, IDC_AA1, theApp.GetConfig("aa1", 0));
 	CheckDlgButton(m_hWnd, IDC_BLUR, theApp.GetConfig("blur", 0));
