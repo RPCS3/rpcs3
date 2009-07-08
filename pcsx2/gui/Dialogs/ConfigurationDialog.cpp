@@ -34,8 +34,14 @@ using namespace Panels;
 Dialogs::ConfigurationDialog::ConfigurationDialog( wxWindow* parent, int id ) :
 	wxDialogWithHelpers( parent, id, _T("PCSX2 Configuration"), true )
 {
+#if defined(__WXMAC__) || defined(__WXMSW__)
+	int orient = wxBK_TOP;
+#else
+	int orient = wxBK_LEFT;
+#endif
+
 	wxBoxSizer& mainSizer = *new wxBoxSizer( wxVERTICAL );
-	wxListbook& Notebook = *new wxListbook( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLB_TOP );
+	wxListbook& Notebook = *new wxListbook( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, orient );
 
 	Notebook.SetImageList( &wxGetApp().GetImgList_Config() );
 

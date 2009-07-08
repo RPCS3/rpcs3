@@ -15,7 +15,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
- 
+
 #include "PrecompiledHeader.h"
 #include "IniInterface.h"
 #include "MainFrame.h"
@@ -111,7 +111,7 @@ bool Pcsx2App::OnInit()
 	// been installed or configured.  The first place we look is in our program's working
 	// directory.  If the ini there exist, and is *not* empty, then we'll use it.  Otherwise
 	// we fall back on the ini file in the user's Documents folder.
-	
+
 	if( !TryOpenConfigCwd() )
 	{
 		PathDefs::GetDocuments().Mkdir();
@@ -180,12 +180,12 @@ const wxImage& LoadImageAny(
 		}
 
 		base.SetExt( L"bmp" );
-		if( base.FileExists() ) 
+		if( base.FileExists() )
 		{
 			if( dest.LoadFile( base.GetFullPath() ) ) return dest;
 		}
 	}
-	
+
 	return dest = onFail.Get();
 }
 
@@ -209,7 +209,7 @@ const wxBitmap& Pcsx2App::GetLogoBitmap()
 			// loading theme from zipfile.
 			//wxFileInputStream stream( zipped.ToString() )
 			//wxZipInputStream zstream( stream );
-			
+
 			Console::Error( "Loading themes from zipfile is not supported yet.\nFalling back on default theme." );
 		}
 
@@ -218,7 +218,8 @@ const wxBitmap& Pcsx2App::GetLogoBitmap()
 	}
 
 	wxImage img;
-	LoadImageAny( img, useTheme, mess, L"BackgroundLogo", EmbeddedImage<png_BackgroundLogo>() );
+	EmbeddedImage<png_BackgroundLogo> temp;	// because gcc can't allow non-const temporaries.
+	LoadImageAny( img, useTheme, mess, L"BackgroundLogo", temp );
 	m_Bitmap_Logo = new wxBitmap( img );
 
 	return *m_Bitmap_Logo;
@@ -245,20 +246,23 @@ wxImageList& Pcsx2App::GetImgList_Config()
 		}
 
 		wxImage img;
-		int width, height;
 
-		m_ConfigImages.GetSize( 0, width, height );
+		// GCC Specific: wxT() macro is required when using string token pasting.  For some reason L
+		// generates syntax errors. >_<
 
 		#undef  FancyLoadMacro
 		#define FancyLoadMacro( name ) \
+		{ \
+			EmbeddedImage<png_ConfigIcon_##name> temp( g_Conf.Listbook_ImageSize, g_Conf.Listbook_ImageSize ); \
 			m_ImageId.Config.name = m_ConfigImages.Add( LoadImageAny( \
-				img, useTheme, mess, L"ConfigIcon_" L#name, EmbeddedImage<png_ConfigIcon_##name>( width, height ) ) \
-			);
+				img, useTheme, mess, L"ConfigIcon_" wxT(#name), temp ) \
+			); \
+		}
 
 		FancyLoadMacro( Paths );
 		FancyLoadMacro( Gamefixes );
 		FancyLoadMacro( Speedhacks );
-		FancyLoadMacro( Video );	
+		FancyLoadMacro( Video );
 	}
 	m_ConfigImagesAreLoaded = true;
 	return m_ConfigImages;
@@ -269,7 +273,7 @@ wxImageList& Pcsx2App::GetImgList_Toolbars()
 {
 	if( m_ToolbarImages == NULL )
 	{
-		const int imgSize = g_Conf.Toolbar_UseLargeImages ? 64 : 32;
+		const int imgSize = g_Conf.Toolbar_ImageSize ? 64 : 32;
 		m_ToolbarImages = new wxImageList( imgSize, imgSize );
 		wxFileName mess;
 		bool useTheme = (g_Conf.DeskTheme != L"default");
@@ -283,7 +287,11 @@ wxImageList& Pcsx2App::GetImgList_Toolbars()
 		wxImage img;
 		#undef  FancyLoadMacro
 		#define FancyLoadMacro( name ) \
-			m_ImageId.Toolbars.name		= m_ConfigImages.Add( LoadImageAny64( img, useTheme, g_Conf.Toolbar_UseLargeImages, mess, L"ToolbarIcon64" L#name, EmbeddedImage<png_ToolbarIcon64_##name>() ) );
+		{ \
+			EmbeddedImage<png_ToolbarIcon_##name> temp( imgSize, imgSize ); \
+			m_ImageId.Toolbars.name = m_ConfigImages.Add( LoadImageAny( img, useTheme, mess, L"ToolbarIcon" wxT(#name), temp ) ); \
+		}
+
 	}
 	return *m_ToolbarImages;
 }

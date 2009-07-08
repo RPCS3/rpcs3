@@ -20,7 +20,7 @@
 
 #include <wx/wx.h>
 #include <wx/fileconf.h>
-
+#include <wx/imaglist.h>
 #include "System.h"
 
 class MainEmuFrame;
@@ -65,7 +65,7 @@ protected:
 	virtual void DoClose();
 
 	DECLARE_EVENT_TABLE()
-	
+
 	void OnMoveAround( wxMoveEvent& evt );
 	void OnResize( wxSizeEvent& evt );
 };
@@ -78,8 +78,8 @@ struct AppImageIds
 			Speedhacks,
 			Gamefixes,
 			Video;
-			
-		ConfigIds() : 
+
+		ConfigIds() :
 			Paths( -1 )
 		,	Speedhacks( -1 )
 		,	Gamefixes( -1 )
@@ -87,7 +87,7 @@ struct AppImageIds
 		{
 		}
 	} Config;
-	
+
 	struct ToolbarIds
 	{
 		int Settings,
@@ -96,8 +96,8 @@ struct AppImageIds
 			PluginVideo,
 			PluginAudio,
 			PluginPad;
-			
-		ToolbarIds() : 
+
+		ToolbarIds() :
 			Settings( -1 )
 		,	Play( -1 )
 		,	PluginVideo( -1 )
@@ -119,7 +119,7 @@ protected:
 
 	wxImageList	m_ConfigImages;
 	bool		m_ConfigImagesAreLoaded;
-	
+
 	wxImageList* m_ToolbarImages;		// dynamic (pointer) to allow for large/small redefinition.
 	AppImageIds m_ImageId;
 
@@ -136,7 +136,7 @@ public:
 	const wxBitmap& GetLogoBitmap();
 	wxImageList& GetImgList_Config();
 	wxImageList& GetImgList_Toolbars();
-	
+
 	const AppImageIds& GetImgId() const { return m_ImageId; }
 
 	MainEmuFrame& GetMainFrame() const
@@ -147,7 +147,7 @@ public:
 
 	ConsoleLogFrame* GetConsoleFrame() const { return m_ConsoleFrame; }
 	void SetConsoleFrame( ConsoleLogFrame& frame ) { m_ConsoleFrame = &frame; }
-	
+
 	bool TryOpenConfigCwd();
 };
 

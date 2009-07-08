@@ -82,7 +82,7 @@ namespace PathDefs
 	{
 		return AppRoot + Plugins;
 	}
-	
+
 	wxDirName GetThemes()
 	{
 		return AppRoot + Themes;
@@ -166,7 +166,10 @@ wxString AppConfig::FullpathHelpers::Bios() const	{ return Path::Combine( m_conf
 wxString AppConfig::FullpathHelpers::Mcd( uint mcdidx ) const { return Path::Combine( m_conf.Folders.MemoryCards, m_conf.MemoryCards.Mcd[mcdidx].Filename ); }
 
 // ------------------------------------------------------------------------
-#define IniEntry( varname, defval ) ini.Entry( L#varname, varname, defval )
+// GCC Note: wxT() macro is required when using string token pasting.  For some reason L generates
+// syntax errors. >_<
+//
+#define IniEntry( varname, defval ) ini.Entry( wxT(#varname), varname, defval )
 
 void AppConfig::LoadSave( IniInterface& ini )
 {
@@ -212,7 +215,7 @@ void AppConfig::ConsoleLogOptions::LoadSave( IniInterface& ini )
 void AppConfig::SpeedhackOptions::LoadSave( IniInterface& ini )
 {
 	ini.SetPath( L"Speedhacks" );
-	
+
 	ini.SetPath( L".." );
 }
 

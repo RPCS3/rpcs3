@@ -69,7 +69,7 @@ public:
 
 		void LoadSave( IniInterface& conf );
 	};
-	
+
 	// ------------------------------------------------------------------------
 	struct FilenameOptions
 	{
@@ -113,7 +113,7 @@ public:
 
 		} Profiler;
 
-		struct 
+		struct
 		{
 			bool
 				EnableEE:1,
@@ -132,7 +132,7 @@ public:
 		bool MultithreadGS;		// Uses the multithreaded GS interface.
 		bool closeOnEsc;		// Closes the GS/Video port on escape (good for fullscreen activity)
 		bool UseFramelimiter;
-		
+
 		int RegionMode;			// 0=NTSC and 1=PAL
 		int CustomFps;
 		int CustomFrameSkip;
@@ -153,7 +153,7 @@ public:
 
 		void LoadSave();
 	};
-	
+
 	// ------------------------------------------------------------------------
 	struct SpeedhackOptions
 	{
@@ -165,7 +165,7 @@ public:
 
 		void LoadSave( IniInterface& conf );
 	};
-	
+
 	// ------------------------------------------------------------------------
 	// Helper functions for returning full pathnames of various Folders and files
 	//
@@ -183,20 +183,27 @@ public:
 
 public:
 	AppConfig() : Files( *this )
+	,	Listbook_ImageSize( 32 )
+	,	Toolbar_ImageSize( 32 )
 	{
 	}
-	
+
 	FullpathHelpers Files;
-	
+
 	wxPoint		MainGuiPosition;
 	bool		CdvdVerboseReads;		// enables cdvd read activity verbosely dumped to the console
 
 	// String value describing the desktop theme to use for pcsk2 (icons and background images)
 	// The theme name is used to look up files in the themes folder (relative to the executable).
 	wxString	DeskTheme;
-	
-	// Enables use of 64x64 toolbar icons; when false 32x32 icons are used instead.
-	bool		Toolbar_UseLargeImages;
+
+	// Specifies the size of icons used in Listbooks; specifically the PCSX2 Properties dialog box.
+	// Realisic values range from 96x96 to 24x24.
+	int			Listbook_ImageSize;
+
+	// Specifies the size of each toolbar icon, in pixels (any value >= 2 is valid, but realistically
+	// values should be between 64 and 16 for usability reasons)
+	int			Toolbar_ImageSize;
 
 	// Enables display of toolbar text labels.
 	bool		Toolbar_ShowLabels;
@@ -209,11 +216,11 @@ public:
 	FolderOptions			Folders;
 	FilenameOptions			BaseFilenames;
 	McdSysOptions			MemoryCards;
-	
+
 public:
 	void Load();
 	void Save();
-	
+
 protected:
 	void LoadSave( IniInterface& ini );
 };

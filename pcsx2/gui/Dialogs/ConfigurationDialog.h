@@ -20,7 +20,6 @@
 
 #include <wx/wx.h>
 #include <wx/image.h>
-#include <wx/imaglist.h>
 #include <wx/propdlg.h>
 
 #include "wxHelpers.h"
