@@ -18,7 +18,7 @@
 
 #pragma once
 
-// writes text directly to the microVU.txt, no newlines appended.
+// writes text directly to mVU->logFile, no newlines appended.
 microVUx(void) __mVULog(const char* fmt, ...) {
 	microVU* mVU = mVUx;
 	char tmp[2024];

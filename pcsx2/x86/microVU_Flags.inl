@@ -143,9 +143,9 @@ microVUt(int) mVUsetFlags(mV, int* xStatus, int* xMac, int* xClip) {
 		mFLAG.lastWrite = (xM-1) & 3;
 		cFLAG.lastWrite = (xC-1) & 3;
 
-		if (sFlagCond)		{ xStatus[xS] = cycles + 4; xS = (xS+1) & 3; }
-		if (mFLAG.doFlag)	{ xMac   [xM] = cycles + 4; xM = (xM+1) & 3; }
-		if (cFLAG.doFlag)	{ xClip  [xC] = cycles + 4; xC = (xC+1) & 3; }
+		if (sFlagCond)	  { xStatus[xS] = cycles + 4; xS = (xS+1) & 3; }
+		if (mFLAG.doFlag) { xMac   [xM] = cycles + 4; xM = (xM+1) & 3; }
+		if (cFLAG.doFlag) { xClip  [xC] = cycles + 4; xC = (xC+1) & 3; }
 
 		cycles++;
 		incPC2(2);
@@ -170,9 +170,6 @@ microVUt(void) mVUsetupFlags(mV, int* xStatus, int* xMac, int* xClip, int cycles
 		int sortRegs = sortFlag(xStatus, bStatus, cycles);
 		// DevCon::Status("sortRegs = %d", params sortRegs);
 		// Note: Emitter will optimize out mov(reg1, reg1) cases...
-		// There 'is' still room for small optimizations but the 
-		// sorting algorithm would be really complex and not really
-		// a noticeable improvement... (Most common cases are 1 & 2)
 		if (sortRegs == 1) {
 			MOV32RtoR(gprF0,  getFlagReg1(bStatus[0]));
 			MOV32RtoR(gprF1,  getFlagReg1(bStatus[1]));
@@ -224,12 +221,12 @@ microVUt(void) mVUsetupFlags(mV, int* xStatus, int* xMac, int* xClip, int cycles
 	}
 }
 
-#define shortBranch() {											\
-	if (branch == 3) {											\
+#define shortBranch()											\
+	if ((branch == 3) || (branch == 4)) {						\
 		mVUflagPass(mVU, aBranchAddr, (xCount - (mVUcount+1)));	\
-		mVUcount = 4;											\
+		if (branch == 3) { mVUcount = 4; break; }				\
 	}															\
-}
+	else break
 
 // Scan through instructions and check if flags are read (FSxxx, FMxxx, FCxxx opcodes)
 void mVUflagPass(mV, u32 startPC, u32 xCount) {
@@ -243,12 +240,12 @@ void mVUflagPass(mV, u32 startPC, u32 xCount) {
 	mVUbranch = 0;
 	for (int branch = 0; mVUcount < xCount; mVUcount++) {
 		incPC(1);
-		if (  curI & _Ebit_   )	{ branch = 1; }
-		if (  curI & _DTbit_ )	{ branch = 4; }
-		if (!(curI & _Ibit_)  )	{ incPC(-1); mVUopL(mVU, 3); incPC(1); }
-		if		(branch >= 2)	{ shortBranch(); break; }
+		if (  curI & _Ebit_  )	{ branch = 1; }
+		if (  curI & _DTbit_ )	{ branch = 6; }
+		if (!(curI & _Ibit_) )	{ incPC(-1); mVUopL(mVU, 3); incPC(1); }
+		if		(branch >= 2)	{ shortBranch(); }
 		else if (branch == 1)	{ branch = 2; }
-		if		(mVUbranch)		{ branch = (mVUbranch >= 9) ? 5 : 3; aBranchAddr = branchAddr; mVUbranch = 0; }
+		if		(mVUbranch)		{ branch = ((mVUbranch>8)?(5):((mVUbranch<3)?3:4)); aBranchAddr = branchAddr; mVUbranch = 0; }
 		incPC(1);
 	}
 	if (mVUcount < 4) { mVUflagInfo |= 0xfff; }
@@ -267,7 +264,7 @@ microVUt(void) mVUsetFlagInfo(mV) {
 	branchType1 { incPC(-1); mVUflagPass(mVU, branchAddr, 4); incPC(1); }
 	branchType2 { 
 		if (!mVUlow.constJump.isValid) { mVUflagInfo |= 0xfff; } 
-		else { mVUflagPass(mVU, mVUlow.constJump.regValue, 4); }
+		else { mVUflagPass(mVU, (mVUlow.constJump.regValue*8)&(mVU->microMemSize-8), 4); }
 	}
 	branchType3 {
 		incPC(-1); 
