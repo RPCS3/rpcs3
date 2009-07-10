@@ -100,7 +100,7 @@ void JoystickInfo::EnumerateJoysticks(vector<JoystickInfo*>& vjoysticks)
 		// select the right joystick id
 		int joyid = -1;
 		
-		for (int i = 0; i < PADKEYS; ++i)
+		for (int i = 0; i < MAX_KEYS; ++i)
 		{
 			KeyType k = type_of_key(pad,i);
 			if (k == PAD_JOYSTICK || k == PAD_JOYBUTTONS)
@@ -167,7 +167,7 @@ void JoystickInfo::Assign(int newpad)
 
 	if (pad >= 0)
 	{
-		for (int i = 0; i < PADKEYS; ++i)
+		for (int i = 0; i < MAX_KEYS; ++i)
 		{
 			KeyType k = type_of_key(pad,i);
 			
@@ -221,7 +221,7 @@ bool JoystickInfo::PollButtons(int &jbutton, u32 &pkey)
 	return false;	
 }
 
-bool JoystickInfo::PollAxes(bool pov, int &jbutton, bool &negative,  u32 &pkey)
+bool JoystickInfo::PollPOV(int &axis_id, bool &sign, u32 &pkey)
 {
 	for (int i = 0; i < GetNumAxes(); ++i)
 	{
@@ -240,17 +240,40 @@ bool JoystickInfo::PollAxes(bool pov, int &jbutton, bool &negative,  u32 &pkey)
 
 			if (abs(value) > 0x3fff)
 			{
-				jbutton = i;
+				axis_id = i;
 				
-				if (pov)
-				{
-					negative = (value < 0);
-					pkey = pov_to_key(GetId(), negative, i);
-				}
-				else   // axis
-				{
-					pkey = joystick_to_key(GetId(), i);
-				}
+				sign = (value < 0);
+				pkey = pov_to_key(GetId(), sign, i);
+				
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+bool JoystickInfo::PollAxes(int &axis_id, u32 &pkey)
+{
+	for (int i = 0; i < GetNumAxes(); ++i)
+	{
+		int value = SDL_JoystickGetAxis(GetJoy(), i);
+
+		if (value != GetAxisState(i))
+		{
+			PAD_LOG("Change in joystick %d: %d.\n", i, value);
+
+			if (abs(value) <= GetAxisState(i))  // we don't want this
+			{
+				// released, we don't really want this
+				SetAxisState(i, value);
+				break;
+			}
+
+			if (abs(value) > 0x3fff)
+			{
+				axis_id = i;
+				pkey = joystick_to_key(GetId(), i);
+				
 				return true;
 			}
 		}
@@ -260,12 +283,11 @@ bool JoystickInfo::PollAxes(bool pov, int &jbutton, bool &negative,  u32 &pkey)
 
 bool JoystickInfo::PollHats(int &jbutton, int &dir, u32 &pkey)
 {
-#ifdef EXPERIMENTAL_POV_CODE
 	for (int i = 0; i < GetNumHats(); ++i)
 	{
 		int value = SDL_JoystickGetHat(GetJoy(), i);
 
-		if (value != SDL_HAT_CENTERED)
+		if ((value != GetHatState(i)) && (value != SDL_HAT_CENTERED))
 		{
 			switch (value)
 			{
@@ -283,6 +305,5 @@ bool JoystickInfo::PollHats(int &jbutton, int &dir, u32 &pkey)
 			}
 		}
 	}
-#endif
 	return false;
 }

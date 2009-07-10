@@ -23,15 +23,15 @@
 #define __CONTROLLER_H__
 
 #ifdef __LINUX__
-#define PADKEYS 28
+#define MAX_KEYS 28
 #else
-#define PADKEYS 20
+#define MAX_KEYS 20
 #endif
 
 #ifdef _WIN32
-#define PADSUBKEYS 1
+#define MAX_SUB_KEYS 1
 #else
-#define PADSUBKEYS 2
+#define MAX_SUB_KEYS 2
 #endif
 
 enum KeyType
@@ -60,12 +60,60 @@ extern int joystick_to_key(int joy_id, int axis_id);
 extern int pov_to_key(int joy_id, int sign, int axis_id);
 extern int hat_to_key(int joy_id, int dir, int axis_id);
 
-//#define EXPERIMENTAL_POV_CODE
 extern int PadEnum[2][2];
 
 typedef struct
 {
-	u32 keys[2 * PADSUBKEYS][PADKEYS];
+	bool left, right, up, down;
+} HatPins;
+
+extern HatPins hat_position;
+
+static __forceinline void set_hat_pins(int tilt_o_the_hat)
+{
+	hat_position.left = false;
+	hat_position.right = false;
+	hat_position.up = false;
+	hat_position.down = false;
+	
+	switch (tilt_o_the_hat)
+	{
+		case SDL_HAT_UP:
+			hat_position.up = true;
+			break;
+		case SDL_HAT_RIGHT:
+			hat_position.right= true;
+			break;
+		case SDL_HAT_DOWN:
+			hat_position.down = true;
+			break;
+		case SDL_HAT_LEFT:
+			hat_position.left = true;
+			break;
+		case SDL_HAT_LEFTUP:
+			hat_position.left = true;
+			hat_position.up = true;
+			break;
+		case SDL_HAT_RIGHTUP:
+			hat_position.right= true;
+			hat_position.up = true;
+			break;
+		case SDL_HAT_LEFTDOWN:
+			hat_position.left = true;
+			hat_position.down = true;
+			break;
+		case SDL_HAT_RIGHTDOWN:
+			hat_position.right= true;
+			hat_position.down = true;
+			break;
+		default:
+			break;
+	}
+}
+
+typedef struct
+{
+	u32 keys[2 * MAX_SUB_KEYS][MAX_KEYS];
 	u32 log;
 	u32 options;  // upper 16 bits are for pad2
 } PADconf;

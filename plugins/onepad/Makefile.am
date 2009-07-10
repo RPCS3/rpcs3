@@ -23,4 +23,4 @@ libOnePAD_LDFLAGS+=-Wl,-soname,@ZEROPAD_SONAME@
 libOnePAD_LDADD=$(libOnePAD_a_OBJECTS)
 
 libOnePAD_a_SOURCES = joystick.cpp analog.cpp analog.h onepad.cpp onepad.h controller.cpp controller.h \
-Linux/gui.cpp Linux/linux.cpp  Linux/support.c Linux/interface.c keyboard.cpp keyboard.h
+Linux/gui.cpp Linux/linux.cpp  Linux/support.c Linux/interface.c Linux/ini.cpp keyboard.cpp keyboard.h

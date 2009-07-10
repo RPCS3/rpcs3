@@ -229,9 +229,9 @@ void initLogging()
 
 void clearPAD()
 {
-	for (int pad = 0; pad < PADSUBKEYS; pad++)
+	for (int pad = 0; pad < MAX_SUB_KEYS; pad++)
 	{
-		for (int key= 0; key < PADKEYS; ++key)
+		for (int key= 0; key < MAX_KEYS; ++key)
 		{
 			set_key(pad, key, 0);
 		}

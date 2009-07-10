@@ -29,6 +29,7 @@
 #endif
 
 #include "onepad.h"
+#include "controller.h"
 
 // holds all joystick info
 class JoystickInfo
@@ -51,9 +52,11 @@ class JoystickInfo
 
 		bool PollButtons(int &jbutton, u32 &pkey);
 		
-		bool PollAxes(bool pov, int &jbutton, bool &negative,  u32 &pkey);
+		bool PollAxes(int &axis_id, u32 &pkey);
 		
 		bool PollHats(int &jbutton, int &dir, u32 &pkey);
+		
+		bool PollPOV(int &axis_id, bool &sign, u32 &pkey);
 		
 		const string& GetName()
 		{
@@ -105,6 +108,7 @@ class JoystickInfo
 		int GetHatState(int i)
 		{
 			//PAD_LOG("Getting POV State of %d.\n", i);
+			set_hat_pins(vhatstate[i]);
 			return vhatstate[i];
 		}
 		
@@ -121,6 +125,7 @@ class JoystickInfo
 		void SetHatState(int i, int value)
 		{
 			//PAD_LOG("We should set %d to %d.\n", i, value);
+			set_hat_pins(i);
 			vhatstate[i] = value;
 		}
 		

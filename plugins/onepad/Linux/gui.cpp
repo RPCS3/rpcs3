@@ -64,9 +64,9 @@ void populate_tree_view()
 	
 	gtk_tree_store_clear(treestore);
 	
-	for (int pad = 0; pad < 2 * PADSUBKEYS; pad++)
+	for (int pad = 0; pad < 2 * MAX_SUB_KEYS; pad++)
 	{
-		for (int key = 0; key < PADKEYS; key++)
+		for (int key = 0; key < MAX_KEYS; key++)
 		{
 			if (get_key(pad, key) != 0)
 			{
@@ -167,79 +167,6 @@ void destroy_tree_view()
 void delete_tree_row()
 {
 }*/
-
-void SaveConfig()
-{
-	FILE *f;
-	char cfg[255];
-
-	strcpy(cfg, s_strIniPath.c_str());
-	f = fopen(cfg, "w");
-	if (f == NULL)
-	{
-		printf("ZeroPAD: failed to save ini %s\n", s_strIniPath.c_str());
-		return;
-	}
-
-	for (int pad = 0; pad < 2 * PADSUBKEYS; pad++)
-	{
-		for (int key = 0; key < PADKEYS; key++)
-		{
-			fprintf(f, "[%d][%d] = 0x%lx\n", pad, key, get_key(pad,key));
-		}
-	}
-	fprintf(f, "log = %d\n", conf.log);
-	fprintf(f, "options = %d\n", conf.options);
-	fclose(f);
-}
-
-void LoadConfig()
-{
-	FILE *f;
-	char str[256];
-	char cfg[255];
-	
-	memset(&conf, 0, sizeof(conf));
-	set_key(0, PAD_L2, XK_a);
-	set_key(0, PAD_R2, XK_semicolon);
-	set_key(0, PAD_L1, XK_w);
-	set_key(0, PAD_R1, XK_p);
-	set_key(0, PAD_TRIANGLE, XK_i);
-	set_key(0, PAD_CIRCLE, XK_l);
-	set_key(0, PAD_CROSS, XK_k);
-	set_key(0, PAD_SQUARE, XK_j);
-	set_key(0, PAD_SELECT, XK_v);
-	set_key(0, PAD_START, XK_n);
-	set_key(0, PAD_UP, XK_e);
-	set_key(0, PAD_RIGHT, XK_f);
-	set_key(0, PAD_DOWN, XK_d);
-	set_key(0, PAD_LEFT, XK_s);
-	conf.log = 0;
-
-	strcpy(cfg, s_strIniPath.c_str());
-	f = fopen(cfg, "r");
-	if (f == NULL)
-	{
-		printf("OnePAD: failed to load ini %s\n", s_strIniPath.c_str());
-		SaveConfig(); //save and return
-		return;
-	}
-
-	for (int pad = 0; pad < 2 * PADSUBKEYS; pad++)
-	{
-		for (int key = 0; key < PADKEYS; key++)
-		{
-			sprintf(str, "[%d][%d] = 0x%%x\n", pad, key);
-			u32 temp;
-			
-			if (fscanf(f, str, &temp) == 0) temp = 0;
-			set_key(pad, key, temp);
-		}
-	}
-	fscanf(f, "log = %d\n", &conf.log);
-	fscanf(f, "options = %d\n", &conf.options);
-	fclose(f);
-}
 
 void OnMsg_Ok()
 {

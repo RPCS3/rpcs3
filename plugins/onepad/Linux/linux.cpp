@@ -34,6 +34,8 @@ const char* s_pGuiKeyMap[] =
 	"R_Up", "R_Right", "R_Down", "R_Left"
 };
 
+extern string KeyName(int pad, int key);
+
 s32  _PADopen(void *pDsp)
 {
 	GSdsp = *(Display**)pDsp;
@@ -63,9 +65,9 @@ int _GetJoystickIdFromPAD(int pad)
 	// select the right joystick id
 	int joyid = -1;
 	
-	for (int p = 0; p < PADSUBKEYS; p++)
+	for (int p = 0; p < MAX_SUB_KEYS; p++)
 	{
-		for (int i = 0; i < PADKEYS; ++i)
+		for (int i = 0; i < MAX_KEYS; ++i)
 		{
 			KeyType k = type_of_key(PadEnum[pad][p],i);
 			
@@ -97,7 +99,7 @@ EXPORT_C_(void) PADupdate(int pad)
 	// joystick info
 	SDL_JoystickUpdate();
 	
-	for (int i = 0; i < PADKEYS; i++)
+	for (int i = 0; i < MAX_KEYS; i++)
 	{
 		int cpad = PadEnum[pad][0];
 			
@@ -136,33 +138,22 @@ EXPORT_C_(void) PADupdate(int pad)
 					}
 				break;
 				}
-	#ifdef EXPERIMENTAL_POV_CODE
 			case PAD_HAT:
 				{
 					int value = SDL_JoystickGetHat((pjoy)->GetJoy(), key_to_axis(cpad, i));
 					
-					if ((value != SDL_HAT_CENTERED) && (key_to_hat_dir(cpad, i) == value))
+					if (key_to_hat_dir(cpad, i) == value)
 					{
-						if 	((value == SDL_HAT_UP) || 
-							(value == SDL_HAT_RIGHT) || 
-							(value == SDL_HAT_DOWN) || 
-							(value == SDL_HAT_LEFT))
-						{
-							set_bit(status[pad], i);
-							PAD_LOG("Registered %s. Set (%d)\n", HatName(value), i);
-						}
-						else
-						{
-							clear_bit(status[pad], i);
-						}
+						clear_bit(status[pad], i);
+						//PAD_LOG("Registered %s\n", HatName(value), i);
+						//PAD_LOG("%s\n", KeyName(cpad, i).c_str());
 					}
 					else
 					{
-						clear_bit(status[pad], i);
+						set_bit(status[pad], i);
 					}
 					break;
 				}
-	#endif
 			case PAD_POV:
 				{
 					int value = SDL_JoystickGetAxis((pjoy)->GetJoy(), key_to_axis(cpad, i));
@@ -179,73 +170,6 @@ EXPORT_C_(void) PADupdate(int pad)
 			}
 		}
 	}
-}
-
-string KeyName(int pad, int key)
-{
-	string tmp;
-	KeyType k = type_of_key(pad, key);
-	
-	switch (k)
-		{
-			case PAD_KEYBOARD:
-			{
-				char* pstr = KeysymToChar(pad_to_key(pad, key));
-				if (pstr != NULL) tmp = pstr;
-				break;
-			}
-			case PAD_JOYBUTTONS:
-			{
-				int button = key_to_button(pad, key);
-				tmp.resize(28);
-			
-				sprintf(&tmp[0], "JBut %d", button);
-				break;
-			}
-			case PAD_JOYSTICK:
-			{
-				int axis = key_to_axis(pad, key);
-				tmp.resize(28);
-			
-				sprintf(&tmp[0], "JAxis %d", axis);
-				break;
-			}
-#ifdef EXPERIMENTAL_POV_CODE
-			case PAD_HAT:
-			{
-				int axis = key_to_axis(pad, key);
-				tmp.resize(28);
-			
-				switch(key_to_hat_dir(pad, key))
-				{
-					case SDL_HAT_UP:
-						sprintf(&tmp[0], "JPOVU-%d", axis);
-						break;
-					
-					case SDL_HAT_RIGHT:
-						sprintf(&tmp[0], "JPOVR-%d", axis);
-						break;
-					
-					case SDL_HAT_DOWN:
-						sprintf(&tmp[0], "JPOVD-%d", axis);
-						break;
-					
-					case SDL_HAT_LEFT:
-						sprintf(&tmp[0], "JPOVL-%d", axis);
-						break;
-				}
-				break;
-			}
-#endif
-			case PAD_POV:
-			{
-				tmp.resize(28);
-				sprintf(&tmp[0], "JPOV %d%s", key_to_axis(pad, key), key_to_pov_sign(pad, key) ? "-" : "+");
-				break;
-			}
-			default: break;
-		}
-	return tmp;
 }
 
 void UpdateConf(int pad)
@@ -267,7 +191,7 @@ void UpdateConf(int pad)
 			continue;
 		}
 
-		gtk_object_set_user_data(GTK_OBJECT(Btn), (void*)(PADKEYS * pad + i));
+		gtk_object_set_user_data(GTK_OBJECT(Btn), (void*)(MAX_KEYS * pad + i));
 	}
 
 	// check bounds
@@ -309,8 +233,8 @@ void OnConf_Key(GtkButton *button, gpointer user_data)
 	
 	if (id == -1) return;
 	
-	int pad = id / PADKEYS;
-	int key = id % PADKEYS;
+	int pad = id / MAX_KEYS;
+	int key = id % MAX_KEYS;
 
 	// save the joystick states
 	UpdateJoysticks();
@@ -324,6 +248,7 @@ void OnConf_Key(GtkButton *button, gpointer user_data)
 		if (PollX11Keyboard(tmp, pkey))
 		{
 			set_key(pad, key, pkey);
+			PAD_LOG("%s\n", KeyName(pad, key).c_str());
 			captured = true;
 			break;
 		}
@@ -333,34 +258,50 @@ void OnConf_Key(GtkButton *button, gpointer user_data)
 		itjoy = s_vjoysticks.begin();
 		while ((itjoy != s_vjoysticks.end()) && (!captured))
 		{
-			int jbutton, direction;
+			int button_id, direction;
 			
 			pkey = get_key(pad, key);
-			if ((*itjoy)->PollButtons(jbutton, pkey))
+			if ((*itjoy)->PollButtons(button_id, pkey))
 			{
 				set_key(pad, key, pkey);
+				PAD_LOG("%s\n", KeyName(pad, key).c_str());
 				captured = true;
 				break;
 			}
 
-			bool negative = false;
+			bool sign = false;
 			bool pov = (!((key == PAD_RY) || (key == PAD_LY) || (key == PAD_RX) || (key == PAD_LX)));
 			
-			if ((*itjoy)->PollAxes(pov, jbutton, negative, pkey))
+			int axis_id;
+			
+			if (pov)
 			{
-				set_key(pad, key, pkey);
-				captured = true;
-				break;
+				if ((*itjoy)->PollPOV(axis_id, sign, pkey))
+				{
+					set_key(pad, key, pkey);
+					PAD_LOG("%s\n", KeyName(pad, key).c_str());
+					captured = true;
+					break;
+				}
+			}
+			else
+			{
+				if ((*itjoy)->PollAxes(axis_id, pkey))
+				{
+					set_key(pad, key, pkey);
+					PAD_LOG("%s\n", KeyName(pad, key).c_str());
+					captured = true;
+					break;
+				}
 			}
 			
-#ifdef EXPERIMENTAL_POV_CODE
-			if ((*itjoy)->PollHats(jbutton, direction, pkey))
+			if ((*itjoy)->PollHats(axis_id, direction, pkey))
 			{
 				set_key(pad, key, pkey);
+				PAD_LOG("%s\n", KeyName(pad, key).c_str());
 				captured = true;
 				break;
 			}
-#endif
 			itjoy++;
 		}
 	}
