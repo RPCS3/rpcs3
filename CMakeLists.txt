@@ -2,7 +2,9 @@ cmake_minimum_required(VERSION 2.6)
 
 project (YAML_CPP)
 
-SET(CMAKE_CXX_FLAGS "-O2 -Wall -pedantic -Wextra")
+if(CMAKE_COMPILER_IS_GNUCC)
+  set(CMAKE_CXX_FLAGS "-O2 -Wall -pedantic -Wextra")
+endif(CMAKE_COMPILER_IS_GNUCC)
 
 set(YAML_CPP_VERSION_MAJOR "0")
 set(YAML_CPP_VERSION_MINOR "1")
