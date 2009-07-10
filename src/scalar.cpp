@@ -4,6 +4,7 @@
 #include "token.h"
 #include "exceptions.h"
 #include "node.h"
+#include "emitter.h"
 
 namespace YAML
 {
@@ -22,19 +23,9 @@ namespace YAML
 		pScanner->pop();
 	}
 
-	void Scalar::Write(std::ostream& out, int /*indent*/, bool /*startedLine*/, bool /*onlyOneCharOnLine*/)
+	void Scalar::Write(Emitter& out) const
 	{
-		out << "\"";
-		for(unsigned i=0;i<m_data.size();i++) {
-			switch(m_data[i]) {
-				case '\\': out << "\\\\"; break;
-				case '\t': out << "\\t"; break;
-				case '\n': out << "\\n"; break;
-				case '\r': out << "\\r"; break;
-				default: out << m_data[i]; break;
-			}
-		}
-		out << "\"\n";
+		out << m_data;
 	}
 
 	int Scalar::Compare(Content *pContent)

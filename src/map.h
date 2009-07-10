@@ -17,7 +17,7 @@ namespace YAML
 		virtual bool GetBegin(std::map <Node *, Node *, ltnode>::const_iterator& it) const;
 		virtual bool GetEnd(std::map <Node *, Node *, ltnode>::const_iterator& it) const;
 		virtual void Parse(Scanner *pScanner, const ParserState& state);
-		virtual void Write(std::ostream& out, int indent, bool startedLine, bool onlyOneCharOnLine);
+		virtual void Write(Emitter& out) const;
 
 		virtual bool IsMap() const { return true; }
 

@@ -14,6 +14,9 @@ int main(int argc, char **argv)
 		while(parser) {
 			YAML::Node doc;
 			parser.GetNextDocument(doc);
+			YAML::Emitter emitter;
+			emitter << doc;
+			std::cout << emitter.c_str() << "\n";
 		}
 	} catch(const YAML::Exception& e) {
 		std::cerr << e.what() << "\n";

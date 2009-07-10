@@ -4,13 +4,13 @@
 
 namespace YAML
 {
-	class Alias : public Content
+	class AliasContent : public Content
 	{
 	public:
-		Alias(Content *pNodeContent);
+		AliasContent(Content *pNodeContent);
 
 		virtual void Parse(Scanner* pScanner, const ParserState& state);
-		virtual void Write(std::ostream& out, int indent, bool startedLine, bool onlyOneCharOnLine);
+		virtual void Write(Emitter&) const;
 
 		virtual bool GetBegin(std::vector <Node *>::const_iterator&) const;
 		virtual bool GetBegin(std::map <Node *, Node *, ltnode>::const_iterator&) const;

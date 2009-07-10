@@ -7,9 +7,9 @@
 #include "scalar.h"
 #include "sequence.h"
 #include "map.h"
-#include "alias.h"
+#include "aliascontent.h"
 #include "iterpriv.h"
-#include <iostream>
+#include "emitter.h"
 
 namespace YAML
 {
@@ -66,7 +66,7 @@ namespace YAML
 			// being deleted twice
 			Content *pAliasedContent = pReferencedNode->m_pContent;
 			if(pAliasedContent)
-				m_pContent = new Alias(pAliasedContent);
+				m_pContent = new AliasContent(pAliasedContent);
 			
 			return;
 		}
@@ -150,50 +150,6 @@ namespace YAML
 		m_anchor = token.value;
 		m_alias = true;
 		pScanner->pop();
-	}
-
-	void Node::Write(std::ostream& out, int indent, bool startedLine, bool onlyOneCharOnLine) const
-	{
-		// If using an anchor or tag for the whole document, document start
-		// must be explicit
-		bool indicateDocStart = (indent == 0);
-
-		// write anchor/alias
-		if(m_anchor != "") {
-			if (indicateDocStart) {
-				out << "--- ";
-				indicateDocStart = false;
-			}
-
-			if(m_alias)
-				out << "*";
-			else
-				out << "&";
-			out << m_anchor << " ";
-			startedLine = true;
-			onlyOneCharOnLine = false;
-		}
-
-		// write tag
-		if(m_tag != "") {
-			if (indicateDocStart) {
-				out << "--- ";
-				indicateDocStart = false;
-			}
-
-			// put the tag in the "proper" brackets
-			if(m_tag.substr(0, 2) == std::string("!<") && m_tag.substr(m_tag.size() - 1) == std::string(">"))
-				out << m_tag << " ";
-			else
-				out << "!<" << m_tag << "> ";
-			startedLine = true;
-			onlyOneCharOnLine = false;
-		}
-
-		if(!m_pContent)
-			out << "\n";
-		else
-			m_pContent->Write(out, indent, startedLine, onlyOneCharOnLine);
 	}
 
 	CONTENT_TYPE Node::GetType() const
@@ -289,9 +245,22 @@ namespace YAML
 		return m_pContent->GetScalar(s);
 	}
 
-	std::ostream& operator << (std::ostream& out, const Node& node)
+	Emitter& operator << (Emitter& out, const Node& node)
 	{
-		node.Write(out, 0, false, false);
+		// write anchor/alias
+		if(node.m_anchor != "") {
+			if(node.m_alias)
+				out << Alias(node.m_anchor);
+			else
+				out << Anchor(node.m_anchor);
+		}
+
+		// TODO: write tag
+
+		// write content
+		if(node.m_pContent)
+			node.m_pContent->Write(out);
+
 		return out;
 	}
 

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <string>
-#include <ios>
 #include <vector>
 #include <map>
 #include "parserstate.h"
@@ -13,6 +12,7 @@ namespace YAML
 {
 	class Content;
 	class Scanner;
+	class Emitter;
 
 	enum CONTENT_TYPE { CT_NONE, CT_SCALAR, CT_SEQUENCE, CT_MAP };
 
@@ -24,7 +24,6 @@ namespace YAML
 
 		void Clear();
 		void Parse(Scanner *pScanner, const ParserState& state);
-		void Write(std::ostream& out, int indent, bool startedLine, bool onlyOneCharOnLine) const;
 
 		CONTENT_TYPE GetType() const;
 
@@ -65,8 +64,8 @@ namespace YAML
 		bool IsAlias() const { return m_alias; }
 		bool IsReferenced() const { return m_referenced; }
 
-		// insertion
-		friend std::ostream& operator << (std::ostream& out, const Node& node);
+		// emitting
+		friend Emitter& operator << (Emitter& out, const Node& node);
 
 		// ordering
 		int Compare(const Node& rhs) const;

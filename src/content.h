@@ -1,6 +1,5 @@
 #pragma once
 
-#include <ios>
 #include <vector>
 #include <map>
 #include "parserstate.h"
@@ -15,6 +14,7 @@ namespace YAML
 	class Scalar;
 	class Sequence;
 	class Map;
+	class Emitter;
 
 	class Content
 	{
@@ -23,7 +23,7 @@ namespace YAML
 		virtual ~Content();
 
 		virtual void Parse(Scanner *pScanner, const ParserState& state) = 0;
-		virtual void Write(std::ostream& out, int indent, bool startedLine, bool onlyOneCharOnLine) = 0;
+		virtual void Write(Emitter& out) const = 0;
 
 		virtual bool GetBegin(std::vector <Node *>::const_iterator&) const { return false; }
 		virtual bool GetBegin(std::map <Node *, Node *, ltnode>::const_iterator&) const { return false; }

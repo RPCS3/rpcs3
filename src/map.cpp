@@ -4,7 +4,7 @@
 #include "scanner.h"
 #include "token.h"
 #include "exceptions.h"
-#include <iostream>
+#include "emitter.h"
 #include <memory>
 
 namespace YAML
@@ -129,28 +129,12 @@ namespace YAML
 		}
 	}
 
-	void Map::Write(std::ostream& out, int indent, bool startedLine, bool onlyOneCharOnLine)
+	void Map::Write(Emitter& out) const
 	{
-		if(startedLine && !onlyOneCharOnLine)
-			out << "\n";
-
-		for(node_map::const_iterator it=m_data.begin();it!=m_data.end();++it) {
-			if((startedLine && !onlyOneCharOnLine) || it != m_data.begin()) {
-				for(int i=0;i<indent;i++)
-					out << "  ";
-			}
-
-			out << "? ";
-			it->first->Write(out, indent + 1, true, it!= m_data.begin() || !startedLine || onlyOneCharOnLine);
-
-			for(int i=0;i<indent;i++)
-				out << "  ";
-			out << ": ";
-			it->second->Write(out, indent + 1, true, true);
-		}
-
-		if(m_data.empty())
-			out << "\n";
+		out << BeginMap;
+		for(node_map::const_iterator it=m_data.begin();it!=m_data.end();++it)
+			out << Key << *it->first << Value << *it->second;
+		out << EndMap;
 	}
 
 	int Map::Compare(Content *pContent)
