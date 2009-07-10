@@ -4,16 +4,17 @@
 
 int main(int argc, char **argv)
 {
-	if(argc != 2) {
-		std::cout << "Usage: " << argv[0] << " input-file\n";
-		return 0;
-	}
-
-	std::ifstream fin(argv[1]);
+	std::ifstream fin;
+	if(argc > 1)
+		fin.open(argv[1]);
+	
+	std::istream& input = (argc > 1 ? fin : std::cin);
 	try {
-		YAML::Parser parser(fin);
-		YAML::Node doc;
-		parser.GetNextDocument(doc);
+		YAML::Parser parser(input);
+		while(parser) {
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+		}
 	} catch(const YAML::Exception& e) {
 		std::cerr << e.what() << "\n";
 	}
