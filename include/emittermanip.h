@@ -43,7 +43,7 @@ namespace YAML
 		// Flow, // duplicate
 		// Block, // duplicate
 		// Auto, // duplicate
-		LongKey,
+		LongKey
 	};
 	
 	struct _Indent {

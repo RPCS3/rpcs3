@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.6)
 
 project (YAML_CPP)
 
-SET(CMAKE_CXX_FLAGS "-O2")
+SET(CMAKE_CXX_FLAGS "-O2 -Wall -pedantic -Wextra")
 
 enable_testing()
 

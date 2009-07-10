@@ -9,11 +9,11 @@ namespace YAML
 	{
 	}
 
-	void Alias::Parse(Scanner *pScanner, const ParserState& state)
+	void Alias::Parse(Scanner */*pScanner*/, const ParserState& /*state*/)
 	{
 	}
 
-	void Alias::Write(std::ostream& out, int indent, bool startedLine, bool onlyOneCharOnLine)
+	void Alias::Write(std::ostream& out, int /*indent*/, bool /*startedLine*/, bool /*onlyOneCharOnLine*/)
 	{
 		out << "\n";
 	}

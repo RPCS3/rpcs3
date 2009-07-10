@@ -25,7 +25,7 @@ namespace YAML
 		TT_ANCHOR,
 		TT_ALIAS,
 		TT_TAG,
-		TT_SCALAR,
+		TT_SCALAR
 	};
 
 	const std::string TokenNames[] = {
@@ -46,7 +46,7 @@ namespace YAML
 		"ANCHOR",
 		"ALIAS",
 		"TAG",
-		"SCALAR",
+		"SCALAR"
 	};
 
 	struct Token {

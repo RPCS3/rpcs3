@@ -128,7 +128,7 @@ namespace YAML
 		pScanner->pop();
 	}
 	
-	void Node::ParseAnchor(Scanner *pScanner, const ParserState& state)
+	void Node::ParseAnchor(Scanner *pScanner, const ParserState& /*state*/)
 	{
 		Token& token = pScanner->peek();
 		if(m_anchor != "")
@@ -139,7 +139,7 @@ namespace YAML
 		pScanner->pop();
 	}
 
-	void Node::ParseAlias(Scanner *pScanner, const ParserState& state)
+	void Node::ParseAlias(Scanner *pScanner, const ParserState& /*state*/)
 	{
 		Token& token = pScanner->peek();
 		if(m_anchor != "")

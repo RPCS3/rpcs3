@@ -15,14 +15,14 @@ namespace YAML
 	{
 	}
 
-	void Scalar::Parse(Scanner *pScanner, const ParserState& state)
+	void Scalar::Parse(Scanner *pScanner, const ParserState& /*state*/)
 	{
 		Token& token = pScanner->peek();
 		m_data = token.value;
 		pScanner->pop();
 	}
 
-	void Scalar::Write(std::ostream& out, int indent, bool startedLine, bool onlyOneCharOnLine)
+	void Scalar::Write(std::ostream& out, int /*indent*/, bool /*startedLine*/, bool /*onlyOneCharOnLine*/)
 	{
 		out << "\"";
 		for(unsigned i=0;i<m_data.size();i++) {
