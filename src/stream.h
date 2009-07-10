@@ -1,5 +1,6 @@
 #pragma once
 
+#include "noncopyable.h"
 #include <deque>
 #include <ios>
 #include <string>
@@ -10,7 +11,7 @@ namespace YAML
 {
 	static const size_t MAX_PARSER_PUSHBACK = 8;
 
-	class Stream
+	class Stream: private noncopyable
 	{
 	public:
 		friend class StreamCharSource;

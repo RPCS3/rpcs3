@@ -1,5 +1,6 @@
 #pragma once
 
+#include "noncopyable.h"
 #include <cstddef>
 
 namespace YAML
@@ -7,9 +8,10 @@ namespace YAML
 	class StreamCharSource
 	{
 	public:
-		StreamCharSource(const Stream& stream);
+		StreamCharSource(const Stream& stream): m_offset(0), m_stream(stream) {}
+		StreamCharSource(const StreamCharSource& source): m_offset(source.m_offset), m_stream(source.m_stream) {}
 		~StreamCharSource() {}
-			
+
 		operator bool() const;
 		char operator [] (std::size_t i) const { return m_stream.CharAt(m_offset + i); }
 		bool operator !() const { return !static_cast<bool>(*this); }
@@ -19,10 +21,9 @@ namespace YAML
 	private:
 		std::size_t m_offset;
 		const Stream& m_stream;
+
+		StreamCharSource& operator = (const StreamCharSource&); // non-assignable
 	};
-	
-	inline StreamCharSource::StreamCharSource(const Stream& stream): m_offset(0), m_stream(stream) {
-	}
 	
 	inline StreamCharSource::operator bool() const {
 		return m_stream.ReadAheadTo(m_offset);
