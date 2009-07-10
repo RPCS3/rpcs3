@@ -3,6 +3,7 @@
 #include "indentation.h"
 #include "exceptions.h"
 #include <sstream>
+#include "stringsource.h"
 
 namespace YAML
 {
@@ -29,8 +30,8 @@ namespace YAML
 				                          || (!Exp::Printable)
 				                          || Exp::Break
 				                          || Exp::Tab;
-				Buffer buffer(&str[0], str.size());
-				while(buffer.size) {
+				StringCharSource buffer(str.c_str(), str.size());
+				while(buffer) {
 					if(disallowed.Matches(buffer))
 						return false;
 					++buffer;

@@ -231,6 +231,10 @@
 					RelativePath=".\src\stream.cpp"
 					>
 				</File>
+				<File
+					RelativePath=".\src\stringsource.cpp"
+					>
+				</File>
 			</Filter>
 			<Filter
 				Name="Emitter"
@@ -355,6 +359,10 @@
 				</File>
 				<File
 					RelativePath=".\src\stream.h"
+					>
+				</File>
+				<File
+					RelativePath=".\src\stringsource.h"
 					>
 				</File>
 				<File

@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 2.6)
 
 project (YAML_CPP)
 
+SET(CMAKE_CXX_FLAGS "-O2")
+
 enable_testing()
 
 if(WIN32)
@@ -36,4 +38,4 @@ install(
 )
 
 add_subdirectory (yaml-reader)
-
+add_subdirectory (util)
