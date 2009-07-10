@@ -15,7 +15,7 @@ int main(int argc, char **argv)
 		YAML::Node doc;
 		parser.GetNextDocument(doc);
 	} catch(const YAML::Exception& e) {
-		std::cerr << "Error at line " << e.line << ", col " << e.column << ": " << e.msg << "\n";
+		std::cerr << e.what() << "\n";
 	}
 	return 0;
 }

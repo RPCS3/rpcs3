@@ -2,6 +2,7 @@
 
 #include <exception>
 #include <string>
+#include <sstream>
 
 namespace YAML
 {
@@ -62,6 +63,11 @@ namespace YAML
 		Exception(int line_, int column_, const std::string& msg_)
 			: line(line_), column(column_), msg(msg_) {}
 		virtual ~Exception() throw() {}
+		virtual const char *what() const throw() {
+			std::stringstream output;
+			output << "Error at line " << line+1 << ", column " << column+1 << ": " << msg;
+			return output.str().c_str();
+		}
 
 		int line, column;
 		std::string msg;
