@@ -4,6 +4,11 @@ project (YAML_CPP)
 
 SET(CMAKE_CXX_FLAGS "-O2 -Wall -pedantic -Wextra")
 
+set(YAML_CPP_VERSION_MAJOR "0")
+set(YAML_CPP_VERSION_MINOR "1")
+set(YAML_CPP_VERSION_PATCH "0")
+set(YAML_CPP_VERSION "${YAML_CPP_VERSION_MAJOR}.${YAML_CPP_VERSION_MINOR}.${YAML_CPP_VERSION_PATCH}")
+
 enable_testing()
 
 if(WIN32)
@@ -25,10 +30,14 @@ file(GLOB private_headers src/*.h)
 file(GLOB sources src/*.cpp)
 
 include_directories(${YAML_CPP_SOURCE_DIR}/include)
-add_library(yaml-cpp
+add_library(yaml-cpp SHARED
 	${public_headers}
 	${private_headers}
 	${sources}
+)
+set_target_properties(yaml-cpp PROPERTIES
+	VERSION "${YAML_CPP_VERSION}"
+	SOVERSION "${YAML_CPP_VERSION_MAJOR}.${YAML_CPP_VERSION_MINOR}"
 )
 
 install(TARGETS yaml-cpp ${_INSTALL_DESTINATIONS})
