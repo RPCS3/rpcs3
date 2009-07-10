@@ -213,9 +213,9 @@ static void iIopDumpBlock( int startpc, u8 * ptr )
 	f = fopen( "mydump1", "wb" );
 	fwrite( ptr, 1, (uptr)x86Ptr - (uptr)ptr, f );
 	fclose( f );
-	sprintf( command, "objdump -D --target=binary --architecture=i386 -M intel mydump1 | cat %s - > tempdump", filename );
+	sprintf( command, "objdump -D --target=binary --architecture=i386 -M intel mydump1 | cat %s - > tempdump", filename.c_str() );
 	system( command );
-	sprintf(command, "mv tempdump %s", filename);
+	sprintf(command, "mv tempdump %s", filename.c_str());
 	system(command);
 	f = fopen( filename.c_str(), "a+" );
 #endif
@@ -702,6 +702,7 @@ static __forceinline u32 psxRecClearMem(u32 pc)
 
 	jASSUME(blockidx != -1);
 
+	// Variable assignment in the middle of the while statements condition?
 	while (pexblock = recBlocks[blockidx - 1]) {
 		if (pexblock->startpc + pexblock->size * 4 <= lowerextent)
 			break;
@@ -710,6 +711,7 @@ static __forceinline u32 psxRecClearMem(u32 pc)
 		blockidx--;
 	}
 	
+	// Same here.
 	while (pexblock = recBlocks[blockidx]) {
 		if (pexblock->startpc >= upperextent)
 			break;
@@ -818,6 +820,7 @@ static void iPsxBranchTest(u32 newpc, u32 cpuBranch)
 	x86SetJ8( j8Ptr[0] );
 }
 
+#if 0
 //static const int *s_pCode;
 
 #if !defined(_MSC_VER)
@@ -832,6 +835,7 @@ static void checkcodefn()
 #endif
 	Console::WriteLn("iop code changed! %x", params pctemp);
 }
+#endif
 #endif
 
 void rpsxSYSCALL()
@@ -878,7 +882,7 @@ void psxRecompileNextInstruction(int delayslot)
 	static u8 s_bFlushReg = 1;
 
 	// pblock isn't used elsewhere in this function.
-	BASEBLOCK* pblock = PSX_GETBLOCK(psxpc);
+	//BASEBLOCK* pblock = PSX_GETBLOCK(psxpc);
 
 	if( IsDebugBuild )
 		MOV32ItoR(EAX, psxpc);

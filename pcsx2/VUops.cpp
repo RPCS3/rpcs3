@@ -2048,7 +2048,7 @@ void _vuXITOP(VURegs * VU) {
 
 void _vuXGKICK(VURegs * VU)
 {
-	u32* ptr = (u32*)GET_VU_MEM(VU, (VU->VI[_Is_].US[0]*16) & (VU == &VU1 ? 0x3fff : 0xfff));
+//	u32* ptr = (u32*)GET_VU_MEM(VU, (VU->VI[_Is_].US[0]*16) & (VU == &VU1 ? 0x3fff : 0xfff));
 //	int temp = 0x4000 - ((VU->VI[_Is_].US[0]*16) & 0x3fff);
 //	u32 tempmem[0x8000];
 	
