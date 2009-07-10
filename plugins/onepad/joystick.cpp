@@ -102,10 +102,10 @@ void JoystickInfo::EnumerateJoysticks(vector<JoystickInfo*>& vjoysticks)
 		
 		for (int i = 0; i < PADKEYS; ++i)
 		{
-			KeyType k = type_of_key(get_key(pad,i));
+			KeyType k = type_of_key(pad,i);
 			if (k == PAD_JOYSTICK || k == PAD_JOYBUTTONS)
 			{
-				joyid = key_to_joystick_id(get_key(pad,i));
+				joyid = key_to_joystick_id(pad,i);
 				break;
 			}
 		}
@@ -169,15 +169,15 @@ void JoystickInfo::Assign(int newpad)
 	{
 		for (int i = 0; i < PADKEYS; ++i)
 		{
-			KeyType k = type_of_key(get_key(pad,i));
+			KeyType k = type_of_key(pad,i);
 			
 			if (k == PAD_JOYBUTTONS)
 			{
-				set_key(pad, i, button_to_key(_id, key_to_button(get_key(pad,i))));
+				set_key(pad, i, button_to_key(_id, key_to_button(pad,i)));
 			}
 			else if (k == PAD_JOYSTICK)
 			{
-				set_key(pad, i, joystick_to_key(_id, key_to_button(get_key(pad,i))));
+				set_key(pad, i, joystick_to_key(_id, key_to_button(pad,i)));
 			}
 		}
 	}

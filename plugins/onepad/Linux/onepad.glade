@@ -699,24 +699,6 @@ and SSSPSXPad, TwinPad authors</property>
 	      </child>
 
 	      <child>
-		<widget class="GtkButton" id="L_Up">
-		  <property name="width_request">64</property>
-		  <property name="height_request">24</property>
-		  <property name="visible">True</property>
-		  <property name="can_focus">True</property>
-		  <property name="label" translatable="yes">Up</property>
-		  <property name="use_underline">True</property>
-		  <property name="relief">GTK_RELIEF_NORMAL</property>
-		  <property name="focus_on_click">True</property>
-		  <signal name="clicked" handler="OnConf_Key" last_modification_time="Sun, 10 May 2009 02:09:18 GMT"/>
-		</widget>
-		<packing>
-		  <property name="x">384</property>
-		  <property name="y">240</property>
-		</packing>
-	      </child>
-
-	      <child>
 		<widget class="GtkButton" id="L_Left">
 		  <property name="width_request">64</property>
 		  <property name="height_request">24</property>
@@ -824,27 +806,6 @@ and SSSPSXPad, TwinPad authors</property>
 		<packing>
 		  <property name="x">360</property>
 		  <property name="y">344</property>
-		</packing>
-	      </child>
-
-	      <child>
-		<widget class="GtkCheckButton" id="checkbutton_reversely">
-		  <property name="width_request">111</property>
-		  <property name="height_request">22</property>
-		  <property name="visible">True</property>
-		  <property name="can_focus">True</property>
-		  <property name="label" translatable="yes">Reverse LY</property>
-		  <property name="use_underline">True</property>
-		  <property name="relief">GTK_RELIEF_NORMAL</property>
-		  <property name="focus_on_click">True</property>
-		  <property name="active">False</property>
-		  <property name="inconsistent">False</property>
-		  <property name="draw_indicator">True</property>
-		  <signal name="toggled" handler="on_checkbutton_reversely_toggled" last_modification_time="Wed, 12 Dec 2007 11:28:39 GMT"/>
-		</widget>
-		<packing>
-		  <property name="x">360</property>
-		  <property name="y">368</property>
 		</packing>
 	      </child>
 
@@ -1099,9 +1060,66 @@ Feedback</property>
 	      </child>
 
 	      <child>
+		<widget class="GtkCheckButton" id="checkbutton_reversely">
+		  <property name="width_request">111</property>
+		  <property name="height_request">22</property>
+		  <property name="visible">True</property>
+		  <property name="can_focus">True</property>
+		  <property name="label" translatable="yes">Reverse LY</property>
+		  <property name="use_underline">True</property>
+		  <property name="relief">GTK_RELIEF_NORMAL</property>
+		  <property name="focus_on_click">True</property>
+		  <property name="active">False</property>
+		  <property name="inconsistent">False</property>
+		  <property name="draw_indicator">True</property>
+		  <signal name="toggled" handler="on_checkbutton_reversely_toggled" last_modification_time="Wed, 12 Dec 2007 11:28:39 GMT"/>
+		</widget>
+		<packing>
+		  <property name="x">360</property>
+		  <property name="y">368</property>
+		</packing>
+	      </child>
+
+	      <child>
+		<widget class="GtkButton" id="L_Up">
+		  <property name="width_request">64</property>
+		  <property name="height_request">24</property>
+		  <property name="visible">True</property>
+		  <property name="can_focus">True</property>
+		  <property name="label" translatable="yes">Up</property>
+		  <property name="use_underline">True</property>
+		  <property name="relief">GTK_RELIEF_NORMAL</property>
+		  <property name="focus_on_click">True</property>
+		  <signal name="clicked" handler="OnConf_Key" last_modification_time="Sun, 10 May 2009 02:09:18 GMT"/>
+		</widget>
+		<packing>
+		  <property name="x">384</property>
+		  <property name="y">240</property>
+		</packing>
+	      </child>
+
+	      <child>
+		<widget class="GtkButton" id="clear_button">
+		  <property name="width_request">70</property>
+		  <property name="height_request">24</property>
+		  <property name="visible">True</property>
+		  <property name="can_focus">True</property>
+		  <property name="label" translatable="yes">Clear All</property>
+		  <property name="use_underline">True</property>
+		  <property name="relief">GTK_RELIEF_NORMAL</property>
+		  <property name="focus_on_click">True</property>
+		  <signal name="clicked" handler="on_Clear" last_modification_time="Thu, 09 Jul 2009 23:32:22 GMT"/>
+		</widget>
+		<packing>
+		  <property name="x">168</property>
+		  <property name="y">352</property>
+		</packing>
+	      </child>
+
+	      <child>
 		<widget class="GtkButton" id="remove_button">
-		  <property name="width_request">0</property>
-		  <property name="height_request">0</property>
+		  <property name="width_request">70</property>
+		  <property name="height_request">24</property>
 		  <property name="visible">True</property>
 		  <property name="can_focus">True</property>
 		  <property name="label" translatable="yes">Remove</property>
@@ -1111,7 +1129,7 @@ Feedback</property>
 		  <signal name="clicked" handler="on_Remove" last_modification_time="Fri, 03 Jul 2009 08:36:59 GMT"/>
 		</widget>
 		<packing>
-		  <property name="x">248</property>
+		  <property name="x">240</property>
 		  <property name="y">352</property>
 		</packing>
 	      </child>

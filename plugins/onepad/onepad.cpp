@@ -227,6 +227,17 @@ void initLogging()
 #endif
 }
 
+void clearPAD()
+{
+	for (int pad = 0; pad < PADSUBKEYS; pad++)
+	{
+		for (int key= 0; key < PADKEYS; ++key)
+		{
+			set_key(pad, key, 0);
+		}
+	}
+}
+
 EXPORT_C_(s32) PADinit(u32 flags)
 {
 	initLogging();

@@ -44,21 +44,21 @@ enum KeyType
 	PAD_NULL = -1
 };
 
-
 extern int set_key(int pad, int index, int value);
 extern int get_key(int pad, int index);
 
-extern KeyType type_of_key(int key);
-extern int pad_to_key(int key);
-extern int key_to_joystick_id(int key);
-extern int key_to_button(int key);
-extern int key_to_axis(int key);
+extern KeyType type_of_key(int pad, int index);
+extern int pad_to_key(int pad, int index);
+extern int key_to_joystick_id(int pad, int index);
+extern int key_to_button(int pad, int index);
+extern int key_to_axis(int pad, int index);
+extern int key_to_pov_sign(int pad, int index);
+extern int key_to_hat_dir(int pad, int index);
+
 extern int button_to_key(int joy_id, int button_id);
 extern int joystick_to_key(int joy_id, int axis_id);
 extern int pov_to_key(int joy_id, int sign, int axis_id);
 extern int hat_to_key(int joy_id, int dir, int axis_id);
-extern int key_to_pov_sign(int key);
-extern int key_to_hat_dir(int key);
 
 //#define EXPERIMENTAL_POV_CODE
 extern int PadEnum[2][2];
@@ -69,7 +69,6 @@ typedef struct
 	u32 log;
 	u32 options;  // upper 16 bits are for pad2
 } PADconf;
-
 
 typedef struct
 {

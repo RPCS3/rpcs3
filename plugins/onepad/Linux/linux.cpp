@@ -67,12 +67,11 @@ int _GetJoystickIdFromPAD(int pad)
 	{
 		for (int i = 0; i < PADKEYS; ++i)
 		{
-			u32 temp = get_key(PadEnum[pad][p],i);
-			KeyType k = type_of_key(temp);
+			KeyType k = type_of_key(PadEnum[pad][p],i);
 			
 			if (k == PAD_JOYSTICK || k == PAD_JOYBUTTONS)
 			{
-				joyid = key_to_joystick_id(temp);
+				joyid = key_to_joystick_id(PadEnum[pad][p],i);
 				return joyid;
 			}
 		}
@@ -100,19 +99,18 @@ EXPORT_C_(void) PADupdate(int pad)
 	
 	for (int i = 0; i < PADKEYS; i++)
 	{
-		int key = get_key(PadEnum[pad][0], i);
+		int cpad = PadEnum[pad][0];
 			
-		if (JoystickIdWithinBounds(key_to_joystick_id(key)))
+		if (JoystickIdWithinBounds(key_to_joystick_id(cpad, i)))
 		{	
-			JoystickInfo* pjoy = s_vjoysticks[key_to_joystick_id(key)];
+			JoystickInfo* pjoy = s_vjoysticks[key_to_joystick_id(cpad, i)];
 			int pad = (pjoy)->GetPAD();
-			KeyType k = type_of_key(key);
 			
-			switch (k)
+			switch (type_of_key(cpad, i))
 			{
 				case PAD_JOYBUTTONS:
 				{
-					int value = SDL_JoystickGetButton((pjoy)->GetJoy(), key_to_button(key));
+					int value = SDL_JoystickGetButton((pjoy)->GetJoy(), key_to_button(cpad, i));
 					
 					if (value)
 						clear_bit(status[pad], i); // released
@@ -122,7 +120,7 @@ EXPORT_C_(void) PADupdate(int pad)
 				}
 				case PAD_JOYSTICK:
 				{
-					int value = SDL_JoystickGetAxis((pjoy)->GetJoy(), key_to_axis(key));
+					int value = SDL_JoystickGetAxis((pjoy)->GetJoy(), key_to_axis(cpad, i));
 					
 					switch (i)
 					{
@@ -141,12 +139,14 @@ EXPORT_C_(void) PADupdate(int pad)
 	#ifdef EXPERIMENTAL_POV_CODE
 			case PAD_HAT:
 				{
-					int value = SDL_JoystickGetHat((pjoy)->GetJoy(), key_to_axis(key));
+					int value = SDL_JoystickGetHat((pjoy)->GetJoy(), key_to_axis(cpad, i));
 					
-					//PAD_LOG("Hat = %d for key %d\n", key_to_hat_dir(key), key);
-					if ((value != SDL_HAT_CENTERED) && (key_to_hat_dir(key) == value))
+					if ((value != SDL_HAT_CENTERED) && (key_to_hat_dir(cpad, i) == value))
 					{
-						if ((value == SDL_HAT_UP) || (value == SDL_HAT_RIGHT) || (value == SDL_HAT_DOWN) ||(value == SDL_HAT_LEFT))
+						if 	((value == SDL_HAT_UP) || 
+							(value == SDL_HAT_RIGHT) || 
+							(value == SDL_HAT_DOWN) || 
+							(value == SDL_HAT_LEFT))
 						{
 							set_bit(status[pad], i);
 							PAD_LOG("Registered %s. Set (%d)\n", HatName(value), i);
@@ -165,11 +165,11 @@ EXPORT_C_(void) PADupdate(int pad)
 	#endif
 			case PAD_POV:
 				{
-					int value = SDL_JoystickGetAxis((pjoy)->GetJoy(), key_to_axis(key));
+					int value = SDL_JoystickGetAxis((pjoy)->GetJoy(), key_to_axis(cpad, i));
 					
-					if (key_to_pov_sign(key) && (value < -2048))
+					if (key_to_pov_sign(cpad, i) && (value < -2048))
 						clear_bit(status[pad], i);
-					else if (!key_to_pov_sign(key) && (value > 2048))
+					else if (!key_to_pov_sign(cpad, i) && (value > 2048))
 						clear_bit(status[pad], i);
 					else
 						set_bit(status[pad], i);
@@ -184,19 +184,19 @@ EXPORT_C_(void) PADupdate(int pad)
 string KeyName(int pad, int key)
 {
 	string tmp;
-	KeyType k = type_of_key(get_key(pad, key));
+	KeyType k = type_of_key(pad, key);
 	
 	switch (k)
 		{
 			case PAD_KEYBOARD:
 			{
-				char* pstr = KeysymToChar(pad_to_key(get_key(pad, key)));
+				char* pstr = KeysymToChar(pad_to_key(pad, key));
 				if (pstr != NULL) tmp = pstr;
 				break;
 			}
 			case PAD_JOYBUTTONS:
 			{
-				int button = key_to_button(get_key(pad, key));
+				int button = key_to_button(pad, key);
 				tmp.resize(28);
 			
 				sprintf(&tmp[0], "JBut %d", button);
@@ -204,7 +204,7 @@ string KeyName(int pad, int key)
 			}
 			case PAD_JOYSTICK:
 			{
-				int axis = key_to_axis(get_key(pad, key));
+				int axis = key_to_axis(pad, key);
 				tmp.resize(28);
 			
 				sprintf(&tmp[0], "JAxis %d", axis);
@@ -213,10 +213,10 @@ string KeyName(int pad, int key)
 #ifdef EXPERIMENTAL_POV_CODE
 			case PAD_HAT:
 			{
-				int axis = key_to_axis(get_key(pad, key));
+				int axis = key_to_axis(pad, key);
 				tmp.resize(28);
 			
-				switch(key_to_hat_dir(get_key(pad, key)))
+				switch(key_to_hat_dir(pad, key))
 				{
 					case SDL_HAT_UP:
 						sprintf(&tmp[0], "JPOVU-%d", axis);
@@ -240,7 +240,7 @@ string KeyName(int pad, int key)
 			case PAD_POV:
 			{
 				tmp.resize(28);
-				sprintf(&tmp[0], "JPOV %d%s", key_to_axis(get_key(pad, key)), key_to_pov_sign(get_key(pad, key)) ? "-" : "+");
+				sprintf(&tmp[0], "JPOV %d%s", key_to_axis(pad, key), key_to_pov_sign(pad, key) ? "-" : "+");
 				break;
 			}
 			default: break;

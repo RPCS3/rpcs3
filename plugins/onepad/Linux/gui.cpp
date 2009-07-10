@@ -360,6 +360,12 @@ void SysMessage(char *fmt, ...)
 	gtk_main();
 }
 
+void on_Clear(GtkButton *button, gpointer user_data)
+{
+	clearPAD();
+	init_tree_view();
+}
+
 void on_Remove(GtkButton *button, gpointer user_data)
 {
 	GtkTreeSelection *selection;
