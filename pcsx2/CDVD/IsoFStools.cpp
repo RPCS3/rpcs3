@@ -24,8 +24,8 @@
 
 #include <ctype.h>
 
-#include "CDVDiso.h"
-#include "CDVDisodrv.h"
+#include "IsoFStools.h"
+#include "IsoFSdrv.h"
 
 struct dir_toc_data
 {

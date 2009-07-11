@@ -22,8 +22,8 @@
 
 #include "PrecompiledHeader.h"
 
-#include "CDVDiso.h"
-#include "CDVDisodrv.h"
+#include "IsoFStools.h"
+#include "IsoFSdrv.h"
 
 CdRMode cdReadMode;
 

@@ -21,7 +21,7 @@
 #include "IopCommon.h"
 #include "SaveState.h"
 
-#include "CDVD/CDVDisodrv.h"
+#include "CDVD/IsoFSdrv.h"
 #include "VUmicro.h"
 #include "VU.h"
 #include "iCore.h"

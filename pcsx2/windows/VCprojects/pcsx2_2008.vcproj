@@ -2450,27 +2450,31 @@
 				Name="FileSystems"
 				>
 				<File
-					RelativePath="..\..\CDVD\CDVDiso.cpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\CDVD\CDVDiso.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\CDVD\CDVDisodrv.cpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\CDVD\CDVDisodrv.h"
-					>
-				</File>
-				<File
 					RelativePath="..\..\Elfheader.cpp"
 					>
 				</File>
 				<File
 					RelativePath="..\..\Elfheader.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\CDVD\IsoFScdvd.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\CDVD\IsoFSdrv.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\CDVD\IsoFSdrv.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\CDVD\IsoFStools.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\CDVD\IsoFStools.h"
 					>
 				</File>
 			</Filter>

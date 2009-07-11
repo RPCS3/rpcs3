@@ -22,7 +22,7 @@
 #include <time.h>
 
 #include "IopCommon.h"
-#include "CDVDiso.h"
+#include "IsoFStools.h"
 #include "CDVD_internal.h"
 
 static cdvdStruct cdvd;

@@ -21,8 +21,8 @@
  *  Modified by Florin for PCSX2 emu
  */
 
-#ifndef _CDVDLIB_H
-#define _CDVDLIB_H
+#ifndef _ISOFSCDVD_H
+#define _ISOFSCDVD_H
 
 #include "Common.h"
 
@@ -168,4 +168,4 @@ int CDVD_findfile(const char* fname, struct TocEntry* tocEntry);
 int CdRead(u32 lsn, u32 sectors, void *buf, CdRMode *mode);
 int DvdRead(u32 lsn, u32 sectors, void *buf, CdRMode *mode);
 
-#endif // _CDVDLIB_H
+#endif // _ISOFSCDVD_H

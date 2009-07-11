@@ -20,10 +20,10 @@
  *  Modified by Florin for PCSX2 emu
  */
 
-#ifndef __CDVDISODRV_H__
-#define __CDVDISODRV_H__
+#ifndef __ISOFSDRV_H__
+#define __ISOFSDRV_H__
 
-#include "CDVDlib.h"
+#include "IsoFScdvd.h"
 
 extern CdRMode cdReadMode;
 
@@ -35,4 +35,4 @@ int CDVDFS_read( int fd, char * buffer, int size );
 int CDVDFS_write( int fd, char * buffer, int size );
 int CDVDFS_close( int fd);
 
-#endif//__CDVDISODRV_H__
+#endif//__ISOFSDRV_H__
