@@ -464,11 +464,6 @@ static int VIFalign(u32 *data, vifCode *v, unsigned int size, const unsigned int
 
 	if (vif->cl != 0 || (size & 0xf))  //Check alignment for SSE unpacks
 	{
-
-#ifdef PCSX2_DEBUG
-		static int s_count = 0;
-#endif
-
 		int incdest;
 
 		if (vifRegs->cycle.cl >= vifRegs->cycle.wl)  // skipping write
@@ -611,10 +606,6 @@ static void VIFunpack(u32 *data, vifCode *v, unsigned int size, const unsigned i
 	
 	if (vifRegs->cycle.cl >= vifRegs->cycle.wl)   // skipping write
 	{
-
-#ifdef PCSX2_DEBUG
-		static int s_count = 0;
-#endif
 		if (v->addr >= memlimit) 
 		{
 			//DevCon::Notice("Overflown at the start");

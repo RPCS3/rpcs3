@@ -31,14 +31,14 @@
 //
 namespace PathDefs
 {
-	const wxDirName Snapshots( L"snaps" );
-	const wxDirName Savestates( L"sstates" );
-	const wxDirName MemoryCards( L"memcards" );
-	const wxDirName Configs( L"inis" );
-	const wxDirName Plugins( L"plugins" );
-	const wxDirName Logs( L"logs" );
-	const wxDirName Dumps( L"dumps" );
-	const wxDirName Themes( L"themes" );
+	const wxDirName Snapshots	( L"snaps" );
+	const wxDirName Savestates	( L"sstates" );
+	const wxDirName MemoryCards	( L"memcards" );
+	const wxDirName Settings	( L"inis" );
+	const wxDirName Plugins		( L"plugins" );
+	const wxDirName Logs		( L"logs" );
+	const wxDirName Dumps		( L"dumps" );
+	const wxDirName Themes		( L"themes" );
 
 	// Specifies the root folder for the application install.
 	// (currently it's the CWD, but in the future I intend to move all binaries to a "bin"
@@ -49,18 +49,20 @@ namespace PathDefs
 	// share with other programs: screenshots, memory cards, and savestates.
 	wxDirName GetDocuments()
 	{
-		wxString wtf( wxStandardPaths::Get().GetDocumentsDir() );
-		return (wxDirName)wxStandardPaths::Get().GetDocumentsDir() + (wxDirName)wxGetApp().GetAppName();
+		if( g_Conf.UseAdminMode )
+			return (wxDirName)wxGetCwd();
+		else
+			return (wxDirName)wxStandardPaths::Get().GetDocumentsDir() + (wxDirName)wxGetApp().GetAppName();
 	}
 
 	wxDirName GetSnapshots()
 	{
-		return (wxDirName)GetDocuments() + Snapshots;
+		return GetDocuments() + Snapshots;
 	}
 
 	wxDirName GetBios()
 	{
-		return AppRoot + wxDirName( L"bios" );
+		return GetDocuments() + wxDirName( L"bios" );
 	}
 
 	wxDirName GetSavestates()
@@ -73,14 +75,14 @@ namespace PathDefs
 		return GetDocuments() + MemoryCards;
 	}
 
-	wxDirName GetConfigs()
-	{
-		return GetDocuments() + Configs;
-	}
-
 	wxDirName GetPlugins()
 	{
 		return AppRoot + Plugins;
+	}
+	
+	wxDirName GetSettings()
+	{
+		return GetDocuments() + Settings;
 	}
 
 	wxDirName GetThemes()
@@ -134,6 +136,7 @@ wxFileName wxDirName::Combine( const wxFileName& right ) const
 	return result;
 }
 
+// ------------------------------------------------------------------------
 wxDirName wxDirName::Combine( const wxDirName& right ) const
 {
 	wxASSERT_MSG( IsDir() && right.IsDir(), L"Warning: Malformed directory name detected during wDirName concatenation." );
@@ -143,6 +146,34 @@ wxDirName wxDirName::Combine( const wxDirName& right ) const
 	return result;
 }
 
+// ------------------------------------------------------------------------
+wxDirName& wxDirName::Normalize( int flags, const wxString& cwd )
+{
+	wxASSERT_MSG( IsDir(), L"Warning: Malformed directory name detected during wDirName normalization." );
+	if( !wxFileName::Normalize( flags, cwd ) )
+		throw Exception::RuntimeError( "wxDirName::Normalize operation failed." );
+	return *this;
+}
+
+// ------------------------------------------------------------------------
+wxDirName& wxDirName::MakeRelativeTo( const wxString& pathBase )
+{
+	wxASSERT_MSG( IsDir(), L"Warning: Malformed directory name detected during wDirName normalization." );
+	if( !wxFileName::MakeRelativeTo( pathBase ) )
+		throw Exception::RuntimeError( "wxDirName::MakeRelativeTo operation failed." );
+	return *this;
+}
+
+// ------------------------------------------------------------------------
+wxDirName& wxDirName::MakeAbsolute( const wxString& cwd )
+{
+	wxASSERT_MSG( IsDir(), L"Warning: Malformed directory name detected during wDirName normalization." );
+	if( !wxFileName::MakeAbsolute( cwd ) )
+		throw Exception::RuntimeError( "wxDirName::MakeAbsolute operation failed." );
+	return *this;
+}
+
+// ------------------------------------------------------------------------
 void wxDirName::Rmdir()
 {
 	if( !Exists() ) return;
@@ -171,6 +202,66 @@ wxString AppConfig::FullpathHelpers::Mcd( uint mcdidx ) const { return Path::Com
 //
 #define IniEntry( varname, defval ) ini.Entry( wxT(#varname), varname, defval )
 
+// ------------------------------------------------------------------------
+void AppConfig::LoadSaveUserMode( IniInterface& ini )
+{
+	IniEntry( UseAdminMode,		false );
+	ini.Entry( L"SettingsPath", Folders.Settings, PathDefs::GetSettings() );
+
+	ini.Flush();
+}
+
+// ------------------------------------------------------------------------
+//
+void i18n_DoPackageCheck( int wxLangId, wxArrayString& destEng, wxArrayString& destTrans )
+{
+	// Note: wx auto-preserves the current locale for us
+
+	if( !wxLocale::IsAvailable( wxLangId ) ) return;
+	wxLocale* locale = new wxLocale( wxLangId, wxLOCALE_CONV_ENCODING );
+
+	if( locale->IsOk() && locale->AddCatalog( L"pcsx2ident" ) )
+	{
+		// Should be a valid language, so add it to the list.
+
+		destEng.Add( wxLocale::GetLanguageName( wxLangId ) );
+		destTrans.Add( wxGetTranslation( L"NativeName" ) );
+	}
+	delete locale;
+}
+
+// ------------------------------------------------------------------------
+// Finds all valid PCSX2 language packs, and enumerates them for configuration selection.
+// Note: On linux there's no easy way to reliably enumerate language packs, since every distro
+// could use its own location for installing pcsx2.mo files (wtcrap?).  Furthermore wxWidgets
+// doesn't give us a public API for checking what the language search paths are.  So the only
+// safe way to enumerate the languages is by forcibly loading every possible locale in the wx
+// database.  Anything which hasn't been installed will fail to load.
+//
+// Because loading and hashing the entire pcsx2 translation for every possible language would
+// assinine and slow, I've decided to use a two-file translation system.  One file is very
+// small and simply contains the name of the language in the language native.  The second file
+// is loaded only if the user picks it (or if it's the default language of the OS).
+//
+void i18n_EnumeratePackages( wxArrayString& englishNames, wxArrayString& xlatedNames)
+{
+	for( int li=wxLANGUAGE_ABKHAZIAN; li<wxLANGUAGE_ZULU; ++li )
+	{
+		i18n_DoPackageCheck( li, englishNames, xlatedNames );
+	}
+	
+	// Brilliant.  Because someone in the wx world didn't think to move wxLANGUAGE_USER_DEFINED
+	// to a place where it wasn't butt right up against the main languages (like, say, start user
+	// defined values at 4000 or something?), they had to add new languages in at some arbitrary
+	// value instead.  Let's handle them here:
+	// fixme: these won't show up in alphabetical order if they're actually present (however
+	// horribly unlikely that is)... do we care?  Probably not.
+	
+	i18n_DoPackageCheck( wxLANGUAGE_VALENCIAN, englishNames, xlatedNames );
+	i18n_DoPackageCheck( wxLANGUAGE_SAMI, englishNames, xlatedNames );
+}
+
+// ------------------------------------------------------------------------
 void AppConfig::LoadSave( IniInterface& ini )
 {
 	IniEntry( MainGuiPosition,		wxDefaultPosition );
@@ -185,9 +276,31 @@ void AppConfig::LoadSave( IniInterface& ini )
 	ini.Flush();
 }
 
+
+// ------------------------------------------------------------------------
+//
+void AppConfig::Apply()
+{
+	// Language Application:
+	// Three stages.  First we try and configure the requested language. If that fails,
+	// we fall back on the default language for the user's operating system.  If that
+	// fails we fall back on good old english.
+
+	//wxLocale*	locale;
+
+	if( !i18n_SetLanguage( LanguageId ) )
+	{
+		if( !i18n_SetLanguage( wxLANGUAGE_DEFAULT ) )
+		{
+			//wxGetTranslation();
+		}
+	}
+}
+
+// ------------------------------------------------------------------------
 void AppConfig::Load()
 {
-	// Note: Extra parenthisis resolves "I think this is a function" issues with C++.
+	// Note: Extra parenthesis resolves "I think this is a function" issues with C++.
 	IniLoader loader( (IniLoader()) );
 	LoadSave( loader );
 }
@@ -227,12 +340,12 @@ void AppConfig::FolderOptions::LoadSave( IniInterface& ini )
 	const wxDirName def( L"default" );
 
 	IniEntry( Plugins,		PathDefs::GetPlugins() );
+	IniEntry( Settings,		PathDefs::GetSettings() );
 	IniEntry( Bios,			PathDefs::GetBios() );
 	IniEntry( Snapshots,	PathDefs::GetSnapshots() );
 	IniEntry( Savestates,	PathDefs::GetSavestates() );
 	IniEntry( MemoryCards,	PathDefs::GetMemoryCards() );
 	IniEntry( Logs,			PathDefs::GetLogs() );
-	IniEntry( Dumps,		PathDefs::GetDumps() );
 
 	ini.SetPath( L".." );
 }

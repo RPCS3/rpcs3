@@ -39,6 +39,7 @@ class GSTextureFX9 : public GSTextureFX
 
 public:
 	GSTextureFX9();
+	virtual ~GSTextureFX9();
 
 	bool Create(GSDevice* dev);
 	

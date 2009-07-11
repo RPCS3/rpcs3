@@ -82,7 +82,7 @@ bool GSTexture7::Update(const GSVector4i& r, const void* data, int pitch)
 		uint8* src = (uint8*)data;
 		uint8* dst = (uint8*)desc.lpSurface;
 
-		int bytes = min(pitch, desc.lPitch);
+		int bytes = std::min<int>(pitch, desc.lPitch);
 
 		for(int i = 0, j = r.height(); i < j; i++, src += pitch, dst += desc.lPitch)
 		{

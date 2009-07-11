@@ -41,22 +41,22 @@ Dialogs::ConfigurationDialog::ConfigurationDialog( wxWindow* parent, int id ) :
 #endif
 
 	wxBoxSizer& mainSizer = *new wxBoxSizer( wxVERTICAL );
-	wxListbook& Notebook = *new wxListbook( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, orient );
+	wxListbook& listbook = *new wxListbook( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, orient );
 
-	Notebook.SetImageList( &wxGetApp().GetImgList_Config() );
+	listbook.SetImageList( &wxGetApp().GetImgList_Config() );
 
 	const AppImageIds::ConfigIds& cfgid( wxGetApp().GetImgId().Config );
 
-	Notebook.AddPage( new PathsPanel( Notebook ), L"Paths", false, cfgid.Paths );
-	//Notebook->AddPage( new PluginSelectionPanel( Notebook ), L"Plugins" );
-	Notebook.AddPage( new SpeedHacksPanel( Notebook ), L"Speedhacks", true, cfgid.Speedhacks );
-	Notebook.AddPage( new GameFixesPanel( Notebook ), L"Game Fixes", false, cfgid.Gamefixes );
+	listbook.AddPage( new PathsPanel( listbook ), L"Paths", false, cfgid.Paths );
+	listbook.AddPage( new PluginSelectorPanel( listbook ), L"Plugins", false, cfgid.Plugins );
+	listbook.AddPage( new SpeedHacksPanel( listbook ), L"Speedhacks", true, cfgid.Speedhacks );
+	listbook.AddPage( new GameFixesPanel( listbook ), L"Game Fixes", false, cfgid.Gamefixes );
 
-	mainSizer.Add( &Notebook );
-	AddOkCancel( mainSizer );
+	mainSizer.Add( &listbook );
+	AddOkCancel( mainSizer, true );
 
 	SetSizerAndFit( &mainSizer );
 
-	Center();
+	Center( wxCENTER_ON_SCREEN );
 }
 

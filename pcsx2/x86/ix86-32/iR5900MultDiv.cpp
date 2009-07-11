@@ -783,7 +783,6 @@ void recDIVU1_constt(int info)
 
 EERECOMPILE_CODE0(DIVU1, XMMINFO_READS|XMMINFO_READT);
 
-
 void recMADD()
 {
 	EEINST_SETSIGNEXT(_Rs_);
@@ -816,7 +815,7 @@ void recMADD()
 		MOV32RtoM( (int)&cpuRegs.HI.UL[1], EDX );
 		return;
 	}
-		
+
 	_deleteEEreg(XMMGPR_LO, 1);
 	_deleteEEreg(XMMGPR_HI, 1);
 	_deleteGPRtoXMMreg(_Rs_, 1);
@@ -826,15 +825,15 @@ void recMADD()
 
 	if( GPR_IS_CONST1(_Rs_) ) {
 		MOV32ItoR( EAX, g_cpuConstRegs[_Rs_].UL[0] );
-		MUL32M( (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] );
+		IMUL32M( (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] );
 	}
 	else if ( GPR_IS_CONST1(_Rt_) ) {
 		MOV32ItoR( EAX, g_cpuConstRegs[_Rt_].UL[0] );
-		MUL32M( (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
+		IMUL32M( (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
 	}
 	else {
 		MOV32MtoR( EAX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
-		MUL32M( (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] );
+		IMUL32M( (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] );
 	}
 
 	MOV32RtoR( ECX, EDX );

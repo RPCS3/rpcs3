@@ -1,3 +1,11 @@
+#define FMT_32 0
+#define FMT_24 1
+#define FMT_16 2
+#define FMT_8H 3
+#define FMT_4HL 4
+#define FMT_4HH 5
+#define FMT_8 6
+
 #if SHADER_MODEL >= 0x400
 
 #ifndef VS_BPPZ
@@ -14,9 +22,9 @@
 
 #ifndef PS_FST
 #define PS_FST 0
-#define PS_WMS 3
-#define PS_WMT 3
-#define PS_BPP 0
+#define PS_WMS 0
+#define PS_WMT 0
+#define PS_FMT FMT_8
 #define PS_AEM 0
 #define PS_TFX 0
 #define PS_TCC 1
@@ -26,7 +34,7 @@
 #define PS_CLR1 0
 #define PS_FBA 0
 #define PS_AOUT 0
-#define PS_LTF 1
+#define PS_LTF 0
 #endif
 
 struct VS_INPUT
@@ -59,10 +67,10 @@ struct PS_OUTPUT
 	float4 c1 : SV_Target1;
 };
 
-Texture2D<float4> Texture;
-Texture2D<float> Palette;
-SamplerState TextureSampler;
-SamplerState PaletteSampler;
+Texture2D<float4> Texture : register(t0);
+Texture2D<float4> Palette : register(t1);
+SamplerState TextureSampler : register(s0);
+SamplerState PaletteSampler : register(s1);
 
 cbuffer cb0
 {
@@ -83,6 +91,16 @@ cbuffer cb1
 	uint4 MskFix;
 };
 
+float4 sample_c(float2 uv)
+{
+	return Texture.Sample(TextureSampler, uv);
+}
+
+float4 sample_p(float u)
+{
+	return Palette.Sample(PaletteSampler, u);
+}
+
 #elif SHADER_MODEL <= 0x300
 
 #ifndef VS_BPPZ
@@ -94,12 +112,12 @@ cbuffer cb1
 
 #ifndef PS_FST
 #define PS_FST 0
-#define PS_WMS 3
-#define PS_WMT 3
-#define PS_BPP 0
+#define PS_WMS 0
+#define PS_WMT 0
+#define PS_FMT FMT_8
 #define PS_AEM 0
 #define PS_TFX 0
-#define PS_TCC 1
+#define PS_TCC 0
 #define PS_ATE 0
 #define PS_ATST 4
 #define PS_FOG 0
@@ -130,7 +148,7 @@ struct PS_INPUT
 };
 
 sampler Texture : register(s0);
-sampler1D Palette : register(s1);
+sampler Palette : register(s1);
 sampler1D UMSKFIX : register(s2);
 sampler1D VMSKFIX : register(s3);
 
@@ -148,8 +166,17 @@ float4 ps_params[5];
 #define WH			ps_params[2]
 #define MinMax		ps_params[3]
 #define MinF		ps_params[4].xy
-#define TA0			ps_params[4].z
-#define TA1			ps_params[4].w
+#define TA			ps_params[4].zw
+
+float4 sample_c(float2 uv)
+{
+	return tex2D(Texture, uv);
+}
+
+float4 sample_p(float u)
+{
+	return tex2D(Palette, u);
+}
 
 #endif
 
@@ -198,7 +225,7 @@ float4 wrapuv(float4 uv)
 		else if(PS_WMS == 3)
 		{
 			#if SHADER_MODEL >= 0x400
-			uv.xz = (float2)(((int2)(uv * WH.xyxy).xz & MskFix.xx) | MskFix.zz) / WH.xy;
+			uv.xz = (float2)(((int2)(uv.xz * WH.xx) & MskFix.xx) | MskFix.zz) / WH.xx;
 			#elif SHADER_MODEL <= 0x300
 			uv.x = tex1D(UMSKFIX, uv.x);
 			uv.z = tex1D(UMSKFIX, uv.z);
@@ -220,7 +247,7 @@ float4 wrapuv(float4 uv)
 		else if(PS_WMT == 3)
 		{
 			#if SHADER_MODEL >= 0x400
-			uv.yw = (float2)(((int2)(uv * WH.xyxy).yw & MskFix.yy) | MskFix.ww) / WH.xy;
+			uv.yw = (float2)(((int2)(uv.yw * WH.yy) & MskFix.yy) | MskFix.ww) / WH.yy;
 			#elif SHADER_MODEL <= 0x300
 			uv.y = tex1D(VMSKFIX, uv.y);
 			uv.w = tex1D(VMSKFIX, uv.w);
@@ -249,35 +276,163 @@ float2 clampuv(float2 uv)
 	return uv;
 }
 
+float4x4 sample_4c(float4 uv)
+{
+	float4x4 c;
+	
+	c[0] = sample_c(uv.xy);
+	c[1] = sample_c(uv.zy);
+	c[2] = sample_c(uv.xw);
+	c[3] = sample_c(uv.zw);
+
+	return c;
+}
+
+float4 sample_4a(float4 uv)
+{
+	float4 c;
+
+	c.x = sample_c(uv.xy).a;
+	c.y = sample_c(uv.zy).a;
+	c.z = sample_c(uv.xw).a;
+	c.w = sample_c(uv.zw).a;
+
+	#if SHADER_MODEL <= 0x300
+	if(PS_RT) c *= 0.5;
+	#endif
+
+	return c;
+}
+
+float4x4 sample_4p(float4 u)
+{
+	float4x4 c;
+	
+	c[0] = sample_p(u.x);
+	c[1] = sample_p(u.y);
+	c[2] = sample_p(u.z);
+	c[3] = sample_p(u.w);
+
+	return c;
+}
+
+float4 sample(float2 st, float q)
+{
+	if(!PS_FST)
+	{
+		st /= q;
+	}
+	
+	float4 t;
+/*	
+	if(PS_FMT <= FMT_16 && PS_WMS < 2 && PS_WMT < 2)
+	{
+		t = sample_c(st);
+	}
+*/
+	if(PS_FMT <= FMT_16 && PS_WMS < 3 && PS_WMT < 3)
+	{
+		t = sample_c(clampuv(st));
+	}
+	else
+	{
+		float4 uv;
+		float2 dd;
+		
+		if(PS_LTF)
+		{
+			uv = st.xyxy + HalfTexel;
+			dd = frac(uv.xy * WH.zw); 
+		}
+		else
+		{
+			uv = st.xyxy;
+		}
+		
+		uv = wrapuv(uv);
+
+		float4x4 c;
+
+		if(PS_FMT == FMT_8H)
+		{
+			c = sample_4p(sample_4a(uv));
+		}
+		else if(PS_FMT == FMT_4HL)
+		{
+			c = sample_4p(fmod(sample_4a(uv), 1.0f / 16));
+		}
+		else if(PS_FMT == FMT_4HH)
+		{
+			c = sample_4p(fmod(sample_4a(uv) * 16, 1.0f / 16));
+		}
+		else if(PS_FMT == FMT_8)
+		{
+			c = sample_4p(sample_4a(uv));
+		}
+		else
+		{
+			c = sample_4c(uv);
+		}
+
+		if(PS_LTF)
+		{
+			t = lerp(lerp(c[0], c[1], dd.x), lerp(c[2], c[3], dd.x), dd.y);
+		}
+		else
+		{
+			t = c[0];
+		}
+	}
+	
+	if(PS_FMT == FMT_32)
+	{
+		#if SHADER_MODEL <= 0x300
+		if(PS_RT) t.a *= 0.5;
+		#endif
+	}
+	else if(PS_FMT == FMT_24)
+	{
+		t.a = !PS_AEM || any(t.rgb) ? TA.x : 0;
+	}
+	else if(PS_FMT == FMT_16)
+	{
+		// a bit incompatible with up-scaling because the 1 bit alpha is interpolated
+	
+		t.a = t.a >= 0.5 ? TA.y : !PS_AEM || any(t.rgb) ? TA.x : 0; 
+	}
+	
+	return t;
+}
+
 float4 tfx(float4 t, float4 c)
 {
 	if(PS_TFX == 0)
 	{
-		if(PS_TCC == 0) 
+		if(PS_TCC) 
 		{
-			c.rgb = c.rgb * t.rgb * 255.0f / 128;
+			c = c * t * 255.0f / 128;
 		}
 		else
 		{
-			c = c * t * 255.0f / 128;
+			c.rgb = c.rgb * t.rgb * 255.0f / 128;
 		}
 	}
 	else if(PS_TFX == 1)
 	{
-		if(PS_TCC == 0) 
+		if(PS_TCC) 
 		{
-			c.rgb = t.rgb;
+			c = t;
 		}
 		else
 		{
-			c = t;
+			c.rgb = t.rgb;
 		}
 	}
 	else if(PS_TFX == 2)
 	{
 		c.rgb = c.rgb * t.rgb * 255.0f / 128 + c.a;
 
-		if(PS_TCC == 1) 
+		if(PS_TCC) 
 		{
 			c.a += t.a;
 		}
@@ -286,7 +441,7 @@ float4 tfx(float4 t, float4 c)
 	{
 		c.rgb = c.rgb * t.rgb * 255.0f / 128 + c.a;
 
-		if(PS_TCC == 1) 
+		if(PS_TCC) 
 		{
 			c.a = t.a;
 		}
@@ -297,7 +452,7 @@ float4 tfx(float4 t, float4 c)
 
 void atst(float4 c)
 {
-	if(PS_ATE == 1)
+	if(PS_ATE)
 	{
 		float a = trunc(c.a * 255);
 		
@@ -326,9 +481,27 @@ void atst(float4 c)
 
 float4 fog(float4 c, float f)
 {
-	if(PS_FOG == 1)
+	if(PS_FOG)
 	{
 		c.rgb = lerp(FogColor, c.rgb, f);
+	}
+
+	return c;
+}
+
+float4 ps_color(PS_INPUT input)
+{
+	float4 t = sample(input.t.xy, input.t.w);
+
+	float4 c = tfx(t, input.c);
+	
+	atst(c);
+
+	c = fog(c, input.t.z);
+
+	if(PS_CLR1) // needed for Cd * (As/Ad/F + 1) blending modes
+	{
+		c.rgb = 1; 
 	}
 
 	return c;
@@ -363,9 +536,9 @@ VS_OUTPUT vs_main(VS_INPUT input)
 
 	output.p = p * VertexScale - VertexOffset;
 	
-	if(VS_TME == 1)
+	if(VS_TME)
 	{
-		if(VS_FST == 1)
+		if(VS_FST)
 		{
 			output.t.xy = input.t * TextureScale;
 			output.t.w = 1.0f;
@@ -454,139 +627,21 @@ void gs_main(line VS_OUTPUT input[2], inout TriangleStream<VS_OUTPUT> stream)
 
 #endif
 
-float4 sample(float2 tc, float w)
-{
-	if(PS_FST == 0)
-	{
-		tc /= w;
-	}
-	
-	float4 t;
-/*	
-	if(PS_BPP < 3 && PS_WMS < 2 && PS_WMT < 2)
-	{
-		t = Texture.Sample(TextureSampler, tc);
-	}
-*/
-	if(PS_BPP < 3 && PS_WMS < 3 && PS_WMT < 3)
-	{
-		t = Texture.Sample(TextureSampler, clampuv(tc));
-	}
-	else
-	{
-		float w, h;
-		Texture.GetDimensions(w, h);
-		
-		float4 uv2 = tc.xyxy + HalfTexel;
-		float2 dd = frac(uv2.xy * float2(w, h)); // * WH.zw
-		float4 uv = wrapuv(uv2);
-
-		float4 t00, t01, t10, t11;
-
-		if(PS_BPP == 3) // 8H
-		{
-			float4 a;
-
-			a.x = Texture.Sample(TextureSampler, uv.xy).a;
-			a.y = Texture.Sample(TextureSampler, uv.zy).a;
-			a.z = Texture.Sample(TextureSampler, uv.xw).a;
-			a.w = Texture.Sample(TextureSampler, uv.zw).a;
-
-			t00 = Palette.Sample(PaletteSampler, a.x);
-			t01 = Palette.Sample(PaletteSampler, a.y);
-			t10 = Palette.Sample(PaletteSampler, a.z);
-			t11 = Palette.Sample(PaletteSampler, a.w);
-		}
-		else if(PS_BPP == 4) // 4HL
-		{
-			float4 a;
-
-			a.x = Texture.Sample(TextureSampler, uv.xy).a;
-			a.y = Texture.Sample(TextureSampler, uv.zy).a;
-			a.z = Texture.Sample(TextureSampler, uv.xw).a;
-			a.w = Texture.Sample(TextureSampler, uv.zw).a;
-
-			a = fmod(a, 1.0f / 16);
-
-			t00 = Palette.Sample(PaletteSampler, a.x);
-			t01 = Palette.Sample(PaletteSampler, a.y);
-			t10 = Palette.Sample(PaletteSampler, a.z);
-			t11 = Palette.Sample(PaletteSampler, a.w);
-		}
-		else if(PS_BPP == 5) // 4HH
-		{
-			float4 a;
-
-			a.x = Texture.Sample(TextureSampler, uv.xy).a;
-			a.y = Texture.Sample(TextureSampler, uv.zy).a;
-			a.z = Texture.Sample(TextureSampler, uv.xw).a;
-			a.w = Texture.Sample(TextureSampler, uv.zw).a;
-
-			a = fmod(a * 16, 1.0f / 16);
-
-			t00 = Palette.Sample(PaletteSampler, a.x);
-			t01 = Palette.Sample(PaletteSampler, a.y);
-			t10 = Palette.Sample(PaletteSampler, a.z);
-			t11 = Palette.Sample(PaletteSampler, a.w);
-		}
-		else
-		{
-			t00 = Texture.Sample(TextureSampler, uv.xy);
-			t01 = Texture.Sample(TextureSampler, uv.zy);
-			t10 = Texture.Sample(TextureSampler, uv.xw);
-			t11 = Texture.Sample(TextureSampler, uv.zw);
-		}
-
-		if(PS_LTF)
-		{
-			t = lerp(lerp(t00, t01, dd.x), lerp(t10, t11, dd.x), dd.y);
-		}
-		else
-		{
-			t = t00;
-		}
-	}
-
-	if(PS_BPP == 1) // 24
-	{
-		t.a = PS_AEM == 0 || any(t.rgb) ? TA.x : 0;
-	}
-	else if(PS_BPP == 2) // 16
-	{
-		// a bit incompatible with up-scaling because the 1 bit alpha is interpolated
-		
-		t.a = t.a >= 0.5 ? TA.y : PS_AEM == 0 || any(t.rgb) ? TA.x : 0;
-	}
-	
-	return t;
-}
-
 PS_OUTPUT ps_main(PS_INPUT input)
 {
-	float4 t = sample(input.t.xy, input.t.w);
-
-	float4 c = tfx(t, input.c);
-
-	atst(c);
-
-	c = fog(c, input.t.z);
-
-	if(PS_CLR1 == 1) // needed for Cd * (As/Ad/F + 1) blending modes
-	{
-		c.rgb = 1; 
-	}
+	float4 c = ps_color(input);
 
 	PS_OUTPUT output;
 
 	output.c1 = c.a * 2; // used for alpha blending
 
-	if(PS_AOUT == 1) // 16 bit output
+	if(PS_AOUT) // 16 bit output
 	{
 		float a = 128.0f / 255; // alpha output will be 0x80
 		
-		c.a = PS_FBA == 1 ? a : step(0.5, c.a) * a;
+		c.a = PS_FBA ? a : step(0.5, c.a) * a;
 	}
-	else if(PS_FBA == 1)
+	else if(PS_FBA)
 	{
 		if(c.a < 0.5) c.a += 0.5;
 	}
@@ -607,7 +662,7 @@ VS_OUTPUT vs_main(VS_INPUT input)
 	else if(VS_BPPZ == 2) // 16
 	{
 		input.p.z = fmod(input.p.z, 0x10000);
-	} 
+	}
 
 	VS_OUTPUT output;
 	
@@ -615,19 +670,19 @@ VS_OUTPUT vs_main(VS_INPUT input)
 	// example: ceil(afterseveralvertextransformations(y = 133)) => 134 => line 133 stays empty
 	// input granularity is 1/16 pixel, anything smaller than that won't step drawing up/left by one pixel
 	// example: 133.0625 (133 + 1/16) should start from line 134, ceil(133.0625 - 0.05) still above 133
-	
+
 	float4 p = input.p - float4(0.05f, 0.05f, 0, 0);
 
 	output.p = p * VertexScale - VertexOffset;
 
-	if(VS_LOGZ == 1)
+	if(VS_LOGZ)
 	{
 		output.p.z = log2(1.0f + input.p.z) / 32;
 	}
 	
-	if(VS_TME == 1)
+	if(VS_TME)
 	{
-		if(VS_FST == 1)
+		if(VS_FST)
 		{
 			output.t.xy = input.t * TextureScale;
 			output.t.w = 1.0f;
@@ -650,134 +705,9 @@ VS_OUTPUT vs_main(VS_INPUT input)
 	return output;
 }
 
-float4 sample(float2 tc, float w)
-{
-	if(PS_FST == 0)
-	{
-		tc /= w;
-	}
-	
-	float4 t;
-/*	
-	if(PS_BPP < 3 && PS_WMS < 2 && PS_WMT < 2)
-	{
-		t = tex2D(Texture, tc);
-	}
-*/
-	if(PS_BPP < 3 && PS_WMS < 3 && PS_WMT < 3)
-	{
-		t = tex2D(Texture, clampuv(tc));
-	}
-	else
-	{
-		float4 uv2 = tc.xyxy + HalfTexel;
-		float2 dd = frac(uv2.xy * WH.zw); 
-		float4 uv = wrapuv(uv2);
-
-		float4 t00, t01, t10, t11;
-
-		if(PS_BPP == 3) // 8HP
-		{
-			float4 a;
-
-			a.x = tex2D(Texture, uv.xy).a;
-			a.y = tex2D(Texture, uv.zy).a;
-			a.z = tex2D(Texture, uv.xw).a;
-			a.w = tex2D(Texture, uv.zw).a;
-
-			if(PS_RT == 1) a *= 0.5;
-			
-			t00 = tex1D(Palette, a.x);
-			t01 = tex1D(Palette, a.y);
-			t10 = tex1D(Palette, a.z);
-			t11 = tex1D(Palette, a.w);
-		}
-		else if(PS_BPP == 4) // 4HL
-		{
-			float4 a;
-
-			a.x = tex2D(Texture, uv.xy).a;
-			a.y = tex2D(Texture, uv.zy).a;
-			a.z = tex2D(Texture, uv.xw).a;
-			a.w = tex2D(Texture, uv.zw).a;
-			
-			if(PS_RT == 1) a *= 0.5;
-			
-			a = fmod(a, 1.0f / 16);
-
-			t00 = tex1D(Palette, a.x);
-			t01 = tex1D(Palette, a.y);
-			t10 = tex1D(Palette, a.z);
-			t11 = tex1D(Palette, a.w);
-		}
-		else if(PS_BPP == 5) // 4HH
-		{
-			float4 a;
-
-			a.x = tex2D(Texture, uv.xy).a;
-			a.y = tex2D(Texture, uv.zy).a;
-			a.z = tex2D(Texture, uv.xw).a;
-			a.w = tex2D(Texture, uv.zw).a;
-
-			if(PS_RT == 1) a *= 0.5;
-			
-			a = fmod(a * 16, 1.0f / 16);
-
-			t00 = tex1D(Palette, a.x);
-			t01 = tex1D(Palette, a.y);
-			t10 = tex1D(Palette, a.z);
-			t11 = tex1D(Palette, a.w);
-		}
-		else
-		{
-			t00 = tex2D(Texture, uv.xy);
-			t01 = tex2D(Texture, uv.zy);
-			t10 = tex2D(Texture, uv.xw);
-			t11 = tex2D(Texture, uv.zw);
-		}
-
-		if(PS_LTF)
-		{
-			t = lerp(lerp(t00, t01, dd.x), lerp(t10, t11, dd.x), dd.y);
-		}
-		else
-		{
-			t = t00;
-		}
-	}
-	
-	if(PS_BPP == 0) // 32
-	{
-		if(PS_RT == 1) t.a *= 0.5;
-	}
-	else if(PS_BPP == 1) // 24
-	{
-		t.a = PS_AEM == 0 || any(t.rgb) ? TA0 : 0;
-	}
-	else if(PS_BPP == 2) // 16
-	{
-		// a bit incompatible with up-scaling because the 1 bit alpha is interpolated
-	
-		t.a = t.a >= 0.5 ? TA1 : PS_AEM == 0 || any(t.rgb) ? TA0 : 0; 
-	}
-	
-	return t;
-}
-
 float4 ps_main(PS_INPUT input) : COLOR
 {
-	float4 t = sample(input.t.xy, input.t.w);
-
-	float4 c = tfx(t, input.c);
-	
-	atst(c);
-
-	c = fog(c, input.t.z);
-
-	if(PS_CLR1 == 1) // needed for Cd * (As/Ad/F + 1) blending modes
-	{
-		c.rgb = 1; 
-	}
+	float4 c = ps_color(input);
 
 	c.a *= 2;
 

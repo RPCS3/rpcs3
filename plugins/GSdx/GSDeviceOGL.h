@@ -110,8 +110,7 @@ public:
 	virtual ~GSDeviceOGL();
 
 	bool Create(GSWnd* wnd, bool vsync);
-	bool Reset(int w, int h, bool fs);
-
+	bool Reset(int w, int h, int mode);
 	void Present(const GSVector4i& r, int shader);
 	void Flip();
 
@@ -130,6 +129,8 @@ public:
 	GSTexture* CreateOffscreen(int w, int h, int format = 0);
 
 	GSTexture* CopyOffscreen(GSTexture* src, const GSVector4& sr, int w, int h, int format = 0);
+
+	void CopyRect(GSTexture* st, GSTexture* dt, const GSVector4i& r);
 
 	void StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, int shader = 0, bool linear = true);
 

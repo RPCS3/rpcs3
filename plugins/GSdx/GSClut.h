@@ -30,7 +30,7 @@ class GSLocalMemory;
 
 __declspec(align(16)) class GSClut : public GSAlignedClass<16>
 {
-	const GSLocalMemory* m_mem;
+	GSLocalMemory* m_mem;
 
 	uint32 m_CBP[2];
 	uint16* m_clut;
@@ -93,7 +93,7 @@ __declspec(align(16)) class GSClut : public GSAlignedClass<16>
 	static void Expand16(const uint16* RESTRICT src, uint32* RESTRICT dst, int w, const GIFRegTEXA& TEXA);
 
 public:
-	GSClut(const GSLocalMemory* mem);
+	GSClut(GSLocalMemory* mem);
 	virtual ~GSClut();
 
 	void Invalidate();

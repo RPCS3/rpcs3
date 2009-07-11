@@ -48,6 +48,7 @@ public:
 		BullyCC,
 		SoTC,
 		OnePieceGrandAdventure,
+		OnePieceGrandBattle,
 		ICO,
 		GT4,
 		WildArms5,
@@ -74,6 +75,7 @@ public:
 		StarOcean3,
 		ValkyrieProfile2,
 		RadiataStories,
+		SMTNocturne,
 		TitleCount,
 	};
 
@@ -95,6 +97,7 @@ public:
 	enum Flags
 	{
 		PointListPalette = 1,
+		ZWriteMustNotClear = 2,
 	};
 
 	struct Game 

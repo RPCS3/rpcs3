@@ -60,12 +60,12 @@ public:
 	struct FolderOptions
 	{
 		wxDirName Plugins;
+		wxDirName Settings;
 		wxDirName Bios;
 		wxDirName Snapshots;
 		wxDirName Savestates;
 		wxDirName MemoryCards;
 		wxDirName Logs;
-		wxDirName Dumps;
 
 		void LoadSave( IniInterface& conf );
 	};
@@ -190,9 +190,13 @@ public:
 
 	FullpathHelpers Files;
 
+	bool		UseAdminMode;			// dictates if the program uses /home/user or /cwd for the program data
 	wxPoint		MainGuiPosition;
 	bool		CdvdVerboseReads;		// enables cdvd read activity verbosely dumped to the console
 
+	// Current language in use (correlates to a wxWidgets wxLANGUAGE specifier)
+	int			LanguageId;
+	
 	// String value describing the desktop theme to use for pcsk2 (icons and background images)
 	// The theme name is used to look up files in the themes folder (relative to the executable).
 	wxString	DeskTheme;
@@ -220,6 +224,9 @@ public:
 public:
 	void Load();
 	void Save();
+	void Apply();
+	
+	void LoadSaveUserMode( IniInterface& ini );
 
 protected:
 	void LoadSave( IniInterface& ini );

@@ -42,7 +42,10 @@ GSDevice9::GSDevice9()
 	, m_bf(0xffffffff)
 	, m_rtv(NULL)
 	, m_dsv(NULL)
+	, m_lost(false)
 {
+	m_rbswapped = true;
+
 	memset(&m_pp, 0, sizeof(m_pp));
 	memset(&m_ddcaps, 0, sizeof(m_ddcaps));
 	memset(&m_d3dcaps, 0, sizeof(m_d3dcaps));
@@ -89,12 +92,12 @@ bool GSDevice9::Create(GSWnd* wnd, bool vsync)
 
 	// d3d
 
-	m_d3d = Direct3DCreate9(D3D_SDK_VERSION);
+	m_d3d.Attach(Direct3DCreate9(D3D_SDK_VERSION));
 
 	if(!m_d3d) return false;
 
 	hr = m_d3d->CheckDeviceFormat(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, D3DFMT_X8R8G8B8, D3DUSAGE_DEPTHSTENCIL, D3DRTYPE_SURFACE, D3DFMT_D24S8);
-		
+
 	if(FAILED(hr)) return false;
 
 	hr = m_d3d->CheckDepthStencilMatch(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, D3DFMT_X8R8G8B8, D3DFMT_X8R8G8B8, D3DFMT_D24S8);
@@ -105,9 +108,7 @@ bool GSDevice9::Create(GSWnd* wnd, bool vsync)
 
 	m_d3d->GetDeviceCaps(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, &m_d3dcaps);
 
-	bool fs = theApp.GetConfig("ModeWidth", 0) > 0;
-
-	if(!Reset(1, 1, fs)) return false;
+	if(!Reset(1, 1, theApp.GetConfig("ModeWidth", 0) > 0 ? Fullscreen : Windowed)) return false;
 
 	m_dev->Clear(0, NULL, D3DCLEAR_TARGET, 0, 1.0f, 0);
 
@@ -188,35 +189,46 @@ bool GSDevice9::Create(GSWnd* wnd, bool vsync)
 	return true;
 }
 
-bool GSDevice9::Reset(int w, int h, bool fs)
+bool GSDevice9::Reset(int w, int h, int mode)
 {
-	if(!__super::Reset(w, h, fs))
+	if(!__super::Reset(w, h, mode))
 		return false;
 
 	HRESULT hr;
 
-	if(!m_d3d) return false;
-
-	if(m_swapchain && !fs && m_pp.Windowed)
+	if(mode == DontCare)
 	{
-		m_swapchain = NULL;
+		mode = m_pp.Windowed ? Windowed : Fullscreen;
+	}
 
-		m_pp.BackBufferWidth = w;
-		m_pp.BackBufferHeight = h;
+	if(!m_lost)
+	{
+		if(m_swapchain && mode != Fullscreen && m_pp.Windowed)
+		{
+			m_swapchain = NULL;
 
-		hr = m_dev->CreateAdditionalSwapChain(&m_pp, &m_swapchain);
+			m_pp.BackBufferWidth = w;
+			m_pp.BackBufferHeight = h;
 
-		if(FAILED(hr)) return false;
+			hr = m_dev->CreateAdditionalSwapChain(&m_pp, &m_swapchain);
 
-		CComPtr<IDirect3DSurface9> backbuffer;
-		hr = m_swapchain->GetBackBuffer(0, D3DBACKBUFFER_TYPE_MONO, &backbuffer);
-		m_backbuffer = new GSTexture9(backbuffer);
+			if(FAILED(hr)) return false;
 
-		return true;
+			CComPtr<IDirect3DSurface9> backbuffer;
+			hr = m_swapchain->GetBackBuffer(0, D3DBACKBUFFER_TYPE_MONO, &backbuffer);
+			m_backbuffer = new GSTexture9(backbuffer);
+
+			return true;
+		}
 	}
 
 	m_swapchain = NULL;
-	
+
+	m_vertices.vb = NULL;
+	m_vertices.vb_old = NULL;
+	m_vertices.start = 0;
+	m_vertices.count = 0;
+
 	if(m_vs_cb) _aligned_free(m_vs_cb);
 	if(m_ps_cb) _aligned_free(m_ps_cb);
 
@@ -258,7 +270,7 @@ bool GSDevice9::Reset(int w, int h, bool fs)
 	int mh = theApp.GetConfig("ModeHeight", 0);
 	int mrr = theApp.GetConfig("ModeRefreshRate", 0);
 
-	if(fs && mw > 0 && mh > 0 && mrr >= 0)
+	if(mode == Fullscreen && mw > 0 && mh > 0 && mrr >= 0)
 	{
 		m_pp.Windowed = FALSE;
 		m_pp.BackBufferWidth = mw;
@@ -324,27 +336,39 @@ bool GSDevice9::Reset(int w, int h, bool fs)
 	return true;
 }
 
-bool GSDevice9::IsLost()
+bool GSDevice9::IsLost(bool update)
 {
-	HRESULT hr = m_dev->TestCooperativeLevel();
-	
-	return hr == D3DERR_DEVICELOST || hr == D3DERR_DEVICENOTRESET;
+	if(!m_lost || update)
+	{
+		HRESULT hr = m_dev->TestCooperativeLevel();
+
+		m_lost = hr == D3DERR_DEVICELOST || hr == D3DERR_DEVICENOTRESET;
+	}
+
+	return m_lost;
 }
 
 void GSDevice9::Flip()
 {
 	m_dev->EndScene();
 
+	HRESULT hr;
+
 	if(m_swapchain)
 	{
-		m_swapchain->Present(NULL, NULL, NULL, NULL, 0);
+		hr = m_swapchain->Present(NULL, NULL, NULL, NULL, 0);
 	}
 	else
 	{
-		m_dev->Present(NULL, NULL, NULL, NULL);
+		hr = m_dev->Present(NULL, NULL, NULL, NULL);
 	}
 
 	m_dev->BeginScene();
+
+	if(FAILED(hr))
+	{
+		m_lost = true;
+	}
 }
 
 void GSDevice9::BeginScene()
@@ -549,6 +573,11 @@ GSTexture* GSDevice9::CopyOffscreen(GSTexture* src, const GSVector4& sr, int w, 
 	return dst;
 }
 
+void GSDevice9::CopyRect(GSTexture* st, GSTexture* dt, const GSVector4i& r)
+{
+	m_dev->StretchRect(*(GSTexture9*)st, r, *(GSTexture9*)dt, r, D3DTEXF_POINT);
+}
+
 void GSDevice9::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, int shader, bool linear)
 {
 	StretchRect(st, sr, dt, dr, m_convert.ps[shader], NULL, 0, linear);
@@ -663,7 +692,7 @@ void GSDevice9::IASetVertexBuffer(const void* vertices, size_t stride, size_t co
 		m_vertices.vb = NULL;
 		m_vertices.start = 0;
 		m_vertices.count = 0;
-		m_vertices.limit = max(count * 3 / 2, 10000);
+		m_vertices.limit = std::max<int>(count * 3 / 2, 10000);
 	}
 
 	if(m_vertices.vb == NULL)
@@ -817,16 +846,16 @@ void GSDevice9::PSSetSamplerState(Direct3DSamplerState9* ss)
 
 		m_dev->SetSamplerState(0, D3DSAMP_ADDRESSU, ss->AddressU);
 		m_dev->SetSamplerState(0, D3DSAMP_ADDRESSV, ss->AddressV);
-		m_dev->SetSamplerState(1, D3DSAMP_ADDRESSU, ss->AddressU);
-		m_dev->SetSamplerState(1, D3DSAMP_ADDRESSV, ss->AddressV);
+		m_dev->SetSamplerState(1, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
+		m_dev->SetSamplerState(1, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
 		m_dev->SetSamplerState(2, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
 		m_dev->SetSamplerState(2, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP);
 		m_dev->SetSamplerState(3, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
 		m_dev->SetSamplerState(3, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP);
 		m_dev->SetSamplerState(0, D3DSAMP_MINFILTER, ss->FilterMin[0]);
 		m_dev->SetSamplerState(0, D3DSAMP_MAGFILTER, ss->FilterMag[0]);
-		m_dev->SetSamplerState(1, D3DSAMP_MINFILTER, ss->FilterMin[1]);
-		m_dev->SetSamplerState(1, D3DSAMP_MAGFILTER, ss->FilterMag[1]);
+		m_dev->SetSamplerState(1, D3DSAMP_MINFILTER, D3DTEXF_POINT);
+		m_dev->SetSamplerState(1, D3DSAMP_MAGFILTER, D3DTEXF_POINT);
 		m_dev->SetSamplerState(2, D3DSAMP_MINFILTER, D3DTEXF_POINT);
 		m_dev->SetSamplerState(2, D3DSAMP_MAGFILTER, D3DTEXF_POINT);
 		m_dev->SetSamplerState(3, D3DSAMP_MINFILTER, D3DTEXF_POINT);

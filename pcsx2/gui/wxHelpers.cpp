@@ -27,23 +27,96 @@
 
 namespace wxHelpers
 {
-	wxSizerFlags stdCenteredFlags( wxSizerFlags().Align( wxALIGN_CENTER ).DoubleBorder() );
-	wxSizerFlags stdSpacingFlags( wxSizerFlags().Border( wxALL, 6 ) );
-	wxSizerFlags stdButtonSizerFlags( wxSizerFlags().Align( wxALIGN_RIGHT ).Border() );
-	wxSizerFlags CheckboxFlags( wxSizerFlags().Border( wxALL, 6 ).Expand() );
+	// ------------------------------------------------------------------------
+	// FlagsAccessors - Provides read-write copies of standard sizer flags for our interface.
+	// These standard definitions provide a consistent and pretty interface for our GUI.
+	// Without them things look compacted, misaligned, and yucky!
+	//
+	// Implementation Note: Accessors are all provisioned as dynamic (realtime) sizer calculations.
+	// I've preferred this over cstatic const variables on the premise that spacing logic could
+	// in the future become a dynamic value (currently it is affixed to 6 for most items).
+	//
+	namespace SizerFlags
+	{
+		wxSizerFlags StdSpace()
+		{
+			return wxSizerFlags().Border( wxALL, 6 );
+		}
 
+		wxSizerFlags StdCenter()
+		{
+			return wxSizerFlags().Align( wxALIGN_CENTER ).DoubleBorder();
+		}
+
+		wxSizerFlags StdExpand()
+		{
+			return StdSpace().Expand();
+		}
+		
+		wxSizerFlags StdGroupie()
+		{
+			// Groups look better with a slightly smaller margin than standard.
+			// (basically this accounts for the group's frame)
+			return wxSizerFlags().Border( wxLEFT | wxBOTTOM | wxRIGHT, 4 ).Expand();
+		}
+
+		// This force-aligns the std button sizer to the right, where (at least) us win32 platform
+		// users always expect it to be.  Most likely Mac platforms expect it on the left side
+		// just because it's *not* where win32 sticks it.  Too bad!
+		wxSizerFlags StdButton()
+		{
+			return wxSizerFlags().Align( wxALIGN_RIGHT ).Border();
+		}
+		
+		wxSizerFlags Checkbox()
+		{
+			return StdExpand();
+		}
+	};
+	
+	// ------------------------------------------------------------------------
+	// Creates a new checkbox and adds it to the specified sizer/parent combo.
+	// Uses the default spacer setting for adding checkboxes.
+	//
 	wxCheckBox& AddCheckBoxTo( wxWindow* parent, wxBoxSizer& sizer, const wxString& label, wxWindowID id )
 	{
 		wxCheckBox* retval = new wxCheckBox( parent, id, label );
-		sizer.Add( retval, CheckboxFlags );
+		sizer.Add( retval, SizerFlags::Checkbox() );
 		return *retval;
 	}
 
-	wxStaticText& AddStaticTextTo(wxWindow* parent, wxBoxSizer& sizer, const wxString& label, int size )
+	// ------------------------------------------------------------------------
+	// Creates a new Radio Button and adds it to the specified sizer/parent combo.
+	// The first item in a group should pass True for the isFisrt parameter.
+	// Uses the default spacer setting for checkboxes.
+	//
+	wxRadioButton& AddRadioButtonTo( wxWindow* parent, wxBoxSizer& sizer, const wxString& label, wxWindowID id, bool isFirst )
 	{
-        wxStaticText *temp = new wxStaticText(parent, wxID_ANY, label);
+		wxRadioButton* retval = new wxRadioButton( parent, id, label, wxDefaultPosition, wxDefaultSize, isFirst ? wxRB_GROUP : 0 );
+		sizer.Add( retval, SizerFlags::Checkbox() );
+		return *retval;
+	}
+
+	// ------------------------------------------------------------------------
+	// Creates a static text box that generally "makes sense" in a free-flowing layout.  Specifically, this
+	// ensures that that auto resizing is disabled, and that the sizer flags match the alignment specified
+	// for the textbox.
+	//
+	// Parameters:
+	//  Size - allows forcing the control to wrap text at a specific pre-defined pixel width;
+	//      or specify zero to let wxWidgets layout the text as it deems appropriate (recommended)
+	//
+	// alignFlags - Either wxALIGN_LEFT, RIGHT, or CENTRE.  All other wxStaticText flags are ignored
+	//      or overridden.  [default is left alignment]
+	//
+	wxStaticText& AddStaticTextTo(wxWindow* parent, wxBoxSizer& sizer, const wxString& label, int size, int alignFlags )
+	{
+		// No reason to ever have AutoResize enabled, quite frankly.  It just causes layout and centering problems.
+		alignFlags |= wxST_NO_AUTORESIZE;
+        wxStaticText *temp = new wxStaticText(parent, wxID_ANY, label, wxDefaultPosition, wxDefaultSize, alignFlags );
         if (size > 0) temp->Wrap(size);
-        sizer.Add(temp);
+
+        sizer.Add(temp, SizerFlags::StdSpace().Align( alignFlags & wxALIGN_MASK ) );
         return *temp;
     }
     
@@ -107,7 +180,7 @@ wxStaticText& wxDialogWithHelpers::AddStaticText(wxBoxSizer& sizer, const wxStri
 	return wxHelpers::AddStaticTextTo( this, sizer, label, size );
 }
 
-void wxDialogWithHelpers::AddOkCancel( wxBoxSizer &sizer )
+void wxDialogWithHelpers::AddOkCancel( wxBoxSizer &sizer, bool hasApply )
 {
 	wxBoxSizer* buttonSizer = &sizer;
 	if( m_hasContextHelp )
@@ -124,13 +197,26 @@ void wxDialogWithHelpers::AddOkCancel( wxBoxSizer &sizer )
 		sizer.Add( buttonSizer, wxSizerFlags().Center() );
 #endif
 	}
-	buttonSizer->Add( CreateStdDialogButtonSizer( wxOK | wxCANCEL ), wxHelpers::stdButtonSizerFlags );
+
+	wxStdDialogButtonSizer& s_buttons = *new wxStdDialogButtonSizer();
+
+	s_buttons.AddButton( new wxButton( this, wxID_OK ) );
+	s_buttons.AddButton( new wxButton( this, wxID_CANCEL ) );
+
+	if( hasApply )
+	{
+		s_buttons.AddButton( new wxButton( this, wxID_APPLY ) );
+	}
+
+	s_buttons.Realize();
+	buttonSizer->Add( &s_buttons, wxHelpers::SizerFlags::StdButton() );
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
 //
 wxPanelWithHelpers::wxPanelWithHelpers( wxWindow* parent, int id, const wxPoint& pos, const wxSize& size ) :
 	wxPanel( parent, id, pos, size )
+,	m_StartNewRadioGroup( true )
 {
 }
 
@@ -139,7 +225,21 @@ wxCheckBox& wxPanelWithHelpers::AddCheckBox( wxBoxSizer& sizer, const wxString& 
 	return wxHelpers::AddCheckBoxTo( this, sizer, label, id );
 }
 
-wxStaticText& wxPanelWithHelpers::AddStaticText(wxBoxSizer& sizer, const wxString& label, int size )
+wxStaticText& wxPanelWithHelpers::AddStaticText(wxBoxSizer& sizer, const wxString& label, int size, int alignFlags )
 {
-	return wxHelpers::AddStaticTextTo( this, sizer, label, size );
+	return wxHelpers::AddStaticTextTo( this, sizer, label, size, alignFlags );
 }
+
+wxRadioButton& wxPanelWithHelpers::AddRadioButton( wxBoxSizer& sizer, const wxString& label, const wxString& subtext, wxWindowID id )
+{
+	wxRadioButton& retval = wxHelpers::AddRadioButtonTo( this, sizer, label, id, m_StartNewRadioGroup );
+	m_StartNewRadioGroup = false;
+	
+	if( !subtext.IsEmpty() )
+	{
+		sizer.Add( new wxStaticText( this, wxID_ANY, subtext ), wxSizerFlags().Border( wxLEFT, 25 ) );
+		sizer.AddSpacer( 4 );
+	}
+	return retval;
+}
+

@@ -801,7 +801,9 @@ union
 		uint64 _PAD4:30;
 	};
 };
-REG_END
+REG_END2
+	__forceinline bool IsRepeating() {return ((uint32)1 << TW) > (TBW << 6);}
+REG_END2
 
 REG64_(GIFReg, TEX1)
 	uint32 LCM:1;

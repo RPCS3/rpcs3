@@ -30,6 +30,17 @@ class GSTextureFX : public GSAlignedClass<16>
 public:
 	#pragma pack(push, 1)
 
+	enum
+	{
+		FMT_32,
+		FMT_24,
+		FMT_16,
+		FMT_8H,
+		FMT_4HL,
+		FMT_4HH,
+		FMT_8,
+	};
+
 	__declspec(align(16)) struct VSConstantBuffer
 	{
 		GSVector4 VertexScale;
@@ -154,7 +165,7 @@ public:
 				uint32 fst:1;
 				uint32 wms:2;
 				uint32 wmt:2;
-				uint32 bpp:3;
+				uint32 fmt:3;
 				uint32 aem:1;
 				uint32 tfx:3;
 				uint32 tcc:1;
@@ -248,6 +259,7 @@ protected:
 
 public:
 	GSTextureFX();
+	virtual ~GSTextureFX() {}
 
 	virtual bool Create(GSDevice* dev);
 	

@@ -29,14 +29,14 @@ bool GSDeviceNull::Create(GSWnd* wnd, bool vsync)
 		return false;
 	}
 
-	Reset(1, 1, false);
+	Reset(1, 1, Windowed);
 
 	return true;
 }
 
-bool GSDeviceNull::Reset(int w, int h, bool fs)
+bool GSDeviceNull::Reset(int w, int h, int mode)
 {
-	if(!__super::Reset(w, h, fs))
+	if(!__super::Reset(w, h, mode))
 		return false;
 
 	return true;

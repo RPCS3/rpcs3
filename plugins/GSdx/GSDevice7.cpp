@@ -25,6 +25,7 @@
 #include "GSDevice7.h"
 
 GSDevice7::GSDevice7()
+	: m_lost(false)
 {
 }
 
@@ -75,14 +76,14 @@ bool GSDevice7::Create(GSWnd* wnd, bool vsync)
 		return false;
 	}
 
-	Reset(1, 1, false);
+	Reset(1, 1, Windowed);
 
 	return true;
 }
 
-bool GSDevice7::Reset(int w, int h, bool fs)
+bool GSDevice7::Reset(int w, int h, int mode)
 {
-	if(!__super::Reset(w, h, fs))
+	if(!__super::Reset(w, h, mode))
 		return false;
 
     DDSURFACEDESC2 desc;
@@ -130,6 +131,8 @@ bool GSDevice7::Reset(int w, int h, bool fs)
 		}
 	}
 
+	m_lost = false;
+
 	return true;
 }
 
@@ -139,9 +142,15 @@ void GSDevice7::Present(const GSVector4i& r, int shader)
 
 	GSVector4i cr = m_wnd->GetClientRect();
 
-	if(m_backbuffer->GetWidth() != cr.width() || m_backbuffer->GetHeight() != cr.height())
+	int w = std::max(cr.width(), 1);
+	int h = std::max(cr.height(), 1);
+
+	if(!m_backbuffer || m_backbuffer->GetWidth() != w || m_backbuffer->GetHeight() != h)
 	{
-		Reset(cr.width(), cr.height(), false);
+		if(!Reset(w, h, DontCare))
+		{
+			return;
+		}
 	}
 
 	CComPtr<IDirectDrawSurface7> backbuffer = *(GSTexture7*)m_backbuffer;
@@ -157,7 +166,10 @@ void GSDevice7::Present(const GSVector4i& r, int shader)
 
 	GSVector4i r2 = r;
 
-	hr = backbuffer->Blt(r2, *(GSTexture7*)m_merge, NULL, DDBLT_WAIT, NULL);
+	if(m_current)
+	{
+		hr = backbuffer->Blt(r2, *(GSTexture7*)m_current, NULL, DDBLT_WAIT, NULL);
+	}
 
 	// if ClearRenderTarget was implemented the parent class could handle these tasks until this point
 
@@ -174,6 +186,8 @@ void GSDevice7::Present(const GSVector4i& r, int shader)
 
 	if(hr == DDERR_SURFACELOST)
 	{
+		m_lost = true;
+
 		// TODO
 
 		HRESULT hr = m_dd->TestCooperativeLevel();

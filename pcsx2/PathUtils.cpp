@@ -106,6 +106,7 @@ bool IsRooted( const wxString& path )
 // ------------------------------------------------------------------------
 // Concatenates two pathnames together, inserting delimiters (backslash on win32)
 // as needed! Assumes the 'dest' is allocated to at least g_MaxPath length.
+//
 wxString Combine( const wxString& srcPath, const wxString& srcFile )
 {
 #if 0

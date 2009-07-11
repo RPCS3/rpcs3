@@ -1,7 +1,20 @@
 #ifndef PCSX2_PRECOMPILED_HEADER
 #define PCSX2_PRECOMPILED_HEADER
 
-//#pragma once
+//#pragma once		// no dice, causes problems in GCC PCH (which doesn't really work very well 
+
+//////////////////////////////////////////////////////////////////////////////////////////
+// Define PCSX2's own i18n helpers.  These override the wxWidgets helpers and provide
+// additional functionality.
+//
+#define WXINTL_NO_GETTEXT_MACRO
+#undef _
+#define _(s)		pxGetTranslation(_T(s))
+
+// macro provided for tagging translation strings, without actually running them through the
+// translator (which the _() does automatically, and sometimes we don't want that).  This is
+// a shorthand replacement for wxTRANSLATE.
+#define wxLt(a)		(a)
 
 #define NOMINMAX		// Disables other libs inclusion of their own min/max macros (we use std instead)
 
@@ -38,6 +51,7 @@
 #include <sys/stat.h>
 #include <pthread.h>
 
+
 using std::string;		// we use it enough, so bring it into the global namespace.
 using std::min;
 using std::max;
@@ -49,10 +63,6 @@ typedef int BOOL;
 #define TRUE  1
 #define FALSE 0
 
-// macro provided for tagging translation strings, without actually running them through the
-// translator (which the _() does automatically, and sometimes we don't want that)
-#define wxLt(a)  a
-
 #define wxASSERT_MSG_A( cond, msg ) wxASSERT_MSG( cond, wxString::FromAscii(msg).c_str() );
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -61,6 +71,7 @@ typedef int BOOL;
 // need a full recompile anyway, when modified (etc)
 
 #include "zlib/zlib.h"
+#include "i18n.h"
 #include "Pcsx2Defs.h"
 #include "Paths.h"
 #include "Config.h"

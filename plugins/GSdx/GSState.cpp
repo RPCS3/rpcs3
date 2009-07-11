@@ -87,8 +87,6 @@ GSState::GSState(uint8* base, bool mt, void (*irq)())
 
 	m_regs = (GSPrivRegSet*)(base + 0x12000000);
 
-	memset(m_regs, 0, sizeof(GSPrivRegSet));
-
 	PRIM = &m_env.PRIM;
 //	CSR->rREV = 0x20;
 	m_env.PRMODECONT.AC = 1;
@@ -948,7 +946,7 @@ void GSState::FlushWrite()
 	r.left = m_env.TRXPOS.DSAX;
 	r.top = y;
 	r.right = r.left + m_env.TRXREG.RRW;
-	r.bottom = min(r.top + m_env.TRXREG.RRH, m_tr.x == r.left ? m_tr.y : m_tr.y + 1);
+	r.bottom = std::min<int>(r.top + m_env.TRXREG.RRH, m_tr.x == r.left ? m_tr.y : m_tr.y + 1);
 
 	InvalidateVideoMem(m_env.BITBLTBUF, r);
 /*
@@ -1085,96 +1083,168 @@ void GSState::Move()
 
 	// TODO: unroll inner loops (width has special size requirement, must be multiples of 1 << n, depending on the format)
 
+	GSLocalMemory::PixelOffset* RESTRICT spo = m_mem.GetPixelOffset(m_env.BITBLTBUF.SBP, m_env.BITBLTBUF.SBW, m_env.BITBLTBUF.SPSM);
+	GSLocalMemory::PixelOffset* RESTRICT dpo = m_mem.GetPixelOffset(m_env.BITBLTBUF.DBP, m_env.BITBLTBUF.DBW, m_env.BITBLTBUF.DPSM);
+
 	if(spsm.trbpp == dpsm.trbpp && spsm.trbpp >= 16)
 	{
-		int* soffset = spsm.rowOffset[0];
-		int* doffset = dpsm.rowOffset[0];
+		int* RESTRICT scol = &spo->col[0][sx];
+		int* RESTRICT dcol = &dpo->col[0][dx];
 
 		if(spsm.trbpp == 32)
 		{
-			for(int y = 0; y < h; y++, sy += yinc, dy += yinc, sx -= xinc * w, dx -= xinc * w)
+			if(xinc > 0)
 			{
-				uint32 sbase = spsm.pa(0, sy, m_env.BITBLTBUF.SBP, m_env.BITBLTBUF.SBW);
-				uint32 dbase = dpsm.pa(0, dy, m_env.BITBLTBUF.DBP, m_env.BITBLTBUF.DBW);
-				
-				for(int x = 0; x < w; x++, sx += xinc, dx += xinc)
+				for(int y = 0; y < h; y++, sy += yinc, dy += yinc)
 				{
-					m_mem.WritePixel32(dbase + doffset[dx], m_mem.ReadPixel32(sbase + soffset[sx]));
+					uint32* RESTRICT s = &m_mem.m_vm32[spo->row[sy]];
+					uint32* RESTRICT d = &m_mem.m_vm32[dpo->row[dy]];
+
+					for(int x = 0; x < w; x++) d[dcol[x]] = s[scol[x]];
+				}
+			}
+			else
+			{
+				for(int y = 0; y < h; y++, sy += yinc, dy += yinc)
+				{
+					uint32* RESTRICT s = &m_mem.m_vm32[spo->row[sy]];
+					uint32* RESTRICT d = &m_mem.m_vm32[dpo->row[dy]];
+
+					for(int x = 0; x > -w; x--) d[dcol[x]] = s[scol[x]];
 				}
 			}
 		}
 		else if(spsm.trbpp == 24)
 		{
-			for(int y = 0; y < h; y++, sy += yinc, dy += yinc, sx -= xinc * w, dx -= xinc * w)
+			if(xinc > 0)
 			{
-				uint32 sbase = spsm.pa(0, sy, m_env.BITBLTBUF.SBP, m_env.BITBLTBUF.SBW);
-				uint32 dbase = dpsm.pa(0, dy, m_env.BITBLTBUF.DBP, m_env.BITBLTBUF.DBW);
-				
-				for(int x = 0; x < w; x++, sx += xinc, dx += xinc)
+				for(int y = 0; y < h; y++, sy += yinc, dy += yinc)
 				{
-					m_mem.WritePixel24(dbase + doffset[dx], m_mem.ReadPixel24(sbase + soffset[sx]));
+					uint32* RESTRICT s = &m_mem.m_vm32[spo->row[sy]];
+					uint32* RESTRICT d = &m_mem.m_vm32[dpo->row[dy]];
+
+					for(int x = 0; x < w; x++) d[dcol[x]] = (d[dcol[x]] & 0xff000000) | (s[scol[x]] & 0x00ffffff);
+				}
+			}
+			else
+			{
+				for(int y = 0; y < h; y++, sy += yinc, dy += yinc)
+				{
+					uint32* RESTRICT s = &m_mem.m_vm32[spo->row[sy]];
+					uint32* RESTRICT d = &m_mem.m_vm32[dpo->row[dy]];
+
+					for(int x = 0; x > -w; x--) d[dcol[x]] = (d[dcol[x]] & 0xff000000) | (s[scol[x]] & 0x00ffffff);
 				}
 			}
 		}
 		else // if(spsm.trbpp == 16)
 		{
-			for(int y = 0; y < h; y++, sy += yinc, dy += yinc, sx -= xinc * w, dx -= xinc * w)
+			if(xinc > 0)
 			{
-				uint32 sbase = spsm.pa(0, sy, m_env.BITBLTBUF.SBP, m_env.BITBLTBUF.SBW);
-				uint32 dbase = dpsm.pa(0, dy, m_env.BITBLTBUF.DBP, m_env.BITBLTBUF.DBW);
-				
-				for(int x = 0; x < w; x++, sx += xinc, dx += xinc)
+				for(int y = 0; y < h; y++, sy += yinc, dy += yinc)
 				{
-					m_mem.WritePixel16(dbase + doffset[dx], m_mem.ReadPixel16(sbase + soffset[sx]));
+					uint16* RESTRICT s = &m_mem.m_vm16[spo->row[sy]];
+					uint16* RESTRICT d = &m_mem.m_vm16[dpo->row[dy]];
+
+					for(int x = 0; x < w; x++) d[dcol[x]] = s[scol[x]];
+				}
+			}
+			else
+			{
+				for(int y = 0; y < h; y++, sy += yinc, dy += yinc)
+				{
+					uint16* RESTRICT s = &m_mem.m_vm16[spo->row[sy]];
+					uint16* RESTRICT d = &m_mem.m_vm16[dpo->row[dy]];
+
+					for(int x = 0; x > -w; x--) d[dcol[x]] = s[scol[x]];
 				}
 			}
 		}
 	}
 	else if(m_env.BITBLTBUF.SPSM == PSM_PSMT8 && m_env.BITBLTBUF.DPSM == PSM_PSMT8)
 	{
-		for(int y = 0; y < h; y++, sy += yinc, dy += yinc, sx -= xinc * w, dx -= xinc * w)
+		if(xinc > 0)
 		{
-			uint32 sbase = GSLocalMemory::PixelAddress8(0, sy, m_env.BITBLTBUF.SBP, m_env.BITBLTBUF.SBW);
-			int* soffset = spsm.rowOffset[sy & 7];
-
-			uint32 dbase = GSLocalMemory::PixelAddress8(0, dy, m_env.BITBLTBUF.DBP, m_env.BITBLTBUF.DBW);
-			int* doffset = dpsm.rowOffset[dy & 7];
-			
-			for(int x = 0; x < w; x++, sx += xinc, dx += xinc)
+			for(int y = 0; y < h; y++, sy += yinc, dy += yinc)
 			{
-				m_mem.WritePixel8(dbase + doffset[dx], m_mem.ReadPixel8(sbase + soffset[sx]));
+				uint8* RESTRICT s = &m_mem.m_vm8[spo->row[sy]];
+				uint8* RESTRICT d = &m_mem.m_vm8[dpo->row[dy]];
+
+				int* RESTRICT scol = &spo->col[sy & 7][sx];
+				int* RESTRICT dcol = &dpo->col[dy & 7][dx];
+
+				for(int x = 0; x < w; x++) d[dcol[x]] = s[scol[x]];
+			}
+		}
+		else
+		{
+			for(int y = 0; y < h; y++, sy += yinc, dy += yinc)
+			{
+				uint8* RESTRICT s = &m_mem.m_vm8[spo->row[sy]];
+				uint8* RESTRICT d = &m_mem.m_vm8[dpo->row[dy]];
+
+				int* RESTRICT scol = &spo->col[sy & 7][sx];
+				int* RESTRICT dcol = &dpo->col[dy & 7][dx];
+
+				for(int x = 0; x > -w; x--) d[dcol[x]] = s[scol[x]];
 			}
 		}
 	}
 	else if(m_env.BITBLTBUF.SPSM == PSM_PSMT4 && m_env.BITBLTBUF.DPSM == PSM_PSMT4)
 	{
-		for(int y = 0; y < h; y++, sy += yinc, dy += yinc, sx -= xinc * w, dx -= xinc * w)
+		if(xinc > 0)
 		{
-			uint32 sbase = GSLocalMemory::PixelAddress4(0, sy, m_env.BITBLTBUF.SBP, m_env.BITBLTBUF.SBW);
-			int* soffset = spsm.rowOffset[sy & 7];
-
-			uint32 dbase = GSLocalMemory::PixelAddress4(0, dy, m_env.BITBLTBUF.DBP, m_env.BITBLTBUF.DBW);
-			int* doffset = dpsm.rowOffset[dy & 7];
-			
-			for(int x = 0; x < w; x++, sx += xinc, dx += xinc)
+			for(int y = 0; y < h; y++, sy += yinc, dy += yinc)
 			{
-				m_mem.WritePixel4(dbase + doffset[dx], m_mem.ReadPixel4(sbase + soffset[sx]));
+				uint32 sbase = spo->row[sy];
+				uint32 dbase = dpo->row[dy];
+
+				int* RESTRICT scol = &spo->col[sy & 7][sx];
+				int* RESTRICT dcol = &dpo->col[dy & 7][dx];
+				
+				for(int x = 0; x < w; x++) m_mem.WritePixel4(dbase + dcol[x], m_mem.ReadPixel4(sbase + scol[x]));
+			}
+		}
+		else
+		{
+			for(int y = 0; y < h; y++, sy += yinc, dy += yinc)
+			{
+				uint32 sbase = spo->row[sy];
+				uint32 dbase = dpo->row[dy];
+
+				int* RESTRICT scol = &spo->col[sy & 7][sx];
+				int* RESTRICT dcol = &dpo->col[dy & 7][dx];
+				
+				for(int x = 0; x > -w; x--) m_mem.WritePixel4(dbase + dcol[x], m_mem.ReadPixel4(sbase + scol[x]));
 			}
 		}
 	}
 	else
 	{
-		for(int y = 0; y < h; y++, sy += yinc, dy += yinc, sx -= xinc * w, dx -= xinc * w)
+		if(xinc > 0)
 		{
-			uint32 sbase = spsm.pa(0, sy, m_env.BITBLTBUF.SBP, m_env.BITBLTBUF.SBW);
-			int* soffset = spsm.rowOffset[sy & 7];
-
-			uint32 dbase = dpsm.pa(0, dy, m_env.BITBLTBUF.DBP, m_env.BITBLTBUF.DBW);
-			int* doffset = dpsm.rowOffset[dy & 7];
-			
-			for(int x = 0; x < w; x++, sx += xinc, dx += xinc)
+			for(int y = 0; y < h; y++, sy += yinc, dy += yinc)
 			{
-				(m_mem.*dpsm.wpa)(dbase + doffset[dx], (m_mem.*spsm.rpa)(sbase + soffset[sx]));
+				uint32 sbase = spo->row[sy];
+				uint32 dbase = dpo->row[dy];
+
+				int* RESTRICT scol = &spo->col[sy & 7][sx];
+				int* RESTRICT dcol = &dpo->col[dy & 7][dx];
+				
+				for(int x = 0; x < w; x++) (m_mem.*dpsm.wpa)(dbase + dcol[x], (m_mem.*spsm.rpa)(sbase + scol[x]));
+			}
+		}
+		else
+		{
+			for(int y = 0; y < h; y++, sy += yinc, dy += yinc)
+			{
+				uint32 sbase = spo->row[sy];
+				uint32 dbase = dpo->row[dy];
+
+				int* RESTRICT scol = &spo->col[sy & 7][sx];
+				int* RESTRICT dcol = &dpo->col[dy & 7][dx];
+				
+				for(int x = 0; x > -w; x--) (m_mem.*dpsm.wpa)(dbase + dcol[x], (m_mem.*spsm.rpa)(sbase + scol[x]));
 			}
 		}
 	}
@@ -1880,6 +1950,19 @@ bool GSC_OnePieceGrandAdventure(const GSFrameInfo& fi, int& skip)
 	return true;
 }
 
+bool GSC_OnePieceGrandBattle(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME && fi.FBP == 0x02d00 && fi.FPSM == PSM_PSMCT16 && (fi.TBP0 == 0x00000 || fi.TBP0 == 0x00f00) && fi.TPSM == PSM_PSMCT16)
+		{
+			skip = 4;
+		}
+	}
+
+	return true;
+}
+
 bool GSC_ICO(const GSFrameInfo& fi, int& skip)
 {
 	if(skip == 0)
@@ -2300,6 +2383,7 @@ bool GSState::IsBadFrame(int& skip)
 		map[CRC::BullyCC] = GSC_BullyCC;
 		map[CRC::SoTC] = GSC_SoTC;
 		map[CRC::OnePieceGrandAdventure] = GSC_OnePieceGrandAdventure;
+		map[CRC::OnePieceGrandBattle] = GSC_OnePieceGrandBattle;
 		map[CRC::ICO] = GSC_ICO;
 		map[CRC::GT4] = GSC_GT4;
 		map[CRC::WildArms5] = GSC_WildArms5;

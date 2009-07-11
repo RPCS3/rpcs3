@@ -25,6 +25,7 @@
 #include "GSVertexSW.h"
 #include "GSFunctionMap.h"
 #include "GSThread.h"
+#include "GSAlignedClass.h"
 
 __declspec(align(16)) class GSRasterizerData
 {
@@ -46,7 +47,7 @@ public:
 	virtual void PrintStats() = 0;
 };
 
-class IDrawScanline
+class IDrawScanline : public GSAlignedClass<16>
 {
 public:
 	typedef void (__fastcall *DrawScanlineStaticPtr)(int right, int left, int top, const GSVertexSW& v);

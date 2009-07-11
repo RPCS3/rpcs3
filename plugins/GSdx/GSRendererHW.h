@@ -87,7 +87,7 @@ protected:
 
 			if(s_dump)
 			{
-				if(s_save) 
+				if(s_save && s_n >= s_saven) 
 				{
 					t->Save(format("c:\\temp2\\_%05d_f%I64d_fr%d_%05x_%d.bmp", s_n, m_perfmon.GetFrame(), i, (int)TEX0.TBP0, (int)TEX0.PSM));
 				}
@@ -157,7 +157,7 @@ protected:
 
 			string s;
 			
-			if(s_save && tex) 
+			if(s_save && s_n >= s_saven && tex) 
 			{
 				s = format("c:\\temp2\\_%05d_f%I64d_tex_%05x_%d_%d%d_%02x_%02x_%02x_%02x.dds", 
 					s_n, frame, (int)context->TEX0.TBP0, (int)context->TEX0.PSM,
@@ -177,14 +177,14 @@ protected:
 
 			s_n++;
 
-			if(s_save)
+			if(s_save && s_n >= s_saven)
 			{
 				s = format("c:\\temp2\\_%05d_f%I64d_rt0_%05x_%d.bmp", s_n, frame, context->FRAME.Block(), context->FRAME.PSM);
 
 				rt->m_texture->Save(s);
 			}
 
-			if(s_savez)
+			if(s_savez && s_n >= s_saven)
 			{
 				s = format("c:\\temp2\\_%05d_f%I64d_rz0_%05x_%d.bmp", s_n, frame, context->ZBUF.Block(), context->ZBUF.PSM);
 
@@ -265,14 +265,14 @@ protected:
 
 			string s;
 
-			if(s_save)
+			if(s_save && s_n >= s_saven)
 			{
 				s = format("c:\\temp2\\_%05d_f%I64d_rt1_%05x_%d.bmp", s_n, frame, context->FRAME.Block(), context->FRAME.PSM);
 
 				rt->m_texture->Save(s);
 			}
 
-			if(s_savez)
+			if(s_savez && s_n >= s_saven)
 			{
 				s = format("c:\\temp2\\_%05d_f%I64d_rz1_%05x_%d.bmp", s_n, frame, context->ZBUF.Block(), context->ZBUF.PSM);
 

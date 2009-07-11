@@ -19,6 +19,7 @@
 #include "PrecompiledHeader.h"
 #include "IniInterface.h"
 #include "MainFrame.h"
+#include "Dialogs/ModalPopups.h"
 
 #include "Resources/EmbeddedImage.h"
 #include "Resources/BackgroundLogo.h"
@@ -46,11 +47,33 @@ wxFileConfig* OpenConfig( const wxString& filename )
 	return new wxFileConfig( wxEmptyString, wxEmptyString, filename, wxEmptyString, wxCONFIG_USE_RELATIVE_PATH );
 }
 
+void Pcsx2App::ReadUserModeSettings()
+{
+	wxString configfile( Path::Combine( wxGetCwd(), L"usermode.ini" ) );
+	
+	if( !wxFile::Exists( configfile ) )
+	{
+		Dialogs::PickUserModeDialog( m_MainFrame ).ShowModal();
+	}
+	
+	wxFileConfig* conf_usermode = OpenConfig( Path::Combine( wxGetCwd(), L"usermode.ini" ) );
+
+	// Ensure proper scoping (IniLoader gets closed prior to delete)
+	{
+		IniLoader loader( *conf_usermode );
+		g_Conf.LoadSaveUserMode( loader );
+	}
+
+	delete conf_usermode;
+}
+
+// ------------------------------------------------------------------------
 // returns true if a configuration file is present in the current working dir (cwd).
 // returns false if not (in which case the calling code should fall back on using OpenConfigUserLocal())
+//
 bool Pcsx2App::TryOpenConfigCwd()
 {
-	wxDirName inipath_cwd( (wxDirName)wxGetCwd() + PathDefs::Configs );
+	wxDirName inipath_cwd( (wxDirName)wxGetCwd() + PathDefs::Settings );
 	if( !inipath_cwd.IsReadable() ) return false;
 
 	wxString inifile_cwd( Path::Combine( inipath_cwd, FilenameDefs::GetConfig() ) );
@@ -107,23 +130,33 @@ bool Pcsx2App::OnInit()
 
 	wxApp::OnInit();
 
-	// Ini Startup:  The ini file could be in one of two locations, depending on how Pcsx2 has
-	// been installed or configured.  The first place we look is in our program's working
-	// directory.  If the ini there exist, and is *not* empty, then we'll use it.  Otherwise
-	// we fall back on the ini file in the user's Documents folder.
+	i18n_InitPlainEnglish();
+	wxLocale::AddCatalogLookupPathPrefix( wxGetCwd() );
+
+	// User/Admin Mode Dual Setup:
+	//   Pcsx2 now supports two fundamental modes of operation.  The default is Classic mode,
+	//   which uses the Current Working Directory (CWD) for all user data files, and requires
+	//   Admin access on Vista (and some Linux as well).  The second mode is the Vista-
+	//   compatible \documents folder usage.  The mode is determined by the presence and
+	//   contents of a usermode.ini file in the CWD.  If the ini file is missing, we assume
+	//   the user is setting up a classic install.  If the ini is present, we read the value of
+	//   the UserMode and SettingsPath vars.
+	//
+	//   Conveniently this dual mode setup applies equally well to most modern Linux distros.
 
 	if( !TryOpenConfigCwd() )
 	{
 		PathDefs::GetDocuments().Mkdir();
-		PathDefs::GetConfigs().Mkdir();
+		PathDefs::GetSettings().Mkdir();
 
 		// Allow wx to use our config, and enforces auto-cleanup as well
-		wxString confile( Path::Combine( PathDefs::GetConfigs(), FilenameDefs::GetConfig() ) );
+		wxString confile( Path::Combine( PathDefs::GetSettings(), FilenameDefs::GetConfig() ) );
 		wxConfigBase::Set( OpenConfig( confile ) );
 		wxConfigBase::Get()->SetRecordDefaults();
 	}
 
 	g_Conf.Load();
+	g_Conf.Apply();
 
     m_MainFrame = new MainEmuFrame( NULL, wxID_ANY, wxEmptyString );
     SetTopWindow( m_MainFrame );
@@ -230,6 +263,7 @@ const wxBitmap& Pcsx2App::GetLogoBitmap()
 #include "Resources/ConfigIcon_Speedhacks.h"
 #include "Resources/ConfigIcon_Gamefixes.h"
 #include "Resources/ConfigIcon_Paths.h"
+#include "Resources/ConfigIcon_Plugins.h"
 
 // ------------------------------------------------------------------------
 wxImageList& Pcsx2App::GetImgList_Config()
@@ -260,6 +294,7 @@ wxImageList& Pcsx2App::GetImgList_Config()
 		}
 
 		FancyLoadMacro( Paths );
+		FancyLoadMacro( Plugins );
 		FancyLoadMacro( Gamefixes );
 		FancyLoadMacro( Speedhacks );
 		FancyLoadMacro( Video );

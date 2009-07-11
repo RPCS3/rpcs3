@@ -1,23 +1,24 @@
 #pragma once
 
 #include <wx/wx.h>
+#include <wx/filepicker.h>
+
 
 namespace wxHelpers
 {
-	// Creates a new checkbox and adds it to the specified sizer/parent combo.
-	// Uses the default spacer setting for adding checkboxes.
 	extern wxCheckBox& AddCheckBoxTo( wxWindow* parent, wxBoxSizer& sizer, const wxString& label, wxWindowID id=wxID_ANY );
-	extern wxStaticText& AddWrappedStaticTextTo(wxWindow* parent, wxBoxSizer& sizer, const wxString& label, int size );
+	extern wxRadioButton& AddRadioButtonTo( wxWindow* parent, wxBoxSizer& sizer, const wxString& label, wxWindowID id=wxID_ANY, bool isFirst = false );
+	extern wxStaticText& AddStaticTextTo(wxWindow* parent, wxBoxSizer& sizer, const wxString& label, int size=0, int alignFlags=wxALIGN_LEFT );
 
-	extern wxSizerFlags stdCenteredFlags;
-	extern wxSizerFlags stdSpacingFlags;
-
-	// This force-aligns the std button sizer to the right, where (at least) us win32 platform
-	// users always expect it to be.  Most likely Mac platforms expect it on the left side
-	// just because it's *not* where win32 sticks it.  Too bad!
-	extern wxSizerFlags stdButtonSizerFlags;
-
-	extern wxSizerFlags CheckboxFlags;
+	namespace SizerFlags
+	{
+		extern wxSizerFlags StdSpace();
+		extern wxSizerFlags StdCenter();
+		extern wxSizerFlags StdExpand();
+		extern wxSizerFlags StdGroupie();
+		extern wxSizerFlags StdButton();
+		extern wxSizerFlags Checkbox();
+	};
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -33,17 +34,26 @@ public:
 protected:
 	wxCheckBox& AddCheckBox( wxBoxSizer& sizer, const wxString& label, wxWindowID id=wxID_ANY );
 	wxStaticText& AddStaticText(wxBoxSizer& sizer, const wxString& label, int size=0 );
-    void AddOkCancel( wxBoxSizer& sizer );
+    void AddOkCancel( wxBoxSizer& sizer, bool hasApply=false );
 };
 
+//////////////////////////////////////////////////////////////////////////////////////////
+//
 class wxPanelWithHelpers : public wxPanel
 {
 protected:
+	bool m_StartNewRadioGroup;
 
 public:
 	wxPanelWithHelpers( wxWindow* parent, int id, const wxPoint& pos=wxDefaultPosition, const wxSize& size=wxDefaultSize );
 
 protected:
 	wxCheckBox& AddCheckBox( wxBoxSizer& sizer, const wxString& label, wxWindowID id=wxID_ANY );
-	wxStaticText& AddStaticText(wxBoxSizer& sizer, const wxString& label, int size=0 );
+	wxRadioButton& AddRadioButton( wxBoxSizer& sizer, const wxString& label, const wxString& subtext=wxEmptyString, wxWindowID id=wxID_ANY );
+	wxStaticText& AddStaticText(wxBoxSizer& sizer, const wxString& label, int size=0, int alignFlags=wxALIGN_LEFT );
+	
+	void StartRadioGroup()
+	{
+		m_StartNewRadioGroup = true;
+	}
 };

@@ -28,11 +28,11 @@ class GSTextureCacheOGL : public GSTextureCache
 {
 	class SourceOGL : public Source
 	{
+	protected:
+		int Get8bitFormat() {return 0;} // TODO
+
 	public:
 		explicit SourceOGL(GSRenderer* r) : Source(r) {}
-
-		bool Create();
-		bool Create(Target* dst);
 	};
 
 	class TargetOGL : public Target

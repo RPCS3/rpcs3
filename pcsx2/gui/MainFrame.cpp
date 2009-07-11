@@ -19,7 +19,7 @@
 #include "PrecompiledHeader.h"
 #include "MainFrame.h"
 #include "LogOptionsDialog.h"
-#include "AboutBoxDialog.h"
+#include "Dialogs/ModalPopups.h"
 
 #include "Resources/EmbeddedImage.h"
 #include "Resources/AppIcon.h"

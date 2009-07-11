@@ -1942,6 +1942,14 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\gui\i18n.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\gui\i18n.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\gui\IniInterface.cpp"
 				>
 			</File>
@@ -1977,10 +1985,6 @@
 					>
 				</File>
 				<File
-					RelativePath="..\..\gui\AboutBoxDialog.h"
-					>
-				</File>
-				<File
 					RelativePath="..\..\gui\AdvancedDialog.cpp"
 					>
 				</File>
@@ -2002,6 +2006,14 @@
 				</File>
 				<File
 					RelativePath="..\..\gui\LogOptionsDialog.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\gui\Dialogs\ModalPopups.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\gui\Dialogs\PickUserModeDialog.cpp"
 					>
 				</File>
 			</Filter>
@@ -2185,6 +2197,38 @@
 					>
 				</File>
 			</Filter>
+			<Filter
+				Name="Linux"
+				>
+				<File
+					RelativePath="..\..\Linux\LnxHostSys.cpp"
+					>
+					<FileConfiguration
+						Name="Debug|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Devel|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+				</File>
+			</Filter>
 		</Filter>
 		<File
 			RelativePath="..\..\Common.h"
@@ -2192,10 +2236,6 @@
 		</File>
 		<File
 			RelativePath="..\..\Config.h"
-			>
-		</File>
-		<File
-			RelativePath=".\icon1.ico"
 			>
 		</File>
 		<File

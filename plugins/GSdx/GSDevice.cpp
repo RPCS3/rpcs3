@@ -24,6 +24,7 @@
 
 GSDevice::GSDevice() 
 	: m_wnd(NULL)
+	, m_rbswapped(false)
 	, m_backbuffer(NULL)
 	, m_merge(NULL)
 	, m_weavebob(NULL)
@@ -34,6 +35,13 @@ GSDevice::GSDevice()
 
 GSDevice::~GSDevice() 
 {
+	for_each(m_pool.begin(), m_pool.end(), delete_object());
+	
+	delete m_backbuffer;
+	delete m_merge; 
+	delete m_weavebob;
+	delete m_blend;
+	delete m_1x1;
 }
 
 bool GSDevice::Create(GSWnd* wnd, bool vsync)
@@ -44,12 +52,9 @@ bool GSDevice::Create(GSWnd* wnd, bool vsync)
 	return true;
 }
 
-bool GSDevice::Reset(int w, int h, bool fs)
+bool GSDevice::Reset(int w, int h, int mode)
 {
-	for(list<GSTexture*>::iterator i = m_pool.begin(); i != m_pool.end(); i++)
-	{
-		delete *i;
-	}
+	for_each(m_pool.begin(), m_pool.end(), delete_object());
 	
 	m_pool.clear();
 	
@@ -74,9 +79,15 @@ void GSDevice::Present(const GSVector4i& r, int shader)
 {
 	GSVector4i cr = m_wnd->GetClientRect();
 
-	if(m_backbuffer->GetWidth() != cr.width() || m_backbuffer->GetHeight() != cr.height())
+	int w = std::max(cr.width(), 1);
+	int h = std::max(cr.height(), 1);
+
+	if(!m_backbuffer || m_backbuffer->GetWidth() != w || m_backbuffer->GetHeight() != h)
 	{
-		Reset(cr.width(), cr.height(), false);
+		if(!Reset(w, h, DontCare))
+		{
+			return;
+		}
 	}
 
 	ClearRenderTarget(m_backbuffer, 0);
@@ -221,4 +232,22 @@ void GSDevice::Interlace(const GSVector2i& ds, int field, int mode, float yoffse
 	{
 		m_current = m_merge;
 	}
+}
+
+bool GSDevice::ResizeTexture(GSTexture** t, int w, int h)
+{
+	if(t == NULL) {ASSERT(0); return false;}
+
+	GSTexture* t2 = *t;
+
+	if(t2 == NULL || t2->GetWidth() != w || t2->GetHeight() != h)
+	{
+		delete t2;
+
+		t2 = CreateTexture(w, h);
+
+		*t = t2;
+	}
+
+	return t2 != NULL;
 }

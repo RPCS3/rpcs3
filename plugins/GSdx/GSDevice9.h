@@ -92,9 +92,11 @@ private:
 
 	DDCAPS m_ddcaps;
 	D3DCAPS9 m_d3dcaps;
+	D3DPRESENT_PARAMETERS m_pp;
 	CComPtr<IDirect3D9> m_d3d;
 	CComPtr<IDirect3DDevice9> m_dev;
 	CComPtr<IDirect3DSwapChain9> m_swapchain;
+	bool m_lost;
 
 	struct
 	{
@@ -103,7 +105,6 @@ private:
 	} m_vertices;
 
 public: // TODO
-	D3DPRESENT_PARAMETERS m_pp;
 
 	struct
 	{
@@ -132,9 +133,8 @@ public:
 	virtual ~GSDevice9();
 
 	bool Create(GSWnd* wnd, bool vsync);
-	bool Reset(int w, int h, bool fs);
-
-	bool IsLost();
+	bool Reset(int w, int h, int mode);
+	bool IsLost(bool update);
 	void Flip();
 
 	void BeginScene();
@@ -153,7 +153,7 @@ public:
 
 	GSTexture* CopyOffscreen(GSTexture* src, const GSVector4& sr, int w, int h, int format = 0);
 
-	virtual bool IsCurrentRGBA() {return false;}
+	void CopyRect(GSTexture* st, GSTexture* dt, const GSVector4i& r);
 
 	void StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, int shader = 0, bool linear = true);
 	void StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, IDirect3DPixelShader9* ps, const float* ps_cb, int ps_cb_len, bool linear = true);

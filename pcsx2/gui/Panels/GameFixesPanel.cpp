@@ -41,8 +41,8 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow& parent, int id ) :
 	AddCheckBox( groupSizer, _T("VU Add / Sub Hack - Special fix for Tri-Ace games!") );
 	AddCheckBox( groupSizer, _T("VU Clip Hack - Special fix for God of War") );
 
-	mainSizer.Add( label_Title, stdCenteredFlags );
-	mainSizer.Add( &groupSizer, stdSpacingFlags );
+	mainSizer.Add( label_Title, SizerFlags::StdCenter() );
+	mainSizer.Add( &groupSizer, SizerFlags::StdSpace() );
 
 	SetSizerAndFit( &mainSizer );
 

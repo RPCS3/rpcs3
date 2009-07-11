@@ -70,17 +70,22 @@ protected:
 	void OnResize( wxSizeEvent& evt );
 };
 
+
+//////////////////////////////////////////////////////////////////////////////////////////
+//
 struct AppImageIds
 {
 	struct ConfigIds
 	{
 		int	Paths,
+			Plugins,
 			Speedhacks,
 			Gamefixes,
 			Video;
 
 		ConfigIds() :
 			Paths( -1 )
+		,	Plugins( -1 )
 		,	Speedhacks( -1 )
 		,	Gamefixes( -1 )
 		,	Video( -1 )
@@ -148,6 +153,8 @@ public:
 	ConsoleLogFrame* GetConsoleFrame() const { return m_ConsoleFrame; }
 	void SetConsoleFrame( ConsoleLogFrame& frame ) { m_ConsoleFrame = &frame; }
 
+protected:
+	void ReadUserModeSettings();
 	bool TryOpenConfigCwd();
 };
 

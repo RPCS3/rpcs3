@@ -55,12 +55,15 @@ public:
 		void Write(const GSVector4i& r);
 		void Flush(uint32 count);
 
+	protected:
+		virtual int Get8bitFormat() = 0;
+
 	public:
 		GSTexture* m_palette;
 		bool m_initpalette;
 		uint32 m_valid[MAX_PAGES]; // each uint32 bits map to the 32 blocks of that page
 		uint32* m_clut;
-		int m_bpp;
+		int m_fmt;
 		bool m_target;
 		bool m_complete;
 
@@ -68,8 +71,8 @@ public:
 		explicit Source(GSRenderer* renderer);
 		virtual ~Source();
 
-		virtual bool Create() = 0;
-		virtual bool Create(Target* dst) = 0;
+		virtual bool Create(bool paltex);
+		virtual bool Create(Target* dst);
 		virtual void Update(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, const GSVector4i& rect);
 	};
 
@@ -90,6 +93,7 @@ public:
 
 protected:
 	GSRenderer* m_renderer;
+	bool m_paltex;
 
 	struct SourceMap
 	{
@@ -100,7 +104,7 @@ protected:
 
 		SourceMap() : m_used(false) {memset(m_pages, 0, sizeof(m_pages));}
 
-		void Add(Source* s, const GIFRegTEX0& TEX0);
+		void Add(Source* s, const GIFRegTEX0& TEX0, GSLocalMemory& mem);
 		void RemoveAll();
 		void RemoveAt(Source* s);
 

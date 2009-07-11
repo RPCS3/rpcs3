@@ -1032,7 +1032,7 @@ public:
 	bool allfalse() const
 	{
 		#if _M_SSE >= 0x401
-		return _mm_testz_si128(m, m);
+		return _mm_testz_si128(m, m) != 0;
 		#else
 		return _mm_movemask_epi8(m) == 0;
 		#endif
@@ -2485,15 +2485,15 @@ public:
 
 	GSVector4 clamp(const float scale = 255) const 
 	{
-		return minv(GSVector4(scale));
+		return min(GSVector4(scale));
 	}
 
-	GSVector4 minv(const GSVector4& a) const
+	GSVector4 min(const GSVector4& a) const
 	{
 		return GSVector4(_mm_min_ps(m, a));
 	}
 
-	GSVector4 maxv(const GSVector4& a) const
+	GSVector4 max(const GSVector4& a) const
 	{
 		return GSVector4(_mm_max_ps(m, a));
 	}
@@ -2550,7 +2550,7 @@ public:
 	{
 		#if _M_SSE >= 0x401
 		__m128i a = _mm_castps_si128(m);
-		return _mm_testz_si128(a, a);
+		return _mm_testz_si128(a, a) != 0;
 		#else
 		return _mm_movemask_ps(m) == 0;
 		#endif

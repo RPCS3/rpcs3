@@ -108,9 +108,9 @@ __declspec(align(16)) struct GSScanlineParam
 	const uint32* clut;
 	uint32 tw;
 
-	GSLocalMemory::Offset* fbo;
-	GSLocalMemory::Offset* zbo;
-	GSLocalMemory::Offset4* fzbo;
+	GSLocalMemory::PixelOffset* fbo;
+	GSLocalMemory::PixelOffset* zbo;
+	GSLocalMemory::PixelOffset4* fzbo;
 
 	uint32 fm, zm;
 };
@@ -122,10 +122,10 @@ __declspec(align(16)) struct GSScanlineEnvironment
 	const uint32* clut;
 	uint32 tw;
 
-	GSVector4i* fbr;
-	GSVector4i* zbr;
-	int** fbc;
-	int** zbc;
+	int* fbr;
+	int* zbr;
+	int* fbc;
+	int* zbc;
 	GSVector2i* fzbr;
 	GSVector2i* fzbc;
 

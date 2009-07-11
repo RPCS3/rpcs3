@@ -204,7 +204,7 @@ void GSTextureFX10::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSampl
 		str[0] = format("%d", sel.fst);
 		str[1] = format("%d", sel.wms);
 		str[2] = format("%d", sel.wmt);
-		str[3] = format("%d", sel.bpp);
+		str[3] = format("%d", sel.fmt);
 		str[4] = format("%d", sel.aem);
 		str[5] = format("%d", sel.tfx);
 		str[6] = format("%d", sel.tcc);
@@ -221,7 +221,7 @@ void GSTextureFX10::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSampl
 			{"PS_FST", str[0].c_str()},
 			{"PS_WMS", str[1].c_str()},
 			{"PS_WMT", str[2].c_str()},
-			{"PS_BPP", str[3].c_str()},
+			{"PS_FMT", str[3].c_str()},
 			{"PS_AEM", str[4].c_str()},
 			{"PS_TFX", str[5].c_str()},
 			{"PS_TCC", str[6].c_str()},
@@ -256,7 +256,7 @@ void GSTextureFX10::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSampl
 
 	if(sel.tfx != 4)
 	{
-		if(!(sel.bpp < 3 && sel.wms < 3 && sel.wmt < 3))
+		if(!(sel.fmt < 3 && sel.wms < 3 && sel.wmt < 3))
 		{
 			ssel.ltf = 0;
 		}
@@ -288,7 +288,7 @@ void GSTextureFX10::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSampl
 			m_ps_ss[ssel] = ss0;
 		}
 
-		if(sel.bpp >= 3)
+		if(sel.fmt >= 3)
 		{
 			ss1 = m_palette_ss;
 		}

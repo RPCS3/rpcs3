@@ -253,7 +253,8 @@ namespace Console
 		if( ConsoleLogFrame* FrameHandle = wxGetApp().GetConsoleFrame() )
 			FrameHandle->Newline();
 
-		fputs( "\n", emuLog );
+		if( emuLog != NULL )
+			fputs( "\n", emuLog );
 		return false;
 	}
 
@@ -263,7 +264,8 @@ namespace Console
 		if( ConsoleLogFrame* FrameHandle = wxGetApp().GetConsoleFrame() )
 			FrameHandle->Write( fmt );
 
-		fputs( fmt, emuLog );
+		if( emuLog != NULL )
+			fputs( fmt, emuLog );
 		return false;
 	}
 
@@ -273,7 +275,8 @@ namespace Console
 		if( ConsoleLogFrame* FrameHandle = wxGetApp().GetConsoleFrame() )
 			FrameHandle->Write( fmt );
 
-		fputs( fmt.ToAscii().data(), emuLog );
+		if( emuLog != NULL )
+			fputs( fmt.ToAscii().data(), emuLog );
 		return false;
 	}
 }

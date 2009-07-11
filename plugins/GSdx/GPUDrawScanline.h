@@ -26,9 +26,8 @@
 #include "GPUScanlineEnvironment.h"
 #include "GPUSetupPrimCodeGenerator.h"
 #include "GPUDrawScanlineCodeGenerator.h"
-#include "GSAlignedClass.h"
 
-class GPUDrawScanline : public GSAlignedClass<16>, public IDrawScanline
+class GPUDrawScanline : public IDrawScanline
 {
 	GPUScanlineEnvironment m_env;
 

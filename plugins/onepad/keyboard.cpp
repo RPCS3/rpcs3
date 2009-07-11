@@ -29,8 +29,8 @@
 
 __forceinline int FindKey(int key, int pad)
 {
-	for (int p = 0; p < PADSUBKEYS; p++)
-		for (int i = 0; i < PADKEYS; i++)
+	for (int p = 0; p < MAX_SUB_KEYS; p++)
+		for (int i = 0; i < MAX_KEYS; i++)
 			if (key ==  get_key(PadEnum[pad][p], i)) return i;
 	return -1;
 }
@@ -189,7 +189,7 @@ LRESULT WINAPI PADwndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 			for (int pad = 0; pad < 2; ++pad)
 			{
-				for (int i = 0; i < PADKEYS; i++)
+				for (int i = 0; i < MAX_KEYS; i++)
 				{
 					if (wParam ==  get_key(pad, i))
 					{
@@ -207,7 +207,7 @@ LRESULT WINAPI PADwndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		case WM_KEYUP:
 			for (int pad = 0; pad < 2; ++pad)
 			{
-				for (int i = 0; i < PADKEYS; i++)
+				for (int i = 0; i < MAX_KEYS; i++)
 				{
 					if (wParam == get_key(pad,i))
 					{

@@ -40,7 +40,7 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow& parent, int id ) :
 		wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE
 	);
 
-	mainSizer.Add( label_Title, stdCenteredFlags );
+	mainSizer.Add( label_Title, SizerFlags::StdCenter() );
 
 	wxSlider* vuScale = new wxSlider(this, wxID_ANY, Config.Hacks.VUCycleSteal,  0, 4 );
 	wxSlider* eeScale = new wxSlider(this, wxID_ANY, Config.Hacks.EECycleRate,  0, 2);

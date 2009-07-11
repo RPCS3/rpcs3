@@ -15,28 +15,22 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
- 
- #ifndef __LNXSYSEXEC_H__
-#define __LNXSYSEXEC_H__
 
-#include "Linux.h"
-#include "GS.h"
-#include <sys/mman.h>
-#include "x86/iR5900.h"
+#include "PrecompiledHeader.h"
 
-void SysPageFaultExceptionFilter( int signal, siginfo_t *info, void * );
-void __fastcall InstallLinuxExceptionHandler();
-void __fastcall ReleaseLinuxExceptionHandler();
+#include "ModalPopups.h"
 
-#define PCSX2_MEM_PROTECT_BEGIN() InstallLinuxExceptionHandler()
-#define PCSX2_MEM_PROTECT_END() ReleaseLinuxExceptionHandler()
+using namespace wxHelpers;
 
-extern void StartGui();
-extern void  RefreshMenuSlots();
+Dialogs::PickUserModeDialog::PickUserModeDialog( wxWindow* parent, int id ) :
+	wxDialogWithHelpers( parent, id, _("PCSX2 Select User Mode"), false )
+{
+	wxBoxSizer& s_main = *new wxBoxSizer( wxVERTICAL );
 
-extern void SignalExit(int sig);
-extern const char* g_pRunGSState;
-extern int efile;
-extern GtkWidget *pStatusBar;
+	AddStaticText( s_main, _("PCSX2 is starting from a new or unknown working directory and needs to be configured."), 400 );
+	AddStaticText( s_main, _("Current Working Directory: ") + wxGetCwd(), 480 );
 
-#endif
+	AddOkCancel( s_main );
+
+}
+

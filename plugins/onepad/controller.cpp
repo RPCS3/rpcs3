@@ -22,6 +22,8 @@
 #include "onepad.h"
 #include "controller.h"
 
+HatPins hat_position = {false, false, false, false};
+
 __forceinline int set_key(int pad, int index, int value)
 {
 	conf.keys[pad][index] = value;
@@ -32,8 +34,10 @@ __forceinline int get_key(int pad, int index)
 	return conf.keys[pad][index];
 }
 
-__forceinline KeyType type_of_key(int key)
+__forceinline KeyType type_of_key(int pad, int index)
  {
+	 int key = conf.keys[pad][index];
+	 
 	if (key < 0x10000) return PAD_KEYBOARD;
 	else if (key >= 0x10000 && key < 0x20000) return PAD_JOYBUTTONS;
 	else if (key >= 0x20000 && key < 0x30000) return PAD_JOYSTICK;
@@ -42,24 +46,24 @@ __forceinline KeyType type_of_key(int key)
 	else return PAD_NULL;
  }
  
- __forceinline int pad_to_key(int key)
+  __forceinline int pad_to_key(int pad, int index)
  {
-	return ((key) & 0xffff);
+	return ((conf.keys[pad][index]) & 0xffff);
 }
  
-__forceinline int key_to_joystick_id(int key)
+__forceinline int key_to_joystick_id(int pad, int index)
 {
-	return (((key) & 0xf000) >> 12);
+	return (((conf.keys[pad][index]) & 0xf000) >> 12);
 }
 
-__forceinline int key_to_button(int key)
+__forceinline int key_to_button(int pad, int index)
 {
-	return ((key) & 0xff);
+	return ((conf.keys[pad][index]) & 0xff);
 }
 
-__forceinline int key_to_axis(int key)
+__forceinline int key_to_axis(int pad, int index)
 {
-	return ((key) & 0xff);
+	return ((conf.keys[pad][index]) & 0xff);
 }
 
 __forceinline int button_to_key(int joy_id, int button_id)
@@ -82,12 +86,12 @@ __forceinline int hat_to_key(int joy_id, int dir, int axis_id)
 	return (0x40000 | ((joy_id) << 12) | ((dir) << 8) | (axis_id));
 }
 
-__forceinline int key_to_pov_sign(int key)
+__forceinline int key_to_pov_sign(int pad, int index)
 {
-	return (((key) & 0x100) >> 8);
+	return (((conf.keys[pad][index]) & 0x100) >> 8);
 }
 
-__forceinline int key_to_hat_dir(int key)
+__forceinline int key_to_hat_dir(int pad, int index)
 {
-	return (((key) & ~ 0x40000) >> 8);
+	return (((conf.keys[pad][index]) & ~ 0x40000) >> 8);
 }

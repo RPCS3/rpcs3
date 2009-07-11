@@ -25,6 +25,7 @@
 #pragma once
 
 #include <wx/image.h>
+#include <wx/statline.h>
 
 #include "wxHelpers.h"
 
@@ -68,8 +69,38 @@ namespace Panels
 	//
 	class PathsPanel: public wxPanelWithHelpers
 	{
+	protected:
+		class MyBasePanel : public wxPanelWithHelpers
+		{
+		public:
+			MyBasePanel(wxWindow& parent, int id=wxID_ANY);
+
+		protected:
+			wxDirPickerCtrl& AddDirPicker( wxBoxSizer& sizer, int id, const wxDirName& defaultPath, const wxString& label, const wxString& dialogLabel, bool pathMustExist=true );
+		};
+
+		class StandardPanel : public MyBasePanel
+		{
+		public:
+			StandardPanel(wxWindow& parent, int id=wxID_ANY);
+		};
+
+		class AdvancedPanel : public MyBasePanel
+		{
+		public:
+			AdvancedPanel(wxWindow& parent, int id=wxID_ANY);
+		};
+
 	public:
 		PathsPanel(wxWindow& parent, int id=wxID_ANY);
+	};
+
+	//////////////////////////////////////////////////////////////////////////////////////////
+	//
+	class PluginSelectorPanel: public wxPanelWithHelpers
+	{
+	public:
+		PluginSelectorPanel(wxWindow& parent, int id=wxID_ANY);
 
 	protected:
 

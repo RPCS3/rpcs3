@@ -19,7 +19,7 @@
 #include "PrecompiledHeader.h"
 #include "Misc.h"
 #include "App.h"
-#include "AboutBoxDialog.h"
+#include "Dialogs/ModalPopups.h"
 #include "wxHelpers.h"
 
 #include "Resources/EmbeddedImage.h"
@@ -27,6 +27,7 @@
 
 #include <wx/mstream.h>
 #include <wx/hyperlink.h>
+
 using namespace wxHelpers;
 
 namespace Dialogs {
@@ -97,19 +98,19 @@ AboutBoxDialog::AboutBoxDialog( wxWindow* parent, int id ):
 	label_auth->Wrap( m_bitmap_logo.GetSize().GetWidth() / 2 );
 	label_greets->Wrap( (m_bitmap_logo.GetSize().GetWidth() * 4) / 3 );
 
-	aboutUs.Add( label_auth, stdSpacingFlags );
-	contribs.Add( label_greets, stdSpacingFlags.Expand() );
+	aboutUs.Add( label_auth, SizerFlags::StdSpace() );
+	contribs.Add( label_greets, SizerFlags::StdExpand() );
 
 	AuthLogoSizer.Add( &aboutUs );
 	AuthLogoSizer.AddSpacer( 7 );
 	AuthLogoSizer.Add( &m_bitmap_logo, wxSizerFlags().Border( wxALL, 4 ) );
 
 	ContribSizer.AddStretchSpacer( 1 );
-	ContribSizer.Add( &m_bitmap_ps2system, stdSpacingFlags );
+	ContribSizer.Add( &m_bitmap_ps2system, SizerFlags::StdSpace() );
 	ContribSizer.AddStretchSpacer( 1 );
 	ContribSizer.Add( &contribs, wxSizerFlags(7).HorzBorder().Expand() );
 
-	mainSizer.Add( &AuthLogoSizer, stdSpacingFlags );
+	mainSizer.Add( &AuthLogoSizer, SizerFlags::StdSpace() );
 
 	mainSizer.Add( new wxHyperlinkCtrl(
 		this, wxID_ANY, L"Pcsx2 Official Website and Forums" , L"http://www.pcsx2.net" ),
@@ -118,9 +119,9 @@ AboutBoxDialog::AboutBoxDialog( wxWindow* parent, int id ):
 		this, wxID_ANY, L"Pcsx2 Official Svn Repository at Googlecode" , L"http://code.google.com/p/pcsx2" ),
 		wxSizerFlags(1).Center().Border( wxALL, 3 ) );
 
-	mainSizer.Add( &ContribSizer, stdSpacingFlags.Expand() );
+	mainSizer.Add( &ContribSizer, SizerFlags::StdExpand() );
 
-	mainSizer.Add( new wxButton( this, wxID_OK, L"I've seen enough"), stdCenteredFlags );
+	mainSizer.Add( new wxButton( this, wxID_OK, L"I've seen enough"), SizerFlags::StdCenter() );
 	SetSizerAndFit( &mainSizer );
 }
 

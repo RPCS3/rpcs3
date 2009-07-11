@@ -88,24 +88,9 @@ public:
 	// removes the lastmost directory from the path
 	void RemoveLast() { wxFileName::RemoveDir(GetCount() - 1); }
 
-	// ------------------------------------------------------------------------
-	bool Normalize( int flags = wxPATH_NORM_ALL, const wxString& cwd = wxEmptyString )
-	{
-		wxASSERT_MSG( IsDir(), L"Warning: Malformed directory name detected during wDirName normalization." );
-		return wxFileName::Normalize( flags, cwd );
-	}
-
-	bool MakeRelativeTo( const wxString& pathBase = wxEmptyString )
-	{
-		wxASSERT_MSG( IsDir(), L"Warning: Malformed directory name detected during wDirName normalization." );
-		return wxFileName::MakeRelativeTo( pathBase );
-	}
-	
-	bool MakeAbsolute( const wxString& cwd = wxEmptyString )
-	{
-		wxASSERT_MSG( IsDir(), L"Warning: Malformed directory name detected during wDirName normalization." );
-		return wxFileName::MakeAbsolute( cwd );
-	}
+	wxDirName& Normalize( int flags = wxPATH_NORM_ALL, const wxString& cwd = wxEmptyString );
+	wxDirName& MakeRelativeTo( const wxString& pathBase = wxEmptyString );
+	wxDirName& MakeAbsolute( const wxString& cwd = wxEmptyString );
 
 	// ------------------------------------------------------------------------
 
@@ -181,7 +166,7 @@ namespace PathDefs
 	extern const wxDirName Snapshots;
 	extern const wxDirName Savestates;
 	extern const wxDirName MemoryCards;
-	extern const wxDirName Configs;
+	extern const wxDirName Settings;
 	extern const wxDirName Plugins;
 	extern const wxDirName Themes;
 	
@@ -192,7 +177,7 @@ namespace PathDefs
 	extern wxDirName GetPlugins();
 	extern wxDirName GetSavestates();
 	extern wxDirName GetMemoryCards();
-	extern wxDirName GetConfigs();
+	extern wxDirName GetSettings();
 }
 
 namespace FilenameDefs

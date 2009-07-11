@@ -21,6 +21,8 @@
 #include <wx/wx.h>
 #include <wx/image.h>
 
+#include "wxHelpers.h"
+
 namespace Dialogs
 {
 	class AboutBoxDialog: public wxDialog
@@ -32,6 +34,12 @@ namespace Dialogs
 		wxStaticBitmap m_bitmap_logo;
 		wxStaticBitmap m_bitmap_ps2system;
 
+	};
+	
+	class PickUserModeDialog : public wxDialogWithHelpers
+	{
+	public:
+		PickUserModeDialog( wxWindow* parent, int id=wxID_ANY );
 	};
 }
 

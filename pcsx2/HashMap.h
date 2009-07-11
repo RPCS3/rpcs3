@@ -530,9 +530,10 @@ public:
 ///   hash keys.  The <see cref="HashMap" /> class isn't suited to the task since it requires the key type to
 ///   include a set of unary methods.  Obviously predicates cannot be added to fundamentals after the fact. :)
 ///   Note:
-///   Do not use <c>char *</c> or <c>wchar_t *</c> as key types.  Use <c>std::string</c> and <c>std::wstring</c> instead,
-///   as performance of those types will generally be superior.  For that matter, don't use this class at all!
-///   Use the string-specialized classes <see cref="Dictionary" /> and <see cref="UnicodeDictionary" />.
+///   Do not use <c>char *</c> or <c>wchar_t *</c> as key types.  Use <c>std::string</c> and <c>std::wstring</c>
+///   instead, as performance of those types will generally be superior due to string length caching.  For that
+///   matter, don't use this class at all! Use the string-specialized classes <see cref="Dictionary" /> and
+///   <see cref="UnicodeDictionary" />.
 /// </remarks>
 template< class Key, class T >
 class HashMap : public google::dense_hash_map<Key, T, CommonHashClass>
@@ -547,7 +548,7 @@ public:
 	///   Both the <c>emptyKey</c>a nd c>deletedKey</c> parameters must be unique values that
 	///   are *not* used as actual values in the set.
 	/// </remarks>
-	HashMap( Key emptyKey, Key deletedKey, int initialCapacity=33 ) :
+	HashMap( const Key& emptyKey, const Key& deletedKey, int initialCapacity=33 ) :
 		google::dense_hash_map<Key, T, CommonHashClass>( initialCapacity )
 	{
 		set_empty_key( emptyKey );
@@ -589,7 +590,7 @@ class Dictionary : public HashMap<std::string, T>
 public:
 	virtual ~Dictionary() {}
 
-	Dictionary( int initialCapacity=33, std::string emptyKey = "@@-EMPTY-@@", std::string deletedKey = "@@-DELETED-@@" ) :
+	Dictionary( int initialCapacity=33, const std::string& emptyKey = "@@-EMPTY-@@", const std::string& deletedKey = "@@-DELETED-@@" ) :
 		HashMap( emptyKey, deletedKey, initialCapacity)
 	{
 	}

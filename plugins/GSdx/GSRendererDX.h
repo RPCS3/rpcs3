@@ -91,10 +91,30 @@ public:
 		GSTextureFX::OMBlendSelector om_bsel;
 
 		om_bsel.abe = !IsOpaque();
-		om_bsel.a = context->ALPHA.A;
-		om_bsel.b = context->ALPHA.B;
-		om_bsel.c = context->ALPHA.C;
-		om_bsel.d = context->ALPHA.D;
+
+		if(om_bsel.abe)
+		{
+			om_bsel.a = context->ALPHA.A;
+			om_bsel.b = context->ALPHA.B;
+			om_bsel.c = context->ALPHA.C;
+			om_bsel.d = context->ALPHA.D;
+
+			if(env.PABE.PABE)
+			{
+				if(om_bsel.a == 0 && om_bsel.b == 1 && om_bsel.c == 0 && om_bsel.d == 1)
+				{
+					// this works because with PABE alpha blending is on when alpha >= 0x80, but since the pixel shader 
+					// cannot output anything over 0x80 (== 1.0) blending with 0x80 or turning it off gives the same result
+
+					om_bsel.abe = 0; 
+				}
+				else
+				{
+					ASSERT(0);
+				}
+			}
+		}
+
 		om_bsel.wr = (context->FRAME.FBMSK & 0x000000ff) != 0x000000ff;
 		om_bsel.wg = (context->FRAME.FBMSK & 0x0000ff00) != 0x0000ff00;
 		om_bsel.wb = (context->FRAME.FBMSK & 0x00ff0000) != 0x00ff0000;
@@ -173,7 +193,6 @@ public:
 		ps_sel.fst = PRIM->FST;
 		ps_sel.wms = context->CLAMP.WMS;
 		ps_sel.wmt = context->CLAMP.WMT;
-		ps_sel.bpp = 0;
 		ps_sel.aem = env.TEXA.AEM;
 		ps_sel.tfx = context->TEX0.TFX;
 		ps_sel.tcc = context->TEX0.TCC;
@@ -193,24 +212,30 @@ public:
 
 		GSTextureFX::PSConstantBuffer ps_cb;
 
-		ps_cb.FogColor_AREF = GSVector4((int)env.FOGCOL.FCR, (int)env.FOGCOL.FCG, (int)env.FOGCOL.FCB, 0) / 255;
-
-		switch(ps_sel.atst)
+		if(ps_sel.fog)
 		{
-		case ATST_LESS:
-			ps_cb.FogColor_AREF.a = (float)((int)context->TEST.AREF - 1);
-			break;
-		case ATST_GREATER:
-			ps_cb.FogColor_AREF.a = (float)((int)context->TEST.AREF + 1);
-			break;
-		default:
-			ps_cb.FogColor_AREF.a = (float)(int)context->TEST.AREF;
-			break;
+			ps_cb.FogColor_AREF = GSVector4((int)env.FOGCOL.FCR, (int)env.FOGCOL.FCG, (int)env.FOGCOL.FCB, 0) / 255;
+		}
+
+		if(ps_sel.ate)
+		{
+			switch(ps_sel.atst)
+			{
+			case ATST_LESS:
+				ps_cb.FogColor_AREF.a = (float)((int)context->TEST.AREF - 1);
+				break;
+			case ATST_GREATER:
+				ps_cb.FogColor_AREF.a = (float)((int)context->TEST.AREF + 1);
+				break;
+			default:
+				ps_cb.FogColor_AREF.a = (float)(int)context->TEST.AREF;
+				break;
+			}
 		}
 
 		if(tex)
 		{
-			ps_sel.bpp = tex->m_bpp;
+			ps_sel.fmt = tex->m_fmt;
 			ps_sel.rt = tex->m_target;
 
 			int w = tex->m_texture->GetWidth();
@@ -223,19 +248,19 @@ public:
 
 			switch(context->CLAMP.WMS)
 			{
-			case 0: 
+			case CLAMP_REPEAT: 
 				ps_ssel.tau = 1; 
 				break;
-			case 1: 
+			case CLAMP_CLAMP: 
 				ps_ssel.tau = 0; 
 				break;
-			case 2: 
+			case CLAMP_REGION_CLAMP: 
 				ps_cb.MinMax.x = ((float)(int)context->CLAMP.MINU) / (1 << context->TEX0.TW);
 				ps_cb.MinMax.z = ((float)(int)context->CLAMP.MAXU) / (1 << context->TEX0.TW);
 				ps_cb.MinF_TA.x = ((float)(int)context->CLAMP.MINU + 0.5f) / (1 << context->TEX0.TW);
 				ps_ssel.tau = 0; 
 				break;
-			case 3: 
+			case CLAMP_REGION_REPEAT: 
 				ps_cb.MskFix.x = context->CLAMP.MINU;
 				ps_cb.MskFix.z = context->CLAMP.MAXU;
 				ps_ssel.tau = 1; 
@@ -246,19 +271,19 @@ public:
 
 			switch(context->CLAMP.WMT)
 			{
-			case 0: 
+			case CLAMP_REPEAT: 
 				ps_ssel.tav = 1; 
 				break;
-			case 1: 
+			case CLAMP_CLAMP: 
 				ps_ssel.tav = 0; 
 				break;
-			case 2: 
+			case CLAMP_REGION_CLAMP: 
 				ps_cb.MinMax.y = ((float)(int)context->CLAMP.MINV) / (1 << context->TEX0.TH);
 				ps_cb.MinMax.w = ((float)(int)context->CLAMP.MAXV) / (1 << context->TEX0.TH);
 				ps_cb.MinF_TA.y = ((float)(int)context->CLAMP.MINV + 0.5f) / (1 << context->TEX0.TH);
 				ps_ssel.tav = 0; 
 				break;
-			case 3: 
+			case CLAMP_REGION_REPEAT: 
 				ps_cb.MskFix.y = context->CLAMP.MINV;
 				ps_cb.MskFix.w = context->CLAMP.MAXV;
 				ps_ssel.tav = 1; 

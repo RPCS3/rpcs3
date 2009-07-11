@@ -41,10 +41,16 @@ GSRenderer::GSRenderer(uint8* base, bool mt, void (*irq)(), GSDevice* dev)
 	s_dump = !!theApp.GetConfig("dump", 0);
 	s_save = !!theApp.GetConfig("save", 0);
 	s_savez = !!theApp.GetConfig("savez", 0);
+	s_saven = theApp.GetConfig("saven", 0);
 }
 
 GSRenderer::~GSRenderer()
 {
+	if(m_dev)
+	{
+		m_dev->Reset(1, 1, GSDevice::Windowed);
+	}
+
 	delete m_dev;
 }
 
@@ -259,9 +265,17 @@ void GSRenderer::VSync(int field)
 
 	Flush();
 
-	field = field ? 1 : 0;
-
-	if(!Merge(field)) return;
+	if(!m_dev->IsLost(true))
+	{
+		if(!Merge(field ? 1 : 0))
+		{
+			return;
+		}
+	}
+	else
+	{
+		ResetDevice();
+	}
 
 	// osd 
 
@@ -310,11 +324,6 @@ void GSRenderer::VSync(int field)
 	}
 
 	// present
-
-	if(m_dev->IsLost())
-	{
-		ResetDevice();
-	}
 
 	m_dev->Present(m_wnd.GetClientRect().fit(m_aspectratio), m_shader);
 
@@ -365,7 +374,7 @@ void GSRenderer::VSync(int field)
 
 				if(offscreen->Map(m))
 				{
-					m_capture.DeliverFrame(m.bits, m.pitch, m_dev->IsCurrentRGBA());
+					m_capture.DeliverFrame(m.bits, m.pitch, m_dev->IsRBSwapped());
 
 					offscreen->Unmap();
 				}

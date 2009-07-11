@@ -153,9 +153,9 @@ static void iIopDumpBlock( int startpc, u8 * ptr )
 	int numused, count;
 
 	Console::WriteLn( "dump1 %x:%x, %x", params startpc, psxpc, psxRegs.cycle );
-	Path::CreateDirectory( L"dumps" );
+	g_Conf.Folders.Logs.Mkdir();
 
-	wxString filename( Path::Combine( g_Conf.Folders.Dumps, wxsFormat( L"psxdump%.8X.txt", startpc ) ) );
+	wxString filename( Path::Combine( g_Conf.Folders.Logs, wxsFormat( L"psxdump%.8X.txt", startpc ) ) );
 	AsciiFile f( filename, wxFile::write );
 
 	/*for ( i = startpc; i < s_nEndBlock; i += 4 ) {
@@ -697,6 +697,7 @@ static __forceinline u32 psxRecClearMem(u32 pc)
 
 	jASSUME(blockidx != -1);
 
+	// Variable assignment in the middle of the while statements condition?
 	while (pexblock = recBlocks[blockidx - 1]) {
 		if (pexblock->startpc + pexblock->size * 4 <= lowerextent)
 			break;
@@ -705,6 +706,7 @@ static __forceinline u32 psxRecClearMem(u32 pc)
 		blockidx--;
 	}
 
+	// Same here.
 	while (pexblock = recBlocks[blockidx]) {
 		if (pexblock->startpc >= upperextent)
 			break;
@@ -813,6 +815,7 @@ static void iPsxBranchTest(u32 newpc, u32 cpuBranch)
 	x86SetJ8( j8Ptr[0] );
 }
 
+#if 0
 //static const int *s_pCode;
 
 #if !defined(_MSC_VER)
@@ -827,6 +830,7 @@ static void checkcodefn()
 #endif
 	Console::WriteLn("iop code changed! %x", params pctemp);
 }
+#endif
 #endif
 
 void rpsxSYSCALL()
@@ -873,7 +877,7 @@ void psxRecompileNextInstruction(int delayslot)
 	static u8 s_bFlushReg = 1;
 
 	// pblock isn't used elsewhere in this function.
-	BASEBLOCK* pblock = PSX_GETBLOCK(psxpc);
+	//BASEBLOCK* pblock = PSX_GETBLOCK(psxpc);
 
 	if( IsDebugBuild )
 		MOV32ItoR(EAX, psxpc);

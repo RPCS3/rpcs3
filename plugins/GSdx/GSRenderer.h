@@ -67,6 +67,7 @@ public:
 	bool s_dump;
 	bool s_save;
 	bool s_savez;
+	int s_saven;
 
 public:
 	GSRenderer(uint8* base, bool mt, void (*irq)(), GSDevice* dev);
@@ -127,7 +128,10 @@ protected:
 			{
 				// FIXME: berserk fpsm = 27 (8H)
 
-				Draw();
+				if(!m_dev->IsLost())
+				{
+					Draw();
+				}
 
 				m_perfmon.Put(GSPerfMon::Draw, 1);
 			}

@@ -104,14 +104,12 @@ create_Conf (void)
   GtkWidget *R1;
   GtkWidget *label3;
   GtkWidget *label6;
-  GtkWidget *L_Up;
   GtkWidget *L_Left;
   GtkWidget *Lx;
   GtkWidget *Ly;
   GtkWidget *L_Down;
   GtkWidget *L_Right;
   GtkWidget *checkbutton_reverselx;
-  GtkWidget *checkbutton_reversely;
   GtkWidget *R_Up;
   GtkWidget *R_Left;
   GtkWidget *Rx;
@@ -126,6 +124,9 @@ create_Conf (void)
   GtkWidget *scrolledwindow2;
   GtkWidget *padtreeview;
   GtkWidget *label7;
+  GtkWidget *checkbutton_reversely;
+  GtkWidget *L_Up;
+  GtkWidget *clear_button;
   GtkWidget *remove_button;
   GtkWidget *dialog_action_area1;
   GtkWidget *okbutton1;
@@ -355,12 +356,6 @@ create_Conf (void)
   gtk_label_set_justify (GTK_LABEL (label6), GTK_JUSTIFY_CENTER);
   gtk_label_set_line_wrap (GTK_LABEL (label6), TRUE);
 
-  L_Up = gtk_button_new_with_mnemonic (_("Up"));
-  gtk_widget_set_name (L_Up, "L_Up");
-  gtk_widget_show (L_Up);
-  gtk_fixed_put (GTK_FIXED (fixed1), L_Up, 384, 240);
-  gtk_widget_set_size_request (L_Up, 64, 24);
-
   L_Left = gtk_button_new_with_mnemonic (_("Left"));
   gtk_widget_set_name (L_Left, "L_Left");
   gtk_widget_show (L_Left);
@@ -396,12 +391,6 @@ create_Conf (void)
   gtk_widget_show (checkbutton_reverselx);
   gtk_fixed_put (GTK_FIXED (fixed1), checkbutton_reverselx, 360, 344);
   gtk_widget_set_size_request (checkbutton_reverselx, 111, 22);
-
-  checkbutton_reversely = gtk_check_button_new_with_mnemonic (_("Reverse LY"));
-  gtk_widget_set_name (checkbutton_reversely, "checkbutton_reversely");
-  gtk_widget_show (checkbutton_reversely);
-  gtk_fixed_put (GTK_FIXED (fixed1), checkbutton_reversely, 360, 368);
-  gtk_widget_set_size_request (checkbutton_reversely, 111, 22);
 
   R_Up = gtk_button_new_with_mnemonic (_("Up"));
   gtk_widget_set_name (R_Up, "R_Up");
@@ -489,11 +478,29 @@ create_Conf (void)
   gtk_widget_show (label7);
   gtk_frame_set_label_widget (GTK_FRAME (frame2), label7);
 
+  checkbutton_reversely = gtk_check_button_new_with_mnemonic (_("Reverse LY"));
+  gtk_widget_set_name (checkbutton_reversely, "checkbutton_reversely");
+  gtk_widget_show (checkbutton_reversely);
+  gtk_fixed_put (GTK_FIXED (fixed1), checkbutton_reversely, 360, 368);
+  gtk_widget_set_size_request (checkbutton_reversely, 111, 22);
+
+  L_Up = gtk_button_new_with_mnemonic (_("Up"));
+  gtk_widget_set_name (L_Up, "L_Up");
+  gtk_widget_show (L_Up);
+  gtk_fixed_put (GTK_FIXED (fixed1), L_Up, 384, 240);
+  gtk_widget_set_size_request (L_Up, 64, 24);
+
+  clear_button = gtk_button_new_with_mnemonic (_("Clear All"));
+  gtk_widget_set_name (clear_button, "clear_button");
+  gtk_widget_show (clear_button);
+  gtk_fixed_put (GTK_FIXED (fixed1), clear_button, 168, 352);
+  gtk_widget_set_size_request (clear_button, 70, 24);
+
   remove_button = gtk_button_new_with_mnemonic (_("Remove"));
   gtk_widget_set_name (remove_button, "remove_button");
   gtk_widget_show (remove_button);
-  gtk_fixed_put (GTK_FIXED (fixed1), remove_button, 248, 352);
-  gtk_widget_set_size_request (remove_button, 0, 0);
+  gtk_fixed_put (GTK_FIXED (fixed1), remove_button, 240, 352);
+  gtk_widget_set_size_request (remove_button, 70, 24);
 
   dialog_action_area1 = GTK_DIALOG (Conf)->action_area;
   gtk_widget_set_name (dialog_action_area1, "dialog_action_area1");
@@ -578,9 +585,6 @@ create_Conf (void)
   g_signal_connect ((gpointer) R1, "clicked",
                     G_CALLBACK (OnConf_Key),
                     NULL);
-  g_signal_connect ((gpointer) L_Up, "clicked",
-                    G_CALLBACK (OnConf_Key),
-                    NULL);
   g_signal_connect ((gpointer) L_Left, "clicked",
                     G_CALLBACK (OnConf_Key),
                     NULL);
@@ -598,9 +602,6 @@ create_Conf (void)
                     NULL);
   g_signal_connect ((gpointer) checkbutton_reverselx, "toggled",
                     G_CALLBACK (on_checkbutton_reverselx_toggled),
-                    NULL);
-  g_signal_connect ((gpointer) checkbutton_reversely, "toggled",
-                    G_CALLBACK (on_checkbutton_reversely_toggled),
                     NULL);
   g_signal_connect ((gpointer) R_Up, "clicked",
                     G_CALLBACK (OnConf_Key),
@@ -628,6 +629,15 @@ create_Conf (void)
                     NULL);
   g_signal_connect ((gpointer) checkbutton_reversery, "toggled",
                     G_CALLBACK (on_checkbutton_reversery_toggled),
+                    NULL);
+  g_signal_connect ((gpointer) checkbutton_reversely, "toggled",
+                    G_CALLBACK (on_checkbutton_reversely_toggled),
+                    NULL);
+  g_signal_connect ((gpointer) L_Up, "clicked",
+                    G_CALLBACK (OnConf_Key),
+                    NULL);
+  g_signal_connect ((gpointer) clear_button, "clicked",
+                    G_CALLBACK (on_Clear),
                     NULL);
   g_signal_connect ((gpointer) remove_button, "clicked",
                     G_CALLBACK (on_Remove),
@@ -678,14 +688,12 @@ create_Conf (void)
   GLADE_HOOKUP_OBJECT (Conf, R1, "R1");
   GLADE_HOOKUP_OBJECT (Conf, label3, "label3");
   GLADE_HOOKUP_OBJECT (Conf, label6, "label6");
-  GLADE_HOOKUP_OBJECT (Conf, L_Up, "L_Up");
   GLADE_HOOKUP_OBJECT (Conf, L_Left, "L_Left");
   GLADE_HOOKUP_OBJECT (Conf, Lx, "Lx");
   GLADE_HOOKUP_OBJECT (Conf, Ly, "Ly");
   GLADE_HOOKUP_OBJECT (Conf, L_Down, "L_Down");
   GLADE_HOOKUP_OBJECT (Conf, L_Right, "L_Right");
   GLADE_HOOKUP_OBJECT (Conf, checkbutton_reverselx, "checkbutton_reverselx");
-  GLADE_HOOKUP_OBJECT (Conf, checkbutton_reversely, "checkbutton_reversely");
   GLADE_HOOKUP_OBJECT (Conf, R_Up, "R_Up");
   GLADE_HOOKUP_OBJECT (Conf, R_Left, "R_Left");
   GLADE_HOOKUP_OBJECT (Conf, Rx, "Rx");
@@ -700,6 +708,9 @@ create_Conf (void)
   GLADE_HOOKUP_OBJECT (Conf, scrolledwindow2, "scrolledwindow2");
   GLADE_HOOKUP_OBJECT (Conf, padtreeview, "padtreeview");
   GLADE_HOOKUP_OBJECT (Conf, label7, "label7");
+  GLADE_HOOKUP_OBJECT (Conf, checkbutton_reversely, "checkbutton_reversely");
+  GLADE_HOOKUP_OBJECT (Conf, L_Up, "L_Up");
+  GLADE_HOOKUP_OBJECT (Conf, clear_button, "clear_button");
   GLADE_HOOKUP_OBJECT (Conf, remove_button, "remove_button");
   GLADE_HOOKUP_OBJECT_NO_REF (Conf, dialog_action_area1, "dialog_action_area1");
   GLADE_HOOKUP_OBJECT (Conf, okbutton1, "okbutton1");

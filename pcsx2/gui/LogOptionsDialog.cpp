@@ -46,13 +46,13 @@ LogOptionsDialog::eeLogOptionsPanel::eeLogOptionsPanel( wxWindow* parent ) :
 
 	AddCheckBoxTo( this, eeMisc, L"Memory",	LogID_Memory );
 	AddCheckBoxTo( this, eeMisc, L"Bios",	LogID_Bios );
-	AddCheckBoxTo( this, eeMisc, L"Elf",		LogID_ELF );
+	AddCheckBoxTo( this, eeMisc, L"Elf",	LogID_ELF );
 
 	wxBoxSizer& eeStack = *new wxBoxSizer( wxVERTICAL );
-	eeStack.Add( new DisasmPanel( this ), stdSpacingFlags );
+	eeStack.Add( new DisasmPanel( this ), SizerFlags::StdSpace() );
 	eeStack.Add( &eeMisc );
 
-	ThisSizer.Add( new HwPanel( this ), stdSpacingFlags );
+	ThisSizer.Add( new HwPanel( this ), SizerFlags::StdSpace() );
 	ThisSizer.Add( &eeStack );
 
 	SetValue( true );
@@ -62,11 +62,11 @@ LogOptionsDialog::eeLogOptionsPanel::eeLogOptionsPanel( wxWindow* parent ) :
 LogOptionsDialog::eeLogOptionsPanel::DisasmPanel::DisasmPanel( wxWindow* parent ) :
 	CheckedStaticBox( parent, wxVERTICAL, L"Disasm" , LogID_Disasm )
 {
-	AddCheckBox( L"Core",	LogID_CPU );
+	AddCheckBox( L"Core",		LogID_CPU );
 	AddCheckBox( L"Fpu",		LogID_FPU );
 	AddCheckBox( L"VU0",		LogID_VU0 );
-	AddCheckBox( L"Cop0",	LogID_COP0 );
-	AddCheckBox( L"VU Macro",LogID_VU_Macro );
+	AddCheckBox( L"Cop0",		LogID_COP0 );
+	AddCheckBox( L"VU Macro",	LogID_VU_Macro );
 
 	SetValue( false );
 	Fit();
@@ -75,7 +75,7 @@ LogOptionsDialog::eeLogOptionsPanel::DisasmPanel::DisasmPanel( wxWindow* parent 
 LogOptionsDialog::eeLogOptionsPanel::HwPanel::HwPanel( wxWindow* parent ) :
 	CheckedStaticBox( parent, wxVERTICAL, L"Hardware", LogID_Hardware )
 {
-	AddCheckBox( L"Registers", LogID_Registers );
+	AddCheckBox( L"Registers",	LogID_Registers );
 	AddCheckBox( L"Dma",		LogID_DMA );
 	AddCheckBox( L"Vif",		LogID_VIF );
 	AddCheckBox( L"SPR",		LogID_SPR );
@@ -132,11 +132,11 @@ LogOptionsDialog::LogOptionsDialog(wxWindow* parent, int id, const wxPoint& pos,
 	// only wanted to work right for the miscSizer and I couldn't figure out why the CheckStaticBox
 	// panel wouldn't also resize to fit the window.. :(  -- air
 
-	topSizer.Add( &eeBox, stdSpacingFlags ); //.Expand() );
-	topSizer.Add( &iopSizer, stdSpacingFlags ); //.Expand() );
+	topSizer.Add( &eeBox, SizerFlags::StdSpace() ); //.Expand() );
+	topSizer.Add( &iopSizer, SizerFlags::StdSpace() ); //.Expand() );
 
 	mainsizer.Add( &topSizer ); //, wxSizerFlags().Expand() );		// topsizer has it's own padding.
-	mainsizer.Add( &miscSizer, stdSpacingFlags ); //.Expand() );
+	mainsizer.Add( &miscSizer, SizerFlags::StdSpace() ); //.Expand() );
 
 	AddOkCancel( mainsizer );
 

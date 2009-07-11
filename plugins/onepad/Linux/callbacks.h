@@ -31,11 +31,7 @@ OnConf_Key                             (GtkButton       *button,
                                         gpointer         user_data);
 
 void
-on_checkbutton_reversery_toggled       (GtkToggleButton *togglebutton,
-                                        gpointer         user_data);
-
-void
-on_checkbutton_reverserx_toggled       (GtkToggleButton *togglebutton,
+on_checkbutton_reverselx_toggled       (GtkToggleButton *togglebutton,
                                         gpointer         user_data);
 
 void
@@ -43,11 +39,23 @@ on_forcefeedback_toggled               (GtkToggleButton *togglebutton,
                                         gpointer         user_data);
 
 void
-on_checkbutton_reverselx_toggled       (GtkToggleButton *togglebutton,
+on_checkbutton_reverserx_toggled       (GtkToggleButton *togglebutton,
+                                        gpointer         user_data);
+
+void
+on_checkbutton_reversery_toggled       (GtkToggleButton *togglebutton,
                                         gpointer         user_data);
 
 void
 on_checkbutton_reversely_toggled       (GtkToggleButton *togglebutton,
+                                        gpointer         user_data);
+
+void
+on_Remove                              (GtkButton       *button,
+                                        gpointer         user_data);
+
+void
+on_Clear                               (GtkButton       *button,
                                         gpointer         user_data);
 
 void
@@ -56,8 +64,4 @@ OnConf_Ok                              (GtkButton       *button,
 
 void
 OnConf_Cancel                          (GtkButton       *button,
-                                        gpointer         user_data);
-
-void
-on_Remove                              (GtkButton       *button,
                                         gpointer         user_data);

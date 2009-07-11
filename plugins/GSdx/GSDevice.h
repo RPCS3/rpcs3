@@ -55,6 +55,7 @@ class GSDevice : public GSAlignedClass<16>
 protected:
 	GSWnd* m_wnd;
 	bool m_vsync;
+	bool m_rbswapped;
 	GSTexture* m_backbuffer;
 	GSTexture* m_merge;
 	GSTexture* m_weavebob;
@@ -73,10 +74,11 @@ public:
 
 	void Recycle(GSTexture* t);
 
-	virtual bool Create(GSWnd* wnd, bool vsync);
-	virtual bool Reset(int w, int h, bool fs);
+	enum {Windowed, Fullscreen, DontCare};
 
-	virtual bool IsLost() {return false;}
+	virtual bool Create(GSWnd* wnd, bool vsync);
+	virtual bool Reset(int w, int h, int mode);
+	virtual bool IsLost(bool update = false) {return false;}
 	virtual void Present(const GSVector4i& r, int shader);
 	virtual void Flip() {}
 
@@ -96,14 +98,19 @@ public:
 
 	virtual GSTexture* CopyOffscreen(GSTexture* src, const GSVector4& sr, int w, int h, int format = 0) {return NULL;}
 
+	virtual void CopyRect(GSTexture* st, GSTexture* dt, const GSVector4i& r) {}
+
 	virtual void StretchRect(GSTexture* st, GSTexture* dt, const GSVector4& dr, int shader = 0, bool linear = true);
 	virtual void StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, int shader = 0, bool linear = true) {}
 
 	GSTexture* GetCurrent();
-	virtual bool IsCurrentRGBA() {return true;}
 
 	void Merge(GSTexture* st[2], GSVector4* sr, GSVector4* dr, const GSVector2i& fs, bool slbg, bool mmod, const GSVector4& c);
 	void Interlace(const GSVector2i& ds, int field, int mode, float yoffset);
+
+	bool ResizeTexture(GSTexture** t, int w, int h);
+
+	bool IsRBSwapped() {return m_rbswapped;}
 
 	template<class T> void PrepareShaderMacro(vector<T>& dst, const T* src, const char* model)
 	{

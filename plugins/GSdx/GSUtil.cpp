@@ -28,8 +28,8 @@
 static struct GSUtilMaps
 {
 	uint8 PrimClassField[8];
-	bool CompatibleBitsField[64][64];
-	bool SharedBitsField[64][64];
+	uint32 CompatibleBitsField[64][2];
+	uint32 SharedBitsField[64][2];
 
 	struct GSUtilMaps()
 	{
@@ -44,31 +44,36 @@ static struct GSUtilMaps
 
 		memset(CompatibleBitsField, 0, sizeof(CompatibleBitsField));
 
-		CompatibleBitsField[PSM_PSMCT32][PSM_PSMCT24] = true;
-		CompatibleBitsField[PSM_PSMCT24][PSM_PSMCT32] = true;
-		CompatibleBitsField[PSM_PSMCT16][PSM_PSMCT16S] = true;
-		CompatibleBitsField[PSM_PSMCT16S][PSM_PSMCT16] = true;
-		CompatibleBitsField[PSM_PSMZ32][PSM_PSMZ24] = true;
-		CompatibleBitsField[PSM_PSMZ24][PSM_PSMZ32] = true;
-		CompatibleBitsField[PSM_PSMZ16][PSM_PSMZ16S] = true;
-		CompatibleBitsField[PSM_PSMZ16S][PSM_PSMZ16] = true;
+		for(int i = 0; i < 64; i++)
+		{
+			CompatibleBitsField[i][i >> 5] |= 1 << (i & 0x1f);
+		}
 
-		memset(SharedBitsField, 1, sizeof(SharedBitsField));
+		CompatibleBitsField[PSM_PSMCT32][PSM_PSMCT24 >> 5] |= 1 << (PSM_PSMCT24 & 0x1f);
+		CompatibleBitsField[PSM_PSMCT24][PSM_PSMCT32 >> 5] |= 1 << (PSM_PSMCT32 & 0x1f);
+		CompatibleBitsField[PSM_PSMCT16][PSM_PSMCT16S >> 5] |= 1 << (PSM_PSMCT16S & 0x1f);
+		CompatibleBitsField[PSM_PSMCT16S][PSM_PSMCT16 >> 5] |= 1 << (PSM_PSMCT16 & 0x1f);
+		CompatibleBitsField[PSM_PSMZ32][PSM_PSMZ24 >> 5] |= 1 << (PSM_PSMZ24 & 0x1f);
+		CompatibleBitsField[PSM_PSMZ24][PSM_PSMZ32 >> 5] |= 1 << (PSM_PSMZ32 & 0x1f);
+		CompatibleBitsField[PSM_PSMZ16][PSM_PSMZ16S >> 5] |= 1 << (PSM_PSMZ16S & 0x1f);
+		CompatibleBitsField[PSM_PSMZ16S][PSM_PSMZ16 >> 5] |= 1 << (PSM_PSMZ16 & 0x1f);
 
-		SharedBitsField[PSM_PSMCT24][PSM_PSMT8H] = false;
-		SharedBitsField[PSM_PSMCT24][PSM_PSMT4HL] = false;
-		SharedBitsField[PSM_PSMCT24][PSM_PSMT4HH] = false;
-		SharedBitsField[PSM_PSMZ24][PSM_PSMT8H] = false;
-		SharedBitsField[PSM_PSMZ24][PSM_PSMT4HL] = false;
-		SharedBitsField[PSM_PSMZ24][PSM_PSMT4HH] = false;
-		SharedBitsField[PSM_PSMT8H][PSM_PSMCT24] = false;
-		SharedBitsField[PSM_PSMT8H][PSM_PSMZ24] = false;
-		SharedBitsField[PSM_PSMT4HL][PSM_PSMCT24] = false;
-		SharedBitsField[PSM_PSMT4HL][PSM_PSMZ24] = false;
-		SharedBitsField[PSM_PSMT4HL][PSM_PSMT4HH] = false;
-		SharedBitsField[PSM_PSMT4HH][PSM_PSMCT24] = false;
-		SharedBitsField[PSM_PSMT4HH][PSM_PSMZ24] = false;
-		SharedBitsField[PSM_PSMT4HH][PSM_PSMT4HL] = false;
+		memset(SharedBitsField, 0, sizeof(SharedBitsField));
+
+		SharedBitsField[PSM_PSMCT24][PSM_PSMT8H >> 5] |= 1 << (PSM_PSMT8H & 0x1f);
+		SharedBitsField[PSM_PSMCT24][PSM_PSMT4HL >> 5] |= 1 << (PSM_PSMT4HL & 0x1f);
+		SharedBitsField[PSM_PSMCT24][PSM_PSMT4HH >> 5] |= 1 << (PSM_PSMT4HH & 0x1f);
+		SharedBitsField[PSM_PSMZ24][PSM_PSMT8H >> 5] |= 1 << (PSM_PSMT8H & 0x1f);
+		SharedBitsField[PSM_PSMZ24][PSM_PSMT4HL >> 5] |= 1 << (PSM_PSMT4HL & 0x1f);
+		SharedBitsField[PSM_PSMZ24][PSM_PSMT4HH >> 5] |= 1 << (PSM_PSMT4HH & 0x1f);
+		SharedBitsField[PSM_PSMT8H][PSM_PSMCT24 >> 5] |= 1 << (PSM_PSMCT24 & 0x1f);
+		SharedBitsField[PSM_PSMT8H][PSM_PSMZ24 >> 5] |= 1 << (PSM_PSMZ24 & 0x1f);
+		SharedBitsField[PSM_PSMT4HL][PSM_PSMCT24 >> 5] |= 1 << (PSM_PSMCT24 & 0x1f);
+		SharedBitsField[PSM_PSMT4HL][PSM_PSMZ24 >> 5] |= 1 << (PSM_PSMZ24 & 0x1f);
+		SharedBitsField[PSM_PSMT4HL][PSM_PSMT4HH >> 5] |= 1 << (PSM_PSMT4HH & 0x1f);
+		SharedBitsField[PSM_PSMT4HH][PSM_PSMCT24 >> 5] |= 1 << (PSM_PSMCT24 & 0x1f);
+		SharedBitsField[PSM_PSMT4HH][PSM_PSMZ24 >> 5] |= 1 << (PSM_PSMZ24 & 0x1f);
+		SharedBitsField[PSM_PSMT4HH][PSM_PSMT4HL >> 5] |= 1 << (PSM_PSMT4HL & 0x1f);
 	}
 
 } s_maps;
@@ -80,21 +85,17 @@ GS_PRIM_CLASS GSUtil::GetPrimClass(uint32 prim)
 
 bool GSUtil::HasSharedBits(uint32 spsm, uint32 dpsm)
 {
-	return s_maps.SharedBitsField[spsm][dpsm];
+	return (s_maps.SharedBitsField[dpsm][spsm >> 5] & (1 << (spsm & 0x1f))) == 0;
 }
 
 bool GSUtil::HasSharedBits(uint32 sbp, uint32 spsm, uint32 dbp, uint32 dpsm)
 {
-	if(sbp != dbp) return false;
-
-	return HasSharedBits(spsm, dpsm);
+	return ((sbp ^ dbp) | (s_maps.SharedBitsField[dpsm][spsm >> 5] & (1 << (spsm & 0x1f)))) == 0;
 }
 
 bool GSUtil::HasCompatibleBits(uint32 spsm, uint32 dpsm)
 {
-	if(spsm == dpsm) return true;
-
-	return s_maps.CompatibleBitsField[spsm][dpsm];
+	return (s_maps.CompatibleBitsField[spsm][dpsm >> 5] & (1 << (dpsm & 0x1f))) != 0;
 }
 
 bool GSUtil::CheckDirectX()

@@ -17,3 +17,11 @@
  */
 
 #include "PrecompiledHeader.h"
+
+#include "ConfigurationPanels.h"
+
+Panels::PluginSelectorPanel::PluginSelectorPanel( wxWindow& parent, int id ) :
+	wxPanelWithHelpers( &parent, id )
+{
+}
+

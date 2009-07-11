@@ -7,14 +7,14 @@
 	<Tool
 		Name="VCCLCompilerTool"
 		AdditionalIncludeDirectories="./;../../;../../x86;&quot;../../x86/ix86-32&quot;;../libs;../../IPU"
-		PreprocessorDefinitions="__i386__;ENABLE_NLS;PACKAGE=\&quot;pcsx2\&quot;;TIXML_USE_STL"
+		PreprocessorDefinitions="__i386__;TIXML_USE_STL;_SCL_SECURE_NO_WARNINGS"
 		RuntimeTypeInfo="false"
 		PrecompiledHeaderFile="$(IntDir)/pcsx2.pch"
 		CompileAs="0"
 	/>
 	<Tool
 		Name="VCLinkerTool"
-		AdditionalDependencies="odbc32.lib odbccp32.lib comctl32.lib ws2_32.lib winmm.lib"
+		AdditionalDependencies="odbc32.lib odbccp32.lib comctl32.lib ws2_32.lib shlwapi.lib winmm.lib"
 		LinkIncremental="1"
 		AdditionalLibraryDirectories="..\;..\libs"
 		GenerateDebugInformation="true"

@@ -408,6 +408,10 @@
 				RelativePath="..\..\include\Utilities\win_memzero.h"
 				>
 			</File>
+			<File
+				RelativePath="..\..\include\Utilities\WinVersion.h"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Resource Files"
