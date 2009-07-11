@@ -130,7 +130,7 @@ extern bool SrcLog_GPU( const char* fmt, ... );
 #define SIF_LOG  (varLog & 0x00002000) && SrcLog_SIF
 #define IPU_LOG  (varLog & 0x00004000) && SrcLog_IPU
 #define VUM_LOG  (varLog & 0x00008000) && SrcLog_VUM
-#define RPC_LOG  (varLog & 0x00010000) && SrcLog_RPC
+#define ISOFS_LOG  (varLog & 0x00010000) && SrcLog_RPC
 #define EECNT_LOG (varLog & 0x40000000) && SrcLog_EECNT
 
 #define PSXCPU_LOG  (varLog & 0x00100000) && SrcLog_PSXCPU
@@ -170,7 +170,7 @@ extern bool SrcLog_GPU( const char* fmt, ... );
 #define SIF_LOG  0&&
 #define IPU_LOG  0&&
 #define VUM_LOG  0&&
-#define RPC_LOG  0&&
+#define ISOFS_LOG  0&&
 
 #define PSXCPU_LOG  0&&
 #define PSXMEM_LOG  0&&

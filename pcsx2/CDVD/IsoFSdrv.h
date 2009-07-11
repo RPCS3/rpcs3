@@ -25,14 +25,11 @@
 
 #include "IsoFScdvd.h"
 
-extern CdRMode cdReadMode;
-
 /* Filing-system exported functions */
-void CDVDFS_init();
-int CDVDFS_open(const char *name, int mode);
-int CDVDFS_lseek(int fd, int offset, int whence);
-int CDVDFS_read( int fd, char * buffer, int size );
-int CDVDFS_write( int fd, char * buffer, int size );
-int CDVDFS_close( int fd);
+void IsoFS_init();
+int IsoFS_open(const char *name, int mode);
+int IsoFS_lseek(int fd, int offset, int whence);
+int IsoFS_read( int fd, char * buffer, int size );
+int IsoFS_close( int fd);
 
 #endif//__ISOFSDRV_H__

@@ -305,17 +305,17 @@ int GetPS2ElfName(char *name){
 	char *pos;
 	TocEntry tocEntry;
 
-	CDVDFS_init();
+	IsoFS_init();
 
 	// check if the file exists
-	if (CDVD_findfile("SYSTEM.CNF;1", &tocEntry) != TRUE){
+	if (IsoFS_findFile("SYSTEM.CNF;1", &tocEntry) != TRUE){
 		Console::Error("Boot Error > SYSTEM.CNF not found");
 		return 0;//could not find; not a PS/PS2 cdvd
 	}
 	
-	f=CDVDFS_open("SYSTEM.CNF;1", 1);
-	CDVDFS_read(f, buffer, g_MaxPath);
-	CDVDFS_close(f);
+	f=IsoFS_open("SYSTEM.CNF;1", 1);
+	IsoFS_read(f, buffer, g_MaxPath);
+	IsoFS_close(f);
 	
 	buffer[tocEntry.fileSize]='\0';
 	

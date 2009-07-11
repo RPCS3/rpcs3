@@ -299,13 +299,13 @@ struct ElfObject
 		if ((strnicmp( filename.c_str(), "cdrom0:", strlen("cdromN:")) == 0) ||
 			(strnicmp( filename.c_str(), "cdrom1:", strlen("cdromN:")) == 0))
 		{
-			int fi = CDVDFS_open(filename.c_str() + strlen("cdromN:"), 1);//RDONLY
+			int fi = IsoFS_open(filename.c_str() + strlen("cdromN:"), 1);//RDONLY
 			
 			if (fi < 0) throw Exception::FileNotFound( filename );
 			
-			CDVDFS_lseek( fi, 0, SEEK_SET );
-			rsize = CDVDFS_read( fi, (char*)data.GetPtr(), data.GetSizeInBytes() );
-			CDVDFS_close( fi );
+			IsoFS_lseek( fi, 0, SEEK_SET );
+			rsize = IsoFS_read( fi, (char*)data.GetPtr(), data.GetSizeInBytes() );
+			IsoFS_close( fi );
 		}
 		else
 		{
@@ -486,8 +486,8 @@ u32 loadElfCRC( const char* filename )
 {
 	TocEntry toc;
 
-	CDVDFS_init( );
-	if ( CDVD_findfile( filename + strlen( "cdromN:" ), &toc ) == -1 )
+	IsoFS_init( );
+	if ( IsoFS_findFile( filename + strlen( "cdromN:" ), &toc ) == -1 )
 		return 0;
 
 	DevCon::Status( "loadElfFile: %d bytes", params toc.fileSize );
@@ -529,8 +529,8 @@ int loadElfFile(const char *filename)
 	{
 		// Loading from a CD rom or CD image.
 		TocEntry toc;
-		CDVDFS_init( );
-		if ( CDVD_findfile( filename + strlen( "cdromN:" ), &toc ) == -1 )
+		IsoFS_init( );
+		if ( IsoFS_findFile( filename + strlen( "cdromN:" ), &toc ) == -1 )
 			return -1;
 		elfsize = toc.fileSize;
 	}

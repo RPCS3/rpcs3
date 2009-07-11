@@ -25,9 +25,8 @@
 
 #include "IsoFScdvd.h"
 
-int CDVD_findfile(const char* fname, TocEntry* tocEntry);
-int CDVD_GetDir_RPC_request(char* pathname, char* extensions, unsigned int inc_dirs);
-int CDVD_GetDir_RPC_get_entries(TocEntry tocEntry[], int req_entries);
+int IsoFS_initDirectoryList(char* pathname, char* extensions, unsigned int inc_dirs);
+int IsoFS_getDirectories(TocEntry tocEntry[], int req_entries);
 
 #if defined(_MSC_VER)
 #pragma pack(1)
