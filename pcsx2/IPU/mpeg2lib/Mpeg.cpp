@@ -1131,7 +1131,7 @@ void __forceinline finishmpeg2sliceIDEC(decoder_t* &decoder)
 }
 
 // This fixes Mana Khemia if uncommented, but needs testing.
-//#define ALWAYS_RESUME_BEFORE_EXITING
+#define ALWAYS_RESUME_BEFORE_EXITING
 void mpeg2sliceIDEC(void* pdone)
 {
 	u32 read;
@@ -1221,6 +1221,11 @@ void mpeg2sliceIDEC(void* pdone)
 				while (g_nIPU0Data > 0)
 				{
 					read = FIFOfrom_write((u32*)g_pIPU0Pointer, g_nIPU0Data);
+					
+					if (read != 8)
+					{
+						Console::Error("g_nIPU0Data = 0x%x; read = 0x%x", params g_nIPU0Data, read);
+					}
 
 					if (read == 0)
 					{
@@ -1231,6 +1236,7 @@ void mpeg2sliceIDEC(void* pdone)
 					{
 						g_pIPU0Pointer += read * 16;
 						g_nIPU0Data -= read;
+						
 					}
 				}
 
@@ -1240,6 +1246,14 @@ void mpeg2sliceIDEC(void* pdone)
 			NEEDBITS(decoder->bitstream_buf, decoder->bitstream_bits, decoder->bitstream_ptr);
 			mba_inc = 0;
 
+			#ifdef ALWAYS_RESUME_BEFORE_EXITING
+			if (!resumed)
+			{
+				so_resume();
+				Console::Error("Resume forced in mpeg2sliceIDEC:1");
+			}
+			#endif
+			
 			while (1)
 			{
 				if (decoder->bitstream_buf >= 0x10000000)
@@ -1256,19 +1270,19 @@ void mpeg2sliceIDEC(void* pdone)
 					{
 
 						case 8:		/* macroblock_escape */
+							Console::Error("macroblock escape ");
 							mba_inc += 33;
 							/* pass through */
 
 						case 15:	/* macroblock_stuffing (MPEG1 only) */
+							Console::Error("macroblock_stuffing (MPEG1 only) ");
 							DUMPBITS(decoder->bitstream_buf, decoder->bitstream_bits, 11);
 							NEEDBITS(decoder->bitstream_buf, decoder->bitstream_bits, decoder->bitstream_ptr);
 							continue;
 
 						default:	/* end of slice/frame, or error? */
 						{
-							#ifdef ALWAYS_RESUME_BEFORE_EXITING
-							if (!resumed) so_resume();
-							#endif
+							Console::Error("UBITS(decoder->bitstream_buf, 11) is 0x%x", params UBITS(decoder->bitstream_buf, 11));
 
 							finishmpeg2sliceIDEC(decoder);
 
@@ -1297,7 +1311,11 @@ void mpeg2sliceIDEC(void* pdone)
 	}
 
 	#ifdef ALWAYS_RESUME_BEFORE_EXITING
-	if (!resumed) so_resume();
+	if (!resumed)
+	{
+		so_resume();
+		Console::Error("Resume forced in mpeg2sliceIDEC:2");
+	}
 	#endif
 
 	finishmpeg2sliceIDEC(decoder);

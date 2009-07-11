@@ -638,7 +638,6 @@ create_SpeedHacksDlg (void)
   GtkWidget *alignment37;
   GtkWidget *vbox76;
   GtkWidget *check_iop_cycle_rate;
-  GtkWidget *check_wait_cycles_sync_hack;
   GtkWidget *check_intc_sync_hack;
   GtkWidget *check_idle_loop_fastforward;
   GtkWidget *label114;
@@ -792,12 +791,6 @@ create_SpeedHacksDlg (void)
   gtk_box_pack_start (GTK_BOX (vbox76), check_iop_cycle_rate, FALSE, FALSE, 0);
   gtk_tooltips_set_tip (tooltips, check_iop_cycle_rate, _("Small speedup, and works well with most games."), NULL);
 
-  check_wait_cycles_sync_hack = gtk_check_button_new_with_mnemonic (_("WaitCycles Sync Hack"));
-  gtk_widget_set_name (check_wait_cycles_sync_hack, "check_wait_cycles_sync_hack");
-  gtk_widget_show (check_wait_cycles_sync_hack);
-  gtk_box_pack_start (GTK_BOX (vbox76), check_wait_cycles_sync_hack, FALSE, FALSE, 0);
-  gtk_tooltips_set_tip (tooltips, check_wait_cycles_sync_hack, _("Small speedup. Works well with most games, but it may cause certain games to crash, or freeze up during bootup or stage changes."), NULL);
-
   check_intc_sync_hack = gtk_check_button_new_with_mnemonic (_("INTC Sync Hack"));
   gtk_widget_set_name (check_intc_sync_hack, "check_intc_sync_hack");
   gtk_widget_show (check_intc_sync_hack);
@@ -909,7 +902,6 @@ create_SpeedHacksDlg (void)
   GLADE_HOOKUP_OBJECT (SpeedHacksDlg, alignment37, "alignment37");
   GLADE_HOOKUP_OBJECT (SpeedHacksDlg, vbox76, "vbox76");
   GLADE_HOOKUP_OBJECT (SpeedHacksDlg, check_iop_cycle_rate, "check_iop_cycle_rate");
-  GLADE_HOOKUP_OBJECT (SpeedHacksDlg, check_wait_cycles_sync_hack, "check_wait_cycles_sync_hack");
   GLADE_HOOKUP_OBJECT (SpeedHacksDlg, check_intc_sync_hack, "check_intc_sync_hack");
   GLADE_HOOKUP_OBJECT (SpeedHacksDlg, check_idle_loop_fastforward, "check_idle_loop_fastforward");
   GLADE_HOOKUP_OBJECT (SpeedHacksDlg, label114, "label114");

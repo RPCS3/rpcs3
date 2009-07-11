@@ -461,6 +461,7 @@ static __forceinline BOOL ipuIDEC(u32 val)
 
 	s_routine = so_create(mpeg2sliceIDEC, &s_RoutineDone, s_tempstack, sizeof(s_tempstack));
 	assert(s_routine != NULL);
+	//return;
 	so_call(s_routine);
 	if (s_RoutineDone) s_routine = NULL;
 

@@ -24,24 +24,24 @@ PADAnalog g_lanalog[NUM_OF_PADS], g_ranalog[NUM_OF_PADS];
 
 namespace Analog
 {
-	u8 Pad(int padvalue, u8 i)
+	u8 Pad(int pad, u8 index)
 	{
-		switch (padvalue)
+		switch (index)
 		{
 			case PAD_LX:
-				return g_lanalog[i].x;
+				return g_lanalog[pad].x;
 				break;
 			
 			case PAD_RX:
-				return g_ranalog[i].x;
+				return g_ranalog[pad].x;
 				break;
 			
 			case PAD_LY:
-				return g_lanalog[i].y;
+				return g_lanalog[pad].y;
 				break;
 			
 			case PAD_RY:
-				return g_ranalog[i].y;
+				return g_ranalog[pad].y;
 				break;
 			
 			default:
@@ -50,24 +50,24 @@ namespace Analog
 		}
 	}
 	
-	void SetPad(int padvalue, u8 i, u8 value)
+	void SetPad(u8 pad, int index, u8 value)
 	{
-		switch (padvalue)
+		switch (index)
 		{
 			case PAD_LX:
-				g_lanalog[i].x = value;
+				g_lanalog[pad].x = value;
 				break;
 			
 			case PAD_RX:
-				g_ranalog[i].x = value;
+				g_ranalog[ pad].x = value;
 				break;
 			
 			case PAD_LY:
-				g_lanalog[i].y = value;
+				g_lanalog[ pad].y = value;
 				break;
 			
 			case PAD_RY:
-				g_ranalog[i].y = value;
+				g_ranalog[pad].y = value;
 				break;
 			
 			default:
@@ -75,30 +75,30 @@ namespace Analog
 		}
 	}
 	
-	void InvertPad(int padvalue, u8 i)
+	void InvertPad(u8 pad, int key)
 	{
-		SetPad(padvalue, i, -Pad(padvalue, i));
+		SetPad(pad, key, -Pad(pad, key));
 	}
 	
-	void ResetPad(int padvalue, u8 i)
+	void ResetPad( u8 pad, int key)
 	{
-		SetPad(padvalue, i, 0x80);
+		SetPad(pad, key, 0x80);
 	}
 	
 	void Init()
 	{
-		for (int i = 0; i < 2; ++i)
+		for (u8 pad = 0; pad < 2; ++pad)
 		{
-			ResetPad(PAD_LX, i);
-			ResetPad(PAD_LY, i);
-			ResetPad(PAD_RX, i);
-			ResetPad(PAD_RY, i);
+			ResetPad(pad, PAD_LX);
+			ResetPad(pad, PAD_LY);
+			ResetPad(pad, PAD_RX);
+			ResetPad(pad, PAD_RY);
 		}
 	}
 	
-	bool RevertPad(u8 padvalue)
+	bool RevertPad(u8 index)
 	{
-		switch (padvalue)
+		switch (index)
 		{
 			case PAD_LX:
 				return ((conf.options & PADOPTION_REVERTLX) != 0);
@@ -122,18 +122,17 @@ namespace Analog
 		}
 	}
 	
-	void ConfigurePad(int padvalue, u8 i, int value)
+	void ConfigurePad( u8 pad, int index, int value)
 	{
-		int temp = Pad(padvalue, i);
-		SetPad(padvalue, i, value / 256);
-		if (RevertPad(padvalue)) InvertPad(padvalue, i);
-		SetPad(padvalue, i, Pad(padvalue, i) + 0x80);
-		
-		//PAD_LOG("Setting pad[%d]@%d to %d from %d\n", padvalue, i, value, temp);
+		int temp = Pad(pad, index);
+		SetPad(pad, index, value / 256);
+		if (RevertPad(index)) InvertPad(pad,index);
+		SetPad(pad, index, Pad(pad, index) + 0x80);
 	}
-	int AnalogToPad(int padvalue)
+	
+	int AnalogToPad(int index)
 	{
-		switch (padvalue)
+		switch (index)
 		{
 			case PAD_R_LEFT:
 				return PAD_RX;

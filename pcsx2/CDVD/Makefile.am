@@ -12,7 +12,7 @@ INCLUDES = -I$(top_srcdir) -I$(x86_dir) -I$(common_dir) -I$(third_dir)
 noinst_LIBRARIES = libps2_cdvd.a
 
 libps2_cdvd_a_SOURCES = \
-CDVD.cpp CDVDiso.cpp  CDVDisodrv.cpp  CdRom.cpp \
-CDVD.h CDVD_internal.h CDVDiso.h CDVDisodrv.h CDVDlib.h CdRom.h 
+CDVD.cpp IsoFStools.cpp  IsoFSdrv.cpp  CdRom.cpp \
+CDVD.h CDVD_internal.h IsoFStools.h IsoFSdrv.h IsoFScdvd.h CdRom.h 
 
 #SUBDIRS =
