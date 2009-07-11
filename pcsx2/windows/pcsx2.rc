@@ -355,7 +355,6 @@ BEGIN
     CONTROL         "Use x1.5 Cycle Rate",IDC_EESYNC1,"Button",BS_AUTORADIOBUTTON,13,79,87,10
     CONTROL         "Use x2 Cycle Rate",IDC_EESYNC2,"Button",BS_AUTORADIOBUTTON,13,113,83,10
     CONTROL         "Enable IOP x2 Cycle Rate",IDC_IOPSYNC,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,187,88,98,10
-    CONTROL         "WaitCycles Sync Hack",IDC_WAITCYCLES,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,187,127,90,10
     CONTROL         "Esc Hack - Use Esc key to fully exit PCSX2.",IDC_ESCHACK,
                     "Button",BS_AUTOCHECKBOX | WS_TABSTOP,13,197,152,10
     DEFPUSHBUTTON   "OK",IDOK,424,208,50,14
@@ -367,7 +366,6 @@ BEGIN
     LTEXT           "Big speedup!  Works well with many games.",IDC_STATIC,25,124,125,19
     LTEXT           "Most compatible option - recommended for everyone with high-end machines.",IDC_STATIC,25,55,136,19
     LTEXT           "Small speedup and works well with most games.",IDC_STATIC,200,100,134,22
-    LTEXT           "Small speedup. Works well with most games, but may cause certain games to crash or freeze up during bootup or stage changes.",IDC_STATIC,200,139,141,39
     LTEXT           "Moderate speedup and works well with most games.",IDC_STATIC,25,90,129,19
     CONTROL         "INTC Sync Hack",IDC_INTCSTATHACK,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,187,43,127,10
     LTEXT           "Huge speedup in many games, and a pretty high compatibility rate (some games still work better with EE sync hacks).",IDC_STATIC,200,55,140,28
@@ -375,8 +373,8 @@ BEGIN
     LTEXT           "This space intentionally left blank",IDC_VUCYCLEDESC,383,160,142,26
     LTEXT           "VU Cycle Stealing (experimental)",IDC_STATIC,408,146,105,8
     CONTROL         "Idle Loop Fast-Forward (experimental)",IDC_IDLELOOPFF,
-                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,187,179,139,10
-    LTEXT           "Speedup for a few games, including FFX with no known side effects.",IDC_STATIC,200,193,144,23
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,187,126,139,10
+    LTEXT           "Speedup for a few games, including FFX with no known side effects.",IDC_STATIC,200,140,144,23
     GROUPBOX        "EmotionEngine (EE) Misc Hacks",IDC_STATIC,177,26,179,192
     GROUPBOX        "Vector Unit (VU) Hacks",IDC_STATIC,363,26,173,173
     CONTROL         "Status Flag Hack (microVU only)",IDC_VUHACK1,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,372,42,155,12

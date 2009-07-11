@@ -44,7 +44,7 @@ BOOL APIENTRY HacksProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 			CheckRadioButton( hDlg, IDC_EESYNC_DEFAULT, IDC_EESYNC3, IDC_EESYNC_DEFAULT + Config.Hacks.EECycleRate );
 
 			if(Config.Hacks.IOPCycleDouble)	CheckDlgButton(hDlg, IDC_IOPSYNC, TRUE);
-			if(Config.Hacks.WaitCycleExt)	CheckDlgButton(hDlg, IDC_WAITCYCLES, TRUE);
+			//if(Config.Hacks.WaitCycleExt)	CheckDlgButton(hDlg, IDC_WAITCYCLES, TRUE);
 			if(Config.Hacks.INTCSTATSlow)	CheckDlgButton(hDlg, IDC_INTCSTATHACK, TRUE);
 			if(Config.Hacks.IdleLoopFF)		CheckDlgButton(hDlg, IDC_IDLELOOPFF, TRUE);
 			if(Config.Hacks.ESCExits)		CheckDlgButton(hDlg, IDC_ESCHACK, TRUE);
@@ -89,7 +89,7 @@ BOOL APIENTRY HacksProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 					}
 
 					newhacks.IOPCycleDouble = !!IsDlgButtonChecked(hDlg, IDC_IOPSYNC);
-					newhacks.WaitCycleExt	= !!IsDlgButtonChecked(hDlg, IDC_WAITCYCLES);
+					//newhacks.WaitCycleExt	= !!IsDlgButtonChecked(hDlg, IDC_WAITCYCLES);
 					newhacks.INTCSTATSlow	= !!IsDlgButtonChecked(hDlg, IDC_INTCSTATHACK);
 					newhacks.ESCExits		= !!IsDlgButtonChecked(hDlg, IDC_ESCHACK);
 					newhacks.vuFlagHack		= !!IsDlgButtonChecked(hDlg, IDC_VUHACK1);

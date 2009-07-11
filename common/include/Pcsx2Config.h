@@ -169,7 +169,7 @@ public:
 	struct Hacks_t {
 		int  EECycleRate;
 		bool IOPCycleDouble;
-		bool WaitCycleExt;
+		//bool WaitCycleExt;
 		bool INTCSTATSlow;
 		bool IdleLoopFF;
 		int  VUCycleSteal;

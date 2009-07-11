@@ -228,7 +228,7 @@ void IniFile::DoConfig( PcsxConfig& Conf )
 	if (Config.Hacks.EECycleRate > 2)
 		Config.Hacks.EECycleRate = 2;
 	Entry("IOPCycleDouble",	Config.Hacks.IOPCycleDouble);
-	Entry("WaitCycleExt",	Config.Hacks.WaitCycleExt);
+	//Entry("WaitCycleExt",	Config.Hacks.WaitCycleExt);
 	Entry("INTCSTATSlow",	Config.Hacks.INTCSTATSlow);
 	Entry("VUCycleSteal",	Config.Hacks.VUCycleSteal);
 	Entry("vuFlagHack",		Config.Hacks.vuFlagHack);

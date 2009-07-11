@@ -52,7 +52,7 @@ R5900cpu *Cpu = NULL;
 u32 bExecBIOS = 0; // set if the BIOS has already been executed
 
 static bool cpuIsInitialized = false;
-static uint eeWaitCycles = 1024;
+static const uint eeWaitCycles = 3072;
 
 bool eeEventTestIsActive = false;
 
@@ -82,12 +82,6 @@ void cpuReset()
 	g_nextBranchCycle = cpuRegs.cycle + 4;
 	EEsCycle = 0;
 	EEoCycle = cpuRegs.cycle;
-	eeWaitCycles = Config.Hacks.WaitCycleExt ? 3072 : 768;
-
-	// Cyclerate hacks effectively speed up the rate of event tests, so we can safely boost
-	// the WaitCycles value here for x2 and x3 modes:
-	if( Config.Hacks.EECycleRate > 1 )
-		eeWaitCycles += 1024;
 
 	hwReset();
 	vif0Reset();

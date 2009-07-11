@@ -80,7 +80,7 @@ void on_Speed_Hacks(GtkMenuItem *menuitem, gpointer user_data)
 	GtkRange *eeScale = GTK_RANGE(lookup_widget(SpeedHacksDlg, "EECycleHackScale"));
 	
 	set_checked(SpeedHacksDlg, "check_iop_cycle_rate",			Config.Hacks.IOPCycleDouble);
-	set_checked(SpeedHacksDlg, "check_wait_cycles_sync_hack",	Config.Hacks.WaitCycleExt);
+	//set_checked(SpeedHacksDlg, "check_wait_cycles_sync_hack",	Config.Hacks.WaitCycleExt);
 	set_checked(SpeedHacksDlg, "check_intc_sync_hack",			Config.Hacks.INTCSTATSlow);
 	set_checked(SpeedHacksDlg, "check_idle_loop_fastforward",	Config.Hacks.IdleLoopFF);
 	set_checked(SpeedHacksDlg, "check_microvu_flag_hack",		Config.Hacks.vuFlagHack);
@@ -104,7 +104,7 @@ void on_Speed_Hack_OK(GtkButton *button, gpointer user_data)
 	newhacks.EECycleRate = 0;
 	
 	newhacks.IOPCycleDouble = is_checked(SpeedHacksDlg, "check_iop_cycle_rate");
-	newhacks.WaitCycleExt = is_checked(SpeedHacksDlg, "check_wait_cycles_sync_hack");
+	//newhacks.WaitCycleExt = is_checked(SpeedHacksDlg, "check_wait_cycles_sync_hack");
 	newhacks.INTCSTATSlow = is_checked(SpeedHacksDlg, "check_intc_sync_hack");
 	newhacks.IdleLoopFF = is_checked(SpeedHacksDlg, "check_idle_loop_fastforward");
 	newhacks.vuFlagHack  = is_checked(SpeedHacksDlg, "check_microvu_flag_hack");
