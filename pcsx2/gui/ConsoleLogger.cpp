@@ -34,6 +34,7 @@
 // filename and try to open it, returns true on success (file was opened),
 // false if file couldn't be opened/created and -1 if the file selection
 // dialog was canceled
+//
 static bool OpenLogFile(wxFile& file, wxString& filename, wxWindow *parent)
 {
     filename = wxSaveFileSelector(L"log", L"txt", L"log.txt", parent);
@@ -63,7 +64,7 @@ static bool OpenLogFile(wxFile& file, wxString& filename, wxWindow *parent)
 				wxFAIL_MSG( L"invalid message box return value" );
         }
 
-		return ( bAppend ) ? 
+		return ( bAppend ) ?
 			file.Open(filename, wxFile::write_append) :
             file.Create(filename, true /* overwrite */);
     }
@@ -73,15 +74,6 @@ static bool OpenLogFile(wxFile& file, wxString& filename, wxWindow *parent)
 
 //////////////////////////////////////////////////////////////////////////////////////////
 //
-
-BEGIN_EVENT_TABLE(ConsoleLogFrame, wxFrame)
-    // wxLogWindow menu events
-    EVT_MENU(Menu_Close, ConsoleLogFrame::OnClose)
-    EVT_MENU(Menu_Save,  ConsoleLogFrame::OnSave)
-    EVT_MENU(Menu_Clear, ConsoleLogFrame::OnClear)
-    EVT_CLOSE(ConsoleLogFrame::OnCloseWindow)
-END_EVENT_TABLE()
-
 ConsoleLogFrame::ConsoleLogFrame(MainEmuFrame *parent, const wxString& title) :
 	wxFrame(parent, wxID_ANY, title),
 	m_TextCtrl( *new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize,
@@ -103,7 +95,12 @@ ConsoleLogFrame::ConsoleLogFrame(MainEmuFrame *parent, const wxString& title) :
     // status bar for menu prompts
     CreateStatusBar();
     ClearColor();
-    
+
+    Connect( Menu_Close, wxEVT_COMMAND_MENU_SELECTED, wxMenuEventHandler( ConsoleLogFrame::OnClose ) );
+    Connect( Menu_Save,  wxEVT_COMMAND_MENU_SELECTED, wxMenuEventHandler( ConsoleLogFrame::OnSave ) );
+    Connect( Menu_Clear, wxEVT_COMMAND_MENU_SELECTED, wxMenuEventHandler( ConsoleLogFrame::OnClear ) );
+
+    Connect( wxEVT_CLOSE_WINDOW, wxCloseEventHandler(ConsoleLogFrame::OnCloseWindow) );
 	Connect( wxEVT_MOVE, wxMoveEventHandler(ConsoleLogFrame::OnMoveAround) );
 	Connect( wxEVT_SIZE, wxSizeEventHandler(ConsoleLogFrame::OnResize) );
 }
@@ -114,10 +111,10 @@ void ConsoleLogFrame::OnMoveAround( wxMoveEvent& evt )
 {
 	// Docking check!  If the window position is within some amount
 	// of the main window, enable docking.
-	
+
 	wxPoint topright( GetParent()->GetRect().GetTopRight() );
 	wxRect snapzone( topright - wxSize( 8,8 ), wxSize( 16,16 ) );
-	
+
 	if( snapzone.Contains( GetPosition() ) )
 		SetPosition( topright + wxSize( 1,0 ) );
 
@@ -138,15 +135,15 @@ void ConsoleLogFrame::DoClose()
 		wxStaticCast( GetParent(), MainEmuFrame )->OnLogBoxHidden();
 }
 
-void ConsoleLogFrame::OnClose(wxCommandEvent& WXUNUSED(event))		{ DoClose(); }
+void ConsoleLogFrame::OnClose(wxMenuEvent& WXUNUSED(event))		{ DoClose(); }
 void ConsoleLogFrame::OnCloseWindow(wxCloseEvent& WXUNUSED(event))	{ DoClose(); }
 
-void ConsoleLogFrame::OnSave(wxCommandEvent& WXUNUSED(event))
+void ConsoleLogFrame::OnSave(wxMenuEvent& WXUNUSED(event))
 {
     wxString filename;
     wxFile file;
-    int rc = OpenLogFile( file, filename, this );
-    if ( rc == -1 )
+    bool rc = OpenLogFile( file, filename, this );
+    if ( !rc )
     {
         // canceled
         return;
@@ -167,23 +164,24 @@ void ConsoleLogFrame::OnSave(wxCommandEvent& WXUNUSED(event))
 	wxLogStatus(this, L"Log saved to the file '%s'.", filename.c_str());
 }
 
-void ConsoleLogFrame::OnClear(wxCommandEvent& WXUNUSED(event))
+void ConsoleLogFrame::OnClear(wxMenuEvent& WXUNUSED(event))
 {
     m_TextCtrl.Clear();
 }
 
-static const wxTextAttr tbl_color_codes[] = 
+static const wxTextAttr tbl_color_codes[] =
 {
+	// Standard R, G, B format:
 	wxTextAttr( wxColor(   0,  0,  0 ) ),
-	wxTextAttr( wxColor( 255,  0,  0 ) ),
-	wxTextAttr( wxColor(   0,255,  0 ) ),
-	wxTextAttr( wxColor( 255,255,  0 ) ),
-	wxTextAttr( wxColor(   0,  0,255 ) ),
-	wxTextAttr( wxColor(   0,255,255 ) ),
-	wxTextAttr( wxColor( 255,255,255 ) )	
+	wxTextAttr( wxColor( 128,  0,  0 ) ),
+	wxTextAttr( wxColor(   0,128,  0 ) ),
+	wxTextAttr( wxColor( 180,180,  0 ) ),
+	wxTextAttr( wxColor(   0,  0,128 ) ),
+	wxTextAttr( wxColor(   0,160,160 ) ),
+	wxTextAttr( wxColor( 160,160,160 ) )
 };
 
-static const wxTextAttr color_default( wxColor( 192, 192, 192 ) );
+static const wxTextAttr color_default( wxColor( 0, 0, 0 ) );
 
 // Note: SetColor currently does not work on Win32, but I suspect it *should* work when
 // we enable unicode compilation.  (I really hope!)
@@ -244,7 +242,7 @@ namespace Console
 	void ClearColor()
 	{
 		if( ConsoleLogFrame* FrameHandle = wxGetApp().GetConsoleFrame() )
-			FrameHandle->ClearColor();		
+			FrameHandle->ClearColor();
 	}
 
 	// ------------------------------------------------------------------------

@@ -37,7 +37,7 @@ Pcsx2App::Pcsx2App()  :
 ,	m_ToolbarImages( NULL )
 ,	m_Bitmap_Logo( NULL )
 {
-	SetAppName( L"Pcsx2" );
+	SetAppName( L"pcsx2" );
 }
 
 wxFrame* Pcsx2App::GetMainWindow() const { return m_MainFrame; }
@@ -50,12 +50,12 @@ wxFileConfig* OpenConfig( const wxString& filename )
 void Pcsx2App::ReadUserModeSettings()
 {
 	wxString configfile( Path::Combine( wxGetCwd(), L"usermode.ini" ) );
-	
+
 	if( !wxFile::Exists( configfile ) )
 	{
 		Dialogs::PickUserModeDialog( m_MainFrame ).ShowModal();
 	}
-	
+
 	wxFileConfig* conf_usermode = OpenConfig( Path::Combine( wxGetCwd(), L"usermode.ini" ) );
 
 	// Ensure proper scoping (IniLoader gets closed prior to delete)

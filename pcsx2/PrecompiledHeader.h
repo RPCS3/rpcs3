@@ -1,7 +1,7 @@
 #ifndef PCSX2_PRECOMPILED_HEADER
 #define PCSX2_PRECOMPILED_HEADER
 
-//#pragma once		// no dice, causes problems in GCC PCH (which doesn't really work very well 
+//#pragma once		// no dice, causes problems in GCC PCH (which doesn't really work very well
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // Define PCSX2's own i18n helpers.  These override the wxWidgets helpers and provide
@@ -71,8 +71,8 @@ typedef int BOOL;
 // need a full recompile anyway, when modified (etc)
 
 #include "zlib/zlib.h"
-#include "i18n.h"
 #include "Pcsx2Defs.h"
+#include "i18n.h"
 #include "Paths.h"
 #include "Config.h"
 #include "Utilities/Console.h"

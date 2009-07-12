@@ -40,7 +40,7 @@ public:
 		wxASSERT_MSG( src.IsDir(), L"Warning: Creating a directory from what looks to be a filename..." );
 		Assign( src.GetPath() );
 	}
-	
+
 	wxDirName() : wxFileName() {}
 	wxDirName( const wxDirName& src ) : wxFileName( src ) { }
 	explicit wxDirName( const char* src ) { Assign( wxString::FromAscii(src) ); }
@@ -63,7 +63,7 @@ public:
 	}
 
 	void Clear() { wxFileName::Clear(); }
-	
+
 	wxCharBuffer ToAscii() const { return GetPath().ToAscii(); }
 	wxString ToString() const { return GetPath(); }
 
@@ -102,14 +102,14 @@ public:
 	bool Mkdir();
 
 	// ------------------------------------------------------------------------
-	
+
 	wxDirName& operator=(const wxDirName& dirname)	{ Assign( dirname ); return *this; }
 	wxDirName& operator=(const wxString& dirname)	{ Assign( dirname ); return *this; }
 	wxDirName& operator=(const char* dirname)		{ Assign( wxString::FromAscii(dirname) ); return *this; }
 
 	wxFileName operator+( const wxFileName& right ) const	{ return Combine( right ); }
 	wxDirName operator+( const wxDirName& right )  const	{ return Combine( right ); }
-	
+
 	bool operator==(const wxDirName& filename) const { return SameAs(filename); }
 	bool operator!=(const wxDirName& filename) const { return !SameAs(filename); }
 
@@ -119,7 +119,7 @@ public:
 	// compare with a filename string interpreted as a native file name
 	bool operator==(const wxString& filename) const { return SameAs(wxDirName(filename)); }
 	bool operator!=(const wxString& filename) const { return !SameAs(wxDirName(filename)); }
-	
+
 	const wxFileName& GetFilename() const { return *this; }
 	wxFileName& GetFilename() { return *this; }
 };
@@ -169,7 +169,7 @@ namespace PathDefs
 	extern const wxDirName Settings;
 	extern const wxDirName Plugins;
 	extern const wxDirName Themes;
-	
+
 	extern wxDirName GetDocuments();
 	extern wxDirName GetSnapshots();
 	extern wxDirName GetBios();
@@ -178,6 +178,8 @@ namespace PathDefs
 	extern wxDirName GetSavestates();
 	extern wxDirName GetMemoryCards();
 	extern wxDirName GetSettings();
+	extern wxDirName GetLogs();
+	extern wxDirName GetThemes();
 }
 
 namespace FilenameDefs

@@ -26,7 +26,7 @@
 using namespace HashTools;
 
 //////////////////////////////////////////////////////////////////////////////////////////
-// Notes to Translators: 
+// Notes to Translators:
 //  * The first line of each entry consists of an enumerated index (used internally), and
 //    the gettext lookup string (which you'll find in the PO data).  The resulting translation
 //    should match the text underneath.
@@ -40,7 +40,7 @@ const EnglishExpansionEntry m_tbl_English[] =
 		L"Warning!! These advanced options are provided for developers and advanced testers only. "
 		L"Changing these settings can cause program errors, so please be weary."
 	},
-	
+
 	{ Msg_Tooltips_SettingsPath, wxLt(L"Setting Tooltip:Settings Path"),
 		L"This is the folder where PCSX2 saves all settings, including settings generated "
 		L"by most plugins.\n\nWarning: Some older versions of plugins may not respect this value."
@@ -64,22 +64,22 @@ const EnglishExpansionEntry m_tbl_English[] =
 		L"This folder is where PCSX2 saves screenshots.  Actual screenshot image format and style "
 		L"may vary depending on the GS plugin being used."
 	},
-	
+
 	{ Msg_Tooltips_Bios,		wxLt(L"Setting Tooltip:Bios Folder"),
 		L"This folder is where PCSX2 looks to find PS2 bios files.  The actual bios used can be "
 		L"selected from the CPU dialog."
 	},
-	
+
 	{ Msg_Tooltips_Logs,		wxLt(L"Setting Tooltip:Logs Folder"),
 		L"This folder is where PCSX2 saves its logfiles and diagnostic dumps.  Most plugins will "
 		L"also adhere to this folder, however some older plugins may ignore it."
 	},
-	
+
 	{ Msg_Tooltips_Memorycards,	wxLt(L"Setting Tooltip:Memorycards Folder"),
 		L"This is the default path where PCSX2 loads or creates its memory cards, and can be "
 		L"overridden in the MemoryCard Configuration by using absolute filenames."
 	},
-	
+
 };
 
 C_ASSERT( ArraySize( m_tbl_English ) == ExpandedMsg_Count );
@@ -92,7 +92,7 @@ static HashMap<int,HashedExpansionPair> m_EnglishExpansions( -1, 0xcdcdcd, Array
 void i18n_InitPlainEnglish()
 {
 	static bool IsInitialized = false;
-	
+
 	IsInitialized = true;
 	for( int i=0; i<ExpandedMsg_Count; ++i )
 	{
@@ -115,7 +115,7 @@ void i18n_InitPlainEnglish()
 const wxChar* __fastcall pxExpandMsg( ExpandedMsgEnum key )
 {
 	const HashedExpansionPair& data( m_EnglishExpansions[key] );
-	
+
 	int curlangid = wxLocale::GetLanguageInfo( g_Conf.LanguageId )->Language;
 	if( curlangid == wxLANGUAGE_ENGLISH || curlangid == wxLANGUAGE_ENGLISH_US )
 		return data.Expanded;
@@ -159,7 +159,7 @@ bool i18n_SetLanguage( int wxLangId )
 	if( !locale->IsOk() )
 	{
 		Console::Notice( wxsFormat( L"SetLanguage: '%s' [%s] is not supported by the operating system",
-			wxLocale::GetLanguageName( locale->GetLanguage() ), locale->GetCanonicalName() )
+			wxLocale::GetLanguageName( locale->GetLanguage() ).c_str(), locale->GetCanonicalName().c_str() )
 		);
 
 		safe_delete( locale );
@@ -169,7 +169,7 @@ bool i18n_SetLanguage( int wxLangId )
 	if( !locale->AddCatalog( L"pcsx2main" ) ) //, wxLANGUAGE_UNKNOWN, NULL ) )
 	{
 		Console::Notice( wxsFormat( L"SetLanguage: Cannot find pcsx2main.mo file for language '%s' [%s]",
-			wxLocale::GetLanguageName( locale->GetLanguage() ), locale->GetCanonicalName() )
+			wxLocale::GetLanguageName( locale->GetLanguage() ).c_str(), locale->GetCanonicalName().c_str() )
 		);
 		safe_delete( locale );
 	}

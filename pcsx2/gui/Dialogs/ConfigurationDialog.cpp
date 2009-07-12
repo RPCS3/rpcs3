@@ -57,6 +57,6 @@ Dialogs::ConfigurationDialog::ConfigurationDialog( wxWindow* parent, int id ) :
 
 	SetSizerAndFit( &mainSizer );
 
-	Center( wxCENTER_ON_SCREEN );
+	Center( wxCENTER_ON_SCREEN | wxBOTH );
 }
 

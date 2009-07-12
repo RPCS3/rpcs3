@@ -52,7 +52,7 @@ namespace wxHelpers
 		{
 			return StdSpace().Expand();
 		}
-		
+
 		wxSizerFlags StdGroupie()
 		{
 			// Groups look better with a slightly smaller margin than standard.
@@ -67,13 +67,13 @@ namespace wxHelpers
 		{
 			return wxSizerFlags().Align( wxALIGN_RIGHT ).Border();
 		}
-		
+
 		wxSizerFlags Checkbox()
 		{
 			return StdExpand();
 		}
 	};
-	
+
 	// ------------------------------------------------------------------------
 	// Creates a new checkbox and adds it to the specified sizer/parent combo.
 	// Uses the default spacer setting for adding checkboxes.
@@ -119,7 +119,7 @@ namespace wxHelpers
         sizer.Add(temp, SizerFlags::StdSpace().Align( alignFlags & wxALIGN_MASK ) );
         return *temp;
     }
-    
+
 	// ------------------------------------------------------------------------
 	// Launches the specified file according to its mime type
 	//
@@ -193,7 +193,7 @@ void wxDialogWithHelpers::AddOkCancel( wxBoxSizer &sizer, bool hasApply )
 		// create a sizer to hold the help and ok/cancel buttons, for platforms
 		// that need a custom help icon.  [fixme: help icon prolly better off somewhere else]
 		buttonSizer = new wxBoxSizer( wxHORIZONTAL );
-		buttonSizer->Add( new wxContextHelpButton(this), wxHelpers::stdButtonSizerFlags.Align( wxALIGN_LEFT ) );
+		buttonSizer->Add( new wxContextHelpButton(this), wxHelpers::SizerFlags::StdButton().Align( wxALIGN_LEFT ) );
 		sizer.Add( buttonSizer, wxSizerFlags().Center() );
 #endif
 	}
@@ -234,7 +234,7 @@ wxRadioButton& wxPanelWithHelpers::AddRadioButton( wxBoxSizer& sizer, const wxSt
 {
 	wxRadioButton& retval = wxHelpers::AddRadioButtonTo( this, sizer, label, id, m_StartNewRadioGroup );
 	m_StartNewRadioGroup = false;
-	
+
 	if( !subtext.IsEmpty() )
 	{
 		sizer.Add( new wxStaticText( this, wxID_ANY, subtext ), wxSizerFlags().Border( wxLEFT, 25 ) );

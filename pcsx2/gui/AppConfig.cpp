@@ -79,7 +79,7 @@ namespace PathDefs
 	{
 		return AppRoot + Plugins;
 	}
-	
+
 	wxDirName GetSettings()
 	{
 		return GetDocuments() + Settings;
@@ -93,11 +93,6 @@ namespace PathDefs
 	wxDirName GetLogs()
 	{
 		return GetDocuments() + Logs;
-	}
-
-	wxDirName GetDumps()
-	{
-		return GetDocuments() + Dumps;
 	}
 };
 
@@ -245,20 +240,22 @@ void i18n_DoPackageCheck( int wxLangId, wxArrayString& destEng, wxArrayString& d
 //
 void i18n_EnumeratePackages( wxArrayString& englishNames, wxArrayString& xlatedNames)
 {
-	for( int li=wxLANGUAGE_ABKHAZIAN; li<wxLANGUAGE_ZULU; ++li )
+	for( int li=wxLANGUAGE_UNKNOWN+1; li<wxLANGUAGE_USER_DEFINED; ++li )
 	{
 		i18n_DoPackageCheck( li, englishNames, xlatedNames );
 	}
-	
+
 	// Brilliant.  Because someone in the wx world didn't think to move wxLANGUAGE_USER_DEFINED
 	// to a place where it wasn't butt right up against the main languages (like, say, start user
 	// defined values at 4000 or something?), they had to add new languages in at some arbitrary
 	// value instead.  Let's handle them here:
 	// fixme: these won't show up in alphabetical order if they're actually present (however
 	// horribly unlikely that is)... do we care?  Probably not.
-	
-	i18n_DoPackageCheck( wxLANGUAGE_VALENCIAN, englishNames, xlatedNames );
-	i18n_DoPackageCheck( wxLANGUAGE_SAMI, englishNames, xlatedNames );
+
+	// Note: These aren't even available in some packaged Linux distros anyway. >_<
+
+	//i18n_DoPackageCheck( wxLANGUAGE_VALENCIAN, englishNames, xlatedNames );
+	//i18n_DoPackageCheck( wxLANGUAGE_SAMI, englishNames, xlatedNames );
 }
 
 // ------------------------------------------------------------------------
@@ -275,7 +272,6 @@ void AppConfig::LoadSave( IniInterface& ini )
 
 	ini.Flush();
 }
-
 
 // ------------------------------------------------------------------------
 //

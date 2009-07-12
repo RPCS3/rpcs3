@@ -39,16 +39,17 @@ public:
 	virtual ~ConsoleLogFrame();
 
 	// menu callbacks
-	virtual void OnClose(wxCommandEvent& event);
+	virtual void OnClose(wxMenuEvent& event);
+	virtual void OnSave (wxMenuEvent& event);
+	virtual void OnClear(wxMenuEvent& event);
+
 	virtual void OnCloseWindow(wxCloseEvent& event);
 
-	virtual void OnSave (wxCommandEvent& event);
-	virtual void OnClear(wxCommandEvent& event);
 
 	virtual void Write( const wxChar* text );
 	virtual void Write( const char* text );
-	void Newline();
 
+	void Newline();
 	void SetColor( Console::Colors color );
 	void ClearColor();
 
@@ -63,8 +64,6 @@ protected:
 
 	// common part of OnClose() and OnCloseWindow()
 	virtual void DoClose();
-
-	DECLARE_EVENT_TABLE()
 
 	void OnMoveAround( wxMoveEvent& evt );
 	void OnResize( wxSizeEvent& evt );

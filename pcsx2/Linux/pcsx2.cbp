@@ -185,7 +185,7 @@
 		<Unit filename="../IopMem.h" />
 		<Unit filename="../IopSio2.cpp" />
 		<Unit filename="../IopSio2.h" />
-		<Unit filename="../Linux/HostGui.cpp" />
+		<Unit filename="LnxHostSys.cpp" />
 		<Unit filename="../MMI.cpp" />
 		<Unit filename="../MTGS.cpp" />
 		<Unit filename="../Memory.cpp" />
@@ -262,6 +262,8 @@
 		<Unit filename="../gui/ConsoleLogger.cpp" />
 		<Unit filename="../gui/Dialogs/ConfigurationDialog.cpp" />
 		<Unit filename="../gui/Dialogs/ConfigurationDialog.h" />
+		<Unit filename="../gui/Dialogs/ModalPopups.h" />
+		<Unit filename="../gui/Dialogs/PickUserModeDialog.cpp" />
 		<Unit filename="../gui/GameFixesDialog.h" />
 		<Unit filename="../gui/HostGui.cpp" />
 		<Unit filename="../gui/IniInterface.cpp" />
@@ -289,6 +291,8 @@
 		<Unit filename="../gui/Resources/EmbeddedImage.h" />
 		<Unit filename="../gui/Resources/ps2_silver.h" />
 		<Unit filename="../gui/SpeedHacksDialog.h" />
+		<Unit filename="../gui/i18n.cpp" />
+		<Unit filename="../gui/i18n.h" />
 		<Unit filename="../gui/main.cpp" />
 		<Unit filename="../gui/wxHelpers.cpp" />
 		<Unit filename="../gui/wxHelpers.h" />
