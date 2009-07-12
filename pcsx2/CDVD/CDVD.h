@@ -20,6 +20,10 @@
 #define __CDVD_H__
 
 #include "IopCommon.h"
+#include "CDVD/CDVDaccess.h"
+
+extern bool loadFromISO;
+extern char isoFileName[];
 
 #define btoi(b)		((b)/16*10 + (b)%16)		/* BCD to u_char */
 #define itob(i)		((i)/10*16 + (i)%10)		/* u_char to BCD */

@@ -38,6 +38,8 @@
 
 #include "implement.h"		// pthreads-win32 defines for startup/shutdown
 
+#include "CDVD/CDVDisoReader.h"
+
 unsigned int langsMax;
 static bool m_RestartGui = false;	// used to signal a GUI restart after DestroyWindow()
 static HBITMAP hbitmap_background = NULL;
@@ -447,6 +449,45 @@ BOOL Open_File_Proc( std::string& outstr )
 	return FALSE;
 }
 
+BOOL Open_Iso_File_Proc( std::string& outstr )
+{
+	OPENFILENAME ofn;
+	char szFileName[ g_MaxPath ];
+	char szFileTitle[ g_MaxPath ];
+	char * filter = "ISO Files (*.ISO)\0*.ISO\0ALL Files (*.*)\0*.*\0";
+
+	memzero_obj( szFileName );
+	memzero_obj( szFileTitle );
+
+	ofn.lStructSize			= sizeof( OPENFILENAME );
+	ofn.hwndOwner			= gApp.hWnd;
+	ofn.lpstrFilter			= filter;
+	ofn.lpstrCustomFilter   = NULL;
+	ofn.nMaxCustFilter		= 0;
+	ofn.nFilterIndex		= 1;
+	ofn.lpstrFile			= szFileName;
+	ofn.nMaxFile			= g_MaxPath;
+	ofn.lpstrInitialDir		= NULL;
+	ofn.lpstrFileTitle		= szFileTitle;
+	ofn.nMaxFileTitle		= g_MaxPath;
+	ofn.lpstrTitle			= NULL;
+	ofn.lpstrDefExt			= "ELF";
+	ofn.Flags				= OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR | OFN_EXPLORER;
+
+	if (GetOpenFileName(&ofn)) {
+		struct stat buf;
+
+		if (stat(szFileName, &buf) != 0) {
+			return FALSE;
+		}
+
+		outstr = szFileName;
+		return TRUE;
+	}
+
+	return FALSE;
+}
+
 //2002-09-20 (Florin)
 BOOL APIENTRY CmdlineProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -630,6 +671,21 @@ LRESULT WINAPI MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			}
 			break;
 
+			case ID_FILE_RUNISO:
+			{
+				string outstr;
+				if( Open_Iso_File_Proc( outstr ) )
+				{
+					loadFromISO = true;
+
+					strcpy(isoFileName,outstr.c_str());
+
+					SysReset();
+					SysPrepareExecution( NULL );
+				}
+			}
+			break;
+
 			case ID_RUN_EXECUTE:
 				// Execute without reset -- resumes existing states or runs the BIOS if
 				// the state is cleared/reset.
@@ -637,9 +693,12 @@ LRESULT WINAPI MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			break;
 
 			case ID_FILE_RUNCD:
+				loadFromISO = false;
 				SysReset();
 				SysPrepareExecution( NULL );
 			break;
+
+
 
 			case ID_RUN_RESET:
 				SysReset();
@@ -791,6 +850,12 @@ LRESULT WINAPI MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				SaveConfig();
 				break;
 
+			case ID_BLOCKDUMP:
+				Config.Blockdump = !Config.Blockdump;
+				CheckMenuItem(gApp.hMenu, ID_BLOCKDUMP, Config.Blockdump ? MF_CHECKED : MF_UNCHECKED);
+				SaveConfig();
+				break;
+
 			case ID_CDVDPRINT:
 				Config.cdvdPrint = !Config.cdvdPrint;
 				CheckMenuItem(gApp.hMenu, ID_CDVDPRINT, Config.cdvdPrint ? MF_CHECKED : MF_UNCHECKED);
@@ -926,6 +991,7 @@ void CreateMainMenu() {
 	ADDSUBMENUS(0, 1, _("&States"));
 	ADDSEPARATOR(0);
 	ADDMENUITEM(0, _("&Open ELF File"), ID_FILEOPEN);
+	ADDMENUITEM(0, _("Run from &ISO Image"), ID_FILE_RUNISO);
 	ADDMENUITEM(0, _("&Run CD/DVD"), ID_FILE_RUNCD);
 	ADDSUBMENUS(1, 3, _("&Save"));
 	ADDSUBMENUS(1, 2, _("&Load"));
@@ -993,6 +1059,8 @@ void CreateMainMenu() {
 	ADDMENUITEM(0,_("Enable &Profiler"), ID_PROFILER);
 	ADDMENUITEM(0,_("Enable &Patches"), ID_PATCHES);
 	ADDMENUITEM(0,_("Enable &Console"), ID_CONSOLE); 
+	//TODO
+	//ADDMENUITEM(0,_("Enable &Block Dumping"), ID_BLOCKDUMP);
 	ADDSEPARATOR(0);
 	ADDMENUITEM(0,_("Patch &Finder..."), ID_CHEAT_FINDER_SHOW); 
 	ADDMENUITEM(0,_("Patch &Browser..."), ID_CHEAT_BROWSER_SHOW); 

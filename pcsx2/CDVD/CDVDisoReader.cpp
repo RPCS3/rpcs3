@@ -20,17 +20,16 @@
  *  Modified by Florin for PCSX2 emu
  *  Fixed CdRead by linuzappz
  */
+#include "PrecompiledHeader.h"
  
- #ifdef __LINUX__
+#ifdef __LINUX__
  // Just in case.
- #define __USE_LARGEFILE64
-#define __USE_FILE_OFFSET64
-#define _FILE_OFFSET_BITS 64
-#define _LARGEFILE_SOURCE 
-#define _LARGEFILE64_SOURCE
+#	define __USE_LARGEFILE64
+#	define __USE_FILE_OFFSET64
+#	define _FILE_OFFSET_BITS 64
+#	define _LARGEFILE_SOURCE 
+#	define _LARGEFILE64_SOURCE
 #endif 
-
- #include "PrecompiledHeader.h"
 
 #include "CDVDisoReader.h"
 
@@ -38,7 +37,9 @@
 #define MAX_PATH 255
 #endif
 
-char IsoFile[256];
+bool loadFromISO;
+
+char isoFileName[256];
 
 u8 *pbuffer;
 
@@ -62,10 +63,6 @@ int isoSectorOffset = 0;
 #define _ftelli64 ftello64
 #define _fseeki64 fseeko64
 #endif
-
-// This var is used to detect resume-style behavior of the Pcsx2 emulator,
-// and skip prompting the user for a new CD when it's likely they want to run the existing one.
-static char cdvdCurrentIso[MAX_PATH];
 
 u8 cdbuffer[CD_FRAMESIZE_RAW * 10] = {0};
 
@@ -106,7 +103,7 @@ void __Log(char *fmt, ...)
 #endif
 
 
-s32 ISOinit()
+s32 CALLBACK ISOinit()
 {
 #ifdef PCSX2_DEBUG
 	cdvdLog = fopen("logs/cdvdLog.txt", "w");
@@ -123,39 +120,24 @@ s32 ISOinit()
 	CDVD_LOG("ISOinit\n");
 #endif
 
-	cdvdCurrentIso[0] = 0;
 	return 0;
 }
 
-void ISOshutdown()
+void CALLBACK ISOshutdown()
 {
-	cdvdCurrentIso[0] = 0;
 #ifdef CDVD_LOG
 	if (cdvdLog != NULL) fclose(cdvdLog);
 #endif
 }
 
-s32 ISOopen(const char* pTitle)
+s32 CALLBACK ISOopen(const char* pTitle)
 {
-	if (pTitle != NULL) strcpy(IsoFile, pTitle);
+	//if (pTitle != NULL) strcpy(isoFileName, pTitle);
 
-	if (*IsoFile == 0) strcpy(IsoFile, cdvdCurrentIso);
-
-	if (*IsoFile == 0)
-	{
-		char temp[256];
-
-		//CfgOpenFile();
-		
-		strcpy(temp, IsoFile);
-		*IsoFile = 0;
-		strcpy(IsoFile, temp);
-	}
-
-	isoFile = fopen(IsoFile,"rb");
+	isoFile = fopen(isoFileName,"rb");
 	if (isoFile == NULL)
 	{
-		Console::Error("Error loading %s\n", params IsoFile);
+		Console::Error("Error loading %s\n", params isoFileName);
 		return -1;
 	}
 
@@ -165,8 +147,9 @@ s32 ISOopen(const char* pTitle)
 	isoSectorSize = 2048;
 	isoSectorOffset = 0;
 
-	// probably vc++ only, CBA to find the unix equivalent
+	_fseeki64(isoFile,0,SEEK_END);
 	isoNumSectors = (int)(_ftelli64(isoFile)/isoSectorSize);
+	_fseeki64(isoFile,0,SEEK_SET);
 
 	if (BlockDump)
 	{
@@ -174,12 +157,12 @@ s32 ISOopen(const char* pTitle)
 
 #ifdef _WIN32
 		char fname[MAX_PATH], ext[MAX_PATH];
-		_splitpath(IsoFile, NULL, NULL, fname, ext);
+		_splitpath(isoFileName, NULL, NULL, fname, ext);
 		_makepath(fname_only, NULL, NULL, fname, NULL);
 #else
 		char* p, *plast;
 		
-		plast = p = strchr(IsoFile, '/');
+		plast = p = strchr(isoFileName, '/');
 		while (p != NULL)
 		{
 			plast = p;
@@ -191,7 +174,7 @@ s32 ISOopen(const char* pTitle)
 		if (plast != NULL) 
 			strcat(fname_only, plast + 1);
 		else 
-			strcat(fname_only, IsoFile);
+			strcat(fname_only, isoFileName);
 	
 		plast = p = strchr(fname_only, '.');
 		
@@ -240,15 +223,13 @@ s32 ISOopen(const char* pTitle)
 	return 0;
 }
 
-void ISOclose()
+void CALLBACK ISOclose()
 {
-	strcpy(cdvdCurrentIso, IsoFile);
-
 	fclose(isoFile);
 	if (fdump != NULL) fclose(fdump);
 }
 
-s32 ISOreadSubQ(u32 lsn, cdvdSubQ* subq)
+s32 CALLBACK ISOreadSubQ(u32 lsn, cdvdSubQ* subq)
 {
 	// fake it, until some kind of support for clonecd .sub files is implemented
 	u8 min, sec, frm;
@@ -271,7 +252,7 @@ s32 ISOreadSubQ(u32 lsn, cdvdSubQ* subq)
 	return 0;
 }
 
-s32 ISOgetTN(cdvdTN *Buffer)
+s32 CALLBACK ISOgetTN(cdvdTN *Buffer)
 {
 	Buffer->strack = 1;
 	Buffer->etrack = 1;
@@ -279,7 +260,7 @@ s32 ISOgetTN(cdvdTN *Buffer)
 	return 0;
 }
 
-s32 ISOgetTD(int tn, cdvdTD *Buffer)
+s32 CALLBACK ISOgetTD(u8 tn, cdvdTD *Buffer)
 {
 	if(tn==1)
 	{
@@ -294,26 +275,26 @@ s32 ISOgetTD(int tn, cdvdTD *Buffer)
 	return 0;
 }
 
-s32 ISOgetDiskType()
+s32 CALLBACK ISOgetDiskType()
 {
 	return isoType;
 }
 
-s32 ISOgetTrayStatus()
+s32 CALLBACK ISOgetTrayStatus()
 {
 	return CDVD_TRAY_CLOSE;
 }
 
-s32 ISOctrlTrayOpen()
+s32 CALLBACK ISOctrlTrayOpen()
 {
 	return 0;
 }
-s32 ISOctrlTrayClose()
+s32 CALLBACK ISOctrlTrayClose()
 {
 	return 0;
 }
 
-s32 ISOreadSector(u8* tempbuffer, u32 lsn)
+s32 CALLBACK ISOreadSector(u8* tempbuffer, u32 lsn)
 {
 	// dummy function, doesn't create valid info for the data surrounding the userdata bytes!
 
@@ -323,7 +304,7 @@ s32 ISOreadSector(u8* tempbuffer, u32 lsn)
 }
 
 static s32 layer1start = -1;
-s32 ISOgetTOC(void* toc)
+s32 CALLBACK ISOgetTOC(void* toc)
 {
 	u8 type = ISOgetDiskType();
 	u8* tocBuff = (u8*)toc;
@@ -465,7 +446,7 @@ s32 ISOgetTOC(void* toc)
 	return 0;
 }
 
-s32 ISOreadTrack(u32 lsn, int mode)
+s32 CALLBACK ISOreadTrack(u32 lsn, int mode)
 {
 	int _lsn = lsn;
 
@@ -503,7 +484,7 @@ s32 ISOreadTrack(u32 lsn, int mode)
 	return 0;
 }
 
-u8* ISOgetBuffer()
+u8* CALLBACK ISOgetBuffer()
 {
 	return pbuffer;
 }

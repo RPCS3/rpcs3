@@ -22,6 +22,7 @@
 #include "IopCommon.h"
 #include "GS.h"
 #include "HostGui.h"
+#include "CDVD/CDVDisoReader.h"
 
 _GSinit            GSinit;
 _GSopen            GSopen;
@@ -486,6 +487,7 @@ void *CDVDplugin;
 void CALLBACK CDVD_configure() {}
 void CALLBACK CDVD_about() {}
 s32  CALLBACK CDVD_test() { return 0; }
+void CALLBACK CDVD_newDiskCB(void (*callback)()) {}
 
 int LoadCDVDplugin(const string& filename) {
 	void *drv;
@@ -691,7 +693,9 @@ int InitPlugins()
 	if (ReportError(PAD1init(1), "PAD1init")) return -1;
 	if (ReportError(PAD2init(2), "PAD2init")) return -1;
 	if (ReportError(SPU2init(), "SPU2init")) return -1;
-	if (ReportError(CDVDinit(), "CDVDinit")) return -1;
+	
+	if (ReportError(DoCDVDinit(), "CDVDinit")) return -1;
+	
 	if (ReportError(DEV9init(), "DEV9init")) return -1;
 	if (ReportError(USBinit(), "USBinit")) return -1;
 	if (ReportError(FWinit(), "FWinit")) return -1;
@@ -714,7 +718,10 @@ void ShutdownPlugins()
 	if (PAD2shutdown != NULL) PAD2shutdown();
 
 	if (SPU2shutdown != NULL) SPU2shutdown();
-	if (CDVDshutdown != NULL) CDVDshutdown();
+	
+	//if (CDVDshutdown != NULL) CDVDshutdown();
+	DoCDVDshutdown();
+	
 	if (DEV9shutdown != NULL) DEV9shutdown();
 	if (USBshutdown != NULL) USBshutdown();
 	if (FWshutdown != NULL) FWshutdown();
@@ -757,9 +764,9 @@ bool OpenCDVD(const char* pTitleFilename)
 	if (!OpenStatus.CDVD && !only_loading_elf)
 	{
 		//First, we need the data.
-		if (CDVDnewDiskCB) CDVDnewDiskCB(cdvdNewDiskCB);
+		DoCDVDnewDiskCB(cdvdNewDiskCB);
 
-		if (CDVDopen(pTitleFilename) != 0) 
+		if (DoCDVDopen(pTitleFilename) != 0) 
 		{ 
 			if (g_Startup.BootMode != BootMode_Elf) 
 			{ 

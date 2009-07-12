@@ -175,6 +175,8 @@ void IniFile::DoConfig( PcsxConfig& Conf )
 {
 	SetCurrentSection( "Misc" );
 
+	Entry( "Blockdump", Conf.Blockdump, false );
+
 	Entry( "Patching", Conf.Patch, false );
 	Entry( "GameFixes", Conf.GameFixes);
 #ifdef PCSX2_DEVBUILD

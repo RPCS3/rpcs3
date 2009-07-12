@@ -185,6 +185,8 @@ public:
 	u32 sseVUMXCSR;
 	u32 eeOptions;
 	u32 vuOptions;
+
+	int Blockdump;
 };
 
 extern PcsxConfig Config;

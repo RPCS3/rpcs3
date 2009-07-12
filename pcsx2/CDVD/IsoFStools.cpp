@@ -26,6 +26,7 @@
 
 #include "IsoFStools.h"
 #include "IsoFSdrv.h"
+#include "CDVDaccess.h"
 
 struct dir_toc_data
 {
@@ -175,9 +176,9 @@ int IsoFS_readSectors(u32 lsn, u32 sectors, void *buf)
 	
 	for (i=0; i<sectors; i++)
 	{
-		if (CDVDreadTrack(lsn+i, CDVD_MODE_2048) == -1) return 0;
+		if (DoCDVDreadTrack(lsn+i, CDVD_MODE_2048) == -1) return 0;
 
-		buff = CDVDgetBuffer();
+		buff = DoCDVDgetBuffer();
 
 		if (buff == NULL) return 0;
 

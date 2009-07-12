@@ -1530,15 +1530,16 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\CDVD\CDVDaccess.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\CDVD\CDVDaccess.h"
+					>
+				</File>
+				<File
 					RelativePath="..\..\CDVD\CDVDisoReader.cpp"
 					>
-					<FileConfiguration
-						Name="Release|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
 				</File>
 				<File
 					RelativePath="..\..\CDVD\CDVDisoReader.h"

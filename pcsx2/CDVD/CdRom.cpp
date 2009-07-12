@@ -141,7 +141,7 @@ static void ReadTrack() {
 	cdr.Prev[2] = itob(cdr.SetSector[2]);
 
 	CDR_LOG("KEY *** %x:%x:%x", cdr.Prev[0], cdr.Prev[1], cdr.Prev[2]);
-	cdr.RErr = CDVDreadTrack(MSFtoLSN(cdr.SetSector), CDVD_MODE_2352);
+	cdr.RErr = DoCDVDreadTrack(MSFtoLSN(cdr.SetSector), CDVD_MODE_2352);
 }
 
 // cdr.Stat:
@@ -332,7 +332,7 @@ void  cdrInterrupt() {
 			SetResultSize(3);
 			cdr.StatP|= 0x2;
 			cdr.Result[0] = cdr.StatP;
-			if (CDVDgetTN(&cdr.ResultTN) == -1) {
+			if (DoCDVDgetTN(&cdr.ResultTN) == -1) {
 				cdr.Stat = DiskError;
 				cdr.Result[0]|= 0x01;
 			} else {
@@ -347,7 +347,7 @@ void  cdrInterrupt() {
 			cdr.Track = btoi(cdr.Param[0]);
 			SetResultSize(4);
 			cdr.StatP|= 0x2;
-			if (CDVDgetTD(cdr.Track, &trackInfo) == -1) {
+			if (DoCDVDgetTD(cdr.Track, &trackInfo) == -1) {
 				cdr.Stat = DiskError;
 				cdr.Result[0]|= 0x01;
 			} else {
@@ -514,7 +514,7 @@ void  cdrReadInterrupt() {
 	cdr.Result[0] = cdr.StatP;
 
 	SysPrintf("Reading From CDR");
-	buf = CDVDgetBuffer();
+	buf = DoCDVDgetBuffer();
 	if (buf == NULL) cdr.RErr = -1;
 
 	if (cdr.RErr == -1) {
