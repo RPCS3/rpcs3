@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     01/02/97
-// RCS-ID:      $Id: prntbase.h 49563 2007-10-31 20:46:21Z VZ $
+// RCS-ID:      $Id: prntbase.h 54404 2008-06-28 15:32:52Z VS $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -574,6 +574,10 @@ protected:
 
 private:
     void Init(wxPrintout *printout, wxPrintout *printoutForPrinting);
+
+    // helpers for RenderPage():
+    bool RenderPageIntoDC(wxDC& dc, int pageNum);
+    bool RenderPageIntoBitmap(wxBitmap& bmp, int pageNum);
 
     DECLARE_NO_COPY_CLASS(wxPrintPreviewBase)
     DECLARE_CLASS(wxPrintPreviewBase)

@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by: Wlodzimierz ABX Skiba from wx/listbook.h
 // Created:     15.09.04
-// RCS-ID:      $Id: choicebk.h 49804 2007-11-10 01:09:42Z VZ $
+// RCS-ID:      $Id: choicebk.h 56623 2008-10-31 23:07:49Z VZ $
 // Copyright:   (c) Vadim Zeitlin, Wlodzimierz Skiba
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -93,7 +93,7 @@ protected:
 
     void UpdateSelectedPage(size_t newsel)
     {
-        m_selection = newsel;
+        m_selection = wx_static_cast(int, newsel);
         GetChoiceCtrl()->Select(newsel);
     }
 

@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     01/02/97
-// RCS-ID:      $Id: event.cpp 51404 2008-01-27 12:57:04Z VZ $
+// RCS-ID:      $Id: event.cpp 56712 2008-11-08 22:41:10Z VZ $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -34,6 +34,7 @@
     #include "wx/module.h"
 
     #if wxUSE_GUI
+        #include "wx/window.h"
         #include "wx/control.h"
         #include "wx/dc.h"
         #include "wx/textctrl.h"
@@ -1039,7 +1040,7 @@ wxEvtHandler::wxEvtHandler()
     m_eventsLocker = new wxCriticalSection;
 #  endif
 #endif
-    
+
     // no client data (yet)
     m_clientData = NULL;
     m_clientDataType = wxClientData_None;
@@ -1141,8 +1142,6 @@ void wxEvtHandler::AddPendingEvent(wxEvent& event)
 
     m_pendingEvents->Append(eventCopy);
 
-    wxLEAVE_CRIT_SECT( Lock() );
-
     // 2) Add this event handler to list of event handlers that
     //    have pending events.
 
@@ -1153,6 +1152,8 @@ void wxEvtHandler::AddPendingEvent(wxEvent& event)
     wxPendingEvents->Append(this);
 
     wxLEAVE_CRIT_SECT(*wxPendingEventsLocker);
+
+    wxLEAVE_CRIT_SECT( Lock() );
 
     // 3) Inform the system that new pending events are somewhere,
     //    and that these should be processed in idle time.
@@ -1165,7 +1166,7 @@ void wxEvtHandler::ProcessPendingEvents()
     // pending events
     wxCHECK_RET( m_pendingEvents,
                  wxT("Please call wxApp::ProcessPendingEvents() instead") );
-    
+
     wxENTER_CRIT_SECT( Lock() );
 
     // we leave the loop once we have processed all events that were present at

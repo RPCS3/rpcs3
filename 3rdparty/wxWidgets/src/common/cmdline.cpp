@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     05.01.00
-// RCS-ID:      $Id: cmdline.cpp 42197 2006-10-21 14:04:27Z VZ $
+// RCS-ID:      $Id: cmdline.cpp 54704 2008-07-19 01:53:04Z VZ $
 // Copyright:   (c) 2000 Vadim Zeitlin <zeitlin@dptmaths.ens-cachan.fr>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -1235,7 +1235,7 @@ wxArrayString wxCmdLineParser::ConvertStringToArgs(const wxChar *p)
                 break;
             }
 
-            lastBS = *p == _T('\\');
+            lastBS = !lastBS && *p == _T('\\');
 
             arg += *p;
         }

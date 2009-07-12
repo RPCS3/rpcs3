@@ -4,7 +4,7 @@
 *  Author:      Vadim Zeitlin
 *  Modified by: Ryan Norton (Converted to C)
 *  Created:     29/01/98
-*  RCS-ID:      $Id: debug.h 53711 2008-05-22 22:58:28Z SN $
+*  RCS-ID:      $Id: debug.h 54492 2008-07-05 17:54:03Z SN $
 *  Copyright:   (c) 1998 Vadim Zeitlin <zeitlin@dptmaths.ens-cachan.fr>
 *  Licence:     wxWindows licence
 */
@@ -190,6 +190,17 @@
 
 /*  as wxCHECK2 but with a message explaining why we fail */
 
+#ifdef __GNUC__
+    #define wxFORCE_SEMICOLON typedef int wxDummyCheckInt
+    /* Note: old gcc versions (e.g. 2.8) give an internal compiler error */
+    /*     on a simple forward declaration, when used in a template    */
+    /*     function, so rather use a dummy typedef which does work...  */
+#else
+    #define wxFORCE_SEMICOLON struct wxDummyCheckStruct
+    /* Note2: however, some other compilers (notably Digital Mars */
+    /*     don't like multiple typedefs (even though the standard */
+    /*     does allow them), so use a forward declaration for non-gcc.  */
+#endif
 /* see comment near the definition of wxASSERT_MSG for the # if/else reason */
 #if defined(__MWERKS__)
     #define wxCHECK2_MSG(cond, op, msg)                                       \
@@ -210,10 +221,7 @@
             wxFAIL_COND_MSG(#cond, msg);                                      \
             op;                                                               \
         }                                                                     \
-        typedef int wxDummyCheckInt /* just to force a semicolon */
-        /* NB: old gcc versions (e.g. 2.8) give an internal compiler error */
-        /*     on a simple forward declaration, when used in a template    */
-        /*     function, so rather use a dummy typedef which does work...  */
+        wxFORCE_SEMICOLON /* just to force a semicolon */
 #endif
 
 /*  special form of wxCHECK2: as wxCHECK, but for use in void functions */

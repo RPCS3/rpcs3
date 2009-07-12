@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     01/02/97
-// RCS-ID:      $Id: tbar95.h 44317 2007-01-25 23:35:07Z RD $
+// RCS-ID:      $Id: tbar95.h 58446 2009-01-26 23:32:16Z VS $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -142,6 +142,9 @@ protected:
     wxToolBarToolBase *m_pInTool;
 
 private:
+    // makes sure tool bitmap size is sufficient for all tools
+    void AdjustToolBitmapSize();
+
     DECLARE_EVENT_TABLE()
     DECLARE_DYNAMIC_CLASS(wxToolBar)
     DECLARE_NO_COPY_CLASS(wxToolBar)

@@ -4,7 +4,7 @@
 // Author:      Hajo Kirchhoff
 // Modified by:
 // Created:     06/11/2003
-// RCS-ID:      $Id: urlmsw.cpp 41020 2006-09-05 20:47:48Z VZ $
+// RCS-ID:      $Id: urlmsw.cpp 58116 2009-01-15 12:45:22Z VZ $
 // Copyright:   (c) 2003 Hajo Kirchhoff
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -23,6 +23,7 @@
     #include "wx/string.h"
     #include "wx/utils.h"
     #include "wx/module.h"
+    #include "wx/log.h"
 #endif
 
 #if !wxUSE_PROTOCOL_HTTP
@@ -129,6 +130,7 @@ public:
         { return -1; }
     wxFileOffset TellI() const
         { return -1; }
+    size_t GetSize() const;
 
 protected:
     void SetError(wxStreamError err) { m_lasterror=err; }
@@ -137,6 +139,18 @@ protected:
 
     DECLARE_NO_COPY_CLASS(wxWinINetInputStream)
 };
+
+size_t wxWinINetInputStream::GetSize() const
+{
+   DWORD contentLength = 0;
+   DWORD dwSize = sizeof(contentLength);
+   DWORD index = 0;
+
+   if ( HttpQueryInfo( m_hFile, HTTP_QUERY_CONTENT_LENGTH | HTTP_QUERY_FLAG_NUMBER, &contentLength, &dwSize, &index) )
+      return contentLength;
+   else
+      return 0;
+}
 
 size_t wxWinINetInputStream::OnSysRead(void *buffer, size_t bufsize)
 {
@@ -160,7 +174,7 @@ size_t wxWinINetInputStream::OnSysRead(void *buffer, size_t bufsize)
             );
 
             wxLogError(wxT("Read failed with error %d: %s"),
-                       iError, errorString);
+                       iError, errorString.c_str());
         }
     }
 

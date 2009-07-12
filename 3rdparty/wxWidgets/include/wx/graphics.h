@@ -5,7 +5,7 @@
 // Modified by:
 // Created:
 // Copyright:   (c) Stefan Csomor
-// RCS-ID:      $Id: graphics.h 50671 2007-12-12 20:19:36Z MR $
+// RCS-ID:      $Id: graphics.h 57953 2009-01-09 18:46:48Z SC $
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
@@ -29,6 +29,7 @@ class WXDLLIMPEXP_CORE wxGraphicsRenderer;
 class WXDLLIMPEXP_CORE wxGraphicsPen;
 class WXDLLIMPEXP_CORE wxGraphicsBrush;
 class WXDLLIMPEXP_CORE wxGraphicsFont;
+class WXDLLIMPEXP_CORE wxGraphicsBitmap;
 
 /*
  * notes about the graphics context apis
@@ -63,6 +64,10 @@ class WXDLLIMPEXP_CORE wxGraphicsObject : public wxObject
 {
 public :
     wxGraphicsObject() ;
+#if wxABI_VERSION >= 20810
+    wxGraphicsObject( const wxGraphicsObject& other) : wxObject( other ) {}
+    wxGraphicsObject& operator= (const wxGraphicsObject & other) { Ref(other); return *this;}
+#endif
     wxGraphicsObject( wxGraphicsRenderer* renderer ) ;
     virtual ~wxGraphicsObject() ;
 
@@ -82,6 +87,10 @@ class WXDLLIMPEXP_CORE wxGraphicsPen : public wxGraphicsObject
 {
 public :
     wxGraphicsPen() {}
+#if wxABI_VERSION >= 20810
+    wxGraphicsPen( const wxGraphicsPen& other) : wxGraphicsObject( other ) {}
+    wxGraphicsPen& operator= (const wxGraphicsPen & other) { Ref(other); return *this;}
+#endif
     virtual ~wxGraphicsPen() {}
 private :
     DECLARE_DYNAMIC_CLASS(wxGraphicsPen)
@@ -93,6 +102,10 @@ class WXDLLIMPEXP_CORE wxGraphicsBrush : public wxGraphicsObject
 {
 public :
     wxGraphicsBrush() {}
+#if wxABI_VERSION >= 20810
+    wxGraphicsBrush( const wxGraphicsBrush& other) : wxGraphicsObject( other ) {}
+    wxGraphicsBrush& operator= (const wxGraphicsBrush & other) { Ref(other); return *this;}
+#endif
     virtual ~wxGraphicsBrush() {}
 private :
     DECLARE_DYNAMIC_CLASS(wxGraphicsBrush)
@@ -104,6 +117,10 @@ class WXDLLIMPEXP_CORE wxGraphicsFont : public wxGraphicsObject
 {
 public :
     wxGraphicsFont() {}
+#if wxABI_VERSION >= 20810
+    wxGraphicsFont( const wxGraphicsFont& other) : wxGraphicsObject( other ) {}
+    wxGraphicsFont& operator= (const wxGraphicsFont & other) { Ref(other); return *this;}
+#endif
     virtual ~wxGraphicsFont() {}
 private :
     DECLARE_DYNAMIC_CLASS(wxGraphicsFont)
@@ -111,6 +128,20 @@ private :
 
 extern WXDLLEXPORT_DATA(wxGraphicsFont) wxNullGraphicsFont;
 
+class WXDLLIMPEXP_CORE wxGraphicsBitmap : public wxGraphicsObject
+{
+public :
+    wxGraphicsBitmap() {}
+#if wxABI_VERSION >= 20810
+    wxGraphicsBitmap( const wxGraphicsBitmap& other) : wxGraphicsObject( other ) {}
+    wxGraphicsBitmap& operator= (const wxGraphicsBitmap & other) { Ref(other); return *this;}
+#endif
+    virtual ~wxGraphicsBitmap() {}
+private :
+    DECLARE_DYNAMIC_CLASS(wxGraphicsBitmap)
+} ;
+
+extern WXDLLEXPORT_DATA(wxGraphicsBitmap) wxNullGraphicsBitmap;
 
 class WXDLLIMPEXP_CORE wxGraphicsMatrixData : public wxGraphicsObjectRefData
 {
@@ -171,6 +202,10 @@ class WXDLLIMPEXP_CORE wxGraphicsMatrix : public wxGraphicsObject
 {
 public :
     wxGraphicsMatrix() {}
+#if wxABI_VERSION >= 20810
+    wxGraphicsMatrix( const wxGraphicsMatrix& other) : wxGraphicsObject( other ) {}
+    wxGraphicsMatrix& operator= (const wxGraphicsMatrix & other) { Ref(other); return *this;}
+#endif
 
     virtual ~wxGraphicsMatrix() {}
 
@@ -306,6 +341,10 @@ class WXDLLIMPEXP_CORE wxGraphicsPath : public wxGraphicsObject
 {
 public :
     wxGraphicsPath()  {}
+#if wxABI_VERSION >= 20810
+    wxGraphicsPath( const wxGraphicsPath& other) : wxGraphicsObject( other ) {}
+    wxGraphicsPath& operator= (const wxGraphicsPath & other) { Ref(other); return *this;}
+#endif
     virtual ~wxGraphicsPath() {}
 
     //
@@ -428,6 +467,12 @@ public:
 
     // sets the font
     virtual wxGraphicsFont CreateFont( const wxFont &font , const wxColour &col = *wxBLACK ) const;
+    
+#if wxABI_VERSION >= 20809
+    wxGraphicsBitmap CreateBitmap( const wxBitmap &bitmap ) const;
+#endif
+
+    //virtual wxGraphicsBitmap CreateSubBitmap( const wxGraphicsBitmap &bitmap, wxDouble x, wxDouble y, wxDouble w, wxDouble h  ) const;
 
     // create a 'native' matrix corresponding to these values
     virtual wxGraphicsMatrix CreateMatrix( wxDouble a=1.0, wxDouble b=0.0, wxDouble c=0.0, wxDouble d=1.0,
@@ -527,7 +572,10 @@ public:
     //
     // image support
     //
-
+#if wxABI_VERSION >= 20809
+    void DrawGraphicsBitmap( const wxGraphicsBitmap &bmp, wxDouble x, wxDouble y, wxDouble w, wxDouble h );
+#endif
+    
     virtual void DrawBitmap( const wxBitmap &bmp, wxDouble x, wxDouble y, wxDouble w, wxDouble h ) = 0;
 
     virtual void DrawIcon( const wxIcon &icon, wxDouble x, wxDouble y, wxDouble w, wxDouble h ) = 0;
@@ -584,6 +632,10 @@ class WXDLLIMPEXP_CORE wxGraphicsFigure : public wxGraphicsObject
 {
 public :
     wxGraphicsFigure(wxGraphicsRenderer* renderer) ;
+#if wxABI_VERSION >= 20810
+    wxGraphicsFigure( const wxGraphicsFigure& other) : wxGraphicsObject( other ) {}
+    wxGraphicsFigure& operator= (const wxGraphicsFigure & other) { Ref(other); return *this;}
+#endif
 
     virtual ~wxGraphicsFigure() ;
 
@@ -665,6 +717,10 @@ public :
 
    // sets the font
     virtual wxGraphicsFont CreateFont( const wxFont &font , const wxColour &col = *wxBLACK ) = 0;
+
+#if wxABI_VERSION >= 20809
+    wxGraphicsBitmap CreateBitmap( const wxBitmap &bmp );
+#endif
 
 private :
     DECLARE_NO_COPY_CLASS(wxGraphicsRenderer)

@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     11/6/98
-// RCS-ID:      $Id: automtn.cpp 53817 2008-05-29 13:35:52Z VZ $
+// RCS-ID:      $Id: automtn.cpp 55899 2008-09-26 15:18:16Z VZ $
 // Copyright:   (c) 1998, Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -538,8 +538,13 @@ bool wxAutomationObject::CreateInstance(const wxString& classId) const
         return false;
     }
 
-    // start a new copy of Excel, grab the IDispatch interface
-    if (FAILED(CoCreateInstance(clsId, NULL, CLSCTX_LOCAL_SERVER, IID_IDispatch, (void**)&m_dispatchPtr)))
+    // get the server IDispatch interface
+    //
+    // NB: using CLSCTX_INPROC_HANDLER results in failure when getting
+    //     Automation interface for Microsoft Office applications so don't use
+    //     CLSCTX_ALL which includes it
+    if (FAILED(CoCreateInstance(clsId, NULL, CLSCTX_SERVER, IID_IDispatch,
+                                (void**)&m_dispatchPtr)))
     {
         wxLogWarning(wxT("Cannot start an instance of this class."));
         return false;

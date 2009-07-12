@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     01/02/97
-// RCS-ID:      $Id: splitter.cpp 42816 2006-10-31 08:50:17Z RD $
+// RCS-ID:      $Id: splitter.cpp 59341 2009-03-05 15:44:24Z JS $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -84,6 +84,11 @@ bool wxSplitterWindow::Create(wxWindow *parent, wxWindowID id,
     style &= ~wxBORDER_MASK;
     style |= wxBORDER_NONE;
 
+#if defined(__WXMAC__) && wxMAC_USE_CORE_GRAPHICS
+    // CoreGraphics can't paint sash feedback
+    style |= wxSP_LIVE_UPDATE;
+#endif
+
     if ( !wxWindow::Create(parent, id, pos, size, style, name) )
         return false;
 
@@ -91,7 +96,7 @@ bool wxSplitterWindow::Create(wxWindow *parent, wxWindowID id,
         m_lastSize.x = size.x;
     if (size.y >= 0)
         m_lastSize.y = size.y;
-    
+
     m_permitUnsplitAlways = (style & wxSP_PERMIT_UNSPLIT) != 0;
 
     // FIXME: with this line the background is not erased at all under GTK1,
@@ -206,8 +211,11 @@ void wxSplitterWindow::OnMouseEvent(wxMouseEvent& event)
     int x = (int)event.GetX(),
         y = (int)event.GetY();
 
-    if (GetWindowStyle() & wxSP_NOSASH)
+    if ( GetWindowStyle() & wxSP_NOSASH )
+    {
+        event.Skip();
         return;
+    }
 
     // with wxSP_LIVE_UPDATE style the splitter windows are always resized
     // following the mouse movement while it drags the sash, without it we only
@@ -388,6 +396,10 @@ void wxSplitterWindow::OnMouseEvent(wxMouseEvent& event)
     else if ( event.LeftDClick() && m_windowTwo )
     {
         OnDoubleClickSash(x, y);
+    }
+    else
+    {
+        event.Skip();
     }
 }
 
@@ -600,7 +612,7 @@ int wxSplitterWindow::AdjustSashPosition(int sashPos) const
             minSize = m_minimumPaneSize;
 
         int maxSize = GetWindowSize() - minSize - GetBorderSize() - GetSashSize();
-        if ( maxSize > 0 && sashPos > maxSize )
+        if ( maxSize > 0 && sashPos > maxSize && maxSize >= m_minimumPaneSize)
             sashPos = maxSize;
     }
 

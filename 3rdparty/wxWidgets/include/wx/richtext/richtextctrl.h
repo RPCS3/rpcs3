@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     2005-09-30
-// RCS-ID:      $Id: richtextctrl.h 52136 2008-02-27 08:54:40Z JS $
+// RCS-ID:      $Id: richtextctrl.h 58256 2009-01-21 12:05:11Z JS $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -38,6 +38,8 @@ class WXDLLIMPEXP_FWD_RICHTEXT wxRichTextStyleDefinition;
 
 #define wxRE_READONLY          0x0010
 #define wxRE_MULTILINE         0x0020
+#define wxRE_CENTRE_CARET      0x8000
+#define wxRE_CENTER_CARET      wxRE_CENTRE_CARET
 
 /* Flags
  */

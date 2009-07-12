@@ -469,14 +469,16 @@ protected:
     void OnRightDown(wxMouseEvent& evt);
     void OnRightUp(wxMouseEvent& evt);
     void OnLeftDClick(wxMouseEvent& evt);
-    void OnSetFocus(wxFocusEvent& event);
-    void OnKillFocus(wxFocusEvent& event);
-    void OnChar(wxKeyEvent& event);
+    void OnSetFocus(wxFocusEvent& evt);
+    void OnKillFocus(wxFocusEvent& evt);
+    void OnChar(wxKeyEvent& evt);
+#endif
+#if wxABI_VERSION >= 20809
+    void OnCaptureLost(wxMouseCaptureLostEvent& evt);
 #endif
     void OnMotion(wxMouseEvent& evt);
     void OnLeaveWindow(wxMouseEvent& evt);
     void OnButton(wxAuiNotebookEvent& evt);
-
 
 protected:
 

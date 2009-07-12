@@ -4,7 +4,7 @@
 // Author:      Robert Roebling, Vadim Zeitlin
 // Modified by:
 // Created:     28.12.2000
-// RCS-ID:      $Id: filename.cpp 52996 2008-04-03 12:47:16Z VZ $
+// RCS-ID:      $Id: filename.cpp 58751 2009-02-08 10:05:28Z VZ $
 // Copyright:   (c) 2000 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -704,7 +704,6 @@ static wxString wxCreateTempImpl(
         WXFILEARGS(wxFile *fileTemp, wxFFile *ffileTemp),
         bool *deleteOnClose = NULL)
 {
-    static int pid = -1;
 #if wxUSE_FILE && wxUSE_FFILE
     wxASSERT(fileTemp == NULL || ffileTemp == NULL);
 #endif
@@ -823,11 +822,7 @@ static wxString wxCreateTempImpl(
 #else // !HAVE_MKTEMP (includes __DOS__)
     // generate the unique file name ourselves
     #if !defined(__DOS__) && !defined(__PALMOS__) && (!defined(__MWERKS__) || defined(__DARWIN__) )
-
-    if(pid < 0)
-        pid = getpid();
-    
-    path << (unsigned int)pid;
+    path << (unsigned int)getpid();
     #endif
 
     wxString pathTry;
@@ -1266,11 +1261,6 @@ bool wxFileName::Normalize(int flags,
             }
         }
 
-        if ( (flags & wxPATH_NORM_CASE) && !IsCaseSensitive(format) )
-        {
-            dir.MakeLower();
-        }
-
         m_dirs.Add(dir);
     }
 
@@ -1280,25 +1270,11 @@ bool wxFileName::Normalize(int flags,
         wxString filename;
         if (GetShortcutTarget(GetFullPath(format), filename))
         {
-            // Repeat this since we may now have a new path
-            if ( (flags & wxPATH_NORM_CASE) && !IsCaseSensitive(format) )
-            {
-                filename.MakeLower();
-            }
             m_relative = false;
             Assign(filename);
         }
     }
 #endif
-
-    if ( (flags & wxPATH_NORM_CASE) && !IsCaseSensitive(format) )
-    {
-        // VZ: expand env vars here too?
-
-        m_volume.MakeLower();
-        m_name.MakeLower();
-        m_ext.MakeLower();
-    }
 
 #if defined(__WIN32__)
     if ( (flags & wxPATH_NORM_LONG) && (format == wxPATH_DOS) )
@@ -1306,6 +1282,22 @@ bool wxFileName::Normalize(int flags,
         Assign(GetLongPath());
     }
 #endif // Win32
+
+    // Change case  (this should be kept at the end of the function, to ensure
+    // that the path doesn't change any more after we normalize its case)
+    if ( (flags & wxPATH_NORM_CASE) && !IsCaseSensitive(format) )
+    {
+        m_volume.MakeLower();
+        m_name.MakeLower();
+        m_ext.MakeLower();
+
+        // directory entries must be made lower case as well
+        count = m_dirs.GetCount();
+        for ( size_t i = 0; i < count; i++ )
+        {
+            m_dirs[i].MakeLower();
+        }
+    }
 
     return true;
 }
@@ -2255,7 +2247,7 @@ bool wxFileName::GetTimes(wxDateTime *dtAccess,
     // not 9x
     bool ok;
     FILETIME ftAccess, ftCreate, ftWrite;
-    if ( IsDir() ) 
+    if ( IsDir() )
     {
         // implemented in msw/dir.cpp
         extern bool wxGetDirectoryTimes(const wxString& dirname,

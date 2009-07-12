@@ -2,7 +2,7 @@
 // Name:        src/generic/imaglist.cpp
 // Purpose:
 // Author:      Robert Roebling
-// Id:          $id$
+// Id:          $Id: imaglist.cpp 58031 2009-01-12 05:39:04Z PC $
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -68,6 +68,8 @@ int wxGenericImageList::Add( const wxBitmap &bitmap )
                   _T("invalid bitmap size in wxImageList: this might work ")
                   _T("on this platform but definitely won't under Windows.") );
 
+    const int index = int(m_images.GetCount());
+
     if (bitmap.IsKindOf(CLASSINFO(wxIcon)))
     {
         m_images.Append( new wxIcon( (const wxIcon&) bitmap ) );
@@ -98,7 +100,7 @@ int wxGenericImageList::Add( const wxBitmap &bitmap )
         m_height = bitmap.GetHeight();
     }
 
-    return m_images.GetCount()-1;
+    return index;
 }
 
 int wxGenericImageList::Add( const wxBitmap& bitmap, const wxBitmap& mask )

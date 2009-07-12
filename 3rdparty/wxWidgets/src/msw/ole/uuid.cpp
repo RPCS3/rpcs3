@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     12.09.96
-// RCS-ID:      $Id: uuid.cpp 41054 2006-09-07 19:01:45Z ABX $
+// RCS-ID:      $Id: uuid.cpp 55125 2008-08-18 20:04:58Z VZ $
 // Copyright:   (c) 1998 Vadim Zeitlin <zeitlin@dptmaths.ens-cachan.fr>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -80,6 +80,18 @@ Uuid& Uuid::operator=(const Uuid& uuid)
   memcpy(m_pszCForm, uuid.m_pszCForm, UUID_CSTRLEN*sizeof(wxChar));
 
   return *this;
+}
+
+bool Uuid::operator==(const Uuid& uuid) const
+{
+    // IsEqualGUID() returns BOOL and not bool so use an explicit comparison to
+    // avoid MSVC warnings about int->bool conversion
+    return IsEqualGUID(m_uuid, uuid.m_uuid) == TRUE;
+}
+
+bool Uuid::operator!=(const Uuid& uuid) const
+{
+    return !(*this == uuid);
 }
 
 // dtor

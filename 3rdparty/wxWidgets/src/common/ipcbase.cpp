@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     04/01/98
-// RCS-ID:      $Id: ipcbase.cpp 38787 2006-04-18 07:24:35Z ABX $
+// RCS-ID:      $Id: ipcbase.cpp 54615 2008-07-14 02:34:29Z VZ $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -61,8 +61,8 @@ wxConnectionBase::wxConnectionBase(const wxConnectionBase& copy)
 
 wxConnectionBase::~wxConnectionBase(void)
 {
-  if ( m_deletebufferwhendone && m_buffer )
-   delete m_buffer;
+  if ( m_deletebufferwhendone )
+   delete [] m_buffer;
 }
 
 wxChar *wxConnectionBase::GetBufferAtLeast( size_t bytes )
@@ -73,8 +73,7 @@ wxChar *wxConnectionBase::GetBufferAtLeast( size_t bytes )
   {  // need to resize buffer
     if ( m_deletebufferwhendone )
     { // we're in charge of buffer, increase it
-      if ( m_buffer )
-        delete m_buffer;
+      delete [] m_buffer;
       // the argument specifies **byte size**, but m_buffer is of type
       // wxChar. Under unicode: sizeof(wxChar) > 1, so the buffer size is
       // bytes / sizeof(wxChar) rounded upwards.

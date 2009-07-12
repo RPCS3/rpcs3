@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by: Vadim Zeitlin to be less MSW-specific on 10.10.98
 // Created:     1997
-// RCS-ID:      $Id: treectrl.cpp 53084 2008-04-07 20:12:57Z VZ $
+// RCS-ID:      $Id: treectrl.cpp 58755 2009-02-08 10:32:23Z VZ $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -2933,11 +2933,12 @@ bool wxTreeCtrl::MSWOnNotify(int idCtrl, WXLPARAM lParam, WXLPARAM *result)
     switch ( hdr->code )
     {
         case NM_DBLCLK:
-            // we translate NM_DBLCLK into ACTIVATED event, so don't interpret
-            // the return code of this event handler as the return value for
-            // NM_DBLCLK - otherwise, double clicking the item to toggle its
-            // expanded status would never work
-            *result = false;
+            // we translate NM_DBLCLK into ACTIVATED event and if the user
+            // handled the activation of the item we shouldn't proceed with
+            // also using the same double click for toggling the item expanded
+            // state -- but OTOH do let the user to expand/collapse the item by
+            // double clicking on it if the activation is not handled specially
+            *result = processed;
             break;
 
         case NM_RCLICK:

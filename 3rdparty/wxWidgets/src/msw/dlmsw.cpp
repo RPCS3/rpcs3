@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     2005-01-10 (partly extracted from common/dynlib.cpp)
-// RCS-ID:      $Id: dlmsw.cpp 44151 2007-01-07 23:35:49Z VZ $
+// RCS-ID:      $Id: dlmsw.cpp 58750 2009-02-08 10:01:03Z VZ $
 // Copyright:   (c) 1998-2005 Vadim Zeitlin <vadim@wxwindows.org>
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -276,9 +276,11 @@ wxDllType wxDynamicLibrary::GetProgramHandle()
 
 /* static */
 wxDllType
-wxDynamicLibrary::RawLoad(const wxString& libname, int WXUNUSED(flags))
+wxDynamicLibrary::RawLoad(const wxString& libname, int flags)
 {
-    return ::LoadLibrary(libname);
+    return flags & wxDL_GET_LOADED
+            ? ::GetModuleHandle(libname)
+            : ::LoadLibrary(libname);
 }
 
 /* static */

@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin (original code by Robert Roebling)
 // Modified by:
 // Created:     25.05.99
-// RCS-ID:      $Id: caret.cpp 42397 2006-10-25 12:12:56Z VS $
+// RCS-ID:      $Id: caret.cpp 55170 2008-08-22 10:34:32Z JS $
 // Copyright:   (c) wxWidgets team
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -268,10 +268,37 @@ void wxCaret::Refresh()
 
 void wxCaret::DoDraw(wxDC *dc)
 {
-    dc->SetPen( *wxBLACK_PEN );
-
-    dc->SetBrush(*(m_hasFocus ? wxBLACK_BRUSH : wxTRANSPARENT_BRUSH));
-    dc->SetPen(*wxBLACK_PEN);
+#if defined(__WXGTK__) || defined(__WXMAC__)
+    wxClientDC* clientDC = wxDynamicCast(dc, wxClientDC);
+    if (clientDC)
+    {
+        wxPen pen(*wxBLACK_PEN);
+        wxBrush brush(*wxBLACK_BRUSH);
+#ifdef __WXGTK__
+        wxWindow* win = clientDC->m_owner;
+#else
+        wxWindow* win = clientDC->GetWindow();
+#endif
+        if (win)
+        {
+            wxColour backgroundColour(win->GetBackgroundColour());
+            if (backgroundColour.Red() < 100 &&
+                backgroundColour.Green() < 100 &&
+                backgroundColour.Blue() < 100)
+            {
+                pen = *wxWHITE_PEN;
+                brush = *wxWHITE_BRUSH;
+            }
+        }
+        dc->SetPen( pen );
+        dc->SetBrush(m_hasFocus ? brush : *wxTRANSPARENT_BRUSH);
+    }
+    else
+#endif
+    {
+        dc->SetBrush(*(m_hasFocus ? wxBLACK_BRUSH : wxTRANSPARENT_BRUSH));
+        dc->SetPen(*wxBLACK_PEN);
+    }
 
     // VZ: unfortunately, the rectangle comes out a pixel smaller when this is
     //     done under wxGTK - no idea why

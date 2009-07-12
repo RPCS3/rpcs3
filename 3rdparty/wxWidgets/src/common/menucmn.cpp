@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     26.10.99
-// RCS-ID:      $Id: menucmn.cpp 51361 2008-01-24 18:12:55Z PC $
+// RCS-ID:      $Id: menucmn.cpp 57852 2009-01-06 09:40:34Z SC $
 // Copyright:   (c) wxWidgets team
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -194,7 +194,11 @@ wxAcceleratorEntry::ParseAccel(const wxString& text, int *flagsOut, int *keyOut)
     {
         if ( (label[n] == '+') || (label[n] == '-') )
         {
+            // differentiate between a ctrl that will be translated to cmd on mac
+            // and an explicit xctrl that will not be translated and remains a ctrl
             if ( CompareAccelString(current, wxTRANSLATE("ctrl")) )
+                accelFlags |= wxACCEL_CMD;
+            else if ( CompareAccelString(current, wxTRANSLATE("xctrl")) )
                 accelFlags |= wxACCEL_CTRL;
             else if ( CompareAccelString(current, wxTRANSLATE("alt")) )
                 accelFlags |= wxACCEL_ALT;
@@ -312,8 +316,12 @@ wxString wxAcceleratorEntry::ToString() const
     int flags = GetFlags();
     if ( flags & wxACCEL_ALT )
         text += _("Alt-");
-    if ( flags & wxACCEL_CTRL )
+    if ( flags & wxACCEL_CMD )
         text += _("Ctrl-");
+#ifdef __WXMAC__
+    if ( flags & wxACCEL_CTRL )
+        text += _("XCtrl-");
+#endif
     if ( flags & wxACCEL_SHIFT )
         text += _("Shift-");
 

@@ -999,7 +999,7 @@
 //
 // Recommended setting: 1, set to 0 if you want compile a
 // smaller library.
-#define wxUSE_RICHTEXT       0
+#define wxUSE_RICHTEXT       1
 
 // ----------------------------------------------------------------------------
 // Data transfer
@@ -1284,14 +1284,14 @@
 //
 // Recommended setting: 1, only set it to 0 if your compiler doesn't have
 //                      or can't compile <richedit.h>
-#define wxUSE_RICHEDIT 0
+#define wxUSE_RICHEDIT 1
 
 // Set this to 1 to use extra features of richedit v2 and later controls
 //
 // Default is 1 for compilers which support it
 //
 // Recommended setting: 1
-#define wxUSE_RICHEDIT2 0
+#define wxUSE_RICHEDIT2 1
 
 // Set this to 1 to enable support for the owner-drawn menu and listboxes. This
 // is required by wxUSE_CHECKLISTBOX.

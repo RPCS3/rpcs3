@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     11/07/98
-// RCS-ID:      $Id: wfstream.cpp 44013 2006-12-19 13:49:26Z SC $
+// RCS-ID:      $Id: wfstream.cpp 54418 2008-06-29 01:28:43Z VZ $
 // Copyright:   (c) Guilhem Lavaux
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -107,9 +107,9 @@ wxFileOffset wxFileInputStream::OnSysTell() const
     return m_file->Tell();
 }
 
-bool wxFileInputStream::IsOk() const 
-{ 
-    return (wxStreamBase::IsOk() && m_file->IsOpened()); 
+bool wxFileInputStream::IsOk() const
+{
+    return (wxStreamBase::IsOk() && m_file->IsOpened());
 }
 
 // ----------------------------------------------------------------------------
@@ -183,9 +183,9 @@ wxFileOffset wxFileOutputStream::GetLength() const
     return m_file->Length();
 }
 
-bool wxFileOutputStream::IsOk() const 
-{ 
-    return (wxStreamBase::IsOk() && m_file->IsOpened()); 
+bool wxFileOutputStream::IsOk() const
+{
+    return (wxStreamBase::IsOk() && m_file->IsOpened());
 }
 
 // ----------------------------------------------------------------------------
@@ -220,9 +220,16 @@ size_t wxTempFileOutputStream::OnSysWrite(const void *buffer, size_t size)
 // ----------------------------------------------------------------------------
 
 wxFileStream::wxFileStream(const wxString& fileName)
-            : wxFileInputStream(fileName)
+            : wxFileInputStream(),
+              wxFileOutputStream()
 {
-    wxFileOutputStream::m_file = wxFileInputStream::m_file;
+    wxFileOutputStream::m_file =
+    wxFileInputStream::m_file = new wxFile(fileName, wxFile::read_write);
+
+    // this is a bit ugly as streams are symmetric but we still have to delete
+    // the file we created above exactly once so we decide to (arbitrarily) do
+    // it in wxFileInputStream
+    wxFileInputStream::m_file_destroy = true;
 }
 
 #endif //wxUSE_FILE
@@ -300,9 +307,9 @@ wxFileOffset wxFFileInputStream::OnSysTell() const
     return m_file->Tell();
 }
 
-bool wxFFileInputStream::IsOk() const 
-{ 
-    return (wxStreamBase::IsOk() && m_file->IsOpened()); 
+bool wxFFileInputStream::IsOk() const
+{
+    return (wxStreamBase::IsOk() && m_file->IsOpened());
 }
 
 // ----------------------------------------------------------------------------
@@ -386,9 +393,9 @@ wxFileOffset wxFFileOutputStream::GetLength() const
     return m_file->Length();
 }
 
-bool wxFFileOutputStream::IsOk() const 
-{ 
-    return (wxStreamBase::IsOk() && m_file->IsOpened()); 
+bool wxFFileOutputStream::IsOk() const
+{
+    return (wxStreamBase::IsOk() && m_file->IsOpened());
 }
 
 // ----------------------------------------------------------------------------
@@ -396,9 +403,14 @@ bool wxFFileOutputStream::IsOk() const
 // ----------------------------------------------------------------------------
 
 wxFFileStream::wxFFileStream(const wxString& fileName)
-             : wxFFileInputStream(fileName)
+             : wxFFileInputStream(),
+               wxFFileOutputStream()
 {
-    wxFFileOutputStream::m_file = wxFFileInputStream::m_file;
+    wxFFileOutputStream::m_file =
+    wxFFileInputStream::m_file = new wxFFile(fileName, _T("w+b"));
+
+    // see comment in wxFileStream ctor
+    wxFFileInputStream::m_file_destroy = true;
 }
 
 #endif //wxUSE_FFILE

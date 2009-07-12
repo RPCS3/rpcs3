@@ -4,7 +4,7 @@
 // Author:      Jaakko Salli
 // Modified by:
 // Created:     Apr-30-2006
-// RCS-ID:      $Id: combocmn.cpp 45512 2007-04-16 20:51:27Z RD $
+// RCS-ID:      $Id: combocmn.cpp 55201 2008-08-23 08:20:00Z RR $
 // Copyright:   (c) 2005 Jaakko Salli
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -1138,6 +1138,8 @@ bool wxComboCtrlBase::Enable(bool enable)
         m_btn->Enable(enable);
     if ( m_text )
         m_text->Enable(enable);
+        
+    Refresh();
 
     return true;
 }
@@ -1194,16 +1196,15 @@ void wxComboCtrlBase::SetValidator(const wxValidator& validator)
 
     if ( textCtrl )
         textCtrl->SetValidator( validator );
+    else
+        wxControl::SetValidator( validator );
 }
 
 wxValidator* wxComboCtrlBase::GetValidator()
 {
     wxTextCtrl* textCtrl = GetTextCtrl();
 
-    if ( textCtrl )
-        return textCtrl->GetValidator();
-
-    return wxControl::GetValidator();
+    return textCtrl ? textCtrl->GetValidator() : wxControl::GetValidator();
 }
 #endif // wxUSE_VALIDATORS
 

@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     30.05.03
-// RCS-ID:      $Id: vscroll.cpp 51579 2008-02-07 14:15:45Z JS $
+// RCS-ID:      $Id: vscroll.cpp 57359 2008-12-15 19:09:31Z BP $
 // Copyright:   (c) 2003 Vadim Zeitlin <vadim@wxwindows.org>
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -373,8 +373,8 @@ bool wxVScrolledWindow::ScrollToLine(size_t line)
 
     // finally refresh the display -- but only redraw as few lines as possible
     // to avoid flicker
-    if ( GetVisibleBegin() >= lineLastOld ||
-            GetVisibleEnd() <= lineFirstOld )
+    if ( GetChildren().empty() &&
+         (GetVisibleBegin() >= lineLastOld || GetVisibleEnd() <= lineFirstOld ) )
     {
         // the simplest case: we don't have any old lines left, just redraw
         // everything

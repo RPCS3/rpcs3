@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     19.02.98
-// RCS-ID:      $Id: oleutils.cpp 51557 2008-02-05 07:24:59Z VZ $
+// RCS-ID:      $Id: oleutils.cpp 59208 2009-02-28 19:34:30Z VZ $
 // Copyright:   (c) 1998 Vadim Zeitlin <zeitlin@dptmaths.ens-cachan.fr>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -95,12 +95,13 @@ WXDLLEXPORT wxString wxConvertStringFromOle(BSTR bStr)
     wxString str(bStr, len);
 #else
     wxString str;
-    if ( !::WideCharToMultiByte(CP_ACP, 0 /* no flags */,
-                                bStr, len /* not necessary NUL-terminated */,
-                                wxStringBuffer(str, len + 1), len + 1,
-                                NULL, NULL /* no default char */) )
+    if (len)
     {
-        str.clear();
+        wxStringBufferLength buf(str, len); // asserts if len == 0
+        buf.SetLength(WideCharToMultiByte(CP_ACP, 0 /* no flags */,
+                                  bStr, len /* not necessarily NUL-terminated */,
+                                  buf, len,
+                                  NULL, NULL /* no default char */));
     }
 #endif
 
@@ -132,9 +133,10 @@ wxBasicString::wxBasicString(const wxString& str)
 // Takes an ANSI string and transforms it to Unicode
 void wxBasicString::Init(const char *sz)
 {
-    // get the size of required buffer
+    // get the size of required buffer: MetroWerks and Cygwin crash if NULL is
+    // passed to mbstowcs()
     UINT lenAnsi = strlen(sz);
-#ifdef __MWERKS__
+#if defined(__MWERKS__) || defined(__CYGWIN__)
     UINT lenWide = lenAnsi * 2 ;
 #else
     UINT lenWide = mbstowcs(NULL, sz, lenAnsi);

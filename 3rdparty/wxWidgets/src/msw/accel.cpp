@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     04/01/98
-// RCS-ID:      $Id: accel.cpp 49804 2007-11-10 01:09:42Z VZ $
+// RCS-ID:      $Id: accel.cpp 56049 2008-10-03 12:13:21Z VZ $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -152,13 +152,6 @@ WXHACCEL wxAcceleratorTable::GetHACCEL() const
 
 bool wxAcceleratorTable::Translate(wxWindow *window, WXMSG *wxmsg) const
 {
-#if 0
-    // calling TranslateAccelerator() with child window doesn't do anything so
-    // it's probably a bug
-    wxASSERT_MSG( window->IsTopLevel(),
-                    _T("TranslateAccelerator() needs a top level window") );
-#endif
-
     MSG *msg = (MSG *)wxmsg;
     return Ok() && ::TranslateAccelerator(GetHwndOf(window), GetHaccel(), msg);
 }

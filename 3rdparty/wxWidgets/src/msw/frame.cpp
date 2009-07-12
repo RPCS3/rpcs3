@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     01/02/97
-// RCS-ID:      $Id: frame.cpp 43065 2006-11-04 21:12:31Z VZ $
+// RCS-ID:      $Id: frame.cpp 59086 2009-02-22 16:07:58Z CE $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -425,19 +425,23 @@ void wxFrame::AttachMenuBar(wxMenuBar *menubar)
         SetToolBar(toolBar);
         menubar->SetToolBar(toolBar);
     }
-    // Now adjust size for menu bar
-    int menuHeight = 26;
 
-    //When the main window is created using CW_USEDEFAULT the height of the
-    // is created is not taken into account). So we resize the window after
-    // if a menubar is present
+    // When the main window is created using CW_USEDEFAULT the height of the
+    // menubar is not taken into account, so we resize it afterwards if a
+    // menubar is present
+    HWND hwndMenuBar = SHFindMenuBar(GetHwnd());
+    if ( hwndMenuBar )
     {
+        RECT mbRect;
+        ::GetWindowRect(hwndMenuBar, &mbRect);
+        const int menuHeight = mbRect.bottom - mbRect.top;
+
         RECT rc;
-        ::GetWindowRect((HWND) GetHWND(), &rc);
+        ::GetWindowRect(GetHwnd(), &rc);
         // adjust for menu / titlebar height
         rc.bottom -= (2*menuHeight-1);
 
-        ::MoveWindow((HWND) GetHWND(), rc.left, rc.top, rc.right, rc.bottom, FALSE);
+        ::MoveWindow(GetHwnd(), rc.left, rc.top, rc.right, rc.bottom, FALSE);
     }
 #endif
 
@@ -954,34 +958,20 @@ bool wxFrame::HandleCommand(WXWORD id, WXWORD cmd, WXHWND control)
             return win->MSWCommand(cmd, id);
     }
 
-    // handle here commands from menus and accelerators
-    if ( cmd == 0 || cmd == 1 )
+    // handle here commands from menus and accelerators for our menu bar items,
+    // all the rest is handled by wxWindow itself
+    if ( !control && (cmd == 0 /* menu */ || cmd == 1 /* accel */) )
     {
 #if wxUSE_MENUS_NATIVE
-        if ( wxCurrentPopupMenu )
-        {
-            wxMenu *popupMenu = wxCurrentPopupMenu;
-            wxCurrentPopupMenu = NULL;
-
-            return popupMenu->MSWCommand(cmd, id);
-        }
+        if ( !wxCurrentPopupMenu )
 #endif // wxUSE_MENUS_NATIVE
-
-#if defined(__SMARTPHONE__) && defined(__WXWINCE__)
-        // handle here commands from Smartphone menu bar
-        if ( wxTopLevelWindow::HandleCommand(id, cmd, control ) )
         {
-            return true;
-        }
-#endif // __SMARTPHONE__ && __WXWINCE__
-
-        if ( ProcessCommand(id) )
-        {
-            return true;
+            if ( GetMenuBar() && ProcessCommand(id) )
+                return true;
         }
     }
 
-    return false;
+    return wxFrameBase::HandleCommand(id, cmd, control);
 }
 
 bool wxFrame::HandleMenuSelect(WXWORD nItem, WXWORD flags, WXHMENU hMenu)
@@ -1053,7 +1043,12 @@ WXLRESULT wxFrame::MSWWindowProc(WXUINT message, WXWPARAM wParam, WXLPARAM lPara
                 UnpackCommand((WXWPARAM)wParam, (WXLPARAM)lParam,
                               &id, &hwnd, &cmd);
 
-                processed = HandleCommand(id, cmd, (WXHWND)hwnd);
+                HandleCommand(id, cmd, (WXHWND)hwnd);
+
+                // don't pass WM_COMMAND to the base class as it would generate
+                // another wxCommandEvent which would result in its handler
+                // being called twice if it uses event.Skip()
+                processed = true;
             }
             break;
 

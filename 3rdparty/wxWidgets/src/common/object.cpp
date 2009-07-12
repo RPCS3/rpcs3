@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by: Ron Lee
 // Created:     04/01/98
-// RCS-ID:      $Id: object.cpp 40111 2006-07-15 22:21:44Z MW $
+// RCS-ID:      $Id: object.cpp 56500 2008-10-23 14:48:31Z MW $
 // Copyright:   (c) 1998 Julian Smart
 //              (c) 2001 Ron Lee <ron@debian.org>
 // Licence:     wxWindows licence
@@ -205,37 +205,45 @@ wxClassInfo *wxClassInfo::FindClass(const wxChar *className)
     }
 }
 
-// This function wasn't written to be reentrant but there is a possiblity of
-// reentrance if something it does causes a shared lib to load and register
-// classes. On Solaris this happens when the wxHashTable is newed, so the first
-// part of the function has been modified to handle it, and a wxASSERT checks
-// against reentrance in the remainder of the function.
+// Reentrance can occur on some platforms (Solaris for one), as the use of hash
+// and string objects can cause other modules to load and register classes
+// before the original call returns. This is handled by keeping the hash table
+// local when it is first created and only assigning it to the global variable
+// when the function is ready to return.
+//
+// That does make the assumption that after the function has completed the
+// first time the problem will no longer happen; all the modules it depends on
+// will have been loaded. The assumption is checked using the 'entry' variable
+// as a reentrance guard, it checks that once the hash table is global it is
+// not accessed multiple times simulateously.
 
 void wxClassInfo::Register()
 {
-    if ( !sm_classTable )
-    {
-        wxHashTable *classTable = new wxHashTable(wxKEY_STRING);
-
-        // check for reentrance
-        if ( sm_classTable )
-            delete classTable;
-        else
-            sm_classTable = classTable;
-    }
-
 #ifdef __WXDEBUG__
     // reentrance guard - see note above
     static int entry = 0;
-    wxASSERT_MSG(++entry == 1, _T("wxClassInfo::Register() reentrance"));
 #endif
+
+    wxHashTable *classTable;
+
+    if ( !sm_classTable )
+    {
+        // keep the hash local initially, reentrance is possible
+        classTable = new wxHashTable(wxKEY_STRING);
+    }
+    else
+    {
+        // guard againt reentrance once the global has been created
+        wxASSERT_MSG(++entry == 1, _T("wxClassInfo::Register() reentrance"));
+        classTable = sm_classTable;
+    }
 
     // Using IMPLEMENT_DYNAMIC_CLASS() macro twice (which may happen if you
     // link any object module twice mistakenly, or link twice against wx shared
     // library) will break this function because it will enter an infinite loop
     // and eventually die with "out of memory" - as this is quite hard to
     // detect if you're unaware of this, try to do some checks here.
-    wxASSERT_MSG( sm_classTable->Get(m_className) == NULL,
+    wxASSERT_MSG( classTable->Get(m_className) == NULL,
         wxString::Format
         (
             _T("Class \"%s\" already in RTTI table - have you used IMPLEMENT_DYNAMIC_CLASS() multiple times or linked some object file twice)?"),
@@ -243,10 +251,27 @@ void wxClassInfo::Register()
         )
     );
 
-    sm_classTable->Put(m_className, (wxObject *)this);
+    classTable->Put(m_className, (wxObject *)this);
+
+    // if we're using a local hash we need to try to make it global
+    if ( sm_classTable != classTable )
+    {
+        if ( !sm_classTable )
+        {
+            // make the hash global
+            sm_classTable = classTable;
+        }
+        else
+        {
+            // the gobal hash has already been created by a reentrant call,
+            // so delete the local hash and try again
+            delete classTable;
+            Register();
+        }
+    }
 
 #ifdef __WXDEBUG__
-    --entry;
+    entry = 0;
 #endif
 }
 

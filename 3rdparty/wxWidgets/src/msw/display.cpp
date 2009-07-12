@@ -4,7 +4,7 @@
 // Author:      Royce Mitchell III, Vadim Zeitlin
 // Modified by: Ryan Norton (IsPrimary override)
 // Created:     06/21/02
-// RCS-ID:      $Id: display.cpp 42813 2006-10-31 08:45:16Z VZ $
+// RCS-ID:      $Id: display.cpp 56865 2008-11-20 17:46:46Z VZ $
 // Copyright:   (c) wxWidgets team
 // Copyright:   (c) 2002-2006 wxWidgets team
 // Licence:     wxWindows licence
@@ -85,6 +85,13 @@
     const GUID wxIID_IDirectDraw2 =
      { 0xB3A6F3E0, 0x2B43, 0x11CF, { 0xA2,0xDE,0x00,0xAA,0x00,0xB9,0x33,0x56 } };
 #endif // wxUSE_DIRECTDRAW
+
+// display functions are found in different DLLs under WinCE and normal Win32
+#ifdef __WXWINCE__
+static const wxChar displayDllName[] = _T("coredll.dll");
+#else
+static const wxChar displayDllName[] = _T("user32.dll");
+#endif
 
 // ----------------------------------------------------------------------------
 // typedefs for dynamically loaded Windows functions
@@ -511,28 +518,28 @@ wxDisplayFactoryWin32Base::wxDisplayFactoryWin32Base()
     {
         ms_supportsMultimon = 0;
 
-        wxDynamicLibrary dllUser32(_T("user32.dll"));
-
         wxLogNull noLog;
 
+        wxDynamicLibrary dllDisplay(displayDllName, wxDL_VERBATIM);
+
         gs_MonitorFromPoint = (MonitorFromPoint_t)
-            dllUser32.GetSymbol(wxT("MonitorFromPoint"));
+            dllDisplay.GetSymbol(wxT("MonitorFromPoint"));
         if ( !gs_MonitorFromPoint )
             return;
 
         gs_MonitorFromWindow = (MonitorFromWindow_t)
-            dllUser32.GetSymbol(wxT("MonitorFromWindow"));
+            dllDisplay.GetSymbol(wxT("MonitorFromWindow"));
         if ( !gs_MonitorFromWindow )
             return;
 
         gs_GetMonitorInfo = (GetMonitorInfo_t)
-            dllUser32.GetSymbolAorW(wxT("GetMonitorInfo"));
+            dllDisplay.GetSymbolAorW(wxT("GetMonitorInfo"));
         if ( !gs_GetMonitorInfo )
             return;
 
         ms_supportsMultimon = 1;
 
-        // we can safely let dllUser32 go out of scope, the DLL itself will
+        // we can safely let dllDisplay go out of scope, the DLL itself will
         // still remain loaded as all Win32 programs use it
     }
 }
@@ -598,9 +605,9 @@ wxDisplayFactoryMultimon::wxDisplayFactoryMultimon()
     {
         wxLogNull noLog;
 
-        wxDynamicLibrary dllUser32(_T("user32.dll"));
+        wxDynamicLibrary dllDisplay(displayDllName, wxDL_VERBATIM);
         pfnEnumDisplayMonitors = (EnumDisplayMonitors_t)
-            dllUser32.GetSymbol(wxT("EnumDisplayMonitors"));
+            dllDisplay.GetSymbol(wxT("EnumDisplayMonitors"));
         if ( !pfnEnumDisplayMonitors )
             return;
     }
@@ -743,11 +750,11 @@ bool wxDisplayImplMultimon::ChangeMode(const wxVideoMode& mode)
     static ChangeDisplaySettingsEx_t pfnChangeDisplaySettingsEx = NULL;
     if ( !pfnChangeDisplaySettingsEx )
     {
-        wxDynamicLibrary dllUser32(_T("user32.dll"));
-        if ( dllUser32.IsLoaded() )
+        wxDynamicLibrary dllDisplay(displayDllName, wxDL_VERBATIM);
+        if ( dllDisplay.IsLoaded() )
         {
             pfnChangeDisplaySettingsEx = (ChangeDisplaySettingsEx_t)
-                dllUser32.GetSymbolAorW(_T("ChangeDisplaySettingsEx"));
+                dllDisplay.GetSymbolAorW(_T("ChangeDisplaySettingsEx"));
         }
         //else: huh, no user32.dll??
 

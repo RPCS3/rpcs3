@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     01/02/97
-// RCS-ID:      $Id: control.cpp 54331 2008-06-22 15:49:12Z VZ $
+// RCS-ID:      $Id: control.cpp 54424 2008-06-29 21:46:29Z VZ $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -173,7 +173,7 @@ bool wxControl::MSWCreateControl(const wxChar *classname,
     // Notice that 0xffff is not a valid Unicode character so the problem
     // doesn't arise in Unicode build.
     if ( !label.empty() && label[0] == -1 )
-        ::SetWindowText(GetHwnd(), label);
+        ::SetWindowText(GetHwnd(), label.c_str());
 #endif // !wxUSE_UNICODE
 
     // install wxWidgets window proc for this window

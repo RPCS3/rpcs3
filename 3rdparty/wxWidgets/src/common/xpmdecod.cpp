@@ -2,7 +2,7 @@
 // Name:        src/common/xpmdecod.cpp
 // Purpose:     wxXPMDecoder
 // Author:      John Cristy, Vaclav Slavik
-// RCS-ID:      $Id: xpmdecod.cpp 41689 2006-10-08 08:04:49Z PC $
+// RCS-ID:      $Id: xpmdecod.cpp 54948 2008-08-03 10:54:33Z VZ $
 // Copyright:   (c) John Cristy, Vaclav Slavik
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -108,6 +108,7 @@ license is as follows:
     #include "wx/hashmap.h"
     #include "wx/stream.h"
     #include "wx/image.h"
+    #include "wx/palette.h"
 #endif
 
 #include <string.h>
@@ -807,6 +808,24 @@ wxImage wxXPMDecoder::ReadData(const char* const* xpm_data)
             }
         }
     }
+
+#if wxUSE_PALETTE
+    unsigned char* r = new unsigned char[colors_cnt];
+    unsigned char* g = new unsigned char[colors_cnt];
+    unsigned char* b = new unsigned char[colors_cnt];
+
+    for (it = clr_tbl.begin(), i = 0; it != clr_tbl.end(); it++, i++)
+    {
+        r[i] = it->second.R;
+        g[i] = it->second.G;
+        b[i] = it->second.B;
+    }
+    wxASSERT(i == colors_cnt);
+    img.SetPalette(wxPalette(colors_cnt, r, g, b));
+    delete[] r;
+    delete[] g;
+    delete[] b;
+#endif // wxUSE_PALETTE
 
     return img;
 }

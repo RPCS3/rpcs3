@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     22.07.99
-// RCS-ID:      $Id: spinctrl.cpp 53397 2008-04-28 11:33:47Z VZ $
+// RCS-ID:      $Id: spinctrl.cpp 55622 2008-09-14 19:56:14Z VZ $
 // Copyright:   (c) 1999-2005 Vadim Zeitlin
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -176,8 +176,20 @@ LRESULT APIENTRY _EXPORT wxBuddyTextWndProc(HWND hwnd,
             break;
 
         case WM_GETDLGCODE:
-            // we want to get WXK_RETURN in order to generate the event for it
-            return DLGC_WANTARROWS;
+            if ( spin->HasFlag(wxTE_PROCESS_ENTER) )
+            {
+                long dlgCode = ::CallWindowProc
+                                 (
+                                    CASTWNDPROC spin->GetBuddyWndProc(),
+                                    hwnd,
+                                    message,
+                                    wParam,
+                                    lParam
+                                 );
+                dlgCode |= DLGC_WANTMESSAGE;
+                return dlgCode;
+            }
+            break;
     }
 
     return ::CallWindowProc(CASTWNDPROC spin->GetBuddyWndProc(),

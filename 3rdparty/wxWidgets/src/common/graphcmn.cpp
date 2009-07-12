@@ -4,7 +4,7 @@
 // Author:      Stefan Csomor
 // Modified by:
 // Created:     
-// RCS-ID:      $Id: graphcmn.cpp 49287 2007-10-21 11:52:54Z SC $
+// RCS-ID:      $Id: graphcmn.cpp 56801 2008-11-16 23:25:09Z KO $
 // Copyright:   (c) Stefan Csomor
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -120,10 +120,12 @@ wxObjectRefData* wxGraphicsObject::CloneRefData(const wxObjectRefData* data) con
 IMPLEMENT_DYNAMIC_CLASS(wxGraphicsPen, wxGraphicsObject)
 IMPLEMENT_DYNAMIC_CLASS(wxGraphicsBrush, wxGraphicsObject)
 IMPLEMENT_DYNAMIC_CLASS(wxGraphicsFont, wxGraphicsObject)
+IMPLEMENT_DYNAMIC_CLASS(wxGraphicsBitmap, wxGraphicsObject)
 
 WXDLLIMPEXP_DATA_CORE(wxGraphicsPen) wxNullGraphicsPen;
 WXDLLIMPEXP_DATA_CORE(wxGraphicsBrush) wxNullGraphicsBrush;
 WXDLLIMPEXP_DATA_CORE(wxGraphicsFont) wxNullGraphicsFont;
+WXDLLIMPEXP_DATA_CORE(wxGraphicsBitmap) wxNullGraphicsBitmap;
 
 //-----------------------------------------------------------------------------
 // matrix
@@ -727,6 +729,11 @@ wxGraphicsBrush wxGraphicsContext::CreateRadialGradientBrush( wxDouble xo, wxDou
 wxGraphicsFont wxGraphicsContext::CreateFont( const wxFont &font , const wxColour &col ) const
 {
     return GetRenderer()->CreateFont(font,col);
+}
+
+wxGraphicsBitmap wxGraphicsContext::CreateBitmap( const wxBitmap& bmp ) const
+{
+    return GetRenderer()->CreateBitmap(bmp);
 }
 
 wxGraphicsContext* wxGraphicsContext::Create( const wxWindowDC& dc) 

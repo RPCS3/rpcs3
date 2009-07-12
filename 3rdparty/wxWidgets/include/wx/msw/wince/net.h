@@ -1,4 +1,5 @@
 // Copyright 1998, Ben Goetter.  All rights reserved.
+// Also released under wxWindows license - see src/msw/wince/net.cpp
 
 /*
  patch holes in winsock

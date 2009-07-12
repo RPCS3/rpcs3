@@ -4,7 +4,7 @@
 // Author:      Jaakko Salli
 // Modified by:
 // Created:     Apr-30-2006
-// RCS-ID:      $Id: odcombo.cpp 52747 2008-03-23 20:20:46Z VZ $
+// RCS-ID:      $Id: odcombo.cpp 58203 2009-01-18 20:05:07Z JMS $
 // Copyright:   (c) 2005 Jaakko Salli
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -257,14 +257,23 @@ bool wxVListBoxComboPopup::HandleKey( int keycode, bool saturate, wxChar unicode
     int comboStyle = m_combo->GetWindowStyle();
 
     // this is the character equivalent of the code
-    wxChar keychar=0;
-    if ((keycode >= WXK_SPACE) && (keycode <=255) && (keycode != WXK_DELETE) && wxIsprint(keycode))
+    wxChar keychar = 0;
+    if ( keycode < WXK_START )
     {
-        keychar = (wxChar)keycode;
-    }
-    else if (unicode>0)
-    {
-        keychar = unicode;
+#if wxUSE_UNICODE
+        if ( unicode > 0 )
+        {
+            if ( wxIsprint(unicode) )
+                keychar = unicode;
+        }
+        else
+#else
+        wxUnusedVar(unicode);
+#endif
+        if ( wxIsprint(keycode) )
+        {
+            keychar = (wxChar) keycode;
+        }
     }
 
     if ( keycode == WXK_DOWN || keycode == WXK_RIGHT )
@@ -287,7 +296,7 @@ bool wxVListBoxComboPopup::HandleKey( int keycode, bool saturate, wxChar unicode
         value-=10;
         StopPartialCompletion();
     }
-    else if ( comboStyle & wxCB_READONLY )
+    else if ( keychar && (comboStyle & wxCB_READONLY) )
     {
         // Try partial completion
 

@@ -4,7 +4,7 @@
 // Author:      Robert Roebling
 // Created:     01/02/97
 // Modified:    22/10/98 - almost total rewrite, simpler interface (VZ)
-// Id:          $Id: treectlg.cpp 53135 2008-04-12 02:31:04Z VZ $
+// Id:          $Id: treectlg.cpp 57542 2008-12-25 13:03:24Z VZ $
 // Copyright:   (c) 1998 Robert Roebling and Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -92,29 +92,8 @@ class WXDLLEXPORT wxTreeTextCtrl: public wxTextCtrl
 public:
     wxTreeTextCtrl(wxGenericTreeCtrl *owner, wxGenericTreeItem *item);
 
-    void EndEdit(bool discardChanges = false)
-    {
-        if ( discardChanges )
-        {
-            StopEditing();
-        }
-        else
-        {
-            m_aboutToFinish = true;
+    void EndEdit(bool discardChanges);
 
-            // Notify the owner about the changes
-            AcceptChanges();
-
-            // Even if vetoed, close the control (consistent with MSW)
-            Finish();
-        }
-    }
-
-    void StopEditing()
-    {
-        Finish();
-        m_owner->OnRenameCancelled(m_itemEdited);
-    }
     const wxGenericTreeItem* item() const { return m_itemEdited; }
 
 protected:
@@ -123,13 +102,12 @@ protected:
     void OnKillFocus( wxFocusEvent &event );
 
     bool AcceptChanges();
-    void Finish();
+    void Finish( bool setfocus = true );
 
 private:
     wxGenericTreeCtrl  *m_owner;
     wxGenericTreeItem  *m_itemEdited;
     wxString            m_startValue;
-    bool                m_finished;
     bool                m_aboutToFinish;
 
     DECLARE_EVENT_TABLE()
@@ -363,7 +341,6 @@ wxTreeTextCtrl::wxTreeTextCtrl(wxGenericTreeCtrl *owner,
               : m_itemEdited(item), m_startValue(item->GetText())
 {
     m_owner = owner;
-    m_finished = false;
     m_aboutToFinish = false;
 
     int w = m_itemEdited->GetWidth(),
@@ -407,6 +384,26 @@ wxTreeTextCtrl::wxTreeTextCtrl(wxGenericTreeCtrl *owner,
                  wxPoint(x - 4, y - 4), wxSize(w + 11, h + 8));
 }
 
+void wxTreeTextCtrl::EndEdit(bool discardChanges)
+{
+    m_aboutToFinish = true;
+
+    if ( discardChanges )
+    {
+        m_owner->OnRenameCancelled(m_itemEdited);
+
+        Finish();
+    }
+    else
+    {
+        // Notify the owner about the changes
+        AcceptChanges();
+
+        // Even if vetoed, close the control (consistent with MSW)
+        Finish();
+    }
+}
+
 bool wxTreeTextCtrl::AcceptChanges()
 {
     const wxString value = GetValue();
@@ -435,18 +432,14 @@ bool wxTreeTextCtrl::AcceptChanges()
     return true;
 }
 
-void wxTreeTextCtrl::Finish()
+void wxTreeTextCtrl::Finish( bool setfocus )
 {
-    if ( !m_finished  )
-    {
-        m_owner->ResetTextControl();
+    m_owner->ResetTextControl();
 
-        wxPendingDelete.Append(this);
+    wxPendingDelete.Append(this);
 
-        m_finished = true;
-
+    if (setfocus)
         m_owner->SetFocus();
-    }
 }
 
 void wxTreeTextCtrl::OnChar( wxKeyEvent &event )
@@ -454,11 +447,11 @@ void wxTreeTextCtrl::OnChar( wxKeyEvent &event )
     switch ( event.m_keyCode )
     {
         case WXK_RETURN:
-            EndEdit();
+            EndEdit( false );
             break;
 
         case WXK_ESCAPE:
-            StopEditing();
+            EndEdit( true );
             break;
 
         default:
@@ -468,7 +461,7 @@ void wxTreeTextCtrl::OnChar( wxKeyEvent &event )
 
 void wxTreeTextCtrl::OnKeyUp( wxKeyEvent &event )
 {
-    if ( !m_finished )
+    if ( !m_aboutToFinish )
     {
         // auto-grow the textctrl:
         wxSize parentSize = m_owner->GetSize();
@@ -488,18 +481,15 @@ void wxTreeTextCtrl::OnKeyUp( wxKeyEvent &event )
 
 void wxTreeTextCtrl::OnKillFocus( wxFocusEvent &event )
 {
-    if ( !m_finished && !m_aboutToFinish )
+    if ( !m_aboutToFinish )
     {
-        // We must finish regardless of success, otherwise we'll get
-        // focus problems:
-        Finish();
-
         if ( !AcceptChanges() )
             m_owner->OnRenameCancelled( m_itemEdited );
+
+        Finish( false );
     }
 
-    // We must let the native text control handle focus, too, otherwise
-    // it could have problems with the cursor (e.g., in wxGTK).
+    // We should let the native text control handle focus, too.
     event.Skip();
 }
 
@@ -820,10 +810,10 @@ bool wxGenericTreeCtrl::Create(wxWindow *parent,
     style |= wxTR_NO_LINES;
     if (major < 10)
         style |= wxTR_ROW_LINES;
-        
+
     if (style == 0 || style & wxTR_DEFAULT_STYLE)
         style |= wxTR_FULL_ROW_HIGHLIGHT;
-        
+
 #endif // __WXMAC__
 #ifdef __WXGTK20__
     style |= wxTR_NO_LINES;
@@ -1519,7 +1509,7 @@ void wxGenericTreeCtrl::SendDeleteEvent(wxGenericTreeItem *item)
 void wxGenericTreeCtrl::ChildrenClosing(wxGenericTreeItem* item)
 {
     if (m_textCtrl != NULL && item != m_textCtrl->item() && IsDescendantOf(item, m_textCtrl->item())) {
-        m_textCtrl->StopEditing();
+        m_textCtrl->EndEdit( true );
     }
     if (item != m_key_current && IsDescendantOf(item, m_key_current)) {
         m_key_current = NULL;
@@ -1553,7 +1543,7 @@ void wxGenericTreeCtrl::Delete(const wxTreeItemId& itemId)
     if (m_textCtrl != NULL && IsDescendantOf(item, m_textCtrl->item()))
     {
         // can't delete the item being edited, cancel editing it first
-        m_textCtrl->StopEditing();
+        m_textCtrl->EndEdit( true );
     }
 
     wxGenericTreeItem *parent = item->GetParent();
@@ -1607,7 +1597,7 @@ void wxGenericTreeCtrl::Delete(const wxTreeItemId& itemId)
 
     delete item;
 
-    InvalidateBestSize();        
+    InvalidateBestSize();
 }
 
 void wxGenericTreeCtrl::DeleteAllItems()
@@ -1905,7 +1895,7 @@ void wxGenericTreeCtrl::SelectItem(const wxTreeItemId& itemId, bool select)
     {
         wxGenericTreeItem *item = (wxGenericTreeItem*) itemId.m_pItem;
         wxCHECK_RET( item, wxT("SelectItem(): invalid tree item") );
-        
+
         wxTreeEvent event(wxEVT_COMMAND_TREE_SEL_CHANGING, this, item);
         if ( GetEventHandler()->ProcessEvent( event ) && !event.IsAllowed() )
             return;
@@ -2262,7 +2252,7 @@ void wxGenericTreeCtrl::PaintItem(wxGenericTreeItem *item, wxDC& dc)
 #else
             rect.x -= 1;
             rect.width += 2;
-        
+
             int flags = wxCONTROL_SELECTED;
             if (m_hasFocus)
                 flags |= wxCONTROL_FOCUSED;
@@ -2289,7 +2279,7 @@ void wxGenericTreeCtrl::PaintItem(wxGenericTreeItem *item, wxDC& dc)
             {
                 rect.x -= 1;
                 rect.width += 2;
-                
+
                 int flags = wxCONTROL_SELECTED;
                 if (m_hasFocus)
                     flags |= wxCONTROL_FOCUSED;
@@ -3629,7 +3619,7 @@ wxGenericTreeCtrl::GetClassDefaultAttributes(wxWindowVariant WXUNUSED(variant))
     return wxListBox::GetClassDefaultAttributes(variant);
 #else
     wxVisualAttributes attr;
-    attr.colFg = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
+    attr.colFg = wxSystemSettings::GetColour(wxSYS_COLOUR_LISTBOXTEXT);
     attr.colBg = wxSystemSettings::GetColour(wxSYS_COLOUR_LISTBOX);
     attr.font  = wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT);
     return attr;

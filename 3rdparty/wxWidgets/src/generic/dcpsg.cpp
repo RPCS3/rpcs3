@@ -4,7 +4,7 @@
 // Author:      Julian Smart, Robert Roebling, Markus Holzhem
 // Modified by:
 // Created:     04/01/98
-// RCS-ID:      $Id: dcpsg.cpp 50711 2007-12-15 02:57:58Z VZ $
+// RCS-ID:      $Id: dcpsg.cpp 55927 2008-09-28 09:12:16Z VS $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -987,8 +987,11 @@ void wxPostScriptDC::SetFont( const wxFont& font )
     PsPrint( name );
     PsPrint( " findfont\n" );
 
+    float size = float(m_font.GetPointSize());
+    size = size * GetFontPointSizeAdjustment(GetResolution());
+
     char buffer[100];
-    sprintf( buffer, "%f scalefont setfont\n", LogicalToDeviceYRel(m_font.GetPointSize() * 1000) / 1000.0F);
+    sprintf( buffer, "%f scalefont setfont\n", size * m_scaleX);
     // this is a hack - we must scale font size (in pts) according to m_scaleY but
     // LogicalToDeviceYRel works with wxCoord type (int or longint). Se we first convert font size
     // to 1/1000th of pt and then back.
@@ -1590,7 +1593,6 @@ bool wxPostScriptDC::StartDoc( const wxString& message )
     m_title = message;
 
     PsPrint( "%!PS-Adobe-2.0\n" );
-    PsPrintf( wxT("%%%%Title: %s\n"), m_title.c_str() );
     PsPrint( "%%Creator: wxWidgets PostScript renderer\n" );
     PsPrintf( wxT("%%%%CreationDate: %s\n"), wxNow().c_str() );
     if (m_printData.GetOrientation() == wxLANDSCAPE)
@@ -1841,7 +1843,8 @@ void wxPostScriptDC::DoGetTextExtent(const wxString& string,
 
     if (!fontToUse) fontToUse = (wxFont*) &m_font;
 
-    wxCHECK_RET( fontToUse, wxT("GetTextExtent: no font defined") );
+    const float fontSize =
+        fontToUse->GetPointSize() * GetFontPointSizeAdjustment(72.0);
 
     if (string.empty())
     {
@@ -1861,15 +1864,10 @@ void wxPostScriptDC::DoGetTextExtent(const wxString& string,
      * Produces accurate results for mono-spaced font
      * such as Courier (aka wxMODERN) */
 
-    int height = 12;
-    if (fontToUse)
-    {
-        height = fontToUse->GetPointSize();
-    }
     if ( x )
-        *x = strlen (strbuf) * height * 72 / 120;
+        *x = strlen (strbuf) * fontSize * 72.0 / 120.0;
     if ( y )
-        *y = (wxCoord) (height * 1.32);    /* allow for descender */
+        *y = (wxCoord) (fontSize * 1.32);    /* allow for descender */
     if (descent) *descent = 0;
     if (externalLeading) *externalLeading = 0;
 #else
@@ -2136,9 +2134,9 @@ void wxPostScriptDC::DoGetTextExtent(const wxString& string,
         // VS: dirty, but is there any better solution?
         double *pt;
         pt = (double*) &m_underlinePosition;
-        *pt = LogicalToDeviceYRel((wxCoord)(UnderlinePosition * fontToUse->GetPointSize())) / 1000.0f;
+        *pt = LogicalToDeviceYRel((wxCoord)(UnderlinePosition * fontSize)) / 1000.0f;
         pt = (double*) &m_underlineThickness;
-        *pt = LogicalToDeviceYRel((wxCoord)(UnderlineThickness * fontToUse->GetPointSize())) / 1000.0f;
+        *pt = LogicalToDeviceYRel((wxCoord)(UnderlineThickness * fontSize)) / 1000.0f;
 
     }
 
@@ -2148,7 +2146,7 @@ void wxPostScriptDC::DoGetTextExtent(const wxString& string,
        /  string. they are given in 1/1000 of the size! */
 
     long sum=0;
-    wxCoord height=Size; /* by default */
+    float height=fontSize; /* by default */
     unsigned char *p;
     for(p=(unsigned char *)wxMBSTRINGCAST strbuf; *p; p++)
     {
@@ -2164,7 +2162,7 @@ void wxPostScriptDC::DoGetTextExtent(const wxString& string,
     }
 
     double widthSum = sum;
-    widthSum *= Size;
+    widthSum *= fontSize;
     widthSum /= 1000.0F;
 
     /* add descender to height (it is usually a negative value) */
@@ -2179,14 +2177,14 @@ void wxPostScriptDC::DoGetTextExtent(const wxString& string,
     if ( x )
         *x = (wxCoord)widthSum;
     if ( y )
-        *y = height;
+        *y = (wxCoord)height;
 
     /* return other parameters */
     if (descent)
     {
         if(lastDescender!=INT_MIN)
         {
-            *descent = (wxCoord)(((-lastDescender)/1000.0F) * Size); /* MATTHEW: forgot scale */
+            *descent = (wxCoord)(((-lastDescender)/1000.0F) * fontSize); /* MATTHEW: forgot scale */
         }
         else
         {

@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by: VZ on 13.05.99: no more Default(), MSWOnXXX() reorganisation
 // Created:     04/01/98
-// RCS-ID:      $Id: window.cpp 53929 2008-06-02 18:27:16Z RD $
+// RCS-ID:      $Id: window.cpp 58750 2009-02-08 10:01:03Z VZ $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -811,7 +811,11 @@ bool wxWindowMSW::SetFont(const wxFont& font)
     HWND hWnd = GetHwnd();
     if ( hWnd != 0 )
     {
-        WXHANDLE hFont = m_font.GetResourceHandle();
+        // note the use of GetFont() instead of m_font: our own font could have
+        // just been reset and in this case we need to change the font used by
+        // the native window to the default for this class, i.e. exactly what
+        // GetFont() returns
+        WXHANDLE hFont = GetFont().GetResourceHandle();
 
         wxASSERT_MSG( hFont, wxT("should have valid font") );
 
@@ -1944,6 +1948,11 @@ void wxWindowMSW::DoMoveWindow(int x, int y, int width, int height)
 #if USE_DEFERRED_SIZING
         m_pendingPosition = wxPoint(x, y);
         m_pendingSize = wxSize(width, height);
+    }
+    else // window was moved immediately, without deferring it
+    {
+        m_pendingPosition = wxDefaultPosition;
+        m_pendingSize = wxDefaultSize;
 #endif // USE_DEFERRED_SIZING
     }
 }
@@ -4008,7 +4017,6 @@ bool wxWindowMSW::HandleDropFiles(WXWPARAM wParam)
         ::DragQueryFile(hFilesInfo, wIndex,
                         wxStringBuffer(files[wIndex], len), len);
     }
-    DragFinish (hFilesInfo);
 
     wxDropFilesEvent event(wxEVT_DROP_FILES, gwFilesDropped, files);
     event.SetEventObject(this);
@@ -4017,6 +4025,8 @@ bool wxWindowMSW::HandleDropFiles(WXWPARAM wParam)
     DragQueryPoint(hFilesInfo, (LPPOINT) &dropPoint);
     event.m_pos.x = dropPoint.x;
     event.m_pos.y = dropPoint.y;
+
+    DragFinish(hFilesInfo);
 
     return GetEventHandler()->ProcessEvent(event);
 #endif
@@ -4183,7 +4193,7 @@ bool wxWindowMSW::IsDoubleBuffered() const
             return true;
         wnd = wnd->GetParent();
     } while ( wnd && !wnd->IsTopLevel() );
-        
+
     return false;
 }
 
@@ -5170,9 +5180,9 @@ bool wxWindowMSW::HandleMouseMove(int x, int y, WXUINT flags)
             static bool s_initDone = false;
             if ( !s_initDone )
             {
-                wxLogNull noLog;
-
-                wxDynamicLibrary dllComCtl32(_T("comctl32.dll"), wxDL_VERBATIM);
+                // see comment in wxApp::GetComCtl32Version() explaining the
+                // use of wxLoadedDLL
+                wxLoadedDLL dllComCtl32(_T("comctl32.dll"));
                 if ( dllComCtl32.IsLoaded() )
                 {
                     s_pfn_TrackMouseEvent = (_TrackMouseEvent_t)
@@ -5180,10 +5190,6 @@ bool wxWindowMSW::HandleMouseMove(int x, int y, WXUINT flags)
                 }
 
                 s_initDone = true;
-
-                // notice that it's ok to unload comctl32.dll here as it won't
-                // be really unloaded, being still in use because we link to it
-                // statically too
             }
 
             if ( s_pfn_TrackMouseEvent )
@@ -5961,6 +5967,7 @@ WXWORD wxCharCodeWXToMSW(int wxk, bool *isVirtual)
             break;
 
         default:
+#ifndef __WXWINCE__
             // check to see if its one of the OEM key codes.
             BYTE vks = LOBYTE(VkKeyScan(wxk));
             if ( vks != 0xff )
@@ -5968,6 +5975,7 @@ WXWORD wxCharCodeWXToMSW(int wxk, bool *isVirtual)
                 vk = vks;
             }
             else
+#endif
             {
                 if ( isVirtual )
                     *isVirtual = false;

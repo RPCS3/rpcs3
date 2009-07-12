@@ -4,7 +4,7 @@
 // Author:      Julian Smart and Guillermo Rodriguez Garcia
 // Modified by: Francesco Montorsi
 // Created:     13/8/99
-// RCS-ID:      $Id: animate.h 43898 2006-12-10 14:18:37Z VZ $
+// RCS-ID:      $Id: animate.h 58350 2009-01-24 10:00:38Z FM $
 // Copyright:   (c) Julian Smart and Guillermo Rodriguez Garcia
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -23,6 +23,11 @@ WX_DECLARE_LIST_WITH_DECL(wxAnimationDecoder, wxAnimationDecoderList, class WXDL
 class WXDLLIMPEXP_ADV wxAnimation : public wxAnimationBase
 {
 public:
+#if wxABI_VERSION >= 20810
+    wxAnimation() {}
+    wxAnimation(const wxString &name, wxAnimationType type = wxANIMATION_TYPE_ANY)
+        { LoadFile(name, type); }
+#endif
     virtual bool IsOk() const
         { return m_refData != NULL; }
 

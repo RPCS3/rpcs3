@@ -4,7 +4,7 @@
 // Author:      Ove Kaven
 // Modified by: Ron Lee, Francesco Montorsi
 // Created:     09/04/99
-// RCS-ID:      $Id: wxchar.cpp 54071 2008-06-10 18:22:32Z VZ $
+// RCS-ID:      $Id: wxchar.cpp 58994 2009-02-18 15:49:09Z FM $
 // Copyright:   (c) wxWidgets copyright
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -565,6 +565,8 @@ bool wxPrintfConvSpec::Parse(const wxChar *format)
                 break;
 
             case wxT('c'):
+                m_szFlags[flagofs++] = char(ch);
+                m_szFlags[flagofs] = '\0';
                 if (ilen == -1)
                 {
                     // in Unicode mode %hc == ANSI character
@@ -591,6 +593,8 @@ bool wxPrintfConvSpec::Parse(const wxChar *format)
                 break;
 
             case wxT('s'):
+                m_szFlags[flagofs++] = char(ch);
+                m_szFlags[flagofs] = '\0';
                 if (ilen == -1)
                 {
                     // Unicode mode wx extension: we'll let %hs mean non-Unicode
@@ -615,6 +619,8 @@ bool wxPrintfConvSpec::Parse(const wxChar *format)
                 break;
 
             case wxT('n'):
+                m_szFlags[flagofs++] = char(ch);
+                m_szFlags[flagofs] = '\0';
                 if (ilen == 0)
                     m_type = wxPAT_NINT;
                 else if (ilen == -1)
@@ -671,7 +677,7 @@ void wxPrintfConvSpec::ReplaceAsteriskWith(int width)
 
 bool wxPrintfConvSpec::LoadArg(wxPrintfArg *p, va_list &argptr)
 {
-    // did the '*' width/precision specifier was used ?
+    // was the '*' width/precision specifier used ?
     if (m_nMaxWidth == -1)
     {
         // take the maxwidth specifier from the stack
@@ -1191,7 +1197,7 @@ int WXDLLEXPORT wxVsnprintf_(wxChar *buf, size_t lenMax,
     // NOTE2: the +1 is because we want to copy also the '\0'
     size_t tocopy = wxStrlen(format) + 1  - ( toparse - format ) ;
 
-    lenCur += wxCopyStrWithPercents(lenMax - lenCur, buf + lenCur, 
+    lenCur += wxCopyStrWithPercents(lenMax - lenCur, buf + lenCur,
                                     tocopy, toparse) - 1;
     if (buf[lenCur])
     {
@@ -1256,7 +1262,7 @@ int WXDLLEXPORT wxSnprintf_(wxChar *buf, size_t len, const wxChar *format, ...)
     int wxSprintf (wchar_t * s, const wchar_t * format, ... )
     {
         va_list arglist;
-    
+
         va_start( arglist, format );
         int iLen = swprintf ( s, -1, format, arglist );
         va_end( arglist );

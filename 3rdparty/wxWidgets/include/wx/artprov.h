@@ -4,7 +4,7 @@
 // Author:      Vaclav Slavik
 // Modified by:
 // Created:     18/03/2002
-// RCS-ID:      $Id: artprov.h 53135 2008-04-12 02:31:04Z VZ $
+// RCS-ID:      $Id: artprov.h 57701 2008-12-31 23:40:06Z VS $
 // Copyright:   (c) Vaclav Slavik
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -122,6 +122,10 @@ public:
 
     // Add new provider to the bottom of providers stack (i.e. the provider
     // will be queried as the last one).
+#if wxABI_VERSION >= 20810
+    static void PushBack(wxArtProvider *provider);
+#endif
+    // same as PushBack()
     static void Insert(wxArtProvider *provider);
 
     // Remove latest added provider and delete it.

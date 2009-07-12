@@ -5,7 +5,7 @@
 // Modified by:
 // Created:     14/4/2006
 // Copyright:   (c) Vadim Zeitlin, Francesco Montorsi
-// RCS-ID:      $Id: clrpickerg.h 40322 2006-07-25 11:41:53Z ABX $
+// RCS-ID:      $Id: clrpickerg.h 58967 2009-02-17 13:31:28Z SC $
 // Licence:     wxWindows Licence
 /////////////////////////////////////////////////////////////////////////////
 
@@ -25,8 +25,18 @@
 // the default style
 #define wxCLRBTN_DEFAULT_STYLE  (wxCLRBTN_SHOW_LABEL)
 
+#ifndef wxCLRBTN_USES_BMP_BUTTON
+    #define wxCLRBTN_USES_BMP_BUTTON 0
+#endif
 
-class WXDLLIMPEXP_CORE wxGenericColourButton : public wxButton,
+#if wxCLRBTN_USES_BMP_BUTTON
+    #include "wx/bmpbutton.h"
+    #define wxCLRBTN_BASE_CLASS wxBitmapButton
+#else
+     #define wxCLRBTN_BASE_CLASS wxButton
+#endif
+                                               
+class WXDLLIMPEXP_CORE wxGenericColourButton : public wxCLRBTN_BASE_CLASS,
                                                public wxColourPickerWidgetBase
 {
 public:

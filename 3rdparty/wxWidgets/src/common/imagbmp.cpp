@@ -2,7 +2,7 @@
 // Name:        src/common/imagbmp.cpp
 // Purpose:     wxImage BMP,ICO and CUR handlers
 // Author:      Robert Roebling, Chris Elliott
-// RCS-ID:      $Id: imagbmp.cpp 41819 2006-10-09 17:51:07Z VZ $
+// RCS-ID:      $Id: imagbmp.cpp 54942 2008-08-03 00:23:38Z VZ $
 // Copyright:   (c) Robert Roebling, Chris Elliott
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -454,9 +454,9 @@ bool wxBMPHandler::DoLoadDib(wxImage * image, int width, int height,
                              wxFileOffset bmpOffset, wxInputStream& stream,
                              bool verbose, bool IsBmp, bool hasPalette)
 {
-    wxInt32         aDword, rmask = 0, gmask = 0, bmask = 0;
-    int             rshift = 0, gshift = 0, bshift = 0;
-    int             rbits = 0, gbits = 0, bbits = 0;
+    wxInt32         aDword, rmask = 0, gmask = 0, bmask = 0, amask = 0;
+    int             rshift = 0, gshift = 0, bshift = 0, ashift = 0;
+    int             rbits = 0, gbits = 0, bbits = 0, abits = 0;
     wxInt32         dbuf[4];
     wxInt8          bbuf[4];
     wxUint8         aByte;
@@ -488,9 +488,27 @@ bool wxBMPHandler::DoLoadDib(wxImage * image, int width, int height,
     {
         if ( verbose )
             wxLogError( _("BMP: Couldn't allocate memory.") );
-        if ( cmap )
-            delete[] cmap;
+        delete[] cmap;
         return false;
+    }
+
+    unsigned char *alpha;
+    if ( bpp == 32 )
+    {
+        // tell the image to allocate an alpha buffer
+        image->SetAlpha();
+        alpha = image->GetAlpha();
+        if ( !alpha )
+        {
+            if ( verbose )
+                wxLogError(_("BMP: Couldn't allocate memory."));
+            delete[] cmap;
+            return false;
+        }
+    }
+    else // no alpha
+    {
+        alpha = NULL;
     }
 
     // Reading the palette, if it exists:
@@ -577,9 +595,13 @@ bool wxBMPHandler::DoLoadDib(wxImage * image, int width, int height,
             rmask = 0x00FF0000;
             gmask = 0x0000FF00;
             bmask = 0x000000FF;
+            amask = 0xFF000000;
+
+            ashift = 24;
             rshift = 16;
             gshift = 8;
             bshift = 0;
+            abits = 8;
             rbits = 8;
             gbits = 8;
             bbits = 8;
@@ -815,6 +837,11 @@ bool wxBMPHandler::DoLoadDib(wxImage * image, int width, int height,
                 ptr[poffset + 1] = temp;
                 temp = (unsigned char)((aDword & bmask) >> bshift);
                 ptr[poffset + 2] = temp;
+                if ( alpha )
+                {
+                    temp = (unsigned char)((aDword & amask) >> ashift);
+                    alpha[line * width + column] = temp;
+                }
                 column++;
             }
         }

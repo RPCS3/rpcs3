@@ -3,7 +3,7 @@
 // Purpose:     declaration of wxAboutDialog class
 // Author:      Vadim Zeitlin
 // Created:     2006-10-07
-// RCS-ID:      $Id: aboutdlg.h 41813 2006-10-09 16:56:18Z RD $
+// RCS-ID:      $Id: aboutdlg.h 58748 2009-02-08 09:46:03Z VZ $
 // Copyright:   (c) 2006 Vadim Zeitlin <vadim@wxwindows.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -127,6 +127,12 @@ public:
     // get the description and credits (i.e. all of developers, doc writers,
     // artists and translators) as a one long multiline string
     wxString GetDescriptionAndCredits() const;
+
+#if wxABI_VERSION >= 20810
+    // returns the copyright with the (C) string substituted by the Unicode
+    // character U+00A9
+    wxString GetCopyrightToDisplay() const;
+#endif // wx 2.8.10+
 
 private:
     wxString m_name,

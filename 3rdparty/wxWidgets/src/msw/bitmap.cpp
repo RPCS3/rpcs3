@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     04/01/98
-// RCS-ID:      $Id: bitmap.cpp 48236 2007-08-20 23:43:32Z KO $
+// RCS-ID:      $Id: bitmap.cpp 56488 2008-10-22 17:01:02Z RR $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -263,30 +263,33 @@ wxObjectRefData *wxBitmap::CloneRefData(const wxObjectRefData *dataOrig) const
     //        course (except in !wxUSE_WXDIB), but is completely illogical
     wxBitmap *self = wx_const_cast(wxBitmap *, this);
 
+    wxBitmapRefData *selfdata;
 #if wxUSE_WXDIB
     // copy the other bitmap
     if ( data->m_hBitmap )
     {
         wxDIB dib((HBITMAP)(data->m_hBitmap));
         self->CopyFromDIB(dib);
+
+        selfdata = wx_static_cast(wxBitmapRefData *, m_refData);
+        selfdata->m_hasAlpha = data->m_hasAlpha;
     }
     else
 #endif // wxUSE_WXDIB
     {
         // copy the bitmap data
-        self->m_refData = new wxBitmapRefData(*data);
+        selfdata = new wxBitmapRefData(*data);
+        self->m_refData = selfdata;
     }
 
     // copy also the mask
     wxMask * const maskSrc = data->GetMask();
     if ( maskSrc )
     {
-        wxBitmapRefData *selfdata = wx_static_cast(wxBitmapRefData *, m_refData);
-
         selfdata->SetMask(new wxMask(*maskSrc));
     }
 
-    return m_refData;
+    return selfdata;
 }
 
 #ifdef __WIN32__
@@ -808,14 +811,17 @@ bool wxBitmap::CreateFromImage(const wxImage& image, int depth, WXHDC hdc)
     if ( !dib.IsOk() )
         return false;
 
-    if ( depth == -1 )
-        depth = dib.GetDepth(); // Get depth from image if none specified
+    const bool hasAlpha = image.HasAlpha();
 
+    if (depth == -1)
+      depth = dib.GetDepth();
+      
     // store the bitmap parameters
-    wxBitmapRefData *refData = new wxBitmapRefData;
+    wxBitmapRefData * const refData = new wxBitmapRefData;
     refData->m_width = w;
     refData->m_height = h;
-    refData->m_hasAlpha = image.HasAlpha();
+    refData->m_hasAlpha = hasAlpha;
+    refData->m_depth = depth;
 
     m_refData = refData;
 
@@ -826,20 +832,17 @@ bool wxBitmap::CreateFromImage(const wxImage& image, int depth, WXHDC hdc)
     // are we going to use DIB?
     //
     // NB: DDBs don't support alpha so if we have alpha channel we must use DIB
-    if ( image.HasAlpha() || wxShouldCreateDIB(w, h, depth, hdc) )
+    if ( hasAlpha || wxShouldCreateDIB(w, h, depth, hdc) )
     {
         // don't delete the DIB section in dib object dtor
         hbitmap = dib.Detach();
 
         refData->m_isDIB = true;
-        refData->m_depth = depth;
     }
 #ifndef ALWAYS_USE_DIB
     else // we need to convert DIB to DDB
     {
         hbitmap = dib.CreateDDB((HDC)hdc);
-
-        refData->m_depth = depth;
     }
 #endif // !ALWAYS_USE_DIB
 

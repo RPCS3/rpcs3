@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     04/01/98
-// RCS-ID:      $Id: utilsexc.cpp 40943 2006-08-31 19:31:43Z ABX $
+// RCS-ID:      $Id: utilsexc.cpp 54695 2008-07-18 22:22:16Z VZ $
 // Copyright:   (c) 1998-2002 wxWidgets dev team
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -360,8 +360,19 @@ wxPipeInputStream::~wxPipeInputStream()
 
 bool wxPipeInputStream::CanRead() const
 {
+    // we can read if there's something in the put back buffer
+    // even pipe is closed
+    if ( m_wbacksize > m_wbackcur )
+        return true;
+
+    wxPipeInputStream * const self = wxConstCast(this, wxPipeInputStream);
+
     if ( !IsOpened() )
+    {
+        // set back to mark Eof as it may have been unset by Ungetch()
+        self->m_lasterror = wxSTREAM_EOF;
         return false;
+    }
 
     DWORD nAvailable;
 
@@ -386,8 +397,6 @@ bool wxPipeInputStream::CanRead() const
         // don't try to continue reading from a pipe if an error occurred or if
         // it had been closed
         ::CloseHandle(m_hInput);
-
-        wxPipeInputStream *self = wxConstCast(this, wxPipeInputStream);
 
         self->m_hInput = INVALID_HANDLE_VALUE;
         self->m_lasterror = wxSTREAM_EOF;
@@ -943,9 +952,47 @@ long wxExecute(wxChar **argv, int flags, wxProcess *handler)
 {
     wxString command;
 
+    wxString arg;
     for ( ;; )
     {
-        command += *argv++;
+        arg = *argv++;
+
+        // we didn't quote the arguments properly in the previous wx versions
+        // and while this is the right thing to do, there is a good chance that
+        // people worked around our bug in their code by quoting the arguments
+        // manually before, so, for compatibility sake, keep the argument
+        // unchanged if it's already quoted
+
+        bool quote;
+        if ( arg.empty() )
+        {
+            // we need to quote empty arguments, otherwise they'd just
+            // disappear
+            quote = true;
+        }
+        else // non-empty
+        {
+            if ( *arg.begin() != _T('"') || *arg.rbegin() != _T('"') )
+            {
+                // escape any quotes present in the string to avoid interfering
+                // with the command line parsing in the child process
+                arg.Replace(_T("\""), _T("\\\""), true /* replace all */);
+
+                // and quote any arguments containing the spaces to prevent
+                // them from being broken down
+                quote = arg.find_first_of(_T(" \t")) != wxString::npos;
+            }
+            else // already quoted
+            {
+                quote = false;
+            }
+        }
+
+        if ( quote )
+            command += _T('\"') + arg + _T('\"');
+        else
+            command += arg;
+
         if ( !*argv )
             break;
 

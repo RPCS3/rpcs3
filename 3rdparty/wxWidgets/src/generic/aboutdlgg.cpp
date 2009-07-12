@@ -3,7 +3,7 @@
 // Purpose:     implements wxGenericAboutBox() function
 // Author:      Vadim Zeitlin
 // Created:     2006-10-08
-// RCS-ID:      $Id: aboutdlgg.cpp 49560 2007-10-31 16:08:18Z VZ $
+// RCS-ID:      $Id: aboutdlgg.cpp 58761 2009-02-08 14:55:44Z VZ $
 // Copyright:   (c) 2006 Vadim Zeitlin <vadim@wxwindows.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -96,6 +96,19 @@ wxIcon wxAboutDialogInfo::GetIcon() const
     return icon;
 }
 
+wxString wxAboutDialogInfo::GetCopyrightToDisplay() const
+{
+    wxString ret = m_copyright;
+
+#if wxUSE_UNICODE
+    const wxString copyrightSign = wxString::FromUTF8("\xc2\xa9");
+    ret.Replace(_T("(c)"), copyrightSign);
+    ret.Replace(_T("(C)"), copyrightSign);
+#endif // wxUSE_UNICODE
+
+    return ret;
+}
+
 // ----------------------------------------------------------------------------
 // wxGenericAboutDialog
 // ----------------------------------------------------------------------------
@@ -120,7 +133,7 @@ bool wxGenericAboutDialog::Create(const wxAboutDialogInfo& info)
     m_sizerText->Add(label, wxSizerFlags().Centre().Border());
     m_sizerText->AddSpacer(5);
 
-    AddText(info.GetCopyright());
+    AddText(info.GetCopyrightToDisplay());
     AddText(info.GetDescription());
 
     if ( info.HasWebSite() )

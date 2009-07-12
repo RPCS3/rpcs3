@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     29/01/98
-// RCS-ID:      $Id: filefn.cpp 51858 2008-02-17 09:16:11Z SC $
+// RCS-ID:      $Id: filefn.cpp 58220 2009-01-19 11:40:24Z VZ $
 // Copyright:   (c) 1998 Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -1493,7 +1493,7 @@ wxChar *wxDoGetCwd(wxChar *buf, int sz)
         {
             sz -= 3;
             rc = ::DosQueryCurrentDir( 0 // current drive
-                                      ,cbuf + 3
+                                      ,(PBYTE)cbuf + 3
                                       ,(PULONG)&sz
                                      );
             cbuf[0] = char('A' + (ulDriveNum - 1));

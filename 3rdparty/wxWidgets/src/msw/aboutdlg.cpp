@@ -3,7 +3,7 @@
 // Purpose:     implementation of wxAboutBox() for wxMSW
 // Author:      Vadim Zeitlin
 // Created:     2006-10-07
-// RCS-ID:      $Id: aboutdlg.cpp 45979 2007-05-11 22:39:15Z VZ $
+// RCS-ID:      $Id: aboutdlg.cpp 58748 2009-02-08 09:46:03Z VZ $
 // Copyright:   (c) 2006 Vadim Zeitlin <vadim@wxwindows.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -53,7 +53,7 @@ void wxAboutBox(const wxAboutDialogInfo& info)
         msg << _T('\n');
 
         if ( info.HasCopyright() )
-            msg << info.GetCopyright() << _T('\n');
+            msg << info.GetCopyrightToDisplay() << _T('\n');
 
         // add everything remaining
         msg << info.GetDescriptionAndCredits();

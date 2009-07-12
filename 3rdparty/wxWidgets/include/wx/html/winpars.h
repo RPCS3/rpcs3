@@ -2,7 +2,7 @@
 // Name:        winpars.h
 // Purpose:     wxHtmlWinParser class (parser to be used with wxHtmlWindow)
 // Author:      Vaclav Slavik
-// RCS-ID:      $Id: winpars.h 53457 2008-05-05 10:53:58Z VS $
+// RCS-ID:      $Id: winpars.h 59260 2009-03-02 10:43:00Z VS $
 // Copyright:   (c) 1999 Vaclav Slavik
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -24,6 +24,7 @@ class WXDLLIMPEXP_FWD_HTML wxHtmlWindowInterface;
 class WXDLLIMPEXP_FWD_HTML wxHtmlWinParser;
 class WXDLLIMPEXP_FWD_HTML wxHtmlWinTagHandler;
 class WXDLLIMPEXP_FWD_HTML wxHtmlTagsModule;
+struct wxHtmlWinParser_TextParsingState;
 
 
 //--------------------------------------------------------------------------------
@@ -221,22 +222,10 @@ private:
     wxEncodingConverter *m_EncConv;
 #endif
 
-    struct TextParsingState
-    {
-        // current whitespace handling mode
-        WhitespaceMode m_whitespaceMode;
-
-        wxHtmlWordCell *m_lastWordCell;
-
-        // current position on line, in num. of characters; used to properly
-        // expand TABs; only updated while inside <pre>
-        int m_posColumn;
-    };
-
     // NB: this pointer replaces m_lastWordCell pointer in wx<=2.8.7; this
     //     way, wxHtmlWinParser remains ABI compatible with older versions
-    //     despite addition of two fields in TextParsingState
-    TextParsingState *m_textParsingState;
+    //     despite addition of two fields in wxHtmlWinParser_TextParsingState
+    wxHtmlWinParser_TextParsingState *m_textParsingState;
 
     DECLARE_NO_COPY_CLASS(wxHtmlWinParser)
 };

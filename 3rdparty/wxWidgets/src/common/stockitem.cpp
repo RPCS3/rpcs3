@@ -4,7 +4,7 @@
 // Author:      Vaclav Slavik
 // Modified by:
 // Created:     2004-08-15
-// RCS-ID:      $Id: stockitem.cpp 42936 2006-11-02 10:42:42Z JS $
+// RCS-ID:      $Id: stockitem.cpp 58617 2009-02-02 05:12:43Z SC $
 // Copyright:   (c) Vaclav Slavik, 2004
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -235,15 +235,15 @@ wxAcceleratorEntry wxGetStockAccelerator(wxWindowID id)
 
     switch (id)
     {
-        STOCKITEM(wxID_COPY,                wxACCEL_CTRL,'C')
-        STOCKITEM(wxID_CUT,                 wxACCEL_CTRL,'X')
-        STOCKITEM(wxID_FIND,                wxACCEL_CTRL,'F')
-        STOCKITEM(wxID_REPLACE,             wxACCEL_CTRL,'R')
-        STOCKITEM(wxID_HELP,                wxACCEL_CTRL,'H')
-        STOCKITEM(wxID_NEW,                 wxACCEL_CTRL,'N')
-        STOCKITEM(wxID_OPEN,                wxACCEL_CTRL,'O')
-        STOCKITEM(wxID_PASTE,               wxACCEL_CTRL,'V')
-        STOCKITEM(wxID_SAVE,                wxACCEL_CTRL,'S')
+        STOCKITEM(wxID_COPY,                wxACCEL_CMD,'C')
+        STOCKITEM(wxID_CUT,                 wxACCEL_CMD,'X')
+        STOCKITEM(wxID_FIND,                wxACCEL_CMD,'F')
+        STOCKITEM(wxID_REPLACE,             wxACCEL_CMD,'R')
+        STOCKITEM(wxID_HELP,                wxACCEL_CMD,'H')
+        STOCKITEM(wxID_NEW,                 wxACCEL_CMD,'N')
+        STOCKITEM(wxID_OPEN,                wxACCEL_CMD,'O')
+        STOCKITEM(wxID_PASTE,               wxACCEL_CMD,'V')
+        STOCKITEM(wxID_SAVE,                wxACCEL_CMD,'S')
 
         default:
             // set the wxAcceleratorEntry to return into an invalid state:

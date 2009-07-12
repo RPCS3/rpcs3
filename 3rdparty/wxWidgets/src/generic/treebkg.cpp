@@ -4,7 +4,7 @@
 // Author:      Evgeniy Tarassov, Vadim Zeitlin
 // Modified by:
 // Created:     2005-09-15
-// RCS-ID:      $Id: treebkg.cpp 44271 2007-01-21 00:52:05Z VZ $
+// RCS-ID:      $Id: treebkg.cpp 54645 2008-07-15 21:29:10Z JS $
 // Copyright:   (c) 2005 Vadim Zeitlin <vadim@wxwidgets.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -104,15 +104,18 @@ wxTreebook::Create(wxWindow *parent,
                             style, wxDefaultValidator, name) )
         return false;
 
+#ifdef __WXMSW__
+    long treeStyle = GetThemedBorderStyle();
+#else
+    long treeStyle = wxBORDER_SUNKEN;
+#endif
     m_bookctrl = new wxTreeCtrl
                  (
                     this,
                     wxID_ANY,
                     wxDefaultPosition,
                     wxDefaultSize,
-#ifndef __WXMSW__
-                    wxBORDER_SIMPLE | // On wxMSW this produces a black border which is wrong
-#endif
+                    treeStyle|
                     wxTR_DEFAULT_STYLE |
                     wxTR_HIDE_ROOT |
                     wxTR_SINGLE

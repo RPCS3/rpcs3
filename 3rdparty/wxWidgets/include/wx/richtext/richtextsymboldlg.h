@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     10/5/2006 3:11:58 PM
-// RCS-ID:      $Id: richtextsymboldlg.h 50950 2007-12-30 16:11:12Z JS $
+// RCS-ID:      $Id: richtextsymboldlg.h 58466 2009-01-27 19:19:40Z BP $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -43,7 +43,7 @@ class wxSymbolListCtrl;
  */
 
 #define SYMBOL_WXSYMBOLPICKERDIALOG_STYLE (wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER|wxCLOSE_BOX)
-#define SYMBOL_WXSYMBOLPICKERDIALOG_TITLE _("Symbols")
+#define SYMBOL_WXSYMBOLPICKERDIALOG_TITLE wxGetTranslation(wxT("Symbols"))
 #define SYMBOL_WXSYMBOLPICKERDIALOG_IDNAME ID_SYMBOLPICKERDIALOG
 #define SYMBOL_WXSYMBOLPICKERDIALOG_SIZE wxSize(400, 300)
 #define SYMBOL_WXSYMBOLPICKERDIALOG_POSITION wxDefaultPosition

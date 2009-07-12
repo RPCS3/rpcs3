@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     2005-09-30
-// RCS-ID:      $Id: richtextbuffer.h 53671 2008-05-20 13:23:07Z JS $
+// RCS-ID:      $Id: richtextbuffer.h 58841 2009-02-12 10:16:07Z JS $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -73,7 +73,11 @@
 // Setting wxRICHTEXT_USE_OWN_CARET to 1 implements a non-flashing
 // cursor reliably without using wxClientDC in case there
 // are platform-specific problems with the generic caret.
+#if defined(wxMAC_USE_CORE_GRAPHICS) && wxMAC_USE_CORE_GRAPHICS
+#define wxRICHTEXT_USE_OWN_CARET 1
+#else
 #define wxRICHTEXT_USE_OWN_CARET 0
+#endif
 
 // Switch off for binary compatibility, on for faster drawing
 #define wxRICHTEXT_USE_OPTIMIZED_LINE_DRAWING 0
@@ -310,7 +314,7 @@ public:
 
     void operator =(const wxRichTextRange& range) { m_start = range.m_start; m_end = range.m_end; }
     bool operator ==(const wxRichTextRange& range) const { return (m_start == range.m_start && m_end == range.m_end); }
-    bool operator !=(const wxRichTextRange& range) const { return (m_start != range.m_start && m_end != range.m_end); }
+    bool operator !=(const wxRichTextRange& range) const { return (m_start != range.m_start || m_end != range.m_end); }
     wxRichTextRange operator -(const wxRichTextRange& range) const { return wxRichTextRange(m_start - range.m_start, m_end - range.m_end); }
     wxRichTextRange operator +(const wxRichTextRange& range) const { return wxRichTextRange(m_start + range.m_start, m_end + range.m_end); }
 
@@ -1067,7 +1071,7 @@ public:
     virtual int GetParagraphLength(long paragraphNumber) const;
 
     /// Get the number of paragraphs
-    virtual int GetParagraphCount() const { return GetChildCount(); }
+    virtual int GetParagraphCount() const { return wx_static_cast(int, GetChildCount()); }
 
     /// Get the number of visible lines
     virtual int GetLineCount() const;

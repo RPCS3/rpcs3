@@ -3,7 +3,7 @@
 // Purpose:     wxFileSystem class - interface for opening files
 // Author:      Vaclav Slavik
 // Copyright:   (c) 1999 Vaclav Slavik
-// CVS-ID:      $Id: filesys.cpp 51940 2008-02-20 16:33:55Z VZ $
+// CVS-ID:      $Id: filesys.cpp 55271 2008-08-26 00:03:04Z VZ $
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
@@ -23,6 +23,7 @@
     #include "wx/module.h"
 #endif
 
+#include "wx/sysopt.h"
 #include "wx/wfstream.h"
 #include "wx/mimetype.h"
 #include "wx/filename.h"
@@ -62,64 +63,77 @@ wxString wxFileSystemHandler::GetMimeTypeFromExt(const wxString& location)
 
 #if wxUSE_MIMETYPE
     static bool s_MinimalMimeEnsured = false;
-    if (!s_MinimalMimeEnsured)
-    {
-        static const wxFileTypeInfo fallbacks[] =
-        {
-            wxFileTypeInfo(_T("image/jpeg"),
-                           wxEmptyString,
-                           wxEmptyString,
-                           _T("JPEG image (from fallback)"),
-                           _T("jpg"), _T("jpeg"), _T("JPG"), _T("JPEG"), NULL),
-            wxFileTypeInfo(_T("image/gif"),
-                           wxEmptyString,
-                           wxEmptyString,
-                           _T("GIF image (from fallback)"),
-                           _T("gif"), _T("GIF"), NULL),
-            wxFileTypeInfo(_T("image/png"),
-                           wxEmptyString,
-                           wxEmptyString,
-                           _T("PNG image (from fallback)"),
-                           _T("png"), _T("PNG"), NULL),
-            wxFileTypeInfo(_T("image/bmp"),
-                           wxEmptyString,
-                           wxEmptyString,
-                           _T("windows bitmap image (from fallback)"),
-                           _T("bmp"), _T("BMP"), NULL),
-            wxFileTypeInfo(_T("text/html"),
-                           wxEmptyString,
-                           wxEmptyString,
-                           _T("HTML document (from fallback)"),
-                           _T("htm"), _T("html"), _T("HTM"), _T("HTML"), NULL),
-            // must terminate the table with this!
-            wxFileTypeInfo()
-        };
-        wxTheMimeTypesManager->AddFallbacks(fallbacks);
-        s_MinimalMimeEnsured = true;
-    }
 
-    wxFileType *ft = wxTheMimeTypesManager->GetFileTypeFromExtension(ext);
-    if ( !ft || !ft -> GetMimeType(&mime) )
-    {
-        mime = wxEmptyString;
-    }
-
-    delete ft;
-
-    return mime;
-#else
-    if ( ext.IsSameAs(wxT("htm"), false) || ext.IsSameAs(_T("html"), false) )
-        return wxT("text/html");
-    if ( ext.IsSameAs(wxT("jpg"), false) || ext.IsSameAs(_T("jpeg"), false) )
-        return wxT("image/jpeg");
-    if ( ext.IsSameAs(wxT("gif"), false) )
-        return wxT("image/gif");
-    if ( ext.IsSameAs(wxT("png"), false) )
-        return wxT("image/png");
-    if ( ext.IsSameAs(wxT("bmp"), false) )
-        return wxT("image/bmp");
-    return wxEmptyString;
+    // Don't use mime types manager if the application doesn't need it and it would be
+    // cause an unacceptable delay, especially on startup.
+    bool useMimeTypesManager = true;
+#if wxUSE_SYSTEM_OPTIONS
+    useMimeTypesManager = (wxSystemOptions::GetOptionInt(wxT("filesys.no-mimetypesmanager")) == 0);
 #endif
+
+    if (useMimeTypesManager)
+    {
+        if (!s_MinimalMimeEnsured)
+        {
+            static const wxFileTypeInfo fallbacks[] =
+            {
+                wxFileTypeInfo(_T("image/jpeg"),
+                    wxEmptyString,
+                    wxEmptyString,
+                    _T("JPEG image (from fallback)"),
+                    _T("jpg"), _T("jpeg"), _T("JPG"), _T("JPEG"), NULL),
+                    wxFileTypeInfo(_T("image/gif"),
+                    wxEmptyString,
+                    wxEmptyString,
+                    _T("GIF image (from fallback)"),
+                    _T("gif"), _T("GIF"), NULL),
+                    wxFileTypeInfo(_T("image/png"),
+                    wxEmptyString,
+                    wxEmptyString,
+                    _T("PNG image (from fallback)"),
+                    _T("png"), _T("PNG"), NULL),
+                    wxFileTypeInfo(_T("image/bmp"),
+                    wxEmptyString,
+                    wxEmptyString,
+                    _T("windows bitmap image (from fallback)"),
+                    _T("bmp"), _T("BMP"), NULL),
+                    wxFileTypeInfo(_T("text/html"),
+                    wxEmptyString,
+                    wxEmptyString,
+                    _T("HTML document (from fallback)"),
+                    _T("htm"), _T("html"), _T("HTM"), _T("HTML"), NULL),
+                    // must terminate the table with this!
+                    wxFileTypeInfo()
+            };
+            wxTheMimeTypesManager->AddFallbacks(fallbacks);
+            s_MinimalMimeEnsured = true;
+        }
+        
+        wxFileType *ft = wxTheMimeTypesManager->GetFileTypeFromExtension(ext);
+        if ( !ft || !ft -> GetMimeType(&mime) )
+        {
+            mime = wxEmptyString;
+        }
+        
+        delete ft;
+        
+        return mime;
+    }
+    else
+#endif
+    {
+        if ( ext.IsSameAs(wxT("htm"), false) || ext.IsSameAs(_T("html"), false) )
+            return wxT("text/html");
+        if ( ext.IsSameAs(wxT("jpg"), false) || ext.IsSameAs(_T("jpeg"), false) )
+            return wxT("image/jpeg");
+        if ( ext.IsSameAs(wxT("gif"), false) )
+            return wxT("image/gif");
+        if ( ext.IsSameAs(wxT("png"), false) )
+            return wxT("image/png");
+        if ( ext.IsSameAs(wxT("bmp"), false) )
+            return wxT("image/bmp");
+        return wxEmptyString;
+    }
 }
 
 
@@ -174,8 +188,10 @@ wxString wxFileSystemHandler::GetAnchor(const wxString& location) const
 
     for (int i = l-1; i >= 0; i--) {
         c = location[i];
-        if (c == wxT('#')) return location.Right(l-i-1);
-        else if ((c == wxT('.')) || (c == wxT('/')) || (c == wxT('\\')) || (c == wxT(':'))) return wxEmptyString;
+        if (c == wxT('#'))
+            return location.Right(l-i-1);
+        else if ((c == wxT('/')) || (c == wxT('\\')) || (c == wxT(':')))
+            return wxEmptyString;
     }
     return wxEmptyString;
 }

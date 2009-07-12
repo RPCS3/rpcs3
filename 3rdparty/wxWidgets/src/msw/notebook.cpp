@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     11.06.98
-// RCS-ID:      $Id: notebook.cpp 50855 2007-12-20 10:51:33Z JS $
+// RCS-ID:      $Id: notebook.cpp 57033 2008-11-29 22:39:47Z VZ $
 // Copyright:   (c) 1998 Vadim Zeitlin <zeitlin@dptmaths.ens-cachan.fr>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -656,16 +656,18 @@ wxSize wxNotebook::CalcSizeFromPage(const wxSize& sizePage) const
         tabSize.y = rect.bottom - rect.top;
     }
 
+    const int rows = GetRowCount();
+
     // add an extra margin in both directions
     const int MARGIN = 8;
     if ( IsVertical() )
     {
         sizeTotal.x += MARGIN;
-        sizeTotal.y += tabSize.y + MARGIN;
+        sizeTotal.y += tabSize.y * rows + MARGIN;
     }
     else // horizontal layout
     {
-        sizeTotal.x += tabSize.x + MARGIN;
+        sizeTotal.x += tabSize.x * rows + MARGIN;
         sizeTotal.y += MARGIN;
     }
 
@@ -1027,6 +1029,10 @@ void wxNotebook::OnSize(wxSizeEvent& event)
                     MAKELPARAM(rc.right, rc.bottom));
             s_isInOnSize = false;
         }
+
+        // The best size depends on the number of rows of tabs, which can
+        // change when the notepad is resized.
+        InvalidateBestSize();
     }
 
 #if wxUSE_UXTHEME

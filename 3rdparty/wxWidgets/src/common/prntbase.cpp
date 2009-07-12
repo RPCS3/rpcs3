@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     04/01/98
-// RCS-ID:      $Id: prntbase.cpp 42763 2006-10-30 20:34:25Z VZ $
+// RCS-ID:      $Id: prntbase.cpp 58209 2009-01-18 21:31:36Z RD $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -17,6 +17,17 @@
 #endif
 
 #if wxUSE_PRINTING_ARCHITECTURE
+
+// change this to 1 to use experimental high-quality printing on Windows
+// (NB: this can't be in msw/printwin.cpp because of binary compatibility)
+#define wxUSE_HIGH_QUALITY_PREVIEW_IN_WXMSW 0
+
+#if wxUSE_HIGH_QUALITY_PREVIEW_IN_WXMSW
+    #if !defined(__WXMSW__) || !wxUSE_IMAGE || !wxUSE_WXDIB
+        #undef wxUSE_HIGH_QUALITY_PREVIEW_IN_WXMSW
+        #define wxUSE_HIGH_QUALITY_PREVIEW_IN_WXMSW 0
+    #endif
+#endif
 
 #include "wx/dcprint.h"
 
@@ -64,6 +75,19 @@
         #include <print.h>
     #endif
 #endif // __WXMSW__
+
+#if wxUSE_HIGH_QUALITY_PREVIEW_IN_WXMSW
+
+#include "wx/msw/dib.h"
+#include "wx/image.h"
+
+typedef bool (wxPrintPreviewBase::*RenderPageIntoDCFunc)(wxDC&, int);
+static bool RenderPageIntoBitmapHQ(wxPrintPreviewBase *preview,
+                                   RenderPageIntoDCFunc RenderPageIntoDC,
+                                   wxPrinterDC& printerDC,
+                                   wxBitmap& bmp, int pageNum,
+                                   int pageWidth, int pageHeight);
+#endif // wxUSE_HIGH_QUALITY_PREVIEW_IN_WXMSW
 
 //----------------------------------------------------------------------------
 // wxPrintFactory
@@ -508,6 +532,7 @@ void wxPrintAbortDialog::OnCancel(wxCommandEvent& WXUNUSED(event))
     wxPrinterBase::sm_abortIt = true;
     wxPrinterBase::sm_abortWindow->Show(false);
     wxPrinterBase::sm_abortWindow->Close(true);
+    wxPrinterBase::sm_abortWindow->Destroy();
     wxPrinterBase::sm_abortWindow = (wxWindow *) NULL;
 }
 
@@ -1469,6 +1494,70 @@ void wxPrintPreviewBase::AdjustScrollbars(wxPreviewCanvas *canvas)
         canvas->SetScrollbars(10, 10, scrollUnitsX, scrollUnitsY, 0, 0, true);
 }
 
+bool wxPrintPreviewBase::RenderPageIntoDC(wxDC& dc, int pageNum)
+{
+    m_previewPrintout->SetDC(&dc);
+    m_previewPrintout->SetPageSizePixels(m_pageWidth, m_pageHeight);
+
+    // Need to delay OnPreparePrinting() until here, so we have enough
+    // information.
+    if (!m_printingPrepared)
+    {
+        m_previewPrintout->OnPreparePrinting();
+        int selFrom, selTo;
+        m_previewPrintout->GetPageInfo(&m_minPage, &m_maxPage, &selFrom, &selTo);
+        m_printingPrepared = true;
+    }
+
+    m_previewPrintout->OnBeginPrinting();
+
+    if (!m_previewPrintout->OnBeginDocument(m_printDialogData.GetFromPage(), m_printDialogData.GetToPage()))
+    {
+        wxMessageBox(_("Could not start document preview."), _("Print Preview Failure"), wxOK);
+        return false;
+    }
+
+    m_previewPrintout->OnPrintPage(pageNum);
+    m_previewPrintout->OnEndDocument();
+    m_previewPrintout->OnEndPrinting();
+
+    m_previewPrintout->SetDC(NULL);
+
+    return true;
+}
+
+bool wxPrintPreviewBase::RenderPageIntoBitmap(wxBitmap& bmp, int pageNum)
+{
+#if wxUSE_HIGH_QUALITY_PREVIEW_IN_WXMSW
+    // try high quality rendering first:
+    static bool s_hqPreviewFailed = false;
+    if ( !s_hqPreviewFailed )
+    {
+        wxPrinterDC printerDC(m_printDialogData.GetPrintData());
+        if ( RenderPageIntoBitmapHQ(this,
+                                    &wxPrintPreviewBase::RenderPageIntoDC,
+                                    printerDC,
+                                    bmp, pageNum,
+                                    m_pageWidth, m_pageHeight) )
+        {
+            return true;
+        }
+        else
+        {
+            wxLogTrace(_T("printing"),
+                       _T("high-quality preview failed, falling back to normal"));
+            s_hqPreviewFailed = true; // don't bother re-trying
+        }
+    }
+#endif // wxUSE_HIGH_QUALITY_PREVIEW_IN_WXMSW
+
+    wxMemoryDC memoryDC;
+    memoryDC.SelectObject(bmp);
+    memoryDC.Clear();
+
+    return RenderPageIntoDC(memoryDC, pageNum);
+}
+
 bool wxPrintPreviewBase::RenderPage(int pageNum)
 {
     wxBusyCursor busy;
@@ -1497,43 +1586,14 @@ bool wxPrintPreviewBase::RenderPage(int pageNum)
         }
     }
 
-    wxMemoryDC memoryDC;
-    memoryDC.SelectObject(*m_previewBitmap);
-
-    memoryDC.Clear();
-
-    m_previewPrintout->SetDC(&memoryDC);
-    m_previewPrintout->SetPageSizePixels(m_pageWidth, m_pageHeight);
-
-    // Need to delay OnPreparePrinting until here, so we have enough information.
-    if (!m_printingPrepared)
-    {
-        m_previewPrintout->OnPreparePrinting();
-        int selFrom, selTo;
-        m_previewPrintout->GetPageInfo(&m_minPage, &m_maxPage, &selFrom, &selTo);
-        m_printingPrepared = true;
-    }
-
-    m_previewPrintout->OnBeginPrinting();
-
-    if (!m_previewPrintout->OnBeginDocument(m_printDialogData.GetFromPage(), m_printDialogData.GetToPage()))
+    if ( !RenderPageIntoBitmap(*m_previewBitmap, pageNum) )
     {
         wxMessageBox(_("Could not start document preview."), _("Print Preview Failure"), wxOK);
-
-        memoryDC.SelectObject(wxNullBitmap);
 
         delete m_previewBitmap;
         m_previewBitmap = NULL;
         return false;
     }
-
-    m_previewPrintout->OnPrintPage(pageNum);
-    m_previewPrintout->OnEndDocument();
-    m_previewPrintout->OnEndPrinting();
-
-    m_previewPrintout->SetDC(NULL);
-
-    memoryDC.SelectObject(wxNullBitmap);
 
 #if wxUSE_STATUSBAR
     wxString status;
@@ -1757,5 +1817,274 @@ void wxPrintPreview::DetermineScaling()
 {
     m_pimpl->DetermineScaling();
 }
+
+//----------------------------------------------------------------------------
+// experimental backport of high-quality preview on Windows
+//----------------------------------------------------------------------------
+
+#if wxUSE_HIGH_QUALITY_PREVIEW_IN_WXMSW
+
+// The preview, as implemented in wxPrintPreviewBase (and as used prior to wx3)
+// is inexact: it uses screen DC, which has much lower resolution and has
+// other properties different from printer DC, so the preview is not quite
+// right.
+//
+// To make matters worse, if the application depends heavily on GetTextExtent()
+// or does text layout itself, the output in preview and on paper can be very
+// different. In particular, wxHtmlEasyPrinting is affected and the preview
+// can be easily off by several pages.
+//
+// To fix this, we attempt to render the preview into high-resolution bitmap
+// using DC with same resolution etc. as the printer DC. This takes lot of
+// memory, so the code is more complicated than it could be, but the results
+// are much better.
+//
+// Finally, this code is specific to wxMSW, because it doesn't make sense to
+// bother with it on other platforms. Both OSX and modern GNOME/GTK+
+// environments have builtin accurate preview (that applications should use
+// instead) and the differences between screen and printer DC in wxGTK are so
+// large than this trick doesn't help at all.
+
+namespace
+{
+
+// If there's not enough memory, we need to render the preview in parts.
+// Unfortunately we cannot simply use wxMemoryDC, because it reports its size
+// as bitmap's size, and we need to use smaller bitmap while still reporting
+// original ("correct") DC size, because printing code frequently uses
+// GetSize() to determine scaling factor. This DC class handles this.
+
+class PageFragmentDC : public wxMemoryDC
+{
+public:
+    PageFragmentDC(wxDC *printer, wxBitmap& bmp,
+                   const wxPoint& offset,
+                   const wxSize& fullSize)
+        : wxMemoryDC(printer),
+          m_offset(offset),
+          m_fullSize(fullSize)
+    {
+        SetDeviceOrigin(0, 0);
+        SelectObject(bmp);
+    }
+
+    virtual void SetDeviceOrigin(wxCoord x, wxCoord y)
+    {
+        wxMemoryDC::SetDeviceOrigin(x - m_offset.x, y - m_offset.y);
+    }
+
+    virtual void DoGetDeviceOrigin(wxCoord *x, wxCoord *y) const
+    {
+        wxMemoryDC::DoGetDeviceOrigin(x, y);
+        if ( x ) *x += m_offset.x;
+        if ( x ) *y += m_offset.y;
+    }
+
+    virtual void DoGetSize(int *width, int *height) const
+    {
+        if ( width )
+            *width = m_fullSize.x;
+        if ( height )
+            *height = m_fullSize.y;
+    }
+
+private:
+    wxPoint m_offset;
+    wxSize m_fullSize;
+};
+
+// estimate how big chunks we can render, given available RAM
+long ComputeFragmentSize(long printerDepth,
+                         long width,
+                         long height)
+{
+    // Compute the amount of memory needed to generate the preview.
+    // Memory requirements of RenderPageFragment() are as follows:
+    //
+    // (memory DC - always)
+    //    width * height * printerDepth/8
+    // (wxImage + wxDIB instance)
+    //    width * height * (3 + 4)
+    //    (this could be reduced to *3 if using wxGraphicsContext)
+    //
+    // So, given amount of memory M, we can render at most
+    //
+    //    height = M / (width * (printerDepth/8 + F))
+    //
+    // where F is 3 or 7 depending on whether wxGraphicsContext is used or not
+
+    wxMemorySize memAvail = wxGetFreeMemory();
+    if ( memAvail == -1 )
+    {
+        // we don't know;  10meg shouldn't be a problem hopefully
+        memAvail = 10000000;
+    }
+    else
+    {
+        // limit ourselves to half of available RAM to have a margin for other
+        // apps, for our rendering code, and for miscalculations
+        memAvail /= 2;
+    }
+
+    const float perPixel = float(printerDepth)/8 + (3 + 4);
+
+    const long perLine = long(width * perPixel);
+    const long maxstep = (memAvail / perLine).GetValue();
+    const long step = wxMin(height, maxstep);
+
+    wxLogTrace(_T("printing"),
+               _T("using %liMB of RAM (%li lines) for preview, %li %lipx fragments"),
+               long((memAvail >> 20).GetValue()),
+               maxstep,
+               (height+step-1) / step,
+               step);
+
+    return step;
+}
+
+} // anonymous namespace
+
+
+static bool RenderPageFragment(wxPrintPreviewBase *preview,
+                               RenderPageIntoDCFunc RenderPageIntoDC,
+                               float scaleX, float scaleY,
+                               int *nextFinalLine,
+                               wxPrinterDC& printer,
+                               wxMemoryDC& finalDC,
+                               const wxRect& rect,
+                               int pageWidth, int pageHeight,
+                               int pageNum)
+{
+    // compute 'rect' equivalent in the small final bitmap:
+    const wxRect smallRect(wxPoint(0, *nextFinalLine),
+                           wxPoint(int(rect.GetRight() * scaleX),
+                                   int(rect.GetBottom() * scaleY)));
+    wxLogTrace(_T("printing"),
+               _T("rendering fragment of page %i: [%i,%i,%i,%i] scaled down to [%i,%i,%i,%i]"),
+               pageNum,
+               rect.x, rect.y, rect.GetRight(), rect.GetBottom(),
+               smallRect.x, smallRect.y, smallRect.GetRight(), smallRect.GetBottom()
+               );
+
+    // create DC and bitmap compatible with printer DC:
+    wxBitmap large(rect.width, rect.height, printer);
+    if ( !large.IsOk() )
+        return false;
+
+    // render part of the page into it:
+    {
+        PageFragmentDC memoryDC(&printer, large,
+                                rect.GetPosition(),
+                                wxSize(pageWidth, pageHeight));
+        if ( !memoryDC.IsOk() )
+            return false;
+
+        memoryDC.Clear();
+
+        if ( !(preview->*RenderPageIntoDC)(memoryDC, pageNum) )
+            return false;
+    } // release bitmap from memoryDC
+
+    // now scale the rendered part down and blit it into final output:
+
+    wxImage img;
+    {
+        wxDIB dib(large);
+        if ( !dib.IsOk() )
+            return false;
+        large = wxNullBitmap; // free memory a.s.a.p.
+        img = dib.ConvertToImage();
+    } // free the DIB now that it's no longer needed, too
+
+    if ( !img.IsOk() )
+        return false;
+
+    img.Rescale(smallRect.width, smallRect.height, wxIMAGE_QUALITY_HIGH);
+    if ( !img.IsOk() )
+        return false;
+
+    wxBitmap bmp(img);
+    if ( !bmp.IsOk() )
+        return false;
+
+    img = wxNullImage;
+    finalDC.DrawBitmap(bmp, smallRect.x, smallRect.y);
+    if ( bmp.IsOk() )
+    {
+        *nextFinalLine += smallRect.height;
+        return true;
+    }
+
+    return false;
+}
+
+static bool RenderPageIntoBitmapHQ(wxPrintPreviewBase *preview,
+                                   RenderPageIntoDCFunc RenderPageIntoDC,
+                                   wxPrinterDC& printerDC,
+                                   wxBitmap& bmp, int pageNum,
+                                   int pageWidth, int pageHeight)
+{
+    wxLogTrace(_T("printing"), _T("rendering HQ preview of page %i"), pageNum);
+
+    if ( !printerDC.IsOk() )
+        return false;
+
+    // compute scale factor
+    const float scaleX = float(bmp.GetWidth()) / float(pageWidth);
+    const float scaleY =  float(bmp.GetHeight()) / float(pageHeight);
+
+    wxMemoryDC bmpDC;
+    bmpDC.SelectObject(bmp);
+    bmpDC.Clear();
+
+    const int initialStep = ComputeFragmentSize(printerDC.GetDepth(),
+                                                pageWidth, pageHeight);
+
+    wxRect todo(0, 0, pageWidth, initialStep); // rect to render
+    int nextFinalLine = 0; // first not-yet-rendered output line
+
+    while ( todo.y < pageHeight )
+    {
+        todo.SetBottom(wxMin(todo.GetBottom(), pageHeight - 1));
+
+        if ( !RenderPageFragment(preview, RenderPageIntoDC,
+                                 scaleX, scaleY,
+                                 &nextFinalLine,
+                                 printerDC,
+                                 bmpDC,
+                                 todo,
+                                 pageWidth, pageHeight,
+                                 pageNum) )
+        {
+            if ( todo.height < 20 )
+            {
+                // something is very wrong if we can't render even at this
+                // slow space, let's bail out and fall back to low quality
+                // preview
+                wxLogTrace(_T("printing"),
+                           _T("it seems that HQ preview doesn't work at all"));
+                return false;
+            }
+
+            // it's possible our memory calculation was off, or conditions
+            // changed, or there's not enough _bitmap_ resources; try if using
+            // smaller bitmap would help:
+            todo.height /= 2;
+
+            wxLogTrace(_T("printing"),
+                       _T("preview of fragment failed, reducing height to %ipx"),
+                       todo.height);
+
+            continue; // retry at the same position again
+        }
+
+        // move to the next segment
+        todo.Offset(0, todo.height);
+    }
+
+    return true;
+}
+
+#endif // wxUSE_HIGH_QUALITY_PREVIEW_IN_WXMSW
 
 #endif // wxUSE_PRINTING_ARCHITECTURE

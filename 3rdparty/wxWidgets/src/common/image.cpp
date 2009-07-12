@@ -2,7 +2,7 @@
 // Name:        src/common/image.cpp
 // Purpose:     wxImage
 // Author:      Robert Roebling
-// RCS-ID:      $Id: image.cpp 53245 2008-04-17 15:10:20Z RR $
+// RCS-ID:      $Id: image.cpp 59197 2009-02-28 15:44:53Z VZ $
 // Copyright:   (c) Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -234,6 +234,7 @@ bool wxImage::Create( int width, int height, unsigned char* data, unsigned char*
     M_IMGDATA->m_height = height;
     M_IMGDATA->m_ok = true;
     M_IMGDATA->m_static = static_data;
+    M_IMGDATA->m_staticAlpha = static_data;
 
     return true;
 }
@@ -1274,7 +1275,6 @@ void wxImage::Paste( const wxImage &image, int x, int y )
          (GetMaskGreen()==image.GetMaskGreen()) &&
          (GetMaskBlue()==image.GetMaskBlue()))))
     {
-        width *= 3;
         unsigned char* source_data = image.GetData() + xx*3 + yy*3*image.GetWidth();
         int source_step = image.GetWidth()*3;
 
@@ -1282,11 +1282,10 @@ void wxImage::Paste( const wxImage &image, int x, int y )
         int target_step = M_IMGDATA->m_width*3;
         for (int j = 0; j < height; j++)
         {
-            memcpy( target_data, source_data, width );
+            memcpy( target_data, source_data, width*3 );
             source_data += source_step;
             target_data += target_step;
         }
-        return;
     }
 
     // Copy over the alpha channel from the original image
@@ -1315,7 +1314,6 @@ void wxImage::Paste( const wxImage &image, int x, int y )
         unsigned char g = image.GetMaskGreen();
         unsigned char b = image.GetMaskBlue();
 
-        width *= 3;
         unsigned char* source_data = image.GetData() + xx*3 + yy*3*image.GetWidth();
         int source_step = image.GetWidth()*3;
 
@@ -1324,7 +1322,7 @@ void wxImage::Paste( const wxImage &image, int x, int y )
 
         for (int j = 0; j < height; j++)
         {
-            for (int i = 0; i < width; i+=3)
+            for (int i = 0; i < width*3; i+=3)
             {
                 if ((source_data[i]   != r) ||
                     (source_data[i+1] != g) ||

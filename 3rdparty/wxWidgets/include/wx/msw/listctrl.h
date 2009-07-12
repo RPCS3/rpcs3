@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by: Agron Selimaj
 // Created:     01/02/97
-// RCS-ID:      $Id: listctrl.h 51773 2008-02-13 22:46:30Z VZ $
+// RCS-ID:      $Id: listctrl.h 54419 2008-06-29 01:35:24Z VZ $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -12,7 +12,6 @@
 #ifndef _WX_LISTCTRL_H_
 #define _WX_LISTCTRL_H_
 
-#include "wx/dcbuffer.h"
 #include "wx/textctrl.h"
 
 class WXDLLIMPEXP_FWD_CORE wxImageList;
@@ -342,7 +341,6 @@ public:
     bool SortItems(wxListCtrlCompare fn, long data);
 
     // IMPLEMENTATION
-	virtual bool MSWDrawSubItem(wxPaintDC& rPainDC, int item, int subitem);
     virtual bool MSWCommand(WXUINT param, WXWORD id);
     virtual bool MSWOnNotify(int idCtrl, WXLPARAM lParam, WXLPARAM *result);
     virtual bool MSWShouldPreProcessMessage(WXMSG* msg);
@@ -437,6 +435,11 @@ private:
     // UpdateStyle()), only should be called if InReportView()
     void MSWSetExListStyles();
 
+    // initialize the (already created) m_textCtrl with the associated HWND
+    void InitEditControl(WXHWND hWnd);
+
+    // destroy m_textCtrl if it's currently valid and reset it to NULL
+    void DeleteEditControl();
 
     DECLARE_DYNAMIC_CLASS(wxListCtrl)
     DECLARE_EVENT_TABLE()

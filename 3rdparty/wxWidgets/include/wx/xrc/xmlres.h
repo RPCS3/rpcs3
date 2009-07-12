@@ -3,7 +3,7 @@
 // Purpose:     XML resources
 // Author:      Vaclav Slavik
 // Created:     2000/03/05
-// RCS-ID:      $Id: xmlres.h 49563 2007-10-31 20:46:21Z VZ $
+// RCS-ID:      $Id: xmlres.h 55504 2008-09-07 09:15:46Z VS $
 // Copyright:   (c) 2000 Vaclav Slavik
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -128,8 +128,6 @@ public:
     // Destructor.
     virtual ~wxXmlResource();
 
-    wxXmlNode *GetFirstRoot();
-    
     // Loads resources from XML files that match given filemask.
     // This method understands VFS (see filesys.h).
     bool Load(const wxString& filemask);

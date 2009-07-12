@@ -4,7 +4,7 @@
 // Author:      Guilhem Lavaux
 // Modified by:
 // Created:     20/07/1997
-// RCS-ID:      $Id: url.cpp 49798 2007-11-09 23:17:49Z VZ $
+// RCS-ID:      $Id: url.cpp 57545 2008-12-25 17:03:20Z VZ $
 // Copyright:   (c) 1997, 1998 Guilhem Lavaux
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -242,11 +242,11 @@ wxInputStream *wxURL::GetInputStream()
         size_t dwPasswordPos = m_userinfo.find(':');
 
         if (dwPasswordPos == wxString::npos)
-            m_protocol->SetUser(m_userinfo);
+            m_protocol->SetUser(Unescape(m_userinfo));
         else
         {
-            m_protocol->SetUser(m_userinfo(0, dwPasswordPos));
-            m_protocol->SetPassword(m_userinfo(dwPasswordPos+1, m_userinfo.length() + 1));
+            m_protocol->SetUser(Unescape(m_userinfo(0, dwPasswordPos)));
+            m_protocol->SetPassword(Unescape(m_userinfo(dwPasswordPos+1, m_userinfo.length() + 1)));
         }
     }
 

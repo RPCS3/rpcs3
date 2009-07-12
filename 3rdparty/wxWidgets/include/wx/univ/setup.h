@@ -1221,16 +1221,16 @@
 #define wxUSE_LIBJPEG 1
 
 // Set to 1 for TIFF format support (requires libtiff)
-#define wxUSE_LIBTIFF 1
+#define wxUSE_LIBTIFF 0
 
 // Set to 1 for GIF format support
-#define wxUSE_GIF 1
+#define wxUSE_GIF 0
 
 // Set to 1 for PNM format support
 #define wxUSE_PNM 1
 
 // Set to 1 for PCX format support
-#define wxUSE_PCX 1
+#define wxUSE_PCX 0
 
 // Set to 1 for IFF format support (Amiga format)
 #define wxUSE_IFF 0
@@ -1289,8 +1289,8 @@
     #define wxUSE_RICHEDIT2 0 // currently not supported
 
 #else
-    #define wxUSE_RICHEDIT 0
-    #define wxUSE_RICHEDIT2 0
+    #define wxUSE_RICHEDIT 1
+    #define wxUSE_RICHEDIT2 1
 #endif
 
 // Set this to 1 to enable support for the owner-drawn menu and listboxes.

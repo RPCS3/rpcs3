@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by: Wlodzimierz ABX Skiba from generic/listbkg.cpp
 // Created:     15.09.04
-// RCS-ID:      $Id: choicbkg.cpp 53045 2008-04-06 15:14:25Z VZ $
+// RCS-ID:      $Id: choicbkg.cpp 58355 2009-01-24 14:12:59Z VZ $
 // Copyright:   (c) Vadim Zeitlin, Wlodzimierz Skiba
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -146,11 +146,15 @@ wxSize wxChoicebook::CalcSizeFromPage(const wxSize& sizePage) const
     wxSize size = sizePage;
     if ( IsVertical() )
     {
+        if ( sizeChoice.x > sizePage.x )
+            size.x = sizeChoice.x;
         size.y += sizeChoice.y + GetInternalBorder();
     }
     else // left/right aligned
     {
         size.x += sizeChoice.x + GetInternalBorder();
+        if ( sizeChoice.y > sizePage.y )
+            size.y = sizeChoice.y;
     }
 
     return size;

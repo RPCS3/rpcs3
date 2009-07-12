@@ -4,7 +4,7 @@
 // Author:      Andreas Pflug
 // Modified by:
 // Created:     2005-01-19
-// RCS-ID:      $Id: datectlg.cpp 53510 2008-05-09 22:15:55Z RD $
+// RCS-ID:      $Id: datectlg.cpp 54407 2008-06-28 18:58:07Z VZ $
 // Copyright:   (c) 2005 Andreas Pflug <pgadmin@pse-consulting.de>
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -167,6 +167,11 @@ public:
 
             m_combo->SetText(wxEmptyString);
         }
+    }
+
+    bool IsTextEmpty() const
+    {
+        return m_combo->GetTextCtrl()->IsEmpty();
     }
 
     bool ParseDateTime(const wxString& s, wxDateTime* pDt)
@@ -470,6 +475,8 @@ wxDatePickerCtrlGeneric::SetDateRange(const wxDateTime& lowerdate,
 
 wxDateTime wxDatePickerCtrlGeneric::GetValue() const
 {
+    if ( HasFlag(wxDP_ALLOWNONE) && m_popup->IsTextEmpty() )
+        return wxInvalidDateTime;
     return m_popup->GetDate();
 }
 

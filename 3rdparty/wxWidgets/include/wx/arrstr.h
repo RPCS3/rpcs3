@@ -4,7 +4,7 @@
 // Author:      Mattia Barbon and Vadim Zeitlin
 // Modified by:
 // Created:     07/07/03
-// RCS-ID:      $Id: arrstr.h 33888 2005-04-26 19:24:12Z MBN $
+// RCS-ID:      $Id: arrstr.h 56758 2008-11-13 22:32:21Z VS $
 // Copyright:   (c) 2003 Vadim Zeitlin <zeitlin@dptmaths.ens-cachan.fr>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -364,6 +364,11 @@ public:
             m_strings[i] = m_array[i];
         return m_strings;
     }
+
+#if wxABI_VERSION >= 20810
+    wxString* Release();
+#endif // wxABI_VERSION >= 20810
+
 private:
     const wxArrayString& m_array;
     wxString* m_strings;

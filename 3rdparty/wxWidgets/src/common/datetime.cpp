@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     11.05.99
-// RCS-ID:      $Id: datetime.cpp 53900 2008-06-01 14:37:26Z VZ $
+// RCS-ID:      $Id: datetime.cpp 58486 2009-01-28 21:52:37Z VZ $
 // Copyright:   (c) 1999 Vadim Zeitlin <zeitlin@dptmaths.ens-cachan.fr>
 //              parts of code taken from sndcal library by Scott E. Lee:
 //
@@ -147,59 +147,26 @@ wxCUSTOM_TYPE_INFO(wxDateTime, wxToStringConverter<wxDateTime> , wxFromStringCon
 #if !defined(WX_TIMEZONE) && !defined(WX_GMTOFF_IN_TM)
     #if defined(__WXPALMOS__)
         #define WX_GMTOFF_IN_TM
-    #elif defined(__BORLANDC__) || defined(__MINGW32__) || defined(__VISAGECPP__)
+    #elif defined(__WXMSW__)
+        static long wxGetTimeZone()
+        {
+            static long s_timezone = MAXLONG; // invalid timezone
+            if (s_timezone == MAXLONG)
+            {
+                TIME_ZONE_INFORMATION info;
+                GetTimeZoneInformation(&info);
+                s_timezone = info.Bias * 60;  // convert minutes to seconds
+            }
+            return s_timezone;
+        }
+        #define WX_TIMEZONE wxGetTimeZone()
+    #elif defined(__VISAGECPP__)
         #define WX_TIMEZONE _timezone
     #elif defined(__MWERKS__)
         long wxmw_timezone = 28800;
         #define WX_TIMEZONE wxmw_timezone
-    #elif defined(__DJGPP__) || defined(__WINE__)
-        #include <sys/timeb.h>
-        #include <values.h>
-        static long wxGetTimeZone()
-        {
-            static long timezone = MAXLONG; // invalid timezone
-            if (timezone == MAXLONG)
-            {
-                struct timeb tb;
-                ftime(&tb);
-                timezone = tb.timezone;
-            }
-            return timezone;
-        }
-        #define WX_TIMEZONE wxGetTimeZone()
     #elif defined(__DARWIN__)
         #define WX_GMTOFF_IN_TM
-    #elif defined(__WXWINCE__) && defined(__VISUALC8__)
-        // _timezone is not present in dynamic run-time library
-        #if 0
-        // Solution (1): use the function equivalent of _timezone
-        static long wxGetTimeZone()
-        {
-            static long s_Timezone = MAXLONG; // invalid timezone
-            if (s_Timezone == MAXLONG)
-            {
-                int t;
-                _get_timezone(& t);
-                s_Timezone = (long) t;
-            }
-            return s_Timezone;
-        }
-        #define WX_TIMEZONE wxGetTimeZone()
-        #elif 1
-        // Solution (2): using GetTimeZoneInformation
-        static long wxGetTimeZone()
-        {
-            static long timezone = MAXLONG; // invalid timezone
-            if (timezone == MAXLONG)
-            {
-                TIME_ZONE_INFORMATION tzi;
-                ::GetTimeZoneInformation(&tzi);
-                timezone = tzi.Bias;
-            }
-            return timezone;
-        }
-        #define WX_TIMEZONE wxGetTimeZone()
-        #endif
     #else // unknown platform - try timezone
         #define WX_TIMEZONE timezone
     #endif
@@ -1272,6 +1239,17 @@ wxDateTime wxDateTime::GetBeginDST(int year, Country country)
                             wxFAIL_MSG( _T("no first Sunday in April?") );
                         }
                     }
+                    else if ( year > 2006 )
+                    // Energy Policy Act of 2005, Pub. L. no. 109-58, 119 Stat 594 (2005).
+                    // Starting in 2007, daylight time begins in the United States on the
+                    // second Sunday in March and ends on the first Sunday in November
+                    {
+                        if ( !dt.SetToWeekDay(Sun, 2, Mar, year) )
+                        {
+                            // weird...
+                            wxFAIL_MSG( _T("no second Sunday in March?") );
+                        }
+                    }
                     else
                     {
                         if ( !dt.SetToWeekDay(Sun, 1, Apr, year) )
@@ -1351,21 +1329,36 @@ wxDateTime wxDateTime::GetEndDST(int year, Country country)
                     dt.Set(30, Sep, year);
                     break;
 
-                default:
-                    // DST ends at 2 a.m. on the last Sunday of October
-                    if ( !dt.SetToLastWeekDay(Sun, Oct, year) )
+                default: // default for switch (year)
+                    if ( year > 2006 )
+                      // Energy Policy Act of 2005, Pub. L. no. 109-58, 119 Stat 594 (2005).
+                      // Starting in 2007, daylight time begins in the United States on the
+                      // second Sunday in March and ends on the first Sunday in November
                     {
-                        // weirder and weirder...
-                        wxFAIL_MSG( _T("no last Sunday in October?") );
+                        if ( !dt.SetToWeekDay(Sun, 1, Nov, year) )
+                        {
+                            // weird...
+                            wxFAIL_MSG( _T("no first Sunday in November?") );
+                        }
+                    }
+                    else
+                     // pre-2007
+                     // DST ends at 2 a.m. on the last Sunday of October
+                    {
+                        if ( !dt.SetToLastWeekDay(Sun, Oct, year) )
+                        {
+                            // weirder and weirder...
+                            wxFAIL_MSG( _T("no last Sunday in October?") );
+                        }
                     }
 
                     dt += wxTimeSpan::Hours(2);
 
-                    // TODO what about timezone??
+            // TODO: what about timezone??
             }
             break;
 
-        default:
+        default: // default for switch (country)
             // assume October 26th as the end of the DST - totally bogus too
             dt.Set(26, Oct, year);
     }
@@ -4304,7 +4297,16 @@ enum TimeSpanPart
 //  %l          milliseconds (000 - 999)
 wxString wxTimeSpan::Format(const wxChar *format) const
 {
-    wxCHECK_MSG( format, wxEmptyString, _T("NULL format in wxTimeSpan::Format") );
+    // we deal with only positive time spans here and just add the sign in
+    // front for the negative ones
+    if ( IsNegative() )
+    {
+        wxString str(Negate().Format(format));
+        return _T("-") + str;
+    }
+
+    wxCHECK_MSG( format, wxEmptyString,
+                 _T("NULL format in wxTimeSpan::Format") );
 
     wxString str;
     str.Alloc(wxStrlen(format));
@@ -4374,13 +4376,6 @@ wxString wxTimeSpan::Format(const wxChar *format) const
                     n = GetHours();
                     if ( partBiggest < Part_Hour )
                     {
-                        if ( n < 0 )
-                        {
-                            // the sign has already been taken into account
-                            // when outputting the biggest part
-                            n = -n;
-                        }
-
                         n %= HOURS_PER_DAY;
                     }
                     else
@@ -4395,9 +4390,6 @@ wxString wxTimeSpan::Format(const wxChar *format) const
                     n = GetMilliseconds().ToLong();
                     if ( partBiggest < Part_MSec )
                     {
-                        if ( n < 0 )
-                            n = -n;
-
                         n %= 1000;
                     }
                     //else: no need to reset partBiggest to Part_MSec, it is
@@ -4410,9 +4402,6 @@ wxString wxTimeSpan::Format(const wxChar *format) const
                     n = GetMinutes();
                     if ( partBiggest < Part_Min )
                     {
-                        if ( n < 0 )
-                            n = -n;
-
                         n %= MIN_PER_HOUR;
                     }
                     else
@@ -4427,9 +4416,6 @@ wxString wxTimeSpan::Format(const wxChar *format) const
                     n = GetSeconds().ToLong();
                     if ( partBiggest < Part_Sec )
                     {
-                        if ( n < 0 )
-                            n = -n;
-
                         n %= SEC_PER_MIN;
                     }
                     else
@@ -4443,10 +4429,6 @@ wxString wxTimeSpan::Format(const wxChar *format) const
 
             if ( digits )
             {
-                // negative numbers need one extra position for '-' display
-                if ( n < 0 )
-                    digits++;
-
                 fmtPrefix << _T("0") << digits;
             }
 

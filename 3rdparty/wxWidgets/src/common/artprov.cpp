@@ -4,7 +4,7 @@
 // Author:      Vaclav Slavik
 // Modified by:
 // Created:     18/03/2002
-// RCS-ID:      $Id: artprov.cpp 41398 2006-09-23 20:16:18Z VZ $
+// RCS-ID:      $Id: artprov.cpp 57701 2008-12-31 23:40:06Z VS $
 // Copyright:   (c) Vaclav Slavik
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -28,6 +28,10 @@
     #include "wx/hashmap.h"
     #include "wx/image.h"
     #include "wx/module.h"
+#endif
+
+#ifdef __WXMSW__
+    #include "wx/msw/wrapwin.h"
 #endif
 
 // ===========================================================================
@@ -133,6 +137,11 @@ wxArtProvider::~wxArtProvider()
 {
     CommonAddingProvider();
     sm_providers->Append(provider);
+}
+
+/*static*/ void wxArtProvider::PushBack(wxArtProvider *provider)
+{
+    Insert(provider);
 }
 
 /*static*/ bool wxArtProvider::Pop()
@@ -272,7 +281,14 @@ wxArtProvider::~wxArtProvider()
     else if (client == wxART_MENU)
         return wxSize(16, 15);
     else if (client == wxART_FRAME_ICON)
-        return wxSize(16, 15);
+    {
+#ifdef __WXMSW__
+        return wxSize(::GetSystemMetrics(SM_CXSMICON),
+                      ::GetSystemMetrics(SM_CYSMICON));
+#else
+        return wxSize(16, 16);
+#endif // __WXMSW__/!__WXMSW__
+    }
     else if (client == wxART_CMN_DIALOG || client == wxART_MESSAGE_BOX)
         return wxSize(32, 32);
     else if (client == wxART_HELP_BROWSER)

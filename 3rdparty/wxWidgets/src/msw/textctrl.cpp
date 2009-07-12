@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     04/01/98
-// RCS-ID:      $Id: textctrl.cpp 52547 2008-03-15 12:33:04Z VS $
+// RCS-ID:      $Id: textctrl.cpp 56394 2008-10-17 11:31:22Z VZ $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -947,14 +947,14 @@ wxTextCtrl::StreamIn(const wxString& value,
         return false;
 
 #if wxUSE_WCHAR_T
-    wxWCharBuffer wchBuf(len);
+    wxWCharBuffer wchBuf(len); // allocates one extra character
     wchar_t *wpc = wchBuf.data();
 #else
     wchar_t *wchBuf = (wchar_t *)malloc((len + 1)*sizeof(wchar_t));
     wchar_t *wpc = wchBuf;
 #endif
 
-    conv.MB2WC(wpc, value, value.length());
+    conv.MB2WC(wpc, value, len + 1);
 #endif // wxUSE_UNICODE_MSLU
 
     // finally, stream it in the control

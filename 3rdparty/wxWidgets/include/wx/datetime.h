@@ -5,7 +5,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     10.02.99
-// RCS-ID:      $Id: datetime.h 53135 2008-04-12 02:31:04Z VZ $
+// RCS-ID:      $Id: datetime.h 57502 2008-12-22 19:52:20Z VZ $
 // Copyright:   (c) 1998 Vadim Zeitlin <zeitlin@dptmaths.ens-cachan.fr>
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -577,7 +577,7 @@ public:
     // ------------------------------------------------------------------------
 
         // default ctor does not initialize the object, use Set()!
-    wxDateTime() { m_time = wxLongLong((long)ULONG_MAX, ULONG_MAX); }
+    wxDateTime() { m_time = wxLongLong((wxInt32)UINT_MAX, UINT_MAX); }
 
         // from time_t: seconds since the Epoch 00:00:00 UTC, Jan 1, 1970)
 #if (!(defined(__VISAGECPP__) && __IBMCPP__ >= 400))
@@ -1100,13 +1100,8 @@ public:
     // another one to get the current time broken down
     static struct tm *GetTmNow()
     {
-#ifdef __WXWINCE__
         static struct tm l_CurrentTime;
         return GetTmNow(&l_CurrentTime);
-#else
-        time_t t = GetTimeNow();
-        return localtime(&t);
-#endif
     }
 
     // get current time using thread-safe function

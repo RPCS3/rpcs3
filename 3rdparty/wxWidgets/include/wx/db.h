@@ -17,7 +17,7 @@
 //                     databases operate the same in that respect
 //
 // Created:     9.96
-// RCS-ID:      $Id: db.h 45498 2007-04-16 13:03:05Z VZ $
+// RCS-ID:      $Id: db.h 56697 2008-11-07 22:45:47Z VZ $
 // Copyright:   (c) 1996 Remstar International, Inc.
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -78,10 +78,15 @@
         // defined in many other places on other systems (Motif, at least on
         // OpenVMS; Cocoa and X11) so prevent the problem by defining it before
         // including these headers
-        #define BOOL int
-        #include <sql.h>
-        #include <sqlext.h>
-        #undef BOOL
+        #ifndef BOOL
+            #define BOOL int
+            #include <sql.h>
+            #include <sqlext.h>
+            #undef BOOL
+        #else
+            #include <sql.h>
+            #include <sqlext.h>
+        #endif
     #endif // wxUSE_BUILTIN_IODBC/!wxUSE_BUILTIN_IODBC
     }
 #endif

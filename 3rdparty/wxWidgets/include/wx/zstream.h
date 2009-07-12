@@ -4,7 +4,7 @@
 // Author:      Guilhem Lavaux
 // Modified by: Mike Wetherell
 // Created:     11/07/98
-// RCS-ID:      $Id: zstream.h 42713 2006-10-30 11:56:12Z ABX $
+// RCS-ID:      $Id: zstream.h 54688 2008-07-18 08:06:44Z MW $
 // Copyright:   (c) Guilhem Lavaux
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -125,11 +125,11 @@ public:
     wxFilterInputStream *NewStream(wxInputStream& stream) const
         { return new wxZlibInputStream(stream); }
     wxFilterOutputStream *NewStream(wxOutputStream& stream) const
-        { return new wxZlibOutputStream(stream, -1); }
+        { return new wxZlibOutputStream(stream, -1, wxZLIB_GZIP); }
     wxFilterInputStream *NewStream(wxInputStream *stream) const
         { return new wxZlibInputStream(stream); }
     wxFilterOutputStream *NewStream(wxOutputStream *stream) const
-        { return new wxZlibOutputStream(stream, -1); }
+        { return new wxZlibOutputStream(stream, -1, wxZLIB_GZIP); }
 
     const wxChar * const *GetProtocols(wxStreamProtocolType type
                                        = wxSTREAM_PROTOCOL) const;

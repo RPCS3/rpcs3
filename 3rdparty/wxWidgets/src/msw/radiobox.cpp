@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     04/01/98
-// RCS-ID:      $Id: radiobox.cpp 51905 2008-02-19 02:43:29Z VZ $
+// RCS-ID:      $Id: radiobox.cpp 54927 2008-08-02 15:59:13Z VZ $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -148,6 +148,11 @@ bool wxRadioBox::Create(wxWindow *parent,
     // common initialization
     if ( !wxStaticBox::Create(parent, id, title, pos, size, style, name) )
         return false;
+
+    // the code elsewhere in this file supposes that either wxRA_SPECIFY_COLS
+    // or wxRA_SPECIFY_ROWS is set, ensure that this is indeed the case
+    if ( !(style & (wxRA_SPECIFY_ROWS | wxRA_SPECIFY_COLS)) )
+        style |= wxRA_SPECIFY_COLS;
 
 #if wxUSE_VALIDATORS
     SetValidator(val);

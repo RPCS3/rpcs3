@@ -5,7 +5,7 @@
 // Author:      Jeffrey C. Ollie <jeff@ollie.clive.ia.us>, Vadim Zeitlin
 // Modified by:
 // Created:     10.02.99
-// RCS-ID:      $Id: longlong.h 53135 2008-04-12 02:31:04Z VZ $
+// RCS-ID:      $Id: longlong.h 54663 2008-07-16 15:22:22Z VZ $
 // Copyright:   (c) 1998 Vadim Zeitlin <zeitlin@dptmaths.ens-cachan.fr>
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -113,9 +113,9 @@ public:
         // from long long
     wxLongLongNative(wxLongLong_t ll) : m_ll(ll) { }
         // from 2 longs
-    wxLongLongNative(long hi, unsigned long lo) : m_ll(0)
+    wxLongLongNative(wxInt32 hi, wxUint32 lo)
     {
-        // assign first to avoid precision loss!
+        // cast to wxLongLong_t first to avoid precision loss!
         m_ll = ((wxLongLong_t) hi) << 32;
         m_ll |= (wxLongLong_t) lo;
     }
@@ -160,11 +160,11 @@ public:
 
     // accessors
         // get high part
-    long GetHi() const
-        { return wx_truncate_cast(long, m_ll >> 32); }
+    wxInt32 GetHi() const
+        { return wx_truncate_cast(wxInt32, m_ll >> 32); }
         // get low part
-    unsigned long GetLo() const
-        { return wx_truncate_cast(unsigned long, m_ll); }
+    wxUint32 GetLo() const
+        { return wx_truncate_cast(wxUint32, m_ll); }
 
         // get absolute value
     wxLongLongNative Abs() const { return wxLongLongNative(*this).Abs(); }
@@ -350,9 +350,9 @@ public:
         // from long long
     wxULongLongNative(wxULongLong_t ll) : m_ll(ll) { }
         // from 2 longs
-    wxULongLongNative(unsigned long hi, unsigned long lo) : m_ll(0)
+    wxULongLongNative(wxUint32 hi, wxUint32 lo) : m_ll(0)
     {
-        // assign first to avoid precision loss!
+        // cast to wxLongLong_t first to avoid precision loss!
         m_ll = ((wxULongLong_t) hi) << 32;
         m_ll |= (wxULongLong_t) lo;
     }
@@ -392,11 +392,11 @@ public:
 
     // accessors
         // get high part
-    unsigned long GetHi() const
-        { return wx_truncate_cast(unsigned long, m_ll >> 32); }
+    wxUint32 GetHi() const
+        { return wx_truncate_cast(wxUint32, m_ll >> 32); }
         // get low part
-    unsigned long GetLo() const
-        { return wx_truncate_cast(unsigned long, m_ll); }
+    wxUint32 GetLo() const
+        { return wx_truncate_cast(wxUint32, m_ll); }
 
         // convert to native ulong long
     wxULongLong_t GetValue() const { return m_ll; }

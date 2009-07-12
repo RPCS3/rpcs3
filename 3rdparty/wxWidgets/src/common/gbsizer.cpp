@@ -6,7 +6,7 @@
 //
 // Author:      Robin Dunn
 // Created:     03-Nov-2003
-// RCS-ID:      $Id: gbsizer.cpp 53000 2008-04-03 23:28:16Z RD $
+// RCS-ID:      $Id: gbsizer.cpp 54568 2008-07-10 01:32:23Z RD $
 // Copyright:   (c) Robin Dunn
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -580,7 +580,7 @@ void wxGridBagSizer::AdjustForOverflow()
         {
             wxGBPosition pos(row,col);
             wxGBSizerItem* item = FindItemAtPosition(pos);
-            if ( !item )
+            if ( !item || !item->ShouldAccountFor() )
                 continue;
 
             int endrow, endcol;
@@ -623,7 +623,7 @@ void wxGridBagSizer::AdjustForOverflow()
         {
             wxGBPosition pos(row,col);
             wxGBSizerItem* item = FindItemAtPosition(pos);
-            if ( !item )
+            if ( !item || !item->ShouldAccountFor() )
                 continue;
 
             int endrow, endcol;

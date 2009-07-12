@@ -4,7 +4,7 @@
 // Author:      Karsten Ballueder
 // Modified by: VZ at 13.07.01 (integrated to wxWin)
 // Created:     05.02.2000
-// RCS-ID:      $Id: regex.h 53135 2008-04-12 02:31:04Z VZ $
+// RCS-ID:      $Id: regex.h 57779 2009-01-02 17:35:16Z PC $
 // Copyright:   (c) 2000 Karsten Ballueder <ballueder@gmx.net>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -16,7 +16,7 @@
 
 #if wxUSE_REGEX
 
-class WXDLLIMPEXP_FWD_BASE wxString;
+#include "wx/string.h"
 
 // ----------------------------------------------------------------------------
 // constants

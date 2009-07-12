@@ -3,7 +3,7 @@
 // Purpose:     wxImage PCX handler
 // Author:      Guillermo Rodriguez Garcia <guille@iies.es>
 // Version:     1.1
-// CVS-ID:      $Id: imagpcx.cpp 40943 2006-08-31 19:31:43Z ABX $
+// CVS-ID:      $Id: imagpcx.cpp 54766 2008-07-22 20:16:03Z VZ $
 // Copyright:   (c) 1999 Guillermo Rodriguez Garcia
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -87,17 +87,15 @@ void RLEencode(unsigned char *p, unsigned int size, wxOutputStream& s)
 
 void RLEdecode(unsigned char *p, unsigned int size, wxInputStream& s)
 {
-    unsigned int i, data, cont;
-
     // Read 'size' bytes. The PCX official specs say there will be
     // a decoding break at the end of each scanline (but not at the
     // end of each plane inside a scanline). Only use this function
     // to read one or more _complete_ scanlines. Else, more than
     // 'size' bytes might be read and the buffer might overflow.
 
-    while (size > 0)
+    while (size != 0)
     {
-        data = (unsigned char)s.GetC();
+        unsigned int data = (unsigned char)s.GetC();
 
         // If ((data & 0xC0) != 0xC0), then the value read is a data
         // byte. Else, it is a counter (cont = val & 0x3F) and the
@@ -110,9 +108,11 @@ void RLEdecode(unsigned char *p, unsigned int size, wxInputStream& s)
         }
         else
         {
-            cont = data & 0x3F;
+            unsigned int cont = data & 0x3F;
+            if (cont > size) // can happen only if the file is malformed
+                break;
             data = (unsigned char)s.GetC();
-            for (i = 1; i <= cont; i++)
+            for (unsigned int i = 1; i <= cont; i++)
                 *(p++) = (unsigned char)data;
             size -= cont;
         }

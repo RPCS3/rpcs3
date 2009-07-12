@@ -5,7 +5,7 @@
 // Modified by: Vadim Zeitlin on 31.08.00: wxScrollHelper allows to implement.
 //              Ron Lee on 10.4.02:  virtual size / auto scrollbars et al.
 // Created:     01/02/97
-// RCS-ID:      $Id: scrlwing.cpp 50982 2008-01-01 20:38:33Z VZ $
+// RCS-ID:      $Id: scrlwing.cpp 55010 2008-08-07 15:58:51Z JS $
 // Copyright:   (c) wxWidgets team
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -1352,21 +1352,69 @@ void wxScrollHelper::HandleOnChildFocus(wxChildFocusEvent& event)
     if ( win == m_targetWindow )
         return; // nothing to do
 
-    while ( win->GetParent() != m_targetWindow )
+#ifdef __WXMAC__
+    if (wxDynamicCast(win, wxScrollBar))
+        return;
+#endif
+
+    // Fixing ticket: http://trac.wxwidgets.org/ticket/9563
+    // When a child inside a wxControlContainer receives a focus, the
+    // wxControlContainer generates an artificial wxChildFocusEvent for
+    // itself, telling its parent that 'it' received the focus. The effect is
+    // that this->HandleOnChildFocus is called twice, first with the
+    // artificial wxChildFocusEvent and then with the original event.  We need
+    // to ignore the artificial event here or otherwise HandleOnChildFocus
+    // would first scroll the target window to make the entire
+    // wxControlContainer visible and immediately afterwards scroll the target
+    // window again to make the child widget visible. This leads to ugly
+    // flickering when using nested wxPanels/wxScrolledWindows.
+    //
+    // Ignore this event if 'win' is derived from wxControlContainer AND its
+    // parent is the m_targetWindow AND 'win' is not actually reciving the
+    // focus (win != FindFocus).  TODO: This affects all wxControlContainer
+    // objects, but wxControlContainer is not part of the wxWidgets RTTI and
+    // so wxDynamicCast(win, wxControlContainer) does not compile.  Find a way
+    // to determine if 'win' derives from wxControlContainer. Until then,
+    // testing if 'win' derives from wxPanel will probably get >90% of all
+    // cases.
+
+    wxWindow *actual_focus=wxWindow::FindFocus();
+    if (win != actual_focus &&
+        wxDynamicCast(win, wxPanel) != 0 &&
+        win->GetParent() == m_targetWindow)
+        // if win is a wxPanel and receives the focus, it should not be
+        // scrolled into view
+        return; 
+
+    wxSize view(m_targetWindow->GetClientSize());
+
+    // For composite controls such as wxComboCtrl we should try to fit the
+    // entire control inside the visible area of the target window, not just
+    // the focused child of the control. Otherwise we'd make only the textctrl
+    // part of a wxComboCtrl visible and the button would still be outside the
+    // scrolled area.  But do so only if the parent fits *entirely* inside the
+    // scrolled window. In other situations, such as nested wxPanel or
+    // wxScrolledWindows, the parent might be way to big to fit inside the
+    // scrolled window. If that is the case, then make only the focused window
+    // visible
+    if ( win->GetParent() != m_targetWindow)
     {
-        win = win->GetParent();
-        if ( !win )
-            return; // event is not from a child of the target window
+        wxWindow *parent=win->GetParent();
+        wxSize parent_size=parent->GetSize();
+        if (parent_size.GetWidth() <= view.GetWidth() &&
+            parent_size.GetHeight() <= view.GetHeight())
+            // make the immediate parent visible instead of the focused control
+            win=parent; 
     }
 
     // if the child is not fully visible, try to scroll it into view:
     int stepx, stepy;
     GetScrollPixelsPerUnit(&stepx, &stepy);
 
-    // NB: we don't call CalcScrolledPosition() on win->GetPosition() here,
-    //     because children' positions are already scrolled
-    wxRect winrect(win->GetPosition(), win->GetSize());
-    wxSize view(m_targetWindow->GetClientSize());
+    // 'win' position coordinates are relative to it's parent
+    // convert them so that they are relative to the m_targetWindow viewing area
+    wxRect winrect(m_targetWindow->ScreenToClient(win->GetScreenPosition()),
+                   win->GetSize());
 
     int startx, starty;
     GetViewStart(&startx, &starty);

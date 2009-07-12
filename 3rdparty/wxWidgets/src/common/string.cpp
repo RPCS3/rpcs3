@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin, Ryan Norton
 // Modified by:
 // Created:     29/01/98
-// RCS-ID:      $Id: string.cpp 53702 2008-05-22 17:22:00Z SN $
+// RCS-ID:      $Id: string.cpp 56758 2008-11-13 22:32:21Z VS $
 // Copyright:   (c) 1998 Vadim Zeitlin <zeitlin@dptmaths.ens-cachan.fr>
 //              (c) 2004 Ryan Norton <wxprojects@comcast.net>
 // Licence:     wxWindows licence
@@ -1492,8 +1492,8 @@ wxString wxString::AfterFirst(wxChar ch) const
 }
 
 // replace first (or all) occurences of some substring with another one
-size_t wxString::Replace(const wxChar *szOld,
-                  const wxChar *szNew, bool bReplaceAll)
+size_t
+wxString::Replace(const wxChar *szOld, const wxChar *szNew, bool bReplaceAll)
 {
     // if we tried to replace an empty string we'd enter an infinite loop below
     wxCHECK_MSG( szOld && *szOld && szNew, 0,
@@ -1501,33 +1501,48 @@ size_t wxString::Replace(const wxChar *szOld,
 
     size_t uiCount = 0;   // count of replacements made
 
-    size_t uiOldLen = wxStrlen(szOld);
-    size_t uiNewLen = wxStrlen(szNew);
-
-    size_t dwPos = 0;
-
-    while ( this->c_str()[dwPos] != wxT('\0') )
+    // optimize the special common case of replacing one character with another
+    // one
+    if ( szOld[1] == '\0' && (szNew[0] != '\0' && szNew[1] == '\0') )
     {
-        //DO NOT USE STRSTR HERE
-        //this string can contain embedded null characters,
-        //so strstr will function incorrectly
-        dwPos = find(szOld, dwPos);
-        if ( dwPos == npos )
-            break;                  // exit the loop
-        else
+        // this loop is the simplified version of the one below
+        for ( size_t pos = 0; ; )
         {
-            //replace this occurance of the old string with the new one
-            replace(dwPos, uiOldLen, szNew, uiNewLen);
+            pos = find(*szOld, pos);
+            if ( pos == npos )
+                break;
 
-            //move up pos past the string that was replaced
-            dwPos += uiNewLen;
+            (*this)[pos++] = *szNew;
 
-            //increase replace count
-            ++uiCount;
+            uiCount++;
+
+            if ( !bReplaceAll )
+                break;
+        }
+    }
+    else // general case
+    {
+        const size_t uiOldLen = wxStrlen(szOld);
+        const size_t uiNewLen = wxStrlen(szNew);
+
+        for ( size_t pos = 0; ; )
+        {
+            pos = find(szOld, pos);
+            if ( pos == npos )
+                break;
+
+            // replace this occurrence of the old string with the new one
+            replace(pos, uiOldLen, szNew, uiNewLen);
+
+            // move past the string that was replaced
+            pos += uiNewLen;
+
+            // increase replace count
+            uiCount++;
 
             // stop now?
             if ( !bReplaceAll )
-                break;                  // exit the loop
+                break;
         }
     }
 
@@ -2629,4 +2644,11 @@ int wxCMPFUNC_CONV wxStringSortAscending(wxString* s1, wxString* s2)
 int wxCMPFUNC_CONV wxStringSortDescending(wxString* s1, wxString* s2)
 {
     return -s1->Cmp(*s2);
+}
+
+wxString* wxCArrayString::Release()
+{
+    wxString *r = GetStrings();
+    m_strings = NULL;
+    return r;
 }

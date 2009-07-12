@@ -187,6 +187,8 @@ public:
 		key = key ^ (key >> 4);
 		key = key * 2057;
 		key = key ^ (key >> 16);
+
+		return val;
 	}
 
 	hash_key_t operator()(const std::string& src) const

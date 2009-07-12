@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     10/09/98
-// RCS-ID:      $Id: variant.cpp 45498 2007-04-16 13:03:05Z VZ $
+// RCS-ID:      $Id: variant.cpp 58054 2009-01-12 17:27:53Z JMS $
 // Copyright:   (c)
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -1223,7 +1223,11 @@ bool wxVariantDataDateTime::Write(wxSTD ostream& str) const
 
 bool wxVariantDataDateTime::Write(wxString& str) const
 {
-    str = m_value.Format();
+    if ( m_value.IsValid() )
+        str = m_value.Format();
+    else
+        str = wxT("Invalid");
+
     return true;
 }
 
@@ -1239,6 +1243,12 @@ bool wxVariantDataDateTime::Read(wxSTD istream& WXUNUSED(str))
 
 bool wxVariantDataDateTime::Read(wxString& str)
 {
+    if ( str == wxT("Invalid") )
+    {
+        m_value = wxInvalidDateTime;
+        return true;
+    }
+
     if(! m_value.ParseDateTime(str))
         return false;
     return true;

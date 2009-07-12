@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     04/01/98
-// RCS-ID:      $Id: app.cpp 53607 2008-05-16 15:21:40Z SN $
+// RCS-ID:      $Id: app.cpp 58750 2009-02-08 10:01:03Z VZ $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -611,8 +611,16 @@ int wxApp::GetComCtl32Version()
         wxLogNull noLog;
 
 #if wxUSE_DYNLIB_CLASS
-        // do we have it?
-        wxDynamicLibrary dllComCtl32(_T("comctl32.dll"), wxDL_VERBATIM);
+        // we don't want to load comctl32.dll, it should be already loaded but,
+        // depending on the OS version and the presence of the manifest, it can
+        // be either v5 or v6 and instead of trying to guess it just get the
+        // handle of the already loaded version
+        wxLoadedDLL dllComCtl32(_T("comctl32.dll"));
+        if ( !dllComCtl32.IsLoaded() )
+        {
+            s_verComCtl32 = 0;
+            return 0;
+        }
 
         // if so, then we can check for the version
         if ( dllComCtl32.IsLoaded() )
@@ -668,7 +676,7 @@ int wxApp::GetComCtl32Version()
                 }
             }
         }
-#endif
+#endif // wxUSE_DYNLIB_CLASS
     }
 
     return s_verComCtl32;

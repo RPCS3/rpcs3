@@ -4,7 +4,7 @@
 // Author:      Karsten Ballueder and Vadim Zeitlin
 // Modified by:
 // Created:     13.07.01
-// RCS-ID:      $Id: regex.cpp 50711 2007-12-15 02:57:58Z VZ $
+// RCS-ID:      $Id: regex.cpp 57779 2009-01-02 17:35:16Z PC $
 // Copyright:   (c) 2000 Karsten Ballueder <ballueder@gmx.net>
 //                  2001 Vadim Zeitlin <vadim@wxwindows.org>
 // Licence:     wxWindows licence
@@ -27,9 +27,10 @@
 
 #if wxUSE_REGEX
 
+#include "wx/regex.h"
+
 #ifndef WX_PRECOMP
     #include "wx/object.h"
-    #include "wx/string.h"
     #include "wx/log.h"
     #include "wx/intl.h"
 #endif //WX_PRECOMP
@@ -43,7 +44,6 @@
 #endif
 
 #include <regex.h>
-#include "wx/regex.h"
 
 // WXREGEX_USING_BUILTIN    defined when using the built-in regex lib
 // WXREGEX_USING_RE_SEARCH  defined when using re_search in the GNU regex lib
@@ -277,12 +277,15 @@ bool wxRegExImpl::Compile(const wxString& expr, int flags)
     // translate our flags to regcomp() ones
     int flagsRE = 0;
     if ( !(flags & wxRE_BASIC) )
+    {
 #ifndef WX_NO_REGEX_ADVANCED
         if (flags & wxRE_ADVANCED)
             flagsRE |= REG_ADVANCED;
         else
 #endif
             flagsRE |= REG_EXTENDED;
+    }
+
     if ( flags & wxRE_ICASE )
         flagsRE |= REG_ICASE;
     if ( flags & wxRE_NOSUB )

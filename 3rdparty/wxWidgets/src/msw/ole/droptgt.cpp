@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:
-// RCS-ID:      $Id: droptgt.cpp 44229 2007-01-15 19:02:29Z VZ $
+// RCS-ID:      $Id: droptgt.cpp 54398 2008-06-28 01:40:42Z VZ $
 // Copyright:   (c) 1998 Vadim Zeitlin <zeitlin@dptmaths.ens-cachan.fr>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -239,15 +239,20 @@ STDMETHODIMP wxIDropTarget::DragOver(DWORD   grfKeyState,
         result = wxDragNone;
     }
 
-    // we need client coordinates to pass to wxWin functions
-    if ( !ScreenToClient(m_hwnd, (POINT *)&pt) )
-    {
-        wxLogLastError(wxT("ScreenToClient"));
-    }
+    if ( result != wxDragNone ) {
+        // we need client coordinates to pass to wxWin functions
+        if ( !ScreenToClient(m_hwnd, (POINT *)&pt) )
+        {
+            wxLogLastError(wxT("ScreenToClient"));
+        }
 
-    *pdwEffect = ConvertDragResultToEffect(
-                    m_pTarget->OnDragOver(pt.x, pt.y, result)
-                 );
+        *pdwEffect = ConvertDragResultToEffect(
+                        m_pTarget->OnDragOver(pt.x, pt.y, result)
+                     );
+    }
+    else {
+        *pdwEffect = DROPEFFECT_NONE;
+    }
 
     return S_OK;
 }

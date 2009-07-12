@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by: Vadim Zeitlin
 // Created:     04/01/98
-// RCS-ID:      $Id: menu.cpp 48053 2007-08-13 17:07:01Z JS $
+// RCS-ID:      $Id: menu.cpp 54478 2008-07-03 15:42:18Z VZ $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -354,7 +354,8 @@ bool wxMenu::DoInsertOrAppend(wxMenuItem *pItem, size_t pos)
     UpdateAccel(pItem);
 #endif // wxUSE_ACCEL
 
-    UINT flags = 0;
+    // we should support disabling the item even prior to adding it to the menu
+    UINT flags = pItem->IsEnabled() ? MF_ENABLED : MF_GRAYED;
 
     // if "Break" has just been called, insert a menu break before this item
     // (and don't forget to reset the flag)

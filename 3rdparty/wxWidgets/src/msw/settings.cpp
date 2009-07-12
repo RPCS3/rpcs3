@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     04/01/98
-// RCS-ID:      $Id: settings.cpp 48086 2007-08-15 11:38:07Z VZ $
+// RCS-ID:      $Id: settings.cpp 57542 2008-12-25 13:03:24Z VZ $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -127,7 +127,12 @@ wxColour wxSystemSettingsNative::GetColour(wxSystemColour index)
         0,          // MENUBAR (unused)
     };
 
-    if ( index == wxSYS_COLOUR_LISTBOX )
+    if ( index == wxSYS_COLOUR_LISTBOXTEXT)
+    {
+        // there is no standard colour with this index, map to another one
+        index = wxSYS_COLOUR_WINDOWTEXT;
+    }
+    else if ( index == wxSYS_COLOUR_LISTBOX )
     {
         // there is no standard colour with this index, map to another one
         index = wxSYS_COLOUR_WINDOW;

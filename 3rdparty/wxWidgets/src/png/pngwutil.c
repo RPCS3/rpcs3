@@ -631,8 +631,8 @@ png_write_IDAT(png_structp png_ptr, png_bytep data, png_size_t length)
             if (data[0] != (png_byte)z_cmf)
             {
                data[0] = (png_byte)z_cmf;
-               data[1] &= (png_byte)0xe0;
-               data[1] = (png_byte)(data[1] + 0x1f - ((z_cmf << 8) + data[1]) % 0x1f);
+               data[1] &= 0xe0;
+               data[1] += (png_byte)(0x1f - ((z_cmf << 8) + data[1]) % 0x1f);
             }
          }
       }
@@ -1556,7 +1556,7 @@ png_write_sCAL(png_structp png_ptr, int unit, double width,double height)
 #endif
    png_size_t total_len;
    char wbuf[32], hbuf[32];
-   png_byte bunit = (png_byte)unit;
+   png_byte bunit = unit;
 
    png_debug(1, "in png_write_sCAL\n");
 

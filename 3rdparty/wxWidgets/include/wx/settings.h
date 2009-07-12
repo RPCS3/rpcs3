@@ -4,7 +4,7 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     01/02/97
-// RCS-ID:      $Id: settings.h 49563 2007-10-31 20:46:21Z VZ $
+// RCS-ID:      $Id: settings.h 57542 2008-12-25 13:03:24Z VZ $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -79,6 +79,7 @@ enum wxSystemColour
     wxSYS_COLOUR_GRADIENTINACTIVECAPTION,
     wxSYS_COLOUR_MENUHILIGHT,
     wxSYS_COLOUR_MENUBAR,
+    wxSYS_COLOUR_LISTBOXTEXT,
 
     wxSYS_COLOUR_MAX
 };

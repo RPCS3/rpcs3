@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     10.09.00
-// RCS-ID:      $Id: radiobox.h 50255 2007-11-26 13:48:36Z VZ $
+// RCS-ID:      $Id: radiobox.h 54930 2008-08-02 19:45:23Z VZ $
 // Copyright:   (c) Vadim Zeitlin
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -49,7 +49,8 @@ public:
     unsigned int GetColumnCount() const { return m_numCols; }
     unsigned int GetRowCount() const { return m_numRows; }
 
-    // return the item above/below/to the left/right of the given one
+    // return the next active (i.e. shown and not disabled) item above/below/to
+    // the left/right of the given one
     int GetNextItem(int item, wxDirection dir, long style) const;
 
 #if wxUSE_TOOLTIPS

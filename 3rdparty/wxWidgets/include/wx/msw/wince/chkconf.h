@@ -4,7 +4,7 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     2005-03-07
-// RCS-ID:      $Id: chkconf.h 40023 2006-07-06 07:07:52Z ABX $
+// RCS-ID:      $Id: chkconf.h 55651 2008-09-16 08:03:55Z VZ $
 // Copyright:   (c) 2005 Vadim Zeitlin <vadim@wxwindows.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -28,6 +28,16 @@
 // DDE doesn't exist under WinCE and wxIPC is DDE-based under MSW
 #undef wxUSE_IPC
 #define wxUSE_IPC 0
+
+// no AUI under CE: it's unnecessary and currently doesn't compile
+#undef wxUSE_AUI
+#define wxUSE_AUI 0
+
+// no MDI under CE
+#undef wxUSE_MDI
+#define wxUSE_MDI 0
+#undef wxUSE_MDI_ARCHITECTURE
+#define wxUSE_MDI_ARCHITECTURE 0
 
 // metafiles are not supported neither
 #undef wxUSE_ENH_METAFILE

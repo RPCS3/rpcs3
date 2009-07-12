@@ -38,6 +38,7 @@ Panels::PathsPanel::DirPickerPanel::DirPickerPanel( wxWindow* parent, const wxDi
 	wxPanelWithHelpers( parent, wxID_ANY )
 ,	m_GetDefaultFunc( getDefault )
 {
+	Console::Notice( initPath.ToString() );
 	wxDirName normalized( initPath );
 	normalized.Normalize();
 
