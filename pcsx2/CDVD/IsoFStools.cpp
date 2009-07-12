@@ -172,19 +172,16 @@ int IsoFS_readSectors(u32 lsn, u32 sectors, void *buf)
 {
 	u32	i;
 	u8*	buff;
-	int rmode;
 	
 	for (i=0; i<sectors; i++)
 	{
-		if (CDVDreadTrack(lsn+i, CDVD_MODE_2048)==-1)
-			return 0;
+		if (CDVDreadTrack(lsn+i, CDVD_MODE_2048) == -1) return 0;
 
 		buff = CDVDgetBuffer();
 
-		if (buff==NULL)
-			return 0;
+		if (buff == NULL) return 0;
 
-		memcpy_fast((void*)((uptr)buf+2048*i), buff, 2048);break;//only data
+		memcpy_fast((void*)((uptr)buf+2048*i), buff, 2048); //only data
 	}
 	return 1;
 }
