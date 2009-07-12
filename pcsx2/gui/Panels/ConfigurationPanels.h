@@ -16,7 +16,7 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
-// All of the options screens in PCSX2 are implemented as panels which can be bound to 
+// All of the options screens in PCSX2 are implemented as panels which can be bound to
 // either their own dialog boxes, or made into children of a paged Properties box.  The
 // paged Properties box is generally superior design, and there's a good chance we'll not
 // want to deviate form that design anytime soon.  But there's no harm in keeping nice
@@ -28,6 +28,7 @@
 #include <wx/statline.h>
 
 #include "wxHelpers.h"
+#include "Utilities/SafeArray.h"
 
 namespace Panels
 {
@@ -46,7 +47,7 @@ namespace Panels
 		void INTCSTATSlow_Click(wxCommandEvent &event);
 		void IdleLoopFF_Click(wxCommandEvent &event);
 	};
-	
+
 	//////////////////////////////////////////////////////////////////////////////////////////
 	//
 	class GameFixesPanel: public wxPanelWithHelpers
@@ -70,19 +71,44 @@ namespace Panels
 	class PathsPanel: public wxPanelWithHelpers
 	{
 	protected:
+		class DirPickerPanel : public wxPanelWithHelpers
+		{
+		protected:
+			wxDirName (*m_GetDefaultFunc)();
+			wxDirPickerCtrl* m_pickerCtrl;
+			wxCheckBox* m_checkCtrl;
+
+		public:
+			DirPickerPanel( wxWindow* parent, const wxDirName& initPath, wxDirName (*getDefault)(), const wxString& label, const wxString& dialogLabel );
+
+		protected:
+			void UseDefaultPath_Click(wxCommandEvent &event);
+		};
+
 		class MyBasePanel : public wxPanelWithHelpers
 		{
+		protected:
+			wxBoxSizer& s_main;
+
 		public:
 			MyBasePanel(wxWindow& parent, int id=wxID_ANY);
 
 		protected:
-			wxDirPickerCtrl& AddDirPicker( wxBoxSizer& sizer, int id, const wxDirName& defaultPath, const wxString& label, const wxString& dialogLabel, bool pathMustExist=true );
+			void AddDirPicker( wxBoxSizer& sizer, const wxDirName& initPath, wxDirName (*getDefaultFunc)(),
+				const wxString& label, const wxString& popupLabel, enum ExpandedMsgEnum tooltip );
 		};
 
 		class StandardPanel : public MyBasePanel
 		{
 		public:
 			StandardPanel(wxWindow& parent, int id=wxID_ANY);
+
+		protected:
+			//DirPickerInfo m_BiosPicker;
+			//DirPickerInfo m_SavestatesPicker;
+			//DirPickerInfo m_SnapshotsPicker;
+			//DirPickerInfo m_MemorycardsPicker;
+			//DirPickerInfo m_LogsPicker;
 		};
 
 		class AdvancedPanel : public MyBasePanel

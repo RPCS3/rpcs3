@@ -28,7 +28,6 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow& parent, int id ) :
 	wxPanelWithHelpers( &parent, id )
 {
 	wxBoxSizer& mainSizer = *new wxBoxSizer( wxVERTICAL );
-	wxBoxSizer& secondarySizer = *new wxBoxSizer( wxHORIZONTAL );
 
 	wxStaticBoxSizer& sliderSizer = *new wxStaticBoxSizer( wxVERTICAL, this, _("Cycle Hacks") );
 	wxStaticBoxSizer& miscSizer = *new wxStaticBoxSizer( wxVERTICAL, this, _("Misc Speed Hacks") );
