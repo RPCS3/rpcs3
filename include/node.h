@@ -7,6 +7,8 @@
 #include "exceptions.h"
 #include "iterator.h"
 #include "conversion.h"
+#include "noncopyable.h"
+#include <iostream>
 
 namespace YAML
 {
@@ -16,7 +18,7 @@ namespace YAML
 
 	enum CONTENT_TYPE { CT_NONE, CT_SCALAR, CT_SEQUENCE, CT_MAP };
 
-	class Node
+	class Node: private noncopyable
 	{
 	public:
 		Node();
@@ -48,11 +50,11 @@ namespace YAML
 
 		// just for maps
 		template <typename T>
-		const Node& GetValue(const T& key) const;
-
+		const Node *FindValue(const T& key) const;
+		const Node *FindValue(const char *key) const;
+		
 		template <typename T>
 		const Node& operator [] (const T& key) const;
-
 		const Node& operator [] (const char *key) const;
 
 		// just for sequences
@@ -72,11 +74,11 @@ namespace YAML
 		friend bool operator < (const Node& n1, const Node& n2);
 
 	private:
-		// shouldn't be copyable! (at least for now)
-		Node(const Node& rhs);
-		Node& operator = (const Node& rhs);
-
-	private:
+		// helper for maps
+		template <typename T>
+		const Node& GetValue(const T& key) const;
+		
+		// helpers for parsing
 		void ParseHeader(Scanner *pScanner, const ParserState& state);
 		void ParseTag(Scanner *pScanner, const ParserState& state);
 		void ParseAnchor(Scanner *pScanner, const ParserState& state);
@@ -90,49 +92,6 @@ namespace YAML
 		const Node *m_pIdentity;
 		mutable bool m_referenced;
 	};
-
-	// templated things we need to keep inline in the header
-	template <typename T>
-	inline bool Node::Read(T& value) const {
-		std::string scalar;
-		if(!GetScalar(scalar))
-			return false;
-
-		return Convert(scalar, value);
-	}
-
-	template <typename T>
-	inline void operator >> (const Node& node, T& value)
-	{
-		if(!node.Read(value))
-			throw InvalidScalar(node.m_line, node.m_column);
-	}
-
-	template <typename T>
-	inline const Node& Node::GetValue(const T& key) const
-	{
-		if(!m_pContent)
-			throw BadDereference();
-
-		for(Iterator it=begin();it!=end();++it) {
-			T t;
-			if(it.first().Read(t)) {
-				if(key == t)
-					return it.second();
-			}
-		}
-
-		throw MakeTypedKeyNotFound(m_line, m_column, key);
-	}
-
-	template <typename T>
-	inline const Node& Node::operator [] (const T& key) const
-	{
-		return GetValue(key);
-	}
-
-	inline const Node& Node::operator [] (const char *key) const
-	{
-		return GetValue(std::string(key));
-	}
 }
+
+#include "nodeimpl.h"
