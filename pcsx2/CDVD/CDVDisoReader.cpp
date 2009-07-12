@@ -21,15 +21,9 @@
  *  Fixed CdRead by linuzappz
  */
 #include "PrecompiledHeader.h"
- 
-#ifdef __LINUX__
- // Just in case.
-#	define __USE_LARGEFILE64
-#	define __USE_FILE_OFFSET64
-#	define _FILE_OFFSET_BITS 64
-#	define _LARGEFILE_SOURCE 
-#	define _LARGEFILE64_SOURCE
-#endif 
+#include <stdio.h>
+#include <stdlib.h>
+#include <fcntl.h>
 
 #include "CDVDisoReader.h"
 
@@ -37,32 +31,41 @@
 #define MAX_PATH 255
 #endif
 
-bool loadFromISO;
+bool loadFromISO=false;
 
 char isoFileName[256];
+char IsoCWD[256];
+char CdDev[256];
 
+_cdIso cdIso[8];
 u8 *pbuffer;
+int cdblocksize;
+int cdblockofs;
+int cdoffset;
+int cdtype;
+int cdblocks;
+
+int psize;
+
+int Zmode; // 1 Z - 2 bz2
+int fmode;						// 0 - file / 1 - Zfile
+char *Ztable;
 
 int BlockDump;
-FILE* fdump;
-FILE* isoFile;
+isoFile *iso;
 
 FILE *cdvdLog = NULL;
 
-int isoType;
-int isoNumAudioTracks = 0;
-int isoNumSectors = 0;
-int isoSectorSize = 0;
-int isoSectorOffset = 0;
+// This var is used to detect resume-style behavior of the Pcsx2 emulator,
+// and skip prompting the user for a new CD when it's likely they want to run the existing one.
+static char cdvdCurrentIso[MAX_PATH];
 
-#ifndef _WIN32
-// if this doesn't work in linux, sorry. -gigaherz
-//
-// Hope this works. Think it will, but it isn't used yet. 
-// CDVDiso uses ftell, then switches to ftello64 if it fails. -arcum42
-#define _ftelli64 ftello64
-#define _fseeki64 fseeko64
-#endif
+char *methods[] =
+{
+	".Z  - compress faster",
+	".BZ - compress better",
+	NULL
+};
 
 u8 cdbuffer[CD_FRAMESIZE_RAW * 10] = {0};
 
@@ -86,6 +89,7 @@ void lba_to_msf(s32 lba, u8* m, u8* s, u8* f)
 #define btoi(b)	((b)/16*10 + (b)%16)	/* BCD to u_char */
 #define itob(i)		((i)/10*16 + (i)%10)		/* u_char to BCD */
 
+
 #ifdef PCSX2_DEBUG
 void __Log(char *fmt, ...)
 {
@@ -97,13 +101,12 @@ void __Log(char *fmt, ...)
 	vfprintf(cdvdLog, fmt, list);
 	va_end(list);
 }
-#define CDVD_LOG __Log
 #else
 #define __Log 0&&
 #endif
 
 
-s32 CALLBACK ISOinit()
+s32 ISOinit()
 {
 #ifdef PCSX2_DEBUG
 	cdvdLog = fopen("logs/cdvdLog.txt", "w");
@@ -117,121 +120,53 @@ s32 CALLBACK ISOinit()
 		}
 	}
 	setvbuf(cdvdLog, NULL,  _IONBF, 0);
-	CDVD_LOG("ISOinit\n");
+	CDVD_LOG("CDVDinit\n");
 #endif
 
+	cdvdCurrentIso[0] = 0;
+	memset(cdIso, 0, sizeof(cdIso));
 	return 0;
 }
 
-void CALLBACK ISOshutdown()
+void ISOshutdown()
 {
+	cdvdCurrentIso[0] = 0;
 #ifdef CDVD_LOG
 	if (cdvdLog != NULL) fclose(cdvdLog);
 #endif
 }
 
-s32 CALLBACK ISOopen(const char* pTitle)
+s32 ISOopen(const char* pTitle)
 {
 	//if (pTitle != NULL) strcpy(isoFileName, pTitle);
 
-	isoFile = fopen(isoFileName,"rb");
-	if (isoFile == NULL)
+	iso = isoOpen(isoFileName);
+	if (iso == NULL)
 	{
 		Console::Error("Error loading %s\n", params isoFileName);
 		return -1;
 	}
 
-	// pretend it's a ps2 dvd... for now
-	isoType=CDVD_TYPE_PS2DVD;
-
-	isoSectorSize = 2048;
-	isoSectorOffset = 0;
-
-	_fseeki64(isoFile,0,SEEK_END);
-	isoNumSectors = (int)(_ftelli64(isoFile)/isoSectorSize);
-	_fseeki64(isoFile,0,SEEK_SET);
-
-	if (BlockDump)
-	{
-		char fname_only[MAX_PATH];
-
-#ifdef _WIN32
-		char fname[MAX_PATH], ext[MAX_PATH];
-		_splitpath(isoFileName, NULL, NULL, fname, ext);
-		_makepath(fname_only, NULL, NULL, fname, NULL);
-#else
-		char* p, *plast;
-		
-		plast = p = strchr(isoFileName, '/');
-		while (p != NULL)
-		{
-			plast = p;
-			p = strchr(p + 1, '/');
-		}
-
-		// Lets not create dumps in the plugin directory.
-		strcpy(fname_only, "../");
-		if (plast != NULL) 
-			strcat(fname_only, plast + 1);
-		else 
-			strcat(fname_only, isoFileName);
-	
-		plast = p = strchr(fname_only, '.');
-		
-		while (p != NULL)
-		{
-			plast = p;
-			p = strchr(p + 1, '.');
-		}
-
-		if (plast != NULL) *plast = 0;
-
-#endif
-		strcat(fname_only, ".dump");
-		fdump = fopen(fname_only, "wb");
-		if(fdump)
-		{
-			if(isoNumAudioTracks)
-			{
-				int k;
-				fwrite("BDV2",4,1,fdump);
-				k=2352;
-				fwrite(&k,4,1,fdump);
-				k=isoNumSectors;
-				fwrite(&k,4,1,fdump);
-				k=0;
-				fwrite(&k,4,1,fdump);
-			}
-			else
-			{
-				int k;
-				fwrite("BDV2",4,1,fdump);
-				k=2048;
-				fwrite(&k,4,1,fdump);
-				k=isoNumSectors;
-				fwrite(&k,4,1,fdump);
-				k=0x18;
-				fwrite(&k,4,1,fdump);
-			}
-		}
-	}
+	if (iso->type == ISOTYPE_DVD)
+		cdtype = CDVD_TYPE_PS2DVD;
+	else if (iso->type == ISOTYPE_AUDIO)
+		cdtype = CDVD_TYPE_CDDA;
 	else
-	{
-		fdump = NULL;
-	}
+		cdtype = CDVD_TYPE_PS2CD;
 
 	return 0;
 }
 
-void CALLBACK ISOclose()
+void ISOclose()
 {
-	fclose(isoFile);
-	if (fdump != NULL) fclose(fdump);
+	strcpy(cdvdCurrentIso, isoFileName);
+
+	isoClose(iso);
 }
 
-s32 CALLBACK ISOreadSubQ(u32 lsn, cdvdSubQ* subq)
+s32 ISOreadSubQ(u32 lsn, cdvdSubQ* subq)
 {
-	// fake it, until some kind of support for clonecd .sub files is implemented
+	// fake it
 	u8 min, sec, frm;
 	subq->ctrl		= 4;
 	subq->mode		= 1;
@@ -252,7 +187,7 @@ s32 CALLBACK ISOreadSubQ(u32 lsn, cdvdSubQ* subq)
 	return 0;
 }
 
-s32 CALLBACK ISOgetTN(cdvdTN *Buffer)
+s32 ISOgetTN(cdvdTN *Buffer)
 {
 	Buffer->strack = 1;
 	Buffer->etrack = 1;
@@ -260,56 +195,28 @@ s32 CALLBACK ISOgetTN(cdvdTN *Buffer)
 	return 0;
 }
 
-s32 CALLBACK ISOgetTD(u8 tn, cdvdTD *Buffer)
+s32 ISOgetTD(u8 Track, cdvdTD *Buffer)
 {
-	if(tn==1)
+	if (Track == 0)
 	{
-		Buffer->lsn = 0;
-		Buffer->type = CDVD_MODE1_TRACK;
+		Buffer->lsn = iso->blocks;
 	}
 	else
 	{
-		Buffer->lsn = isoNumSectors;
-		Buffer->type = 0;
+		Buffer->type = CDVD_MODE1_TRACK;
+		Buffer->lsn = 0;
 	}
+
 	return 0;
-}
-
-s32 CALLBACK ISOgetDiskType()
-{
-	return isoType;
-}
-
-s32 CALLBACK ISOgetTrayStatus()
-{
-	return CDVD_TRAY_CLOSE;
-}
-
-s32 CALLBACK ISOctrlTrayOpen()
-{
-	return 0;
-}
-s32 CALLBACK ISOctrlTrayClose()
-{
-	return 0;
-}
-
-s32 CALLBACK ISOreadSector(u8* tempbuffer, u32 lsn)
-{
-	// dummy function, doesn't create valid info for the data surrounding the userdata bytes!
-
-	// probably vc++ only, CBA to figure out the unix equivalent of fseek with support for >2gb seeking
-	_fseeki64(isoFile, lsn * (s64)isoSectorSize, SEEK_SET);
-	return fread(tempbuffer+24, isoSectorSize, 1, isoFile)-1;
 }
 
 static s32 layer1start = -1;
-s32 CALLBACK ISOgetTOC(void* toc)
+s32 ISOgetTOC(void* toc)
 {
-	u8 type = ISOgetDiskType();
+	u8 type = CDVDgetDiskType();
 	u8* tocBuff = (u8*)toc;
 
-	//__Log("ISOgetTOC\n");
+	//__Log("CDVDgetTOC\n");
 
 	if (type == CDVD_TYPE_DVDV || type == CDVD_TYPE_PS2DVD)
 	{
@@ -317,9 +224,9 @@ s32 CALLBACK ISOgetTOC(void* toc)
 		// scsi command 0x43
 		memset(tocBuff, 0, 2048);
 
-		if (layer1start != -2 && isoNumSectors >= 0x300000)
+		if (layer1start != -2 && iso->blocks >= 0x300000)
 		{
-			int off = isoSectorOffset;
+			int off = iso->blockofs;
 			u8* tempbuffer;
 
 			// dual sided
@@ -342,9 +249,9 @@ s32 CALLBACK ISOgetTOC(void* toc)
 			{
 				printf("CDVD: searching for layer1...");
 				tempbuffer = (u8*)malloc(CD_FRAMESIZE_RAW * 10);
-				for (layer1start = (isoNumSectors / 2 - 0x10) & ~0xf; layer1start < 0x200010; layer1start += 16)
+				for (layer1start = (iso->blocks / 2 - 0x10) & ~0xf; layer1start < 0x200010; layer1start += 16)
 				{
-					ISOreadSector(tempbuffer, layer1start);
+					isoReadBlock(iso, tempbuffer, layer1start);
 					// CD001
 					if (tempbuffer[off+1] == 0x43 && tempbuffer[off+2] == 0x44 && tempbuffer[off+3] == 0x30 && tempbuffer[off+4] == 0x30 && tempbuffer[off+5] == 0x31)
 						break;
@@ -396,7 +303,7 @@ s32 CALLBACK ISOgetTOC(void* toc)
 		}
 	}
 	else if ((type == CDVD_TYPE_CDDA) || (type == CDVD_TYPE_PS2CDDA) ||
-	             (type == CDVD_TYPE_PS2CD) || (type == CDVD_TYPE_PSCDDA) || (type == CDVD_TYPE_PSCD))
+		(type == CDVD_TYPE_PS2CD) || (type == CDVD_TYPE_PSCDDA) || (type == CDVD_TYPE_PSCD))
 	{
 		// cd toc
 		// (could be replaced by 1 command that reads the full toc)
@@ -405,12 +312,12 @@ s32 CALLBACK ISOgetTOC(void* toc)
 		cdvdTN diskInfo;
 		cdvdTD trackInfo;
 		memset(tocBuff, 0, 1024);
-		if (ISOgetTN(&diskInfo) == -1)
+		if (CDVDgetTN(&diskInfo) == -1)
 		{
 			diskInfo.etrack = 0;
 			diskInfo.strack = 1;
 		}
-		if (ISOgetTD(0, &trackInfo) == -1) trackInfo.lsn = 0;
+		if (CDVDgetTD(0, &trackInfo) == -1) trackInfo.lsn = 0;
 
 		tocBuff[0] = 0x41;
 		tocBuff[1] = 0x00;
@@ -431,7 +338,7 @@ s32 CALLBACK ISOgetTOC(void* toc)
 
 		for (i = diskInfo.strack; i <= diskInfo.etrack; i++)
 		{
-			err = ISOgetTD(i, &trackInfo);
+			err = CDVDgetTD(i, &trackInfo);
 			lba_to_msf(trackInfo.lsn, &min, &sec, &frm);
 			tocBuff[i*10+30] = trackInfo.type;
 			tocBuff[i*10+32] = err == -1 ? 0 : itob(i);	  //number
@@ -446,45 +353,106 @@ s32 CALLBACK ISOgetTOC(void* toc)
 	return 0;
 }
 
-s32 CALLBACK ISOreadTrack(u32 lsn, int mode)
+s32 ISOreadSector(u8* tempbuffer, u32 lsn, int mode)
 {
 	int _lsn = lsn;
 
-	//__Log("ISOreadTrack: %x %x\n", lsn, mode);
 	if (_lsn < 0)
-	{
-//		lsn = 2097152 + (-_lsn);
-		lsn = isoNumSectors - (-_lsn);
-	}
-//	printf ("CDRreadTrack %d\n", lsn);
+		lsn = iso->blocks + _lsn;
 
-	ISOreadSector(cdbuffer, lsn);
-	if (fdump != NULL)
+	if(lsn > iso->blocks)
+		return -1;
+
+	if(mode == CDVD_MODE_2352)
 	{
-		fwrite(&lsn,4,1,fdump);
-		fwrite(cdbuffer,isoSectorSize,1,fdump);
+		isoReadBlock(iso, tempbuffer, lsn);
+		return 0;
 	}
+
+	isoReadBlock(iso, cdbuffer, lsn);
 
 	pbuffer = cdbuffer;
 	switch (mode)
 	{
-		case CDVD_MODE_2352:
-			break;
-		case CDVD_MODE_2340:
-			pbuffer += 12;
-			break;
-		case CDVD_MODE_2328:
-			pbuffer += 24;
-			break;
-		case CDVD_MODE_2048:
-			pbuffer += 24;
-			break;
+	case CDVD_MODE_2352:
+		psize = 2352;
+		break;
+	case CDVD_MODE_2340:
+		pbuffer += 12;
+		psize = 2340;
+		break;
+	case CDVD_MODE_2328:
+		pbuffer += 24;
+		psize = 2328;
+		break;
+	case CDVD_MODE_2048:
+		pbuffer += 24;
+		psize = 2048;
+		break;
+	}
+
+	memcpy_fast(tempbuffer,pbuffer,psize);
+
+	return 0;
+}
+
+s32 ISOreadTrack(u32 lsn, int mode)
+{
+	int _lsn = lsn;
+
+	if (_lsn < 0)
+		lsn = iso->blocks + _lsn;
+
+	if(lsn > iso->blocks)
+		return -1;
+
+	isoReadBlock(iso, cdbuffer, lsn);
+
+	pbuffer = cdbuffer;
+	switch (mode)
+	{
+	case CDVD_MODE_2352:
+		psize = 2352;
+		break;
+	case CDVD_MODE_2340:
+		pbuffer += 12;
+		psize = 2340;
+		break;
+	case CDVD_MODE_2328:
+		pbuffer += 24;
+		psize = 2328;
+		break;
+	case CDVD_MODE_2048:
+		pbuffer += 24;
+		psize = 2048;
+		break;
 	}
 
 	return 0;
 }
 
-u8* CALLBACK ISOgetBuffer()
+s32 ISOgetBuffer(u8* buffer)
 {
-	return pbuffer;
+	memcpy_fast(buffer,pbuffer,psize);
+	return 0;
 }
+
+s32 ISOgetDiskType()
+{
+	return cdtype;
+}
+
+s32 ISOgetTrayStatus()
+{
+	return CDVD_TRAY_CLOSE;
+}
+
+s32 ISOctrlTrayOpen()
+{
+	return 0;
+}
+s32 ISOctrlTrayClose()
+{
+	return 0;
+}
+

@@ -454,7 +454,7 @@ BOOL Open_Iso_File_Proc( std::string& outstr )
 	OPENFILENAME ofn;
 	char szFileName[ g_MaxPath ];
 	char szFileTitle[ g_MaxPath ];
-	char * filter = "ISO Files (*.ISO)\0*.ISO\0ALL Files (*.*)\0*.*\0";
+	char * filter = "ISO Files (*.ISO)\0*.ISO\0Blockdump Files (*.dump)\0*.dump\0ALL Files (*.*)\0*.*\0";
 
 	memzero_obj( szFileName );
 	memzero_obj( szFileTitle );
@@ -1059,8 +1059,7 @@ void CreateMainMenu() {
 	ADDMENUITEM(0,_("Enable &Profiler"), ID_PROFILER);
 	ADDMENUITEM(0,_("Enable &Patches"), ID_PATCHES);
 	ADDMENUITEM(0,_("Enable &Console"), ID_CONSOLE); 
-	//TODO
-	//ADDMENUITEM(0,_("Enable &Block Dumping"), ID_BLOCKDUMP);
+	ADDMENUITEM(0,_("Enable &Block Dumping"), ID_BLOCKDUMP);
 	ADDSEPARATOR(0);
 	ADDMENUITEM(0,_("Patch &Finder..."), ID_CHEAT_FINDER_SHOW); 
 	ADDMENUITEM(0,_("Patch &Browser..."), ID_CHEAT_BROWSER_SHOW); 

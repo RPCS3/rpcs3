@@ -172,17 +172,10 @@ int TocEntryCompare(char* filename, char* extensions){
 int IsoFS_readSectors(u32 lsn, u32 sectors, void *buf)
 {
 	u32	i;
-	u8*	buff;
 	
 	for (i=0; i<sectors; i++)
 	{
-		if (DoCDVDreadTrack(lsn+i, CDVD_MODE_2048) == -1) return 0;
-
-		buff = DoCDVDgetBuffer();
-
-		if (buff == NULL) return 0;
-
-		memcpy_fast((void*)((uptr)buf+2048*i), buff, 2048); //only data
+		if (DoCDVDreadSector((u8*)((uptr)buf+2048*i), lsn+i, CDVD_MODE_2048) == -1) return 0;
 	}
 	return 1;
 }

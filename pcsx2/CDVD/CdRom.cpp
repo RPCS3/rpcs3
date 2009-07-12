@@ -496,7 +496,7 @@ void  cdrInterrupt() {
 }
 
 void  cdrReadInterrupt() {
-	u8 *buf;
+	u8 buf[2352];
 
 	if (!cdr.Reading)
 		return;
@@ -514,10 +514,10 @@ void  cdrReadInterrupt() {
 	cdr.Result[0] = cdr.StatP;
 
 	SysPrintf("Reading From CDR");
-	buf = DoCDVDgetBuffer();
-	if (buf == NULL) cdr.RErr = -1;
+	cdr.RErr = DoCDVDgetBuffer(buf);
 
-	if (cdr.RErr == -1) {
+	if (cdr.RErr == -1) 
+	{
 		CDR_LOG(" err\n");
 		memzero_ptr<2340>(cdr.Transfer);
 		cdr.Stat = DiskError;

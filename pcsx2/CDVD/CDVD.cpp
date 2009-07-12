@@ -28,6 +28,8 @@
 
 static cdvdStruct cdvd;
 
+static u8 tempbuf[2352];
+
 static __forceinline void SetResultSize(u8 size)
 {
 	cdvd.ResultC = size;
@@ -746,12 +748,16 @@ __forceinline void cdvdReadInterrupt()
 	}
 	else
 	{
+
 		if (cdvd.RErr == 0) 
-			cdr.pTransfer = DoCDVDgetBuffer();
+		{
+			cdr.RErr = DoCDVDgetBuffer(tempbuf);
+			cdr.pTransfer = tempbuf;
+		}
 		else 
 			cdr.pTransfer = NULL;
 		
-		if (cdr.pTransfer == NULL)
+		if (cdr.RErr < 0)
 		{
 			cdvd.RetryCntP++;
 			Console::Error("CDVD READ ERROR, sector=%d", params cdvd.Sector);

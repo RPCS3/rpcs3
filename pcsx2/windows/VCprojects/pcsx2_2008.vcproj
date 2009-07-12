@@ -71,7 +71,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalOptions="/MACHINE:I386"
-				AdditionalDependencies="zlib.lib"
+				AdditionalDependencies="zlib.lib bzip2.lib"
 				OutputFile="$(OutDir)\$(ProjectName)-dbg.exe"
 			/>
 			<Tool
@@ -151,7 +151,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="zlib.lib"
+				AdditionalDependencies="zlib.lib bzip2.lib"
 				OutputFile="$(OutDir)\$(ProjectName)-dev.exe"
 				LinkIncremental="2"
 			/>
@@ -232,7 +232,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="zlib.lib"
+				AdditionalDependencies="zlib.lib bzip2.lib"
 				ProgramDatabaseFile="&quot;$(TargetDir)$(TargetName).pdb&quot;"
 			/>
 			<Tool
@@ -2478,6 +2478,14 @@
 				</File>
 				<File
 					RelativePath="..\..\Elfheader.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\CDVD\IsoFileFormats.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\CDVD\IsoFileFormats.h"
 					>
 				</File>
 				<File

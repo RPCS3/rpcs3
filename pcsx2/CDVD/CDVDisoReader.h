@@ -25,8 +25,33 @@
 
 #include <stdio.h>
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 #include "IopCommon.h"
 #include "IsoFStools.h"
+#include "IsoFileFormats.h"
+
+#define CDVD_LOG __Log
+extern FILE *cdvdLog;
+
+void __Log(char *fmt, ...);
+
+#define VERBOSE 1
+
+typedef struct
+{
+	int slsn;
+	int elsn;
+#ifdef _WIN32
+	HANDLE handle;
+#else
+	FILE *handle;
+#endif
+} _cdIso;
+
+extern _cdIso cdIso[8];
 
 #define CD_FRAMESIZE_RAW	2352
 #define DATA_SIZE	(CD_FRAMESIZE_RAW-12)
@@ -36,32 +61,46 @@
 
 #define MSF2SECT(m,s,f)	(((m)*60+(s)-2)*75+(f))
 
-extern bool loadFromISO;
+extern const u8 version;
+extern const u8 revision;
+extern const u8 build;
 
 extern char isoFileName[256];
+extern char IsoCWD[256];
+extern char CdDev[256];
 
 extern int BlockDump;
-extern FILE* fdump;
-extern FILE* isoFile;
-extern int isoType;
+extern isoFile *blockDumpFile;
+extern isoFile *iso;
 
 extern u8 cdbuffer[];
 extern u8 *pbuffer;
+extern int cdblocksize;
+extern int cdblockofs;
+extern int cdoffset;
+extern int cdtype;
+extern int cdblocks;
 
-s32 CALLBACK ISOinit();
-void CALLBACK ISOshutdown();
-s32 CALLBACK ISOopen(const char* pTitle);
-void CALLBACK ISOclose();
-s32 CALLBACK ISOreadSubQ(u32 lsn, cdvdSubQ* subq);
-s32 CALLBACK ISOgetTN(cdvdTN *Buffer);
-s32 CALLBACK ISOgetTD(u8 tn, cdvdTD *Buffer);
-s32 CALLBACK ISOgetDiskType();
-s32 CALLBACK ISOgetTrayStatus();
-s32 CALLBACK ISOctrlTrayOpen();
-s32 CALLBACK ISOctrlTrayClose();
-s32 CALLBACK ISOreadSector(u8* tempbuffer, u32 lsn);
-s32 CALLBACK ISOgetTOC(void* toc);
-s32 CALLBACK ISOreadTrack(u32 lsn, int mode);
-u8* CALLBACK ISOgetBuffer();
+extern int Zmode; // 1 Z - 2 bz2
+extern int fmode;						// 0 - file / 1 - Zfile
+extern char *Ztable;
+
+extern char *methods[];
+
+s32  ISOinit();
+void ISOshutdown();
+s32  ISOopen(const char* pTitle);
+void ISOclose();
+s32  ISOreadSubQ(u32 lsn, cdvdSubQ* subq);
+s32  ISOgetTN(cdvdTN *Buffer);
+s32  ISOgetTD(u8 tn, cdvdTD *Buffer);
+s32  ISOgetDiskType();
+s32  ISOgetTrayStatus();
+s32  ISOctrlTrayOpen();
+s32  ISOctrlTrayClose();
+s32  ISOreadSector(u8* tempbuffer, u32 lsn, int mode);
+s32  ISOgetTOC(void* toc);
+s32  ISOreadTrack(u32 lsn, int mode);
+s32  ISOgetBuffer(u8* buffer);
 
 #endif

@@ -18,6 +18,9 @@
 
 #include "PrecompiledHeader.h"
 
+// TODO: fix this for linux! (hardcoded as _WIN32 only)
+#define ENABLE_TIMESTAMPS
+
 #include <ctype.h>
 #include <time.h>
 
@@ -27,6 +30,11 @@
 #include "CDVDisoReader.h"
 
 static int diskTypeCached=-1;
+
+static int psize;
+static int plsn=0;
+
+static isoFile *blockDumpFile;
 
 /////////////////////////////////////////////////
 //
@@ -98,7 +106,7 @@ int FindDiskType(int mType)
 		{
 			iCDType = CDVD_TYPE_DETCTDVDS;
 		}
-		else if(DoCDVDreadSector((u8*)bleh,16)==0)
+		else if(DoCDVDreadSector((u8*)bleh,16,CDVD_MODE_2048)==0)
 		{
 			struct cdVolDesc* volDesc=(struct cdVolDesc *)bleh;
 			if(volDesc)
@@ -209,10 +217,78 @@ s32 DoCDVDinit()
 
 s32 DoCDVDopen(const char* pTitleFilename)
 {
+	int ret=0;
 	if(loadFromISO)
-		return ISOopen(pTitleFilename);
+		ret = ISOopen(pTitleFilename);
 	else
-		return CDVDopen(pTitleFilename);
+		ret = CDVDopen(pTitleFilename);
+
+	if (Config.Blockdump)
+	{
+		char fname_only[MAX_PATH];
+
+		if(loadFromISO)
+		{
+#ifdef _WIN32
+			char fname[MAX_PATH], ext[MAX_PATH];
+			_splitpath(isoFileName, NULL, NULL, fname, ext);
+			_makepath(fname_only, NULL, NULL, fname, NULL);
+#else
+			char* p, *plast;
+
+			plast = p = strchr(isoFileName, '/');
+			while (p != NULL)
+			{
+				plast = p;
+				p = strchr(p + 1, '/');
+			}
+
+			// Lets not create dumps in the plugin directory.
+			strcpy(fname_only, "../");
+			if (plast != NULL) 
+				strcat(fname_only, plast + 1);
+			else 
+				strcat(fname_only, isoFileName);
+
+			plast = p = strchr(fname_only, '.');
+
+			while (p != NULL)
+			{
+				plast = p;
+				p = strchr(p + 1, '.');
+			}
+
+			if (plast != NULL) *plast = 0;
+#endif
+		}
+		else
+		{
+			strcpy(fname_only, "Untitled");
+		}
+
+#if defined(_WIN32) && defined(ENABLE_TIMESTAMPS)
+		SYSTEMTIME time;
+		GetLocalTime(&time);
+
+		sprintf(
+			fname_only+strlen(fname_only),
+			" (%04d-%02d-%02d %02d-%02d-%02d).dump",
+			time.wYear, time.wMonth, time.wDay,
+			time.wHour, time.wMinute, time.wSecond);
+#else
+		// TODO: implement this
+		strcat(fname_only, ".dump");
+#endif
+
+		blockDumpFile = isoCreate(fname_only, ISOFLAGS_BLOCKDUMP);
+		if (blockDumpFile) isoSetFormat(blockDumpFile, iso->blockofs, iso->blocksize, iso->blocks);
+	}
+	else
+	{
+		blockDumpFile = NULL;
+	}
+
+	return ret;
 }
 
 void DoCDVDclose()
@@ -221,6 +297,8 @@ void DoCDVDclose()
 		ISOclose();
 	else
 		CDVDclose();
+
+	if (blockDumpFile != NULL) isoClose(blockDumpFile);
 }
 
 void DoCDVDshutdown()
@@ -231,21 +309,47 @@ void DoCDVDshutdown()
 	}
 }
 
-s32 DoCDVDreadSector(u8* buffer, u32 lsn)
+s32 DoCDVDreadSector(u8* buffer, u32 lsn, int mode)
 {
+	int ret;
+
 	if(loadFromISO)
-		return ISOreadSector(buffer,lsn);
+		ret = ISOreadSector(buffer,lsn,mode);
 	else
 	{
-		CDVDreadTrack(lsn,CDVD_MODE_2048);
+		CDVDreadTrack(lsn,mode);
 		void* pbuffer = CDVDgetBuffer();
 		if(pbuffer!=NULL)
 		{
-			memcpy(buffer,pbuffer,2048);
-			return 0;
+			switch(mode)
+			{
+			case CDVD_MODE_2048:
+				memcpy(buffer,pbuffer,2048);
+				break;
+			case CDVD_MODE_2328:
+				memcpy(buffer,pbuffer,2328);
+				break;
+			case CDVD_MODE_2340:
+				memcpy(buffer,pbuffer,2340);
+				break;
+			case CDVD_MODE_2352:
+				memcpy(buffer,pbuffer,2352);
+				break;
+			}
+			ret = 0;
 		}
-		return -1;
+		else ret = -1;
 	}
+
+
+	if(ret==0)
+	{
+		if (blockDumpFile != NULL)
+		{
+			isoWriteBlock(blockDumpFile, pbuffer, plsn);
+		}
+	}
+	return ret;
 }
 
 s32 DoCDVDreadTrack(u32 lsn, int mode)
@@ -253,16 +357,54 @@ s32 DoCDVDreadTrack(u32 lsn, int mode)
 	if(loadFromISO)
 		return ISOreadTrack(lsn, mode);
 	else
+	{
+		// TEMP: until I fix all the plugins to use the new CDVDgetBuffer style
+		switch (mode)
+		{
+		case CDVD_MODE_2352:
+			psize = 2352;
+			break;
+		case CDVD_MODE_2340:
+			psize = 2340;
+			break;
+		case CDVD_MODE_2328:
+			psize = 2328;
+			break;
+		case CDVD_MODE_2048:
+			psize = 2048;
+			break;
+		}
 		return CDVDreadTrack(lsn, mode);
+	}
 }
 
 // return can be NULL (for async modes)
-u8* DoCDVDgetBuffer()
+s32 DoCDVDgetBuffer(u8* buffer)
 {
+	int ret;
+
 	if(loadFromISO)
-		return ISOgetBuffer();
+		ret = ISOgetBuffer(buffer);
 	else
-		return CDVDgetBuffer();
+	{
+		// TEMP: until I fix all the plugins to use this function style
+		u8* pb = CDVDgetBuffer();
+		if(pb!=NULL)
+		{
+			memcpy(buffer,pb,psize);
+			ret=0;
+		}
+		else ret= -1;
+	}
+
+	if(ret==0)
+	{
+		if (blockDumpFile != NULL)
+		{
+			isoWriteBlock(blockDumpFile, pbuffer, plsn);
+		}
+	}
+	return ret;
 }
 
 s32 DoCDVDreadSubQ(u32 lsn, cdvdSubQ* subq)
