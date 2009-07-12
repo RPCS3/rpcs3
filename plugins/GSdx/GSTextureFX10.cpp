@@ -265,7 +265,7 @@ void GSTextureFX10::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSampl
 
 		if(i != m_ps_ss.end())
 		{
-			ss0 = (*i).second;
+			ss0 = i->second;
 		}
 		else
 		{
@@ -360,7 +360,7 @@ void GSTextureFX10::UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel,
 		i = m_om_dss.find(dssel);
 	}
 
-	dev->OMSetDepthStencilState((*i).second, 1);
+	dev->OMSetDepthStencilState(i->second, 1);
 
 	hash_map<uint32, CComPtr<ID3D10BlendState> >::const_iterator j = m_om_bs.find(bsel);
 

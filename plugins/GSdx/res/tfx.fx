@@ -298,7 +298,7 @@ float4 sample_4a(float4 uv)
 	c.w = sample_c(uv.zw).a;
 
 	#if SHADER_MODEL <= 0x300
-	if(PS_RT) c *= 0.5;
+	if(PS_RT) c *= 128.0f / 255;
 	#endif
 
 	return c;
@@ -387,7 +387,7 @@ float4 sample(float2 st, float q)
 	if(PS_FMT == FMT_32)
 	{
 		#if SHADER_MODEL <= 0x300
-		if(PS_RT) t.a *= 0.5;
+		if(PS_RT) t.a *= 128.0f / 255;
 		#endif
 	}
 	else if(PS_FMT == FMT_24)

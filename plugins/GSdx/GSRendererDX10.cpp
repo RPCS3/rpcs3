@@ -25,11 +25,9 @@
 #include "resource.h"
 
 GSRendererDX10::GSRendererDX10(uint8* base, bool mt, void (*irq)())
-	: GSRendererDX<GSVertexHW10>(base, mt, irq, new GSDevice10(), new GSTextureCache10(this), new GSTextureFX10())
+	: GSRendererDX<GSVertexHW10>(base, mt, irq, new GSDevice10(), new GSTextureCache10(this), new GSTextureFX10(), GSVector2(-0.5f, -0.5f))
 {
 	InitVertexKick<GSRendererDX10>();
-
-	m_pixelcenter = GSVector2(-0.5f, -0.5f);
 }
 
 bool GSRendererDX10::Create(const string& title)

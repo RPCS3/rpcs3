@@ -122,7 +122,7 @@ public:
 			GSVector4i b4 = b[4];
 			GSVector4i b5 = b[5];
 
-			if(!((a[0] == b0) & (a[1] == b1) & (a[2] == b2) & (a[3] == b3) & (a[4] == b4) & (a[5] == b5)).alltrue())
+			if(!((a[0] == b0) /*& (a[1] == b1)*/ & (a[2] == b2) & (a[3] == b3) & (a[4] == b4) & (a[5] == b5)).alltrue()) // if WH matches HalfTexel does too
 			{
 				a[0] = b0;
 				a[1] = b1;
@@ -250,6 +250,11 @@ public:
 		operator uint32() {return key & 0x1fff;}
 
 		OMBlendSelector() : key(0) {}
+
+		bool IsCLR1() const
+		{
+			return (key & 0x19f) == 0x93; // abe == 1 && a == 1 && b == 2 && d == 1
+		}
 	};
 
 	#pragma pack(pop)

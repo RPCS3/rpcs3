@@ -28,22 +28,22 @@ template<class Vertex>
 class GSRendererDX : public GSRendererHW<Vertex>
 {
 	GSTextureFX* m_tfx;
+	GSVector2 m_pixelcenter;
 	bool m_logz;
 	bool m_fba;
 
 protected:
 	int m_topology;
-	GSVector2 m_pixelcenter;
 
 	virtual void SetupDATE(GSTexture* rt, GSTexture* ds) {}
 	virtual void UpdateFBA(GSTexture* rt) {}
 
 public:
-	GSRendererDX(uint8* base, bool mt, void (*irq)(), GSDevice* dev, GSTextureCache* tc, GSTextureFX* tfx)
+	GSRendererDX(uint8* base, bool mt, void (*irq)(), GSDevice* dev, GSTextureCache* tc, GSTextureFX* tfx, const GSVector2& pixelcenter = GSVector2(0, 0))
 		: GSRendererHW<Vertex>(base, mt, irq, dev, tc)
 		, m_tfx(tfx)
+		, m_pixelcenter(pixelcenter)
 		, m_topology(-1)
-		, m_pixelcenter(0, 0)
 	{
 		m_logz = !!theApp.GetConfig("logz", 0);
 		m_fba = !!theApp.GetConfig("fba", 1);
@@ -189,36 +189,25 @@ public:
 		// ps
 
 		GSTextureFX::PSSelector ps_sel;
-
-		ps_sel.fst = PRIM->FST;
-		ps_sel.wms = context->CLAMP.WMS;
-		ps_sel.wmt = context->CLAMP.WMT;
-		ps_sel.aem = env.TEXA.AEM;
-		ps_sel.tfx = context->TEX0.TFX;
-		ps_sel.tcc = context->TEX0.TCC;
-		ps_sel.ate = context->TEST.ATE;
-		ps_sel.atst = context->TEST.ATST;
-		ps_sel.fog = PRIM->FGE;
-		ps_sel.clr1 = om_bsel.abe && om_bsel.a == 1 && om_bsel.b == 2 && om_bsel.d == 1;
-		ps_sel.fba = context->FBA.FBA;
-		ps_sel.aout = context->FRAME.PSM == PSM_PSMCT16 || context->FRAME.PSM == PSM_PSMCT16S || (context->FRAME.FBMSK & 0xff000000) == 0x7f000000 ? 1 : 0;
-		ps_sel.ltf = m_filter == 2 ? IsLinear() : m_filter;
-
 		GSTextureFX::PSSamplerSelector ps_ssel;
-
-		ps_ssel.tau = 0;
-		ps_ssel.tav = 0;
-		ps_ssel.ltf = ps_sel.ltf;
-
 		GSTextureFX::PSConstantBuffer ps_cb;
 
-		if(ps_sel.fog)
+		ps_sel.clr1 = om_bsel.IsCLR1();
+		ps_sel.fba = context->FBA.FBA;
+		ps_sel.aout = context->FRAME.PSM == PSM_PSMCT16 || context->FRAME.PSM == PSM_PSMCT16S || (context->FRAME.FBMSK & 0xff000000) == 0x7f000000 ? 1 : 0;
+
+		if(PRIM->FGE)
 		{
-			ps_cb.FogColor_AREF = GSVector4((int)env.FOGCOL.FCR, (int)env.FOGCOL.FCG, (int)env.FOGCOL.FCB, 0) / 255;
+			ps_sel.fog = 1;
+
+			ps_cb.FogColor_AREF = GSVector4(env.FOGCOL.u32[0]) / 255;
 		}
 
-		if(ps_sel.ate)
+		if(context->TEST.ATE)
 		{
+			ps_sel.ate = 1;
+			ps_sel.atst = context->TEST.ATST;
+
 			switch(ps_sel.atst)
 			{
 			case ATST_LESS:
@@ -235,61 +224,55 @@ public:
 
 		if(tex)
 		{
+			ps_sel.fst = PRIM->FST;
+			ps_sel.wms = context->CLAMP.WMS;
+			ps_sel.wmt = context->CLAMP.WMT;
 			ps_sel.fmt = tex->m_fmt;
+			ps_sel.aem = env.TEXA.AEM;
+			ps_sel.tfx = context->TEX0.TFX;
+			ps_sel.tcc = context->TEX0.TCC;
+			ps_sel.ltf = m_filter == 2 ? IsLinear() : m_filter;
 			ps_sel.rt = tex->m_target;
 
 			int w = tex->m_texture->GetWidth();
 			int h = tex->m_texture->GetHeight();
 
-			ps_cb.WH = GSVector4((int)(1 << context->TEX0.TW), (int)(1 << context->TEX0.TH), w, h);
+			int tw = (int)(1 << context->TEX0.TW);
+			int th = (int)(1 << context->TEX0.TH);
+
+			ps_cb.WH = GSVector4(tw, th, w, h);
 			ps_cb.HalfTexel = GSVector4(-0.5f, 0.5f).xxyy() / GSVector4(w, h).xyxy();
 			ps_cb.MinF_TA.z = (float)(int)env.TEXA.TA0 / 255;
 			ps_cb.MinF_TA.w = (float)(int)env.TEXA.TA1 / 255;
 
-			switch(context->CLAMP.WMS)
+			ps_ssel.tau = (context->CLAMP.WMS + 3) >> 1;
+			ps_ssel.tav = (context->CLAMP.WMT + 3) >> 1;
+			ps_ssel.ltf = ps_sel.ltf;
+
+			switch(ps_sel.wms)
 			{
-			case CLAMP_REPEAT: 
-				ps_ssel.tau = 1; 
-				break;
-			case CLAMP_CLAMP: 
-				ps_ssel.tau = 0; 
-				break;
 			case CLAMP_REGION_CLAMP: 
-				ps_cb.MinMax.x = ((float)(int)context->CLAMP.MINU) / (1 << context->TEX0.TW);
-				ps_cb.MinMax.z = ((float)(int)context->CLAMP.MAXU) / (1 << context->TEX0.TW);
-				ps_cb.MinF_TA.x = ((float)(int)context->CLAMP.MINU + 0.5f) / (1 << context->TEX0.TW);
-				ps_ssel.tau = 0; 
+				ps_cb.MinMax.x = (float)(int)context->CLAMP.MINU / tw;
+				ps_cb.MinMax.z = (float)(int)context->CLAMP.MAXU / tw;
+				ps_cb.MinF_TA.x = ((float)(int)context->CLAMP.MINU + 0.5f) / tw;
 				break;
 			case CLAMP_REGION_REPEAT: 
 				ps_cb.MskFix.x = context->CLAMP.MINU;
 				ps_cb.MskFix.z = context->CLAMP.MAXU;
-				ps_ssel.tau = 1; 
 				break;
-			default: 
-				__assume(0);
 			}
 
-			switch(context->CLAMP.WMT)
+			switch(ps_sel.wmt)
 			{
-			case CLAMP_REPEAT: 
-				ps_ssel.tav = 1; 
-				break;
-			case CLAMP_CLAMP: 
-				ps_ssel.tav = 0; 
-				break;
 			case CLAMP_REGION_CLAMP: 
-				ps_cb.MinMax.y = ((float)(int)context->CLAMP.MINV) / (1 << context->TEX0.TH);
-				ps_cb.MinMax.w = ((float)(int)context->CLAMP.MAXV) / (1 << context->TEX0.TH);
-				ps_cb.MinF_TA.y = ((float)(int)context->CLAMP.MINV + 0.5f) / (1 << context->TEX0.TH);
-				ps_ssel.tav = 0; 
+				ps_cb.MinMax.y = (float)(int)context->CLAMP.MINV / th;
+				ps_cb.MinMax.w = (float)(int)context->CLAMP.MAXV / th;
+				ps_cb.MinF_TA.y = ((float)(int)context->CLAMP.MINV + 0.5f) / th;
 				break;
 			case CLAMP_REGION_REPEAT: 
 				ps_cb.MskFix.y = context->CLAMP.MINV;
 				ps_cb.MskFix.w = context->CLAMP.MAXV;
-				ps_ssel.tav = 1; 
 				break;
-			default: 
-				__assume(0);
 			}
 		}
 		else

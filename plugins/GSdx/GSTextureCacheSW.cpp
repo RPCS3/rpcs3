@@ -39,11 +39,11 @@ const GSTextureCacheSW::GSTexture* GSTextureCacheSW::Lookup(const GIFRegTEX0& TE
 
 	GSTexture* t = NULL;
 
-	const hash_map<GSTexture*, bool>& map = m_map[TEX0.TBP0 >> 5];
+	list<GSTexture*>& m = m_map[TEX0.TBP0 >> 5];
 
-	for(hash_map<GSTexture*, bool>::const_iterator i = map.begin(); i != map.end(); i++)
+	for(list<GSTexture*>::iterator i = m.begin(); i != m.end(); i++)
 	{
-		GSTexture* t2 = i->first;
+		GSTexture* t2 = *i;
 
 		if(((TEX0.u32[0] ^ t2->m_TEX0.u32[0]) | ((TEX0.u32[1] ^ t2->m_TEX0.u32[1]) & 3)) != 0) // TBP0 TBW PSM TW TH
 		{
@@ -54,6 +54,8 @@ const GSTextureCacheSW::GSTexture* GSTextureCacheSW::Lookup(const GIFRegTEX0& TE
 		{
 			continue;
 		}
+
+		m.splice(m.begin(), m, i);
 
 		t = t2;
 
@@ -96,13 +98,13 @@ const GSTextureCacheSW::GSTexture* GSTextureCacheSW::Lookup(const GIFRegTEX0& TE
 			{
 				m_pages[i] = 0;
 
-				hash_map<GSTexture*, bool>* m = &m_map[i << 5];
+				list<GSTexture*>* m = &m_map[i << 5];
 
 				for(int j = 0; j < 32; j++)
 				{
 					if(p & (1 << j))
 					{
-						m[j][t] = true;
+						m[j].push_front(t);
 					}
 				}
 			}
@@ -113,16 +115,9 @@ const GSTextureCacheSW::GSTexture* GSTextureCacheSW::Lookup(const GIFRegTEX0& TE
 	{
 		printf("!@#$%\n"); // memory allocation may fail if the game is too hungry
 
-		m_textures.erase(t);
+		RemoveAt(t);
 
-		for(int i = 0; i < MAX_PAGES; i++)
-		{
-			m_map[i].erase(t);
-		}
-
-		delete t;
-
-		return NULL;
+		t = NULL;
 	}
 
 	return t;
@@ -140,6 +135,25 @@ void GSTextureCacheSW::RemoveAll()
 	}
 }
 
+void GSTextureCacheSW::RemoveAt(GSTexture* t)
+{
+	m_textures.erase(t);
+
+	for(uint32 start = t->m_TEX0.TBP0 >> 5, end = countof(m_map) - 1; start <= end; start++)
+	{
+		list<GSTexture*>& m = m_map[start];
+
+		for(list<GSTexture*>::iterator i = m.begin(); i != m.end(); )
+		{
+			list<GSTexture*>::iterator j = i++;
+
+			if(*j == t) {m.erase(j); break;}
+		}
+	}
+
+	delete t;
+}
+
 void GSTextureCacheSW::IncAge()
 {
 	for(hash_map<GSTexture*, bool>::iterator i = m_textures.begin(); i != m_textures.end(); )
@@ -150,14 +164,7 @@ void GSTextureCacheSW::IncAge()
 
 		if(++t->m_age > 30)
 		{
-			m_textures.erase(j);
-
-			for(int i = 0; i < MAX_PAGES; i++)
-			{
-				m_map[i].erase(t);
-			}
-
-			delete t;
+			RemoveAt(t);
 		}
 	}
 }
@@ -184,11 +191,11 @@ void GSTextureCacheSW::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, cons
 
 			if(page < MAX_PAGES)
 			{
-				const hash_map<GSTexture*, bool>& map = m_map[page];
+				const list<GSTexture*>& map = m_map[page];
 
-				for(hash_map<GSTexture*, bool>::const_iterator i = map.begin(); i != map.end(); i++)
+				for(list<GSTexture*>::const_iterator i = map.begin(); i != map.end(); i++)
 				{
-					GSTexture* t = i->first;
+					GSTexture* t = *i;
 
 					if(GSUtil::HasSharedBits(psm, t->m_TEX0.PSM))
 					{

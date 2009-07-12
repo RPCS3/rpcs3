@@ -76,6 +76,7 @@ public:
 		ValkyrieProfile2,
 		RadiataStories,
 		SMTNocturne,
+		RozenMaidenGebetGarden,
 		TitleCount,
 	};
 
@@ -91,7 +92,8 @@ public:
 		DE,
 		IT,
 		ES,
-		ASIA
+		ASIA,
+		RegionCount,
 	};
 
 	enum Flags
@@ -102,8 +104,8 @@ public:
 
 	struct Game 
 	{
-		uint32 crc; 
-		Title title; 
+		uint32 crc;
+		Title title;
 		Region region;
 		uint32 flags;
 	};

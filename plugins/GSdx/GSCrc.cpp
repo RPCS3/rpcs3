@@ -147,6 +147,7 @@ CRC::Game CRC::m_games[] =
 	{0x04CCB600, ValkyrieProfile2, EU, 0},
 	{0x47B9B2FD, RadiataStories, US, 0},
 	{0xE8FCF8EC, SMTNocturne, US, ZWriteMustNotClear}, // saves/reloads z buffer around shadow drawing
+	{0x0B8AB37B, RozenMaidenGebetGarden, JP, 0},
 };
 
 hash_map<uint32, CRC::Game*> CRC::m_map;
