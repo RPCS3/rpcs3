@@ -201,7 +201,7 @@ static void SetSingleAffinity()
 	}
 
 	HANDLE s_threadId = GetCurrentThread();
-	DWORD s_oldmask = SetThreadAffinityMask( s_threadId, (1UL<<i) );
+	s_oldmask = SetThreadAffinityMask( s_threadId, (1UL<<i) );
 
 	if( s_oldmask == ERROR_INVALID_PARAMETER )
 	{
