@@ -21,6 +21,10 @@
 // TODO: fix this for linux! (hardcoded as _WIN32 only)
 #define ENABLE_TIMESTAMPS
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 #include <ctype.h>
 #include <time.h>
 

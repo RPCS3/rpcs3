@@ -25,10 +25,6 @@
 
 #include <stdio.h>
 
-#ifdef _WIN32
-#include <windows.h>
-#endif
-
 #include "IopCommon.h"
 #include "IsoFStools.h"
 #include "IsoFileFormats.h"
@@ -47,24 +43,22 @@ void __Log(char *fmt, ...);
 #define btoi(b)		((b)/16*10 + (b)%16)	/* BCD to u_char */
 
 extern char isoFileName[256];
-
-//extern isoFile *blockDumpFile;
 extern isoFile *iso;
 
-s32  ISOinit();
-void ISOshutdown();
-s32  ISOopen(const char* pTitle);
-void ISOclose();
-s32  ISOreadSubQ(u32 lsn, cdvdSubQ* subq);
-s32  ISOgetTN(cdvdTN *Buffer);
-s32  ISOgetTD(u8 tn, cdvdTD *Buffer);
-s32  ISOgetDiskType();
-s32  ISOgetTrayStatus();
-s32  ISOctrlTrayOpen();
-s32  ISOctrlTrayClose();
-s32  ISOreadSector(u8* tempbuffer, u32 lsn, int mode);
-s32  ISOgetTOC(void* toc);
-s32  ISOreadTrack(u32 lsn, int mode);
-s32  ISOgetBuffer(u8* buffer);
+extern s32  ISOinit();
+extern void ISOshutdown();
+extern s32  ISOopen(const char* pTitle);
+extern void ISOclose();
+extern s32  ISOreadSubQ(u32 lsn, cdvdSubQ* subq);
+extern s32  ISOgetTN(cdvdTN *Buffer);
+extern s32  ISOgetTD(u8 tn, cdvdTD *Buffer);
+extern s32  ISOgetDiskType();
+extern s32  ISOgetTrayStatus();
+extern s32  ISOctrlTrayOpen();
+extern s32  ISOctrlTrayClose();
+extern s32  ISOreadSector(u8* tempbuffer, u32 lsn, int mode);
+extern s32  ISOgetTOC(void* toc);
+extern s32  ISOreadTrack(u32 lsn, int mode);
+extern s32  ISOgetBuffer(u8* buffer);
 
 #endif

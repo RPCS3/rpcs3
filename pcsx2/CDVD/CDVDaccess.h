@@ -19,22 +19,23 @@
 #ifndef __CDVD_ACCESS_H__
 #define __CDVD_ACCESS_H__
 
-s32 DoCDVDinit();
-s32 DoCDVDopen(const char* pTitleFilename);
-void DoCDVDclose();
-void DoCDVDshutdown();
-s32 DoCDVDreadSector(u8* buffer, u32 lsn, int mode);
-s32 DoCDVDreadTrack(u32 lsn, int mode);
-s32 DoCDVDgetBuffer(u8* buffer);
-s32 DoCDVDreadSubQ(u32 lsn, cdvdSubQ* subq);
-s32 DoCDVDgetTN(cdvdTN *Buffer);
-s32 DoCDVDgetTD(u8 Track, cdvdTD *Buffer);
-s32 DoCDVDgetTOC(void* toc);
-s32 DoCDVDgetDiskType();
-s32 DoCDVDgetTrayStatus();
-s32 DoCDVDctrlTrayOpen();
-s32 DoCDVDctrlTrayClose();
-void DoCDVDnewDiskCB(void (*callback)());
-s32 DoCDVDdetectDiskType();
-void DoCDVDresetDiskTypeCache();
+extern s32  DoCDVDinit();
+extern s32  DoCDVDopen(const char* pTitleFilename);
+extern void DoCDVDclose();
+extern void DoCDVDshutdown();
+extern s32  DoCDVDreadSector(u8* buffer, u32 lsn, int mode);
+extern s32  DoCDVDreadTrack(u32 lsn, int mode);
+extern s32  DoCDVDgetBuffer(u8* buffer);
+extern s32  DoCDVDreadSubQ(u32 lsn, cdvdSubQ* subq);
+extern s32  DoCDVDgetTN(cdvdTN *Buffer);
+extern s32  DoCDVDgetTD(u8 Track, cdvdTD *Buffer);
+extern s32  DoCDVDgetTOC(void* toc);
+extern s32  DoCDVDgetDiskType();
+extern s32  DoCDVDgetTrayStatus();
+extern s32  DoCDVDctrlTrayOpen();
+extern s32  DoCDVDctrlTrayClose();
+extern void DoCDVDnewDiskCB(void (*callback)());
+extern s32  DoCDVDdetectDiskType();
+extern void DoCDVDresetDiskTypeCache();
+
 #endif /* __CDVD_H__ */
