@@ -34,31 +34,16 @@
 bool loadFromISO=false;
 
 char isoFileName[256];
-char IsoCWD[256];
-char CdDev[256];
 
-_cdIso cdIso[8];
 u8 *pbuffer;
-int cdblocksize;
-int cdblockofs;
-int cdoffset;
 int cdtype;
-int cdblocks;
 
 int psize;
-
-int Zmode; // 1 Z - 2 bz2
-int fmode;						// 0 - file / 1 - Zfile
-char *Ztable;
 
 int BlockDump;
 isoFile *iso;
 
 FILE *cdvdLog = NULL;
-
-// This var is used to detect resume-style behavior of the Pcsx2 emulator,
-// and skip prompting the user for a new CD when it's likely they want to run the existing one.
-static char cdvdCurrentIso[MAX_PATH];
 
 char *methods[] =
 {
@@ -123,14 +108,11 @@ s32 ISOinit()
 	CDVD_LOG("CDVDinit\n");
 #endif
 
-	cdvdCurrentIso[0] = 0;
-	memset(cdIso, 0, sizeof(cdIso));
 	return 0;
 }
 
 void ISOshutdown()
 {
-	cdvdCurrentIso[0] = 0;
 #ifdef CDVD_LOG
 	if (cdvdLog != NULL) fclose(cdvdLog);
 #endif
@@ -159,8 +141,6 @@ s32 ISOopen(const char* pTitle)
 
 void ISOclose()
 {
-	strcpy(cdvdCurrentIso, isoFileName);
-
 	isoClose(iso);
 }
 

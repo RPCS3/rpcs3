@@ -38,36 +38,10 @@ extern FILE *cdvdLog;
 
 void __Log(char *fmt, ...);
 
-#define VERBOSE 1
-
-typedef struct
-{
-	int slsn;
-	int elsn;
-#ifdef _WIN32
-	HANDLE handle;
-#else
-	FILE *handle;
-#endif
-} _cdIso;
-
-extern _cdIso cdIso[8];
-
-#define CD_FRAMESIZE_RAW	2352
-#define DATA_SIZE	(CD_FRAMESIZE_RAW-12)
-
 #define itob(i)		((i)/10*16 + (i)%10)	/* u_char to BCD */
 #define btoi(b)		((b)/16*10 + (b)%16)	/* BCD to u_char */
 
-#define MSF2SECT(m,s,f)	(((m)*60+(s)-2)*75+(f))
-
-extern const u8 version;
-extern const u8 revision;
-extern const u8 build;
-
 extern char isoFileName[256];
-extern char IsoCWD[256];
-extern char CdDev[256];
 
 extern int BlockDump;
 extern isoFile *blockDumpFile;
@@ -75,15 +49,7 @@ extern isoFile *iso;
 
 extern u8 cdbuffer[];
 extern u8 *pbuffer;
-extern int cdblocksize;
-extern int cdblockofs;
-extern int cdoffset;
 extern int cdtype;
-extern int cdblocks;
-
-extern int Zmode; // 1 Z - 2 bz2
-extern int fmode;						// 0 - file / 1 - Zfile
-extern char *Ztable;
 
 extern char *methods[];
 

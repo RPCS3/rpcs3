@@ -929,7 +929,13 @@ void ClosePlugins( bool closegs )
 		}
 	}
 
-	CLOSE_PLUGIN( CDVD );
+	//CLOSE_PLUGIN( CDVD );
+	if( OpenStatus.CDVD ) 
+	{
+		DoCDVDclose();
+		OpenStatus.CDVD = false;
+	}
+
 	CLOSE_PLUGIN( DEV9 );
 	CLOSE_PLUGIN( USB );
 	CLOSE_PLUGIN( FW );

@@ -124,7 +124,11 @@ int FindDiskType(int mType)
 	{
 		cdvdTD td,td2;
 		DoCDVDgetTD(i,&td);
-		DoCDVDgetTD(i+1,&td2);
+
+		if(tn.etrack>i)
+			DoCDVDgetTD(i+1,&td2);
+		else
+			DoCDVDgetTD(0,&td2);
 
 		int tlength = td2.lsn - td.lsn;
 
@@ -207,6 +211,9 @@ void DetectDiskType()
 
 s32 DoCDVDinit()
 {
+	// called even when not used
+	ISOinit();
+
 	if(!loadFromISO)
 		return CDVDinit();
 
@@ -307,6 +314,8 @@ void DoCDVDshutdown()
 	{
 		if (CDVDshutdown != NULL) CDVDshutdown();
 	}
+
+	ISOshutdown();
 }
 
 s32 DoCDVDreadSector(u8* buffer, u32 lsn, int mode)
