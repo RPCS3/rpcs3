@@ -1130,6 +1130,7 @@ void CreateMainWindow()
 	if(Config.Profiler)	CheckMenuItem(gApp.hMenu,ID_PROFILER,MF_CHECKED);
 	if(Config.cdvdPrint) CheckMenuItem(gApp.hMenu,ID_CDVDPRINT,MF_CHECKED);
 	if(Config.closeGSonEsc)CheckMenuItem(gApp.hMenu,ID_CLOSEGS,MF_CHECKED);
+	if(Config.Blockdump) CheckMenuItem(gApp.hMenu,ID_BLOCKDUMP,MF_CHECKED);
 
 	hStatusWnd = CreateStatusWindow(WS_CHILD | WS_VISIBLE, "", hWnd, 100);
 

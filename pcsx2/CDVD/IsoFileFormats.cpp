@@ -12,7 +12,6 @@
 
 #include <stdio.h>
 #include <fcntl.h>
-#include "bzip2\bzlib.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -148,7 +147,7 @@ int detect(isoFile *iso)
 	u8 buf[2448];
 	struct cdVolDesc *volDesc;
 
-	if (isoReadBlock(iso, buf, 16) == -1) return -1;
+	if (isoReadBlock(iso, buf + iso->blockofs, 16) == -1) return -1;
 	
 	volDesc = (struct cdVolDesc *)(buf + 24);
 	
@@ -160,138 +159,6 @@ int detect(isoFile *iso)
 		iso->type = ISOTYPE_DVD;
 
 	return 1;
-}
-
-int _isoReadZtable(isoFile *iso)
-{
-	void *handle;
-	char table[256];
-	int size;
-
-	sprintf(table, "%s.table", iso->filename);
-	handle = _openfile(table, O_RDONLY);
-	if (handle == NULL)
-	{
-		printf("Error loading %s\n", table);
-		return -1;
-	}
-
-	_seekfile(handle, 0, SEEK_END);
-	size = _tellfile(handle);
-	iso->Ztable = (char*)malloc(size);
-	
-	if (iso->Ztable == NULL)
-	{
-		return -1;
-	}
-
-	_seekfile(handle, 0, SEEK_SET);
-	_readfile(handle, iso->Ztable, size);
-	_closefile(handle);
-
-	iso->blocks = size / 6;
-
-	return 0;
-}
-
-int _isoReadZ2table(isoFile *iso)
-{
-	void *handle;
-	char table[256];
-	u32 *Ztable;
-	int ofs, size,  i;
-
-	sprintf(table, "%s.table", iso->filename);
-	handle = _openfile(table, O_RDONLY);
-	
-	if (handle == NULL)
-	{
-		printf("Error loading %s\n", table);
-		return -1;
-	}
-
-	_seekfile(handle, 0, SEEK_END);
-	size = _tellfile(handle);
-	Ztable = (u32*)malloc(size);
-	
-	if (Ztable == NULL)
-	{
-		return -1;
-	}
-
-	_seekfile(handle, 0, SEEK_SET);
-	_readfile(handle, Ztable, size);
-	_closefile(handle);
-
-	iso->Ztable = (char*)malloc(iso->blocks * 8);
-	
-	if (iso->Ztable == NULL)
-	{
-		return -1;
-	}
-
-	ofs = 16;
-	
-	for (i = 0; i < iso->blocks; i++)
-	{
-		*(u32*)&iso->Ztable[i*8+0] = ofs;
-		*(u32*)&iso->Ztable[i*8+4] = Ztable[i];
-		ofs += Ztable[i];
-	}
-	
-	free(Ztable);
-
-	return 0;
-}
-
-int _isoReadBZ2table(isoFile *iso)
-{
-	void *handle;
-	char table[256];
-	u32 *Ztable;
-	int ofs;
-	int size;
-	int i;
-
-	sprintf(table, "%s.table", iso->filename);
-	handle = _openfile(table, O_RDONLY);
-	if (handle == NULL)
-	{
-		printf("Error loading %s\n", table);
-		return -1;
-	}
-
-	_seekfile(handle, 0, SEEK_END);
-	size = _tellfile(handle);
-	Ztable = (u32*)malloc(size);
-	if (Ztable == NULL) return -1;
-
-	_seekfile(handle, 0, SEEK_SET);
-	_readfile(handle, Ztable, size);
-	_closefile(handle);
-
-	iso->Ztable = (char*)malloc(iso->blocks * 8);
-	if (iso->Ztable == NULL) return -1;
-
-	ofs = 16;
-	
-	for (i = 0; i < iso->blocks / 16; i++)
-	{
-		*(u32*)&iso->Ztable[i*8+0] = ofs;
-		*(u32*)&iso->Ztable[i*8+4] = Ztable[i];
-		ofs += Ztable[i];
-	}
-	
-	if (iso->blocks & 0xf)
-	{
-		*(u32*)&iso->Ztable[i*8+0] = ofs;
-		*(u32*)&iso->Ztable[i*8+4] = Ztable[i];
-		ofs += Ztable[i];
-	}
-	
-	free(Ztable);
-
-	return 0;
 }
 
 int _isoReadDtable(isoFile *iso)
@@ -321,16 +188,6 @@ int isoDetect(isoFile *iso)   // based on florin's CDVDbin detection code :)
 	iso->type = ISOTYPE_ILLEGAL;
 
 	len = strlen(iso->filename);
-	if (len >= 2)
-	{
-		if (!strncmp(iso->filename + (len - 2), ".Z", 2))
-		{
-			iso->flags = ISOFLAGS_Z;
-			iso->blocksize = 2352;
-			_isoReadZtable(iso);
-			return detect(iso) == 1 ? 0 : -1;
-		}
-	}
 
 	_seekfile(iso->handle, 0, SEEK_SET);
 	_readfile(iso->handle, buf, 4);
@@ -342,27 +199,6 @@ int isoDetect(isoFile *iso)   // based on florin's CDVDbin detection code :)
 		_readfile(iso->handle, &iso->blocks, 4);
 		_readfile(iso->handle, &iso->blockofs, 4);
 		_isoReadDtable(iso);
-		return detect(iso) == 1 ? 0 : -1;
-	}
-	else if (strncmp(buf, "Z V2", 4) == 0)
-	{
-		iso->flags = ISOFLAGS_Z2;
-		_readfile(iso->handle, &iso->blocksize, 4);
-		_readfile(iso->handle, &iso->blocks, 4);
-		_readfile(iso->handle, &iso->blockofs, 4);
-		_isoReadZ2table(iso);
-		return detect(iso) == 1 ? 0 : -1;
-	}
-	else if (strncmp(buf, "BZV2", 4) == 0)
-	{
-		iso->flags = ISOFLAGS_BZ2;
-		_readfile(iso->handle, &iso->blocksize, 4);
-		_readfile(iso->handle, &iso->blocks, 4);
-		_readfile(iso->handle, &iso->blockofs, 4);
-		iso->buflsn = -1;
-		iso->buffer = (u8*)malloc(iso->blocksize * 16);
-		if (iso->buffer == NULL) return -1;
-		_isoReadBZ2table(iso);
 		return detect(iso) == 1 ? 0 : -1;
 	}
 	else
@@ -550,23 +386,6 @@ int  isoSetFormat(isoFile *iso, int blockofs, int blocksize, int blocks)
 	printf("blockofs = %d\n", iso->blockofs);
 	printf("blocksize = %d\n", iso->blocksize);
 	printf("blocks = %d\n", iso->blocks);
-	if (iso->flags & ISOFLAGS_Z2)
-	{
-		if (_writefile(iso->handle, "Z V2", 4) < 4) return -1;
-		if (_writefile(iso->handle, &blocksize, 4) < 4) return -1;
-		if (_writefile(iso->handle, &blocks, 4) < 4) return -1;
-		if (_writefile(iso->handle, &blockofs, 4) < 4) return -1;
-	}
-	if (iso->flags & ISOFLAGS_BZ2)
-	{
-		if (_writefile(iso->handle, "BZV2", 4) < 4) return -1;
-		if (_writefile(iso->handle, &blocksize, 4) < 4) return -1;
-		if (_writefile(iso->handle, &blocks, 4) < 4) return -1;
-		if (_writefile(iso->handle, &blockofs, 4) < 4) return -1;
-		iso->buflsn = -1;
-		iso->buffer = (u8*)malloc(iso->blocksize * 16);
-		if (iso->buffer == NULL) return -1;
-	}
 	if (iso->flags & ISOFLAGS_BLOCKDUMP)
 	{
 		if (_writefile(iso->handle, "BDV2", 4) < 4) return -1;
@@ -607,109 +426,14 @@ int _isoReadBlock(isoFile *iso, u8 *dst, int lsn)
 	u64 ofs = (u64)lsn * iso->blocksize + iso->offset;
 	int ret;
 
-//	printf("_isoReadBlock %d, blocksize=%d, blockofs=%d\n", lsn, iso->blocksize, iso->blockofs);
 	memset(dst, 0, iso->blockofs);
 	_seekfile(iso->handle, ofs, SEEK_SET);
-	ret = _readfile(iso->handle, dst + iso->blockofs, iso->blocksize);
+	ret = _readfile(iso->handle, dst, iso->blocksize);
 	if (ret < iso->blocksize)
 	{
 		printf("read error %d\n", ret);
 		return -1;
 	}
-
-	return 0;
-}
-
-int _isoReadBlockZ(isoFile *iso, u8 *dst, int lsn)
-{
-	u32 pos, p;
-	uLongf size;
-	u8  Zbuf[CD_FRAMESIZE_RAW*2];
-	int ret;
-
-//	printf("_isoReadBlockZ %d, %d\n", lsn, iso->blocksize);
-	pos = *(unsigned long*) & iso->Ztable[lsn * 6];
-	p = *(unsigned short*) & iso->Ztable[lsn * 6 + 4];
-//	printf("%d, %d\n", pos, p);
-	_seekfile(iso->handle, pos, SEEK_SET);
-	ret = _readfile(iso->handle, Zbuf, p);
-	if (ret < p)
-	{
-		printf("error reading block!!\n");
-		return -1;
-	}
-
-	size = CD_FRAMESIZE_RAW;
-	uncompress(dst, &size, Zbuf, p);
-
-	return 0;
-}
-
-int _isoReadBlockZ2(isoFile *iso, u8 *dst, int lsn)
-{
-	u32 pos, p;
-	uLongf size;
-	u8  Zbuf[16*1024];
-	int ret;
-
-//	printf("_isoReadBlockZ2 %d, %d\n", lsn, iso->blocksize);
-	pos = *(u32*) & iso->Ztable[lsn*8];
-	p = *(u32*) & iso->Ztable[lsn*8+4];
-//	printf("%d, %d\n", pos, p);
-	_seekfile(iso->handle, pos, SEEK_SET);
-	ret = _readfile(iso->handle, Zbuf, p);
-	if (ret < p)
-	{
-		printf("error reading block!!\n");
-		return -1;
-	}
-
-	size = iso->blocksize;
-	uncompress(dst + iso->blockofs, &size, Zbuf, p);
-
-	return 0;
-}
-
-int _isoReadBlockBZ2(isoFile *iso, u8 *dst, int lsn)
-{
-	u32 pos, p;
-	u32 size;
-	u8  Zbuf[64*1024];
-	int ret;
-
-	if ((lsn / 16) == iso->buflsn)
-	{
-		memset(dst, 0, iso->blockofs);
-		memcpy(dst + iso->blockofs, iso->buffer + (iso->blocksize*(lsn&0xf)), iso->blocksize);
-		return 0;
-	}
-
-	iso->buflsn = lsn / 16;
-//	printf("_isoReadBlockBZ2 %d, %d\n", lsn, iso->blocksize);
-	pos = *(u32*) & iso->Ztable[(lsn/16)*8];
-	p = *(u32*) & iso->Ztable[(lsn/16)*8+4];
-//	printf("%d, %d\n", pos, p);
-	_seekfile(iso->handle, pos, SEEK_SET);
-	ret = _readfile(iso->handle, Zbuf, p);
-	
-	if (ret < p)
-	{
-		printf("error reading block!!\n");
-		return -1;
-	}
-
-	size = iso->blocksize * 64;
-	ret = BZ2_bzBuffToBuffDecompress((s8*)iso->buffer, &size, (s8*)Zbuf, p, 0, 0);
-	
-	if (ret != BZ_OK)
-	{
-		printf("_isoReadBlockBZ2 %d, %d\n", lsn, iso->blocksize);
-		printf("%d, %d\n", pos, p);
-		printf("error on BZ2: %d\n", ret);
-	}
-
-	memset(dst, 0, iso->blockofs);
-	memcpy(dst + iso->blockofs, iso->buffer + (iso->blocksize*(lsn&0xf)), iso->blocksize);
 
 	return 0;
 }
@@ -726,7 +450,7 @@ int _isoReadBlockD(isoFile *iso, u8 *dst, int lsn)
 		if (iso->dtable[i] != lsn) continue;
 
 		_seekfile(iso->handle, 16 + i*(iso->blocksize + 4) + 4, SEEK_SET);
-		ret = _readfile(iso->handle, dst + iso->blockofs, iso->blocksize);
+		ret = _readfile(iso->handle, dst, iso->blocksize);
 		if (ret < iso->blocksize) return -1;
 
 		return 0;
@@ -756,7 +480,7 @@ int _isoReadBlockM(isoFile *iso, u8 *dst, int lsn)
 //	printf("_isoReadBlock %d, blocksize=%d, blockofs=%d\n", lsn, iso->blocksize, iso->blockofs);
 	memset(dst, 0, iso->blockofs);
 	_seekfile(iso->multih[i].handle, ofs, SEEK_SET);
-	ret = _readfile(iso->multih[i].handle, dst + iso->blockofs, iso->blocksize);
+	ret = _readfile(iso->multih[i].handle, dst, iso->blocksize);
 	
 	if (ret < iso->blocksize)
 	{
@@ -777,16 +501,10 @@ int isoReadBlock(isoFile *iso, u8 *dst, int lsn)
 		return -1;
 	}
 	
-	if (iso->flags & ISOFLAGS_Z)
-		ret = _isoReadBlockZ(iso, dst, lsn);
-	else if (iso->flags & ISOFLAGS_Z2)
-		ret = _isoReadBlockZ2(iso, dst, lsn);
-	else if (iso->flags & ISOFLAGS_BLOCKDUMP)
+	if (iso->flags & ISOFLAGS_BLOCKDUMP)
 		ret = _isoReadBlockD(iso, dst, lsn);
 	else if (iso->flags & ISOFLAGS_MULTI)
 		ret = _isoReadBlockM(iso, dst, lsn);
-	else if (iso->flags & ISOFLAGS_BZ2)
-		ret = _isoReadBlockBZ2(iso, dst, lsn);
 	else
 		ret = _isoReadBlock(iso, dst, lsn);
 	
@@ -807,64 +525,9 @@ int _isoWriteBlock(isoFile *iso, u8 *src, int lsn)
 	u64 ofs = (u64)lsn * iso->blocksize + iso->offset;
 	int ret;
 
-//	printf("_isoWriteBlock %d (ofs=%d)\n", iso->blocksize, ofs);
 	_seekfile(iso->handle, ofs, SEEK_SET);
-	ret = _writefile(iso->handle, src + iso->blockofs, iso->blocksize);
-//	printf("_isoWriteBlock %d\n", ret);
+	ret = _writefile(iso->handle, src, iso->blocksize);
 	if (ret < iso->blocksize) return -1;
-
-	return 0;
-}
-
-int _isoWriteBlockZ(isoFile *iso, u8 *src, int lsn)
-{
-	u32 pos;
-	uLongf size;
-	u8  Zbuf[CD_FRAMESIZE_RAW];
-	int ret;
-
-//	printf("_isoWriteBlockZ %d\n", iso->blocksize);
-	size = 2352;
-	compress(Zbuf, &size, src, 2352);
-//	printf("_isoWriteBlockZ %d\n", size);
-
-	pos = (u32)_tellfile(iso->handle);
-	ret = _writefile(iso->htable, &pos, 4);
-	if (ret < 4) return -1;
-	ret = _writefile(iso->htable, &size, 2);
-	if (ret < 2) return -1;
-
-	ret = _writefile(iso->handle, Zbuf, size);
-//	printf("_isoWriteBlockZ %d\n", ret);
-	if (ret < size)
-	{
-		printf("error writing block!!\n");
-		return -1;
-	}
-
-	return 0;
-}
-
-int _isoWriteBlockZ2(isoFile *iso, u8 *src, int lsn)
-{
-	uLongf size;
-	u8  Zbuf[1024*16];
-	int ret;
-
-//	printf("_isoWriteBlockZ %d\n", iso->blocksize);
-	size = 1024 * 16;
-	compress(Zbuf, &size, src + iso->blockofs, iso->blocksize);
-//	printf("_isoWriteBlockZ %d\n", size);
-
-	ret = _writefile(iso->htable, (u8*) & size, 4);
-	if (ret < 4) return -1;
-	ret = _writefile(iso->handle, Zbuf, size);
-//	printf("_isoWriteBlockZ %d\n", ret);
-	if (ret < size)
-	{
-		printf("error writing block!!\n");
-		return -1;
-	}
 
 	return 0;
 }
@@ -876,53 +539,9 @@ int _isoWriteBlockD(isoFile *iso, u8 *src, int lsn)
 //	printf("_isoWriteBlock %d (ofs=%d)\n", iso->blocksize, ofs);
 	ret = _writefile(iso->handle, &lsn, 4);
 	if (ret < 4) return -1;
-	ret = _writefile(iso->handle, src + iso->blockofs, iso->blocksize);
+	ret = _writefile(iso->handle, src, iso->blocksize);
 //	printf("_isoWriteBlock %d\n", ret);
 	if (ret < iso->blocksize) return -1;
-
-	return 0;
-}
-
-int _isoWriteBlockBZ2(isoFile *iso, u8 *src, int lsn)
-{
-	u32 size;
-	u8  Zbuf[64*1024];
-	int blocks;
-	int ret;
-
-	memcpy(iso->buffer + (iso->blocksize*(lsn&0xf)), src + iso->blockofs, iso->blocksize);
-
-	if (lsn == (iso->blocks - 1))
-	{
-		blocks = (lsn & 0xf) + 1;
-	}
-	else
-	{
-		blocks = 16;
-		if ((lsn & 0xf) != 0xf) return 0;
-	}
-
-//	printf("_isoWriteBlockBZ2 %d\n", iso->blocksize);
-	size = 64 * 1024;
-	ret = BZ2_bzBuffToBuffCompress((s8*)Zbuf, (u32*) & size, (s8*)iso->buffer, iso->blocksize * blocks, 9, 0, 30);
-	
-	if (ret != BZ_OK)
-	{
-		printf("error on BZ2: %d\n", ret);
-	}
-	
-//	printf("_isoWriteBlockBZ2 %d\n", size);
-
-	ret = _writefile(iso->htable, (u8*) & size, 4);
-	if (ret < 4) return -1;
-	ret = _writefile(iso->handle, Zbuf, size);
-//	printf("_isoWriteBlockZ %d\n", ret);
-	
-	if (ret < size)
-	{
-		printf("error writing block!!\n");
-		return -1;
-	}
 
 	return 0;
 }
@@ -931,14 +550,8 @@ int isoWriteBlock(isoFile *iso, u8 *src, int lsn)
 {
 	int ret;
 
-	if (iso->flags & ISOFLAGS_Z)
-		ret = _isoWriteBlockZ(iso, src, lsn);
-	else if (iso->flags & ISOFLAGS_Z2)
-		ret = _isoWriteBlockZ2(iso, src, lsn);
-	else if (iso->flags & ISOFLAGS_BLOCKDUMP)
+	if (iso->flags & ISOFLAGS_BLOCKDUMP)
 		ret = _isoWriteBlockD(iso, src, lsn);
-	else if (iso->flags & ISOFLAGS_BZ2)
-		ret = _isoWriteBlockBZ2(iso, src, lsn);
 	else
 		ret = _isoWriteBlock(iso, src, lsn);
 	

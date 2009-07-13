@@ -234,7 +234,9 @@ s32 DoCDVDopen(const char* pTitleFilename)
 	else
 		ret = CDVDopen(pTitleFilename);
 
-	if (Config.Blockdump)
+	int cdtype = DoCDVDdetectDiskType();
+
+	if((Config.Blockdump)&&(cdtype != CDVD_TYPE_NODISC))
 	{
 		char fname_only[MAX_PATH];
 
@@ -286,13 +288,35 @@ s32 DoCDVDopen(const char* pTitleFilename)
 			" (%04d-%02d-%02d %02d-%02d-%02d).dump",
 			time.wYear, time.wMonth, time.wDay,
 			time.wHour, time.wMinute, time.wSecond);
+
+		// TODO: implement this for linux
 #else
-		// TODO: implement this
 		strcat(fname_only, ".dump");
 #endif
+		cdvdTD td;
+		DoCDVDgetTD(0, &td);
+
+		int blockofs=0;
+		int blocksize=0;
+		int blocks = td.lsn;
+
+		switch(cdtype)
+		{
+		case CDVD_TYPE_PS2DVD:
+		case CDVD_TYPE_DVDV:
+		case CDVD_TYPE_DETCTDVDS:
+		case CDVD_TYPE_DETCTDVDD:
+			blockofs = 24;
+			blocksize = 2048;
+			break;
+		default:
+			blockofs = 0;
+			blocksize= 2352;
+			break;
+		}
 
 		blockDumpFile = isoCreate(fname_only, ISOFLAGS_BLOCKDUMP);
-		if (blockDumpFile) isoSetFormat(blockDumpFile, iso->blockofs, iso->blocksize, iso->blocks);
+		if (blockDumpFile) isoSetFormat(blockDumpFile, blockofs, blocksize, blocks);
 	}
 	else
 	{

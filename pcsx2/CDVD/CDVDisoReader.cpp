@@ -220,7 +220,7 @@ s32 ISOgetTOC(void* toc)
 			if (layer1start == -1)
 			{
 				printf("CDVD: searching for layer1...");
-				tempbuffer = (u8*)malloc(CD_FRAMESIZE_RAW * 10);
+				tempbuffer = (u8*)malloc(CD_FRAMESIZE_RAW);
 				for (layer1start = (iso->blocks / 2 - 0x10) & ~0xf; layer1start < 0x200010; layer1start += 16)
 				{
 					isoReadBlock(iso, tempbuffer, layer1start);
@@ -341,7 +341,7 @@ s32 ISOreadSector(u8* tempbuffer, u32 lsn, int mode)
 		return 0;
 	}
 
-	isoReadBlock(iso, cdbuffer, lsn);
+	isoReadBlock(iso, cdbuffer + iso->blockofs, lsn);
 
 	pbuffer = cdbuffer;
 	switch (mode)
@@ -378,7 +378,7 @@ s32 ISOreadTrack(u32 lsn, int mode)
 	if(lsn > iso->blocks)
 		return -1;
 
-	isoReadBlock(iso, cdbuffer, lsn);
+	isoReadBlock(iso, cdbuffer + iso->blockofs, lsn);
 
 	pbuffer = cdbuffer;
 	switch (mode)
