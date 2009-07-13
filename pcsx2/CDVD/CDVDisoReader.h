@@ -34,6 +34,11 @@
 #include "IsoFileFormats.h"
 
 #define CDVD_LOG __Log
+
+#ifndef MAX_PATH
+#define MAX_PATH 255
+#endif
+
 extern FILE *cdvdLog;
 
 void __Log(char *fmt, ...);
@@ -43,7 +48,7 @@ void __Log(char *fmt, ...);
 
 extern char isoFileName[256];
 
-extern isoFile *blockDumpFile;
+//extern isoFile *blockDumpFile;
 extern isoFile *iso;
 
 s32  ISOinit();

@@ -27,10 +27,6 @@
 
 #include "CDVDisoReader.h"
 
-#ifndef MAX_PATH
-#define MAX_PATH 255
-#endif
-
 bool loadFromISO=false;
 
 char isoFileName[256];

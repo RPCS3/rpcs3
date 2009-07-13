@@ -14,6 +14,7 @@ noinst_LIBRARIES = libps2_cdvd.a
 libps2_cdvd_a_SOURCES = \
 CDVD.cpp IsoFStools.cpp  IsoFSdrv.cpp  CdRom.cpp \
 CDVD.h CDVD_internal.h IsoFStools.h IsoFSdrv.h IsoFScdvd.h CdRom.h  \
-CDVDisoReader.cpp CDVDisoReader.h CDVDaccess.cpp CDVDaccess.h
+CDVDisoReader.cpp CDVDisoReader.h CDVDaccess.cpp CDVDaccess.h \
+IsoFileFormats.cpp IsoFileFormats.h
 
 #SUBDIRS =
