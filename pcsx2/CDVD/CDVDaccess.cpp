@@ -208,6 +208,7 @@ void DetectDiskType()
 //
 /////////////////////////////////////////////////
 
+int cdvdInitCount=0;
 
 s32 DoCDVDinit()
 {
@@ -215,7 +216,10 @@ s32 DoCDVDinit()
 	ISOinit();
 
 	if(!loadFromISO)
+	{
+		cdvdInitCount++; // used to handle the case where the plugin was inited at boot, but then iso takes over
 		return CDVDinit();
+	}
 
 	diskTypeCached=-1;
 
@@ -310,8 +314,9 @@ void DoCDVDclose()
 
 void DoCDVDshutdown()
 {
-	if(!loadFromISO)
+	if((!loadFromISO)||(cdvdInitCount>0)) // handle the case where the plugin was inited at boot, but then iso takes over
 	{
+		cdvdInitCount--;
 		if (CDVDshutdown != NULL) CDVDshutdown();
 	}
 
@@ -350,12 +355,11 @@ s32 DoCDVDreadSector(u8* buffer, u32 lsn, int mode)
 		else ret = -1;
 	}
 
-
 	if(ret==0)
 	{
 		if (blockDumpFile != NULL)
 		{
-			isoWriteBlock(blockDumpFile, pbuffer, plsn);
+			isoWriteBlock(blockDumpFile, buffer, plsn);
 		}
 	}
 	return ret;
@@ -410,7 +414,7 @@ s32 DoCDVDgetBuffer(u8* buffer)
 	{
 		if (blockDumpFile != NULL)
 		{
-			isoWriteBlock(blockDumpFile, pbuffer, plsn);
+			isoWriteBlock(blockDumpFile, buffer, plsn);
 		}
 	}
 	return ret;

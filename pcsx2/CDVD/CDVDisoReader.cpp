@@ -40,19 +40,11 @@ int cdtype;
 
 int psize;
 
-int BlockDump;
 isoFile *iso;
 
 FILE *cdvdLog = NULL;
 
-char *methods[] =
-{
-	".Z  - compress faster",
-	".BZ - compress better",
-	NULL
-};
-
-u8 cdbuffer[CD_FRAMESIZE_RAW * 10] = {0};
+u8 cdbuffer[2352] = {0};
 
 s32 msf_to_lba(u8 m, u8 s, u8 f)
 {

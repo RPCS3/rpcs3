@@ -43,15 +43,8 @@ void __Log(char *fmt, ...);
 
 extern char isoFileName[256];
 
-extern int BlockDump;
 extern isoFile *blockDumpFile;
 extern isoFile *iso;
-
-extern u8 cdbuffer[];
-extern u8 *pbuffer;
-extern int cdtype;
-
-extern char *methods[];
 
 s32  ISOinit();
 void ISOshutdown();
