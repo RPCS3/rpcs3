@@ -463,32 +463,38 @@ static s32 cdvdReadDvdDualInfo(s32* dualType, u32* layer1Start)
 	u8 toc[2064];
 	*dualType = 0;
 	*layer1Start = 0;
-	
-	// if error getting toc, settle for single layer disc ;)
-	if(cdvdGetToc(toc))
-		return 0;
-	if(toc[14] & 0x60)
+
+	if(loadFromISO)
 	{
-		if(toc[14] & 0x10)
-		{
-			// otp dvd
-			*dualType = 2;
-			*layer1Start = (toc[25]<<16) + (toc[26]<<8) + (toc[27]) - 0x30000 + 1;
-		}
-		else
-		{
-			// ptp dvd
-			*dualType = 1;
-			*layer1Start = (toc[21]<<16) + (toc[22]<<8) + (toc[23]) - 0x30000 + 1;
-		}
+		return ISOgetDualInfo(dualType,layer1Start);
 	}
 	else
 	{
-		// single layer dvd
-		*dualType = 0;
-		*layer1Start = (toc[21]<<16) + (toc[22]<<8) + (toc[23]) - 0x30000 + 1;
+		// if error getting toc, settle for single layer disc ;)
+		if(cdvdGetToc(toc))
+			return 0;
+		if(toc[14] & 0x60)
+		{
+			if(toc[14] & 0x10)
+			{
+				// otp dvd
+				*dualType = 2;
+				*layer1Start = (toc[25]<<16) + (toc[26]<<8) + (toc[27]) - 0x30000 + 1;
+			}
+			else
+			{
+				// ptp dvd
+				*dualType = 1;
+				*layer1Start = (toc[21]<<16) + (toc[22]<<8) + (toc[23]) - 0x30000 + 1;
+			}
+		}
+		else
+		{
+			// single layer dvd
+			*dualType = 0;
+			*layer1Start = (toc[21]<<16) + (toc[22]<<8) + (toc[23]) - 0x30000 + 1;
+		}
 	}
-	
 	return 1;
 }
 

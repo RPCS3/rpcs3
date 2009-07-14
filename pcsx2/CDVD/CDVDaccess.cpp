@@ -121,7 +121,7 @@ int FindDiskType(int mType)
 		}
 	}
 
-	fprintf(stderr," * CDVD Disk Open: %d tracks (%d to %d):\n",tn.etrack-tn.strack+1,tn.strack,tn.etrack);
+	DevCon::Status(" * CDVD Disk Open: %d tracks (%d to %d):\n", params tn.etrack-tn.strack+1,tn.strack,tn.etrack);
 
 	audioTracks=dataTracks=0;
 	for(int i=tn.strack;i<=tn.etrack;i++)
@@ -139,12 +139,12 @@ int FindDiskType(int mType)
 		if(td.type==CDVD_AUDIO_TRACK) 
 		{
 			audioTracks++;
-			fprintf(stderr," * * Track %d: Audio (%d sectors)\n",i,tlength);
+			DevCon::Status(" * * Track %d: Audio (%d sectors)\n", params i,tlength);
 		}
 		else 
 		{
 			dataTracks++;
-			fprintf(stderr," * * Track %d: Data (Mode %d) (%d sectors)\n",i,((td.type==CDVD_MODE1_TRACK)?1:2),tlength);
+			DevCon::Status(" * * Track %d: Data (Mode %d) (%d sectors)\n", params i,((td.type==CDVD_MODE1_TRACK)?1:2),tlength);
 		}
 	}
 

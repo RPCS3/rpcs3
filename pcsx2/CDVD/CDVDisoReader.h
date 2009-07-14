@@ -60,5 +60,6 @@ extern s32  ISOreadSector(u8* tempbuffer, u32 lsn, int mode);
 extern s32  ISOgetTOC(void* toc);
 extern s32  ISOreadTrack(u32 lsn, int mode);
 extern s32  ISOgetBuffer(u8* buffer);
+extern s32 ISOgetDualInfo(s32* dualType, u32* _layer1start);
 
 #endif

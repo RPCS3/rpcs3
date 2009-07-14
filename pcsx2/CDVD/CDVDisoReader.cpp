@@ -179,6 +179,53 @@ s32 ISOgetTD(u8 Track, cdvdTD *Buffer)
 }
 
 static s32 layer1start = -1;
+
+static void FindLayer1Start()
+{
+	if ((layer1start == -1) && iso->blocks >= 2295104)
+	{
+		// search for it
+		int off = iso->blockofs;
+		u8* tempbuffer;
+
+		Console::Status("CDVD: searching for layer1...");
+		tempbuffer = (u8*)malloc(CD_FRAMESIZE_RAW);
+		for (layer1start = (iso->blocks / 2 - 0x10) & ~0xf; layer1start < 0x200010; layer1start += 16)
+		{
+			isoReadBlock(iso, tempbuffer, layer1start);
+			// CD001
+			if (tempbuffer[off+1] == 0x43 && tempbuffer[off+2] == 0x44 && tempbuffer[off+3] == 0x30 && tempbuffer[off+4] == 0x30 && tempbuffer[off+5] == 0x31)
+				break;
+		}
+		free(tempbuffer);
+
+		if(layer1start == 0x200010)
+		{
+			Console::Status("Couldn't find second layer on dual layer... ignoring\n");
+			layer1start=-2;
+		}
+
+		Console::Status("found at 0x%8.8x\n", params layer1start);
+	}
+}
+
+s32 ISOgetDualInfo(s32* dualType, u32* _layer1start)
+{
+	FindLayer1Start();
+
+	if(layer1start<0)
+	{
+		*dualType=0;
+		*_layer1start = iso->blocks;
+	}
+	else
+	{
+		*dualType = 1;
+		*_layer1start = layer1start;
+	}
+	return 1;
+}
+
 s32 ISOgetTOC(void* toc)
 {
 	u8 type = CDVDgetDiskType();
@@ -192,11 +239,26 @@ s32 ISOgetTOC(void* toc)
 		// scsi command 0x43
 		memset(tocBuff, 0, 2048);
 
-		if (layer1start != -2 && iso->blocks >= 0x300000)
-		{
-			int off = iso->blockofs;
-			u8* tempbuffer;
+		FindLayer1Start();
 
+		if (layer1start < 0)
+		{
+			// fake it
+			tocBuff[ 0] = 0x04;
+			tocBuff[ 1] = 0x02;
+			tocBuff[ 2] = 0xF2;
+			tocBuff[ 3] = 0x00;
+			tocBuff[ 4] = 0x86;
+			tocBuff[ 5] = 0x72;
+
+			tocBuff[16] = 0x00;
+			tocBuff[17] = 0x03;
+			tocBuff[18] = 0x00;
+			tocBuff[19] = 0x00;
+			return 0;
+		}
+		else
+		{
 			// dual sided
 			tocBuff[ 0] = 0x24;
 			tocBuff[ 1] = 0x02;
@@ -212,62 +274,11 @@ s32 ISOgetTOC(void* toc)
 			tocBuff[18] = 0x00;
 			tocBuff[19] = 0x00;
 
-			// search for it
-			if (layer1start == -1)
-			{
-				printf("CDVD: searching for layer1...");
-				tempbuffer = (u8*)malloc(CD_FRAMESIZE_RAW);
-				for (layer1start = (iso->blocks / 2 - 0x10) & ~0xf; layer1start < 0x200010; layer1start += 16)
-				{
-					isoReadBlock(iso, tempbuffer, layer1start);
-					// CD001
-					if (tempbuffer[off+1] == 0x43 && tempbuffer[off+2] == 0x44 && tempbuffer[off+3] == 0x30 && tempbuffer[off+4] == 0x30 && tempbuffer[off+5] == 0x31)
-						break;
-				}
-				free(tempbuffer);
-
-				if (layer1start == 0x200010)
-				{
-					printf("Couldn't find second layer on dual layer... ignoring\n");
-					// fake it
-					tocBuff[ 0] = 0x04;
-					tocBuff[ 1] = 0x02;
-					tocBuff[ 2] = 0xF2;
-					tocBuff[ 3] = 0x00;
-					tocBuff[ 4] = 0x86;
-					tocBuff[ 5] = 0x72;
-
-					tocBuff[16] = 0x00;
-					tocBuff[17] = 0x03;
-					tocBuff[18] = 0x00;
-					tocBuff[19] = 0x00;
-					layer1start = -2;
-					return 0;
-				}
-
-				printf("found at 0x%8.8x\n", layer1start);
-				layer1start = layer1start + 0x30000 - 1;
-			}
-
-			tocBuff[20] = layer1start >> 24;
-			tocBuff[21] = (layer1start >> 16) & 0xff;
-			tocBuff[22] = (layer1start >> 8) & 0xff;
-			tocBuff[23] = (layer1start >> 0) & 0xff;
-		}
-		else
-		{
-			// fake it
-			tocBuff[ 0] = 0x04;
-			tocBuff[ 1] = 0x02;
-			tocBuff[ 2] = 0xF2;
-			tocBuff[ 3] = 0x00;
-			tocBuff[ 4] = 0x86;
-			tocBuff[ 5] = 0x72;
-
-			tocBuff[16] = 0x00;
-			tocBuff[17] = 0x03;
-			tocBuff[18] = 0x00;
-			tocBuff[19] = 0x00;
+			s32 l1s = layer1start + 0x30000 - 1;
+			tocBuff[20] = (l1s >> 24);
+			tocBuff[21] = (l1s >> 16) & 0xff;
+			tocBuff[22] = (l1s >> 8) & 0xff;
+			tocBuff[23] = (l1s >> 0) & 0xff;
 		}
 	}
 	else if ((type == CDVD_TYPE_CDDA) || (type == CDVD_TYPE_PS2CDDA) ||
