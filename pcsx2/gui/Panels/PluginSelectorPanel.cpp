@@ -35,7 +35,7 @@ struct PluginInfo
 };
 
 // Yay, order of this array shouldn't be important. :)
-static const PluginInfo tbl_PluginInfo[] = 
+static const PluginInfo tbl_PluginInfo[] =
 {
 	{ "GS",		PluginId_GS,	PS2E_LT_GS,		PS2E_GS_VERSION },
 	{ "PAD",	PluginId_PAD,	PS2E_LT_PAD,	PS2E_PAD_VERSION },
@@ -57,7 +57,7 @@ namespace Exception
 	public:
 		virtual ~NotPcsxPlugin() throw() {}
 		explicit NotPcsxPlugin( const wxString& objname ) :
-			Stream( objname, wxLt("Dynamic library is not a PCSX2 plugin (or is an unsupported m_version)") ) {}	
+			Stream( objname, wxLt("Dynamic library is not a PCSX2 plugin (or is an unsupported m_version)") ) {}
 	};
 
 };
@@ -79,7 +79,7 @@ protected:
 	_PS2EgetLibType     m_GetLibType;
 	_PS2EgetLibName     m_GetLibName;
 	_PS2EgetLibVersion2 m_GetLibVersion2;
-	
+
 	u32 m_type;
 
 public:
@@ -100,7 +100,7 @@ public:
 		m_GetLibType		= (_PS2EgetLibType)m_plugin.GetSymbol( L"PS2EgetLibType" );
 		m_GetLibName		= (_PS2EgetLibName)m_plugin.GetSymbol( L"PS2EgetLibName" );
 		m_GetLibVersion2	= (_PS2EgetLibVersion2)m_plugin.GetSymbol( L"PS2EgetLibVersion2" );
-		
+
 		if( m_GetLibType == NULL || m_GetLibName == NULL || m_GetLibVersion2 == NULL )
 		{
 			throw Exception::NotPcsxPlugin( m_plugpath );
@@ -120,11 +120,11 @@ public:
 			if ( ((version >> 16)&0xff) == tbl_PluginInfo[pluginTypeIndex].version )
 				return true;
 
-			Console::Notice("%s Plugin %s:  Version %x != %x", params info.shortname, m_plugpath, 0xff&(version >> 16), info.version);
+			Console::Notice("%s Plugin %s:  Version %x != %x", params info.shortname, m_plugpath.c_str(), 0xff&(version >> 16), info.version);
 		}
 		return false;
 	}
-	
+
 	bool Test( int pluginTypeIndex ) const
 	{
 		// all test functions use the same parameterless API, so just pick one arbitrarily (I pick PAD!)
@@ -132,7 +132,7 @@ public:
 		if( testfunc == NULL ) return false;
 		return (testfunc() == 0);
 	}
-	
+
 	wxString GetName() const
 	{
 		wxASSERT( m_GetLibName != NULL );
@@ -198,7 +198,7 @@ Panels::PluginSelectorPanel::ComboBoxPanel::ComboBoxPanel( PluginSelectorPanel* 
 		s_plugin.Add( new wxButton( this, wxID_ANY, L"Configure..." ) );
 	}
 
-	SetSizerAndFit( &s_plugin );	
+	SetSizerAndFit( &s_plugin );
 }
 
 void Panels::PluginSelectorPanel::ComboBoxPanel::Reset()
@@ -225,16 +225,16 @@ Panels::PluginSelectorPanel::PluginSelectorPanel( wxWindow& parent ) :
 	s_main.AddSpacer( 4 );
 	AddStaticText( s_main, _("Tip: Any installed plugins that are not compatible with your hardware or operating system will be listed below a separator."), 388, wxALIGN_CENTRE );
 	s_main.AddSpacer( 4 );
-	
+
 	s_main.Add( &m_StatusPanel, SizerFlags::StdExpand().ReserveSpaceEvenIfHidden() );
 
 	// refresh button used for diagnostics... (don't think there's a point to having one otherwise) --air
 	//wxButton* refresh = new wxButton( this, wxID_ANY, L"Refresh" );
 	//s_main.Add( refresh );
 	//Connect( refresh->GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PluginSelectorPanel::OnRefresh ) );
-	
+
 	SetSizerAndFit( &s_main );
-	
+
 	Connect( GetId(), wxEVT_SHOW, wxShowEventHandler( PluginSelectorPanel::OnShow ) );
 
 	Connect( wxEVT_EnumeratedNext,		wxCommandEventHandler( PluginSelectorPanel::OnProgress ) );
@@ -245,7 +245,7 @@ Panels::PluginSelectorPanel::~PluginSelectorPanel()
 {
 	// Random crashes on null function pointer if we don't clean up the event...
 	Disconnect( GetId(), wxEVT_SHOW, wxShowEventHandler( PluginSelectorPanel::OnShow ) );
-	
+
 	// Kill the thread if it's alive.
 
 	safe_delete( m_EnumeratorThread );
@@ -262,7 +262,7 @@ bool Panels::PluginSelectorPanel::Apply( AppConfig& conf )
 		relative.MakeRelativeTo( g_Conf.Folders.Plugins.ToString() );
 		conf.BaseFilenames.Plugins[tbl_PluginInfo[i].id] = relative.GetFullPath();
 	}
-	
+
 	return true;
 }
 
@@ -295,7 +295,7 @@ void Panels::PluginSelectorPanel::OnShow( wxShowEvent& evt )
 void Panels::PluginSelectorPanel::OnRefresh( wxCommandEvent& evt )
 {
 	m_ComboBoxes.Reset();
-	DoRefresh();	
+	DoRefresh();
 }
 
 void Panels::PluginSelectorPanel::OnEnumComplete( wxCommandEvent& evt )
@@ -304,7 +304,7 @@ void Panels::PluginSelectorPanel::OnEnumComplete( wxCommandEvent& evt )
 
 	// fixme: Default plugins should be picked based on the timestamp of the DLL or something?
 	//  (for now we just force it to selection zero if nothing's selected)
-	
+
 	int emptyBoxes = 0;
 	for( int i=0; i<NumPluginTypes; ++i )
 	{
@@ -314,7 +314,7 @@ void Panels::PluginSelectorPanel::OnEnumComplete( wxCommandEvent& evt )
 		else if( m_ComboBoxes.Get(i).GetSelection() == wxNOT_FOUND )
 			m_ComboBoxes.Get(i).SetSelection( 0 );
 	}
-	
+
 	if( emptyBoxes > 0 )
 	{
 		wxMessageBox( pxE( Msg_Popup_MissingPlugins),
@@ -331,10 +331,15 @@ void Panels::PluginSelectorPanel::OnProgress( wxCommandEvent& evt )
 {
 	size_t evtidx = evt.GetExtraLong();
 	m_StatusPanel.AdvanceProgress( (evtidx < m_FileList.Count()-1) ?
-		m_FileList[evtidx + 1] : _("Completing tasks...")
+		m_FileList[evtidx + 1] : wxString(_("Completing tasks..."))
 	);
 
 	EnumeratedPluginInfo& result( m_EnumeratorThread->Results[evtidx] );
+
+	if( result.TypeMask == 0 )
+	{
+		Console::Error( L"Some kinda plugin failure: " + m_FileList[evtidx] );
+	}
 
 	for( int i=0; i<NumPluginTypes; ++i )
 	{
@@ -346,22 +351,15 @@ void Panels::PluginSelectorPanel::OnProgress( wxCommandEvent& evt )
 					result.Name.c_str(), result.Version[i].c_str(), Path::GetFilenameWithoutExt( m_FileList[evtidx] ).c_str() ),
 					(void*)evtidx
 				);
-				
+
 				wxFileName left( m_FileList[evtidx] );
 				wxFileName right( g_Conf.FullpathTo(tbl_PluginInfo[i].id) );
 
 				left.MakeRelativeTo( g_Conf.Folders.Plugins.ToString() );
 				right.MakeRelativeTo( g_Conf.Folders.Plugins.ToString() );
 
-				Console::WriteLn( left.GetFullPath() );
-				Console::WriteLn( right.GetFullPath() );
-
 				if( left == right )
 					m_ComboBoxes.Get(i).SetSelection( sel );
-			}
-			else
-			{
-				// plugin failed the test.
 			}
 		}
 	}
@@ -426,7 +424,8 @@ int Panels::PluginSelectorPanel::EnumThread::Callback()
 		m_master.GetEventHandler()->AddPendingEvent( yay );
 	}
 
-	m_master.GetEventHandler()->AddPendingEvent( wxCommandEvent( wxEVT_EnumerationFinished ) );
+	wxCommandEvent done( wxEVT_EnumerationFinished );
+	m_master.GetEventHandler()->AddPendingEvent( done );
 
 	return 0;
 }
