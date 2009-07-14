@@ -4890,11 +4890,30 @@ Version x.x</property>
 		  </child>
 
 		  <child>
+		    <widget class="GtkMenuItem" id="run_iso1">
+		      <property name="visible">True</property>
+		      <property name="label" translatable="yes">_Run Iso...</property>
+		      <property name="use_underline">True</property>
+		      <signal name="activate" handler="OnFile_RunIso" last_modification_time="Tue, 14 Jul 2009 10:07:31 GMT"/>
+		    </widget>
+		  </child>
+
+		  <child>
 		    <widget class="GtkMenuItem" id="GtkMenuItem_LoadElf">
 		      <property name="visible">True</property>
-		      <property name="label" translatable="yes">_Load Elf</property>
+		      <property name="label" translatable="yes">_Load Elf...</property>
 		      <property name="use_underline">True</property>
 		      <signal name="activate" handler="OnFile_LoadElf"/>
+		    </widget>
+		  </child>
+
+		  <child>
+		    <widget class="GtkCheckMenuItem" id="enable_blockdump1">
+		      <property name="visible">True</property>
+		      <property name="label" translatable="yes">_Enable Blockdump</property>
+		      <property name="use_underline">True</property>
+		      <property name="active">False</property>
+		      <signal name="activate" handler="OnFile_BlockDump" last_modification_time="Tue, 14 Jul 2009 10:09:00 GMT"/>
 		    </widget>
 		  </child>
 

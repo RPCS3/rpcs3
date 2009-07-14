@@ -17,6 +17,7 @@
  */
 
 #include "LnxMain.h"
+#include "CDVD/CDVDisoReader.h"
 
 using namespace R5900;
 
@@ -334,8 +335,51 @@ void OnLanguage(GtkMenuItem *menuitem, gpointer user_data)
 
 void OnFile_RunCD(GtkMenuItem *menuitem, gpointer user_data)
 {
+	loadFromISO = false;
 	SysReset();
 	SysPrepareExecution(NULL);
+}
+
+void OnRunIso_Ok(GtkButton* button, gpointer user_data)
+{
+	gchar *File;
+	loadFromISO = true;
+
+	File = (gchar*)gtk_file_selection_get_filename(GTK_FILE_SELECTION(FileSel));
+	strcpy(isoFileName, File);
+	gtk_widget_destroy(FileSel);
+
+	SysReset();
+	SysPrepareExecution( NULL );
+}
+
+void OnRunIso_Cancel(GtkButton* button, gpointer user_data)
+{
+	gtk_widget_destroy(FileSel);
+}
+
+void OnFile_RunIso(GtkMenuItem *menuitem, gpointer user_data)
+{
+	GtkWidget *Ok, *Cancel;
+
+	FileSel = gtk_file_selection_new("Select Iso File");
+
+	Ok = GTK_FILE_SELECTION(FileSel)->ok_button;
+	gtk_signal_connect(GTK_OBJECT(Ok), "clicked", GTK_SIGNAL_FUNC(OnRunIso_Ok), NULL);
+	gtk_widget_show(Ok);
+
+	Cancel = GTK_FILE_SELECTION(FileSel)->cancel_button;
+	gtk_signal_connect(GTK_OBJECT(Cancel), "clicked", GTK_SIGNAL_FUNC(OnRunIso_Cancel), NULL);
+	gtk_widget_show(Cancel);
+
+	gtk_widget_show(FileSel);
+	gdk_window_raise(FileSel->window);
+}
+
+void OnFile_BlockDump(GtkMenuItem *menuitem, gpointer user_data)
+{
+	Config.Blockdump = (int)gtk_check_menu_item_get_active((GtkCheckMenuItem*)menuitem);
+	SaveConfig();
 }
 
 void OnRunElf_Ok(GtkButton* button, gpointer user_data)

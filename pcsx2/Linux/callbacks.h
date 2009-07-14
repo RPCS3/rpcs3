@@ -265,3 +265,11 @@ OnLogging_Ok                           (GtkButton       *button,
 void
 OnMemcards_Ok                          (GtkButton       *button,
                                         gpointer         user_data);
+
+void
+OnFile_RunIso                          (GtkMenuItem     *menuitem,
+                                        gpointer         user_data);
+
+void
+OnFile_BlockDump                       (GtkMenuItem     *menuitem,
+                                        gpointer         user_data);
