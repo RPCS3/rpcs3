@@ -24,11 +24,12 @@ extern void DevAssert( bool condition, const char* msg );
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // This class provides an easy and clean method for ensuring objects are not copyable.
+//
 class NoncopyableObject
 {
 protected:
 	NoncopyableObject() {}
-	~NoncopyableObject() {}
+	~NoncopyableObject() {}		// intentionally non-virtual (code should never use this as a polymorphic type)
 
 // Programmer's note:
 //   No need to provide implementations for these methods since they should
@@ -119,8 +120,10 @@ namespace Exception
 		virtual bool IsDelaySlot() const=0;
 	};
 
-	//////////////////////////////////////////////////////////////////////////////////
-	//
+	// ---------------------------------------------------------------------------------------
+	// Generalized Exceptions: RuntimeError / LogicError / AssertionFailure
+	// ---------------------------------------------------------------------------------------
+
 	class RuntimeError : public BaseException
 	{
 	public:
@@ -128,14 +131,13 @@ namespace Exception
 		
 		RuntimeError( const RuntimeError& src ) : BaseException( src ) {}
 
-		explicit RuntimeError( const char* msg="An unhandled runtime error has occurred, somewhere in the depths of Pcsx2's cluttered brain-matter." ) :
+		explicit RuntimeError( const char* msg=wxLt("An unhandled runtime error has occurred, somewhere in the depths of Pcsx2's cluttered brain-matter.") ) :
 			BaseException( msg ) { }
 
 		explicit RuntimeError( const wxString& msg_eng, const wxString& msg_xlt ) :
 			BaseException( msg_eng, msg_xlt ) { }
 	};
 
-	// ------------------------------------------------------------------------
 	class LogicError : public BaseException
 	{
 	public:
@@ -143,7 +145,7 @@ namespace Exception
 
 		LogicError( const LogicError& src ) : BaseException( src ) {}
 
-		explicit LogicError( const char* msg="An unhandled logic error has occurred." ) :
+		explicit LogicError( const char* msg=wxLt("An unhandled logic error has occurred.") ) :
 			BaseException( msg ) { }
 
 		explicit LogicError( const wxString& msg_eng, const wxString& msg_xlt ) :
@@ -153,7 +155,7 @@ namespace Exception
 	class AssertionFailure : public LogicError
 	{
 	public:
-		explicit AssertionFailure( const char* msg="Assertion Failure" ) :
+		explicit AssertionFailure( const char* msg=wxLt("Assertion Failure") ) :
 			LogicError( msg ) {}
 
 		explicit AssertionFailure( const wxString& msg_eng, const wxString& msg_xlt ) :
@@ -162,22 +164,24 @@ namespace Exception
 		virtual ~AssertionFailure() throw() {}
 	};
 	
-	//////////////////////////////////////////////////////////////////////////////////
-	//
+	// ---------------------------------------------------------------------------------------
+	// OutOfMemory / InvalidOperation / InvalidArgument / IndexBoundsFault / ParseError
+	// ---------------------------------------------------------------------------------------
+
 	class OutOfMemory : public RuntimeError
 	{
 	public:
 		virtual ~OutOfMemory() throw() {}
-		explicit OutOfMemory( const char* msg="Out of memory" ) :
+		explicit OutOfMemory( const char* msg=wxLt("Out of memory") ) :
 			RuntimeError( msg ) {}
 
 		explicit OutOfMemory( const wxString& msg_eng, const wxString& msg_xlt=_("Out of memory") ) :
 			RuntimeError( msg_eng, msg_xlt ) { }
 	};
 
-	// ------------------------------------------------------------------------
 	// This exception thrown any time an operation is attempted when an object
 	// is in an uninitialized state.
+	//
 	class InvalidOperation : public LogicError
 	{
 	public:
@@ -189,9 +193,9 @@ namespace Exception
 			LogicError( msg_eng, msg_xlt ) { }
 	};
 
-	// ------------------------------------------------------------------------
 	// This exception thrown any time an operation is attempted when an object
 	// is in an uninitialized state.
+	//
 	class InvalidArgument : public LogicError
 	{
 	public:
@@ -200,13 +204,13 @@ namespace Exception
 			LogicError( msg )
 		{
 			// assertions make debugging easier sometimes. :)
-			wxASSERT( msg );
+			wxASSERT_MSG_A( false, msg );
 		}
 	};
 
-	// ------------------------------------------------------------------------
 	// Keep those array indexers in bounds when using the SafeArray type, or you'll be
 	// seeing these.
+	//
 	class IndexBoundsFault : public LogicError
 	{
 	public:
@@ -223,14 +227,13 @@ namespace Exception
 			BadIndex( index )
 		{
 			// assertions make debugging easier sometimes. :)
-			wxASSERT( L"Index is outside the bounds of an array" );
+			wxASSERT_MSG( false, L"Index is outside the bounds of an array" );
 		}
 		
 		virtual wxString LogMessage() const;
 		virtual wxString DisplayMessage() const;
 	};
 	
-	// ------------------------------------------------------------------------
 	class ParseError : public RuntimeError
 	{
 	public:
@@ -239,20 +242,23 @@ namespace Exception
 			RuntimeError( msg ) {}
 	};	
 
-	//////////////////////////////////////////////////////////////////////////////////
-	//
+	// ---------------------------------------------------------------------------------------
+	// Hardware/OS Exceptions:
+	//   HardwareDeficiency / CpuStateShutdown / PluginFailure / ThreadCreationError
+	// ---------------------------------------------------------------------------------------
+
 	class HardwareDeficiency : public RuntimeError
 	{
 	public:
-		explicit HardwareDeficiency( const char* msg="Your machine's hardware is incapable of running Pcsx2.  Sorry dood." ) :
+		explicit HardwareDeficiency( const char* msg=wxLt("Your machine's hardware is incapable of running Pcsx2.  Sorry dood.") ) :
 			RuntimeError( msg ) {}
 		virtual ~HardwareDeficiency() throw() {}
 	};
 
-	// ------------------------------------------------------------------------
 	// This exception is thrown by the PS2 emulation (R5900, etc) when bad things happen
 	// that force the emulation state to terminate.  The GUI should handle them by returning
 	// the user to the GUI.
+	//
 	class CpuStateShutdown : public RuntimeError
 	{
 	public:
@@ -264,7 +270,6 @@ namespace Exception
 			RuntimeError( msg_eng, msg_xlt.IsEmpty() ? L"Unexpected emulation shutdown" : msg_xlt ) { }
 	};
 
-	// ------------------------------------------------------------------------
 	class PluginFailure : public RuntimeError
 	{
 	public:
@@ -280,7 +285,6 @@ namespace Exception
 		virtual wxString DisplayMessage() const;
 	};
 
-	// ------------------------------------------------------------------------
 	class ThreadCreationError : public RuntimeError
 	{
 	public:
@@ -289,12 +293,15 @@ namespace Exception
 			RuntimeError( msg ) {}
 	};
 
-	//////////////////////////////////////////////////////////////////////////////////
-	//                             STREAMING EXCEPTIONS
+	// ---------------------------------------------------------------------------------------
+	// Streaming (file) Exceptions:
+	//   Stream / BadStream / CreateStream / FileNotFound / AccessDenied / EndOfStream
+	// ---------------------------------------------------------------------------------------
 
-	// ------------------------------------------------------------------------
 	// Generic stream error.  Contains the name of the stream and a message.
-	// This exception is usually thrown via derived classes, except in the (rare) case of a generic / unknown error.
+	// This exception is usually thrown via derived classes, except in the (rare) case of a
+	// generic / unknown error.
+	//
 	class Stream : public RuntimeError
 	{
 	public:
@@ -322,23 +329,23 @@ namespace Exception
 		virtual wxString DisplayMessage() const;
 	};
 
-	// ------------------------------------------------------------------------
 	// A generic base error class for bad streams -- corrupted data, sudden closures, loss of
 	// connection, or anything else that would indicate a failure to read the data after the
 	// stream was successfully opened.
+	//
 	class BadStream : public Stream
 	{
 	public:
 		virtual ~BadStream() throw() {}
 		explicit BadStream(
 			const wxString& objname=wxString(),
-			const char* msg="File data is corrupted or incomplete, or the stream connection closed unexpectedly"
+			const char* msg=wxLt("File data is corrupted or incomplete, or the stream connection closed unexpectedly")
 		) :
 			Stream( objname, msg ) {}
 	};
 
-	// ------------------------------------------------------------------------
 	// A generic exception for odd-ball stream creation errors.
+	//
 	class CreateStream : public Stream
 	{
 	public:
@@ -346,18 +353,18 @@ namespace Exception
 
 		explicit CreateStream(
 			const char* objname,
-			const char* msg="File could not be created or opened" ) :
+			const char* msg=wxLt("File could not be created or opened") ) :
 		Stream( wxString::FromAscii( objname ), msg ) {}
 
 		explicit CreateStream(
 			const wxString& objname=wxString(),
-			const char* msg="File could not be created or opened" ) :
+			const char* msg=wxLt("File could not be created or opened") ) :
 		Stream( objname, msg ) {}	
 	};
 
-	// ------------------------------------------------------------------------
 	// Exception thrown when an attempt to open a non-existent file is made.
 	// (this exception can also mean file permissions are invalid)
+	//
 	class FileNotFound : public CreateStream
 	{
 	public:
@@ -370,7 +377,6 @@ namespace Exception
 		CreateStream( objname, msg ) {}
 	};
 
-	// ------------------------------------------------------------------------
 	class AccessDenied : public CreateStream
 	{
 	public:
@@ -381,21 +387,25 @@ namespace Exception
 		CreateStream( objname, msg ) {}
 	};
 
-	// ------------------------------------------------------------------------
-	// Generic End of Stream exception (sometimes an error, and sometimes just used as a
-	// shortcut for manual feof checks).
+	// EndOfStream can be used either as an error, or used just as a shortcut for manual
+	// feof checks.
+	//
 	class EndOfStream : public Stream
 	{
 	public:
 		virtual ~EndOfStream() throw() {}
-		explicit EndOfStream( const wxString& objname, const char* msg="End of file" ) :
+		explicit EndOfStream( const wxString& objname, const char* msg=wxLt("Unexpected end of file") ) :
 			Stream( objname, msg ) {}
 	};
 
-	//////////////////////////////////////////////////////////////////////////////////
-	//                            SAVESTATE EXCEPTIONS
+	// ---------------------------------------------------------------------------------------
+	// Savestate Exceptions:
+	//   BadSavedState / FreezePluginFailure / StateLoadError / UnsupportedStateVersion /
+	//   StateCrcMismatch
+	// ---------------------------------------------------------------------------------------
 
 	// Exception thrown when a corrupted or truncated savestate is encountered.
+	//
 	class BadSavedState : public BadStream
 	{
 	public:
@@ -406,8 +416,8 @@ namespace Exception
 		BadStream( objname, msg ) {}
 	};
 
-	// ------------------------------------------------------------------------
 	// Exception thrown by SaveState class when a critical plugin or gzread
+	//
 	class FreezePluginFailure : public RuntimeError
 	{
 	public:
@@ -426,21 +436,21 @@ namespace Exception
 		virtual wxString DisplayMessage() const;
 	};
 
-	// ------------------------------------------------------------------------
-	// The savestate code throws Recoverable errors when it fails prior to actually modifying
+	// A recoverable error thrown when a savestate load fails prior to actually modifying
 	// the current emulation state.  Recoverable errors are always thrown from the SaveState
 	// object construction (and never from Freeze methods).
-	class StateLoadError_Recoverable : public RuntimeError
+	//
+	class StateLoadError : public RuntimeError
 	{
 	public:
-		virtual ~StateLoadError_Recoverable() throw() {}
-		explicit StateLoadError_Recoverable( const char* msg="Recoverable savestate load error" ) :
+		virtual ~StateLoadError() throw() {}
+		explicit StateLoadError( const char* msg="Recoverable savestate load error" ) :
 			RuntimeError( msg ) {}
 	};
 
-	// ------------------------------------------------------------------------
 	// A recoverable exception thrown when the savestate being loaded isn't supported.
-	class UnsupportedStateVersion : public StateLoadError_Recoverable
+	//
+	class UnsupportedStateVersion : public StateLoadError
 	{
 	public:
 		u32 Version;		// version number of the unsupported state.
@@ -448,7 +458,7 @@ namespace Exception
 	public:
 		virtual ~UnsupportedStateVersion() throw() {}
 		explicit UnsupportedStateVersion( int version ) :
-			StateLoadError_Recoverable(),
+			StateLoadError(),
 			Version( version )
 		{}
 
@@ -456,11 +466,11 @@ namespace Exception
 		virtual wxString DisplayMessage() const;
 	};
 
-	// ------------------------------------------------------------------------
 	// A recoverable exception thrown when the CRC of the savestate does not match the
 	// CRC returned by the Cdvd driver.
 	// [feature not implemented yet]
-	class StateCrcMismatch : public StateLoadError_Recoverable
+	//
+	class StateCrcMismatch : public StateLoadError
 	{
 	public:
 		u32 Crc_Savestate;
@@ -469,7 +479,7 @@ namespace Exception
 	public:
 		virtual ~StateCrcMismatch() throw() {}
 		explicit StateCrcMismatch( u32 crc_save, u32 crc_cdvd )
-		:	StateLoadError_Recoverable()
+		:	StateLoadError()
 		,	Crc_Savestate( crc_save )
 		,	Crc_Cdvd( crc_cdvd )
 		{}

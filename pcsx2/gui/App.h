@@ -21,10 +21,14 @@
 #include <wx/wx.h>
 #include <wx/fileconf.h>
 #include <wx/imaglist.h>
+#include <wx/docview.h>
+
 #include "System.h"
 
 class MainEmuFrame;
 class IniInterface;
+
+extern wxFileHistory* g_RecentIsoList;
 
 //////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -44,7 +48,6 @@ public:
 	virtual void OnClear(wxMenuEvent& event);
 
 	virtual void OnCloseWindow(wxCloseEvent& event);
-
 
 	virtual void Write( const wxChar* text );
 	virtual void Write( const char* text );

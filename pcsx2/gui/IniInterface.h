@@ -41,6 +41,8 @@ public:
 
 	void SetPath( const wxString& path );
 	void Flush();
+	
+	wxConfigBase& GetConfig() { return m_Config; }
 
 	virtual bool IsLoading() const=0;
 	bool IsSaving() const { return !IsLoading(); }

@@ -204,7 +204,7 @@
 // Default is 0
 //
 // Recommended setting: YMMV
-#define wxUSE_STL 0
+#define wxUSE_STL 1
 
 // Support for message/error logging. This includes wxLogXXX() functions and
 // wxLog and derived classes. Don't set this to 0 unless you really know what
@@ -963,7 +963,7 @@
 #define wxUSE_MDI 0
 
 // Set to 0 to disable document/view architecture
-#define wxUSE_DOC_VIEW_ARCHITECTURE 0
+#define wxUSE_DOC_VIEW_ARCHITECTURE 1
 
 // Set to 0 to disable MDI document/view architecture
 //

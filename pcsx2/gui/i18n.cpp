@@ -41,9 +41,14 @@ const EnglishExpansionEntry m_tbl_English[] =
 		L"Changing these settings can cause program errors, so please be weary."
 	},
 
-	{ Msg_Tooltips_SettingsPath, wxLt(L"Setting Tooltip:Settings Path"),
+	{ Msg_Tooltips_SettingsPath, wxLt(L"Settings Tooltip:Settings Path"),
 		L"This is the folder where PCSX2 saves all settings, including settings generated "
 		L"by most plugins.\n\nWarning: Some older versions of plugins may not respect this value."
+	},
+	
+	{ Msg_Popup_MissingPlugins, wxLt(L"Popup Error:Missing Plugins"),
+		L"Critical Error: A valid plugin for one or more components of PCSX2 could not be found. "
+		L"Your installation of PCSX2 is incomplete, and will be unable to run games."
 	},
 
 	// ------------------------------------------------------------------------
@@ -86,6 +91,11 @@ C_ASSERT( ArraySize( m_tbl_English ) == ExpandedMsg_Count );
 
 static HashMap<int,HashedExpansionPair> m_EnglishExpansions( -1, 0xcdcdcd, ArraySize( m_tbl_English ) );
 
+static bool IsEnglish( int id )
+{
+	return ( id == wxLANGUAGE_ENGLISH || id == wxLANGUAGE_ENGLISH_US );
+}
+
 // ------------------------------------------------------------------------
 // Builds an internal hashtable for English iconized description lookups.
 //
@@ -99,6 +109,58 @@ void i18n_InitPlainEnglish()
 		HashedExpansionPair silly = { m_tbl_English[i].gettextKey, m_tbl_English[i].Expanded };
 		m_EnglishExpansions[m_tbl_English[i].Key] = silly;
 	}
+}
+
+// ------------------------------------------------------------------------
+//
+static void i18n_DoPackageCheck( int wxLangId, wxArrayString& destEng, wxArrayString& destTrans )
+{
+	// Note: wx auto-preserves the current locale for us
+
+	if( !wxLocale::IsAvailable( wxLangId ) ) return;
+	wxLocale* locale = new wxLocale( wxLangId, wxLOCALE_CONV_ENCODING );
+
+	if( locale->IsOk() && locale->AddCatalog( L"pcsx2ident" ) )
+	{
+		// Should be a valid language, so add it to the list.
+
+		destEng.Add( wxLocale::GetLanguageName( wxLangId ) );
+		destTrans.Add( wxGetTranslation( L"NativeName" ) );
+	}
+	delete locale;
+}
+
+// ------------------------------------------------------------------------
+// Finds all valid PCSX2 language packs, and enumerates them for configuration selection.
+// Note: On linux there's no easy way to reliably enumerate language packs, since every distro
+// could use its own location for installing pcsx2.mo files (wtcrap?).  Furthermore wxWidgets
+// doesn't give us a public API for checking what the language search paths are.  So the only
+// safe way to enumerate the languages is by forcibly loading every possible locale in the wx
+// database.  Anything which hasn't been installed will fail to load.
+//
+// Because loading and hashing the entire pcsx2 translation for every possible language would
+// assinine and slow, I've decided to use a two-file translation system.  One file is very
+// small and simply contains the name of the language in the language native.  The second file
+// is loaded only if the user picks it (or if it's the default language of the OS).
+//
+void i18n_EnumeratePackages( wxArrayString& englishNames, wxArrayString& xlatedNames)
+{
+	for( int li=wxLANGUAGE_UNKNOWN+1; li<wxLANGUAGE_USER_DEFINED; ++li )
+	{
+		i18n_DoPackageCheck( li, englishNames, xlatedNames );
+	}
+
+	// Brilliant.  Because someone in the wx world didn't think to move wxLANGUAGE_USER_DEFINED
+	// to a place where it wasn't butt right up against the main languages (like, say, start user
+	// defined values at 4000 or something?), they had to add new languages in at some arbitrary
+	// value instead.  Let's handle them here:
+	// fixme: these won't show up in alphabetical order if they're actually present (however
+	// horribly unlikely that is)... do we care?  Probably not.
+
+	// Note: These aren't even available in some packaged Linux distros anyway. >_<
+
+	//i18n_DoPackageCheck( wxLANGUAGE_VALENCIAN, englishNames, xlatedNames );
+	//i18n_DoPackageCheck( wxLANGUAGE_SAMI, englishNames, xlatedNames );
 }
 
 // ------------------------------------------------------------------------
@@ -117,7 +179,7 @@ const wxChar* __fastcall pxExpandMsg( ExpandedMsgEnum key )
 	const HashedExpansionPair& data( m_EnglishExpansions[key] );
 
 	int curlangid = wxLocale::GetLanguageInfo( g_Conf.LanguageId )->Language;
-	if( curlangid == wxLANGUAGE_ENGLISH || curlangid == wxLANGUAGE_ENGLISH_US )
+	if( IsEnglish( curlangid ) )
 		return data.Expanded;
 
 	const wxChar* retval = wxGetTranslation( data.gettextKey );
@@ -166,13 +228,13 @@ bool i18n_SetLanguage( int wxLangId )
 		return false;
 	}
 
-	if( !locale->AddCatalog( L"pcsx2main" ) ) //, wxLANGUAGE_UNKNOWN, NULL ) )
+	if( !IsEnglish(wxLangId) && !locale->AddCatalog( L"pcsx2main" ) )
 	{
 		Console::Notice( wxsFormat( L"SetLanguage: Cannot find pcsx2main.mo file for language '%s' [%s]",
 			wxLocale::GetLanguageName( locale->GetLanguage() ).c_str(), locale->GetCanonicalName().c_str() )
 		);
 		safe_delete( locale );
+		return false;
 	}
-	//return locale;
 	return true;
 }

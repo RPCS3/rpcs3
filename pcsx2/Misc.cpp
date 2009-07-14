@@ -498,7 +498,7 @@ void ProcessFKeys(int fkey, struct KeyModifiers *keymod)
 				SysClearExecutionCache();
 				joe.FreezeAll();
 			}
-			catch( Exception::StateLoadError_Recoverable& )
+			catch( Exception::StateLoadError& )
 			{
 				// At this point the cpu hasn't been reset, so we can return
 				// control to the user safely... (and silently)

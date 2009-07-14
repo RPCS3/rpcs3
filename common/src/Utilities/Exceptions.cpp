@@ -18,13 +18,9 @@
 
 #include "PrecompiledHeader.h"
 
-wxLocale* g_EnglishLocale = NULL;
-//g_EnglishLocale = new wxLocale( wxLANGUAGE_ENGLISH );
-
 wxString GetEnglish( const char* msg )
 {
-	if( g_EnglishLocale == NULL ) return wxString::FromAscii(msg);
-	return g_EnglishLocale->GetString( wxString::FromAscii(msg).c_str() );
+	return wxString::FromAscii(msg);
 }
 
 wxString GetTranslation( const char* msg )

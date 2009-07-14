@@ -38,7 +38,6 @@ Panels::PathsPanel::DirPickerPanel::DirPickerPanel( wxWindow* parent, const wxDi
 	wxPanelWithHelpers( parent, wxID_ANY )
 ,	m_GetDefaultFunc( getDefault )
 {
-	Console::Notice( initPath.ToString() );
 	wxDirName normalized( initPath );
 	normalized.Normalize();
 
@@ -137,8 +136,8 @@ Panels::PathsPanel::AdvancedPanel::AdvancedPanel( wxWindow& parent, int id ) :
 }
 
 // ------------------------------------------------------------------------
-Panels::PathsPanel::PathsPanel( wxWindow& parent, int id ) :
-	wxPanelWithHelpers( &parent, id )
+Panels::PathsPanel::PathsPanel( wxWindow& parent ) :
+	BaseApplicableConfigPanel( &parent )
 {
 	wxBoxSizer& s_main = *new wxBoxSizer( wxVERTICAL );
 	wxNotebook& notebook = *new wxNotebook( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxNB_BOTTOM | wxNB_FIXEDWIDTH );
@@ -151,3 +150,7 @@ Panels::PathsPanel::PathsPanel( wxWindow& parent, int id ) :
 	SetSizerAndFit( &s_main );
 }
 
+bool Panels::PathsPanel::Apply( AppConfig& conf )
+{
+	return true;
+}

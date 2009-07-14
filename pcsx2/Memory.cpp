@@ -92,7 +92,7 @@ void loadBiosRom( const wxChar *ext, u8 *dest, long maxSize )
 	long filesize;
 
 	// Try first a basic extension concatenation (normally results in something like name.bin.rom1)
-	const wxString Bios( g_Conf.Files.Bios() );
+	const wxString Bios( g_Conf.FullpathToBios() );
 	Bios1.Printf( L"%s.%s", Bios.c_str(), ext);
 
 	if( (filesize=Path::GetFileSize( Bios1 ) ) <= 0 )
@@ -801,7 +801,7 @@ void memReset()
 	vtlb_VMap(0x00000000,0x00000000,0x20000000);
 	vtlb_VMapUnmap(0x20000000,0x60000000);
 
-	wxString Bios( g_Conf.Files.Bios() );
+	wxString Bios( g_Conf.FullpathToBios() );
 
 	long filesize = Path::GetFileSize( Bios );
 	if( filesize <= 0 )

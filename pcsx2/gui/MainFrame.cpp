@@ -28,8 +28,7 @@
 
 using namespace Dialogs;
 
-//////////////////////////////////////////////////////////////////////////////////////////
-//
+// ------------------------------------------------------------------------
 wxMenu* MainEmuFrame::MakeLanguagesMenu() const
 {
 	wxMenu* menuLangs = new wxMenu();
@@ -41,6 +40,7 @@ wxMenu* MainEmuFrame::MakeLanguagesMenu() const
 	return menuLangs;
 }
 
+// ------------------------------------------------------------------------
 wxMenu* MainEmuFrame::MakeStatesMenu()
 {
 	wxMenu* mnuStates = new wxMenu();
@@ -48,24 +48,88 @@ wxMenu* MainEmuFrame::MakeStatesMenu()
 	m_LoadStatesSubmenu.Append( Menu_State_LoadOther, _T("Other..."), wxEmptyString, wxITEM_NORMAL );
 	m_SaveStatesSubmenu.Append( Menu_State_SaveOther, _T("Other..."), wxEmptyString, wxITEM_NORMAL );
 
-	mnuStates->Append( Menu_State_Load, _T("Load"), &m_LoadStatesSubmenu, wxEmptyString );
-	mnuStates->Append( Menu_State_Save, _T("Save"), &m_SaveStatesSubmenu, wxEmptyString );
+	mnuStates->Append( Menu_State_Load, _("Load"), &m_LoadStatesSubmenu, wxEmptyString );
+	mnuStates->Append( Menu_State_Save, _("Save"), &m_SaveStatesSubmenu, wxEmptyString );
 	return mnuStates;
 }
 
+// ------------------------------------------------------------------------
 wxMenu* MainEmuFrame::MakeStatesSubMenu( int baseid ) const
 {
 	wxMenu* mnuSubstates = new wxMenu();
-	wxString slot( _T("Slot") );
 
-	mnuSubstates->Append( baseid,    _T("Slot 0"), wxEmptyString, wxITEM_NORMAL );
-	mnuSubstates->Append( baseid+1,  _T("Slot 1"), wxEmptyString, wxITEM_NORMAL );
-	mnuSubstates->Append( baseid+2,  _T("Slot 2"), wxEmptyString, wxITEM_NORMAL );
-	mnuSubstates->Append( baseid+3,  _T("Slot 3"), wxEmptyString, wxITEM_NORMAL );
-	mnuSubstates->Append( baseid+4,  _T("Slot 4"), wxEmptyString, wxITEM_NORMAL );
+	mnuSubstates->Append( baseid,    _("Slot 0"), wxEmptyString, wxITEM_NORMAL );
+	mnuSubstates->Append( baseid+1,  _("Slot 1"), wxEmptyString, wxITEM_NORMAL );
+	mnuSubstates->Append( baseid+2,  _("Slot 2"), wxEmptyString, wxITEM_NORMAL );
+	mnuSubstates->Append( baseid+3,  _("Slot 3"), wxEmptyString, wxITEM_NORMAL );
+	mnuSubstates->Append( baseid+4,  _("Slot 4"), wxEmptyString, wxITEM_NORMAL );
 	return mnuSubstates;
 }
 
+/*struct StringListNode
+{
+	wxString* item;
+	StringListNode* next;
+};*/
+
+// ------------------------------------------------------------------------
+wxMenu* MainEmuFrame::MakeIsoMenu()
+{
+	wxMenu* mnuIso = new wxMenu();
+
+	mnuIso->Append( Menu_IsoBrowse, _("Browse..."), _("Select an Iso image from your hard drive.") );
+	//mnuIso->AppendSeparator();
+
+	// Add in the recent files!
+
+	/*const StringListNode* cruise = g_Conf.RecentIsos;
+	
+	int i = 0;
+	int threshold = 15;
+	while( cruise != NULL && (--threshold >= 0) )
+	{
+		wxString ellipsized;
+
+		if( cruise->item->Length() > 64 )
+		{
+			// Ellipsize it!
+			wxFileName src( *cruise->item );
+			ellipsized = src.GetVolume() + wxFileName::GetVolumeSeparator() + wxFileName::GetPathSeparator() + L"...";
+			
+			const wxArrayString& dirs( src.GetDirs() );
+			int totalLen = ellipsized.Length();
+			int i=dirs.Count()-1;
+
+			for( ; i; --i )
+			{
+				if( totalLen + dirs[i].Length() < 56 )
+					totalLen += dirs[i];
+			}
+
+			for( ; i<dirs.Count(); ++i )
+				ellipsized += wxFileName::GetPathSeparator() + dirs[i];
+
+			ellipsized += wxFileName::GetPathSeparator() + src.GetFullName();
+		}
+		else
+			ellipsized = *cruise->item;
+
+		mnuIso->Append( Menu_Iso_Recent+i, Path::GetFilename( ellipsized ), *cruise->item );
+	}*/
+	
+	g_RecentIsoList->UseMenu( mnuIso );
+	g_RecentIsoList->AddFilesToMenu( mnuIso );
+	return mnuIso;
+}
+
+// ------------------------------------------------------------------------
+wxMenu* MainEmuFrame::MakeCdvdMenu()
+{
+	wxMenu* mnuCdvd = new wxMenu();
+	return mnuCdvd;
+}
+
+// ------------------------------------------------------------------------
 void MainEmuFrame::PopulateVideoMenu()
 {
 	m_menuVideo.Append( Menu_Video_Basics,	_T("Basic Settings..."),	wxEmptyString, wxITEM_CHECK );
@@ -76,6 +140,7 @@ void MainEmuFrame::PopulateVideoMenu()
 	m_menuVideo.Append( Menu_Video_Advanced,	_T("Advanced..."),		wxEmptyString, wxITEM_NORMAL );
 }
 
+// ------------------------------------------------------------------------
 void MainEmuFrame::PopulateAudioMenu()
 {
 	// Populate options from the plugin here.
@@ -83,6 +148,7 @@ void MainEmuFrame::PopulateAudioMenu()
 	m_menuAudio.Append( Menu_Audio_Advanced,	_T("Advanced..."),		wxEmptyString, wxITEM_NORMAL );
 }
 
+// ------------------------------------------------------------------------
 void MainEmuFrame::PopulatePadMenu()
 {
 	// Populate options from the plugin here.
@@ -93,6 +159,7 @@ void MainEmuFrame::PopulatePadMenu()
 #define ConnectMenu( id, handler ) \
 	Connect( id, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainEmuFrame::handler) )
 
+// ------------------------------------------------------------------------
 void MainEmuFrame::OnMoveAround( wxMoveEvent& evt )
 {
 	if( g_Conf.ConLogBox.AutoDock )
@@ -101,15 +168,17 @@ void MainEmuFrame::OnMoveAround( wxMoveEvent& evt )
 	//evt.Skip();
 }
 
+// ------------------------------------------------------------------------
 void MainEmuFrame::ConnectMenus()
 {
 	Connect( wxEVT_MOVE, wxMoveEventHandler(MainEmuFrame::OnMoveAround) );
 
-	// This just seems a bit more flexible & intuitive to me, if overly verbose.
+	ConnectMenu( Menu_Config_Settings,	Menu_ConfigSettings_Click );
+	ConnectMenu( Menu_RunWithoutDisc,	Menu_RunWithoutDisc_Click );
+	
+	ConnectMenu( Menu_IsoBrowse,		Menu_IsoBrowse_Click );
 
-	ConnectMenu( Menu_QuickBootCD, Menu_QuickBootCD_Click );
-	ConnectMenu( Menu_FullBootCD, Menu_BootCD_Click );
-	ConnectMenu( Menu_BootNoCD, Menu_BootNoCD_Click );
+	Connect( wxID_FILE1, wxID_FILE1+20, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainEmuFrame::Menu_IsoRecent_Click) );
 
 	ConnectMenu( Menu_RunELF, Menu_OpenELF_Click );
 	ConnectMenu( Menu_Run_Exit, Menu_Exit_Click );
@@ -134,16 +203,18 @@ void MainEmuFrame::ConnectMenus()
 	ConnectMenu( Menu_About, Menu_ShowAboutBox );
 }
 
+// ------------------------------------------------------------------------
 void MainEmuFrame::OnLogBoxHidden()
 {
 	g_Conf.ConLogBox.Visible = false;
 	m_MenuItem_Console.Check( false );
 }
 
+// ------------------------------------------------------------------------
 MainEmuFrame::MainEmuFrame(wxWindow* parent, int id, const wxString& title, const wxPoint& pos, const wxSize& size, long style):
     wxFrame(parent, id, title, pos, size, wxDEFAULT_FRAME_STYLE & ~(wxMAXIMIZE_BOX | wxRESIZE_BORDER) ),
 
-	m_logbox( this, L"Pcsx2 Log" ),
+	m_logbox( this, L"PCSX2 Log" ),
 
 	m_statusbar( *CreateStatusBar(2, 0) ),
 	m_background( this, wxID_ANY, wxGetApp().GetLogoBitmap() ),
@@ -173,13 +244,13 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, int id, const wxString& title, cons
 	// Initial menubar setup.  This needs to be done first so that the menu bar's visible size
 	// can be factored into the window size (which ends up being background+status+menus)
 
-	m_menubar.Append( &m_menuRun,		L"Run" );
-	m_menubar.Append( &m_menuConfig,	L"Config" );
-	m_menubar.Append( &m_menuVideo,		L"Video" );
-	m_menubar.Append( &m_menuAudio,		L"Audio" );
-	m_menubar.Append( &m_menuPad,		L"Pad" );
-	m_menubar.Append( &m_menuMisc,		L"Misc" );
-	m_menubar.Append( &m_menuDebug,		L"Debug" );
+	m_menubar.Append( &m_menuRun,		_("Run") );
+	m_menubar.Append( &m_menuConfig,	_("Config") );
+	m_menubar.Append( &m_menuVideo,		_("Video") );
+	m_menubar.Append( &m_menuAudio,		_("Audio") );
+	m_menubar.Append( &m_menuPad,		_("Pad") );
+	m_menubar.Append( &m_menuMisc,		_("Misc") );
+	m_menubar.Append( &m_menuDebug,		_("Debug") );
 	SetMenuBar( &m_menubar );
 
 	// ------------------------------------------------------------------------
@@ -237,40 +308,48 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, int id, const wxString& title, cons
 
 	// ------------------------------------------------------------------------
 
-	m_menuRun.Append(Menu_QuickBootCD,	_T("Boot CDVD (Quick)"),	wxEmptyString, wxITEM_NORMAL);
-	m_menuRun.Append(Menu_FullBootCD,	_T("Boot CDVD (Full)"),		wxEmptyString, wxITEM_NORMAL);
-	m_menuRun.Append(Menu_BootNoCD,		_T("Boot without CDVD"),	wxEmptyString, wxITEM_NORMAL);
-	m_menuRun.Append(Menu_RunELF,		_T("Run ELF File..."),		wxEmptyString, wxITEM_NORMAL);
+	m_menuRun.Append(Menu_BootIso,		_("Run ISO"),				MakeIsoMenu(),	_("Performs a complete bootup sequence (recommended for best compat)"));
+	m_menuRun.Append(Menu_BootIsoFast,	_("Run ISO (skip Bios)"),	MakeIsoMenu(),	_("Skips PS2 startup screens when booting; may cause compat issues"));
+	m_menuRun.Append(Menu_BootQuickCDVD,_("Run CDVD"),				MakeCdvdMenu(),	_("Skips PS2 init screens when running cdvd images"));
+	m_menuRun.Append(Menu_BootFullCDVD,	_("Run CDVD (skip Bios)"),	MakeCdvdMenu(),	_("Skips PS2 startup screens when booting; may cause compat issues"));
+	m_menuRun.Append(Menu_RunWithoutDisc,_("Run without Disc"),						_("Use this to access the PS2 system configuration menu"));
+	m_menuRun.Append(Menu_RunELF,		_("Run ELF File..."),		wxEmptyString);
 	m_menuRun.AppendSeparator();
 
-	m_menuRun.Append(Menu_SuspendExec,	_T("Suspend"),	_T("Suspends emulation progress."), wxITEM_NORMAL);
-	m_menuRun.Append(Menu_ResumeExec,	_T("Resume"),	_T("Resumes emulation progress."), wxITEM_NORMAL);
-	m_menuRun.Append(Menu_States,		_T("States"),	MakeStatesMenu(), wxEmptyString);
-	m_menuRun.Append(Menu_Reset,		_T("Reset"),	_T("Resets emulation state and reloads plugins."), wxITEM_NORMAL);
+	m_menuRun.Append(Menu_SuspendExec,	_("Suspend"),	_T("Stops emulation dead in its tracks"));
+	m_menuRun.Append(Menu_ResumeExec,	_("Resume"),	_T("Resumes suspended emulation"));
+	m_menuRun.Append(Menu_States,		_("States"),	MakeStatesMenu(), wxEmptyString);
+	m_menuRun.Append(Menu_Reset,		_("Reset"),		_T("Resets emulation state and reloads plugins"));
 
 	m_menuRun.AppendSeparator();
-	m_menuRun.Append(Menu_Run_Exit,	_T("Exit"), _T("Closing Pcsx2 may be hazardous to your health"), wxITEM_NORMAL);
+	m_menuRun.Append(Menu_Run_Exit,		_("Exit"),		_T("Closing PCSX2 may be hazardous to your health"));
 
     // ------------------------------------------------------------------------
 
-	m_menuConfig.Append(Menu_Config_CDVD,		_T("Cdvdrom"),	wxEmptyString, wxITEM_NORMAL);
-	m_menuConfig.Append(Menu_Config_DEV9,		_T("Dev9"),		wxEmptyString, wxITEM_NORMAL);
-	m_menuConfig.Append(Menu_Config_USB,		_T("USB"),		wxEmptyString, wxITEM_NORMAL);
-	m_menuConfig.Append(Menu_Config_FireWire,	_T("Firewire"),	wxEmptyString, wxITEM_NORMAL);
+	m_menuConfig.Append(Menu_Config_Settings,	_("Settings..."),	wxEmptyString);
+	m_menuConfig.AppendSeparator();
+
+	// Query installed "tertiary" plugins for name and menu options.
+	m_menuConfig.Append(Menu_Config_CDVD,		_("CDVD"),		wxEmptyString);
+	m_menuConfig.Append(Menu_Config_DEV9,		_("Dev9"),		wxEmptyString);
+	m_menuConfig.Append(Menu_Config_USB,		_("USB"),		wxEmptyString);
+	m_menuConfig.Append(Menu_Config_FireWire,	_("Firewire"),	wxEmptyString);
+
+	m_menuConfig.AppendSeparator();
+	m_menuConfig.Append(Menu_SelectPlugins,		_("Plugin Selector..."), wxEmptyString);
+
+	m_menuConfig.AppendSeparator();
+	m_menuConfig.Append(Menu_Config_Memcards,	_("Memcards"),		_T("Memory card file locations and options"));
+	m_menuConfig.Append(Menu_Config_Gamefixes,	_("Gamefixes"),		_T("God of War and TriAce fixes are found here"));
+	m_menuConfig.Append(Menu_Config_SpeedHacks,	_("Speed Hacks"),	_T("Options to make Pcsx2 emulate faster, but less accurately"));
+	m_menuConfig.Append(Menu_Config_Patches,	_("Patches"),		wxEmptyString);
+	//m_menuConfig.Append(Menu_Config_Advanced,	_("Advanced"),		_T("Cpu, Fpu, and Recompiler options."), wxITEM_NORMAL);
+
+	// ------------------------------------------------------------------------
 
 	PopulateVideoMenu();
 	PopulateAudioMenu();
 	PopulatePadMenu();
-
-	m_menuConfig.AppendSeparator();
-	m_menuConfig.Append(Menu_SelectPlugins,	_T("Plugin Selector..."), wxEmptyString, wxITEM_NORMAL);
-
-	m_menuConfig.AppendSeparator();
-	m_menuConfig.Append(Menu_Config_Memcards,	_T("Memcards"),		_T("Memory card file locations and options."), wxITEM_NORMAL);
-	m_menuConfig.Append(Menu_Config_Gamefixes,	_T("Gamefixes"),	_T("God of War and TriAce fixes are found here."), wxITEM_NORMAL);
-	m_menuConfig.Append(Menu_Config_SpeedHacks,	_T("Speed Hacks"),	_T("Options to make Pcsx2 emulate faster, but less accurately."), wxITEM_NORMAL);
-	m_menuConfig.Append(Menu_Config_Patches,	_T("Patches"),		wxEmptyString, wxITEM_NORMAL);
-	m_menuConfig.Append(Menu_Config_Advanced,	_T("Advanced"),		_T("Cpu, Fpu, and Recompiler options."), wxITEM_NORMAL);
 
 	// ------------------------------------------------------------------------
 
@@ -300,21 +379,28 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, int id, const wxString& title, cons
 	ConnectMenus();
 
 	m_MenuItem_Console.Check( g_Conf.ConLogBox.Visible );
+	
+	//g_RecentIsoList->AddFileToHistory( L"fail.iso" );
 }
 
-void MainEmuFrame::Menu_QuickBootCD_Click(wxCommandEvent &event)
+void MainEmuFrame::Menu_ConfigSettings_Click(wxCommandEvent &event)
 {
 	Dialogs::ConfigurationDialog( this ).ShowModal();
 }
 
-void MainEmuFrame::Menu_BootCD_Click(wxCommandEvent &event)
+void MainEmuFrame::Menu_RunWithoutDisc_Click(wxCommandEvent &event)
 {
 }
 
-void MainEmuFrame::Menu_BootNoCD_Click(wxCommandEvent &event)
+void MainEmuFrame::Menu_IsoBrowse_Click(wxCommandEvent &event)
 {
 }
 
+void MainEmuFrame::Menu_IsoRecent_Click(wxCommandEvent &event)
+{
+	Console::Status( "%d", params event.GetId() - g_RecentIsoList->GetBaseId() );
+	Console::WriteLn( Color_Magenta, g_RecentIsoList->GetHistoryFile( event.GetId() - g_RecentIsoList->GetBaseId() ) );
+}
 
 void MainEmuFrame::Menu_OpenELF_Click(wxCommandEvent &event)
 {

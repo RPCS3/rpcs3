@@ -22,15 +22,14 @@ class IniInterface;
 
 enum PluginsEnum_t
 {
-	Plugin_CDVD = 0,
-	Plugin_GS,
-	Plugin_PAD1,
-	Plugin_PAD2,
-	Plugin_SPU2,
-	Plugin_USB,
-	Plugin_FW,
-	Plugin_DEV9,
-	Plugin_Count
+	PluginId_CDVD = 0,
+	PluginId_GS,
+	PluginId_PAD,
+	PluginId_SPU2,
+	PluginId_USB,
+	PluginId_FW,
+	PluginId_DEV9,
+	PluginId_Count
 };
 
 
@@ -74,7 +73,7 @@ public:
 	struct FilenameOptions
 	{
 		wxFileName Bios;
-		wxFileName Plugins[Plugin_Count];
+		wxFileName Plugins[PluginId_Count];
 
 		void LoadSave( IniInterface& conf );
 
@@ -166,29 +165,18 @@ public:
 		void LoadSave( IniInterface& conf );
 	};
 
-	// ------------------------------------------------------------------------
-	// Helper functions for returning full pathnames of various Folders and files
-	//
-	struct FullpathHelpers
-	{
-		FullpathHelpers( const AppConfig& conf ) : m_conf( conf ) {}
-
-		const AppConfig& m_conf;
-
-		wxString operator[]( PluginsEnum_t pluginidx ) const;
-
-		wxString Bios() const;
-		wxString Mcd( uint mcdidx ) const;
-	};
 
 public:
-	AppConfig() : Files( *this )
-	,	Listbook_ImageSize( 32 )
-	,	Toolbar_ImageSize( 32 )
+	AppConfig() :
+		Listbook_ImageSize( 32 )
+	,	Toolbar_ImageSize( 24 )
 	{
 	}
 
-	FullpathHelpers Files;
+	wxString FullpathToBios() const;
+	wxString FullpathToMcd( uint mcdidx ) const;
+	wxString FullpathTo( PluginsEnum_t pluginId ) const;
+
 
 	bool		UseAdminMode;			// dictates if the program uses /home/user or /cwd for the program data
 	wxPoint		MainGuiPosition;
@@ -197,12 +185,14 @@ public:
 	// Current language in use (correlates to a wxWidgets wxLANGUAGE specifier)
 	int			LanguageId;
 	
+	int			RecentFileCount;		// number of files displayed in the Recent Isos list.
+	
 	// String value describing the desktop theme to use for pcsk2 (icons and background images)
 	// The theme name is used to look up files in the themes folder (relative to the executable).
 	wxString	DeskTheme;
 
 	// Specifies the size of icons used in Listbooks; specifically the PCSX2 Properties dialog box.
-	// Realisic values range from 96x96 to 24x24.
+	// Realistic values range from 96x96 to 24x24.
 	int			Listbook_ImageSize;
 
 	// Specifies the size of each toolbar icon, in pixels (any value >= 2 is valid, but realistically
@@ -225,7 +215,7 @@ public:
 	void Load();
 	void Save();
 	void Apply();
-	
+
 	void LoadSaveUserMode( IniInterface& ini );
 
 protected:

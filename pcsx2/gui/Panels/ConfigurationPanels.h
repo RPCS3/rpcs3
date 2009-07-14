@@ -29,19 +29,36 @@
 
 #include "wxHelpers.h"
 #include "Utilities/SafeArray.h"
+#include "Utilities/Threading.h"
 
 namespace Panels
 {
 	//////////////////////////////////////////////////////////////////////////////////////////
+	// Extends the Panel class to add an Apply() method, which is invoked from the parent
+	// window (usually the ConfigurationDialog) when either Ok or Apply is clicked.
 	//
-	class SpeedHacksPanel : public wxPanelWithHelpers
+	class BaseApplicableConfigPanel : public wxPanelWithHelpers
 	{
 	public:
-		SpeedHacksPanel(wxWindow& parent, int id=wxID_ANY);
+		virtual ~BaseApplicableConfigPanel() { }
+		BaseApplicableConfigPanel( wxWindow* parent ) : 
+			wxPanelWithHelpers( parent, wxID_ANY ) { }
+	
+		// This method attempts to assign the settings for the panel into the given
+		// configuration structure (which is typically a copy of g_Conf).  If validation
+		// of form contents fails, the function returns false.
+		virtual bool Apply( AppConfig& conf )=0;
+	};
+
+	//////////////////////////////////////////////////////////////////////////////////////////
+	//
+	class SpeedHacksPanel : public BaseApplicableConfigPanel
+	{
+	public:
+		SpeedHacksPanel(wxWindow& parent);
+		bool Apply( AppConfig& conf );
 
 	protected:
-
-	public:
 		void IOPCycleDouble_Click(wxCommandEvent &event);
 		void WaitCycleExt_Click(wxCommandEvent &event);
 		void INTCSTATSlow_Click(wxCommandEvent &event);
@@ -50,14 +67,12 @@ namespace Panels
 
 	//////////////////////////////////////////////////////////////////////////////////////////
 	//
-	class GameFixesPanel: public wxPanelWithHelpers
+	class GameFixesPanel: public BaseApplicableConfigPanel
 	{
 	public:
-		GameFixesPanel(wxWindow& parent, int id=wxID_ANY);
-
-	protected:
-
-	public:
+		GameFixesPanel(wxWindow& parent);
+		bool Apply( AppConfig& conf );
+		
 		void FPUCompareHack_Click(wxCommandEvent &event);
 		void FPUMultHack_Click(wxCommandEvent &event);
 		void TriAce_Click(wxCommandEvent &event);
@@ -68,7 +83,7 @@ namespace Panels
 
 	//////////////////////////////////////////////////////////////////////////////////////////
 	//
-	class PathsPanel: public wxPanelWithHelpers
+	class PathsPanel : public BaseApplicableConfigPanel
 	{
 	protected:
 		class DirPickerPanel : public wxPanelWithHelpers
@@ -102,13 +117,6 @@ namespace Panels
 		{
 		public:
 			StandardPanel(wxWindow& parent, int id=wxID_ANY);
-
-		protected:
-			//DirPickerInfo m_BiosPicker;
-			//DirPickerInfo m_SavestatesPicker;
-			//DirPickerInfo m_SnapshotsPicker;
-			//DirPickerInfo m_MemorycardsPicker;
-			//DirPickerInfo m_LogsPicker;
 		};
 
 		class AdvancedPanel : public MyBasePanel
@@ -118,18 +126,105 @@ namespace Panels
 		};
 
 	public:
-		PathsPanel(wxWindow& parent, int id=wxID_ANY);
+		PathsPanel(wxWindow& parent);
+		bool Apply( AppConfig& conf );
 	};
 
 	//////////////////////////////////////////////////////////////////////////////////////////
 	//
-	class PluginSelectorPanel: public wxPanelWithHelpers
+	class PluginSelectorPanel: public BaseApplicableConfigPanel
 	{
-	public:
-		PluginSelectorPanel(wxWindow& parent, int id=wxID_ANY);
+	protected:
+		static const int NumPluginTypes = 7;
+
+		// ------------------------------------------------------------------------
+		// PluginSelectorPanel Subclasses
+		// ------------------------------------------------------------------------
+
+		class EnumeratedPluginInfo
+		{
+		public:
+			uint PassedTest;		// msk specifying which plugin types passed the mask test.
+			uint TypeMask;			// indicates which combo boxes it should be listed in
+			wxString Name;			// string to be pasted into the combo box
+			wxString Version[NumPluginTypes];
+
+			EnumeratedPluginInfo() :
+				PassedTest( 0 )
+			,	TypeMask( 0 )
+			,	Name()
+			{
+			}
+		};
+	
+		class EnumThread : public Threading::Thread
+		{
+		public:
+			EnumeratedPluginInfo* Results;		// array of plugin results.
+
+		protected:
+			PluginSelectorPanel& m_master;
+			volatile bool m_cancel;			
+		public:
+			virtual ~EnumThread();
+			EnumThread( PluginSelectorPanel& master );
+			void Close();
+
+		protected:
+			int Callback();
+		};
+		
+		// This panel contains all of the plugin combo boxes.  We stick them
+		// on a panel together so that we can hide/show the whole mess easily.
+		class ComboBoxPanel : public wxPanelWithHelpers
+		{
+		protected:
+			wxComboBox* m_combobox[NumPluginTypes];
+
+		public:
+			ComboBoxPanel( PluginSelectorPanel* parent );
+			wxComboBox& Get( int i ) { return *m_combobox[i]; }
+			void Reset();
+		};
+
+		class StatusPanel : public wxPanelWithHelpers
+		{
+		protected:
+			wxGauge&		m_gauge;
+			wxStaticText&	m_label;
+			int				m_progress;
+			
+		public:
+			StatusPanel( wxWindow* parent, int pluginCount );
+			void AdvanceProgress( const wxString& msg );
+			void Reset();
+		};
+
+	// ------------------------------------------------------------------------
+	// PluginSelectorPanel Members
+	// ------------------------------------------------------------------------
 
 	protected:
+		wxArrayString	m_FileList;	// list of potential plugin files
+		StatusPanel&	m_StatusPanel;
+		ComboBoxPanel&	m_ComboBoxes;
+		bool			m_Uninitialized;
+		EnumThread*		m_EnumeratorThread;
 
 	public:
+		virtual ~PluginSelectorPanel();
+		PluginSelectorPanel(wxWindow& parent);
+		virtual void OnShow( wxShowEvent& evt );
+		virtual void OnRefresh( wxCommandEvent& evt );
+		virtual void OnProgress( wxCommandEvent& evt );
+		virtual void OnEnumComplete( wxCommandEvent& evt );
+		
+		bool Apply( AppConfig& conf );
+	
+	protected:
+		void DoRefresh();
+		int FileCount() const { return m_FileList.Count(); }
+		const wxString& GetFilename( int i ) const { return m_FileList[i]; }
+		friend class EnumThread;
 	};
 }

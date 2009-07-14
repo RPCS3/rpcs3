@@ -25,6 +25,7 @@
 enum ExpandedMsgEnum
 {
 	Msg_Dialog_AdvancedPaths,
+	Msg_Popup_MissingPlugins,
 
 	Msg_Tooltips_Savestates,
 	Msg_Tooltips_Snapshots,

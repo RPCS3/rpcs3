@@ -21,6 +21,7 @@
 #include <wx/wx.h>
 #include <wx/image.h>
 #include <wx/propdlg.h>
+#include <wx/listbook.h>
 
 #include "wxHelpers.h"
 
@@ -28,12 +29,16 @@ namespace Dialogs
 {
 	class ConfigurationDialog : public wxDialogWithHelpers
 	{
+	protected:
+		wxListbook&		m_listbook;
+
 	public:
+		virtual ~ConfigurationDialog();
 		ConfigurationDialog(wxWindow* parent, int id=wxID_ANY);
 
 	protected:
-		wxImageList* m_ImageList;
-
-	public:
+		bool ApplySettings();
+		void OnOk_Click( wxCommandEvent& evt );
+		void OnApply_Click( wxCommandEvent& evt );
 	};
 }

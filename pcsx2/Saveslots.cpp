@@ -44,7 +44,7 @@ bool States_isSlotUsed(int num)
 // The calling function should trap and handle exceptions as needed.
 static void _loadStateOrExcept( const wxString& file )
 {
-	gzLoadingState joe( file );		// this'll throw an StateLoadError_Recoverable.
+	gzLoadingState joe( file );		// this'll throw an StateLoadError.
 
 	// Make sure the cpu and plugins are ready to be state-ified!
 	cpuReset();
@@ -64,7 +64,7 @@ void States_Load( const wxString& file )
 		_loadStateOrExcept( file );
 		HostGui::Notice( wxsFormat( _("Loaded State %s"), file.c_str() ) );
 	}
-	catch( Exception::StateLoadError_Recoverable& ex)
+	catch( Exception::StateLoadError& ex)
 	{
 		Console::Notice( ex.LogMessage() );
 
@@ -103,7 +103,7 @@ void States_Load(int num)
 		_loadStateOrExcept( file );
 		HostGui::Notice( wxsFormat( _("Loaded State %d"), num ) );
 	}
-	catch( Exception::StateLoadError_Recoverable& ex)
+	catch( Exception::StateLoadError& ex)
 	{
 		Console::Notice( wxsFormat( L"Could not load savestate slot %d.\n\n%s", num, ex.LogMessage().c_str() ) );
 

@@ -183,13 +183,13 @@ bool wxDirName::Mkdir()
 }
 
 // ------------------------------------------------------------------------
-wxString AppConfig::FullpathHelpers::operator[]( PluginsEnum_t pluginidx ) const
+wxString AppConfig::FullpathTo( PluginsEnum_t pluginidx ) const
 {
-	return Path::Combine( m_conf.Folders.Plugins, m_conf.BaseFilenames[pluginidx] );
+	return Path::Combine( Folders.Plugins, BaseFilenames[pluginidx] );
 }
 
-wxString AppConfig::FullpathHelpers::Bios() const	{ return Path::Combine( m_conf.Folders.Bios, m_conf.BaseFilenames.Bios ); }
-wxString AppConfig::FullpathHelpers::Mcd( uint mcdidx ) const { return Path::Combine( m_conf.Folders.MemoryCards, m_conf.MemoryCards.Mcd[mcdidx].Filename ); }
+wxString AppConfig::FullpathToBios() const				{ return Path::Combine( Folders.Bios, BaseFilenames.Bios ); }
+wxString AppConfig::FullpathToMcd( uint mcdidx ) const	{ return Path::Combine( Folders.MemoryCards, MemoryCards.Mcd[mcdidx].Filename ); }
 
 // ------------------------------------------------------------------------
 // GCC Note: wxT() macro is required when using string token pasting.  For some reason L generates
@@ -207,61 +207,16 @@ void AppConfig::LoadSaveUserMode( IniInterface& ini )
 }
 
 // ------------------------------------------------------------------------
-//
-void i18n_DoPackageCheck( int wxLangId, wxArrayString& destEng, wxArrayString& destTrans )
-{
-	// Note: wx auto-preserves the current locale for us
-
-	if( !wxLocale::IsAvailable( wxLangId ) ) return;
-	wxLocale* locale = new wxLocale( wxLangId, wxLOCALE_CONV_ENCODING );
-
-	if( locale->IsOk() && locale->AddCatalog( L"pcsx2ident" ) )
-	{
-		// Should be a valid language, so add it to the list.
-
-		destEng.Add( wxLocale::GetLanguageName( wxLangId ) );
-		destTrans.Add( wxGetTranslation( L"NativeName" ) );
-	}
-	delete locale;
-}
-
-// ------------------------------------------------------------------------
-// Finds all valid PCSX2 language packs, and enumerates them for configuration selection.
-// Note: On linux there's no easy way to reliably enumerate language packs, since every distro
-// could use its own location for installing pcsx2.mo files (wtcrap?).  Furthermore wxWidgets
-// doesn't give us a public API for checking what the language search paths are.  So the only
-// safe way to enumerate the languages is by forcibly loading every possible locale in the wx
-// database.  Anything which hasn't been installed will fail to load.
-//
-// Because loading and hashing the entire pcsx2 translation for every possible language would
-// assinine and slow, I've decided to use a two-file translation system.  One file is very
-// small and simply contains the name of the language in the language native.  The second file
-// is loaded only if the user picks it (or if it's the default language of the OS).
-//
-void i18n_EnumeratePackages( wxArrayString& englishNames, wxArrayString& xlatedNames)
-{
-	for( int li=wxLANGUAGE_UNKNOWN+1; li<wxLANGUAGE_USER_DEFINED; ++li )
-	{
-		i18n_DoPackageCheck( li, englishNames, xlatedNames );
-	}
-
-	// Brilliant.  Because someone in the wx world didn't think to move wxLANGUAGE_USER_DEFINED
-	// to a place where it wasn't butt right up against the main languages (like, say, start user
-	// defined values at 4000 or something?), they had to add new languages in at some arbitrary
-	// value instead.  Let's handle them here:
-	// fixme: these won't show up in alphabetical order if they're actually present (however
-	// horribly unlikely that is)... do we care?  Probably not.
-
-	// Note: These aren't even available in some packaged Linux distros anyway. >_<
-
-	//i18n_DoPackageCheck( wxLANGUAGE_VALENCIAN, englishNames, xlatedNames );
-	//i18n_DoPackageCheck( wxLANGUAGE_SAMI, englishNames, xlatedNames );
-}
-
-// ------------------------------------------------------------------------
 void AppConfig::LoadSave( IniInterface& ini )
 {
 	IniEntry( MainGuiPosition,		wxDefaultPosition );
+	IniEntry( LanguageId,			wxLANGUAGE_DEFAULT );
+	IniEntry( RecentFileCount,		6 );
+	IniEntry( DeskTheme,			L"default" );
+	IniEntry( Listbook_ImageSize,	32 );
+	IniEntry( Toolbar_ImageSize,	24 );
+	IniEntry( Toolbar_ShowLabels,	true );
+
 	IniEntry( CdvdVerboseReads,		false );
 
 	// Process various sub-components:
@@ -270,27 +225,40 @@ void AppConfig::LoadSave( IniInterface& ini )
 	Folders.LoadSave( ini );
 	BaseFilenames.LoadSave( ini );
 
+	if( ini.IsSaving() && (g_RecentIsoList != NULL) )
+		g_RecentIsoList->Save( ini.GetConfig() );
+
 	ini.Flush();
 }
 
 // ------------------------------------------------------------------------
+// Performs necessary operations to ensure that the current g_Conf settings (and other config-stored
+// globals) are applied to the pcsx2 main window and primary emulation subsystems (if active).
 //
 void AppConfig::Apply()
 {
-	// Language Application:
-	// Three stages.  First we try and configure the requested language. If that fails,
-	// we fall back on the default language for the user's operating system.  If that
-	// fails we fall back on good old english.
-
-	//wxLocale*	locale;
-
 	if( !i18n_SetLanguage( LanguageId ) )
 	{
 		if( !i18n_SetLanguage( wxLANGUAGE_DEFAULT ) )
 		{
-			//wxGetTranslation();
+			i18n_SetLanguage( wxLANGUAGE_ENGLISH );
 		}
 	}
+
+	// Always perform delete and reload of the Recent Iso List.  This handles cases where
+	// the recent file count has been changed, and it's a helluva lot easier than trying
+	// to make a clone copy of this complex object. ;)
+
+	wxConfigBase* cfg = wxConfigBase::Get( false );
+	wxASSERT( cfg != NULL );
+	
+	if( g_RecentIsoList != NULL )
+		g_RecentIsoList->Save( *cfg );
+	safe_delete( g_RecentIsoList );
+	g_RecentIsoList = new wxFileHistory( RecentFileCount );
+	g_RecentIsoList->Load( *cfg );
+
+	cfg->Flush();
 }
 
 // ------------------------------------------------------------------------
@@ -316,7 +284,7 @@ void AppConfig::ConsoleLogOptions::LoadSave( IniInterface& ini )
 	IniEntry( AutoDock,			true );
 	IniEntry( DisplayPosition,	wxDefaultPosition );
 	IniEntry( DisplaySize,		wxSize( 540, 540 ) );
-
+	
 	ini.SetPath( L".." );
 }
 
@@ -361,8 +329,8 @@ const wxString g_PluginNames[] =
 // ------------------------------------------------------------------------
 const wxFileName& AppConfig::FilenameOptions::operator[]( PluginsEnum_t pluginidx ) const
 {
-	if( (uint)pluginidx >= Plugin_Count )
-		throw Exception::IndexBoundsFault( L"Filename[Plugin]", pluginidx, Plugin_Count );
+	if( (uint)pluginidx >= PluginId_Count )
+		throw Exception::IndexBoundsFault( L"Filename[Plugin]", pluginidx, PluginId_Count );
 
 	return Plugins[pluginidx];
 }
@@ -373,7 +341,7 @@ void AppConfig::FilenameOptions::LoadSave( IniInterface& ini )
 
 	const wxFileName pc( L"Please Configure" );
 
-	for( int i=0; i<Plugin_Count; ++i )
+	for( int i=0; i<PluginId_Count; ++i )
 	{
 		ini.Entry( g_PluginNames[i], Plugins[i], pc );
 	}

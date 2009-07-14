@@ -20,6 +20,7 @@
 
 #include <wx/wx.h>
 #include <wx/image.h>
+#include <wx/docview.h>
 
 #include "App.h"
 
@@ -44,11 +45,14 @@ protected:
 		Menu_Misc,				// Misc options and help!
 
 		// Run SubSection
-		Menu_QuickBootCD = 60,	// boots games using the bios stub method (skips power-on checks)
-		Menu_FullBootCD,		// boots games through the bios.
-		Menu_BootNoCD,			// used to enter the bios (subs in cdvdnull)
+		Menu_BootIsoFast = 20,	// Opens Recent Files sub-menu, and boots selected iso using QuickBoot
+		Menu_BootIso,			// Opens Recent Files sub-menu, and boots selected iso using FullBoot
+		Menu_IsoBrowse,			// sub-menu opened up by BootIso
+		Menu_BootQuickCDVD,		// opens a submenu filled by CDVD plugin (usually list of drives)
+		Menu_BootFullCDVD,		// opens a submenu filled by CDVD plugin (usually list of drives)
+		Menu_RunWithoutDisc,	// used to enter the bios (subs in cdvdnull)
 		Menu_RunELF,
-		Menu_SuspendExec,			// suspends active emulation
+		Menu_SuspendExec,		// suspends active emulation
 		Menu_ResumeExec,		// restores active emulation
 		Menu_Reset,				// Issues a complete reset.
 		Menu_States,			// Opens states submenu
@@ -68,11 +72,11 @@ protected:
 		Menu_Config_USB,
 		Menu_Config_FireWire,
 
+		Menu_Config_Settings,
 		Menu_Config_Memcards,
 		Menu_Config_SpeedHacks,
 		Menu_Config_Gamefixes,
 		Menu_Config_Patches,
-		Menu_Config_Advanced,
 
 		// Video Subsection
 		// Top items are Pcsx2-controlled.  GS plugin items are inserted beneath.
@@ -117,6 +121,9 @@ protected:
 	wxMenu* MakeStatesMenu();
 	wxMenu* MakeLanguagesMenu() const;
 
+	wxMenu* MakeIsoMenu();
+	wxMenu* MakeCdvdMenu();
+
 	void PopulateVideoMenu();
 	void PopulateAudioMenu();
 	void PopulatePadMenu();
@@ -149,9 +156,10 @@ protected:
 protected:
 	void OnMoveAround( wxMoveEvent& evt );
 
-	void Menu_QuickBootCD_Click(wxCommandEvent &event);
-	void Menu_BootCD_Click(wxCommandEvent &event);
-	void Menu_BootNoCD_Click(wxCommandEvent &event);
+	void Menu_ConfigSettings_Click(wxCommandEvent &event);
+	void Menu_RunWithoutDisc_Click(wxCommandEvent &event);
+	void Menu_IsoBrowse_Click(wxCommandEvent &event);
+	void Menu_IsoRecent_Click(wxCommandEvent &event);
 
 	void Menu_OpenELF_Click(wxCommandEvent &event);
 	void Menu_LoadStateOther_Click(wxCommandEvent &event);

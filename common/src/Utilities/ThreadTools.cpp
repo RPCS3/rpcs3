@@ -45,8 +45,8 @@ namespace Threading
 
 	void Thread::Close()
 	{
-		if( m_terminated ) return;
-		pthread_cancel( m_thread );
+		if( !m_terminated )
+			pthread_cancel( m_thread );
 		pthread_join( m_thread, NULL );
 	}
 

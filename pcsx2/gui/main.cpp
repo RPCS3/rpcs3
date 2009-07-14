@@ -29,6 +29,7 @@
 IMPLEMENT_APP(Pcsx2App)
 
 AppConfig g_Conf;
+wxFileHistory* g_RecentIsoList = NULL;
 
 Pcsx2App::Pcsx2App()  :
 	m_ConsoleFrame( NULL )

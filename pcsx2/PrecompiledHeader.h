@@ -63,7 +63,9 @@ typedef int BOOL;
 #define TRUE  1
 #define FALSE 0
 
-#define wxASSERT_MSG_A( cond, msg ) wxASSERT_MSG( cond, wxString::FromAscii(msg).c_str() );
+#ifndef wxASSERT_MSG_A
+#	define wxASSERT_MSG_A( cond, msg ) wxASSERT_MSG( cond, wxString::FromAscii(msg).c_str() );
+#endif
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // Begin Pcsx2 Includes: Add items here that are local to Pcsx2 but stay relatively
@@ -81,7 +83,7 @@ typedef int BOOL;
 #include "Utilities/General.h"
 #include "x86emitter/tools.h"
 
-////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////
 // Compiler/OS specific macros and defines -- Begin Section
 
 #if defined(_MSC_VER)

@@ -201,7 +201,7 @@
 // Default is 0
 //
 // Recommended setting: YMMV
-#define wxUSE_STL 0
+#define wxUSE_STL 1
 
 // Set wxUSE_EXTENDED_RTTI to 1 to use extended RTTI
 //

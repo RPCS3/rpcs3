@@ -147,7 +147,7 @@ namespace Path
 	extern wxString ReplaceFilename( const wxString& src, const wxString& newfilename );
 	extern wxString GetFilename( const wxString& src );
 	extern wxString GetDirectory( const wxString& src );
-	extern wxString GetFilenameWithoutExt( const string& src );
+	extern wxString GetFilenameWithoutExt( const wxString& src );
 	extern wxString GetRootDirectory( const wxString& src );
 
 	extern void CreateDirectory( const wxString& src );

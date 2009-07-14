@@ -18,6 +18,15 @@
 
 #pragma once
 
+// macro provided for tagging translation strings, without actually running them through the
+// translator (which the _() does automatically, and sometimes we don't want that).  This is
+// a shorthand replacement for wxTRANSLATE.
+#define wxLt(a)		(a)
+
+#ifndef wxASSERT_MSG_A
+#	define wxASSERT_MSG_A( cond, msg ) wxASSERT_MSG( cond, wxString::FromAscii( msg ).c_str() )
+#endif
+
 // must include wx/setup.h first, otherwise we get warnings/errors regarding __LINUX__
 #include <wx/setup.h>
 

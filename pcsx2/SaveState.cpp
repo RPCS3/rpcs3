@@ -109,7 +109,7 @@ void SaveState::FreezeAll()
 
 	char descin[128];
 	wxString descout;
-	IsBIOS( g_Conf.Files.Bios(), descout );
+	IsBIOS( g_Conf.FullpathToBios(), descout );
 	memcpy_fast( descin, descout.ToAscii().data(), 128 );
 	Freeze( descin );
 	

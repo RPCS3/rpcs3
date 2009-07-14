@@ -24,8 +24,8 @@
 
 using namespace wxHelpers;
 
-Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow& parent, int id ) :
-	wxPanelWithHelpers( &parent, id )
+Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow& parent ) :
+	BaseApplicableConfigPanel( &parent )
 {
 	wxBoxSizer& mainSizer = *new wxBoxSizer( wxVERTICAL );
 
@@ -75,6 +75,11 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow& parent, int id ) :
 	Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( SpeedHacksPanel::WaitCycleExt_Click ) );
 	Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( SpeedHacksPanel::INTCSTATSlow_Click ) );
 	Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( SpeedHacksPanel::IdleLoopFF_Click ) );
+}
+
+bool Panels::SpeedHacksPanel::Apply( AppConfig& conf )
+{
+	return true;
 }
 
 void Panels::SpeedHacksPanel::IOPCycleDouble_Click(wxCommandEvent &event)

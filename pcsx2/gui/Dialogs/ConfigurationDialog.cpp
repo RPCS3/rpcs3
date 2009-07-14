@@ -26,37 +26,74 @@
 
 #include <wx/bookctrl.h>
 #include <wx/artprov.h>
-#include <wx/listbook.h>
 
 using namespace wxHelpers;
 using namespace Panels;
 
-Dialogs::ConfigurationDialog::ConfigurationDialog( wxWindow* parent, int id ) :
-	wxDialogWithHelpers( parent, id, _T("PCSX2 Configuration"), true )
-{
+// configure the orientation of the listbox based on the platform
+
 #if defined(__WXMAC__) || defined(__WXMSW__)
-	int orient = wxBK_TOP;
+	static const int s_orient = wxBK_TOP;
 #else
-	int orient = wxBK_LEFT;
+	static const int s_orient = wxBK_LEFT;
 #endif
 
+
+Dialogs::ConfigurationDialog::ConfigurationDialog( wxWindow* parent, int id ) :
+	wxDialogWithHelpers( parent, id, _T("PCSX2 Configuration"), true )
+,	m_listbook( *new wxListbook( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, s_orient ) )
+{
 	wxBoxSizer& mainSizer = *new wxBoxSizer( wxVERTICAL );
-	wxListbook& listbook = *new wxListbook( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, orient );
 
-	listbook.SetImageList( &wxGetApp().GetImgList_Config() );
-
+	m_listbook.SetImageList( &wxGetApp().GetImgList_Config() );
 	const AppImageIds::ConfigIds& cfgid( wxGetApp().GetImgId().Config );
 
-	listbook.AddPage( new PathsPanel( listbook ), L"Paths", false, cfgid.Paths );
-	listbook.AddPage( new PluginSelectorPanel( listbook ), L"Plugins", false, cfgid.Plugins );
-	listbook.AddPage( new SpeedHacksPanel( listbook ), L"Speedhacks", true, cfgid.Speedhacks );
-	listbook.AddPage( new GameFixesPanel( listbook ), L"Game Fixes", false, cfgid.Gamefixes );
+	m_listbook.AddPage( new PathsPanel( m_listbook ),			_("Folders"), false, cfgid.Paths );
+	m_listbook.AddPage( new PluginSelectorPanel( m_listbook ),	_("Plugins"), false, cfgid.Plugins );
+	m_listbook.AddPage( new SpeedHacksPanel( m_listbook ),		_("Speedhacks"), false, cfgid.Speedhacks );
+	m_listbook.AddPage( new GameFixesPanel( m_listbook ),		_("Game Fixes"), false, cfgid.Gamefixes );
 
-	mainSizer.Add( &listbook );
+	mainSizer.Add( &m_listbook );
 	AddOkCancel( mainSizer, true );
 
 	SetSizerAndFit( &mainSizer );
 
 	Center( wxCENTER_ON_SCREEN | wxBOTH );
+	
+	Connect( wxID_OK,		wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ConfigurationDialog::OnOk_Click ) );
+	Connect( wxID_APPLY,	wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ConfigurationDialog::OnApply_Click ) );
 }
 
+Dialogs::ConfigurationDialog::~ConfigurationDialog()
+{
+}
+
+bool Dialogs::ConfigurationDialog::ApplySettings()
+{
+	AppConfig confcopy( g_Conf );
+
+	int pagecount = m_listbook.GetPageCount();
+	for( int i=0; i<pagecount; ++i )
+	{
+		BaseApplicableConfigPanel* panel = (BaseApplicableConfigPanel*)m_listbook.GetPage(i);
+		if( !panel->Apply( confcopy ) ) return false;
+	}
+	
+	g_Conf = confcopy;
+	g_Conf.Apply();
+	g_Conf.Save();
+
+	return true;
+}
+
+void Dialogs::ConfigurationDialog::OnOk_Click( wxCommandEvent& evt )
+{
+	evt.Skip();
+	if( ApplySettings() ) Close();
+}
+
+void Dialogs::ConfigurationDialog::OnApply_Click( wxCommandEvent& evt )
+{
+	evt.Skip();
+	ApplySettings();
+}

@@ -78,7 +78,7 @@ namespace wxHelpers
 	// Creates a new checkbox and adds it to the specified sizer/parent combo.
 	// Uses the default spacer setting for adding checkboxes.
 	//
-	wxCheckBox& AddCheckBoxTo( wxWindow* parent, wxBoxSizer& sizer, const wxString& label, wxWindowID id )
+	wxCheckBox& AddCheckBoxTo( wxWindow* parent, wxSizer& sizer, const wxString& label, wxWindowID id )
 	{
 		wxCheckBox* retval = new wxCheckBox( parent, id, label );
 		sizer.Add( retval, SizerFlags::Checkbox() );
@@ -90,7 +90,7 @@ namespace wxHelpers
 	// The first item in a group should pass True for the isFisrt parameter.
 	// Uses the default spacer setting for checkboxes.
 	//
-	wxRadioButton& AddRadioButtonTo( wxWindow* parent, wxBoxSizer& sizer, const wxString& label, wxWindowID id, bool isFirst )
+	wxRadioButton& AddRadioButtonTo( wxWindow* parent, wxSizer& sizer, const wxString& label, wxWindowID id, bool isFirst )
 	{
 		wxRadioButton* retval = new wxRadioButton( parent, id, label, wxDefaultPosition, wxDefaultSize, isFirst ? wxRB_GROUP : 0 );
 		sizer.Add( retval, SizerFlags::Checkbox() );
@@ -109,7 +109,7 @@ namespace wxHelpers
 	// alignFlags - Either wxALIGN_LEFT, RIGHT, or CENTRE.  All other wxStaticText flags are ignored
 	//      or overridden.  [default is left alignment]
 	//
-	wxStaticText& AddStaticTextTo(wxWindow* parent, wxBoxSizer& sizer, const wxString& label, int size, int alignFlags )
+	wxStaticText& AddStaticTextTo(wxWindow* parent, wxSizer& sizer, const wxString& label, int size, int alignFlags )
 	{
 		// No reason to ever have AutoResize enabled, quite frankly.  It just causes layout and centering problems.
 		alignFlags |= wxST_NO_AUTORESIZE;
@@ -170,19 +170,19 @@ wxDialogWithHelpers::wxDialogWithHelpers( wxWindow* parent, int id,  const wxStr
 	// any good.
 }
 
-wxCheckBox& wxDialogWithHelpers::AddCheckBox( wxBoxSizer& sizer, const wxString& label, wxWindowID id )
+wxCheckBox& wxDialogWithHelpers::AddCheckBox( wxSizer& sizer, const wxString& label, wxWindowID id )
 {
 	return wxHelpers::AddCheckBoxTo( this, sizer, label, id );
 }
 
-wxStaticText& wxDialogWithHelpers::AddStaticText(wxBoxSizer& sizer, const wxString& label, int size )
+wxStaticText& wxDialogWithHelpers::AddStaticText(wxSizer& sizer, const wxString& label, int size )
 {
 	return wxHelpers::AddStaticTextTo( this, sizer, label, size );
 }
 
-void wxDialogWithHelpers::AddOkCancel( wxBoxSizer &sizer, bool hasApply )
+void wxDialogWithHelpers::AddOkCancel( wxSizer &sizer, bool hasApply )
 {
-	wxBoxSizer* buttonSizer = &sizer;
+	wxSizer* buttonSizer = &sizer;
 	if( m_hasContextHelp )
 	{
 		// Add the context-sensitive help button on the caption for the platforms
@@ -220,17 +220,17 @@ wxPanelWithHelpers::wxPanelWithHelpers( wxWindow* parent, int id, const wxPoint&
 {
 }
 
-wxCheckBox& wxPanelWithHelpers::AddCheckBox( wxBoxSizer& sizer, const wxString& label, wxWindowID id )
+wxCheckBox& wxPanelWithHelpers::AddCheckBox( wxSizer& sizer, const wxString& label, wxWindowID id )
 {
 	return wxHelpers::AddCheckBoxTo( this, sizer, label, id );
 }
 
-wxStaticText& wxPanelWithHelpers::AddStaticText(wxBoxSizer& sizer, const wxString& label, int size, int alignFlags )
+wxStaticText& wxPanelWithHelpers::AddStaticText(wxSizer& sizer, const wxString& label, int size, int alignFlags )
 {
 	return wxHelpers::AddStaticTextTo( this, sizer, label, size, alignFlags );
 }
 
-wxRadioButton& wxPanelWithHelpers::AddRadioButton( wxBoxSizer& sizer, const wxString& label, const wxString& subtext, wxWindowID id )
+wxRadioButton& wxPanelWithHelpers::AddRadioButton( wxSizer& sizer, const wxString& label, const wxString& subtext, wxWindowID id )
 {
 	wxRadioButton& retval = wxHelpers::AddRadioButtonTo( this, sizer, label, id, m_StartNewRadioGroup );
 	m_StartNewRadioGroup = false;

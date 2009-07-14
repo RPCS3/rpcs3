@@ -26,8 +26,8 @@ using namespace wxHelpers;
 #define FLAG_FPU_Compare 0x4 // Digimon Rumble Arena - IDC_GAMEFIX3
 #define FLAG_FPU_MUL 0x8 //Tales of Destiny - IDC_GAMEFIX5
 
-Panels::GameFixesPanel::GameFixesPanel( wxWindow& parent, int id ) :
-	wxPanelWithHelpers( &parent, id )
+Panels::GameFixesPanel::GameFixesPanel( wxWindow& parent ) :
+	BaseApplicableConfigPanel( &parent )
 {
 	wxStaticText* label_Title = new wxStaticText(
 		this, wxID_ANY, _T("Some games need special settings.\nConfigure them here."), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE
@@ -50,6 +50,11 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow& parent, int id ) :
 	Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( GameFixesPanel::FPUMultHack_Click ) );
 	Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( GameFixesPanel::TriAce_Click ) );
 	Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( GameFixesPanel::GodWar_Click ) );
+}
+
+bool Panels::GameFixesPanel::Apply( AppConfig& conf )
+{
+	return true;
 }
 
 void Panels::GameFixesPanel::FPUCompareHack_Click(wxCommandEvent &event)
