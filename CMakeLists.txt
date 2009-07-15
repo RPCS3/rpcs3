@@ -18,15 +18,17 @@ if(WIN32)
 else(WIN32)
   set(_library_dir lib)
 endif(WIN32)
+
+set(INCLUDE_INSTALL_DIR include/yaml-cpp)
+set(LIB_INSTALL_DIR ${_library_dir}${LIB_SUFFIX})
+
 #
 set(_INSTALL_DESTINATIONS
 	RUNTIME DESTINATION bin
-	LIBRARY DESTINATION ${_library_dir}${LIB_SUFFIX} 
+	LIBRARY DESTINATION ${LIB_INSTALL_DIR}
 	ARCHIVE DESTINATION lib${LIB_SUFFIX}
 )
 #
-set(INCLUDE_INSTALL_DIR include/yaml-cpp)
-
 file(GLOB public_headers include/*.h)
 file(GLOB private_headers src/*.h)
 file(GLOB sources src/*.cpp)
@@ -47,6 +49,11 @@ install(
 	FILES ${public_headers}
 	DESTINATION ${INCLUDE_INSTALL_DIR}
 )
+
+if(UNIX)
+	configure_file("yaml-cpp.pc.cmake" yaml-cpp.pc @ONLY)
+	install(FILES yaml-cpp.pc DESTINATION ${LIB_INSTALL_DIR}/pkgconfig)
+endif(UNIX)
 
 add_subdirectory (yaml-reader)
 add_subdirectory (util)
