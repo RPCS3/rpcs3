@@ -970,7 +970,7 @@ int OpenPlugins(const char* pTitleFilename)
 	    (!OpenSPU2()) || (!OpenDEV9()) || (!OpenUSB()) || (!OpenFW()))
 		return -1;
 	
-	if (!only_loading_elf) cdvdNewDiskCB();
+	if (!only_loading_elf) cdvdDetectDisk();
 	return 0;
 }
 

@@ -101,6 +101,7 @@ extern void cdvdActionInterrupt();
 extern void cdvdReadInterrupt();
 
 // We really should not have a function with the exact same name as a callback except for case!
+extern void cdvdDetectDisk();
 extern void cdvdNewDiskCB();
 extern u8 cdvdRead(u8 key);
 extern void cdvdWrite(u8 key, u8 rt);
@@ -111,6 +112,5 @@ extern void cdvdSetSystemTime(cdvdStruct& setme);
 extern CDVDplugin CDVD;
 extern CDVDplugin ISO;
 extern CDVDplugin NODISC;
-
 
 #endif /* __CDVD_H__ */

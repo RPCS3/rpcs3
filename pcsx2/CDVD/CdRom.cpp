@@ -496,7 +496,6 @@ void  cdrInterrupt() {
 }
 
 void  cdrReadInterrupt() {
-	u8 buf[2352];
 
 	if (!cdr.Reading)
 		return;

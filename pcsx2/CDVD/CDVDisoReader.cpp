@@ -202,7 +202,8 @@ static void FindLayer1Start()
 			layer1start=-2;
 		}
 
-		Console::Status("found at 0x%8.8x\n", params layer1start);
+		if(layer1start>=0)
+			Console::Status("found at 0x%8.8x\n", params layer1start);
 	}
 }
 

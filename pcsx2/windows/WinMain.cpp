@@ -748,7 +748,7 @@ LRESULT WINAPI MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				break;
 
 			case ID_CONFIG_CDVDROM:
-				if (CDVD.configure) CDVD.configure();
+				if (CDVD_plugin.configure) CDVD_plugin.configure();
 				break;
 
 			case ID_CONFIG_DEV9:

@@ -517,14 +517,14 @@ void SaveState::cdvdFreeze()
 }
 
 // Modified by (efp) - 16/01/2006
-void cdvdNewDiskCB()
+
+void cdvdDetectDisk()
 {
-	DoCDVDresetDiskTypeCache();
 	cdvd.Type = DoCDVDdetectDiskType();
 
 	char str[g_MaxPath];
 	int result = GetPS2ElfName(str);
-	
+
 	// Now's a good time to reload the ELF info...
 	if( ElfCRC == 0 )
 	{
@@ -532,6 +532,13 @@ void cdvdNewDiskCB()
 		ElfApplyPatches();
 		GSsetGameCRC( ElfCRC, 0 );
 	}
+}
+
+void cdvdNewDiskCB()
+{
+	DoCDVDresetDiskTypeCache();
+
+	cdvdDetectDisk();
 }
 
 void mechaDecryptBytes( u32 madr, int size )
@@ -904,7 +911,7 @@ u8 cdvdRead(u8 key)
 			break;
 		
 		case 0x08:  // STATUS
-			CDR_LOG("cdvdRead0A(Status) %x", cdvd.Status);
+			CDR_LOG("cdvdRead08(Status) %x", cdvd.Status);
 			return cdvd.Status;
 			break;
 		
@@ -1348,7 +1355,15 @@ static void cdvdWrite16(u8 rt)		 // SCOMMAND
 					cdvd.Result[4] = 0x01;//hour
 					cdvd.Result[5] = 0x30;//min
 					break;
-				
+
+				case 0x80: // completely stupid code, but might even work... whatever it is menat to be for :P
+					SetResultSize(1);
+					if((CDVD.getDiskType()==CDVD_TYPE_NODISC)||(CDVD.getTrayStatus()==CDVD_TRAY_OPEN))
+						cdvd.Result[0] = 0x80;
+					else
+						cdvd.Result[0] = 0x00;
+					break;
+
 				default:
 					SetResultSize(1);
 					cdvd.Result[0] = 0x80;
