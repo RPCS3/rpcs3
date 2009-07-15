@@ -55,13 +55,12 @@ int CheckDiskTypeFS(int baseType)
 	IsoFS_init();
 
 	// check if the file exists
-	if (IsoFS_findFile("SYSTEM.CNF;1", &tocEntry) == TRUE)
+	if ((f=IsoFS_open("SYSTEM.CNF;1", 1)) >= 0)
 	{
-		f=IsoFS_open("SYSTEM.CNF;1", 1);
-		IsoFS_read(f, buffer, 256);
+		int size = IsoFS_read(f, buffer, 256);
 		IsoFS_close(f);
 
-		buffer[tocEntry.fileSize]='\0';
+		buffer[size]='\0';
 
 		pos=strstr(buffer, "BOOT2");
 		if (pos==NULL){
@@ -94,15 +93,19 @@ int FindDiskType(int mType)
 	int dataTracks=0;
 	int audioTracks=0;
 
-	int iCDType = CDVD_TYPE_DETCTDVDS;
-
-	s32 mt=mType;
+	int iCDType = mType;
 
 	cdvdTN tn;
 
 	CDVD.getTN(&tn);
 
-	if((mt<0) || ((mt == CDVD_TYPE_DETCTDVDS) && (tn.strack != tn.etrack)))
+	const char* cdTypeName;
+
+	if(tn.strack != tn.etrack) // multitrack == CD.
+	{
+		iCDType = CDVD_TYPE_DETCTCD;
+	}
+	else if(mType<0)
 	{
 		cdvdTD td;
 		CDVD.getTD(0,&td);
@@ -121,7 +124,31 @@ int FindDiskType(int mType)
 		}
 	}
 
-	DevCon::Status(" * CDVD Disk Open: %d tracks (%d to %d):\n", params tn.etrack-tn.strack+1,tn.strack,tn.etrack);
+	if(iCDType == CDVD_TYPE_DETCTDVDS)
+	{
+		s32 dlt=0;
+		u32 l1s=0;
+
+		if(CDVD.getDualInfo(&dlt,&l1s)==0)
+		{
+			if(dlt>0)
+				iCDType = CDVD_TYPE_DETCTDVDD;
+		}
+	}
+
+	switch(iCDType)
+	{
+	case CDVD_TYPE_DETCTCD:
+		DevCon::Status(" * CDVD Disk Open: CD, %d tracks (%d to %d):\n", params tn.etrack-tn.strack+1,tn.strack,tn.etrack);
+		break;
+	case CDVD_TYPE_DETCTDVDS:
+		DevCon::Status(" * CDVD Disk Open: DVD, Single layer or unknown\n");
+		break;
+	case CDVD_TYPE_DETCTDVDD:
+		DevCon::Status(" * CDVD Disk Open: DVD, Double layer\n");
+		break;
+
+	}
 
 	audioTracks=dataTracks=0;
 	for(int i=tn.strack;i<=tn.etrack;i++)
@@ -363,7 +390,7 @@ s32 DoCDVDreadTrack(u32 lsn, int mode)
 		break;
 	}
 
-	DevCon::Notice("CDVD readTrack(lsn=%d,mode=%d)",params lsn, lastReadSize);
+	//DevCon::Notice("CDVD readTrack(lsn=%d,mode=%d)",params lsn, lastReadSize);
 
 	return CDVD.readTrack(lsn,mode);
 }
