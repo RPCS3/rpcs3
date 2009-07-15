@@ -479,11 +479,11 @@ void CALLBACK CDVD_about() {}
 s32  CALLBACK CDVD_test() { return 0; }
 void CALLBACK CDVD_newDiskCB(void (*callback)()) {}
 
+extern int lastReadSize;
 s32 CALLBACK CDVD_getBuffer2(u8* buffer)
 {
 	int ret;
 
-	extern int lastReadSize;
 
 	// TEMP: until I fix all the plugins to use this function style
 	u8* pb = CDVD.getBuffer();
@@ -500,32 +500,26 @@ s32 CALLBACK CDVD_getBuffer2(u8* buffer)
 
 s32 CALLBACK CDVD_readSector(u8* buffer, u32 lsn, int mode)
 {
-	int ret;
-
-	CDVD.readTrack(lsn,mode);
-	void* pbuffer = CDVD.getBuffer();
-	if(pbuffer!=NULL)
+	if(CDVD.readTrack(lsn,mode)<0)
+		return -1;
+	
+	// TEMP: until all the plugins use the new CDVDgetBuffer style
+	switch (mode)
 	{
-		switch(mode)
-		{
-		case CDVD_MODE_2048:
-			memcpy(buffer,pbuffer,2048);
-			break;
-		case CDVD_MODE_2328:
-			memcpy(buffer,pbuffer,2328);
-			break;
-		case CDVD_MODE_2340:
-			memcpy(buffer,pbuffer,2340);
-			break;
-		case CDVD_MODE_2352:
-			memcpy(buffer,pbuffer,2352);
-			break;
-		}
-		ret = 0;
+	case CDVD_MODE_2352:
+		lastReadSize = 2352;
+		break;
+	case CDVD_MODE_2340:
+		lastReadSize = 2340;
+		break;
+	case CDVD_MODE_2328:
+		lastReadSize = 2328;
+		break;
+	case CDVD_MODE_2048:
+		lastReadSize = 2048;
+		break;
 	}
-	else ret = -1;
-
-	return ret;
+	return CDVD.getBuffer2(buffer);
 }
 
 s32 CALLBACK CDVD_getDualInfo(s32* dualType, u32* layer1Start)

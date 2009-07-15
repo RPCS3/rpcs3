@@ -141,7 +141,7 @@ static void ReadTrack() {
 	cdr.Prev[2] = itob(cdr.SetSector[2]);
 
 	CDR_LOG("KEY *** %x:%x:%x", cdr.Prev[0], cdr.Prev[1], cdr.Prev[2]);
-	cdr.RErr = DoCDVDreadTrack(MSFtoLSN(cdr.SetSector), CDVD_MODE_2352);
+	cdr.RErr = DoCDVDreadTrack(MSFtoLSN(cdr.SetSector), CDVD_MODE_2340);
 }
 
 // cdr.Stat:
@@ -514,8 +514,7 @@ void  cdrReadInterrupt() {
 	cdr.Result[0] = cdr.StatP;
 
 	SysPrintf("Reading From CDR");
-	cdr.RErr = DoCDVDgetBuffer(buf);
-
+	cdr.RErr = DoCDVDgetBuffer(cdr.Transfer);
 	if (cdr.RErr == -1) 
 	{
 		CDR_LOG(" err\n");
@@ -526,7 +525,6 @@ void  cdrReadInterrupt() {
 		CDREAD_INT((cdr.Mode & 0x80) ? (cdReadTime / 2) : cdReadTime);
 		return;
 	}
-	memcpy_fast(cdr.Transfer, buf+12, 2340);
 	cdr.Stat = DataReady;
 
 	CDR_LOG(" %x:%x:%x", cdr.Transfer[0], cdr.Transfer[1], cdr.Transfer[2]);

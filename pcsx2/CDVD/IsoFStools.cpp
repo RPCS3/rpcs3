@@ -193,7 +193,7 @@ int IsoFS_getVolumeDescriptor(void)
 
 	cdVolDesc localVolDesc;
 
-	DbgCon::WriteLn("CDVD_GetVolumeDescriptor called");
+	DbgCon::WriteLn("IsoFS_GetVolumeDescriptor called");
 
 	for (volDescSector = 16; volDescSector<20; volDescSector++)
 	{
@@ -241,7 +241,7 @@ int IsoFS_findFile(const char* fname, TocEntry* tocEntry){
 
 	dirTocEntry* tocEntryPointer;
 
-	DbgCon::WriteLn("CDVD_findfile called");
+	DbgCon::WriteLn("IsoFS_findfile(\"%s\" called", params fname);
 
 	_splitpath2(fname, pathname, filename);
 
@@ -351,7 +351,7 @@ int IsoFS_findFile(const char* fname, TocEntry* tocEntry){
 		// If we havent found the directory name we wanted then fail
 		if (found_dir != TRUE)
 		{
-			Console::Notice( "CDVD_findfile: could not find dir" );
+			Console::Notice( "IsoFS_findfile: could not find dir" );
 			return -1;
 		}
 
@@ -406,7 +406,7 @@ int IsoFS_findFile(const char* fname, TocEntry* tocEntry){
 				strcpy(tocEntry->filename, localTocEntry.filename);
 				memcpy(tocEntry->date, localTocEntry.date, 7);
 
-				DbgCon::WriteLn("CDVD_findfile: found file");
+				DbgCon::WriteLn("IsoFS_findfile: found file");
 
 				return TRUE;
 			}
@@ -430,7 +430,7 @@ int IsoFS_findFile(const char* fname, TocEntry* tocEntry){
 		}
 	}
 
-	DbgCon::Notice("CDVD_findfile: could not find file");
+	DbgCon::Notice("IsoFS_findfile: could not find file");
 
 	return FALSE;
 }

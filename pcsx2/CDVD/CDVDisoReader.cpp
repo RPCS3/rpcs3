@@ -185,7 +185,7 @@ static void FindLayer1Start()
 		int off = iso->blockofs;
 		u8* tempbuffer;
 
-		Console::Status("CDVD: searching for layer1...");
+		Console::Status("CDVD ISO: searching for layer1...");
 		tempbuffer = (u8*)malloc(CD_FRAMESIZE_RAW);
 		for (layer1start = (iso->blocks / 2 - 0x10) & ~0xf; layer1start < 0x200010; layer1start += 16)
 		{
@@ -409,6 +409,8 @@ s32 CALLBACK ISOreadTrack(u32 lsn, int mode)
 		break;
 	}
 
+	DevCon::Status("* ISO: Reading Track %d mode %d\n", params lsn, psize);
+
 	return 0;
 }
 
@@ -416,6 +418,11 @@ s32 CALLBACK ISOgetBuffer2(u8* buffer)
 {
 	memcpy_fast(buffer,pbuffer,psize);
 	return 0;
+}
+
+u8* CALLBACK ISOgetBuffer()
+{
+	return pbuffer;
 }
 
 s32 CALLBACK ISOgetTrayStatus()
@@ -451,7 +458,7 @@ CDVDplugin ISO = {
 	ISOclose,
 	ISOshutdown,
 	ISOreadTrack,
-	NULL,			// emu shouldn't try to use this one.
+	ISOgetBuffer, // emu shouldn't use this one.
 	ISOreadSubQ,
 	ISOgetTN,
 	ISOgetTD,

@@ -677,19 +677,21 @@ LRESULT WINAPI MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				string outstr;
 				if( Open_Iso_File_Proc( outstr ) )
 				{
-					CDVD = ISO;
-
 					strcpy(isoFileName,outstr.c_str());
 
-					SysReset();
+					//SysReset();
+
+					// SysReset shuts down plugins so it's best in here
+					CDVD = ISO;
 					SysPrepareExecution( NULL );
 				}
 			}
 			break;
 
 			case ID_FILE_RUNBIOS:
+					//SysReset();
+					// SysReset shuts down plugins so it's best in here
 					CDVD = NODISC;
-					SysReset();
 					SysPrepareExecution( NULL, true );
 				break;
 
@@ -700,8 +702,9 @@ LRESULT WINAPI MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			break;
 
 			case ID_FILE_RUNCD:
+				//SysReset();
+				// SysReset shuts down plugins so it's best in here
 				CDVD = CDVD_plugin;
-				SysReset();
 				SysPrepareExecution( NULL );
 			break;
 

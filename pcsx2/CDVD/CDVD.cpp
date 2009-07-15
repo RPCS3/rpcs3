@@ -28,8 +28,6 @@
 
 static cdvdStruct cdvd;
 
-static u8 tempbuf[2352];
-
 static __forceinline void SetResultSize(u8 size)
 {
 	cdvd.ResultC = size;
@@ -522,18 +520,10 @@ void SaveState::cdvdFreeze()
 void cdvdNewDiskCB()
 {
 	DoCDVDresetDiskTypeCache();
-	cdvd.Type = CDVD.getDiskType();
+	cdvd.Type = DoCDVDdetectDiskType();
 
-	
 	char str[g_MaxPath];
 	int result = GetPS2ElfName(str);
-
-	if (cdvd.Type == CDVD_TYPE_PS2CD) 
-	{
-		
-		 // Does the SYSTEM.CNF file only say "BOOT="? PS1 CD then.
-		if(result == 1) cdvd.Type = CDVD_TYPE_PSCD;
-	}
 	
 	// Now's a good time to reload the ELF info...
 	if( ElfCRC == 0 )
@@ -542,7 +532,6 @@ void cdvdNewDiskCB()
 		ElfApplyPatches();
 		GSsetGameCRC( ElfCRC, 0 );
 	}
-
 }
 
 void mechaDecryptBytes( u32 madr, int size )
@@ -725,8 +714,8 @@ __forceinline void cdvdReadInterrupt()
 
 		if (cdvd.RErr == 0) 
 		{
-			cdr.RErr = DoCDVDgetBuffer(tempbuf);
-			cdr.pTransfer = tempbuf;
+			cdr.RErr = DoCDVDgetBuffer(cdr.Transfer);
+			cdr.pTransfer = cdr.Transfer;
 		}
 		else 
 			cdr.pTransfer = NULL;
