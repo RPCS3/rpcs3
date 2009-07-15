@@ -409,8 +409,6 @@ s32 CALLBACK ISOreadTrack(u32 lsn, int mode)
 		break;
 	}
 
-	DevCon::Status("* ISO: Reading Track %d mode %d\n", params lsn, psize);
-
 	return 0;
 }
 
