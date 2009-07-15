@@ -241,7 +241,7 @@ int IsoFS_findFile(const char* fname, TocEntry* tocEntry){
 
 	dirTocEntry* tocEntryPointer;
 
-	DbgCon::WriteLn("IsoFS_findfile(\"%s\" called", params fname);
+	DbgCon::WriteLn("IsoFS_findfile(\"%s\") called", params fname);
 
 	_splitpath2(fname, pathname, filename);
 

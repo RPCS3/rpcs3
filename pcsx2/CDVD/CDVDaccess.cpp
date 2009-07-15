@@ -99,8 +99,6 @@ int FindDiskType(int mType)
 
 	CDVD.getTN(&tn);
 
-	const char* cdTypeName;
-
 	if(tn.strack != tn.etrack) // multitrack == CD.
 	{
 		iCDType = CDVD_TYPE_DETCTCD;
@@ -139,13 +137,13 @@ int FindDiskType(int mType)
 	switch(iCDType)
 	{
 	case CDVD_TYPE_DETCTCD:
-		DevCon::Status(" * CDVD Disk Open: CD, %d tracks (%d to %d):\n", params tn.etrack-tn.strack+1,tn.strack,tn.etrack);
+		DevCon::Status(" * CDVD Disk Open: CD, %d tracks (%d to %d):", params tn.etrack-tn.strack+1,tn.strack,tn.etrack);
 		break;
 	case CDVD_TYPE_DETCTDVDS:
-		DevCon::Status(" * CDVD Disk Open: DVD, Single layer or unknown\n");
+		DevCon::Status(" * CDVD Disk Open: DVD, Single layer or unknown:");
 		break;
 	case CDVD_TYPE_DETCTDVDD:
-		DevCon::Status(" * CDVD Disk Open: DVD, Double layer\n");
+		DevCon::Status(" * CDVD Disk Open: DVD, Double layer:");
 		break;
 
 	}
@@ -166,12 +164,12 @@ int FindDiskType(int mType)
 		if(td.type==CDVD_AUDIO_TRACK) 
 		{
 			audioTracks++;
-			DevCon::Status(" * * Track %d: Audio (%d sectors)\n", params i,tlength);
+			DevCon::Status(" * * Track %d: Audio (%d sectors)", params i,tlength);
 		}
 		else 
 		{
 			dataTracks++;
-			DevCon::Status(" * * Track %d: Data (Mode %d) (%d sectors)\n", params i,((td.type==CDVD_MODE1_TRACK)?1:2),tlength);
+			DevCon::Status(" * * Track %d: Data (Mode %d) (%d sectors)", params i,((td.type==CDVD_MODE1_TRACK)?1:2),tlength);
 		}
 	}
 
