@@ -324,6 +324,12 @@ s32 DoCDVDopen(const char* pTitleFilename)
 	return ret;
 }
 
+void DoCDVDclose()
+{
+	if(blockDumpFile) isoClose(blockDumpFile);
+	CDVD.close();
+}
+
 s32 DoCDVDreadSector(u8* buffer, u32 lsn, int mode)
 {
 	int ret = CDVD.readSector(buffer,lsn,mode);
