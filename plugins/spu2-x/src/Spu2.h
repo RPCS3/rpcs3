@@ -32,7 +32,7 @@ namespace VersionInfo
 {
 	static const u8 PluginApi = PS2E_SPU2_VERSION;
 	static const u8 Release  = 1;
-	static const u8 Revision = 1;	// increase that with each version
+	static const u8 Revision = 2;	// increase that with each version
 }
 
 #ifdef _MSC_VER
