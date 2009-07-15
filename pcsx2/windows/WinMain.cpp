@@ -39,6 +39,7 @@
 #include "implement.h"		// pthreads-win32 defines for startup/shutdown
 
 #include "CDVD/CDVDisoReader.h"
+#include "CDVD/CDVD.h"
 
 unsigned int langsMax;
 static bool m_RestartGui = false;	// used to signal a GUI restart after DestroyWindow()
@@ -686,6 +687,12 @@ LRESULT WINAPI MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			}
 			break;
 
+			case ID_FILE_RUNBIOS:
+					CDVD = NODISC;
+					SysReset();
+					SysPrepareExecution( NULL, true );
+				break;
+
 			case ID_RUN_EXECUTE:
 				// Execute without reset -- resumes existing states or runs the BIOS if
 				// the state is cleared/reset.
@@ -990,8 +997,9 @@ void CreateMainMenu() {
 	ADDSEPARATOR(0);
 	ADDSUBMENUS(0, 1, _("&States"));
 	ADDSEPARATOR(0);
-	ADDMENUITEM(0, _("&Open ELF File"), ID_FILEOPEN);
-	ADDMENUITEM(0, _("Run from &ISO Image"), ID_FILE_RUNISO);
+	ADDMENUITEM(0, _("&Open ELF File..."), ID_FILEOPEN);
+	ADDMENUITEM(0, _("Run &ISO Image..."), ID_FILE_RUNISO);
+	ADDMENUITEM(0, _("Run &BIOS (No Disc)"), ID_FILE_RUNBIOS);
 	ADDMENUITEM(0, _("&Run CD/DVD"), ID_FILE_RUNCD);
 	ADDSUBMENUS(1, 3, _("&Save"));
 	ADDSUBMENUS(1, 2, _("&Load"));

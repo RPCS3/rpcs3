@@ -29,6 +29,8 @@
 
 #include "R5900Exceptions.h"
 
+#include "CDVD/CDVD.h"
+
 using namespace std;
 using namespace Console;
 

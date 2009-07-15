@@ -389,3 +389,123 @@ void DoCDVDresetDiskTypeCache()
 {
 	diskTypeCached = -1;
 }
+
+////////////////////////////////////////////////////////
+//
+// CDVD null interface for Run BIOS menu
+
+
+s32 CALLBACK NODISCinit()
+{
+	return 0;
+}
+
+s32 CALLBACK NODISCopen(const char* pTitle)
+{
+	return 0;
+}
+
+void CALLBACK NODISCclose()
+{
+}
+
+void CALLBACK NODISCshutdown()
+{
+}
+
+s32 CALLBACK NODISCreadTrack(u32 lsn, int mode)
+{
+	return -1;
+}
+
+// return can be NULL (for async modes)
+u8* CALLBACK NODISCgetBuffer()
+{
+	return NULL;
+}
+
+s32 CALLBACK NODISCreadSubQ(u32 lsn, cdvdSubQ* subq)
+{
+	return -1;
+}
+
+s32 CALLBACK NODISCgetTN(cdvdTN *Buffer)
+{
+	return -1;
+}
+
+s32 CALLBACK NODISCgetTD(u8 Track, cdvdTD *Buffer)
+{
+	return -1;
+}
+
+s32 CALLBACK NODISCgetTOC(void* toc)
+{
+	return -1;
+}
+
+s32 CALLBACK NODISCgetDiskType()
+{
+	return CDVD_TYPE_NODISC;
+}
+
+s32 CALLBACK NODISCgetTrayStatus()
+{
+	return CDVD_TRAY_CLOSE;
+}
+
+s32 CALLBACK NODISCdummyS32()
+{
+	return 0;
+}
+
+void CALLBACK NODISCdummyVOID()
+{
+}
+
+void CALLBACK NODISCnewDiskCB(void(CALLBACK*)())
+{
+}
+
+s32 CALLBACK NODISCreadSector(u8* tempbuffer, u32 lsn, int mode)
+{
+	return -1;
+}
+
+s32 CALLBACK NODISCgetBuffer2(u8* buffer)
+{
+	return -1;
+}
+
+s32 CALLBACK NODISCgetDualInfo(s32* dualType, u32* _layer1start)
+{
+	return -1;
+}
+
+CDVDplugin NODISC = {
+	NODISCinit,
+	NODISCopen,
+	NODISCclose,
+	NODISCshutdown,
+	NODISCreadTrack,
+	NODISCgetBuffer,
+	NODISCreadSubQ,
+	NODISCgetTN,
+	NODISCgetTD,
+	NODISCgetTOC,
+	NODISCgetDiskType,
+	NODISCgetTrayStatus,
+	NODISCdummyS32,
+	NODISCdummyS32,
+
+	NODISCdummyVOID,
+	NODISCdummyS32,
+	NODISCdummyVOID,
+	NODISCnewDiskCB,
+
+	NODISCreadSector,
+	NODISCgetBuffer2,
+	NODISCgetDualInfo,
+
+	NULL
+};

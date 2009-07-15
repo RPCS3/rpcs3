@@ -846,8 +846,6 @@ struct CDVDplugin {
 	int* initCount;
 };
 extern CDVDplugin CDVD_plugin; // _plugin because of
-extern CDVDplugin CDVD;
-extern CDVDplugin ISO;
 
 // DEV9
 extern _DEV9init          DEV9init;

@@ -107,5 +107,10 @@ extern void cdvdWrite(u8 key, u8 rt);
 
 // Platform dependent system time assignment (see WinMisc / LnxMisc)
 extern void cdvdSetSystemTime(cdvdStruct& setme);
-		
+
+extern CDVDplugin CDVD;
+extern CDVDplugin ISO;
+extern CDVDplugin NODISC;
+
+
 #endif /* __CDVD_H__ */
