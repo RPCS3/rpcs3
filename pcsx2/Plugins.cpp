@@ -843,7 +843,7 @@ bool OpenCDVD(const char* pTitleFilename)
 		//First, we need the data.
 		CDVD.newDiskCB(cdvdNewDiskCB);
 
-		if (CDVD.open(pTitleFilename) != 0) 
+		if (DoCDVDopen(pTitleFilename) != 0) 
 		{ 
 			if (g_Startup.BootMode != BootMode_Elf) 
 			{ 
@@ -1012,7 +1012,11 @@ void ClosePlugins( bool closegs )
 		}
 	}
 
-	CLOSE_PLUGIN2( CDVD );
+	if( OpenStatus.CDVD )
+	{
+		DoCDVDclose();
+		OpenStatus.CDVD=false;
+	}
 
 	CLOSE_PLUGIN( DEV9 );
 	CLOSE_PLUGIN( USB );

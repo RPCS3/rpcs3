@@ -720,7 +720,7 @@ __forceinline void cdvdReadInterrupt()
 		else 
 			cdr.pTransfer = NULL;
 		
-		if (cdr.RErr < 0)
+		if (cdr.RErr == -1)
 		{
 			cdvd.RetryCntP++;
 			Console::Error("CDVD READ ERROR, sector=%d", params cdvd.Sector);
@@ -731,6 +731,12 @@ __forceinline void cdvdReadInterrupt()
 				CDVDREAD_INT(cdvd.ReadTime);
 				return;
 			}
+		}
+		else if(cdr.RErr == -2)
+		{
+			// not finished yet ... give it a bit more time
+			CDVDREAD_INT(cdvd.ReadTime);
+			return;
 		}
 		cdvd.Reading = false;
 	}
