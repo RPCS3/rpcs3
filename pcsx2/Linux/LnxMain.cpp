@@ -336,8 +336,15 @@ void OnLanguage(GtkMenuItem *menuitem, gpointer user_data)
 void OnFile_RunCD(GtkMenuItem *menuitem, gpointer user_data)
 {
 	CDVD = CDVD_plugin;
-	SysReset();
+	//SysReset();
 	SysPrepareExecution(NULL);
+}
+
+void OnFile_RunBIOS(GtkMenuItem *menuitem, gpointer user_data)
+{
+	CDVD = NODISC;
+	SysReset();
+	SysPrepareExecution(NULL, true);
 }
 
 void OnRunIso_Ok(GtkButton* button, gpointer user_data)
@@ -349,7 +356,7 @@ void OnRunIso_Ok(GtkButton* button, gpointer user_data)
 	strcpy(isoFileName, File);
 	gtk_widget_destroy(FileSel);
 
-	SysReset();
+	//SysReset();
 	SysPrepareExecution( NULL );
 }
 

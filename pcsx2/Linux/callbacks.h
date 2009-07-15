@@ -273,3 +273,7 @@ OnFile_RunIso                          (GtkMenuItem     *menuitem,
 void
 OnFile_BlockDump                       (GtkMenuItem     *menuitem,
                                         gpointer         user_data);
+
+void
+OnFile_RunBIOS                         (GtkMenuItem     *menuitem,
+                                        gpointer         user_data);

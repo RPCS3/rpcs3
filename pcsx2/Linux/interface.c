@@ -2768,10 +2768,10 @@ create_MainWindow (void)
   GtkWidget *GtkMenuBar_Menu;
   GtkWidget *GtkMenuItem_File;
   GtkWidget *GtkMenuItem_File_menu;
-  GtkWidget *run_cd1;
-  GtkWidget *run_iso1;
   GtkWidget *GtkMenuItem_LoadElf;
-  GtkWidget *enable_blockdump1;
+  GtkWidget *run_iso1;
+  GtkWidget *run_cd1;
+  GtkWidget *run_bios__no_disc_1;
   GtkWidget *separator2;
   GtkWidget *states1;
   GtkWidget *states1_menu;
@@ -2821,6 +2821,7 @@ create_MainWindow (void)
   GtkWidget *separator7;
   GtkWidget *enable_console1;
   GtkWidget *enable_patches1;
+  GtkWidget *enable_blockdump1;
   GtkWidget *print_cdvd_info1;
   GtkWidget *GtkMenuItem_Debug;
   GtkWidget *GtkMenuItem_Debug_menu;
@@ -2858,25 +2859,25 @@ create_MainWindow (void)
   gtk_widget_set_name (GtkMenuItem_File_menu, "GtkMenuItem_File_menu");
   gtk_menu_item_set_submenu (GTK_MENU_ITEM (GtkMenuItem_File), GtkMenuItem_File_menu);
 
-  run_cd1 = gtk_menu_item_new_with_mnemonic (_("_Run CD"));
-  gtk_widget_set_name (run_cd1, "run_cd1");
-  gtk_widget_show (run_cd1);
-  gtk_container_add (GTK_CONTAINER (GtkMenuItem_File_menu), run_cd1);
-
-  run_iso1 = gtk_menu_item_new_with_mnemonic (_("_Run Iso..."));
-  gtk_widget_set_name (run_iso1, "run_iso1");
-  gtk_widget_show (run_iso1);
-  gtk_container_add (GTK_CONTAINER (GtkMenuItem_File_menu), run_iso1);
-
-  GtkMenuItem_LoadElf = gtk_menu_item_new_with_mnemonic (_("_Load Elf..."));
+  GtkMenuItem_LoadElf = gtk_menu_item_new_with_mnemonic (_("_Open ELF File.."));
   gtk_widget_set_name (GtkMenuItem_LoadElf, "GtkMenuItem_LoadElf");
   gtk_widget_show (GtkMenuItem_LoadElf);
   gtk_container_add (GTK_CONTAINER (GtkMenuItem_File_menu), GtkMenuItem_LoadElf);
 
-  enable_blockdump1 = gtk_check_menu_item_new_with_mnemonic (_("_Enable Blockdump"));
-  gtk_widget_set_name (enable_blockdump1, "enable_blockdump1");
-  gtk_widget_show (enable_blockdump1);
-  gtk_container_add (GTK_CONTAINER (GtkMenuItem_File_menu), enable_blockdump1);
+  run_iso1 = gtk_menu_item_new_with_mnemonic (_("_Run Iso Image..."));
+  gtk_widget_set_name (run_iso1, "run_iso1");
+  gtk_widget_show (run_iso1);
+  gtk_container_add (GTK_CONTAINER (GtkMenuItem_File_menu), run_iso1);
+
+  run_cd1 = gtk_menu_item_new_with_mnemonic (_("_Run CD/DVD"));
+  gtk_widget_set_name (run_cd1, "run_cd1");
+  gtk_widget_show (run_cd1);
+  gtk_container_add (GTK_CONTAINER (GtkMenuItem_File_menu), run_cd1);
+
+  run_bios__no_disc_1 = gtk_menu_item_new_with_mnemonic (_("_Run Bios (No Disc)"));
+  gtk_widget_set_name (run_bios__no_disc_1, "run_bios__no_disc_1");
+  gtk_widget_show (run_bios__no_disc_1);
+  gtk_container_add (GTK_CONTAINER (GtkMenuItem_File_menu), run_bios__no_disc_1);
 
   separator2 = gtk_separator_menu_item_new ();
   gtk_widget_set_name (separator2, "separator2");
@@ -3121,6 +3122,11 @@ create_MainWindow (void)
   gtk_widget_show (enable_patches1);
   gtk_container_add (GTK_CONTAINER (misc1_menu), enable_patches1);
 
+  enable_blockdump1 = gtk_check_menu_item_new_with_mnemonic (_("_Enable Blockdump"));
+  gtk_widget_set_name (enable_blockdump1, "enable_blockdump1");
+  gtk_widget_show (enable_blockdump1);
+  gtk_container_add (GTK_CONTAINER (misc1_menu), enable_blockdump1);
+
   print_cdvd_info1 = gtk_check_menu_item_new_with_mnemonic (_("Print CDVD Info"));
   gtk_widget_set_name (print_cdvd_info1, "print_cdvd_info1");
   gtk_widget_show (print_cdvd_info1);
@@ -3186,17 +3192,17 @@ create_MainWindow (void)
   g_signal_connect ((gpointer) MainWindow, "delete_event",
                     G_CALLBACK (OnDelete),
                     NULL);
-  g_signal_connect ((gpointer) run_cd1, "activate",
-                    G_CALLBACK (OnFile_RunCD),
+  g_signal_connect ((gpointer) GtkMenuItem_LoadElf, "activate",
+                    G_CALLBACK (OnFile_LoadElf),
                     NULL);
   g_signal_connect ((gpointer) run_iso1, "activate",
                     G_CALLBACK (OnFile_RunIso),
                     NULL);
-  g_signal_connect ((gpointer) GtkMenuItem_LoadElf, "activate",
-                    G_CALLBACK (OnFile_LoadElf),
+  g_signal_connect ((gpointer) run_cd1, "activate",
+                    G_CALLBACK (OnFile_RunCD),
                     NULL);
-  g_signal_connect ((gpointer) enable_blockdump1, "activate",
-                    G_CALLBACK (OnFile_BlockDump),
+  g_signal_connect ((gpointer) run_bios__no_disc_1, "activate",
+                    G_CALLBACK (OnFile_RunBIOS),
                     NULL);
   g_signal_connect ((gpointer) load_slot_0, "activate",
                     G_CALLBACK (OnStates_Load),
@@ -3294,6 +3300,9 @@ create_MainWindow (void)
   g_signal_connect ((gpointer) enable_patches1, "activate",
                     G_CALLBACK (on_enable_patches1_activate),
                     NULL);
+  g_signal_connect ((gpointer) enable_blockdump1, "activate",
+                    G_CALLBACK (OnFile_BlockDump),
+                    NULL);
   g_signal_connect ((gpointer) print_cdvd_info1, "activate",
                     G_CALLBACK (OnPrintCdvdInfo),
                     NULL);
@@ -3316,10 +3325,10 @@ create_MainWindow (void)
   GLADE_HOOKUP_OBJECT (MainWindow, GtkMenuBar_Menu, "GtkMenuBar_Menu");
   GLADE_HOOKUP_OBJECT (MainWindow, GtkMenuItem_File, "GtkMenuItem_File");
   GLADE_HOOKUP_OBJECT (MainWindow, GtkMenuItem_File_menu, "GtkMenuItem_File_menu");
-  GLADE_HOOKUP_OBJECT (MainWindow, run_cd1, "run_cd1");
-  GLADE_HOOKUP_OBJECT (MainWindow, run_iso1, "run_iso1");
   GLADE_HOOKUP_OBJECT (MainWindow, GtkMenuItem_LoadElf, "GtkMenuItem_LoadElf");
-  GLADE_HOOKUP_OBJECT (MainWindow, enable_blockdump1, "enable_blockdump1");
+  GLADE_HOOKUP_OBJECT (MainWindow, run_iso1, "run_iso1");
+  GLADE_HOOKUP_OBJECT (MainWindow, run_cd1, "run_cd1");
+  GLADE_HOOKUP_OBJECT (MainWindow, run_bios__no_disc_1, "run_bios__no_disc_1");
   GLADE_HOOKUP_OBJECT (MainWindow, separator2, "separator2");
   GLADE_HOOKUP_OBJECT (MainWindow, states1, "states1");
   GLADE_HOOKUP_OBJECT (MainWindow, states1_menu, "states1_menu");
@@ -3369,6 +3378,7 @@ create_MainWindow (void)
   GLADE_HOOKUP_OBJECT (MainWindow, separator7, "separator7");
   GLADE_HOOKUP_OBJECT (MainWindow, enable_console1, "enable_console1");
   GLADE_HOOKUP_OBJECT (MainWindow, enable_patches1, "enable_patches1");
+  GLADE_HOOKUP_OBJECT (MainWindow, enable_blockdump1, "enable_blockdump1");
   GLADE_HOOKUP_OBJECT (MainWindow, print_cdvd_info1, "print_cdvd_info1");
   GLADE_HOOKUP_OBJECT (MainWindow, GtkMenuItem_Debug, "GtkMenuItem_Debug");
   GLADE_HOOKUP_OBJECT (MainWindow, GtkMenuItem_Debug_menu, "GtkMenuItem_Debug_menu");

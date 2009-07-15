@@ -4881,39 +4881,38 @@ Version x.x</property>
 		<widget class="GtkMenu" id="GtkMenuItem_File_menu">
 
 		  <child>
-		    <widget class="GtkMenuItem" id="run_cd1">
-		      <property name="visible">True</property>
-		      <property name="label" translatable="yes">_Run CD</property>
-		      <property name="use_underline">True</property>
-		      <signal name="activate" handler="OnFile_RunCD"/>
-		    </widget>
-		  </child>
-
-		  <child>
-		    <widget class="GtkMenuItem" id="run_iso1">
-		      <property name="visible">True</property>
-		      <property name="label" translatable="yes">_Run Iso...</property>
-		      <property name="use_underline">True</property>
-		      <signal name="activate" handler="OnFile_RunIso" last_modification_time="Tue, 14 Jul 2009 10:07:31 GMT"/>
-		    </widget>
-		  </child>
-
-		  <child>
 		    <widget class="GtkMenuItem" id="GtkMenuItem_LoadElf">
 		      <property name="visible">True</property>
-		      <property name="label" translatable="yes">_Load Elf...</property>
+		      <property name="label" translatable="yes">_Open ELF File..</property>
 		      <property name="use_underline">True</property>
 		      <signal name="activate" handler="OnFile_LoadElf"/>
 		    </widget>
 		  </child>
 
 		  <child>
-		    <widget class="GtkCheckMenuItem" id="enable_blockdump1">
+		    <widget class="GtkMenuItem" id="run_iso1">
 		      <property name="visible">True</property>
-		      <property name="label" translatable="yes">_Enable Blockdump</property>
+		      <property name="label" translatable="yes">_Run Iso Image...</property>
 		      <property name="use_underline">True</property>
-		      <property name="active">False</property>
-		      <signal name="activate" handler="OnFile_BlockDump" last_modification_time="Tue, 14 Jul 2009 10:09:00 GMT"/>
+		      <signal name="activate" handler="OnFile_RunIso" last_modification_time="Tue, 14 Jul 2009 10:07:31 GMT"/>
+		    </widget>
+		  </child>
+
+		  <child>
+		    <widget class="GtkMenuItem" id="run_cd1">
+		      <property name="visible">True</property>
+		      <property name="label" translatable="yes">_Run CD/DVD</property>
+		      <property name="use_underline">True</property>
+		      <signal name="activate" handler="OnFile_RunCD"/>
+		    </widget>
+		  </child>
+
+		  <child>
+		    <widget class="GtkMenuItem" id="run_bios_(no_disc)1">
+		      <property name="visible">True</property>
+		      <property name="label" translatable="yes">_Run Bios (No Disc)</property>
+		      <property name="use_underline">True</property>
+		      <signal name="activate" handler="OnFile_RunBIOS" last_modification_time="Wed, 15 Jul 2009 06:35:22 GMT"/>
 		    </widget>
 		  </child>
 
@@ -5314,6 +5313,16 @@ Version x.x</property>
 		      <property name="use_underline">True</property>
 		      <property name="active">False</property>
 		      <signal name="activate" handler="on_enable_patches1_activate"/>
+		    </widget>
+		  </child>
+
+		  <child>
+		    <widget class="GtkCheckMenuItem" id="enable_blockdump1">
+		      <property name="visible">True</property>
+		      <property name="label" translatable="yes">_Enable Blockdump</property>
+		      <property name="use_underline">True</property>
+		      <property name="active">False</property>
+		      <signal name="activate" handler="OnFile_BlockDump" last_modification_time="Tue, 14 Jul 2009 10:09:00 GMT"/>
 		    </widget>
 		  </child>
 
