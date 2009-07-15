@@ -93,7 +93,7 @@ static u32 s_nInstCacheSize = 0;
 static BASEBLOCK* s_pCurBlock = NULL;
 static BASEBLOCKEX* s_pCurBlockEx = NULL;
 u32 s_nEndBlock = 0; // what pc the current block ends	
-static u32 s_nHasDelay = 0;
+//static u32 s_nHasDelay = 0;
 static bool s_nBlockFF;
 
 // save states for branches
@@ -454,7 +454,7 @@ PCSX2_ALIGNED16( static u8 manual_counter[Ps2MemSize::Base >> 12] );
 ////////////////////////////////////////////////////
 void recResetEE( void )
 {
-	Console::Status( "Issuing EE/iR5900-32 Recompiler Reset [mem/structure cleanup]" );
+	Console::Status( "Issuing full EE/iR5900-32 Recompiler Reset [mem/structure cleanup]" );
 
 	maxrecmem = 0;
 
@@ -508,6 +508,42 @@ void recResetEE( void )
 		recLUT_SetPage(recLUT, hwLUT, recROM1, 0x8000, i, i - 0x1e00);
 		recLUT_SetPage(recLUT, hwLUT, recROM1, 0xa000, i, i - 0x1e00);
 	}
+
+	x86SetPtr(recMem);
+
+	recPtr = recMem;
+	recConstBufPtr = recConstBuf;
+	x86FpuState = FPU_STATE;
+
+	branch = 0;
+	SetCPUState(Config.sseMXCSR, Config.sseVUMXCSR);
+}
+
+void recResetEE_Fast( void )
+{
+	Console::Status( "Issuing fast EE/iR5900-32 Recompiler Reset [mem/structure cleanup]" );
+
+	maxrecmem = 0;
+
+	if( IsDevBuild ) memset_8<0xcc, REC_CACHEMEM>(recMem);	// 0xcc is INT3
+	memzero_ptr<(m_recBlockAllocSize-Ps2MemSize::Base)>( m_recBlockAlloc ); //Excluding the 32mb ram copy
+	memzero_ptr<RECCONSTBUF_SIZE * sizeof(u32)>(recConstBuf);
+	memzero_obj( manual_page );
+	memzero_obj( manual_counter );
+	ClearRecLUT((BASEBLOCK*)m_recBlockAlloc,
+		(((Ps2MemSize::Base + Ps2MemSize::Rom + Ps2MemSize::Rom1) / 4)));
+
+	if( s_pInstCache )
+		memset( s_pInstCache, 0, sizeof(EEINST)*s_nInstCacheSize );
+
+	recBlocks.Reset();
+	mmap_ResetBlockTracking();
+
+#ifdef _MSC_VER
+	__asm emms;
+#else
+    __asm__("emms");
+#endif
 
 	x86SetPtr(recMem);
 
@@ -1267,7 +1303,7 @@ void recRecompile( const u32 startpc )
 
 	// if recPtr reached the mem limit reset whole mem
 	if ( ( (uptr)recPtr - (uptr)recMem ) >= REC_CACHEMEM-0x40000 || dumplog == 0xffffffff) {
-		recResetEE();
+		recResetEE_Fast();
 	}
 	if ( (recConstBufPtr - recConstBuf) >= RECCONSTBUF_SIZE - 64 ) {
 		DevCon::WriteLn("EE recompiler stack reset");
@@ -1323,7 +1359,7 @@ void recRecompile( const u32 startpc )
 	// go until the next branch
 	i = startpc;
 	s_nEndBlock = 0xffffffff;
-	s_nHasDelay = 0;
+	/*s_nHasDelay = 0;*/
 	
 	while(1) {
 		BASEBLOCK* pblock = PC_GETBLOCK(i);
@@ -1354,7 +1390,7 @@ void recRecompile( const u32 startpc )
 			case 0: // special
 				if( _Funct_ == 8 || _Funct_ == 9 ) { // JR, JALR
 					s_nEndBlock = i + 8;
-					s_nHasDelay = 1;
+					/*s_nHasDelay = 1;*/
 					goto StartRecomp;
 				}
 				break;
@@ -1363,8 +1399,8 @@ void recRecompile( const u32 startpc )
 				
 				if( _Rt_ < 4 || (_Rt_ >= 16 && _Rt_ < 20) ) {
 					// branches
-					if( _Rt_ == 2 || _Rt_ == 3 || _Rt_ == 18 || _Rt_ == 19 ) s_nHasDelay = 1;
-					else s_nHasDelay = 2;
+					/*if( _Rt_ == 2 || _Rt_ == 3 || _Rt_ == 18 || _Rt_ == 19 ) s_nHasDelay = 1;
+					else s_nHasDelay = 2;*/
 
 					branchTo = _Imm_ * 4 + i + 4;
 					if( branchTo > startpc && branchTo < i ) s_nEndBlock = branchTo;
@@ -1376,7 +1412,7 @@ void recRecompile( const u32 startpc )
 
 			case 2: // J
 			case 3: // JAL
-				s_nHasDelay = 1;
+				/*s_nHasDelay = 1;*/
 				s_nEndBlock = i + 8;
 				goto StartRecomp;
 
@@ -1384,8 +1420,8 @@ void recRecompile( const u32 startpc )
 			case 4: case 5: case 6: case 7: 
 			case 20: case 21: case 22: case 23:
 
-				if( (cpuRegs.code >> 26) >= 20 ) s_nHasDelay = 1;
-				else s_nHasDelay = 2;
+				/*if( (cpuRegs.code >> 26) >= 20 ) s_nHasDelay = 1;
+				else s_nHasDelay = 2;*/
 
 				branchTo = _Imm_ * 4 + i + 4;
 				if( branchTo > startpc && branchTo < i ) s_nEndBlock = branchTo;
@@ -1408,8 +1444,8 @@ void recRecompile( const u32 startpc )
 				if( _Rs_ == 8 ) {
 					// BC1F, BC1T, BC1FL, BC1TL
 					// BC2F, BC2T, BC2FL, BC2TL
-					if( _Rt_ >= 2 ) s_nHasDelay = 1;
-					else s_nHasDelay = 2;
+					/*if( _Rt_ >= 2 ) s_nHasDelay = 1;
+					else s_nHasDelay = 2;*/
 
 					branchTo = _Imm_ * 4 + i + 4;
 					if( branchTo > startpc && branchTo < i ) s_nEndBlock = branchTo;
