@@ -175,6 +175,7 @@ void gsInit()
 // Opens the gsRingbuffer thread.
 s32 gsOpen()
 {
+	u32 curFrameLimit = Config.Options & PCSX2_FRAMELIMIT_MASK;
 	if( m_gsOpened ) return 0;
 
 	//video
@@ -200,6 +201,23 @@ s32 gsOpen()
 			UpdateVSyncRate()
 		);
 	}*/
+	
+	if(GSsetFrameLimit == NULL)
+	{
+		DevCon::Notice("Notice: GS Plugin does not implement GSsetFrameLimit.");
+	}
+	else
+	{
+		if(curFrameLimit == PCSX2_FRAMELIMIT_NORMAL)
+		{
+			GSsetFrameLimit(0);
+		}
+		else
+		{
+			GSsetFrameLimit(1);
+		}
+	}
+
 	return !m_gsOpened;
 }
 

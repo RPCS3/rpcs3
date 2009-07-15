@@ -251,3 +251,8 @@ bool GSDevice::ResizeTexture(GSTexture** t, int w, int h)
 
 	return t2 != NULL;
 }
+
+void GSDevice::SetVSync(bool vsync)
+{
+	m_vsync = vsync;
+}

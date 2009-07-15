@@ -77,6 +77,7 @@ public:
 	virtual void VSync(int field);
 	virtual bool MakeSnapshot(const string& path);
 	virtual void KeyEvent(GSKeyEventData* e);
+	virtual void SetFrameLimit(bool limit);
 
 	virtual bool CanUpscale() 
 	{

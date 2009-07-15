@@ -291,7 +291,7 @@ EXPORT_C GSsetGameCRC(uint32 crc, int options)
 	s_gs->SetGameCRC(crc, options);
 }
 
-EXPORT_C GSgetLastTag(uint32* tag) 
+EXPORT_C GSgetLastTag(uint32* tag)
 {
 	s_gs->GetLastTag(tag);
 }
@@ -299,6 +299,18 @@ EXPORT_C GSgetLastTag(uint32* tag)
 EXPORT_C GSsetFrameSkip(int frameskip)
 {
 	s_gs->SetFrameSkip(frameskip);
+}
+
+EXPORT_C GSsetFrameLimit(int limit)
+{
+	if(limit)
+	{
+		s_gs->SetFrameLimit(1);
+	}
+	else
+	{
+		s_gs->SetFrameLimit(0);
+	}
 }
 
 #ifdef _WINDOWS

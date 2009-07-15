@@ -46,6 +46,7 @@ _GSprintf      	   GSprintf;
 _GSsetBaseMem 	   GSsetBaseMem;
 _GSsetGameCRC		GSsetGameCRC;
 _GSsetFrameSkip	   GSsetFrameSkip;
+_GSsetFrameLimit   GSsetFrameLimit;
 _GSsetupRecording GSsetupRecording;
 _GSreset		   GSreset;
 _GSwriteCSR		   GSwriteCSR;
@@ -341,6 +342,7 @@ int LoadGSplugin(const string& filename)
 	MapSymbol(GSgetDriverInfo);
 
 	MapSymbol(GSsetFrameSkip);
+	MapSymbol(GSsetFrameLimit);
 	MapSymbol(GSsetupRecording);
 
 #ifdef _WIN32

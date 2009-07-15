@@ -435,6 +435,12 @@ void GSRenderer::KeyEvent(GSKeyEventData* e)
 	}
 }
 
+
+void GSRenderer::SetFrameLimit(bool limit)
+{
+	m_dev->SetVSync(m_vsync && limit);
+}
+
 void GSRenderer::GetTextureMinMax(GSVector4i& r, bool linear)
 {
 	const GSDrawingContext* context = m_context;

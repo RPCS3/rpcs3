@@ -499,6 +499,23 @@ void CycleFrameLimit(int dir)
 	newOptions = (Config.Options & ~PCSX2_FRAMELIMIT_MASK) | newFrameLimit;
 
 	gsResetFrameSkip();
+	
+	// Allows sync to vblank only when framelimit is on, if GS can.
+	if(GSsetFrameLimit == NULL)
+	{
+	DevCon::Notice("Notice: GS Plugin does not implement GSsetFrameLimit.");
+	}
+	else
+	{
+		if(newFrameLimit)
+		{
+			GSsetFrameLimit(1);
+		}
+		else
+		{
+			GSsetFrameLimit(0);
+		}
+	}
 
 	switch(newFrameLimit) {
 		case PCSX2_FRAMELIMIT_NORMAL:
