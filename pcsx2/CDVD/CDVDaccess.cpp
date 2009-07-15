@@ -35,7 +35,7 @@
 
 static int diskTypeCached=-1;
 
-static int psize;
+int lastReadSize;
 static int plsn=0;
 
 static isoFile *blockDumpFile;
@@ -100,12 +100,12 @@ int FindDiskType(int mType)
 
 	cdvdTN tn;
 
-	DoCDVDgetTN(&tn);
+	CDVD.getTN(&tn);
 
 	if((mt<0) || ((mt == CDVD_TYPE_DETCTDVDS) && (tn.strack != tn.etrack)))
 	{
 		cdvdTD td;
-		DoCDVDgetTD(0,&td);
+		CDVD.getTD(0,&td);
 		if(td.lsn>452849)
 		{
 			iCDType = CDVD_TYPE_DETCTDVDS;
@@ -127,12 +127,12 @@ int FindDiskType(int mType)
 	for(int i=tn.strack;i<=tn.etrack;i++)
 	{
 		cdvdTD td,td2;
-		DoCDVDgetTD(i,&td);
+		CDVD.getTD(i,&td);
 
 		if(tn.etrack>i)
-			DoCDVDgetTD(i+1,&td2);
+			CDVD.getTD(i+1,&td2);
 		else
-			DoCDVDgetTD(0,&td2);
+			CDVD.getTD(0,&td2);
 
 		int tlength = td2.lsn - td.lsn;
 
@@ -174,13 +174,13 @@ int FindDiskType(int mType)
 
 void DetectDiskType()
 {
-	if (DoCDVDgetTrayStatus() == CDVD_TRAY_OPEN)
+	if (CDVD.getTrayStatus() == CDVD_TRAY_OPEN)
 	{
 		diskTypeCached = CDVD_TYPE_NODISC;
 		return;
 	}
 
-	int baseMediaType = DoCDVDgetDiskType();
+	int baseMediaType = CDVD.getDiskType();
 	int mType = -1;
 
 	switch(baseMediaType) // Paranoid mode: do not trust the plugin's detection system to work correctly.
@@ -212,31 +212,25 @@ void DetectDiskType()
 //
 /////////////////////////////////////////////////
 
-int cdvdInitCount=0;
-
 s32 DoCDVDinit()
 {
-	// called even when not used
-	ISOinit();
-
-	if(!loadFromISO)
-	{
-		cdvdInitCount++; // used to handle the case where the plugin was inited at boot, but then iso takes over
-		return CDVDinit();
-	}
-
 	diskTypeCached=-1;
 
-	return 0;
+	if(CDVD.initCount) *CDVD.initCount++; // used to handle the case where the plugin was inited at boot, but then iso takes over
+	return CDVD.init();
+}
+
+void DoCDVDshutdown()
+{
+	if(CDVD.initCount) *CDVD.initCount--;
+	CDVD.shutdown();
 }
 
 s32 DoCDVDopen(const char* pTitleFilename)
 {
 	int ret=0;
-	if(loadFromISO)
-		ret = ISOopen(pTitleFilename);
-	else
-		ret = CDVDopen(pTitleFilename);
+
+	ret = CDVD.open(pTitleFilename);
 
 	int cdtype = DoCDVDdetectDiskType();
 
@@ -244,7 +238,7 @@ s32 DoCDVDopen(const char* pTitleFilename)
 	{
 		char fname_only[MAX_PATH];
 
-		if(loadFromISO)
+		if(CDVD.init == ISO.init)
 		{
 #ifdef _WIN32
 			char fname[MAX_PATH], ext[MAX_PATH];
@@ -298,7 +292,7 @@ s32 DoCDVDopen(const char* pTitleFilename)
 		strcat(fname_only, ".dump");
 #endif
 		cdvdTD td;
-		DoCDVDgetTD(0, &td);
+		CDVD.getTD(0, &td);
 
 		int blockofs=0;
 		int blocksize=0;
@@ -330,58 +324,9 @@ s32 DoCDVDopen(const char* pTitleFilename)
 	return ret;
 }
 
-void DoCDVDclose()
-{
-	if(loadFromISO)
-		ISOclose();
-	else
-		CDVDclose();
-
-	if (blockDumpFile != NULL) isoClose(blockDumpFile);
-}
-
-void DoCDVDshutdown()
-{
-	if((!loadFromISO)||(cdvdInitCount>0)) // handle the case where the plugin was inited at boot, but then iso takes over
-	{
-		cdvdInitCount--;
-		if (CDVDshutdown != NULL) CDVDshutdown();
-	}
-
-	ISOshutdown();
-}
-
 s32 DoCDVDreadSector(u8* buffer, u32 lsn, int mode)
 {
-	int ret;
-
-	if(loadFromISO)
-		ret = ISOreadSector(buffer,lsn,mode);
-	else
-	{
-		CDVDreadTrack(lsn,mode);
-		void* pbuffer = CDVDgetBuffer();
-		if(pbuffer!=NULL)
-		{
-			switch(mode)
-			{
-			case CDVD_MODE_2048:
-				memcpy(buffer,pbuffer,2048);
-				break;
-			case CDVD_MODE_2328:
-				memcpy(buffer,pbuffer,2328);
-				break;
-			case CDVD_MODE_2340:
-				memcpy(buffer,pbuffer,2340);
-				break;
-			case CDVD_MODE_2352:
-				memcpy(buffer,pbuffer,2352);
-				break;
-			}
-			ret = 0;
-		}
-		else ret = -1;
-	}
+	int ret = CDVD.readSector(buffer,lsn,mode);
 
 	if(ret==0)
 	{
@@ -395,48 +340,31 @@ s32 DoCDVDreadSector(u8* buffer, u32 lsn, int mode)
 
 s32 DoCDVDreadTrack(u32 lsn, int mode)
 {
-	if(loadFromISO)
-		return ISOreadTrack(lsn, mode);
-	else
+	// TEMP: until all the plugins use the new CDVDgetBuffer style
+	switch (mode)
 	{
-		// TEMP: until I fix all the plugins to use the new CDVDgetBuffer style
-		switch (mode)
-		{
-		case CDVD_MODE_2352:
-			psize = 2352;
-			break;
-		case CDVD_MODE_2340:
-			psize = 2340;
-			break;
-		case CDVD_MODE_2328:
-			psize = 2328;
-			break;
-		case CDVD_MODE_2048:
-			psize = 2048;
-			break;
-		}
-		return CDVDreadTrack(lsn, mode);
+	case CDVD_MODE_2352:
+		lastReadSize = 2352;
+		break;
+	case CDVD_MODE_2340:
+		lastReadSize = 2340;
+		break;
+	case CDVD_MODE_2328:
+		lastReadSize = 2328;
+		break;
+	case CDVD_MODE_2048:
+		lastReadSize = 2048;
+		break;
 	}
+
+	return CDVD.readTrack(lsn,mode);
 }
 
 // return can be NULL (for async modes)
+
 s32 DoCDVDgetBuffer(u8* buffer)
 {
-	int ret;
-
-	if(loadFromISO)
-		ret = ISOgetBuffer(buffer);
-	else
-	{
-		// TEMP: until I fix all the plugins to use this function style
-		u8* pb = CDVDgetBuffer();
-		if(pb!=NULL)
-		{
-			memcpy(buffer,pb,psize);
-			ret=0;
-		}
-		else ret= -1;
-	}
+	int ret = CDVD.getBuffer2(buffer);
 
 	if(ret==0)
 	{
@@ -445,47 +373,8 @@ s32 DoCDVDgetBuffer(u8* buffer)
 			isoWriteBlock(blockDumpFile, buffer, plsn);
 		}
 	}
+
 	return ret;
-}
-
-s32 DoCDVDreadSubQ(u32 lsn, cdvdSubQ* subq)
-{
-	if(loadFromISO)
-		return ISOreadSubQ(lsn,subq);
-	else
-		return CDVDreadSubQ(lsn,subq);
-}
-
-s32 DoCDVDgetTN(cdvdTN *Buffer)
-{
-	if(loadFromISO)
-		return ISOgetTN(Buffer);
-	else
-		return CDVDgetTN(Buffer);
-}
-
-s32 DoCDVDgetTD(u8 Track, cdvdTD *Buffer)
-{
-	if(loadFromISO)
-		return ISOgetTD(Track,Buffer);
-	else
-		return CDVDgetTD(Track,Buffer);
-}
-
-s32 DoCDVDgetTOC(void* toc)
-{
-	if(loadFromISO)
-		return ISOgetTOC(toc);
-	else
-		return CDVDgetTOC(toc);
-}
-
-s32 DoCDVDgetDiskType()
-{
-	if(loadFromISO)
-		return ISOgetDiskType();
-	else
-		return CDVDgetDiskType();
 }
 
 s32 DoCDVDdetectDiskType()
@@ -498,38 +387,5 @@ s32 DoCDVDdetectDiskType()
 
 void DoCDVDresetDiskTypeCache()
 {
-	diskTypeCached=-1;
-}
-
-s32 DoCDVDgetTrayStatus()
-{
-	if(loadFromISO)
-		return ISOgetTrayStatus();
-	else
-		return CDVDgetTrayStatus();
-
-}
-
-s32 DoCDVDctrlTrayOpen()
-{
-	if(loadFromISO)
-		return ISOctrlTrayOpen();
-	else
-		return CDVDctrlTrayOpen();
-}
-
-s32 DoCDVDctrlTrayClose()
-{
-	if(loadFromISO)
-		return ISOctrlTrayClose();
-	else
-		return CDVDctrlTrayClose();
-}
-
-void DoCDVDnewDiskCB(void (*callback)())
-{
-	if(!loadFromISO)
-	{
-		if (CDVDnewDiskCB) CDVDnewDiskCB(callback);
-	}
+	diskTypeCached = -1;
 }

@@ -676,7 +676,7 @@ LRESULT WINAPI MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				string outstr;
 				if( Open_Iso_File_Proc( outstr ) )
 				{
-					loadFromISO = true;
+					CDVD = ISO;
 
 					strcpy(isoFileName,outstr.c_str());
 
@@ -693,7 +693,7 @@ LRESULT WINAPI MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			break;
 
 			case ID_FILE_RUNCD:
-				loadFromISO = false;
+				CDVD = CDVD_plugin;
 				SysReset();
 				SysPrepareExecution( NULL );
 			break;
@@ -738,7 +738,7 @@ LRESULT WINAPI MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				break;
 
 			case ID_CONFIG_CDVDROM:
-				if (CDVDconfigure) CDVDconfigure();
+				if (CDVD.configure) CDVD.configure();
 				break;
 
 			case ID_CONFIG_DEV9:

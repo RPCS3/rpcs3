@@ -45,21 +45,4 @@ void __Log(char *fmt, ...);
 extern char isoFileName[256];
 extern isoFile *iso;
 
-extern s32  ISOinit();
-extern void ISOshutdown();
-extern s32  ISOopen(const char* pTitle);
-extern void ISOclose();
-extern s32  ISOreadSubQ(u32 lsn, cdvdSubQ* subq);
-extern s32  ISOgetTN(cdvdTN *Buffer);
-extern s32  ISOgetTD(u8 tn, cdvdTD *Buffer);
-extern s32  ISOgetDiskType();
-extern s32  ISOgetTrayStatus();
-extern s32  ISOctrlTrayOpen();
-extern s32  ISOctrlTrayClose();
-extern s32  ISOreadSector(u8* tempbuffer, u32 lsn, int mode);
-extern s32  ISOgetTOC(void* toc);
-extern s32  ISOreadTrack(u32 lsn, int mode);
-extern s32  ISOgetBuffer(u8* buffer);
-extern s32 ISOgetDualInfo(s32* dualType, u32* _layer1start);
-
 #endif

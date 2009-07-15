@@ -27,14 +27,12 @@
 
 #include "CDVDisoReader.h"
 
-bool loadFromISO=false;
-
 char isoFileName[256];
 
 u8 *pbuffer;
 int cdtype;
 
-int psize;
+static int psize;
 
 isoFile *iso;
 
@@ -78,8 +76,7 @@ void __Log(char *fmt, ...)
 #define __Log 0&&
 #endif
 
-
-s32 ISOinit()
+s32 CALLBACK ISOinit()
 {
 #ifdef PCSX2_DEBUG
 	cdvdLog = fopen("logs/cdvdLog.txt", "w");
@@ -99,14 +96,14 @@ s32 ISOinit()
 	return 0;
 }
 
-void ISOshutdown()
+void CALLBACK ISOshutdown()
 {
 #ifdef CDVD_LOG
 	if (cdvdLog != NULL) fclose(cdvdLog);
 #endif
 }
 
-s32 ISOopen(const char* pTitle)
+s32 CALLBACK ISOopen(const char* pTitle)
 {
 	//if (pTitle != NULL) strcpy(isoFileName, pTitle);
 
@@ -127,12 +124,12 @@ s32 ISOopen(const char* pTitle)
 	return 0;
 }
 
-void ISOclose()
+void CALLBACK ISOclose()
 {
 	isoClose(iso);
 }
 
-s32 ISOreadSubQ(u32 lsn, cdvdSubQ* subq)
+s32 CALLBACK ISOreadSubQ(u32 lsn, cdvdSubQ* subq)
 {
 	// fake it
 	u8 min, sec, frm;
@@ -155,7 +152,7 @@ s32 ISOreadSubQ(u32 lsn, cdvdSubQ* subq)
 	return 0;
 }
 
-s32 ISOgetTN(cdvdTN *Buffer)
+s32 CALLBACK ISOgetTN(cdvdTN *Buffer)
 {
 	Buffer->strack = 1;
 	Buffer->etrack = 1;
@@ -163,7 +160,7 @@ s32 ISOgetTN(cdvdTN *Buffer)
 	return 0;
 }
 
-s32 ISOgetTD(u8 Track, cdvdTD *Buffer)
+s32 CALLBACK ISOgetTD(u8 Track, cdvdTD *Buffer)
 {
 	if (Track == 0)
 	{
@@ -209,7 +206,7 @@ static void FindLayer1Start()
 	}
 }
 
-s32 ISOgetDualInfo(s32* dualType, u32* _layer1start)
+s32 CALLBACK ISOgetDualInfo(s32* dualType, u32* _layer1start)
 {
 	FindLayer1Start();
 
@@ -226,9 +223,14 @@ s32 ISOgetDualInfo(s32* dualType, u32* _layer1start)
 	return 1;
 }
 
-s32 ISOgetTOC(void* toc)
+s32 CALLBACK ISOgetDiskType()
 {
-	u8 type = CDVDgetDiskType();
+	return cdtype;
+}
+
+s32 CALLBACK ISOgetTOC(void* toc)
+{
+	u8 type = ISOgetDiskType();
 	u8* tocBuff = (u8*)toc;
 
 	//__Log("CDVDgetTOC\n");
@@ -291,12 +293,12 @@ s32 ISOgetTOC(void* toc)
 		cdvdTN diskInfo;
 		cdvdTD trackInfo;
 		memset(tocBuff, 0, 1024);
-		if (CDVDgetTN(&diskInfo) == -1)
+		if (ISOgetTN(&diskInfo) == -1)
 		{
 			diskInfo.etrack = 0;
 			diskInfo.strack = 1;
 		}
-		if (CDVDgetTD(0, &trackInfo) == -1) trackInfo.lsn = 0;
+		if (ISOgetTD(0, &trackInfo) == -1) trackInfo.lsn = 0;
 
 		tocBuff[0] = 0x41;
 		tocBuff[1] = 0x00;
@@ -317,7 +319,7 @@ s32 ISOgetTOC(void* toc)
 
 		for (i = diskInfo.strack; i <= diskInfo.etrack; i++)
 		{
-			err = CDVDgetTD(i, &trackInfo);
+			err = ISOgetTD(i, &trackInfo);
 			lba_to_msf(trackInfo.lsn, &min, &sec, &frm);
 			tocBuff[i*10+30] = trackInfo.type;
 			tocBuff[i*10+32] = err == -1 ? 0 : itob(i);	  //number
@@ -332,7 +334,7 @@ s32 ISOgetTOC(void* toc)
 	return 0;
 }
 
-s32 ISOreadSector(u8* tempbuffer, u32 lsn, int mode)
+s32 CALLBACK ISOreadSector(u8* tempbuffer, u32 lsn, int mode)
 {
 	int _lsn = lsn;
 
@@ -375,7 +377,7 @@ s32 ISOreadSector(u8* tempbuffer, u32 lsn, int mode)
 	return 0;
 }
 
-s32 ISOreadTrack(u32 lsn, int mode)
+s32 CALLBACK ISOreadTrack(u32 lsn, int mode)
 {
 	int _lsn = lsn;
 
@@ -410,28 +412,63 @@ s32 ISOreadTrack(u32 lsn, int mode)
 	return 0;
 }
 
-s32 ISOgetBuffer(u8* buffer)
+s32 CALLBACK ISOgetBuffer2(u8* buffer)
 {
 	memcpy_fast(buffer,pbuffer,psize);
 	return 0;
 }
 
-s32 ISOgetDiskType()
-{
-	return cdtype;
-}
-
-s32 ISOgetTrayStatus()
+s32 CALLBACK ISOgetTrayStatus()
 {
 	return CDVD_TRAY_CLOSE;
 }
 
-s32 ISOctrlTrayOpen()
+s32 CALLBACK ISOctrlTrayOpen()
 {
 	return 0;
 }
-s32 ISOctrlTrayClose()
+s32 CALLBACK ISOctrlTrayClose()
 {
 	return 0;
 }
 
+s32 CALLBACK ISOdummyS32()
+{
+	return 0;
+}
+
+void CALLBACK ISOdummyVOID()
+{
+}
+
+void CALLBACK ISOnewDiskCB(void(CALLBACK*)())
+{
+}
+
+CDVDplugin ISO = {
+	ISOinit,
+	ISOopen,
+	ISOclose,
+	ISOshutdown,
+	ISOreadTrack,
+	NULL,			// emu shouldn't try to use this one.
+	ISOreadSubQ,
+	ISOgetTN,
+	ISOgetTD,
+	ISOgetTOC,
+	ISOgetDiskType,
+	ISOdummyS32,
+	ISOdummyS32,
+	ISOdummyS32,
+
+	ISOdummyVOID,
+	ISOdummyS32,
+	ISOdummyVOID,
+	ISOnewDiskCB,
+
+	ISOreadSector,
+	ISOgetBuffer2,
+	ISOgetDualInfo,
+
+	NULL
+};

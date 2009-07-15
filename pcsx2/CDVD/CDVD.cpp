@@ -403,28 +403,28 @@ void cdvdReadKey(u8 arg0, u16 arg1, u32 arg2, u8* key) {
 
 s32 cdvdGetToc(void* toc)
 {
-	s32 ret = DoCDVDgetTOC(toc);
+	s32 ret = CDVD.getTOC(toc);
 	if (ret == -1) ret = 0x80;	
 	return ret;
 }
 
 s32 cdvdReadSubQ(s32 lsn, cdvdSubQ* subq)
 {
-	s32 ret = DoCDVDreadSubQ(lsn, subq);
+	s32 ret = CDVD.readSubQ(lsn, subq);
 	if (ret == -1) ret = 0x80;
 	return ret;
 }
 
 s32 cdvdCtrlTrayOpen()
 {
-	s32 ret = DoCDVDctrlTrayOpen();
+	s32 ret = CDVD.ctrlTrayOpen();
 	if (ret == -1) ret = 0x80;
 	return ret;
 }
 
 s32 cdvdCtrlTrayClose()
 {
-	s32 ret = DoCDVDctrlTrayClose();
+	s32 ret = CDVD.ctrlTrayClose();
 	if (ret == -1) ret = 0x80;
 	return ret;
 }
@@ -433,7 +433,7 @@ s32 cdvdCtrlTrayClose()
 // checks if tray was opened since last call to this func
 s32 cdvdGetTrayStatus()
 {
-	s32 ret = DoCDVDgetTrayStatus();
+	s32 ret = CDVD.getTrayStatus();
 	
 	if (ret == -1) 
 		return(CDVD_TRAY_CLOSE);
@@ -460,41 +460,10 @@ static __forceinline void cdvdGetDiskType()
 //          0 if not on dual layer disc
 static s32 cdvdReadDvdDualInfo(s32* dualType, u32* layer1Start)
 {
-	u8 toc[2064];
 	*dualType = 0;
 	*layer1Start = 0;
 
-	if(loadFromISO)
-	{
-		return ISOgetDualInfo(dualType,layer1Start);
-	}
-	else
-	{
-		// if error getting toc, settle for single layer disc ;)
-		if(cdvdGetToc(toc))
-			return 0;
-		if(toc[14] & 0x60)
-		{
-			if(toc[14] & 0x10)
-			{
-				// otp dvd
-				*dualType = 2;
-				*layer1Start = (toc[25]<<16) + (toc[26]<<8) + (toc[27]) - 0x30000 + 1;
-			}
-			else
-			{
-				// ptp dvd
-				*dualType = 1;
-				*layer1Start = (toc[21]<<16) + (toc[22]<<8) + (toc[23]) - 0x30000 + 1;
-			}
-		}
-		else
-		{
-			// single layer dvd
-			*dualType = 0;
-			*layer1Start = (toc[21]<<16) + (toc[22]<<8) + (toc[23]) - 0x30000 + 1;
-		}
-	}
+	CDVD.getDualInfo(dualType,layer1Start);
 	return 1;
 }
 
@@ -554,7 +523,7 @@ void SaveState::cdvdFreeze()
 void cdvdNewDiskCB()
 {
 	DoCDVDresetDiskTypeCache();
-	cdvd.Type = CDVDgetDiskType();
+	cdvd.Type = CDVD.getDiskType();
 
 	
 	char str[g_MaxPath];

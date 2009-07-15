@@ -332,7 +332,7 @@ void  cdrInterrupt() {
 			SetResultSize(3);
 			cdr.StatP|= 0x2;
 			cdr.Result[0] = cdr.StatP;
-			if (DoCDVDgetTN(&cdr.ResultTN) == -1) {
+			if (CDVD.getTN(&cdr.ResultTN) == -1) {
 				cdr.Stat = DiskError;
 				cdr.Result[0]|= 0x01;
 			} else {
@@ -347,7 +347,7 @@ void  cdrInterrupt() {
 			cdr.Track = btoi(cdr.Param[0]);
 			SetResultSize(4);
 			cdr.StatP|= 0x2;
-			if (DoCDVDgetTD(cdr.Track, &trackInfo) == -1) {
+			if (CDVD.getTD(cdr.Track, &trackInfo) == -1) {
 				cdr.Stat = DiskError;
 				cdr.Result[0]|= 0x01;
 			} else {

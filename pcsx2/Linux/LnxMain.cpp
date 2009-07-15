@@ -335,7 +335,7 @@ void OnLanguage(GtkMenuItem *menuitem, gpointer user_data)
 
 void OnFile_RunCD(GtkMenuItem *menuitem, gpointer user_data)
 {
-	loadFromISO = false;
+	CDVD = CDVD_plugin;
 	SysReset();
 	SysPrepareExecution(NULL);
 }
@@ -343,7 +343,7 @@ void OnFile_RunCD(GtkMenuItem *menuitem, gpointer user_data)
 void OnRunIso_Ok(GtkButton* button, gpointer user_data)
 {
 	gchar *File;
-	loadFromISO = true;
+	CDVD = ISO;
 
 	File = (gchar*)gtk_file_selection_get_filename(GTK_FILE_SELECTION(FileSel));
 	strcpy(isoFileName, File);

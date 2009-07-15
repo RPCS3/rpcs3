@@ -393,6 +393,17 @@ void CALLBACK CDVDabout();
 s32  CALLBACK CDVDtest();
 void CALLBACK CDVDnewDiskCB(void (*callback)());
 
+// new funcs 
+
+// read a track directly
+s32  CALLBACK CDVDreadSector(u8* buffer, s32 lsn, int mode);
+
+// improved getBuffer
+s32  CALLBACK CDVDgetBuffer2(u8* buffer);
+
+// tool function
+s32  CALLBACK CDVDgetDualInfo(s32* dualType, u32* _layer1start);
+
 #endif
 
 /* DEV9 plugin API */
@@ -615,11 +626,15 @@ typedef s32  (CALLBACK* _CDVDgetDiskType)();
 typedef s32  (CALLBACK* _CDVDgetTrayStatus)();
 typedef s32  (CALLBACK* _CDVDctrlTrayOpen)();
 typedef s32  (CALLBACK* _CDVDctrlTrayClose)();
+typedef s32  (CALLBACK* _CDVDreadSector)(u8* buffer, u32 lsn, int mode);
+typedef s32  (CALLBACK* _CDVDgetBuffer2)(u8* buffer);
+typedef s32  (CALLBACK* _CDVDgetDualInfo)(s32* dualType, u32* _layer1start);
 
 typedef void (CALLBACK* _CDVDconfigure)();
 typedef s32  (CALLBACK* _CDVDtest)();
 typedef void (CALLBACK* _CDVDabout)();
 typedef void (CALLBACK* _CDVDnewDiskCB)(void (*callback)());
+
 
 // DEV9
 // NOTE: The read/write functions CANNOT use XMM/MMX regs
@@ -802,25 +817,37 @@ extern _SPU2test          SPU2test;
 extern _SPU2about         SPU2about;
 
 // CDVD
-extern _CDVDinit          CDVDinit;
-extern _CDVDopen          CDVDopen;
-extern _CDVDclose         CDVDclose;
-extern _CDVDshutdown      CDVDshutdown;
-extern _CDVDreadTrack     CDVDreadTrack;
-extern _CDVDgetBuffer     CDVDgetBuffer;
-extern _CDVDreadSubQ      CDVDreadSubQ;
-extern _CDVDgetTN         CDVDgetTN;
-extern _CDVDgetTD         CDVDgetTD;
-extern _CDVDgetTOC        CDVDgetTOC;
-extern _CDVDgetDiskType   CDVDgetDiskType;
-extern _CDVDgetTrayStatus CDVDgetTrayStatus;
-extern _CDVDctrlTrayOpen  CDVDctrlTrayOpen;
-extern _CDVDctrlTrayClose CDVDctrlTrayClose;
+struct CDVDplugin {
+	_CDVDinit          init;
+	_CDVDopen          open;
+	_CDVDclose         close;
+	_CDVDshutdown      shutdown;
+	_CDVDreadTrack     readTrack;
+	_CDVDgetBuffer     getBuffer;
+	_CDVDreadSubQ      readSubQ;
+	_CDVDgetTN         getTN;
+	_CDVDgetTD         getTD;
+	_CDVDgetTOC        getTOC;
+	_CDVDgetDiskType   getDiskType;
+	_CDVDgetTrayStatus getTrayStatus;
+	_CDVDctrlTrayOpen  ctrlTrayOpen;
+	_CDVDctrlTrayClose ctrlTrayClose;
 
-extern _CDVDconfigure     CDVDconfigure;
-extern _CDVDtest          CDVDtest;
-extern _CDVDabout         CDVDabout;
-extern _CDVDnewDiskCB     CDVDnewDiskCB;
+	_CDVDconfigure     configure;
+	_CDVDtest          test;
+	_CDVDabout         about;
+	_CDVDnewDiskCB     newDiskCB;
+
+	// special functions, not in external interface yet
+	_CDVDreadSector    readSector;
+	_CDVDgetBuffer2    getBuffer2;
+	_CDVDgetDualInfo   getDualInfo;
+
+	int* initCount;
+};
+extern CDVDplugin CDVD_plugin; // _plugin because of
+extern CDVDplugin CDVD;
+extern CDVDplugin ISO;
 
 // DEV9
 extern _DEV9init          DEV9init;
