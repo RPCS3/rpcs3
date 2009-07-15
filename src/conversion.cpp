@@ -1,6 +1,6 @@
 #include "conversion.h"
 #include <algorithm>
-
+#include <cstdlib>
 
 ////////////////////////////////////////////////////////////////
 // Specializations for converting a string to specific types
@@ -81,6 +81,20 @@ namespace YAML
 		}
 
 		return false;
+	}
+	
+	template <>
+	bool Converter<std::wstring>::Convert(const std::string& input, std::wstring& output)
+	{
+		output.clear();
+		output.resize(std::mbstowcs(NULL, input.data(), input.size()));
+		std::mbstowcs(
+			(wchar_t *) output.data(),
+			input.data(),
+			input.size()
+		);
+		
+		return true;
 	}
 }
 

@@ -32,4 +32,7 @@ namespace YAML
 
 	template <>
 	bool Converter<bool>::Convert(const std::string& input, bool& output);
+	
+	template <>
+	bool Converter<std::wstring>::Convert(const std::string& input, std::wstring& output);
 }
