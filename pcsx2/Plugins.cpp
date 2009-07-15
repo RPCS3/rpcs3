@@ -556,6 +556,8 @@ s32 CALLBACK CDVD_getDualInfo(s32* dualType, u32* layer1Start)
 		*dualType = 0;
 		*layer1Start = (toc[21]<<16) + (toc[22]<<8) + (toc[23]) - 0x30000 + 1;
 	}
+
+	return 1;
 }
 
 int cdvdInitCount;

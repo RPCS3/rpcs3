@@ -463,8 +463,7 @@ static s32 cdvdReadDvdDualInfo(s32* dualType, u32* layer1Start)
 	*dualType = 0;
 	*layer1Start = 0;
 
-	CDVD.getDualInfo(dualType,layer1Start);
-	return 1;
+	return CDVD.getDualInfo(dualType,layer1Start);
 }
 
 static uint cdvdBlockReadTime( CDVD_MODE_TYPE mode )
