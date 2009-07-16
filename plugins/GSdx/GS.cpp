@@ -301,16 +301,9 @@ EXPORT_C GSsetFrameSkip(int frameskip)
 	s_gs->SetFrameSkip(frameskip);
 }
 
-EXPORT_C GSsetFrameLimit(int limit)
+EXPORT_C GSsetFrameLimit(bool limit)
 {
-	if(limit)
-	{
-		s_gs->SetFrameLimit(1);
-	}
-	else
-	{
-		s_gs->SetFrameLimit(0);
-	}
+	s_gs->SetFrameLimit(limit);
 }
 
 #ifdef _WINDOWS

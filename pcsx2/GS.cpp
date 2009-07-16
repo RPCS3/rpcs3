@@ -208,14 +208,7 @@ s32 gsOpen()
 	}
 	else
 	{
-		if(curFrameLimit == PCSX2_FRAMELIMIT_NORMAL)
-		{
-			GSsetFrameLimit(0);
-		}
-		else
-		{
-			GSsetFrameLimit(1);
-		}
+		GSsetFrameLimit(curFrameLimit != PCSX2_FRAMELIMIT_NORMAL);
 	}
 
 	return !m_gsOpened;

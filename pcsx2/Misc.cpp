@@ -507,14 +507,7 @@ void CycleFrameLimit(int dir)
 	}
 	else
 	{
-		if(newFrameLimit)
-		{
-			GSsetFrameLimit(1);
-		}
-		else
-		{
-			GSsetFrameLimit(0);
-		}
+		GSsetFrameLimit(newFrameLimit);
 	}
 
 	switch(newFrameLimit) {
