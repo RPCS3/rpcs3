@@ -445,7 +445,7 @@ void recMOVZtemp_consts(int info)
 		if( g_cpuFlushedConstReg & (1<<_Rs_) )
 			mem = &cpuRegs.GPR.r[_Rs_].UL[0];
 		else
-			mem = _eeGetConstReg(_Rs_);
+			mem = recGetImm64(g_cpuConstRegs[_Rs_].UL[1], g_cpuConstRegs[_Rs_].UL[0]);
 
 		MOVQMtoR(EEREC_D, (uptr)mem);
 		x86SetJ8( j8Ptr[ 0 ] ); 
@@ -566,7 +566,7 @@ void recMOVNtemp_consts(int info)
 		if( g_cpuFlushedConstReg & (1<<_Rs_) )
 			mem = &cpuRegs.GPR.r[_Rs_].UL[0];
 		else
-			mem = _eeGetConstReg(_Rs_);
+			mem = recGetImm64(g_cpuConstRegs[_Rs_].UL[1], g_cpuConstRegs[_Rs_].UL[0]);
 
 		MOVQMtoR(EEREC_D, (uptr)mem);
 		x86SetJ8( j8Ptr[ 0 ] ); 

@@ -371,7 +371,7 @@ u32* recGetImm64(u32 hi, u32 lo)
 	imm64[0] = lo;
 	imm64[1] = hi;
 
-	//Console::Notice("Consts allocated: %d of %u", params (recConstBufPtr - recConstBuf) / 2, ++count);
+	//Console::Notice("Consts allocated: %d of %u", params (recConstBufPtr - recConstBuf) / 2, count);
 
 	return imm64;
 }
