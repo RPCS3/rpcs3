@@ -183,18 +183,23 @@ static void FindLayer1Start()
 	{
 		// search for it
 		int off = iso->blockofs;
-		u8* tempbuffer;
+		u8 tempbuffer[2352];
 
 		Console::Status("CDVD ISO: searching for layer1...");
-		tempbuffer = (u8*)malloc(CD_FRAMESIZE_RAW);
+		//tempbuffer = (u8*)malloc(CD_FRAMESIZE_RAW);
 		for (layer1start = (iso->blocks / 2 - 0x10) & ~0xf; layer1start < 0x200010; layer1start += 16)
 		{
-			isoReadBlock(iso, tempbuffer, layer1start);
+			isoReadBlock(iso, tempbuffer+off, layer1start);
 			// CD001
-			if (tempbuffer[off+1] == 0x43 && tempbuffer[off+2] == 0x44 && tempbuffer[off+3] == 0x30 && tempbuffer[off+4] == 0x30 && tempbuffer[off+5] == 0x31)
+			if ((tempbuffer[off+1] == 0x43) &&
+				(tempbuffer[off+2] == 0x44) &&
+				(tempbuffer[off+3] == 0x30) &&
+				(tempbuffer[off+4] == 0x30) &&
+				(tempbuffer[off+5] == 0x31)
+				)
 				break;
 		}
-		free(tempbuffer);
+		//free(tempbuffer);
 
 		if(layer1start == 0x200010)
 		{

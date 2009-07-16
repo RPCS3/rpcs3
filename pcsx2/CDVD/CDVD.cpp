@@ -1356,14 +1356,6 @@ static void cdvdWrite16(u8 rt)		 // SCOMMAND
 					cdvd.Result[5] = 0x30;//min
 					break;
 
-				case 0x80: // completely stupid code, but might even work... whatever it is menat to be for :P
-					SetResultSize(1);
-					if((CDVD.getDiskType()==CDVD_TYPE_NODISC)||(CDVD.getTrayStatus()==CDVD_TRAY_OPEN))
-						cdvd.Result[0] = 0x80;
-					else
-						cdvd.Result[0] = 0x00;
-					break;
-
 				default:
 					SetResultSize(1);
 					cdvd.Result[0] = 0x80;

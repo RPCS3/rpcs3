@@ -178,7 +178,7 @@ static __forceinline void memzero_ptr( void *dest )
 
 	enum
 	{
-		remdat = bytes>>2
+		remdat = (bytes>>2)
 	};
 
 	// This case statement handles 5 special-case sizes (small blocks)
