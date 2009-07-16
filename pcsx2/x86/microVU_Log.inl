@@ -5,12 +5,12 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2 of the License, or
  *  (at your option) any later version.
- *  
+ *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
- *  
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
@@ -48,9 +48,11 @@ microVUx(void) __mVUdumpProgram(int progIndex) {
 	int bPC		= iPC;
 	mVUbranch	= 0;
 
-	sprintf(str, "%s\\microVU%d prog - %02d.html", LOGS_DIR, vuIndex, progIndex);
+	// fixme: This needs recdone using wxFile and wxString
+
+	sprintf(str, "%s\\microVU%d prog - %02d.html", "logs", vuIndex, progIndex);
 	mVU->logFile = fopen(str, "w");
-	
+
 	mVUlog("<html>\n");
 	mVUlog("<title>microVU%d MicroProgram Log</title>\n", vuIndex);
 	mVUlog("<body bgcolor=\"#000000\" LINK=\"#1111ff\" VLINK=\"#1111ff\">\n");
@@ -90,8 +92,8 @@ microVUx(void) __mVUdumpProgram(int progIndex) {
 		mVUlog("[%04x] (%08x)</a> ", i*4, mVU->code);
 		mVUopU(mVU, 2);
 
-		if (bitX[5]) { 
-			mVUlog(" ("); 
+		if (bitX[5]) {
+			mVUlog(" (");
 			if (bitX[0]) { mVUlog("I"); bitX[6] = 1; }
 			if (bitX[1]) { commaIf(); mVUlog("E"); bitX[6] = 1; }
 			if (bitX[2]) { commaIf(); mVUlog("M"); bitX[6] = 1; }

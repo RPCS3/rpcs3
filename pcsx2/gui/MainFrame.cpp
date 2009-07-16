@@ -83,7 +83,7 @@ wxMenu* MainEmuFrame::MakeIsoMenu()
 	// Add in the recent files!
 
 	/*const StringListNode* cruise = g_Conf->RecentIsos;
-	
+
 	int i = 0;
 	int threshold = 15;
 	while( cruise != NULL && (--threshold >= 0) )
@@ -95,7 +95,7 @@ wxMenu* MainEmuFrame::MakeIsoMenu()
 			// Ellipsize it!
 			wxFileName src( *cruise->item );
 			ellipsized = src.GetVolume() + wxFileName::GetVolumeSeparator() + wxFileName::GetPathSeparator() + L"...";
-			
+
 			const wxArrayString& dirs( src.GetDirs() );
 			int totalLen = ellipsized.Length();
 			int i=dirs.Count()-1;
@@ -116,7 +116,7 @@ wxMenu* MainEmuFrame::MakeIsoMenu()
 
 		mnuIso->Append( Menu_Iso_Recent+i, Path::GetFilename( ellipsized ), *cruise->item );
 	}*/
-	
+
 	if( g_RecentIsoList != NULL )
 	{
 		g_RecentIsoList->UseMenu( mnuIso );
@@ -174,17 +174,23 @@ void MainEmuFrame::OnCloseWindow(wxCloseEvent& evt)
 
 void MainEmuFrame::OnMoveAround( wxMoveEvent& evt )
 {
+	// wxGTK note: X sends gratuitous amounts of OnMove messages for various crap actions
+	// like selecting or deselecting a window, which muck up docking logic.  We filter them
+	// out using 'lastpos' here. :)
+
+	static wxPoint lastpos( wxDefaultCoord, wxDefaultCoord );
+
+	if( lastpos == evt.GetPosition() ) return;
+	lastpos = evt.GetPosition();
 	if( g_Conf->ConLogBox.AutoDock )
 	{
 		g_Conf->ConLogBox.DisplayPosition = GetRect().GetTopRight();
-
-		// Send the move event our window ID, which allows the logbox to know that this
-		// move event comes from us, and needs a special handler.
-		wxCommandEvent evt( wxEVT_DockConsole );
-		wxGetApp().ConsoleLog_PostEvent( evt );
+		wxCommandEvent conevt( wxEVT_DockConsole );
+		wxGetApp().ProgramLog_PostEvent( conevt );
 	}
-	
-	g_Conf->MainGuiPosition = GetPosition();
+
+	Console::Error( "XWindows Messages Suck: %d, %d", params GetPosition().x, GetPosition().y );
+	g_Conf->MainGuiPosition = evt.GetPosition();
 
 	//evt.Skip();
 }
@@ -203,7 +209,7 @@ void MainEmuFrame::ConnectMenus()
 
 	ConnectMenu( Menu_Config_Settings,	Menu_ConfigSettings_Click );
 	ConnectMenu( Menu_RunWithoutDisc,	Menu_RunWithoutDisc_Click );
-	
+
 	ConnectMenu( Menu_IsoBrowse,		Menu_IsoBrowse_Click );
 
 	Connect( wxID_FILE1, wxID_FILE1+20, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainEmuFrame::Menu_IsoRecent_Click) );
@@ -390,7 +396,7 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, int id, const wxString& title, cons
 	m_menuDebug.Append(Menu_Debug_Logging,		_T("Logging..."), wxEmptyString, wxITEM_NORMAL);
 
 	m_MenuItem_Console.Check( g_Conf->ConLogBox.Visible );
-	
+
 	ConnectMenus();
 	Connect( wxEVT_MOVE,			wxMoveEventHandler (MainEmuFrame::OnMoveAround) );
 	Connect( wxEVT_CLOSE_WINDOW,	wxCloseEventHandler(MainEmuFrame::OnCloseWindow) );
@@ -470,7 +476,7 @@ void MainEmuFrame::Menu_Debug_Logging_Click(wxCommandEvent &event)
 void MainEmuFrame::Menu_ShowConsole(wxCommandEvent &event)
 {
 	// Use messages to relay open/close commands (thread-safe)
-	
+
 	g_Conf->ConLogBox.Visible = event.IsChecked();
 	wxCommandEvent evt( wxEVT_COMMAND_MENU_SELECTED, g_Conf->ConLogBox.Visible ? wxID_OPEN : wxID_CLOSE );
 	wxGetApp().ProgramLog_PostEvent( evt );

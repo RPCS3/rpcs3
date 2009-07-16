@@ -130,9 +130,9 @@ ConsoleLogFrame::ConsoleLogFrame(MainEmuFrame *parent, const wxString& title) :
     // status bar for menu prompts
     CreateStatusBar();
     ClearColor();
-    
+
     // Sync with configuration settings:
-    
+
 	wxASSERT_MSG( g_Conf != NULL, L"Console Log Frames must be created AFTER the configuration has been loaded" );
 	if( g_Conf != NULL )
 	{
@@ -150,7 +150,7 @@ ConsoleLogFrame::ConsoleLogFrame(MainEmuFrame *parent, const wxString& title) :
     Connect( wxEVT_CLOSE_WINDOW, wxCloseEventHandler(ConsoleLogFrame::OnCloseWindow) );
 	Connect( wxEVT_MOVE, wxMoveEventHandler(ConsoleLogFrame::OnMoveAround) );
 	Connect( wxEVT_SIZE, wxSizeEventHandler(ConsoleLogFrame::OnResize) );
-	
+
 	Connect( wxEVT_LOG_Write, wxCommandEventHandler(ConsoleLogFrame::OnWrite) );
 	Connect( wxEVT_LOG_Newline, wxCommandEventHandler(ConsoleLogFrame::OnNewline) );
 	Connect( wxEVT_SetTitleText, wxCommandEventHandler(ConsoleLogFrame::OnSetTitle) );
@@ -170,6 +170,7 @@ void ConsoleLogFrame::OnMoveAround( wxMoveEvent& evt )
 		wxRect snapzone( topright - wxSize( 8,8 ), wxSize( 16,16 ) );
 
 		g_Conf->ConLogBox.AutoDock = snapzone.Contains( GetPosition() );
+		Console::WriteLn( "DockCheck: %d", params g_Conf->ConLogBox.AutoDock );
 		if( g_Conf->ConLogBox.AutoDock )
 		{
 			SetPosition( topright + wxSize( 1,0 ) );
@@ -201,9 +202,9 @@ void ConsoleLogFrame::OnOpen(wxMenuEvent& WXUNUSED(event))
 
 void ConsoleLogFrame::OnClose( wxMenuEvent& event )
 {
-	
 	DoClose();
 }
+
 void ConsoleLogFrame::OnCloseWindow(wxCloseEvent& event)
 {
 	if( event.CanVeto() )
@@ -256,7 +257,7 @@ void ConsoleLogFrame::ClearColor()
 void ConsoleLogFrame::OnWrite( wxCommandEvent& event )
 {
 	Colors color = (Colors)event.GetExtraLong();
-	
+
 	if( color != m_curcolor )
 		m_TextCtrl.SetDefaultStyle( m_ColorTable[m_curcolor=color] );
 
@@ -275,6 +276,7 @@ void ConsoleLogFrame::OnSetTitle( wxCommandEvent& event )
 
 void ConsoleLogFrame::OnDockedMove( wxCommandEvent& event )
 {
+	Console::Error( "Dock Message: %d, %d", params g_Conf->ConLogBox.DisplayPosition.x, g_Conf->ConLogBox.DisplayPosition.y );
 	if( g_Conf != NULL )
 		SetPosition( g_Conf->ConLogBox.DisplayPosition );
 }

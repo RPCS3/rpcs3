@@ -51,7 +51,7 @@ protected:
 		{
 			return m_table[(int)coloridx];
 		}
-		
+
 		void SetFont( const wxFont& font );
 		const wxTextAttr& Default() { return m_table[0]; }
 	};
@@ -60,7 +60,7 @@ protected:
 	wxTextCtrl&	m_TextCtrl;
 	ColorArray	m_ColorTable;
 	Console::Colors m_curcolor;
-	
+
 public:
 	// ctor & dtor
 	ConsoleLogFrame(MainEmuFrame *pParent, const wxString& szTitle);
@@ -75,7 +75,7 @@ protected:
 	virtual void OnClose(wxMenuEvent& event);
 	virtual void OnSave (wxMenuEvent& event);
 	virtual void OnClear(wxMenuEvent& event);
-	
+
 	void OnWrite( wxCommandEvent& event );
 	void OnNewline( wxCommandEvent& event );
 	void OnSetTitle( wxCommandEvent& event );
